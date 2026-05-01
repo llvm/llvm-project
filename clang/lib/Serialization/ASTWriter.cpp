@@ -221,7 +221,7 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
       if (auto UniqF = MM.getModuleMapFileIDForUniquing(Mod); UniqF.isValid())
         AssignMostImportant(ModuleMaps[UniqF], Reason);
 
-      for (auto *SubM : Mod->submodules())
+      for (Module *SubM : Mod->submodules())
         Q.push(SubM);
     }
   };
@@ -241,7 +241,7 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
     for (const Module *UndeclaredModule : CurrentModule->UndeclaredUses)
       CollectModuleMapsForHierarchy(UndeclaredModule, AR_ImportOrTextualHeader);
 
-    for (auto *M : CurrentModule->submodules())
+    for (Module *M : CurrentModule->submodules())
       Q.push(M);
   }
 
@@ -2987,7 +2987,7 @@ unsigned ASTWriter::getSubmoduleID(Module *Mod) {
 /// given module).
 static unsigned getNumberOfModules(Module *Mod) {
   unsigned ChildModules = 0;
-  for (auto *Submodule : Mod->submodules())
+  for (Module *Submodule : Mod->submodules())
     ChildModules += getNumberOfModules(Submodule);
 
   return ChildModules + 1;
@@ -3189,7 +3189,7 @@ void ASTWriter::WriteSubmodules(Module *WritingModule, ASTContext *Context) {
     // Emit the imports.
     if (!Mod->Imports.empty()) {
       RecordData Record;
-      for (auto *I : Mod->Imports)
+      for (Module *I : Mod->Imports)
         Record.push_back(getSubmoduleID(I));
       Stream.EmitRecord(SUBMODULE_IMPORTS, Record);
     }
@@ -3197,7 +3197,7 @@ void ASTWriter::WriteSubmodules(Module *WritingModule, ASTContext *Context) {
     // Emit the modules affecting compilation that were not imported.
     if (!Mod->AffectingClangModules.empty()) {
       RecordData Record;
-      for (auto *I : Mod->AffectingClangModules)
+      for (Module *I : Mod->AffectingClangModules)
         Record.push_back(getSubmoduleID(I));
       Stream.EmitRecord(SUBMODULE_AFFECTING_MODULES, Record);
     }
@@ -3208,8 +3208,8 @@ void ASTWriter::WriteSubmodules(Module *WritingModule, ASTContext *Context) {
       for (const auto &E : Mod->Exports) {
         // FIXME: This may fail; we don't require that all exported modules
         // are local or imported.
-        Record.push_back(getSubmoduleID(E.getPointer()));
-        Record.push_back(E.getInt());
+        Record.push_back(getSubmoduleID(E.first));
+        Record.push_back(E.second);
       }
       Stream.EmitRecord(SUBMODULE_EXPORTS, Record);
     }
@@ -3260,7 +3260,7 @@ void ASTWriter::WriteSubmodules(Module *WritingModule, ASTContext *Context) {
     }
 
     // Queue up the submodules of this module.
-    for (auto *M : Mod->submodules())
+    for (Module *M : Mod->submodules())
       Q.push(M);
   }
 
@@ -3373,6 +3373,13 @@ void ASTWriter::WritePragmaDiagnosticMappings(const DiagnosticsEngine &Diag,
   // treated as errors.
   AddSourceLocation(Diag.DiagStatesByLoc.CurDiagStateLoc, Record);
   AddDiagState(Diag.DiagStatesByLoc.CurDiagState, false);
+
+  // Emit the push stack so that unmatched pushes from a preamble can be
+  // restored when the main file is parsed.  Each entry is a DiagState that
+  // was active at the time of a `#pragma diagnostic push`.
+  Record.push_back(Diag.DiagStateOnPushStack.size());
+  for (const auto *State : Diag.DiagStateOnPushStack)
+    AddDiagState(State, false);
 
   Stream.EmitRecord(DIAG_PRAGMA_MAPPINGS, Record);
 }
@@ -3521,12 +3528,6 @@ void ASTWriter::WriteComments(ASTContext &Context) {
   Stream.EnterSubblock(COMMENTS_BLOCK_ID, 3);
   llvm::scope_exit _([this] { Stream.ExitBlock(); });
   if (!PP->getPreprocessorOpts().WriteCommentListToPCH)
-    return;
-
-  // Don't write comments to BMI to reduce the size of BMI.
-  // If language services (e.g., clangd) want such abilities,
-  // we can offer a special option then.
-  if (isWritingStdCXXNamedModules())
     return;
 
   RecordData Record;
@@ -5496,7 +5497,7 @@ time_t ASTWriter::getTimestampForOutput(time_t ModTime) const {
 ASTFileSignature
 ASTWriter::WriteAST(llvm::PointerUnion<Sema *, Preprocessor *> Subject,
                     StringRef OutputFile, Module *WritingModule,
-                    StringRef isysroot, bool ShouldCacheASTInMemory) {
+                    StringRef isysroot) {
   llvm::TimeTraceScope scope("WriteAST", OutputFile);
   WritingAST = true;
 
@@ -5523,12 +5524,6 @@ ASTWriter::WriteAST(llvm::PointerUnion<Sema *, Preprocessor *> Subject,
 
   WritingAST = false;
 
-  if (ShouldCacheASTInMemory) {
-    // Construct MemoryBuffer and update buffer manager.
-    ModCache.getInMemoryModuleCache().addBuiltPCM(
-        OutputFile, llvm::MemoryBuffer::getMemBufferCopy(
-                        StringRef(Buffer.begin(), Buffer.size())));
-  }
   return Signature;
 }
 
@@ -8067,6 +8062,17 @@ void OMPClauseWriter::VisitOMPSizesClause(OMPSizesClause *C) {
   Record.push_back(C->getNumSizes());
   for (Expr *Size : C->getSizesRefs())
     Record.AddStmt(Size);
+  Record.AddSourceLocation(C->getLParenLoc());
+}
+
+void OMPClauseWriter::VisitOMPCountsClause(OMPCountsClause *C) {
+  Record.push_back(C->getNumCounts());
+  Record.push_back(C->hasOmpFill());
+  if (C->hasOmpFill())
+    Record.push_back(*C->getOmpFillIndex());
+  Record.AddSourceLocation(C->getOmpFillLoc());
+  for (Expr *Count : C->getCountsRefs())
+    Record.AddStmt(Count);
   Record.AddSourceLocation(C->getLParenLoc());
 }
 

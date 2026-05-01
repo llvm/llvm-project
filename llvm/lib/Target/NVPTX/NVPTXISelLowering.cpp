@@ -1324,15 +1324,6 @@ static Align getArgumentAlignment(const CallBase *CB, Type *Ty, unsigned Idx,
   return DL.getABITypeAlign(Ty);
 }
 
-static bool shouldConvertToIndirectCall(const CallBase *CB,
-                                        const GlobalAddressSDNode *Func) {
-  if (!Func)
-    return false;
-  if (auto *CalleeFunc = dyn_cast<Function>(Func->getGlobal()))
-    return CB->getFunctionType() != CalleeFunc->getFunctionType();
-  return false;
-}
-
 static MachinePointerInfo refinePtrAS(SDValue &Ptr, SelectionDAG &DAG,
                                       const DataLayout &DL,
                                       const TargetLowering &TL) {
@@ -1655,9 +1646,12 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   }
 
   const auto *Func = dyn_cast<GlobalAddressSDNode>(Callee.getNode());
+  const auto *CalleeF = Func ? dyn_cast<Function>(Func->getGlobal()) : nullptr;
+
   // If the type of the callsite does not match that of the function, convert
   // the callsite to an indirect call.
-  const bool ConvertToIndirectCall = shouldConvertToIndirectCall(CB, Func);
+  const bool ConvertToIndirectCall =
+      CalleeF && CB->getFunctionType() != CalleeF->getFunctionType();
 
   // Both indirect calls and libcalls have nullptr Func. In order to distinguish
   // between them we must rely on the call site value which is valid for
@@ -1694,6 +1688,17 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         NVPTXISD::CallPrototype, dl, MVT::Other,
         {StartChain, DAG.getTargetExternalSymbol(ProtoStr, MVT::i32)});
     CallPrereqs.push_back(PrototypeDeclare);
+  }
+
+  const bool IsUnknownIntrinsic =
+      CalleeF && CalleeF->isIntrinsic() &&
+      CalleeF->getIntrinsicID() == Intrinsic::not_intrinsic;
+  if (IsUnknownIntrinsic) {
+    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+        DAG.getMachineFunction().getFunction(),
+        "call to unknown intrinsic '" + CalleeF->getName() +
+            "' cannot be lowered by the NVPTX backend",
+        dl.getDebugLoc()));
   }
 
   const unsigned Proto = IsIndirectCall ? UniqueCallSite : 0;
@@ -5748,15 +5753,12 @@ PerformADDCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
   return SDValue();
 }
 
-static SDValue
-PerformFADDCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
-                               TargetLowering::DAGCombinerInfo &DCI,
-                               CodeGenOptLevel OptLevel) {
+SDValue NVPTXTargetLowering::performFADDCombineWithOperands(
+    SDNode *N, SDValue N0, SDValue N1, TargetLowering::DAGCombinerInfo &DCI,
+    CodeGenOptLevel OptLevel) const {
   EVT VT = N0.getValueType();
   if (N0.getOpcode() == ISD::FMUL) {
-    const auto *TLI = static_cast<const NVPTXTargetLowering *>(
-        &DCI.DAG.getTargetLoweringInfo());
-    if (!(TLI->allowFMA(DCI.DAG.getMachineFunction(), OptLevel) ||
+    if (!(allowFMA(DCI.DAG.getMachineFunction(), OptLevel) ||
           (N->getFlags().hasAllowContract() &&
            N0->getFlags().hasAllowContract())))
       return SDValue();
@@ -6133,6 +6135,44 @@ static bool isNonCoalescableBuildVector(const SDValue &BV) {
   return std::abs(Idx0->getSExtValue() - Idx1->getSExtValue()) != 1;
 }
 
+/// Return true if FMUL v2f32 node \p N may be scalarized to fold each lane's
+/// product into a scalar FMA.
+bool NVPTXTargetLowering::mayFoldFMULIntoFMA(SDNode *N, MachineFunction &MF,
+                                             CodeGenOptLevel OptLevel) const {
+  if (N->getOpcode() != ISD::FMUL || N->getValueType(0) != MVT::v2f32)
+    return false;
+  const bool GlobalFMA = allowFMA(MF, OptLevel);
+  if (!N->getFlags().hasAllowContract() && !GlobalFMA)
+    return false;
+
+  const SDNode *FirstFAdd = nullptr;
+  unsigned NumScalarFAdd = 0;
+
+  // Both lanes must feed unique FADDs
+  for (SDNode *EE : N->users()) {
+    if (NumScalarFAdd == 2)
+      return false;
+
+    if (EE->getOpcode() != ISD::EXTRACT_VECTOR_ELT || !EE->hasOneUse() ||
+        !isa<ConstantSDNode>(EE->getOperand(1)))
+      return false;
+
+    const SDNode *const FAdd = *EE->users().begin();
+    if (FAdd->getOpcode() != ISD::FADD ||
+        (!GlobalFMA && !FAdd->getFlags().hasAllowContract()))
+      return false;
+
+    if (!FirstFAdd)
+      FirstFAdd = FAdd;
+    else if (FAdd == FirstFAdd)
+      return false;
+
+    NumScalarFAdd++;
+  }
+
+  return NumScalarFAdd == 2;
+}
+
 /// Scalarize a v2f32 arithmetic node (FADD, FMUL, FSUB, FMA) when at least
 /// one operand is a BUILD_VECTOR that repacks values from non-adjacent register
 /// pairs.  Without this combine the BUILD_VECTOR forces allocation of a
@@ -6156,15 +6196,18 @@ static bool isNonCoalescableBuildVector(const SDValue &BV) {
 ///   r0: f32 = fma a0, t1, c0
 ///   r1: f32 = fma a1, t2, c1
 ///   t4: v2f32 = BUILD_VECTOR r0, r1
-static SDValue PerformScalarizeV2F32Op(SDNode *N,
-                                       TargetLowering::DAGCombinerInfo &DCI) {
+///
+/// Also scalarizes an FMUL when all output lanes feed into scalar FADDs
+/// to enable scalar FMA combining.
+SDValue NVPTXTargetLowering::performScalarizeV2F32Op(
+    SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
+    CodeGenOptLevel OptLevel) const {
   EVT VT = N->getValueType(0);
   if (VT != MVT::v2f32)
     return SDValue();
 
-  // Only scalarize when at least one operand is a BUILD_VECTOR whose elements
-  // are guaranteed to reside in different register pairs.
-  if (none_of(N->ops(), isNonCoalescableBuildVector))
+  if (none_of(N->ops(), isNonCoalescableBuildVector) &&
+      !mayFoldFMULIntoFMA(N, DCI.DAG.getMachineFunction(), OptLevel))
     return SDValue();
 
   SelectionDAG &DAG = DCI.DAG;
@@ -6195,27 +6238,27 @@ static SDValue PerformScalarizeV2F32Op(SDNode *N,
   return DAG.getNode(ISD::BUILD_VECTOR, DL, VT, Res0, Res1);
 }
 
-/// PerformFADDCombine - Target-specific dag combine xforms for ISD::FADD.
-///
-static SDValue PerformFADDCombine(SDNode *N,
-                                  TargetLowering::DAGCombinerInfo &DCI,
-                                  CodeGenOptLevel OptLevel) {
+/// Target-specific dag combine xforms for ISD::FADD.
+SDValue
+NVPTXTargetLowering::performFADDCombine(SDNode *N,
+                                        TargetLowering::DAGCombinerInfo &DCI,
+                                        CodeGenOptLevel OptLevel) const {
+  if (SDValue Result = performScalarizeV2F32Op(N, DCI, OptLevel))
+    return Result;
+
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
-
-  if (SDValue Result = PerformScalarizeV2F32Op(N, DCI))
-    return Result;
 
   EVT VT = N0.getValueType();
   if (VT.isVector() || !(VT == MVT::f32 || VT == MVT::f64))
     return SDValue();
 
   // First try with the default operand order.
-  if (SDValue Result = PerformFADDCombineWithOperands(N, N0, N1, DCI, OptLevel))
+  if (SDValue Result = performFADDCombineWithOperands(N, N0, N1, DCI, OptLevel))
     return Result;
 
   // If that didn't work, try again with the operands commuted.
-  return PerformFADDCombineWithOperands(N, N1, N0, DCI, OptLevel);
+  return performFADDCombineWithOperands(N, N1, N0, DCI, OptLevel);
 }
 
 /// Get 3-input version of a 2-input min/max opcode
@@ -7055,11 +7098,11 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::EXTRACT_VECTOR_ELT:
     return PerformEXTRACTCombine(N, DCI);
   case ISD::FADD:
-    return PerformFADDCombine(N, DCI, OptLevel);
+    return performFADDCombine(N, DCI, OptLevel);
   case ISD::FMA:
   case ISD::FMUL:
   case ISD::FSUB:
-    return PerformScalarizeV2F32Op(N, DCI);
+    return performScalarizeV2F32Op(N, DCI, OptLevel);
   case ISD::FMAXNUM:
   case ISD::FMINNUM:
   case ISD::FMAXIMUM:
@@ -7673,7 +7716,7 @@ static void computeKnownBitsForPRMT(const SDValue Op, KnownBits &Known,
     unsigned Sign = Sel.getHiBits(1).getZExtValue();
     KnownBits Byte = BitField.extractBits(8, Idx * 8);
     if (Sign)
-      Byte = KnownBits::ashr(Byte, 8);
+      Byte = KnownBits::ashr(Byte, KnownBits::makeConstant(APInt(8, 7)));
     Known.insertBits(Byte, I * 8);
   }
 }

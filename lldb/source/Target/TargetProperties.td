@@ -169,6 +169,9 @@ let Definition = "target", Path = "target" in {
   def UseHexImmediates: Property<"use-hex-immediates", "Boolean">,
     DefaultTrue,
     Desc<"Show immediates in disassembly as hexadecimal.">;
+  def CheckValueObjectOwnership: Property<"check-vo-ownership", "Boolean">,
+    DefaultFalse,
+    Desc<"Check that ValueObject children are managed by their parents.">;
   def HexImmediateStyle: Property<"hex-immediate-style", "Enum">,
     DefaultEnumValue<"Disassembler::eHexStyleC">,
     EnumValues<"OptionEnumValues(g_hex_immediate_style_values)">,
@@ -176,10 +179,12 @@ let Definition = "target", Path = "target" in {
   def UseFastStepping: Property<"use-fast-stepping", "Boolean">,
     DefaultTrue,
     Desc<"Use a fast stepping algorithm based on running from branch to branch rather than instruction single-stepping.">;
-  def LoadScriptFromSymbolFile: Property<"load-script-from-symbol-file", "Enum">,
-    DefaultEnumValue<"eLoadScriptFromSymFileWarn">,
-    EnumValues<"OptionEnumValues(g_load_script_from_sym_file_values)">,
-    Desc<"Allow LLDB to load scripting resources embedded in symbol files when available.">;
+  def LoadScriptFromSymbolFile
+      : Property<"load-script-from-symbol-file", "Enum">,
+        DefaultEnumValue<"eLoadScriptFromSymFileTrusted">,
+        EnumValues<"OptionEnumValues(g_load_script_from_sym_file_values)">,
+        Desc<"Allow LLDB to load scripting resources embedded in symbol files "
+             "when available.">;
   def LoadCWDlldbinitFile: Property<"load-cwd-lldbinit", "Enum">,
     DefaultEnumValue<"eLoadCWDlldbinitWarn">,
     EnumValues<"OptionEnumValues(g_load_cwd_lldbinit_values)">,
@@ -220,6 +225,12 @@ let Definition = "target", Path = "target" in {
   def ParallelModuleLoad: Property<"parallel-module-load", "Boolean">,
     DefaultTrue,
     Desc<"Enable loading of modules in parallel for the dynamic loader.">;
+  def AutoLoadScriptsForModules
+      : Property<"auto-load-scripts-for-modules", "Dictionary">,
+        ElementType<"Enum">,
+        EnumValues<"OptionEnumValues(g_load_script_from_sym_file_values)">,
+        Desc<"A list of module/image names and whether LLDB should auto-load scripting "
+             "resources for it from safe paths.">;
 }
 
 let Definition = "process_experimental", Path = "target.process.experimental" in {
@@ -302,6 +313,12 @@ let Definition = "process", Path = "target.process" in {
   def TrackMemoryCacheChanges: Property<"track-memory-cache-changes", "Boolean">,
     DefaultTrue,
     Desc<"If true, memory cache modifications (which happen often during expressions evaluation) will bump process state ID (and invalidate all synthetic children). Disabling this option helps to avoid synthetic children reevaluation when pretty printers heavily use expressions. The downside of disabled setting is that convenience variables won't reevaluate synthetic children automatically.">;
+  def AlwaysRunThreadNames
+      : Property<"always-run-thread-names", "Array">,
+        ElementType<"String">,
+        Desc<"A list of thread names. Threads with any of these names will "
+             "always be resumed when the process resumes, even when other "
+             "threads are suspended during single-stepping operations.">;
 }
 
 let Definition = "platform", Path = "platform" in {

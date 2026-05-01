@@ -322,42 +322,27 @@ mlir::Value ReductionProcessor::createScalarCombiner(
                               fir::MulcOp>(builder, type, loc, op1, op2);
     break;
   case ReductionIdentifier::AND: {
-    mlir::Value op1I1 = builder.createConvert(loc, builder.getI1Type(), op1);
-    mlir::Value op2I1 = builder.createConvert(loc, builder.getI1Type(), op2);
-
-    mlir::Value andiOp =
-        mlir::arith::AndIOp::create(builder, loc, op1I1, op2I1);
-
-    reductionOp = builder.createConvert(loc, type, andiOp);
+    mlir::Value v1 = builder.createConvert(loc, type, op1);
+    mlir::Value v2 = builder.createConvert(loc, type, op2);
+    reductionOp = fir::LogicalAndOp::create(builder, loc, type, v1, v2);
     break;
   }
   case ReductionIdentifier::OR: {
-    mlir::Value op1I1 = builder.createConvert(loc, builder.getI1Type(), op1);
-    mlir::Value op2I1 = builder.createConvert(loc, builder.getI1Type(), op2);
-
-    mlir::Value oriOp = mlir::arith::OrIOp::create(builder, loc, op1I1, op2I1);
-
-    reductionOp = builder.createConvert(loc, type, oriOp);
+    mlir::Value v1 = builder.createConvert(loc, type, op1);
+    mlir::Value v2 = builder.createConvert(loc, type, op2);
+    reductionOp = fir::LogicalOrOp::create(builder, loc, type, v1, v2);
     break;
   }
   case ReductionIdentifier::EQV: {
-    mlir::Value op1I1 = builder.createConvert(loc, builder.getI1Type(), op1);
-    mlir::Value op2I1 = builder.createConvert(loc, builder.getI1Type(), op2);
-
-    mlir::Value cmpiOp = mlir::arith::CmpIOp::create(
-        builder, loc, mlir::arith::CmpIPredicate::eq, op1I1, op2I1);
-
-    reductionOp = builder.createConvert(loc, type, cmpiOp);
+    mlir::Value v1 = builder.createConvert(loc, type, op1);
+    mlir::Value v2 = builder.createConvert(loc, type, op2);
+    reductionOp = fir::EqvOp::create(builder, loc, type, v1, v2);
     break;
   }
   case ReductionIdentifier::NEQV: {
-    mlir::Value op1I1 = builder.createConvert(loc, builder.getI1Type(), op1);
-    mlir::Value op2I1 = builder.createConvert(loc, builder.getI1Type(), op2);
-
-    mlir::Value cmpiOp = mlir::arith::CmpIOp::create(
-        builder, loc, mlir::arith::CmpIPredicate::ne, op1I1, op2I1);
-
-    reductionOp = builder.createConvert(loc, type, cmpiOp);
+    mlir::Value v1 = builder.createConvert(loc, type, op1);
+    mlir::Value v2 = builder.createConvert(loc, type, op2);
+    reductionOp = fir::NeqvOp::create(builder, loc, type, v1, v2);
     break;
   }
   default:
@@ -502,7 +487,7 @@ template <typename OpType>
 static void createReductionAllocAndInitRegions(
     AbstractConverter &converter, mlir::Location loc, OpType &reductionDecl,
     ReductionProcessor::GenInitValueCBTy genInitValueCB, mlir::Type type,
-    bool isByRef) {
+    bool isByRef, const Fortran::semantics::Symbol *sym) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   auto yield = [&](mlir::Value ret) { genYield<OpType>(builder, loc, ret); };
 
@@ -524,13 +509,16 @@ static void createReductionAllocAndInitRegions(
   mlir::Type ty = fir::unwrapRefType(type);
   builder.setInsertionPointToEnd(initBlock);
   mlir::Value initValue =
-      genInitValueCB(builder, loc, ty, initBlock->getArgument(0));
+      isByRef ? genInitValueCB(builder, loc, ty, initBlock->getArgument(0),
+                               initBlock->getArgument(1))
+              : genInitValueCB(builder, loc, ty, initBlock->getArgument(0),
+                               mlir::Value{});
   if (isByRef) {
     populateByRefInitAndCleanupRegions(
         converter, loc, type, initValue, initBlock,
         reductionDecl.getInitializerAllocArg(),
         reductionDecl.getInitializerMoldArg(), reductionDecl.getCleanupRegion(),
-        DeclOperationKind::Reduction, /*sym=*/nullptr,
+        DeclOperationKind::Reduction, sym,
         /*cannotHaveLowerBounds=*/false,
         /*isDoConcurrent*/ std::is_same_v<OpType, fir::DeclareReductionOp>);
   }
@@ -559,7 +547,8 @@ template <typename DeclareRedType>
 DeclareRedType ReductionProcessor::createDeclareReductionHelper(
     AbstractConverter &converter, llvm::StringRef reductionOpName,
     mlir::Type type, mlir::Location loc, bool isByRef,
-    GenCombinerCBTy genCombinerCB, GenInitValueCBTy genInitValueCB) {
+    GenCombinerCBTy genCombinerCB, GenInitValueCBTy genInitValueCB,
+    const semantics::Symbol *sym) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::OpBuilder::InsertionGuard guard(builder);
   mlir::ModuleOp module = builder.getModule();
@@ -593,7 +582,7 @@ DeclareRedType ReductionProcessor::createDeclareReductionHelper(
   decl = DeclareRedType::create(modBuilder, loc, reductionOpName, type,
                                 boxedTyAttr);
   createReductionAllocAndInitRegions(converter, loc, decl, genInitValueCB, type,
-                                     isByRef);
+                                     isByRef, sym);
   builder.createBlock(&decl.getReductionRegion(),
                       decl.getReductionRegion().end(), {type, type},
                       {loc, loc});
@@ -622,7 +611,8 @@ OpType ReductionProcessor::createDeclareReduction(
     const ReductionIdentifier redId, mlir::Type type, mlir::Location loc,
     bool isByRef) {
   auto genInitValueCB = [&](fir::FirOpBuilder &builder, mlir::Location loc,
-                            mlir::Type type, mlir::Value val) {
+                            mlir::Type type, mlir::Value /*moldArg*/,
+                            mlir::Value /*privArg*/) {
     mlir::Type ty = fir::unwrapRefType(type);
     mlir::Value initValue = ReductionProcessor::getReductionInitValue(
         loc, unwrapSeqOrBoxedType(ty), redId, builder);
@@ -642,11 +632,11 @@ OpType ReductionProcessor::createDeclareReduction(
 bool ReductionProcessor::doReductionByRef(mlir::Type reductionType) {
   if (forceByrefReduction)
     return true;
-
-  if (!fir::isa_trivial(fir::unwrapRefType(reductionType)) &&
-      !fir::isa_derived(fir::unwrapRefType(reductionType)))
+  // Non-trivial, non-derived types (e.g., boxes, arrays) must be by-ref.
+  // Derived types must also be by-ref because user-defined combiners
+  // operate on components via side-effects, not by producing a whole value.
+  if (!fir::isa_trivial(fir::unwrapRefType(reductionType)))
     return true;
-
   return false;
 }
 
@@ -798,6 +788,16 @@ bool ReductionProcessor::processReductionArguments(
         }
 
         reductionName = getReductionName(redId, kindMap, redType, isByRef);
+        // If a user-defined declare reduction already exists for this
+        // operator+type, reuse it instead of generating a new one
+        // (which would fail for non-predefined types like derived types).
+        mlir::ModuleOp module = builder.getModule();
+        if (auto existingDecl = module.lookupSymbol<OpType>(reductionName)) {
+          reductionDeclSymbols.push_back(mlir::SymbolRefAttr::get(
+              builder.getContext(), existingDecl.getSymName()));
+          ++idx;
+          continue;
+        }
       } else if (const auto *reductionIntrinsic =
                      std::get_if<omp::clause::ProcedureDesignator>(
                          &redOperator.u)) {

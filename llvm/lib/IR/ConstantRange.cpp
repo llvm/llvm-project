@@ -23,6 +23,7 @@
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/IR/CmpPredicate.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
@@ -154,6 +155,15 @@ ConstantRange ConstantRange::makeAllowedICmpRegion(CmpInst::Predicate Pred,
   case CmpInst::ICMP_SGE:
     return getNonEmpty(CR.getSignedMin(), APInt::getSignedMinValue(W));
   }
+}
+
+ConstantRange ConstantRange::makeAllowedICmpRegion(CmpPredicate Pred,
+                                                   const ConstantRange &CR) {
+  ConstantRange Result = makeAllowedICmpRegion(Pred.dropSameSign(), CR);
+  if (!Pred.hasSameSign())
+    return Result;
+  return Result.intersectWith(
+      makeAllowedICmpRegion(Pred.getPreferredSignedPredicate(), CR));
 }
 
 ConstantRange ConstantRange::makeSatisfyingICmpRegion(CmpInst::Predicate Pred,

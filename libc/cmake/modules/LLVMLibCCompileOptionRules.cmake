@@ -154,6 +154,10 @@ function(_get_compile_options_from_config output_var)
     libc_add_definition(config_options "LIBC_THREAD_MODE=${LIBC_CONF_THREAD_MODE}")
   endif()
 
+  if(LIBC_CONF_TIMEOUT_ENSURE_MONOTONICITY)
+    libc_add_definition(config_options "LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY")
+  endif()
+
   if(LIBC_CONF_TRAP_ON_RAISE_FP_EXCEPT)
     libc_add_definition(config_options "LIBC_TRAP_ON_RAISE_FP_EXCEPT")
   endif()
@@ -180,6 +184,10 @@ function(_get_compile_options_from_config output_var)
 
   if(LIBC_COPT_PRINTF_DISABLE_BITINT)
     libc_add_definition(config_options "LIBC_COPT_PRINTF_DISABLE_BITINT")
+  endif()
+
+  if(LIBC_COPT_USE_C_ASSERT)
+    list(APPEND config_options "-DLIBC_COPT_USE_C_ASSERT")
   endif()
 
   set(${output_var} ${config_options} PARENT_SCOPE)

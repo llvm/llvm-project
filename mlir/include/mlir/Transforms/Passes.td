@@ -48,7 +48,17 @@ def CanonicalizerPass : Pass<"canonicalize"> {
     Option<"maxNumRewrites", "max-num-rewrites", "int64_t", /*default=*/"-1",
            "Max. number of pattern rewrites within an iteration">,
     Option<"testConvergence", "test-convergence", "bool", /*default=*/"false",
-           "Test only: Fail pass on non-convergence to detect cyclic pattern">
+           "Test only: Fail pass on non-convergence to detect cyclic pattern">,
+    Option<"cseBetweenIterations", "cse-between-iterations", "bool",
+           /*default=*/"false",
+           "Run full CSE between each pattern-application iteration. "
+           "CSE-driven changes trigger extra iterations, so this may push "
+           "the iteration count up to max-iterations and affect convergence "
+           "under test-convergence.">,
+    ListOption<"filterDialects", "filter-dialects", "std::string",
+               "If non-empty, only collect canonicalization patterns from the"
+               " dialects with the given namespaces. The listed dialects are"
+               " force-loaded into the context as dependent dialects.">
   ] # RewritePassUtils.options;
 }
 

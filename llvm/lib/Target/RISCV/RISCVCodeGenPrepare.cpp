@@ -21,6 +21,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
@@ -48,6 +49,7 @@ public:
   bool visitAnd(BinaryOperator &BO);
   bool visitIntrinsicInst(IntrinsicInst &I);
   bool expandVPStrideLoad(IntrinsicInst &I);
+  bool expandMulReduction(IntrinsicInst &I);
   bool widenVPMerge(Instruction *I);
   bool visitFreezeInst(FreezeInst &BO);
 };
@@ -228,6 +230,9 @@ bool RISCVCodeGenPrepare::visitIntrinsicInst(IntrinsicInst &I) {
   if (expandVPStrideLoad(I))
     return true;
 
+  if (expandMulReduction(I))
+    return true;
+
   if (widenVPMerge(&I))
     return true;
 
@@ -256,6 +261,76 @@ bool RISCVCodeGenPrepare::visitIntrinsicInst(IntrinsicInst &I) {
 
   PHI->eraseFromParent();
 
+  return true;
+}
+
+// Partially expand a vector_reduce_mul wider than M1 to reduce the
+// number of vsetvlis required when VLEN is exactly known, and
+// reducing register pressure in all cases.
+bool RISCVCodeGenPrepare::expandMulReduction(IntrinsicInst &II) {
+  if (II.getIntrinsicID() != Intrinsic::vector_reduce_mul)
+    return false;
+
+  if (!ST->hasVInstructions())
+    return false;
+
+  Value *TmpVec = II.getArgOperand(0);
+  auto *VecTy = dyn_cast<FixedVectorType>(TmpVec->getType());
+  if (!VecTy)
+    return false;
+
+  unsigned EltSize = VecTy->getScalarSizeInBits();
+  unsigned VF = VecTy->getNumElements();
+  unsigned MinVLen = ST->getRealMinVLen();
+  unsigned M1VF = MinVLen / EltSize;
+
+  if (!isPowerOf2_32(VF) || VF <= M1VF)
+    return false;
+
+  IRBuilder<> Builder(&II);
+  auto *M1Ty = FixedVectorType::get(VecTy->getElementType(), M1VF);
+
+  // When VLEN is exactly known, extract m1 pieces and build a mul tree.
+  // This greatly reduces register pressure during the reduction, and
+  // avoids all but one vsetvli (the one from original LMUL to m1).
+  // TODO: Generalize to handle the splitting case.
+  if (MinVLen == ST->getRealMaxVLen() && VF <= 8 * M1VF) {
+    unsigned NumM1 = VF / M1VF;
+    assert(isPowerOf2_32(NumM1) && NumM1 <= 8);
+    SmallVector<Value *, 8> Pieces(NumM1);
+    for (unsigned i = 0; i < NumM1; i++)
+      Pieces[i] =
+          Builder.CreateExtractVector(M1Ty, TmpVec, (uint64_t)(i * M1VF));
+
+    while (Pieces.size() > 1) {
+      for (unsigned i = 0; i < Pieces.size() / 2; i++)
+        Pieces[i] =
+            Builder.CreateMul(Pieces[i * 2], Pieces[i * 2 + 1], "bin.rdx");
+      Pieces.truncate(Pieces.size() / 2);
+    }
+    TmpVec = Pieces[0];
+  } else {
+    // For non-exact VLEN, shuffle-reduce at the original vector width down to
+    // m1, then extract.  This prioritizes reducing the number of vsetvli
+    // over maximual reduction of LMUL for the intermediate states.
+    SmallVector<int, 32> ShuffleMask(VF);
+    for (unsigned LiveElts = VF; LiveElts > M1VF; LiveElts /= 2) {
+      unsigned Half = LiveElts / 2;
+      std::iota(ShuffleMask.begin(), ShuffleMask.begin() + Half, Half);
+      std::fill(ShuffleMask.begin() + Half, ShuffleMask.end(), -1);
+      Value *Shuf =
+          Builder.CreateShuffleVector(TmpVec, ShuffleMask, "rdx.shuf");
+      TmpVec = Builder.CreateMul(TmpVec, Shuf, "bin.rdx");
+    }
+    // Extract the M1-sized subvector and emit the final reduction intrinsic.
+    // This is the reason we're here - to force a vsetvli toggle once at m1.
+    TmpVec = Builder.CreateExtractVector(M1Ty, TmpVec, (uint64_t)0, "rdx.sub");
+  }
+
+  Value *Rdx =
+      Builder.CreateIntrinsic(Intrinsic::vector_reduce_mul, {M1Ty}, {TmpVec});
+  II.replaceAllUsesWith(Rdx);
+  II.eraseFromParent();
   return true;
 }
 

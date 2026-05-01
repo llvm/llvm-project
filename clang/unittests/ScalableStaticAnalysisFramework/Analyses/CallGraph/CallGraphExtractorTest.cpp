@@ -120,16 +120,18 @@ template <typename... Matchers> auto hasSummaryThat(const Matchers &...Ms) {
 // Test fixture
 // ============================================================================
 
+static const SummaryName CallGraphName{CallGraphSummary::Name.str()};
+
 struct CallGraphExtractorTest : ssaf::TestFixture {
-  TUSummary Summary =
-      BuildNamespace(BuildNamespaceKind::CompilationUnit, "Mock.cpp");
+  TUSummary Summary{
+      BuildNamespace(BuildNamespaceKind::CompilationUnit, "Mock.cpp")};
   TUSummaryBuilder Builder = TUSummaryBuilder(Summary);
 
   /// Creates the AST and extractor, then extracts the summaries from the AST.
   /// This will update the \c AST \c Builder and \c Summary data members.
   void runExtractor(StringRef Code, ArrayRef<std::string> Args = {}) {
     AST = tooling::buildASTFromCodeWithArgs(Code, Args);
-    auto Consumer = makeTUSummaryExtractor("CallGraph", Builder);
+    auto Consumer = makeTUSummaryExtractor(CallGraphName.str(), Builder);
     Consumer->HandleTranslationUnit(AST->getASTContext());
   }
 
@@ -207,7 +209,7 @@ CallGraphExtractorTest::findSummary(llvm::StringRef FnName) const {
   }
   EntityId ID = It->second;
   auto &Data = getData(Summary);
-  auto SummaryIt = Data.find(SummaryName("CallGraph"));
+  auto SummaryIt = Data.find(CallGraphName);
   if (SummaryIt == Data.end())
     return llvm::createStringError("There is no 'CallGraph' summary");
   auto EntityIt = SummaryIt->second.find(ID);
@@ -343,7 +345,7 @@ TEST_F(CallGraphExtractorTest, DeclarationsOnlyNoSummary) {
   )cpp");
 
   // No summary for functions without definitions.
-  EXPECT_FALSE(llvm::is_contained(getData(Summary), SummaryName("CallGraph")));
+  EXPECT_FALSE(llvm::is_contained(getData(Summary), CallGraphName));
 }
 
 TEST_F(CallGraphExtractorTest, DuplicateCallees) {

@@ -164,8 +164,8 @@ define void @uniform_gep_for_replicating_gep(ptr %dst) {
 ; CHECK-NEXT:    [[TMP15:%.*]] = zext i32 [[TMP9]] to i64
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP14]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP15]]
-; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <2 x i8> [[TMP11]], i32 1
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i8> [[TMP6]], i32 1
+; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <2 x i8> [[TMP11]], i64 1
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i8> [[TMP6]], i64 1
 ; CHECK-NEXT:    store i8 [[TMP22]], ptr [[TMP18]], align 1
 ; CHECK-NEXT:    store i8 [[TMP12]], ptr [[TMP19]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
@@ -209,17 +209,17 @@ define void @test_load_gep_widen_induction(ptr noalias %dst, ptr noalias %dst2) 
 ; CHECK-NEXT:    [[STEP_ADD_2:%.*]] = add nuw <2 x i64> [[STEP_ADD]], splat (i64 2)
 ; CHECK-NEXT:    [[STEP_ADD_3:%.*]] = add nuw <2 x i64> [[STEP_ADD_2]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i128, ptr [[DST]], <2 x i64> [[VEC_IND]]
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x ptr> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x ptr> [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x ptr> [[TMP0]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x ptr> [[TMP0]], i64 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i128, ptr [[DST]], <2 x i64> [[STEP_ADD]]
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x ptr> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x ptr> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x ptr> [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x ptr> [[TMP1]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i128, ptr [[DST]], <2 x i64> [[STEP_ADD_2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x ptr> [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x ptr> [[TMP2]], i32 1
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x ptr> [[TMP2]], i64 0
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x ptr> [[TMP2]], i64 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i128, ptr [[DST]], <2 x i64> [[STEP_ADD_3]]
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x ptr> [[TMP3]], i32 0
-; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <2 x ptr> [[TMP3]], i32 1
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x ptr> [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <2 x ptr> [[TMP3]], i64 1
 ; CHECK-NEXT:    store ptr null, ptr [[TMP5]], align 8
 ; CHECK-NEXT:    store ptr null, ptr [[TMP6]], align 8
 ; CHECK-NEXT:    store ptr null, ptr [[TMP7]], align 8
@@ -247,7 +247,7 @@ define void @test_load_gep_widen_induction(ptr noalias %dst, ptr noalias %dst2) 
 entry:
   br label %loop
 
-loop:                                         ; preds = %loop, %entry
+loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %gep.dst.iv = getelementptr i128, ptr %dst, i64 %iv
   %iv.next = add i64 %iv, 1
@@ -454,8 +454,7 @@ define void @test_prefer_vector_addressing(ptr %start, ptr %ms, ptr noalias %src
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP6]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[N_VEC]], 3
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[GEP_START]], i64 [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = mul i64 [[N_VEC]], 3
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP9]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP7]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -636,7 +635,7 @@ define i32 @test_ptr_iv_load_used_by_other_load(ptr %start, ptr %end) {
 entry:
   br label %loop
 
-loop:                                 ; preds = %loop, %entry
+loop:
   %iv = phi ptr [ %iv.next, %loop ], [ null, %entry ]
   %red = phi i32 [ %red.next, %loop ], [ 0, %entry ]
   %0 = load ptr, ptr %iv, align 8
@@ -665,7 +664,7 @@ define i32 @test_or_reduction_with_stride_2(i32 %scale, ptr %src) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <16 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP66:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX]], 6
@@ -734,7 +733,7 @@ define i32 @test_or_reduction_with_stride_2(i32 %scale, ptr %src) {
 ; CHECK-NEXT:    [[TMP66]] = or <16 x i32> [[TMP65]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP67:%.*]] = icmp eq i64 [[INDEX_NEXT]], 48
-; CHECK-NEXT:    br i1 [[TMP67]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP67]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP68:%.*]] = call i32 @llvm.vector.reduce.or.v16i32(<16 x i32> [[TMP66]])
 ; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]

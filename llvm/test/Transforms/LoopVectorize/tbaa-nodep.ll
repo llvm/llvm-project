@@ -1,5 +1,5 @@
-; RUN: opt < %s  -aa-pipeline=tbaa,basic-aa -passes=loop-vectorize,dce,instcombine,simplifycfg -force-vector-interleave=1 -force-vector-width=4 -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s
-; RUN: opt < %s  -aa-pipeline=basic-aa -passes=loop-vectorize,dce,instcombine,simplifycfg -force-vector-interleave=1 -force-vector-width=4 -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s --check-prefix=CHECK-NOTBAA
+; RUN: opt < %s  -aa-pipeline=tbaa,basic-aa -passes=loop-vectorize,instcombine,simplifycfg -force-vector-interleave=1 -force-vector-width=4 -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s
+; RUN: opt < %s  -aa-pipeline=basic-aa -passes=loop-vectorize,instcombine,simplifycfg -force-vector-interleave=1 -force-vector-width=4 -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s --check-prefix=CHECK-NOTBAA
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; TBAA partitions the accesses in this loop, so it can be vectorized without
@@ -29,7 +29,7 @@ define i32 @test1(ptr nocapture %a, ptr nocapture readonly %b) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %b, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4, !tbaa !0
@@ -40,7 +40,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %indvars.iv.next, 1600
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret i32 0
 }
 
@@ -73,7 +73,7 @@ define i32 @test2(ptr nocapture readonly %a, ptr nocapture readonly %b, ptr noca
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %b, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4, !tbaa !0
@@ -87,7 +87,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %indvars.iv.next, 1600
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret i32 0
 }
 

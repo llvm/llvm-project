@@ -2961,7 +2961,7 @@ public:
     if (!module_sp->IsExecutable())
       return "";
 
-    return module_sp->GetFileSpec().GetFilename().AsCString();
+    return module_sp->GetFileSpec().GetFilename().GetString();
   }
 
   bool StopRunningProcess() {
@@ -5934,7 +5934,9 @@ public:
       if (m_frame_block != frame_block) {
         m_frame_block = frame_block;
 
-        VariableList *locals = frame->GetVariableList(true, nullptr);
+        VariableList *locals = frame->GetVariableList(
+            /*get_file_globals=*/true, /*include_synthetic_vars=*/true,
+            nullptr);
         if (locals) {
           const DynamicValueType use_dynamic = eDynamicDontRunTarget;
           for (const VariableSP &local_sp : *locals) {

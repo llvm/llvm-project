@@ -24,30 +24,6 @@ add_header_library(
     libc.src.__support.time.abs_timeout
 )
 
-set(monotonicity_flags)
-if (LIBC_CONF_TIMEOUT_ENSURE_MONOTONICITY)
-  libc_set_definition(monotonicity_flags LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY=1)
-else()
-  libc_set_definition(monotonicity_flags LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY=0)
-endif()
-
-libc_set_definition(rwlock_default_spin_count "LIBC_COPT_RWLOCK_DEFAULT_SPIN_COUNT=${LIBC_CONF_RWLOCK_DEFAULT_SPIN_COUNT}")
-add_header_library(
-  rwlock
-  HDRS
-    rwlock.h
-  COMPILE_OPTIONS
-    ${rwlock_default_spin_count}
-    ${monotonicity_flags}
-  DEPENDS
-    .futex_utils
-    libc.src.__support.threads.raw_mutex
-    libc.src.__support.common
-    libc.src.__support.OSUtil.osutil
-    libc.src.__support.CPP.limits
-    libc.src.__support.threads.identifier
-)
-
 add_object_library(
   thread
   SRCS
@@ -57,6 +33,7 @@ add_object_library(
     libc.config.app_h
     libc.include.sys_syscall
     libc.hdr.fcntl_macros
+    libc.hdr.errno_macros
     libc.src.errno.errno
     libc.src.__support.CPP.atomic
     libc.src.__support.CPP.stringstream
@@ -80,22 +57,6 @@ add_header_library(
   DEPENDS
     .futex_utils
     libc.src.__support.macros.optimization
-)
-
-add_object_library(
-  CndVar
-  SRCS
-    CndVar.cpp
-  HDRS
-    ../CndVar.h
-  DEPENDS
-    libc.hdr.stdint_proxy
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
-    libc.src.__support.threads.linux.futex_word_type
-    libc.src.__support.threads.mutex
-    libc.src.__support.threads.raw_mutex
-    libc.src.__support.CPP.mutex
 )
 
 add_object_library(

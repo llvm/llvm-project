@@ -5,8 +5,8 @@
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 
 ; CHECK-LABEL: phi_two_incoming_values
-; CHECK:       LV: Found an estimated cost of 1 for VF 2 For instruction: %i = phi i64 [ %i.next, %if.end ], [ 0, %entry ]
-; CHECK:       LV: Found an estimated cost of 1 for VF 2 For instruction: %tmp5 = phi i32 [ %tmp1, %for.body ], [ %tmp4, %if.then ]
+; CHECK:       Cost of 1 for VF 2: induction instruction   %i = phi i64 [ %i.next, %if.end ], [ 0, %entry ]
+; CHECK:       Cost of 1 for VF 2: BLEND ir<%tmp5> = ir<%tmp1> ir<%tmp4>/ir<%tmp3>
 ;
 define void @phi_two_incoming_values(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; CHECK-LABEL: define void @phi_two_incoming_values(
@@ -82,8 +82,8 @@ for.end:
 }
 
 ; CHECK-LABEL: phi_three_incoming_values
-; CHECK:       LV: Found an estimated cost of 1 for VF 2 For instruction: %i = phi i64 [ %i.next, %if.end ], [ 0, %entry ]
-; CHECK:       LV: Found an estimated cost of 2 for VF 2 For instruction: %tmp8 = phi i32 [ 9, %for.body ], [ 3, %if.then ], [ %tmp7, %if.else ]
+; CHECK:       Cost of 1 for VF 2: induction instruction   %i = phi i64 [ %i.next, %if.end ], [ 0, %entry ]
+; CHECK:       Cost of 2 for VF 2: BLEND ir<%tmp8> = ir<%tmp7> ir<3>/vp<{{.*}}> ir<9>/vp<{{.*}}>
 ;
 define void @phi_three_incoming_values(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; CHECK-LABEL: define void @phi_three_incoming_values(

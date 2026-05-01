@@ -3245,11 +3245,11 @@ static Instruction *foldSelectWithFCmpToFabs(SelectInst &SI,
          isKnownNeverNaN(X, IC.getSimplifyQuery().getWithInstruction(
                                 cast<Instruction>(CondVal))))) {
       if (!Swap && (Pred == FCmpInst::FCMP_OLE || Pred == FCmpInst::FCMP_ULE)) {
-        Value *Fabs = IC.Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X, &SI);
+        Value *Fabs = IC.Builder.CreateFAbs(X, &SI);
         return IC.replaceInstUsesWith(SI, Fabs);
       }
       if (Swap && (Pred == FCmpInst::FCMP_OGT || Pred == FCmpInst::FCMP_UGT)) {
-        Value *Fabs = IC.Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X, &SI);
+        Value *Fabs = IC.Builder.CreateFAbs(X, &SI);
         return IC.replaceInstUsesWith(SI, Fabs);
       }
     }
@@ -3303,11 +3303,11 @@ static Instruction *foldSelectWithFCmpToFabs(SelectInst &SI,
                     Pred == FCmpInst::FCMP_UGT || Pred == FCmpInst::FCMP_UGE;
 
     if (IsLTOrLE) {
-      Value *Fabs = IC.Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X, &SI);
+      Value *Fabs = IC.Builder.CreateFAbs(X, &SI);
       return IC.replaceInstUsesWith(SI, Fabs);
     }
     if (IsGTOrGE) {
-      Value *Fabs = IC.Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X, &SI);
+      Value *Fabs = IC.Builder.CreateFAbs(X, &SI);
       Instruction *NewFNeg = UnaryOperator::CreateFNeg(Fabs);
       NewFNeg->setFastMathFlags(SI.getFastMathFlags());
       return NewFNeg;
@@ -3338,13 +3338,87 @@ static Instruction *foldSelectWithFCmpToFabs(SelectInst &SI,
 
     // Fold (IsNeg ? -X : X) or (!IsNeg ? X : -X) to fabs(X)
     // Fold (IsNeg ? X : -X) or (!IsNeg ? -X : X) to -fabs(X)
-    Value *Fabs = IC.Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X, &SI);
+    Value *Fabs = IC.Builder.CreateFAbs(X, &SI);
     if (Swap != TrueIfSigned)
       return IC.replaceInstUsesWith(SI, Fabs);
     return UnaryOperator::CreateFNegFMF(Fabs, &SI);
   }
 
   return ChangedFMF ? &SI : nullptr;
+}
+
+// Fold a select of an ordered fcmp using fabs of a NaN-scrubbed value:
+//   %s   = select i1 (isnotnan T %x), T %x, T %y
+//   %a   = call T @llvm.fabs.T(T %s)
+//   %c   = fcmp <ordered-pred> T %a, %k
+//   %r   = select i1 %c, T %s, T %y
+//     =>
+//   %a2  = call T @llvm.fabs.T(T %x)
+//   %c2  = fcmp <ordered-pred> T %a2, %k
+//   %r2  = select i1 %c2, T %x, T %y
+static Instruction *
+foldSelectOfOrderedFAbsCmpOfNaNScrubbedValue(SelectInst &SI,
+                                             InstCombinerImpl &IC) {
+  Instruction *OuterCmpI;
+  Value *Cmp0, *Cmp1;
+  if (!match(SI.getCondition(),
+             m_OneUse(m_Instruction(OuterCmpI,
+                                    m_FCmp(m_Value(Cmp0), m_Value(Cmp1))))))
+    return nullptr;
+
+  auto *OuterCmp = cast<FCmpInst>(OuterCmpI);
+  CmpInst::Predicate Pred = OuterCmp->getPredicate();
+  if (!FCmpInst::isOrdered(Pred))
+    return nullptr;
+
+  Value *Y = SI.getFalseValue();
+  Value *InnerSel = SI.getTrueValue();
+
+  // Match a select that returns X when X is not NaN, and Y otherwise:
+  //   select (fcmp ord X, 0.0), X, Y
+  Value *X;
+  if (!match(InnerSel,
+             m_Select(m_OneUse(m_SpecificFCmp(FCmpInst::FCMP_ORD, m_Value(X),
+                                              m_AnyZeroFP())),
+                      m_Deferred(X), m_Specific(Y))))
+    return nullptr;
+
+  Instruction *FAbsI;
+  auto MatchFAbsOfInnerSel = [&](Value *V) {
+    return match(V,
+                 m_OneUse(m_Instruction(FAbsI, m_FAbs(m_Specific(InnerSel)))));
+  };
+
+  if (!MatchFAbsOfInnerSel(Cmp0)) {
+    if (!MatchFAbsOfInnerSel(Cmp1))
+      return nullptr;
+
+    std::swap(Cmp0, Cmp1);
+    Pred = CmpInst::getSwappedPredicate(Pred);
+  }
+
+  FastMathFlags FAbsFMF = FAbsI->getFastMathFlags();
+  FastMathFlags CmpFMF = OuterCmp->getFastMathFlags();
+
+  FastMathFlags CommonRewriteFMF =
+      FastMathFlags::intersectRewrite(FAbsFMF, CmpFMF);
+
+  // unionValue with FastMathFlags() drops all rewriter based flags
+  FastMathFlags NewFAbsFMF =
+      CommonRewriteFMF | FastMathFlags::unionValue(FAbsFMF, FastMathFlags());
+  FastMathFlags NewCmpFMF =
+      CommonRewriteFMF | FastMathFlags::unionValue(CmpFMF, FastMathFlags());
+
+  // When X is NaN, the old code evaluated fabs(Y), while the new code evaluates
+  // fabs(X). Do not preserve nnan on either newly-created instruction.
+  NewFAbsFMF.setNoNaNs(false);
+  NewCmpFMF.setNoNaNs(false);
+
+  Value *NewAbs = IC.Builder.CreateFAbs(X, FMFSource(NewFAbsFMF));
+  Value *NewCmp =
+      IC.Builder.CreateFCmpFMF(Pred, NewAbs, Cmp1, FMFSource(NewCmpFMF));
+  Value *NewSel = IC.Builder.CreateSelectFMF(NewCmp, X, Y, &SI);
+  return IC.replaceInstUsesWith(SI, NewSel);
 }
 
 // Match the following IR pattern:
@@ -4598,6 +4672,9 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   // Fold selecting to fabs.
   if (Instruction *Fabs = foldSelectWithFCmpToFabs(SI, *this))
     return Fabs;
+
+  if (Instruction *I = foldSelectOfOrderedFAbsCmpOfNaNScrubbedValue(SI, *this))
+    return I;
 
   // See if we are selecting two values based on a comparison of the two values.
   if (CmpInst *CI = dyn_cast<CmpInst>(CondVal))

@@ -183,6 +183,7 @@ LogicalResult spirv::Deserializer::processInstruction(
   case spirv::Opcode::OpTypeArray:
   case spirv::Opcode::OpTypeFunction:
   case spirv::Opcode::OpTypeImage:
+  case spirv::Opcode::OpTypeSampler:
   case spirv::Opcode::OpTypeSampledImage:
   case spirv::Opcode::OpTypeRuntimeArray:
   case spirv::Opcode::OpTypeStruct:
@@ -220,6 +221,7 @@ LogicalResult spirv::Deserializer::processInstruction(
   case spirv::Opcode::OpGraphConstantARM:
     return processGraphConstantARM(operands);
   case spirv::Opcode::OpDecorate:
+  case spirv::Opcode::OpDecorateId:
     return processDecoration(operands);
   case spirv::Opcode::OpMemberDecorate:
     return processMemberDecoration(operands);

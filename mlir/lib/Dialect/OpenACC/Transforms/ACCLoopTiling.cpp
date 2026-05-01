@@ -158,7 +158,7 @@ struct ACCLoopTilingImpl : public OpRewritePattern<acc::LoopOp> {
                                 PatternRewriter &rewriter) const override {
 
     if (origLoop.getTileValues().empty())
-      return success();
+      return failure();
 
     SmallVector<Value> tileSizes(origLoop.getTileValues().begin(),
                                  origLoop.getTileValues().end());

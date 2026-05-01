@@ -645,16 +645,15 @@ define <4 x i16> @sminsmax_range_unsigned_i64_to_i16(<2 x i16> %x, <2 x i64> %y)
 ;
 ; CHECK-GI-LABEL: sminsmax_range_unsigned_i64_to_i16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    cmgt v2.2d, v1.2d, #0
-; CHECK-GI-NEXT:    movi v3.2d, #0x0000000000ffff
-; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-GI-NEXT:    cmgt v2.2d, v3.2d, v1.2d
-; CHECK-GI-NEXT:    bif v1.16b, v3.16b, v2.16b
+; CHECK-GI-NEXT:    cmgt v3.2d, v1.2d, #0
+; CHECK-GI-NEXT:    movi v2.2d, #0x0000000000ffff
+; CHECK-GI-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
+; CHECK-GI-NEXT:    and v1.16b, v1.16b, v3.16b
+; CHECK-GI-NEXT:    cmgt v3.2d, v2.2d, v1.2d
+; CHECK-GI-NEXT:    bif v1.16b, v2.16b, v3.16b
 ; CHECK-GI-NEXT:    xtn v1.2s, v1.2d
 ; CHECK-GI-NEXT:    uzp1 v1.4h, v1.4h, v0.4h
-; CHECK-GI-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
-; CHECK-GI-NEXT:    fmov w8, s1
-; CHECK-GI-NEXT:    mov v0.s[1], w8
+; CHECK-GI-NEXT:    mov v0.s[1], v1.s[0]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -683,6 +682,7 @@ define <4 x i16> @sminsmax_range_signed_i64_to_i16(<2 x i16> %x, <2 x i64> %y) {
 ; CHECK-GI-LABEL: sminsmax_range_signed_i64_to_i16:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    adrp x8, .LCPI46_1
+; CHECK-GI-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
 ; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI46_1]
 ; CHECK-GI-NEXT:    adrp x8, .LCPI46_0
 ; CHECK-GI-NEXT:    cmgt v3.2d, v1.2d, v2.2d
@@ -692,9 +692,7 @@ define <4 x i16> @sminsmax_range_signed_i64_to_i16(<2 x i16> %x, <2 x i64> %y) {
 ; CHECK-GI-NEXT:    bif v1.16b, v2.16b, v3.16b
 ; CHECK-GI-NEXT:    xtn v1.2s, v1.2d
 ; CHECK-GI-NEXT:    uzp1 v1.4h, v1.4h, v0.4h
-; CHECK-GI-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
-; CHECK-GI-NEXT:    fmov w8, s1
-; CHECK-GI-NEXT:    mov v0.s[1], w8
+; CHECK-GI-NEXT:    mov v0.s[1], v1.s[0]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -718,13 +716,12 @@ define <4 x i16> @umin_range_unsigned_i64_to_i16(<2 x i16> %x, <2 x i64> %y) {
 ; CHECK-GI-LABEL: umin_range_unsigned_i64_to_i16:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    movi v2.2d, #0x0000000000ffff
+; CHECK-GI-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
 ; CHECK-GI-NEXT:    cmhi v3.2d, v2.2d, v1.2d
 ; CHECK-GI-NEXT:    bif v1.16b, v2.16b, v3.16b
 ; CHECK-GI-NEXT:    xtn v1.2s, v1.2d
 ; CHECK-GI-NEXT:    uzp1 v1.4h, v1.4h, v0.4h
-; CHECK-GI-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
-; CHECK-GI-NEXT:    fmov w8, s1
-; CHECK-GI-NEXT:    mov v0.s[1], w8
+; CHECK-GI-NEXT:    mov v0.s[1], v1.s[0]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -750,13 +747,12 @@ define <8 x i8> @sminsmax_range_unsigned_i64_to_i8(<4 x i8> %x, <4 x i32> %y) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-GI-NEXT:    movi v3.2d, #0x0000ff000000ff
+; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    smax v1.4s, v1.4s, v2.4s
 ; CHECK-GI-NEXT:    smin v1.4s, v1.4s, v3.4s
 ; CHECK-GI-NEXT:    xtn v1.4h, v1.4s
 ; CHECK-GI-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
-; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
-; CHECK-GI-NEXT:    fmov w8, s1
-; CHECK-GI-NEXT:    mov v0.s[1], w8
+; CHECK-GI-NEXT:    mov v0.s[1], v1.s[0]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -782,13 +778,12 @@ define <8 x i8> @sminsmax_range_signed_i32_to_i8(<4 x i8> %x, <4 x i32> %y) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mvni v2.4s, #127
 ; CHECK-GI-NEXT:    movi v3.4s, #127
+; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    smax v1.4s, v1.4s, v2.4s
 ; CHECK-GI-NEXT:    smin v1.4s, v1.4s, v3.4s
 ; CHECK-GI-NEXT:    xtn v1.4h, v1.4s
 ; CHECK-GI-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
-; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
-; CHECK-GI-NEXT:    fmov w8, s1
-; CHECK-GI-NEXT:    mov v0.s[1], w8
+; CHECK-GI-NEXT:    mov v0.s[1], v1.s[0]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -811,12 +806,11 @@ define <8 x i8> @umin_range_unsigned_i32_to_i8(<4 x i8> %x, <4 x i32> %y) {
 ; CHECK-GI-LABEL: umin_range_unsigned_i32_to_i8:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    movi v2.2d, #0x0000ff000000ff
+; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    umin v1.4s, v1.4s, v2.4s
 ; CHECK-GI-NEXT:    xtn v1.4h, v1.4s
 ; CHECK-GI-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
-; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
-; CHECK-GI-NEXT:    fmov w8, s1
-; CHECK-GI-NEXT:    mov v0.s[1], w8
+; CHECK-GI-NEXT:    mov v0.s[1], v1.s[0]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:

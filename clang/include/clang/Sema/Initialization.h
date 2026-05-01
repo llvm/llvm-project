@@ -136,6 +136,20 @@ public:
     // that diagnostic text needs to be updated as well.
   };
 
+  enum class NRVOKind : uint8_t { Forbidden, Allowed };
+
+  enum class NewArrayKind : uint8_t {
+    KnownLength,
+    UnknownLength,
+  };
+
+  enum class FieldInitKind : uint8_t {
+    Normal,
+    ImplicitField,
+    DefaultMember,
+    ParenAgg
+  };
+
 private:
   /// The kind of entity being initialized.
   EntityKind Kind;
@@ -159,11 +173,11 @@ private:
 
     /// Whether the entity being initialized may end up using the
     /// named return value optimization (NRVO).
-    bool NRVO;
+    NRVOKind NRVO;
 
     /// When Kind == EK_New, whether this is initializing an array of runtime
     /// size (which needs an array filler).
-    bool VariableLengthArrayNew;
+    NewArrayKind IsVariableLengthArrayNew;
   };
 
   struct VD {
@@ -171,14 +185,14 @@ private:
     /// initialized.
     NamedDecl *VariableOrMember;
 
-    /// When Kind == EK_Member, whether this is an implicit member
-    /// initialization in a copy or move constructor. These can perform array
-    /// copies.
-    bool IsImplicitFieldInit;
-
-    /// When Kind == EK_Member, whether this is the initial initialization
-    /// check for a default member initializer.
-    bool IsDefaultMemberInit;
+    /// When Kind == EK_Member or EK_ParenAggInitMember, whether this is:
+    /// - ImplicitField: an implicit member initialization in a copy or move
+    ///   constructor. These can perform array copies.
+    /// - DefaultMember: the initial initialization check for a default member
+    ///   initialize.
+    /// - ParenAgg: aggregate initialization with a parenthesized list.
+    /// - Normal: simple member initialization.
+    FieldInitKind FieldKind;
   };
 
   struct C {
@@ -225,27 +239,25 @@ private:
 
   /// Create the initialization entity for a variable.
   InitializedEntity(VarDecl *Var, EntityKind EK = EK_Variable)
-      : Kind(EK), Type(Var->getType()), Variable{Var, false, false} {}
+      : Kind(EK), Type(Var->getType()), Variable{Var, FieldInitKind::Normal} {}
 
   /// Create the initialization entity for the result of a
   /// function, throwing an object, performing an explicit cast, or
   /// initializing a parameter for which there is no declaration.
-  InitializedEntity(EntityKind Kind, SourceLocation Loc, QualType Type,
-                    bool NRVO = false, bool VariableLengthArrayNew = false)
+  InitializedEntity(
+      EntityKind Kind, SourceLocation Loc, QualType Type,
+      NRVOKind NRVO = NRVOKind::Forbidden,
+      NewArrayKind VariableLengthArrayNew = NewArrayKind::KnownLength)
       : Kind(Kind), Type(Type) {
-    new (&LocAndNRVO) LN;
-    LocAndNRVO.Location = Loc;
-    LocAndNRVO.NRVO = NRVO;
-    LocAndNRVO.VariableLengthArrayNew = VariableLengthArrayNew;
+    new (&LocAndNRVO) LN{Loc, NRVO, VariableLengthArrayNew};
   }
 
   /// Create the initialization entity for a member subobject.
   InitializedEntity(FieldDecl *Member, const InitializedEntity *Parent,
-                    bool Implicit, bool DefaultMemberInit,
-                    bool IsParenAggInit = false)
-      : Kind(IsParenAggInit ? EK_ParenAggInitMember : EK_Member),
-        Parent(Parent), Type(Member->getType()),
-        Variable{Member, Implicit, DefaultMemberInit} {}
+                    FieldInitKind FieldKind)
+      : Kind(FieldKind == FieldInitKind::ParenAgg ? EK_ParenAggInitMember
+                                                  : EK_Member),
+        Parent(Parent), Type(Member->getType()), Variable{Member, FieldKind} {}
 
   /// Create the initialization entity for an array element.
   InitializedEntity(ASTContext &Context, unsigned Index,
@@ -254,9 +266,7 @@ private:
   /// Create the initialization entity for a lambda capture.
   InitializedEntity(IdentifierInfo *VarID, QualType FieldType, SourceLocation Loc)
       : Kind(EK_LambdaCapture), Type(FieldType) {
-    new (&Capture) C;
-    Capture.VarID = VarID;
-    Capture.Location = Loc;
+    new (&Capture) C{VarID, Loc};
   }
 
 public:
@@ -307,7 +317,7 @@ public:
     Entity.Kind = EK_TemplateParameter;
     Entity.Type = T;
     Entity.Parent = nullptr;
-    Entity.Variable = {Param, false, false};
+    Entity.Variable = {Param, FieldInitKind::Normal};
     return Entity;
   }
 
@@ -340,10 +350,11 @@ public:
   }
 
   /// Create the initialization entity for an object allocated via new.
-  static InitializedEntity InitializeNew(SourceLocation NewLoc, QualType Type,
-                                         bool VariableLengthArrayNew) {
-    return InitializedEntity(EK_New, NewLoc, Type, /*NRVO=*/false,
-                             VariableLengthArrayNew);
+  static InitializedEntity
+  InitializeNew(SourceLocation NewLoc, QualType Type,
+                NewArrayKind IsVariableLengthArrayNew) {
+    return InitializedEntity(EK_New, NewLoc, Type, NRVOKind::Forbidden,
+                             IsVariableLengthArrayNew);
   }
 
   /// Create the initialization entity for a temporary.
@@ -393,31 +404,43 @@ public:
   /// Create the initialization entity for a member subobject.
   static InitializedEntity
   InitializeMember(FieldDecl *Member,
-                   const InitializedEntity *Parent = nullptr,
-                   bool Implicit = false) {
-    return InitializedEntity(Member, Parent, Implicit, false);
+                   const InitializedEntity *Parent = nullptr) {
+    return InitializedEntity(Member, Parent, FieldInitKind::Normal);
   }
 
   /// Create the initialization entity for a member subobject.
   static InitializedEntity
   InitializeMember(IndirectFieldDecl *Member,
-                   const InitializedEntity *Parent = nullptr,
-                   bool Implicit = false) {
-    return InitializedEntity(Member->getAnonField(), Parent, Implicit, false);
+                   const InitializedEntity *Parent = nullptr) {
+    return InitializedEntity(Member->getAnonField(), Parent,
+                             FieldInitKind::Normal);
+  }
+
+  /// Create the initialization entity for a member subobject with implicit
+  /// field initializer.
+  static InitializedEntity InitializeMemberImplicit(FieldDecl *Member) {
+    return InitializedEntity(Member, /*Parent=*/nullptr,
+                             FieldInitKind::ImplicitField);
+  }
+
+  /// Create the initialization entity for a member subobject with implicit
+  /// field initializer.
+  static InitializedEntity InitializeMemberImplicit(IndirectFieldDecl *Member) {
+    return InitializedEntity(Member->getAnonField(), /*Parent=*/nullptr,
+                             FieldInitKind::ImplicitField);
   }
 
   /// Create the initialization entity for a member subobject initialized via
   /// parenthesized aggregate init.
   static InitializedEntity InitializeMemberFromParenAggInit(FieldDecl *Member) {
-    return InitializedEntity(Member, /*Parent=*/nullptr, /*Implicit=*/false,
-                             /*DefaultMemberInit=*/false,
-                             /*IsParenAggInit=*/true);
+    return InitializedEntity(Member, /*Parent=*/nullptr,
+                             FieldInitKind::ParenAgg);
   }
 
   /// Create the initialization entity for a default member initializer.
   static InitializedEntity
   InitializeMemberFromDefaultMemberInitializer(FieldDecl *Member) {
-    return InitializedEntity(Member, nullptr, false, true);
+    return InitializedEntity(Member, nullptr, FieldInitKind::DefaultMember);
   }
 
   /// Create the initialization entity for an array element.
@@ -513,19 +536,22 @@ public:
 
   /// Determine whether this is an array new with an unknown bound.
   bool isVariableLengthArrayNew() const {
-    return getKind() == EK_New && LocAndNRVO.VariableLengthArrayNew;
+    return getKind() == EK_New &&
+           LocAndNRVO.IsVariableLengthArrayNew == NewArrayKind::UnknownLength;
   }
 
   /// Is this the implicit initialization of a member of a class from
   /// a defaulted constructor?
   bool isImplicitMemberInitializer() const {
-    return getKind() == EK_Member && Variable.IsImplicitFieldInit;
+    return getKind() == EK_Member &&
+           Variable.FieldKind == FieldInitKind::ImplicitField;
   }
 
   /// Is this the default member initializer of a member (specified inside
   /// the class definition)?
   bool isDefaultMemberInitializer() const {
-    return getKind() == EK_Member && Variable.IsDefaultMemberInit;
+    return getKind() == EK_Member &&
+           Variable.FieldKind == FieldInitKind::DefaultMember;
   }
 
   /// Determine the location of the 'return' keyword when initializing
@@ -1137,7 +1163,7 @@ public:
     // A designated initializer was provided for a non-aggregate type.
     FK_DesignatedInitForNonAggregate,
 
-    /// HLSL intialization list flattening failed.
+    /// HLSL initialization list flattening failed.
     FK_HLSLInitListFlatteningFailed,
   };
 

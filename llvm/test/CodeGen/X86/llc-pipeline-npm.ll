@@ -54,10 +54,12 @@
 ; O0-NEXT: prolog-epilog
 ; O0-NEXT: post-ra-pseudos
 ; O0-NEXT: x86-expand-pseudo
+; O0-NEXT: kcfi
 ; O0-NEXT: fentry-insert
 ; O0-NEXT: xray-instrumentation
 ; O0-NEXT: patchable-function
 ; O0-NEXT: x86-indirect-branch-tracking
+; O0-NEXT: x86-insert-vzeroupper
 ; O0-NEXT: x86-compress-evex
 ; O0-NEXT: x86-insert-x87-wait
 ; O0-NEXT: FuncletLayoutPass
@@ -88,8 +90,6 @@
 ; O2-NEXT: verify
 ; O2-NEXT: loop(canon-freeze
 ; O2-NEXT: loop-reduce)
-; O2-NEXT: mergeicmps
-; O2-NEXT: expand-memcmp
 ; O2-NEXT: gc-lowering)
 ; O2-NEXT: shadow-stack-gc-lowering
 ; O2-NEXT: function(unreachableblockelim
@@ -167,6 +167,7 @@
 ; O2-NEXT: machine-cp
 ; O2-NEXT: post-ra-pseudos
 ; O2-NEXT: x86-expand-pseudo
+; O2-NEXT: kcfi
 ; O2-NEXT: post-RA-sched
 ; O2-NEXT: block-placement
 ; O2-NEXT: fentry-insert
@@ -174,6 +175,7 @@
 ; O2-NEXT: patchable-function
 ; O2-NEXT: BreakFalseDepsPass
 ; O2-NEXT: x86-indirect-branch-tracking
+; O2-NEXT: x86-insert-vzeroupper
 ; O2-NEXT: x86-fixup-bw-insts
 ; O2-NEXT: x86-fixup-leas
 ; O2-NEXT: x86-fixup-inst-tuning
@@ -240,10 +242,12 @@
 ; O0-WINDOWS-NEXT: prolog-epilog
 ; O0-WINDOWS-NEXT: post-ra-pseudos
 ; O0-WINDOWS-NEXT: x86-expand-pseudo
+; O0-WINDOWS-NEXT: kcfi
 ; O0-WINDOWS-NEXT: fentry-insert
 ; O0-WINDOWS-NEXT: xray-instrumentation
 ; O0-WINDOWS-NEXT: patchable-function
 ; O0-WINDOWS-NEXT: x86-indirect-branch-tracking
+; O0-WINDOWS-NEXT: x86-insert-vzeroupper
 ; O0-WINDOWS-NEXT: x86-compress-evex
 ; O0-WINDOWS-NEXT: x86-insert-x87-wait
 ; O0-WINDOWS-NEXT: FuncletLayoutPass
@@ -276,8 +280,6 @@
 ; O3-WINDOWS-NEXT: verify
 ; O3-WINDOWS-NEXT: loop(canon-freeze
 ; O3-WINDOWS-NEXT: loop-reduce)
-; O3-WINDOWS-NEXT: mergeicmps
-; O3-WINDOWS-NEXT: expand-memcmp
 ; O3-WINDOWS-NEXT: gc-lowering)
 ; O3-WINDOWS-NEXT: shadow-stack-gc-lowering
 ; O3-WINDOWS-NEXT: function(unreachableblockelim
@@ -356,6 +358,7 @@
 ; O3-WINDOWS-NEXT: machine-cp
 ; O3-WINDOWS-NEXT: post-ra-pseudos
 ; O3-WINDOWS-NEXT: x86-expand-pseudo
+; O3-WINDOWS-NEXT: kcfi
 ; O3-WINDOWS-NEXT: post-RA-sched
 ; O3-WINDOWS-NEXT: block-placement
 ; O3-WINDOWS-NEXT: fentry-insert
@@ -363,6 +366,7 @@
 ; O3-WINDOWS-NEXT: patchable-function
 ; O3-WINDOWS-NEXT: BreakFalseDepsPass
 ; O3-WINDOWS-NEXT: x86-indirect-branch-tracking
+; O3-WINDOWS-NEXT: x86-insert-vzeroupper
 ; O3-WINDOWS-NEXT: x86-fixup-bw-insts
 ; O3-WINDOWS-NEXT: x86-fixup-leas
 ; O3-WINDOWS-NEXT: x86-fixup-inst-tuning

@@ -13,6 +13,7 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include "MCTargetDesc/AArch64InstPrinter.h"
@@ -33,12 +34,13 @@ public:
 };
 
 static std::string AArch64InstPrinterTestPrintAlignedLabel(uint64_t value) {
-  MCAsmInfo MAI;
+  MCTargetOptions MCOptions;
+  MCAsmInfo MAI(MCOptions);
   MCInstrInfo MII;
   MCRegisterInfo MRI;
   MCSubtargetInfo STI(Triple(""), "", "", "", {}, {}, {}, nullptr, nullptr,
                       nullptr, nullptr, nullptr, nullptr);
-  MCContext Ctx(Triple(""), &MAI, &MRI, &STI);
+  MCContext Ctx(Triple(""), MAI, &MRI, &STI);
   MCInst MI;
 
   MI.addOperand(MCOperand::createExpr(MCConstantExpr::create(value, Ctx)));
