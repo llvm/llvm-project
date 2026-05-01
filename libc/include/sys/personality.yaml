@@ -1,5 +1,4 @@
 header: sys/personality.h
-header_template: personality.h.def
 macros:
   - macro_name: PER_LINUX
     macro_header: sys-personality-macros.h
@@ -9,7 +8,7 @@ objects: []
 functions:
   - name: personality
     standards:
-      - Linux
+      - linux
     return_type: int
     arguments:
       - type: unsigned long
