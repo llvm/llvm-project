@@ -8,7 +8,7 @@ func.func @vector_interleave_to_shuffle(%a: vector<7xi16>, %b: vector<7xi16>) ->
 // CHECK: vector.shuffle %arg0, %arg1 [0, 7, 1, 8, 2, 9, 3, 10, 4, 11, 5, 12, 6, 13] : vector<7xi16>, vector<7xi16>
 
 // CHECK-LABEL: @vector_interleave_0d
-func.func @vector_interleave_0d(%a: vector<f32>, %b: vector<f32>) -> vector<2xf32> {
+func.func @vector_interleave_to_shuffle_0d(%a: vector<f32>, %b: vector<f32>) -> vector<2xf32> {
   %0 = vector.interleave %a, %b : vector<f32> -> vector<2xf32>
   return %0 : vector<2xf32>
 }
