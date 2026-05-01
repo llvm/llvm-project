@@ -13604,18 +13604,6 @@ SDValue llvm::peekThroughTruncates(SDValue V) {
   return V;
 }
 
-SDValue llvm::peekThroughFreeze(SDValue V) {
-  if (V.getOpcode() == ISD::FREEZE)
-    return V.getOperand(0);
-  return V;
-}
-
-SDValue llvm::peekThroughOneUseFreeze(SDValue V) {
-  if (V.getOpcode() == ISD::FREEZE && V.hasOneUse())
-    return V.getOperand(0);
-  return V;
-}
-
 bool llvm::isBitwiseNot(SDValue V, bool AllowUndefs) {
   if (V.getOpcode() != ISD::XOR)
     return false;
