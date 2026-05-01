@@ -79,7 +79,9 @@ void Stream::PutCStringColorHighlighted(
     return;
   }
 
-  llvm::Regex reg_pattern(pattern_info->pattern);
+  llvm::Regex reg_pattern(pattern_info->pattern, pattern_info->ignore_case
+                                                     ? llvm::Regex::IgnoreCase
+                                                     : llvm::Regex::NoFlags);
   llvm::SmallVector<llvm::StringRef, 1> matches;
   llvm::StringRef remaining = text;
   std::string format_str = lldb_private::ansi::FormatAnsiTerminalCodes(
