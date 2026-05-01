@@ -4631,11 +4631,6 @@ private:
   mlir::LLVM::TargetFeaturesAttr targetFeatures;
 };
 
-struct MetadirectiveVariant {
-  const parser::OmpDirectiveSpecification *spec = nullptr;
-  bool isExplicit = false;
-};
-
 struct MetadirectiveCandidate {
   MetadirectiveCandidate(const parser::OmpDirectiveSpecification *spec,
                          llvm::omp::VariantMatchInfo vmi, bool isExplicit)
@@ -4699,11 +4694,13 @@ static void genMetadirective(lower::AbstractConverter &converter,
     return nullptr;
   };
 
-  auto getDirectiveVariant =
-      [](const parser::OmpClause::When &whenClause) -> MetadirectiveVariant {
+  // Extract the directive variant spec from a when clause.
+  // Returns {spec_ptr, isExplicit}. A null spec means "nothing".
+  auto getDirectiveVariant = [](const parser::OmpClause::When &whenClause)
+      -> std::pair<const parser::OmpDirectiveSpecification *, bool> {
     const auto &opt = std::get<1>(whenClause.v.t);
     if (!opt)
-      return {};
+      return {nullptr, false};
     if (opt->value().DirId() == llvm::omp::Directive::OMPD_nothing)
       return {nullptr, true};
     return {&opt->value(), true};
@@ -4721,12 +4718,12 @@ static void genMetadirective(lower::AbstractConverter &converter,
     if (const auto *whenClause =
             std::get_if<parser::OmpClause::When>(&clause.u)) {
       const auto *ctxSel = getContextSelector(*whenClause);
-      MetadirectiveVariant variant = getDirectiveVariant(*whenClause);
+      auto [spec, isExplicit] = getDirectiveVariant(*whenClause);
 
       // Always match when there is no context selector.
       if (!ctxSel) {
-        candidates.emplace_back(variant.spec, llvm::omp::VariantMatchInfo(),
-                                variant.isExplicit);
+        candidates.emplace_back(spec, llvm::omp::VariantMatchInfo(),
+                                isExplicit);
         continue;
       }
 
@@ -4742,7 +4739,7 @@ static void genMetadirective(lower::AbstractConverter &converter,
       if (!llvm::omp::isVariantApplicableInContext(vmi, ompCtx))
         continue;
 
-      candidates.emplace_back(variant.spec, vmi, variant.isExplicit);
+      candidates.emplace_back(spec, vmi, isExplicit);
     } else if (const auto *otherwiseClause =
                    std::get_if<parser::OmpClause::Otherwise>(&clause.u)) {
       if (otherwiseClause->v && otherwiseClause->v->v)
