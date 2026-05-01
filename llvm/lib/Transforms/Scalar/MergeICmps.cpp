@@ -892,8 +892,8 @@ static bool runImpl(Function &F, const TargetLibraryInfo &TLI,
   if (!TTI.enableMemCmpExpansion(F.hasOptSize(), true))
     return false;
 
-  // If we don't have memcmp avaiable we can't emit calls to it.
-  if (!TLI.has(LibFunc_memcmp))
+  // Make sure we can emit calls to memcmp().
+  if (!isLibFuncEmittable(F.getParent(), &TLI, LibFunc_memcmp))
     return false;
 
   DomTreeUpdater DTU(DT, /*PostDominatorTree*/ nullptr,

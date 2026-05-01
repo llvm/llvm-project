@@ -331,7 +331,7 @@ int main(void) {
 #pragma omp atomic capture seq_cst
   {cdx = cdx - cdv; cfv = cdx;}
 // CHECK: [[BV:%.+]] = load i8, ptr @{{.+}}
-// CHECK: [[BOOL:%.+]] = trunc i8 [[BV]] to i1
+// CHECK: [[BOOL:%.+]] = icmp ne i8 [[BV]], 0
 // CHECK: [[EXPR:%.+]] = zext i1 [[BOOL]] to i64
 // CHECK: [[OLD:%.+]] = atomicrmw and ptr @{{.+}}, i64 [[EXPR]] monotonic, align 8
 // CHECK: [[DESIRED:%.+]] = and i64 [[OLD]], [[EXPR]]
@@ -344,7 +344,7 @@ int main(void) {
 // CHECK: br label %[[CONT:.+]]
 // CHECK: [[CONT]]
 // CHECK: [[EXPECTED:%.+]] = phi i8 [ [[X]], %{{.+}} ], [ [[OLD_X:%.+]], %[[CONT]] ]
-// CHECK: [[OLD_BOOL:%.+]] = trunc i8 [[EXPECTED]] to i1
+// CHECK: [[OLD_BOOL:%.+]] = icmp ne i8 [[EXPECTED]], 0
 // CHECK: [[X_RVAL:%.+]] = zext i1 [[OLD_BOOL]] to i32
 // CHECK: [[AND:%.+]] = and i32 [[EXPR]], [[X_RVAL]]
 // CHECK: [[CAST:%.+]] = icmp ne i32 [[AND]], 0
@@ -549,7 +549,7 @@ int main(void) {
 // CHECK: br label %[[CONT:.+]]
 // CHECK: [[CONT]]
 // CHECK: [[EXPECTED:%.+]] = phi i8 [ [[XI8]], %{{.+}} ], [ [[OLD_X:%.+]], %[[CONT]] ]
-// CHECK: [[BOOL_EXPECTED:%.+]] = trunc i8 [[EXPECTED]] to i1
+// CHECK: [[BOOL_EXPECTED:%.+]] = icmp ne i8 [[EXPECTED]], 0
 // CHECK: [[CONV:%.+]] = zext i1 [[BOOL_EXPECTED]] to i32
 // CHECK: [[X_RVAL:%.+]] = sitofp i32 [[CONV]] to x86_fp80
 // CHECK: [[MUL:%.+]] = fmul x86_fp80 [[EXPR]], [[X_RVAL]]
@@ -572,7 +572,7 @@ int main(void) {
 // CHECK: br label %[[CONT:.+]]
 // CHECK: [[CONT]]
 // CHECK: [[EXPECTED:%.+]] = phi i8 [ [[XI8]], %{{.+}} ], [ [[OLD_X:%.+]], %[[CONT]] ]
-// CHECK: [[BOOL_EXPECTED:%.+]] = trunc i8 [[EXPECTED]] to i1
+// CHECK: [[BOOL_EXPECTED:%.+]] = icmp ne i8 [[EXPECTED]], 0
 // CHECK: [[X_RVAL:%.+]] = zext i1 [[BOOL_EXPECTED]] to i32
 // CHECK: [[SUB_RE:%.+]] = sub i32 [[EXPR_RE:%.+]], [[X_RVAL]]
 // CHECK: [[SUB_IM:%.+]] = sub i32 [[EXPR_IM:%.+]], 0

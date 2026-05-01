@@ -39,6 +39,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sched.sched_get_priority_max
     libc.src.sched.sched_get_priority_min
     libc.src.sched.sched_getaffinity
+    libc.src.sched.sched_getcpu
     libc.src.sched.sched_getparam
     libc.src.sched.sched_getscheduler
     libc.src.sched.sched_rr_get_interval
@@ -1134,6 +1135,13 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_condattr_init
     libc.src.pthread.pthread_condattr_setclock
     libc.src.pthread.pthread_condattr_setpshared
+    libc.src.pthread.pthread_cond_broadcast
+    libc.src.pthread.pthread_cond_clockwait
+    libc.src.pthread.pthread_cond_destroy
+    libc.src.pthread.pthread_cond_init
+    libc.src.pthread.pthread_cond_signal
+    libc.src.pthread.pthread_cond_timedwait
+    libc.src.pthread.pthread_cond_wait
     libc.src.pthread.pthread_create
     libc.src.pthread.pthread_detach
     libc.src.pthread.pthread_equal

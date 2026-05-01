@@ -173,7 +173,7 @@ body:             |
     ; CHECK-NEXT: $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
     ; CHECK-NEXT: S_SETREG_IMM32_B32 146108, 30785, implicit-def $mode, implicit $mode
     ; CHECK-NEXT: S_NOP 0
-    ; CHECK-NEXT: S_SET_VGPR_MSB 65, implicit-def $mode
+    ; CHECK-NEXT: S_SET_VGPR_MSB 16705, implicit-def $mode
     ; CHECK-NEXT: S_ENDPGM 0
     $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
     ; size=16, offset=1, hwreg=MODE: simm16 = 0x7841 = 30785

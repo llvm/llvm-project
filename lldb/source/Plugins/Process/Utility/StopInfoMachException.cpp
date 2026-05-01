@@ -636,7 +636,7 @@ StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
   addr_t pc = reg_ctx_sp->GetPC();
   BreakpointSiteSP bp_site_sp =
       process_sp->GetBreakpointSiteList().FindByAddress(pc);
-  if (bp_site_sp && bp_site_sp->IsEnabled())
+  if (bp_site_sp && process_sp->IsBreakpointSitePhysicallyEnabled(*bp_site_sp))
     thread.SetThreadStoppedAtUnexecutedBP(pc);
 
   switch (exc_type) {
@@ -771,7 +771,8 @@ StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
       if (!bp_site_sp && reg_ctx_sp) {
         bp_site_sp = process_sp->GetBreakpointSiteList().FindByAddress(pc);
       }
-      if (bp_site_sp && bp_site_sp->IsEnabled()) {
+      if (bp_site_sp &&
+          process_sp->IsBreakpointSitePhysicallyEnabled(*bp_site_sp)) {
         // We've hit this breakpoint, whether it was intended for this thread
         // or not.  Clear this in the Tread object so we step past it on resume.
         thread.SetThreadHitBreakpointSite();
@@ -865,7 +866,8 @@ bool StopInfoMachException::WasContinueInterrupted(Thread &thread) {
   // We have a hardware breakpoint -- this is the kernel bug.
   auto &bp_site_list = process_sp->GetBreakpointSiteList();
   for (auto &site : bp_site_list.Sites()) {
-    if (site->IsHardware() && site->IsEnabled()) {
+    if (site->IsHardware() &&
+        process_sp->IsBreakpointSitePhysicallyEnabled(*site)) {
       LLDB_LOGF(log,
                 "Thread stopped with insn-step completed mach exception but "
                 "thread was not stepping; there is a hardware breakpoint set.");

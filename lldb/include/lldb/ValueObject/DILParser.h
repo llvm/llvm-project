@@ -35,9 +35,6 @@ enum class ErrorCode : unsigned char {
   kUnknown,
 };
 
-llvm::Expected<lldb::TypeSystemSP>
-GetTypeSystemFromCU(std::shared_ptr<StackFrame> ctx);
-
 // The following is modeled on class OptionParseError.
 class DILDiagnosticError
     : public llvm::ErrorInfo<DILDiagnosticError, DiagnosticError> {
