@@ -1540,9 +1540,17 @@ struct AAPointerInfoImpl
       // paths that the BFS can't model. In that case, we skip the BFS entirely
       // and only use the same-block optimization (which doesn't depend on the
       // BFS).
-      bool BFSSafe = false;
-      if (isa<AllocaInst>(&getAssociatedValue()) && IsLiveInCalleeCB)
-        BFSSafe = true;
+      // For an alloca AI, IsLiveInCalleeCB returns true iff the function
+      // it is queried for is *not* AI's enclosing function (AIFn). Testing
+      // IsLiveInCalleeCB(Scope) == false therefore checks two things at
+      // once: that AIFn is norecurse (a precondition for IsLiveInCalleeCB
+      // to have been assigned for an alloca) and that Scope == AIFn (so
+      // norecurse of AIFn implies norecurse of the function the BFS runs
+      // over). Both legs are required for the BFS to be a sound negative
+      // filter; the previous "IsLiveInCalleeCB is callable" check only
+      // verified the first leg.
+      bool BFSSafe = isa<AllocaInst>(&getAssociatedValue()) &&
+                     IsLiveInCalleeCB && !IsLiveInCalleeCB(Scope);
 
       auto CanSkipAccessBatch = [&](const Access &Acc, bool Exact) {
         if (SkipCB && SkipCB(Acc))
