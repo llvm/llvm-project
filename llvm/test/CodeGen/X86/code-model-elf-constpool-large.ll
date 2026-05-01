@@ -8,6 +8,8 @@
 ; CHECK: .lrodata.cst4  {{.*}} AMl
 
 ; Also verify the suffixed path (via -partition-static-data-sections).
+; The .hot suffix requires profile information (see !prof metadata below)
+; so that the partitioner can distinguish hot from cold constant pool entries.
 ; RUN: llc < %s -relocation-model=pic -code-model=large \
 ; RUN:     -partition-static-data-sections -o - | FileCheck %s --check-prefix=SUFFIX
 
