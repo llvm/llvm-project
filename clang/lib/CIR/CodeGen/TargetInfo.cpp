@@ -132,6 +132,24 @@ class NVPTXTargetCIRGenInfo : public TargetCIRGenInfo {
 public:
   NVPTXTargetCIRGenInfo(CIRGenTypes &cgt)
       : TargetCIRGenInfo(std::make_unique<NVPTXABIInfo>(cgt)) {}
+
+  void setTargetAttributes(const clang::Decl *decl, mlir::Operation *global,
+                           CIRGenModule &cgm) const override {
+    auto func = mlir::dyn_cast<cir::FuncOp>(global);
+    if (!func || func.isDeclaration())
+      return;
+
+    const auto *fd = dyn_cast_or_null<FunctionDecl>(decl);
+    if (!fd)
+      return;
+
+    if (cgm.getLangOpts().CUDA && fd->hasAttr<CUDAGlobalAttr>())
+      func.setCallingConv(cir::CallingConv::PTXKernel);
+
+    // TODO(CIR): NoInline on kernels, CUDALaunchBoundsAttr,
+    // CUDAGridConstantAttr param attrs, nvvm.annotations for
+    // surface/texture VarDecls.
+  }
 };
 } // namespace
 
