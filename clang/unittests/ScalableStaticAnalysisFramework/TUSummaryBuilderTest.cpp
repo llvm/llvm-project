@@ -273,6 +273,8 @@ TEST_F(TUSummaryBuilderTest, AddConflictingSummaryToSameEntity) {
 
 struct TUSummaryBuilderLinkageTest : TUSummaryBuilderTest {
   std::unique_ptr<ASTUnit> AST;
+  static constexpr auto Internal = EntityLinkageType::Internal;
+  static constexpr auto External = EntityLinkageType::External;
 
   const FunctionDecl *findFnByName(StringRef Name) {
     return ssaf::findFnByName(Name, AST->getASTContext());
@@ -292,32 +294,28 @@ TEST_F(TUSummaryBuilderLinkageTest, HasInternalLinkage) {
   AST = tooling::buildASTFromCode("static void target() {}");
   const FunctionDecl *Fn = findFnByName("target");
   ASSERT_TRUE(Fn);
-  EXPECT_EQ(getLinkageFor(Extractor.addEntity(Fn)),
-            EntityLinkageType::Internal);
+  EXPECT_EQ(getLinkageFor(Extractor.addEntity(Fn)), Internal);
 }
 
 TEST_F(TUSummaryBuilderLinkageTest, HasExternalLinkage) {
   AST = tooling::buildASTFromCode("void target() {}");
   const FunctionDecl *Fn = findFnByName("target");
   ASSERT_TRUE(Fn);
-  EXPECT_EQ(getLinkageFor(Extractor.addEntity(Fn)),
-            EntityLinkageType::External);
+  EXPECT_EQ(getLinkageFor(Extractor.addEntity(Fn)), External);
 }
 
 TEST_F(TUSummaryBuilderLinkageTest, HasExternalLinkageWithInline) {
   AST = tooling::buildASTFromCode("inline void target() {}");
   const FunctionDecl *Fn = findFnByName("target");
   ASSERT_TRUE(Fn);
-  EXPECT_EQ(getLinkageFor(Extractor.addEntity(Fn)),
-            EntityLinkageType::External);
+  EXPECT_EQ(getLinkageFor(Extractor.addEntity(Fn)), External);
 }
 
 TEST_F(TUSummaryBuilderLinkageTest, HasInternalLinkageWithStaticInline) {
   AST = tooling::buildASTFromCode("static inline void target() {}");
   const FunctionDecl *Fn = findFnByName("target");
   ASSERT_TRUE(Fn);
-  EXPECT_EQ(getLinkageFor(Extractor.addEntity(Fn)),
-            EntityLinkageType::Internal);
+  EXPECT_EQ(getLinkageFor(Extractor.addEntity(Fn)), Internal);
 }
 
 TEST_F(TUSummaryBuilderLinkageTest, ConstVolatileGlobalHasExternalLinkage) {
@@ -326,8 +324,7 @@ TEST_F(TUSummaryBuilderLinkageTest, ConstVolatileGlobalHasExternalLinkage) {
                                   "}");
   const auto *VD = findDeclByName<VarDecl>("glob", AST->getASTContext());
   ASSERT_TRUE(VD);
-  EXPECT_EQ(getLinkageFor(Extractor.addEntity(VD)),
-            EntityLinkageType::External);
+  EXPECT_EQ(getLinkageFor(Extractor.addEntity(VD)), External);
 }
 
 TEST_F(TUSummaryBuilderLinkageTest, ConstGlobalHasInternalLinkage) {
@@ -336,8 +333,7 @@ TEST_F(TUSummaryBuilderLinkageTest, ConstGlobalHasInternalLinkage) {
                                   "}");
   const auto *VD = findDeclByName<VarDecl>("glob", AST->getASTContext());
   ASSERT_TRUE(VD);
-  EXPECT_EQ(getLinkageFor(Extractor.addEntity(VD)),
-            EntityLinkageType::Internal);
+  EXPECT_EQ(getLinkageFor(Extractor.addEntity(VD)), Internal);
 }
 
 } // namespace
