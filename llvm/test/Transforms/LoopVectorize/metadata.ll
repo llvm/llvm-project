@@ -522,12 +522,12 @@ define void @noalias_metadata(ptr align 8 %dst, ptr align 8 %src) {
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP4]], 2
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP4]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP23:%.*]] = mul i64 [[N_VEC]], 8
+; CHECK-NEXT:    [[TMP23:%.*]] = shl i64 [[N_VEC]], 3
 ; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP23]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP26:%.*]] = mul i64 [[INDEX]], 8
+; CHECK-NEXT:    [[TMP26:%.*]] = shl i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP26]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x ptr>, ptr [[NEXT_GEP]], align 8, !alias.scope [[META14:![0-9]+]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x ptr> [[WIDE_LOAD]], i64 1
@@ -575,12 +575,12 @@ define void @noalias_metadata(ptr align 8 %dst, ptr align 8 %src) {
 ; INTERLEAVE:       [[VECTOR_PH]]:
 ; INTERLEAVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP4]], 4
 ; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP4]], [[N_MOD_VF]]
-; INTERLEAVE-NEXT:    [[TMP23:%.*]] = mul i64 [[N_VEC]], 8
+; INTERLEAVE-NEXT:    [[TMP23:%.*]] = shl i64 [[N_VEC]], 3
 ; INTERLEAVE-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP23]]
 ; INTERLEAVE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; INTERLEAVE:       [[VECTOR_BODY]]:
 ; INTERLEAVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; INTERLEAVE-NEXT:    [[TMP26:%.*]] = mul i64 [[INDEX]], 8
+; INTERLEAVE-NEXT:    [[TMP26:%.*]] = shl i64 [[INDEX]], 3
 ; INTERLEAVE-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP26]]
 ; INTERLEAVE-NEXT:    [[TMP7:%.*]] = getelementptr ptr, ptr [[NEXT_GEP]], i64 2
 ; INTERLEAVE-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x ptr>, ptr [[TMP7]], align 8, !alias.scope [[META14:![0-9]+]]

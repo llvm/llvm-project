@@ -664,8 +664,8 @@ createScalarIVSteps(VPlan &Plan, InductionDescriptor::InductionKind Kind,
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
   VPValue *CanonicalIV = LoopRegion->getCanonicalIV();
-  VPSingleDefRecipe *BaseIV = Builder.createDerivedIV(
-      Kind, FPBinOp, StartV, CanonicalIV, Step, "offset.idx");
+  VPSingleDefRecipe *BaseIV =
+      Builder.createDerivedIV(Kind, FPBinOp, StartV, CanonicalIV, Step);
 
   // Truncate base induction if needed.
   VPTypeAnalysis TypeInfo(Plan);
@@ -3731,6 +3731,47 @@ static void expandVPWidenPointerInduction(VPWidenPointerInductionRecipe *R,
   ScalarPtrPhi->addOperand(InductionGEP);
 }
 
+/// Expand a VPDerivedIVRecipe into executable recipes.
+static void expandVPDerivedIV(VPDerivedIVRecipe *R, VPTypeAnalysis &TypeInfo) {
+  VPBuilder Builder(R);
+  VPIRValue *Start = R->getStartValue();
+  VPValue *Step = R->getStepValue();
+  VPValue *Index = R->getIndex();
+  Type *StepTy = TypeInfo.inferScalarType(Step);
+  Type *IndexTy = TypeInfo.inferScalarType(Index);
+  Index = StepTy->isIntegerTy()
+              ? Builder.createScalarSExtOrTrunc(
+                    Index, StepTy, IndexTy, DebugLoc::getCompilerGenerated())
+              : Builder.createScalarCast(Instruction::SIToFP, Index, StepTy,
+                                         DebugLoc::getCompilerGenerated());
+  switch (R->getInductionKind()) {
+  case InductionDescriptor::IK_IntInduction: {
+    assert(TypeInfo.inferScalarType(Index) == TypeInfo.inferScalarType(Start) &&
+           "Index type does not match StartValue type");
+    return R->replaceAllUsesWith(Builder.createAdd(
+        Start, Builder.createOverflowingOp(Instruction::Mul, {Index, Step})));
+  }
+  case InductionDescriptor::IK_PtrInduction:
+    return R->replaceAllUsesWith(Builder.createPtrAdd(
+        Start, Builder.createOverflowingOp(Instruction::Mul, {Index, Step})));
+  case InductionDescriptor::IK_FpInduction: {
+    assert(StepTy->isFloatingPointTy() && "Expected FP Step value");
+    const FPMathOperator *FPBinOp = R->getFPBinOp();
+    assert(FPBinOp &&
+           (FPBinOp->getOpcode() == Instruction::FAdd ||
+            FPBinOp->getOpcode() == Instruction::FSub) &&
+           "Original BinOp should be defined for FP induction");
+    FastMathFlags FMF = FPBinOp->getFastMathFlags();
+    VPValue *FMul = Builder.createNaryOp(Instruction::FMul, {Step, Index}, FMF);
+    return R->replaceAllUsesWith(
+        Builder.createNaryOp(FPBinOp->getOpcode(), {Start, FMul}, FMF));
+  }
+  case InductionDescriptor::IK_NoInduction:
+    return;
+  }
+  llvm_unreachable("Unhandled induction kind");
+}
+
 void VPlanTransforms::dissolveLoopRegions(VPlan &Plan) {
   // Replace loop regions with explicity CFG.
   SmallVector<VPRegionBlock *> LoopRegions;
@@ -3820,6 +3861,12 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
         }
         expandVPWidenPointerInduction(WidenIVR, TypeInfo);
         ToRemove.push_back(WidenIVR);
+        continue;
+      }
+
+      if (auto *DerivedIVR = dyn_cast<VPDerivedIVRecipe>(&R)) {
+        expandVPDerivedIV(DerivedIVR, TypeInfo);
+        ToRemove.push_back(DerivedIVR);
         continue;
       }
 
