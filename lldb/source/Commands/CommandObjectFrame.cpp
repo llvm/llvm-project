@@ -32,6 +32,8 @@
 #include "lldb/Utility/ValueType.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/lldb-enumerations.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 
 #include <memory>
 #include <optional>
@@ -355,7 +357,7 @@ protected:
     } else {
       if (command.GetArgumentCount() > 1) {
         result.AppendErrorWithFormat(
-            "too many arguments; expected frame-index, saw '%s'.\n",
+            "too many arguments; expected frame-index, saw '%s'",
             command[0].c_str());
         m_options.GenerateOptionUsage(
             result.GetErrorStream(), *this,
@@ -366,7 +368,7 @@ protected:
 
       if (command.GetArgumentCount() == 1) {
         if (command[0].ref().getAsInteger(0, frame_idx)) {
-          result.AppendErrorWithFormat("invalid frame index argument '%s'.",
+          result.AppendErrorWithFormat("invalid frame index argument '%s'",
                                        command[0].c_str());
           return;
         }
@@ -384,8 +386,7 @@ protected:
       m_exe_ctx.SetFrameSP(thread->GetSelectedFrame(SelectMostRelevantFrame));
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
-      result.AppendErrorWithFormat("Frame index (%u) out of range.\n",
-                                   frame_idx);
+      result.AppendErrorWithFormat("Frame index (%u) out of range", frame_idx);
     }
   }
 
@@ -435,6 +436,77 @@ may even involve JITing and running code in the target program.)");
   ~CommandObjectFrameVariable() override = default;
 
   Options *GetOptions() override { return &m_option_group; }
+
+  // `frame variable` repeats by incrementing the printing depth. When the depth
+  // is too shallow, hitting enter a few times will quickly expand the data.
+  std::optional<std::string> GetRepeatCommand(Args &current_command_args,
+                                              uint32_t index) override {
+    llvm::StringRef depth_opt = "--depth";
+
+    Args repeat_args;
+    auto increment_option =
+        [&](llvm::StringRef option) -> std::optional<std::string> {
+      uint32_t num;
+      bool failed = option.getAsInteger(10, num);
+      if (failed)
+        return std::nullopt;
+      return llvm::utostr(num + 1);
+    };
+
+    bool has_depth_option = false;
+    bool increment_next_arg = false;
+    for (const auto &entry : current_command_args) {
+      llvm::StringRef arg = entry.ref();
+
+      if (arg == "-" || arg == "--") {
+        repeat_args.AppendArgument(arg);
+        continue;
+      }
+
+      if (increment_next_arg) {
+        increment_next_arg = false;
+        if (auto maybe_opt = increment_option(arg)) {
+          repeat_args.AppendArgument(*maybe_opt);
+          continue;
+        }
+      }
+
+      if (depth_opt.starts_with(arg) || arg == "-D") {
+        repeat_args.AppendArgument(arg);
+        increment_next_arg = true;
+        has_depth_option = true;
+        continue;
+      }
+      if (arg.consume_front("-D")) {
+        if (auto maybe_opt = increment_option(arg)) {
+          repeat_args.AppendArgument(llvm::formatv("-D{0}", *maybe_opt).str());
+          has_depth_option = true;
+          continue;
+        }
+      }
+
+      repeat_args.AppendArgument(arg);
+    }
+
+    if (!has_depth_option) {
+      // Access the default max-depth from the target. This is because
+      // GetRepeatCommand is called before ParseOptions, which is when
+      // m_varobj_options.max_depth becomes assigned.
+      if (auto target_sp = GetDebugger().GetSelectedTarget()) {
+        auto [default_depth, _] =
+            target_sp->GetMaximumDepthOfChildrenToDisplay();
+        // Insert the depth after `frame variable`, before positional args.
+        assert(repeat_args[0].ref() == "frame" && "expects resolved command");
+        repeat_args.InsertArgumentAtIndex(2, "--depth");
+        repeat_args.InsertArgumentAtIndex(3, llvm::utostr(default_depth + 1));
+      }
+    }
+
+    std::string repeat_command;
+    if (!repeat_args.GetQuotedCommandString(repeat_command))
+      return std::nullopt;
+    return repeat_command;
+  }
 
 protected:
   llvm::StringRef GetScopeString(VariableSP var_sp) {
@@ -586,7 +658,7 @@ protected:
                   findUniqueRegexMatches(regex, regex_var_list, *variable_list);
               if (!results) {
                 result.AppendErrorWithFormat(
-                    "no variables matched the regular expression '%s'.",
+                    "no variables matched the regular expression '%s'",
                     entry.c_str());
                 continue;
               }
@@ -679,7 +751,7 @@ protected:
               else
                 result.AppendErrorWithFormat(
                     "unable to find any variable expression path that matches "
-                    "'%s'.",
+                    "'%s'",
                     entry.c_str());
             }
           }
@@ -908,27 +980,26 @@ void CommandObjectFrameRecognizerAdd::DoExecute(Args &command,
                                                 CommandReturnObject &result) {
 #if LLDB_ENABLE_PYTHON
   if (m_options.m_class_name.empty()) {
-    result.AppendErrorWithFormat(
-        "%s needs a Python class name (-l argument).\n", m_cmd_name.c_str());
+    result.AppendErrorWithFormat("%s needs a Python class name (-l argument)",
+                                 m_cmd_name.c_str());
     return;
   }
 
   if (m_options.m_module.empty()) {
-    result.AppendErrorWithFormat("%s needs a module name (-s argument).\n",
+    result.AppendErrorWithFormat("%s needs a module name (-s argument)",
                                  m_cmd_name.c_str());
     return;
   }
 
   if (m_options.m_symbols.empty()) {
     result.AppendErrorWithFormat(
-        "%s needs at least one symbol name (-n argument).\n",
-        m_cmd_name.c_str());
+        "%s needs at least one symbol name (-n argument)", m_cmd_name.c_str());
     return;
   }
 
   if (m_options.m_regex && m_options.m_symbols.size() > 1) {
     result.AppendErrorWithFormat(
-        "%s needs only one symbol regular expression (-n argument).\n",
+        "%s needs only one symbol regular expression (-n argument)",
         m_cmd_name.c_str());
     return;
   }
@@ -1051,7 +1122,7 @@ public:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     uint32_t recognizer_id;
     if (!llvm::to_integer(command.GetArgumentAtIndex(0), recognizer_id)) {
-      result.AppendErrorWithFormat("'%s' is not a valid recognizer id.\n",
+      result.AppendErrorWithFormat("'%s' is not a valid recognizer id",
                                    command.GetArgumentAtIndex(0));
       return;
     }
@@ -1077,7 +1148,7 @@ protected:
                        uint32_t recognizer_id) override {
     auto &recognizer_mgr = GetTarget().GetFrameRecognizerManager();
     if (!recognizer_mgr.SetEnabledForID(recognizer_id, true)) {
-      result.AppendErrorWithFormat("'%u' is not a valid recognizer id.\n",
+      result.AppendErrorWithFormat("'%u' is not a valid recognizer id",
                                    recognizer_id);
       return;
     }
@@ -1102,7 +1173,7 @@ protected:
                        uint32_t recognizer_id) override {
     auto &recognizer_mgr = GetTarget().GetFrameRecognizerManager();
     if (!recognizer_mgr.SetEnabledForID(recognizer_id, false)) {
-      result.AppendErrorWithFormat("'%u' is not a valid recognizer id.\n",
+      result.AppendErrorWithFormat("'%u' is not a valid recognizer id",
                                    recognizer_id);
       return;
     }
@@ -1127,7 +1198,7 @@ protected:
                        uint32_t recognizer_id) override {
     auto &recognizer_mgr = GetTarget().GetFrameRecognizerManager();
     if (!recognizer_mgr.RemoveRecognizerWithID(recognizer_id)) {
-      result.AppendErrorWithFormat("'%u' is not a valid recognizer id.\n",
+      result.AppendErrorWithFormat("'%u' is not a valid recognizer id",
                                    recognizer_id);
       return;
     }
@@ -1193,7 +1264,7 @@ protected:
     const char *frame_index_str = command.GetArgumentAtIndex(0);
     uint32_t frame_index;
     if (!llvm::to_integer(frame_index_str, frame_index)) {
-      result.AppendErrorWithFormat("'%s' is not a valid frame index.",
+      result.AppendErrorWithFormat("'%s' is not a valid frame index",
                                    frame_index_str);
       return;
     }
@@ -1210,7 +1281,7 @@ protected:
     }
     if (command.GetArgumentCount() != 1) {
       result.AppendErrorWithFormat(
-          "'%s' takes exactly one frame index argument.\n", m_cmd_name.c_str());
+          "'%s' takes exactly one frame index argument", m_cmd_name.c_str());
       return;
     }
 

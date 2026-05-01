@@ -490,13 +490,10 @@ define i32 @pr45526() optsize {
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt <4 x i32> [[VEC_IND]], splat (i32 510)
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[VECTOR_RECUR]], <4 x i32> [[TMP1]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[FIRST_INACTIVE_LANE:%.*]] = call i32 @llvm.experimental.cttz.elts.i32.v4i1(<4 x i1> [[TMP0]], i1 false)
 ; CHECK-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i32 [[FIRST_INACTIVE_LANE]], 1
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 [[LAST_ACTIVE_LANE]], 1
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP1]], i32 [[TMP4]]
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[VECTOR_RECUR]], i64 3
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[LAST_ACTIVE_LANE]], 0
-; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i32 [[TMP8]], i32 [[TMP7]]
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i32> [[TMP4]], i32 [[LAST_ACTIVE_LANE]]
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i32 [[TMP10]]
@@ -518,13 +515,10 @@ define i32 @pr45526() optsize {
 ; PGSO-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
 ; PGSO:       [[MIDDLE_BLOCK]]:
 ; PGSO-NEXT:    [[TMP0:%.*]] = icmp ugt <4 x i32> [[VEC_IND]], splat (i32 510)
+; PGSO-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[VECTOR_RECUR]], <4 x i32> [[TMP1]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; PGSO-NEXT:    [[FIRST_INACTIVE_LANE:%.*]] = call i32 @llvm.experimental.cttz.elts.i32.v4i1(<4 x i1> [[TMP0]], i1 false)
 ; PGSO-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i32 [[FIRST_INACTIVE_LANE]], 1
-; PGSO-NEXT:    [[TMP4:%.*]] = sub i32 [[LAST_ACTIVE_LANE]], 1
-; PGSO-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP1]], i32 [[TMP4]]
-; PGSO-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[VECTOR_RECUR]], i64 3
-; PGSO-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[LAST_ACTIVE_LANE]], 0
-; PGSO-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i32 [[TMP8]], i32 [[TMP7]]
+; PGSO-NEXT:    [[TMP10:%.*]] = extractelement <4 x i32> [[TMP4]], i32 [[LAST_ACTIVE_LANE]]
 ; PGSO-NEXT:    br label %[[EXIT:.*]]
 ; PGSO:       [[EXIT]]:
 ; PGSO-NEXT:    ret i32 [[TMP10]]
@@ -546,13 +540,10 @@ define i32 @pr45526() optsize {
 ; NPGSO-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
 ; NPGSO:       [[MIDDLE_BLOCK]]:
 ; NPGSO-NEXT:    [[TMP0:%.*]] = icmp ugt <4 x i32> [[VEC_IND]], splat (i32 510)
+; NPGSO-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[VECTOR_RECUR]], <4 x i32> [[TMP1]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; NPGSO-NEXT:    [[FIRST_INACTIVE_LANE:%.*]] = call i32 @llvm.experimental.cttz.elts.i32.v4i1(<4 x i1> [[TMP0]], i1 false)
 ; NPGSO-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i32 [[FIRST_INACTIVE_LANE]], 1
-; NPGSO-NEXT:    [[TMP4:%.*]] = sub i32 [[LAST_ACTIVE_LANE]], 1
-; NPGSO-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP1]], i32 [[TMP4]]
-; NPGSO-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[VECTOR_RECUR]], i64 3
-; NPGSO-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[LAST_ACTIVE_LANE]], 0
-; NPGSO-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i32 [[TMP8]], i32 [[TMP7]]
+; NPGSO-NEXT:    [[TMP10:%.*]] = extractelement <4 x i32> [[TMP4]], i32 [[LAST_ACTIVE_LANE]]
 ; NPGSO-NEXT:    br label %[[EXIT:.*]]
 ; NPGSO:       [[EXIT]]:
 ; NPGSO-NEXT:    ret i32 [[TMP10]]
@@ -590,13 +581,10 @@ define i32 @pr45526_pgso() !prof !14 {
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt <4 x i32> [[VEC_IND]], splat (i32 510)
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[VECTOR_RECUR]], <4 x i32> [[TMP1]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[FIRST_INACTIVE_LANE:%.*]] = call i32 @llvm.experimental.cttz.elts.i32.v4i1(<4 x i1> [[TMP0]], i1 false)
 ; CHECK-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i32 [[FIRST_INACTIVE_LANE]], 1
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 [[LAST_ACTIVE_LANE]], 1
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP1]], i32 [[TMP4]]
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[VECTOR_RECUR]], i64 3
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[LAST_ACTIVE_LANE]], 0
-; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i32 [[TMP8]], i32 [[TMP7]]
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i32> [[TMP4]], i32 [[LAST_ACTIVE_LANE]]
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i32 [[TMP10]]
@@ -618,13 +606,10 @@ define i32 @pr45526_pgso() !prof !14 {
 ; PGSO-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
 ; PGSO:       [[MIDDLE_BLOCK]]:
 ; PGSO-NEXT:    [[TMP0:%.*]] = icmp ugt <4 x i32> [[VEC_IND]], splat (i32 510)
+; PGSO-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[VECTOR_RECUR]], <4 x i32> [[TMP1]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; PGSO-NEXT:    [[FIRST_INACTIVE_LANE:%.*]] = call i32 @llvm.experimental.cttz.elts.i32.v4i1(<4 x i1> [[TMP0]], i1 false)
 ; PGSO-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i32 [[FIRST_INACTIVE_LANE]], 1
-; PGSO-NEXT:    [[TMP4:%.*]] = sub i32 [[LAST_ACTIVE_LANE]], 1
-; PGSO-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP1]], i32 [[TMP4]]
-; PGSO-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[VECTOR_RECUR]], i64 3
-; PGSO-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[LAST_ACTIVE_LANE]], 0
-; PGSO-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i32 [[TMP8]], i32 [[TMP7]]
+; PGSO-NEXT:    [[TMP10:%.*]] = extractelement <4 x i32> [[TMP4]], i32 [[LAST_ACTIVE_LANE]]
 ; PGSO-NEXT:    br label %[[EXIT:.*]]
 ; PGSO:       [[EXIT]]:
 ; PGSO-NEXT:    ret i32 [[TMP10]]

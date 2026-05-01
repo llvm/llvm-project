@@ -682,12 +682,15 @@ public:
   bool isConvertingBoolWithCmp0() const {
     switch (getLoadBoolFromMem()) {
     case BoolFromMem::Strict:
+      return !isOptimizedBuild();
+
     case BoolFromMem::Truncate:
       return false;
 
     case BoolFromMem::NonZero:
       return true;
     }
+    llvm_unreachable("Unknown BoolFromMem enum");
   }
 };
 

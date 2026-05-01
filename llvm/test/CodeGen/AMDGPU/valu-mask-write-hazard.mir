@@ -562,7 +562,7 @@ body:            |
   bb.0:
     ; GCN-LABEL: name: mask_hazard_waitcnt
     ; GCN: $vgpr1 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr2, $sgpr0_sgpr1, implicit $exec
-    ; GCN-NEXT: S_WAITCNT 0
+    ; GCN-NEXT: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
     ; GCN-NEXT: $sgpr0_sgpr1 = S_GETPC_B64
     ; GCN-NEXT: S_WAITCNT_DEPCTR .SaSdst_0
     ; GCN-NEXT: $sgpr0 = S_ADD_U32 $sgpr0, 0, implicit-def $scc

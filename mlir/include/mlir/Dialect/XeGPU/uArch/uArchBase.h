@@ -36,11 +36,14 @@ enum class InstructionScope { Lane, Subgroup, Workgroup, Cluster };
 enum class InstructionKind {
   SubgroupMatrixMultiplyAcc, // Dot Product Accumulate Systolic (DPAS) is a
                              // matrix multiply-add operation
-  Subgroup2DBlockStore,      // Subgroup-level 2D block write instruction
-  Subgroup2DBlockLoad,       // Subgroup-level 2D block load instruction
-  Subgroup2DBlockPrefetch,   // Subgroup-level 2D block prefetch instruction
-  StoreScatter,              // Lane-level store (scalar, vector)
-  LoadGather,                // Lane-level load (scalar, vector)
+  SubgroupScaledMatrixMultiplyAcc, // Scaled Matrix Multiply Accumulate is a
+                                   // DPAS with scaling factor applied to
+                                   // operand A or B before multiplication
+  Subgroup2DBlockStore,            // Subgroup-level 2D block write instruction
+  Subgroup2DBlockLoad,             // Subgroup-level 2D block load instruction
+  Subgroup2DBlockPrefetch, // Subgroup-level 2D block prefetch instruction
+  StoreScatter,            // Lane-level store (scalar, vector)
+  LoadGather,              // Lane-level load (scalar, vector)
   // @TODO: Add more instructions as needed
 };
 
@@ -61,6 +64,8 @@ struct Instruction {
     switch (instKind) {
     case InstructionKind::SubgroupMatrixMultiplyAcc:
       return "dpas";
+    case InstructionKind::SubgroupScaledMatrixMultiplyAcc:
+      return "dpas_mx";
     case InstructionKind::Subgroup2DBlockStore:
       return "store_nd";
     case InstructionKind::Subgroup2DBlockLoad:
@@ -246,7 +251,7 @@ struct MMAInstructionInterface {
   virtual llvm::SmallVector<uint32_t, 8> getSupportedM(Type type) const = 0;
   virtual llvm::SmallVector<uint32_t, 8> getSupportedK(Type type) const = 0;
   virtual llvm::SmallVector<uint32_t, 8> getSupportedN(Type type) const = 0;
-
+  virtual bool isLaneLayoutRowMajorOrder() const = 0;
   virtual ~MMAInstructionInterface() = default;
 };
 

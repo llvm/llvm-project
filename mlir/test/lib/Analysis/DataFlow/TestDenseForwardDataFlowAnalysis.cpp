@@ -49,6 +49,8 @@ public:
 class LastModifiedAnalysis
     : public DenseForwardDataFlowAnalysis<LastModification> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(LastModifiedAnalysis)
+
   explicit LastModifiedAnalysis(DataFlowSolver &solver, bool assumeFuncWrites)
       : DenseForwardDataFlowAnalysis(solver),
         assumeFuncWrites(assumeFuncWrites) {}

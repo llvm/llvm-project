@@ -182,33 +182,32 @@ endfunction()
 function(darwin_filter_host_archs input output)
   list_intersect(tmp_var DARWIN_osx_ARCHS ${input})
   execute_process(
-    COMMAND sysctl hw.cputype
-    OUTPUT_VARIABLE CPUTYPE)
-  string(REGEX MATCH "hw.cputype: ([0-9]*)"
-         CPUTYPE_MATCHED "${CPUTYPE}")
-  set(ARM_HOST Off)
-  if(CPUTYPE_MATCHED)
-    # ARM cputype is (0x01000000 | 12) and X86(_64) is always 7.
-    if(${CMAKE_MATCH_1} GREATER 11)
-      set(ARM_HOST On)
-    endif()
+    COMMAND sysctl hw.optional.arm64
+    OUTPUT_VARIABLE IS_ARM64)
+  string(REGEX MATCH "hw.optional.arm64: ([0-9]*)"
+         ARM64_MATCHED "${IS_ARM64}")
+
+  set(ARM_HOST OFF)
+  if(ARM64_MATCHED AND ("${CMAKE_MATCH_1}" STREQUAL "1"))
+    set(ARM_HOST ON)
   endif()
 
-  # arm64e isn't usually supported out of the box on darwin, because of ABI.
-  list(REMOVE_ITEM tmp_var arm64e)
+  execute_process(
+    COMMAND sysctl hw.cpusubtype
+    OUTPUT_VARIABLE SUBTYPE)
+  string(REGEX MATCH "hw.cpusubtype: ([0-9]*)"
+          SUBTYPE_MATCHED "${SUBTYPE}")
 
   if(ARM_HOST)
     list(REMOVE_ITEM tmp_var i386)
     list(REMOVE_ITEM tmp_var x86_64)
     list(REMOVE_ITEM tmp_var x86_64h)
+    if(NOT COMPILER_RT_HAS_MAC_PUBLIC_ARM64E)
+      list(REMOVE_ITEM tmp_var arm64e)
+    endif()
   else()
+    list(REMOVE_ITEM tmp_var arm64e)
     list(REMOVE_ITEM tmp_var arm64)
-    execute_process(
-      COMMAND sysctl hw.cpusubtype
-      OUTPUT_VARIABLE SUBTYPE)
-    string(REGEX MATCH "hw.cpusubtype: ([0-9]*)"
-           SUBTYPE_MATCHED "${SUBTYPE}")
-
     set(HASWELL_SUPPORTED Off)
     if(SUBTYPE_MATCHED)
       if(${CMAKE_MATCH_1} GREATER 7)
@@ -527,9 +526,9 @@ endmacro()
 macro(darwin_add_embedded_builtin_libraries)
   # this is a hacky opt-out. If you can't target both intel and arm
   # architectures we bail here.
-  set(DARWIN_SOFT_FLOAT_ARCHS armv6m armv7m armv7em armv7)
-  set(DARWIN_HARD_FLOAT_ARCHS armv7em armv7)
-  if(COMPILER_RT_SUPPORTED_ARCH MATCHES ".*armv.*")
+  set(DARWIN_SOFT_FLOAT_ARCHS armv6m armv7m armv7em armv7 armv8m.main armv8.1m.main)
+  set(DARWIN_HARD_FLOAT_ARCHS armv7em armv7 armv8m.main armv8.1m.main)
+  if(COMPILER_RT_SUPPORTED_ARCH MATCHES ".*arm.*")
     list(FIND COMPILER_RT_SUPPORTED_ARCH i386 i386_idx)
     if(i386_idx GREATER -1)
       list(APPEND DARWIN_HARD_FLOAT_ARCHS i386)
@@ -554,7 +553,7 @@ macro(darwin_add_embedded_builtin_libraries)
     set(PIC_FLAG -fPIC)
     set(STATIC_FLAG -static)
 
-    set(DARWIN_macho_embedded_ARCHS armv6m armv7m armv7em armv7 i386 x86_64)
+    set(DARWIN_macho_embedded_ARCHS armv6m armv7m armv7em armv7 armv8m.main armv8.1m.main i386 x86_64)
 
     set(DARWIN_macho_embedded_LIBRARY_OUTPUT_DIR
       ${COMPILER_RT_OUTPUT_LIBRARY_DIR}/macho_embedded)
@@ -575,6 +574,8 @@ macro(darwin_add_embedded_builtin_libraries)
     set(armv7m_FUNCTIONS ${common_FUNCTIONS} ${arm_FUNCTIONS} ${thumb2_FUNCTIONS})
     set(armv7em_FUNCTIONS ${common_FUNCTIONS} ${arm_FUNCTIONS} ${thumb2_FUNCTIONS})
     set(armv7_FUNCTIONS ${common_FUNCTIONS} ${arm_FUNCTIONS} ${thumb2_FUNCTIONS} ${thumb2_64_FUNCTIONS})
+    set(armv8m.main_FUNCTIONS ${common_FUNCTIONS} ${arm_FUNCTIONS} ${thumb2_FUNCTIONS} ${thumb2_64_FUNCTIONS})
+    set(armv8.1m.main_FUNCTIONS ${common_FUNCTIONS} ${arm_FUNCTIONS} ${thumb2_FUNCTIONS} ${thumb2_64_FUNCTIONS})
     set(i386_FUNCTIONS ${common_FUNCTIONS} ${i386_FUNCTIONS})
     set(x86_64_FUNCTIONS ${common_FUNCTIONS})
 
