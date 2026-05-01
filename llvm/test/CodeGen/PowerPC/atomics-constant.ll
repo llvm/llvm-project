@@ -10,8 +10,8 @@ define i64 @foo() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis 3, 2, a@toc@ha
 ; CHECK-NEXT:    ld 3, a@toc@l(3)
-; CHECK-NEXT:    cmpd 7, 3, 3
-; CHECK-NEXT:    bne- 7, .+4
+; CHECK-NEXT:    cmpd 3, 3
+; CHECK-NEXT:    bne- 0, .+4
 ; CHECK-NEXT:    isync
 ; CHECK-NEXT:    blr
 entry:

@@ -3329,14 +3329,16 @@ bool PPCInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     // FIXME: Maybe we can expand it in 'PowerPC Expand Atomic' pass.
   case PPC::CFENCE:
   case PPC::CFENCE8: {
-    auto Val = MI.getOperand(0).getReg();
+    auto CRReg = MI.getOperand(0).getReg();
+    auto Val = MI.getOperand(1).getReg();
     unsigned CmpOp = Subtarget.isPPC64() ? PPC::CMPD : PPC::CMPW;
-    BuildMI(MBB, MI, DL, get(CmpOp), PPC::CR7).addReg(Val).addReg(Val);
+    BuildMI(MBB, MI, DL, get(CmpOp), CRReg).addReg(Val).addReg(Val);
     BuildMI(MBB, MI, DL, get(PPC::CTRL_DEP))
         .addImm(PPC::PRED_NE_MINUS)
-        .addReg(PPC::CR7)
+        .addReg(CRReg)
         .addImm(1);
     MI.setDesc(get(PPC::ISYNC));
+    MI.removeOperand(1);
     MI.removeOperand(0);
     return true;
   }

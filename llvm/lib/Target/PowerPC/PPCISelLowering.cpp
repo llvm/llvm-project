@@ -11668,10 +11668,10 @@ SDValue PPCTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     unsigned Opcode = Subtarget.isPPC64() ? PPC::CFENCE8 : PPC::CFENCE;
     return SDValue(
         DAG.getMachineNode(
-            Opcode, DL, MVT::Other,
+            Opcode, DL, MVT::i32, MVT::Other,
             DAG.getNode(ISD::ANY_EXTEND, DL, Subtarget.getScalarIntVT(), Val),
             Op.getOperand(0)),
-        0);
+        1);
   }
   case Intrinsic::ppc_disassemble_dmr: {
     assert(ArgStart == 1 &&
