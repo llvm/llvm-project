@@ -2049,12 +2049,10 @@ LogicalResult spirv::GLFrexpStructOp::verify() {
 // spirv.GL.Ldexp
 //===----------------------------------------------------------------------===//
 
-LogicalResult spirv::GLLdexpOp::verify() {
-  Type significandType = getX().getType();
-  Type exponentType = getExp().getType();
-
-  if (isa<FloatType>(significandType) != isa<IntegerType>(exponentType))
-    return emitOpError("operands must both be scalars or vectors");
+static LogicalResult verifyFloatIntegerBuiltin(Operation *op, Type floatType,
+                                               Type integerType) {
+  if (isa<FloatType>(floatType) != isa<IntegerType>(integerType))
+    return op->emitOpError("operands must both be scalars or vectors");
 
   auto getNumElements = [](Type type) -> unsigned {
     if (auto vectorType = dyn_cast<VectorType>(type))
@@ -2062,10 +2060,42 @@ LogicalResult spirv::GLLdexpOp::verify() {
     return 1;
   };
 
-  if (getNumElements(significandType) != getNumElements(exponentType))
-    return emitOpError("operands must have the same number of elements");
+  if (getNumElements(floatType) != getNumElements(integerType))
+    return op->emitOpError("operands must have the same number of elements");
 
   return success();
+}
+
+LogicalResult spirv::GLLdexpOp::verify() {
+  return verifyFloatIntegerBuiltin(getOperation(), getX().getType(),
+                                   getExp().getType());
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.CL.ldexp
+//===----------------------------------------------------------------------===//
+
+LogicalResult spirv::CLLdexpOp::verify() {
+  return verifyFloatIntegerBuiltin(getOperation(), getX().getType(),
+                                   getExp().getType());
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.CL.pown
+//===----------------------------------------------------------------------===//
+
+LogicalResult spirv::CLPownOp::verify() {
+  return verifyFloatIntegerBuiltin(getOperation(), getX().getType(),
+                                   getY().getType());
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.CL.rootn
+//===----------------------------------------------------------------------===//
+
+LogicalResult spirv::CLRootnOp::verify() {
+  return verifyFloatIntegerBuiltin(getOperation(), getX().getType(),
+                                   getN().getType());
 }
 
 //===----------------------------------------------------------------------===//

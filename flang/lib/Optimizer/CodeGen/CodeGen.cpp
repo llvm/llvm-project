@@ -934,30 +934,52 @@ struct ConvertOpConversion : public fir::FIROpConversion<fir::ConvertOp> {
   llvm::LogicalResult
   matchAndRewrite(fir::ConvertOp convert, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
+    mlir::Location loc = convert.getLoc();
+
     auto fromFirTy = convert.getValue().getType();
     auto toFirTy = convert.getRes().getType();
+
+    auto toMemRefTy = mlir::dyn_cast<mlir::MemRefType>(toFirTy);
+    auto fromMemRefTy = mlir::dyn_cast<mlir::MemRefType>(fromFirTy);
+
+    auto *firConv =
+        static_cast<const fir::LLVMTypeConverter *>(this->getTypeConverter());
+    assert(firConv && "expected non-null LLVMTypeConverter");
+
+    auto getBufferPtr = [&rewriter, &loc, &firConv](mlir::Value memRefVal,
+                                                    mlir::MemRefType memRefTy) {
+      auto alignedPtr =
+          mlir::LLVM::ExtractValueOp::create(rewriter, loc, memRefVal, 1);
+      auto offset =
+          mlir::LLVM::ExtractValueOp::create(rewriter, loc, memRefVal, 2);
+      mlir::Type elementType = firConv->convertType(memRefTy.getElementType());
+      auto gepOp = mlir::LLVM::GEPOp::create(rewriter, loc,
+                                             alignedPtr.getType(), elementType,
+                                             alignedPtr, offset.getResult());
+      return gepOp;
+    };
 
     // Handle conversions between pointer-like values and memref descriptors.
     // These are produced by FIR-to-MemRef lowering and represent descriptor
     // conversion rather than pure value conversions.
-    if (auto memRefTy = mlir::dyn_cast<mlir::MemRefType>(toFirTy)) {
-      mlir::Location loc = convert.getLoc();
+    if (toMemRefTy) {
       mlir::Value basePtr = adaptor.getValue();
       assert(basePtr && "null base pointer");
 
-      auto [strides, offset] = memRefTy.getStridesAndOffset();
+      // If the from type is also a memref we need to extract its buffer
+      // pointer.
+      if (fromMemRefTy)
+        basePtr = getBufferPtr(basePtr, fromMemRefTy);
+
+      auto [strides, offset] = toMemRefTy.getStridesAndOffset();
       bool hasStaticLayout =
           mlir::ShapedType::isStatic(offset) &&
           llvm::none_of(strides, mlir::ShapedType::isDynamic);
 
-      auto *firConv =
-          static_cast<const fir::LLVMTypeConverter *>(this->getTypeConverter());
-      assert(firConv && "expected non-null LLVMTypeConverter");
-
-      if (memRefTy.hasStaticShape() && hasStaticLayout) {
+      if (toMemRefTy.hasStaticShape() && hasStaticLayout) {
         // Static shape and layout: build a fully-populated descriptor.
         mlir::Value memrefDesc = mlir::MemRefDescriptor::fromStaticShape(
-            rewriter, loc, *firConv, memRefTy, basePtr);
+            rewriter, loc, *firConv, toMemRefTy, basePtr);
         rewriter.replaceOp(convert, memrefDesc);
         return mlir::success();
       }
@@ -965,7 +987,7 @@ struct ConvertOpConversion : public fir::FIROpConversion<fir::ConvertOp> {
       // Dynamic shape or layout: create an LLVM memref descriptor and insert
       // the base pointer field, letting the rest of the fields be populated
       // by subsequent lowering.
-      mlir::Type llvmMemRefTy = firConv->convertType(memRefTy);
+      mlir::Type llvmMemRefTy = firConv->convertType(toMemRefTy);
       auto undef = mlir::LLVM::UndefOp::create(rewriter, loc, llvmMemRefTy);
       auto insert =
           mlir::LLVM::InsertValueOp::create(rewriter, loc, undef, basePtr, 1);
@@ -973,20 +995,11 @@ struct ConvertOpConversion : public fir::FIROpConversion<fir::ConvertOp> {
       return mlir::success();
     }
 
-    if (auto memRefTy = mlir::dyn_cast<mlir::MemRefType>(fromFirTy)) {
+    if (fromMemRefTy) {
       // Legalize conversions *from* memref descriptors to pointer-like values
       // by extracting the underlying buffer pointer from the descriptor.
-      mlir::Location loc = convert.getLoc();
       mlir::Value base = adaptor.getValue();
-      auto alignedPtr =
-          mlir::LLVM::ExtractValueOp::create(rewriter, loc, base, 1);
-      auto offset = mlir::LLVM::ExtractValueOp::create(rewriter, loc, base, 2);
-      mlir::Type elementType =
-          this->getTypeConverter()->convertType(memRefTy.getElementType());
-      auto gepOp = mlir::LLVM::GEPOp::create(rewriter, loc,
-                                             alignedPtr.getType(), elementType,
-                                             alignedPtr, offset.getResult());
-      rewriter.replaceOp(convert, gepOp);
+      rewriter.replaceOp(convert, getBufferPtr(base, fromMemRefTy));
       return mlir::success();
     }
 
@@ -999,7 +1012,6 @@ struct ConvertOpConversion : public fir::FIROpConversion<fir::ConvertOp> {
       return mlir::success();
     }
 
-    auto loc = convert.getLoc();
     auto i1Type = mlir::IntegerType::get(convert.getContext(), 1);
 
     if (mlir::isa<fir::RecordType>(toFirTy)) {
