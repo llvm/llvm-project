@@ -63,7 +63,7 @@ void skep2<KN<2>>(K<2>);
 // CHECK:      |-FunctionTemplateDecl {{.*}} skep2 external-linkage
 // CHECK-NEXT: | |-TemplateTypeParmDecl {{.*}} KNT
 // CHECK-NEXT: | |-TemplateTypeParmDecl {{.*}} KT
-// CHECK-NEXT: | |-FunctionDecl {{.*}} skep2 'void (KT)' external-linkage
+// CHECK-NEXT: | |-FunctionDecl {{.*}} skep2 'void (KT)'
 // CHECK-NEXT: | | |-ParmVarDecl {{.*}} k 'KT'
 // CHECK-NEXT: | | |-UnresolvedSYCLKernelCallStmt {{.*}}
 // CHECK-NEXT: | | | |-CompoundStmt {{.*}}
@@ -122,7 +122,7 @@ void skep3<KN<3>>(K<3> k) {
 // CHECK:      |-FunctionTemplateDecl {{.*}} skep3 external-linkage
 // CHECK-NEXT: | |-TemplateTypeParmDecl {{.*}} KNT
 // CHECK-NEXT: | |-TemplateTypeParmDecl {{.*}} KT
-// CHECK-NEXT: | |-FunctionDecl {{.*}} skep3 'void (KT)' external-linkage
+// CHECK-NEXT: | |-FunctionDecl {{.*}} skep3 'void (KT)'
 // CHECK-NEXT: | | |-ParmVarDecl {{.*}} k 'KT'
 // CHECK-NEXT: | | |-UnresolvedSYCLKernelCallStmt {{.*}}
 // CHECK-NEXT: | | | |-CompoundStmt {{.*}}
@@ -262,10 +262,10 @@ void skep5(int unused1, K<5> k, int unused2, int p, int unused3) {
 // CHECK-NEXT: | |   |-ImplicitParamDecl {{.*}} implicit unused3 'int'
 // CHECK-NEXT: | |   `-CompoundStmt {{.*}}
 // CHECK-NEXT: | |     |-DeclStmt {{.*}}
-// CHECK-NEXT: | |     | `-VarDecl {{.*}} used slv 'int' static cinit no-linkage
+// CHECK-NEXT: | |     | `-VarDecl {{.*}} used slv 'int' static cinit
 // CHECK-NEXT: | |     |   `-IntegerLiteral {{.*}} 'int' 0
 // CHECK-NEXT: | |     |-DeclStmt {{.*}}
-// CHECK-NEXT: | |     | `-VarDecl {{.*}} used lv 'int' cinit no-linkage
+// CHECK-NEXT: | |     | `-VarDecl {{.*}} used lv 'int' cinit
 // CHECK-NEXT: | |     |   `-IntegerLiteral {{.*}} 'int' 4
 // CHECK-NEXT: | |     `-CXXOperatorCallExpr {{.*}} 'void' '()'
 // CHECK-NEXT: | |       |-ImplicitCastExpr {{.*}} 'void (*)(int, int, int, int, int, int, (lambda {{.*}}) const' <FunctionToPointerDecay>
@@ -404,7 +404,7 @@ void foo() {
 // CHECK: | |-FunctionTemplateDecl {{.*}} skep9 external-linkage
 // CHECK-NEXT: | | |-TemplateTypeParmDecl {{.*}} referenced typename depth 0 index 0 KNT
 // CHECK-NEXT: | | |-TemplateTypeParmDecl {{.*}} referenced typename depth 0 index 1 KT
-// CHECK-NEXT: | | |-CXXMethodDecl {{.*}} skep9 'void (KT, int, int)' implicit-inline external-linkage
+// CHECK-NEXT: | | |-CXXMethodDecl {{.*}} skep9 'void (KT, int, int)' implicit-inline
 // CHECK-NEXT: | | | |-ParmVarDecl {{.*}} referenced k 'KT'
 // CHECK-NEXT: | | | |-ParmVarDecl {{.*}} referenced a 'int'
 // CHECK-NEXT: | | | |-ParmVarDecl {{.*}} referenced b 'int'

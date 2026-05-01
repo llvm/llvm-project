@@ -2319,6 +2319,11 @@ void TextNodeDumper::VisitTypedefDecl(const TypedefDecl *D) {
   dumpType(D->getUnderlyingType());
   if (D->isModulePrivate())
     OS << " __module_private__";
+
+  const TagDecl *TD = D->getUnderlyingType()->getAsTagDecl();
+  if (TD && TD->getTypedefNameForAnonDecl()) {
+    dumpFormalLinkage(D);
+  }
 }
 
 void TextNodeDumper::VisitEnumDecl(const EnumDecl *D) {
@@ -2339,10 +2344,7 @@ void TextNodeDumper::VisitEnumDecl(const EnumDecl *D) {
     dumpPointer(Instance);
   }
 
-  if (D->getDeclName() ||
-      (!D->enumerators().empty() && !D->getTypedefNameForAnonDecl())) {
-    dumpFormalLinkage(D);
-  }
+  dumpFormalLinkage(D);
 }
 
 void TextNodeDumper::VisitRecordDecl(const RecordDecl *D) {
@@ -2353,10 +2355,7 @@ void TextNodeDumper::VisitRecordDecl(const RecordDecl *D) {
   if (D->isCompleteDefinition())
     OS << " definition";
 
-  if (D->hasNameForLinkage() && !D->isImplicit() &&
-      D->getFriendObjectKind() == Decl::FOK_None &&
-      (!D->getDescribedTemplate() ||
-       D->getDescribedTemplate()->getFriendObjectKind() == Decl::FOK_None)) {
+  if (!D->isImplicit() && !D->getDescribedTemplate()) {
     dumpFormalLinkage(D);
   }
 }
@@ -2457,8 +2456,7 @@ void TextNodeDumper::VisitFunctionDecl(const FunctionDecl *D) {
     dumpPointer(Instance);
   }
 
-  if (D->getFriendObjectKind() == Decl::FOK_None &&
-      !isa<CXXDeductionGuideDecl>(D)) {
+  if (!isa<CXXDeductionGuideDecl>(D) && !D->getDescribedTemplate()) {
     dumpFormalLinkage(D);
   }
 }
@@ -2562,7 +2560,7 @@ void TextNodeDumper::VisitVarDecl(const VarDecl *D) {
     }
   }
 
-  if (!isa<ParmVarDecl, ImplicitParamDecl, OMPCapturedExprDecl>(D)) {
+  if (!D->getDescribedVarTemplate()) {
     dumpFormalLinkage(D);
   }
 }
@@ -2695,6 +2693,11 @@ void TextNodeDumper::VisitNamespaceAliasDecl(const NamespaceAliasDecl *D) {
 void TextNodeDumper::VisitTypeAliasDecl(const TypeAliasDecl *D) {
   dumpName(D);
   dumpType(D->getUnderlyingType());
+
+  const TagDecl *TD = D->getUnderlyingType()->getAsTagDecl();
+  if (TD && TD->getTypedefNameForAnonDecl()) {
+    dumpFormalLinkage(D);
+  }
 }
 
 void TextNodeDumper::VisitTypeAliasTemplateDecl(
@@ -2861,16 +2864,12 @@ void TextNodeDumper::VisitCXXRecordDecl(const CXXRecordDecl *D) {
 
 void TextNodeDumper::VisitFunctionTemplateDecl(const FunctionTemplateDecl *D) {
   dumpName(D);
-  if (D->getFriendObjectKind() == Decl::FOK_None) {
-    dumpFormalLinkage(D);
-  }
+  dumpFormalLinkage(D);
 }
 
 void TextNodeDumper::VisitClassTemplateDecl(const ClassTemplateDecl *D) {
   dumpName(D);
-  if (D->getFriendObjectKind() == Decl::FOK_None) {
-    dumpFormalLinkage(D);
-  }
+  dumpFormalLinkage(D);
 }
 
 void TextNodeDumper::VisitVarTemplateDecl(const VarTemplateDecl *D) {

@@ -320,7 +320,7 @@ namespace testClassTemplateDecl {
 
 // CHECK:       ClassTemplateDecl 0x{{.+}} <{{.+}}:[[@LINE-40]]:3, line:[[@LINE-34]]:3> line:[[@LINE-40]]:30 referenced TestClassTemplate external-linkage{{$}}
 // CHECK-NEXT:  |-TemplateTypeParmDecl 0x{{.+}} <col:12, col:21> col:21 typename depth 0 index 0 T{{$}}
-// CHECK-NEXT:  |-CXXRecordDecl 0x{{.+}} <col:24, line:[[@LINE-36]]:3> line:[[@LINE-42]]:30 class TestClassTemplate definition external-linkage{{$}}
+// CHECK-NEXT:  |-CXXRecordDecl 0x{{.+}} <col:24, line:[[@LINE-36]]:3> line:[[@LINE-42]]:30 class TestClassTemplate definition{{$}}
 // CHECK-NEXT:  | |-DefinitionData standard_layout has_user_declared_ctor can_const_default_init{{$}}
 // CHECK-NEXT:  | | |-DefaultConstructor exists non_trivial user_provided{{$}}
 // CHECK-NEXT:  | | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param{{$}}
@@ -410,7 +410,7 @@ namespace testClassTemplateDecl {
 // CHECK:      ClassTemplateDecl 0x{{.+}} <{{.+}}:[[@LINE-106]]:3, line:[[@LINE-104]]:3> line:[[@LINE-106]]:44 TestClassTemplatePartial external-linkage{{$}}
 // CHECK-NEXT:  |-TemplateTypeParmDecl 0x{{.+}} <col:12, col:21> col:21 typename depth 0 index 0 T1{{$}}
 // CHECK-NEXT:  |-TemplateTypeParmDecl 0x{{.+}} <col:25, col:34> col:34 typename depth 0 index 1 T2{{$}}
-// CHECK-NEXT:  `-CXXRecordDecl 0x{{.+}} <col:38, line:[[@LINE-107]]:3> line:[[@LINE-109]]:44 class TestClassTemplatePartial definition external-linkage{{$}}
+// CHECK-NEXT:  `-CXXRecordDecl 0x{{.+}} <col:38, line:[[@LINE-107]]:3> line:[[@LINE-109]]:44 class TestClassTemplatePartial definition{{$}}
 // CHECK-NEXT:    |-DefinitionData standard_layout trivially_copyable trivial literal{{$}}
 // CHECK-NEXT:    | |-DefaultConstructor exists trivial needs_implicit{{$}}
 // CHECK-NEXT:    | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param{{$}}
@@ -442,14 +442,14 @@ namespace testClassTemplateDecl {
 // CHECK-NEXT:  |-TemplateTypeParmDecl 0x{{.+}} <col:12, col:25> col:21 typename depth 0 index 0 T{{$}}
 // CHECK-NEXT:  | `-TemplateArgument type 'int'{{$}}
 // CHECK-NEXT:  |   `-BuiltinType 0x{{.+}} 'int'{{$}}
-// CHECK-NEXT:  `-CXXRecordDecl 0x{{.+}} <col:30, col:37> col:37 struct TestTemplateDefaultType external-linkage{{$}}
+// CHECK-NEXT:  `-CXXRecordDecl 0x{{.+}} <col:30, col:37> col:37 struct TestTemplateDefaultType{{$}}
 
 // CHECK:       ClassTemplateDecl 0x{{.+}} prev 0x{{.+}} <{{.+}}:[[@LINE-135]]:3, col:57> col:31 TestTemplateDefaultType external-linkage{{$}}
 // CHECK-NEXT:  |-TemplateTypeParmDecl 0x{{.+}} <col:12, col:21> col:21 typename depth 0 index 0 T{{$}}
 // CHECK-NEXT:  | `-TemplateArgument type 'int'{{$}}
 // CHECK-NEXT:  |   |-inherited from TemplateTypeParm 0x{{.+}} 'T'{{$}}
 // CHECK-NEXT:  |   `-BuiltinType 0x{{.+}} 'int'{{$}}
-// CHECK-NEXT:  `-CXXRecordDecl 0x{{.+}} prev 0x{{.+}} <col:24, col:57> col:31 struct TestTemplateDefaultType definition external-linkage{{$}}
+// CHECK-NEXT:  `-CXXRecordDecl 0x{{.+}} prev 0x{{.+}} <col:24, col:57> col:31 struct TestTemplateDefaultType definition{{$}}
 // CHECK-NEXT:    |-DefinitionData empty aggregate standard_layout trivially_copyable pod trivial literal has_constexpr_non_copy_move_ctor can_const_default_init{{$}}
 // CHECK-NEXT:    | |-DefaultConstructor exists trivial constexpr needs_implicit defaulted_is_constexpr{{$}}
 // CHECK-NEXT:    | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param{{$}}
@@ -463,14 +463,14 @@ namespace testClassTemplateDecl {
 // CHECK-NEXT:  |-NonTypeTemplateParmDecl 0x{{.+}} <col:12, col:20> col:16 'int' depth 0 index 0 I{{$}}
 // CHECK-NEXT:  | `-TemplateArgument <col:20> expr '42'{{$}}
 // CHECK-NEXT:  |   `-IntegerLiteral 0x{{.+}} <col:20> 'int' 42{{$}}
-// CHECK-NEXT:  `-CXXRecordDecl 0x{{.+}} <col:24, col:31> col:31 struct TestTemplateDefaultNonType external-linkage{{$}}
+// CHECK-NEXT:  `-CXXRecordDecl 0x{{.+}} <col:24, col:31> col:31 struct TestTemplateDefaultNonType{{$}}
 
 // CHECK:       ClassTemplateDecl 0x{{.+}} <{{.+}}:{{.*}}:3, col:68> col:68 TestTemplateTemplateDefaultType external-linkage{{$}}
 // CHECK-NEXT:  |-TemplateTemplateParmDecl 0x{{.+}} <col:12, col:42> col:37 depth 0 index 0 TT{{$}}
 // CHECK-NEXT:  | |-TemplateTypeParmDecl 0x{{.+}} <col:21> col:29 typename depth 1 index 0{{$}}
 // CHECK-NEXT:  | `-TemplateArgument <col:42> template 'TestClassTemplate':'testClassTemplateDecl::TestClassTemplate' qualified{{$}}
 // CHECK-NEXT:  |   `-ClassTemplateDecl 0x{{.+}} <line:{{.+}}:3, line:{{.+}}:3> line:{{.+}}:30 referenced TestClassTemplate external-linkage{{$}}
-// CHECK-NEXT:  `-CXXRecordDecl 0x{{.+}} <line:{{.*}}:61, col:68> col:68 struct TestTemplateTemplateDefaultType external-linkage{{$}}
+// CHECK-NEXT:  `-CXXRecordDecl 0x{{.+}} <line:{{.*}}:61, col:68> col:68 struct TestTemplateTemplateDefaultType{{$}}
 
 // CHECK:       ClassTemplateDecl 0x{{.+}} prev 0x{{.+}} <{{.+}}:{{.*}}:3, col:82> col:48 TestTemplateTemplateDefaultType external-linkage{{$}}
 // CHECK-NEXT:  |-TemplateTemplateParmDecl 0x{{.+}} <col:12, col:37> col:37 depth 0 index 0 TT{{$}}
@@ -478,7 +478,7 @@ namespace testClassTemplateDecl {
 // CHECK-NEXT:  | `-TemplateArgument <line:{{.*}}:42> template 'TestClassTemplate':'testClassTemplateDecl::TestClassTemplate' qualified{{$}}
 // CHECK-NEXT:  |   |-inherited from TemplateTemplateParm 0x{{.+}} 'TT'{{$}}
 // CHECK-NEXT:  |   `-ClassTemplateDecl 0x{{.+}} <line:{{.+}}:3, line:{{.+}}:3> line:{{.+}}:30 referenced TestClassTemplate
-// CHECK-NEXT:  `-CXXRecordDecl 0x{{.+}} prev 0x{{.+}} <line:{{.*}}:41, col:82> col:48 struct TestTemplateTemplateDefaultType definition external-linkage{{$}}
+// CHECK-NEXT:  `-CXXRecordDecl 0x{{.+}} prev 0x{{.+}} <line:{{.*}}:41, col:82> col:48 struct TestTemplateTemplateDefaultType definition{{$}}
 // CHECK-NEXT:    |-DefinitionData empty aggregate standard_layout trivially_copyable pod trivial literal has_constexpr_non_copy_move_ctor can_const_default_init{{$}}
 // CHECK-NEXT:    | |-DefaultConstructor exists trivial constexpr needs_implicit defaulted_is_constexpr{{$}}
 // CHECK-NEXT:    | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param{{$}}
@@ -601,7 +601,7 @@ namespace testCanonicalTemplate {
   void bar(A a) { TestFunctionTemplate(a); }
   // CHECK:      FunctionTemplateDecl 0x{{.+}} <{{.+}}:[[@LINE-3]]:3, col:51> col:29 TestFunctionTemplate external-linkage{{$}}
   // CHECK-NEXT:   |-TemplateTypeParmDecl 0x{{.+}} <col:12, col:21> col:21 referenced typename depth 0 index 0 T{{$}}
-  // CHECK-NEXT:   |-FunctionDecl 0x{{.*}} <col:24, col:51> col:29 TestFunctionTemplate 'void (T)' external-linkage{{$}}
+  // CHECK-NEXT:   |-FunctionDecl 0x{{.*}} <col:24, col:51> col:29 TestFunctionTemplate 'void (T)'{{$}}
   // CHECK-NEXT:   | `-ParmVarDecl 0x{{.*}} <col:50> col:51 'T'{{$}}
   // CHECK-NEXT:   `-FunctionDecl 0x{{.*}} <line:[[@LINE-6]]:24, col:51> col:29 used TestFunctionTemplate 'void (testCanonicalTemplate::A)' implicit_instantiation instantiated_from 0x{{.+}}{{$}}
   // CHECK-NEXT:     |-TemplateArgument type 'testCanonicalTemplate::A'{{$}}
@@ -611,7 +611,7 @@ namespace testCanonicalTemplate {
 
   // CHECK:      FunctionTemplateDecl 0x{{.+}} prev 0x{{.+}} <{{.+}}:[[@LINE-12]]:3, col:51> col:29 TestFunctionTemplate external-linkage{{$}}
   // CHECK-NEXT:   |-TemplateTypeParmDecl 0x{{.+}} <col:12, col:21> col:21 referenced typename depth 0 index 0 T{{$}}
-  // CHECK-NEXT:   |-FunctionDecl{{.*}} 0x{{.+}} prev 0x{{.+}} <col:24, col:51> col:29 TestFunctionTemplate 'void (T)' external-linkage{{$}}
+  // CHECK-NEXT:   |-FunctionDecl{{.*}} 0x{{.+}} prev 0x{{.+}} <col:24, col:51> col:29 TestFunctionTemplate 'void (T)'{{$}}
   // CHECK-NEXT:   | `-ParmVarDecl 0x{{.+}} <col:50> col:51 'T'{{$}}
   // CHECK-NEXT:   `-Function 0x{{.+}} 'TestFunctionTemplate' 'void (testCanonicalTemplate::A)'{{$}}
   // CHECK-NOT:      TemplateArgument{{$}}
@@ -622,7 +622,7 @@ namespace testCanonicalTemplate {
   TestClassTemplate<A> a;
   // CHECK:      ClassTemplateDecl 0x{{.+}} <{{.+}}:[[@LINE-4]]:3, line:[[@LINE-2]]:3> line:[[@LINE-4]]:31 referenced TestClassTemplate external-linkage{{$}}
   // CHECK-NEXT: |-TemplateTypeParmDecl 0x{{.+}} <col:12, col:21> col:21 typename depth 0 index 0 T1{{$}}
-  // CHECK-NEXT: |-CXXRecordDecl 0x{{.+}} <col:25, line:[[@LINE-4]]:3> line:[[@LINE-6]]:31 class TestClassTemplate definition external-linkage{{$}}
+  // CHECK-NEXT: |-CXXRecordDecl 0x{{.+}} <col:25, line:[[@LINE-4]]:3> line:[[@LINE-6]]:31 class TestClassTemplate definition{{$}}
   // CHECK-NEXT: | |-DefinitionData empty aggregate standard_layout trivially_copyable pod trivial literal has_constexpr_non_copy_move_ctor can_const_default_init{{$}}
   // CHECK-NEXT: | | |-DefaultConstructor exists trivial constexpr needs_implicit defaulted_is_constexpr{{$}}
   // CHECK-NEXT: | | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param{{$}}
@@ -632,7 +632,7 @@ namespace testCanonicalTemplate {
   // CHECK-NEXT: | | `-Destructor simple irrelevant trivial needs_implicit{{$}}
   // CHECK-NEXT: | |-CXXRecordDecl 0x{{.+}} <col:25, col:31> col:31 implicit class TestClassTemplate{{$}}
   // CHECK-NEXT: | `-FriendDecl 0x{{.+}} <line:[[@LINE-14]]:5, col:40> col:40{{$}}
-  // CHECK-NEXT: |   `-ClassTemplateDecl 0x{{.+}} parent 0x{{.+}} <col:5, col:40> col:40 friend_undeclared TestClassTemplate{{$}}
+  // CHECK-NEXT: |   `-ClassTemplateDecl 0x{{.+}} parent 0x{{.+}} <col:5, col:40> col:40 friend_undeclared TestClassTemplate external-linkage{{$}}
   // CHECK-NEXT: |     |-TemplateTypeParmDecl 0x{{.+}} <col:14, col:23> col:23 typename depth 1 index 0 T2{{$}}
   // CHECK-NEXT: |     `-CXXRecordDecl 0x{{.+}} parent 0x{{.+}} <col:34, col:40> col:40 class TestClassTemplate{{$}}
   // CHECK-NEXT: `-ClassTemplateSpecializationDecl 0x{{.+}} <line:[[@LINE-19]]:3, line:[[@LINE-17]]:3> line:[[@LINE-19]]:31 referenced class TestClassTemplate definition external-linkage instantiated_from 0x{{.+}} implicit_instantiation{{$}}
@@ -648,7 +648,7 @@ namespace testCanonicalTemplate {
   // CHECK-NEXT:   |   `-CXXRecord 0x{{.+}} 'A'{{$}}
   // CHECK-NEXT:   |-CXXRecordDecl 0x{{.+}} <col:25, col:31> col:31 implicit class TestClassTemplate{{$}}
   // CHECK-NEXT:   |-FriendDecl 0x{{.+}} <line:[[@LINE-30]]:5, col:40> col:40{{$}}
-  // CHECK-NEXT:   | `-ClassTemplateDecl 0x{{.+}} parent 0x{{.+}} prev 0x{{.+}} <col:5, col:40> col:40 friend TestClassTemplate{{$}}
+  // CHECK-NEXT:   | `-ClassTemplateDecl 0x{{.+}} parent 0x{{.+}} prev 0x{{.+}} <col:5, col:40> col:40 friend TestClassTemplate external-linkage{{$}}
   // CHECK-NEXT:   |   |-TemplateTypeParmDecl 0x{{.+}} <col:14, col:23> col:23 typename depth 0 index 0 T2{{$}}
   // CHECK-NEXT:   |   |-CXXRecordDecl 0x{{.+}} parent 0x{{.+}} prev 0x{{.+}} <col:34, col:40> col:40 class TestClassTemplate{{$}}
   // CHECK-NEXT:   |   `-ClassTemplateSpecialization 0x{{.+}} 'TestClassTemplate'{{$}}
@@ -667,7 +667,7 @@ namespace testCanonicalTemplate {
   TestClassTemplate2<A> a2;
   // CHECK:      ClassTemplateDecl 0x{{.+}} <{{.+}}:[[@LINE-5]]:3, col:31> col:31 TestClassTemplate2 external-linkage{{$}}
   // CHECK-NEXT: |-TemplateTypeParmDecl 0x{{.+}} <col:12, col:21> col:21 typename depth 0 index 0 T1{{$}}
-  // CHECK-NEXT: |-CXXRecordDecl 0x{{.+}} <col:25, col:31> col:31 class TestClassTemplate2 external-linkage{{$}}
+  // CHECK-NEXT: |-CXXRecordDecl 0x{{.+}} <col:25, col:31> col:31 class TestClassTemplate2{{$}}
   // CHECK-NEXT: `-ClassTemplateSpecializationDecl 0x{{.+}} <line:[[@LINE-6]]:3, line:[[@LINE-5]]:3> line:[[@LINE-6]]:31 referenced class TestClassTemplate2 definition external-linkage instantiated_from 0x{{.+}} implicit_instantiation{{$}}
   // CHECK-NEXT:   |-DefinitionData pass_in_registers empty aggregate standard_layout trivially_copyable pod trivial literal has_constexpr_non_copy_move_ctor can_const_default_init{{$}}
   // CHECK-NEXT:   | |-DefaultConstructor exists trivial constexpr defaulted_is_constexpr{{$}}
@@ -689,12 +689,12 @@ namespace testCanonicalTemplate {
 
   // CHECK:      ClassTemplateDecl 0x{{.+}} prev 0x{{.+}} <{{.+}}:[[@LINE-26]]:3, col:31> col:31 TestClassTemplate2 external-linkage{{$}}
   // CHECK-NEXT: |-TemplateTypeParmDecl 0x{{.+}} <col:12, col:21> col:21 typename depth 0 index 0 T1{{$}}
-  // CHECK-NEXT: |-CXXRecordDecl 0x{{.+}} prev 0x{{.+}} <col:25, col:31> col:31 class TestClassTemplate2 external-linkage{{$}}
+  // CHECK-NEXT: |-CXXRecordDecl 0x{{.+}} prev 0x{{.+}} <col:25, col:31> col:31 class TestClassTemplate2{{$}}
   // CHECK-NEXT: `-ClassTemplateSpecialization 0x{{.+}} 'TestClassTemplate2'{{$}}
 
   // CHECK:      ClassTemplateDecl 0x{{.+}} prev 0x{{.+}} <{{.+}}:[[@LINE-30]]:3, line:[[@LINE-29]]:3> line:[[@LINE-30]]:31 referenced TestClassTemplate2 external-linkage{{$}}
   // CHECK-NEXT: |-TemplateTypeParmDecl 0x{{.+}} <col:12, col:21> col:21 typename depth 0 index 0 T1{{$}}
-  // CHECK-NEXT: |-CXXRecordDecl 0x{{.+}} prev 0x{{.+}} <col:25, line:[[@LINE-31]]:3> line:[[@LINE-32]]:31 class TestClassTemplate2 definition external-linkage{{$}}
+  // CHECK-NEXT: |-CXXRecordDecl 0x{{.+}} prev 0x{{.+}} <col:25, line:[[@LINE-31]]:3> line:[[@LINE-32]]:31 class TestClassTemplate2 definition{{$}}
   // CHECK-NEXT: | |-DefinitionData empty aggregate standard_layout trivially_copyable pod trivial literal has_constexpr_non_copy_move_ctor can_const_default_init{{$}}
   // CHECK-NEXT: | | |-DefaultConstructor exists trivial constexpr needs_implicit defaulted_is_constexpr{{$}}
   // CHECK-NEXT: | | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param{{$}}

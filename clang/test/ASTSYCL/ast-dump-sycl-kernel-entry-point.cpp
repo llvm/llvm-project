@@ -59,7 +59,7 @@ void skep4(F f) {
 // CHECK:      |-FunctionTemplateDecl {{.*}} skep4 external-linkage
 // CHECK-NEXT: | |-TemplateTypeParmDecl {{.*}} KNT
 // CHECK-NEXT: | |-TemplateTypeParmDecl {{.*}} F
-// CHECK-NEXT: | |-FunctionDecl {{.*}} skep4 'void (F)' external-linkage
+// CHECK-NEXT: | |-FunctionDecl {{.*}} skep4 'void (F)'
 // CHECK:      | | `-SYCLKernelEntryPointAttr {{.*}} KNT
 
 void test_skep4() {
@@ -78,7 +78,7 @@ void skep5(T) {
 // CHECK:      |-FunctionTemplateDecl {{.*}} skep5 external-linkage
 // CHECK-NEXT: | |-TemplateTypeParmDecl {{.*}} KNT
 // CHECK-NEXT: | |-TemplateTypeParmDecl {{.*}} T
-// CHECK-NEXT: | |-FunctionDecl {{.*}} skep5 'void (T)' external-linkage
+// CHECK-NEXT: | |-FunctionDecl {{.*}} skep5 'void (T)'
 // CHECK:      | | `-SYCLKernelEntryPointAttr {{.*}} KNT
 
 // Checks for the explicit template instantiation declaration below.

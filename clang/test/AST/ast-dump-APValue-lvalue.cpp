@@ -39,38 +39,38 @@ struct MP : P, Q {
 
 void Test(int (&arr)[10]) {
   constexpr int *pi = &i;
-  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} pi 'int *const' constexpr cinit no-linkage
+  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} pi 'int *const' constexpr cinit
   // CHECK-NEXT:  |   |-value: LValue Base=VarDecl {{.*}}, Null=0, Offset=0, HasPath=1, PathLength=0, Path=()
 
   constexpr int *psi = &s.i;
-  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} psi 'int *const' constexpr cinit no-linkage
+  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} psi 'int *const' constexpr cinit
   // CHECK-NEXT:  |   |-value: LValue Base=VarDecl {{.*}}, Null=0, Offset=0, HasPath=1, PathLength=1, Path=({{.*}})
 
   constexpr int *psii = &s.ii;
-  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} psii 'int *const' constexpr cinit no-linkage
+  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} psii 'int *const' constexpr cinit
   // CHECK-NEXT:  |   |-value: LValue Base=VarDecl {{.*}}, Null=0, Offset=4, HasPath=1, PathLength=1, Path=({{.*}})
 
   constexpr int *pf = &f.s.ii;
-  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} pf 'int *const' constexpr cinit no-linkage
+  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} pf 'int *const' constexpr cinit
   // CHECK-NEXT:  |   |-value: LValue Base=VarDecl {{.*}}, Null=0, Offset=16, HasPath=1, PathLength=2, Path=({{.*}}, {{.*}})
 
   constexpr char *pc = &f.padding[2];
-  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} pc 'char *const' constexpr cinit no-linkage
+  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} pc 'char *const' constexpr cinit
   // CHECK-NEXT:  |   |-value: LValue Base=VarDecl {{.*}}, Null=0, Offset=2, HasPath=1, PathLength=2, Path=({{.*}}, 2)
 
   constexpr const int *n = nullptr;
-  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} n 'const int *const' constexpr cinit no-linkage
+  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} n 'const int *const' constexpr cinit
   // CHECK-NEXT:  |   |-value: LValue Base=null, Null=1, Offset=0, HasPath=1, PathLength=0, Path=()
 
   constexpr const std::type_info* pti = &typeid(int);
-  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} pti 'const std::type_info *const' constexpr cinit no-linkage
+  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} pti 'const std::type_info *const' constexpr cinit
   // CHECK-NEXT:  |   |-value: LValue Base=TypeInfoLValue typeid(int), Null=0, Offset=0, HasPath=1, PathLength=0, Path=()
 
   constexpr int(MP::*pmi) = (int MP::*)&P::x;
-  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} pmi 'int (MP::*const)' constexpr cinit no-linkage
+  // CHECK:  | `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} pmi 'int (MP::*const)' constexpr cinit
   // CHECK-NEXT:  |   |-value: MemberPointer MP::x
 
   constexpr int(MP::*pmn) = (int MP::*)nullptr;
-  // CHECK:    `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} pmn 'int (MP::*const)' constexpr cinit no-linkage
+  // CHECK:    `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} pmn 'int (MP::*const)' constexpr cinit
   // CHECK-NEXT:      |-value: MemberPointer null
 }

@@ -56,7 +56,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | |   |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
 // CHECK-NEXT: |       | | | |   | |-ForStmt {{.*}} <line:6:3, line:7:5>
 // CHECK-NEXT: |       | | | |   | | |-DeclStmt {{.*}} <line:6:8, col:17>
-// CHECK-NEXT: |       | | | |   | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       | | | |   | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       | | | |   | | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
 // CHECK-NEXT: |       | | | |   | | |-<<<NULL>>>
 // CHECK-NEXT: |       | | | |   | | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
@@ -70,7 +70,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | |   | |-ImplicitParamDecl {{.*}} <line:5:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       | | | |   | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
 // CHECK-NEXT: |       | | | |   | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-simd.c:5:1) *const restrict'
-// CHECK-NEXT: |       | | | |   | `-VarDecl {{.*}} <line:6:8, col:16> col:12 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       | | | |   | `-VarDecl {{.*}} <line:6:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       | | | |   |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
 // CHECK-NEXT: |       | | | |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
 // CHECK-NEXT: |       | | | |-ImplicitParamDecl {{.*}} <line:4:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-simd.c:4:1) *const restrict'
@@ -81,7 +81,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
 // CHECK-NEXT: |       | | | | |-ForStmt {{.*}} <col:3, line:7:5>
 // CHECK-NEXT: |       | | | | | |-DeclStmt {{.*}} <line:6:8, col:17>
-// CHECK-NEXT: |       | | | | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       | | | | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       | | | | | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
 // CHECK-NEXT: |       | | | | | |-<<<NULL>>>
 // CHECK-NEXT: |       | | | | | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
@@ -95,7 +95,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | | |-ImplicitParamDecl {{.*}} <line:5:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
 // CHECK-NEXT: |       | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-simd.c:5:1) *const restrict'
-// CHECK-NEXT: |       | | | | `-VarDecl {{.*}} <line:6:8, col:16> col:12 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       | | | | `-VarDecl {{.*}} <line:6:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       | | | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
 // CHECK-NEXT: |       | | | |-OMPCapturedExprDecl {{.*}} <col:23> col:23 implicit used .capture_expr. 'int'
 // CHECK-NEXT: |       | | | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
@@ -133,7 +133,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   |   |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
 // CHECK-NEXT: |       |   |   | |-ForStmt {{.*}} <line:6:3, line:7:5>
 // CHECK-NEXT: |       |   |   | | |-DeclStmt {{.*}} <line:6:8, col:17>
-// CHECK-NEXT: |       |   |   | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       |   |   | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       |   |   | | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
 // CHECK-NEXT: |       |   |   | | |-<<<NULL>>>
 // CHECK-NEXT: |       |   |   | | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
@@ -147,7 +147,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   |   | |-ImplicitParamDecl {{.*}} <line:5:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       |   |   | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
 // CHECK-NEXT: |       |   |   | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-simd.c:5:1) *const restrict'
-// CHECK-NEXT: |       |   |   | `-VarDecl {{.*}} <line:6:8, col:16> col:12 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       |   |   | `-VarDecl {{.*}} <line:6:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       |   |   |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
 // CHECK-NEXT: |       |   |   `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
 // CHECK-NEXT: |       |   |-ImplicitParamDecl {{.*}} <line:4:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-simd.c:4:1) *const restrict'
@@ -158,7 +158,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
 // CHECK-NEXT: |       |   | |-ForStmt {{.*}} <col:3, line:7:5>
 // CHECK-NEXT: |       |   | | |-DeclStmt {{.*}} <line:6:8, col:17>
-// CHECK-NEXT: |       |   | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       |   | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       |   | | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
 // CHECK-NEXT: |       |   | | |-<<<NULL>>>
 // CHECK-NEXT: |       |   | | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
@@ -172,7 +172,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   | |-ImplicitParamDecl {{.*}} <line:5:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       |   | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
 // CHECK-NEXT: |       |   | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-simd.c:5:1) *const restrict'
-// CHECK-NEXT: |       |   | `-VarDecl {{.*}} <line:6:8, col:16> col:12 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       |   | `-VarDecl {{.*}} <line:6:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       |   |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
 // CHECK-NEXT: |       |   |-OMPCapturedExprDecl {{.*}} <col:23> col:23 implicit used .capture_expr. 'int'
 // CHECK-NEXT: |       |   | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
@@ -210,7 +210,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | |   |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
 // CHECK-NEXT: |       | | | |   | |-ForStmt {{.*}} <line:13:3, line:15:7>
 // CHECK-NEXT: |       | | | |   | | |-DeclStmt {{.*}} <line:13:8, col:17>
-// CHECK-NEXT: |       | | | |   | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       | | | |   | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       | | | |   | | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
 // CHECK-NEXT: |       | | | |   | | |-<<<NULL>>>
 // CHECK-NEXT: |       | | | |   | | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
@@ -222,7 +222,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | |   | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT: |       | | | |   | | `-ForStmt {{.*}} <line:14:5, line:15:7>
 // CHECK-NEXT: |       | | | |   | |   |-DeclStmt {{.*}} <line:14:10, col:19>
-// CHECK-NEXT: |       | | | |   | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       | | | |   | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
 // CHECK-NEXT: |       | | | |   | |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
 // CHECK-NEXT: |       | | | |   | |   |-<<<NULL>>>
 // CHECK-NEXT: |       | | | |   | |   |-BinaryOperator {{.*}} <col:21, col:25> 'int' '<'
@@ -236,9 +236,9 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | |   | |-ImplicitParamDecl {{.*}} <line:12:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       | | | |   | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
 // CHECK-NEXT: |       | | | |   | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-simd.c:12:1) *const restrict'
-// CHECK-NEXT: |       | | | |   | |-VarDecl {{.*}} <line:13:8, col:16> col:12 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       | | | |   | |-VarDecl {{.*}} <line:13:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       | | | |   | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       | | | |   | `-VarDecl {{.*}} <line:14:10, col:18> col:14 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       | | | |   | `-VarDecl {{.*}} <line:14:10, col:18> col:14 used i 'int' cinit
 // CHECK-NEXT: |       | | | |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
 // CHECK-NEXT: |       | | | |   |-DeclRefExpr {{.*}} <line:13:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
 // CHECK-NEXT: |       | | | |   `-DeclRefExpr {{.*}} <line:14:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
@@ -251,7 +251,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
 // CHECK-NEXT: |       | | | | |-ForStmt {{.*}} <line:13:3, line:15:7>
 // CHECK-NEXT: |       | | | | | |-DeclStmt {{.*}} <line:13:8, col:17>
-// CHECK-NEXT: |       | | | | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       | | | | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       | | | | | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
 // CHECK-NEXT: |       | | | | | |-<<<NULL>>>
 // CHECK-NEXT: |       | | | | | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
@@ -263,7 +263,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT: |       | | | | | `-ForStmt {{.*}} <line:14:5, line:15:7>
 // CHECK-NEXT: |       | | | | |   |-DeclStmt {{.*}} <line:14:10, col:19>
-// CHECK-NEXT: |       | | | | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       | | | | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
 // CHECK-NEXT: |       | | | | |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
 // CHECK-NEXT: |       | | | | |   |-<<<NULL>>>
 // CHECK-NEXT: |       | | | | |   |-BinaryOperator {{.*}} <col:21, col:25> 'int' '<'
@@ -277,9 +277,9 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | | |-ImplicitParamDecl {{.*}} <line:12:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
 // CHECK-NEXT: |       | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-simd.c:12:1) *const restrict'
-// CHECK-NEXT: |       | | | | |-VarDecl {{.*}} <line:13:8, col:16> col:12 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       | | | | |-VarDecl {{.*}} <line:13:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       | | | | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       | | | | `-VarDecl {{.*}} <line:14:10, col:18> col:14 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       | | | | `-VarDecl {{.*}} <line:14:10, col:18> col:14 used i 'int' cinit
 // CHECK-NEXT: |       | | | |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
 // CHECK-NEXT: |       | | | |-OMPCapturedExprDecl {{.*}} <line:13:23> col:23 implicit used .capture_expr. 'int'
 // CHECK-NEXT: |       | | | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
@@ -320,7 +320,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   |   |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
 // CHECK-NEXT: |       |   |   | |-ForStmt {{.*}} <line:13:3, line:15:7>
 // CHECK-NEXT: |       |   |   | | |-DeclStmt {{.*}} <line:13:8, col:17>
-// CHECK-NEXT: |       |   |   | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       |   |   | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       |   |   | | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
 // CHECK-NEXT: |       |   |   | | |-<<<NULL>>>
 // CHECK-NEXT: |       |   |   | | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
@@ -332,7 +332,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   |   | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT: |       |   |   | | `-ForStmt {{.*}} <line:14:5, line:15:7>
 // CHECK-NEXT: |       |   |   | |   |-DeclStmt {{.*}} <line:14:10, col:19>
-// CHECK-NEXT: |       |   |   | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       |   |   | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
 // CHECK-NEXT: |       |   |   | |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
 // CHECK-NEXT: |       |   |   | |   |-<<<NULL>>>
 // CHECK-NEXT: |       |   |   | |   |-BinaryOperator {{.*}} <col:21, col:25> 'int' '<'
@@ -346,9 +346,9 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   |   | |-ImplicitParamDecl {{.*}} <line:12:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       |   |   | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
 // CHECK-NEXT: |       |   |   | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-simd.c:12:1) *const restrict'
-// CHECK-NEXT: |       |   |   | |-VarDecl {{.*}} <line:13:8, col:16> col:12 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       |   |   | |-VarDecl {{.*}} <line:13:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       |   |   | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       |   |   | `-VarDecl {{.*}} <line:14:10, col:18> col:14 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       |   |   | `-VarDecl {{.*}} <line:14:10, col:18> col:14 used i 'int' cinit
 // CHECK-NEXT: |       |   |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
 // CHECK-NEXT: |       |   |   |-DeclRefExpr {{.*}} <line:13:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
 // CHECK-NEXT: |       |   |   `-DeclRefExpr {{.*}} <line:14:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
@@ -361,7 +361,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
 // CHECK-NEXT: |       |   | |-ForStmt {{.*}} <line:13:3, line:15:7>
 // CHECK-NEXT: |       |   | | |-DeclStmt {{.*}} <line:13:8, col:17>
-// CHECK-NEXT: |       |   | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       |   | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       |   | | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
 // CHECK-NEXT: |       |   | | |-<<<NULL>>>
 // CHECK-NEXT: |       |   | | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
@@ -373,7 +373,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT: |       |   | | `-ForStmt {{.*}} <line:14:5, line:15:7>
 // CHECK-NEXT: |       |   | |   |-DeclStmt {{.*}} <line:14:10, col:19>
-// CHECK-NEXT: |       |   | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       |   | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
 // CHECK-NEXT: |       |   | |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
 // CHECK-NEXT: |       |   | |   |-<<<NULL>>>
 // CHECK-NEXT: |       |   | |   |-BinaryOperator {{.*}} <col:21, col:25> 'int' '<'
@@ -387,9 +387,9 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   | |-ImplicitParamDecl {{.*}} <line:12:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       |   | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
 // CHECK-NEXT: |       |   | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-simd.c:12:1) *const restrict'
-// CHECK-NEXT: |       |   | |-VarDecl {{.*}} <line:13:8, col:16> col:12 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       |   | |-VarDecl {{.*}} <line:13:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       |   | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       |   | `-VarDecl {{.*}} <line:14:10, col:18> col:14 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       |   | `-VarDecl {{.*}} <line:14:10, col:18> col:14 used i 'int' cinit
 // CHECK-NEXT: |       |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
 // CHECK-NEXT: |       |   |-OMPCapturedExprDecl {{.*}} <line:13:23> col:23 implicit used .capture_expr. 'int'
 // CHECK-NEXT: |       |   | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
@@ -432,7 +432,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | |   |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
 // CHECK-NEXT: |       | | | |   | |-ForStmt {{.*}} <line:21:3, line:23:7>
 // CHECK-NEXT: |       | | | |   | | |-DeclStmt {{.*}} <line:21:8, col:17>
-// CHECK-NEXT: |       | | | |   | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       | | | |   | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       | | | |   | | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
 // CHECK-NEXT: |       | | | |   | | |-<<<NULL>>>
 // CHECK-NEXT: |       | | | |   | | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
@@ -444,7 +444,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | |   | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT: |       | | | |   | | `-ForStmt {{.*}} <line:22:5, line:23:7>
 // CHECK-NEXT: |       | | | |   | |   |-DeclStmt {{.*}} <line:22:10, col:19>
-// CHECK-NEXT: |       | | | |   | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       | | | |   | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
 // CHECK-NEXT: |       | | | |   | |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
 // CHECK-NEXT: |       | | | |   | |   |-<<<NULL>>>
 // CHECK-NEXT: |       | | | |   | |   |-BinaryOperator {{.*}} <col:21, col:25> 'int' '<'
@@ -458,9 +458,9 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | |   | |-ImplicitParamDecl {{.*}} <line:20:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       | | | |   | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
 // CHECK-NEXT: |       | | | |   | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-simd.c:20:1) *const restrict'
-// CHECK-NEXT: |       | | | |   | |-VarDecl {{.*}} <line:21:8, col:16> col:12 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       | | | |   | |-VarDecl {{.*}} <line:21:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       | | | |   | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       | | | |   | `-VarDecl {{.*}} <line:22:10, col:18> col:14 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       | | | |   | `-VarDecl {{.*}} <line:22:10, col:18> col:14 used i 'int' cinit
 // CHECK-NEXT: |       | | | |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
 // CHECK-NEXT: |       | | | |   |-DeclRefExpr {{.*}} <line:21:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
 // CHECK-NEXT: |       | | | |   `-DeclRefExpr {{.*}} <line:22:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
@@ -473,7 +473,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
 // CHECK-NEXT: |       | | | | |-ForStmt {{.*}} <line:21:3, line:23:7>
 // CHECK-NEXT: |       | | | | | |-DeclStmt {{.*}} <line:21:8, col:17>
-// CHECK-NEXT: |       | | | | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       | | | | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       | | | | | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
 // CHECK-NEXT: |       | | | | | |-<<<NULL>>>
 // CHECK-NEXT: |       | | | | | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
@@ -485,7 +485,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT: |       | | | | | `-ForStmt {{.*}} <line:22:5, line:23:7>
 // CHECK-NEXT: |       | | | | |   |-DeclStmt {{.*}} <line:22:10, col:19>
-// CHECK-NEXT: |       | | | | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       | | | | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
 // CHECK-NEXT: |       | | | | |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
 // CHECK-NEXT: |       | | | | |   |-<<<NULL>>>
 // CHECK-NEXT: |       | | | | |   |-BinaryOperator {{.*}} <col:21, col:25> 'int' '<'
@@ -499,9 +499,9 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | | |-ImplicitParamDecl {{.*}} <line:20:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
 // CHECK-NEXT: |       | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-simd.c:20:1) *const restrict'
-// CHECK-NEXT: |       | | | | |-VarDecl {{.*}} <line:21:8, col:16> col:12 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       | | | | |-VarDecl {{.*}} <line:21:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       | | | | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       | | | | `-VarDecl {{.*}} <line:22:10, col:18> col:14 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       | | | | `-VarDecl {{.*}} <line:22:10, col:18> col:14 used i 'int' cinit
 // CHECK-NEXT: |       | | | |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
 // CHECK-NEXT: |       | | | |-OMPCapturedExprDecl {{.*}} <line:21:23> col:23 implicit used .capture_expr. 'int'
 // CHECK-NEXT: |       | | | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
@@ -546,7 +546,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   |   |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
 // CHECK-NEXT: |       |   |   | |-ForStmt {{.*}} <line:21:3, line:23:7>
 // CHECK-NEXT: |       |   |   | | |-DeclStmt {{.*}} <line:21:8, col:17>
-// CHECK-NEXT: |       |   |   | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       |   |   | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       |   |   | | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
 // CHECK-NEXT: |       |   |   | | |-<<<NULL>>>
 // CHECK-NEXT: |       |   |   | | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
@@ -558,7 +558,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   |   | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT: |       |   |   | | `-ForStmt {{.*}} <line:22:5, line:23:7>
 // CHECK-NEXT: |       |   |   | |   |-DeclStmt {{.*}} <line:22:10, col:19>
-// CHECK-NEXT: |       |   |   | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       |   |   | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
 // CHECK-NEXT: |       |   |   | |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
 // CHECK-NEXT: |       |   |   | |   |-<<<NULL>>>
 // CHECK-NEXT: |       |   |   | |   |-BinaryOperator {{.*}} <col:21, col:25> 'int' '<'
@@ -572,9 +572,9 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   |   | |-ImplicitParamDecl {{.*}} <line:20:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       |   |   | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
 // CHECK-NEXT: |       |   |   | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-simd.c:20:1) *const restrict'
-// CHECK-NEXT: |       |   |   | |-VarDecl {{.*}} <line:21:8, col:16> col:12 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       |   |   | |-VarDecl {{.*}} <line:21:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       |   |   | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       |   |   | `-VarDecl {{.*}} <line:22:10, col:18> col:14 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       |   |   | `-VarDecl {{.*}} <line:22:10, col:18> col:14 used i 'int' cinit
 // CHECK-NEXT: |       |   |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
 // CHECK-NEXT: |       |   |   |-DeclRefExpr {{.*}} <line:21:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
 // CHECK-NEXT: |       |   |   `-DeclRefExpr {{.*}} <line:22:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
@@ -587,7 +587,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
 // CHECK-NEXT: |       |   | |-ForStmt {{.*}} <line:21:3, line:23:7>
 // CHECK-NEXT: |       |   | | |-DeclStmt {{.*}} <line:21:8, col:17>
-// CHECK-NEXT: |       |   | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       |   | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       |   | | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
 // CHECK-NEXT: |       |   | | |-<<<NULL>>>
 // CHECK-NEXT: |       |   | | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
@@ -599,7 +599,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT: |       |   | | `-ForStmt {{.*}} <line:22:5, line:23:7>
 // CHECK-NEXT: |       |   | |   |-DeclStmt {{.*}} <line:22:10, col:19>
-// CHECK-NEXT: |       |   | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       |   | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
 // CHECK-NEXT: |       |   | |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
 // CHECK-NEXT: |       |   | |   |-<<<NULL>>>
 // CHECK-NEXT: |       |   | |   |-BinaryOperator {{.*}} <col:21, col:25> 'int' '<'
@@ -613,9 +613,9 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   | |-ImplicitParamDecl {{.*}} <line:20:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       |   | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
 // CHECK-NEXT: |       |   | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-simd.c:20:1) *const restrict'
-// CHECK-NEXT: |       |   | |-VarDecl {{.*}} <line:21:8, col:16> col:12 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       |   | |-VarDecl {{.*}} <line:21:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       |   | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       |   | `-VarDecl {{.*}} <line:22:10, col:18> col:14 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       |   | `-VarDecl {{.*}} <line:22:10, col:18> col:14 used i 'int' cinit
 // CHECK-NEXT: |       |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
 // CHECK-NEXT: |       |   |-OMPCapturedExprDecl {{.*}} <line:21:23> col:23 implicit used .capture_expr. 'int'
 // CHECK-NEXT: |       |   | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
@@ -658,7 +658,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | |   |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
 // CHECK-NEXT: |       | | | |   | |-ForStmt {{.*}} <line:29:3, line:31:7>
 // CHECK-NEXT: |       | | | |   | | |-DeclStmt {{.*}} <line:29:8, col:17>
-// CHECK-NEXT: |       | | | |   | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       | | | |   | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       | | | |   | | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
 // CHECK-NEXT: |       | | | |   | | |-<<<NULL>>>
 // CHECK-NEXT: |       | | | |   | | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
@@ -670,7 +670,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | |   | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT: |       | | | |   | | `-ForStmt {{.*}} <line:30:5, line:31:7>
 // CHECK-NEXT: |       | | | |   | |   |-DeclStmt {{.*}} <line:30:10, col:19>
-// CHECK-NEXT: |       | | | |   | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       | | | |   | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
 // CHECK-NEXT: |       | | | |   | |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
 // CHECK-NEXT: |       | | | |   | |   |-<<<NULL>>>
 // CHECK-NEXT: |       | | | |   | |   |-BinaryOperator {{.*}} <col:21, col:25> 'int' '<'
@@ -684,9 +684,9 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | |   | |-ImplicitParamDecl {{.*}} <line:28:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       | | | |   | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
 // CHECK-NEXT: |       | | | |   | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-simd.c:28:1) *const restrict'
-// CHECK-NEXT: |       | | | |   | |-VarDecl {{.*}} <line:29:8, col:16> col:12 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       | | | |   | |-VarDecl {{.*}} <line:29:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       | | | |   | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       | | | |   | `-VarDecl {{.*}} <line:30:10, col:18> col:14 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       | | | |   | `-VarDecl {{.*}} <line:30:10, col:18> col:14 used i 'int' cinit
 // CHECK-NEXT: |       | | | |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
 // CHECK-NEXT: |       | | | |   |-DeclRefExpr {{.*}} <line:29:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
 // CHECK-NEXT: |       | | | |   `-DeclRefExpr {{.*}} <line:30:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
@@ -699,7 +699,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
 // CHECK-NEXT: |       | | | | |-ForStmt {{.*}} <line:29:3, line:31:7>
 // CHECK-NEXT: |       | | | | | |-DeclStmt {{.*}} <line:29:8, col:17>
-// CHECK-NEXT: |       | | | | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       | | | | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       | | | | | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
 // CHECK-NEXT: |       | | | | | |-<<<NULL>>>
 // CHECK-NEXT: |       | | | | | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
@@ -711,7 +711,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT: |       | | | | | `-ForStmt {{.*}} <line:30:5, line:31:7>
 // CHECK-NEXT: |       | | | | |   |-DeclStmt {{.*}} <line:30:10, col:19>
-// CHECK-NEXT: |       | | | | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       | | | | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
 // CHECK-NEXT: |       | | | | |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
 // CHECK-NEXT: |       | | | | |   |-<<<NULL>>>
 // CHECK-NEXT: |       | | | | |   |-BinaryOperator {{.*}} <col:21, col:25> 'int' '<'
@@ -725,9 +725,9 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | | | | |-ImplicitParamDecl {{.*}} <line:28:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
 // CHECK-NEXT: |       | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-simd.c:28:1) *const restrict'
-// CHECK-NEXT: |       | | | | |-VarDecl {{.*}} <line:29:8, col:16> col:12 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       | | | | |-VarDecl {{.*}} <line:29:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       | | | | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       | | | | `-VarDecl {{.*}} <line:30:10, col:18> col:14 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       | | | | `-VarDecl {{.*}} <line:30:10, col:18> col:14 used i 'int' cinit
 // CHECK-NEXT: |       | | | |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
 // CHECK-NEXT: |       | | | |-OMPCapturedExprDecl {{.*}} <line:29:23> col:23 implicit used .capture_expr. 'int'
 // CHECK-NEXT: |       | | | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
@@ -791,7 +791,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   |   |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
 // CHECK-NEXT: |       |   |   | |-ForStmt {{.*}} <line:29:3, line:31:7>
 // CHECK-NEXT: |       |   |   | | |-DeclStmt {{.*}} <line:29:8, col:17>
-// CHECK-NEXT: |       |   |   | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       |   |   | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       |   |   | | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
 // CHECK-NEXT: |       |   |   | | |-<<<NULL>>>
 // CHECK-NEXT: |       |   |   | | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
@@ -803,7 +803,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   |   | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT: |       |   |   | | `-ForStmt {{.*}} <line:30:5, line:31:7>
 // CHECK-NEXT: |       |   |   | |   |-DeclStmt {{.*}} <line:30:10, col:19>
-// CHECK-NEXT: |       |   |   | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       |   |   | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
 // CHECK-NEXT: |       |   |   | |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
 // CHECK-NEXT: |       |   |   | |   |-<<<NULL>>>
 // CHECK-NEXT: |       |   |   | |   |-BinaryOperator {{.*}} <col:21, col:25> 'int' '<'
@@ -817,9 +817,9 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   |   | |-ImplicitParamDecl {{.*}} <line:28:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       |   |   | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
 // CHECK-NEXT: |       |   |   | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-simd.c:28:1) *const restrict'
-// CHECK-NEXT: |       |   |   | |-VarDecl {{.*}} <line:29:8, col:16> col:12 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       |   |   | |-VarDecl {{.*}} <line:29:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       |   |   | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       |   |   | `-VarDecl {{.*}} <line:30:10, col:18> col:14 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       |   |   | `-VarDecl {{.*}} <line:30:10, col:18> col:14 used i 'int' cinit
 // CHECK-NEXT: |       |   |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
 // CHECK-NEXT: |       |   |   |-DeclRefExpr {{.*}} <line:29:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
 // CHECK-NEXT: |       |   |   `-DeclRefExpr {{.*}} <line:30:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
@@ -832,7 +832,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
 // CHECK-NEXT: |       |   | |-ForStmt {{.*}} <line:29:3, line:31:7>
 // CHECK-NEXT: |       |   | | |-DeclStmt {{.*}} <line:29:8, col:17>
-// CHECK-NEXT: |       |   | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       |   | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       |   | | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
 // CHECK-NEXT: |       |   | | |-<<<NULL>>>
 // CHECK-NEXT: |       |   | | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
@@ -844,7 +844,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT: |       |   | | `-ForStmt {{.*}} <line:30:5, line:31:7>
 // CHECK-NEXT: |       |   | |   |-DeclStmt {{.*}} <line:30:10, col:19>
-// CHECK-NEXT: |       |   | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       |   | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
 // CHECK-NEXT: |       |   | |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
 // CHECK-NEXT: |       |   | |   |-<<<NULL>>>
 // CHECK-NEXT: |       |   | |   |-BinaryOperator {{.*}} <col:21, col:25> 'int' '<'
@@ -858,9 +858,9 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   | |-ImplicitParamDecl {{.*}} <line:28:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT: |       |   | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
 // CHECK-NEXT: |       |   | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-simd.c:28:1) *const restrict'
-// CHECK-NEXT: |       |   | |-VarDecl {{.*}} <line:29:8, col:16> col:12 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       |   | |-VarDecl {{.*}} <line:29:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       |   | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT: |       |   | `-VarDecl {{.*}} <line:30:10, col:18> col:14 used i 'int' cinit no-linkage
+// CHECK-NEXT: |       |   | `-VarDecl {{.*}} <line:30:10, col:18> col:14 used i 'int' cinit
 // CHECK-NEXT: |       |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
 // CHECK-NEXT: |       |   |-OMPCapturedExprDecl {{.*}} <line:29:23> col:23 implicit used .capture_expr. 'int'
 // CHECK-NEXT: |       |   | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
@@ -924,7 +924,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT:         | | | |   |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
 // CHECK-NEXT:         | | | |   | |-ForStmt {{.*}} <line:37:3, line:40:9>
 // CHECK-NEXT:         | | | |   | | |-DeclStmt {{.*}} <line:37:8, col:17>
-// CHECK-NEXT:         | | | |   | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit no-linkage
+// CHECK-NEXT:         | | | |   | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT:         | | | |   | | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
 // CHECK-NEXT:         | | | |   | | |-<<<NULL>>>
 // CHECK-NEXT:         | | | |   | | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
@@ -936,7 +936,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT:         | | | |   | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT:         | | | |   | | `-ForStmt {{.*}} <line:38:5, line:40:9>
 // CHECK-NEXT:         | | | |   | |   |-DeclStmt {{.*}} <line:38:10, col:19>
-// CHECK-NEXT:         | | | |   | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit no-linkage
+// CHECK-NEXT:         | | | |   | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
 // CHECK-NEXT:         | | | |   | |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
 // CHECK-NEXT:         | | | |   | |   |-<<<NULL>>>
 // CHECK-NEXT:         | | | |   | |   |-BinaryOperator {{.*}} <col:21, col:25> 'int' '<'
@@ -948,7 +948,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT:         | | | |   | |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT:         | | | |   | |   `-ForStmt {{.*}} <line:39:7, line:40:9>
 // CHECK-NEXT:         | | | |   | |     |-DeclStmt {{.*}} <line:39:12, col:21>
-// CHECK-NEXT:         | | | |   | |     | `-VarDecl {{.*}} <col:12, col:20> col:16 used i 'int' cinit no-linkage
+// CHECK-NEXT:         | | | |   | |     | `-VarDecl {{.*}} <col:12, col:20> col:16 used i 'int' cinit
 // CHECK-NEXT:         | | | |   | |     |   `-IntegerLiteral {{.*}} <col:20> 'int' 0
 // CHECK-NEXT:         | | | |   | |     |-<<<NULL>>>
 // CHECK-NEXT:         | | | |   | |     |-BinaryOperator {{.*}} <col:23, col:27> 'int' '<'
@@ -962,11 +962,11 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT:         | | | |   | |-ImplicitParamDecl {{.*}} <line:36:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT:         | | | |   | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
 // CHECK-NEXT:         | | | |   | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-simd.c:36:1) *const restrict'
-// CHECK-NEXT:         | | | |   | |-VarDecl {{.*}} <line:37:8, col:16> col:12 used i 'int' cinit no-linkage
+// CHECK-NEXT:         | | | |   | |-VarDecl {{.*}} <line:37:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT:         | | | |   | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT:         | | | |   | |-VarDecl {{.*}} <line:38:10, col:18> col:14 used i 'int' cinit no-linkage
+// CHECK-NEXT:         | | | |   | |-VarDecl {{.*}} <line:38:10, col:18> col:14 used i 'int' cinit
 // CHECK-NEXT:         | | | |   | | `-IntegerLiteral {{.*}} <col:18> 'int' 0
-// CHECK-NEXT:         | | | |   | `-VarDecl {{.*}} <line:39:12, col:20> col:16 used i 'int' cinit no-linkage
+// CHECK-NEXT:         | | | |   | `-VarDecl {{.*}} <line:39:12, col:20> col:16 used i 'int' cinit
 // CHECK-NEXT:         | | | |   |   `-IntegerLiteral {{.*}} <col:20> 'int' 0
 // CHECK-NEXT:         | | | |   |-DeclRefExpr {{.*}} <line:37:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
 // CHECK-NEXT:         | | | |   |-DeclRefExpr {{.*}} <line:38:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
@@ -981,7 +981,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT:         | | | |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
 // CHECK-NEXT:         | | | | |-ForStmt {{.*}} <line:37:3, line:40:9>
 // CHECK-NEXT:         | | | | | |-DeclStmt {{.*}} <line:37:8, col:17>
-// CHECK-NEXT:         | | | | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit no-linkage
+// CHECK-NEXT:         | | | | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT:         | | | | | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
 // CHECK-NEXT:         | | | | | |-<<<NULL>>>
 // CHECK-NEXT:         | | | | | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
@@ -993,7 +993,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT:         | | | | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT:         | | | | | `-ForStmt {{.*}} <line:38:5, line:40:9>
 // CHECK-NEXT:         | | | | |   |-DeclStmt {{.*}} <line:38:10, col:19>
-// CHECK-NEXT:         | | | | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit no-linkage
+// CHECK-NEXT:         | | | | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
 // CHECK-NEXT:         | | | | |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
 // CHECK-NEXT:         | | | | |   |-<<<NULL>>>
 // CHECK-NEXT:         | | | | |   |-BinaryOperator {{.*}} <col:21, col:25> 'int' '<'
@@ -1005,7 +1005,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT:         | | | | |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT:         | | | | |   `-ForStmt {{.*}} <line:39:7, line:40:9>
 // CHECK-NEXT:         | | | | |     |-DeclStmt {{.*}} <line:39:12, col:21>
-// CHECK-NEXT:         | | | | |     | `-VarDecl {{.*}} <col:12, col:20> col:16 used i 'int' cinit no-linkage
+// CHECK-NEXT:         | | | | |     | `-VarDecl {{.*}} <col:12, col:20> col:16 used i 'int' cinit
 // CHECK-NEXT:         | | | | |     |   `-IntegerLiteral {{.*}} <col:20> 'int' 0
 // CHECK-NEXT:         | | | | |     |-<<<NULL>>>
 // CHECK-NEXT:         | | | | |     |-BinaryOperator {{.*}} <col:23, col:27> 'int' '<'
@@ -1019,11 +1019,11 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT:         | | | | |-ImplicitParamDecl {{.*}} <line:36:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT:         | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
 // CHECK-NEXT:         | | | | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-simd.c:36:1) *const restrict'
-// CHECK-NEXT:         | | | | |-VarDecl {{.*}} <line:37:8, col:16> col:12 used i 'int' cinit no-linkage
+// CHECK-NEXT:         | | | | |-VarDecl {{.*}} <line:37:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT:         | | | | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT:         | | | | |-VarDecl {{.*}} <line:38:10, col:18> col:14 used i 'int' cinit no-linkage
+// CHECK-NEXT:         | | | | |-VarDecl {{.*}} <line:38:10, col:18> col:14 used i 'int' cinit
 // CHECK-NEXT:         | | | | | `-IntegerLiteral {{.*}} <col:18> 'int' 0
-// CHECK-NEXT:         | | | | `-VarDecl {{.*}} <line:39:12, col:20> col:16 used i 'int' cinit no-linkage
+// CHECK-NEXT:         | | | | `-VarDecl {{.*}} <line:39:12, col:20> col:16 used i 'int' cinit
 // CHECK-NEXT:         | | | |   `-IntegerLiteral {{.*}} <col:20> 'int' 0
 // CHECK-NEXT:         | | | |-OMPCapturedExprDecl {{.*}} <line:37:23> col:23 implicit used .capture_expr. 'int'
 // CHECK-NEXT:         | | | | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>
@@ -1090,7 +1090,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT:         |   |   |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
 // CHECK-NEXT:         |   |   | |-ForStmt {{.*}} <line:37:3, line:40:9>
 // CHECK-NEXT:         |   |   | | |-DeclStmt {{.*}} <line:37:8, col:17>
-// CHECK-NEXT:         |   |   | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit no-linkage
+// CHECK-NEXT:         |   |   | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT:         |   |   | | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
 // CHECK-NEXT:         |   |   | | |-<<<NULL>>>
 // CHECK-NEXT:         |   |   | | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
@@ -1102,7 +1102,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT:         |   |   | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT:         |   |   | | `-ForStmt {{.*}} <line:38:5, line:40:9>
 // CHECK-NEXT:         |   |   | |   |-DeclStmt {{.*}} <line:38:10, col:19>
-// CHECK-NEXT:         |   |   | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit no-linkage
+// CHECK-NEXT:         |   |   | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
 // CHECK-NEXT:         |   |   | |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
 // CHECK-NEXT:         |   |   | |   |-<<<NULL>>>
 // CHECK-NEXT:         |   |   | |   |-BinaryOperator {{.*}} <col:21, col:25> 'int' '<'
@@ -1114,7 +1114,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT:         |   |   | |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT:         |   |   | |   `-ForStmt {{.*}} <line:39:7, line:40:9>
 // CHECK-NEXT:         |   |   | |     |-DeclStmt {{.*}} <line:39:12, col:21>
-// CHECK-NEXT:         |   |   | |     | `-VarDecl {{.*}} <col:12, col:20> col:16 used i 'int' cinit no-linkage
+// CHECK-NEXT:         |   |   | |     | `-VarDecl {{.*}} <col:12, col:20> col:16 used i 'int' cinit
 // CHECK-NEXT:         |   |   | |     |   `-IntegerLiteral {{.*}} <col:20> 'int' 0
 // CHECK-NEXT:         |   |   | |     |-<<<NULL>>>
 // CHECK-NEXT:         |   |   | |     |-BinaryOperator {{.*}} <col:23, col:27> 'int' '<'
@@ -1128,11 +1128,11 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT:         |   |   | |-ImplicitParamDecl {{.*}} <line:36:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT:         |   |   | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
 // CHECK-NEXT:         |   |   | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-simd.c:36:1) *const restrict'
-// CHECK-NEXT:         |   |   | |-VarDecl {{.*}} <line:37:8, col:16> col:12 used i 'int' cinit no-linkage
+// CHECK-NEXT:         |   |   | |-VarDecl {{.*}} <line:37:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT:         |   |   | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT:         |   |   | |-VarDecl {{.*}} <line:38:10, col:18> col:14 used i 'int' cinit no-linkage
+// CHECK-NEXT:         |   |   | |-VarDecl {{.*}} <line:38:10, col:18> col:14 used i 'int' cinit
 // CHECK-NEXT:         |   |   | | `-IntegerLiteral {{.*}} <col:18> 'int' 0
-// CHECK-NEXT:         |   |   | `-VarDecl {{.*}} <line:39:12, col:20> col:16 used i 'int' cinit no-linkage
+// CHECK-NEXT:         |   |   | `-VarDecl {{.*}} <line:39:12, col:20> col:16 used i 'int' cinit
 // CHECK-NEXT:         |   |   |   `-IntegerLiteral {{.*}} <col:20> 'int' 0
 // CHECK-NEXT:         |   |   |-DeclRefExpr {{.*}} <line:37:23> 'int' lvalue ParmVar {{.*}} 'x' 'int' refers_to_enclosing_variable_or_capture
 // CHECK-NEXT:         |   |   |-DeclRefExpr {{.*}} <line:38:25> 'int' lvalue ParmVar {{.*}} 'y' 'int' refers_to_enclosing_variable_or_capture
@@ -1147,7 +1147,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT:         |   |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
 // CHECK-NEXT:         |   | |-ForStmt {{.*}} <line:37:3, line:40:9>
 // CHECK-NEXT:         |   | | |-DeclStmt {{.*}} <line:37:8, col:17>
-// CHECK-NEXT:         |   | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit no-linkage
+// CHECK-NEXT:         |   | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT:         |   | | |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
 // CHECK-NEXT:         |   | | |-<<<NULL>>>
 // CHECK-NEXT:         |   | | |-BinaryOperator {{.*}} <col:19, col:23> 'int' '<'
@@ -1159,7 +1159,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT:         |   | | | `-DeclRefExpr {{.*}} <col:26> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT:         |   | | `-ForStmt {{.*}} <line:38:5, line:40:9>
 // CHECK-NEXT:         |   | |   |-DeclStmt {{.*}} <line:38:10, col:19>
-// CHECK-NEXT:         |   | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit no-linkage
+// CHECK-NEXT:         |   | |   | `-VarDecl {{.*}} <col:10, col:18> col:14 used i 'int' cinit
 // CHECK-NEXT:         |   | |   |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
 // CHECK-NEXT:         |   | |   |-<<<NULL>>>
 // CHECK-NEXT:         |   | |   |-BinaryOperator {{.*}} <col:21, col:25> 'int' '<'
@@ -1171,7 +1171,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT:         |   | |   | `-DeclRefExpr {{.*}} <col:28> 'int' lvalue Var {{.*}} 'i' 'int'
 // CHECK-NEXT:         |   | |   `-ForStmt {{.*}} <line:39:7, line:40:9>
 // CHECK-NEXT:         |   | |     |-DeclStmt {{.*}} <line:39:12, col:21>
-// CHECK-NEXT:         |   | |     | `-VarDecl {{.*}} <col:12, col:20> col:16 used i 'int' cinit no-linkage
+// CHECK-NEXT:         |   | |     | `-VarDecl {{.*}} <col:12, col:20> col:16 used i 'int' cinit
 // CHECK-NEXT:         |   | |     |   `-IntegerLiteral {{.*}} <col:20> 'int' 0
 // CHECK-NEXT:         |   | |     |-<<<NULL>>>
 // CHECK-NEXT:         |   | |     |-BinaryOperator {{.*}} <col:23, col:27> 'int' '<'
@@ -1185,11 +1185,11 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT:         |   | |-ImplicitParamDecl {{.*}} <line:36:1> col:1 implicit .global_tid. 'const int *const restrict'
 // CHECK-NEXT:         |   | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit .bound_tid. 'const int *const restrict'
 // CHECK-NEXT:         |   | |-ImplicitParamDecl {{.*}} <col:1> col:1 implicit __context 'struct (unnamed at {{.*}}ast-dump-openmp-teams-distribute-simd.c:36:1) *const restrict'
-// CHECK-NEXT:         |   | |-VarDecl {{.*}} <line:37:8, col:16> col:12 used i 'int' cinit no-linkage
+// CHECK-NEXT:         |   | |-VarDecl {{.*}} <line:37:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT:         |   | | `-IntegerLiteral {{.*}} <col:16> 'int' 0
-// CHECK-NEXT:         |   | |-VarDecl {{.*}} <line:38:10, col:18> col:14 used i 'int' cinit no-linkage
+// CHECK-NEXT:         |   | |-VarDecl {{.*}} <line:38:10, col:18> col:14 used i 'int' cinit
 // CHECK-NEXT:         |   | | `-IntegerLiteral {{.*}} <col:18> 'int' 0
-// CHECK-NEXT:         |   | `-VarDecl {{.*}} <line:39:12, col:20> col:16 used i 'int' cinit no-linkage
+// CHECK-NEXT:         |   | `-VarDecl {{.*}} <line:39:12, col:20> col:16 used i 'int' cinit
 // CHECK-NEXT:         |   |   `-IntegerLiteral {{.*}} <col:20> 'int' 0
 // CHECK-NEXT:         |   |-OMPCapturedExprDecl {{.*}} <line:37:23> col:23 implicit used .capture_expr. 'int'
 // CHECK-NEXT:         |   | `-ImplicitCastExpr {{.*}} <col:23> 'int' <LValueToRValue>

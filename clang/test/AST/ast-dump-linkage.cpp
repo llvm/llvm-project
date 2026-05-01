@@ -53,7 +53,7 @@ enum Enum {};
 // CHECK: |-EnumDecl {{.*}} Enum external-linkage
 
 enum { Enumerator };
-// CHECK: |-EnumDecl {{.*}} no-linkage
+// CHECK: |-EnumDecl {{.*}}
 // CHECK: | `-EnumConstantDecl {{.*}} referenced Enumerator '(unnamed enum at {{.*}})'
 // FIXME: This enum has enumerator as its name for linkage purposes, and has external linkage.
 
@@ -66,6 +66,7 @@ auto [Binding1, Binding2] = {3, 4};
 // CHECK: |-DecompositionDecl {{.*}} used 'std::initializer_list<int>' cinit external-linkage
 // CHECK: | |-BindingDecl {{.*}} Binding1 'const int *'
 // CHECK: | `-BindingDecl {{.*}} Binding2 'const int *'
+// FIXME: Why BindingDecls are duplicated?
 
 int Int = 0;
 // CHECK: |-VarDecl {{.*}} Int 'int' cinit external-linkage
@@ -76,8 +77,10 @@ const int ConstInt = 0;
 template <typename T>
 T TemplatedVar = T{};
 // CHECK: |-VarTemplateDecl {{.*}} TemplatedVar external-linkage
-// CHECK: | |-VarDecl {{.*}} TemplatedVar 'T' cinit instantiated_from 0x{{[0-9a-f]*}} external-linkage
+// CHECK: | |-VarDecl {{.*}} TemplatedVar 'T' cinit instantiated_from 0x{{[0-9a-f]*}}
 // CHECK: | `-VarTemplateSpecializationDecl {{.*}} used TemplatedVar 'int' implicit_instantiation cinit instantiated_from 0x{{[0-9a-f]*}} external-linkage
+
+// FIXME: VarTemplateSpecializationDecl node is printed twice.
 
 int TemplatedVarSpec = TemplatedVar<int>;
 // CHECK: |-VarDecl {{.*}} TemplatedVarSpec 'int' cinit external-linkage
@@ -89,7 +92,7 @@ void FuncDecl();
 template <typename>
 void TemplatedFuncDecl();
 // CHECK: |-FunctionTemplateDecl {{.*}} TemplatedFuncDecl external-linkage
-// CHECK: | `-FunctionDecl {{.*}} TemplatedFuncDecl 'void ()' external-linkage
+// CHECK: | `-FunctionDecl {{.*}} TemplatedFuncDecl 'void ()'
 
 void FuncDef() {
 // CHECK: |-FunctionDecl {{.*}} FuncDef 'void ()' external-linkage
@@ -104,7 +107,7 @@ void FuncDef() {
 // CHECK: |   | `-FunctionDecl {{.*}} FuncDecl 'void ()' extern external-linkage
   {
     int Int;
-// CHECK: |     | `-VarDecl {{.*}} Int 'int' no-linkage
+// CHECK: |     | `-VarDecl {{.*}} Int 'int'
     {
       extern int Int;
 // CHECK: |       | `-VarDecl {{.*}} Int 'int' extern external-linkage
@@ -117,8 +120,7 @@ void FuncDef() {
 template <typename>
 void TemplatedFuncDef() {}
 // CHECK: |-FunctionTemplateDecl {{.*}} TemplatedFuncDef external-linkage
-// CHECK: | `-FunctionDecl {{.*}} TemplatedFuncDef 'void ()' external-linkage
-
+// CHECK: | `-FunctionDecl {{.*}} TemplatedFuncDef 'void ()'
 
 struct KnownFriendStruct;
 // CHECK: |-CXXRecordDecl {{.*}} struct KnownFriendStruct external-linkage
@@ -126,7 +128,7 @@ struct KnownFriendStruct;
 template <typename>
 struct KnownFriendStructTemplate;
 // CHECK: |-ClassTemplateDecl {{.*}} KnownFriendStructTemplate external-linkage
-// CHECK: | `-CXXRecordDecl {{.*}} struct KnownFriendStructTemplate external-linkage
+// CHECK: | `-CXXRecordDecl {{.*}} struct KnownFriendStructTemplate
 
 namespace N {
 // CHECK: |-NamespaceDecl {{.*}} N external-linkage
@@ -137,7 +139,8 @@ struct Struct {
 
   friend struct UnknownFriendStruct;
 // CHECK: |   |-FriendDecl {{.*}} 'struct UnknownFriendStruct'
-// CHECK: |   | `-CXXRecordDecl {{.*}} friend_undeclared struct UnknownFriendStruct
+// CHECK: |   | `-CXXRecordDecl {{.*}} friend_undeclared struct UnknownFriendStruct external-linkage
+// FIXME: Friend declarations do not bind names, so they cannot have linkage.
   
   friend struct ::KnownFriendStruct;
 // CHECK: |   |-FriendDecl {{.*}} 'struct ::KnownFriendStruct'
@@ -145,22 +148,33 @@ struct Struct {
   template <typename>
   friend struct ::KnownFriendStructTemplate;
 // CHECK: |   |-FriendDecl {{.*}} col:{{[0-9]*$}}
-// CHECK: |   | `-ClassTemplateDecl {{.*}} friend KnownFriendStructTemplate
+// CHECK: |   | `-ClassTemplateDecl {{.*}} friend KnownFriendStructTemplate external-linkage
 // CHECK: |   |   `-CXXRecordDecl {{.*}} struct KnownFriendStructTemplate
 
   friend void UnknownFuncDecl();
 // CHECK: |   |-FriendDecl {{.*}} col:{{[0-9]*$}}
-// CHECK: |   | `-FunctionDecl {{.*}} friend_undeclared UnknownFuncDecl 'void ()'
+// CHECK: |   | `-FunctionDecl {{.*}} friend_undeclared UnknownFuncDecl 'void ()' external-linkage
+// FIXME: Friend declarations do not bind names, so they cannot have linkage.
 
   friend void ::FuncDecl();
 // CHECK: |   |-FriendDecl {{.*}} col:{{[0-9]*$}}
-// CHECK: |   | `-FunctionDecl {{.*}} friend FuncDecl 'void ()'
+// CHECK: |   | `-FunctionDecl {{.*}} friend FuncDecl 'void ()' external-linkage
   
   template <typename>
   friend void ::TemplatedFuncDecl();
 // CHECK: |   |-FriendDecl {{.*}} col:{{[0-9]*$}}
-// CHECK: |   | `-FunctionTemplateDecl {{.*}} friend TemplatedFuncDecl
+// CHECK: |   | `-FunctionTemplateDecl {{.*}} friend TemplatedFuncDecl external-linkage
 // CHECK: |   |   `-FunctionDecl {{.*}} friend TemplatedFuncDecl 'void ()'
+
+  friend void HiddenFriend() {}
+// CHECK: |   |-FriendDecl {{.*}} col:{{[0-9]*$}}
+// CHECK: |   | `-FunctionDecl {{.*}} friend_undeclared HiddenFriend 'void ()' implicit-inline external-linkage
+
+  template <typename>
+  friend void HiddenFriendTemplate() {}
+// CHECK: |   |-FriendDecl {{.*}} col:{{[0-9]*$}}
+// CHECK: |   | `-FunctionTemplateDecl {{.*}} friend_undeclared HiddenFriendTemplate external-linkage
+// CHECK: |   |   `-FunctionDecl {{.*}} friend_undeclared HiddenFriendTemplate 'void ()' implicit-inline
 
   int NonStaticDataMember;
 // CHECK: |   |-FieldDecl {{.*}} NonStaticDataMember 'int'
@@ -174,7 +188,7 @@ struct Struct {
   template <typename>
   void NonStaticMemberFunctionTemplate();
 // CHECK: |   |-FunctionTemplateDecl {{.*}} NonStaticMemberFunctionTemplate external-linkage
-// CHECK: |   | `-CXXMethodDecl {{.*}} NonStaticMemberFunctionTemplate 'void ()' external-linkage
+// CHECK: |   | `-CXXMethodDecl {{.*}} NonStaticMemberFunctionTemplate 'void ()'
 
   static void StaticMemberFunction();
 // CHECK: |   |-CXXMethodDecl {{.*}} StaticMemberFunction 'void ()' static external-linkage
@@ -182,7 +196,7 @@ struct Struct {
   template <typename>
   static void StaticMemberFunctionTemplate();
 // CHECK: |   |-FunctionTemplateDecl {{.*}} StaticMemberFunctionTemplate external-linkage
-// CHECK: |   | `-CXXMethodDecl {{.*}} StaticMemberFunctionTemplate 'void ()' static external-linkage
+// CHECK: |   | `-CXXMethodDecl {{.*}} StaticMemberFunctionTemplate 'void ()' static
 
   struct NestedStruct {};
 // CHECK: |   |-CXXRecordDecl {{.*}} struct NestedStruct definition external-linkage
@@ -191,7 +205,7 @@ struct Struct {
   template <typename>
   struct NestedStructTemplate {};
 // CHECK: |   `-ClassTemplateDecl {{.*}} NestedStructTemplate external-linkage
-// CHECK: |     `-CXXRecordDecl {{.*}} struct NestedStructTemplate definition external-linkage
+// CHECK: |     `-CXXRecordDecl {{.*}} struct NestedStructTemplate definition
 // CHECK: |       `-CXXRecordDecl {{.*}} implicit struct NestedStructTemplate
 };
 
@@ -201,37 +215,48 @@ namespace M {
 template <typename>
 struct StructTemplate {
 // CHECK: | `-ClassTemplateDecl {{.*}} StructTemplate external-linkage
-// CHECK: |   `-CXXRecordDecl {{.*}} struct StructTemplate definition external-linkage
+// CHECK: |   `-CXXRecordDecl {{.*}} struct StructTemplate definition
 // CHECK: |     |-CXXRecordDecl {{.*}} implicit struct StructTemplate
 
   friend struct UnknownFriendStruct;
 // CHECK: |   |-FriendDecl {{.*}} 'struct UnknownFriendStruct'
-// CHECK: |   | `-CXXRecordDecl {{.*}} friend_undeclared struct UnknownFriendStruct
+// CHECK: |   | `-CXXRecordDecl {{.*}} friend_undeclared struct UnknownFriendStruct external-linkage
   
   friend struct ::KnownFriendStruct;
 // CHECK: |   |-FriendDecl {{.*}} 'struct ::KnownFriendStruct'
-  
+// FIXME: Where is CXXRecordDecl? 
+
   template <typename>
   friend struct ::KnownFriendStructTemplate;
 // CHECK: |   |-FriendDecl {{.*}} col:{{[0-9]*$}}
-// CHECK: |   | `-ClassTemplateDecl {{.*}} friend_undeclared KnownFriendStructTemplate
+// CHECK: |   | `-ClassTemplateDecl {{.*}} friend_undeclared KnownFriendStructTemplate external-linkage
 // CHECK: |   |   `-CXXRecordDecl {{.*}} struct KnownFriendStructTemplate
-  // FIXME: Why "friend_undeclared" instead of "friend"?
+// FIXME: Why "friend_undeclared" instead of "friend"?
 
   friend void UnknownFuncDecl();
 // CHECK: |   |-FriendDecl {{.*}} col:{{[0-9]*$}}
-// CHECK: |   | `-FunctionDecl {{.*}} friend_undeclared UnknownFuncDecl 'void ()'
+// CHECK: |   | `-FunctionDecl {{.*}} friend_undeclared UnknownFuncDecl 'void ()' external-linkage
 
   friend void ::FuncDecl();
 // CHECK: |   |-FriendDecl {{.*}} col:{{[0-9]*$}}
-// CHECK: |   | `-FunctionDecl {{.*}} friend_undeclared FuncDecl 'void ()'
-  // FIXME: Why "friend_undeclared" instead of "friend"?
+// CHECK: |   | `-FunctionDecl {{.*}} friend_undeclared FuncDecl 'void ()' external-linkage
+// FIXME: Why "friend_undeclared" instead of "friend"?
   
   template <typename>
   friend void ::TemplatedFuncDecl();
 // CHECK: |   |-FriendDecl {{.*}} col:{{[0-9]*$}}
-// CHECK: |   | `-FunctionTemplateDecl {{.*}} friend TemplatedFuncDecl
+// CHECK: |   | `-FunctionTemplateDecl {{.*}} friend TemplatedFuncDecl external-linkage
 // CHECK: |   |   `-FunctionDecl {{.*}} friend TemplatedFuncDecl 'void ()'
+
+  friend void HiddenFriend() {}
+// CHECK: |   |-FriendDecl {{.*}} col:{{[0-9]*$}}
+// CHECK: |   | `-FunctionDecl {{.*}} friend_undeclared HiddenFriend 'void ()' implicit-inline external-linkage
+
+  template <typename>
+  friend void HiddenFriendTemplate() {}
+// CHECK: |   |-FriendDecl {{.*}} col:{{[0-9]*$}}
+// CHECK: |   | `-FunctionTemplateDecl {{.*}} friend_undeclared HiddenFriendTemplate external-linkage
+// CHECK: |   |   `-FunctionDecl {{.*}} friend_undeclared HiddenFriendTemplate 'void ()' implicit-inline
 
   int NonStaticDataMember;
 // CHECK: |   |-FieldDecl {{.*}} NonStaticDataMember 'int'
@@ -245,7 +270,7 @@ struct StructTemplate {
   template <typename>
   void NonStaticMemberFunctionTemplate();
 // CHECK: |   |-FunctionTemplateDecl {{.*}} NonStaticMemberFunctionTemplate external-linkage
-// CHECK: |   | `-CXXMethodDecl {{.*}} NonStaticMemberFunctionTemplate 'void ()' external-linkage
+// CHECK: |   | `-CXXMethodDecl {{.*}} NonStaticMemberFunctionTemplate 'void ()'
 
   static void StaticMemberFunction();
 // CHECK: |   |-CXXMethodDecl {{.*}} StaticMemberFunction 'void ()' static external-linkage
@@ -253,7 +278,7 @@ struct StructTemplate {
   template <typename>
   static void StaticMemberFunctionTemplate();
 // CHECK: |   |-FunctionTemplateDecl {{.*}} StaticMemberFunctionTemplate external-linkage
-// CHECK: |   | `-CXXMethodDecl {{.*}} StaticMemberFunctionTemplate 'void ()' static external-linkage
+// CHECK: |   | `-CXXMethodDecl {{.*}} StaticMemberFunctionTemplate 'void ()' static
 
   struct NestedStruct {};
 // CHECK: |   |-CXXRecordDecl {{.*}} struct NestedStruct definition external-linkage
@@ -262,7 +287,7 @@ struct StructTemplate {
   template <typename>
   struct NestedStructTemplate {};
 // CHECK: |   `-ClassTemplateDecl {{.*}} NestedStructTemplate external-linkage
-// CHECK: |     `-CXXRecordDecl {{.*}} struct NestedStructTemplate definition external-linkage
+// CHECK: |     `-CXXRecordDecl {{.*}} struct NestedStructTemplate definition
 // CHECK: |       `-CXXRecordDecl {{.*}} implicit struct NestedStructTemplate
 };
 } // namespace M

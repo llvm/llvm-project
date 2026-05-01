@@ -38,11 +38,11 @@ template <typename... Ts> void test(Ts... a) {
 // CHECK:Dumping test:
 // CHECK-NEXT:FunctionTemplateDecl {{.*}} <{{.*}}ast-dump-lambda.cpp:15:1, line:37:1> line:15:32{{( imported)?}} test external-linkage
 // CHECK-NEXT:|-TemplateTypeParmDecl {{.*}} <col:11, col:23> col:23{{( imported)?}} referenced typename depth 0 index 0 ... Ts
-// CHECK-NEXT:`-FunctionDecl {{.*}} <col:27, line:37:1> line:15:32{{( imported)?}} test 'void (Ts...)' external-linkage
+// CHECK-NEXT:`-FunctionDecl {{.*}} <col:27, line:37:1> line:15:32{{( imported)?}} test 'void (Ts...)'
 // CHECK-NEXT:  |-ParmVarDecl {{.*}} <col:37, col:43> col:43{{( imported)?}} referenced a 'Ts...' pack
 // CHECK-NEXT:  `-CompoundStmt {{.*}} <col:46, line:37:1>
 // CHECK-NEXT:    |-DeclStmt {{.*}} <line:16:3, line:21:4>
-// CHECK-NEXT:    | `-CXXRecordDecl {{.*}} <line:16:3, line:21:3> line:16:10{{( imported)?}}{{( <undeserialized declarations>)?}} struct V definition no-linkage
+// CHECK-NEXT:    | `-CXXRecordDecl {{.*}} <line:16:3, line:21:3> line:16:10{{( imported)?}}{{( <undeserialized declarations>)?}} struct V definition
 // CHECK-NEXT:    |   |-DefinitionData empty aggregate standard_layout trivially_copyable pod trivial literal has_constexpr_non_copy_move_ctor can_const_default_init
 // CHECK-NEXT:    |   | |-DefaultConstructor exists trivial constexpr needs_implicit defaulted_is_constexpr
 // CHECK-NEXT:    |   | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
@@ -51,7 +51,7 @@ template <typename... Ts> void test(Ts... a) {
 // CHECK-NEXT:    |   | |-MoveAssignment exists simple trivial needs_implicit
 // CHECK-NEXT:    |   | `-Destructor simple irrelevant trivial needs_implicit
 // CHECK-NEXT:    |   |-CXXRecordDecl {{.*}} <col:3, col:10> col:10{{( imported)?}} implicit struct V
-// CHECK-NEXT:    |   `-CXXMethodDecl {{.*}} <line:17:5, line:20:5> line:17:10{{( imported)?}} f 'void ()' implicit-inline no-linkage
+// CHECK-NEXT:    |   `-CXXMethodDecl {{.*}} <line:17:5, line:20:5> line:17:10{{( imported)?}} f 'void ()' implicit-inline
 // CHECK-NEXT:    |     `-CompoundStmt {{.*}} <col:14, line:20:5>
 // CHECK-NEXT:    |       |-LambdaExpr {{.*}} <line:18:7, col:15> '(lambda at {{.*}}ast-dump-lambda.cpp:18:7)'
 // CHECK-NEXT:    |       | |-CXXRecordDecl {{.*}} <col:7> col:7{{( imported)?}} implicit{{( <undeserialized declarations>)?}} class definition
@@ -62,7 +62,7 @@ template <typename... Ts> void test(Ts... a) {
 // CHECK-NEXT:    |       | | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:    |       | | | |-MoveAssignment
 // CHECK-NEXT:    |       | | | `-Destructor simple irrelevant trivial needs_implicit
-// CHECK-NEXT:    |       | | |-CXXMethodDecl {{.*}} <col:12, col:15> col:7{{( imported)?}} operator() 'auto () const -> auto' inline no-linkage
+// CHECK-NEXT:    |       | | |-CXXMethodDecl {{.*}} <col:12, col:15> col:7{{( imported)?}} operator() 'auto () const -> auto' inline
 // CHECK-NEXT:    |       | | | `-CompoundStmt {{.*}} <col:14, col:15>
 // CHECK-NEXT:    |       | | `-FieldDecl {{.*}} <col:8> col:8{{( imported)?}} implicit 'V *'
 // CHECK-NEXT:    |       | |-ParenListExpr {{.*}} <col:8> 'NULL TYPE'
@@ -77,7 +77,7 @@ template <typename... Ts> void test(Ts... a) {
 // CHECK-NEXT:    |         | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:    |         | | |-MoveAssignment
 // CHECK-NEXT:    |         | | `-Destructor simple irrelevant trivial needs_implicit
-// CHECK-NEXT:    |         | |-CXXMethodDecl {{.*}} <col:13, col:16> col:7{{( imported)?}} operator() 'auto () const -> auto' inline no-linkage
+// CHECK-NEXT:    |         | |-CXXMethodDecl {{.*}} <col:13, col:16> col:7{{( imported)?}} operator() 'auto () const -> auto' inline
 // CHECK-NEXT:    |         | | `-CompoundStmt {{.*}} <col:15, col:16>
 // CHECK-NEXT:    |         | `-FieldDecl {{.*}} <col:8> col:8{{( imported)?}} implicit 'V'
 // CHECK-NEXT:    |         |-ParenListExpr {{.*}} <col:8> 'NULL TYPE'
@@ -85,8 +85,8 @@ template <typename... Ts> void test(Ts... a) {
 // CHECK-NEXT:    |         |   `-CXXThisExpr {{.*}} <col:8> 'V *' this
 // CHECK-NEXT:    |         `-CompoundStmt {{.*}} <col:15, col:16>
 // CHECK-NEXT:    |-DeclStmt {{.*}} <line:22:3, col:11>
-// CHECK-NEXT:    | |-VarDecl {{.*}} <col:3, col:7> col:7{{( imported)?}} referenced b 'int' no-linkage
-// CHECK-NEXT:    | `-VarDecl {{.*}} <col:3, col:10> col:10{{( imported)?}} referenced c 'int' no-linkage
+// CHECK-NEXT:    | |-VarDecl {{.*}} <col:3, col:7> col:7{{( imported)?}} referenced b 'int'
+// CHECK-NEXT:    | `-VarDecl {{.*}} <col:3, col:10> col:10{{( imported)?}} referenced c 'int'
 // CHECK-NEXT:    |-LambdaExpr {{.*}} <line:23:3, col:9> '(lambda at {{.*}}ast-dump-lambda.cpp:23:3)'
 // CHECK-NEXT:    | |-CXXRecordDecl {{.*}} <col:3> col:3{{( imported)?}} implicit{{( <undeserialized declarations>)?}} class definition
 // CHECK-NEXT:    | | |-DefinitionData lambda empty standard_layout trivially_copyable literal can_const_default_init
@@ -96,10 +96,10 @@ template <typename... Ts> void test(Ts... a) {
 // CHECK-NEXT:    | | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:    | | | |-MoveAssignment
 // CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial needs_implicit
-// CHECK-NEXT:    | | |-CXXMethodDecl {{.*}} <col:6, col:9> col:3{{( imported)?}} operator() 'auto () const' inline no-linkage
+// CHECK-NEXT:    | | |-CXXMethodDecl {{.*}} <col:6, col:9> col:3{{( imported)?}} operator() 'auto () const' inline
 // CHECK-NEXT:    | | | `-CompoundStmt {{.*}} <col:8, col:9>
-// CHECK-NEXT:    | | |-CXXConversionDecl {{.*}} <col:3, col:9> col:3{{( imported)?}} implicit constexpr operator auto (*)() 'auto (*() const noexcept)()' inline no-linkage
-// CHECK-NEXT:    | | `-CXXMethodDecl {{.*}} <col:3, col:9> col:3{{( imported)?}} implicit __invoke 'auto ()' static inline no-linkage
+// CHECK-NEXT:    | | |-CXXConversionDecl {{.*}} <col:3, col:9> col:3{{( imported)?}} implicit constexpr operator auto (*)() 'auto (*() const noexcept)()' inline
+// CHECK-NEXT:    | | `-CXXMethodDecl {{.*}} <col:3, col:9> col:3{{( imported)?}} implicit __invoke 'auto ()' static inline
 // CHECK-NEXT:    | `-CompoundStmt {{.*}} <col:8, col:9>
 // CHECK-NEXT:    |-LambdaExpr {{.*}} <line:24:3, col:19> '(lambda at {{.*}}ast-dump-lambda.cpp:24:3)'
 // CHECK-NEXT:    | |-CXXRecordDecl {{.*}} <col:3> col:3{{( imported)?}} implicit{{( <undeserialized declarations>)?}} class definition
@@ -110,11 +110,11 @@ template <typename... Ts> void test(Ts... a) {
 // CHECK-NEXT:    | | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:    | | | |-MoveAssignment
 // CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial needs_implicit
-// CHECK-NEXT:    | | |-CXXMethodDecl {{.*}} <col:16, col:19> col:3{{( imported)?}} operator() 'auto (int, ...) const' inline no-linkage
+// CHECK-NEXT:    | | |-CXXMethodDecl {{.*}} <col:16, col:19> col:3{{( imported)?}} operator() 'auto (int, ...) const' inline
 // CHECK-NEXT:    | | | |-ParmVarDecl {{.*}} <col:6, col:10> col:10{{( imported)?}} a 'int'
 // CHECK-NEXT:    | | | `-CompoundStmt {{.*}} <col:18, col:19>
-// CHECK-NEXT:    | | |-CXXConversionDecl {{.*}} <col:3, col:19> col:3{{( imported)?}} implicit constexpr operator auto (*)(int, ...) 'auto (*() const noexcept)(int, ...)' inline no-linkage
-// CHECK-NEXT:    | | `-CXXMethodDecl {{.*}} <col:3, col:19> col:3{{( imported)?}} implicit __invoke 'auto (int, ...)' static inline no-linkage
+// CHECK-NEXT:    | | |-CXXConversionDecl {{.*}} <col:3, col:19> col:3{{( imported)?}} implicit constexpr operator auto (*)(int, ...) 'auto (*() const noexcept)(int, ...)' inline
+// CHECK-NEXT:    | | `-CXXMethodDecl {{.*}} <col:3, col:19> col:3{{( imported)?}} implicit __invoke 'auto (int, ...)' static inline
 // CHECK-NEXT:    | |   `-ParmVarDecl {{.*}} <col:6, col:10> col:10{{( imported)?}} a 'int'
 // CHECK-NEXT:    | `-CompoundStmt {{.*}} <col:18, col:19>
 // CHECK-NEXT:    |-LambdaExpr {{.*}} <line:25:3, col:11> '(lambda at {{.*}}ast-dump-lambda.cpp:25:3)'
@@ -126,7 +126,7 @@ template <typename... Ts> void test(Ts... a) {
 // CHECK-NEXT:    | | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:    | | | |-MoveAssignment
 // CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial needs_implicit
-// CHECK-NEXT:    | | |-CXXMethodDecl {{.*}} <col:8, col:11> col:3{{( imported)?}} operator() 'auto () const -> auto' inline no-linkage
+// CHECK-NEXT:    | | |-CXXMethodDecl {{.*}} <col:8, col:11> col:3{{( imported)?}} operator() 'auto () const -> auto' inline
 // CHECK-NEXT:    | | | `-CompoundStmt {{.*}} <col:10, col:11>
 // CHECK-NEXT:    | | `-FieldDecl {{.*}} <col:4> col:4{{( imported)?}} implicit 'Ts...'
 // CHECK-NEXT:    | |-ParenListExpr {{.*}} <col:4> 'NULL TYPE'
@@ -141,7 +141,7 @@ template <typename... Ts> void test(Ts... a) {
 // CHECK-NEXT:    | | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:    | | | |-MoveAssignment
 // CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial needs_implicit
-// CHECK-NEXT:    | | `-CXXMethodDecl {{.*}} <col:5, col:8> col:3{{( imported)?}} operator() 'auto () const -> auto' inline no-linkage
+// CHECK-NEXT:    | | `-CXXMethodDecl {{.*}} <col:5, col:8> col:3{{( imported)?}} operator() 'auto () const -> auto' inline
 // CHECK-NEXT:    | |   `-CompoundStmt {{.*}} <col:7, col:8>
 // CHECK-NEXT:    | `-CompoundStmt {{.*}} <col:7, col:8>
 // CHECK-NEXT:    |-LambdaExpr {{.*}} <line:27:3, col:19> '(lambda at {{.*}}ast-dump-lambda.cpp:27:3)'
@@ -153,7 +153,7 @@ template <typename... Ts> void test(Ts... a) {
 // CHECK-NEXT:    | | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:    | | | |-MoveAssignment
 // CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial needs_implicit
-// CHECK-NEXT:    | | `-CXXMethodDecl {{.*}} <col:5, col:19> col:3{{( imported)?}} operator() 'auto () const -> auto' inline no-linkage
+// CHECK-NEXT:    | | `-CXXMethodDecl {{.*}} <col:5, col:19> col:3{{( imported)?}} operator() 'auto () const -> auto' inline
 // CHECK-NEXT:    | |   `-CompoundStmt {{.*}} <col:7, col:19>
 // CHECK-NEXT:    | |     `-ReturnStmt {{.*}} <col:9, col:16>
 // CHECK-NEXT:    | |       `-DeclRefExpr {{.*}} <col:16> 'const int' lvalue Var {{.*}} 'b' 'int' refers_to_enclosing_variable_or_capture
@@ -169,7 +169,7 @@ template <typename... Ts> void test(Ts... a) {
 // CHECK-NEXT:    | | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:    | | | |-MoveAssignment
 // CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial needs_implicit
-// CHECK-NEXT:    | | `-CXXMethodDecl {{.*}} <col:5, col:8> col:3{{( imported)?}} operator() 'auto () const -> auto' inline no-linkage
+// CHECK-NEXT:    | | `-CXXMethodDecl {{.*}} <col:5, col:8> col:3{{( imported)?}} operator() 'auto () const -> auto' inline
 // CHECK-NEXT:    | |   `-CompoundStmt {{.*}} <col:7, col:8>
 // CHECK-NEXT:    | `-CompoundStmt {{.*}} <col:7, col:8>
 // CHECK-NEXT:    |-LambdaExpr {{.*}} <line:29:3, col:19> '(lambda at {{.*}}ast-dump-lambda.cpp:29:3)'
@@ -181,7 +181,7 @@ template <typename... Ts> void test(Ts... a) {
 // CHECK-NEXT:    | | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:    | | | |-MoveAssignment
 // CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial needs_implicit
-// CHECK-NEXT:    | | `-CXXMethodDecl {{.*}} <col:5, col:19> col:3{{( imported)?}} operator() 'auto () const -> auto' inline no-linkage
+// CHECK-NEXT:    | | `-CXXMethodDecl {{.*}} <col:5, col:19> col:3{{( imported)?}} operator() 'auto () const -> auto' inline
 // CHECK-NEXT:    | |   `-CompoundStmt {{.*}} <col:7, col:19>
 // CHECK-NEXT:    | |     `-ReturnStmt {{.*}} <col:9, col:16>
 // CHECK-NEXT:    | |       `-DeclRefExpr {{.*}} <col:16> 'int' lvalue Var {{.*}} 'c' 'int' refers_to_enclosing_variable_or_capture
@@ -197,7 +197,7 @@ template <typename... Ts> void test(Ts... a) {
 // CHECK-NEXT:    | | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:    | | | |-MoveAssignment
 // CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial needs_implicit
-// CHECK-NEXT:    | | |-CXXMethodDecl {{.*}} <col:9, col:27> col:3{{( imported)?}} operator() 'auto () const -> auto' inline no-linkage
+// CHECK-NEXT:    | | |-CXXMethodDecl {{.*}} <col:9, col:27> col:3{{( imported)?}} operator() 'auto () const -> auto' inline
 // CHECK-NEXT:    | | | `-CompoundStmt {{.*}} <col:11, col:27>
 // CHECK-NEXT:    | | |   `-ReturnStmt {{.*}} <col:13, col:24>
 // CHECK-NEXT:    | | |     `-BinaryOperator {{.*}} <col:20, col:24> 'int' '+'
@@ -226,7 +226,7 @@ template <typename... Ts> void test(Ts... a) {
 // CHECK-NEXT:    | | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:    | | | |-MoveAssignment
 // CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial needs_implicit
-// CHECK-NEXT:    | | |-CXXMethodDecl {{.*}} <col:16, col:19> col:3{{( imported)?}} operator() 'auto () const -> auto' inline no-linkage
+// CHECK-NEXT:    | | |-CXXMethodDecl {{.*}} <col:16, col:19> col:3{{( imported)?}} operator() 'auto () const -> auto' inline
 // CHECK-NEXT:    | | | `-CompoundStmt {{.*}} <col:18, col:19>
 // CHECK-NEXT:    | | |-FieldDecl {{.*}} <col:4> col:4{{( imported)?}} implicit 'Ts...'
 // CHECK-NEXT:    | | `-FieldDecl {{.*}} <col:10> col:10{{( imported)?}} implicit 'int'
@@ -243,10 +243,10 @@ template <typename... Ts> void test(Ts... a) {
 // CHECK-NEXT:    | | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:    | | | |-MoveAssignment
 // CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial needs_implicit
-// CHECK-NEXT:    | | |-CXXMethodDecl {{.*}} <col:8, col:19> col:3{{( imported)?}} constexpr operator() 'auto () const' inline no-linkage
+// CHECK-NEXT:    | | |-CXXMethodDecl {{.*}} <col:8, col:19> col:3{{( imported)?}} constexpr operator() 'auto () const' inline
 // CHECK-NEXT:    | | | `-CompoundStmt {{.*}} <col:18, col:19>
-// CHECK-NEXT:    | | |-CXXConversionDecl {{.*}} <col:3, col:19> col:3{{( imported)?}} implicit constexpr operator auto (*)() 'auto (*() const noexcept)()' inline no-linkage
-// CHECK-NEXT:    | | `-CXXMethodDecl {{.*}} <col:3, col:19> col:3{{( imported)?}} implicit constexpr __invoke 'auto ()' static inline no-linkage
+// CHECK-NEXT:    | | |-CXXConversionDecl {{.*}} <col:3, col:19> col:3{{( imported)?}} implicit constexpr operator auto (*)() 'auto (*() const noexcept)()' inline
+// CHECK-NEXT:    | | `-CXXMethodDecl {{.*}} <col:3, col:19> col:3{{( imported)?}} implicit constexpr __invoke 'auto ()' static inline
 // CHECK-NEXT:    | `-CompoundStmt {{.*}} <col:18, col:19>
 // CHECK-NEXT:    |-LambdaExpr {{.*}} <line:33:3, col:17> '(lambda at {{.*}}ast-dump-lambda.cpp:33:3)'
 // CHECK-NEXT:    | |-CXXRecordDecl {{.*}} <col:3> col:3{{( imported)?}} implicit{{( <undeserialized declarations>)?}} class definition
@@ -257,10 +257,10 @@ template <typename... Ts> void test(Ts... a) {
 // CHECK-NEXT:    | | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:    | | | |-MoveAssignment
 // CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial needs_implicit
-// CHECK-NEXT:    | | |-CXXMethodDecl {{.*}} <col:8, col:17> col:3{{( imported)?}} operator() 'auto ()' inline no-linkage
+// CHECK-NEXT:    | | |-CXXMethodDecl {{.*}} <col:8, col:17> col:3{{( imported)?}} operator() 'auto ()' inline
 // CHECK-NEXT:    | | | `-CompoundStmt {{.*}} <col:16, col:17>
-// CHECK-NEXT:    | | |-CXXConversionDecl {{.*}} <col:3, col:17> col:3{{( imported)?}} implicit constexpr operator auto (*)() 'auto (*() const noexcept)()' inline no-linkage
-// CHECK-NEXT:    | | `-CXXMethodDecl {{.*}} <col:3, col:17> col:3{{( imported)?}} implicit __invoke 'auto ()' static inline no-linkage
+// CHECK-NEXT:    | | |-CXXConversionDecl {{.*}} <col:3, col:17> col:3{{( imported)?}} implicit constexpr operator auto (*)() 'auto (*() const noexcept)()' inline
+// CHECK-NEXT:    | | `-CXXMethodDecl {{.*}} <col:3, col:17> col:3{{( imported)?}} implicit __invoke 'auto ()' static inline
 // CHECK-NEXT:    | `-CompoundStmt {{.*}} <col:16, col:17>
 // CHECK-NEXT:    |-LambdaExpr {{.*}} <line:34:3, col:18> '(lambda at {{.*}}ast-dump-lambda.cpp:34:3)'
 // CHECK-NEXT:    | |-CXXRecordDecl {{.*}} <col:3> col:3{{( imported)?}} implicit{{( <undeserialized declarations>)?}} class definition
@@ -271,10 +271,10 @@ template <typename... Ts> void test(Ts... a) {
 // CHECK-NEXT:    | | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:    | | | |-MoveAssignment
 // CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial needs_implicit
-// CHECK-NEXT:    | | |-CXXMethodDecl {{.*}} <col:8, col:18> col:3{{( imported)?}} operator() 'auto () const noexcept' inline no-linkage
+// CHECK-NEXT:    | | |-CXXMethodDecl {{.*}} <col:8, col:18> col:3{{( imported)?}} operator() 'auto () const noexcept' inline
 // CHECK-NEXT:    | | | `-CompoundStmt {{.*}} <col:17, col:18>
-// CHECK-NEXT:    | | |-CXXConversionDecl {{.*}} <col:3, col:18> col:3{{( imported)?}} implicit constexpr operator auto (*)() noexcept 'auto (*() const noexcept)() noexcept' inline no-linkage
-// CHECK-NEXT:    | | `-CXXMethodDecl {{.*}} <col:3, col:18> col:3{{( imported)?}} implicit __invoke 'auto () noexcept' static inline no-linkage
+// CHECK-NEXT:    | | |-CXXConversionDecl {{.*}} <col:3, col:18> col:3{{( imported)?}} implicit constexpr operator auto (*)() noexcept 'auto (*() const noexcept)() noexcept' inline
+// CHECK-NEXT:    | | `-CXXMethodDecl {{.*}} <col:3, col:18> col:3{{( imported)?}} implicit __invoke 'auto () noexcept' static inline
 // CHECK-NEXT:    | `-CompoundStmt {{.*}} <col:17, col:18>
 // CHECK-NEXT:    |-LambdaExpr {{.*}} <line:35:3, col:27> '(lambda at {{.*}}ast-dump-lambda.cpp:35:3)'
 // CHECK-NEXT:    | |-CXXRecordDecl {{.*}} <col:3> col:3{{( imported)?}} implicit{{( <undeserialized declarations>)?}} class definition
@@ -285,12 +285,12 @@ template <typename... Ts> void test(Ts... a) {
 // CHECK-NEXT:    | | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:    | | | |-MoveAssignment
 // CHECK-NEXT:    | | | `-Destructor simple irrelevant trivial needs_implicit
-// CHECK-NEXT:    | | |-CXXMethodDecl {{.*}} <col:11, col:27> col:3{{( imported)?}} operator() 'auto () const -> int' inline no-linkage
+// CHECK-NEXT:    | | |-CXXMethodDecl {{.*}} <col:11, col:27> col:3{{( imported)?}} operator() 'auto () const -> int' inline
 // CHECK-NEXT:    | | | `-CompoundStmt {{.*}} <col:15, col:27>
 // CHECK-NEXT:    | | |   `-ReturnStmt {{.*}} <col:17, col:24>
 // CHECK-NEXT:    | | |     `-IntegerLiteral {{.*}} <col:24> 'int' 0
-// CHECK-NEXT:    | | |-CXXConversionDecl {{.*}} <col:3, col:27> col:3{{( imported)?}} implicit constexpr operator int (*)() 'auto (*() const noexcept)() -> int' inline no-linkage
-// CHECK-NEXT:    | | `-CXXMethodDecl {{.*}} <col:3, col:27> col:3{{( imported)?}} implicit __invoke 'auto () -> int' static inline no-linkage
+// CHECK-NEXT:    | | |-CXXConversionDecl {{.*}} <col:3, col:27> col:3{{( imported)?}} implicit constexpr operator int (*)() 'auto (*() const noexcept)() -> int' inline
+// CHECK-NEXT:    | | `-CXXMethodDecl {{.*}} <col:3, col:27> col:3{{( imported)?}} implicit __invoke 'auto () -> int' static inline
 // CHECK-NEXT:    | `-CompoundStmt {{.*}} <col:15, col:27>
 // CHECK-NEXT:    |   `-ReturnStmt {{.*}} <col:17, col:24>
 // CHECK-NEXT:    |     `-IntegerLiteral {{.*}} <col:24> 'int' 0
@@ -303,9 +303,9 @@ template <typename... Ts> void test(Ts... a) {
 // CHECK-NEXT:      | | |-CopyAssignment trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT:      | | |-MoveAssignment
 // CHECK-NEXT:      | | `-Destructor simple irrelevant trivial needs_implicit
-// CHECK-NEXT:      | |-CXXMethodDecl {{.*}} <col:20, col:23> col:3{{( imported)?}} operator() 'auto () const' inline no-linkage
+// CHECK-NEXT:      | |-CXXMethodDecl {{.*}} <col:20, col:23> col:3{{( imported)?}} operator() 'auto () const' inline
 // CHECK-NEXT:      | | |-CompoundStmt {{.*}} <col:22, col:23>
 // CHECK-NEXT:      | | `-CXX11NoReturnAttr {{.*}} <col:8> noreturn
-// CHECK-NEXT:      | |-CXXConversionDecl {{.*}} <col:3, col:23> col:3{{( imported)?}} implicit constexpr operator auto (*)() 'auto (*() const noexcept)()' inline no-linkage
-// CHECK-NEXT:      | `-CXXMethodDecl {{.*}} <col:3, col:23> col:3{{( imported)?}} implicit __invoke 'auto ()' static inline no-linkage
+// CHECK-NEXT:      | |-CXXConversionDecl {{.*}} <col:3, col:23> col:3{{( imported)?}} implicit constexpr operator auto (*)() 'auto (*() const noexcept)()' inline
+// CHECK-NEXT:      | `-CXXMethodDecl {{.*}} <col:3, col:23> col:3{{( imported)?}} implicit __invoke 'auto ()' static inline
 // CHECK-NEXT:      `-CompoundStmt {{.*}} <col:22, col:23>
