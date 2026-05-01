@@ -206,7 +206,9 @@ PreservedAnalyses ModuleInlinerPass::run(Module &M,
 
     InlineResult IR =
         InlineFunction(*CB, IFI, CtxProf, /*MergeAttributes=*/true,
-                       &FAM.getResult<AAManager>(*CB->getCaller()));
+                       &FAM.getResult<AAManager>(*CB->getCaller()),
+                       /*InsertLifetime=*/true,
+                       /*TrackInlineHistory=*/true);
     if (!IR.isSuccess()) {
       Advice->recordUnsuccessfulInlining(IR);
       continue;
