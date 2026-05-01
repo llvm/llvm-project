@@ -34,7 +34,6 @@ func.func @global_transpose_load_16xi4(%i : index, %j : index,
   // CHECK-GFX1250: %[[RES:.*]] = rocdl.global.load.tr4.b64
   // CHECK-GFX1250-SAME: -> vector<2xi32>
   // CHECK-GFX1250-NEXT: llvm.bitcast %[[RES]] : vector<2xi32> to vector<16xi4>
-  // CHECK-OLD: error: 'amdgpu.global_transpose_load' op global_transpose_load is only supported on gfx1200+
   // expected-error@+2 {{'amdgpu.global_transpose_load' op 4-bit global_transpose_load requires gfx1250+}}
   // expected-error@+1 {{failed to legalize operation 'amdgpu.global_transpose_load'}}
   %0 = amdgpu.global_transpose_load %src[%i, %j]
@@ -50,7 +49,6 @@ func.func @global_transpose_load_16xi6(%i : index, %j : index,
   // CHECK-GFX1250: %[[RES:.*]] = rocdl.global.load.tr6.b96
   // CHECK-GFX1250-SAME: -> vector<3xi32>
   // CHECK-GFX1250-NEXT: llvm.bitcast %[[RES]] : vector<3xi32> to vector<16xi6>
-  // CHECK-OLD: error: 'amdgpu.global_transpose_load' op global_transpose_load is only supported on gfx1200+
   // expected-error@+2 {{'amdgpu.global_transpose_load' op 6-bit global_transpose_load requires gfx1250+}}
   // expected-error@+1 {{failed to legalize operation 'amdgpu.global_transpose_load'}}
   %0 = amdgpu.global_transpose_load %src[%i, %j]
