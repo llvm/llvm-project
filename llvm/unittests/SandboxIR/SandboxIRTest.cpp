@@ -3224,6 +3224,11 @@ define void @foo(ptr %arg0, ptr %arg1) {
   EXPECT_FALSE(NewLd->isVolatile());
   EXPECT_EQ(NewLd->getType(), Ld->getType());
   EXPECT_EQ(NewLd->getPointerOperand(), Arg1);
+  // Check getPointerOperandType()
+  EXPECT_EQ(NewLd->getPointerOperandType(), Arg1->getType());
+  // Check getPointerAddressSpace()
+  EXPECT_EQ(NewLd->getPointerAddressSpace(),
+            Arg1->getType()->getPointerAddressSpace());
   EXPECT_EQ(NewLd->getAlign(), 8);
   EXPECT_EQ(NewLd->getName(), "NewLd");
   // Check create(InsertBefore, IsVolatile=true)
@@ -3289,6 +3294,11 @@ define void @foo(i8 %val, ptr %ptr) {
   // Check getPointerOperand()
   EXPECT_EQ(St->getValueOperand(), Val);
   EXPECT_EQ(St->getPointerOperand(), Ptr);
+  // Check getPointerOperandType()
+  EXPECT_EQ(St->getPointerOperandType(), Ptr->getType());
+  // Check getPointerAddressSpace()
+  EXPECT_EQ(St->getPointerAddressSpace(),
+            Ptr->getType()->getPointerAddressSpace());
   // Check getAlign()
   EXPECT_EQ(St->getAlign(), 64);
   // Check create(InsertBefore)
