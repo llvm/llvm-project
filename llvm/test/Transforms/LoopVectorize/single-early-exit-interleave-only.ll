@@ -42,11 +42,10 @@ define i8 @iv_used_in_exit_with_math(i8 noundef %g) {
 ; CHECK-NEXT:    [[TMP17:%.*]] = select i1 [[TMP16]], i64 [[TMP15]], i64 [[TMP34]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = trunc i64 [[TMP17]] to i32
 ; CHECK-NEXT:    [[TMP19:%.*]] = add i32 [[INDEX]], [[TMP18]]
-; CHECK-NEXT:    [[TMP20:%.*]] = trunc i32 [[TMP19]] to i8
 ; CHECK-NEXT:    [[TMP23:%.*]] = trunc i32 [[TMP19]] to i8
 ; CHECK-NEXT:    br label %[[RETURN]]
 ; CHECK:       [[RETURN]]:
-; CHECK-NEXT:    [[RES_IV1:%.*]] = phi i8 [ 32, %[[MIDDLE_BLOCK]] ], [ [[TMP20]], %[[VECTOR_EARLY_EXIT]] ]
+; CHECK-NEXT:    [[RES_IV1:%.*]] = phi i8 [ 32, %[[MIDDLE_BLOCK]] ], [ [[TMP23]], %[[VECTOR_EARLY_EXIT]] ]
 ; CHECK-NEXT:    [[RES_IV2:%.*]] = phi i8 [ 0, %[[MIDDLE_BLOCK]] ], [ [[TMP23]], %[[VECTOR_EARLY_EXIT]] ]
 ; CHECK-NEXT:    [[RES:%.*]] = add i8 [[RES_IV1]], [[RES_IV2]]
 ; CHECK-NEXT:    ret i8 [[RES]]

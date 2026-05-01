@@ -144,9 +144,8 @@ class PPCAsmParser : public MCTargetAsmParser {
 
 public:
   PPCAsmParser(const MCSubtargetInfo &STI, MCAsmParser &,
-               const MCInstrInfo &MII, const MCTargetOptions &Options)
-      : MCTargetAsmParser(Options, STI, MII),
-        IsPPC64(STI.getTargetTriple().isPPC64()) {
+               const MCInstrInfo &MII)
+      : MCTargetAsmParser(STI, MII), IsPPC64(STI.getTargetTriple().isPPC64()) {
     // Initialize the set of available features.
     setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
   }
