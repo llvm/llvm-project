@@ -1096,8 +1096,8 @@ LogicalResult GlobalTransposeLoadOp::verify() {
 
   // ElementSize -> NumElements (matches ISA-documented global_load_tr variants)
   const llvm::SmallDenseMap<size_t, size_t> kValidLoadSizeMap = {
-      {8, 8},   // global_load_tr_b64
-      {16, 8},  // global_load_tr_b128
+      {8, 8},  // global_load_tr_b64
+      {16, 8}, // global_load_tr_b128
   };
 
   auto validNumElems = kValidLoadSizeMap.find(elementTypeSize);
