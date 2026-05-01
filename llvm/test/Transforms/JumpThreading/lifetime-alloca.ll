@@ -14,8 +14,10 @@ define void @widget_dropped(i1 %arg) {
 ; CHECK-NEXT:    br label [[BB4:%.*]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    call void @dummy()
+; CHECK-NEXT:    [[ALLOCA1:%.*]] = alloca [4 x [4 x i32]], align 8
 ; CHECK-NEXT:    br label [[BB4]]
 ; CHECK:       bb4:
+; CHECK-NEXT:    [[ALLOCA2:%.*]] = phi ptr [ [[ALLOCA1]], [[BB3]] ], [ [[ALLOCA]], [[BB2]] ]
 ; CHECK-NEXT:    ret void
 ;
 bb:

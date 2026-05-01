@@ -1980,18 +1980,11 @@ void JumpThreadingPass::updateSSA(BasicBlock *BB, BasicBlock *NewBB,
     // block, and if so, record them in UsesToRename.
 
     SmallVector<Instruction *> LifetimeMarkers;
-    bool HasNonDominatedLifetimeMarker = false;
     for (Use &U : I.uses()) {
       Instruction *User = cast<Instruction>(U.getUser());
       if (isa<AllocaInst>(&I) && User->isLifetimeStartOrEnd()) {
-        // If any lifetime marker for the alloca is no longer dominated by the
-        // alloca after jump threading, we will remove all lifetime markers.
-        // This avoids inserting PHI nodes for lifetime markers, which is
-        // invalid.
-        DominatorTree &DT = DTU->getDomTree();
-        if (!DT.dominates(&I, User))
-          HasNonDominatedLifetimeMarker = true;
         LifetimeMarkers.push_back(User);
+        UsesToRename.push_back(&U);
       } else {
         if (PHINode *UserPN = dyn_cast<PHINode>(User)) {
           if (UserPN->getIncomingBlock(U) == BB)
@@ -2000,10 +1993,6 @@ void JumpThreadingPass::updateSSA(BasicBlock *BB, BasicBlock *NewBB,
           continue;
         UsesToRename.push_back(&U);
       }
-    }
-    if (HasNonDominatedLifetimeMarker) {
-      for (Instruction *User : LifetimeMarkers)
-        User->eraseFromParent();
     }
 
     // Find debug values outside of the block
@@ -2031,6 +2020,25 @@ void JumpThreadingPass::updateSSA(BasicBlock *BB, BasicBlock *NewBB,
       DbgVariableRecords.clear();
     }
 
+    // Lifetime markers cannot be rewritten through PHIs. If threading leaves
+    // one of them pointing at a PHI, drop the whole set.
+    bool HasPhiArg = false;
+    for (Instruction *User : LifetimeMarkers) {
+      auto *CB = cast<CallBase>(User);
+
+      // Lifetime markers have two common signatures:
+      // @llvm.lifetime.start.p0(ptr)
+      // @llvm.lifetime.start(i64, ptr)
+      if (isa<PHINode>(
+              CB->getOperand(CB->arg_size() - 1)->stripPointerCasts())) {
+        HasPhiArg = true;
+        break;
+      }
+    }
+    if (HasPhiArg) {
+      for (Instruction *User : LifetimeMarkers)
+        User->eraseFromParent();
+    }
     LLVM_DEBUG(dbgs() << "\n");
   }
 }
