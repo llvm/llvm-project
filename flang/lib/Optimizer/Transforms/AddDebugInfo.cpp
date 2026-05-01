@@ -828,10 +828,26 @@ void AddDebugInfoPass::handleOnlyClause(
   auto renames = useOp.getRenames();
 
   // Process ONLY symbols (without renames)
-  if (onlySymbols && !renames) {
+  if (onlySymbols) {
     for (mlir::Attribute attr : *onlySymbols) {
       auto symbolRef = mlir::cast<mlir::FlatSymbolRefAttr>(attr);
-      if (auto importedDecl = createImportedDeclForGlobal(
+
+      // Check if this symbol is also in renames, if so skip it
+      bool isInRenames = false;
+      if (renames) {
+        for (auto renameAttr : *renames) {
+          auto rename = mlir::cast<fir::UseRenameAttr>(renameAttr);
+          if (rename.getSymbol().getValue() == symbolRef.getValue()) {
+            isInRenames = true;
+            break;
+          }
+        }
+      }
+
+    if (isInRenames)
+      continue;
+
+    if (auto importedDecl = createImportedDeclForGlobal(
               symbolRef.getValue(), spAttr, fileAttr, mlir::StringAttr(),
               symbolTable))
         importedModules.insert(*importedDecl);
