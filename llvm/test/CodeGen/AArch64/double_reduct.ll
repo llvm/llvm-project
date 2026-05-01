@@ -55,7 +55,8 @@ define float @fmul_f32(<8 x float> %a, <4 x float> %b) {
 ; CHECK-SD-NEXT:    fmul v0.4s, v0.4s, v2.4s
 ; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-SD-NEXT:    fmul v0.2s, v0.2s, v1.2s
-; CHECK-SD-NEXT:    fmul s0, s0, v0.s[1]
+; CHECK-SD-NEXT:    fmul v0.2s, v0.2s, v0.s[1]
+; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: fmul_f32:
@@ -83,7 +84,8 @@ define float @fmul_f32_same(<4 x float> %a, <4 x float> %b) {
 ; CHECK-SD-NEXT:    fmul v0.4s, v0.4s, v1.4s
 ; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-SD-NEXT:    fmul v0.2s, v0.2s, v1.2s
-; CHECK-SD-NEXT:    fmul s0, s0, v0.s[1]
+; CHECK-SD-NEXT:    fmul v0.2s, v0.2s, v0.s[1]
+; CHECK-SD-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: fmul_f32_same:
@@ -378,9 +380,8 @@ define i32 @mul_i32(<8 x i32> %a, <4 x i32> %b) {
 ; CHECK-SD-NEXT:    mul v0.4s, v0.4s, v2.4s
 ; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-SD-NEXT:    mul v0.2s, v0.2s, v1.2s
-; CHECK-SD-NEXT:    mov w8, v0.s[1]
-; CHECK-SD-NEXT:    fmov w9, s0
-; CHECK-SD-NEXT:    mul w0, w9, w8
+; CHECK-SD-NEXT:    mul v0.2s, v0.2s, v0.s[1]
+; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: mul_i32:
@@ -412,9 +413,8 @@ define i32 @mul_i32_same(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-SD-NEXT:    mul v0.4s, v0.4s, v1.4s
 ; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-SD-NEXT:    mul v0.2s, v0.2s, v1.2s
-; CHECK-SD-NEXT:    mov w8, v0.s[1]
-; CHECK-SD-NEXT:    fmov w9, s0
-; CHECK-SD-NEXT:    mul w0, w9, w8
+; CHECK-SD-NEXT:    mul v0.2s, v0.2s, v0.s[1]
+; CHECK-SD-NEXT:    fmov w0, s0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: mul_i32_same:
@@ -907,8 +907,8 @@ define float @nested_mul_f32(<4 x float> %a, <4 x float> %b, float %c, float %d)
 ; CHECK-SD-NEXT:    fmul s2, s2, s3
 ; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-SD-NEXT:    fmul v0.2s, v0.2s, v1.2s
-; CHECK-SD-NEXT:    fmul s0, s0, v0.s[1]
-; CHECK-SD-NEXT:    fmul s0, s0, s2
+; CHECK-SD-NEXT:    fmul v0.2s, v0.2s, v0.s[1]
+; CHECK-SD-NEXT:    fmul s0, s2, s0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: nested_mul_f32:
@@ -1058,9 +1058,8 @@ define i32 @nested_mul_i32(<4 x i32> %a, <4 x i32> %b, i32 %c, i32 %d) {
 ; CHECK-SD-NEXT:    mul w8, w0, w1
 ; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-SD-NEXT:    mul v0.2s, v0.2s, v1.2s
-; CHECK-SD-NEXT:    mov w9, v0.s[1]
-; CHECK-SD-NEXT:    fmov w10, s0
-; CHECK-SD-NEXT:    mul w9, w10, w9
+; CHECK-SD-NEXT:    mul v0.2s, v0.2s, v0.s[1]
+; CHECK-SD-NEXT:    fmov w9, s0
 ; CHECK-SD-NEXT:    mul w0, w9, w8
 ; CHECK-SD-NEXT:    ret
 ;

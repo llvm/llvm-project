@@ -91,7 +91,7 @@ defvar NumericTypesNoDbl = [Int16Ty, UInt16Ty, HalfTy, IntTy, UIntTy,
 // These classes are usable in both argument and return type positions.
 //===----------------------------------------------------------------------===//
 
-// The varying type — expanded per VaryingTypes.
+// The varying type - expanded per VaryingTypes.
 // As an argument: the arg type varies with each overload.
 // As a return type: returns the same type as the varying arg.
 def Varying : HLSLArgType, HLSLReturnType;
@@ -210,7 +210,7 @@ class HLSLBuiltin<string name, string builtin = ""> {
   // Whether the function has the convergent attribute
   bit IsConvergent = 0;
 
-  // Argument element types — drives overload expansion.
+  // Argument element types - drives overload expansion.
   // One overload set is generated per type (scalar + vectors + matrices).
   // Only used when Args contains Varying entries.
   list<HLSLType> VaryingTypes = [];
@@ -324,14 +324,14 @@ def hlsl_abs : HLSLOneArgBuiltin<"abs", "__builtin_elementwise_abs"> {
   let VaryingMatDims = [];
 }
 
-// Unsigned abs is a constexpr identity — unsigned values are already non-negative.
+// Unsigned abs is a constexpr identity - unsigned values are already non-negative.
 def hlsl_abs_unsigned : HLSLOneArgInlineBuiltin<"abs"> {
   let Doc = [{
 \fn T abs(T Val)
 \brief Returns the absolute value of the input value, \a Val.
 \param Val The input value.
 
-Unsigned overload — unsigned values are already non-negative, so this
+Unsigned overload - unsigned values are already non-negative, so this
 function returns its input unchanged.
 }];
   let ParamNames = ["V"];
@@ -995,8 +995,60 @@ with regard to the x and y screen space coordinates.
   let VaryingMatDims = [];
 }
 
-// Blocks execution of all threads in a group until all group shared accesses
+// Blocks execution of all threads in a group until all memory accesses
+// have been completed.
+def hlsl_all_memory_barrier :
+    HLSLBuiltin<"AllMemoryBarrier",
+                "__builtin_hlsl_all_memory_barrier"> {
+  let Doc = [{
+\fn void AllMemoryBarrier(void)
+\brief Blocks execution of all threads in a group until all memory
+accesses have been completed.
+}];
+  let IsConvergent = 1;
+}
+
+// Blocks execution of all threads in a group until all memory accesses
 // have been completed and all threads in the group have reached this call.
+def hlsl_all_memory_barrier_with_group_sync :
+    HLSLBuiltin<"AllMemoryBarrierWithGroupSync",
+                "__builtin_hlsl_all_memory_barrier_with_group_sync"> {
+  let Doc = [{
+\fn void AllMemoryBarrierWithGroupSync(void)
+\brief Blocks execution of all threads in a group until all memory
+accesses have been completed and all threads in the group have reached this call.
+}];
+  let IsConvergent = 1;
+}
+
+// Blocks execution of all threads in a group until all device memory accesses
+// have been completed.
+def hlsl_device_memory_barrier :
+    HLSLBuiltin<"DeviceMemoryBarrier",
+                "__builtin_hlsl_device_memory_barrier"> {
+  let Doc = [{
+\fn void DeviceMemoryBarrier(void)
+\brief Blocks execution of all threads in a group until all device memory
+accesses have been completed.
+}];
+  let IsConvergent = 1;
+}
+
+// Blocks execution of all threads in a group until all device memory accesses
+// have been completed and all threads in the group have reached this call.
+def hlsl_device_memory_barrier_with_group_sync :
+    HLSLBuiltin<"DeviceMemoryBarrierWithGroupSync",
+                "__builtin_hlsl_device_memory_barrier_with_group_sync"> {
+  let Doc = [{
+\fn void DeviceMemoryBarrierWithGroupSync(void)
+\brief Blocks execution of all threads in a group until all device memory
+accesses have been completed and all threads in the group have reached this call.
+}];
+  let IsConvergent = 1;
+}
+
+// Blocks execution of all threads in a group until all group shared accesses
+// have been completed.
 def hlsl_group_memory_barrier :
     HLSLBuiltin<"GroupMemoryBarrier",
                 "__builtin_hlsl_group_memory_barrier"> {

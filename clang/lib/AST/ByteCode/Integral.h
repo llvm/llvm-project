@@ -218,6 +218,11 @@ public:
       return APValue(D->asValueDecl(), CharUnits::Zero(),
                      APValue::NoLValuePath{});
     }
+    case IntegralKind::FunctionAddress: {
+      return APValue((const FunctionDecl *)Ptr.P,
+                     CharUnits::fromQuantity(Ptr.Offset),
+                     APValue::NoLValuePath{});
+    }
     case IntegralKind::AddrLabelDiff: {
       return APValue(AddrLabelDiff.L1, AddrLabelDiff.L2);
     }
@@ -300,6 +305,9 @@ public:
       break;
     case IntegralKind::LabelAddress:
       OS << Ptr.P << " + " << Ptr.Offset << " (LabelAddress)";
+      break;
+    case IntegralKind::FunctionAddress:
+      OS << Ptr.P << " + " << Ptr.Offset << " (FunctionAddress)";
     }
   }
 
@@ -327,6 +335,7 @@ public:
     case IntegralKind::Address:
     case IntegralKind::BlockAddress:
     case IntegralKind::LabelAddress:
+    case IntegralKind::FunctionAddress:
       return Integral(V.getKind(), V.getPtr(), V.getOffset());
     }
     llvm_unreachable("Unhandled IntegralKind");

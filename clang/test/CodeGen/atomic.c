@@ -91,7 +91,7 @@ int atomic(void) {
   if ( __sync_val_compare_and_swap(&valb, 0, 1)) {
     // CHECK: [[PAIR:%[a-z0-9_.]+]] = cmpxchg ptr %valb, i8 0, i8 1 seq_cst seq_cst, align 1
     // CHECK: [[VAL:%[a-z0-9_.]+]] = extractvalue { i8, i1 } [[PAIR]], 0
-    // CHECK: trunc i8 [[VAL]] to i1
+    // CHECK: icmp ne i8 [[VAL]], 0
     old = 42;
   }
   

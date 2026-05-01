@@ -83,6 +83,11 @@ namespace Intrinsic {
   /// Returns true if the intrinsic can be overloaded.
   LLVM_ABI bool isOverloaded(ID id);
 
+  /// Returns true if the intrinsic is trivially scalarizable.
+  /// This means that the intrinsic's argument types are all scalars for the
+  /// scalar form and all vectors for the vector form.
+  LLVM_ABI bool isTriviallyScalarizable(ID id);
+
   /// Returns true if the intrinsic has pretty printed immediate arguments.
   LLVM_ABI bool hasPrettyPrintedArgs(ID id);
 
@@ -222,7 +227,7 @@ namespace Intrinsic {
     }
 
     // OneNthEltsVecArguments uses both a divisor N and a reference argument for
-    // the full-width vector to match
+    // the full-width vector to match.
     unsigned getVectorDivisor() const {
       assert(Kind == OneNthEltsVec);
       return OverloadInfo >> 16;
@@ -280,7 +285,7 @@ namespace Intrinsic {
   LLVM_ABI bool matchIntrinsicVarArg(bool isVarArg,
                                      ArrayRef<IITDescriptor> &Infos);
 
-  /// Gets the type arguments of an intrinsic call by matching type contraints
+  /// Gets the overload types of an intrinsic call by matching type contraints
   /// specified by the .td file. The overloaded types are pushed into the
   /// OverloadTys vector.
   ///

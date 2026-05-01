@@ -353,6 +353,6 @@ body:             |
     %1 = IMPLICIT_DEF
     $sgpr0_sgpr1 = S_OR_B64 $exec, killed $vcc, implicit-def $scc
     %2:sreg_64 = IMPLICIT_DEF
-    INLINEASM &"", 1
+    INLINEASM &"", sideeffect attdialect
     S_ENDPGM 0
 ...

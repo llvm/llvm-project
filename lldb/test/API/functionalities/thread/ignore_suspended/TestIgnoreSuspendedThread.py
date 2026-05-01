@@ -8,6 +8,7 @@ from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
 
 
+@skipIfTargetDoesNotSupportThreads()
 class IgnoreSuspendedThreadTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 

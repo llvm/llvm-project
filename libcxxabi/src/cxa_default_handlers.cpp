@@ -81,6 +81,7 @@ static void demangling_terminate_handler()
 __attribute__((noreturn))
 static void demangling_terminate_handler()
 {
+    (void)cause;
     __abort_message("terminating");
 }
 #endif // !_LIBCXXABI_NO_EXCEPTIONS

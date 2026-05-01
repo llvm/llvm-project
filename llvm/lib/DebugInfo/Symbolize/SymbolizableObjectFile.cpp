@@ -47,8 +47,7 @@ SymbolizableObjectFile::create(const object::ObjectFile *Obj,
         Expected<StringRef> E = Section->getContents();
         if (!E)
           return E.takeError();
-        OpdExtractor.reset(new DataExtractor(*E, Obj->isLittleEndian(),
-                                             Obj->getBytesInAddress()));
+        OpdExtractor.reset(new DataExtractor(*E, Obj->isLittleEndian()));
         OpdAddress = Section->getAddress();
         break;
       }
@@ -205,8 +204,9 @@ Error SymbolizableObjectFile::addSymbol(const SymbolRef &Symbol,
     // For the purposes of symbolization, pretend the symbol's address is that
     // of the function's code, not the descriptor.
     uint64_t OpdOffset = SymbolAddress - OpdAddress;
-    if (OpdExtractor->isValidOffsetForAddress(OpdOffset))
-      SymbolAddress = OpdExtractor->getAddress(&OpdOffset);
+    unsigned AddressSize = Obj.getBytesInAddress();
+    if (OpdExtractor->isValidOffsetForDataOfSize(OpdOffset, AddressSize))
+      SymbolAddress = OpdExtractor->getUnsigned(&OpdOffset, AddressSize);
   }
   // Mach-O symbol table names have leading underscore, skip it.
   if (Module->isMachO())

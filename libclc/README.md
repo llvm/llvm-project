@@ -85,11 +85,22 @@ Note you can use the `DESTDIR` Makefile variable to do staged installs.
 DESTDIR=/path/for/staged/install ninja install
 ```
 
-## Run tests
+## Testing
+libclc utilizes the LLVM testing infrastructure.
+#### Run all tests
+To execute all per-target tests for libclc.
+```
+ninja check-libclc
+```
+`check-libclc` is a top-level target that aggregates all per-target tests.
+
+#### Run target-specific tests
+If you are working on a specific target, you can run tests for just that target triple:
 ```
 ninja check-libclc-<target-triple>
 ```
-or
+Alternatively, you can run target-specific tests via the runtimes build by
+pointing to the target-specific build directory:
 ```
 ninja -C runtimes/runtimes-<target-triple>-bins check-libclc
 ```

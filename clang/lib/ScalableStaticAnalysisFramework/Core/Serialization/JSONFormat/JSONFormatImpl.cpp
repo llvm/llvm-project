@@ -311,8 +311,10 @@ Array JSONFormat::nestedBuildNamespaceToJSON(
 // EntityName
 //----------------------------------------------------------------------------
 
-llvm::Expected<EntityName>
-JSONFormat::entityNameFromJSON(const Object &EntityNameObject) const {
+/// Reads "usr" and "suffix" fields from an EntityName JSON object.
+/// Shared core logic for both TU and LU entity name deserialization.
+static llvm::Expected<std::pair<llvm::StringRef, llvm::StringRef>>
+entityNameCoreFromJSON(const Object &EntityNameObject) {
   const auto OptUSR = EntityNameObject.getString("usr");
   if (!OptUSR) {
     return ErrorBuilder::create(std::errc::invalid_argument,
@@ -328,6 +330,34 @@ JSONFormat::entityNameFromJSON(const Object &EntityNameObject) const {
                                 "Suffix", "suffix", "string")
         .build();
   }
+
+  return std::make_pair(*OptUSR, *OptSuffix);
+}
+
+llvm::Expected<EntityName>
+JSONFormat::tuEntityNameFromJSON(const Object &EntityNameObject) const {
+  auto ExpectedCore = entityNameCoreFromJSON(EntityNameObject);
+  if (!ExpectedCore)
+    return ExpectedCore.takeError();
+
+  auto [USR, Suffix] = *ExpectedCore;
+  return EntityName{USR, Suffix, NestedBuildNamespace()};
+}
+
+Object JSONFormat::tuEntityNameToJSON(const EntityName &EN) const {
+  Object Result;
+  Result["usr"] = getUSR(EN);
+  Result["suffix"] = getSuffix(EN);
+  return Result;
+}
+
+llvm::Expected<EntityName>
+JSONFormat::luEntityNameFromJSON(const Object &EntityNameObject) const {
+  auto ExpectedCore = entityNameCoreFromJSON(EntityNameObject);
+  if (!ExpectedCore)
+    return ExpectedCore.takeError();
+
+  auto [USR, Suffix] = *ExpectedCore;
 
   const Array *OptNamespaceArray = EntityNameObject.getArray("namespace");
   if (!OptNamespaceArray) {
@@ -345,10 +375,10 @@ JSONFormat::entityNameFromJSON(const Object &EntityNameObject) const {
         .build();
   }
 
-  return EntityName{*OptUSR, *OptSuffix, std::move(*ExpectedNamespace)};
+  return EntityName{USR, Suffix, std::move(*ExpectedNamespace)};
 }
 
-Object JSONFormat::entityNameToJSON(const EntityName &EN) const {
+Object JSONFormat::luEntityNameToJSON(const EntityName &EN) const {
   Object Result;
   Result["usr"] = getUSR(EN);
   Result["suffix"] = getSuffix(EN);
@@ -411,26 +441,10 @@ Object JSONFormat::entityLinkageToJSON(const EntityLinkage &EL) const {
 // EntityIdTableEntry
 //----------------------------------------------------------------------------
 
-llvm::Expected<std::pair<EntityName, EntityId>>
-JSONFormat::entityIdTableEntryFromJSON(
-    const Object &EntityIdTableEntryObject) const {
-
-  const Object *OptEntityNameObject =
-      EntityIdTableEntryObject.getObject("name");
-  if (!OptEntityNameObject) {
-    return ErrorBuilder::create(std::errc::invalid_argument,
-                                ErrorMessages::FailedToReadObjectAtField,
-                                "EntityName", "name", "object")
-        .build();
-  }
-
-  auto ExpectedEntityName = entityNameFromJSON(*OptEntityNameObject);
-  if (!ExpectedEntityName) {
-    return ErrorBuilder::wrap(ExpectedEntityName.takeError())
-        .context(ErrorMessages::ReadingFromField, "EntityName", "name")
-        .build();
-  }
-
+/// Shared logic for reading the "id" field from an EntityIdTableEntry object.
+static llvm::Expected<EntityId>
+entityIdTableEntryIdFromJSON(const Object &EntityIdTableEntryObject,
+                             llvm::function_ref<EntityId(uint64_t)> MakeId) {
   const Value *EntityIdIntValue = EntityIdTableEntryObject.get("id");
   if (!EntityIdIntValue) {
     return ErrorBuilder::create(std::errc::invalid_argument,
@@ -450,16 +464,80 @@ JSONFormat::entityIdTableEntryFromJSON(
         .build();
   }
 
-  EntityId EI = entityIdFromJSON(*OptEntityIdInt);
-
-  return std::make_pair(std::move(*ExpectedEntityName), std::move(EI));
+  return MakeId(*OptEntityIdInt);
 }
 
-Object JSONFormat::entityIdTableEntryToJSON(const EntityName &EN,
-                                            EntityId EI) const {
+llvm::Expected<std::pair<EntityName, EntityId>>
+JSONFormat::tuEntityIdTableEntryFromJSON(
+    const Object &EntityIdTableEntryObject) const {
+
+  const Object *OptEntityNameObject =
+      EntityIdTableEntryObject.getObject("name");
+  if (!OptEntityNameObject) {
+    return ErrorBuilder::create(std::errc::invalid_argument,
+                                ErrorMessages::FailedToReadObjectAtField,
+                                "EntityName", "name", "object")
+        .build();
+  }
+
+  auto ExpectedEntityName = tuEntityNameFromJSON(*OptEntityNameObject);
+  if (!ExpectedEntityName) {
+    return ErrorBuilder::wrap(ExpectedEntityName.takeError())
+        .context(ErrorMessages::ReadingFromField, "EntityName", "name")
+        .build();
+  }
+
+  auto ExpectedId = entityIdTableEntryIdFromJSON(
+      EntityIdTableEntryObject,
+      [this](uint64_t V) { return entityIdFromJSON(V); });
+  if (!ExpectedId)
+    return ExpectedId.takeError();
+
+  return std::make_pair(std::move(*ExpectedEntityName), std::move(*ExpectedId));
+}
+
+Object JSONFormat::tuEntityIdTableEntryToJSON(const EntityName &EN,
+                                              EntityId EI) const {
   Object Entry;
   Entry["id"] = entityIdToJSON(EI);
-  Entry["name"] = entityNameToJSON(EN);
+  Entry["name"] = tuEntityNameToJSON(EN);
+  return Entry;
+}
+
+llvm::Expected<std::pair<EntityName, EntityId>>
+JSONFormat::luEntityIdTableEntryFromJSON(
+    const Object &EntityIdTableEntryObject) const {
+
+  const Object *OptEntityNameObject =
+      EntityIdTableEntryObject.getObject("name");
+  if (!OptEntityNameObject) {
+    return ErrorBuilder::create(std::errc::invalid_argument,
+                                ErrorMessages::FailedToReadObjectAtField,
+                                "EntityName", "name", "object")
+        .build();
+  }
+
+  auto ExpectedEntityName = luEntityNameFromJSON(*OptEntityNameObject);
+  if (!ExpectedEntityName) {
+    return ErrorBuilder::wrap(ExpectedEntityName.takeError())
+        .context(ErrorMessages::ReadingFromField, "EntityName", "name")
+        .build();
+  }
+
+  auto ExpectedId = entityIdTableEntryIdFromJSON(
+      EntityIdTableEntryObject,
+      [this](uint64_t V) { return entityIdFromJSON(V); });
+  if (!ExpectedId)
+    return ExpectedId.takeError();
+
+  return std::make_pair(std::move(*ExpectedEntityName), std::move(*ExpectedId));
+}
+
+Object JSONFormat::luEntityIdTableEntryToJSON(const EntityName &EN,
+                                              EntityId EI) const {
+  Object Entry;
+  Entry["id"] = entityIdToJSON(EI);
+  Entry["name"] = luEntityNameToJSON(EN);
   return Entry;
 }
 
@@ -467,10 +545,18 @@ Object JSONFormat::entityIdTableEntryToJSON(const EntityName &EN,
 // EntityIdTable
 //----------------------------------------------------------------------------
 
-llvm::Expected<EntityIdTable>
-JSONFormat::entityIdTableFromJSON(const Array &EntityIdTableArray) const {
+/// Shared logic for deserializing an EntityIdTable from a JSON array.
+/// \p EntryReader is called for each entry object to produce an
+/// (EntityName, EntityId) pair.
+static llvm::Expected<EntityIdTable> entityIdTableFromJSONImpl(
+    const Array &EntityIdTableArray,
+    llvm::function_ref<
+        llvm::Expected<std::pair<EntityName, EntityId>>(const Object &)>
+        EntryReader,
+    llvm::function_ref<std::map<EntityName, EntityId> &(EntityIdTable &)>
+        GetEntities) {
   EntityIdTable IdTable;
-  std::map<EntityName, EntityId> &Entities = getEntities(IdTable);
+  std::map<EntityName, EntityId> &Entities = GetEntities(IdTable);
 
   for (const auto &[Index, EntityIdTableEntryValue] :
        llvm::enumerate(EntityIdTableArray)) {
@@ -483,8 +569,7 @@ JSONFormat::entityIdTableFromJSON(const Array &EntityIdTableArray) const {
           .build();
     }
 
-    auto ExpectedEntityIdTableEntry =
-        entityIdTableEntryFromJSON(*OptEntityIdTableEntryObject);
+    auto ExpectedEntityIdTableEntry = EntryReader(*OptEntityIdTableEntryObject);
     if (!ExpectedEntityIdTableEntry) {
       return ErrorBuilder::wrap(ExpectedEntityIdTableEntry.takeError())
           .context(ErrorMessages::ReadingFromIndex, "EntityIdTable entry",
@@ -506,14 +591,47 @@ JSONFormat::entityIdTableFromJSON(const Array &EntityIdTableArray) const {
   return IdTable;
 }
 
-Array JSONFormat::entityIdTableToJSON(const EntityIdTable &IdTable) const {
+llvm::Expected<EntityIdTable>
+JSONFormat::tuEntityIdTableFromJSON(const Array &EntityIdTableArray) const {
+  return entityIdTableFromJSONImpl(
+      EntityIdTableArray,
+      [this](const Object &O) { return tuEntityIdTableEntryFromJSON(O); },
+      [](EntityIdTable &T) -> std::map<EntityName, EntityId> & {
+        return getEntities(T);
+      });
+}
+
+Array JSONFormat::tuEntityIdTableToJSON(const EntityIdTable &IdTable) const {
   Array EntityIdTableArray;
   const auto &Entities = getEntities(IdTable);
   EntityIdTableArray.reserve(Entities.size());
 
   for (const auto &[EntityName, EntityId] : Entities) {
     EntityIdTableArray.push_back(
-        entityIdTableEntryToJSON(EntityName, EntityId));
+        tuEntityIdTableEntryToJSON(EntityName, EntityId));
+  }
+
+  return EntityIdTableArray;
+}
+
+llvm::Expected<EntityIdTable>
+JSONFormat::luEntityIdTableFromJSON(const Array &EntityIdTableArray) const {
+  return entityIdTableFromJSONImpl(
+      EntityIdTableArray,
+      [this](const Object &O) { return luEntityIdTableEntryFromJSON(O); },
+      [](EntityIdTable &T) -> std::map<EntityName, EntityId> & {
+        return getEntities(T);
+      });
+}
+
+Array JSONFormat::luEntityIdTableToJSON(const EntityIdTable &IdTable) const {
+  Array EntityIdTableArray;
+  const auto &Entities = getEntities(IdTable);
+  EntityIdTableArray.reserve(Entities.size());
+
+  for (const auto &[EntityName, EntityId] : Entities) {
+    EntityIdTableArray.push_back(
+        luEntityIdTableEntryToJSON(EntityName, EntityId));
   }
 
   return EntityIdTableArray;

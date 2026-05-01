@@ -26,22 +26,16 @@ class MDGeneratorTest : public ClangDocContextTest {};
 TEST_F(MDGeneratorTest, emitNamespaceMD) {
   NamespaceInfo I;
   I.Name = "Namespace";
-  Reference Ns[] = {Reference(EmptySID, "A", InfoType::IT_namespace)};
-  I.Namespace = llvm::ArrayRef(Ns);
+  I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
   Reference NewNamespace(EmptySID, "ChildNamespace", InfoType::IT_namespace);
   I.Children.Namespaces.push_back(NewNamespace);
-  Reference ChildStruct(EmptySID, "ChildStruct", InfoType::IT_record);
-  I.Children.Records.push_back(ChildStruct);
-
-  FunctionInfo F;
-  F.Name = "OneFunction";
-  F.Access = AccessSpecifier::AS_none;
-  I.Children.Functions.push_back(F);
-
-  EnumInfo E;
-  E.Name = "OneEnum";
-  I.Children.Enums.push_back(E);
+  I.Children.Records.emplace_back(EmptySID, "ChildStruct", InfoType::IT_record);
+  I.Children.Functions.emplace_back();
+  I.Children.Functions.back().Name = "OneFunction";
+  I.Children.Functions.back().Access = AccessSpecifier::AS_none;
+  I.Children.Enums.emplace_back();
+  I.Children.Enums.back().Name = "OneEnum";
 
   auto G = getMDGenerator();
   assert(G);
@@ -85,31 +79,21 @@ TEST_F(MDGeneratorTest, emitNamespaceMD) {
 TEST_F(MDGeneratorTest, emitRecordMD) {
   RecordInfo I;
   I.Name = "r";
-  Reference Ns[] = {Reference(EmptySID, "A", InfoType::IT_namespace)};
-  I.Namespace = llvm::ArrayRef(Ns);
+  I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
   I.DefLoc = Location(10, 10, "test.cpp");
-  Location Loc1(12, 12, "test.cpp");
-  I.Loc.push_back(Loc1);
+  I.Loc.emplace_back(12, 12, "test.cpp");
 
-  MemberTypeInfo M[] = {
-      MemberTypeInfo(TypeInfo("int"), "X", AccessSpecifier::AS_private)};
-  I.Members = llvm::ArrayRef(M);
+  I.Members.emplace_back(TypeInfo("int"), "X", AccessSpecifier::AS_private);
   I.TagType = TagTypeKind::Class;
-  Reference Parents[] = {Reference(EmptySID, "F", InfoType::IT_record)};
-  I.Parents = llvm::ArrayRef(Parents);
-  Reference VParents[] = {Reference(EmptySID, "G", InfoType::IT_record)};
-  I.VirtualParents = llvm::ArrayRef(VParents);
+  I.Parents.emplace_back(EmptySID, "F", InfoType::IT_record);
+  I.VirtualParents.emplace_back(EmptySID, "G", InfoType::IT_record);
 
-  Reference ChildStruct(EmptySID, "ChildStruct", InfoType::IT_record);
-  I.Children.Records.push_back(ChildStruct);
-  FunctionInfo F;
-  F.Name = "OneFunction";
-  I.Children.Functions.push_back(F);
-
-  EnumInfo E;
-  E.Name = "OneEnum";
-  I.Children.Enums.push_back(E);
+  I.Children.Records.emplace_back(EmptySID, "ChildStruct", InfoType::IT_record);
+  I.Children.Functions.emplace_back();
+  I.Children.Functions.back().Name = "OneFunction";
+  I.Children.Enums.emplace_back();
+  I.Children.Enums.back().Name = "OneEnum";
 
   auto G = getMDGenerator();
   assert(G);
@@ -159,18 +143,15 @@ ChildStruct
 TEST_F(MDGeneratorTest, emitFunctionMD) {
   FunctionInfo I;
   I.Name = "f";
-  Reference Ns[] = {Reference(EmptySID, "A", InfoType::IT_namespace)};
-  I.Namespace = llvm::ArrayRef(Ns);
+  I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
   I.DefLoc = Location(10, 10, "test.cpp");
-  Location Loc1(12, 12, "test.cpp");
-  I.Loc.push_back(Loc1);
+  I.Loc.emplace_back(12, 12, "test.cpp");
 
   I.Access = AccessSpecifier::AS_none;
 
   I.ReturnType = TypeInfo("void");
-  FieldTypeInfo P[] = {FieldTypeInfo(TypeInfo("int"), "P")};
-  I.Params = llvm::ArrayRef(P);
+  I.Params.emplace_back(TypeInfo("int"), "P");
   I.IsMethod = true;
   I.Parent = Reference(EmptySID, "Parent", InfoType::IT_record);
 
@@ -194,15 +175,12 @@ TEST_F(MDGeneratorTest, emitFunctionMD) {
 TEST_F(MDGeneratorTest, emitEnumMD) {
   EnumInfo I;
   I.Name = "e";
-  Reference Ns[] = {Reference(EmptySID, "A", InfoType::IT_namespace)};
-  I.Namespace = llvm::ArrayRef(Ns);
+  I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
   I.DefLoc = Location(10, 10, "test.cpp");
-  Location Loc1(12, 12, "test.cpp");
-  I.Loc.push_back(Loc1);
+  I.Loc.emplace_back(12, 12, "test.cpp");
 
-  EnumValueInfo EV[] = {EnumValueInfo("X")};
-  I.Members = llvm::ArrayRef(EV);
+  I.Members.emplace_back("X");
   I.Scoped = true;
 
   auto G = getMDGenerator();
@@ -230,9 +208,8 @@ TEST_F(MDGeneratorTest, emitCommentMD) {
 
   I.DefLoc = Location(10, 10, "test.cpp");
   I.ReturnType = TypeInfo("void");
-  FieldTypeInfo PI[] = {FieldTypeInfo(TypeInfo("int"), "I"),
-                        FieldTypeInfo(TypeInfo("int"), "J")};
-  I.Params = llvm::ArrayRef(PI);
+  I.Params.emplace_back(TypeInfo("int"), "I");
+  I.Params.emplace_back(TypeInfo("int"), "J");
   I.Access = AccessSpecifier::AS_none;
 
   CommentInfo Top;
