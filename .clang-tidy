@@ -4,6 +4,7 @@ Checks: >
   clang-diagnostic-*,
   llvm-*,
   misc-*,
+  -misc-header-guard,
   -misc-const-correctness,
   -misc-include-cleaner,
   -misc-no-recursion,
