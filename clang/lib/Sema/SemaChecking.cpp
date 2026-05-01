@@ -5010,6 +5010,7 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
     AOEVT_None = 0,
     AOEVT_Pointer = 1,
     AOEVT_FP = 2,
+    AOEVT_Int = 4,
   };
   unsigned ArithAllows = AOEVT_None;
 
@@ -5063,20 +5064,12 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
     break;
   case AtomicExpr::AO__atomic_fetch_fminimum:
   case AtomicExpr::AO__atomic_fetch_fmaximum:
-  case AtomicExpr::AO__atomic_fminimum_fetch:
-  case AtomicExpr::AO__atomic_fmaximum_fetch:
   case AtomicExpr::AO__atomic_fetch_fminimum_num:
   case AtomicExpr::AO__atomic_fetch_fmaximum_num:
-  case AtomicExpr::AO__atomic_fminimum_num_fetch:
-  case AtomicExpr::AO__atomic_fmaximum_num_fetch:
   case AtomicExpr::AO__scoped_atomic_fetch_fminimum:
   case AtomicExpr::AO__scoped_atomic_fetch_fmaximum:
-  case AtomicExpr::AO__scoped_atomic_fminimum_fetch:
-  case AtomicExpr::AO__scoped_atomic_fmaximum_fetch:
   case AtomicExpr::AO__scoped_atomic_fetch_fminimum_num:
   case AtomicExpr::AO__scoped_atomic_fetch_fmaximum_num:
-  case AtomicExpr::AO__scoped_atomic_fminimum_num_fetch:
-  case AtomicExpr::AO__scoped_atomic_fmaximum_num_fetch:
     ArithAllows = AOEVT_FP;
     Form = Arithmetic;
     break;
@@ -5094,7 +5087,7 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   case AtomicExpr::AO__opencl_atomic_fetch_min:
   case AtomicExpr::AO__hip_atomic_fetch_max:
   case AtomicExpr::AO__hip_atomic_fetch_min:
-    ArithAllows = AOEVT_FP;
+    ArithAllows = AOEVT_Int | AOEVT_FP;
     Form = Arithmetic;
     break;
   case AtomicExpr::AO__c11_atomic_fetch_and:
@@ -5273,8 +5266,8 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
               &llvm::APFloat::x87DoubleExtended();
       if (ValType->isIntegerType())
         // Special case: f-prefixed operations (AOEVT_FP exactly) reject
-        // integers
-        return AllowedType != AOEVT_FP;
+        // integers. Explicit AOEVT_Int or other combinations allow integers.
+        return (AllowedType & AOEVT_Int) || AllowedType != AOEVT_FP;
       if (ValType->isPointerType())
         return AllowedType & AOEVT_Pointer;
       if (!(ValType->isFloatingType() && (AllowedType & AOEVT_FP)))

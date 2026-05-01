@@ -116,52 +116,6 @@ void test_minmax_postop(float *f32, _Float16 *f16, __bf16 *bf16, double *f64) {
   *bf16 = __atomic_min_fetch(bf16, 42.1, memory_order_release);
 }
 
-// CHECK-LABEL: define dso_local void @test_fminimum_fmaximum_postop(
-// CHECK-SAME: ptr noundef [[F32:%.*]], ptr noundef [[F16:%.*]], ptr noundef [[BF16:%.*]], ptr noundef [[F64:%.*]]) #[[ATTR0:[0-9]+]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK:    [[TMP0:%.*]] = load ptr, ptr [[F64_ADDR]], align 8
-// CHECK:    store double 4.210000e+01, ptr [[DOTATOMICTMP]], align 8
-// CHECK:    [[TMP1:%.*]] = load double, ptr [[DOTATOMICTMP]], align 8
-// CHECK:    [[TMP2:%.*]] = atomicrmw fmaximum ptr [[TMP0]], double [[TMP1]] release, align 8
-// CHECK:    [[NEWVAL:%.*]] = call double @llvm.maximum.f64(double [[TMP2]], double [[TMP1]])
-// CHECK:    store double [[NEWVAL]], ptr [[ATOMIC_TEMP]], align 8
-// CHECK:    [[TMP3:%.*]] = load double, ptr [[ATOMIC_TEMP]], align 8
-// CHECK:    [[TMP4:%.*]] = load ptr, ptr [[F64_ADDR]], align 8
-// CHECK:    store double [[TMP3]], ptr [[TMP4]], align 8
-void test_fminimum_fmaximum_postop(float *f32, _Float16 *f16, __bf16 *bf16, double *f64) {
-  *f64  = __atomic_fmaximum_fetch(f64,  42.1, memory_order_release);
-  *f32  = __atomic_fmaximum_fetch(f32,  42.1, memory_order_release);
-  *f16  = __atomic_fmaximum_fetch(f16,  42.1, memory_order_release);
-  *bf16 = __atomic_fmaximum_fetch(bf16, 42.1, memory_order_release);
-  *f64  = __atomic_fminimum_fetch(f64,  42.1, memory_order_release);
-  *f32  = __atomic_fminimum_fetch(f32,  42.1, memory_order_release);
-  *f16  = __atomic_fminimum_fetch(f16,  42.1, memory_order_release);
-  *bf16 = __atomic_fminimum_fetch(bf16, 42.1, memory_order_release);
-}
-
-// CHECK-LABEL: define dso_local void @test_fminimumnum_fmaximumnum_postop(
-// CHECK-SAME: ptr noundef [[F32:%.*]], ptr noundef [[F16:%.*]], ptr noundef [[BF16:%.*]], ptr noundef [[F64:%.*]]) #[[ATTR0:[0-9]+]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK:    [[TMP0:%.*]] = load ptr, ptr [[F64_ADDR]], align 8
-// CHECK:    store double 4.210000e+01, ptr [[DOTATOMICTMP]], align 8
-// CHECK:    [[TMP1:%.*]] = load double, ptr [[DOTATOMICTMP]], align 8
-// CHECK:    [[TMP2:%.*]] = atomicrmw fmaximumnum ptr [[TMP0]], double [[TMP1]] release, align 8
-// CHECK:    [[NEWVAL:%.*]] = call double @llvm.maximumnum.f64(double [[TMP2]], double [[TMP1]])
-// CHECK:    store double [[NEWVAL]], ptr [[ATOMIC_TEMP]], align 8
-// CHECK:    [[TMP3:%.*]] = load double, ptr [[ATOMIC_TEMP]], align 8
-// CHECK:    [[TMP4:%.*]] = load ptr, ptr [[F64_ADDR]], align 8
-// CHECK:    store double [[TMP3]], ptr [[TMP4]], align 8
-void test_fminimumnum_fmaximumnum_postop(float *f32, _Float16 *f16, __bf16 *bf16, double *f64) {
-  *f64  = __atomic_fmaximum_num_fetch(f64,  42.1, memory_order_release);
-  *f32  = __atomic_fmaximum_num_fetch(f32,  42.1, memory_order_release);
-  *f16  = __atomic_fmaximum_num_fetch(f16,  42.1, memory_order_release);
-  *bf16 = __atomic_fmaximum_num_fetch(bf16, 42.1, memory_order_release);
-  *f64  = __atomic_fminimum_num_fetch(f64,  42.1, memory_order_release);
-  *f32  = __atomic_fminimum_num_fetch(f32,  42.1, memory_order_release);
-  *f16  = __atomic_fminimum_num_fetch(f16,  42.1, memory_order_release);
-  *bf16 = __atomic_fminimum_num_fetch(bf16, 42.1, memory_order_release);
-}
-
 // CHECK-LABEL: define dso_local void @test_fetch_variants(
 // CHECK-SAME: ptr noundef [[F64:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK:    [[TMP0:%.*]] = atomicrmw fminimum ptr {{%.*}}, double {{%.*}} release, align 8

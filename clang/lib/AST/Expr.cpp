@@ -5316,10 +5316,6 @@ unsigned AtomicExpr::getNumSubExprs(AtomicOp Op) {
   case AO__atomic_nand_fetch:
   case AO__atomic_min_fetch:
   case AO__atomic_max_fetch:
-  case AO__atomic_fminimum_fetch:
-  case AO__atomic_fmaximum_fetch:
-  case AO__atomic_fminimum_num_fetch:
-  case AO__atomic_fmaximum_num_fetch:
   case AO__atomic_fetch_min:
   case AO__atomic_fetch_max:
   case AO__atomic_fetch_fminimum:
@@ -5347,10 +5343,6 @@ unsigned AtomicExpr::getNumSubExprs(AtomicOp Op) {
   case AO__scoped_atomic_nand_fetch:
   case AO__scoped_atomic_min_fetch:
   case AO__scoped_atomic_max_fetch:
-  case AO__scoped_atomic_fminimum_fetch:
-  case AO__scoped_atomic_fmaximum_fetch:
-  case AO__scoped_atomic_fminimum_num_fetch:
-  case AO__scoped_atomic_fmaximum_num_fetch:
   case AO__scoped_atomic_fetch_min:
   case AO__scoped_atomic_fetch_max:
   case AO__scoped_atomic_fetch_fminimum:
