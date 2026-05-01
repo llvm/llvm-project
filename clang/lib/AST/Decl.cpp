@@ -2010,8 +2010,10 @@ bool NamedDecl::isCXXInstanceMember() const {
 
 template <typename DeclT>
 static SourceLocation getTemplateOrInnerLocStart(const DeclT *decl) {
-  if (decl->getNumTemplateParameterLists() > 0)
-    return decl->getTemplateParameterList(0)->getTemplateLoc();
+  if (ArrayRef<TemplateParameterList *> TPLs =
+          decl->getTemplateParameterLists();
+      !TPLs.empty())
+    return TPLs.front()->getTemplateLoc();
   return decl->getInnerLocStart();
 }
 
