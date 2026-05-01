@@ -294,45 +294,45 @@ define i64 @atomicrmw_max_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV32IB-COMMON-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
 ; RV32IB-COMMON-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
 ; RV32IB-COMMON-NEXT:    mv s0, a2
-; RV32IB-COMMON-NEXT:    mv s1, a0
-; RV32IB-COMMON-NEXT:    lw a4, 0(a0)
-; RV32IB-COMMON-NEXT:    lw a5, 4(a0)
-; RV32IB-COMMON-NEXT:    mv s2, a1
+; RV32IB-COMMON-NEXT:    mv s1, a1
+; RV32IB-COMMON-NEXT:    mv s2, a0
+; RV32IB-COMMON-NEXT:    li a1, 0
+; RV32IB-COMMON-NEXT:    call __atomic_load_8
+; RV32IB-COMMON-NEXT:    mv a4, a0
 ; RV32IB-COMMON-NEXT:    j .LBB4_2
 ; RV32IB-COMMON-NEXT:  .LBB4_1: # %atomicrmw.start
 ; RV32IB-COMMON-NEXT:    # in Loop: Header=BB4_2 Depth=1
 ; RV32IB-COMMON-NEXT:    sw a4, 8(sp)
-; RV32IB-COMMON-NEXT:    sw a5, 12(sp)
+; RV32IB-COMMON-NEXT:    sw a1, 12(sp)
 ; RV32IB-COMMON-NEXT:    addi a1, sp, 8
 ; RV32IB-COMMON-NEXT:    li a4, 5
 ; RV32IB-COMMON-NEXT:    li a5, 5
-; RV32IB-COMMON-NEXT:    mv a0, s1
+; RV32IB-COMMON-NEXT:    mv a0, s2
 ; RV32IB-COMMON-NEXT:    call __atomic_compare_exchange_8
 ; RV32IB-COMMON-NEXT:    lw a4, 8(sp)
-; RV32IB-COMMON-NEXT:    lw a5, 12(sp)
+; RV32IB-COMMON-NEXT:    lw a1, 12(sp)
 ; RV32IB-COMMON-NEXT:    bnez a0, .LBB4_7
 ; RV32IB-COMMON-NEXT:  .LBB4_2: # %atomicrmw.start
 ; RV32IB-COMMON-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32IB-COMMON-NEXT:    beq a5, s0, .LBB4_4
+; RV32IB-COMMON-NEXT:    beq a1, s0, .LBB4_4
 ; RV32IB-COMMON-NEXT:  # %bb.3: # %atomicrmw.start
 ; RV32IB-COMMON-NEXT:    # in Loop: Header=BB4_2 Depth=1
-; RV32IB-COMMON-NEXT:    slt a0, s0, a5
+; RV32IB-COMMON-NEXT:    slt a0, s0, a1
 ; RV32IB-COMMON-NEXT:    j .LBB4_5
 ; RV32IB-COMMON-NEXT:  .LBB4_4: # in Loop: Header=BB4_2 Depth=1
-; RV32IB-COMMON-NEXT:    sltu a0, s2, a4
+; RV32IB-COMMON-NEXT:    sltu a0, s1, a4
 ; RV32IB-COMMON-NEXT:  .LBB4_5: # %atomicrmw.start
 ; RV32IB-COMMON-NEXT:    # in Loop: Header=BB4_2 Depth=1
 ; RV32IB-COMMON-NEXT:    mv a2, a4
-; RV32IB-COMMON-NEXT:    mv a3, a5
+; RV32IB-COMMON-NEXT:    mv a3, a1
 ; RV32IB-COMMON-NEXT:    bnez a0, .LBB4_1
 ; RV32IB-COMMON-NEXT:  # %bb.6: # %atomicrmw.start
 ; RV32IB-COMMON-NEXT:    # in Loop: Header=BB4_2 Depth=1
-; RV32IB-COMMON-NEXT:    mv a2, s2
+; RV32IB-COMMON-NEXT:    mv a2, s1
 ; RV32IB-COMMON-NEXT:    mv a3, s0
 ; RV32IB-COMMON-NEXT:    j .LBB4_1
 ; RV32IB-COMMON-NEXT:  .LBB4_7: # %atomicrmw.end
 ; RV32IB-COMMON-NEXT:    mv a0, a4
-; RV32IB-COMMON-NEXT:    mv a1, a5
 ; RV32IB-COMMON-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32IB-COMMON-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32IB-COMMON-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
@@ -383,45 +383,45 @@ define i64 @atomicrmw_min_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV32IB-COMMON-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
 ; RV32IB-COMMON-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
 ; RV32IB-COMMON-NEXT:    mv s0, a2
-; RV32IB-COMMON-NEXT:    mv s1, a0
-; RV32IB-COMMON-NEXT:    lw a4, 0(a0)
-; RV32IB-COMMON-NEXT:    lw a5, 4(a0)
-; RV32IB-COMMON-NEXT:    mv s2, a1
+; RV32IB-COMMON-NEXT:    mv s1, a1
+; RV32IB-COMMON-NEXT:    mv s2, a0
+; RV32IB-COMMON-NEXT:    li a1, 0
+; RV32IB-COMMON-NEXT:    call __atomic_load_8
+; RV32IB-COMMON-NEXT:    mv a4, a0
 ; RV32IB-COMMON-NEXT:    j .LBB5_2
 ; RV32IB-COMMON-NEXT:  .LBB5_1: # %atomicrmw.start
 ; RV32IB-COMMON-NEXT:    # in Loop: Header=BB5_2 Depth=1
 ; RV32IB-COMMON-NEXT:    sw a4, 8(sp)
-; RV32IB-COMMON-NEXT:    sw a5, 12(sp)
+; RV32IB-COMMON-NEXT:    sw a1, 12(sp)
 ; RV32IB-COMMON-NEXT:    addi a1, sp, 8
 ; RV32IB-COMMON-NEXT:    li a4, 5
 ; RV32IB-COMMON-NEXT:    li a5, 5
-; RV32IB-COMMON-NEXT:    mv a0, s1
+; RV32IB-COMMON-NEXT:    mv a0, s2
 ; RV32IB-COMMON-NEXT:    call __atomic_compare_exchange_8
 ; RV32IB-COMMON-NEXT:    lw a4, 8(sp)
-; RV32IB-COMMON-NEXT:    lw a5, 12(sp)
+; RV32IB-COMMON-NEXT:    lw a1, 12(sp)
 ; RV32IB-COMMON-NEXT:    bnez a0, .LBB5_7
 ; RV32IB-COMMON-NEXT:  .LBB5_2: # %atomicrmw.start
 ; RV32IB-COMMON-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32IB-COMMON-NEXT:    beq a5, s0, .LBB5_4
+; RV32IB-COMMON-NEXT:    beq a1, s0, .LBB5_4
 ; RV32IB-COMMON-NEXT:  # %bb.3: # %atomicrmw.start
 ; RV32IB-COMMON-NEXT:    # in Loop: Header=BB5_2 Depth=1
-; RV32IB-COMMON-NEXT:    slt a0, a5, s0
+; RV32IB-COMMON-NEXT:    slt a0, a1, s0
 ; RV32IB-COMMON-NEXT:    j .LBB5_5
 ; RV32IB-COMMON-NEXT:  .LBB5_4: # in Loop: Header=BB5_2 Depth=1
-; RV32IB-COMMON-NEXT:    sltu a0, a4, s2
+; RV32IB-COMMON-NEXT:    sltu a0, a4, s1
 ; RV32IB-COMMON-NEXT:  .LBB5_5: # %atomicrmw.start
 ; RV32IB-COMMON-NEXT:    # in Loop: Header=BB5_2 Depth=1
 ; RV32IB-COMMON-NEXT:    mv a2, a4
-; RV32IB-COMMON-NEXT:    mv a3, a5
+; RV32IB-COMMON-NEXT:    mv a3, a1
 ; RV32IB-COMMON-NEXT:    bnez a0, .LBB5_1
 ; RV32IB-COMMON-NEXT:  # %bb.6: # %atomicrmw.start
 ; RV32IB-COMMON-NEXT:    # in Loop: Header=BB5_2 Depth=1
-; RV32IB-COMMON-NEXT:    mv a2, s2
+; RV32IB-COMMON-NEXT:    mv a2, s1
 ; RV32IB-COMMON-NEXT:    mv a3, s0
 ; RV32IB-COMMON-NEXT:    j .LBB5_1
 ; RV32IB-COMMON-NEXT:  .LBB5_7: # %atomicrmw.end
 ; RV32IB-COMMON-NEXT:    mv a0, a4
-; RV32IB-COMMON-NEXT:    mv a1, a5
 ; RV32IB-COMMON-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32IB-COMMON-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32IB-COMMON-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
@@ -472,45 +472,45 @@ define i64 @atomicrmw_umax_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV32IB-COMMON-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
 ; RV32IB-COMMON-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
 ; RV32IB-COMMON-NEXT:    mv s0, a2
-; RV32IB-COMMON-NEXT:    mv s1, a0
-; RV32IB-COMMON-NEXT:    lw a4, 0(a0)
-; RV32IB-COMMON-NEXT:    lw a5, 4(a0)
-; RV32IB-COMMON-NEXT:    mv s2, a1
+; RV32IB-COMMON-NEXT:    mv s1, a1
+; RV32IB-COMMON-NEXT:    mv s2, a0
+; RV32IB-COMMON-NEXT:    li a1, 0
+; RV32IB-COMMON-NEXT:    call __atomic_load_8
+; RV32IB-COMMON-NEXT:    mv a4, a0
 ; RV32IB-COMMON-NEXT:    j .LBB6_2
 ; RV32IB-COMMON-NEXT:  .LBB6_1: # %atomicrmw.start
 ; RV32IB-COMMON-NEXT:    # in Loop: Header=BB6_2 Depth=1
 ; RV32IB-COMMON-NEXT:    sw a4, 8(sp)
-; RV32IB-COMMON-NEXT:    sw a5, 12(sp)
+; RV32IB-COMMON-NEXT:    sw a1, 12(sp)
 ; RV32IB-COMMON-NEXT:    addi a1, sp, 8
 ; RV32IB-COMMON-NEXT:    li a4, 5
 ; RV32IB-COMMON-NEXT:    li a5, 5
-; RV32IB-COMMON-NEXT:    mv a0, s1
+; RV32IB-COMMON-NEXT:    mv a0, s2
 ; RV32IB-COMMON-NEXT:    call __atomic_compare_exchange_8
 ; RV32IB-COMMON-NEXT:    lw a4, 8(sp)
-; RV32IB-COMMON-NEXT:    lw a5, 12(sp)
+; RV32IB-COMMON-NEXT:    lw a1, 12(sp)
 ; RV32IB-COMMON-NEXT:    bnez a0, .LBB6_7
 ; RV32IB-COMMON-NEXT:  .LBB6_2: # %atomicrmw.start
 ; RV32IB-COMMON-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32IB-COMMON-NEXT:    beq a5, s0, .LBB6_4
+; RV32IB-COMMON-NEXT:    beq a1, s0, .LBB6_4
 ; RV32IB-COMMON-NEXT:  # %bb.3: # %atomicrmw.start
 ; RV32IB-COMMON-NEXT:    # in Loop: Header=BB6_2 Depth=1
-; RV32IB-COMMON-NEXT:    sltu a0, s0, a5
+; RV32IB-COMMON-NEXT:    sltu a0, s0, a1
 ; RV32IB-COMMON-NEXT:    j .LBB6_5
 ; RV32IB-COMMON-NEXT:  .LBB6_4: # in Loop: Header=BB6_2 Depth=1
-; RV32IB-COMMON-NEXT:    sltu a0, s2, a4
+; RV32IB-COMMON-NEXT:    sltu a0, s1, a4
 ; RV32IB-COMMON-NEXT:  .LBB6_5: # %atomicrmw.start
 ; RV32IB-COMMON-NEXT:    # in Loop: Header=BB6_2 Depth=1
 ; RV32IB-COMMON-NEXT:    mv a2, a4
-; RV32IB-COMMON-NEXT:    mv a3, a5
+; RV32IB-COMMON-NEXT:    mv a3, a1
 ; RV32IB-COMMON-NEXT:    bnez a0, .LBB6_1
 ; RV32IB-COMMON-NEXT:  # %bb.6: # %atomicrmw.start
 ; RV32IB-COMMON-NEXT:    # in Loop: Header=BB6_2 Depth=1
-; RV32IB-COMMON-NEXT:    mv a2, s2
+; RV32IB-COMMON-NEXT:    mv a2, s1
 ; RV32IB-COMMON-NEXT:    mv a3, s0
 ; RV32IB-COMMON-NEXT:    j .LBB6_1
 ; RV32IB-COMMON-NEXT:  .LBB6_7: # %atomicrmw.end
 ; RV32IB-COMMON-NEXT:    mv a0, a4
-; RV32IB-COMMON-NEXT:    mv a1, a5
 ; RV32IB-COMMON-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32IB-COMMON-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32IB-COMMON-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
@@ -561,45 +561,45 @@ define i64 @atomicrmw_umin_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV32IB-COMMON-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
 ; RV32IB-COMMON-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
 ; RV32IB-COMMON-NEXT:    mv s0, a2
-; RV32IB-COMMON-NEXT:    mv s1, a0
-; RV32IB-COMMON-NEXT:    lw a4, 0(a0)
-; RV32IB-COMMON-NEXT:    lw a5, 4(a0)
-; RV32IB-COMMON-NEXT:    mv s2, a1
+; RV32IB-COMMON-NEXT:    mv s1, a1
+; RV32IB-COMMON-NEXT:    mv s2, a0
+; RV32IB-COMMON-NEXT:    li a1, 0
+; RV32IB-COMMON-NEXT:    call __atomic_load_8
+; RV32IB-COMMON-NEXT:    mv a4, a0
 ; RV32IB-COMMON-NEXT:    j .LBB7_2
 ; RV32IB-COMMON-NEXT:  .LBB7_1: # %atomicrmw.start
 ; RV32IB-COMMON-NEXT:    # in Loop: Header=BB7_2 Depth=1
 ; RV32IB-COMMON-NEXT:    sw a4, 8(sp)
-; RV32IB-COMMON-NEXT:    sw a5, 12(sp)
+; RV32IB-COMMON-NEXT:    sw a1, 12(sp)
 ; RV32IB-COMMON-NEXT:    addi a1, sp, 8
 ; RV32IB-COMMON-NEXT:    li a4, 5
 ; RV32IB-COMMON-NEXT:    li a5, 5
-; RV32IB-COMMON-NEXT:    mv a0, s1
+; RV32IB-COMMON-NEXT:    mv a0, s2
 ; RV32IB-COMMON-NEXT:    call __atomic_compare_exchange_8
 ; RV32IB-COMMON-NEXT:    lw a4, 8(sp)
-; RV32IB-COMMON-NEXT:    lw a5, 12(sp)
+; RV32IB-COMMON-NEXT:    lw a1, 12(sp)
 ; RV32IB-COMMON-NEXT:    bnez a0, .LBB7_7
 ; RV32IB-COMMON-NEXT:  .LBB7_2: # %atomicrmw.start
 ; RV32IB-COMMON-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32IB-COMMON-NEXT:    beq a5, s0, .LBB7_4
+; RV32IB-COMMON-NEXT:    beq a1, s0, .LBB7_4
 ; RV32IB-COMMON-NEXT:  # %bb.3: # %atomicrmw.start
 ; RV32IB-COMMON-NEXT:    # in Loop: Header=BB7_2 Depth=1
-; RV32IB-COMMON-NEXT:    sltu a0, a5, s0
+; RV32IB-COMMON-NEXT:    sltu a0, a1, s0
 ; RV32IB-COMMON-NEXT:    j .LBB7_5
 ; RV32IB-COMMON-NEXT:  .LBB7_4: # in Loop: Header=BB7_2 Depth=1
-; RV32IB-COMMON-NEXT:    sltu a0, a4, s2
+; RV32IB-COMMON-NEXT:    sltu a0, a4, s1
 ; RV32IB-COMMON-NEXT:  .LBB7_5: # %atomicrmw.start
 ; RV32IB-COMMON-NEXT:    # in Loop: Header=BB7_2 Depth=1
 ; RV32IB-COMMON-NEXT:    mv a2, a4
-; RV32IB-COMMON-NEXT:    mv a3, a5
+; RV32IB-COMMON-NEXT:    mv a3, a1
 ; RV32IB-COMMON-NEXT:    bnez a0, .LBB7_1
 ; RV32IB-COMMON-NEXT:  # %bb.6: # %atomicrmw.start
 ; RV32IB-COMMON-NEXT:    # in Loop: Header=BB7_2 Depth=1
-; RV32IB-COMMON-NEXT:    mv a2, s2
+; RV32IB-COMMON-NEXT:    mv a2, s1
 ; RV32IB-COMMON-NEXT:    mv a3, s0
 ; RV32IB-COMMON-NEXT:    j .LBB7_1
 ; RV32IB-COMMON-NEXT:  .LBB7_7: # %atomicrmw.end
 ; RV32IB-COMMON-NEXT:    mv a0, a4
-; RV32IB-COMMON-NEXT:    mv a1, a5
 ; RV32IB-COMMON-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32IB-COMMON-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32IB-COMMON-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
