@@ -105,10 +105,8 @@ LIBC_INLINE void memcpy_inline(void *__restrict dst,
 #endif
 }
 
-// These helpers read and write arbitrary object representations, so they must
-// use a character type for aliasing.
-using Ptr = unsigned char *;        // Pointer to raw data.
-using CPtr = const unsigned char *; // Pointer to const raw data.
+using Ptr = cpp::byte *;        // Pointer to raw data.
+using CPtr = const cpp::byte *; // Pointer to const raw data.
 
 // This type makes sure that we don't accidentally promote an integral type to
 // another one. It is only constructible from the exact T type.

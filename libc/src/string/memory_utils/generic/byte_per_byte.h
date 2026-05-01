@@ -49,7 +49,7 @@ inline_memset_byte_per_byte(Ptr dst, uint8_t value, size_t count,
                             size_t offset = 0) {
   LIBC_LOOP_NOUNROLL
   for (; offset < count; ++offset)
-    dst[offset] = static_cast<unsigned char>(value);
+    dst[offset] = static_cast<cpp::byte>(value);
 }
 
 [[maybe_unused]] LIBC_INLINE BcmpReturnType
