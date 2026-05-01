@@ -8,6 +8,16 @@
 
 // cwg2406 is in cwg2406.cpp
 
+namespace cwg2413 { // cwg2413: 23
+#if __cplusplus >= 202002L
+template <typename T>
+struct S {
+  operator T::R();
+  void f() { operator T::R(); }
+};
+#endif
+} // namespace cwg2413
+
 namespace cwg2428 { // cwg2428: 19
 #if __cplusplus >= 202002L
 template <typename>
