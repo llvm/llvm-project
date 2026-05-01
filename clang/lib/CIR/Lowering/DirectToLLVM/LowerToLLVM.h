@@ -40,7 +40,7 @@ struct LLVMBlockAddressInfo {
   uint32_t getTagIndex() { return blockTagOpIndex++; }
 
   void mapBlockTag(cir::BlockAddrInfoAttr info, mlir::LLVM::BlockTagOp tagOp) {
-    auto result = blockInfoToTagOp.try_emplace(info, tagOp);
+    [[maybe_unused]] auto result = blockInfoToTagOp.try_emplace(info, tagOp);
     assert(result.second &&
            "attempting to map a BlockTag operation that is already mapped");
   }

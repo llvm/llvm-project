@@ -5767,8 +5767,9 @@ static kmp_taskgraph_record_t *__kmp_taskgraph_alloc(kmp_int32 gtid,
   return new_rec;
 }
 
-static void __kmp_taskgraph_free_region_metadata(
-    kmp_info_t *thread, kmp_taskgraph_region_t *region) {
+static void
+__kmp_taskgraph_free_region_metadata(kmp_info_t *thread,
+                                     kmp_taskgraph_region_t *region) {
   if (region->reduce_input) {
     __kmp_fast_free(thread, region->reduce_input->reduce_data);
     __kmp_fast_free(thread, region->reduce_input);
@@ -5777,21 +5778,21 @@ static void __kmp_taskgraph_free_region_metadata(
     __kmp_fast_free(thread, region->mutexset);
   }
   switch (region->type) {
-    case TASKGRAPH_REGION_ENTRY:
-    case TASKGRAPH_REGION_EXIT:
-    case TASKGRAPH_REGION_WAIT:
-    case TASKGRAPH_REGION_NODE:
-      break;
-    case TASKGRAPH_REGION_PARALLEL:
-    case TASKGRAPH_REGION_SEQUENTIAL:
-    case TASKGRAPH_REGION_EXCLUSIVE: {
-      for (int k = 0; k < region->inner.num_children; k++) {
-        __kmp_taskgraph_free_region_metadata(thread, region->inner.children[k]);
-      }
-      break;
+  case TASKGRAPH_REGION_ENTRY:
+  case TASKGRAPH_REGION_EXIT:
+  case TASKGRAPH_REGION_WAIT:
+  case TASKGRAPH_REGION_NODE:
+    break;
+  case TASKGRAPH_REGION_PARALLEL:
+  case TASKGRAPH_REGION_SEQUENTIAL:
+  case TASKGRAPH_REGION_EXCLUSIVE: {
+    for (int k = 0; k < region->inner.num_children; k++) {
+      __kmp_taskgraph_free_region_metadata(thread, region->inner.children[k]);
     }
-    default:
-      assert(false && "unreachable");
+    break;
+  }
+  default:
+    assert(false && "unreachable");
   }
 }
 
@@ -5832,7 +5833,7 @@ static void __kmp_taskgraph_free(kmp_int32 gtid, kmp_taskgraph_record_t *rec,
 
 static kmp_taskgraph_header_t *__kmp_taskgraph_header_alloc(kmp_int32 gtid) {
   kmp_taskgraph_header_t *new_hdr =
-    (kmp_taskgraph_header_t *)__kmp_allocate(sizeof(kmp_taskgraph_header_t));
+      (kmp_taskgraph_header_t *)__kmp_allocate(sizeof(kmp_taskgraph_header_t));
   new_hdr->first = nullptr;
   new_hdr->expiring = nullptr;
   __kmp_init_lock(&new_hdr->header_lock);
@@ -5872,8 +5873,9 @@ static kmp_task_t *__kmp_taskgraph_clone_task(kmp_info_t *thread,
 // When available, a kmp_taskgraph_record_t structure is returned for reuse by
 // a subsequent taskgraph recording.
 
-static kmp_taskgraph_record_t *__kmp_expire_taskgraph_records(
-    kmp_int32 gtid, kmp_taskgraph_record_t **expiring_p) {
+static kmp_taskgraph_record_t *
+__kmp_expire_taskgraph_records(kmp_int32 gtid,
+                               kmp_taskgraph_record_t **expiring_p) {
   kmp_taskgraph_record_t *record = nullptr;
 
   while (*expiring_p) {

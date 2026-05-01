@@ -144,6 +144,12 @@ public:
 
   /// Creates a reduction declaration and associates it with an OpenMP block
   /// directive.
+  /// \param [in,out] reductionVarCache - optional cache mapping reduction
+  ///   symbols to their SSA values. When provided, array/box reduction
+  ///   variables that have already been allocated will be reused instead of
+  ///   creating new allocas. This ensures that nested composite wrappers
+  ///   (e.g. wsloop and simd in DO SIMD) share the same SSA values, allowing
+  ///   the genLoopVars() mapper to correctly remap inner wrapper operands.
   template <typename OpType, typename RedOperatorListTy>
   static bool processReductionArguments(
       mlir::Location currentLocation, lower::AbstractConverter &converter,
@@ -151,7 +157,9 @@ public:
       llvm::SmallVectorImpl<mlir::Value> &reductionVars,
       llvm::SmallVectorImpl<bool> &reduceVarByRef,
       llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
-      const llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols);
+      const llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols,
+      llvm::DenseMap<const semantics::Symbol *, mlir::Value>
+          *reductionVarCache = nullptr);
 };
 
 template <typename FloatOp, typename IntegerOp>
