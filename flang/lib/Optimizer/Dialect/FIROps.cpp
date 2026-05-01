@@ -203,8 +203,16 @@ bool fir::mayBeAbsentBox(mlir::Value val) {
 
     // Check for fir.embox and fir.rebox before checking for
     // FortranObjectViewOpInterface, which they support.
-    // A box created by fir.embox/rebox cannot be absent.
-    if (mlir::isa<fir::ReboxOp, fir::EmboxOp, fir::LoadOp>(defOp))
+    // A box created by fir.embox/fir.rebox/fir.rebox_assumed_rank is only
+    // potentially absent when the operation was explicitly tagged with the
+    // `optional` attribute.
+    if (auto reboxOp = mlir::dyn_cast<fir::ReboxOp>(defOp))
+      return reboxOp.getOptional();
+    if (auto emboxOp = mlir::dyn_cast<fir::EmboxOp>(defOp))
+      return emboxOp.getOptional();
+    if (auto reboxAROp = mlir::dyn_cast<fir::ReboxAssumedRankOp>(defOp))
+      return reboxAROp.getOptional();
+    if (mlir::isa<fir::LoadOp>(defOp))
       return false;
 
     if (auto viewIface =
@@ -2490,6 +2498,11 @@ std::optional<std::int64_t> fir::EmboxOp::getViewOffset(mlir::OpResult) {
 }
 
 mlir::Speculation::Speculatability fir::EmboxOp::getSpeculatability() {
+  // The operation is always safe to evaluate if it has the "optional"
+  // attribute, otherwise it is not safe to evaluate if the input may
+  // be absent.
+  if (getOptional())
+    return mlir::Speculation::Speculatable;
   return (getSourceBox() && mayBeAbsentBox(getSourceBox()))
              ? mlir::Speculation::NotSpeculatable
              : mlir::Speculation::Speculatable;
@@ -3801,6 +3814,11 @@ std::optional<std::int64_t> fir::ReboxOp::getViewOffset(mlir::OpResult) {
 }
 
 mlir::Speculation::Speculatability fir::ReboxOp::getSpeculatability() {
+  // The operation is always safe to evaluate if it has the "optional"
+  // attribute, otherwise it is not safe to evaluate if the input may
+  // be absent.
+  if (getOptional())
+    return mlir::Speculation::Speculatable;
   return mayBeAbsentBox(getBox()) ? mlir::Speculation::NotSpeculatable
                                   : mlir::Speculation::Speculatable;
 }
