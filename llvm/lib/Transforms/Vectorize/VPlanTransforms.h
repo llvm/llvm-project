@@ -327,7 +327,7 @@ struct VPlanTransforms {
       VPlan &Plan,
       const SmallPtrSetImpl<const InterleaveGroup<Instruction> *>
           &InterleaveGroups,
-      VPRecipeBuilder &RecipeBuilder, const bool &EpilogueAllowed);
+      const bool &EpilogueAllowed);
 
   /// Remove dead recipes from \p Plan.
   static void removeDeadRecipes(VPlan &Plan);

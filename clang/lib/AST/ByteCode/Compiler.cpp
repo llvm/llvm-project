@@ -773,8 +773,12 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
 
     auto Sem =
         Ctx.getASTContext().getFixedPointSemantics(E->getType()).toOpaqueInt();
-    return this->emitCastIntegralFixedPoint(classifyPrim(SubExpr->getType()),
-                                            Sem, E);
+    if (!this->emitCastIntegralFixedPoint(classifyPrim(SubExpr->getType()), Sem,
+                                          E))
+      return false;
+    if (DiscardResult)
+      return this->emitPopFixedPoint(E);
+    return true;
   }
   case CK_FloatingToFixedPoint: {
     if (!this->visit(SubExpr))
@@ -782,25 +786,42 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
 
     auto Sem =
         Ctx.getASTContext().getFixedPointSemantics(E->getType()).toOpaqueInt();
-    return this->emitCastFloatingFixedPoint(Sem, E);
+    if (!this->emitCastFloatingFixedPoint(Sem, E))
+      return false;
+    if (DiscardResult)
+      return this->emitPopFixedPoint(E);
+    return true;
   }
   case CK_FixedPointToFloating: {
     if (!this->visit(SubExpr))
       return false;
     const auto *TargetSemantics = &Ctx.getFloatSemantics(E->getType());
-    return this->emitCastFixedPointFloating(TargetSemantics, E);
+    if (!this->emitCastFixedPointFloating(TargetSemantics, E))
+      return false;
+    if (DiscardResult)
+      return this->emitPopFloat(E);
+    return true;
   }
   case CK_FixedPointToIntegral: {
     if (!this->visit(SubExpr))
       return false;
-    return this->emitCastFixedPointIntegral(classifyPrim(E->getType()), E);
+    PrimType IntegralT = classifyPrim(E->getType());
+    if (!this->emitCastFixedPointIntegral(IntegralT, E))
+      return false;
+    if (DiscardResult)
+      return this->emitPop(IntegralT, E);
+    return true;
   }
   case CK_FixedPointCast: {
     if (!this->visit(SubExpr))
       return false;
     auto Sem =
         Ctx.getASTContext().getFixedPointSemantics(E->getType()).toOpaqueInt();
-    return this->emitCastFixedPoint(Sem, E);
+    if (!this->emitCastFixedPoint(Sem, E))
+      return false;
+    if (DiscardResult)
+      return this->emitPopFixedPoint(E);
+    return true;
   }
 
   case CK_ToVoid:
@@ -1902,7 +1923,11 @@ bool Compiler<Emitter>::VisitFixedPointUnaryOperator(const UnaryOperator *E) {
   case UO_Minus:
     if (!this->visit(SubExpr))
       return false;
-    return this->emitNegFixedPoint(E);
+    if (!this->emitNegFixedPoint(E))
+      return false;
+    if (DiscardResult)
+      return this->emitPopFixedPoint(E);
+    return true;
   default:
     return false;
   }

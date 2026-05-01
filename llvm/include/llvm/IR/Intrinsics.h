@@ -227,7 +227,7 @@ namespace Intrinsic {
     }
 
     // OneNthEltsVecArguments uses both a divisor N and a reference argument for
-    // the full-width vector to match
+    // the full-width vector to match.
     unsigned getVectorDivisor() const {
       assert(Kind == OneNthEltsVec);
       return OverloadInfo >> 16;
@@ -285,7 +285,7 @@ namespace Intrinsic {
   LLVM_ABI bool matchIntrinsicVarArg(bool isVarArg,
                                      ArrayRef<IITDescriptor> &Infos);
 
-  /// Gets the type arguments of an intrinsic call by matching type contraints
+  /// Gets the overload types of an intrinsic call by matching type contraints
   /// specified by the .td file. The overloaded types are pushed into the
   /// OverloadTys vector.
   ///
