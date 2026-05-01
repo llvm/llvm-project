@@ -316,7 +316,7 @@ bool ScriptedThread::CalculateStopInfo() {
     ProcessSP proc = GetProcess();
     if (BreakpointSiteSP bp_site_sp =
             proc->GetBreakpointSiteList().FindByAddress(pc))
-      if (proc->IsBreakpointSiteEnabled(*bp_site_sp))
+      if (proc->IsBreakpointSitePhysicallyEnabled(*bp_site_sp))
         SetThreadStoppedAtUnexecutedBP(pc);
   }
 
