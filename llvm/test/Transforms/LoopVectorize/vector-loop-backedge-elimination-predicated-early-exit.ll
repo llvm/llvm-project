@@ -8,10 +8,10 @@ define i64 @early_exit_predicated_single_iter(i1 %c) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i1> poison, i1 [[C]], i64 0
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[C]], true
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i1> poison, i1 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i1> [[BROADCAST_SPLATINSERT]], <2 x i1> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP0:%.*]] = xor <2 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
-; CHECK-NEXT:    [[TMP1:%.*]] = freeze <2 x i1> [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze <2 x i1> [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i1 @llvm.vector.reduce.or.v2i1(<2 x i1> [[TMP1]])
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -21,7 +21,7 @@ define i64 @early_exit_predicated_single_iter(i1 %c) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[VECTOR_EARLY_EXIT]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> [[TMP0]], i1 false)
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> [[BROADCAST_SPLAT]], i1 false)
 ; CHECK-NEXT:    br label %[[EARLY_EXIT:.*]]
 ; CHECK:       [[EARLY_EXIT]]:
 ; CHECK-NEXT:    ret i64 [[TMP3]]

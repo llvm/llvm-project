@@ -244,10 +244,10 @@ define i32 @diff_blocks_invariant_early_exit_cond(ptr %s) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[SVAL]], 0
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[COND]], i64 0
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[COND]], true
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP0:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
-; CHECK-NEXT:    [[TMP4:%.*]] = freeze <4 x i1> [[TMP0]]
+; CHECK-NEXT:    [[TMP4:%.*]] = freeze <4 x i1> [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP4]])
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:

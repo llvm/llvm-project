@@ -57,10 +57,78 @@ exit:
 define void @test_wide_shift_uses_predicated_invariant_instruction(i32 %d, i1 %c, ptr %dst) {
 ; CHECK-LABEL: define void @test_wide_shift_uses_predicated_invariant_instruction(
 ; CHECK-SAME: i32 [[D:%.*]], i1 [[C:%.*]], ptr [[DST:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[C]], true
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[LOOP_HEADER]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_UREM_CONTINUE14:.*]] ]
+; CHECK-NEXT:    br i1 [[TMP0]], label %[[PRED_UREM_IF:.*]], label %[[PRED_UREM_CONTINUE:.*]]
+; CHECK:       [[PRED_UREM_IF]]:
+; CHECK-NEXT:    [[TMP1:%.*]] = urem i32 100, [[D]]
+; CHECK-NEXT:    br label %[[PRED_UREM_CONTINUE]]
+; CHECK:       [[PRED_UREM_CONTINUE]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ poison, %[[VECTOR_BODY]] ], [ [[TMP1]], %[[PRED_UREM_IF]] ]
+; CHECK-NEXT:    br i1 [[TMP0]], label %[[PRED_UREM_IF1:.*]], label %[[PRED_UREM_CONTINUE2:.*]]
+; CHECK:       [[PRED_UREM_IF1]]:
+; CHECK-NEXT:    [[TMP3:%.*]] = urem i32 100, [[D]]
+; CHECK-NEXT:    br label %[[PRED_UREM_CONTINUE2]]
+; CHECK:       [[PRED_UREM_CONTINUE2]]:
+; CHECK-NEXT:    br i1 [[TMP0]], label %[[PRED_UREM_IF3:.*]], label %[[PRED_UREM_CONTINUE4:.*]]
+; CHECK:       [[PRED_UREM_IF3]]:
+; CHECK-NEXT:    [[TMP4:%.*]] = urem i32 100, [[D]]
+; CHECK-NEXT:    br label %[[PRED_UREM_CONTINUE4]]
+; CHECK:       [[PRED_UREM_CONTINUE4]]:
+; CHECK-NEXT:    br i1 [[TMP0]], label %[[PRED_UREM_IF5:.*]], label %[[PRED_UREM_CONTINUE6:.*]]
+; CHECK:       [[PRED_UREM_IF5]]:
+; CHECK-NEXT:    [[TMP5:%.*]] = urem i32 100, [[D]]
+; CHECK-NEXT:    br label %[[PRED_UREM_CONTINUE6]]
+; CHECK:       [[PRED_UREM_CONTINUE6]]:
+; CHECK-NEXT:    br i1 [[TMP0]], label %[[PRED_UREM_IF7:.*]], label %[[PRED_UREM_CONTINUE8:.*]]
+; CHECK:       [[PRED_UREM_IF7]]:
+; CHECK-NEXT:    [[TMP6:%.*]] = urem i32 100, [[D]]
+; CHECK-NEXT:    br label %[[PRED_UREM_CONTINUE8]]
+; CHECK:       [[PRED_UREM_CONTINUE8]]:
+; CHECK-NEXT:    [[TMP7:%.*]] = phi i32 [ poison, %[[PRED_UREM_CONTINUE6]] ], [ [[TMP6]], %[[PRED_UREM_IF7]] ]
+; CHECK-NEXT:    br i1 [[TMP0]], label %[[PRED_UREM_IF9:.*]], label %[[PRED_UREM_CONTINUE10:.*]]
+; CHECK:       [[PRED_UREM_IF9]]:
+; CHECK-NEXT:    [[TMP8:%.*]] = urem i32 100, [[D]]
+; CHECK-NEXT:    br label %[[PRED_UREM_CONTINUE10]]
+; CHECK:       [[PRED_UREM_CONTINUE10]]:
+; CHECK-NEXT:    br i1 [[TMP0]], label %[[PRED_UREM_IF11:.*]], label %[[PRED_UREM_CONTINUE12:.*]]
+; CHECK:       [[PRED_UREM_IF11]]:
+; CHECK-NEXT:    [[TMP9:%.*]] = urem i32 100, [[D]]
+; CHECK-NEXT:    br label %[[PRED_UREM_CONTINUE12]]
+; CHECK:       [[PRED_UREM_CONTINUE12]]:
+; CHECK-NEXT:    br i1 [[TMP0]], label %[[PRED_UREM_IF13:.*]], label %[[PRED_UREM_CONTINUE14]]
+; CHECK:       [[PRED_UREM_IF13]]:
+; CHECK-NEXT:    [[TMP10:%.*]] = urem i32 100, [[D]]
+; CHECK-NEXT:    br label %[[PRED_UREM_CONTINUE14]]
+; CHECK:       [[PRED_UREM_CONTINUE14]]:
+; CHECK-NEXT:    [[TMP11:%.*]] = shl i32 [[TMP2]], 12
+; CHECK-NEXT:    [[TMP12:%.*]] = shl i32 [[TMP7]], 12
+; CHECK-NEXT:    [[TMP13:%.*]] = shl i32 999, [[TMP11]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP13]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP14:%.*]] = shl i32 999, [[TMP12]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT15:%.*]] = insertelement <4 x i32> poison, i32 [[TMP14]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT16:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT15]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[C]], <4 x i32> zeroinitializer, <4 x i32> [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[PREDPHI17:%.*]] = select i1 [[C]], <4 x i32> zeroinitializer, <4 x i32> [[BROADCAST_SPLAT16]]
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[INDEX]]
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, ptr [[TMP15]], i64 4
+; CHECK-NEXT:    store <4 x i32> [[PREDPHI]], ptr [[TMP15]], align 4
+; CHECK-NEXT:    store <4 x i32> [[PREDPHI17]], ptr [[TMP16]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
+; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i32 [[INDEX_NEXT]], 96
+; CHECK-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    br label %[[LOOP_HEADER1:.*]]
+; CHECK:       [[LOOP_HEADER1]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 96, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_LATCH]], label %[[ELSE:.*]]
 ; CHECK:       [[ELSE]]:
 ; CHECK-NEXT:    [[REM:%.*]] = urem i32 100, [[D]]
@@ -68,12 +136,12 @@ define void @test_wide_shift_uses_predicated_invariant_instruction(i32 %d, i1 %c
 ; CHECK-NEXT:    [[SHL_I:%.*]] = shl i32 999, [[SEXT]]
 ; CHECK-NEXT:    br label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[P:%.*]] = phi i32 [ [[SHL_I]], %[[ELSE]] ], [ 0, %[[LOOP_HEADER]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi i32 [ [[SHL_I]], %[[ELSE]] ], [ 0, %[[LOOP_HEADER1]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[IV]]
 ; CHECK-NEXT:    store i32 [[P]], ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], 100
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP_HEADER]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP_HEADER1]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -238,7 +306,7 @@ define i32 @predicated_store_with_scatter_legal(ptr %dst, i64 %n) #0 {
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <8 x i64> [[VEC_IND]], splat (i64 8)
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[LOOP]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[LOOP]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -264,7 +332,7 @@ define i32 @predicated_store_with_scatter_legal(ptr %dst, i64 %n) #0 {
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], [[N]]
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP1]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP1]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i32 0
 ;

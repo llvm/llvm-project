@@ -235,18 +235,20 @@ define void @pr52024(ptr %dst, i16 %N) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i16 [[TMP3]], -100
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i16> poison, i16 [[TMP4]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i16> [[BROADCAST_SPLATINSERT]], <2 x i16> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul i16 24, [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = mul <2 x i16> splat (i16 2), [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP6:%.*]] = shl i16 [[TMP4]], 1
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i16> poison, i16 [[TMP6]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i16> [[BROADCAST_SPLATINSERT]], <2 x i16> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <2 x i16> poison, i16 [[REM_TRUNC]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT6:%.*]] = shufflevector <2 x i16> [[BROADCAST_SPLATINSERT5]], <2 x i16> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = mul <2 x i16> <i16 0, i16 1>, [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <2 x i16> poison, i16 [[TMP4]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <2 x i16> [[BROADCAST_SPLATINSERT2]], <2 x i16> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = mul <2 x i16> <i16 0, i16 1>, [[BROADCAST_SPLAT3]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i16> [ [[TMP7]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <2 x i16> [[VEC_IND]], [[TMP6]]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <2 x i16> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i32 8, [[INDEX]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = sub <2 x i16> [[VEC_IND]], [[BROADCAST_SPLAT6]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = sub <2 x i16> [[STEP_ADD]], [[BROADCAST_SPLAT6]]
@@ -257,7 +259,7 @@ define void @pr52024(ptr %dst, i16 %N) {
 ; CHECK-NEXT:    store <2 x i32> [[TMP10]], ptr [[TMP12]], align 4
 ; CHECK-NEXT:    store <2 x i32> [[TMP11]], ptr [[TMP13]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i16> [[STEP_ADD]], [[TMP6]]
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i16> [[STEP_ADD]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i32 [[INDEX_NEXT]], 24
 ; CHECK-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:

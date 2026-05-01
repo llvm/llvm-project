@@ -1792,9 +1792,9 @@ define float @reduction_fmuladd_blend(ptr %a, ptr %b, i64 %n, i1 %c) {
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[C]], i64 0
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[C]], true
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -1804,7 +1804,7 @@ define float @reduction_fmuladd_blend(ptr %a, ptr %b, i64 %n, i1 %c) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x float>, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul <4 x float> [[WIDE_LOAD]], [[WIDE_LOAD1]]
-; CHECK-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[TMP1]], <4 x float> [[TMP4]], <4 x float> splat (float -0.000000e+00)
+; CHECK-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[BROADCAST_SPLAT]], <4 x float> [[TMP4]], <4 x float> splat (float -0.000000e+00)
 ; CHECK-NEXT:    [[TMP6:%.*]] = call float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP5]])
 ; CHECK-NEXT:    [[TMP7]] = fadd float [[VEC_PHI]], [[TMP6]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -1847,9 +1847,9 @@ define float @reduction_fmuladd_blend(ptr %a, ptr %b, i64 %n, i1 %c) {
 ; CHECK-INTERLEAVED:       [[VECTOR_PH]]:
 ; CHECK-INTERLEAVED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 8
 ; CHECK-INTERLEAVED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; CHECK-INTERLEAVED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[C]], i64 0
+; CHECK-INTERLEAVED-NEXT:    [[TMP0:%.*]] = xor i1 [[C]], true
+; CHECK-INTERLEAVED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[TMP0]], i64 0
 ; CHECK-INTERLEAVED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
-; CHECK-INTERLEAVED-NEXT:    [[TMP1:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
 ; CHECK-INTERLEAVED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-INTERLEAVED:       [[VECTOR_BODY]]:
 ; CHECK-INTERLEAVED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -1865,10 +1865,10 @@ define float @reduction_fmuladd_blend(ptr %a, ptr %b, i64 %n, i1 %c) {
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x float>, ptr [[TMP5]], align 4
 ; CHECK-INTERLEAVED-NEXT:    [[TMP6:%.*]] = fmul <4 x float> [[WIDE_LOAD]], [[WIDE_LOAD3]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP7:%.*]] = fmul <4 x float> [[WIDE_LOAD2]], [[WIDE_LOAD4]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP8:%.*]] = select <4 x i1> [[TMP1]], <4 x float> [[TMP6]], <4 x float> splat (float -0.000000e+00)
+; CHECK-INTERLEAVED-NEXT:    [[TMP8:%.*]] = select <4 x i1> [[BROADCAST_SPLAT]], <4 x float> [[TMP6]], <4 x float> splat (float -0.000000e+00)
 ; CHECK-INTERLEAVED-NEXT:    [[TMP9:%.*]] = call float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP8]])
 ; CHECK-INTERLEAVED-NEXT:    [[TMP10]] = fadd float [[VEC_PHI]], [[TMP9]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP11:%.*]] = select <4 x i1> [[TMP1]], <4 x float> [[TMP7]], <4 x float> splat (float -0.000000e+00)
+; CHECK-INTERLEAVED-NEXT:    [[TMP11:%.*]] = select <4 x i1> [[BROADCAST_SPLAT]], <4 x float> [[TMP7]], <4 x float> splat (float -0.000000e+00)
 ; CHECK-INTERLEAVED-NEXT:    [[TMP12:%.*]] = call float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP11]])
 ; CHECK-INTERLEAVED-NEXT:    [[TMP13]] = fadd float [[VEC_PHI1]], [[TMP12]]
 ; CHECK-INTERLEAVED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8

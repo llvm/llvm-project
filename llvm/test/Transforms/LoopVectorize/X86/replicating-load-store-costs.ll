@@ -697,8 +697,6 @@ define void @loaded_address_used_by_load_through_blend(i64 %start, ptr noalias %
 ; I32-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP1]], 8
 ; I32-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP1]], [[N_MOD_VF]]
 ; I32-NEXT:    [[TMP2:%.*]] = sub i64 [[START]], [[N_VEC]]
-; I32-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x ptr> poison, ptr [[SRC_2]], i64 0
-; I32-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x ptr> [[BROADCAST_SPLATINSERT]], <8 x ptr> poison, <8 x i32> zeroinitializer
 ; I32-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; I32:       [[VECTOR_BODY]]:
 ; I32-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -766,6 +764,8 @@ define void @loaded_address_used_by_load_through_blend(i64 %start, ptr noalias %
 ; I32-NEXT:    [[TMP64:%.*]] = insertelement <8 x ptr> [[TMP63]], ptr [[TMP56]], i32 5
 ; I32-NEXT:    [[TMP65:%.*]] = insertelement <8 x ptr> [[TMP64]], ptr [[TMP57]], i32 6
 ; I32-NEXT:    [[TMP66:%.*]] = insertelement <8 x ptr> [[TMP65]], ptr [[TMP58]], i32 7
+; I32-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x ptr> poison, ptr [[SRC_2]], i64 0
+; I32-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x ptr> [[BROADCAST_SPLATINSERT]], <8 x ptr> poison, <8 x i32> zeroinitializer
 ; I32-NEXT:    [[PREDPHI:%.*]] = select <8 x i1> [[TMP42]], <8 x ptr> [[TMP66]], <8 x ptr> [[BROADCAST_SPLAT]]
 ; I32-NEXT:    [[TMP67:%.*]] = extractelement <8 x ptr> [[PREDPHI]], i64 0
 ; I32-NEXT:    [[TMP68:%.*]] = extractelement <8 x ptr> [[PREDPHI]], i64 1

@@ -7,24 +7,26 @@ define void @foo(i32 %0, ptr %p) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i32> poison, i32 [[TMP0]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 8 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <vscale x 8 x i32> [[BROADCAST_SPLAT]], splat (i32 308)
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <vscale x 8 x i32> [[BROADCAST_SPLAT]], splat (i32 309)
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <vscale x 8 x i32> [[BROADCAST_SPLAT]], splat (i32 160)
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <vscale x 8 x i32> [[BROADCAST_SPLAT]], splat (i32 243)
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <vscale x 8 x i32> [[BROADCAST_SPLAT]], splat (i32 53)
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <vscale x 8 x i32> [[BROADCAST_SPLAT]], splat (i32 162)
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq <vscale x 8 x i32> [[BROADCAST_SPLAT]], splat (i32 161)
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq <vscale x 8 x i32> [[BROADCAST_SPLAT]], splat (i32 172)
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq <vscale x 8 x i32> [[BROADCAST_SPLAT]], splat (i32 159)
-; CHECK-NEXT:    [[TMP10:%.*]] = or <vscale x 8 x i1> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP11:%.*]] = or <vscale x 8 x i1> [[TMP10]], [[TMP3]]
-; CHECK-NEXT:    [[TMP12:%.*]] = or <vscale x 8 x i1> [[TMP11]], [[TMP4]]
-; CHECK-NEXT:    [[TMP13:%.*]] = or <vscale x 8 x i1> [[TMP12]], [[TMP5]]
-; CHECK-NEXT:    [[TMP14:%.*]] = or <vscale x 8 x i1> [[TMP13]], [[TMP6]]
-; CHECK-NEXT:    [[TMP15:%.*]] = or <vscale x 8 x i1> [[TMP14]], [[TMP7]]
-; CHECK-NEXT:    [[TMP16:%.*]] = or <vscale x 8 x i1> [[TMP15]], [[TMP8]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[TMP0]], 308
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP0]], 309
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP0]], 160
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP0]], 243
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[TMP0]], 53
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP0]], 162
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[TMP0]], 161
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[TMP0]], 172
+; CHECK-NEXT:    [[TMP21:%.*]] = icmp eq i32 [[TMP0]], 159
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 8 x i1> poison, i1 [[TMP21]], i64 0
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <vscale x 8 x i1> [[BROADCAST_SPLATINSERT1]], <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP10:%.*]] = or i1 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP11:%.*]] = or i1 [[TMP10]], [[TMP3]]
+; CHECK-NEXT:    [[TMP12:%.*]] = or i1 [[TMP11]], [[TMP4]]
+; CHECK-NEXT:    [[TMP13:%.*]] = or i1 [[TMP12]], [[TMP5]]
+; CHECK-NEXT:    [[TMP14:%.*]] = or i1 [[TMP13]], [[TMP6]]
+; CHECK-NEXT:    [[TMP15:%.*]] = or i1 [[TMP14]], [[TMP7]]
+; CHECK-NEXT:    [[TMP22:%.*]] = or i1 [[TMP15]], [[TMP8]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i1> poison, i1 [[TMP22]], i64 0
+; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <vscale x 8 x i1> [[BROADCAST_SPLATINSERT]], <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP17:%.*]] = or <vscale x 8 x i1> [[TMP16]], [[TMP9]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:

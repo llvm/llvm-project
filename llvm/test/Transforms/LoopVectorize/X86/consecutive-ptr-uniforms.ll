@@ -193,8 +193,8 @@ define void @PR40816() #1 {
 ; FORCE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; FORCE:       [[VECTOR_BODY]]:
 ; FORCE-NEXT:    [[TMP0:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE2:.*]] ]
-; FORCE-NEXT:    [[VEC_IND:%.*]] = phi <2 x i8> [ <i8 0, i8 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_STORE_CONTINUE2]] ]
-; FORCE-NEXT:    [[TMP2:%.*]] = icmp ule <2 x i8> [[VEC_IND]], splat (i8 2)
+; FORCE-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_STORE_CONTINUE2]] ]
+; FORCE-NEXT:    [[TMP2:%.*]] = icmp ule <2 x i32> [[VEC_IND]], splat (i32 2)
 ; FORCE-NEXT:    [[TMP3:%.*]] = extractelement <2 x i1> [[TMP2]], i64 0
 ; FORCE-NEXT:    br i1 [[TMP3]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; FORCE:       [[PRED_STORE_IF]]:
@@ -209,7 +209,7 @@ define void @PR40816() #1 {
 ; FORCE-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
 ; FORCE:       [[PRED_STORE_CONTINUE2]]:
 ; FORCE-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[TMP0]], 2
-; FORCE-NEXT:    [[VEC_IND_NEXT]] = add <2 x i8> [[VEC_IND]], splat (i8 2)
+; FORCE-NEXT:    [[VEC_IND_NEXT]] = add <2 x i32> [[VEC_IND]], splat (i32 2)
 ; FORCE-NEXT:    [[TMP15:%.*]] = icmp eq i32 [[INDEX_NEXT]], 4
 ; FORCE-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; FORCE:       [[MIDDLE_BLOCK]]:

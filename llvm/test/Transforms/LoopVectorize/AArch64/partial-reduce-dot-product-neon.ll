@@ -1896,8 +1896,6 @@ define i32 @dotp_ext_mul(i64 %n, ptr %a, i8 %b) {
 ; CHECK-INTERLEAVE1:       vector.ph:
 ; CHECK-INTERLEAVE1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 8
 ; CHECK-INTERLEAVE1-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
-; CHECK-INTERLEAVE1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i8> poison, i8 [[B]], i64 0
-; CHECK-INTERLEAVE1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i8> [[BROADCAST_SPLATINSERT]], <8 x i8> poison, <8 x i32> zeroinitializer
 ; CHECK-INTERLEAVE1-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-INTERLEAVE1:       vector.body:
 ; CHECK-INTERLEAVE1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -1905,6 +1903,8 @@ define i32 @dotp_ext_mul(i64 %n, ptr %a, i8 %b) {
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP1:%.*]] = load i16, ptr [[A]], align 2
 ; CHECK-INTERLEAVE1-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x i16> poison, i16 [[TMP1]], i64 0
 ; CHECK-INTERLEAVE1-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <8 x i16> [[BROADCAST_SPLATINSERT1]], <8 x i16> poison, <8 x i32> zeroinitializer
+; CHECK-INTERLEAVE1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i8> poison, i8 [[B]], i64 0
+; CHECK-INTERLEAVE1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i8> [[BROADCAST_SPLATINSERT]], <8 x i8> poison, <8 x i32> zeroinitializer
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP2:%.*]] = zext <8 x i8> [[BROADCAST_SPLAT]] to <8 x i32>
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP3:%.*]] = mul <8 x i32> [[TMP2]], [[TMP2]]
 ; CHECK-INTERLEAVE1-NEXT:    [[PARTIAL_REDUCE]] = call <2 x i32> @llvm.vector.partial.reduce.add.v2i32.v8i32(<2 x i32> [[VEC_PHI]], <8 x i32> [[TMP3]])
@@ -1929,8 +1929,6 @@ define i32 @dotp_ext_mul(i64 %n, ptr %a, i8 %b) {
 ; CHECK-INTERLEAVED:       vector.ph:
 ; CHECK-INTERLEAVED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 16
 ; CHECK-INTERLEAVED-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
-; CHECK-INTERLEAVED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i8> poison, i8 [[B]], i64 0
-; CHECK-INTERLEAVED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i8> [[BROADCAST_SPLATINSERT]], <8 x i8> poison, <8 x i32> zeroinitializer
 ; CHECK-INTERLEAVED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-INTERLEAVED:       vector.body:
 ; CHECK-INTERLEAVED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -1939,6 +1937,8 @@ define i32 @dotp_ext_mul(i64 %n, ptr %a, i8 %b) {
 ; CHECK-INTERLEAVED-NEXT:    [[TMP1:%.*]] = load i16, ptr [[A]], align 2
 ; CHECK-INTERLEAVED-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <8 x i16> poison, i16 [[TMP1]], i64 0
 ; CHECK-INTERLEAVED-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <8 x i16> [[BROADCAST_SPLATINSERT3]], <8 x i16> poison, <8 x i32> zeroinitializer
+; CHECK-INTERLEAVED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i8> poison, i8 [[B]], i64 0
+; CHECK-INTERLEAVED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i8> [[BROADCAST_SPLATINSERT]], <8 x i8> poison, <8 x i32> zeroinitializer
 ; CHECK-INTERLEAVED-NEXT:    [[TMP2:%.*]] = zext <8 x i8> [[BROADCAST_SPLAT]] to <8 x i32>
 ; CHECK-INTERLEAVED-NEXT:    [[TMP3:%.*]] = mul <8 x i32> [[TMP2]], [[TMP2]]
 ; CHECK-INTERLEAVED-NEXT:    [[PARTIAL_REDUCE]] = call <2 x i32> @llvm.vector.partial.reduce.add.v2i32.v8i32(<2 x i32> [[VEC_PHI]], <8 x i32> [[TMP3]])
@@ -1965,8 +1965,6 @@ define i32 @dotp_ext_mul(i64 %n, ptr %a, i8 %b) {
 ; CHECK-MAXBW:       vector.ph:
 ; CHECK-MAXBW-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 8
 ; CHECK-MAXBW-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
-; CHECK-MAXBW-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i8> poison, i8 [[B]], i64 0
-; CHECK-MAXBW-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i8> [[BROADCAST_SPLATINSERT]], <8 x i8> poison, <8 x i32> zeroinitializer
 ; CHECK-MAXBW-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-MAXBW:       vector.body:
 ; CHECK-MAXBW-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -1974,6 +1972,8 @@ define i32 @dotp_ext_mul(i64 %n, ptr %a, i8 %b) {
 ; CHECK-MAXBW-NEXT:    [[TMP1:%.*]] = load i16, ptr [[A]], align 2
 ; CHECK-MAXBW-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x i16> poison, i16 [[TMP1]], i64 0
 ; CHECK-MAXBW-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <8 x i16> [[BROADCAST_SPLATINSERT1]], <8 x i16> poison, <8 x i32> zeroinitializer
+; CHECK-MAXBW-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i8> poison, i8 [[B]], i64 0
+; CHECK-MAXBW-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i8> [[BROADCAST_SPLATINSERT]], <8 x i8> poison, <8 x i32> zeroinitializer
 ; CHECK-MAXBW-NEXT:    [[TMP2:%.*]] = zext <8 x i8> [[BROADCAST_SPLAT]] to <8 x i32>
 ; CHECK-MAXBW-NEXT:    [[TMP3:%.*]] = mul <8 x i32> [[TMP2]], [[TMP2]]
 ; CHECK-MAXBW-NEXT:    [[PARTIAL_REDUCE]] = call <2 x i32> @llvm.vector.partial.reduce.add.v2i32.v8i32(<2 x i32> [[VEC_PHI]], <8 x i32> [[TMP3]])

@@ -276,21 +276,25 @@ define void @const_tc_with_predicated_store(i1 %c1, i1 %c2, i1 %c3, ptr %dst) #1
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i1> poison, i1 [[C2:%.*]], i64 0
+; CHECK-NEXT:    [[C2:%.*]] = xor i1 [[C3:%.*]], true
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i1> poison, i1 [[C2]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 4 x i1> [[BROADCAST_SPLATINSERT1]], <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <vscale x 4 x i1> poison, i1 [[C1:%.*]], i64 0
+; CHECK-NEXT:    [[C1:%.*]] = xor i1 [[C4:%.*]], true
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <vscale x 4 x i1> poison, i1 [[C1]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <vscale x 4 x i1> [[BROADCAST_SPLATINSERT3]], <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP12:%.*]] = xor <vscale x 4 x i1> [[BROADCAST_SPLAT4]], splat (i1 true)
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <vscale x 4 x i1> [[BROADCAST_SPLAT2]], splat (i1 true)
-; CHECK-NEXT:    [[TMP13:%.*]] = select <vscale x 4 x i1> [[TMP12]], <vscale x 4 x i1> [[TMP1]], <vscale x 4 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = or <vscale x 4 x i1> [[TMP13]], [[BROADCAST_SPLAT4]]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[C1]], <vscale x 4 x float> splat (float 1.000000e+00), <vscale x 4 x float> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT4:%.*]] = insertelement <vscale x 4 x i1> poison, i1 [[C3:%.*]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = select <vscale x 4 x i1> [[BROADCAST_SPLAT2]], <vscale x 4 x i1> [[BROADCAST_SPLAT4]], <vscale x 4 x i1> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT4:%.*]] = insertelement <vscale x 4 x i1> poison, i1 [[C3]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i1> [[BROADCAST_SPLATINSERT4]], <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = or <vscale x 4 x i1> [[TMP3]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[PREDPHI1:%.*]] = select i1 [[C3]], float 1.000000e+00, float 0.000000e+00
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT7:%.*]] = insertelement <vscale x 4 x float> poison, float [[PREDPHI1]], i64 0
+; CHECK-NEXT:    [[PREDPHI:%.*]] = shufflevector <vscale x 4 x float> [[BROADCAST_SPLATINSERT7]], <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 4 x i1> @llvm.vp.merge.nxv4i1(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i1> [[TMP2]], <vscale x 4 x i1> zeroinitializer, i32 57)
-; CHECK-NEXT:    [[TMP10:%.*]] = select <vscale x 4 x i1> [[TMP6]], <vscale x 4 x i1> [[BROADCAST_SPLAT]], <vscale x 4 x i1> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <vscale x 4 x i1> poison, i1 [[C5:%.*]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT6:%.*]] = shufflevector <vscale x 4 x i1> [[BROADCAST_SPLATINSERT5]], <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP10:%.*]] = select <vscale x 4 x i1> [[TMP6]], <vscale x 4 x i1> [[BROADCAST_SPLAT6]], <vscale x 4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[PREDPHI5:%.*]] = select <vscale x 4 x i1> [[TMP10]], <vscale x 4 x float> [[PREDPHI]], <vscale x 4 x float> splat (float 2.000000e+00)
 ; CHECK-NEXT:    call void @llvm.vp.store.nxv4f32.p0(<vscale x 4 x float> [[PREDPHI5]], ptr align 4 [[DST:%.*]], <vscale x 4 x i1> splat (i1 true), i32 57)
 ; CHECK-NEXT:    br label [[MIDDLE_BLOCK:%.*]]
@@ -360,7 +364,7 @@ define i8 @mul_non_pow_2_low_trip_count(ptr noalias %a) {
 ; CHECK-NEXT:    [[MUL]] = mul i8 [[TMP5]], [[RDX]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 10
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    [[MUL_LCSSA:%.*]] = phi i8 [ [[MUL]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    ret i8 [[MUL_LCSSA]]

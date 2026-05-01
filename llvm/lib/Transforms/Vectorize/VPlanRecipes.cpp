@@ -47,6 +47,11 @@ using VectorParts = SmallVector<Value *, 2>;
 #define LV_NAME "loop-vectorize"
 #define DEBUG_TYPE LV_NAME
 
+bool VPUser::usesFirstLaneOnly(const VPValue *Op) const {
+  assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
+  return vputils::isSingleScalar(Op);
+}
+
 bool VPRecipeBase::mayWriteToMemory() const {
   switch (getVPRecipeID()) {
   case VPExpressionSC:
@@ -1381,6 +1386,8 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
 
 bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
+  if (VPUser::usesFirstLaneOnly(Op))
+    return true;
   if (Instruction::isBinaryOp(getOpcode()) || Instruction::isCast(getOpcode()))
     return vputils::onlyFirstLaneUsed(this);
 
@@ -1979,6 +1986,8 @@ StringRef VPWidenIntrinsicRecipe::getIntrinsicName() const {
 
 bool VPWidenIntrinsicRecipe::usesFirstLaneOnly(const VPValue *Op) const {
   assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
+  // We cannot query VPUser::usesFirstLaneOnly here, as single-scalars must be
+  // widened for argument types to match with function type.
   return all_of(enumerate(operands()), [this, &Op](const auto &X) {
     auto [Idx, V] = X;
     return V != Op || isVectorIntrinsicWithScalarOpAtArg(getVectorIntrinsicID(),
@@ -2605,11 +2614,6 @@ void VPScalarIVStepsRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   printOperands(O, SlotTracker);
 }
 #endif
-
-bool VPWidenGEPRecipe::usesFirstLaneOnly(const VPValue *Op) const {
-  assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
-  return vputils::isSingleScalar(Op);
-}
 
 void VPWidenGEPRecipe::execute(VPTransformState &State) {
   assert(State.VF.isVector() && "not widening");
@@ -4633,6 +4637,8 @@ void VPReductionPHIRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 
 bool VPBlendRecipe::usesFirstLaneOnly(const VPValue *Op) const {
   assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
+  if (VPUser::usesFirstLaneOnly(Op))
+    return true;
   return vputils::onlyFirstLaneUsed(this);
 }
 

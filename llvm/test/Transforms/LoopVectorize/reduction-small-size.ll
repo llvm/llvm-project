@@ -96,11 +96,11 @@ define i8 @PR34687_no_undef(i1 %c, i32 %x, i32 %n) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i32> poison, i32 [[X:%.*]], i64 0
+; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[C:%.*]], i32 [[X1:%.*]], i32 1
+; CHECK-NEXT:    [[X:%.*]] = sdiv i32 99, [[TMP0]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT1]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[C:%.*]], <4 x i32> [[BROADCAST_SPLAT2]], <4 x i32> splat (i32 1)
-; CHECK-NEXT:    [[TMP1:%.*]] = sdiv <4 x i32> splat (i32 99), [[TMP0]]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[C]], <4 x i32> [[TMP1]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[C]], <4 x i32> [[BROADCAST_SPLAT2]], <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -126,7 +126,7 @@ define i8 @PR34687_no_undef(i1 %c, i32 %x, i32 %n) {
 ; CHECK-NEXT:    [[R:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[R_NEXT:%.*]], [[IF_END]] ]
 ; CHECK-NEXT:    br i1 [[C]], label [[IF_THEN:%.*]], label [[IF_END]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[T0:%.*]] = sdiv i32 99, [[X]]
+; CHECK-NEXT:    [[T0:%.*]] = sdiv i32 99, [[X1]]
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[P:%.*]] = phi i32 [ 0, [[FOR_BODY]] ], [ [[T0]], [[IF_THEN]] ]

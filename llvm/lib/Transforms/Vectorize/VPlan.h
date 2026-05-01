@@ -2024,6 +2024,14 @@ public:
   operand_range args() { return drop_end(operands()); }
   const_operand_range args() const { return drop_end(operands()); }
 
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    // We cannot query VPUser::usesFirstLaneOnly here, as single-scalars must be
+    // widened for argument types to match with function type.
+    return false;
+  }
+
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -2126,9 +2134,6 @@ public:
     // TODO: Compute accurate cost after retiring the legacy cost model.
     return 0;
   }
-
-  /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool usesFirstLaneOnly(const VPValue *Op) const override;
 
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

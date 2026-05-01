@@ -119,11 +119,13 @@ define void @_Z3fn1v() #0 {
 ; CHECK:       [[VECTOR_PH25]]:
 ; CHECK-NEXT:    [[N_MOD_VF31:%.*]] = urem i64 [[TMP28]], 16
 ; CHECK-NEXT:    [[N_VEC32:%.*]] = sub i64 [[TMP28]], [[N_MOD_VF31]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i1> poison, i1 [[TOBOOL6]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i1> [[BROADCAST_SPLATINSERT]], <16 x i1> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP29:%.*]] = shl i64 [[N_VEC32]], 1
 ; CHECK-NEXT:    [[IND_END41:%.*]] = add i64 8, [[TMP29]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT25:%.*]] = insertelement <16 x i1> poison, i1 [[TOBOOL6]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i1> [[BROADCAST_SPLATINSERT25]], <16 x i1> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP34:%.*]] = xor <16 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT27:%.*]] = insertelement <16 x i1> poison, i1 [[TOBOOL6]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT28:%.*]] = shufflevector <16 x i1> [[BROADCAST_SPLATINSERT27]], <16 x i1> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY30:.*]]
 ; CHECK:       [[VECTOR_BODY30]]:
 ; CHECK-NEXT:    [[INDEX34:%.*]] = phi i64 [ 0, %[[VECTOR_PH25]] ], [ [[INDEX_NEXT39:%.*]], %[[VECTOR_BODY30]] ]
@@ -138,8 +140,8 @@ define void @_Z3fn1v() #0 {
 ; CHECK-NEXT:    [[TMP36:%.*]] = add nsw <16 x i64> [[TMP30]], [[TMP49]]
 ; CHECK-NEXT:    [[TMP37:%.*]] = getelementptr inbounds [10 x i32], <16 x ptr> [[TMP31]], <16 x i64> [[TMP36]], i64 0
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v16i32.v16p0(<16 x i32> splat (i32 8), <16 x ptr> align 8 [[TMP37]], <16 x i1> [[TMP34]])
-; CHECK-NEXT:    call void @llvm.masked.scatter.v16i32.v16p0(<16 x i32> splat (i32 7), <16 x ptr> align 16 [[TMP33]], <16 x i1> [[BROADCAST_SPLAT]])
-; CHECK-NEXT:    call void @llvm.masked.scatter.v16i32.v16p0(<16 x i32> splat (i32 7), <16 x ptr> align 8 [[TMP37]], <16 x i1> [[BROADCAST_SPLAT]])
+; CHECK-NEXT:    call void @llvm.masked.scatter.v16i32.v16p0(<16 x i32> splat (i32 7), <16 x ptr> align 16 [[TMP33]], <16 x i1> [[BROADCAST_SPLAT28]])
+; CHECK-NEXT:    call void @llvm.masked.scatter.v16i32.v16p0(<16 x i32> splat (i32 7), <16 x ptr> align 8 [[TMP37]], <16 x i1> [[BROADCAST_SPLAT28]])
 ; CHECK-NEXT:    [[INDEX_NEXT39]] = add nuw i64 [[INDEX34]], 16
 ; CHECK-NEXT:    [[VEC_IND_NEXT35]] = add nuw nsw <16 x i64> [[VEC_IND35]], splat (i64 32)
 ; CHECK-NEXT:    [[VEC_IND_NEXT36]] = add nuw nsw <16 x i64> [[VEC_IND37]], splat (i64 32)
@@ -152,16 +154,18 @@ define void @_Z3fn1v() #0 {
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK50:%.*]] = icmp ult i64 [[N_MOD_VF31]], 8
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK50]], label %[[VEC_EPILOG_SCALAR_PH42]], label %[[VEC_EPILOG_PH45]], !prof [[PROF3]]
 ; CHECK:       [[VEC_EPILOG_PH45]]:
-; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL36:%.*]] = phi i64 [ [[N_VEC32]], %[[VEC_EPILOG_ITER_CHECK43]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK24]] ]
+; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL38:%.*]] = phi i64 [ [[N_VEC32]], %[[VEC_EPILOG_ITER_CHECK43]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK24]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL42:%.*]] = phi i64 [ [[IND_END41]], %[[VEC_EPILOG_ITER_CHECK43]] ], [ 8, %[[VECTOR_MAIN_LOOP_ITER_CHECK24]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL44:%.*]] = phi i64 [ [[TMP29]], %[[VEC_EPILOG_ITER_CHECK43]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK24]] ]
 ; CHECK-NEXT:    [[N_MOD_VF52:%.*]] = urem i64 [[TMP28]], 8
 ; CHECK-NEXT:    [[N_VEC53:%.*]] = sub i64 [[TMP28]], [[N_MOD_VF52]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT49:%.*]] = insertelement <8 x i1> poison, i1 [[TOBOOL6]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT73:%.*]] = shufflevector <8 x i1> [[BROADCAST_SPLATINSERT49]], <8 x i1> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP43:%.*]] = shl i64 [[N_VEC53]], 1
 ; CHECK-NEXT:    [[IND_END54:%.*]] = add i64 8, [[TMP43]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT48:%.*]] = insertelement <8 x i1> poison, i1 [[TOBOOL6]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT73:%.*]] = shufflevector <8 x i1> [[BROADCAST_SPLATINSERT48]], <8 x i1> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP48:%.*]] = xor <8 x i1> [[BROADCAST_SPLAT73]], splat (i1 true)
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT50:%.*]] = insertelement <8 x i1> poison, i1 [[TOBOOL6]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT51:%.*]] = shufflevector <8 x i1> [[BROADCAST_SPLATINSERT50]], <8 x i1> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[DOTSPLATINSERT62:%.*]] = insertelement <8 x i64> poison, i64 [[BC_RESUME_VAL42]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT63:%.*]] = shufflevector <8 x i64> [[DOTSPLATINSERT62]], <8 x i64> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[INDUCTION52:%.*]] = add nuw nsw <8 x i64> [[DOTSPLAT63]], <i64 0, i64 2, i64 4, i64 6, i64 8, i64 10, i64 12, i64 14>
@@ -170,7 +174,7 @@ define void @_Z3fn1v() #0 {
 ; CHECK-NEXT:    [[INDUCTION55:%.*]] = add nuw nsw <8 x i64> [[DOTSPLAT68]], <i64 0, i64 2, i64 4, i64 6, i64 8, i64 10, i64 12, i64 14>
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY56:.*]]
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY56]]:
-; CHECK-NEXT:    [[INDEX61:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL36]], %[[VEC_EPILOG_PH45]] ], [ [[INDEX_NEXT74:%.*]], %[[VEC_EPILOG_VECTOR_BODY56]] ]
+; CHECK-NEXT:    [[INDEX61:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL38]], %[[VEC_EPILOG_PH45]] ], [ [[INDEX_NEXT74:%.*]], %[[VEC_EPILOG_VECTOR_BODY56]] ]
 ; CHECK-NEXT:    [[VEC_IND65:%.*]] = phi <8 x i64> [ [[INDUCTION52]], %[[VEC_EPILOG_PH45]] ], [ [[VEC_IND_NEXT61:%.*]], %[[VEC_EPILOG_VECTOR_BODY56]] ]
 ; CHECK-NEXT:    [[VEC_IND70:%.*]] = phi <8 x i64> [ [[INDUCTION55]], %[[VEC_EPILOG_PH45]] ], [ [[VEC_IND_NEXT62:%.*]], %[[VEC_EPILOG_VECTOR_BODY56]] ]
 ; CHECK-NEXT:    [[TMP44:%.*]] = sub nsw <8 x i64> splat (i64 8), [[VEC_IND65]]
@@ -182,8 +186,8 @@ define void @_Z3fn1v() #0 {
 ; CHECK-NEXT:    [[TMP50:%.*]] = add nsw <8 x i64> [[TMP44]], [[TMP54]]
 ; CHECK-NEXT:    [[TMP51:%.*]] = getelementptr inbounds [10 x i32], <8 x ptr> [[TMP45]], <8 x i64> [[TMP50]], i64 0
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> splat (i32 8), <8 x ptr> align 8 [[TMP51]], <8 x i1> [[TMP48]])
-; CHECK-NEXT:    call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> splat (i32 7), <8 x ptr> align 16 [[TMP47]], <8 x i1> [[BROADCAST_SPLAT73]])
-; CHECK-NEXT:    call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> splat (i32 7), <8 x ptr> align 8 [[TMP51]], <8 x i1> [[BROADCAST_SPLAT73]])
+; CHECK-NEXT:    call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> splat (i32 7), <8 x ptr> align 16 [[TMP47]], <8 x i1> [[BROADCAST_SPLAT51]])
+; CHECK-NEXT:    call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> splat (i32 7), <8 x ptr> align 8 [[TMP51]], <8 x i1> [[BROADCAST_SPLAT51]])
 ; CHECK-NEXT:    [[INDEX_NEXT74]] = add nuw i64 [[INDEX61]], 8
 ; CHECK-NEXT:    [[VEC_IND_NEXT61]] = add nuw nsw <8 x i64> [[VEC_IND65]], splat (i64 16)
 ; CHECK-NEXT:    [[VEC_IND_NEXT62]] = add nuw nsw <8 x i64> [[VEC_IND70]], splat (i64 16)
@@ -193,12 +197,12 @@ define void @_Z3fn1v() #0 {
 ; CHECK-NEXT:    [[CMP_N65:%.*]] = icmp eq i64 [[TMP28]], [[N_VEC53]]
 ; CHECK-NEXT:    br i1 [[CMP_N65]], label %[[FOR_COND_CLEANUP_LOOPEXIT]], label %[[VEC_EPILOG_SCALAR_PH42]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH42]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL63:%.*]] = phi i64 [ [[IND_END54]], %[[VEC_EPILOG_MIDDLE_BLOCK63]] ], [ [[IND_END41]], %[[VEC_EPILOG_ITER_CHECK43]] ], [ 8, %[[ITER_CHECK22]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL64:%.*]] = phi i64 [ [[TMP43]], %[[VEC_EPILOG_MIDDLE_BLOCK63]] ], [ [[TMP29]], %[[VEC_EPILOG_ITER_CHECK43]] ], [ 0, %[[ITER_CHECK22]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL67:%.*]] = phi i64 [ [[IND_END54]], %[[VEC_EPILOG_MIDDLE_BLOCK63]] ], [ [[IND_END41]], %[[VEC_EPILOG_ITER_CHECK43]] ], [ 8, %[[ITER_CHECK22]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL68:%.*]] = phi i64 [ [[TMP43]], %[[VEC_EPILOG_MIDDLE_BLOCK63]] ], [ [[TMP29]], %[[VEC_EPILOG_ITER_CHECK43]] ], [ 0, %[[ITER_CHECK22]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY_US:.*]]
 ; CHECK:       [[FOR_BODY_US]]:
-; CHECK-NEXT:    [[INDVARS_IV78:%.*]] = phi i64 [ [[INDVARS_IV_NEXT79:%.*]], %[[FOR_COND_CLEANUP4_US_LCSSA_US_US:.*]] ], [ [[BC_RESUME_VAL63]], %[[VEC_EPILOG_SCALAR_PH42]] ]
-; CHECK-NEXT:    [[INDVARS_IV70:%.*]] = phi i64 [ [[INDVARS_IV_NEXT71:%.*]], %[[FOR_COND_CLEANUP4_US_LCSSA_US_US]] ], [ [[BC_RESUME_VAL64]], %[[VEC_EPILOG_SCALAR_PH42]] ]
+; CHECK-NEXT:    [[INDVARS_IV78:%.*]] = phi i64 [ [[INDVARS_IV_NEXT79:%.*]], %[[FOR_COND_CLEANUP4_US_LCSSA_US_US:.*]] ], [ [[BC_RESUME_VAL67]], %[[VEC_EPILOG_SCALAR_PH42]] ]
+; CHECK-NEXT:    [[INDVARS_IV70:%.*]] = phi i64 [ [[INDVARS_IV_NEXT71:%.*]], %[[FOR_COND_CLEANUP4_US_LCSSA_US_US]] ], [ [[BC_RESUME_VAL68]], %[[VEC_EPILOG_SCALAR_PH42]] ]
 ; CHECK-NEXT:    [[TMP56:%.*]] = sub nsw i64 8, [[INDVARS_IV78]]
 ; CHECK-NEXT:    [[ADD_PTR_US:%.*]] = getelementptr inbounds [10 x [10 x i32]], ptr @d, i64 0, i64 [[INDVARS_IV78]]
 ; CHECK-NEXT:    [[TMP57:%.*]] = add nsw i64 [[TMP56]], [[INDVARS_IV70]]

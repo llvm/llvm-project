@@ -179,13 +179,13 @@ define void @test_exit_branch_cost(ptr %dst, ptr noalias %x.ptr, ptr noalias %y.
 ; COMMON-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; COMMON-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; COMMON:       [[VECTOR_PH]]:
-; COMMON-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i1> poison, i1 [[C_3]], i64 0
+; COMMON-NEXT:    [[TMP0:%.*]] = select i1 [[C_4]], i1 [[C_3]], i1 false
+; COMMON-NEXT:    [[TMP1:%.*]] = xor i1 [[TMP0]], true
+; COMMON-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i1> poison, i1 [[TMP1]], i64 0
 ; COMMON-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i1> [[BROADCAST_SPLATINSERT]], <2 x i1> poison, <2 x i32> zeroinitializer
-; COMMON-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <2 x i1> poison, i1 [[C_4]], i64 0
+; COMMON-NEXT:    [[TMP2:%.*]] = xor i1 [[C_4]], true
+; COMMON-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <2 x i1> poison, i1 [[TMP2]], i64 0
 ; COMMON-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <2 x i1> [[BROADCAST_SPLATINSERT2]], <2 x i1> poison, <2 x i32> zeroinitializer
-; COMMON-NEXT:    [[TMP0:%.*]] = select i1 [[C_4]], <2 x i1> [[BROADCAST_SPLAT]], <2 x i1> zeroinitializer
-; COMMON-NEXT:    [[TMP1:%.*]] = xor <2 x i1> [[TMP0]], splat (i1 true)
-; COMMON-NEXT:    [[TMP3:%.*]] = xor <2 x i1> [[BROADCAST_SPLAT3]], splat (i1 true)
 ; COMMON-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; COMMON:       [[VECTOR_BODY]]:
 ; COMMON-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE17:.*]] ]
@@ -205,7 +205,7 @@ define void @test_exit_branch_cost(ptr %dst, ptr noalias %x.ptr, ptr noalias %y.
 ; COMMON-NEXT:    store i64 0, ptr [[DST_1]], align 8
 ; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE5]]
 ; COMMON:       [[PRED_STORE_CONTINUE5]]:
-; COMMON-NEXT:    [[TMP10:%.*]] = select <2 x i1> [[TMP7]], <2 x i1> [[TMP1]], <2 x i1> zeroinitializer
+; COMMON-NEXT:    [[TMP10:%.*]] = select <2 x i1> [[TMP7]], <2 x i1> [[BROADCAST_SPLAT]], <2 x i1> zeroinitializer
 ; COMMON-NEXT:    [[TMP11:%.*]] = extractelement <2 x i1> [[TMP10]], i64 0
 ; COMMON-NEXT:    br i1 [[TMP11]], label %[[PRED_STORE_IF6:.*]], label %[[PRED_STORE_CONTINUE7:.*]]
 ; COMMON:       [[PRED_STORE_IF6]]:
@@ -218,8 +218,12 @@ define void @test_exit_branch_cost(ptr %dst, ptr noalias %x.ptr, ptr noalias %y.
 ; COMMON-NEXT:    store i64 0, ptr [[DST_3]], align 8
 ; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE9]]
 ; COMMON:       [[PRED_STORE_CONTINUE9]]:
-; COMMON-NEXT:    [[TMP22:%.*]] = select <2 x i1> [[TMP7]], <2 x i1> [[BROADCAST_SPLAT]], <2 x i1> zeroinitializer
-; COMMON-NEXT:    [[TMP13:%.*]] = select <2 x i1> [[TMP22]], <2 x i1> [[BROADCAST_SPLAT3]], <2 x i1> zeroinitializer
+; COMMON-NEXT:    [[BROADCAST_SPLATINSERT8:%.*]] = insertelement <2 x i1> poison, i1 [[C_3]], i64 0
+; COMMON-NEXT:    [[BROADCAST_SPLAT9:%.*]] = shufflevector <2 x i1> [[BROADCAST_SPLATINSERT8]], <2 x i1> poison, <2 x i32> zeroinitializer
+; COMMON-NEXT:    [[TMP22:%.*]] = select <2 x i1> [[TMP7]], <2 x i1> [[BROADCAST_SPLAT9]], <2 x i1> zeroinitializer
+; COMMON-NEXT:    [[BROADCAST_SPLATINSERT10:%.*]] = insertelement <2 x i1> poison, i1 [[C_4]], i64 0
+; COMMON-NEXT:    [[BROADCAST_SPLAT11:%.*]] = shufflevector <2 x i1> [[BROADCAST_SPLATINSERT10]], <2 x i1> poison, <2 x i32> zeroinitializer
+; COMMON-NEXT:    [[TMP13:%.*]] = select <2 x i1> [[TMP22]], <2 x i1> [[BROADCAST_SPLAT11]], <2 x i1> zeroinitializer
 ; COMMON-NEXT:    [[TMP14:%.*]] = or <2 x i1> [[TMP6]], [[TMP13]]
 ; COMMON-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP13]], <2 x i64> zeroinitializer, <2 x i64> splat (i64 1)
 ; COMMON-NEXT:    [[TMP15:%.*]] = extractelement <2 x i1> [[TMP14]], i64 0
@@ -236,7 +240,7 @@ define void @test_exit_branch_cost(ptr %dst, ptr noalias %x.ptr, ptr noalias %y.
 ; COMMON-NEXT:    store i64 [[TMP18]], ptr [[DST_2]], align 8
 ; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE13]]
 ; COMMON:       [[PRED_STORE_CONTINUE13]]:
-; COMMON-NEXT:    [[TMP19:%.*]] = select <2 x i1> [[TMP22]], <2 x i1> [[TMP3]], <2 x i1> zeroinitializer
+; COMMON-NEXT:    [[TMP19:%.*]] = select <2 x i1> [[TMP22]], <2 x i1> [[BROADCAST_SPLAT3]], <2 x i1> zeroinitializer
 ; COMMON-NEXT:    [[TMP20:%.*]] = or <2 x i1> [[TMP14]], [[TMP19]]
 ; COMMON-NEXT:    [[TMP21:%.*]] = extractelement <2 x i1> [[TMP20]], i64 0
 ; COMMON-NEXT:    br i1 [[TMP21]], label %[[PRED_STORE_IF14:.*]], label %[[PRED_STORE_CONTINUE15:.*]]
@@ -599,9 +603,9 @@ define void @forced_scalar_instr(ptr %gep.dst) {
 ; COMMON-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; COMMON:       [[VECTOR_BODY]]:
 ; COMMON-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE6:.*]] ]
-; COMMON-NEXT:    [[VEC_IND:%.*]] = phi <4 x i8> [ <i8 0, i8 1, i8 2, i8 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_STORE_CONTINUE6]] ]
+; COMMON-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_STORE_CONTINUE6]] ]
 ; COMMON-NEXT:    [[TMP0:%.*]] = trunc i64 [[INDEX]] to i32
-; COMMON-NEXT:    [[TMP1:%.*]] = icmp ule <4 x i8> [[VEC_IND]], splat (i8 4)
+; COMMON-NEXT:    [[TMP1:%.*]] = icmp ule <4 x i64> [[VEC_IND]], splat (i64 4)
 ; COMMON-NEXT:    [[TMP2:%.*]] = extractelement <4 x i1> [[TMP1]], i64 0
 ; COMMON-NEXT:    br i1 [[TMP2]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; COMMON:       [[PRED_STORE_IF]]:
@@ -641,7 +645,7 @@ define void @forced_scalar_instr(ptr %gep.dst) {
 ; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
 ; COMMON:       [[PRED_STORE_CONTINUE6]]:
 ; COMMON-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; COMMON-NEXT:    [[VEC_IND_NEXT]] = add <4 x i8> [[VEC_IND]], splat (i8 4)
+; COMMON-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; COMMON-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[INDEX_NEXT]], 8
 ; COMMON-NEXT:    br i1 [[TMP22]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; COMMON:       [[MIDDLE_BLOCK]]:

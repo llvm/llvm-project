@@ -8,17 +8,15 @@ define void @ordered_reduction(ptr %dst, float %a, float %b) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x float> poison, float [[B]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x float> [[BROADCAST_SPLATINSERT]], <2 x float> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x float> poison, float [[A]], i64 0
+; CHECK-NEXT:    [[TMP0:%.*]] = fmul float [[A]], [[B]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x float> poison, float [[TMP0]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <2 x float> [[BROADCAST_SPLATINSERT1]], <2 x float> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP0:%.*]] = fmul <2 x float> [[BROADCAST_SPLAT2]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi float [ 0.000000e+00, %[[VECTOR_PH]] ], [ [[TMP2:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.vector.reduce.fadd.v2f32(float [[VEC_PHI]], <2 x float> [[TMP0]])
-; CHECK-NEXT:    [[TMP2]] = call float @llvm.vector.reduce.fadd.v2f32(float [[TMP1]], <2 x float> [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.vector.reduce.fadd.v2f32(float [[VEC_PHI]], <2 x float> [[BROADCAST_SPLAT2]])
+; CHECK-NEXT:    [[TMP2]] = call float @llvm.vector.reduce.fadd.v2f32(float [[TMP1]], <2 x float> [[BROADCAST_SPLAT2]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]

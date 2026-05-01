@@ -13,10 +13,6 @@ define void @replicating_store_with_phi_addr1(ptr noalias %array, i64 %N, i32 %x
 ; CHECK-NEXT:    call void @init(ptr [[PTR1]], ptr [[PTR2]], ptr [[PTR3]])
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x ptr> poison, ptr [[PTR1]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x ptr> [[BROADCAST_SPLATINSERT]], <16 x ptr> poison, <16 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <16 x i1> poison, i1 [[COND]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <16 x i1> [[BROADCAST_SPLATINSERT1]], <16 x i1> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE32:.*]] ]
@@ -103,8 +99,12 @@ define void @replicating_store_with_phi_addr1(ptr noalias %array, i64 %N, i32 %x
 ; CHECK-NEXT:    [[TMP80:%.*]] = insertelement <16 x ptr> [[TMP79]], ptr [[TMP64]], i32 13
 ; CHECK-NEXT:    [[TMP81:%.*]] = insertelement <16 x ptr> [[TMP80]], ptr [[TMP65]], i32 14
 ; CHECK-NEXT:    [[TMP82:%.*]] = insertelement <16 x ptr> [[TMP81]], ptr [[TMP66]], i32 15
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <16 x i1> poison, i1 [[COND]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <16 x i1> [[BROADCAST_SPLATINSERT1]], <16 x i1> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP83:%.*]] = select <16 x i1> [[TMP33]], <16 x i1> [[BROADCAST_SPLAT2]], <16 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP84:%.*]] = or <16 x i1> [[TMP83]], [[TMP34]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <16 x ptr> poison, ptr [[PTR1]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x ptr> [[BROADCAST_SPLATINSERT2]], <16 x ptr> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <16 x i1> [[TMP33]], <16 x ptr> [[BROADCAST_SPLAT]], <16 x ptr> [[TMP82]]
 ; CHECK-NEXT:    [[TMP85:%.*]] = extractelement <16 x i1> [[TMP84]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP85]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]

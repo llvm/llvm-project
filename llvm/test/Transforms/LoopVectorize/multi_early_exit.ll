@@ -132,8 +132,6 @@ define i64 @early_exit_with_live_in_condition(i1 %cond) {
 ; CHECK-NEXT:    call void @init_mem(ptr [[P]], i64 1024)
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[COND]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[LOOP]] ], [ [[INC:%.*]], [[VECTOR_BODY_INTERIM:%.*]] ]
@@ -141,6 +139,8 @@ define i64 @early_exit_with_live_in_condition(i1 %cond) {
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i8> [[WIDE_LOAD]], zeroinitializer
 ; CHECK-NEXT:    [[INC]] = add nuw i64 [[IV]], 4
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[COND]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[BROADCAST_SPLAT]], <4 x i1> splat (i1 true), <4 x i1> [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = freeze <4 x i1> [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP3]])
@@ -151,8 +151,7 @@ define i64 @early_exit_with_live_in_condition(i1 %cond) {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       vector.early.exit.check:
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i1> [[BROADCAST_SPLAT]], i64 0
-; CHECK-NEXT:    br i1 [[TMP5]], label [[VECTOR_EARLY_EXIT_0:%.*]], label [[VECTOR_EARLY_EXIT_1:%.*]]
+; CHECK-NEXT:    br i1 [[COND]], label [[VECTOR_EARLY_EXIT_0:%.*]], label [[VECTOR_EARLY_EXIT_1:%.*]]
 ; CHECK:       vector.early.exit.1:
 ; CHECK-NEXT:    br label [[LOOP_END]]
 ; CHECK:       vector.early.exit.0:

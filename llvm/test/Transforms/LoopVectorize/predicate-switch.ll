@@ -535,8 +535,6 @@ define void @switch_unconditional_duplicate_target(ptr %start, ptr %dest) {
 ; IC1-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; IC1-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; IC1:       [[VECTOR_PH]]:
-; IC1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x ptr> poison, ptr [[DEST]], i64 0
-; IC1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x ptr> [[BROADCAST_SPLATINSERT]], <2 x ptr> poison, <2 x i32> zeroinitializer
 ; IC1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IC1:       [[VECTOR_BODY]]:
 ; IC1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -545,6 +543,8 @@ define void @switch_unconditional_duplicate_target(ptr %start, ptr %dest) {
 ; IC1-NEXT:    [[TMP4:%.*]] = extractelement <2 x ptr> [[TMP0]], i64 0
 ; IC1-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP4]], align 4, !alias.scope [[META6:![0-9]+]]
 ; IC1-NEXT:    [[TMP5:%.*]] = icmp ult <2 x i32> [[WIDE_LOAD]], splat (i32 10)
+; IC1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x ptr> poison, ptr [[DEST]], i64 0
+; IC1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x ptr> [[BROADCAST_SPLATINSERT]], <2 x ptr> poison, <2 x i32> zeroinitializer
 ; IC1-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP5]], <2 x ptr> [[BROADCAST_SPLAT]], <2 x ptr> [[TMP0]]
 ; IC1-NEXT:    [[PREDPHI2:%.*]] = select <2 x i1> [[TMP5]], <2 x ptr> [[BROADCAST_SPLAT]], <2 x ptr> [[PREDPHI]]
 ; IC1-NEXT:    [[TMP1:%.*]] = extractelement <2 x ptr> [[PREDPHI2]], i64 0
@@ -590,8 +590,6 @@ define void @switch_unconditional_duplicate_target(ptr %start, ptr %dest) {
 ; IC2-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; IC2-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; IC2:       [[VECTOR_PH]]:
-; IC2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x ptr> poison, ptr [[DEST]], i64 0
-; IC2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x ptr> [[BROADCAST_SPLATINSERT]], <2 x ptr> poison, <2 x i32> zeroinitializer
 ; IC2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IC2:       [[VECTOR_BODY]]:
 ; IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -605,6 +603,8 @@ define void @switch_unconditional_duplicate_target(ptr %start, ptr %dest) {
 ; IC2-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x i32>, ptr [[TMP8]], align 4, !alias.scope [[META6]]
 ; IC2-NEXT:    [[TMP9:%.*]] = icmp ult <2 x i32> [[WIDE_LOAD]], splat (i32 10)
 ; IC2-NEXT:    [[TMP10:%.*]] = icmp ult <2 x i32> [[WIDE_LOAD2]], splat (i32 10)
+; IC2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x ptr> poison, ptr [[DEST]], i64 0
+; IC2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x ptr> [[BROADCAST_SPLATINSERT]], <2 x ptr> poison, <2 x i32> zeroinitializer
 ; IC2-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP9]], <2 x ptr> [[BROADCAST_SPLAT]], <2 x ptr> [[TMP0]]
 ; IC2-NEXT:    [[PREDPHI2:%.*]] = select <2 x i1> [[TMP9]], <2 x ptr> [[BROADCAST_SPLAT]], <2 x ptr> [[PREDPHI]]
 ; IC2-NEXT:    [[TMP2:%.*]] = extractelement <2 x ptr> [[PREDPHI2]], i64 0
