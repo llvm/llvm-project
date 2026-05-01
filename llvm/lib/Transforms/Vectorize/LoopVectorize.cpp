@@ -379,8 +379,6 @@ static cl::opt<bool> EnableEarlyExitVectorization(
 // after prolog. See `emitIterationCountCheck`.
 static constexpr uint32_t MinItersBypassWeights[] = {1, 127};
 
-static bool AllowInvariantBoundRetry = true;
-
 /// A helper function that returns true if the given type is irregular. The
 /// type is irregular if its allocated size doesn't equal the store size of an
 /// element of the corresponding vector type.
@@ -8336,6 +8334,28 @@ static Loop *tryToVersionLoopForInvariantBoundLoad(
   DT.insertEdge(RtCheckBB, PreHeader);
   DT.insertEdge(RtCheckBB, VerPreHeader);
 
+  assert(VerLatch &&
+         "Versioned loop must have a single latch, loop not in canonical form");
+
+  // Emit metadata llvm.loop.speculative.bound.hoist.versioned to prevent
+  // repeted recursive calls with same loop to processLoop.
+  Instruction *VerLatchTerm = VerLatch->getTerminator();
+  LLVMContext &ctx = VerLatchTerm->getContext();
+  MDNode *Marker = MDNode::get(
+      ctx, {(Metadata *)MDString::get(
+               Ctx, "llvm.loop.speculative.bound.hoist.versioned")});
+  MDNode *ExistingMD = VerLatchTerm->getMetadata(LLVMContext::MD_loop);
+  SmallVector<Metadata *, 4> Mds;
+  if (ExistingMD)
+    Mds.append(ExistingMD->op_begin(), ExistingMD->op_end());
+  else
+    Mds.push_back(nullptr);
+  Mds.push_back(Marker);
+  MDNode *NewLoopMD = MDNode::getDistinct(ctx, Mds);
+  if (!ExistingMD)
+    NewLoopMD->replaceOperandWith(0, NewLoopMD);
+  VerLatchTerm->setMetadata(LLVMContext::MD_loop, NewLoopMD);
+
   return VerLoop;
 }
 
@@ -8391,10 +8411,22 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                                 &Requirements, &Hints, DB, AC,
                                 /*AllowRuntimeSCEVChecks=*/!OptForSize, AA);
   if (!LVL.canVectorize(EnableVPlanNativePath)) {
-    if (AllowInvariantBoundRetry) {
-      // There has to be a better way to do this? Trying to avoid changing
-      // processLoop Signature.
-      AllowInvariantBoundRetry = false;
+    bool VisitedSpeculativeHoist = false;
+    if (BasicBlock *Latch = L->getLoopLatch()) {
+      if (MDNode *LoopMD =
+              Latch->getTerminator()->getMetadata(LLVMContext::MD_loop)) {
+        for (unsigned i = 1, e = LoopMD->getNumOperands(); i < e; ++i) {
+          if (auto *Op = dyn_cast<MDNode>(LoopMD->getOperand(i)))
+            if (Op->getNumOperands() > 0)
+              if (auto *S = dyn_cast<MDString>(Op->getOperand(0)))
+                if (S->getString() ==
+                    "llvm.loop.speculative.bound.hoist.versioned")
+                  VisitedSpeculativeHoist = true;
+        }
+      }
+    }
+
+    if (!VisitedSpeculativeHoist) {
       const DataLayout &DL = F->getDataLayout();
       // 1) Check if the loop qualifies for loop invariant bound load.
       // 2) Generate the versioned loop with runtime checks using the dynamic
