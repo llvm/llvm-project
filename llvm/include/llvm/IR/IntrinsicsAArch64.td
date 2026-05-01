@@ -2849,8 +2849,6 @@ def int_aarch64_sve_bfdot   : SVE_4Vec_BF16;
 def int_aarch64_sve_bfmlalb : SVE_4Vec_BF16;
 def int_aarch64_sve_bfmlalt : SVE_4Vec_BF16;
 
-def int_aarch64_sve_bfmmla  : SVE_4Vec_BF16;
-
 def int_aarch64_sve_bfdot_lane_v2   : SVE_4Vec_BF16_Indexed;
 def int_aarch64_sve_bfmlalb_lane_v2 : SVE_4Vec_BF16_Indexed;
 def int_aarch64_sve_bfmlalt_lane_v2 : SVE_4Vec_BF16_Indexed;
@@ -3782,6 +3780,13 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sve_sqcvtun_x4 : SVE2_CVT_VG4_SINGLE_Intrinsic;
 
   //
+  // Multi-vector saturating shift right narrow and interleave
+  //
+  def int_aarch64_sve_sqshrn_x2 : SVE2_VG2_Multi_Imm_Intrinsic;
+  def int_aarch64_sve_uqshrn_x2 : SVE2_VG2_Multi_Imm_Intrinsic;
+  def int_aarch64_sve_sqshrun_x2 : SVE2_VG2_Multi_Imm_Intrinsic;
+
+  //
   // Multi-Single add/sub
   //
 
@@ -4296,4 +4301,3 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sve_pmlal_pair_x2 : DefaultAttrsIntrinsic<[llvm_nxv2i64_ty, llvm_nxv2i64_ty],
       [llvm_nxv2i64_ty, llvm_nxv2i64_ty, llvm_nxv2i64_ty, llvm_nxv2i64_ty], [IntrNoMem]>;
 }
-

@@ -1356,6 +1356,7 @@ mlir::Value CIRGenFunction::emitRuntimeCall(mlir::Location loc,
                                             cir::FuncOp callee,
                                             ArrayRef<mlir::Value> args,
                                             mlir::NamedAttrList attrs) {
+
   // TODO(cir): set the calling convention to this runtime call.
   assert(!cir::MissingFeatures::opFuncCallingConv());
 
