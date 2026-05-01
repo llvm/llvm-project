@@ -9,15 +9,25 @@ struct P {
 };
 
 struct S : P {
-  float4 b;
+  double b;
+  float4 c;
 };
 
-// CHECK-DAG: %S = type <{ <3 x float>, target("[[PADDING_TYPE]]", 4), <4 x float> }>
+struct T {
+  S s;
+  int arr[2];
+};
+
+// CHECK-DAG: %__cblayout_CB = type <{ %S, %T }>
+// CHECK-DAG: %S = type <{ <3 x float>, target("[[PADDING_TYPE]]", 4), double, target("[[PADDING_TYPE]]", 8), <4 x float> }>
+// CHECK-DAG: %T = type <{ %S, <{ [1 x <{ i32, target("[[PADDING_TYPE]]", 12) }>], i32 }> }>
+// CHECK-DAG: %struct.S = type <{ %struct.P, double, <4 x float> }>
 // CHECK-DAG: %struct.P = type { <3 x float> }
-// CHECK-DAG: %struct.S = type { %struct.P, <4 x float> }
+// CHECK-DAG: %struct.T = type { %struct.S, [2 x i32] }
 
 cbuffer CB {
   S cbs;
+  T cbt;
 };
 // CHECK-DAG: @cbs = external hidden addrspace([[CONST_ADDR_SPACE]]) global %S, align 1
 
@@ -27,13 +37,19 @@ cbuffer CB {
 //
   // Copy S field by field into local variable in default address space.
 //
-// CHECK-NEXT: [[LocalS:%.*]] = alloca %struct.S, align 1
-// CHECK-NEXT: [[PtrA:%.*]] = getelementptr inbounds %struct.S, ptr [[LocalS]], i32 0, i32 0
-// CHECK-NEXT: [[CBufLoad1:%.*]] = load <3 x float>, ptr addrspace([[CONST_ADDR_SPACE]]) @cbs, align 4
-// CHECK-NEXT: store <3 x float> [[CBufLoad1]], ptr [[PtrA]], align 4
-// CHECK-NEXT: [[PtrB:%.*]] = getelementptr inbounds %struct.S, ptr [[LocalS]], i32 0, i32 1
-// CHECK-NEXT: [[CBufLoad2:%.*]] = load <4 x float>, ptr addrspace([[CONST_ADDR_SPACE]]) getelementptr inbounds nuw (i8, ptr addrspace([[CONST_ADDR_SPACE]]) @cbs, {{i32|i64}} 16), align 4
-// CHECK-NEXT: store <4 x float> [[CBufLoad2]], ptr [[PtrB]], align 4
+// CHECK-NEXT: [[AggTemp:%.*]] = alloca %struct.S, align 1
+
+// CHECK-NEXT: [[Ptr_a:%.*]] = getelementptr inbounds %struct.S, ptr [[AggTemp]], i32 0, i32 0
+// CHECK-NEXT: [[CBufLoad_a:%.*]] = load <3 x float>, ptr addrspace([[CONST_ADDR_SPACE]]) @cbs, align 4
+// CHECK-NEXT: store <3 x float> [[CBufLoad_a]], ptr [[Ptr_a]], align 4
+
+// CHECK-NEXT: [[Ptr_b:%.*]] = getelementptr inbounds %struct.S, ptr [[AggTemp]], i32 0, i32 1
+// CHECK-NEXT: [[CBufLoad_b:%.*]] = load double, ptr addrspace([[CONST_ADDR_SPACE]]) getelementptr inbounds nuw (i8, ptr addrspace([[CONST_ADDR_SPACE]]) @cbs, {{i32|i64}} 16), align 8
+// CHECK-NEXT: store double [[CBufLoad_b]], ptr [[Ptr_b]], align 8
+
+// CHECK-NEXT: [[Ptr_c:%.*]] = getelementptr inbounds %struct.S, ptr [[AggTemp]], i32 0, i32 2
+// CHECK-NEXT: [[CBufLoad_c:%.*]] = load <4 x float>, ptr addrspace([[CONST_ADDR_SPACE]]) getelementptr inbounds nuw (i8, ptr addrspace([[CONST_ADDR_SPACE]]) @cbs, {{i32|i64}} 32), align 4
+// CHECK-NEXT: store <4 x float> [[CBufLoad_c]], ptr [[Ptr_c]], align 4
 // CHECK-NEXT: ret void
 void case1() {
   S local = cbs;
@@ -47,56 +63,128 @@ void case1() {
 //
 // CHECK-NEXT: [[LocalS:%.*]] = alloca %struct.S, align 1
 // CHECK-NEXT: [[AggTemp:%.*]] = alloca %struct.S, align 1
-// CHECK-NEXT: [[PtrA:%.*]] = getelementptr inbounds %struct.S, ptr [[AggTemp]], i32 0, i32 0
-// CHECK-NEXT: [[CBufLoad1:%.*]] = load <3 x float>, ptr addrspace([[CONST_ADDR_SPACE]]) @cbs, align 4
-// CHECK-NEXT: store <3 x float> [[CBufLoad1]], ptr [[PtrA]], align 4
-// CHECK-NEXT: [[PtrB:%.*]] = getelementptr inbounds %struct.S, ptr [[AggTemp]], i32 0, i32 1
-// CHECK-NEXT: [[CBufLoad2:%.*]] = load <4 x float>, ptr addrspace([[CONST_ADDR_SPACE]]) getelementptr inbounds nuw (i8, ptr addrspace([[CONST_ADDR_SPACE]]) @cbs, {{i32|i64}} 16), align 4
-// CHECK-NEXT: store <4 x float> [[CBufLoad2]], ptr [[PtrB]], align 4
+
+// CHECK-NEXT: [[Ptr_a:%.*]] = getelementptr inbounds %struct.S, ptr [[AggTemp]], i32 0, i32 0
+// CHECK-NEXT: [[CBufLoad_a:%.*]] = load <3 x float>, ptr addrspace([[CONST_ADDR_SPACE]]) @cbs, align 4
+// CHECK-NEXT: store <3 x float> [[CBufLoad_a]], ptr [[Ptr_a]], align 4
+
+// CHECK-NEXT: [[Ptr_b:%.*]] = getelementptr inbounds %struct.S, ptr [[AggTemp]], i32 0, i32 1
+// CHECK-NEXT: [[CBufLoad_b:%.*]] = load double, ptr addrspace([[CONST_ADDR_SPACE]]) getelementptr inbounds nuw (i8, ptr addrspace([[CONST_ADDR_SPACE]]) @cbs, {{i32|i64}} 16), align 8
+// CHECK-NEXT: store double [[CBufLoad_b]], ptr [[Ptr_b]], align 8
+
+// CHECK-NEXT: [[Ptr_c:%.*]] = getelementptr inbounds %struct.S, ptr [[AggTemp]], i32 0, i32 2
+// CHECK-NEXT: [[CBufLoad_c:%.*]] = load <4 x float>, ptr addrspace([[CONST_ADDR_SPACE]]) getelementptr inbounds nuw (i8, ptr addrspace([[CONST_ADDR_SPACE]]) @cbs, {{i32|i64}} 32), align 4
+// CHECK-NEXT: store <4 x float> [[CBufLoad_c]], ptr [[Ptr_c]], align 4
 //
 // The proces HLSLElementwiseCast - copy individual vector elements between the structs.
 //
-// CHECK-NEXT: [[VecGep1:%.*]] = getelementptr inbounds %struct.S, ptr [[LocalS]], i32 0, i32 0
-// CHECK-NEXT: [[VecGep2:%.*]] = getelementptr inbounds %struct.S, ptr [[LocalS]], i32 0, i32 1
-// CHECK-NEXT: [[VecGep3:%.*]] = getelementptr inbounds %struct.S, ptr [[AggTemp]], i32 0, i32 0
-// CHECK-NEXT: [[VecGep4:%.*]] = getelementptr inbounds %struct.S, ptr [[AggTemp]], i32 0, i32 1
+// CHECK-NEXT: [[Ptr_LocalS_a:%.*]] = getelementptr inbounds %struct.S, ptr [[LocalS]], i32 0, i32 0, i32 0
+// CHECK-NEXT: [[Ptr_LocalS_b:%.*]] = getelementptr inbounds %struct.S, ptr [[LocalS]], i32 0, i32 1
+// CHECK-NEXT: [[Ptr_LocalS_c:%.*]] = getelementptr inbounds %struct.S, ptr [[LocalS]], i32 0, i32 2
+// CHECK-NEXT: [[Ptr_AggTemp_a:%.*]] = getelementptr inbounds %struct.S, ptr [[AggTemp]], i32 0, i32 0, i32 0
+// CHECK-NEXT: [[Ptr_AggTemp_b:%.*]] = getelementptr inbounds %struct.S, ptr [[AggTemp]], i32 0, i32 1
+// CHECK-NEXT: [[Ptr_AggTemp_c:%.*]] = getelementptr inbounds %struct.S, ptr [[AggTemp]], i32 0, i32 2
 
-// CHECK-NEXT: [[VecA1:%.*]] = load <3 x float>, ptr [[VecGep3]], align 4
-// CHECK-NEXT: [[Val1:%.*]] = extractelement <3 x float> [[VecA1]], i32 0
-// CHECK-NEXT: [[VecA1Ptr:%.*]] = getelementptr <3 x float>, ptr [[VecGep1]], i32 0, i32 0
-// CHECK-NEXT: store float [[Val1]], ptr [[VecA1Ptr]], align 4
+// CHECK-NEXT: [[AggTemp_a:%.*]] = load <3 x float>, ptr [[Ptr_AggTemp_a]], align 4
+// CHECK-NEXT: [[Val_a0:%.*]] = extractelement <3 x float> [[AggTemp_a]], i32 0
+// CHECK-NEXT: [[Ptr_LocalS_a0:%.*]] = getelementptr <3 x float>, ptr [[Ptr_LocalS_a]], i32 0, i32 0
+// CHECK-NEXT: store float [[Val_a0]], ptr [[Ptr_LocalS_a0]], align 4
 
-// CHECK-NEXT: [[VecA2:%.*]] = load <3 x float>, ptr [[VecGep3]], align 4
-// CHECK-NEXT: [[Val2:%.*]] = extractelement <3 x float> [[VecA2]], i32 1
-// CHECK-NEXT: [[VecA2Ptr:%.*]] = getelementptr <3 x float>, ptr [[VecGep1]], i32 0, i32 1
-// CHECK-NEXT: store float [[Val2]], ptr [[VecA2Ptr]], align 4
+// CHECK-NEXT: [[AggTemp_a:%.*]] = load <3 x float>, ptr [[Ptr_AggTemp_a]], align 4
+// CHECK-NEXT: [[Val_a1:%.*]] = extractelement <3 x float> [[AggTemp_a]], i32 1
+// CHECK-NEXT: [[Ptr_LocalS_a1:%.*]] = getelementptr <3 x float>, ptr [[Ptr_LocalS_a]], i32 0, i32 1
+// CHECK-NEXT: store float [[Val_a1]], ptr [[Ptr_LocalS_a1]], align 4
 
-// CHECK-NEXT: [[VecA3:%.*]] = load <3 x float>, ptr [[VecGep3]], align 4
-// CHECK-NEXT: [[Val3:%.*]] = extractelement <3 x float> [[VecA3]], i32 2
-// CHECK-NEXT: [[VecA3Ptr:%.*]] = getelementptr <3 x float>, ptr [[VecGep1]], i32 0, i32 2
-// CHECK-NEXT: store float [[Val3]], ptr [[VecA3Ptr]], align 4
+// CHECK-NEXT: [[AggTemp_a:%.*]] = load <3 x float>, ptr [[Ptr_AggTemp_a]], align 4
+// CHECK-NEXT: [[Val_a2:%.*]] = extractelement <3 x float> [[AggTemp_a]], i32 2
+// CHECK-NEXT: [[Ptr_LocalS_a2:%.*]] = getelementptr <3 x float>, ptr [[Ptr_LocalS_a]], i32 0, i32 2
+// CHECK-NEXT: store float [[Val_a2]], ptr [[Ptr_LocalS_a2]], align 4
 
-// CHECK-NEXT: [[VecB1:%.*]] = load <4 x float>, ptr [[VecGep4]], align 4
-// CHECK-NEXT: [[Val4:%.*]] = extractelement <4 x float> [[VecB1]], i32 0
-// CHECK-NEXT: [[VecB1Ptr:%.*]] = getelementptr <4 x float>, ptr [[VecGep2]], i32 0, i32 0
-// CHECK-NEXT: store float [[Val4]], ptr [[VecB1Ptr]], align 4
+// CHECK-NEXT: [[Val_b:%.*]] = load double, ptr [[Ptr_AggTemp_b]], align 8
+// CHECK-NEXT: store double [[Val_b]], ptr [[Ptr_LocalS_b]], align 8
 
-// CHECK-NEXT: [[VecB2:%.*]] = load <4 x float>, ptr [[VecGep4]], align 4
-// CHECK-NEXT: [[Val5:%.*]] = extractelement <4 x float> [[VecB2]], i32 1
-// CHECK-NEXT: [[VecB2Ptr:%.*]] = getelementptr <4 x float>, ptr [[VecGep2]], i32 0, i32 1
-// CHECK-NEXT: store float [[Val5]], ptr [[VecB2Ptr]], align 4
+// CHECK-NEXT: [[AggTemp_c:%.*]] = load <4 x float>, ptr [[Ptr_AggTemp_c]], align 4
+// CHECK-NEXT: [[Val_c0:%.*]] = extractelement <4 x float> [[AggTemp_c]], i32 0
+// CHECK-NEXT: [[Ptr_LocalS_c0:%.*]] = getelementptr <4 x float>, ptr [[Ptr_LocalS_c]], i32 0, i32 0
+// CHECK-NEXT: store float [[Val_c0]], ptr [[Ptr_LocalS_c0]], align 4
 
-// CHECK-NEXT: [[VecB3:%.*]] = load <4 x float>, ptr [[VecGep4]], align 4
-// CHECK-NEXT: [[Val6:%.*]] = extractelement <4 x float> [[VecB3]], i32 2
-// CHECK-NEXT: [[VecB3Ptr:%.*]] = getelementptr <4 x float>, ptr [[VecGep2]], i32 0, i32 2
-// CHECK-NEXT: store float [[Val6]], ptr [[VecB3Ptr]], align 4
+// CHECK-NEXT: [[AggTemp_c:%.*]] = load <4 x float>, ptr [[Ptr_AggTemp_c]], align 4
+// CHECK-NEXT: [[Val_c1:%.*]] = extractelement <4 x float> [[AggTemp_c]], i32 1
+// CHECK-NEXT: [[Ptr_LocalS_c1:%.*]] = getelementptr <4 x float>, ptr [[Ptr_LocalS_c]], i32 0, i32 1
+// CHECK-NEXT: store float [[Val_c1]], ptr [[Ptr_LocalS_c1]], align 4
 
-// CHECK-NEXT: [[VecB4:%.*]] = load <4 x float>, ptr [[VecGep4]], align 4
-// CHECK-NEXT: [[Val7:%.*]] = extractelement <4 x float> [[VecB4]], i32 3
-// CHECK-NEXT: [[VecB4Ptr:%.*]] = getelementptr <4 x float>, ptr [[VecGep2]], i32 0, i32 3
-// CHECK-NEXT: store float [[Val7]], ptr [[VecB4Ptr]], align 4
+// CHECK-NEXT: [[AggTemp_c:%.*]] = load <4 x float>, ptr [[Ptr_AggTemp_c]], align 4
+// CHECK-NEXT: [[Val_c2:%.*]] = extractelement <4 x float> [[AggTemp_c]], i32 2
+// CHECK-NEXT: [[Ptr_LocalS_c2:%.*]] = getelementptr <4 x float>, ptr [[Ptr_LocalS_c]], i32 0, i32 2
+// CHECK-NEXT: store float [[Val_c2]], ptr [[Ptr_LocalS_c2]], align 4
+
+// CHECK-NEXT: [[AggTemp_c:%.*]] = load <4 x float>, ptr [[Ptr_AggTemp_c]], align 4
+// CHECK-NEXT: [[Val_c3:%.*]] = extractelement <4 x float> [[AggTemp_c]], i32 3
+// CHECK-NEXT: [[Ptr_LocalS_c3:%.*]] = getelementptr <4 x float>, ptr [[Ptr_LocalS_c]], i32 0, i32 3
+// CHECK-NEXT: store float [[Val_c3]], ptr [[Ptr_LocalS_c3]], align 4
 
 // CHECK-NEXT: ret void
 void case2() {
-  S localS = (S)cbs;
+  S AggTemp = (S)cbs;
+}
+
+// CHECK-LABEL: case3
+// CHECK-NEXT: entry:
+// SPIRV-NEXT: call token @llvm.experimental.convergence.entry()
+void case3() {
+
+// CHECK-NEXT: [[LocalT:%.*]] = alloca %struct.T, align 1
+// CHECK-NEXT: [[LocalTCopy:%.*]] = alloca %struct.T, align 1
+// CHECK-NEXT: [[AggTemp:%.*]] = alloca %struct.S, align 1
+// CHECK-NEXT: [[AggTempCopy:%.*]] = alloca %struct.S, align 1
+
+// Check that constant to default address space copies the struct field by field
+//
+// CHECK-NEXT: [[Ptr_s:%.*]] = getelementptr inbounds %struct.T, ptr [[LocalT]], i32 0, i32 0
+// CHECK-NEXT: [[Ptr_a:%.*]] = getelementptr inbounds %struct.S, ptr [[Ptr_s]], i32 0, i32 0
+// CHECK-NEXT: [[CbufLoad_a:%.*]] = load <3 x float>, ptr addrspace([[CONST_ADDR_SPACE]]) @cbt, align 4
+// CHECK-NEXT: store <3 x float> [[CbufLoad_a]], ptr [[Ptr_a]], align 4
+
+// CHECK-NEXT: [[Ptr_b:%.*]] = getelementptr inbounds %struct.S, ptr [[Ptr_s]], i32 0, i32 1
+// CHECK-NEXT: [[CbufLoad_c:%.*]] = load double, ptr addrspace([[CONST_ADDR_SPACE]]) getelementptr inbounds nuw (i8, ptr addrspace([[CONST_ADDR_SPACE]]) @cbt, {{i32|i64}} 16), align 8
+// CHECK-NEXT: store double [[CbufLoad_c]], ptr [[Ptr_b]], align 8
+
+// CHECK-NEXT: [[Ptr_c:%.*]] = getelementptr inbounds %struct.S, ptr [[Ptr_s]], i32 0, i32 2
+// CHECK-NEXT: [[CbufLoad_b:%.*]] = load <4 x float>, ptr addrspace([[CONST_ADDR_SPACE]]) getelementptr inbounds nuw (i8, ptr addrspace([[CONST_ADDR_SPACE]]) @cbt, {{i32|i64}} 32), align 4
+// CHECK-NEXT: store <4 x float> [[CbufLoad_b]], ptr [[Ptr_c]], align 4
+  
+// CHECK-NEXT: [[Ptr_arr:%.*]] = getelementptr inbounds %struct.T, ptr [[LocalT]], i32 0, i32 1
+// CHECK-NEXT: [[Ptr_arr0:%.*]] = getelementptr inbounds [2 x i32], ptr [[Ptr_arr]], i32 0, i32 0
+// CHECK-NEXT: [[CbufLoad_arr0:%.*]] = load i32, ptr addrspace([[CONST_ADDR_SPACE]]) getelementptr inbounds nuw (i8, ptr addrspace([[CONST_ADDR_SPACE]]) @cbt, {{i32|i64}} 48), align 4
+// CHECK-NEXT: store i32 [[CbufLoad_arr0]], ptr [[Ptr_arr0]], align 4
+
+// CHECK-NEXT: [[Ptr_arr1:%.*]] = getelementptr inbounds [2 x i32], ptr [[Ptr_arr]], i32 0, i32 1
+// CHECK-NEXT: [[CbufLoad_arr1:%.*]] = load i32, ptr addrspace([[CONST_ADDR_SPACE]]) getelementptr inbounds nuw (i8, ptr addrspace([[CONST_ADDR_SPACE]]) @cbt, {{i32|i64}} 64), align 4
+// CHECK-NEXT: store i32 [[CbufLoad_arr1]], ptr [[Ptr_arr1]], align 4
+  T localT = cbt;
+
+// Check that default to default address space copy uses memcpy
+//
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.{{i32|i64}}(ptr align 1 [[LocalTCopy]], ptr align 1 [[LocalT]], {{i32|i64}} 44, i1 false)
+  T localTCopy = localT;
+
+// Check that constant to default address space copies the struct field by field
+//
+// CHECK-NEXT: [[Ptr_a1:%.*]] = getelementptr inbounds %struct.S, ptr [[AggTemp]], i32 0, i32 0
+// CHECK-NEXT: [[CbufLoad_a1:%.*]] = load <3 x float>, ptr addrspace([[CONST_ADDR_SPACE]]) @cbt, align 4
+// CHECK-NEXT: store <3 x float> [[CbufLoad_a1]], ptr [[Ptr_a1]], align 4
+// CHECK-NEXT: [[Ptr_b1:%.*]] = getelementptr inbounds %struct.S, ptr [[AggTemp]], i32 0, i32 1
+// CHECK-NEXT: [[CbufLoad_b1:%.*]] = load double, ptr addrspace([[CONST_ADDR_SPACE]]) getelementptr inbounds nuw (i8, ptr addrspace([[CONST_ADDR_SPACE]]) @cbt, {{i32|i64}} 16), align 8
+// CHECK-NEXT: store double [[CbufLoad_b1]], ptr [[Ptr_b1]], align 8
+// CHECK-NEXT: [[Ptr_c1:%.*]] = getelementptr inbounds %struct.S, ptr [[AggTemp]], i32 0, i32 2
+// CHECK-NEXT: [[CbufLoad_c1:%.*]] = load <4 x float>, ptr addrspace([[CONST_ADDR_SPACE]]) getelementptr inbounds nuw (i8, ptr addrspace([[CONST_ADDR_SPACE]]) @cbt, {{i32|i64}} 32), align 4
+// CHECK-NEXT: store <4 x float> [[CbufLoad_c1]], ptr [[Ptr_c1]], align 4
+  S AggTemp = cbt.s;
+
+// Check that default to default address space copy uses memcpy
+//
+// CHECK-NEXT: call void @llvm.memcpy.p0.p0.{{i32|i64}}(ptr align 1 [[AggTempCopy]], ptr align 1 [[AggTemp]], {{i32|i64}} 36, i1 false)
+  S AggTempCopy = AggTemp;
+
+// CHECK-NEXT: ret void
 }
