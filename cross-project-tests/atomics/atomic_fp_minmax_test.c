@@ -15,7 +15,8 @@
 //    - Propagates NaN (any NaN input produces NaN output)
 //    - Distinguishes -0 and +0 (minimum(-0, +0) = -0, maximum(-0, +0) = +0)
 //
-// 2. fetch_fminimum_num/fetch_fmaximum_num: IEEE 754-2019 minimumNumber/maximumNumber
+// 2. fetch_fminimum_num/fetch_fmaximum_num: IEEE 754-2019
+// minimumNumber/maximumNumber
 //    - Propagates numbers over NaN (minimumNumber(2.0, NaN) = 2.0)
 //    - Treats -0 and +0 as equivalent
 //
@@ -110,7 +111,8 @@ void test_fetch_fminimum_float(void) {
   {
     float x = neg_zero_f();
     float old = __atomic_fetch_fminimum(&x, 0.0f, MO);
-    assert(same_bits_f(old, neg_zero_f()) && "fetch_fminimum should return old -0");
+    assert(same_bits_f(old, neg_zero_f()) &&
+           "fetch_fminimum should return old -0");
     assert(same_bits_f(x, neg_zero_f()) && "stored value should be -0");
   }
 
@@ -170,7 +172,8 @@ void test_fetch_fmaximum_float(void) {
   {
     float x = neg_zero_f();
     float old = __atomic_fetch_fmaximum(&x, 0.0f, MO);
-    assert(same_bits_f(old, neg_zero_f()) && "fetch_fmaximum should return old -0");
+    assert(same_bits_f(old, neg_zero_f()) &&
+           "fetch_fmaximum should return old -0");
     assert(same_bits_f(x, 0.0f) && "stored value should be +0");
   }
 
@@ -314,7 +317,8 @@ void test_fetch_fmaximum_double(void) {
   {
     double x = neg_zero_d();
     double old = __atomic_fetch_fmaximum(&x, 0.0, MO);
-    assert(same_bits_d(old, neg_zero_d()) && "fetch_fmaximum should return old -0");
+    assert(same_bits_d(old, neg_zero_d()) &&
+           "fetch_fmaximum should return old -0");
     assert(same_bits_d(x, 0.0) && "stored value should be +0");
   }
 
@@ -376,13 +380,15 @@ int main(void) {
   printf("=============================================================\n");
   printf("\n");
 
-  printf("--- fetch_fminimum/fetch_fmaximum (propagate NaN, distinguish zeros) ---\n");
+  printf("--- fetch_fminimum/fetch_fmaximum (propagate NaN, distinguish zeros) "
+         "---\n");
   test_fetch_fminimum_float();
   test_fetch_fmaximum_float();
   test_fetch_fminimum_double();
   test_fetch_fmaximum_double();
 
-  printf("\n--- fetch_fminimum_num/fetch_fmaximum_num (prefer numbers, treat zeros equal) ---\n");
+  printf("\n--- fetch_fminimum_num/fetch_fmaximum_num (prefer numbers, treat "
+         "zeros equal) ---\n");
   test_fetch_fminimum_num_float();
   test_fetch_fmaximum_num_float();
   test_fetch_fminimum_num_double();
