@@ -8586,17 +8586,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     auto *Store = cast<StoreSDNode>(Op);
     SDValue StoredVal = Store->getValue();
     EVT VT = StoredVal.getValueType();
-    if (Subtarget.hasStdExtP()) {
-      if (VT == MVT::v2i16 || VT == MVT::v4i8) {
-        SDValue DL(Op);
-        SDValue Cast = DAG.getBitcast(MVT::i32, StoredVal);
-        SDValue NewStore =
-            DAG.getStore(Store->getChain(), DL, Cast, Store->getBasePtr(),
-                         Store->getPointerInfo(), Store->getBaseAlign(),
-                         Store->getMemOperand()->getFlags());
-        return NewStore;
-      }
-    }
+
     if (VT == MVT::f64) {
       assert(Subtarget.hasStdExtZdinx() && !Subtarget.hasStdExtZilsd() &&
              !Subtarget.is64Bit() && "Unexpected custom legalisation");
