@@ -1667,6 +1667,22 @@ static void printBroadcast(const MachineInstr *MI, MCStreamer &OutStreamer,
   }
 }
 
+static void addConstantComment(const MachineInstr *MI, MCStreamer &OutStreamer,
+                               unsigned OpNo, int BitWidth, int Repeats = 1) {
+  if (auto *C = X86::getConstantFromPool(*MI, OpNo)) {
+    std::string Comment;
+    raw_string_ostream CS(Comment);
+    CS << "[";
+    for (int I = 0; I != Repeats; ++I) {
+      if (I != 0)
+        CS << ",";
+      printConstant(C, BitWidth, CS);
+    }
+    CS << "]";
+    OutStreamer.AddComment(CS.str());
+  }
+}
+
 static bool printExtend(const MachineInstr *MI, MCStreamer &OutStreamer,
                         int SrcEltBits, int DstEltBits, bool IsSext) {
   unsigned SrcIdx = getSrcIdx(MI, 1);
@@ -1944,18 +1960,19 @@ static void addConstantComments(const MachineInstr *MI,
   case X86::VGF2P8AFFINEQBZrmi:
   case X86::VGF2P8AFFINEQBZ128rmi:
   case X86::VGF2P8AFFINEQBZ256rmi: {
-    // TODO: Add predicate / broadcast handling with test coverage.
+    // TODO: Add predicate handling with test coverage.
     unsigned SrcIdx = getSrcIdx(MI, 1);
-    if (auto *C = X86::getConstantFromPool(*MI, SrcIdx + 1)) {
-      std::string Comment;
-      raw_string_ostream CS(Comment);
-      unsigned VectorWidth =
-          X86::getVectorRegisterWidth(MI->getDesc().operands()[0]);
-      CS << "[";
-      printConstant(C, VectorWidth, CS);
-      CS << "]";
-      OutStreamer.AddComment(CS.str());
-    }
+    unsigned Width = X86::getVectorRegisterWidth(MI->getDesc().operands()[0]);
+    addConstantComment(MI, OutStreamer, SrcIdx + 1, Width);
+    break;
+  }
+
+  case X86::VGF2P8AFFINEQBZ128rmbi:
+  case X86::VGF2P8AFFINEQBZ256rmbi:
+  case X86::VGF2P8AFFINEQBZrmbi: {
+    unsigned SrcIdx = getSrcIdx(MI, 1);
+    unsigned Width = X86::getVectorRegisterWidth(MI->getDesc().operands()[0]);
+    addConstantComment(MI, OutStreamer, SrcIdx + 1, 64, Width / 64);
     break;
   }
 
@@ -2003,16 +2020,9 @@ static void addConstantComments(const MachineInstr *MI,
     CASE_ARITH_RM(PMULHUW)
     CASE_ARITH_RM(PMULHRSW) {
       unsigned SrcIdx = getSrcIdx(MI, 1);
-      if (auto *C = X86::getConstantFromPool(*MI, SrcIdx + 1)) {
-        std::string Comment;
-        raw_string_ostream CS(Comment);
-        unsigned VectorWidth =
-            X86::getVectorRegisterWidth(MI->getDesc().operands()[0]);
-        CS << "[";
-        printConstant(C, VectorWidth, CS);
-        CS << "]";
-        OutStreamer.AddComment(CS.str());
-      }
+      unsigned VectorWidth =
+          X86::getVectorRegisterWidth(MI->getDesc().operands()[0]);
+      addConstantComment(MI, OutStreamer, SrcIdx + 1, VectorWidth);
       break;
     }
 
