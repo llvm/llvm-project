@@ -4305,6 +4305,10 @@ LogicalResult cir::ConstructCatchParamOp::verifySymbolUses(
     return emitOpError("'")
            << getCopyFn() << "' does not reference a valid cir.func";
 
+  if (!fn->hasAttr(cir::CIRDialect::getCatchCopyThunkAttrName()))
+    return emitOpError("catch-init copy_fn must be tagged with the ")
+           << cir::CIRDialect::getCatchCopyThunkAttrName() << " attribute";
+
   cir::FuncType fnType = fn.getFunctionType();
   if (fnType.getNumInputs() != 2 || !fnType.hasVoidReturn())
     return emitOpError("catch-init copy_fn must take two pointer arguments and "
