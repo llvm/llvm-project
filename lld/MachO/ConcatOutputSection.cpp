@@ -120,17 +120,16 @@ bool TextOutputSection::isTargetKnownInRange(const ConcatInputSection &isec,
 }
 
 Defined *TextOutputSection::getThunkInRange(const ConcatInputSection &isec,
-                                            const Relocation &r) const {
+                                            const Relocation &r,
+                                            const ThunkInfo &thunkInfo) const {
   assert(!isTargetKnownInRange(isec, r));
+  if (!thunkInfo.sym)
+    return nullptr;
   uint64_t callVA = isec.getVA() + r.offset;
   uint64_t lowVA = target->backwardBranchRange < callVA
                        ? callVA - target->backwardBranchRange
                        : 0;
   uint64_t highVA = callVA + target->forwardBranchRange;
-  auto *funcSym = cast<Symbol *>(r.referent);
-  auto &thunkInfo = thunkMap[ThunkKey{funcSym, r.addend}];
-  if (!thunkInfo.sym)
-    return nullptr;
   uint64_t thunkVA = thunkInfo.isec->getVA();
   if (lowVA <= thunkVA && thunkVA <= highVA)
     return thunkInfo.sym;
@@ -147,8 +146,8 @@ void TextOutputSection::updateBranchTargetToThunk(Relocation &r,
 }
 
 void TextOutputSection::createThunk(const ConcatInputSection &isec,
-                                    Relocation &r) {
-  assert(getThunkInRange(isec, r) == nullptr);
+                                    Relocation &r, ThunkInfo &thunkInfo) {
+  assert(getThunkInRange(isec, r, thunkInfo) == nullptr);
   assert(isec.isFinal);
   uint64_t highVA = isec.getVA() + r.offset + target->forwardBranchRange;
   if (addr + size > highVA) {
@@ -160,8 +159,6 @@ void TextOutputSection::createThunk(const ConcatInputSection &isec,
     fatal("encountered a branch whose target is out of range, but there is "
           "no more space for a new thunk");
   }
-  auto *funcSym = cast<Symbol *>(r.referent);
-  ThunkInfo &thunkInfo = thunkMap[ThunkKey{funcSym, r.addend}];
   thunkInfo.isec = makeSyntheticInputSection(isec.getSegName(), isec.getName());
   thunkInfo.isec->parent = this;
   assert(thunkInfo.isec->live);
@@ -170,6 +167,7 @@ void TextOutputSection::createThunk(const ConcatInputSection &isec,
   if (r.addend != 0)
     addendSuffix = "+" + std::to_string(r.addend);
   size_t thunkSize = target->thunkSize;
+  auto *funcSym = cast<Symbol *>(r.referent);
   StringRef thunkName =
       saver().save(funcSym->getName() + addendSuffix + ".thunk." +
                    std::to_string(thunkInfo.sequence++));
@@ -206,8 +204,8 @@ bool TextOutputSection::isTargetStubsAndInRange(
   return estimatedStubsEnd <= highVA;
 }
 
-void TextOutputSection::markBranchAsResolved(ThunkInfo &thunkInfo,
-                                             const Relocation *r) {
+void TextOutputSection::markBranchAsResolved(const Relocation *r,
+                                             ThunkInfo &thunkInfo) {
   if (!thunkInfo.pendingBranches.erase(r))
     return;
   if (!thunkInfo.pendingBranches.empty())
@@ -225,8 +223,7 @@ void TextOutputSection::finalize() {
 
   // Branches whose target sections are out of range or have not yet been
   // finalized. We may need to emit thunks for them.
-  std::deque<std::tuple<ConcatInputSection *, Relocation *, ThunkKey>>
-      branchesToProcess;
+  std::deque<std::pair<ConcatInputSection *, Relocation *>> branchesToProcess;
   // Branches whose targets have not yet be finalized, but a thunk for that
   // target exists. We defer processing these branches because it's possible we
   // can still direct call to their targets after they have all been finalized.
@@ -235,17 +232,18 @@ void TextOutputSection::finalize() {
 
   for (auto *isec : inputs) {
     while (!branchesToProcess.empty()) {
-      auto &[callerIsec, r, thunkKey] = branchesToProcess.front();
+      auto &[callerIsec, r] = branchesToProcess.front();
       assert(callerIsec->isFinal);
-      auto &thunkInfo = thunkMap[thunkKey];
+      auto *funcSym = cast<Symbol *>(r->referent);
+      auto &thunkInfo = thunkMap[{funcSym, r->addend}];
       if (isTargetKnownInRange(*callerIsec, *r)) {
         branchesToProcess.pop_front();
-        markBranchAsResolved(thunkInfo, r);
+        markBranchAsResolved(r, thunkInfo);
         continue;
       }
-      if (auto *thunk = getThunkInRange(*callerIsec, *r)) {
+      if (auto *thunk = getThunkInRange(*callerIsec, *r, thunkInfo)) {
         deferredBranchRedirects.emplace_back(callerIsec, r, thunk);
-        markBranchAsResolved(thunkInfo, r);
+        markBranchAsResolved(r, thunkInfo);
         branchesToProcess.pop_front();
         continue;
       }
@@ -264,7 +262,7 @@ void TextOutputSection::finalize() {
       thunkInfo.pendingBranches.clear();
       assert(numPendingThunkTargets);
       --numPendingThunkTargets;
-      createThunk(*callerIsec, *r);
+      createThunk(*callerIsec, *r, thunkInfo);
       branchesToProcess.pop_front();
     }
     finalizeOne(isec);
@@ -288,33 +286,38 @@ void TextOutputSection::finalize() {
         continue;
       if (isTargetKnownInRange(*isec, r))
         continue;
-      if (auto *thunk = getThunkInRange(*isec, r)) {
+      auto *funcSym = cast<Symbol *>(r.referent);
+      auto &thunkInfo = thunkMap[{funcSym, r.addend}];
+      if (auto *thunk = getThunkInRange(*isec, r, thunkInfo)) {
         deferredBranchRedirects.emplace_back(isec, &r, thunk);
         continue;
       }
-      auto *funcSym = cast<Symbol *>(r.referent);
-      ThunkKey key{funcSym, r.addend};
-      branchesToProcess.emplace_back(isec, &r, key);
-      auto &thunkInfo = thunkMap[key];
       if (thunkInfo.pendingBranches.empty())
         ++numPendingThunkTargets;
       thunkInfo.pendingBranches.insert(&r);
+      branchesToProcess.emplace_back(isec, &r);
     }
   }
 
-  llvm::erase_if(branchesToProcess, [&](auto &tuple) {
-    auto [callerIsec, r, thunkKey] = tuple;
+  llvm::erase_if(branchesToProcess, [&](auto &pair) {
+    auto [callerIsec, r] = pair;
     bool targetInRange = isTargetKnownInRange(*callerIsec, *r);
-    if (targetInRange || getThunkInRange(*callerIsec, *r))
-      markBranchAsResolved(thunkMap[thunkKey], r);
+    auto *funcSym = cast<Symbol *>(r->referent);
+    auto &thunkInfo = thunkMap[{funcSym, r->addend}];
+    if (targetInRange || getThunkInRange(*callerIsec, *r, thunkInfo))
+      markBranchAsResolved(r, thunkInfo);
     return targetInRange;
   });
 
 #ifndef NDEBUG
   DenseSet<ThunkKey, ThunkMapKeyInfo> branchTargets;
-  for (auto [callerIsec, r, thunkKey] : branchesToProcess)
-    if (!getThunkInRange(*callerIsec, *r))
+  for (auto [callerIsec, r] : branchesToProcess) {
+    auto *funcSym = cast<Symbol *>(r->referent);
+    ThunkKey thunkKey{funcSym, r->addend};
+    auto &thunkInfo = thunkMap[thunkKey];
+    if (!getThunkInRange(*callerIsec, *r, thunkInfo))
       branchTargets.insert(thunkKey);
+  }
   assert(numPendingThunkTargets == branchTargets.size());
 #endif
 
@@ -335,17 +338,19 @@ void TextOutputSection::finalize() {
     updateBranchTargetToThunk(*r, thunk);
   }
 
-  for (auto [isec, r, thunkKey] : branchesToProcess) {
+  for (auto [isec, r] : branchesToProcess) {
+    auto *funcSym = cast<Symbol *>(r->referent);
+    auto &thunkInfo = thunkMap[{funcSym, r->addend}];
 #ifndef NDEBUG
-    markBranchAsResolved(thunkMap[thunkKey], r);
+    markBranchAsResolved(r, thunkInfo);
 #endif
     if (isTargetStubsAndInRange(*isec, *r, estimatedStubsEnd))
       continue;
-    if (auto *thunk = getThunkInRange(*isec, *r)) {
+    if (auto *thunk = getThunkInRange(*isec, *r, thunkInfo)) {
       updateBranchTargetToThunk(*r, thunk);
       continue;
     }
-    createThunk(*isec, *r);
+    createThunk(*isec, *r, thunkInfo);
   }
   assert(numPendingThunkTargets == 0);
 

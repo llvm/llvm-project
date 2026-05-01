@@ -109,12 +109,13 @@ private:
                             const Relocation &r) const;
   /// If there exists a thunk in range of the target in \p r, \return that
   /// thunk.
-  Defined *getThunkInRange(const ConcatInputSection &isec,
-                           const Relocation &r) const;
+  Defined *getThunkInRange(const ConcatInputSection &isec, const Relocation &r,
+                           const ThunkInfo &thunkInfo) const;
   /// Update \p r to target \p thunk which is guaranteed to be in range.
   void updateBranchTargetToThunk(Relocation &r, Defined *thunk);
   /// Create a new thunk and update \p r to target the new thunk.
-  void createThunk(const ConcatInputSection &isec, Relocation &r);
+  void createThunk(const ConcatInputSection &isec, Relocation &r,
+                   ThunkInfo &thunkInfo);
   /// \return true if the target in \p r is in __stubs or __objc_stubs and in
   /// range from the location in \p isec. \p estimatedStubsEnd is the estimated
   /// VA of the end of the last stubs section.
@@ -123,7 +124,7 @@ private:
                                uint64_t estimatedStubsEnd) const;
   /// Mark the branch at \p r as resolved and possibly decrement
   /// numPendingThunkTargets.
-  void markBranchAsResolved(ThunkInfo &thunkInfo, const Relocation *r);
+  void markBranchAsResolved(const Relocation *r, ThunkInfo &thunkInfo);
   /// The number of relocations updated to point to thunks.
   size_t thunkCallCount = 0;
   /// The number of new thunks that could be created from our current list of
