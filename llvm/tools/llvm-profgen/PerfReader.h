@@ -69,9 +69,8 @@ enum PerfFormat {
 // The type of perfscript content.
 enum PerfContent {
   UnknownContent = 0,
-  LBR = 1,         // Only LBR sample.
-  LBRStack = 2,    // Hybrid sample including call stack and LBR stack.
-  AggLBRStack = 3, // Pre-aggregated hybrid sample.
+  LBR = 1,      // Only LBR sample.
+  LBRStack = 2, // Hybrid sample including call stack and LBR stack.
 };
 
 struct PerfInputFile {
@@ -632,15 +631,9 @@ public:
   // receiving signals.
   static SmallVector<CleanupInstaller, 2> TempFileCleanups;
 
-  void setIsPreAggregated(bool V) { IsPreAggregated = V; }
-
-  // Check whether a given line is LBR sample
-  bool isLBRSample(StringRef Line, bool CheckLineStart);
-
 protected:
   // Check whether a given line is LBR sample
-  static bool isLBRSample(StringRef Line, bool CheckLineStart,
-                          bool IsPreAggregated);
+  static bool isLBRSample(StringRef Line, bool CheckLineStart);
   // Check whether a given line is MMAP event
   static bool isMMapEvent(StringRef Line);
   // Update base address based on mmap events
@@ -683,8 +676,6 @@ protected:
   std::set<uint64_t> InvalidReturnAddresses;
   // PID for the process of interest
   std::optional<int32_t> PIDFilter;
-  // Whether the input is pre-aggregated with [buildid:]addr format.
-  bool IsPreAggregated = false;
 };
 
 /*
