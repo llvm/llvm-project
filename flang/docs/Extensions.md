@@ -527,11 +527,11 @@ end program
 * Default exponent of zero, e.g. `3.14159E`, on a READ from a
   fixed-width input field.  Includes the case with only an
   exponent letter for compatibility with other compilers.
-* Relax some restriction to make `C_LOC` more like `LOC` for
-  compatibility with legacy code that needs updated. This is
+* Relax some restrictions to make `C_LOC` more like `LOC` for
+  compatibility with legacy code that should be fixed. This is
   is unsafe and can be used to create aliases that the compiler
-  does not know about. Loactions obtained this way should be
-  passed directly to C code. 
+  does not know about. Locations obtained this way should be
+  passed directly to C code. This could be removed at any time.
   [-frelaxed-c-loc]
 
 ### Extensions and legacy features deliberately not supported
