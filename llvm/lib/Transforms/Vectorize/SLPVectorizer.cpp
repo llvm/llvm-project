@@ -20072,11 +20072,20 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
   // We suppose it is better to ignore instruction, which do not form splats,
   // are not vectorized/not extractelements (these instructions will be handled
   // by extractelements processing) or may form vector node in future.
-  auto MightBeIgnored = [=](Value *V) {
+  // Cache results - each V in VL is queried up to 3 times (direct +
+  // NeighborMightBeIgnored from both neighbors), and areAllUsersVectorized
+  // walks each instruction's user list.
+  SmallDenseMap<Value *, bool> MightBeIgnoredCache;
+  auto MightBeIgnored = [=, &MightBeIgnoredCache](Value *V) {
+    auto [It, Inserted] = MightBeIgnoredCache.try_emplace(V);
+    if (!Inserted)
+      return It->second;
     auto *I = dyn_cast<Instruction>(V);
-    return I && !IsSplatOrUndefs && !isVectorized(I) &&
-           !isVectorLikeInstWithConstOps(I) &&
-           !areAllUsersVectorized(I, UserIgnoreList) && isSimple(I);
+    bool Res = I && !IsSplatOrUndefs && !isVectorized(I) &&
+               !isVectorLikeInstWithConstOps(I) &&
+               !areAllUsersVectorized(I, UserIgnoreList) && isSimple(I);
+    It->second = Res;
+    return Res;
   };
   // Check that the neighbor instruction may form a full vector node with the
   // current instruction V. It is possible, if they have same/alternate opcode
