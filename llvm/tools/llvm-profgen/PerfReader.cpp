@@ -365,11 +365,9 @@ PerfReaderBase::create(ProfiledBinary *Binary, PerfInputFile &PerfInput,
 
   PerfInput.Content =
       PerfScriptReader::checkPerfScriptType(PerfInput.InputFile);
-  if (PerfInput.Content == PerfContent::LBRStack ||
-      PerfInput.Content == PerfContent::AggLBRStack) {
-    auto *Reader = new HybridPerfReader(Binary, PerfInput.InputFile, PIDFilter);
-    Reader->setIsPreAggregated(PerfInput.Content == PerfContent::AggLBRStack);
-    PerfReader.reset(Reader);
+  if (PerfInput.Content == PerfContent::LBRStack) {
+    PerfReader.reset(
+        new HybridPerfReader(Binary, PerfInput.InputFile, PIDFilter));
   } else if (PerfInput.Content == PerfContent::LBR) {
     PerfReader.reset(new LBRPerfReader(Binary, PerfInput.InputFile, PIDFilter));
   } else {
@@ -1202,9 +1200,8 @@ PerfContent PerfScriptReader::checkPerfScriptType(StringRef FileName) {
   TraceStream TraceIt(FileName);
   uint64_t FrameAddr = 0;
   while (!TraceIt.isAtEoF()) {
-    // Skip the aggregated count and detect pre-aggregated input.
-    bool HasAggCount = !TraceIt.getCurrentLine().getAsInteger(10, FrameAddr);
-    if (HasAggCount)
+    // Skip the aggregated count
+    if (!TraceIt.getCurrentLine().getAsInteger(10, FrameAddr))
       TraceIt.advance();
 
     // Detect sample with call stack
@@ -1217,7 +1214,7 @@ PerfContent PerfScriptReader::checkPerfScriptType(StringRef FileName) {
     if (!TraceIt.isAtEoF()) {
       if (isLBRSample(TraceIt.getCurrentLine(), false)) {
         if (Count > 0)
-          return HasAggCount ? PerfContent::AggLBRStack : PerfContent::LBRStack;
+          return PerfContent::LBRStack;
         else
           return PerfContent::LBR;
       }
