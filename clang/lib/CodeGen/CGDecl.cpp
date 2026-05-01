@@ -1531,7 +1531,7 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
          ((Ty.isPODType(getContext()) || BaseTy->isObjCObjectPointerType() ||
            // If HLSL, check if it's a constant initializer anyway because
            // POD-ness will no longer be true for user defined structs
-           // (since they cannot have constructors or a destructor).
+           // (since they do not have constructors).
            (getLangOpts().HLSL && BaseTy->isRecordType())) &&
           D.getInit()->isConstantInitializer(getContext())))) {
 

@@ -16095,7 +16095,7 @@ ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
   if (getLangOpts().CPlusPlus) {
     // Otherwise, build an overloaded op if either expression is type-dependent
     // or has an overloadable type.
-    // In HLSL, user-defined structs/classes do not have ctors, dtors or
+    // In HLSL, user-defined structs/classes do not have ctors or
     // overloadable operators.
     QualType LHSTy = LHSExpr->getType();
     QualType RHSTy = RHSExpr->getType();

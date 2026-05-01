@@ -5563,9 +5563,9 @@ bool SemaHLSL::ActOnUninitializedVarDecl(VarDecl *VD) {
   }
 
   // User-defined structs/classes do not have constructors.
-  // When declared at the a scope, they are part of the constant buffer
+  // When declared at a global scope, they are part of the constant buffer
   // and should not be initialized by the compiler.
-  // When declated at a local scope, they are  by default not initialized.
+  // When declared at a local scope, they are not initialized.
   // Also applies to arrays of user-defined structs/classes.
   const Type *Ty = VD->getType()->getUnqualifiedDesugaredType();
   while (Ty->isArrayType())
