@@ -1,6 +1,4 @@
 .. title:: clang-tidy - cppcoreguidelines-noexcept-destructor
-.. meta::
-   :http-equiv=refresh: 5;URL=../performance/noexcept-destructor.html
 
 cppcoreguidelines-noexcept-destructor
 =====================================

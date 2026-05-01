@@ -517,8 +517,6 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case VPInstruction::ComputeReductionResult:
   case VPInstruction::FirstActiveLane:
   case VPInstruction::LastActiveLane:
-  case VPInstruction::SLPLoad:
-  case VPInstruction::SLPStore:
   case VPInstruction::ExtractLane:
   case VPInstruction::ExtractLastActive:
     // Cannot determine the number of operands from the opcode.
@@ -1257,6 +1255,15 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     return Ctx.TTI.getIndexedVectorInstrCostFromEnd(Instruction::ExtractElement,
                                                     VecTy, Ctx.CostKind, 0);
   }
+  case Instruction::FCmp:
+  case Instruction::ICmp:
+    // FIXME: We don't handle scalar compares here yet. Scalar compares used for
+    // the loop exit condition are handled by the legacy cost model, but other
+    // scalar compares (e.g. in the middle block deciding whether to execute the
+    // scalar epilogue) aren't accounted for.
+    if (vputils::onlyFirstLaneUsed(this))
+      return 0;
+    return getCostForRecipeWithOpcode(getOpcode(), VF, Ctx);
   case VPInstruction::ExtractPenultimateElement:
     if (VF == ElementCount::getScalable(1))
       return InstructionCost::getInvalid();
@@ -1408,6 +1415,7 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::BranchOnCount:
   case VPInstruction::BranchOnCond:
+  case VPInstruction::BranchOnTwoConds:
   case VPInstruction::Broadcast:
   case VPInstruction::ReductionStartVector:
     return true;
@@ -1468,12 +1476,6 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
   switch (getOpcode()) {
   case VPInstruction::Not:
     O << "not";
-    break;
-  case VPInstruction::SLPLoad:
-    O << "combined load";
-    break;
-  case VPInstruction::SLPStore:
-    O << "combined store";
     break;
   case VPInstruction::ActiveLaneMask:
     O << "active lane mask";
@@ -2529,23 +2531,6 @@ bool VPWidenIntOrFpInductionRecipe::isCanonical() const {
   return match(getStartValue(), m_ZeroInt()) &&
          match(getStepValue(), m_One()) &&
          getScalarType() == getRegion()->getCanonicalIVType();
-}
-
-void VPDerivedIVRecipe::execute(VPTransformState &State) {
-  assert(!State.Lane && "VPDerivedIVRecipe being replicated.");
-
-  // Fast-math-flags propagate from the original induction instruction.
-  IRBuilder<>::FastMathFlagGuard FMFG(State.Builder);
-  if (FPBinOp)
-    State.Builder.setFastMathFlags(FPBinOp->getFastMathFlags());
-
-  Value *Step = State.get(getStepValue(), VPLane(0));
-  Value *Index = State.get(getOperand(1), VPLane(0));
-  Value *DerivedIV = emitTransformedIndex(
-      State.Builder, Index, getStartValue()->getLiveInIRValue(), Step, Kind,
-      cast_if_present<BinaryOperator>(FPBinOp));
-  DerivedIV->setName(Name);
-  State.set(this, DerivedIV, VPLane(0));
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

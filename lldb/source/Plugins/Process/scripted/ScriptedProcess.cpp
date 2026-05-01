@@ -265,7 +265,7 @@ size_t ScriptedProcess::DoWriteMemory(lldb::addr_t vm_addr, const void *buf,
 Status ScriptedProcess::EnableBreakpointSite(BreakpointSite *bp_site) {
   assert(bp_site != nullptr);
 
-  if (bp_site->IsEnabled()) {
+  if (IsBreakpointSitePhysicallyEnabled(*bp_site)) {
     return {};
   }
 
