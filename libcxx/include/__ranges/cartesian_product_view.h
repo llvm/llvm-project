@@ -335,7 +335,11 @@ public:
   }
 
   [[nodiscard]] friend _LIBCPP_HIDE_FROM_ABI constexpr auto
-  iter_move(const __iterator& __i) noexcept(__iter_move_noexcept_impl(__i)) {
+  iter_move(const __iterator& __i) noexcept(
+      noexcept(ranges::iter_move(std::declval<const iterator_t<__maybe_const<_IsConst, _First>>&>())) &&
+      (noexcept(ranges::iter_move(std::declval<const iterator_t<__maybe_const<_IsConst, _Vs>>&>())) && ...) &&
+      is_nothrow_move_constructible_v<range_rvalue_reference_t<__maybe_const<_IsConst, _First>>> &&
+      (is_nothrow_move_constructible_v<range_rvalue_reference_t<__maybe_const<_IsConst, _Vs>>> && ...)) {
     return __tuple_transform(ranges::iter_move, __i.__current_);
   }
 
@@ -448,20 +452,6 @@ private:
 
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator(_Parent& __parent, _MultiIter __current)
       : __parent_(std::addressof(__parent)), __current_(std::move(__current)) {}
-
-  template <auto _Np = sizeof...(_Vs)>
-  _LIBCPP_HIDE_FROM_ABI static constexpr bool __iter_move_noexcept_impl(const __iterator& __i) {
-    if (not noexcept(std::ranges::iter_move(std::get<_Np>(__i.__current_))))
-      return false;
-    if constexpr (_Np > 0)
-      return __iter_move_noexcept_impl<_Np - 1>(__i);
-
-    return std::is_nothrow_move_constructible_v<
-               std::ranges::range_rvalue_reference_t<__maybe_const<_IsConst, _First>>> and
-           (std::is_nothrow_move_constructible_v<
-                std::ranges::range_rvalue_reference_t<__maybe_const<_IsConst, _Vs>>> and
-            ...);
-  }
 
   template <auto _Ip = sizeof...(_Vs)>
   _LIBCPP_HIDE_FROM_ABI static constexpr bool __iter_swap_noexcept_impl(const __iterator& __l, const __iterator& __r) {
