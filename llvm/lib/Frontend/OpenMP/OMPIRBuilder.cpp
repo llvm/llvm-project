@@ -7602,6 +7602,34 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createSingle(
   return Builder.saveIP();
 }
 
+OpenMPIRBuilder::InsertPointOrErrorTy
+OpenMPIRBuilder::createScope(const LocationDescription &Loc,
+                             BodyGenCallbackTy BodyGenCB,
+                             FinalizeCallbackTy FiniCB, bool IsNowait) {
+
+  if (!updateToLocation(Loc))
+    return Loc.IP;
+
+  // All threads execute the scope body — no conditional entry.
+  InsertPointOrErrorTy AfterIP = EmitOMPInlinedRegion(
+      Directive::OMPD_scope, /*EntryCall=*/nullptr, /*ExitCall=*/nullptr,
+      BodyGenCB, FiniCB, /*Conditional=*/false, /*HasFinalize=*/true,
+      /*IsCancellable=*/false);
+  if (!AfterIP)
+    return AfterIP.takeError();
+
+  Builder.restoreIP(*AfterIP);
+  if (!IsNowait) {
+    AfterIP = createBarrier(LocationDescription(Builder.saveIP(), Loc.DL),
+                            omp::Directive::OMPD_unknown,
+                            /*ForceSimpleCall=*/false,
+                            /*CheckCancelFlag=*/false);
+    if (!AfterIP)
+      return AfterIP.takeError();
+  }
+  return Builder.saveIP();
+}
+
 OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createCritical(
     const LocationDescription &Loc, BodyGenCallbackTy BodyGenCB,
     FinalizeCallbackTy FiniCB, StringRef CriticalName, Value *HintInst) {
