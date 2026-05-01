@@ -18,36 +18,36 @@ using namespace mlir;
 
 namespace {
 
-// Subgroup size is typically 16 for Intel GPUs
+// Subgroup size is typically 16 for Intel GPUs.
+// TODO: make this uArch-based.
 constexpr int64_t SUBGROUP_SIZE = 16;
 
-/// Helper to compute array_length from FCD and subgroup size
+/// Helper to compute array_length from FCD and subgroup size.
 static int64_t computeArrayLength(int64_t fcdSize) {
   if (fcdSize <= SUBGROUP_SIZE)
     return 1;
   return fcdSize / SUBGROUP_SIZE;
 }
 
-/// Helper to compute new FCD after introducing array_length
-static int64_t computeNewFCD(int64_t oldFCD, int64_t arrayLength) {
-  return oldFCD / arrayLength;
-}
-
-/// Check if a load_nd or prefetch_nd operation needs optimization
+/// Check if a 2D `xegpu.create_nd_tdesc` can be optimized into an
+/// array-length-enabled descriptor. Applies only when the FCD is an integer
+/// multiple of the subgroup size larger than the subgroup size itself and the
+/// tensor desc does not already carry an array_length.
 static bool needsOptimization(xegpu::TensorDescType tdescType) {
   auto shape = tdescType.getShape();
   if (shape.size() != 2)
-    return false; // Only 2D tensors
+    return false;
 
   int64_t fcd = shape[1];
-  if (fcd <= SUBGROUP_SIZE || fcd % SUBGROUP_SIZE != 0)
-    return false; // FCD must be > subgroup_size and evenly divisible
+  if (fcd % SUBGROUP_SIZE != 0)
+    return false;
 
-  return tdescType.getArrayLength() == 1; // Skip if already optimized
+  return fcd > SUBGROUP_SIZE && tdescType.getArrayLength() == 1;
 }
 
-/// Pattern to rewrite xegpu.create_nd_tdesc operations using simple
-/// RewritePattern
+/// Rewrite `xegpu.create_nd_tdesc` to fold an array_length attribute into the
+/// resulting tensor descriptor type. Only applies when the source is a static
+/// memref; dynamic-shape sources are left unchanged.
 class OptimizeCreateNdDescOp : public OpRewritePattern<xegpu::CreateNdDescOp> {
 public:
   using OpRewritePattern<xegpu::CreateNdDescOp>::OpRewritePattern;
@@ -58,36 +58,23 @@ public:
     if (!needsOptimization(tdescType))
       return failure();
 
+    // Only static memref sources are supported for now.
+    auto memrefSource =
+        dyn_cast<TypedValue<MemRefType>>(op.getSource());
+    if (!memrefSource || !memrefSource.getType().hasStaticShape())
+      return failure();
+
     auto shape = tdescType.getShape();
-    int64_t oldFCD = shape[1];
-    int64_t arrayLength = computeArrayLength(oldFCD);
-    int64_t newFCD = computeNewFCD(oldFCD, arrayLength);
+    int64_t arrayLength = computeArrayLength(shape[1]);
+    SmallVector<int64_t> newShape = {shape[0], shape[1] / arrayLength};
 
-    // Build new shape with updated FCD
-    SmallVector<int64_t> newShape = {shape[0], newFCD};
-
-    // Create new TensorDescType with array_length
     auto newTdescType = xegpu::TensorDescType::get(
         newShape, tdescType.getElementType(), arrayLength,
         tdescType.getBoundaryCheck(), tdescType.getMemorySpace(),
         tdescType.getLayout());
 
-    // Check if we have a simple static memref source
-    Value source = op.getSource();
-    auto memrefType = dyn_cast<MemRefType>(source.getType());
-    if (!memrefType || !memrefType.hasStaticShape()) {
-      return failure();
-    }
-
-    // Cast to TypedValue<MemRefType> for the builder
-    auto memrefSource = cast<TypedValue<MemRefType>>(source);
-
-    // Build operation state and use the simple builder
-    OperationState state(op.getLoc(),
-                         xegpu::CreateNdDescOp::getOperationName());
-    xegpu::CreateNdDescOp::build(rewriter, state, newTdescType, memrefSource);
-    auto newOp = cast<xegpu::CreateNdDescOp>(rewriter.create(state));
-
+    auto newOp = xegpu::CreateNdDescOp::create(rewriter, op.getLoc(),
+                                               newTdescType, memrefSource);
     rewriter.replaceOp(op, newOp.getResult());
     return success();
   }
@@ -133,22 +120,6 @@ public:
 
     rewriter.replaceOp(op, newLoadOp.getResult());
     return success();
-  }
-};
-
-/// Pattern to rewrite xegpu.prefetch_nd operations
-/// Note: PrefetchNdOp doesn't require transformation - it automatically uses
-/// the optimized tensor descriptor created by CreateNdDescOp
-class OptimizePrefetchNdOp : public OpRewritePattern<xegpu::PrefetchNdOp> {
-public:
-  using OpRewritePattern<xegpu::PrefetchNdOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(xegpu::PrefetchNdOp op,
-                                PatternRewriter &rewriter) const override {
-    // PrefetchNdOp doesn't need rewriting - it just uses the tensor descriptor
-    // as-is. After CreateNdDescOp optimizes the descriptor, PrefetchNdOp
-    // automatically uses the optimized version.
-    return failure();
   }
 };
 
@@ -213,6 +184,6 @@ public:
 
 void xegpu::populateXeGPUArrayLengthOptimizationPatterns(
     RewritePatternSet &patterns) {
-  patterns.add<OptimizeCreateNdDescOp, OptimizeLoadNdOp, OptimizePrefetchNdOp,
+  patterns.add<OptimizeCreateNdDescOp, OptimizeLoadNdOp,
                UpdateExtractStridedSliceOp>(patterns.getContext());
 }
