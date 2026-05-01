@@ -650,8 +650,8 @@ public:
   /// of FP operations.
   bool useOrderedReductions(const RecurrenceDescriptor &RdxDesc) const;
 
-  /// Returns true if the target machine can represent \p I as a masked load
-  /// or store.
+  /// Returns true if the target machine supports masked loads or stores
+  /// for \p I's data type and alignment.
   bool isLegalMaskedLoadOrStore(Instruction *I, ElementCount VF) const;
 
   /// Returns true if the target machine can represent \p V as a masked gather
