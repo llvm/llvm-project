@@ -29886,20 +29886,18 @@ static SDValue LowerMINMAX(SDValue Op, const X86Subtarget &Subtarget,
 static SDValue LowerMINMAX_REDUCE(SDValue Op, const X86Subtarget &Subtarget,
                                   SelectionDAG &DAG) {
   EVT ExtractVT = Op.getValueType();
-  if (ExtractVT != MVT::i16 && ExtractVT != MVT::i8)
-    return SDValue();
-
-  // Check for SMAX/SMIN/UMAX/UMIN horizontal reduction patterns.
-  ISD::NodeType BinOp = ISD::getVecReduceBaseOpcode(Op.getOpcode());
+  if (!Subtarget.hasSSE41() || (ExtractVT != MVT::i16 && ExtractVT != MVT::i8))
+    return LowerVECREDUCE(Op, Subtarget, DAG);
 
   SDValue Src = Op.getOperand(0);
   EVT SrcVT = Src.getValueType();
   EVT SrcSVT = SrcVT.getScalarType();
   if (SrcSVT != ExtractVT || (SrcVT.getSizeInBits() % 128) != 0)
-    return SDValue();
+    return LowerVECREDUCE(Op, Subtarget, DAG);
 
   SDLoc DL(Op);
   SDValue MinPos = Src;
+  ISD::NodeType BinOp = ISD::getVecReduceBaseOpcode(Op.getOpcode());
 
   // First, reduce the source down to 128-bit, applying BinOp to lo/hi.
   while (SrcVT.getSizeInBits() > 128) {
@@ -29911,20 +29909,6 @@ static SDValue LowerMINMAX_REDUCE(SDValue Op, const X86Subtarget &Subtarget,
   assert(((SrcVT == MVT::v8i16 && ExtractVT == MVT::i16) ||
           (SrcVT == MVT::v16i8 && ExtractVT == MVT::i8)) &&
          "Unexpected value type");
-
-  // Without SSE41, we need to unroll.
-  if (!Subtarget.hasSSE41()) {
-    unsigned NumSrcElts = SrcVT.getVectorNumElements();
-    for (unsigned NumElts = NumSrcElts; NumElts != 1; NumElts /= 2) {
-      SmallVector<int, 16> Mask(NumSrcElts, -1);
-      std::iota(Mask.begin(), Mask.begin() + (NumElts / 2), NumElts / 2);
-      SDValue Upper =
-          DAG.getVectorShuffle(SrcVT, DL, MinPos, DAG.getUNDEF(SrcVT), Mask);
-      MinPos = DAG.getNode(BinOp, DL, SrcVT, MinPos, Upper);
-    }
-    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ExtractVT, MinPos,
-                       DAG.getVectorIdxConstant(0, DL));
-  }
 
   // PHMINPOSUW applies to UMIN(v8i16), for SMIN/SMAX/UMAX we must apply a mask
   // to flip the value accordingly.
