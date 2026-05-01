@@ -1180,6 +1180,29 @@ filled with `import`s from the generated files to enable `import
 mlir.dialects.<dialect-namespace>` in Python.
 
 
+#### Customizing Type Annotations
+
+The generated `__init__` methods include type annotations for operand and
+attribute arguments. Built-in mappings cover standard MLIR types and attributes,
+but dialects can extend them by adding definitions from
+[`PythonBindings.td`](https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/Bindings/Python/PythonBindings.td)
+to the same `.td` file passed to `mlir-tblgen -gen-python-op-bindings`:
+
+```tablegen
+include "mlir/Bindings/Python/PythonBindings.td"
+
+// Operand/result annotations: maps a C++ type from the ODS type constraint's
+// cppClassName to a Python type annotation, e.g.
+// `ir.Value` -> `ir.Value[my_dialect.MyTensorType]`.
+def : PythonTypeName<"::my_dialect::MyTensorType",
+                     "my_dialect.MyTensorType">;
+
+// Attribute annotations: maps a TableGen attribute def name to the Python
+// type accepted by its AttrBuilder, e.g.
+// `Union[Any, ir.Attribute]` -> `Union[my_dialect.MyValue, ir.Attribute]`.
+def : PythonAttrType<"MyCustomAttr", "my_dialect.MyValue">;
+```
+
 ### Attributes and Types
 
 Dialect attributes and types are provided in Python as subclasses of the
@@ -1293,7 +1316,42 @@ The following sections outline how each of these can be implemented.
 
 ### Dialects
 
-Dialects can be defined through the IRDL dialect bindings in Python.
+The `mlir.dialects.ext` module provides support for defining Python-defined dialects.
+Users can define a new dialect (e.g., `MyDialect`) by subclassing the `Dialect` class,
+and define operations in that dialect by subclassing `MyDialect.Operation`.
+The dialect can then be loaded into MLIR by calling `MyDialect.load()` within a valid `Context`.
+After loading, these operations can be used just like other `OpView` subclasses.
+
+The following example shows how to define a dialect and construct IR using the newly defined ops.
+
+```python
+class MyInt(Dialect, name="myint"):
+    pass
+
+class ConstantOp(MyInt.Operation, name="constant"):
+    value: IntegerAttr
+    cst: Result[IntegerType[32]] = infer_result()
+
+class AddOp(MyInt.Operation, name="add"):
+    lhs: Operand[IntegerType[32]]
+    rhs: Operand[IntegerType[32]]
+    res: Result[IntegerType[32]] = infer_result()
+
+# The code below requires an available MLIR context and location.
+
+MyInt.load()
+
+module = Module.create()
+i32 = IntegerType.get(32)
+with InsertionPoint(module.body):
+    two = ConstantOp(IntegerAttr.get(i32, 2))
+    three = ConstantOp(IntegerAttr.get(i32, 3))
+    add1 = AddOp(two, three)
+    add2 = AddOp(add1, two)
+    add3 = AddOp(add2, three)
+```
+
+Dialects can also be defined through the IRDL dialect bindings in Python.
 The IRDL bindings offer a `load_dialects` function that
 converts an MLIR module containing `irdl.dialect` ops into MLIR dialects.
 For further details, see the documentation of [the IRDL dialect](../Dialects/IRDL.md).

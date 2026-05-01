@@ -17,9 +17,8 @@ def fconstant_to_constant : GICombineRule<
          [{ return matchFConstantToConstant(*${root}, MRI); }]),
   (apply [{ applyFConstantToConstant(*${root}); }])>;
 
-def icmp_redundant_trunc_matchdata : GIDefMatchData<"Register">;
 def icmp_redundant_trunc : GICombineRule<
-  (defs root:$root, icmp_redundant_trunc_matchdata:$matchinfo),
+  (defs root:$root, register_matchinfo:$matchinfo),
   (match (G_ICMP $dst, $tst, $src1, $src2):$root,
          [{ return matchICmpRedundantTrunc(*${root}, MRI, Helper.getValueTracking(), ${matchinfo}); }]),
   (apply [{ applyICmpRedundantTrunc(*${root}, MRI, B, Observer, ${matchinfo}); }])>;
@@ -95,35 +94,35 @@ def rev : GICombineRule<
   (defs root:$root, shuffle_matchdata:$matchinfo),
   (match (wip_match_opcode G_SHUFFLE_VECTOR):$root,
          [{ return matchREV(*${root}, MRI, ${matchinfo}); }]),
-  (apply [{ applyShuffleVectorPseudo(*${root}, ${matchinfo}); }])
+  (apply [{ applyShuffleVectorPseudo(*${root}, MRI, ${matchinfo}); }])
 >;
 
 def zip : GICombineRule<
   (defs root:$root, shuffle_matchdata:$matchinfo),
   (match (wip_match_opcode G_SHUFFLE_VECTOR):$root,
          [{ return matchZip(*${root}, MRI, ${matchinfo}); }]),
-  (apply [{ applyShuffleVectorPseudo(*${root}, ${matchinfo}); }])
+  (apply [{ applyShuffleVectorPseudo(*${root}, MRI, ${matchinfo}); }])
 >;
 
 def uzp : GICombineRule<
   (defs root:$root, shuffle_matchdata:$matchinfo),
   (match (wip_match_opcode G_SHUFFLE_VECTOR):$root,
          [{ return matchUZP(*${root}, MRI, ${matchinfo}); }]),
-  (apply [{ applyShuffleVectorPseudo(*${root}, ${matchinfo}); }])
+  (apply [{ applyShuffleVectorPseudo(*${root}, MRI, ${matchinfo}); }])
 >;
 
 def dup: GICombineRule <
   (defs root:$root, shuffle_matchdata:$matchinfo),
   (match (wip_match_opcode G_SHUFFLE_VECTOR):$root,
          [{ return matchDup(*${root}, MRI, ${matchinfo}); }]),
-  (apply [{ applyShuffleVectorPseudo(*${root}, ${matchinfo}); }])
+  (apply [{ applyShuffleVectorPseudo(*${root}, MRI, ${matchinfo}); }])
 >;
 
 def trn : GICombineRule<
   (defs root:$root, shuffle_matchdata:$matchinfo),
   (match (wip_match_opcode G_SHUFFLE_VECTOR):$root,
          [{ return matchTRN(*${root}, MRI, ${matchinfo}); }]),
-  (apply [{ applyShuffleVectorPseudo(*${root}, ${matchinfo}); }])
+  (apply [{ applyShuffleVectorPseudo(*${root}, MRI, ${matchinfo}); }])
 >;
 
 def ext: GICombineRule <
@@ -157,9 +156,8 @@ def shuf_to_ins: GICombineRule <
   (apply [{ applyINS(*${root}, MRI, B, ${matchinfo}); }])
 >;
 
-def vashr_vlshr_imm_matchdata : GIDefMatchData<"int64_t">;
 def vashr_vlshr_imm : GICombineRule<
-  (defs root:$root, vashr_vlshr_imm_matchdata:$matchinfo),
+  (defs root:$root, int64_matchinfo:$matchinfo),
   (match (wip_match_opcode G_ASHR, G_LSHR):$root,
           [{ return matchVAshrLshrImm(*${root}, MRI, ${matchinfo}); }]),
   (apply [{ applyVAshrLshrImm(*${root}, MRI, ${matchinfo}); }])
@@ -242,6 +240,16 @@ def extmultomull : GICombineRule<
   (apply [{ applyExtMulToMULL(*${root}, MRI, B, Observer, ${matchinfo}); }])
 >;
 
+// The mid end will reassociate sub(sub(x, m1), m2) to sub(x, add(m1, m2))
+// This reassociates it back to allow the creation of more mls instructions.
+def subaddmulreassoc : GICombineRule<
+  (defs root:$dst),
+  (match (G_ADD $tmp, $src1, $src2):$sub,
+         (G_SUB $dst, $src3, $tmp):$root,
+         [{ return matchSubAddMulReassoc(${src1}.getReg(), ${src2}.getReg(),
+                                         ${tmp}.getReg(), ${src3}.getReg(), MRI); }]),
+  (apply [{ applySubAddMulReassoc(*${root}, *${sub}, MRI, B, Observer); }])>;
+
 def lower_mulv2s64 : GICombineRule<
   (defs root:$root),
   (match (G_MUL $dst, $src1, $src2):$root,
@@ -272,9 +280,8 @@ def lower_vector_fcmp : GICombineRule<
     [{ return matchLowerVectorFCMP(*${root}, MRI, B); }]),
   (apply [{ applyLowerVectorFCMP(*${root}, MRI, B); }])>;
 
-def form_truncstore_matchdata : GIDefMatchData<"Register">;
 def form_truncstore : GICombineRule<
-  (defs root:$root, form_truncstore_matchdata:$matchinfo),
+  (defs root:$root, register_matchinfo:$matchinfo),
   (match (G_STORE $src, $addr):$root,
           [{ return matchFormTruncstore(*${root}, MRI, ${matchinfo}); }]),
   (apply [{ applyFormTruncstore(*${root}, MRI, B, Observer, ${matchinfo}); }])
@@ -308,9 +315,8 @@ def vector_sext_inreg_to_shift : GICombineRule<
   (apply [{ applyVectorSextInReg(*${d}, MRI, B, Observer); }])
 >;
 
-def unmerge_ext_to_unmerge_matchdata : GIDefMatchData<"Register">;
 def unmerge_ext_to_unmerge : GICombineRule<
-  (defs root:$d, unmerge_ext_to_unmerge_matchdata:$matchinfo),
+  (defs root:$d, register_matchinfo:$matchinfo),
   (match (wip_match_opcode G_UNMERGE_VALUES):$d,
           [{ return matchUnmergeExtToUnmerge(*${d}, MRI, ${matchinfo}); }]),
   (apply [{ applyUnmergeExtToUnmerge(*${d}, MRI, B, Observer, ${matchinfo}); }])
@@ -367,6 +373,7 @@ def AArch64PostLegalizerCombiner
                         commute_constant_to_rhs, extract_vec_elt_combines,
                         push_freeze_to_prevent_poison_from_propagating,
                         combine_mul_cmlt, combine_use_vector_truncate,
-                        extmultomull, truncsat_combines, lshr_of_trunc_of_lshr,
+                        extmultomull, subaddmulreassoc, truncsat_combines,
+                        lshr_of_trunc_of_lshr,
                         funnel_shift_from_or_shift_constants_are_legal]> {
 }

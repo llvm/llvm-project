@@ -111,7 +111,7 @@ cir.func @vector_insert_element_test() {
     %7 = cir.const #cir.int<2> : !s32i
     %8 = cir.load %0 : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
     %9 = cir.vec.extract %8[%7 : !s32i] : !cir.vector<4 x !s32i>
-    %10 = cir.binop(add, %9, %6) nsw : !s32i
+    %10 = cir.add nsw %9, %6 : !s32i
     %11 = cir.load %0 : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
     %12 = cir.vec.insert %10, %11[%7 : !s32i] : !cir.vector<4 x !s32i>
     cir.store %12, %0 : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
@@ -130,7 +130,7 @@ cir.func @vector_insert_element_test() {
 // CHECK:    %7 = cir.const #cir.int<2> : !s32i
 // CHECK:    %8 = cir.load %0 : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
 // CHECK:    %9 = cir.vec.extract %8[%7 : !s32i] : !cir.vector<4 x !s32i>
-// CHECK:    %10 = cir.binop(add, %9, %6) nsw : !s32i
+// CHECK:    %10 = cir.add nsw %9, %6 : !s32i
 // CHECK:    %11 = cir.load %0 : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
 // CHECK:    %12 = cir.vec.insert %10, %11[%7 : !s32i] : !cir.vector<4 x !s32i>
 // CHECK:    cir.store %12, %0 : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>

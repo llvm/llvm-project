@@ -742,11 +742,13 @@ bool SemaARM::CheckNeonBuiltinFunctionCall(const TargetInfo &TI,
 
   // For NEON intrinsics which are overloaded on vector element type, validate
   // the immediate which specifies which variant to emit.
-  unsigned ImmArg = TheCall->getNumArgs() - 1;
   if (mask) {
+    unsigned ImmArg = TheCall->getNumArgs() - 1;
     if (SemaRef.BuiltinConstantArg(TheCall, ImmArg, Result))
       return true;
 
+    // FIXME: This is effectively dead code. Change the logic above so that the
+    // following check is actually run.
     TV = Result.getLimitedValue(64);
     if ((TV > 63) || (mask & (1ULL << TV)) == 0)
       return Diag(TheCall->getBeginLoc(), diag::err_invalid_neon_type_code)
@@ -1158,11 +1160,14 @@ bool SemaARM::CheckAArch64BuiltinFunctionCall(const TargetInfo &TI,
     return BuiltinARMSpecialReg(BuiltinID, TheCall, 0, 5, true);
 
   // Only check the valid encoding range. Any constant in this range would be
-  // converted to a register of the form S1_2_C3_C4_5. Let the hardware throw
+  // converted to a register of the form S2_2_C3_C4_5. Let the hardware throw
   // an exception for incorrect registers. This matches MSVC behavior.
   if (BuiltinID == AArch64::BI_ReadStatusReg ||
-      BuiltinID == AArch64::BI_WriteStatusReg || BuiltinID == AArch64::BI__sys)
-    return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 0x7fff);
+      BuiltinID == AArch64::BI_WriteStatusReg)
+    return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0x4000, 0x7fff);
+
+  if (BuiltinID == AArch64::BI__sys)
+    return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 0x3fff);
 
   if (BuiltinID == AArch64::BI__getReg)
     return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 31);
@@ -1525,7 +1530,8 @@ bool SemaARM::areCompatibleSveTypes(QualType FirstType, QualType SecondType) {
           return BT->getKind() == BuiltinType::SveBool;
         else if (VT->getVectorKind() == VectorKind::SveFixedLengthData)
           return VT->getElementType().getCanonicalType() ==
-                 FirstType->getSveEltType(Context);
+                     FirstType->getSveEltType(Context) &&
+                 BT->getKind() != BuiltinType::SveBool;
         else if (VT->getVectorKind() == VectorKind::Generic)
           return Context.getTypeSize(SecondType) ==
                      getSVETypeSize(Context, BT, IsStreaming) &&
@@ -1740,10 +1746,8 @@ bool SemaARM::checkTargetClonesAttr(
     NewParams.push_back(NewParam);
     HasNonDefault = true;
   }
-  if (!HasNonDefault)
-    return true;
 
-  return false;
+  return !HasNonDefault;
 }
 
 bool SemaARM::checkSVETypeSupport(QualType Ty, SourceLocation Loc,

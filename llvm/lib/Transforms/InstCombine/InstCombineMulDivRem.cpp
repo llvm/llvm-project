@@ -41,6 +41,10 @@
 using namespace llvm;
 using namespace PatternMatch;
 
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+}
+
 /// The specific integer value is used in a context where it is known to be
 /// non-zero.  If this allows us to simplify the computation, do so and return
 /// the new operand, otherwise return null.
@@ -620,8 +624,7 @@ Instruction *InstCombinerImpl::foldFPSignBitOps(BinaryOperator &I) {
   if (match(Op0, m_FAbs(m_Value(X))) && match(Op1, m_FAbs(m_Value(Y))) &&
       (Op0->hasOneUse() || Op1->hasOneUse())) {
     Value *XY = Builder.CreateBinOpFMF(Opcode, X, Y, &I);
-    Value *Fabs =
-        Builder.CreateUnaryIntrinsic(Intrinsic::fabs, XY, &I, I.getName());
+    Value *Fabs = Builder.CreateFAbs(XY, &I, I.getName());
     return replaceInstUsesWith(I, Fabs);
   }
 
@@ -996,20 +999,6 @@ Instruction *InstCombinerImpl::visitFMul(BinaryOperator &I) {
   if (match(Op1, m_SpecificFP(-1.0)))
     return UnaryOperator::CreateFNegFMF(Op0, &I);
 
-  // With no-nans/no-infs:
-  // X * 0.0 --> copysign(0.0, X)
-  // X * -0.0 --> copysign(0.0, -X)
-  const APFloat *FPC;
-  if (match(Op1, m_APFloatAllowPoison(FPC)) && FPC->isZero() &&
-      ((I.hasNoInfs() && isKnownNeverNaN(Op0, SQ.getWithInstruction(&I))) ||
-       isKnownNeverNaN(&I, SQ.getWithInstruction(&I)))) {
-    if (FPC->isNegative())
-      Op0 = Builder.CreateFNegFMF(Op0, &I);
-    CallInst *CopySign = Builder.CreateIntrinsic(Intrinsic::copysign,
-                                                 {I.getType()}, {Op1, Op0}, &I);
-    return replaceInstUsesWith(I, CopySign);
-  }
-
   // -X * C --> X * -C
   Value *X, *Y;
   Constant *C;
@@ -1099,6 +1088,18 @@ Instruction *InstCombinerImpl::visitFMul(BinaryOperator &I) {
     }
     return replaceInstUsesWith(I, Sin);
   }
+
+  // X * ldexp(1.0, Y) -> ldexp(X, Y)
+  if (match(&I, m_AllowReassoc(m_c_FMul(
+                    m_Value(X),
+                    m_AllowReassoc(m_OneUse(m_Intrinsic<Intrinsic::ldexp>(
+                        m_FPOne(), m_Value(Y))))))))
+    return replaceInstUsesWith(
+        I, Builder.CreateIntrinsic(Intrinsic::ldexp,
+                                   {X->getType(), Y->getType()}, {X, Y}, &I));
+
+  if (SimplifyDemandedInstructionFPClass(I))
+    return &I;
 
   return nullptr;
 }
@@ -1619,7 +1620,9 @@ Value *InstCombinerImpl::takeLog2(Value *Op, unsigned Depth, bool AssumeNonZero,
       if (Value *LogY =
               takeLog2(SI->getOperand(2), Depth, AssumeNonZero, DoFold))
         return IfFold([&]() {
-          return Builder.CreateSelect(SI->getOperand(0), LogX, LogY);
+          return Builder.CreateSelect(SI->getOperand(0), LogX, LogY, "",
+                                      ProfcheckDisableMetadataFixes ? nullptr
+                                                                    : SI);
         });
 
   // log2(umin(X, Y)) -> umin(log2(X), log2(Y))

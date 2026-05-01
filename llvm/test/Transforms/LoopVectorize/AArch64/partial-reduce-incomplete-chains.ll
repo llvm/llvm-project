@@ -85,7 +85,7 @@ define i16 @test_incomplete_chain_without_mul(ptr noalias %dst, ptr %A, ptr %B) 
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i8> poison, i8 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i8> [[BROADCAST_SPLATINSERT]], <16 x i8> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext <16 x i8> [[BROADCAST_SPLAT]] to <16 x i16>
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <16 x i16> [[TMP1]], i32 15
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <16 x i16> [[TMP1]], i64 15
 ; CHECK-NEXT:    store i16 [[TMP2]], ptr [[DST]], align 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[B]], align 1
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <16 x i8> poison, i8 [[TMP3]], i64 0
@@ -123,6 +123,170 @@ loop:
 
 exit:
   ret i16 %red.next
+}
+
+; Test that we don't form a partial reduction when the extend is used by both
+; the reduction chain and by a non-multiply binary operation (shift) whose
+; result is subtracted from the reduction.
+define i64 @no_partial_reduce_for_extend_used_by_shl(ptr %src) #0 {
+; CHECK-LABEL: define i64 @no_partial_reduce_for_extend_used_by_shl(
+; CHECK-SAME: ptr [[SRC:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP4:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SRC]], align 4
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = sext <4 x i32> [[BROADCAST_SPLAT]] to <4 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i64> [[TMP1]], [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shl <4 x i64> [[TMP1]], splat (i64 2)
+; CHECK-NEXT:    [[TMP4]] = sub <4 x i64> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], 80
+; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP4]])
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i64 [[TMP9]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %accum = phi i64 [ 0, %entry ], [ %sub, %loop ]
+  %ld = load i32, ptr %src, align 4
+  %ext = sext i32 %ld to i64
+  %add = add i64 %ext, %accum
+  %shl = shl i64 %ext, 2
+  %sub = sub i64 %add, %shl
+  %iv.next = add i32 %iv, 1
+  %cmp = icmp ult i32 %iv, 79
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret i64 %sub
+}
+
+; Same as above but with 'and' instead of 'shl' - any non-multiply binary op
+; using the extend should prevent partial reduction formation.
+define i64 @no_partial_reduce_for_extend_used_by_and(ptr %src) {
+; CHECK-LABEL: define i64 @no_partial_reduce_for_extend_used_by_and(
+; CHECK-SAME: ptr [[SRC:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP4:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SRC]], align 4
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = sext <4 x i32> [[BROADCAST_SPLAT]] to <4 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i64> [[TMP1]], [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and <4 x i64> [[TMP1]], splat (i64 255)
+; CHECK-NEXT:    [[TMP4]] = sub <4 x i64> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], 80
+; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP4]])
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i64 [[TMP6]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %accum = phi i64 [ 0, %entry ], [ %sub, %loop ]
+  %ld = load i32, ptr %src, align 4
+  %ext = sext i32 %ld to i64
+  %add = add i64 %ext, %accum
+  %and = and i64 %ext, 255
+  %sub = sub i64 %add, %and
+  %iv.next = add i32 %iv, 1
+  %cmp = icmp ult i32 %iv, 79
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret i64 %sub
+}
+
+; This test case should be rejected as `%add.const = add i32 %accum, 1` (which
+; is not the exit value), does not have an extended operand.
+define i32 @invalid_operation_after_exit_value(ptr %src) #0 {
+; CHECK-LABEL: define i32 @invalid_operation_after_exit_value(
+; CHECK-SAME: ptr [[SRC:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP10:%.*]] = shl nuw i64 [[TMP0]], 3
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 64, [[TMP10]]
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 3
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 64, [[TMP3]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 64, [[N_MOD_VF]]
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 8 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = add <vscale x 8 x i32> [[VEC_PHI]], splat (i32 1)
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i8>, ptr [[TMP1]], align 1
+; CHECK-NEXT:    [[TMP6:%.*]] = sext <vscale x 8 x i8> [[WIDE_LOAD]] to <vscale x 8 x i32>
+; CHECK-NEXT:    [[TMP7]] = add <vscale x 8 x i32> [[TMP4]], [[TMP6]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP9:%.*]] = call i32 @llvm.vector.reduce.add.nxv8i32(<vscale x 8 x i32> [[TMP7]])
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 64, [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT1:.*]], label %[[SCALAR_PH]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP9]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[EXIT]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[ACCUM:%.*]] = phi i32 [ [[ADD:%.*]], %[[EXIT]] ], [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[ADD_CONST:%.*]] = add i32 [[ACCUM]], 1
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[IV]]
+; CHECK-NEXT:    [[LD:%.*]] = load i8, ptr [[GEP]], align 1
+; CHECK-NEXT:    [[EXT:%.*]] = sext i8 [[LD]] to i32
+; CHECK-NEXT:    [[ADD]] = add i32 [[ADD_CONST]], [[EXT]]
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV_NEXT]], 64
+; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT1]], label %[[EXIT]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK:       [[EXIT1]]:
+; CHECK-NEXT:    [[TMP5:%.*]] = phi i32 [ [[ADD]], %[[EXIT]] ], [ [[TMP9]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    ret i32 [[TMP5]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
+  %accum = phi i32 [ %add, %loop ], [ 0, %entry ]
+  %add.const = add i32 %accum, 1
+  %gep = getelementptr i8, ptr %src, i64 %iv
+  %ld = load i8, ptr %gep, align 1
+  %ext = sext i8 %ld to i32
+  %add = add i32 %add.const, %ext
+  %iv.next = add i64 %iv, 1
+  %cmp = icmp eq i64 %iv.next, 64
+  br i1 %cmp, label %exit, label %loop
+
+exit:
+  ret i32 %add
 }
 
 attributes #0 = { "target-cpu"="grace" }

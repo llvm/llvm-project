@@ -546,33 +546,59 @@ define float @fake_fmin(float %a, float %b) {
   ret float %f
 }
 
-declare fp128 @fmin(fp128, fp128)
+; The combine from sqrt->sqrtf should only propagate the existing
+; callsite attributes. It should not propgate the callee's function
+; attributes to the callsite; it's invalid to set denormal_fpenv on the callsiten
+define void @sqrt_to_sqrtf_only_preserve_callsite_attrs() #0 {
+; LINUX-LABEL: define void @sqrt_to_sqrtf_only_preserve_callsite_attrs(
+; LINUX-SAME: ) #[[ATTR0:[0-9]+]] {
+; LINUX-NEXT:  [[ENTRY:.*:]]
+; LINUX-NEXT:    [[SQRTF:%.*]] = call float @sqrtf(float noundef -1.000000e+00) #[[CALLSITE_ATTR:[0-9]+]]
+; LINUX-NEXT:    ret void
+entry:
+  %call = call double @sqrt(double noundef -1.000000e+00) #2, !tbaa !0
+  ret void
+}
 
-declare double @fmax(double, double)
+declare fp128 @fmin(fp128, fp128) #0
 
-declare double @tanh(double)
-declare double @tan(double)
+declare double @fmax(double, double) #0
+
+declare double @tanh(double) #0
+declare double @tan(double) #0
 
 ; sqrt is a special case: the shrinking optimization
 ; is valid even without unsafe-fp-math.
-declare double @sqrt(double)
+declare double @sqrt(double) #0
 declare double @llvm.sqrt.f64(double)
 
-declare double @sin(double)
-declare double @pow(double, double)
-declare double @log2(double)
-declare double @log1p(double)
-declare double @log10(double)
-declare double @log(double)
-declare double @logb(double)
-declare double @exp10(double)
-declare double @expm1(double)
-declare double @exp(double)
-declare double @cbrt(double)
-declare double @atanh(double)
-declare double @atan(double)
-declare double @acos(double)
-declare double @acosh(double)
-declare double @asin(double)
-declare double @asinh(double)
+declare double @sin(double) #0
+declare double @pow(double, double) #0
+declare double @log2(double) #0
+declare double @log1p(double) #0
+declare double @log10(double) #0
+declare double @log(double) #0
+declare double @logb(double) #0
+declare double @exp10(double) #0
+declare double @expm1(double) #0
+declare double @exp(double) #0
+declare double @cbrt(double) #0
+declare double @atanh(double) #0
+declare double @atan(double) #0
+declare double @acos(double) #0
+declare double @acosh(double) #0
+declare double @asin(double) #0
+declare double @asinh(double) #0
 
+; LINUX: #[[CALLSITE_ATTR]] = { "custom-callsite-attr" }
+
+attributes #0 = { denormal_fpenv(float: dynamic) }
+attributes #1 = { mustprogress nocallback nofree nounwind willreturn denormal_fpenv(float: preservesign) memory(errnomem: write) }
+attributes #2 = { "custom-callsite-attr" }
+
+!llvm.errno.tbaa = !{!0}
+
+!0 = !{!1, !1, i64 0}
+!1 = !{!"int", !2, i64 0}
+!2 = !{!"omnipotent char", !3, i64 0}
+!3 = !{!"Simple C/C++ TBAA"}

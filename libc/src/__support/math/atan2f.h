@@ -17,7 +17,7 @@
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
+#include "src/__support/macros/optimization.h"            // LIBC_UNLIKELY
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
 
 #if defined(LIBC_MATH_HAS_SKIP_ACCURATE_PASS) &&                               \
@@ -45,7 +45,7 @@ namespace atan2f_internal {
 //     b = round(atan(i/16) - a, D, RN);
 //     print("{", b, ",", a, "},");
 //   };
-static constexpr fputil::DoubleDouble ATAN_I[17] = {
+LIBC_INLINE_VAR constexpr fputil::DoubleDouble ATAN_I[17] = {
     {0.0, 0.0},
     {-0x1.c934d86d23f1dp-60, 0x1.ff55bb72cfdeap-5},
     {-0x1.cd37686760c17p-59, 0x1.fd5ba9aac2f6ep-4},
@@ -72,7 +72,7 @@ static constexpr fputil::DoubleDouble ATAN_I[17] = {
 //     b = round(j - a, D, RN);
 //     print("{", b, ",", a, "},");
 //   };
-static constexpr fputil::DoubleDouble COEFFS[9] = {
+LIBC_INLINE_VAR constexpr fputil::DoubleDouble COEFFS[9] = {
     {0.0, 1.0},                                      // 1
     {-0x1.5555555555555p-56, -0x1.5555555555555p-2}, // -1/3
     {-0x1.999999999999ap-57, 0x1.999999999999ap-3},  // 1/5
@@ -98,8 +98,7 @@ static constexpr fputil::DoubleDouble COEFFS[9] = {
 //                     = 33.
 // Thus, the Veltkamp splitting constant is C = 2^33 + 1.
 // This is used when FMA instruction is not available.
-[[maybe_unused]] LIBC_INLINE static constexpr fputil::DoubleDouble
-split_d(double a) {
+[[maybe_unused]] LIBC_INLINE constexpr fputil::DoubleDouble split_d(double a) {
   fputil::DoubleDouble r{0.0, 0.0};
   constexpr double C = 0x1.0p33 + 1.0;
   double t1 = C * a;
@@ -116,10 +115,9 @@ split_d(double a) {
 //   idx, k_d   = round( 2^4 * num_d / den_d )
 //   final_sign = sign of the final result
 //   const_term = the constant term in the final expression.
-LIBC_INLINE static float
-atan2f_double_double(double num_d, double den_d, double q_d, int idx,
-                     double k_d, double final_sign,
-                     const fputil::DoubleDouble &const_term) {
+LIBC_INLINE float atan2f_double_double(double num_d, double den_d, double q_d,
+                                       int idx, double k_d, double final_sign,
+                                       const fputil::DoubleDouble &const_term) {
   fputil::DoubleDouble q;
   double num_r = 0, den_r = 0;
 
@@ -241,7 +239,7 @@ atan2f_double_double(double num_d, double den_d, double q_d, int idx,
 // 0x1.aec6f...p-100
 // which is about rounding errors of double-double (2^-104).
 
-LIBC_INLINE static constexpr float atan2f(float y, float x) {
+LIBC_INLINE constexpr float atan2f(float y, float x) {
   using namespace atan2f_internal;
   using namespace inv_trigf_utils_internal;
   using FPBits = typename fputil::FPBits<float>;

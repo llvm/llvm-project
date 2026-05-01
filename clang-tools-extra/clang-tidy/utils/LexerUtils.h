@@ -12,8 +12,10 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/Lexer.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include <optional>
 #include <utility>
+#include <vector>
 
 namespace clang {
 
@@ -21,10 +23,13 @@ class Stmt;
 
 namespace tidy::utils::lexer {
 
-/// Returns previous token or ``tok::unknown`` if not found.
-Token getPreviousToken(SourceLocation Location, const SourceManager &SM,
-                       const LangOptions &LangOpts, bool SkipComments = true);
-std::pair<Token, SourceLocation>
+/// Returns previous token or ``std::nullopt`` if not found.
+std::optional<Token> getPreviousToken(SourceLocation Location,
+                                      const SourceManager &SM,
+                                      const LangOptions &LangOpts,
+                                      bool SkipComments = true);
+
+std::pair<std::optional<Token>, SourceLocation>
 getPreviousTokenAndStart(SourceLocation Location, const SourceManager &SM,
                          const LangOptions &LangOpts, bool SkipComments = true);
 
@@ -109,6 +114,31 @@ findNextTokenSkippingComments(SourceLocation Start, const SourceManager &SM,
 bool rangeContainsExpansionsOrDirectives(SourceRange Range,
                                          const SourceManager &SM,
                                          const LangOptions &LangOpts);
+
+// Represents a comment token and its source location in the original file.
+struct CommentToken {
+  SourceLocation Loc;
+  StringRef Text;
+};
+
+/// Returns all comment tokens found in the given range.
+std::vector<CommentToken> getCommentsInRange(CharSourceRange Range,
+                                             const SourceManager &SM,
+                                             const LangOptions &LangOpts);
+
+/// Returns comment tokens found in the given range. If a non-comment token is
+/// encountered, clears previously collected comments and continues.
+std::vector<CommentToken>
+getTrailingCommentsInRange(CharSourceRange Range, const SourceManager &SM,
+                           const LangOptions &LangOpts);
+
+/// Returns source range of the first token in \p Range matching \p Pred.
+/// The returned char range starts at the matched token and ends at the start
+/// of the next token. Returns invalid range if no token matches.
+CharSourceRange
+findTokenTextInRange(CharSourceRange Range, const SourceManager &SM,
+                     const LangOptions &LangOpts,
+                     llvm::function_ref<bool(const Token &)> Pred);
 
 /// Assuming that ``Range`` spans a CVR-qualified type, returns the
 /// token in ``Range`` that is responsible for the qualification. ``Range``

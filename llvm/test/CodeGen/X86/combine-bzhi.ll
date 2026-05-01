@@ -40,3 +40,44 @@ define i64 @test_bzhi64_constfold() nounwind readnone {
   ret i64 %1
 }
 
+define i32 @test_bzhi32_minvaluefold(i32 %arg) nounwind readnone {
+; CHECK-LABEL: test_bzhi32_minvaluefold:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl $5, %eax
+; CHECK-NEXT:    retq
+  %2 = or i32 %arg, 32
+  %3 = tail call i32 @llvm.x86.bmi.bzhi.32(i32 5, i32 %2)
+  ret i32 %3
+}
+
+define i64 @test_bzhi64_minvaluefold(i64 %arg) nounwind readnone {
+; CHECK-LABEL: test_bzhi64_minvaluefold:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movabsq $30064771072, %rax # imm = 0x700000000
+; CHECK-NEXT:    retq
+  %2 = or i64 %arg, 64
+  %3 = tail call i64 @llvm.x86.bmi.bzhi.64(i64 30064771072, i64 %2)
+  ret i64 %3
+}
+
+define i32 @test_bzhi32_range(i32 %arg) nounwind readnone {
+; CHECK-LABEL: test_bzhi32_range:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl $42, %eax
+; CHECK-NEXT:    retq
+  %2 = or i32 %arg, 6
+  %3 = and i32 %2, 7
+  %4 = tail call i32 @llvm.x86.bmi.bzhi.32(i32 699050, i32 %3)
+  ret i32 %4
+}
+
+define i64 @test_bzhi64_range(i64 %arg) nounwind readnone {
+; CHECK-LABEL: test_bzhi64_range:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl $40, %eax
+; CHECK-NEXT:    retq
+  %2 = or i64 %arg, 6
+  %3 = and i64 %2, 7
+  %4 = tail call i64 @llvm.x86.bmi.bzhi.64(i64 30064771240, i64 %3)
+  ret i64 %4
+}

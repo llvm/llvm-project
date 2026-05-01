@@ -754,7 +754,8 @@ DWARFUnit::GetVendorDWARFOpcodeSize(const DataExtractor &data,
   return GetSymbolFileDWARF().GetVendorDWARFOpcodeSize(data, data_offset, op);
 }
 
-bool DWARFUnit::ParseVendorDWARFOpcode(uint8_t op, const DataExtractor &opcodes,
+bool DWARFUnit::ParseVendorDWARFOpcode(uint8_t op,
+                                       const llvm::DataExtractor &opcodes,
                                        lldb::offset_t &offset,
                                        RegisterContext *reg_ctx,
                                        lldb::RegisterKind reg_kind,
@@ -857,8 +858,8 @@ void DWARFUnit::ParseProducerInfo() {
   if (producer.empty())
     return;
 
-  static const RegularExpression g_swiftlang_version_regex(
-      llvm::StringRef(R"(swiftlang-([0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?))"));
+  static const RegularExpression g_swiftlang_version_regex(llvm::StringRef(
+      R"(swiftlang-([0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?(\.[0-9]+)?))"));
   static const RegularExpression g_clang_version_regex(
       llvm::StringRef(R"(clang-([0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?))"));
 

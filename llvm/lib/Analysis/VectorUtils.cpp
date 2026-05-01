@@ -122,21 +122,18 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::llrint:
   case Intrinsic::ucmp:
   case Intrinsic::scmp:
+  case Intrinsic::clmul:
     return true;
   default:
     return false;
   }
 }
 
-bool llvm::isTriviallyScalarizable(Intrinsic::ID ID,
-                                   const TargetTransformInfo *TTI) {
+bool llvm::isTriviallyScalarizable(Intrinsic::ID ID) {
   if (isTriviallyVectorizable(ID))
     return true;
 
-  if (TTI && Intrinsic::isTargetIntrinsic(ID))
-    return TTI->isTargetIntrinsicTriviallyScalarizable(ID);
-
-  return false;
+  return Intrinsic::isTriviallyScalarizable(ID);
 }
 
 /// Identifies if the vector form of the intrinsic has a scalar operand.

@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Investigate why we get an assertion failure with LLVM libc.
+// XFAIL: LLVM-LIBC-FIXME
+
 // <system_error>
 
 // class error_category

@@ -796,7 +796,7 @@ const FunctionProtoType *generator::extract_prototype(QualType type)
  */
 int generator::prototype_n_args(QualType type)
 {
-	return extract_prototype(type)->getNumArgs();
+	return extract_prototype(type)->getNumParams();
 }
 
 /* Return the function name suffix for the type of "param".

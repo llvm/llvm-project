@@ -278,7 +278,7 @@ __m256bh test_mm256_loadu_pbh(void *p) {
 
 __m128bh test_mm_load_sbh(void const *A) {
   // CHECK-LABEL: test_mm_load_sbh
-  // CHECK: %{{.*}} = call <8 x bfloat> @llvm.masked.load.v8bf16.p0(ptr align 1 %{{.*}}, <8 x i1> bitcast (<1 x i8> splat (i8 1) to <8 x i1>), <8 x bfloat> %{{.*}})
+  // CHECK: %{{.*}} = call <8 x bfloat> @llvm.masked.load.v8bf16.p0(ptr align 1 %{{.*}}, <8 x i1> <i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>, <8 x bfloat> %{{.*}})
   return _mm_load_sbh(A);
 }
 

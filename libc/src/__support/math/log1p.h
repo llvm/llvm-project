@@ -828,8 +828,8 @@ LIBC_INLINE_VAR constexpr Float128 BIG_COEFFS[4]{
     {Sign::NEG, -128, 0x80000000'00000000'00000000'00000000_u128},
 };
 
-[[maybe_unused]] LIBC_INLINE static double
-log1p_accurate(int e_x, int index, fputil::DoubleDouble m_x) {
+[[maybe_unused]] LIBC_INLINE double log1p_accurate(int e_x, int index,
+                                                   fputil::DoubleDouble m_x) {
   Float128 e_x_f128(static_cast<float>(e_x));
   Float128 sum = fputil::quick_mul(LOG_2, e_x_f128);
   sum = fputil::quick_add(sum, LOG_R1[index]);
@@ -884,7 +884,7 @@ log1p_accurate(int e_x, int index, fputil::DoubleDouble m_x) {
 
 } // namespace log1p_internal
 
-LIBC_INLINE static double log1p(double x) {
+LIBC_INLINE double log1p(double x) {
   using namespace log1p_internal;
   using FPBits_t = typename fputil::FPBits<double>;
 

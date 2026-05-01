@@ -34,6 +34,17 @@ static Value createConst(Location loc, Type type, int value,
   return arith::ConstantOp::create(rewriter, loc, attr);
 }
 
+/// Create an integer constant from an APInt.
+static Value createAPIntConst(Location loc, Type type, const APInt &value,
+                              PatternRewriter &rewriter) {
+  auto attr = IntegerAttr::get(getElementTypeOrSelf(type), value);
+  if (auto shapedTy = dyn_cast<ShapedType>(type)) {
+    return arith::ConstantOp::create(rewriter, loc,
+                                     DenseElementsAttr::get(shapedTy, attr));
+  }
+  return arith::ConstantOp::create(rewriter, loc, attr);
+}
+
 /// Create a float constant.
 static Value createFloatConst(Location loc, Type type, const APFloat &value,
                               PatternRewriter &rewriter) {
@@ -452,18 +463,25 @@ struct F8E8M0ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
     Type f32Ty = cloneToShapedType(operandTy, b.getF32Type());
 
     Value bitcast = arith::BitcastOp::create(b, i8Ty, operand);
-    // create constants for NaNs
-    Value cF8NaN = createConst(op.getLoc(), i8Ty, 0xff, rewriter);
-    Value cF32NaN = createConst(op.getLoc(), i32Ty, 0xffffffff, rewriter);
     Value cF32MantissaWidth = createConst(op->getLoc(), i32Ty, 23, rewriter);
-
     Value exti = arith::ExtUIOp::create(b, i32Ty, bitcast);
     Value f32Bits = arith::ShLIOp::create(b, exti, cF32MantissaWidth);
 
-    Value isNan =
-        arith::CmpIOp::create(b, arith::CmpIPredicate::eq, bitcast, cF8NaN);
-    // select for NaNs
-    f32Bits = arith::SelectOp::create(b, isNan, cF32NaN, f32Bits);
+    // If FastMathFlag allows no NaN checks, skip it
+    auto fastMath = op.getFastmathAttr();
+    bool NoNaN = fastMath
+                     ? (fastMath.getValue() & arith::FastMathFlags::nnan) ==
+                           arith::FastMathFlags::nnan
+                     : false;
+    if (!NoNaN) {
+      Value cF8NaN = createConst(op.getLoc(), i8Ty, 0xff, rewriter);
+      Value cF32NaN = createConst(op.getLoc(), i32Ty, 0xffffffff, rewriter);
+      Value isNan =
+          arith::CmpIOp::create(b, arith::CmpIPredicate::eq, bitcast, cF8NaN);
+      // select for NaNs
+      f32Bits = arith::SelectOp::create(b, isNan, cF32NaN, f32Bits);
+    }
+
     Value result = arith::BitcastOp::create(b, f32Ty, f32Bits);
     if (resultETy.getIntOrFloatBitWidth() < 32) {
       result = arith::TruncFOp::create(b, resultTy, result, nullptr,
@@ -722,6 +740,81 @@ struct ScalingTruncFOpConverter
   }
 };
 
+/// Expands `arith.flush_denormals` into integer arithmetic.
+///
+/// For an IEEE-like floating-point value with a sign|exponent|mantissa bit
+/// layout, a value is denormal iff its biased exponent field is zero and its
+/// stored mantissa is non-zero. When the exponent field is zero, the value is
+/// either pos/neg 0 (mantissa = 0) or a denormal (mantissa != 0); in both
+/// cases, clearing the mantissa bits produces the desired sign-preserved zero
+/// (a no-op for pos/neg 0, a flush for denormals). When the exponent field is
+/// non-zero, the value passes through unchanged.
+///
+/// Pseudocode:
+///   bits        = bitcast(x, iN)
+///   expIsZero   = (bits & expMask) == 0
+///   cleared     = bits & ~manMask
+///   resultBits  = select(expIsZero, cleared, bits)
+///   result      = bitcast(resultBits, floatTy)
+struct FlushDenormalsOpConverter
+    : public OpRewritePattern<arith::FlushDenormalsOp> {
+  using Base::Base;
+  LogicalResult matchAndRewrite(arith::FlushDenormalsOp op,
+                                PatternRewriter &rewriter) const final {
+    Location loc = op.getLoc();
+    ImplicitLocOpBuilder b(loc, rewriter);
+    Value operand = op.getOperand();
+    Type operandTy = operand.getType();
+    auto floatTy = dyn_cast<FloatType>(getElementTypeOrSelf(operandTy));
+    if (!floatTy)
+      return rewriter.notifyMatchFailure(op, "operand is not a float type");
+
+    const llvm::fltSemantics &sem = floatTy.getFloatSemantics();
+    // Restrict to IEEE-like encodings, where the sign bit is the MSB and
+    // denormals are exactly "biased exponent == 0 and non-zero mantissa".
+    if (!llvm::APFloatBase::isIEEELikeFP(sem))
+      return rewriter.notifyMatchFailure(
+          op, "only IEEE-like floating-point types are supported");
+
+    unsigned totalBits = llvm::APFloatBase::semanticsSizeInBits(sem);
+    unsigned precision = llvm::APFloatBase::semanticsPrecision(sem);
+    // Stored mantissa bits = precision - 1 (implicit leading bit not stored).
+    // Exponent field bits = totalBits - 1 (sign) - storedMantissa.
+    if (precision < 1 || precision > totalBits)
+      return rewriter.notifyMatchFailure(op, "unexpected float semantics");
+    unsigned mantissaBits = precision - 1;
+    unsigned expBits = totalBits - 1 - mantissaBits;
+    if (expBits == 0 || mantissaBits == 0)
+      return rewriter.notifyMatchFailure(
+          op, "degenerate float encoding has no exponent or mantissa");
+
+    Type intTy =
+        cloneToShapedType(operandTy, rewriter.getIntegerType(totalBits));
+    Value bits = arith::BitcastOp::create(b, intTy, operand);
+    APInt expMaskVal =
+        APInt::getBitsSet(totalBits, mantissaBits, mantissaBits + expBits);
+    APInt clearMantissaMaskVal = ~APInt::getLowBitsSet(totalBits, mantissaBits);
+    APInt zeroVal = APInt::getZero(totalBits);
+    Value expMask = createAPIntConst(loc, intTy, expMaskVal, rewriter);
+    Value clearMantissaMask =
+        createAPIntConst(loc, intTy, clearMantissaMaskVal, rewriter);
+    Value zero = createAPIntConst(loc, intTy, zeroVal, rewriter);
+
+    // expField == 0
+    Value expField = arith::AndIOp::create(b, bits, expMask);
+    Value expIsZero =
+        arith::CmpIOp::create(b, arith::CmpIPredicate::eq, expField, zero);
+
+    // Clear mantissa bits: when exp == 0, this produces pos/neg 0.0.
+    Value cleared = arith::AndIOp::create(b, bits, clearMantissaMask);
+    Value resultBits = arith::SelectOp::create(b, expIsZero, cleared, bits);
+    Value result = arith::BitcastOp::create(b, operandTy, resultBits);
+
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
 struct ArithExpandOpsPass
     : public arith::impl::ArithExpandOpsPassBase<ArithExpandOpsPass> {
   using ArithExpandOpsPassBase::ArithExpandOpsPassBase;
@@ -758,6 +851,20 @@ struct ArithExpandOpsPass
       arith::populateExpandF8E8M0Patterns(patterns);
     if (includeF4E2M1)
       arith::populateExpandF4E2M1Patterns(patterns);
+    if (includeFlushDenormals) {
+      arith::populateExpandFlushDenormalsPatterns(patterns);
+      // Only IEEE-like floating-point types are expanded by the pattern;
+      // leave `arith.flush_denormals` on other types alone.
+      target.addDynamicallyLegalOp<arith::FlushDenormalsOp>(
+          [](arith::FlushDenormalsOp op) {
+            auto floatTy =
+                dyn_cast<FloatType>(getElementTypeOrSelf(op.getType()));
+            if (!floatTy)
+              return true;
+            return !llvm::APFloatBase::isIEEELikeFP(
+                floatTy.getFloatSemantics());
+          });
+    }
 
     target.addDynamicallyLegalOp<arith::ExtFOp>(
       [=](arith::ExtFOp op) {
@@ -822,6 +929,11 @@ void mlir::arith::populateExpandScalingExtTruncPatterns(
     RewritePatternSet &patterns) {
   patterns.add<ScalingExtFOpConverter, ScalingTruncFOpConverter>(
       patterns.getContext());
+}
+
+void mlir::arith::populateExpandFlushDenormalsPatterns(
+    RewritePatternSet &patterns) {
+  patterns.add<FlushDenormalsOpConverter>(patterns.getContext());
 }
 
 void mlir::arith::populateArithExpandOpsPatterns(RewritePatternSet &patterns) {

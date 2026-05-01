@@ -107,18 +107,55 @@ AArch64InstrInfo::AArch64InstrInfo(const AArch64Subtarget &STI)
                           AArch64::ADJCALLSTACKUP, AArch64::CATCHRET),
       RI(STI.getTargetTriple(), STI.getHwMode()), Subtarget(STI) {}
 
+/// Return the maximum number of bytes of code the specified instruction may be
+/// after LFI rewriting. If the instruction is not rewritten, std::nullopt is
+/// returned (use default sizing).
+///
+/// NOTE: the size estimates here must be kept in sync with the rewrites in
+/// AArch64MCLFIRewriter.cpp. Sizes may be overestimates of the rewritten
+/// instruction sequences.
+static std::optional<unsigned> getLFIInstSizeInBytes(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  case AArch64::SVC:
+    // SVC expands to 4 instructions.
+    return 16;
+  case AArch64::BR:
+  case AArch64::BLR:
+    // Indirect branches/calls expand to 2 instructions (guard + br/blr).
+    return 8;
+  case AArch64::RET:
+    // RET through LR is not rewritten, but RET through another register
+    // expands to 2 instructions (guard + ret).
+    if (MI.getOperand(0).getReg() != AArch64::LR)
+      return 8;
+    return 4;
+  default:
+    break;
+  }
+
+  // Instructions that explicitly modify LR expand to 2 instructions.
+  for (const MachineOperand &MO : MI.explicit_operands())
+    if (MO.isReg() && MO.isDef() && MO.getReg() == AArch64::LR)
+      return 8;
+
+  // Default case: instructions that don't cause expansion.
+  // - TP accesses in LFI are a single load/store, so no expansion.
+  // - All remaining instructions are not rewritten.
+  return std::nullopt;
+}
+
 /// GetInstSize - Return the number of bytes of code the specified
 /// instruction may be.  This returns the maximum number of bytes.
 unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   const MachineBasicBlock &MBB = *MI.getParent();
   const MachineFunction *MF = MBB.getParent();
   const Function &F = MF->getFunction();
-  const MCAsmInfo *MAI = MF->getTarget().getMCAsmInfo();
+  const MCAsmInfo &MAI = MF->getTarget().getMCAsmInfo();
 
   {
     auto Op = MI.getOpcode();
     if (Op == AArch64::INLINEASM || Op == AArch64::INLINEASM_BR)
-      return getInlineAsmLength(MI.getOperand(0).getSymbolName(), *MAI);
+      return getInlineAsmLength(MI.getOperand(0).getSymbolName(), MAI);
   }
 
   // Meta-instructions emit no code.
@@ -130,6 +167,12 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   unsigned NumBytes = 0;
   const MCInstrDesc &Desc = MI.getDesc();
 
+  // LFI rewriter expansions that supersede normal sizing.
+  const auto &STI = MF->getSubtarget<AArch64Subtarget>();
+  if (STI.isLFI())
+    if (auto Size = getLFIInstSizeInBytes(MI))
+      return *Size;
+
   if (!MI.isBundle() && isTailCallReturnInst(MI)) {
     NumBytes = Desc.getSize() ? Desc.getSize() : 4;
 
@@ -137,7 +180,6 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     if (!MFI->shouldSignReturnAddress(*MF))
       return NumBytes;
 
-    const auto &STI = MF->getSubtarget<AArch64Subtarget>();
     auto Method = STI.getAuthenticatedLRCheckMethod(*MF);
     NumBytes += AArch64PAuth::getCheckerSizeInBytes(Method);
     return NumBytes;
@@ -195,22 +237,11 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     NumBytes = MI.getOperand(1).getImm();
     break;
   case TargetOpcode::BUNDLE:
-    NumBytes = getInstBundleLength(MI);
+    NumBytes = getInstBundleSize(MI);
     break;
   }
 
   return NumBytes;
-}
-
-unsigned AArch64InstrInfo::getInstBundleLength(const MachineInstr &MI) const {
-  unsigned Size = 0;
-  MachineBasicBlock::const_instr_iterator I = MI.getIterator();
-  MachineBasicBlock::const_instr_iterator E = MI.getParent()->instr_end();
-  while (++I != E && I->isInsideBundle()) {
-    assert(!I->isBundle() && "No nested bundle!");
-    Size += getInstSizeInBytes(*I);
-  }
-  return Size;
 }
 
 static void parseCondBranch(MachineInstr *LastInst, MachineBasicBlock *&Target,
@@ -370,19 +401,22 @@ void AArch64InstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
     return;
   }
 
-  // If there's a free register and it's worth inflating the code size,
-  // manually insert the indirect branch.
-  Register Scavenged = RS->FindUnusedReg(&AArch64::GPR64RegClass);
-  if (Scavenged != AArch64::NoRegister &&
-      MBB.getSectionID() == MBBSectionID::ColdSectionID) {
-    buildIndirectBranch(Scavenged, NewDestBB);
-    RS->setRegUsed(Scavenged);
-    return;
+  // In a cold block without BTI, insert the indirect branch if a register is
+  // free. Skip this if BTI is enabled to avoid inserting a BTI at the target,
+  // prioritizing a dynamic cost in cold code over a static cost in hot code.
+  AArch64FunctionInfo *AFI = MBB.getParent()->getInfo<AArch64FunctionInfo>();
+  bool HasBTI = AFI && AFI->branchTargetEnforcement();
+  if (MBB.getSectionID() == MBBSectionID::ColdSectionID && !HasBTI) {
+    Register Scavenged = RS->FindUnusedReg(&AArch64::GPR64RegClass);
+    if (Scavenged != AArch64::NoRegister) {
+      buildIndirectBranch(Scavenged, NewDestBB);
+      RS->setRegUsed(Scavenged);
+      return;
+    }
   }
 
   // Note: Spilling X16 briefly moves the stack pointer, making it incompatible
   // with red zones.
-  AArch64FunctionInfo *AFI = MBB.getParent()->getInfo<AArch64FunctionInfo>();
   if (!AFI || AFI->hasRedZone().value_or(true))
     report_fatal_error(
         "Unable to insert indirect branch inside function that has red zone");
@@ -823,15 +857,13 @@ static unsigned canFoldIntoCSel(const MachineRegisterInfo &MRI, unsigned VReg,
   case AArch64::SUBREG_TO_REG:
     // Check for the following way to define an 64-bit immediate:
     //   %0:gpr32 = MOVi32imm 1
-    //   %1:gpr64 = SUBREG_TO_REG 0, %0:gpr32, %subreg.sub_32
-    if (!DefMI->getOperand(1).isImm() || DefMI->getOperand(1).getImm() != 0)
+    //   %1:gpr64 = SUBREG_TO_REG %0:gpr32, %subreg.sub_32
+    if (!DefMI->getOperand(1).isReg())
       return 0;
-    if (!DefMI->getOperand(2).isReg())
+    if (!DefMI->getOperand(2).isImm() ||
+        DefMI->getOperand(2).getImm() != AArch64::sub_32)
       return 0;
-    if (!DefMI->getOperand(3).isImm() ||
-        DefMI->getOperand(3).getImm() != AArch64::sub_32)
-      return 0;
-    DefMI = MRI.getVRegDef(DefMI->getOperand(2).getReg());
+    DefMI = MRI.getVRegDef(DefMI->getOperand(1).getReg());
     if (DefMI->getOpcode() != AArch64::MOVi32imm)
       return 0;
     if (!DefMI->getOperand(1).isImm() || DefMI->getOperand(1).getImm() != 1)
@@ -2074,8 +2106,8 @@ static bool areCFlagsAliveInSuccessors(const MachineBasicBlock *MBB) {
 
 /// \returns The condition code operand index for \p Instr if it is a branch
 /// or select and -1 otherwise.
-static int
-findCondCodeUseOperandIdxForBranchOrSelect(const MachineInstr &Instr) {
+int AArch64InstrInfo::findCondCodeUseOperandIdxForBranchOrSelect(
+    const MachineInstr &Instr) {
   switch (Instr.getOpcode()) {
   default:
     return -1;
@@ -2107,7 +2139,8 @@ findCondCodeUseOperandIdxForBranchOrSelect(const MachineInstr &Instr) {
 /// Returns AArch64CC::Invalid if either the instruction does not use condition
 /// codes or we don't optimize CmpInstr in the presence of such instructions.
 static AArch64CC::CondCode findCondCodeUsedByInstr(const MachineInstr &Instr) {
-  int CCIdx = findCondCodeUseOperandIdxForBranchOrSelect(Instr);
+  int CCIdx =
+      AArch64InstrInfo::findCondCodeUseOperandIdxForBranchOrSelect(Instr);
   return CCIdx >= 0 ? static_cast<AArch64CC::CondCode>(
                           Instr.getOperand(CCIdx).getImm())
                     : AArch64CC::Invalid;
@@ -3339,9 +3372,9 @@ bool AArch64InstrInfo::isCandidateToMergeOrPair(const MachineInstr &MI) const {
   // prologue/epilogue if the CFI information encoded the operations as separate
   // instructions, as that will cause the size of the actual prologue to mismatch
   // with the prologue size recorded in the Windows CFI.
-  const MCAsmInfo *MAI = MI.getMF()->getTarget().getMCAsmInfo();
-  bool NeedsWinCFI = MAI->usesWindowsCFI() &&
-                     MI.getMF()->getFunction().needsUnwindTableEntry();
+  const MCAsmInfo &MAI = MI.getMF()->getTarget().getMCAsmInfo();
+  bool NeedsWinCFI =
+      MAI.usesWindowsCFI() && MI.getMF()->getFunction().needsUnwindTableEntry();
   if (NeedsWinCFI && (MI.getFlag(MachineInstr::FrameSetup) ||
                       MI.getFlag(MachineInstr::FrameDestroy)))
     return false;
@@ -3557,12 +3590,11 @@ bool AArch64InstrInfo::canFoldIntoAddrMode(const MachineInstr &MemI,
       // ldr Xd, [Xn, Wm, uxtw #N]
 
       // Zero-extension looks like an ORRWrs followed by a SUBREG_TO_REG.
-      if (AddrI.getOperand(1).getImm() != 0 ||
-          AddrI.getOperand(3).getImm() != AArch64::sub_32)
+      if (AddrI.getOperand(2).getImm() != AArch64::sub_32)
         return false;
 
       const MachineRegisterInfo &MRI = AddrI.getMF()->getRegInfo();
-      Register OffsetReg = AddrI.getOperand(2).getReg();
+      Register OffsetReg = AddrI.getOperand(1).getReg();
       if (!OffsetReg.isVirtual() || !MRI.hasOneNonDBGUse(OffsetReg))
         return false;
 
@@ -4935,17 +4967,21 @@ int AArch64InstrInfo::getMemScale(unsigned Opc) {
   switch (Opc) {
   default:
     llvm_unreachable("Opcode has unknown scale!");
+  case AArch64::LDRBui:
   case AArch64::LDRBBui:
   case AArch64::LDURBBi:
   case AArch64::LDRSBWui:
   case AArch64::LDURSBWi:
+  case AArch64::STRBui:
   case AArch64::STRBBui:
   case AArch64::STURBBi:
     return 1;
+  case AArch64::LDRHui:
   case AArch64::LDRHHui:
   case AArch64::LDURHHi:
   case AArch64::LDRSHWui:
   case AArch64::LDURSHWi:
+  case AArch64::STRHui:
   case AArch64::STRHHui:
   case AArch64::STURHHi:
     return 2;
@@ -5033,6 +5069,54 @@ bool AArch64InstrInfo::isPreSt(const MachineInstr &MI) {
 
 bool AArch64InstrInfo::isPreLdSt(const MachineInstr &MI) {
   return isPreLd(MI) || isPreSt(MI);
+}
+
+bool AArch64InstrInfo::isZExtLoad(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  default:
+    return false;
+  case AArch64::LDURBBi:
+  case AArch64::LDURHHi:
+  case AArch64::LDURWi:
+  case AArch64::LDRBBui:
+  case AArch64::LDRHHui:
+  case AArch64::LDRWui:
+  case AArch64::LDRBBroX:
+  case AArch64::LDRHHroX:
+  case AArch64::LDRWroX:
+  case AArch64::LDRBBroW:
+  case AArch64::LDRHHroW:
+  case AArch64::LDRWroW:
+    return true;
+  }
+}
+
+bool AArch64InstrInfo::isSExtLoad(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
+  default:
+    return false;
+  case AArch64::LDURSBWi:
+  case AArch64::LDURSHWi:
+  case AArch64::LDURSBXi:
+  case AArch64::LDURSHXi:
+  case AArch64::LDURSWi:
+  case AArch64::LDRSBWui:
+  case AArch64::LDRSHWui:
+  case AArch64::LDRSBXui:
+  case AArch64::LDRSHXui:
+  case AArch64::LDRSWui:
+  case AArch64::LDRSBWroX:
+  case AArch64::LDRSHWroX:
+  case AArch64::LDRSBXroX:
+  case AArch64::LDRSHXroX:
+  case AArch64::LDRSWroX:
+  case AArch64::LDRSBWroW:
+  case AArch64::LDRSHWroW:
+  case AArch64::LDRSBXroW:
+  case AArch64::LDRSHXroW:
+  case AArch64::LDRSWroW:
+    return true;
+  }
 }
 
 bool AArch64InstrInfo::isPairedLdSt(const MachineInstr &MI) {
@@ -6757,8 +6841,9 @@ void llvm::emitFrameOffset(MachineBasicBlock &MBB,
 
 MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
     MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
-    MachineBasicBlock::iterator InsertPt, int FrameIndex,
-    LiveIntervals *LIS, VirtRegMap *VRM) const {
+    int FrameIndex, MachineInstr *&CopyMI, LiveIntervals *LIS,
+    VirtRegMap *VRM) const {
+  MachineBasicBlock::iterator InsertPt = MI;
   // This is a bit of a hack. Consider this instruction:
   //
   //   %0 = COPY %sp; GPR64all:%0
@@ -8029,7 +8114,7 @@ static bool getGatherLanePattern(MachineInstr &Root,
     return false;
 
   // Verify that the subreg to reg loads an integer into the first lane.
-  auto Lane0LoadReg = CurrInstr->getOperand(2).getReg();
+  auto Lane0LoadReg = CurrInstr->getOperand(1).getReg();
   unsigned SingleLaneSizeInBits = 128 / NumLanes;
   if (TRI->getRegSizeInBits(Lane0LoadReg, MRI) != SingleLaneSizeInBits)
     return false;
@@ -8133,7 +8218,7 @@ generateGatherLanePattern(MachineInstr &Root,
 
   MachineInstr *SubregToReg = CurrInstr;
   LoadToLaneInstrs.push_back(
-      MRI.getUniqueVRegDef(SubregToReg->getOperand(2).getReg()));
+      MRI.getUniqueVRegDef(SubregToReg->getOperand(1).getReg()));
   auto LoadToLaneInstrsAscending = llvm::reverse(LoadToLaneInstrs);
 
   const TargetRegisterClass *FPR128RegClass =
@@ -8237,7 +8322,6 @@ generateGatherLanePattern(MachineInstr &Root,
   auto SubRegToRegInstr =
       BuildMI(MF, MIMetadata(Root), TII->get(SubregToReg->getOpcode()),
               DestRegForSubregToReg)
-          .addImm(0)
           .addReg(DestRegForMiddleIndex, getKillRegState(true))
           .addImm(SubregType);
   InstrIdxForVirtReg.insert(
@@ -10447,7 +10531,7 @@ bool AArch64InstrInfo::isFunctionSafeToOutlineFrom(
     return false;
 
   // FIXME: Teach the outliner to generate/handle Windows unwind info.
-  if (MF.getTarget().getMCAsmInfo()->usesWindowsCFI())
+  if (MF.getTarget().getMCAsmInfo().usesWindowsCFI())
     return false;
 
   // It's safe to outline from MF.
@@ -10752,9 +10836,7 @@ static void signOutlinedFunction(MachineFunction &MF, MachineBasicBlock &MBB,
 
   BuildMI(MBB, MBB.begin(), DebugLoc(), TII->get(AArch64::PAUTH_PROLOGUE))
       .setMIFlag(MachineInstr::FrameSetup);
-  BuildMI(MBB, MBB.getFirstInstrTerminator(), DebugLoc(),
-          TII->get(AArch64::PAUTH_EPILOGUE))
-      .setMIFlag(MachineInstr::FrameDestroy);
+  TII->createPauthEpilogueInstr(MBB, DebugLoc());
 }
 
 void AArch64InstrInfo::buildOutlinedFrame(
@@ -11243,6 +11325,17 @@ unsigned llvm::getBLRCallOpcode(const MachineFunction &MF) {
     return AArch64::BLRNoIP;
   else
     return AArch64::BLR;
+}
+
+void AArch64InstrInfo::createPauthEpilogueInstr(MachineBasicBlock &MBB,
+                                                DebugLoc DL) const {
+  MachineBasicBlock::iterator InsertPt = MBB.getFirstTerminator();
+  auto Builder = BuildMI(MBB, InsertPt, DL, get(AArch64::PAUTH_EPILOGUE))
+                     .setMIFlag(MachineInstr::FrameDestroy);
+
+  const auto *AFI = MBB.getParent()->getInfo<AArch64FunctionInfo>();
+  if (AFI->branchProtectionPAuthLR() && !Subtarget.hasPAuthLR())
+    Builder.addReg(AArch64::X16, RegState::ImplicitDefine);
 }
 
 MachineBasicBlock::iterator

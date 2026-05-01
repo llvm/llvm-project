@@ -20,6 +20,7 @@
 #include "lldb/ValueObject/ValueObjectConstResult.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorExtras.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -39,8 +40,6 @@ public:
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
   lldb::ChildCacheState Update() override;
-
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
 private:
   CompilerType GetNodeType();
@@ -211,8 +210,8 @@ lldb::ValueObjectSP lldb_private::formatters::
   const bool thread_and_frame_only_if_stopped = true;
   ExecutionContext exe_ctx =
       val_hash->GetExecutionContextRef().Lock(thread_and_frame_only_if_stopped);
-  return CreateValueObjectFromData(stream.GetString(), data, exe_ctx,
-                                   m_element_type);
+  return CreateChildValueObjectFromData(stream.GetString(), data, exe_ctx,
+                                        m_element_type);
 }
 
 llvm::Expected<size_t>
@@ -224,7 +223,7 @@ lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
     return size_sp->GetValueAsUnsigned(0);
 
   if (!is_compressed_pair)
-    return llvm::createStringError("Unsupported std::unordered_map layout.");
+    return llvm::createStringError("unsupported std::unordered_map layout");
 
   ValueObjectSP num_elements_sp = GetFirstValueOfLibCXXCompressedPair(*size_sp);
 
@@ -283,17 +282,6 @@ lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::Update() {
     m_next_element = m_tree;
 
   return lldb::ChildCacheState::eRefetch;
-}
-
-llvm::Expected<size_t>
-lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
-    GetIndexOfChildWithName(ConstString name) {
-  auto optional_idx = formatters::ExtractIndexFromString(name.GetCString());
-  if (!optional_idx) {
-    return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
-  }
-  return *optional_idx;
 }
 
 SyntheticChildrenFrontEnd *
@@ -405,8 +393,7 @@ lldb_private::formatters::LibCxxUnorderedMapIteratorSyntheticFrontEnd::
     return 0;
   if (name == "second")
     return 1;
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.AsCString());
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 SyntheticChildrenFrontEnd *

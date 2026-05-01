@@ -4631,7 +4631,7 @@ unsigned HexagonInstrInfo::getSize(const MachineInstr &MI) const {
   if (BranchRelaxAsmLarge && MI.getOpcode() == Hexagon::INLINEASM) {
     const MachineBasicBlock &MBB = *MI.getParent();
     const MachineFunction *MF = MBB.getParent();
-    const MCAsmInfo *MAI = MF->getTarget().getMCAsmInfo();
+    const MCAsmInfo &MAI = MF->getTarget().getMCAsmInfo();
 
     // Count the number of register definitions to find the asm string.
     unsigned NumDefs = 0;
@@ -4642,7 +4642,7 @@ unsigned HexagonInstrInfo::getSize(const MachineInstr &MI) const {
     assert(MI.getOperand(NumDefs).isSymbol() && "No asm string?");
     // Disassemble the AsmStr and approximate number of instructions.
     const char *AsmStr = MI.getOperand(NumDefs).getSymbolName();
-    Size = getInlineAsmLength(AsmStr, *MAI);
+    Size = getInlineAsmLength(AsmStr, MAI);
   }
 
   return Size;
@@ -4781,6 +4781,173 @@ bool HexagonInstrInfo::isQFPMul(const MachineInstr *MI) const {
           MI->getOpcode() == Hexagon::V6_vmpy_qf32_mix_hf ||
           MI->getOpcode() == Hexagon::V6_vmpy_qf32_qf16 ||
           MI->getOpcode() == Hexagon::V6_vmpy_qf32);
+}
+
+namespace llvm::HexagonII {
+
+static constexpr RegTypeInfo make(RegType Out, RegType In1 = RegType::Unknown,
+                                  RegType In2 = RegType::Unknown,
+                                  RegType In3 = RegType::Unknown) {
+  RegTypeInfo I;
+  I.Output = Out;
+  I.Input1 = In1;
+  I.Input2 = In2;
+  I.Input3 = In3;
+  return I;
+}
+
+RegTypeInfo getRegTypeInfo(unsigned Opcode) {
+  switch (Opcode) {
+  default:
+    return {};
+
+  case Hexagon::V6_vabs_qf16_hf:
+    return make(RegType::QF16);
+  case Hexagon::V6_vabs_qf16_qf16:
+    return make(RegType::QF16, RegType::QF16);
+  case Hexagon::V6_vabs_qf32_qf32:
+    return make(RegType::QF32, RegType::QF32);
+  case Hexagon::V6_vabs_qf32_sf:
+    return make(RegType::QF32);
+  case Hexagon::V6_vadd_hf:
+    return make(RegType::QF16);
+  case Hexagon::V6_vadd_qf16:
+    return make(RegType::QF16, RegType::QF16, RegType::QF16);
+  case Hexagon::V6_vadd_qf16_mix:
+    return make(RegType::QF16, RegType::QF16);
+  case Hexagon::V6_vadd_qf32:
+    return make(RegType::QF32, RegType::QF32, RegType::QF32);
+  case Hexagon::V6_vadd_qf32_mix:
+    return make(RegType::QF32, RegType::QF32);
+  case Hexagon::V6_vadd_sf:
+    return make(RegType::QF32);
+  case Hexagon::V6_vconv_bf_qf32:
+    return make(RegType::Unknown, RegType::QF32);
+  case Hexagon::V6_vconv_f8_qf16:
+    return make(RegType::Unknown, RegType::QF16);
+  case Hexagon::V6_vconv_hf_qf16:
+    return make(RegType::Unknown, RegType::QF16);
+  case Hexagon::V6_vconv_hf_qf32:
+    return make(RegType::Unknown, RegType::QF32);
+  case Hexagon::V6_vconv_qf16_f8:
+    return make(RegType::QF16);
+  case Hexagon::V6_vconv_qf16_hf:
+    return make(RegType::QF16);
+  case Hexagon::V6_vconv_qf16_qf16:
+    return make(RegType::QF16, RegType::QF16);
+  case Hexagon::V6_vconv_qf32_qf32:
+    return make(RegType::QF32, RegType::QF32);
+  case Hexagon::V6_vconv_qf32_sf:
+    return make(RegType::QF32);
+  case Hexagon::V6_vconv_sf_qf32:
+    return make(RegType::Unknown, RegType::QF32);
+  case Hexagon::V6_vilog2_qf16:
+    return make(RegType::Unknown, RegType::QF16);
+  case Hexagon::V6_vilog2_qf32:
+    return make(RegType::Unknown, RegType::QF32);
+  case Hexagon::V6_vmpy_qf16:
+    return make(RegType::QF16, RegType::QF16, RegType::QF16);
+  case Hexagon::V6_vmpy_qf16_hf:
+    return make(RegType::QF16);
+  case Hexagon::V6_vmpy_qf16_mix_hf:
+    return make(RegType::QF16, RegType::QF16);
+  case Hexagon::V6_vmpy_qf32:
+    return make(RegType::QF32, RegType::QF32, RegType::QF32);
+  case Hexagon::V6_vmpy_qf32_hf:
+    return make(RegType::QF32);
+  case Hexagon::V6_vmpy_qf32_mix_hf:
+    return make(RegType::QF32, RegType::QF16);
+  case Hexagon::V6_vmpy_qf32_qf16:
+    return make(RegType::QF32, RegType::QF16, RegType::QF16);
+  case Hexagon::V6_vmpy_qf32_sf:
+    return make(RegType::QF32);
+  case Hexagon::V6_vmpy_rt_hf:
+    return make(RegType::QF16);
+  case Hexagon::V6_vmpy_rt_qf16:
+    return make(RegType::QF16, RegType::QF16);
+  case Hexagon::V6_vmpy_rt_sf:
+    return make(RegType::QF32);
+  case Hexagon::V6_vneg_qf16_hf:
+    return make(RegType::QF16);
+  case Hexagon::V6_vneg_qf16_qf16:
+    return make(RegType::QF16, RegType::QF16);
+  case Hexagon::V6_vneg_qf32_qf32:
+    return make(RegType::QF32, RegType::QF32);
+  case Hexagon::V6_vneg_qf32_sf:
+    return make(RegType::QF32);
+  case Hexagon::V6_vsub_hf:
+    return make(RegType::QF16);
+  case Hexagon::V6_vsub_qf16:
+    return make(RegType::QF16, RegType::QF16, RegType::QF16);
+  case Hexagon::V6_vsub_qf16_mix:
+    return make(RegType::QF16, RegType::QF16);
+  case Hexagon::V6_vsub_qf32:
+    return make(RegType::QF32, RegType::QF32, RegType::QF32);
+  case Hexagon::V6_vsub_qf32_mix:
+    return make(RegType::QF32, RegType::QF32);
+  case Hexagon::V6_vsub_sf:
+    return make(RegType::QF32);
+  case Hexagon::V6_vsub_sf_mix:
+    return make(RegType::QF32, RegType::Unknown, RegType::QF32);
+  case Hexagon::V6_vsub_hf_mix:
+    return make(RegType::QF16, RegType::Unknown, RegType::QF16);
+  }
+}
+
+} // namespace llvm::HexagonII
+
+bool HexagonInstrInfo::usesQF32Operand(MachineInstr *MI, unsigned Index) const {
+  auto Info = HexagonII::getRegTypeInfo(MI->getOpcode());
+  switch (Index) {
+  case 1:
+    return Info.Input1 == HexagonII::RegType::QF32;
+  case 2:
+    return Info.Input2 == HexagonII::RegType::QF32;
+  case 3:
+    return Info.Input3 == HexagonII::RegType::QF32;
+  case 0:
+    return Info.Input1 == HexagonII::RegType::QF32 ||
+           Info.Input2 == HexagonII::RegType::QF32 ||
+           Info.Input3 == HexagonII::RegType::QF32;
+  default: // No instruction with more than 3 operands uses QF32.
+    return false;
+  }
+  return false;
+}
+
+bool HexagonInstrInfo::usesQF16Operand(MachineInstr *MI, unsigned Index) const {
+  auto Info = HexagonII::getRegTypeInfo(MI->getOpcode());
+  switch (Index) {
+  case 1:
+    return Info.Input1 == HexagonII::RegType::QF16;
+  case 2:
+    return Info.Input2 == HexagonII::RegType::QF16;
+  case 3:
+    return Info.Input3 == HexagonII::RegType::QF16;
+  case 0:
+    return Info.Input1 == HexagonII::RegType::QF16 ||
+           Info.Input2 == HexagonII::RegType::QF16 ||
+           Info.Input3 == HexagonII::RegType::QF16;
+  default: // No instruction with more than 3 operands uses QF16.
+    return false;
+  }
+  return false;
+}
+
+bool HexagonInstrInfo::usesQFOperand(MachineInstr *MI, unsigned Index) const {
+  return usesQF32Operand(MI, Index) || usesQF16Operand(MI, Index);
+}
+
+bool HexagonInstrInfo::isQFP32Instr(MachineInstr *MI) const {
+  return HexagonII::getOpRegType(MI->getOpcode()) == HexagonII::RegType::QF32;
+}
+
+bool HexagonInstrInfo::isQFP16Instr(MachineInstr *MI) const {
+  return HexagonII::getOpRegType(MI->getOpcode()) == HexagonII::RegType::QF16;
+}
+
+bool HexagonInstrInfo::isQFPInstr(MachineInstr *MI) const {
+  return isQFP32Instr(MI) || isQFP16Instr(MI);
 }
 
 // Addressing mode relations.

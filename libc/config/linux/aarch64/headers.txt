@@ -2,6 +2,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.arpa_inet
     libc.include.assert
     libc.include.complex
+    libc.include.cpio
     libc.include.ctype
     libc.include.dirent
     libc.include.dlfcn
@@ -49,8 +50,10 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.sys_syscall
     libc.include.sys_time
     libc.include.sys_types
+    libc.include.sys_un
     libc.include.sys_utsname
     libc.include.sys_wait
+    libc.include.syscall
     libc.include.sysexits
     libc.include.termios
     libc.include.threads

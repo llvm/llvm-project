@@ -255,13 +255,13 @@ def get_gdb_version_string():
             subprocess.check_output(["gdb", "--version"]).decode().splitlines()
         )
     except:
-        return None  # We coudln't find gdb or something went wrong running it.
+        return None  # We couldn't find gdb or something went wrong running it.
     if len(gdb_vers_lines) < 1:
-        print("Unkown GDB version format (too few lines)", file=sys.stderr)
+        print("Unknown GDB version format (too few lines)", file=sys.stderr)
         return None
     match = re.search(r"GNU gdb \(.*?\) ((\d|\.)+)", gdb_vers_lines[0].strip())
     if match is None:
-        print(f"Unkown GDB version format: {gdb_vers_lines[0]}", file=sys.stderr)
+        print(f"Unknown GDB version format: {gdb_vers_lines[0]}", file=sys.stderr)
         return None
     return match.group(1)
 
@@ -285,33 +285,51 @@ def get_lldb_version_string():
     --version output is formatted unexpectedly.
     """
     try:
-        cmd = ["lldb", "--version"]
         if platform.system() == "Darwin":
-            cmd = ["xcrun"] + cmd
+            # On Darwin, use system lldb which has Apple-specific versioning.
+            cmd = ["xcrun", "lldb", "--version"]
+        else:
+            # On non-Darwin, use the locally-built lldb from llvm_tools_dir.
+            lldb_path = os.path.join(config.llvm_tools_dir, "lldb")
+            if not os.path.exists(lldb_path):
+                print(f"LLDB not found at {lldb_path}", file=sys.stderr)
+                return None
+            cmd = [lldb_path, "--version"]
 
         lldb_vers_lines = subprocess.check_output(cmd).decode().splitlines()
     except:
         return None
     if len(lldb_vers_lines) < 1:
-        print("Unkown LLDB version format (too few lines)", file=sys.stderr)
+        print("Unknown LLDB version format (too few lines)", file=sys.stderr)
         return None
-    match = re.search(r"lldb.*[ -]((\d|\.)+)", lldb_vers_lines[0].strip())
+    match = re.search(r"lldb.*?[ -]((\d|\.)+)", lldb_vers_lines[0].strip())
     if match is None:
-        print(f"Unkown LLDB version format: {lldb_vers_lines[0]}", file=sys.stderr)
+        print(f"Unknown LLDB version format: {lldb_vers_lines[0]}", file=sys.stderr)
         return None
     return match.group(1)
 
 
 def set_lldb_formatters_compatibility_feature():
     current_lldb_version = get_lldb_version_string()
-    if not current_lldb_version:
+    if current_lldb_version:
+        print(
+            f"Found LLDB version '{current_lldb_version}'",
+            file=sys.stderr,
+        )
+    else:
+        print(
+            "No LLDB found on host. Skipping tests that require LLDB.",
+            file=sys.stderr,
+        )
         return
 
     if platform.system() == "Darwin":
         # The Apple LLDB version doesn't follow the LLVM release versioning.
         min_required_lldb_version = "1700"
     else:
-        min_required_lldb_version = "1900"
+        # Minimum version required for SBType::FindDirectNestedType API
+        # which some LLVM data formatters depend on.
+        min_required_lldb_version = "19.0.0"
 
     try:
         from packaging import version
@@ -348,6 +366,19 @@ def set_apple_lldb_pre_1000_feature():
 # platform and the installed gdb version.
 dwarf_version_string = get_clang_default_dwarf_version_string(config.host_triple)
 gdb_version_string = get_gdb_version_string()
+
+if gdb_version_string:
+    config.available_features.add("has-gdb")
+    print(
+        f"Found GDB version '{gdb_version_string}'",
+        file=sys.stderr,
+    )
+else:
+    print(
+        "No GDB found on host. Skipping tests that require GDB.",
+        file=sys.stderr,
+    )
+
 if dwarf_version_string and gdb_version_string:
     if int(dwarf_version_string) >= 5:
         try:
@@ -379,3 +410,41 @@ llvm_config.feature_config([("--build-mode", {"Debug|RelWithDebInfo": "debug-inf
 # Allow 'REQUIRES: XXX-registered-target' in tests.
 for arch in config.targets_to_build:
     config.available_features.add(arch.lower() + "-registered-target")
+
+
+def find_dbgeng():
+    if platform.system() != "Windows":
+        return None
+
+    for path in os.environ.get("PATH", "").split(os.pathsep):
+        p = os.path.join(path, "dbgeng.dll")
+        if os.path.exists(p) and not os.path.isdir(p):
+            return os.path.abspath(p)
+
+    return None
+
+
+def get_dbgeng_version():
+    dbgeng = find_dbgeng()
+    if not dbgeng:
+        return None
+
+    try:
+        import win32api
+    except:
+        return None
+
+    info = win32api.GetFileVersionInfo(dbgeng, "\\")
+    ms = info["FileVersionMS"]
+    ls = info["FileVersionLS"]
+    return (
+        win32api.HIWORD(ms),
+        win32api.LOWORD(ms),
+        win32api.HIWORD(ls),
+        win32api.LOWORD(ls),
+    )
+
+
+dbgeng_version = get_dbgeng_version()
+if dbgeng_version and dbgeng_version >= (10, 0, 19041, 0):
+    config.available_features.add("dbgeng-10-19041")

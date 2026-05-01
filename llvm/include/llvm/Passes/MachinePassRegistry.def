@@ -27,6 +27,7 @@ MODULE_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis(PIC))
 MODULE_PASS("global-merge", GlobalMergePass(TM, GlobalMergeOptions()))
 MODULE_PASS("jmc-instrumenter", JMCInstrumenterPass())
 MODULE_PASS("lower-emutls", LowerEmuTLSPass())
+MODULE_PASS("mir-strip-debug", StripDebugMachineModulePass())
 MODULE_PASS("pre-isel-intrinsic-lowering", PreISelIntrinsicLoweringPass())
 MODULE_PASS("print<regusage>", PhysicalRegisterUsageInfoPrinterPass(errs()))
 MODULE_PASS("shadow-stack-gc-lowering", ShadowStackGCLoweringPass())
@@ -63,6 +64,7 @@ LOOP_PASS("loop-term-fold", LoopTermFoldPass())
 // computed. (We still either need to regenerate kill flags after regalloc, or
 // preferably fix the scavenger to not depend on them).
 MACHINE_FUNCTION_ANALYSIS("edge-bundles", EdgeBundlesAnalysis())
+MACHINE_FUNCTION_ANALYSIS("gisel-cse-analysis", GISelCSEAnalysis(TM))
 MACHINE_FUNCTION_ANALYSIS("gisel-value-tracking", GISelValueTrackingAnalysis())
 MACHINE_FUNCTION_ANALYSIS("livedebugvars", LiveDebugVariablesAnalysis())
 MACHINE_FUNCTION_ANALYSIS("live-intervals", LiveIntervalsAnalysis())
@@ -70,9 +72,11 @@ MACHINE_FUNCTION_ANALYSIS("live-reg-matrix", LiveRegMatrixAnalysis())
 MACHINE_FUNCTION_ANALYSIS("live-stacks", LiveStacksAnalysis())
 MACHINE_FUNCTION_ANALYSIS("live-vars", LiveVariablesAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-block-freq", MachineBlockFrequencyAnalysis())
+MACHINE_FUNCTION_ANALYSIS("machine-block-hash", MachineBlockHashInfoAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-branch-prob",
                           MachineBranchProbabilityAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-cycles", MachineCycleAnalysis())
+MACHINE_FUNCTION_ANALYSIS("machine-dom-frontier", MachineDominanceFrontierAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-dom-tree", MachineDominatorTreeAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-loops", MachineLoopAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-opt-remark-emitter",
@@ -91,8 +95,6 @@ MACHINE_FUNCTION_ANALYSIS("virtregmap", VirtRegMapAnalysis())
 // MACHINE_FUNCTION_ANALYSIS("lazy-machine-bfi",
 // LazyMachineBlockFrequencyInfoAnalysis())
 // MACHINE_FUNCTION_ANALYSIS("machine-loops", MachineLoopInfoAnalysis())
-// MACHINE_FUNCTION_ANALYSIS("machine-dom-frontier",
-// MachineDominanceFrontierAnalysis())
 // MACHINE_FUNCTION_ANALYSIS("machine-post-dom-tree",
 // MachinePostDominatorTreeAnalysis())
 // MACHINE_FUNCTION_ANALYSIS("machine-region-info",
@@ -116,6 +118,7 @@ MACHINE_FUNCTION_PASS("finalize-isel", FinalizeISelPass())
 MACHINE_FUNCTION_PASS("finalizebundle-test", FinalizeBundleTestPass())
 MACHINE_FUNCTION_PASS("fixup-statepoint-caller-saved", FixupStatepointCallerSavedPass())
 MACHINE_FUNCTION_PASS("init-undef", InitUndefPass())
+MACHINE_FUNCTION_PASS("kcfi", MachineKCFIPass())
 MACHINE_FUNCTION_PASS("gc-empty-basic-blocks", GCEmptyBasicBlocksPass())
 MACHINE_FUNCTION_PASS("localstackalloc", LocalStackSlotAllocationPass())
 MACHINE_FUNCTION_PASS("machine-cp", MachineCopyPropagationPass())
@@ -142,6 +145,8 @@ MACHINE_FUNCTION_PASS("print<live-stacks>", LiveStacksPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<live-vars>", LiveVariablesPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<machine-block-freq>",
                       MachineBlockFrequencyPrinterPass(errs()))
+MACHINE_FUNCTION_PASS("print<machine-block-hash>",
+                      MachineBlockHashInfoPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<machine-branch-prob>",
                       MachineBranchProbabilityPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<machine-cycles>", MachineCycleInfoPrinterPass(errs()))
@@ -172,6 +177,7 @@ MACHINE_FUNCTION_PASS("stack-slot-coloring", StackSlotColoringPass())
 MACHINE_FUNCTION_PASS("tailduplication", TailDuplicatePass())
 MACHINE_FUNCTION_PASS("trigger-verifier-error", TriggerVerifierErrorPass())
 MACHINE_FUNCTION_PASS("two-address-instruction", TwoAddressInstructionPass())
+MACHINE_FUNCTION_PASS("unpack-mi-bundles", UnpackMachineBundlesPass())
 MACHINE_FUNCTION_PASS("unreachable-mbb-elimination", 
                       UnreachableMachineBlockElimPass())
 MACHINE_FUNCTION_PASS("verify", MachineVerifierPass())
@@ -260,7 +266,6 @@ DUMMY_MACHINE_MODULE_PASS("static-data-annotator", StaticDataAnnotator)
 DUMMY_MACHINE_MODULE_PASS("pseudo-probe-inserter", PseudoProbeInserterPass)
 DUMMY_MACHINE_MODULE_PASS("mir-debugify", DebugifyMachineModule)
 DUMMY_MACHINE_MODULE_PASS("mir-check-debugify", CheckDebugMachineModulePass)
-DUMMY_MACHINE_MODULE_PASS("mir-strip-debug", StripDebugMachineModulePass)
 #undef DUMMY_MACHINE_MODULE_PASS
 
 #ifndef DUMMY_MACHINE_FUNCTION_PASS
@@ -279,7 +284,6 @@ DUMMY_MACHINE_FUNCTION_PASS("funclet-layout", FuncletLayoutPass)
 DUMMY_MACHINE_FUNCTION_PASS("implicit-null-checks", ImplicitNullChecksPass)
 DUMMY_MACHINE_FUNCTION_PASS("instruction-select", InstructionSelectPass)
 DUMMY_MACHINE_FUNCTION_PASS("irtranslator", IRTranslatorPass)
-DUMMY_MACHINE_FUNCTION_PASS("kcfi", MachineKCFIPass)
 DUMMY_MACHINE_FUNCTION_PASS("legalizer", LegalizerPass)
 DUMMY_MACHINE_FUNCTION_PASS("lrshrink", LiveRangeShrinkPass)
 DUMMY_MACHINE_FUNCTION_PASS("machine-combiner", MachineCombinerPass)
@@ -295,5 +299,4 @@ DUMMY_MACHINE_FUNCTION_PASS("regallocscoringpass", RegAllocScoringPass)
 DUMMY_MACHINE_FUNCTION_PASS("regbankselect", RegBankSelectPass)
 DUMMY_MACHINE_FUNCTION_PASS("reset-machine-function", ResetMachineFunctionPass)
 DUMMY_MACHINE_FUNCTION_PASS("stackmap-liveness", StackMapLivenessPass)
-DUMMY_MACHINE_FUNCTION_PASS("unpack-mi-bundles", UnpackMachineBundlesPass)
 #undef DUMMY_MACHINE_FUNCTION_PASS

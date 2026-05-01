@@ -260,20 +260,22 @@ bool GIMatchTableExecutor::executeMatchTable(
       break;
     }
 
-    case GIM_SwitchType: {
+    case GIM_SwitchType:
+    case GIM_SwitchTypeShape: {
       uint64_t InsnID = readULEB();
       uint64_t OpIdx = readULEB();
       uint16_t LowerBound = readU16();
       uint16_t UpperBound = readU16();
       int64_t Default = readU32();
+      bool IsShape = MatcherOpcode == GIM_SwitchTypeShape;
 
       assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
       MachineOperand &MO = State.MIs[InsnID]->getOperand(OpIdx);
 
       DEBUG_WITH_TYPE(TgtExecutor::getName(), {
-        dbgs() << CurrentIdx << ": GIM_SwitchType(MIs[" << InsnID
-               << "]->getOperand(" << OpIdx << "), [" << LowerBound << ", "
-               << UpperBound << "), Default=" << Default
+        dbgs() << CurrentIdx << ": GIM_SwitchType" << (IsShape ? "Shape" : "")
+               << "(MIs[" << InsnID << "]->getOperand(" << OpIdx << "), ["
+               << LowerBound << ", " << UpperBound << "), Default=" << Default
                << ", JumpTable...) // Got=";
         if (!MO.isReg())
           dbgs() << "Not a VReg\n";
@@ -284,8 +286,12 @@ bool GIMatchTableExecutor::executeMatchTable(
         CurrentIdx = Default;
         break;
       }
-      const LLT Ty = MRI.getType(MO.getReg());
-      const auto TyI = ExecInfo.TypeIDMap.find(Ty);
+
+      LLT Ty = MRI.getType(MO.getReg());
+      if (IsShape)
+        Ty = Ty.changeElementType(LLT::scalar(Ty.getScalarSizeInBits()));
+
+      const auto TyI = ExecInfo.TypeIDMap.find(Ty.getUniqueRAWLLTData());
       if (TyI == ExecInfo.TypeIDMap.end()) {
         CurrentIdx = Default;
         break;
@@ -1058,7 +1064,7 @@ bool GIMatchTableExecutor::executeMatchTable(
     case GIR_MutateOpcode: {
       uint64_t OldInsnID = readULEB();
       uint64_t NewInsnID = readULEB();
-      uint16_t NewOpcode = readU16();
+      uint32_t NewOpcode = readU16();
       if (NewInsnID >= OutMIs.size())
         OutMIs.resize(NewInsnID + 1);
 
@@ -1079,7 +1085,7 @@ bool GIMatchTableExecutor::executeMatchTable(
     case GIR_BuildRootMI:
     case GIR_BuildMI: {
       uint64_t NewInsnID = (MatcherOpcode == GIR_BuildRootMI) ? 0 : readULEB();
-      uint16_t Opcode = readU16();
+      uint32_t Opcode = readU16();
       if (NewInsnID >= OutMIs.size())
         OutMIs.resize(NewInsnID + 1);
 

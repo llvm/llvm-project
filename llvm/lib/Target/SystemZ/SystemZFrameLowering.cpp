@@ -12,6 +12,7 @@
 #include "SystemZMachineFunctionInfo.h"
 #include "SystemZRegisterInfo.h"
 #include "SystemZSubtarget.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -159,6 +160,35 @@ bool SystemZFrameLowering::hasReservedCallFrame(
   // we're using a frame pointer. Similarly, 64-bit XPLINK requires 96 bytes
   // of stack space for the register save area.
   return true;
+}
+
+void SystemZFrameLowering::emitIncrement(MachineBasicBlock &MBB,
+                                         MachineBasicBlock::iterator &MBBI,
+                                         const DebugLoc &DL, Register Reg,
+                                         int64_t NumBytes,
+                                         const TargetInstrInfo *TII) const {
+  while (NumBytes) {
+    unsigned Opcode;
+    int64_t ThisVal = NumBytes;
+    if (isInt<16>(NumBytes))
+      Opcode = SystemZ::AGHI;
+    else {
+      Opcode = SystemZ::AGFI;
+      // Make sure we maintain stack alignment.
+      int64_t MinVal = -uint64_t(1) << 31;
+      int64_t MaxVal = (int64_t(1) << 31) - getStackAlignment();
+      if (ThisVal < MinVal)
+        ThisVal = MinVal;
+      else if (ThisVal > MaxVal)
+        ThisVal = MaxVal;
+    }
+    MachineInstr *MI = BuildMI(MBB, MBBI, DL, TII->get(Opcode), Reg)
+                           .addReg(Reg)
+                           .addImm(ThisVal);
+    // The CC implicit def is dead.
+    MI->getOperand(3).setIsDead();
+    NumBytes -= ThisVal;
+  }
 }
 
 bool SystemZELFFrameLowering::assignCalleeSavedSpillSlots(
@@ -471,34 +501,6 @@ void SystemZELFFrameLowering::processFunctionBeforeFrameFinalized(
       ZFI->getRestoreGPRRegs().LowGPR != SystemZ::R6D)
     for (auto &MO : MRI->use_nodbg_operands(SystemZ::R6D))
       MO.setIsKill(false);
-}
-
-// Emit instructions before MBBI (in MBB) to add NumBytes to Reg.
-static void emitIncrement(MachineBasicBlock &MBB,
-                          MachineBasicBlock::iterator &MBBI, const DebugLoc &DL,
-                          Register Reg, int64_t NumBytes,
-                          const TargetInstrInfo *TII) {
-  while (NumBytes) {
-    unsigned Opcode;
-    int64_t ThisVal = NumBytes;
-    if (isInt<16>(NumBytes))
-      Opcode = SystemZ::AGHI;
-    else {
-      Opcode = SystemZ::AGFI;
-      // Make sure we maintain 8-byte stack alignment.
-      int64_t MinVal = -uint64_t(1) << 31;
-      int64_t MaxVal = (int64_t(1) << 31) - 8;
-      if (ThisVal < MinVal)
-        ThisVal = MinVal;
-      else if (ThisVal > MaxVal)
-        ThisVal = MaxVal;
-    }
-    MachineInstr *MI = BuildMI(MBB, MBBI, DL, TII->get(Opcode), Reg)
-      .addReg(Reg).addImm(ThisVal);
-    // The CC implicit def is dead.
-    MI->getOperand(3).setIsDead();
-    NumBytes -= ThisVal;
-  }
 }
 
 // Add CFI for the new CFA offset.
@@ -1027,8 +1029,10 @@ bool SystemZXPLINKFrameLowering::assignCalleeSavedSpillSlots(
 
   // If this function has an associated personality function then the
   // environment register R5 must be saved in the DSA.
-  if (!MF.getLandingPads().empty())
+  if (!MF.getLandingPads().empty()) {
     CSI.push_back(CalleeSavedInfo(Regs.getADARegister()));
+    CSI.back().setRestored(false);
+  }
 
   // Scan the call-saved GPRs and find the bounds of the register spill area.
   Register LowRestoreGPR = 0;
@@ -1152,7 +1156,11 @@ bool SystemZXPLINKFrameLowering::spillCalleeSavedRegisters(
   }
 
   // Spill FPRs to the stack in the normal TargetInstrInfo way
-  for (const CalleeSavedInfo &I : CSI) {
+  // Registers in CSI are in inverted order so registers with large
+  // numbers will be assigned to high address.
+  // Reverse the order at spilling and restoring so instructions on
+  // registers with small numbers are emitted first.
+  for (const CalleeSavedInfo &I : llvm::reverse(CSI)) {
     MCRegister Reg = I.getReg();
     if (SystemZ::FP64BitRegClass.contains(Reg)) {
       MBB.addLiveIn(Reg);
@@ -1185,7 +1193,7 @@ bool SystemZXPLINKFrameLowering::restoreCalleeSavedRegisters(
   DebugLoc DL = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
 
   // Restore FPRs in the normal TargetInstrInfo way.
-  for (const CalleeSavedInfo &I : CSI) {
+  for (const CalleeSavedInfo &I : llvm::reverse(CSI)) {
     MCRegister Reg = I.getReg();
     if (SystemZ::FP64BitRegClass.contains(Reg))
       TII->loadRegFromStackSlot(MBB, MBBI, Reg, I.getFrameIdx(),

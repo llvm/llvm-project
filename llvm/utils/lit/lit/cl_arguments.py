@@ -19,7 +19,8 @@ class TestOrder(enum.Enum):
 class TestOutputLevel(enum.IntEnum):
     OFF = 0
     FAILED = 1
-    ALL = 2
+    FAILED_OR_FLAKY = 2
+    ALL = 3
 
     @classmethod
     def create(cls, value):
@@ -27,6 +28,8 @@ class TestOutputLevel(enum.IntEnum):
             return cls.OFF
         if value == "failed":
             return cls.FAILED
+        if value == "failed-or-flaky":
+            return cls.FAILED_OR_FLAKY
         if value == "all":
             return cls.ALL
         raise ValueError(f"invalid output level {repr(value)} of type {type(value)}")
@@ -112,7 +115,7 @@ def parse_args():
         "--test-output",
         help="Control whether the executed commands and their outputs are printed after each test has executed (default off). "
         "If --print-result-after is set lower than the level given to --test-output, --print-result-after is raised to match.",
-        choices=["off", "failed", "all"],
+        choices=["off", "failed", "failed-or-flaky", "all"],
         default="off",
         action=TestOutputAction,
     )
@@ -120,7 +123,7 @@ def parse_args():
         "--print-result-after",
         help="Control which the executed test names and results are printed after each test has executed (default all). "
         "If --test-output is set higher than the level given to --print-result-after, --test-output is lowered to match.",
-        choices=["off", "failed", "all"],
+        choices=["off", "failed", "failed-or-flaky", "all"],
         default="all",
         action=TestOutputAction,
     )
@@ -231,6 +234,14 @@ def parse_args():
         dest="useProgressBar",
         help="Do not use curses based progress bar (default)",
         action="store_false",
+    )
+    format_group.add_argument(
+        "--min-output-interval",
+        dest="minOutputInterval",
+        help="Limit updates to progressbar to at most once per INTERVAL, in seconds. Set to 0 to disable ratelimit (default - no ratelimit).",
+        default=0.0,
+        metavar="INTERVAL",
+        type=_non_negative_float,
     )
 
     # Note: this does not generate flags for user-defined result codes.
@@ -543,6 +554,24 @@ def _int(arg, kind, pred):
     if not pred(i):
         raise _error(desc, kind, arg)
     return i
+
+
+def _non_negative_float(arg):
+    return _float(arg, "non-negative", lambda f: f >= 0.0)
+
+
+def _float(arg, kind, pred):
+    try:
+        f = float(arg)
+        if not pred(f):
+            raise argparse.ArgumentTypeError(
+                f"requires {kind} float, but found '{arg}'"
+            )
+    except ValueError:
+        raise argparse.ArgumentTypeError(
+            f"conversion error - requires {kind} float, but found '{arg}'"
+        )
+    return f
 
 
 def _case_insensitive_regex(arg):

@@ -57,6 +57,8 @@ struct KernelPropertiesTy {
   uint32_t Width = 0;
   uint32_t SIMDWidth = 0;
   uint32_t MaxThreadGroupSize = 0;
+  uint32_t NumKernelArgs = 0;
+  std::unique_ptr<uint32_t[]> ArgSizes;
 
   /// Cached input parameters used in the previous launch.
   int32_t NumTeams = -1;
@@ -86,10 +88,12 @@ struct L0LaunchEnvTy {
   KernelPropertiesTy &KernelPR;
   bool HalfNumThreads = false;
   bool IsTeamsNDRange = false;
+  std::unique_lock<std::mutex> Lock;
 
   L0LaunchEnvTy(bool IsAsync, AsyncQueueTy *AsyncQueue,
                 KernelPropertiesTy &KernelPR)
-      : IsAsync(IsAsync), AsyncQueue(AsyncQueue), KernelPR(KernelPR) {}
+      : IsAsync(IsAsync), AsyncQueue(AsyncQueue), KernelPR(KernelPR),
+        Lock(KernelPR.Mtx, std::defer_lock) {}
 };
 
 class L0KernelTy : public GenericKernelTy {
@@ -124,8 +128,8 @@ public:
   Error initImpl(GenericDeviceTy &GenericDevice, DeviceImageTy &Image) override;
   /// Launch the L0 kernel function.
   Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads[3],
-                   uint32_t NumBlocks[3], KernelArgsTy &KernelArgs,
-                   KernelLaunchParamsTy LaunchParams,
+                   uint32_t NumBlocks[3], uint32_t DynBlockMemSize,
+                   KernelArgsTy &KernelArgs, KernelLaunchParamsTy LaunchParams,
                    AsyncInfoWrapperTy &AsyncInfoWrapper) const override;
   Error deinit() {
     CALL_ZE_RET_ERROR(zeKernelDestroy, zeKernel);

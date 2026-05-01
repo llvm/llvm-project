@@ -156,6 +156,7 @@ private:
   void materializeLoadStoreOperands(Address &Addr);
   void addLoadStoreOperands(const Address &Addr, const MachineInstrBuilder &MIB,
                             MachineMemOperand *MMO);
+  bool emitLoad(Register ResultReg, unsigned Opc, const LoadInst *LoadInst);
   unsigned maskI1Value(unsigned Reg, const Value *V);
   unsigned getRegForI1Value(const Value *V, const BasicBlock *BB, bool &Not);
   unsigned zeroExtendToI32(unsigned Reg, const Value *V,
@@ -188,7 +189,7 @@ private:
   bool selectBitCast(const Instruction *I);
   bool selectLoad(const Instruction *I);
   bool selectStore(const Instruction *I);
-  bool selectBr(const Instruction *I);
+  bool selectCondBr(const Instruction *I);
   bool selectRet(const Instruction *I);
   bool selectUnreachable(const Instruction *I);
 
@@ -204,6 +205,8 @@ public:
   }
 
   bool fastSelectInstruction(const Instruction *I) override;
+  bool tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
+                           const LoadInst *LI) override;
 
 #include "WebAssemblyGenFastISel.inc"
 };
@@ -428,6 +431,20 @@ void WebAssemblyFastISel::addLoadStoreOperands(const Address &Addr,
   MIB.addMemOperand(MMO);
 }
 
+bool WebAssemblyFastISel::emitLoad(Register ResultReg, unsigned Opc,
+                                   const LoadInst *Load) {
+  Address Addr;
+  if (!computeAddress(Load->getPointerOperand(), Addr))
+    return false;
+
+  materializeLoadStoreOperands(Addr);
+  auto MIB =
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(Opc), ResultReg);
+  addLoadStoreOperands(Addr, MIB, createMachineMemOperandFor(Load));
+
+  return true;
+}
+
 unsigned WebAssemblyFastISel::maskI1Value(unsigned Reg, const Value *V) {
   return zeroExtendToI32(Reg, V, MVT::i1);
 }
@@ -478,8 +495,8 @@ unsigned WebAssemblyFastISel::zeroExtendToI32(unsigned Reg, const Value *V,
       .addImm(~(~uint64_t(0) << MVT(From).getSizeInBits()));
 
   Register Result = createResultReg(&WebAssembly::I32RegClass);
-  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-          TII.get(WebAssembly::AND_I32), Result)
+  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(WebAssembly::AND_I32),
+          Result)
       .addReg(Reg)
       .addReg(Imm);
 
@@ -502,14 +519,26 @@ unsigned WebAssemblyFastISel::signExtendToI32(unsigned Reg, const Value *V,
     return 0;
   }
 
+  if (Subtarget->hasSignExt()) {
+    if (From == MVT::i8 || From == MVT::i16) {
+      Register Result = createResultReg(&WebAssembly::I32RegClass);
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
+              TII.get(From == MVT::i16 ? WebAssembly::I32_EXTEND16_S_I32
+                                       : WebAssembly::I32_EXTEND8_S_I32),
+              Result)
+          .addReg(Reg);
+      return Result;
+    }
+  }
+
   Register Imm = createResultReg(&WebAssembly::I32RegClass);
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
           TII.get(WebAssembly::CONST_I32), Imm)
       .addImm(32 - MVT(From).getSizeInBits());
 
   Register Left = createResultReg(&WebAssembly::I32RegClass);
-  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-          TII.get(WebAssembly::SHL_I32), Left)
+  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(WebAssembly::SHL_I32),
+          Left)
       .addReg(Reg)
       .addReg(Imm);
 
@@ -551,12 +580,45 @@ unsigned WebAssemblyFastISel::signExtend(unsigned Reg, const Value *V,
     if (From == MVT::i64)
       return copyValue(Reg);
 
-    Reg = signExtendToI32(Reg, V, From);
-
     Register Result = createResultReg(&WebAssembly::I64RegClass);
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-            TII.get(WebAssembly::I64_EXTEND_S_I32), Result)
-        .addReg(Reg);
+
+    if (Subtarget->hasSignExt()) {
+      if (From != MVT::i32) {
+        BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
+                TII.get(WebAssembly::I64_EXTEND_U_I32), Result)
+            .addReg(Reg);
+
+        Reg = Result;
+        Result = createResultReg(&WebAssembly::I64RegClass);
+      }
+
+      switch (From) {
+      case MVT::i8:
+        BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
+                TII.get(WebAssembly::I64_EXTEND8_S_I64), Result)
+            .addReg(Reg);
+        return Result;
+      case MVT::i16:
+        BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
+                TII.get(WebAssembly::I64_EXTEND16_S_I64), Result)
+            .addReg(Reg);
+        return Result;
+      case MVT::i32:
+        BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
+                TII.get(WebAssembly::I64_EXTEND_S_I32), Result)
+            .addReg(Reg);
+        return Result;
+      default:
+        break;
+      }
+    } else {
+      Reg = signExtendToI32(Reg, V, From);
+
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
+              TII.get(WebAssembly::I64_EXTEND_S_I32), Result)
+          .addReg(Reg);
+    }
+
     return Result;
   }
 
@@ -597,8 +659,8 @@ unsigned WebAssemblyFastISel::notValue(unsigned Reg) {
   assert(MRI.getRegClass(Reg) == &WebAssembly::I32RegClass);
 
   Register NotReg = createResultReg(&WebAssembly::I32RegClass);
-  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-          TII.get(WebAssembly::EQZ_I32), NotReg)
+  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(WebAssembly::EQZ_I32),
+          NotReg)
       .addReg(Reg);
   return NotReg;
 }
@@ -1210,8 +1272,8 @@ bool WebAssemblyFastISel::selectBitCast(const Instruction *I) {
     return true;
   }
 
-  Register Reg = fastEmit_ISD_BITCAST_r(VT.getSimpleVT(), RetVT.getSimpleVT(),
-                                        In);
+  Register Reg =
+      fastEmit_ISD_BITCAST_r(VT.getSimpleVT(), RetVT.getSimpleVT(), In);
   if (!Reg)
     return false;
   MachineBasicBlock::iterator Iter = FuncInfo.InsertPt;
@@ -1222,6 +1284,310 @@ bool WebAssemblyFastISel::selectBitCast(const Instruction *I) {
   return true;
 }
 
+static unsigned getSExtLoadOpcode(unsigned LoadSize, bool I64Result, bool A64) {
+  if (I64Result) {
+    switch (LoadSize) {
+    default:
+      return WebAssembly::INSTRUCTION_LIST_END;
+    case 8:
+      return A64 ? WebAssembly::LOAD8_S_I64_A64 : WebAssembly::LOAD8_S_I64_A32;
+    case 16:
+      return A64 ? WebAssembly::LOAD16_S_I64_A64
+                 : WebAssembly::LOAD16_S_I64_A32;
+    case 32:
+      return A64 ? WebAssembly::LOAD32_S_I64_A64
+                 : WebAssembly::LOAD32_S_I64_A32;
+    }
+  }
+
+  switch (LoadSize) {
+  default:
+    return WebAssembly::INSTRUCTION_LIST_END;
+  case 8:
+    return A64 ? WebAssembly::LOAD8_S_I32_A64 : WebAssembly::LOAD8_S_I32_A32;
+  case 16:
+    return A64 ? WebAssembly::LOAD16_S_I32_A64 : WebAssembly::LOAD16_S_I32_A32;
+  }
+}
+
+static unsigned getZExtLoadOpcode(unsigned LoadSize, bool I64Result, bool A64) {
+  if (I64Result) {
+    switch (LoadSize) {
+    default:
+      return WebAssembly::INSTRUCTION_LIST_END;
+    case 8:
+      return A64 ? WebAssembly::LOAD8_U_I64_A64 : WebAssembly::LOAD8_U_I64_A32;
+    case 16:
+      return A64 ? WebAssembly::LOAD16_U_I64_A64
+                 : WebAssembly::LOAD16_U_I64_A32;
+    case 32:
+      return A64 ? WebAssembly::LOAD32_U_I64_A64
+                 : WebAssembly::LOAD32_U_I64_A32;
+    }
+  }
+
+  switch (LoadSize) {
+  default:
+    return WebAssembly::INSTRUCTION_LIST_END;
+  case 8:
+    return A64 ? WebAssembly::LOAD8_U_I32_A64 : WebAssembly::LOAD8_U_I32_A32;
+  case 16:
+    return A64 ? WebAssembly::LOAD16_U_I32_A64 : WebAssembly::LOAD16_U_I32_A32;
+  }
+}
+
+static bool isFoldableSExtOpcode(unsigned Opc) {
+  switch (Opc) {
+  default:
+    return false;
+  case WebAssembly::I32_EXTEND8_S_I32:
+  case WebAssembly::I32_EXTEND16_S_I32:
+  case WebAssembly::I64_EXTEND8_S_I64:
+  case WebAssembly::I64_EXTEND16_S_I64:
+  case WebAssembly::I64_EXTEND32_S_I64:
+  case WebAssembly::I64_EXTEND_S_I32:
+    return true;
+  }
+}
+
+static bool isI64SExtResult(unsigned Opc) {
+  switch (Opc) {
+  default:
+    llvm_unreachable("unexpected opcode");
+  case WebAssembly::I32_EXTEND8_S_I32:
+  case WebAssembly::I32_EXTEND16_S_I32:
+    return false;
+  case WebAssembly::I64_EXTEND8_S_I64:
+  case WebAssembly::I64_EXTEND16_S_I64:
+  case WebAssembly::I64_EXTEND32_S_I64:
+  case WebAssembly::I64_EXTEND_S_I32:
+    return true;
+  }
+}
+
+static unsigned getFoldedLoadOpcode(MachineInstr *MI, MachineRegisterInfo &MRI,
+                                    const LoadInst *LI, bool A64) {
+  unsigned Opc = MI->getOpcode();
+
+  if (isFoldableSExtOpcode(Opc)) {
+    unsigned LoadSize = LI->getType()->getPrimitiveSizeInBits();
+    return getSExtLoadOpcode(LoadSize, isI64SExtResult(Opc), A64);
+  }
+
+  return WebAssembly::INSTRUCTION_LIST_END;
+}
+
+static unsigned getFoldedI64LoadOpcode(Register DestReg, const LoadInst *LI,
+                                       MachineRegisterInfo &MRI, bool A64,
+                                       MachineInstr *&OuterUserMI,
+                                       unsigned NarrowOpc) {
+  if (!MRI.hasOneNonDBGUse(DestReg))
+    return NarrowOpc;
+
+  MachineInstr *UserMI = &*MRI.use_instr_nodbg_begin(DestReg);
+  unsigned LoadSize = LI->getType()->getPrimitiveSizeInBits();
+  switch (UserMI->getOpcode()) {
+  case WebAssembly::I64_EXTEND_U_I32:
+    OuterUserMI = UserMI;
+    return getZExtLoadOpcode(LoadSize, /*I64Result=*/true, A64);
+  case WebAssembly::I64_EXTEND_S_I32:
+    OuterUserMI = UserMI;
+    return getSExtLoadOpcode(LoadSize, /*I64Result=*/true, A64);
+  default:
+    return NarrowOpc;
+  }
+}
+
+/// Matches a sign-extension pattern (shl + shr_s) to fold it into a signed
+/// load. FastISel assumes that 'sext' from i8 or i16 will first be lowered to a
+/// 32-bit zero-extending load (i32.load8_u / i32.load16_u) followed by 32-bit
+/// shifts, even when extending to i64. Therefore, this function only matches
+/// 32-bit shifts (SHL_I32 / SHR_S_I32) and specifically checks if both shift
+/// amounts are identical, compile-time constants that match the exact extension
+/// size (32 - LoadBitWidth).
+static unsigned matchFoldableShift(MachineInstr *MI, const LoadInst *LI,
+                                   MachineRegisterInfo &MRI, bool A64,
+                                   MachineInstr *&UserMI,
+                                   MachineInstr *&OuterUserMI) {
+  unsigned Opc = MI->getOpcode();
+  unsigned NewOpc = WebAssembly::INSTRUCTION_LIST_END;
+  if (Opc != WebAssembly::SHL_I32)
+    return NewOpc;
+
+  Register DestReg = MI->getOperand(0).getReg();
+  if (!MRI.hasOneNonDBGUse(DestReg))
+    return NewOpc;
+
+  UserMI = &*MRI.use_instr_nodbg_begin(DestReg);
+  unsigned UserOpc = UserMI->getOpcode();
+  if (UserOpc != WebAssembly::SHR_S_I32)
+    return NewOpc;
+
+  Type *LoadTy = LI->getType();
+  if (!LoadTy->isIntegerTy(8) && !LoadTy->isIntegerTy(16))
+    return NewOpc;
+
+  int64_t ExpectedShiftAmt = 32 - LoadTy->getIntegerBitWidth();
+  Register ShlAmtReg = MI->getOperand(2).getReg();
+  Register ShrAmtReg = UserMI->getOperand(2).getReg();
+  MachineInstr *ShlAmtDef = MRI.getUniqueVRegDef(ShlAmtReg);
+  MachineInstr *ShrAmtDef = MRI.getUniqueVRegDef(ShrAmtReg);
+  auto IsExpectedConst = [ExpectedShiftAmt](MachineInstr *MI) {
+    return MI && MI->getOpcode() == WebAssembly::CONST_I32 &&
+           MI->getOperand(1).getImm() == ExpectedShiftAmt;
+  };
+  if (!IsExpectedConst(ShlAmtDef) || !IsExpectedConst(ShrAmtDef))
+    return NewOpc;
+
+  unsigned LoadSize = LoadTy->getIntegerBitWidth();
+  unsigned NarrowOpc = getSExtLoadOpcode(LoadSize, /*I64Result=*/false, A64);
+  if (NarrowOpc == WebAssembly::INSTRUCTION_LIST_END)
+    return WebAssembly::INSTRUCTION_LIST_END;
+
+  return getFoldedI64LoadOpcode(UserMI->getOperand(0).getReg(), LI, MRI, A64,
+                                OuterUserMI, NarrowOpc);
+}
+
+static unsigned matchFoldableSExtFromPromotedI32(MachineInstr *MI,
+                                                 const LoadInst *LI,
+                                                 MachineRegisterInfo &MRI,
+                                                 bool A64,
+                                                 MachineInstr *&UserMI) {
+  if (MI->getOpcode() != WebAssembly::I64_EXTEND_U_I32)
+    return WebAssembly::INSTRUCTION_LIST_END;
+
+  unsigned LoadSize = LI->getType()->getPrimitiveSizeInBits();
+  Register DestReg = MI->getOperand(0).getReg();
+  if (!MRI.hasOneNonDBGUse(DestReg))
+    return WebAssembly::INSTRUCTION_LIST_END;
+
+  UserMI = &*MRI.use_instr_nodbg_begin(DestReg);
+  switch (UserMI->getOpcode()) {
+  default:
+    return WebAssembly::INSTRUCTION_LIST_END;
+  case WebAssembly::I64_EXTEND8_S_I64:
+    if (LoadSize != 8)
+      return WebAssembly::INSTRUCTION_LIST_END;
+    return getSExtLoadOpcode(LoadSize, true, A64);
+  case WebAssembly::I64_EXTEND16_S_I64:
+    if (LoadSize != 16)
+      return WebAssembly::INSTRUCTION_LIST_END;
+    return getSExtLoadOpcode(LoadSize, true, A64);
+  }
+}
+
+static unsigned matchFoldableCopyToI64Ext(MachineInstr *MI, const LoadInst *LI,
+                                          MachineRegisterInfo &MRI, bool A64,
+                                          MachineInstr *&OuterUserMI) {
+  if (MI->getOpcode() != WebAssembly::COPY)
+    return WebAssembly::INSTRUCTION_LIST_END;
+
+  unsigned LoadSize = LI->getType()->getPrimitiveSizeInBits();
+  if (LoadSize != 32)
+    return WebAssembly::INSTRUCTION_LIST_END;
+
+  Register CopyDst = MI->getOperand(0).getReg();
+  if (!MRI.hasOneNonDBGUse(CopyDst))
+    return WebAssembly::INSTRUCTION_LIST_END;
+
+  OuterUserMI = &*MRI.use_instr_nodbg_begin(CopyDst);
+  switch (OuterUserMI->getOpcode()) {
+  default:
+    return WebAssembly::INSTRUCTION_LIST_END;
+  case WebAssembly::I64_EXTEND_U_I32:
+    return getZExtLoadOpcode(LoadSize, true, A64);
+  case WebAssembly::I64_EXTEND_S_I32:
+    return getSExtLoadOpcode(LoadSize, true, A64);
+  }
+}
+
+static unsigned matchFoldableAnd(MachineInstr *MI, const LoadInst *LI,
+                                 MachineRegisterInfo &MRI, bool A64,
+                                 MachineInstr *&OuterUserMI) {
+  if (MI->getOpcode() != WebAssembly::AND_I32 &&
+      MI->getOpcode() != WebAssembly::AND_I64)
+    return WebAssembly::INSTRUCTION_LIST_END;
+
+  uint64_t Mask = 0;
+  bool IsConstant = false;
+  for (unsigned I = 1; I <= 2; ++I) {
+    Register Reg = MI->getOperand(I).getReg();
+    MachineInstr *DefMI = MRI.getUniqueVRegDef(Reg);
+    if (DefMI && (DefMI->getOpcode() == WebAssembly::CONST_I32 ||
+                  DefMI->getOpcode() == WebAssembly::CONST_I64)) {
+      Mask = DefMI->getOperand(1).getImm();
+      IsConstant = true;
+      break;
+    }
+  }
+
+  if (!IsConstant)
+    return WebAssembly::INSTRUCTION_LIST_END;
+
+  unsigned LoadSize = LI->getType()->getPrimitiveSizeInBits();
+  if (Mask != llvm::maskTrailingOnes<uint64_t>(LoadSize))
+    return WebAssembly::INSTRUCTION_LIST_END;
+
+  if (MI->getOpcode() == WebAssembly::AND_I64)
+    return getZExtLoadOpcode(LoadSize, /*I64Result=*/true, A64);
+
+  unsigned NarrowOpc = getZExtLoadOpcode(LoadSize, /*I64Result=*/false, A64);
+  if (NarrowOpc == WebAssembly::INSTRUCTION_LIST_END)
+    return WebAssembly::INSTRUCTION_LIST_END;
+
+  return getFoldedI64LoadOpcode(MI->getOperand(0).getReg(), LI, MRI, A64,
+                                OuterUserMI, NarrowOpc);
+}
+
+bool WebAssemblyFastISel::tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
+                                              const LoadInst *LI) {
+  bool A64 = Subtarget->hasAddr64();
+  MachineRegisterInfo &MRI = FuncInfo.MF->getRegInfo();
+  Register ResultReg;
+  MachineInstr *UserMI = nullptr;
+  MachineInstr *OuterUserMI = nullptr;
+  unsigned NewOpc = WebAssembly::INSTRUCTION_LIST_END;
+  if ((NewOpc = matchFoldableSExtFromPromotedI32(MI, LI, MRI, A64, UserMI)) !=
+      WebAssembly::INSTRUCTION_LIST_END) {
+    ResultReg = UserMI->getOperand(0).getReg();
+  } else if ((NewOpc =
+                  matchFoldableCopyToI64Ext(MI, LI, MRI, A64, OuterUserMI)) !=
+             WebAssembly::INSTRUCTION_LIST_END) {
+    ResultReg = OuterUserMI->getOperand(0).getReg();
+  } else if ((NewOpc = matchFoldableAnd(MI, LI, MRI, A64, OuterUserMI)) !=
+             WebAssembly::INSTRUCTION_LIST_END) {
+    ResultReg = OuterUserMI ? OuterUserMI->getOperand(0).getReg()
+                            : MI->getOperand(0).getReg();
+  } else if ((NewOpc = getFoldedLoadOpcode(MI, MRI, LI, A64)) !=
+             WebAssembly::INSTRUCTION_LIST_END) {
+    ResultReg = MI->getOperand(0).getReg();
+  } else if ((NewOpc =
+                  matchFoldableShift(MI, LI, MRI, A64, UserMI, OuterUserMI)) !=
+             WebAssembly::INSTRUCTION_LIST_END) {
+    ResultReg = OuterUserMI ? OuterUserMI->getOperand(0).getReg()
+                            : UserMI->getOperand(0).getReg();
+  } else {
+    return false;
+  }
+
+  if (!emitLoad(ResultReg, NewOpc, LI))
+    return false;
+
+  if (OuterUserMI) {
+    MachineBasicBlock::iterator OuterIter(OuterUserMI);
+    removeDeadCode(OuterIter, std::next(OuterIter));
+  }
+
+  if (UserMI) {
+    MachineBasicBlock::iterator UserIter(UserMI);
+    removeDeadCode(UserIter, std::next(UserIter));
+  }
+
+  MachineBasicBlock::iterator Iter(MI);
+  removeDeadCode(Iter, std::next(Iter));
+  return true;
+}
+
 bool WebAssemblyFastISel::selectLoad(const Instruction *I) {
   const auto *Load = cast<LoadInst>(I);
   if (Load->isAtomic())
@@ -1229,10 +1595,6 @@ bool WebAssemblyFastISel::selectLoad(const Instruction *I) {
   if (!WebAssembly::isDefaultAddressSpace(Load->getPointerAddressSpace()))
     return false;
   if (!Subtarget->hasSIMD128() && Load->getType()->isVectorTy())
-    return false;
-
-  Address Addr;
-  if (!computeAddress(Load->getPointerOperand(), Addr))
     return false;
 
   // TODO: Fold a following sign-/zero-extend into the load instruction.
@@ -1270,13 +1632,9 @@ bool WebAssemblyFastISel::selectLoad(const Instruction *I) {
     return false;
   }
 
-  materializeLoadStoreOperands(Addr);
-
   Register ResultReg = createResultReg(RC);
-  auto MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(Opc),
-                     ResultReg);
-
-  addLoadStoreOperands(Addr, MIB, createMachineMemOperandFor(Load));
+  if (!emitLoad(ResultReg, Opc, Load))
+    return false;
 
   updateValueMap(Load, ResultReg);
   return true;
@@ -1341,13 +1699,8 @@ bool WebAssemblyFastISel::selectStore(const Instruction *I) {
   return true;
 }
 
-bool WebAssemblyFastISel::selectBr(const Instruction *I) {
-  const auto *Br = cast<BranchInst>(I);
-  if (Br->isUnconditional()) {
-    MachineBasicBlock *MSucc = FuncInfo.getMBB(Br->getSuccessor(0));
-    fastEmitBranch(MSucc, Br->getDebugLoc());
-    return true;
-  }
+bool WebAssemblyFastISel::selectCondBr(const Instruction *I) {
+  const auto *Br = cast<CondBrInst>(I);
 
   MachineBasicBlock *TBB = FuncInfo.getMBB(Br->getSuccessor(0));
   MachineBasicBlock *FBB = FuncInfo.getMBB(Br->getSuccessor(1));
@@ -1422,8 +1775,7 @@ bool WebAssemblyFastISel::selectRet(const Instruction *I) {
   if (Reg == 0)
     return false;
 
-  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-          TII.get(WebAssembly::RETURN))
+  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(WebAssembly::RETURN))
       .addReg(Reg);
   return true;
 }
@@ -1458,8 +1810,8 @@ bool WebAssemblyFastISel::fastSelectInstruction(const Instruction *I) {
     return selectLoad(I);
   case Instruction::Store:
     return selectStore(I);
-  case Instruction::Br:
-    return selectBr(I);
+  case Instruction::CondBr:
+    return selectCondBr(I);
   case Instruction::Ret:
     return selectRet(I);
   case Instruction::Unreachable:

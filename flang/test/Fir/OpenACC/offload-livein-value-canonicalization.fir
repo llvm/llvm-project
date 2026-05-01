@@ -253,3 +253,217 @@ func.func @test_accbounds_rematerialize_fir() {
 // CHECK: acc.bounds
 // CHECK: acc.serial {
 // CHECK:   acc.bounds
+
+// -----
+
+// Test fir.convert rematerialization (ViewLikeOpInterface +
+// OutlineRematerializationOpInterface).
+func.func private @use_i64(i64) -> ()
+
+func.func @test_convert_rematerialize(%arg0: !fir.ref<i32>) {
+  %0 = fir.convert %arg0 : (!fir.ref<i32>) -> i64
+  fir.call @use_i64(%0) : (i64) -> ()
+  acc.parallel {
+    fir.call @use_i64(%0) : (i64) -> ()
+    acc.yield
+  }
+  return
+}
+
+// CHECK-LABEL: @test_convert_rematerialize
+// CHECK: %[[CVT_OUTER:.*]] = fir.convert
+// CHECK: fir.call @use_i64(%[[CVT_OUTER]])
+// CHECK: acc.parallel {
+// CHECK:   %[[CVT_INNER:.*]] = fir.convert
+// CHECK:   fir.call @use_i64(%[[CVT_INNER]])
+
+// -----
+
+// Test fir.convert sinking (only used inside region).
+func.func private @use_i64(i64) -> ()
+
+func.func @test_convert_sink(%arg0: !fir.ref<i32>) {
+  %0 = fir.convert %arg0 : (!fir.ref<i32>) -> i64
+  acc.parallel {
+    fir.call @use_i64(%0) : (i64) -> ()
+    acc.yield
+  }
+  return
+}
+
+// CHECK-LABEL: @test_convert_sink
+// CHECK: acc.parallel {
+// CHECK:   %[[CVT:.*]] = fir.convert
+// CHECK:   fir.call @use_i64(%[[CVT]])
+
+// -----
+
+// Test fir.convert sinking when input is fir.alloca (not a block argument).
+func.func private @use_i64(i64) -> ()
+
+func.func @test_convert_alloca_sink() {
+  %0 = fir.alloca i32
+  %1 = fir.convert %0 : (!fir.ref<i32>) -> i64
+  acc.parallel {
+    fir.call @use_i64(%1) : (i64) -> ()
+    acc.yield
+  }
+  return
+}
+
+// CHECK-LABEL: @test_convert_alloca_sink
+// CHECK: %[[ALLOCA:.*]] = fir.alloca i32
+// CHECK: acc.parallel {
+// CHECK:   %[[CVT:.*]] = fir.convert %[[ALLOCA]]
+// CHECK:   fir.call @use_i64(%[[CVT]])
+
+// -----
+
+// Test fir.convert rematerialization when input is fir.alloca.
+func.func private @use_i64(i64) -> ()
+
+func.func @test_convert_alloca_remat() {
+  %0 = fir.alloca i32
+  %1 = fir.convert %0 : (!fir.ref<i32>) -> i64
+  fir.call @use_i64(%1) : (i64) -> ()
+  acc.parallel {
+    fir.call @use_i64(%1) : (i64) -> ()
+    acc.yield
+  }
+  return
+}
+
+// CHECK-LABEL: @test_convert_alloca_remat
+// CHECK: %[[ALLOCA:.*]] = fir.alloca i32
+// CHECK: %[[CVT_OUTER:.*]] = fir.convert %[[ALLOCA]]
+// CHECK: fir.call @use_i64(%[[CVT_OUTER]])
+// CHECK: acc.parallel {
+// CHECK:   %[[CVT_INNER:.*]] = fir.convert %[[ALLOCA]]
+// CHECK:   fir.call @use_i64(%[[CVT_INNER]])
+
+// -----
+
+// Integer-to-integer fir.convert is not an outline rematerialization candidate.
+func.func private @use_i64(i64) -> ()
+
+func.func @test_convert_integer_widen_no_remat(%arg0: !fir.ref<i32>) {
+  %0 = fir.load %arg0 : !fir.ref<i32>
+  %1 = fir.convert %0 : (i32) -> i64
+  fir.call @use_i64(%1) : (i64) -> ()
+  acc.parallel {
+    fir.call @use_i64(%1) : (i64) -> ()
+    acc.yield
+  }
+  return
+}
+
+// CHECK-LABEL: @test_convert_integer_widen_no_remat
+// CHECK: fir.load
+// CHECK: %[[CVT:.*]] = fir.convert
+// CHECK: fir.call @use_i64(%[[CVT]])
+// CHECK: acc.parallel {
+// CHECK-NEXT: fir.call @use_i64(%[[CVT]])
+
+// -----
+
+// Pointer-to-pointer fir.convert is not a rematerialization candidate.
+func.func private @use_ref_f32(!fir.ref<f32>) -> ()
+
+func.func @test_convert_ptr_to_ptr_no_remat(%arg0: !fir.ref<i32>) {
+  %0 = fir.convert %arg0 : (!fir.ref<i32>) -> !fir.ref<f32>
+  fir.call @use_ref_f32(%0) : (!fir.ref<f32>) -> ()
+  acc.parallel {
+    fir.call @use_ref_f32(%0) : (!fir.ref<f32>) -> ()
+    acc.yield
+  }
+  return
+}
+
+// CHECK-LABEL: @test_convert_ptr_to_ptr_no_remat
+// CHECK: %[[CVT:.*]] = fir.convert %arg0
+// CHECK: fir.call @use_ref_f32(%[[CVT]])
+// CHECK: acc.parallel {
+// CHECK-NEXT: fir.call @use_ref_f32(%[[CVT]])
+
+// -----
+
+// Test that an intermediate fir.convert in a trace chain
+// (declare -> convert -> unboxchar) does not get rematerialized,
+// while a direct ptr-to-int fir.convert is correctly sunk.
+func.func private @use_i64(i64) -> ()
+func.func private @use_ref(!fir.ref<!fir.char<1,10>>) -> ()
+
+func.func @test_convert_chain_and_direct(%arg0: !fir.boxchar<1>, %arg1: !fir.ref<i32>) {
+  %c10 = arith.constant 10 : index
+  %0:2 = fir.unboxchar %arg0 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+  %1 = fir.convert %0#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,10>>
+  %2 = fir.declare %1 typeparams %c10 {uniq_name = "scalar"} : (!fir.ref<!fir.char<1,10>>, index) -> !fir.ref<!fir.char<1,10>>
+  %3 = fir.convert %arg1 : (!fir.ref<i32>) -> i64
+  acc.parallel {
+    fir.call @use_ref(%2) : (!fir.ref<!fir.char<1,10>>) -> ()
+    fir.call @use_i64(%3) : (i64) -> ()
+    acc.yield
+  }
+  return
+}
+
+// CHECK-LABEL: @test_convert_chain_and_direct
+// CHECK: %[[UNBOX:.*]]:2 = fir.unboxchar %arg0
+// CHECK: %[[CVT_REF:.*]] = fir.convert %[[UNBOX]]#0
+// CHECK: %[[DECL:.*]] = fir.declare %[[CVT_REF]]
+// CHECK: acc.parallel {
+// CHECK:   %[[CVT_INT:.*]] = fir.convert %arg1
+// CHECK:   fir.call @use_ref(%[[DECL]])
+// CHECK:   fir.call @use_i64(%[[CVT_INT]])
+
+// -----
+
+// Test fir.undefined sinking into offload region.
+// fir.undefined is used in fir.slice to mark collapsed dimensions.
+// After gpu-kernel-outlining, function arguments lose their defining op,
+// so SliceOp::getOutputRank() can no longer identify collapsed dims.
+// The pass must sink fir.undefined to preserve this information.
+
+func.func @test_undef_slice_sink(%arg0: !fir.box<!fir.array<?x?xf32>>) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %undef = fir.undefined index
+  %slice = fir.slice %c1, %c10, %c1, %c1, %undef, %undef : (index, index, index, index, index, index) -> !fir.slice<2>
+  acc.serial {
+    %rebox = fir.rebox %arg0 [%slice] : (!fir.box<!fir.array<?x?xf32>>, !fir.slice<2>) -> !fir.box<!fir.array<?xf32>>
+    acc.yield
+  }
+  return
+}
+
+// CHECK-LABEL: @test_undef_slice_sink
+// CHECK: acc.serial {
+// CHECK:   %[[UNDEF:.*]] = fir.undefined index
+// CHECK:   %[[SLICE:.*]] = fir.slice {{.*}}, %[[UNDEF]], %[[UNDEF]]
+// CHECK:   fir.rebox %arg0 [%[[SLICE]]]
+
+// -----
+
+// Test fir.undefined rematerialization (used both inside and outside region).
+
+func.func @test_undef_slice_rematerialize(%arg0: !fir.box<!fir.array<?x?xf32>>) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %undef = fir.undefined index
+  %slice = fir.slice %c1, %c10, %c1, %c1, %undef, %undef : (index, index, index, index, index, index) -> !fir.slice<2>
+  %rebox_outer = fir.rebox %arg0 [%slice] : (!fir.box<!fir.array<?x?xf32>>, !fir.slice<2>) -> !fir.box<!fir.array<?xf32>>
+  acc.serial {
+    %rebox_inner = fir.rebox %arg0 [%slice] : (!fir.box<!fir.array<?x?xf32>>, !fir.slice<2>) -> !fir.box<!fir.array<?xf32>>
+    acc.yield
+  }
+  return
+}
+
+// CHECK-LABEL: @test_undef_slice_rematerialize
+// CHECK: %[[UNDEF_OUTER:.*]] = fir.undefined index
+// CHECK: %[[SLICE_OUTER:.*]] = fir.slice {{.*}}, %[[UNDEF_OUTER]], %[[UNDEF_OUTER]]
+// CHECK: fir.rebox %arg0 [%[[SLICE_OUTER]]]
+// CHECK: acc.serial {
+// CHECK:   %[[UNDEF_INNER:.*]] = fir.undefined index
+// CHECK:   %[[SLICE_INNER:.*]] = fir.slice {{.*}}, %[[UNDEF_INNER]], %[[UNDEF_INNER]]
+// CHECK:   fir.rebox %arg0 [%[[SLICE_INNER]]]

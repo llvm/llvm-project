@@ -405,6 +405,7 @@ public:
   void VisitFriendDecl(FriendDecl *D);
   void VisitFriendTemplateDecl(FriendTemplateDecl *D);
   void VisitStaticAssertDecl(StaticAssertDecl *D);
+  void VisitExplicitInstantiationDecl(ExplicitInstantiationDecl *D);
   void VisitBlockDecl(BlockDecl *BD);
   void VisitOutlinedFunctionDecl(OutlinedFunctionDecl *D);
   void VisitCapturedDecl(CapturedDecl *CD);
@@ -636,6 +637,7 @@ void ASTDeclReader::VisitDecl(Decl *D) {
       break;
     case Decl::ModuleOwnershipKind::Unowned:
     case Decl::ModuleOwnershipKind::VisibleWhenImported:
+    case Decl::ModuleOwnershipKind::VisiblePromoted:
     case Decl::ModuleOwnershipKind::ReachableWhenImported:
     case Decl::ModuleOwnershipKind::ModulePrivate:
       break;
@@ -2784,6 +2786,32 @@ void ASTDeclReader::VisitStaticAssertDecl(StaticAssertDecl *D) {
   D->RParenLoc = readSourceLocation();
 }
 
+void ASTDeclReader::VisitExplicitInstantiationDecl(
+    ExplicitInstantiationDecl *D) {
+  // Note: trailing flags were already read by ReadDeclRecord and passed to
+  // CreateDeserialized, so TypeAndFlags.getInt() is already set.
+  VisitDecl(D);
+  auto *Spec = readDeclAs<NamedDecl>();
+  D->SpecAndTSK.setPointer(Spec);
+  D->ExternLoc = readSourceLocation();
+  D->NameLoc = readSourceLocation();
+  TypeSourceInfo *TSI = readTypeSourceInfo();
+  unsigned TSK = Record.readInt();
+  D->SpecAndTSK.setInt(TSK);
+  D->TypeAndFlags.setPointer(TSI); // preserves trailing flags in int bits
+  // Read trailing objects.
+  if (D->hasTrailingQualifier())
+    *D->getTrailingObjects<NestedNameSpecifierLoc>() =
+        Record.readNestedNameSpecifierLoc();
+  if (D->hasTrailingArgsAsWritten())
+    *D->getTrailingObjects<const ASTTemplateArgumentListInfo *>() =
+        Record.readASTTemplateArgumentListInfo();
+
+  // Rebuild the ASTContext map from specialization to EID.
+  if (Spec)
+    Reader.getContext().addExplicitInstantiationDecl(Spec, D);
+}
+
 void ASTDeclReader::VisitEmptyDecl(EmptyDecl *D) {
   VisitDecl(D);
 }
@@ -3642,7 +3670,6 @@ template<>
 void ASTDeclReader::attachPreviousDeclImpl(ASTReader &Reader,
                                            Redeclarable<VarDecl> *D,
                                            Decl *Previous, Decl *Canon) {
-  auto *VD = static_cast<VarDecl *>(D);
   auto *PrevVD = cast<VarDecl>(Previous);
   D->RedeclLink.setPrevious(PrevVD);
   D->First = PrevVD->First;
@@ -3650,11 +3677,20 @@ void ASTDeclReader::attachPreviousDeclImpl(ASTReader &Reader,
   // We should keep at most one definition on the chain.
   // FIXME: Cache the definition once we've found it. Building a chain with
   // N definitions currently takes O(N^2) time here.
+  auto *VD = static_cast<VarDecl *>(D);
   if (VD->isThisDeclarationADefinition() == VarDecl::Definition) {
     for (VarDecl *CurD = PrevVD; CurD; CurD = CurD->getPreviousDecl()) {
       if (CurD->isThisDeclarationADefinition() == VarDecl::Definition) {
+        // FIXME: For header modules, there are some problems if we don't
+        // demote definition to declaration.
+        // See clang/test/Modules/module-init-forcelly-loaded-module.cpp
+        // for example. Maybe we are able to handle the CodeGen part
+        // to avoid it emitting duplicated definitions. But just workaround
+        // now temporarily.
+        if (VD->getOwningModule() &&
+            VD->getOwningModule()->isHeaderLikeModule())
+          VD->demoteThisDefinitionToDeclaration();
         Reader.mergeDefinitionVisibility(CurD, VD);
-        VD->demoteThisDefinitionToDeclaration();
         break;
       }
     }
@@ -4097,6 +4133,10 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
     break;
   case DECL_STATIC_ASSERT:
     D = StaticAssertDecl::CreateDeserialized(Context, ID);
+    break;
+  case DECL_EXPLICIT_INSTANTIATION:
+    D = ExplicitInstantiationDecl::CreateDeserialized(Context, ID,
+                                                      Record.readInt());
     break;
   case DECL_OBJC_METHOD:
     D = ObjCMethodDecl::CreateDeserialized(Context, ID);
@@ -4972,6 +5012,11 @@ void ASTDeclReader::UpdateDecl(Decl *D) {
           Reader.getContext(), AllocatorKind, Allocator, Alignment, SR));
       break;
     }
+
+    case DeclUpdateKind::DeclMarkedOpenMPIndirectCall:
+      D->addAttr(OMPTargetIndirectCallAttr::CreateImplicit(Reader.getContext(),
+                                                           readSourceRange()));
+      break;
 
     case DeclUpdateKind::DeclExported: {
       unsigned SubmoduleID = readSubmoduleID();

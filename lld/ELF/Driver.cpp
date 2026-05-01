@@ -195,7 +195,8 @@ static std::tuple<ELFKind, uint16_t, uint8_t> parseEmulation(Ctx &ctx,
 // Returns slices of MB by parsing MB as an archive file.
 // Each slice consists of a member file in the archive.
 std::vector<std::pair<MemoryBufferRef, uint64_t>> static getArchiveMembers(
-    Ctx &ctx, MemoryBufferRef mb) {
+    Ctx &ctx, LoadJob &job) {
+  MemoryBufferRef mb = job.mbref;
   std::unique_ptr<Archive> file =
       CHECK(Archive::create(mb),
             mb.getBufferIdentifier() + ": failed to parse archive");
@@ -218,32 +219,16 @@ std::vector<std::pair<MemoryBufferRef, uint64_t>> static getArchiveMembers(
                << ": Archive::children failed: " << std::move(err);
 
   // Take ownership of memory buffers created for members of thin archives.
-  std::vector<std::unique_ptr<MemoryBuffer>> mbs = file->takeThinBuffers();
-  std::move(mbs.begin(), mbs.end(), std::back_inserter(ctx.memoryBuffers));
+  job.thinBufs = file->takeThinBuffers();
 
   return v;
 }
 
-static bool isBitcode(MemoryBufferRef mb) {
-  return identify_magic(mb.getBuffer()) == llvm::file_magic::bitcode;
-}
-
-bool LinkerDriver::tryAddFatLTOFile(MemoryBufferRef mb, StringRef archiveName,
-                                    uint64_t offsetInArchive, bool lazy) {
-  if (!ctx.arg.fatLTOObjects)
-    return false;
-  Expected<MemoryBufferRef> fatLTOData =
-      IRObjectFile::findBitcodeInMemBuffer(mb);
-  if (errorToBool(fatLTOData.takeError()))
-    return false;
-  auto file = std::make_unique<BitcodeFile>(ctx, *fatLTOData, archiveName,
-                                            offsetInArchive, lazy);
-  file->obj->fatLTOObject(true);
-  files.push_back(std::move(file));
-  return true;
-}
-
 // Opens a file and create a file object. Path has to be resolved already.
+// Every regular input (not binary-format or linker scripts) is recorded as a
+// LoadJob. Inside createFiles() jobs batch up and are expanded in parallel at
+// the end. Outside createFiles() (e.g. addDependentLibrary during parseFiles)
+// the single job is expanded immediately.
 void LinkerDriver::addFile(StringRef path, bool withLOption) {
   using namespace sys::fs;
 
@@ -253,86 +238,59 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
   MemoryBufferRef mbref = *buffer;
 
   if (ctx.arg.formatBinary) {
-    files.push_back(std::make_unique<BinaryFile>(ctx, mbref));
-    return;
-  }
-
-  switch (identify_magic(mbref.getBuffer())) {
-  case file_magic::unknown:
-    readLinkerScript(ctx, mbref);
-    return;
-  case file_magic::archive: {
-    auto members = getArchiveMembers(ctx, mbref);
-    if (inWholeArchive) {
-      for (const std::pair<MemoryBufferRef, uint64_t> &p : members) {
-        if (isBitcode(p.first))
-          files.push_back(std::make_unique<BitcodeFile>(ctx, p.first, path,
-                                                        p.second, false));
-        else if (!tryAddFatLTOFile(p.first, path, p.second, false))
-          files.push_back(createObjFile(ctx, p.first, path));
+    loadJobs.push_back({mbref,
+                        path,
+                        LoadJob::Binary,
+                        /*inWholeArchive=*/false,
+                        /*lazy=*/false,
+                        /*asNeeded=*/false,
+                        /*withLOption=*/false,
+                        nextGroupId,
+                        {},
+                        {}});
+  } else {
+    auto magic = identify_magic(mbref.getBuffer());
+    if (magic == file_magic::unknown) {
+      readLinkerScript(ctx, mbref);
+      return;
+    }
+    LoadJob::Kind kind;
+    switch (magic) {
+    case file_magic::archive:
+      kind = LoadJob::Archive;
+      break;
+    case file_magic::elf_relocatable:
+      kind = LoadJob::Obj;
+      break;
+    case file_magic::bitcode:
+      kind = LoadJob::Bitcode;
+      break;
+    case file_magic::elf_shared_object:
+      if (ctx.arg.isStatic) {
+        Err(ctx) << "attempted static link of dynamic object " << path;
+        return;
       }
+      kind = LoadJob::Shared;
+      break;
+    default:
+      Err(ctx) << path << ": unknown file type";
       return;
     }
-
-    archiveFiles.emplace_back(path, members.size());
-
-    // Handle archives and --start-lib/--end-lib using the same code path. This
-    // scans all the ELF relocatable object files and bitcode files in the
-    // archive rather than just the index file, with the benefit that the
-    // symbols are only loaded once. For many projects archives see high
-    // utilization rates and it is a net performance win. --start-lib scans
-    // symbols in the same order that llvm-ar adds them to the index, so in the
-    // common case the semantics are identical. If the archive symbol table was
-    // created in a different order, or is incomplete, this strategy has
-    // different semantics. Such output differences are considered user error.
-    //
-    // All files within the archive get the same group ID to allow mutual
-    // references for --warn-backrefs.
-    SaveAndRestore saved(isInGroup, true);
-    for (const std::pair<MemoryBufferRef, uint64_t> &p : members) {
-      auto magic = identify_magic(p.first.getBuffer());
-      if (magic == file_magic::elf_relocatable) {
-        if (!tryAddFatLTOFile(p.first, path, p.second, true))
-          files.push_back(createObjFile(ctx, p.first, path, true));
-      } else if (magic == file_magic::bitcode)
-        files.push_back(
-            std::make_unique<BitcodeFile>(ctx, p.first, path, p.second, true));
-      else
-        Warn(ctx) << path << ": archive member '"
-                  << p.first.getBufferIdentifier()
-                  << "' is neither ET_REL nor LLVM bitcode";
-    }
-    if (!saved.get())
-      ++nextGroupId;
-    return;
+    loadJobs.push_back({mbref,
+                        path,
+                        kind,
+                        inWholeArchive,
+                        inLib,
+                        ctx.arg.asNeeded,
+                        withLOption,
+                        nextGroupId,
+                        {},
+                        {}});
   }
-  case file_magic::elf_shared_object: {
-    if (ctx.arg.isStatic) {
-      ErrAlways(ctx) << "attempted static link of dynamic object " << path;
-      return;
-    }
-
-    // Shared objects are identified by soname. soname is (if specified)
-    // DT_SONAME and falls back to filename. If a file was specified by -lfoo,
-    // the directory part is ignored. Note that path may be a temporary and
-    // cannot be stored into SharedFile::soName.
-    path = mbref.getBufferIdentifier();
-    auto f = std::make_unique<SharedFile>(
-        ctx, mbref, withLOption ? path::filename(path) : path);
-    f->init();
-    files.push_back(std::move(f));
-    return;
-  }
-  case file_magic::bitcode:
-    files.push_back(std::make_unique<BitcodeFile>(ctx, mbref, "", 0, inLib));
-    break;
-  case file_magic::elf_relocatable:
-    if (!tryAddFatLTOFile(mbref, "", 0, inLib))
-      files.push_back(createObjFile(ctx, mbref, "", inLib));
-    break;
-  default:
-    ErrAlways(ctx) << path << ": unknown file type";
-  }
+  if (!isInGroup)
+    ++nextGroupId;
+  if (!deferLoad)
+    loadFiles();
 }
 
 // Add a given library by searching it from input search paths.
@@ -630,6 +588,25 @@ static ZicfissPolicy getZZicfiss(Ctx &ctx, opt::InputArgList &args) {
   return ret;
 }
 
+static int getZMemtagMode(Ctx &ctx, opt::InputArgList &args) {
+  auto ret = ELF::NT_MEMTAG_LEVEL_NONE;
+  for (auto *arg : args.filtered(OPT_z)) {
+    std::pair<StringRef, StringRef> kv = StringRef(arg->getValue()).split('=');
+    if (kv.first == "memtag-mode") {
+      arg->claim();
+      if (kv.second == "none")
+        ret = ELF::NT_MEMTAG_LEVEL_NONE;
+      else if (kv.second == "sync")
+        ret = ELF::NT_MEMTAG_LEVEL_SYNC;
+      else if (kv.second == "async")
+        ret = ELF::NT_MEMTAG_LEVEL_ASYNC;
+      else
+        ErrAlways(ctx) << "unknown -z memtag-mode= value: " << kv.second;
+    }
+  }
+  return ret;
+}
+
 // Report a warning for an unknown -z option.
 static void checkZOptions(Ctx &ctx, opt::InputArgList &args) {
   // This function is called before getTarget(), when certain options are not
@@ -846,27 +823,19 @@ static StringRef getDynamicLinker(Ctx &ctx, opt::InputArgList &args) {
 }
 
 static int getMemtagMode(Ctx &ctx, opt::InputArgList &args) {
-  StringRef memtagModeArg = args.getLastArgValue(OPT_android_memtag_mode);
-  if (memtagModeArg.empty()) {
-    if (ctx.arg.androidMemtagStack)
-      Warn(ctx) << "--android-memtag-mode is unspecified, leaving "
-                   "--android-memtag-stack a no-op";
-    else if (ctx.arg.androidMemtagHeap)
-      Warn(ctx) << "--android-memtag-mode is unspecified, leaving "
-                   "--android-memtag-heap a no-op";
-    return ELF::NT_MEMTAG_LEVEL_NONE;
+  auto memtagMode = getZMemtagMode(ctx, args);
+  if (memtagMode == ELF::NT_MEMTAG_LEVEL_NONE) {
+    if (ctx.arg.memtagStack)
+      Warn(ctx) << "-z memtag-mode is none, leaving "
+                   "-z memtag-stack a no-op";
+    if (ctx.arg.memtagHeap)
+      Warn(ctx) << "-z memtag-mode is none, leaving "
+                   "-z memtag-heap a no-op";
+    if (ctx.arg.memtagAndroidNote)
+      Warn(ctx) << "-z memtag-mode is none, leaving "
+                   "--android-memtag-note a no-op";
   }
-
-  if (memtagModeArg == "sync")
-    return ELF::NT_MEMTAG_LEVEL_SYNC;
-  if (memtagModeArg == "async")
-    return ELF::NT_MEMTAG_LEVEL_ASYNC;
-  if (memtagModeArg == "none")
-    return ELF::NT_MEMTAG_LEVEL_NONE;
-
-  ErrAlways(ctx) << "unknown --android-memtag-mode value: \"" << memtagModeArg
-                 << "\", should be one of {async, sync, none}";
-  return ELF::NT_MEMTAG_LEVEL_NONE;
+  return memtagMode;
 }
 
 static ICFLevel getICF(opt::InputArgList &args) {
@@ -1198,6 +1167,54 @@ static CGProfileSortKind getCGProfileSortKind(Ctx &ctx,
 }
 
 static void parseBPOrdererOptions(Ctx &ctx, opt::InputArgList &args) {
+  auto addCompressionSortSpec = [&](StringRef value) {
+    SmallVector<StringRef, 3> parts;
+    value.split(parts, '=');
+
+    StringRef globString = parts[0];
+    unsigned layoutPriority = 0;
+    std::optional<unsigned> matchPriority;
+
+    if (parts.size() > 1 && !parts[1].empty()) {
+      if (!to_integer(parts[1], layoutPriority)) {
+        ErrAlways(ctx) << "--bp-compression-sort-section: expected integer "
+                          "for layout_priority, got '"
+                       << parts[1] << "'";
+        return;
+      }
+    }
+    if (parts.size() > 2 && !parts[2].empty()) {
+      unsigned mp;
+      if (!to_integer(parts[2], mp)) {
+        ErrAlways(ctx) << "--bp-compression-sort-section: expected integer "
+                          "for match_priority, got '"
+                       << parts[2] << "'";
+        return;
+      }
+      matchPriority = mp;
+    }
+    if (parts.size() > 3) {
+      ErrAlways(ctx) << "--bp-compression-sort-section: too many '=' in '"
+                     << value << "'";
+      return;
+    }
+
+    auto spec = BPCompressionSortSpec::create(globString, layoutPriority,
+                                              matchPriority);
+    if (!spec) {
+      ErrAlways(ctx) << "--bp-compression-sort-section: "
+                     << toString(spec.takeError());
+      return;
+    }
+    ctx.arg.bpCompressionSortSpecs.emplace_back(std::move(*spec));
+  };
+
+  for (auto *arg : args.filtered(OPT_bp_compression_sort_section))
+    addCompressionSortSpec(arg->getValue());
+  if (!ctx.arg.bpCompressionSortSpecs.empty() &&
+      args.hasArg(OPT_call_graph_ordering_file))
+    ErrAlways(ctx) << "--bp-compression-sort-section is incompatible with "
+                      "--call-graph-ordering-file";
   if (auto *arg = args.getLastArg(OPT_bp_compression_sort)) {
     StringRef s = arg->getValue();
     if (s == "function") {
@@ -1358,13 +1375,12 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       hasZOption(args, "muldefs") ||
       args.hasFlag(OPT_allow_multiple_definition,
                    OPT_no_allow_multiple_definition, false);
-  ctx.arg.androidMemtagHeap =
-      args.hasFlag(OPT_android_memtag_heap, OPT_no_android_memtag_heap, false);
-  ctx.arg.androidMemtagStack = args.hasFlag(OPT_android_memtag_stack,
-                                            OPT_no_android_memtag_stack, false);
+  ctx.arg.memtagHeap = hasZOption(args, "memtag-heap");
+  ctx.arg.memtagStack = hasZOption(args, "memtag-stack");
+  ctx.arg.memtagAndroidNote = args.hasArg(OPT_android_memtag_note);
   ctx.arg.fatLTOObjects =
       args.hasFlag(OPT_fat_lto_objects, OPT_no_fat_lto_objects, false);
-  ctx.arg.androidMemtagMode = getMemtagMode(ctx, args);
+  ctx.arg.memtagMode = getMemtagMode(ctx, args);
   ctx.arg.auxiliaryList = args::getStrings(args, OPT_auxiliary);
   ctx.arg.armBe8 = args.hasArg(OPT_be8);
   if (opt::Arg *arg = args.getLastArg(
@@ -1706,6 +1722,15 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       ErrAlways(ctx) << errPrefix << pat.takeError() << ": " << kv.first;
   }
 
+  if (ctx.arg.zForceBti) {
+    ctx.arg.zBtiReport = ReportPolicy::Warning;
+    ctx.arg.zBtiReportSource = "-z force-bti";
+  }
+  if (ctx.arg.zGcs == GcsPolicy::Always) {
+    ctx.arg.zGcsReport = ReportPolicy::Warning;
+    ctx.arg.zGcsReportSource = "-z gcs";
+  }
+
   auto reports = {
       std::make_pair("bti-report", &ctx.arg.zBtiReport),
       std::make_pair("cet-report", &ctx.arg.zCetReport),
@@ -1737,6 +1762,10 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
         continue;
       }
       hasGcsReportDynamic |= option.first == "gcs-report-dynamic";
+      if (option.first == "bti-report")
+        ctx.arg.zBtiReportSource = "-z bti-report";
+      else if (option.first == "gcs-report")
+        ctx.arg.zGcsReportSource = "-z gcs-report";
     }
   }
 
@@ -2082,8 +2111,108 @@ static bool isFormatBinary(Ctx &ctx, StringRef s) {
   return false;
 }
 
+// Expand LoadJob entries recorded by addFile(). Called in batch from
+// createFiles() (parallel), or immediately from addFile() for late additions
+// like dependent libraries (single job, runs inline).
+void LinkerDriver::loadFiles() {
+  // BitcodeFile / fatLTO constructors call ctx.saver which is not thread-safe.
+  // SharedFile and ObjFile constructors are safe without the mutex.
+  std::mutex mu;
+  auto makeFile = [&](MemoryBufferRef mb, file_magic magic, StringRef arPath,
+                      uint64_t offset,
+                      bool lazy) -> std::unique_ptr<InputFile> {
+    if (magic == file_magic::bitcode) {
+      std::lock_guard<std::mutex> lk(mu);
+      return std::make_unique<BitcodeFile>(ctx, mb, arPath, offset, lazy);
+    }
+    if (ctx.arg.fatLTOObjects) {
+      Expected<MemoryBufferRef> fatLTOData =
+          IRObjectFile::findBitcodeInMemBuffer(mb);
+      if (!errorToBool(fatLTOData.takeError())) {
+        std::lock_guard<std::mutex> lk(mu);
+        auto f = std::make_unique<BitcodeFile>(ctx, *fatLTOData, arPath, offset,
+                                               lazy);
+        f->obj->fatLTOObject(true);
+        return f;
+      }
+    }
+    return createObjFile(ctx, mb, arPath, lazy);
+  };
+
+  {
+    llvm::TimeTraceScope timeScope("Parallel load");
+    parallelFor(0, loadJobs.size(), [&](size_t i) {
+      LoadJob &job = loadJobs[i];
+      switch (job.kind) {
+      case LoadJob::Obj:
+      case LoadJob::Bitcode:
+        job.out.push_back(makeFile(job.mbref,
+                                   job.kind == LoadJob::Bitcode
+                                       ? file_magic::bitcode
+                                       : file_magic::elf_relocatable,
+                                   "", 0, job.lazy));
+        break;
+      case LoadJob::Archive: {
+        // Scan all archive members rather than using the archive symbol
+        // index. We assume the archive symbol table order matches the order
+        // of symbols in the member symbol tables. All files within the
+        // archive share the same group ID to allow mutual references for
+        // --warn-backrefs.
+        auto members = getArchiveMembers(ctx, job);
+        job.out.reserve(members.size());
+        bool lazy = !job.inWholeArchive;
+        for (const auto &[mb, offset] : members) {
+          auto mm = identify_magic(mb.getBuffer());
+          if (mm == file_magic::elf_relocatable || mm == file_magic::bitcode ||
+              job.inWholeArchive)
+            job.out.push_back(makeFile(mb, mm, job.path, offset, lazy));
+          else
+            Warn(ctx) << job.path << ": archive member '"
+                      << mb.getBufferIdentifier()
+                      << "' is neither ET_REL nor LLVM bitcode";
+        }
+        break;
+      }
+      case LoadJob::Shared: {
+        // Shared objects are identified by soname. soname is (if specified)
+        // DT_SONAME and falls back to filename. If a file was specified by
+        // -lfoo, the directory part is ignored.
+        StringRef bufPath = job.mbref.getBufferIdentifier();
+        auto f = std::make_unique<SharedFile>(
+            ctx, job.mbref,
+            job.withLOption ? path::filename(bufPath) : bufPath);
+        f->init();
+        f->isNeeded = !job.asNeeded;
+        job.out.push_back(std::move(f));
+        break;
+      }
+      case LoadJob::Binary:
+        job.out.push_back(std::make_unique<BinaryFile>(ctx, job.mbref));
+        break;
+      }
+      for (auto &m : job.out)
+        m->groupId = job.groupId;
+    });
+  }
+
+  size_t numFiles = 0;
+  for (auto &job : loadJobs)
+    numFiles += job.out.size();
+  files.reserve(files.size() + numFiles);
+  for (auto &job : loadJobs) {
+    if (job.kind == LoadJob::Archive)
+      archiveFiles.emplace_back(job.path, (unsigned)job.out.size());
+    files.append(std::make_move_iterator(job.out.begin()),
+                 std::make_move_iterator(job.out.end()));
+    ctx.memoryBuffers.append(std::make_move_iterator(job.thinBufs.begin()),
+                             std::make_move_iterator(job.thinBufs.end()));
+  }
+  loadJobs.clear();
+}
+
 void LinkerDriver::createFiles(opt::InputArgList &args) {
   llvm::TimeTraceScope timeScope("Load input files");
+  SaveAndRestore saveDefer(deferLoad, true);
   // For --{push,pop}-state.
   std::vector<std::tuple<bool, bool, bool>> stack;
 
@@ -2205,6 +2334,7 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
 
   if (defaultScript && !hasScript)
     readLinkerScript(ctx, *defaultScript);
+  loadFiles();
   if (files.empty() && !hasInput && errCount(ctx) == 0)
     ErrAlways(ctx) << "no input files";
 }
@@ -2946,14 +3076,14 @@ static void readSecurityNotes(Ctx &ctx) {
 
     reportUnless(ctx.arg.zBtiReport,
                  features & GNU_PROPERTY_AARCH64_FEATURE_1_BTI)
-        << f
-        << ": -z bti-report: file does not have "
+        << f << ": " << ctx.arg.zBtiReportSource
+        << ": file does not have "
            "GNU_PROPERTY_AARCH64_FEATURE_1_BTI property";
 
     reportUnless(ctx.arg.zGcsReport,
                  features & GNU_PROPERTY_AARCH64_FEATURE_1_GCS)
-        << f
-        << ": -z gcs-report: file does not have "
+        << f << ": " << ctx.arg.zGcsReportSource
+        << ": file does not have "
            "GNU_PROPERTY_AARCH64_FEATURE_1_GCS property";
 
     reportUnless(ctx.arg.zCetReport, features & GNU_PROPERTY_X86_FEATURE_1_IBT)
@@ -3008,10 +3138,6 @@ static void readSecurityNotes(Ctx &ctx) {
 
     if (ctx.arg.zForceBti && !(features & GNU_PROPERTY_AARCH64_FEATURE_1_BTI)) {
       features |= GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
-      if (ctx.arg.zBtiReport == ReportPolicy::None)
-        Warn(ctx) << f
-                  << ": -z force-bti: file does not have "
-                     "GNU_PROPERTY_AARCH64_FEATURE_1_BTI property";
     } else if (ctx.arg.zForceIbt &&
                !(features & GNU_PROPERTY_X86_FEATURE_1_IBT)) {
       if (ctx.arg.zCetReport == ReportPolicy::None)

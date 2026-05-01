@@ -104,7 +104,9 @@ template <typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
     return V;
   } else if constexpr (sizeof(T) == 2) {
     uint16_t UV = V;
-#if defined(_MSC_VER) && !defined(_DEBUG)
+#if __has_builtin(__builtin_bswap16)
+    return __builtin_bswap16(UV);
+#elif defined(_MSC_VER) && !defined(_DEBUG)
     // The DLL version of the runtime lacks these functions (bug!?), but in a
     // release build they're replaced with BSWAP instructions anyway.
     return _byteswap_ushort(UV);
@@ -230,23 +232,52 @@ template <typename T> [[nodiscard]] int countr_zero(T Val) {
 /// Count number of 0's from the most significant bit to the least
 ///   stopping at the first 1.
 ///
+/// A constexpr version of countl_zero.
+///
+/// Only unsigned integral types are allowed.
+///
+/// Returns std::numeric_limits<T>::digits on an input of 0.
+template <typename T> [[nodiscard]] constexpr int countl_zero_constexpr(T Val) {
+  static_assert(std::is_unsigned_v<T>,
+                "Only unsigned integral types are allowed.");
+  if (!Val)
+    return std::numeric_limits<T>::digits;
+
+  unsigned ZeroBits = 0;
+  for (T Shift = std::numeric_limits<T>::digits >> 1; Shift; Shift >>= 1) {
+    T Tmp = Val >> Shift;
+    if (Tmp)
+      Val = Tmp;
+    else
+      ZeroBits |= Shift;
+  }
+  return ZeroBits;
+}
+
+/// Count number of 0's from the most significant bit to the least
+///   stopping at the first 1.
+///
 /// Only unsigned integral types are allowed.
 ///
 /// Returns std::numeric_limits<T>::digits on an input of 0.
 template <typename T> [[nodiscard]] int countl_zero(T Val) {
   static_assert(std::is_unsigned_v<T>,
                 "Only unsigned integral types are allowed.");
+
+  constexpr int BitWidth = std::numeric_limits<T>::digits;
+
   if (!Val)
-    return std::numeric_limits<T>::digits;
+    return BitWidth;
 
   // Use the intrinsic if available.
-  if constexpr (sizeof(T) == 4) {
+  if constexpr (sizeof(T) <= 4) {
 #if __has_builtin(__builtin_clz) || defined(__GNUC__)
-    return __builtin_clz(Val);
+    constexpr int Padding = std::numeric_limits<uint32_t>::digits - BitWidth;
+    return __builtin_clz(Val) - Padding;
 #elif defined(_MSC_VER)
     unsigned long Index;
     _BitScanReverse(&Index, Val);
-    return Index ^ 31;
+    return static_cast<int>((BitWidth - 1) - Index);
 #endif
   } else if constexpr (sizeof(T) == 8) {
 #if __has_builtin(__builtin_clzll) || defined(__GNUC__)
@@ -258,16 +289,7 @@ template <typename T> [[nodiscard]] int countl_zero(T Val) {
 #endif
   }
 
-  // Fall back to the bisection method.
-  unsigned ZeroBits = 0;
-  for (T Shift = std::numeric_limits<T>::digits >> 1; Shift; Shift >>= 1) {
-    T Tmp = Val >> Shift;
-    if (Tmp)
-      Val = Tmp;
-    else
-      ZeroBits |= Shift;
-  }
-  return ZeroBits;
+  return countl_zero_constexpr(Val);
 }
 
 /// Count the number of ones from the most significant bit to the first
@@ -315,12 +337,7 @@ template <typename T> [[nodiscard]] int bit_width(T Value) {
 template <typename T> [[nodiscard]] constexpr int bit_width_constexpr(T Value) {
   static_assert(std::is_unsigned_v<T>,
                 "Only unsigned integral types are allowed.");
-  int Width = 0;
-  while (Value > 0) {
-    Value >>= 1;
-    ++Width;
-  }
-  return Width;
+  return std::numeric_limits<T>::digits - llvm::countl_zero_constexpr(Value);
 }
 
 /// Returns the largest integral power of two no greater than Value if Value is

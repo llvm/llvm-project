@@ -11,6 +11,7 @@
 
 #include "TestingSupport/TestUtilities.h"
 #include "lldb/Expression/Expression.h"
+#include "lldb/Target/Target.h"
 #include "llvm/Testing/Support/Error.h"
 
 using namespace lldb_private;
@@ -35,37 +36,37 @@ static LabelTestCase g_label_test_cases[] = {
      {},
      {"expected function call label prefix '$__lldb_func' but found "
       "'$__lldb_funcc' instead."}},
-    {"", {}, {"malformed function call label."}},
-    {"foo", {}, {"malformed function call label."}},
-    {"$__lldb_func", {}, {"malformed function call label."}},
-    {"$__lldb_func:", {}, {"malformed function call label."}},
-    {"$__lldb_func:blah", {}, {"malformed function call label."}},
-    {"$__lldb_func:blah:0x0", {}, {"malformed function call label."}},
-    {"$__lldb_func:111:0x0:0x0", {}, {"malformed function call label."}},
+    {"", {}, {"malformed function call label"}},
+    {"foo", {}, {"malformed function call label"}},
+    {"$__lldb_func", {}, {"malformed function call label"}},
+    {"$__lldb_func:", {}, {"malformed function call label"}},
+    {"$__lldb_func:blah", {}, {"malformed function call label"}},
+    {"$__lldb_func:blah:0x0", {}, {"malformed function call label"}},
+    {"$__lldb_func:111:0x0:0x0", {}, {"malformed function call label"}},
     {"$__lldb_func:111:abc:0x0:_Z3foov",
      {},
-     {"failed to parse module ID from 'abc'."}},
+     {"failed to parse module ID from 'abc'"}},
     {"$__lldb_func:111:-1:0x0:_Z3foov",
      {},
-     {"failed to parse module ID from '-1'."}},
+     {"failed to parse module ID from '-1'"}},
     {"$__lldb_func:111:0x0invalid:0x0:_Z3foov",
      {},
-     {"failed to parse module ID from '0x0invalid'."}},
+     {"failed to parse module ID from '0x0invalid'"}},
     {"$__lldb_func:111:0x0 :0x0:_Z3foov",
      {},
-     {"failed to parse module ID from '0x0 '."}},
+     {"failed to parse module ID from '0x0 '"}},
     {"$__lldb_func:blah:0x0:abc:_Z3foov",
      {},
-     {"failed to parse symbol ID from 'abc'."}},
+     {"failed to parse symbol ID from 'abc'"}},
     {"$__lldb_func:blah:0x5:-1:_Z3foov",
      {},
-     {"failed to parse symbol ID from '-1'."}},
+     {"failed to parse symbol ID from '-1'"}},
     {"$__lldb_func:blah:0x5:0x0invalid:_Z3foov",
      {},
-     {"failed to parse symbol ID from '0x0invalid'."}},
+     {"failed to parse symbol ID from '0x0invalid'"}},
     {"$__lldb_func:blah:0x5:0x0 :_Z3foov",
      {},
-     {"failed to parse symbol ID from '0x0 '."}},
+     {"failed to parse symbol ID from '0x0 '"}},
     {"$__lldb_func:blah:0x0:0x0:_Z3foov",
      {
          /*.discriminator=*/"blah",
@@ -127,3 +128,41 @@ TEST_P(ExpressionTestFixture, FunctionCallLabel) {
 
 INSTANTIATE_TEST_SUITE_P(FunctionCallLabelTest, ExpressionTestFixture,
                          testing::ValuesIn(g_label_test_cases));
+
+TEST(ExpressionTests, ExpressionOptions_Basic) {
+  EvaluateExpressionOptions options;
+
+  EXPECT_THAT_EXPECTED(options.GetBooleanLanguageOption("foo"),
+                       llvm::FailedWithMessage("option 'foo' does not exist"));
+  EXPECT_THAT_EXPECTED(options.GetBooleanLanguageOption("bar"),
+                       llvm::FailedWithMessage("option 'bar' does not exist"));
+
+  EXPECT_THAT_ERROR(options.SetBooleanLanguageOption("foo", true),
+                    llvm::Succeeded());
+  EXPECT_THAT_ERROR(options.SetBooleanLanguageOption("bar", false),
+                    llvm::Succeeded());
+
+  EXPECT_THAT_EXPECTED(options.GetBooleanLanguageOption("foo"),
+                       llvm::HasValue(true));
+  EXPECT_THAT_EXPECTED(options.GetBooleanLanguageOption("bar"),
+                       llvm::HasValue(false));
+
+  EXPECT_THAT_ERROR(options.SetBooleanLanguageOption("foo", false),
+                    llvm::Succeeded());
+  EXPECT_THAT_ERROR(options.SetBooleanLanguageOption("bar", true),
+                    llvm::Succeeded());
+
+  EXPECT_THAT_EXPECTED(options.GetBooleanLanguageOption("foo"),
+                       llvm::HasValue(false));
+  EXPECT_THAT_EXPECTED(options.GetBooleanLanguageOption("bar"),
+                       llvm::HasValue(true));
+
+  // Empty option names not allowed.
+  EXPECT_THAT_EXPECTED(options.GetBooleanLanguageOption(""),
+                       llvm::FailedWithMessage("option '' does not exist"));
+  EXPECT_THAT_ERROR(
+      options.SetBooleanLanguageOption("", true),
+      llvm::FailedWithMessage("can't set an option with an empty name"));
+  EXPECT_THAT_EXPECTED(options.GetBooleanLanguageOption(""),
+                       llvm::FailedWithMessage("option '' does not exist"));
+}

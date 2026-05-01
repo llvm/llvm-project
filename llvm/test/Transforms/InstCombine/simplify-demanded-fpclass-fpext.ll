@@ -2,6 +2,7 @@
 ; RUN: opt -S -passes=instcombine < %s | FileCheck %s
 
 declare nofpclass(inf norm sub zero) half @returns_nan_f16()
+declare nofpclass(qnan inf norm sub zero) half @returns_snan_f16()
 declare nofpclass(nan ninf norm sub zero) half @returns_pinf_f16()
 declare nofpclass(nan pinf norm sub zero) half @returns_ninf_f16()
 declare nofpclass(nan norm sub zero) half @returns_inf_f16()
@@ -467,6 +468,20 @@ define nofpclass(zero) float @ret_no_zero__fpext__select_zero_or_unknown(i1 %con
 ;
   %zero = call half @returns_zero_f16()
   %select = select i1 %cond, half %zero, half %unknown
+  %result = fpext half %select to float
+  ret float %result
+}
+
+define nofpclass(snan) float @qnan_result_demands_snan_src(i1 %cond, half %unknown) {
+; CHECK-LABEL: define nofpclass(snan) float @qnan_result_demands_snan_src(
+; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    [[SNAN:%.*]] = call half @returns_snan_f16()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[SNAN]], half [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fpext half [[SELECT]] to float
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %snan = call half @returns_snan_f16()
+  %select = select i1 %cond, half %snan, half %unknown
   %result = fpext half %select to float
   ret float %result
 }

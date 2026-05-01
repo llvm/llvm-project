@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PLATFORM_WASM_PLATFORMWASM_H
-#define LLDB_SOURCE_PLUGINS_PLATFORM_WASM_PLATFORMWASM_H
+#ifndef LLDB_SOURCE_PLUGINS_PLATFORM_WEBASSEMBLY_PLATFORMWASM_H
+#define LLDB_SOURCE_PLUGINS_PLATFORM_WEBASSEMBLY_PLATFORMWASM_H
 
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
@@ -55,13 +55,22 @@ public:
         arch, addr, length, prot, flags, fd, offset);
   }
 
+protected:
+  /// Find a free TCP port by binding to port 0.
+  static llvm::Expected<uint16_t> FindFreeTCPPort();
+
+  static auto GetArgRange(const Args &args) {
+    return llvm::make_range(args.GetArgumentArrayRef().begin(),
+                            args.GetArgumentArrayRef().end());
+  }
+
+  PlatformWasm() : RemoteAwarePlatform(/*is_host=*/false) {}
+
 private:
   static lldb::PlatformSP CreateInstance(bool force, const ArchSpec *arch);
   static void DebuggerInitialize(Debugger &debugger);
-
-  PlatformWasm() : RemoteAwarePlatform(/*is_host=*/false) {}
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_PLATFORM_WASM_PLATFORMWASM_H
+#endif // LLDB_SOURCE_PLUGINS_PLATFORM_WEBASSEMBLY_PLATFORMWASM_H

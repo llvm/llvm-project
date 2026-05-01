@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "IRForTarget.h"
+#include "InjectPointerSigningFixups.h"
 
 #include "ClangExpressionDeclMap.h"
 #include "ClangUtil.h"
@@ -73,31 +74,30 @@ IRForTarget::IRForTarget(lldb_private::ClangExpressionDeclMap *decl_map,
                          bool resolve_vars,
                          lldb_private::IRExecutionUnit &execution_unit,
                          lldb_private::Stream &error_stream,
+                         lldb_private::ExecutionPolicy execution_policy,
                          const char *func_name)
     : m_resolve_vars(resolve_vars), m_func_name(func_name),
       m_decl_map(decl_map), m_error_stream(error_stream),
-      m_execution_unit(execution_unit),
+      m_execution_unit(execution_unit), m_policy(execution_policy),
       m_entry_instruction_finder(FindEntryInstruction) {}
 
 /* Handy utility functions used at several places in the code */
 
-static std::string PrintValue(const Value *value, bool truncate = false) {
+static std::string PrintValue(const Value *value) {
+  if (!value)
+    return {};
   std::string s;
-  if (value) {
-    raw_string_ostream rso(s);
-    value->print(rso);
-    if (truncate)
-      s.resize(s.length() - 1);
-  }
+  raw_string_ostream rso(s);
+  value->print(rso);
   return s;
 }
 
-static std::string PrintType(const llvm::Type *type, bool truncate = false) {
+static std::string PrintType(const llvm::Type *type) {
+  if (!type)
+    return {};
   std::string s;
   raw_string_ostream rso(s);
   type->print(rso);
-  if (truncate)
-    s.resize(s.length() - 1);
   return s;
 }
 
@@ -212,8 +212,7 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
     return false;
   }
 
-  LLDB_LOG(log, "Found result in the IR: \"{0}\"",
-           PrintValue(result_value, false));
+  LLDB_LOG(log, "Found result in the IR: \"{0}\"", PrintValue(result_value));
 
   GlobalVariable *result_global = dyn_cast<GlobalVariable>(result_value);
 
@@ -1647,10 +1646,7 @@ bool IRForTarget::runOnModule(Module &llvm_module) {
     }
   }
 
-  ////////////////////////////////////////////////////////////
-  // Replace $__lldb_expr_result with a persistent variable
-  //
-
+  // Replace $__lldb_expr_result with a persistent variable.
   if (main_function) {
     if (!CreateResultVariable(*main_function)) {
       LLDB_LOG(log, "CreateResultVariable() failed");
@@ -1699,10 +1695,7 @@ bool IRForTarget::runOnModule(Module &llvm_module) {
     }
   }
 
-  ///////////////////////////////////////////////////////////////////////////////
   // Fix all Objective-C constant strings to use NSStringWithCString:encoding:
-  //
-
   if (!RewriteObjCConstStrings()) {
     LLDB_LOG(log, "RewriteObjCConstStrings() failed");
 
@@ -1736,10 +1729,7 @@ bool IRForTarget::runOnModule(Module &llvm_module) {
     }
   }
 
-  ////////////////////////////////////////////////////////////////////////
-  // Run function-level passes that only make sense on the main function
-  //
-
+  // Run function-level passes that only make sense on the main function.
   if (main_function) {
     if (!ResolveExternals(*main_function)) {
       LLDB_LOG(log, "ResolveExternals() failed");
@@ -1756,6 +1746,14 @@ bool IRForTarget::runOnModule(Module &llvm_module) {
 
       return false;
     }
+  }
+
+  // Run architecture specific module-level passes.
+  if (llvm::Error error =
+          lldb_private::InjectPointerSigningFixupCode(*m_module, m_policy)) {
+    LLDB_LOG_ERROR(log, std::move(error),
+                   "InsertPointerSigningFixups() failed: {0}");
+    return false;
   }
 
   if (log && log->GetVerbose()) {

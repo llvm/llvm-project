@@ -462,7 +462,7 @@ public:
 
   void addDirectiveHandler(StringRef Directive,
                            ExtensionDirectiveHandler Handler) override {
-    ExtensionDirectiveMap[Directive] = Handler;
+    ExtensionDirectiveMap[Directive] = std::move(Handler);
     DirectiveKindMap.try_emplace(Directive, DK_HANDLER_DIRECTIVE);
   }
 
@@ -1203,7 +1203,7 @@ const AsmToken MasmParser::peekTok(bool ShouldSkipSpace) {
 bool MasmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
   // Create the initial section, if requested.
   if (!NoInitialTextSection)
-    Out.initSections(false, getTargetParser().getSTI());
+    Out.initSections(getTargetParser().getSTI());
 
   // Prime the lexer.
   Lex();
@@ -1273,7 +1273,7 @@ bool MasmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
 bool MasmParser::checkForValidSection() {
   if (!ParsingMSInlineAsm && !(getStreamer().getCurrentFragment() &&
                                getStreamer().getCurrentSectionOnly())) {
-    Out.initSections(false, getTargetParser().getSTI());
+    Out.initSections(getTargetParser().getSTI());
     return Error(getTok().getLoc(),
                  "expected section directive before assembly directive");
   }
@@ -4098,7 +4098,7 @@ bool MasmParser::parseDirectiveEnds(StringRef Name, SMLoc NameLoc) {
   // and the size of its largest field.
   Structure.Size = llvm::alignTo(
       Structure.Size, std::min(Structure.Alignment, Structure.AlignmentSize));
-  Structs[Name.lower()] = Structure;
+  Structs[Name.lower()] = std::move(Structure);
 
   if (parseEOL())
     return addErrorSuffix(" in ENDS directive");
@@ -6070,7 +6070,7 @@ bool MasmParser::parseMSInlineAsm(
         OS << "]";
       break;
     case AOK_Label:
-      OS << Ctx.getAsmInfo()->getPrivateLabelPrefix() << AR.Label;
+      OS << Ctx.getAsmInfo().getPrivateLabelPrefix() << AR.Label;
       break;
     case AOK_Input:
       OS << '$' << InputIdx++;
@@ -6100,7 +6100,7 @@ bool MasmParser::parseMSInlineAsm(
       // MS alignment directives are measured in bytes. If the native assembler
       // measures alignment in bytes, we can pass it straight through.
       OS << ".align";
-      if (getContext().getAsmInfo()->getAlignmentIsInBytes())
+      if (getContext().getAsmInfo().getAlignmentIsInBytes())
         break;
 
       // Alignment is in log2 form, so print that instead and skip the original

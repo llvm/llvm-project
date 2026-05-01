@@ -58,16 +58,35 @@ void MultipleInheritanceCheck::registerMatchers(MatchFinder *Finder) {
 
 void MultipleInheritanceCheck::check(const MatchFinder::MatchResult &Result) {
   const auto &D = *Result.Nodes.getNodeAs<CXXRecordDecl>("decl");
-  // Check to see if the class inherits from multiple concrete classes.
-  unsigned NumConcrete =
-      llvm::count_if(D.bases(), [&](const CXXBaseSpecifier &I) {
-        return !I.isVirtual() && !isInterface(I);
-      });
+  // Collect the direct and virtual concrete bases of the class.
+  SmallVector<const CXXRecordDecl *> DirectConcreteBases;
+  for (const CXXBaseSpecifier &Base : D.bases())
+    if (!Base.isVirtual() && !isInterface(Base))
+      DirectConcreteBases.push_back(Base.getType()->getAsCXXRecordDecl());
 
-  // Check virtual bases to see if there is more than one concrete
-  // non-virtual base.
+  SmallVector<const CXXRecordDecl *> VirtualConcreteBases;
+  for (const CXXBaseSpecifier &VBase : D.vbases())
+    if (!isInterface(VBase))
+      VirtualConcreteBases.push_back(VBase.getType()->getAsCXXRecordDecl());
+
+  unsigned NumConcrete = DirectConcreteBases.size();
+
+  // Count only virtual concrete bases that introduce an additional
+  // implementation base, skipping those already represented by a more derived
+  // concrete base.
   NumConcrete += llvm::count_if(
-      D.vbases(), [&](const CXXBaseSpecifier &V) { return !isInterface(V); });
+      VirtualConcreteBases, [&](const CXXRecordDecl *VirtualBase) {
+        const bool HiddenByMoreDerivedVirtualBase = llvm::any_of(
+            VirtualConcreteBases, [&](const CXXRecordDecl *OtherVirtualBase) {
+              return VirtualBase != OtherVirtualBase &&
+                     OtherVirtualBase->isVirtuallyDerivedFrom(VirtualBase);
+            });
+        const bool HiddenByDirectConcreteBase = llvm::any_of(
+            DirectConcreteBases, [&](const CXXRecordDecl *DirectBase) {
+              return DirectBase->isVirtuallyDerivedFrom(VirtualBase);
+            });
+        return !HiddenByMoreDerivedVirtualBase && !HiddenByDirectConcreteBase;
+      });
 
   if (NumConcrete > 1)
     diag(D.getBeginLoc(), "inheriting multiple classes that aren't "

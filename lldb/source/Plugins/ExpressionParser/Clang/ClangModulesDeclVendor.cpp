@@ -8,6 +8,7 @@
 
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticFrontend.h"
+#include "clang/Basic/DiagnosticSerialization.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Driver/CreateInvocationFromArgs.h"
@@ -213,6 +214,14 @@ bool StoringDiagnosticConsumer::HandleModuleRemark(
     LLDB_LOG(log, "Finished building Clang module {0}", module_name);
     return true;
   }
+  case clang::diag::remark_module_import: {
+    const auto &module_name = info.getArgStdStr(0);
+    const auto &module_path = info.getArgStdStr(1);
+    LLDB_LOG(log, "Importing Clang module {0} from {1}", module_name,
+             module_path);
+    return true;
+  }
+
   default:
     return false;
   }
@@ -329,7 +338,8 @@ ClangModulesDeclVendorImpl::AddModule(const SourceModule &module,
         return llvm::createStringError("couldn't find modulemap file in %s",
                                        module.search_path.GetCString());
 
-      if (HS.parseAndLoadModuleMapFile(*file, is_system))
+      if (HS.parseAndLoadModuleMapFile(*file, is_system,
+                                       /*ImplicitlyDiscovered=*/false))
         return llvm::createStringError(
             "failed to parse and load modulemap file in %s",
             module.search_path.GetCString());
@@ -337,8 +347,8 @@ ClangModulesDeclVendorImpl::AddModule(const SourceModule &module,
   }
 
   if (!HS.lookupModule(module.path.front().GetStringRef()))
-    return llvm::createStringError("header search couldn't locate module '%s'",
-                                   module.path.front().AsCString());
+    return llvm::createStringErrorV(
+        "header search couldn't locate module '{0}'", module.path.front());
 
   llvm::SmallVector<clang::IdentifierLoc, 4> clang_path;
 
@@ -681,6 +691,7 @@ ClangModulesDeclVendor::Create(Target &target) {
       "-fmodules-validate-system-headers",
       "-Werror=non-modular-include-in-framework-module",
       "-Xclang=-fincremental-extensions",
+      "-Rmodule-import",
       "-Rmodule-build"};
 
   target.GetPlatform()->AddClangModuleCompilationOptions(

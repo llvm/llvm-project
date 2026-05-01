@@ -58,7 +58,7 @@ public:
     if (succ_size(&BB) < 2)
       return nullptr;
     auto *Term = BB.getTerminator();
-    return (isa<BranchInst>(Term) || isa<SwitchInst>(Term) ||
+    return (isa<CondBrInst>(Term) || isa<SwitchInst>(Term) ||
             isa<IndirectBrInst>(Term) || isa<CallBrInst>(Term))
                ? Term
                : nullptr;
@@ -77,7 +77,7 @@ bool isAsmOnly(const Function &F) {
   if (!F.hasFnAttribute(Attribute::AttrKind::Naked))
     return false;
   for (const auto &BB : F)
-    for (const auto &I : drop_end(BB.instructionsWithoutDebug())) {
+    for (const auto &I : drop_end(BB)) {
       const auto *CB = dyn_cast<CallBase>(&I);
       if (!CB || !CB->isInlineAsm())
         return false;
@@ -206,14 +206,15 @@ PreservedAnalyses ProfileVerifierPass::run(Module &M,
                                            ModuleAnalysisManager &MAM) {
   auto PopulateIgnoreList = [&](StringRef GVName) {
     if (const auto *CT = M.getGlobalVariable(GVName))
-      if (const auto *CA =
-              dyn_cast_if_present<ConstantArray>(CT->getInitializer()))
-        for (const auto &Elt : CA->operands())
-          if (const auto *CS = dyn_cast<ConstantStruct>(Elt))
-            if (CS->getNumOperands() >= 2 && CS->getOperand(1))
-              if (const auto *F = dyn_cast<Function>(
-                      CS->getOperand(1)->stripPointerCasts()))
-                IgnoreList.insert(F);
+      if (CT->hasInitializer())
+        if (const auto *CA =
+                dyn_cast_if_present<ConstantArray>(CT->getInitializer()))
+          for (const auto &Elt : CA->operands())
+            if (const auto *CS = dyn_cast<ConstantStruct>(Elt))
+              if (CS->getNumOperands() >= 2 && CS->getOperand(1))
+                if (const auto *F = dyn_cast<Function>(
+                        CS->getOperand(1)->stripPointerCasts()))
+                  IgnoreList.insert(F);
   };
   PopulateIgnoreList("llvm.global_ctors");
   PopulateIgnoreList("llvm.global_dtors");

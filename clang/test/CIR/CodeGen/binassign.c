@@ -89,8 +89,8 @@ void binary_assign_struct() {
 // LLVM: define {{.*}}void @binary_assign_struct()
 // LLVM:   %[[LS_PTR:.*]] = alloca %struct.S
 // LLVM:   %[[LSV_PTR:.*]] = alloca %struct.SV
-// LLVM:   call void @llvm.memcpy.p0.p0.i32(ptr %[[LS_PTR]], ptr @gs, i32 8, i1 false)
-// LLVM:   call void @llvm.memcpy.p0.p0.i32(ptr %[[LSV_PTR]], ptr @gsv, i32 8, i1 true)
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr %[[LS_PTR]], ptr @gs, i64 8, i1 false)
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr %[[LSV_PTR]], ptr @gsv, i64 8, i1 true)
 // LLVM:   ret void
 
 // OGCG: define {{.*}}void @binary_assign_struct()
@@ -123,7 +123,8 @@ int ignore_result_assign() {
 // CIR:         cir.store{{.*}} %[[VAL_123]], %[[J]] : !s32i, !cir.ptr<!s32i>
 // CIR:         %[[VAL_5:.*]] = cir.const #cir.int<5> : !s32i
 // CIR:         cir.store{{.*}} %[[VAL_5]], %[[I]] : !s32i, !cir.ptr<!s32i>
-// CIR:         %[[ARR_ELEM:.*]] = cir.get_element %[[ARR]][%[[VAL_5]] : !s32i] : !cir.ptr<!cir.array<!s32i x 10>> -> !cir.ptr<!s32i>
+// CIR:         %[[VAL_5_64:.*]] = cir.const #cir.int<5> : !s64i
+// CIR:         %[[ARR_ELEM:.*]] = cir.get_element %[[ARR]][%[[VAL_5_64]] : !s64i] : !cir.ptr<!cir.array<!s32i x 10>> -> !cir.ptr<!s32i>
 // CIR:         %[[ARR_LOAD:.*]] = cir.load{{.*}} %[[ARR_ELEM]] : !cir.ptr<!s32i>, !s32i
 // CIR:         cir.store{{.*}} %[[ARR_LOAD]], %[[J]] : !s32i, !cir.ptr<!s32i>
 // CIR:         %[[NULL:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!s32i>

@@ -218,6 +218,9 @@ struct MachineSchedPolicy {
   // Compute DFSResult for use in scheduling heuristics.
   bool ComputeDFSResult = false;
 
+  // If enabled, some extra cases of physreg defs will be biased towards user.
+  bool BiasPRegsExtra = false;
+
   MachineSchedPolicy() = default;
 };
 
@@ -1233,6 +1236,7 @@ private:
 };
 
 // Utility functions used by heuristics in tryCandidate().
+LLVM_ABI unsigned computeRemLatency(SchedBoundary &CurrZone);
 LLVM_ABI bool tryLess(int TryVal, int CandVal,
                       GenericSchedulerBase::SchedCandidate &TryCand,
                       GenericSchedulerBase::SchedCandidate &Cand,
@@ -1251,8 +1255,12 @@ LLVM_ABI bool tryPressure(const PressureChange &TryP,
                           GenericSchedulerBase::CandReason Reason,
                           const TargetRegisterInfo *TRI,
                           const MachineFunction &MF);
+LLVM_ABI bool tryBiasPhysRegs(GenericSchedulerBase::SchedCandidate &TryCand,
+                              GenericSchedulerBase::SchedCandidate &Cand,
+                              SchedBoundary *Zone, bool BiasPRegsExtra);
 LLVM_ABI unsigned getWeakLeft(const SUnit *SU, bool isTop);
-LLVM_ABI int biasPhysReg(const SUnit *SU, bool isTop);
+LLVM_ABI int biasPhysReg(const SUnit *SU, bool isTop,
+                         bool BiasPRegsExtra = false);
 
 /// GenericScheduler shrinks the unscheduled zone using heuristics to balance
 /// the schedule.

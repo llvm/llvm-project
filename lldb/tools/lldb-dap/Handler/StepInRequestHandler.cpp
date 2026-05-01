@@ -32,6 +32,9 @@ namespace lldb_dap {
 // possible targets for a given source line can be retrieved via the
 // `stepInTargets` request.
 Error StepInRequestHandler::Run(const StepInArguments &args) const {
+  if (dap.ProcessIsNotStopped())
+    return make_error<NotStoppedError>();
+
   SBThread thread = dap.GetLLDBThread(args.threadId);
   if (!thread.IsValid())
     return make_error<DAPError>("invalid thread");
@@ -39,9 +42,6 @@ Error StepInRequestHandler::Run(const StepInArguments &args) const {
   // Remember the thread ID that caused the resume so we can set the
   // "threadCausedFocus" boolean value in the "stopped" events.
   dap.focus_tid = thread.GetThreadID();
-
-  if (!SBDebugger::StateIsStoppedState(dap.target.GetProcess().GetState()))
-    return make_error<NotStoppedError>();
 
   lldb::SBError error;
   if (args.granularity == eSteppingGranularityInstruction) {

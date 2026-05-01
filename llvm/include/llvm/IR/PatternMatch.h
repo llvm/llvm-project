@@ -33,6 +33,7 @@
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/FMF.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -41,7 +42,10 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/PatternMatchHelpers.h"
 #include <cstdint>
+
+using namespace llvm::PatternMatchHelpers;
 
 namespace llvm {
 namespace PatternMatch {
@@ -75,80 +79,84 @@ template <typename T> inline OneUse_match<T> m_OneUse(const T &SubPattern) {
   return SubPattern;
 }
 
-template <typename SubPattern_t> struct AllowReassoc_match {
+template <typename SubPattern_t, int Flag> struct AllowFmf_match {
   SubPattern_t SubPattern;
+  FastMathFlags FMF;
 
-  AllowReassoc_match(const SubPattern_t &SP) : SubPattern(SP) {}
+  AllowFmf_match(const SubPattern_t &SP) : SubPattern(SP), FMF(Flag) {}
 
   template <typename OpTy> bool match(OpTy *V) const {
     auto *I = dyn_cast<FPMathOperator>(V);
-    return I && I->hasAllowReassoc() && SubPattern.match(I);
+    return I && ((I->getFastMathFlags() & FMF) == FMF) && SubPattern.match(I);
   }
 };
 
 template <typename T>
-inline AllowReassoc_match<T> m_AllowReassoc(const T &SubPattern) {
+inline AllowFmf_match<T, FastMathFlags::AllowReassoc>
+m_AllowReassoc(const T &SubPattern) {
   return SubPattern;
 }
 
-template <typename Class> struct class_match {
-  template <typename ITy> bool match(ITy *V) const { return isa<Class>(V); }
-};
+template <typename T>
+inline AllowFmf_match<T, FastMathFlags::AllowReciprocal>
+m_AllowReciprocal(const T &SubPattern) {
+  return SubPattern;
+}
+
+template <typename T>
+inline AllowFmf_match<T, FastMathFlags::AllowContract>
+m_AllowContract(const T &SubPattern) {
+  return SubPattern;
+}
+
+template <typename T>
+inline AllowFmf_match<T, FastMathFlags::ApproxFunc>
+m_ApproxFunc(const T &SubPattern) {
+  return SubPattern;
+}
+
+template <typename T>
+inline AllowFmf_match<T, FastMathFlags::NoNaNs> m_NoNaNs(const T &SubPattern) {
+  return SubPattern;
+}
+
+template <typename T>
+inline AllowFmf_match<T, FastMathFlags::NoInfs> m_NoInfs(const T &SubPattern) {
+  return SubPattern;
+}
+
+template <typename T>
+inline AllowFmf_match<T, FastMathFlags::NoSignedZeros>
+m_NoSignedZeros(const T &SubPattern) {
+  return SubPattern;
+}
 
 /// Match an arbitrary value and ignore it.
-inline class_match<Value> m_Value() { return class_match<Value>(); }
+inline auto m_Value() { return m_Isa<Value>(); }
 
 /// Match an arbitrary unary operation and ignore it.
-inline class_match<UnaryOperator> m_UnOp() {
-  return class_match<UnaryOperator>();
-}
+inline auto m_UnOp() { return m_Isa<UnaryOperator>(); }
 
 /// Match an arbitrary binary operation and ignore it.
-inline class_match<BinaryOperator> m_BinOp() {
-  return class_match<BinaryOperator>();
-}
+inline auto m_BinOp() { return m_Isa<BinaryOperator>(); }
 
 /// Matches any compare instruction and ignore it.
-inline class_match<CmpInst> m_Cmp() { return class_match<CmpInst>(); }
+inline auto m_Cmp() { return m_Isa<CmpInst>(); }
+
+/// Matches any intrinsic call and ignore it.
+inline auto m_AnyIntrinsic() { return m_Isa<IntrinsicInst>(); }
 
 struct undef_match {
+private:
+  static bool checkAggregate(const ConstantAggregate *CA);
+
+public:
   static bool check(const Value *V) {
     if (isa<UndefValue>(V))
       return true;
-
-    const auto *CA = dyn_cast<ConstantAggregate>(V);
-    if (!CA)
-      return false;
-
-    SmallPtrSet<const ConstantAggregate *, 8> Seen;
-    SmallVector<const ConstantAggregate *, 8> Worklist;
-
-    // Either UndefValue, PoisonValue, or an aggregate that only contains
-    // these is accepted by matcher.
-    // CheckValue returns false if CA cannot satisfy this constraint.
-    auto CheckValue = [&](const ConstantAggregate *CA) {
-      for (const Value *Op : CA->operand_values()) {
-        if (isa<UndefValue>(Op))
-          continue;
-
-        const auto *CA = dyn_cast<ConstantAggregate>(Op);
-        if (!CA)
-          return false;
-        if (Seen.insert(CA).second)
-          Worklist.emplace_back(CA);
-      }
-
-      return true;
-    };
-
-    if (!CheckValue(CA))
-      return false;
-
-    while (!Worklist.empty()) {
-      if (!CheckValue(Worklist.pop_back_val()))
-        return false;
-    }
-    return true;
+    if (const auto *CA = dyn_cast<ConstantAggregate>(V))
+      return checkAggregate(CA);
+    return false;
   }
   template <typename ITy> bool match(ITy *V) const { return check(V); }
 };
@@ -159,27 +167,19 @@ struct undef_match {
 inline auto m_Undef() { return undef_match(); }
 
 /// Match an arbitrary UndefValue constant.
-inline class_match<UndefValue> m_UndefValue() {
-  return class_match<UndefValue>();
-}
+inline auto m_UndefValue() { return m_Isa<UndefValue>(); }
 
 /// Match an arbitrary poison constant.
-inline class_match<PoisonValue> m_Poison() {
-  return class_match<PoisonValue>();
-}
+inline auto m_Poison() { return m_Isa<PoisonValue>(); }
 
 /// Match an arbitrary Constant and ignore it.
-inline class_match<Constant> m_Constant() { return class_match<Constant>(); }
+inline auto m_Constant() { return m_Isa<Constant>(); }
 
 /// Match an arbitrary ConstantInt and ignore it.
-inline class_match<ConstantInt> m_ConstantInt() {
-  return class_match<ConstantInt>();
-}
+inline auto m_ConstantInt() { return m_Isa<ConstantInt>(); }
 
 /// Match an arbitrary ConstantFP and ignore it.
-inline class_match<ConstantFP> m_ConstantFP() {
-  return class_match<ConstantFP>();
-}
+inline auto m_ConstantFP() { return m_Isa<ConstantFP>(); }
 
 struct constantexpr_match {
   template <typename ITy> bool match(ITy *V) const {
@@ -213,9 +213,7 @@ inline Splat_match<T> m_ConstantSplat(const T &SubPattern) {
 }
 
 /// Match an arbitrary basic block value and ignore it.
-inline class_match<BasicBlock> m_BasicBlock() {
-  return class_match<BasicBlock>();
-}
+inline auto m_BasicBlock() { return m_Isa<BasicBlock>(); }
 
 /// Inverting matcher
 template <typename Ty> struct match_unless {
@@ -229,48 +227,6 @@ template <typename Ty> struct match_unless {
 /// Match if the inner matcher does *NOT* match.
 template <typename Ty> inline match_unless<Ty> m_Unless(const Ty &M) {
   return match_unless<Ty>(M);
-}
-
-/// Matching combinators
-template <typename LTy, typename RTy> struct match_combine_or {
-  LTy L;
-  RTy R;
-
-  match_combine_or(const LTy &Left, const RTy &Right) : L(Left), R(Right) {}
-
-  template <typename ITy> bool match(ITy *V) const {
-    if (L.match(V))
-      return true;
-    if (R.match(V))
-      return true;
-    return false;
-  }
-};
-
-template <typename LTy, typename RTy> struct match_combine_and {
-  LTy L;
-  RTy R;
-
-  match_combine_and(const LTy &Left, const RTy &Right) : L(Left), R(Right) {}
-
-  template <typename ITy> bool match(ITy *V) const {
-    if (L.match(V))
-      if (R.match(V))
-        return true;
-    return false;
-  }
-};
-
-/// Combine two pattern matchers matching L || R
-template <typename LTy, typename RTy>
-inline match_combine_or<LTy, RTy> m_CombineOr(const LTy &L, const RTy &R) {
-  return match_combine_or<LTy, RTy>(L, R);
-}
-
-/// Combine two pattern matchers matching L && R
-template <typename LTy, typename RTy>
-inline match_combine_and<LTy, RTy> m_CombineAnd(const LTy &L, const RTy &R) {
-  return match_combine_and<LTy, RTy>(L, R);
 }
 
 template <typename APTy> struct ap_match {
@@ -360,38 +316,44 @@ template <int64_t Val> inline constantint_match<Val> m_ConstantInt() {
 /// is true.
 template <typename Predicate, typename ConstantVal, bool AllowPoison>
 struct cstval_pred_ty : public Predicate {
+private:
+  bool matchVector(const Value *V) const {
+    if (const auto *C = dyn_cast<Constant>(V)) {
+      if (const auto *CV = dyn_cast_or_null<ConstantVal>(C->getSplatValue()))
+        return this->isValue(CV->getValue());
+
+      // Number of elements of a scalable vector unknown at compile time
+      auto *FVTy = dyn_cast<FixedVectorType>(V->getType());
+      if (!FVTy)
+        return false;
+
+      // Non-splat vector constant: check each element for a match.
+      unsigned NumElts = FVTy->getNumElements();
+      assert(NumElts != 0 && "Constant vector with no elements?");
+      bool HasNonPoisonElements = false;
+      for (unsigned i = 0; i != NumElts; ++i) {
+        Constant *Elt = C->getAggregateElement(i);
+        if (!Elt)
+          return false;
+        if (AllowPoison && isa<PoisonValue>(Elt))
+          continue;
+        auto *CV = dyn_cast<ConstantVal>(Elt);
+        if (!CV || !this->isValue(CV->getValue()))
+          return false;
+        HasNonPoisonElements = true;
+      }
+      return HasNonPoisonElements;
+    }
+    return false;
+  }
+
+public:
   const Constant **Res = nullptr;
   template <typename ITy> bool match_impl(ITy *V) const {
     if (const auto *CV = dyn_cast<ConstantVal>(V))
       return this->isValue(CV->getValue());
-    if (const auto *VTy = dyn_cast<VectorType>(V->getType())) {
-      if (const auto *C = dyn_cast<Constant>(V)) {
-        if (const auto *CV = dyn_cast_or_null<ConstantVal>(C->getSplatValue()))
-          return this->isValue(CV->getValue());
-
-        // Number of elements of a scalable vector unknown at compile time
-        auto *FVTy = dyn_cast<FixedVectorType>(VTy);
-        if (!FVTy)
-          return false;
-
-        // Non-splat vector constant: check each element for a match.
-        unsigned NumElts = FVTy->getNumElements();
-        assert(NumElts != 0 && "Constant vector with no elements?");
-        bool HasNonPoisonElements = false;
-        for (unsigned i = 0; i != NumElts; ++i) {
-          Constant *Elt = C->getAggregateElement(i);
-          if (!Elt)
-            return false;
-          if (AllowPoison && isa<PoisonValue>(Elt))
-            continue;
-          auto *CV = dyn_cast<ConstantVal>(Elt);
-          if (!CV || !this->isValue(CV->getValue()))
-            return false;
-          HasNonPoisonElements = true;
-        }
-        return HasNonPoisonElements;
-      }
-    }
+    if (isa<VectorType>(V->getType()))
+      return matchVector(V);
     return false;
   }
 
@@ -742,6 +704,24 @@ struct is_inf {
 /// For vectors, this includes constants with undefined elements.
 inline cstfp_pred_ty<is_inf> m_Inf() { return cstfp_pred_ty<is_inf>(); }
 
+template <bool IsNegative> struct is_signed_inf {
+  bool isValue(const APFloat &C) const {
+    return C.isInfinity() && IsNegative == C.isNegative();
+  }
+};
+
+/// Match a positive infinity FP constant.
+/// For vectors, this includes constants with undefined elements.
+inline cstfp_pred_ty<is_signed_inf<false>> m_PosInf() {
+  return cstfp_pred_ty<is_signed_inf<false>>();
+}
+
+/// Match a negative infinity FP constant.
+/// For vectors, this includes constants with undefined elements.
+inline cstfp_pred_ty<is_signed_inf<true>> m_NegInf() {
+  return cstfp_pred_ty<is_signed_inf<true>>();
+}
+
 struct is_noninf {
   bool isValue(const APFloat &C) const { return !C.isInfinity(); }
 };
@@ -823,111 +803,79 @@ inline cstfp_pred_ty<is_non_zero_not_denormal_fp> m_NonZeroNotDenormalFP() {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-template <typename Class> struct bind_ty {
-  Class *&VR;
-
-  bind_ty(Class *&V) : VR(V) {}
-
-  template <typename ITy> bool match(ITy *V) const {
-    if (auto *CV = dyn_cast<Class>(V)) {
-      VR = CV;
-      return true;
-    }
-    return false;
-  }
-};
-
-/// Check whether the value has the given Class and matches the nested
-/// pattern. Capture it into the provided variable if successful.
-template <typename Class, typename MatchTy> struct bind_and_match_ty {
-  Class *&VR;
-  MatchTy Match;
-
-  bind_and_match_ty(Class *&V, const MatchTy &Match) : VR(V), Match(Match) {}
-
-  template <typename ITy> bool match(ITy *V) const {
-    auto *CV = dyn_cast<Class>(V);
-    if (CV && Match.match(V)) {
-      VR = CV;
-      return true;
-    }
-    return false;
-  }
-};
-
 /// Match a value, capturing it if we match.
-inline bind_ty<Value> m_Value(Value *&V) { return V; }
-inline bind_ty<const Value> m_Value(const Value *&V) { return V; }
+inline match_bind<Value> m_Value(Value *&V) { return V; }
+inline match_bind<const Value> m_Value(const Value *&V) { return V; }
 
 /// Match against the nested pattern, and capture the value if we match.
-template <typename MatchTy>
-inline bind_and_match_ty<Value, MatchTy> m_Value(Value *&V,
-                                                 const MatchTy &Match) {
-  return {V, Match};
+template <typename Pattern> inline auto m_Value(Value *&V, const Pattern &P) {
+  return m_CombineAnd(P, match_bind<Value>(V));
 }
 
 /// Match against the nested pattern, and capture the value if we match.
-template <typename MatchTy>
-inline bind_and_match_ty<const Value, MatchTy> m_Value(const Value *&V,
-                                                       const MatchTy &Match) {
-  return {V, Match};
+template <typename Pattern>
+inline auto m_Value(const Value *&V, const Pattern &P) {
+  return m_CombineAnd(P, match_bind<const Value>(V));
 }
 
 /// Match an instruction, capturing it if we match.
-inline bind_ty<Instruction> m_Instruction(Instruction *&I) { return I; }
-inline bind_ty<const Instruction> m_Instruction(const Instruction *&I) {
+inline match_bind<Instruction> m_Instruction(Instruction *&I) { return I; }
+inline match_bind<const Instruction> m_Instruction(const Instruction *&I) {
   return I;
 }
 
 /// Match against the nested pattern, and capture the instruction if we match.
-template <typename MatchTy>
-inline bind_and_match_ty<Instruction, MatchTy>
-m_Instruction(Instruction *&I, const MatchTy &Match) {
-  return {I, Match};
+template <typename Pattern>
+inline auto m_Instruction(Instruction *&I, const Pattern &P) {
+  return m_CombineAnd(P, match_bind<Instruction>(I));
 }
-template <typename MatchTy>
-inline bind_and_match_ty<const Instruction, MatchTy>
-m_Instruction(const Instruction *&I, const MatchTy &Match) {
-  return {I, Match};
+template <typename Pattern>
+inline auto m_Instruction(const Instruction *&I, const Pattern &P) {
+  return m_CombineAnd(P, match_bind<const Instruction>(I));
 }
 
 /// Match a unary operator, capturing it if we match.
-inline bind_ty<UnaryOperator> m_UnOp(UnaryOperator *&I) { return I; }
-inline bind_ty<const UnaryOperator> m_UnOp(const UnaryOperator *&I) {
+inline match_bind<UnaryOperator> m_UnOp(UnaryOperator *&I) { return I; }
+inline match_bind<const UnaryOperator> m_UnOp(const UnaryOperator *&I) {
   return I;
 }
 /// Match a binary operator, capturing it if we match.
-inline bind_ty<BinaryOperator> m_BinOp(BinaryOperator *&I) { return I; }
-inline bind_ty<const BinaryOperator> m_BinOp(const BinaryOperator *&I) {
+inline match_bind<BinaryOperator> m_BinOp(BinaryOperator *&I) { return I; }
+inline match_bind<const BinaryOperator> m_BinOp(const BinaryOperator *&I) {
+  return I;
+}
+/// Match any intrinsic call, capturing it if we match.
+inline match_bind<IntrinsicInst> m_AnyIntrinsic(IntrinsicInst *&I) { return I; }
+inline match_bind<const IntrinsicInst> m_AnyIntrinsic(const IntrinsicInst *&I) {
   return I;
 }
 /// Match a with overflow intrinsic, capturing it if we match.
-inline bind_ty<WithOverflowInst> m_WithOverflowInst(WithOverflowInst *&I) {
+inline match_bind<WithOverflowInst> m_WithOverflowInst(WithOverflowInst *&I) {
   return I;
 }
-inline bind_ty<const WithOverflowInst>
+inline match_bind<const WithOverflowInst>
 m_WithOverflowInst(const WithOverflowInst *&I) {
   return I;
 }
 
 /// Match an UndefValue, capturing the value if we match.
-inline bind_ty<UndefValue> m_UndefValue(UndefValue *&U) { return U; }
+inline match_bind<UndefValue> m_UndefValue(UndefValue *&U) { return U; }
 
 /// Match a Constant, capturing the value if we match.
-inline bind_ty<Constant> m_Constant(Constant *&C) { return C; }
+inline match_bind<Constant> m_Constant(Constant *&C) { return C; }
 
 /// Match a ConstantInt, capturing the value if we match.
-inline bind_ty<ConstantInt> m_ConstantInt(ConstantInt *&CI) { return CI; }
+inline match_bind<ConstantInt> m_ConstantInt(ConstantInt *&CI) { return CI; }
 
 /// Match a ConstantFP, capturing the value if we match.
-inline bind_ty<ConstantFP> m_ConstantFP(ConstantFP *&C) { return C; }
+inline match_bind<ConstantFP> m_ConstantFP(ConstantFP *&C) { return C; }
 
 /// Match a ConstantExpr, capturing the value if we match.
-inline bind_ty<ConstantExpr> m_ConstantExpr(ConstantExpr *&C) { return C; }
+inline match_bind<ConstantExpr> m_ConstantExpr(ConstantExpr *&C) { return C; }
 
 /// Match a basic block value, capturing it if we match.
-inline bind_ty<BasicBlock> m_BasicBlock(BasicBlock *&V) { return V; }
-inline bind_ty<const BasicBlock> m_BasicBlock(const BasicBlock *&V) {
+inline match_bind<BasicBlock> m_BasicBlock(BasicBlock *&V) { return V; }
+inline match_bind<const BasicBlock> m_BasicBlock(const BasicBlock *&V) {
   return V;
 }
 
@@ -978,7 +926,7 @@ inline bind_immconstant_ty m_ImmConstant(Constant *&C) {
   return bind_immconstant_ty(C);
 }
 
-/// Match a specified Value*.
+/// Matcher for specified Value*.
 struct specificval_ty {
   const Value *Val;
 
@@ -990,24 +938,14 @@ struct specificval_ty {
 /// Match if we have a specific specified value.
 inline specificval_ty m_Specific(const Value *V) { return V; }
 
-/// Stores a reference to the Value *, not the Value * itself,
-/// thus can be used in commutative matchers.
-template <typename Class> struct deferredval_ty {
-  Class *const &Val;
-
-  deferredval_ty(Class *const &V) : Val(V) {}
-
-  template <typename ITy> bool match(ITy *const V) const { return V == Val; }
-};
-
 /// Like m_Specific(), but works if the specific value to match is determined
 /// as part of the same match() expression. For example:
 /// m_Add(m_Value(X), m_Specific(X)) is incorrect, because m_Specific() will
 /// bind X before the pattern match starts.
 /// m_Add(m_Value(X), m_Deferred(X)) is correct, and will check against
 /// whichever value m_Value(X) populated.
-inline deferredval_ty<Value> m_Deferred(Value *const &V) { return V; }
-inline deferredval_ty<const Value> m_Deferred(const Value *const &V) {
+inline match_deferred<Value> m_Deferred(Value *const &V) { return V; }
+inline match_deferred<const Value> m_Deferred(const Value *const &V) {
   return V;
 }
 
@@ -1045,9 +983,10 @@ struct bind_const_intval_ty {
     const APInt *ConstInt;
     if (!ap_match<APInt>(ConstInt, /*AllowPoison=*/false).match(V))
       return false;
-    if (ConstInt->getActiveBits() > 64)
+    std::optional<uint64_t> ZExtVal = ConstInt->tryZExtValue();
+    if (!ZExtVal)
       return false;
-    VR = ConstInt->getZExtValue();
+    VR = *ZExtVal;
     return true;
   }
 };
@@ -1124,10 +1063,10 @@ inline specific_bbval m_SpecificBB(BasicBlock *BB) {
 }
 
 /// A commutative-friendly version of m_Specific().
-inline deferredval_ty<BasicBlock> m_Deferred(BasicBlock *const &BB) {
+inline match_deferred<BasicBlock> m_Deferred(BasicBlock *const &BB) {
   return BB;
 }
-inline deferredval_ty<const BasicBlock>
+inline match_deferred<const BasicBlock>
 m_Deferred(const BasicBlock *const &BB) {
   return BB;
 }
@@ -2324,12 +2263,85 @@ m_ZExtOrSExtOrSelf(const OpTy &Op) {
   return m_CombineOr(m_ZExtOrSExt(Op), Op);
 }
 
-template <typename OpTy>
-inline match_combine_or<match_combine_or<CastInst_match<OpTy, ZExtInst>,
-                                         CastInst_match<OpTy, TruncInst>>,
-                        OpTy>
-m_ZExtOrTruncOrSelf(const OpTy &Op) {
-  return m_CombineOr(m_CombineOr(m_ZExt(Op), m_Trunc(Op)), Op);
+template <typename OpTy> inline auto m_ZExtOrTruncOrSelf(const OpTy &Op) {
+  return m_CombineOr(m_ZExt(Op), m_Trunc(Op), Op);
+}
+
+template <typename LHS_t, typename RHS_t> struct ICmpLike_match {
+  CmpPredicate &Pred;
+  LHS_t L;
+  RHS_t R;
+
+  ICmpLike_match(CmpPredicate &P, const LHS_t &Left, const RHS_t &Right)
+      : Pred(P), L(Left), R(Right) {}
+
+  template <typename OpTy> bool match(OpTy *V) const {
+    if (PatternMatch::match(V, m_ICmp(Pred, L, R)))
+      return true;
+    Value *A;
+    // trunc nuw x to i1 is equivalent to icmp ne x, 0
+    if (V->getType()->isIntOrIntVectorTy(1) &&
+        PatternMatch::match(V, m_NUWTrunc(m_Value(A))) && L.match(A) &&
+        R.match(ConstantInt::getNullValue(A->getType()))) {
+      Pred = ICmpInst::ICMP_NE;
+      return true;
+    }
+    return false;
+  }
+};
+
+template <typename LHS, typename RHS>
+inline ICmpLike_match<LHS, RHS> m_ICmpLike(CmpPredicate &Pred, const LHS &L,
+                                           const RHS &R) {
+  return ICmpLike_match<LHS, RHS>(Pred, L, R);
+}
+
+template <typename CondTy, typename LTy, typename RTy> struct SelectLike_match {
+  CondTy Cond;
+  LTy TrueC;
+  RTy FalseC;
+
+  SelectLike_match(const CondTy &C, const LTy &TC, const RTy &FC)
+      : Cond(C), TrueC(TC), FalseC(FC) {}
+
+  template <typename OpTy> bool match(OpTy *V) const {
+    // select(Cond, TrueC, FalseC) — captures both constants directly
+    if (PatternMatch::match(V, m_Select(Cond, TrueC, FalseC)))
+      return true;
+
+    Type *Ty = V->getType();
+    Value *CondV = nullptr;
+
+    // zext(i1 Cond) is equivalent to select(Cond, 1, 0)
+    if (PatternMatch::match(V, m_ZExt(m_Value(CondV))) &&
+        CondV->getType()->isIntOrIntVectorTy(1) && Cond.match(CondV) &&
+        TrueC.match(ConstantInt::get(Ty, 1)) &&
+        FalseC.match(ConstantInt::get(Ty, 0)))
+      return true;
+
+    // sext(i1 Cond) is equivalent to select(Cond, -1, 0)
+    if (PatternMatch::match(V, m_SExt(m_Value(CondV))) &&
+        CondV->getType()->isIntOrIntVectorTy(1) && Cond.match(CondV) &&
+        TrueC.match(Constant::getAllOnesValue(Ty)) &&
+        FalseC.match(ConstantInt::get(Ty, 0)))
+      return true;
+
+    return false;
+  }
+};
+
+/// Matches a value that behaves like a boolean-controlled select, i.e. one of:
+///   select i1 Cond, TrueC, FalseC
+///   zext i1 Cond             (equivalent to select i1 Cond, 1, 0)
+///   sext i1 Cond             (equivalent to select i1 Cond, -1, 0)
+///
+/// The condition is matched against \p Cond, and the true/false constants
+/// against \p TrueC and \p FalseC respectively. For zext/sext, the synthetic
+/// constants are bound to \p TrueC and \p FalseC via their matchers.
+template <typename CondTy, typename LTy, typename RTy>
+inline SelectLike_match<CondTy, LTy, RTy>
+m_SelectLike(const CondTy &C, const LTy &TrueC, const RTy &FalseC) {
+  return SelectLike_match<CondTy, LTy, RTy>(C, TrueC, FalseC);
 }
 
 template <typename OpTy>
@@ -2343,6 +2355,13 @@ inline CastInst_match<OpTy, SIToFPInst> m_SIToFP(const OpTy &Op) {
 }
 
 template <typename OpTy>
+inline match_combine_or<CastInst_match<OpTy, UIToFPInst>,
+                        CastInst_match<OpTy, SIToFPInst>>
+m_IToFP(const OpTy &Op) {
+  return m_CombineOr(m_UIToFP(Op), m_SIToFP(Op));
+}
+
+template <typename OpTy>
 inline CastInst_match<OpTy, FPToUIInst> m_FPToUI(const OpTy &Op) {
   return CastInst_match<OpTy, FPToUIInst>(Op);
 }
@@ -2350,6 +2369,13 @@ inline CastInst_match<OpTy, FPToUIInst> m_FPToUI(const OpTy &Op) {
 template <typename OpTy>
 inline CastInst_match<OpTy, FPToSIInst> m_FPToSI(const OpTy &Op) {
   return CastInst_match<OpTy, FPToSIInst>(Op);
+}
+
+template <typename OpTy>
+inline match_combine_or<CastInst_match<OpTy, FPToUIInst>,
+                        CastInst_match<OpTy, FPToSIInst>>
+m_FPToI(const OpTy &Op) {
+  return m_CombineOr(m_FPToUI(Op), m_FPToSI(Op));
 }
 
 template <typename OpTy>
@@ -2372,11 +2398,10 @@ struct br_match {
   br_match(BasicBlock *&Succ) : Succ(Succ) {}
 
   template <typename OpTy> bool match(OpTy *V) const {
-    if (auto *BI = dyn_cast<BranchInst>(V))
-      if (BI->isUnconditional()) {
-        Succ = BI->getSuccessor(0);
-        return true;
-      }
+    if (auto *BI = dyn_cast<UncondBrInst>(V)) {
+      Succ = BI->getSuccessor();
+      return true;
+    }
     return false;
   }
 };
@@ -2393,17 +2418,17 @@ struct brc_match {
       : Cond(C), T(t), F(f) {}
 
   template <typename OpTy> bool match(OpTy *V) const {
-    if (auto *BI = dyn_cast<BranchInst>(V))
-      if (BI->isConditional() && Cond.match(BI->getCondition()))
+    if (auto *BI = dyn_cast<CondBrInst>(V))
+      if (Cond.match(BI->getCondition()))
         return T.match(BI->getSuccessor(0)) && F.match(BI->getSuccessor(1));
     return false;
   }
 };
 
 template <typename Cond_t>
-inline brc_match<Cond_t, bind_ty<BasicBlock>, bind_ty<BasicBlock>>
+inline brc_match<Cond_t, match_bind<BasicBlock>, match_bind<BasicBlock>>
 m_Br(const Cond_t &C, BasicBlock *&T, BasicBlock *&F) {
-  return brc_match<Cond_t, bind_ty<BasicBlock>, bind_ty<BasicBlock>>(
+  return brc_match<Cond_t, match_bind<BasicBlock>, match_bind<BasicBlock>>(
       C, m_BasicBlock(T), m_BasicBlock(F));
 }
 
@@ -2548,14 +2573,8 @@ inline MaxMin_match<ICmpInst, LHS, RHS, umin_pred_ty> m_UMin(const LHS &L,
 }
 
 template <typename LHS, typename RHS>
-inline match_combine_or<
-    match_combine_or<MaxMin_match<ICmpInst, LHS, RHS, smax_pred_ty>,
-                     MaxMin_match<ICmpInst, LHS, RHS, smin_pred_ty>>,
-    match_combine_or<MaxMin_match<ICmpInst, LHS, RHS, umax_pred_ty>,
-                     MaxMin_match<ICmpInst, LHS, RHS, umin_pred_ty>>>
-m_MaxOrMin(const LHS &L, const RHS &R) {
-  return m_CombineOr(m_CombineOr(m_SMax(L, R), m_SMin(L, R)),
-                     m_CombineOr(m_UMax(L, R), m_UMin(L, R)));
+inline auto m_MaxOrMin(const LHS &L, const RHS &R) {
+  return m_CombineOr(m_SMax(L, R), m_SMin(L, R), m_UMax(L, R), m_UMin(L, R));
 }
 
 /// Match an 'ordered' floating point maximum function.
@@ -2768,6 +2787,18 @@ struct IntrinsicID_match {
   }
 };
 
+/// Match intrinsic calls with any of the given IDs.
+template <Intrinsic::ID... IntrIDs> struct IntrinsicIDs_match {
+  template <typename OpTy> bool match(OpTy *V) const {
+    if (const auto *CI = dyn_cast<CallInst>(V))
+      if (const auto *F = dyn_cast_or_null<Function>(CI->getCalledOperand())) {
+        Intrinsic::ID ID = F->getIntrinsicID();
+        return ((ID == IntrIDs) || ...);
+      }
+    return false;
+  }
+};
+
 /// Intrinsic matches are combinations of ID matchers, and argument
 /// matchers. Higher arity matcher are defined recursively in terms of and-ing
 /// them with lower arity matchers. Here's some convenient typedefs for up to
@@ -2812,6 +2843,15 @@ struct m_Intrinsic_Ty<T0, T1, T2, T3, T4, T5> {
 /// m_Intrinsic<Intrinsic::fabs>(m_Value(X))
 template <Intrinsic::ID IntrID> inline IntrinsicID_match m_Intrinsic() {
   return IntrinsicID_match(IntrID);
+}
+
+/// Match intrinsic calls with any of the given IDs like this:
+/// m_AnyIntrinsic<Intrinsic::fptosi_sat, Intrinsic::fptoui_sat>()
+/// This is more efficient than using nested m_CombineOr with m_Intrinsic
+/// because it performs the CallInst/Function cast only once.
+template <Intrinsic::ID... IntrIDs>
+inline IntrinsicIDs_match<IntrIDs...> m_AnyIntrinsic() {
+  return IntrinsicIDs_match<IntrIDs...>();
 }
 
 /// Matches MaskedLoad Intrinsic.
@@ -2932,6 +2972,20 @@ template <typename Opnd0, typename Opnd1>
 inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty
 m_FMaximumNum(const Opnd0 &Op0, const Opnd1 &Op1) {
   return m_Intrinsic<Intrinsic::maximumnum>(Op0, Op1);
+}
+
+template <typename Opnd0, typename Opnd1>
+inline match_combine_or<typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty,
+                        typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty>
+m_FMaxNum_or_FMaximumNum(const Opnd0 &Op0, const Opnd1 &Op1) {
+  return m_CombineOr(m_FMaxNum(Op0, Op1), m_FMaximumNum(Op0, Op1));
+}
+
+template <typename Opnd0, typename Opnd1>
+inline match_combine_or<typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty,
+                        typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty>
+m_FMinNum_or_FMinimumNum(const Opnd0 &Op0, const Opnd1 &Op1) {
+  return m_CombineOr(m_FMinNum(Op0, Op1), m_FMinimumNum(Op0, Op1));
 }
 
 template <typename Opnd0, typename Opnd1, typename Opnd2>
@@ -3076,14 +3130,9 @@ m_c_UMax(const LHS &L, const RHS &R) {
 }
 
 template <typename LHS, typename RHS>
-inline match_combine_or<
-    match_combine_or<MaxMin_match<ICmpInst, LHS, RHS, smax_pred_ty, true>,
-                     MaxMin_match<ICmpInst, LHS, RHS, smin_pred_ty, true>>,
-    match_combine_or<MaxMin_match<ICmpInst, LHS, RHS, umax_pred_ty, true>,
-                     MaxMin_match<ICmpInst, LHS, RHS, umin_pred_ty, true>>>
-m_c_MaxOrMin(const LHS &L, const RHS &R) {
-  return m_CombineOr(m_CombineOr(m_c_SMax(L, R), m_c_SMin(L, R)),
-                     m_CombineOr(m_c_UMax(L, R), m_c_UMin(L, R)));
+inline auto m_c_MaxOrMin(const LHS &L, const RHS &R) {
+  return m_CombineOr(m_c_SMax(L, R), m_c_SMin(L, R), m_c_UMax(L, R),
+                     m_c_UMin(L, R));
 }
 
 template <Intrinsic::ID IntrID, typename LHS, typename RHS>

@@ -18,7 +18,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/GenericLoopInfoImpl.h"
+#include "llvm/Support/GenericLoopInfo.h"
 #include <optional>
 #include <utility>
 
@@ -288,7 +288,7 @@ public:
   ///   br ExitSucc
   /// ExitSucc:
   /// \endcode
-  BranchInst *getLoopGuardBranch() const;
+  CondBrInst *getLoopGuardBranch() const;
 
   /// Return true iff the loop is
   /// - in simplify rotated form, and
@@ -367,6 +367,26 @@ public:
 
   /// Add llvm.loop.mustprogress to this loop's loop id metadata.
   void setLoopMustProgress();
+
+  /// Add a string-only metadata attribute to this loop's loop-ID node.
+  ///
+  /// Creates an MDNode containing just \p Name (no value operand) and appends
+  /// it to the loop metadata via makePostTransformationMetadata. Any existing
+  /// attributes whose key starts with one of \p RemovePrefixes are stripped
+  /// first.
+  LLVM_ABI void
+  addStringLoopAttribute(StringRef Name,
+                         ArrayRef<StringRef> RemovePrefixes = {}) const;
+
+  /// Add an integer metadata attribute to this loop's loop-ID node.
+  ///
+  /// Creates an MDNode of the form { Name, ConstantInt(Value) } and appends
+  /// it to the loop metadata via makePostTransformationMetadata. Any existing
+  /// attributes whose key starts with one of \p RemovePrefixes are stripped
+  /// first.
+  LLVM_ABI void
+  addIntLoopAttribute(StringRef Name, unsigned Value,
+                      ArrayRef<StringRef> RemovePrefixes = {}) const;
 
   void dump() const;
   void dumpVerbose() const;

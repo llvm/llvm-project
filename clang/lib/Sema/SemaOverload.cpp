@@ -30,6 +30,7 @@
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Overload.h"
+#include "clang/Sema/SemaAMDGPU.h"
 #include "clang/Sema/SemaARM.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaObjC.h"
@@ -116,6 +117,11 @@ static ImplicitConversionSequence::CompareKind
 CompareQualificationConversions(Sema &S,
                                 const StandardConversionSequence& SCS1,
                                 const StandardConversionSequence& SCS2);
+
+static ImplicitConversionSequence::CompareKind
+CompareOverflowBehaviorConversions(Sema &S,
+                                   const StandardConversionSequence &SCS1,
+                                   const StandardConversionSequence &SCS2);
 
 static ImplicitConversionSequence::CompareKind
 CompareDerivedToBaseConversions(Sema &S, SourceLocation Loc,
@@ -1515,6 +1521,12 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
     return false;
   };
 
+  // We look at the parameters first, as it is the common case.
+  // However we should not emit diagnostic before checking
+  // the overloads do not differ by constraints or other discriminant.
+  bool ShouldDiagnoseInconsistentRefQualifiers = false;
+  bool HaveInconsistentQualifiers = false;
+
   if (OldMethod && OldMethod->isExplicitObjectMemberFunction())
     OldParamsOffset++;
   if (NewMethod && NewMethod->isExplicitObjectMemberFunction())
@@ -1551,16 +1563,19 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
     }(OldMethod, NewMethod);
 
     if (!HaveCorrespondingObjectParameters) {
-      if (DiagnoseInconsistentRefQualifiers())
-        return true;
+      ShouldDiagnoseInconsistentRefQualifiers = true;
       // CWG2554
       // and, if at least one is an explicit object member function, ignoring
       // object parameters
       if (!UseOverrideRules || (!NewMethod->isExplicitObjectMemberFunction() &&
                                 !OldMethod->isExplicitObjectMemberFunction()))
-        return true;
+        HaveInconsistentQualifiers = true;
     }
   }
+
+  if (NewMethod && OldMethod && OldMethod->isImplicitObjectMemberFunction() &&
+      NewMethod->isImplicitObjectMemberFunction())
+    ShouldDiagnoseInconsistentRefQualifiers = true;
 
   if (!UseOverrideRules &&
       New->getTemplateSpecializationKind() != TSK_ExplicitSpecialization) {
@@ -1573,12 +1588,6 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
     if (NewRC &&
         !SemaRef.AreConstraintExpressionsEqual(OldDecl, OldRC.ConstraintExpr,
                                                NewDecl, NewRC.ConstraintExpr))
-      return true;
-  }
-
-  if (NewMethod && OldMethod && OldMethod->isImplicitObjectMemberFunction() &&
-      NewMethod->isImplicitObjectMemberFunction()) {
-    if (DiagnoseInconsistentRefQualifiers())
       return true;
   }
 
@@ -1605,6 +1614,11 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
     if (NewID != OldID)
       return true;
   }
+
+  if ((ShouldDiagnoseInconsistentRefQualifiers &&
+       DiagnoseInconsistentRefQualifiers()) ||
+      HaveInconsistentQualifiers)
+    return true;
 
   // At this point, it is known that the two functions have the same signature.
   if (SemaRef.getLangOpts().CUDA && ConsiderCudaAttrs) {
@@ -2154,8 +2168,6 @@ static bool IsMatrixConversion(Sema &S, QualType FromType, QualType ToType,
     ElConv = ICK_HLSL_Matrix_Splat;
     QualType ToElTy = ToMatrixType->getElementType();
     return IsVectorOrMatrixElementConversion(S, FromType, ToElTy, ICK, From);
-    ICK = ICK_HLSL_Matrix_Splat;
-    return true;
   }
   if (FromMatrixType && !ToMatrixType) {
     ElConv = ICK_HLSL_Matrix_Truncation;
@@ -2296,6 +2308,12 @@ static bool tryAtomicConversion(Sema &S, Expr *From, QualType ToType,
                                 bool InOverloadResolution,
                                 StandardConversionSequence &SCS,
                                 bool CStyle);
+
+static bool tryOverflowBehaviorTypeConversion(Sema &S, Expr *From,
+                                              QualType ToType,
+                                              bool InOverloadResolution,
+                                              StandardConversionSequence &SCS,
+                                              bool CStyle);
 
 /// IsStandardConversion - Determines whether there is a standard
 /// conversion sequence (C++ [conv], C++ [over.ics.scs]) from the
@@ -2487,9 +2505,16 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
     // Complex promotion (Clang extension)
     SCS.Second = ICK_Complex_Promotion;
     FromType = ToType.getUnqualifiedType();
+  } else if (S.IsOverflowBehaviorTypePromotion(FromType, ToType)) {
+    // OverflowBehaviorType promotions
+    SCS.Second = ICK_Integral_Promotion;
+    FromType = ToType.getUnqualifiedType();
+  } else if (S.IsOverflowBehaviorTypeConversion(FromType, ToType)) {
+    // OverflowBehaviorType conversions
+    SCS.Second = ICK_Integral_Conversion;
+    FromType = ToType.getUnqualifiedType();
   } else if (ToType->isBooleanType() &&
-             (FromType->isArithmeticType() ||
-              FromType->isAnyPointerType() ||
+             (FromType->isArithmeticType() || FromType->isAnyPointerType() ||
               FromType->isBlockPointerType() ||
               FromType->isMemberPointerType())) {
     // Boolean conversions (C++ 4.12).
@@ -2559,6 +2584,9 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
                                  CStyle)) {
     // tryAtomicConversion has updated the standard conversion sequence
     // appropriately.
+    return true;
+  } else if (tryOverflowBehaviorTypeConversion(
+                 S, From, ToType, InOverloadResolution, SCS, CStyle)) {
     return true;
   } else if (ToType->isEventT() &&
              From->isIntegerConstantExpr(S.getASTContext()) &&
@@ -2905,6 +2933,42 @@ bool Sema::IsComplexPromotion(QualType FromType, QualType ToType) {
                                   ToComplex->getElementType()) ||
     IsIntegralPromotion(nullptr, FromComplex->getElementType(),
                         ToComplex->getElementType());
+}
+
+bool Sema::IsOverflowBehaviorTypePromotion(QualType FromType, QualType ToType) {
+  if (!getLangOpts().OverflowBehaviorTypes)
+    return false;
+
+  if (!FromType->isOverflowBehaviorType() || !ToType->isOverflowBehaviorType())
+    return false;
+
+  return Context.getTypeSize(FromType) < Context.getTypeSize(ToType);
+}
+
+bool Sema::IsOverflowBehaviorTypeConversion(QualType FromType,
+                                            QualType ToType) {
+  if (!getLangOpts().OverflowBehaviorTypes)
+    return false;
+
+  if (FromType->isOverflowBehaviorType() && !ToType->isOverflowBehaviorType()) {
+    if (ToType->isBooleanType())
+      return false;
+    // Don't allow implicit conversion from OverflowBehaviorType to scoped enum
+    if (const EnumType *ToEnumType = ToType->getAs<EnumType>()) {
+      const EnumDecl *ToED = ToEnumType->getDecl()->getDefinitionOrSelf();
+      if (ToED->isScoped())
+        return false;
+    }
+    return true;
+  }
+
+  if (!FromType->isOverflowBehaviorType() && ToType->isOverflowBehaviorType())
+    return true;
+
+  if (FromType->isOverflowBehaviorType() && ToType->isOverflowBehaviorType())
+    return Context.getTypeSize(FromType) > Context.getTypeSize(ToType);
+
+  return false;
 }
 
 /// BuildSimilarlyQualifiedPointerType - In a pointer conversion from
@@ -3939,6 +4003,35 @@ static bool tryAtomicConversion(Sema &S, Expr *From, QualType ToType,
   return true;
 }
 
+static bool tryOverflowBehaviorTypeConversion(Sema &S, Expr *From,
+                                              QualType ToType,
+                                              bool InOverloadResolution,
+                                              StandardConversionSequence &SCS,
+                                              bool CStyle) {
+  const OverflowBehaviorType *ToOBT = ToType->getAs<OverflowBehaviorType>();
+  if (!ToOBT)
+    return false;
+
+  // Check for incompatible OBT kinds (e.g., trap vs wrap)
+  QualType FromType = From->getType();
+  if (!S.Context.areCompatibleOverflowBehaviorTypes(FromType, ToType))
+    return false;
+
+  StandardConversionSequence InnerSCS;
+  if (!IsStandardConversion(S, From, ToOBT->getUnderlyingType(),
+                            InOverloadResolution, InnerSCS, CStyle,
+                            /*AllowObjCWritebackConversion=*/false))
+    return false;
+
+  SCS.Second = InnerSCS.Second;
+  SCS.setToType(1, InnerSCS.getToType(1));
+  SCS.Third = InnerSCS.Third;
+  SCS.QualificationIncludesObjCLifetime =
+      InnerSCS.QualificationIncludesObjCLifetime;
+  SCS.setToType(2, InnerSCS.getToType(2));
+  return true;
+}
+
 static bool isFirstArgumentCompatibleWithType(ASTContext &Context,
                                               CXXConstructorDecl *Constructor,
                                               QualType Type) {
@@ -4733,6 +4826,10 @@ CompareStandardConversionSequences(Sema &S, SourceLocation Loc,
         = CompareQualificationConversions(S, SCS1, SCS2))
     return QualCK;
 
+  if (ImplicitConversionSequence::CompareKind ObtCK =
+          CompareOverflowBehaviorConversions(S, SCS1, SCS2))
+    return ObtCK;
+
   if (SCS1.ReferenceBinding && SCS2.ReferenceBinding) {
     // C++ [over.ics.rank]p3b4:
     //   -- S1 and S2 are reference bindings (8.5.3), and the types to
@@ -4842,6 +4939,25 @@ CompareStandardConversionSequences(Sema &S, SourceLocation Loc,
                  ? ImplicitConversionSequence::Better
                  : ImplicitConversionSequence::Worse;
   }
+  return ImplicitConversionSequence::Indistinguishable;
+}
+
+/// CompareOverflowBehaviorConversions - Compares two standard conversion
+/// sequences to determine whether they can be ranked based on their
+/// OverflowBehaviorType's underlying type.
+static ImplicitConversionSequence::CompareKind
+CompareOverflowBehaviorConversions(Sema &S,
+                                   const StandardConversionSequence &SCS1,
+                                   const StandardConversionSequence &SCS2) {
+
+  if (SCS1.getFromType()->isOverflowBehaviorType() &&
+      SCS1.getToType(2)->isOverflowBehaviorType())
+    return ImplicitConversionSequence::Better;
+
+  if (SCS2.getFromType()->isOverflowBehaviorType() &&
+      SCS2.getToType(2)->isOverflowBehaviorType())
+    return ImplicitConversionSequence::Worse;
+
   return ImplicitConversionSequence::Indistinguishable;
 }
 
@@ -6258,12 +6374,13 @@ TryContextuallyConvertToBool(Sema &S, Expr *From) {
 ExprResult Sema::PerformContextuallyConvertToBool(Expr *From) {
   if (checkPlaceholderForOverload(*this, From))
     return ExprError();
+  if (From->getType() == Context.AMDGPUFeaturePredicateTy)
+    return AMDGPU().ExpandAMDGPUPredicateBuiltIn(From);
 
   ImplicitConversionSequence ICS = TryContextuallyConvertToBool(*this, From);
   if (!ICS.isBad())
     return PerformImplicitConversion(From, Context.BoolTy, ICS,
                                      AssignmentAction::Converting);
-
   if (!DiagnoseMultipleUserDefinedConversion(From, Context.BoolTy))
     return Diag(From->getBeginLoc(), diag::err_typecheck_bool_condition)
            << From->getType() << From->getSourceRange();
@@ -6358,6 +6475,14 @@ static ExprResult BuildConvertedConstantExpression(Sema &S, Expr *From,
 
   if (checkPlaceholderForOverload(S, From))
     return ExprError();
+
+  if (From->containsErrors()) {
+    // The expression already has errors, so the correct cast kind can't be
+    // determined. Use RecoveryExpr to keep the expected type T and mark the
+    // result as invalid, preventing further cascading errors.
+    return S.CreateRecoveryExpr(From->getBeginLoc(), From->getEndLoc(), {From},
+                                T);
+  }
 
   // C++1z [expr.const]p3:
   //  A converted constant expression of type T is an expression,
@@ -6470,6 +6595,12 @@ static ExprResult BuildConvertedConstantExpression(Sema &S, Expr *From,
     S.Diag(From->getBeginLoc(), diag::ext_cce_narrowing)
         << CCE << /*Constant*/ 1
         << PreNarrowingValue.getAsString(S.Context, PreNarrowingType) << T;
+    // If this is an SFINAE Context, treat the result as invalid so it stops
+    // substitution at this point, respecting C++26 [temp.deduct.general]p7.
+    // FIXME: Should do this whenever the above diagnostic is an error, but
+    // without further changes this would degrade some other diagnostics.
+    if (S.isSFINAEContext())
+      return ExprError();
     break;
 
   case NK_Dependent_Narrowing:
@@ -6485,6 +6616,8 @@ static ExprResult BuildConvertedConstantExpression(Sema &S, Expr *From,
     // constant expression.
     S.Diag(From->getBeginLoc(), diag::ext_cce_narrowing)
         << CCE << /*Constant*/ 0 << From->getType() << T;
+    if (S.isSFINAEContext())
+      return ExprError();
     break;
   }
   if (!ReturnPreNarrowingValue)
@@ -7359,8 +7492,13 @@ void Sema::AddOverloadCandidate(
       QualType ParamType = Proto->getParamType(ArgIdx);
       auto ParamABI = Proto->getExtParameterInfo(ArgIdx).getABI();
       if (ParamABI == ParameterABI::HLSLOut ||
-          ParamABI == ParameterABI::HLSLInOut)
+          ParamABI == ParameterABI::HLSLInOut) {
         ParamType = ParamType.getNonReferenceType();
+        if (ParamABI == ParameterABI::HLSLInOut &&
+            Args[ArgIdx]->getType().getAddressSpace() ==
+                LangAS::hlsl_groupshared)
+          Diag(Args[ArgIdx]->getBeginLoc(), diag::warn_hlsl_groupshared_inout);
+      }
       Candidate.Conversions[ConvIdx] = TryCopyInitialization(
           *this, Args[ArgIdx], ParamType, SuppressUserConversions,
           /*InOverloadResolution=*/true,
@@ -12090,6 +12228,16 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
   if (TakingCandidateAddress && !checkAddressOfCandidateIsAvailable(S, Fn))
     return;
 
+  // __amdgpu_feature_predicate_t can be explicitly cast to the logical op type,
+  // although this is almost always an error and we advise against it.
+  if (FromTy == S.Context.AMDGPUFeaturePredicateTy &&
+      ToTy == S.Context.getLogicalOperationType()) {
+    S.Diag(Conv.Bad.FromExpr->getExprLoc(),
+           diag::err_amdgcn_predicate_type_needs_explicit_bool_cast)
+        << Conv.Bad.FromExpr << ToTy;
+    return;
+  }
+
   // Emit the generic diagnostic and, optionally, add the hints to it.
   PartialDiagnostic FDiag = S.PDiag(diag::note_ovl_candidate_bad_conv);
   FDiag << (unsigned)FnKindPair.first << (unsigned)FnKindPair.second << FnDesc
@@ -12713,7 +12861,9 @@ static void NoteFunctionCandidate(Sema &S, OverloadCandidate *Cand,
 
       S.Diag(Fn->getLocation(), diag::note_ovl_candidate_deleted)
           << (unsigned)FnKindPair.first << (unsigned)FnKindPair.second << FnDesc
-          << (Fn->isDeleted() ? (Fn->isDeletedAsWritten() ? 1 : 2) : 0);
+          << (Fn->isDeleted()
+                  ? (Fn->getCanonicalDecl()->isDeletedAsWritten() ? 1 : 2)
+                  : 0);
       MaybeEmitInheritedConstructorNote(S, Cand->FoundDecl);
       return;
     }
@@ -15552,7 +15702,8 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
         TheCall = CXXOperatorCallExpr::Create(
             Context, ChosenOp, FnExpr.get(), Args, ResultTy, VK, OpLoc,
             CurFPFeatureOverrides(),
-            static_cast<CallExpr::ADLCallKind>(Best->IsADLCandidate));
+            static_cast<CallExpr::ADLCallKind>(Best->IsADLCandidate),
+            IsReversed);
 
         if (const auto *Method = dyn_cast<CXXMethodDecl>(FnDecl);
             Method && Method->isImplicitObjectMemberFunction()) {
