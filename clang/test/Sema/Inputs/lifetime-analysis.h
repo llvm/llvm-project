@@ -214,6 +214,9 @@ unique_ptr<T> make_unique(Args&&... args) {
   return unique_ptr<T>(new T(args...));
 }
 
+template <class T>
+void destroy_at(T *);
+
 template<typename T>
 struct shared_ptr {
   shared_ptr();

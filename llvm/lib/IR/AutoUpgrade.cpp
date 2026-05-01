@@ -1004,6 +1004,13 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
     if (Name.consume_front("sve.")) {
       // 'aarch64.sve.*'.
       if (Name.consume_front("bf")) {
+        if (Name == "mmla") {
+          Type *Tys[] = {F->getReturnType(),
+                         std::next(F->arg_begin())->getType()};
+          NewFn = Intrinsic::getOrInsertDeclaration(
+              F->getParent(), Intrinsic::aarch64_sve_fmmla, Tys);
+          return true;
+        }
         if (Name.consume_back(".lane")) {
           // 'aarch64.sve.bf*.lane'.
           Intrinsic::ID ID =
