@@ -6270,8 +6270,6 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "immediate must be an integer in range [0, 1].");
   case Match_InvalidImm0_3:
     return Error(Loc, "immediate must be an integer in range [0, 3].");
-  case Match_InvalidImm0_6:
-    return Error(Loc, "immediate must be an integer in range [0, 6].");
   case Match_InvalidImm0_7:
     return Error(Loc, "immediate must be an integer in range [0, 7].");
   case Match_InvalidImm0_15:
@@ -6296,10 +6294,6 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "immediate must be an integer in range [1, 64].");
   case Match_InvalidImmM1_62:
     return Error(Loc, "immediate must be an integer in range [-1, 62].");
-  case Match_InvalidSysCR0_7:
-    return Error(Loc, "expected cN operand where 0 <= N <= 7");
-  case Match_InvalidSysCR8_9:
-    return Error(Loc, "expected cN operand where 8 <= N <= 9");
   case Match_InvalidSysCR0_15:
     return Error(Loc, "expected cN operand where 0 <= N <= 15");
   case Match_InvalidMemoryIndexedRange2UImm0:
@@ -7064,7 +7058,6 @@ bool AArch64AsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidImm0_0:
   case Match_InvalidImm0_1:
   case Match_InvalidImm0_3:
-  case Match_InvalidImm0_6:
   case Match_InvalidImm0_7:
   case Match_InvalidImm0_15:
   case Match_InvalidImm0_31:
@@ -7077,8 +7070,6 @@ bool AArch64AsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidImm1_32:
   case Match_InvalidImm1_64:
   case Match_InvalidImmM1_62:
-  case Match_InvalidSysCR0_7:
-  case Match_InvalidSysCR8_9:
   case Match_InvalidSysCR0_15:
   case Match_InvalidMemoryIndexedRange2UImm0:
   case Match_InvalidMemoryIndexedRange2UImm1:
@@ -8739,12 +8730,12 @@ ParseStatus AArch64AsmParser::tryParseConsecutiveGPRSeqPair(
   SMLoc E = getLoc();
   MCRegister SecondReg;
   Res = tryParseScalarRegister(SecondReg);
-  // SYSP accepts either no register pair or `xzr, xzr`. The omitted form
-  // is changed to `xzr, xzr` during assembly.
   if (!Res.isSuccess())
     return Error(E, IsXZRPair ? "expected second xzr in xzr/xzr register pair"
                               : SecondRegExpected);
 
+  // For SYSP, Rt == 31 denotes the optional-pair default. If the explicit
+  // pair starts with xzr, the derived second register must be xzr too.
   if (IsXZRPair) {
     if (!XRegClass.contains(SecondReg) || SecondReg != AArch64::XZR)
       return Error(E, "expected second xzr in xzr/xzr register pair");

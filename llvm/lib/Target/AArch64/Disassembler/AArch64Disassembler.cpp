@@ -1407,9 +1407,6 @@ static DecodeStatus DecodeSyspInstruction(MCInst &Inst, uint32_t insn,
   unsigned op2 = fieldFromInstruction(insn, 5, 3);
   unsigned Rt = fieldFromInstruction(insn, 0, 5);
 
-  if (op1 > 6 || (CRn != 8 && CRn != 9) || CRm > 7)
-    return Fail;
-
   Inst.addOperand(MCOperand::createImm(op1));
   Inst.addOperand(MCOperand::createImm(CRn));
   Inst.addOperand(MCOperand::createImm(CRm));
