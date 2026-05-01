@@ -1579,7 +1579,7 @@ static void splitEndLoopBB(MachineBasicBlock *EndTryTableBB) {
 
 // Print the BB name in the form of bb.NUMBER.ORIGINAL_NAME.
 // e.g., bb.3.catch.start
-static std::string getBBName(const MachineBasicBlock *MBB) {
+[[maybe_unused]] static std::string getBBName(const MachineBasicBlock *MBB) {
   std::string Name = "bb.";
   Name += Twine(MBB->getNumber()).str();
   if (MBB->getBasicBlock()) {
