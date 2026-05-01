@@ -1,76 +1,88 @@
 // RUN: %clang_cc1 -finclude-default-header -fnative-half-type -x hlsl \
-// RUN:   -triple dxil-pc-shadermodel6.6-library %s \
+// RUN:   -triple dxil-pc-shadermodel6.6-library %s -Wdouble-promotion \
 // RUN:   -emit-llvm-only -disable-llvm-passes -verify \
 // RUN:   -verify-ignore-unexpected=note
 // RUN: %clang_cc1 -finclude-default-header -fnative-half-type -x hlsl \
-// RUN:   -triple spirv-unknown-vulkan-compute %s \
+// RUN:   -triple spirv-unknown-vulkan-compute %s -Wdouble-promotion \
 // RUN:   -emit-llvm-only -disable-llvm-passes -verify \
 // RUN:   -verify-ignore-unexpected=note
 
 float bad_float(float a, float b, float c) {
   // Overload resolution selects 'double fma(double, double, double)'; args promoted to double.
   return fma(a, b, c);
-  // expected-warning@-1 {{implicit conversion loses floating-point precision: 'double' to 'float'}}
+  // expected-warning@-1 3{{implicit conversion increases floating-point precision: 'float' to 'double'}}
+  // expected-warning@-2 {{implicit conversion loses floating-point precision: 'double' to 'float'}}
 }
 
 float2 bad_float2(float2 a, float2 b, float2 c) {
   // Overload resolution selects 'double2 fma(double2, double2, double2)'; args promoted to double2.
   return fma(a, b, c);
-  // expected-warning@-1 {{implicit conversion loses floating-point precision: 'vector<double, 2>' (vector of 2 'double' values) to 'vector<float, 2>' (vector of 2 'float' values)}}
+  // expected-warning@-1 3{{implicit conversion increases floating-point precision: 'float2' (aka 'vector<float, 2>') to 'vector<double, 2>' (vector of 2 'double' values)}}
+  // expected-warning@-2 {{implicit conversion loses floating-point precision: 'vector<double, 2>' (vector of 2 'double' values) to 'vector<float, 2>' (vector of 2 'float' values)}}
 }
 
 float2x2 bad_float2x2(float2x2 a, float2x2 b, float2x2 c) {
   // Overload resolution selects 'double2x2 fma(double2x2, double2x2, double2x2)'; args promoted.
   return fma(a, b, c);
-  // expected-warning@-1 {{implicit conversion loses floating-point precision: 'matrix<double, 2, 2>' to 'matrix<float, 2, 2>'}}
+  // expected-warning@-1 3{{implicit conversion increases floating-point precision: 'float2x2' (aka 'matrix<float, 2, 2>') to 'matrix<double, 2, 2>'}}
+  // expected-warning@-2 {{implicit conversion loses floating-point precision: 'matrix<double, 2, 2>' to 'matrix<float, 2, 2>'}}
 }
 
 half bad_half(half a, half b, half c) {
   // Overload resolution selects 'double fma(double, double, double)'; args promoted to double.
   return fma(a, b, c);
-  // expected-warning@-1 {{implicit conversion loses floating-point precision: 'double' to 'half'}}
+  // expected-warning@-1 3{{implicit conversion increases floating-point precision: 'half' to 'double'}}
+  // expected-warning@-2 {{implicit conversion loses floating-point precision: 'double' to 'half'}}
 }
 
 half2 bad_half2(half2 a, half2 b, half2 c) {
   // Overload resolution selects 'double2 fma(double2, double2, double2)'; args promoted.
   return fma(a, b, c);
-  // expected-warning@-1 {{implicit conversion loses floating-point precision: 'vector<double, 2>' (vector of 2 'double' values) to 'vector<half, 2>' (vector of 2 'half' values)}}
+  // expected-warning@-1 3{{implicit conversion increases floating-point precision: 'half2' (aka 'vector<half, 2>') to 'vector<double, 2>' (vector of 2 'double' values)}}
+  // expected-warning@-2 {{implicit conversion loses floating-point precision: 'vector<double, 2>' (vector of 2 'double' values) to 'vector<half, 2>' (vector of 2 'half' values)}}
 }
 
 half2x2 bad_half2x2(half2x2 a, half2x2 b, half2x2 c) {
   // Overload resolution selects 'double2x2 fma(double2x2, double2x2, double2x2)'; args promoted.
   return fma(a, b, c);
-  // expected-warning@-1 {{implicit conversion loses floating-point precision: 'matrix<double, 2, 2>' to 'matrix<half, 2, 2>'}}
+  // expected-warning@-1 3{{implicit conversion increases floating-point precision: 'half2x2' (aka 'matrix<half, 2, 2>') to 'matrix<double, 2, 2>'}}
+  // expected-warning@-2 {{implicit conversion loses floating-point precision: 'matrix<double, 2, 2>' to 'matrix<half, 2, 2>'}}
 }
 
 double mixed_bad_second(double a, float b, double c) {
   // Overload resolution selects 'double fma(double, double, double)'; float promoted to double.
   return fma(a, b, c);
+  // expected-warning@-1 {{implicit conversion increases floating-point precision: 'float' to 'double'}}
 }
 
 double mixed_bad_third(double a, double b, half c) {
   // Overload resolution selects 'double fma(double, double, double)'; half promoted to double.
   return fma(a, b, c);
+  // expected-warning@-1 {{implicit conversion increases floating-point precision: 'half' to 'double'}}
 }
 
 double2 mixed_bad_second_vec(double2 a, float2 b, double2 c) {
   // Overload resolution selects 'double2 fma(double2, double2, double2)'; float2 promoted.
   return fma(a, b, c);
+  // expected-warning@-1 {{implicit conversion increases floating-point precision: 'float2' (aka 'vector<float, 2>') to 'vector<double, 2>' (vector of 2 'double' values)}}
 }
 
 double2 mixed_bad_third_vec(double2 a, double2 b, float2 c) {
   // Overload resolution selects 'double2 fma(double2, double2, double2)'; float2 promoted.
   return fma(a, b, c);
+  // expected-warning@-1 {{implicit conversion increases floating-point precision: 'float2' (aka 'vector<float, 2>') to 'vector<double, 2>' (vector of 2 'double' values)}}
 }
 
 double2x2 mixed_bad_second_mat(double2x2 a, float2x2 b, double2x2 c) {
   // Overload resolution selects 'double2x2 fma(double2x2, double2x2, double2x2)'; float2x2 promoted.
   return fma(a, b, c);
+  // expected-warning@-1 {{implicit conversion increases floating-point precision: 'float2x2' (aka 'matrix<float, 2, 2>') to 'matrix<double, 2, 2>'}}
 }
 
 double2x2 mixed_bad_third_mat(double2x2 a, double2x2 b, half2x2 c) {
   // Overload resolution selects 'double2x2 fma(double2x2, double2x2, double2x2)'; half2x2 promoted.
   return fma(a, b, c);
+  // expected-warning@-1 {{implicit conversion increases floating-point precision: 'half2x2' (aka 'matrix<half, 2, 2>') to 'matrix<double, 2, 2>'}}
 }
 
 double shape_mismatch_second(double a, double2 b, double c) {
