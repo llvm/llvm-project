@@ -358,3 +358,113 @@ always_taken:
 for.end:
   ret i32 0
 }
+
+; Below are similar tests with explicit samesign flag
+
+define i32 @test_samesign_ult_negative_iv() {
+; CHECK-LABEL: @test_samesign_ult_negative_iv(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi i32 [ -2, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    store i32 [[STOREMERGE]], ptr @a, align 4
+; CHECK-NEXT:    [[INC]] = add nsw i32 [[STOREMERGE]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[INC]], 0
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  br label %loop
+
+loop:
+  %storemerge = phi i32 [ -2, %entry ], [ %inc, %loop ]
+  store i32 %storemerge, ptr @a
+  %cmp = icmp samesign ult i32 %storemerge, -1
+  %inc = add nuw nsw i32 %storemerge, 1
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret i32 0
+}
+
+define i32 @test_samesign_slt_negative_iv() {
+; CHECK-LABEL: @test_samesign_slt_negative_iv(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi i32 [ -2, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    store i32 [[STOREMERGE]], ptr @a, align 4
+; CHECK-NEXT:    [[INC]] = add nsw i32 [[STOREMERGE]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[INC]], 0
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  br label %loop
+
+loop:
+  %storemerge = phi i32 [ -2, %entry ], [ %inc, %loop ]
+  store i32 %storemerge, ptr @a
+  %cmp = icmp samesign slt i32 %storemerge, -1
+  %inc = add nuw nsw i32 %storemerge, 1
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret i32 0
+}
+
+define i32 @test_samesign_ult_positive_iv() {
+; CHECK-LABEL: @test_samesign_ult_positive_iv(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    store i32 [[STOREMERGE]], ptr @a, align 4
+; CHECK-NEXT:    [[INC]] = add nuw i32 [[STOREMERGE]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[INC]], -2147483648
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  br label %loop
+
+loop:
+  %storemerge = phi i32 [ 0, %entry ], [ %inc, %loop ]
+  store i32 %storemerge, ptr @a
+  %cmp = icmp samesign ult i32 %storemerge, 2147483647
+  %inc = add nuw nsw i32 %storemerge, 1
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret i32 0
+}
+
+define i32 @test_samesign_slt_positive_iv() {
+; CHECK-LABEL: @test_samesign_slt_positive_iv(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    store i32 [[STOREMERGE]], ptr @a, align 4
+; CHECK-NEXT:    [[INC]] = add nuw i32 [[STOREMERGE]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[INC]], -2147483648
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  br label %loop
+
+loop:
+  %storemerge = phi i32 [ 0, %entry ], [ %inc, %loop ]
+  store i32 %storemerge, ptr @a
+  %cmp = icmp samesign slt i32 %storemerge, 2147483647
+  %inc = add nuw nsw i32 %storemerge, 1
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret i32 0
+}
