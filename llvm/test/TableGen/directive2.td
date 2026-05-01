@@ -118,7 +118,10 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-NEXT:    case TDLD_dira:
 // CHECK-NEXT:      return Association::Block;
 // CHECK-NEXT:    } // switch (Dir)
+// CHECK-NEXT:  #if __clang__ || !__GNUC__ || __GNUC__ >= 9
+// CHECK-NEXT:    // GCC < 9 fails to compile this.
 // CHECK-NEXT:    llvm_unreachable("Unexpected directive");
+// CHECK-NEXT:  #endif
 // CHECK-NEXT:  }
 // CHECK-EMPTY:
 // CHECK-NEXT:  constexpr Category getDirectiveCategory(Directive Dir) {
@@ -126,7 +129,10 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-NEXT:    case TDLD_dira:
 // CHECK-NEXT:      return Category::Declarative;
 // CHECK-NEXT:    } // switch (Dir)
+// CHECK-NEXT:  #if __clang__ || !__GNUC__ || __GNUC__ >= 9
+// CHECK-NEXT:    // GCC < 9 fails to compile this.
 // CHECK-NEXT:    llvm_unreachable("Unexpected directive");
+// CHECK-NEXT:  #endif
 // CHECK-NEXT:  }
 // CHECK-EMPTY:
 // CHECK-NEXT:  constexpr SourceLanguage getDirectiveLanguages(Directive D) {
@@ -134,7 +140,10 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-NEXT:    case TDLD_dira:
 // CHECK-NEXT:      return SourceLanguage::C | SourceLanguage::Fortran;
 // CHECK-NEXT:    } // switch(D)
+// CHECK-NEXT:  #if __clang__ || !__GNUC__ || __GNUC__ >= 9
+// CHECK-NEXT:    // GCC < 9 fails to compile this.
 // CHECK-NEXT:    llvm_unreachable("Unexpected directive");
+// CHECK-NEXT:  #endif
 // CHECK-NEXT:  }
 // CHECK-EMPTY:
 // CHECK-NEXT:  // Enumeration helper functions
