@@ -15,7 +15,7 @@ func.func @vector_interleave_0d(%a: vector<f32>, %b: vector<f32>) -> vector<2xf3
 // CHECK: vector.shuffle %arg0, %arg1 [0, 1] : vector<f32>, vector<f32>
 
 // CHECK-LABEL: @vector_deinterleave_to_shuffle
-func.func @vector_deinterleave_to_shuffle(%arg0: vector<14xi16>) -> (vector<7xi16>, vector<7xi16>) {
+func.func @vector_deinterleave_to_shuffle_1d(%arg0: vector<14xi16>) -> (vector<7xi16>, vector<7xi16>) {
   %evens, %odds = vector.deinterleave %arg0 : vector<14xi16> -> vector<7xi16>
   return %evens, %odds : vector<7xi16>, vector<7xi16>
 }
