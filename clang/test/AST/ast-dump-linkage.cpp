@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -ast-dump %s | FileCheck --match-full-lines %s
+// RUN: %clang_cc1 -ast-dump -std=c++2c %s | FileCheck --match-full-lines %s
 
 namespace std {
 template <typename T>
@@ -86,14 +86,6 @@ int TemplatedVarSpec = TemplatedVar<int>;
 // CHECK: |-VarDecl {{.*}} TemplatedVarSpec 'int' cinit external-linkage
 // CHECK: |-VarTemplateSpecializationDecl {{.*}} used TemplatedVar 'int' implicit_instantiation cinit instantiated_from 0x{{[0-9a-f]*}} external-linkage
 
-void FuncDecl();
-// CHECK: |-FunctionDecl {{.*}} FuncDecl 'void ()' external-linkage
-
-template <typename>
-void TemplatedFuncDecl();
-// CHECK: |-FunctionTemplateDecl {{.*}} TemplatedFuncDecl external-linkage
-// CHECK: | `-FunctionDecl {{.*}} TemplatedFuncDecl 'void ()'
-
 void FuncDef() {
 // CHECK: |-FunctionDecl {{.*}} FuncDef 'void ()' external-linkage
   
@@ -122,16 +114,46 @@ void TemplatedFuncDef() {}
 // CHECK: |-FunctionTemplateDecl {{.*}} TemplatedFuncDef external-linkage
 // CHECK: | `-FunctionDecl {{.*}} TemplatedFuncDef 'void ()'
 
-struct KnownFriendStruct;
-// CHECK: |-CXXRecordDecl {{.*}} struct KnownFriendStruct external-linkage
+namespace Known {
+
+void FuncDecl();
+// CHECK: | |-FunctionDecl {{.*}} FuncDecl 'void ()' external-linkage
+
+constexpr void ConstexprFuncDecl();
+// CHECK: | |-FunctionDecl{{.*}} constexpr ConstexprFuncDecl 'void ()' implicit-inline external-linkage
+
+consteval void ConstevalFuncDecl();
+// CHECK: | |-FunctionDecl{{.*}} consteval ConstevalFuncDecl 'void ()' implicit-inline external-linkage
+// FIXME: Why consteval functions have linkage?
 
 template <typename>
-struct KnownFriendStructTemplate;
-// CHECK: |-ClassTemplateDecl {{.*}} KnownFriendStructTemplate external-linkage
-// CHECK: | `-CXXRecordDecl {{.*}} struct KnownFriendStructTemplate
+void TemplatedFuncDecl();
+// CHECK: | |-FunctionTemplateDecl {{.*}} TemplatedFuncDecl external-linkage
+// CHECK: | | `-FunctionDecl {{.*}} TemplatedFuncDecl 'void ()'
+
+template <typename>
+constexpr void TemplatedConstexprFuncDecl();
+// CHECK: | |-FunctionTemplateDecl {{.*}} TemplatedConstexprFuncDecl external-linkage
+// CHECK: | | `-FunctionDecl {{.*}} constexpr TemplatedConstexprFuncDecl 'void ()' implicit-inline
+
+template <typename>
+consteval void TemplatedConstevalFuncDecl();
+// CHECK: | |-FunctionTemplateDecl {{.*}} TemplatedConstevalFuncDecl external-linkage
+// CHECK: | | `-FunctionDecl {{.*}} consteval TemplatedConstevalFuncDecl 'void ()' implicit-inline
+// FIXME: Should consteval function templates have linkage?
+
+struct FriendStruct;
+// CHECK: | |-CXXRecordDecl {{.*}} struct FriendStruct external-linkage
+
+template <typename>
+struct FriendStructTemplate;
+// CHECK: | `-ClassTemplateDecl {{.*}} FriendStructTemplate external-linkage
+// CHECK: |   `-CXXRecordDecl {{.*}} struct FriendStructTemplate
+
+} // namespace Known
 
 namespace N {
-// CHECK: |-NamespaceDecl {{.*}} N external-linkage
+// CHECK-LABEL: |-NamespaceDecl {{.*}} N external-linkage
 
 struct Struct {
 // CHECK: | `-CXXRecordDecl {{.*}} struct Struct definition external-linkage
@@ -141,30 +163,82 @@ struct Struct {
 // CHECK: |   |-FriendDecl {{.*}} 'struct UnknownFriendStruct'
 // CHECK: |   | `-CXXRecordDecl {{.*}} friend_undeclared struct UnknownFriendStruct external-linkage
 // FIXME: Friend declarations do not bind names, so they cannot have linkage.
+
+  template <typename>
+  friend struct UnknownFriendStructTemplate;
+// CHECK: |   |-FriendDecl {{.*}} col:{{[0-9]*$}}
+// CHECK: |   | `-ClassTemplateDecl {{.*}} friend_undeclared UnknownFriendStructTemplate external-linkage
+// CHECK: |   |   `-CXXRecordDecl {{.*}} struct UnknownFriendStructTemplate
+// FIXME: Friend declarations do not bind names, so they cannot have linkage.
   
-  friend struct ::KnownFriendStruct;
-// CHECK: |   |-FriendDecl {{.*}} 'struct ::KnownFriendStruct'
+  friend struct Known::FriendStruct;
+// CHECK: |   |-FriendDecl {{.*}} 'struct Known::FriendStruct'
+// FIXME: Where is CXXRecordDecl?
   
   template <typename>
-  friend struct ::KnownFriendStructTemplate;
+  friend struct Known::FriendStructTemplate;
 // CHECK: |   |-FriendDecl {{.*}} col:{{[0-9]*$}}
-// CHECK: |   | `-ClassTemplateDecl {{.*}} friend KnownFriendStructTemplate external-linkage
-// CHECK: |   |   `-CXXRecordDecl {{.*}} struct KnownFriendStructTemplate
+// CHECK: |   | `-ClassTemplateDecl {{.*}} friend FriendStructTemplate external-linkage
+// CHECK: |   |   `-CXXRecordDecl {{.*}} struct FriendStructTemplate
 
   friend void UnknownFuncDecl();
 // CHECK: |   |-FriendDecl {{.*}} col:{{[0-9]*$}}
 // CHECK: |   | `-FunctionDecl {{.*}} friend_undeclared UnknownFuncDecl 'void ()' external-linkage
 // FIXME: Friend declarations do not bind names, so they cannot have linkage.
 
-  friend void ::FuncDecl();
+  friend constexpr void UnknownConstexprFuncDecl();
+// CHECK: |   |-FriendDecl {{.*}} col:{{[0-9]*$}}
+// CHECK: |   | `-FunctionDecl {{.*}} constexpr friend_undeclared UnknownConstexprFuncDecl 'void ()' implicit-inline external-linkage
+
+  friend consteval void UnknownConstevalFuncDecl();
+// CHECK: |   |-FriendDecl {{.*}} col:{{[0-9]*$}}
+// CHECK: |   | `-FunctionDecl {{.*}} consteval friend_undeclared UnknownConstevalFuncDecl 'void ()' implicit-inline external-linkage
+
+  template <typename>
+  friend void UnknownFuncDecl();
+// CHECK: |   |-FriendDecl {{.*}} col:{{[0-9]*$}}
+// CHECK: |   | `-FunctionTemplateDecl {{.*}} friend_undeclared UnknownFuncDecl external-linkage
+// FIXME: Friend declarations do not bind names, so they cannot have linkage.
+
+  template <typename>
+  friend constexpr void UnknownConstexprFuncDecl();
+// CHECK: |   |-FriendDecl {{.*}} col:{{[0-9]*$}}
+// CHECK: |   | `-FunctionTemplateDecl {{.*}} friend_undeclared UnknownConstexprFuncDecl external-linkage
+
+  template <typename>
+  friend consteval void UnknownConstevalFuncDecl();
+// CHECK: |   |-FriendDecl {{.*}} col:{{[0-9]*$}}
+// CHECK: |   | `-FunctionTemplateDecl {{.*}} friend_undeclared UnknownConstevalFuncDecl external-linkage
+
+  friend void Known::FuncDecl();
 // CHECK: |   |-FriendDecl {{.*}} col:{{[0-9]*$}}
 // CHECK: |   | `-FunctionDecl {{.*}} friend FuncDecl 'void ()' external-linkage
-  
+
+  friend constexpr void Known::ConstexprFuncDecl();
+// CHECK: |   |-FriendDecl {{.*}} col:{{[0-9]*$}}
+// CHECK: |   | `-FunctionDecl {{.*}} constexpr friend ConstexprFuncDecl 'void ()' implicit-inline external-linkage
+
+  friend consteval void Known::ConstevalFuncDecl();
+// CHECK: |   |-FriendDecl {{.*}} col:{{[0-9]*$}}
+// CHECK: |   | `-FunctionDecl {{.*}} consteval friend ConstevalFuncDecl 'void ()' implicit-inline external-linkage
+
   template <typename>
-  friend void ::TemplatedFuncDecl();
+  friend void Known::TemplatedFuncDecl();
 // CHECK: |   |-FriendDecl {{.*}} col:{{[0-9]*$}}
 // CHECK: |   | `-FunctionTemplateDecl {{.*}} friend TemplatedFuncDecl external-linkage
 // CHECK: |   |   `-FunctionDecl {{.*}} friend TemplatedFuncDecl 'void ()'
+
+  template <typename>
+  friend constexpr void Known::TemplatedConstexprFuncDecl();
+// CHECK: |   |-FriendDecl {{.*}} col:{{[0-9]*$}}
+// CHECK: |   | `-FunctionTemplateDecl {{.*}} friend TemplatedConstexprFuncDecl external-linkage
+// CHECK: |   |   `-FunctionDecl {{.*}} constexpr friend TemplatedConstexprFuncDecl 'void ()' implicit-inline
+
+  template <typename>
+  friend consteval void Known::TemplatedConstevalFuncDecl();
+// CHECK: |   |-FriendDecl {{.*}} col:{{[0-9]*$}}
+// CHECK: |   | `-FunctionTemplateDecl {{.*}} friend TemplatedConstevalFuncDecl external-linkage
+// CHECK: |   |   `-FunctionDecl {{.*}} consteval friend TemplatedConstevalFuncDecl 'void ()' implicit-inline
 
   friend void HiddenFriend() {}
 // CHECK: |   |-FriendDecl {{.*}} col:{{[0-9]*$}}
@@ -185,18 +259,50 @@ struct Struct {
   void NonStaticMemberFunction();
 // CHECK: |   |-CXXMethodDecl {{.*}} NonStaticMemberFunction 'void ()' external-linkage
 
+  constexpr void ConstexprNonStaticMemberFunction();
+// CHECK: |   |-CXXMethodDecl {{.*}} constexpr ConstexprNonStaticMemberFunction 'void ()' implicit-inline external-linkage
+
+  consteval void ConstevalNonStaticMemberFunction();
+// CHECK: |   |-CXXMethodDecl {{.*}} consteval ConstevalNonStaticMemberFunction 'void ()' implicit-inline external-linkage
+
   template <typename>
   void NonStaticMemberFunctionTemplate();
 // CHECK: |   |-FunctionTemplateDecl {{.*}} NonStaticMemberFunctionTemplate external-linkage
 // CHECK: |   | `-CXXMethodDecl {{.*}} NonStaticMemberFunctionTemplate 'void ()'
 
+  template <typename>
+  constexpr void ConstexprNonStaticMemberFunction();
+// CHECK: |   |-FunctionTemplateDecl {{.*}} ConstexprNonStaticMemberFunction external-linkage
+// CHECK: |   | `-CXXMethodDecl {{.*}} constexpr ConstexprNonStaticMemberFunction 'void ()' implicit-inline
+
+  template <typename>
+  consteval void ConstevalNonStaticMemberFunction();
+// CHECK: |   |-FunctionTemplateDecl {{.*}} ConstevalNonStaticMemberFunction external-linkage
+// CHECK: |   | `-CXXMethodDecl {{.*}} consteval ConstevalNonStaticMemberFunction 'void ()' implicit-inline
+
   static void StaticMemberFunction();
 // CHECK: |   |-CXXMethodDecl {{.*}} StaticMemberFunction 'void ()' static external-linkage
+
+  constexpr static void ConstexprStaticMemberFunction();
+// CHECK: |   |-CXXMethodDecl {{.*}} constexpr ConstexprStaticMemberFunction 'void ()' static implicit-inline external-linkage
+
+  consteval static void ConstevalStaticMemberFunction();
+// CHECK: |   |-CXXMethodDecl {{.*}} consteval ConstevalStaticMemberFunction 'void ()' static implicit-inline external-linkage
 
   template <typename>
   static void StaticMemberFunctionTemplate();
 // CHECK: |   |-FunctionTemplateDecl {{.*}} StaticMemberFunctionTemplate external-linkage
 // CHECK: |   | `-CXXMethodDecl {{.*}} StaticMemberFunctionTemplate 'void ()' static
+
+  template <typename>
+  constexpr static void ConstexprStaticMemberFunctionTemplate();
+// CHECK: |   |-FunctionTemplateDecl {{.*}} ConstexprStaticMemberFunctionTemplate external-linkage
+// CHECK: |   | `-CXXMethodDecl {{.*}} ConstexprStaticMemberFunctionTemplate 'void ()' static implicit-inline
+
+  template <typename>
+  consteval static void ConstevalStaticMemberFunctionTemplate();
+// CHECK: |   |-FunctionTemplateDecl {{.*}} ConstevalStaticMemberFunctionTemplate external-linkage
+// CHECK: |   | `-CXXMethodDecl {{.*}} ConstevalStaticMemberFunctionTemplate 'void ()' static implicit-inline
 
   struct NestedStruct {};
 // CHECK: |   |-CXXRecordDecl {{.*}} struct NestedStruct definition external-linkage
@@ -208,45 +314,96 @@ struct Struct {
 // CHECK: |     `-CXXRecordDecl {{.*}} struct NestedStructTemplate definition
 // CHECK: |       `-CXXRecordDecl {{.*}} implicit struct NestedStructTemplate
 };
-
 } // namespace N
 
 namespace M {
+// CHECK-LABEL: |-NamespaceDecl {{.*}} M external-linkage
+
 template <typename>
 struct StructTemplate {
 // CHECK: | `-ClassTemplateDecl {{.*}} StructTemplate external-linkage
-// CHECK: |   `-CXXRecordDecl {{.*}} struct StructTemplate definition
-// CHECK: |     |-CXXRecordDecl {{.*}} implicit struct StructTemplate
+// CHECK: | `-CXXRecordDecl {{.*}} struct StructTemplate definition
+// CHECK: |   |-CXXRecordDecl {{.*}} implicit struct StructTemplate
 
   friend struct UnknownFriendStruct;
 // CHECK: |   |-FriendDecl {{.*}} 'struct UnknownFriendStruct'
 // CHECK: |   | `-CXXRecordDecl {{.*}} friend_undeclared struct UnknownFriendStruct external-linkage
-  
-  friend struct ::KnownFriendStruct;
-// CHECK: |   |-FriendDecl {{.*}} 'struct ::KnownFriendStruct'
-// FIXME: Where is CXXRecordDecl? 
+// FIXME: Friend declarations do not bind names, so they cannot have linkage.
 
   template <typename>
-  friend struct ::KnownFriendStructTemplate;
+  friend struct UnknownFriendStructTemplate;
 // CHECK: |   |-FriendDecl {{.*}} col:{{[0-9]*$}}
-// CHECK: |   | `-ClassTemplateDecl {{.*}} friend_undeclared KnownFriendStructTemplate external-linkage
-// CHECK: |   |   `-CXXRecordDecl {{.*}} struct KnownFriendStructTemplate
-// FIXME: Why "friend_undeclared" instead of "friend"?
+// CHECK: |   | `-ClassTemplateDecl {{.*}} friend_undeclared UnknownFriendStructTemplate external-linkage
+// CHECK: |   |   `-CXXRecordDecl {{.*}} struct UnknownFriendStructTemplate
+// FIXME: Friend declarations do not bind names, so they cannot have linkage.
+  
+  friend struct Known::FriendStruct;
+// CHECK: |   |-FriendDecl {{.*}} 'struct Known::FriendStruct'
+  
+  template <typename>
+  friend struct Known::FriendStructTemplate;
+// CHECK: |   |-FriendDecl {{.*}} col:{{[0-9]*$}}
+// CHECK: |   | `-ClassTemplateDecl {{.*}} friend_undeclared FriendStructTemplate external-linkage
+// CHECK: |   |   `-CXXRecordDecl {{.*}} struct FriendStructTemplate
 
   friend void UnknownFuncDecl();
 // CHECK: |   |-FriendDecl {{.*}} col:{{[0-9]*$}}
 // CHECK: |   | `-FunctionDecl {{.*}} friend_undeclared UnknownFuncDecl 'void ()' external-linkage
+// FIXME: Friend declarations do not bind names, so they cannot have linkage.
 
-  friend void ::FuncDecl();
+  friend constexpr void UnknownConstexprFuncDecl();
+// CHECK: |   |-FriendDecl {{.*}} col:{{[0-9]*$}}
+// CHECK: |   | `-FunctionDecl {{.*}} constexpr friend_undeclared UnknownConstexprFuncDecl 'void ()' implicit-inline external-linkage
+
+  friend consteval void UnknownConstevalFuncDecl();
+// CHECK: |   |-FriendDecl {{.*}} col:{{[0-9]*$}}
+// CHECK: |   | `-FunctionDecl {{.*}} consteval friend_undeclared UnknownConstevalFuncDecl 'void ()' implicit-inline external-linkage
+
+  template <typename>
+  friend void UnknownFuncDecl();
+// CHECK: |   |-FriendDecl {{.*}} col:{{[0-9]*$}}
+// CHECK: |   | `-FunctionTemplateDecl {{.*}} friend_undeclared UnknownFuncDecl external-linkage
+// FIXME: Friend declarations do not bind names, so they cannot have linkage.
+
+  template <typename>
+  friend constexpr void UnknownConstexprFuncDecl();
+// CHECK: |   |-FriendDecl {{.*}} col:{{[0-9]*$}}
+// CHECK: |   | `-FunctionTemplateDecl {{.*}} friend_undeclared UnknownConstexprFuncDecl external-linkage
+
+  template <typename>
+  friend consteval void UnknownConstevalFuncDecl();
+// CHECK: |   |-FriendDecl {{.*}} col:{{[0-9]*$}}
+// CHECK: |   | `-FunctionTemplateDecl {{.*}} friend_undeclared UnknownConstevalFuncDecl external-linkage
+
+  friend void Known::FuncDecl();
 // CHECK: |   |-FriendDecl {{.*}} col:{{[0-9]*$}}
 // CHECK: |   | `-FunctionDecl {{.*}} friend_undeclared FuncDecl 'void ()' external-linkage
-// FIXME: Why "friend_undeclared" instead of "friend"?
-  
+
+  friend constexpr void Known::ConstexprFuncDecl();
+// CHECK: |   |-FriendDecl {{.*}} col:{{[0-9]*$}}
+// CHECK: |   | `-FunctionDecl {{.*}} constexpr friend_undeclared ConstexprFuncDecl 'void ()' implicit-inline external-linkage
+
+  friend consteval void Known::ConstevalFuncDecl();
+// CHECK: |   |-FriendDecl {{.*}} col:{{[0-9]*$}}
+// CHECK: |   | `-FunctionDecl {{.*}} consteval friend_undeclared ConstevalFuncDecl 'void ()' implicit-inline external-linkage
+
   template <typename>
-  friend void ::TemplatedFuncDecl();
+  friend void Known::TemplatedFuncDecl();
 // CHECK: |   |-FriendDecl {{.*}} col:{{[0-9]*$}}
 // CHECK: |   | `-FunctionTemplateDecl {{.*}} friend TemplatedFuncDecl external-linkage
 // CHECK: |   |   `-FunctionDecl {{.*}} friend TemplatedFuncDecl 'void ()'
+
+  template <typename>
+  friend constexpr void Known::TemplatedConstexprFuncDecl();
+// CHECK: |   |-FriendDecl {{.*}} col:{{[0-9]*$}}
+// CHECK: |   | `-FunctionTemplateDecl {{.*}} friend TemplatedConstexprFuncDecl external-linkage
+// CHECK: |   |   `-FunctionDecl {{.*}} constexpr friend TemplatedConstexprFuncDecl 'void ()' implicit-inline
+
+  template <typename>
+  friend consteval void Known::TemplatedConstevalFuncDecl();
+// CHECK: |   |-FriendDecl {{.*}} col:{{[0-9]*$}}
+// CHECK: |   | `-FunctionTemplateDecl {{.*}} friend TemplatedConstevalFuncDecl external-linkage
+// CHECK: |   |   `-FunctionDecl {{.*}} consteval friend TemplatedConstevalFuncDecl 'void ()' implicit-inline
 
   friend void HiddenFriend() {}
 // CHECK: |   |-FriendDecl {{.*}} col:{{[0-9]*$}}
@@ -267,18 +424,50 @@ struct StructTemplate {
   void NonStaticMemberFunction();
 // CHECK: |   |-CXXMethodDecl {{.*}} NonStaticMemberFunction 'void ()' external-linkage
 
+  constexpr void ConstexprNonStaticMemberFunction();
+// CHECK: |   |-CXXMethodDecl {{.*}} constexpr ConstexprNonStaticMemberFunction 'void ()' implicit-inline external-linkage
+
+  consteval void ConstevalNonStaticMemberFunction();
+// CHECK: |   |-CXXMethodDecl {{.*}} consteval ConstevalNonStaticMemberFunction 'void ()' implicit-inline external-linkage
+
   template <typename>
   void NonStaticMemberFunctionTemplate();
 // CHECK: |   |-FunctionTemplateDecl {{.*}} NonStaticMemberFunctionTemplate external-linkage
 // CHECK: |   | `-CXXMethodDecl {{.*}} NonStaticMemberFunctionTemplate 'void ()'
 
+  template <typename>
+  constexpr void ConstexprNonStaticMemberFunction();
+// CHECK: |   |-FunctionTemplateDecl {{.*}} ConstexprNonStaticMemberFunction external-linkage
+// CHECK: |   | `-CXXMethodDecl {{.*}} constexpr ConstexprNonStaticMemberFunction 'void ()' implicit-inline
+
+  template <typename>
+  consteval void ConstevalNonStaticMemberFunction();
+// CHECK: |   |-FunctionTemplateDecl {{.*}} ConstevalNonStaticMemberFunction external-linkage
+// CHECK: |   | `-CXXMethodDecl {{.*}} consteval ConstevalNonStaticMemberFunction 'void ()' implicit-inline
+
   static void StaticMemberFunction();
 // CHECK: |   |-CXXMethodDecl {{.*}} StaticMemberFunction 'void ()' static external-linkage
+
+  constexpr static void ConstexprStaticMemberFunction();
+// CHECK: |   |-CXXMethodDecl {{.*}} constexpr ConstexprStaticMemberFunction 'void ()' static implicit-inline external-linkage
+
+  consteval static void ConstevalStaticMemberFunction();
+// CHECK: |   |-CXXMethodDecl {{.*}} consteval ConstevalStaticMemberFunction 'void ()' static implicit-inline external-linkage
 
   template <typename>
   static void StaticMemberFunctionTemplate();
 // CHECK: |   |-FunctionTemplateDecl {{.*}} StaticMemberFunctionTemplate external-linkage
 // CHECK: |   | `-CXXMethodDecl {{.*}} StaticMemberFunctionTemplate 'void ()' static
+
+  template <typename>
+  constexpr static void ConstexprStaticMemberFunctionTemplate();
+// CHECK: |   |-FunctionTemplateDecl {{.*}} ConstexprStaticMemberFunctionTemplate external-linkage
+// CHECK: |   | `-CXXMethodDecl {{.*}} ConstexprStaticMemberFunctionTemplate 'void ()' static implicit-inline
+
+  template <typename>
+  consteval static void ConstevalStaticMemberFunctionTemplate();
+// CHECK: |   |-FunctionTemplateDecl {{.*}} ConstevalStaticMemberFunctionTemplate external-linkage
+// CHECK: |   | `-CXXMethodDecl {{.*}} ConstevalStaticMemberFunctionTemplate 'void ()' static implicit-inline
 
   struct NestedStruct {};
 // CHECK: |   |-CXXRecordDecl {{.*}} struct NestedStruct definition external-linkage
