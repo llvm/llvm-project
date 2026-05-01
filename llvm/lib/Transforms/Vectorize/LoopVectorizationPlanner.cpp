@@ -59,8 +59,8 @@ static cl::opt<bool> ForceTargetSupportsMaskedMemoryOps(
     cl::desc("Assume the target supports masked memory operations (used for "
              "testing)."));
 
-bool VFSelectionContext::isLegalMaskedLoadOrStore(
-    Instruction *I, ElementCount VF) const {
+bool VFSelectionContext::isLegalMaskedLoadOrStore(Instruction *I,
+                                                  ElementCount VF) const {
   assert(isa<LoadInst>(I) || isa<StoreInst>(I));
   auto *Ptr = getLoadStorePointerOperand(I);
   auto *Ty = getLoadStoreType(I);
