@@ -20,18 +20,6 @@
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 
-namespace {
-/// Check if we are inside a WHERE construct's masked expression region.
-/// Array constructors inside WHERE statements must be evaluated exactly once
-/// without mask control, similar to non-elemental function calls.
-
-static bool isInWhereMaskedExpression(fir::FirOpBuilder &builder) {
-  mlir::Operation *op = builder.getRegion().getParentOp();
-  return op && op->getParentOfType<hlfir::WhereOp>();
-}
-
-} // namespace
-
 // Array constructors are lowered with three different strategies.
 // All strategies are not possible with all array constructors.
 //
@@ -797,7 +785,7 @@ hlfir::EntityWithAttributes Fortran::lower::ArrayConstructorBuilder<T>::gen(
   // exactly once without mask control, per Fortran 2023 section 10.2.3.2.
   // Lower them in a special region so that this can be enforced when
   // scheduling forall/where expression evaluations.
-  if (isInWhereMaskedExpression(builder) &&
+  if (hlfir::isInsideHlfirWhereMaskedExpression(builder.getRegion()) &&
       !builder.getRegion().getParentOfType<hlfir::ExactlyOnceOp>()) {
     Fortran::lower::StatementContext localStmtCtx;
     mlir::Type bogusType = builder.getIndexType();

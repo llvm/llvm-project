@@ -1048,9 +1048,6 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     return LoopUnrollResult::Unmodified;
   }
 
-  assert((!ULO.Runtime || canHaveUnrollRemainder(L)) &&
-         "Can't runtime unroll if loop contains a convergent operation.");
-
   bool EpilogProfitability =
       UnrollRuntimeEpilog.getNumOccurrences() ? UnrollRuntimeEpilog
                                               : isEpilogProfitable(L);
@@ -1071,6 +1068,11 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   }
 
   using namespace ore;
+
+  // Determine whether this loop originated from the vectorizer so we can
+  // produce more informative remarks.
+  StringRef LoopKind = getLoopVectorizeKindPrefix(L);
+
   // Report the unrolling decision.
   if (CompletelyUnroll) {
     LLVM_DEBUG(dbgs() << "COMPLETELY UNROLLING loop %" << Header->getName()
@@ -1079,7 +1081,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
       ORE->emit([&]() {
         return OptimizationRemark(DEBUG_TYPE, "FullyUnrolled", L->getStartLoc(),
                                   L->getHeader())
-               << "completely unrolled loop with "
+               << "completely unrolled " + LoopKind.str() + "loop with "
                << NV("UnrollCount", ULO.Count) << " iterations";
       });
   } else {
@@ -1097,7 +1099,8 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
       ORE->emit([&]() {
         OptimizationRemark Diag(DEBUG_TYPE, "PartialUnrolled", L->getStartLoc(),
                                 L->getHeader());
-        Diag << "unrolled loop by a factor of " << NV("UnrollCount", ULO.Count);
+        Diag << "unrolled " + LoopKind.str() + "loop by a factor of "
+             << NV("UnrollCount", ULO.Count);
         if (ULO.Runtime)
           Diag << " with run-time trip count"
                << (ULO.UnrollRemainder ? " (remainder unrolled)" : "");

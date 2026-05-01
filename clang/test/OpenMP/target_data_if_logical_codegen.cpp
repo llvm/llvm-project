@@ -60,11 +60,11 @@ int main() {
 // CHECK-NEXT:    store i32 42, ptr [[PP]], align 4
 // CHECK-NEXT:    store ptr [[PP]], ptr [[P]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[A]], align 1
-// CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP0]], 0
 // CHECK-NEXT:    br i1 [[LOADEDV]], label [[LAND_RHS:%.*]], label [[LAND_END:%.*]]
 // CHECK:       land.rhs:
 // CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[B]], align 1
-// CHECK-NEXT:    [[LOADEDV3:%.*]] = trunc i8 [[TMP1]] to i1
+// CHECK-NEXT:    [[LOADEDV3:%.*]] = icmp ne i8 [[TMP1]], 0
 // CHECK-NEXT:    br label [[LAND_END]]
 // CHECK:       land.end:
 // CHECK-NEXT:    [[TMP2:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ [[LOADEDV3]], [[LAND_RHS]] ]

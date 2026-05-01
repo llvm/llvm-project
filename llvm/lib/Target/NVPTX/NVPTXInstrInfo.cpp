@@ -103,6 +103,7 @@ bool NVPTXInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
       // Block ends with fall-through condbranch.
       TBB = LastInst.getOperand(1).getMBB();
       Cond.push_back(LastInst.getOperand(0));
+      Cond.push_back(LastInst.getOperand(2));
       return false;
     }
     // Otherwise, don't know what this is.
@@ -121,6 +122,7 @@ bool NVPTXInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
       LastInst.getOpcode() == NVPTX::GOTO) {
     TBB = SecondLastInst.getOperand(1).getMBB();
     Cond.push_back(SecondLastInst.getOperand(0));
+    Cond.push_back(SecondLastInst.getOperand(2));
     FBB = LastInst.getOperand(0).getMBB();
     return false;
   }
@@ -176,7 +178,7 @@ unsigned NVPTXInstrInfo::insertBranch(MachineBasicBlock &MBB,
 
   // Shouldn't be a fall through.
   assert(TBB && "insertBranch must not be told to insert a fallthrough");
-  assert((Cond.size() == 1 || Cond.size() == 0) &&
+  assert((Cond.size() == 2 || Cond.size() == 0) &&
          "NVPTX branch conditions have two components!");
 
   // One-way branch.
@@ -184,12 +186,22 @@ unsigned NVPTXInstrInfo::insertBranch(MachineBasicBlock &MBB,
     if (Cond.empty()) // Unconditional branch
       BuildMI(&MBB, DL, get(NVPTX::GOTO)).addMBB(TBB);
     else // Conditional branch
-      BuildMI(&MBB, DL, get(NVPTX::CBranch)).add(Cond[0]).addMBB(TBB);
+      BuildMI(&MBB, DL, get(NVPTX::CBranch))
+          .add(Cond[0])
+          .addMBB(TBB)
+          .add(Cond[1]);
     return 1;
   }
 
   // Two-way Conditional Branch.
-  BuildMI(&MBB, DL, get(NVPTX::CBranch)).add(Cond[0]).addMBB(TBB);
+  BuildMI(&MBB, DL, get(NVPTX::CBranch)).add(Cond[0]).addMBB(TBB).add(Cond[1]);
   BuildMI(&MBB, DL, get(NVPTX::GOTO)).addMBB(FBB);
   return 2;
+}
+
+bool NVPTXInstrInfo::reverseBranchCondition(
+    SmallVectorImpl<MachineOperand> &Cond) const {
+  assert(Cond.size() == 2 && "Invalid NVPTX branch condition!");
+  Cond[1].setImm(!Cond[1].getImm());
+  return false;
 }

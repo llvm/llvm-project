@@ -15,7 +15,8 @@
 namespace LIBC_NAMESPACE_DECL {
 
 constinit ExitCallbackList atexit_callbacks;
-Mutex handler_list_mtx(false, false, false, false);
+Mutex handler_list_mtx(/*is_priority_inherit=*/false, /*is_recursive=*/false,
+                       /*is_robust=*/false, /*is_pshared=*/false);
 
 extern "C" {
 

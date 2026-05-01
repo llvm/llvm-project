@@ -319,6 +319,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setOperationAction({ISD::SHL_PARTS, ISD::SRA_PARTS, ISD::SRL_PARTS}, MVT::i64,
                      Expand);
 
+  setOperationAction(ISD::INLINEASM, MVT::Other, Custom);
+
 #if 0
   setOperationAction({ISD::UADDO_CARRY, ISD::USUBO_CARRY}, MVT::i64, Legal);
 #endif
@@ -1552,6 +1554,7 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
     Info.size = 8;
     Info.align.reset();
     Info.flags = Flags | MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
+    Info.order = AtomicOrdering::Monotonic;
     Infos.push_back(Info);
     return;
   }
@@ -7597,6 +7600,8 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return lowerSET_FPENV(Op, DAG);
   case ISD::ROTR:
     return lowerROTR(Op, DAG);
+  case ISD::INLINEASM:
+    return LowerINLINEASM(Op, DAG);
   }
   return SDValue();
 }
@@ -8994,6 +8999,79 @@ SDValue SITargetLowering::lowerDEBUGTRAP(SDValue Op, SelectionDAG &DAG) const {
       static_cast<uint64_t>(GCNSubtarget::TrapID::LLVMAMDHSADebugTrap);
   SDValue Ops[] = {Chain, DAG.getTargetConstant(TrapID, SL, MVT::i16)};
   return DAG.getNode(AMDGPUISD::TRAP, SL, MVT::Other, Ops);
+}
+
+/// When a divergent value (in VGPR) is passed to an inline asm with an SGPR
+/// constraint ('s'), we need to insert v_readfirstlane to move the value from
+/// VGPR to SGPR. This is done by modifying the CopyToReg nodes in the glue
+/// chain that feed into the INLINEASM node.
+SDValue SITargetLowering::LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const {
+  unsigned NumOps = Op.getNumOperands();
+
+  const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
+  SmallSet<Register, 8> SGPRInputRegs;
+
+  unsigned NumVals = 0;
+  for (unsigned I = InlineAsm::Op_FirstOperand; I < NumOps - 1;
+       I += 1 + NumVals) {
+    const InlineAsm::Flag Flags(Op.getConstantOperandVal(I));
+    NumVals = Flags.getNumOperandRegisters();
+
+    unsigned RCID;
+    bool IsSGPRInput = Flags.getKind() == InlineAsm::Kind::RegUse &&
+                       NumVals > 0 && Flags.hasRegClassConstraint(RCID) &&
+                       TRI->isSGPRClass(TRI->getRegClass(RCID));
+
+    for (unsigned J = 0; J < NumVals; ++J) {
+      SDValue Val = Op.getOperand(I + 1 + J);
+      if (const RegisterSDNode *RegNode =
+              dyn_cast<RegisterSDNode>(Val.getNode())) {
+        Register Reg = RegNode->getReg();
+        if (IsSGPRInput || (Reg.isPhysical() && TRI->isSGPRPhysReg(Reg)))
+          SGPRInputRegs.insert(Reg);
+      }
+    }
+  }
+
+  if (SGPRInputRegs.empty())
+    return Op;
+
+  // Walk the glue chain and insert readfirstlane for divergent SGPR inputs.
+  SDLoc DL(Op);
+  SDNode *N = Op.getOperand(NumOps - 1).getNode();
+
+  while (N && N->getOpcode() == ISD::CopyToReg) {
+    Register Reg = cast<RegisterSDNode>(N->getOperand(1))->getReg();
+    SDValue SrcVal = N->getOperand(2);
+
+    // Insert readfirstlane if copying a divergent value to an SGPR input.
+    if (SrcVal->isDivergent() && SGPRInputRegs.count(Reg)) {
+      SDValue ReadFirstLaneID =
+          DAG.getTargetConstant(Intrinsic::amdgcn_readfirstlane, DL, MVT::i32);
+      SDValue ReadFirstLane =
+          DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, SrcVal.getValueType(),
+                      ReadFirstLaneID, SrcVal);
+
+      SmallVector<SDValue, 4> Ops = {N->getOperand(0), N->getOperand(1),
+                                     ReadFirstLane};
+      if (N->getNumOperands() > 3)
+        Ops.push_back(N->getOperand(3)); // Glue input
+
+      DAG.UpdateNodeOperands(N, Ops);
+    }
+
+    // Follow glue chain to next CopyToReg.
+    SDNode *Next = nullptr;
+    for (unsigned I = 0, E = N->getNumOperands(); I != E; ++I) {
+      if (N->getOperand(I).getValueType() == MVT::Glue) {
+        Next = N->getOperand(I).getNode();
+        break;
+      }
+    }
+    N = Next;
+  }
+
+  return Op;
 }
 
 SDValue SITargetLowering::getSegmentAperture(unsigned AS, const SDLoc &DL,
@@ -16011,10 +16089,17 @@ SDValue SITargetLowering::performMinMaxCombine(SDNode *N,
 
   if (supportsMin3Max3(*Subtarget, Opc, VT)) {
     auto IsTreeWithCombinableChildren = [Opc](SDValue Op) {
-      return Op.getOperand(0).getOpcode() == Opc &&
-             Op.getOperand(1).getOpcode() == Opc &&
-             (Op.getOperand(0).hasOneUse() || Op.getOperand(1).hasOneUse());
+      return (Op.getOperand(0).getOpcode() == Opc &&
+              Op.getOperand(0).hasOneUse()) ||
+             (Op.getOperand(1).getOpcode() == Opc &&
+              Op.getOperand(1).hasOneUse());
     };
+
+    bool CanTreeCombineApply = Op0.getOpcode() == Opc && Op0.hasOneUse() &&
+                               Op1.getOpcode() == Opc && Op1.hasOneUse();
+    bool HasCombinableTreeChild =
+        CanTreeCombineApply && (IsTreeWithCombinableChildren(Op0) ||
+                                IsTreeWithCombinableChildren(Op1));
 
     // Tree reduction: when both operands are the same min/max op, restructure
     // to keep a 2-op node on top so higher tree levels can still combine.
@@ -16023,9 +16108,7 @@ SDValue SITargetLowering::performMinMaxCombine(SDNode *N,
     // min(min(a, b), min(c, d)) -> min(min3(a, b, c), d)
     //
     // Defer when either inner op is a tree node with combinable children.
-    if (Op0.getOpcode() == Opc && Op0.hasOneUse() && Op1.getOpcode() == Opc &&
-        Op1.hasOneUse() && !IsTreeWithCombinableChildren(Op0) &&
-        !IsTreeWithCombinableChildren(Op1)) {
+    if (CanTreeCombineApply && !HasCombinableTreeChild) {
       SDLoc DL(N);
       SDValue Inner =
           DAG.getNode(minMaxOpcToMin3Max3Opc(Opc), DL, VT, Op0.getOperand(0),
@@ -16036,8 +16119,7 @@ SDValue SITargetLowering::performMinMaxCombine(SDNode *N,
     // max(max(a, b), c) -> max3(a, b, c)
     // min(min(a, b), c) -> min3(a, b, c)
     // Deferred when Op0 is a tree node with combinable children.
-    if (Op0.getOpcode() == Opc && Op0.hasOneUse() &&
-        !IsTreeWithCombinableChildren(Op0)) {
+    if (Op0.getOpcode() == Opc && Op0.hasOneUse() && !HasCombinableTreeChild) {
       SDLoc DL(N);
       return DAG.getNode(minMaxOpcToMin3Max3Opc(Opc), DL, N->getValueType(0),
                          Op0.getOperand(0), Op0.getOperand(1), Op1);
@@ -16047,8 +16129,7 @@ SDValue SITargetLowering::performMinMaxCombine(SDNode *N,
     // max(a, max(b, c)) -> max3(a, b, c)
     // min(a, min(b, c)) -> min3(a, b, c)
     // Deferred when Op1 is a tree node with combinable children.
-    if (Op1.getOpcode() == Opc && Op1.hasOneUse() &&
-        !IsTreeWithCombinableChildren(Op1)) {
+    if (Op1.getOpcode() == Opc && Op1.hasOneUse() && !HasCombinableTreeChild) {
       SDLoc DL(N);
       return DAG.getNode(minMaxOpcToMin3Max3Opc(Opc), DL, N->getValueType(0),
                          Op0, Op1.getOperand(0), Op1.getOperand(1));
