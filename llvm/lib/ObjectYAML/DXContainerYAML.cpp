@@ -592,7 +592,7 @@ void MappingTraits<DXContainerYAML::SignatureElement>::mapping(
 
 void MappingTraits<DXContainerYAML::StringTableEntry>::mapping(
     IO &IO, DXContainerYAML::StringTableEntry &E) {
-  IO.mapRequired("Name", E.Name);
+  IO.mapRequired("String", E.String);
   IO.mapRequired("Offset", E.Offset);
 }
 

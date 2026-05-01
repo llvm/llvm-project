@@ -75,7 +75,7 @@ Parts:
 # CHECK-NEXT: ResourceStride: 24
 # CHECK-NEXT: RuntimeInfoSize: 52
 # CHECK-NEXT: StringTable:
-# CHECK-NEXT: - Name:            CSEntry
+# CHECK-NEXT: - String:            CSEntry
 # CHECK-NEXT: Offset:          1
 # CHECK-NEXT: Resources:
 # CHECK-NEXT: - Type:            Sampler

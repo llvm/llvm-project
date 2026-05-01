@@ -241,7 +241,7 @@ struct SignatureElement {
 };
 
 struct StringTableEntry {
-  StringRef Name;
+  StringRef String;
   uint32_t Offset;
 };
 

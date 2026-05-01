@@ -1285,12 +1285,14 @@ TEST(DXCFile, PSVv2EntryNameNotInStringTable) {
   StringRef Data(Buffer.data(), Buffer.size());
   EXPECT_FALSE(Data.contains("CSMain"));
 
-  // Deserialize and verify the string table is empty (only null byte).
+  // Deserialize and verify the string table contains only null bytes
+  // (size 4 = one null byte padded to 4-byte alignment).
   DirectX::PSVRuntimeInfo ParsedPSV(Data);
   ASSERT_THAT_ERROR(ParsedPSV.parse(static_cast<uint16_t>(
                         Triple::EnvironmentType::Compute - Triple::Pixel)),
                     Succeeded());
   EXPECT_EQ(ParsedPSV.getVersion(), 2u);
   StringRef StrTab = ParsedPSV.getStringTable();
-  EXPECT_FALSE(StrTab.contains("CSMain"));
+  EXPECT_EQ(StrTab.size(), 4u);
+  EXPECT_TRUE(llvm::all_of(StrTab, [](char C) { return C == '\0'; }));
 }
