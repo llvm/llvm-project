@@ -982,23 +982,23 @@ void Instantiate_RefParamMustBePtrExternallyCountedGood() {
 // CHECK-NEXT:| | |-FieldDecl {{.*}} <line:197:5, col:9> col:9 referenced size 'int'
 // CHECK-NEXT:| | |-FieldDecl {{.*}} <line:198:5, col:7> col:7 referenced end_ptr 'T'
 // CHECK-NEXT:| | |-FieldDecl {{.*}} <line:199:5, col:26> col:26 referenced cb 'T'
-// CHECK-NEXT:| | | `-CountedByAttr {{.*}} </Volumes/user_data/dev/llvm/upstream_swift/next/builds/Release_xc_WonderE_uxi_sccache/lib/clang/23/include/ptrcheck.h:56:40, col:56> 0
+// CHECK-NEXT:| | | `-CountedByAttr {{.*}} <{{.*}}ptrcheck.h:56:40, col:56> 0
 // CHECK-NEXT:| | |   `-MemberExpr {{.*}} <{{.*}}attributes_in_template_decls_attr_only_mode.cpp:199:20> 'int' lvalue ->size {{.*}}
 // CHECK-NEXT:| | |     `-CXXThisExpr {{.*}} <col:20> 'RefParamMustBePtrExternallyCountedGood<T> *' implicit this
 // CHECK-NEXT:| | |-FieldDecl {{.*}} <line:200:5, col:34> col:34 cbon 'T'
-// CHECK-NEXT:| | | `-CountedByOrNullAttr {{.*}} </Volumes/user_data/dev/llvm/upstream_swift/next/builds/Release_xc_WonderE_uxi_sccache/lib/clang/23/include/ptrcheck.h:60:48, col:72> 0
+// CHECK-NEXT:| | | `-CountedByOrNullAttr {{.*}} <{{.*}}ptrcheck.h:60:48, col:72> 0
 // CHECK-NEXT:| | |   `-MemberExpr {{.*}} <{{.*}}attributes_in_template_decls_attr_only_mode.cpp:200:28> 'int' lvalue ->size {{.*}}
 // CHECK-NEXT:| | |     `-CXXThisExpr {{.*}} <col:28> 'RefParamMustBePtrExternallyCountedGood<T> *' implicit this
 // CHECK-NEXT:| | |-FieldDecl {{.*}} <line:201:5, col:24> col:24 sb 'T'
-// CHECK-NEXT:| | | `-SizedByAttr {{.*}} </Volumes/user_data/dev/llvm/upstream_swift/next/builds/Release_xc_WonderE_uxi_sccache/lib/clang/23/include/ptrcheck.h:64:38, col:52> 0
+// CHECK-NEXT:| | | `-SizedByAttr {{.*}} <{{.*}}ptrcheck.h:64:38, col:52> 0
 // CHECK-NEXT:| | |   `-MemberExpr {{.*}} <{{.*}}attributes_in_template_decls_attr_only_mode.cpp:201:18> 'int' lvalue ->size {{.*}}
 // CHECK-NEXT:| | |     `-CXXThisExpr {{.*}} <col:18> 'RefParamMustBePtrExternallyCountedGood<T> *' implicit this
 // CHECK-NEXT:| | |-FieldDecl {{.*}} <line:202:5, col:32> col:32 sbon 'T'
-// CHECK-NEXT:| | | `-SizedByOrNullAttr {{.*}} </Volumes/user_data/dev/llvm/upstream_swift/next/builds/Release_xc_WonderE_uxi_sccache/lib/clang/23/include/ptrcheck.h:68:46, col:68> 0
+// CHECK-NEXT:| | | `-SizedByOrNullAttr {{.*}} <{{.*}}ptrcheck.h:68:46, col:68> 0
 // CHECK-NEXT:| | |   `-MemberExpr {{.*}} <{{.*}}attributes_in_template_decls_attr_only_mode.cpp:202:26> 'int' lvalue ->size {{.*}}
 // CHECK-NEXT:| | |     `-CXXThisExpr {{.*}} <col:26> 'RefParamMustBePtrExternallyCountedGood<T> *' implicit this
 // CHECK-NEXT:| | |-FieldDecl {{.*}} <line:203:5, col:27> col:27 eb 'T'
-// CHECK-NEXT:| | | `-PtrEndedByAttr {{.*}} </Volumes/user_data/dev/llvm/upstream_swift/next/builds/Release_xc_WonderE_uxi_sccache/lib/clang/23/include/ptrcheck.h:80:38, col:52> 0
+// CHECK-NEXT:| | | `-PtrEndedByAttr {{.*}} <{{.*}}ptrcheck.h:80:38, col:52> 0
 // CHECK-NEXT:| | |   `-MemberExpr {{.*}} <{{.*}}attributes_in_template_decls_attr_only_mode.cpp:203:18> 'T' lvalue ->end_ptr {{.*}}
 // CHECK-NEXT:| | |     `-CXXThisExpr {{.*}} <col:18> 'RefParamMustBePtrExternallyCountedGood<T> *' implicit this
 // CHECK-NEXT:| | |-CXXMethodDecl {{.*}} <line:205:5, line:207:5> line:205:26 ret_cb 'T ()' implicit-inline
@@ -1006,7 +1006,7 @@ void Instantiate_RefParamMustBePtrExternallyCountedGood() {
 // CHECK-NEXT:| | | | `-ReturnStmt {{.*}} <line:206:9, col:16>
 // CHECK-NEXT:| | | |   `-MemberExpr {{.*}} <col:16> 'T' lvalue ->cb {{.*}}
 // CHECK-NEXT:| | | |     `-CXXThisExpr {{.*}} <col:16> 'RefParamMustBePtrExternallyCountedGood<T> *' implicit this
-// CHECK-NEXT:| | | `-CountedByAttr {{.*}} </Volumes/user_data/dev/llvm/upstream_swift/next/builds/Release_xc_WonderE_uxi_sccache/lib/clang/23/include/ptrcheck.h:56:40, col:56> 0
+// CHECK-NEXT:| | | `-CountedByAttr {{.*}} <{{.*}}ptrcheck.h:56:40, col:56> 0
 // CHECK-NEXT:| | |   `-MemberExpr {{.*}} <{{.*}}attributes_in_template_decls_attr_only_mode.cpp:205:20> 'int' lvalue ->size {{.*}}
 // CHECK-NEXT:| | |     `-CXXThisExpr {{.*}} <col:20> 'RefParamMustBePtrExternallyCountedGood<T> *' implicit this
 // CHECK-NEXT:| | `-CXXMethodDecl {{.*}} <line:214:5, line:217:5> line:214:10 useT 'void ()' implicit-inline
@@ -1020,7 +1020,7 @@ void Instantiate_RefParamMustBePtrExternallyCountedGood() {
 // CHECK-NEXT:| |       `-VarDecl {{.*}} <col:9, col:42> col:36 tmp 'T' cinit
 // CHECK-NEXT:| |         |-MemberExpr {{.*}} <col:42> 'T' lvalue ->cb {{.*}}
 // CHECK-NEXT:| |         | `-CXXThisExpr {{.*}} <col:42> 'RefParamMustBePtrExternallyCountedGood<T> *' implicit this
-// CHECK-NEXT:| |         `-CountedByAttr {{.*}} </Volumes/user_data/dev/llvm/upstream_swift/next/builds/Release_xc_WonderE_uxi_sccache/lib/clang/23/include/ptrcheck.h:56:40, col:56> 0
+// CHECK-NEXT:| |         `-CountedByAttr {{.*}} <{{.*}}ptrcheck.h:56:40, col:56> 0
 // CHECK-NEXT:| |           `-DeclRefExpr {{.*}} <{{.*}}attributes_in_template_decls_attr_only_mode.cpp:216:24> 'int' lvalue Var {{.*}} 'size_local' 'int'
 // CHECK-NEXT:| |-ClassTemplateSpecialization {{.*}} 'RefParamMustBePtrExternallyCountedGood'
 // CHECK-NEXT:| |-ClassTemplateSpecializationDecl {{.*}} <line:194:1, line:218:1> line:195:7 referenced class RefParamMustBePtrExternallyCountedGood definition instantiated_from {{.*}} implicit_instantiation
