@@ -415,6 +415,13 @@ static Value *MakeHalfType(unsigned IntrinsicID, unsigned BuiltinID,
   return MakeHalfType(CGF.CGM.getIntrinsic(IntrinsicID), BuiltinID, E, CGF);
 }
 
+static Value *MakeHalfType(unsigned IntrinsicID, llvm::Type *Ty,
+                           unsigned BuiltinID, const CallExpr *E,
+                           CodeGenFunction &CGF) {
+  return MakeHalfType(CGF.CGM.getIntrinsic(IntrinsicID, {Ty}), BuiltinID, E,
+                      CGF);
+}
+
 static Value *MakeFMAOOB(unsigned IntrinsicID, llvm::Type *Ty,
                          const CallExpr *E, CodeGenFunction &CGF) {
   return CGF.Builder.CreateCall(CGF.CGM.getIntrinsic(IntrinsicID, {Ty}),
@@ -1014,87 +1021,117 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
                       llvm::FixedVectorType::get(Builder.getBFloatTy(), 2), E,
                       *this);
   case NVPTX::BI__nvvm_fmax_f16:
-    return MakeHalfType(Intrinsic::nvvm_fmax_f16, BuiltinID, E, *this);
-  case NVPTX::BI__nvvm_fmax_f16x2:
-    return MakeHalfType(Intrinsic::nvvm_fmax_f16x2, BuiltinID, E, *this);
-  case NVPTX::BI__nvvm_fmax_ftz_f16:
-    return MakeHalfType(Intrinsic::nvvm_fmax_ftz_f16, BuiltinID, E, *this);
-  case NVPTX::BI__nvvm_fmax_ftz_f16x2:
-    return MakeHalfType(Intrinsic::nvvm_fmax_ftz_f16x2, BuiltinID, E, *this);
-  case NVPTX::BI__nvvm_fmax_ftz_nan_f16:
-    return MakeHalfType(Intrinsic::nvvm_fmax_ftz_nan_f16, BuiltinID, E, *this);
-  case NVPTX::BI__nvvm_fmax_ftz_nan_f16x2:
-    return MakeHalfType(Intrinsic::nvvm_fmax_ftz_nan_f16x2, BuiltinID, E,
+    return MakeHalfType(Intrinsic::nvvm_fmax, Builder.getHalfTy(), BuiltinID, E,
                         *this);
+  case NVPTX::BI__nvvm_fmax_f16x2:
+    return MakeHalfType(Intrinsic::nvvm_fmax,
+                        llvm::FixedVectorType::get(Builder.getHalfTy(), 2),
+                        BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fmax_ftz_f16:
+    return MakeHalfType(Intrinsic::nvvm_fmax_ftz, Builder.getHalfTy(),
+                        BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fmax_ftz_f16x2:
+    return MakeHalfType(Intrinsic::nvvm_fmax_ftz,
+                        llvm::FixedVectorType::get(Builder.getHalfTy(), 2),
+                        BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fmax_ftz_nan_f16:
+    return MakeHalfType(Intrinsic::nvvm_fmax_ftz_nan, Builder.getHalfTy(),
+                        BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fmax_ftz_nan_f16x2:
+    return MakeHalfType(Intrinsic::nvvm_fmax_ftz_nan,
+                        llvm::FixedVectorType::get(Builder.getHalfTy(), 2),
+                        BuiltinID, E, *this);
   case NVPTX::BI__nvvm_fmax_ftz_nan_xorsign_abs_f16:
-    return MakeHalfType(Intrinsic::nvvm_fmax_ftz_nan_xorsign_abs_f16, BuiltinID,
-                        E, *this);
+    return MakeHalfType(Intrinsic::nvvm_fmax_ftz_nan_xorsign_abs,
+                        Builder.getHalfTy(), BuiltinID, E, *this);
   case NVPTX::BI__nvvm_fmax_ftz_nan_xorsign_abs_f16x2:
-    return MakeHalfType(Intrinsic::nvvm_fmax_ftz_nan_xorsign_abs_f16x2,
+    return MakeHalfType(Intrinsic::nvvm_fmax_ftz_nan_xorsign_abs,
+                        llvm::FixedVectorType::get(Builder.getHalfTy(), 2),
                         BuiltinID, E, *this);
   case NVPTX::BI__nvvm_fmax_ftz_xorsign_abs_f16:
-    return MakeHalfType(Intrinsic::nvvm_fmax_ftz_xorsign_abs_f16, BuiltinID, E,
-                        *this);
+    return MakeHalfType(Intrinsic::nvvm_fmax_ftz_xorsign_abs,
+                        Builder.getHalfTy(), BuiltinID, E, *this);
   case NVPTX::BI__nvvm_fmax_ftz_xorsign_abs_f16x2:
-    return MakeHalfType(Intrinsic::nvvm_fmax_ftz_xorsign_abs_f16x2, BuiltinID,
-                        E, *this);
+    return MakeHalfType(Intrinsic::nvvm_fmax_ftz_xorsign_abs,
+                        llvm::FixedVectorType::get(Builder.getHalfTy(), 2),
+                        BuiltinID, E, *this);
   case NVPTX::BI__nvvm_fmax_nan_f16:
-    return MakeHalfType(Intrinsic::nvvm_fmax_nan_f16, BuiltinID, E, *this);
+    return MakeHalfType(Intrinsic::nvvm_fmax_nan, Builder.getHalfTy(),
+                        BuiltinID, E, *this);
   case NVPTX::BI__nvvm_fmax_nan_f16x2:
-    return MakeHalfType(Intrinsic::nvvm_fmax_nan_f16x2, BuiltinID, E, *this);
+    return MakeHalfType(Intrinsic::nvvm_fmax_nan,
+                        llvm::FixedVectorType::get(Builder.getHalfTy(), 2),
+                        BuiltinID, E, *this);
   case NVPTX::BI__nvvm_fmax_nan_xorsign_abs_f16:
-    return MakeHalfType(Intrinsic::nvvm_fmax_nan_xorsign_abs_f16, BuiltinID, E,
-                        *this);
+    return MakeHalfType(Intrinsic::nvvm_fmax_nan_xorsign_abs,
+                        Builder.getHalfTy(), BuiltinID, E, *this);
   case NVPTX::BI__nvvm_fmax_nan_xorsign_abs_f16x2:
-    return MakeHalfType(Intrinsic::nvvm_fmax_nan_xorsign_abs_f16x2, BuiltinID,
-                        E, *this);
+    return MakeHalfType(Intrinsic::nvvm_fmax_nan_xorsign_abs,
+                        llvm::FixedVectorType::get(Builder.getHalfTy(), 2),
+                        BuiltinID, E, *this);
   case NVPTX::BI__nvvm_fmax_xorsign_abs_f16:
-    return MakeHalfType(Intrinsic::nvvm_fmax_xorsign_abs_f16, BuiltinID, E,
-                        *this);
+    return MakeHalfType(Intrinsic::nvvm_fmax_xorsign_abs, Builder.getHalfTy(),
+                        BuiltinID, E, *this);
   case NVPTX::BI__nvvm_fmax_xorsign_abs_f16x2:
-    return MakeHalfType(Intrinsic::nvvm_fmax_xorsign_abs_f16x2, BuiltinID, E,
-                        *this);
+    return MakeHalfType(Intrinsic::nvvm_fmax_xorsign_abs,
+                        llvm::FixedVectorType::get(Builder.getHalfTy(), 2),
+                        BuiltinID, E, *this);
   case NVPTX::BI__nvvm_fmin_f16:
-    return MakeHalfType(Intrinsic::nvvm_fmin_f16, BuiltinID, E, *this);
-  case NVPTX::BI__nvvm_fmin_f16x2:
-    return MakeHalfType(Intrinsic::nvvm_fmin_f16x2, BuiltinID, E, *this);
-  case NVPTX::BI__nvvm_fmin_ftz_f16:
-    return MakeHalfType(Intrinsic::nvvm_fmin_ftz_f16, BuiltinID, E, *this);
-  case NVPTX::BI__nvvm_fmin_ftz_f16x2:
-    return MakeHalfType(Intrinsic::nvvm_fmin_ftz_f16x2, BuiltinID, E, *this);
-  case NVPTX::BI__nvvm_fmin_ftz_nan_f16:
-    return MakeHalfType(Intrinsic::nvvm_fmin_ftz_nan_f16, BuiltinID, E, *this);
-  case NVPTX::BI__nvvm_fmin_ftz_nan_f16x2:
-    return MakeHalfType(Intrinsic::nvvm_fmin_ftz_nan_f16x2, BuiltinID, E,
+    return MakeHalfType(Intrinsic::nvvm_fmin, Builder.getHalfTy(), BuiltinID, E,
                         *this);
+  case NVPTX::BI__nvvm_fmin_f16x2:
+    return MakeHalfType(Intrinsic::nvvm_fmin,
+                        llvm::FixedVectorType::get(Builder.getHalfTy(), 2),
+                        BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fmin_ftz_f16:
+    return MakeHalfType(Intrinsic::nvvm_fmin_ftz, Builder.getHalfTy(),
+                        BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fmin_ftz_f16x2:
+    return MakeHalfType(Intrinsic::nvvm_fmin_ftz,
+                        llvm::FixedVectorType::get(Builder.getHalfTy(), 2),
+                        BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fmin_ftz_nan_f16:
+    return MakeHalfType(Intrinsic::nvvm_fmin_ftz_nan, Builder.getHalfTy(),
+                        BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fmin_ftz_nan_f16x2:
+    return MakeHalfType(Intrinsic::nvvm_fmin_ftz_nan,
+                        llvm::FixedVectorType::get(Builder.getHalfTy(), 2),
+                        BuiltinID, E, *this);
   case NVPTX::BI__nvvm_fmin_ftz_nan_xorsign_abs_f16:
-    return MakeHalfType(Intrinsic::nvvm_fmin_ftz_nan_xorsign_abs_f16, BuiltinID,
-                        E, *this);
+    return MakeHalfType(Intrinsic::nvvm_fmin_ftz_nan_xorsign_abs,
+                        Builder.getHalfTy(), BuiltinID, E, *this);
   case NVPTX::BI__nvvm_fmin_ftz_nan_xorsign_abs_f16x2:
-    return MakeHalfType(Intrinsic::nvvm_fmin_ftz_nan_xorsign_abs_f16x2,
+    return MakeHalfType(Intrinsic::nvvm_fmin_ftz_nan_xorsign_abs,
+                        llvm::FixedVectorType::get(Builder.getHalfTy(), 2),
                         BuiltinID, E, *this);
   case NVPTX::BI__nvvm_fmin_ftz_xorsign_abs_f16:
-    return MakeHalfType(Intrinsic::nvvm_fmin_ftz_xorsign_abs_f16, BuiltinID, E,
-                        *this);
+    return MakeHalfType(Intrinsic::nvvm_fmin_ftz_xorsign_abs,
+                        Builder.getHalfTy(), BuiltinID, E, *this);
   case NVPTX::BI__nvvm_fmin_ftz_xorsign_abs_f16x2:
-    return MakeHalfType(Intrinsic::nvvm_fmin_ftz_xorsign_abs_f16x2, BuiltinID,
-                        E, *this);
+    return MakeHalfType(Intrinsic::nvvm_fmin_ftz_xorsign_abs,
+                        llvm::FixedVectorType::get(Builder.getHalfTy(), 2),
+                        BuiltinID, E, *this);
   case NVPTX::BI__nvvm_fmin_nan_f16:
-    return MakeHalfType(Intrinsic::nvvm_fmin_nan_f16, BuiltinID, E, *this);
+    return MakeHalfType(Intrinsic::nvvm_fmin_nan, Builder.getHalfTy(),
+                        BuiltinID, E, *this);
   case NVPTX::BI__nvvm_fmin_nan_f16x2:
-    return MakeHalfType(Intrinsic::nvvm_fmin_nan_f16x2, BuiltinID, E, *this);
+    return MakeHalfType(Intrinsic::nvvm_fmin_nan,
+                        llvm::FixedVectorType::get(Builder.getHalfTy(), 2),
+                        BuiltinID, E, *this);
   case NVPTX::BI__nvvm_fmin_nan_xorsign_abs_f16:
-    return MakeHalfType(Intrinsic::nvvm_fmin_nan_xorsign_abs_f16, BuiltinID, E,
-                        *this);
+    return MakeHalfType(Intrinsic::nvvm_fmin_nan_xorsign_abs,
+                        Builder.getHalfTy(), BuiltinID, E, *this);
   case NVPTX::BI__nvvm_fmin_nan_xorsign_abs_f16x2:
-    return MakeHalfType(Intrinsic::nvvm_fmin_nan_xorsign_abs_f16x2, BuiltinID,
-                        E, *this);
+    return MakeHalfType(Intrinsic::nvvm_fmin_nan_xorsign_abs,
+                        llvm::FixedVectorType::get(Builder.getHalfTy(), 2),
+                        BuiltinID, E, *this);
   case NVPTX::BI__nvvm_fmin_xorsign_abs_f16:
-    return MakeHalfType(Intrinsic::nvvm_fmin_xorsign_abs_f16, BuiltinID, E,
-                        *this);
+    return MakeHalfType(Intrinsic::nvvm_fmin_xorsign_abs, Builder.getHalfTy(),
+                        BuiltinID, E, *this);
   case NVPTX::BI__nvvm_fmin_xorsign_abs_f16x2:
-    return MakeHalfType(Intrinsic::nvvm_fmin_xorsign_abs_f16x2, BuiltinID, E,
-                        *this);
+    return MakeHalfType(Intrinsic::nvvm_fmin_xorsign_abs,
+                        llvm::FixedVectorType::get(Builder.getHalfTy(), 2),
+                        BuiltinID, E, *this);
   case NVPTX::BI__nvvm_fabs_f:
   case NVPTX::BI__nvvm_abs_bf16:
   case NVPTX::BI__nvvm_abs_bf16x2:
