@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_MACROS_PTHREAD_MACRO_H
 #define LLVM_LIBC_MACROS_PTHREAD_MACRO_H
 
+#include "stdint-macros.h"
+
 #define PTHREAD_NULL {0}
 
 #define PTHREAD_CREATE_JOINABLE 0
@@ -76,5 +78,8 @@
 #define PTHREAD_RWLOCK_PREFER_READER_NP 0
 #define PTHREAD_RWLOCK_PREFER_WRITER_NP 1
 #define PTHREAD_RWLOCK_PREFER_WRITER_NONRECURSIVE_NP 2
+
+// LLVM libc extensions
+#define __PTHREAD_GET_ID(t) (reinterpret_cast<uintptr_t>((t).__attrib))
 
 #endif // LLVM_LIBC_MACROS_PTHREAD_MACRO_H

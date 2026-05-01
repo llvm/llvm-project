@@ -386,6 +386,7 @@ add_macro_header(
     pthread-macros.h
   DEPENDS
     .null_macro
+    .stdint_macros
 )
 
 add_macro_header(
@@ -404,6 +405,14 @@ add_macro_header(
   sysexits_macros
   HDR
     sysexits-macros.h
+)
+
+add_macro_header(
+  threads_macros
+  HDR
+    threads-macros.h
+  DEPENDS
+    .stdint_macros
 )
 
 if (LIBC_CONF_MODULAR_FORMAT)

@@ -50,6 +50,8 @@ macros:
     standards:
       - gnu
     macro_header: pthread-macros.h
+  - macro_name: __PTHREAD_GET_ID
+    macro_header: pthread-macros.h
 types:
   - type_name: pthread_t
   - type_name: pthread_once_t

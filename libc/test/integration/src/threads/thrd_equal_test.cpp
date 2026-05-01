@@ -21,12 +21,14 @@
 
 thrd_t child_thread;
 mtx_t mutex;
+uintptr_t child_self_thread_id;
 
 static int child_func(void *arg) {
   LIBC_NAMESPACE::mtx_lock(&mutex);
   int *ret = reinterpret_cast<int *>(arg);
   auto self = LIBC_NAMESPACE::thrd_current();
   *ret = LIBC_NAMESPACE::thrd_equal(child_thread, self);
+  child_self_thread_id = __THRD_GET_ID(self);
   LIBC_NAMESPACE::mtx_unlock(&mutex);
   return 0;
 }
@@ -50,10 +52,12 @@ TEST_MAIN() {
             int(thrd_success));
   // This new thread should of course not be equal to the main thread.
   ASSERT_EQ(LIBC_NAMESPACE::thrd_equal(th, main_thread), 0);
+  ASSERT_NE(__THRD_GET_ID(th), __THRD_GET_ID(main_thread));
 
   // Set the |child_thread| global var and unlock to allow the child to perform
   // the comparison.
   child_thread = th;
+  uintptr_t child_thread_id = __THRD_GET_ID(child_thread);
   ASSERT_EQ(LIBC_NAMESPACE::mtx_unlock(&mutex), int(thrd_success));
 
   int retval;
@@ -62,6 +66,7 @@ TEST_MAIN() {
   // The child thread should see that thrd_current return value is the same as
   // |child_thread|.
   ASSERT_NE(result, 0);
+  ASSERT_EQ(child_thread_id, child_self_thread_id);
 
   LIBC_NAMESPACE::mtx_destroy(&mutex);
   return 0;
