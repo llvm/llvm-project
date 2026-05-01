@@ -5632,6 +5632,8 @@ bool Parser::isTypeSpecifierQualifier(const Token &Tok) {
     return isTypeSpecifierQualifier(getCurToken());
 
   case tok::coloncolon:   // ::foo::bar
+    if (!getLangOpts().CPlusPlus && !getLangOpts().ObjC)
+      return false;
     if (NextToken().is(tok::kw_new) ||    // ::new
         NextToken().is(tok::kw_delete))   // ::delete
       return false;
