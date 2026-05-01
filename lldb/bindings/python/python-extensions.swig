@@ -606,3 +606,47 @@ def is_numeric_type(basic_type):
     return (False,False)
 
 %}
+
+%pythoncode %{
+
+def _type_spec(type_name, regex):
+    type_spec = f"'{type_name}'"
+    if regex:
+        type_spec = f"-x {type_spec}"
+    return type_spec
+
+def summary(type_name, regex=False):
+    """A decorator that registers a function as an LLDB type summary provider.
+
+    @lldb.summary("MyType")
+    def MyTypeSummary(valobj, internal_dict):
+        return "summary string"
+    """
+    type_spec = _type_spec(type_name, regex)
+    def decorator(func):
+        qualified = f"{func.__module__}.{func.__qualname__}"
+        func._lldb_register_command = f"type summary add -F {qualified} {type_spec}"
+        return func
+    return decorator
+
+def synthetic(type_name, regex=False):
+    """A decorator that registers a class as an LLDB synthetic child provider.
+
+    @lldb.synthetic("MyType")
+    class MyTypeSynthetic:
+        def __init__(self, valobj, internal_dict):
+            ...
+    """
+    type_spec = _type_spec(type_name, regex)
+    def decorator(cls):
+        qualified = f"{cls.__module__}.{cls.__qualname__}"
+        cls._lldb_register_command = f"type synthetic add -l {qualified} {type_spec}"
+        return cls
+    return decorator
+
+def _register_lldb_decorators(module, debugger):
+    for obj in vars(module).values():
+        if cmd := getattr(obj, '_lldb_register_command', None):
+            debugger.HandleCommand(cmd)
+
+%}

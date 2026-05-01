@@ -1007,10 +1007,23 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallModuleInit(
 
   // This method is optional and need not exist.  So if we don't find it,
   // it's actually a success, not a failure.
-  if (!pfunc.IsAllocated())
-    return true;
+  if (pfunc.IsAllocated())
+    pfunc(SWIGBridge::ToSWIGWrapper(debugger), dict);
 
-  pfunc(SWIGBridge::ToSWIGWrapper(std::move(debugger)), dict);
+  // Scan the module for @lldb.summary and @lldb.synthetic decorators.
+  auto lldb_module =
+      unwrapIgnoringErrors(PythonModule::Import("lldb"));
+  if (lldb_module.IsAllocated()) {
+    auto register_func =
+        lldb_module.ResolveName<PythonCallable>("_register_lldb_decorators");
+    if (register_func.IsAllocated()) {
+      auto user_module =
+          unwrapIgnoringErrors(PythonModule::Import(python_module_name));
+      if (user_module.IsAllocated())
+        register_func(std::move(user_module),
+                       SWIGBridge::ToSWIGWrapper(std::move(debugger)));
+    }
+  }
 
   return true;
 }
