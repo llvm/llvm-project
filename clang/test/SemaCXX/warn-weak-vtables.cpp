@@ -89,7 +89,7 @@ void uses_templ() {
   TemplVirt<long> l;
 }
 
-namespace pr195110 {
+namespace GH195110 {
 // Check that no warning is emitted on a template instantiation.
 template <class> struct basic_streambuf {
   __attribute__((__exclude_from_explicit_instantiation__)) virtual void
