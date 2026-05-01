@@ -9,7 +9,7 @@
 // Registry for SerializationFormats, and some helper functions.
 //
 // To register some custom serialization format, you will need to add some
-// declarations and defintions.
+// declarations and definitions.
 //
 // Insert this code to the header file:
 //
