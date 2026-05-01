@@ -3433,11 +3433,15 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
     case Intrinsic::minimumnum:
     case Intrinsic::nvvm_fmax:
     case Intrinsic::nvvm_fmin:
-      // If one argument is undef, return the other argument.
-      if (IsOp0Undef)
-        return Operands[1];
-      if (IsOp1Undef)
-        return Operands[0];
+      // If one argument is undef, return the other argument — unless it is a
+      // float NaN, in which case fall through to canonicalize it. Double NaNs
+      // are returned as-is; PTX only canonicalizes f32 NaNs.
+      if (IsOp0Undef || IsOp1Undef) {
+        Constant *Other = Operands[IsOp0Undef ? 1 : 0];
+        auto *Op = dyn_cast<ConstantFP>(Other);
+        if (!Op || !Op->isNaN() || Ty->isDoubleTy())
+          return Other;
+      }
       [[fallthrough]];
 
     case Intrinsic::nvvm_fmax_ftz:
