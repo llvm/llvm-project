@@ -645,6 +645,7 @@ add_header_macro(
   sys/personality.h
   DEPENDS
     .llvm_libc_common_h
+    .llvm-libc-macros.sys_personality_macros
 )
 
 add_header_macro(

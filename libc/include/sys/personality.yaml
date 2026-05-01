@@ -1,6 +1,8 @@
 header: sys/personality.h
 header_template: personality.h.def
-macros: []
+macros:
+  - macro_name: PER_LINUX
+    macro_header: sys-personality-macros.h
 types: []
 enums: []
 objects: []
