@@ -1,0 +1,54 @@
+{
+  "configuration": {
+    "runtime_prefix": "__stack_usage_",
+    "runtime_prefix.description": "The runtime API prefix.",
+    "demangle_function_names": true,
+    "demangle_function_names.description": "Demangle functions names passed to the runtime."
+  },
+  "function_pre": {
+    "function": {
+      "enabled": true,
+      "address": false,
+      "address.description": "The function address.",
+      "name": true,
+      "name.description": "The function name.",
+      "num_arguments": false,
+      "num_arguments.description": "Number of function arguments (without varargs).",
+      "arguments": false,
+      "arguments.description": "Description of the arguments.",
+      "is_main": false,
+      "is_main.description": "Flag to indicate it is the main function.",
+      "id": false,
+      "id.description": "A unique ID associated with the given instrumentor call"
+    }
+  },
+  "function_post": {
+    "function": {
+      "enabled": true,
+      "address": false,
+      "address.description": "The function address.",
+      "name": true,
+      "name.description": "The function name.",
+      "num_arguments": false,
+      "num_arguments.description": "Number of function arguments (without varargs).",
+      "arguments": false,
+      "arguments.description": "Description of the arguments.",
+      "is_main": false,
+      "is_main.description": "Flag to indicate it is the main function.",
+      "id": false,
+      "id.description": "A unique ID associated with the given instrumentor call"
+    }
+  },
+  "instruction_pre": {
+    "alloca": {
+      "enabled": true,
+      "size": true,
+      "size.replace": false,
+      "size.description": "The allocation size.",
+      "alignment": false,
+      "alignment.description": "The allocation alignment.",
+      "id": false,
+      "id.description": "A unique ID associated with the given instrumentor call"
+    }
+  }
+}
