@@ -28,7 +28,7 @@
 // CHECK:           %[[ADD_0:.*]] = llvm.add %[[LOAD_1]], %[[LOAD_2]] : i32
 // CHECK:           %[[SITOFP_0:.*]] = llvm.sitofp %[[ADD_0]] : i32 to f32
 // CHECK:           %[[MLIR_5:.*]] = llvm.mlir.constant(72 : i32) : i32
-// CHECK:           "llvm.intr.memcpy"(%[[ALLOCA_0]], %[[ARG3]], %[[MLIR_5]]) <{arg_attrs = [{llvm.align = 8 : i64}, {llvm.align = 8 : i64}, {}], isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+// CHECK:           "llvm.intr.memcpy"(%[[ALLOCA_0]], %[[ARG3]], %[[MLIR_5]]) <{access_groups = [#[[$ATTR_0]]], arg_attrs = [{llvm.align = 8 : i64}, {llvm.align = 8 : i64}, {}], isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
 // CHECK:           %[[LOAD_3:.*]] = llvm.load %[[ARG0]] {accessGroups = [#[[$ATTR_0]]], access_groups = [#[[$ATTR_0]]]} : !llvm.ptr -> i32
 // CHECK:           %[[SEXT_1:.*]] = llvm.sext %[[LOAD_3]] : i32 to i64
 // CHECK:           %[[SEXT_2:.*]] = llvm.sext %[[LOAD_1]] : i32 to i64
