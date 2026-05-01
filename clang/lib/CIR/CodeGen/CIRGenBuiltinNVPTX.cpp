@@ -972,19 +972,17 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
   case NVPTX::BI__nvvm_bar_sync:
     return builder.emitIntrinsicCallOp(
         getLoc(expr->getExprLoc()), "nvvm.barrier.cta.sync.aligned.all",
-        builder.getVoidTy(),
-        mlir::ValueRange{emitScalarExpr(expr->getArg(0))});
+        builder.getVoidTy(), mlir::ValueRange{emitScalarExpr(expr->getArg(0))});
   case NVPTX::BI__syncthreads:
     return builder.emitIntrinsicCallOp(
         getLoc(expr->getExprLoc()), "nvvm.barrier.cta.sync.aligned.all",
         builder.getVoidTy(),
-        mlir::ValueRange{builder.getConstInt(
-            getLoc(expr->getExprLoc()), builder.getSInt32Ty(), 0)});
+        mlir::ValueRange{builder.getConstInt(getLoc(expr->getExprLoc()),
+                                             builder.getSInt32Ty(), 0)});
   case NVPTX::BI__nvvm_barrier_sync:
     return builder.emitIntrinsicCallOp(
         getLoc(expr->getExprLoc()), "nvvm.barrier.cta.sync.all",
-        builder.getVoidTy(),
-        mlir::ValueRange{emitScalarExpr(expr->getArg(0))});
+        builder.getVoidTy(), mlir::ValueRange{emitScalarExpr(expr->getArg(0))});
   case NVPTX::BI__nvvm_barrier_sync_cnt:
     return builder.emitIntrinsicCallOp(
         getLoc(expr->getExprLoc()), "nvvm.barrier.cta.sync.count",
