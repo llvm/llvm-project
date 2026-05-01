@@ -1,5 +1,7 @@
+// clang-format off
 // RUN: %clangXX %flags %openmp_flags -fopenmp-version=60 %s -o %t && env OMP_NUM_THREADS=4 %libomp-run 2>&1 | FileCheck %s
 // REQUIRES: omp_taskgraph_experimental
+// clang-format on
 
 #include <atomic>
 #include <cstdio>
@@ -25,7 +27,7 @@ int main() {
 #pragma omp single
     {
       for (int iter = 0; iter < NumIters; ++iter) {
-        const int gid = iter & 1;           // alternate two records
+        const int gid = iter & 1; // alternate two records
         const bool reset = (iter % 4) == 3; // periodically force re-record
 
 #pragma omp taskgraph graph_id(gid) graph_reset(reset)
