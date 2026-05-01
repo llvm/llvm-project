@@ -2867,11 +2867,10 @@ protected:
     assert((!Mask || !IG->isReverse()) &&
            "Reversed masked interleave-group not supported.");
     if (StoredValues.empty()) {
-      for (unsigned I = 0; I < IG->getFactor(); ++I)
-        if (Instruction *Inst = IG->getMember(I)) {
-          assert(!Inst->getType()->isVoidTy() && "must have result");
-          new VPRecipeValue(this, Inst);
-        }
+      for (Instruction *Inst : IG->members()) {
+        assert(!Inst->getType()->isVoidTy() && "must have result");
+        new VPRecipeValue(this, Inst);
+      }
     } else {
       for (auto *SV : StoredValues)
         addOperand(SV);
