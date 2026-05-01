@@ -31,13 +31,6 @@ define double @fdiv_f64(double %a, double %b) {
   ret double %r
 }
 
-define double @fneg_f64(double %a) {
-; CHECK-LABEL: fneg_f64:
-; CHECK: vneg.f64
-  %r = call double @llvm.fneg.f64(double %a)
-  ret double %r
-}
-
 ;;; f32 arithmetic
 
 define float @fadd_f32(float %a, float %b) {
@@ -65,13 +58,6 @@ define float @fdiv_f32(float %a, float %b) {
 ; CHECK-LABEL: fdiv_f32:
 ; CHECK: vdiv.f32
   %r = call float @llvm.fdiv.f32(float %a, float %b)
-  ret float %r
-}
-
-define float @fneg_f32(float %a) {
-; CHECK-LABEL: fneg_f32:
-; CHECK: vneg.f32
-  %r = call float @llvm.fneg.f32(float %a)
   ret float %r
 }
 
@@ -159,12 +145,10 @@ declare double @llvm.fadd.f64(double, double)
 declare double @llvm.fsub.f64(double, double)
 declare double @llvm.fmul.f64(double, double)
 declare double @llvm.fdiv.f64(double, double)
-declare double @llvm.fneg.f64(double)
 declare float @llvm.fadd.f32(float, float)
 declare float @llvm.fsub.f32(float, float)
 declare float @llvm.fmul.f32(float, float)
 declare float @llvm.fdiv.f32(float, float)
-declare float @llvm.fneg.f32(float)
 declare float @llvm.fptrunc.f32.f64(double)
 declare double @llvm.fpext.f64.f32(float)
 declare float @llvm.sitofp.f32.i32(i32)

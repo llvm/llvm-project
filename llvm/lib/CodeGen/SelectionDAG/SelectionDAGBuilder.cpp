@@ -7112,11 +7112,6 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                              getValue(I.getArgOperand(0)),
                              getValue(I.getArgOperand(1)), Flags));
     return;
-  case Intrinsic::fneg:
-    setValue(&I, DAG.getNode(ISD::FNEG, sdl,
-                             getValue(I.getArgOperand(0)).getValueType(),
-                             getValue(I.getArgOperand(0)), Flags));
-    return;
   case Intrinsic::fdiv:
     setValue(&I, DAG.getNode(ISD::FDIV, sdl,
                              getValue(I.getArgOperand(0)).getValueType(),

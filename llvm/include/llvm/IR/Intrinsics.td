@@ -1147,8 +1147,6 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison] in
                            [LLVMMatchType<0>, LLVMMatchType<0>]>;
   def int_fmul : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
                            [LLVMMatchType<0>, LLVMMatchType<0>]>;
-  def int_fneg : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
-                           [LLVMMatchType<0>]>;
   def int_fdiv : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
                            [LLVMMatchType<0>, LLVMMatchType<0>]>;
   def int_frem : DefaultAttrsIntrinsic<[llvm_anyfloat_ty],

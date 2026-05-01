@@ -30488,52 +30488,6 @@ Example:
 
       %r = call float @llvm.frem.f32(float %a, float %b)
 
-.. _int_fneg:
-
-'``llvm.fneg.*``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-
-This is an overloaded intrinsic. You can use ``llvm.fneg`` on any
-floating-point or vector of floating-point type. Not all targets support
-all types however.
-
-::
-
-      declare half      @llvm.fneg.f16(half %op1)
-      declare bfloat    @llvm.fneg.bf16(bfloat %op1)
-      declare float     @llvm.fneg.f32(float %op1)
-      declare double    @llvm.fneg.f64(double %op1)
-      declare x86_fp80  @llvm.fneg.f80(x86_fp80 %op1)
-      declare fp128     @llvm.fneg.f128(fp128 %op1)
-      declare ppc_fp128 @llvm.fneg.ppcf128(ppc_fp128 %op1)
-
-Overview:
-"""""""""
-
-Intrinsic form of the :ref:`fneg <i_fneg>` instruction.  Returns the
-floating-point negation of its operand.
-
-Arguments:
-""""""""""
-
-The argument and return value are floating-point numbers of the same type.
-
-Semantics:
-""""""""""
-
-Equivalent to the :ref:`fneg <i_fneg>` instruction.  Always
-``memory(none)`` and speculatable.
-
-Example:
-""""""""
-
-::
-
-      %r = call float @llvm.fneg.f32(float %x)
-
 .. _int_fcmp:
 
 '``llvm.fcmp.*``' Intrinsic
@@ -30577,7 +30531,9 @@ Semantics:
 """"""""""
 
 The comparison semantics :ref:`follow those of the fcmp instruction
-<fcmp_md_cc_sem>`.  Always ``memory(none)`` and speculatable.
+<fcmp_md_cc_sem>`.  As a quiet comparison, it does not raise FP Invalid
+Operation for qNaN operands; it will raise for sNaN operands when FP
+exception tracking is active.  Always ``memory(none)`` and speculatable.
 
 Example:
 """"""""

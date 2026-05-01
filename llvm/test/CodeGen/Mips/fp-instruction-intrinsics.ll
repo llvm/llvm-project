@@ -31,13 +31,6 @@ define float @fdiv_f32(float %a, float %b) {
   ret float %r
 }
 
-define float @fneg_f32(float %a) {
-; CHECK-LABEL: fneg_f32:
-; CHECK: neg.s
-  %r = call float @llvm.fneg.f32(float %a)
-  ret float %r
-}
-
 ;;; Conversions
 
 define float @sitofp_i32_f32(i32 %a) {
@@ -93,7 +86,6 @@ declare float @llvm.fadd.f32(float, float)
 declare float @llvm.fsub.f32(float, float)
 declare float @llvm.fmul.f32(float, float)
 declare float @llvm.fdiv.f32(float, float)
-declare float @llvm.fneg.f32(float)
 declare float @llvm.sitofp.f32.i32(i32)
 declare i32 @llvm.fptosi.i32.f32(float)
 declare i1 @llvm.fcmp.f32(float, float, metadata)

@@ -2717,8 +2717,6 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     return translateBinaryOp(TargetOpcode::G_FDIV, CI, MIRBuilder);
   case Intrinsic::frem:
     return translateBinaryOp(TargetOpcode::G_FREM, CI, MIRBuilder);
-  case Intrinsic::fneg:
-    return translateUnaryOp(TargetOpcode::G_FNEG, CI, MIRBuilder);
   case Intrinsic::fptrunc: {
     Register Src = getOrCreateVReg(*CI.getArgOperand(0));
     Register Res = getOrCreateVReg(CI);

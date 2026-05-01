@@ -12,8 +12,6 @@ define void @test_arithmetic(float %a, float %b, double %da, double %db) {
   %fmul  = call float @llvm.fmul.f32(float %a, float %b)
   %fdiv  = call float @llvm.fdiv.f32(float %a, float %b)
   %frem  = call float @llvm.frem.f32(float %a, float %b)
-  %fneg  = call float @llvm.fneg.f32(float %a)
-
   %dfadd = call double @llvm.fadd.f64(double %da, double %db)
   %dfsub = call double @llvm.fsub.f64(double %da, double %db)
   %dfmul = call double @llvm.fmul.f64(double %da, double %db)
@@ -24,7 +22,6 @@ define void @test_arithmetic(float %a, float %b, double %da, double %db) {
 ; CHECK: call float @llvm.fmul.f32(float %a, float %b)
 ; CHECK: call float @llvm.fdiv.f32(float %a, float %b)
 ; CHECK: call float @llvm.frem.f32(float %a, float %b)
-; CHECK: call float @llvm.fneg.f32(float %a)
 ; CHECK: call double @llvm.fadd.f64(double %da, double %db)
 
   ret void
@@ -106,7 +103,6 @@ define void @test_fcmps(float %a, float %b) {
 ; CHECK-DAG: declare float @llvm.fmul.f32(float, float)
 ; CHECK-DAG: declare float @llvm.fdiv.f32(float, float)
 ; CHECK-DAG: declare float @llvm.frem.f32(float, float)
-; CHECK-DAG: declare float @llvm.fneg.f32(float)
 ; CHECK-DAG: declare double @llvm.fadd.f64(double, double)
 ; CHECK-DAG: declare float @llvm.fptrunc.f32.f64(double)
 ; CHECK-DAG: declare double @llvm.fpext.f64.f32(float)
@@ -124,7 +120,6 @@ declare float @llvm.fsub.f32(float, float)
 declare float @llvm.fmul.f32(float, float)
 declare float @llvm.fdiv.f32(float, float)
 declare float @llvm.frem.f32(float, float)
-declare float @llvm.fneg.f32(float)
 declare double @llvm.fadd.f64(double, double)
 declare double @llvm.fsub.f64(double, double)
 declare double @llvm.fmul.f64(double, double)
