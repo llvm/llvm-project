@@ -2714,7 +2714,7 @@ struct PaddingClearer {
   PaddingClearer(CodeGenFunction &F)
       : CGF(F), CharWidth(CGF.getContext().getCharWidth()) {}
 
-  void run(Value *Ptr, QualType Ty) {
+  void run(Address Src, QualType Ty) {
     OccuppiedIntervals.clear();
     Stack.clear();
 
@@ -2729,7 +2729,7 @@ struct PaddingClearer {
     auto PaddingIntervals =
         GetPaddingIntervals(CGF.getContext().getTypeSize(Ty));
     for (const auto &Interval : PaddingIntervals) {
-      ClearPadding(Ptr, Interval);
+      ClearPadding(Src, Interval);
     }
   }
 
@@ -2906,8 +2906,9 @@ private:
     return Results;
   }
 
-  void ClearPadding(Value *Ptr, const BitInterval &PaddingInterval) {
-    auto *I8Ptr = CGF.Builder.CreateBitCast(Ptr, CGF.Int8PtrTy);
+  void ClearPadding(Address Src, const BitInterval &PaddingInterval) {
+    auto *I8Ptr =
+        CGF.Builder.CreateBitCast(Src.getBasePointer(), CGF.Int8PtrTy);
     auto *Zero = ConstantInt::get(CGF.Int8Ty, 0);
 
     // Calculate byte indices and bit positions
@@ -2920,7 +2921,9 @@ private:
       // Interval is within a single byte
       auto *Index = ConstantInt::get(CGF.IntTy, StartByte);
       auto *Element = CGF.Builder.CreateGEP(CGF.Int8Ty, I8Ptr, Index);
-      Address ElementAddr(Element, CGF.Int8Ty, CharUnits::One());
+      Address ElementAddr(Element, CGF.Int8Ty,
+                          Src.getAlignment().alignmentAtOffset(
+                              CharUnits::fromQuantity(StartByte)));
 
       auto *Value = CGF.Builder.CreateLoad(ElementAddr);
 
@@ -2937,7 +2940,9 @@ private:
       if (StartBit != 0) {
         auto *Index = ConstantInt::get(CGF.IntTy, StartByte);
         auto *Element = CGF.Builder.CreateGEP(CGF.Int8Ty, I8Ptr, Index);
-        Address ElementAddr(Element, CGF.Int8Ty, CharUnits::One());
+        Address ElementAddr(Element, CGF.Int8Ty,
+                            Src.getAlignment().alignmentAtOffset(
+                                CharUnits::fromQuantity(StartByte)));
 
         auto *Value = CGF.Builder.CreateLoad(ElementAddr);
 
@@ -2954,7 +2959,9 @@ private:
       for (auto Offset = StartByte; Offset < EndByte; ++Offset) {
         auto *Index = ConstantInt::get(CGF.IntTy, Offset);
         auto *Element = CGF.Builder.CreateGEP(CGF.Int8Ty, I8Ptr, Index);
-        Address ElementAddr(Element, CGF.Int8Ty, CharUnits::One());
+        Address ElementAddr(Element, CGF.Int8Ty,
+                            Src.getAlignment().alignmentAtOffset(
+                                CharUnits::fromQuantity(Offset)));
 
         CGF.Builder.CreateStore(Zero, ElementAddr);
       }
@@ -2963,7 +2970,9 @@ private:
       if (EndBit != 0) {
         auto *Index = ConstantInt::get(CGF.IntTy, EndByte);
         auto *Element = CGF.Builder.CreateGEP(CGF.Int8Ty, I8Ptr, Index);
-        Address ElementAddr(Element, CGF.Int8Ty, CharUnits::One());
+        Address ElementAddr(Element, CGF.Int8Ty,
+                            Src.getAlignment().alignmentAtOffset(
+                                CharUnits::fromQuantity(EndByte)));
 
         auto *Value = CGF.Builder.CreateLoad(ElementAddr);
 
@@ -5480,7 +5489,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Address Src = EmitPointerWithAlignment(E->getArg(0));
     auto PointeeTy = E->getArg(0)->getType()->getPointeeType();
     PaddingClearer clearer{*this};
-    clearer.run(Src.getBasePointer(), PointeeTy);
+    clearer.run(Src, PointeeTy);
     return RValue::get(nullptr);
   }
   case Builtin::BI__sync_fetch_and_add:

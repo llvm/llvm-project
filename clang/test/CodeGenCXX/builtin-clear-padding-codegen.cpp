@@ -60,15 +60,15 @@ void testPrimitiveNoPadding(int *i) {
 // LINUX-NEXT:    store ptr [[LD]], ptr [[LD_ADDR]], align 8
 // LINUX-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[LD_ADDR]], align 8
 // LINUX-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 10
-// LINUX-NEXT:    store i8 0, ptr [[TMP1]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP1]], align 2
 // LINUX-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i32 11
 // LINUX-NEXT:    store i8 0, ptr [[TMP2]], align 1
 // LINUX-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i32 12
-// LINUX-NEXT:    store i8 0, ptr [[TMP3]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP3]], align 4
 // LINUX-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 13
 // LINUX-NEXT:    store i8 0, ptr [[TMP4]], align 1
 // LINUX-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0]], i32 14
-// LINUX-NEXT:    store i8 0, ptr [[TMP5]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP5]], align 2
 // LINUX-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP0]], i32 15
 // LINUX-NEXT:    store i8 0, ptr [[TMP6]], align 1
 // LINUX-NEXT:    ret void
@@ -80,15 +80,15 @@ void testPrimitiveNoPadding(int *i) {
 // WINDOWS-NEXT:    store ptr [[LD]], ptr [[LD_ADDR]], align 8
 // WINDOWS-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[LD_ADDR]], align 8
 // WINDOWS-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 10
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP1]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP1]], align 2
 // WINDOWS-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i32 11
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP2]], align 1
 // WINDOWS-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i32 12
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP3]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP3]], align 4
 // WINDOWS-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 13
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP4]], align 1
 // WINDOWS-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0]], i32 14
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP5]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP5]], align 2
 // WINDOWS-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP0]], i32 15
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP6]], align 1
 // WINDOWS-NEXT:    ret void
@@ -106,27 +106,27 @@ void testPrimitiveLongDouble(long double *ld) {
 // LINUX-NEXT:    store ptr [[C]], ptr [[C_ADDR]], align 8
 // LINUX-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[C_ADDR]], align 8
 // LINUX-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 10
-// LINUX-NEXT:    store i8 0, ptr [[TMP1]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP1]], align 2
 // LINUX-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i32 11
 // LINUX-NEXT:    store i8 0, ptr [[TMP2]], align 1
 // LINUX-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i32 12
-// LINUX-NEXT:    store i8 0, ptr [[TMP3]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP3]], align 4
 // LINUX-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 13
 // LINUX-NEXT:    store i8 0, ptr [[TMP4]], align 1
 // LINUX-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0]], i32 14
-// LINUX-NEXT:    store i8 0, ptr [[TMP5]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP5]], align 2
 // LINUX-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP0]], i32 15
 // LINUX-NEXT:    store i8 0, ptr [[TMP6]], align 1
 // LINUX-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP0]], i32 26
-// LINUX-NEXT:    store i8 0, ptr [[TMP7]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP7]], align 2
 // LINUX-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP0]], i32 27
 // LINUX-NEXT:    store i8 0, ptr [[TMP8]], align 1
 // LINUX-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP0]], i32 28
-// LINUX-NEXT:    store i8 0, ptr [[TMP9]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP9]], align 4
 // LINUX-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[TMP0]], i32 29
 // LINUX-NEXT:    store i8 0, ptr [[TMP10]], align 1
 // LINUX-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP0]], i32 30
-// LINUX-NEXT:    store i8 0, ptr [[TMP11]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP11]], align 2
 // LINUX-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[TMP0]], i32 31
 // LINUX-NEXT:    store i8 0, ptr [[TMP12]], align 1
 // LINUX-NEXT:    ret void
@@ -138,27 +138,27 @@ void testPrimitiveLongDouble(long double *ld) {
 // WINDOWS-NEXT:    store ptr [[C]], ptr [[C_ADDR]], align 8
 // WINDOWS-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[C_ADDR]], align 8
 // WINDOWS-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 10
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP1]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP1]], align 2
 // WINDOWS-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i32 11
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP2]], align 1
 // WINDOWS-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i32 12
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP3]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP3]], align 4
 // WINDOWS-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 13
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP4]], align 1
 // WINDOWS-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0]], i32 14
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP5]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP5]], align 2
 // WINDOWS-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP0]], i32 15
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP6]], align 1
 // WINDOWS-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP0]], i32 26
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP7]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP7]], align 2
 // WINDOWS-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP0]], i32 27
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP8]], align 1
 // WINDOWS-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP0]], i32 28
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP9]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP9]], align 4
 // WINDOWS-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[TMP0]], i32 29
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP10]], align 1
 // WINDOWS-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP0]], i32 30
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP11]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP11]], align 2
 // WINDOWS-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[TMP0]], i32 31
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP12]], align 1
 // WINDOWS-NEXT:    ret void
@@ -213,15 +213,15 @@ union U2 {
 // LINUX-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
 // LINUX-NEXT:    store i8 0, ptr [[TMP1]], align 1
 // LINUX-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i32 2
-// LINUX-NEXT:    store i8 0, ptr [[TMP2]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP2]], align 2
 // LINUX-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3
 // LINUX-NEXT:    store i8 0, ptr [[TMP3]], align 1
 // LINUX-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 4
-// LINUX-NEXT:    store i8 0, ptr [[TMP4]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP4]], align 4
 // LINUX-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0]], i32 5
 // LINUX-NEXT:    store i8 0, ptr [[TMP5]], align 1
 // LINUX-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP0]], i32 6
-// LINUX-NEXT:    store i8 0, ptr [[TMP6]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP6]], align 2
 // LINUX-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP0]], i32 7
 // LINUX-NEXT:    store i8 0, ptr [[TMP7]], align 1
 // LINUX-NEXT:    ret void
@@ -235,15 +235,15 @@ union U2 {
 // WINDOWS-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP1]], align 1
 // WINDOWS-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i32 2
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP2]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP2]], align 2
 // WINDOWS-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP3]], align 1
 // WINDOWS-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 4
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP4]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP4]], align 4
 // WINDOWS-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0]], i32 5
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP5]], align 1
 // WINDOWS-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP0]], i32 6
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP6]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP6]], align 2
 // WINDOWS-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP0]], i32 7
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP7]], align 1
 // WINDOWS-NEXT:    ret void
@@ -289,7 +289,7 @@ struct alignas(4) Baz : Foo {
 // LINUX-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i32 5
 // LINUX-NEXT:    store i8 0, ptr [[TMP3]], align 1
 // LINUX-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 6
-// LINUX-NEXT:    store i8 0, ptr [[TMP4]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP4]], align 2
 // LINUX-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0]], i32 7
 // LINUX-NEXT:    store i8 0, ptr [[TMP5]], align 1
 // LINUX-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP0]], i32 9
@@ -311,7 +311,7 @@ struct alignas(4) Baz : Foo {
 // WINDOWS-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i32 5
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP3]], align 1
 // WINDOWS-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 6
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP4]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP4]], align 2
 // WINDOWS-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0]], i32 7
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP5]], align 1
 // WINDOWS-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP0]], i32 9
@@ -338,7 +338,7 @@ void testStructPaddingInBetweenMembers(Baz *baz) {
 // LINUX-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i32 5
 // LINUX-NEXT:    store i8 0, ptr [[TMP3]], align 1
 // LINUX-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 6
-// LINUX-NEXT:    store i8 0, ptr [[TMP4]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP4]], align 2
 // LINUX-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0]], i32 7
 // LINUX-NEXT:    store i8 0, ptr [[TMP5]], align 1
 // LINUX-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP0]], i32 9
@@ -360,7 +360,7 @@ void testStructPaddingInBetweenMembers(Baz *baz) {
 // WINDOWS-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i32 5
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP3]], align 1
 // WINDOWS-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 6
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP4]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP4]], align 2
 // WINDOWS-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0]], i32 7
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP5]], align 1
 // WINDOWS-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP0]], i32 9
@@ -391,7 +391,7 @@ class S2 {
 // LINUX-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 8
 // LINUX-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
 // LINUX-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 6
-// LINUX-NEXT:    store i8 0, ptr [[TMP1]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP1]], align 2
 // LINUX-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i32 7
 // LINUX-NEXT:    store i8 0, ptr [[TMP2]], align 1
 // LINUX-NEXT:    ret void
@@ -403,7 +403,7 @@ class S2 {
 // WINDOWS-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 8
 // WINDOWS-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
 // WINDOWS-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 6
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP1]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP1]], align 2
 // WINDOWS-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i32 7
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP2]], align 1
 // WINDOWS-NEXT:    ret void
@@ -425,45 +425,45 @@ struct S3 {
 // LINUX-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 8
 // LINUX-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
 // LINUX-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 10
-// LINUX-NEXT:    store i8 0, ptr [[TMP1]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP1]], align 2
 // LINUX-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i32 11
 // LINUX-NEXT:    store i8 0, ptr [[TMP2]], align 1
 // LINUX-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i32 12
-// LINUX-NEXT:    store i8 0, ptr [[TMP3]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP3]], align 4
 // LINUX-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 13
 // LINUX-NEXT:    store i8 0, ptr [[TMP4]], align 1
 // LINUX-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0]], i32 14
-// LINUX-NEXT:    store i8 0, ptr [[TMP5]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP5]], align 2
 // LINUX-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP0]], i32 15
 // LINUX-NEXT:    store i8 0, ptr [[TMP6]], align 1
 // LINUX-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP0]], i32 17
 // LINUX-NEXT:    store i8 0, ptr [[TMP7]], align 1
 // LINUX-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP0]], i32 18
-// LINUX-NEXT:    store i8 0, ptr [[TMP8]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP8]], align 2
 // LINUX-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP0]], i32 19
 // LINUX-NEXT:    store i8 0, ptr [[TMP9]], align 1
 // LINUX-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[TMP0]], i32 20
-// LINUX-NEXT:    store i8 0, ptr [[TMP10]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP10]], align 4
 // LINUX-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP0]], i32 21
 // LINUX-NEXT:    store i8 0, ptr [[TMP11]], align 1
 // LINUX-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[TMP0]], i32 22
-// LINUX-NEXT:    store i8 0, ptr [[TMP12]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP12]], align 2
 // LINUX-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[TMP0]], i32 23
 // LINUX-NEXT:    store i8 0, ptr [[TMP13]], align 1
 // LINUX-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[TMP0]], i32 24
-// LINUX-NEXT:    store i8 0, ptr [[TMP14]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP14]], align 8
 // LINUX-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[TMP0]], i32 25
 // LINUX-NEXT:    store i8 0, ptr [[TMP15]], align 1
 // LINUX-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[TMP0]], i32 26
-// LINUX-NEXT:    store i8 0, ptr [[TMP16]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP16]], align 2
 // LINUX-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[TMP0]], i32 27
 // LINUX-NEXT:    store i8 0, ptr [[TMP17]], align 1
 // LINUX-NEXT:    [[TMP18:%.*]] = getelementptr i8, ptr [[TMP0]], i32 28
-// LINUX-NEXT:    store i8 0, ptr [[TMP18]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP18]], align 4
 // LINUX-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr [[TMP0]], i32 29
 // LINUX-NEXT:    store i8 0, ptr [[TMP19]], align 1
 // LINUX-NEXT:    [[TMP20:%.*]] = getelementptr i8, ptr [[TMP0]], i32 30
-// LINUX-NEXT:    store i8 0, ptr [[TMP20]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP20]], align 2
 // LINUX-NEXT:    [[TMP21:%.*]] = getelementptr i8, ptr [[TMP0]], i32 31
 // LINUX-NEXT:    store i8 0, ptr [[TMP21]], align 1
 // LINUX-NEXT:    ret void
@@ -475,45 +475,45 @@ struct S3 {
 // WINDOWS-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 8
 // WINDOWS-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
 // WINDOWS-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 10
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP1]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP1]], align 2
 // WINDOWS-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i32 11
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP2]], align 1
 // WINDOWS-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i32 12
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP3]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP3]], align 4
 // WINDOWS-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 13
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP4]], align 1
 // WINDOWS-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0]], i32 14
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP5]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP5]], align 2
 // WINDOWS-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP0]], i32 15
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP6]], align 1
 // WINDOWS-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP0]], i32 17
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP7]], align 1
 // WINDOWS-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP0]], i32 18
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP8]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP8]], align 2
 // WINDOWS-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP0]], i32 19
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP9]], align 1
 // WINDOWS-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[TMP0]], i32 20
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP10]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP10]], align 4
 // WINDOWS-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP0]], i32 21
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP11]], align 1
 // WINDOWS-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[TMP0]], i32 22
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP12]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP12]], align 2
 // WINDOWS-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[TMP0]], i32 23
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP13]], align 1
 // WINDOWS-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[TMP0]], i32 24
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP14]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP14]], align 8
 // WINDOWS-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[TMP0]], i32 25
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP15]], align 1
 // WINDOWS-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[TMP0]], i32 26
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP16]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP16]], align 2
 // WINDOWS-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[TMP0]], i32 27
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP17]], align 1
 // WINDOWS-NEXT:    [[TMP18:%.*]] = getelementptr i8, ptr [[TMP0]], i32 28
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP18]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP18]], align 4
 // WINDOWS-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr [[TMP0]], i32 29
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP19]], align 1
 // WINDOWS-NEXT:    [[TMP20:%.*]] = getelementptr i8, ptr [[TMP0]], i32 30
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP20]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP20]], align 2
 // WINDOWS-NEXT:    [[TMP21:%.*]] = getelementptr i8, ptr [[TMP0]], i32 31
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP21]], align 1
 // WINDOWS-NEXT:    ret void
@@ -539,7 +539,7 @@ struct S4 : Empty, B {
 // LINUX-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 5
 // LINUX-NEXT:    store i8 0, ptr [[TMP1]], align 1
 // LINUX-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i32 6
-// LINUX-NEXT:    store i8 0, ptr [[TMP2]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP2]], align 2
 // LINUX-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i32 7
 // LINUX-NEXT:    store i8 0, ptr [[TMP3]], align 1
 // LINUX-NEXT:    ret void
@@ -553,7 +553,7 @@ struct S4 : Empty, B {
 // WINDOWS-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 5
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP1]], align 1
 // WINDOWS-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i32 6
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP2]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP2]], align 2
 // WINDOWS-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i32 7
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP3]], align 1
 // WINDOWS-NEXT:    ret void
@@ -581,13 +581,13 @@ struct S5 : B1, B2 {
 // LINUX-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
 // LINUX-NEXT:    store i8 0, ptr [[TMP1]], align 1
 // LINUX-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i32 2
-// LINUX-NEXT:    store i8 0, ptr [[TMP2]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP2]], align 2
 // LINUX-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3
 // LINUX-NEXT:    store i8 0, ptr [[TMP3]], align 1
 // LINUX-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 5
 // LINUX-NEXT:    store i8 0, ptr [[TMP4]], align 1
 // LINUX-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0]], i32 6
-// LINUX-NEXT:    store i8 0, ptr [[TMP5]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP5]], align 2
 // LINUX-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP0]], i32 7
 // LINUX-NEXT:    store i8 0, ptr [[TMP6]], align 1
 // LINUX-NEXT:    ret void
@@ -601,13 +601,13 @@ struct S5 : B1, B2 {
 // WINDOWS-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 1
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP1]], align 1
 // WINDOWS-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i32 2
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP2]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP2]], align 2
 // WINDOWS-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP3]], align 1
 // WINDOWS-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 5
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP4]], align 1
 // WINDOWS-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0]], i32 6
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP5]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP5]], align 2
 // WINDOWS-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP0]], i32 7
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP6]], align 1
 // WINDOWS-NEXT:    ret void
@@ -636,13 +636,13 @@ struct S6 : B3, B4 {
 // LINUX-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 8
 // LINUX-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
 // LINUX-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 2
-// LINUX-NEXT:    store i8 0, ptr [[TMP1]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP1]], align 2
 // LINUX-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3
 // LINUX-NEXT:    store i8 0, ptr [[TMP2]], align 1
 // LINUX-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i32 5
 // LINUX-NEXT:    store i8 0, ptr [[TMP3]], align 1
 // LINUX-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 6
-// LINUX-NEXT:    store i8 0, ptr [[TMP4]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP4]], align 2
 // LINUX-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0]], i32 7
 // LINUX-NEXT:    store i8 0, ptr [[TMP5]], align 1
 // LINUX-NEXT:    ret void
@@ -654,13 +654,13 @@ struct S6 : B3, B4 {
 // WINDOWS-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 8
 // WINDOWS-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
 // WINDOWS-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 2
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP1]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP1]], align 2
 // WINDOWS-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i32 3
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP2]], align 1
 // WINDOWS-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i32 5
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP3]], align 1
 // WINDOWS-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 6
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP4]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP4]], align 2
 // WINDOWS-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0]], i32 7
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP5]], align 1
 // WINDOWS-NEXT:    ret void
@@ -692,7 +692,7 @@ struct S7 : VirtualBase, NonVirtualBase {
 // LINUX-NEXT:    [[S_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // LINUX-NEXT:    store ptr [[S]], ptr [[S_INDIRECT_ADDR]], align 8
 // LINUX-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[S]], i32 14
-// LINUX-NEXT:    store i8 0, ptr [[TMP0]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP0]], align 2
 // LINUX-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[S]], i32 15
 // LINUX-NEXT:    store i8 0, ptr [[TMP1]], align 1
 // LINUX-NEXT:    ret void
@@ -703,7 +703,7 @@ struct S7 : VirtualBase, NonVirtualBase {
 // WINDOWS-NEXT:    [[S_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // WINDOWS-NEXT:    store ptr [[S]], ptr [[S_INDIRECT_ADDR]], align 8
 // WINDOWS-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[S]], i32 14
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP0]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP0]], align 2
 // WINDOWS-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[S]], i32 15
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP1]], align 1
 // WINDOWS-NEXT:    ret void
@@ -745,23 +745,23 @@ struct S8 : VirtualBase1, VirtualBase2, NonVirtualBase1, VirtualBase3 {
 // LINUX-NEXT:    [[S_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // LINUX-NEXT:    store ptr [[S]], ptr [[S_INDIRECT_ADDR]], align 8
 // LINUX-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[S]], i32 12
-// LINUX-NEXT:    store i8 0, ptr [[TMP0]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP0]], align 4
 // LINUX-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[S]], i32 13
 // LINUX-NEXT:    store i8 0, ptr [[TMP1]], align 1
 // LINUX-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[S]], i32 14
-// LINUX-NEXT:    store i8 0, ptr [[TMP2]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP2]], align 2
 // LINUX-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[S]], i32 15
 // LINUX-NEXT:    store i8 0, ptr [[TMP3]], align 1
 // LINUX-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[S]], i32 29
 // LINUX-NEXT:    store i8 0, ptr [[TMP4]], align 1
 // LINUX-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[S]], i32 30
-// LINUX-NEXT:    store i8 0, ptr [[TMP5]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP5]], align 2
 // LINUX-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[S]], i32 31
 // LINUX-NEXT:    store i8 0, ptr [[TMP6]], align 1
 // LINUX-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[S]], i32 45
 // LINUX-NEXT:    store i8 0, ptr [[TMP7]], align 1
 // LINUX-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[S]], i32 46
-// LINUX-NEXT:    store i8 0, ptr [[TMP8]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP8]], align 2
 // LINUX-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[S]], i32 47
 // LINUX-NEXT:    store i8 0, ptr [[TMP9]], align 1
 // LINUX-NEXT:    ret void
@@ -772,23 +772,23 @@ struct S8 : VirtualBase1, VirtualBase2, NonVirtualBase1, VirtualBase3 {
 // WINDOWS-NEXT:    [[S_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // WINDOWS-NEXT:    store ptr [[S]], ptr [[S_INDIRECT_ADDR]], align 8
 // WINDOWS-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[S]], i32 12
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP0]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP0]], align 4
 // WINDOWS-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[S]], i32 13
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP1]], align 1
 // WINDOWS-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[S]], i32 14
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP2]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP2]], align 2
 // WINDOWS-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[S]], i32 15
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP3]], align 1
 // WINDOWS-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[S]], i32 29
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP4]], align 1
 // WINDOWS-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[S]], i32 30
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP5]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP5]], align 2
 // WINDOWS-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[S]], i32 31
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP6]], align 1
 // WINDOWS-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[S]], i32 45
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP7]], align 1
 // WINDOWS-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[S]], i32 46
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP8]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP8]], align 2
 // WINDOWS-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[S]], i32 47
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP9]], align 1
 // WINDOWS-NEXT:    ret void
@@ -832,7 +832,7 @@ struct S9 : NonVirtualBase2, VirtualChain3 {
 // LINUX-NEXT:    [[S_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // LINUX-NEXT:    store ptr [[S]], ptr [[S_INDIRECT_ADDR]], align 8
 // LINUX-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[S]], i32 22
-// LINUX-NEXT:    store i8 0, ptr [[TMP0]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP0]], align 2
 // LINUX-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[S]], i32 23
 // LINUX-NEXT:    store i8 0, ptr [[TMP1]], align 1
 // LINUX-NEXT:    ret void
@@ -843,7 +843,7 @@ struct S9 : NonVirtualBase2, VirtualChain3 {
 // WINDOWS-NEXT:    [[S_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // WINDOWS-NEXT:    store ptr [[S]], ptr [[S_INDIRECT_ADDR]], align 8
 // WINDOWS-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[S]], i32 22
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP0]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP0]], align 2
 // WINDOWS-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[S]], i32 23
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP1]], align 1
 // WINDOWS-NEXT:    ret void
@@ -882,19 +882,19 @@ struct S10 : D1, D2 {
 // LINUX-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[S]], i32 13
 // LINUX-NEXT:    store i8 0, ptr [[TMP0]], align 1
 // LINUX-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[S]], i32 14
-// LINUX-NEXT:    store i8 0, ptr [[TMP1]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP1]], align 2
 // LINUX-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[S]], i32 15
 // LINUX-NEXT:    store i8 0, ptr [[TMP2]], align 1
 // LINUX-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[S]], i32 30
-// LINUX-NEXT:    store i8 0, ptr [[TMP3]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP3]], align 2
 // LINUX-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[S]], i32 31
 // LINUX-NEXT:    store i8 0, ptr [[TMP4]], align 1
 // LINUX-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[S]], i32 36
-// LINUX-NEXT:    store i8 0, ptr [[TMP5]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP5]], align 4
 // LINUX-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[S]], i32 37
 // LINUX-NEXT:    store i8 0, ptr [[TMP6]], align 1
 // LINUX-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[S]], i32 38
-// LINUX-NEXT:    store i8 0, ptr [[TMP7]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP7]], align 2
 // LINUX-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[S]], i32 39
 // LINUX-NEXT:    store i8 0, ptr [[TMP8]], align 1
 // LINUX-NEXT:    ret void
@@ -907,19 +907,19 @@ struct S10 : D1, D2 {
 // WINDOWS-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[S]], i32 13
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP0]], align 1
 // WINDOWS-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[S]], i32 14
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP1]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP1]], align 2
 // WINDOWS-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[S]], i32 15
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP2]], align 1
 // WINDOWS-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[S]], i32 30
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP3]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP3]], align 2
 // WINDOWS-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[S]], i32 31
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP4]], align 1
 // WINDOWS-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[S]], i32 36
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP5]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP5]], align 4
 // WINDOWS-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[S]], i32 37
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP6]], align 1
 // WINDOWS-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[S]], i32 38
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP7]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP7]], align 2
 // WINDOWS-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[S]], i32 39
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP8]], align 1
 // WINDOWS-NEXT:    ret void
@@ -994,27 +994,27 @@ void testArrayNoPadding() {
 // LINUX-NEXT:  [[ENTRY:.*:]]
 // LINUX-NEXT:    [[LD:%.*]] = alloca [2 x x86_fp80], align 16
 // LINUX-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[LD]], i32 10
-// LINUX-NEXT:    store i8 0, ptr [[TMP0]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP0]], align 2
 // LINUX-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[LD]], i32 11
 // LINUX-NEXT:    store i8 0, ptr [[TMP1]], align 1
 // LINUX-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[LD]], i32 12
-// LINUX-NEXT:    store i8 0, ptr [[TMP2]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP2]], align 4
 // LINUX-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[LD]], i32 13
 // LINUX-NEXT:    store i8 0, ptr [[TMP3]], align 1
 // LINUX-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[LD]], i32 14
-// LINUX-NEXT:    store i8 0, ptr [[TMP4]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP4]], align 2
 // LINUX-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[LD]], i32 15
 // LINUX-NEXT:    store i8 0, ptr [[TMP5]], align 1
 // LINUX-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[LD]], i32 26
-// LINUX-NEXT:    store i8 0, ptr [[TMP6]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP6]], align 2
 // LINUX-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[LD]], i32 27
 // LINUX-NEXT:    store i8 0, ptr [[TMP7]], align 1
 // LINUX-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[LD]], i32 28
-// LINUX-NEXT:    store i8 0, ptr [[TMP8]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP8]], align 4
 // LINUX-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[LD]], i32 29
 // LINUX-NEXT:    store i8 0, ptr [[TMP9]], align 1
 // LINUX-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[LD]], i32 30
-// LINUX-NEXT:    store i8 0, ptr [[TMP10]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP10]], align 2
 // LINUX-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[LD]], i32 31
 // LINUX-NEXT:    store i8 0, ptr [[TMP11]], align 1
 // LINUX-NEXT:    ret void
@@ -1024,27 +1024,27 @@ void testArrayNoPadding() {
 // WINDOWS-NEXT:  [[ENTRY:.*:]]
 // WINDOWS-NEXT:    [[LD:%.*]] = alloca [2 x x86_fp80], align 16
 // WINDOWS-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[LD]], i32 10
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP0]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP0]], align 2
 // WINDOWS-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[LD]], i32 11
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP1]], align 1
 // WINDOWS-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[LD]], i32 12
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP2]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP2]], align 4
 // WINDOWS-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[LD]], i32 13
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP3]], align 1
 // WINDOWS-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[LD]], i32 14
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP4]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP4]], align 2
 // WINDOWS-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[LD]], i32 15
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP5]], align 1
 // WINDOWS-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[LD]], i32 26
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP6]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP6]], align 2
 // WINDOWS-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[LD]], i32 27
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP7]], align 1
 // WINDOWS-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[LD]], i32 28
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP8]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP8]], align 4
 // WINDOWS-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[LD]], i32 29
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP9]], align 1
 // WINDOWS-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[LD]], i32 30
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP10]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP10]], align 2
 // WINDOWS-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[LD]], i32 31
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP11]], align 1
 // WINDOWS-NEXT:    ret void
@@ -1063,25 +1063,25 @@ void testArrayLongDouble() {
 // LINUX-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[S]], i32 5
 // LINUX-NEXT:    store i8 0, ptr [[TMP0]], align 1
 // LINUX-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[S]], i32 6
-// LINUX-NEXT:    store i8 0, ptr [[TMP1]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP1]], align 2
 // LINUX-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[S]], i32 7
 // LINUX-NEXT:    store i8 0, ptr [[TMP2]], align 1
 // LINUX-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[S]], i32 13
 // LINUX-NEXT:    store i8 0, ptr [[TMP3]], align 1
 // LINUX-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[S]], i32 14
-// LINUX-NEXT:    store i8 0, ptr [[TMP4]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP4]], align 2
 // LINUX-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[S]], i32 15
 // LINUX-NEXT:    store i8 0, ptr [[TMP5]], align 1
 // LINUX-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[S]], i32 21
 // LINUX-NEXT:    store i8 0, ptr [[TMP6]], align 1
 // LINUX-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[S]], i32 22
-// LINUX-NEXT:    store i8 0, ptr [[TMP7]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP7]], align 2
 // LINUX-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[S]], i32 23
 // LINUX-NEXT:    store i8 0, ptr [[TMP8]], align 1
 // LINUX-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[S]], i32 29
 // LINUX-NEXT:    store i8 0, ptr [[TMP9]], align 1
 // LINUX-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[S]], i32 30
-// LINUX-NEXT:    store i8 0, ptr [[TMP10]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP10]], align 2
 // LINUX-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[S]], i32 31
 // LINUX-NEXT:    store i8 0, ptr [[TMP11]], align 1
 // LINUX-NEXT:    ret void
@@ -1093,25 +1093,25 @@ void testArrayLongDouble() {
 // WINDOWS-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[S]], i32 5
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP0]], align 1
 // WINDOWS-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[S]], i32 6
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP1]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP1]], align 2
 // WINDOWS-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[S]], i32 7
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP2]], align 1
 // WINDOWS-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[S]], i32 13
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP3]], align 1
 // WINDOWS-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[S]], i32 14
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP4]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP4]], align 2
 // WINDOWS-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[S]], i32 15
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP5]], align 1
 // WINDOWS-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[S]], i32 21
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP6]], align 1
 // WINDOWS-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[S]], i32 22
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP7]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP7]], align 2
 // WINDOWS-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[S]], i32 23
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP8]], align 1
 // WINDOWS-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[S]], i32 29
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP9]], align 1
 // WINDOWS-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[S]], i32 30
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP10]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP10]], align 2
 // WINDOWS-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[S]], i32 31
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP11]], align 1
 // WINDOWS-NEXT:    ret void
@@ -1192,7 +1192,7 @@ struct S12 {
 // LINUX-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 5
 // LINUX-NEXT:    store i8 0, ptr [[TMP1]], align 1
 // LINUX-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i32 6
-// LINUX-NEXT:    store i8 0, ptr [[TMP2]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP2]], align 2
 // LINUX-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i32 7
 // LINUX-NEXT:    store i8 0, ptr [[TMP3]], align 1
 // LINUX-NEXT:    ret void
@@ -1206,7 +1206,7 @@ struct S12 {
 // WINDOWS-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 5
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP1]], align 1
 // WINDOWS-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i32 6
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP2]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP2]], align 2
 // WINDOWS-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i32 7
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP3]], align 1
 // WINDOWS-NEXT:    ret void
@@ -1261,7 +1261,7 @@ struct NonTriviallyCopyable {
 // LINUX-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[NTC]], i32 5
 // LINUX-NEXT:    store i8 0, ptr [[TMP0]], align 1
 // LINUX-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[NTC]], i32 6
-// LINUX-NEXT:    store i8 0, ptr [[TMP1]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP1]], align 2
 // LINUX-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[NTC]], i32 7
 // LINUX-NEXT:    store i8 0, ptr [[TMP2]], align 1
 // LINUX-NEXT:    ret void
@@ -1274,7 +1274,7 @@ struct NonTriviallyCopyable {
 // WINDOWS-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[NTC]], i32 5
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP0]], align 1
 // WINDOWS-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[NTC]], i32 6
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP1]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP1]], align 2
 // WINDOWS-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[NTC]], i32 7
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP2]], align 1
 // WINDOWS-NEXT:    ret void
@@ -1292,11 +1292,11 @@ typedef float Float3Vec __attribute__((ext_vector_type(3)));
 // LINUX-NEXT:    store ptr [[V]], ptr [[V_ADDR]], align 8
 // LINUX-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[V_ADDR]], align 8
 // LINUX-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 12
-// LINUX-NEXT:    store i8 0, ptr [[TMP1]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP1]], align 4
 // LINUX-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i32 13
 // LINUX-NEXT:    store i8 0, ptr [[TMP2]], align 1
 // LINUX-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i32 14
-// LINUX-NEXT:    store i8 0, ptr [[TMP3]], align 1
+// LINUX-NEXT:    store i8 0, ptr [[TMP3]], align 2
 // LINUX-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 15
 // LINUX-NEXT:    store i8 0, ptr [[TMP4]], align 1
 // LINUX-NEXT:    ret void
@@ -1308,11 +1308,11 @@ typedef float Float3Vec __attribute__((ext_vector_type(3)));
 // WINDOWS-NEXT:    store ptr [[V]], ptr [[V_ADDR]], align 8
 // WINDOWS-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[V_ADDR]], align 8
 // WINDOWS-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 12
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP1]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP1]], align 4
 // WINDOWS-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i32 13
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP2]], align 1
 // WINDOWS-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i32 14
-// WINDOWS-NEXT:    store i8 0, ptr [[TMP3]], align 1
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP3]], align 2
 // WINDOWS-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 15
 // WINDOWS-NEXT:    store i8 0, ptr [[TMP4]], align 1
 // WINDOWS-NEXT:    ret void
