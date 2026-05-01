@@ -6423,25 +6423,21 @@ VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
   VPValue *Ptr = VPI->getOpcode() == Instruction::Load ? VPI->getOperand(0)
                                                        : VPI->getOperand(1);
   if (Consecutive) {
-    auto *GEP = dyn_cast<GetElementPtrInst>(
-        Ptr->getUnderlyingValue()->stripPointerCasts());
+    GEPNoWrapFlags Flags = vputils::getGEPFlagsForPtr(Ptr);
     VPSingleDefRecipe *VectorPtr;
     if (Reverse) {
       // When folding the tail, we may compute an address that we don't in the
       // original scalar loop: drop the GEP no-wrap flags in this case.
       // Otherwise preserve existing flags without no-unsigned-wrap, as we will
       // emit negative indices.
-      GEPNoWrapFlags Flags =
-          CM.foldTailByMasking() || !GEP
-              ? GEPNoWrapFlags::none()
-              : GEP->getNoWrapFlags().withoutNoUnsignedWrap();
+      GEPNoWrapFlags ReverseFlags = CM.foldTailByMasking()
+                                        ? GEPNoWrapFlags::none()
+                                        : Flags.withoutNoUnsignedWrap();
       VectorPtr = new VPVectorEndPointerRecipe(
           Ptr, &Plan.getVF(), getLoadStoreType(I),
-          /*Stride*/ -1, Flags, VPI->getDebugLoc());
+          /*Stride*/ -1, ReverseFlags, VPI->getDebugLoc());
     } else {
-      VectorPtr = new VPVectorPointerRecipe(Ptr, getLoadStoreType(I),
-                                            GEP ? GEP->getNoWrapFlags()
-                                                : GEPNoWrapFlags::none(),
+      VectorPtr = new VPVectorPointerRecipe(Ptr, getLoadStoreType(I), Flags,
                                             VPI->getDebugLoc());
     }
     Builder.setInsertPoint(VPI);
