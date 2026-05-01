@@ -642,6 +642,34 @@ implicit none
     end function
   end interface
 
+  interface __float2ull_rd
+    attributes(device) integer(8) function __float2ull_rd(r) bind(c, name='__nv_float2ull_rd')
+      !dir$ ignore_tkr (d) r
+      real, value :: r
+    end function
+  end interface
+
+  interface __float2ull_rn
+    attributes(device) integer(8) function __float2ull_rn(r) bind(c, name='__nv_float2ull_rn')
+      !dir$ ignore_tkr (d) r
+      real, value :: r
+    end function
+  end interface
+  
+  interface __float2ull_ru
+    attributes(device) integer(8) function __float2ull_ru(r) bind(c, name='__nv_float2ull_ru')
+      !dir$ ignore_tkr (d) r
+      real, value :: r
+    end function
+  end interface
+  
+  interface __float2ull_rz
+    attributes(device) integer(8) function __float2ull_rz(r) bind(c, name='__nv_float2ull_rz')
+      !dir$ ignore_tkr (d) r
+      real, value :: r
+    end function
+  end interface
+
   interface __half2float
     attributes(device) real function __half2float(i) bind(c, name='__nv_half2float')
       !dir$ ignore_tkr (d) i

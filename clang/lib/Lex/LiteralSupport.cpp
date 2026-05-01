@@ -1429,7 +1429,15 @@ void NumericLiteralParser::ParseNumberStartingWithZero(SourceLocation TokLoc) {
       DiagId = diag::ext_cpp_octal_literal;
     else
       DiagId = diag::ext_octal_literal;
-    Diags.Report(TokLoc, DiagId);
+    // If the token location is from a macro expansion where the macro was
+    // defined in a system header, suppress the diagnostic.
+    // FIXME: this is actually a more general issue, for example we have a
+    // similar need for binary literals above. It would be best for this to be
+    // handled by the diagnostics engine instead of with ad hoc solutions. This
+    // same concern exists below for issuing the deprecation warning.
+    if (!SM.isInSystemMacro(TokLoc))
+      Diags.Report(TokLoc, DiagId);
+
     ++s;
     DigitsBegin = s;
     radix = 8;
@@ -1450,8 +1458,11 @@ void NumericLiteralParser::ParseNumberStartingWithZero(SourceLocation TokLoc) {
 
   llvm::scope_exit _([&] {
     // If we still have an octal value but we did not see an octal prefix,
-    // diagnose as being an obsolescent feature starting in C2y.
-    if (radix == 8 && LangOpts.C2y && !hadError && !IsSingleZero)
+    // diagnose as being an obsolescent feature starting in C2y. If the token
+    // location is from a macro expansion where the macro was defined in a
+    // system header, suppress the diagnostic.
+    if (radix == 8 && LangOpts.C2y && !hadError && !IsSingleZero &&
+        !SM.isInSystemMacro(TokLoc))
       Diags.Report(TokLoc, diag::warn_unprefixed_octal_deprecated);
   });
 

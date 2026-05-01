@@ -10,8 +10,11 @@ define void @test1(i32 %x) nounwind {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[TMP0]], true
-; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP1]])
+; CHECK-NEXT:    br i1 [[TMP0]], label [[BB:%.*]], label [[RETURN:%.*]]
+; CHECK:       bb:
+; CHECK-NEXT:    [[TMP1:%.*]] = load volatile i32, ptr null, align 4
+; CHECK-NEXT:    unreachable
+; CHECK:       return:
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -31,8 +34,11 @@ define void @test1_no_null_opt(i32 %x) nounwind #0 {
 ; CHECK-LABEL: @test1_no_null_opt(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[TMP0]], true
-; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP1]])
+; CHECK-NEXT:    br i1 [[TMP0]], label [[BB:%.*]], label [[RETURN:%.*]]
+; CHECK:       bb:
+; CHECK-NEXT:    [[TMP1:%.*]] = load volatile i32, ptr null, align 4
+; CHECK-NEXT:    unreachable
+; CHECK:       return:
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -120,8 +126,11 @@ F:
 define void @test5(i1 %C, ptr %P) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[C:%.*]], true
-; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[T:%.*]], label [[F:%.*]]
+; CHECK:       T:
+; CHECK-NEXT:    [[TMP0:%.*]] = cmpxchg volatile ptr [[P:%.*]], i32 0, i32 1 seq_cst seq_cst, align 4
+; CHECK-NEXT:    unreachable
+; CHECK:       F:
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -137,8 +146,11 @@ F:
 define void @test6(i1 %C, ptr %P) {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[C:%.*]], true
-; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[T:%.*]], label [[F:%.*]]
+; CHECK:       T:
+; CHECK-NEXT:    [[TMP0:%.*]] = atomicrmw volatile xchg ptr [[P:%.*]], i32 0 seq_cst, align 4
+; CHECK-NEXT:    unreachable
+; CHECK:       F:
 ; CHECK-NEXT:    ret void
 ;
 entry:

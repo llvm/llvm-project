@@ -11,6 +11,7 @@ Implementation Status
    cpio
    ctype
    dirent
+   dlfcn
    endian
    errno
    fcntl
@@ -22,22 +23,29 @@ Implementation Status
    math/index.rst
    net/if
    netinet/in
+   nl_types
+   poll
    sched
    search
    setjmp
    signal
+   spawn
    stdbit
    stdfix
    stdio
    stdlib
    string
    strings
+   sys/ipc
    sys/mman
    sys/resource
+   sys/select
+   sys/sem
    sys/socket
    sys/stat
    sys/statvfs
    sys/time
+   sys/uio
    sys/utsname
    sys/wait
    termios

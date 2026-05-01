@@ -423,6 +423,27 @@ func.func @test_error_scalar_input_with_per_channel(%arg0: tensor<i8>) -> tensor
 
 // -----
 
+func.func @test_rescale_invalid_static_output_shape(%arg0: tensor<13x21x3xi8>) -> tensor<13x21x4xi8> {
+  %multiplier = "tosa.const"() <{values = dense<42> : tensor<1xi16>}> : () -> tensor<1xi16>
+  %shift = "tosa.const"() <{values = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %input_zp = "tosa.const"() <{values = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %output_zp = "tosa.const"() <{values = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
+  // expected-error@+1 {{'tosa.rescale' op expected output shape 13, 21, 4 to be compatible with inferred shape 13, 21, 3}}
+  %0 = tosa.rescale %arg0, %multiplier, %shift, %input_zp, %output_zp {scale32 = false, rounding_mode = SINGLE_ROUND, per_channel = false, input_unsigned = false, output_unsigned = false} : (tensor<13x21x3xi8>, tensor<1xi16>, tensor<1xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<13x21x4xi8>
+  return %0 : tensor<13x21x4xi8>
+}
+
+// -----
+
+func.func @test_mul_invalid_static_output_shape(%arg0: tensor<?x21x1xf32>, %arg1: tensor<?x1x3xf32>) -> tensor<?x21x2xf32> {
+  %shift = "tosa.const"() <{values = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
+  // expected-error@+1 {{'tosa.mul' op expected output shape ?, 21, 2 to be compatible with inferred shape ?, 21, 3}}
+  %0 = tosa.mul %arg0, %arg1, %shift : (tensor<?x21x1xf32>, tensor<?x1x3xf32>, tensor<1xi8>) -> tensor<?x21x2xf32>
+  return %0 : tensor<?x21x2xf32>
+}
+
+// -----
+
 // CHECK-LABEL: @test_gather_invalid_indices_N
 func.func @test_gather_invalid_indices_N(%arg0: tensor<13x21x3xf32>, %arg1: tensor<12x26xi32>) -> tensor<13x26x3xf32> {
   // expected-error@+1 {{'tosa.gather' op requires indices dimension 0 to have size 13, got 12}}
@@ -452,6 +473,42 @@ func.func @test_gather_invalid_out_C(%arg0: tensor<13x21x3xf32>, %arg1: tensor<1
   // expected-error@+1 {{'tosa.gather' op requires output dimension 2 to have size 3, got 8}}
   %0 = tosa.gather %arg0, %arg1 : (tensor<13x21x3xf32>, tensor<13x26xi32>) -> tensor<13x26x8xf32>
   return %0 : tensor<13x26x8xf32>
+}
+
+// -----
+// CHECK-LABEL: test_row_gather_block_scaled_output_count_mismatch
+func.func @test_row_gather_block_scaled_output_count_mismatch(%arg0: tensor<13x21x3xf32>, %arg1: tensor<13x26xi32>) -> (tensor<13x52x3xf32>, tensor<13x52x3xf32>) {
+  %row_count = "tosa.const"() {values = dense<2> : tensor<1xi32>} : () -> tensor<1xi32>
+  // expected-error@+1 {{'tosa.row_gather_block_scaled' op expects output tensor list length to match values tensor list length, got 2 results for 1 input tensors}}
+  %0:2 = tosa.row_gather_block_scaled %arg0, %arg1, %row_count {block_size = #tosa.block_size<BLOCK_SIZE_1>} : (tensor<13x21x3xf32>, tensor<13x26xi32>, tensor<1xi32>) -> (tensor<13x52x3xf32>, tensor<13x52x3xf32>)
+  return %0#0, %0#1 : tensor<13x52x3xf32>, tensor<13x52x3xf32>
+}
+
+// -----
+// CHECK-LABEL: test_row_gather_block_scaled_block_size_one_required
+func.func @test_row_gather_block_scaled_block_size_one_required(%arg0: tensor<13x21x3xf32>, %arg1: tensor<13x26xi32>) -> tensor<13x52x3xf32> {
+  %row_count = "tosa.const"() {values = dense<2> : tensor<1xi32>} : () -> tensor<1xi32>
+  // expected-error@+1 {{'tosa.row_gather_block_scaled' op requires block_size to be BLOCK_SIZE_1 when values tensor list length is 1}}
+  %0 = tosa.row_gather_block_scaled %arg0, %arg1, %row_count {block_size = #tosa.block_size<BLOCK_SIZE_32>} : (tensor<13x21x3xf32>, tensor<13x26xi32>, tensor<1xi32>) -> (tensor<13x52x3xf32>)
+  return %0 : tensor<13x52x3xf32>
+}
+
+// -----
+// CHECK-LABEL: test_row_gather_block_scaled_output_rows_mismatch
+func.func @test_row_gather_block_scaled_output_rows_mismatch(%arg0: tensor<13x21x3xf32>, %arg1: tensor<13x26xi32>) -> tensor<13x53x3xf32> {
+  %row_count = "tosa.const"() {values = dense<2> : tensor<1xi32>} : () -> tensor<1xi32>
+  // expected-error@+1 {{'tosa.row_gather_block_scaled' op requires output[0] dimension 1 to have size 52, got 53}}
+  %0 = tosa.row_gather_block_scaled %arg0, %arg1, %row_count {block_size = #tosa.block_size<BLOCK_SIZE_1>} : (tensor<13x21x3xf32>, tensor<13x26xi32>, tensor<1xi32>) -> (tensor<13x53x3xf32>)
+  return %0 : tensor<13x53x3xf32>
+}
+
+// -----
+// CHECK-LABEL: test_row_gather_block_scaled_scale_channel_mismatch
+func.func @test_row_gather_block_scaled_scale_channel_mismatch(%arg0: tensor<13x21x32xf4E2M1FN>, %arg1: tensor<13x21x2xf8E8M0FNU>, %arg2: tensor<13x26xi32>) -> (tensor<13x52x32xf4E2M1FN>, tensor<13x52x2xf8E8M0FNU>) {
+  %row_count = "tosa.const"() {values = dense<2> : tensor<1xi32>} : () -> tensor<1xi32>
+  // expected-error@+1 {{'tosa.row_gather_block_scaled' op expects channels of scale tensors to equal C/block_size (32/32), got 2}}
+  %0:2 = tosa.row_gather_block_scaled %arg0, %arg1, %arg2, %row_count {block_size = #tosa.block_size<BLOCK_SIZE_32>} : (tensor<13x21x32xf4E2M1FN>, tensor<13x21x2xf8E8M0FNU>, tensor<13x26xi32>, tensor<1xi32>) -> (tensor<13x52x32xf4E2M1FN>, tensor<13x52x2xf8E8M0FNU>)
+  return %0#0, %0#1 : tensor<13x52x32xf4E2M1FN>, tensor<13x52x2xf8E8M0FNU>
 }
 
 // -----

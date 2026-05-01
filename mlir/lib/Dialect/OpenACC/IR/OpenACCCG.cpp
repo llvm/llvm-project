@@ -19,9 +19,11 @@
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Region.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Support/LogicalResult.h"
+#include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 
@@ -103,6 +105,90 @@ struct RemoveEmptyKernelEnvironment
     else
       rewriter.eraseOp(op);
 
+    return success();
+  }
+};
+
+static void updateComputeRegionInputOperandSegments(ComputeRegionOp op,
+                                                    PatternRewriter &rewriter,
+                                                    size_t numInput) {
+  const size_t numLaunch = op.getLaunchArgs().size();
+  op->setAttr(ComputeRegionOp::getOperandSegmentSizeAttr(),
+              rewriter.getDenseI32ArrayAttr({static_cast<int32_t>(numLaunch),
+                                             static_cast<int32_t>(numInput),
+                                             op.getStream() ? 1 : 0}));
+}
+
+struct ComputeRegionRemoveDuplicateArgs
+    : public OpRewritePattern<ComputeRegionOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ComputeRegionOp op,
+                                PatternRewriter &rewriter) const override {
+    Block *body = op.getBody();
+    const size_t numLaunch = op.getLaunchArgs().size();
+    size_t numInput = op.getInputArgs().size();
+    assert(body->getNumArguments() == numLaunch + numInput &&
+           "region args mismatch");
+
+    bool mergedAny = false;
+    while (true) {
+      bool merged = false;
+      for (size_t j = 1; j < numInput && !merged; ++j) {
+        for (size_t i = 0; i < j; ++i) {
+          if (op->getOperand(static_cast<unsigned>(numLaunch + i)) !=
+              op->getOperand(static_cast<unsigned>(numLaunch + j)))
+            continue;
+          unsigned keepIdx = static_cast<unsigned>(numLaunch + i);
+          unsigned dropIdx = static_cast<unsigned>(numLaunch + j);
+          rewriter.replaceAllUsesWith(body->getArgument(dropIdx),
+                                      body->getArgument(keepIdx));
+          body->eraseArgument(dropIdx);
+          op->eraseOperand(dropIdx);
+          --numInput;
+          merged = true;
+          mergedAny = true;
+          break;
+        }
+      }
+      if (!merged)
+        break;
+    }
+
+    if (!mergedAny)
+      return failure();
+    updateComputeRegionInputOperandSegments(op, rewriter, numInput);
+    return success();
+  }
+};
+
+struct ComputeRegionRemoveUnusedArgs
+    : public OpRewritePattern<ComputeRegionOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ComputeRegionOp op,
+                                PatternRewriter &rewriter) const override {
+    Block *body = op.getBody();
+    const size_t numLaunch = op.getLaunchArgs().size();
+    size_t numInput = op.getInputArgs().size();
+    assert(body->getNumArguments() == numLaunch + numInput &&
+           "region args mismatch");
+
+    bool changed = false;
+    for (size_t k = numLaunch; k < numLaunch + numInput;) {
+      if (!body->getArgument(static_cast<unsigned>(k)).use_empty()) {
+        ++k;
+        continue;
+      }
+      body->eraseArgument(static_cast<unsigned>(k));
+      op->eraseOperand(static_cast<unsigned>(k));
+      --numInput;
+      changed = true;
+    }
+
+    if (!changed)
+      return failure();
+    updateComputeRegionInputOperandSegments(op, rewriter, numInput);
     return success();
   }
 };
@@ -396,6 +482,23 @@ BlockArgument ComputeRegionOp::appendInputArg(Value value) {
   return getBody()->addArgument(value.getType(), getLoc());
 }
 
+std::optional<BlockArgument>
+ComputeRegionOp::wireHoistedValueThroughIns(Value value) {
+  Region &region = getRegion();
+
+  auto useIsInRegion = [&](OpOperand &use) -> bool {
+    return region.isAncestor(use.getOwner()->getParentRegion());
+  };
+
+  if (!areValuesDefinedAbove(ValueRange(value), region) ||
+      !llvm::any_of(value.getUses(), useIsInRegion))
+    return std::nullopt;
+
+  BlockArgument arg = appendInputArg(value);
+  replaceAllUsesInRegionWith(value, arg, region);
+  return arg;
+}
+
 bool ComputeRegionOp::isEffectivelySerial() {
   auto *ctx = getContext();
 
@@ -441,13 +544,37 @@ SmallVector<GPUParallelDimAttr> ComputeRegionOp::getLaunchParDims() {
 }
 
 Value ComputeRegionOp::getOperand(BlockArgument blockArg) {
+  Block *body = getBody();
+  if (blockArg.getOwner() != body)
+    return Value();
   unsigned argNumber = blockArg.getArgNumber();
   unsigned numLaunchArgs = getLaunchArgs().size();
-  assert(argNumber < (numLaunchArgs + getInputArgs().size()) &&
-         "invalid block argument");
+  unsigned numInputArgs = getInputArgs().size();
+  if (argNumber >= numLaunchArgs + numInputArgs)
+    return Value();
   if (argNumber < numLaunchArgs)
     return getLaunchArgs()[argNumber];
   return getInputArgs()[argNumber - numLaunchArgs];
+}
+
+std::optional<BlockArgument> ComputeRegionOp::getBlockArg(Value value) {
+  Block *body = getBody();
+  for (auto [idx, launchVal] : llvm::enumerate(getLaunchArgs())) {
+    if (launchVal == value)
+      return body->getArgument(idx);
+  }
+  unsigned numLaunch = getLaunchArgs().size();
+  for (auto [idx, inputVal] : llvm::enumerate(getInputArgs())) {
+    if (inputVal == value)
+      return body->getArgument(numLaunch + idx);
+  }
+  return std::nullopt;
+}
+
+void ComputeRegionOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                  MLIRContext *context) {
+  results.add<ComputeRegionRemoveDuplicateArgs, ComputeRegionRemoveUnusedArgs>(
+      context);
 }
 
 BlockArgument ComputeRegionOp::gpuParWidth(gpu::Processor processor) {
