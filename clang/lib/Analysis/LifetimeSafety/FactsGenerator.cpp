@@ -773,9 +773,10 @@ void FactsGenerator::handleInvalidatingCall(const Expr *Call,
 
   if (!isContainerInvalidationMethod(*MD))
     return;
-  // Heuristics to turn-down false positives.
-  auto *DRE = dyn_cast<DeclRefExpr>(Args[0]);
-  if (!DRE || DRE->getDecl()->getType()->isReferenceType())
+
+  // Skip member field expressions for now. This is not a perfect filter and
+  // will still surface some false positives (e.g. `auto& r = s.v`).
+  if (!isa<DeclRefExpr>(Args[0]->IgnoreParenImpCasts()))
     return;
 
   OriginList *ThisList = getOriginsList(*Args[0]);
