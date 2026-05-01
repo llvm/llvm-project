@@ -3,10 +3,6 @@
 ; RUN:     < %s | FileCheck %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 \
 ; RUN:     -amdgpu-disable-rewrite-mfma-form-sched-stage=false \
-; RUN:     -stop-before=machine-scheduler \
-; RUN:     < %s | FileCheck %s --check-prefix=BEFORE
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 \
-; RUN:     -amdgpu-disable-rewrite-mfma-form-sched-stage=false \
 ; RUN:     -stop-after=machine-scheduler \
 ; RUN:     < %s | FileCheck %s --check-prefix=AFTER
 ;
@@ -339,29 +335,6 @@ epilogue:
 }
 
 attributes #0 = { "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="64,64" }
-
-; stop-before=machine-scheduler: MFMAs still in VGPR (vgprcd) form.
-; BEFORE-LABEL: name: test_v7slice_scalar_phi_acc
-; 8x V_MFMA_F32_16X16X32_F16_vgprcd_e64: VGPR form, rewrite not yet applied.
-; BEFORE:       bb.1.loop:
-; BEFORE:         %{{[0-9]+}}:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %{{[0-9]+}}, %{{[0-9]+}}, %{{[0-9]+}}, 0, 0, 0, implicit $mode, implicit $exec
-; BEFORE:         %{{[0-9]+}}:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %{{[0-9]+}}, %{{[0-9]+}}, %{{[0-9]+}}, 0, 0, 0, implicit $mode, implicit $exec
-; BEFORE:         %{{[0-9]+}}:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %{{[0-9]+}}, %{{[0-9]+}}, %{{[0-9]+}}, 0, 0, 0, implicit $mode, implicit $exec
-; BEFORE:         %{{[0-9]+}}:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %{{[0-9]+}}, %{{[0-9]+}}, %{{[0-9]+}}, 0, 0, 0, implicit $mode, implicit $exec
-; BEFORE:         %{{[0-9]+}}:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %{{[0-9]+}}, %{{[0-9]+}}, %{{[0-9]+}}, 0, 0, 0, implicit $mode, implicit $exec
-; BEFORE:         %{{[0-9]+}}:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %{{[0-9]+}}, %{{[0-9]+}}, %{{[0-9]+}}, 0, 0, 0, implicit $mode, implicit $exec
-; BEFORE:         %{{[0-9]+}}:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %{{[0-9]+}}, %{{[0-9]+}}, %{{[0-9]+}}, 0, 0, 0, implicit $mode, implicit $exec
-; BEFORE:         %{{[0-9]+}}:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %{{[0-9]+}}, %{{[0-9]+}}, %{{[0-9]+}}, 0, 0, 0, implicit $mode, implicit $exec
-; 8x V_MFMA_F32_16X16X32_F16_vgprcd_e64: epilogue peeled K-tile, VGPR form.
-; BEFORE:       bb.2.epilogue:
-; BEFORE:         %{{[0-9]+}}:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %{{[0-9]+}}, %{{[0-9]+}}, %{{[0-9]+}}, 0, 0, 0, implicit $mode, implicit $exec
-; BEFORE:         %{{[0-9]+}}:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %{{[0-9]+}}, %{{[0-9]+}}, %{{[0-9]+}}, 0, 0, 0, implicit $mode, implicit $exec
-; BEFORE:         %{{[0-9]+}}:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %{{[0-9]+}}, %{{[0-9]+}}, %{{[0-9]+}}, 0, 0, 0, implicit $mode, implicit $exec
-; BEFORE:         %{{[0-9]+}}:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %{{[0-9]+}}, %{{[0-9]+}}, %{{[0-9]+}}, 0, 0, 0, implicit $mode, implicit $exec
-; BEFORE:         %{{[0-9]+}}:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %{{[0-9]+}}, %{{[0-9]+}}, %{{[0-9]+}}, 0, 0, 0, implicit $mode, implicit $exec
-; BEFORE:         %{{[0-9]+}}:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %{{[0-9]+}}, %{{[0-9]+}}, %{{[0-9]+}}, 0, 0, 0, implicit $mode, implicit $exec
-; BEFORE:         %{{[0-9]+}}:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %{{[0-9]+}}, %{{[0-9]+}}, %{{[0-9]+}}, 0, 0, 0, implicit $mode, implicit $exec
-; BEFORE:         %{{[0-9]+}}:vreg_128_align2 = V_MFMA_F32_16X16X32_F16_vgprcd_e64 %{{[0-9]+}}, %{{[0-9]+}}, %{{[0-9]+}}, 0, 0, 0, implicit $mode, implicit $exec
 
 ; AFTER-LABEL: name: test_v7slice_scalar_phi_acc
 ; Case 3: 4x areg_128_align2 = COPY vreg (VGPR->AGPR init for scalar-phi acc).

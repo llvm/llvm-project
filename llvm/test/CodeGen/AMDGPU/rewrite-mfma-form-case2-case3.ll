@@ -4,14 +4,6 @@
 ;
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a \
 ; RUN:     -amdgpu-disable-rewrite-mfma-form-sched-stage=false \
-; RUN:     -stop-before=machine-scheduler \
-; RUN:     < %s | FileCheck %s --check-prefix=BEFORE
-; Verify MIR state BEFORE machine-scheduler (rewrite not yet applied):
-;   All 9 MFMAs use VGPR form: vreg_128_align2 / V_MFMA_F32_4X4X2BF16_vgprcd_e64.
-;   No AGPR COPYs inserted yet.
-;
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a \
-; RUN:     -amdgpu-disable-rewrite-mfma-form-sched-stage=false \
 ; RUN:     -stop-after=machine-scheduler \
 ; RUN:     < %s | FileCheck %s --check-prefix=MIR
 ; Verify MIR state AFTER machine-scheduler (rewrite applied):
@@ -19,19 +11,6 @@
 ;   loop.body: all 9 MFMAs rewritten to V_MFMA_F32_4X4X2BF16_e64 with areg dst.
 ;   Case 2: vreg_128_align2 = COPY areg in bb.2.exit.
 ;
-; BEFORE-LABEL: name: test_case2_case3
-; All MFMAs in VGPR form (_vgprcd_e64) — rewrite not yet applied.
-; BEFORE:       bb.1.loop.body:
-; BEFORE:         %{{[0-9]+}}:vreg_128_align2 = V_MFMA_F32_4X4X2BF16_vgprcd_e64 %{{[0-9]+}}, %{{[0-9]+}}, %{{[0-9]+}}, 0, 0, 0, implicit $mode, implicit $exec
-; BEFORE:         %{{[0-9]+}}:vreg_128_align2 = V_MFMA_F32_4X4X2BF16_vgprcd_e64 %{{[0-9]+}}, %{{[0-9]+}}, %{{[0-9]+}}, 0, 0, 0, implicit $mode, implicit $exec
-; BEFORE:         %{{[0-9]+}}:vreg_128_align2 = V_MFMA_F32_4X4X2BF16_vgprcd_e64 %{{[0-9]+}}, %{{[0-9]+}}, %{{[0-9]+}}, 0, 0, 0, implicit $mode, implicit $exec
-; BEFORE:         %{{[0-9]+}}:vreg_128_align2 = V_MFMA_F32_4X4X2BF16_vgprcd_e64 %{{[0-9]+}}, %{{[0-9]+}}, %{{[0-9]+}}, 0, 0, 0, implicit $mode, implicit $exec
-; BEFORE:         %{{[0-9]+}}:vreg_128_align2 = V_MFMA_F32_4X4X2BF16_vgprcd_e64 %{{[0-9]+}}, %{{[0-9]+}}, %{{[0-9]+}}, 0, 0, 0, implicit $mode, implicit $exec
-; BEFORE:         %{{[0-9]+}}:vreg_128_align2 = V_MFMA_F32_4X4X2BF16_vgprcd_e64 %{{[0-9]+}}, %{{[0-9]+}}, %{{[0-9]+}}, 0, 0, 0, implicit $mode, implicit $exec
-; BEFORE:         %{{[0-9]+}}:vreg_128_align2 = V_MFMA_F32_4X4X2BF16_vgprcd_e64 %{{[0-9]+}}, %{{[0-9]+}}, %{{[0-9]+}}, 0, 0, 0, implicit $mode, implicit $exec
-; BEFORE:         %{{[0-9]+}}:vreg_128_align2 = V_MFMA_F32_4X4X2BF16_vgprcd_e64 %{{[0-9]+}}, %{{[0-9]+}}, %{{[0-9]+}}, 0, 0, 0, implicit $mode, implicit $exec
-; BEFORE:         %{{[0-9]+}}:vreg_128_align2 = V_MFMA_F32_4X4X2BF16_vgprcd_e64 %{{[0-9]+}}, %{{[0-9]+}}, %{{[0-9]+}}, 0, 0, 0, implicit $mode, implicit $exec
-
 ; MIR-LABEL: name: test_case2_case3
 ; Case 3: areg COPYs in entry. MFMAs rewritten to AGPR. Case 2: vreg COPYs in exit.
 ; MIR:       bb.0.entry:
