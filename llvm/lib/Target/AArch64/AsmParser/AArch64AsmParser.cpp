@@ -3877,8 +3877,8 @@ static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {
     SmallVector<StringRef, 2> ExtMatches;
     for (const auto& Ext : ExtensionMap) {
       // Use & in case multiple features are enabled
-      if ((FBS & Ext.value()) != FeatureBitset())
-        ExtMatches.push_back(Ext.name());
+      if ((FBS & Ext.Features) != FeatureBitset())
+        ExtMatches.push_back(Ext.Name);
     }
     Str += !ExtMatches.empty() ? llvm::join(ExtMatches, ", ") : "(unknown)";
   }

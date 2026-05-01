@@ -230,6 +230,14 @@ static void emitARMTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
       OS << "}, " << (AllowInDirective ? "true" : "false") << "},\n";
     };
 
+    // Emit entries as:
+    //   {"Name", {AArch64::Feature, ...}, AllowInDirective},
+    //
+    // The order is relevant for diagnostics: setRequiredFeatureString scans
+    // ExtensionMap in order and reports the first matching spellings first.
+    // Prefer the legacy asm parser spelling when one exists, then add the
+    // target parser's user-visible name/alias as accepted alternate spellings.
+    // If there is no public spelling, fall back to the raw TableGen name.
     StringRef PrimaryName = getAArch64AsmParserPrimaryName(Rec);
     if (PrimaryName.empty())
       PrimaryName = Rec->getValueAsString("UserVisibleName");
