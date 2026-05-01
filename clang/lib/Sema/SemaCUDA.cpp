@@ -84,10 +84,6 @@ ExprResult SemaCUDA::ActOnExecConfigExpr(Scope *S, SourceLocation LLLLoc,
     return ExprError(
         Diag(LLLLoc, diag::err_cuda_device_kernel_launch_not_supported));
 
-  if (IsDeviceKernelCall && !getLangOpts().GPURelocatableDeviceCode)
-    return ExprError(
-        Diag(LLLLoc, diag::err_cuda_device_kernel_launch_require_rdc));
-
   FunctionDecl *ConfigDecl = IsDeviceKernelCall
                                  ? getASTContext().getcudaLaunchDeviceDecl()
                                  : getASTContext().getcudaConfigureCallDecl();
@@ -1027,9 +1023,20 @@ bool SemaCUDA::CheckCall(SourceLocation Loc, FunctionDecl *Callee) {
     }
   }();
 
+  bool IsDeviceKernelCall = Callee == getASTContext().getcudaLaunchDeviceDecl();
+  bool CallerHD = Caller && Caller->hasAttr<CUDAHostAttr>() &&
+                  Caller->hasAttr<CUDADeviceAttr>();
+  bool CallerDiscard = SemaRef.getEmissionStatus(Caller) ==
+                       Sema::FunctionEmissionStatus::TemplateDiscarded;
+  bool RDC = getLangOpts().GPURelocatableDeviceCode;
+  if (IsDeviceKernelCall && !(CallerHD && CallerDiscard) && !RDC) {
+    Diag(Loc, diag::err_cuda_device_kernel_launch_require_rdc);
+    return false;
+  }
+
   if (DiagKind == SemaDiagnosticBuilder::K_Nop) {
     // For -fgpu-rdc, keep track of external kernels used by host functions.
-    if (getLangOpts().CUDAIsDevice && getLangOpts().GPURelocatableDeviceCode &&
+    if (getLangOpts().CUDAIsDevice && RDC &&
         Callee->hasAttr<CUDAGlobalAttr>() && !Callee->isDefined() &&
         (!Caller || (!Caller->getDescribedFunctionTemplate() &&
                      getASTContext().GetGVALinkageForFunction(Caller) ==
