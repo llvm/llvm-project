@@ -30,5 +30,7 @@
 // RUN: %clang --target=arm64-apple-macos -### %t.o -flto=thin -fprofile-use 2>&1 | FileCheck %s --check-prefix=DARWIN-LD-USE1
 // RUN: %clang --target=arm64-apple-macos -### %t.o -flto=thin -fprofile-use=a.profdata 2>&1 | FileCheck %s --check-prefix=DARWIN-LD-USE2
 
+// DARWIN-LD-USE1-NOT: "-cs-profile-generate"
 // DARWIN-LD-USE1: "-mllvm" "-cs-profile-path=default.profdata"
+// DARWIN-LD-USE2-NOT: "-cs-profile-generate"
 // DARWIN-LD-USE2: "-mllvm" "-cs-profile-path=a.profdata"
