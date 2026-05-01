@@ -27,8 +27,6 @@
 namespace llvm {
 namespace lto {
 
-class DTLTO;
-
 /// Prepares inputs for Distributed ThinLTO so that backend compilations can use
 /// individual bitcode paths and consistent module IDs.
 ///

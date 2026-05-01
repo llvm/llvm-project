@@ -237,9 +237,8 @@ void lto::DTLTO::cleanup() {
     };
 
     TimeTraceScope JobScope("Remove DTLTO temporary files");
-    for (const auto &Name : CleanupList) {
+    for (const auto &Name : CleanupList)
       removeFile(Name);
-    }
   }
   Base::cleanup();
 }

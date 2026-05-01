@@ -295,7 +295,7 @@ struct Config {
 
   /// Called by WriteIndexesThinBackend when it needs to write a bitcode
   /// module's summary index. The callback should return a stream to write
-  /// the index into. If the callback returns nullptr, the backend falls back
+  /// the index into. If not set, the backend falls back
   /// to writing the summary index to a file.
   std::function<std::unique_ptr<raw_pwrite_stream>(size_t Task)>
       OnSummaryIndexStoreCb;
