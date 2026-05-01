@@ -12678,13 +12678,13 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
       // Check that the new loop nest shares the same outer structure as the
       // tree's current loop nest. Completely disjoint nests (different
       // outermost loops) are forced to gather because their scales cannot be
-      // meaningfully combined. Sibling inner loops inside a common outer
-      // loop are allowed: the cost model scales each entry by its own loop
-      // via getScaleToLoopIterations(), so a tree that spans sibling inner
-      // loops (e.g. a PHI at their merge block) can still be costed
-      // correctly. Contract CurrentLoopNest to the longest common prefix
-      // with the new entry's nest so subsequent entries in yet another
-      // sibling can also be admitted.
+      // meaningfully combined. Sibling inner loops (inside a common outer
+      // loop or outside any loops at all) are allowed: the cost model scales
+      // each entry by its own loop via getScaleToLoopIterations(), so a tree
+      // that spans sibling inner loops (e.g. a PHI at their merge block) can
+      // still be costed correctly. Contract CurrentLoopNest to the longest
+      // common prefix with the new entry's nest so subsequent entries in yet
+      // another sibling can also be admitted.
       L = findInnermostNonInvariantLoop(L, VL);
       if (L) {
         SmallVector<const Loop *> NewLoopNest(getLoopNest(L));
