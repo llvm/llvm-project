@@ -2676,9 +2676,9 @@ defm ORC  : XForm_6r<31, 412, (outs gprc:$RA), (ins gprc:$RST, gprc:$RB),
                      "orc", "$RA, $RST, $RB", IIC_IntSimple,
                      [(set i32:$RA, (or i32:$RST, (not i32:$RB)))]>;
 let isCommutable = 1 in {
-defm EQV  : XForm_6r<31, 284, (outs gprc:$RA), (ins gprc:$RST, gprc:$RB),
+defm EQV  : XForm_6r<31, 284, (outs gprc:$RA), (ins gxrc:$RST, gxrc:$RB),
                      "eqv", "$RA, $RST, $RB", IIC_IntSimple,
-                     [(set i32:$RA, (not (xor i32:$RST, i32:$RB)))]>;
+                     [(set XLenVT:$RA, (not (xor XLenVT:$RST, XLenVT:$RB)))]>;
 defm XOR  : XForm_6r<31, 316, (outs gprc:$RA), (ins gprc:$RST, gprc:$RB),
                      "xor", "$RA, $RST, $RB", IIC_IntSimple,
                      [(set i32:$RA, (xor i32:$RST, i32:$RB))]>;
