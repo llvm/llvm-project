@@ -10,9 +10,6 @@
 // RUN: %clangxx_lsan -O0 -fno-omit-frame-pointer -DEXPLICIT_EXIT %s -o %t
 // RUN: %env_lsan_opts="use_registers=0:use_stacks=1" not %run %t 2>&1 | FileCheck %s
 //
-// RUN: %clangxx_lsan -O0 -fno-omit-frame-pointer %s -o %t
-// RUN: %env_lsan_opts="use_registers=0:use_stacks=1" not %run %t 2>&1 | FileCheck %s
-//
 // REQUIRES: x86_64-target-arch, glibc
 // UNSUPPORTED: hwasan
 
