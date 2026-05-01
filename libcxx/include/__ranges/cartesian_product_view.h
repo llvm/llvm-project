@@ -334,8 +334,7 @@ public:
     return -(__i - default_sentinel);
   }
 
-  [[nodiscard]] friend _LIBCPP_HIDE_FROM_ABI constexpr auto
-  iter_move(const __iterator& __i) noexcept(
+  [[nodiscard]] friend _LIBCPP_HIDE_FROM_ABI constexpr auto iter_move(const __iterator& __i) noexcept(
       noexcept(ranges::iter_move(std::declval<const iterator_t<__maybe_const<_IsConst, _First>>&>())) &&
       (noexcept(ranges::iter_move(std::declval<const iterator_t<__maybe_const<_IsConst, _Vs>>&>())) && ...) &&
       is_nothrow_move_constructible_v<range_rvalue_reference_t<__maybe_const<_IsConst, _First>>> &&
@@ -343,12 +342,12 @@ public:
     return __tuple_transform(ranges::iter_move, __i.__current_);
   }
 
-  friend _LIBCPP_HIDE_FROM_ABI constexpr void
-  iter_swap(const __iterator& __l, const __iterator& __r) noexcept(
+  friend _LIBCPP_HIDE_FROM_ABI constexpr void iter_swap(const __iterator& __l, const __iterator& __r) noexcept(
       noexcept(ranges::iter_swap(std::declval<const iterator_t<__maybe_const<_IsConst, _First>>&>(),
                                  std::declval<const iterator_t<__maybe_const<_IsConst, _First>>&>())) &&
       (noexcept(ranges::iter_swap(std::declval<const iterator_t<__maybe_const<_IsConst, _Vs>>&>(),
-                                  std::declval<const iterator_t<__maybe_const<_IsConst, _Vs>>&>())) && ...))
+                                  std::declval<const iterator_t<__maybe_const<_IsConst, _Vs>>&>())) &&
+       ...))
     requires(indirectly_swappable<iterator_t<__maybe_const<_IsConst, _First>>> && ... &&
              indirectly_swappable<iterator_t<__maybe_const<_IsConst, _Vs>>>)
   {
@@ -456,7 +455,6 @@ private:
 
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator(_Parent& __parent, _MultiIter __current)
       : __parent_(std::addressof(__parent)), __current_(std::move(__current)) {}
-
 };
 
 namespace views {
