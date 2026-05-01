@@ -6073,6 +6073,35 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
     Known.fneg();
     break;
   }
+  case ISD::FSQRT: {
+    FPClassTest InterestedSrcs = InterestedClasses;
+    if (InterestedClasses & fcNan)
+      InterestedSrcs |= KnownFPClass::OrderedLessThanZeroMask;
+
+    KnownFPClass KnownSrc = computeKnownFPClass(
+        Op.getOperand(0), DemandedElts, InterestedSrcs, Depth + 1);
+
+
+    DenormalMode Mode = DenormalMode::getDynamic();
+
+    bool HasNSZ = Op->getFlags().hasNoSignedZeros();
+    bool nnan = Op->getFlags().hasNoNaNs();
+
+    if (!HasNSZ) {
+      const fltSemantics &FltSem =
+          Op.getValueType().getScalarType().getFltSemantics();
+      Mode = getMachineFunction().getDenormalMode(FltSem);
+    }
+
+    Known = KnownFPClass::sqrt(KnownSrc, Mode);
+
+    if (HasNSZ)
+      Known.knownNot(fcNegZero);
+
+    if (nnan)
+      Known.knownNot(fcNan);
+    break;
+  }
   case ISD::BUILD_VECTOR: {
     assert(!VT.isScalableVector());
     bool First = true;
