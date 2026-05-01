@@ -1881,65 +1881,6 @@ static Instruction *foldNeonShift(IntrinsicInst *II, InstCombinerImpl &IC) {
   return IC.replaceInstUsesWith(*II, Result);
 }
 
-// If II is llvm.sin(x) or llvm.cos(x), and there is a matching
-// llvm.cos(x) or llvm.sin(x) using the same argument, combine them
-// into a single llvm.sincos(x) call. Returns the result for II
-// extracted from sincos, or nullptr if no match is found.
-static Value *foldSinAndCosToSinCos(IntrinsicInst *II, IRBuilderBase &B,
-                                    InstCombinerImpl &IC) {
-  Intrinsic::ID IID = II->getIntrinsicID();
-  bool IsSin = IID == Intrinsic::sin;
-  Intrinsic::ID MatchID = IsSin ? Intrinsic::cos : Intrinsic::sin;
-
-  Value *Arg = II->getArgOperand(0);
-
-  // Don't bother looking through uses of constants.
-  if (isa<Constant>(Arg))
-    return nullptr;
-
-  // Look for a matching cos/sin intrinsic with the same argument.
-  IntrinsicInst *Match = nullptr;
-  for (User *U : Arg->users()) {
-    if (auto *Cand = dyn_cast<IntrinsicInst>(U)) {
-      if (Cand != II && !Cand->use_empty() &&
-          Cand->getIntrinsicID() == MatchID) {
-        Match = Cand;
-        break;
-      }
-    }
-  }
-
-  if (!Match)
-    return nullptr;
-
-  // Insert sincos right after the argument definition.
-  IRBuilderBase::InsertPointGuard Guard(B);
-  if (auto *ArgInst = dyn_cast<Instruction>(Arg))
-    B.SetInsertPoint(ArgInst->getParent(), std::next(ArgInst->getIterator()));
-  else {
-    BasicBlock &EntryBB = II->getFunction()->getEntryBlock();
-    B.SetInsertPoint(&EntryBB, EntryBB.begin());
-  }
-
-  Function *SinCosFunc = Intrinsic::getOrInsertDeclaration(
-      II->getModule(), Intrinsic::sincos, Arg->getType());
-  CallInst *SinCos = B.CreateCall(SinCosFunc, Arg, "sincos");
-  // Intersect fast-math flags from the two calls.
-  SinCos->setFastMathFlags(II->getFastMathFlags() & Match->getFastMathFlags());
-  // Propagate the most-generic fpmath metadata from the two original calls.
-  if (MDNode *MD = MDNode::getMostGenericFPMath(
-          II->getMetadata(LLVMContext::MD_fpmath),
-          Match->getMetadata(LLVMContext::MD_fpmath)))
-    SinCos->setMetadata(LLVMContext::MD_fpmath, MD);
-  Value *Sin = B.CreateExtractValue(SinCos, 0, "sin");
-  Value *Cos = B.CreateExtractValue(SinCos, 1, "cos");
-
-  // Replace the matching call and erase it.
-  IC.replaceInstUsesWith(*Match, IsSin ? Cos : Sin);
-  IC.eraseInstFromFunction(*Match);
-  return IsSin ? Sin : Cos;
-}
-
 /// CallInst simplification. This mostly only handles folding of intrinsic
 /// instructions. For normal calls, it allows visitCallBase to do the heavy
 /// lifting.
@@ -3240,10 +3181,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       // for f in {cos, cosh}
       return replaceOperand(*II, 0, X);
     }
-    if (IID == Intrinsic::cos) {
-      if (Value *Result = foldSinAndCosToSinCos(II, Builder, *this))
-        return replaceInstUsesWith(*II, Result);
-    }
     break;
   }
   case Intrinsic::sin:
@@ -3257,10 +3194,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       // for f in {sin, sinh, tan, tanh}
       Value *NewFunc = Builder.CreateUnaryIntrinsic(IID, X, II);
       return UnaryOperator::CreateFNegFMF(NewFunc, II);
-    }
-    if (IID == Intrinsic::sin) {
-      if (Value *Result = foldSinAndCosToSinCos(II, Builder, *this))
-        return replaceInstUsesWith(*II, Result);
     }
     break;
   }
