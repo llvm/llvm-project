@@ -45,9 +45,21 @@ static bool needsOptimization(xegpu::TensorDescType tdescType) {
   return fcd > SUBGROUP_SIZE && tdescType.getArrayLength() == 1;
 }
 
+/// Returns true if `loadOp` carries a non-identity transpose attribute. A
+/// transpose of `[0, 1]` is the identity and is therefore treated as absent.
+static bool hasNonIdentityTranspose(xegpu::LoadNdOp loadOp) {
+  auto transpose = loadOp.getTranspose();
+  if (!transpose)
+    return false;
+  ArrayRef<int64_t> perm = *transpose;
+  return !(perm.size() == 2 && perm[0] == 0 && perm[1] == 1);
+}
+
 /// Rewrite `xegpu.create_nd_tdesc` to fold an array_length attribute into the
 /// resulting tensor descriptor type. Only applies when the source is a static
-/// memref; dynamic-shape sources are left unchanged.
+/// memref; dynamic-shape sources are left unchanged. Skipped if any consumer
+/// load_nd carries a non-identity transpose, since stacking the array blocks
+/// along the non-FCD dimension would invalidate that load.
 class OptimizeCreateNdDescOp : public OpRewritePattern<xegpu::CreateNdDescOp> {
 public:
   using OpRewritePattern<xegpu::CreateNdDescOp>::OpRewritePattern;
@@ -59,10 +71,18 @@ public:
       return failure();
 
     // Only static memref sources are supported for now.
-    auto memrefSource =
-        dyn_cast<TypedValue<MemRefType>>(op.getSource());
+    // TODO: extend to dynamic-shape memrefs and raw pointer sources by
+    // rewriting the `shape`/`strides` operands of create_nd_tdesc.
+    auto memrefSource = dyn_cast<TypedValue<MemRefType>>(op.getSource());
     if (!memrefSource || !memrefSource.getType().hasStaticShape())
       return failure();
+
+    // Bail out if any consumer is a transposing load_nd.
+    for (Operation *user : op.getResult().getUsers()) {
+      if (auto loadOp = dyn_cast<xegpu::LoadNdOp>(user))
+        if (hasNonIdentityTranspose(loadOp))
+          return failure();
+    }
 
     auto shape = tdescType.getShape();
     int64_t arrayLength = computeArrayLength(shape[1]);
@@ -91,6 +111,11 @@ public:
     int64_t arrayLength = tdescType.getArrayLength();
 
     if (arrayLength <= 1)
+      return failure();
+
+    // Transposing loads are not compatible with the stacked-on-non-FCD layout
+    // that this pass produces.
+    if (hasNonIdentityTranspose(op))
       return failure();
 
     auto origVectorType = op.getType();

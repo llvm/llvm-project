@@ -99,6 +99,31 @@ func.func @test_no_optimization_16x16(%arg0: memref<4096x4096xf16>) -> vector<16
 // -----
 
 gpu.module @test {
+// Loads that carry a non-identity transpose must not be rewritten: the array
+// blocks would otherwise be stacked along the non-FCD dimension, which
+// conflicts with the transpose semantics.
+// CHECK-LABEL: func.func @test_no_optimization_with_transpose
+// CHECK-SAME:    (%[[ARG0:.*]]: memref<4096x4096xf32>)
+func.func @test_no_optimization_with_transpose(%arg0: memref<4096x4096xf32>) -> vector<32x32xf32> {
+  %c0 = arith.constant 0 : index
+
+  // CHECK: %[[TDESC:.*]] = xegpu.create_nd_tdesc %[[ARG0]]
+  // CHECK-SAME: memref<4096x4096xf32> -> !xegpu.tensor_desc<32x32xf32>
+  // CHECK-NOT: array_length
+  %tdesc = xegpu.create_nd_tdesc %arg0 : memref<4096x4096xf32> -> !xegpu.tensor_desc<32x32xf32>
+
+  // CHECK: xegpu.load_nd %[[TDESC]]
+  // CHECK-SAME: <{transpose = array<i64: 1, 0>}>
+  // CHECK-SAME: !xegpu.tensor_desc<32x32xf32> -> vector<32x32xf32>
+  %load = xegpu.load_nd %tdesc[%c0, %c0] <{transpose = array<i64: 1, 0>}> : !xegpu.tensor_desc<32x32xf32> -> vector<32x32xf32>
+
+  return %load : vector<32x32xf32>
+}
+}
+
+// -----
+
+gpu.module @test {
 // CHECK-LABEL: func.func @test_multiple_extracts
 // CHECK-SAME:    (%[[ARG0:.*]]: memref<4096x4096xf16>)
 func.func @test_multiple_extracts(%arg0: memref<4096x4096xf16>) -> (vector<16x16xf16>, vector<16x16xf16>, vector<16x16xf16>, vector<16x16xf16>) {
