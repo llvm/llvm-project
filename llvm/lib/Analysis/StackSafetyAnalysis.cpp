@@ -998,6 +998,18 @@ bool StackSafetyGlobalInfo::isSafe(const AllocaInst &AI) const {
   return Info.SafeAllocas.count(&AI);
 }
 
+bool StackSafetyGlobalInfo::addressEscapesToCall(const AllocaInst &AI) const {
+  const auto &Info = getInfo();
+  const Function *F = AI.getFunction();
+  auto FnIt = Info.Info.find(F);
+  if (FnIt == Info.Info.end())
+    return true; // Conservative: assume escapes if we don't have info
+  auto AllocaIt = FnIt->second.Allocas.find(&AI);
+  if (AllocaIt == FnIt->second.Allocas.end())
+    return true; // Conservative: assume escapes if we don't have info
+  return !AllocaIt->second.Calls.empty();
+}
+
 bool StackSafetyGlobalInfo::stackAccessIsSafe(const Instruction &I) const {
   const auto &Info = getInfo();
   return Info.UnsafeAccesses.find(&I) == Info.UnsafeAccesses.end();
