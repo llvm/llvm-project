@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03
 // UNSUPPORTED: gcc
-// UNSUPPORTED: clang-19, clang-20, clang-21, clang-22, apple-clang-17
+// UNSUPPORTED: clang-19, clang-20, clang-21, clang-22, clang-23, apple-clang-17, apple-clang-21
 
 // ADDITIONAL_COMPILE_FLAGS: -Wno-deprecated-volatile -Wno-dynamic-class-memaccess
 
