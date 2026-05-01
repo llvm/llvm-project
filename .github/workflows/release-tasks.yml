@@ -27,6 +27,9 @@ jobs:
   release-create:
     name: Create a New Release
     runs-on: ubuntu-24.04
+    environment:
+      name: release
+      deployment: false
     permissions:
       contents: write # For creating the release.
     needs: validate-tag
