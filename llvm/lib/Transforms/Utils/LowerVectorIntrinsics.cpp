@@ -21,8 +21,7 @@ bool llvm::lowerUnaryVectorIntrinsicAsLoop(Module &M, CallInst *CI) {
   Type *IdxTy = M.getDataLayout().getIndexType(CI->getContext(), 0);
 
   IRBuilder<> Builder(CI);
-  Value *LoopEnd =
-      Builder.CreateElementCount(IdxTy, VecTy->getElementCount());
+  Value *LoopEnd = Builder.CreateElementCount(IdxTy, VecTy->getElementCount());
 
   auto [BodyIP, IV] =
       SplitBlockAndInsertSimpleForLoop(LoopEnd, CI->getIterator());

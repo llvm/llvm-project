@@ -1683,10 +1683,10 @@ llvm::SplitBlockAndInsertSimpleForLoop(Value *End,
                                        BasicBlock::iterator SplitBefore,
                                        DominatorTree *DT, LoopInfo *LI) {
   BasicBlock *LoopPred = SplitBefore->getParent();
-  BasicBlock *LoopBody = SplitBlock(SplitBefore->getParent(), SplitBefore,
-                                    DT, LI, /*MSSAU=*/nullptr, "ec.loop");
-  BasicBlock *LoopExit = SplitBlock(SplitBefore->getParent(), SplitBefore,
-                                    DT, LI, /*MSSAU=*/nullptr, "ec.exit");
+  BasicBlock *LoopBody = SplitBlock(SplitBefore->getParent(), SplitBefore, DT,
+                                    LI, /*MSSAU=*/nullptr, "ec.loop");
+  BasicBlock *LoopExit = SplitBlock(SplitBefore->getParent(), SplitBefore, DT,
+                                    LI, /*MSSAU=*/nullptr, "ec.exit");
 
   auto *Ty = End->getType();
   auto &DL = SplitBefore->getDataLayout();
@@ -1725,8 +1725,8 @@ llvm::SplitBlockAndInsertSimpleForLoop(Value *End,
 
 void llvm::SplitBlockAndInsertForEachLane(
     ElementCount EC, Type *IndexTy, BasicBlock::iterator InsertBefore,
-    std::function<void(IRBuilderBase &, Value *)> Func,
-    DominatorTree *DT, LoopInfo *LI) {
+    std::function<void(IRBuilderBase &, Value *)> Func, DominatorTree *DT,
+    LoopInfo *LI) {
 
   IRBuilder<> IRB(InsertBefore->getParent(), InsertBefore);
 
@@ -1734,7 +1734,7 @@ void llvm::SplitBlockAndInsertForEachLane(
     Value *NumElements = IRB.CreateElementCount(IndexTy, EC);
 
     auto [BodyIP, Index] =
-      SplitBlockAndInsertSimpleForLoop(NumElements, InsertBefore, DT, LI);
+        SplitBlockAndInsertSimpleForLoop(NumElements, InsertBefore, DT, LI);
 
     IRB.SetInsertPoint(BodyIP);
     Func(IRB, Index);
@@ -1750,8 +1750,8 @@ void llvm::SplitBlockAndInsertForEachLane(
 
 void llvm::SplitBlockAndInsertForEachLane(
     Value *EVL, BasicBlock::iterator InsertBefore,
-    std::function<void(IRBuilderBase &, Value *)> Func,
-    DominatorTree *DT, LoopInfo *LI) {
+    std::function<void(IRBuilderBase &, Value *)> Func, DominatorTree *DT,
+    LoopInfo *LI) {
 
   IRBuilder<> IRB(InsertBefore->getParent(), InsertBefore);
   Type *Ty = EVL->getType();

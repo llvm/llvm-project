@@ -1345,25 +1345,23 @@ Value *llvm::expandReductionViaLoop(IRBuilderBase &Builder, Value *Vec,
 
   const DataLayout &DL = Builder.GetInsertBlock()->getDataLayout();
   Type *IdxTy = DL.getIndexType(EltTy->getContext(), 0);
-  Value *NumElts = Builder.CreateElementCount(IdxTy,
-                                              VTy->getElementCount());
+  Value *NumElts = Builder.CreateElementCount(IdxTy, VTy->getElementCount());
 
-  auto [BodyIP, IV] =
-      SplitBlockAndInsertSimpleForLoop(NumElts, Builder.GetInsertPoint(),
-                                       DT, LI);
+  auto [BodyIP, IV] = SplitBlockAndInsertSimpleForLoop(
+      NumElts, Builder.GetInsertPoint(), DT, LI);
 
   BasicBlock *LoopBB = BodyIP->getParent();
   auto *IVPhi = cast<PHINode>(IV);
   BasicBlock *Preheader =
-    IVPhi->getIncomingBlock(IVPhi->getIncomingBlock(0) == LoopBB);
+      IVPhi->getIncomingBlock(IVPhi->getIncomingBlock(0) == LoopBB);
 
   PHINode *AccPhi = PHINode::Create(EltTy, 2, "rdx.acc", BodyIP->getIterator());
   AccPhi->addIncoming(Acc, Preheader);
 
   Builder.SetInsertPoint(BodyIP);
   Value *Elt = Builder.CreateExtractElement(Vec, IV);
-  Value *Res = Builder.CreateBinOp((Instruction::BinaryOps)RdxOpcode,
-                                    AccPhi, Elt, "rdx.op");
+  Value *Res = Builder.CreateBinOp((Instruction::BinaryOps)RdxOpcode, AccPhi,
+                                   Elt, "rdx.op");
   AccPhi->addIncoming(Res, LoopBB);
 
   auto *ExitBr = cast<CondBrInst>(LoopBB->getTerminator());
