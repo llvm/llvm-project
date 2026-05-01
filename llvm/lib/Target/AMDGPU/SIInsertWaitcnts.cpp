@@ -3067,7 +3067,7 @@ bool WaitcntBrackets::mergeAsyncMarks(ArrayRef<MergeInfo> MergeInfos,
   unsigned OtherSize = OtherMarks.size();
   unsigned OurSize = AsyncMarks.size();
   unsigned MergeCount = std::min(OtherSize, OurSize);
-  // OtherMarks is empty → OtherSize == 0 → MergeCount == 0.
+  // OtherMarks is empty -> OtherSize == 0 -> MergeCount == 0.
   // Our existing marks are the conservative result; return early to avoid
   // passing MergeCount == 0 to seq_inclusive which asserts Begin <= End.
   if (MergeCount == 0)
