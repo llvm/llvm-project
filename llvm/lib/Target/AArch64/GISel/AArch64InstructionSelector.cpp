@@ -484,9 +484,14 @@ private:
 
   ComplexRendererFns selectCVTFixedPointVec(MachineOperand &Root) const;
   ComplexRendererFns
-  selectCVTFixedPointVecBase(const MachineOperand &Root) const;
+  selectCVTFixedPosRecipOperandVec(MachineOperand &Root) const;
+  ComplexRendererFns
+  selectCVTFixedPointVecBase(const MachineOperand &Root,
+                             bool isReciprocal = false) const;
   void renderFixedPointXForm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                              int OpIdx = -1) const;
+  void renderFixedPointRecipXForm(MachineInstrBuilder &MIB,
+                                  const MachineInstr &MI, int OpIdx = -1) const;
 
   void renderTruncImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                       int OpIdx = -1) const;
@@ -7864,7 +7869,7 @@ AArch64InstructionSelector::selectExtractHigh(MachineOperand &Root) const {
 
 InstructionSelector::ComplexRendererFns
 AArch64InstructionSelector::selectCVTFixedPointVecBase(
-    const MachineOperand &Root) const {
+    const MachineOperand &Root, bool isReciprocal) const {
   if (!Root.isReg())
     return std::nullopt;
   const MachineRegisterInfo &MRI =
@@ -7893,8 +7898,8 @@ AArch64InstructionSelector::selectCVTFixedPointVecBase(
   default:
     return std::nullopt;
   };
-  if (unsigned FBits = CheckFixedPointOperandConstant(FVal, RegWidth,
-                                                      /*isReciprocal*/ false))
+  if (unsigned FBits =
+          CheckFixedPointOperandConstant(FVal, RegWidth, isReciprocal))
     return {{[=](MachineInstrBuilder &MIB) { MIB.addImm(FBits); }}};
 
   return std::nullopt;
@@ -7902,7 +7907,13 @@ AArch64InstructionSelector::selectCVTFixedPointVecBase(
 
 InstructionSelector::ComplexRendererFns
 AArch64InstructionSelector::selectCVTFixedPointVec(MachineOperand &Root) const {
-  return selectCVTFixedPointVecBase(Root);
+  return selectCVTFixedPointVecBase(Root, /*isReciprocal*/ false);
+}
+
+InstructionSelector::ComplexRendererFns
+AArch64InstructionSelector::selectCVTFixedPosRecipOperandVec(
+    MachineOperand &Root) const {
+  return selectCVTFixedPointVecBase(Root, /*isReciprocal*/ true);
 }
 
 void AArch64InstructionSelector::renderFixedPointXForm(MachineInstrBuilder &MIB,
@@ -7912,9 +7923,18 @@ void AArch64InstructionSelector::renderFixedPointXForm(MachineInstrBuilder &MIB,
   // should be able to reuse the Renderers already calculated by
   // selectCVTFixedPointVecBase.
   InstructionSelector::ComplexRendererFns Renderer =
-      selectCVTFixedPointVecBase(MI.getOperand(2));
+      selectCVTFixedPointVecBase(MI.getOperand(2), /*isReciprocal*/ false);
   assert((Renderer && Renderer->size() == 1) &&
          "Expected selectCVTFixedPointVec to provide a function\n");
+  (Renderer->front())(MIB);
+}
+
+void AArch64InstructionSelector::renderFixedPointRecipXForm(
+    MachineInstrBuilder &MIB, const MachineInstr &MI, int OpIdx) const {
+  InstructionSelector::ComplexRendererFns Renderer =
+      selectCVTFixedPointVecBase(MI.getOperand(2), /*isReciprocal*/ true);
+  assert((Renderer && Renderer->size() == 1) &&
+         "Expected selectCVTFixedPosRecipOperandVec to provide a function\n");
   (Renderer->front())(MIB);
 }
 
