@@ -562,7 +562,8 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
       AffineMap readMap = readOp.getPermutationMap();
       if (!readMap.isMinorIdentity())
         return rewriter.notifyMatchFailure(
-            readOp, "Transpose not supported for SLM loads");
+            readOp,
+            "Non identity transposition is not supported for SLM loads.");
       // Out of bounds case is not supported for SLM loads.
       if (isOutOfBounds)
         return rewriter.notifyMatchFailure(
