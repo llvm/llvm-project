@@ -670,6 +670,12 @@ public:
     LDBG() << "checking the necessity of: " << barrier << " "
            << barrier.getLoc();
 
+    // Named barriers have precise arrival-count semantics; never eliminate.
+    if (barrier.getNamedBarrier()) {
+      LDBG() << "barrier is a named barrier, retain it\n";
+      return failure();
+    }
+
     std::optional<ArrayAttr> fencedMemSpaces = barrier.getAddressSpaces();
     if (fencedMemSpaces && fencedMemSpaces->empty()) {
       LDBG()

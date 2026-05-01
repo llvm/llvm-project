@@ -189,6 +189,14 @@ gpu.module @test_module_5 {
     gpu.barrier
     func.return
   }
+
+  // CHECK-LABEL: func @gpu_sync_subgroup()
+  func.func @gpu_sync_subgroup() {
+    // CHECK: %[[WARP_MASK:.*]] = llvm.mlir.constant(-1 : i32) : i32
+    // CHECK: nvvm.bar.warp.sync %[[WARP_MASK]]
+    gpu.barrier scope <subgroup>
+    func.return
+  }
 }
 
 

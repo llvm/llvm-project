@@ -100,13 +100,26 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-/// Pattern to convert a gpu.barrier op into a spirv.ControlBarrier op.
+/// Pattern to convert a gpu.barrier op into a spirv.ControlBarrier or
+/// spirv.MemoryNamedBarrier op.
 class GPUBarrierConversion final : public OpConversionPattern<gpu::BarrierOp> {
 public:
   using Base::Base;
 
   LogicalResult
   matchAndRewrite(gpu::BarrierOp barrierOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
+/// Pattern to convert a gpu.initialize_named_barrier into
+/// spirv.NamedBarrierInitialize.
+class GPUInitializeNamedBarrierConversion final
+    : public OpConversionPattern<gpu::InitializeNamedBarrierOp> {
+public:
+  using Base::Base;
+
+  LogicalResult
+  matchAndRewrite(gpu::InitializeNamedBarrierOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override;
 };
 
@@ -437,18 +450,63 @@ LogicalResult GPUReturnOpConversion::matchAndRewrite(
 // Barrier.
 //===----------------------------------------------------------------------===//
 
+/// Map gpu::Scope to spirv::Scope.
+static FailureOr<spirv::Scope> mapGPUScopeToSPIRV(gpu::Scope gpuScope) {
+  switch (gpuScope) {
+  case gpu::Scope::Thread:
+    return spirv::Scope::Invocation;
+  case gpu::Scope::Subgroup:
+    return spirv::Scope::Subgroup;
+  case gpu::Scope::Workgroup:
+    return spirv::Scope::Workgroup;
+  case gpu::Scope::Device:
+    return spirv::Scope::Device;
+  case gpu::Scope::CrossDevice:
+    return spirv::Scope::CrossDevice;
+  case gpu::Scope::Cluster:
+    return failure();
+  }
+  return failure();
+}
+
 LogicalResult GPUBarrierConversion::matchAndRewrite(
     gpu::BarrierOp barrierOp, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
   MLIRContext *context = getContext();
-  // Both execution and memory scope should be workgroup.
-  auto scope = spirv::ScopeAttr::get(context, spirv::Scope::Workgroup);
+
+  // Map GPU scope to SPIR-V scope.
+  auto spirvScope = mapGPUScopeToSPIRV(barrierOp.getScope());
+  if (failed(spirvScope))
+    return rewriter.notifyMatchFailure(
+        barrierOp, "cluster scope is not supported in SPIR-V");
+
+  auto scopeAttr = spirv::ScopeAttr::get(context, *spirvScope);
+  auto memoryScopeAttr =
+      spirv::ScopeAttr::get(context, spirv::Scope::Workgroup);
+
   // Require acquire and release memory semantics for workgroup memory.
   auto memorySemantics = spirv::MemorySemanticsAttr::get(
       context, spirv::MemorySemantics::WorkgroupMemory |
                    spirv::MemorySemantics::AcquireRelease);
-  rewriter.replaceOpWithNewOp<spirv::ControlBarrierOp>(barrierOp, scope, scope,
-                                                       memorySemantics);
+
+  if (adaptor.getNamedBarrier()) {
+    spirv::MemoryNamedBarrierOp::create(rewriter, barrierOp.getLoc(),
+                                        adaptor.getNamedBarrier(),
+                                        memoryScopeAttr, memorySemantics);
+    rewriter.eraseOp(barrierOp);
+  } else {
+    rewriter.replaceOpWithNewOp<spirv::ControlBarrierOp>(
+        barrierOp, scopeAttr, memoryScopeAttr, memorySemantics);
+  }
+  return success();
+}
+
+LogicalResult GPUInitializeNamedBarrierConversion::matchAndRewrite(
+    gpu::InitializeNamedBarrierOp op, OpAdaptor adaptor,
+    ConversionPatternRewriter &rewriter) const {
+  auto nbType = spirv::NamedBarrierType::get(getContext());
+  rewriter.replaceOpWithNewOp<spirv::NamedBarrierInitializeOp>(
+      op, nbType, adaptor.getMemberCount());
   return success();
 }
 
@@ -921,7 +979,8 @@ LogicalResult GPUPrintfConversion::matchAndRewrite(
 void mlir::populateGPUToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
                                       RewritePatternSet &patterns) {
   patterns.add<
-      GPUBarrierConversion, GPUBallotConversion, GPUFuncOpConversion,
+      GPUBarrierConversion, GPUInitializeNamedBarrierConversion,
+      GPUBallotConversion, GPUFuncOpConversion,
       GPUModuleConversion, GPUReturnOpConversion, GPUShuffleConversion,
       GPURotateConversion, GPUSubgroupBroadcastConversion,
       LaunchConfigConversion<gpu::BlockIdOp, spirv::BuiltIn::WorkgroupId>,
@@ -942,4 +1001,11 @@ void mlir::populateGPUToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
       WorkGroupSizeConversion, GPUAllReduceConversion,
       GPUSubgroupReduceConversion, GPUPrintfConversion>(typeConverter,
                                                         patterns.getContext());
+}
+
+void mlir::populateGPUNamedBarrierToSPIRVTypeConversion(
+    SPIRVTypeConverter &typeConverter) {
+  typeConverter.addConversion([](gpu::NamedBarrierType type) {
+    return spirv::NamedBarrierType::get(type.getContext());
+  });
 }

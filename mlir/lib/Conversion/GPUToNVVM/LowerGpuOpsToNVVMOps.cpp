@@ -367,14 +367,34 @@ struct AssertOpToAssertfailLowering
   }
 };
 
-/// Lowering of gpu.barrier to nvvm.barrier (defaults to barrier id 0).
-struct GPUBarrierToNVVMLowering : public OpRewritePattern<gpu::BarrierOp> {
-  using OpRewritePattern::OpRewritePattern;
+struct GPUBarrierOpToNVVMLowering final
+    : public ConvertOpToLLVMPattern<gpu::BarrierOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
 
-  LogicalResult matchAndRewrite(gpu::BarrierOp op,
-                                PatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<NVVM::BarrierOp>(op);
-    return success();
+  LogicalResult
+  matchAndRewrite(gpu::BarrierOp op, gpu::BarrierOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (op.getNamedBarrier())
+      return rewriter.notifyMatchFailure(
+          op, "named barriers are not supported on NVVM");
+
+    gpu::Scope scope = op.getScope();
+    switch (scope) {
+    case gpu::Scope::Workgroup:
+      rewriter.replaceOpWithNewOp<NVVM::BarrierOp>(op);
+      return success();
+    case gpu::Scope::Subgroup: {
+      // Emit __syncwarp(0xFFFFFFFF) for full-warp sync.
+      Value mask = LLVM::ConstantOp::create(
+          rewriter, op.getLoc(), rewriter.getI32Type(),
+          rewriter.getI32IntegerAttr(0xFFFFFFFF));
+      rewriter.replaceOpWithNewOp<NVVM::SyncWarpOp>(op, mask);
+      return success();
+    }
+    default:
+      return rewriter.notifyMatchFailure(
+          op, "unsupported scope for NVVM barrier lowering");
+    }
   }
 };
 
@@ -511,9 +531,8 @@ void mlir::populateGpuToNVVMConversionPatterns(
   using gpu::index_lowering::IndexKind;
   using gpu::index_lowering::IntrType;
 
-  patterns.add<GPUBarrierToNVVMLowering>(patterns.getContext(), benefit);
-  patterns.add<GPUPrintfOpToVPrintfLowering, AssertOpToAssertfailLowering>(
-      converter, benefit);
+  patterns.add<GPUBarrierOpToNVVMLowering, GPUPrintfOpToVPrintfLowering,
+               AssertOpToAssertfailLowering>(converter, benefit);
   patterns.add<
       gpu::index_lowering::OpLowering<gpu::ThreadIdOp, NVVM::ThreadIdXOp,
                                       NVVM::ThreadIdYOp, NVVM::ThreadIdZOp>>(
