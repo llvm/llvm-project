@@ -5590,6 +5590,12 @@ void OmpStructureChecker::CheckWorkshareBlockStmts(
         parser::Unwrap<parser::WhereStmt>(*it) ||
         parser::Unwrap<parser::WhereConstruct>(*it)) {
       parser::Walk(*it, ompWorkshareBlockChecker);
+    } else if (const auto *blockConstruct{
+                   parser::Unwrap<parser::BlockConstruct>(*it)}) {
+      // Fortran BLOCK construct is a transparent scoping wrapper.
+      // Recursively check the statements inside it.
+      const auto &nestedBlock{std::get<parser::Block>(blockConstruct->t)};
+      CheckWorkshareBlockStmts(nestedBlock, source);
     } else if (const auto *ompConstruct{
                    parser::Unwrap<parser::OpenMPConstruct>(*it)}) {
       if (const auto *ompAtomicConstruct{
