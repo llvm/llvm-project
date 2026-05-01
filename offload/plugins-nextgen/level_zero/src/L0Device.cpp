@@ -1375,10 +1375,7 @@ Error L0DeviceTy::callGlobalCtorDtorCommon(GenericPluginTy &Plugin,
                           KernelArgs, KernelLaunchParamsTy{}, AsyncInfoWrapper);
 
   AsyncInfoWrapper.finalize(Err);
-  if (Err)
-    return CleanupBufferAndErr(std::move(Err));
-
-  return CleanupBufferAndErr(Plugin::success());
+  return CleanupBufferAndErr(std::move(Err));
 }
 
 } // namespace llvm::omp::target::plugin
