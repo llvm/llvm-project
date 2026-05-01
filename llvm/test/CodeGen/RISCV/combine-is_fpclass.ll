@@ -266,3 +266,153 @@ define <4 x i1> @fneg_vec_unknown_sign(<4 x i32> %vecbits) nounwind {
   %res = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %neg, i32 60) ; any negative
   ret <4 x i1> %res
 }
+
+define <vscale x 4 x i1> @extract_subvec_scalable_isneg_false(<vscale x 8 x float> %a0) {
+; CHECK-LABEL: extract_subvec_scalable_isneg_false:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vfabs.v v8, v8
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vfclass.v v8, v8
+; CHECK-NEXT:    vand.vi v8, v8, 15
+; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    ret
+  %abs = call <vscale x 8 x float> @llvm.fabs.nxv8f32(<vscale x 8 x float> %a0)
+  %sub = call <vscale x 4 x float> @llvm.vector.extract.nxv4f32.nxv8f32(<vscale x 8 x float> %abs, i64 0)
+  %res = call <vscale x 4 x i1> @llvm.is.fpclass.nxv4f32(<vscale x 4 x float> %sub, i32 60) ; 60 = neginf,negnorm,negsub,negzero
+  ret <vscale x 4 x i1> %res
+}
+
+define <2 x i1> @extract_subvec_fixed_isneg_false(<4 x float> %a0) {
+; CHECK-LABEL: extract_subvec_fixed_isneg_false:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vfabs.v v8, v8
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; CHECK-NEXT:    vfclass.v v8, v8
+; CHECK-NEXT:    vand.vi v8, v8, 15
+; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    ret
+  %abs = call <4 x float> @llvm.fabs.v4f32(<4 x float> %a0)
+  %sub = call <2 x float> @llvm.vector.extract.v2f32.v4f32(<4 x float> %abs, i64 0)
+  %res = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> %sub, i32 60) ; 60 = neginf,negnorm,negsub,negzero
+  ret <2 x i1> %res
+}
+
+define <vscale x 4 x i1> @insert_subvec_scalable_both_isneg_false(<vscale x 4 x float> %base, <vscale x 2 x float> %sub) {
+; CHECK-LABEL: insert_subvec_scalable_both_isneg_false:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vfabs.v v8, v8
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vfabs.v v8, v10
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vfclass.v v8, v8
+; CHECK-NEXT:    vand.vi v8, v8, 15
+; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    ret
+  %absbase = call <vscale x 4 x float> @llvm.fabs.nxv4f32(<vscale x 4 x float> %base)
+  %abssub  = call <vscale x 2 x float> @llvm.fabs.nxv2f32(<vscale x 2 x float> %sub)
+  %ins = call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.nxv2f32(<vscale x 4 x float> %absbase, <vscale x 2 x float> %abssub, i64 0)
+  %res = call <vscale x 4 x i1> @llvm.is.fpclass.nxv4f32(<vscale x 4 x float> %ins, i32 60) ; 60 = neginf,negnorm,negsub,negzero
+  ret <vscale x 4 x i1> %res
+}
+
+define <4 x i1> @insert_subvec_fixed_both_isneg_false(<4 x float> %base, <2 x float> %sub) {
+; CHECK-LABEL: insert_subvec_fixed_both_isneg_false:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vfabs.v v8, v8
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; CHECK-NEXT:    vfabs.v v9, v9
+; CHECK-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
+; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vfclass.v v8, v8
+; CHECK-NEXT:    vand.vi v8, v8, 15
+; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    ret
+  %absbase = call <4 x float> @llvm.fabs.v4f32(<4 x float> %base)
+  %abssub  = call <2 x float> @llvm.fabs.v2f32(<2 x float> %sub)
+  %ins = call <4 x float> @llvm.vector.insert.v4f32.v2f32(<4 x float> %absbase, <2 x float> %abssub, i64 0)
+  %res = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %ins, i32 60) ; 60 = neginf,negnorm,negsub,negzero
+  ret <4 x i1> %res
+}
+
+define <2 x i1> @extract_subvec_fixed_mixed_to_pos_isneg_false(<4 x float> %a) {
+; CHECK-LABEL: extract_subvec_fixed_mixed_to_pos_isneg_false:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vfabs.v v8, v8
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; CHECK-NEXT:    vfclass.v v8, v8
+; CHECK-NEXT:    vand.vi v8, v8, 15
+; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    ret
+  %abs = call <4 x float> @llvm.fabs.v4f32(<4 x float> %a)
+  %neg = fneg <4 x float> %abs
+  %mixed = shufflevector <4 x float> %abs, <4 x float> %neg, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+  %sub = call <2 x float> @llvm.vector.extract.v2f32.v4f32(<4 x float> %mixed, i64 0)
+  %res = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> %sub, i32 60) ; 60 = neginf,negnorm,negsub,negzero
+  ret <2 x i1> %res
+}
+
+define <2 x i1> @extract_subvec_fixed_straddle_isneg_unknown(<4 x float> %a) {
+; CHECK-LABEL: extract_subvec_fixed_straddle_isneg_unknown:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vfabs.v v8, v8
+; CHECK-NEXT:    vfneg.v v9, v8
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; CHECK-NEXT:    vslideup.vi v8, v9, 1
+; CHECK-NEXT:    vfclass.v v8, v8
+; CHECK-NEXT:    vand.vi v8, v8, 15
+; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    ret
+  %abs = call <4 x float> @llvm.fabs.v4f32(<4 x float> %a)
+  %neg = fneg <4 x float> %abs
+  %mixed = shufflevector <4 x float> %abs, <4 x float> %neg, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
+  %sub = call <2 x float> @llvm.vector.extract.v2f32.v4f32(<4 x float> %mixed, i64 0)
+  %res = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> %sub, i32 60) ; 60 = neginf,negnorm,negsub,negzero
+  ret <2 x i1> %res
+}
+
+define <4 x i1> @insert_subvec_fixed_pos_base_neg_sub_isneg_unknown(<4 x float> %base, <2 x float> %sub) {
+; CHECK-LABEL: insert_subvec_fixed_pos_base_neg_sub_isneg_unknown:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vfabs.v v8, v8
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; CHECK-NEXT:    vfneg.v v9, v9
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vslideup.vi v8, v9, 2
+; CHECK-NEXT:    vfclass.v v8, v8
+; CHECK-NEXT:    vand.vi v8, v8, 15
+; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    ret
+  %abs_base = call <4 x float> @llvm.fabs.v4f32(<4 x float> %base)
+  %neg_sub = fneg <2 x float> %sub
+  %ins = call <4 x float> @llvm.vector.insert.v4f32.v2f32(<4 x float> %abs_base, <2 x float> %neg_sub, i64 2)
+  %res = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %ins, i32 60) ; 60 = neginf,negnorm,negsub,negzero
+  ret <4 x i1> %res
+}
+
+define <4 x i1> @insert_subvec_fixed_pos_base_pos_sub_isneg_false(<4 x float> %base, <2 x float> %sub) {
+; CHECK-LABEL: insert_subvec_fixed_pos_base_pos_sub_isneg_false:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vfabs.v v8, v8
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; CHECK-NEXT:    vfabs.v v9, v9
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vslideup.vi v8, v9, 2
+; CHECK-NEXT:    vfclass.v v8, v8
+; CHECK-NEXT:    vand.vi v8, v8, 15
+; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    ret
+  %abs_base = call <4 x float> @llvm.fabs.v4f32(<4 x float> %base)
+  %abs_sub = call <2 x float> @llvm.fabs.v2f32(<2 x float> %sub)
+  %ins = call <4 x float> @llvm.vector.insert.v4f32.v2f32(<4 x float> %abs_base, <2 x float> %abs_sub, i64 2)
+  %res = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %ins, i32 60) ; 60 = neginf,negnorm,negsub,negzero
+  ret <4 x i1> %res
+}
