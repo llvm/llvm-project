@@ -2,7 +2,7 @@
 ;; Test jump table generation with Indirect Branch Tracking on x86.
 ; RUN: opt -S -passes=lowertypetests -mtriple=i686 %s | FileCheck --check-prefixes=X86_32 %s
 ; RUN: opt -S -passes=lowertypetests -mtriple=x86_64 %s | FileCheck --check-prefixes=X86_64 %s
-; RUN: opt -S -passes=lowertypetests -mtriple=x86_64 %s | FileCheck --check-prefixes=X86_64-OFF %s
+; RUN: opt -S -passes=lowertypetests -lowertypetests-jump-table-debug-info=0 -mtriple=x86_64 %s | FileCheck --check-prefixes=X86_64-OFF %s
 
 @0 = private unnamed_addr constant [2 x ptr] [ptr @f, ptr @g], align 16
 

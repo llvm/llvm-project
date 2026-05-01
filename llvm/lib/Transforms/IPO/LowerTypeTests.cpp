@@ -124,6 +124,11 @@ static cl::opt<std::string> ClWriteSummary(
     cl::desc("Write summary to given YAML file after running pass"),
     cl::Hidden);
 
+// FIXME: Remove in clang 24.
+static cl::opt<bool> EnableJumpTableDebugInfo(
+    "lowertypetests-jump-table-debug-info", cl::init(true), cl::Hidden,
+    cl::desc("Enable debug info generation for jump tables"));
+
 bool BitSetInfo::containsGlobalOffset(uint64_t Offset) const {
   if (Offset < ByteOffset)
     return false;
@@ -1589,7 +1594,7 @@ void LowerTypeTestsModule::createJumpTable(
   IRBuilder<> IRB(BB);
 
   SmallVector<DILocation *> Locations;
-  if (M.getDwarfVersion() != 0)
+  if (M.getDwarfVersion() != 0 && EnableJumpTableDebugInfo)
     Locations = createJumpTableDebugInfo(F, Functions);
 
   InlineAsm *JumpTableAsm = createJumpTableEntryAsm(JumpTableArch);
