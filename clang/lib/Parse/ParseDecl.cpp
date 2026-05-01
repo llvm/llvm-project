@@ -1091,7 +1091,8 @@ void Parser::ParseOpenCLQualifiers(ParsedAttributes &Attrs) {
 }
 
 bool Parser::isHLSLQualifier(const Token &Tok) const {
-  return Tok.is(tok::kw_groupshared);
+  return Tok.is(tok::kw_groupshared) || Tok.is(tok::kw_row_major) ||
+         Tok.is(tok::kw_column_major);
 }
 
 void Parser::ParseHLSLQualifiers(ParsedAttributes &Attrs) {
@@ -4818,7 +4819,8 @@ void Parser::ParseDeclarationSpecifiers(
     case tok::kw___read_write:
       ParseOpenCLQualifiers(DS.getAttributes());
       break;
-
+    case tok::kw_row_major:
+    case tok::kw_column_major:
     case tok::kw_groupshared:
     case tok::kw_in:
     case tok::kw_inout:
@@ -5988,6 +5990,8 @@ bool Parser::isTypeSpecifierQualifier(const Token &Tok) {
   case tok::kw_in:
   case tok::kw_inout:
   case tok::kw_out:
+  case tok::kw_row_major:
+  case tok::kw_column_major:
     return getLangOpts().HLSL;
   }
 }
@@ -6265,6 +6269,10 @@ bool Parser::isDeclarationSpecifier(
   case tok::kw___funcref:
   case tok::kw_groupshared:
     return true;
+
+  case tok::kw_row_major:
+  case tok::kw_column_major:
+    return getLangOpts().HLSL;
 
   case tok::kw_private:
     return getLangOpts().OpenCL;
