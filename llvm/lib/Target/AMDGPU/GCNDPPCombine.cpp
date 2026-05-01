@@ -492,30 +492,22 @@ static bool isIdentityValue(unsigned OrigMIOp, MachineOperand *OldOpnd) {
     break;
   case AMDGPU::V_MIN_F32_e32:
   case AMDGPU::V_MIN_F32_e64:
-    if (static_cast<uint32_t>(OldOpnd->getImm()) ==
-        APFloat::getInf(APFloat::IEEEsingle()).bitcastToAPInt().getZExtValue())
+    if (static_cast<uint32_t>(OldOpnd->getImm()) == /*+inf=*/0x7F800000)
       return true;
     break;
   case AMDGPU::V_MAX_F32_e32:
   case AMDGPU::V_MAX_F32_e64:
-    if (static_cast<uint32_t>(OldOpnd->getImm()) ==
-        APFloat::getInf(APFloat::IEEEsingle(), true)
-            .bitcastToAPInt()
-            .getZExtValue())
+    if (static_cast<uint32_t>(OldOpnd->getImm()) == /*-inf=*/0xFF800000)
       return true;
     break;
   case AMDGPU::V_MIN_F64_e64:
   case AMDGPU::V_MIN_NUM_F64_e64:
-    if (static_cast<uint64_t>(OldOpnd->getImm()) ==
-        APFloat::getInf(APFloat::IEEEdouble()).bitcastToAPInt().getZExtValue())
+    if (static_cast<uint64_t>(OldOpnd->getImm()) == /*+inf=*/0x7FF0000000000000)
       return true;
     break;
   case AMDGPU::V_MAX_F64_e64:
   case AMDGPU::V_MAX_NUM_F64_e64:
-    if (static_cast<uint64_t>(OldOpnd->getImm()) ==
-        APFloat::getInf(APFloat::IEEEdouble(), true)
-            .bitcastToAPInt()
-            .getZExtValue())
+    if (static_cast<uint64_t>(OldOpnd->getImm()) == /*-inf=*/0xFFF0000000000000)
       return true;
     break;
   case AMDGPU::V_MIN_F16_e32:
@@ -524,8 +516,7 @@ static bool isIdentityValue(unsigned OrigMIOp, MachineOperand *OldOpnd) {
   case AMDGPU::V_MIN_F16_t16_e64:
   case AMDGPU::V_MIN_F16_fake16_e32:
   case AMDGPU::V_MIN_F16_fake16_e64:
-    if (static_cast<uint16_t>(OldOpnd->getImm()) ==
-        APFloat::getInf(APFloat::IEEEhalf()).bitcastToAPInt().getZExtValue())
+    if (static_cast<uint16_t>(OldOpnd->getImm()) == /*+inf=*/0x7C00)
       return true;
     break;
   case AMDGPU::V_MAX_F16_e32:
@@ -534,10 +525,7 @@ static bool isIdentityValue(unsigned OrigMIOp, MachineOperand *OldOpnd) {
   case AMDGPU::V_MAX_F16_t16_e64:
   case AMDGPU::V_MAX_F16_fake16_e32:
   case AMDGPU::V_MAX_F16_fake16_e64:
-    if (static_cast<uint16_t>(OldOpnd->getImm()) ==
-        APFloat::getInf(APFloat::IEEEhalf(), true)
-            .bitcastToAPInt()
-            .getZExtValue())
+    if (static_cast<uint16_t>(OldOpnd->getImm()) == /*-inf=*/0xFC00)
       return true;
     break;
   }
