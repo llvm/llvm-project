@@ -311,16 +311,6 @@ Attribute Changes in Clang
   foreign language personality with a given function. Note that this does not
   perform any ABI validation for the personality routine.
 
-- The ``__attribute__((flatten))`` attribute behavior has changed to match
-  GCC. Previously, Clang only inlined direct callees of the attributed
-  function. Now, all calls are inlined transitively, including calls
-  introduced by inlining. Calls that cannot be inlined are left as-is:
-  this includes callees marked ``noinline``, callees with incompatible ABI
-  attributes (e.g. SME), callees without a visible definition, and
-  recursive calls where a function already appears in the inlining chain.
-  Flatten also works across ThinLTO module boundaries when callee
-  definitions are available.
-
 - The :doc:`ThreadSafetyAnalysis` attributes ``guarded_by`` and
   ``pt_guarded_by`` now accept multiple capability arguments with refined
   access semantics: *writing* requires all listed capabilities to be held
