@@ -13,6 +13,7 @@
 #include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "llvm/ADT/TypeSwitch.h"
 
@@ -449,10 +450,15 @@ Attribute CUDAVarRegistrationInfoAttr::parse(AsmParser &parser, Type odsType) {
   if (parser.parseLess())
     return {};
 
-  StringRef deviceSideNameRef;
-  if (parser.parseKeyword(&deviceSideNameRef))
+  std::string deviceSideName;
+  if (parser.parseKeywordOrString(&deviceSideName)) {
+    parser.emitError(parser.getCurrentLocation(),
+                     "expected device variable name");
     return {};
-  std::string deviceSideName = deviceSideNameRef.str();
+  }
+
+  if (parser.parseComma())
+    return {};
 
   // Parse the device variable kind (Variable, Surface, Texture)
   StringRef kindStr;

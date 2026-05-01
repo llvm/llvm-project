@@ -3,6 +3,6 @@
 !s32i = !cir.int<s, 32>
 
 module {
-  // CHECK:   cir.global {{.*}} @i = #cir.poison : !s32i {{{.*}}, cu.var_registration = #cir.cu.var_registration<i, Variable, extern>}
+  // CHECK: cir.global {{.*}} @i = #cir.poison : !s32i {{{.*}}, cu.var_registration = #cir.cu.var_registration<i, Variable, extern>}
   cir.global "private" internal dso_local @i = #cir.poison : !s32i {alignment = 4 : i64, cu.var_registration = #cir.cu.var_registration<i, Variable, extern>}
 }
