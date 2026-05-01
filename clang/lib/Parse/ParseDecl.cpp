@@ -2248,7 +2248,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
       ;
 
   if (Tok.is(tok::kw_requires))
-    ParseTrailingRequiresClause(D);
+    ParseTrailingRequiresClauseWithScope(D);
 
   // Save late-parsed attributes for now; they need to be parsed in the
   // appropriate function scope after the function Decl has been constructed.
@@ -2520,7 +2520,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
       //	      declarator initializer[opt]
       //        declarator requires-clause
       if (Tok.is(tok::kw_requires))
-        ParseTrailingRequiresClause(D);
+        ParseTrailingRequiresClauseWithScope(D);
       Decl *ThisDecl = ParseDeclarationAfterDeclarator(D, TemplateInfo);
       /* TO_UPSTREAM(BoundsSafety) ON*/
       if (getLangOpts().BoundsSafetyAttributes && BoundsSafetyLateAttrs) {
