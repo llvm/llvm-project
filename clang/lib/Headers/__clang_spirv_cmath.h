@@ -1,4 +1,4 @@
- /*===---- __clang_spirv_cmath.h - SPIRV cmath decls -----------------------===
+/*===---- __clang_spirv_cmath.h - SPIRV cmath decls -----------------------===
  *
  * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
  * See https://llvm.org/LICENSE.txt for license information.
@@ -33,7 +33,6 @@
 #define __DEVICE__ static __device__ __forceinline__
 #endif
 
-__DEVICE__ float fabs(float __x) { return ::fabsf(__x); }
 __DEVICE__ float sin(float __x) { return ::sinf(__x); }
 __DEVICE__ float sinh(float __x) { return ::sinhf(__x); }
 __DEVICE__ float cos(float __x) { return ::cosf(__x); }
@@ -82,7 +81,7 @@ __DEVICE__ float hypot(float __x, float __y) { return ::hypotf(__x, __y); }
 // function generation. That means we will end up with two specializations, one
 // per type, but only one has a base function defined by the system header.
 #pragma omp begin declare variant match(                                       \
-    implementation = {extension(disable_implicit_base)})
+        implementation = {extension(disable_implicit_base)})
 
 // FIXME: We lack an extension to customize the mangling of the variants, e.g.,
 //        add a suffix. This means we would clash with the names of the variants
@@ -143,21 +142,15 @@ __DEVICE__ bool islessgreater(float __x, float __y) {
 __DEVICE__ bool islessgreater(double __x, double __y) {
   return __builtin_islessgreater(__x, __y);
 }
-__DEVICE__ bool isnormal(float __x) {
-  return __builtin_isnormal(__x);
-}
-__DEVICE__ bool isnormal(double __x) {
-  return __builtin_isnormal(__x);
-}
+__DEVICE__ bool isnormal(float __x) { return __builtin_isnormal(__x); }
+__DEVICE__ bool isnormal(double __x) { return __builtin_isnormal(__x); }
 __DEVICE__ bool isunordered(float __x, float __y) {
   return __builtin_isunordered(__x, __y);
 }
 __DEVICE__ bool isunordered(double __x, double __y) {
   return __builtin_isunordered(__x, __y);
 }
-__DEVICE__ float modf(float __x, float *__iptr) {
-  return ::modff(__x, __iptr);
-}
+__DEVICE__ float modf(float __x, float *__iptr) { return ::modff(__x, __iptr); }
 __DEVICE__ float pow(float __base, int __iexp) {
   return ::powif(__base, __iexp);
 }
@@ -171,7 +164,7 @@ __DEVICE__ float scalbln(float __x, long int __n) {
   return ::scalblnf(__x, __n);
 }
 __DEVICE__ bool signbit(float __x) { return ::__signbitf(__x); }
-__DEVICE__  bool signbit(double __x) { return ::__signbit(__x); }
+__DEVICE__ bool signbit(double __x) { return ::__signbit(__x); }
 __DEVICE__ float ldexp(float __arg, int __exp) {
   return ::ldexpf(__arg, __exp);
 }
@@ -188,7 +181,9 @@ __DEVICE__ float sqrt(float __x) { return ::sqrtf(__x); }
 __DEVICE__ float tan(float __x) { return ::tanf(__x); }
 __DEVICE__ float tanh(float __x) { return ::tanhf(__x); }
 __DEVICE__ float cbrt(float __x) { return ::cbrtf(__x); }
-__DEVICE__ float copysign(float __a, float __b) { return ::copysignf(__a, __b); }
+__DEVICE__ float copysign(float __a, float __b) {
+  return ::copysignf(__a, __b);
+}
 __DEVICE__ float erf(float __x) { return ::erff(__x); }
 __DEVICE__ float erfc(float __x) { return ::erfcf(__x); }
 __DEVICE__ float fdim(float __a, float __b) { return ::fdimf(__a, __b); }
@@ -203,8 +198,12 @@ __DEVICE__ float rint(float __x) { return ::rintf(__x); }
 __DEVICE__ float round(float __x) { return ::roundf(__x); }
 __DEVICE__ float trunc(float __x) { return ::truncf(__x); }
 __DEVICE__ float nearbyint(float __x) { return ::nearbyintf(__x); }
-__DEVICE__ float nextafter(float __a, float __b) { return ::nextafterf(__a, __b); }
-__DEVICE__ float remainder(float __a, float __b) { return ::remainderf(__a, __b); }
+__DEVICE__ float nextafter(float __a, float __b) {
+  return ::nextafterf(__a, __b);
+}
+__DEVICE__ float remainder(float __a, float __b) {
+  return ::remainderf(__a, __b);
+}
 __DEVICE__ float scalbn(float __a, int __b) { return ::scalbnf(__a, __b); }
 
 #ifndef __OPENMP_SPIRV__
@@ -216,19 +215,17 @@ __DEVICE__ float scalbn(float __a, int __b) { return ::scalbnf(__a, __b); }
 // floor(double).
 #define __SPIRV_OVERLOAD1(__retty, __fn)                                       \
   template <typename __T>                                                      \
-  __DEVICE__                                                                   \
-       std::enable_if_t<std::numeric_limits<__T>::is_integer, __retty>         \
-      __fn(__T __x) {                                                          \
+  __DEVICE__ std::enable_if_t<std::numeric_limits<__T>::is_integer, __retty>   \
+  __fn(__T __x) {                                                              \
     return ::__fn((double)__x);                                                \
   }
 
 #define __SPIRV_OVERLOAD2(__retty, __fn)                                       \
   template <typename __T1, typename __T2>                                      \
-  __DEVICE__                                                                   \
-       std::enable_if_t<std::numeric_limits<__T1>::is_specialized &&           \
-       std::numeric_limits<__T2>::is_specialized,                              \
-                               __retty>                                        \
-      __fn(__T1 __x, __T2 __y) {                                               \
+  __DEVICE__ std::enable_if_t<std::numeric_limits<__T1>::is_specialized &&     \
+                                  std::numeric_limits<__T2>::is_specialized,   \
+                              __retty>                                         \
+  __fn(__T1 __x, __T2 __y) {                                                   \
     return __fn((double)__x, (double)__y);                                     \
   }
 
@@ -298,51 +295,49 @@ __SPIRV_OVERLOAD2(double, max)
 __SPIRV_OVERLOAD2(double, min)
 
 template <typename __T1, typename __T2, typename __T3>
-__DEVICE__ std::enable_if_t<
-    std::numeric_limits<__T1>::is_specialized && 
-    std::numeric_limits<__T2>::is_specialized &&
-    std::numeric_limits<__T3>::is_specialized,
-    double>
+__DEVICE__ std::enable_if_t<std::numeric_limits<__T1>::is_specialized &&
+                                std::numeric_limits<__T2>::is_specialized &&
+                                std::numeric_limits<__T3>::is_specialized,
+                            double>
 fma(__T1 __x, __T2 __y, __T3 __z) {
   return ::fma((double)__x, (double)__y, (double)__z);
 }
 
-
 template <typename __T>
 __DEVICE__ std::enable_if_t<std::numeric_limits<__T>::is_integer, double>
-    frexp(__T __x, int *__exp) {
+frexp(__T __x, int *__exp) {
   return ::frexp((double)__x, __exp);
 }
 
 template <typename __T>
 __DEVICE__ std::enable_if_t<std::numeric_limits<__T>::is_integer, double>
-    ldexp(__T __x, int __exp) {
+ldexp(__T __x, int __exp) {
   return ::ldexp((double)__x, __exp);
 }
 
 template <typename __T>
 __DEVICE__ std::enable_if_t<std::numeric_limits<__T>::is_integer, double>
-    modf(__T __x, double *__exp) {
+modf(__T __x, double *__exp) {
   return ::modf((double)__x, __exp);
 }
 
 template <typename __T1, typename __T2>
 __DEVICE__ std::enable_if_t<std::numeric_limits<__T1>::is_specialized &&
-                            std::numeric_limits<__T2>::is_specialized,
+                                std::numeric_limits<__T2>::is_specialized,
                             double>
-    remquo(__T1 __x, __T2 __y, int *__quo) {
+remquo(__T1 __x, __T2 __y, int *__quo) {
   return ::remquo((double)__x, (double)__y, __quo);
 }
 
 template <typename __T>
 __DEVICE__ std::enable_if_t<std::numeric_limits<__T>::is_integer, double>
-    scalbln(__T __x, long int __exp) {
+scalbln(__T __x, long int __exp) {
   return ::scalbln((double)__x, __exp);
 }
 
 template <typename __T>
 __DEVICE__ std::enable_if_t<std::numeric_limits<__T>::is_integer, double>
-    scalbn(__T __x, int __exp) {
+scalbn(__T __x, int __exp) {
   return ::scalbn((double)__x, __exp);
 }
 
@@ -467,7 +462,7 @@ using ::ilogbf;
 using ::ldexpf;
 using ::lgammaf;
 using ::llrintf;
-using ::llroundf;hfgh fghdggf h
+using ::llroundf;
 using ::log10f;
 using ::log1pf;
 using ::log2f;
