@@ -1985,6 +1985,9 @@ bool GetPtrFieldPop(InterpState &S, CodePtr OpPC, uint32_t Off);
 bool GetPtrBase(InterpState &S, CodePtr OpPC, uint32_t Off);
 bool GetPtrBasePop(InterpState &S, CodePtr OpPC, uint32_t Off, bool NullOK);
 
+bool GetPtrDerivedPop(InterpState &S, CodePtr OpPC, uint32_t Off, bool NullOK,
+                      const Type *TargetType);
+
 inline bool GetPtrThisField(InterpState &S, CodePtr OpPC, uint32_t Off) {
   if (S.checkingPotentialConstantExpression() && S.Current->getDepth() == 0)
     return false;
@@ -1992,40 +1995,6 @@ inline bool GetPtrThisField(InterpState &S, CodePtr OpPC, uint32_t Off) {
     return false;
   const Pointer &This = S.Current->getThis();
   S.Stk.push<Pointer>(This.atField(Off));
-  return true;
-}
-
-inline bool GetPtrDerivedPop(InterpState &S, CodePtr OpPC, uint32_t Off,
-                             bool NullOK, const Type *TargetType) {
-  const Pointer &Ptr = S.Stk.pop<Pointer>();
-  if (!NullOK && !CheckNull(S, OpPC, Ptr, CSK_Derived))
-    return false;
-
-  if (!Ptr.isBlockPointer()) {
-    // FIXME: We don't have the necessary information in integral pointers.
-    // The Descriptor only has a record, but that does of course not include
-    // the potential derived classes of said record.
-    S.Stk.push<Pointer>(Ptr);
-    return true;
-  }
-
-  if (!CheckSubobject(S, OpPC, Ptr, CSK_Derived))
-    return false;
-  if (!CheckDowncast(S, OpPC, Ptr, Off))
-    return false;
-
-  const Record *TargetRecord = Ptr.atFieldSub(Off).getRecord();
-  assert(TargetRecord);
-
-  if (TargetRecord->getDecl()->getCanonicalDecl() !=
-      TargetType->getAsCXXRecordDecl()->getCanonicalDecl()) {
-    QualType MostDerivedType = Ptr.getDeclDesc()->getType();
-    S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_invalid_downcast)
-        << MostDerivedType << QualType(TargetType, 0);
-    return false;
-  }
-
-  S.Stk.push<Pointer>(Ptr.atFieldSub(Off));
   return true;
 }
 
