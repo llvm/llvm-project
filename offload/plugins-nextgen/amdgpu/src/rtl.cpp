@@ -3459,8 +3459,8 @@ private:
     if (auto Err = getDeviceAttr(HSA_AMD_AGENT_INFO_MEMORY_PROPERTIES,
                                  MemoryProperties)) {
       IsAPU = false;
-      ODBG(ODT_Tool) << "HSA_AMD_AGENT_INFO_MEMORY_PROPERTIES is unavailable, "
-                        "assuming not APU";
+      ODBG(OLDT_Init) << "HSA_AMD_AGENT_INFO_MEMORY_PROPERTIES is unavailable, "
+                         "assuming not APU";
       return Plugin::success();
     }
 
