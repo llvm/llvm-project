@@ -7407,7 +7407,7 @@ defm SADDL   : SIMDLongThreeVectorBHS<   0, 0b0000, "saddl",
 defm SADDW   : SIMDWideThreeVectorBHS<   0, 0b0001, "saddw",
                  BinOpFrag<(add node:$LHS, (sext node:$RHS))>>;
 defm SMLAL   : SIMDLongThreeVectorTiedBHS<0, 0b1000, "smlal",
-                 TriOpFrag<(add node:$LHS, (AArch64smull node:$MHS, node:$RHS))>>;
+                 TriOpFrag<(add_like node:$LHS, (AArch64smull node:$MHS, node:$RHS))>>;
 defm SMLSL   : SIMDLongThreeVectorTiedBHS<0, 0b1010, "smlsl",
                  TriOpFrag<(sub node:$LHS, (AArch64smull node:$MHS, node:$RHS))>>;
 defm SMULL   : SIMDLongThreeVectorBHS<0, 0b1100, "smull", AArch64smull>;
@@ -7428,7 +7428,7 @@ defm UADDL   : SIMDLongThreeVectorBHS<1, 0b0000, "uaddl",
 defm UADDW   : SIMDWideThreeVectorBHS<1, 0b0001, "uaddw",
                  BinOpFrag<(add node:$LHS, (zanyext node:$RHS))>>;
 defm UMLAL   : SIMDLongThreeVectorTiedBHS<1, 0b1000, "umlal",
-                 TriOpFrag<(add node:$LHS, (AArch64umull node:$MHS, node:$RHS))>>;
+                 TriOpFrag<(add_like node:$LHS, (AArch64umull node:$MHS, node:$RHS))>>;
 defm UMLSL   : SIMDLongThreeVectorTiedBHS<1, 0b1010, "umlsl",
                  TriOpFrag<(sub node:$LHS, (AArch64umull node:$MHS, node:$RHS))>>;
 defm UMULL   : SIMDLongThreeVectorBHS<1, 0b1100, "umull", AArch64umull>;
@@ -9035,7 +9035,7 @@ defm MLS   : SIMDVectorIndexedHSTied<1, 0b0100, "mls", null_frag>;
 
 defm MUL   : SIMDVectorIndexedHS<0, 0b1000, "mul", mul>;
 defm SMLAL : SIMDVectorIndexedLongSDTied<0, 0b0010, "smlal",
-    TriOpFrag<(add node:$LHS, (AArch64smull node:$MHS, node:$RHS))>>;
+    TriOpFrag<(add_like node:$LHS, (AArch64smull node:$MHS, node:$RHS))>>;
 defm SMLSL : SIMDVectorIndexedLongSDTied<0, 0b0110, "smlsl",
     TriOpFrag<(sub node:$LHS, (AArch64smull node:$MHS, node:$RHS))>>;
 defm SMULL : SIMDVectorIndexedLongSD<0, 0b1010, "smull", AArch64smull>;
@@ -9049,7 +9049,7 @@ defm SQRDMLSH : SIMDIndexedSQRDMLxHSDTied<1, 0b1111, "sqrdmlsh",
                                           AArch64sqrdmlsh, int_aarch64_neon_sqrdmlsh>;
 defm SQDMULL : SIMDIndexedLongSD<0, 0b1011, "sqdmull", int_aarch64_neon_sqdmull>;
 defm UMLAL   : SIMDVectorIndexedLongSDTied<1, 0b0010, "umlal",
-    TriOpFrag<(add node:$LHS, (AArch64umull node:$MHS, node:$RHS))>>;
+    TriOpFrag<(add_like node:$LHS, (AArch64umull node:$MHS, node:$RHS))>>;
 defm UMLSL   : SIMDVectorIndexedLongSDTied<1, 0b0110, "umlsl",
     TriOpFrag<(sub node:$LHS, (AArch64umull node:$MHS, node:$RHS))>>;
 defm UMULL   : SIMDVectorIndexedLongSD<1, 0b1010, "umull", AArch64umull>;
