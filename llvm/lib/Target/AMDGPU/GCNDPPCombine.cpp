@@ -41,6 +41,7 @@
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -487,6 +488,56 @@ static bool isIdentityValue(unsigned OrigMIOp, MachineOperand *OldOpnd) {
   case AMDGPU::V_MUL_U32_U24_e32:
   case AMDGPU::V_MUL_U32_U24_e64:
     if (OldOpnd->getImm() == 1)
+      return true;
+    break;
+  case AMDGPU::V_MIN_F32_e32:
+  case AMDGPU::V_MIN_F32_e64:
+    if (static_cast<uint32_t>(OldOpnd->getImm()) ==
+        APFloat::getInf(APFloat::IEEEsingle()).bitcastToAPInt().getZExtValue())
+      return true;
+    break;
+  case AMDGPU::V_MAX_F32_e32:
+  case AMDGPU::V_MAX_F32_e64:
+    if (static_cast<uint32_t>(OldOpnd->getImm()) ==
+        APFloat::getInf(APFloat::IEEEsingle(), true)
+            .bitcastToAPInt()
+            .getZExtValue())
+      return true;
+    break;
+  case AMDGPU::V_MIN_F64_e64:
+  case AMDGPU::V_MIN_NUM_F64_e64:
+    if (static_cast<uint64_t>(OldOpnd->getImm()) ==
+        APFloat::getInf(APFloat::IEEEdouble()).bitcastToAPInt().getZExtValue())
+      return true;
+    break;
+  case AMDGPU::V_MAX_F64_e64:
+  case AMDGPU::V_MAX_NUM_F64_e64:
+    if (static_cast<uint64_t>(OldOpnd->getImm()) ==
+        APFloat::getInf(APFloat::IEEEdouble(), true)
+            .bitcastToAPInt()
+            .getZExtValue())
+      return true;
+    break;
+  case AMDGPU::V_MIN_F16_e32:
+  case AMDGPU::V_MIN_F16_e64:
+  case AMDGPU::V_MIN_F16_t16_e32:
+  case AMDGPU::V_MIN_F16_t16_e64:
+  case AMDGPU::V_MIN_F16_fake16_e32:
+  case AMDGPU::V_MIN_F16_fake16_e64:
+    if (static_cast<uint16_t>(OldOpnd->getImm()) ==
+        APFloat::getInf(APFloat::IEEEhalf()).bitcastToAPInt().getZExtValue())
+      return true;
+    break;
+  case AMDGPU::V_MAX_F16_e32:
+  case AMDGPU::V_MAX_F16_e64:
+  case AMDGPU::V_MAX_F16_t16_e32:
+  case AMDGPU::V_MAX_F16_t16_e64:
+  case AMDGPU::V_MAX_F16_fake16_e32:
+  case AMDGPU::V_MAX_F16_fake16_e64:
+    if (static_cast<uint16_t>(OldOpnd->getImm()) ==
+        APFloat::getInf(APFloat::IEEEhalf(), true)
+            .bitcastToAPInt()
+            .getZExtValue())
       return true;
     break;
   }
