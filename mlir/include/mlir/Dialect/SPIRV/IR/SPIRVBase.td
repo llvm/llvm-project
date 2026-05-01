@@ -398,7 +398,7 @@ def SPV_INTEL_usm_storage_classes                : I32EnumAttrCase<"SPV_INTEL_us
 def SPV_INTEL_io_pipes                           : I32EnumAttrCase<"SPV_INTEL_io_pipes", 4021>;
 def SPV_ALTERA_blocking_pipes                     : I32EnumAttrCase<"SPV_ALTERA_blocking_pipes", 4022>;
 def SPV_INTEL_fpga_reg                           : I32EnumAttrCase<"SPV_INTEL_fpga_reg", 4023>;
-def SPV_INTEL_long_constant_composite            : I32EnumAttrCase<"SPV_INTEL_long_constant_composite", 4024>;
+def SPV_INTEL_long_composites                    : I32EnumAttrCase<"SPV_INTEL_long_composites", 4024>;
 def SPV_INTEL_optnone                            : I32EnumAttrCase<"SPV_INTEL_optnone", 4025>;
 def SPV_INTEL_debug_module                       : I32EnumAttrCase<"SPV_INTEL_debug_module", 4026>;
 def SPV_INTEL_fp_fast_math_mode                  : I32EnumAttrCase<"SPV_INTEL_fp_fast_math_mode", 4027>;
@@ -468,7 +468,7 @@ def SPIRV_ExtensionAttr :
       SPV_INTEL_fpga_cluster_attributes, SPV_INTEL_loop_fuse,
       SPV_INTEL_fpga_buffer_location, SPV_INTEL_arbitrary_precision_fixed_point,
       SPV_INTEL_usm_storage_classes, SPV_INTEL_io_pipes, SPV_ALTERA_blocking_pipes,
-      SPV_INTEL_fpga_reg, SPV_INTEL_long_constant_composite, SPV_INTEL_optnone,
+      SPV_INTEL_fpga_reg, SPV_INTEL_long_composites, SPV_INTEL_optnone,
       SPV_INTEL_debug_module, SPV_INTEL_fp_fast_math_mode,
       SPV_INTEL_memory_access_aliasing, SPV_INTEL_split_barrier,
       SPV_INTEL_bfloat16_conversion, SPV_INTEL_cache_controls,
@@ -877,9 +877,9 @@ def SPIRV_C_AtomicFloat64AddEXT                         : I32EnumAttrCase<"Atomi
     Extension<[SPV_EXT_shader_atomic_float_add]>
   ];
 }
-def SPIRV_C_LongConstantCompositeINTEL                  : I32EnumAttrCase<"LongConstantCompositeINTEL", 6089> {
+def SPIRV_C_LongCompositesINTEL                         : I32EnumAttrCase<"LongCompositesINTEL", 6089> {
   list<Availability> availability = [
-    Extension<[SPV_INTEL_long_constant_composite]>
+    Extension<[SPV_INTEL_long_composites]>
   ];
 }
 def SPIRV_C_OptNoneINTEL                                : I32EnumAttrCase<"OptNoneINTEL", 6094> {
@@ -1546,7 +1546,7 @@ def SPIRV_CapabilityAttr :
       SPIRV_C_DotProductInput4x8BitPacked, SPIRV_C_DotProduct, SPIRV_C_RayCullMaskKHR,
       SPIRV_C_CooperativeMatrixKHR, SPIRV_C_ReplicatedCompositesEXT,
       SPIRV_C_BitInstructions, SPIRV_C_AtomicFloat32AddEXT, SPIRV_C_AtomicFloat64AddEXT,
-      SPIRV_C_LongConstantCompositeINTEL, SPIRV_C_OptNoneINTEL,
+      SPIRV_C_LongCompositesINTEL, SPIRV_C_OptNoneINTEL,
       SPIRV_C_AtomicFloat16AddEXT, SPIRV_C_DebugInfoModuleINTEL, SPIRV_C_SplitBarrierINTEL,
       SPIRV_C_GroupUniformArithmeticKHR, SPIRV_C_Shader, SPIRV_C_Vector16,
       SPIRV_C_Float16Buffer, SPIRV_C_Int64Atomics, SPIRV_C_ImageBasic, SPIRV_C_Pipes,
