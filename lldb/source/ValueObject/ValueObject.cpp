@@ -358,8 +358,9 @@ bool ValueObject::IsLogicalTrue(Status &error) {
     LazyBool is_logical_true = language->IsLogicalTrue(*this, error);
     switch (is_logical_true) {
     case eLazyBoolYes:
+      return true;
     case eLazyBoolNo:
-      return (is_logical_true == true);
+      return false;
     case eLazyBoolCalculate:
       break;
     }

@@ -1421,7 +1421,7 @@ void ByteCodeExecutor::executeApplyConstraint(PatternRewriter &rewriter) {
 
   LDBG() << "  * Arguments: " << llvm::interleaved(args);
 
-  ByteCodeField isNegated = read();
+  bool isNegated = (read() != 0);
   LDBG() << "  * isNegated: " << isNegated;
 
   ByteCodeField numResults = read();
