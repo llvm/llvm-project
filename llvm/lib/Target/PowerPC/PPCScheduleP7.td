@@ -115,6 +115,9 @@ let SchedModel = P7Model in {
   def : InstRW<[P7_BRU_NONE, P7_DISP_BR],
     (instregex "^B(L)?(A)?(8)?(_NOP|_NOTOC)?(_TLS|_RM)?(_)?$")>;
 
+  def : InstRW<[P7_BRU_NONE, P7_DISP_BR, P7_LSU_2C, P7_DISP_LS],
+    (instregex "^BL(8)?_RESTORE(_RM)?$")>;
+
   def : InstRW<[P7_BRU_3C, P7_DISP_BR], (instrs
     BDZLRLp, BDZLRm, BDZLRp, BDZLm, BDZLp, BDZm, BDZp,
     BDNZ, BDNZ8, BDNZA, BDNZAm, BDNZAp, BDNZL, BDNZLA, BDNZLAm, BDNZLAp, BDNZLR,
@@ -128,7 +131,7 @@ let SchedModel = P7Model in {
     BCCCTR, BCCCTR8, BCCCTRL, BCCCTRL8, BCCL, BCCLA, BCCLR, BCCLRL, BCCTR,
     BCCTR8, BCCTR8n, BCCTRL, BCCTRL8, BCCTRL8n, BCCTRLn, BCCTRn, gBC, gBCA,
     gBCAat, gBCCTR, gBCCTRL, gBCL, gBCLA, gBCLAat, gBCLR, gBCLRL, gBCLat, gBCat,
-    MFCTR, MFCTR8, MFLR, MFLR8, BL_RESTORE, BL8_RESTORE
+    MFCTR, MFCTR8, MFLR, MFLR8
   )>;
 
   def : InstRW<[P7_BRU_4C], (instrs MTLR, MTLR8, MTCTR, MTCTR8, MTCTR8loop, MTCTRloop)>;
