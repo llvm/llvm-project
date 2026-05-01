@@ -389,11 +389,11 @@ void foo() {
 template <typename T>
 class [[clang::analyse_as_class("std::optional")]] CustomOptional {
 public:
-  [[clang::analyse_as_method("std::optional::has_value")]] bool isEngaged() const;
-  [[clang::analyse_as_method("std::optional::value")]] T &retrieve();
-  [[clang::analyse_as_method("std::optional::value")]] const T &retrieve() const;
-  [[clang::analyse_as_method("std::optional::emplace")]] T &fill(T val);
-  [[clang::analyse_as_method("std::optional::reset")]] void clear();
+  [[clang::analyse_as_method("has_value")]] bool isEngaged() const;
+  [[clang::analyse_as_method("value")]] T &retrieve();
+  [[clang::analyse_as_method("value")]] const T &retrieve() const;
+  [[clang::analyse_as_method("emplace")]] T &fill(T val);
+  [[clang::analyse_as_method("reset")]] void clear();
 };
 
 void custom_unchecked_access(CustomOptional<int> opt) {

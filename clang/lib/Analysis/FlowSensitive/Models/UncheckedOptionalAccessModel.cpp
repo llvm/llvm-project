@@ -240,11 +240,7 @@ AST_MATCHER_P(NamedDecl, hasAnalyseAsMethodName, std::string, MethodName) {
   if (const auto *MD = dyn_cast<CXXMethodDecl>(&Node)) {
     if (const auto *Attr = MD->getAttr<AnalyseAsMethodAttr>()) {
       StringRef AttrValue = Attr->getMethodName();
-      auto Pos = AttrValue.rfind("::");
-      StringRef AttrMethodName = (Pos != StringRef::npos)
-          ? AttrValue.substr(Pos + 2)
-          : AttrValue;
-      return AttrMethodName == MethodName;
+      return AttrValue == MethodName;
     }
   }
   return false;
@@ -1076,7 +1072,7 @@ auto buildTransferMatchSwitch() {
       // Of the supported optionals only folly::Optional uses hasValue, but this
       // will also pass for other types
       // "hasValue" could be removed if folly::Optional used
-      // [[clang::analyse_as_method("std::optional::has_value")]] on hasValue()
+      // [[clang::analyse_as_method("has_value")]] on hasValue()
       .CaseOfCFGStmt<CXXMemberCallExpr>(
           isOptionalMemberCallWithNameMatcher(
               anyOf(hasAnyName("has_value", "hasValue"),
@@ -1097,7 +1093,7 @@ auto buildTransferMatchSwitch() {
           transferOptionalIsNullCall)
 
       // this code could be removed if NullableValue used
-      // [[clang::analyse_as_method("std::optional::emplace")]] on makeValue() and makeValueInplace()
+      // [[clang::analyse_as_method("emplace")]] on makeValue() and makeValueInplace()
       // NullableValue::makeValue, NullableValue::makeValueInplace
       // Only NullableValue has these methods, but this
       // will also pass for other types

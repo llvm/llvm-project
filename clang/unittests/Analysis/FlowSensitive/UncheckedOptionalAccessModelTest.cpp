@@ -3023,9 +3023,9 @@ TEST_P(UncheckedOptionalAccessTest, TestCustomAttributeHicketts) {
     template <typename T>
     class __attribute__((analyse_as_class("std::optional"))) MyOptional {
     public:
-      __attribute__((analyse_as_method("std::optional::has_value"))) bool isNotNull() const;
-      __attribute__((analyse_as_method("std::optional::value"))) T& unwrap();
-      __attribute__((analyse_as_method("std::optional::value"))) const T& unwrap() const;
+      __attribute__((analyse_as_method("has_value"))) bool isNotNull() const;
+      __attribute__((analyse_as_method("value"))) T& unwrap();
+      __attribute__((analyse_as_method("value"))) const T& unwrap() const;
     };
 
     void target(MyOptional<int> opt) {
