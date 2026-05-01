@@ -407,6 +407,25 @@ public:
   /// Returns function ranges of this unit.
   const RangesTy &getFunctionRanges() const { return Ranges; }
 
+  /// Record that a DW_AT_LLVM_stmt_sequence attribute on this unit
+  /// references the input line-table sequence starting at \p InputFirstAddr
+  /// (std::nullopt if the input offset couldn't be resolved to an input
+  /// row). After the line table for this unit has been emitted, \p V is
+  /// rewritten to the byte offset of the output sequence that contains
+  /// the relocated address (or to an invalid sentinel if the sequence
+  /// wasn't kept).
+  void noteStmtSeqListAttribute(DIEValue *V,
+                                std::optional<uint64_t> InputFirstAddr) {
+    StmtSeqListAttributes.push_back({V, InputFirstAddr});
+  }
+
+  /// Return the input-side first-row address of the line-table sequence
+  /// whose header sits at \p StmtSeqOffset in this unit's input
+  /// .debug_line contribution, or std::nullopt if no such sequence was
+  /// recognised by the DWARF parser. Builds and caches a lookup table on
+  /// first call to keep stmt_sequence attribute resolution O(1).
+  std::optional<uint64_t> getStmtSeqFirstAddress(uint64_t StmtSeqOffset);
+
   /// Clone and emit this compilation unit.
   Error
   cloneAndEmit(std::optional<std::reference_wrapper<const Triple>> TargetTriple,
@@ -651,6 +670,19 @@ private:
   void insertLineSequence(std::vector<DWARFDebugLine::Row> &Seq,
                           std::vector<DWARFDebugLine::Row> &Rows);
 
+  /// Filter \p InputLineTable's rows to those covered by this unit's
+  /// function ranges, relocating addresses in the process, and store the
+  /// result in \p NewRows.
+  void filterLineTableRows(const DWARFDebugLine::LineTable &InputLineTable,
+                           std::vector<DWARFDebugLine::Row> &NewRows);
+
+  /// Rewrite every DW_AT_LLVM_stmt_sequence DIEValue recorded on this
+  /// unit with the local .debug_line offset of the output sequence
+  /// corresponding to its input-sequence first-row address. The map is
+  /// built during line-table emission.
+  void patchStmtSeqAttributes(
+      const DenseMap<uint64_t, uint64_t> &AddrToSeqStartOffset);
+
   /// Emits body for both macro sections.
   void emitMacroTableImpl(const DWARFDebugMacro *MacroTable,
                           uint64_t OffsetToMacroTable, bool hasDWARFv5Header);
@@ -721,6 +753,23 @@ private:
   /// The DW_AT_low_pc of each DW_TAG_label.
   using LabelMapTy = SmallDenseMap<uint64_t, uint64_t, 1>;
   LabelMapTy Labels;
+
+  /// Recorded DW_AT_LLVM_stmt_sequence attributes for this unit. Each
+  /// entry pairs the DIEValue holding the attribute with the input-side
+  /// first-row address of the referenced line-table sequence (empty if
+  /// the parser couldn't resolve the input offset); the value is
+  /// rewritten with the matching output offset after the line table has
+  /// been emitted.
+  struct StmtSeqPatch {
+    DIEValue *Value = nullptr;
+    std::optional<uint64_t> InputFirstAddr;
+  };
+  SmallVector<StmtSeqPatch, 4> StmtSeqListAttributes;
+
+  /// Lazily-built lookup table from an input DW_AT_LLVM_stmt_sequence
+  /// byte offset to the address of the corresponding sequence's first
+  /// row. Populated on the first call to getStmtSeqFirstAddress().
+  std::optional<DenseMap<uint64_t, uint64_t>> StmtSeqOffsetToFirstAddr;
   std::mutex LabelsMutex;
 
   /// This field keeps current stage of overall compile unit processing.

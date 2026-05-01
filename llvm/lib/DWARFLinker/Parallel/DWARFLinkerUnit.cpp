@@ -118,11 +118,12 @@ Error DwarfUnit::emitDebugInfo(const Triple &TargetTriple) {
   return Error::success();
 }
 
-Error DwarfUnit::emitDebugLine(const Triple &TargetTriple,
-                               const DWARFDebugLine::LineTable &OutLineTable) {
+Error DwarfUnit::emitDebugLine(
+    const Triple &TargetTriple, const DWARFDebugLine::LineTable &OutLineTable,
+    DenseMap<uint64_t, uint64_t> *AddrToSeqStartOffset) {
   DebugLineSectionEmitter DebugLineEmitter(TargetTriple, *this);
 
-  return DebugLineEmitter.emit(OutLineTable);
+  return DebugLineEmitter.emit(OutLineTable, AddrToSeqStartOffset);
 }
 
 Error DwarfUnit::emitDebugStringOffsetSection() {

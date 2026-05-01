@@ -96,8 +96,10 @@ public:
   Error emitDebugInfo(const Triple &TargetTriple);
 
   /// Emit .debug_line section.
-  Error emitDebugLine(const Triple &TargetTriple,
-                      const DWARFDebugLine::LineTable &OutLineTable);
+  Error
+  emitDebugLine(const Triple &TargetTriple,
+                const DWARFDebugLine::LineTable &OutLineTable,
+                DenseMap<uint64_t, uint64_t> *AddrToSeqStartOffset = nullptr);
 
   /// Emit the .debug_str_offsets section for current unit.
   Error emitDebugStringOffsetSection();

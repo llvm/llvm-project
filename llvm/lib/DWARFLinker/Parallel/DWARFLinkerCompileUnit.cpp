@@ -1553,74 +1553,142 @@ Error CompileUnit::cloneAndEmitLineTable(const Triple &TargetTriple) {
       OutLineTable.Rows.clear();
 
     OutLineTable.Sequences = InputLineTable->Sequences;
-  } else {
-    // This vector is the output line table.
-    std::vector<DWARFDebugLine::Row> NewRows;
-    NewRows.reserve(InputLineTable->Rows.size());
-
-    // Current sequence of rows being extracted, before being inserted
-    // in NewRows.
-    std::vector<DWARFDebugLine::Row> Seq;
-
-    const auto &FunctionRanges = getFunctionRanges();
-    std::optional<AddressRangeValuePair> CurrRange;
-
-    // FIXME: This logic is meant to generate exactly the same output as
-    // Darwin's classic dsymutil. There is a nicer way to implement this
-    // by simply putting all the relocated line info in NewRows and simply
-    // sorting NewRows before passing it to emitLineTableForUnit. This
-    // should be correct as sequences for a function should stay
-    // together in the sorted output. There are a few corner cases that
-    // look suspicious though, and that required to implement the logic
-    // this way. Revisit that once initial validation is finished.
-
-    // Iterate over the object file line info and extract the sequences
-    // that correspond to linked functions.
-    for (DWARFDebugLine::Row Row : InputLineTable->Rows) {
-      // Check whether we stepped out of the range. The range is
-      // half-open, but consider accept the end address of the range if
-      // it is marked as end_sequence in the input (because in that
-      // case, the relocation offset is accurate and that entry won't
-      // serve as the start of another function).
-      if (!CurrRange || !CurrRange->Range.contains(Row.Address.Address)) {
-        // We just stepped out of a known range. Insert a end_sequence
-        // corresponding to the end of the range.
-        uint64_t StopAddress =
-            CurrRange ? CurrRange->Range.end() + CurrRange->Value : -1ULL;
-        CurrRange = FunctionRanges.getRangeThatContains(Row.Address.Address);
-        if (StopAddress != -1ULL && !Seq.empty()) {
-          // Insert end sequence row with the computed end address, but
-          // the same line as the previous one.
-          auto NextLine = Seq.back();
-          NextLine.Address.Address = StopAddress;
-          NextLine.EndSequence = 1;
-          NextLine.PrologueEnd = 0;
-          NextLine.BasicBlock = 0;
-          NextLine.EpilogueBegin = 0;
-          Seq.push_back(NextLine);
-          insertLineSequence(Seq, NewRows);
-        }
-
-        if (!CurrRange)
-          continue;
-      }
-
-      // Ignore empty sequences.
-      if (Row.EndSequence && Seq.empty())
-        continue;
-
-      // Relocate row address and add it to the current sequence.
-      Row.Address.Address += CurrRange->Value;
-      Seq.emplace_back(Row);
-
-      if (Row.EndSequence)
-        insertLineSequence(Seq, NewRows);
-    }
-
-    OutLineTable.Rows = std::move(NewRows);
+    return emitDebugLine(TargetTriple, OutLineTable);
   }
 
-  return emitDebugLine(TargetTriple, OutLineTable);
+  filterLineTableRows(*InputLineTable, OutLineTable.Rows);
+
+  if (StmtSeqListAttributes.empty())
+    return emitDebugLine(TargetTriple, OutLineTable);
+
+  // When DW_AT_LLVM_stmt_sequence attributes on this CU need their values
+  // rewritten to point at the correct output sequence, have the emitter
+  // record, for every row, the byte offset of the DW_LNE_set_address that
+  // opens the sequence containing that row.
+  //
+  // The patching below MUST run before emitDebugInfo() serializes the
+  // DIE bytes and before OutputSections::applyPatches() runs for this
+  // unit's .debug_info — it writes a local offset into the DIEValue that
+  // the serializer then emits, and a DebugOffsetPatch (registered at DIE
+  // cloning time) later adds the CU's .debug_line start offset to reach
+  // the final absolute value.
+  DenseMap<uint64_t, uint64_t> AddrToSeqStartOffset;
+  if (Error Err =
+          emitDebugLine(TargetTriple, OutLineTable, &AddrToSeqStartOffset))
+    return Err;
+
+  patchStmtSeqAttributes(AddrToSeqStartOffset);
+  return Error::success();
+}
+
+void CompileUnit::filterLineTableRows(
+    const DWARFDebugLine::LineTable &InputLineTable,
+    std::vector<DWARFDebugLine::Row> &NewRows) {
+  NewRows.reserve(InputLineTable.Rows.size());
+
+  // Current sequence of rows being extracted, before being inserted
+  // in NewRows.
+  std::vector<DWARFDebugLine::Row> Seq;
+
+  const auto &FunctionRanges = getFunctionRanges();
+  std::optional<AddressRangeValuePair> CurrRange;
+
+  // FIXME: This logic is meant to generate exactly the same output as
+  // Darwin's classic dsymutil. There is a nicer way to implement this
+  // by simply putting all the relocated line info in NewRows and simply
+  // sorting NewRows before passing it to emitLineTableForUnit. This
+  // should be correct as sequences for a function should stay
+  // together in the sorted output. There are a few corner cases that
+  // look suspicious though, and that required to implement the logic
+  // this way. Revisit that once initial validation is finished.
+
+  // Iterate over the object file line info and extract the sequences
+  // that correspond to linked functions.
+  for (DWARFDebugLine::Row Row : InputLineTable.Rows) {
+    // Check whether we stepped out of the range. The range is
+    // half-open, but consider accept the end address of the range if
+    // it is marked as end_sequence in the input (because in that
+    // case, the relocation offset is accurate and that entry won't
+    // serve as the start of another function).
+    if (!CurrRange || !CurrRange->Range.contains(Row.Address.Address)) {
+      // We just stepped out of a known range. Insert a end_sequence
+      // corresponding to the end of the range.
+      uint64_t StopAddress =
+          CurrRange ? CurrRange->Range.end() + CurrRange->Value : -1ULL;
+      CurrRange = FunctionRanges.getRangeThatContains(Row.Address.Address);
+      if (StopAddress != -1ULL && !Seq.empty()) {
+        // Insert end sequence row with the computed end address, but
+        // the same line as the previous one.
+        auto NextLine = Seq.back();
+        NextLine.Address.Address = StopAddress;
+        NextLine.EndSequence = 1;
+        NextLine.PrologueEnd = 0;
+        NextLine.BasicBlock = 0;
+        NextLine.EpilogueBegin = 0;
+        Seq.push_back(NextLine);
+        insertLineSequence(Seq, NewRows);
+      }
+
+      if (!CurrRange)
+        continue;
+    }
+
+    // Ignore empty sequences.
+    if (Row.EndSequence && Seq.empty())
+      continue;
+
+    // Relocate row address and add it to the current sequence.
+    Row.Address.Address += CurrRange->Value;
+    Seq.emplace_back(Row);
+
+    if (Row.EndSequence)
+      insertLineSequence(Seq, NewRows);
+  }
+}
+
+void CompileUnit::patchStmtSeqAttributes(
+    const DenseMap<uint64_t, uint64_t> &AddrToSeqStartOffset) {
+  const uint64_t InvalidOffset = getFormParams().getDwarfMaxOffset();
+  const auto &FunctionRanges = getFunctionRanges();
+
+  for (const CompileUnit::StmtSeqPatch &Patch : StmtSeqListAttributes) {
+    uint64_t NewStmtSeq = InvalidOffset;
+    if (Patch.InputFirstAddr) {
+      if (auto Range =
+              FunctionRanges.getRangeThatContains(*Patch.InputFirstAddr)) {
+        uint64_t OutAddr = *Patch.InputFirstAddr + Range->Value;
+        auto It = AddrToSeqStartOffset.find(OutAddr);
+        if (It != AddrToSeqStartOffset.end())
+          NewStmtSeq = It->second;
+      }
+    }
+    // When resolution fails, the InvalidOffset sentinel must survive the
+    // combination-time section-offset fixup. The patch applier preserves
+    // InvalidOffset as-is so consumers see a clean invalid marker rather
+    // than StartOffset - 1.
+    *Patch.Value = DIEValue(Patch.Value->getAttribute(), Patch.Value->getForm(),
+                            DIEInteger(NewStmtSeq));
+  }
+}
+
+std::optional<uint64_t>
+CompileUnit::getStmtSeqFirstAddress(uint64_t StmtSeqOffset) {
+  if (!StmtSeqOffsetToFirstAddr) {
+    StmtSeqOffsetToFirstAddr.emplace();
+    if (const DWARFDebugLine::LineTable *InputLT =
+            getContaingFile().Dwarf->getLineTableForUnit(&getOrigUnit())) {
+      for (const DWARFDebugLine::Sequence &Seq : InputLT->Sequences) {
+        assert(Seq.FirstRowIndex < InputLT->Rows.size() &&
+               "sequence's first-row index out of range");
+        (*StmtSeqOffsetToFirstAddr)[Seq.StmtSeqOffset] =
+            InputLT->Rows[Seq.FirstRowIndex].Address.Address;
+      }
+    }
+  }
+  auto It = StmtSeqOffsetToFirstAddr->find(StmtSeqOffset);
+  if (It == StmtSeqOffsetToFirstAddr->end())
+    return std::nullopt;
+  return It->second;
 }
 
 void CompileUnit::insertLineSequence(std::vector<DWARFDebugLine::Row> &Seq,

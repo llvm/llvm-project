@@ -26,7 +26,8 @@ public:
   DebugLineSectionEmitter(const Triple &TheTriple, DwarfUnit &U)
       : TheTriple(TheTriple), U(U) {}
 
-  Error emit(const DWARFDebugLine::LineTable &LineTable) {
+  Error emit(const DWARFDebugLine::LineTable &LineTable,
+             DenseMap<uint64_t, uint64_t> *AddrToSeqStartOffset = nullptr) {
     // FIXME: remove dependence on MCDwarfLineAddr::encode.
     // As we reuse MCDwarfLineAddr::encode, we need to create/initialize
     // some MC* classes.
@@ -45,7 +46,7 @@ public:
     emitLineTablePrologue(LineTable.Prologue, OutSection);
 
     // Emit rows.
-    emitLineTableRows(LineTable, OutSection);
+    emitLineTableRows(LineTable, OutSection, AddrToSeqStartOffset);
     uint64_t OffsetAfterEnd = OutSection.OS.tell();
 
     // Update unit length field with actual length value.
@@ -292,8 +293,9 @@ private:
       emitLineTablePrologueV5IncludeAndFileTable(P, Section);
   }
 
-  void emitLineTableRows(const DWARFDebugLine::LineTable &LineTable,
-                         SectionDescriptor &Section) {
+  void emitLineTableRows(
+      const DWARFDebugLine::LineTable &LineTable, SectionDescriptor &Section,
+      DenseMap<uint64_t, uint64_t> *AddrToSeqStartOffset = nullptr) {
 
     MCDwarfLineTableParams Params;
     Params.DWARF2LineOpcodeBase = LineTable.Prologue.OpcodeBase;
@@ -321,10 +323,15 @@ private:
     uint64_t Address = -1ULL;
 
     unsigned RowsSinceLastSequence = 0;
+    // Offset of the DW_LNE_set_address opcode that opens the sequence
+    // currently being emitted. Recorded for each row's address so that
+    // DW_AT_LLVM_stmt_sequence attributes can be resolved by address.
+    uint64_t CurrentSeqStartOffset = 0;
 
     for (const DWARFDebugLine::Row &Row : LineTable.Rows) {
       int64_t AddressDelta;
       if (Address == -1ULL) {
+        CurrentSeqStartOffset = Section.OS.tell();
         Section.emitIntVal(dwarf::DW_LNS_extended_op, 1);
         encodeULEB128(Section.getFormParams().AddrSize + 1, Section.OS);
         Section.emitIntVal(dwarf::DW_LNE_set_address, 1);
@@ -335,6 +342,8 @@ private:
         AddressDelta =
             (Row.Address.Address - Address) / LineTable.Prologue.MinInstLength;
       }
+      if (AddrToSeqStartOffset)
+        (*AddrToSeqStartOffset)[Row.Address.Address] = CurrentSeqStartOffset;
 
       // FIXME: code copied and transformed from
       // MCDwarf.cpp::EmitDwarfLineTable. We should find a way to share this

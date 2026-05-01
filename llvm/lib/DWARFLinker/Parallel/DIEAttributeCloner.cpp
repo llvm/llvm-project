@@ -514,8 +514,34 @@ size_t DIEAttributeCloner::cloneScalarAttr(
   } else if (AttrSpec.Attr == dwarf::DW_AT_declaration && Value)
     AttrInfo.IsDeclaration = true;
 
-  return Generator.addScalarAttribute(AttrSpec.Attr, ResultingForm, Value)
-      .second;
+  auto Result =
+      Generator.addScalarAttribute(AttrSpec.Attr, ResultingForm, Value);
+  // Record DW_AT_LLVM_stmt_sequence so the attribute value can be
+  // rewritten with the correct .debug_line offset after the line table
+  // for this CU has been emitted. We also register a DebugOffsetPatch so
+  // that the final-section offset of .debug_line gets added when the
+  // section is placed in the combined output. The assert encodes
+  // dsymutil's placement policy: subprograms (which carry
+  // DW_AT_LLVM_stmt_sequence) are placed in compile units, not type
+  // units, so this attribute should never appear on a type-unit DIE.
+  if (AttrSpec.Attr == dwarf::DW_AT_LLVM_stmt_sequence) {
+    assert(OutUnit.isCompileUnit() &&
+           "DW_AT_LLVM_stmt_sequence on a non-compile-unit DIE");
+    // Resolve the attribute's stmt-sequence offset to the address of the
+    // referenced sequence's first row, so that after line-table emission
+    // the attribute can be matched to the output sequence by address.
+    std::optional<uint64_t> InputFirstAddr =
+        InUnit.getStmtSeqFirstAddress(Value);
+    OutUnit.getAsCompileUnit()->noteStmtSeqListAttribute(&Result.first,
+                                                         InputFirstAddr);
+    DebugInfoOutputSection.notePatchWithOffsetUpdate(
+        DebugOffsetPatch{
+            AttrOutOffset,
+            &OutUnit->getOrCreateSectionDescriptor(DebugSectionKind::DebugLine),
+            /*AddLocalValue=*/true},
+        PatchesOffsets);
+  }
+  return Result.second;
 }
 
 size_t DIEAttributeCloner::cloneBlockAttr(
