@@ -105,6 +105,8 @@ public:
       TTI::TargetCostKind CostKind,
       std::optional<FastMathFlags> FMF) const override;
 
+  bool shouldExpandReduction(const IntrinsicInst *II) const override;
+
   TTI::ReductionShuffle
   getPreferredExpandedReductionShuffle(const IntrinsicInst *II) const override;
 

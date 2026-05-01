@@ -480,6 +480,16 @@ InstructionCost WebAssemblyTTIImpl::getPartialReductionCost(
   return Invalid;
 }
 
+bool WebAssemblyTTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
+  switch (II->getIntrinsicID()) {
+  case Intrinsic::vector_reduce_fmaximum:
+  case Intrinsic::vector_reduce_fminimum:
+    return false;
+  default:
+    return BaseT::shouldExpandReduction(II);
+  }
+}
+
 TTI::ReductionShuffle WebAssemblyTTIImpl::getPreferredExpandedReductionShuffle(
     const IntrinsicInst *II) const {
 
