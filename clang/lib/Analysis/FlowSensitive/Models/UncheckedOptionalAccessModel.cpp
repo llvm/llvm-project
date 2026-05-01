@@ -71,6 +71,8 @@ static bool hasOptionalClassName(const CXXRecordDecl &RD) {
     return false;
   }
 
+  // this code could be removed if base::Optional and folly::Optional used
+  // [[clang::analyse_as_class("std::optional")]]
   if (RD.getName() == "Optional") {
     // Check whether namespace is "::base" or "::folly".
     const auto *N = dyn_cast_or_null<NamespaceDecl>(RD.getDeclContext());
@@ -78,12 +80,16 @@ static bool hasOptionalClassName(const CXXRecordDecl &RD) {
                             isFullyQualifiedNamespaceEqualTo(*N, "folly"));
   }
 
+  // this code could be removed if Optional_Base used
+  // [[clang::analyse_as_class("std::optional")]]
   if (RD.getName() == "Optional_Base") {
     const auto *N = dyn_cast_or_null<NamespaceDecl>(RD.getDeclContext());
     return N != nullptr &&
            isFullyQualifiedNamespaceEqualTo(*N, "bslstl", "BloombergLP");
   }
 
+  // this code could be removed if NullableValue used
+  // [[clang::analyse_as_class("std::optional")]]
   if (RD.getName() == "NullableValue") {
     const auto *N = dyn_cast_or_null<NamespaceDecl>(RD.getDeclContext());
     return N != nullptr &&
@@ -1069,6 +1075,8 @@ auto buildTransferMatchSwitch() {
       // optional::has_value, optional::hasValue
       // Of the supported optionals only folly::Optional uses hasValue, but this
       // will also pass for other types
+      // "hasValue" could be removed if folly::Optional used
+      // [[clang::analyse_as_method("std::optional::has_value")]] on hasValue()
       .CaseOfCFGStmt<CXXMemberCallExpr>(
           isOptionalMemberCallWithNameMatcher(
               anyOf(hasAnyName("has_value", "hasValue"),
@@ -1080,12 +1088,16 @@ auto buildTransferMatchSwitch() {
           isOptionalMemberCallWithNameMatcher(hasName("operator bool")),
           transferOptionalHasValueCall)
 
+      // this code could be removed if NullableValue used
+      // [[clang::analyse_as_inverse_method("std::optional::has_value")]] on isNull() *NYI
       // NullableValue::isNull
       // Only NullableValue has isNull
       .CaseOfCFGStmt<CXXMemberCallExpr>(
           isOptionalMemberCallWithNameMatcher(hasName("isNull")),
           transferOptionalIsNullCall)
 
+      // this code could be removed if NullableValue used
+      // [[clang::analyse_as_method("std::optional::emplace")]] on makeValue() and makeValueInplace()
       // NullableValue::makeValue, NullableValue::makeValueInplace
       // Only NullableValue has these methods, but this
       // will also pass for other types
