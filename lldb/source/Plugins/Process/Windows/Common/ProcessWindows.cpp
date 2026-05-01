@@ -656,8 +656,9 @@ void ProcessWindows::OnExitProcess(uint32_t exit_code) {
 
   if (m_pty) {
     m_pty->SetStopping(true);
-    m_stdio_communication.InterruptRead();
     m_pty->Close();
+    m_stdio_communication.InterruptRead();
+    m_stdio_communication.StopReadThread();
   }
 
   TargetSP target = CalculateTarget();
