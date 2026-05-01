@@ -415,7 +415,7 @@ void ProcessWindows::RefreshStateAfterStop() {
   // If we're at a BreakpointSite, mark this as an Unexecuted Breakpoint.
   // We'll clear that state if we've actually executed the breakpoint.
   BreakpointSiteSP site(GetBreakpointSiteList().FindByAddress(pc));
-  if (site && site->IsEnabled())
+  if (site && IsBreakpointSiteEnabled(*site))
     stop_thread->SetThreadStoppedAtUnexecutedBP(pc);
 
   switch (active_exception->GetExceptionCode()) {

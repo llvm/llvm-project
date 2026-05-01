@@ -1163,6 +1163,11 @@ OpFoldResult arith::SubFOp::fold(FoldAdaptor adaptor) {
       });
 }
 
+void arith::SubFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                                MLIRContext *context) {
+  patterns.add<SubFOfNegZero>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // MaximumFOp
 //===----------------------------------------------------------------------===//

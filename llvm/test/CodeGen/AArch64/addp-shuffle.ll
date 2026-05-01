@@ -562,3 +562,70 @@ entry:
   %1 = extractelement <2 x i64> %0, i32 0
   ret i64 %1
 }
+
+define <16 x i8> @xtn_uzp2_v16i8_add(<16 x i8> %x) {
+; CHECK-LABEL: xtn_uzp2_v16i8_add:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    ret
+  %e = shufflevector <16 x i8> %x, <16 x i8> poison, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %o = shufflevector <16 x i8> %x, <16 x i8> poison, <16 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %r = add <16 x i8> %e, %o
+  ret <16 x i8> %r
+}
+
+define <16 x i8> @xtn_uzp2_v16i8_or(<16 x i8> %x) {
+; CHECK-LABEL: xtn_uzp2_v16i8_or:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    ret
+  %e = shufflevector <16 x i8> %x, <16 x i8> poison, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %o = shufflevector <16 x i8> %x, <16 x i8> poison, <16 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %r = or disjoint <16 x i8> %e, %o
+  ret <16 x i8> %r
+}
+
+define <8 x i16> @xtn_uzp2_v8i16_add(<8 x i16> %x) {
+; CHECK-LABEL: xtn_uzp2_v8i16_add:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    addp v0.8h, v0.8h, v0.8h
+; CHECK-NEXT:    ret
+  %e = shufflevector <8 x i16> %x, <8 x i16> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 poison, i32 poison, i32 poison, i32 poison>
+  %o = shufflevector <8 x i16> %x, <8 x i16> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
+  %r = add <8 x i16> %e, %o
+  ret <8 x i16> %r
+}
+
+define <8 x i16> @xtn_uzp2_v8i16_or(<8 x i16> %x) {
+; CHECK-LABEL: xtn_uzp2_v8i16_or:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    addp v0.8h, v0.8h, v0.8h
+; CHECK-NEXT:    ret
+  %e = shufflevector <8 x i16> %x, <8 x i16> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 poison, i32 poison, i32 poison, i32 poison>
+  %o = shufflevector <8 x i16> %x, <8 x i16> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
+  %r = or disjoint <8 x i16> %e, %o
+  ret <8 x i16> %r
+}
+
+define <4 x i32> @xtn_uzp2_v4i32_add(<4 x i32> %x) {
+; CHECK-LABEL: xtn_uzp2_v4i32_add:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    addp v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    ret
+  %e = shufflevector <4 x i32> %x, <4 x i32> poison, <4 x i32> <i32 0, i32 2, i32 poison, i32 poison>
+  %o = shufflevector <4 x i32> %x, <4 x i32> poison, <4 x i32> <i32 1, i32 3, i32 poison, i32 poison>
+  %r = add <4 x i32> %e, %o
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @xtn_uzp2_v4i32_or(<4 x i32> %x) {
+; CHECK-LABEL: xtn_uzp2_v4i32_or:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    addp v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    ret
+  %e = shufflevector <4 x i32> %x, <4 x i32> poison, <4 x i32> <i32 0, i32 2, i32 poison, i32 poison>
+  %o = shufflevector <4 x i32> %x, <4 x i32> poison, <4 x i32> <i32 1, i32 3, i32 poison, i32 poison>
+  %r = or disjoint <4 x i32> %e, %o
+  ret <4 x i32> %r
+}
+

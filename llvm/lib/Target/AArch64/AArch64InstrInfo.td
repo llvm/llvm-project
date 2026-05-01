@@ -11056,6 +11056,20 @@ def : Pat<(v8i8  (add_like (trunc (v8i16 (bitconvert FPR128:$Rn))),
                            (extract_subvector (AArch64uzp2 (v16i8 FPR128:$Rn), undef), (i64 0)))),
           (EXTRACT_SUBREG (ADDPv16i8 $Rn, $Rn), dsub)>;
 
+multiclass PairwiseXtnUzp2BinOpWide<SDPatternOperator Op, ValueType VT,
+                                    ValueType HalfVT, ValueType WideEltVT,
+                                    Instruction Inst> {
+  def : Pat<(VT (Op (VT (concat_vectors
+                          (HalfVT (trunc (WideEltVT (bitconvert (VT FPR128:$Rn))))),
+                          (HalfVT undef))),
+                    (VT (AArch64uzp2 (VT FPR128:$Rn), (VT undef))))),
+            (Inst $Rn, $Rn)>;
+}
+
+defm : PairwiseXtnUzp2BinOpWide<add_like, v16i8, v8i8,  v8i16, ADDPv16i8>;
+defm : PairwiseXtnUzp2BinOpWide<add_like, v8i16, v4i16, v4i32, ADDPv8i16>;
+defm : PairwiseXtnUzp2BinOpWide<add_like, v4i32, v2i32, v2i64, ADDPv4i32>;
+
 defm : PairwiseZIPBinOp<fadd, v2f64, FPR128, FADDPv2f64>;
 defm : PairwiseZIPBinOp<fadd, v2f32, FPR64,  FADDPv2f32>;
 defm : PairwiseUZPBinOp<fadd, v4f32, FPR128, FADDPv4f32>;
