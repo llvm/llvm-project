@@ -1375,20 +1375,21 @@ MCObjectFileInfo::getPseudoProbeDescSection(StringRef FuncName,
   // COMDAT sections instead of being silently dropped (ELF) or causing linker
   // errors (COFF). Duplicate GUIDs with mismatching hashes are detected
   // during descriptor decoding and reported by llvm-profgen.
-  std::string HashSuffix = "." + Twine::utohexstr(FuncHash).str();
   auto ObjFileType = Ctx->getObjectFileType();
   if (ObjFileType == MCContext::IsELF) {
     auto *S = static_cast<MCSectionELF *>(PseudoProbeDescSection);
     auto Flags = S->getFlags() | ELF::SHF_GROUP;
     return Ctx->getELFSection(
         S->getName(), S->getType(), Flags, S->getEntrySize(),
-        S->getName() + "_" + FuncName + HashSuffix, /*IsComdat=*/true);
+        S->getName() + "_" + FuncName + "." + Twine::utohexstr(FuncHash),
+        /*IsComdat=*/true);
   } else if (ObjFileType == MCContext::IsCOFF) {
     auto *S = static_cast<MCSectionCOFF *>(PseudoProbeDescSection);
     unsigned Characteristics =
         S->getCharacteristics() | COFF::IMAGE_SCN_LNK_COMDAT;
     std::string COMDATSymName =
-        (S->getName() + "_" + FuncName + HashSuffix).str();
+        (S->getName() + "_" + FuncName + "." + Twine::utohexstr(FuncHash))
+            .str();
     return Ctx->getCOFFSection(S->getName(), Characteristics, COMDATSymName,
                                COFF::IMAGE_COMDAT_SELECT_EXACT_MATCH);
   }
