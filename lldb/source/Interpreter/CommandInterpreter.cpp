@@ -3100,14 +3100,24 @@ void CommandInterpreter::SetSynchronous(bool value) {
   m_synchronous_execution = value;
 }
 
-void CommandInterpreter::OutputFormattedHelpText(Stream &strm,
-                                                 llvm::StringRef prefix,
-                                                 llvm::StringRef help_text) {
+void CommandInterpreter::OutputFormattedHelpText(
+    Stream &strm, llvm::StringRef prefix, llvm::StringRef help_text,
+    std::optional<Stream::HighlightSettings> highlight) {
   const uint32_t max_columns = m_debugger.GetTerminalWidth();
 
   size_t line_width_max = max_columns - prefix.size();
   if (line_width_max < 16)
     line_width_max = help_text.size() + prefix.size();
+
+  // Apply highlighting to the full text before line splitting so that matches
+  // spanning a line break are highlighted on both lines.
+  std::string highlighted_storage;
+  if (highlight) {
+    StreamString ss;
+    ss.PutCStringColorHighlighted(help_text, highlight);
+    highlighted_storage = std::string(ss.GetString());
+    help_text = highlighted_storage;
+  }
 
   strm.IndentMore(prefix.size());
   bool prefixed_yet = false;
@@ -3117,7 +3127,7 @@ void CommandInterpreter::OutputFormattedHelpText(Stream &strm,
   while (!help_text.empty()) {
     // Prefix the first line, indent subsequent lines to line up
     if (!prefixed_yet) {
-      strm << prefix;
+      strm.PutCStringColorHighlighted(prefix, highlight);
       prefixed_yet = true;
     } else
       strm.Indent();
@@ -3144,15 +3154,15 @@ void CommandInterpreter::OutputFormattedHelpText(Stream &strm,
   strm.IndentLess(prefix.size());
 }
 
-void CommandInterpreter::OutputFormattedHelpText(Stream &strm,
-                                                 llvm::StringRef word_text,
-                                                 llvm::StringRef separator,
-                                                 llvm::StringRef help_text,
-                                                 size_t max_word_len) {
+void CommandInterpreter::OutputFormattedHelpText(
+    Stream &strm, llvm::StringRef word_text, llvm::StringRef separator,
+    llvm::StringRef help_text, size_t max_word_len,
+    std::optional<Stream::HighlightSettings> highlight) {
   StreamString prefix_stream;
   prefix_stream.Printf("  %-*s %*s ", (int)max_word_len, word_text.data(),
                        (int)separator.size(), separator.data());
-  OutputFormattedHelpText(strm, prefix_stream.GetString(), help_text);
+  OutputFormattedHelpText(strm, prefix_stream.GetString(), help_text,
+                          highlight);
 }
 
 void CommandInterpreter::OutputHelpText(Stream &strm, llvm::StringRef word_text,
