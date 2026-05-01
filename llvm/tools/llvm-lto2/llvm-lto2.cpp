@@ -444,7 +444,7 @@ static int run(int argc, char **argv) {
   };
 
   ThinBackend Backend;
-  if (ThinLTODistributedIndexes || !DTLTODistributor.empty())
+  if (ThinLTODistributedIndexes)
     Backend = createWriteIndexesThinBackend(llvm::hardware_concurrency(Threads),
                                             /*OldPrefix=*/"",
                                             /*NewPrefix=*/"",
@@ -478,10 +478,10 @@ static int run(int argc, char **argv) {
   std::unique_ptr<LTO> Lto;
   if (!DTLTODistributor.empty()) {
     Lto = std::make_unique<DTLTO>(
-        std::move(Conf), std::move(Backend), 1, LTOMode, nullptr,
-        ThinLTOEmitIndexes, ThinLTOEmitImports, OutputFilename,
-        DTLTODistributor, DTLTODistributorArgsSV, DTLTOCompiler,
-        DTLTOCompilerPrependArgsSV, DTLTOCompilerArgsSV, AddBuffer, SaveTemps);
+        std::move(Conf), 1, LTOMode, nullptr, ThinLTOEmitIndexes,
+        ThinLTOEmitImports, OutputFilename, DTLTODistributor,
+        DTLTODistributorArgsSV, DTLTOCompiler, DTLTOCompilerPrependArgsSV,
+        DTLTOCompilerArgsSV, AddBuffer, SaveTemps);
   } else {
     Lto =
         std::make_unique<LTO>(std::move(Conf), std::move(Backend), 1, LTOMode);

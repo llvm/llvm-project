@@ -184,7 +184,7 @@ BitcodeCompiler::BitcodeCompiler(Ctx &ctx) : ctx(ctx) {
   // Initialize ltoObj.
   lto::ThinBackend backend;
   auto onIndexWrite = [&](StringRef s) { thinIndices.erase(s); };
-  if (ctx.arg.thinLTOIndexOnly || !ctx.arg.dtltoDistributor.empty()) {
+  if (ctx.arg.thinLTOIndexOnly) {
     backend = lto::createWriteIndexesThinBackend(
         llvm::hardware_concurrency(ctx.arg.thinLTOJobs),
         std::string(ctx.arg.thinLTOPrefixReplaceOld),
@@ -209,8 +209,8 @@ BitcodeCompiler::BitcodeCompiler(Ctx &ctx) : ctx(ctx) {
                                         ltoModes[ctx.arg.ltoKind]);
   else
     ltoObj = std::make_unique<lto::DTLTO>(
-        createConfig(ctx), backend, ctx.arg.ltoPartitions,
-        ltoModes[ctx.arg.ltoKind], onIndexWrite, ctx.arg.thinLTOEmitIndexFiles,
+        createConfig(ctx), ctx.arg.ltoPartitions, ltoModes[ctx.arg.ltoKind],
+        onIndexWrite, ctx.arg.thinLTOEmitIndexFiles,
         ctx.arg.thinLTOEmitImportsFiles, ctx.arg.outputFile,
         ctx.arg.dtltoDistributor, ctx.arg.dtltoDistributorArgs,
         ctx.arg.dtltoCompiler, ctx.arg.dtltoCompilerPrependArgs,

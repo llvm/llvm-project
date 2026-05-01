@@ -47,17 +47,15 @@ class DTLTO : public LTO {
   using Base = LTO;
 
 public:
-  LLVM_ABI DTLTO(Config Conf, ThinBackend Backend,
-                 unsigned ParallelCodeGenParallelismLevel, LTOKind LTOMode,
-                 IndexWriteCallback OnWrite, bool EmitIndexFiles,
-                 bool EmitImportsFiles, StringRef LinkerOutputFile,
-                 StringRef Distributor, ArrayRef<StringRef> DistributorArgs,
-                 StringRef RemoteCompiler,
+  LLVM_ABI DTLTO(Config Conf, unsigned ParallelCodeGenParallelismLevel,
+                 LTOKind LTOMode, IndexWriteCallback OnWrite,
+                 bool EmitIndexFiles, bool EmitImportsFiles,
+                 StringRef LinkerOutputFile, StringRef Distributor,
+                 ArrayRef<StringRef> DistributorArgs, StringRef RemoteCompiler,
                  ArrayRef<StringRef> RemoteCompilerPrependArgs,
                  ArrayRef<StringRef> RemoteCompilerArgs,
                  AddBufferFn AddBufferArg, bool SaveTempsArg)
-      : Base(std::move(Conf), Backend, ParallelCodeGenParallelismLevel,
-             LTOMode),
+      : Base(std::move(Conf), {}, ParallelCodeGenParallelismLevel, LTOMode),
         AddBuffer(AddBufferArg), SaveTemps(SaveTempsArg),
         ShouldEmitIndexFiles(EmitIndexFiles),
         ShouldEmitImportFiles(EmitImportsFiles), OnWriteCb(OnWrite),
