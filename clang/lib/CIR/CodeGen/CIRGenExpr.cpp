@@ -303,6 +303,92 @@ Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr,
       /*forPointeeType=*/true, baseInfo);
 }
 
+void CIRGenFunction::emitStoreThroughExtVectorComponentLValue(RValue src,
+                                                              LValue dst) {
+  auto getScalarSizeInBits = [&](mlir::Type ty) -> unsigned {
+    mlir::Type scalarTy = mlir::isa<cir::VectorType>(ty)
+                              ? mlir::cast<cir::VectorType>(ty).getElementType()
+                              : ty;
+    cir::CIRDataLayout dl = cgm.getDataLayout();
+    return dl.getTypeSizeInBits(scalarTy).getFixedValue();
+  };
+
+  mlir::Value srcVal = src.getValue();
+  Address dstAddr = dst.getExtVectorAddress();
+  if (getScalarSizeInBits(dstAddr.getElementType()) >
+      getScalarSizeInBits(srcVal.getType())) {
+    cgm.errorNYI(
+        dst.getPointer().getLoc(),
+        "emitStoreThroughExtVectorComponentLValue: dstTySize > srcTysize");
+    return;
+  }
+
+  if (getLangOpts().HLSL) {
+    cgm.errorNYI(dst.getPointer().getLoc(),
+                 "emitStoreThroughExtVectorComponentLValue: HLSL");
+    return;
+  }
+
+  // This access turns into a read/modify/write of the vector.  Load the input
+  // value now.
+  mlir::Location loc = dst.getExtVectorPointer().getLoc();
+
+  mlir::ArrayAttr elts = dst.getExtVectorElts();
+
+  mlir::Value vec = builder.createLoad(loc, dstAddr, dst.isVolatile());
+  if (const auto *vecTy = dst.getType()->getAs<clang::VectorType>()) {
+    unsigned numSrcElts = vecTy->getNumElements();
+    unsigned numDstElts = cast<cir::VectorType>(vec.getType()).getSize();
+    if (numDstElts == numSrcElts) {
+      // Use shuffle vector is the src and destination are the same number of
+      // elements and restore the vector mask since it is on the side it will be
+      // stored.
+      SmallVector<int64_t> mask(numDstElts);
+      for (unsigned i = 0; i != numDstElts; ++i)
+        mask[getAccessedFieldNo(i, elts)] = i;
+
+      vec = builder.createVecShuffle(loc, srcVal, mask);
+    } else if (numDstElts > numSrcElts) {
+      // Extended the source vector to the same length and then shuffle it
+      // into the destination.
+      // FIXME: since we're shuffling with undef, can we just use the indices
+      //        into that?  This could be simpler.
+      SmallVector<int64_t> extMask(numDstElts, -1);
+      std::iota(extMask.begin(), extMask.begin() + numSrcElts, 0);
+
+      mlir::Value extSrcVal = builder.createVecShuffle(loc, srcVal, extMask);
+
+      // build identity
+      SmallVector<int64_t> mask(numDstElts);
+      std::iota(mask.begin(), mask.begin() + numDstElts, 0);
+
+      // When the vector size is odd and .odd or .hi is used, the last element
+      // of the Elts constant array will be one past the size of the vector.
+      // Ignore the last element here, if it is greater than the mask size.
+      if ((unsigned)getAccessedFieldNo(numSrcElts - 1, elts) == mask.size())
+        numSrcElts--;
+
+      // modify when what gets shuffled in
+      for (unsigned i = 0; i != numSrcElts; ++i)
+        mask[getAccessedFieldNo(i, elts)] = i + numDstElts;
+
+      vec = builder.createVecShuffle(loc, vec, extSrcVal, mask);
+    } else {
+      // We should never shorten the vector
+      llvm_unreachable("unexpected shorten vector length");
+    }
+  } else {
+    // If the Src is a scalar (not a vector), and the target is a vector it
+    // must be updating one element.
+    unsigned inIdx = getAccessedFieldNo(0, elts);
+    cir::ConstantOp elt = builder.getSInt64(inIdx, loc);
+    vec = cir::VecInsertOp::create(builder, loc, vec, srcVal, elt);
+  }
+
+  builder.createStore(loc, vec, dst.getExtVectorAddress(),
+                      dst.isVolatileQualified());
+}
+
 void CIRGenFunction::emitStoreThroughLValue(RValue src, LValue dst,
                                             bool isInit) {
   if (!dst.isSimple()) {
@@ -316,6 +402,9 @@ void CIRGenFunction::emitStoreThroughLValue(RValue src, LValue dst,
       builder.createStore(loc, newVector, dst.getVectorAddress());
       return;
     }
+
+    if (dst.isExtVectorElt())
+      return emitStoreThroughExtVectorComponentLValue(src, dst);
 
     assert(dst.isBitField() && "Unknown LValue type");
     emitStoreThroughBitfieldLValue(src, dst);
