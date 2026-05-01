@@ -384,3 +384,72 @@ void foo() {
   if (!vec.empty())
     vec[0].x = 0;
 }
+
+// Custom optional-like type using analyse_as_class / analyse_as_method attributes.
+template <typename T>
+class [[clang::analyse_as_class("std::optional")]] CustomOptional {
+public:
+  [[clang::analyse_as_method("std::optional::has_value")]] bool isEngaged() const;
+  [[clang::analyse_as_method("std::optional::value")]] T &retrieve();
+  [[clang::analyse_as_method("std::optional::value")]] const T &retrieve() const;
+  [[clang::analyse_as_method("std::optional::emplace")]] T &fill(T val);
+  [[clang::analyse_as_method("std::optional::reset")]] void clear();
+};
+
+void custom_unchecked_access(CustomOptional<int> opt) {
+  opt.retrieve();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
+}
+
+void custom_checked_access(CustomOptional<int> opt) {
+  if (opt.isEngaged()) {
+    opt.retrieve();
+  }
+}
+
+void custom_emplace_then_access(CustomOptional<int> opt) {
+  opt.fill(42);
+  opt.retrieve();
+}
+
+void custom_clear_then_access(CustomOptional<int> opt) {
+  opt.fill(42);
+  opt.clear();
+  opt.retrieve();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
+}
+
+// Custom optional-like type using standard method names — recognised via
+// analyse_as_class alone, without analyse_as_method attributes.
+template <typename T>
+class [[clang::analyse_as_class("std::optional")]] StdNamedOptional {
+public:
+  bool has_value() const;
+  T &value();
+  const T &value() const;
+  T &emplace(T val);
+  void reset();
+};
+
+void std_named_unchecked_access(StdNamedOptional<int> opt) {
+  opt.value();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
+}
+
+void std_named_checked_access(StdNamedOptional<int> opt) {
+  if (opt.has_value()) {
+    opt.value();
+  }
+}
+
+void std_named_emplace_then_access(StdNamedOptional<int> opt) {
+  opt.emplace(42);
+  opt.value();
+}
+
+void std_named_reset_then_access(StdNamedOptional<int> opt) {
+  opt.emplace(42);
+  opt.reset();
+  opt.value();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
+}
