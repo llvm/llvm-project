@@ -844,10 +844,10 @@ void AddDebugInfoPass::handleOnlyClause(
         }
       }
 
-    if (isInRenames)
-      continue;
+      if (isInRenames)
+        continue;
 
-    if (auto importedDecl = createImportedDeclForGlobal(
+      if (auto importedDecl = createImportedDeclForGlobal(
               symbolRef.getValue(), spAttr, fileAttr, mlir::StringAttr(),
               symbolTable))
         importedModules.insert(*importedDecl);
