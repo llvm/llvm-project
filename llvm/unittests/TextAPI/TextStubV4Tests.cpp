@@ -1315,16 +1315,15 @@ TEST(TBDv4, SkipUnknownInFullFile) {
   TBDFile File = std::move(Result.get());
 
   TargetList ExpectedTargets = {
-      Target(AK_arm64, PLATFORM_MACOS),
       Target(AK_x86_64, PLATFORM_MACOS),
+      Target(AK_arm64, PLATFORM_MACOS),
   };
-  EXPECT_EQ(ExpectedTargets.size(), llvm::size(File->targets()));
+  EXPECT_EQ(2U, llvm::size(File->targets()));
   for (const auto &T : File->targets())
     EXPECT_TRUE(llvm::is_contained(ExpectedTargets, T));
 
   auto &Umbrellas = File->umbrellas();
-  EXPECT_EQ(ExpectedTargets.size(),
-            (size_t)std::distance(Umbrellas.begin(), Umbrellas.end()));
+  EXPECT_EQ(2U, std::distance(Umbrellas.begin(), Umbrellas.end()));
   for (const auto &U : Umbrellas)
     EXPECT_TRUE(llvm::is_contained(ExpectedTargets, U.first));
 
@@ -1341,7 +1340,7 @@ TEST(TBDv4, SkipUnknownInFullFile) {
   EXPECT_EQ(1, std::distance(Exports.begin(), Exports.end()));
   const Symbol *Sym = *Exports.begin();
   EXPECT_EQ("_sym", Sym->getName());
-  EXPECT_EQ(ExpectedTargets.size(), llvm::size(Sym->targets()));
+  EXPECT_EQ(2U, llvm::size(Sym->targets()));
   for (const auto &T : Sym->targets())
     EXPECT_TRUE(llvm::is_contained(ExpectedTargets, T));
 }
