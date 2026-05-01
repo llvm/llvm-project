@@ -14071,7 +14071,10 @@ static SDValue PerformSUBCombine(SDNode *N,
 static SDValue PerformVMULCombine(SDNode *N,
                                   TargetLowering::DAGCombinerInfo &DCI,
                                   const ARMSubtarget *Subtarget) {
-  if (!Subtarget->hasVMLxForwarding())
+
+  EVT VT = N->getValueType(0);
+  if (!Subtarget->hasVMLxForwarding() ||
+      (!VT.is64BitVector() && !VT.is128BitVector()))
     return SDValue();
 
   SelectionDAG &DAG = DCI.DAG;
@@ -14090,7 +14093,6 @@ static SDValue PerformVMULCombine(SDNode *N,
   if (N0 == N1)
     return SDValue();
 
-  EVT VT = N->getValueType(0);
   SDLoc DL(N);
   SDValue N00 = N0->getOperand(0);
   SDValue N01 = N0->getOperand(1);
@@ -14102,7 +14104,7 @@ static SDValue PerformVMULCombine(SDNode *N,
 static SDValue PerformMVEVMULLCombine(SDNode *N, SelectionDAG &DAG,
                                       const ARMSubtarget *Subtarget) {
   EVT VT = N->getValueType(0);
-  if (VT != MVT::v2i64)
+  if (!Subtarget->hasMVEIntegerOps() || VT != MVT::v2i64)
     return SDValue();
 
   SDValue N0 = N->getOperand(0);
@@ -14164,14 +14166,12 @@ static SDValue PerformMVEVMULLCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-static SDValue PerformMULCombine(SDNode *N,
+static SDValue PerformMULCombine(SDNode *N, SelectionDAG &DAG,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  const ARMSubtarget *Subtarget) {
-  SelectionDAG &DAG = DCI.DAG;
 
-  EVT VT = N->getValueType(0);
-  if (Subtarget->hasMVEIntegerOps() && VT == MVT::v2i64)
-    return PerformMVEVMULLCombine(N, DAG, Subtarget);
+  if (SDValue Val = PerformMVEVMULLCombine(N, DAG, Subtarget))
+    return Val;
 
   if (Subtarget->isThumb1Only())
     return SDValue();
@@ -14179,74 +14179,208 @@ static SDValue PerformMULCombine(SDNode *N,
   if (DCI.isBeforeLegalize() || DCI.isCalledByLegalizer())
     return SDValue();
 
-  if (VT.is64BitVector() || VT.is128BitVector())
-    return PerformVMULCombine(N, DCI, Subtarget);
-  if (VT != MVT::i32)
-    return SDValue();
+  if (SDValue Val = PerformVMULCombine(N, DCI, Subtarget))
+    return Val;
 
-  ConstantSDNode *C = dyn_cast<ConstantSDNode>(N->getOperand(1));
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  SDValue MulOper;
+  unsigned AddSubOpc;
+
+  if (!Subtarget->isThumb()) {
+    auto IsAddSubWith1 = [&](SDValue V) -> bool {
+      AddSubOpc = V->getOpcode();
+      if ((AddSubOpc == ISD::ADD || AddSubOpc == ISD::SUB) && V->hasOneUse()) {
+        SDValue Opnd = V->getOperand(1);
+        MulOper = V->getOperand(0);
+        if (AddSubOpc == ISD::SUB)
+          std::swap(Opnd, MulOper);
+        if (auto C = dyn_cast<ConstantSDNode>(Opnd))
+          return C->isOne();
+      }
+      return false;
+    };
+
+    if (IsAddSubWith1(N0)) {
+      SDValue MulVal = DAG.getNode(ISD::MUL, DL, VT, N1, MulOper);
+      return DAG.getNode(AddSubOpc, DL, VT, N1, MulVal);
+    }
+
+    if (IsAddSubWith1(N1)) {
+      SDValue MulVal = DAG.getNode(ISD::MUL, DL, VT, N0, MulOper);
+      return DAG.getNode(AddSubOpc, DL, VT, N0, MulVal);
+    }
+  }
+
+  // The below optimizations require a constant RHS.
+  ConstantSDNode *C = dyn_cast<ConstantSDNode>(N1);
   if (!C)
     return SDValue();
 
-  int64_t MulAmt = C->getSExtValue();
-  unsigned ShiftAmt = llvm::countr_zero<uint64_t>(MulAmt);
+  const APInt &ConstValue = C->getAPIntValue();
 
-  ShiftAmt = ShiftAmt & (32 - 1);
-  SDValue V = N->getOperand(0);
-  SDLoc DL(N);
-
-  SDValue Res;
-  MulAmt >>= ShiftAmt;
-
-  if (MulAmt >= 0) {
-    if (llvm::has_single_bit<uint32_t>(MulAmt - 1)) {
-      // (mul x, 2^N + 1) => (add (shl x, N), x)
-      Res = DAG.getNode(ISD::ADD, DL, VT,
-                        V,
-                        DAG.getNode(ISD::SHL, DL, VT,
-                                    V,
-                                    DAG.getConstant(Log2_32(MulAmt - 1), DL,
-                                                    MVT::i32)));
-    } else if (llvm::has_single_bit<uint32_t>(MulAmt + 1)) {
-      // (mul x, 2^N - 1) => (sub (shl x, N), x)
-      Res = DAG.getNode(ISD::SUB, DL, VT,
-                        DAG.getNode(ISD::SHL, DL, VT,
-                                    V,
-                                    DAG.getConstant(Log2_32(MulAmt + 1), DL,
-                                                    MVT::i32)),
-                        V);
-    } else
+  unsigned TrailingZeroes = ConstValue.countr_zero();
+  if (TrailingZeroes && !Subtarget->isThumb()) {
+    // Conservatively do not lower to shift+add+shift if the mul might be
+    // folded into smul or umul.
+    if (N0->hasOneUse() && (isSignExtended(N0.getNode(), DAG) ||
+                            isZeroExtended(N0.getNode(), DAG)))
       return SDValue();
-  } else {
-    uint64_t MulAmtAbs = -MulAmt;
-    if (llvm::has_single_bit<uint32_t>(MulAmtAbs + 1)) {
-      // (mul x, -(2^N - 1)) => (sub x, (shl x, N))
-      Res = DAG.getNode(ISD::SUB, DL, VT,
-                        V,
-                        DAG.getNode(ISD::SHL, DL, VT,
-                                    V,
-                                    DAG.getConstant(Log2_32(MulAmtAbs + 1), DL,
-                                                    MVT::i32)));
-    } else if (llvm::has_single_bit<uint32_t>(MulAmtAbs - 1)) {
-      // (mul x, -(2^N + 1)) => - (add (shl x, N), x)
-      Res = DAG.getNode(ISD::ADD, DL, VT,
-                        V,
-                        DAG.getNode(ISD::SHL, DL, VT,
-                                    V,
-                                    DAG.getConstant(Log2_32(MulAmtAbs - 1), DL,
-                                                    MVT::i32)));
-      Res = DAG.getNode(ISD::SUB, DL, VT,
-                        DAG.getConstant(0, DL, MVT::i32), Res);
-    } else
+    // Conservatively do not lower to shift+add+shift if the mul might be
+    // folded into madd or msub.
+    if (N->hasOneUse() && (N->user_begin()->getOpcode() == ISD::ADD ||
+                           N->user_begin()->getOpcode() == ISD::SUB))
       return SDValue();
   }
 
-  if (ShiftAmt != 0)
-    Res = DAG.getNode(ISD::SHL, DL, VT,
-                      Res, DAG.getConstant(ShiftAmt, DL, MVT::i32));
+  // Use ShiftedConstValue instead of ConstValue to support both shift+add/sub
+  // and shift+add+shift.
+  APInt ShiftedConstValue = ConstValue.ashr(TrailingZeroes);
+  unsigned ShiftAmt;
 
-  // Do not add new nodes to DAG combiner worklist.
-  DCI.CombineTo(N, Res, false);
+  auto Shl = [&](SDValue N0, unsigned N1) {
+    if (!N0.getNode())
+      return SDValue();
+    // If shift causes overflow, ignore this combine.
+    if (N1 >= N0.getValueSizeInBits())
+      return SDValue();
+    SDValue RHS = DAG.getConstant(N1, DL, MVT::i32);
+    return DAG.getNode(ISD::SHL, DL, VT, N0, RHS);
+  };
+  auto Add = [&](SDValue N0, SDValue N1) {
+    if (!N0.getNode() || !N1.getNode())
+      return SDValue();
+    return DAG.getNode(ISD::ADD, DL, VT, N0, N1);
+  };
+  auto Sub = [&](SDValue N0, SDValue N1) {
+    if (!N0.getNode() || !N1.getNode())
+      return SDValue();
+    return DAG.getNode(ISD::SUB, DL, VT, N0, N1);
+  };
+  auto Negate = [&](SDValue N) {
+    if (!N0.getNode())
+      return SDValue();
+    SDValue Zero = DAG.getConstant(0, DL, VT);
+    return DAG.getNode(ISD::SUB, DL, VT, Zero, N);
+  };
+
+  // Can the const C be decomposed into (1+2^M1)*(1+2^N1), eg:
+  // C = 45 is equal to (1+4)*(1+8), we don't decompose it into (1+2)*(16-1) as
+  // the (2^N - 1) can't be execused via a single instruction.
+  auto isPowPlusPlusConst = [](APInt C, APInt &M, APInt &N) {
+    unsigned BitWidth = C.getBitWidth();
+    for (unsigned i = 1; i < BitWidth / 2; i++) {
+      APInt Rem;
+      APInt X(BitWidth, (1 << i) + 1);
+      APInt::sdivrem(C, X, N, Rem);
+      APInt NVMinus1 = N - 1;
+      if (Rem == 0 && NVMinus1.isPowerOf2()) {
+        M = X;
+        return true;
+      }
+    }
+    return false;
+  };
+
+  // Can the const C be decomposed into (2^M + 1) * 2^N + 1), eg:
+  // C = 11 is equal to (1+4)*2+1, we don't decompose it into (1+2)*4-1 as
+  // the (2^N - 1) can't be execused via a single instruction.
+  auto isPowPlusPlusOneConst = [](APInt C, APInt &M, APInt &N) {
+    APInt CVMinus1 = C - 1;
+    if (CVMinus1.isNegative())
+      return false;
+    unsigned TrailingZeroes = CVMinus1.countr_zero();
+    APInt SCVMinus1 = CVMinus1.ashr(TrailingZeroes) - 1;
+    if (SCVMinus1.isPowerOf2()) {
+      unsigned BitWidth = SCVMinus1.getBitWidth();
+      M = APInt(BitWidth, SCVMinus1.logBase2());
+      N = APInt(BitWidth, TrailingZeroes);
+      return true;
+    }
+    return false;
+  };
+
+  // Can the const C be decomposed into (1 - (1 - 2^M) * 2^N), eg:
+  // C = 29 is equal to 1 - (1 - 2^3) * 2^2.
+  auto isPowMinusMinusOneConst = [](APInt C, APInt &M, APInt &N) {
+    APInt CVMinus1 = C - 1;
+    if (CVMinus1.isNegative())
+      return false;
+    unsigned TrailingZeroes = CVMinus1.countr_zero();
+    APInt CVPlus1 = CVMinus1.ashr(TrailingZeroes) + 1;
+    if (CVPlus1.isPowerOf2()) {
+      unsigned BitWidth = CVPlus1.getBitWidth();
+      M = APInt(BitWidth, CVPlus1.logBase2());
+      N = APInt(BitWidth, TrailingZeroes);
+      return true;
+    }
+    return false;
+  };
+
+  if (ConstValue.isNonNegative()) {
+    // (mul x, (2^N + 1) * 2^M) => (shl (add x, (shl x, N)), M)
+    // (mul x, 2^N - 1) => (sub (shl x, N), x)
+    // (mul x, (2^(N-M) - 1) * 2^M) => (sub (shl x, N), (shl x, M))
+    // (mul x, (2^M + 1) * (2^N + 1))
+    //     => MV = (add x, (shl x, M)); (add MV, (shl MV, N))
+    // (mul x, (2^M + 1) * 2^N + 1))
+    //     =>  MV = (add x, (shl x, M)); (add x, (shl MV, N)))
+    // (mul x, 1 - (1 - 2^M) * 2^N))
+    //     =>  MV = sub (x - (shl x, M)); sub (x - (shl MV, N))
+    APInt SCVMinus1 = ShiftedConstValue - 1;
+    APInt SCVPlus1 = ShiftedConstValue + 1;
+    APInt CVPlus1 = ConstValue + 1;
+    APInt CVM, CVN;
+    if (SCVMinus1.isPowerOf2()) {
+      ShiftAmt = SCVMinus1.logBase2();
+      return Shl(Add(N0, Shl(N0, ShiftAmt)), TrailingZeroes);
+    } else if (CVPlus1.isPowerOf2()) {
+      ShiftAmt = CVPlus1.logBase2();
+      return Sub(Shl(N0, ShiftAmt), N0);
+    } else if (SCVPlus1.isPowerOf2()) {
+      ShiftAmt = SCVPlus1.logBase2() + TrailingZeroes;
+      return Sub(Shl(N0, ShiftAmt), Shl(N0, TrailingZeroes));
+    }
+    if (isPowPlusPlusConst(ConstValue, CVM, CVN)) {
+      APInt CVMMinus1 = CVM - 1;
+      APInt CVNMinus1 = CVN - 1;
+      unsigned ShiftM1 = CVMMinus1.logBase2();
+      unsigned ShiftN1 = CVNMinus1.logBase2();
+
+      SDValue MVal = Add(N0, Shl(N0, ShiftM1));
+      return Add(MVal, Shl(MVal, ShiftN1));
+    }
+    if (isPowPlusPlusOneConst(ConstValue, CVM, CVN)) {
+
+      SDValue MVal = Add(N0, Shl(N0, CVM.getZExtValue()));
+      return Add(N0, Shl(MVal, CVN.getZExtValue()));
+    }
+
+    if (isPowMinusMinusOneConst(ConstValue, CVM, CVN)) {
+      SDValue MVal = Sub(N0, Shl(N0, CVM.getZExtValue()));
+      return Sub(N0, Shl(MVal, CVN.getZExtValue()));
+    }
+  } else {
+    // (mul x, -(2^N - 1)) => (sub x, (shl x, N))
+    // (mul x, -(2^N + 1)) => - (add x, (shl x, N)))
+    // (mul x, -(2^(N-M) - 1) * 2^M) => (sub (shl x, M), (shl x, N))
+    APInt SCVPlus1 = -ShiftedConstValue + 1;
+    APInt CVNegPlus1 = -ConstValue + 1;
+    APInt CVNegMinus1 = -ConstValue - 1;
+    if (CVNegPlus1.isPowerOf2()) {
+      ShiftAmt = CVNegPlus1.logBase2();
+      return Sub(N0, Shl(N0, ShiftAmt));
+    } else if (CVNegMinus1.isPowerOf2()) {
+      ShiftAmt = CVNegMinus1.logBase2();
+      return Negate(Add(N0, Shl(N0, ShiftAmt)));
+    } else if (SCVPlus1.isPowerOf2()) {
+      ShiftAmt = SCVPlus1.logBase2() + TrailingZeroes;
+      return Sub(Shl(N0, TrailingZeroes), Shl(N0, ShiftAmt));
+    }
+  }
+
   return SDValue();
 }
 
@@ -18961,7 +19095,8 @@ SDValue ARMTargetLowering::PerformDAGCombine(SDNode *N,
   case ARMISD::UMLAL:   return PerformUMLALCombine(N, DCI.DAG, Subtarget);
   case ISD::ADD:        return PerformADDCombine(N, DCI, Subtarget);
   case ISD::SUB:        return PerformSUBCombine(N, DCI, Subtarget);
-  case ISD::MUL:        return PerformMULCombine(N, DCI, Subtarget);
+  case ISD::MUL:
+    return PerformMULCombine(N, DCI.DAG, DCI, Subtarget);
   case ISD::OR:         return PerformORCombine(N, DCI, Subtarget);
   case ISD::XOR:        return PerformXORCombine(N, DCI, Subtarget);
   case ISD::AND:        return PerformANDCombine(N, DCI, Subtarget);

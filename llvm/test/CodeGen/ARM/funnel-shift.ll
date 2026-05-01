@@ -69,8 +69,9 @@ define i37 @fshl_i37(i37 %x, i37 %y, i37 %z) {
 ; SCALAR-NEXT:    sub r4, r5, r12
 ; SCALAR-NEXT:    add r4, r12, r4, lsr #1
 ; SCALAR-NEXT:    lsr r12, r4, #5
-; SCALAR-NEXT:    mov r4, #37
-; SCALAR-NEXT:    mls r5, r12, r4, r5
+; SCALAR-NEXT:    add r4, r12, r12, lsl #3
+; SCALAR-NEXT:    add r4, r12, r4, lsl #2
+; SCALAR-NEXT:    sub r5, r5, r4
 ; SCALAR-NEXT:    mov r4, r0
 ; SCALAR-NEXT:    tst r5, #32
 ; SCALAR-NEXT:    and r12, r5, #31
@@ -111,8 +112,9 @@ define i37 @fshl_i37(i37 %x, i37 %y, i37 %z) {
 ; NEON-NEXT:    sub r4, r12, lr
 ; NEON-NEXT:    add r4, lr, r4, lsr #1
 ; NEON-NEXT:    lsr lr, r4, #5
-; NEON-NEXT:    mov r4, #37
-; NEON-NEXT:    mls r12, lr, r4, r12
+; NEON-NEXT:    add r4, lr, lr, lsl #3
+; NEON-NEXT:    add r4, lr, r4, lsl #2
+; NEON-NEXT:    sub r12, r12, r4
 ; NEON-NEXT:    mov r4, r0
 ; NEON-NEXT:    tst r12, #32
 ; NEON-NEXT:    and lr, r12, #31
@@ -276,8 +278,9 @@ define i37 @fshr_i37(i37 %x, i37 %y, i37 %z) {
 ; SCALAR-NEXT:    sub r4, r5, r12
 ; SCALAR-NEXT:    add r4, r12, r4, lsr #1
 ; SCALAR-NEXT:    lsr r12, r4, #5
-; SCALAR-NEXT:    mov r4, #37
-; SCALAR-NEXT:    mls r5, r12, r4, r5
+; SCALAR-NEXT:    add r4, r12, r12, lsl #3
+; SCALAR-NEXT:    add r4, r12, r4, lsl #2
+; SCALAR-NEXT:    sub r5, r5, r4
 ; SCALAR-NEXT:    mov r4, #31
 ; SCALAR-NEXT:    add lr, r5, #27
 ; SCALAR-NEXT:    bic r12, r4, lr
@@ -319,8 +322,9 @@ define i37 @fshr_i37(i37 %x, i37 %y, i37 %z) {
 ; NEON-NEXT:    sub r4, r12, lr
 ; NEON-NEXT:    add r4, lr, r4, lsr #1
 ; NEON-NEXT:    lsr lr, r4, #5
-; NEON-NEXT:    mov r4, #37
-; NEON-NEXT:    mls r4, lr, r4, r12
+; NEON-NEXT:    add r4, lr, lr, lsl #3
+; NEON-NEXT:    add r4, lr, r4, lsl #2
+; NEON-NEXT:    sub r4, r12, r4
 ; NEON-NEXT:    add r12, r4, #27
 ; NEON-NEXT:    mov r4, #31
 ; NEON-NEXT:    bic lr, r4, r12

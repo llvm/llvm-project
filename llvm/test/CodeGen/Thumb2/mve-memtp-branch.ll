@@ -14,10 +14,9 @@ define i32 @a(i8 zeroext %b, ptr nocapture readonly %c, ptr nocapture readonly %
 ; CHECK-NEXT:    cmp r0, #2
 ; CHECK-NEXT:    bls.w .LBB0_12
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.us.preheader
-; CHECK-NEXT:    movw r5, :lower16:arr_183
+; CHECK-NEXT:    movw r12, :lower16:arr_183
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movt r5, :upper16:arr_183
-; CHECK-NEXT:    mov.w r12, #19
+; CHECK-NEXT:    movt r12, :upper16:arr_183
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    vmov.i32 q1, #0x0
 ; CHECK-NEXT:    vmov.i32 q2, #0x0
@@ -33,11 +32,13 @@ define i32 @a(i8 zeroext %b, ptr nocapture readonly %c, ptr nocapture readonly %
 ; CHECK-NEXT:    @ Child Loop BB0_8 Depth 2
 ; CHECK-NEXT:    @ Child Loop BB0_11 Depth 2
 ; CHECK-NEXT:    ldr.w r0, [r2, r3, lsl #2]
+; CHECK-NEXT:    add.w r4, r3, r3, lsl #3
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    ite ne
 ; CHECK-NEXT:    ldrbne r0, [r1, r3]
 ; CHECK-NEXT:    moveq r0, #0
-; CHECK-NEXT:    mla r3, r3, r12, r5
+; CHECK-NEXT:    add.w r3, r3, r4, lsl #1
+; CHECK-NEXT:    add r3, r12
 ; CHECK-NEXT:    add r3, r0
 ; CHECK-NEXT:    rsb.w r0, r0, #108
 ; CHECK-NEXT:    wlstp.8 lr, r0, .LBB0_5
@@ -52,7 +53,7 @@ define i32 @a(i8 zeroext %b, ptr nocapture readonly %c, ptr nocapture readonly %
 ; CHECK-NEXT:    ite ne
 ; CHECK-NEXT:    ldrbne r0, [r1, #1]
 ; CHECK-NEXT:    moveq r0, #0
-; CHECK-NEXT:    adds r3, r5, r0
+; CHECK-NEXT:    add.w r3, r12, r0
 ; CHECK-NEXT:    rsb.w r0, r0, #108
 ; CHECK-NEXT:    adds r3, #19
 ; CHECK-NEXT:    wlstp.8 lr, r0, .LBB0_7
@@ -67,7 +68,7 @@ define i32 @a(i8 zeroext %b, ptr nocapture readonly %c, ptr nocapture readonly %
 ; CHECK-NEXT:    ite ne
 ; CHECK-NEXT:    ldrbne r0, [r1, #1]
 ; CHECK-NEXT:    moveq r0, #0
-; CHECK-NEXT:    adds r3, r5, r0
+; CHECK-NEXT:    add.w r3, r12, r0
 ; CHECK-NEXT:    rsb.w r0, r0, #108
 ; CHECK-NEXT:    adds r3, #19
 ; CHECK-NEXT:    wlstp.8 lr, r0, .LBB0_9
@@ -82,12 +83,12 @@ define i32 @a(i8 zeroext %b, ptr nocapture readonly %c, ptr nocapture readonly %
 ; CHECK-NEXT:    ite ne
 ; CHECK-NEXT:    ldrbne r0, [r1, #1]
 ; CHECK-NEXT:    moveq r0, #0
-; CHECK-NEXT:    adds r3, r5, r0
+; CHECK-NEXT:    add.w r3, r12, r0
 ; CHECK-NEXT:    rsb.w r0, r0, #108
-; CHECK-NEXT:    add.w r4, r0, #15
+; CHECK-NEXT:    add.w r5, r0, #15
 ; CHECK-NEXT:    adds r3, #19
-; CHECK-NEXT:    lsrs r4, r4, #4
-; CHECK-NEXT:    cmp.w r4, #0
+; CHECK-NEXT:    lsrs r5, r5, #4
+; CHECK-NEXT:    cmp.w r5, #0
 ; CHECK-NEXT:    beq .LBB0_2
 ; CHECK-NEXT:  @ %bb.10: @ %land.end.us.2
 ; CHECK-NEXT:    @ in Loop: Header=BB0_3 Depth=1
@@ -132,13 +133,13 @@ define i32 @a(i8 zeroext %b, ptr nocapture readonly %c, ptr nocapture readonly %
 ; CHECK-NEXT:    ite ne
 ; CHECK-NEXT:    ldrbne r3, [r1, #1]
 ; CHECK-NEXT:    moveq r3, #0
-; CHECK-NEXT:    add.w r5, r12, r3
+; CHECK-NEXT:    add.w r4, r12, r3
 ; CHECK-NEXT:    rsb.w r3, r3, #108
-; CHECK-NEXT:    add.w r4, r5, #19
+; CHECK-NEXT:    add.w r5, r4, #19
 ; CHECK-NEXT:    wlstp.8 lr, r3, .LBB0_17
 ; CHECK-NEXT:  .LBB0_16: @ Parent Loop BB0_14 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    vstrb.8 q0, [r4], #16
+; CHECK-NEXT:    vstrb.8 q0, [r5], #16
 ; CHECK-NEXT:    letp lr, .LBB0_16
 ; CHECK-NEXT:  .LBB0_17: @ %for.cond.backedge
 ; CHECK-NEXT:    @ in Loop: Header=BB0_14 Depth=1

@@ -3839,52 +3839,6 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
     if (tryFMULFixed(N, dl))
       return;
     break;
-  case ISD::MUL:
-    if (Subtarget->isThumb1Only())
-      break;
-    if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(N->getOperand(1))) {
-      unsigned RHSV = C->getZExtValue();
-      if (!RHSV) break;
-      if (isPowerOf2_32(RHSV-1)) {  // 2^n+1?
-        unsigned ShImm = Log2_32(RHSV-1);
-        if (ShImm >= 32)
-          break;
-        SDValue V = N->getOperand(0);
-        ShImm = ARM_AM::getSORegOpc(ARM_AM::lsl, ShImm);
-        SDValue ShImmOp = CurDAG->getTargetConstant(ShImm, dl, MVT::i32);
-        SDValue Reg0 = CurDAG->getRegister(0, MVT::i32);
-        if (Subtarget->isThumb()) {
-          SDValue Ops[] = { V, V, ShImmOp, getAL(CurDAG, dl), Reg0, Reg0 };
-          CurDAG->SelectNodeTo(N, ARM::t2ADDrs, MVT::i32, Ops);
-          return;
-        } else {
-          SDValue Ops[] = { V, V, Reg0, ShImmOp, getAL(CurDAG, dl), Reg0,
-                            Reg0 };
-          CurDAG->SelectNodeTo(N, ARM::ADDrsi, MVT::i32, Ops);
-          return;
-        }
-      }
-      if (isPowerOf2_32(RHSV+1)) {  // 2^n-1?
-        unsigned ShImm = Log2_32(RHSV+1);
-        if (ShImm >= 32)
-          break;
-        SDValue V = N->getOperand(0);
-        ShImm = ARM_AM::getSORegOpc(ARM_AM::lsl, ShImm);
-        SDValue ShImmOp = CurDAG->getTargetConstant(ShImm, dl, MVT::i32);
-        SDValue Reg0 = CurDAG->getRegister(0, MVT::i32);
-        if (Subtarget->isThumb()) {
-          SDValue Ops[] = { V, V, ShImmOp, getAL(CurDAG, dl), Reg0, Reg0 };
-          CurDAG->SelectNodeTo(N, ARM::t2RSBrs, MVT::i32, Ops);
-          return;
-        } else {
-          SDValue Ops[] = { V, V, Reg0, ShImmOp, getAL(CurDAG, dl), Reg0,
-                            Reg0 };
-          CurDAG->SelectNodeTo(N, ARM::RSBrsi, MVT::i32, Ops);
-          return;
-        }
-      }
-    }
-    break;
   case ISD::AND: {
     // Check for unsigned bitfield extract
     if (tryV6T2BitfieldExtractOp(N, false))

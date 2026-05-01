@@ -193,18 +193,18 @@ define i1 @test_urem_even(i27 %X) nounwind {
 define i1 @test_urem_odd_setne(i4 %X) nounwind {
 ; ARM5-LABEL: test_urem_odd_setne:
 ; ARM5:       @ %bb.0:
-; ARM5-NEXT:    mov r1, #13
-; ARM5-NEXT:    mul r2, r0, r1
+; ARM5-NEXT:    add r1, r0, r0, lsl #1
+; ARM5-NEXT:    add r0, r0, r1, lsl #2
+; ARM5-NEXT:    and r1, r0, #15
 ; ARM5-NEXT:    mov r0, #0
-; ARM5-NEXT:    and r1, r2, #15
 ; ARM5-NEXT:    cmp r1, #3
 ; ARM5-NEXT:    movhi r0, #1
 ; ARM5-NEXT:    bx lr
 ;
 ; ARM6-LABEL: test_urem_odd_setne:
 ; ARM6:       @ %bb.0:
-; ARM6-NEXT:    mov r1, #13
-; ARM6-NEXT:    mul r0, r0, r1
+; ARM6-NEXT:    add r1, r0, r0, lsl #1
+; ARM6-NEXT:    add r0, r0, r1, lsl #2
 ; ARM6-NEXT:    and r1, r0, #15
 ; ARM6-NEXT:    mov r0, #0
 ; ARM6-NEXT:    cmp r1, #3
@@ -213,8 +213,8 @@ define i1 @test_urem_odd_setne(i4 %X) nounwind {
 ;
 ; ARM7-LABEL: test_urem_odd_setne:
 ; ARM7:       @ %bb.0:
-; ARM7-NEXT:    mov r1, #13
-; ARM7-NEXT:    mul r0, r0, r1
+; ARM7-NEXT:    add r1, r0, r0, lsl #1
+; ARM7-NEXT:    add r0, r0, r1, lsl #2
 ; ARM7-NEXT:    and r1, r0, #15
 ; ARM7-NEXT:    mov r0, #0
 ; ARM7-NEXT:    cmp r1, #3
@@ -223,8 +223,8 @@ define i1 @test_urem_odd_setne(i4 %X) nounwind {
 ;
 ; ARM8-LABEL: test_urem_odd_setne:
 ; ARM8:       @ %bb.0:
-; ARM8-NEXT:    mov r1, #13
-; ARM8-NEXT:    mul r0, r0, r1
+; ARM8-NEXT:    add r1, r0, r0, lsl #1
+; ARM8-NEXT:    add r0, r0, r1, lsl #2
 ; ARM8-NEXT:    and r1, r0, #15
 ; ARM8-NEXT:    mov r0, #0
 ; ARM8-NEXT:    cmp r1, #3
@@ -233,8 +233,8 @@ define i1 @test_urem_odd_setne(i4 %X) nounwind {
 ;
 ; NEON7-LABEL: test_urem_odd_setne:
 ; NEON7:       @ %bb.0:
-; NEON7-NEXT:    mov r1, #13
-; NEON7-NEXT:    mul r0, r0, r1
+; NEON7-NEXT:    add r1, r0, r0, lsl #1
+; NEON7-NEXT:    add r0, r0, r1, lsl #2
 ; NEON7-NEXT:    and r1, r0, #15
 ; NEON7-NEXT:    mov r0, #0
 ; NEON7-NEXT:    cmp r1, #3
@@ -243,8 +243,8 @@ define i1 @test_urem_odd_setne(i4 %X) nounwind {
 ;
 ; NEON8-LABEL: test_urem_odd_setne:
 ; NEON8:       @ %bb.0:
-; NEON8-NEXT:    mov r1, #13
-; NEON8-NEXT:    mul r0, r0, r1
+; NEON8-NEXT:    add r1, r0, r0, lsl #1
+; NEON8-NEXT:    add r0, r0, r1, lsl #2
 ; NEON8-NEXT:    and r1, r0, #15
 ; NEON8-NEXT:    mov r0, #0
 ; NEON8-NEXT:    cmp r1, #3

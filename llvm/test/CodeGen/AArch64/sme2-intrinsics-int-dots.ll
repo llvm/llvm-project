@@ -77,7 +77,7 @@ define void @udot_multi_za32_u16_vg1x4_tuple(i64 %stride, ptr %ptr) #1 {
 ; CHECK-NEXT:    mov w8, wzr
 ; CHECK-NEXT:    ld1b { z16.b, z20.b, z24.b, z28.b }, pn8/z, [x1]
 ; CHECK-NEXT:    ld1b { z17.b, z21.b, z25.b, z29.b }, pn8/z, [x1, x0]
-; CHECK-NEXT:    add x10, x9, x0
+; CHECK-NEXT:    add x10, x0, x9
 ; CHECK-NEXT:    ld1b { z18.b, z22.b, z26.b, z30.b }, pn8/z, [x1, x9]
 ; CHECK-NEXT:    ld1b { z19.b, z23.b, z27.b, z31.b }, pn8/z, [x1, x10]
 ; CHECK-NEXT:    udot za.s[w8, 0, vgx4], { z16.b - z19.b }, { z20.b - z23.b }
@@ -270,7 +270,7 @@ define void @usdot_multi_za32_u16_vg1x4_tuple(i64 %stride, ptr %ptr) #1 {
 ; CHECK-NEXT:    mov w8, wzr
 ; CHECK-NEXT:    ld1b { z16.b, z20.b, z24.b, z28.b }, pn8/z, [x1]
 ; CHECK-NEXT:    ld1b { z17.b, z21.b, z25.b, z29.b }, pn8/z, [x1, x0]
-; CHECK-NEXT:    add x10, x9, x0
+; CHECK-NEXT:    add x10, x0, x9
 ; CHECK-NEXT:    ld1b { z18.b, z22.b, z26.b, z30.b }, pn8/z, [x1, x9]
 ; CHECK-NEXT:    ld1b { z19.b, z23.b, z27.b, z31.b }, pn8/z, [x1, x10]
 ; CHECK-NEXT:    usdot za.s[w8, 0, vgx4], { z16.b - z19.b }, { z20.b - z23.b }
@@ -383,7 +383,7 @@ define void @sdot_multi_za32_u16_vg1x4_tuple(i64 %stride, ptr %ptr) #0 {
 ; CHECK-NEXT:    mov w8, wzr
 ; CHECK-NEXT:    ld1b { z16.b, z20.b, z24.b, z28.b }, pn8/z, [x1]
 ; CHECK-NEXT:    ld1b { z17.b, z21.b, z25.b, z29.b }, pn8/z, [x1, x0]
-; CHECK-NEXT:    add x10, x9, x0
+; CHECK-NEXT:    add x10, x0, x9
 ; CHECK-NEXT:    ld1b { z18.b, z22.b, z26.b, z30.b }, pn8/z, [x1, x9]
 ; CHECK-NEXT:    ld1b { z19.b, z23.b, z27.b, z31.b }, pn8/z, [x1, x10]
 ; CHECK-NEXT:    sdot za.s[w8, 0, vgx4], { z16.b - z19.b }, { z20.b - z23.b }
@@ -883,7 +883,7 @@ define void @usdot_single_za32_u16_vg1x4_tuple(ptr %ptr, i64 %stride, <vscale x 
 ; CHECK-NEXT:    str z23, [sp, #1, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov w8, wzr
 ; CHECK-NEXT:    str z22, [sp, #2, mul vl] // 16-byte Folded Spill
-; CHECK-NEXT:    add x10, x9, x1
+; CHECK-NEXT:    add x10, x1, x9
 ; CHECK-NEXT:    str z21, [sp, #3, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z20, [sp, #4, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z19, [sp, #5, mul vl] // 16-byte Folded Spill
@@ -1203,7 +1203,7 @@ define void @sudot_single_za32_u16_vg1x4_tuple(ptr %ptr, i64 %stride, <vscale x 
 ; CHECK-NEXT:    str z23, [sp, #1, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov w8, wzr
 ; CHECK-NEXT:    str z22, [sp, #2, mul vl] // 16-byte Folded Spill
-; CHECK-NEXT:    add x10, x9, x1
+; CHECK-NEXT:    add x10, x1, x9
 ; CHECK-NEXT:    str z21, [sp, #3, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z20, [sp, #4, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z19, [sp, #5, mul vl] // 16-byte Folded Spill
@@ -1398,7 +1398,7 @@ define void @udot_form_4x_tuple(ptr %ptr, i64 %stride) #0 {
 ; CHECK-NEXT:    mov w8, wzr
 ; CHECK-NEXT:    ld1b { z16.b, z20.b, z24.b, z28.b }, pn8/z, [x0]
 ; CHECK-NEXT:    ld1b { z17.b, z21.b, z25.b, z29.b }, pn8/z, [x0, x1]
-; CHECK-NEXT:    add x10, x9, x1
+; CHECK-NEXT:    add x10, x1, x9
 ; CHECK-NEXT:    ld1b { z18.b, z22.b, z26.b, z30.b }, pn8/z, [x0, x9]
 ; CHECK-NEXT:    ld1b { z19.b, z23.b, z27.b, z31.b }, pn8/z, [x0, x10]
 ; CHECK-NEXT:    udot za.s[w8, 0, vgx4], { z16.b - z19.b }, z0.b[0]
@@ -1451,7 +1451,7 @@ define void @udot_form_4x_tuple_svecc(ptr %ptr, i64 %stride, <vscale x 16 x i8> 
 ; CHECK-NEXT:    str z23, [sp, #1, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov w8, wzr
 ; CHECK-NEXT:    str z22, [sp, #2, mul vl] // 16-byte Folded Spill
-; CHECK-NEXT:    add x10, x9, x1
+; CHECK-NEXT:    add x10, x1, x9
 ; CHECK-NEXT:    str z21, [sp, #3, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z20, [sp, #4, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z19, [sp, #5, mul vl] // 16-byte Folded Spill
@@ -1526,7 +1526,7 @@ define void @udot_single_za32_u16_vg1x4_x2load_x4tuple(ptr %ptr, i64 %stride, <v
 ; CHECK-NEXT:    st1b { z10.b, z11.b }, pn8, [sp, #2, mul vl] // 32-byte Folded Spill
 ; CHECK-NEXT:    ptrue pn8.b
 ; CHECK-NEXT:    str z9, [sp, #4, mul vl] // 16-byte Folded Spill
-; CHECK-NEXT:    add x10, x9, x1
+; CHECK-NEXT:    add x10, x1, x9
 ; CHECK-NEXT:    mov w8, wzr
 ; CHECK-NEXT:    ld1b { z1.b, z9.b }, pn8/z, [x0]
 ; CHECK-NEXT:    ld1b { z2.b, z10.b }, pn8/z, [x0, x1]
@@ -1702,7 +1702,7 @@ define void @usdot_form_4x_tuple(ptr %ptr, i64 %stride) #0 {
 ; CHECK-NEXT:    mov w8, wzr
 ; CHECK-NEXT:    ld1b { z16.b, z20.b, z24.b, z28.b }, pn8/z, [x0]
 ; CHECK-NEXT:    ld1b { z17.b, z21.b, z25.b, z29.b }, pn8/z, [x0, x1]
-; CHECK-NEXT:    add x10, x9, x1
+; CHECK-NEXT:    add x10, x1, x9
 ; CHECK-NEXT:    ld1b { z18.b, z22.b, z26.b, z30.b }, pn8/z, [x0, x9]
 ; CHECK-NEXT:    ld1b { z19.b, z23.b, z27.b, z31.b }, pn8/z, [x0, x10]
 ; CHECK-NEXT:    usdot za.s[w8, 0, vgx4], { z16.b - z19.b }, z0.b[0]
@@ -1755,7 +1755,7 @@ define void @usdot_form_4x_tuple_svecc(ptr %ptr, i64 %stride, <vscale x 16 x i8>
 ; CHECK-NEXT:    str z23, [sp, #1, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov w8, wzr
 ; CHECK-NEXT:    str z22, [sp, #2, mul vl] // 16-byte Folded Spill
-; CHECK-NEXT:    add x10, x9, x1
+; CHECK-NEXT:    add x10, x1, x9
 ; CHECK-NEXT:    str z21, [sp, #3, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z20, [sp, #4, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z19, [sp, #5, mul vl] // 16-byte Folded Spill
@@ -1956,7 +1956,7 @@ define void @sdot_form_4x_tuple(ptr %ptr, i64 %stride) #0 {
 ; CHECK-NEXT:    mov w8, wzr
 ; CHECK-NEXT:    ld1b { z16.b, z20.b, z24.b, z28.b }, pn8/z, [x0]
 ; CHECK-NEXT:    ld1b { z17.b, z21.b, z25.b, z29.b }, pn8/z, [x0, x1]
-; CHECK-NEXT:    add x10, x9, x1
+; CHECK-NEXT:    add x10, x1, x9
 ; CHECK-NEXT:    ld1b { z18.b, z22.b, z26.b, z30.b }, pn8/z, [x0, x9]
 ; CHECK-NEXT:    ld1b { z19.b, z23.b, z27.b, z31.b }, pn8/z, [x0, x10]
 ; CHECK-NEXT:    sdot za.s[w8, 0, vgx4], { z16.b - z19.b }, z0.b[0]
@@ -2009,7 +2009,7 @@ define void @sdot_form_4x_tuple_svecc(ptr %ptr, i64 %stride, <vscale x 16 x i8> 
 ; CHECK-NEXT:    str z23, [sp, #1, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov w8, wzr
 ; CHECK-NEXT:    str z22, [sp, #2, mul vl] // 16-byte Folded Spill
-; CHECK-NEXT:    add x10, x9, x1
+; CHECK-NEXT:    add x10, x1, x9
 ; CHECK-NEXT:    str z21, [sp, #3, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z20, [sp, #4, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z19, [sp, #5, mul vl] // 16-byte Folded Spill
@@ -2210,7 +2210,7 @@ define void @sudot_form_4x_tuple(ptr %ptr, i64 %stride) #0 {
 ; CHECK-NEXT:    mov w8, wzr
 ; CHECK-NEXT:    ld1b { z16.b, z20.b, z24.b, z28.b }, pn8/z, [x0]
 ; CHECK-NEXT:    ld1b { z17.b, z21.b, z25.b, z29.b }, pn8/z, [x0, x1]
-; CHECK-NEXT:    add x10, x9, x1
+; CHECK-NEXT:    add x10, x1, x9
 ; CHECK-NEXT:    ld1b { z18.b, z22.b, z26.b, z30.b }, pn8/z, [x0, x9]
 ; CHECK-NEXT:    ld1b { z19.b, z23.b, z27.b, z31.b }, pn8/z, [x0, x10]
 ; CHECK-NEXT:    sudot za.s[w8, 0, vgx4], { z16.b - z19.b }, z0.b[0]
@@ -2263,7 +2263,7 @@ define void @sudot_form_4x_tuple_svecc(ptr %ptr, i64 %stride, <vscale x 16 x i8>
 ; CHECK-NEXT:    str z23, [sp, #1, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov w8, wzr
 ; CHECK-NEXT:    str z22, [sp, #2, mul vl] // 16-byte Folded Spill
-; CHECK-NEXT:    add x10, x9, x1
+; CHECK-NEXT:    add x10, x1, x9
 ; CHECK-NEXT:    str z21, [sp, #3, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z20, [sp, #4, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z19, [sp, #5, mul vl] // 16-byte Folded Spill
