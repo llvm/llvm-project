@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -DUSE_DEF -emit-llvm -o - %s |FileCheck %s -check-prefixes CHECK,CHECKDEF
 // <rdr://6116729>
 
-//CHECK: _renamed{{.*}} = external global
+//CHECK: _renamed{{.*}} = external {{.*}}global
 void pipe() asm("_thisIsNotAPipe");
 
 void f0(void) {
