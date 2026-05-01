@@ -57,24 +57,12 @@ jobs:
           pip install --require-hashes -r ./llvm/utils/git/requirements.txt
           ./llvm/utils/git/github-automation.py --token ${{ github.token }} setup-llvmbot-git
 
-      - id: app-token
-        uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf  #v2.2.1
-        with:
-          app-id: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
-          private-key: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
-          permission-organization-projects: write
-          permission-pull-requests: write
-          permission-issues: write
-
       - name: Backport Commits
-        env:
-          RELEASE_WORKFLOW_PR_CREATE_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           printf "%s" "$COMMENT_BODY" |
           ./llvm/utils/git/github-automation.py \
           --repo "$GITHUB_REPOSITORY" \
-          --token "$RELEASE_WORKFLOW_PR_CREATE_TOKEN" \
+          --token "${{ secrets.RELEASE_WORKFLOW_PR_CREATE }}" \
           release-workflow \
           --branch-repo-token ${{ secrets.RELEASE_WORKFLOW_PUSH_SECRET }} \
           --issue-number ${{ github.event.issue.number }} \
