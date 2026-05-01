@@ -44,6 +44,8 @@ public:
   Status EnableBreakpointSite(BreakpointSite *bp_site) override;
   Status DisableBreakpointSite(BreakpointSite *bp_site) override;
 
+  bool ShouldUseDelayedBreakpoints() const override { return false; }
+
   Status DoDetach(bool keep_stopped) override;
   Status DoLaunch(Module *exe_module, ProcessLaunchInfo &launch_info) override;
   Status DoAttachToProcessWithID(
