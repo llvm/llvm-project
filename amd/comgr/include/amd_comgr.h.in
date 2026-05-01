@@ -1810,6 +1810,9 @@ typedef enum amd_comgr_action_kind_s {
    * @llvm.cmdline variable. Finally, we compile the bitcode to a reloctable,
    * appending any extracted flags.
    *
+   * If @p isa name is set in @p info, the GPU architecture (e.g. gfx900) is
+   * forwarded to the SPIR-V translator for feature predicate resolution.
+   *
    * Return @p AMD_COMGR_STATUS_ERROR if any translation, flag extraction, or
    * compilation fails.
    *
@@ -1820,9 +1823,12 @@ typedef enum amd_comgr_action_kind_s {
 
    /**
    * Translate each source SPIR-V object in @p input into LLVM IR Bitcode.
-   * For each successful translation, add a bc object to @p result   *
+   * For each successful translation, add a bc object to @p result.
    *
-   * Return @p AMD_COMGR_STATUS_ERROR if any translation fails
+   * If @p isa name is set in @p info, the GPU architecture (e.g. gfx900) is
+   * forwarded to the SPIR-V translator for feature predicate resolution.
+   *
+   * Return @p AMD_COMGR_STATUS_ERROR if any translation fails.
    *
    * Return @p AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT
    * if any input is not SPIR-V.

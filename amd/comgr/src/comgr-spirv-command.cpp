@@ -57,6 +57,9 @@ amd_comgr_status_t SPIRVCommand::execute(raw_ostream &LogS) {
   Opts.setDesiredBIsRepresentation(SPIRV::BIsRepresentation::OpenCL20);
   Opts.setPreserveAuxData(true);
 
+  if (!OffloadArch.empty())
+    Opts.setAMDGCNSPIRVOffloadArch(OffloadArch);
+
   if (!readSpirv(Context, Opts, ISS, M, Err)) {
     LogS << "Failed to load SPIR-V as LLVM Module: " << Err << '\n';
     return AMD_COMGR_STATUS_ERROR;
@@ -78,9 +81,9 @@ SPIRVCommand::ActionClass SPIRVCommand::getClass() const {
   return clang::driver::Action::ActionClass::JobClassLast + 1;
 }
 
-void SPIRVCommand::addOptionsIdentifier(HashAlgorithm &) const {
-  // do nothing, there are no options
-  return;
+void SPIRVCommand::addOptionsIdentifier(HashAlgorithm &H) const {
+  if (!OffloadArch.empty())
+    addString(H, OffloadArch);
 }
 
 Error SPIRVCommand::addInputIdentifier(HashAlgorithm &H) const {

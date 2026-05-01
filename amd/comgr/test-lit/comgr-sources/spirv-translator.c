@@ -14,6 +14,7 @@
 
 // Tests the AMD_COMGR_ACTION_TRANSLATE_SPIRV_TO_BC action
 //     Accepts one or more .spv files, and returns one or more .bc files
+//     Optional: --isa <isa_name> to set the ISA for offload arch forwarding
 
 int main(int argc, char *argv[]) {
   char *BufSpirv;
@@ -23,12 +24,40 @@ int main(int argc, char *argv[]) {
   amd_comgr_action_info_t DataAction;
   size_t Count;
 
-  if (argc != 4) {
-    fprintf(stderr, "Usage: spirv-translator file.spv -o file.spv.bc\n");
+  // Parse arguments: spirv-translator [--isa <name>] file.spv -o file.bc
+  const char *IsaName = NULL;
+  const char *InputFile = NULL;
+  const char *OutputFile = NULL;
+
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "--isa") == 0) {
+      if (i + 1 >= argc) {
+        fprintf(stderr, "--isa requires an argument\n");
+        exit(1);
+      }
+      IsaName = argv[++i];
+    } else if (strcmp(argv[i], "-o") == 0) {
+      if (i + 1 >= argc) {
+        fprintf(stderr, "-o requires an argument\n");
+        exit(1);
+      }
+      OutputFile = argv[++i];
+    } else if (!InputFile) {
+      InputFile = argv[i];
+    } else {
+      fprintf(stderr,
+              "Usage: spirv-translator [--isa <name>] file.spv -o file.bc\n");
+      exit(1);
+    }
+  }
+
+  if (!InputFile || !OutputFile) {
+    fprintf(stderr,
+            "Usage: spirv-translator [--isa <name>] file.spv -o file.bc\n");
     exit(1);
   }
 
-  SizeSpirv = setBuf(argv[1], &BufSpirv);
+  SizeSpirv = setBuf(InputFile, &BufSpirv);
 
   amd_comgr_(create_data_set(&DataSetSpirv));
   amd_comgr_(create_data(AMD_COMGR_DATA_KIND_SPIRV, &DataSpirv));
@@ -37,6 +66,10 @@ int main(int argc, char *argv[]) {
   amd_comgr_(data_set_add(DataSetSpirv, DataSpirv));
 
   amd_comgr_(create_action_info(&DataAction));
+
+  if (IsaName)
+    amd_comgr_(action_info_set_isa_name(DataAction, IsaName));
+
   amd_comgr_(create_data_set(&DataSetBc));
 
   amd_comgr_(do_action(AMD_COMGR_ACTION_TRANSLATE_SPIRV_TO_BC, DataAction,
@@ -57,7 +90,7 @@ int main(int argc, char *argv[]) {
   amd_comgr_(
       action_data_get_data(DataSetBc, AMD_COMGR_DATA_KIND_BC, 0, &DataSpirvBc));
 
-  dumpData(DataSpirvBc, argv[3]);
+  dumpData(DataSpirvBc, OutputFile);
 
   amd_comgr_(release_data(DataSpirv));
   amd_comgr_(release_data(DataSpirvBc));

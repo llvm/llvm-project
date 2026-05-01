@@ -17,10 +17,13 @@ class SPIRVCommand : public CachedCommandAdaptor {
 public:
   llvm::StringRef InputBuffer;
   llvm::SmallVectorImpl<char> &OutputBuffer;
+  std::string OffloadArch;
 
 public:
-  SPIRVCommand(DataObject *Input, llvm::SmallVectorImpl<char> &OutputBuffer)
-      : InputBuffer(Input->Data, Input->Size), OutputBuffer(OutputBuffer) {}
+  SPIRVCommand(DataObject *Input, llvm::SmallVectorImpl<char> &OutputBuffer,
+               llvm::StringRef OffloadArch = "")
+      : InputBuffer(Input->Data, Input->Size), OutputBuffer(OutputBuffer),
+        OffloadArch(OffloadArch) {}
 
   bool canCache() const final { return true; }
   llvm::Error writeExecuteOutput(llvm::StringRef CachedBuffer) final;

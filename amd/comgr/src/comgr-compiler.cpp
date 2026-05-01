@@ -2247,6 +2247,17 @@ AMDGPUCompiler::translateSpirvToBitcodeImpl(DataSet *SpirvInSet,
     return Status;
   }
 
+  // Extract GPU processor from ISA name if set, for SPIR-V feature predicate
+  // resolution. TODO: Make ISA name required for this action once users have
+  // migrated.
+  StringRef OffloadArch;
+  TargetIdentifier Ident;
+  if (ActionInfo->IsaName) {
+    if (auto Status = parseTargetIdentifier(ActionInfo->IsaName, Ident))
+      return Status;
+    OffloadArch = Ident.Processor;
+  }
+
   auto Cache = CommandCache::get(LogS);
 
   for (auto *Input : SpirvInSet->DataObjects) {
@@ -2262,7 +2273,7 @@ AMDGPUCompiler::translateSpirvToBitcodeImpl(DataSet *SpirvInSet,
     }
 
     SmallString<0> OutBuf;
-    SPIRVCommand SPIRV(Input, OutBuf);
+    SPIRVCommand SPIRV(Input, OutBuf, OffloadArch);
 
     amd_comgr_status_t Status;
     if (!Cache) {
