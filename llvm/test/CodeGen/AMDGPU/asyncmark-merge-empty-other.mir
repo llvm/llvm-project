@@ -30,7 +30,7 @@ machineFunctionInfo:
 body:             |
   ; CHECK-LABEL: name: asyncmark_in_then
   ; CHECK: bb.0:
-  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT:   liveins: $sgpr0, $sgpr1, $vgpr0_vgpr1, $vgpr2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   S_WAIT_LOADCNT_DSCNT 0
@@ -42,7 +42,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT:   liveins: $vgpr0_vgpr1, $vgpr2
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32) from `ptr addrspace(1) poison`, addrspace 1), (store (s32) into `ptr addrspace(3) poison`, addrspace 3)
+  ; CHECK-NEXT:   GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
   ; CHECK-NEXT:   ASYNCMARK
   ; CHECK-NEXT:   S_BRANCH %bb.3
   ; CHECK-NEXT: {{  $}}
@@ -56,7 +56,6 @@ body:             |
   ; CHECK-NEXT:   S_WAIT_ASYNCCNT 0, implicit-def $asynccnt, implicit $asynccnt
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
     liveins: $sgpr0, $sgpr1, $vgpr0_vgpr1, $vgpr2
 
     S_CMP_LG_U32 $sgpr0, $sgpr1, implicit-def $scc
@@ -64,17 +63,14 @@ body:             |
 
   ; then branch — issues async LDS DMA + ASYNCMARK
   bb.1:
-    successors: %bb.3(0x80000000)
     liveins: $vgpr0_vgpr1, $vgpr2
 
-    GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32) from `ptr addrspace(1) poison`), (store (s32) into `ptr addrspace(3) poison`)
+    GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
     ASYNCMARK
     S_BRANCH %bb.3
 
   ; else branch — sync path, no async operations; OtherMarks is empty at join
   bb.2:
-    successors: %bb.3(0x80000000)
-
     S_BRANCH %bb.3
 
   ; join — mergeAsyncMarks sees non-empty AsyncMarks (then) and empty OtherMarks (else).
@@ -93,7 +89,7 @@ machineFunctionInfo:
 body:             |
   ; CHECK-LABEL: name: asyncmark_in_else
   ; CHECK: bb.0:
-  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT:   liveins: $sgpr0, $sgpr1, $vgpr0_vgpr1, $vgpr2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   S_WAIT_LOADCNT_DSCNT 0
@@ -110,7 +106,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT:   liveins: $vgpr0_vgpr1, $vgpr2
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32) from `ptr addrspace(1) poison`, addrspace 1), (store (s32) into `ptr addrspace(3) poison`, addrspace 3)
+  ; CHECK-NEXT:   GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
   ; CHECK-NEXT:   ASYNCMARK
   ; CHECK-NEXT:   S_BRANCH %bb.3
   ; CHECK-NEXT: {{  $}}
@@ -119,7 +115,6 @@ body:             |
   ; CHECK-NEXT:   S_WAIT_ASYNCCNT 0, implicit-def $asynccnt, implicit $asynccnt
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
     liveins: $sgpr0, $sgpr1, $vgpr0_vgpr1, $vgpr2
 
     S_CMP_LG_U32 $sgpr0, $sgpr1, implicit-def $scc
@@ -127,21 +122,17 @@ body:             |
 
   ; then branch — sync path, no async operations
   bb.1:
-    successors: %bb.3(0x80000000)
-
     S_BRANCH %bb.3
 
   ; else branch — issues async LDS DMA + ASYNCMARK
   bb.2:
-    successors: %bb.3(0x80000000)
     liveins: $vgpr0_vgpr1, $vgpr2
 
-    GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32) from `ptr addrspace(1) poison`), (store (s32) into `ptr addrspace(3) poison`)
+    GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
     ASYNCMARK
     S_BRANCH %bb.3
 
-  ; join — mergeAsyncMarks sees empty AsyncMarks (then) and non-empty OtherMarks (else).
-  ; Before fix: assertion. After fix: returns early, no spurious wait inserted.
+  ; join block
   bb.3:
     WAIT_ASYNCMARK 0
     S_ENDPGM 0
