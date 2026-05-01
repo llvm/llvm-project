@@ -5672,8 +5672,7 @@ static SDValue lowerVZIP(unsigned Opc, SDValue Op0, SDValue Op1,
 
 static SDValue lowerZvzipVZIP(SDValue Op0, SDValue Op1, const SDLoc &DL,
                               SelectionDAG &DAG,
-                              const RISCVSubtarget &Subtarget,
-                              std::optional<unsigned> Part = std::nullopt) {
+                              const RISCVSubtarget &Subtarget) {
   assert(Op0.getSimpleValueType() == Op1.getSimpleValueType());
   MVT VT = Op0.getSimpleValueType();
   MVT IntVT = VT.changeVectorElementTypeToInteger();
@@ -5690,15 +5689,6 @@ static SDValue lowerZvzipVZIP(SDValue Op0, SDValue Op1, const SDLoc &DL,
   SDValue Passthru = DAG.getUNDEF(ResVT);
   SDValue Res =
       DAG.getNode(RISCVISD::VZIP_VL, DL, ResVT, Op0, Op1, Passthru, Mask, VL);
-  if (Part) {
-    assert(*Part < 2 && "Unexpected VZIP part");
-    Res = DAG.getExtractSubvector(
-        DL, ContainerVT, Res,
-        *Part * ContainerVT.getVectorElementCount().getKnownMinValue());
-    if (IntVT.isFixedLengthVector())
-      Res = convertFromScalableVector(IntVT, Res, DAG, Subtarget);
-    return DAG.getBitcast(VT, Res);
-  }
   if (IntVT.isFixedLengthVector())
     Res = convertFromScalableVector(IntVT.getDoubleNumVectorElementsVT(), Res,
                                     DAG, Subtarget);
@@ -13081,8 +13071,10 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
       // Freeze the sources so we can increase their use count.
       SDValue V1 = DAG.getFreeze(Op->getOperand(0));
       SDValue V2 = DAG.getFreeze(Op->getOperand(1));
-      SDValue Lo = lowerZvzipVZIP(V1, V2, DL, DAG, Subtarget, /*Part=*/0);
-      SDValue Hi = lowerZvzipVZIP(V1, V2, DL, DAG, Subtarget, /*Part=*/1);
+      SDValue Interleaved = lowerZvzipVZIP(V1, V2, DL, DAG, Subtarget);
+      SDValue Lo = DAG.getExtractSubvector(DL, VT, Interleaved, 0);
+      SDValue Hi = DAG.getExtractSubvector(DL, VT, Interleaved,
+                                           VT.getVectorMinNumElements());
       return DAG.getMergeValues({Lo, Hi}, DL);
     }
   }
