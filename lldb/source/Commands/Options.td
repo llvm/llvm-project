@@ -1233,6 +1233,23 @@ let Command = "platform shell" in {
 let Command = "plugin list" in {
   def plugin_list_json : Option<"json", "j">,
                          Desc<"Output the plugin list in json format.">;
+  def plugin_list_domain : Option<"domain", "d">,
+                           EnumArg<"PluginDomain">,
+                           Desc<"The ${d}omain to list plugins for. Defaults to 'global'.">;
+}
+
+let Command = "plugin enable" in {
+  def plugin_enable_domain : Option<"domain", "d">,
+                             EnumArg<"PluginDomain">,
+                             Desc<"The ${d}omain in which to enable the "
+                                  "matching plugins. Defaults to 'global'.">;
+}
+
+let Command = "plugin disable" in {
+  def plugin_disable_domain : Option<"domain", "d">,
+                              EnumArg<"PluginDomain">,
+                              Desc<"The ${d}omain in which to disable the "
+                                   "matching plugins. Defaults to 'global'.">;
 }
 
 let Command = "process launch" in {
