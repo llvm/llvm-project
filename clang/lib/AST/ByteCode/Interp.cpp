@@ -819,10 +819,10 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return false;
   if (!CheckActive(S, OpPC, Ptr, AK))
     return false;
-  if (!CheckLifetime(S, OpPC, Ptr, AK))
-    return false;
   if (!Ptr.isInitialized())
     return DiagnoseUninitialized(S, OpPC, Ptr, AK);
+  if (!CheckLifetime(S, OpPC, Ptr, AK))
+    return false;
   if (!CheckTemporary(S, OpPC, Ptr.block(), AK))
     return false;
 
@@ -899,13 +899,16 @@ bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   return true;
 }
 
-static bool CheckInvoke(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+static bool CheckInvoke(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                        bool IsCtorDtor = false) {
   if (!Ptr.isDummy() && !isConstexprUnknown(Ptr)) {
     if (!CheckLive(S, OpPC, Ptr, AK_MemberCall))
       return false;
     if (!CheckExtern(S, OpPC, Ptr))
       return false;
     if (!CheckRange(S, OpPC, Ptr, AK_MemberCall))
+      return false;
+    if (!IsCtorDtor && !CheckLifetime(S, OpPC, Ptr, AK_MemberCall))
       return false;
   }
   return true;
@@ -1775,7 +1778,8 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
         Func->isLambdaCallOperator()) {
       assert(ThisPtr.isZero());
     } else {
-      if (!CheckInvoke(S, OpPC, ThisPtr))
+      if (!CheckInvoke(S, OpPC, ThisPtr,
+                       Func->isConstructor() || Func->isDestructor()))
         return cleanup();
       if (!Func->isConstructor() && !Func->isDestructor() &&
           !CheckActive(S, OpPC, ThisPtr, AK_MemberCall))
@@ -2023,27 +2027,47 @@ bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
 static void startLifetimeRecurse(const Pointer &Ptr) {
   if (const Record *R = Ptr.getRecord()) {
     Ptr.startLifetime();
-    for (const Record::Field &Fi : R->fields())
-      startLifetimeRecurse(Ptr.atField(Fi.Offset));
+
+    for (const Record::Field &Fi : R->fields()) {
+      Pointer FP = Ptr.atField(Fi.Offset);
+      if (FP.getLifetime() != Lifetime::Started)
+        startLifetimeRecurse(FP);
+    }
     return;
   }
 
   if (const Descriptor *FieldDesc = Ptr.getFieldDesc();
       FieldDesc->isCompositeArray()) {
-    assert(Ptr.getLifetime() == Lifetime::Started);
-    for (unsigned I = 0; I != FieldDesc->getNumElems(); ++I)
-      startLifetimeRecurse(Ptr.atIndex(I).narrow());
+    for (unsigned I = 0; I != FieldDesc->getNumElems(); ++I) {
+      Pointer EP = Ptr.atIndex(I).narrow();
+      if (EP.getLifetime() != Lifetime::Started)
+        startLifetimeRecurse(EP);
+    }
     return;
   }
 
   Ptr.startLifetime();
 }
 
-bool StartLifetime(InterpState &S, CodePtr OpPC) {
-  const auto &Ptr = S.Stk.peek<Pointer>();
-  if (Ptr.isBlockPointer() && !CheckDummy(S, OpPC, Ptr.block(), AK_Destroy))
+bool StartThisLifetime(InterpState &S, CodePtr OpPC) {
+  if (S.checkingPotentialConstantExpression())
+    return true;
+
+  const auto &Ptr = S.Current->getThis();
+  if (!Ptr.isBlockPointer())
     return false;
-  startLifetimeRecurse(Ptr.narrow());
+  startLifetimeRecurse(Ptr);
+  return true;
+}
+
+bool StartThisLifetime1(InterpState &S, CodePtr OpPC) {
+  if (S.checkingPotentialConstantExpression())
+    return true;
+
+  const auto &Ptr = S.Current->getThis();
+  if (!Ptr.isBlockPointer())
+    return false;
+  Ptr.startLifetime();
   return true;
 }
 
