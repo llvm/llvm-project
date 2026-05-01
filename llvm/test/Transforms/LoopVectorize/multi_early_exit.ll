@@ -151,7 +151,8 @@ define i64 @early_exit_with_live_in_condition(i1 %cond) {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[LOOP_END:%.*]]
 ; CHECK:       vector.early.exit.check:
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i1> [[BROADCAST_SPLAT]], i64 0
+; CHECK-NEXT:    [[FIRST_ACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP2]], i1 false)
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i1> [[BROADCAST_SPLAT]], i64 [[FIRST_ACTIVE_LANE]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[VECTOR_EARLY_EXIT_0:%.*]], label [[VECTOR_EARLY_EXIT_1:%.*]]
 ; CHECK:       vector.early.exit.1:
 ; CHECK-NEXT:    br label [[LOOP_END]]

@@ -45,13 +45,14 @@ define i64 @test1(i64 %y) {
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq <4 x i64> [[BROADCAST_SPLAT]], zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i64> splat (i64 3), [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i1> [[TMP0]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i64> [[TMP1]], i64 0
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP2]], i64 77, i64 [[TMP3]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP0]], <4 x i64> splat (i64 77), <4 x i64> [[TMP1]]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    br label [[MIDDLE_BLOCK:%.*]]
 ; CHECK:       middle.block:
+; CHECK-NEXT:    [[FIRST_INACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> <i1 false, i1 false, i1 false, i1 true>, i1 false)
+; CHECK-NEXT:    [[LAST_ACTIVE_LANE:%.*]] = sub i64 [[FIRST_INACTIVE_LANE]], 1
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i64> [[PREDPHI]], i64 [[LAST_ACTIVE_LANE]]
 ; CHECK-NEXT:    br label [[COND_END:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret i64 [[TMP5]]

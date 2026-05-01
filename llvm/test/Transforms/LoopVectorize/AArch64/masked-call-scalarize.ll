@@ -67,8 +67,7 @@ define void @test_widen_exp_v2(ptr noalias %p2, ptr noalias %p, i64 %n) #5 {
 ; TFCOMMON-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x double> poison, double [[TMP2]], i64 0
 ; TFCOMMON-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x double> [[BROADCAST_SPLATINSERT]], <2 x double> poison, <2 x i32> zeroinitializer
 ; TFCOMMON-NEXT:    [[TMP3:%.*]] = fcmp ogt <2 x double> [[BROADCAST_SPLAT]], zeroinitializer
-; TFCOMMON-NEXT:    [[TMP4:%.*]] = extractelement <2 x i1> [[TMP3]], i64 0
-; TFCOMMON-NEXT:    [[PREDPHI:%.*]] = select i1 [[TMP4]], <2 x double> zeroinitializer, <2 x double> splat (double 1.000000e+00)
+; TFCOMMON-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP3]], <2 x double> zeroinitializer, <2 x double> splat (double 1.000000e+00)
 ; TFCOMMON-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[ACTIVE_LANE_MASK]], i64 0
 ; TFCOMMON-NEXT:    br i1 [[TMP5]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; TFCOMMON:       [[PRED_STORE_IF]]:
@@ -107,8 +106,7 @@ define void @test_widen_exp_v2(ptr noalias %p2, ptr noalias %p, i64 %n) #5 {
 ; TFA_INTERLEAVE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x double> poison, double [[TMP2]], i64 0
 ; TFA_INTERLEAVE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x double> [[BROADCAST_SPLATINSERT]], <2 x double> poison, <2 x i32> zeroinitializer
 ; TFA_INTERLEAVE-NEXT:    [[TMP3:%.*]] = fcmp ogt <2 x double> [[BROADCAST_SPLAT]], zeroinitializer
-; TFA_INTERLEAVE-NEXT:    [[TMP4:%.*]] = extractelement <2 x i1> [[TMP3]], i64 0
-; TFA_INTERLEAVE-NEXT:    [[PREDPHI:%.*]] = select i1 [[TMP4]], <2 x double> zeroinitializer, <2 x double> splat (double 1.000000e+00)
+; TFA_INTERLEAVE-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP3]], <2 x double> zeroinitializer, <2 x double> splat (double 1.000000e+00)
 ; TFA_INTERLEAVE-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[ACTIVE_LANE_MASK]], i64 0
 ; TFA_INTERLEAVE-NEXT:    br i1 [[TMP5]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; TFA_INTERLEAVE:       [[PRED_STORE_IF]]:
