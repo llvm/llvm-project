@@ -3947,6 +3947,16 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_dsqrtf128",
+    hdrs = ["src/__support/math/dsqrtf128.h"],
+    deps = [
+        ":__support_fputil_normal_float",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_fmaximum",
     hdrs = ["src/__support/math/fmaximum.h"],
     deps = [
@@ -7657,7 +7667,7 @@ libc_math_function(
 libc_math_function(
     name = "dsqrtf128",
     additional_deps = [
-        ":__support_fputil_sqrt",
+        ":__support_math_dsqrtf128",
     ],
 )
 

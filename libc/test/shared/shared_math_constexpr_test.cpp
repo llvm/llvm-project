@@ -115,6 +115,7 @@ static_assert(float128(0.0) ==
                                                    float128(0.0)));
 static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::fminf128(float128(0.0), float128(0.0)));
+static_assert(0.0 == LIBC_NAMESPACE::shared::dsqrtf128(float128(0.0)));
 
 static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::fmaxf128(float128(0.0), float128(0.0)));

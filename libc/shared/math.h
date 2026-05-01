@@ -94,6 +94,7 @@
 #include "math/dfmal.h"
 #include "math/dmulf128.h"
 #include "math/dmull.h"
+#include "math/dsqrtf128.h"
 #include "math/dsqrtl.h"
 #include "math/dsubf128.h"
 #include "math/dsubl.h"

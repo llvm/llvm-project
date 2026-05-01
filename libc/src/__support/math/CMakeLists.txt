@@ -819,6 +819,17 @@ add_header_library(
     libc.src.__support.macros.config
     libc.src.__support.number_pair
 )
+
+add_header_library(
+  dsqrtf128
+  HDRS
+    dsqrtf128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.generic.sqrt
+    libc.src.__support.macros.config
+)
+
 add_header_library(
   fmaximum
   HDRS
