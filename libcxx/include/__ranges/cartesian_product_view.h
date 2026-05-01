@@ -148,16 +148,16 @@ private:
   template <bool _IsConst>
   _LIBCPP_HIDE_FROM_ABI static constexpr __iterator<_IsConst>
   __end_impl(__maybe_const<_IsConst, cartesian_product_view>& __self) {
-    const bool __empty = __self.__end_is_empty();
-    const auto __ranges_to_iterators =
-        [__empty, &__b = __self.__bases_]<std::size_t... _Ip>(std::index_sequence<_Ip...>) {
-          const auto __begin_or_first_end = []<class _IsFirst>(_IsFirst, auto& __rng, bool __empty) {
-            if constexpr (_IsFirst::value)
-              return __empty ? ranges::begin(__rng) : __cartesian_common_arg_end(__rng);
-            return ranges::begin(__rng);
-          };
-          return std::make_tuple(__begin_or_first_end(std::bool_constant<_Ip == 0>{}, std::get<_Ip>(__b), __empty)...);
-        };
+    const auto __ranges_to_iterators = [__end_is_empty = __self.__end_is_empty(),
+                                        &__b = __self.__bases_]<std::size_t... _Ip>(std::index_sequence<_Ip...>) {
+      const auto __begin_or_first_end = []<class _IsFirst>(_IsFirst, auto& __rng, bool __empty) {
+        if constexpr (_IsFirst::value)
+          return __empty ? ranges::begin(__rng) : __cartesian_common_arg_end(__rng);
+        return ranges::begin(__rng);
+      };
+      return std::make_tuple(
+          __begin_or_first_end(std::bool_constant<_Ip == 0>{}, std::get<_Ip>(__b), __end_is_empty)...);
+    };
     __iterator<_IsConst> __it(__self, __ranges_to_iterators(std::make_index_sequence<1 + sizeof...(_Vs)>{}));
     return __it;
   }
