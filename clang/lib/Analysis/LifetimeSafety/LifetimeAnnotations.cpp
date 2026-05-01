@@ -268,6 +268,12 @@ static StringRef getName(const CXXRecordDecl &RD) {
   return "";
 }
 
+static StringRef getName(const FunctionDecl &FD) {
+  if (FD.getIdentifier())
+    return FD.getName();
+  return "";
+}
+
 static bool isStdUniquePtr(const CXXRecordDecl &RD) {
   return RD.isInStdNamespace() && getName(RD) == "unique_ptr";
 }
@@ -385,6 +391,12 @@ bool isInvalidationMethod(const CXXMethodDecl &MD) {
     return false;
 
   return InvalidatingMethods->contains(MD.getName());
+}
+
+bool destructsFirstArg(const FunctionDecl &FD) {
+  if (isa<CXXDestructorDecl>(FD))
+    return true;
+  return isInStlNamespace(&FD) && getName(FD) == "destroy_at";
 }
 
 bool isStdCallableWrapperType(const CXXRecordDecl *RD) {
