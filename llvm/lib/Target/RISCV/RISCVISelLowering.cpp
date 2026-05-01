@@ -5151,8 +5151,8 @@ static SDValue getSingleShuffleSrc(MVT VT, SDValue V1, SDValue V2) {
   return SDValue();
 }
 
-static bool isLegalVTForZvzip(MVT VT, const RISCVSubtarget &Subtarget,
-                              const TargetLowering &TLI) {
+static bool isLegalVTForZvzipOperand(MVT VT, const RISCVSubtarget &Subtarget,
+                                     const TargetLowering &TLI) {
   MVT ContainerVT = VT;
   if (VT.isFixedLengthVector())
     ContainerVT = getContainerForFixedLengthVector(TLI, VT, Subtarget);
@@ -6472,7 +6472,8 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
 
     // Prefer vzip2a or vzip if available.
     // TODO: Extend to matching ri.vzip2b or vzip if EvenSrc and OddSrc allow.
-    if (Subtarget.hasStdExtZvzip() && isLegalVTForZvzip(VT, Subtarget, *this))
+    if (Subtarget.hasStdExtZvzip() &&
+        isLegalVTForZvzipOperand(VT, Subtarget, *this))
       return lowerZvzipVZIP(EvenV, OddV, DL, DAG, Subtarget);
     if (Subtarget.hasVendorXRivosVizip()) {
       EvenV = DAG.getInsertSubvector(DL, DAG.getUNDEF(VT), EvenV, 0);
@@ -13067,7 +13068,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
   if (Subtarget.hasStdExtZvzip() && !Op.getOperand(0).isUndef() &&
       !Op.getOperand(1).isUndef()) {
     MVT VT = Op->getSimpleValueType(0);
-    if (isLegalVTForZvzip(VT, Subtarget, *this)) {
+    if (isLegalVTForZvzipOperand(VT, Subtarget, *this)) {
       // Freeze the sources so we can increase their use count.
       SDValue V1 = DAG.getFreeze(Op->getOperand(0));
       SDValue V2 = DAG.getFreeze(Op->getOperand(1));
