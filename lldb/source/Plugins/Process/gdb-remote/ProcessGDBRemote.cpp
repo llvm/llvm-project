@@ -6536,7 +6536,7 @@ llvm::Error ProcessGDBRemote::UpdateBreakpointSites(
       ParseMultiBreakpointResponse(response->GetStringRef());
 
   // This is a protocol violation, do nothing.
-  if (results.size() != site_to_action.size())
+  if (results.size() != breakpoint_infos.size())
     return llvm::createStringErrorV(
         "MultiBreakpoint response count mismatch (expected {0}, got {1})",
         site_to_action.size(), results.size());
