@@ -6,8 +6,7 @@ declare <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8>, <16 x i8>, i8)
 define <16 x i8> @test_ashr1_rotl2(<16 x i8> %src) nounwind {
 ; CHECK-LABEL: test_ashr1_rotl2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [128,128,64,32,16,8,4,2,128,128,64,32,16,8,4,2]
-; CHECK-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [32,16,8,4,2,1,128,64,32,16,8,4,2,1,128,64]
+; CHECK-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [64,32,16,8,4,2,128,128,64,32,16,8,4,2,128,128]
 ; CHECK-NEXT:    retq
   %ashr1 = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %src, <16 x i8> <i8 128, i8 128, i8 64, i8 32, i8 16, i8 8, i8 4, i8 2, i8 128, i8 128, i8 64, i8 32, i8 16, i8 8, i8 4, i8 2>, i8 0)
   %rotl2 = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %ashr1, <16 x i8> <i8 32, i8 16, i8 8, i8 4, i8 2, i8 1, i8 128, i8 64, i8 32, i8 16, i8 8, i8 4, i8 2, i8 1, i8 128, i8 64>, i8 0)
@@ -17,8 +16,7 @@ define <16 x i8> @test_ashr1_rotl2(<16 x i8> %src) nounwind {
 define <16 x i8> @test_ashr2_reverse(<16 x i8> %src) nounwind {
 ; CHECK-LABEL: test_ashr2_reverse:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [128,128,128,64,32,16,8,4,128,128,128,64,32,16,8,4]
-; CHECK-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
+; CHECK-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [4,8,16,32,64,128,128,128,4,8,16,32,64,128,128,128]
 ; CHECK-NEXT:    retq
   %ashr2 = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %src, <16 x i8> <i8 128, i8 128, i8 128, i8 64, i8 32, i8 16, i8 8, i8 4, i8 128, i8 128, i8 128, i8 64, i8 32, i8 16, i8 8, i8 4>, i8 0)
   %rev = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %ashr2, <16 x i8> <i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128, i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128>, i8 0)
@@ -28,8 +26,7 @@ define <16 x i8> @test_ashr2_reverse(<16 x i8> %src) nounwind {
 define <16 x i8> @test_ashr2_splat_lsb(<16 x i8> %src) nounwind {
 ; CHECK-LABEL: test_ashr2_splat_lsb:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [128,128,128,64,32,16,8,4,128,128,128,64,32,16,8,4]
-; CHECK-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; CHECK-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
 ; CHECK-NEXT:    retq
   %ashr2 = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %src, <16 x i8> <i8 128, i8 128, i8 128, i8 64, i8 32, i8 16, i8 8, i8 4, i8 128, i8 128, i8 128, i8 64, i8 32, i8 16, i8 8, i8 4>, i8 0)
   %lsb = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %ashr2, <16 x i8> splat(i8 1), i8 0)
@@ -39,8 +36,7 @@ define <16 x i8> @test_ashr2_splat_lsb(<16 x i8> %src) nounwind {
 define <16 x i8> @test_cumulative_parity_both_directions(<16 x i8> %src) nounwind {
 ; CHECK-LABEL: test_cumulative_parity_both_directions:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [255,127,63,31,15,7,3,1,255,127,63,31,15,7,3,1]
-; CHECK-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [128,192,224,240,248,252,254,255,128,192,224,240,248,252,254,255]
+; CHECK-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [255,128,191,160,175,168,171,170,255,128,191,160,175,168,171,170]
 ; CHECK-NEXT:    retq
   %left = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %src, <16 x i8> <i8 255, i8 127, i8 63, i8 31, i8 15, i8 7, i8 3, i8 1, i8 255, i8 127, i8 63, i8 31, i8 15, i8 7, i8 3, i8 1>, i8 0)
   %right = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %left, <16 x i8> <i8 128, i8 192, i8 224, i8 240, i8 248, i8 252, i8 254, i8 255, i8 128, i8 192, i8 224, i8 240, i8 248, i8 252, i8 254, i8 255>, i8 0)
@@ -50,10 +46,7 @@ define <16 x i8> @test_cumulative_parity_both_directions(<16 x i8> %src) nounwin
 define <16 x i8> @test_reverse_reverse_reverse(<16 x i8> %src) nounwind {
 ; CHECK-LABEL: test_reverse_reverse_reverse:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
-; CHECK-NEXT:    vgf2p8affineqb $0, %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vgf2p8affineqb $0, %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vgf2p8affineqb $0, %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; CHECK-NEXT:    retq
   %rev1 = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %src, <16 x i8> <i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128, i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128>, i8 0)
   %rev2 = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %rev1, <16 x i8> <i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128, i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128>, i8 0)
@@ -64,9 +57,7 @@ define <16 x i8> @test_reverse_reverse_reverse(<16 x i8> %src) nounwind {
 define <16 x i8> @test_parity_fill_cumulative_parity(<16 x i8> %src) nounwind {
 ; CHECK-LABEL: test_parity_fill_cumulative_parity:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vgf2p8affineqb $0, %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [255,127,63,31,15,7,3,1,255,127,63,31,15,7,3,1]
+; CHECK-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255]
 ; CHECK-NEXT:    retq
   %fill = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %src, <16 x i8> splat(i8 -1), i8 0)
   %parity = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %fill, <16 x i8> <i8 255, i8 127, i8 63, i8 31, i8 15, i8 7, i8 3, i8 1, i8 255, i8 127, i8 63, i8 31, i8 15, i8 7, i8 3, i8 1>, i8 0)
@@ -76,8 +67,7 @@ define <16 x i8> @test_parity_fill_cumulative_parity(<16 x i8> %src) nounwind {
 define <16 x i8> @test_ashr1_reverse_non_zero_imm(<16 x i8> %src) nounwind {
 ; CHECK-LABEL: test_ashr1_reverse_non_zero_imm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vgf2p8affineqb $15, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [128,128,64,32,16,8,4,2,128,128,64,32,16,8,4,2]
-; CHECK-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
+; CHECK-NEXT:    vgf2p8affineqb $240, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [2,4,8,16,32,64,128,128,2,4,8,16,32,64,128,128]
 ; CHECK-NEXT:    retq
   %ashr1 = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %src, <16 x i8> <i8 128, i8 128, i8 64, i8 32, i8 16, i8 8, i8 4, i8 2, i8 128, i8 128, i8 64, i8 32, i8 16, i8 8, i8 4, i8 2>, i8 15)
   %rev = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %ashr1, <16 x i8> <i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128, i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128>, i8 0)
@@ -87,8 +77,7 @@ define <16 x i8> @test_ashr1_reverse_non_zero_imm(<16 x i8> %src) nounwind {
 define <16 x i8> @test_reverse_ashr1_non_zero_imm(<16 x i8> %src) nounwind {
 ; CHECK-LABEL: test_reverse_ashr1_non_zero_imm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vgf2p8affineqb $129, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
-; CHECK-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [128,128,64,32,16,8,4,2,128,128,64,32,16,8,4,2]
+; CHECK-NEXT:    vgf2p8affineqb $192, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,1,2,4,8,16,32,64,1,1,2,4,8,16,32,64]
 ; CHECK-NEXT:    retq
   %rev = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %src, <16 x i8> <i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128, i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128>, i8 129)
   %ashr1 = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %rev, <16 x i8> <i8 128, i8 128, i8 64, i8 32, i8 16, i8 8, i8 4, i8 2, i8 128, i8 128, i8 64, i8 32, i8 16, i8 8, i8 4, i8 2>, i8 0)
@@ -98,8 +87,7 @@ define <16 x i8> @test_reverse_ashr1_non_zero_imm(<16 x i8> %src) nounwind {
 define <16 x i8> @test_const_gen_cumulative_parity_non_zero_imm(<16 x i8> %src) nounwind {
 ; CHECK-LABEL: test_const_gen_cumulative_parity_non_zero_imm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vgf2p8affineqb $127, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [64,32,32,32,32,32,32,32,64,32,32,32,32,32,32,32]
-; CHECK-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [255,127,63,31,15,7,3,1,255,127,63,31,15,7,3,1]
+; CHECK-NEXT:    vgf2p8affineqb $213, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [96,32,0,32,0,32,0,32,96,32,0,32,0,32,0,32]
 ; CHECK-NEXT:    retq
   %gen = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %src, <16 x i8> <i8 64, i8 32, i8 32, i8 32,i8 32, i8 32, i8 32, i8 32, i8 64, i8 32, i8 32, i8 32,i8 32, i8 32, i8 32, i8 32>, i8 127)
   %parity = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %gen, <16 x i8> <i8 255, i8 127, i8 63, i8 31, i8 15, i8 7, i8 3, i8 1, i8 255, i8 127, i8 63, i8 31, i8 15, i8 7, i8 3, i8 1>, i8 0)
@@ -109,8 +97,7 @@ define <16 x i8> @test_const_gen_cumulative_parity_non_zero_imm(<16 x i8> %src) 
 define <16 x i8> @test_rotr2_cumulative_parity_non_zero_imm(<16 x i8> %src) nounwind {
 ; CHECK-LABEL: test_rotr2_cumulative_parity_non_zero_imm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vgf2p8affineqb $255, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [2,1,128,64,32,16,8,4,2,1,128,64,32,16,8,4]
-; CHECK-NEXT:    vgf2p8affineqb $255, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [255,127,63,31,15,7,3,1,255,127,63,31,15,7,3,1]
+; CHECK-NEXT:    vgf2p8affineqb $170, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [255,253,252,124,60,28,12,4,255,253,252,124,60,28,12,4]
 ; CHECK-NEXT:    retq
   %rotr2 = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %src, <16 x i8> <i8 2, i8 1, i8 128, i8 64, i8 32, i8 16, i8 8, i8 4, i8 2, i8 1, i8 128, i8 64, i8 32, i8 16, i8 8, i8 4>, i8 255)
   %parity = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %rotr2, <16 x i8> <i8 255, i8 127, i8 63, i8 31, i8 15, i8 7, i8 3, i8 1, i8 255, i8 127, i8 63, i8 31, i8 15, i8 7, i8 3, i8 1>, i8 255)
@@ -121,8 +108,8 @@ define <16 x i8> @test_rotr2_cumulative_parity_non_zero_imm(<16 x i8> %src) noun
 define <16 x i8> @test_multi_use(<16 x i8> %src, ptr %sink) nounwind {
 ; CHECK-LABEL: test_multi_use:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
-; CHECK-NEXT:    vmovdqa %xmm0, (%rdi)
+; CHECK-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
+; CHECK-NEXT:    vmovdqa %xmm1, (%rdi)
 ; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vgf2p8affineqb $0, %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
@@ -136,8 +123,7 @@ define <16 x i8> @test_multi_use(<16 x i8> %src, ptr %sink) nounwind {
 define <16 x i8> @test_ashr12_reverse(<16 x i8> %src) nounwind {
 ; CHECK-LABEL: test_ashr12_reverse:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [128,128,64,32,16,8,4,2,128,128,128,64,32,16,8,4]
-; CHECK-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
+; CHECK-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [2,4,8,16,32,64,128,128,4,8,16,32,64,128,128,128]
 ; CHECK-NEXT:    retq
   %ashr12 = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %src, <16 x i8> <i8 128, i8 128, i8 64, i8 32, i8 16, i8 8, i8 4, i8 2, i8 128, i8 128, i8 128, i8 64, i8 32, i8 16, i8 8, i8 4>, i8 0)
   %rev = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %ashr12, <16 x i8> <i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128, i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128>, i8 0)
@@ -148,8 +134,7 @@ define <16 x i8> @test_ashr12_reverse(<16 x i8> %src) nounwind {
 define <16 x i8> @test_cumulative_parity_fill_17(<16 x i8> %src) nounwind {
 ; CHECK-LABEL: test_cumulative_parity_fill_17:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [255,127,63,31,15,7,3,1,255,127,63,31,15,7,3,1]
-; CHECK-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [2,2,2,2,2,2,2,2,128,128,128,128,128,128,128,128]
+; CHECK-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [3,3,3,3,3,3,3,3,255,255,255,255,255,255,255,255]
 ; CHECK-NEXT:    retq
   %parity = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %src, <16 x i8> <i8 255, i8 127, i8 63, i8 31, i8 15, i8 7, i8 3, i8 1, i8 255, i8 127, i8 63, i8 31, i8 15, i8 7, i8 3, i8 1>, i8 0)
   %fill12 = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %parity, <16 x i8> <i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128, i8 128>, i8 0)
