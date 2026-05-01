@@ -9983,3 +9983,40 @@ different languages to coexist on the same call stack while each interpreting
 exceptions according to their own rules.
   }];
 }
+
+def AlignedDocs : Documentation {
+  let Category = DocCatDecl;
+  let Heading = "aligned";
+  let Content = [{
+The ``aligned`` attribute specifies a minimum alignment (in bytes) for a 
+variable, structure field, or type definition. The attribute takes an 
+optional integer constant expression that must evaluate to a power of two.
+
+.. code-block:: c++
+
+  struct __attribute__((aligned(8))) S { 
+    short f[3]; 
+  };
+
+If the alignment factor is omitted, the compiler defaults to the largest 
+alignment supported by the target machine for any data type. 
+
+Applying this attribute to a structure or union changes the type's layout 
+properties. To ensure that array indexing and pointer arithmetic remain 
+consistent, the compiler automatically increases the structure's total size 
+(via tail padding) to a multiple of the alignment value. For example, a 
+struct with a natural size of 6 bytes marked ``aligned(8)`` will be 
+padded to 8 bytes.
+
+The attribute is additive and can only increase alignment; it cannot decrease 
+alignment below the type's natural requirement. To force a smaller 
+alignment, ``__attribute__((packed))`` must be used instead. 
+
+Furthermore, the attribute is incompatible with entities that do not 
+possess a stable, addressable memory location. It cannot be applied to 
+bit-fields, function parameters, or variables declared with the 
+``register`` storage class. The effectiveness of the attribute may also be 
+limited by the target's object file format and linker, which often impose 
+a maximum supported alignment boundary.
+  }];
+}
