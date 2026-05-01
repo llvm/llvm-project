@@ -376,7 +376,6 @@ public:
         Intrinsic::experimental_vp_splice,
         Intrinsic::vp_cttz_elts,
         Intrinsic::vp_gather,
-        Intrinsic::vp_is_fpclass,
         Intrinsic::vp_load,
         Intrinsic::vp_load_ff,
         Intrinsic::vp_merge,
