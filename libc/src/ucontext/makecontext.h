@@ -1,4 +1,4 @@
-//===-- Implementation header for getcontext ----------------------*- C++
+//===-- Implementation header for makecontext ---------------------*- C++
 //-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -7,16 +7,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_UCONTEXT_GETCONTEXT_H
-#define LLVM_LIBC_SRC_UCONTEXT_GETCONTEXT_H
+#ifndef LLVM_LIBC_SRC_UCONTEXT_MAKECONTEXT_H
+#define LLVM_LIBC_SRC_UCONTEXT_MAKECONTEXT_H
 
 #include "include/llvm-libc-types/ucontext_t.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-int getcontext(ucontext_t *ucp);
+void makecontext(ucontext_t *ucp, void (*func)(void), int argc, ...);
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_UCONTEXT_GETCONTEXT_H
+#endif // LLVM_LIBC_SRC_UCONTEXT_MAKECONTEXT_H

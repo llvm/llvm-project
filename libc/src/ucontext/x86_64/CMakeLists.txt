@@ -26,3 +26,38 @@ add_entrypoint_object(
     libc.hdr.types.size_t
 )
 
+add_entrypoint_object(
+  makecontext
+  SRCS
+    makecontext.cpp
+  HDRS
+    ../makecontext.h
+  COMPILE_OPTIONS
+    -O3
+    -fno-omit-frame-pointer
+  DEPENDS
+    libc.include.llvm-libc-types.ucontext_t
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.osutil
+    .setcontext
+    libc.hdr.types.size_t
+    libc.hdr.stdint_proxy
+)
+
+add_entrypoint_object(
+  swapcontext
+  SRCS
+    swapcontext.cpp
+  HDRS
+    ../swapcontext.h
+  COMPILE_OPTIONS
+    -O3
+    -fno-omit-frame-pointer
+  DEPENDS
+    libc.include.llvm-libc-types.ucontext_t
+    libc.include.sys_syscall
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.hdr.types.size_t
+)

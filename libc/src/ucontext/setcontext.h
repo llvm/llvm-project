@@ -1,4 +1,5 @@
-//===-- Implementation header for setcontext --------------------*- C++ -*-===//
+//===-- Implementation header for setcontext ----------------------*- C++
+//-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,7 +15,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-int setcontext(const ucontext_t *ucp) noexcept;
+int setcontext(const ucontext_t *ucp);
 
 } // namespace LIBC_NAMESPACE_DECL
 

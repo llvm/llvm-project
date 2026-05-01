@@ -16,3 +16,16 @@ add_entrypoint_object(
     .${LIBC_TARGET_ARCHITECTURE}.setcontext
 )
 
+add_entrypoint_object(
+  makecontext
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_ARCHITECTURE}.makecontext
+)
+
+add_entrypoint_object(
+  swapcontext
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_ARCHITECTURE}.swapcontext
+)
