@@ -475,8 +475,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                     stderr=stderr,
                     env=cmd_shenv.env,
                     close_fds=kUseCloseFDs,
-                    universal_newlines=True,
-                    errors="replace",
+                    text=False,
                 )
             )
             if old_umask != -1:
