@@ -73,6 +73,21 @@ static bool hasNonIdentityTranspose(xegpu::LoadNdOp loadOp) {
   return !(perm.size() == 2 && perm[0] == 0 && perm[1] == 1);
 }
 
+/// Returns true if `tdescType` carries a lane layout that signals a
+/// transpose-intent load (lane_layout = `[SG, 1]`). Such descriptors are
+/// rewritten by the transpose peephole optimization and must not be touched
+/// here, since stacking the array blocks along the non-FCD dimension would
+/// invalidate that rewrite.
+static bool hasTransposeLaneLayout(xegpu::TensorDescType tdescType) {
+  auto layout = tdescType.getLayoutAttr();
+  if (!layout)
+    return false;
+  SmallVector<int64_t> laneLayout = layout.getEffectiveLaneLayoutAsInt();
+  if (laneLayout.size() != 2)
+    return false;
+  return laneLayout[0] != 1 && laneLayout[1] == 1;
+}
+
 /// Rewrite `xegpu.create_nd_tdesc` to fold an array_length attribute into the
 /// resulting tensor descriptor type. Only applies when the source is a static
 /// memref; dynamic-shape sources are left unchanged. Skipped if any consumer
@@ -87,6 +102,11 @@ public:
     int64_t subgroupSize = getSubgroupSize(op);
     auto tdescType = op.getType();
     if (!needsOptimization(tdescType, subgroupSize))
+      return failure();
+
+    // A transpose lane layout marks this descriptor as a candidate for the
+    // separate transpose peephole; stacking the array blocks would break it.
+    if (hasTransposeLaneLayout(tdescType))
       return failure();
 
     // Only static memref sources are supported for now.
@@ -134,7 +154,7 @@ public:
 
     // Transposing loads are not compatible with the stacked-on-non-FCD layout
     // that this pass produces.
-    if (hasNonIdentityTranspose(op))
+    if (hasNonIdentityTranspose(op) || hasTransposeLaneLayout(tdescType))
       return failure();
 
     auto origVectorType = op.getType();
