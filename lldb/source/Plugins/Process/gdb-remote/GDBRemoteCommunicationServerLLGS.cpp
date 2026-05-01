@@ -15,6 +15,7 @@
 #include <limits>
 #include <optional>
 #include <thread>
+#include <variant>
 
 #include "GDBRemoteCommunicationServerLLGS.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
@@ -2903,155 +2904,146 @@ GDBRemoteCommunicationServerLLGS::Handle_qMemoryRegionInfo(
   return SendPacketNoLock(response.GetString());
 }
 
-GDBRemoteCommunication::PacketResult
-GDBRemoteCommunicationServerLLGS::Handle_Z(StringExtractorGDBRemote &packet) {
+namespace {
+struct UseBreakpoint {
+  bool want_hardware = false;
+};
+struct UseWatchpoint {
+  uint32_t flags;
+  static constexpr bool want_hardware = true;
+};
+struct InvalidStoppoint {};
+
+std::variant<UseBreakpoint, UseWatchpoint, InvalidStoppoint>
+getBreakpointKind(GDBStoppointType stoppoint_type) {
+  switch (stoppoint_type) {
+  case eBreakpointSoftware:
+    return UseBreakpoint{/*want_hardware*/ false};
+  case eBreakpointHardware:
+    return UseBreakpoint{/*want_hardware*/ true};
+  case eWatchpointWrite:
+    return UseWatchpoint{/*flags*/ 1};
+  case eWatchpointRead:
+    return UseWatchpoint{/*flags*/ 2};
+  case eWatchpointReadWrite:
+    return UseWatchpoint{/*flags*/ 3};
+  case eStoppointInvalid:
+    return InvalidStoppoint();
+  }
+  llvm_unreachable("unhandled GDBStoppointType");
+}
+} // namespace
+
+GDBRemoteCommunicationServerLLGS::BreakpointResult
+GDBRemoteCommunicationServerLLGS::ExecuteSetBreakpoint(
+    llvm::StringRef packet_str) {
   // Ensure we have a process.
   if (!m_current_process ||
       (m_current_process->GetID() == LLDB_INVALID_PROCESS_ID)) {
     Log *log = GetLog(LLDBLog::Process);
     LLDB_LOG(log, "failed, no process available");
-    return SendErrorResponse(0x15);
+    return BreakpointError{0x15};
   }
+
+  StringExtractorGDBRemote packet(packet_str);
 
   // Parse out software or hardware breakpoint or watchpoint requested.
   packet.SetFilePos(strlen("Z"));
   if (packet.GetBytesLeft() < 1)
-    return SendIllFormedResponse(
-        packet, "Too short Z packet, missing software/hardware specifier");
-
-  bool want_breakpoint = true;
-  bool want_hardware = false;
-  uint32_t watch_flags = 0;
+    return BreakpointIllFormed{
+        "Too short Z packet, missing software/hardware specifier"};
 
   const GDBStoppointType stoppoint_type =
       GDBStoppointType(packet.GetS32(eStoppointInvalid));
-  switch (stoppoint_type) {
-  case eBreakpointSoftware:
-    want_hardware = false;
-    want_breakpoint = true;
-    break;
-  case eBreakpointHardware:
-    want_hardware = true;
-    want_breakpoint = true;
-    break;
-  case eWatchpointWrite:
-    watch_flags = 1;
-    want_hardware = true;
-    want_breakpoint = false;
-    break;
-  case eWatchpointRead:
-    watch_flags = 2;
-    want_hardware = true;
-    want_breakpoint = false;
-    break;
-  case eWatchpointReadWrite:
-    watch_flags = 3;
-    want_hardware = true;
-    want_breakpoint = false;
-    break;
-  case eStoppointInvalid:
-    return SendIllFormedResponse(
-        packet, "Z packet had invalid software/hardware specifier");
-  }
+  std::variant<UseBreakpoint, UseWatchpoint, InvalidStoppoint> bp_variant =
+      getBreakpointKind(stoppoint_type);
+  if (std::holds_alternative<InvalidStoppoint>(bp_variant))
+    return BreakpointIllFormed{
+        "Z packet had invalid software/hardware specifier"};
 
   if ((packet.GetBytesLeft() < 1) || packet.GetChar() != ',')
-    return SendIllFormedResponse(
-        packet, "Malformed Z packet, expecting comma after stoppoint type");
+    return BreakpointIllFormed{
+        "Malformed Z packet, expecting comma after stoppoint type"};
 
   // Parse out the stoppoint address.
   if (packet.GetBytesLeft() < 1)
-    return SendIllFormedResponse(packet, "Too short Z packet, missing address");
+    return BreakpointIllFormed{"Too short Z packet, missing address"};
   const lldb::addr_t addr = packet.GetHexMaxU64(false, 0);
 
   if ((packet.GetBytesLeft() < 1) || packet.GetChar() != ',')
-    return SendIllFormedResponse(
-        packet, "Malformed Z packet, expecting comma after address");
+    return BreakpointIllFormed{
+        "Malformed Z packet, expecting comma after address"};
 
   // Parse out the stoppoint size (i.e. size hint for opcode size).
   const uint32_t size =
       packet.GetHexMaxU32(false, std::numeric_limits<uint32_t>::max());
   if (size == std::numeric_limits<uint32_t>::max())
-    return SendIllFormedResponse(
-        packet, "Malformed Z packet, failed to parse size argument");
+    return BreakpointIllFormed{
+        "Malformed Z packet, failed to parse size argument"};
 
-  if (want_breakpoint) {
-    // Try to set the breakpoint.
+  // Try to set a breakpoint.
+  if (auto *bp_kind = std::get_if<UseBreakpoint>(&bp_variant)) {
     const Status error =
-        m_current_process->SetBreakpoint(addr, size, want_hardware);
+        m_current_process->SetBreakpoint(addr, size, bp_kind->want_hardware);
     if (error.Success())
-      return SendOKResponse();
+      return BreakpointOK();
     Log *log = GetLog(LLDBLog::Breakpoints);
     LLDB_LOG(log, "pid {0} failed to set breakpoint: {1}",
              m_current_process->GetID(), error);
-    return SendErrorResponse(0x09);
-  } else {
-    // Try to set the watchpoint.
-    const Status error = m_current_process->SetWatchpoint(
-        addr, size, watch_flags, want_hardware);
-    if (error.Success())
-      return SendOKResponse();
-    Log *log = GetLog(LLDBLog::Watchpoints);
-    LLDB_LOG(log, "pid {0} failed to set watchpoint: {1}",
-             m_current_process->GetID(), error);
-    return SendErrorResponse(0x09);
+    return BreakpointError{0x09};
   }
+
+  // Try to set a watchpoint.
+  auto wp_kind = std::get<UseWatchpoint>(bp_variant);
+  const Status error = m_current_process->SetWatchpoint(
+      addr, size, wp_kind.flags, wp_kind.want_hardware);
+  if (error.Success())
+    return BreakpointOK();
+  Log *log = GetLog(LLDBLog::Watchpoints);
+  LLDB_LOG(log, "pid {0} failed to set watchpoint: {1}",
+           m_current_process->GetID(), error);
+  return BreakpointError{0x09};
 }
 
-GDBRemoteCommunication::PacketResult
-GDBRemoteCommunicationServerLLGS::Handle_z(StringExtractorGDBRemote &packet) {
+GDBRemoteCommunicationServerLLGS::BreakpointResult
+GDBRemoteCommunicationServerLLGS::ExecuteRemoveBreakpoint(
+    llvm::StringRef packet_str) {
   // Ensure we have a process.
   if (!m_current_process ||
       (m_current_process->GetID() == LLDB_INVALID_PROCESS_ID)) {
     Log *log = GetLog(LLDBLog::Process);
     LLDB_LOG(log, "failed, no process available");
-    return SendErrorResponse(0x15);
+    return BreakpointError{0x15};
   }
+
+  StringExtractorGDBRemote packet(packet_str);
 
   // Parse out software or hardware breakpoint or watchpoint requested.
   packet.SetFilePos(strlen("z"));
   if (packet.GetBytesLeft() < 1)
-    return SendIllFormedResponse(
-        packet, "Too short z packet, missing software/hardware specifier");
-
-  bool want_breakpoint = true;
-  bool want_hardware = false;
+    return BreakpointIllFormed{
+        "Too short z packet, missing software/hardware specifier"};
 
   const GDBStoppointType stoppoint_type =
       GDBStoppointType(packet.GetS32(eStoppointInvalid));
-  switch (stoppoint_type) {
-  case eBreakpointHardware:
-    want_breakpoint = true;
-    want_hardware = true;
-    break;
-  case eBreakpointSoftware:
-    want_breakpoint = true;
-    break;
-  case eWatchpointWrite:
-    want_breakpoint = false;
-    break;
-  case eWatchpointRead:
-    want_breakpoint = false;
-    break;
-  case eWatchpointReadWrite:
-    want_breakpoint = false;
-    break;
-  default:
-    return SendIllFormedResponse(
-        packet, "z packet had invalid software/hardware specifier");
-  }
+  std::variant<UseBreakpoint, UseWatchpoint, InvalidStoppoint> bp_variant =
+      getBreakpointKind(stoppoint_type);
+  if (std::holds_alternative<InvalidStoppoint>(bp_variant))
+    return BreakpointIllFormed{
+        "z packet had invalid software/hardware specifier"};
 
   if ((packet.GetBytesLeft() < 1) || packet.GetChar() != ',')
-    return SendIllFormedResponse(
-        packet, "Malformed z packet, expecting comma after stoppoint type");
+    return BreakpointIllFormed{
+        "Malformed z packet, expecting comma after stoppoint type"};
 
   // Parse out the stoppoint address.
   if (packet.GetBytesLeft() < 1)
-    return SendIllFormedResponse(packet, "Too short z packet, missing address");
+    return BreakpointIllFormed{"Too short z packet, missing address"};
   const lldb::addr_t addr = packet.GetHexMaxU64(false, 0);
 
   if ((packet.GetBytesLeft() < 1) || packet.GetChar() != ',')
-    return SendIllFormedResponse(
-        packet, "Malformed z packet, expecting comma after address");
+    return BreakpointIllFormed{
+        "Malformed z packet, expecting comma after address"};
 
   /*
   // Parse out the stoppoint size (i.e. size hint for opcode size).
@@ -3062,26 +3054,55 @@ GDBRemoteCommunicationServerLLGS::Handle_z(StringExtractorGDBRemote &packet) {
   size argument");
   */
 
-  if (want_breakpoint) {
-    // Try to clear the breakpoint.
+  // Try to clear the breakpoint.
+  if (auto *bp_kind = std::get_if<UseBreakpoint>(&bp_variant)) {
     const Status error =
-        m_current_process->RemoveBreakpoint(addr, want_hardware);
+        m_current_process->RemoveBreakpoint(addr, bp_kind->want_hardware);
     if (error.Success())
-      return SendOKResponse();
+      return BreakpointOK();
     Log *log = GetLog(LLDBLog::Breakpoints);
     LLDB_LOG(log, "pid {0} failed to remove breakpoint: {1}",
              m_current_process->GetID(), error);
-    return SendErrorResponse(0x09);
-  } else {
-    // Try to clear the watchpoint.
-    const Status error = m_current_process->RemoveWatchpoint(addr);
-    if (error.Success())
-      return SendOKResponse();
-    Log *log = GetLog(LLDBLog::Watchpoints);
-    LLDB_LOG(log, "pid {0} failed to remove watchpoint: {1}",
-             m_current_process->GetID(), error);
-    return SendErrorResponse(0x09);
+    return BreakpointError{0x09};
   }
+  // Try to clear the watchpoint.
+  const Status error = m_current_process->RemoveWatchpoint(addr);
+  if (error.Success())
+    return BreakpointOK();
+  Log *log = GetLog(LLDBLog::Watchpoints);
+  LLDB_LOG(log, "pid {0} failed to remove watchpoint: {1}",
+           m_current_process->GetID(), error);
+  return BreakpointError{0x09};
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::SendBreakpointResponse(
+    StringExtractorGDBRemote &packet, const BreakpointResult &result) {
+  return std::visit(
+      [&](auto &&arg) {
+        using T = std::decay_t<decltype(arg)>;
+        if constexpr (std::is_same_v<T, BreakpointOK>)
+          return SendOKResponse();
+        else if constexpr (std::is_same_v<T, BreakpointError>)
+          return SendErrorResponse(arg.error_code);
+        else if constexpr (std::is_same_v<T, BreakpointIllFormed>)
+          return SendIllFormedResponse(packet, arg.message.c_str());
+        else
+          static_assert(false, "non-exhaustive visitor!");
+      },
+      result);
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::Handle_Z(StringExtractorGDBRemote &packet) {
+  return SendBreakpointResponse(packet,
+                                ExecuteSetBreakpoint(packet.GetStringRef()));
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::Handle_z(StringExtractorGDBRemote &packet) {
+  return SendBreakpointResponse(packet,
+                                ExecuteRemoveBreakpoint(packet.GetStringRef()));
 }
 
 GDBRemoteCommunication::PacketResult
