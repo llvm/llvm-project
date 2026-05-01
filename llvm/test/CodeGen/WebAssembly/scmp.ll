@@ -150,17 +150,19 @@ define i8 @scmp_i128_zero_to_i8(i128 %x) nounwind {
 ; CHECK-LABEL: scmp_i128_zero_to_i8:
 ; CHECK:         .functype scmp_i128_zero_to_i8 (i64, i64) -> (i32)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    local.get $push8=, 1
-; CHECK-NEXT:    i64.const $push0=, 63
-; CHECK-NEXT:    i64.shr_s $push1=, $pop8, $pop0
-; CHECK-NEXT:    local.get $push10=, 0
-; CHECK-NEXT:    local.get $push9=, 1
-; CHECK-NEXT:    i64.or $push2=, $pop10, $pop9
-; CHECK-NEXT:    i64.const $push3=, 0
-; CHECK-NEXT:    i64.ne $push4=, $pop2, $pop3
-; CHECK-NEXT:    i64.extend_i32_u $push5=, $pop4
-; CHECK-NEXT:    i64.or $push6=, $pop1, $pop5
-; CHECK-NEXT:    i32.wrap_i64 $push7=, $pop6
+; CHECK-NEXT:    local.get $push10=, 1
+; CHECK-NEXT:    i64.const $push5=, 63
+; CHECK-NEXT:    i64.shr_s $push6=, $pop10, $pop5
+; CHECK-NEXT:    i64.const $push3=, 1
+; CHECK-NEXT:    i64.const $push1=, 0
+; CHECK-NEXT:    local.get $push12=, 0
+; CHECK-NEXT:    local.get $push11=, 1
+; CHECK-NEXT:    i64.or $push0=, $pop12, $pop11
+; CHECK-NEXT:    i64.const $push9=, 0
+; CHECK-NEXT:    i64.ne $push2=, $pop0, $pop9
+; CHECK-NEXT:    i64.select $push4=, $pop3, $pop1, $pop2
+; CHECK-NEXT:    i64.or $push7=, $pop6, $pop4
+; CHECK-NEXT:    i32.wrap_i64 $push8=, $pop7
 ; CHECK-NEXT:    # fallthrough-return
   %r = call i8 @llvm.scmp.i8.i128(i128 %x, i128 0)
   ret i8 %r

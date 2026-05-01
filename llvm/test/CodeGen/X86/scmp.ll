@@ -3862,14 +3862,14 @@ define i8 @scmp_i128_zero_to_i8(i128 %x) nounwind {
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $16, %esp
 ; X86-NEXT:    movl 8(%ebp), %edx
-; X86-NEXT:    movl 20(%ebp), %eax
+; X86-NEXT:    movl 20(%ebp), %ecx
 ; X86-NEXT:    movl 12(%ebp), %esi
-; X86-NEXT:    orl %eax, %esi
+; X86-NEXT:    orl %ecx, %esi
 ; X86-NEXT:    orl 16(%ebp), %edx
-; X86-NEXT:    xorl %ecx, %ecx
+; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    orl %esi, %edx
-; X86-NEXT:    setne %cl
-; X86-NEXT:    sarl $31, %eax
+; X86-NEXT:    setne %al
+; X86-NEXT:    sarl $31, %ecx
 ; X86-NEXT:    orl %ecx, %eax
 ; X86-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-NEXT:    leal -4(%ebp), %esp

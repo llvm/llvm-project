@@ -11640,19 +11640,15 @@ SDValue TargetLowering::expandCMP(SDNode *Node, SelectionDAG &DAG) const {
   EVT BoolVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
   SDLoc dl(Node);
 
-  // fold scmp(x, 0) -> or(sra(x, bw-1), zext(setne(x, 0)))
+  // fold scmp(x, 0) -> or(sra(x, bw-1), select(setne(x, 0), 1, 0))
   // only when VT is a non-native integer type.
-  if (Opcode == ISD::SCMP && isNullConstant(RHS) && VT.isScalarInteger() &&
-      getTypeAction(*DAG.getContext(), VT) == TypeExpandInteger) {
+  if (Opcode == ISD::SCMP && isNullConstant(RHS) && !isTypeLegal(VT)) {
     SDValue ShiftAmt =
         DAG.getShiftAmountConstant(VT.getScalarSizeInBits() - 1, VT, dl);
     SDValue SignMask = DAG.getNode(ISD::SRA, dl, VT, LHS, ShiftAmt);
     SDValue IsNZ = DAG.getSetCC(dl, BoolVT, LHS, RHS, ISD::SETNE);
-    SDValue IsNZExt = DAG.getZExtOrTrunc(IsNZ, dl, VT);
-    if (BoolVT.getScalarSizeInBits() != 1 &&
-        getBooleanContents(BoolVT) != ZeroOrOneBooleanContent)
-      IsNZExt =
-          DAG.getNode(ISD::AND, dl, VT, IsNZExt, DAG.getConstant(1, dl, VT));
+    SDValue IsNZExt = DAG.getSelect(dl, VT, IsNZ, DAG.getConstant(1, dl, VT),
+                                    DAG.getConstant(0, dl, VT));
     SDValue Result = DAG.getNode(ISD::OR, dl, VT, SignMask, IsNZExt);
     return DAG.getSExtOrTrunc(Result, dl, ResVT);
   }

@@ -436,9 +436,10 @@ define i8 @scmp_i128_zero_to_i8(i128 %x) nounwind {
 ; THUMB2-NEXT:    orrs r1, r3
 ; THUMB2-NEXT:    orrs r0, r2
 ; THUMB2-NEXT:    orrs r0, r1
+; THUMB2-NEXT:    mov.w r1, #1
+; THUMB2-NEXT:    asr.w r0, r3, #31
 ; THUMB2-NEXT:    it ne
-; THUMB2-NEXT:    movne r0, #1
-; THUMB2-NEXT:    orr.w r0, r0, r3, asr #31
+; THUMB2-NEXT:    orrne.w r0, r1, r3, asr #31
 ; THUMB2-NEXT:    bx lr
 ;
 ; V81M-LABEL: scmp_i128_zero_to_i8:
@@ -446,8 +447,10 @@ define i8 @scmp_i128_zero_to_i8(i128 %x) nounwind {
 ; V81M-NEXT:    orrs r1, r3
 ; V81M-NEXT:    orrs r0, r2
 ; V81M-NEXT:    orrs r0, r1
-; V81M-NEXT:    cset r0, ne
-; V81M-NEXT:    orr.w r0, r0, r3, asr #31
+; V81M-NEXT:    mov.w r1, #1
+; V81M-NEXT:    asr.w r0, r3, #31
+; V81M-NEXT:    it ne
+; V81M-NEXT:    orrne.w r0, r1, r3, asr #31
 ; V81M-NEXT:    bx lr
   %r = call i8 @llvm.scmp.i8.i128(i128 %x, i128 0)
   ret i8 %r

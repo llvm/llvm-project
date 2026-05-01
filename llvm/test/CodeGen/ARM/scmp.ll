@@ -148,8 +148,9 @@ define i8 @scmp_i128_zero_to_i8(i128 %x) nounwind {
 ; CHECK-NEXT:    orr r1, r1, r3
 ; CHECK-NEXT:    orr r0, r0, r2
 ; CHECK-NEXT:    orrs r0, r0, r1
-; CHECK-NEXT:    movwne r0, #1
-; CHECK-NEXT:    orr r0, r0, r3, asr #31
+; CHECK-NEXT:    mov r1, #1
+; CHECK-NEXT:    asr r0, r3, #31
+; CHECK-NEXT:    orrne r0, r1, r3, asr #31
 ; CHECK-NEXT:    bx lr
   %r = call i8 @llvm.scmp.i8.i128(i128 %x, i128 0)
   ret i8 %r
