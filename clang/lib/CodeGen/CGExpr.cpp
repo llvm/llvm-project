@@ -3631,17 +3631,25 @@ LValue CodeGenFunction::EmitOMPCapturedBindingLValue(const BindingDecl *BD) {
   DeclarationNameInfo NameInfo(DD->getDeclName(), SourceLocation());
   DeclRefExpr *DRE = DeclRefExpr::Create(
       getContext(), NestedNameSpecifierLoc(), SourceLocation(), DD,
-      /*RefersToEnclosingVariableOrCapture=*/false, NameInfo, AggregType,
+      /*RefersToEnclosingVariableOrCapture=*/true, NameInfo, AggregType,
       VK_LValue);
   LValue CapLVal = EmitLValue(DRE);
-
+  QualType CanonType = AggregType.getCanonicalType();
+  llvm::Type *StructTy = CGM.getTypes().ConvertTypeForMem(CanonType);
+  Address Addr = CapLVal.getAddress();
+  if (Addr.getElementType() != StructTy) {
+    Addr = Addr.withElementType(StructTy);
+    CapLVal = MakeAddrLValue(Addr, CanonType, CapLVal.getBaseInfo(),
+                             CapLVal.getTBAAInfo());
+  }
   // Extract the specific binding from the decomposed object.
   Expr *BindingExpr = BD->getBinding()->IgnoreImplicit();
   if (auto *ME = dyn_cast<MemberExpr>(BindingExpr)) {
     // Struct/union: access field.
     FieldDecl *Field = cast<FieldDecl>(ME->getMemberDecl());
     return EmitLValueForField(CapLVal, Field);
-  } else if (auto *ASE = dyn_cast<ArraySubscriptExpr>(BindingExpr)) {
+  }
+  if (auto *ASE = dyn_cast<ArraySubscriptExpr>(BindingExpr)) {
     // Array binding - access element.
     Address Base = CapLVal.getAddress();
     llvm::Value *Idx = EmitScalarExpr(ASE->getIdx());
