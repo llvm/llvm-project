@@ -1422,18 +1422,31 @@ struct AAPointerInfoImpl
         });
       };
 
-      // Lazily compute forward reachability from I's block.
-      // BFS over successor edges within Scope, skipping dead edges (AAIsDead)
-      // and not traversing past ExclusionSet blocks (must-write barriers).
-      // I's block is always traversed (its successors are always explored).
-      // Other blocks containing ExclusionSet instructions are added to the
-      // reachable set but their successors are NOT explored.
+      // Lazily compute the set of basic blocks in Scope potentially reachable
+      // from I's block, used by CanSkipAccessBatch as a negative filter:
+      // when Acc's block is not in ReachableFromI we can skip the
+      // AA::isPotentiallyReachable call and set ReadChecked = true. When
+      // Acc's block is in ReachableFromI we fall through to
+      // AA::isPotentiallyReachable for a precise verdict.
       //
-      // Note: we do NOT block I's block even if it contains an ExclusionSet
-      // instruction after I. This matches isPotentiallyReachable /
-      // isReachableImpl semantics, which check SuccBB == ToBB before
-      // ExclusionBlocks and thus always consider direct successors as
-      // reachable.
+      // BFS over successor edges within Scope, skipping dead edges (AAIsDead).
+      // ExclusionSet blocks (other than I's own block, which we always
+      // traverse) are added to the reachable set but their successors are
+      // NOT explored - i.e., "blocking" applies to outgoing edges, not to
+      // the block's own membership.
+      //
+      // This is a deliberate over-approximation relative to
+      // AA::isPotentiallyReachable: in particular, the BFS does not model
+      // in-block barriers. A block containing an ExclusionSet instruction
+      // is reported reachable even if every path into the block crosses
+      // that instruction before the block's accesses;
+      // AA::isPotentiallyReachable's AAIntraFnReachability pre-checks that
+      // case explicitly via WillReachInBlock(ToBB->front(), To, ExclusionSet)
+      // and may answer "not reachable" where the BFS answers "reachable".
+      // Because the BFS is consumed only as a negative filter, this
+      // asymmetry is sound: when the BFS over-approximates, we just fall
+      // through to the AA::isPotentiallyReachable call - a missed
+      // optimization, not a soundness/correctness bug.
       auto EnsureReachableFromI = [&]() {
         if (ReachableFromIComputed)
           return;
@@ -1465,15 +1478,12 @@ struct AAPointerInfoImpl
         ReachableFromIComputed = true;
       };
 
-      // Lazily compute backward reachability to I's block.
-      // BFS over predecessor edges within Scope, skipping dead edges and
-      // not traversing past ExclusionSet blocks. This is the mirror of
-      // EnsureReachableFromI: it answers "can Acc reach I?" rather than
-      // "can I reach Acc?".
-      //
-      // As with EnsureReachableFromI, I's block is always traversed
-      // (its predecessors are always explored) to match isPotentiallyReachable
-      // semantics.
+      // Lazily compute the set of basic blocks in Scope from which I's
+      // block is potentially reachable. Mirror of EnsureReachableFromI:
+      // BFS over predecessor edges instead of successors, used as a
+      // negative filter for the backward "can Acc reach I?" question.
+      // Same over-approximation/soundness properties apply - see the
+      // comment above EnsureReachableFromI for the full argument.
       auto EnsureReachableToI = [&]() {
         if (ReachableToIComputed)
           return;
@@ -1509,12 +1519,13 @@ struct AAPointerInfoImpl
 
       // Batch variant of CanSkipAccess for intra-function accesses.
       //
-      // The batch BFS can safely be used as a negative filter (skip iPR when
-      // BFS says "not reachable") only when iPR agrees for all paths the BFS
-      // can't model. This requires:
+      // The batch BFS can safely be used as a negative filter (skip
+      // AA::isPotentiallyReachable when BFS says "not reachable") only when
+      // AA::isPotentiallyReachable agrees for all paths the BFS can't model.
+      // This requires:
       //   (a) norecurse: instructionCanReach can't find paths back to Scope
-      //   (b) GoBackwardsCB returns false for Scope: iPR won't step back to
-      //   callers
+      //   (b) GoBackwardsCB returns false for Scope:
+      //       AA::isPotentiallyReachable won't step back to callers
       // Both hold for allocas in norecurse functions where
       // GoBackwardsCB(*Scope) = IsLiveInCalleeCB(*Scope) = (AIFn != Scope) =
       // false.
