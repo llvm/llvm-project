@@ -1,5 +1,7 @@
+// clang-format off
 // RUN: %clangXX %flags %openmp_flags -fopenmp-version=60 %s -o %t && env OMP_NUM_THREADS=4 %libomp-run 2>&1 | FileCheck %s
 // REQUIRES: omp_taskgraph_experimental
+// clang-format on
 
 #include <atomic>
 #include <cstdio>
