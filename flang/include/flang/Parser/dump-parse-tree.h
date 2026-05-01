@@ -586,6 +586,7 @@ public:
   NODE_ENUM(OmpDefaultmapClause, ImplicitBehavior)
   NODE(parser, OmpDeleteModifier)
   NODE_ENUM(OmpDeleteModifier, Value)
+  NODE(parser, OmpDelimitedMetadirectiveDirective)
   NODE(parser, OmpDependClause)
   NODE(OmpDependClause, TaskDep)
   NODE(OmpDependClause::TaskDep, Modifier)
