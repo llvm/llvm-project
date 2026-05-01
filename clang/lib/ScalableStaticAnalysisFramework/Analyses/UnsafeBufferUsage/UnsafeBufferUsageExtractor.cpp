@@ -49,7 +49,7 @@ clang::ssaf::UnsafeBufferUsageTUSummaryExtractor::extractEntitySummary(
 
   for (const Expr *Ptr : UnsafePointers) {
     Expected<EntityPointerLevelSet> Translation =
-        translateEntityPointerLevel(Ptr, Ctx, SummaryBuilder);
+        translateEntityPointerLevel(Ptr, Ctx, *this);
 
     if (Translation) {
       // Filter out those temporary invalid EntityPointerLevels associated
@@ -82,7 +82,7 @@ void clang::ssaf::UnsafeBufferUsageTUSummaryExtractor::HandleTranslationUnit(
     if ((*EntitySummary)->empty())
       continue;
 
-    auto ContributorId = SummaryBuilder.addEntity(CD);
+    auto ContributorId = addEntity(CD);
 
     if (!ContributorId)
       llvm::reportFatalInternalError(makeEntityNameErr(Ctx, CD));

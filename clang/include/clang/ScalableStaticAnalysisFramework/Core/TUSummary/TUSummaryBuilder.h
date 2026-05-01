@@ -9,11 +9,10 @@
 #ifndef LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_TUSUMMARY_TUSUMMARYBUILDER_H
 #define LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_TUSUMMARY_TUSUMMARYBUILDER_H
 
-#include "clang/AST/DeclBase.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityId.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityLinkage.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/EntitySummary.h"
 #include <memory>
-#include <optional>
 #include <utility>
 
 namespace clang::ssaf {
@@ -25,15 +24,7 @@ class TUSummaryBuilder {
 public:
   explicit TUSummaryBuilder(TUSummary &Summary) : Summary(Summary) {}
 
-  /// Creates EntityName from the Decl, registers the entity, and sets its
-  /// linkage atomically.
-  /// \returns the EntityId, or std::nullopt if EntityName creation fails.
-  std::optional<EntityId> addEntity(const NamedDecl *D);
-
-  /// Creates EntityName for the return value of \p FD, registers the entity,
-  /// and sets its linkage atomically.
-  /// \returns the EntityId, or std::nullopt if EntityName creation fails.
-  std::optional<EntityId> addEntityForReturn(const FunctionDecl *FD);
+  EntityId addEntity(const EntityName &EN, EntityLinkageType Linkage);
 
   /// Associate the \p Data \c EntitySummary with the \p Entity.
   /// This consumes the \p Data only if \p Entity wasn't associated yet with the
@@ -46,8 +37,6 @@ public:
 
 private:
   TUSummary &Summary;
-
-  EntityId addEntityImpl(const EntityName &Name, const Decl *D);
 
   std::pair<EntitySummary *, bool>
   addSummaryImpl(EntityId Entity, std::unique_ptr<EntitySummary> &&Data);

@@ -39,7 +39,7 @@ class UnsafeBufferUsageTest : public TestFixture {
 protected:
   TUSummary TUSum;
   TUSummaryBuilder Builder;
-  std::unique_ptr<ASTConsumer> Extractor;
+  std::unique_ptr<TUSummaryExtractor> Extractor;
   std::unique_ptr<ASTUnit> AST;
 
   UnsafeBufferUsageTest()
@@ -74,7 +74,7 @@ protected:
     }
 
     std::optional<EntityId> ContributorEntityId =
-        Builder.addEntity(ContributorDefn);
+        Extractor->addEntity(ContributorDefn);
     if (!ContributorEntityId) {
       ADD_FAILURE() << "failed to get EntityName for contributor \""
                     << ContributorEntityName << "\"";
@@ -101,13 +101,13 @@ protected:
 
   std::optional<EntityId> getEntityId(StringRef Name) {
     if (const auto *D = findDeclByName(Name, AST->getASTContext()))
-      return Builder.addEntity(D);
+      return Extractor->addEntity(D);
     return std::nullopt;
   }
 
   std::optional<EntityId> getEntityIdForReturn(StringRef FunName) {
     if (const auto *D = findFnByName(FunName, AST->getASTContext()))
-      return Builder.addEntityForReturn(D);
+      return Extractor->addEntityForReturn(D);
     return std::nullopt;
   }
 

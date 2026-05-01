@@ -52,7 +52,7 @@ void CallGraphExtractor::handleCallGraphNode(const ASTContext &Ctx,
   // FIXME: `clang::CallGraph` does not create entries for primary templates.
   assert(!Definition->isTemplated());
 
-  auto CallerId = SummaryBuilder.addEntity(Definition);
+  auto CallerId = addEntity(Definition);
   if (!CallerId)
     return;
 
@@ -79,7 +79,7 @@ void CallGraphExtractor::handleCallGraphNode(const ASTContext &Ctx,
     // FIXME: `clang::CallGraph` does not create entries for primary templates.
     assert(!CalleeDecl->isTemplated());
 
-    auto CalleeId = SummaryBuilder.addEntity(cast<NamedDecl>(CalleeDecl));
+    auto CalleeId = addEntity(cast<NamedDecl>(CalleeDecl));
     if (!CalleeId)
       continue;
 

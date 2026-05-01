@@ -14,7 +14,7 @@
 #include <set>
 
 namespace clang::ssaf {
-class TUSummaryBuilder;
+class TUSummaryExtractor;
 
 /// An EntityPointerLevel is associated with a level of the declared
 /// pointer/array type of an entity.  In the fully-expanded spelling of the
@@ -94,7 +94,7 @@ using EntityPointerLevelSet =
 /// to EntityIds.
 llvm::Expected<EntityPointerLevelSet>
 translateEntityPointerLevel(const Expr *E, ASTContext &Ctx,
-                            TUSummaryBuilder &Builder);
+                            TUSummaryExtractor &Extractor);
 
 /// Creates a `EntityPointerLevel` from a pair of an EntityId and a pointer
 /// level:
@@ -108,7 +108,7 @@ EntityPointerLevel buildEntityPointerLevel(EntityId, unsigned);
 /// \param IsFunRet true iff the created EPL is associated with the return type
 /// of a function entity.
 llvm::Expected<EntityPointerLevel>
-createEntityPointerLevel(const NamedDecl *ND, TUSummaryBuilder &Builder,
+createEntityPointerLevel(const NamedDecl *ND, TUSummaryExtractor &Extractor,
                          bool IsFunRet = false);
 
 /// Creates a new EntityPointerLevel (EPL) from `E` by incrementing `E`'s

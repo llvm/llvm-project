@@ -16,6 +16,7 @@
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/SummaryName.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/EntitySummary.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummary.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryExtractor.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
@@ -90,7 +91,8 @@ void PrintTo(const MockSummaryData3 &S, std::ostream *OS) {
 struct TUSummaryBuilderTest : ssaf::TestFixture {
   TUSummary Summary{
       BuildNamespace(BuildNamespaceKind::CompilationUnit, "Mock.cpp")};
-  TUSummaryBuilder Builder = TUSummaryBuilder(this->Summary);
+  TUSummaryBuilder Builder{Summary};
+  TUSummaryExtractor Extractor{Builder};
 
   [[nodiscard]] EntityId addTestEntity(llvm::StringRef USR) {
     return getIdTable(Summary).getId(
@@ -290,28 +292,32 @@ TEST_F(TUSummaryBuilderLinkageTest, HasInternalLinkage) {
   AST = tooling::buildASTFromCode("static void target() {}");
   const FunctionDecl *Fn = findFnByName("target");
   ASSERT_TRUE(Fn);
-  EXPECT_EQ(getLinkageFor(Builder.addEntity(Fn)), EntityLinkageType::Internal);
+  EXPECT_EQ(getLinkageFor(Extractor.addEntity(Fn)),
+            EntityLinkageType::Internal);
 }
 
 TEST_F(TUSummaryBuilderLinkageTest, HasExternalLinkage) {
   AST = tooling::buildASTFromCode("void target() {}");
   const FunctionDecl *Fn = findFnByName("target");
   ASSERT_TRUE(Fn);
-  EXPECT_EQ(getLinkageFor(Builder.addEntity(Fn)), EntityLinkageType::External);
+  EXPECT_EQ(getLinkageFor(Extractor.addEntity(Fn)),
+            EntityLinkageType::External);
 }
 
 TEST_F(TUSummaryBuilderLinkageTest, HasExternalLinkageWithInline) {
   AST = tooling::buildASTFromCode("inline void target() {}");
   const FunctionDecl *Fn = findFnByName("target");
   ASSERT_TRUE(Fn);
-  EXPECT_EQ(getLinkageFor(Builder.addEntity(Fn)), EntityLinkageType::External);
+  EXPECT_EQ(getLinkageFor(Extractor.addEntity(Fn)),
+            EntityLinkageType::External);
 }
 
 TEST_F(TUSummaryBuilderLinkageTest, HasInternalLinkageWithStaticInline) {
   AST = tooling::buildASTFromCode("static inline void target() {}");
   const FunctionDecl *Fn = findFnByName("target");
   ASSERT_TRUE(Fn);
-  EXPECT_EQ(getLinkageFor(Builder.addEntity(Fn)), EntityLinkageType::Internal);
+  EXPECT_EQ(getLinkageFor(Extractor.addEntity(Fn)),
+            EntityLinkageType::Internal);
 }
 
 TEST_F(TUSummaryBuilderLinkageTest, ConstVolatileGlobalHasExternalLinkage) {
@@ -320,7 +326,8 @@ TEST_F(TUSummaryBuilderLinkageTest, ConstVolatileGlobalHasExternalLinkage) {
                                   "}");
   const auto *VD = findDeclByName<VarDecl>("glob", AST->getASTContext());
   ASSERT_TRUE(VD);
-  EXPECT_EQ(getLinkageFor(Builder.addEntity(VD)), EntityLinkageType::External);
+  EXPECT_EQ(getLinkageFor(Extractor.addEntity(VD)),
+            EntityLinkageType::External);
 }
 
 TEST_F(TUSummaryBuilderLinkageTest, ConstGlobalHasInternalLinkage) {
@@ -329,7 +336,8 @@ TEST_F(TUSummaryBuilderLinkageTest, ConstGlobalHasInternalLinkage) {
                                   "}");
   const auto *VD = findDeclByName<VarDecl>("glob", AST->getASTContext());
   ASSERT_TRUE(VD);
-  EXPECT_EQ(getLinkageFor(Builder.addEntity(VD)), EntityLinkageType::Internal);
+  EXPECT_EQ(getLinkageFor(Extractor.addEntity(VD)),
+            EntityLinkageType::Internal);
 }
 
 } // namespace
