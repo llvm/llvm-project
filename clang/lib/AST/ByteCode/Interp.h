@@ -2920,7 +2920,7 @@ bool CastPointerIntegral(InterpState &S, CodePtr OpPC) {
       S.Stk.push<T>(Kind, PtrVal, /*Offset=*/0);
     } else if (Ptr.isFunctionPointer()) {
       const void *FuncDecl = Ptr.asFunctionPointer().Func->getDecl();
-      S.Stk.push<T>(IntegralKind::Address, FuncDecl, /*Offset=*/0);
+      S.Stk.push<T>(IntegralKind::FunctionAddress, FuncDecl, /*Offset=*/0);
     } else {
       S.Stk.push<T>(T::from(Ptr.getIntegerRepresentation()));
     }
@@ -3514,6 +3514,10 @@ inline bool GetIntPtr(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
 
       const Block *B = (const Block *)IntVal.getPtr();
       S.Stk.push<Pointer>(const_cast<Block *>(B));
+    } else if (IntVal.getKind() == IntegralKind::FunctionAddress) {
+      const Function *F =
+          S.P.getFunction((const FunctionDecl *)IntVal.getPtr());
+      S.Stk.push<Pointer>(F, IntVal.getOffset());
     } else {
       S.Stk.push<Pointer>(static_cast<uint64_t>(IntVal), Desc);
     }
