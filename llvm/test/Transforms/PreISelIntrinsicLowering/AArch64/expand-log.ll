@@ -14,7 +14,7 @@ define <vscale x 4 x float> @scalable_vec_log(<vscale x 4 x float> %input) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <vscale x 4 x float> [[TMP5]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call float @llvm.log.f32(float [[TMP6]])
 ; CHECK-NEXT:    [[TMP8]] = insertelement <vscale x 4 x float> [[TMP5]], float [[TMP7]], i64 [[TMP4]]
-; CHECK-NEXT:    [[TMP9]] = add i64 [[TMP4]], 1
+; CHECK-NEXT:    [[TMP9]] = add nuw nsw i64 [[TMP4]], 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[TMP9]], [[TMP2]]
 ; CHECK-NEXT:    br i1 [[TMP10]], label %[[BB11:.*]], label %[[BB3]]
 ; CHECK:       [[BB11]]:

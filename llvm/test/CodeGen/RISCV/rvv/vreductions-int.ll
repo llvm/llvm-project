@@ -1710,14 +1710,14 @@ define signext i8 @vreduce_mul_nxv1i8(<vscale x 1 x i8> %v) {
 ; RV32-NEXT:    srli a2, a2, 3
 ; RV32-NEXT:    li a1, 1
 ; RV32-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; RV32-NEXT:  .LBB114_1: # %rdx.loop
+; RV32-NEXT:  .LBB114_1: # %ec.loop
 ; RV32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32-NEXT:    vslidedown.vx v9, v8, a0
 ; RV32-NEXT:    vmv.x.s a3, v9
 ; RV32-NEXT:    addi a0, a0, 1
 ; RV32-NEXT:    mul a1, a1, a3
 ; RV32-NEXT:    bne a0, a2, .LBB114_1
-; RV32-NEXT:  # %bb.2: # %rdx.exit
+; RV32-NEXT:  # %bb.2: # %ec.exit
 ; RV32-NEXT:    slli a0, a1, 24
 ; RV32-NEXT:    srai a0, a0, 24
 ; RV32-NEXT:    ret
@@ -1729,14 +1729,14 @@ define signext i8 @vreduce_mul_nxv1i8(<vscale x 1 x i8> %v) {
 ; RV64-NEXT:    srli a2, a2, 3
 ; RV64-NEXT:    li a1, 1
 ; RV64-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; RV64-NEXT:  .LBB114_1: # %rdx.loop
+; RV64-NEXT:  .LBB114_1: # %ec.loop
 ; RV64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64-NEXT:    vslidedown.vx v9, v8, a0
 ; RV64-NEXT:    vmv.x.s a3, v9
 ; RV64-NEXT:    addi a0, a0, 1
 ; RV64-NEXT:    mul a1, a1, a3
 ; RV64-NEXT:    bne a0, a2, .LBB114_1
-; RV64-NEXT:  # %bb.2: # %rdx.exit
+; RV64-NEXT:  # %bb.2: # %ec.exit
 ; RV64-NEXT:    slli a0, a1, 56
 ; RV64-NEXT:    srai a0, a0, 56
 ; RV64-NEXT:    ret
@@ -1752,14 +1752,14 @@ define signext i8 @vreduce_mul_nxv2i8(<vscale x 2 x i8> %v) {
 ; RV32-NEXT:    srli a2, a2, 2
 ; RV32-NEXT:    li a1, 1
 ; RV32-NEXT:    vsetivli zero, 1, e8, mf4, ta, ma
-; RV32-NEXT:  .LBB115_1: # %rdx.loop
+; RV32-NEXT:  .LBB115_1: # %ec.loop
 ; RV32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32-NEXT:    vslidedown.vx v9, v8, a0
 ; RV32-NEXT:    vmv.x.s a3, v9
 ; RV32-NEXT:    addi a0, a0, 1
 ; RV32-NEXT:    mul a1, a1, a3
 ; RV32-NEXT:    bne a0, a2, .LBB115_1
-; RV32-NEXT:  # %bb.2: # %rdx.exit
+; RV32-NEXT:  # %bb.2: # %ec.exit
 ; RV32-NEXT:    slli a0, a1, 24
 ; RV32-NEXT:    srai a0, a0, 24
 ; RV32-NEXT:    ret
@@ -1771,14 +1771,14 @@ define signext i8 @vreduce_mul_nxv2i8(<vscale x 2 x i8> %v) {
 ; RV64-NEXT:    srli a2, a2, 2
 ; RV64-NEXT:    li a1, 1
 ; RV64-NEXT:    vsetivli zero, 1, e8, mf4, ta, ma
-; RV64-NEXT:  .LBB115_1: # %rdx.loop
+; RV64-NEXT:  .LBB115_1: # %ec.loop
 ; RV64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64-NEXT:    vslidedown.vx v9, v8, a0
 ; RV64-NEXT:    vmv.x.s a3, v9
 ; RV64-NEXT:    addi a0, a0, 1
 ; RV64-NEXT:    mul a1, a1, a3
 ; RV64-NEXT:    bne a0, a2, .LBB115_1
-; RV64-NEXT:  # %bb.2: # %rdx.exit
+; RV64-NEXT:  # %bb.2: # %ec.exit
 ; RV64-NEXT:    slli a0, a1, 56
 ; RV64-NEXT:    srai a0, a0, 56
 ; RV64-NEXT:    ret
@@ -1794,14 +1794,14 @@ define signext i8 @vreduce_mul_nxv4i8(<vscale x 4 x i8> %v) {
 ; RV32-NEXT:    srli a2, a2, 1
 ; RV32-NEXT:    li a1, 1
 ; RV32-NEXT:    vsetivli zero, 1, e8, mf2, ta, ma
-; RV32-NEXT:  .LBB116_1: # %rdx.loop
+; RV32-NEXT:  .LBB116_1: # %ec.loop
 ; RV32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32-NEXT:    vslidedown.vx v9, v8, a0
 ; RV32-NEXT:    vmv.x.s a3, v9
 ; RV32-NEXT:    addi a0, a0, 1
 ; RV32-NEXT:    mul a1, a1, a3
 ; RV32-NEXT:    bne a0, a2, .LBB116_1
-; RV32-NEXT:  # %bb.2: # %rdx.exit
+; RV32-NEXT:  # %bb.2: # %ec.exit
 ; RV32-NEXT:    slli a0, a1, 24
 ; RV32-NEXT:    srai a0, a0, 24
 ; RV32-NEXT:    ret
@@ -1813,14 +1813,14 @@ define signext i8 @vreduce_mul_nxv4i8(<vscale x 4 x i8> %v) {
 ; RV64-NEXT:    srli a2, a2, 1
 ; RV64-NEXT:    li a1, 1
 ; RV64-NEXT:    vsetivli zero, 1, e8, mf2, ta, ma
-; RV64-NEXT:  .LBB116_1: # %rdx.loop
+; RV64-NEXT:  .LBB116_1: # %ec.loop
 ; RV64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64-NEXT:    vslidedown.vx v9, v8, a0
 ; RV64-NEXT:    vmv.x.s a3, v9
 ; RV64-NEXT:    addi a0, a0, 1
 ; RV64-NEXT:    mul a1, a1, a3
 ; RV64-NEXT:    bne a0, a2, .LBB116_1
-; RV64-NEXT:  # %bb.2: # %rdx.exit
+; RV64-NEXT:  # %bb.2: # %ec.exit
 ; RV64-NEXT:    slli a0, a1, 56
 ; RV64-NEXT:    srai a0, a0, 56
 ; RV64-NEXT:    ret
@@ -1836,14 +1836,14 @@ define signext i16 @vreduce_mul_nxv1i16(<vscale x 1 x i16> %v) {
 ; RV32-NEXT:    srli a2, a2, 3
 ; RV32-NEXT:    li a1, 1
 ; RV32-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; RV32-NEXT:  .LBB117_1: # %rdx.loop
+; RV32-NEXT:  .LBB117_1: # %ec.loop
 ; RV32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32-NEXT:    vslidedown.vx v9, v8, a0
 ; RV32-NEXT:    vmv.x.s a3, v9
 ; RV32-NEXT:    addi a0, a0, 1
 ; RV32-NEXT:    mul a1, a1, a3
 ; RV32-NEXT:    bne a0, a2, .LBB117_1
-; RV32-NEXT:  # %bb.2: # %rdx.exit
+; RV32-NEXT:  # %bb.2: # %ec.exit
 ; RV32-NEXT:    slli a0, a1, 16
 ; RV32-NEXT:    srai a0, a0, 16
 ; RV32-NEXT:    ret
@@ -1855,14 +1855,14 @@ define signext i16 @vreduce_mul_nxv1i16(<vscale x 1 x i16> %v) {
 ; RV64-NEXT:    srli a2, a2, 3
 ; RV64-NEXT:    li a1, 1
 ; RV64-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; RV64-NEXT:  .LBB117_1: # %rdx.loop
+; RV64-NEXT:  .LBB117_1: # %ec.loop
 ; RV64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64-NEXT:    vslidedown.vx v9, v8, a0
 ; RV64-NEXT:    vmv.x.s a3, v9
 ; RV64-NEXT:    addi a0, a0, 1
 ; RV64-NEXT:    mul a1, a1, a3
 ; RV64-NEXT:    bne a0, a2, .LBB117_1
-; RV64-NEXT:  # %bb.2: # %rdx.exit
+; RV64-NEXT:  # %bb.2: # %ec.exit
 ; RV64-NEXT:    slli a0, a1, 48
 ; RV64-NEXT:    srai a0, a0, 48
 ; RV64-NEXT:    ret
@@ -1878,14 +1878,14 @@ define signext i16 @vreduce_mul_nxv2i16(<vscale x 2 x i16> %v) {
 ; RV32-NEXT:    srli a2, a2, 2
 ; RV32-NEXT:    li a1, 1
 ; RV32-NEXT:    vsetivli zero, 1, e16, mf2, ta, ma
-; RV32-NEXT:  .LBB118_1: # %rdx.loop
+; RV32-NEXT:  .LBB118_1: # %ec.loop
 ; RV32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32-NEXT:    vslidedown.vx v9, v8, a0
 ; RV32-NEXT:    vmv.x.s a3, v9
 ; RV32-NEXT:    addi a0, a0, 1
 ; RV32-NEXT:    mul a1, a1, a3
 ; RV32-NEXT:    bne a0, a2, .LBB118_1
-; RV32-NEXT:  # %bb.2: # %rdx.exit
+; RV32-NEXT:  # %bb.2: # %ec.exit
 ; RV32-NEXT:    slli a0, a1, 16
 ; RV32-NEXT:    srai a0, a0, 16
 ; RV32-NEXT:    ret
@@ -1897,14 +1897,14 @@ define signext i16 @vreduce_mul_nxv2i16(<vscale x 2 x i16> %v) {
 ; RV64-NEXT:    srli a2, a2, 2
 ; RV64-NEXT:    li a1, 1
 ; RV64-NEXT:    vsetivli zero, 1, e16, mf2, ta, ma
-; RV64-NEXT:  .LBB118_1: # %rdx.loop
+; RV64-NEXT:  .LBB118_1: # %ec.loop
 ; RV64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64-NEXT:    vslidedown.vx v9, v8, a0
 ; RV64-NEXT:    vmv.x.s a3, v9
 ; RV64-NEXT:    addi a0, a0, 1
 ; RV64-NEXT:    mul a1, a1, a3
 ; RV64-NEXT:    bne a0, a2, .LBB118_1
-; RV64-NEXT:  # %bb.2: # %rdx.exit
+; RV64-NEXT:  # %bb.2: # %ec.exit
 ; RV64-NEXT:    slli a0, a1, 48
 ; RV64-NEXT:    srai a0, a0, 48
 ; RV64-NEXT:    ret
@@ -1920,14 +1920,14 @@ define signext i16 @vreduce_mul_nxv4i16(<vscale x 4 x i16> %v) {
 ; RV32-NEXT:    srli a2, a2, 1
 ; RV32-NEXT:    li a1, 1
 ; RV32-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; RV32-NEXT:  .LBB119_1: # %rdx.loop
+; RV32-NEXT:  .LBB119_1: # %ec.loop
 ; RV32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32-NEXT:    vslidedown.vx v9, v8, a0
 ; RV32-NEXT:    vmv.x.s a3, v9
 ; RV32-NEXT:    addi a0, a0, 1
 ; RV32-NEXT:    mul a1, a1, a3
 ; RV32-NEXT:    bne a0, a2, .LBB119_1
-; RV32-NEXT:  # %bb.2: # %rdx.exit
+; RV32-NEXT:  # %bb.2: # %ec.exit
 ; RV32-NEXT:    slli a0, a1, 16
 ; RV32-NEXT:    srai a0, a0, 16
 ; RV32-NEXT:    ret
@@ -1939,14 +1939,14 @@ define signext i16 @vreduce_mul_nxv4i16(<vscale x 4 x i16> %v) {
 ; RV64-NEXT:    srli a2, a2, 1
 ; RV64-NEXT:    li a1, 1
 ; RV64-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; RV64-NEXT:  .LBB119_1: # %rdx.loop
+; RV64-NEXT:  .LBB119_1: # %ec.loop
 ; RV64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64-NEXT:    vslidedown.vx v9, v8, a0
 ; RV64-NEXT:    vmv.x.s a3, v9
 ; RV64-NEXT:    addi a0, a0, 1
 ; RV64-NEXT:    mul a1, a1, a3
 ; RV64-NEXT:    bne a0, a2, .LBB119_1
-; RV64-NEXT:  # %bb.2: # %rdx.exit
+; RV64-NEXT:  # %bb.2: # %ec.exit
 ; RV64-NEXT:    slli a0, a1, 48
 ; RV64-NEXT:    srai a0, a0, 48
 ; RV64-NEXT:    ret
@@ -1962,14 +1962,14 @@ define signext i32 @vreduce_mul_nxv1i32(<vscale x 1 x i32> %v) {
 ; RV32-NEXT:    srli a2, a2, 3
 ; RV32-NEXT:    li a0, 1
 ; RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; RV32-NEXT:  .LBB120_1: # %rdx.loop
+; RV32-NEXT:  .LBB120_1: # %ec.loop
 ; RV32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32-NEXT:    vslidedown.vx v9, v8, a1
 ; RV32-NEXT:    vmv.x.s a3, v9
 ; RV32-NEXT:    addi a1, a1, 1
 ; RV32-NEXT:    mul a0, a0, a3
 ; RV32-NEXT:    bne a1, a2, .LBB120_1
-; RV32-NEXT:  # %bb.2: # %rdx.exit
+; RV32-NEXT:  # %bb.2: # %ec.exit
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vreduce_mul_nxv1i32:
@@ -1979,14 +1979,14 @@ define signext i32 @vreduce_mul_nxv1i32(<vscale x 1 x i32> %v) {
 ; RV64-NEXT:    srli a2, a2, 3
 ; RV64-NEXT:    li a0, 1
 ; RV64-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; RV64-NEXT:  .LBB120_1: # %rdx.loop
+; RV64-NEXT:  .LBB120_1: # %ec.loop
 ; RV64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64-NEXT:    vslidedown.vx v9, v8, a1
 ; RV64-NEXT:    vmv.x.s a3, v9
 ; RV64-NEXT:    addi a1, a1, 1
 ; RV64-NEXT:    mulw a0, a0, a3
 ; RV64-NEXT:    bne a1, a2, .LBB120_1
-; RV64-NEXT:  # %bb.2: # %rdx.exit
+; RV64-NEXT:  # %bb.2: # %ec.exit
 ; RV64-NEXT:    ret
   %red = call i32 @llvm.vector.reduce.mul.nxv1i32(<vscale x 1 x i32> %v)
   ret i32 %red
@@ -2000,14 +2000,14 @@ define signext i32 @vreduce_mul_nxv2i32(<vscale x 2 x i32> %v) {
 ; RV32-NEXT:    srli a2, a2, 2
 ; RV32-NEXT:    li a0, 1
 ; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV32-NEXT:  .LBB121_1: # %rdx.loop
+; RV32-NEXT:  .LBB121_1: # %ec.loop
 ; RV32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32-NEXT:    vslidedown.vx v9, v8, a1
 ; RV32-NEXT:    vmv.x.s a3, v9
 ; RV32-NEXT:    addi a1, a1, 1
 ; RV32-NEXT:    mul a0, a0, a3
 ; RV32-NEXT:    bne a1, a2, .LBB121_1
-; RV32-NEXT:  # %bb.2: # %rdx.exit
+; RV32-NEXT:  # %bb.2: # %ec.exit
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vreduce_mul_nxv2i32:
@@ -2017,14 +2017,14 @@ define signext i32 @vreduce_mul_nxv2i32(<vscale x 2 x i32> %v) {
 ; RV64-NEXT:    srli a2, a2, 2
 ; RV64-NEXT:    li a0, 1
 ; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; RV64-NEXT:  .LBB121_1: # %rdx.loop
+; RV64-NEXT:  .LBB121_1: # %ec.loop
 ; RV64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64-NEXT:    vslidedown.vx v9, v8, a1
 ; RV64-NEXT:    vmv.x.s a3, v9
 ; RV64-NEXT:    addi a1, a1, 1
 ; RV64-NEXT:    mulw a0, a0, a3
 ; RV64-NEXT:    bne a1, a2, .LBB121_1
-; RV64-NEXT:  # %bb.2: # %rdx.exit
+; RV64-NEXT:  # %bb.2: # %ec.exit
 ; RV64-NEXT:    ret
   %red = call i32 @llvm.vector.reduce.mul.nxv2i32(<vscale x 2 x i32> %v)
   ret i32 %red
@@ -2039,7 +2039,7 @@ define signext i32 @vreduce_mul_nxv4i32(<vscale x 4 x i32> %v) {
 ; RV32-NEXT:    csrr a2, vlenb
 ; RV32-NEXT:    srli a2, a2, 2
 ; RV32-NEXT:    li a0, 1
-; RV32-NEXT:  .LBB122_1: # %rdx.loop
+; RV32-NEXT:  .LBB122_1: # %ec.loop
 ; RV32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV32-NEXT:    vslidedown.vx v9, v8, a1
@@ -2047,7 +2047,7 @@ define signext i32 @vreduce_mul_nxv4i32(<vscale x 4 x i32> %v) {
 ; RV32-NEXT:    addi a1, a1, 1
 ; RV32-NEXT:    mul a0, a0, a3
 ; RV32-NEXT:    bne a1, a2, .LBB122_1
-; RV32-NEXT:  # %bb.2: # %rdx.exit
+; RV32-NEXT:  # %bb.2: # %ec.exit
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vreduce_mul_nxv4i32:
@@ -2058,7 +2058,7 @@ define signext i32 @vreduce_mul_nxv4i32(<vscale x 4 x i32> %v) {
 ; RV64-NEXT:    csrr a2, vlenb
 ; RV64-NEXT:    srli a2, a2, 2
 ; RV64-NEXT:    li a0, 1
-; RV64-NEXT:  .LBB122_1: # %rdx.loop
+; RV64-NEXT:  .LBB122_1: # %ec.loop
 ; RV64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV64-NEXT:    vslidedown.vx v9, v8, a1
@@ -2066,7 +2066,7 @@ define signext i32 @vreduce_mul_nxv4i32(<vscale x 4 x i32> %v) {
 ; RV64-NEXT:    addi a1, a1, 1
 ; RV64-NEXT:    mulw a0, a0, a3
 ; RV64-NEXT:    bne a1, a2, .LBB122_1
-; RV64-NEXT:  # %bb.2: # %rdx.exit
+; RV64-NEXT:  # %bb.2: # %ec.exit
 ; RV64-NEXT:    ret
   %red = call i32 @llvm.vector.reduce.mul.nxv4i32(<vscale x 4 x i32> %v)
   ret i32 %red
@@ -2082,7 +2082,7 @@ define i64 @vreduce_mul_nxv1i64(<vscale x 1 x i64> %v) {
 ; RV32-NEXT:    srli a3, a3, 3
 ; RV32-NEXT:    li a4, 32
 ; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV32-NEXT:  .LBB123_1: # %rdx.loop
+; RV32-NEXT:  .LBB123_1: # %ec.loop
 ; RV32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32-NEXT:    vslidedown.vx v9, v8, a2
 ; RV32-NEXT:    addi a2, a2, 1
@@ -2096,7 +2096,7 @@ define i64 @vreduce_mul_nxv1i64(<vscale x 1 x i64> %v) {
 ; RV32-NEXT:    add a1, a1, a6
 ; RV32-NEXT:    mul a0, a0, a5
 ; RV32-NEXT:    bne a2, a3, .LBB123_1
-; RV32-NEXT:  # %bb.2: # %rdx.exit
+; RV32-NEXT:  # %bb.2: # %ec.exit
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vreduce_mul_nxv1i64:
@@ -2106,14 +2106,14 @@ define i64 @vreduce_mul_nxv1i64(<vscale x 1 x i64> %v) {
 ; RV64-NEXT:    srli a2, a2, 3
 ; RV64-NEXT:    li a0, 1
 ; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV64-NEXT:  .LBB123_1: # %rdx.loop
+; RV64-NEXT:  .LBB123_1: # %ec.loop
 ; RV64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64-NEXT:    vslidedown.vx v9, v8, a1
 ; RV64-NEXT:    vmv.x.s a3, v9
 ; RV64-NEXT:    addi a1, a1, 1
 ; RV64-NEXT:    mul a0, a0, a3
 ; RV64-NEXT:    bne a1, a2, .LBB123_1
-; RV64-NEXT:  # %bb.2: # %rdx.exit
+; RV64-NEXT:  # %bb.2: # %ec.exit
 ; RV64-NEXT:    ret
   %red = call i64 @llvm.vector.reduce.mul.nxv1i64(<vscale x 1 x i64> %v)
   ret i64 %red
@@ -2130,7 +2130,7 @@ define i64 @vreduce_mul_nxv2i64(<vscale x 2 x i64> %v) {
 ; RV32-NEXT:    li a0, 1
 ; RV32-NEXT:    srli a3, a3, 3
 ; RV32-NEXT:    li a4, 32
-; RV32-NEXT:  .LBB124_1: # %rdx.loop
+; RV32-NEXT:  .LBB124_1: # %ec.loop
 ; RV32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV32-NEXT:    vslidedown.vx v9, v8, a2
@@ -2145,7 +2145,7 @@ define i64 @vreduce_mul_nxv2i64(<vscale x 2 x i64> %v) {
 ; RV32-NEXT:    add a1, a1, a6
 ; RV32-NEXT:    mul a0, a0, a5
 ; RV32-NEXT:    bne a2, a3, .LBB124_1
-; RV32-NEXT:  # %bb.2: # %rdx.exit
+; RV32-NEXT:  # %bb.2: # %ec.exit
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vreduce_mul_nxv2i64:
@@ -2156,7 +2156,7 @@ define i64 @vreduce_mul_nxv2i64(<vscale x 2 x i64> %v) {
 ; RV64-NEXT:    csrr a2, vlenb
 ; RV64-NEXT:    srli a2, a2, 3
 ; RV64-NEXT:    li a0, 1
-; RV64-NEXT:  .LBB124_1: # %rdx.loop
+; RV64-NEXT:  .LBB124_1: # %ec.loop
 ; RV64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV64-NEXT:    vslidedown.vx v9, v8, a1
@@ -2164,7 +2164,7 @@ define i64 @vreduce_mul_nxv2i64(<vscale x 2 x i64> %v) {
 ; RV64-NEXT:    addi a1, a1, 1
 ; RV64-NEXT:    mul a0, a0, a3
 ; RV64-NEXT:    bne a1, a2, .LBB124_1
-; RV64-NEXT:  # %bb.2: # %rdx.exit
+; RV64-NEXT:  # %bb.2: # %ec.exit
 ; RV64-NEXT:    ret
   %red = call i64 @llvm.vector.reduce.mul.nxv2i64(<vscale x 2 x i64> %v)
   ret i64 %red
@@ -2183,7 +2183,7 @@ define i64 @vreduce_mul_nxv4i64(<vscale x 4 x i64> %v) {
 ; RV32-NEXT:    vmul.vv v8, v8, v9
 ; RV32-NEXT:    srli a3, a3, 3
 ; RV32-NEXT:    li a4, 32
-; RV32-NEXT:  .LBB125_1: # %rdx.loop
+; RV32-NEXT:  .LBB125_1: # %ec.loop
 ; RV32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV32-NEXT:    vslidedown.vx v9, v8, a2
@@ -2198,7 +2198,7 @@ define i64 @vreduce_mul_nxv4i64(<vscale x 4 x i64> %v) {
 ; RV32-NEXT:    add a1, a1, a6
 ; RV32-NEXT:    mul a0, a0, a5
 ; RV32-NEXT:    bne a2, a3, .LBB125_1
-; RV32-NEXT:  # %bb.2: # %rdx.exit
+; RV32-NEXT:  # %bb.2: # %ec.exit
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vreduce_mul_nxv4i64:
@@ -2211,7 +2211,7 @@ define i64 @vreduce_mul_nxv4i64(<vscale x 4 x i64> %v) {
 ; RV64-NEXT:    vmul.vv v8, v8, v9
 ; RV64-NEXT:    srli a2, a2, 3
 ; RV64-NEXT:    li a0, 1
-; RV64-NEXT:  .LBB125_1: # %rdx.loop
+; RV64-NEXT:  .LBB125_1: # %ec.loop
 ; RV64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV64-NEXT:    vslidedown.vx v9, v8, a1
@@ -2219,7 +2219,7 @@ define i64 @vreduce_mul_nxv4i64(<vscale x 4 x i64> %v) {
 ; RV64-NEXT:    addi a1, a1, 1
 ; RV64-NEXT:    mul a0, a0, a3
 ; RV64-NEXT:    bne a1, a2, .LBB125_1
-; RV64-NEXT:  # %bb.2: # %rdx.exit
+; RV64-NEXT:  # %bb.2: # %ec.exit
 ; RV64-NEXT:    ret
   %red = call i64 @llvm.vector.reduce.mul.nxv4i64(<vscale x 4 x i64> %v)
   ret i64 %red
@@ -2235,14 +2235,14 @@ define signext i32 @vreduce_mul_nxv6i32(<vscale x 6 x i32> %v) {
 ; RV32-NEXT:    sub a2, a0, a2
 ; RV32-NEXT:    li a0, 1
 ; RV32-NEXT:    vsetivli zero, 1, e32, m4, ta, ma
-; RV32-NEXT:  .LBB126_1: # %rdx.loop
+; RV32-NEXT:  .LBB126_1: # %ec.loop
 ; RV32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32-NEXT:    vslidedown.vx v12, v8, a1
 ; RV32-NEXT:    vmv.x.s a3, v12
 ; RV32-NEXT:    addi a1, a1, 1
 ; RV32-NEXT:    mul a0, a0, a3
 ; RV32-NEXT:    bne a1, a2, .LBB126_1
-; RV32-NEXT:  # %bb.2: # %rdx.exit
+; RV32-NEXT:  # %bb.2: # %ec.exit
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vreduce_mul_nxv6i32:
@@ -2253,14 +2253,14 @@ define signext i32 @vreduce_mul_nxv6i32(<vscale x 6 x i32> %v) {
 ; RV64-NEXT:    sub a2, a0, a2
 ; RV64-NEXT:    li a0, 1
 ; RV64-NEXT:    vsetivli zero, 1, e32, m4, ta, ma
-; RV64-NEXT:  .LBB126_1: # %rdx.loop
+; RV64-NEXT:  .LBB126_1: # %ec.loop
 ; RV64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64-NEXT:    vslidedown.vx v12, v8, a1
 ; RV64-NEXT:    vmv.x.s a3, v12
 ; RV64-NEXT:    addi a1, a1, 1
 ; RV64-NEXT:    mulw a0, a0, a3
 ; RV64-NEXT:    bne a1, a2, .LBB126_1
-; RV64-NEXT:  # %bb.2: # %rdx.exit
+; RV64-NEXT:  # %bb.2: # %ec.exit
 ; RV64-NEXT:    ret
   %red = call i32 @llvm.vector.reduce.mul.nxv6i32(<vscale x 6 x i32> %v)
   ret i32 %red
@@ -2278,7 +2278,7 @@ define signext i31 @vreduce_mul_nxv8i31(<vscale x 8 x i31> %v) {
 ; RV32-NEXT:    vmul.vv v8, v8, v9
 ; RV32-NEXT:    srli a2, a2, 2
 ; RV32-NEXT:    li a1, 1
-; RV32-NEXT:  .LBB127_1: # %rdx.loop
+; RV32-NEXT:  .LBB127_1: # %ec.loop
 ; RV32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV32-NEXT:    vslidedown.vx v9, v8, a0
@@ -2286,7 +2286,7 @@ define signext i31 @vreduce_mul_nxv8i31(<vscale x 8 x i31> %v) {
 ; RV32-NEXT:    addi a0, a0, 1
 ; RV32-NEXT:    mul a1, a1, a3
 ; RV32-NEXT:    bne a0, a2, .LBB127_1
-; RV32-NEXT:  # %bb.2: # %rdx.exit
+; RV32-NEXT:  # %bb.2: # %ec.exit
 ; RV32-NEXT:    slli a0, a1, 1
 ; RV32-NEXT:    srai a0, a0, 1
 ; RV32-NEXT:    ret
@@ -2301,7 +2301,7 @@ define signext i31 @vreduce_mul_nxv8i31(<vscale x 8 x i31> %v) {
 ; RV64-NEXT:    vmul.vv v8, v8, v9
 ; RV64-NEXT:    srli a2, a2, 2
 ; RV64-NEXT:    li a1, 1
-; RV64-NEXT:  .LBB127_1: # %rdx.loop
+; RV64-NEXT:  .LBB127_1: # %ec.loop
 ; RV64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV64-NEXT:    vslidedown.vx v9, v8, a0
@@ -2309,7 +2309,7 @@ define signext i31 @vreduce_mul_nxv8i31(<vscale x 8 x i31> %v) {
 ; RV64-NEXT:    addi a0, a0, 1
 ; RV64-NEXT:    mul a1, a1, a3
 ; RV64-NEXT:    bne a0, a2, .LBB127_1
-; RV64-NEXT:  # %bb.2: # %rdx.exit
+; RV64-NEXT:  # %bb.2: # %ec.exit
 ; RV64-NEXT:    slli a0, a1, 33
 ; RV64-NEXT:    srai a0, a0, 33
 ; RV64-NEXT:    ret
@@ -2340,7 +2340,7 @@ define signext i32 @vreduce_mul_nxv32i32(<vscale x 32 x i32> %v) {
 ; RV32-NEXT:    vmul.vv v9, v10, v11
 ; RV32-NEXT:    vmul.vv v8, v8, v9
 ; RV32-NEXT:    li a0, 1
-; RV32-NEXT:  .LBB128_1: # %rdx.loop
+; RV32-NEXT:  .LBB128_1: # %ec.loop
 ; RV32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV32-NEXT:    vslidedown.vx v9, v8, a1
@@ -2348,7 +2348,7 @@ define signext i32 @vreduce_mul_nxv32i32(<vscale x 32 x i32> %v) {
 ; RV32-NEXT:    addi a1, a1, 1
 ; RV32-NEXT:    mul a0, a0, a3
 ; RV32-NEXT:    bne a1, a2, .LBB128_1
-; RV32-NEXT:  # %bb.2: # %rdx.exit
+; RV32-NEXT:  # %bb.2: # %ec.exit
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vreduce_mul_nxv32i32:
@@ -2373,7 +2373,7 @@ define signext i32 @vreduce_mul_nxv32i32(<vscale x 32 x i32> %v) {
 ; RV64-NEXT:    vmul.vv v9, v10, v11
 ; RV64-NEXT:    vmul.vv v8, v8, v9
 ; RV64-NEXT:    li a0, 1
-; RV64-NEXT:  .LBB128_1: # %rdx.loop
+; RV64-NEXT:  .LBB128_1: # %ec.loop
 ; RV64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV64-NEXT:    vslidedown.vx v9, v8, a1
@@ -2381,7 +2381,7 @@ define signext i32 @vreduce_mul_nxv32i32(<vscale x 32 x i32> %v) {
 ; RV64-NEXT:    addi a1, a1, 1
 ; RV64-NEXT:    mulw a0, a0, a3
 ; RV64-NEXT:    bne a1, a2, .LBB128_1
-; RV64-NEXT:  # %bb.2: # %rdx.exit
+; RV64-NEXT:  # %bb.2: # %ec.exit
 ; RV64-NEXT:    ret
   %red = call i32 @llvm.vector.reduce.mul.nxv32i32(<vscale x 32 x i32> %v)
   ret i32 %red

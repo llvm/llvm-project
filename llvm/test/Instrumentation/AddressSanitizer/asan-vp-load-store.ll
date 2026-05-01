@@ -17,7 +17,7 @@ define void @store.v4f32.variable(ptr align 4 %p, <4 x float> %arg, <4 x i1> %ma
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[EVL]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP3]], i64 4)
 ; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
-; CHECK:       .split:
+; CHECK:       ec.loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP9:%.*]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i1> [[MASK:%.*]], i64 [[IV]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP9]]
@@ -30,7 +30,7 @@ define void @store.v4f32.variable(ptr align 4 %p, <4 x float> %arg, <4 x i1> %ma
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
 ; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
-; CHECK:       .split.split:
+; CHECK:       ec.exit:
 ; CHECK-NEXT:    br label [[TMP10]]
 ; CHECK:       10:
 ; CHECK-NEXT:    tail call void @llvm.vp.store.v4f32.p0(<4 x float> [[ARG:%.*]], ptr [[P]], <4 x i1> [[MASK]], i32 [[EVL]])
@@ -53,7 +53,7 @@ define void @store.v4f32.1010.split(ptr align 4 %p, <4 x float> %arg, i32 %evl) 
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[EVL]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP3]], i64 4)
 ; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
-; CHECK:       .split:
+; CHECK:       ec.loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP9:%.*]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i1> <i1 false, i1 false, i1 true, i1 true>, i64 [[IV]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP9]]
@@ -66,7 +66,7 @@ define void @store.v4f32.1010.split(ptr align 4 %p, <4 x float> %arg, i32 %evl) 
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
 ; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
-; CHECK:       .split.split:
+; CHECK:       ec.exit:
 ; CHECK-NEXT:    br label [[TMP10]]
 ; CHECK:       10:
 ; CHECK-NEXT:    tail call void @llvm.vp.store.v4f32.p0(<4 x float> [[ARG:%.*]], ptr [[P]], <4 x i1> <i1 false, i1 false, i1 true, i1 true>, i32 [[EVL]])
@@ -76,7 +76,7 @@ define void @store.v4f32.1010.split(ptr align 4 %p, <4 x float> %arg, i32 %evl) 
 ; CHECK-NEXT:    [[TMP13:%.*]] = zext i32 [[EVL]] to i64
 ; CHECK-NEXT:    [[TMP14:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP13]], i64 4)
 ; CHECK-NEXT:    br label [[DOTSPLIT1:%.*]]
-; CHECK:       .split1:
+; CHECK:       ec.loop1:
 ; CHECK-NEXT:    [[IV2:%.*]] = phi i64 [ 0, [[TMP12]] ], [ [[IV2_NEXT:%.*]], [[TMP19:%.*]] ]
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x i1> <i1 false, i1 false, i1 true, i1 false>, i64 [[IV2]]
 ; CHECK-NEXT:    br i1 [[TMP15]], label [[TMP16:%.*]], label [[TMP19]]
@@ -89,7 +89,7 @@ define void @store.v4f32.1010.split(ptr align 4 %p, <4 x float> %arg, i32 %evl) 
 ; CHECK-NEXT:    [[IV2_NEXT]] = add nuw nsw i64 [[IV2]], 1
 ; CHECK-NEXT:    [[IV2_CHECK:%.*]] = icmp eq i64 [[IV2_NEXT]], [[TMP14]]
 ; CHECK-NEXT:    br i1 [[IV2_CHECK]], label [[DOTSPLIT1_SPLIT:%.*]], label [[DOTSPLIT1]]
-; CHECK:       .split1.split:
+; CHECK:       ec.exit2:
 ; CHECK-NEXT:    br label [[TMP20]]
 ; CHECK:       20:
 ; CHECK-NEXT:    tail call void @llvm.vp.store.v4f32.p0(<4 x float> [[ARG]], ptr [[P]], <4 x i1> <i1 false, i1 false, i1 true, i1 false>, i32 [[EVL]])
@@ -136,7 +136,7 @@ define <4 x float> @load.v4f32.variable(ptr align 4 %p, <4 x float> %arg, <4 x i
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[EVL]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP3]], i64 4)
 ; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
-; CHECK:       .split:
+; CHECK:       ec.loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP9:%.*]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i1> [[MASK:%.*]], i64 [[IV]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP9]]
@@ -149,7 +149,7 @@ define <4 x float> @load.v4f32.variable(ptr align 4 %p, <4 x float> %arg, <4 x i
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
 ; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
-; CHECK:       .split.split:
+; CHECK:       ec.exit:
 ; CHECK-NEXT:    br label [[TMP10]]
 ; CHECK:       10:
 ; CHECK-NEXT:    [[RES:%.*]] = tail call <4 x float> @llvm.vp.load.v4f32.p0(ptr [[P]], <4 x i1> [[MASK]], i32 [[EVL]])
@@ -172,7 +172,7 @@ define <4 x float> @load.v4f32.1001.split(ptr align 4 %p, i32 %evl) sanitize_add
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[EVL]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP3]], i64 4)
 ; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
-; CHECK:       .split:
+; CHECK:       ec.loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP9:%.*]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i1> <i1 true, i1 false, i1 false, i1 false>, i64 [[IV]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP9]]
@@ -185,7 +185,7 @@ define <4 x float> @load.v4f32.1001.split(ptr align 4 %p, i32 %evl) sanitize_add
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
 ; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
-; CHECK:       .split.split:
+; CHECK:       ec.exit:
 ; CHECK-NEXT:    br label [[TMP10]]
 ; CHECK:       10:
 ; CHECK-NEXT:    [[RES:%.*]] = tail call <4 x float> @llvm.vp.load.v4f32.p0(ptr [[P]], <4 x i1> <i1 true, i1 false, i1 false, i1 false>, i32 [[EVL]])
@@ -195,7 +195,7 @@ define <4 x float> @load.v4f32.1001.split(ptr align 4 %p, i32 %evl) sanitize_add
 ; CHECK-NEXT:    [[TMP13:%.*]] = zext i32 [[EVL]] to i64
 ; CHECK-NEXT:    [[TMP14:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP13]], i64 4)
 ; CHECK-NEXT:    br label [[DOTSPLIT1:%.*]]
-; CHECK:       .split1:
+; CHECK:       ec.loop1:
 ; CHECK-NEXT:    [[IV2:%.*]] = phi i64 [ 0, [[TMP12]] ], [ [[IV2_NEXT:%.*]], [[TMP19:%.*]] ]
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x i1> <i1 false, i1 false, i1 false, i1 true>, i64 [[IV2]]
 ; CHECK-NEXT:    br i1 [[TMP15]], label [[TMP16:%.*]], label [[TMP19]]
@@ -208,7 +208,7 @@ define <4 x float> @load.v4f32.1001.split(ptr align 4 %p, i32 %evl) sanitize_add
 ; CHECK-NEXT:    [[IV2_NEXT]] = add nuw nsw i64 [[IV2]], 1
 ; CHECK-NEXT:    [[IV2_CHECK:%.*]] = icmp eq i64 [[IV2_NEXT]], [[TMP14]]
 ; CHECK-NEXT:    br i1 [[IV2_CHECK]], label [[DOTSPLIT1_SPLIT:%.*]], label [[DOTSPLIT1]]
-; CHECK:       .split1.split:
+; CHECK:       ec.exit2:
 ; CHECK-NEXT:    br label [[TMP20]]
 ; CHECK:       20:
 ; CHECK-NEXT:    [[RES2:%.*]] = tail call <4 x float> @llvm.vp.load.v4f32.p0(ptr [[P]], <4 x i1> <i1 false, i1 false, i1 false, i1 true>, i32 [[EVL]])
@@ -258,7 +258,7 @@ define <vscale x 4 x float> @scalable.load.nxv4f32(ptr align 4 %p, <vscale x 4 x
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP3]], i64 [[TMP5]])
 ; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
-; CHECK:       .split:
+; CHECK:       ec.loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 4 x i1> [[MASK:%.*]], i64 [[IV]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
@@ -271,7 +271,7 @@ define <vscale x 4 x float> @scalable.load.nxv4f32(ptr align 4 %p, <vscale x 4 x
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
 ; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
-; CHECK:       .split.split:
+; CHECK:       ec.exit:
 ; CHECK-NEXT:    br label [[TMP12]]
 ; CHECK:       12:
 ; CHECK-NEXT:    [[RES:%.*]] = tail call <vscale x 4 x float> @llvm.vp.load.nxv4f32.p0(ptr [[P]], <vscale x 4 x i1> [[MASK]], i32 [[EVL]])
@@ -295,7 +295,7 @@ define void @scalable.store.nxv4f32(ptr align 4 %p, <vscale x 4 x float> %arg, <
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP3]], i64 [[TMP5]])
 ; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
-; CHECK:       .split:
+; CHECK:       ec.loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 4 x i1> [[MASK:%.*]], i64 [[IV]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
@@ -308,7 +308,7 @@ define void @scalable.store.nxv4f32(ptr align 4 %p, <vscale x 4 x float> %arg, <
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
 ; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
-; CHECK:       .split.split:
+; CHECK:       ec.exit:
 ; CHECK-NEXT:    br label [[TMP12]]
 ; CHECK:       12:
 ; CHECK-NEXT:    tail call void @llvm.vp.store.nxv4f32.p0(<vscale x 4 x float> [[ARG:%.*]], ptr [[P]], <vscale x 4 x i1> [[MASK]], i32 [[EVL]])
@@ -337,7 +337,7 @@ define <vscale x 4 x float> @scalable.strided.load.nxv4f32(ptr align 4 %p, i32 %
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP3]], i64 [[TMP5]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext i32 [[STRIDE:%.*]] to i64
 ; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
-; CHECK:       .split:
+; CHECK:       ec.loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP13:%.*]] ]
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <vscale x 4 x i1> [[MASK:%.*]], i64 [[IV]]
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP13]]
@@ -351,7 +351,7 @@ define <vscale x 4 x float> @scalable.strided.load.nxv4f32(ptr align 4 %p, i32 %
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
 ; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
-; CHECK:       .split.split:
+; CHECK:       ec.exit:
 ; CHECK-NEXT:    br label [[TMP14]]
 ; CHECK:       14:
 ; CHECK-NEXT:    [[RES:%.*]] = tail call <vscale x 4 x float> @llvm.experimental.vp.strided.load.nxv4f32.p0.i32(ptr [[P]], i32 [[STRIDE]], <vscale x 4 x i1> [[MASK]], i32 [[EVL]])
@@ -376,7 +376,7 @@ define void @scalable.strided.store.nxv4f32(<vscale x 4 x float> %arg, ptr align
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP3]], i64 [[TMP5]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext i32 [[STRIDE:%.*]] to i64
 ; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
-; CHECK:       .split:
+; CHECK:       ec.loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP13:%.*]] ]
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <vscale x 4 x i1> [[MASK:%.*]], i64 [[IV]]
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP13]]
@@ -390,7 +390,7 @@ define void @scalable.strided.store.nxv4f32(<vscale x 4 x float> %arg, ptr align
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
 ; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
-; CHECK:       .split.split:
+; CHECK:       ec.exit:
 ; CHECK-NEXT:    br label [[TMP14]]
 ; CHECK:       14:
 ; CHECK-NEXT:    tail call void @llvm.experimental.vp.strided.store.nxv4f32.p0.i32(<vscale x 4 x float> [[ARG:%.*]], ptr [[P]], i32 [[STRIDE]], <vscale x 4 x i1> [[MASK]], i32 [[EVL]])
@@ -415,7 +415,7 @@ define <vscale x 4 x float> @scalable.strided.load.nxv4f32.align(ptr align 4 %p,
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP3]], i64 [[TMP5]])
 ; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
-; CHECK:       .split:
+; CHECK:       ec.loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP12:%.*]] ]
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 4 x i1> [[MASK:%.*]], i64 [[IV]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP12]]
@@ -429,7 +429,7 @@ define <vscale x 4 x float> @scalable.strided.load.nxv4f32.align(ptr align 4 %p,
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
 ; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
-; CHECK:       .split.split:
+; CHECK:       ec.exit:
 ; CHECK-NEXT:    br label [[TMP13]]
 ; CHECK:       13:
 ; CHECK-NEXT:    [[RES:%.*]] = tail call <vscale x 4 x float> @llvm.experimental.vp.strided.load.nxv4f32.p0.i32(ptr [[P]], i32 4, <vscale x 4 x i1> [[MASK]], i32 [[EVL]])
@@ -457,7 +457,7 @@ define <vscale x 4 x float> @scalable.gather.nxv4f32(<vscale x 4 x ptr> %vp, <vs
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP3]], i64 [[TMP5]])
 ; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
-; CHECK:       .split:
+; CHECK:       ec.loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 4 x i1> [[MASK:%.*]], i64 [[IV]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
@@ -470,7 +470,7 @@ define <vscale x 4 x float> @scalable.gather.nxv4f32(<vscale x 4 x ptr> %vp, <vs
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
 ; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
-; CHECK:       .split.split:
+; CHECK:       ec.exit:
 ; CHECK-NEXT:    br label [[TMP12]]
 ; CHECK:       12:
 ; CHECK-NEXT:    [[RES:%.*]] = tail call <vscale x 4 x float> @llvm.vp.gather.nxv4f32.nxv4p0(<vscale x 4 x ptr> align 4 [[VP]], <vscale x 4 x i1> [[MASK]], i32 [[EVL]])
@@ -494,7 +494,7 @@ define void @scalable.scatter.nxv4f32(<vscale x 4 x float> %arg, <vscale x 4 x p
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP3]], i64 [[TMP5]])
 ; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
-; CHECK:       .split:
+; CHECK:       ec.loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 4 x i1> [[MASK:%.*]], i64 [[IV]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
@@ -507,7 +507,7 @@ define void @scalable.scatter.nxv4f32(<vscale x 4 x float> %arg, <vscale x 4 x p
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
 ; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
-; CHECK:       .split.split:
+; CHECK:       ec.exit:
 ; CHECK-NEXT:    br label [[TMP12]]
 ; CHECK:       12:
 ; CHECK-NEXT:    tail call void @llvm.vp.scatter.nxv4f32.nxv4p0(<vscale x 4 x float> [[ARG:%.*]], <vscale x 4 x ptr> align 4 [[VP]], <vscale x 4 x i1> [[MASK]], i32 [[EVL]])
