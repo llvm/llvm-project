@@ -3859,6 +3859,8 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
 
   case Builtin::BI__builtin_stdc_rotate_left:
   case Builtin::BI__builtin_stdc_rotate_right:
+  case Builtin::BIstdc_rotate_left:
+  case Builtin::BIstdc_rotate_right:
     if (BuiltinRotateGeneric(*this, TheCall))
       return ExprError();
     break;

@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -ffreestanding %s -emit-llvm -o - | FileCheck %s
 // RUN: %if clang-target-64-bits %{ %clang_cc1 -ffreestanding %s -emit-llvm -o - | FileCheck %s --check-prefix=INT128 %}
+// RUN: %clang_cc1 -std=c2y -isystem %S/Inputs -DTEST_C2Y_LIB_SPELLINGS %s -emit-llvm -o - | FileCheck %s --check-prefix=C2Y
 
+#ifndef TEST_C2Y_LIB_SPELLINGS
 #include<stdint.h>
 
 unsigned char rotl8(unsigned char x, unsigned char y) {
@@ -313,3 +315,197 @@ void test_int128_rotate(unsigned __int128 u128) {
   result_u128 = __builtin_stdc_rotate_right(u128, 32);
 }
 #endif
+
+#endif // !TEST_C2Y_LIB_SPELLINGS
+
+#ifdef TEST_C2Y_LIB_SPELLINGS
+#include <stdbit.h>
+
+// C2Y-LABEL: define dso_local zeroext i8 @test_typed_rotate_left_uc(
+// C2Y-SAME: i8 noundef zeroext [[X:%.*]], i32 noundef [[CNT:%.*]]) #[[ATTR0:[0-9]+]] {
+// C2Y-NEXT:  [[ENTRY:.*:]]
+// C2Y-NEXT:    [[X_ADDR:%.*]] = alloca i8, align 1
+// C2Y-NEXT:    [[CNT_ADDR:%.*]] = alloca i32, align 4
+// C2Y-NEXT:    store i8 [[X]], ptr [[X_ADDR]], align 1
+// C2Y-NEXT:    store i32 [[CNT]], ptr [[CNT_ADDR]], align 4
+// C2Y-NEXT:    [[TMP0:%.*]] = load i8, ptr [[X_ADDR]], align 1
+// C2Y-NEXT:    [[TMP1:%.*]] = load i32, ptr [[CNT_ADDR]], align 4
+// C2Y-NEXT:    [[TMP2:%.*]] = urem i32 [[TMP1]], 8
+// C2Y-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i8
+// C2Y-NEXT:    [[TMP4:%.*]] = call i8 @llvm.fshl.i8(i8 [[TMP0]], i8 [[TMP0]], i8 [[TMP3]])
+// C2Y-NEXT:    ret i8 [[TMP4]]
+//
+unsigned char test_typed_rotate_left_uc(unsigned char x, unsigned int cnt) {
+  return stdc_rotate_left_uc(x, cnt);
+}
+
+// C2Y-LABEL: define dso_local zeroext i16 @test_typed_rotate_left_us(
+// C2Y-SAME: i16 noundef zeroext [[X:%.*]], i32 noundef [[CNT:%.*]]) #[[ATTR0]] {
+// C2Y-NEXT:  [[ENTRY:.*:]]
+// C2Y-NEXT:    [[X_ADDR:%.*]] = alloca i16, align 2
+// C2Y-NEXT:    [[CNT_ADDR:%.*]] = alloca i32, align 4
+// C2Y-NEXT:    store i16 [[X]], ptr [[X_ADDR]], align 2
+// C2Y-NEXT:    store i32 [[CNT]], ptr [[CNT_ADDR]], align 4
+// C2Y-NEXT:    [[TMP0:%.*]] = load i16, ptr [[X_ADDR]], align 2
+// C2Y-NEXT:    [[TMP1:%.*]] = load i32, ptr [[CNT_ADDR]], align 4
+// C2Y-NEXT:    [[TMP2:%.*]] = urem i32 [[TMP1]], 16
+// C2Y-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i16
+// C2Y-NEXT:    [[TMP4:%.*]] = call i16 @llvm.fshl.i16(i16 [[TMP0]], i16 [[TMP0]], i16 [[TMP3]])
+// C2Y-NEXT:    ret i16 [[TMP4]]
+//
+unsigned short test_typed_rotate_left_us(unsigned short x, unsigned int cnt) {
+  return stdc_rotate_left_us(x, cnt);
+}
+
+// C2Y-LABEL: define dso_local i32 @test_typed_rotate_left_ui(
+// C2Y-SAME: i32 noundef [[X:%.*]], i32 noundef [[CNT:%.*]]) #[[ATTR0]] {
+// C2Y-NEXT:  [[ENTRY:.*:]]
+// C2Y-NEXT:    [[X_ADDR:%.*]] = alloca i32, align 4
+// C2Y-NEXT:    [[CNT_ADDR:%.*]] = alloca i32, align 4
+// C2Y-NEXT:    store i32 [[X]], ptr [[X_ADDR]], align 4
+// C2Y-NEXT:    store i32 [[CNT]], ptr [[CNT_ADDR]], align 4
+// C2Y-NEXT:    [[TMP0:%.*]] = load i32, ptr [[X_ADDR]], align 4
+// C2Y-NEXT:    [[TMP1:%.*]] = load i32, ptr [[CNT_ADDR]], align 4
+// C2Y-NEXT:    [[TMP2:%.*]] = urem i32 [[TMP1]], 32
+// C2Y-NEXT:    [[TMP3:%.*]] = call i32 @llvm.fshl.i32(i32 [[TMP0]], i32 [[TMP0]], i32 [[TMP2]])
+// C2Y-NEXT:    ret i32 [[TMP3]]
+//
+unsigned int test_typed_rotate_left_ui(unsigned int x, unsigned int cnt) {
+  return stdc_rotate_left_ui(x, cnt);
+}
+
+// C2Y-LABEL: define dso_local i64 @test_typed_rotate_left_ull(
+// C2Y-SAME: i64 noundef [[X:%.*]], i32 noundef [[CNT:%.*]]) #[[ATTR0]] {
+// C2Y-NEXT:  [[ENTRY:.*:]]
+// C2Y-NEXT:    [[X_ADDR:%.*]] = alloca i64, align 8
+// C2Y-NEXT:    [[CNT_ADDR:%.*]] = alloca i32, align 4
+// C2Y-NEXT:    store i64 [[X]], ptr [[X_ADDR]], align 8
+// C2Y-NEXT:    store i32 [[CNT]], ptr [[CNT_ADDR]], align 4
+// C2Y-NEXT:    [[TMP0:%.*]] = load i64, ptr [[X_ADDR]], align 8
+// C2Y-NEXT:    [[TMP1:%.*]] = load i32, ptr [[CNT_ADDR]], align 4
+// C2Y-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
+// C2Y-NEXT:    [[TMP3:%.*]] = urem i64 [[TMP2]], 64
+// C2Y-NEXT:    [[TMP4:%.*]] = call i64 @llvm.fshl.i64(i64 [[TMP0]], i64 [[TMP0]], i64 [[TMP3]])
+// C2Y-NEXT:    ret i64 [[TMP4]]
+//
+unsigned long long test_typed_rotate_left_ull(unsigned long long x, unsigned int cnt) {
+  return stdc_rotate_left_ull(x, cnt);
+}
+
+// C2Y-LABEL: define dso_local zeroext i8 @test_typed_rotate_right_uc(
+// C2Y-SAME: i8 noundef zeroext [[X:%.*]], i32 noundef [[CNT:%.*]]) #[[ATTR0]] {
+// C2Y-NEXT:  [[ENTRY:.*:]]
+// C2Y-NEXT:    [[X_ADDR:%.*]] = alloca i8, align 1
+// C2Y-NEXT:    [[CNT_ADDR:%.*]] = alloca i32, align 4
+// C2Y-NEXT:    store i8 [[X]], ptr [[X_ADDR]], align 1
+// C2Y-NEXT:    store i32 [[CNT]], ptr [[CNT_ADDR]], align 4
+// C2Y-NEXT:    [[TMP0:%.*]] = load i8, ptr [[X_ADDR]], align 1
+// C2Y-NEXT:    [[TMP1:%.*]] = load i32, ptr [[CNT_ADDR]], align 4
+// C2Y-NEXT:    [[TMP2:%.*]] = urem i32 [[TMP1]], 8
+// C2Y-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i8
+// C2Y-NEXT:    [[TMP4:%.*]] = call i8 @llvm.fshr.i8(i8 [[TMP0]], i8 [[TMP0]], i8 [[TMP3]])
+// C2Y-NEXT:    ret i8 [[TMP4]]
+//
+unsigned char test_typed_rotate_right_uc(unsigned char x, unsigned int cnt) {
+  return stdc_rotate_right_uc(x, cnt);
+}
+
+// C2Y-LABEL: define dso_local zeroext i16 @test_typed_rotate_right_us(
+// C2Y-SAME: i16 noundef zeroext [[X:%.*]], i32 noundef [[CNT:%.*]]) #[[ATTR0]] {
+// C2Y-NEXT:  [[ENTRY:.*:]]
+// C2Y-NEXT:    [[X_ADDR:%.*]] = alloca i16, align 2
+// C2Y-NEXT:    [[CNT_ADDR:%.*]] = alloca i32, align 4
+// C2Y-NEXT:    store i16 [[X]], ptr [[X_ADDR]], align 2
+// C2Y-NEXT:    store i32 [[CNT]], ptr [[CNT_ADDR]], align 4
+// C2Y-NEXT:    [[TMP0:%.*]] = load i16, ptr [[X_ADDR]], align 2
+// C2Y-NEXT:    [[TMP1:%.*]] = load i32, ptr [[CNT_ADDR]], align 4
+// C2Y-NEXT:    [[TMP2:%.*]] = urem i32 [[TMP1]], 16
+// C2Y-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i16
+// C2Y-NEXT:    [[TMP4:%.*]] = call i16 @llvm.fshr.i16(i16 [[TMP0]], i16 [[TMP0]], i16 [[TMP3]])
+// C2Y-NEXT:    ret i16 [[TMP4]]
+//
+unsigned short test_typed_rotate_right_us(unsigned short x, unsigned int cnt) {
+  return stdc_rotate_right_us(x, cnt);
+}
+
+// C2Y-LABEL: define dso_local i32 @test_typed_rotate_right_ui(
+// C2Y-SAME: i32 noundef [[X:%.*]], i32 noundef [[CNT:%.*]]) #[[ATTR0]] {
+// C2Y-NEXT:  [[ENTRY:.*:]]
+// C2Y-NEXT:    [[X_ADDR:%.*]] = alloca i32, align 4
+// C2Y-NEXT:    [[CNT_ADDR:%.*]] = alloca i32, align 4
+// C2Y-NEXT:    store i32 [[X]], ptr [[X_ADDR]], align 4
+// C2Y-NEXT:    store i32 [[CNT]], ptr [[CNT_ADDR]], align 4
+// C2Y-NEXT:    [[TMP0:%.*]] = load i32, ptr [[X_ADDR]], align 4
+// C2Y-NEXT:    [[TMP1:%.*]] = load i32, ptr [[CNT_ADDR]], align 4
+// C2Y-NEXT:    [[TMP2:%.*]] = urem i32 [[TMP1]], 32
+// C2Y-NEXT:    [[TMP3:%.*]] = call i32 @llvm.fshr.i32(i32 [[TMP0]], i32 [[TMP0]], i32 [[TMP2]])
+// C2Y-NEXT:    ret i32 [[TMP3]]
+//
+unsigned int test_typed_rotate_right_ui(unsigned int x, unsigned int cnt) {
+  return stdc_rotate_right_ui(x, cnt);
+}
+
+// C2Y-LABEL: define dso_local i64 @test_typed_rotate_right_ull(
+// C2Y-SAME: i64 noundef [[X:%.*]], i32 noundef [[CNT:%.*]]) #[[ATTR0]] {
+// C2Y-NEXT:  [[ENTRY:.*:]]
+// C2Y-NEXT:    [[X_ADDR:%.*]] = alloca i64, align 8
+// C2Y-NEXT:    [[CNT_ADDR:%.*]] = alloca i32, align 4
+// C2Y-NEXT:    store i64 [[X]], ptr [[X_ADDR]], align 8
+// C2Y-NEXT:    store i32 [[CNT]], ptr [[CNT_ADDR]], align 4
+// C2Y-NEXT:    [[TMP0:%.*]] = load i64, ptr [[X_ADDR]], align 8
+// C2Y-NEXT:    [[TMP1:%.*]] = load i32, ptr [[CNT_ADDR]], align 4
+// C2Y-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
+// C2Y-NEXT:    [[TMP3:%.*]] = urem i64 [[TMP2]], 64
+// C2Y-NEXT:    [[TMP4:%.*]] = call i64 @llvm.fshr.i64(i64 [[TMP0]], i64 [[TMP0]], i64 [[TMP3]])
+// C2Y-NEXT:    ret i64 [[TMP4]]
+//
+unsigned long long test_typed_rotate_right_ull(unsigned long long x, unsigned int cnt) {
+  return stdc_rotate_right_ull(x, cnt);
+}
+
+// C2Y-LABEL: define dso_local void @test_typed_rotate_constant_count(
+// C2Y-SAME: i8 noundef zeroext [[UC:%.*]], i16 noundef zeroext [[US:%.*]], i32 noundef [[UI:%.*]], i64 noundef [[ULL:%.*]]) #[[ATTR0]] {
+// C2Y-NEXT:  [[ENTRY:.*:]]
+// C2Y-NEXT:    [[UC_ADDR:%.*]] = alloca i8, align 1
+// C2Y-NEXT:    [[US_ADDR:%.*]] = alloca i16, align 2
+// C2Y-NEXT:    [[UI_ADDR:%.*]] = alloca i32, align 4
+// C2Y-NEXT:    [[ULL_ADDR:%.*]] = alloca i64, align 8
+// C2Y-NEXT:    [[R_UC:%.*]] = alloca i8, align 1
+// C2Y-NEXT:    [[R_US:%.*]] = alloca i16, align 2
+// C2Y-NEXT:    [[R_UI:%.*]] = alloca i32, align 4
+// C2Y-NEXT:    [[R_ULL:%.*]] = alloca i64, align 8
+// C2Y-NEXT:    store i8 [[UC]], ptr [[UC_ADDR]], align 1
+// C2Y-NEXT:    store i16 [[US]], ptr [[US_ADDR]], align 2
+// C2Y-NEXT:    store i32 [[UI]], ptr [[UI_ADDR]], align 4
+// C2Y-NEXT:    store i64 [[ULL]], ptr [[ULL_ADDR]], align 8
+// C2Y-NEXT:    [[TMP0:%.*]] = load i8, ptr [[UC_ADDR]], align 1
+// C2Y-NEXT:    [[TMP1:%.*]] = call i8 @llvm.fshl.i8(i8 [[TMP0]], i8 [[TMP0]], i8 3)
+// C2Y-NEXT:    store volatile i8 [[TMP1]], ptr [[R_UC]], align 1
+// C2Y-NEXT:    [[TMP2:%.*]] = load i8, ptr [[UC_ADDR]], align 1
+// C2Y-NEXT:    [[TMP3:%.*]] = call i8 @llvm.fshr.i8(i8 [[TMP2]], i8 [[TMP2]], i8 3)
+// C2Y-NEXT:    store volatile i8 [[TMP3]], ptr [[R_UC]], align 1
+// C2Y-NEXT:    [[TMP4:%.*]] = load i16, ptr [[US_ADDR]], align 2
+// C2Y-NEXT:    [[TMP5:%.*]] = call i16 @llvm.fshl.i16(i16 [[TMP4]], i16 [[TMP4]], i16 5)
+// C2Y-NEXT:    store volatile i16 [[TMP5]], ptr [[R_US]], align 2
+// C2Y-NEXT:    [[TMP6:%.*]] = load i32, ptr [[UI_ADDR]], align 4
+// C2Y-NEXT:    [[TMP7:%.*]] = call i32 @llvm.fshl.i32(i32 [[TMP6]], i32 [[TMP6]], i32 8)
+// C2Y-NEXT:    store volatile i32 [[TMP7]], ptr [[R_UI]], align 4
+// C2Y-NEXT:    [[TMP8:%.*]] = load i64, ptr [[ULL_ADDR]], align 8
+// C2Y-NEXT:    [[TMP9:%.*]] = call i64 @llvm.fshr.i64(i64 [[TMP8]], i64 [[TMP8]], i64 16)
+// C2Y-NEXT:    store volatile i64 [[TMP9]], ptr [[R_ULL]], align 8
+// C2Y-NEXT:    ret void
+//
+void test_typed_rotate_constant_count(unsigned char uc, unsigned short us,
+                                      unsigned int ui, unsigned long long ull) {
+  volatile unsigned char r_uc;
+  volatile unsigned short r_us;
+  volatile unsigned int r_ui;
+  volatile unsigned long long r_ull;
+  r_uc = stdc_rotate_left_uc(uc, 3);
+  r_uc = stdc_rotate_right_uc(uc, 3);
+  r_us = stdc_rotate_left_us(us, 5);
+  r_ui = stdc_rotate_left_ui(ui, 8);
+  r_ull = stdc_rotate_right_ull(ull, 16);
+}
+
+#endif // TEST_C2Y_LIB_SPELLINGS

@@ -177,6 +177,11 @@ C Language Changes
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^
 
+- Implemented the type-specific C2y ``<stdbit.h>`` rotate functions with constexpr
+  evaluation support:
+  ``stdc_rotate_left_{uc,us,ui,ul,ull}`` and
+  ``stdc_rotate_right_{uc,us,ui,ul,ull}``.
+
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
 - Clang now allows C23 ``constexpr`` struct member access through the dot operator in constant expressions. (#GH178349)
