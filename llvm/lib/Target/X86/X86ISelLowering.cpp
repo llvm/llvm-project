@@ -55624,7 +55624,8 @@ static SDValue combineVTRUNC(SDNode *N, SelectionDAG &DAG,
 }
 
 static SDValue combineVTRUNCSAT(SDNode *N, SelectionDAG &DAG,
-                                TargetLowering::DAGCombinerInfo &DCI) {
+                                TargetLowering::DAGCombinerInfo &DCI,
+                                const X86Subtarget &Subtarget) {
   using namespace SDPatternMatch;
   unsigned Opc = N->getOpcode();
   EVT VT = N->getValueType(0);
@@ -55643,7 +55644,17 @@ static SDValue combineVTRUNCSAT(SDNode *N, SelectionDAG &DAG,
       (EltSizeInBits * 2) == Src.getScalarValueSizeInBits() &&
       isFreeToSplitVector(Src, DAG)) {
     SDLoc DL(N);
-    auto [LHS, RHS] = splitVector(Src, DAG, DL);
+    SDValue LHS, RHS;
+    if (Src.getValueSizeInBits() == VT.getSizeInBits()) {
+      assert(VT.is128BitVector() && "128-bit VTRUNC source expected");
+      LHS = Src;
+      RHS = getZeroVector(Src.getSimpleValueType(), Subtarget, DAG, DL);
+    } else {
+      std::tie(LHS, RHS) = splitVector(Src, DAG, DL);
+    }
+    assert(LHS.getValueSizeInBits() == VT.getSizeInBits() &&
+           RHS.getValueSizeInBits() == VT.getSizeInBits() &&
+           "PACK src/dst size mismatch");
     unsigned PackOpc = Opc == X86ISD::VTRUNCS ? X86ISD::PACKSS : X86ISD::PACKUS;
     SDValue Pack = DAG.getNode(PackOpc, DL, VT, LHS, RHS);
     if (VT.is128BitVector())
@@ -62386,7 +62397,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::TRUNCATE:       return combineTruncate(N, DAG, Subtarget);
   case X86ISD::VTRUNC:      return combineVTRUNC(N, DAG, DCI);
   case X86ISD::VTRUNCS:
-  case X86ISD::VTRUNCUS:    return combineVTRUNCSAT(N, DAG, DCI);
+  case X86ISD::VTRUNCUS:    return combineVTRUNCSAT(N, DAG, DCI, Subtarget);
   case X86ISD::ANDNP:       return combineAndnp(N, DAG, DCI, Subtarget);
   case X86ISD::FAND:        return combineFAnd(N, DAG, Subtarget);
   case X86ISD::FANDN:       return combineFAndn(N, DAG, Subtarget);
