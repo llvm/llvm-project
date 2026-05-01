@@ -849,7 +849,10 @@ static void generateGetDirectiveAssociation(const DirectiveLanguage &DirLang,
     }
   }
   OS << "  } // switch (Dir)\n";
+  OS << "#if __clang__ || !__GNUC__ || __GNUC__ >= 9\n";
+  OS << "  // GCC < 9 fails to compile this.\n";
   OS << "  llvm_unreachable(\"Unexpected directive\");\n";
+  OS << "#endif\n";
   OS << "}\n";
 }
 
@@ -867,7 +870,10 @@ static void generateGetDirectiveCategory(const DirectiveLanguage &DirLang,
        << ";\n";
   }
   OS << "  } // switch (Dir)\n";
+  OS << "#if __clang__ || !__GNUC__ || __GNUC__ >= 9\n";
+  OS << "  // GCC < 9 fails to compile this.\n";
   OS << "  llvm_unreachable(\"Unexpected directive\");\n";
+  OS << "#endif\n";
   OS << "}\n";
 }
 
@@ -892,7 +898,10 @@ static void generateGetDirectiveLanguages(const DirectiveLanguage &DirLang,
     OS << ";\n";
   }
   OS << "  } // switch(D)\n";
+  OS << "#if __clang__ || !__GNUC__ || __GNUC__ >= 9\n";
+  OS << "  // GCC < 9 fails to compile this.\n";
   OS << "  llvm_unreachable(\"Unexpected directive\");\n";
+  OS << "#endif\n";
   OS << "}\n";
 }
 
