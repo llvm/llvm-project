@@ -195,7 +195,7 @@ namespace test7 {
 // DUMP-NEXT:  |-TemplateTemplateParmDecl
 // DUMP-NEXT:  | `-TemplateTypeParmDecl
 // DUMP-NEXT:  |-CXXRecordDecl 0x[[TEST7_PAT:[^ ]+]] {{.+}} struct A definition
-// DUMP:       ClassTemplateSpecializationDecl {{.*}} struct AA definition external-linkage instantiated_from 0x[[TEST7_PAT]] explicit_instantiation_definition strict-pack-match{{$}}
+// DUMP:       ClassTemplateSpecializationDecl {{.*}} struct A definition external-linkage instantiated_from 0x[[TEST7_PAT]] explicit_instantiation_definition strict-pack-match{{$}}
 
 // JSON-LABEL: "name": "test7",
 // JSON:         "kind": "ClassTemplateSpecializationDecl",
@@ -434,7 +434,7 @@ namespace TestDependentMemberPointer {
 } // namespace TestDependentMemberPointer
 
 namespace TestPartialSpecNTTP {
-// DUMP-LABEL: NamespaceDecl {{.+}} TestPartialSpecNTTP{{$}}
+// DUMP-LABEL: NamespaceDecl {{.+}} TestPartialSpecNTTP external-linkage{{$}}
 // JSON-LABEL: "name": "TestPartialSpecNTTP"
   template <class TA1, bool TA2> struct Template1 {};
   template <class TB1, bool TB2> struct Template2 {};
@@ -581,7 +581,7 @@ namespace TestPartialSpecNTTP {
 
   template <typename U1, bool U3, bool U2>
   struct Template2<Template1<U1, U2>, U3> {};
-// DUMP:      ClassTemplatePartialSpecializationDecl {{.+}} struct Template2 definition explicit_specialization
+// DUMP:      ClassTemplatePartialSpecializationDecl {{.+}} struct Template2 definition external-linkage explicit_specialization
 // DUMP:      |-TemplateArgument type 'TestPartialSpecNTTP::Template1<type-parameter-0-0, value-parameter-0-2>'
 // DUMP-NEXT: | `-TemplateSpecializationType {{.+}} 'TestPartialSpecNTTP::Template1<type-parameter-0-0, value-parameter-0-2>' dependent
 // DUMP-NEXT: |   |-name: 'TestPartialSpecNTTP::Template1'
@@ -721,7 +721,7 @@ namespace TestPartialSpecNTTP {
 } // namespace TestPartialSpecNTTP
 
 namespace GH153540 {
-// DUMP-LABEL: NamespaceDecl {{.*}} GH153540{{$}}
+// DUMP-LABEL: NamespaceDecl {{.*}} GH153540 external-linkage{{$}}
 // JSON-LABEL: "name": "GH153540",
 
   namespace N {
@@ -791,7 +791,7 @@ namespace GH153540 {
 } // namespace GH153540
 
 namespace AliasDependentTemplateSpecializationType {
-// DUMP-LABEL: NamespaceDecl {{.*}} AliasDependentTemplateSpecializationType{{$}}
+// DUMP-LABEL: NamespaceDecl {{.*}} AliasDependentTemplateSpecializationType external-linkage{{$}}
 // JSON-LABEL: "name": "AliasDependentTemplateSpecializationType",
 
   template<template<class> class TT> using T1 = TT<int>;
@@ -864,7 +864,7 @@ namespace AliasDependentTemplateSpecializationType {
 } // namespace
 
 namespace TestAbbreviatedTemplateDecls {
-// DUMP-LABEL: NamespaceDecl {{.*}} TestAbbreviatedTemplateDecls{{$}}
+// DUMP-LABEL: NamespaceDecl {{.*}} TestAbbreviatedTemplateDecls external-linkage{{$}}
 // JSON-LABEL: "name": "TestAbbreviatedTemplateDecls",
 
   void abbreviated(auto);
