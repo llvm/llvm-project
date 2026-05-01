@@ -512,10 +512,10 @@ static SmallString<0> collectSymbols(const Module &M) {
 /// For SPLIT_PER_KERNEL, the module is split into parts such that each part
 /// contains exactly one kernel entry point and its transitive dependencies;
 /// each part is written to a fresh temporary bitcode file.
-static Expected<SmallVector<SplitModule>>
+static Expected<SmallVector<SplitModule, 0>>
 splitDeviceCode(std::unique_ptr<Module> M, StringRef LinkedBitcodeFile,
                 IRSplitMode Mode, const ArgList &Args) {
-  SmallVector<SplitModule> SplitModules;
+  SmallVector<SplitModule, 0> SplitModules;
 
   if (Mode == SPLIT_NONE) {
     SplitModules.push_back(
@@ -595,11 +595,11 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
   }
 
   // Split the linked module into one or more device images.
-  Expected<SmallVector<SplitModule>> SplitModulesOrErr =
+  Expected<SmallVector<SplitModule, 0>> SplitModulesOrErr =
       splitDeviceCode(std::move(LinkedModule), LinkedFile, SplitMode, Args);
   if (!SplitModulesOrErr)
     return SplitModulesOrErr.takeError();
-  SmallVector<SplitModule> &SplitModules = *SplitModulesOrErr;
+  SmallVector<SplitModule, 0> &SplitModules = *SplitModulesOrErr;
   if (Verbose) {
     SmallVector<StringRef> SplitFiles;
     for (const SplitModule &SI : SplitModules)
