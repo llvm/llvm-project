@@ -5955,6 +5955,8 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
   // subtract in the middle block.
   if (WidenRecipe->getOpcode() == Instruction::Sub &&
       Chain.RK != RecurKind::Sub) {
+    assert((WidenRecipe->getOpcode() != Instruction::FSub) &&
+           "Fsub chain reduction isn't supported");
     VPBuilder Builder(WidenRecipe);
     Type *ElemTy = TypeInfo.inferScalarType(ExtendedOp);
     auto *Zero = Plan.getZero(ElemTy);
