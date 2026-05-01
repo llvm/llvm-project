@@ -1503,6 +1503,20 @@ LogicalResult spirv::MemoryBarrierOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.MemoryNamedBarrierOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult spirv::MemoryNamedBarrierOp::verify() {
+  return verifyMemorySemantics(getOperation(), getMemorySemantics());
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.NamedBarrierInitializeOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult spirv::NamedBarrierInitializeOp::verify() { return success(); }
+
+//===----------------------------------------------------------------------===//
 // spirv.module
 //===----------------------------------------------------------------------===//
 
