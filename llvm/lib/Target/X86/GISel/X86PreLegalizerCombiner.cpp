@@ -190,8 +190,8 @@ X86PreLegalizerCombinerPass::run(MachineFunction &MF,
   GISelValueTracking &VT = MFAM.getResult<GISelValueTrackingAnalysis>(MF);
   MachineDominatorTree &MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
   CombinerInfo CInfo = createCombinerInfo(EnableOpt, F);
-  X86PreLegalizerCombinerImpl Impl(MF, CInfo, VT, CSEInfo.get(),
-                                   RuleConfig, &MDT);
+  X86PreLegalizerCombinerImpl Impl(MF, CInfo, VT, CSEInfo.get(), RuleConfig,
+                                   &MDT);
   Impl.combineMachineInstrs();
 
   PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
