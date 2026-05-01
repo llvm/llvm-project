@@ -235,8 +235,7 @@ int castViaInt[*(int*)(unsigned long)"test"]; // ref-error {{variable length arr
                                               // expected-error {{variable length array}} \
                                               // pedantic-expected-error {{variable length array}}
 
-const void (*const funcp)(void) = (void*)123; // pedantic-warning {{converts between void pointer and function pointer}} \
-                                              // pedantic-expected-note {{this conversion is not allowed in a constant expression}}
+const void (*const funcp)(void) = (void*)123; // pedantic-warning {{converts between void pointer and function pointer}}
 _Static_assert(funcp == (void*)0, ""); // all-error {{failed due to requirement 'funcp == (void *)0'}} \
                                        // pedantic-warning {{expression is not an integer constant expression}}
 _Static_assert(funcp == (void*)123, ""); // pedantic-warning {{equality comparison between function pointer and void pointer}} \
@@ -455,3 +454,6 @@ float r  = (float) (intptr_t) &r; // all-error {{initializer element is not a co
 void labelAndNull(void) { int bar = &*(void *)0 - &&baz; } // all-error {{use of undeclared label 'baz'}} \\
                                                            // pedantic-warning {{use of GNU address-of-label extension}} \
                                                            // pedantic-warning {{arithmetic on pointers to void is a GNU extension}}
+
+void nonNumberRem(void) { *((int *)0) = (long)foo % 42; } // all-warning {{indirection of non-volatile null pointer will be deleted, not trap}} \
+                                                          // all-note {{consider using __builtin_trap() or qualifying pointer with 'volatile'}}

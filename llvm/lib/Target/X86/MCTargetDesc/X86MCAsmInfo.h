@@ -28,12 +28,14 @@ class X86MCAsmInfoDarwin : public MCAsmInfoDarwin {
 
 public:
   StringSet<> ReservedIdentifiers;
-  explicit X86MCAsmInfoDarwin(const Triple &Triple);
+  explicit X86MCAsmInfoDarwin(const Triple &Triple,
+                              const MCTargetOptions &Options);
   bool isValidUnquotedName(StringRef Name) const override;
 };
 
 struct X86_64MCAsmInfoDarwin : public X86MCAsmInfoDarwin {
-  explicit X86_64MCAsmInfoDarwin(const Triple &Triple);
+  explicit X86_64MCAsmInfoDarwin(const Triple &Triple,
+                                 const MCTargetOptions &Options);
   const MCExpr *
   getExprForPersonalitySymbol(const MCSymbol *Sym, unsigned Encoding,
                               MCStreamer &Streamer) const override;
@@ -44,7 +46,8 @@ class X86ELFMCAsmInfo : public MCAsmInfoELF {
 
 public:
   StringSet<> ReservedIdentifiers;
-  explicit X86ELFMCAsmInfo(const Triple &Triple);
+  explicit X86ELFMCAsmInfo(const Triple &Triple,
+                           const MCTargetOptions &Options);
   bool isValidUnquotedName(StringRef Name) const override;
 };
 
@@ -53,7 +56,8 @@ class X86MCAsmInfoMicrosoft : public MCAsmInfoMicrosoft {
 
 public:
   StringSet<> ReservedIdentifiers;
-  explicit X86MCAsmInfoMicrosoft(const Triple &Triple);
+  explicit X86MCAsmInfoMicrosoft(const Triple &Triple,
+                                 const MCTargetOptions &Options);
   bool isValidUnquotedName(StringRef Name) const override;
 };
 
@@ -61,7 +65,8 @@ class X86MCAsmInfoMicrosoftMASM : public X86MCAsmInfoMicrosoft {
   void anchor() override;
 
 public:
-  explicit X86MCAsmInfoMicrosoftMASM(const Triple &Triple);
+  explicit X86MCAsmInfoMicrosoftMASM(const Triple &Triple,
+                                     const MCTargetOptions &Options);
 };
 
 class X86MCAsmInfoGNUCOFF : public MCAsmInfoGNUCOFF {
@@ -69,7 +74,8 @@ class X86MCAsmInfoGNUCOFF : public MCAsmInfoGNUCOFF {
 
 public:
   StringSet<> ReservedIdentifiers;
-  explicit X86MCAsmInfoGNUCOFF(const Triple &Triple);
+  explicit X86MCAsmInfoGNUCOFF(const Triple &Triple,
+                               const MCTargetOptions &Options);
   bool isValidUnquotedName(StringRef Name) const override;
 };
 

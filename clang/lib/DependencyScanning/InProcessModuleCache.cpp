@@ -145,7 +145,8 @@ public:
     ModuleCacheEntry &Entry = getOrCreateEntry(Path);
     std::lock_guard<std::mutex> Lock(Entry.Mutex);
     if (Entry.State == ModuleCacheEntry::S_Written) {
-      assert(Entry.Buffer && *Entry.Buffer == Buffer &&
+      assert(Entry.Buffer && "Wrote PCM with no contents");
+      assert(Entry.Buffer->getBuffer() == Buffer.getBuffer() &&
              "Wrote the same PCM with different contents");
       Size = Entry.Buffer->getBufferSize();
       ModTime = Entry.ModTime;
@@ -178,7 +179,8 @@ public:
     }
     Size = Entry.Buffer->getBufferSize();
     ModTime = Entry.ModTime;
-    return llvm::MemoryBuffer::getMemBuffer(*Entry.Buffer);
+    return llvm::MemoryBuffer::getMemBuffer(*Entry.Buffer,
+                                            /* RequiresNullTerminator */ false);
   }
 };
 } // namespace

@@ -3435,6 +3435,7 @@ private:
 
   /// Generate FIR for a FORALL construct.
   void genFIR(const Fortran::parser::ForallConstruct &forall) {
+    setCurrentPositionAt(forall);
     mlir::OpBuilder::InsertPoint insertPt = builder->saveInsertionPoint();
     if (lowerToHighLevelFIR())
       localSymbols.pushScope();
@@ -3569,7 +3570,7 @@ private:
     if (currentFunctionUnit && !currentFunctionUnit->isMainProgram()) {
       const std::string symName =
           currentFunctionUnit->getSubprogramSymbol().name().ToString();
-      if (dir.v->ToString() == symName) {
+      if (dir.v.value().ToString() == symName) {
         func->setAttr("llvm.always_inline", builder->getUnitAttr());
       }
     }
@@ -3668,6 +3669,7 @@ private:
   }
 
   void genFIR(const Fortran::parser::OpenACCConstruct &acc) {
+    setCurrentPositionAt(acc);
     Fortran::lower::clearCollapsedDoConstructs();
     mlir::OpBuilder::InsertPoint insertPt = builder->saveInsertionPoint();
 
@@ -3830,6 +3832,7 @@ private:
   }
 
   void genFIR(const Fortran::parser::OpenACCDeclarativeConstruct &accDecl) {
+    setCurrentPositionAt(accDecl);
     genOpenACCDeclarativeConstruct(*this, bridge.getSemanticsContext(),
                                    bridge.openAccCtx(), accDecl);
     for (Fortran::lower::pft::Evaluation &e : getEval().getNestedEvaluations())
@@ -3841,6 +3844,7 @@ private:
   }
 
   void genFIR(const Fortran::parser::CUFKernelDoConstruct &kernel) {
+    setCurrentPositionAt(kernel);
     Fortran::lower::SymMapScope scope(localSymbols);
     const Fortran::parser::CUFKernelDoConstruct::Directive &dir =
         std::get<Fortran::parser::CUFKernelDoConstruct::Directive>(kernel.t);
@@ -4112,6 +4116,7 @@ private:
   }
 
   void genFIR(const Fortran::parser::OpenMPConstruct &omp) {
+    setCurrentPositionAt(omp);
     mlir::OpBuilder::InsertPoint insertPt = builder->saveInsertionPoint();
     genOpenMPConstruct(*this, localSymbols, bridge.getSemanticsContext(),
                        getEval(), omp);
@@ -4123,6 +4128,7 @@ private:
   }
 
   void genFIR(const Fortran::parser::OpenMPDeclarativeConstruct &ompDecl) {
+    setCurrentPositionAt(ompDecl);
     mlir::OpBuilder::InsertPoint insertPt = builder->saveInsertionPoint();
     // Register if a declare target construct intended for a target device was
     // found
@@ -4379,6 +4385,7 @@ private:
   }
 
   void genFIR(const Fortran::parser::ChangeTeamConstruct &construct) {
+    setCurrentPositionAt(construct);
     Fortran::lower::StatementContext stmtCtx;
     pushActiveConstruct(getEval(), stmtCtx);
     Fortran::lower::pft::Evaluation &eval = getEval();
@@ -6076,6 +6083,7 @@ private:
   bool isInsideHlfirWhere() const { return isInsideOp<hlfir::WhereOp>(); }
 
   void genFIR(const Fortran::parser::WhereConstruct &c) {
+    setCurrentPositionAt(c);
     mlir::Location loc = getCurrentLocation();
     hlfir::WhereOp whereOp;
 
@@ -6157,6 +6165,7 @@ private:
       implicitIterSpace.append(maskExpr);
   }
   void genFIR(const Fortran::parser::WhereConstruct::MaskedElsewhere &ew) {
+    setCurrentPositionAt(ew);
     mlir::Location loc = getCurrentLocation();
     hlfir::ElseWhereOp elsewhereOp;
     if (lowerToHighLevelFIR()) {
@@ -6186,6 +6195,7 @@ private:
       implicitIterSpace.append(maskExpr);
   }
   void genFIR(const Fortran::parser::WhereConstruct::Elsewhere &ew) {
+    setCurrentPositionAt(ew);
     if (lowerToHighLevelFIR()) {
       auto elsewhereOp =
           hlfir::ElseWhereOp::create(*builder, getCurrentLocation());
@@ -6632,18 +6642,21 @@ private:
 
     Fortran::lower::AggregateStoreMap storeMap;
 
-    // Map all containing submodule and module equivalences and variables, in
-    // case they are referenced. It might be better to limit this to variables
-    // that are actually referenced, although that is more complicated when
-    // there are equivalenced variables.
-    auto &scopeVariableListMap =
-        Fortran::lower::pft::getScopeVariableListMap(funit);
-    for (auto *scp = &scope.parent(); !scp->IsGlobal(); scp = &scp->parent())
-      if (scp->kind() == Fortran::semantics::Scope::Kind::Module)
-        for (const auto &var : Fortran::lower::pft::getScopeVariableList(
-                 *scp, scopeVariableListMap))
-          if (!var.isRuntimeTypeInfoData())
-            instantiateVar(var, storeMap);
+    // Map containing [sub]module equivalences and variables that are
+    // referenced in this function-like unit. Only referenced host module
+    // variables are instantiated to avoid generating IR for unused module
+    // variables. Equivalenced variables are handled via the aggregate store
+    // analysis performed on the host [sub]module scopes.
+    const bool hasHostModuleScope = [&]() {
+      for (auto *scp = &scope.parent(); !scp->IsGlobal(); scp = &scp->parent())
+        if (scp->kind() == Fortran::semantics::Scope::Kind::Module)
+          return true;
+      return false;
+    }();
+    if (hasHostModuleScope)
+      for (const auto &var :
+           Fortran::lower::pft::getHostModuleVariableList(funit))
+        instantiateVar(var, storeMap);
 
     // Map function equivalences and variables.
     mlir::Value primaryFuncResultStorage;

@@ -411,10 +411,7 @@ public:
                              const MCTargetOptions &Options) const {
     if (!MCAsmInfoCtorFn)
       return nullptr;
-    auto *MAI = MCAsmInfoCtorFn(MRI, TheTriple, Options);
-    if (MAI)
-      MAI->setTargetOptions(Options);
-    return MAI;
+    return MCAsmInfoCtorFn(MRI, TheTriple, Options);
   }
 
   /// Create a MCObjectFileInfo implementation for the specified target
