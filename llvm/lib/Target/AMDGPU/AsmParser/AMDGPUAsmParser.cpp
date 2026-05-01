@@ -6357,6 +6357,10 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
     return TokError(".amdhsa_next_free_sgpr directive is required");
 
   unsigned UserSGPRCount = ExplicitUserSGPRCount.value_or(ImpliedUserSGPRCount);
+  if (UserSGPRCount > getMaxNumUserSGPRs())
+    return TokError("too many user SGPRs enabled, found " +
+                    Twine(UserSGPRCount) + ", but only " +
+                    Twine(getMaxNumUserSGPRs()) + " are supported.");
 
   // Consider the case where the total number of UserSGPRs with trailing
   // allocated preload SGPRs, is greater than the number of explicitly
@@ -6404,17 +6408,12 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
                     "enabled user SGPRs");
 
   if (isGFX1250Plus()) {
-    if (!isUInt<COMPUTE_PGM_RSRC2_GFX125_USER_SGPR_COUNT_WIDTH>(UserSGPRCount))
-      return TokError("too many user SGPRs enabled");
     AMDGPU::MCKernelDescriptor::bits_set(
         KD.compute_pgm_rsrc2,
         MCConstantExpr::create(UserSGPRCount, getContext()),
         COMPUTE_PGM_RSRC2_GFX125_USER_SGPR_COUNT_SHIFT,
         COMPUTE_PGM_RSRC2_GFX125_USER_SGPR_COUNT, getContext());
   } else {
-    if (!isUInt<COMPUTE_PGM_RSRC2_GFX6_GFX120_USER_SGPR_COUNT_WIDTH>(
-            UserSGPRCount))
-      return TokError("too many user SGPRs enabled");
     AMDGPU::MCKernelDescriptor::bits_set(
         KD.compute_pgm_rsrc2,
         MCConstantExpr::create(UserSGPRCount, getContext()),
