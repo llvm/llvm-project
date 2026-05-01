@@ -813,15 +813,14 @@ def XSeqPairsClass   : RegisterClass<"AArch64", [untyped], 64,
   let Size = 128;
 }
 def SyspPairsClass   : RegisterClass<"AArch64", [untyped], 64,
-                                     (add XSeqPairs, XZR)>{
+                                     (add XSeqPairs, [XZR, XZR])>{
   let Size = 128;
   let isAllocatable = 0;
-  let GeneratePressureSet = 0;
-  let CopyCost = -1;
 }
 
 
-let RenderMethod = "addRegOperands", ParserMethod="tryParseGPRSeqPair" in {
+let RenderMethod = "addRegOperands",
+    ParserMethod="tryParseConsecutiveGPRSeqPair<false>" in {
   def WSeqPairsAsmOperandClass : AsmOperandClass { let Name = "WSeqPair"; }
   def XSeqPairsAsmOperandClass : AsmOperandClass { let Name = "XSeqPair"; }
 }
@@ -842,7 +841,7 @@ def MrrsMssrPairClassOperand :
 def SyspPairOperandMatcherClass : AsmOperandClass {
   let Name = "SyspPair";
   let RenderMethod = "addRegOperands";
-  let ParserMethod = "tryParseSyspPair";
+  let ParserMethod = "tryParseConsecutiveGPRSeqPair<true>";
 }
 def SyspPairOperand :
     RegisterOperand<SyspPairsClass, "printGPRSeqPairsClassOperand<64>"> {

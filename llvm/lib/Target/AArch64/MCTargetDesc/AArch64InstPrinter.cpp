@@ -90,12 +90,11 @@ void AArch64InstPrinter::printInst(const MCInst *MI, uint64_t Address,
       return;
     }
 
-  if (Opcode == AArch64::SYSPxt) {
+  if (Opcode == AArch64::SYSPxt)
     if (printSyspAlias(MI, STI, O)) {
       printAnnotation(O, Annot);
       return;
     }
-  }
 
   // RPRFM overlaps PRFM (reg), so try to print it as RPRFM here.
   if ((Opcode == AArch64::PRFMroX) || (Opcode == AArch64::PRFMroW)) {
@@ -372,12 +371,7 @@ void AArch64InstPrinter::printInst(const MCInst *MI, uint64_t Address,
     return;
   }
 
-  // SYSP alias printing is handled explicitly by printSyspAlias above.
-  // Skip the generic alias printer for SYSPxt, because its XSeqPair aliases
-  // are only valid for a subset of SYSP register pairs and can misprint
-  // odd-started regs or xzr,xzr encodings.
-  if (!PrintAliases || Opcode == AArch64::SYSPxt ||
-      !printAliasInstr(MI, Address, STI, O))
+  if (!PrintAliases || !printAliasInstr(MI, Address, STI, O))
     printInstruction(MI, Address, STI, O);
 
   printAnnotation(O, Annot);
@@ -898,13 +892,21 @@ bool AArch64InstPrinter::printRangePrefetchAlias(const MCInst *MI,
   return true;
 }
 
+static uint16_t getSystemEncoding(const MCOperand &Op1, const MCOperand &Cn,
+                                  const MCOperand &Cm, const MCOperand &Op2) {
+  uint16_t Encoding = Op2.getImm();
+  Encoding |= Cn.getImm() << 7;
+  Encoding |= Cm.getImm() << 3;
+  Encoding |= Op1.getImm() << 11;
+  return Encoding;
+}
+
 bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
                                        const MCSubtargetInfo &STI,
-                                       raw_ostream &O, bool PairOperand) {
+                                       raw_ostream &O) {
 #ifndef NDEBUG
   unsigned Opcode = MI->getOpcode();
-  assert((Opcode == AArch64::SYSxt || Opcode == AArch64::SYSPxt) &&
-         "Invalid opcode for system alias!");
+  assert(Opcode == AArch64::SYSxt && "Invalid opcode for SYS alias!");
 #endif
 
   const MCOperand &Op1 = MI->getOperand(0);
@@ -917,28 +919,14 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
   unsigned CmVal = Cm.getImm();
   unsigned Op2Val = Op2.getImm();
 
-  uint16_t Encoding = Op2Val;
-  Encoding |= CmVal << 3;
-  Encoding |= CnVal << 7;
-  Encoding |= Op1Val << 11;
+  uint16_t Encoding = getSystemEncoding(Op1, Cn, Cm, Op2);
 
   bool NeedsReg = false;
   bool OptionalReg = false;
   std::string Ins;
   std::string Name;
 
-  if (PairOperand) {
-    if (CnVal != 8 && CnVal != 9)
-      return false;
-
-    const AArch64TLBIP::TLBIP *TLBIP =
-        AArch64TLBIP::lookupTLBIPByEncoding(Encoding);
-    if (!TLBIP || !TLBIP->haveFeatures(STI.getFeatureBits()))
-      return false;
-
-    Ins = "tlbip\t";
-    Name = std::string(AArch64TLBIP::getTLBIPStr(TLBIP->Name));
-  } else if (CnVal == 7) {
+  if (CnVal == 7) {
     switch (CmVal) {
     default:
       return false;
@@ -1073,13 +1061,6 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
   std::string Str = Ins + Name;
   llvm::transform(Str, Str.begin(), ::tolower);
 
-  if (PairOperand) {
-    O << '\t' << Str;
-    O << ", ";
-    printGPRSeqPairsClassOperand<64>(MI, 4, STI, O);
-    return true;
-  }
-
   StringRef Reg = getRegisterName(MI->getOperand(4).getReg());
   bool NotXZR = Reg != "xzr";
 
@@ -1113,15 +1094,10 @@ bool AArch64InstPrinter::printSyslAlias(const MCInst *MI,
   const MCOperand &Cm = MI->getOperand(3);
   const MCOperand &Op2 = MI->getOperand(4);
 
-  unsigned Op1Val = Op1.getImm();
   unsigned CnVal = Cn.getImm();
   unsigned CmVal = Cm.getImm();
-  unsigned Op2Val = Op2.getImm();
 
-  uint16_t Encoding = Op2Val;
-  Encoding |= CmVal << 3;
-  Encoding |= CnVal << 7;
-  Encoding |= Op1Val << 11;
+  uint16_t Encoding = getSystemEncoding(Op1, Cn, Cm, Op2);
 
   std::string Ins;
   std::string Name;
@@ -1151,8 +1127,30 @@ bool AArch64InstPrinter::printSyslAlias(const MCInst *MI,
 bool AArch64InstPrinter::printSyspAlias(const MCInst *MI,
                                         const MCSubtargetInfo &STI,
                                         raw_ostream &O) {
-  if (printSysAlias(MI, STI, O, /*PairOperand=*/true))
-    return true;
+#ifndef NDEBUG
+  unsigned Opcode = MI->getOpcode();
+  assert(Opcode == AArch64::SYSPxt && "Invalid opcode for SYSP alias!");
+#endif
+
+  const MCOperand &Op1 = MI->getOperand(0);
+  const MCOperand &Cn = MI->getOperand(1);
+  const MCOperand &Cm = MI->getOperand(2);
+  const MCOperand &Op2 = MI->getOperand(3);
+
+  unsigned CnVal = Cn.getImm();
+
+  if (CnVal == 8 || CnVal == 9) {
+    const AArch64TLBIP::TLBIP *TLBIP = AArch64TLBIP::lookupTLBIPByEncoding(
+        getSystemEncoding(Op1, Cn, Cm, Op2));
+    if (TLBIP && TLBIP->haveFeatures(STI.getFeatureBits())) {
+      std::string Str = (Twine("tlbip\t") + TLBIP->Name).str();
+      llvm::transform(Str, Str.begin(), ::tolower);
+
+      O << '\t' << Str << ", ";
+      printGPRSeqPairsClassOperand<64>(MI, 4, STI, O);
+      return true;
+    }
+  }
 
   // Preserve SYSP short form for XZR/XZR encoding:
   //   sysp #op1, cN, cM, #op2
