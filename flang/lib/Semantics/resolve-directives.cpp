@@ -2114,16 +2114,6 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndex(
     ivDSA = Symbol::Flag::OmpLastPrivate;
   }
 
-  auto checkThreadprivate{[&](const parser::Name &iv) {
-    if (const auto *details{iv.symbol->detailsIf<HostAssocDetails>()}) {
-      if (details->symbol().test(Symbol::Flag::OmpThreadprivate)) {
-        context_.Say(iv.source,
-            "Loop iteration variable %s is not allowed in THREADPRIVATE."_err_en_US,
-            iv.ToString());
-      }
-    }
-  }};
-
   Scope &scope{currScope()};
 
   if (auto doLoops{omp::CollectAffectedDoLoops(x, version, &context_)}) {
@@ -2132,9 +2122,7 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndex(
       if (!iv || (iv->symbol && IsLocalInsideScope(*iv->symbol, scope))) {
         continue;
       }
-
       if (auto *symbol{ResolveOmp(*iv, ivDSA, scope)}) {
-        checkThreadprivate(*iv);
         SetSymbolDSA(*symbol, {Symbol::Flag::OmpPreDetermined, ivDSA});
         iv->symbol = symbol; // adjust the symbol within region
         AddToContextObjectWithDSA(*symbol, ivDSA);
