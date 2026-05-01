@@ -409,9 +409,11 @@ public:
   void applyCombineConstantFoldFpUnary(MachineInstr &MI,
                                        const ConstantFP *Cst) const;
 
-  /// Constant fold G_CTLZ, G_CTTZ, G_CTPOP (and their _ZERO_UNDEF variants)
-  /// when the operand is a scalar constant or a G_BUILD_VECTOR of constants.
-  bool matchConstantFoldCountOp(MachineInstr &MI, BuildFnTy &MatchInfo) const;
+  /// Constant fold a unary integer op (G_CTLZ, G_CTTZ, G_CTPOP and their
+  /// _ZERO_UNDEF variants, G_ABS, G_BSWAP, G_BITREVERSE) when the operand is
+  /// a scalar constant or a G_BUILD_VECTOR of constants.
+  bool matchConstantFoldUnaryIntOp(MachineInstr &MI,
+                                   BuildFnTy &MatchInfo) const;
 
   /// Transform IntToPtr(PtrToInt(x)) to x if cast is in the same address space.
   bool matchCombineI2PToP2I(MachineInstr &MI, Register &Reg) const;
