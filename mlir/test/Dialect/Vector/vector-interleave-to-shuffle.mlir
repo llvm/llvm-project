@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s --transform-interpreter | FileCheck %s
 
 // CHECK-LABEL: @vector_interleave_to_shuffle
-func.func @vector_interleave_to_shuffle(%a: vector<7xi16>, %b: vector<7xi16>) -> vector<14xi16> {
+func.func @vector_interleave_to_shuffle_1d(%a: vector<7xi16>, %b: vector<7xi16>) -> vector<14xi16> {
   %0 = vector.interleave %a, %b : vector<7xi16> -> vector<14xi16>
   return %0 : vector<14xi16>
 }
