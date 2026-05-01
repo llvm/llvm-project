@@ -134,7 +134,7 @@ static void propagateResultsToRegularOperands(Operation *op) {
       result.setType(typeWithLayout);
     }
   }
-  if (isa<VectorType>(resultType) && resLayout)
+  if (resLayout)
     xegpu::setTemporaryLayout(result, resLayout);
 
   for (OpOperand &opr : op->getOpOperands()) {

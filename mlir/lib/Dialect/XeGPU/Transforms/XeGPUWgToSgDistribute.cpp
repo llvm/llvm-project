@@ -1562,7 +1562,6 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
 
   target.addDynamicallyLegalOp<vector::ShapeCastOp, vector::StepOp,
                                vector::TransposeOp, vector::BroadcastOp,
-                               vector::MultiDimReductionOp,
                                vector::ConstantMaskOp, vector::CreateMaskOp>(
       [=](Operation *op) -> bool {
         // Check for either a SliceAttr or LayoutAttr on the result.
@@ -1570,7 +1569,13 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
             xegpu::getTemporaryLayout(dyn_cast<OpResult>(op->getResult(0)));
         return isLegal(layout);
       });
-
+  target.addDynamicallyLegalOp<vector::MultiDimReductionOp>(
+      [=](Operation *op) -> bool {
+        // Check operand since the result maybe scalar not bearing layout..
+        auto layout =
+            xegpu::getTemporaryLayout(dyn_cast<vector::MultiDimReductionOp>(op)->getOpOperand(0));
+        return isLegal(layout);
+      });
   target.addDynamicallyLegalOp<xegpu::LoadGatherOp>(
       [=](xegpu::LoadGatherOp op) -> bool {
         auto layout = op.getLayoutAttr();

@@ -32,6 +32,11 @@ gpu.func @load_nd() {
   %0 = "some_op"() : () -> !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
   %1 = xegpu.load_nd %0[%c0, %c0] {layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
     : !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>> -> vector<16x16xf16>
+  %anchor = xegpu.convert_layout %1
+    <{
+      input_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
+      target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
+    }> : vector<16x16xf16>
   gpu.return
 }
 
@@ -116,6 +121,11 @@ gpu.func @dpas() {
      layout_b = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
      layout_cd = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
     : vector<8x16xf16>, vector<16x16xf16>, vector<8x16xf32>  -> vector<8x16xf32>
+  %anchor = xegpu.convert_layout %4
+    <{
+      input_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
+      target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
+    }> : vector<8x16xf32>
   gpu.return
 }
 
