@@ -1503,7 +1503,7 @@ void WebAssemblyCFGStackify::addNestedTryTable(MachineInstr *RangeBegin,
   // Add a 'end_try_table' instruction in the EndTryTable BB created above.
   MachineInstr *EndTryTable = BuildMI(EndTryTableBB, RangeEnd->getDebugLoc(),
                                       TII.get(WebAssembly::END_TRY_TABLE));
-  registerTryScope(TryTable, EndTryTable, nullptr);
+  registerTryScope(TryTable, EndTryTable, TrampolineBB);
 }
 
 // In the standard (exnref) EH, we fix unwind mismatches by adding a new
@@ -1838,8 +1838,51 @@ bool WebAssemblyCFGStackify::fixCallUnwindMismatches(MachineFunction &MF) {
         EHPadStack.pop_back();
       else if (MI.getOpcode() == WebAssembly::DELEGATE)
         EHPadStack.push_back(MI.getOperand(0).getMBB());
-      else if (WebAssembly::isCatch(MI.getOpcode()))
+      else if (WebAssembly::WasmUseLegacyEH &&
+               WebAssembly::isCatch(MI.getOpcode()))
         EHPadStack.push_back(MI.getParent());
+      else if (MI.getOpcode() == WebAssembly::END_TRY_TABLE)
+        // In case of the legacy EH, 'catch' instruction is always an EH pad for
+        // the 'try' body that precedes it. But in the standard EH, because
+        // fixCatchUnwindMismatches runs before this, a new try_table's
+        // trampoline BB will be separated from try_table ~ end_try_table body:
+        //
+        // bb0:
+        //   try_table (catch_all_ref %far_away_trampoline)
+        //     ...
+        //   end_try_table
+        // ...
+        // far_away_trampoline:
+        //   catch_all_ref
+        //   throw_ref
+        //
+        // And there can be multiple try_tables that target a single trampoline:
+        //
+        // bb0:
+        //   try_table (catch_all_ref %far_away_trampolinle_bb)
+        //     ...
+        //   end_try_table
+        // ...
+        // bb1:
+        //   try_table (catch_all_ref %far_away_trampolinle_bb)
+        //     ...
+        //   end_try_table
+        // ...
+        // far_away_trampoline:
+        //   catch_all_ref
+        //   throw_ref
+        //
+        // So we can't call WebAssembly::isCatch to add its parent EH pad to
+        // EHPadStack. Now we add to EHPadStack at end_try_table marker, by
+        // getting its matching try_table's destination. This works when the
+        // destination EH pad is either a normal EH pad or a trampoline created
+        // in fixCatchUnwindMismatches.
+        //
+        // Note that we don't need to distinguish this case in
+        // fixCatchUnwindMismatches because it runs before
+        // fixCallUnwindMismatches and there is no new try_tables and
+        // trampolines when it runs.
+        EHPadStack.push_back(TryToEHPad[EndToBegin[&MI]]);
 
       // In this loop we only gather calls that have an EH pad to unwind. So
       // there will be at most 1 such call (= invoke) in a BB, so after we've
@@ -1946,8 +1989,12 @@ bool WebAssemblyCFGStackify::fixCallUnwindMismatches(MachineFunction &MF) {
         EHPadStack.pop_back();
       else if (MI.getOpcode() == WebAssembly::DELEGATE)
         EHPadStack.push_back(MI.getOperand(0).getMBB());
-      else if (WebAssembly::isCatch(MI.getOpcode()))
+      else if (WebAssembly::WasmUseLegacyEH &&
+               WebAssembly::isCatch(MI.getOpcode()))
         EHPadStack.push_back(MI.getParent());
+      else if (!WebAssembly::WasmUseLegacyEH &&
+               MI.getOpcode() == WebAssembly::END_TRY_TABLE)
+        EHPadStack.push_back(TryToEHPad[EndToBegin[&MI]]);
     }
 
     if (RangeEnd)
