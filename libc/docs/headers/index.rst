@@ -25,9 +25,11 @@ Implementation Status
    netinet/in
    nl_types
    poll
+   sched
    search
    setjmp
    signal
+   spawn
    stdbit
    stdfix
    stdio

@@ -805,9 +805,6 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     return LoopUnrollResult::Unmodified;
   }
 
-  assert((!ULO.Runtime || canHaveUnrollRemainder(L)) &&
-         "Can't runtime unroll if loop contains a convergent operation.");
-
   bool EpilogProfitability =
       UnrollRuntimeEpilog.getNumOccurrences() ? UnrollRuntimeEpilog
                                               : isEpilogProfitable(L);

@@ -59,8 +59,10 @@ if (SPHINX_FOUND)
       netinet/in
       poll
       pthread
+      sched
       setjmp
       signal
+      spawn
       stdbit
       stdio
       stdlib

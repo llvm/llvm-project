@@ -821,6 +821,17 @@ void FactsGenerator::handleInvalidatingCall(const Expr *Call,
         ThisList->getOuterOriginID(), Call));
 }
 
+void FactsGenerator::handleDestructiveCall(const Expr *Call,
+                                           const FunctionDecl *FD,
+                                           ArrayRef<const Expr *> Args) {
+  if (!destructsFirstArg(*FD))
+    return;
+  OriginList *ArgList = getOriginsList(*Args[0]);
+  if (ArgList)
+    CurrentBlockFacts.push_back(FactMgr.createFact<InvalidateOriginFact>(
+        ArgList->getOuterOriginID(), Call));
+}
+
 void FactsGenerator::handleImplicitObjectFieldUses(const Expr *Call,
                                                    const FunctionDecl *FD) {
   const auto *MemberCall = dyn_cast_or_null<CXXMemberCallExpr>(Call);
@@ -866,6 +877,7 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
   for (const Expr *Arg : Args)
     handleUse(Arg);
   handleInvalidatingCall(Call, FD, Args);
+  handleDestructiveCall(Call, FD, Args);
   handleMovedArgsInCall(FD, Args);
   handleImplicitObjectFieldUses(Call, FD);
   if (!CallList)

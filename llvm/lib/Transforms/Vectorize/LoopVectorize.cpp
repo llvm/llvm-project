@@ -748,7 +748,7 @@ void reportVectorizationFailure(const StringRef DebugMsg,
                                 OptimizationRemarkEmitter *ORE, Loop *TheLoop,
                                 Instruction *I) {
   LLVM_DEBUG(debugVectorizationMessage("Not vectorizing: ", DebugMsg, I));
-  LoopVectorizeHints Hints(TheLoop, true /* doesn't matter */, *ORE);
+  LoopVectorizeHints Hints(TheLoop, false /* doesn't matter */, *ORE);
   ORE->emit(
       createLVAnalysis(Hints.vectorizeAnalysisPassName(), ORETag, TheLoop, I)
       << "loop not vectorized: " << OREMsg);
@@ -758,7 +758,7 @@ void reportVectorizationInfo(const StringRef Msg, const StringRef ORETag,
                              OptimizationRemarkEmitter *ORE,
                              const Loop *TheLoop, Instruction *I, DebugLoc DL) {
   LLVM_DEBUG(debugVectorizationMessage("", Msg, I));
-  LoopVectorizeHints Hints(TheLoop, true /* doesn't matter */, *ORE);
+  LoopVectorizeHints Hints(TheLoop, false /* doesn't matter */, *ORE);
   ORE->emit(createLVAnalysis(Hints.vectorizeAnalysisPassName(), ORETag, TheLoop,
                              I, DL)
             << Msg);
