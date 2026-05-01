@@ -148,7 +148,33 @@ public:
   }
 };
 
-/// Pattern to update vector.extract_strided_slice operations
+/// Rewrite `vector.extract_strided_slice` offsets so they index into the
+/// stacked register layout produced by `OptimizeLoadNdOp`.
+///
+/// The optimized load places `arrayLength` blocks side-by-side in memory
+/// but stacks them along the non-FCD dimension in registers. Given a
+/// tensor desc of shape `[H, W]` with array_length = A:
+///
+///   memory layout (what the extract offsets refer to): `[H, W * A]`
+///   register layout (what the new load returns):       `[H * A, W]`
+///
+/// An extract at memory offset `[r, c]` therefore maps to register offset
+/// `[r + (c / W) * H, 0]` — provided the extract is block-aligned in the
+/// FCD dimension, i.e. `c % W == 0`.
+///
+/// Example (`A = 2`, `H = 32`, `W = 16`):
+///
+///   // before
+///   %v = xegpu.load_nd %t : ... -> vector<32x32xf16>
+///   %e = vector.extract_strided_slice %v
+///          {offsets = [0, 16], sizes = [16, 16], strides = [1, 1]}
+///          : vector<32x32xf16> to vector<16x16xf16>
+///
+///   // after (load rewritten to vector<64x16>, extract offset remapped)
+///   %v = xegpu.load_nd %t : ... -> vector<64x16xf16>
+///   %e = vector.extract_strided_slice %v
+///          {offsets = [32, 0], sizes = [16, 16], strides = [1, 1]}
+///          : vector<64x16xf16> to vector<16x16xf16>
 class UpdateExtractStridedSliceOp
     : public OpRewritePattern<vector::ExtractStridedSliceOp> {
 public:
@@ -179,26 +205,34 @@ public:
     int64_t origOffset0 = cast<IntegerAttr>(offsets[0]).getInt();
     int64_t origOffset1 = cast<IntegerAttr>(offsets[1]).getInt();
 
-    int64_t newFCD = tdescType.getShape()[1];
-    int64_t origRows = sourceType.getShape()[0] / arrayLength;
+    int64_t blockHeight = tdescType.getShape()[0];
+    int64_t arrayWidth = tdescType.getShape()[1];
 
-    int64_t arrayIndex = origOffset1 / newFCD;
-    int64_t newOffset0 = origOffset0 + (arrayIndex * origRows);
-    int64_t newOffset1 = origOffset1 % newFCD;
-
-    // If offsets don't change, this extract is already transformed
-    if (newOffset0 == origOffset0 && newOffset1 == origOffset1)
+    // Skip extracts that already live entirely inside block 0: their offsets
+    // are identical in the memory and register layouts, so there is nothing
+    // to rewrite.
+    if (origOffset1 < arrayWidth)
       return failure();
 
-    SmallVector<int64_t> newOffsets = {newOffset0, newOffset1};
+    // The remap is only well-defined when the extract is aligned to an array
+    // block along the FCD.
+    assert(origOffset1 % arrayWidth == 0 &&
+           "extract offset along FCD must be a multiple of the array width");
+
+    int64_t arrayIndex = origOffset1 / arrayWidth;
+    SmallVector<int64_t> newOffsets = {origOffset0 + arrayIndex * blockHeight,
+                                       /*offset1=*/0};
+
+    auto toInts = [](ArrayAttr arr) {
+      return llvm::to_vector(llvm::map_range(
+          arr, [](Attribute a) { return cast<IntegerAttr>(a).getInt(); }));
+    };
+    SmallVector<int64_t> sliceSizes = toInts(op.getSizes());
+    SmallVector<int64_t> sliceStrides = toInts(op.getStrides());
 
     auto newOp = vector::ExtractStridedSliceOp::create(
-        rewriter, op.getLoc(), op.getSource(), newOffsets,
-        llvm::to_vector(llvm::map_range(
-            sizes, [](Attribute a) { return cast<IntegerAttr>(a).getInt(); })),
-        llvm::to_vector(llvm::map_range(strides, [](Attribute a) {
-          return cast<IntegerAttr>(a).getInt();
-        })));
+        rewriter, op.getLoc(), op.getSource(), newOffsets, sliceSizes,
+        sliceStrides);
 
     rewriter.replaceOp(op, newOp.getResult());
     return success();
