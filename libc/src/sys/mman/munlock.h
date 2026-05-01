@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_SRC_SYS_MMAN_MUNLOCK_H
 #define LLVM_LIBC_SRC_SYS_MMAN_MUNLOCK_H
 
+#include "hdr/types/size_t.h"
 #include "src/__support/macros/config.h"
-#include <sys/mman.h>
 
 namespace LIBC_NAMESPACE_DECL {
 
