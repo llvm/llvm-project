@@ -42,7 +42,7 @@ enum class GCNSchedStageID : unsigned {
 raw_ostream &operator<<(raw_ostream &OS, const GCNSchedStageID &StageID);
 #endif
 
-/// This is a minimal scheduler strategy. The main difference between this
+/// This is a minimal scheduler strategy.  The main difference between this
 /// and the GenericScheduler is that GCNSchedStrategy uses different
 /// heuristics to determine excess/critical pressure sets.
 class GCNSchedStrategy : public GenericScheduler {
@@ -105,7 +105,7 @@ protected:
   // GCN RP Tracker for top-down scheduling
   mutable GCNDownwardRPTracker DownwardTracker;
 
-  // GCN RP Tracker for bottom-up scheduling
+  // GCN RP Tracker for botttom-up scheduling
   mutable GCNUpwardRPTracker UpwardTracker;
 
   bool UseGCNTrackers = false;
@@ -313,7 +313,7 @@ class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
 
   // The live out registers per region. These are internally stored as a map of
   // the initial last region instruction to region live out registers, but can
-  // be retrieved with the regionIdx by calls to getLiveRegsForRegionIdx.
+  // be retreived with the regionIdx by calls to getLiveRegsForRegionIdx.
   RegionPressureMap RegionLiveOuts;
 
   // Return current region pressure.
@@ -393,7 +393,7 @@ public:
   // Check result of scheduling.
   void checkScheduling();
 
-  // Computes the given schedule virtual execution time in clocks
+  // computes the given schedule virtual execution time in clocks
   ScheduleMetrics getScheduleMetrics(const std::vector<SUnit> &InputSchedule);
   ScheduleMetrics getScheduleMetrics(const GCNScheduleDAGMILive &DAG);
   unsigned computeSUnitReadyCycle(const SUnit &SU, unsigned CurrCycle,
@@ -446,7 +446,7 @@ private:
   /// Do a speculative rewrite and collect copy locations. The speculative
   /// rewrite allows us to calculate the RP of the code after the rewrite, and
   /// the copy locations allow us to calculate the total cost of copies required
-  /// for the rewrite. Stores the rewritten instructions in \p RewriteCands,
+  /// for the rewrite. Stores the rewritten instructions in \p RewriteCands ,
   /// the copy locations for uses (of the MFMA result) in \p CopyForUse and the
   /// copy locations for defs (of the MFMA operands) in \p CopyForDef
   bool
@@ -464,7 +464,6 @@ private:
 
   /// Do the final rewrite on \p RewriteCands and insert any needed copies.
   bool rewrite(ArrayRef<std::pair<MachineInstr *, unsigned>> RewriteCands);
-
   /// Resets all rewrite candidates in \p RewriteCands back to their original
   /// VGPR opcodes and register classes.
   void resetRewriteCandsToVGPR(
@@ -540,7 +539,7 @@ public:
 /// 2. The single defining instruction is either deemed rematerializable by the
 ///    target-independent logic, or if not, has no non-constant and
 ///    non-ignorable physical register use.
-/// 3. The register has no virtual register use whose live range would be
+/// 3  The register has no virtual register use whose live range would be
 ///    extended by the rematerialization.
 /// 4. The register has a single non-debug user in a different region from its
 ///    defining region.
@@ -551,8 +550,8 @@ private:
   using RegisterIdx = Rematerializer::RegisterIdx;
 
   /// A scored rematerialization candidate. Higher scores indicate more
-  /// beneficial rematerializations. A null score indicates the
-  /// rematerialization is not helpful to reduce RP in target regions.
+  /// beneficial rematerializations. A null score indicate the rematerialization
+  /// is not helpful to reduce RP in target regions.
   struct ScoredRemat {
     /// The register index handle in the rematerializer.
     RegisterIdx RegIdx;
