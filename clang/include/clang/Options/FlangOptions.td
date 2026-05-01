@@ -291,7 +291,7 @@ defm unsafe_cray_pointers : BoolOptionWithoutMarshalling<"f", "unsafe-cray-point
   PosFlag<SetTrue, [], [FlangOption, FC1Option], "Optimizations allow for unsafe Cray pointer usages">,
   NegFlag<SetFalse, [], [FlangOption, FC1Option], "Optimizations don't allow for unsafe Cray pointer usages (default)">>;
 
-defm relaxed_c_loc : Flag<["-"], "frelaxed-c-loc">, Group<f_Group>,
+def relaxed_c_loc : Flag<["-"], "frelaxed-c-loc">, Group<f_Group>,
   Visibility<[FlangOption, FC1Option]>,
   HelpText<"Unsafe relaxation of C_LOC() argument restrictions for compatibility">,
   DocBrief<[{

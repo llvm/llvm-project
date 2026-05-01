@@ -26,9 +26,9 @@ module m
     real :: arr2(purefun2(c_funloc(subr))) ! ok
     character(:), allocatable, target :: deferred
     character(n), pointer :: p2ch
-    !WARNING: C_LOC() argument must be a data pointer or target [-Wc-loc]
+    !WARNING: C_LOC() argument should be a data pointer or target [-Wc-loc]
     cp = c_loc(notATarget)
-    !WARNING: C_LOC() argument must be a data pointer or target [-Wc-loc]
+    !WARNING: C_LOC() argument should be a data pointer or target [-Wc-loc]
     cp = c_loc(pptr)
     !ERROR: C_LOC() argument must be contiguous
     cp = c_loc(arr(1:3:2))
@@ -89,9 +89,12 @@ module m3
     procedure(helper), pointer :: pptr
     cp = c_loc(modtarg)    ! ok
     cp = c_loc(localtarg)  ! ok
-    !WARNING: C_LOC() argument must be a data pointer or target [-Wc-loc]
+    !WARNING: C_LOC() argument should be a data pointer or target [-Wc-loc]
     cp = c_loc(notATarget)
-    !WARNING: C_LOC() argument must be a data pointer or target [-Wc-loc]
+    !WARNING: C_LOC() argument should be a data pointer or target [-Wc-loc]
     cp = c_loc(pptr)
+    !ERROR: C_LOC() argument must be a object or procedure
+    !ERROR: alternate return specification may not appear on function reference
+10  cp = c_loc(*10)
   end subroutine
 end module

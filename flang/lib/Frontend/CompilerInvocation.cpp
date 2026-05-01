@@ -869,11 +869,10 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
                        args.hasFlag(clang::options::OPT_funsigned,
                                     clang::options::OPT_fno_unsigned, false));
 
-  // -f{no-}relaxed-c-loc
-  opts.features.Enable(Fortran::common::LanguageFeature::RelaxedCLoc,
-                       args.hasFlag(clang::options::OPT_frelaxed_c_loc,
-                                    clang::options::OPT_fno_relaxed_c_loc,
-                                    false));
+  // -frelaxed-c-loc
+  if (args.hasArg(clang::options::OPT_relaxed_c_loc)) {
+    opts.features.Enable(Fortran::common::LanguageFeature::RelaxedCLoc);
+  }
 
   // -f{no-}xor-operator
   opts.features.Enable(Fortran::common::LanguageFeature::XOROperator,

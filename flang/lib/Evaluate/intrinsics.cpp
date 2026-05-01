@@ -3513,7 +3513,7 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::HandleC_Loc(
       if (context.languageFeatures().IsEnabled(
               common::LanguageFeature::RelaxedCLoc)) {
         context.Warn(common::UsageWarning::CLoc, arguments[0]->sourceLocation(),
-            "C_LOC() argument must be a data pointer or target"_warn_en_US);
+            "C_LOC() argument should be a data pointer or target"_warn_en_US);
       } else {
         context.messages().Say(arguments[0]->sourceLocation(),
             "C_LOC() argument must be a data pointer or target"_err_en_US);
@@ -3557,14 +3557,13 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::HandleC_Loc(
       characteristics::DummyDataObject ddo{std::move(*typeAndShape)};
       ddo.intent = common::Intent::In;
       specificCall.specificIntrinsic.characteristics.value()
-          .dummyArguments.emplace_back(std::move(ddo));
+          .dummyArguments.emplace_back(characteristics::DummyArgument{"x", std::move(ddo)});
       specificCall.arguments.emplace_back(std::move(arguments[0]));
       return specificCall;
     } else if (expr && IsProcedurePointer(*expr)) {
       auto dummyArg{characteristics::DummyArgument::FromActual(
           "x", *expr, context, /*forImplicitInterface=*/false)};
       CHECK(dummyArg.has_value());
-      dummyArg->intent = common::Intent::In;
       specificCall.specificIntrinsic.characteristics.value()
           .dummyArguments.emplace_back(std::move(*dummyArg));
       specificCall.arguments.emplace_back(std::move(arguments[0]));

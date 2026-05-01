@@ -139,6 +139,7 @@ LanguageFeatureControl::LanguageFeatureControl() {
   disable_.set(LanguageFeature::ImplicitNoneExternal);
   disable_.set(LanguageFeature::DefaultSave);
   disable_.set(LanguageFeature::SaveMainProgram);
+  disable_.set(LanguageFeature::RelaxedCLoc);
   // These features, if enabled, conflict with valid standard usage,
   // so there are disabled here by default.
   disable_.set(LanguageFeature::BackslashEscapes);
