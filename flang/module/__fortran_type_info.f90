@@ -53,7 +53,8 @@ module __fortran_type_info
     integer(1) :: noDestructionNeeded ! 1 if no component w/ dealloc/final
     integer(1) :: noFinalizationNeeded ! 1 if nothing finalizeable
     integer(1) :: noDefinedAssignment ! 1 if no defined ASSIGNMENT(=)
-    integer(1) :: __padding0(3)
+    integer(1) :: isVectorType ! 1 if it is vector type
+    integer(1) :: __padding0(2)
   end type
 
   type :: Binding
