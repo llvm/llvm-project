@@ -819,13 +819,12 @@ public:
 
   class OMPWithinTaskgraphRAII {
     CodeGenFunction &CGF;
+
   public:
     OMPWithinTaskgraphRAII(CodeGenFunction &CGF_) : CGF(CGF_) {
       CGF.setOMPWithinTaskgraph(true);
     }
-    ~OMPWithinTaskgraphRAII() {
-      CGF.setOMPWithinTaskgraph(false);
-    }
+    ~OMPWithinTaskgraphRAII() { CGF.setOMPWithinTaskgraph(false); }
   };
 
   template <class T>

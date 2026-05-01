@@ -1,3 +1,4 @@
+// clang-format off
 // RUN: %clangXX %flags %openmp_flags -fopenmp-version=60 %s -o %t && %libomp-run 2>&1 | FileCheck %s
 
 // REQUIRES: omp_taskgraph_experimental
