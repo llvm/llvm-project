@@ -5571,6 +5571,15 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
       match(Op1, m_Not(m_Specific(A))))
     return BinaryOperator::CreateNot(Builder.CreateAnd(A, B));
 
+  // (A ^ (X & ~C)) ^ C --> (X | C) ^ A
+  Constant *NotC;
+  if (match(&I, m_c_Xor(m_OneUse(m_c_Xor(
+                            m_Value(A), m_OneUse(m_c_And(
+                                            m_Value(X), m_ImmConstant(NotC))))),
+                        m_ImmConstant(C1))) &&
+      NotC == ConstantExpr::getNot(C1))
+    return BinaryOperator::CreateXor(Builder.CreateOr(X, C1), A);
+
   // (~A & B) ^ A --> A | B -- There are 4 commuted variants.
   if (match(&I, m_c_Xor(m_c_And(m_Not(m_Value(A)), m_Value(B)), m_Deferred(A))))
     return BinaryOperator::CreateOr(A, B);

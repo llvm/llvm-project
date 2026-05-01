@@ -5,10 +5,9 @@
 
 define i32 @basic(i32 %a, i32 %x) {
 ; CHECK-LABEL: @basic(
-; CHECK-NEXT:    [[A:%.*]] = and i32 [[X:%.*]], -43
-; CHECK-NEXT:    [[R:%.*]] = xor i32 [[TMP1:%.*]], [[A]]
-; CHECK-NEXT:    [[R1:%.*]] = xor i32 [[R]], 42
-; CHECK-NEXT:    ret i32 [[R1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[X:%.*]], 42
+; CHECK-NEXT:    [[R:%.*]] = xor i32 [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
 ;
   %and = and i32 %x, -43
   %xor0 = xor i32 %a, %and
@@ -18,10 +17,9 @@ define i32 @basic(i32 %a, i32 %x) {
 
 define i32 @outer_xor_commuted(i32 %a, i32 %x) {
 ; CHECK-LABEL: @outer_xor_commuted(
-; CHECK-NEXT:    [[A:%.*]] = and i32 [[X:%.*]], -43
-; CHECK-NEXT:    [[R:%.*]] = xor i32 [[TMP1:%.*]], [[A]]
-; CHECK-NEXT:    [[R1:%.*]] = xor i32 [[R]], 42
-; CHECK-NEXT:    ret i32 [[R1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[X:%.*]], 42
+; CHECK-NEXT:    [[R:%.*]] = xor i32 [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
 ;
   %and = and i32 %x, -43
   %xor0 = xor i32 %a, %and
@@ -31,10 +29,9 @@ define i32 @outer_xor_commuted(i32 %a, i32 %x) {
 
 define i32 @inner_xor_commuted(i32 %a, i32 %x) {
 ; CHECK-LABEL: @inner_xor_commuted(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], -43
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[X:%.*]], 42
 ; CHECK-NEXT:    [[R:%.*]] = xor i32 [[TMP1]], [[A:%.*]]
-; CHECK-NEXT:    [[R1:%.*]] = xor i32 [[R]], 42
-; CHECK-NEXT:    ret i32 [[R1]]
+; CHECK-NEXT:    ret i32 [[R]]
 ;
   %and = and i32 %x, -43
   %xor0 = xor i32 %and, %a
@@ -44,10 +41,9 @@ define i32 @inner_xor_commuted(i32 %a, i32 %x) {
 
 define i32 @and_commuted(i32 %a, i32 %x) {
 ; CHECK-LABEL: @and_commuted(
-; CHECK-NEXT:    [[A:%.*]] = and i32 [[X:%.*]], -43
-; CHECK-NEXT:    [[R:%.*]] = xor i32 [[TMP1:%.*]], [[A]]
-; CHECK-NEXT:    [[R1:%.*]] = xor i32 [[R]], 42
-; CHECK-NEXT:    ret i32 [[R1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[X:%.*]], 42
+; CHECK-NEXT:    [[R:%.*]] = xor i32 [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
 ;
   %and = and i32 -43, %x
   %xor0 = xor i32 %a, %and
@@ -57,10 +53,9 @@ define i32 @and_commuted(i32 %a, i32 %x) {
 
 define <2 x i8> @vector_splat(<2 x i8> %a, <2 x i8> %x) {
 ; CHECK-LABEL: @vector_splat(
-; CHECK-NEXT:    [[A:%.*]] = and <2 x i8> [[X:%.*]], splat (i8 -43)
-; CHECK-NEXT:    [[R:%.*]] = xor <2 x i8> [[TMP1:%.*]], [[A]]
-; CHECK-NEXT:    [[R1:%.*]] = xor <2 x i8> [[R]], splat (i8 42)
-; CHECK-NEXT:    ret <2 x i8> [[R1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i8> [[X:%.*]], splat (i8 42)
+; CHECK-NEXT:    [[R:%.*]] = xor <2 x i8> [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %and = and <2 x i8> %x, <i8 -43, i8 -43>
   %xor0 = xor <2 x i8> %a, %and
@@ -70,10 +65,9 @@ define <2 x i8> @vector_splat(<2 x i8> %a, <2 x i8> %x) {
 
 define <2 x i8> @vector_non_splat(<2 x i8> %a, <2 x i8> %x) {
 ; CHECK-LABEL: @vector_non_splat(
-; CHECK-NEXT:    [[A:%.*]] = and <2 x i8> [[X:%.*]], <i8 -43, i8 -13>
-; CHECK-NEXT:    [[R:%.*]] = xor <2 x i8> [[TMP1:%.*]], [[A]]
-; CHECK-NEXT:    [[R1:%.*]] = xor <2 x i8> [[R]], <i8 42, i8 12>
-; CHECK-NEXT:    ret <2 x i8> [[R1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i8> [[X:%.*]], <i8 42, i8 12>
+; CHECK-NEXT:    [[R:%.*]] = xor <2 x i8> [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %and = and <2 x i8> %x, <i8 -43, i8 -13>
   %xor0 = xor <2 x i8> %a, %and
