@@ -5,67 +5,36 @@
 define void @sdivrem_i128(ptr %q_out, ptr %r_out, i128 %n, i128 %d) {
 ; RV64-LABEL: sdivrem_i128:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    addi sp, sp, -80
-; RV64-NEXT:    .cfi_def_cfa_offset 80
-; RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s1, 56(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s2, 48(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s3, 40(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s4, 32(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s5, 24(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s6, 16(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s7, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    addi sp, sp, -48
+; RV64-NEXT:    .cfi_def_cfa_offset 48
+; RV64-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    .cfi_offset ra, -8
 ; RV64-NEXT:    .cfi_offset s0, -16
 ; RV64-NEXT:    .cfi_offset s1, -24
-; RV64-NEXT:    .cfi_offset s2, -32
-; RV64-NEXT:    .cfi_offset s3, -40
-; RV64-NEXT:    .cfi_offset s4, -48
-; RV64-NEXT:    .cfi_offset s5, -56
-; RV64-NEXT:    .cfi_offset s6, -64
-; RV64-NEXT:    .cfi_offset s7, -72
-; RV64-NEXT:    mv s0, a5
-; RV64-NEXT:    mv s1, a4
-; RV64-NEXT:    mv s2, a3
-; RV64-NEXT:    mv s3, a2
-; RV64-NEXT:    mv s4, a1
-; RV64-NEXT:    mv s5, a0
+; RV64-NEXT:    mv a6, a4
+; RV64-NEXT:    mv s0, a1
+; RV64-NEXT:    mv s1, a0
+; RV64-NEXT:    mv a4, sp
 ; RV64-NEXT:    mv a0, a2
 ; RV64-NEXT:    mv a1, a3
-; RV64-NEXT:    mv a2, a4
+; RV64-NEXT:    mv a2, a6
 ; RV64-NEXT:    mv a3, a5
-; RV64-NEXT:    call __divti3
-; RV64-NEXT:    mv s6, a0
-; RV64-NEXT:    mv s7, a1
-; RV64-NEXT:    mv a0, s3
-; RV64-NEXT:    mv a1, s2
-; RV64-NEXT:    mv a2, s1
-; RV64-NEXT:    mv a3, s0
-; RV64-NEXT:    call __modti3
-; RV64-NEXT:    sd s6, 0(s5)
-; RV64-NEXT:    sd s7, 8(s5)
-; RV64-NEXT:    sd a0, 0(s4)
-; RV64-NEXT:    sd a1, 8(s4)
-; RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s1, 56(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s2, 48(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s3, 40(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s4, 32(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s5, 24(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s6, 16(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s7, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    call __divmodti4
+; RV64-NEXT:    ld a2, 0(sp)
+; RV64-NEXT:    ld a3, 8(sp)
+; RV64-NEXT:    sd a0, 0(s1)
+; RV64-NEXT:    sd a1, 8(s1)
+; RV64-NEXT:    sd a2, 0(s0)
+; RV64-NEXT:    sd a3, 8(s0)
+; RV64-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    .cfi_restore ra
 ; RV64-NEXT:    .cfi_restore s0
 ; RV64-NEXT:    .cfi_restore s1
-; RV64-NEXT:    .cfi_restore s2
-; RV64-NEXT:    .cfi_restore s3
-; RV64-NEXT:    .cfi_restore s4
-; RV64-NEXT:    .cfi_restore s5
-; RV64-NEXT:    .cfi_restore s6
-; RV64-NEXT:    .cfi_restore s7
-; RV64-NEXT:    addi sp, sp, 80
+; RV64-NEXT:    addi sp, sp, 48
 ; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
   %q = sdiv i128 %n, %d
@@ -78,67 +47,36 @@ define void @sdivrem_i128(ptr %q_out, ptr %r_out, i128 %n, i128 %d) {
 define void @udivrem_i128(ptr %q_out, ptr %r_out, i128 %n, i128 %d) {
 ; RV64-LABEL: udivrem_i128:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    addi sp, sp, -80
-; RV64-NEXT:    .cfi_def_cfa_offset 80
-; RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s1, 56(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s2, 48(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s3, 40(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s4, 32(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s5, 24(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s6, 16(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s7, 8(sp) # 8-byte Folded Spill
+; RV64-NEXT:    addi sp, sp, -48
+; RV64-NEXT:    .cfi_def_cfa_offset 48
+; RV64-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    .cfi_offset ra, -8
 ; RV64-NEXT:    .cfi_offset s0, -16
 ; RV64-NEXT:    .cfi_offset s1, -24
-; RV64-NEXT:    .cfi_offset s2, -32
-; RV64-NEXT:    .cfi_offset s3, -40
-; RV64-NEXT:    .cfi_offset s4, -48
-; RV64-NEXT:    .cfi_offset s5, -56
-; RV64-NEXT:    .cfi_offset s6, -64
-; RV64-NEXT:    .cfi_offset s7, -72
-; RV64-NEXT:    mv s0, a5
-; RV64-NEXT:    mv s1, a4
-; RV64-NEXT:    mv s2, a3
-; RV64-NEXT:    mv s3, a2
-; RV64-NEXT:    mv s4, a1
-; RV64-NEXT:    mv s5, a0
+; RV64-NEXT:    mv a6, a4
+; RV64-NEXT:    mv s0, a1
+; RV64-NEXT:    mv s1, a0
+; RV64-NEXT:    mv a4, sp
 ; RV64-NEXT:    mv a0, a2
 ; RV64-NEXT:    mv a1, a3
-; RV64-NEXT:    mv a2, a4
+; RV64-NEXT:    mv a2, a6
 ; RV64-NEXT:    mv a3, a5
-; RV64-NEXT:    call __udivti3
-; RV64-NEXT:    mv s6, a0
-; RV64-NEXT:    mv s7, a1
-; RV64-NEXT:    mv a0, s3
-; RV64-NEXT:    mv a1, s2
-; RV64-NEXT:    mv a2, s1
-; RV64-NEXT:    mv a3, s0
-; RV64-NEXT:    call __umodti3
-; RV64-NEXT:    sd s6, 0(s5)
-; RV64-NEXT:    sd s7, 8(s5)
-; RV64-NEXT:    sd a0, 0(s4)
-; RV64-NEXT:    sd a1, 8(s4)
-; RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s1, 56(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s2, 48(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s3, 40(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s4, 32(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s5, 24(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s6, 16(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld s7, 8(sp) # 8-byte Folded Reload
+; RV64-NEXT:    call __udivmodti4
+; RV64-NEXT:    ld a2, 0(sp)
+; RV64-NEXT:    ld a3, 8(sp)
+; RV64-NEXT:    sd a0, 0(s1)
+; RV64-NEXT:    sd a1, 8(s1)
+; RV64-NEXT:    sd a2, 0(s0)
+; RV64-NEXT:    sd a3, 8(s0)
+; RV64-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    .cfi_restore ra
 ; RV64-NEXT:    .cfi_restore s0
 ; RV64-NEXT:    .cfi_restore s1
-; RV64-NEXT:    .cfi_restore s2
-; RV64-NEXT:    .cfi_restore s3
-; RV64-NEXT:    .cfi_restore s4
-; RV64-NEXT:    .cfi_restore s5
-; RV64-NEXT:    .cfi_restore s6
-; RV64-NEXT:    .cfi_restore s7
-; RV64-NEXT:    addi sp, sp, 80
+; RV64-NEXT:    addi sp, sp, 48
 ; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
   %q = udiv i128 %n, %d

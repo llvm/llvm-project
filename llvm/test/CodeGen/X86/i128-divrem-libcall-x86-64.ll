@@ -8,289 +8,156 @@
 define void @sdivrem_i128(ptr %q_out, ptr %r_out, i128 %n, i128 %d) {
 ; LINUX-X64-LABEL: sdivrem_i128:
 ; LINUX-X64:       # %bb.0:
-; LINUX-X64-NEXT:    pushq %rbp
-; LINUX-X64-NEXT:    .cfi_def_cfa_offset 16
-; LINUX-X64-NEXT:    pushq %r15
-; LINUX-X64-NEXT:    .cfi_def_cfa_offset 24
 ; LINUX-X64-NEXT:    pushq %r14
-; LINUX-X64-NEXT:    .cfi_def_cfa_offset 32
-; LINUX-X64-NEXT:    pushq %r13
-; LINUX-X64-NEXT:    .cfi_def_cfa_offset 40
-; LINUX-X64-NEXT:    pushq %r12
-; LINUX-X64-NEXT:    .cfi_def_cfa_offset 48
+; LINUX-X64-NEXT:    .cfi_def_cfa_offset 16
 ; LINUX-X64-NEXT:    pushq %rbx
-; LINUX-X64-NEXT:    .cfi_def_cfa_offset 56
+; LINUX-X64-NEXT:    .cfi_def_cfa_offset 24
 ; LINUX-X64-NEXT:    subq $24, %rsp
-; LINUX-X64-NEXT:    .cfi_def_cfa_offset 80
-; LINUX-X64-NEXT:    .cfi_offset %rbx, -56
-; LINUX-X64-NEXT:    .cfi_offset %r12, -48
-; LINUX-X64-NEXT:    .cfi_offset %r13, -40
-; LINUX-X64-NEXT:    .cfi_offset %r14, -32
-; LINUX-X64-NEXT:    .cfi_offset %r15, -24
-; LINUX-X64-NEXT:    .cfi_offset %rbp, -16
-; LINUX-X64-NEXT:    movq %r9, %rbx
-; LINUX-X64-NEXT:    movq %r8, %r14
-; LINUX-X64-NEXT:    movq %rcx, %r15
-; LINUX-X64-NEXT:    movq %rdx, %r12
-; LINUX-X64-NEXT:    movq %rsi, %r13
-; LINUX-X64-NEXT:    movq %rdi, %rbp
+; LINUX-X64-NEXT:    .cfi_def_cfa_offset 48
+; LINUX-X64-NEXT:    .cfi_offset %rbx, -24
+; LINUX-X64-NEXT:    .cfi_offset %r14, -16
+; LINUX-X64-NEXT:    movq %r8, %rax
+; LINUX-X64-NEXT:    movq %rsi, %rbx
+; LINUX-X64-NEXT:    movq %rdi, %r14
+; LINUX-X64-NEXT:    movq %rsp, %r8
 ; LINUX-X64-NEXT:    movq %rdx, %rdi
 ; LINUX-X64-NEXT:    movq %rcx, %rsi
-; LINUX-X64-NEXT:    movq %r8, %rdx
+; LINUX-X64-NEXT:    movq %rax, %rdx
 ; LINUX-X64-NEXT:    movq %r9, %rcx
-; LINUX-X64-NEXT:    callq __divti3@PLT
-; LINUX-X64-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; LINUX-X64-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; LINUX-X64-NEXT:    movq %r12, %rdi
-; LINUX-X64-NEXT:    movq %r15, %rsi
-; LINUX-X64-NEXT:    movq %r14, %rdx
-; LINUX-X64-NEXT:    movq %rbx, %rcx
-; LINUX-X64-NEXT:    callq __modti3@PLT
-; LINUX-X64-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
-; LINUX-X64-NEXT:    movq %rcx, (%rbp)
-; LINUX-X64-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
-; LINUX-X64-NEXT:    movq %rcx, 8(%rbp)
-; LINUX-X64-NEXT:    movq %rax, (%r13)
-; LINUX-X64-NEXT:    movq %rdx, 8(%r13)
+; LINUX-X64-NEXT:    callq __divmodti4@PLT
+; LINUX-X64-NEXT:    movq (%rsp), %rcx
+; LINUX-X64-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
+; LINUX-X64-NEXT:    movq %rax, (%r14)
+; LINUX-X64-NEXT:    movq %rdx, 8(%r14)
+; LINUX-X64-NEXT:    movq %rcx, (%rbx)
+; LINUX-X64-NEXT:    movq %rsi, 8(%rbx)
 ; LINUX-X64-NEXT:    addq $24, %rsp
-; LINUX-X64-NEXT:    .cfi_def_cfa_offset 56
-; LINUX-X64-NEXT:    popq %rbx
-; LINUX-X64-NEXT:    .cfi_def_cfa_offset 48
-; LINUX-X64-NEXT:    popq %r12
-; LINUX-X64-NEXT:    .cfi_def_cfa_offset 40
-; LINUX-X64-NEXT:    popq %r13
-; LINUX-X64-NEXT:    .cfi_def_cfa_offset 32
-; LINUX-X64-NEXT:    popq %r14
 ; LINUX-X64-NEXT:    .cfi_def_cfa_offset 24
-; LINUX-X64-NEXT:    popq %r15
+; LINUX-X64-NEXT:    popq %rbx
 ; LINUX-X64-NEXT:    .cfi_def_cfa_offset 16
-; LINUX-X64-NEXT:    popq %rbp
+; LINUX-X64-NEXT:    popq %r14
 ; LINUX-X64-NEXT:    .cfi_def_cfa_offset 8
 ; LINUX-X64-NEXT:    retq
 ;
 ; LINUX-X32-LABEL: sdivrem_i128:
 ; LINUX-X32:       # %bb.0:
-; LINUX-X32-NEXT:    pushq %rbp
-; LINUX-X32-NEXT:    .cfi_def_cfa_offset 16
-; LINUX-X32-NEXT:    pushq %r15
-; LINUX-X32-NEXT:    .cfi_def_cfa_offset 24
 ; LINUX-X32-NEXT:    pushq %r14
-; LINUX-X32-NEXT:    .cfi_def_cfa_offset 32
-; LINUX-X32-NEXT:    pushq %r13
-; LINUX-X32-NEXT:    .cfi_def_cfa_offset 40
-; LINUX-X32-NEXT:    pushq %r12
-; LINUX-X32-NEXT:    .cfi_def_cfa_offset 48
+; LINUX-X32-NEXT:    .cfi_def_cfa_offset 16
 ; LINUX-X32-NEXT:    pushq %rbx
-; LINUX-X32-NEXT:    .cfi_def_cfa_offset 56
+; LINUX-X32-NEXT:    .cfi_def_cfa_offset 24
 ; LINUX-X32-NEXT:    subl $24, %esp
-; LINUX-X32-NEXT:    .cfi_def_cfa_offset 80
-; LINUX-X32-NEXT:    .cfi_offset %rbx, -56
-; LINUX-X32-NEXT:    .cfi_offset %r12, -48
-; LINUX-X32-NEXT:    .cfi_offset %r13, -40
-; LINUX-X32-NEXT:    .cfi_offset %r14, -32
-; LINUX-X32-NEXT:    .cfi_offset %r15, -24
-; LINUX-X32-NEXT:    .cfi_offset %rbp, -16
-; LINUX-X32-NEXT:    movq %r9, %rbx
-; LINUX-X32-NEXT:    movq %r8, %r14
-; LINUX-X32-NEXT:    movq %rcx, %r15
-; LINUX-X32-NEXT:    movq %rdx, %r12
-; LINUX-X32-NEXT:    movq %rsi, %r13
-; LINUX-X32-NEXT:    movq %rdi, %rbp
+; LINUX-X32-NEXT:    .cfi_def_cfa_offset 48
+; LINUX-X32-NEXT:    .cfi_offset %rbx, -24
+; LINUX-X32-NEXT:    .cfi_offset %r14, -16
+; LINUX-X32-NEXT:    movq %r8, %rax
+; LINUX-X32-NEXT:    movq %rsi, %rbx
+; LINUX-X32-NEXT:    movq %rdi, %r14
+; LINUX-X32-NEXT:    movl %esp, %r8d
 ; LINUX-X32-NEXT:    movq %rdx, %rdi
 ; LINUX-X32-NEXT:    movq %rcx, %rsi
-; LINUX-X32-NEXT:    movq %r8, %rdx
+; LINUX-X32-NEXT:    movq %rax, %rdx
 ; LINUX-X32-NEXT:    movq %r9, %rcx
-; LINUX-X32-NEXT:    callq __divti3@PLT
-; LINUX-X32-NEXT:    movq %rax, {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Spill
-; LINUX-X32-NEXT:    movq %rdx, {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Spill
-; LINUX-X32-NEXT:    movq %r12, %rdi
-; LINUX-X32-NEXT:    movq %r15, %rsi
-; LINUX-X32-NEXT:    movq %r14, %rdx
-; LINUX-X32-NEXT:    movq %rbx, %rcx
-; LINUX-X32-NEXT:    callq __modti3@PLT
-; LINUX-X32-NEXT:    movq {{[-0-9]+}}(%e{{[sb]}}p), %rcx # 8-byte Reload
-; LINUX-X32-NEXT:    movq %rcx, (%ebp)
-; LINUX-X32-NEXT:    movq {{[-0-9]+}}(%e{{[sb]}}p), %rcx # 8-byte Reload
-; LINUX-X32-NEXT:    movq %rcx, 8(%ebp)
-; LINUX-X32-NEXT:    movq %rax, (%r13d)
-; LINUX-X32-NEXT:    movq %rdx, 8(%r13d)
+; LINUX-X32-NEXT:    callq __divmodti4@PLT
+; LINUX-X32-NEXT:    movq (%esp), %rcx
+; LINUX-X32-NEXT:    movq {{[0-9]+}}(%esp), %rsi
+; LINUX-X32-NEXT:    movq %rax, (%r14d)
+; LINUX-X32-NEXT:    movq %rdx, 8(%r14d)
+; LINUX-X32-NEXT:    movq %rcx, (%ebx)
+; LINUX-X32-NEXT:    movq %rsi, 8(%ebx)
 ; LINUX-X32-NEXT:    addl $24, %esp
-; LINUX-X32-NEXT:    .cfi_def_cfa_offset 56
-; LINUX-X32-NEXT:    popq %rbx
-; LINUX-X32-NEXT:    .cfi_def_cfa_offset 48
-; LINUX-X32-NEXT:    popq %r12
-; LINUX-X32-NEXT:    .cfi_def_cfa_offset 40
-; LINUX-X32-NEXT:    popq %r13
-; LINUX-X32-NEXT:    .cfi_def_cfa_offset 32
-; LINUX-X32-NEXT:    popq %r14
 ; LINUX-X32-NEXT:    .cfi_def_cfa_offset 24
-; LINUX-X32-NEXT:    popq %r15
+; LINUX-X32-NEXT:    popq %rbx
 ; LINUX-X32-NEXT:    .cfi_def_cfa_offset 16
-; LINUX-X32-NEXT:    popq %rbp
+; LINUX-X32-NEXT:    popq %r14
 ; LINUX-X32-NEXT:    .cfi_def_cfa_offset 8
 ; LINUX-X32-NEXT:    retq
 ;
 ; DARWIN-X64-LABEL: sdivrem_i128:
 ; DARWIN-X64:       ## %bb.0:
-; DARWIN-X64-NEXT:    pushq %rbp
-; DARWIN-X64-NEXT:    .cfi_def_cfa_offset 16
-; DARWIN-X64-NEXT:    pushq %r15
-; DARWIN-X64-NEXT:    .cfi_def_cfa_offset 24
 ; DARWIN-X64-NEXT:    pushq %r14
-; DARWIN-X64-NEXT:    .cfi_def_cfa_offset 32
-; DARWIN-X64-NEXT:    pushq %r13
-; DARWIN-X64-NEXT:    .cfi_def_cfa_offset 40
-; DARWIN-X64-NEXT:    pushq %r12
-; DARWIN-X64-NEXT:    .cfi_def_cfa_offset 48
+; DARWIN-X64-NEXT:    .cfi_def_cfa_offset 16
 ; DARWIN-X64-NEXT:    pushq %rbx
-; DARWIN-X64-NEXT:    .cfi_def_cfa_offset 56
+; DARWIN-X64-NEXT:    .cfi_def_cfa_offset 24
 ; DARWIN-X64-NEXT:    subq $24, %rsp
-; DARWIN-X64-NEXT:    .cfi_def_cfa_offset 80
-; DARWIN-X64-NEXT:    .cfi_offset %rbx, -56
-; DARWIN-X64-NEXT:    .cfi_offset %r12, -48
-; DARWIN-X64-NEXT:    .cfi_offset %r13, -40
-; DARWIN-X64-NEXT:    .cfi_offset %r14, -32
-; DARWIN-X64-NEXT:    .cfi_offset %r15, -24
-; DARWIN-X64-NEXT:    .cfi_offset %rbp, -16
-; DARWIN-X64-NEXT:    movq %r9, %rbx
-; DARWIN-X64-NEXT:    movq %r8, %r14
-; DARWIN-X64-NEXT:    movq %rcx, %r15
-; DARWIN-X64-NEXT:    movq %rdx, %r12
-; DARWIN-X64-NEXT:    movq %rsi, %r13
-; DARWIN-X64-NEXT:    movq %rdi, %rbp
+; DARWIN-X64-NEXT:    .cfi_def_cfa_offset 48
+; DARWIN-X64-NEXT:    .cfi_offset %rbx, -24
+; DARWIN-X64-NEXT:    .cfi_offset %r14, -16
+; DARWIN-X64-NEXT:    movq %r8, %rax
+; DARWIN-X64-NEXT:    movq %rsi, %rbx
+; DARWIN-X64-NEXT:    movq %rdi, %r14
+; DARWIN-X64-NEXT:    movq %rsp, %r8
 ; DARWIN-X64-NEXT:    movq %rdx, %rdi
 ; DARWIN-X64-NEXT:    movq %rcx, %rsi
-; DARWIN-X64-NEXT:    movq %r8, %rdx
+; DARWIN-X64-NEXT:    movq %rax, %rdx
 ; DARWIN-X64-NEXT:    movq %r9, %rcx
-; DARWIN-X64-NEXT:    callq ___divti3
-; DARWIN-X64-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; DARWIN-X64-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; DARWIN-X64-NEXT:    movq %r12, %rdi
-; DARWIN-X64-NEXT:    movq %r15, %rsi
-; DARWIN-X64-NEXT:    movq %r14, %rdx
-; DARWIN-X64-NEXT:    movq %rbx, %rcx
-; DARWIN-X64-NEXT:    callq ___modti3
-; DARWIN-X64-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx ## 8-byte Reload
-; DARWIN-X64-NEXT:    movq %rcx, (%rbp)
-; DARWIN-X64-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx ## 8-byte Reload
-; DARWIN-X64-NEXT:    movq %rcx, 8(%rbp)
-; DARWIN-X64-NEXT:    movq %rax, (%r13)
-; DARWIN-X64-NEXT:    movq %rdx, 8(%r13)
+; DARWIN-X64-NEXT:    callq ___divmodti4
+; DARWIN-X64-NEXT:    movq (%rsp), %rcx
+; DARWIN-X64-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
+; DARWIN-X64-NEXT:    movq %rax, (%r14)
+; DARWIN-X64-NEXT:    movq %rdx, 8(%r14)
+; DARWIN-X64-NEXT:    movq %rcx, (%rbx)
+; DARWIN-X64-NEXT:    movq %rsi, 8(%rbx)
 ; DARWIN-X64-NEXT:    addq $24, %rsp
 ; DARWIN-X64-NEXT:    popq %rbx
-; DARWIN-X64-NEXT:    popq %r12
-; DARWIN-X64-NEXT:    popq %r13
 ; DARWIN-X64-NEXT:    popq %r14
-; DARWIN-X64-NEXT:    popq %r15
-; DARWIN-X64-NEXT:    popq %rbp
 ; DARWIN-X64-NEXT:    retq
 ;
 ; MINGW-X64-LABEL: sdivrem_i128:
 ; MINGW-X64:       # %bb.0:
-; MINGW-X64-NEXT:    pushq %r15
-; MINGW-X64-NEXT:    .seh_pushreg %r15
-; MINGW-X64-NEXT:    pushq %r14
-; MINGW-X64-NEXT:    .seh_pushreg %r14
-; MINGW-X64-NEXT:    pushq %r12
-; MINGW-X64-NEXT:    .seh_pushreg %r12
 ; MINGW-X64-NEXT:    pushq %rsi
 ; MINGW-X64-NEXT:    .seh_pushreg %rsi
 ; MINGW-X64-NEXT:    pushq %rdi
 ; MINGW-X64-NEXT:    .seh_pushreg %rdi
-; MINGW-X64-NEXT:    pushq %rbx
-; MINGW-X64-NEXT:    .seh_pushreg %rbx
-; MINGW-X64-NEXT:    subq $120, %rsp
-; MINGW-X64-NEXT:    .seh_stackalloc 120
-; MINGW-X64-NEXT:    movaps %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; MINGW-X64-NEXT:    .seh_savexmm %xmm6, 96
+; MINGW-X64-NEXT:    subq $88, %rsp
+; MINGW-X64-NEXT:    .seh_stackalloc 88
 ; MINGW-X64-NEXT:    .seh_endprologue
-; MINGW-X64-NEXT:    movq %r9, %rsi
-; MINGW-X64-NEXT:    movq %r8, %rdi
-; MINGW-X64-NEXT:    movq %rdx, %rbx
-; MINGW-X64-NEXT:    movq %rcx, %r14
-; MINGW-X64-NEXT:    movq {{[0-9]+}}(%rsp), %r15
-; MINGW-X64-NEXT:    movq {{[0-9]+}}(%rsp), %r12
+; MINGW-X64-NEXT:    movq %rdx, %rsi
+; MINGW-X64-NEXT:    movq %rcx, %rdi
+; MINGW-X64-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
 ; MINGW-X64-NEXT:    movq %r9, {{[0-9]+}}(%rsp)
 ; MINGW-X64-NEXT:    movq %r8, {{[0-9]+}}(%rsp)
-; MINGW-X64-NEXT:    movq %r12, {{[0-9]+}}(%rsp)
-; MINGW-X64-NEXT:    movq %r15, {{[0-9]+}}(%rsp)
+; MINGW-X64-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; MINGW-X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; MINGW-X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; MINGW-X64-NEXT:    callq __divti3
-; MINGW-X64-NEXT:    movaps %xmm0, %xmm6
-; MINGW-X64-NEXT:    movq %rsi, {{[0-9]+}}(%rsp)
-; MINGW-X64-NEXT:    movq %rdi, {{[0-9]+}}(%rsp)
-; MINGW-X64-NEXT:    movq %r12, {{[0-9]+}}(%rsp)
-; MINGW-X64-NEXT:    movq %r15, {{[0-9]+}}(%rsp)
-; MINGW-X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; MINGW-X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; MINGW-X64-NEXT:    callq __modti3
-; MINGW-X64-NEXT:    movaps %xmm6, (%r14)
-; MINGW-X64-NEXT:    movaps %xmm0, (%rbx)
-; MINGW-X64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm6 # 16-byte Reload
+; MINGW-X64-NEXT:    leaq {{[0-9]+}}(%rsp), %r8
+; MINGW-X64-NEXT:    callq __divmodti4
+; MINGW-X64-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1
+; MINGW-X64-NEXT:    movaps %xmm0, (%rdi)
+; MINGW-X64-NEXT:    movaps %xmm1, (%rsi)
 ; MINGW-X64-NEXT:    .seh_startepilogue
-; MINGW-X64-NEXT:    addq $120, %rsp
-; MINGW-X64-NEXT:    popq %rbx
+; MINGW-X64-NEXT:    addq $88, %rsp
 ; MINGW-X64-NEXT:    popq %rdi
 ; MINGW-X64-NEXT:    popq %rsi
-; MINGW-X64-NEXT:    popq %r12
-; MINGW-X64-NEXT:    popq %r14
-; MINGW-X64-NEXT:    popq %r15
 ; MINGW-X64-NEXT:    .seh_endepilogue
 ; MINGW-X64-NEXT:    retq
 ; MINGW-X64-NEXT:    .seh_endproc
 ;
 ; WIN64-LABEL: sdivrem_i128:
 ; WIN64:       # %bb.0:
-; WIN64-NEXT:    pushq %r15
-; WIN64-NEXT:    .seh_pushreg %r15
-; WIN64-NEXT:    pushq %r14
-; WIN64-NEXT:    .seh_pushreg %r14
-; WIN64-NEXT:    pushq %r12
-; WIN64-NEXT:    .seh_pushreg %r12
 ; WIN64-NEXT:    pushq %rsi
 ; WIN64-NEXT:    .seh_pushreg %rsi
 ; WIN64-NEXT:    pushq %rdi
 ; WIN64-NEXT:    .seh_pushreg %rdi
-; WIN64-NEXT:    pushq %rbx
-; WIN64-NEXT:    .seh_pushreg %rbx
-; WIN64-NEXT:    subq $120, %rsp
-; WIN64-NEXT:    .seh_stackalloc 120
-; WIN64-NEXT:    movaps %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; WIN64-NEXT:    .seh_savexmm %xmm6, 96
+; WIN64-NEXT:    subq $88, %rsp
+; WIN64-NEXT:    .seh_stackalloc 88
 ; WIN64-NEXT:    .seh_endprologue
-; WIN64-NEXT:    movq %r9, %rsi
-; WIN64-NEXT:    movq %r8, %rdi
-; WIN64-NEXT:    movq %rdx, %rbx
-; WIN64-NEXT:    movq %rcx, %r14
-; WIN64-NEXT:    movq {{[0-9]+}}(%rsp), %r15
-; WIN64-NEXT:    movq {{[0-9]+}}(%rsp), %r12
+; WIN64-NEXT:    movq %rdx, %rsi
+; WIN64-NEXT:    movq %rcx, %rdi
+; WIN64-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
 ; WIN64-NEXT:    movq %r9, {{[0-9]+}}(%rsp)
 ; WIN64-NEXT:    movq %r8, {{[0-9]+}}(%rsp)
-; WIN64-NEXT:    movq %r12, {{[0-9]+}}(%rsp)
-; WIN64-NEXT:    movq %r15, {{[0-9]+}}(%rsp)
+; WIN64-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; WIN64-NEXT:    callq __divti3
-; WIN64-NEXT:    movaps %xmm0, %xmm6
-; WIN64-NEXT:    movq %rsi, {{[0-9]+}}(%rsp)
-; WIN64-NEXT:    movq %rdi, {{[0-9]+}}(%rsp)
-; WIN64-NEXT:    movq %r12, {{[0-9]+}}(%rsp)
-; WIN64-NEXT:    movq %r15, {{[0-9]+}}(%rsp)
-; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; WIN64-NEXT:    callq __modti3
-; WIN64-NEXT:    movaps %xmm6, (%r14)
-; WIN64-NEXT:    movaps %xmm0, (%rbx)
-; WIN64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm6 # 16-byte Reload
+; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %r8
+; WIN64-NEXT:    callq __divmodti4
+; WIN64-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1
+; WIN64-NEXT:    movaps %xmm0, (%rdi)
+; WIN64-NEXT:    movaps %xmm1, (%rsi)
 ; WIN64-NEXT:    .seh_startepilogue
-; WIN64-NEXT:    addq $120, %rsp
-; WIN64-NEXT:    popq %rbx
+; WIN64-NEXT:    addq $88, %rsp
 ; WIN64-NEXT:    popq %rdi
 ; WIN64-NEXT:    popq %rsi
-; WIN64-NEXT:    popq %r12
-; WIN64-NEXT:    popq %r14
-; WIN64-NEXT:    popq %r15
 ; WIN64-NEXT:    .seh_endepilogue
 ; WIN64-NEXT:    retq
 ; WIN64-NEXT:    .seh_endproc
@@ -304,289 +171,156 @@ define void @sdivrem_i128(ptr %q_out, ptr %r_out, i128 %n, i128 %d) {
 define void @udivrem_i128(ptr %q_out, ptr %r_out, i128 %n, i128 %d) {
 ; LINUX-X64-LABEL: udivrem_i128:
 ; LINUX-X64:       # %bb.0:
-; LINUX-X64-NEXT:    pushq %rbp
-; LINUX-X64-NEXT:    .cfi_def_cfa_offset 16
-; LINUX-X64-NEXT:    pushq %r15
-; LINUX-X64-NEXT:    .cfi_def_cfa_offset 24
 ; LINUX-X64-NEXT:    pushq %r14
-; LINUX-X64-NEXT:    .cfi_def_cfa_offset 32
-; LINUX-X64-NEXT:    pushq %r13
-; LINUX-X64-NEXT:    .cfi_def_cfa_offset 40
-; LINUX-X64-NEXT:    pushq %r12
-; LINUX-X64-NEXT:    .cfi_def_cfa_offset 48
+; LINUX-X64-NEXT:    .cfi_def_cfa_offset 16
 ; LINUX-X64-NEXT:    pushq %rbx
-; LINUX-X64-NEXT:    .cfi_def_cfa_offset 56
+; LINUX-X64-NEXT:    .cfi_def_cfa_offset 24
 ; LINUX-X64-NEXT:    subq $24, %rsp
-; LINUX-X64-NEXT:    .cfi_def_cfa_offset 80
-; LINUX-X64-NEXT:    .cfi_offset %rbx, -56
-; LINUX-X64-NEXT:    .cfi_offset %r12, -48
-; LINUX-X64-NEXT:    .cfi_offset %r13, -40
-; LINUX-X64-NEXT:    .cfi_offset %r14, -32
-; LINUX-X64-NEXT:    .cfi_offset %r15, -24
-; LINUX-X64-NEXT:    .cfi_offset %rbp, -16
-; LINUX-X64-NEXT:    movq %r9, %rbx
-; LINUX-X64-NEXT:    movq %r8, %r14
-; LINUX-X64-NEXT:    movq %rcx, %r15
-; LINUX-X64-NEXT:    movq %rdx, %r12
-; LINUX-X64-NEXT:    movq %rsi, %r13
-; LINUX-X64-NEXT:    movq %rdi, %rbp
+; LINUX-X64-NEXT:    .cfi_def_cfa_offset 48
+; LINUX-X64-NEXT:    .cfi_offset %rbx, -24
+; LINUX-X64-NEXT:    .cfi_offset %r14, -16
+; LINUX-X64-NEXT:    movq %r8, %rax
+; LINUX-X64-NEXT:    movq %rsi, %rbx
+; LINUX-X64-NEXT:    movq %rdi, %r14
+; LINUX-X64-NEXT:    movq %rsp, %r8
 ; LINUX-X64-NEXT:    movq %rdx, %rdi
 ; LINUX-X64-NEXT:    movq %rcx, %rsi
-; LINUX-X64-NEXT:    movq %r8, %rdx
+; LINUX-X64-NEXT:    movq %rax, %rdx
 ; LINUX-X64-NEXT:    movq %r9, %rcx
-; LINUX-X64-NEXT:    callq __udivti3@PLT
-; LINUX-X64-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; LINUX-X64-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; LINUX-X64-NEXT:    movq %r12, %rdi
-; LINUX-X64-NEXT:    movq %r15, %rsi
-; LINUX-X64-NEXT:    movq %r14, %rdx
-; LINUX-X64-NEXT:    movq %rbx, %rcx
-; LINUX-X64-NEXT:    callq __umodti3@PLT
-; LINUX-X64-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
-; LINUX-X64-NEXT:    movq %rcx, (%rbp)
-; LINUX-X64-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
-; LINUX-X64-NEXT:    movq %rcx, 8(%rbp)
-; LINUX-X64-NEXT:    movq %rax, (%r13)
-; LINUX-X64-NEXT:    movq %rdx, 8(%r13)
+; LINUX-X64-NEXT:    callq __udivmodti4@PLT
+; LINUX-X64-NEXT:    movq (%rsp), %rcx
+; LINUX-X64-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
+; LINUX-X64-NEXT:    movq %rax, (%r14)
+; LINUX-X64-NEXT:    movq %rdx, 8(%r14)
+; LINUX-X64-NEXT:    movq %rcx, (%rbx)
+; LINUX-X64-NEXT:    movq %rsi, 8(%rbx)
 ; LINUX-X64-NEXT:    addq $24, %rsp
-; LINUX-X64-NEXT:    .cfi_def_cfa_offset 56
-; LINUX-X64-NEXT:    popq %rbx
-; LINUX-X64-NEXT:    .cfi_def_cfa_offset 48
-; LINUX-X64-NEXT:    popq %r12
-; LINUX-X64-NEXT:    .cfi_def_cfa_offset 40
-; LINUX-X64-NEXT:    popq %r13
-; LINUX-X64-NEXT:    .cfi_def_cfa_offset 32
-; LINUX-X64-NEXT:    popq %r14
 ; LINUX-X64-NEXT:    .cfi_def_cfa_offset 24
-; LINUX-X64-NEXT:    popq %r15
+; LINUX-X64-NEXT:    popq %rbx
 ; LINUX-X64-NEXT:    .cfi_def_cfa_offset 16
-; LINUX-X64-NEXT:    popq %rbp
+; LINUX-X64-NEXT:    popq %r14
 ; LINUX-X64-NEXT:    .cfi_def_cfa_offset 8
 ; LINUX-X64-NEXT:    retq
 ;
 ; LINUX-X32-LABEL: udivrem_i128:
 ; LINUX-X32:       # %bb.0:
-; LINUX-X32-NEXT:    pushq %rbp
-; LINUX-X32-NEXT:    .cfi_def_cfa_offset 16
-; LINUX-X32-NEXT:    pushq %r15
-; LINUX-X32-NEXT:    .cfi_def_cfa_offset 24
 ; LINUX-X32-NEXT:    pushq %r14
-; LINUX-X32-NEXT:    .cfi_def_cfa_offset 32
-; LINUX-X32-NEXT:    pushq %r13
-; LINUX-X32-NEXT:    .cfi_def_cfa_offset 40
-; LINUX-X32-NEXT:    pushq %r12
-; LINUX-X32-NEXT:    .cfi_def_cfa_offset 48
+; LINUX-X32-NEXT:    .cfi_def_cfa_offset 16
 ; LINUX-X32-NEXT:    pushq %rbx
-; LINUX-X32-NEXT:    .cfi_def_cfa_offset 56
+; LINUX-X32-NEXT:    .cfi_def_cfa_offset 24
 ; LINUX-X32-NEXT:    subl $24, %esp
-; LINUX-X32-NEXT:    .cfi_def_cfa_offset 80
-; LINUX-X32-NEXT:    .cfi_offset %rbx, -56
-; LINUX-X32-NEXT:    .cfi_offset %r12, -48
-; LINUX-X32-NEXT:    .cfi_offset %r13, -40
-; LINUX-X32-NEXT:    .cfi_offset %r14, -32
-; LINUX-X32-NEXT:    .cfi_offset %r15, -24
-; LINUX-X32-NEXT:    .cfi_offset %rbp, -16
-; LINUX-X32-NEXT:    movq %r9, %rbx
-; LINUX-X32-NEXT:    movq %r8, %r14
-; LINUX-X32-NEXT:    movq %rcx, %r15
-; LINUX-X32-NEXT:    movq %rdx, %r12
-; LINUX-X32-NEXT:    movq %rsi, %r13
-; LINUX-X32-NEXT:    movq %rdi, %rbp
+; LINUX-X32-NEXT:    .cfi_def_cfa_offset 48
+; LINUX-X32-NEXT:    .cfi_offset %rbx, -24
+; LINUX-X32-NEXT:    .cfi_offset %r14, -16
+; LINUX-X32-NEXT:    movq %r8, %rax
+; LINUX-X32-NEXT:    movq %rsi, %rbx
+; LINUX-X32-NEXT:    movq %rdi, %r14
+; LINUX-X32-NEXT:    movl %esp, %r8d
 ; LINUX-X32-NEXT:    movq %rdx, %rdi
 ; LINUX-X32-NEXT:    movq %rcx, %rsi
-; LINUX-X32-NEXT:    movq %r8, %rdx
+; LINUX-X32-NEXT:    movq %rax, %rdx
 ; LINUX-X32-NEXT:    movq %r9, %rcx
-; LINUX-X32-NEXT:    callq __udivti3@PLT
-; LINUX-X32-NEXT:    movq %rax, {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Spill
-; LINUX-X32-NEXT:    movq %rdx, {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Spill
-; LINUX-X32-NEXT:    movq %r12, %rdi
-; LINUX-X32-NEXT:    movq %r15, %rsi
-; LINUX-X32-NEXT:    movq %r14, %rdx
-; LINUX-X32-NEXT:    movq %rbx, %rcx
-; LINUX-X32-NEXT:    callq __umodti3@PLT
-; LINUX-X32-NEXT:    movq {{[-0-9]+}}(%e{{[sb]}}p), %rcx # 8-byte Reload
-; LINUX-X32-NEXT:    movq %rcx, (%ebp)
-; LINUX-X32-NEXT:    movq {{[-0-9]+}}(%e{{[sb]}}p), %rcx # 8-byte Reload
-; LINUX-X32-NEXT:    movq %rcx, 8(%ebp)
-; LINUX-X32-NEXT:    movq %rax, (%r13d)
-; LINUX-X32-NEXT:    movq %rdx, 8(%r13d)
+; LINUX-X32-NEXT:    callq __udivmodti4@PLT
+; LINUX-X32-NEXT:    movq (%esp), %rcx
+; LINUX-X32-NEXT:    movq {{[0-9]+}}(%esp), %rsi
+; LINUX-X32-NEXT:    movq %rax, (%r14d)
+; LINUX-X32-NEXT:    movq %rdx, 8(%r14d)
+; LINUX-X32-NEXT:    movq %rcx, (%ebx)
+; LINUX-X32-NEXT:    movq %rsi, 8(%ebx)
 ; LINUX-X32-NEXT:    addl $24, %esp
-; LINUX-X32-NEXT:    .cfi_def_cfa_offset 56
-; LINUX-X32-NEXT:    popq %rbx
-; LINUX-X32-NEXT:    .cfi_def_cfa_offset 48
-; LINUX-X32-NEXT:    popq %r12
-; LINUX-X32-NEXT:    .cfi_def_cfa_offset 40
-; LINUX-X32-NEXT:    popq %r13
-; LINUX-X32-NEXT:    .cfi_def_cfa_offset 32
-; LINUX-X32-NEXT:    popq %r14
 ; LINUX-X32-NEXT:    .cfi_def_cfa_offset 24
-; LINUX-X32-NEXT:    popq %r15
+; LINUX-X32-NEXT:    popq %rbx
 ; LINUX-X32-NEXT:    .cfi_def_cfa_offset 16
-; LINUX-X32-NEXT:    popq %rbp
+; LINUX-X32-NEXT:    popq %r14
 ; LINUX-X32-NEXT:    .cfi_def_cfa_offset 8
 ; LINUX-X32-NEXT:    retq
 ;
 ; DARWIN-X64-LABEL: udivrem_i128:
 ; DARWIN-X64:       ## %bb.0:
-; DARWIN-X64-NEXT:    pushq %rbp
-; DARWIN-X64-NEXT:    .cfi_def_cfa_offset 16
-; DARWIN-X64-NEXT:    pushq %r15
-; DARWIN-X64-NEXT:    .cfi_def_cfa_offset 24
 ; DARWIN-X64-NEXT:    pushq %r14
-; DARWIN-X64-NEXT:    .cfi_def_cfa_offset 32
-; DARWIN-X64-NEXT:    pushq %r13
-; DARWIN-X64-NEXT:    .cfi_def_cfa_offset 40
-; DARWIN-X64-NEXT:    pushq %r12
-; DARWIN-X64-NEXT:    .cfi_def_cfa_offset 48
+; DARWIN-X64-NEXT:    .cfi_def_cfa_offset 16
 ; DARWIN-X64-NEXT:    pushq %rbx
-; DARWIN-X64-NEXT:    .cfi_def_cfa_offset 56
+; DARWIN-X64-NEXT:    .cfi_def_cfa_offset 24
 ; DARWIN-X64-NEXT:    subq $24, %rsp
-; DARWIN-X64-NEXT:    .cfi_def_cfa_offset 80
-; DARWIN-X64-NEXT:    .cfi_offset %rbx, -56
-; DARWIN-X64-NEXT:    .cfi_offset %r12, -48
-; DARWIN-X64-NEXT:    .cfi_offset %r13, -40
-; DARWIN-X64-NEXT:    .cfi_offset %r14, -32
-; DARWIN-X64-NEXT:    .cfi_offset %r15, -24
-; DARWIN-X64-NEXT:    .cfi_offset %rbp, -16
-; DARWIN-X64-NEXT:    movq %r9, %rbx
-; DARWIN-X64-NEXT:    movq %r8, %r14
-; DARWIN-X64-NEXT:    movq %rcx, %r15
-; DARWIN-X64-NEXT:    movq %rdx, %r12
-; DARWIN-X64-NEXT:    movq %rsi, %r13
-; DARWIN-X64-NEXT:    movq %rdi, %rbp
+; DARWIN-X64-NEXT:    .cfi_def_cfa_offset 48
+; DARWIN-X64-NEXT:    .cfi_offset %rbx, -24
+; DARWIN-X64-NEXT:    .cfi_offset %r14, -16
+; DARWIN-X64-NEXT:    movq %r8, %rax
+; DARWIN-X64-NEXT:    movq %rsi, %rbx
+; DARWIN-X64-NEXT:    movq %rdi, %r14
+; DARWIN-X64-NEXT:    movq %rsp, %r8
 ; DARWIN-X64-NEXT:    movq %rdx, %rdi
 ; DARWIN-X64-NEXT:    movq %rcx, %rsi
-; DARWIN-X64-NEXT:    movq %r8, %rdx
+; DARWIN-X64-NEXT:    movq %rax, %rdx
 ; DARWIN-X64-NEXT:    movq %r9, %rcx
-; DARWIN-X64-NEXT:    callq ___udivti3
-; DARWIN-X64-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; DARWIN-X64-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; DARWIN-X64-NEXT:    movq %r12, %rdi
-; DARWIN-X64-NEXT:    movq %r15, %rsi
-; DARWIN-X64-NEXT:    movq %r14, %rdx
-; DARWIN-X64-NEXT:    movq %rbx, %rcx
-; DARWIN-X64-NEXT:    callq ___umodti3
-; DARWIN-X64-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx ## 8-byte Reload
-; DARWIN-X64-NEXT:    movq %rcx, (%rbp)
-; DARWIN-X64-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx ## 8-byte Reload
-; DARWIN-X64-NEXT:    movq %rcx, 8(%rbp)
-; DARWIN-X64-NEXT:    movq %rax, (%r13)
-; DARWIN-X64-NEXT:    movq %rdx, 8(%r13)
+; DARWIN-X64-NEXT:    callq ___udivmodti4
+; DARWIN-X64-NEXT:    movq (%rsp), %rcx
+; DARWIN-X64-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
+; DARWIN-X64-NEXT:    movq %rax, (%r14)
+; DARWIN-X64-NEXT:    movq %rdx, 8(%r14)
+; DARWIN-X64-NEXT:    movq %rcx, (%rbx)
+; DARWIN-X64-NEXT:    movq %rsi, 8(%rbx)
 ; DARWIN-X64-NEXT:    addq $24, %rsp
 ; DARWIN-X64-NEXT:    popq %rbx
-; DARWIN-X64-NEXT:    popq %r12
-; DARWIN-X64-NEXT:    popq %r13
 ; DARWIN-X64-NEXT:    popq %r14
-; DARWIN-X64-NEXT:    popq %r15
-; DARWIN-X64-NEXT:    popq %rbp
 ; DARWIN-X64-NEXT:    retq
 ;
 ; MINGW-X64-LABEL: udivrem_i128:
 ; MINGW-X64:       # %bb.0:
-; MINGW-X64-NEXT:    pushq %r15
-; MINGW-X64-NEXT:    .seh_pushreg %r15
-; MINGW-X64-NEXT:    pushq %r14
-; MINGW-X64-NEXT:    .seh_pushreg %r14
-; MINGW-X64-NEXT:    pushq %r12
-; MINGW-X64-NEXT:    .seh_pushreg %r12
 ; MINGW-X64-NEXT:    pushq %rsi
 ; MINGW-X64-NEXT:    .seh_pushreg %rsi
 ; MINGW-X64-NEXT:    pushq %rdi
 ; MINGW-X64-NEXT:    .seh_pushreg %rdi
-; MINGW-X64-NEXT:    pushq %rbx
-; MINGW-X64-NEXT:    .seh_pushreg %rbx
-; MINGW-X64-NEXT:    subq $120, %rsp
-; MINGW-X64-NEXT:    .seh_stackalloc 120
-; MINGW-X64-NEXT:    movaps %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; MINGW-X64-NEXT:    .seh_savexmm %xmm6, 96
+; MINGW-X64-NEXT:    subq $88, %rsp
+; MINGW-X64-NEXT:    .seh_stackalloc 88
 ; MINGW-X64-NEXT:    .seh_endprologue
-; MINGW-X64-NEXT:    movq %r9, %rsi
-; MINGW-X64-NEXT:    movq %r8, %rdi
-; MINGW-X64-NEXT:    movq %rdx, %rbx
-; MINGW-X64-NEXT:    movq %rcx, %r14
-; MINGW-X64-NEXT:    movq {{[0-9]+}}(%rsp), %r15
-; MINGW-X64-NEXT:    movq {{[0-9]+}}(%rsp), %r12
+; MINGW-X64-NEXT:    movq %rdx, %rsi
+; MINGW-X64-NEXT:    movq %rcx, %rdi
+; MINGW-X64-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
 ; MINGW-X64-NEXT:    movq %r9, {{[0-9]+}}(%rsp)
 ; MINGW-X64-NEXT:    movq %r8, {{[0-9]+}}(%rsp)
-; MINGW-X64-NEXT:    movq %r12, {{[0-9]+}}(%rsp)
-; MINGW-X64-NEXT:    movq %r15, {{[0-9]+}}(%rsp)
+; MINGW-X64-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; MINGW-X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; MINGW-X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; MINGW-X64-NEXT:    callq __udivti3
-; MINGW-X64-NEXT:    movaps %xmm0, %xmm6
-; MINGW-X64-NEXT:    movq %rsi, {{[0-9]+}}(%rsp)
-; MINGW-X64-NEXT:    movq %rdi, {{[0-9]+}}(%rsp)
-; MINGW-X64-NEXT:    movq %r12, {{[0-9]+}}(%rsp)
-; MINGW-X64-NEXT:    movq %r15, {{[0-9]+}}(%rsp)
-; MINGW-X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; MINGW-X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; MINGW-X64-NEXT:    callq __umodti3
-; MINGW-X64-NEXT:    movaps %xmm6, (%r14)
-; MINGW-X64-NEXT:    movaps %xmm0, (%rbx)
-; MINGW-X64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm6 # 16-byte Reload
+; MINGW-X64-NEXT:    leaq {{[0-9]+}}(%rsp), %r8
+; MINGW-X64-NEXT:    callq __udivmodti4
+; MINGW-X64-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1
+; MINGW-X64-NEXT:    movaps %xmm0, (%rdi)
+; MINGW-X64-NEXT:    movaps %xmm1, (%rsi)
 ; MINGW-X64-NEXT:    .seh_startepilogue
-; MINGW-X64-NEXT:    addq $120, %rsp
-; MINGW-X64-NEXT:    popq %rbx
+; MINGW-X64-NEXT:    addq $88, %rsp
 ; MINGW-X64-NEXT:    popq %rdi
 ; MINGW-X64-NEXT:    popq %rsi
-; MINGW-X64-NEXT:    popq %r12
-; MINGW-X64-NEXT:    popq %r14
-; MINGW-X64-NEXT:    popq %r15
 ; MINGW-X64-NEXT:    .seh_endepilogue
 ; MINGW-X64-NEXT:    retq
 ; MINGW-X64-NEXT:    .seh_endproc
 ;
 ; WIN64-LABEL: udivrem_i128:
 ; WIN64:       # %bb.0:
-; WIN64-NEXT:    pushq %r15
-; WIN64-NEXT:    .seh_pushreg %r15
-; WIN64-NEXT:    pushq %r14
-; WIN64-NEXT:    .seh_pushreg %r14
-; WIN64-NEXT:    pushq %r12
-; WIN64-NEXT:    .seh_pushreg %r12
 ; WIN64-NEXT:    pushq %rsi
 ; WIN64-NEXT:    .seh_pushreg %rsi
 ; WIN64-NEXT:    pushq %rdi
 ; WIN64-NEXT:    .seh_pushreg %rdi
-; WIN64-NEXT:    pushq %rbx
-; WIN64-NEXT:    .seh_pushreg %rbx
-; WIN64-NEXT:    subq $120, %rsp
-; WIN64-NEXT:    .seh_stackalloc 120
-; WIN64-NEXT:    movaps %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; WIN64-NEXT:    .seh_savexmm %xmm6, 96
+; WIN64-NEXT:    subq $88, %rsp
+; WIN64-NEXT:    .seh_stackalloc 88
 ; WIN64-NEXT:    .seh_endprologue
-; WIN64-NEXT:    movq %r9, %rsi
-; WIN64-NEXT:    movq %r8, %rdi
-; WIN64-NEXT:    movq %rdx, %rbx
-; WIN64-NEXT:    movq %rcx, %r14
-; WIN64-NEXT:    movq {{[0-9]+}}(%rsp), %r15
-; WIN64-NEXT:    movq {{[0-9]+}}(%rsp), %r12
+; WIN64-NEXT:    movq %rdx, %rsi
+; WIN64-NEXT:    movq %rcx, %rdi
+; WIN64-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
 ; WIN64-NEXT:    movq %r9, {{[0-9]+}}(%rsp)
 ; WIN64-NEXT:    movq %r8, {{[0-9]+}}(%rsp)
-; WIN64-NEXT:    movq %r12, {{[0-9]+}}(%rsp)
-; WIN64-NEXT:    movq %r15, {{[0-9]+}}(%rsp)
+; WIN64-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; WIN64-NEXT:    callq __udivti3
-; WIN64-NEXT:    movaps %xmm0, %xmm6
-; WIN64-NEXT:    movq %rsi, {{[0-9]+}}(%rsp)
-; WIN64-NEXT:    movq %rdi, {{[0-9]+}}(%rsp)
-; WIN64-NEXT:    movq %r12, {{[0-9]+}}(%rsp)
-; WIN64-NEXT:    movq %r15, {{[0-9]+}}(%rsp)
-; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
-; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
-; WIN64-NEXT:    callq __umodti3
-; WIN64-NEXT:    movaps %xmm6, (%r14)
-; WIN64-NEXT:    movaps %xmm0, (%rbx)
-; WIN64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm6 # 16-byte Reload
+; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %r8
+; WIN64-NEXT:    callq __udivmodti4
+; WIN64-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1
+; WIN64-NEXT:    movaps %xmm0, (%rdi)
+; WIN64-NEXT:    movaps %xmm1, (%rsi)
 ; WIN64-NEXT:    .seh_startepilogue
-; WIN64-NEXT:    addq $120, %rsp
-; WIN64-NEXT:    popq %rbx
+; WIN64-NEXT:    addq $88, %rsp
 ; WIN64-NEXT:    popq %rdi
 ; WIN64-NEXT:    popq %rsi
-; WIN64-NEXT:    popq %r12
-; WIN64-NEXT:    popq %r14
-; WIN64-NEXT:    popq %r15
 ; WIN64-NEXT:    .seh_endepilogue
 ; WIN64-NEXT:    retq
 ; WIN64-NEXT:    .seh_endproc

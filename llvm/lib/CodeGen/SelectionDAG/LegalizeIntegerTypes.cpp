@@ -3165,6 +3165,10 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::READCYCLECOUNTER:
   case ISD::READSTEADYCOUNTER: ExpandIntRes_READCOUNTER(N, Lo, Hi); break;
   case ISD::SDIV:        ExpandIntRes_SDIV(N, Lo, Hi); break;
+  case ISD::SDIVREM:
+  case ISD::UDIVREM:
+    ExpandIntRes_DIVREM(N, ResNo, Lo, Hi);
+    break;
   case ISD::SIGN_EXTEND: ExpandIntRes_SIGN_EXTEND(N, Lo, Hi); break;
   case ISD::SIGN_EXTEND_INREG: ExpandIntRes_SIGN_EXTEND_INREG(N, Lo, Hi); break;
   case ISD::SREM:        ExpandIntRes_SREM(N, Lo, Hi); break;
@@ -4950,6 +4954,70 @@ void DAGTypeLegalizer::ExpandIntRes_SADDSUBO(SDNode *Node,
 
   // Use the calculated overflow everywhere.
   ReplaceValueWith(SDValue(Node, 1), Ovf);
+}
+
+void DAGTypeLegalizer::ExpandIntRes_DIVREM(SDNode *N, unsigned ResNo,
+                                           SDValue &Lo, SDValue &Hi) {
+  SDLoc dl(N);
+  EVT VT = N->getValueType(0);
+  bool IsSigned = (N->getOpcode() == ISD::SDIVREM);
+
+  RTLIB::Libcall LC = IsSigned ? RTLIB::SDIVREM_I128 : RTLIB::UDIVREM_I128;
+  assert(VT == MVT::i128 && "ExpandIntRes_DIVREM only handles i128");
+
+  // fall back to separate div and rem if no fused libcall is available.
+  if (VT != MVT::i128 ||
+      DAG.getLibcalls().getLibcallImpl(LC) == RTLIB::Unsupported) {
+    unsigned DivOp = IsSigned ? ISD::SDIV : ISD::UDIV;
+    unsigned RemOp = IsSigned ? ISD::SREM : ISD::UREM;
+    SDValue Ops[2] = {N->getOperand(0), N->getOperand(1)};
+    SDValue Q = DAG.getNode(DivOp, dl, VT, Ops);
+    SDValue R = DAG.getNode(RemOp, dl, VT, Ops);
+    assert(ResNo == 0 && "Legalizer always starts with first illegal result");
+    SplitInteger(Q, Lo, Hi);
+    ReplaceValueWith(SDValue(N, 1), R);
+    return;
+  }
+
+  // emit __divmodti4 / __udivmodti4:
+  //   RetTy libcall(RetTy a, RetTy b, RetTy *rem)
+  // the quotient is the return value; the remainder is written via pointer.
+  Type *RetTy = VT.getTypeForEVT(*DAG.getContext());
+  TargetLowering::ArgListTy Args;
+  for (const SDValue &Op : N->op_values()) {
+    TargetLowering::ArgListEntry Entry(
+        Op, Op.getValueType().getTypeForEVT(*DAG.getContext()));
+    Entry.IsSExt = IsSigned;
+    Entry.IsZExt = !IsSigned;
+    Args.push_back(Entry);
+  }
+
+  SDValue FIPtr = DAG.CreateStackTemporary(VT);
+  TargetLowering::ArgListEntry PtrEntry(
+      FIPtr, PointerType::getUnqual(RetTy->getContext()));
+  Args.push_back(PtrEntry);
+
+  RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(LC);
+  TargetLowering::CallLoweringInfo CLI(DAG);
+  CLI.setDebugLoc(dl)
+      .setChain(DAG.getEntryNode())
+      .setLibCallee(DAG.getLibcalls().getLibcallImplCallingConv(LCImpl), RetTy,
+                    DAG.getExternalSymbol(
+                        LCImpl, TLI.getProgramPointerTy(DAG.getDataLayout())),
+                    std::move(Args))
+      .setSExtResult(IsSigned)
+      .setZExtResult(!IsSigned);
+
+  std::pair<SDValue, SDValue> CallInfo = TLI.LowerCallTo(CLI);
+
+  int FI = cast<FrameIndexSDNode>(FIPtr)->getIndex();
+  SDValue Rem = DAG.getLoad(
+      VT, dl, CallInfo.second, FIPtr,
+      MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI));
+
+  assert(ResNo == 0 && "Legalizer always starts with first illegal result");
+  SplitInteger(CallInfo.first, Lo, Hi);
+  ReplaceValueWith(SDValue(N, 1), Rem);
 }
 
 void DAGTypeLegalizer::ExpandIntRes_SDIV(SDNode *N,

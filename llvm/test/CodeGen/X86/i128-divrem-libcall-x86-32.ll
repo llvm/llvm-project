@@ -3,9 +3,6 @@
 ; RUN: llc < %s -mtriple=i686-linux-gnu          | FileCheck %s --check-prefix=LINUX-X86
 ; RUN: llc < %s -mtriple=i686-pc-windows-msvc    | FileCheck %s --check-prefix=WIN32
 
-; The 32-bit X86 triples inline-expand i128 div/rem, so keep the checks
-; focused on the absence of libcalls.
-
 define void @sdivrem_i128(ptr %q_out, ptr %r_out, i128 %n, i128 %d) {
 ; LINUX-X86-LABEL: sdivrem_i128:
 ; LINUX-X86:       # %bb.0: # %_udiv-special-cases_udiv-special-cases

@@ -832,6 +832,8 @@ namespace llvm {
     SDValue LowerSET_FPENV_MEM(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerRESET_FPENV(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerWin64_i128OP(SDValue Op, SelectionDAG &DAG) const;
+    void LowerWin64_i128DIVREM(SDNode *N, SelectionDAG &DAG, SDValue &Quot,
+                               SDValue &Rem) const;
     SDValue LowerWin64_FP_TO_INT128(SDValue Op, SelectionDAG &DAG,
                                     SDValue &Chain) const;
     SDValue LowerWin64_INT128_TO_FP(SDValue Op, SelectionDAG &DAG) const;

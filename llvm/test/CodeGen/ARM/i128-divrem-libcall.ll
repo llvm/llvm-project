@@ -3,10 +3,6 @@
 ; RUN: llc < %s -mtriple=armv7-linux-gnueabi   | FileCheck %s --check-prefix=ARMV7
 ; RUN: llc < %s -mtriple=armv7-none-eabi       | FileCheck %s --check-prefix=ARMV7
 
-; These 32-bit ARM triples inline-expand i128 div/rem. Keep the checks minimal:
-; verify that no libcalls are emitted and that the function reaches its
-; epilogue.
-
 define void @sdivrem_i128(ptr %q_out, ptr %r_out, i128 %n, i128 %d) {
 ; ARMV6-LABEL: sdivrem_i128:
 ; ARMV6:       @ %bb.0: @ %_udiv-special-cases_udiv-special-cases

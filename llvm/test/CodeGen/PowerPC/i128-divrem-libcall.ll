@@ -5,59 +5,33 @@ define void @sdivrem_i128(ptr %q_out, ptr %r_out, i128 %n, i128 %d) {
 ; CHECK-LABEL: sdivrem_i128:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    stdu 1, -192(1)
-; CHECK-NEXT:    std 0, 208(1)
-; CHECK-NEXT:    .cfi_def_cfa_offset 192
+; CHECK-NEXT:    stdu 1, -160(1)
+; CHECK-NEXT:    std 0, 176(1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 160
 ; CHECK-NEXT:    .cfi_offset lr, 16
-; CHECK-NEXT:    .cfi_offset r23, -72
-; CHECK-NEXT:    .cfi_offset r24, -64
-; CHECK-NEXT:    .cfi_offset r25, -56
-; CHECK-NEXT:    .cfi_offset r26, -48
-; CHECK-NEXT:    .cfi_offset r27, -40
-; CHECK-NEXT:    .cfi_offset r28, -32
 ; CHECK-NEXT:    .cfi_offset r29, -24
 ; CHECK-NEXT:    .cfi_offset r30, -16
-; CHECK-NEXT:    std 25, 136(1) # 8-byte Folded Spill
-; CHECK-NEXT:    mr 25, 3
+; CHECK-NEXT:    mr 9, 7
+; CHECK-NEXT:    std 29, 136(1) # 8-byte Folded Spill
+; CHECK-NEXT:    mr 29, 3
+; CHECK-NEXT:    addi 7, 1, 112
 ; CHECK-NEXT:    mr 3, 5
-; CHECK-NEXT:    std 26, 144(1) # 8-byte Folded Spill
-; CHECK-NEXT:    mr 26, 4
+; CHECK-NEXT:    std 30, 144(1) # 8-byte Folded Spill
+; CHECK-NEXT:    mr 30, 4
 ; CHECK-NEXT:    mr 4, 6
-; CHECK-NEXT:    std 27, 152(1) # 8-byte Folded Spill
-; CHECK-NEXT:    mr 27, 5
-; CHECK-NEXT:    mr 5, 7
-; CHECK-NEXT:    std 28, 160(1) # 8-byte Folded Spill
-; CHECK-NEXT:    mr 28, 6
+; CHECK-NEXT:    mr 5, 9
 ; CHECK-NEXT:    mr 6, 8
-; CHECK-NEXT:    std 23, 120(1) # 8-byte Folded Spill
-; CHECK-NEXT:    std 24, 128(1) # 8-byte Folded Spill
-; CHECK-NEXT:    std 29, 168(1) # 8-byte Folded Spill
-; CHECK-NEXT:    mr 29, 7
-; CHECK-NEXT:    std 30, 176(1) # 8-byte Folded Spill
-; CHECK-NEXT:    mr 30, 8
-; CHECK-NEXT:    bl __divti3
+; CHECK-NEXT:    bl __divmodti4
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    mr 24, 3
-; CHECK-NEXT:    mr 23, 4
-; CHECK-NEXT:    mr 3, 27
-; CHECK-NEXT:    mr 4, 28
-; CHECK-NEXT:    mr 5, 29
-; CHECK-NEXT:    mr 6, 30
-; CHECK-NEXT:    bl __modti3
-; CHECK-NEXT:    nop
-; CHECK-NEXT:    std 24, 0(25)
-; CHECK-NEXT:    std 23, 8(25)
-; CHECK-NEXT:    std 3, 0(26)
-; CHECK-NEXT:    std 4, 8(26)
-; CHECK-NEXT:    ld 30, 176(1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld 29, 168(1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld 28, 160(1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld 27, 152(1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld 26, 144(1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld 25, 136(1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld 24, 128(1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld 23, 120(1) # 8-byte Folded Reload
-; CHECK-NEXT:    addi 1, 1, 192
+; CHECK-NEXT:    ld 5, 120(1)
+; CHECK-NEXT:    ld 6, 112(1)
+; CHECK-NEXT:    std 3, 0(29)
+; CHECK-NEXT:    std 4, 8(29)
+; CHECK-NEXT:    std 6, 0(30)
+; CHECK-NEXT:    std 5, 8(30)
+; CHECK-NEXT:    ld 30, 144(1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld 29, 136(1) # 8-byte Folded Reload
+; CHECK-NEXT:    addi 1, 1, 160
 ; CHECK-NEXT:    ld 0, 16(1)
 ; CHECK-NEXT:    mtlr 0
 ; CHECK-NEXT:    blr
@@ -72,59 +46,33 @@ define void @udivrem_i128(ptr %q_out, ptr %r_out, i128 %n, i128 %d) {
 ; CHECK-LABEL: udivrem_i128:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    stdu 1, -192(1)
-; CHECK-NEXT:    std 0, 208(1)
-; CHECK-NEXT:    .cfi_def_cfa_offset 192
+; CHECK-NEXT:    stdu 1, -160(1)
+; CHECK-NEXT:    std 0, 176(1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 160
 ; CHECK-NEXT:    .cfi_offset lr, 16
-; CHECK-NEXT:    .cfi_offset r23, -72
-; CHECK-NEXT:    .cfi_offset r24, -64
-; CHECK-NEXT:    .cfi_offset r25, -56
-; CHECK-NEXT:    .cfi_offset r26, -48
-; CHECK-NEXT:    .cfi_offset r27, -40
-; CHECK-NEXT:    .cfi_offset r28, -32
 ; CHECK-NEXT:    .cfi_offset r29, -24
 ; CHECK-NEXT:    .cfi_offset r30, -16
-; CHECK-NEXT:    std 25, 136(1) # 8-byte Folded Spill
-; CHECK-NEXT:    mr 25, 3
+; CHECK-NEXT:    mr 9, 7
+; CHECK-NEXT:    std 29, 136(1) # 8-byte Folded Spill
+; CHECK-NEXT:    mr 29, 3
+; CHECK-NEXT:    addi 7, 1, 112
 ; CHECK-NEXT:    mr 3, 5
-; CHECK-NEXT:    std 26, 144(1) # 8-byte Folded Spill
-; CHECK-NEXT:    mr 26, 4
+; CHECK-NEXT:    std 30, 144(1) # 8-byte Folded Spill
+; CHECK-NEXT:    mr 30, 4
 ; CHECK-NEXT:    mr 4, 6
-; CHECK-NEXT:    std 27, 152(1) # 8-byte Folded Spill
-; CHECK-NEXT:    mr 27, 5
-; CHECK-NEXT:    mr 5, 7
-; CHECK-NEXT:    std 28, 160(1) # 8-byte Folded Spill
-; CHECK-NEXT:    mr 28, 6
+; CHECK-NEXT:    mr 5, 9
 ; CHECK-NEXT:    mr 6, 8
-; CHECK-NEXT:    std 23, 120(1) # 8-byte Folded Spill
-; CHECK-NEXT:    std 24, 128(1) # 8-byte Folded Spill
-; CHECK-NEXT:    std 29, 168(1) # 8-byte Folded Spill
-; CHECK-NEXT:    mr 29, 7
-; CHECK-NEXT:    std 30, 176(1) # 8-byte Folded Spill
-; CHECK-NEXT:    mr 30, 8
-; CHECK-NEXT:    bl __udivti3
+; CHECK-NEXT:    bl __udivmodti4
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    mr 24, 3
-; CHECK-NEXT:    mr 23, 4
-; CHECK-NEXT:    mr 3, 27
-; CHECK-NEXT:    mr 4, 28
-; CHECK-NEXT:    mr 5, 29
-; CHECK-NEXT:    mr 6, 30
-; CHECK-NEXT:    bl __umodti3
-; CHECK-NEXT:    nop
-; CHECK-NEXT:    std 24, 0(25)
-; CHECK-NEXT:    std 23, 8(25)
-; CHECK-NEXT:    std 3, 0(26)
-; CHECK-NEXT:    std 4, 8(26)
-; CHECK-NEXT:    ld 30, 176(1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld 29, 168(1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld 28, 160(1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld 27, 152(1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld 26, 144(1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld 25, 136(1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld 24, 128(1) # 8-byte Folded Reload
-; CHECK-NEXT:    ld 23, 120(1) # 8-byte Folded Reload
-; CHECK-NEXT:    addi 1, 1, 192
+; CHECK-NEXT:    ld 5, 120(1)
+; CHECK-NEXT:    ld 6, 112(1)
+; CHECK-NEXT:    std 3, 0(29)
+; CHECK-NEXT:    std 4, 8(29)
+; CHECK-NEXT:    std 6, 0(30)
+; CHECK-NEXT:    std 5, 8(30)
+; CHECK-NEXT:    ld 30, 144(1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld 29, 136(1) # 8-byte Folded Reload
+; CHECK-NEXT:    addi 1, 1, 160
 ; CHECK-NEXT:    ld 0, 16(1)
 ; CHECK-NEXT:    mtlr 0
 ; CHECK-NEXT:    blr

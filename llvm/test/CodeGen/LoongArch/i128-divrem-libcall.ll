@@ -4,60 +4,34 @@
 define void @sdivrem_i128(ptr %q_out, ptr %r_out, i128 %n, i128 %d) {
 ; CHECK-LABEL: sdivrem_i128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -80
-; CHECK-NEXT:    .cfi_def_cfa_offset 80
-; CHECK-NEXT:    st.d $ra, $sp, 72 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 64 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $s0, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $s1, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $s2, $sp, 40 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $s3, $sp, 32 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $s4, $sp, 24 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $s5, $sp, 16 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $s6, $sp, 8 # 8-byte Folded Spill
+; CHECK-NEXT:    addi.d $sp, $sp, -48
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    st.d $ra, $sp, 40 # 8-byte Folded Spill
+; CHECK-NEXT:    st.d $fp, $sp, 32 # 8-byte Folded Spill
+; CHECK-NEXT:    st.d $s0, $sp, 24 # 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 1, -8
 ; CHECK-NEXT:    .cfi_offset 22, -16
 ; CHECK-NEXT:    .cfi_offset 23, -24
-; CHECK-NEXT:    .cfi_offset 24, -32
-; CHECK-NEXT:    .cfi_offset 25, -40
-; CHECK-NEXT:    .cfi_offset 26, -48
-; CHECK-NEXT:    .cfi_offset 27, -56
-; CHECK-NEXT:    .cfi_offset 28, -64
-; CHECK-NEXT:    .cfi_offset 29, -72
-; CHECK-NEXT:    move $fp, $a5
-; CHECK-NEXT:    move $s0, $a4
-; CHECK-NEXT:    move $s1, $a3
-; CHECK-NEXT:    move $s2, $a2
-; CHECK-NEXT:    move $s3, $a1
-; CHECK-NEXT:    move $s4, $a0
+; CHECK-NEXT:    move $a6, $a4
+; CHECK-NEXT:    move $fp, $a1
+; CHECK-NEXT:    move $s0, $a0
+; CHECK-NEXT:    addi.d $a4, $sp, 0
 ; CHECK-NEXT:    move $a0, $a2
 ; CHECK-NEXT:    move $a1, $a3
-; CHECK-NEXT:    move $a2, $a4
+; CHECK-NEXT:    move $a2, $a6
 ; CHECK-NEXT:    move $a3, $a5
-; CHECK-NEXT:    pcaddu18i $ra, %call36(__divti3)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(__divmodti4)
 ; CHECK-NEXT:    jirl $ra, $ra, 0
-; CHECK-NEXT:    move $s5, $a0
-; CHECK-NEXT:    move $s6, $a1
-; CHECK-NEXT:    move $a0, $s2
-; CHECK-NEXT:    move $a1, $s1
-; CHECK-NEXT:    move $a2, $s0
-; CHECK-NEXT:    move $a3, $fp
-; CHECK-NEXT:    pcaddu18i $ra, %call36(__modti3)
-; CHECK-NEXT:    jirl $ra, $ra, 0
-; CHECK-NEXT:    st.d $s5, $s4, 0
-; CHECK-NEXT:    st.d $s6, $s4, 8
-; CHECK-NEXT:    st.d $a0, $s3, 0
-; CHECK-NEXT:    st.d $a1, $s3, 8
-; CHECK-NEXT:    ld.d $s6, $sp, 8 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $s5, $sp, 16 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $s4, $sp, 24 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $s3, $sp, 32 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $s2, $sp, 40 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $s1, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $s0, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $fp, $sp, 64 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 72 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 80
+; CHECK-NEXT:    ld.d $a2, $sp, 0
+; CHECK-NEXT:    ld.d $a3, $sp, 8
+; CHECK-NEXT:    st.d $a0, $s0, 0
+; CHECK-NEXT:    st.d $a1, $s0, 8
+; CHECK-NEXT:    st.d $a2, $fp, 0
+; CHECK-NEXT:    st.d $a3, $fp, 8
+; CHECK-NEXT:    ld.d $s0, $sp, 24 # 8-byte Folded Reload
+; CHECK-NEXT:    ld.d $fp, $sp, 32 # 8-byte Folded Reload
+; CHECK-NEXT:    ld.d $ra, $sp, 40 # 8-byte Folded Reload
+; CHECK-NEXT:    addi.d $sp, $sp, 48
 ; CHECK-NEXT:    ret
   %q = sdiv i128 %n, %d
   %r = srem i128 %n, %d
@@ -69,60 +43,34 @@ define void @sdivrem_i128(ptr %q_out, ptr %r_out, i128 %n, i128 %d) {
 define void @udivrem_i128(ptr %q_out, ptr %r_out, i128 %n, i128 %d) {
 ; CHECK-LABEL: udivrem_i128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -80
-; CHECK-NEXT:    .cfi_def_cfa_offset 80
-; CHECK-NEXT:    st.d $ra, $sp, 72 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 64 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $s0, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $s1, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $s2, $sp, 40 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $s3, $sp, 32 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $s4, $sp, 24 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $s5, $sp, 16 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $s6, $sp, 8 # 8-byte Folded Spill
+; CHECK-NEXT:    addi.d $sp, $sp, -48
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    st.d $ra, $sp, 40 # 8-byte Folded Spill
+; CHECK-NEXT:    st.d $fp, $sp, 32 # 8-byte Folded Spill
+; CHECK-NEXT:    st.d $s0, $sp, 24 # 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 1, -8
 ; CHECK-NEXT:    .cfi_offset 22, -16
 ; CHECK-NEXT:    .cfi_offset 23, -24
-; CHECK-NEXT:    .cfi_offset 24, -32
-; CHECK-NEXT:    .cfi_offset 25, -40
-; CHECK-NEXT:    .cfi_offset 26, -48
-; CHECK-NEXT:    .cfi_offset 27, -56
-; CHECK-NEXT:    .cfi_offset 28, -64
-; CHECK-NEXT:    .cfi_offset 29, -72
-; CHECK-NEXT:    move $fp, $a5
-; CHECK-NEXT:    move $s0, $a4
-; CHECK-NEXT:    move $s1, $a3
-; CHECK-NEXT:    move $s2, $a2
-; CHECK-NEXT:    move $s3, $a1
-; CHECK-NEXT:    move $s4, $a0
+; CHECK-NEXT:    move $a6, $a4
+; CHECK-NEXT:    move $fp, $a1
+; CHECK-NEXT:    move $s0, $a0
+; CHECK-NEXT:    addi.d $a4, $sp, 0
 ; CHECK-NEXT:    move $a0, $a2
 ; CHECK-NEXT:    move $a1, $a3
-; CHECK-NEXT:    move $a2, $a4
+; CHECK-NEXT:    move $a2, $a6
 ; CHECK-NEXT:    move $a3, $a5
-; CHECK-NEXT:    pcaddu18i $ra, %call36(__udivti3)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(__udivmodti4)
 ; CHECK-NEXT:    jirl $ra, $ra, 0
-; CHECK-NEXT:    move $s5, $a0
-; CHECK-NEXT:    move $s6, $a1
-; CHECK-NEXT:    move $a0, $s2
-; CHECK-NEXT:    move $a1, $s1
-; CHECK-NEXT:    move $a2, $s0
-; CHECK-NEXT:    move $a3, $fp
-; CHECK-NEXT:    pcaddu18i $ra, %call36(__umodti3)
-; CHECK-NEXT:    jirl $ra, $ra, 0
-; CHECK-NEXT:    st.d $s5, $s4, 0
-; CHECK-NEXT:    st.d $s6, $s4, 8
-; CHECK-NEXT:    st.d $a0, $s3, 0
-; CHECK-NEXT:    st.d $a1, $s3, 8
-; CHECK-NEXT:    ld.d $s6, $sp, 8 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $s5, $sp, 16 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $s4, $sp, 24 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $s3, $sp, 32 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $s2, $sp, 40 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $s1, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $s0, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $fp, $sp, 64 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 72 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 80
+; CHECK-NEXT:    ld.d $a2, $sp, 0
+; CHECK-NEXT:    ld.d $a3, $sp, 8
+; CHECK-NEXT:    st.d $a0, $s0, 0
+; CHECK-NEXT:    st.d $a1, $s0, 8
+; CHECK-NEXT:    st.d $a2, $fp, 0
+; CHECK-NEXT:    st.d $a3, $fp, 8
+; CHECK-NEXT:    ld.d $s0, $sp, 24 # 8-byte Folded Reload
+; CHECK-NEXT:    ld.d $fp, $sp, 32 # 8-byte Folded Reload
+; CHECK-NEXT:    ld.d $ra, $sp, 40 # 8-byte Folded Reload
+; CHECK-NEXT:    addi.d $sp, $sp, 48
 ; CHECK-NEXT:    ret
   %q = udiv i128 %n, %d
   %r = urem i128 %n, %d

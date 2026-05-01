@@ -5110,7 +5110,10 @@ SDValue DAGCombiner::useDivRem(SDNode *Node) {
   if (VT.isVector() || !VT.isInteger())
     return SDValue();
 
-  if (!TLI.isTypeLegal(VT) && !TLI.isOperationCustom(DivRemOpc, VT))
+  // for non-legal types, only form DIVREM if the expander can handle it
+  // ExpandIntRes_DIVREM currently only handles i128.
+  if (!TLI.isTypeLegal(VT) && !TLI.isOperationCustom(DivRemOpc, VT) &&
+      (VT != MVT::i128 || !isDivRemLibcallAvailable(Node, isSigned, DAG)))
     return SDValue();
 
   // If DIVREM is going to get expanded into a libcall,

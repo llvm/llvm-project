@@ -5,26 +5,24 @@ define void @sdivrem_i128(ptr %q_out, ptr %r_out, i128 %n, i128 %d) {
 ; CHECK-LABEL: sdivrem_i128:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  ! %bb.0:
-; CHECK-NEXT:    save %sp, -176, %sp
+; CHECK-NEXT:    save %sp, -192, %sp
 ; CHECK-NEXT:    .cfi_def_cfa_register %fp
 ; CHECK-NEXT:    .cfi_window_save
 ; CHECK-NEXT:    .cfi_register %o7, %i7
-; CHECK-NEXT:    mov %i2, %o0
-; CHECK-NEXT:    mov %i3, %o1
-; CHECK-NEXT:    mov %i4, %o2
-; CHECK-NEXT:    call __divti3
 ; CHECK-NEXT:    mov %i5, %o3
-; CHECK-NEXT:    mov %o0, %l0
-; CHECK-NEXT:    mov %o1, %l1
-; CHECK-NEXT:    mov %i2, %o0
-; CHECK-NEXT:    mov %i3, %o1
 ; CHECK-NEXT:    mov %i4, %o2
-; CHECK-NEXT:    call __modti3
-; CHECK-NEXT:    mov %i5, %o3
-; CHECK-NEXT:    stx %l0, [%i0]
-; CHECK-NEXT:    stx %l1, [%i0+8]
-; CHECK-NEXT:    stx %o0, [%i1]
-; CHECK-NEXT:    stx %o1, [%i1+8]
+; CHECK-NEXT:    mov %i3, %o1
+; CHECK-NEXT:    mov %i2, %o0
+; CHECK-NEXT:    add %fp, 2031, %i2
+; CHECK-NEXT:    call __divmodti4
+; CHECK-NEXT:    mov %i2, %o4
+; CHECK-NEXT:    or %i2, 8, %i2
+; CHECK-NEXT:    ldx [%fp+2031], %i3
+; CHECK-NEXT:    ldx [%i2], %i2
+; CHECK-NEXT:    stx %o0, [%i0]
+; CHECK-NEXT:    stx %o1, [%i0+8]
+; CHECK-NEXT:    stx %i3, [%i1]
+; CHECK-NEXT:    stx %i2, [%i1+8]
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    restore
   %q = sdiv i128 %n, %d
@@ -38,26 +36,24 @@ define void @udivrem_i128(ptr %q_out, ptr %r_out, i128 %n, i128 %d) {
 ; CHECK-LABEL: udivrem_i128:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  ! %bb.0:
-; CHECK-NEXT:    save %sp, -176, %sp
+; CHECK-NEXT:    save %sp, -192, %sp
 ; CHECK-NEXT:    .cfi_def_cfa_register %fp
 ; CHECK-NEXT:    .cfi_window_save
 ; CHECK-NEXT:    .cfi_register %o7, %i7
-; CHECK-NEXT:    mov %i2, %o0
-; CHECK-NEXT:    mov %i3, %o1
-; CHECK-NEXT:    mov %i4, %o2
-; CHECK-NEXT:    call __udivti3
 ; CHECK-NEXT:    mov %i5, %o3
-; CHECK-NEXT:    mov %o0, %l0
-; CHECK-NEXT:    mov %o1, %l1
-; CHECK-NEXT:    mov %i2, %o0
-; CHECK-NEXT:    mov %i3, %o1
 ; CHECK-NEXT:    mov %i4, %o2
-; CHECK-NEXT:    call __umodti3
-; CHECK-NEXT:    mov %i5, %o3
-; CHECK-NEXT:    stx %l0, [%i0]
-; CHECK-NEXT:    stx %l1, [%i0+8]
-; CHECK-NEXT:    stx %o0, [%i1]
-; CHECK-NEXT:    stx %o1, [%i1+8]
+; CHECK-NEXT:    mov %i3, %o1
+; CHECK-NEXT:    mov %i2, %o0
+; CHECK-NEXT:    add %fp, 2031, %i2
+; CHECK-NEXT:    call __udivmodti4
+; CHECK-NEXT:    mov %i2, %o4
+; CHECK-NEXT:    or %i2, 8, %i2
+; CHECK-NEXT:    ldx [%fp+2031], %i3
+; CHECK-NEXT:    ldx [%i2], %i2
+; CHECK-NEXT:    stx %o0, [%i0]
+; CHECK-NEXT:    stx %o1, [%i0+8]
+; CHECK-NEXT:    stx %i3, [%i1]
+; CHECK-NEXT:    stx %i2, [%i1+8]
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    restore
   %q = udiv i128 %n, %d
