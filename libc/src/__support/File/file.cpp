@@ -344,19 +344,23 @@ FileIOResult File::read_unlocked_nbf(uint8_t *data, size_t len) {
 }
 
 int File::ungetc_unlocked(int c) {
-  if (orientation == Orientation::WIDE) {
-    err = true;
-    return EOF;
-  }
-  if (orientation == Orientation::UNORIENTED)
-    orientation = Orientation::BYTE;
-
   // There is no meaning to unget if:
   // 1. You are trying to push back EOF.
   // 2. Read operations are not allowed on this file.
   // 3. The previous operation was a write operation.
   if (c == EOF || !read_allowed() || (prev_op == FileOp::WRITE))
     return EOF;
+
+  switch (orientation) {
+  case Orientation::WIDE:
+    err = true;
+    return EOF;
+  case Orientation::UNORIENTED:
+    orientation = Orientation::BYTE;
+    break;
+  case Orientation::BYTE:
+    break;
+  }
 
   cpp::span<uint8_t> bufref(static_cast<uint8_t *>(buf), bufsize);
   if (read_limit == 0) {
@@ -637,7 +641,11 @@ FileIOResult File::read_unlocked(wchar_t *ws, size_t len) {
 }
 
 wint_t File::ungetwc_unlocked(wint_t wc) {
-  if (wc == WEOF)
+  // There is no meaning to unget if:
+  // 1. You are trying to push back EOF.
+  // 2. Read operations are not allowed on this file.
+  // 3. The previous operation was a write operation.
+  if (wc == WEOF || !read_allowed() || (prev_op == FileOp::WRITE))
     return WEOF;
   switch (orientation) {
   case Orientation::BYTE:
