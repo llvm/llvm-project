@@ -403,7 +403,7 @@ protected:
       }
     }
     if (num_matches == 0) {
-      result.AppendErrorWithFormat("Could not find function named \'%s\'.",
+      result.AppendErrorWithFormat("Could not find function named \'%s\'",
                                    m_options.symbol_name.c_str());
       return false;
     }
@@ -464,15 +464,15 @@ protected:
     StreamString error_strm;
     if (!GetSymbolContextsForAddress(target.GetImages(), m_options.address,
                                      sc_list, error_strm)) {
-      result.AppendErrorWithFormat("%s.", error_strm.GetData());
+      result.AppendErrorWithFormat("%s", error_strm.GetData());
       return false;
     }
     ModuleList module_list;
     FileSpec file_spec;
     if (!DumpLinesInSymbolContexts(result.GetOutputStream(), sc_list,
                                    module_list, file_spec)) {
-      result.AppendErrorWithFormat(
-          "No modules contain load address 0x%" PRIx64 ".", m_options.address);
+      result.AppendErrorWithFormat("No modules contain load address 0x%" PRIx64,
+                                   m_options.address);
       return false;
     }
     return true;
@@ -834,7 +834,7 @@ protected:
           start_file, line_no, column, 0, m_options.num_lines, "",
           &result.GetOutputStream(), GetBreakpointLocations());
     } else {
-      result.AppendErrorWithFormat("Could not find function info for: \"%s\".",
+      result.AppendErrorWithFormat("Could not find function info for: \"%s\"",
                                    m_options.symbol_name.c_str());
     }
     return 0;
@@ -925,7 +925,7 @@ protected:
       }
 
       if (sc_list.GetSize() == 0) {
-        result.AppendErrorWithFormat("Could not find function named: \"%s\".",
+        result.AppendErrorWithFormat("Could not find function named: \"%s\"",
                                      m_options.symbol_name.c_str());
         return;
       }
@@ -972,8 +972,7 @@ protected:
 
         if (sc_list.GetSize() == 0) {
           result.AppendErrorWithFormat(
-              "no modules have source information for file address 0x%" PRIx64
-              ".",
+              "no modules have source information for file address 0x%" PRIx64,
               m_options.address);
           return;
         }
@@ -994,7 +993,7 @@ protected:
                            Address::DumpStyleModuleWithFileAddress);
               result.AppendErrorWithFormat("address resolves to %s, but there "
                                            "is no line table information "
-                                           "available for this address.",
+                                           "available for this address",
                                            error_strm.GetData());
               return;
             }
@@ -1003,8 +1002,7 @@ protected:
 
         if (sc_list.GetSize() == 0) {
           result.AppendErrorWithFormat(
-              "no modules contain load address 0x%" PRIx64 ".",
-              m_options.address);
+              "no modules contain load address 0x%" PRIx64, m_options.address);
           return;
         }
       }
@@ -1138,7 +1136,7 @@ protected:
       }
 
       if (num_matches == 0) {
-        result.AppendErrorWithFormat("Could not find source file \"%s\".",
+        result.AppendErrorWithFormat("Could not find source file \"%s\"",
                                      m_options.file_name.c_str());
         return;
       }
