@@ -480,7 +480,8 @@ void CIRGenNVCUDARuntime::finalizeModule() {
         (kind == cir::CUDADeviceVarKind::Variable ||
          kind == cir::CUDADeviceVarKind::Surface ||
          kind == cir::CUDADeviceVarKind::Texture)) {
-      cgm.addCompilerUsedGlobal(globalOp);
+      cgm.addCompilerUsedGlobal(mlir::dyn_cast<cir::CIRGlobalValueInterface>(
+          globalOp.getOperation()));
     }
   }
 }
