@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <functional>
 #include <ranges>
 #include <tuple>
 #include <vector>
