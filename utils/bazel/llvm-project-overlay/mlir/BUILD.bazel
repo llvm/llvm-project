@@ -1350,6 +1350,12 @@ cc_binary(
     ],
 )
 
+td_library(
+    name = "PythonBindingsTdFiles",
+    srcs = ["include/mlir/Bindings/Python/PythonBindings.td"],
+    includes = ["include"],
+)
+
 ##---------------------------------------------------------------------------##
 
 td_library(
