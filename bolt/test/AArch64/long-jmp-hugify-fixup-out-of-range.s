@@ -41,12 +41,12 @@ _start:
 # CHECK: Disassembly of section .text:
 
 # CHECK: <foo>:
-# CHECK-NEXT:            {{.*}} cbz x0, 0x[[ADDR0:[0-9a-f]+]] <{{.*}}>
+# CHECK-NEXT:            {{.*}} cbnz x0, 0x[[ADDR0:[0-9a-f]+]] <{{.*}}>
 # CHECK-NEXT:            {{.*}} b 0x[[ADDR1:[0-9a-f]+]] <{{.*}}>
 # CHECK-NEXT: [[ADDR0]]: {{.*}} b 0x[[ADDR2:[0-9a-f]+]] <{{.*}}>
 
 # CHECK: Disassembly of section .text.cold:
 
 # CHECK: <foo.cold.0>:
-# CHECK-NEXT: [[ADDR1]]: {{.*}} mov x0, #0x1 // =1
-# CHECK-NEXT: [[ADDR2]]: {{.*}} ret
+# CHECK-NEXT: [[ADDR2]]: {{.*}} mov x0, #0x1 // =1
+# CHECK-NEXT: [[ADDR1]]: {{.*}} ret
