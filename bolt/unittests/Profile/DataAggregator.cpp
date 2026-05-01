@@ -130,6 +130,21 @@ TEST_F(PreAggregatedTestHelper, parseHexField) {
   ASSERT_TRUE(!!Res);
   EXPECT_EQ(*Res, Trace::BR_ONLY);
 
+  // -1 → UINT64_MAX (BR_ONLY / FT_ONLY).
+  Res = parseHex("-1\n");
+  ASSERT_TRUE(!!Res);
+  EXPECT_EQ(*Res, Trace::BR_ONLY);
+
+  // -2 → UINT64_MAX - 1 (FT_EXTERNAL_ORIGIN).
+  Res = parseHex("-2\n");
+  ASSERT_TRUE(!!Res);
+  EXPECT_EQ(*Res, Trace::FT_EXTERNAL_ORIGIN);
+
+  // -3 → UINT64_MAX - 2 (FT_EXTERNAL_RETURN).
+  Res = parseHex("-3\n");
+  ASSERT_TRUE(!!Res);
+  EXPECT_EQ(*Res, Trace::FT_EXTERNAL_RETURN);
+
   Res = parseHex("0\n");
   ASSERT_TRUE(!!Res);
   EXPECT_EQ(*Res, 0ULL);
@@ -222,6 +237,31 @@ TEST_F(PreAggregatedX86TestHelper, ReturnEntry) {
   EXPECT_EQ(Traces[0].first.From, 0x4b19e0ULL);
   EXPECT_EQ(Traces[0].first.To, 0x4b19efULL);
   EXPECT_EQ(Traces[0].second.TakenCount, 4u);
+}
+
+TEST_F(PreAggregatedX86TestHelper, TraceWithNeg1AsBROnly) {
+  // T entry with -1 as fall-through target: parsed as BR_ONLY.
+  std::vector<std::pair<Trace, TakenBranchInfo>> Traces;
+  parseAndCollectTraces("T 4b196f 4b19e0 -1 2\n", Traces);
+  ASSERT_EQ(Traces.size(), 1u);
+  EXPECT_EQ(Traces[0].first.Branch, 0x4b196fULL);
+  EXPECT_EQ(Traces[0].first.From, 0x4b19e0ULL);
+  EXPECT_EQ(Traces[0].first.To, Trace::BR_ONLY);
+  EXPECT_EQ(Traces[0].second.TakenCount, 2u);
+}
+
+TEST_F(PreAggregatedX86TestHelper, TraceWithFFFAsBROnly) {
+  std::vector<std::pair<Trace, TakenBranchInfo>> Traces;
+  parseAndCollectTraces("T 4b196f 4b19e0 ffffffffffffffff 2\n", Traces);
+  ASSERT_EQ(Traces.size(), 1u);
+  EXPECT_EQ(Traces[0].first.To, Trace::BR_ONLY);
+}
+
+TEST_F(PreAggregatedX86TestHelper, TraceWithBuildIdNeg1) {
+  std::vector<std::pair<Trace, TakenBranchInfo>> Traces;
+  parseAndCollectTraces("T 4b196f 4b19e0 deadbeef:-1 2\n", Traces);
+  ASSERT_EQ(Traces.size(), 1u);
+  EXPECT_EQ(Traces[0].first.To, Trace::BR_ONLY);
 }
 
 TEST_F(PreAggregatedX86TestHelper, MultipleEntries) {
