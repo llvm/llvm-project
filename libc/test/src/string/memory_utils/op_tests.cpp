@@ -61,9 +61,9 @@ using MemcpyImplementations = testing::TypeList<
 #endif // LLVM_LIBC_HAS_BUILTIN_MEMCPY_INLINE
     >;
 
-// Convenient helper to turn a span into cpp::byte *.
-static inline cpp::byte *as_byte(cpp::span<char> span) {
-  return reinterpret_cast<cpp::byte *>(span.data());
+// Convenient helper to turn a span into a raw-memory pointer.
+static inline Ptr as_byte(cpp::span<char> span) {
+  return reinterpret_cast<Ptr>(span.data());
 }
 
 // Adapt CheckMemcpy signature to op implementation signatures.
