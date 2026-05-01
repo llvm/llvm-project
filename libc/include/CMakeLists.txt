@@ -476,6 +476,12 @@ if(LIBC_TARGET_ARCHITECTURE STREQUAL "x86_64")
       .llvm-libc-types.sigset_t
       .llvm-libc-types.stack_t
   )
+
+  add_header(
+    sys_ucontext
+    HDR
+      sys/ucontext.h
+  )
 endif()
 
 add_header_macro(
