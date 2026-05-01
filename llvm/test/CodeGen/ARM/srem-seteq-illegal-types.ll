@@ -119,8 +119,9 @@ define i1 @test_srem_even(i4 %X) nounwind {
 ; ARM5-NEXT:    add r1, r1, r1, lsl #1
 ; ARM5-NEXT:    lsr r2, r1, #4
 ; ARM5-NEXT:    add r1, r2, r1, lsr #31
-; ARM5-NEXT:    add r1, r1, r1, lsl #1
-; ARM5-NEXT:    sub r0, r0, r1, lsl #1
+; ARM5-NEXT:    mov r2, #6
+; ARM5-NEXT:    mul r3, r1, r2
+; ARM5-NEXT:    sub r0, r0, r3
 ; ARM5-NEXT:    and r0, r0, #15
 ; ARM5-NEXT:    sub r0, r0, #1
 ; ARM5-NEXT:    clz r0, r0
@@ -134,8 +135,9 @@ define i1 @test_srem_even(i4 %X) nounwind {
 ; ARM6-NEXT:    add r1, r1, r1, lsl #1
 ; ARM6-NEXT:    lsr r2, r1, #4
 ; ARM6-NEXT:    add r1, r2, r1, lsr #31
-; ARM6-NEXT:    add r1, r1, r1, lsl #1
-; ARM6-NEXT:    sub r0, r0, r1, lsl #1
+; ARM6-NEXT:    mov r2, #6
+; ARM6-NEXT:    mul r1, r1, r2
+; ARM6-NEXT:    sub r0, r0, r1
 ; ARM6-NEXT:    and r0, r0, #15
 ; ARM6-NEXT:    sub r0, r0, #1
 ; ARM6-NEXT:    clz r0, r0
@@ -148,8 +150,8 @@ define i1 @test_srem_even(i4 %X) nounwind {
 ; ARM7-NEXT:    add r1, r1, r1, lsl #1
 ; ARM7-NEXT:    lsr r2, r1, #4
 ; ARM7-NEXT:    add r1, r2, r1, lsr #31
-; ARM7-NEXT:    add r1, r1, r1, lsl #1
-; ARM7-NEXT:    sub r0, r0, r1, lsl #1
+; ARM7-NEXT:    mov r2, #6
+; ARM7-NEXT:    mls r0, r1, r2, r0
 ; ARM7-NEXT:    and r0, r0, #15
 ; ARM7-NEXT:    sub r0, r0, #1
 ; ARM7-NEXT:    clz r0, r0
@@ -162,8 +164,8 @@ define i1 @test_srem_even(i4 %X) nounwind {
 ; ARM8-NEXT:    add r1, r1, r1, lsl #1
 ; ARM8-NEXT:    lsr r2, r1, #4
 ; ARM8-NEXT:    add r1, r2, r1, lsr #31
-; ARM8-NEXT:    add r1, r1, r1, lsl #1
-; ARM8-NEXT:    sub r0, r0, r1, lsl #1
+; ARM8-NEXT:    mov r2, #6
+; ARM8-NEXT:    mls r0, r1, r2, r0
 ; ARM8-NEXT:    and r0, r0, #15
 ; ARM8-NEXT:    sub r0, r0, #1
 ; ARM8-NEXT:    clz r0, r0
@@ -176,8 +178,8 @@ define i1 @test_srem_even(i4 %X) nounwind {
 ; NEON7-NEXT:    add r1, r1, r1, lsl #1
 ; NEON7-NEXT:    lsr r2, r1, #4
 ; NEON7-NEXT:    add r1, r2, r1, lsr #31
-; NEON7-NEXT:    add r1, r1, r1, lsl #1
-; NEON7-NEXT:    sub r0, r0, r1, lsl #1
+; NEON7-NEXT:    mov r2, #6
+; NEON7-NEXT:    mls r0, r1, r2, r0
 ; NEON7-NEXT:    and r0, r0, #15
 ; NEON7-NEXT:    sub r0, r0, #1
 ; NEON7-NEXT:    clz r0, r0
@@ -190,8 +192,8 @@ define i1 @test_srem_even(i4 %X) nounwind {
 ; NEON8-NEXT:    add r1, r1, r1, lsl #1
 ; NEON8-NEXT:    lsr r2, r1, #4
 ; NEON8-NEXT:    add r1, r2, r1, lsr #31
-; NEON8-NEXT:    add r1, r1, r1, lsl #1
-; NEON8-NEXT:    sub r0, r0, r1, lsl #1
+; NEON8-NEXT:    mov r2, #6
+; NEON8-NEXT:    mls r0, r1, r2, r0
 ; NEON8-NEXT:    and r0, r0, #15
 ; NEON8-NEXT:    sub r0, r0, #1
 ; NEON8-NEXT:    clz r0, r0

@@ -49,7 +49,7 @@ entry:
         %8 = load i8, ptr %arrayidx62, align 1
         %conv63 = zext i8 %8 to i32
 ; CHECK: ldrb r{{[0-9]*}}, [r{{[0-9]*}}, #-1]
-; CHECK-NEXT: ldrb{{[.w]*}} r{{[0-9]*}}, [r{{[0-9]*}}, #1]
+; CHECK: ldrb{{[.w]*}} r{{[0-9]*}}, [r{{[0-9]*}}, #1]
         %tmp = add i32 %add34191, %conv46
         %tmp193 = add i32 %tmp, %conv52
         %tmp194 = add i32 %tmp193, %conv57

@@ -208,14 +208,14 @@ entry:
 define i32 @tn12288(i32 %v) nounwind readnone {
 ; ARM-LABEL: tn12288:
 ; ARM:       @ %bb.0: @ %entry
-; ARM-NEXT:    sub r0, r0, r0, lsl #2
-; ARM-NEXT:    lsl r0, r0, #12
+; ARM-NEXT:    lsl r1, r0, #12
+; ARM-NEXT:    sub r0, r1, r0, lsl #14
 ; ARM-NEXT:    mov pc, lr
 ;
 ; THUMB2-LABEL: tn12288:
 ; THUMB2:       @ %bb.0: @ %entry
-; THUMB2-NEXT:    sub.w r0, r0, r0, lsl #2
-; THUMB2-NEXT:    lsls r0, r0, #12
+; THUMB2-NEXT:    lsls r1, r0, #12
+; THUMB2-NEXT:    sub.w r0, r1, r0, lsl #14
 ; THUMB2-NEXT:    bx lr
 ;
 ; THUMB-LABEL: tn12288:

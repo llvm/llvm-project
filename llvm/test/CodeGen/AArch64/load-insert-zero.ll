@@ -793,7 +793,7 @@ define void @predictor_4x4_neon(ptr nocapture noundef writeonly %0, i64 noundef 
 ; CHECK-NEXT:    ext v2.8b, v2.8b, v0.8b, #1
 ; CHECK-NEXT:    ext v1.8b, v3.8b, v0.8b, #1
 ; CHECK-NEXT:    str s2, [x0, x8]
-; CHECK-NEXT:    add x8, x8, x1
+; CHECK-NEXT:    add x8, x1, x8
 ; CHECK-NEXT:    str s1, [x0, x8]
 ; CHECK-NEXT:    ret
   %5 = load i32, ptr %2, align 4
@@ -856,7 +856,7 @@ define void @predictor_4x4_neon_new(ptr nocapture noundef writeonly %0, i64 noun
 ; CHECK-NEXT:    ldur s3, [x2, #3]
 ; CHECK-NEXT:    uaddl v4.8h, v1.8b, v0.8b
 ; CHECK-NEXT:    urhadd v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    add x9, x8, x1
+; CHECK-NEXT:    add x9, x1, x8
 ; CHECK-NEXT:    uaddl v5.8h, v2.8b, v1.8b
 ; CHECK-NEXT:    uaddl v3.8h, v3.8b, v2.8b
 ; CHECK-NEXT:    urhadd v1.8b, v1.8b, v2.8b

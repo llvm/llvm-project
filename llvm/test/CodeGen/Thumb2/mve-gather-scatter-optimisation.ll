@@ -864,16 +864,15 @@ define hidden arm_aapcs_vfpcc i32 @arm_depthwise_conv_s8(ptr nocapture readonly 
 ; CHECK-NEXT:    .pad #24
 ; CHECK-NEXT:    sub sp, #24
 ; CHECK-NEXT:    ldrd r2, r7, [sp, #136]
-; CHECK-NEXT:    add.w r8, r7, #10
+; CHECK-NEXT:    add.w r12, r7, #10
 ; CHECK-NEXT:    adr r7, .LCPI11_0
 ; CHECK-NEXT:    ldr r1, [sp, #128]
 ; CHECK-NEXT:    vdup.32 q0, r2
 ; CHECK-NEXT:    vldrw.u32 q1, [r7]
-; CHECK-NEXT:    movs r4, #0
+; CHECK-NEXT:    mov.w r11, #0
 ; CHECK-NEXT:    mov.w r10, #6
-; CHECK-NEXT:    movs r6, #11
 ; CHECK-NEXT:    vshl.i32 q0, q0, #2
-; CHECK-NEXT:    movs r5, #0
+; CHECK-NEXT:    movs r6, #0
 ; CHECK-NEXT:  .LBB11_1: @ %for.body10.i
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-NEXT:    @ Child Loop BB11_2 Depth 2
@@ -881,14 +880,14 @@ define hidden arm_aapcs_vfpcc i32 @arm_depthwise_conv_s8(ptr nocapture readonly 
 ; CHECK-NEXT:    @ Child Loop BB11_4 Depth 4
 ; CHECK-NEXT:    @ Child Loop BB11_5 Depth 5
 ; CHECK-NEXT:    mov.w r9, #0
-; CHECK-NEXT:    str r5, [sp, #4] @ 4-byte Spill
+; CHECK-NEXT:    str r6, [sp, #4] @ 4-byte Spill
 ; CHECK-NEXT:  .LBB11_2: @ %for.cond22.preheader.i
 ; CHECK-NEXT:    @ Parent Loop BB11_1 Depth=1
 ; CHECK-NEXT:    @ => This Loop Header: Depth=2
 ; CHECK-NEXT:    @ Child Loop BB11_3 Depth 3
 ; CHECK-NEXT:    @ Child Loop BB11_4 Depth 4
 ; CHECK-NEXT:    @ Child Loop BB11_5 Depth 5
-; CHECK-NEXT:    movs r7, #0
+; CHECK-NEXT:    movs r6, #0
 ; CHECK-NEXT:    vdup.32 q2, r9
 ; CHECK-NEXT:    vstrw.32 q2, [sp, #8] @ 16-byte Spill
 ; CHECK-NEXT:  .LBB11_3: @ %for.body27.i
@@ -898,23 +897,24 @@ define hidden arm_aapcs_vfpcc i32 @arm_depthwise_conv_s8(ptr nocapture readonly 
 ; CHECK-NEXT:    @ Child Loop BB11_4 Depth 4
 ; CHECK-NEXT:    @ Child Loop BB11_5 Depth 5
 ; CHECK-NEXT:    dls lr, r10
-; CHECK-NEXT:    mov.w r12, #0
-; CHECK-NEXT:    mov.w r11, #4
-; CHECK-NEXT:    vdup.32 q3, r7
+; CHECK-NEXT:    movs r4, #0
+; CHECK-NEXT:    movs r5, #4
+; CHECK-NEXT:    vdup.32 q3, r6
 ; CHECK-NEXT:  .LBB11_4: @ %for.body78.us.i
 ; CHECK-NEXT:    @ Parent Loop BB11_1 Depth=1
 ; CHECK-NEXT:    @ Parent Loop BB11_2 Depth=2
 ; CHECK-NEXT:    @ Parent Loop BB11_3 Depth=3
 ; CHECK-NEXT:    @ => This Loop Header: Depth=4
 ; CHECK-NEXT:    @ Child Loop BB11_5 Depth 5
-; CHECK-NEXT:    mul r5, r11, r6
+; CHECK-NEXT:    add.w r7, r5, r5, lsl #2
 ; CHECK-NEXT:    vmov q4, q3
-; CHECK-NEXT:    vadd.i32 q5, q1, r5
+; CHECK-NEXT:    add.w r7, r5, r7, lsl #1
+; CHECK-NEXT:    vadd.i32 q5, q1, r7
+; CHECK-NEXT:    add.w r8, r7, #113
 ; CHECK-NEXT:    vmla.i32 q4, q5, r2
 ; CHECK-NEXT:    vldrw.u32 q5, [sp, #8] @ 16-byte Reload
-; CHECK-NEXT:    adds r5, #113
-; CHECK-NEXT:    vadd.i32 q6, q1, r5
-; CHECK-NEXT:    mov r5, r8
+; CHECK-NEXT:    vadd.i32 q6, q1, r8
+; CHECK-NEXT:    mov r7, r12
 ; CHECK-NEXT:    vmla.i32 q5, q6, r2
 ; CHECK-NEXT:  .LBB11_5: @ %vector.body
 ; CHECK-NEXT:    @ Parent Loop BB11_1 Depth=1
@@ -927,20 +927,20 @@ define hidden arm_aapcs_vfpcc i32 @arm_depthwise_conv_s8(ptr nocapture readonly 
 ; CHECK-NEXT:    vldrb.s32 q5, [r1, q4]
 ; CHECK-NEXT:    vadd.i32 q6, q4, q0
 ; CHECK-NEXT:    vadd.i32 q2, q2, r2
-; CHECK-NEXT:    subs r5, #4
-; CHECK-NEXT:    vmlava.u32 r12, q2, q5
+; CHECK-NEXT:    subs r7, #4
+; CHECK-NEXT:    vmlava.u32 r4, q2, q5
 ; CHECK-NEXT:    vmov q5, q7
 ; CHECK-NEXT:    vmov q4, q6
 ; CHECK-NEXT:    bne .LBB11_5
 ; CHECK-NEXT:  @ %bb.6: @ %middle.block
 ; CHECK-NEXT:    @ in Loop: Header=BB11_4 Depth=4
-; CHECK-NEXT:    add.w r11, r11, #1
+; CHECK-NEXT:    adds r5, #1
 ; CHECK-NEXT:    le lr, .LBB11_4
 ; CHECK-NEXT:  @ %bb.7: @ %for.cond.cleanup77.i
 ; CHECK-NEXT:    @ in Loop: Header=BB11_3 Depth=3
-; CHECK-NEXT:    adds r7, #1
-; CHECK-NEXT:    adds r4, #1
-; CHECK-NEXT:    cmp r7, r2
+; CHECK-NEXT:    adds r6, #1
+; CHECK-NEXT:    add.w r11, r11, #1
+; CHECK-NEXT:    cmp r6, r2
 ; CHECK-NEXT:    bne .LBB11_3
 ; CHECK-NEXT:  @ %bb.8: @ %for.cond.cleanup26.i
 ; CHECK-NEXT:    @ in Loop: Header=BB11_2 Depth=2
@@ -949,12 +949,12 @@ define hidden arm_aapcs_vfpcc i32 @arm_depthwise_conv_s8(ptr nocapture readonly 
 ; CHECK-NEXT:    bne .LBB11_2
 ; CHECK-NEXT:  @ %bb.9: @ %for.cond.cleanup20.i
 ; CHECK-NEXT:    @ in Loop: Header=BB11_1 Depth=1
-; CHECK-NEXT:    ldr r5, [sp, #4] @ 4-byte Reload
+; CHECK-NEXT:    ldr r6, [sp, #4] @ 4-byte Reload
 ; CHECK-NEXT:    ldr r7, [sp, #180]
-; CHECK-NEXT:    adds r5, #1
-; CHECK-NEXT:    cmp r5, r7
+; CHECK-NEXT:    adds r6, #1
+; CHECK-NEXT:    cmp r6, r7
 ; CHECK-NEXT:    it eq
-; CHECK-NEXT:    moveq r5, #0
+; CHECK-NEXT:    moveq r6, #0
 ; CHECK-NEXT:    b .LBB11_1
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.10:

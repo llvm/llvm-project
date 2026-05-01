@@ -7,17 +7,24 @@
 define i32 @fold_add19_mul11_i32(i32 %a) {
 ; CHECK-ARM-LABEL: fold_add19_mul11_i32:
 ; CHECK-ARM:       @ %bb.0:
-; CHECK-ARM-NEXT:    mov r1, #11
-; CHECK-ARM-NEXT:    mul r0, r0, r1
+; CHECK-ARM-NEXT:    add r1, r0, r0, lsl #2
+; CHECK-ARM-NEXT:    add r0, r0, r1, lsl #1
 ; CHECK-ARM-NEXT:    add r0, r0, #209
 ; CHECK-ARM-NEXT:    bx lr
 ;
-; CHECK-THUMB-LABEL: fold_add19_mul11_i32:
-; CHECK-THUMB:       @ %bb.0:
-; CHECK-THUMB-NEXT:    movs r1, #11
-; CHECK-THUMB-NEXT:    muls r0, r1, r0
-; CHECK-THUMB-NEXT:    adds r0, #209
-; CHECK-THUMB-NEXT:    bx lr
+; CHECK-THUMBV6M-LABEL: fold_add19_mul11_i32:
+; CHECK-THUMBV6M:       @ %bb.0:
+; CHECK-THUMBV6M-NEXT:    movs r1, #11
+; CHECK-THUMBV6M-NEXT:    muls r0, r1, r0
+; CHECK-THUMBV6M-NEXT:    adds r0, #209
+; CHECK-THUMBV6M-NEXT:    bx lr
+;
+; CHECK-THUMBV7M-LABEL: fold_add19_mul11_i32:
+; CHECK-THUMBV7M:       @ %bb.0:
+; CHECK-THUMBV7M-NEXT:    add.w r1, r0, r0, lsl #2
+; CHECK-THUMBV7M-NEXT:    add.w r0, r0, r1, lsl #1
+; CHECK-THUMBV7M-NEXT:    adds r0, #209
+; CHECK-THUMBV7M-NEXT:    bx lr
   %b = add i32 %a, 19
   %c = mul i32 %b, 11
   ret i32 %c
@@ -26,17 +33,24 @@ define i32 @fold_add19_mul11_i32(i32 %a) {
 define i16 @fold_add19_mul11_i16(i16 %a) {
 ; CHECK-ARM-LABEL: fold_add19_mul11_i16:
 ; CHECK-ARM:       @ %bb.0:
-; CHECK-ARM-NEXT:    mov r1, #11
-; CHECK-ARM-NEXT:    mul r0, r0, r1
+; CHECK-ARM-NEXT:    add r1, r0, r0, lsl #2
+; CHECK-ARM-NEXT:    add r0, r0, r1, lsl #1
 ; CHECK-ARM-NEXT:    add r0, r0, #209
 ; CHECK-ARM-NEXT:    bx lr
 ;
-; CHECK-THUMB-LABEL: fold_add19_mul11_i16:
-; CHECK-THUMB:       @ %bb.0:
-; CHECK-THUMB-NEXT:    movs r1, #11
-; CHECK-THUMB-NEXT:    muls r0, r1, r0
-; CHECK-THUMB-NEXT:    adds r0, #209
-; CHECK-THUMB-NEXT:    bx lr
+; CHECK-THUMBV6M-LABEL: fold_add19_mul11_i16:
+; CHECK-THUMBV6M:       @ %bb.0:
+; CHECK-THUMBV6M-NEXT:    movs r1, #11
+; CHECK-THUMBV6M-NEXT:    muls r0, r1, r0
+; CHECK-THUMBV6M-NEXT:    adds r0, #209
+; CHECK-THUMBV6M-NEXT:    bx lr
+;
+; CHECK-THUMBV7M-LABEL: fold_add19_mul11_i16:
+; CHECK-THUMBV7M:       @ %bb.0:
+; CHECK-THUMBV7M-NEXT:    add.w r1, r0, r0, lsl #2
+; CHECK-THUMBV7M-NEXT:    add.w r0, r0, r1, lsl #1
+; CHECK-THUMBV7M-NEXT:    adds r0, #209
+; CHECK-THUMBV7M-NEXT:    bx lr
   %b = add i16 %a, 19
   %c = mul i16 %b, 11
   ret i16 %c
@@ -45,17 +59,24 @@ define i16 @fold_add19_mul11_i16(i16 %a) {
 define i32 @fold_sub19_mul11_i32(i32 %a) {
 ; CHECK-ARM-LABEL: fold_sub19_mul11_i32:
 ; CHECK-ARM:       @ %bb.0:
-; CHECK-ARM-NEXT:    mov r1, #11
-; CHECK-ARM-NEXT:    mul r0, r0, r1
+; CHECK-ARM-NEXT:    add r1, r0, r0, lsl #2
+; CHECK-ARM-NEXT:    add r0, r0, r1, lsl #1
 ; CHECK-ARM-NEXT:    sub r0, r0, #209
 ; CHECK-ARM-NEXT:    bx lr
 ;
-; CHECK-THUMB-LABEL: fold_sub19_mul11_i32:
-; CHECK-THUMB:       @ %bb.0:
-; CHECK-THUMB-NEXT:    movs r1, #11
-; CHECK-THUMB-NEXT:    muls r0, r1, r0
-; CHECK-THUMB-NEXT:    subs r0, #209
-; CHECK-THUMB-NEXT:    bx lr
+; CHECK-THUMBV6M-LABEL: fold_sub19_mul11_i32:
+; CHECK-THUMBV6M:       @ %bb.0:
+; CHECK-THUMBV6M-NEXT:    movs r1, #11
+; CHECK-THUMBV6M-NEXT:    muls r0, r1, r0
+; CHECK-THUMBV6M-NEXT:    subs r0, #209
+; CHECK-THUMBV6M-NEXT:    bx lr
+;
+; CHECK-THUMBV7M-LABEL: fold_sub19_mul11_i32:
+; CHECK-THUMBV7M:       @ %bb.0:
+; CHECK-THUMBV7M-NEXT:    add.w r1, r0, r0, lsl #2
+; CHECK-THUMBV7M-NEXT:    add.w r0, r0, r1, lsl #1
+; CHECK-THUMBV7M-NEXT:    subs r0, #209
+; CHECK-THUMBV7M-NEXT:    bx lr
   %b = add i32 %a, -19
   %c = mul i32 %b, 11
   ret i32 %c
@@ -64,17 +85,24 @@ define i32 @fold_sub19_mul11_i32(i32 %a) {
 define i16 @fold_sub19_mul11_i16(i16 %a) {
 ; CHECK-ARM-LABEL: fold_sub19_mul11_i16:
 ; CHECK-ARM:       @ %bb.0:
-; CHECK-ARM-NEXT:    mov r1, #11
-; CHECK-ARM-NEXT:    mul r0, r0, r1
+; CHECK-ARM-NEXT:    add r1, r0, r0, lsl #2
+; CHECK-ARM-NEXT:    add r0, r0, r1, lsl #1
 ; CHECK-ARM-NEXT:    sub r0, r0, #209
 ; CHECK-ARM-NEXT:    bx lr
 ;
-; CHECK-THUMB-LABEL: fold_sub19_mul11_i16:
-; CHECK-THUMB:       @ %bb.0:
-; CHECK-THUMB-NEXT:    movs r1, #11
-; CHECK-THUMB-NEXT:    muls r0, r1, r0
-; CHECK-THUMB-NEXT:    subs r0, #209
-; CHECK-THUMB-NEXT:    bx lr
+; CHECK-THUMBV6M-LABEL: fold_sub19_mul11_i16:
+; CHECK-THUMBV6M:       @ %bb.0:
+; CHECK-THUMBV6M-NEXT:    movs r1, #11
+; CHECK-THUMBV6M-NEXT:    muls r0, r1, r0
+; CHECK-THUMBV6M-NEXT:    subs r0, #209
+; CHECK-THUMBV6M-NEXT:    bx lr
+;
+; CHECK-THUMBV7M-LABEL: fold_sub19_mul11_i16:
+; CHECK-THUMBV7M:       @ %bb.0:
+; CHECK-THUMBV7M-NEXT:    add.w r1, r0, r0, lsl #2
+; CHECK-THUMBV7M-NEXT:    add.w r0, r0, r1, lsl #1
+; CHECK-THUMBV7M-NEXT:    subs r0, #209
+; CHECK-THUMBV7M-NEXT:    bx lr
   %b = add i16 %a, -19
   %c = mul i16 %b, 11
   ret i16 %c
@@ -83,17 +111,18 @@ define i16 @fold_sub19_mul11_i16(i16 %a) {
 define i32 @fold_add301_mul19_i32(i32 %a) {
 ; CHECK-ARMV6-LABEL: fold_add301_mul19_i32:
 ; CHECK-ARMV6:       @ %bb.0:
-; CHECK-ARMV6-NEXT:    mov r1, #87
-; CHECK-ARMV6-NEXT:    mov r2, #19
-; CHECK-ARMV6-NEXT:    orr r1, r1, #5632
-; CHECK-ARMV6-NEXT:    mla r0, r0, r2, r1
+; CHECK-ARMV6-NEXT:    add r1, r0, r0, lsl #3
+; CHECK-ARMV6-NEXT:    add r0, r0, r1, lsl #1
+; CHECK-ARMV6-NEXT:    add r0, r0, #87
+; CHECK-ARMV6-NEXT:    add r0, r0, #5632
 ; CHECK-ARMV6-NEXT:    bx lr
 ;
 ; CHECK-ARMV7-LABEL: fold_add301_mul19_i32:
 ; CHECK-ARMV7:       @ %bb.0:
+; CHECK-ARMV7-NEXT:    add r1, r0, r0, lsl #3
+; CHECK-ARMV7-NEXT:    add r0, r0, r1, lsl #1
 ; CHECK-ARMV7-NEXT:    movw r1, #5719
-; CHECK-ARMV7-NEXT:    mov r2, #19
-; CHECK-ARMV7-NEXT:    mla r0, r0, r2, r1
+; CHECK-ARMV7-NEXT:    add r0, r0, r1
 ; CHECK-ARMV7-NEXT:    bx lr
 ;
 ; CHECK-THUMBV6M-LABEL: fold_add301_mul19_i32:
@@ -110,9 +139,10 @@ define i32 @fold_add301_mul19_i32(i32 %a) {
 ;
 ; CHECK-THUMBV7M-LABEL: fold_add301_mul19_i32:
 ; CHECK-THUMBV7M:       @ %bb.0:
+; CHECK-THUMBV7M-NEXT:    add.w r1, r0, r0, lsl #3
+; CHECK-THUMBV7M-NEXT:    add.w r0, r0, r1, lsl #1
 ; CHECK-THUMBV7M-NEXT:    movw r1, #5719
-; CHECK-THUMBV7M-NEXT:    movs r2, #19
-; CHECK-THUMBV7M-NEXT:    mla r0, r0, r2, r1
+; CHECK-THUMBV7M-NEXT:    add r0, r1
 ; CHECK-THUMBV7M-NEXT:    bx lr
   %b = add i32 %a, 301
   %c = mul i32 %b, 19
@@ -122,17 +152,18 @@ define i32 @fold_add301_mul19_i32(i32 %a) {
 define i16 @fold_add301_mul19_i16(i16 %a) {
 ; CHECK-ARMV6-LABEL: fold_add301_mul19_i16:
 ; CHECK-ARMV6:       @ %bb.0:
-; CHECK-ARMV6-NEXT:    mov r1, #87
-; CHECK-ARMV6-NEXT:    mov r2, #19
-; CHECK-ARMV6-NEXT:    orr r1, r1, #5632
-; CHECK-ARMV6-NEXT:    mla r0, r0, r2, r1
+; CHECK-ARMV6-NEXT:    add r1, r0, r0, lsl #3
+; CHECK-ARMV6-NEXT:    add r0, r0, r1, lsl #1
+; CHECK-ARMV6-NEXT:    add r0, r0, #87
+; CHECK-ARMV6-NEXT:    add r0, r0, #5632
 ; CHECK-ARMV6-NEXT:    bx lr
 ;
 ; CHECK-ARMV7-LABEL: fold_add301_mul19_i16:
 ; CHECK-ARMV7:       @ %bb.0:
+; CHECK-ARMV7-NEXT:    add r1, r0, r0, lsl #3
+; CHECK-ARMV7-NEXT:    add r0, r0, r1, lsl #1
 ; CHECK-ARMV7-NEXT:    movw r1, #5719
-; CHECK-ARMV7-NEXT:    mov r2, #19
-; CHECK-ARMV7-NEXT:    mla r0, r0, r2, r1
+; CHECK-ARMV7-NEXT:    add r0, r0, r1
 ; CHECK-ARMV7-NEXT:    bx lr
 ;
 ; CHECK-THUMBV6M-LABEL: fold_add301_mul19_i16:
@@ -149,9 +180,10 @@ define i16 @fold_add301_mul19_i16(i16 %a) {
 ;
 ; CHECK-THUMBV7M-LABEL: fold_add301_mul19_i16:
 ; CHECK-THUMBV7M:       @ %bb.0:
+; CHECK-THUMBV7M-NEXT:    add.w r1, r0, r0, lsl #3
+; CHECK-THUMBV7M-NEXT:    add.w r0, r0, r1, lsl #1
 ; CHECK-THUMBV7M-NEXT:    movw r1, #5719
-; CHECK-THUMBV7M-NEXT:    movs r2, #19
-; CHECK-THUMBV7M-NEXT:    mla r0, r0, r2, r1
+; CHECK-THUMBV7M-NEXT:    add r0, r1
 ; CHECK-THUMBV7M-NEXT:    bx lr
   %b = add i16 %a, 301
   %c = mul i16 %b, 19
@@ -161,16 +193,16 @@ define i16 @fold_add301_mul19_i16(i16 %a) {
 define i32 @fold_sub301_mul19_i32(i32 %a) {
 ; CHECK-ARMV6-LABEL: fold_sub301_mul19_i32:
 ; CHECK-ARMV6:       @ %bb.0:
-; CHECK-ARMV6-NEXT:    mvn r1, #86
-; CHECK-ARMV6-NEXT:    mov r2, #19
-; CHECK-ARMV6-NEXT:    sub r1, r1, #5632
-; CHECK-ARMV6-NEXT:    mla r0, r0, r2, r1
+; CHECK-ARMV6-NEXT:    add r1, r0, r0, lsl #3
+; CHECK-ARMV6-NEXT:    add r0, r0, r1, lsl #1
+; CHECK-ARMV6-NEXT:    sub r0, r0, #87
+; CHECK-ARMV6-NEXT:    sub r0, r0, #5632
 ; CHECK-ARMV6-NEXT:    bx lr
 ;
 ; CHECK-ARMV7-LABEL: fold_sub301_mul19_i32:
 ; CHECK-ARMV7:       @ %bb.0:
-; CHECK-ARMV7-NEXT:    mov r1, #19
-; CHECK-ARMV7-NEXT:    mul r0, r0, r1
+; CHECK-ARMV7-NEXT:    add r1, r0, r0, lsl #3
+; CHECK-ARMV7-NEXT:    add r0, r0, r1, lsl #1
 ; CHECK-ARMV7-NEXT:    movw r1, #5719
 ; CHECK-ARMV7-NEXT:    sub r0, r0, r1
 ; CHECK-ARMV7-NEXT:    bx lr
@@ -189,8 +221,8 @@ define i32 @fold_sub301_mul19_i32(i32 %a) {
 ;
 ; CHECK-THUMBV7M-LABEL: fold_sub301_mul19_i32:
 ; CHECK-THUMBV7M:       @ %bb.0:
-; CHECK-THUMBV7M-NEXT:    movs r1, #19
-; CHECK-THUMBV7M-NEXT:    muls r0, r1, r0
+; CHECK-THUMBV7M-NEXT:    add.w r1, r0, r0, lsl #3
+; CHECK-THUMBV7M-NEXT:    add.w r0, r0, r1, lsl #1
 ; CHECK-THUMBV7M-NEXT:    movw r1, #5719
 ; CHECK-THUMBV7M-NEXT:    subs r0, r0, r1
 ; CHECK-THUMBV7M-NEXT:    bx lr
@@ -202,16 +234,16 @@ define i32 @fold_sub301_mul19_i32(i32 %a) {
 define i16 @fold_sub301_mul19_i16(i16 %a) {
 ; CHECK-ARMV6-LABEL: fold_sub301_mul19_i16:
 ; CHECK-ARMV6:       @ %bb.0:
-; CHECK-ARMV6-NEXT:    mvn r1, #86
-; CHECK-ARMV6-NEXT:    mov r2, #19
-; CHECK-ARMV6-NEXT:    sub r1, r1, #5632
-; CHECK-ARMV6-NEXT:    mla r0, r0, r2, r1
+; CHECK-ARMV6-NEXT:    add r1, r0, r0, lsl #3
+; CHECK-ARMV6-NEXT:    add r0, r0, r1, lsl #1
+; CHECK-ARMV6-NEXT:    sub r0, r0, #87
+; CHECK-ARMV6-NEXT:    sub r0, r0, #5632
 ; CHECK-ARMV6-NEXT:    bx lr
 ;
 ; CHECK-ARMV7-LABEL: fold_sub301_mul19_i16:
 ; CHECK-ARMV7:       @ %bb.0:
-; CHECK-ARMV7-NEXT:    mov r1, #19
-; CHECK-ARMV7-NEXT:    mul r0, r0, r1
+; CHECK-ARMV7-NEXT:    add r1, r0, r0, lsl #3
+; CHECK-ARMV7-NEXT:    add r0, r0, r1, lsl #1
 ; CHECK-ARMV7-NEXT:    movw r1, #5719
 ; CHECK-ARMV7-NEXT:    sub r0, r0, r1
 ; CHECK-ARMV7-NEXT:    bx lr
@@ -230,8 +262,8 @@ define i16 @fold_sub301_mul19_i16(i16 %a) {
 ;
 ; CHECK-THUMBV7M-LABEL: fold_sub301_mul19_i16:
 ; CHECK-THUMBV7M:       @ %bb.0:
-; CHECK-THUMBV7M-NEXT:    movs r1, #19
-; CHECK-THUMBV7M-NEXT:    muls r0, r1, r0
+; CHECK-THUMBV7M-NEXT:    add.w r1, r0, r0, lsl #3
+; CHECK-THUMBV7M-NEXT:    add.w r0, r0, r1, lsl #1
 ; CHECK-THUMBV7M-NEXT:    movw r1, #5719
 ; CHECK-THUMBV7M-NEXT:    subs r0, r0, r1
 ; CHECK-THUMBV7M-NEXT:    bx lr
@@ -244,15 +276,16 @@ define i32 @fold_add251_mul253_i32(i32 %a) {
 ; CHECK-ARMV6-LABEL: fold_add251_mul253_i32:
 ; CHECK-ARMV6:       @ %bb.0:
 ; CHECK-ARMV6-NEXT:    add r0, r0, #251
-; CHECK-ARMV6-NEXT:    mov r1, #253
-; CHECK-ARMV6-NEXT:    mul r0, r0, r1
+; CHECK-ARMV6-NEXT:    sub r1, r0, r0, lsl #6
+; CHECK-ARMV6-NEXT:    sub r0, r0, r1, lsl #2
 ; CHECK-ARMV6-NEXT:    bx lr
 ;
 ; CHECK-ARMV7-LABEL: fold_add251_mul253_i32:
 ; CHECK-ARMV7:       @ %bb.0:
+; CHECK-ARMV7-NEXT:    sub r1, r0, r0, lsl #6
+; CHECK-ARMV7-NEXT:    sub r0, r0, r1, lsl #2
 ; CHECK-ARMV7-NEXT:    movw r1, #63503
-; CHECK-ARMV7-NEXT:    mov r2, #253
-; CHECK-ARMV7-NEXT:    mla r0, r0, r2, r1
+; CHECK-ARMV7-NEXT:    add r0, r0, r1
 ; CHECK-ARMV7-NEXT:    bx lr
 ;
 ; CHECK-THUMBV6M-LABEL: fold_add251_mul253_i32:
@@ -264,9 +297,10 @@ define i32 @fold_add251_mul253_i32(i32 %a) {
 ;
 ; CHECK-THUMBV7M-LABEL: fold_add251_mul253_i32:
 ; CHECK-THUMBV7M:       @ %bb.0:
+; CHECK-THUMBV7M-NEXT:    sub.w r1, r0, r0, lsl #6
+; CHECK-THUMBV7M-NEXT:    sub.w r0, r0, r1, lsl #2
 ; CHECK-THUMBV7M-NEXT:    movw r1, #63503
-; CHECK-THUMBV7M-NEXT:    movs r2, #253
-; CHECK-THUMBV7M-NEXT:    mla r0, r0, r2, r1
+; CHECK-THUMBV7M-NEXT:    add r0, r1
 ; CHECK-THUMBV7M-NEXT:    bx lr
   %b = add i32 %a, 251
   %c = mul i32 %b, 253
@@ -277,14 +311,14 @@ define i16 @fold_add251_mul253_i16(i16 %a) {
 ; CHECK-ARMV6-LABEL: fold_add251_mul253_i16:
 ; CHECK-ARMV6:       @ %bb.0:
 ; CHECK-ARMV6-NEXT:    add r0, r0, #251
-; CHECK-ARMV6-NEXT:    mov r1, #253
-; CHECK-ARMV6-NEXT:    mul r0, r0, r1
+; CHECK-ARMV6-NEXT:    sub r1, r0, r0, lsl #6
+; CHECK-ARMV6-NEXT:    sub r0, r0, r1, lsl #2
 ; CHECK-ARMV6-NEXT:    bx lr
 ;
 ; CHECK-ARMV7-LABEL: fold_add251_mul253_i16:
 ; CHECK-ARMV7:       @ %bb.0:
-; CHECK-ARMV7-NEXT:    mov r1, #253
-; CHECK-ARMV7-NEXT:    mul r0, r0, r1
+; CHECK-ARMV7-NEXT:    sub r1, r0, r0, lsl #6
+; CHECK-ARMV7-NEXT:    sub r0, r0, r1, lsl #2
 ; CHECK-ARMV7-NEXT:    movw r1, #2033
 ; CHECK-ARMV7-NEXT:    sub r0, r0, r1
 ; CHECK-ARMV7-NEXT:    bx lr
@@ -298,8 +332,8 @@ define i16 @fold_add251_mul253_i16(i16 %a) {
 ;
 ; CHECK-THUMBV7M-LABEL: fold_add251_mul253_i16:
 ; CHECK-THUMBV7M:       @ %bb.0:
-; CHECK-THUMBV7M-NEXT:    movs r1, #253
-; CHECK-THUMBV7M-NEXT:    muls r0, r1, r0
+; CHECK-THUMBV7M-NEXT:    sub.w r1, r0, r0, lsl #6
+; CHECK-THUMBV7M-NEXT:    sub.w r0, r0, r1, lsl #2
 ; CHECK-THUMBV7M-NEXT:    subw r0, r0, #2033
 ; CHECK-THUMBV7M-NEXT:    bx lr
   %b = add i16 %a, 251
@@ -311,16 +345,23 @@ define i32 @fold_sub251_mul253_i32(i32 %a) {
 ; CHECK-ARM-LABEL: fold_sub251_mul253_i32:
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    sub r0, r0, #251
-; CHECK-ARM-NEXT:    mov r1, #253
-; CHECK-ARM-NEXT:    mul r0, r0, r1
+; CHECK-ARM-NEXT:    sub r1, r0, r0, lsl #6
+; CHECK-ARM-NEXT:    sub r0, r0, r1, lsl #2
 ; CHECK-ARM-NEXT:    bx lr
 ;
-; CHECK-THUMB-LABEL: fold_sub251_mul253_i32:
-; CHECK-THUMB:       @ %bb.0:
-; CHECK-THUMB-NEXT:    subs r0, #251
-; CHECK-THUMB-NEXT:    movs r1, #253
-; CHECK-THUMB-NEXT:    muls r0, r1, r0
-; CHECK-THUMB-NEXT:    bx lr
+; CHECK-THUMBV6M-LABEL: fold_sub251_mul253_i32:
+; CHECK-THUMBV6M:       @ %bb.0:
+; CHECK-THUMBV6M-NEXT:    subs r0, #251
+; CHECK-THUMBV6M-NEXT:    movs r1, #253
+; CHECK-THUMBV6M-NEXT:    muls r0, r1, r0
+; CHECK-THUMBV6M-NEXT:    bx lr
+;
+; CHECK-THUMBV7M-LABEL: fold_sub251_mul253_i32:
+; CHECK-THUMBV7M:       @ %bb.0:
+; CHECK-THUMBV7M-NEXT:    subs r0, #251
+; CHECK-THUMBV7M-NEXT:    sub.w r1, r0, r0, lsl #6
+; CHECK-THUMBV7M-NEXT:    sub.w r0, r0, r1, lsl #2
+; CHECK-THUMBV7M-NEXT:    bx lr
   %b = add i32 %a, -251
   %c = mul i32 %b, 253
   ret i32 %c
@@ -330,15 +371,16 @@ define i16 @fold_sub251_mul253_i16(i16 %a) {
 ; CHECK-ARMV6-LABEL: fold_sub251_mul253_i16:
 ; CHECK-ARMV6:       @ %bb.0:
 ; CHECK-ARMV6-NEXT:    sub r0, r0, #251
-; CHECK-ARMV6-NEXT:    mov r1, #253
-; CHECK-ARMV6-NEXT:    mul r0, r0, r1
+; CHECK-ARMV6-NEXT:    sub r1, r0, r0, lsl #6
+; CHECK-ARMV6-NEXT:    sub r0, r0, r1, lsl #2
 ; CHECK-ARMV6-NEXT:    bx lr
 ;
 ; CHECK-ARMV7-LABEL: fold_sub251_mul253_i16:
 ; CHECK-ARMV7:       @ %bb.0:
+; CHECK-ARMV7-NEXT:    sub r1, r0, r0, lsl #6
+; CHECK-ARMV7-NEXT:    sub r0, r0, r1, lsl #2
 ; CHECK-ARMV7-NEXT:    movw r1, #2033
-; CHECK-ARMV7-NEXT:    mov r2, #253
-; CHECK-ARMV7-NEXT:    mla r0, r0, r2, r1
+; CHECK-ARMV7-NEXT:    add r0, r0, r1
 ; CHECK-ARMV7-NEXT:    bx lr
 ;
 ; CHECK-THUMBV6M-LABEL: fold_sub251_mul253_i16:
@@ -350,8 +392,8 @@ define i16 @fold_sub251_mul253_i16(i16 %a) {
 ;
 ; CHECK-THUMBV7M-LABEL: fold_sub251_mul253_i16:
 ; CHECK-THUMBV7M:       @ %bb.0:
-; CHECK-THUMBV7M-NEXT:    movs r1, #253
-; CHECK-THUMBV7M-NEXT:    muls r0, r1, r0
+; CHECK-THUMBV7M-NEXT:    sub.w r1, r0, r0, lsl #6
+; CHECK-THUMBV7M-NEXT:    sub.w r0, r0, r1, lsl #2
 ; CHECK-THUMBV7M-NEXT:    addw r0, r0, #2033
 ; CHECK-THUMBV7M-NEXT:    bx lr
   %b = add i16 %a, -251
@@ -500,3 +542,5 @@ define i16 @fold_sub251_mul353_i16(i16 %a) {
   %c = mul i16 %b, 353
   ret i16 %c
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; CHECK-THUMB: {{.*}}

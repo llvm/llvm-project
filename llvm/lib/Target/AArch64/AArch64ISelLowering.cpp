@@ -20520,13 +20520,13 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
   };
 
   if (ConstValue.isNonNegative()) {
-    // (mul x, (2^N + 1) * 2^M) => (shl (add (shl x, N), x), M)
+    // (mul x, (2^N + 1) * 2^M) => (shl (add x, (shl x, N)), M)
     // (mul x, 2^N - 1) => (sub (shl x, N), x)
     // (mul x, (2^(N-M) - 1) * 2^M) => (sub (shl x, N), (shl x, M))
     // (mul x, (2^M + 1) * (2^N + 1))
-    //     => MV = (add (shl x, M), x); (add (shl MV, N), MV)
+    //     => MV = (add x, (shl x, M)); (add MV, (shl MV, N))
     // (mul x, (2^M + 1) * 2^N + 1))
-    //     =>  MV = add (shl x, M), x); add (shl MV, N), x)
+    //     =>  MV = (add x, (shl x, M)); (add x, (shl MV, N)))
     // (mul x, 1 - (1 - 2^M) * 2^N))
     //     =>  MV = sub (x - (shl x, M)); sub (x - (shl MV, N))
     APInt SCVMinus1 = ShiftedConstValue - 1;
@@ -20535,7 +20535,7 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
     APInt CVM, CVN;
     if (SCVMinus1.isPowerOf2()) {
       ShiftAmt = SCVMinus1.logBase2();
-      return Shl(Add(Shl(N0, ShiftAmt), N0), TrailingZeroes);
+      return Shl(Add(N0, Shl(N0, ShiftAmt)), TrailingZeroes);
     } else if (CVPlus1.isPowerOf2()) {
       ShiftAmt = CVPlus1.logBase2();
       return Sub(Shl(N0, ShiftAmt), N0);
@@ -20551,8 +20551,8 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
       unsigned ShiftN1 = CVNMinus1.logBase2();
       // ALULSLFast implicate that Shifts <= 4 places are fast
       if (ShiftM1 <= 4 && ShiftN1 <= 4) {
-        SDValue MVal = Add(Shl(N0, ShiftM1), N0);
-        return Add(Shl(MVal, ShiftN1), MVal);
+        SDValue MVal = Add(N0, Shl(N0, ShiftM1));
+        return Add(MVal, Shl(MVal, ShiftN1));
       }
     }
     if (Subtarget->hasALULSLFast() &&
@@ -20561,8 +20561,8 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
       unsigned ShiftN = CVN.getZExtValue();
       // ALULSLFast implicate that Shifts <= 4 places are fast
       if (ShiftM <= 4 && ShiftN <= 4) {
-        SDValue MVal = Add(Shl(N0, CVM.getZExtValue()), N0);
-        return Add(Shl(MVal, CVN.getZExtValue()), N0);
+        SDValue MVal = Add(N0, Shl(N0, CVM.getZExtValue()));
+        return Add(N0, Shl(MVal, CVN.getZExtValue()));
       }
     }
 
@@ -20578,7 +20578,7 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
     }
   } else {
     // (mul x, -(2^N - 1)) => (sub x, (shl x, N))
-    // (mul x, -(2^N + 1)) => - (add (shl x, N), x)
+    // (mul x, -(2^N + 1)) => - (add x, (shl x, N)))
     // (mul x, -(2^(N-M) - 1) * 2^M) => (sub (shl x, M), (shl x, N))
     APInt SCVPlus1 = -ShiftedConstValue + 1;
     APInt CVNegPlus1 = -ConstValue + 1;
@@ -20588,7 +20588,7 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
       return Sub(N0, Shl(N0, ShiftAmt));
     } else if (CVNegMinus1.isPowerOf2()) {
       ShiftAmt = CVNegMinus1.logBase2();
-      return Negate(Add(Shl(N0, ShiftAmt), N0));
+      return Negate(Add(N0, Shl(N0, ShiftAmt)));
     } else if (SCVPlus1.isPowerOf2()) {
       ShiftAmt = SCVPlus1.logBase2() + TrailingZeroes;
       return Sub(Shl(N0, TrailingZeroes), Shl(N0, ShiftAmt));

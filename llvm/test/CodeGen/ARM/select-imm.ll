@@ -698,16 +698,15 @@ define i1 @t11() {
 ; ARMT2-NEXT:    sub sp, sp, #4
 ; ARMT2-NEXT:    ldr r1, [sp]
 ; ARMT2-NEXT:    mov r0, #33
-; ARMT2-NEXT:    movw r2, #39322
-; ARMT2-NEXT:    movt r2, #6553
+; ARMT2-NEXT:    mov r12, #10
+; ARMT2-NEXT:    movw r3, #39322
 ; ARMT2-NEXT:    bfi r1, r0, #0, #12
-; ARMT2-NEXT:    mov r0, #10
-; ARMT2-NEXT:    bfi r1, r0, #12, #13
-; ARMT2-NEXT:    mov r0, r1
-; ARMT2-NEXT:    bfc r0, #12, #20
-; ARMT2-NEXT:    umull r2, r3, r0, r2
-; ARMT2-NEXT:    add r2, r3, r3, lsl #2
-; ARMT2-NEXT:    sub r0, r0, r2, lsl #1
+; ARMT2-NEXT:    movt r3, #6553
+; ARMT2-NEXT:    bfi r1, r12, #12, #13
+; ARMT2-NEXT:    mov r2, r1
+; ARMT2-NEXT:    bfc r2, #12, #20
+; ARMT2-NEXT:    umull r3, r0, r2, r3
+; ARMT2-NEXT:    mls r0, r0, r12, r2
 ; ARMT2-NEXT:    movw r2, #40960
 ; ARMT2-NEXT:    movt r2, #65024
 ; ARMT2-NEXT:    and r1, r1, r2
