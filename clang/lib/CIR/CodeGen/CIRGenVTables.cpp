@@ -900,10 +900,12 @@ cir::FuncOp CIRGenVTables::maybeEmitThunk(GlobalDecl gd,
     assert(oldThunkFn.isDeclaration() && "Shouldn't replace non-declaration");
 
     // Remove the name from the old thunk function and get a new thunk.
+    cgm.eraseGlobalSymbol(oldThunkFn);
     oldThunkFn.setName(StringRef());
     thunkFn =
         cir::FuncOp::create(cgm.getBuilder(), thunk->getLoc(), name.str(),
                             thunkFnTy, cir::GlobalLinkageKind::ExternalLinkage);
+    cgm.insertGlobalSymbol(thunkFn);
     cgm.setCIRFunctionAttributes(md, fnInfo, thunkFn, /*isThunk=*/false);
 
     if (!oldThunkFn->use_empty())

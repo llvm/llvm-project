@@ -2077,6 +2077,7 @@ CIRGenCallee CIRGenFunction::emitDirectCallee(const GlobalDecl &gd) {
 
         clone = cir::FuncOp::create(builder, calleeFunc.getLoc(), fdInlineName,
                                     calleeFunc.getFunctionType());
+        cgm.insertGlobalSymbol(clone);
         clone.setLinkageAttr(cir::GlobalLinkageKindAttr::get(
             &cgm.getMLIRContext(), cir::GlobalLinkageKind::InternalLinkage));
         clone.setSymVisibility("private");

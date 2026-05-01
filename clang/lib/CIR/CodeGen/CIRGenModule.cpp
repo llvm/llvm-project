@@ -380,8 +380,7 @@ void CIRGenModule::emitGlobalDecl(const clang::GlobalDecl &d) {
   // TODO: Not sure what to map this to for MLIR
   mlir::Operation *globalValueOp = op;
   if (auto gv = dyn_cast<cir::GetGlobalOp>(op)) {
-    globalValueOp =
-        mlir::SymbolTable::lookupSymbolIn(getModule(), gv.getNameAttr());
+    globalValueOp = getGlobalValue(gv.getName());
     assert(globalValueOp && "expected a valid global op");
   }
 
@@ -663,7 +662,8 @@ void CIRGenModule::handleCXXStaticMemberVarInstantiation(VarDecl *vd) {
 }
 
 mlir::Operation *CIRGenModule::getGlobalValue(StringRef name) {
-  return mlir::SymbolTable::lookupSymbolIn(theModule, name);
+  auto it = symbolLookupCache.find(name);
+  return it != symbolLookupCache.end() ? it->second : nullptr;
 }
 
 cir::GlobalOp
@@ -699,6 +699,7 @@ CIRGenModule::createGlobalOp(CIRGenModule &cgm, mlir::Location loc,
     mlir::SymbolTable::setSymbolVisibility(
         g, mlir::SymbolTable::Visibility::Private);
   }
+  cgm.symbolLookupCache[g.getSymNameAttr()] = g;
   return g;
 }
 
@@ -944,6 +945,7 @@ void CIRGenModule::replaceGlobal(cir::GlobalOp oldGV, cir::GlobalOp newGV) {
   // erased) operation, which would leave them detached from the module.
   if (lastGlobalOp == oldGV)
     lastGlobalOp = newGV;
+  eraseGlobalSymbol(oldGV);
   oldGV.erase();
 }
 
@@ -1598,6 +1600,7 @@ void CIRGenModule::applyReplacements() {
       llvm_unreachable("internal error, cannot RAUW symbol");
     if (newF) {
       newF->moveBefore(oldF);
+      eraseGlobalSymbol(oldF);
       oldF->erase();
     }
   }
@@ -1606,8 +1609,7 @@ void CIRGenModule::applyReplacements() {
 cir::GlobalOp CIRGenModule::createOrReplaceCXXRuntimeVariable(
     mlir::Location loc, StringRef name, mlir::Type ty,
     cir::GlobalLinkageKind linkage, clang::CharUnits alignment) {
-  auto gv = mlir::dyn_cast_or_null<cir::GlobalOp>(
-      mlir::SymbolTable::lookupSymbolIn(theModule, name));
+  auto gv = mlir::dyn_cast_or_null<cir::GlobalOp>(getGlobalValue(name));
 
   if (gv) {
     // Check if the variable has the right type.
@@ -1928,7 +1930,7 @@ std::string CIRGenModule::getUniqueGlobalName(const std::string &baseName) {
   std::string result =
       baseName + "." + std::to_string(cgGlobalNames[baseName]++);
   // There should not be any symbol with this name in the module.
-  assert(!mlir::SymbolTable::lookupSymbolIn(theModule, result));
+  assert(!getGlobalValue(result));
   return result;
 }
 
@@ -2954,6 +2956,7 @@ cir::FuncOp CIRGenModule::getOrCreateCIRFunction(
       replaceUsesOfNonProtoTypeWithRealFunction(entry, funcOp);
 
     // Obliterate no-proto declaration.
+    eraseGlobalSymbol(entry);
     entry->erase();
   }
 
@@ -3035,6 +3038,8 @@ CIRGenModule::createCIRFunction(mlir::Location loc, StringRef name,
       builder.setInsertionPoint(cgf->curFn);
 
     func = cir::FuncOp::create(builder, loc, name, funcType);
+
+    symbolLookupCache[func.getSymNameAttr()] = func;
 
     assert(!cir::MissingFeatures::opFuncAstDeclAttr());
 
@@ -3312,6 +3317,7 @@ void CIRGenModule::emitAliasForGlobal(StringRef mangledName,
     // function declaration.
     assert(cast<cir::FuncOp>(op).getFunctionType() == alias.getFunctionType() &&
            "declaration exists with different type");
+    eraseGlobalSymbol(op);
     op->erase();
   } else {
     // Name already set by createCIRFunction
@@ -3556,6 +3562,7 @@ CIRGenModule::getAddrOfGlobalTemporary(const MaterializeTemporaryExpr *mte,
   mlir::Operation *&entry = materializedGlobalTemporaryMap[mte];
   if (entry) {
     entry->replaceAllUsesWith(cv);
+    eraseGlobalSymbol(entry);
     entry->erase();
   }
   entry = cv;
