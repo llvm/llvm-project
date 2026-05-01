@@ -55,8 +55,7 @@ entry:
 define <4 x i32> @bitclri_v8i16_v4i32(<4 x i32> %a) nounwind {
 ; CHECK-LABEL: bitclri_v8i16_v4i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vrepli.h $vr1, -5
-; CHECK-NEXT:    vand.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vbitclri.h $vr0, $vr0, 2
 ; CHECK-NEXT:    ret
 entry:
     %0 = and <4 x i32> %a, splat (i32 -262149)
@@ -76,8 +75,7 @@ entry:
 define <2 x i64> @bitclri_v8i16_v2i64(<2 x i64> %a) nounwind {
 ; CHECK-LABEL: bitclri_v8i16_v2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vrepli.h $vr1, -5
-; CHECK-NEXT:    vand.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vbitclri.h $vr0, $vr0, 2
 ; CHECK-NEXT:    ret
 entry:
     %0 = and <2 x i64> %a, splat (i64 -1125917086973957)
@@ -87,8 +85,7 @@ entry:
 define <2 x i64> @bitclri_v4i32_v2i64(<2 x i64> %a) nounwind {
 ; CHECK-LABEL: bitclri_v4i32_v2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vrepli.w $vr1, -5
-; CHECK-NEXT:    vand.v $vr0, $vr0, $vr1
+; CHECK-NEXT:    vbitclri.w $vr0, $vr0, 2
 ; CHECK-NEXT:    ret
 entry:
     %0 = and <2 x i64> %a, splat (i64 -17179869189)

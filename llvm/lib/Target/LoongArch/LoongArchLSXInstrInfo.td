@@ -225,7 +225,15 @@ def vsplat_i8_uimm8 : ComplexPattern<vAny, 1, "selectVSplatImm<8, 8>",
 def vsplat_uimm_inv_pow2 : ComplexPattern<vAny, 1, "selectVSplatUimmInvPow2",
                                           [build_vector, bitconvert]>;
 
+foreach N = [8, 16, 32] in
+def vsplat_i#N#_inv_pow2 : ComplexPattern<vAny, 1, "selectVSplatUimmInvPow2<"#N#">",
+                                          [build_vector, bitconvert]>;
+
 def vsplat_uimm_pow2 : ComplexPattern<vAny, 1, "selectVSplatUimmPow2",
+                                      [build_vector, bitconvert]>;
+
+foreach N = [8, 16, 32] in
+def vsplat_i#N#_pow2 : ComplexPattern<vAny, 1, "selectVSplatUimmPow2<"#N#">",
                                       [build_vector, bitconvert]>;
 
 def muladd : PatFrag<(ops node:$vd, node:$vj, node:$vk),
@@ -1778,6 +1786,15 @@ def : Pat<(and (v4i32 LSX128:$vj), (v4i32 (vsplat_uimm_inv_pow2 uimm5:$imm))),
 def : Pat<(and (v2i64 LSX128:$vj), (v2i64 (vsplat_uimm_inv_pow2 uimm6:$imm))),
           (VBITCLRI_D LSX128:$vj, uimm6:$imm)>;
 
+foreach vt = [v8i16, v4i32, v2i64] in {
+  def : Pat<(and (vt LSX128:$vj), (vt (vsplat_i8_inv_pow2 grlenimm:$imm))),
+            (VBITCLRI_B LSX128:$vj, grlenimm:$imm)>;
+  def : Pat<(and (vt LSX128:$vj), (vt (vsplat_i16_inv_pow2 grlenimm:$imm))),
+            (VBITCLRI_H LSX128:$vj, grlenimm:$imm)>;
+  def : Pat<(and (vt LSX128:$vj), (vt (vsplat_i32_inv_pow2 grlenimm:$imm))),
+            (VBITCLRI_W LSX128:$vj, grlenimm:$imm)>;
+}
+
 // VBITSET_{B/H/W/D}
 def : Pat<(or v16i8:$vj, (shl vsplat_imm_eq_1, v16i8:$vk)),
           (v16i8 (VBITSET_B v16i8:$vj, v16i8:$vk))>;
@@ -1806,6 +1823,15 @@ def : Pat<(or (v4i32 LSX128:$vj), (v4i32 (vsplat_uimm_pow2 uimm5:$imm))),
 def : Pat<(or (v2i64 LSX128:$vj), (v2i64 (vsplat_uimm_pow2 uimm6:$imm))),
           (VBITSETI_D LSX128:$vj, uimm6:$imm)>;
 
+foreach vt = [v8i16, v4i32, v2i64] in {
+  def : Pat<(or (vt LSX128:$vj), (vt (vsplat_i8_pow2 grlenimm:$imm))),
+            (VBITSETI_B LSX128:$vj, grlenimm:$imm)>;
+  def : Pat<(or (vt LSX128:$vj), (vt (vsplat_i16_pow2 grlenimm:$imm))),
+            (VBITSETI_H LSX128:$vj, grlenimm:$imm)>;
+  def : Pat<(or (vt LSX128:$vj), (vt (vsplat_i32_pow2 grlenimm:$imm))),
+            (VBITSETI_W LSX128:$vj, grlenimm:$imm)>;
+}
+
 // VBITREV_{B/H/W/D}
 def : Pat<(xor v16i8:$vj, (shl vsplat_imm_eq_1, v16i8:$vk)),
           (v16i8 (VBITREV_B v16i8:$vj, v16i8:$vk))>;
@@ -1833,6 +1859,15 @@ def : Pat<(xor (v4i32 LSX128:$vj), (v4i32 (vsplat_uimm_pow2 uimm5:$imm))),
           (VBITREVI_W LSX128:$vj, uimm5:$imm)>;
 def : Pat<(xor (v2i64 LSX128:$vj), (v2i64 (vsplat_uimm_pow2 uimm6:$imm))),
           (VBITREVI_D LSX128:$vj, uimm6:$imm)>;
+
+foreach vt = [v8i16, v4i32, v2i64] in {
+  def : Pat<(xor (vt LSX128:$vj), (vt (vsplat_i8_pow2 grlenimm:$imm))),
+            (VBITREVI_B LSX128:$vj, grlenimm:$imm)>;
+  def : Pat<(xor (vt LSX128:$vj), (vt (vsplat_i16_pow2 grlenimm:$imm))),
+            (VBITREVI_H LSX128:$vj, grlenimm:$imm)>;
+  def : Pat<(xor (vt LSX128:$vj), (vt (vsplat_i32_pow2 grlenimm:$imm))),
+            (VBITREVI_W LSX128:$vj, grlenimm:$imm)>;
+}
 
 // Vector bswaps
 def : Pat<(bswap (v8i16 LSX128:$vj)), (VSHUF4I_B LSX128:$vj, 0b10110001)>;
