@@ -8,18 +8,9 @@
 
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
-#include "mlir/Dialect/XeGPU/Transforms/Passes.h"
+#include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Debug.h"
-
-namespace mlir {
-namespace xegpu {
-#define GEN_PASS_DEF_XEGPUARRAYLENGTHOPTIMIZATION
-#include "mlir/Dialect/XeGPU/Transforms/Passes.h.inc"
-} // namespace xegpu
-} // namespace mlir
 
 #define DEBUG_TYPE "xegpu-array-length-optimization"
 
@@ -220,33 +211,8 @@ public:
 
 } // namespace
 
-namespace mlir {
-namespace xegpu {
-
-void populateXeGPUArrayLengthOptimizationPatterns(RewritePatternSet &patterns) {
+void xegpu::populateXeGPUArrayLengthOptimizationPatterns(
+    RewritePatternSet &patterns) {
   patterns.add<OptimizeCreateNdDescOp, OptimizeLoadNdOp, OptimizePrefetchNdOp,
                UpdateExtractStridedSliceOp>(patterns.getContext());
 }
-
-} // namespace xegpu
-} // namespace mlir
-
-namespace {
-
-struct XeGPUArrayLengthOptimizationPass final
-    : public xegpu::impl::XeGPUArrayLengthOptimizationBase<
-          XeGPUArrayLengthOptimizationPass> {
-  void runOnOperation() override {
-    MLIRContext &context = getContext();
-    RewritePatternSet patterns(&context);
-
-    xegpu::populateXeGPUArrayLengthOptimizationPatterns(patterns);
-
-    if (failed(applyPatternsGreedily(getOperation(), std::move(patterns)))) {
-      LLVM_DEBUG(llvm::dbgs() << "Array length optimization pass failed.\n");
-      return signalPassFailure();
-    }
-  }
-};
-
-} // namespace

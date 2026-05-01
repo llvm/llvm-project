@@ -1,6 +1,6 @@
-// RUN: mlir-opt --xegpu-array-length-optimization --split-input-file %s | FileCheck %s
+// RUN: mlir-opt --test-xegpu-array-length-optimization --split-input-file %s | FileCheck %s
 
-
+gpu.module @test {
 // CHECK-LABEL: func.func @test_load_nd_with_extract_slice
 // CHECK-SAME:    (%[[ARG0:.*]]: memref<4096x4096xf16>)
 func.func @test_load_nd_with_extract_slice(%arg0: memref<4096x4096xf16>) -> vector<16x16xf16> {
@@ -23,9 +23,11 @@ func.func @test_load_nd_with_extract_slice(%arg0: memref<4096x4096xf16>) -> vect
 
   return %extract0 : vector<16x16xf16>
 }
+}
 
 // -----
 
+gpu.module @test {
 // CHECK-LABEL: func.func @test_load_nd_with_second_extract
 // CHECK-SAME:    (%[[ARG0:.*]]: memref<4096x4096xf16>)
 func.func @test_load_nd_with_second_extract(%arg0: memref<4096x4096xf16>) -> vector<16x16xf16> {
@@ -51,9 +53,11 @@ func.func @test_load_nd_with_second_extract(%arg0: memref<4096x4096xf16>) -> vec
 
   return %extract1 : vector<16x16xf16>
 }
+}
 
 // -----
 
+gpu.module @test {
 // CHECK-LABEL: func.func @test_prefetch_nd_32x32
 // CHECK-SAME:    (%[[ARG0:.*]]: memref<4096x4096xf16>)
 func.func @test_prefetch_nd_32x32(%arg0: memref<4096x4096xf16>) {
@@ -69,9 +73,11 @@ func.func @test_prefetch_nd_32x32(%arg0: memref<4096x4096xf16>) {
 
   return
 }
+}
 
 // -----
 
+gpu.module @test {
 // CHECK-LABEL: func.func @test_no_optimization_16x16
 // CHECK-SAME:    (%[[ARG0:.*]]: memref<4096x4096xf16>)
 func.func @test_no_optimization_16x16(%arg0: memref<4096x4096xf16>) -> vector<16x16xf16> {
@@ -88,10 +94,11 @@ func.func @test_no_optimization_16x16(%arg0: memref<4096x4096xf16>) -> vector<16
 
   return %load : vector<16x16xf16>
 }
-
+}
 
 // -----
 
+gpu.module @test {
 // CHECK-LABEL: func.func @test_multiple_extracts
 // CHECK-SAME:    (%[[ARG0:.*]]: memref<4096x4096xf16>)
 func.func @test_multiple_extracts(%arg0: memref<4096x4096xf16>) -> (vector<16x16xf16>, vector<16x16xf16>, vector<16x16xf16>, vector<16x16xf16>) {
@@ -131,4 +138,5 @@ func.func @test_multiple_extracts(%arg0: memref<4096x4096xf16>) -> (vector<16x16
   %e3 = vector.extract_strided_slice %load {offsets = [16, 16], sizes = [16, 16], strides = [1, 1]} : vector<32x32xf16> to vector<16x16xf16>
 
   return %e0, %e1, %e2, %e3 : vector<16x16xf16>, vector<16x16xf16>, vector<16x16xf16>, vector<16x16xf16>
+}
 }
