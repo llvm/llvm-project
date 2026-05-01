@@ -83,6 +83,7 @@ class X86TTIImpl final : public BasicTTIImplBase<X86TTIImpl> {
       X86::TuningSlowPMULLD,
       X86::TuningSlowSHLD,
       X86::TuningSlowTwoMemOps,
+      X86::TuningSlowIndirectCall,
       X86::TuningSlowUAMem16,
       X86::TuningPreferMaskRegisters,
       X86::TuningInsertVZEROUPPER,
