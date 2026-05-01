@@ -1094,12 +1094,10 @@ LogicalResult GlobalTransposeLoadOp::verify() {
   size_t elementTypeSize =
       resultType.getElementType().getIntOrFloatBitWidth();
 
-  // ElementSize -> NumElements (matches global_load_tr* ISA variants)
+  // ElementSize -> NumElements (matches ISA-documented global_load_tr variants)
   const llvm::SmallDenseMap<size_t, size_t> kValidLoadSizeMap = {
-      {4, 16},  // global_load_tr4_b64
-      {6, 16},  // global_load_tr6_b96
-      {8, 8},   // global_load_tr8_b64
-      {16, 8},  // global_load_tr.b128
+      {8, 8},   // global_load_tr_b64
+      {16, 8},  // global_load_tr_b128
   };
 
   auto validNumElems = kValidLoadSizeMap.find(elementTypeSize);

@@ -2265,20 +2265,6 @@ struct GlobalTransposeLoadOpLowering
     Type llvmResultType = typeConverter->convertType(resultType);
 
     switch (elementTypeSize) {
-    case 4: {
-      assert(numElements == 16);
-      auto rocdlOp = ROCDL::GlobalLoadTr4_B64::create(rewriter, loc,
-                                                      rocdlResultType, srcPtr);
-      rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(op, llvmResultType, rocdlOp);
-      break;
-    }
-    case 6: {
-      assert(numElements == 16);
-      auto rocdlOp = ROCDL::GlobalLoadTr6_B96::create(rewriter, loc,
-                                                      rocdlResultType, srcPtr);
-      rewriter.replaceOpWithNewOp<LLVM::BitcastOp>(op, llvmResultType, rocdlOp);
-      break;
-    }
     case 8: {
       assert(numElements == 8);
       auto rocdlOp = ROCDL::GlobalLoadTr8_B64::create(rewriter, loc,

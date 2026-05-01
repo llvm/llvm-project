@@ -1477,10 +1477,8 @@ def AMDGPU_GlobalTransposeLoadOp :
     * `$result`: register this transpose load instruction writes to.
 
     Valid (element bits, num elements) pairs:
-    * (4, 16)  -> global_load_tr4_b64
-    * (6, 16)  -> global_load_tr6_b96
-    * (8, 8)   -> global_load_tr8_b64
-    * (16, 8)  -> global_load_tr.b128
+    * (8, 8)   -> global_load_tr_b64
+    * (16, 8)  -> global_load_tr_b128
 
     Note: Lowering is only supported on gfx1250 and up.
   }];
