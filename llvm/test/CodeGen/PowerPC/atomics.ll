@@ -30,16 +30,16 @@ define i32 @load_i32_acquire(ptr %mem) {
 ; PPC32-LABEL: load_i32_acquire:
 ; PPC32:       # %bb.0:
 ; PPC32-NEXT:    lwz r3, 0(r3)
-; PPC32-NEXT:    cmpw cr7, r3, r3
-; PPC32-NEXT:    bne- cr7, .+4
+; PPC32-NEXT:    cmpw r3, r3
+; PPC32-NEXT:    bne- cr0, .+4
 ; PPC32-NEXT:    isync
 ; PPC32-NEXT:    blr
 ;
 ; PPC64-LABEL: load_i32_acquire:
 ; PPC64:       # %bb.0:
 ; PPC64-NEXT:    lwz r3, 0(r3)
-; PPC64-NEXT:    cmpd cr7, r3, r3
-; PPC64-NEXT:    bne- cr7, .+4
+; PPC64-NEXT:    cmpd r3, r3
+; PPC64-NEXT:    bne- cr0, .+4
 ; PPC64-NEXT:    isync
 ; PPC64-NEXT:    blr
   %val = load atomic i32, ptr %mem acquire, align 4
@@ -68,8 +68,8 @@ define i64 @load_i64_seq_cst(ptr %mem) {
 ; PPC64:       # %bb.0:
 ; PPC64-NEXT:    sync
 ; PPC64-NEXT:    ld r3, 0(r3)
-; PPC64-NEXT:    cmpd cr7, r3, r3
-; PPC64-NEXT:    bne- cr7, .+4
+; PPC64-NEXT:    cmpd r3, r3
+; PPC64-NEXT:    bne- cr0, .+4
 ; PPC64-NEXT:    isync
 ; PPC64-NEXT:    blr
   %val = load atomic i64, ptr %mem seq_cst, align 8
@@ -484,8 +484,8 @@ define half @load_atomic_f16__seq_cst(ptr %ptr) {
 ; PPC32:       # %bb.0:
 ; PPC32-NEXT:    sync
 ; PPC32-NEXT:    lhz r3, 0(r3)
-; PPC32-NEXT:    cmpw cr7, r3, r3
-; PPC32-NEXT:    bne- cr7, .+4
+; PPC32-NEXT:    cmpw r3, r3
+; PPC32-NEXT:    bne- cr0, .+4
 ; PPC32-NEXT:    isync
 ; PPC32-NEXT:    blr
 ;
@@ -493,8 +493,8 @@ define half @load_atomic_f16__seq_cst(ptr %ptr) {
 ; PPC64:       # %bb.0:
 ; PPC64-NEXT:    sync
 ; PPC64-NEXT:    lhz r3, 0(r3)
-; PPC64-NEXT:    cmpd cr7, r3, r3
-; PPC64-NEXT:    bne- cr7, .+4
+; PPC64-NEXT:    cmpd r3, r3
+; PPC64-NEXT:    bne- cr0, .+4
 ; PPC64-NEXT:    isync
 ; PPC64-NEXT:    blr
   %val = load atomic half, ptr %ptr seq_cst, align 2
@@ -514,8 +514,8 @@ define float @load_atomic_f32__seq_cst(ptr %ptr) {
 ; PPC32-NEXT:    .cfi_def_cfa_offset 16
 ; PPC32-NEXT:    sync
 ; PPC32-NEXT:    lwz r3, 0(r3)
-; PPC32-NEXT:    cmpw cr7, r3, r3
-; PPC32-NEXT:    bne- cr7, .+4
+; PPC32-NEXT:    cmpw r3, r3
+; PPC32-NEXT:    bne- cr0, .+4
 ; PPC32-NEXT:    isync
 ; PPC32-NEXT:    stw r3, 12(r1)
 ; PPC32-NEXT:    lfs f1, 12(r1)
@@ -526,8 +526,8 @@ define float @load_atomic_f32__seq_cst(ptr %ptr) {
 ; PPC64:       # %bb.0:
 ; PPC64-NEXT:    sync
 ; PPC64-NEXT:    lwz r3, 0(r3)
-; PPC64-NEXT:    cmpd cr7, r3, r3
-; PPC64-NEXT:    bne- cr7, .+4
+; PPC64-NEXT:    cmpd r3, r3
+; PPC64-NEXT:    bne- cr0, .+4
 ; PPC64-NEXT:    isync
 ; PPC64-NEXT:    stw r3, -4(r1)
 ; PPC64-NEXT:    lfs f1, -4(r1)
@@ -558,8 +558,8 @@ define double @load_atomic_f64__seq_cst(ptr %ptr) {
 ; PPC64:       # %bb.0:
 ; PPC64-NEXT:    sync
 ; PPC64-NEXT:    ld r3, 0(r3)
-; PPC64-NEXT:    cmpd cr7, r3, r3
-; PPC64-NEXT:    bne- cr7, .+4
+; PPC64-NEXT:    cmpd r3, r3
+; PPC64-NEXT:    bne- cr0, .+4
 ; PPC64-NEXT:    isync
 ; PPC64-NEXT:    std r3, -8(r1)
 ; PPC64-NEXT:    lfd f1, -8(r1)

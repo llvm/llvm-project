@@ -6,16 +6,16 @@ define ptr @foo(ptr %p) {
 ; CHECK-LE-LABEL: foo:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    ld 3, 0(3)
-; CHECK-LE-NEXT:    cmpd 7, 3, 3
-; CHECK-LE-NEXT:    bne- 7, .+4
+; CHECK-LE-NEXT:    cmpd 3, 3
+; CHECK-LE-NEXT:    bne- 0, .+4
 ; CHECK-LE-NEXT:    isync
 ; CHECK-LE-NEXT:    blr
 ;
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    ld 3, 0(3)
-; CHECK-NEXT:    cmpd 7, 3, 3
-; CHECK-NEXT:    bne- 7, .+4
+; CHECK-NEXT:    cmpd 3, 3
+; CHECK-NEXT:    bne- 0, .+4
 ; CHECK-NEXT:    isync
 ; CHECK-NEXT:    blr
 entry:
@@ -27,15 +27,15 @@ define void @foobar(ptr addrspace(11) %p) {
 ; CHECK-LE-LABEL: foobar:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    ld 3, 0(3)
-; CHECK-LE-NEXT:    cmpd 7, 3, 3
-; CHECK-LE-NEXT:    bne- 7, .+4
+; CHECK-LE-NEXT:    cmpd 3, 3
+; CHECK-LE-NEXT:    bne- 0, .+4
 ; CHECK-LE-NEXT:    isync
 ;
 ; CHECK-LABEL: foobar:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    ld 3, 0(3)
-; CHECK-NEXT:    cmpd 7, 3, 3
-; CHECK-NEXT:    bne- 7, .+4
+; CHECK-NEXT:    cmpd 3, 3
+; CHECK-NEXT:    bne- 0, .+4
 ; CHECK-NEXT:    isync
 entry:
   %0 = load atomic ptr addrspace(10), ptr addrspace(11) %p acquire, align 8

@@ -23,8 +23,8 @@ define i8 @test2(ptr %ptr) {
 ; PPC64LE-LABEL: test2:
 ; PPC64LE:       # %bb.0:
 ; PPC64LE-NEXT:    lbz 3, 0(3)
-; PPC64LE-NEXT:    cmpd 7, 3, 3
-; PPC64LE-NEXT:    bne- 7, .+4
+; PPC64LE-NEXT:    cmpd 3, 3
+; PPC64LE-NEXT:    bne- 0, .+4
 ; PPC64LE-NEXT:    isync
 ; PPC64LE-NEXT:    blr
   %val = load atomic i8, ptr %ptr acquire, align 1
@@ -36,8 +36,8 @@ define i8 @test3(ptr %ptr) {
 ; PPC64LE:       # %bb.0:
 ; PPC64LE-NEXT:    sync
 ; PPC64LE-NEXT:    lbz 3, 0(3)
-; PPC64LE-NEXT:    cmpd 7, 3, 3
-; PPC64LE-NEXT:    bne- 7, .+4
+; PPC64LE-NEXT:    cmpd 3, 3
+; PPC64LE-NEXT:    bne- 0, .+4
 ; PPC64LE-NEXT:    isync
 ; PPC64LE-NEXT:    blr
   %val = load atomic i8, ptr %ptr seq_cst, align 1
@@ -66,8 +66,8 @@ define i16 @test6(ptr %ptr) {
 ; PPC64LE-LABEL: test6:
 ; PPC64LE:       # %bb.0:
 ; PPC64LE-NEXT:    lhz 3, 0(3)
-; PPC64LE-NEXT:    cmpd 7, 3, 3
-; PPC64LE-NEXT:    bne- 7, .+4
+; PPC64LE-NEXT:    cmpd 3, 3
+; PPC64LE-NEXT:    bne- 0, .+4
 ; PPC64LE-NEXT:    isync
 ; PPC64LE-NEXT:    blr
   %val = load atomic i16, ptr %ptr acquire, align 2
@@ -79,8 +79,8 @@ define i16 @test7(ptr %ptr) {
 ; PPC64LE:       # %bb.0:
 ; PPC64LE-NEXT:    sync
 ; PPC64LE-NEXT:    lhz 3, 0(3)
-; PPC64LE-NEXT:    cmpd 7, 3, 3
-; PPC64LE-NEXT:    bne- 7, .+4
+; PPC64LE-NEXT:    cmpd 3, 3
+; PPC64LE-NEXT:    bne- 0, .+4
 ; PPC64LE-NEXT:    isync
 ; PPC64LE-NEXT:    blr
   %val = load atomic i16, ptr %ptr seq_cst, align 2
@@ -109,8 +109,8 @@ define i32 @test10(ptr %ptr) {
 ; PPC64LE-LABEL: test10:
 ; PPC64LE:       # %bb.0:
 ; PPC64LE-NEXT:    lwz 3, 0(3)
-; PPC64LE-NEXT:    cmpd 7, 3, 3
-; PPC64LE-NEXT:    bne- 7, .+4
+; PPC64LE-NEXT:    cmpd 3, 3
+; PPC64LE-NEXT:    bne- 0, .+4
 ; PPC64LE-NEXT:    isync
 ; PPC64LE-NEXT:    blr
   %val = load atomic i32, ptr %ptr acquire, align 4
@@ -122,8 +122,8 @@ define i32 @test11(ptr %ptr) {
 ; PPC64LE:       # %bb.0:
 ; PPC64LE-NEXT:    sync
 ; PPC64LE-NEXT:    lwz 3, 0(3)
-; PPC64LE-NEXT:    cmpd 7, 3, 3
-; PPC64LE-NEXT:    bne- 7, .+4
+; PPC64LE-NEXT:    cmpd 3, 3
+; PPC64LE-NEXT:    bne- 0, .+4
 ; PPC64LE-NEXT:    isync
 ; PPC64LE-NEXT:    blr
   %val = load atomic i32, ptr %ptr seq_cst, align 4
@@ -152,8 +152,8 @@ define i64 @test14(ptr %ptr) {
 ; PPC64LE-LABEL: test14:
 ; PPC64LE:       # %bb.0:
 ; PPC64LE-NEXT:    ld 3, 0(3)
-; PPC64LE-NEXT:    cmpd 7, 3, 3
-; PPC64LE-NEXT:    bne- 7, .+4
+; PPC64LE-NEXT:    cmpd 3, 3
+; PPC64LE-NEXT:    bne- 0, .+4
 ; PPC64LE-NEXT:    isync
 ; PPC64LE-NEXT:    blr
   %val = load atomic i64, ptr %ptr acquire, align 8
@@ -165,8 +165,8 @@ define i64 @test15(ptr %ptr) {
 ; PPC64LE:       # %bb.0:
 ; PPC64LE-NEXT:    sync
 ; PPC64LE-NEXT:    ld 3, 0(3)
-; PPC64LE-NEXT:    cmpd 7, 3, 3
-; PPC64LE-NEXT:    bne- 7, .+4
+; PPC64LE-NEXT:    cmpd 3, 3
+; PPC64LE-NEXT:    bne- 0, .+4
 ; PPC64LE-NEXT:    isync
 ; PPC64LE-NEXT:    blr
   %val = load atomic i64, ptr %ptr seq_cst, align 8
@@ -9794,8 +9794,8 @@ define i32 @test_ordering0(ptr %ptr1, ptr %ptr2) {
 ; PPC64LE-LABEL: test_ordering0:
 ; PPC64LE:       # %bb.0:
 ; PPC64LE-NEXT:    lwz 4, 0(3)
-; PPC64LE-NEXT:    cmpd 7, 4, 4
-; PPC64LE-NEXT:    bne- 7, .+4
+; PPC64LE-NEXT:    cmpd 4, 4
+; PPC64LE-NEXT:    bne- 0, .+4
 ; PPC64LE-NEXT:    isync
 ; PPC64LE-NEXT:    lwz 3, 0(3)
 ; PPC64LE-NEXT:    add 3, 4, 3
@@ -9811,8 +9811,8 @@ define i32 @test_ordering1(ptr %ptr1, i32 %val1, ptr %ptr2) {
 ; PPC64LE-LABEL: test_ordering1:
 ; PPC64LE:       # %bb.0:
 ; PPC64LE-NEXT:    lwz 3, 0(3)
-; PPC64LE-NEXT:    cmpd 7, 3, 3
-; PPC64LE-NEXT:    bne- 7, .+4
+; PPC64LE-NEXT:    cmpd 3, 3
+; PPC64LE-NEXT:    bne- 0, .+4
 ; PPC64LE-NEXT:    isync
 ; PPC64LE-NEXT:    stw 4, 0(5)
 ; PPC64LE-NEXT:    blr
