@@ -510,15 +510,34 @@ TYPE_PARSER(construct<ProcedureDesignator>(Parser<ProcComponentRef>{}) ||
 TYPE_PARSER(construct<ActualArgSpec>(
     maybe(keyword / "=" / !"="_ch), Parser<ActualArg>{}))
 
+// F2023 R1527 consequent -> consequent-arg | .NIL.
+// F2023 R1528 consequent-arg -> expr | variable
+// N.B. "variable" is subsumed by "expr" in the parser;
+// semantics determines the distinction.
+constexpr auto consequent{construct<ConditionalArg::Consequent>(
+                              ".NIL." >> construct<ConditionalArgNil>()) ||
+    construct<ConditionalArg::Consequent>(indirect(expr))};
+
+// F2023 R1526 conditional-arg ->
+//   scalar-logical-expr ? consequent : conditional-arg-or-consequent
+// The outer parentheses are added at the ActualArg level.
+TYPE_PARSER(construct<ConditionalArg>(scalarLogicalExpr / "?", consequent / ":",
+    indirect(Parser<ConditionalArgTail>{})))
+
+// conditional-arg-part-or-consequent -> conditional-arg | consequent
+TYPE_PARSER(construct<ConditionalArgTail>(Parser<ConditionalArg>{}) ||
+    construct<ConditionalArgTail>(consequent))
+
 // R1524 actual-arg ->
 //         expr | variable | procedure-name | proc-component-ref |
-//         alt-return-spec
+//         alt-return-spec | conditional-arg
 // N.B. the "procedure-name" and "proc-component-ref" alternatives can't
 // yet be distinguished from "variable", many instances of which can't be
 // distinguished from "expr" anyway (to do so would misparse structure
 // constructors and function calls as array elements).
 // Semantics sorts it all out later.
-TYPE_PARSER(construct<ActualArg>(expr) ||
+TYPE_PARSER(construct<ActualArg>(parenthesized(Parser<ConditionalArg>{})) ||
+    construct<ActualArg>(expr) ||
     construct<ActualArg>(Parser<AltReturnSpec>{}) ||
     extension<LanguageFeature::PercentRefAndVal>(
         "nonstandard usage: %REF"_port_en_US,

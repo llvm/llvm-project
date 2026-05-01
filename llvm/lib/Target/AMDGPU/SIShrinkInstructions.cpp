@@ -48,8 +48,8 @@ class SIShrinkInstructions {
   bool shrinkMadFma(MachineInstr &MI) const;
   ChangeKind shrinkScalarLogicOp(MachineInstr &MI) const;
   bool tryReplaceDeadSDST(MachineInstr &MI) const;
-  bool instAccessReg(iterator_range<MachineInstr::const_mop_iterator> &&R,
-                     Register Reg, unsigned SubReg) const;
+  bool instAccessReg(MachineInstr::filtered_const_mop_range &&R, Register Reg,
+                     unsigned SubReg) const;
   bool instReadsReg(const MachineInstr *MI, unsigned Reg,
                     unsigned SubReg) const;
   bool instModifiesReg(const MachineInstr *MI, unsigned Reg,
@@ -620,12 +620,9 @@ ChangeKind SIShrinkInstructions::shrinkScalarLogicOp(MachineInstr &MI) const {
 // This is the same as MachineInstr::readsRegister/modifiesRegister except
 // it takes subregs into account.
 bool SIShrinkInstructions::instAccessReg(
-    iterator_range<MachineInstr::const_mop_iterator> &&R, Register Reg,
+    MachineInstr::filtered_const_mop_range &&R, Register Reg,
     unsigned SubReg) const {
   for (const MachineOperand &MO : R) {
-    if (!MO.isReg())
-      continue;
-
     if (Reg.isPhysical() && MO.getReg().isPhysical()) {
       if (TRI->regsOverlap(Reg, MO.getReg()))
         return true;
@@ -641,12 +638,12 @@ bool SIShrinkInstructions::instAccessReg(
 
 bool SIShrinkInstructions::instReadsReg(const MachineInstr *MI, unsigned Reg,
                                         unsigned SubReg) const {
-  return instAccessReg(MI->uses(), Reg, SubReg);
+  return instAccessReg(MI->all_uses(), Reg, SubReg);
 }
 
 bool SIShrinkInstructions::instModifiesReg(const MachineInstr *MI, unsigned Reg,
                                            unsigned SubReg) const {
-  return instAccessReg(MI->defs(), Reg, SubReg);
+  return instAccessReg(MI->all_defs(), Reg, SubReg);
 }
 
 TargetInstrInfo::RegSubRegPair
@@ -711,6 +708,8 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
     return nullptr;
   Register X = Xop.getReg();
   unsigned Xsub = Xop.getSubReg();
+  Register Y;
+  unsigned Ysub;
 
   unsigned Size = TII->getOpSize(MovT, 0);
 
@@ -724,73 +723,82 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
 
   const unsigned SearchLimit = 16;
   unsigned Count = 0;
-  bool KilledT = false;
+
+  MachineInstr *MovX = nullptr;
+  MachineInstr *InsertionPt = nullptr;
+  MachineInstr *MovY = nullptr;
+
   for (auto Iter = std::next(MovT.getIterator()),
             E = MovT.getParent()->instr_end();
-       Iter != E && Count < SearchLimit && !KilledT; ++Iter) {
-
-    MachineInstr *MovY = &*Iter;
-    KilledT = MovY->killsRegister(T, TRI);
-    if (MovY->isDebugInstr())
+       Iter != E && Count < SearchLimit; ++Iter) {
+    if (Iter->isDebugInstr())
       continue;
     ++Count;
 
-    if ((MovY->getOpcode() != AMDGPU::V_MOV_B32_e32 &&
-         MovY->getOpcode() != AMDGPU::V_MOV_B16_t16_e32 &&
-         MovY->getOpcode() != AMDGPU::COPY) ||
-        !MovY->getOperand(1).isReg() || MovY->getOperand(1).getReg() != T ||
-        MovY->getOperand(1).getSubReg() != Tsub)
-      continue;
-
-    Register Y = MovY->getOperand(0).getReg();
-    unsigned Ysub = MovY->getOperand(0).getSubReg();
-
-    if (!TRI->isVGPR(*MRI, Y))
-      continue;
-
-    MachineInstr *MovX = nullptr;
-    for (auto IY = MovY->getIterator(), I = std::next(MovT.getIterator());
-         I != IY; ++I) {
-      if (I->isDebugInstr())
-        continue;
-      if (instReadsReg(&*I, X, Xsub) || instModifiesReg(&*I, Y, Ysub) ||
-          instModifiesReg(&*I, T, Tsub) ||
-          (MovX && instModifiesReg(&*I, X, Xsub))) {
-        MovX = nullptr;
-        break;
+    if (!MovX) {
+      // Search for mov x, y.
+      if ((Iter->getOpcode() == AMDGPU::V_MOV_B32_e32 ||
+           Iter->getOpcode() == AMDGPU::V_MOV_B16_t16_e32 ||
+           Iter->getOpcode() == AMDGPU::COPY) &&
+          Iter->getOperand(0).getReg() == X &&
+          Iter->getOperand(0).getSubReg() == Xsub &&
+          Iter->getOperand(1).isReg()) {
+        MovX = &*Iter;
+        Y = MovX->getOperand(1).getReg();
+        Ysub = MovX->getOperand(1).getSubReg();
+      } else if (instModifiesReg(&*Iter, X, Xsub)) {
+        // Writes to x are not allowed until mov x, y has been found
+        return nullptr;
       }
-      if (!instReadsReg(&*I, Y, Ysub)) {
-        if (!MovX && instModifiesReg(&*I, X, Xsub)) {
-          MovX = nullptr;
-          break;
-        }
-        continue;
-      }
-      if (MovX ||
-          (I->getOpcode() != AMDGPU::V_MOV_B32_e32 &&
-           I->getOpcode() != AMDGPU::V_MOV_B16_t16_e32 &&
-           I->getOpcode() != AMDGPU::COPY) ||
-          I->getOperand(0).getReg() != X ||
-          I->getOperand(0).getSubReg() != Xsub) {
-        MovX = nullptr;
+    } else {
+      // mov x, y has been found.
+      // Search for mov y, t.
+      if ((Iter->getOpcode() == AMDGPU::V_MOV_B32_e32 ||
+           Iter->getOpcode() == AMDGPU::V_MOV_B16_t16_e32 ||
+           Iter->getOpcode() == AMDGPU::COPY) &&
+          Iter->getOperand(0).getReg() == Y &&
+          Iter->getOperand(0).getSubReg() == Ysub &&
+          Iter->getOperand(1).isReg() && Iter->getOperand(1).getReg() == T &&
+          Iter->getOperand(1).getSubReg() == Tsub) {
+        MovY = &*Iter;
         break;
       }
 
-      if (Size > 4 && (I->getNumImplicitOperands() > (I->isCopy() ? 0U : 1U)))
-        continue;
+      // Effectively, mov x, y must be moved downward
+      // and mov y, t must be moved upward so that they can be fused into a
+      // swap. A write to y creates a barrier that prevents the two moves from
+      // being moved adjacent to each other.
+      if (instModifiesReg(&*Iter, Y, Ysub))
+        return nullptr;
 
-      MovX = &*I;
+      // Reads or writes to x prevent mov x, y from being moved farther
+      // downward. Select this to be the insertion point.
+      if (!InsertionPt &&
+          (instReadsReg(&*Iter, X, Xsub) || instModifiesReg(&*Iter, X, Xsub))) {
+        InsertionPt = &*Iter;
+      }
+      // If the insertion point has been found, then mov y, t must be moved
+      // upward past all subsequent instructions.  A read of y will block this
+      // movement.
+      if (InsertionPt) {
+        if (instReadsReg(&*Iter, Y, Ysub))
+          return nullptr;
+      }
     }
 
-    if (!MovX)
-      continue;
-
+    if (instModifiesReg(&*Iter, T, Tsub))
+      return nullptr;
+  }
+  if (MovY) {
     LLVM_DEBUG(dbgs() << "Matched v_swap:\n" << MovT << *MovX << *MovY);
 
     MachineBasicBlock &MBB = *MovT.getParent();
     SmallVector<MachineInstr *, 4> Swaps;
+
+    if (!InsertionPt)
+      InsertionPt = MovY;
     if (Size == 2) {
-      auto *MIB = BuildMI(MBB, MovX->getIterator(), MovT.getDebugLoc(),
+      auto *MIB = BuildMI(MBB, InsertionPt->getIterator(), MovT.getDebugLoc(),
                           TII->get(AMDGPU::V_SWAP_B16))
                       .addDef(X)
                       .addDef(Y)
@@ -804,7 +812,7 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
         TargetInstrInfo::RegSubRegPair X1, Y1;
         X1 = getSubRegForIndex(X, Xsub, I);
         Y1 = getSubRegForIndex(Y, Ysub, I);
-        auto *MIB = BuildMI(MBB, MovX->getIterator(), MovT.getDebugLoc(),
+        auto *MIB = BuildMI(MBB, InsertionPt->getIterator(), MovT.getDebugLoc(),
                             TII->get(AMDGPU::V_SWAP_B32))
                         .addDef(X1.Reg, {}, X1.SubReg)
                         .addDef(Y1.Reg, {}, Y1.SubReg)
@@ -839,7 +847,6 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
 
     return Next;
   }
-
   return nullptr;
 }
 

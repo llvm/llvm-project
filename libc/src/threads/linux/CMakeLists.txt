@@ -21,6 +21,7 @@ add_entrypoint_object(
     ../cnd_init.h
   DEPENDS
     libc.include.threads
+    libc.src.__support.CPP.new
     libc.src.__support.threads.CndVar
 )
 

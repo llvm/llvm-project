@@ -2376,6 +2376,24 @@ void testExplicitThreadPools(void) {
   mlirLlvmThreadPoolDestroy(threadPool);
 }
 
+void testLocation(void) {
+  MlirContext ctx = mlirContextCreate();
+  fprintf(stderr, "@test_location\n");
+
+  MlirLocation unknownLoc = mlirLocationUnknownGet(ctx);
+  MlirLocation fileLoc = mlirLocationFileLineColGet(
+      ctx, mlirStringRefCreateFromCString("foo.c"), 1, 2);
+
+  // CHECK-LABEL: @test_location
+  // CHECK: unknown is_a_unknown: 1
+  fprintf(stderr, "unknown is_a_unknown: %d\n",
+          mlirLocationIsAUnknown(unknownLoc));
+  // CHECK: file is_a_unknown: 0
+  fprintf(stderr, "file is_a_unknown: %d\n", mlirLocationIsAUnknown(fileLoc));
+
+  mlirContextDestroy(ctx);
+}
+
 void testDiagnostics(void) {
   MlirContext ctx = mlirContextCreate();
   MlirDiagnosticHandlerID id = mlirContextAttachDiagnosticHandler(
@@ -2469,29 +2487,29 @@ int testBlockPredecessorsSuccessors(MlirContext ctx) {
 #define FPRINTF_OP(OP, FMT) fprintf(stderr, #OP ": " FMT "\n", OP)
 
   // CHECK: mlirBlockGetNumPredecessors(entryBlock): 0
-  FPRINTF_OP(mlirBlockGetNumPredecessors(entryBlock), "%ld");
+  FPRINTF_OP(mlirBlockGetNumPredecessors(entryBlock), "%" PRIdPTR);
 
   // CHECK: mlirBlockGetNumSuccessors(entryBlock): 1
-  FPRINTF_OP(mlirBlockGetNumSuccessors(entryBlock), "%ld");
+  FPRINTF_OP(mlirBlockGetNumSuccessors(entryBlock), "%" PRIdPTR);
   // CHECK: mlirBlockEqual(middleBlock, mlirBlockGetSuccessor(entryBlock, 0)): 1
   FPRINTF_OP(mlirBlockEqual(middleBlock, mlirBlockGetSuccessor(entryBlock, 0)),
              "%d");
   // CHECK: mlirBlockGetNumPredecessors(middleBlock): 1
-  FPRINTF_OP(mlirBlockGetNumPredecessors(middleBlock), "%ld");
+  FPRINTF_OP(mlirBlockGetNumPredecessors(middleBlock), "%" PRIdPTR);
   // CHECK: mlirBlockEqual(entryBlock, mlirBlockGetPredecessor(middleBlock, 0))
   FPRINTF_OP(
       mlirBlockEqual(entryBlock, mlirBlockGetPredecessor(middleBlock, 0)),
       "%d");
 
   // CHECK: mlirBlockGetNumSuccessors(middleBlock): 1
-  FPRINTF_OP(mlirBlockGetNumSuccessors(middleBlock), "%ld");
+  FPRINTF_OP(mlirBlockGetNumSuccessors(middleBlock), "%" PRIdPTR);
   // CHECK: BlockEqual(successorBlock, mlirBlockGetSuccessor(middleBlock, 0)): 1
   fprintf(
       stderr,
       "BlockEqual(successorBlock, mlirBlockGetSuccessor(middleBlock, 0)): %d\n",
       mlirBlockEqual(successorBlock, mlirBlockGetSuccessor(middleBlock, 0)));
   // CHECK: mlirBlockGetNumPredecessors(successorBlock): 1
-  FPRINTF_OP(mlirBlockGetNumPredecessors(successorBlock), "%ld");
+  FPRINTF_OP(mlirBlockGetNumPredecessors(successorBlock), "%" PRIdPTR);
   // CHECK: Equal(middleBlock, mlirBlockGetPredecessor(successorBlock, 0)): 1
   fprintf(
       stderr,
@@ -2499,7 +2517,7 @@ int testBlockPredecessorsSuccessors(MlirContext ctx) {
       mlirBlockEqual(middleBlock, mlirBlockGetPredecessor(successorBlock, 0)));
 
   // CHECK: mlirBlockGetNumSuccessors(successorBlock): 0
-  FPRINTF_OP(mlirBlockGetNumSuccessors(successorBlock), "%ld");
+  FPRINTF_OP(mlirBlockGetNumSuccessors(successorBlock), "%" PRIdPTR);
 
 #undef FPRINTF_OP
 
@@ -2552,6 +2570,7 @@ int main(void) {
     return 16;
 
   testExplicitThreadPools();
+  testLocation();
   testDiagnostics();
 
   if (testBlockPredecessorsSuccessors(ctx))

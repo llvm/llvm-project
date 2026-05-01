@@ -5,10 +5,11 @@
 !s32i_bitint = !cir.int<s, 32, bitint>
 !u64i_bitint = !cir.int<u, 64, bitint>
 !s128i_bitint = !cir.int<s, 128, bitint>
+!s1024i_bitint = !cir.int<s, 1024, bitint>
 
 module {
-  // CHECK: cir.func @round_trip_bitint(%arg0: !s32i_bitint, %arg1: !u64i_bitint, %arg2: !s128i_bitint)
-  cir.func @round_trip_bitint(%arg0: !s32i_bitint, %arg1: !u64i_bitint, %arg2: !s128i_bitint) {
+  // CHECK: cir.func @round_trip_bitint(%arg0: !s32i_bitint, %arg1: !u64i_bitint, %arg2: !s128i_bitint, %arg3: !s1024i_bitint)
+  cir.func @round_trip_bitint(%arg0: !s32i_bitint, %arg1: !u64i_bitint, %arg2: !s128i_bitint, %arg3: !s1024i_bitint) {
     cir.return
   }
 

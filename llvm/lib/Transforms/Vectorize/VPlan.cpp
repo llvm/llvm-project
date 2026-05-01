@@ -31,6 +31,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/IRBuilder.h"
@@ -92,7 +93,7 @@ Value *VPLane::getAsRuntimeExpr(IRBuilderBase &Builder,
     return Builder.CreateSub(getRuntimeVF(Builder, Builder.getInt32Ty(), VF),
                              Builder.getInt32(VF.getKnownMinValue() - Lane));
   case VPLane::Kind::First:
-    return Builder.getInt32(Lane);
+    return Builder.getInt64(Lane);
   }
   llvm_unreachable("Unknown lane kind");
 }
@@ -743,10 +744,11 @@ VPBlockUtils::cloneFrom(VPBlockBase *Entry) {
 VPRegionBlock *VPRegionBlock::clone() {
   const auto &[NewEntry, NewExiting] = VPBlockUtils::cloneFrom(getEntry());
   VPlan &Plan = *getPlan();
+  VPRegionValue *CanIV = getCanonicalIV();
   VPRegionBlock *NewRegion =
-      isReplicator()
-          ? Plan.createReplicateRegion(NewEntry, NewExiting, getName())
-          : Plan.createLoopRegion(getName(), NewEntry, NewExiting);
+      CanIV ? Plan.createLoopRegion(CanIV->getType(), CanIV->getDebugLoc(),
+                                    getName(), NewEntry, NewExiting)
+            : Plan.createReplicateRegion(NewEntry, NewExiting, getName());
 
   for (VPBlockBase *Block : vp_depth_first_shallow(NewEntry))
     Block->setParent(NewRegion);
@@ -803,6 +805,7 @@ const VPBasicBlock *VPBasicBlock::getCFGPredecessor(unsigned Idx) const {
 
 InstructionCost VPRegionBlock::cost(ElementCount VF, VPCostContext &Ctx) {
   if (!isReplicator()) {
+    // Neglect the cost of canonical IV, matching the legacy cost model.
     InstructionCost Cost = 0;
     for (VPBlockBase *Block : vp_depth_first_shallow(getEntry()))
       Cost += Block->cost(VF, Ctx);
@@ -834,6 +837,11 @@ void VPRegionBlock::print(raw_ostream &O, const Twine &Indent,
                           VPSlotTracker &SlotTracker) const {
   O << Indent << (isReplicator() ? "<xVFxUF> " : "<x1> ") << getName() << ": {";
   auto NewIndent = Indent + "  ";
+  if (auto *CanIV = getCanonicalIV()) {
+    O << '\n';
+    CanIV->print(O, SlotTracker);
+    O << " = CANONICAL-IV\n";
+  }
   for (auto *BlockBase : vp_depth_first_shallow(Entry)) {
     O << '\n';
     BlockBase->print(O, NewIndent, SlotTracker);
@@ -846,19 +854,20 @@ void VPRegionBlock::print(raw_ostream &O, const Twine &Indent,
 
 void VPRegionBlock::dissolveToCFGLoop() {
   auto *Header = cast<VPBasicBlock>(getEntry());
-  if (auto *CanIV = dyn_cast<VPCanonicalIVPHIRecipe>(&Header->front())) {
-    assert(this == getPlan()->getVectorLoopRegion() &&
-           "Canonical IV must be in the entry of the top-level loop region");
-    auto *ScalarR = VPBuilder(CanIV).createScalarPhi(
-        {CanIV->getStartValue(), CanIV->getBackedgeValue()},
-        CanIV->getDebugLoc(), "index");
+  auto *ExitingLatch = cast<VPBasicBlock>(getExiting());
+  auto *CanIV = getCanonicalIV();
+  if (CanIV->getNumUsers() > 0) {
+    VPlan &Plan = *getPlan();
+    auto *Zero = Plan.getZero(CanIV->getType());
+    DebugLoc DL = CanIV->getDebugLoc();
+    VPInstruction *CanIVInc = getOrCreateCanonicalIVIncrement();
+    VPBuilder HeaderBuilder(Header, Header->begin());
+    auto *ScalarR =
+        HeaderBuilder.createScalarPhi({Zero, CanIVInc}, DL, "index");
     CanIV->replaceAllUsesWith(ScalarR);
-    CanIV->eraseFromParent();
   }
 
   VPBlockBase *Preheader = getSinglePredecessor();
-  auto *ExitingLatch = cast<VPBasicBlock>(getExiting());
-
   VPBlockUtils::disconnectBlocks(Preheader, this);
 
   for (VPBlockBase *VPB : vp_depth_first_shallow(Entry))
@@ -867,6 +876,23 @@ void VPRegionBlock::dissolveToCFGLoop() {
   VPBlockUtils::connectBlocks(Preheader, Header);
   VPBlockUtils::transferSuccessors(this, ExitingLatch);
   VPBlockUtils::connectBlocks(ExitingLatch, Header);
+}
+
+VPInstruction *VPRegionBlock::getOrCreateCanonicalIVIncrement() {
+  // TODO: Represent the increment as VPRegionValue as well.
+  VPRegionValue *CanIV = getCanonicalIV();
+  assert(CanIV && "Expected a canonical IV");
+
+  if (auto *Inc = vputils::findCanonicalIVIncrement(*getPlan()))
+    return Inc;
+
+  assert(!getPlan()->getVFxUF().isMaterialized() &&
+         "VFxUF can be used only before it is materialized.");
+  auto *ExitingLatch = cast<VPBasicBlock>(getExiting());
+  return VPBuilder(ExitingLatch->getTerminator())
+      .createOverflowingOp(Instruction::Add, {CanIV, &getPlan()->getVFxUF()},
+                           {hasCanonicalIVNUW(), /* HasNSW */ false},
+                           CanIV->getDebugLoc(), "index.next");
 }
 
 VPlan::VPlan(Loop *L) {
@@ -893,7 +919,10 @@ VPlan::~VPlan() {
         for (unsigned I = 0, E = R.getNumOperands(); I != E; I++)
           R.setOperand(I, &DummyValue);
       }
+    } else if (auto *CanIV = cast<VPRegionBlock>(VPB)->getCanonicalIV()) {
+      CanIV->replaceAllUsesWith(&DummyValue);
     }
+
     delete VPB;
   }
   for (VPValue *VPV : getLiveIns())
@@ -945,7 +974,7 @@ void VPlan::execute(VPTransformState *State) {
 
   BasicBlock *ScalarPh = State->CFG.ExitBB;
   VPBasicBlock *ScalarPhVPBB = getScalarPreheader();
-  if (ScalarPhVPBB->hasPredecessors()) {
+  if (ScalarPhVPBB) {
     // Disconnect scalar preheader and scalar header, as the dominator tree edge
     // will be updated as part of VPlan execution. This allows keeping the DTU
     // logic generic during VPlan execution.
@@ -993,7 +1022,7 @@ void VPlan::execute(VPTransformState *State) {
   }
 
   // If the original loop is unreachable, delete it and all its blocks.
-  if (!ScalarPhVPBB->hasPredecessors()) {
+  if (!ScalarPhVPBB) {
     // DeleteDeadBlocks will remove single-entry phis. Remove them from the exit
     // VPIRBBs in VPlan as well, otherwise we would retain references to deleted
     // IR instructions.
@@ -1007,11 +1036,13 @@ void VPlan::execute(VPTransformState *State) {
     Loop *OrigLoop =
         State->LI->getLoopFor(getScalarHeader()->getIRBasicBlock());
     auto Blocks = OrigLoop->getBlocksVector();
-    Blocks.push_back(cast<VPIRBasicBlock>(ScalarPhVPBB)->getIRBasicBlock());
+    Blocks.push_back(ScalarPh);
+    while (!OrigLoop->isInnermost())
+      State->LI->erase(*OrigLoop->begin());
+    State->LI->erase(OrigLoop);
     for (auto *BB : Blocks)
       State->LI->removeBlock(BB);
     DeleteDeadBlocks(Blocks, &State->CFG.DTU);
-    State->LI->erase(OrigLoop);
   }
 
   State->CFG.DTU.flush();
@@ -1237,6 +1268,14 @@ VPlan *VPlan::duplicate() {
   // else NewTripCount will be created and inserted into Old2NewVPValues when
   // TripCount is cloned. In any case NewPlan->TripCount is updated below.
 
+  if (auto *LoopRegion = getVectorLoopRegion()) {
+    auto *OldCanIV = LoopRegion->getCanonicalIV();
+    auto *NewCanIV = NewPlan->getVectorLoopRegion()->getCanonicalIV();
+    assert(OldCanIV && NewCanIV &&
+           "Loop regions of both plans must have canonical IVs.");
+    Old2NewVPValues[OldCanIV] = NewCanIV;
+  }
+
   assert(none_of(Old2NewVPValues.keys(), IsaPred<VPSymbolicValue>) &&
          "All VPSymbolicValues must be handled below");
 
@@ -1256,6 +1295,7 @@ VPlan *VPlan::duplicate() {
     if (OldSV->isMaterialized())
       NewSV->markMaterialized();
   }
+
   remapOperands(Entry, NewEntry, Old2NewVPValues);
 
   // Initialize remaining fields of cloned VPlan.
@@ -1422,6 +1462,16 @@ void VPlanPrinter::dumpRegion(const VPRegionBlock *Region) {
      << Indent << "label=\""
      << DOT::EscapeString(Region->isReplicator() ? "<xVFxUF> " : "<x1> ")
      << DOT::EscapeString(Region->getName()) << "\"\n";
+
+  if (auto *CanIV = Region->getCanonicalIV()) {
+    OS << Indent << "\"";
+    std::string Op;
+    raw_string_ostream S(Op);
+    CanIV->printAsOperand(S, SlotTracker);
+    OS << DOT::EscapeString(Op);
+    OS << " = CANONICAL-IV\"\n";
+  }
+
   // Dump the blocks of the region.
   assert(Region->getEntry() && "Region contains no inner blocks.");
   for (const VPBlockBase *Block : vp_depth_first_shallow(Region->getEntry()))
@@ -1436,6 +1486,8 @@ void VPlanPrinter::dumpRegion(const VPRegionBlock *Region) {
 /// Returns true if there is a vector loop region and \p VPV is defined in a
 /// loop region.
 static bool isDefinedInsideLoopRegions(const VPValue *VPV) {
+  if (isa<VPRegionValue>(VPV))
+    return true;
   const VPRecipeBase *DefR = VPV->getDefiningRecipe();
   return DefR && (!DefR->getParent()->getPlan()->getVectorLoopRegion() ||
                   DefR->getParent()->getEnclosingLoopRegion());
@@ -1550,9 +1602,12 @@ void VPSlotTracker::assignNames(const VPlan &Plan) {
 
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<const VPBlockBase *>>
       RPOT(VPBlockDeepTraversalWrapper<const VPBlockBase *>(Plan.getEntry()));
-  for (const VPBasicBlock *VPBB :
-       VPBlockUtils::blocksOnly<const VPBasicBlock>(RPOT))
-    assignNames(VPBB);
+  for (const VPBlockBase *VPB : RPOT) {
+    if (auto *VPBB = dyn_cast<VPBasicBlock>(VPB))
+      assignNames(VPBB);
+    else if (auto *CanIV = cast<VPRegionBlock>(VPB)->getCanonicalIV())
+      assignName(CanIV);
+  }
 }
 
 void VPSlotTracker::assignNames(const VPBasicBlock *VPBB) {
@@ -1611,6 +1666,21 @@ std::string VPSlotTracker::getOrCreateName(const VPValue *V) const {
   }
 
   return "<badref>";
+}
+
+VPInstruction *VPBuilder::createAnyOfReduction(VPValue *ChainOp,
+                                               VPValue *TrueVal,
+                                               VPValue *FalseVal, DebugLoc DL) {
+  assert(VPTypeAnalysis(*getInsertBlock()->getPlan())
+             .inferScalarType(ChainOp)
+             ->isIntegerTy(1) &&
+         "ChainOp must be i1 for AnyOf reduction");
+  VPIRFlags Flags(RecurKind::Or, /*IsOrdered=*/false, /*IsInLoop=*/false,
+                  FastMathFlags());
+  auto *OrReduce =
+      createNaryOp(VPInstruction::ComputeReductionResult, {ChainOp}, Flags, DL);
+  auto *Freeze = createNaryOp(Instruction::Freeze, {OrReduce}, DL);
+  return createSelect(Freeze, TrueVal, FalseVal, DL, "rdx.select");
 }
 
 bool LoopVectorizationPlanner::getDecisionAndClampRange(
@@ -1708,7 +1778,8 @@ void LoopVectorizationPlanner::updateLoopMetadataAndProfileInfo(
   // Update the metadata of the scalar loop. Skip the update when vectorizing
   // the epilogue loop to ensure it is updated only once. Also skip the update
   // when the scalar loop became unreachable.
-  if (Plan.getScalarPreheader()->hasPredecessors() && !VectorizingEpilogue) {
+  auto *ScalarPH = Plan.getScalarPreheader();
+  if (ScalarPH && !VectorizingEpilogue) {
     std::optional<MDNode *> RemainderLoopID =
         makeFollowupLoopID(OrigLoopID, {LLVMLoopVectorizeFollowupAll,
                                         LLVMLoopVectorizeFollowupEpilogue});
@@ -1718,10 +1789,16 @@ void LoopVectorizationPlanner::updateLoopMetadataAndProfileInfo(
       if (DisableRuntimeUnroll)
         addRuntimeUnrollDisableMetaData(OrigLoop);
 
-      LoopVectorizeHints Hints(OrigLoop, true, *ORE);
+      LoopVectorizeHints Hints(OrigLoop, /*InterleaveOnlyWhenForced*/ false,
+                               *ORE);
       Hints.setAlreadyVectorized();
     }
   }
+  // Tag the scalar remainder so downstream passes (e.g. the unroller and
+  // WarnMissedTransforms) can produce more informative remarks.  Only emit
+  // when remarks are enabled.
+  if (ORE->enabled() && ScalarPH && ScalarPH->hasPredecessors())
+    OrigLoop->addIntLoopAttribute("llvm.loop.vectorize.epilogue", 1);
 
   if (!VectorLoop)
     return;
@@ -1737,10 +1814,15 @@ void LoopVectorizationPlanner::updateLoopMetadataAndProfileInfo(
       VectorLoop->setLoopID(OrigLoopID);
 
     if (!VectorizingEpilogue) {
-      LoopVectorizeHints Hints(VectorLoop, true, *ORE);
+      LoopVectorizeHints Hints(VectorLoop, /*InterleaveOnlyWhenForced*/ false,
+                               *ORE);
       Hints.setAlreadyVectorized();
     }
   }
+  // Tag the vector loop body so downstream passes can identify it.  Only
+  // emit when remarks are enabled.
+  if (ORE->enabled())
+    VectorLoop->addIntLoopAttribute("llvm.loop.vectorize.body", 1);
   TargetTransformInfo::UnrollingPreferences UP;
   TTI.getUnrollingPreferences(VectorLoop, *PSE.getSE(), UP, ORE);
   if (!UP.UnrollVectorizedLoop || VectorizingEpilogue)
@@ -1770,7 +1852,7 @@ void LoopVectorizationPlanner::updateLoopMetadataAndProfileInfo(
     AverageVectorTripCount = SE.getSmallConstantTripCount(VectorLoop);
     if (ProfcheckDisableMetadataFixes || !AverageVectorTripCount)
       return;
-    if (Plan.getScalarPreheader()->hasPredecessors())
+    if (ScalarPH)
       RemainderAverageTripCount =
           SE.getSmallConstantTripCount(OrigLoop) % EstimatedVFxUF;
     // Setting to 1 should be sufficient to generate the correct branch weights.
@@ -1786,7 +1868,7 @@ void LoopVectorizationPlanner::updateLoopMetadataAndProfileInfo(
                               OrigLoopInvocationWeight);
   }
 
-  if (Plan.getScalarPreheader()->hasPredecessors()) {
+  if (ScalarPH) {
     setLoopEstimatedTripCount(OrigLoop, RemainderAverageTripCount,
                               OrigLoopInvocationWeight);
   }

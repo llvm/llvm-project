@@ -553,7 +553,17 @@ ModuleFlagAttr::verify(function_ref<InFlightDiagnostic()> emitError,
   if (isa<IntegerAttr, StringAttr>(value))
     return success();
 
-  return emitError() << "only integer and string values are currently "
-                        "supported for unknown key '"
+  // Allow non-empty ArrayAttr of StringAttrs to represent MDTuples of
+  // MDStrings (e.g. the "riscv-isa" module flag). Integer values within
+  // MDTuples are not handled here because integer module flags are encoded as
+  // ConstantAsMetadata at the top level (not as MDTuples), so no known use
+  // case requires an array-of-integers representation.
+  if (auto arrayAttr = dyn_cast<ArrayAttr>(value))
+    if (!arrayAttr.empty() &&
+        llvm::all_of(arrayAttr, [](Attribute a) { return isa<StringAttr>(a); }))
+      return success();
+
+  return emitError() << "only integer, string, and string-array values are "
+                        "currently supported for unknown key '"
                      << key << "'";
 }

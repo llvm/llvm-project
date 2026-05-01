@@ -42,7 +42,7 @@ struct Context {
     MRI.reset(TheTarget->createMCRegInfo(TT));
     MCTargetOptions MCOptions;
     MAI.reset(TheTarget->createMCAsmInfo(*MRI, TT, MCOptions));
-    Ctx = std::make_unique<MCContext>(TT, MAI.get(), MRI.get(),
+    Ctx = std::make_unique<MCContext>(TT, *MAI, MRI.get(),
                                       /*MSTI=*/nullptr);
   }
 

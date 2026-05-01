@@ -801,8 +801,8 @@ public:
     return BaseT::getEpilogueVectorizationMinVF();
   }
 
-  bool preferPredicateOverEpilogue(TailFoldingInfo *TFI) const override {
-    return BaseT::preferPredicateOverEpilogue(TFI);
+  bool preferTailFoldingOverEpilogue(TailFoldingInfo *TFI) const override {
+    return BaseT::preferTailFoldingOverEpilogue(TFI);
   }
 
   TailFoldingStyle getPreferredTailFoldingStyle() const override {
@@ -929,10 +929,6 @@ public:
     }
 
     return Cost;
-  }
-
-  bool isTargetIntrinsicTriviallyScalarizable(Intrinsic::ID ID) const override {
-    return false;
   }
 
   bool
@@ -2173,6 +2169,10 @@ public:
     case Intrinsic::experimental_vector_histogram_uadd_sat:
     case Intrinsic::experimental_vector_histogram_umax:
     case Intrinsic::experimental_vector_histogram_umin:
+    case Intrinsic::masked_udiv:
+    case Intrinsic::masked_sdiv:
+    case Intrinsic::masked_urem:
+    case Intrinsic::masked_srem:
       return thisT()->getTypeBasedIntrinsicInstrCost(ICA, CostKind);
     case Intrinsic::modf:
     case Intrinsic::sincos:
@@ -2196,46 +2196,42 @@ public:
       // The possible expansions are...
       //
       // loop_dependence_war_mask:
-      //   diff = (ptrB - ptrA) / eltSize
+      //   diff = (addrB - addrA) / eltSize
       //   cmp = icmp sle diff, 0
       //   upper_bound = select cmp, -1, diff
       //   mask = get_active_lane_mask 0, upper_bound
       //
       // loop_dependence_raw_mask:
-      //   diff = (abs(ptrB - ptrA)) / eltSize
+      //   diff = (abs(addrB - addrA)) / eltSize
       //   cmp = icmp eq diff, 0
       //   upper_bound = select cmp, -1, diff
       //   mask = get_active_lane_mask 0, upper_bound
       //
-      auto *PtrTy = cast<PointerType>(ICA.getArgTypes()[0]);
-      Type *IntPtrTy = IntegerType::getIntNTy(
-          RetTy->getContext(), thisT()->getDataLayout().getPointerSizeInBits(
-                                   PtrTy->getAddressSpace()));
+      Type *AddrTy = ICA.getArgTypes()[0];
       bool IsReadAfterWrite = IID == Intrinsic::loop_dependence_raw_mask;
 
       InstructionCost Cost =
-          thisT()->getArithmeticInstrCost(Instruction::Sub, IntPtrTy, CostKind);
+          thisT()->getArithmeticInstrCost(Instruction::Sub, AddrTy, CostKind);
       if (IsReadAfterWrite) {
-        IntrinsicCostAttributes AbsAttrs(Intrinsic::abs, IntPtrTy, {IntPtrTy},
-                                         {});
+        IntrinsicCostAttributes AbsAttrs(Intrinsic::abs, AddrTy, {AddrTy}, {});
         Cost += thisT()->getIntrinsicInstrCost(AbsAttrs, CostKind);
       }
 
       TTI::OperandValueInfo EltSizeOpInfo =
           TTI::getOperandInfo(ICA.getArgs()[2]);
-      Cost += thisT()->getArithmeticInstrCost(Instruction::SDiv, IntPtrTy,
+      Cost += thisT()->getArithmeticInstrCost(Instruction::SDiv, AddrTy,
                                               CostKind, {}, EltSizeOpInfo);
 
       Type *CondTy = IntegerType::getInt1Ty(RetTy->getContext());
       CmpInst::Predicate Pred =
           IsReadAfterWrite ? CmpInst::ICMP_EQ : CmpInst::ICMP_SLE;
-      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, CondTy,
-                                          IntPtrTy, Pred, CostKind);
-      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::Select, IntPtrTy,
+      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::ICmp, CondTy, AddrTy,
+                                          Pred, CostKind);
+      Cost += thisT()->getCmpSelInstrCost(BinaryOperator::Select, AddrTy,
                                           CondTy, Pred, CostKind);
 
       IntrinsicCostAttributes Attrs(Intrinsic::get_active_lane_mask, RetTy,
-                                    {IntPtrTy, IntPtrTy}, FMF);
+                                    {AddrTy, AddrTy}, FMF);
       Cost += thisT()->getIntrinsicInstrCost(Attrs, CostKind);
       return Cost;
     }
@@ -2732,6 +2728,46 @@ public:
     case Intrinsic::clmul:
       ISD = ISD::CLMUL;
       break;
+    case Intrinsic::masked_udiv:
+    case Intrinsic::masked_sdiv:
+    case Intrinsic::masked_urem:
+    case Intrinsic::masked_srem: {
+      unsigned UnmaskedOpc;
+      switch (IID) {
+      case Intrinsic::masked_udiv:
+        ISD = ISD::MASKED_UDIV;
+        UnmaskedOpc = Instruction::UDiv;
+        break;
+      case Intrinsic::masked_sdiv:
+        ISD = ISD::MASKED_SDIV;
+        UnmaskedOpc = Instruction::SDiv;
+        break;
+      case Intrinsic::masked_urem:
+        ISD = ISD::MASKED_UREM;
+        UnmaskedOpc = Instruction::URem;
+        break;
+      case Intrinsic::masked_srem:
+        ISD = ISD::MASKED_SREM;
+        UnmaskedOpc = Instruction::SRem;
+        break;
+      default:
+        llvm_unreachable("Unexpected intrinsic ID");
+      }
+      InstructionCost Cost =
+          thisT()->getArithmeticInstrCost(UnmaskedOpc, RetTy, CostKind);
+
+      // Expansion generates a (select %mask, %rhs, 1) for the divisor.
+      MVT LT = getTypeLegalizationCost(RetTy).second;
+      if (!getTLI()->isOperationLegalOrCustom(ISD, LT)) {
+        Type *CondTy = cast<VectorType>(RetTy)->getWithNewType(
+            IntegerType::getInt1Ty(RetTy->getContext()));
+        Cost += thisT()->getCmpSelInstrCost(
+            BinaryOperator::Select, RetTy, CondTy, CmpInst::BAD_ICMP_PREDICATE,
+            CostKind, {}, {TTI::OK_UniformConstantValue, TTI::OP_PowerOf2});
+      }
+
+      return Cost;
+    }
     }
 
     auto *ST = dyn_cast<StructType>(RetTy);
