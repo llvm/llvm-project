@@ -5103,8 +5103,8 @@ public:
   /// Create an CUDALaunchBoundsAttr attribute.
   CUDALaunchBoundsAttr *CreateLaunchBoundsAttr(const AttributeCommonInfo &CI,
                                                Expr *MaxThreads,
-                                               Expr *MinBlocks,
-                                               Expr *MaxBlocks);
+                                               Expr *MinBlocks, Expr *MaxBlocks,
+                                               bool IgnoreArch = false);
 
   /// AddLaunchBoundsAttr - Adds a launch_bounds attribute to a particular
   /// declaration.
