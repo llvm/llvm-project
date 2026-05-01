@@ -1822,8 +1822,6 @@ void ASTDeclWriter::VisitAccessSpecDecl(AccessSpecDecl *D) {
 }
 
 void ASTDeclWriter::VisitFriendDecl(FriendDecl *D) {
-  // Record the number of friend type template parameter lists here
-  // so as to simplify memory allocation during deserialization.
   VisitDecl(D);
   bool hasFriendDecl = isa<NamedDecl *>(D->Friend);
   Record.push_back(hasFriendDecl);
@@ -1838,8 +1836,10 @@ void ASTDeclWriter::VisitFriendDecl(FriendDecl *D) {
 }
 
 void ASTDeclWriter::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
-  VisitDecl(D);
+  // Record the number of friend type template parameter lists here
+  // so as to simplify memory allocation during deserialization.
   Record.push_back(D->NumTPLists);
+  VisitDecl(D);
   for (TemplateParameterList *TPL : D->getFriendTypeTemplateParameterLists())
     Record.AddTemplateParameterList(TPL);
   Record.push_back(D->getFriendDecl() != nullptr);
