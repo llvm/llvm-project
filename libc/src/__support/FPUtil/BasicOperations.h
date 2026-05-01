@@ -233,7 +233,7 @@ LIBC_INLINE T fminimum_mag_num(T x, T y) {
 }
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE T fdim(T x, T y) {
+LIBC_INLINE T constexpr fdim(T x, T y) {
   FPBits<T> bitx(x), bity(y);
 
   if (bitx.is_nan()) {
