@@ -2810,8 +2810,8 @@ TemplateInstantiator::TransformNestedRequirement(
       return nullptr;
 
     Success = !SemaRef.CheckConstraintSatisfaction(
-        Req, AssociatedConstraint(Constraint, SemaRef.ArgPackSubstIndex),
-        TemplateArgs, Constraint->getSourceRange(), Satisfaction,
+        Req, AssociatedConstraint(Constraint), TemplateArgs,
+        Constraint->getSourceRange(), Satisfaction,
         /*TopLevelConceptId=*/nullptr, &NewConstraint);
   }
 
@@ -3085,7 +3085,13 @@ bool Sema::SubstTypeConstraint(
 
   if (!EvaluateConstraints && !inParameterMappingSubstitution()) {
     UnsignedOrNone Index = TC->getArgPackSubstIndex();
-    if (!Index)
+    bool ContainsUnexpandedPack =
+        TemplArgInfo &&
+        llvm::any_of(
+            TemplArgInfo->arguments(), [](const TemplateArgumentLoc &TA) {
+              return TA.getArgument().containsUnexpandedParameterPack();
+            });
+    if (!Index && ContainsUnexpandedPack)
       Index = SemaRef.ArgPackSubstIndex;
     Inst->setTypeConstraint(TC->getConceptReference(),
                             TC->getImmediatelyDeclaredConstraint(), Index);
@@ -3227,6 +3233,8 @@ Sema::SubstParmVarDecl(ParmVarDecl *OldParm,
                         OldParm->getFunctionScopeIndex() + indexAdjustment);
 
   InstantiateAttrs(TemplateArgs, OldParm, NewParm);
+
+  NewParm->deduceParmAddressSpace(Context);
 
   return NewParm;
 }
@@ -3405,7 +3413,7 @@ Sema::SubstBaseSpecifiers(CXXRecordDecl *Instantiation,
   bool Invalid = false;
   SmallVector<CXXBaseSpecifier*, 4> InstantiatedBases;
   for (const auto &Base : Pattern->bases()) {
-    if (!Base.getType()->isDependentType()) {
+    if (!Base.getType()->isInstantiationDependentType()) {
       if (const CXXRecordDecl *RD = Base.getType()->getAsCXXRecordDecl()) {
         if (RD->isInvalidDecl())
           Instantiation->setInvalidDecl();

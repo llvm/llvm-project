@@ -19,5 +19,5 @@ llvm.func @test_simd_guided() {
   llvm.return
 }
 
-// CHECK:   %[[omp_global_thread_num:.*]] = call i32 @__kmpc_global_thread_num(ptr @1)
+// CHECK:   %[[omp_global_thread_num:.*]] = call i32 @__kmpc_global_thread_num(ptr @2)
 // CHECK:   call void @__kmpc_dispatch_init_4u(ptr @1, i32 %[[omp_global_thread_num]], i32 1073741870, i32 1, i32 65, i32 1, i32 4)

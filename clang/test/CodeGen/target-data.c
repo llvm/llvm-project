@@ -152,20 +152,20 @@
 
 // RUN: %clang_cc1 -triple r600-unknown -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=R600
-// R600: target datalayout = "e-m:e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1"
+// R600: target datalayout = "e-m:e-p:32:32-po2:32:32-po3:32:32-po5:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1"
 
 // RUN: %clang_cc1 -triple r600-unknown -target-cpu cayman -o - -emit-llvm %s \
 // RUN: | FileCheck %s -check-prefix=R600D
-// R600D: target datalayout = "e-m:e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1"
+// R600D: target datalayout = "e-m:e-p:32:32-po2:32:32-po3:32:32-po5:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1"
 
 // RUN: %clang_cc1 -triple amdgcn-unknown -target-cpu hawaii -o - -emit-llvm %s \
 // RUN: | FileCheck %s -check-prefix=R600SI
-// R600SI: target datalayout = "e-m:e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128:128:48-p9:192:256:256:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9"
+// R600SI: target datalayout = "e-m:e-p:64:64-p1:64:64-po2:32:32-po3:32:32-p4:64:64-po5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128:128:48-p9:192:256:256:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9"
 
 // Test default -target-cpu
 // RUN: %clang_cc1 -triple amdgcn-unknown -o - -emit-llvm %s \
 // RUN: | FileCheck %s -check-prefix=R600SIDefault
-// R600SIDefault: target datalayout = "e-m:e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128:128:48-p9:192:256:256:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9"
+// R600SIDefault: target datalayout = "e-m:e-p:64:64-p1:64:64-po2:32:32-po3:32:32-p4:64:64-po5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128:128:48-p9:192:256:256:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9"
 
 // RUN: %clang_cc1 -triple arm64-unknown -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=AARCH64
@@ -227,11 +227,15 @@
 
 // RUN: %clang_cc1 -triple tce-unknown -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=TCE
-// TCE: target datalayout = "E-p:32:32:32-i1:8:8-i8:8:32-i16:16:32-i32:32:32-i64:32:32-f32:32:32-f64:32:32-v64:32:32-v128:32:32-v256:32:32-v512:32:32-v1024:32:32-a0:0:32-n32"
+// TCE: target datalayout = "E-p:32:32:32-i1:8:8-i8:8:32-i16:16:32-i32:32:32-i64:32:32-f16:16:16-f32:32:32-f64:32:32-v64:64:64-i128:128-v128:128:128-v256:256:256-v512:512:512-v1024:1024:1024-v2048:2048:2048-v4096:4096:4096-a0:0:32-n32"
 
 // RUN: %clang_cc1 -triple tcele-unknown -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=TCELE
-// TCELE: target datalayout = "e-p:32:32:32-i1:8:8-i8:8:32-i16:16:32-i32:32:32-i64:32:32-f32:32:32-f64:32:32-v64:32:32-v128:32:32-v256:32:32-v512:32:32-v1024:32:32-a0:0:32-n32"
+// TCELE: target datalayout = "e-p:32:32:32-i1:8:8-i8:8:32-i16:16:32-i32:32:32-i64:32:32-f16:16:16-f32:32:32-f64:32:32-v64:64:64-i128:128-v128:128:128-v256:256:256-v512:512:512-v1024:1024:1024-v2048:2048:2048-v4096:4096:4096-a0:0:32-n32"
+
+// RUN: %clang_cc1 -triple tcele64-unknown -o - -emit-llvm %s | \
+// RUN: FileCheck %s -check-prefix=TCELE64
+// TCELE64: target datalayout = "e-p:64:64:64-i1:8:64-i8:8:64-i16:16:64-i32:32:64-i64:64:64-f16:16:64-f32:32:64-f64:64:64-v64:64:64-i128:128-v128:128:128-v256:256:256-v512:512:512-v1024:1024:1024-v2048:2048:2048-v4096:4096:4096-a0:0:64-n64"
 
 // RUN: %clang_cc1 -triple spir-unknown -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=SPIR

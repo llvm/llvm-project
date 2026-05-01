@@ -49,7 +49,7 @@ extern uptr kHighMemStart;
 extern uptr kHighMemEnd;
 
 inline uptr GetShadowOffset() {
-  return SANITIZER_FUCHSIA ? 0 : __hwasan_shadow_memory_dynamic_address;
+  return __hwasan_shadow_memory_dynamic_address;
 }
 inline uptr MemToShadow(uptr untagged_addr) {
   return (untagged_addr >> kShadowScale) + GetShadowOffset();

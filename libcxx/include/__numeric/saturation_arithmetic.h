@@ -29,7 +29,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 20
 
 template <__signed_or_unsigned_integer _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr _Tp __add_sat(_Tp __x, _Tp __y) noexcept {
+_LIBCPP_HIDE_FROM_ABI constexpr _Tp __saturating_add(_Tp __x, _Tp __y) noexcept {
 #  if defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER >= 2101
   return __builtin_elementwise_add_sat(__x, __y);
 #  else
@@ -51,7 +51,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Tp __add_sat(_Tp __x, _Tp __y) noexcept {
 }
 
 template <__signed_or_unsigned_integer _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr _Tp __sub_sat(_Tp __x, _Tp __y) noexcept {
+_LIBCPP_HIDE_FROM_ABI constexpr _Tp __saturating_sub(_Tp __x, _Tp __y) noexcept {
 #  if defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER >= 2101
   return __builtin_elementwise_sub_sat(__x, __y);
 #  else
@@ -74,7 +74,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Tp __sub_sat(_Tp __x, _Tp __y) noexcept {
 }
 
 template <__signed_or_unsigned_integer _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr _Tp __mul_sat(_Tp __x, _Tp __y) noexcept {
+_LIBCPP_HIDE_FROM_ABI constexpr _Tp __saturating_mul(_Tp __x, _Tp __y) noexcept {
   if (_Tp __mul; !__builtin_mul_overflow(__x, __y, std::addressof(__mul)))
     return __mul;
   // Handle overflow
@@ -90,7 +90,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Tp __mul_sat(_Tp __x, _Tp __y) noexcept {
 }
 
 template <__signed_or_unsigned_integer _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr _Tp __div_sat(_Tp __x, _Tp __y) noexcept {
+_LIBCPP_HIDE_FROM_ABI constexpr _Tp __saturating_div(_Tp __x, _Tp __y) noexcept {
   _LIBCPP_ASSERT_UNCATEGORIZED(__y != 0, "Division by 0 is undefined");
   if constexpr (__unsigned_integer<_Tp>) {
     return __x / __y;
@@ -103,7 +103,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Tp __div_sat(_Tp __x, _Tp __y) noexcept {
 }
 
 template <__signed_or_unsigned_integer _Rp, __signed_or_unsigned_integer _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr _Rp __saturate_cast(_Tp __x) noexcept {
+_LIBCPP_HIDE_FROM_ABI constexpr _Rp __saturating_cast(_Tp __x) noexcept {
   // Saturation is impossible edge case when ((min _Rp) < (min _Tp) && (max _Rp) > (max _Tp)) and it is expected to be
   // optimized out by the compiler.
 
@@ -121,28 +121,28 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Rp __saturate_cast(_Tp __x) noexcept {
 #if _LIBCPP_STD_VER >= 26
 
 template <__signed_or_unsigned_integer _Tp>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp add_sat(_Tp __x, _Tp __y) noexcept {
-  return std::__add_sat(__x, __y);
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp saturating_add(_Tp __x, _Tp __y) noexcept {
+  return std::__saturating_add(__x, __y);
 }
 
 template <__signed_or_unsigned_integer _Tp>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp sub_sat(_Tp __x, _Tp __y) noexcept {
-  return std::__sub_sat(__x, __y);
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp saturating_sub(_Tp __x, _Tp __y) noexcept {
+  return std::__saturating_sub(__x, __y);
 }
 
 template <__signed_or_unsigned_integer _Tp>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp mul_sat(_Tp __x, _Tp __y) noexcept {
-  return std::__mul_sat(__x, __y);
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp saturating_mul(_Tp __x, _Tp __y) noexcept {
+  return std::__saturating_mul(__x, __y);
 }
 
 template <__signed_or_unsigned_integer _Tp>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp div_sat(_Tp __x, _Tp __y) noexcept {
-  return std::__div_sat(__x, __y);
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp saturating_div(_Tp __x, _Tp __y) noexcept {
+  return std::__saturating_div(__x, __y);
 }
 
 template <__signed_or_unsigned_integer _Rp, __signed_or_unsigned_integer _Tp>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Rp saturate_cast(_Tp __x) noexcept {
-  return std::__saturate_cast<_Rp>(__x);
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Rp saturating_cast(_Tp __x) noexcept {
+  return std::__saturating_cast<_Rp>(__x);
 }
 
 #endif // _LIBCPP_STD_VER >= 26

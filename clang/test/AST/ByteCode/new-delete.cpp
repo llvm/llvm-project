@@ -612,6 +612,16 @@ namespace CastedDelete {
   }
   static_assert(foo() == 1); // both-error {{not an integral constant expression}} \
                              // both-note {{in call to}}
+
+  constexpr bool nvdtor() { // both-error {{never produces a constant expression}}
+    struct S {
+      constexpr ~S() {}
+    };
+    struct T : S {};
+    delete (S*)new T; // both-note {{delete of object with dynamic type 'T' through pointer to base class type 'S' with non-virtual destructor}}
+    return true;
+  }
+
 }
 
 constexpr void use_after_free_2() { // both-error {{never produces a constant expression}}
@@ -703,7 +713,7 @@ namespace OperatorNewDelete {
   static_assert(zeroAlloc());
 
   constexpr int arrayAlloc() {
-    int *F = std::allocator<int>().allocate(2);
+    int *F = std::allocator<int>().allocate(2); // both-note {{heap allocation performed here}}
     F[0] = 10; // both-note {{assignment to object outside its lifetime is not allowed in a constant expression}}
     F[1] = 13;
     int Res = F[1] + F[0];
@@ -719,31 +729,30 @@ namespace OperatorNewDelete {
     constexpr ~S() { }
   };
 
-  /// FIXME: This is broken in the current interpreter.
   constexpr bool structAlloc() {
-    S *s = std::allocator<S>().allocate(1);
+    S *s = std::allocator<S>().allocate(1); // both-note {{heap allocation performed here}}
 
-    s->i = 12; // ref-note {{assignment to object outside its lifetime is not allowed in a constant expression}}
+    s->i = 12; // both-note {{assignment to object outside its lifetime is not allowed in a constant expression}}
 
     bool Res = (s->i == 12);
     std::allocator<S>().deallocate(s);
 
     return Res;
   }
-  static_assert(structAlloc()); // ref-error {{not an integral constant expression}} \
-                                // ref-note {{in call to}}
+  static_assert(structAlloc()); // both-error {{not an integral constant expression}} \
+                                // both-note {{in call to}}
 
   constexpr bool structAllocArray() {
-    S *s = std::allocator<S>().allocate(9);
+    S *s = std::allocator<S>().allocate(9); // both-note {{heap allocation performed here}}
 
-    s[2].i = 12; // ref-note {{assignment to object outside its lifetime is not allowed in a constant expression}}
+    s[2].i = 12; // both-note {{assignment to object outside its lifetime is not allowed in a constant expression}}
     bool Res = (s[2].i == 12);
     std::allocator<S>().deallocate(s);
 
     return Res;
   }
-  static_assert(structAllocArray()); // ref-error {{not an integral constant expression}} \
-                                     // ref-note {{in call to}}
+  static_assert(structAllocArray()); // both-error {{not an integral constant expression}} \
+                                     // both-note {{in call to}}
 
   constexpr bool alloc_from_user_code() {
     void *p = __builtin_operator_new(sizeof(int)); // both-note {{cannot allocate untyped memory in a constant expression; use 'std::allocator<T>::allocate'}}
@@ -900,7 +909,7 @@ namespace IncompleteArray {
   };
   constexpr int test1() {
     int n = 5;
-    int* a = new int[n];
+    int* a = new int[n]; // both-note {{heap allocation performed here}}
     int c = a[0]; // both-note {{read of uninitialized object}}
     delete[] a;
     return c;
@@ -1144,6 +1153,40 @@ namespace BrokenDelete {
   }
 }
 
+namespace vdtor {
+  constexpr int vdtor_3(int mode) {
+    int a = 0;
+    struct S { constexpr virtual ~S() {} };
+    struct T : S {
+      constexpr T(int *p) : p(p) {}
+      constexpr ~T() { ++*p; }
+      int *p;
+    };
+    S *p = new T[3]{&a, &a, &a}; // both-note 2{{heap allocation}} \
+                                 // both-note {{allocated with 'new[]' here}}
+    switch (mode) {
+    case 0:
+      delete p; // both-note {{non-array delete used to delete pointer to array object of type 'T[3]'}} \
+                // both-warning {{'delete' applied to a pointer that was allocated with 'new[]'}}
+      break;
+    case 1:
+      delete[] p; // both-note {{delete of pointer to subobject '&{*new T[3]#0}[0]'}}
+      break;
+    case 2:
+      delete (T*)p; // both-note {{non-array delete used to delete pointer to array object of type 'T[3]'}}
+      break;
+    case 3:
+      delete[] (T*)p;
+      break;
+    }
+    return a;
+  }
+  static_assert(vdtor_3(0) == 3); // both-error {{}} both-note {{in call}}
+  static_assert(vdtor_3(1) == 1); // both-error {{}} both-note {{in call}}
+  static_assert(vdtor_3(2) == 3); // both-error {{}} both-note {{in call}}
+  static_assert(vdtor_3(3) == 3);
+}
+
 #else
 /// Make sure we reject this prior to C++20
 constexpr int a() { // both-error {{never produces a constant expression}}
@@ -1155,6 +1198,7 @@ static_assert(a() == 1, ""); // both-error {{not an integral constant expression
 
 
 static_assert(true ? *new int : 4, ""); // both-error {{expression is not an integral constant expression}} \
-                                        // both-note {{read of uninitialized object is not allowed in a constant expression}}
+                                        // both-note {{read of uninitialized object is not allowed in a constant expression}} \
+                                        // both-note {{heap allocation performed here}}
 
 #endif

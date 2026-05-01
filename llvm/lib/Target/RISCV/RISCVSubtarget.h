@@ -19,6 +19,7 @@
 #include "RISCVISelLowering.h"
 #include "RISCVInstrInfo.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
+#include "llvm/CodeGen/GlobalISel/InlineAsmLowering.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/MachineScheduler.h"
@@ -27,6 +28,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetMachine.h"
 #include <bitset>
+#include <memory>
 
 #define GET_RISCV_MACRO_FUSION_PRED_DECL
 #include "RISCVGenMacroFusion.inc"
@@ -353,6 +355,7 @@ protected:
   mutable std::unique_ptr<InstructionSelector> InstSelector;
   mutable std::unique_ptr<LegalizerInfo> Legalizer;
   mutable std::unique_ptr<RISCVRegisterBankInfo> RegBankInfo;
+  mutable std::unique_ptr<InlineAsmLowering> InlineAsmLoweringInfo;
 
   // Return the known range for the bit length of RVV data registers as set
   // at the command line. A value of 0 means nothing is known about that particular
@@ -367,6 +370,7 @@ public:
   InstructionSelector *getInstructionSelector() const override;
   const LegalizerInfo *getLegalizerInfo() const override;
   const RISCVRegisterBankInfo *getRegBankInfo() const override;
+  const InlineAsmLowering *getInlineAsmLowering() const override;
 
   bool isTargetAndroid() const { return getTargetTriple().isAndroid(); }
   bool isTargetFuchsia() const { return getTargetTriple().isOSFuchsia(); }

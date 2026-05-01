@@ -292,16 +292,16 @@ public:
                                    bool Invert) const override;
   std::optional<unsigned> getInverseOpcode(unsigned Opcode) const override;
 
+  MachineInstr *foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
+                                      ArrayRef<unsigned> Ops, int FrameIndex,
+                                      MachineInstr *&CopyMI,
+                                      LiveIntervals *LIS = nullptr,
+                                      VirtRegMap *VRM = nullptr) const override;
   MachineInstr *
   foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
-                        ArrayRef<unsigned> Ops,
-                        MachineBasicBlock::iterator InsertPt, int FrameIndex,
-                        LiveIntervals *LIS = nullptr,
-                        VirtRegMap *VRM = nullptr) const override;
-  MachineInstr *foldMemoryOperandImpl(
-      MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
-      MachineBasicBlock::iterator InsertPt, MachineInstr &LoadMI,
-      LiveIntervals *LIS = nullptr) const override;
+                        ArrayRef<unsigned> Ops, MachineInstr &LoadMI,
+                        MachineInstr *&CopyMI,
+                        LiveIntervals *LIS = nullptr) const override;
   bool expandPostRAPseudo(MachineInstr &MBBI) const override;
   bool reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const
     override;

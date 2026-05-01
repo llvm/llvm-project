@@ -58,7 +58,7 @@
 ; ENABLED-O1-NEXT: Function Alias Analysis Results
 ; ENABLED:       IRTranslator
 ; VERIFY-NEXT:   Verify generated machine code
-; ENABLED-NEXT:  Analysis for ComputingKnownBits
+; ENABLED-O1-NEXT:  Analysis for ComputingKnownBits
 ; ENABLED-O1-NEXT:  MachineDominator Tree Construction
 ; ENABLED-O1-NEXT:  Analysis containing CSE Info
 ; ENABLED-O1-NEXT:  PreLegalizerCombiner

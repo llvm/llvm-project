@@ -336,14 +336,13 @@ Type RecordType::getLargestMember(const ::mlir::DataLayout &dataLayout) const {
   auto endIt = getPadded() ? std::prev(members.end()) : members.end();
   if (endIt == members.begin())
     return {};
-  return *std::max_element(
-      members.begin(), endIt, [&](Type lhs, Type rhs) {
-        return dataLayout.getTypeABIAlignment(lhs) <
-                   dataLayout.getTypeABIAlignment(rhs) ||
-               (dataLayout.getTypeABIAlignment(lhs) ==
-                    dataLayout.getTypeABIAlignment(rhs) &&
-                dataLayout.getTypeSize(lhs) < dataLayout.getTypeSize(rhs));
-      });
+  return *std::max_element(members.begin(), endIt, [&](Type lhs, Type rhs) {
+    return dataLayout.getTypeABIAlignment(lhs) <
+               dataLayout.getTypeABIAlignment(rhs) ||
+           (dataLayout.getTypeABIAlignment(lhs) ==
+                dataLayout.getTypeABIAlignment(rhs) &&
+            dataLayout.getTypeSize(lhs) < dataLayout.getTypeSize(rhs));
+  });
 }
 
 bool RecordType::isLayoutIdentical(const RecordType &other) {
@@ -379,8 +378,12 @@ PointerType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
 llvm::TypeSize
 RecordType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
                               mlir::DataLayoutEntryListRef params) const {
-  if (isUnion())
-    return dataLayout.getTypeSize(getLargestMember(dataLayout));
+  if (isUnion()) {
+    mlir::Type largest = getLargestMember(dataLayout);
+    if (!largest)
+      return llvm::TypeSize::getFixed(0);
+    return dataLayout.getTypeSizeInBits(largest);
+  }
 
   auto recordSize = static_cast<uint64_t>(computeStructSize(dataLayout));
   return llvm::TypeSize::getFixed(recordSize * 8);

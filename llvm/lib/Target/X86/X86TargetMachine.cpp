@@ -84,7 +84,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86TileConfigLegacyPass(PR);
   initializeX86FastPreTileConfigLegacyPass(PR);
   initializeX86FastTileConfigLegacyPass(PR);
-  initializeKCFIPass(PR);
+  initializeMachineKCFILegacyPass(PR);
   initializeX86LowerTileCopyLegacyPass(PR);
   initializeX86ExpandPseudoLegacyPass(PR);
   initializeX86ExecutionDomainFixPass(PR);
@@ -443,11 +443,7 @@ void X86PassConfig::addIRPasses() {
   // Add Control Flow Guard checks.
   const Triple &TT = TM->getTargetTriple();
   if (TT.isOSWindows()) {
-    if (TT.isX86_64()) {
-      addPass(createCFGuardDispatchPass());
-    } else {
-      addPass(createCFGuardCheckPass());
-    }
+    addPass(createCFGuardPass());
   }
 
   if (TM->Options.JMCInstrument)
@@ -569,7 +565,7 @@ void X86PassConfig::addPreEmitPass() {
 
   addPass(createX86IndirectBranchTrackingLegacyPass());
 
-  addPass(createX86IssueVZeroUpperPass());
+  addPass(createX86InsertVZeroUpperLegacyPass());
 
   if (getOptLevel() != CodeGenOptLevel::None) {
     addPass(createX86FixupBWInstsLegacyPass());
@@ -584,7 +580,7 @@ void X86PassConfig::addPreEmitPass() {
 
 void X86PassConfig::addPreEmitPass2() {
   const Triple &TT = TM->getTargetTriple();
-  const MCAsmInfo *MAI = TM->getMCAsmInfo();
+  const MCAsmInfo &MAI = TM->getMCAsmInfo();
 
   // The X86 Speculative Execution Pass must run after all control
   // flow graph modifying passes. As a result it was listed to run right before
@@ -609,7 +605,7 @@ void X86PassConfig::addPreEmitPass2() {
   // instructions.
   if (!TT.isOSDarwin() &&
       (!TT.isOSWindows() ||
-       MAI->getExceptionHandlingType() == ExceptionHandling::DwarfCFI))
+       MAI.getExceptionHandlingType() == ExceptionHandling::DwarfCFI))
     addPass(createCFIInstrInserter());
 
   if (TT.isOSWindows()) {

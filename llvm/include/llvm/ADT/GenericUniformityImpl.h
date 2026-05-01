@@ -98,21 +98,21 @@ public:
 
   ModifiedPostOrder(const ContextT &C) : Context(C) {}
 
-  bool empty() const { return m_order.empty(); }
-  size_t size() const { return m_order.size(); }
+  bool empty() const { return Order.empty(); }
+  size_t size() const { return Order.size(); }
 
-  void clear() { m_order.clear(); }
+  void clear() { Order.clear(); }
   void compute(const CycleInfoT &CI);
 
   unsigned count(BlockT *BB) const { return POIndex.count(BB); }
-  const BlockT *operator[](size_t idx) const { return m_order[idx]; }
+  const BlockT *operator[](size_t Idx) const { return Order[Idx]; }
 
-  void appendBlock(const BlockT &BB, bool isReducibleCycleHeader = false) {
-    POIndex[&BB] = m_order.size();
-    m_order.push_back(&BB);
+  void appendBlock(const BlockT &BB, bool IsReducibleCycleHeader = false) {
+    POIndex[&BB] = Order.size();
+    Order.push_back(&BB);
     LLVM_DEBUG(dbgs() << "ModifiedPO(" << POIndex[&BB]
                       << "): " << Context.print(&BB) << "\n");
-    if (isReducibleCycleHeader)
+    if (IsReducibleCycleHeader)
       ReducibleCycleHeaders.insert(&BB);
   }
 
@@ -126,7 +126,7 @@ public:
   }
 
 private:
-  SmallVector<const BlockT *> m_order;
+  SmallVector<const BlockT *> Order;
   DenseMap<const BlockT *, unsigned> POIndex;
   SmallPtrSet<const BlockT *, 32> ReducibleCycleHeaders;
   const ContextT &Context;
@@ -411,11 +411,11 @@ public:
     return DivergentTermBlocks.contains(&B);
   }
 
-  void print(raw_ostream &out) const;
+  void print(raw_ostream &Out) const;
 
   /// Print divergent arguments and return true if any were found.
   /// IR specialization iterates F.args(); default is a no-op.
-  bool printDivergentArgs(raw_ostream &out) const;
+  bool printDivergentArgs(raw_ostream &Out) const;
 
   SmallVector<TemporalDivergenceTuple, 8> TemporalDivergenceList;
 
@@ -788,7 +788,7 @@ auto llvm::GenericSyncDependenceAnalysis<ContextT>::getJoinBlocks(
   DivergencePropagatorT Propagator(CyclePO, DT, CI, *DivTermBlock);
   auto DivDesc = Propagator.computeJoinPoints();
 
-  auto printBlockSet = [&](ConstBlockSet &Blocks) {
+  auto PrintBlockSet = [&](ConstBlockSet &Blocks) {
     return Printable([&](raw_ostream &Out) {
       Out << "[";
       ListSeparator LS;
@@ -801,10 +801,10 @@ auto llvm::GenericSyncDependenceAnalysis<ContextT>::getJoinBlocks(
 
   LLVM_DEBUG(
       dbgs() << "\nResult (" << CI.getSSAContext().print(DivTermBlock)
-             << "):\n  JoinDivBlocks: " << printBlockSet(DivDesc->JoinDivBlocks)
-             << "  CycleDivBlocks: " << printBlockSet(DivDesc->CycleDivBlocks)
+             << "):\n  JoinDivBlocks: " << PrintBlockSet(DivDesc->JoinDivBlocks)
+             << "  CycleDivBlocks: " << PrintBlockSet(DivDesc->CycleDivBlocks)
              << "\n");
-  (void)printBlockSet;
+  (void)PrintBlockSet;
 
   auto ItInserted =
       CachedControlDivDescs.try_emplace(DivTermBlock, std::move(DivDesc));
@@ -1213,16 +1213,16 @@ void GenericUniformityAnalysisImpl<ContextT>::print(raw_ostream &OS) const {
   if (!AssumedDivergent.empty()) {
     FoundDivergence = true;
     OS << "CYCLES ASSUMED DIVERGENT:\n";
-    for (const CycleT *cycle : AssumedDivergent) {
-      OS << "  " << cycle->print(Context) << '\n';
+    for (const CycleT *Cycle : AssumedDivergent) {
+      OS << "  " << Cycle->print(Context) << '\n';
     }
   }
 
   if (!DivergentExitCycles.empty()) {
     FoundDivergence = true;
     OS << "CYCLES WITH DIVERGENT EXIT:\n";
-    for (const CycleT *cycle : DivergentExitCycles) {
-      OS << "  " << cycle->print(Context) << '\n';
+    for (const CycleT *Cycle : DivergentExitCycles) {
+      OS << "  " << Cycle->print(Context) << '\n';
     }
   }
 
@@ -1237,30 +1237,30 @@ void GenericUniformityAnalysisImpl<ContextT>::print(raw_ostream &OS) const {
     }
   }
 
-  for (auto &block : F) {
-    OS << "\nBLOCK " << Context.print(&block) << '\n';
+  for (auto &Block : F) {
+    OS << "\nBLOCK " << Context.print(&Block) << '\n';
 
     OS << "DEFINITIONS\n";
-    SmallVector<ConstValueRefT, 16> defs;
-    Context.appendBlockDefs(defs, block);
-    for (auto value : defs) {
-      if (isDivergent(value)) {
+    SmallVector<ConstValueRefT, 16> Defs;
+    Context.appendBlockDefs(Defs, Block);
+    for (auto Value : Defs) {
+      if (isDivergent(Value)) {
         FoundDivergence = true;
         OS << "  DIVERGENT: ";
       } else {
         OS << "             ";
       }
-      OS << Context.print(value) << NewLine;
+      OS << Context.print(Value) << NewLine;
     }
 
     OS << "TERMINATORS\n";
-    SmallVector<const InstructionT *, 8> terms;
-    Context.appendBlockTerms(terms, block);
-    bool divergentTerminators = hasDivergentTerminator(block);
-    if (divergentTerminators)
+    SmallVector<const InstructionT *, 8> Terms;
+    Context.appendBlockTerms(Terms, Block);
+    bool DivergentTerminators = hasDivergentTerminator(Block);
+    if (DivergentTerminators)
       FoundDivergence = true;
-    for (auto *T : terms) {
-      if (divergentTerminators)
+    for (auto *T : Terms) {
+      if (DivergentTerminators)
         OS << "  DIVERGENT: ";
       else
         OS << "             ";
@@ -1313,12 +1313,12 @@ bool GenericUniformityInfo<ContextT>::hasDivergentTerminator(const BlockT &B) {
 
 /// \brief T helper function for printing.
 template <typename ContextT>
-void GenericUniformityInfo<ContextT>::print(raw_ostream &out) const {
+void GenericUniformityInfo<ContextT>::print(raw_ostream &Out) const {
   if (!DA) {
-    out << "  Uniformity analysis not computed (no branch divergence).\n";
+    Out << "  Uniformity analysis not computed (no branch divergence).\n";
     return;
   }
-  DA->print(out);
+  DA->print(Out);
 }
 
 template <typename ContextT>

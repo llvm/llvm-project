@@ -119,12 +119,48 @@ define i64 @pli_h_i64() {
   ret i64 u0x0123012301230123
 }
 
+define i64 @pli_h_slli_i64() {
+; CHECK-LABEL: pli_h_slli_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pli.h a0, 511
+; CHECK-NEXT:    slli a0, a0, 3
+; CHECK-NEXT:    ret
+  ret i64 u0x0ff80ff80ff80ff8
+}
+
+define i64 @pli_h_srli_i64() {
+; CHECK-LABEL: pli_h_srli_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pli.h a0, -240
+; CHECK-NEXT:    srli a0, a0, 4
+; CHECK-NEXT:    ret
+  ret i64 u0x0ff10ff10ff10ff1
+}
+
 define i64 @pli_w_i64() {
 ; CHECK-LABEL: pli_w_i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pli.w a0, -292
 ; CHECK-NEXT:    ret
   ret i64 u0xfffffedcfffffedc
+}
+
+define i64 @pli_w_slli_i64() {
+; CHECK-LABEL: pli_w_slli_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pli.w a0, 511
+; CHECK-NEXT:    slli a0, a0, 7
+; CHECK-NEXT:    ret
+  ret i64 u0x0000ff800000ff80
+}
+
+define i64 @pli_w_srli_i64() {
+; CHECK-LABEL: pli_w_srli_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pli.w a0, -480
+; CHECK-NEXT:    srli a0, a0, 5
+; CHECK-NEXT:    ret
+  ret i64 u0x07fffff107fffff1
 }
 
 define void @pli_b_store_i32(ptr %p) {
@@ -135,6 +171,53 @@ define void @pli_b_store_i32(ptr %p) {
 ; CHECK-NEXT:    ret
   store i32 u0x41414141, ptr %p
   ret void
+}
+
+define void @pli_b_store_i16(ptr %p) {
+; CHECK-LABEL: pli_b_store_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pli.b a1, -127
+; CHECK-NEXT:    sh a1, 0(a0)
+; CHECK-NEXT:    ret
+  store i16 u0x8181, ptr %p
+  ret void
+}
+
+define i64 @plui_h_i64() {
+; CHECK-LABEL: plui_h_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    plui.h a0, -9
+; CHECK-NEXT:    ret
+  ret i64 u0xfdc0fdc0fdc0fdc0
+}
+
+define void @plui_h_i32(ptr %p) {
+; CHECK-LABEL: plui_h_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    plui.h a1, -9
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    ret
+  store i32 u0xfdc0fdc0, ptr %p
+  ret void
+}
+
+; Make sure we use lui instead of plui.h.
+define void @lui_i32(ptr %p) {
+; CHECK-LABEL: lui_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a1, 524296
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    ret
+  store i32 u0x80008000, ptr %p
+  ret void
+}
+
+define i64 @plui_w_i64() {
+; CHECK-LABEL: plui_w_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    plui.w a0, 473
+; CHECK-NEXT:    ret
+  ret i64 u0x7640000076400000
 }
 
 define i64 @pack_i64(i64 %a, i64 %b) nounwind {
@@ -1017,6 +1100,99 @@ entry:
   ret i32 %4
 }
 
+; Test multiply patterns with one extended operand
+define i64 @mul_w00_sexti32_sext_inreg(i32 signext %a, i64 %b) nounwind {
+; CHECK-LABEL: mul_w00_sexti32_sext_inreg:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mul.w00 a0, a0, a1
+; CHECK-NEXT:    ret
+  %a_sext = sext i32 %a to i64
+  %b_trunc = trunc i64 %b to i32
+  %b_sext = sext i32 %b_trunc to i64
+  %mul = mul i64 %a_sext, %b_sext
+  ret i64 %mul
+}
+
+define i64 @mul_w00_sexti32_sext_inreg_commute(i32 signext %a, i64 %b) nounwind {
+; CHECK-LABEL: mul_w00_sexti32_sext_inreg_commute:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mul.w00 a0, a0, a1
+; CHECK-NEXT:    ret
+  %a_sext = sext i32 %a to i64
+  %b_trunc = trunc i64 %b to i32
+  %b_sext = sext i32 %b_trunc to i64
+  %mul = mul i64 %b_sext, %a_sext
+  ret i64 %mul
+}
+
+define i64 @mulu_w00_zexti32_and(i32 zeroext %a, i64 %b) nounwind {
+; CHECK-LABEL: mulu_w00_zexti32_and:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulu.w00 a0, a0, a1
+; CHECK-NEXT:    ret
+  %a_zext = zext i32 %a to i64
+  %b_and = and i64 %b, 4294967295
+  %mul = mul i64 %a_zext, %b_and
+  ret i64 %mul
+}
+
+define i64 @mulu_w00_zexti32_and_commute(i32 zeroext %a, i64 %b) nounwind {
+; CHECK-LABEL: mulu_w00_zexti32_and_commute:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulu.w00 a0, a0, a1
+; CHECK-NEXT:    ret
+  %a_zext = zext i32 %a to i64
+  %b_and = and i64 %b, 4294967295
+  %mul = mul i64 %b_and, %a_zext
+  ret i64 %mul
+}
+
+define i64 @mulsu_w00_sexti32_and(i32 signext %a, i64 %b) nounwind {
+; CHECK-LABEL: mulsu_w00_sexti32_and:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulsu.w00 a0, a0, a1
+; CHECK-NEXT:    ret
+  %a_sext = sext i32 %a to i64
+  %b_and = and i64 %b, 4294967295
+  %mul = mul i64 %a_sext, %b_and
+  ret i64 %mul
+}
+
+define i64 @mulsu_w00_sexti32_and_commute(i32 signext %a, i64 %b) nounwind {
+; CHECK-LABEL: mulsu_w00_sexti32_and_commute:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulsu.w00 a0, a0, a1
+; CHECK-NEXT:    ret
+  %a_sext = sext i32 %a to i64
+  %b_and = and i64 %b, 4294967295
+  %mul = mul i64 %b_and, %a_sext
+  ret i64 %mul
+}
+
+define i64 @mulsu_w00_sext_inreg_zexti32(i64 %a, i32 zeroext %b) nounwind {
+; CHECK-LABEL: mulsu_w00_sext_inreg_zexti32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulsu.w00 a0, a0, a1
+; CHECK-NEXT:    ret
+  %a_trunc = trunc i64 %a to i32
+  %a_sext = sext i32 %a_trunc to i64
+  %b_zext = zext i32 %b to i64
+  %mul = mul i64 %a_sext, %b_zext
+  ret i64 %mul
+}
+
+define i64 @mulsu_w00_sext_inreg_zexti32_commute(i64 %a, i32 zeroext %b) nounwind {
+; CHECK-LABEL: mulsu_w00_sext_inreg_zexti32_commute:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulsu.w00 a0, a0, a1
+; CHECK-NEXT:    ret
+  %a_trunc = trunc i64 %a to i32
+  %a_sext = sext i32 %a_trunc to i64
+  %b_zext = zext i32 %b to i64
+  %mul = mul i64 %b_zext, %a_sext
+  ret i64 %mul
+}
+
 ; Test that we select pack.
 define i64 @mm_usati_32_knownbits_i64(i64 %x, i64 %y) {
 ; CHECK-LABEL: mm_usati_32_knownbits_i64:
@@ -1362,9 +1538,7 @@ define i64 @maccsu_w00_swap_operands_commute(i64 %rd, i32 %a, i32 %b) nounwind {
 define i64 @macc_w00_multiple_uses(i32 %a, i32 %b, i64 %c, ptr %out) nounwind {
 ; CHECK-LABEL: macc_w00_multiple_uses:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sext.w a0, a0
-; CHECK-NEXT:    sext.w a1, a1
-; CHECK-NEXT:    mul a1, a0, a1
+; CHECK-NEXT:    mul.w00 a1, a0, a1
 ; CHECK-NEXT:    add a0, a2, a1
 ; CHECK-NEXT:    sd a1, 0(a3)
 ; CHECK-NEXT:    ret
@@ -1374,4 +1548,229 @@ define i64 @macc_w00_multiple_uses(i32 %a, i32 %b, i64 %c, ptr %out) nounwind {
   %result = add i64 %c, %mul
   store i64 %mul, ptr %out
   ret i64 %result
+}
+
+; Test that pli.b is rematerialized rather than spilled
+define i64 @test_pli_b_remat(ptr %p) nounwind {
+; CHECK-LABEL: test_pli_b_remat:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -112
+; CHECK-NEXT:    sd ra, 104(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s0, 96(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s1, 88(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s2, 80(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s3, 72(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s4, 64(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s5, 56(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s6, 48(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s7, 40(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s8, 32(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s9, 24(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s10, 16(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s11, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    pli.b a1, 37
+; CHECK-NEXT:    sd a1, 0(a0)
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    pli.b a0, 37
+; CHECK-NEXT:    ld ra, 104(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 96(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s1, 88(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s2, 80(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s3, 72(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s4, 64(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s5, 56(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s6, 48(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s7, 40(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s8, 32(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s9, 24(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s10, 16(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s11, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 112
+; CHECK-NEXT:    ret
+  store volatile i64 u0x2525252525252525, ptr %p
+  ; Clobber all registers to force rematerialization
+  tail call void asm sideeffect "", "~{x1},~{x3},~{x4},~{x5},~{x6},~{x7},~{x8},~{x9},~{x10},~{x11},~{x12},~{x13},~{x14},~{x15},~{x16},~{x17},~{x18},~{x19},~{x20},~{x21},~{x22},~{x23},~{x24},~{x25},~{x26},~{x27},~{x28},~{x29},~{x30},~{x31}"()
+  ; Use the constant again - it should be rematerialized, not spilled/reloaded
+  ret i64 u0x2525252525252525
+}
+
+; Test that pli.h is rematerialized rather than spilled
+define i64 @test_pli_h_remat(ptr %p) nounwind {
+; CHECK-LABEL: test_pli_h_remat:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -112
+; CHECK-NEXT:    sd ra, 104(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s0, 96(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s1, 88(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s2, 80(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s3, 72(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s4, 64(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s5, 56(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s6, 48(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s7, 40(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s8, 32(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s9, 24(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s10, 16(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s11, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    pli.h a1, 291
+; CHECK-NEXT:    sd a1, 0(a0)
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    pli.h a0, 291
+; CHECK-NEXT:    ld ra, 104(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 96(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s1, 88(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s2, 80(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s3, 72(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s4, 64(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s5, 56(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s6, 48(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s7, 40(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s8, 32(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s9, 24(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s10, 16(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s11, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 112
+; CHECK-NEXT:    ret
+  store volatile i64 u0x0123012301230123, ptr %p
+  ; Clobber all registers to force rematerialization
+  tail call void asm sideeffect "", "~{x1},~{x3},~{x4},~{x5},~{x6},~{x7},~{x8},~{x9},~{x10},~{x11},~{x12},~{x13},~{x14},~{x15},~{x16},~{x17},~{x18},~{x19},~{x20},~{x21},~{x22},~{x23},~{x24},~{x25},~{x26},~{x27},~{x28},~{x29},~{x30},~{x31}"()
+  ; Use the constant again - it should be rematerialized, not spilled/reloaded
+  ret i64 u0x0123012301230123
+}
+
+; Test that plui.h is rematerialized rather than spilled
+define i64 @test_plui_h_remat(ptr %p) nounwind {
+; CHECK-LABEL: test_plui_h_remat:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -112
+; CHECK-NEXT:    sd ra, 104(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s0, 96(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s1, 88(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s2, 80(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s3, 72(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s4, 64(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s5, 56(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s6, 48(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s7, 40(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s8, 32(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s9, 24(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s10, 16(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s11, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    plui.h a1, -9
+; CHECK-NEXT:    sd a1, 0(a0)
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    plui.h a0, -9
+; CHECK-NEXT:    ld ra, 104(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 96(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s1, 88(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s2, 80(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s3, 72(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s4, 64(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s5, 56(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s6, 48(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s7, 40(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s8, 32(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s9, 24(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s10, 16(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s11, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 112
+; CHECK-NEXT:    ret
+  store volatile i64 u0xfdc0fdc0fdc0fdc0, ptr %p
+  ; Clobber all registers to force rematerialization
+  tail call void asm sideeffect "", "~{x1},~{x3},~{x4},~{x5},~{x6},~{x7},~{x8},~{x9},~{x10},~{x11},~{x12},~{x13},~{x14},~{x15},~{x16},~{x17},~{x18},~{x19},~{x20},~{x21},~{x22},~{x23},~{x24},~{x25},~{x26},~{x27},~{x28},~{x29},~{x30},~{x31}"()
+  ; Use the constant again - it should be rematerialized, not spilled/reloaded
+  ret i64 u0xfdc0fdc0fdc0fdc0
+}
+
+; Test that pli.w is rematerialized rather than spilled
+define i64 @test_pli_w_remat(ptr %p) nounwind {
+; CHECK-LABEL: test_pli_w_remat:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -112
+; CHECK-NEXT:    sd ra, 104(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s0, 96(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s1, 88(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s2, 80(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s3, 72(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s4, 64(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s5, 56(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s6, 48(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s7, 40(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s8, 32(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s9, 24(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s10, 16(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s11, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    pli.w a1, -292
+; CHECK-NEXT:    sd a1, 0(a0)
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    pli.w a0, -292
+; CHECK-NEXT:    ld ra, 104(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 96(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s1, 88(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s2, 80(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s3, 72(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s4, 64(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s5, 56(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s6, 48(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s7, 40(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s8, 32(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s9, 24(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s10, 16(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s11, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 112
+; CHECK-NEXT:    ret
+  store volatile i64 u0xfffffedcfffffedc, ptr %p
+  ; Clobber all registers to force rematerialization
+  tail call void asm sideeffect "", "~{x1},~{x3},~{x4},~{x5},~{x6},~{x7},~{x8},~{x9},~{x10},~{x11},~{x12},~{x13},~{x14},~{x15},~{x16},~{x17},~{x18},~{x19},~{x20},~{x21},~{x22},~{x23},~{x24},~{x25},~{x26},~{x27},~{x28},~{x29},~{x30},~{x31}"()
+  ; Use the constant again - it should be rematerialized, not spilled/reloaded
+  ret i64 u0xfffffedcfffffedc
+}
+
+; Test that plui.w is rematerialized rather than spilled
+define i64 @test_plui_w_remat(ptr %p) nounwind {
+; CHECK-LABEL: test_plui_w_remat:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -112
+; CHECK-NEXT:    sd ra, 104(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s0, 96(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s1, 88(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s2, 80(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s3, 72(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s4, 64(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s5, 56(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s6, 48(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s7, 40(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s8, 32(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s9, 24(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s10, 16(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s11, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    plui.w a1, 473
+; CHECK-NEXT:    sd a1, 0(a0)
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    plui.w a0, 473
+; CHECK-NEXT:    ld ra, 104(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 96(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s1, 88(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s2, 80(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s3, 72(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s4, 64(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s5, 56(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s6, 48(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s7, 40(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s8, 32(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s9, 24(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s10, 16(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s11, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 112
+; CHECK-NEXT:    ret
+  store volatile i64 u0x7640000076400000, ptr %p
+  ; Clobber all registers to force rematerialization
+  tail call void asm sideeffect "", "~{x1},~{x3},~{x4},~{x5},~{x6},~{x7},~{x8},~{x9},~{x10},~{x11},~{x12},~{x13},~{x14},~{x15},~{x16},~{x17},~{x18},~{x19},~{x20},~{x21},~{x22},~{x23},~{x24},~{x25},~{x26},~{x27},~{x28},~{x29},~{x30},~{x31}"()
+  ; Use the constant again - it should be rematerialized, not spilled/reloaded
+  ret i64 u0x7640000076400000
 }

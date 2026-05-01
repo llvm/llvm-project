@@ -228,11 +228,21 @@ private:
 void ClangDocCommentVisitor::parseComment(const comments::Comment *C) {
   CurrentCI.Kind = stringToCommentKind(C->getCommentKindName());
   ConstCommentVisitor<ClangDocCommentVisitor>::visit(C);
-  for (comments::Comment *Child :
-       llvm::make_range(C->child_begin(), C->child_end())) {
-    CurrentCI.Children.emplace_back(allocatePtr<CommentInfo>());
-    ClangDocCommentVisitor Visitor(*CurrentCI.Children.back());
-    Visitor.parseComment(Child);
+
+  unsigned NumChildren = C->child_count();
+  if (NumChildren > 0) {
+    CommentInfo *ChildrenArray =
+        TransientArena.Allocate<CommentInfo>(NumChildren);
+    unsigned I = 0;
+    for (comments::Comment *Child :
+         llvm::make_range(C->child_begin(), C->child_end())) {
+      new (&ChildrenArray[I]) CommentInfo();
+      ClangDocCommentVisitor Visitor(ChildrenArray[I]);
+      Visitor.parseComment(Child);
+      I++;
+    }
+    CurrentCI.Children =
+        llvm::ArrayRef<CommentInfo>(ChildrenArray, NumChildren);
   }
 }
 

@@ -24,6 +24,11 @@ class FrameProviderPassThroughPrefixTestCase(TestBase):
         TestBase.setUp(self)
         self.source = "main.c"
 
+    @expectedFailureAll(
+        oslist=["linux"],
+        archs=["arm$"],
+        bugnumber="github.com/llvm/llvm-project/issues/191859",
+    )
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     def test_pass_through_with_prefix(self):
         """

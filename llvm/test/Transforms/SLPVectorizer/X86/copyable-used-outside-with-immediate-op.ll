@@ -13,16 +13,18 @@ define void @test() {
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi <4 x i32> [ [[TMP0]], %[[BB1]] ]
 ; CHECK-NEXT:    br label %[[BB10]]
 ; CHECK:       [[BB10]]:
+; CHECK-NEXT:    [[PHI11:%.*]] = phi i32 [ 0, %[[BB3]] ], [ [[PHI11]], %[[BB14]] ]
 ; CHECK-NEXT:    [[PHI12:%.*]] = phi float [ 0.000000e+00, %[[BB3]] ], [ 0.000000e+00, %[[BB14]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 0, i32 0>, %[[BB3]] ], [ [[TMP7:%.*]], %[[BB14]] ]
+; CHECK-NEXT:    [[PHI13:%.*]] = phi i32 [ 0, %[[BB3]] ], [ [[OR15:%.*]], %[[BB14]] ]
 ; CHECK-NEXT:    switch i32 0, label %[[BB14]] [
 ; CHECK-NEXT:      i32 0, label %[[BB1]]
 ; CHECK-NEXT:    ]
 ; CHECK:       [[BB14]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> <i32 poison, i32 poison, i32 0, i32 poison>, <4 x i32> [[TMP3]], <4 x i32> <i32 poison, i32 poison, i32 2, i32 6>
-; CHECK-NEXT:    [[TMP5:%.*]] = or <4 x i32> [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[PHI13]], [[PHI11]]
+; CHECK-NEXT:    [[OR15]] = or i32 [[OR]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> poison, i32 [[PHI11]], i32 2
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[OR]], i32 3
 ; CHECK-NEXT:    [[TMP6]] = or <4 x i32> [[TMP5]], <i32 poison, i32 poison, i32 0, i32 0>
-; CHECK-NEXT:    [[TMP7]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> [[TMP6]], <4 x i32> <i32 poison, i32 poison, i32 2, i32 7>
 ; CHECK-NEXT:    br i1 false, label %[[BB1]], label %[[BB10]]
 ;
 bb:

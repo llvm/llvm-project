@@ -68,11 +68,6 @@ class TestGdbRemoteHostInfo(GdbRemoteTestCaseBase):
             for match in re.finditer(r"([^:]+):([^;]+);", host_info_raw)
         }
 
-        import pprint
-
-        print("\nqHostInfo response:")
-        pprint.pprint(host_info_dict)
-
         # Validate keys are known.
         for key, val in list(host_info_dict.items()):
             self.assertIn(
