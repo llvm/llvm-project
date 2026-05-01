@@ -915,7 +915,7 @@ bool StubsManager_v7::visitEdge(LinkGraph &G, Block *B, Edge &E) {
     });
   }
 
-  assert(MakeThumb == (StubSymbol->getTargetFlags() & ThumbSymbol) &&
+  assert(MakeThumb == hasTargetFlags(*StubSymbol, ThumbSymbol) &&
          "Instruction set states of stub and relocation site should be equal");
   LLVM_DEBUG({
     dbgs() << "    Using " << (MakeThumb ? "Thumb" : "Arm") << " entry "

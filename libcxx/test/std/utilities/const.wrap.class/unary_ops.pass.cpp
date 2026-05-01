@@ -226,7 +226,7 @@ constexpr bool test() {
     assert(result3.get() == ~42);
 
     std::same_as<NonStructural> decltype(auto) result4 = !cwOpsReturnNonStructural;
-    assert(result4.get() == !42);
+    assert(result4.get() == static_cast<int>(!42));
 
     std::same_as<NonStructural> decltype(auto) result5 = &cwOpsReturnNonStructural;
     assert(result5.get() == 84);

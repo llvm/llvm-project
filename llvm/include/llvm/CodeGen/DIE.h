@@ -547,7 +547,7 @@ struct IntrusiveBackListBase {
 
   void push_back(Node &N) {
     assert(N.Next.getPointer() == &N && "Expected unlinked node");
-    assert(N.Next.getInt() == true && "Expected unlinked node");
+    assert(N.Next.getInt() && "Expected unlinked node");
 
     if (Last) {
       N.Next = Last->Next;
@@ -558,7 +558,7 @@ struct IntrusiveBackListBase {
 
   void push_front(Node &N) {
     assert(N.Next.getPointer() == &N && "Expected unlinked node");
-    assert(N.Next.getInt() == true && "Expected unlinked node");
+    assert(N.Next.getInt() && "Expected unlinked node");
 
     if (Last) {
       N.Next.setPointerAndInt(Last->Next.getPointer(), false);

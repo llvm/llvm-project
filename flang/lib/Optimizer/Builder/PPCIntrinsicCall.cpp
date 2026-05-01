@@ -966,7 +966,7 @@ bool PPCIntrinsicLibrary::isNativeVecElemOrderOnLE() {
 bool PPCIntrinsicLibrary::changeVecElemOrder() {
   const auto triple{fir::getTargetTriple(builder.getModule())};
   return (triple.isLittleEndian() !=
-          converter->getLoweringOptions().getNoPPCNativeVecElemOrder());
+          (converter->getLoweringOptions().getNoPPCNativeVecElemOrder() != 0));
 }
 
 static mlir::FunctionType genMmaVpFuncType(mlir::MLIRContext *context,

@@ -185,7 +185,7 @@ template <bool Cold>
 void BoltAddressTranslation::writeMaps(uint64_t &PrevAddress, raw_ostream &OS) {
   const uint32_t NumFuncs =
       llvm::count_if(llvm::make_first_range(Maps), [&](const uint64_t Address) {
-        return Cold == ColdPartSource.count(Address);
+        return Cold == (ColdPartSource.count(Address) != 0);
       });
   encodeULEB128(NumFuncs, OS);
   LLVM_DEBUG(dbgs() << "Writing " << NumFuncs << (Cold ? " cold" : "")
@@ -194,7 +194,7 @@ void BoltAddressTranslation::writeMaps(uint64_t &PrevAddress, raw_ostream &OS) {
   for (auto &MapEntry : Maps) {
     const uint64_t Address = MapEntry.first;
     // Only process cold fragments in cold mode, and vice versa.
-    if (Cold != ColdPartSource.count(Address))
+    if (Cold != (ColdPartSource.count(Address) != 0))
       continue;
     // NB: in `writeMaps` we use the input address because hashes are saved
     // early in `saveMetadata` before output addresses are assigned.
