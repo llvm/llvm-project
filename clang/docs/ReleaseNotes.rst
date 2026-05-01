@@ -506,6 +506,7 @@ Bug Fixes in This Version
 - Fixed a crash where constexpr evaluation encountered invalid overrides. (#GH183290)
 - Fixed a crash when assigning to an element of an ``ext_vector_type`` with ``bool`` element type. (#GH189260)
 - Clang now emits an error for friend declarations of lambda members. (#GH26540)
+- Fixed a crash caused by lambda capture handling in delayed default arguments. (#GH176534)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
