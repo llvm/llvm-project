@@ -418,27 +418,22 @@ bool AMDGPURegBankCombinerImpl::combineD16Load(MachineInstr &MI) const {
       return false;
     }
 
-    if (Load->getOpcode() == AMDGPU::G_ZEXT) {
-      SextLoad = getDefIgnoringCopies(Load->getOperand(1).getReg(), MRI);
-      if (!SextLoad || SextLoad->getOpcode() != AMDGPU::G_SEXTLOAD)
-        return false;
-
-      const MachineMemOperand *MMO = *SextLoad->memoperands_begin();
-      if (MMO->getSizeInBits().getValue() != 8)
-        return false;
-
-      return applyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_LO_I8, MI, SextLoad, Dst);
-    }
-
     if (mi_match(
             Load, MRI,
-            m_GAnd(m_MInstr(SextLoad), m_Copy(m_SpecificICst(CleanHi16))))) {
+            m_GAnd(m_MInstr(SextLoad), m_Copy(m_SpecificICst(CleanHi16)))) ||
+        mi_match(Load, MRI, m_GZExt(m_MInstr(SextLoad)))) {
       if (SextLoad->getOpcode() != AMDGPU::G_SEXTLOAD)
         return false;
 
       const MachineMemOperand *MMO = *SextLoad->memoperands_begin();
       if (MMO->getSizeInBits().getValue() != 8)
         return false;
+
+      if (Load->getOpcode() == TargetOpcode::G_ZEXT) {
+        LLT SextDstTy = MRI.getType(SextLoad->getOperand(0).getReg());
+        if (SextDstTy.getSizeInBits() != 16)
+          return false;
+      }
 
       return applyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_LO_I8, MI, SextLoad, Dst);
     }
@@ -462,26 +457,22 @@ bool AMDGPURegBankCombinerImpl::combineD16Load(MachineInstr &MI) const {
       return false;
     }
 
-    if (Load->getOpcode() == AMDGPU::G_ZEXT) {
-      SextLoad = getDefIgnoringCopies(Load->getOperand(1).getReg(), MRI);
-      if (!SextLoad || SextLoad->getOpcode() != AMDGPU::G_SEXTLOAD)
-        return false;
-
-      const MachineMemOperand *MMO = *SextLoad->memoperands_begin();
-      if (MMO->getSizeInBits().getValue() != 8)
-        return false;
-
-      return applyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_HI_I8, MI, SextLoad, Dst);
-    }
-
     if (mi_match(
             Load, MRI,
-            m_GAnd(m_MInstr(SextLoad), m_Copy(m_SpecificICst(CleanHi16))))) {
+            m_GAnd(m_MInstr(SextLoad), m_Copy(m_SpecificICst(CleanHi16)))) ||
+        mi_match(Load, MRI, m_GZExt(m_MInstr(SextLoad)))) {
       if (SextLoad->getOpcode() != AMDGPU::G_SEXTLOAD)
         return false;
+
       const MachineMemOperand *MMO = *SextLoad->memoperands_begin();
       if (MMO->getSizeInBits().getValue() != 8)
         return false;
+
+      if (Load->getOpcode() == TargetOpcode::G_ZEXT) {
+        LLT SextDstTy = MRI.getType(SextLoad->getOperand(0).getReg());
+        if (SextDstTy.getSizeInBits() != 16)
+          return false;
+      }
 
       return applyD16Load(AMDGPU::G_AMDGPU_LOAD_D16_HI_I8, MI, SextLoad, Dst);
     }
