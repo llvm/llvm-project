@@ -14,9 +14,6 @@ needs SPIRV/COMGR
 breaks build of llvm
 [clang][CIR][doc] Add auto-generated ClangIR documentation (#190354)
 ---
-breaks reduction_teams aomp_mappings_newrt
-[Offload] Make kernel dynamic memory handling more generic (#194403)
----
-breaks smoke, smoke-fort-limbo
-[Clang] Emit LLVM flatten attribute instead of per-callsite alwaysinline (#188615)
+breaks windows build
+[cmake] Refactor DIA SDK detection into FindDIASDK module (#160354)
 ---
