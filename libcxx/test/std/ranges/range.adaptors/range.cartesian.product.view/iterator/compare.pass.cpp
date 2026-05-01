@@ -17,9 +17,7 @@
 #include <array>
 #include <cassert>
 #include <compare>
-#include <concepts>
 #include <ranges>
-#include <tuple>
 
 #include "test_iterators.h"
 #include "test_range.h"

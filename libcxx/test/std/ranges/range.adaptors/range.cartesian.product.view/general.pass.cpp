@@ -17,7 +17,6 @@
 #include <functional>
 #include <ranges>
 #include <tuple>
-#include <vector>
 
 constexpr bool test() {
   { // 2-range product: full enumeration in lexicographic order

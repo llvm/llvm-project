@@ -11,7 +11,6 @@
 // constexpr iterator<false> begin()       requires (!simple-view<First> || ... || !simple-view<Vs>);
 // constexpr iterator<true>  begin() const requires (range<const First> && ... && range<const Vs>);
 
-#include <array>
 #include <cassert>
 #include <concepts>
 #include <ranges>

@@ -16,10 +16,7 @@
 
 #include <array>
 #include <cassert>
-#include <concepts>
-#include <functional>
 #include <ranges>
-#include <tuple>
 
 #include "../../range_adaptor_types.h"
 

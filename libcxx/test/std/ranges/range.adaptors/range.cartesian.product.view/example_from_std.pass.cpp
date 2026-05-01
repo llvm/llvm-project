@@ -8,10 +8,10 @@
 
 // REQUIRES: std-at-least-c++23
 
-#include <ranges>
 #include <cassert>
-#include <vector>
+#include <ranges>
 #include <string>
+#include <vector>
 
 constexpr bool test() {
   struct ConstexprStringStream {

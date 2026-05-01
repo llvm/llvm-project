@@ -14,8 +14,6 @@
 
 #include <cassert>
 #include <ranges>
-#include <type_traits>
-#include <utility>
 
 constexpr int buff[] = {1, 2, 3};
 

@@ -18,7 +18,6 @@
 //   * sized             iff every range is sized
 //   * common            iff first is common or (sized + random_access)
 
-#include <concepts>
 #include <ranges>
 
 #include "test_iterators.h"
