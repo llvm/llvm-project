@@ -3867,6 +3867,27 @@ bool TargetLowering::SimplifyDemandedVectorElts(
         return true;
     break;
   }
+  case ISD::SMAX:
+  case ISD::SMIN:
+  case ISD::UMAX:
+  case ISD::UMIN: {
+    SDValue Op0 = Op.getOperand(0);
+    SDValue Op1 = Op.getOperand(1);
+
+    APInt SrcUndef, SrcZero;
+    if (SimplifyDemandedVectorElts(Op1, DemandedElts, SrcUndef, SrcZero, TLO,
+                                   Depth + 1))
+      return true;
+    if (SimplifyDemandedVectorElts(Op0, DemandedElts, SrcUndef, SrcZero, TLO,
+                                   Depth + 1))
+      return true;
+
+    // Attempt to avoid multi-use ops if we don't need anything from them.
+    if (!DemandedElts.isAllOnes())
+      if (SimplifyDemandedVectorEltsBinOp(Op0, Op1))
+        return true;
+    break;
+  }
   case ISD::TRUNCATE:
   case ISD::SIGN_EXTEND:
   case ISD::ZERO_EXTEND:
