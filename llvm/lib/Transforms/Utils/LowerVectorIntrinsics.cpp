@@ -32,7 +32,7 @@ bool llvm::lowerUnaryVectorIntrinsicAsLoop(Module &M, CallInst *CI) {
   BasicBlock *Preheader =
       IVPhi->getIncomingBlock(IVPhi->getIncomingBlock(0) == LoopBB);
 
-  PHINode *Vec = PHINode::Create(VecTy, 2, "", BodyIP);
+  PHINode *Vec = PHINode::Create(VecTy, 2, "", BodyIP->getIterator());
   Vec->addIncoming(CI->getArgOperand(0), Preheader);
 
   Builder.SetInsertPoint(BodyIP);

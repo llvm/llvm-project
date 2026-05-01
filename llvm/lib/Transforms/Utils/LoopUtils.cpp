@@ -1357,7 +1357,7 @@ Value *llvm::expandReductionViaLoop(IRBuilderBase &Builder, Value *Vec,
   BasicBlock *Preheader =
     IVPhi->getIncomingBlock(IVPhi->getIncomingBlock(0) == LoopBB);
 
-  PHINode *AccPhi = PHINode::Create(EltTy, 2, "rdx.acc", BodyIP);
+  PHINode *AccPhi = PHINode::Create(EltTy, 2, "rdx.acc", BodyIP->getIterator());
   AccPhi->addIncoming(Acc, Preheader);
 
   Builder.SetInsertPoint(BodyIP);
@@ -1366,7 +1366,7 @@ Value *llvm::expandReductionViaLoop(IRBuilderBase &Builder, Value *Vec,
                                     AccPhi, Elt, "rdx.op");
   AccPhi->addIncoming(Res, LoopBB);
 
-  auto *ExitBr = cast<BranchInst>(LoopBB->getTerminator());
+  auto *ExitBr = cast<CondBrInst>(LoopBB->getTerminator());
   BasicBlock *ExitBB = ExitBr->getSuccessor(ExitBr->getSuccessor(0) == LoopBB);
   Builder.SetInsertPoint(ExitBB, ExitBB->begin());
   return Res;
