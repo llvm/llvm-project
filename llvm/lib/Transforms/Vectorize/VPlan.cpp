@@ -1788,7 +1788,8 @@ void LoopVectorizationPlanner::updateLoopMetadataAndProfileInfo(
       if (DisableRuntimeUnroll)
         addRuntimeUnrollDisableMetaData(OrigLoop);
 
-      LoopVectorizeHints Hints(OrigLoop, true, *ORE);
+      LoopVectorizeHints Hints(OrigLoop, /*InterleaveOnlyWhenForced*/ false,
+                               *ORE);
       Hints.setAlreadyVectorized();
     }
   }
@@ -1807,7 +1808,8 @@ void LoopVectorizationPlanner::updateLoopMetadataAndProfileInfo(
       VectorLoop->setLoopID(OrigLoopID);
 
     if (!VectorizingEpilogue) {
-      LoopVectorizeHints Hints(VectorLoop, true, *ORE);
+      LoopVectorizeHints Hints(VectorLoop, /*InterleaveOnlyWhenForced*/ false,
+                               *ORE);
       Hints.setAlreadyVectorized();
     }
   }

@@ -1883,7 +1883,7 @@ CommandObject *CommandInterpreter::BuildAliasResult(
 
       result.AppendErrorWithFormat("Not enough arguments provided; you "
                                    "need at least %d arguments to use "
-                                   "this alias.",
+                                   "this alias",
                                    index);
       return nullptr;
     } else {
@@ -2520,7 +2520,7 @@ void CommandInterpreter::BuildAliasCommandArgs(CommandObject *alias_cmd_obj,
       } else if (static_cast<size_t>(index) >= cmd_args.GetArgumentCount()) {
         result.AppendErrorWithFormat("Not enough arguments provided; you "
                                      "need at least %d arguments to use "
-                                     "this alias.",
+                                     "this alias",
                                      index);
         return;
       } else {
@@ -2889,7 +2889,7 @@ void CommandInterpreter::HandleCommands(
         if (idx != num_lines - 1)
           result.AppendErrorWithFormat(
               "Aborting reading of commands after command #%" PRIu64
-              ": '%s' continued the target.",
+              ": '%s' continued the target",
               (uint64_t)idx + 1, cmd);
         else
           result.AppendMessageWithFormatv(
@@ -2909,7 +2909,7 @@ void CommandInterpreter::HandleCommands(
       if (idx != num_lines - 1)
         result.AppendErrorWithFormat(
             "Aborting reading of commands after command #%" PRIu64
-            ": '%s' stopped with a signal or exception.",
+            ": '%s' stopped with a signal or exception",
             (uint64_t)idx + 1, cmd);
       else
         result.AppendMessageWithFormatv(
@@ -2953,7 +2953,7 @@ void CommandInterpreter::HandleCommandsFromFile(
     CommandReturnObject &result) {
   if (!FileSystem::Instance().Exists(cmd_file)) {
     result.AppendErrorWithFormat(
-        "Error reading commands from file %s - file not found.",
+        "Error reading commands from file %s - file not found",
         cmd_file.GetFilename().AsCString("<Unknown>"));
     return;
   }
@@ -3818,7 +3818,7 @@ CommandInterpreter::ResolveCommandImpl(std::string &command_line,
       } else {
         // We didn't have only one match, otherwise we wouldn't get here.
         lldbassert(num_matches == 0);
-        result.AppendErrorWithFormat("'%s' is not a valid command.",
+        result.AppendErrorWithFormat("'%s' is not a valid command",
                                      next_word.c_str());
       }
       if (!done)
@@ -3829,7 +3829,7 @@ CommandInterpreter::ResolveCommandImpl(std::string &command_line,
       if (!suffix.empty()) {
         result.AppendErrorWithFormat(
             "command '%s' did not recognize '%s%s%s' as valid (subcommand "
-            "might be invalid).",
+            "might be invalid)",
             cmd_obj->GetCommandName().str().c_str(),
             next_word.empty() ? "" : next_word.c_str(),
             next_word.empty() ? " -- " : " ", suffix.c_str());

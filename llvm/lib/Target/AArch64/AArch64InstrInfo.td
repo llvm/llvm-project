@@ -7407,7 +7407,7 @@ defm SADDL   : SIMDLongThreeVectorBHS<   0, 0b0000, "saddl",
 defm SADDW   : SIMDWideThreeVectorBHS<   0, 0b0001, "saddw",
                  BinOpFrag<(add node:$LHS, (sext node:$RHS))>>;
 defm SMLAL   : SIMDLongThreeVectorTiedBHS<0, 0b1000, "smlal",
-                 TriOpFrag<(add node:$LHS, (AArch64smull node:$MHS, node:$RHS))>>;
+                 TriOpFrag<(add_like node:$LHS, (AArch64smull node:$MHS, node:$RHS))>>;
 defm SMLSL   : SIMDLongThreeVectorTiedBHS<0, 0b1010, "smlsl",
                  TriOpFrag<(sub node:$LHS, (AArch64smull node:$MHS, node:$RHS))>>;
 defm SMULL   : SIMDLongThreeVectorBHS<0, 0b1100, "smull", AArch64smull>;
@@ -7428,7 +7428,7 @@ defm UADDL   : SIMDLongThreeVectorBHS<1, 0b0000, "uaddl",
 defm UADDW   : SIMDWideThreeVectorBHS<1, 0b0001, "uaddw",
                  BinOpFrag<(add node:$LHS, (zanyext node:$RHS))>>;
 defm UMLAL   : SIMDLongThreeVectorTiedBHS<1, 0b1000, "umlal",
-                 TriOpFrag<(add node:$LHS, (AArch64umull node:$MHS, node:$RHS))>>;
+                 TriOpFrag<(add_like node:$LHS, (AArch64umull node:$MHS, node:$RHS))>>;
 defm UMLSL   : SIMDLongThreeVectorTiedBHS<1, 0b1010, "umlsl",
                  TriOpFrag<(sub node:$LHS, (AArch64umull node:$MHS, node:$RHS))>>;
 defm UMULL   : SIMDLongThreeVectorBHS<1, 0b1100, "umull", AArch64umull>;
@@ -9035,7 +9035,7 @@ defm MLS   : SIMDVectorIndexedHSTied<1, 0b0100, "mls", null_frag>;
 
 defm MUL   : SIMDVectorIndexedHS<0, 0b1000, "mul", mul>;
 defm SMLAL : SIMDVectorIndexedLongSDTied<0, 0b0010, "smlal",
-    TriOpFrag<(add node:$LHS, (AArch64smull node:$MHS, node:$RHS))>>;
+    TriOpFrag<(add_like node:$LHS, (AArch64smull node:$MHS, node:$RHS))>>;
 defm SMLSL : SIMDVectorIndexedLongSDTied<0, 0b0110, "smlsl",
     TriOpFrag<(sub node:$LHS, (AArch64smull node:$MHS, node:$RHS))>>;
 defm SMULL : SIMDVectorIndexedLongSD<0, 0b1010, "smull", AArch64smull>;
@@ -9049,7 +9049,7 @@ defm SQRDMLSH : SIMDIndexedSQRDMLxHSDTied<1, 0b1111, "sqrdmlsh",
                                           AArch64sqrdmlsh, int_aarch64_neon_sqrdmlsh>;
 defm SQDMULL : SIMDIndexedLongSD<0, 0b1011, "sqdmull", int_aarch64_neon_sqdmull>;
 defm UMLAL   : SIMDVectorIndexedLongSDTied<1, 0b0010, "umlal",
-    TriOpFrag<(add node:$LHS, (AArch64umull node:$MHS, node:$RHS))>>;
+    TriOpFrag<(add_like node:$LHS, (AArch64umull node:$MHS, node:$RHS))>>;
 defm UMLSL   : SIMDVectorIndexedLongSDTied<1, 0b0110, "umlsl",
     TriOpFrag<(sub node:$LHS, (AArch64umull node:$MHS, node:$RHS))>>;
 defm UMULL   : SIMDVectorIndexedLongSD<1, 0b1010, "umull", AArch64umull>;
@@ -10986,9 +10986,9 @@ defm : InsertSubvectorUndef<i64>;
 
 // Use pair-wise add instructions when summing up the lanes for v2f64, v2i64
 // or v2f32.
-def : Pat<(i64 (add (vector_extract (v2i64 FPR128:$Rn), (i64 0)),
-                    (vector_extract (v2i64 FPR128:$Rn), (i64 1)))),
-           (i64 (ADDPv2i64p (v2i64 FPR128:$Rn)))>;
+def : Pat<(i64 (add_like (vector_extract (v2i64 FPR128:$Rn), (i64 0)),
+                         (vector_extract (v2i64 FPR128:$Rn), (i64 1)))),
+          (i64 (ADDPv2i64p (v2i64 FPR128:$Rn)))>;
 def : Pat<(f64 (any_fadd (vector_extract (v2f64 FPR128:$Rn), (i64 0)),
                          (vector_extract (v2f64 FPR128:$Rn), (i64 1)))),
            (f64 (FADDPv2i64p (v2f64 FPR128:$Rn)))>;
@@ -11036,25 +11036,39 @@ multiclass PairwiseZIPBinOp<SDPatternOperator Op, ValueType VT,
 }
 
 // add(uzp1(X, Y), uzp2(X, Y)) -> addp(X, Y)
-defm : PairwiseZIPBinOp<add, v2i64, FPR128, ADDPv2i64>;
-defm : PairwiseZIPBinOp<add, v2i32, FPR64,  ADDPv2i32>;
-defm : PairwiseUZPBinOp<add, v4i32, FPR128, ADDPv4i32>;
-defm : PairwiseUZPBinOp<add, v4i16, FPR64,  ADDPv4i16>;
-defm : PairwiseUZPBinOp<add, v8i16, FPR128, ADDPv8i16>;
-defm : PairwiseUZPBinOp<add, v8i8,  FPR64,  ADDPv8i8>;
-defm : PairwiseUZPBinOp<add, v16i8, FPR128, ADDPv16i8>;
+defm : PairwiseZIPBinOp<add_like, v2i64, FPR128, ADDPv2i64>;
+defm : PairwiseZIPBinOp<add_like, v2i32, FPR64,  ADDPv2i32>;
+defm : PairwiseUZPBinOp<add_like, v4i32, FPR128, ADDPv4i32>;
+defm : PairwiseUZPBinOp<add_like, v4i16, FPR64,  ADDPv4i16>;
+defm : PairwiseUZPBinOp<add_like, v8i16, FPR128, ADDPv8i16>;
+defm : PairwiseUZPBinOp<add_like, v8i8,  FPR64,  ADDPv8i8>;
+defm : PairwiseUZPBinOp<add_like, v16i8, FPR128, ADDPv16i8>;
 
-def : Pat<(v2i32 (add (AArch64zip1 (extract_subvector (v4i32 FPR128:$Rn), (i64 0)),
-                                   (extract_subvector (v4i32 FPR128:$Rn), (i64 2))),
-                      (AArch64zip2 (extract_subvector (v4i32 FPR128:$Rn), (i64 0)),
-                                   (extract_subvector (v4i32 FPR128:$Rn), (i64 2))))),
+def : Pat<(v2i32 (add_like (AArch64zip1 (extract_subvector (v4i32 FPR128:$Rn), (i64 0)),
+                                        (extract_subvector (v4i32 FPR128:$Rn), (i64 2))),
+                           (AArch64zip2 (extract_subvector (v4i32 FPR128:$Rn), (i64 0)),
+                                        (extract_subvector (v4i32 FPR128:$Rn), (i64 2))))),
           (EXTRACT_SUBREG (ADDPv4i32 $Rn, $Rn), dsub)>;
-def : Pat<(v4i16 (add (trunc (v4i32 (bitconvert FPR128:$Rn))),
-                      (extract_subvector (AArch64uzp2 (v8i16 FPR128:$Rn), undef), (i64 0)))),
+def : Pat<(v4i16 (add_like (trunc (v4i32 (bitconvert FPR128:$Rn))),
+                           (extract_subvector (AArch64uzp2 (v8i16 FPR128:$Rn), undef), (i64 0)))),
           (EXTRACT_SUBREG (ADDPv8i16 $Rn, $Rn), dsub)>;
-def : Pat<(v8i8  (add (trunc (v8i16 (bitconvert FPR128:$Rn))),
-                      (extract_subvector (AArch64uzp2 (v16i8 FPR128:$Rn), undef), (i64 0)))),
+def : Pat<(v8i8  (add_like (trunc (v8i16 (bitconvert FPR128:$Rn))),
+                           (extract_subvector (AArch64uzp2 (v16i8 FPR128:$Rn), undef), (i64 0)))),
           (EXTRACT_SUBREG (ADDPv16i8 $Rn, $Rn), dsub)>;
+
+multiclass PairwiseXtnUzp2BinOpWide<SDPatternOperator Op, ValueType VT,
+                                    ValueType HalfVT, ValueType WideEltVT,
+                                    Instruction Inst> {
+  def : Pat<(VT (Op (VT (concat_vectors
+                          (HalfVT (trunc (WideEltVT (bitconvert (VT FPR128:$Rn))))),
+                          (HalfVT undef))),
+                    (VT (AArch64uzp2 (VT FPR128:$Rn), (VT undef))))),
+            (Inst $Rn, $Rn)>;
+}
+
+defm : PairwiseXtnUzp2BinOpWide<add_like, v16i8, v8i8,  v8i16, ADDPv16i8>;
+defm : PairwiseXtnUzp2BinOpWide<add_like, v8i16, v4i16, v4i32, ADDPv8i16>;
+defm : PairwiseXtnUzp2BinOpWide<add_like, v4i32, v2i32, v2i64, ADDPv4i32>;
 
 defm : PairwiseZIPBinOp<fadd, v2f64, FPR128, FADDPv2f64>;
 defm : PairwiseZIPBinOp<fadd, v2f32, FPR64,  FADDPv2f32>;
