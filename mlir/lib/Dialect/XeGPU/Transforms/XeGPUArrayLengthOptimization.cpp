@@ -9,6 +9,9 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
+#include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
+#include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
+#include "mlir/Dialect/XeGPU/uArch/uArchBase.h"
 #include "mlir/IR/PatternMatch.h"
 #include "llvm/ADT/SmallVector.h"
 
@@ -18,31 +21,46 @@ using namespace mlir;
 
 namespace {
 
-// Subgroup size is typically 16 for Intel GPUs.
-// TODO: make this uArch-based.
-constexpr int64_t SUBGROUP_SIZE = 16;
+// Fallback subgroup size used when the target uArch cannot be resolved from
+// the op (e.g. standalone unit tests with no chip attribute attached).
+constexpr int64_t DEFAULT_SUBGROUP_SIZE = 16;
+
+/// Return the subgroup size for `op`'s target uArch, falling back to
+/// DEFAULT_SUBGROUP_SIZE if no chip attribute is attached or the chip is not
+/// recognized.
+static int64_t getSubgroupSize(Operation *op) {
+  auto chipStr = xegpu::getChipStr(op);
+  if (!chipStr)
+    return DEFAULT_SUBGROUP_SIZE;
+  const xegpu::uArch::uArch *targetUArch =
+      xegpu::uArch::getUArch(chipStr.value());
+  if (!targetUArch)
+    return DEFAULT_SUBGROUP_SIZE;
+  return targetUArch->getSubgroupSize();
+}
 
 /// Helper to compute array_length from FCD and subgroup size.
-static int64_t computeArrayLength(int64_t fcdSize) {
-  if (fcdSize <= SUBGROUP_SIZE)
+static int64_t computeArrayLength(int64_t fcdSize, int64_t subgroupSize) {
+  if (fcdSize <= subgroupSize)
     return 1;
-  return fcdSize / SUBGROUP_SIZE;
+  return fcdSize / subgroupSize;
 }
 
 /// Check if a 2D `xegpu.create_nd_tdesc` can be optimized into an
 /// array-length-enabled descriptor. Applies only when the FCD is an integer
 /// multiple of the subgroup size larger than the subgroup size itself and the
 /// tensor desc does not already carry an array_length.
-static bool needsOptimization(xegpu::TensorDescType tdescType) {
+static bool needsOptimization(xegpu::TensorDescType tdescType,
+                              int64_t subgroupSize) {
   auto shape = tdescType.getShape();
   if (shape.size() != 2)
     return false;
 
   int64_t fcd = shape[1];
-  if (fcd % SUBGROUP_SIZE != 0)
+  if (fcd % subgroupSize != 0)
     return false;
 
-  return fcd > SUBGROUP_SIZE && tdescType.getArrayLength() == 1;
+  return fcd > subgroupSize && tdescType.getArrayLength() == 1;
 }
 
 /// Returns true if `loadOp` carries a non-identity transpose attribute. A
@@ -66,8 +84,9 @@ public:
 
   LogicalResult matchAndRewrite(xegpu::CreateNdDescOp op,
                                 PatternRewriter &rewriter) const override {
+    int64_t subgroupSize = getSubgroupSize(op);
     auto tdescType = op.getType();
-    if (!needsOptimization(tdescType))
+    if (!needsOptimization(tdescType, subgroupSize))
       return failure();
 
     // Only static memref sources are supported for now.
@@ -85,7 +104,7 @@ public:
     }
 
     auto shape = tdescType.getShape();
-    int64_t arrayLength = computeArrayLength(shape[1]);
+    int64_t arrayLength = computeArrayLength(shape[1], subgroupSize);
     SmallVector<int64_t> newShape = {shape[0], shape[1] / arrayLength};
 
     auto newTdescType = xegpu::TensorDescType::get(
