@@ -1658,10 +1658,9 @@ class HLSLBufferCopyEmitter {
                             llvm::ArrayType *DstTy) {
     // Those assumptions are checked by isBufferLayoutArray.
     auto *SrcPaddedArrayTy = cast<llvm::ArrayType>(SrcTy->getElementType(0));
-    auto *SrcPaddedEltTy =
-        cast<llvm::StructType>(SrcPaddedArrayTy->getElementType());
     assert(SrcPaddedArrayTy->getNumElements() + 1 == DstTy->getNumElements());
-    assert(SrcPaddedEltTy->getElementType(0) == SrcTy->getElementType(1));
+    assert(cast<llvm::StructType>(SrcPaddedArrayTy->getElementType())
+               ->getElementType(0) == SrcTy->getElementType(1));
 
     auto *SrcDataTy = SrcTy->getElementType(1);
     auto Zero = llvm::ConstantInt::get(CGF.IntTy, 0);
