@@ -53,6 +53,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   WAIT_ASYNCMARK 0
+  ; CHECK-NEXT:   S_WAIT_ASYNCCNT 0, implicit-def $asynccnt, implicit $asynccnt
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
     successors: %bb.1(0x40000000), %bb.2(0x40000000)

@@ -3025,11 +3025,8 @@ bool WaitcntBrackets::mergeAsyncMarks(ArrayRef<MergeInfo> MergeInfos,
   bool StrictDom = false;
 
   LLVM_DEBUG(dbgs() << "Merging async marks ...");
-  // Early exit: nothing to merge when either side is empty.
-  // If OtherMarks is empty the join point has no async marks from that
-  // predecessor, so our existing marks are already the conservative result.
-  // If both are empty there is simply nothing to do.
-  if (AsyncMarks.empty() || OtherMarks.empty()) {
+  // Early exit: nothing to merge when both sides are empty.
+  if (AsyncMarks.empty() && OtherMarks.empty()) {
     LLVM_DEBUG(dbgs() << " nothing to merge\n");
     return false;
   }
@@ -3070,6 +3067,11 @@ bool WaitcntBrackets::mergeAsyncMarks(ArrayRef<MergeInfo> MergeInfos,
   unsigned OtherSize = OtherMarks.size();
   unsigned OurSize = AsyncMarks.size();
   unsigned MergeCount = std::min(OtherSize, OurSize);
+  // OtherMarks is empty → OtherSize == 0 → MergeCount == 0.
+  // Our existing marks are the conservative result; return early to avoid
+  // passing MergeCount == 0 to seq_inclusive which asserts Begin <= End.
+  if (MergeCount == 0)
+    return StrictDom;
   for (auto Idx : seq_inclusive<unsigned>(1, MergeCount)) {
     for (auto T : inst_counter_types(Context->MaxCounter)) {
       StrictDom |= mergeScore(MergeInfos[T], AsyncMarks[OurSize - Idx][T],
