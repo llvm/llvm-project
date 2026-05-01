@@ -5173,3 +5173,16 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.math.bf16subf128
 )
+
+add_entrypoint_object(
+  tgammaf16
+  SRCS
+    tgammaf16.cpp
+  HDRS
+    ../tgammaf16.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.math.tgammaf16
+    libc.src.errno.errno
+)

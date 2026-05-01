@@ -575,6 +575,12 @@ MPFRNumber MPFRNumber::tanpi() const {
 #endif
 }
 
+MPFRNumber MPFRNumber::tgamma() const {
+  MPFRNumber result(*this);
+  mpfr_gamma(result.value, value, mpfr_rounding);
+  return result;
+}
+
 MPFRNumber MPFRNumber::trunc() const {
   MPFRNumber result(*this);
   mpfr_trunc(result.value, value);

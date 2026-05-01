@@ -3626,6 +3626,17 @@ add_fp_unittest(
     libc.src.__support.FPUtil.bfloat16
 )
 
+add_fp_unittest(
+  tgammaf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    tgammaf16_test.cpp
+  DEPENDS
+    libc.src.math.tgammaf16
+)
+
 add_subdirectory(generic)
 add_subdirectory(smoke)
 
@@ -3633,3 +3644,4 @@ if(NOT LLVM_LIBC_FULL_BUILD)
   add_subdirectory(exhaustive)
   add_subdirectory(performance_testing)
 endif()
+
