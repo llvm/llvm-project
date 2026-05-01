@@ -1091,8 +1091,7 @@ LogicalResult GlobalTransposeLoadOp::verify() {
 
   auto resultType = cast<VectorType>(getType());
   size_t numElements = resultType.getNumElements();
-  size_t elementTypeSize =
-      resultType.getElementType().getIntOrFloatBitWidth();
+  size_t elementTypeSize = resultType.getElementType().getIntOrFloatBitWidth();
 
   // ElementSize -> NumElements (matches ISA-documented global_load_tr variants)
   const llvm::SmallDenseMap<size_t, size_t> kValidLoadSizeMap = {
