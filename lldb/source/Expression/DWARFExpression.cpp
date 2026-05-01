@@ -1168,8 +1168,8 @@ static llvm::Error Evaluate_DW_OP_piece(EvalContext &eval_ctx,
 
     // Check if this is the first piece?
     if (eval_ctx.op_piece_offset == 0) {
-      // This is the first piece, we should push it back onto the eval_ctx.stack
-      // so subsequent eval_ctx.pieces will be able to access this piece and add
+      // This is the first piece, we should push it back onto the stack
+      // so subsequent pieces will be able to access this piece and add
       // to it.
       if (eval_ctx.pieces.AppendDataToHostBuffer(curr_piece) == 0) {
         return llvm::createStringError("failed to append piece data");
@@ -1303,7 +1303,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
   EvalContext eval_ctx(exe_ctx, reg_ctx, std::move(module_sp), dwarf_cu,
                        reg_kind, initial_value_ptr, object_address_ptr);
 
-  auto &stack = eval_ctx.stack;
+  Stack &stack = eval_ctx.stack;
 
   if (initial_value_ptr)
     stack.push_back(*initial_value_ptr);
@@ -1787,7 +1787,7 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
         return err;
     } break;
 
-    case DW_OP_bit_piece: // 0x9d ULEB128 bit size, ULEB128 bit offset (DWARF3);
+    case DW_OP_bit_piece:
       if (stack.size() < 1) {
         UpdateValueTypeFromLocationDescription(eval_ctx,
                                                LocationDescriptionKind::Empty);
