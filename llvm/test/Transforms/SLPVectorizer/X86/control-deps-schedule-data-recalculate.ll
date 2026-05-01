@@ -13,9 +13,10 @@ define i32 @test(i32 %mul) {
 ; CHECK-NEXT:    [[ADD5:%.*]] = add i32 [[CALL]], [[MUL1]]
 ; CHECK-NEXT:    store i32 [[ADD5]], ptr [[H]], align 16
 ; CHECK-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr i8, ptr [[H]], i64 4
-; CHECK-NEXT:    [[ADD6:%.*]] = add i32 0, [[ADD4]]
+; CHECK-NEXT:    [[ADD6:%.*]] = add i32 0, 0
 ; CHECK-NEXT:    [[ADD7:%.*]] = add i32 [[ADD6]], [[MUL]]
-; CHECK-NEXT:    store i32 [[ADD7]], ptr [[ARRAYINIT_ELEMENT]], align 4
+; CHECK-NEXT:    [[ADD9:%.*]] = add i32 [[ADD7]], [[ADD4]]
+; CHECK-NEXT:    store i32 [[ADD9]], ptr [[ARRAYINIT_ELEMENT]], align 4
 ; CHECK-NEXT:    [[ARRAYINIT_ELEMENT10:%.*]] = getelementptr i8, ptr [[H]], i64 8
 ; CHECK-NEXT:    [[ADD11:%.*]] = or i32 [[ADD]], 0
 ; CHECK-NEXT:    [[ADD12:%.*]] = add i32 [[ADD11]], [[ADD4]]

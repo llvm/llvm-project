@@ -13,10 +13,10 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[ARGUMENT_i32_:%[0-9]+]]:i32 = ARGUMENT_i32 0, implicit $arguments
     ; CHECK-NEXT: RETURN [[ARGUMENT_i32_]], implicit-def $arguments
-    %1:i32(s32) = ARGUMENT_i32 0, implicit $arguments
-    %0:_(s8) = G_TRUNC %1(s32)
-    %2:i32(s32) = G_ANYEXT %0(s8)
-    RETURN %2(s32), implicit-def $arguments
+    %1:i32(i32) = ARGUMENT_i32 0, implicit $arguments
+    %0:_(i8) = G_TRUNC %1(i32)
+    %2:i32(i32) = G_ANYEXT %0(i8)
+    RETURN %2(i32), implicit-def $arguments
 ...
 ---
 name: aext_i8_i64
@@ -31,10 +31,10 @@ body: |
     ; CHECK-NEXT: [[ARGUMENT_i32_:%[0-9]+]]:i32 = ARGUMENT_i32 0, implicit $arguments
     ; CHECK-NEXT: [[I64_EXTEND_U_I32_:%[0-9]+]]:i64 = I64_EXTEND_U_I32 [[ARGUMENT_i32_]], implicit-def dead $arguments
     ; CHECK-NEXT: RETURN [[I64_EXTEND_U_I32_]], implicit-def $arguments
-    %1:i32(s32) = ARGUMENT_i32 0, implicit $arguments
-    %0:_(s8) = G_TRUNC %1(s32)
-    %2:i64(s64) = G_ANYEXT %0(s8)
-    RETURN %2(s64), implicit-def $arguments
+    %1:i32(i32) = ARGUMENT_i32 0, implicit $arguments
+    %0:_(i8) = G_TRUNC %1(i32)
+    %2:i64(i64) = G_ANYEXT %0(i8)
+    RETURN %2(i64), implicit-def $arguments
 ...
 
 ---
@@ -49,10 +49,10 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[ARGUMENT_i32_:%[0-9]+]]:i32 = ARGUMENT_i32 0, implicit $arguments
     ; CHECK-NEXT: RETURN [[ARGUMENT_i32_]], implicit-def $arguments
-    %1:i32(s32) = ARGUMENT_i32 0, implicit $arguments
-    %0:_(s16) = G_TRUNC %1(s32)
-    %2:i32(s32) = G_ANYEXT %0(s16)
-    RETURN %2(s32), implicit-def $arguments
+    %1:i32(i32) = ARGUMENT_i32 0, implicit $arguments
+    %0:_(i16) = G_TRUNC %1(i32)
+    %2:i32(i32) = G_ANYEXT %0(i16)
+    RETURN %2(i32), implicit-def $arguments
 ...
 ---
 name: aext_i16_i64
@@ -67,10 +67,10 @@ body: |
     ; CHECK-NEXT: [[ARGUMENT_i32_:%[0-9]+]]:i32 = ARGUMENT_i32 0, implicit $arguments
     ; CHECK-NEXT: [[I64_EXTEND_U_I32_:%[0-9]+]]:i64 = I64_EXTEND_U_I32 [[ARGUMENT_i32_]], implicit-def dead $arguments
     ; CHECK-NEXT: RETURN [[I64_EXTEND_U_I32_]], implicit-def $arguments
-    %1:i32(s32) = ARGUMENT_i32 0, implicit $arguments
-    %0:_(s16) = G_TRUNC %1(s32)
-    %2:i64(s64) = G_ANYEXT %0(s16)
-    RETURN %2(s64), implicit-def $arguments
+    %1:i32(i32) = ARGUMENT_i32 0, implicit $arguments
+    %0:_(i16) = G_TRUNC %1(i32)
+    %2:i64(i64) = G_ANYEXT %0(i16)
+    RETURN %2(i64), implicit-def $arguments
 ...
 ---
 name: aext_i32_i64
@@ -85,7 +85,7 @@ body: |
     ; CHECK-NEXT: [[ARGUMENT_i32_:%[0-9]+]]:i32 = ARGUMENT_i32 0, implicit $arguments
     ; CHECK-NEXT: [[I64_EXTEND_U_I32_:%[0-9]+]]:i64 = I64_EXTEND_U_I32 [[ARGUMENT_i32_]], implicit-def dead $arguments
     ; CHECK-NEXT: RETURN [[I64_EXTEND_U_I32_]], implicit-def $arguments
-    %0:i32(s32) = ARGUMENT_i32 0, implicit $arguments
-    %1:i64(s64) = G_ANYEXT %0(s32)
-    RETURN %1(s64), implicit-def $arguments
+    %0:i32(i32) = ARGUMENT_i32 0, implicit $arguments
+    %1:i64(i64) = G_ANYEXT %0(i32)
+    RETURN %1(i64), implicit-def $arguments
 ...

@@ -20,10 +20,10 @@ define i32 @test(i32 %0, i32 %1) {
 ; CHECK-NEXT:    [[SUB8:%.*]] = add i32 [[ADD7]], [[TMP0]]
 ; CHECK-NEXT:    store i32 [[SUB8]], ptr [[ARRAYINIT_ELEMENT5]], align 8
 ; CHECK-NEXT:    [[ARRAYINIT_ELEMENT9:%.*]] = getelementptr i8, ptr [[K]], i64 12
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 [[TMP0]], 2
-; CHECK-NEXT:    [[ADD10:%.*]] = add i32 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[ADD13:%.*]] = add i32 [[TMP1]], 1
+; CHECK-NEXT:    [[ADD10:%.*]] = add i32 [[ADD13]], [[TMP0]]
 ; CHECK-NEXT:    [[ADD11:%.*]] = add i32 [[ADD10]], [[ADD1]]
-; CHECK-NEXT:    [[ADD12:%.*]] = add i32 [[ADD11]], 1
+; CHECK-NEXT:    [[ADD12:%.*]] = add i32 [[ADD11]], [[TMP0]]
 ; CHECK-NEXT:    store i32 [[ADD12]], ptr [[ARRAYINIT_ELEMENT9]], align 4
 ; CHECK-NEXT:    [[CALL15:%.*]] = call i32 (ptr, ...) @printf(ptr null, ptr [[K]])
 ; CHECK-NEXT:    ret i32 [[CALL15]]

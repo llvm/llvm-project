@@ -729,31 +729,30 @@ namespace OperatorNewDelete {
     constexpr ~S() { }
   };
 
-  /// FIXME: This is broken in the current interpreter.
   constexpr bool structAlloc() {
-    S *s = std::allocator<S>().allocate(1); // ref-note {{heap allocation performed here}}
+    S *s = std::allocator<S>().allocate(1); // both-note {{heap allocation performed here}}
 
-    s->i = 12; // ref-note {{assignment to object outside its lifetime is not allowed in a constant expression}}
+    s->i = 12; // both-note {{assignment to object outside its lifetime is not allowed in a constant expression}}
 
     bool Res = (s->i == 12);
     std::allocator<S>().deallocate(s);
 
     return Res;
   }
-  static_assert(structAlloc()); // ref-error {{not an integral constant expression}} \
-                                // ref-note {{in call to}}
+  static_assert(structAlloc()); // both-error {{not an integral constant expression}} \
+                                // both-note {{in call to}}
 
   constexpr bool structAllocArray() {
-    S *s = std::allocator<S>().allocate(9); // ref-note {{heap allocation performed here}}
+    S *s = std::allocator<S>().allocate(9); // both-note {{heap allocation performed here}}
 
-    s[2].i = 12; // ref-note {{assignment to object outside its lifetime is not allowed in a constant expression}}
+    s[2].i = 12; // both-note {{assignment to object outside its lifetime is not allowed in a constant expression}}
     bool Res = (s[2].i == 12);
     std::allocator<S>().deallocate(s);
 
     return Res;
   }
-  static_assert(structAllocArray()); // ref-error {{not an integral constant expression}} \
-                                     // ref-note {{in call to}}
+  static_assert(structAllocArray()); // both-error {{not an integral constant expression}} \
+                                     // both-note {{in call to}}
 
   constexpr bool alloc_from_user_code() {
     void *p = __builtin_operator_new(sizeof(int)); // both-note {{cannot allocate untyped memory in a constant expression; use 'std::allocator<T>::allocate'}}

@@ -1258,6 +1258,10 @@ public:
   /// For isa/dyn_cast.
   LLVM_ABI static bool classof(const Value *From);
   LLVM_ABI Value *getPointerOperand() const;
+  Type *getPointerOperandType() const { return getPointerOperand()->getType(); }
+  unsigned getPointerAddressSpace() const {
+    return getPointerOperandType()->getPointerAddressSpace();
+  }
   Align getAlign() const { return cast<llvm::LoadInst>(Val)->getAlign(); }
   bool isUnordered() const { return cast<llvm::LoadInst>(Val)->isUnordered(); }
   bool isSimple() const { return cast<llvm::LoadInst>(Val)->isSimple(); }
@@ -1287,6 +1291,10 @@ public:
   LLVM_ABI static bool classof(const Value *From);
   LLVM_ABI Value *getValueOperand() const;
   LLVM_ABI Value *getPointerOperand() const;
+  Type *getPointerOperandType() const { return getPointerOperand()->getType(); }
+  unsigned getPointerAddressSpace() const {
+    return getPointerOperandType()->getPointerAddressSpace();
+  }
   Align getAlign() const { return cast<llvm::StoreInst>(Val)->getAlign(); }
   bool isSimple() const { return cast<llvm::StoreInst>(Val)->isSimple(); }
   bool isUnordered() const { return cast<llvm::StoreInst>(Val)->isUnordered(); }
@@ -2737,6 +2745,20 @@ public:
     return From->getSubclassID() == ClassID::Opaque;
   }
 };
+
+//===----------------------------------------------------------------------===//
+//                          Helper functions
+//===----------------------------------------------------------------------===//
+
+/// A helper function that returns the address space of the pointer operand of
+/// load or store instruction.
+inline unsigned getLoadStoreAddressSpace(const Instruction *I) {
+  assert((isa<LoadInst>(I) || isa<StoreInst>(I)) &&
+         "Expected Load or Store instruction");
+  if (auto *LI = dyn_cast<LoadInst>(I))
+    return LI->getPointerAddressSpace();
+  return cast<StoreInst>(I)->getPointerAddressSpace();
+}
 
 } // namespace llvm::sandboxir
 

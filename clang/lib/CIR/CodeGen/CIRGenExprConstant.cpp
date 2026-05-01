@@ -1411,12 +1411,17 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
       }
     }
 
-    // Classic codegen handles MSGuidDecl,UnnamedGlobalConstantDecl, and
-    // TemplateParamObjectDecl, but it can also fall through from VarDecl,
-    // in which case it silently returns nullptr. For now, let's emit an
-    // error to see what cases we need to handle.
-    cgm.errorNYI(d->getSourceRange(),
-                 "ConstantLValueEmitter: unhandled value decl");
+    if (isa<MSGuidDecl>(d))
+      cgm.errorNYI(d->getSourceRange(), "ConstantLValueEmitter: MSGuidDecl");
+
+    if (const auto *gcd = dyn_cast<UnnamedGlobalConstantDecl>(d))
+      return cgm.getBuilder().getGlobalViewAttr(
+          cgm.getAddrOfUnnamedGlobalConstantDecl(gcd));
+
+    if (const auto *tpo = dyn_cast<TemplateParamObjectDecl>(d))
+      return cgm.getBuilder().getGlobalViewAttr(
+          cgm.getAddrOfTemplateParamObject(tpo));
+
     return {};
   }
 
@@ -1739,21 +1744,34 @@ mlir::Attribute ConstantEmitter::emitNullForMemory(mlir::Location loc,
 
 mlir::Attribute ConstantEmitter::emitForMemory(mlir::Attribute c,
                                                QualType destType) {
-  // For an _Atomic-qualified constant, we may need to add tail padding.
-  if (destType->getAs<AtomicType>()) {
-    cgm.errorNYI("emitForMemory: atomic type");
-    return {};
-  }
-
-  return c;
+  return emitForMemory(cgm, c, destType);
 }
 
 mlir::Attribute ConstantEmitter::emitForMemory(CIRGenModule &cgm,
                                                mlir::Attribute c,
                                                QualType destType) {
   // For an _Atomic-qualified constant, we may need to add tail padding.
-  if (destType->getAs<AtomicType>()) {
-    cgm.errorNYI("atomic constants");
+  if (const auto *at = destType->getAs<AtomicType>()) {
+    QualType destValueType = at->getValueType();
+    c = emitForMemory(cgm, c, destValueType);
+
+    uint64_t innerSize = cgm.getASTContext().getTypeSize(destValueType);
+    uint64_t outerSize = cgm.getASTContext().getTypeSize(destType);
+    if (innerSize == outerSize)
+      return c;
+
+    assert(innerSize < outerSize && "emitted over-large constant for atomic");
+    cgm.errorNYI("emitForMemory: tail padding in atomic initializer");
+  }
+
+  // In HLSL bool vectors are stored in memory as a vector of i32
+  if (destType->isExtVectorBoolType() &&
+      !destType->isPackedVectorBoolType(cgm.getASTContext())) {
+    cgm.errorNYI("emitForMemory: zero-extend HLSL bool vectors");
+  }
+
+  if (destType->isBitIntType()) {
+    cgm.errorNYI("emitForMemory: _BitInt type");
   }
 
   return c;

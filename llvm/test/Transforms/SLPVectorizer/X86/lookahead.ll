@@ -199,54 +199,31 @@ entry:
 ; It is more profitable to reorder the operands of the RHS add, because A[1] has an external use.
 
 define void @lookahead_external_uses(ptr %A, ptr %B, ptr %C, ptr %D, ptr %S, ptr %Ext1, ptr %Ext2) {
-; SSE-LABEL: @lookahead_external_uses(
-; SSE-NEXT:  entry:
-; SSE-NEXT:    [[IDXA1:%.*]] = getelementptr inbounds double, ptr [[A:%.*]], i64 1
-; SSE-NEXT:    [[IDXB1:%.*]] = getelementptr inbounds double, ptr [[B:%.*]], i64 1
-; SSE-NEXT:    [[A0:%.*]] = load double, ptr [[A]], align 8
-; SSE-NEXT:    [[B0:%.*]] = load double, ptr [[B]], align 8
-; SSE-NEXT:    [[C0:%.*]] = load double, ptr [[C:%.*]], align 8
-; SSE-NEXT:    [[D0:%.*]] = load double, ptr [[D:%.*]], align 8
-; SSE-NEXT:    [[SUBA0B0:%.*]] = fsub fast double [[A0]], [[B0]]
-; SSE-NEXT:    [[SUBC0D0:%.*]] = fsub fast double [[C0]], [[D0]]
-; SSE-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[IDXA1]], align 8
-; SSE-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[IDXB1]], align 8
-; SSE-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
-; SSE-NEXT:    [[TMP3:%.*]] = fsub fast <2 x double> [[TMP0]], [[TMP2]]
-; SSE-NEXT:    [[ADD0:%.*]] = fadd fast double [[SUBA0B0]], [[SUBC0D0]]
-; SSE-NEXT:    [[TMP4:%.*]] = call fast double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> [[TMP3]])
-; SSE-NEXT:    [[IDXS1:%.*]] = getelementptr inbounds double, ptr [[S:%.*]], i64 1
-; SSE-NEXT:    store double [[ADD0]], ptr [[S]], align 8
-; SSE-NEXT:    store double [[TMP4]], ptr [[IDXS1]], align 8
-; SSE-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP0]], i32 0
-; SSE-NEXT:    store double [[TMP5]], ptr [[EXT1:%.*]], align 8
-; SSE-NEXT:    ret void
-;
-; AVX-LABEL: @lookahead_external_uses(
-; AVX-NEXT:  entry:
-; AVX-NEXT:    [[IDXA1:%.*]] = getelementptr inbounds double, ptr [[A:%.*]], i64 1
-; AVX-NEXT:    [[IDXB2:%.*]] = getelementptr inbounds double, ptr [[B:%.*]], i64 2
-; AVX-NEXT:    [[IDXA2:%.*]] = getelementptr inbounds double, ptr [[A]], i64 2
-; AVX-NEXT:    [[IDXB1:%.*]] = getelementptr inbounds double, ptr [[B]], i64 1
-; AVX-NEXT:    [[A0:%.*]] = load double, ptr [[A]], align 8
-; AVX-NEXT:    [[B0:%.*]] = load double, ptr [[B]], align 8
-; AVX-NEXT:    [[C0:%.*]] = load double, ptr [[C:%.*]], align 8
-; AVX-NEXT:    [[D0:%.*]] = load double, ptr [[D:%.*]], align 8
-; AVX-NEXT:    [[A1:%.*]] = load double, ptr [[IDXA1]], align 8
-; AVX-NEXT:    [[B2:%.*]] = load double, ptr [[IDXB2]], align 8
-; AVX-NEXT:    [[A2:%.*]] = load double, ptr [[IDXA2]], align 8
-; AVX-NEXT:    [[B1:%.*]] = load double, ptr [[IDXB1]], align 8
-; AVX-NEXT:    [[SUBA0B0:%.*]] = fsub fast double [[A0]], [[B0]]
-; AVX-NEXT:    [[SUBC0D0:%.*]] = fsub fast double [[C0]], [[D0]]
-; AVX-NEXT:    [[SUBA1B2:%.*]] = fsub fast double [[A1]], [[B2]]
-; AVX-NEXT:    [[SUBA2B1:%.*]] = fsub fast double [[A2]], [[B1]]
-; AVX-NEXT:    [[ADD0:%.*]] = fadd fast double [[SUBA0B0]], [[SUBC0D0]]
-; AVX-NEXT:    [[ADD1:%.*]] = fadd fast double [[SUBA1B2]], [[SUBA2B1]]
-; AVX-NEXT:    [[IDXS1:%.*]] = getelementptr inbounds double, ptr [[S:%.*]], i64 1
-; AVX-NEXT:    store double [[ADD0]], ptr [[S]], align 8
-; AVX-NEXT:    store double [[ADD1]], ptr [[IDXS1]], align 8
-; AVX-NEXT:    store double [[A1]], ptr [[EXT1:%.*]], align 8
-; AVX-NEXT:    ret void
+; CHECK-LABEL: @lookahead_external_uses(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[IDXA1:%.*]] = getelementptr inbounds double, ptr [[A:%.*]], i64 1
+; CHECK-NEXT:    [[IDXB2:%.*]] = getelementptr inbounds double, ptr [[B:%.*]], i64 2
+; CHECK-NEXT:    [[IDXA2:%.*]] = getelementptr inbounds double, ptr [[A]], i64 2
+; CHECK-NEXT:    [[IDXB1:%.*]] = getelementptr inbounds double, ptr [[B]], i64 1
+; CHECK-NEXT:    [[A0:%.*]] = load double, ptr [[A]], align 8
+; CHECK-NEXT:    [[B0:%.*]] = load double, ptr [[B]], align 8
+; CHECK-NEXT:    [[C0:%.*]] = load double, ptr [[C:%.*]], align 8
+; CHECK-NEXT:    [[D0:%.*]] = load double, ptr [[D:%.*]], align 8
+; CHECK-NEXT:    [[A1:%.*]] = load double, ptr [[IDXA1]], align 8
+; CHECK-NEXT:    [[B2:%.*]] = load double, ptr [[IDXB2]], align 8
+; CHECK-NEXT:    [[A2:%.*]] = load double, ptr [[IDXA2]], align 8
+; CHECK-NEXT:    [[B1:%.*]] = load double, ptr [[IDXB1]], align 8
+; CHECK-NEXT:    [[SUBA0B0:%.*]] = fsub fast double [[A0]], [[B0]]
+; CHECK-NEXT:    [[SUBC0D0:%.*]] = fsub fast double [[C0]], [[D0]]
+; CHECK-NEXT:    [[SUBA1B2:%.*]] = fsub fast double [[A1]], [[B2]]
+; CHECK-NEXT:    [[SUBA2B1:%.*]] = fsub fast double [[A2]], [[B1]]
+; CHECK-NEXT:    [[ADD0:%.*]] = fadd fast double [[SUBA0B0]], [[SUBC0D0]]
+; CHECK-NEXT:    [[ADD1:%.*]] = fadd fast double [[SUBA1B2]], [[SUBA2B1]]
+; CHECK-NEXT:    [[IDXS1:%.*]] = getelementptr inbounds double, ptr [[S:%.*]], i64 1
+; CHECK-NEXT:    store double [[ADD0]], ptr [[S]], align 8
+; CHECK-NEXT:    store double [[ADD1]], ptr [[IDXS1]], align 8
+; CHECK-NEXT:    store double [[A1]], ptr [[EXT1:%.*]], align 8
+; CHECK-NEXT:    ret void
 ;
 entry:
 
@@ -300,63 +277,35 @@ entry:
 ; from A get vectorized instead of the loads from B.
 ;
 define void @lookahead_limit_users_budget(ptr %A, ptr %B, ptr %C, ptr %D, ptr %S, ptr %Ext1, ptr %Ext2, ptr %Ext3, ptr %Ext4, ptr %Ext5) {
-; SSE-LABEL: @lookahead_limit_users_budget(
-; SSE-NEXT:  entry:
-; SSE-NEXT:    [[IDXA1:%.*]] = getelementptr inbounds double, ptr [[A:%.*]], i64 1
-; SSE-NEXT:    [[IDXB1:%.*]] = getelementptr inbounds double, ptr [[B:%.*]], i64 1
-; SSE-NEXT:    [[A0:%.*]] = load double, ptr [[A]], align 8
-; SSE-NEXT:    [[B0:%.*]] = load double, ptr [[B]], align 8
-; SSE-NEXT:    [[C0:%.*]] = load double, ptr [[C:%.*]], align 8
-; SSE-NEXT:    [[D0:%.*]] = load double, ptr [[D:%.*]], align 8
-; SSE-NEXT:    [[SUBA0B0:%.*]] = fsub fast double [[A0]], [[B0]]
-; SSE-NEXT:    [[SUBC0D0:%.*]] = fsub fast double [[C0]], [[D0]]
-; SSE-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[IDXA1]], align 8
-; SSE-NEXT:    [[B1:%.*]] = load double, ptr [[IDXB1]], align 8
-; SSE-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[IDXB1]], align 8
-; SSE-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
-; SSE-NEXT:    [[TMP3:%.*]] = fsub fast <2 x double> [[TMP0]], [[TMP2]]
-; SSE-NEXT:    [[ADD0:%.*]] = fadd fast double [[SUBA0B0]], [[SUBC0D0]]
-; SSE-NEXT:    [[TMP4:%.*]] = call fast double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> [[TMP3]])
-; SSE-NEXT:    [[IDXS1:%.*]] = getelementptr inbounds double, ptr [[S:%.*]], i64 1
-; SSE-NEXT:    store double [[ADD0]], ptr [[S]], align 8
-; SSE-NEXT:    store double [[TMP4]], ptr [[IDXS1]], align 8
-; SSE-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP0]], i32 0
-; SSE-NEXT:    store double [[TMP5]], ptr [[EXT1:%.*]], align 8
-; SSE-NEXT:    store double [[TMP5]], ptr [[EXT2:%.*]], align 8
-; SSE-NEXT:    store double [[TMP5]], ptr [[EXT3:%.*]], align 8
-; SSE-NEXT:    store double [[B1]], ptr [[EXT4:%.*]], align 8
-; SSE-NEXT:    store double [[B1]], ptr [[EXT5:%.*]], align 8
-; SSE-NEXT:    ret void
-;
-; AVX-LABEL: @lookahead_limit_users_budget(
-; AVX-NEXT:  entry:
-; AVX-NEXT:    [[IDXA1:%.*]] = getelementptr inbounds double, ptr [[A:%.*]], i64 1
-; AVX-NEXT:    [[IDXB2:%.*]] = getelementptr inbounds double, ptr [[B:%.*]], i64 2
-; AVX-NEXT:    [[IDXA2:%.*]] = getelementptr inbounds double, ptr [[A]], i64 2
-; AVX-NEXT:    [[IDXB1:%.*]] = getelementptr inbounds double, ptr [[B]], i64 1
-; AVX-NEXT:    [[A0:%.*]] = load double, ptr [[A]], align 8
-; AVX-NEXT:    [[B0:%.*]] = load double, ptr [[B]], align 8
-; AVX-NEXT:    [[C0:%.*]] = load double, ptr [[C:%.*]], align 8
-; AVX-NEXT:    [[D0:%.*]] = load double, ptr [[D:%.*]], align 8
-; AVX-NEXT:    [[A1:%.*]] = load double, ptr [[IDXA1]], align 8
-; AVX-NEXT:    [[B2:%.*]] = load double, ptr [[IDXB2]], align 8
-; AVX-NEXT:    [[A2:%.*]] = load double, ptr [[IDXA2]], align 8
-; AVX-NEXT:    [[B1:%.*]] = load double, ptr [[IDXB1]], align 8
-; AVX-NEXT:    [[SUBA0B0:%.*]] = fsub fast double [[A0]], [[B0]]
-; AVX-NEXT:    [[SUBC0D0:%.*]] = fsub fast double [[C0]], [[D0]]
-; AVX-NEXT:    [[SUBA1B2:%.*]] = fsub fast double [[A1]], [[B2]]
-; AVX-NEXT:    [[SUBA2B1:%.*]] = fsub fast double [[A2]], [[B1]]
-; AVX-NEXT:    [[ADD0:%.*]] = fadd fast double [[SUBA0B0]], [[SUBC0D0]]
-; AVX-NEXT:    [[ADD1:%.*]] = fadd fast double [[SUBA1B2]], [[SUBA2B1]]
-; AVX-NEXT:    [[IDXS1:%.*]] = getelementptr inbounds double, ptr [[S:%.*]], i64 1
-; AVX-NEXT:    store double [[ADD0]], ptr [[S]], align 8
-; AVX-NEXT:    store double [[ADD1]], ptr [[IDXS1]], align 8
-; AVX-NEXT:    store double [[A1]], ptr [[EXT1:%.*]], align 8
-; AVX-NEXT:    store double [[A1]], ptr [[EXT2:%.*]], align 8
-; AVX-NEXT:    store double [[A1]], ptr [[EXT3:%.*]], align 8
-; AVX-NEXT:    store double [[B1]], ptr [[EXT4:%.*]], align 8
-; AVX-NEXT:    store double [[B1]], ptr [[EXT5:%.*]], align 8
-; AVX-NEXT:    ret void
+; CHECK-LABEL: @lookahead_limit_users_budget(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[IDXA1:%.*]] = getelementptr inbounds double, ptr [[A:%.*]], i64 1
+; CHECK-NEXT:    [[IDXB2:%.*]] = getelementptr inbounds double, ptr [[B:%.*]], i64 2
+; CHECK-NEXT:    [[IDXA2:%.*]] = getelementptr inbounds double, ptr [[A]], i64 2
+; CHECK-NEXT:    [[IDXB1:%.*]] = getelementptr inbounds double, ptr [[B]], i64 1
+; CHECK-NEXT:    [[A0:%.*]] = load double, ptr [[A]], align 8
+; CHECK-NEXT:    [[B0:%.*]] = load double, ptr [[B]], align 8
+; CHECK-NEXT:    [[C0:%.*]] = load double, ptr [[C:%.*]], align 8
+; CHECK-NEXT:    [[D0:%.*]] = load double, ptr [[D:%.*]], align 8
+; CHECK-NEXT:    [[A1:%.*]] = load double, ptr [[IDXA1]], align 8
+; CHECK-NEXT:    [[B2:%.*]] = load double, ptr [[IDXB2]], align 8
+; CHECK-NEXT:    [[A2:%.*]] = load double, ptr [[IDXA2]], align 8
+; CHECK-NEXT:    [[B1:%.*]] = load double, ptr [[IDXB1]], align 8
+; CHECK-NEXT:    [[SUBA0B0:%.*]] = fsub fast double [[A0]], [[B0]]
+; CHECK-NEXT:    [[SUBC0D0:%.*]] = fsub fast double [[C0]], [[D0]]
+; CHECK-NEXT:    [[SUBA1B2:%.*]] = fsub fast double [[A1]], [[B2]]
+; CHECK-NEXT:    [[SUBA2B1:%.*]] = fsub fast double [[A2]], [[B1]]
+; CHECK-NEXT:    [[ADD0:%.*]] = fadd fast double [[SUBA0B0]], [[SUBC0D0]]
+; CHECK-NEXT:    [[ADD1:%.*]] = fadd fast double [[SUBA1B2]], [[SUBA2B1]]
+; CHECK-NEXT:    [[IDXS1:%.*]] = getelementptr inbounds double, ptr [[S:%.*]], i64 1
+; CHECK-NEXT:    store double [[ADD0]], ptr [[S]], align 8
+; CHECK-NEXT:    store double [[ADD1]], ptr [[IDXS1]], align 8
+; CHECK-NEXT:    store double [[A1]], ptr [[EXT1:%.*]], align 8
+; CHECK-NEXT:    store double [[A1]], ptr [[EXT2:%.*]], align 8
+; CHECK-NEXT:    store double [[A1]], ptr [[EXT3:%.*]], align 8
+; CHECK-NEXT:    store double [[B1]], ptr [[EXT4:%.*]], align 8
+; CHECK-NEXT:    store double [[B1]], ptr [[EXT5:%.*]], align 8
+; CHECK-NEXT:    ret void
 ;
 entry:
 
