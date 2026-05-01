@@ -1456,6 +1456,9 @@ class CursorKind(BaseEnumeration):
     # OpenMP split directive.
     OMP_SPLIT_DIRECTIVE = 312
 
+    # OpenMP taskgraph directive.
+    OMP_TASKGRAPH_DIRECTIVE = 313
+
     # OpenACC Compute Construct.
     OPEN_ACC_COMPUTE_DIRECTIVE = 320
 
