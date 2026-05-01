@@ -344,7 +344,11 @@ public:
   }
 
   friend _LIBCPP_HIDE_FROM_ABI constexpr void
-  iter_swap(const __iterator& __l, const __iterator& __r) noexcept(__iter_swap_noexcept_impl(__l, __r))
+  iter_swap(const __iterator& __l, const __iterator& __r) noexcept(
+      noexcept(ranges::iter_swap(std::declval<const iterator_t<__maybe_const<_IsConst, _First>>&>(),
+                                 std::declval<const iterator_t<__maybe_const<_IsConst, _First>>&>())) &&
+      (noexcept(ranges::iter_swap(std::declval<const iterator_t<__maybe_const<_IsConst, _Vs>>&>(),
+                                  std::declval<const iterator_t<__maybe_const<_IsConst, _Vs>>&>())) && ...))
     requires(indirectly_swappable<iterator_t<__maybe_const<_IsConst, _First>>> && ... &&
              indirectly_swappable<iterator_t<__maybe_const<_IsConst, _Vs>>>)
   {
@@ -452,15 +456,6 @@ private:
 
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator(_Parent& __parent, _MultiIter __current)
       : __parent_(std::addressof(__parent)), __current_(std::move(__current)) {}
-
-  template <auto _Ip = sizeof...(_Vs)>
-  _LIBCPP_HIDE_FROM_ABI static constexpr bool __iter_swap_noexcept_impl(const __iterator& __l, const __iterator& __r) {
-    if (not noexcept(std::ranges::iter_swap(std::get<_Ip>(__l.__current_), std::get<_Ip>(__r.__current_))))
-      return false;
-    if constexpr (_Ip > 0)
-      return __iter_swap_noexcept_impl<_Ip - 1>(__l, __r);
-    return true;
-  }
 
   template <auto _Np = sizeof...(_Vs)>
   _LIBCPP_HIDE_FROM_ABI static constexpr void __iter_swap_impl(const __iterator& __l, const __iterator& __r) {
