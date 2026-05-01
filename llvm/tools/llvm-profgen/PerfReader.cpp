@@ -11,11 +11,13 @@
 #include "ProfileGenerator.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
+#include "llvm/ProfileData/ETMTraceDecoder.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/TargetParser/Triple.h"
 
 #define DEBUG_TYPE "perf-reader"
 
@@ -344,32 +346,29 @@ bool VirtualUnwinder::unwind(const PerfSample *Sample, uint64_t Repeat) {
 }
 
 std::unique_ptr<PerfReaderBase>
-PerfReaderBase::create(ProfiledBinary *Binary, PerfInputFile &PerfInput,
+PerfReaderBase::create(ProfiledBinary *Binary, InputFile &Input,
                        std::optional<int32_t> PIDFilter) {
   std::unique_ptr<PerfReaderBase> PerfReader;
 
-  if (PerfInput.Format == PerfFormat::UnsymbolizedProfile) {
-    PerfReader.reset(
-        new UnsymbolizedProfileReader(Binary, PerfInput.InputFile));
+  if (Input.Format == InputFormat::UnsymbolizedProfile) {
+    PerfReader.reset(new UnsymbolizedProfileReader(Binary, Input.InputFile));
     return PerfReader;
   }
 
   // For perf data input, we need to convert them into perf script first.
   // If this is a kernel perf file, there is no need for retrieving PIDs.
-  if (PerfInput.Format == PerfFormat::PerfData)
-    PerfInput = PerfScriptReader::convertPerfDataToTrace(
-        Binary, Binary->isKernel(), PerfInput, PIDFilter);
+  if (Input.Format == InputFormat::PerfData)
+    Input = PerfScriptReader::convertPerfDataToTrace(Binary, Binary->isKernel(),
+                                                     Input, PIDFilter);
 
-  assert((PerfInput.Format == PerfFormat::PerfScript) &&
+  assert((Input.Format == InputFormat::PerfScript) &&
          "Should be a perfscript!");
 
-  PerfInput.Content =
-      PerfScriptReader::checkPerfScriptType(PerfInput.InputFile);
-  if (PerfInput.Content == PerfContent::LBRStack) {
-    PerfReader.reset(
-        new HybridPerfReader(Binary, PerfInput.InputFile, PIDFilter));
-  } else if (PerfInput.Content == PerfContent::LBR) {
-    PerfReader.reset(new LBRPerfReader(Binary, PerfInput.InputFile, PIDFilter));
+  Input.Content = PerfScriptReader::checkPerfScriptType(Input.InputFile);
+  if (Input.Content == PerfContent::LBRStack) {
+    PerfReader.reset(new HybridPerfReader(Binary, Input.InputFile, PIDFilter));
+  } else if (Input.Content == PerfContent::LBR) {
+    PerfReader.reset(new LBRPerfReader(Binary, Input.InputFile, PIDFilter));
   } else {
     exitWithError("Unsupported perfscript!");
   }
@@ -448,9 +447,9 @@ Error PerfReaderBase::parseDataAccessPerfTraces(
   return Error::success();
 }
 
-PerfInputFile
+InputFile
 PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary, bool SkipPID,
-                                         PerfInputFile &File,
+                                         InputFile &File,
                                          std::optional<int32_t> PIDFilter) {
   StringRef PerfData = File.InputFile;
   // Run perf script to retrieve PIDs matching binary we're interested in.
@@ -514,7 +513,7 @@ PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary, bool SkipPID,
   }
   sys::ExecuteAndWait(PerfPath, ScriptSampleArgs, std::nullopt, Redirects);
 
-  return {std::string(PerfTraceFile), PerfFormat::PerfScript,
+  return {std::string(PerfTraceFile), InputFormat::PerfScript,
           PerfContent::UnknownContent};
 }
 
@@ -1411,6 +1410,60 @@ void PerfScriptReader::parsePerfTraces() {
 }
 
 SmallVector<CleanupInstaller, 2> PerfScriptReader::TempFileCleanups;
+
+void ETMReader::recordProcessedRange(uint64_t Start, uint64_t End,
+                                     uint64_t Count) {
+  assert(!Counters.empty() && "Counters should not be empty!");
+  auto &Counter = Counters.begin()->second;
+  Counter.recordRangeCount(Start, End, Count);
+}
+
+class ETMCallback : public ETMDecoder::Callback {
+  ETMReader *Reader;
+
+public:
+  ETMCallback(ETMReader *R) : Reader(R) {}
+  void processInstructionRange(uint64_t Start, uint64_t End) override {
+    Reader->recordProcessedRange(Start, End, 1);
+  }
+};
+
+void ETMReader::parseETMTraces() {
+  auto BufferOrErr = MemoryBuffer::getFile(TraceFile);
+  if (std::error_code EC = BufferOrErr.getError())
+    exitWithError("Could not open ETM trace file: " + EC.message());
+
+  ArrayRef<uint8_t> Data(
+      reinterpret_cast<const uint8_t *>((*BufferOrErr)->getBufferStart()),
+      (*BufferOrErr)->getBufferSize());
+
+  // There is no context for ETM instruction traces.
+  // Initialize the SampleCounters map with a single empty context key
+  // to aggregate all instruction hits into a global bucket.
+  auto Key = std::make_shared<StringBasedCtxKey>();
+  Counters.emplace(Hashable<ContextKey>(Key), SampleCounter());
+
+  // The protocol utilizes a 0x80 byte as an initial synchronization header.
+  // Perform a manual search for this sync point to discard any leading
+  // padding or truncated packets before decoding begins.
+  size_t StartIdx = 0;
+  while (StartIdx < Data.size() && Data[StartIdx] != 0x80)
+    StartIdx++;
+  if (StartIdx >= Data.size())
+    exitWithError("No synchronization header (0x80) found in the bitstream.");
+  ArrayRef<uint8_t> TraceSlice = Data.slice(StartIdx);
+
+  auto DecoderOrErr = ETMDecoder::create(
+      Binary->getBinary(), Binary->getTriple(), static_cast<uint8_t>(TraceID));
+
+  if (!DecoderOrErr)
+    exitWithError(toString(DecoderOrErr.takeError()));
+  auto Decoder = std::move(*DecoderOrErr);
+
+  ETMCallback CB(this);
+  if (Error E = Decoder->processTrace(TraceSlice, CB))
+    exitWithError(toString(std::move(E)));
+}
 
 } // end namespace sampleprof
 } // end namespace llvm
