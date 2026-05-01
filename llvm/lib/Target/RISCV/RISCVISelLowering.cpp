@@ -872,7 +872,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VP_SHL,         ISD::VP_REDUCE_ADD,  ISD::VP_REDUCE_AND,
         ISD::VP_REDUCE_OR,   ISD::VP_REDUCE_XOR,  ISD::VP_REDUCE_SMAX,
         ISD::VP_REDUCE_SMIN, ISD::VP_REDUCE_UMAX, ISD::VP_REDUCE_UMIN,
-        ISD::VP_MERGE,       ISD::VP_SELECT,
+        ISD::VP_MERGE,
         ISD::VP_SIGN_EXTEND,
         ISD::VP_ZERO_EXTEND, ISD::VP_TRUNCATE,
         ISD::EXPERIMENTAL_VP_REVERSE, ISD::EXPERIMENTAL_VP_SPLICE,
@@ -881,7 +881,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     static const unsigned FloatingPointVPOps[] = {
         ISD::VP_REDUCE_FADD, ISD::VP_REDUCE_SEQ_FADD,
         ISD::VP_REDUCE_FMIN, ISD::VP_REDUCE_FMAX, ISD::VP_MERGE,
-        ISD::VP_SELECT,
         ISD::VP_IS_FPCLASS,  ISD::VP_REDUCE_FMINIMUM,
         ISD::VP_REDUCE_FMAXIMUM};
 
@@ -929,7 +928,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          Custom);
 
       setOperationAction(ISD::SELECT, VT, Custom);
-      setOperationAction({ISD::SELECT_CC, ISD::VSELECT, ISD::VP_SELECT}, VT,
+      setOperationAction({ISD::SELECT_CC, ISD::VSELECT}, VT,
                          Expand);
       setOperationAction(ISD::VP_MERGE, VT, Custom);
 
@@ -1298,7 +1297,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          Custom);
       setOperationAction({ISD::LRINT, ISD::LLRINT}, VT, Custom);
       setOperationAction({ISD::LROUND, ISD::LLROUND}, VT, Custom);
-      setOperationAction({ISD::VP_MERGE, ISD::VP_SELECT, ISD::SELECT}, VT,
+      setOperationAction({ISD::VP_MERGE, ISD::SELECT}, VT,
                          Custom);
       setOperationAction(ISD::SELECT_CC, VT, Expand);
       setOperationAction({ISD::INSERT_VECTOR_ELT, ISD::CONCAT_VECTORS,
@@ -1351,7 +1350,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          Custom);
       setOperationAction({ISD::LRINT, ISD::LLRINT}, VT, Custom);
       setOperationAction({ISD::LROUND, ISD::LLROUND}, VT, Custom);
-      setOperationAction({ISD::VP_MERGE, ISD::VP_SELECT, ISD::SELECT}, VT,
+      setOperationAction({ISD::VP_MERGE, ISD::SELECT}, VT,
                          Custom);
       setOperationAction(ISD::SELECT_CC, VT, Expand);
       setOperationAction({ISD::INSERT_VECTOR_ELT, ISD::EXTRACT_VECTOR_ELT,
@@ -1664,7 +1663,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         if (VT.getVectorElementType() == MVT::f16 &&
             !Subtarget.hasVInstructionsF16()) {
           setOperationAction(
-              {ISD::VP_MERGE, ISD::VP_SELECT, ISD::VSELECT, ISD::SELECT}, VT,
+              {ISD::VP_MERGE, ISD::VSELECT, ISD::SELECT}, VT,
               Custom);
           setOperationAction({ISD::LRINT, ISD::LLRINT}, VT, Custom);
           setOperationAction({ISD::LROUND, ISD::LLROUND}, VT, Custom);
@@ -1707,7 +1706,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
             setCondCodeAction(VFPCCToExpand, VT, Expand);
           }
           setOperationAction(
-              {ISD::VP_MERGE, ISD::VP_SELECT, ISD::VSELECT, ISD::SELECT}, VT,
+              {ISD::VP_MERGE, ISD::VSELECT, ISD::SELECT}, VT,
               Custom);
           MVT F32VecVT = MVT::getVectorVT(MVT::f32, VT.getVectorElementCount());
           // Don't promote bf16 vector operations to f32 if f32 vector type is
@@ -7581,7 +7580,6 @@ static unsigned getRISCVVLOp(SDValue Op) {
     return RISCVISD::SETCC_VL;
   case ISD::VSELECT:
     return RISCVISD::VMERGE_VL;
-  case ISD::VP_SELECT:
   case ISD::VP_MERGE:
     return RISCVISD::VMERGE_VL;
   case ISD::VP_SRA:
@@ -8963,7 +8961,6 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     if (Op.getSimpleValueType().getVectorElementType() == MVT::i1)
       return lowerVPMergeMask(Op, DAG);
     [[fallthrough]];
-  case ISD::VP_SELECT:
   case ISD::VP_SDIV:
   case ISD::VP_UDIV:
   case ISD::VP_SREM:
@@ -13860,14 +13857,9 @@ SDValue RISCVTargetLowering::lowerVPOp(SDValue Op, SelectionDAG &DAG) const {
           Ops.push_back(DAG.getUNDEF(ContainerVT));
       } else if (ISD::getVPExplicitVectorLengthIdx(Op.getOpcode()) ==
                  OpIdx.index()) {
-        if (Op.getOpcode() == ISD::VP_MERGE) {
-          // For VP_MERGE, copy the false operand instead of an undef value.
-          Ops.push_back(Ops.back());
-        } else {
-          assert(Op.getOpcode() == ISD::VP_SELECT);
-          // For VP_SELECT, add an undef value.
-          Ops.push_back(DAG.getUNDEF(ContainerVT));
-        }
+        assert(Op.getOpcode() == ISD::VP_MERGE);
+        // For VP_MERGE, copy the false operand instead of an undef value.
+        Ops.push_back(Ops.back());
       }
     }
     // VFCVT_RM_X_F_VL requires a rounding mode to be injected before the VL.
