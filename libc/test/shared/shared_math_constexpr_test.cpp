@@ -114,5 +114,6 @@ static_assert(bfloat16(0.0) ==
 static_assert(bfloat16(0.0) ==
               LIBC_NAMESPACE::shared::logbbf16(bfloat16(1.0f)));
 static_assert(0 == LIBC_NAMESPACE::shared::ilogbbf16(bfloat16(1.0)));
+static_assert(0L == LIBC_NAMESPACE::shared::llogbbf16(bfloat16(1.0)));
 
 TEST(LlvmLibcSharedMathTest, ConstantEvaluation) {}

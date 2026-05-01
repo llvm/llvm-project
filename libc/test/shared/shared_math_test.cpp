@@ -539,4 +539,5 @@ TEST(LlvmLibcSharedMathTest, AllBFloat16) {
 #endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
 
   EXPECT_EQ(0, LIBC_NAMESPACE::shared::ilogbbf16(bfloat16(1.0)));
+  EXPECT_EQ(0L, LIBC_NAMESPACE::shared::llogbbf16(bfloat16(1.0)));
 }
