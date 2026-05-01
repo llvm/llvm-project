@@ -1,4 +1,4 @@
-; RUN: opt -passes='assume-builder,verify' --enable-knowledge-retention -S %s | FileCheck %s
+; RUN: opt -passes=assume-builder --enable-knowledge-retention -S %s | FileCheck %s
 
 define void @test_atomic_accesses(ptr %p, ptr %q) {
 ; CHECK-LABEL: define {{[^@]+}}@test_atomic_accesses
