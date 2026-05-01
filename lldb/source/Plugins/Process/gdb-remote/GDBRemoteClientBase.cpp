@@ -202,10 +202,10 @@ GDBRemoteClientBase::SendPacketAndExpectResponse(
   GDBRemoteCommunication::PacketResult packet_result =
       SendPacketAndWaitForResponse(payload, response, interrupt_timeout);
   if (packet_result != GDBRemoteCommunication::PacketResult::Success)
-    return llvm::createStringErrorV("Failed to send packet: '{0}'", payload);
+    return llvm::createStringErrorV("failed to send packet: '{0}'", payload);
 
   if (response.IsUnsupportedResponse())
-    return llvm::createStringErrorV("Unsupported response: '{0}'",
+    return llvm::createStringErrorV("unsupported response: '{0}'",
                                     response.GetStringRef());
 
   return std::move(response);

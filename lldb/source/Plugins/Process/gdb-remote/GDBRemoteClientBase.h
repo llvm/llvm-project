@@ -74,7 +74,7 @@ public:
       std::chrono::seconds interrupt_timeout,
       llvm::function_ref<void(llvm::StringRef)> output_callback);
 
-  /// Wrapper around SendPacketAndWaitForResponse that returns and `Expected`.
+  /// Wrapper around SendPacketAndWaitForResponse that returns an `Expected`.
   llvm::Expected<StringExtractorGDBRemote> SendPacketAndExpectResponse(
       llvm::StringRef payload,
       std::chrono::seconds interrupt_timeout = std::chrono::seconds(0));

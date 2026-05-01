@@ -6555,7 +6555,8 @@ llvm::Error ProcessGDBRemote::UpdateBreakpointSites(
 
   // Process results: mark successful sites as enabled/disabled, retry failed
   // sites individually.
-  for (auto [error_code, bp_info] : llvm::zip(results, breakpoint_infos)) {
+  for (auto [error_code, bp_info] :
+       llvm::zip_equal(results, breakpoint_infos)) {
     BreakpointSite &site = bp_info.site;
     if (error_code == std::nullopt) {
       SetBreakpointSiteEnabled(site, bp_info.is_enable);
