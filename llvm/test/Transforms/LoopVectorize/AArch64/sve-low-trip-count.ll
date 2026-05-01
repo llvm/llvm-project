@@ -56,22 +56,20 @@ exit:
 define void @trip5_i8(ptr noalias nocapture noundef %dst, ptr noalias nocapture noundef readonly %src) #0 {
 ; CHECK-LABEL: define void @trip5_i8(
 ; CHECK-SAME: ptr noalias noundef captures(none) [[DST:%.*]], ptr noalias noundef readonly captures(none) [[SRC:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[GEP_SRC]], align 1
-; CHECK-NEXT:    [[MUL:%.*]] = shl i8 [[TMP0]], 1
-; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[GEP_DST]], align 1
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[MUL]], [[TMP1]]
-; CHECK-NEXT:    store i8 [[ADD]], ptr [[GEP_DST]], align 1
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 5
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[SRC]], align 1
+; CHECK-NEXT:    [[TMP0:%.*]] = shl <4 x i8> [[WIDE_LOAD]], splat (i8 1)
+; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i8>, ptr [[DST]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i8> [[TMP0]], [[WIDE_LOAD1]]
+; CHECK-NEXT:    store <4 x i8> [[TMP1]], ptr [[DST]], align 1
+; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
+; CHECK:       [[SCALAR_PH]]:
 ;
 entry:
   br label %loop
