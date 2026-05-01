@@ -3557,7 +3557,8 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::HandleC_Loc(
       characteristics::DummyDataObject ddo{std::move(*typeAndShape)};
       ddo.intent = common::Intent::In;
       specificCall.specificIntrinsic.characteristics.value()
-          .dummyArguments.emplace_back(characteristics::DummyArgument{"x", std::move(ddo)});
+          .dummyArguments.emplace_back(
+              characteristics::DummyArgument{"x", std::move(ddo)});
       specificCall.arguments.emplace_back(std::move(arguments[0]));
       return specificCall;
     } else if (expr && IsProcedurePointer(*expr)) {
