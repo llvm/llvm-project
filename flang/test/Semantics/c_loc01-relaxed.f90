@@ -46,6 +46,8 @@ module m
     cp = c_loc(ch(1:1)) ! ok
     cp = c_loc(deferred) ! ok
     cp = c_loc(p2ch) ! ok
+    !ERROR: alternate return specification may not appear on function reference
+666 cp = c_loc(*666)
     !ERROR: PRIVATE name '__address' is accessible only within module '__fortran_builtins'
     cp = c_ptr(0)
     !ERROR: PRIVATE name '__address' is accessible only within module '__fortran_builtins'
@@ -76,11 +78,13 @@ end
 
 module m3
   use iso_c_binding
+  implicit none
   real, target :: modtarg
  contains
   subroutine helper()
   end subroutine
   subroutine test
+    implicit none
     type(c_ptr) :: cp
     real :: notATarget
     real, target :: localtarg
@@ -91,8 +95,5 @@ module m3
     cp = c_loc(notATarget)
     !WARNING: C_LOC() argument should be a data pointer or target [-Wc-loc]
     cp = c_loc(pptr)
-    !ERROR: C_LOC() argument must be a object or procedure
-    !ERROR: alternate return specification may not appear on function reference
-10  cp = c_loc(*10)
   end subroutine
 end module

@@ -3561,17 +3561,22 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::HandleC_Loc(
               characteristics::DummyArgument{"x", std::move(ddo)});
       specificCall.arguments.emplace_back(std::move(arguments[0]));
       return specificCall;
-    } else if (expr && IsProcedurePointer(*expr)) {
-      auto dummyArg{characteristics::DummyArgument::FromActual(
-          "x", *expr, context, /*forImplicitInterface=*/false)};
-      CHECK(dummyArg.has_value());
-      specificCall.specificIntrinsic.characteristics.value()
-          .dummyArguments.emplace_back(std::move(*dummyArg));
-      specificCall.arguments.emplace_back(std::move(arguments[0]));
-      return specificCall;
-    } else {
-      context.messages().Say(arguments[0]->sourceLocation(),
-          "C_LOC() argument must be a object or procedure"_err_en_US);
+      // C_LOC() argument is a procedure pointer
+    } else if (context.languageFeatures().IsEnabled(
+                   common::LanguageFeature::RelaxedCLoc)) {
+      if (!expr || !IsProcedurePointer(*expr)) {
+        // There are more specific errors as to why the expression doesn't exist
+        // or isn't characterizable as a data object or procedure.
+      } else if (auto proc{characteristics::Procedure::Characterize(
+                     *expr, context)}) {
+        characteristics::DummyProcedure dProc{std::move(*proc)};
+        dProc.intent = common::Intent::In;
+        specificCall.specificIntrinsic.characteristics.value()
+            .dummyArguments.emplace_back(
+                characteristics::DummyArgument{"x", std::move(dProc)});
+        specificCall.arguments.emplace_back(std::move(arguments[0]));
+        return specificCall;
+      }
     }
   }
   return std::nullopt;
