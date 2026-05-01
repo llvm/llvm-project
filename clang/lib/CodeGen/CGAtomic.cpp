@@ -532,16 +532,11 @@ static llvm::Value *EmitPostAtomicMinMax(CGBuilderTy &Builder,
   const bool IsFP = OldVal->getType()->isFloatingPointTy();
 
   if (IsFP) {
-    llvm::Intrinsic::ID IID;
-    if (Op == AtomicExpr::AO__atomic_max_fetch ||
-        Op == AtomicExpr::AO__scoped_atomic_max_fetch)
-      IID = llvm::Intrinsic::maxnum;
-    else if (Op == AtomicExpr::AO__atomic_min_fetch ||
-             Op == AtomicExpr::AO__scoped_atomic_min_fetch)
-      IID = llvm::Intrinsic::minnum;
-    else
-      llvm_unreachable("Unexpected atomic FP min/max operation");
-
+    llvm::Intrinsic::ID IID =
+        (Op == AtomicExpr::AO__atomic_max_fetch ||
+         Op == AtomicExpr::AO__scoped_atomic_max_fetch)
+            ? llvm::Intrinsic::maxnum
+            : llvm::Intrinsic::minnum;
     return Builder.CreateBinaryIntrinsic(IID, OldVal, RHS, llvm::FMFSource(),
                                          "newval");
   }
