@@ -3561,7 +3561,6 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::HandleC_Loc(
               characteristics::DummyArgument{"x", std::move(ddo)});
       specificCall.arguments.emplace_back(std::move(arguments[0]));
       return specificCall;
-      // C_LOC() argument is a procedure pointer
     } else if (context.languageFeatures().IsEnabled(
                    common::LanguageFeature::RelaxedCLoc)) {
       if (!expr || !IsProcedurePointer(*expr)) {
