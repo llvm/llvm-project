@@ -464,8 +464,8 @@ static bool isLoadStoreSizeLegal(const GCNSubtarget &ST,
     MemSize = std::max(MemSize, Align);
 #endif
 
-  // Only 1-byte and 2-byte to 32-bit extloads are valid.
-  if (MemSize != RegSize && RegSize != 32)
+  // Only allow extloads to up to 32 bits.
+  if (MemSize != RegSize && RegSize > 32)
     return false;
 
   if (MemSize > maxSizeForAddrSpace(ST, AS, IsLoad,
