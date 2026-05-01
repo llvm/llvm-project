@@ -41,6 +41,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sched.sched_get_priority_max
     libc.src.sched.sched_get_priority_min
     libc.src.sched.sched_getaffinity
+    libc.src.sched.sched_getcpu
     libc.src.sched.sched_getparam
     libc.src.sched.sched_getscheduler
     libc.src.sched.sched_rr_get_interval
