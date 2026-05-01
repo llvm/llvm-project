@@ -1577,6 +1577,18 @@ static void splitEndLoopBB(MachineBasicBlock *EndTryTableBB) {
   EndLoopBB->addSuccessor(EndTryTableBB);
 }
 
+// Print the BB name in the form of bb.NUMBER.ORIGINAL_NAME.
+// e.g., bb.3.catch.start
+static std::string getBBName(const MachineBasicBlock *MBB) {
+  std::string Name = "bb.";
+  Name += Twine(MBB->getNumber()).str();
+  if (MBB->getBasicBlock()) {
+    Name += ".";
+    Name += MBB->getBasicBlock()->getName();
+  }
+  return Name;
+}
+
 bool WebAssemblyCFGStackify::fixCallUnwindMismatches(MachineFunction &MF) {
   // This function is used for both the legacy EH and the standard (exnref) EH,
   // and the reason we have unwind mismatches is the same for the both of them,
@@ -1921,10 +1933,10 @@ bool WebAssemblyCFGStackify::fixCallUnwindMismatches(MachineFunction &MF) {
       // If not, record the range.
       UnwindDestToTryRanges[UnwindDest].push_back(
           TryRange(RangeBegin, RangeEnd));
-      LLVM_DEBUG(dbgs() << "- Call unwind mismatch: MBB = " << MBB.getName()
+      LLVM_DEBUG(dbgs() << "- Call unwind mismatch: MBB = " << getBBName(&MBB)
                         << "\nCall = " << MI
-                        << "\nOriginal dest = " << UnwindDest->getName()
-                        << "  Current dest = " << EHPadStack.back()->getName()
+                        << "\nOriginal dest = " << getBBName(UnwindDest)
+                        << "  Current dest = " << getBBName(EHPadStack.back())
                         << "\n\n");
     }
   }
@@ -1943,11 +1955,11 @@ bool WebAssemblyCFGStackify::fixCallUnwindMismatches(MachineFunction &MF) {
     UnwindDestToTryRanges[getFakeCallerBlock(MF)].push_back(
         TryRange(RangeBegin, RangeEnd));
     LLVM_DEBUG(dbgs() << "- Call unwind mismatch: MBB = "
-                      << RangeBegin->getParent()->getName()
+                      << getBBName(RangeBegin->getParent())
                       << "\nRange begin = " << *RangeBegin
                       << "Range end = " << *RangeEnd
                       << "\nOriginal dest = caller  Current dest = "
-                      << CurrentDest->getName() << "\n\n");
+                      << getBBName(CurrentDest) << "\n\n");
     RangeBegin = RangeEnd = nullptr; // Reset range pointers
   };
 
@@ -2185,7 +2197,7 @@ bool WebAssemblyCFGStackify::fixCatchUnwindMismatches(MachineFunction &MF) {
         // This can happen when the unwind dest was removed during the
         // optimization, e.g. because it was unreachable.
         else if (EHPadStack.empty() && EHInfo->hasUnwindDest(EHPad)) {
-          LLVM_DEBUG(dbgs() << "EHPad (" << EHPad->getName()
+          LLVM_DEBUG(dbgs() << "EHPad (" << getBBName(EHPad)
                             << "'s unwind destination does not exist anymore"
                             << "\n\n");
         }
@@ -2196,9 +2208,9 @@ bool WebAssemblyCFGStackify::fixCatchUnwindMismatches(MachineFunction &MF) {
                  !EHInfo->hasUnwindDest(EHPad)) {
           EHPadToUnwindDest[EHPad] = getFakeCallerBlock(MF);
           LLVM_DEBUG(dbgs()
-                     << "- Catch unwind mismatch:\nEHPad = " << EHPad->getName()
+                     << "- Catch unwind mismatch:\nEHPad = " << getBBName(EHPad)
                      << "  Original dest = caller  Current dest = "
-                     << EHPadStack.back()->getName() << "\n\n");
+                     << getBBName(EHPadStack.back()) << "\n\n");
         }
 
         // The EHPad's next unwind destination is an EH pad, whereas we
@@ -2208,9 +2220,9 @@ bool WebAssemblyCFGStackify::fixCatchUnwindMismatches(MachineFunction &MF) {
           if (EHPadStack.back() != UnwindDest) {
             EHPadToUnwindDest[EHPad] = UnwindDest;
             LLVM_DEBUG(dbgs() << "- Catch unwind mismatch:\nEHPad = "
-                              << EHPad->getName() << "  Original dest = "
-                              << UnwindDest->getName() << "  Current dest = "
-                              << EHPadStack.back()->getName() << "\n\n");
+                              << getBBName(EHPad) << "  Original dest = "
+                              << getBBName(UnwindDest) << "  Current dest = "
+                              << getBBName(EHPadStack.back()) << "\n\n");
           }
         }
 
