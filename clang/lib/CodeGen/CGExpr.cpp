@@ -3625,26 +3625,16 @@ LValue CodeGenFunction::EmitOMPCapturedBindingLValue(const BindingDecl *BD) {
          CapturedStmtInfo->getKind() == CapturedRegionKind::CR_OpenMP &&
          CGM.getLangOpts().OpenMP);
   auto *DD = cast<VarDecl>(BD->getDecomposedDecl());
-  auto I = LocalDeclMap.find(DD);
-  assert(I != LocalDeclMap.end() && "Decomposed decl not in LocalDeclMap");
-
-  Address ParamAddr = I->second;
   QualType AggregType = DD->getType();
   if (AggregType->isReferenceType())
     AggregType = AggregType->getPointeeType();
+  DeclarationNameInfo NameInfo(DD->getDeclName(), SourceLocation());
+  DeclRefExpr *DRE = DeclRefExpr::Create(
+      getContext(), NestedNameSpecifierLoc(), SourceLocation(), DD,
+      /*RefersToEnclosingVariableOrCapture=*/false, NameInfo, AggregType,
+      VK_LValue);
+  LValue CapLVal = EmitLValue(DRE);
 
-  LValue CapLVal;
-  llvm::Type *ParamLLVMType = ParamAddr.getElementType();
-  if (ParamLLVMType->isPointerTy()) {
-    llvm::Value *Ptr = Builder.CreateLoad(ParamAddr, "captured.val");
-    Address AggregAddr(Ptr, ConvertTypeForMem(AggregType),
-                       getContext().getDeclAlign(DD));
-    CapLVal = MakeAddrLValue(AggregAddr, AggregType);
-  } else {
-    Address AggregAddr(ParamAddr.emitRawPointer(*this),
-                       ConvertTypeForMem(AggregType), ParamAddr.getAlignment());
-    CapLVal = MakeAddrLValue(AggregAddr, AggregType);
-  }
   // Extract the specific binding from the decomposed object.
   Expr *BindingExpr = BD->getBinding()->IgnoreImplicit();
   if (auto *ME = dyn_cast<MemberExpr>(BindingExpr)) {

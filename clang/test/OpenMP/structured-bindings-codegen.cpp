@@ -440,9 +440,10 @@ void test_reference_binding() {
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
 // CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META3]]
 // CHECK:    store ptr [[TMP1]], ptr [[TMP:%.*]], align 8
+// CHECK:    [[TMP2:%.*]] = load ptr, ptr [[TMP]], align 8, !nonnull [[META2]], !align [[META3]]
 // CHECK:    [[CAPTURED_VAL:%.*]] = load ptr, ptr [[TMP]], align 8
 // CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT:%.*]], ptr [[CAPTURED_VAL]], i32 0, i32 0
-// CHECK:    [[TMP2:%.*]] = load i32, ptr [[X]], align 8
-// CHECK:    call void @_Z3usei(i32 noundef [[TMP2]])
+// CHECK:    [[TMP3:%.*]] = load i32, ptr [[X]], align 8
+// CHECK:    call void @_Z3usei(i32 noundef [[TMP3]])
 // CHECK:    ret void
 //
