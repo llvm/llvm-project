@@ -580,7 +580,7 @@
 # CHECK-NEXT:  1      4     0.50                        fadd	z31.d, p7/m, z31.d, #1.0
 # CHECK-NEXT:  1      4     0.50                        fadd	z31.h, p7/m, z31.h, #1.0
 # CHECK-NEXT:  1      4     0.50                        fadd	z31.s, p7/m, z31.s, #1.0
-# CHECK-NEXT:  1      8     3.00                        fadda	d0, p7, d0, z31.d
+# CHECK-NEXT:  1      8     2.50                        fadda	d0, p7, d0, z31.d
 # CHECK-NEXT:  1      32    25.00                       fadda	h0, p7, h0, z31.h
 # CHECK-NEXT:  1      16    9.00                        fadda	s0, p7, s0, z31.s
 # CHECK-NEXT:  1      4     0.50                        faddp	z0.h, p0/m, z0.h, z1.h
@@ -1745,10 +1745,10 @@
 # CHECK-NEXT:  1      2     1.00                        pfirst	p15.b, p15, p15.b
 # CHECK-NEXT:  1      3     0.50                        pmul	z0.b, z1.b, z2.b
 # CHECK-NEXT:  1      3     0.50                        pmul	z29.b, z30.b, z31.b
-# CHECK-NEXT:  1      9     7.00                        pmullb	z0.h, z1.b, z2.b
+# CHECK-NEXT:  1      3     0.50                        pmullb	z0.h, z1.b, z2.b
 # CHECK-NEXT:  1      9     7.00                        pmullb	z29.q, z30.d, z31.d
 # CHECK-NEXT:  1      9     7.00                        pmullb	z31.d, z31.s, z31.s
-# CHECK-NEXT:  1      9     7.00                        pmullt	z0.h, z1.b, z2.b
+# CHECK-NEXT:  1      3     0.50                        pmullt	z0.h, z1.b, z2.b
 # CHECK-NEXT:  1      9     7.00                        pmullt	z29.q, z30.d, z31.d
 # CHECK-NEXT:  1      9     7.00                        pmullt	z31.d, z31.s, z31.s
 # CHECK-NEXT:  1      2     1.00                        pnext	p0.b, p15, p0.b
@@ -3442,7 +3442,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
-# CHECK-NEXT: 437.00 54.00  9.00    -     221.00 2425.00  -     -     1177.00 1258.00 215.00 215.00 690.00
+# CHECK-NEXT: 437.00 54.00  9.00    -     221.00 2425.00  -     -     1177.50 1258.50 215.00 215.00 676.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
@@ -4016,7 +4016,7 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fadd	z31.d, p7/m, z31.d, #1.0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fadd	z31.h, p7/m, z31.h, #1.0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fadd	z31.s, p7/m, z31.s, #1.0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00   3.00    -      -      -     fadda	d0, p7, d0, z31.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     2.50   2.50    -      -      -     fadda	d0, p7, d0, z31.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     25.00  25.00   -      -      -     fadda	h0, p7, h0, z31.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     9.00   9.00    -      -      -     fadda	s0, p7, s0, z31.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     faddp	z0.h, p0/m, z0.h, z1.h
@@ -5181,10 +5181,10 @@
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     pfirst	p15.b, p15, p15.b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     pmul	z0.b, z1.b, z2.b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     pmul	z29.b, z30.b, z31.b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     7.00   pmullb	z0.h, z1.b, z2.b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     pmullb	z0.h, z1.b, z2.b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     7.00   pmullb	z29.q, z30.d, z31.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     7.00   pmullb	z31.d, z31.s, z31.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     7.00   pmullt	z0.h, z1.b, z2.b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     pmullt	z0.h, z1.b, z2.b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     7.00   pmullt	z29.q, z30.d, z31.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     7.00   pmullt	z31.d, z31.s, z31.s
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -     pnext	p0.b, p15, p0.b

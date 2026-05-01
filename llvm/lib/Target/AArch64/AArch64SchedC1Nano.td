@@ -1298,9 +1298,9 @@ def : InstRW<[C1NanoWrite<4, C1NanoUnitVMAC>], (instregex "^SQRDMULH_ZZZ_[BHS]",
 def : InstRW<[C1NanoWrite<4, C1NanoUnitVMAC>], (instregex "^SQRDMULH_ZZZI?_D")>;
 
 // Multiply/multiply long, (8x8) polynomial
-def : InstRW<[C1NanoWrite<3, C1NanoUnitVALU>], (instregex "^PMUL_ZZZ_B")>;
+def : InstRW<[C1NanoWrite<3, C1NanoUnitVALU>], (instregex "^PMUL_ZZZ_B", "^PMULL[BT]_ZZZ_H")>;
 
-def : InstRW<[C1NanoMCWrite<9, 7, C1NanoUnitVMC>], (instregex "^PMULL[BT]_ZZZ_[HDQ]")>;
+def : InstRW<[C1NanoMCWrite<9, 7, C1NanoUnitVMC>], (instregex "^PMULL[BT]_ZZZ_[DQ]")>;
 
 
 // Predicate counting vector
@@ -1375,7 +1375,7 @@ def : InstRW<[C1NanoMC2Write<16, 9, C1NanoUnitVALU>], (instrs FADDA_VPZ_S)>;
 
 // Floating point associative add, F64
 // RThoughput should be 5/2 but we cannot have fractional values so using 3
-def : InstRW<[C1NanoMC2Write<8, 3, C1NanoUnitVALU>], (instrs FADDA_VPZ_D)>;
+def : InstRW<[C1NanoMCWrite<8, 5, C1NanoUnitVALU>], (instrs FADDA_VPZ_D)>;
 
 // Floating point compare
 def : InstRW<[C1NanoMC2Write<4, 1, C1NanoUnitVALU>], (instregex "^FACG[ET]_PPzZZ_[HSD]",
