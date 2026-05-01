@@ -30,13 +30,32 @@ entry:
 }
 
 define i32 @bar(i32 %x, i32 %y, i32 %z) nounwind readnone {
-; CHECK32-LABEL: bar:
-; CHECK32:       # %bb.0: # %entry
-; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK32-NEXT:    shldl %cl, %edx, %eax
-; CHECK32-NEXT:    retl
+; X86-LABEL: bar:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shldl %cl, %edx, %eax
+; X86-NEXT:    retl
+;
+; SHLD-LABEL: bar:
+; SHLD:       # %bb.0: # %entry
+; SHLD-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; SHLD-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; SHLD-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SHLD-NEXT:    shldl %cl, %edx, %eax
+; SHLD-NEXT:    retl
+;
+; BMI2-LABEL: bar:
+; BMI2:       # %bb.0: # %entry
+; BMI2-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; BMI2-NEXT:    movzbl %cl, %eax
+; BMI2-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; BMI2-NEXT:    shll %cl, %edx
+; BMI2-NEXT:    negl %eax
+; BMI2-NEXT:    shrxl %eax, {{[0-9]+}}(%esp), %eax
+; BMI2-NEXT:    orl %edx, %eax
+; BMI2-NEXT:    retl
 ;
 ; CHECK64-LABEL: bar:
 ; CHECK64:       # %bb.0: # %entry
@@ -77,13 +96,32 @@ entry:
 }
 
 define i32 @bu(i32 %x, i32 %y, i32 %z) nounwind readnone {
-; CHECK32-LABEL: bu:
-; CHECK32:       # %bb.0: # %entry
-; CHECK32-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK32-NEXT:    shrdl %cl, %edx, %eax
-; CHECK32-NEXT:    retl
+; X86-LABEL: bu:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shrdl %cl, %edx, %eax
+; X86-NEXT:    retl
+;
+; SHLD-LABEL: bu:
+; SHLD:       # %bb.0: # %entry
+; SHLD-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; SHLD-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; SHLD-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SHLD-NEXT:    shrdl %cl, %edx, %eax
+; SHLD-NEXT:    retl
+;
+; BMI2-LABEL: bu:
+; BMI2:       # %bb.0: # %entry
+; BMI2-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; BMI2-NEXT:    movzbl %cl, %eax
+; BMI2-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; BMI2-NEXT:    shrl %cl, %edx
+; BMI2-NEXT:    negl %eax
+; BMI2-NEXT:    shlxl %eax, {{[0-9]+}}(%esp), %eax
+; BMI2-NEXT:    orl %edx, %eax
+; BMI2-NEXT:    retl
 ;
 ; CHECK64-LABEL: bu:
 ; CHECK64:       # %bb.0: # %entry

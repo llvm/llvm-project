@@ -33,6 +33,7 @@ enum X86MachineCombinerPattern : unsigned {
   // Unfold SHD
   USHD_OR,
   USHD_LEA,
+  USHD_SHLX_OR,
 };
 
 namespace X86 {

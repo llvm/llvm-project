@@ -10640,6 +10640,7 @@ CombinerObjective X86InstrInfo::getCombinerObjective(unsigned Pattern) const {
   switch (Pattern) {
   case X86MachineCombinerPattern::USHD_OR:
   case X86MachineCombinerPattern::USHD_LEA:
+  case X86MachineCombinerPattern::USHD_SHLX_OR:
     return CombinerObjective::MustReduceLatency;
   default:
     return TargetInstrInfo::getCombinerObjective(Pattern);
@@ -10673,7 +10674,6 @@ bool X86InstrInfo::getMachineCombinerPatterns(
     }
     break;
   }
-  // We do not support CL variant, as it requires a lot of bookkeeping.
   case X86::SHLD32rri8:
   case X86::SHLD64rri8:
   case X86::SHRD32rri8:
@@ -10687,6 +10687,23 @@ bool X86InstrInfo::getMachineCombinerPatterns(
   case X86::SHRD64mri8:
     Patterns.push_back(X86MachineCombinerPattern::USHD_OR);
     return true;
+  // With BMI2, one SH*rCL/SH*mCL uses the existing CL directly; the
+  // complement shift uses SHLX/SHRX with a negated copy of CL, avoiding
+  // physical-register conflicts. LEA is inapplicable (needs compile-time
+  // scale).
+  case X86::SHLD32rrCL:
+  case X86::SHLD64rrCL:
+  case X86::SHRD32rrCL:
+  case X86::SHRD64rrCL:
+  case X86::SHLD32mrCL:
+  case X86::SHLD64mrCL:
+  case X86::SHRD32mrCL:
+  case X86::SHRD64mrCL:
+    if (Subtarget.hasBMI2()) {
+      Patterns.push_back(X86MachineCombinerPattern::USHD_SHLX_OR);
+      return true;
+    }
+    break;
   }
   return TargetInstrInfo::getMachineCombinerPatterns(Root,
                                                      Patterns, DoRegPressureReduce);
@@ -10920,6 +10937,131 @@ genShdLeaSequence(MachineInstr &Root, const TargetInstrInfo &TII,
   DelInstrs.push_back(&Root);
 }
 
+// Expand SH_D_rCL into SH_rCL and SH_X + OR, the idea being
+// that we can spare a register by knowing that one of the operands is
+// already in CL.
+// We have to introduce a new register, otherwise all the operations would
+// serialise on CL accesses. This is why this optimization only applies
+// when BMI2 is available.
+static void
+genShdShlxOrSequence(MachineInstr &Root, const TargetInstrInfo &TII,
+                     SmallVectorImpl<MachineInstr *> &InsInstrs,
+                     SmallVectorImpl<MachineInstr *> &DelInstrs,
+                     DenseMap<Register, unsigned> &InstrIdxForVirtReg) {
+  auto *MF = Root.getMF();
+  MachineRegisterInfo &RegInfo = MF->getRegInfo();
+  const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
+  auto GetRC = [&](Register Reg) {
+    return Reg.isVirtual() ? RegInfo.getRegClass(Reg)
+                           : TRI->getMinimalPhysRegClass(Reg);
+  };
+
+  unsigned OpCode = Root.getOpcode();
+  bool Is64 = OpCode == X86::SHLD64rrCL || OpCode == X86::SHRD64rrCL ||
+              OpCode == X86::SHLD64mrCL || OpCode == X86::SHRD64mrCL;
+  bool IsShrd = OpCode == X86::SHRD32rrCL || OpCode == X86::SHRD64rrCL ||
+                OpCode == X86::SHRD32mrCL || OpCode == X86::SHRD64mrCL;
+  bool IsMem = OpCode == X86::SHLD32mrCL || OpCode == X86::SHLD64mrCL ||
+               OpCode == X86::SHRD32mrCL || OpCode == X86::SHRD64mrCL;
+
+  unsigned DirectClOpc, MemClOpc, ComplXOpc, MovzxOpc, NegOpc, OrOpc;
+  const TargetRegisterClass *RC;
+  if (Is64) {
+    DirectClOpc = IsShrd ? X86::SHR64rCL : X86::SHL64rCL;
+    MemClOpc = IsShrd ? X86::SHR64mCL : X86::SHL64mCL;
+    ComplXOpc = IsShrd ? X86::SHLX64rr : X86::SHRX64rr;
+    MovzxOpc = X86::MOVZX64rr8;
+    NegOpc = X86::NEG64r;
+    OrOpc = IsMem ? X86::OR64mr : X86::OR64rr;
+    RC = &X86::GR64RegClass;
+  } else {
+    DirectClOpc = IsShrd ? X86::SHR32rCL : X86::SHL32rCL;
+    MemClOpc = IsShrd ? X86::SHR32mCL : X86::SHL32mCL;
+    ComplXOpc = IsShrd ? X86::SHLX32rr : X86::SHRX32rr;
+    MovzxOpc = X86::MOVZX32rr8;
+    NegOpc = X86::NEG32r;
+    OrOpc = IsMem ? X86::OR32mr : X86::OR32rr;
+    RC = &X86::GR32RegClass;
+  }
+
+  // Copy physical CL into a virtual register to be negated.
+  Register CntVirt = RegInfo.createVirtualRegister(RC);
+  MachineInstr *Movzx =
+      BuildMI(*MF, MIMetadata(Root), TII.get(MovzxOpc), CntVirt)
+          .addReg(X86::CL);
+
+  Register CntNeg = RegInfo.createVirtualRegister(RC);
+  MachineInstr *Neg = BuildMI(*MF, MIMetadata(Root), TII.get(NegOpc), CntNeg)
+                          .addReg(CntVirt, RegState::Kill);
+
+  if (!IsMem) {
+    // Register case
+    Register Src1 = Root.getOperand(1).getReg();
+    Register Src2 = Root.getOperand(2).getReg();
+    Register Dst = Root.getOperand(0).getReg();
+
+    Register Tmp1 = RegInfo.createVirtualRegister(RC);
+    MachineInstr *DirectShift =
+        BuildMI(*MF, MIMetadata(Root), TII.get(DirectClOpc), Tmp1)
+            .addReg(Src1, getKillRegState(Root.getOperand(1).isKill()));
+
+    Register Tmp2 = RegInfo.createVirtualRegister(RC);
+    MachineInstr *ComplShift =
+        BuildMI(*MF, MIMetadata(Root), TII.get(ComplXOpc), Tmp2)
+            .addReg(Src2, getKillRegState(Root.getOperand(2).isKill()))
+            .addReg(CntNeg, RegState::Kill);
+
+    MachineInstr *Or = BuildMI(*MF, MIMetadata(Root), TII.get(OrOpc), Dst)
+                           .addReg(Tmp1, RegState::Kill)
+                           .addReg(Tmp2, RegState::Kill);
+
+    InstrIdxForVirtReg.insert({CntVirt, 0});
+    InstrIdxForVirtReg.insert({CntNeg, 1});
+    InstrIdxForVirtReg.insert({Tmp1, 2});
+    InstrIdxForVirtReg.insert({Tmp2, 3});
+    InsInstrs.push_back(Movzx);
+    InsInstrs.push_back(Neg);
+    InsInstrs.push_back(DirectShift);
+    InsInstrs.push_back(ComplShift);
+    InsInstrs.push_back(Or);
+  } else {
+    // Memory case
+    const TargetRegisterClass *SrcRC = GetRC(Root.getOperand(5).getReg());
+
+    MachineInstr *MemShift = BuildMI(*MF, MIMetadata(Root), TII.get(MemClOpc))
+                                 .add(Root.getOperand(0 + X86::AddrBaseReg))
+                                 .add(Root.getOperand(0 + X86::AddrScaleAmt))
+                                 .add(Root.getOperand(0 + X86::AddrIndexReg))
+                                 .add(Root.getOperand(0 + X86::AddrDisp))
+                                 .add(Root.getOperand(0 + X86::AddrSegmentReg));
+
+    Register RegSrc = RegInfo.createVirtualRegister(SrcRC);
+    MachineInstr *ComplShift =
+        BuildMI(*MF, MIMetadata(Root), TII.get(ComplXOpc), RegSrc)
+            .addReg(Root.getOperand(5).getReg(),
+                    getKillRegState(Root.getOperand(5).isKill()))
+            .addReg(CntNeg, RegState::Kill);
+
+    MachineInstr *Or = BuildMI(*MF, MIMetadata(Root), TII.get(OrOpc))
+                           .add(Root.getOperand(0 + X86::AddrBaseReg))
+                           .add(Root.getOperand(0 + X86::AddrScaleAmt))
+                           .add(Root.getOperand(0 + X86::AddrIndexReg))
+                           .add(Root.getOperand(0 + X86::AddrDisp))
+                           .add(Root.getOperand(0 + X86::AddrSegmentReg))
+                           .addReg(RegSrc, RegState::Kill);
+
+    InstrIdxForVirtReg.insert({CntVirt, 0});
+    InstrIdxForVirtReg.insert({CntNeg, 1});
+    InstrIdxForVirtReg.insert({RegSrc, 3});
+    InsInstrs.push_back(Movzx);
+    InsInstrs.push_back(Neg);
+    InsInstrs.push_back(MemShift);
+    InsInstrs.push_back(ComplShift);
+    InsInstrs.push_back(Or);
+  }
+  DelInstrs.push_back(&Root);
+}
+
 static void
 genAlternativeDpCodeSequence(MachineInstr &Root, const TargetInstrInfo &TII,
                              SmallVectorImpl<MachineInstr *> &InsInstrs,
@@ -11030,6 +11172,9 @@ void X86InstrInfo::genAlternativeCodeSequence(
     return;
   case X86MachineCombinerPattern::USHD_LEA:
     genShdLeaSequence(Root, *this, InsInstrs, DelInstrs, InstrIdxForVirtReg);
+    return;
+  case X86MachineCombinerPattern::USHD_SHLX_OR:
+    genShdShlxOrSequence(Root, *this, InsInstrs, DelInstrs, InstrIdxForVirtReg);
   }
 }
 
