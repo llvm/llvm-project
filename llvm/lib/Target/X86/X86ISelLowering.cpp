@@ -61857,15 +61857,23 @@ static SDValue combineKSHIFT(SDNode *N, SelectionDAG &DAG,
   uint64_t Amt = N->getConstantOperandVal(1);
   unsigned Opcode = N->getOpcode();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  SDLoc DL(N);
 
   if (ISD::isBuildVectorAllZeros(Src.getNode()))
-    return DAG.getConstant(0, SDLoc(N), VT);
+    return DAG.getConstant(0, DL, VT);
+
+  // Constant Fold.
+  if (auto *SrcC = dyn_cast<ConstantSDNode>(peekThroughBitcasts(Src))) {
+    APInt NewCst = Opcode == X86ISD::KSHIFTR ? SrcC->getAPIntValue().lshr(Amt)
+                                             : SrcC->getAPIntValue().shl(Amt);
+    return DAG.getBitcast(VT,
+                          DAG.getConstant(NewCst, DL, SrcC->getValueType(0)));
+  }
 
   // Fold kshiftr(extract_subvector(X,C1),C2)
   //  --> extract_subvector(kshiftr(X,C1+C2),0)
   // Fold kshiftr(kshiftr(X,C1),C2) --> kshiftr(X,C1+C2)
   if (Opcode == X86ISD::KSHIFTR) {
-    SDLoc DL(N);
     if (Src.getOpcode() == ISD::EXTRACT_SUBVECTOR ||
         Src.getOpcode() == X86ISD::KSHIFTR) {
       SDValue Inner = Src.getOperand(0);
@@ -61878,6 +61886,17 @@ static SDValue combineKSHIFT(SDNode *N, SelectionDAG &DAG,
                            DAG.getVectorIdxConstant(0, DL));
       }
     }
+  }
+
+  // Fold kshift(logicop(X,C1),C2)
+  //  --> logicop(kshift(X,C2),kshift(C1,C2))
+  if (ISD::isBitwiseLogicOp(Src.getOpcode()) &&
+      isa<ConstantSDNode>(peekThroughBitcasts(Src.getOperand(1)))) {
+    SDValue LHS =
+        DAG.getNode(Opcode, DL, VT, Src.getOperand(0), N->getOperand(1));
+    SDValue RHS =
+        DAG.getNode(Opcode, DL, VT, Src.getOperand(1), N->getOperand(1));
+    return DAG.getNode(Src.getOpcode(), DL, VT, LHS, RHS);
   }
 
   APInt DemandedElts = APInt::getAllOnes(VT.getVectorNumElements());
