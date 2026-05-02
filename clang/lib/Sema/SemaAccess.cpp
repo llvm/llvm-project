@@ -313,7 +313,7 @@ static bool CanDeduceTemplateArguments(Sema &S, TemplateParameterList *TPL,
 
   EnterExpressionEvaluationContext Unevaluated(
       S, Sema::ExpressionEvaluationContext::Unevaluated);
-  TemplateDeductionInfo Info(Loc);
+  TemplateDeductionInfo Info(FailedTSC ? FailedTSC->getLocation() : Loc);
   Sema::SFINAETrap Trap(S, Info);
   LocalInstantiationScope InstantiationScope(S);
   SmallVector<DeducedTemplateArgument, 4> Deduced(TPL->size());
