@@ -14,6 +14,9 @@
 #define LLVM_CLANG_LIB_BASIC_TARGETS_SPIR_H
 
 #include "Targets.h"
+#include "clang/Basic/AddressSpaces.h"
+#include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/Support/Compiler.h"
@@ -51,6 +54,8 @@ static const unsigned SPIRDefIsPrivMap[] = {
     10, // hlsl_private
     11, // hlsl_device
     7,  // hlsl_input
+    8,  // hlsl_output
+    13, // hlsl_push_constant
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
     20, // wasm_funcref
@@ -87,6 +92,8 @@ static const unsigned SPIRDefIsGenMap[] = {
     10, // hlsl_private
     11, // hlsl_device
     7,  // hlsl_input
+    8,  // hlsl_output
+    13, // hlsl_push_constant
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
     20, // wasm_funcref
@@ -106,8 +113,12 @@ protected:
     LongWidth = LongAlign = 64;
     AddrSpaceMap = &SPIRDefIsPrivMap;
     UseAddrSpaceMapMangling = true;
-    HasLegalHalfType = true;
+    HasFastHalfType = true;
     HasFloat16 = true;
+    HasBFloat16 = true;
+    HasFullBFloat16 = true;
+    BFloat16Width = BFloat16Align = 16;
+    BFloat16Format = &llvm::APFloat::BFloat();
     // Define available target features
     // These must be defined in sorted order!
     NoAsmVariants = true;
@@ -205,8 +216,9 @@ public:
     AddrSpaceMap = DefaultIsGeneric ? &SPIRDefIsGenMap : &SPIRDefIsPrivMap;
   }
 
-  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts) override {
-    TargetInfo::adjust(Diags, Opts);
+  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+              const TargetInfo *Aux) override {
+    TargetInfo::adjust(Diags, Opts, Aux);
     // FIXME: SYCL specification considers unannotated pointers and references
     // to be pointing to the generic address space. See section 5.9.3 of
     // SYCL 2020 specification.
@@ -218,8 +230,11 @@ public:
     setAddressSpaceMap(
         /*DefaultIsGeneric=*/Opts.SYCLIsDevice ||
         // The address mapping from HIP/CUDA language for device code is only
-        // defined for SPIR-V.
-        (getTriple().isSPIRV() && Opts.CUDAIsDevice));
+        // defined for SPIR-V, and all Intel SPIR-V code should have the default
+        // AS as generic.
+        (getTriple().isSPIRV() &&
+         (Opts.CUDAIsDevice ||
+          getTriple().getVendor() == llvm::Triple::Intel)));
   }
 
   void setSupportedOpenCLOpts() override {
@@ -263,6 +278,9 @@ public:
     PointerWidth = PointerAlign = 32;
     SizeType = TargetInfo::UnsignedInt;
     PtrDiffType = IntPtrType = TargetInfo::SignedInt;
+    // SPIR32 has support for atomic ops if atomic extension is enabled.
+    // Take the maximum because it's possible the Host supports wider types.
+    MaxAtomicInlineWidth = std::max<unsigned char>(MaxAtomicInlineWidth, 64);
     resetDataLayout("e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-"
                     "v96:128-v192:256-v256:256-v512:512-v1024:1024-G1");
   }
@@ -280,6 +298,9 @@ public:
     PointerWidth = PointerAlign = 64;
     SizeType = TargetInfo::UnsignedLong;
     PtrDiffType = IntPtrType = TargetInfo::SignedLong;
+    // SPIR64 has support for atomic ops if atomic extension is enabled.
+    // Take the maximum because it's possible the Host supports wider types.
+    MaxAtomicInlineWidth = std::max<unsigned char>(MaxAtomicInlineWidth, 64);
     resetDataLayout("e-i64:64-v16:16-v24:32-v32:32-v48:64-"
                     "v96:128-v192:256-v256:256-v512:512-v1024:1024-G1");
   }
@@ -301,6 +322,17 @@ public:
     return Feature == "spirv";
   }
 
+  virtual bool isAddressSpaceSupersetOf(LangAS A, LangAS B) const override {
+    // The generic space AS(4) is a superset of all the other address
+    // spaces used by the backend target except constant address space.
+    return A == B || ((A == LangAS::Default ||
+                       (isTargetAddressSpace(A) &&
+                        toTargetAddressSpace(A) == /*Generic=*/4)) &&
+                      isTargetAddressSpace(B) &&
+                      (toTargetAddressSpace(B) <= /*Generic=*/4 &&
+                       toTargetAddressSpace(B) != /*Constant=*/2));
+  }
+
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 };
@@ -311,18 +343,29 @@ public:
       : BaseSPIRVTargetInfo(Triple, Opts) {
     assert(Triple.getArch() == llvm::Triple::spirv &&
            "Invalid architecture for Logical SPIR-V.");
-    assert(Triple.getOS() == llvm::Triple::Vulkan &&
-           Triple.getVulkanVersion() != llvm::VersionTuple(0) &&
-           "Logical SPIR-V requires a valid Vulkan environment.");
-    assert(Triple.getEnvironment() >= llvm::Triple::Pixel &&
-           Triple.getEnvironment() <= llvm::Triple::Amplification &&
-           "Logical SPIR-V environment must be a valid shader stage.");
     PointerWidth = PointerAlign = 64;
 
     // SPIR-V IDs are represented with a single 32-bit word.
     SizeType = TargetInfo::UnsignedInt;
-    resetDataLayout("e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-"
-                    "v256:256-v512:512-v1024:1024-n8:16:32:64-G10");
+    VectorsAreElementAligned = true;
+    resetDataLayout();
+  }
+
+  // SPIR-V targeting requires a fully specified Vulkan environment.
+  // SPIR-V requires the enviornment to be in a valid shader stage as well.
+  // Validate here before CreateTargetInfo() to emit a proper diagnostic.
+  bool validateTarget(DiagnosticsEngine &Diags) const override {
+    if (getTriple().getOS() != llvm::Triple::Vulkan ||
+        getTriple().getVulkanVersion() == llvm::VersionTuple(0)) {
+      Diags.Report(diag::err_target_spirv_requires_vulkan);
+      return false;
+    }
+    if (getTriple().getEnvironment() < llvm::Triple::Pixel ||
+        getTriple().getEnvironment() > llvm::Triple::Amplification) {
+      Diags.Report(diag::err_target_spirv_requires_shader_stage);
+      return false;
+    }
+    return true;
   }
 
   void getTargetDefines(const LangOptions &Opts,
@@ -335,8 +378,9 @@ public:
       : BaseSPIRVTargetInfo(Triple, Opts) {
     assert(Triple.getArch() == llvm::Triple::spirv32 &&
            "Invalid architecture for 32-bit SPIR-V.");
-    assert(getTriple().getOS() == llvm::Triple::UnknownOS &&
-           "32-bit SPIR-V target must use unknown OS");
+    assert((getTriple().getOS() == llvm::Triple::UnknownOS ||
+            getTriple().getOS() == llvm::Triple::ChipStar) &&
+           "32-bit SPIR-V target must use unknown or chipstar OS");
     assert(getTriple().getEnvironment() == llvm::Triple::UnknownEnvironment &&
            "32-bit SPIR-V target must use unknown environment type");
     PointerWidth = PointerAlign = 32;
@@ -344,9 +388,8 @@ public:
     PtrDiffType = IntPtrType = TargetInfo::SignedInt;
     // SPIR-V has core support for atomic ops, and Int32 is always available;
     // we take the maximum because it's possible the Host supports wider types.
-    MaxAtomicInlineWidth = std::max<unsigned char>(MaxAtomicInlineWidth, 32);
-    resetDataLayout("e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-"
-                    "v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64-G1");
+    MaxAtomicInlineWidth = std::max<unsigned char>(MaxAtomicInlineWidth, 64);
+    resetDataLayout();
   }
 
   void getTargetDefines(const LangOptions &Opts,
@@ -359,8 +402,9 @@ public:
       : BaseSPIRVTargetInfo(Triple, Opts) {
     assert(Triple.getArch() == llvm::Triple::spirv64 &&
            "Invalid architecture for 64-bit SPIR-V.");
-    assert(getTriple().getOS() == llvm::Triple::UnknownOS &&
-           "64-bit SPIR-V target must use unknown OS");
+    assert((getTriple().getOS() == llvm::Triple::UnknownOS ||
+            getTriple().getOS() == llvm::Triple::ChipStar) &&
+           "64-bit SPIR-V target must use unknown or chipstar OS");
     assert(getTriple().getEnvironment() == llvm::Triple::UnknownEnvironment &&
            "64-bit SPIR-V target must use unknown environment type");
     PointerWidth = PointerAlign = 64;
@@ -369,8 +413,7 @@ public:
     // SPIR-V has core support for atomic ops, and Int64 is always available;
     // we take the maximum because it's possible the Host supports wider types.
     MaxAtomicInlineWidth = std::max<unsigned char>(MaxAtomicInlineWidth, 64);
-    resetDataLayout("e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-"
-                    "v256:256-v512:512-v1024:1024-n8:16:32:64-G1");
+    resetDataLayout();
   }
 
   void getTargetDefines(const LangOptions &Opts,
@@ -383,8 +426,9 @@ public:
   std::optional<LangAS> getConstantAddressSpace() const override {
     return ConstantAS;
   }
-  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts) override {
-    BaseSPIRVTargetInfo::adjust(Diags, Opts);
+  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+              const TargetInfo *Aux) override {
+    BaseSPIRVTargetInfo::adjust(Diags, Opts, Aux);
     // opencl_constant will map to UniformConstant in SPIR-V
     if (Opts.OpenCL)
       ConstantAS = LangAS::opencl_constant;
@@ -413,22 +457,20 @@ public:
     PtrDiffType = IntPtrType = TargetInfo::SignedLong;
     AddrSpaceMap = &SPIRDefIsGenMap;
 
-    resetDataLayout("e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-"
-                    "v256:256-v512:512-v1024:1024-n32:64-S32-G1-P4-A0");
+    resetDataLayout();
 
-    BFloat16Width = BFloat16Align = 16;
-    BFloat16Format = &llvm::APFloat::BFloat();
-
-    HasLegalHalfType = true;
+    HasFastHalfType = true;
     HasFloat16 = true;
     HalfArgsAndReturns = true;
 
     MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
   }
 
-  bool hasBFloat16Type() const override { return true; }
-
   ArrayRef<const char *> getGCCRegNames() const override;
+
+  BuiltinVaListKind getBuiltinVaListKind() const override {
+    return TargetInfo::CharPtrBuiltinVaList;
+  }
 
   bool initFeatureMap(llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags,
                       StringRef,
@@ -446,13 +488,31 @@ public:
 
   void setAuxTarget(const TargetInfo *Aux) override;
 
-  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts) override {
-    TargetInfo::adjust(Diags, Opts);
+  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+              const TargetInfo *Aux) override {
+    TargetInfo::adjust(Diags, Opts, Aux);
+
+    AtomicOpts = AtomicOptions(Opts);
   }
 
   bool hasInt128Type() const override { return TargetInfo::hasInt128Type(); }
+
+  // This is only needed for validating arguments passed to
+  // __builtin_amdgcn_processor_is
+  bool isValidCPUName(StringRef Name) const override;
+  void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
 };
 
+class LLVM_LIBRARY_VISIBILITY SPIRV64IntelTargetInfo final
+    : public SPIRV64TargetInfo {
+public:
+  SPIRV64IntelTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
+      : SPIRV64TargetInfo(Triple, Opts) {
+    assert(Triple.getVendor() == llvm::Triple::VendorType::Intel &&
+           "64-bit Intel SPIR-V target must use Intel vendor");
+    resetDataLayout();
+  }
+};
 } // namespace targets
 } // namespace clang
 #endif // LLVM_CLANG_LIB_BASIC_TARGETS_SPIR_H

@@ -13,16 +13,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "XtensaMCAsmInfo.h"
-#include "XtensaMCExpr.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 
-XtensaMCAsmInfo::XtensaMCAsmInfo(const Triple &TT) {
+XtensaMCAsmInfo::XtensaMCAsmInfo(const Triple &TT,
+                                 const MCTargetOptions &Options)
+    : MCAsmInfoELF(Options) {
   CodePointerSize = 4;
   CalleeSaveStackSlotSize = 4;
-  PrivateGlobalPrefix = ".L";
+  InternalSymbolPrefix = ".L";
   CommentString = "#";
   ZeroDirective = "\t.space\t";
   Data64bitsDirective = "\t.quad\t";

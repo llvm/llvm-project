@@ -1,4 +1,4 @@
-//===--- RedundantStrcatCallsCheck.cpp - clang-tidy------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -45,7 +45,10 @@ struct StrCatCheckResult {
   std::vector<FixItHint> Hints;
 };
 
-void removeCallLeaveArgs(const CallExpr *Call, StrCatCheckResult *CheckResult) {
+} // namespace
+
+static void removeCallLeaveArgs(const CallExpr *Call,
+                                StrCatCheckResult *CheckResult) {
   if (Call->getNumArgs() == 0)
     return;
   // Remove 'Foo('
@@ -58,7 +61,7 @@ void removeCallLeaveArgs(const CallExpr *Call, StrCatCheckResult *CheckResult) {
           Call->getRParenLoc(), Call->getEndLoc().getLocWithOffset(1))));
 }
 
-const clang::CallExpr *processArgument(const Expr *Arg,
+static const CallExpr *processArgument(const Expr *Arg,
                                        const MatchFinder::MatchResult &Result,
                                        StrCatCheckResult *CheckResult) {
   const auto IsAlphanum = hasDeclaration(cxxMethodDecl(hasName("AlphaNum")));
@@ -78,30 +81,27 @@ const clang::CallExpr *processArgument(const Expr *Arg,
   return nullptr;
 }
 
-StrCatCheckResult processCall(const CallExpr *RootCall, bool IsAppend,
-                              const MatchFinder::MatchResult &Result) {
+static StrCatCheckResult processCall(const CallExpr *RootCall, bool IsAppend,
+                                     const MatchFinder::MatchResult &Result) {
   StrCatCheckResult CheckResult;
   std::deque<const CallExpr *> CallsToProcess = {RootCall};
 
   while (!CallsToProcess.empty()) {
     ++CheckResult.NumCalls;
 
-    const CallExpr *CallExpr = CallsToProcess.front();
+    const CallExpr *Call = CallsToProcess.front();
     CallsToProcess.pop_front();
 
-    int StartArg = CallExpr == RootCall && IsAppend;
-    for (const auto *Arg : CallExpr->arguments()) {
+    int StartArg = Call == RootCall && IsAppend;
+    for (const auto *Arg : Call->arguments()) {
       if (StartArg-- > 0)
         continue;
-      if (const clang::CallExpr *Sub =
-              processArgument(Arg, Result, &CheckResult)) {
+      if (const CallExpr *Sub = processArgument(Arg, Result, &CheckResult))
         CallsToProcess.push_back(Sub);
-      }
     }
   }
   return CheckResult;
 }
-} // namespace
 
 void RedundantStrcatCallsCheck::check(const MatchFinder::MatchResult &Result) {
   bool IsAppend = false;

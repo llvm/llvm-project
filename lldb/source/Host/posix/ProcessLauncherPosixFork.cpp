@@ -229,8 +229,8 @@ struct ForkLaunchInfo {
 // End of code running in the child process.
 
 ForkFileAction::ForkFileAction(const FileAction &act)
-    : action(act.GetAction()), fd(act.GetFD()), path(act.GetPath().str()),
-      arg(act.GetActionArgument()) {}
+    : action(act.GetAction()), fd(act.GetFD()),
+      path(act.GetFileSpec().GetPath()), arg(act.GetActionArgument()) {}
 
 static std::vector<ForkFileAction>
 MakeForkActions(const ProcessLaunchInfo &info) {
@@ -255,8 +255,7 @@ ProcessLauncherPosixFork::LaunchProcess(const ProcessLaunchInfo &launch_info,
                                         Status &error) {
   // A pipe used by the child process to report errors.
   PipePosix pipe;
-  const bool child_processes_inherit = false;
-  error = pipe.CreateNew(child_processes_inherit);
+  error = pipe.CreateNew();
   if (error.Fail())
     return HostProcess();
 

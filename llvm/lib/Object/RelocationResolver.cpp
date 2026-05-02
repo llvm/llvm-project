@@ -79,6 +79,7 @@ static bool supportsAArch64(uint64_t Type) {
   case ELF::R_AARCH64_PREL16:
   case ELF::R_AARCH64_PREL32:
   case ELF::R_AARCH64_PREL64:
+  case ELF::R_AARCH64_TLS_DTPREL64:
     return true;
   default:
     return false;
@@ -91,6 +92,7 @@ static uint64_t resolveAArch64(uint64_t Type, uint64_t Offset, uint64_t S,
   case ELF::R_AARCH64_ABS32:
     return (S + Addend) & 0xFFFFFFFF;
   case ELF::R_AARCH64_ABS64:
+  case ELF::R_AARCH64_TLS_DTPREL64:
     return S + Addend;
   case ELF::R_AARCH64_PREL16:
     return (S + Addend - Offset) & 0xFFFF;
@@ -812,6 +814,7 @@ getRelocationResolver(const ObjectFile &Obj) {
       case Triple::amdgcn:
         return {supportsAmdgpu, resolveAmdgpu};
       case Triple::riscv64:
+      case Triple::riscv64be:
         return {supportsRISCV, resolveRISCV};
       default:
         if (isAMDGPU(Obj))
@@ -851,6 +854,7 @@ getRelocationResolver(const ObjectFile &Obj) {
     case Triple::r600:
       return {supportsAmdgpu, resolveAmdgpu};
     case Triple::riscv32:
+    case Triple::riscv32be:
       return {supportsRISCV, resolveRISCV};
     case Triple::csky:
       return {supportsCSKY, resolveCSKY};
@@ -897,7 +901,9 @@ uint64_t resolveRelocation(RelocationResolver Resolver, const RelocationRef &R,
         if (Obj->getArch() != Triple::loongarch32 &&
             Obj->getArch() != Triple::loongarch64 &&
             Obj->getArch() != Triple::riscv32 &&
-            Obj->getArch() != Triple::riscv64)
+            Obj->getArch() != Triple::riscv64 &&
+            Obj->getArch() != Triple::riscv32be &&
+            Obj->getArch() != Triple::riscv64be)
           LocData = 0;
       }
     }

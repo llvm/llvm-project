@@ -115,6 +115,10 @@ ExprDependence clang::computeDependence(ArraySubscriptExpr *E) {
   return E->getLHS()->getDependence() | E->getRHS()->getDependence();
 }
 
+ExprDependence clang::computeDependence(MatrixSingleSubscriptExpr *E) {
+  return E->getBase()->getDependence() | E->getRowIdx()->getDependence();
+}
+
 ExprDependence clang::computeDependence(MatrixSubscriptExpr *E) {
   return E->getBase()->getDependence() | E->getRowIdx()->getDependence() |
          (E->getColumnIdx() ? E->getColumnIdx()->getDependence()
@@ -178,7 +182,7 @@ ExprDependence clang::computeDependence(StmtExpr *E, unsigned TemplateDepth) {
   auto D = toExprDependenceForImpliedType(E->getType()->getDependence());
   // Propagate dependence of the result.
   if (const auto *CompoundExprResult =
-          dyn_cast_or_null<ValueStmt>(E->getSubStmt()->getStmtExprResult()))
+          dyn_cast_or_null<ValueStmt>(E->getSubStmt()->body_back()))
     if (const Expr *ResultExpr = CompoundExprResult->getExprStmt())
       D |= ResultExpr->getDependence();
   // Note: we treat a statement-expression in a dependent context as always
@@ -249,6 +253,10 @@ ExprDependence clang::computeDependence(ImplicitValueInitExpr *E) {
 }
 
 ExprDependence clang::computeDependence(ExtVectorElementExpr *E) {
+  return E->getBase()->getDependence();
+}
+
+ExprDependence clang::computeDependence(MatrixElementExpr *E) {
   return E->getBase()->getDependence();
 }
 
@@ -500,9 +508,8 @@ ExprDependence clang::computeDependence(OMPIteratorExpr *E) {
 ExprDependence clang::computeDependence(DeclRefExpr *E, const ASTContext &Ctx) {
   auto Deps = ExprDependence::None;
 
-  if (auto *NNS = E->getQualifier())
-    Deps |= toExprDependence(NNS->getDependence() &
-                             ~NestedNameSpecifierDependence::Dependent);
+  Deps |= toExprDependence(E->getQualifier().getDependence() &
+                           ~NestedNameSpecifierDependence::Dependent);
 
   if (auto *FirstArg = E->getTemplateArgs()) {
     unsigned NumArgs = E->getNumTemplateArgs();
@@ -639,12 +646,11 @@ ExprDependence clang::computeDependence(PredefinedExpr *E) {
   return toExprDependenceForImpliedType(E->getType()->getDependence());
 }
 
-ExprDependence clang::computeDependence(CallExpr *E,
-                                        llvm::ArrayRef<Expr *> PreArgs) {
+ExprDependence clang::computeDependence(CallExpr *E, ArrayRef<Expr *> PreArgs) {
   auto D = E->getCallee()->getDependence();
   if (E->getType()->isDependentType())
     D |= ExprDependence::Type;
-  for (auto *A : llvm::ArrayRef(E->getArgs(), E->getNumArgs())) {
+  for (auto *A : ArrayRef(E->getArgs(), E->getNumArgs())) {
     if (A)
       D |= A->getDependence();
   }
@@ -674,9 +680,8 @@ ExprDependence clang::computeDependence(MemberExpr *E) {
   auto D = E->getBase()->getDependence();
   D |= getDependenceInExpr(E->getMemberNameInfo());
 
-  if (auto *NNS = E->getQualifier())
-    D |= toExprDependence(NNS->getDependence() &
-                          ~NestedNameSpecifierDependence::Dependent);
+  D |= toExprDependence(E->getQualifier().getDependence() &
+                        ~NestedNameSpecifierDependence::Dependent);
 
   for (const auto &A : E->template_arguments())
     D |= toExprDependence(A.getArgument().getDependence());
@@ -709,7 +714,7 @@ ExprDependence clang::computeDependence(InitListExpr *E) {
 
 ExprDependence clang::computeDependence(ShuffleVectorExpr *E) {
   auto D = toExprDependenceForImpliedType(E->getType()->getDependence());
-  for (auto *C : llvm::ArrayRef(E->getSubExprs(), E->getNumSubExprs()))
+  for (auto *C : ArrayRef(E->getSubExprs(), E->getNumSubExprs()))
     D |= C->getDependence();
   return D;
 }
@@ -758,7 +763,7 @@ ExprDependence clang::computeDependence(PseudoObjectExpr *O) {
 
 ExprDependence clang::computeDependence(AtomicExpr *A) {
   auto D = ExprDependence::None;
-  for (auto *E : llvm::ArrayRef(A->getSubExprs(), A->getNumSubExprs()))
+  for (auto *E : ArrayRef(A->getSubExprs(), A->getNumSubExprs()))
     D |= E->getDependence();
   return D;
 }
@@ -784,9 +789,8 @@ ExprDependence clang::computeDependence(CXXPseudoDestructorExpr *E) {
   if (auto *ST = E->getScopeTypeInfo())
     D |= turnTypeToValueDependence(
         toExprDependenceAsWritten(ST->getType()->getDependence()));
-  if (auto *Q = E->getQualifier())
-    D |= toExprDependence(Q->getDependence() &
-                          ~NestedNameSpecifierDependence::Dependent);
+  D |= toExprDependence(E->getQualifier().getDependence() &
+                        ~NestedNameSpecifierDependence::Dependent);
   return D;
 }
 
@@ -802,12 +806,11 @@ clang::computeDependence(OverloadExpr *E, bool KnownDependent,
   if (KnownContainsUnexpandedParameterPack)
     Deps |= ExprDependence::UnexpandedPack;
   Deps |= getDependenceInExpr(E->getNameInfo());
-  if (auto *Q = E->getQualifier())
-    Deps |= toExprDependence(Q->getDependence() &
-                             ~NestedNameSpecifierDependence::Dependent);
+  Deps |= toExprDependence(E->getQualifier().getDependence() &
+                           ~NestedNameSpecifierDependence::Dependent);
   for (auto *D : E->decls()) {
     if (D->getDeclContext()->isDependentContext() ||
-        isa<UnresolvedUsingValueDecl>(D))
+        isa<UnresolvedUsingValueDecl>(D) || isa<TemplateTemplateParmDecl>(D))
       Deps |= ExprDependence::TypeValueInstantiation;
   }
   // If we have explicit template arguments, check for dependent
@@ -821,8 +824,7 @@ clang::computeDependence(OverloadExpr *E, bool KnownDependent,
 ExprDependence clang::computeDependence(DependentScopeDeclRefExpr *E) {
   auto D = ExprDependence::TypeValue;
   D |= getDependenceInExpr(E->getNameInfo());
-  if (auto *Q = E->getQualifier())
-    D |= toExprDependence(Q->getDependence());
+  D |= toExprDependence(E->getQualifier().getDependence());
   for (const auto &A : E->template_arguments())
     D |= toExprDependence(A.getArgument().getDependence());
   return D;
@@ -873,8 +875,7 @@ ExprDependence clang::computeDependence(CXXDependentScopeMemberExpr *E) {
   auto D = ExprDependence::TypeValueInstantiation;
   if (!E->isImplicitAccess())
     D |= E->getBase()->getDependence();
-  if (auto *Q = E->getQualifier())
-    D |= toExprDependence(Q->getDependence());
+  D |= toExprDependence(E->getQualifier().getDependence());
   D |= getDependenceInExpr(E->getMemberNameInfo());
   for (const auto &A : E->template_arguments())
     D |= toExprDependence(A.getArgument().getDependence());

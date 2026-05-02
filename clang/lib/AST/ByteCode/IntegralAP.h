@@ -63,7 +63,7 @@ public:
     if (singleWord())
       return APInt(BitWidth, Val, Signed);
     unsigned NumWords = llvm::APInt::getNumWords(BitWidth);
-    return llvm::APInt(BitWidth, NumWords, Memory);
+    return llvm::APInt(BitWidth, llvm::ArrayRef(Memory, NumWords));
   }
 
 public:
@@ -131,14 +131,15 @@ public:
     if (NumBits == 0)
       NumBits = sizeof(T) * 8;
     assert(NumBits > 0);
+    assert(APInt::getNumWords(NumBits) == 1);
     APInt Copy = APInt(NumBits, static_cast<uint64_t>(Value), Signed);
-    assert(false);
     return IntegralAP<Signed>(Copy);
   }
 
   constexpr uint32_t bitWidth() const { return BitWidth; }
   constexpr unsigned numWords() const { return APInt::getNumWords(BitWidth); }
-  constexpr bool singleWord() const { return numWords() == 1; }
+  constexpr bool singleWord() const { return numWords() <= 1; }
+  constexpr static bool isNumber() { return true; }
 
   APSInt toAPSInt(unsigned Bits = 0) const {
     if (Bits == 0)
@@ -163,8 +164,16 @@ public:
       return !getValue().isNonNegative();
     return false;
   }
-  bool isMin() const { return getValue().isMinValue(); }
-  bool isMax() const { return getValue().isMaxValue(); }
+  bool isMin() const {
+    if constexpr (Signed)
+      return getValue().isMinSignedValue();
+    return getValue().isMinValue();
+  }
+  bool isMax() const {
+    if constexpr (Signed)
+      return getValue().isMaxSignedValue();
+    return getValue().isMaxValue();
+  }
   static constexpr bool isSigned() { return Signed; }
   bool isMinusOne() const { return Signed && getValue().isAllOnes(); }
 

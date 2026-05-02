@@ -1,0 +1,27 @@
+{
+    "Opcodes" : {
+        "ABS_Fp":[1, 2],
+        "ADC":[3, 4],
+        "ADD":[5, 6],
+        "ADDPDrm":[7, 8],
+        "ADDPDrr":[9, 10],
+        "ADDPSrr":[11, 12],
+        "ADDSDrm":[13, 14]
+    },
+    "CommonOperands": {
+        "Immediate": [0.1, 0.1],
+        "MBB": [0.2, 0.2],
+        "FrameIndex": [0.3, 0.3],
+        "GlobalAddress": [0.4, 0.4]
+    },
+    "PhysicalRegisters": {
+        "GR32": [0.5, 0.5],
+        "GR64": [0.6, 0.6],
+        "XMM": [0.7, 0.7]
+    },
+    "VirtualRegisters": {
+        "GR32": [0.8, 0.8],
+        "GR64": [0.9, 0.9],
+        "XMM": [1.0, 1.0]
+    }
+}

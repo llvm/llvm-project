@@ -35,14 +35,14 @@ vtable:
 # B2B-NEXT: [[VF:[0-9a-f]{8}]]
 # B2B-RELOC-NEXT: R_AARCH64_PLT32 f3
 # NOB2B-RELOC-NEXT: R_AARCH64_PLT32 f1
-.4byte f1@PLT - vtable
+.4byte %pltpcrel(f1)
 # B2B-SAME: [[VF]]
 # B2B-RELOC-NEXT: R_AARCH64_PLT32 f3+0x4
 # NOB2B-RELOC-NEXT: R_AARCH64_PLT32 f2+0x4
-.4byte f2@PLT - vtable
+.4byte %pltpcrel(f2+4)
 # B2B-SAME: [[VF]]
 # RELOC-NEXT: R_AARCH64_PLT32 f3+0x8
-.4byte f3@PLT - vtable
+.4byte %pltpcrel(f3+8)
 
 .section .text._start,"ax"
 .globl _start
@@ -50,6 +50,7 @@ vtable:
 # RELOC: RELOCATION RECORDS FOR [.text]:
 # RELOC-NEXT: OFFSET
 _start:
+.cfi_startproc
 # B2B: bl {{.*}} <f3>
 # B2B-RELOC-NEXT: R_AARCH64_CALL26 f3
 # NOB2B: bl {{.*}} <f1{{.*}}>
@@ -60,6 +61,7 @@ bl f1
 # NOB2B: b {{.*}} <f2{{.*}}>
 # NOB2B-RELOC-NEXT: R_AARCH64_JUMP26 f2
 b f2
+.cfi_endproc
 
 .section .text.f1,"ax"
 .globl f1

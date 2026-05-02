@@ -6,21 +6,22 @@ define void @test(ptr %0, i1 %1, i1 %2) {
 ; CHECK-SAME: ptr [[TMP0:%.*]], i1 [[TMP1:%.*]], i1 [[TMP2:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    br label %[[BB4:.*]]
 ; CHECK:       [[BB4]]:
-; CHECK-NEXT:    [[TMP5:%.*]] = phi <2 x i32> [ [[TMP12:%.*]], %[[TMP7:.*]] ], [ zeroinitializer, [[TMP3:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi <2 x i32> [ [[TMP15:%.*]], %[[TMP7:.*]] ], [ zeroinitializer, [[TMP3:%.*]] ]
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP5]], <2 x i32> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 1>
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[TMP7]], label %[[BB14:.*]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[TMP7]], label %[[BB15:.*]]
 ; CHECK:       [[TMP7]]:
 ; CHECK-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP8]], i64 16
 ; CHECK-NEXT:    [[TMP10:%.*]] = load <2 x i32>, ptr [[TMP9]], align 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = or <2 x i32> [[TMP10]], splat (i32 1)
-; CHECK-NEXT:    [[TMP12]] = shufflevector <2 x i32> [[TMP11]], <2 x i32> <i32 1, i32 poison>, <2 x i32> <i32 2, i32 1>
-; CHECK-NEXT:    [[TMP13:%.*]] = call <4 x i32> @llvm.vector.insert.v4i32.v2i32(<4 x i32> <i32 0, i32 0, i32 poison, i32 poison>, <2 x i32> [[TMP11]], i64 2)
-; CHECK-NEXT:    br i1 [[TMP2]], label %[[BB15:.*]], label %[[BB4]]
-; CHECK:       [[BB14]]:
-; CHECK-NEXT:    br label %[[BB15]]
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <2 x i32> [[TMP11]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <4 x i32> <i32 0, i32 0, i32 poison, i32 poison>, <4 x i32> [[TMP13]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP15]] = shufflevector <2 x i32> [[TMP11]], <2 x i32> <i32 1, i32 poison>, <2 x i32> <i32 2, i32 1>
+; CHECK-NEXT:    br i1 [[TMP2]], label %[[BB16:.*]], label %[[BB4]]
 ; CHECK:       [[BB15]]:
-; CHECK-NEXT:    [[TMP16:%.*]] = phi <4 x i32> [ [[TMP6]], %[[BB14]] ], [ [[TMP13]], %[[TMP7]] ]
+; CHECK-NEXT:    br label %[[BB16]]
+; CHECK:       [[BB16]]:
+; CHECK-NEXT:    [[TMP16:%.*]] = phi <4 x i32> [ [[TMP6]], %[[BB15]] ], [ [[TMP14]], %[[TMP7]] ]
 ; CHECK-NEXT:    [[TMP17:%.*]] = load volatile ptr, ptr null, align 8
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr i8, ptr [[TMP17]], i64 176
 ; CHECK-NEXT:    store <4 x i32> [[TMP16]], ptr [[TMP18]], align 8

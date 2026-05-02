@@ -41,6 +41,15 @@ if(LLVM_BUILD_LLVM_DYLIB)
     llvm_install_library_symlink(LLVM-${LLVM_VERSION_MAJOR}${LLVM_VERSION_SUFFIX} $<TARGET_FILE_NAME:LLVM> SHARED FULL_DEST COMPONENT LLVM)
   endif()
 
+  if (MINGW OR CYGWIN)
+    # The LLVM DLL is supposed to export all symbols (except for ones
+    # that are explicitly hidden). Normally, this is what happens anyway, but
+    # if there are symbols that are marked explicitly as dllexport, we'd only
+    # export them and nothing else. Therefore, add --export-all-symbols to
+    # make sure we export all symbols despite potential dllexports.
+    target_link_options(LLVM PRIVATE LINKER:--export-all-symbols)
+  endif()
+
   list(REMOVE_DUPLICATES LIB_NAMES)
   if("${CMAKE_SYSTEM_NAME}" STREQUAL "Darwin")
     set(LIB_NAMES -Wl,-all_load ${LIB_NAMES})
@@ -87,9 +96,7 @@ if(LLVM_BUILD_LLVM_DYLIB)
   endif()
 
   if (APPLE)
-    set_property(TARGET LLVM APPEND_STRING PROPERTY
-                LINK_FLAGS
-                " -compatibility_version 1 -current_version ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}")
+    llvm_set_macho_current_version(LLVM ${LLVM_VERSION_MAJOR})
   endif()
 
   if(TARGET libLLVMExports)
@@ -131,9 +138,10 @@ if(LLVM_BUILD_LLVM_C_DYLIB AND NOT MSVC)
   target_link_libraries(LLVM-C PUBLIC LLVM)
   add_dependencies(LLVM-C libLLVMCExports)
 
+  llvm_set_macho_current_version(LLVM-C ${LLVM_VERSION_MAJOR})
   set_property(TARGET LLVM-C APPEND_STRING PROPERTY
               LINK_FLAGS
-              " -compatibility_version 1 -current_version ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH} -Wl,-reexport_library ${LIB_PATH}")
+              " -Wl,-reexport_library ${LIB_PATH}")
 endif()
 
 if(LLVM_BUILD_LLVM_C_DYLIB AND MSVC)

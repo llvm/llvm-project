@@ -20,12 +20,15 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/StackFrameRecognizer.h"
 #include "lldb/Target/StopInfo.h"
+#include "lldb/Target/SyntheticFrameProvider.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/Unwind.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Support/ConvertUTF.h"
 
 #include <memory>
 
@@ -37,12 +40,13 @@ using namespace lldb_private;
 // StackFrameList constructor
 StackFrameList::StackFrameList(Thread &thread,
                                const lldb::StackFrameListSP &prev_frames_sp,
-                               bool show_inline_frames)
+                               bool show_inline_frames,
+                               lldb::frame_list_id_t provider_id)
     : m_thread(thread), m_prev_frames_sp(prev_frames_sp), m_frames(),
       m_selected_frame_idx(), m_concrete_frames_fetched(0),
       m_current_inlined_depth(UINT32_MAX),
       m_current_inlined_pc(LLDB_INVALID_ADDRESS),
-      m_show_inlined_frames(show_inline_frames) {
+      m_show_inlined_frames(show_inline_frames), m_identifier(provider_id) {
   if (prev_frames_sp) {
     m_current_inlined_depth = prev_frames_sp->m_current_inlined_depth;
     m_current_inlined_pc = prev_frames_sp->m_current_inlined_pc;
@@ -53,6 +57,72 @@ StackFrameList::~StackFrameList() {
   // Call clear since this takes a lock and clears the stack frame list in case
   // another thread is currently using this stack frame list
   Clear();
+}
+
+SyntheticStackFrameList::SyntheticStackFrameList(
+    Thread &thread, lldb::StackFrameListSP input_frames,
+    const lldb::StackFrameListSP &prev_frames_sp, bool show_inline_frames,
+    lldb::SyntheticFrameProviderSP provider_sp, uint64_t provider_id)
+    : StackFrameList(thread, prev_frames_sp, show_inline_frames, provider_id),
+      m_input_frames(std::move(input_frames)),
+      m_provider(std::move(provider_sp)) {}
+
+bool SyntheticStackFrameList::FetchFramesUpTo(
+    uint32_t end_idx, InterruptionControl allow_interrupt) {
+
+  // Use the provider to generate frames lazily.
+  if (m_provider) {
+    // Count how many synthetic frames already exist so we assign unique CFAs
+    // to new ones. This must not be a local initialized to zero — when
+    // FetchFramesUpTo is called incrementally (first for a small range, then
+    // for the full stack), a zero-initialized counter would hand out duplicate
+    // CFA values, creating StackID collisions for PC-less synthetic frames.
+    size_t num_synthetic_frames = 0;
+    for (const auto &f : m_frames) {
+      if (f && f->IsSynthetic())
+        num_synthetic_frames++;
+    }
+
+    // Keep fetching until we reach end_idx or the provider returns an error.
+    for (uint32_t idx = m_frames.size(); idx <= end_idx; idx++) {
+      if (allow_interrupt &&
+          m_thread.GetProcess()->GetTarget().GetDebugger().InterruptRequested())
+        return true;
+
+      // Ensure the provider sees its parent StackFrameList, not the
+      // synthetic list being constructed. In a chain A->B->C, provider C
+      // must consult B's output - using its own list would be nonsensical.
+      // This also applies when the provider runs commands or expressions:
+      // any path that fetches a StackFrameList should transparently get the
+      // parent list. As a side benefit, this avoids circular re-entrancy and
+      // deadlocks on the private state thread.
+      m_thread.PushProviderFrameList(m_input_frames);
+      auto clear_active_frames =
+          llvm::scope_exit([&]() { m_thread.PopProviderFrameList(); });
+      auto frame_or_err = m_provider->GetFrameAtIndex(idx);
+
+      if (!frame_or_err) {
+        // Provider returned error - we've reached the end.
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Thread), frame_or_err.takeError(),
+                       "Frame provider reached end at index {0}: {1}", idx);
+        SetAllFramesFetched();
+        break;
+      }
+      StackFrameSP frame_sp = *frame_or_err;
+      if (frame_sp->IsSynthetic())
+        frame_sp->GetStackID().SetCFA(num_synthetic_frames++,
+                                      GetThread().GetProcess().get());
+      // Set the frame list weak pointer so ExecutionContextRef can resolve
+      // the frame without calling Thread::GetStackFrameList().
+      frame_sp->m_frame_list_id = GetIdentifier();
+      m_frames.push_back(frame_sp);
+    }
+
+    return false; // Not interrupted.
+  }
+
+  // If no provider, fall back to the base implementation.
+  return StackFrameList::FetchFramesUpTo(end_idx, allow_interrupt);
 }
 
 void StackFrameList::CalculateCurrentInlinedDepth() {
@@ -69,11 +139,9 @@ uint32_t StackFrameList::GetCurrentInlinedDepth() {
     if (cur_pc != m_current_inlined_pc) {
       m_current_inlined_pc = LLDB_INVALID_ADDRESS;
       m_current_inlined_depth = UINT32_MAX;
-      Log *log = GetLog(LLDBLog::Step);
-      if (log && log->GetVerbose())
-        LLDB_LOGF(
-            log,
-            "GetCurrentInlinedDepth: invalidating current inlined depth.\n");
+      LLDB_LOGF_VERBOSE(
+          GetLog(LLDBLog::Step),
+          "GetCurrentInlinedDepth: invalidating current inlined depth.\n");
     }
     return m_current_inlined_depth;
   } else {
@@ -98,19 +166,16 @@ void StackFrameList::ResetCurrentInlinedDepth() {
     m_current_inlined_depth = *inline_depth;
     m_current_inlined_pc = m_thread.GetRegisterContext()->GetPC();
 
-    if (log && log->GetVerbose())
-      LLDB_LOGF(log,
-                "ResetCurrentInlinedDepth: setting inlined "
-                "depth: %d 0x%" PRIx64 ".\n",
-                m_current_inlined_depth, m_current_inlined_pc);
+    LLDB_LOGF_VERBOSE(log,
+                      "ResetCurrentInlinedDepth: setting inlined "
+                      "depth: %d 0x%" PRIx64 ".\n",
+                      m_current_inlined_depth, m_current_inlined_pc);
   } else {
     std::lock_guard<std::mutex> guard(m_inlined_depth_mutex);
     m_current_inlined_pc = LLDB_INVALID_ADDRESS;
     m_current_inlined_depth = UINT32_MAX;
-    if (log && log->GetVerbose())
-      LLDB_LOGF(
-          log,
-          "ResetCurrentInlinedDepth: Invalidating current inlined depth.\n");
+    LLDB_LOGF_VERBOSE(
+        log, "ResetCurrentInlinedDepth: Invalidating current inlined depth.\n");
   }
 }
 
@@ -161,30 +226,33 @@ static void FindInterveningFrames(Function &begin, Function &end,
                                   ExecutionContext &exe_ctx, Target &target,
                                   addr_t return_pc, CallSequence &path,
                                   ModuleList &images, Log *log) {
-  LLDB_LOG(log, "Finding frames between {0} and {1}, retn-pc={2:x}",
-           begin.GetDisplayName(), end.GetDisplayName(), return_pc);
+  LLDB_LOG_VERBOSE(log, "Finding frames between {0} and {1}, retn-pc={2:x}",
+                   begin.GetDisplayName(), end.GetDisplayName(), return_pc);
 
   // Find a non-tail calling edge with the correct return PC.
   if (log)
     for (const auto &edge : begin.GetCallEdges())
-      LLDB_LOG(log, "FindInterveningFrames: found call with retn-PC = {0:x}",
-               edge->GetReturnPCAddress(begin, target));
+      LLDB_LOG_VERBOSE(log,
+                       "FindInterveningFrames: found call with retn-PC = {0:x}",
+                       edge->GetReturnPCAddress(begin, target));
   CallEdge *first_edge = begin.GetCallEdgeForReturnAddress(return_pc, target);
   if (!first_edge) {
-    LLDB_LOG(log, "No call edge outgoing from {0} with retn-PC == {1:x}",
-             begin.GetDisplayName(), return_pc);
+    LLDB_LOG_VERBOSE(log,
+                     "No call edge outgoing from {0} with retn-PC == {1:x}",
+                     begin.GetDisplayName(), return_pc);
     return;
   }
 
   // The first callee may not be resolved, or there may be nothing to fill in.
   Function *first_callee = first_edge->GetCallee(images, exe_ctx);
   if (!first_callee) {
-    LLDB_LOG(log, "Could not resolve callee");
+    LLDB_LOG_VERBOSE(log, "Could not resolve callee");
     return;
   }
   if (first_callee == &end) {
-    LLDB_LOG(log, "Not searching further, first callee is {0} (retn-PC: {1:x})",
-             end.GetDisplayName(), return_pc);
+    LLDB_LOG_VERBOSE(
+        log, "Not searching further, first callee is {0} (retn-PC: {1:x})",
+        end.GetDisplayName(), return_pc);
     return;
   }
 
@@ -321,14 +389,16 @@ void StackFrameList::SynthesizeTailCallFrames(StackFrame &next_frame) {
     addr_t pc = calleeInfo.address;
     // If the callee address refers to the call instruction, we do not want to
     // subtract 1 from this value.
+    const bool artificial = true;
     const bool behaves_like_zeroth_frame =
         calleeInfo.address_type == CallEdge::AddrType::Call;
     SymbolContext sc;
     callee->CalculateSymbolContext(&sc);
     auto synth_frame = std::make_shared<StackFrame>(
         m_thread.shared_from_this(), frame_idx, concrete_frame_idx, cfa,
-        cfa_is_valid, pc, StackFrame::Kind::Artificial,
+        cfa_is_valid, pc, StackFrame::Kind::Regular, artificial,
         behaves_like_zeroth_frame, &sc);
+    synth_frame->m_frame_list_id = GetIdentifier();
     m_frames.push_back(synth_frame);
     LLDB_LOG(log, "Pushed frame {0} at {1:x}", callee->GetDisplayName(), pc);
   }
@@ -336,6 +406,39 @@ void StackFrameList::SynthesizeTailCallFrames(StackFrame &next_frame) {
   // If any frames were created, adjust next_frame's index.
   if (!path.empty())
     next_frame.SetFrameIndex(m_frames.size());
+}
+
+uint32_t StackFrameList::SynthesizeInlineFrames(StackFrameSP frame_sp,
+                                                addr_t cfa) {
+  SymbolContext unwind_sc =
+      frame_sp->GetSymbolContext(eSymbolContextBlock | eSymbolContextFunction);
+  if (!unwind_sc.block)
+    return 0;
+
+  TargetSP target_sp = m_thread.CalculateTarget();
+  uint32_t concrete_frame_idx = frame_sp->GetConcreteFrameIndex();
+  Address curr_frame_address(frame_sp->GetFrameCodeAddressForSymbolication());
+
+  SymbolContext next_frame_sc;
+  Address next_frame_address;
+  uint32_t num_inlined_frames = 0;
+
+  while (unwind_sc.GetParentOfInlinedScope(curr_frame_address, next_frame_sc,
+                                           next_frame_address)) {
+    next_frame_sc.line_entry.ApplyFileMappings(target_sp);
+    StackFrameSP inline_frame_sp = std::make_shared<StackFrame>(
+        m_thread.shared_from_this(), m_frames.size(), concrete_frame_idx,
+        frame_sp->GetRegisterContextSP(), cfa, next_frame_address,
+        /*behaves_like_zeroth_frame=*/false, &next_frame_sc);
+
+    inline_frame_sp->m_frame_list_id = GetIdentifier();
+    m_frames.push_back(inline_frame_sp);
+    unwind_sc = next_frame_sc;
+    curr_frame_address = next_frame_address;
+    ++num_inlined_frames;
+  }
+
+  return num_inlined_frames;
 }
 
 bool StackFrameList::GetFramesUpTo(uint32_t end_idx,
@@ -444,11 +547,12 @@ bool StackFrameList::FetchFramesUpTo(uint32_t end_idx,
           unwind_frame_sp = std::make_shared<StackFrame>(
               m_thread.shared_from_this(), m_frames.size(), idx, reg_ctx_sp,
               cfa, pc, behaves_like_zeroth_frame, nullptr);
+          unwind_frame_sp->m_frame_list_id = GetIdentifier();
           m_frames.push_back(unwind_frame_sp);
         }
       } else {
         unwind_frame_sp = m_frames.front();
-        cfa = unwind_frame_sp->m_id.GetCallFrameAddress();
+        cfa = unwind_frame_sp->m_id.GetCallFrameAddressWithoutMetadata();
       }
     } else {
       // Check for interruption when building the frames.
@@ -470,42 +574,20 @@ bool StackFrameList::FetchFramesUpTo(uint32_t end_idx,
       const bool cfa_is_valid = true;
       unwind_frame_sp = std::make_shared<StackFrame>(
           m_thread.shared_from_this(), m_frames.size(), idx, cfa, cfa_is_valid,
-          pc, StackFrame::Kind::Regular, behaves_like_zeroth_frame, nullptr);
+          pc, StackFrame::Kind::Regular, false, behaves_like_zeroth_frame,
+          nullptr);
 
       // Create synthetic tail call frames between the previous frame and the
       // newly-found frame. The new frame's index may change after this call,
       // although its concrete index will stay the same.
       SynthesizeTailCallFrames(*unwind_frame_sp.get());
 
+      unwind_frame_sp->m_frame_list_id = GetIdentifier();
       m_frames.push_back(unwind_frame_sp);
     }
 
     assert(unwind_frame_sp);
-    SymbolContext unwind_sc = unwind_frame_sp->GetSymbolContext(
-        eSymbolContextBlock | eSymbolContextFunction);
-    Block *unwind_block = unwind_sc.block;
-    TargetSP target_sp = m_thread.CalculateTarget();
-    if (unwind_block) {
-      Address curr_frame_address(
-          unwind_frame_sp->GetFrameCodeAddressForSymbolication());
-
-      SymbolContext next_frame_sc;
-      Address next_frame_address;
-
-      while (unwind_sc.GetParentOfInlinedScope(
-          curr_frame_address, next_frame_sc, next_frame_address)) {
-        next_frame_sc.line_entry.ApplyFileMappings(target_sp);
-        behaves_like_zeroth_frame = false;
-        StackFrameSP frame_sp(new StackFrame(
-            m_thread.shared_from_this(), m_frames.size(), idx,
-            unwind_frame_sp->GetRegisterContextSP(), cfa, next_frame_address,
-            behaves_like_zeroth_frame, &next_frame_sc));
-
-        m_frames.push_back(frame_sp);
-        unwind_sc = next_frame_sc;
-        curr_frame_address = next_frame_address;
-      }
-    }
+    SynthesizeInlineFrames(unwind_frame_sp, cfa);
   } while (m_frames.size() - 1 < end_idx);
 
   // Don't try to merge till you've calculated all the frames in this stack.
@@ -557,6 +639,7 @@ bool StackFrameList::FetchFramesUpTo(uint32_t end_idx,
       prev_frame->UpdatePreviousFrameFromCurrentFrame(*curr_frame);
       // Now copy the fixed up previous frame into the current frames so the
       // pointer doesn't change.
+      prev_frame_sp->m_frame_list_id = GetIdentifier();
       m_frames[curr_frame_idx] = prev_frame_sp;
 
 #if defined(DEBUG_STACK_FRAMES)
@@ -723,7 +806,7 @@ void StackFrameList::SelectMostRelevantFrame() {
   // Don't call into the frame recognizers on the private state thread as
   // they can cause code to run in the target, and that can cause deadlocks
   // when fetching stop events for the expression.
-  if (m_thread.GetProcess()->CurrentThreadIsPrivateStateThread())
+  if (m_thread.GetProcess()->CurrentThreadPosesAsPrivateStateThread())
     return;
 
   Log *log = GetLog(LLDBLog::Thread);
@@ -783,6 +866,8 @@ void StackFrameList::SelectMostRelevantFrame() {
 
 uint32_t
 StackFrameList::GetSelectedFrameIndex(SelectMostRelevant select_most_relevant) {
+  std::lock_guard<std::recursive_mutex> guard(m_selected_frame_mutex);
+
   if (!m_selected_frame_idx && select_most_relevant)
     SelectMostRelevantFrame();
   if (!m_selected_frame_idx) {
@@ -798,6 +883,8 @@ StackFrameList::GetSelectedFrameIndex(SelectMostRelevant select_most_relevant) {
 
 uint32_t StackFrameList::SetSelectedFrame(lldb_private::StackFrame *frame) {
   std::shared_lock<std::shared_mutex> guard(m_list_mutex);
+  std::lock_guard<std::recursive_mutex> selected_frame_guard(
+      m_selected_frame_mutex);
 
   const_iterator pos;
   const_iterator begin = m_frames.begin();
@@ -851,6 +938,8 @@ void StackFrameList::Clear() {
   std::unique_lock<std::shared_mutex> guard(m_list_mutex);
   m_frames.clear();
   m_concrete_frames_fetched = 0;
+  std::lock_guard<std::recursive_mutex> selected_frame_guard(
+      m_selected_frame_mutex);
   m_selected_frame_idx.reset();
 }
 
@@ -871,11 +960,45 @@ StackFrameList::GetStackFrameSPForStackFramePtr(StackFrame *stack_frame_ptr) {
   return ret_sp;
 }
 
+bool StackFrameList::IsNextFrameHidden(lldb_private::StackFrame &frame) {
+  uint32_t frame_idx = frame.GetFrameIndex();
+  StackFrameSP frame_sp = GetFrameAtIndex(frame_idx + 1);
+  if (!frame_sp)
+    return false;
+  return frame_sp->IsHidden();
+}
+
+bool StackFrameList::IsPreviousFrameHidden(lldb_private::StackFrame &frame) {
+  uint32_t frame_idx = frame.GetFrameIndex();
+  if (frame_idx == 0)
+    return false;
+  StackFrameSP frame_sp = GetFrameAtIndex(frame_idx - 1);
+  if (!frame_sp)
+    return false;
+  return frame_sp->IsHidden();
+}
+
+std::string StackFrameList::GetFrameMarker(lldb::StackFrameSP frame_sp,
+                                           lldb::StackFrameSP selected_frame_sp,
+                                           bool show_hidden_marker) {
+  bool show_unicode_marker = Terminal::SupportsUnicode() && show_hidden_marker;
+  if (frame_sp == selected_frame_sp)
+    return show_unicode_marker ? " * " : "* ";
+  if (!show_unicode_marker)
+    return "  ";
+  if (IsPreviousFrameHidden(*frame_sp))
+    return reinterpret_cast<const char *>(u8"﹉ ");
+  if (IsNextFrameHidden(*frame_sp))
+    return reinterpret_cast<const char *>(u8"﹍ ");
+  return "   ";
+}
+
 size_t StackFrameList::GetStatus(Stream &strm, uint32_t first_frame,
                                  uint32_t num_frames, bool show_frame_info,
                                  uint32_t num_frames_with_source,
                                  bool show_unique, bool show_hidden,
-                                 const char *selected_frame_marker) {
+                                 bool show_hidden_marker,
+                                 bool show_selected_frame) {
   size_t num_frames_displayed = 0;
 
   if (num_frames == 0)
@@ -893,25 +1016,18 @@ size_t StackFrameList::GetStatus(Stream &strm, uint32_t first_frame,
 
   StackFrameSP selected_frame_sp =
       m_thread.GetSelectedFrame(DoNoSelectMostRelevantFrame);
-  const char *unselected_marker = nullptr;
   std::string buffer;
-  if (selected_frame_marker) {
-    size_t len = strlen(selected_frame_marker);
-    buffer.insert(buffer.begin(), len, ' ');
-    unselected_marker = buffer.c_str();
-  }
-  const char *marker = nullptr;
+  std::string marker;
   for (frame_idx = first_frame; frame_idx < last_frame; ++frame_idx) {
     frame_sp = GetFrameAtIndex(frame_idx);
     if (!frame_sp)
       break;
 
-    if (selected_frame_marker != nullptr) {
-      if (frame_sp == selected_frame_sp)
-        marker = selected_frame_marker;
-      else
-        marker = unselected_marker;
-    }
+    if (show_selected_frame)
+      marker = GetFrameMarker(frame_sp, selected_frame_sp, show_hidden_marker);
+    else
+      marker = GetFrameMarker(frame_sp, /*selected_frame_sp=*/nullptr,
+                              show_hidden_marker);
 
     // Hide uninteresting frames unless it's the selected frame.
     if (!show_hidden && frame_sp != selected_frame_sp && frame_sp->IsHidden())
@@ -925,7 +1041,6 @@ size_t StackFrameList::GetStatus(Stream &strm, uint32_t first_frame,
             m_thread.GetID(), num_frames_displayed))
       break;
 
-
     if (!frame_sp->GetStatus(strm, show_frame_info,
                              num_frames_with_source > (first_frame - frame_idx),
                              show_unique, marker))
@@ -936,3 +1051,5 @@ size_t StackFrameList::GetStatus(Stream &strm, uint32_t first_frame,
   strm.IndentLess();
   return num_frames_displayed;
 }
+
+void StackFrameList::ClearSelectedFrameIndex() { m_selected_frame_idx.reset(); }

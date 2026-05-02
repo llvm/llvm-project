@@ -37,8 +37,8 @@ struct ExtractStridedMetadataOnFatRawBufferCastFolder final
       return rewriter.notifyMatchFailure(metadataOp,
                                          "not a fat raw buffer cast");
     Location loc = castOp.getLoc();
-    auto sourceMetadata = rewriter.create<memref::ExtractStridedMetadataOp>(
-        loc, castOp.getSource());
+    auto sourceMetadata = memref::ExtractStridedMetadataOp::create(
+        rewriter, loc, castOp.getSource());
     SmallVector<Value> results;
     if (metadataOp.getBaseBuffer().use_empty()) {
       results.push_back(nullptr);
@@ -48,13 +48,13 @@ struct ExtractStridedMetadataOnFatRawBufferCastFolder final
       if (baseBufferType == castOp.getResult().getType()) {
         results.push_back(castOp.getResult());
       } else {
-        results.push_back(rewriter.create<memref::ReinterpretCastOp>(
-            loc, baseBufferType, castOp.getResult(), /*offset=*/0,
+        results.push_back(memref::ReinterpretCastOp::create(
+            rewriter, loc, baseBufferType, castOp.getResult(), /*offset=*/0,
             /*sizes=*/ArrayRef<int64_t>{}, /*strides=*/ArrayRef<int64_t>{}));
       }
     }
     if (castOp.getResetOffset())
-      results.push_back(rewriter.create<arith::ConstantIndexOp>(loc, 0));
+      results.push_back(arith::ConstantIndexOp::create(rewriter, loc, 0));
     else
       results.push_back(sourceMetadata.getOffset());
     llvm::append_range(results, sourceMetadata.getSizes());

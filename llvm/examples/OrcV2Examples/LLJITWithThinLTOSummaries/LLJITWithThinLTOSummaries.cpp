@@ -169,7 +169,9 @@ Expected<ThreadSafeModule> loadModule(StringRef Path,
 
   MemoryBufferRef BitcodeBufferRef = (**BitcodeBuffer).getMemBufferRef();
   Expected<std::unique_ptr<Module>> M =
-      parseBitcodeFile(BitcodeBufferRef, *TSCtx.getContext());
+      TSCtx.withContextDo([&](LLVMContext *Ctx) {
+        return parseBitcodeFile(BitcodeBufferRef, *Ctx);
+      });
   if (!M)
     return M.takeError();
 

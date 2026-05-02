@@ -133,6 +133,7 @@ syn keyword llvmKeyword
       \ noimplicitfloat
       \ noinline
       \ nomerge
+      \ nooutline
       \ nonlazybind
       \ nonnull
       \ noprofile
@@ -163,6 +164,7 @@ syn keyword llvmKeyword
       \ returns_twice
       \ safestack
       \ sanitize_address
+      \ sanitize_alloc_token
       \ sanitize_hwaddress
       \ sanitize_memory
       \ sanitize_memtag
@@ -219,7 +221,7 @@ syn keyword llvmError  getresult begin end
 syn match   llvmNoName /[%@!]\d\+\>/
 syn match   llvmNumber /-\?\<\d\+\>/
 syn match   llvmFloat  /-\?\<\d\+\.\d*\(e[+-]\d\+\)\?\>/
-syn match   llvmFloat  /\<0x[KLMHR]\?\x\+\>/
+syn match   llvmFloat  /\<\(u\|s\)\?0x[KLMHR]\?\x\+\>/
 syn keyword llvmBoolean true false
 syn keyword llvmConstant zeroinitializer undef null none poison vscale
 syn match   llvmComment /;.*$/

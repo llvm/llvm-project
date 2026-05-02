@@ -274,8 +274,10 @@ void LVBinaryReader::mapVirtualAddress(const object::COFFObjectFile &COFFObj) {
   });
 }
 
-Error LVBinaryReader::loadGenericTargetInfo(StringRef TheTriple,
-                                            StringRef TheFeatures) {
+Error LVBinaryReader::loadGenericTargetInfo(StringRef TripleName,
+                                            StringRef TheFeatures,
+                                            StringRef TheCPU) {
+  Triple TheTriple(TripleName);
   std::string TargetLookupError;
   const Target *TheTarget =
       TargetRegistry::lookupTarget(TheTriple, TargetLookupError);
@@ -286,41 +288,39 @@ Error LVBinaryReader::loadGenericTargetInfo(StringRef TheTriple,
   MCRegisterInfo *RegisterInfo = TheTarget->createMCRegInfo(TheTriple);
   if (!RegisterInfo)
     return createStringError(errc::invalid_argument,
-                             "no register info for target " + TheTriple);
+                             "no register info for target " + TripleName);
   MRI.reset(RegisterInfo);
 
   // Assembler properties and features.
-  MCTargetOptions MCOptions;
   MCAsmInfo *AsmInfo(TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
   if (!AsmInfo)
     return createStringError(errc::invalid_argument,
-                             "no assembly info for target " + TheTriple);
+                             "no assembly info for target " + TripleName);
   MAI.reset(AsmInfo);
 
   // Target subtargets.
-  StringRef CPU;
   MCSubtargetInfo *SubtargetInfo(
-      TheTarget->createMCSubtargetInfo(TheTriple, CPU, TheFeatures));
+      TheTarget->createMCSubtargetInfo(TheTriple, TheCPU, TheFeatures));
   if (!SubtargetInfo)
     return createStringError(errc::invalid_argument,
-                             "no subtarget info for target " + TheTriple);
+                             "no subtarget info for target " + TripleName);
   STI.reset(SubtargetInfo);
 
   // Instructions Info.
   MCInstrInfo *InstructionInfo(TheTarget->createMCInstrInfo());
   if (!InstructionInfo)
     return createStringError(errc::invalid_argument,
-                             "no instruction info for target " + TheTriple);
+                             "no instruction info for target " + TripleName);
   MII.reset(InstructionInfo);
 
-  MC = std::make_unique<MCContext>(Triple(TheTriple), MAI.get(), MRI.get(),
+  MC = std::make_unique<MCContext>(Triple(TheTriple), *MAI, MRI.get(),
                                    STI.get());
 
   // Assembler.
   MCDisassembler *DisAsm(TheTarget->createMCDisassembler(*STI, *MC));
   if (!DisAsm)
     return createStringError(errc::invalid_argument,
-                             "no disassembler for target " + TheTriple);
+                             "no disassembler for target " + TripleName);
   MD.reset(DisAsm);
 
   MCInstPrinter *InstructionPrinter(TheTarget->createMCInstPrinter(
@@ -328,7 +328,7 @@ Error LVBinaryReader::loadGenericTargetInfo(StringRef TheTriple,
   if (!InstructionPrinter)
     return createStringError(errc::invalid_argument,
                              "no target assembly language printer for target " +
-                                 TheTriple);
+                                 TripleName);
   MIP.reset(InstructionPrinter);
   InstructionPrinter->setPrintImmHex(true);
 
@@ -496,8 +496,8 @@ Error LVBinaryReader::createInstructions(LVScope *Scope,
     dbgs() << "\nSectionIndex: " << format_decimal(SectionIndex, 3)
            << " Scope DIE: " << hexValue(Scope->getOffset()) << "\n"
            << "Address: " << hexValue(FirstAddress)
-           << format(" - Collected instructions lines: %d\n",
-                     Instructions.size());
+           << formatv(" - Collected instructions lines: {0}\n",
+                      Instructions.size());
     for (const LVLine *Line : Instructions)
       dbgs() << format_decimal(++Index, 5) << ": "
              << hexValue(Line->getOffset()) << ", (" << Line->getName()
@@ -584,7 +584,7 @@ void LVBinaryReader::processLines(LVLines *DebugLines,
   LLVM_DEBUG({
     size_t Index = 1;
     size_t PerLine = 4;
-    dbgs() << format("\nProcess debug lines: %d\n", DebugLines->size());
+    dbgs() << formatv("\nProcess debug lines: {0}\n", DebugLines->size());
     for (const LVLine *Line : *DebugLines) {
       dbgs() << format_decimal(Index, 5) << ": " << hexValue(Line->getOffset())
              << ", (" << Line->getLineNumber() << ")"
@@ -621,8 +621,8 @@ void LVBinaryReader::processLines(LVLines *DebugLines,
       size_t Index = 0;
       dbgs() << "\nSectionIndex: " << format_decimal(SectionIndex, 3)
              << " Scope DIE: " << hexValue(Scope->getOffset()) << "\n"
-             << format("Process instruction lines: %d\n",
-                       InstructionLines.size());
+             << formatv("Process instruction lines: {0}\n",
+                        InstructionLines.size());
       for (const LVLine *Line : InstructionLines)
         dbgs() << format_decimal(++Index, 5) << ": "
                << hexValue(Line->getOffset()) << ", (" << Line->getName()
@@ -649,7 +649,7 @@ void LVBinaryReader::processLines(LVLines *DebugLines,
             dbgs() << "Line " << (IsDebug ? "dbg:" : "ins:") << " ["
                    << hexValue(DebugAddress) << "]";
             if (IsDebug)
-              dbgs() << format(" %d", (*Iter)->getLineNumber());
+              dbgs() << formatv(" {0}", (*Iter)->getLineNumber());
             dbgs() << "\n";
           });
           // Instruction address before debug line.
@@ -657,7 +657,7 @@ void LVBinaryReader::processLines(LVLines *DebugLines,
             LLVM_DEBUG({
               dbgs() << "Inserted instruction address: "
                      << hexValue(InstructionAddress) << " before line: "
-                     << format("%d", (*Iter)->getLineNumber()) << " ["
+                     << formatv("{0}", (*Iter)->getLineNumber()) << " ["
                      << hexValue(DebugAddress) << "]\n";
             });
             Iter = DebugLines->insert(Iter, InstructionLine);
@@ -681,7 +681,7 @@ void LVBinaryReader::processLines(LVLines *DebugLines,
   }
 
   LLVM_DEBUG({
-    dbgs() << format("Lines after merge: %d\n", DebugLines->size());
+    dbgs() << formatv("Lines after merge: {0}\n", DebugLines->size());
     size_t Index = 0;
     for (const LVLine *Line : *DebugLines) {
       dbgs() << format_decimal(++Index, 5) << ": "
@@ -706,7 +706,7 @@ void LVBinaryReader::processLines(LVLines *DebugLines,
             size_t Index = 0;
             dbgs() << "\nSectionIndex: " << format_decimal(SectionIndex, 3)
                    << " Scope DIE: " << hexValue(Scope->getOffset()) << "\n"
-                   << format("Instruction lines: %d\n", Lines->size());
+                   << formatv("Instruction lines: {0}\n", Lines->size());
             for (const LVLine *Line : *Lines)
               dbgs() << format_decimal(++Index, 5) << ": "
                      << hexValue(Line->getOffset()) << ", (" << Line->getName()
@@ -901,7 +901,7 @@ void LVBinaryReader::includeInlineeLines(LVSectionIndex SectionIndex,
       for (const LVLine *Line : *InlineeLines)
         dbgs() << "[" << hexValue(Line->getAddress()) << "] "
                << Line->getLineNumber() << "\n";
-      dbgs() << format("Debug lines: %d\n", CULines.size());
+      dbgs() << formatv("Debug lines: {0}\n", CULines.size());
       for (const LVLine *Line : CULines)
         dbgs() << "Line address: " << hexValue(Line->getOffset()) << ", ("
                << Line->getLineNumber() << ")\n";
@@ -938,7 +938,7 @@ void LVBinaryReader::includeInlineeLines(LVSectionIndex SectionIndex,
   }
   LLVM_DEBUG({
     dbgs() << "Merged Inlined lines for: " << Function->getName() << "\n";
-    dbgs() << format("Debug lines: %d\n", CULines.size());
+    dbgs() << formatv("Debug lines: {0}\n", CULines.size());
     for (const LVLine *Line : CULines)
       dbgs() << "Line address: " << hexValue(Line->getOffset()) << ", ("
              << Line->getLineNumber() << ")\n";

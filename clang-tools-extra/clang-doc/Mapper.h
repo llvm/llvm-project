@@ -19,7 +19,6 @@
 
 #include "Representation.h"
 #include "clang/AST/RecursiveASTVisitor.h"
-#include "clang/Tooling/Execution.h"
 
 using namespace clang::comments;
 using namespace clang::tooling;
@@ -42,6 +41,7 @@ public:
   bool VisitTypedefDecl(const TypedefDecl *D);
   bool VisitTypeAliasDecl(const TypeAliasDecl *D);
   bool VisitConceptDecl(const ConceptDecl *D);
+  bool VisitVarDecl(const VarDecl *D);
 
 private:
   template <typename T> bool mapDecl(const T *D, bool IsDefinition);

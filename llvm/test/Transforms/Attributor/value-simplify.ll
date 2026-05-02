@@ -626,7 +626,7 @@ define internal ptr @test_byval2(ptr byval(%struct.X) %a) {
 ; CHECK-NEXT:    [[A_PRIV:%.*]] = alloca [[STRUCT_X:%.*]], align 8
 ; CHECK-NEXT:    store ptr [[TMP0]], ptr [[A_PRIV]], align 8
 ; CHECK-NEXT:    call void @sync()
-; CHECK-NEXT:    [[L:%.*]] = load ptr, ptr [[A_PRIV]], align 8
+; CHECK-NEXT:    [[L:%.*]] = load ptr, ptr [[A_PRIV]], align 8, !invariant.load [[META0:![0-9]+]]
 ; CHECK-NEXT:    ret ptr [[L]]
 ;
   call void @sync()
@@ -1114,7 +1114,7 @@ define i32 @test(i1 %c) {
 ; TUNIT-LABEL: define {{[^@]+}}@test
 ; TUNIT-SAME: (i1 [[C:%.*]]) {
 ; TUNIT-NEXT:    [[R1:%.*]] = call i32 @ctx_test1(i1 noundef [[C]])
-; TUNIT-NEXT:    [[R2:%.*]] = call i32 @ctx_test2(i1 noundef [[C]]), !range [[RNG0:![0-9]+]]
+; TUNIT-NEXT:    [[R2:%.*]] = call range(i32 0, -2147483648) i32 @ctx_test2(i1 noundef [[C]])
 ; TUNIT-NEXT:    [[ADD:%.*]] = add i32 [[R1]], [[R2]]
 ; TUNIT-NEXT:    ret i32 [[ADD]]
 ;
@@ -1359,7 +1359,7 @@ define internal i32 @ret_speculatable_expr(ptr %mem, i32 %a2) {
 ; CGSCC-SAME: (i32 [[TMP0:%.*]]) #[[ATTR1]] {
 ; CGSCC-NEXT:    [[MEM_PRIV:%.*]] = alloca i32, align 4
 ; CGSCC-NEXT:    store i32 [[TMP0]], ptr [[MEM_PRIV]], align 4
-; CGSCC-NEXT:    [[L:%.*]] = load i32, ptr [[MEM_PRIV]], align 4
+; CGSCC-NEXT:    [[L:%.*]] = load i32, ptr [[MEM_PRIV]], align 4, !invariant.load [[META0]]
 ; CGSCC-NEXT:    [[MUL:%.*]] = mul i32 [[L]], 13
 ; CGSCC-NEXT:    [[ADD:%.*]] = add i32 [[MUL]], 7
 ; CGSCC-NEXT:    ret i32 [[ADD]]
@@ -1684,12 +1684,10 @@ define i32 @readExtInitZeroInit() {
 ; TUNIT: attributes #[[ATTR10]] = { nofree willreturn }
 ; TUNIT: attributes #[[ATTR11]] = { nofree nosync nounwind willreturn memory(write) }
 ; TUNIT: attributes #[[ATTR12]] = { nofree willreturn memory(readwrite) }
-; TUNIT: attributes #[[ATTR13]] = { nofree nosync nounwind willreturn }
+; TUNIT: attributes #[[ATTR13]] = { nofree norecurse nosync nounwind willreturn }
 ; TUNIT: attributes #[[ATTR14]] = { nosync }
 ; TUNIT: attributes #[[ATTR15]] = { nosync nounwind memory(read) }
 ; TUNIT: attributes #[[ATTR16]] = { nounwind memory(write) }
-;.
-; TUNIT: [[RNG0]] = !{i32 0, i32 -2147483648}
 ;.
 ; CGSCC: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn }
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
@@ -1710,4 +1708,8 @@ define i32 @readExtInitZeroInit() {
 ; CGSCC: attributes #[[ATTR16]] = { nofree willreturn memory(readwrite) }
 ; CGSCC: attributes #[[ATTR17]] = { nosync }
 ; CGSCC: attributes #[[ATTR18]] = { nounwind }
+;.
+; TUNIT: [[META0]] = !{}
+;.
+; CGSCC: [[META0]] = !{}
 ;.

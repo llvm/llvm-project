@@ -58,23 +58,23 @@ subroutine s5()
 end subroutine
 
 subroutine s6()
-!C835   An object whose array bounds are specified by an 
+!C835   An object whose array bounds are specified by an
 !  implied-shape-or-assumed-size-spec shall be a dummy data object or a named
 !  constant.
 !
-!C843   An entity with the INTENT attribute shall be a dummy data object or a 
+!C843   An entity with the INTENT attribute shall be a dummy data object or a
 !  dummy procedure pointer.
 !
 !C849   An entity with the OPTIONAL attribute shall be a dummy argument.
 
   !ERROR: Implied-shape array 'local1' must be a named constant or a dummy argument
   real, dimension (*) :: local1
-  !WARNING: Only a dummy argument should have an INTENT, VALUE, or OPTIONAL attribute
+  !WARNING: Only a dummy argument should have an INTENT, VALUE, or OPTIONAL attribute [-Wignore-irrelevant-attributes]
   real, intent(in) :: local2
-  !WARNING: Only a dummy argument should have an INTENT, VALUE, or OPTIONAL attribute
+  !WARNING: Only a dummy argument should have an INTENT, VALUE, or OPTIONAL attribute [-Wignore-irrelevant-attributes]
   procedure(), intent(in) :: p1
-  !WARNING: Only a dummy argument should have an INTENT, VALUE, or OPTIONAL attribute
+  !WARNING: Only a dummy argument should have an INTENT, VALUE, or OPTIONAL attribute [-Wignore-irrelevant-attributes]
   real, optional :: local3
-  !WARNING: Only a dummy argument should have an INTENT, VALUE, or OPTIONAL attribute
+  !WARNING: Only a dummy argument should have an INTENT, VALUE, or OPTIONAL attribute [-Wignore-irrelevant-attributes]
   procedure(), optional :: p2
 end subroutine

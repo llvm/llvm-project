@@ -1,5 +1,5 @@
-! RUN: %flang_fc1 -flang-experimental-hlfir -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefixes="LLVMIR","LLVMIR-LE" %s
-! RUN: %flang_fc1 -flang-experimental-hlfir -triple powerpc64-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefixes="LLVMIR","LLVMIR-BE" %s
+! RUN: %flang_fc1 -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefixes="LLVMIR","LLVMIR-LE" %s
+! RUN: %flang_fc1 -triple powerpc64-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefixes="LLVMIR","LLVMIR-BE" %s
 ! REQUIRES: target=powerpc{{.*}}
 
 ! CHECK-LABEL: vec_perm_test_i1

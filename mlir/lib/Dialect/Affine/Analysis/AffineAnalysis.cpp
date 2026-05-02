@@ -19,9 +19,6 @@
 #include "mlir/Dialect/Affine/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
-#include "mlir/IR/AffineExprVisitor.h"
-#include "mlir/IR/BuiltinOps.h"
-#include "mlir/IR/IntegerSet.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -69,9 +66,10 @@ static Value getSupportedReduction(AffineForOp forOp, unsigned pos,
           .Case([](arith::MaxSIOp) { return arith::AtomicRMWKind::maxs; })
           .Case([](arith::MinUIOp) { return arith::AtomicRMWKind::minu; })
           .Case([](arith::MaxUIOp) { return arith::AtomicRMWKind::maxu; })
+          .Case([](arith::XOrIOp) { return arith::AtomicRMWKind::xori; })
+          .Case([](arith::MaxNumFOp) { return arith::AtomicRMWKind::maxnumf; })
+          .Case([](arith::MinNumFOp) { return arith::AtomicRMWKind::minnumf; })
           .Default([](Operation *) -> std::optional<arith::AtomicRMWKind> {
-            // TODO: AtomicRMW supports other kinds of reductions this is
-            // currently not detecting, add those when the need arises.
             return std::nullopt;
           });
   if (!maybeKind)
@@ -391,7 +389,7 @@ static void addOrderingConstraints(const FlatAffineValueConstraints &srcDomain,
   unsigned numCommonLoops = getNumCommonLoops(srcDomain, dstDomain);
   unsigned numCommonLoopConstraints = std::min(numCommonLoops, loopDepth);
   for (unsigned i = 0; i < numCommonLoopConstraints; ++i) {
-    std::fill(eq.begin(), eq.end(), 0);
+    llvm::fill(eq, 0);
     eq[i] = -1;
     eq[i + numSrcDims] = 1;
     if (i == loopDepth - 1) {
@@ -433,7 +431,7 @@ static void computeDirectionVector(
   // Constraint variables format:
   // [num-common-loops][num-src-dim-ids][num-dst-dim-ids][num-symbols][constant]
   for (unsigned j = 0; j < numCommonLoops; ++j) {
-    std::fill(eq.begin(), eq.end(), 0);
+    llvm::fill(eq, 0);
     eq[j] = 1;
     eq[j + numCommonLoops] = 1;
     eq[j + numCommonLoops + numSrcDims] = -1;

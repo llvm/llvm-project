@@ -53,8 +53,8 @@ struct InlinerCallback
     mlir::Operation &call = inlineBlock->back();
     builder.setInsertionPointAfter(&call);
 
-    auto executeRegionOp = builder.create<mlir::scf::ExecuteRegionOp>(
-        call.getLoc(), call.getResultTypes());
+    auto executeRegionOp = mlir::scf::ExecuteRegionOp::create(
+        builder, call.getLoc(), call.getResultTypes());
     mlir::Region &region = executeRegionOp.getRegion();
 
     // Move the inlined blocks into the region
@@ -70,8 +70,8 @@ struct InlinerCallback
         if (test::TestReturnOp returnOp =
                 llvm::dyn_cast<test::TestReturnOp>(&op)) {
           mlir::OpBuilder returnBuilder(returnOp);
-          returnBuilder.create<mlir::scf::YieldOp>(returnOp.getLoc(),
-                                                   returnOp.getOperands());
+          mlir::scf::YieldOp::create(returnBuilder, returnOp.getLoc(),
+                                     returnOp.getOperands());
           returnOp.erase();
         }
       }
@@ -79,8 +79,8 @@ struct InlinerCallback
 
     // Add test.return after scf.execute_region
     builder.setInsertionPointAfter(executeRegionOp);
-    builder.create<test::TestReturnOp>(executeRegionOp.getLoc(),
-                                       executeRegionOp.getResults());
+    test::TestReturnOp::create(builder, executeRegionOp.getLoc(),
+                               executeRegionOp.getResults());
   }
 
   void runOnOperation() override {

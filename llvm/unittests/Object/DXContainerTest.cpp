@@ -9,6 +9,7 @@
 #include "llvm/Object/DXContainer.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Magic.h"
+#include "llvm/MC/DXContainerPSVInfo.h"
 #include "llvm/ObjectYAML/DXContainerYAML.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/Error.h"
@@ -1062,8 +1063,8 @@ TEST(RootSignature, ParseDescriptorTable) {
         0x3c, 0x00, 0x00, 0x00, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x03, 0x00, 0x00, 0x00, 0x24, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
         0x2c, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
-        0x2a, 0x00, 0x00, 0x00, 0x2b, 0x00, 0x00, 0x00, 0x29, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x2a, 0x00, 0x00, 0x00, 0x2b, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00,
+        0x29, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00};
     DXContainer C =
@@ -1088,7 +1089,7 @@ TEST(RootSignature, ParseDescriptorTable) {
     auto *DescriptorTableView =
         dyn_cast<DirectX::DescriptorTableView>(&*ParamView);
     ASSERT_TRUE(DescriptorTableView != nullptr);
-    auto Table = DescriptorTableView->read(2);
+    auto Table = DescriptorTableView->read<dxbc::RTS0::v2::DescriptorRange>();
 
     ASSERT_THAT_ERROR(Table.takeError(), Succeeded());
 
@@ -1140,7 +1141,7 @@ TEST(RootSignature, ParseDescriptorTable) {
     auto *DescriptorTableView =
         dyn_cast<DirectX::DescriptorTableView>(&*ParamView);
     ASSERT_TRUE(DescriptorTableView != nullptr);
-    auto Table = DescriptorTableView->read(1);
+    auto Table = DescriptorTableView->read<dxbc::RTS0::v1::DescriptorRange>();
 
     ASSERT_THAT_ERROR(Table.takeError(), Succeeded());
 
@@ -1200,4 +1201,98 @@ TEST(RootSignature, ParseStaticSamplers) {
     ASSERT_EQ(Sampler.RegisterSpace, 32u);
     ASSERT_EQ(Sampler.ShaderVisibility, 7u);
   }
+  {
+    // this is testing static sampler parsing for root signature version 1.2,
+    // it changes: the version number, the size of root signature being emitted
+    // and the values for flag fields.
+    uint8_t Buffer[] = {
+        0x44, 0x58, 0x42, 0x43, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+        0x90, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x3c, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x52, 0x54, 0x53, 0x30, 0x4c, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+        0x18, 0x00, 0x00, 0x00, 0x11, 0x00, 0x00, 0x00, 0x0a, 0x00, 0x00, 0x00,
+        0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00,
+        0xa4, 0x70, 0x9d, 0x3f, 0x14, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x85, 0xeb, 0x91, 0x40, 0x66, 0x66, 0x0e, 0x41,
+        0x1f, 0x00, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00, 0x07, 0x00, 0x00, 0x00,
+        0x01, 0x00, 0x00, 0x00};
+    DXContainer C =
+        llvm::cantFail(DXContainer::create(getMemoryBuffer<148>(Buffer)));
+
+    auto MaybeRS = C.getRootSignature();
+    ASSERT_TRUE(MaybeRS.has_value());
+    const auto &RS = MaybeRS.value();
+    ASSERT_EQ(RS.getVersion(), 3U);
+    ASSERT_EQ(RS.getNumParameters(), 0U);
+    ASSERT_EQ(RS.getRootParametersOffset(), 0U);
+    ASSERT_EQ(RS.getNumStaticSamplers(), 1U);
+    ASSERT_EQ(RS.getStaticSamplersOffset(), 24U);
+    ASSERT_EQ(RS.getFlags(), 17U);
+
+    auto Sampler = *RS.samplers().begin();
+
+    ASSERT_EQ(Sampler.Filter, 10U);
+    ASSERT_EQ(Sampler.AddressU, 1U);
+    ASSERT_EQ(Sampler.AddressV, 2U);
+    ASSERT_EQ(Sampler.AddressW, 5U);
+    ASSERT_FLOAT_EQ(Sampler.MipLODBias, 1.23F);
+    ASSERT_EQ(Sampler.MaxAnisotropy, 20U);
+    ASSERT_EQ(Sampler.ComparisonFunc, 4U);
+    ASSERT_EQ(Sampler.BorderColor, 0U);
+    ASSERT_FLOAT_EQ(Sampler.MinLOD, 4.56F);
+    ASSERT_FLOAT_EQ(Sampler.MaxLOD, 8.9F);
+    ASSERT_EQ(Sampler.ShaderRegister, 31U);
+    ASSERT_EQ(Sampler.RegisterSpace, 32U);
+    ASSERT_EQ(Sampler.ShaderVisibility, 7U);
+    ASSERT_EQ(Sampler.Flags, 1U);
+  }
+}
+
+// PSVInfo:
+//   Version:         2
+//   ShaderStage:     5
+//   MinimumWaveLaneCount: 0
+//   MaximumWaveLaneCount: 4294967295
+//   NumThreadsX:     8
+//   NumThreadsY:     1
+//   NumThreadsZ:     1
+//   EntryName:       CSMain  <--- not serialized for version < 3
+//   ResourceStride:  0
+//   Resources:       []
+TEST(DXCFile, PSVv2EntryNameNotInStringTable) {
+  // Verify that when EntryName is set but PSV version is < 3,
+  // the entry name does not appear in the serialized string table.
+  mcdxbc::PSVRuntimeInfo PSV;
+  PSV.BaseData.ShaderStage =
+      static_cast<uint8_t>(Triple::EnvironmentType::Compute - Triple::Pixel);
+  PSV.BaseData.MinimumWaveLaneCount = 0;
+  PSV.BaseData.MaximumWaveLaneCount = 0xFFFFFFFF;
+  PSV.BaseData.NumThreadsX = 8;
+  PSV.BaseData.NumThreadsY = 1;
+  PSV.BaseData.NumThreadsZ = 1;
+  PSV.EntryName = "CSMain";
+
+  PSV.finalize(Triple::EnvironmentType::Compute, 2);
+
+  SmallVector<char> Buffer;
+  raw_svector_ostream OS(Buffer);
+  PSV.write(OS, 2);
+
+  // The serialized PSV data should not contain the entry name string.
+  StringRef Data(Buffer.data(), Buffer.size());
+  EXPECT_FALSE(Data.contains("CSMain"));
+
+  // Deserialize and verify the string table contains only null bytes
+  // (size 4 = one null byte padded to 4-byte alignment).
+  DirectX::PSVRuntimeInfo ParsedPSV(Data);
+  ASSERT_THAT_ERROR(ParsedPSV.parse(static_cast<uint16_t>(
+                        Triple::EnvironmentType::Compute - Triple::Pixel)),
+                    Succeeded());
+  EXPECT_EQ(ParsedPSV.getVersion(), 2u);
+  StringRef StrTab = ParsedPSV.getStringTable();
+  EXPECT_EQ(StrTab.size(), 4u);
+  EXPECT_TRUE(llvm::all_of(StrTab, [](char C) { return C == '\0'; }));
 }

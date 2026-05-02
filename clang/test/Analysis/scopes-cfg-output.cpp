@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -analyze -analyzer-checker=debug.DumpCFG -analyzer-config cfg-scopes=true %s > %t 2>&1
+// RUN: %clang_analyze_cc1 -fcxx-exceptions -fexceptions -analyzer-checker=debug.DumpCFG -analyzer-config cfg-scopes=true %s > %t 2>&1
 // RUN: FileCheck --input-file=%t %s
 
 class A {
@@ -907,10 +907,10 @@ void test_for_compound_and_break() {
 // CHECK-NEXT:   5: auto &i
 // CHECK-NEXT:   6: operator=
 // CHECK-NEXT:   7: [B4.6] (ImplicitCastExpr, FunctionToPointerDecay, A &(*)(const A &)
-// CHECK-NEXT:   8: i
-// CHECK-NEXT:   9: b
-// CHECK-NEXT:  10: [B4.9] (ImplicitCastExpr, NoOp, const A)
-// CHECK-NEXT:  11: [B4.8] = [B4.10] (OperatorCall)
+// CHECK-NEXT:   8: b
+// CHECK-NEXT:   9: [B4.8] (ImplicitCastExpr, NoOp, const A)
+// CHECK-NEXT:  10: i
+// CHECK-NEXT:  11: [B4.10] = [B4.9] (OperatorCall)
 // CHECK-NEXT:  12: CFGScopeEnd(i)
 // CHECK-NEXT:   Preds (1): B2
 // CHECK-NEXT:   Succs (1): B3

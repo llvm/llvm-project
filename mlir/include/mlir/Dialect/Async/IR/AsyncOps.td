@@ -36,9 +36,11 @@ def Async_ExecuteOp :
   Async_Op<"execute", [SingleBlockImplicitTerminator<"YieldOp">,
                        DeclareOpInterfaceMethods<RegionBranchOpInterface,
                                                  ["getEntrySuccessorOperands",
+                                                  "getSuccessorInputs",
                                                   "areTypesCompatible"]>,
                        AttrSizedOperandSegments,
-                       AutomaticAllocationScope]> {
+                       AutomaticAllocationScope,
+                       RecursiveMemoryEffects]> {
   let summary = "Asynchronous execute operation";
   let description = [{
     The `body` region attached to the `async.execute` operation semantically
@@ -288,7 +290,7 @@ def Async_ReturnOp : Async_Op<"return",
 
   let arguments = (ins Variadic<AnyType>:$operands);
 
-  let builders = [OpBuilder<(ins), [{build($_builder, $_state, std::nullopt);}]>];
+  let builders = [OpBuilder<(ins), [{build($_builder, $_state, {});}]>];
 
   let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
   let hasVerifier = 1;

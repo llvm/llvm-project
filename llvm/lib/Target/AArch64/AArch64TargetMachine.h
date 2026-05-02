@@ -76,6 +76,12 @@ public:
   ScheduleDAGInstrs *
   createPostMachineScheduler(MachineSchedContext *C) const override;
 
+  size_t clearLinkerOptimizationHints(
+      const SmallPtrSetImpl<MachineInstr *> &MIs) const override;
+
+  /// Returns the optimisation level that enables GlobalISel.
+  unsigned getEnableGlobalISelAtO() const;
+
 private:
   bool isLittle;
 };

@@ -70,11 +70,31 @@ class Stream;
 class SymbolContext;
 class Target;
 
-/// \class Debugger Debugger.h "lldb/Core/Debugger.h"
+#ifndef NDEBUG
+/// Global properties used in the LLDB testsuite.
+struct TestingProperties : public Properties {
+  TestingProperties();
+  bool GetInjectVarLocListError() const;
+  static TestingProperties &GetGlobalTestingProperties();
+
+  /// Overwrites the testing.safe-auto-load-paths settings.
+  void SetSafeAutoLoadPaths(FileSpecList paths);
+
+  /// Appends a path to the testing.safe-auto-load-paths setting.
+  void AppendSafeAutoLoadPaths(FileSpec path);
+
+private:
+  friend Target;
+
+  /// Callers should use Debugger::GetSafeAutoLoadPaths since it
+  /// accounts for default paths configured via CMake.
+  FileSpecList GetSafeAutoLoadPaths() const;
+};
+#endif
+
 /// A class to manage flag bits.
 ///
 /// Provides a global root objects for the debugger core.
-
 class Debugger : public std::enable_shared_from_this<Debugger>,
                  public UserID,
                  public Properties {
@@ -93,10 +113,6 @@ public:
   CreateInstance(lldb::LogOutputCallback log_callback = nullptr,
                  void *baton = nullptr);
 
-  static lldb::TargetSP FindTargetWithProcessID(lldb::pid_t pid);
-
-  static lldb::TargetSP FindTargetWithProcess(Process *process);
-
   static void Initialize(LoadPluginCallbackType load_plugin_callback);
 
   static void Terminate();
@@ -106,6 +122,9 @@ public:
   static void SettingsTerminate();
 
   static void Destroy(lldb::DebuggerSP &debugger_sp);
+
+  /// Get the build configuration as structured data.
+  static StructuredData::DictionarySP GetBuildConfiguration();
 
   static lldb::DebuggerSP FindDebuggerWithID(lldb::user_id_t id);
 
@@ -181,7 +200,19 @@ public:
     return m_target_list.GetSelectedTarget();
   }
 
-  ExecutionContext GetSelectedExecutionContext();
+  /// Get the execution context representing the selected entities in the
+  /// selected target. If no target is selected, the execution context will
+  /// contain the dummy target if adopt_dummy_target is true.
+  ///
+  // Ideally, adopt_dummy_target would be the default. However, there are a
+  // bunch of operations that don't make sense on the dummy target but we lack
+  // a mechanism to enforce that. The explicit argument forces the caller to
+  // consider the dummy target.
+  ExecutionContext GetSelectedExecutionContext(bool adopt_dummy_target);
+
+  /// Like GetSelectedExecutionContext but returns an ExecutionContextRef.
+  ExecutionContextRef GetSelectedExecutionContextRef(bool adopt_dummy_target);
+
   /// Get accessor for the target list.
   ///
   /// The target list is part of the global debugger object. This the single
@@ -226,6 +257,8 @@ public:
   const char *GetIOHandlerCommandPrefix();
 
   const char *GetIOHandlerHelpPrologue();
+
+  void RefreshIOHandler();
 
   void ClearIOHandlers();
 
@@ -327,6 +360,8 @@ public:
 
   bool SetUseSourceCache(bool use_source_cache);
 
+  bool GetMarkHiddenFrames() const;
+
   bool GetHighlightSource() const;
 
   lldb::StopShowColumn GetStopShowColumn() const;
@@ -365,7 +400,7 @@ public:
 
   bool GetNotifyVoid() const;
 
-  const std::string &GetInstanceName() { return m_instance_name; }
+  const std::string &GetInstanceName() const { return m_instance_name; }
 
   bool GetShowInlineDiagnostics() const;
 
@@ -417,7 +452,10 @@ public:
   void CancelInterruptRequest();
 
   /// Redraw the statusline if enabled.
-  void RedrawStatusline(bool update = true);
+  void RedrawStatusline(std::optional<ExecutionContextRef> exe_ctx_ref);
+
+  /// Flush cached state (e.g. stale execution context in the statusline).
+  void FlushStatusLine();
 
   /// This is the correct way to query the state of Interruption.
   /// If you are on the RunCommandInterpreter thread, it will check the
@@ -602,10 +640,6 @@ public:
   void FlushProcessOutput(Process &process, bool flush_stdout,
                           bool flush_stderr);
 
-  void AddProtocolServer(lldb::ProtocolServerSP protocol_server_sp);
-  void RemoveProtocolServer(lldb::ProtocolServerSP protocol_server_sp);
-  lldb::ProtocolServerSP GetProtocolServer(llvm::StringRef protocol) const;
-
   SourceManager::SourceFileCache &GetSourceFileCache() {
     return m_source_file_cache;
   }
@@ -617,6 +651,8 @@ public:
     std::string message;
   };
   std::optional<ProgressReport> GetCurrentProgressReport() const;
+
+  static const FileSpecList &GetDefaultSafeAutoLoadPaths();
 
 protected:
   friend class CommandInterpreter;
@@ -676,6 +712,7 @@ protected:
   lldb::LockableStreamFileSP GetErrorStreamSP() { return m_error_stream_sp; }
   /// @}
 
+  bool IsEscapeCodeCapableTTY();
   bool StatuslineSupported();
 
   void PushIOHandler(const lldb::IOHandlerSP &reader_sp,
@@ -703,9 +740,9 @@ protected:
 
   void HandleBreakpointEvent(const lldb::EventSP &event_sp);
 
-  void HandleProcessEvent(const lldb::EventSP &event_sp);
+  lldb::ProcessSP HandleProcessEvent(const lldb::EventSP &event_sp);
 
-  void HandleThreadEvent(const lldb::EventSP &event_sp);
+  lldb::ThreadSP HandleThreadEvent(const lldb::EventSP &event_sp);
 
   void HandleProgressEvent(const lldb::EventSP &event_sp);
 
@@ -775,8 +812,6 @@ protected:
   llvm::SmallVector<ProgressReport, 4> m_progress_reports;
   mutable std::mutex m_progress_reports_mutex;
   /// @}
-
-  llvm::SmallVector<lldb::ProtocolServerSP> m_protocol_servers;
 
   std::mutex m_destroy_callback_mutex;
   lldb::callback_token_t m_destroy_callback_next_token = 0;

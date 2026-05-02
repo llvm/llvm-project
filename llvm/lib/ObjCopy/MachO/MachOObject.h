@@ -64,14 +64,14 @@ struct Section {
     return static_cast<MachO::SectionType>(Flags & MachO::SECTION_TYPE);
   }
 
-  bool isVirtualSection() const {
+  bool isBssSection() const {
     return (getType() == MachO::S_ZEROFILL ||
             getType() == MachO::S_GB_ZEROFILL ||
             getType() == MachO::S_THREAD_LOCAL_ZEROFILL);
   }
 
   bool hasValidOffset() const {
-    return !(isVirtualSection() || OriginalOffset == 0);
+    return !(isBssSection() || OriginalOffset == 0);
   }
 };
 

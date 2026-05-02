@@ -15,6 +15,7 @@
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/CGData/CodeGenData.h"
 #include "llvm/CGData/CodeGenDataWriter.h"
+#include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/StructuralHash.h"
 #include "llvm/InitializePasses.h"
@@ -92,6 +93,10 @@ bool isEligibleFunction(Function *F) {
     return false;
 
   if (F->getCallingConv() == CallingConv::SwiftTail)
+    return false;
+
+  // Unnamed functions are skipped for simplicity.
+  if (!F->hasName())
     return false;
 
   // If function contains callsites with musttail, if we merge
@@ -203,6 +208,10 @@ static Function *createMergedFunction(FuncMergeInfo &FI,
   if (auto *SP = MergedFunc->getSubprogram())
     NewFunction->setSubprogram(SP);
   NewFunction->copyAttributesFrom(MergedFunc);
+  // Preserve entry count for the merged function. Branch weights for blocks
+  // are automatically preserved via splice() which moves the basic blocks.
+  if (auto EC = MergedFunc->getEntryCount())
+    NewFunction->setEntryCount(*EC);
   NewFunction->setDLLStorageClass(GlobalValue::DefaultStorageClass);
 
   NewFunction->setLinkage(GlobalValue::InternalLinkage);
@@ -249,6 +258,10 @@ static void createThunk(FuncMergeInfo &FI, ArrayRef<Constant *> Params,
 
   assert(Thunk->arg_size() + Params.size() ==
          ToFunc->getFunctionType()->getNumParams());
+
+  // Save entry count before dropping references (which clears metadata).
+  auto EC = Thunk->getEntryCount();
+
   Thunk->dropAllReferences();
 
   BasicBlock *BB = BasicBlock::Create(Thunk->getContext(), "", Thunk);
@@ -284,6 +297,10 @@ static void createThunk(FuncMergeInfo &FI, ArrayRef<Constant *> Params,
     Builder.CreateRetVoid();
   else
     Builder.CreateRet(Builder.CreateAggregateCast(CI, Thunk->getReturnType()));
+
+  // Restore the thunk's original entry count.
+  if (EC)
+    Thunk->setEntryCount(*EC);
 }
 
 // Check if the old merged/optimized IndexOperandHashMap is compatible with
@@ -345,9 +362,8 @@ checkConstLocationCompatible(const StableFunctionMap::StableFunctionEntry &SF,
   return true;
 }
 
-static ParamLocsVecTy computeParamInfo(
-    const SmallVector<std::unique_ptr<StableFunctionMap::StableFunctionEntry>>
-        &SFS) {
+static ParamLocsVecTy
+computeParamInfo(const StableFunctionMap::StableFunctionEntries &SFS) {
   std::map<std::vector<stable_hash>, ParamLocs> HashSeqToLocs;
   auto &RSF = *SFS[0];
   unsigned StableFunctionCount = SFS.size();
@@ -391,19 +407,18 @@ bool GlobalMergeFunc::merge(Module &M, const StableFunctionMap *FunctionMap) {
   // Collect stable functions related to the current module.
   DenseMap<stable_hash, SmallVector<std::pair<Function *, FunctionHashInfo>>>
       HashToFuncs;
-  auto &Maps = FunctionMap->getFunctionMap();
   for (auto &F : M) {
     if (!isEligibleFunction(&F))
       continue;
     auto FI = llvm::StructuralHashWithDifferences(F, ignoreOp);
-    if (Maps.contains(FI.FunctionHash))
+    if (FunctionMap->contains(FI.FunctionHash))
       HashToFuncs[FI.FunctionHash].emplace_back(&F, std::move(FI));
   }
 
   for (auto &[Hash, Funcs] : HashToFuncs) {
     std::optional<ParamLocsVecTy> ParamLocsVec;
     SmallVector<FuncMergeInfo> FuncMergeInfos;
-    auto &SFS = Maps.at(Hash);
+    auto &SFS = FunctionMap->at(Hash);
     assert(!SFS.empty());
     auto &RFS = SFS[0];
 
@@ -568,7 +583,7 @@ class GlobalMergeFuncPassWrapper : public ModulePass {
 public:
   static char ID;
 
-  GlobalMergeFuncPassWrapper();
+  GlobalMergeFuncPassWrapper() : ModulePass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addUsedIfAvailable<ImmutableModuleSummaryIndexWrapperPass>();
@@ -584,20 +599,11 @@ public:
 } // namespace
 
 char GlobalMergeFuncPassWrapper::ID = 0;
-INITIALIZE_PASS_BEGIN(GlobalMergeFuncPassWrapper, "global-merge-func",
-                      "Global merge function pass", false, false)
-INITIALIZE_PASS_END(GlobalMergeFuncPassWrapper, "global-merge-func",
-                    "Global merge function pass", false, false)
+INITIALIZE_PASS(GlobalMergeFuncPassWrapper, "global-merge-func",
+                "Global merge function pass", false, false)
 
-namespace llvm {
-ModulePass *createGlobalMergeFuncPass() {
+ModulePass *llvm::createGlobalMergeFuncPass() {
   return new GlobalMergeFuncPassWrapper();
-}
-} // namespace llvm
-
-GlobalMergeFuncPassWrapper::GlobalMergeFuncPassWrapper() : ModulePass(ID) {
-  initializeGlobalMergeFuncPassWrapperPass(
-      *llvm::PassRegistry::getPassRegistry());
 }
 
 bool GlobalMergeFuncPassWrapper::runOnModule(Module &M) {

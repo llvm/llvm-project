@@ -21,8 +21,14 @@
 #include "header0.h"
 #include "system2.h"
 
+// RUN: rm %t.txt
+// RUN: rm -rf %t
+// RUN: env CC_PRINT_HEADERS_FORMAT=json CC_PRINT_HEADERS_FILTERING=direct-per-file CC_PRINT_HEADERS_FILE=%t.txt %clang -fsyntax-only -I %S/Inputs/print-header-json -isystem %S/Inputs/print-header-json/system -fmodules -fimplicit-module-maps -fmodules-cache-path=%t %s -o /dev/null
+// RUN: cat %t.txt | FileCheck %s --check-prefix=SUPPORTED_PERFILE_MODULES
+
 // SUPPORTED: {"source":"{{[^,]*}}print-header-json.c","includes":["{{[^,]*}}system0.h","{{[^,]*}}system3.h","{{[^,]*}}system2.h"]}
-// SUPPORTED_PERFILE: [{"source":"{{[^,]*}}print-header-json.c","includes":["{{[^,]*}}system0.h","{{[^,]*}}header0.h","{{[^,]*}}system2.h"]},{"source":"{{[^,]*}}header0.h","includes":["{{[^,]*}}system3.h","{{[^,]*}}header1.h","{{[^,]*}}header2.h"]}]
+// SUPPORTED_PERFILE: {"version":"2.0.0","dependencies":[{"source":"{{[^,]*}}print-header-json.c","includes":[{"location":"{{[^,]*}}print-header-json.c:20:1","file":"{{[^,]*}}system0.h"},{"location":"{{[^,]*}}print-header-json.c:21:1","file":"{{[^,]*}}header0.h"},{"location":"{{[^,]*}}print-header-json.c:22:1","file":"{{[^,]*}}system2.h"}],"imports":[]},{"source":"{{[^,]*}}header0.h","includes":[{"location":"{{[^,]*}}header0.h:1:1","file":"{{[^,]*}}system3.h"},{"location":"{{[^,]*}}header0.h:2:1","file":"{{[^,]*}}header1.h"},{"location":"{{[^,]*}}header0.h:3:1","file":"{{[^,]*}}header2.h"}],"imports":[]}]}
+// SUPPORTED_PERFILE_MODULES: {"version":"2.0.0","dependencies":[{"source":"{{[^,]*}}print-header-json.c","includes":[{"location":"{{[^,]*}}print-header-json.c:20:1","file":"{{[^,]*}}system0.h"}],"imports":[{"location":"{{[^,]*}}print-header-json.c:21:1","module":"module0","file":"{{[^,]*}}print-header-json{{[\/\\]+}}module.modulemap"},{"location":"{{[^,]*}}print-header-json.c:22:1","module":"systemmodule0","file":"{{[^,]*}}print-header-json{{[\/\\]+}}system{{[\/\\]+}}module.modulemap"}]}]}
 
 // UNSUPPORTED0: error: unsupported combination: -header-include-format=textual and -header-include-filtering=only-direct-system
 // UNSUPPORTED1: error: unsupported combination: -header-include-format=json and -header-include-filtering=none

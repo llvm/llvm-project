@@ -3,7 +3,9 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX11,GFX11-TRUE16 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX11,GFX11-FAKE16 %s
-; RUN: not llc -mtriple=r600 -mcpu=redwood < %s
+; RUN: not --crash llc -mtriple=r600 -mcpu=redwood < %s 2>&1 | FileCheck -check-prefix=R600-ERR %s
+
+; R600-ERR: LLVM ERROR: unsupported library call operation
 
 define amdgpu_kernel void @s_fneg_f32(ptr addrspace(1) %out, float %in) {
 ; SI-LABEL: s_fneg_f32:
@@ -50,16 +52,15 @@ define amdgpu_kernel void @s_fneg_v2f32(ptr addrspace(1) nocapture %out, <2 x fl
 ; SI-LABEL: s_fneg_v2f32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
-; SI-NEXT:    s_mov_b32 s7, 0xf000
-; SI-NEXT:    s_mov_b32 s6, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_mov_b32 s4, s0
-; SI-NEXT:    s_mov_b32 s5, s1
-; SI-NEXT:    s_xor_b32 s0, s3, 0x80000000
-; SI-NEXT:    s_xor_b32 s1, s2, 0x80000000
-; SI-NEXT:    v_mov_b32_e32 v0, s1
-; SI-NEXT:    v_mov_b32_e32 v1, s0
-; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
+; SI-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; SI-NEXT:    s_xor_b32 s5, s5, 0x80000000
+; SI-NEXT:    s_xor_b32 s4, s4, 0x80000000
+; SI-NEXT:    s_mov_b32 s3, 0xf000
+; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    v_mov_b32_e32 v0, s4
+; SI-NEXT:    v_mov_b32_e32 v1, s5
+; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; VI-LABEL: s_fneg_v2f32:
@@ -604,6 +605,7 @@ define half @v_fneg_i16_fp_use(i16 %in) {
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SI-NEXT:    v_sub_f32_e32 v0, 2.0, v0
+; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: v_fneg_i16_fp_use:
@@ -672,28 +674,11 @@ define amdgpu_kernel void @s_fneg_v2i16(ptr addrspace(1) %out, i32 %arg) {
 }
 
 define <2 x i16> @v_fneg_v2i16(<2 x i16> %in) {
-; SI-LABEL: v_fneg_v2i16:
-; SI:       ; %bb.0:
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_xor_b32_e32 v1, 0x8000, v1
-; SI-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
-; SI-NEXT:    v_lshlrev_b32_e32 v2, 16, v1
-; SI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; SI-NEXT:    v_or_b32_e32 v0, v0, v2
-; SI-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; SI-NEXT:    s_setpc_b64 s[30:31]
-;
-; VI-LABEL: v_fneg_v2i16:
-; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
-; VI-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-LABEL: v_fneg_v2i16:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GCN-LABEL: v_fneg_v2i16:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
   %fneg = xor <2 x i16> %in, <i16 -32768, i16 -32768>
   ret <2 x i16> %fneg
 }
@@ -758,10 +743,14 @@ define <2 x half> @v_fneg_v2i16_fp_use(i32 %arg) {
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SI-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; SI-NEXT:    v_sub_f32_e32 v0, 2.0, v0
+; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SI-NEXT:    v_sub_f32_e32 v1, 2.0, v1
+; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; SI-NEXT:    v_sub_f32_e32 v0, 2.0, v0
+; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; SI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: v_fneg_v2i16_fp_use:

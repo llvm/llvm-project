@@ -20,6 +20,7 @@ class CXXBasePath;
 class CXXDependentScopeMemberExpr;
 class DeclarationName;
 class DependentScopeDeclRefExpr;
+class FunctionProtoTypeLoc;
 class NamedDecl;
 class Type;
 class UnresolvedUsingValueDecl;
@@ -53,21 +54,18 @@ public:
   std::vector<const NamedDecl *>
   resolveDeclRefExpr(const DependentScopeDeclRefExpr *RE) const;
   std::vector<const NamedDecl *>
-  resolveTypeOfCallExpr(const CallExpr *CE) const;
-  std::vector<const NamedDecl *>
   resolveCalleeOfCallExpr(const CallExpr *CE) const;
   std::vector<const NamedDecl *>
   resolveUsingValueDecl(const UnresolvedUsingValueDecl *UUVD) const;
   std::vector<const NamedDecl *>
   resolveDependentNameType(const DependentNameType *DNT) const;
   std::vector<const NamedDecl *> resolveTemplateSpecializationType(
-      const DependentTemplateSpecializationType *DTST) const;
+      const TemplateSpecializationType *TST) const;
 
   // Try to heuristically resolve a dependent nested name specifier
   // to the type it likely denotes. Note that *dependent* name specifiers always
   // denote types, not namespaces.
-  QualType
-  resolveNestedNameSpecifierToType(const NestedNameSpecifier *NNS) const;
+  QualType resolveNestedNameSpecifierToType(NestedNameSpecifier NNS) const;
 
   // Perform an imprecise lookup of a dependent name in `RD`.
   // This function does not follow strict semantic rules and should be used
@@ -92,6 +90,16 @@ public:
   // If `UnwrapPointer` is true, exactly only pointer type will be unwrapped
   // during simplification, and the operation fails if no pointer type is found.
   QualType simplifyType(QualType Type, const Expr *E, bool UnwrapPointer);
+
+  // Try to heuristically resolve the type of a possibly-dependent expression
+  // `E`.
+  QualType resolveExprToType(const Expr *E) const;
+
+  // Given an expression `Fn` representing the callee in a function call,
+  // if the call is through a function pointer, try to find the declaration of
+  // the corresponding function pointer type, so that we can recover argument
+  // names from it.
+  FunctionProtoTypeLoc getFunctionProtoTypeLoc(const Expr *Fn) const;
 
 private:
   ASTContext &Ctx;

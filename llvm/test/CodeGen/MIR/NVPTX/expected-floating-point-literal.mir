@@ -12,8 +12,8 @@
 ---
 name:            test
 registers:
-  - { id: 0, class: int32regs }
-  - { id: 1, class: int32regs }
+  - { id: 0, class: b32 }
+  - { id: 1, class: b32 }
 body: |
   bb.0.entry:
     %0 = LD_i32 0, 4, 1, 2, 32, &test_param_0, 0

@@ -19,7 +19,7 @@
 #  include <new.h>
 #else
 _LIBCPP_BEGIN_UNVERSIONED_NAMESPACE_STD
-struct _LIBCPP_EXPORTED_FROM_ABI nothrow_t {
+struct nothrow_t {
   explicit nothrow_t() = default;
 };
 extern _LIBCPP_EXPORTED_FROM_ABI const nothrow_t nothrow;

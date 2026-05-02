@@ -75,7 +75,7 @@ AAResults::AAResults(const TargetLibraryInfo &TLI) : TLI(TLI) {}
 AAResults::AAResults(AAResults &&Arg)
     : TLI(Arg.TLI), AAs(std::move(Arg.AAs)), AADeps(std::move(Arg.AADeps)) {}
 
-AAResults::~AAResults() {}
+AAResults::~AAResults() = default;
 
 bool AAResults::invalidate(Function &F, const PreservedAnalyses &PA,
                            FunctionAnalysisManager::Invalidator &Inv) {
@@ -145,6 +145,18 @@ AliasResult AAResults::alias(const MemoryLocation &LocA,
     else
       ++NumMayAlias;
   }
+  return Result;
+}
+
+AliasResult AAResults::aliasErrno(const MemoryLocation &Loc, const Module *M) {
+  AliasResult Result = AliasResult::MayAlias;
+
+  for (const auto &AA : AAs) {
+    Result = AA->aliasErrno(Loc, M);
+    if (Result != AliasResult::MayAlias)
+      break;
+  }
+
   return Result;
 }
 
@@ -229,6 +241,29 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call,
   if (!isNoModRef(Result))
     Result &= getModRefInfoMask(Loc);
 
+  return Result;
+}
+
+ModRefInfo
+getModRefInfoInaccessibleAndTargetMemLoc(const MemoryEffects CallUse,
+                                         const MemoryEffects CallDef) {
+
+  ModRefInfo Result = ModRefInfo::NoModRef;
+  auto addModRefInfoForLoc = [&](IRMemLocation L) {
+    ModRefInfo UseMR = CallUse.getModRef(L);
+    if (UseMR == ModRefInfo::NoModRef)
+      return;
+    ModRefInfo DefMR = CallDef.getModRef(L);
+    if (DefMR == ModRefInfo::NoModRef)
+      return;
+    if (DefMR == ModRefInfo::Ref && DefMR == UseMR)
+      return;
+    Result |= UseMR;
+  };
+
+  addModRefInfoForLoc(IRMemLocation::InaccessibleMem);
+  for (auto Loc : MemoryEffects::targetMemLocations())
+    addModRefInfoForLoc(Loc);
   return Result;
 }
 
@@ -335,6 +370,12 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call1,
 
     return R;
   }
+
+  // If only Inaccessible and Target Memory Location have set ModRefInfo
+  // then check the relation between the same locations.
+  if (Call1B.onlyAccessesInaccessibleOrTargetMem() &&
+      Call2B.onlyAccessesInaccessibleOrTargetMem())
+    return getModRefInfoInaccessibleAndTargetMemLoc(Call1B, Call2B);
 
   return Result;
 }
@@ -461,14 +502,27 @@ ModRefInfo AAResults::getModRefInfo(const StoreInst *S,
   return ModRefInfo::Mod;
 }
 
-ModRefInfo AAResults::getModRefInfo(const FenceInst *S,
+ModRefInfo AAResults::getModRefInfo(const FenceInst *F,
                                     const MemoryLocation &Loc,
                                     AAQueryInfo &AAQI) {
-  // All we know about a fence instruction is what we get from the ModRef
-  // mask: if Loc is a constant memory location, the fence definitely could
-  // not modify it.
-  if (Loc.Ptr)
-    return getModRefInfoMask(Loc);
+  if (Loc.Ptr) {
+    ModRefInfo Result = ModRefInfo::ModRef;
+
+    for (const auto &AA : AAs) {
+      Result &= AA->getModRefInfo(F, Loc, AAQI);
+
+      if (isNoModRef(Result))
+        return ModRefInfo::NoModRef;
+    }
+
+    // Apply the ModRef mask. This ensures that if Loc is a constant memory
+    // location, we take into account the fact that the fence definitely could
+    // not modify the memory location.
+    if (!isNoModRef(Result))
+      Result &= getModRefInfoMask(Loc);
+
+    return Result;
+  }
   return ModRefInfo::ModRef;
 }
 

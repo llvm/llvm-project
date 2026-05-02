@@ -2,23 +2,624 @@
 ; RUN: llc -mtriple arm64-apple-ios -mattr +cmpbr -verify-machineinstrs -o - < %s | FileCheck %s --check-prefix=CHECK-CMPBR
 ; RUN: llc -mtriple arm64-apple-ios -mattr -cmpbr -verify-machineinstrs -o - < %s | FileCheck %s --check-prefix=CHECK-NO-CMPBR
 
-
-define void @cbgt_i32(i32 %a, i32 %b)  {
-; CHECK-CMPBR-LABEL: cbgt_i32:
+define void @cbgt_i8(i8 %a, i8 %b)  {
+; CHECK-CMPBR-LABEL: cbgt_i8:
 ; CHECK-CMPBR:       ; %bb.0: ; %entry
-; CHECK-CMPBR-NEXT:    cbgt w0, w1, LBB0_2
+; CHECK-CMPBR-NEXT:    cbbgt w0, w1, LBB0_2
 ; CHECK-CMPBR-NEXT:  ; %bb.1: ; %if.end
 ; CHECK-CMPBR-NEXT:    ret
 ; CHECK-CMPBR-NEXT:  LBB0_2: ; %if.then
 ; CHECK-CMPBR-NEXT:    brk #0x1
 ;
-; CHECK-NO-CMPBR-LABEL: cbgt_i32:
+; CHECK-NO-CMPBR-LABEL: cbgt_i8:
 ; CHECK-NO-CMPBR:       ; %bb.0: ; %entry
-; CHECK-NO-CMPBR-NEXT:    cmp w0, w1
+; CHECK-NO-CMPBR-NEXT:    sxtb w8, w0
+; CHECK-NO-CMPBR-NEXT:    cmp w8, w1, sxtb
 ; CHECK-NO-CMPBR-NEXT:    b.gt LBB0_2
 ; CHECK-NO-CMPBR-NEXT:  ; %bb.1: ; %if.end
 ; CHECK-NO-CMPBR-NEXT:    ret
 ; CHECK-NO-CMPBR-NEXT:  LBB0_2: ; %if.then
+; CHECK-NO-CMPBR-NEXT:    brk #0x1
+entry:
+  %cmp = icmp sgt i8 %a, %b
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  tail call void @llvm.trap()
+  unreachable
+
+if.end:
+  ret void
+}
+
+define void @cbge_i8(i8 %a, i8 %b)  {
+; CHECK-CMPBR-LABEL: cbge_i8:
+; CHECK-CMPBR:       ; %bb.0: ; %entry
+; CHECK-CMPBR-NEXT:    cbbge w0, w1, LBB1_2
+; CHECK-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-CMPBR-NEXT:    ret
+; CHECK-CMPBR-NEXT:  LBB1_2: ; %if.then
+; CHECK-CMPBR-NEXT:    brk #0x1
+;
+; CHECK-NO-CMPBR-LABEL: cbge_i8:
+; CHECK-NO-CMPBR:       ; %bb.0: ; %entry
+; CHECK-NO-CMPBR-NEXT:    sxtb w8, w0
+; CHECK-NO-CMPBR-NEXT:    cmp w8, w1, sxtb
+; CHECK-NO-CMPBR-NEXT:    b.ge LBB1_2
+; CHECK-NO-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-NO-CMPBR-NEXT:    ret
+; CHECK-NO-CMPBR-NEXT:  LBB1_2: ; %if.then
+; CHECK-NO-CMPBR-NEXT:    brk #0x1
+entry:
+  %cmp = icmp sge i8 %a, %b
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  tail call void @llvm.trap()
+  unreachable
+
+if.end:
+  ret void
+}
+
+
+define void @cbhi_i8(i8 %a, i8 %b)  {
+; CHECK-CMPBR-LABEL: cbhi_i8:
+; CHECK-CMPBR:       ; %bb.0: ; %entry
+; CHECK-CMPBR-NEXT:    cbbhi w0, w1, LBB2_2
+; CHECK-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-CMPBR-NEXT:    ret
+; CHECK-CMPBR-NEXT:  LBB2_2: ; %if.then
+; CHECK-CMPBR-NEXT:    brk #0x1
+;
+; CHECK-NO-CMPBR-LABEL: cbhi_i8:
+; CHECK-NO-CMPBR:       ; %bb.0: ; %entry
+; CHECK-NO-CMPBR-NEXT:    and w8, w0, #0xff
+; CHECK-NO-CMPBR-NEXT:    cmp w8, w1, uxtb
+; CHECK-NO-CMPBR-NEXT:    b.hi LBB2_2
+; CHECK-NO-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-NO-CMPBR-NEXT:    ret
+; CHECK-NO-CMPBR-NEXT:  LBB2_2: ; %if.then
+; CHECK-NO-CMPBR-NEXT:    brk #0x1
+entry:
+  %cmp = icmp ugt i8 %a, %b
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  tail call void @llvm.trap()
+  unreachable
+
+if.end:
+  ret void
+}
+
+define void @cbhs_i8(i8 %a, i8 %b)  {
+; CHECK-CMPBR-LABEL: cbhs_i8:
+; CHECK-CMPBR:       ; %bb.0: ; %entry
+; CHECK-CMPBR-NEXT:    cbbhs w0, w1, LBB3_2
+; CHECK-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-CMPBR-NEXT:    ret
+; CHECK-CMPBR-NEXT:  LBB3_2: ; %if.then
+; CHECK-CMPBR-NEXT:    brk #0x1
+;
+; CHECK-NO-CMPBR-LABEL: cbhs_i8:
+; CHECK-NO-CMPBR:       ; %bb.0: ; %entry
+; CHECK-NO-CMPBR-NEXT:    and w8, w0, #0xff
+; CHECK-NO-CMPBR-NEXT:    cmp w8, w1, uxtb
+; CHECK-NO-CMPBR-NEXT:    b.hs LBB3_2
+; CHECK-NO-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-NO-CMPBR-NEXT:    ret
+; CHECK-NO-CMPBR-NEXT:  LBB3_2: ; %if.then
+; CHECK-NO-CMPBR-NEXT:    brk #0x1
+entry:
+  %cmp = icmp uge i8 %a, %b
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  tail call void @llvm.trap()
+  unreachable
+
+if.end:
+  ret void
+}
+
+define void @cbeq_i8(i8 %a, i8 %b)  {
+; CHECK-CMPBR-LABEL: cbeq_i8:
+; CHECK-CMPBR:       ; %bb.0: ; %entry
+; CHECK-CMPBR-NEXT:    cbbeq w0, w1, LBB4_2
+; CHECK-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-CMPBR-NEXT:    ret
+; CHECK-CMPBR-NEXT:  LBB4_2: ; %if.then
+; CHECK-CMPBR-NEXT:    brk #0x1
+;
+; CHECK-NO-CMPBR-LABEL: cbeq_i8:
+; CHECK-NO-CMPBR:       ; %bb.0: ; %entry
+; CHECK-NO-CMPBR-NEXT:    and w8, w0, #0xff
+; CHECK-NO-CMPBR-NEXT:    cmp w8, w1, uxtb
+; CHECK-NO-CMPBR-NEXT:    b.eq LBB4_2
+; CHECK-NO-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-NO-CMPBR-NEXT:    ret
+; CHECK-NO-CMPBR-NEXT:  LBB4_2: ; %if.then
+; CHECK-NO-CMPBR-NEXT:    brk #0x1
+entry:
+  %cmp = icmp eq i8 %a, %b
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  tail call void @llvm.trap()
+  unreachable
+
+if.end:
+  ret void
+}
+
+define void @cbne_i8(i8 %a, i8 %b)  {
+; CHECK-CMPBR-LABEL: cbne_i8:
+; CHECK-CMPBR:       ; %bb.0: ; %entry
+; CHECK-CMPBR-NEXT:    cbbne w0, w1, LBB5_2
+; CHECK-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-CMPBR-NEXT:    ret
+; CHECK-CMPBR-NEXT:  LBB5_2: ; %if.then
+; CHECK-CMPBR-NEXT:    brk #0x1
+;
+; CHECK-NO-CMPBR-LABEL: cbne_i8:
+; CHECK-NO-CMPBR:       ; %bb.0: ; %entry
+; CHECK-NO-CMPBR-NEXT:    and w8, w0, #0xff
+; CHECK-NO-CMPBR-NEXT:    cmp w8, w1, uxtb
+; CHECK-NO-CMPBR-NEXT:    b.ne LBB5_2
+; CHECK-NO-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-NO-CMPBR-NEXT:    ret
+; CHECK-NO-CMPBR-NEXT:  LBB5_2: ; %if.then
+; CHECK-NO-CMPBR-NEXT:    brk #0x1
+entry:
+  %cmp = icmp ne i8 %a, %b
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  tail call void @llvm.trap()
+  unreachable
+
+if.end:
+  ret void
+}
+
+define void @cble_ge_swap_i8(i8 %a, i8 %b)  {
+; CHECK-CMPBR-LABEL: cble_ge_swap_i8:
+; CHECK-CMPBR:       ; %bb.0: ; %entry
+; CHECK-CMPBR-NEXT:    cbbge w1, w0, LBB6_2
+; CHECK-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-CMPBR-NEXT:    ret
+; CHECK-CMPBR-NEXT:  LBB6_2: ; %if.then
+; CHECK-CMPBR-NEXT:    brk #0x1
+;
+; CHECK-NO-CMPBR-LABEL: cble_ge_swap_i8:
+; CHECK-NO-CMPBR:       ; %bb.0: ; %entry
+; CHECK-NO-CMPBR-NEXT:    sxtb w8, w0
+; CHECK-NO-CMPBR-NEXT:    cmp w8, w1, sxtb
+; CHECK-NO-CMPBR-NEXT:    b.le LBB6_2
+; CHECK-NO-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-NO-CMPBR-NEXT:    ret
+; CHECK-NO-CMPBR-NEXT:  LBB6_2: ; %if.then
+; CHECK-NO-CMPBR-NEXT:    brk #0x1
+entry:
+  %cmp = icmp sle i8 %a, %b
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  tail call void @llvm.trap()
+  unreachable
+
+if.end:
+  ret void
+}
+
+define void @cblo_hi_swap_i8(i8 %a, i8 %b)  {
+; CHECK-CMPBR-LABEL: cblo_hi_swap_i8:
+; CHECK-CMPBR:       ; %bb.0: ; %entry
+; CHECK-CMPBR-NEXT:    cbbhi w1, w0, LBB7_2
+; CHECK-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-CMPBR-NEXT:    ret
+; CHECK-CMPBR-NEXT:  LBB7_2: ; %if.then
+; CHECK-CMPBR-NEXT:    brk #0x1
+;
+; CHECK-NO-CMPBR-LABEL: cblo_hi_swap_i8:
+; CHECK-NO-CMPBR:       ; %bb.0: ; %entry
+; CHECK-NO-CMPBR-NEXT:    and w8, w0, #0xff
+; CHECK-NO-CMPBR-NEXT:    cmp w8, w1, uxtb
+; CHECK-NO-CMPBR-NEXT:    b.lo LBB7_2
+; CHECK-NO-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-NO-CMPBR-NEXT:    ret
+; CHECK-NO-CMPBR-NEXT:  LBB7_2: ; %if.then
+; CHECK-NO-CMPBR-NEXT:    brk #0x1
+entry:
+  %cmp = icmp ult i8 %a, %b
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  tail call void @llvm.trap()
+  unreachable
+
+if.end:
+  ret void
+}
+
+define void @cbls_hs_swap_i8(i8 %a, i8 %b)  {
+; CHECK-CMPBR-LABEL: cbls_hs_swap_i8:
+; CHECK-CMPBR:       ; %bb.0: ; %entry
+; CHECK-CMPBR-NEXT:    cbbhs w1, w0, LBB8_2
+; CHECK-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-CMPBR-NEXT:    ret
+; CHECK-CMPBR-NEXT:  LBB8_2: ; %if.then
+; CHECK-CMPBR-NEXT:    brk #0x1
+;
+; CHECK-NO-CMPBR-LABEL: cbls_hs_swap_i8:
+; CHECK-NO-CMPBR:       ; %bb.0: ; %entry
+; CHECK-NO-CMPBR-NEXT:    and w8, w0, #0xff
+; CHECK-NO-CMPBR-NEXT:    cmp w8, w1, uxtb
+; CHECK-NO-CMPBR-NEXT:    b.ls LBB8_2
+; CHECK-NO-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-NO-CMPBR-NEXT:    ret
+; CHECK-NO-CMPBR-NEXT:  LBB8_2: ; %if.then
+; CHECK-NO-CMPBR-NEXT:    brk #0x1
+entry:
+  %cmp = icmp ule i8 %a, %b
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  tail call void @llvm.trap()
+  unreachable
+
+if.end:
+  ret void
+}
+
+define void @cblt_gt_swap_i8(i8 %a, i8 %b)  {
+; CHECK-CMPBR-LABEL: cblt_gt_swap_i8:
+; CHECK-CMPBR:       ; %bb.0: ; %entry
+; CHECK-CMPBR-NEXT:    cbbgt w1, w0, LBB9_2
+; CHECK-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-CMPBR-NEXT:    ret
+; CHECK-CMPBR-NEXT:  LBB9_2: ; %if.then
+; CHECK-CMPBR-NEXT:    brk #0x1
+;
+; CHECK-NO-CMPBR-LABEL: cblt_gt_swap_i8:
+; CHECK-NO-CMPBR:       ; %bb.0: ; %entry
+; CHECK-NO-CMPBR-NEXT:    sxtb w8, w0
+; CHECK-NO-CMPBR-NEXT:    cmp w8, w1, sxtb
+; CHECK-NO-CMPBR-NEXT:    b.lt LBB9_2
+; CHECK-NO-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-NO-CMPBR-NEXT:    ret
+; CHECK-NO-CMPBR-NEXT:  LBB9_2: ; %if.then
+; CHECK-NO-CMPBR-NEXT:    brk #0x1
+entry:
+  %cmp = icmp slt i8 %a, %b
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  tail call void @llvm.trap()
+  unreachable
+
+if.end:
+  ret void
+}
+
+define void @cbgt_i16(i16 %a, i16 %b)  {
+; CHECK-CMPBR-LABEL: cbgt_i16:
+; CHECK-CMPBR:       ; %bb.0: ; %entry
+; CHECK-CMPBR-NEXT:    cbhgt w0, w1, LBB10_2
+; CHECK-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-CMPBR-NEXT:    ret
+; CHECK-CMPBR-NEXT:  LBB10_2: ; %if.then
+; CHECK-CMPBR-NEXT:    brk #0x1
+;
+; CHECK-NO-CMPBR-LABEL: cbgt_i16:
+; CHECK-NO-CMPBR:       ; %bb.0: ; %entry
+; CHECK-NO-CMPBR-NEXT:    sxth w8, w0
+; CHECK-NO-CMPBR-NEXT:    cmp w8, w1, sxth
+; CHECK-NO-CMPBR-NEXT:    b.gt LBB10_2
+; CHECK-NO-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-NO-CMPBR-NEXT:    ret
+; CHECK-NO-CMPBR-NEXT:  LBB10_2: ; %if.then
+; CHECK-NO-CMPBR-NEXT:    brk #0x1
+entry:
+  %cmp = icmp sgt i16 %a, %b
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  tail call void @llvm.trap()
+  unreachable
+
+if.end:
+  ret void
+}
+
+define void @cbge_i16(i16 %a, i16 %b)  {
+; CHECK-CMPBR-LABEL: cbge_i16:
+; CHECK-CMPBR:       ; %bb.0: ; %entry
+; CHECK-CMPBR-NEXT:    cbhge w0, w1, LBB11_2
+; CHECK-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-CMPBR-NEXT:    ret
+; CHECK-CMPBR-NEXT:  LBB11_2: ; %if.then
+; CHECK-CMPBR-NEXT:    brk #0x1
+;
+; CHECK-NO-CMPBR-LABEL: cbge_i16:
+; CHECK-NO-CMPBR:       ; %bb.0: ; %entry
+; CHECK-NO-CMPBR-NEXT:    sxth w8, w0
+; CHECK-NO-CMPBR-NEXT:    cmp w8, w1, sxth
+; CHECK-NO-CMPBR-NEXT:    b.ge LBB11_2
+; CHECK-NO-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-NO-CMPBR-NEXT:    ret
+; CHECK-NO-CMPBR-NEXT:  LBB11_2: ; %if.then
+; CHECK-NO-CMPBR-NEXT:    brk #0x1
+entry:
+  %cmp = icmp sge i16 %a, %b
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  tail call void @llvm.trap()
+  unreachable
+
+if.end:
+  ret void
+}
+
+
+define void @cbhi_i16(i16 %a, i16 %b)  {
+; CHECK-CMPBR-LABEL: cbhi_i16:
+; CHECK-CMPBR:       ; %bb.0: ; %entry
+; CHECK-CMPBR-NEXT:    cbhhi w0, w1, LBB12_2
+; CHECK-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-CMPBR-NEXT:    ret
+; CHECK-CMPBR-NEXT:  LBB12_2: ; %if.then
+; CHECK-CMPBR-NEXT:    brk #0x1
+;
+; CHECK-NO-CMPBR-LABEL: cbhi_i16:
+; CHECK-NO-CMPBR:       ; %bb.0: ; %entry
+; CHECK-NO-CMPBR-NEXT:    and w8, w0, #0xffff
+; CHECK-NO-CMPBR-NEXT:    cmp w8, w1, uxth
+; CHECK-NO-CMPBR-NEXT:    b.hi LBB12_2
+; CHECK-NO-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-NO-CMPBR-NEXT:    ret
+; CHECK-NO-CMPBR-NEXT:  LBB12_2: ; %if.then
+; CHECK-NO-CMPBR-NEXT:    brk #0x1
+entry:
+  %cmp = icmp ugt i16 %a, %b
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  tail call void @llvm.trap()
+  unreachable
+
+if.end:
+  ret void
+}
+
+define void @cbhs_i16(i16 %a, i16 %b)  {
+; CHECK-CMPBR-LABEL: cbhs_i16:
+; CHECK-CMPBR:       ; %bb.0: ; %entry
+; CHECK-CMPBR-NEXT:    cbhhs w0, w1, LBB13_2
+; CHECK-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-CMPBR-NEXT:    ret
+; CHECK-CMPBR-NEXT:  LBB13_2: ; %if.then
+; CHECK-CMPBR-NEXT:    brk #0x1
+;
+; CHECK-NO-CMPBR-LABEL: cbhs_i16:
+; CHECK-NO-CMPBR:       ; %bb.0: ; %entry
+; CHECK-NO-CMPBR-NEXT:    and w8, w0, #0xffff
+; CHECK-NO-CMPBR-NEXT:    cmp w8, w1, uxth
+; CHECK-NO-CMPBR-NEXT:    b.hs LBB13_2
+; CHECK-NO-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-NO-CMPBR-NEXT:    ret
+; CHECK-NO-CMPBR-NEXT:  LBB13_2: ; %if.then
+; CHECK-NO-CMPBR-NEXT:    brk #0x1
+entry:
+  %cmp = icmp uge i16 %a, %b
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  tail call void @llvm.trap()
+  unreachable
+
+if.end:
+  ret void
+}
+
+define void @cbeq_i16(i16 %a, i16 %b)  {
+; CHECK-CMPBR-LABEL: cbeq_i16:
+; CHECK-CMPBR:       ; %bb.0: ; %entry
+; CHECK-CMPBR-NEXT:    cbheq w0, w1, LBB14_2
+; CHECK-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-CMPBR-NEXT:    ret
+; CHECK-CMPBR-NEXT:  LBB14_2: ; %if.then
+; CHECK-CMPBR-NEXT:    brk #0x1
+;
+; CHECK-NO-CMPBR-LABEL: cbeq_i16:
+; CHECK-NO-CMPBR:       ; %bb.0: ; %entry
+; CHECK-NO-CMPBR-NEXT:    and w8, w0, #0xffff
+; CHECK-NO-CMPBR-NEXT:    cmp w8, w1, uxth
+; CHECK-NO-CMPBR-NEXT:    b.eq LBB14_2
+; CHECK-NO-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-NO-CMPBR-NEXT:    ret
+; CHECK-NO-CMPBR-NEXT:  LBB14_2: ; %if.then
+; CHECK-NO-CMPBR-NEXT:    brk #0x1
+entry:
+  %cmp = icmp eq i16 %a, %b
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  tail call void @llvm.trap()
+  unreachable
+
+if.end:
+  ret void
+}
+
+define void @cbne_i16(i16 %a, i16 %b)  {
+; CHECK-CMPBR-LABEL: cbne_i16:
+; CHECK-CMPBR:       ; %bb.0: ; %entry
+; CHECK-CMPBR-NEXT:    cbhne w0, w1, LBB15_2
+; CHECK-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-CMPBR-NEXT:    ret
+; CHECK-CMPBR-NEXT:  LBB15_2: ; %if.then
+; CHECK-CMPBR-NEXT:    brk #0x1
+;
+; CHECK-NO-CMPBR-LABEL: cbne_i16:
+; CHECK-NO-CMPBR:       ; %bb.0: ; %entry
+; CHECK-NO-CMPBR-NEXT:    and w8, w0, #0xffff
+; CHECK-NO-CMPBR-NEXT:    cmp w8, w1, uxth
+; CHECK-NO-CMPBR-NEXT:    b.ne LBB15_2
+; CHECK-NO-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-NO-CMPBR-NEXT:    ret
+; CHECK-NO-CMPBR-NEXT:  LBB15_2: ; %if.then
+; CHECK-NO-CMPBR-NEXT:    brk #0x1
+entry:
+  %cmp = icmp ne i16 %a, %b
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  tail call void @llvm.trap()
+  unreachable
+
+if.end:
+  ret void
+}
+
+define void @cble_ge_swap_i16(i16 %a, i16 %b)  {
+; CHECK-CMPBR-LABEL: cble_ge_swap_i16:
+; CHECK-CMPBR:       ; %bb.0: ; %entry
+; CHECK-CMPBR-NEXT:    cbhge w1, w0, LBB16_2
+; CHECK-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-CMPBR-NEXT:    ret
+; CHECK-CMPBR-NEXT:  LBB16_2: ; %if.then
+; CHECK-CMPBR-NEXT:    brk #0x1
+;
+; CHECK-NO-CMPBR-LABEL: cble_ge_swap_i16:
+; CHECK-NO-CMPBR:       ; %bb.0: ; %entry
+; CHECK-NO-CMPBR-NEXT:    sxth w8, w0
+; CHECK-NO-CMPBR-NEXT:    cmp w8, w1, sxth
+; CHECK-NO-CMPBR-NEXT:    b.le LBB16_2
+; CHECK-NO-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-NO-CMPBR-NEXT:    ret
+; CHECK-NO-CMPBR-NEXT:  LBB16_2: ; %if.then
+; CHECK-NO-CMPBR-NEXT:    brk #0x1
+entry:
+  %cmp = icmp sle i16 %a, %b
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  tail call void @llvm.trap()
+  unreachable
+
+if.end:
+  ret void
+}
+
+define void @cblo_hi_swap_i16(i16 %a, i16 %b)  {
+; CHECK-CMPBR-LABEL: cblo_hi_swap_i16:
+; CHECK-CMPBR:       ; %bb.0: ; %entry
+; CHECK-CMPBR-NEXT:    cbhhi w1, w0, LBB17_2
+; CHECK-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-CMPBR-NEXT:    ret
+; CHECK-CMPBR-NEXT:  LBB17_2: ; %if.then
+; CHECK-CMPBR-NEXT:    brk #0x1
+;
+; CHECK-NO-CMPBR-LABEL: cblo_hi_swap_i16:
+; CHECK-NO-CMPBR:       ; %bb.0: ; %entry
+; CHECK-NO-CMPBR-NEXT:    and w8, w0, #0xffff
+; CHECK-NO-CMPBR-NEXT:    cmp w8, w1, uxth
+; CHECK-NO-CMPBR-NEXT:    b.lo LBB17_2
+; CHECK-NO-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-NO-CMPBR-NEXT:    ret
+; CHECK-NO-CMPBR-NEXT:  LBB17_2: ; %if.then
+; CHECK-NO-CMPBR-NEXT:    brk #0x1
+entry:
+  %cmp = icmp ult i16 %a, %b
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  tail call void @llvm.trap()
+  unreachable
+
+if.end:
+  ret void
+}
+
+define void @cbls_hs_swap_i16(i16 %a, i16 %b)  {
+; CHECK-CMPBR-LABEL: cbls_hs_swap_i16:
+; CHECK-CMPBR:       ; %bb.0: ; %entry
+; CHECK-CMPBR-NEXT:    cbhhs w1, w0, LBB18_2
+; CHECK-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-CMPBR-NEXT:    ret
+; CHECK-CMPBR-NEXT:  LBB18_2: ; %if.then
+; CHECK-CMPBR-NEXT:    brk #0x1
+;
+; CHECK-NO-CMPBR-LABEL: cbls_hs_swap_i16:
+; CHECK-NO-CMPBR:       ; %bb.0: ; %entry
+; CHECK-NO-CMPBR-NEXT:    and w8, w0, #0xffff
+; CHECK-NO-CMPBR-NEXT:    cmp w8, w1, uxth
+; CHECK-NO-CMPBR-NEXT:    b.ls LBB18_2
+; CHECK-NO-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-NO-CMPBR-NEXT:    ret
+; CHECK-NO-CMPBR-NEXT:  LBB18_2: ; %if.then
+; CHECK-NO-CMPBR-NEXT:    brk #0x1
+entry:
+  %cmp = icmp ule i16 %a, %b
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  tail call void @llvm.trap()
+  unreachable
+
+if.end:
+  ret void
+}
+
+define void @cblt_gt_swap_i16(i16 %a, i16 %b)  {
+; CHECK-CMPBR-LABEL: cblt_gt_swap_i16:
+; CHECK-CMPBR:       ; %bb.0: ; %entry
+; CHECK-CMPBR-NEXT:    cbhgt w1, w0, LBB19_2
+; CHECK-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-CMPBR-NEXT:    ret
+; CHECK-CMPBR-NEXT:  LBB19_2: ; %if.then
+; CHECK-CMPBR-NEXT:    brk #0x1
+;
+; CHECK-NO-CMPBR-LABEL: cblt_gt_swap_i16:
+; CHECK-NO-CMPBR:       ; %bb.0: ; %entry
+; CHECK-NO-CMPBR-NEXT:    sxth w8, w0
+; CHECK-NO-CMPBR-NEXT:    cmp w8, w1, sxth
+; CHECK-NO-CMPBR-NEXT:    b.lt LBB19_2
+; CHECK-NO-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-NO-CMPBR-NEXT:    ret
+; CHECK-NO-CMPBR-NEXT:  LBB19_2: ; %if.then
+; CHECK-NO-CMPBR-NEXT:    brk #0x1
+entry:
+  %cmp = icmp slt i16 %a, %b
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  tail call void @llvm.trap()
+  unreachable
+
+if.end:
+  ret void
+}
+
+define void @cbgt_i32(i32 %a, i32 %b)  {
+; CHECK-CMPBR-LABEL: cbgt_i32:
+; CHECK-CMPBR:       ; %bb.0: ; %entry
+; CHECK-CMPBR-NEXT:    cbgt w0, w1, LBB20_2
+; CHECK-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-CMPBR-NEXT:    ret
+; CHECK-CMPBR-NEXT:  LBB20_2: ; %if.then
+; CHECK-CMPBR-NEXT:    brk #0x1
+;
+; CHECK-NO-CMPBR-LABEL: cbgt_i32:
+; CHECK-NO-CMPBR:       ; %bb.0: ; %entry
+; CHECK-NO-CMPBR-NEXT:    cmp w0, w1
+; CHECK-NO-CMPBR-NEXT:    b.gt LBB20_2
+; CHECK-NO-CMPBR-NEXT:  ; %bb.1: ; %if.end
+; CHECK-NO-CMPBR-NEXT:    ret
+; CHECK-NO-CMPBR-NEXT:  LBB20_2: ; %if.then
 ; CHECK-NO-CMPBR-NEXT:    brk #0x1
 entry:
   %cmp = icmp sgt i32 %a, %b
@@ -35,19 +636,19 @@ if.end:
 define void @cbge_i32(i32 %a, i32 %b)  {
 ; CHECK-CMPBR-LABEL: cbge_i32:
 ; CHECK-CMPBR:       ; %bb.0: ; %entry
-; CHECK-CMPBR-NEXT:    cbge w0, w1, LBB1_2
+; CHECK-CMPBR-NEXT:    cbge w0, w1, LBB21_2
 ; CHECK-CMPBR-NEXT:  ; %bb.1: ; %if.end
 ; CHECK-CMPBR-NEXT:    ret
-; CHECK-CMPBR-NEXT:  LBB1_2: ; %if.then
+; CHECK-CMPBR-NEXT:  LBB21_2: ; %if.then
 ; CHECK-CMPBR-NEXT:    brk #0x1
 ;
 ; CHECK-NO-CMPBR-LABEL: cbge_i32:
 ; CHECK-NO-CMPBR:       ; %bb.0: ; %entry
 ; CHECK-NO-CMPBR-NEXT:    cmp w0, w1
-; CHECK-NO-CMPBR-NEXT:    b.ge LBB1_2
+; CHECK-NO-CMPBR-NEXT:    b.ge LBB21_2
 ; CHECK-NO-CMPBR-NEXT:  ; %bb.1: ; %if.end
 ; CHECK-NO-CMPBR-NEXT:    ret
-; CHECK-NO-CMPBR-NEXT:  LBB1_2: ; %if.then
+; CHECK-NO-CMPBR-NEXT:  LBB21_2: ; %if.then
 ; CHECK-NO-CMPBR-NEXT:    brk #0x1
 entry:
   %cmp = icmp sge i32 %a, %b
@@ -65,19 +666,19 @@ if.end:
 define void @cbhi_i32(i32 %a, i32 %b)  {
 ; CHECK-CMPBR-LABEL: cbhi_i32:
 ; CHECK-CMPBR:       ; %bb.0: ; %entry
-; CHECK-CMPBR-NEXT:    cbhi w0, w1, LBB2_2
+; CHECK-CMPBR-NEXT:    cbhi w0, w1, LBB22_2
 ; CHECK-CMPBR-NEXT:  ; %bb.1: ; %if.end
 ; CHECK-CMPBR-NEXT:    ret
-; CHECK-CMPBR-NEXT:  LBB2_2: ; %if.then
+; CHECK-CMPBR-NEXT:  LBB22_2: ; %if.then
 ; CHECK-CMPBR-NEXT:    brk #0x1
 ;
 ; CHECK-NO-CMPBR-LABEL: cbhi_i32:
 ; CHECK-NO-CMPBR:       ; %bb.0: ; %entry
 ; CHECK-NO-CMPBR-NEXT:    cmp w0, w1
-; CHECK-NO-CMPBR-NEXT:    b.hi LBB2_2
+; CHECK-NO-CMPBR-NEXT:    b.hi LBB22_2
 ; CHECK-NO-CMPBR-NEXT:  ; %bb.1: ; %if.end
 ; CHECK-NO-CMPBR-NEXT:    ret
-; CHECK-NO-CMPBR-NEXT:  LBB2_2: ; %if.then
+; CHECK-NO-CMPBR-NEXT:  LBB22_2: ; %if.then
 ; CHECK-NO-CMPBR-NEXT:    brk #0x1
 entry:
   %cmp = icmp ugt i32 %a, %b
@@ -94,19 +695,19 @@ if.end:
 define void @cbhs_i32(i32 %a, i32 %b)  {
 ; CHECK-CMPBR-LABEL: cbhs_i32:
 ; CHECK-CMPBR:       ; %bb.0: ; %entry
-; CHECK-CMPBR-NEXT:    cbhs w0, w1, LBB3_2
+; CHECK-CMPBR-NEXT:    cbhs w0, w1, LBB23_2
 ; CHECK-CMPBR-NEXT:  ; %bb.1: ; %if.end
 ; CHECK-CMPBR-NEXT:    ret
-; CHECK-CMPBR-NEXT:  LBB3_2: ; %if.then
+; CHECK-CMPBR-NEXT:  LBB23_2: ; %if.then
 ; CHECK-CMPBR-NEXT:    brk #0x1
 ;
 ; CHECK-NO-CMPBR-LABEL: cbhs_i32:
 ; CHECK-NO-CMPBR:       ; %bb.0: ; %entry
 ; CHECK-NO-CMPBR-NEXT:    cmp w0, w1
-; CHECK-NO-CMPBR-NEXT:    b.hs LBB3_2
+; CHECK-NO-CMPBR-NEXT:    b.hs LBB23_2
 ; CHECK-NO-CMPBR-NEXT:  ; %bb.1: ; %if.end
 ; CHECK-NO-CMPBR-NEXT:    ret
-; CHECK-NO-CMPBR-NEXT:  LBB3_2: ; %if.then
+; CHECK-NO-CMPBR-NEXT:  LBB23_2: ; %if.then
 ; CHECK-NO-CMPBR-NEXT:    brk #0x1
 entry:
   %cmp = icmp uge i32 %a, %b
@@ -123,19 +724,19 @@ if.end:
 define void @cbeq_i32(i32 %a, i32 %b)  {
 ; CHECK-CMPBR-LABEL: cbeq_i32:
 ; CHECK-CMPBR:       ; %bb.0: ; %entry
-; CHECK-CMPBR-NEXT:    cbeq w0, w1, LBB4_2
+; CHECK-CMPBR-NEXT:    cbeq w0, w1, LBB24_2
 ; CHECK-CMPBR-NEXT:  ; %bb.1: ; %if.end
 ; CHECK-CMPBR-NEXT:    ret
-; CHECK-CMPBR-NEXT:  LBB4_2: ; %if.then
+; CHECK-CMPBR-NEXT:  LBB24_2: ; %if.then
 ; CHECK-CMPBR-NEXT:    brk #0x1
 ;
 ; CHECK-NO-CMPBR-LABEL: cbeq_i32:
 ; CHECK-NO-CMPBR:       ; %bb.0: ; %entry
 ; CHECK-NO-CMPBR-NEXT:    cmp w0, w1
-; CHECK-NO-CMPBR-NEXT:    b.eq LBB4_2
+; CHECK-NO-CMPBR-NEXT:    b.eq LBB24_2
 ; CHECK-NO-CMPBR-NEXT:  ; %bb.1: ; %if.end
 ; CHECK-NO-CMPBR-NEXT:    ret
-; CHECK-NO-CMPBR-NEXT:  LBB4_2: ; %if.then
+; CHECK-NO-CMPBR-NEXT:  LBB24_2: ; %if.then
 ; CHECK-NO-CMPBR-NEXT:    brk #0x1
 entry:
   %cmp = icmp eq i32 %a, %b
@@ -152,19 +753,19 @@ if.end:
 define void @cbne_i32(i32 %a, i32 %b)  {
 ; CHECK-CMPBR-LABEL: cbne_i32:
 ; CHECK-CMPBR:       ; %bb.0: ; %entry
-; CHECK-CMPBR-NEXT:    cbne w0, w1, LBB5_2
+; CHECK-CMPBR-NEXT:    cbne w0, w1, LBB25_2
 ; CHECK-CMPBR-NEXT:  ; %bb.1: ; %if.end
 ; CHECK-CMPBR-NEXT:    ret
-; CHECK-CMPBR-NEXT:  LBB5_2: ; %if.then
+; CHECK-CMPBR-NEXT:  LBB25_2: ; %if.then
 ; CHECK-CMPBR-NEXT:    brk #0x1
 ;
 ; CHECK-NO-CMPBR-LABEL: cbne_i32:
 ; CHECK-NO-CMPBR:       ; %bb.0: ; %entry
 ; CHECK-NO-CMPBR-NEXT:    cmp w0, w1
-; CHECK-NO-CMPBR-NEXT:    b.ne LBB5_2
+; CHECK-NO-CMPBR-NEXT:    b.ne LBB25_2
 ; CHECK-NO-CMPBR-NEXT:  ; %bb.1: ; %if.end
 ; CHECK-NO-CMPBR-NEXT:    ret
-; CHECK-NO-CMPBR-NEXT:  LBB5_2: ; %if.then
+; CHECK-NO-CMPBR-NEXT:  LBB25_2: ; %if.then
 ; CHECK-NO-CMPBR-NEXT:    brk #0x1
 entry:
   %cmp = icmp ne i32 %a, %b
@@ -181,19 +782,19 @@ if.end:
 define void @cble_ge_swap_i32(i32 %a, i32 %b)  {
 ; CHECK-CMPBR-LABEL: cble_ge_swap_i32:
 ; CHECK-CMPBR:       ; %bb.0: ; %entry
-; CHECK-CMPBR-NEXT:    cbge w1, w0, LBB6_2
+; CHECK-CMPBR-NEXT:    cbge w1, w0, LBB26_2
 ; CHECK-CMPBR-NEXT:  ; %bb.1: ; %if.end
 ; CHECK-CMPBR-NEXT:    ret
-; CHECK-CMPBR-NEXT:  LBB6_2: ; %if.then
+; CHECK-CMPBR-NEXT:  LBB26_2: ; %if.then
 ; CHECK-CMPBR-NEXT:    brk #0x1
 ;
 ; CHECK-NO-CMPBR-LABEL: cble_ge_swap_i32:
 ; CHECK-NO-CMPBR:       ; %bb.0: ; %entry
 ; CHECK-NO-CMPBR-NEXT:    cmp w0, w1
-; CHECK-NO-CMPBR-NEXT:    b.le LBB6_2
+; CHECK-NO-CMPBR-NEXT:    b.le LBB26_2
 ; CHECK-NO-CMPBR-NEXT:  ; %bb.1: ; %if.end
 ; CHECK-NO-CMPBR-NEXT:    ret
-; CHECK-NO-CMPBR-NEXT:  LBB6_2: ; %if.then
+; CHECK-NO-CMPBR-NEXT:  LBB26_2: ; %if.then
 ; CHECK-NO-CMPBR-NEXT:    brk #0x1
 entry:
   %cmp = icmp sle i32 %a, %b
@@ -210,19 +811,19 @@ if.end:
 define void @cblo_hi_swap_i32(i32 %a, i32 %b)  {
 ; CHECK-CMPBR-LABEL: cblo_hi_swap_i32:
 ; CHECK-CMPBR:       ; %bb.0: ; %entry
-; CHECK-CMPBR-NEXT:    cbhi w1, w0, LBB7_2
+; CHECK-CMPBR-NEXT:    cbhi w1, w0, LBB27_2
 ; CHECK-CMPBR-NEXT:  ; %bb.1: ; %if.end
 ; CHECK-CMPBR-NEXT:    ret
-; CHECK-CMPBR-NEXT:  LBB7_2: ; %if.then
+; CHECK-CMPBR-NEXT:  LBB27_2: ; %if.then
 ; CHECK-CMPBR-NEXT:    brk #0x1
 ;
 ; CHECK-NO-CMPBR-LABEL: cblo_hi_swap_i32:
 ; CHECK-NO-CMPBR:       ; %bb.0: ; %entry
 ; CHECK-NO-CMPBR-NEXT:    cmp w0, w1
-; CHECK-NO-CMPBR-NEXT:    b.lo LBB7_2
+; CHECK-NO-CMPBR-NEXT:    b.lo LBB27_2
 ; CHECK-NO-CMPBR-NEXT:  ; %bb.1: ; %if.end
 ; CHECK-NO-CMPBR-NEXT:    ret
-; CHECK-NO-CMPBR-NEXT:  LBB7_2: ; %if.then
+; CHECK-NO-CMPBR-NEXT:  LBB27_2: ; %if.then
 ; CHECK-NO-CMPBR-NEXT:    brk #0x1
 entry:
   %cmp = icmp ult i32 %a, %b
@@ -239,19 +840,19 @@ if.end:
 define void @cbls_hs_swap_i32(i32 %a, i32 %b)  {
 ; CHECK-CMPBR-LABEL: cbls_hs_swap_i32:
 ; CHECK-CMPBR:       ; %bb.0: ; %entry
-; CHECK-CMPBR-NEXT:    cbhs w1, w0, LBB8_2
+; CHECK-CMPBR-NEXT:    cbhs w1, w0, LBB28_2
 ; CHECK-CMPBR-NEXT:  ; %bb.1: ; %if.end
 ; CHECK-CMPBR-NEXT:    ret
-; CHECK-CMPBR-NEXT:  LBB8_2: ; %if.then
+; CHECK-CMPBR-NEXT:  LBB28_2: ; %if.then
 ; CHECK-CMPBR-NEXT:    brk #0x1
 ;
 ; CHECK-NO-CMPBR-LABEL: cbls_hs_swap_i32:
 ; CHECK-NO-CMPBR:       ; %bb.0: ; %entry
 ; CHECK-NO-CMPBR-NEXT:    cmp w0, w1
-; CHECK-NO-CMPBR-NEXT:    b.ls LBB8_2
+; CHECK-NO-CMPBR-NEXT:    b.ls LBB28_2
 ; CHECK-NO-CMPBR-NEXT:  ; %bb.1: ; %if.end
 ; CHECK-NO-CMPBR-NEXT:    ret
-; CHECK-NO-CMPBR-NEXT:  LBB8_2: ; %if.then
+; CHECK-NO-CMPBR-NEXT:  LBB28_2: ; %if.then
 ; CHECK-NO-CMPBR-NEXT:    brk #0x1
 entry:
   %cmp = icmp ule i32 %a, %b
@@ -268,19 +869,19 @@ if.end:
 define void @cblt_gt_swap_i32(i32 %a, i32 %b)  {
 ; CHECK-CMPBR-LABEL: cblt_gt_swap_i32:
 ; CHECK-CMPBR:       ; %bb.0: ; %entry
-; CHECK-CMPBR-NEXT:    cbgt w1, w0, LBB9_2
+; CHECK-CMPBR-NEXT:    cbgt w1, w0, LBB29_2
 ; CHECK-CMPBR-NEXT:  ; %bb.1: ; %if.end
 ; CHECK-CMPBR-NEXT:    ret
-; CHECK-CMPBR-NEXT:  LBB9_2: ; %if.then
+; CHECK-CMPBR-NEXT:  LBB29_2: ; %if.then
 ; CHECK-CMPBR-NEXT:    brk #0x1
 ;
 ; CHECK-NO-CMPBR-LABEL: cblt_gt_swap_i32:
 ; CHECK-NO-CMPBR:       ; %bb.0: ; %entry
 ; CHECK-NO-CMPBR-NEXT:    cmp w0, w1
-; CHECK-NO-CMPBR-NEXT:    b.lt LBB9_2
+; CHECK-NO-CMPBR-NEXT:    b.lt LBB29_2
 ; CHECK-NO-CMPBR-NEXT:  ; %bb.1: ; %if.end
 ; CHECK-NO-CMPBR-NEXT:    ret
-; CHECK-NO-CMPBR-NEXT:  LBB9_2: ; %if.then
+; CHECK-NO-CMPBR-NEXT:  LBB29_2: ; %if.then
 ; CHECK-NO-CMPBR-NEXT:    brk #0x1
 entry:
   %cmp = icmp slt i32 %a, %b
@@ -297,19 +898,19 @@ if.end:
 define void @cbgt_i64(i64 %a, i64 %b)  {
 ; CHECK-CMPBR-LABEL: cbgt_i64:
 ; CHECK-CMPBR:       ; %bb.0: ; %entry
-; CHECK-CMPBR-NEXT:    cbgt x0, x1, LBB10_2
+; CHECK-CMPBR-NEXT:    cbgt x0, x1, LBB30_2
 ; CHECK-CMPBR-NEXT:  ; %bb.1: ; %if.end
 ; CHECK-CMPBR-NEXT:    ret
-; CHECK-CMPBR-NEXT:  LBB10_2: ; %if.then
+; CHECK-CMPBR-NEXT:  LBB30_2: ; %if.then
 ; CHECK-CMPBR-NEXT:    brk #0x1
 ;
 ; CHECK-NO-CMPBR-LABEL: cbgt_i64:
 ; CHECK-NO-CMPBR:       ; %bb.0: ; %entry
 ; CHECK-NO-CMPBR-NEXT:    cmp x0, x1
-; CHECK-NO-CMPBR-NEXT:    b.gt LBB10_2
+; CHECK-NO-CMPBR-NEXT:    b.gt LBB30_2
 ; CHECK-NO-CMPBR-NEXT:  ; %bb.1: ; %if.end
 ; CHECK-NO-CMPBR-NEXT:    ret
-; CHECK-NO-CMPBR-NEXT:  LBB10_2: ; %if.then
+; CHECK-NO-CMPBR-NEXT:  LBB30_2: ; %if.then
 ; CHECK-NO-CMPBR-NEXT:    brk #0x1
 entry:
   %cmp = icmp sgt i64 %a, %b
@@ -326,19 +927,19 @@ if.end:
 define void @cbge_i64(i64 %a, i64 %b)  {
 ; CHECK-CMPBR-LABEL: cbge_i64:
 ; CHECK-CMPBR:       ; %bb.0: ; %entry
-; CHECK-CMPBR-NEXT:    cbge x0, x1, LBB11_2
+; CHECK-CMPBR-NEXT:    cbge x0, x1, LBB31_2
 ; CHECK-CMPBR-NEXT:  ; %bb.1: ; %if.end
 ; CHECK-CMPBR-NEXT:    ret
-; CHECK-CMPBR-NEXT:  LBB11_2: ; %if.then
+; CHECK-CMPBR-NEXT:  LBB31_2: ; %if.then
 ; CHECK-CMPBR-NEXT:    brk #0x1
 ;
 ; CHECK-NO-CMPBR-LABEL: cbge_i64:
 ; CHECK-NO-CMPBR:       ; %bb.0: ; %entry
 ; CHECK-NO-CMPBR-NEXT:    cmp x0, x1
-; CHECK-NO-CMPBR-NEXT:    b.ge LBB11_2
+; CHECK-NO-CMPBR-NEXT:    b.ge LBB31_2
 ; CHECK-NO-CMPBR-NEXT:  ; %bb.1: ; %if.end
 ; CHECK-NO-CMPBR-NEXT:    ret
-; CHECK-NO-CMPBR-NEXT:  LBB11_2: ; %if.then
+; CHECK-NO-CMPBR-NEXT:  LBB31_2: ; %if.then
 ; CHECK-NO-CMPBR-NEXT:    brk #0x1
 entry:
   %cmp = icmp sge i64 %a, %b
@@ -356,19 +957,19 @@ if.end:
 define void @cbhi_i64(i64 %a, i64 %b)  {
 ; CHECK-CMPBR-LABEL: cbhi_i64:
 ; CHECK-CMPBR:       ; %bb.0: ; %entry
-; CHECK-CMPBR-NEXT:    cbhi x0, x1, LBB12_2
+; CHECK-CMPBR-NEXT:    cbhi x0, x1, LBB32_2
 ; CHECK-CMPBR-NEXT:  ; %bb.1: ; %if.end
 ; CHECK-CMPBR-NEXT:    ret
-; CHECK-CMPBR-NEXT:  LBB12_2: ; %if.then
+; CHECK-CMPBR-NEXT:  LBB32_2: ; %if.then
 ; CHECK-CMPBR-NEXT:    brk #0x1
 ;
 ; CHECK-NO-CMPBR-LABEL: cbhi_i64:
 ; CHECK-NO-CMPBR:       ; %bb.0: ; %entry
 ; CHECK-NO-CMPBR-NEXT:    cmp x0, x1
-; CHECK-NO-CMPBR-NEXT:    b.hi LBB12_2
+; CHECK-NO-CMPBR-NEXT:    b.hi LBB32_2
 ; CHECK-NO-CMPBR-NEXT:  ; %bb.1: ; %if.end
 ; CHECK-NO-CMPBR-NEXT:    ret
-; CHECK-NO-CMPBR-NEXT:  LBB12_2: ; %if.then
+; CHECK-NO-CMPBR-NEXT:  LBB32_2: ; %if.then
 ; CHECK-NO-CMPBR-NEXT:    brk #0x1
 entry:
   %cmp = icmp ugt i64 %a, %b
@@ -385,19 +986,19 @@ if.end:
 define void @cbhs_i64(i64 %a, i64 %b)  {
 ; CHECK-CMPBR-LABEL: cbhs_i64:
 ; CHECK-CMPBR:       ; %bb.0: ; %entry
-; CHECK-CMPBR-NEXT:    cbhs x0, x1, LBB13_2
+; CHECK-CMPBR-NEXT:    cbhs x0, x1, LBB33_2
 ; CHECK-CMPBR-NEXT:  ; %bb.1: ; %if.end
 ; CHECK-CMPBR-NEXT:    ret
-; CHECK-CMPBR-NEXT:  LBB13_2: ; %if.then
+; CHECK-CMPBR-NEXT:  LBB33_2: ; %if.then
 ; CHECK-CMPBR-NEXT:    brk #0x1
 ;
 ; CHECK-NO-CMPBR-LABEL: cbhs_i64:
 ; CHECK-NO-CMPBR:       ; %bb.0: ; %entry
 ; CHECK-NO-CMPBR-NEXT:    cmp x0, x1
-; CHECK-NO-CMPBR-NEXT:    b.hs LBB13_2
+; CHECK-NO-CMPBR-NEXT:    b.hs LBB33_2
 ; CHECK-NO-CMPBR-NEXT:  ; %bb.1: ; %if.end
 ; CHECK-NO-CMPBR-NEXT:    ret
-; CHECK-NO-CMPBR-NEXT:  LBB13_2: ; %if.then
+; CHECK-NO-CMPBR-NEXT:  LBB33_2: ; %if.then
 ; CHECK-NO-CMPBR-NEXT:    brk #0x1
 entry:
   %cmp = icmp uge i64 %a, %b
@@ -414,19 +1015,19 @@ if.end:
 define void @cbeq_i64(i64 %a, i64 %b)  {
 ; CHECK-CMPBR-LABEL: cbeq_i64:
 ; CHECK-CMPBR:       ; %bb.0: ; %entry
-; CHECK-CMPBR-NEXT:    cbeq x0, x1, LBB14_2
+; CHECK-CMPBR-NEXT:    cbeq x0, x1, LBB34_2
 ; CHECK-CMPBR-NEXT:  ; %bb.1: ; %if.end
 ; CHECK-CMPBR-NEXT:    ret
-; CHECK-CMPBR-NEXT:  LBB14_2: ; %if.then
+; CHECK-CMPBR-NEXT:  LBB34_2: ; %if.then
 ; CHECK-CMPBR-NEXT:    brk #0x1
 ;
 ; CHECK-NO-CMPBR-LABEL: cbeq_i64:
 ; CHECK-NO-CMPBR:       ; %bb.0: ; %entry
 ; CHECK-NO-CMPBR-NEXT:    cmp x0, x1
-; CHECK-NO-CMPBR-NEXT:    b.eq LBB14_2
+; CHECK-NO-CMPBR-NEXT:    b.eq LBB34_2
 ; CHECK-NO-CMPBR-NEXT:  ; %bb.1: ; %if.end
 ; CHECK-NO-CMPBR-NEXT:    ret
-; CHECK-NO-CMPBR-NEXT:  LBB14_2: ; %if.then
+; CHECK-NO-CMPBR-NEXT:  LBB34_2: ; %if.then
 ; CHECK-NO-CMPBR-NEXT:    brk #0x1
 entry:
   %cmp = icmp eq i64 %a, %b
@@ -443,19 +1044,19 @@ if.end:
 define void @cbne_i64(i64 %a, i64 %b)  {
 ; CHECK-CMPBR-LABEL: cbne_i64:
 ; CHECK-CMPBR:       ; %bb.0: ; %entry
-; CHECK-CMPBR-NEXT:    cbne x0, x1, LBB15_2
+; CHECK-CMPBR-NEXT:    cbne x0, x1, LBB35_2
 ; CHECK-CMPBR-NEXT:  ; %bb.1: ; %if.end
 ; CHECK-CMPBR-NEXT:    ret
-; CHECK-CMPBR-NEXT:  LBB15_2: ; %if.then
+; CHECK-CMPBR-NEXT:  LBB35_2: ; %if.then
 ; CHECK-CMPBR-NEXT:    brk #0x1
 ;
 ; CHECK-NO-CMPBR-LABEL: cbne_i64:
 ; CHECK-NO-CMPBR:       ; %bb.0: ; %entry
 ; CHECK-NO-CMPBR-NEXT:    cmp x0, x1
-; CHECK-NO-CMPBR-NEXT:    b.ne LBB15_2
+; CHECK-NO-CMPBR-NEXT:    b.ne LBB35_2
 ; CHECK-NO-CMPBR-NEXT:  ; %bb.1: ; %if.end
 ; CHECK-NO-CMPBR-NEXT:    ret
-; CHECK-NO-CMPBR-NEXT:  LBB15_2: ; %if.then
+; CHECK-NO-CMPBR-NEXT:  LBB35_2: ; %if.then
 ; CHECK-NO-CMPBR-NEXT:    brk #0x1
 entry:
   %cmp = icmp ne i64 %a, %b
@@ -472,19 +1073,19 @@ if.end:
 define void @cble_ge_swap_i64(i64 %a, i64 %b)  {
 ; CHECK-CMPBR-LABEL: cble_ge_swap_i64:
 ; CHECK-CMPBR:       ; %bb.0: ; %entry
-; CHECK-CMPBR-NEXT:    cbge x1, x0, LBB16_2
+; CHECK-CMPBR-NEXT:    cbge x1, x0, LBB36_2
 ; CHECK-CMPBR-NEXT:  ; %bb.1: ; %if.end
 ; CHECK-CMPBR-NEXT:    ret
-; CHECK-CMPBR-NEXT:  LBB16_2: ; %if.then
+; CHECK-CMPBR-NEXT:  LBB36_2: ; %if.then
 ; CHECK-CMPBR-NEXT:    brk #0x1
 ;
 ; CHECK-NO-CMPBR-LABEL: cble_ge_swap_i64:
 ; CHECK-NO-CMPBR:       ; %bb.0: ; %entry
 ; CHECK-NO-CMPBR-NEXT:    cmp x0, x1
-; CHECK-NO-CMPBR-NEXT:    b.le LBB16_2
+; CHECK-NO-CMPBR-NEXT:    b.le LBB36_2
 ; CHECK-NO-CMPBR-NEXT:  ; %bb.1: ; %if.end
 ; CHECK-NO-CMPBR-NEXT:    ret
-; CHECK-NO-CMPBR-NEXT:  LBB16_2: ; %if.then
+; CHECK-NO-CMPBR-NEXT:  LBB36_2: ; %if.then
 ; CHECK-NO-CMPBR-NEXT:    brk #0x1
 entry:
   %cmp = icmp sle i64 %a, %b
@@ -501,19 +1102,19 @@ if.end:
 define void @cblo_hi_swap_i64(i64 %a, i64 %b)  {
 ; CHECK-CMPBR-LABEL: cblo_hi_swap_i64:
 ; CHECK-CMPBR:       ; %bb.0: ; %entry
-; CHECK-CMPBR-NEXT:    cbhi x1, x0, LBB17_2
+; CHECK-CMPBR-NEXT:    cbhi x1, x0, LBB37_2
 ; CHECK-CMPBR-NEXT:  ; %bb.1: ; %if.end
 ; CHECK-CMPBR-NEXT:    ret
-; CHECK-CMPBR-NEXT:  LBB17_2: ; %if.then
+; CHECK-CMPBR-NEXT:  LBB37_2: ; %if.then
 ; CHECK-CMPBR-NEXT:    brk #0x1
 ;
 ; CHECK-NO-CMPBR-LABEL: cblo_hi_swap_i64:
 ; CHECK-NO-CMPBR:       ; %bb.0: ; %entry
 ; CHECK-NO-CMPBR-NEXT:    cmp x0, x1
-; CHECK-NO-CMPBR-NEXT:    b.lo LBB17_2
+; CHECK-NO-CMPBR-NEXT:    b.lo LBB37_2
 ; CHECK-NO-CMPBR-NEXT:  ; %bb.1: ; %if.end
 ; CHECK-NO-CMPBR-NEXT:    ret
-; CHECK-NO-CMPBR-NEXT:  LBB17_2: ; %if.then
+; CHECK-NO-CMPBR-NEXT:  LBB37_2: ; %if.then
 ; CHECK-NO-CMPBR-NEXT:    brk #0x1
 entry:
   %cmp = icmp ult i64 %a, %b
@@ -530,19 +1131,19 @@ if.end:
 define void @cbls_hs_swap_i64(i64 %a, i64 %b)  {
 ; CHECK-CMPBR-LABEL: cbls_hs_swap_i64:
 ; CHECK-CMPBR:       ; %bb.0: ; %entry
-; CHECK-CMPBR-NEXT:    cbhs x1, x0, LBB18_2
+; CHECK-CMPBR-NEXT:    cbhs x1, x0, LBB38_2
 ; CHECK-CMPBR-NEXT:  ; %bb.1: ; %if.end
 ; CHECK-CMPBR-NEXT:    ret
-; CHECK-CMPBR-NEXT:  LBB18_2: ; %if.then
+; CHECK-CMPBR-NEXT:  LBB38_2: ; %if.then
 ; CHECK-CMPBR-NEXT:    brk #0x1
 ;
 ; CHECK-NO-CMPBR-LABEL: cbls_hs_swap_i64:
 ; CHECK-NO-CMPBR:       ; %bb.0: ; %entry
 ; CHECK-NO-CMPBR-NEXT:    cmp x0, x1
-; CHECK-NO-CMPBR-NEXT:    b.ls LBB18_2
+; CHECK-NO-CMPBR-NEXT:    b.ls LBB38_2
 ; CHECK-NO-CMPBR-NEXT:  ; %bb.1: ; %if.end
 ; CHECK-NO-CMPBR-NEXT:    ret
-; CHECK-NO-CMPBR-NEXT:  LBB18_2: ; %if.then
+; CHECK-NO-CMPBR-NEXT:  LBB38_2: ; %if.then
 ; CHECK-NO-CMPBR-NEXT:    brk #0x1
 entry:
   %cmp = icmp ule i64 %a, %b
@@ -559,19 +1160,19 @@ if.end:
 define void @cblt_gt_swap_i64(i64 %a, i64 %b)  {
 ; CHECK-CMPBR-LABEL: cblt_gt_swap_i64:
 ; CHECK-CMPBR:       ; %bb.0: ; %entry
-; CHECK-CMPBR-NEXT:    cbgt x1, x0, LBB19_2
+; CHECK-CMPBR-NEXT:    cbgt x1, x0, LBB39_2
 ; CHECK-CMPBR-NEXT:  ; %bb.1: ; %if.end
 ; CHECK-CMPBR-NEXT:    ret
-; CHECK-CMPBR-NEXT:  LBB19_2: ; %if.then
+; CHECK-CMPBR-NEXT:  LBB39_2: ; %if.then
 ; CHECK-CMPBR-NEXT:    brk #0x1
 ;
 ; CHECK-NO-CMPBR-LABEL: cblt_gt_swap_i64:
 ; CHECK-NO-CMPBR:       ; %bb.0: ; %entry
 ; CHECK-NO-CMPBR-NEXT:    cmp x0, x1
-; CHECK-NO-CMPBR-NEXT:    b.lt LBB19_2
+; CHECK-NO-CMPBR-NEXT:    b.lt LBB39_2
 ; CHECK-NO-CMPBR-NEXT:  ; %bb.1: ; %if.end
 ; CHECK-NO-CMPBR-NEXT:    ret
-; CHECK-NO-CMPBR-NEXT:  LBB19_2: ; %if.then
+; CHECK-NO-CMPBR-NEXT:  LBB39_2: ; %if.then
 ; CHECK-NO-CMPBR-NEXT:    brk #0x1
 entry:
   %cmp = icmp slt i64 %a, %b

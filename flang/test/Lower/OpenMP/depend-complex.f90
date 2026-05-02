@@ -5,7 +5,7 @@ subroutine depend_complex(z)
 ! CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<complex<f32>> {fir.bindc_name = "z"}) {
   complex :: z
 ! CHECK:           %[[VAL_0:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_0]] {uniq_name = "_QFdepend_complexEz"} : (!fir.ref<complex<f32>>, !fir.dscope) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_0]] arg {{[0-9]+}} {uniq_name = "_QFdepend_complexEz"} : (!fir.ref<complex<f32>>, !fir.dscope) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
   !$omp task depend(in:z%re)
 ! CHECK:           %[[VAL_2:.*]] = hlfir.designate %[[VAL_1]]#0  real : (!fir.ref<complex<f32>>) -> !fir.ref<f32>
 ! CHECK:           omp.task depend(taskdependin -> %[[VAL_2]] : !fir.ref<f32>) {

@@ -2,7 +2,7 @@
 
 // CHECK-LABEL: func @broadcast_vec1d_from_scalar
 // CHECK-SAME: %[[A:.*0]]: f32
-// CHECK:      %[[T0:.*]] = vector.splat %[[A]] : vector<2xf32>
+// CHECK:      %[[T0:.*]] = vector.broadcast %[[A]] : f32 to vector<2xf32>
 // CHECK:      return %[[T0]] : vector<2xf32>
 
 func.func @broadcast_vec1d_from_scalar(%arg0: f32) -> vector<2xf32> {
@@ -12,7 +12,7 @@ func.func @broadcast_vec1d_from_scalar(%arg0: f32) -> vector<2xf32> {
 
 // CHECK-LABEL: func @broadcast_vec2d_from_scalar
 // CHECK-SAME: %[[A:.*0]]: f32
-// CHECK:      %[[T0:.*]] = vector.splat %[[A]] : vector<2x3xf32>
+// CHECK:      %[[T0:.*]] = vector.broadcast %[[A]] : f32 to vector<2x3xf32>
 // CHECK:      return %[[T0]] : vector<2x3xf32>
 
 func.func @broadcast_vec2d_from_scalar(%arg0: f32) -> vector<2x3xf32> {
@@ -22,7 +22,7 @@ func.func @broadcast_vec2d_from_scalar(%arg0: f32) -> vector<2x3xf32> {
 
 // CHECK-LABEL: func @broadcast_vec3d_from_scalar
 // CHECK-SAME: %[[A:.*0]]: f32
-// CHECK:      %[[T0:.*]] = vector.splat %[[A]] : vector<2x3x4xf32>
+// CHECK:      %[[T0:.*]] = vector.broadcast %[[A]] : f32 to vector<2x3x4xf32>
 // CHECK:      return %[[T0]] : vector<2x3x4xf32>
 
 func.func @broadcast_vec3d_from_scalar(%arg0: f32) -> vector<2x3x4xf32> {
@@ -87,7 +87,7 @@ func.func @broadcast_vec3d_from_vec2d(%arg0: vector<3x2xf32>) -> vector<4x3x2xf3
 // CHECK-LABEL: func @broadcast_stretch
 // CHECK-SAME: %[[A:.*0]]: vector<1xf32>
 // CHECK:      %[[T0:.*]] = vector.extract %[[A]][0] : f32 from vector<1xf32>
-// CHECK:      %[[T1:.*]] = vector.splat %[[T0]] : vector<4xf32>
+// CHECK:      %[[T1:.*]] = vector.broadcast %[[T0]] : f32 to vector<4xf32>
 // CHECK:      return %[[T1]] : vector<4xf32>
 
 func.func @broadcast_stretch(%arg0: vector<1xf32>) -> vector<4xf32> {
@@ -113,16 +113,16 @@ func.func @broadcast_stretch_at_start(%arg0: vector<1x4xf32>) -> vector<3x4xf32>
 // CHECK-SAME: %[[A:.*0]]: vector<4x1xf32>
 // CHECK:      %[[U0:.*]] = ub.poison : vector<4x3xf32>
 // CHECK:      %[[T0:.*]] = vector.extract %[[A]][0, 0] : f32 from vector<4x1xf32>
-// CHECK:      %[[T2:.*]] = vector.splat %[[T0]] : vector<3xf32>
+// CHECK:      %[[T2:.*]] = vector.broadcast %[[T0]] : f32 to vector<3xf32>
 // CHECK:      %[[T3:.*]] = vector.insert %[[T2]], %[[U0]] [0] : vector<3xf32> into vector<4x3xf32>
 // CHECK:      %[[T4:.*]] = vector.extract %[[A]][1, 0] : f32 from vector<4x1xf32>
-// CHECK:      %[[T6:.*]] = vector.splat %[[T4]] : vector<3xf32>
+// CHECK:      %[[T6:.*]] = vector.broadcast %[[T4]] : f32 to vector<3xf32>
 // CHECK:      %[[T7:.*]] = vector.insert %[[T6]], %[[T3]] [1] : vector<3xf32> into vector<4x3xf32>
 // CHECK:      %[[T8:.*]] = vector.extract %[[A]][2, 0] : f32 from vector<4x1xf32>
-// CHECK:      %[[T10:.*]] = vector.splat %[[T8]] : vector<3xf32>
+// CHECK:      %[[T10:.*]] = vector.broadcast %[[T8]] : f32 to vector<3xf32>
 // CHECK:      %[[T11:.*]] = vector.insert %[[T10]], %[[T7]] [2] : vector<3xf32> into vector<4x3xf32>
 // CHECK:      %[[T12:.*]] = vector.extract %[[A]][3, 0] : f32 from vector<4x1xf32>
-// CHECK:      %[[T14:.*]] = vector.splat %[[T12]] : vector<3xf32>
+// CHECK:      %[[T14:.*]] = vector.broadcast %[[T12]] : f32 to vector<3xf32>
 // CHECK:      %[[T15:.*]] = vector.insert %[[T14]], %[[T11]] [3] : vector<3xf32> into vector<4x3xf32>
 // CHECK:      return %[[T15]] : vector<4x3xf32>
 

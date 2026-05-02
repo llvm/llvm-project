@@ -9,7 +9,7 @@
 // CHECK:   |     `-TemplateTypeParm {{.*}} 'element_type'
 // CHECK:   `-BinaryOperator {{.*}} 'bool' lvalue '>='
 // CHECK:     |-UnaryExprOrTypeTraitExpr {{.*}} 'bool' sizeof 'element_type'
-// CHECK:     `-IntegerLiteral {{.*}} 'unsigned long' 1
+// CHECK:     `-IntegerLiteral {{.*}} '__size_t':'unsigned long' 1
 
 
 StructuredBuffer<float> Buffer;

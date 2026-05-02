@@ -20,7 +20,7 @@ define i32 @add_mul_combine_accept_a1(i32 %x) {
 ; RV64IMB:       # %bb.0:
 ; RV64IMB-NEXT:    sh1add a1, a0, a0
 ; RV64IMB-NEXT:    slli a0, a0, 5
-; RV64IMB-NEXT:    subw a0, a0, a1
+; RV64IMB-NEXT:    sub a0, a0, a1
 ; RV64IMB-NEXT:    addiw a0, a0, 1073
 ; RV64IMB-NEXT:    ret
   %tmp0 = add i32 %x, 37
@@ -41,7 +41,7 @@ define signext i32 @add_mul_combine_accept_a2(i32 signext %x) {
 ; RV64IMB:       # %bb.0:
 ; RV64IMB-NEXT:    sh1add a1, a0, a0
 ; RV64IMB-NEXT:    slli a0, a0, 5
-; RV64IMB-NEXT:    subw a0, a0, a1
+; RV64IMB-NEXT:    sub a0, a0, a1
 ; RV64IMB-NEXT:    addiw a0, a0, 1073
 ; RV64IMB-NEXT:    ret
   %tmp0 = add i32 %x, 37
@@ -93,7 +93,7 @@ define i32 @add_mul_combine_accept_b1(i32 %x) {
 ; RV64IMB:       # %bb.0:
 ; RV64IMB-NEXT:    sh3add a1, a0, a0
 ; RV64IMB-NEXT:    slli a0, a0, 5
-; RV64IMB-NEXT:    subw a0, a0, a1
+; RV64IMB-NEXT:    sub a0, a0, a1
 ; RV64IMB-NEXT:    lui a1, 50
 ; RV64IMB-NEXT:    addi a1, a1, 1119
 ; RV64IMB-NEXT:    addw a0, a0, a1
@@ -118,7 +118,7 @@ define signext i32 @add_mul_combine_accept_b2(i32 signext %x) {
 ; RV64IMB:       # %bb.0:
 ; RV64IMB-NEXT:    sh3add a1, a0, a0
 ; RV64IMB-NEXT:    slli a0, a0, 5
-; RV64IMB-NEXT:    subw a0, a0, a1
+; RV64IMB-NEXT:    sub a0, a0, a1
 ; RV64IMB-NEXT:    lui a1, 50
 ; RV64IMB-NEXT:    addi a1, a1, 1119
 ; RV64IMB-NEXT:    addw a0, a0, a1
@@ -456,7 +456,7 @@ define i32 @add_mul_combine_reject_f1(i32 %x) {
 ; RV64IMB-NEXT:    addi a0, a0, 1972
 ; RV64IMB-NEXT:    sh1add a1, a0, a0
 ; RV64IMB-NEXT:    slli a0, a0, 5
-; RV64IMB-NEXT:    subw a0, a0, a1
+; RV64IMB-NEXT:    sub a0, a0, a1
 ; RV64IMB-NEXT:    addiw a0, a0, 11
 ; RV64IMB-NEXT:    ret
   %tmp0 = mul i32 %x, 29
@@ -479,7 +479,7 @@ define signext i32 @add_mul_combine_reject_f2(i32 signext %x) {
 ; RV64IMB-NEXT:    addi a0, a0, 1972
 ; RV64IMB-NEXT:    sh1add a1, a0, a0
 ; RV64IMB-NEXT:    slli a0, a0, 5
-; RV64IMB-NEXT:    subw a0, a0, a1
+; RV64IMB-NEXT:    sub a0, a0, a1
 ; RV64IMB-NEXT:    addiw a0, a0, 11
 ; RV64IMB-NEXT:    ret
   %tmp0 = mul i32 %x, 29

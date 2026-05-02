@@ -20,11 +20,19 @@
 
 #if TEST_STD_VER < 14
 
+#  ifdef __cpp_lib_constexpr_flat_set
+#    error "__cpp_lib_constexpr_flat_set should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_flat_set
 #    error "__cpp_lib_flat_set should not be defined before c++23"
 #  endif
 
 #elif TEST_STD_VER == 14
+
+#  ifdef __cpp_lib_constexpr_flat_set
+#    error "__cpp_lib_constexpr_flat_set should not be defined before c++26"
+#  endif
 
 #  ifdef __cpp_lib_flat_set
 #    error "__cpp_lib_flat_set should not be defined before c++23"
@@ -32,11 +40,19 @@
 
 #elif TEST_STD_VER == 17
 
+#  ifdef __cpp_lib_constexpr_flat_set
+#    error "__cpp_lib_constexpr_flat_set should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_flat_set
 #    error "__cpp_lib_flat_set should not be defined before c++23"
 #  endif
 
 #elif TEST_STD_VER == 20
+
+#  ifdef __cpp_lib_constexpr_flat_set
+#    error "__cpp_lib_constexpr_flat_set should not be defined before c++26"
+#  endif
 
 #  ifdef __cpp_lib_flat_set
 #    error "__cpp_lib_flat_set should not be defined before c++23"
@@ -44,23 +60,33 @@
 
 #elif TEST_STD_VER == 23
 
+#  ifdef __cpp_lib_constexpr_flat_set
+#    error "__cpp_lib_constexpr_flat_set should not be defined before c++26"
+#  endif
+
 #  ifndef __cpp_lib_flat_set
 #    error "__cpp_lib_flat_set should be defined in c++23"
 #  endif
-#  if __cpp_lib_flat_set != 202207L
-#    error "__cpp_lib_flat_set should have the value 202207L in c++23"
+#  if __cpp_lib_flat_set != 202511L
+#    error "__cpp_lib_flat_set should have the value 202511L in c++23"
 #  endif
 
 #elif TEST_STD_VER > 23
 
+#  ifndef __cpp_lib_constexpr_flat_set
+#    error "__cpp_lib_constexpr_flat_set should be defined in c++26"
+#  endif
+#  if __cpp_lib_constexpr_flat_set != 202502L
+#    error "__cpp_lib_constexpr_flat_set should have the value 202502L in c++26"
+#  endif
+
 #  ifndef __cpp_lib_flat_set
 #    error "__cpp_lib_flat_set should be defined in c++26"
 #  endif
-#  if __cpp_lib_flat_set != 202207L
-#    error "__cpp_lib_flat_set should have the value 202207L in c++26"
+#  if __cpp_lib_flat_set != 202511L
+#    error "__cpp_lib_flat_set should have the value 202511L in c++26"
 #  endif
 
 #endif // TEST_STD_VER > 23
 
 // clang-format on
-

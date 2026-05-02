@@ -119,7 +119,7 @@ static CVSymbol serializePublic(uint8_t *Mem, const BulkPublic &Pub) {
   memcpy(NameMem, Pub.Name, NameLen);
   // Zero the null terminator and remaining bytes.
   memset(&NameMem[NameLen], 0, Size - sizeof(PublicSym32Layout) - NameLen);
-  return CVSymbol(ArrayRef(reinterpret_cast<uint8_t *>(Mem), Size));
+  return CVSymbol(ArrayRef(Mem, Size));
 }
 
 uint32_t GSIHashStreamBuilder::calculateSerializedLength() const {
@@ -166,7 +166,7 @@ static int gsiRecordCmp(StringRef S1, StringRef S2) {
     return memcmp(S1.data(), S2.data(), LS);
 
   // Both strings are ascii, perform a case-insensitive comparison.
-  return S1.compare_insensitive(S2.data());
+  return S1.compare_insensitive(S2);
 }
 
 void GSIStreamBuilder::finalizePublicBuckets() {
@@ -200,7 +200,7 @@ void GSIHashStreamBuilder::finalizeBuckets(
     uint32_t RecordZeroOffset, MutableArrayRef<BulkPublic> Records) {
   // Hash every name in parallel.
   parallelFor(0, Records.size(), [&](size_t I) {
-    Records[I].setBucketIdx(hashStringV1(Records[I].Name) % IPHR_HASH);
+    Records[I].setBucketIdx(hashStringV1(Records[I].getName()) % IPHR_HASH);
   });
 
   // Count up the size of each bucket. Then, use an exclusive prefix sum to

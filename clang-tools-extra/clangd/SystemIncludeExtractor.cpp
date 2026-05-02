@@ -106,7 +106,7 @@ struct DriverArgs {
     // relative or absolute).
     if (llvm::any_of(Driver,
                      [](char C) { return llvm::sys::path::is_separator(C); })) {
-      llvm::sys::fs::make_absolute(Cmd.Directory, Driver);
+      llvm::sys::path::make_absolute(Cmd.Directory, Driver);
     }
     this->Driver = Driver.str().str();
     for (size_t I = 0, E = Cmd.CommandLine.size(); I < E; ++I) {
@@ -254,7 +254,7 @@ bool isValidTarget(llvm::StringRef Triple) {
   std::shared_ptr<TargetOptions> TargetOpts(new TargetOptions);
   TargetOpts->Triple = Triple.str();
   DiagnosticOptions DiagOpts;
-  DiagnosticsEngine Diags(new DiagnosticIDs, DiagOpts,
+  DiagnosticsEngine Diags(DiagnosticIDs::create(), DiagOpts,
                           new IgnoringDiagConsumer);
   llvm::IntrusiveRefCntPtr<TargetInfo> Target =
       TargetInfo::CreateTargetInfo(Diags, *TargetOpts);
@@ -332,7 +332,7 @@ std::optional<std::string> run(llvm::ArrayRef<llvm::StringRef> Argv,
          EC.message());
     return std::nullopt;
   }
-  auto CleanUp = llvm::make_scope_exit(
+  llvm::scope_exit CleanUp(
       [&OutputPath]() { llvm::sys::fs::remove(OutputPath); });
 
   std::optional<llvm::StringRef> Redirects[] = {{""}, {""}, {""}};

@@ -9,6 +9,7 @@ endif()
 set(CLANG_BOOTSTRAP_TARGETS
   check-all
   check-clang
+  check-clang-extra
   check-lld
   check-llvm
   check-polly
@@ -43,3 +44,6 @@ set(CLANG_BOOTSTRAP_CMAKE_ARGS
   ${EXTRA_ARGS}
   -C ${CMAKE_CURRENT_LIST_DIR}/Fuchsia-stage2.cmake
   CACHE STRING "")
+
+# Do not use LLVM build for generating PGO data.
+set(CLANG_PGO_TRAINING_USE_LLVM_BUILD OFF CACHE BOOL "")

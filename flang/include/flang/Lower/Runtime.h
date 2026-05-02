@@ -57,12 +57,6 @@ void genEventWaitStatement(AbstractConverter &, const parser::EventWaitStmt &);
 void genLockStatement(AbstractConverter &, const parser::LockStmt &);
 void genFailImageStatement(AbstractConverter &);
 void genStopStatement(AbstractConverter &, const parser::StopStmt &);
-void genSyncAllStatement(AbstractConverter &, const parser::SyncAllStmt &);
-void genSyncImagesStatement(AbstractConverter &,
-                            const parser::SyncImagesStmt &);
-void genSyncMemoryStatement(AbstractConverter &,
-                            const parser::SyncMemoryStmt &);
-void genSyncTeamStatement(AbstractConverter &, const parser::SyncTeamStmt &);
 void genUnlockStatement(AbstractConverter &, const parser::UnlockStmt &);
 void genPauseStatement(AbstractConverter &, const parser::PauseStmt &);
 
@@ -70,7 +64,7 @@ void genPointerAssociate(fir::FirOpBuilder &, mlir::Location,
                          mlir::Value pointer, mlir::Value target);
 void genPointerAssociateRemapping(fir::FirOpBuilder &, mlir::Location,
                                   mlir::Value pointer, mlir::Value target,
-                                  mlir::Value bounds);
+                                  mlir::Value bounds, bool isMonomorphic);
 void genPointerAssociateLowerBounds(fir::FirOpBuilder &, mlir::Location,
                                     mlir::Value pointer, mlir::Value target,
                                     mlir::Value lbounds);

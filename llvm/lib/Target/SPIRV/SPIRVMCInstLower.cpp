@@ -25,6 +25,8 @@ void SPIRVMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI,
   // Propagate previously set flags
   if (MI->getAsmPrinterFlags() & SPIRV::ASM_PRINTER_WIDTH16)
     OutMI.setFlags(SPIRV::INST_PRINTER_WIDTH16);
+  if (MI->getAsmPrinterFlags() & SPIRV::ASM_PRINTER_WIDTH64)
+    OutMI.setFlags(SPIRV::INST_PRINTER_WIDTH64);
   const MachineFunction *MF = MI->getMF();
   for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
     const MachineOperand &MO = MI->getOperand(i);
@@ -33,15 +35,16 @@ void SPIRVMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI,
     default:
       llvm_unreachable("unknown operand type");
     case MachineOperand::MO_GlobalAddress: {
-      MCRegister FuncReg = MAI->getFuncReg(dyn_cast<Function>(MO.getGlobal()));
-      if (!FuncReg.isValid()) {
+      MCRegister Reg =
+          MAI->getGlobalObjReg(dyn_cast<GlobalObject>(MO.getGlobal()));
+      if (!Reg.isValid()) {
         std::string DiagMsg;
         raw_string_ostream OS(DiagMsg);
         MI->print(OS);
-        DiagMsg = "Unknown function in:" + DiagMsg;
+        DiagMsg = "Unknown global object in:" + DiagMsg;
         report_fatal_error(DiagMsg.c_str());
       }
-      MCOp = MCOperand::createReg(FuncReg);
+      MCOp = MCOperand::createReg(Reg);
       break;
     }
     case MachineOperand::MO_MachineBasicBlock:

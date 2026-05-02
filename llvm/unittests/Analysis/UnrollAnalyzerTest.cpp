@@ -27,7 +27,7 @@ runUnrollAnalyzer(Module &M, StringRef FuncName,
   auto *F = M.getFunction(FuncName);
   ASSERT_NE(F, nullptr) << "Could not find " << FuncName;
 
-  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfoImpl TLII(M.getTargetTriple());
   TargetLibraryInfo TLI(TLII);
   AssumptionCache AC(*F);
   DominatorTree DT(*F);
@@ -214,18 +214,18 @@ TEST(UnrollAnalyzerTest, PtrCmpSimplifications) {
       "target datalayout = \"e-m:o-i64:64-f80:128-n8:16:32:64-S128\"\n"
       "define void @ptr_cmp(i8 *%a) {\n"
       "entry:\n"
-      "  %limit = getelementptr i8, i8* %a, i64 40\n"
-      "  %start.iv2 = getelementptr i8, i8* %a, i64 7\n"
+      "  %limit = getelementptr i8, ptr %a, i64 40\n"
+      "  %start.iv2 = getelementptr i8, ptr %a, i64 7\n"
       "  br label %loop.body\n"
       "loop.body:\n"
-      "  %iv.0 = phi i8* [ %a, %entry ], [ %iv.1, %loop.body ]\n"
-      "  %iv2.0 = phi i8* [ %start.iv2, %entry ], [ %iv2.1, %loop.body ]\n"
-      "  %cmp = icmp eq i8* %iv2.0, %iv.0\n"
-      "  %cmp2 = icmp slt i8* %iv2.0, %iv.0\n"
-      "  %cmp3 = icmp ult i8* %iv2.0, %iv.0\n"
-      "  %iv.1 = getelementptr inbounds i8, i8* %iv.0, i64 1\n"
-      "  %iv2.1 = getelementptr inbounds i8, i8* %iv2.0, i64 1\n"
-      "  %exitcond = icmp ne i8* %iv.1, %limit\n"
+      "  %iv.0 = phi ptr [ %a, %entry ], [ %iv.1, %loop.body ]\n"
+      "  %iv2.0 = phi ptr [ %start.iv2, %entry ], [ %iv2.1, %loop.body ]\n"
+      "  %cmp = icmp eq ptr %iv2.0, %iv.0\n"
+      "  %cmp2 = icmp slt ptr %iv2.0, %iv.0\n"
+      "  %cmp3 = icmp ult ptr %iv2.0, %iv.0\n"
+      "  %iv.1 = getelementptr inbounds i8, ptr %iv.0, i64 1\n"
+      "  %iv2.1 = getelementptr inbounds i8, ptr %iv2.0, i64 1\n"
+      "  %exitcond = icmp ne ptr %iv.1, %limit\n"
       "  br i1 %exitcond, label %loop.body, label %loop.exit\n"
       "loop.exit:\n"
       "  ret void\n"
@@ -248,14 +248,14 @@ TEST(UnrollAnalyzerTest, PtrCmpSimplifications) {
   Instruction *Cmp2 = &*BBI++;
   Instruction *Cmp3 = &*BBI++;
   // Check simplification expected on the 5th iteration.
-  // Check that "%cmp = icmp eq i8* %iv2.0, %iv.0" is simplified to 0.
+  // Check that "%cmp = icmp eq ptr %iv2.0, %iv.0" is simplified to 0.
   auto I1 = SimplifiedValuesVector[5].find(Cmp1);
   EXPECT_TRUE(I1 != SimplifiedValuesVector[5].end());
   EXPECT_EQ(cast<ConstantInt>((*I1).second)->getZExtValue(), 0U);
-  // Check that "%cmp2 = icmp slt i8* %iv2.0, %iv.0" does not simplify
+  // Check that "%cmp2 = icmp slt ptr %iv2.0, %iv.0" does not simplify
   auto I2 = SimplifiedValuesVector[5].find(Cmp2);
   EXPECT_TRUE(I2 == SimplifiedValuesVector[5].end());
-  // Check that "%cmp3 = icmp ult i8* %iv2.0, %iv.0" is simplified to 0.
+  // Check that "%cmp3 = icmp ult ptr %iv2.0, %iv.0" is simplified to 0.
   auto I3 = SimplifiedValuesVector[5].find(Cmp3);
   EXPECT_TRUE(I3 != SimplifiedValuesVector[5].end());
   EXPECT_EQ(cast<ConstantInt>((*I1).second)->getZExtValue(), 0U);
@@ -271,8 +271,8 @@ TEST(UnrollAnalyzerTest, CastSimplifications) {
       "\n"
       "loop:\n"
       "  %iv = phi i64 [ 0, %entry ], [ %inc, %loop ]\n"
-      "  %array_const_idx = getelementptr inbounds [10 x i32], [10 x i32]* @known_constant, i64 0, i64 %iv\n"
-      "  %const_array_element = load i32, i32* %array_const_idx, align 4\n"
+      "  %array_const_idx = getelementptr inbounds [10 x i32], ptr @known_constant, i64 0, i64 %iv\n"
+      "  %const_array_element = load i32, ptr %array_const_idx, align 4\n"
       "  %se = sext i32 %const_array_element to i64\n"
       "  %ze = zext i32 %const_array_element to i64\n"
       "  %tr = trunc i32 %const_array_element to i8\n"

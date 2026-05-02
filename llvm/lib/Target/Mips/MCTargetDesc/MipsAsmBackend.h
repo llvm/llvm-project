@@ -40,17 +40,13 @@ public:
   createObjectTargetWriter() const override;
 
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
-                  MutableArrayRef<char> Data, uint64_t Value,
-                  bool IsResolved) override;
+                  uint8_t *Data, uint64_t Value, bool IsResolved) override;
 
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
 
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override;
-
-  bool shouldForceRelocation(const MCFixup &Fixup,
-                             const MCValue &Target) override;
 }; // class MipsAsmBackend
 
 } // namespace

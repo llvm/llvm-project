@@ -104,7 +104,7 @@ define <2 x i64> @pmovzxbq_1() nounwind {
 ; X64-SSE-LABEL: pmovzxbq_1:
 ; X64-SSE:       ## %bb.0: ## %entry
 ; X64-SSE-NEXT:    movq _g16@GOTPCREL(%rip), %rax ## encoding: [0x48,0x8b,0x05,A,A,A,A]
-; X64-SSE-NEXT:    ## fixup A - offset: 3, value: _g16@GOTPCREL-4, kind: reloc_riprel_4byte_movq_load
+; X64-SSE-NEXT:    ## fixup A - offset: 3, value: _g16@GOTPCREL, kind: reloc_riprel_4byte_movq_load
 ; X64-SSE-NEXT:    pmovzxbq (%rax), %xmm0 ## xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
 ; X64-SSE-NEXT:    ## encoding: [0x66,0x0f,0x38,0x32,0x00]
 ; X64-SSE-NEXT:    retq ## encoding: [0xc3]
@@ -112,7 +112,7 @@ define <2 x i64> @pmovzxbq_1() nounwind {
 ; X64-AVX1-LABEL: pmovzxbq_1:
 ; X64-AVX1:       ## %bb.0: ## %entry
 ; X64-AVX1-NEXT:    movq _g16@GOTPCREL(%rip), %rax ## encoding: [0x48,0x8b,0x05,A,A,A,A]
-; X64-AVX1-NEXT:    ## fixup A - offset: 3, value: _g16@GOTPCREL-4, kind: reloc_riprel_4byte_movq_load
+; X64-AVX1-NEXT:    ## fixup A - offset: 3, value: _g16@GOTPCREL, kind: reloc_riprel_4byte_movq_load
 ; X64-AVX1-NEXT:    vpmovzxbq (%rax), %xmm0 ## xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
 ; X64-AVX1-NEXT:    ## encoding: [0xc4,0xe2,0x79,0x32,0x00]
 ; X64-AVX1-NEXT:    retq ## encoding: [0xc3]
@@ -120,7 +120,7 @@ define <2 x i64> @pmovzxbq_1() nounwind {
 ; X64-AVX512-LABEL: pmovzxbq_1:
 ; X64-AVX512:       ## %bb.0: ## %entry
 ; X64-AVX512-NEXT:    movq _g16@GOTPCREL(%rip), %rax ## encoding: [0x48,0x8b,0x05,A,A,A,A]
-; X64-AVX512-NEXT:    ## fixup A - offset: 3, value: _g16@GOTPCREL-4, kind: reloc_riprel_4byte_movq_load
+; X64-AVX512-NEXT:    ## fixup A - offset: 3, value: _g16@GOTPCREL, kind: reloc_riprel_4byte_movq_load
 ; X64-AVX512-NEXT:    vpmovzxbq (%rax), %xmm0 ## xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
 ; X64-AVX512-NEXT:    ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x32,0x00]
 ; X64-AVX512-NEXT:    retq ## encoding: [0xc3]
@@ -220,7 +220,7 @@ define float @ext_1(<4 x float> %v) nounwind {
 ; X64-SSE-NEXT:    shufps $255, %xmm0, %xmm0 ## encoding: [0x0f,0xc6,0xc0,0xff]
 ; X64-SSE-NEXT:    ## xmm0 = xmm0[3,3,3,3]
 ; X64-SSE-NEXT:    addss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 ## encoding: [0xf3,0x0f,0x58,0x05,A,A,A,A]
-; X64-SSE-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; X64-SSE-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: reloc_riprel_4byte
 ; X64-SSE-NEXT:    retq ## encoding: [0xc3]
 ;
 ; X64-AVX1-LABEL: ext_1:
@@ -228,7 +228,7 @@ define float @ext_1(<4 x float> %v) nounwind {
 ; X64-AVX1-NEXT:    vshufps $255, %xmm0, %xmm0, %xmm0 ## encoding: [0xc5,0xf8,0xc6,0xc0,0xff]
 ; X64-AVX1-NEXT:    ## xmm0 = xmm0[3,3,3,3]
 ; X64-AVX1-NEXT:    vaddss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 ## encoding: [0xc5,0xfa,0x58,0x05,A,A,A,A]
-; X64-AVX1-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; X64-AVX1-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: reloc_riprel_4byte
 ; X64-AVX1-NEXT:    retq ## encoding: [0xc3]
 ;
 ; X64-AVX512-LABEL: ext_1:
@@ -236,7 +236,7 @@ define float @ext_1(<4 x float> %v) nounwind {
 ; X64-AVX512-NEXT:    vshufps $255, %xmm0, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf8,0xc6,0xc0,0xff]
 ; X64-AVX512-NEXT:    ## xmm0 = xmm0[3,3,3,3]
 ; X64-AVX512-NEXT:    vaddss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x58,0x05,A,A,A,A]
-; X64-AVX512-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; X64-AVX512-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: reloc_riprel_4byte
 ; X64-AVX512-NEXT:    retq ## encoding: [0xc3]
   %s = extractelement <4 x float> %v, i32 3
   %t = fadd float %s, 1.0

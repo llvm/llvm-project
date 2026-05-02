@@ -1,3 +1,23 @@
+version: 0.27
+date: Sun Sep  1 12:07:24 PM CEST 2024
+changes:
+	- improved modulo detection
+	- remove all unused local variables from affine expressions
+	- minor improvements to coalescing
+	- minor improvements to lexicographic optimization
+	- improved constraint simplification
+	- fix handling of empty piecewise expressions
+---
+version: 0.26
+date: Sat Apr  1 05:10:53 PM CEST 2023
+changes:
+	- fix inherited overloaded methods in Python bindings
+	- decompose topological sort of clusters in incremental scheduler
+	- improved isl_pw_aff_list_{min,max}
+	- add some convenience functions
+	- more exports to (templated C++) bindings
+	- slightly improved conversion from binary relation to function
+---
 version: 0.25
 date: Sat 02 Jul 2022 11:14:57 AM CEST
 changes:

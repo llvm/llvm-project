@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Tools/PDLL/ODS/Operation.h"
-#include "mlir/Support/IndentedOstream.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace mlir;
 using namespace mlir::pdll::ods;

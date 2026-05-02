@@ -55,6 +55,7 @@ struct FPOInstruction {
     StackAlign,
     SetFrame,
   } Op;
+  // FIXME: This should be a union of MCRegister and unsigned.
   unsigned RegOrOffset;
 };
 
@@ -108,7 +109,7 @@ void X86WinCOFFAsmTargetStreamer::emitCode64() { OS << "\t.code64\n"; }
 bool X86WinCOFFAsmTargetStreamer::emitFPOProc(const MCSymbol *ProcSym,
                                               unsigned ParamsSize, SMLoc L) {
   OS << "\t.cv_fpo_proc\t";
-  ProcSym->print(OS, getContext().getAsmInfo());
+  ProcSym->print(OS, &getContext().getAsmInfo());
   OS << ' ' << ParamsSize << '\n';
   return false;
 }
@@ -126,7 +127,7 @@ bool X86WinCOFFAsmTargetStreamer::emitFPOEndProc(SMLoc L) {
 bool X86WinCOFFAsmTargetStreamer::emitFPOData(const MCSymbol *ProcSym,
                                               SMLoc L) {
   OS << "\t.cv_fpo_data\t";
-  ProcSym->print(OS, getStreamer().getContext().getAsmInfo());
+  ProcSym->print(OS, &getStreamer().getContext().getAsmInfo());
   OS << '\n';
   return false;
 }
@@ -215,7 +216,7 @@ bool X86WinCOFFTargetStreamer::emitFPOSetFrame(MCRegister Reg, SMLoc L) {
   FPOInstruction Inst;
   Inst.Label = emitFPOLabel();
   Inst.Op = FPOInstruction::SetFrame;
-  Inst.RegOrOffset = Reg;
+  Inst.RegOrOffset = Reg.id();
   CurFPOData->Instructions.push_back(Inst);
   return false;
 }
@@ -226,7 +227,7 @@ bool X86WinCOFFTargetStreamer::emitFPOPushReg(MCRegister Reg, SMLoc L) {
   FPOInstruction Inst;
   Inst.Label = emitFPOLabel();
   Inst.Op = FPOInstruction::PushReg;
-  Inst.RegOrOffset = Reg;
+  Inst.RegOrOffset = Reg.id();
   CurFPOData->Instructions.push_back(Inst);
   return false;
 }

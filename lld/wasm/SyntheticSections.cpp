@@ -196,7 +196,9 @@ void ImportSection::addImport(Symbol *sym) {
   StringRef module = sym->importModule.value_or(defaultModule);
   StringRef name = sym->importName.value_or(sym->getName());
   if (auto *f = dyn_cast<FunctionSymbol>(sym)) {
-    ImportKey<WasmSignature> key(*(f->getSignature()), module, name);
+    const WasmSignature *sig = f->getSignature();
+    assert(sig && "imported functions must have a signature");
+    ImportKey<WasmSignature> key(*sig, module, name);
     auto entry = importedFunctions.try_emplace(key, numImportedFunctions);
     if (entry.second) {
       importedSymbols.emplace_back(sym);
@@ -239,9 +241,12 @@ void ImportSection::addImport(Symbol *sym) {
 void ImportSection::writeBody() {
   raw_ostream &os = bodyOutputStream;
 
-  writeUleb128(os, getNumImports(), "import count");
+  uint32_t numImports = getNumImports();
+  writeUleb128(os, numImports, "import count");
 
   bool is64 = ctx.arg.is64.value_or(false);
+  std::vector<WasmImport> imports;
+  imports.reserve(numImports);
 
   if (ctx.arg.memoryImport) {
     WasmImport import;
@@ -258,7 +263,11 @@ void ImportSection::writeBody() {
       import.Memory.Flags |= WASM_LIMITS_FLAG_IS_SHARED;
     if (is64)
       import.Memory.Flags |= WASM_LIMITS_FLAG_IS_64;
-    writeImport(os, import);
+    if (ctx.arg.pageSize != WasmDefaultPageSize) {
+      import.Memory.Flags |= WASM_LIMITS_FLAG_HAS_PAGE_SIZE;
+      import.Memory.PageSize = ctx.arg.pageSize;
+    }
+    imports.push_back(import);
   }
 
   for (const Symbol *sym : importedSymbols) {
@@ -280,7 +289,7 @@ void ImportSection::writeBody() {
       import.Kind = WASM_EXTERNAL_TABLE;
       import.Table = *tableSym->getTableType();
     }
-    writeImport(os, import);
+    imports.push_back(import);
   }
 
   for (const Symbol *sym : gotSymbols) {
@@ -293,7 +302,34 @@ void ImportSection::writeBody() {
     else
       import.Module = "GOT.func";
     import.Field = sym->getName();
-    writeImport(os, import);
+    imports.push_back(import);
+  }
+
+  bool hasCompactImports =
+      out.targetFeaturesSec->features.contains("compact-imports");
+  uint32_t i = 0;
+  while (i < numImports) {
+    const WasmImport &import = imports[i];
+    if (hasCompactImports) {
+      uint32_t groupSize = 1;
+      for (uint32_t j = i + 1; j < numImports; j++) {
+        if (imports[j].Module == import.Module)
+          groupSize++;
+        else
+          break;
+      }
+      if (groupSize > 1) {
+        writeStr(os, import.Module, "module name");
+        writeStr(os, "", "empty field name");
+        writeU8(os, 0x7F, "compact imports encoding 1");
+        writeUleb128(os, groupSize, "num compact imports");
+        while (groupSize--) {
+          writeCompactImport(os, imports[i++]);
+        }
+        continue;
+      }
+    }
+    writeImport(os, imports[i++]);
   }
 }
 
@@ -430,10 +466,7 @@ void GlobalSection::addInternalGOTEntry(Symbol *sym) {
 void GlobalSection::generateRelocationCode(raw_ostream &os, bool TLS) const {
   assert(!ctx.arg.extendedConst);
   bool is64 = ctx.arg.is64.value_or(false);
-  unsigned opcode_ptr_const = is64 ? WASM_OPCODE_I64_CONST
-                                   : WASM_OPCODE_I32_CONST;
-  unsigned opcode_ptr_add = is64 ? WASM_OPCODE_I64_ADD
-                                 : WASM_OPCODE_I32_ADD;
+  unsigned opcode_ptr_add = is64 ? WASM_OPCODE_I64_ADD : WASM_OPCODE_I32_ADD;
 
   for (const Symbol *sym : internalGotSymbols) {
     if (TLS != sym->isTLS())
@@ -448,8 +481,7 @@ void GlobalSection::generateRelocationCode(raw_ostream &os, bool TLS) const {
         writeUleb128(os, ctx.sym.memoryBase->getGlobalIndex(), "__memory_base");
 
       // Add the virtual address of the data symbol
-      writeU8(os, opcode_ptr_const, "CONST");
-      writeSleb128(os, d->getVA(), "offset");
+      writePtrConst(os, d->getVA(), is64, "offset");
     } else if (auto *f = dyn_cast<FunctionSymbol>(sym)) {
       if (f->isStub)
         continue;
@@ -458,8 +490,7 @@ void GlobalSection::generateRelocationCode(raw_ostream &os, bool TLS) const {
       writeUleb128(os, ctx.sym.tableBase->getGlobalIndex(), "__table_base");
 
       // Add the table index to __table_base
-      writeU8(os, opcode_ptr_const, "CONST");
-      writeSleb128(os, f->getTableIndex(), "offset");
+      writePtrConst(os, f->getTableIndex(), is64, "offset");
     } else {
       assert(isa<UndefinedData>(sym) || isa<SharedData>(sym));
       continue;
@@ -614,7 +645,7 @@ void ElemSection::writeBody() {
   uint32_t tableIndex = ctx.arg.tableBase;
   for (const FunctionSymbol *sym : indirectFunctions) {
     assert(sym->getTableIndex() == tableIndex);
-    (void) tableIndex;
+    (void)tableIndex;
     writeUleb128(os, sym->getFunctionIndex(), "function index");
     ++tableIndex;
   }
@@ -631,6 +662,13 @@ void DataCountSection::writeBody() {
 }
 
 bool DataCountSection::isNeeded() const {
+  // The datacount section is only required under certain circumstance.
+  // Specifically, when the module includes bulk memory instructions that deal
+  // with passive data segments. i.e. memory.init/data.drop.
+  // LLVM does not yet have relocation types for data segments so these
+  // instructions are not yet supported in input files.  However, in the case
+  // of shared memory, lld itself will generate these instructions as part of
+  // `__wasm_init_memory`. See Writer::createInitMemoryFunction.
   return numSegments && ctx.arg.sharedMemory;
 }
 
@@ -960,4 +998,4 @@ void BuildIdSection::writeBuildId(llvm::ArrayRef<uint8_t> buf) {
   memcpy(hashPlaceholderPtr, buf.data(), hashSize);
 }
 
-} // namespace wasm::lld
+} // namespace lld::wasm

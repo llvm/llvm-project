@@ -131,6 +131,7 @@ public:
   InlineCommandComment *actOnInlineCommand(SourceLocation CommandLocBegin,
                                            SourceLocation CommandLocEnd,
                                            unsigned CommandID,
+                                           CommandMarkerKind CommandMarker,
                                            ArrayRef<Comment::Argument> Args);
 
   InlineContentComment *actOnUnknownCommand(SourceLocation LocBegin,
@@ -210,6 +211,7 @@ private:
   bool isObjCMethodDecl();
   bool isObjCPropertyDecl();
   bool isTemplateOrSpecialization();
+  bool isExplicitFunctionTemplateInstantiation();
   bool isRecordLikeDecl();
   bool isClassOrStructDecl();
   /// \return \c true if the declaration that this comment is attached to

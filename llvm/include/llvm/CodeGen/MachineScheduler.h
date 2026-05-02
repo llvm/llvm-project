@@ -65,7 +65,7 @@
 //
 // void <SubTarget>Subtarget::
 // overrideSchedPolicy(MachineSchedPolicy &Policy,
-//                     unsigned NumRegionInstrs) const {
+//                     const SchedRegion &Region) const {
 //   Policy.<Flag> = true;
 // }
 //
@@ -82,6 +82,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachinePassRegistry.h"
 #include "llvm/CodeGen/RegisterPressure.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
@@ -117,6 +118,7 @@ enum Direction {
 
 LLVM_ABI extern cl::opt<MISched::Direction> PreRADirection;
 LLVM_ABI extern cl::opt<bool> VerifyScheduling;
+
 #ifndef NDEBUG
 extern cl::opt<bool> ViewMISchedDAGs;
 extern cl::opt<bool> PrintDAGs;
@@ -147,6 +149,7 @@ struct LLVM_ABI MachineSchedContext {
   const TargetMachine *TM = nullptr;
   AAResults *AA = nullptr;
   LiveIntervals *LIS = nullptr;
+  MachineBlockFrequencyInfo *MBFI = nullptr;
 
   RegisterClassInfo *RegClassInfo;
 
@@ -215,7 +218,26 @@ struct MachineSchedPolicy {
   // Compute DFSResult for use in scheduling heuristics.
   bool ComputeDFSResult = false;
 
+  // If enabled, some extra cases of physreg defs will be biased towards user.
+  bool BiasPRegsExtra = false;
+
   MachineSchedPolicy() = default;
+};
+
+/// A region of an MBB for scheduling.
+struct SchedRegion {
+  /// RegionBegin is the first instruction in the scheduling region, and
+  /// RegionEnd is either MBB->end() or the scheduling boundary after the
+  /// last instruction in the scheduling region. These iterators cannot refer
+  /// to instructions outside of the identified scheduling region because
+  /// those may be reordered before scheduling this region.
+  MachineBasicBlock::iterator RegionBegin;
+  MachineBasicBlock::iterator RegionEnd;
+  unsigned NumRegionInstrs;
+
+  SchedRegion(MachineBasicBlock::iterator B, MachineBasicBlock::iterator E,
+              unsigned N)
+      : RegionBegin(B), RegionEnd(E), NumRegionInstrs(N) {}
 };
 
 /// MachineSchedStrategy - Interface to the scheduling algorithm used by
@@ -293,6 +315,7 @@ class LLVM_ABI ScheduleDAGMI : public ScheduleDAGInstrs {
 protected:
   AAResults *AA;
   LiveIntervals *LIS;
+  MachineBlockFrequencyInfo *MBFI;
   std::unique_ptr<MachineSchedStrategy> SchedImpl;
 
   /// Ordered list of DAG postprocessing steps.
@@ -314,7 +337,7 @@ public:
   ScheduleDAGMI(MachineSchedContext *C, std::unique_ptr<MachineSchedStrategy> S,
                 bool RemoveKillFlags)
       : ScheduleDAGInstrs(*C->MF, C->MLI, RemoveKillFlags), AA(C->AA),
-        LIS(C->LIS), SchedImpl(std::move(S)) {}
+        LIS(C->LIS), MBFI(C->MBFI), SchedImpl(std::move(S)) {}
 
   // Provide a vtable anchor
   ~ScheduleDAGMI() override;
@@ -813,7 +836,7 @@ private:
 
 public:
   // constructor for empty set
-  explicit ResourceSegments(){};
+  explicit ResourceSegments() = default;
   bool empty() const { return _Intervals.empty(); }
   explicit ResourceSegments(const std::list<IntervalTy> &Intervals)
       : _Intervals(Intervals) {
@@ -1022,7 +1045,7 @@ public:
   getNextResourceCycle(const MCSchedClassDesc *SC, unsigned PIdx,
                        unsigned ReleaseAtCycle, unsigned AcquireAtCycle);
 
-  bool isUnbufferedGroup(unsigned PIdx) const {
+  bool isReservedGroup(unsigned PIdx) const {
     return SchedModel->getProcResource(PIdx)->SubUnitsIdxBegin &&
            !SchedModel->getProcResource(PIdx)->BufferSize;
   }
@@ -1213,6 +1236,7 @@ private:
 };
 
 // Utility functions used by heuristics in tryCandidate().
+LLVM_ABI unsigned computeRemLatency(SchedBoundary &CurrZone);
 LLVM_ABI bool tryLess(int TryVal, int CandVal,
                       GenericSchedulerBase::SchedCandidate &TryCand,
                       GenericSchedulerBase::SchedCandidate &Cand,
@@ -1231,8 +1255,12 @@ LLVM_ABI bool tryPressure(const PressureChange &TryP,
                           GenericSchedulerBase::CandReason Reason,
                           const TargetRegisterInfo *TRI,
                           const MachineFunction &MF);
+LLVM_ABI bool tryBiasPhysRegs(GenericSchedulerBase::SchedCandidate &TryCand,
+                              GenericSchedulerBase::SchedCandidate &Cand,
+                              SchedBoundary *Zone, bool BiasPRegsExtra);
 LLVM_ABI unsigned getWeakLeft(const SUnit *SU, bool isTop);
-LLVM_ABI int biasPhysReg(const SUnit *SU, bool isTop);
+LLVM_ABI int biasPhysReg(const SUnit *SU, bool isTop,
+                         bool BiasPRegsExtra = false);
 
 /// GenericScheduler shrinks the unscheduled zone using heuristics to balance
 /// the schedule.
@@ -1287,8 +1315,8 @@ protected:
   SchedBoundary Top;
   SchedBoundary Bot;
 
-  ClusterInfo *TopCluster;
-  ClusterInfo *BotCluster;
+  unsigned TopClusterID;
+  unsigned BotClusterID;
 
   /// Candidate last picked from Top boundary.
   SchedCandidate TopCand;
@@ -1330,8 +1358,8 @@ protected:
   /// Candidate last picked from Bot boundary.
   SchedCandidate BotCand;
 
-  ClusterInfo *TopCluster;
-  ClusterInfo *BotCluster;
+  unsigned TopClusterID;
+  unsigned BotClusterID;
 
 public:
   PostGenericScheduler(const MachineSchedContext *C)
@@ -1403,7 +1431,7 @@ createCopyConstrainDAGMutation(const TargetInstrInfo *TII,
 /// default scheduler if the target does not set a default.
 /// Adds default DAG mutations.
 template <typename Strategy = GenericScheduler>
-LLVM_ABI ScheduleDAGMILive *createSchedLive(MachineSchedContext *C) {
+ScheduleDAGMILive *createSchedLive(MachineSchedContext *C) {
   ScheduleDAGMILive *DAG =
       new ScheduleDAGMILive(C, std::make_unique<Strategy>(C));
   // Register DAG post-processors.
@@ -1423,7 +1451,7 @@ LLVM_ABI ScheduleDAGMILive *createSchedLive(MachineSchedContext *C) {
 
 /// Create a generic scheduler with no vreg liveness or DAG mutation passes.
 template <typename Strategy = PostGenericScheduler>
-LLVM_ABI ScheduleDAGMI *createSchedPostRA(MachineSchedContext *C) {
+ScheduleDAGMI *createSchedPostRA(MachineSchedContext *C) {
   ScheduleDAGMI *DAG = new ScheduleDAGMI(C, std::make_unique<Strategy>(C),
                                          /*RemoveKillFlags=*/true);
   const TargetSubtargetInfo &STI = C->MF->getSubtarget();

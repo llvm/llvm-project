@@ -58,6 +58,9 @@ class LVDWARFReader final : public LVBinaryReader {
   bool FoundLowPC = false;
   bool FoundHighPC = false;
 
+  // The value is updated for each Compile Unit that is processed.
+  std::optional<LVAddress> TombstoneAddress;
+
   // Cross references (Elements).
   using LVElementSet = std::unordered_set<LVElement *>;
   struct LVElementEntry {
@@ -120,12 +123,18 @@ public:
         Obj(Obj) {}
   LVDWARFReader(const LVDWARFReader &) = delete;
   LVDWARFReader &operator=(const LVDWARFReader &) = delete;
-  ~LVDWARFReader() = default;
+  ~LVDWARFReader() override = default;
 
   LVAddress getCUBaseAddress() const { return CUBaseAddress; }
   void setCUBaseAddress(LVAddress Address) { CUBaseAddress = Address; }
   LVAddress getCUHighAddress() const { return CUHighAddress; }
   void setCUHighAddress(LVAddress Address) { CUHighAddress = Address; }
+
+  void setTombstoneAddress(LVAddress Address) { TombstoneAddress = Address; }
+  LVAddress getTombstoneAddress() const {
+    assert(TombstoneAddress && "Unset tombstone value");
+    return TombstoneAddress.value();
+  }
 
   const LVSymbols &GetSymbolsWithLocations() const {
     return SymbolsWithLocations;

@@ -62,6 +62,7 @@
 #include "flang-rt/runtime/stat.h"
 #include "flang-rt/runtime/type-info.h"
 #include "flang/Common/api-attrs.h"
+#include "flang/Common/optional.h"
 #include "flang/Runtime/freestanding-tools.h"
 #include <flang/Common/variant.h>
 
@@ -73,6 +74,8 @@ struct NonTbpDefinedIoTable;
 namespace Fortran::runtime {
 class Terminator;
 class WorkQueue;
+
+RT_OFFLOAD_API_GROUP_BEGIN
 
 // Ticket worker base classes
 
@@ -122,7 +125,7 @@ public:
 
 protected:
   const Descriptor &instance_, *from_{nullptr};
-  std::size_t elements_{instance_.Elements()};
+  std::size_t elements_{instance_.InlineElements()};
   std::size_t elementAt_{0};
   SubscriptValue subscripts_[common::maxRank];
   SubscriptValue fromSubscripts_[common::maxRank];
@@ -131,11 +134,19 @@ protected:
 // Base class for ticket workers that operate over derived type components.
 class Componentwise {
 public:
-  RT_API_ATTRS Componentwise(const typeInfo::DerivedType &);
+  RT_API_ATTRS Componentwise(const typeInfo::DerivedType &derived)
+      : derived_{derived}, components_{derived_.component().InlineElements()} {
+    GetFirstComponent();
+  }
+
   RT_API_ATTRS bool IsComplete() const { return componentAt_ >= components_; }
   RT_API_ATTRS void Advance() {
     ++componentAt_;
-    GetComponent();
+    if (IsComplete()) {
+      component_ = nullptr;
+    } else {
+      ++component_;
+    }
   }
   RT_API_ATTRS void SkipToEnd() {
     component_ = nullptr;
@@ -144,15 +155,21 @@ public:
   RT_API_ATTRS void Reset() {
     component_ = nullptr;
     componentAt_ = 0;
-    GetComponent();
+    GetFirstComponent();
   }
-  RT_API_ATTRS void GetComponent();
 
 protected:
   const typeInfo::DerivedType &derived_;
   std::size_t components_{0}, componentAt_{0};
   const typeInfo::Component *component_{nullptr};
   StaticDescriptor<common::maxRank, true, 0> componentDescriptor_;
+
+private:
+  RT_API_ATTRS void GetFirstComponent() {
+    if (components_ > 0) {
+      component_ = derived_.component().OffsetElement<typeInfo::Component>();
+    }
+  }
 };
 
 // Base class for ticket workers that operate over derived type components
@@ -228,16 +245,19 @@ protected:
 
 // Ticket worker classes
 
-// Implements derived type instance initialization
+// Implements derived type instance initialization.
 class InitializeTicket : public ImmediateTicketRunner<InitializeTicket>,
-                         private ComponentsOverElements {
+                         private ElementsOverComponents {
 public:
-  RT_API_ATTRS InitializeTicket(
-      const Descriptor &instance, const typeInfo::DerivedType &derived)
+  RT_API_ATTRS InitializeTicket(const Descriptor &instance,
+      const typeInfo::DerivedType &derived, MemcpyFct memcpyFct)
       : ImmediateTicketRunner<InitializeTicket>{*this},
-        ComponentsOverElements{instance, derived} {}
+        ElementsOverComponents{instance, derived}, memcpyFct_{memcpyFct} {}
   RT_API_ATTRS int Begin(WorkQueue &);
   RT_API_ATTRS int Continue(WorkQueue &);
+
+private:
+  MemcpyFct memcpyFct_;
 };
 
 // Initializes one derived type instance from the value of another
@@ -283,12 +303,14 @@ public:
   RT_API_ATTRS DestroyTicket(const Descriptor &instance,
       const typeInfo::DerivedType &derived, bool finalize)
       : ImmediateTicketRunner<DestroyTicket>{*this},
-        ComponentsOverElements{instance, derived}, finalize_{finalize} {}
+        ComponentsOverElements{instance, derived}, finalize_{finalize},
+        fixedStride_{instance.FixedStride()} {}
   RT_API_ATTRS int Begin(WorkQueue &);
   RT_API_ATTRS int Continue(WorkQueue &);
 
 private:
   bool finalize_{false};
+  common::optional<SubscriptValue> fixedStride_;
 };
 
 // Implements general intrinsic assignment
@@ -302,11 +324,11 @@ public:
   RT_API_ATTRS int Continue(WorkQueue &);
 
 private:
+  RT_API_ATTRS Descriptor &GetTempDescriptor();
   RT_API_ATTRS bool IsSimpleMemmove() const {
     return !toDerived_ && to_.rank() == from_->rank() && to_.IsContiguous() &&
         from_->IsContiguous() && to_.ElementBytes() == from_->ElementBytes();
   }
-  RT_API_ATTRS Descriptor &GetTempDescriptor();
 
   Descriptor &to_;
   const Descriptor *from_{nullptr};
@@ -361,6 +383,7 @@ public:
       : ImmediateTicketRunner<DescriptorIoTicket>(*this),
         Elementwise{descriptor}, io_{io}, table_{table},
         anyIoTookPlace_{anyIoTookPlace} {}
+
   RT_API_ATTRS int Begin(WorkQueue &);
   RT_API_ATTRS int Continue(WorkQueue &);
   RT_API_ATTRS bool &anyIoTookPlace() { return anyIoTookPlace_; }
@@ -428,12 +451,19 @@ public:
 
   // APIs for particular tasks.  These can return StatOk if the work is
   // completed immediately.
-  RT_API_ATTRS int BeginInitialize(
-      const Descriptor &descriptor, const typeInfo::DerivedType &derived) {
+#ifdef RT_DEVICE_COMPILATION
+  RT_API_ATTRS int BeginInitialize(const Descriptor &descriptor,
+      const typeInfo::DerivedType &derived,
+      MemcpyFct memcpyFct = &MemcpyWrapper) {
+#else
+  RT_API_ATTRS int BeginInitialize(const Descriptor &descriptor,
+      const typeInfo::DerivedType &derived,
+      MemcpyFct memcpyFct = &Fortran::runtime::memcpy) {
+#endif
     if (runTicketsImmediately_) {
-      return InitializeTicket{descriptor, derived}.Run(*this);
+      return InitializeTicket{descriptor, derived, memcpyFct}.Run(*this);
     } else {
-      StartTicket().u.emplace<InitializeTicket>(descriptor, derived);
+      StartTicket().u.emplace<InitializeTicket>(descriptor, derived, memcpyFct);
       return StatContinue;
     }
   }
@@ -549,7 +579,10 @@ private:
   TicketList *first_{nullptr}, *last_{nullptr}, *insertAfter_{nullptr};
   TicketList static_[numStatic_];
   TicketList *firstFree_{static_};
+  bool anyDynamicAllocation_{false};
 };
+
+RT_OFFLOAD_API_GROUP_END
 
 } // namespace Fortran::runtime
 #endif // FLANG_RT_RUNTIME_WORK_QUEUE_H_

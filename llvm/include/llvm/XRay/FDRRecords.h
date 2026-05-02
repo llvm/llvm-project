@@ -23,8 +23,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/XRay/XRayRecord.h"
 
-namespace llvm {
-namespace xray {
+namespace llvm::xray {
 
 class RecordVisitor;
 class RecordInitializer;
@@ -102,7 +101,7 @@ public:
 
   MetadataType metadataType() const { return MT; }
 
-  virtual ~MetadataRecord() = default;
+  ~MetadataRecord() override = default;
 };
 
 // What follows are specific Metadata record types which encapsulate the
@@ -444,7 +443,6 @@ public:
   Error visit(TypedEventRecord &) override;
 };
 
-} // namespace xray
-} // namespace llvm
+} // namespace llvm::xray
 
 #endif // LLVM_XRAY_FDRRECORDS_H

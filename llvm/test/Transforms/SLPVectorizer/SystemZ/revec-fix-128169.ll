@@ -25,23 +25,19 @@ define void @e(<4 x i16> %0) {
 ;
 ; THRESH-LABEL: @e(
 ; THRESH-NEXT:  entry:
-; THRESH-NEXT:    [[TMP1:%.*]] = call <8 x i16> @llvm.vector.insert.v8i16.v4i16(<8 x i16> poison, <4 x i16> zeroinitializer, i64 0)
-; THRESH-NEXT:    [[TMP2:%.*]] = call <8 x i16> @llvm.vector.insert.v8i16.v4i16(<8 x i16> [[TMP1]], <4 x i16> zeroinitializer, i64 4)
-; THRESH-NEXT:    [[TMP3:%.*]] = call <8 x i16> @llvm.vector.insert.v8i16.v4i16(<8 x i16> poison, <4 x i16> zeroinitializer, i64 4)
-; THRESH-NEXT:    [[TMP4:%.*]] = call <16 x i16> @llvm.vector.insert.v16i16.v4i16(<16 x i16> poison, <4 x i16> zeroinitializer, i64 0)
-; THRESH-NEXT:    [[TMP5:%.*]] = call <16 x i16> @llvm.vector.insert.v16i16.v4i16(<16 x i16> [[TMP4]], <4 x i16> zeroinitializer, i64 4)
-; THRESH-NEXT:    [[TMP6:%.*]] = call <16 x i16> @llvm.vector.insert.v16i16.v4i16(<16 x i16> [[TMP5]], <4 x i16> zeroinitializer, i64 8)
-; THRESH-NEXT:    [[TMP7:%.*]] = call <16 x i16> @llvm.vector.insert.v16i16.v4i16(<16 x i16> [[TMP6]], <4 x i16> zeroinitializer, i64 12)
 ; THRESH-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; THRESH:       vector.body:
 ; THRESH-NEXT:    [[VEC_IND:%.*]] = phi <4 x i16> [ zeroinitializer, [[ENTRY:%.*]] ], [ zeroinitializer, [[VECTOR_BODY]] ]
 ; THRESH-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[ENTRY]] ], [ [[TMP26:%.*]], [[VECTOR_BODY]] ]
-; THRESH-NEXT:    [[TMP8:%.*]] = call <8 x i16> @llvm.vector.insert.v8i16.v4i16(<8 x i16> [[TMP3]], <4 x i16> [[VEC_IND]], i64 0)
-; THRESH-NEXT:    [[TMP9:%.*]] = add <8 x i16> [[TMP2]], [[TMP8]]
+; THRESH-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i16> [[VEC_IND]], <4 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; THRESH-NEXT:    [[TMP8:%.*]] = shufflevector <8 x i16> <i16 undef, i16 undef, i16 undef, i16 undef, i16 0, i16 0, i16 0, i16 0>, <8 x i16> [[TMP1]], <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7>
+; THRESH-NEXT:    [[TMP3:%.*]] = add <8 x i16> zeroinitializer, [[TMP8]]
 ; THRESH-NEXT:    [[TMP10:%.*]] = shufflevector <8 x i16> [[TMP8]], <8 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; THRESH-NEXT:    [[TMP11:%.*]] = call <16 x i16> @llvm.vector.insert.v16i16.v4i16(<16 x i16> [[TMP10]], <4 x i16> [[TMP0:%.*]], i64 4)
-; THRESH-NEXT:    [[TMP12:%.*]] = call <16 x i16> @llvm.vector.insert.v16i16.v8i16(<16 x i16> [[TMP11]], <8 x i16> [[TMP9]], i64 8)
-; THRESH-NEXT:    [[TMP13:%.*]] = icmp sgt <16 x i16> [[TMP12]], [[TMP7]]
+; THRESH-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i16> [[TMP0:%.*]], <4 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; THRESH-NEXT:    [[TMP6:%.*]] = shufflevector <16 x i16> [[TMP10]], <16 x i16> [[TMP5]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 16, i32 17, i32 18, i32 19, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+; THRESH-NEXT:    [[TMP7:%.*]] = shufflevector <8 x i16> [[TMP3]], <8 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; THRESH-NEXT:    [[TMP9:%.*]] = shufflevector <16 x i16> [[TMP6]], <16 x i16> [[TMP7]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
+; THRESH-NEXT:    [[TMP13:%.*]] = icmp sgt <16 x i16> [[TMP9]], zeroinitializer
 ; THRESH-NEXT:    [[TMP14:%.*]] = shufflevector <16 x i1> [[TMP13]], <16 x i1> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
 ; THRESH-NEXT:    [[TMP15:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP14]])
 ; THRESH-NEXT:    [[TMP23:%.*]] = insertelement <4 x i1> poison, i1 [[TMP15]], i64 0

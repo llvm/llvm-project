@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++2c -verify %s
+// RUN: %clang_cc1 -std=c++2c -verify %s -fexperimental-new-constant-interpreter
 
 
 namespace std {
@@ -25,7 +26,7 @@ consteval int conversion() {
 }
 
 consteval int indeterminate() {
-    int * indeterminate;
+    int * indeterminate; // expected-note {{declared here}}
     new (indeterminate) int(0);
     // expected-note@-1 {{read of uninitialized object is not allowed in a constant expression}}
     return 0;
@@ -104,7 +105,7 @@ static_assert(blah()); // expected-error {{not an integral constant expression}}
                        // expected-note {{in call to 'blah()'}}
 
 constexpr int *get_indeterminate() {
-  int *evil;
+  int *evil; // expected-note {{declared here}}
   return evil; // expected-note {{read of uninitialized object is not allowed in a constant expression}}
 }
 

@@ -81,6 +81,15 @@ enum : unsigned {
   WASM_TYPE_NORESULT = 0x40, // for blocks with no result values
 };
 
+// Memory ordering encodings for atomic instructions.
+enum : unsigned {
+  WASM_MEM_ORDER_SEQ_CST = 0x00,
+  WASM_MEM_ORDER_ACQ_REL = 0x01,
+  // RMW/CMPXCHG operations have 2 orderings but they must currently match.
+  WASM_MEM_ORDER_RMW_ACQ_REL = 0x11,
+};
+const unsigned WASM_MEMARG_HAS_MEM_ORDER = 0x20;
+
 // Kinds of externals (for imports and exports).
 enum : unsigned {
   WASM_EXTERNAL_FUNCTION = 0x0,
@@ -253,7 +262,7 @@ const unsigned WASM_SYMBOL_ABSOLUTE = 0x200;
 
 #define WASM_RELOC(name, value) name = value,
 
-enum : unsigned {
+enum WasmRelocType : unsigned {
 #include "WasmRelocs.def"
 };
 
@@ -452,6 +461,8 @@ struct WasmRelocation {
   uint32_t Index;  // Index into either symbol or type index space.
   uint64_t Offset; // Offset from the start of the section.
   int64_t Addend;  // A value to add to the symbol.
+
+  WasmRelocType getType() const { return static_cast<WasmRelocType>(Type); }
 };
 
 struct WasmInitFunc {

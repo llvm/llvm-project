@@ -197,9 +197,79 @@ ChangeStatus &llvm::operator&=(ChangeStatus &L, ChangeStatus R) {
 }
 ///}
 
+namespace {
+/// NVPTX/AMDGPU address space values (shared between both targets)
+enum class NVPTXAMDGPUAddressSpace : unsigned {
+  Generic = 0,
+  Global = 1,
+  Shared = 3,
+  Constant = 4,
+  Local = 5,
+};
+
+/// SPIRV address space values (StorageClass)
+enum class SPIRVAddressSpace : unsigned {
+  Local = 0,    // Function (private/local)
+  Global = 1,   // CrossWorkgroup (global)
+  Constant = 2, // UniformConstant (constant)
+  Shared = 3,   // Workgroup (shared)
+  Generic = 4,  // Generic
+};
+} // namespace
+
 bool AA::isGPU(const Module &M) {
   Triple T(M.getTargetTriple());
   return T.isGPU();
+}
+
+bool AA::isGPUGenericAddressSpace(const Module &M, unsigned AS) {
+  assert(AA::isGPU(M) && "Only callable on GPU targets");
+  Triple T(M.getTargetTriple());
+
+  if (T.isSPIRV())
+    return AS == static_cast<unsigned>(SPIRVAddressSpace::Generic);
+
+  return AS == static_cast<unsigned>(NVPTXAMDGPUAddressSpace::Generic);
+}
+
+bool AA::isGPUGlobalAddressSpace(const Module &M, unsigned AS) {
+  assert(AA::isGPU(M) && "Only callable on GPU targets");
+  Triple T(M.getTargetTriple());
+
+  if (T.isSPIRV())
+    return AS == static_cast<unsigned>(SPIRVAddressSpace::Global);
+
+  return AS == static_cast<unsigned>(NVPTXAMDGPUAddressSpace::Global);
+}
+
+bool AA::isGPUSharedAddressSpace(const Module &M, unsigned AS) {
+  assert(AA::isGPU(M) && "Only callable on GPU targets");
+  Triple T(M.getTargetTriple());
+
+  if (T.isSPIRV())
+    return AS == static_cast<unsigned>(SPIRVAddressSpace::Shared);
+
+  return AS == static_cast<unsigned>(NVPTXAMDGPUAddressSpace::Shared);
+}
+
+bool AA::isGPUConstantAddressSpace(const Module &M, unsigned AS) {
+  assert(AA::isGPU(M) && "Only callable on GPU targets");
+  Triple T(M.getTargetTriple());
+
+  if (T.isSPIRV())
+    return AS == static_cast<unsigned>(SPIRVAddressSpace::Constant);
+
+  return AS == static_cast<unsigned>(NVPTXAMDGPUAddressSpace::Constant);
+}
+
+bool AA::isGPULocalAddressSpace(const Module &M, unsigned AS) {
+  assert(AA::isGPU(M) && "Only callable on GPU targets");
+  Triple T(M.getTargetTriple());
+
+  if (T.isSPIRV())
+    return AS == static_cast<unsigned>(SPIRVAddressSpace::Local);
+
+  return AS == static_cast<unsigned>(NVPTXAMDGPUAddressSpace::Local);
 }
 
 bool AA::isNoSyncInst(Attributor &A, const Instruction &I,
@@ -272,6 +342,9 @@ AA::getInitialValueForObj(Attributor &A, const AbstractAttribute &QueryingAA,
   }
 
   if (RangePtr && !RangePtr->offsetOrSizeAreUnknown()) {
+    int64_t StorageSize = DL.getTypeStoreSize(&Ty);
+    if (StorageSize != RangePtr->Size)
+      return nullptr;
     APInt Offset = APInt(64, RangePtr->Offset);
     return ConstantFoldLoadFromConst(Initializer, &Ty, Offset, DL);
   }
@@ -793,7 +866,7 @@ isPotentiallyReachable(Attributor &A, const Instruction &FromI,
       if (isa<InvokeInst>(CB))
         return false;
 
-      Instruction *Inst = CB->getNextNonDebugInstruction();
+      Instruction *Inst = CB->getNextNode();
       Worklist.push_back(Inst);
       return true;
     };
@@ -869,15 +942,16 @@ bool AA::isAssumedThreadLocalObject(Attributor &A, Value &Obj,
     }
   }
 
-  if (A.getInfoCache().targetIsGPU()) {
-    if (Obj.getType()->getPointerAddressSpace() ==
-        (int)AA::GPUAddressSpace::Local) {
+  if (A.getInfoCache().IsTargetGPU()) {
+    if (AA::isGPULocalAddressSpace(A.getInfoCache().getModule(),
+                                   Obj.getType()->getPointerAddressSpace())) {
       LLVM_DEBUG(dbgs() << "[AA] Object '" << Obj
                         << "' is thread local; GPU local memory\n");
       return true;
     }
-    if (Obj.getType()->getPointerAddressSpace() ==
-        (int)AA::GPUAddressSpace::Constant) {
+    if (AA::isGPUConstantAddressSpace(
+            A.getInfoCache().getModule(),
+            Obj.getType()->getPointerAddressSpace())) {
       LLVM_DEBUG(dbgs() << "[AA] Object '" << Obj
                         << "' is thread local; GPU constant memory\n");
       return true;
@@ -987,6 +1061,13 @@ static bool addIfNotExistent(LLVMContext &Ctx, const Attribute &Attr,
       if (!ForceReplace && isEqualOrWorse(Attr, AttrSet.getAttribute(Kind)))
         return false;
     }
+    AB.addAttribute(Attr);
+    return true;
+  }
+  if (Attr.isConstantRangeAttribute()) {
+    Attribute::AttrKind Kind = Attr.getKindAsEnum();
+    if (!ForceReplace && AttrSet.hasAttribute(Kind))
+      return false;
     AB.addAttribute(Attr);
     return true;
   }
@@ -1126,13 +1207,11 @@ Attributor::updateAttrMap(const IRPosition &IRP, ArrayRef<DescTy> AttrDescs,
     break;
   };
 
-  AttributeList AL;
+  AttributeList AL = IRP.getAttrList();
   Value *AttrListAnchor = IRP.getAttrListAnchor();
-  auto It = AttrsMap.find(AttrListAnchor);
-  if (It == AttrsMap.end())
-    AL = IRP.getAttrList();
-  else
-    AL = It->getSecond();
+  auto [Iter, Inserted] = AttrsMap.insert({AttrListAnchor, AL});
+  if (!Inserted)
+    AL = Iter->second;
 
   LLVMContext &Ctx = IRP.getAnchorValue().getContext();
   auto AttrIdx = IRP.getAttrIdx();
@@ -1150,8 +1229,9 @@ Attributor::updateAttrMap(const IRPosition &IRP, ArrayRef<DescTy> AttrDescs,
 
   AL = AL.removeAttributesAtIndex(Ctx, AttrIdx, AM);
   AL = AL.addAttributesAtIndex(Ctx, AttrIdx, AB);
-  AttrsMap[AttrListAnchor] = AL;
-  return ChangeStatus::CHANGED;
+
+  Iter->second = AL;
+  return HasChanged;
 }
 
 bool Attributor::hasAttr(const IRPosition &IRP,
@@ -2462,7 +2542,7 @@ ChangeStatus Attributor::cleanupIR() {
           Callee->removeParamAttr(Idx, Attribute::NoUndef);
       }
     }
-    if (isa<Constant>(NewV) && isa<BranchInst>(U->getUser())) {
+    if (isa<Constant>(NewV) && isa<CondBrInst>(U->getUser())) {
       Instruction *UserI = cast<Instruction>(U->getUser());
       if (isa<UndefValue>(NewV)) {
         ToBeChangedToUnreachableInsts.insert(UserI);
@@ -3245,7 +3325,8 @@ void InformationCache::initializeInformationCache(const Function &CF,
     case Instruction::CatchSwitch:
     case Instruction::AtomicRMW:
     case Instruction::AtomicCmpXchg:
-    case Instruction::Br:
+    case Instruction::UncondBr:
+    case Instruction::CondBr:
     case Instruction::Resume:
     case Instruction::Ret:
     case Instruction::Load:
@@ -3285,7 +3366,7 @@ InformationCache::getIndirectlyCallableFunctions(Attributor &A) const {
 }
 
 std::optional<unsigned> InformationCache::getFlatAddressSpace() const {
-  if (TargetTriple.isGPU())
+  if (IsTargetGPU())
     return 0;
   return std::nullopt;
 }
@@ -3330,9 +3411,9 @@ void Attributor::checkAndQueryIRAttr(const IRPosition &IRP, AttributeSet Attrs,
 }
 
 void Attributor::identifyDefaultAbstractAttributes(Function &F) {
+  assert(!F.isDeclaration());
+
   if (!VisitedFunctions.insert(&F).second)
-    return;
-  if (F.isDeclaration())
     return;
 
   // In non-module runs we need to look at the call sites of a function to
@@ -3612,6 +3693,8 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
       if (SimplifyAllLoads)
         getAssumedSimplified(IRPosition::value(I), nullptr,
                              UsedAssumedInformation, AA::Intraprocedural);
+      getOrCreateAAFor<AAInvariantLoadPointer>(
+          IRPosition::value(*LI->getPointerOperand()));
       getOrCreateAAFor<AAAddressSpace>(
           IRPosition::value(*LI->getPointerOperand()));
     } else {
@@ -3864,6 +3947,9 @@ static bool runAttributorOnFunctions(InformationCache &InfoCache,
   }
 
   for (Function *F : Functions) {
+    if (F->isDeclaration())
+      continue;
+
     if (F->hasExactDefinition())
       NumFnWithExactDefinition++;
     else
@@ -3919,13 +4005,17 @@ static bool runAttributorLightOnFunctions(InformationCache &InfoCache,
        &AANoFree::ID, &AANoReturn::ID, &AAMemoryLocation::ID,
        &AAMemoryBehavior::ID, &AAUnderlyingObjects::ID, &AANoCapture::ID,
        &AAInterFnReachability::ID, &AAIntraFnReachability::ID, &AACallEdges::ID,
-       &AANoFPClass::ID, &AAMustProgress::ID, &AANonNull::ID});
+       &AANoFPClass::ID, &AAMustProgress::ID, &AANonNull::ID,
+       &AADenormalFPMath::ID});
   AC.Allowed = &Allowed;
   AC.UseLiveness = false;
 
   Attributor A(Functions, InfoCache, AC);
 
   for (Function *F : Functions) {
+    if (F->isDeclaration())
+      continue;
+
     if (F->hasExactDefinition())
       NumFnWithExactDefinition++;
     else

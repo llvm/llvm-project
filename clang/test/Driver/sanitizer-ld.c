@@ -115,7 +115,7 @@
 // RUN:     --sysroot=%S/Inputs/basic_freebsd_tree \
 // RUN:   | %{filecheck} --check-prefix=CHECK-ASAN-FREEBSD
 //
-// CHECK-ASAN-FREEBSD: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
+// CHECK-ASAN-FREEBSD: "{{(.*[^.0-9A-Z_a-z])?}}ld.lld{{(.exe)?}}"
 // CHECK-ASAN-FREEBSD-NOT: "-lc"
 // CHECK-ASAN-FREEBSD: freebsd{{/|\\+}}libclang_rt.asan_static.a"
 // CHECK-ASAN-FREEBSD: freebsd{{/|\\+}}libclang_rt.asan.a"
@@ -130,7 +130,7 @@
 // RUN:     --sysroot=%S/Inputs/basic_freebsd_tree \
 // RUN:   | %{filecheck} --check-prefix=CHECK-ASAN-FREEBSD-LDL
 //
-// CHECK-ASAN-FREEBSD-LDL: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
+// CHECK-ASAN-FREEBSD-LDL: "{{(.*[^.0-9A-Z_a-z])?}}ld.lld{{(.exe)?}}"
 // CHECK-ASAN-FREEBSD-LDL-NOT: "-ldl"
 // CHECK-ASAN-FREEBSD-LDL: "--whole-archive" "{{.*}}libclang_rt.asan_static.a" "--no-whole-archive"
 // CHECK-ASAN-FREEBSD-LDL: "--whole-archive" "{{.*}}libclang_rt.asan.a" "--no-whole-archive"
@@ -371,6 +371,16 @@
 // CHECK-TYSAN-DARWIN-CXX: "{{.*}}ld{{(.exe)?}}"
 // CHECK-TYSAN-DARWIN-CXX: libclang_rt.tysan_osx_dynamic.dylib
 // CHECK-TYSAN-DARWIN-CXX-NOT: -lc++abi
+
+// RUN: %clang %s -### -o %t.o 2>&1 \
+// RUN:     --target=hexagon-unknown-linux-musl -fuse-ld=ld \
+// RUN:     -fsanitize=type \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | %{filecheck} --check-prefix=CHECK-TYSAN-HEXAGON
+//
+// CHECK-TYSAN-HEXAGON: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.lld)?(.exe)?}}"
+// CHECK-TYSAN-HEXAGON: "--whole-archive" "{{.*}}libclang_rt.tysan{{[^.]*}}.a" "--no-whole-archive"
 
 // RUN: %clangxx -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld -stdlib=platform -lstdc++ \
@@ -1033,7 +1043,7 @@
 // RUN:     --target=riscv32-unknown-elf -fuse-ld=ld \
 // RUN:   | %{filecheck} --check-prefix=CHECK-SHADOWCALLSTACK-ELF-RISCV32
 // CHECK-SHADOWCALLSTACK-ELF-RISCV32-NOT: error:
-// CHECK-SHADOWCALLSTACK-ELF-RISCV32: "{{(.*[^-.0-9A-Z_a-z])?}}ld.lld{{(.exe)?}}"
+// CHECK-SHADOWCALLSTACK-ELF-RISCV32: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
 
 // RUN: %clang -fsanitize=shadow-call-stack -### %s 2>&1 \
 // RUN:     --target=riscv64-unknown-linux -fuse-ld=ld \
@@ -1369,3 +1379,37 @@
 // CHECK-DSO-SHARED-HWASAN-AARCH64-LINUX-NOT: "-lresolv"
 // CHECK-DSO-SHARED-HWASAN-AARCH64-LINUX-NOT: "--export-dynamic"
 // CHECK-DSO-SHARED-HWASAN-AARCH64-LINUX-NOT: "--dynamic-list"
+
+// RUN: %clang -fsanitize=address,undefined -r -### %s 2>&1 \
+// RUN:     --target=x86_64-unknown-linux -fuse-ld=ld \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | %{filecheck} --check-prefix=CHECK-RELOCATABLE-LINK-ASAN-UBSAN-RTLIB
+//
+// CHECK-RELOCATABLE-LINK-ASAN-UBSAN-RTLIB-NOT: "{{.*}}(asan|ubsan){{.*}}"
+
+// RUN: %clang -fsanitize=address -r -fsanitize-link-runtime -### %s 2>&1 \
+// RUN:     --target=x86_64-unknown-linux -fuse-ld=ld \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck %s --check-prefix=CHECK-RELOCATABLE-LINK-FORCE-LINK-ASAN
+//
+// CHECK-RELOCATABLE-LINK-FORCE-LINK-ASAN: "{{.*}}asan{{.*}}"
+
+// RUN: %clang -fsanitize=thread -r -### %s 2>&1 \
+// RUN:     --target=x86_64-unknown-linux -fuse-ld=ld \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | %{filecheck} --check-prefix=CHECK-RELOCATABLE-LINK-TSAN-RTLIB
+//
+// CHECK-RELOCATABLE-LINK-TSAN-RTLIB-NOT: "{{.*}}tsan{{.*}}"
+
+// RUN: %clang -fsanitize=fuzzer,address -shared-libsan -### %s 2>&1 \
+// RUN:     --target=x86_64-unknown-linux -fuse-ld=ld \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck %s --check-prefix=CHECK-FUZZER-WITH-SHARED-ASAN-ORDER
+//
+// CHECK-FUZZER-WITH-SHARED-ASAN-ORDER: "{{.*}}libclang_rt.asan.so"
+// CHECK-FUZZER-WITH-SHARED-ASAN-ORDER-SAME: "--whole-archive" "{{.*}}libclang_rt.fuzzer.a" "--no-whole-archive"
+// CHECK-FUZZER-WITH-SHARED-ASAN-ORDER-SAME: "-l{{(std)?}}c++"

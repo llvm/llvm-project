@@ -7,12 +7,8 @@
 define i64 @test(ptr %p) {
 ; RISCV-LABEL: @test(
 ; RISCV-NEXT:  entry:
-; RISCV-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr inbounds i64, ptr [[P:%.*]], i64 4
-; RISCV-NEXT:    [[TMP0:%.*]] = load <4 x i64>, ptr [[P]], align 4
-; RISCV-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[ARRAYIDX_4]], align 4
-; RISCV-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i64> [[TMP0]], <4 x i64> poison, <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 0, i32 0>
-; RISCV-NEXT:    [[TMP3:%.*]] = call <8 x i64> @llvm.vector.insert.v8i64.v4i64(<8 x i64> [[TMP2]], <4 x i64> [[TMP0]], i64 0)
-; RISCV-NEXT:    [[TMP4:%.*]] = call <8 x i64> @llvm.vector.insert.v8i64.v2i64(<8 x i64> [[TMP3]], <2 x i64> [[TMP1]], i64 4)
+; RISCV-NEXT:    [[TMP0:%.*]] = load <6 x i64>, ptr [[P:%.*]], align 4
+; RISCV-NEXT:    [[TMP4:%.*]] = shufflevector <6 x i64> [[TMP0]], <6 x i64> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 0, i32 0>
 ; RISCV-NEXT:    [[TMP5:%.*]] = mul <8 x i64> [[TMP4]], splat (i64 42)
 ; RISCV-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vector.reduce.add.v8i64(<8 x i64> [[TMP5]])
 ; RISCV-NEXT:    ret i64 [[TMP6]]

@@ -43,7 +43,9 @@ STATISTIC(
 STATISTIC(
     NumSimplifiedSRem,
     "Number of IV signed remainder operations converted to unsigned remainder");
-STATISTIC(NumElimCmp     , "Number of IV comparisons eliminated");
+STATISTIC(NumElimCmp, "Number of IV comparisons eliminated");
+STATISTIC(NumInvariantCmp, "Number of IV comparisons made loop invariant");
+STATISTIC(NumSameSign, "Number of IV comparisons with new samesign flags");
 
 namespace {
   /// This is a utility for simplifying induction variables
@@ -275,25 +277,33 @@ void SimplifyIndvar::eliminateIVComparison(ICmpInst *ICmp,
     ICmp->replaceAllUsesWith(ConstantInt::getBool(ICmp->getContext(), *Ev));
     DeadInsts.emplace_back(ICmp);
     LLVM_DEBUG(dbgs() << "INDVARS: Eliminated comparison: " << *ICmp << '\n');
-  } else if (makeIVComparisonInvariant(ICmp, IVOperand)) {
-    // fallthrough to end of function
-  } else if (ICmpInst::isSigned(OriginalPred) &&
-             SE->isKnownNonNegative(S) && SE->isKnownNonNegative(X)) {
-    // If we were unable to make anything above, all we can is to canonicalize
-    // the comparison hoping that it will open the doors for other
-    // optimizations. If we find out that we compare two non-negative values,
-    // we turn the instruction's predicate to its unsigned version. Note that
-    // we cannot rely on Pred here unless we check if we have swapped it.
+    ++NumElimCmp;
+    Changed = true;
+    return;
+  }
+
+  if (makeIVComparisonInvariant(ICmp, IVOperand)) {
+    ++NumInvariantCmp;
+    Changed = true;
+    return;
+  }
+
+  if ((ICmpInst::isSigned(OriginalPred) ||
+       (ICmpInst::isUnsigned(OriginalPred) && !ICmp->hasSameSign())) &&
+      SE->haveSameSign(S, X)) {
+    // Set the samesign flag on the compare if legal, and canonicalize to
+    // the unsigned variant (for signed compares) hoping that it will open
+    // the doors for other optimizations.  Note that we cannot rely on Pred
+    // here unless we check if we have swapped it.
     assert(ICmp->getPredicate() == OriginalPred && "Predicate changed?");
-    LLVM_DEBUG(dbgs() << "INDVARS: Turn to unsigned comparison: " << *ICmp
+    LLVM_DEBUG(dbgs() << "INDVARS: Marking comparison samesign: " << *ICmp
                       << '\n');
     ICmp->setPredicate(ICmpInst::getUnsignedPredicate(OriginalPred));
     ICmp->setSameSign();
-  } else
+    NumSameSign++;
+    Changed = true;
     return;
-
-  ++NumElimCmp;
-  Changed = true;
+  }
 }
 
 bool SimplifyIndvar::eliminateSDiv(BinaryOperator *SDiv) {
@@ -1025,7 +1035,7 @@ std::pair<bool, bool> simplifyUsersOfIV(PHINode *CurrIV, ScalarEvolution *SE,
 bool simplifyLoopIVs(Loop *L, ScalarEvolution *SE, DominatorTree *DT,
                      LoopInfo *LI, const TargetTransformInfo *TTI,
                      SmallVectorImpl<WeakTrackingVH> &Dead) {
-  SCEVExpander Rewriter(*SE, SE->getDataLayout(), "indvars");
+  SCEVExpander Rewriter(*SE, "indvars");
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
   Rewriter.setDebugType(DEBUG_TYPE);
 #endif
@@ -2221,22 +2231,17 @@ void WidenIV::calculatePostIncRange(Instruction *NarrowDef,
     auto *TI = BB->getTerminator();
     UpdateRangeFromGuards(TI);
 
-    auto *BI = dyn_cast<BranchInst>(TI);
-    if (!BI || !BI->isConditional())
+    auto *BI = dyn_cast<CondBrInst>(TI);
+    if (!BI)
       continue;
 
     auto *TrueSuccessor = BI->getSuccessor(0);
     auto *FalseSuccessor = BI->getSuccessor(1);
 
-    auto DominatesNarrowUser = [this, NarrowUser] (BasicBlockEdge BBE) {
-      return BBE.isSingleEdge() &&
-             DT->dominates(BBE, NarrowUser->getParent());
-    };
-
-    if (DominatesNarrowUser(BasicBlockEdge(BB, TrueSuccessor)))
+    if (DT->dominates(BasicBlockEdge(BB, TrueSuccessor), NarrowUserBB))
       UpdateRangeFromCondition(BI->getCondition(), /*TrueDest=*/true);
 
-    if (DominatesNarrowUser(BasicBlockEdge(BB, FalseSuccessor)))
+    if (DT->dominates(BasicBlockEdge(BB, FalseSuccessor), NarrowUserBB))
       UpdateRangeFromCondition(BI->getCondition(), /*TrueDest=*/false);
   }
 }

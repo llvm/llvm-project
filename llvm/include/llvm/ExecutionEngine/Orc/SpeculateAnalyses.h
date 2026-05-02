@@ -16,6 +16,7 @@
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/Speculation.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -24,8 +25,8 @@ namespace orc {
 // Provides common code.
 class SpeculateQuery {
 protected:
-  void findCalles(const BasicBlock *, DenseSet<StringRef> &);
-  bool isStraightLine(const Function &F);
+  LLVM_ABI void findCalles(const BasicBlock *, DenseSet<StringRef> &);
+  LLVM_ABI bool isStraightLine(const Function &F);
 
 public:
   using ResultTy = std::optional<DenseMap<StringRef, DenseSet<StringRef>>>;
@@ -37,7 +38,7 @@ class BlockFreqQuery : public SpeculateQuery {
 
 public:
   // Find likely next executables based on IR Block Frequency
-  ResultTy operator()(Function &F);
+  LLVM_ABI ResultTy operator()(Function &F);
 };
 
 // This Query generates a sequence of basic blocks which follows the order of
@@ -73,7 +74,7 @@ private:
                            VisitedBlocksInfoTy &);
 
 public:
-  ResultTy operator()(Function &F);
+  LLVM_ABI ResultTy operator()(Function &F);
 };
 
 } // namespace orc

@@ -1,6 +1,10 @@
 ; RUN: opt < %s -passes=pgo-icall-prom -S -icp-total-percent-threshold=50 | FileCheck %s --check-prefix=ICALL-PROM
 ; RUN: opt < %s -passes=pgo-icall-prom -S -pass-remarks=pgo-icall-prom -icp-remaining-percent-threshold=0 -icp-total-percent-threshold=0 -icp-max-prom=4 2>&1 | FileCheck %s --check-prefix=PASS-REMARK
 ; RUN: opt < %s -passes=pgo-icall-prom -S -pass-remarks=pgo-icall-prom -icp-remaining-percent-threshold=0 -icp-total-percent-threshold=20 -icp-max-prom=4 2>&1 | FileCheck %s --check-prefix=PASS2-REMARK
+; Test minimum count threshold - should prevent func1 promotion (count 10 < threshold 15)
+; RUN: opt < %s -passes=pgo-icall-prom -S -pass-remarks=pgo-icall-prom -icp-minimum-count-threshold=15 -icp-remaining-percent-threshold=0 -icp-total-percent-threshold=0 -icp-max-prom=4 2>&1 | FileCheck %s --check-prefix=MIN-COUNT-15
+; Test edge case - threshold exactly at count value
+; RUN: opt < %s -passes=pgo-icall-prom -S -pass-remarks=pgo-icall-prom -icp-minimum-count-threshold=10 -icp-remaining-percent-threshold=0 -icp-total-percent-threshold=0 -icp-max-prom=4 2>&1 | FileCheck %s --check-prefix=MIN-COUNT-10
 
 ; PASS-REMARK: remark: <unknown>:0:0: Promote indirect call to func4 with count 1030 out of 1600
 ; PASS-REMARK: remark: <unknown>:0:0: Promote indirect call to func2 with count 410 out of 570
@@ -11,6 +15,16 @@
 ; PASS2-REMARK: remark: <unknown>:0:0: Promote indirect call to func2 with count 410 out of 570
 ; PASS2-REMARK-NOT: remark: <unknown>:0:0: Promote indirect call to func3
 ; PASS2-REMARK-NOT: remark: <unknown>:0:0: Promote indirect call to func1
+
+; MIN-COUNT-15: remark: <unknown>:0:0: Promote indirect call to func4 with count 1030 out of 1600
+; MIN-COUNT-15: remark: <unknown>:0:0: Promote indirect call to func2 with count 410 out of 570
+; MIN-COUNT-15: remark: <unknown>:0:0: Promote indirect call to func3 with count 150 out of 160
+; MIN-COUNT-15-NOT: remark: <unknown>:0:0: Promote indirect call to func1
+
+; MIN-COUNT-10: remark: <unknown>:0:0: Promote indirect call to func4 with count 1030 out of 1600
+; MIN-COUNT-10: remark: <unknown>:0:0: Promote indirect call to func2 with count 410 out of 570
+; MIN-COUNT-10: remark: <unknown>:0:0: Promote indirect call to func3 with count 150 out of 160
+; MIN-COUNT-10: remark: <unknown>:0:0: Promote indirect call to func1 with count 10 out of 10
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

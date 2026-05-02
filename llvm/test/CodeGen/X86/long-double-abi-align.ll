@@ -73,7 +73,7 @@ define void @foo(i32 %0, x86_fp80 %1, i32 %2) nounwind {
 ; DARWIN-LABEL: foo:
 ; DARWIN:       ## %bb.0:
 ; DARWIN-NEXT:    subl $44, %esp
-; DARWIN-NEXT:    fldt 64(%esp)
+; DARWIN-NEXT:    fldt 52(%esp)
 ; DARWIN-NEXT:    fstpt 16(%esp)
 ; DARWIN-NEXT:    leal 48(%esp), %eax
 ; DARWIN-NEXT:    movl %eax, (%esp)
@@ -81,7 +81,7 @@ define void @foo(i32 %0, x86_fp80 %1, i32 %2) nounwind {
 ; DARWIN-NEXT:    leal 16(%esp), %eax
 ; DARWIN-NEXT:    movl %eax, (%esp)
 ; DARWIN-NEXT:    calll _escape
-; DARWIN-NEXT:    leal 80(%esp), %eax
+; DARWIN-NEXT:    leal 68(%esp), %eax
 ; DARWIN-NEXT:    movl %eax, (%esp)
 ; DARWIN-NEXT:    calll _escape
 ; DARWIN-NEXT:    addl $44, %esp

@@ -79,6 +79,19 @@ public:
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
+/// Additional 'norecurse' attribute deduction during postlink LTO phase.
+///
+/// This is a module pass that infers 'norecurse' attribute on functions.
+/// It runs during LTO and analyzes the module's call graph to find functions
+/// that are guaranteed not to call themselves, either directly or indirectly.
+/// The pass uses a module-wide flag which checks if any function's address is
+/// taken or any function in the module has external linkage, to safely handle
+/// indirect and library function calls from current function.
+class NoRecurseLTOInferencePass
+    : public PassInfoMixin<NoRecurseLTOInferencePass> {
+public:
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+};
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_IPO_FUNCTIONATTRS_H

@@ -17,7 +17,7 @@
 
 using namespace llvm;
 
-const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
+const MCAsmInfo::AtSpecifier atSpecifiers[] = {
     {ARM::S_GOT_PREL, "GOT_PREL"},
     {ARM::S_ARM_NONE, "none"},
     {ARM::S_PREL31, "prel31"},
@@ -34,7 +34,7 @@ const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
     {ARM::S_GOTTPOFF, "GOTTPOFF"},
     {ARM::S_GOTTPOFF_FDPIC, "gottpoff_fdpic"},
     {ARM::S_PLT, "PLT"},
-    {MCSymbolRefExpr::VK_SECREL, "SECREL32"},
+    {ARM::S_COFF_SECREL, "SECREL32"},
     {ARM::S_TLSCALL, "tlscall"},
     {ARM::S_TLSDESC, "tlsdesc"},
     {ARM::S_TLSGD, "TLSGD"},
@@ -46,7 +46,9 @@ const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
 
 void ARMMCAsmInfoDarwin::anchor() { }
 
-ARMMCAsmInfoDarwin::ARMMCAsmInfoDarwin(const Triple &TheTriple) {
+ARMMCAsmInfoDarwin::ARMMCAsmInfoDarwin(const Triple &TheTriple,
+                                       const MCTargetOptions &Options)
+    : MCAsmInfoDarwin(Options) {
   if ((TheTriple.getArch() == Triple::armeb) ||
       (TheTriple.getArch() == Triple::thumbeb))
     IsLittleEndian = false;
@@ -65,12 +67,14 @@ ARMMCAsmInfoDarwin::ARMMCAsmInfoDarwin(const Triple &TheTriple) {
                        ? ExceptionHandling::SjLj
                        : ExceptionHandling::DwarfCFI;
 
-  initializeVariantKinds(variantKindDescs);
+  initializeAtSpecifiers(atSpecifiers);
 }
 
 void ARMELFMCAsmInfo::anchor() { }
 
-ARMELFMCAsmInfo::ARMELFMCAsmInfo(const Triple &TheTriple) {
+ARMELFMCAsmInfo::ARMELFMCAsmInfo(const Triple &TheTriple,
+                                 const MCTargetOptions &Options)
+    : MCAsmInfoELF(Options) {
   if ((TheTriple.getArch() == Triple::armeb) ||
       (TheTriple.getArch() == Triple::thumbeb))
     IsLittleEndian = false;
@@ -96,11 +100,10 @@ ARMELFMCAsmInfo::ARMELFMCAsmInfo(const Triple &TheTriple) {
     break;
   }
 
+  initializeAtSpecifiers(atSpecifiers);
   // foo(plt) instead of foo@plt
   UseAtForSpecifier = false;
   UseParensForSpecifier = true;
-
-  initializeVariantKinds(variantKindDescs);
 }
 
 void ARMELFMCAsmInfo::setUseIntegratedAssembler(bool Value) {
@@ -115,43 +118,45 @@ void ARMELFMCAsmInfo::setUseIntegratedAssembler(bool Value) {
 
 void ARMCOFFMCAsmInfoMicrosoft::anchor() { }
 
-ARMCOFFMCAsmInfoMicrosoft::ARMCOFFMCAsmInfoMicrosoft() {
+ARMCOFFMCAsmInfoMicrosoft::ARMCOFFMCAsmInfoMicrosoft(
+    const MCTargetOptions &Options)
+    : MCAsmInfoMicrosoft(Options) {
   AlignmentIsInBytes = false;
   SupportsDebugInformation = true;
   ExceptionsType = ExceptionHandling::WinEH;
   WinEHEncodingType = WinEH::EncodingType::Itanium;
-  PrivateGlobalPrefix = "$M";
+  InternalSymbolPrefix = "$M";
   PrivateLabelPrefix = "$M";
   CommentString = "@";
 
   // Conditional Thumb 4-byte instructions can have an implicit IT.
   MaxInstLength = 6;
 
-  initializeVariantKinds(variantKindDescs);
+  initializeAtSpecifiers(atSpecifiers);
 }
 
 void ARMCOFFMCAsmInfoGNU::anchor() { }
 
-ARMCOFFMCAsmInfoGNU::ARMCOFFMCAsmInfoGNU() {
+ARMCOFFMCAsmInfoGNU::ARMCOFFMCAsmInfoGNU(const MCTargetOptions &Options)
+    : MCAsmInfoGNUCOFF(Options) {
   AlignmentIsInBytes = false;
   HasSingleParameterDotFile = true;
 
   CommentString = "@";
-  PrivateGlobalPrefix = ".L";
+  InternalSymbolPrefix = ".L";
   PrivateLabelPrefix = ".L";
 
   SupportsDebugInformation = true;
   ExceptionsType = ExceptionHandling::WinEH;
   WinEHEncodingType = WinEH::EncodingType::Itanium;
-  UseAtForSpecifier = false;
-  UseParensForSpecifier = true;
-
   DwarfRegNumForCFI = false;
 
   // Conditional Thumb 4-byte instructions can have an implicit IT.
   MaxInstLength = 6;
 
-  initializeVariantKinds(variantKindDescs);
+  initializeAtSpecifiers(atSpecifiers);
+  UseAtForSpecifier = false;
+  UseParensForSpecifier = true;
 }
 
 void ARM::printSpecifierExpr(const MCAsmInfo &MAI, raw_ostream &OS,

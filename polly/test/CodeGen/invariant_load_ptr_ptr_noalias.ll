@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -polly-process-unprofitable -passes=polly-codegen -polly-invariant-load-hoisting=true -polly-ignore-aliasing -S  < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -polly-process-unprofitable '-passes=polly<no-default-opts>' -polly-invariant-load-hoisting=true -polly-ignore-aliasing -S < %s | FileCheck %s
 ;
 ; CHECK-LABEL: polly.preload.begin:
 ; CHECK:   %polly.access.A = getelementptr ptr, ptr %A, i64 42

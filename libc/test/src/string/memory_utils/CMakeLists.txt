@@ -9,6 +9,7 @@ add_libc_test(
   COMPILE_OPTIONS
     ${LIBC_COMPILE_OPTIONS_NATIVE}
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.src.__support.CPP.array
     libc.src.__support.CPP.cstddef
     libc.src.__support.CPP.span

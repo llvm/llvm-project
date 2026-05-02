@@ -10,11 +10,11 @@
 ; RUN: llc -mtriple=arm-eabi -mcpu=cortex-a8 %s -o - \
 ; RUN:  | FileCheck %s -check-prefix=CORTEXA8
 
-; RUN: llc -mtriple=arm-eabi -mcpu=cortex-a8 --enable-unsafe-fp-math %s -o - \
+; RUN: llc -mtriple=arm-eabi -mcpu=cortex-a8 --denormal-fp-math=preserve-sign %s -o - \
 ; RUN:  | FileCheck %s -check-prefix=CORTEXA8U
 
 ; RUN: llc -mtriple=arm-darwin -mcpu=cortex-a8 %s -o - \
-; RUN:  | FileCheck %s -check-prefix=CORTEXA8U
+; RUN:  | FileCheck %s -check-prefix=CORTEXA8U-DARWIN
 
 ; RUN: llc -mtriple=arm-eabi -mcpu=cortex-a9 %s -o - \
 ; RUN:  | FileCheck %s -check-prefix=CORTEXA9
@@ -41,7 +41,10 @@ entry:
 ; CORTEXA8: 	vneg.f32	s{{.*}}, s{{.*}}
 
 ; CORTEXA8U-LABEL: test1:
-; CORTEXA8U: 	vneg.f32	d{{.*}}, d{{.*}}
+; CORTEXA8U: 	vsub.f32	d{{.*}}, d{{.*}}, d{{.*}}
+
+; CORTEXA8U-DARWIN-LABEL: test1:
+; CORTEXA8U-DARWIN: 	vneg.f32	d{{.*}}, d{{.*}}
 
 ; CORTEXA9-LABEL: test1:
 ; CORTEXA9: 	vneg.f32	s{{.*}}, s{{.*}}
@@ -110,9 +113,13 @@ define <2 x float> @fneg_bitcast(i64 %i) {
 ; CORTEXA8-NOT:         vneg.f32
 
 ; CORTEXA8U-LABEL: fneg_bitcast:
-; CORTEXA8U-DAG: eor r0, r0, #-2147483648
-; CORTEXA8U-DAG: eor r1, r1, #-2147483648
-; CORTEXA8U-NOT:        vneg.f32
+; CORTEXA8U-DAG: vmov.i32	d{{.*}}, #0x80000000
+; CORTEXA8U-DAG: vsub.f32	d{{.*}}, d{{.*}}, d{{.*}}
+
+; CORTEXA8U-DARWIN-LABEL: fneg_bitcast:
+; CORTEXA8U-DARWIN-DAG: eor r0, r0, #-2147483648
+; CORTEXA8U-DARWIN-DAG: eor r1, r1, #-2147483648
+; CORTEXA8U-DARWIN-NOT:        vneg.f32
 
 ; CORTEXA9-LABEL: fneg_bitcast:
 ; CORTEXA9-DAG: eor r0, r0, #-2147483648

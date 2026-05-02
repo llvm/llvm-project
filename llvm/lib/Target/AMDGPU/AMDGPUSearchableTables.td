@@ -237,8 +237,6 @@ def : SourceOfDivergence<int_amdgcn_mbcnt_lo>;
 def : SourceOfDivergence<int_r600_read_tidig_x>;
 def : SourceOfDivergence<int_r600_read_tidig_y>;
 def : SourceOfDivergence<int_r600_read_tidig_z>;
-def : SourceOfDivergence<int_amdgcn_atomic_cond_sub_u32>;
-def : SourceOfDivergence<int_amdgcn_global_atomic_csub>;
 def : SourceOfDivergence<int_amdgcn_global_atomic_fmin_num>;
 def : SourceOfDivergence<int_amdgcn_global_atomic_fmax_num>;
 def : SourceOfDivergence<int_amdgcn_global_atomic_ordered_add_b64>;
@@ -317,10 +315,19 @@ def : SourceOfDivergence<int_amdgcn_live_mask>;
 def : SourceOfDivergence<int_amdgcn_ds_swizzle>;
 def : SourceOfDivergence<int_amdgcn_ds_ordered_add>;
 def : SourceOfDivergence<int_amdgcn_ds_ordered_swap>;
+def : SourceOfDivergence<int_amdgcn_ds_add_gs_reg_rtn>;
+def : SourceOfDivergence<int_amdgcn_ds_sub_gs_reg_rtn>;
+def : SourceOfDivergence<int_amdgcn_ds_atomic_barrier_arrive_rtn_b64>;
 def : SourceOfDivergence<int_amdgcn_permlane16>;
 def : SourceOfDivergence<int_amdgcn_permlanex16>;
 def : SourceOfDivergence<int_amdgcn_permlane16_var>;
 def : SourceOfDivergence<int_amdgcn_permlanex16_var>;
+def : SourceOfDivergence<int_amdgcn_permlane64>;
+def : SourceOfDivergence<int_amdgcn_permlane_bcast>;
+def : SourceOfDivergence<int_amdgcn_permlane_up>;
+def : SourceOfDivergence<int_amdgcn_permlane_down>;
+def : SourceOfDivergence<int_amdgcn_permlane_xor>;
+def : SourceOfDivergence<int_amdgcn_permlane_idx_gen>;
 def : SourceOfDivergence<int_amdgcn_mov_dpp>;
 def : SourceOfDivergence<int_amdgcn_mov_dpp8>;
 def : SourceOfDivergence<int_amdgcn_update_dpp>;
@@ -328,6 +335,8 @@ def : SourceOfDivergence<int_amdgcn_writelane>;
 def : SourceOfDivergence<int_amdgcn_init_whole_wave>;
 def : SourceOfDivergence<int_amdgcn_permlane16_swap>;
 def : SourceOfDivergence<int_amdgcn_permlane32_swap>;
+def : SourceOfDivergence<int_amdgcn_set_inactive>;
+def : SourceOfDivergence<int_amdgcn_set_inactive_chain_arg>;
 
 foreach intr = AMDGPUMFMAIntrinsics908 in
 def : SourceOfDivergence<intr>;
@@ -341,9 +350,19 @@ foreach intr = AMDGPUWMMAIntrinsicsGFX11 in
 def : SourceOfDivergence<intr>;
 foreach intr = AMDGPUWMMAIntrinsicsGFX12 in
 def : SourceOfDivergence<intr>;
+foreach intr = AMDGPUWMMAIntrinsicsGFX1250 in
+def : SourceOfDivergence<intr>;
+foreach intr = AMDGPUSWMMACIntrinsicsGFX1250 in
+def : SourceOfDivergence<intr>;
 
 def : SourceOfDivergence<int_amdgcn_global_load_tr_b64>;
 def : SourceOfDivergence<int_amdgcn_global_load_tr_b128>;
+def : SourceOfDivergence<int_amdgcn_global_load_tr4_b64>;
+def : SourceOfDivergence<int_amdgcn_global_load_tr6_b96>;
+def : SourceOfDivergence<int_amdgcn_ds_load_tr8_b64>;
+def : SourceOfDivergence<int_amdgcn_ds_load_tr16_b128>;
+def : SourceOfDivergence<int_amdgcn_ds_load_tr4_b64>;
+def : SourceOfDivergence<int_amdgcn_ds_load_tr6_b96>;
 
 def : SourceOfDivergence<int_amdgcn_ds_read_tr4_b64>;
 def : SourceOfDivergence<int_amdgcn_ds_read_tr6_b96>;
@@ -363,6 +382,7 @@ foreach intr = AMDGPUImageDimAtomicIntrinsics in
 def : SourceOfDivergence<intr>;
 
 def : SourceOfDivergence<int_amdgcn_dead>;
+def : SourceOfDivergence<int_amdgcn_call_whole_wave>;
 
 class AlwaysUniform<Intrinsic intr> {
   Intrinsic Intr = intr;
@@ -382,10 +402,30 @@ def : AlwaysUniform<int_amdgcn_icmp>;
 def : AlwaysUniform<int_amdgcn_fcmp>;
 def : AlwaysUniform<int_amdgcn_ballot>;
 def : AlwaysUniform<int_amdgcn_if_break>;
+def : AlwaysUniform<int_amdgcn_cluster_workgroup_id_x>;
+def : AlwaysUniform<int_amdgcn_cluster_workgroup_id_y>;
+def : AlwaysUniform<int_amdgcn_cluster_workgroup_id_z>;
+def : AlwaysUniform<int_amdgcn_cluster_workgroup_flat_id>;
+def : AlwaysUniform<int_amdgcn_cluster_workgroup_max_id_x>;
+def : AlwaysUniform<int_amdgcn_cluster_workgroup_max_id_y>;
+def : AlwaysUniform<int_amdgcn_cluster_workgroup_max_id_z>;
+def : AlwaysUniform<int_amdgcn_cluster_workgroup_max_flat_id>;
 def : AlwaysUniform<int_amdgcn_workgroup_id_x>;
 def : AlwaysUniform<int_amdgcn_workgroup_id_y>;
 def : AlwaysUniform<int_amdgcn_workgroup_id_z>;
+def : AlwaysUniform<int_amdgcn_s_alloc_vgpr>;
+def : AlwaysUniform<int_amdgcn_s_get_barrier_state>;
+def : AlwaysUniform<int_amdgcn_s_get_named_barrier_state>;
 def : AlwaysUniform<int_amdgcn_s_getpc>;
 def : AlwaysUniform<int_amdgcn_s_getreg>;
 def : AlwaysUniform<int_amdgcn_s_memrealtime>;
 def : AlwaysUniform<int_amdgcn_s_memtime>;
+
+def AMDGPUImageDMaskIntrinsicTable : GenericTable {
+  let FilterClass = "AMDGPUImageDMaskIntrinsic";
+  let Fields = ["Intr"];
+
+  let PrimaryKey = ["Intr"];
+  let PrimaryKeyName = "getAMDGPUImageDMaskIntrinsic";
+  let PrimaryKeyEarlyOut = 1;
+}

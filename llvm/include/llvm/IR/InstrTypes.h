@@ -68,7 +68,7 @@ protected:
 public:
   // allocate space for exactly one operand
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
@@ -185,7 +185,7 @@ protected:
 public:
   // allocate space for exactly two operands
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
@@ -601,11 +601,9 @@ public:
       Instruction::CastOps firstOpcode,  ///< Opcode of first cast
       Instruction::CastOps secondOpcode, ///< Opcode of second cast
       Type *SrcTy,                       ///< SrcTy of 1st cast
-      Type *MidTy,       ///< DstTy of 1st cast & SrcTy of 2nd cast
-      Type *DstTy,       ///< DstTy of 2nd cast
-      Type *SrcIntPtrTy, ///< Integer type corresponding to Ptr SrcTy, or null
-      Type *MidIntPtrTy, ///< Integer type corresponding to Ptr MidTy, or null
-      Type *DstIntPtrTy  ///< Integer type corresponding to Ptr DstTy, or null
+      Type *MidTy,         ///< DstTy of 1st cast & SrcTy of 2nd cast
+      Type *DstTy,         ///< DstTy of 2nd cast
+      const DataLayout *DL ///< Optional data layout
   );
 
   /// Return the opcode of this CastInst
@@ -736,7 +734,7 @@ protected:
 public:
   // allocate space for exactly two operands
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
   /// Construct a compare instruction, given the opcode, the predicate and
   /// the two operands.  Optionally (if InstBefore is specified) insert the
@@ -953,11 +951,15 @@ public:
 
   /// @returns true if the predicate is unsigned, false otherwise.
   /// Determine if the predicate is an unsigned operation.
-  LLVM_ABI static bool isUnsigned(Predicate predicate);
+  static bool isUnsigned(Predicate Pred) {
+    return Pred >= ICMP_UGT && Pred <= ICMP_ULE;
+  }
 
   /// @returns true if the predicate is signed, false otherwise.
   /// Determine if the predicate is an signed operation.
-  LLVM_ABI static bool isSigned(Predicate predicate);
+  static bool isSigned(Predicate Pred) {
+    return Pred >= ICMP_SGT && Pred <= ICMP_SLE;
+  }
 
   /// Determine if the predicate is an ordered operation.
   LLVM_ABI static bool isOrdered(Predicate predicate);
@@ -1347,7 +1349,7 @@ public:
   /// the call target is an alias.
   Function *getCalledFunction() const {
     if (auto *F = dyn_cast_or_null<Function>(getCalledOperand()))
-      if (F->getValueType() == getFunctionType())
+      if (F->getFunctionType() == getFunctionType())
         return F;
     return nullptr;
   }

@@ -15,36 +15,41 @@
 #define LLVM_CLANG_INTERPRETER_INTERPRETER_H
 
 #include "clang/AST/GlobalDecl.h"
+#include "clang/Interpreter/IncrementalExecutor.h"
 #include "clang/Interpreter/PartialTranslationUnit.h"
 #include "clang/Interpreter/Value.h"
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
+#include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/Support/Error.h"
+#include <cstdint>
 #include <memory>
 #include <vector>
 
 namespace llvm {
 namespace orc {
-class LLJIT;
-class LLJITBuilder;
 class ThreadSafeContext;
 } // namespace orc
 } // namespace llvm
 
 namespace clang {
 
+namespace driver {
+class Compilation;
+} // namespace driver
+
 class CompilerInstance;
-class CodeGenerator;
 class CXXRecordDecl;
 class Decl;
-class IncrementalExecutor;
 class IncrementalParser;
 class IncrementalCUDADeviceParser;
 
 /// Create a pre-configured \c CompilerInstance for incremental processing.
 class IncrementalCompilerBuilder {
+  using DriverCompilationFn = llvm::Error(const driver::Compilation &);
+
 public:
   IncrementalCompilerBuilder() {}
 
@@ -63,11 +68,16 @@ public:
   // CUDA specific
   void SetCudaSDK(llvm::StringRef path) { CudaSDKPath = path; };
 
+  // Hand over the compilation.
+  void SetDriverCompilationCallback(std::function<DriverCompilationFn> C) {
+    CompilationCB = C;
+  }
+
   llvm::Expected<std::unique_ptr<CompilerInstance>> CreateCudaHost();
   llvm::Expected<std::unique_ptr<CompilerInstance>> CreateCudaDevice();
 
 private:
-  static llvm::Expected<std::unique_ptr<CompilerInstance>>
+  llvm::Expected<std::unique_ptr<CompilerInstance>>
   create(std::string TT, std::vector<const char *> &ClangArgv);
 
   llvm::Expected<std::unique_ptr<CompilerInstance>> createCuda(bool device);
@@ -77,6 +87,8 @@ private:
 
   llvm::StringRef OffloadArch;
   llvm::StringRef CudaSDKPath;
+
+  std::optional<std::function<DriverCompilationFn>> CompilationCB;
 };
 
 class IncrementalAction;
@@ -109,10 +121,6 @@ class Interpreter {
   // printing happens, it's in an invalid state.
   Value LastValue;
 
-  /// When CodeGen is created the first llvm::Module gets cached in many places
-  /// and we must keep it alive.
-  std::unique_ptr<llvm::Module> CachedInCodeGenModule;
-
   /// Compiler instance performing the incremental compilation.
   std::unique_ptr<CompilerInstance> CI;
 
@@ -122,7 +130,7 @@ class Interpreter {
 protected:
   // Derived classes can use an extended interface of the Interpreter.
   Interpreter(std::unique_ptr<CompilerInstance> Instance, llvm::Error &Err,
-              std::unique_ptr<llvm::orc::LLJITBuilder> JITBuilder = nullptr,
+              std::unique_ptr<IncrementalExecutorBuilder> IEB = nullptr,
               std::unique_ptr<clang::ASTConsumer> Consumer = nullptr);
 
   // Create the internal IncrementalExecutor, or re-create it after calling
@@ -131,20 +139,22 @@ protected:
 
   // Delete the internal IncrementalExecutor. This causes a hard shutdown of the
   // JIT engine. In particular, it doesn't run cleanup or destructors.
-  void ResetExecutor();
+  void ResetExecutor() { IncrExecutor.reset(); }
 
 public:
   virtual ~Interpreter();
   static llvm::Expected<std::unique_ptr<Interpreter>>
-  create(std::unique_ptr<CompilerInstance> CI);
+  create(std::unique_ptr<CompilerInstance> CI,
+         std::unique_ptr<IncrementalExecutorBuilder> IEB = nullptr);
   static llvm::Expected<std::unique_ptr<Interpreter>>
   createWithCUDA(std::unique_ptr<CompilerInstance> CI,
                  std::unique_ptr<CompilerInstance> DCI);
+
   const ASTContext &getASTContext() const;
   ASTContext &getASTContext();
   const CompilerInstance *getCompilerInstance() const;
   CompilerInstance *getCompilerInstance();
-  llvm::Expected<llvm::orc::LLJIT &> getExecutionEngine();
+  llvm::Expected<IncrementalExecutor &> getExecutionEngine();
 
   llvm::Expected<PartialTranslationUnit &> Parse(llvm::StringRef Code);
   llvm::Error Execute(PartialTranslationUnit &T);
@@ -170,31 +180,35 @@ public:
   llvm::Expected<llvm::orc::ExecutorAddr>
   getSymbolAddressFromLinkerName(llvm::StringRef LinkerName) const;
 
-  const llvm::SmallVectorImpl<Expr *> &getValuePrintingInfo() const {
-    return ValuePrintingInfo;
+  const IncrementalExecutorBuilder &getIncrementalExecutorBuilder() const {
+    return *IncrExecutorBuilder;
   }
-
-  Expr *SynthesizeExpr(Expr *E);
 
 private:
   size_t getEffectivePTUSize() const;
   void markUserCodeStart();
-  llvm::Expected<Expr *> ExtractValueFromExpr(Expr *E);
-  llvm::Expected<llvm::orc::ExecutorAddr> CompileDtorCall(CXXRecordDecl *CXXRD);
-
-  CodeGenerator *getCodeGen(IncrementalAction *Action = nullptr) const;
-  std::unique_ptr<llvm::Module> GenModule(IncrementalAction *Action = nullptr);
-  PartialTranslationUnit &RegisterPTU(TranslationUnitDecl *TU,
-                                      std::unique_ptr<llvm::Module> M = {},
-                                      IncrementalAction *Action = nullptr);
 
   // A cache for the compiled destructors used to for de-allocation of managed
   // clang::Values.
-  llvm::DenseMap<CXXRecordDecl *, llvm::orc::ExecutorAddr> Dtors;
+  mutable llvm::DenseMap<CXXRecordDecl *, llvm::orc::ExecutorAddr> Dtors;
 
-  llvm::SmallVector<Expr *, 4> ValuePrintingInfo;
+  std::array<Expr *, 4> ValuePrintingInfo = {0};
 
-  std::unique_ptr<llvm::orc::LLJITBuilder> JITBuilder;
+  std::unique_ptr<IncrementalExecutorBuilder> IncrExecutorBuilder;
+
+  /// @}
+  /// @name Value and pretty printing support
+  /// @{
+
+  std::string ValueDataToString(const Value &V) const;
+  std::string ValueTypeToString(const Value &V) const;
+
+  llvm::Expected<Expr *> convertExprToValue(Expr *E);
+
+  // When we deallocate clang::Value we need to run the destructor of the type.
+  // This function forces emission of the needed dtor.
+  llvm::Expected<llvm::orc::ExecutorAddr>
+  CompileDtorCall(CXXRecordDecl *CXXRD) const;
 };
 } // namespace clang
 

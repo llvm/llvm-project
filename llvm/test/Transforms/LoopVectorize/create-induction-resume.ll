@@ -16,7 +16,7 @@ define void @test(i32 %arg, i32 %L1.limit, i32 %L2.switch, i1 %c, ptr %dst) {
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i32 [ [[INDVAR_NEXT:%.*]], [[L1_BACKEDGE]] ], [ 0, [[L1_PREHEADER]] ]
 ; CHECK-NEXT:    [[L1_SUM:%.*]] = phi i32 [ [[ARG]], [[L1_PREHEADER]] ], [ [[L1_SUM_NEXT:%.*]], [[L1_BACKEDGE]] ]
 ; CHECK-NEXT:    [[L1_IV:%.*]] = phi i32 [ 1, [[L1_PREHEADER]] ], [ [[L1_IV_NEXT:%.*]], [[L1_BACKEDGE]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = mul nsw i32 [[INDVAR]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[INDVAR]], -1
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], -2
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[L1_BACKEDGE]], label [[L1_EARLY_EXIT:%.*]]
 ; CHECK:       L1.backedge:
@@ -29,7 +29,6 @@ define void @test(i32 %arg, i32 %L1.limit, i32 %L2.switch, i1 %c, ptr %dst) {
 ; CHECK:       L1.early.exit:
 ; CHECK-NEXT:    ret void
 ; CHECK:       L1.exit:
-; CHECK-NEXT:    [[INDUCTION_IV_LCSSA1:%.*]] = phi i32 [ [[INDUCTION_IV]], [[L1_BACKEDGE]] ]
 ; CHECK-NEXT:    [[L1_EXIT_VAL:%.*]] = phi i32 [ [[L1_SUM_NEXT]], [[L1_BACKEDGE]] ]
 ; CHECK-NEXT:    br label [[L2_HEADER:%.*]]
 ; CHECK:       L2.header.loopexit:
@@ -42,17 +41,15 @@ define void @test(i32 %arg, i32 %L1.limit, i32 %L2.switch, i1 %c, ptr %dst) {
 ; CHECK:       L2.header.backedge:
 ; CHECK-NEXT:    br label [[L2_HEADER]]
 ; CHECK:       L2.Inner.header.preheader:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i32 12, [[INDUCTION_IV_LCSSA1]]
-; CHECK-NEXT:    [[IND_END:%.*]] = add i32 1, [[TMP3]]
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[L1_EXIT_VAL]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[DOTSPLATINSERT1:%.*]] = insertelement <4 x i32> poison, i32 [[INDUCTION_IV_LCSSA1]], i64 0
+; CHECK-NEXT:    [[DOTSPLATINSERT1:%.*]] = insertelement <4 x i32> poison, i32 [[INDUCTION_IV]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT1:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT1]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul <4 x i32> <i32 0, i32 1, i32 2, i32 3>, [[DOTSPLAT1]]
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i32> splat (i32 1), [[TMP4]]
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i32 [[INDUCTION_IV_LCSSA1]], 4
+; CHECK-NEXT:    [[TMP5:%.*]] = shl i32 [[INDUCTION_IV]], 2
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP5]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -63,59 +60,44 @@ define void @test(i32 %arg, i32 %L1.limit, i32 %L2.switch, i1 %c, ptr %dst) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub <4 x i32> [[VEC_IND]], [[DOTSPLAT]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = sext <4 x i32> [[TMP7]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[DST:%.*]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[TMP9]], i32 0
-; CHECK-NEXT:    store <4 x i64> [[TMP8]], ptr [[TMP10]], align 8
+; CHECK-NEXT:    store <4 x i64> [[TMP8]], ptr [[TMP9]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 12
 ; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 true, label [[L2_HEADER_LOOPEXIT:%.*]], label [[SCALAR_PH]]
-; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 1, [[L2_INNER_HEADER_PREHEADER]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i64 [ 13, [[MIDDLE_BLOCK]] ], [ 1, [[L2_INNER_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    br label [[L2_INNER_HEADER:%.*]]
-; CHECK:       L2.Inner.header:
-; CHECK-NEXT:    [[L2_ACCUM:%.*]] = phi i32 [ [[L2_ACCUM_NEXT:%.*]], [[L2_INNER_HEADER]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[L2_IV:%.*]] = phi i64 [ [[L2_IV_NEXT:%.*]], [[L2_INNER_HEADER]] ], [ [[BC_RESUME_VAL2]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[L2_ACCUM_NEXT]] = sub i32 [[L2_ACCUM]], [[L1_EXIT_VAL]]
-; CHECK-NEXT:    [[L2_DUMMY_BUT_NEED_IT:%.*]] = sext i32 [[L2_ACCUM_NEXT]] to i64
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[L2_IV]]
-; CHECK-NEXT:    store i64 [[L2_DUMMY_BUT_NEED_IT]], ptr [[GEP]], align 8
-; CHECK-NEXT:    [[L2_IV_NEXT]] = add nuw nsw i64 [[L2_IV]], 1
-; CHECK-NEXT:    [[L2_EXIT_COND:%.*]] = icmp ugt i64 [[L2_IV]], 11
-; CHECK-NEXT:    br i1 [[L2_EXIT_COND]], label [[L2_HEADER_LOOPEXIT]], label [[L2_INNER_HEADER]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       L2.exit:
 ; CHECK-NEXT:    ret void
 ;
 L1.preheader:
   br label %L1.header
 
-L1.header:                                        ; preds = %L1.preheader, %L1.backedge
+L1.header:
   %L1.sum = phi i32 [ %arg, %L1.preheader ], [ %L1.sum.next, %L1.backedge ]
   %L1.iv = phi i32 [ 1, %L1.preheader ], [ %L1.iv.next, %L1.backedge ]
   br i1 %c, label %L1.backedge, label %L1.early.exit
 
-L1.backedge:                                      ; preds = %L1.header
+L1.backedge:
   %L1.sum.next = add i32 %L1.iv, %L1.sum
   %L1.iv.next = add nuw nsw i32 %L1.iv, 1
   %L1.exit.cond = icmp ult i32 %L1.iv.next, %L1.limit
   br i1 %L1.exit.cond, label %L1.header, label %L1.exit
 
-L1.early.exit:                                    ; preds = %L1.header
+L1.early.exit:
   ret void
 
-L1.exit:                                          ; preds = %L1.backedge
+L1.exit:
   %L1.exit.val = phi i32 [ %L1.sum.next, %L1.backedge ]
   br label %L2.header
 
-L2.header:                                        ; preds = %L2.Inner.header, %L1.exit, %L2.header
+L2.header:
   switch i32 %L2.switch, label %L2.header [
   i32 8, label %L2.exit
   i32 20, label %L2.Inner.header
   ]
 
-L2.Inner.header:                                  ; preds = %L2.Inner.header, %L2.header
+L2.Inner.header:
   %L2.accum = phi i32 [ %L2.accum.next, %L2.Inner.header ], [ 1, %L2.header ]
   %L2.iv = phi i64 [ %L2.iv.next, %L2.Inner.header ], [ 1, %L2.header ]
   %L2.accum.next = sub i32 %L2.accum, %L1.exit.val
@@ -126,7 +108,7 @@ L2.Inner.header:                                  ; preds = %L2.Inner.header, %L
   %L2.exit_cond = icmp ugt i64 %L2.iv, 11
   br i1 %L2.exit_cond, label %L2.header, label %L2.Inner.header
 
-L2.exit:                                          ; preds = %L2.header
+L2.exit:
   ret void
 }
 

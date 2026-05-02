@@ -32,8 +32,7 @@ class VirtualFileHelper {
 
 public:
   VirtualFileHelper()
-      : Diagnostics(IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs),
-                    DiagOpts),
+      : Diagnostics(DiagnosticIDs::create(), DiagOpts),
         DiagnosticPrinter(llvm::outs(), DiagOpts),
         Files((FileSystemOptions())) {}
 

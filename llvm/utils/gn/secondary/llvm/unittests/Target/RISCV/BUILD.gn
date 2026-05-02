@@ -16,5 +16,6 @@ unittest("RISCVTests") {
   sources = [
     "MCInstrAnalysisTest.cpp",
     "RISCVInstrInfoTest.cpp",
+    "RISCVSelectionDAGTest.cpp",
   ]
 }

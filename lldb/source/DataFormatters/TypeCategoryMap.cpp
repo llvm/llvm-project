@@ -19,7 +19,7 @@ TypeCategoryMap::TypeCategoryMap(IFormatChangeListener *lst)
     : m_map_mutex(), listener(lst), m_map(), m_active_categories() {
   ConstString default_cs("default");
   lldb::TypeCategoryImplSP default_sp =
-      lldb::TypeCategoryImplSP(new TypeCategoryImpl(listener, default_cs));
+      std::make_shared<TypeCategoryImpl>(listener, default_cs);
   Add(default_cs, default_sp);
   Enable(default_cs, First);
 }

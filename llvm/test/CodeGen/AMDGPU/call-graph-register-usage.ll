@@ -1,8 +1,13 @@
-; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -mtriple=amdgcn-amd-amdhsa -enable-ipra=0 -verify-machineinstrs | FileCheck -check-prefixes=GCN,CI %s
-; RUN: sed 's/CODE_OBJECT_VERSION/500/g' %s | llc -mtriple=amdgcn-amd-amdhsa -enable-ipra=0 -verify-machineinstrs | FileCheck -check-prefixes=GCN-V5 %s
-; RUN: sed 's/CODE_OBJECT_VERSION/600/g' %s | llc -mtriple=amdgcn-amd-amdhsa -enable-ipra=0 -verify-machineinstrs | FileCheck -check-prefixes=GCN-V5 %s
-; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -enable-ipra=0 -verify-machineinstrs | FileCheck -check-prefixes=GCN,VI,VI-NOBUG %s
-; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -mtriple=amdgcn-amd-amdhsa -mcpu=iceland -enable-ipra=0 -verify-machineinstrs | FileCheck -check-prefixes=GCN,VI,VI-BUG %s
+; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -enable-ipra=0 | FileCheck -check-prefixes=GCN,CI %s
+; RUN: sed 's/CODE_OBJECT_VERSION/500/g' %s | llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -enable-ipra=0 | FileCheck -check-prefixes=GCN-V5 %s
+; RUN: sed 's/CODE_OBJECT_VERSION/600/g' %s | llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -enable-ipra=0 | FileCheck -check-prefixes=GCN-V5 %s
+; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -enable-ipra=0 | FileCheck -check-prefixes=GCN,VI,VI-NOBUG %s
+; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=iceland -enable-ipra=0 | FileCheck -check-prefixes=GCN,VI,VI-BUG %s
+; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -enable-ipra=0 | FileCheck -check-prefixes=GCN,CI %s
+; RUN: sed 's/CODE_OBJECT_VERSION/500/g' %s | llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -enable-ipra=0 | FileCheck -check-prefixes=GCN-V5 %s
+; RUN: sed 's/CODE_OBJECT_VERSION/600/g' %s | llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -enable-ipra=0 | FileCheck -check-prefixes=GCN-V5 %s
+; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -enable-ipra=0 | FileCheck -check-prefixes=GCN,VI,VI-NOBUG %s
+; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=iceland -enable-ipra=0 | FileCheck -check-prefixes=GCN,VI,VI-BUG %s
 
 ; Make sure to run a GPU with the SGPR allocation bug.
 
@@ -234,11 +239,11 @@ define amdgpu_kernel void @usage_direct_recursion(i32 %n) #0 {
 ; Make sure there's no assert when a sgpr96 is used.
 ; GCN-LABEL: {{^}}count_use_sgpr96_external_call
 ; GCN: ; sgpr96 s[{{[0-9]+}}:{{[0-9]+}}]
-; GCN: .set count_use_sgpr96_external_call.num_vgpr, max(0, amdgpu.max_num_vgpr)
-; GCN: .set count_use_sgpr96_external_call.numbered_sgpr, max(33, amdgpu.max_num_sgpr)
-; CI: TotalNumSgprs: count_use_sgpr96_external_call.numbered_sgpr+4
+; GCN: .set .Lcount_use_sgpr96_external_call.num_vgpr, max(0, amdgpu.max_num_vgpr)
+; GCN: .set .Lcount_use_sgpr96_external_call.numbered_sgpr, max(33, amdgpu.max_num_sgpr)
+; CI: TotalNumSgprs: .Lcount_use_sgpr96_external_call.numbered_sgpr+4
 ; VI-BUG: TotalNumSgprs: 96
-; GCN: NumVgprs: count_use_sgpr96_external_call.num_vgpr
+; GCN: NumVgprs: .Lcount_use_sgpr96_external_call.num_vgpr
 define amdgpu_kernel void @count_use_sgpr96_external_call()  {
 entry:
   tail call void asm sideeffect "; sgpr96 $0", "s"(<3 x i32> <i32 10, i32 11, i32 12>) #1
@@ -249,11 +254,11 @@ entry:
 ; Make sure there's no assert when a sgpr160 is used.
 ; GCN-LABEL: {{^}}count_use_sgpr160_external_call
 ; GCN: ; sgpr160 s[{{[0-9]+}}:{{[0-9]+}}]
-; GCN: .set count_use_sgpr160_external_call.num_vgpr, max(0, amdgpu.max_num_vgpr)
-; GCN: .set count_use_sgpr160_external_call.numbered_sgpr, max(33, amdgpu.max_num_sgpr)
-; CI: TotalNumSgprs: count_use_sgpr160_external_call.numbered_sgpr+4
+; GCN: .set .Lcount_use_sgpr160_external_call.num_vgpr, max(0, amdgpu.max_num_vgpr)
+; GCN: .set .Lcount_use_sgpr160_external_call.numbered_sgpr, max(33, amdgpu.max_num_sgpr)
+; CI: TotalNumSgprs: .Lcount_use_sgpr160_external_call.numbered_sgpr+4
 ; VI-BUG: TotalNumSgprs: 96
-; GCN: NumVgprs: count_use_sgpr160_external_call.num_vgpr
+; GCN: NumVgprs: .Lcount_use_sgpr160_external_call.num_vgpr
 define amdgpu_kernel void @count_use_sgpr160_external_call()  {
 entry:
   tail call void asm sideeffect "; sgpr160 $0", "s"(<5 x i32> <i32 10, i32 11, i32 12, i32 13, i32 14>) #1
@@ -264,11 +269,11 @@ entry:
 ; Make sure there's no assert when a vgpr160 is used.
 ; GCN-LABEL: {{^}}count_use_vgpr160_external_call
 ; GCN: ; vgpr160 v[{{[0-9]+}}:{{[0-9]+}}]
-; GCN: .set count_use_vgpr160_external_call.num_vgpr, max(5, amdgpu.max_num_vgpr)
-; GCN: .set count_use_vgpr160_external_call.numbered_sgpr, max(33, amdgpu.max_num_sgpr)
-; CI: TotalNumSgprs: count_use_vgpr160_external_call.numbered_sgpr+4
+; GCN: .set .Lcount_use_vgpr160_external_call.num_vgpr, max(5, amdgpu.max_num_vgpr)
+; GCN: .set .Lcount_use_vgpr160_external_call.numbered_sgpr, max(33, amdgpu.max_num_sgpr)
+; CI: TotalNumSgprs: .Lcount_use_vgpr160_external_call.numbered_sgpr+4
 ; VI-BUG: TotalNumSgprs: 96
-; GCN: NumVgprs: count_use_vgpr160_external_call.num_vgpr
+; GCN: NumVgprs: .Lcount_use_vgpr160_external_call.num_vgpr
 define amdgpu_kernel void @count_use_vgpr160_external_call()  {
 entry:
   tail call void asm sideeffect "; vgpr160 $0", "v"(<5 x i32> <i32 10, i32 11, i32 12, i32 13, i32 14>) #1

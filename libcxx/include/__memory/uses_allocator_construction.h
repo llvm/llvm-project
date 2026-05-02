@@ -17,6 +17,7 @@
 #include <__type_traits/remove_cv.h>
 #include <__utility/declval.h>
 #include <__utility/pair.h>
+#include <__utility/piecewise_construct.h>
 #include <tuple>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

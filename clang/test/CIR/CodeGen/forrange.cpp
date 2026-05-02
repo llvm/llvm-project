@@ -13,10 +13,10 @@ void for_range() {
     ;
 }
 
-// CIR: cir.func @_Z5beginR9Container(!cir.ptr<!rec_Container>) -> !cir.ptr<!rec_Element>
-// CIR: cir.func @_Z3endR9Container(!cir.ptr<!rec_Container>) -> !cir.ptr<!rec_Element
+// CIR: cir.func{{.*}} @_Z5beginR9Container(!cir.ptr<!rec_Container>{{.*}}) -> (!cir.ptr<!rec_Element>{{.*}})
+// CIR: cir.func{{.*}} @_Z3endR9Container(!cir.ptr<!rec_Container>{{.*}}) -> (!cir.ptr<!rec_Element{{.*}})
 
-// CIR: cir.func @_Z9for_rangev()
+// CIR: cir.func{{.*}} @_Z9for_rangev()
 // CIR:    %[[C_ADDR:.*]] = cir.alloca !rec_Container{{.*}} ["c"]
 // CIR:    cir.scope {
 // CIR:      %[[RANGE_ADDR:.*]] = cir.alloca !cir.ptr<!rec_Container>{{.*}} ["__range1", init, const]
@@ -33,7 +33,7 @@ void for_range() {
 // CIR:      cir.for : cond {
 // CIR:        %[[BEGIN:.*]] = cir.load{{.*}} %[[BEGIN_ADDR]]
 // CIR:        %[[END:.*]] = cir.load{{.*}} %[[END_ADDR]]
-// CIR:        %[[CMP:.*]] = cir.cmp(ne, %[[BEGIN]], %[[END]])
+// CIR:        %[[CMP:.*]] = cir.cmp ne %[[BEGIN]], %[[END]]
 // CIR:        cir.condition(%[[CMP]])
 // CIR:      } body {
 // CIR:        %[[E:.*]] = cir.load deref{{.*}} %[[BEGIN_ADDR]]
@@ -42,7 +42,7 @@ void for_range() {
 // CIR:      } step {
 // CIR:        %[[BEGIN:.*]] = cir.load{{.*}} %[[BEGIN_ADDR]]
 // CIR:        %[[STEP:.*]] = cir.const #cir.int<1>
-// CIR:        %[[NEXT:.*]] = cir.ptr_stride(%[[BEGIN]] {{.*}}, %[[STEP]] {{.*}})
+// CIR:        %[[NEXT:.*]] = cir.ptr_stride %[[BEGIN]], %[[STEP]]
 // CIR:        cir.store{{.*}} %[[NEXT]], %[[BEGIN_ADDR]]
 // CIR:        cir.yield
 // CIR:      }
@@ -59,7 +59,7 @@ void for_range2() {
     ;
 }
 
-// CIR: cir.func @_Z10for_range2v()
+// CIR: cir.func{{.*}} @_Z10for_range2v()
 // CIR:    %[[C_ADDR:.*]] = cir.alloca !rec_C2{{.*}} ["c"]
 // CIR:    cir.scope {
 // CIR:      %[[RANGE_ADDR:.*]] = cir.alloca !cir.ptr<!rec_C2>{{.*}} ["__range1", init, const]
@@ -76,7 +76,7 @@ void for_range2() {
 // CIR:      cir.for : cond {
 // CIR:        %[[BEGIN:.*]] = cir.load{{.*}} %[[BEGIN_ADDR]]
 // CIR:        %[[END:.*]] = cir.load{{.*}} %[[END_ADDR]]
-// CIR:        %[[CMP:.*]] = cir.cmp(ne, %[[BEGIN]], %[[END]])
+// CIR:        %[[CMP:.*]] = cir.cmp ne %[[BEGIN]], %[[END]]
 // CIR:        cir.condition(%[[CMP]])
 // CIR:      } body {
 // CIR:        %[[E:.*]] = cir.load deref{{.*}} %[[BEGIN_ADDR]]
@@ -85,7 +85,7 @@ void for_range2() {
 // CIR:      } step {
 // CIR:        %[[BEGIN:.*]] = cir.load{{.*}} %[[BEGIN_ADDR]]
 // CIR:        %[[STEP:.*]] = cir.const #cir.int<1>
-// CIR:        %[[NEXT:.*]] = cir.ptr_stride(%[[BEGIN]] {{.*}}, %[[STEP]] {{.*}})
+// CIR:        %[[NEXT:.*]] = cir.ptr_stride %[[BEGIN]], %[[STEP]]
 // CIR:        cir.store{{.*}} %[[NEXT]], %[[BEGIN_ADDR]]
 // CIR:        cir.yield
 // CIR:      }
@@ -111,7 +111,7 @@ void for_range3() {
     ;
 }
 
-// CIR: cir.func @_Z10for_range3v()
+// CIR: cir.func{{.*}} @_Z10for_range3v()
 // CIR:    %[[C_ADDR:.*]] = cir.alloca !rec_C3{{.*}} ["c"]
 // CIR:    cir.scope {
 // CIR:      %[[RANGE_ADDR:.*]] = cir.alloca !cir.ptr<!rec_C3>{{.*}} ["__range1", init, const]

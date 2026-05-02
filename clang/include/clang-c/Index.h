@@ -36,7 +36,7 @@
 #define CINDEX_VERSION_MAJOR 0
 #define CINDEX_VERSION_MINOR 64
 
-#define CINDEX_VERSION_ENCODE(major, minor) (((major)*10000) + ((minor)*1))
+#define CINDEX_VERSION_ENCODE(major, minor) (((major) * 10000) + ((minor) * 1))
 
 #define CINDEX_VERSION                                                         \
   CINDEX_VERSION_ENCODE(CINDEX_VERSION_MAJOR, CINDEX_VERSION_MINOR)
@@ -2162,6 +2162,14 @@ enum CXCursorKind {
    */
   CXCursor_OMPStripeDirective = 310,
 
+  /** OpenMP fuse directive
+   */
+  CXCursor_OMPFuseDirective = 311,
+
+  /** OpenMP split directive.
+   */
+  CXCursor_OMPSplitDirective = 312,
+
   /** OpenACC Compute Construct.
    */
   CXCursor_OpenACCComputeConstruct = 320,
@@ -2390,7 +2398,7 @@ CINDEX_LINKAGE unsigned clang_isDeclaration(enum CXCursorKind);
  * A declaration is invalid if it could not be parsed successfully.
  *
  * \returns non-zero if the cursor represents a declaration and it is
- * invalid, otherwise NULL.
+ * invalid, otherwise zero.
  */
 CINDEX_LINKAGE unsigned clang_isInvalidDeclaration(CXCursor);
 
@@ -4500,6 +4508,129 @@ CINDEX_LINKAGE CXStringSet *clang_Cursor_getObjCManglings(CXCursor);
  */
 
 /**
+ * \defgroup CINDEX_MODULE Inline Assembly introspection
+ *
+ * The functions in this group provide access to information about GCC-style
+ * inline assembly statements.
+ *
+ * @{
+ */
+
+/**
+ * Given a CXCursor_GCCAsmStmt cursor, return the assembly template string.
+ * As per LLVM IR Assembly Template language, template placeholders for
+ * inputs and outputs are either of the form $N where N is a decimal number
+ * as an index into the input-output specification,
+ * or ${N:M} where N is a decimal number also as an index into the
+ * input-output specification and M is the template argument modifier.
+ * The index N in both cases points into the the total inputs and outputs,
+ * or more specifically, into the list of outputs followed by the inputs,
+ * starting from index 0 as the first available template argument.
+ *
+ * This function also returns a valid empty string if the cursor does not point
+ * at a GCC inline assembly block.
+ *
+ * Users are responsible for releasing the allocation of returned string via
+ * \c clang_disposeString.
+ */
+
+CINDEX_LINKAGE CXString clang_Cursor_getGCCAssemblyTemplate(CXCursor);
+
+/**
+ * Given a CXCursor_GCCAsmStmt cursor, check if the assembly block has goto
+ * labels.
+ * This function also returns 0 if the cursor does not point at a GCC inline
+ * assembly block.
+ */
+
+CINDEX_LINKAGE unsigned clang_Cursor_isGCCAssemblyHasGoto(CXCursor);
+
+/**
+ * Given a CXCursor_GCCAsmStmt cursor, count the number of outputs.
+ * This function also returns 0 if the cursor does not point at a GCC inline
+ * assembly block.
+ */
+
+CINDEX_LINKAGE unsigned clang_Cursor_getGCCAssemblyNumOutputs(CXCursor);
+
+/**
+ * Given a CXCursor_GCCAsmStmt cursor, count the number of inputs.
+ * This function also returns 0 if the cursor does not point at a GCC inline
+ * assembly block.
+ */
+
+CINDEX_LINKAGE unsigned clang_Cursor_getGCCAssemblyNumInputs(CXCursor);
+
+/**
+ * Given a CXCursor_GCCAsmStmt cursor, get the constraint and expression cursor
+ * to the Index-th input.
+ * This function returns 1 when the cursor points at a GCC inline assembly
+ * statement, `Index` is within bounds and both the `Constraint` and `Expr` are
+ * not NULL.
+ * Otherwise, this function returns 0 but leaves `Constraint` and `Expr`
+ * intact.
+ *
+ * Users are responsible for releasing the allocation of `Constraint` via
+ * \c clang_disposeString.
+ */
+
+CINDEX_LINKAGE unsigned clang_Cursor_getGCCAssemblyInput(CXCursor Cursor,
+                                                         unsigned Index,
+                                                         CXString *Constraint,
+                                                         CXCursor *Expr);
+
+/**
+ * Given a CXCursor_GCCAsmStmt cursor, get the constraint and expression cursor
+ * to the Index-th output.
+ * This function returns 1 when the cursor points at a GCC inline assembly
+ * statement, `Index` is within bounds and both the `Constraint` and `Expr` are
+ * not NULL.
+ * Otherwise, this function returns 0 but leaves `Constraint` and `Expr`
+ * intact.
+ *
+ * Users are responsible for releasing the allocation of `Constraint` via
+ * \c clang_disposeString.
+ */
+
+CINDEX_LINKAGE unsigned clang_Cursor_getGCCAssemblyOutput(CXCursor Cursor,
+                                                          unsigned Index,
+                                                          CXString *Constraint,
+                                                          CXCursor *Expr);
+
+/**
+ * Given a CXCursor_GCCAsmStmt cursor, count the clobbers in it.
+ * This function also returns 0 if the cursor does not point at a GCC inline
+ * assembly block.
+ */
+
+CINDEX_LINKAGE unsigned clang_Cursor_getGCCAssemblyNumClobbers(CXCursor Cursor);
+
+/**
+ * Given a CXCursor_GCCAsmStmt cursor, get the Index-th clobber of it.
+ * This function returns a valid empty string if the cursor does not point
+ * at a GCC inline assembly block or `Index` is out of bounds.
+ *
+ * Users are responsible for releasing the allocation of returned string via
+ * \c clang_disposeString.
+ */
+
+CINDEX_LINKAGE CXString clang_Cursor_getGCCAssemblyClobber(CXCursor Cursor,
+                                                           unsigned Index);
+
+/**
+ * Given a CXCursor_GCCAsmStmt cursor, check if the inline assembly is
+ * `volatile`.
+ * This function returns 0 if the cursor does not point at a GCC inline
+ * assembly block.
+ */
+
+CINDEX_LINKAGE unsigned clang_Cursor_isGCCAssemblyVolatile(CXCursor Cursor);
+
+/**
+ * @}
+ */
+
+/**
  * \defgroup CINDEX_MODULE Module introspection
  *
  * The functions in this group provide access to information about modules.
@@ -4524,6 +4655,8 @@ CINDEX_LINKAGE CXModule clang_getModuleForFile(CXTranslationUnit, CXFile);
  * \param Module a module object.
  *
  * \returns the module file where the provided module object came from.
+ *
+ * @deprecated: module files are longer guaranteed to be loaded from a CXFile
  */
 CINDEX_LINKAGE CXFile clang_Module_getASTFile(CXModule Module);
 
@@ -6805,7 +6938,8 @@ enum CXUnaryOperatorKind {
   /** __extension__ marker operator. */
   CXUnaryOperator_Extension,
   /** C++ co_await operator. */
-  CXUnaryOperator_Coawait
+  CXUnaryOperator_Coawait,
+  CXUnaryOperator_Last = CXUnaryOperator_Coawait
 };
 
 /**
@@ -6829,6 +6963,21 @@ clang_getCursorUnaryOperatorKind(CXCursor cursor);
 /**
  * @}
  */
+
+/* CINDEX_DEPRECATED - disabled to silence MSVC deprecation warnings */
+typedef void *CXRemapping;
+
+CINDEX_DEPRECATED CINDEX_LINKAGE CXRemapping clang_getRemappings(const char *);
+
+CINDEX_DEPRECATED CINDEX_LINKAGE CXRemapping
+clang_getRemappingsFromFileList(const char **, unsigned);
+
+CINDEX_DEPRECATED CINDEX_LINKAGE unsigned clang_remap_getNumFiles(CXRemapping);
+
+CINDEX_DEPRECATED CINDEX_LINKAGE void
+clang_remap_getFilenames(CXRemapping, unsigned, CXString *, CXString *);
+
+CINDEX_DEPRECATED CINDEX_LINKAGE void clang_remap_dispose(CXRemapping);
 
 LLVM_CLANG_C_EXTERN_C_END
 

@@ -45,3 +45,30 @@ class FoundationTestCaseNSError(TestBase):
             ],
         )
         self.runCmd("process continue")
+
+    @skipIfOutOfTreeDebugserver
+    def test_runtime_types_efficient_memreads(self):
+        # Test that we use an efficient reading of memory when reading
+        # Objective-C method descriptions.
+        logfile = os.path.join(self.getBuildDir(), "log.txt")
+        self.runCmd(f"log enable -f {logfile} gdb-remote packets process")
+        self.addTearDownHook(lambda: self.runCmd("log disable gdb-remote packets"))
+
+        self.build()
+        self.target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
+            self, "// Break here for NSString tests", lldb.SBFileSpec("main.m", False)
+        )
+
+        self.runCmd(f"proc plugin packet send StartTesting", check=False)
+        self.expect('expression str = [NSString stringWithCString: "new"]')
+        self.runCmd(f"proc plugin packet send EndTesting", check=False)
+
+        self.assertTrue(os.path.exists(logfile))
+        log_text = open(logfile).read()
+        log_text = log_text.split("StartTesting", 1)[-1].split("EndTesting", 1)[0]
+
+        # This test is only checking that the packet it used at all (and that
+        # no errors are produced). It doesn't check that the packet is being
+        # used to solve a problem in an optimal way.
+        self.assertIn("MultiMemRead:", log_text)
+        self.assertNotIn("MultiMemRead error", log_text)

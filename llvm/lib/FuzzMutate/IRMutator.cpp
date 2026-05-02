@@ -20,6 +20,8 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PassInstrumentation.h"
@@ -115,9 +117,41 @@ InjectorIRStrategy::chooseOperation(Value *Src, RandomIRBuilder &IB) {
   return *RS;
 }
 
+static inline Instruction *getEffectiveTerminator(BasicBlock &BB) {
+  if (Instruction *I = BB.getTerminatingMustTailCall()) {
+    return I;
+  } else {
+    // Certain intrinsics, such as @llvm.amdgcn.cs.chain, must be immediately
+    // followed by an unreachable instruction..
+    if (UnreachableInst *UI = dyn_cast<UnreachableInst>(BB.getTerminator())) {
+      if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(UI->getPrevNode())) {
+        return II;
+      }
+    }
+  }
+
+  return BB.getTerminator();
+}
+
+static inline BasicBlock::iterator getEndIterator(BasicBlock &BB) {
+  auto End = BB.end();
+
+  if (BB.empty()) {
+    return End;
+  }
+
+  Instruction *EffectiveTerminator = getEffectiveTerminator(BB);
+  if (EffectiveTerminator != BB.getTerminator()) {
+    // Adjust range for special cases such as tail call.
+    End = std::prev(BB.end());
+  }
+
+  return End;
+}
+
 static inline iterator_range<BasicBlock::iterator>
 getInsertionRange(BasicBlock &BB) {
-  auto End = BB.getTerminatingMustTailCall() ? std::prev(BB.end()) : BB.end();
+  auto End = getEndIterator(BB);
   return make_range(BB.getFirstInsertionPt(), End);
 }
 
@@ -304,7 +338,7 @@ void InstModificationIRStrategy::mutate(Instruction &Inst,
     // constant 0.
     Value *Operand = Inst.getOperand(0);
     if (Constant *C = dyn_cast<Constant>(Operand)) {
-      if (!C->isZeroValue()) {
+      if (!C->isNullValue()) {
         ShuffleItems = {0, 1};
       }
     }
@@ -409,6 +443,12 @@ static bool isUnsupportedFunction(Function *F) {
     return true;
   }
 
+  // This intrinsic has specific requirements for its parameters and the caller
+  // must adhere to certain calling conventions.
+  if (F->isIntrinsic() && F->getIntrinsicID() == Intrinsic::amdgcn_cs_chain) {
+    return true;
+  }
+
   return false;
 }
 
@@ -478,7 +518,7 @@ void InsertCFGStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
   uint64_t IP = uniform<uint64_t>(IB.Rand, 0, Insts.size() - 1);
   auto InstsBeforeSplit = ArrayRef(Insts).slice(0, IP);
 
-  // `Sink` inherits Blocks' terminator, `Source` will have a BranchInst
+  // `Sink` inherits Blocks' terminator, `Source` will have a UncondBrInst
   // directly jumps to `Sink`. Here, we have to create a new terminator for
   // `Source`.
   BasicBlock *Block = Insts[IP]->getParent();
@@ -495,7 +535,7 @@ void InsertCFGStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
     Value *Cond =
         IB.findOrCreateSource(*Source, InstsBeforeSplit, {},
                               fuzzerop::onlyType(Type::getInt1Ty(C)), false);
-    BranchInst *Branch = BranchInst::Create(IfTrue, IfFalse, Cond);
+    CondBrInst *Branch = CondBrInst::Create(Cond, IfTrue, IfFalse);
     // Remove the old terminator.
     ReplaceInstWithInst(Source->getTerminator(), Branch);
     // Connect these blocks to `Sink`
@@ -567,7 +607,7 @@ void InsertCFGStrategy::connectBlocksToSink(ArrayRef<BasicBlock *> Blocks,
       break;
     }
     case CFGToSink::DirectSink: {
-      BranchInst::Create(Sink, BB);
+      UncondBrInst::Create(Sink, BB);
       break;
     }
     case CFGToSink::SinkOrSelfLoop: {
@@ -576,7 +616,7 @@ void InsertCFGStrategy::connectBlocksToSink(ArrayRef<BasicBlock *> Blocks,
       uint64_t coin = uniform<uint64_t>(IB.Rand, 0, 1);
       Value *Cond = IB.findOrCreateSource(
           *BB, {}, {}, fuzzerop::onlyType(Type::getInt1Ty(C)), false);
-      BranchInst::Create(Branches[coin], Branches[1 - coin], Cond, BB);
+      CondBrInst::Create(Cond, Branches[coin], Branches[1 - coin], BB);
       break;
     }
     case CFGToSink::EndOfCFGToLink:
@@ -641,8 +681,9 @@ void ShuffleBlockStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
   std::map<size_t, Instruction *> AliveInsts;
   std::map<Instruction *, size_t> AliveInstsLookup;
   size_t InsertIdx = 0;
-  for (auto &I : make_early_inc_range(make_range(
-           BB.getFirstInsertionPt(), BB.getTerminator()->getIterator()))) {
+  for (auto &I : make_early_inc_range(
+           make_range(BB.getFirstInsertionPt(),
+                      getEffectiveTerminator(BB)->getIterator()))) {
     // First gather all instructions that can be shuffled. Don't take
     // terminator.
     AliveInsts.insert({InsertIdx, &I});
@@ -702,7 +743,7 @@ void ShuffleBlockStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
     }
   }
 
-  Instruction *Terminator = BB.getTerminator();
+  Instruction *Terminator = getEffectiveTerminator(BB);
   // Then put instructions back.
   for (Instruction *I : Insts) {
     I->insertBefore(Terminator->getIterator());

@@ -5,7 +5,7 @@
 ;   clang -target bpf -g -S -emit-llvm test.c
 
 ; Function Attrs: noinline nounwind optnone
-define dso_local i32 @test(i32 %a, i32 %b) #0 !dbg !7 {
+define dso_local i32 @test(i32 %a, i32 %b) !dbg !7 {
 entry:
   %a.addr = alloca i32, align 4
   %b.addr = alloca i32, align 4
@@ -22,10 +22,7 @@ entry:
 ; CHECK-LABEL: test
 
 ; Function Attrs: nounwind readnone speculatable
-declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
-
-attributes #0 = { noinline nounwind optnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind readnone speculatable}
+declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5}

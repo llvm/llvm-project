@@ -16,12 +16,14 @@
 #include "GCNSubtarget.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -64,7 +66,7 @@ private:
 
   void initialize(const GCNSubtarget &ST);
 
-  bool isUniform(BranchInst *T);
+  bool isUniform(CondBrInst *T);
 
   bool isTopOfStack(BasicBlock *BB);
 
@@ -78,15 +80,14 @@ private:
 
   bool eraseIfUnused(PHINode *Phi);
 
-  bool openIf(BranchInst *Term);
+  bool openIf(CondBrInst *Term);
 
-  bool insertElse(BranchInst *Term);
+  bool insertElse(CondBrInst *Term);
 
-  Value *
-  handleLoopCondition(Value *Cond, PHINode *Broken, llvm::Loop *L,
-                      BranchInst *Term);
+  Value *handleLoopCondition(Value *Cond, PHINode *Broken, llvm::Loop *L,
+                             CondBrInst *Term);
 
-  bool handleLoop(BranchInst *Term);
+  bool handleLoop(CondBrInst *Term);
 
   bool closeControlFlow(BasicBlock *BB);
 
@@ -126,7 +127,7 @@ void SIAnnotateControlFlow::initialize(const GCNSubtarget &ST) {
 
 /// Is the branch condition uniform or did the StructurizeCFG pass
 /// consider it as such?
-bool SIAnnotateControlFlow::isUniform(BranchInst *T) {
+bool SIAnnotateControlFlow::isUniform(CondBrInst *T) {
   return UA->isUniform(T) || T->hasMetadata("structurizecfg.uniform");
 }
 
@@ -182,7 +183,7 @@ bool SIAnnotateControlFlow::eraseIfUnused(PHINode *Phi) {
 }
 
 /// Open a new "If" block
-bool SIAnnotateControlFlow::openIf(BranchInst *Term) {
+bool SIAnnotateControlFlow::openIf(CondBrInst *Term) {
   if (isUniform(Term))
     return false;
 
@@ -197,7 +198,7 @@ bool SIAnnotateControlFlow::openIf(BranchInst *Term) {
 }
 
 /// Close the last "If" block and open a new "Else" block
-bool SIAnnotateControlFlow::insertElse(BranchInst *Term) {
+bool SIAnnotateControlFlow::insertElse(CondBrInst *Term) {
   if (isUniform(Term)) {
     return false;
   }
@@ -213,8 +214,9 @@ bool SIAnnotateControlFlow::insertElse(BranchInst *Term) {
 }
 
 /// Recursively handle the condition leading to a loop
-Value *SIAnnotateControlFlow::handleLoopCondition(
-    Value *Cond, PHINode *Broken, llvm::Loop *L, BranchInst *Term) {
+Value *SIAnnotateControlFlow::handleLoopCondition(Value *Cond, PHINode *Broken,
+                                                  llvm::Loop *L,
+                                                  CondBrInst *Term) {
 
   auto CreateBreak = [this, Cond, Broken](Instruction *I) -> CallInst * {
     return IRBuilder<>(I).CreateCall(
@@ -255,7 +257,7 @@ Value *SIAnnotateControlFlow::handleLoopCondition(
 }
 
 /// Handle a back edge (loop)
-bool SIAnnotateControlFlow::handleLoop(BranchInst *Term) {
+bool SIAnnotateControlFlow::handleLoop(CondBrInst *Term) {
   if (isUniform(Term))
     return false;
 
@@ -345,9 +347,9 @@ bool SIAnnotateControlFlow::run() {
                                  E = df_end(&F->getEntryBlock());
        I != E; ++I) {
     BasicBlock *BB = *I;
-    BranchInst *Term = dyn_cast<BranchInst>(BB->getTerminator());
+    CondBrInst *Term = dyn_cast<CondBrInst>(BB->getTerminator());
 
-    if (!Term || Term->isUnconditional()) {
+    if (!Term) {
       if (isTopOfStack(BB))
         Changed |= closeControlFlow(BB);
 

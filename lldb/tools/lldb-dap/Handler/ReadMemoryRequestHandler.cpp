@@ -21,8 +21,7 @@ llvm::Expected<protocol::ReadMemoryResponseBody>
 ReadMemoryRequestHandler::Run(const protocol::ReadMemoryArguments &args) const {
   const lldb::addr_t raw_address = args.memoryReference + args.offset;
 
-  lldb::SBProcess process = dap.target.GetProcess();
-  if (!lldb::SBDebugger::StateIsStoppedState(process.GetState()))
+  if (dap.ProcessIsNotStopped())
     return llvm::make_error<NotStoppedError>();
 
   const uint64_t count_read = std::max<uint64_t>(args.count, 1);
@@ -37,7 +36,7 @@ ReadMemoryRequestHandler::Run(const protocol::ReadMemoryArguments &args) const {
   const size_t memory_count = dap.target.GetProcess().ReadMemory(
       raw_address, buffer.data(), buffer.size(), error);
 
-  response.address = "0x" + llvm::utohexstr(raw_address);
+  response.address = raw_address;
 
   // reading memory may fail for multiple reasons. memory not readable,
   // reading out of memory range and gaps in memory. return from

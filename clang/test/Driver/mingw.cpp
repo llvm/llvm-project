@@ -85,6 +85,10 @@
 // RUN:   | FileCheck %s --check-prefix CHECK_MINGW_EC_LINK
 // CHECK_MINGW_EC_LINK: "-m" "arm64ecpe"
 
+// RUN: %clang --target=aarch64-windows-gnu -marm64x -### -o /dev/null %s 2>&1 \
+// RUN:   | FileCheck %s --check-prefix CHECK_MINGW_A64X_LINK
+// CHECK_MINGW_A64X_LINK: "-m" "arm64xpe"
+
 // RUN: %clang --target=mipsel-windows-gnu -### -o /dev/null %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix CHECK_MINGW_MIPSPE
 // CHECK_MINGW_MIPSPE: "-m" "mipspe"
@@ -92,3 +96,13 @@
 // RUN: %clang --target=i686-windows-gnu -fms-hotpatch -### -- %s 2>&1 \
 // RUN:    | FileCheck %s --check-prefix=FUNCTIONPADMIN
 // FUNCTIONPADMIN: "--functionpadmin"
+
+// RUN: %clang --target=x86_64-pc-windows-gnu -nolibc -### %s 2>&1 | FileCheck -check-prefix=CHECK_MINGW_NOLIBC %s
+// CHECK_MINGW_NOLIBC-NOT: "-ladvapi32"
+// CHECK_MINGW_NOLIBC-NOT: "-lkernel32"
+// CHECK_MINGW_NOLIBC-NOT: "-lmingw32"
+// CHECK_MINGW_NOLIBC-NOT: "-lmingwex"
+// CHECK_MINGW_NOLIBC-NOT: "-lmoldname"
+// CHECK_MINGW_NOLIBC-NOT: "-lmsvcrt"
+// CHECK_MINGW_NOLIBC-NOT: "-lshell32"
+// CHECK_MINGW_NOLIBC-NOT: "-luser32"

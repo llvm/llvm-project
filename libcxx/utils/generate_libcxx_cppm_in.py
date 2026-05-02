@@ -9,11 +9,19 @@
 import os.path
 import sys
 
-from libcxx.header_information import module_c_headers, module_headers, header_restrictions, headers_not_available, libcxx_root
+from libcxx.header_information import (
+    module_c_headers,
+    module_headers,
+    header_restrictions,
+    headers_not_available,
+    libcxx_root,
+)
 
 
 def write_file(module):
-    with open(libcxx_root / "modules" / f"{module}.cppm.in", "w") as module_cpp_in:
+    with open(
+        libcxx_root / "modules" / f"{module}.cppm.in", "w", encoding="utf-8"
+    ) as module_cpp_in:
         module_cpp_in.write(
             """\
 // -*- C++ -*-

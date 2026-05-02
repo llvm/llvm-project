@@ -20,13 +20,15 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Timer.h"
+#include "llvm/BinaryFormat/Dwarf.h"
+#include <cstdint>
 #include <cstring>
 #include <list>
 #include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
-using namespace lldb_private::dwarf;
+using namespace llvm::dwarf;
 
 // GetDwarfEHPtr
 //
@@ -145,6 +147,23 @@ GetGNUEHPointer(const DataExtractor &DE, lldb::offset_t *offset_ptr,
     }
   }
   return baseAddress + addressValue;
+}
+
+// Check if the given cie_id value indicates a CIE (Common Information Entry)
+// as opposed to an FDE (Frame Description Entry).
+static bool IsCIEMarker(uint64_t cie_id, bool is_64bit,
+                        DWARFCallFrameInfo::Type type) {
+  // Check eh_frame CIE marker
+  if (type == DWARFCallFrameInfo::EH)
+    return cie_id == 0;
+
+  // Check debug_frame CIE marker
+  // DWARF64
+  if (is_64bit)
+    return cie_id == llvm::dwarf::DW64_CIE_ID;
+
+  // DWARF32
+  return cie_id == llvm::dwarf::DW_CIE_ID;
 }
 
 DWARFCallFrameInfo::DWARFCallFrameInfo(ObjectFile &objfile,
@@ -283,7 +302,7 @@ DWARFCallFrameInfo::ParseCIE(const dw_offset_t cie_offset) {
     GetCFIData();
   uint32_t length = m_cfi_data.GetU32(&offset);
   dw_offset_t cie_id, end_offset;
-  bool is_64bit = (length == UINT32_MAX);
+  bool is_64bit = (length == llvm::dwarf::DW_LENGTH_DWARF64);
   if (is_64bit) {
     length = m_cfi_data.GetU64(&offset);
     cie_id = m_cfi_data.GetU64(&offset);
@@ -292,8 +311,9 @@ DWARFCallFrameInfo::ParseCIE(const dw_offset_t cie_offset) {
     cie_id = m_cfi_data.GetU32(&offset);
     end_offset = cie_offset + length + 4;
   }
-  if (length > 0 && ((m_type == DWARF && cie_id == UINT32_MAX) ||
-                     (m_type == EH && cie_id == 0ul))) {
+
+  // Check if this is a CIE or FDE based on the CIE ID marker
+  if (length > 0 && IsCIEMarker(cie_id, is_64bit, m_type)) {
     size_t i;
     //    cie.offset = cie_offset;
     //    cie.length = length;
@@ -470,7 +490,7 @@ void DWARFCallFrameInfo::GetFDEIndex() {
     const dw_offset_t current_entry = offset;
     dw_offset_t cie_id, next_entry, cie_offset;
     uint32_t len = m_cfi_data.GetU32(&offset);
-    bool is_64bit = (len == UINT32_MAX);
+    bool is_64bit = (len == llvm::dwarf::DW_LENGTH_DWARF64);
     if (is_64bit) {
       len = m_cfi_data.GetU64(&offset);
       cie_id = m_cfi_data.GetU64(&offset);
@@ -493,11 +513,8 @@ void DWARFCallFrameInfo::GetFDEIndex() {
       return;
     }
 
-    // An FDE entry contains CIE_pointer in debug_frame in same place as cie_id
-    // in eh_frame. CIE_pointer is an offset into the .debug_frame section. So,
-    // variable cie_offset should be equal to cie_id for debug_frame.
-    // FDE entries with cie_id == 0 shouldn't be ignored for it.
-    if ((cie_id == 0 && m_type == EH) || cie_id == UINT32_MAX || len == 0) {
+    // Check if this is a CIE or FDE based on the CIE ID marker
+    if (IsCIEMarker(cie_id, is_64bit, m_type) || len == 0) {
       auto cie_sp = ParseCIE(current_entry);
       if (!cie_sp) {
         // Cannot parse, the reason is already logged
@@ -568,7 +585,7 @@ DWARFCallFrameInfo::ParseFDE(dw_offset_t dwarf_offset,
 
   uint32_t length = m_cfi_data.GetU32(&offset);
   dw_offset_t cie_offset;
-  bool is_64bit = (length == UINT32_MAX);
+  bool is_64bit = (length == llvm::dwarf::DW_LENGTH_DWARF64);
   if (is_64bit) {
     length = m_cfi_data.GetU64(&offset);
     cie_offset = m_cfi_data.GetU64(&offset);
@@ -577,7 +594,9 @@ DWARFCallFrameInfo::ParseFDE(dw_offset_t dwarf_offset,
   }
 
   // FDE entries with zeroth cie_offset may occur for debug_frame.
-  assert(!(m_type == EH && 0 == cie_offset) && cie_offset != UINT32_MAX);
+  assert(!(m_type == EH && 0 == cie_offset) &&
+         cie_offset !=
+             (is_64bit ? llvm::dwarf::DW64_CIE_ID : llvm::dwarf::DW_CIE_ID));
 
   // Translate the CIE_id from the eh_frame format, which is relative to the
   // FDE offset, into a __eh_frame section offset
@@ -766,8 +785,32 @@ DWARFCallFrameInfo::ParseFDE(dw_offset_t dwarf_offset,
           break;
         }
 
-        case DW_CFA_val_offset:    // 0x14
-        case DW_CFA_val_offset_sf: // 0x15
+        case DW_CFA_val_offset: { // 0x14
+          // takes two unsigned LEB128 operands representing a register number
+          // and a factored offset. The required action is to change the rule
+          // for the register indicated by the register number to be a
+          // val_offset(N) rule where the value of N is factored_offset*
+          // data_alignment_factor
+          uint32_t reg_num = (uint32_t)m_cfi_data.GetULEB128(&offset);
+          int32_t op_offset =
+              (int32_t)m_cfi_data.GetULEB128(&offset) * data_align;
+          reg_location.SetIsCFAPlusOffset(op_offset);
+          row.SetRegisterInfo(reg_num, reg_location);
+          break;
+        }
+        case DW_CFA_val_offset_sf: { // 0x15
+          // takes two operands: an unsigned LEB128 value representing a
+          // register number and a signed LEB128 factored offset. This
+          // instruction is identical to DW_CFA_val_offset except that the
+          // second operand is signed and factored. The resulting offset is
+          // factored_offset* data_alignment_factor.
+          uint32_t reg_num = (uint32_t)m_cfi_data.GetULEB128(&offset);
+          int32_t op_offset =
+              (int32_t)m_cfi_data.GetSLEB128(&offset) * data_align;
+          reg_location.SetIsCFAPlusOffset(op_offset);
+          row.SetRegisterInfo(reg_num, reg_location);
+          break;
+        }
         default:
           break;
         }

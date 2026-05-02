@@ -201,7 +201,7 @@ void X86RegisterBankInfo::getInstrPartialMappingIdxs(
   unsigned NumOperands = MI.getNumOperands();
   for (unsigned Idx = 0; Idx < NumOperands; ++Idx) {
     auto &MO = MI.getOperand(Idx);
-    if (!MO.isReg() || !MO.getReg())
+    if (!MO.isReg() || !MO.getReg().isVirtual())
       OpRegBankIdx[Idx] = PMI_None;
     else
       OpRegBankIdx[Idx] =
@@ -218,7 +218,7 @@ bool X86RegisterBankInfo::getInstrValueMapping(
   for (unsigned Idx = 0; Idx < NumOperands; ++Idx) {
     if (!MI.getOperand(Idx).isReg())
       continue;
-    if (!MI.getOperand(Idx).getReg())
+    if (!MI.getOperand(Idx).getReg().isVirtual())
       continue;
 
     auto Mapping = getValueMapping(OpRegBankIdx[Idx], 1);
@@ -341,6 +341,7 @@ X86RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
                     /* Predicate */ PMI_None, FpRegBank, FpRegBank};
     break;
   }
+  case TargetOpcode::G_FABS:
   case TargetOpcode::G_TRUNC:
   case TargetOpcode::G_ANYEXT: {
     auto &Op0 = MI.getOperand(0);
@@ -354,9 +355,9 @@ X86RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
         Ty0.getSizeInBits() == 128 &&
         (Ty1.getSizeInBits() == 32 || Ty1.getSizeInBits() == 64) &&
         Opc == TargetOpcode::G_ANYEXT;
-
-    getInstrPartialMappingIdxs(MI, MRI, /* isFP= */ isFPTrunc || isFPAnyExt,
-                               OpRegBankIdx);
+    bool isFAbs = (Opc == TargetOpcode::G_FABS);
+    getInstrPartialMappingIdxs(
+        MI, MRI, /* isFP= */ isFPTrunc || isFPAnyExt || isFAbs, OpRegBankIdx);
     break;
   }
   case TargetOpcode::G_LOAD: {

@@ -41,8 +41,8 @@ LogicalResult sparse_tensor::detail::stageWithSortImpl(
 
   // -> sort
   Type dstCOOTp = dstStt.getCOOType(/*ordered=*/true);
-  Value dstCOO = rewriter.create<ReorderCOOOp>(
-      loc, dstCOOTp, srcCOO, SparseTensorSortKind::HybridQuickSort);
+  Value dstCOO = ReorderCOOOp::create(rewriter, loc, dstCOOTp, srcCOO,
+                                      SparseTensorSortKind::HybridQuickSort);
 
   // -> dest.
   if (dstCOO.getType() == finalTp) {

@@ -12,12 +12,14 @@
 
 #include <string>
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
 #include <type_traits>
 
 #include "test_macros.h"
 
-static int allocated_;
+static std::uint64_t allocated_;
+static std::uint64_t deallocated_;
 
 template <class T, class Sz>
 struct test_alloc {
@@ -41,12 +43,12 @@ struct test_alloc {
 
   pointer allocate(size_type n, const void* = nullptr) {
     allocated_ += n;
-    return std::allocator<value_type>().allocate(n);
+    return std::allocator<value_type>().allocate(static_cast<std::size_t>(n));
   }
 
   void deallocate(pointer p, size_type s) {
-    allocated_ -= s;
-    std::allocator<value_type>().deallocate(p, s);
+    deallocated_ += s;
+    std::allocator<value_type>().deallocate(p, static_cast<std::size_t>(s));
   }
 
   template <class U>
@@ -64,14 +66,13 @@ struct test_alloc {
 
 template <class Sz>
 void test() {
-  for (int i = 1; i < 1000; ++i) {
-    using Str = std::basic_string<char, std::char_traits<char>, test_alloc<char, Sz> >;
+  for (unsigned int i = 1; i < 1000; ++i) {
     {
-      Str s(i, 't');
-      assert(allocated_ == 0 || allocated_ >= i);
+      std::basic_string<char, std::char_traits<char>, test_alloc<char, Sz> > s(i, 't');
+      (void)s;
     }
+    assert(allocated_ == deallocated_);
   }
-  assert(allocated_ == 0);
 }
 
 int main(int, char**) {

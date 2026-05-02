@@ -35,6 +35,13 @@ LLVM_ABI FunctionPass *createDeadCodeEliminationPass();
 
 //===----------------------------------------------------------------------===//
 //
+// DeadStoreElimination - This pass deletes stores that are post-dominated by
+// must-aliased stores and are not loaded used between the stores.
+//
+LLVM_ABI FunctionPass *createDeadStoreEliminationPass();
+
+//===----------------------------------------------------------------------===//
+//
 // SROA - Replace aggregates or pieces of aggregates with scalar SSA values.
 //
 LLVM_ABI FunctionPass *createSROAPass(bool PreserveCFG = true);
@@ -138,11 +145,6 @@ LLVM_ABI FunctionPass *createSinkingPass();
 LLVM_ABI Pass *createLowerAtomicPass();
 
 //===----------------------------------------------------------------------===//
-//
-// MergeICmps - Merge integer comparison chains into a memcmp
-//
-LLVM_ABI Pass *createMergeICmpsLegacyPass();
-
 //===----------------------------------------------------------------------===//
 //
 // InferAddressSpaces - Modify users of addrspacecast instructions with values

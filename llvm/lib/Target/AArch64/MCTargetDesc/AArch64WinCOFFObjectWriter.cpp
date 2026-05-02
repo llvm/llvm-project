@@ -15,7 +15,6 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/MCWinCOFFObjectWriter.h"
@@ -49,32 +48,35 @@ unsigned AArch64WinCOFFObjectWriter::getRelocType(
     MCContext &Ctx, const MCValue &Target, const MCFixup &Fixup,
     bool IsCrossSection, const MCAsmBackend &MAB) const {
   unsigned FixupKind = Fixup.getKind();
+  bool PCRel = Fixup.isPCRel();
   if (IsCrossSection) {
     // IMAGE_REL_ARM64_REL64 does not exist. We treat FK_Data_8 as FK_PCRel_4 so
     // that .xword a-b can lower to IMAGE_REL_ARM64_REL32. This allows generic
     // instrumentation to not bother with the COFF limitation. A negative value
     // needs attention.
-    if (FixupKind != FK_Data_4 && FixupKind != FK_Data_8) {
+    if (PCRel || (FixupKind != FK_Data_4 && FixupKind != FK_Data_8)) {
       Ctx.reportError(Fixup.getLoc(), "Cannot represent this expression");
       return COFF::IMAGE_REL_ARM64_ADDR32;
     }
-    FixupKind = FK_PCRel_4;
+    FixupKind = FK_Data_4;
+    PCRel = true;
   }
 
   auto Spec = Target.getSpecifier();
   const MCExpr *Expr = Fixup.getValue();
 
   if (auto *A64E = dyn_cast<MCSpecifierExpr>(Expr)) {
-    AArch64MCExpr::Specifier Spec = A64E->getSpecifier();
+    AArch64::Specifier Spec = A64E->getSpecifier();
     switch (AArch64::getSymbolLoc(Spec)) {
-    case AArch64MCExpr::VK_ABS:
-    case AArch64MCExpr::VK_SECREL:
+    case AArch64::S_ABS:
+    case AArch64::S_SECREL:
       // Supported
       break;
     default:
-      Ctx.reportError(Fixup.getLoc(), "relocation specifier " +
-                                          AArch64::getSpecifierName(*A64E) +
-                                          " unsupported on COFF targets");
+      Ctx.reportError(Fixup.getLoc(),
+                      "relocation specifier " +
+                          AArch64::getSpecifierName(A64E->getSpecifier()) +
+                          " unsupported on COFF targets");
       return COFF::IMAGE_REL_ARM64_ABSOLUTE; // Dummy return value
     }
   }
@@ -82,9 +84,10 @@ unsigned AArch64WinCOFFObjectWriter::getRelocType(
   switch (FixupKind) {
   default: {
     if (auto *A64E = dyn_cast<MCSpecifierExpr>(Expr)) {
-      Ctx.reportError(Fixup.getLoc(), "relocation specifier " +
-                                          AArch64::getSpecifierName(*A64E) +
-                                          " unsupported on COFF targets");
+      Ctx.reportError(Fixup.getLoc(),
+                      "relocation specifier " +
+                          AArch64::getSpecifierName(A64E->getSpecifier()) +
+                          " unsupported on COFF targets");
     } else {
       MCFixupKindInfo Info = MAB.getFixupKindInfo(Fixup.getKind());
       Ctx.reportError(Fixup.getLoc(), Twine("relocation type ") + Info.Name +
@@ -93,17 +96,14 @@ unsigned AArch64WinCOFFObjectWriter::getRelocType(
     return COFF::IMAGE_REL_ARM64_ABSOLUTE; // Dummy return value
   }
 
-  case FK_PCRel_4:
-    return COFF::IMAGE_REL_ARM64_REL32;
-
   case FK_Data_4:
+    if (PCRel)
+      return COFF::IMAGE_REL_ARM64_REL32;
     switch (Spec) {
     default:
       return COFF::IMAGE_REL_ARM64_ADDR32;
     case MCSymbolRefExpr::VK_COFF_IMGREL32:
       return COFF::IMAGE_REL_ARM64_ADDR32NB;
-    case MCSymbolRefExpr::VK_SECREL:
-      return COFF::IMAGE_REL_ARM64_SECREL;
     }
 
   case FK_Data_8:
@@ -117,10 +117,10 @@ unsigned AArch64WinCOFFObjectWriter::getRelocType(
 
   case AArch64::fixup_aarch64_add_imm12:
     if (auto *A64E = dyn_cast<MCSpecifierExpr>(Expr)) {
-      AArch64MCExpr::Specifier Spec = A64E->getSpecifier();
-      if (Spec == AArch64MCExpr::VK_SECREL_LO12)
+      AArch64::Specifier Spec = A64E->getSpecifier();
+      if (Spec == AArch64::S_SECREL_LO12)
         return COFF::IMAGE_REL_ARM64_SECREL_LOW12A;
-      if (Spec == AArch64MCExpr::VK_SECREL_HI12)
+      if (Spec == AArch64::S_SECREL_HI12)
         return COFF::IMAGE_REL_ARM64_SECREL_HIGH12A;
     }
     return COFF::IMAGE_REL_ARM64_PAGEOFFSET_12A;
@@ -131,8 +131,8 @@ unsigned AArch64WinCOFFObjectWriter::getRelocType(
   case AArch64::fixup_aarch64_ldst_imm12_scale8:
   case AArch64::fixup_aarch64_ldst_imm12_scale16:
     if (auto *A64E = dyn_cast<MCSpecifierExpr>(Expr)) {
-      AArch64MCExpr::Specifier Spec = A64E->getSpecifier();
-      if (Spec == AArch64MCExpr::VK_SECREL_LO12)
+      AArch64::Specifier Spec = A64E->getSpecifier();
+      if (Spec == AArch64::S_SECREL_LO12)
         return COFF::IMAGE_REL_ARM64_SECREL_LOW12L;
     }
     return COFF::IMAGE_REL_ARM64_PAGEOFFSET_12L;

@@ -100,6 +100,17 @@ ValueWithRealFlags<Complex<R>> Complex<R>::Divide(
   return {Complex{re, im}, flags};
 }
 
+template <typename R>
+ValueWithRealFlags<Complex<R>> Complex<R>::KahanSummation(
+    const Complex &that, Complex &correction, Rounding rounding) const {
+  RealFlags flags;
+  Part reSum{re_.KahanSummation(that.re_, correction.re_, rounding)
+          .AccumulateFlags(flags)};
+  Part imSum{im_.KahanSummation(that.im_, correction.im_, rounding)
+          .AccumulateFlags(flags)};
+  return {Complex{reSum, imSum}, flags};
+}
+
 template <typename R> std::string Complex<R>::DumpHexadecimal() const {
   std::string result{'('};
   result += re_.DumpHexadecimal();

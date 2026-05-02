@@ -16,6 +16,12 @@
 #define __SPIRV_NOEXCEPT
 #endif
 
+#pragma push_macro("__size_t")
+#pragma push_macro("__uint32_t")
+#pragma push_macro("__uint64_t")
+#define __size_t __SIZE_TYPE__
+#define __uint32_t __UINT32_TYPE__
+
 #define __SPIRV_overloadable __attribute__((overloadable))
 #define __SPIRV_convergent __attribute__((convergent))
 #define __SPIRV_inline __attribute__((always_inline))
@@ -36,12 +42,40 @@
 // to establish if we can use the builtin alias. We disable builtin altogether
 // if we do not intent to use the backend. So instead of use target macros, rely
 // on a __has_builtin test.
-#if (__has_builtin(__builtin_spirv_generic_cast_to_ptr_explicit))
+#if (__has_builtin(__builtin_spirv_num_workgroups))
 #define __SPIRV_BUILTIN_ALIAS(builtin)                                         \
   __attribute__((clang_builtin_alias(builtin)))
 #else
 #define __SPIRV_BUILTIN_ALIAS(builtin)
 #endif
+
+// Builtin IDs and sizes
+
+extern __SPIRV_BUILTIN_ALIAS(__builtin_spirv_num_workgroups) __size_t
+    __spirv_BuiltInNumWorkgroups(int);
+extern __SPIRV_BUILTIN_ALIAS(__builtin_spirv_workgroup_size) __size_t
+    __spirv_BuiltInWorkgroupSize(int);
+extern __SPIRV_BUILTIN_ALIAS(__builtin_spirv_workgroup_id) __size_t
+    __spirv_BuiltInWorkgroupId(int);
+extern __SPIRV_BUILTIN_ALIAS(__builtin_spirv_local_invocation_id) __size_t
+    __spirv_BuiltInLocalInvocationId(int);
+extern __SPIRV_BUILTIN_ALIAS(__builtin_spirv_global_invocation_id) __size_t
+    __spirv_BuiltInGlobalInvocationId(int);
+
+extern __SPIRV_BUILTIN_ALIAS(__builtin_spirv_global_size) __size_t
+    __spirv_BuiltInGlobalSize(int);
+extern __SPIRV_BUILTIN_ALIAS(__builtin_spirv_global_offset) __size_t
+    __spirv_BuiltInGlobalOffset(int);
+extern __SPIRV_BUILTIN_ALIAS(__builtin_spirv_subgroup_size) __uint32_t
+    __spirv_BuiltInSubgroupSize();
+extern __SPIRV_BUILTIN_ALIAS(__builtin_spirv_subgroup_max_size) __uint32_t
+    __spirv_BuiltInSubgroupMaxSize();
+extern __SPIRV_BUILTIN_ALIAS(__builtin_spirv_num_subgroups) __uint32_t
+    __spirv_BuiltInNumSubgroups();
+extern __SPIRV_BUILTIN_ALIAS(__builtin_spirv_subgroup_id) __uint32_t
+    __spirv_BuiltInSubgroupId();
+extern __SPIRV_BUILTIN_ALIAS(__builtin_spirv_subgroup_local_invocation_id)
+    __uint32_t __spirv_BuiltInSubgroupLocalInvocationId();
 
 // OpGenericCastToPtrExplicit
 
@@ -163,6 +197,10 @@ __spirv_GenericCastToPtr_ToPrivate(__generic const volatile void *p,
                                    int) __SPIRV_NOEXCEPT {
   return (__private const volatile void *)p;
 }
+
+#pragma pop_macro("__size_t")
+#pragma pop_macro("__uint32_t")
+#pragma pop_macro("__uint64_t")
 
 #undef __SPIRV_overloadable
 #undef __SPIRV_convergent

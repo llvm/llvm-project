@@ -135,17 +135,17 @@ public:
   MCRegister getFPReg() const { return FPReg; }
 
   void emitFnStartLocNotes() const {
-    for (const SMLoc &Loc : FnStartLocs)
+    for (SMLoc Loc : FnStartLocs)
       Parser.Note(Loc, ".fnstart was specified here");
   }
 
   void emitCantUnwindLocNotes() const {
-    for (const SMLoc &Loc : CantUnwindLocs)
+    for (SMLoc Loc : CantUnwindLocs)
       Parser.Note(Loc, ".cantunwind was specified here");
   }
 
   void emitHandlerDataLocNotes() const {
-    for (const SMLoc &Loc : HandlerDataLocs)
+    for (SMLoc Loc : HandlerDataLocs)
       Parser.Note(Loc, ".handlerdata was specified here");
   }
 
@@ -426,15 +426,15 @@ class ARMAsmParser : public MCTargetAsmParser {
       VPTState.CurPosition = ~0U;
   }
 
-  void Note(SMLoc L, const Twine &Msg, SMRange Range = std::nullopt) {
+  void Note(SMLoc L, const Twine &Msg, SMRange Range = {}) {
     return getParser().Note(L, Msg, Range);
   }
 
-  bool Warning(SMLoc L, const Twine &Msg, SMRange Range = std::nullopt) {
+  bool Warning(SMLoc L, const Twine &Msg, SMRange Range = {}) {
     return getParser().Warning(L, Msg, Range);
   }
 
-  bool Error(SMLoc L, const Twine &Msg, SMRange Range = std::nullopt) {
+  bool Error(SMLoc L, const Twine &Msg, SMRange Range = {}) {
     return getParser().Error(L, Msg, Range);
   }
 
@@ -689,8 +689,8 @@ public:
   };
 
   ARMAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
-               const MCInstrInfo &MII, const MCTargetOptions &Options)
-    : MCTargetAsmParser(Options, STI, MII), UC(Parser), MS(STI) {
+               const MCInstrInfo &MII)
+      : MCTargetAsmParser(STI, MII), UC(Parser), MS(STI) {
     MCAsmParserExtension::Initialize(Parser);
 
     // Cache the MCRegisterInfo.
@@ -3373,12 +3373,12 @@ public:
 
   void addMSRMaskOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createImm(unsigned(getMSRMask())));
+    Inst.addOperand(MCOperand::createImm(getMSRMask()));
   }
 
   void addBankedRegOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createImm(unsigned(getBankedReg())));
+    Inst.addOperand(MCOperand::createImm(getBankedReg()));
   }
 
   void addProcIFlagsOperands(MCInst &Inst, unsigned N) const {
@@ -3629,7 +3629,7 @@ public:
     Inst.addOperand(MCOperand::createImm(Imm == 48 ? 1 : 0));
   }
 
-  void print(raw_ostream &OS) const override;
+  void print(raw_ostream &OS, const MCAsmInfo &MAI) const override;
 
   static std::unique_ptr<ARMOperand> CreateITMask(unsigned Mask, SMLoc S,
                                                   ARMAsmParser &Parser) {
@@ -3979,7 +3979,7 @@ public:
 
 } // end anonymous namespace.
 
-void ARMOperand::print(raw_ostream &OS) const {
+void ARMOperand::print(raw_ostream &OS, const MCAsmInfo &MAI) const {
   auto RegName = [](MCRegister Reg) {
     if (Reg)
       return ARMInstPrinter::getRegisterName(Reg);
@@ -4024,7 +4024,7 @@ void ARMOperand::print(raw_ostream &OS) const {
     OS << "<banked reg: " << getBankedReg() << ">";
     break;
   case k_Immediate:
-    OS << *getImm();
+    MAI.printExpr(OS, *getImm());
     break;
   case k_MemBarrierOpt:
     OS << "<ARM_MB::" << MemBOptToString(getMemBarrierOpt(), false) << ">";
@@ -4039,8 +4039,10 @@ void ARMOperand::print(raw_ostream &OS) const {
     OS << "<memory";
     if (Memory.BaseRegNum)
       OS << " base:" << RegName(Memory.BaseRegNum);
-    if (Memory.OffsetImm)
-      OS << " offset-imm:" << *Memory.OffsetImm;
+    if (Memory.OffsetImm) {
+      OS << " offset-imm:";
+      MAI.printExpr(OS, *Memory.OffsetImm);
+    }
     if (Memory.OffsetRegNum)
       OS << " offset-reg:" << (Memory.isNegative ? "-" : "")
          << RegName(Memory.OffsetRegNum);
@@ -4094,7 +4096,8 @@ void ARMOperand::print(raw_ostream &OS) const {
        <<  ModImm.Rot << ")>";
     break;
   case k_ConstantPoolImmediate:
-    OS << "<constant_pool_imm #" << *getConstantPoolImm();
+    OS << "<constant_pool_imm #";
+    MAI.printExpr(OS, *getConstantPoolImm());
     break;
   case k_BitfieldDescriptor:
     OS << "<bitfield " << "lsb: " << Bitfield.LSB
@@ -6433,7 +6436,7 @@ bool ARMAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
       return true;
 
     const auto *ExprVal =
-        MCSpecifierExpr::create(SubExprVal, Spec, getContext());
+        MCSpecifierExpr::create(SubExprVal, Spec, getContext(), S);
     E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
     Operands.push_back(ARMOperand::CreateImm(ExprVal, S, E, *this));
     return false;
@@ -6868,19 +6871,13 @@ void ARMAsmParser::tryConvertingToTwoOperandForm(
   }
 }
 
+static bool isARMMCExpr(MCParsedAsmOperand &MCOp);
 // this function returns true if the operand is one of the following
 // relocations: :upper8_15:, :upper0_7:, :lower8_15: or :lower0_7:
 static bool isThumbI8Relocation(MCParsedAsmOperand &MCOp) {
+  assert(isARMMCExpr(MCOp));
   ARMOperand &Op = static_cast<ARMOperand &>(MCOp);
-  if (!Op.isImm())
-    return false;
-  const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(Op.getImm());
-  if (CE)
-    return false;
-  const MCExpr *E = dyn_cast<MCExpr>(Op.getImm());
-  if (!E)
-    return false;
-  auto *ARM16Expr = dyn_cast<MCSpecifierExpr>(E);
+  auto *ARM16Expr = dyn_cast<MCSpecifierExpr>(Op.getImm());
   if (ARM16Expr && (ARM16Expr->getSpecifier() == ARM::S_HI_8_15 ||
                     ARM16Expr->getSpecifier() == ARM::S_HI_0_7 ||
                     ARM16Expr->getSpecifier() == ARM::S_LO_8_15 ||
@@ -6944,7 +6941,7 @@ static void applyMnemonicAliases(StringRef &Mnemonic,
 // tablegen, so fix it up here.
 //
 // We have to be careful to not emit an invalid Rt2 here, because the rest of
-// the assembly parser could then generate confusing diagnostics refering to
+// the assembly parser could then generate confusing diagnostics referring to
 // it. If we do find anything that prevents us from doing the transformation we
 // bail out, and let the assembly parser report an error on the instruction as
 // it is written.
@@ -7256,8 +7253,8 @@ bool ARMAsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
   }
 
   // This marks the end of the LHS Mnemonic operators.
-  // This is used for indexing into the non-menmonic operators as some of the
-  // mnemonic operators are optional and therfore indexes can differ.
+  // This is used for indexing into the non-mnemonic operators as some of the
+  // mnemonic operators are optional and therefore indexes can differ.
   unsigned MnemonicOpsEndInd = Operands.size();
 
   // Read the remaining operands.
@@ -7649,13 +7646,7 @@ static bool isARMMCExpr(MCParsedAsmOperand &MCOp) {
   ARMOperand &Op = static_cast<ARMOperand &>(MCOp);
   if (!Op.isImm())
     return false;
-  const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(Op.getImm());
-  if (CE)
-    return false;
-  const MCExpr *E = dyn_cast<MCExpr>(Op.getImm());
-  if (!E)
-    return false;
-  return true;
+  return !isa<MCConstantExpr>(Op.getImm());
 }
 
 // FIXME: We would really like to be able to tablegen'erate this.
@@ -8283,10 +8274,9 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
     int i = (Operands[MnemonicOpsEndInd]->isImm()) ? MnemonicOpsEndInd
                                                    : MnemonicOpsEndInd + 1;
     ARMOperand &Op = static_cast<ARMOperand &>(*Operands[i]);
-    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(Op.getImm());
-    if (CE) break;
-    const MCExpr *E = dyn_cast<MCExpr>(Op.getImm());
-    if (!E) break;
+    const MCExpr *E = Op.getImm();
+    if (isa<MCConstantExpr>(E))
+      break;
     auto *ARM16Expr = dyn_cast<MCSpecifierExpr>(E);
     if (!ARM16Expr || (ARM16Expr->getSpecifier() != ARM::S_HI16 &&
                        ARM16Expr->getSpecifier() != ARM::S_LO16))
@@ -9005,7 +8995,7 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
     Inst = TmpInst;
     return true;
   }
-  // Alias for 'ldr{sb,h,sh}t Rt, [Rn] {, #imm}' for ommitted immediate.
+  // Alias for 'ldr{sb,h,sh}t Rt, [Rn] {, #imm}' for omitted immediate.
   case ARM::LDRSBTii:
   case ARM::LDRHTii:
   case ARM::LDRSHTii: {
@@ -11363,7 +11353,7 @@ unsigned ARMAsmParser::MatchInstruction(OperandVector &Operands, MCInst &Inst,
     extendImplicitITBlock(ITState.Cond);
     if (MatchInstructionImpl(Operands, Inst, nullptr, MatchingInlineAsm) ==
             Match_Success) {
-      // The match succeded, but we still have to check that the instruction is
+      // The match succeeded, but we still have to check that the instruction is
       // valid in this implicit IT block.
       const MCInstrDesc &MCID = MII.get(Inst.getOpcode());
       if (MCID.isPredicable()) {
@@ -11827,7 +11817,7 @@ void ARMAsmParser::FixModeAfterArchChange(bool WasThumb, SMLoc Loc) {
         getTargetStreamer().emitCode16();
       else
         getTargetStreamer().emitCode32();
-      // Warn about the implcit mode switch. GAS does not switch modes here,
+      // Warn about the implicit mode switch. GAS does not switch modes here,
       // but instead stays in the old mode, reporting an error on any following
       // instructions as the mode does not exist on the target.
       Warning(Loc, Twine("new target does not support ") +
@@ -12319,12 +12309,12 @@ bool ARMAsmParser::parseDirectiveEven(SMLoc L) {
     return true;
 
   if (!Section) {
-    getStreamer().initSections(false, getSTI());
+    getStreamer().initSections(getSTI());
     Section = getStreamer().getCurrentSectionOnly();
   }
 
   assert(Section && "must have section to emit alignment");
-  if (Section->useCodeAlign())
+  if (getContext().getAsmInfo().useCodeAlign(*Section))
     getStreamer().emitCodeAlignment(Align(2), &getSTI());
   else
     getStreamer().emitValueToAlignment(Align(2));
@@ -12522,7 +12512,7 @@ bool ARMAsmParser::parseDirectiveAlign(SMLoc L) {
     // '.align' is target specifically handled to mean 2**2 byte alignment.
     const MCSection *Section = getStreamer().getCurrentSectionOnly();
     assert(Section && "must have section to emit alignment");
-    if (Section->useCodeAlign())
+    if (getContext().getAsmInfo().useCodeAlign(*Section))
       getStreamer().emitCodeAlignment(Align(4), &getSTI(), 0);
     else
       getStreamer().emitValueToAlignment(Align(4), 0, 1, 0);

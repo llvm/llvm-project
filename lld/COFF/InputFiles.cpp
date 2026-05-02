@@ -25,6 +25,7 @@
 #include "llvm/DebugInfo/PDB/Native/NativeSession.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/IR/Mangler.h"
+#include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/COFF.h"
@@ -87,10 +88,18 @@ static void checkAndSetWeakAlias(SymbolTable &symtab, InputFile *f,
         // Weak aliases as produced by GCC are named in the form
         // .weak.<weaksymbol>.<othersymbol>, where <othersymbol> is the name
         // of another symbol emitted near the weak symbol.
-        // Just use the definition from the first object file that defined
-        // this weak symbol.
-        if (symtab.ctx.config.allowDuplicateWeak)
+        if (symtab.ctx.config.allowDuplicateWeak) {
+          auto isAbsZero = [](Symbol *sym) -> bool {
+            return isa<DefinedAbsolute>(sym) &&
+                   dyn_cast<DefinedAbsolute>(sym)->getVA() == 0;
+          };
+          // If the alias we had points at absolute zero, and we get another
+          // weak symbol which isn't absolute zero, prefer that one.
+          if (isAbsZero(u->weakAlias) && !isAbsZero(target)) {
+            u->setWeakAlias(target, isAntiDep);
+          }
           return;
+        }
         symtab.reportDuplicate(source, f);
       }
     }
@@ -114,15 +123,42 @@ static coff_symbol_generic *cloneSymbol(COFFSymbolRef sym) {
   }
 }
 
-ArchiveFile::ArchiveFile(COFFLinkerContext &ctx, MemoryBufferRef m)
-    : InputFile(ctx.symtab, ArchiveKind, m) {}
+// Skip importing DllMain thunks from import libraries.
+static bool fixupDllMain(COFFLinkerContext &ctx, llvm::object::Archive *file,
+                         const Archive::Symbol &sym, bool &skipDllMain) {
+  const Archive::Child &c =
+      CHECK(sym.getMember(), file->getFileName() +
+                                 ": could not get the member for symbol " +
+                                 toCOFFString(ctx, sym));
+  MemoryBufferRef mb =
+      CHECK(c.getMemoryBufferRef(),
+            file->getFileName() +
+                ": could not get the buffer for a child buffer of the archive");
+  if (identify_magic(mb.getBuffer()) == file_magic::coff_import_library) {
+    if (ctx.config.warnImportedDllMain) {
+      // We won't place DllMain symbols in the symbol table if they are
+      // coming from a import library. This message can be ignored with the flag
+      // '/ignore:importeddllmain'
+      Warn(ctx)
+          << file->getFileName()
+          << ": skipping imported DllMain symbol [importeddllmain]\nNOTE: this "
+             "might be a mistake when the DLL/library was produced.";
+    }
+    skipDllMain = true;
+    return true;
+  }
+  return false;
+}
+
+ArchiveFile::ArchiveFile(COFFLinkerContext &ctx, MemoryBufferRef m,
+                         std::unique_ptr<Archive> &f)
+    : InputFile(ctx.symtab, ArchiveKind, m) {
+  file.swap(f);
+}
 
 void ArchiveFile::parse() {
   COFFLinkerContext &ctx = symtab.ctx;
   SymbolTable *archiveSymtab = &symtab;
-
-  // Parse a MemoryBufferRef as an archive file.
-  file = CHECK(Archive::create(mb), this);
 
   // Try to read symbols from ECSYMBOLS section on ARM64EC.
   if (ctx.symtab.isEC()) {
@@ -175,9 +211,28 @@ void ArchiveFile::parse() {
     }
   }
 
+  bool skipDllMain = false;
+  StringRef mangledDllMain, impMangledDllMain;
+
+  // The calls below will fail if we haven't set the machine type yet. Instead
+  // of failing, it is preferable to skip this "imported DllMain" check if we
+  // don't know the machine type at this point.
+  if (!file->isEmpty() && ctx.config.machine != IMAGE_FILE_MACHINE_UNKNOWN) {
+    mangledDllMain = archiveSymtab->mangle("DllMain");
+    impMangledDllMain = uniqueSaver().save("__imp_" + mangledDllMain);
+  }
+
   // Read the symbol table to construct Lazy objects.
-  for (const Archive::Symbol &sym : file->symbols())
+  for (const Archive::Symbol &sym : file->symbols()) {
+    // If an import library provides the DllMain symbol, skip importing it, as
+    // we should be using our own DllMain, not another DLL's DllMain.
+    if (!mangledDllMain.empty() && (sym.getName() == mangledDllMain ||
+                                    sym.getName() == impMangledDllMain)) {
+      if (skipDllMain || fixupDllMain(ctx, file.get(), sym, skipDllMain))
+        continue;
+    }
     archiveSymtab->addLazyArchive(this, sym);
+  }
 }
 
 // Returns a buffer pointing to a member file containing a given symbol.
@@ -356,6 +411,9 @@ SectionChunk *ObjFile::readSection(uint32_t sectionNumber,
     callgraphSec = sec;
     return nullptr;
   }
+
+  if (symtab.ctx.config.discardSection.contains(name))
+    return nullptr;
 
   // Object files may have DWARF debug info or MS CodeView debug info
   // (or both).
@@ -1329,6 +1387,7 @@ BitcodeFile *BitcodeFile::create(COFFLinkerContext &ctx, MemoryBufferRef mb,
                                                utostr(offsetInArchive)));
 
   std::unique_ptr<lto::InputFile> obj = check(lto::InputFile::create(mbref));
+  obj->setArchivePathAndName(archiveName, mb.getBufferIdentifier());
   return make<BitcodeFile>(ctx.getSymtab(getMachineType(obj.get())), mb, obj,
                            lazy);
 }
@@ -1343,6 +1402,8 @@ void BitcodeFile::parse() {
     // FIXME: Check nodeduplicate
     comdat[i] =
         symtab.addComdat(this, saver.save(obj->getComdatTable()[i].first));
+  Triple tt(obj->getTargetTriple());
+  RTLIB::RuntimeLibcallsInfo libcalls(tt);
   for (const lto::InputFile::Symbol &objSym : obj->symbols()) {
     StringRef symName = saver.save(objSym.getName());
     int comdatIndex = objSym.getComdatIndex();
@@ -1392,7 +1453,7 @@ void BitcodeFile::parse() {
           symtab.addRegular(this, symName, nullptr, fakeSC, 0, objSym.isWeak());
     }
     symbols.push_back(sym);
-    if (objSym.isUsed())
+    if (objSym.isUsed() || objSym.isLibcall(libcalls))
       symtab.ctx.config.gcroot.push_back(sym);
   }
   directives = saver.save(obj->getCOFFLinkerOpts());

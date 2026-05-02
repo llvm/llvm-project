@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs -early-live-intervals < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -mcpu=tahiti -early-live-intervals < %s | FileCheck %s
 
 ; CHECK-LABEL: {{^}}fold_sgpr:
 ; CHECK: v_add_i32_e32 v{{[0-9]+}}, vcc, s
@@ -168,4 +168,4 @@ define i32 @issue139908(i64 %in) {
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 
 attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+attributes #1 = { nounwind denormal_fpenv(float: preservesign) }

@@ -45,7 +45,7 @@ static void test_try_user(isl::ctx ctx)
 
 	if (!maybe_int)
 		die("integer cannot be retrieved from isl::id");
-	if (maybe_int.value() != 5)
+	if (*maybe_int != 5)
 		die("wrong integer retrieved from isl::id");
 	if (maybe_s)
 		die("structure unexpectedly retrieved from isl::id");
@@ -60,7 +60,7 @@ static void test_try_user(isl::ctx ctx)
 		auto maybe_s = id.try_user<std::shared_ptr<S>>();
 		if (!maybe_s)
 			die("structure cannot be retrieved from isl::id");
-		if (maybe_s.value()->freed != &freed)
+		if ((*maybe_s)->freed != &freed)
 			die("invalid structure retrieved from isl::id");
 	}
 	if (!freed)

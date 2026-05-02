@@ -120,7 +120,7 @@ struct ParserCallbacks {
           IdentificationBit(IdentificationBit), ModuleBit(ModuleBit) {}
 
     // Calls the ctor.
-    LLVM_ABI_FRIEND friend Expected<BitcodeFileContents>
+    LLVM_ABI friend Expected<BitcodeFileContents>
     getBitcodeFileContents(MemoryBufferRef Buffer);
 
     Expected<std::unique_ptr<Module>>
@@ -136,6 +136,11 @@ struct ParserCallbacks {
     StringRef getStrtab() const { return Strtab; }
 
     StringRef getModuleIdentifier() const { return ModuleIdentifier; }
+
+    // Assign a new module identifier to this bitcode module.
+    void setModuleIdentifier(llvm::StringRef ModuleId) {
+      ModuleIdentifier = ModuleId;
+    }
 
     /// Read the bitcode module and prepare for lazy deserialization of function
     /// bodies. If ShouldLazyLoadMetadata is true, lazily load metadata as well.

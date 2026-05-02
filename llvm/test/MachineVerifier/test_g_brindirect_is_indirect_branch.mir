@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=riscv32 -o - -run-pass=none -verify-machineinstrs %s | FileCheck %s
+# RUN: llc -mtriple=riscv32 -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
 # REQUIRES: riscv-registered-target
 
 # This test checks that the G_BRINDIRECT is an indirect branch by leveraging
@@ -6,15 +6,13 @@
 # branch, this test would crash.
 
 ---
-name:            test_indirect_branch
-legalized:       true
+name: test_indirect_branch
 tracksRegLiveness: true
-body:             |
+body: |
   bb.0:
     liveins: $x0
     %0:_(p0) = COPY $x0
 
     ; CHECK-NOT: Branch instruction is missing a basic block operand or isIndirectBranch property
     G_BRINDIRECT %0
-
 ...

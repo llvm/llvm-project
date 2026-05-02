@@ -31,53 +31,12 @@ private:
   explicit X86MCExpr(MCRegister R) : Reg(R) {}
 
 public:
-  // Relocation specifier. Named VK_ for legacy reasons.
-  enum Specifier {
-    VK_None,
-
-    VK_ABS8 = MCSymbolRefExpr::FirstTargetSpecifier,
-    VK_DTPOFF,
-    VK_DTPREL,
-    VK_GOT,
-    VK_GOTENT,
-    VK_GOTNTPOFF,
-    VK_GOTOFF,
-    VK_GOTPCREL,
-    VK_GOTPCREL_NORELAX,
-    VK_GOTREL,
-    VK_GOTTPOFF,
-    VK_INDNTPOFF,
-    VK_NTPOFF,
-    VK_PCREL,
-    VK_PLT,
-    VK_PLTOFF,
-    VK_SIZE,
-    VK_TLSCALL,
-    VK_TLSDESC,
-    VK_TLSGD,
-    VK_TLSLD,
-    VK_TLSLDM,
-    VK_TLVP,
-    VK_TLVPPAGE,
-    VK_TLVPPAGEOFF,
-    VK_TPOFF,
-  };
-
-  /// @name Construction
-  /// @{
-
   static const X86MCExpr *create(MCRegister Reg, MCContext &Ctx) {
     return new (Ctx) X86MCExpr(Reg);
   }
 
-  /// @}
-  /// @name Accessors
-  /// @{
-
   /// getSubExpr - Get the child of this expression.
   MCRegister getReg() const { return Reg; }
-
-  /// @}
 
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override {
     if (!MAI || MAI->getAssemblerDialect() == 0)
@@ -103,10 +62,6 @@ public:
     return E->getKind() == MCExpr::Target;
   }
 };
-
-static inline X86MCExpr::Specifier getSpecifier(const MCSymbolRefExpr *SRE) {
-  return X86MCExpr::Specifier(SRE->getKind());
-}
 } // end namespace llvm
 
 #endif

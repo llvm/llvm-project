@@ -65,7 +65,7 @@ class TokenLexer {
 
   /// The offset of the macro expansion in the
   /// "source location address space".
-  unsigned MacroStartSLocOffset;
+  SourceLocation::UIntTy MacroStartSLocOffset;
 
   /// Location of the macro definition.
   SourceLocation MacroDefStart;
@@ -99,6 +99,10 @@ class TokenLexer {
   /// When true, the produced tokens have Token::IsReinjected flag set.
   /// See the flag documentation for details.
   bool IsReinject : 1;
+
+  /// This is true if this TokenLexer is created when handling a C++ module
+  /// directive.
+  bool LexingCXXModuleDirective : 1;
 
 public:
   /// Create a TokenLexer for the specified macro with the specified actual
@@ -139,10 +143,10 @@ public:
   void Init(const Token *TokArray, unsigned NumToks, bool DisableMacroExpansion,
             bool OwnsTokens, bool IsReinject);
 
-  /// If the next token lexed will pop this macro off the
-  /// expansion stack, return 2.  If the next unexpanded token is a '(', return
-  /// 1, otherwise return 0.
-  unsigned isNextTokenLParen() const;
+  /// If TokenLexer::isAtEnd returns true(the next token lexed will pop this
+  /// macro off the expansion stack), return std::nullopt, otherwise return the
+  /// next unexpanded token.
+  std::optional<Token> peekNextPPToken() const;
 
   /// Lex and return a token from this macro stream.
   bool Lex(Token &Tok);
@@ -150,6 +154,14 @@ public:
   /// isParsingPreprocessorDirective - Return true if we are in the middle of a
   /// preprocessor directive.
   bool isParsingPreprocessorDirective() const;
+
+  /// setLexingCXXModuleDirective - This is set to true if this TokenLexer is
+  /// created when handling a C++ module directive.
+  void setLexingCXXModuleDirective(bool Val = true);
+
+  /// isLexingCXXModuleDirective - Return true if we are lexing a C++ module or
+  /// import directive.
+  bool isLexingCXXModuleDirective() const;
 
 private:
   void destroy();

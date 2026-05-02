@@ -30,17 +30,10 @@ class D2 : public B {
   using B::x;
   using C::g; // expected-error{{using declaration refers into 'C', which is not a base class of 'D2'}}
 
-  // These are valid in C++98 but not in C++11.
-  using D::f2;
-  using D::E2;
-  using D::e2;
-  using D::x2;
-#if __cplusplus >= 201103L
-  // expected-error@-5 {{using declaration refers into 'D', which is not a base class of 'D2'}}
-  // expected-error@-5 {{using declaration refers into 'D', which is not a base class of 'D2'}}
-  // expected-error@-5 {{using declaration refers into 'D', which is not a base class of 'D2'}}
-  // expected-error@-5 {{using declaration refers into 'D', which is not a base class of 'D2'}}
-#endif
+  using D::f2; // expected-error {{using declaration refers into 'D', which is not a base class of 'D2'}}
+  using D::E2; // expected-error {{using declaration refers into 'D', which is not a base class of 'D2'}}
+  using D::e2; // expected-error {{using declaration refers into 'D', which is not a base class of 'D2'}}
+  using D::x2; // expected-error {{using declaration refers into 'D', which is not a base class of 'D2'}}
 
   using B::EC;
   using B::EC::ec; // expected-warning {{a C++20 extension}} expected-warning 0-1 {{C++11}}
@@ -71,13 +64,7 @@ namespace test1 {
     using Base::bar; // expected-error {{no member named 'bar'}}
     using Unrelated::foo; // expected-error {{not a base class}}
 
-    // In C++98, it's hard to see that these are invalid, because indirect
-    // references to base class members are permitted.
-    using C::foo;
-    using Subclass::foo;
-#if __cplusplus >= 201103L
-    // expected-error@-3 {{refers to its own class}}
-    // expected-error@-3 {{not a base class}}
-#endif
+    using C::foo; // expected-error {{refers to its own class}}
+    using Subclass::foo; // expected-error {{not a base class}}
   };
 }

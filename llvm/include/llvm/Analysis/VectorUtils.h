@@ -14,6 +14,8 @@
 #define LLVM_ANALYSIS_VECTORUTILS_H
 
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/IR/Module.h"
@@ -24,6 +26,7 @@
 
 namespace llvm {
 class TargetLibraryInfo;
+class IntrinsicInst;
 
 /// The Vector Function Database.
 ///
@@ -144,9 +147,8 @@ LLVM_ABI bool isTriviallyVectorizable(Intrinsic::ID ID);
 /// Note: There are intrinsics where implementing vectorization for the
 /// intrinsic is redundant, but we want to implement scalarization of the
 /// vector. To prevent the requirement that an intrinsic also implements
-/// vectorization we provide this seperate function.
-LLVM_ABI bool isTriviallyScalarizable(Intrinsic::ID ID,
-                                      const TargetTransformInfo *TTI);
+/// vectorization we provide this separate function.
+LLVM_ABI bool isTriviallyScalarizable(Intrinsic::ID ID);
 
 /// Identifies if the vector form of the intrinsic has a scalar operand.
 /// \p TTI is used to consider target specific intrinsics, if no target specific
@@ -176,11 +178,15 @@ LLVM_ABI bool isVectorIntrinsicWithStructReturnOverloadAtField(
 LLVM_ABI Intrinsic::ID
 getVectorIntrinsicIDForCall(const CallInst *CI, const TargetLibraryInfo *TLI);
 
-/// Returns the corresponding llvm.vector.interleaveN intrinsic for factor N.
-LLVM_ABI Intrinsic::ID getInterleaveIntrinsicID(unsigned Factor);
+/// Returns the corresponding factor of llvm.vector.interleaveN intrinsics.
+LLVM_ABI unsigned getInterleaveIntrinsicFactor(Intrinsic::ID ID);
 
-/// Returns the corresponding llvm.vector.deinterleaveN intrinsic for factor N.
-LLVM_ABI Intrinsic::ID getDeinterleaveIntrinsicID(unsigned Factor);
+/// Returns the corresponding factor of llvm.vector.deinterleaveN intrinsics.
+LLVM_ABI unsigned getDeinterleaveIntrinsicFactor(Intrinsic::ID ID);
+
+/// Given a deinterleaveN intrinsic, return the (narrow) vector type of each
+/// factor.
+LLVM_ABI VectorType *getDeinterleavedVectorType(IntrinsicInst *DI);
 
 /// Given a vector and an element number, see if the scalar value is
 /// already around as a register, for example if it were inserted then extracted
@@ -591,6 +597,15 @@ public:
     return Members.lookup(Key);
   }
 
+  /// Return an iterator range over the non-null members of this group, in
+  /// index order.
+  auto members() const {
+    return make_filter_range(
+        map_range(seq<uint32_t>(0, Factor),
+                  [this](uint32_t I) { return getMember(I); }),
+        [](InstTy *I) { return I != nullptr; });
+  }
+
   /// Get the index for the given member. Unlike the key in the member
   /// map, the index starts from 0.
   uint32_t getIndex(const InstTy *Instr) const {
@@ -627,6 +642,9 @@ public:
     // This is a group of loads, with gaps, and without a last-member
     return true;
   }
+
+  /// Return true if this group is full, i.e. it has no gaps.
+  bool isFull() const { return getNumMembers() == getFactor(); }
 
 private:
   uint32_t Factor; // Interleave Factor.

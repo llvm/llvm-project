@@ -53,9 +53,9 @@ builtins_sources = [
   "divsf3.c",
   "divsi3.c",
   "divti3.c",
+  "extendhfdf2.c",
   "extendhfsf2.c",
   "extendsfdf2.c",
-  "extendhfdf2.c",
   "ffsdi2.c",
   "ffssi2.c",
   "ffsti2.c",
@@ -272,7 +272,10 @@ if (current_cpu == "x86") {
     ]
   }
   if (current_os == "win") {
-    builtins_sources += [ "i386/chkstk.S" ]
+    builtins_sources += [
+      "i386/chkstk.S",
+      "i386/chkstk2.S",
+    ]
   }
 } else if (current_cpu == "x64") {
   builtins_sources -= [
@@ -314,11 +317,13 @@ if (current_cpu == "arm") {
       "divsi3.c",
       "fp_mode.c",
       "modsi3.c",
+      "subdf3.c",
       "udivmodsi4.c",
       "udivsi3.c",
       "umodsi3.c",
     ]
     builtins_sources += [
+      "arm/adddf3.S",
       "arm/aeabi_cdcmp.S",
       "arm/aeabi_cdcmpeq_check_nan.c",
       "arm/aeabi_cfcmp.S",
@@ -336,6 +341,10 @@ if (current_cpu == "arm") {
       "arm/aeabi_memset.S",
       "arm/aeabi_uidivmod.S",
       "arm/aeabi_uldivmod.S",
+      "arm/aeabi_uread4.S",
+      "arm/aeabi_uread8.S",
+      "arm/aeabi_uwrite4.S",
+      "arm/aeabi_uwrite8.S",
       "arm/bswapdi2.S",
       "arm/bswapsi2.S",
       "arm/clzdi2.S",
@@ -429,6 +438,7 @@ if (current_cpu == "arm") {
 if (current_cpu == "arm64") {
   builtins_sources -= [ "fp_mode.c" ]
   builtins_sources += [
+    "aarch64/emupac.cpp",
     "aarch64/fp_mode.c",
     "cpu_model/aarch64.c",
   ]
@@ -500,6 +510,9 @@ if (current_cpu == "ppc64") {
     "ppc/gcc_qsub.c",
     "ppc/multc3.c",
   ]
+  if (current_os == "aix") {
+    builtins_sources += [ "ppc/init_ifuncs.c" ]
+  }
 }
 
 if (current_cpu == "riscv" || current_cpu == "riscv64") {

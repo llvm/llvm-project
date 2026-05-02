@@ -14,6 +14,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
@@ -202,9 +203,10 @@ static alias IgnoreCaseAlias("i", desc("Alias for --ignore-case."),
                              aliasopt(IgnoreCase), cl::NotHidden);
 static list<std::string> Name(
     "name",
-    desc("Find and print all debug info entries whose name (DW_AT_name "
-         "attribute) matches the exact text in <pattern>.  When used with the "
-         "the -regex option <pattern> is interpreted as a regular expression."),
+    desc("Find and print all debug info entries whose name "
+         "(DW_AT_name/DW_AT_linkage_name attribute) matches the exact text "
+         "in <pattern>.  When used with the the -regex option <pattern> is "
+         "interpreted as a regular expression."),
     value_desc("pattern"), cat(DwarfDumpCategory));
 static alias NameAlias("n", desc("Alias for --name"), aliasopt(Name),
                        cl::NotHidden);
@@ -241,6 +243,15 @@ static opt<bool>
                 cat(DwarfDumpCategory));
 static alias ShowParentsAlias("p", desc("Alias for --show-parents."),
                               aliasopt(ShowParents), cl::NotHidden);
+
+static list<std::string> FilterChildTag(
+    "filter-child-tag",
+    desc("When --show-children is specified, show only DIEs with the "
+         "specified DWARF tags."),
+    value_desc("list of DWARF tags"), cat(DwarfDumpCategory));
+static alias FilterChildTagAlias("t", desc("Alias for --filter-child-tag."),
+                                 aliasopt(FilterChildTag), cl::NotHidden);
+
 static opt<bool>
     ShowForm("show-form",
              desc("Show DWARF form types after the DWARF attribute types."),
@@ -323,11 +334,33 @@ static opt<bool> Verbose("verbose",
                          cat(DwarfDumpCategory));
 static alias VerboseAlias("v", desc("Alias for --verbose."), aliasopt(Verbose),
                           cat(DwarfDumpCategory), cl::NotHidden);
+static opt<bool>
+    ShowVariableCoverage("show-variable-coverage",
+                         desc("Show per-variable coverage metrics."),
+                         cat(DwarfDumpCategory));
+static opt<std::string>
+    CoverageBaseline("coverage-baseline",
+                     desc("File to use as the baseline for variable coverage "
+                          "statistics (implies --show-variable-coverage)"),
+                     value_desc("filename"), cat(DwarfDumpCategory));
+static opt<bool> CombineInstances(
+    "combine-inline-variable-instances",
+    desc(
+        "Use with --show-variable-coverage to average variable coverage across "
+        "inlined subroutine instances instead of printing them separately."),
+    cat(DwarfDumpCategory));
 static cl::extrahelp
     HelpResponse("\nPass @FILE as argument to read options from FILE.\n");
 } // namespace
 /// @}
 //===----------------------------------------------------------------------===//
+
+static llvm::SmallVector<unsigned>
+makeTagVector(const list<std::string> &TagStrings) {
+  return llvm::map_to_vector(TagStrings, [](const std::string &Tag) {
+    return llvm::dwarf::getTag(Tag);
+  });
+}
 
 static void error(Error Err) {
   if (!Err)
@@ -355,6 +388,7 @@ static DIDumpOptions getDumpOpts(DWARFContext &C) {
   DumpOpts.ShowAddresses = !Diff;
   DumpOpts.ShowChildren = ShowChildren;
   DumpOpts.ShowParents = ShowParents;
+  DumpOpts.FilterChildTag = makeTagVector(FilterChildTag);
   DumpOpts.ShowForm = ShowForm;
   DumpOpts.SummarizeTypes = SummarizeTypes;
   DumpOpts.Verbose = Verbose;
@@ -678,7 +712,7 @@ createRegInfo(const object::ObjectFile &Obj) {
   const Target *TheTarget = TargetRegistry::lookupTarget(TT, TargetLookupError);
   if (!TargetLookupError.empty())
     return nullptr;
-  MCRegInfo.reset(TheTarget->createMCRegInfo(TT.str()));
+  MCRegInfo.reset(TheTarget->createMCRegInfo(TT));
   return MCRegInfo;
 }
 
@@ -886,7 +920,8 @@ int main(int argc, char **argv) {
     DumpType |= DIDT_UUID;
   if (DumpAll)
     DumpType = DIDT_All;
-  if (DumpType == DIDT_Null) {
+  if (DumpType == DIDT_Null && !ShowVariableCoverage &&
+      CoverageBaseline.empty()) {
     if (Verbose || Verify)
       DumpType = DIDT_All;
     else
@@ -936,6 +971,30 @@ int main(int argc, char **argv) {
   } else {
     for (StringRef Object : Objects)
       Success &= handleFile(Object, dumpObjectFile, OutputFile.os());
+  }
+
+  if (!CoverageBaseline.empty()) {
+    auto handleBaseline = [&](ObjectFile &BaselineObj,
+                              DWARFContext &BaselineCtx, const Twine &Filename,
+                              raw_ostream &OS) {
+      auto showCoverage = [&](ObjectFile &Obj, DWARFContext &DICtx,
+                              const Twine &Filename, raw_ostream &OS) {
+        return showVariableCoverage(Obj, DICtx, &BaselineObj, &BaselineCtx,
+                                    CombineInstances, OS);
+      };
+      for (StringRef Object : Objects)
+        Success &= handleFile(Object, showCoverage, OutputFile.os());
+      return true;
+    };
+    Success &= handleFile(CoverageBaseline, handleBaseline, OutputFile.os());
+  } else if (ShowVariableCoverage) {
+    auto showCoverage = [&](ObjectFile &Obj, DWARFContext &DICtx,
+                            const Twine &Filename, raw_ostream &OS) {
+      return showVariableCoverage(Obj, DICtx, nullptr, nullptr,
+                                  CombineInstances, OS);
+    };
+    for (StringRef Object : Objects)
+      Success &= handleFile(Object, showCoverage, OutputFile.os());
   }
 
   return Success ? EXIT_SUCCESS : EXIT_FAILURE;

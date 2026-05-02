@@ -133,7 +133,7 @@ QuotingType ScalarTraits<PlatformSet>::mustQuote(StringRef) {
 
 void ScalarBitSetTraits<ArchitectureSet>::bitset(IO &IO,
                                                  ArchitectureSet &Archs) {
-#define ARCHINFO(arch, type, subtype, numbits)                                 \
+#define ARCHINFO(arch, name, type, subtype, numbits)                           \
   IO.bitSetCase(Archs, #arch, 1U << static_cast<int>(AK_##arch));
 #include "llvm/TextAPI/Architecture.def"
 #undef ARCHINFO

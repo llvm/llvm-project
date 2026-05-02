@@ -70,7 +70,7 @@ f:
 !4 = !{i32 0}
 !5 = !{i32 2, !"Debug Info Version", i32 3}
 !7 = !DISubroutineType(types: !2)
-!17 = distinct !DISubprogram(name: "f", scope: null, file: !1, line: 1, type: !7, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
+!17 = distinct !DISubprogram(name: "f", scope: null, file: !1, line: 1, type: !7, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2, keyInstructions: true)
 !18 = !DILocation(line: 10, column: 10, scope: !17)
 !19 = !DILocation(line: 10, column: 10, scope: !17, atomGroup: 1, atomRank: 2)
 !20 = !DILocation(line: 10, column: 10, scope: !17, atomGroup: 2, atomRank: 2)
@@ -79,7 +79,7 @@ f:
 ; CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C, file: [[META1:![0-9]+]], producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: [[META2:![0-9]+]])
 ; CHECK: [[META1]] = !DIFile(filename: "a.ll", directory: {{.*}})
 ; CHECK: [[META2]] = !{}
-; CHECK: [[DBG6]] = distinct !DISubprogram(name: "f", scope: null, file: [[META1]], line: 1, type: [[META7:![0-9]+]], scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META2]])
+; CHECK: [[DBG6]] = distinct !DISubprogram(name: "f", scope: null, file: [[META1]], line: 1, type: [[META7:![0-9]+]], scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META2]], keyInstructions: true)
 ; CHECK: [[META7]] = !DISubroutineType(types: [[META2]])
 ; CHECK: [[DBG8]] = !DILocation(line: 10, column: 10, scope: [[DBG6]], atomGroup: 5, atomRank: 2)
 ; CHECK: [[DBG9]] = !DILocation(line: 10, column: 10, scope: [[DBG6]], atomGroup: 6, atomRank: 2)

@@ -10,7 +10,7 @@ define <1 x bfloat> @masked_load_v1bf16(ptr %a, <1 x i1> %mask) {
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %load = call <1 x bfloat> @llvm.masked.load.v1bf16(ptr %a, i32 8, <1 x i1> %mask, <1 x bfloat> undef)
+  %load = call <1 x bfloat> @llvm.masked.load.v1bf16(ptr %a, i32 8, <1 x i1> %mask, <1 x bfloat> poison)
   ret <1 x bfloat> %load
 }
 
@@ -20,7 +20,7 @@ define <1 x half> @masked_load_v1f16(ptr %a, <1 x i1> %mask) {
 ; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %load = call <1 x half> @llvm.masked.load.v1f16(ptr %a, i32 8, <1 x i1> %mask, <1 x half> undef)
+  %load = call <1 x half> @llvm.masked.load.v1f16(ptr %a, i32 8, <1 x i1> %mask, <1 x half> poison)
   ret <1 x half> %load
 }
 
@@ -30,7 +30,7 @@ define <1 x float> @masked_load_v1f32(ptr %a, <1 x i1> %mask) {
 ; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %load = call <1 x float> @llvm.masked.load.v1f32(ptr %a, i32 8, <1 x i1> %mask, <1 x float> undef)
+  %load = call <1 x float> @llvm.masked.load.v1f32(ptr %a, i32 8, <1 x i1> %mask, <1 x float> poison)
   ret <1 x float> %load
 }
 
@@ -40,7 +40,7 @@ define <1 x double> @masked_load_v1f64(ptr %a, <1 x i1> %mask) {
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %load = call <1 x double> @llvm.masked.load.v1f64(ptr %a, i32 8, <1 x i1> %mask, <1 x double> undef)
+  %load = call <1 x double> @llvm.masked.load.v1f64(ptr %a, i32 8, <1 x i1> %mask, <1 x double> poison)
   ret <1 x double> %load
 }
 
@@ -50,7 +50,7 @@ define <2 x bfloat> @masked_load_v2bf16(ptr %a, <2 x i1> %mask) {
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %load = call <2 x bfloat> @llvm.masked.load.v2bf16(ptr %a, i32 8, <2 x i1> %mask, <2 x bfloat> undef)
+  %load = call <2 x bfloat> @llvm.masked.load.v2bf16(ptr %a, i32 8, <2 x i1> %mask, <2 x bfloat> poison)
   ret <2 x bfloat> %load
 }
 
@@ -60,7 +60,7 @@ define <2 x half> @masked_load_v2f16(ptr %a, <2 x i1> %mask) {
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %load = call <2 x half> @llvm.masked.load.v2f16(ptr %a, i32 8, <2 x i1> %mask, <2 x half> undef)
+  %load = call <2 x half> @llvm.masked.load.v2f16(ptr %a, i32 8, <2 x i1> %mask, <2 x half> poison)
   ret <2 x half> %load
 }
 
@@ -70,7 +70,7 @@ define <2 x float> @masked_load_v2f32(ptr %a, <2 x i1> %mask) {
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %load = call <2 x float> @llvm.masked.load.v2f32(ptr %a, i32 8, <2 x i1> %mask, <2 x float> undef)
+  %load = call <2 x float> @llvm.masked.load.v2f32(ptr %a, i32 8, <2 x i1> %mask, <2 x float> poison)
   ret <2 x float> %load
 }
 
@@ -80,7 +80,7 @@ define <2 x double> @masked_load_v2f64(ptr %a, <2 x i1> %mask) {
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %load = call <2 x double> @llvm.masked.load.v2f64(ptr %a, i32 8, <2 x i1> %mask, <2 x double> undef)
+  %load = call <2 x double> @llvm.masked.load.v2f64(ptr %a, i32 8, <2 x i1> %mask, <2 x double> poison)
   ret <2 x double> %load
 }
 
@@ -90,7 +90,7 @@ define <4 x bfloat> @masked_load_v4bf16(ptr %a, <4 x i1> %mask) {
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %load = call <4 x bfloat> @llvm.masked.load.v4bf16(ptr %a, i32 8, <4 x i1> %mask, <4 x bfloat> undef)
+  %load = call <4 x bfloat> @llvm.masked.load.v4bf16(ptr %a, i32 8, <4 x i1> %mask, <4 x bfloat> poison)
   ret <4 x bfloat> %load
 }
 
@@ -100,7 +100,7 @@ define <4 x half> @masked_load_v4f16(ptr %a, <4 x i1> %mask) {
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %load = call <4 x half> @llvm.masked.load.v4f16(ptr %a, i32 8, <4 x i1> %mask, <4 x half> undef)
+  %load = call <4 x half> @llvm.masked.load.v4f16(ptr %a, i32 8, <4 x i1> %mask, <4 x half> poison)
   ret <4 x half> %load
 }
 
@@ -110,7 +110,7 @@ define <4 x float> @masked_load_v4f32(ptr %a, <4 x i1> %mask) {
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %load = call <4 x float> @llvm.masked.load.v4f32(ptr %a, i32 8, <4 x i1> %mask, <4 x float> undef)
+  %load = call <4 x float> @llvm.masked.load.v4f32(ptr %a, i32 8, <4 x i1> %mask, <4 x float> poison)
   ret <4 x float> %load
 }
 
@@ -120,7 +120,7 @@ define <4 x double> @masked_load_v4f64(ptr %a, <4 x i1> %mask) {
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %load = call <4 x double> @llvm.masked.load.v4f64(ptr %a, i32 8, <4 x i1> %mask, <4 x double> undef)
+  %load = call <4 x double> @llvm.masked.load.v4f64(ptr %a, i32 8, <4 x i1> %mask, <4 x double> poison)
   ret <4 x double> %load
 }
 
@@ -130,7 +130,7 @@ define <8 x bfloat> @masked_load_v8bf16(ptr %a, <8 x i1> %mask) {
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %load = call <8 x bfloat> @llvm.masked.load.v8bf16(ptr %a, i32 8, <8 x i1> %mask, <8 x bfloat> undef)
+  %load = call <8 x bfloat> @llvm.masked.load.v8bf16(ptr %a, i32 8, <8 x i1> %mask, <8 x bfloat> poison)
   ret <8 x bfloat> %load
 }
 
@@ -140,7 +140,7 @@ define <8 x half> @masked_load_v8f16(ptr %a, <8 x i1> %mask) {
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %load = call <8 x half> @llvm.masked.load.v8f16(ptr %a, i32 8, <8 x i1> %mask, <8 x half> undef)
+  %load = call <8 x half> @llvm.masked.load.v8f16(ptr %a, i32 8, <8 x i1> %mask, <8 x half> poison)
   ret <8 x half> %load
 }
 
@@ -150,7 +150,7 @@ define <8 x float> @masked_load_v8f32(ptr %a, <8 x i1> %mask) {
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %load = call <8 x float> @llvm.masked.load.v8f32(ptr %a, i32 8, <8 x i1> %mask, <8 x float> undef)
+  %load = call <8 x float> @llvm.masked.load.v8f32(ptr %a, i32 8, <8 x i1> %mask, <8 x float> poison)
   ret <8 x float> %load
 }
 
@@ -160,7 +160,7 @@ define <8 x double> @masked_load_v8f64(ptr %a, <8 x i1> %mask) {
 ; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %load = call <8 x double> @llvm.masked.load.v8f64(ptr %a, i32 8, <8 x i1> %mask, <8 x double> undef)
+  %load = call <8 x double> @llvm.masked.load.v8f64(ptr %a, i32 8, <8 x i1> %mask, <8 x double> poison)
   ret <8 x double> %load
 }
 
@@ -170,7 +170,7 @@ define <16 x bfloat> @masked_load_v16bf16(ptr %a, <16 x i1> %mask) {
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %load = call <16 x bfloat> @llvm.masked.load.v16bf16(ptr %a, i32 8, <16 x i1> %mask, <16 x bfloat> undef)
+  %load = call <16 x bfloat> @llvm.masked.load.v16bf16(ptr %a, i32 8, <16 x i1> %mask, <16 x bfloat> poison)
   ret <16 x bfloat> %load
 }
 
@@ -180,7 +180,7 @@ define <16 x half> @masked_load_v16f16(ptr %a, <16 x i1> %mask) {
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %load = call <16 x half> @llvm.masked.load.v16f16(ptr %a, i32 8, <16 x i1> %mask, <16 x half> undef)
+  %load = call <16 x half> @llvm.masked.load.v16f16(ptr %a, i32 8, <16 x i1> %mask, <16 x half> poison)
   ret <16 x half> %load
 }
 
@@ -190,7 +190,7 @@ define <16 x float> @masked_load_v16f32(ptr %a, <16 x i1> %mask) {
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %load = call <16 x float> @llvm.masked.load.v16f32(ptr %a, i32 8, <16 x i1> %mask, <16 x float> undef)
+  %load = call <16 x float> @llvm.masked.load.v16f32(ptr %a, i32 8, <16 x i1> %mask, <16 x float> poison)
   ret <16 x float> %load
 }
 
@@ -200,7 +200,7 @@ define <16 x double> @masked_load_v16f64(ptr %a, <16 x i1> %mask) {
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %load = call <16 x double> @llvm.masked.load.v16f64(ptr %a, i32 8, <16 x i1> %mask, <16 x double> undef)
+  %load = call <16 x double> @llvm.masked.load.v16f64(ptr %a, i32 8, <16 x i1> %mask, <16 x double> poison)
   ret <16 x double> %load
 }
 
@@ -211,7 +211,7 @@ define <32 x bfloat> @masked_load_v32bf16(ptr %a, <32 x i1> %mask) {
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %load = call <32 x bfloat> @llvm.masked.load.v32bf16(ptr %a, i32 8, <32 x i1> %mask, <32 x bfloat> undef)
+  %load = call <32 x bfloat> @llvm.masked.load.v32bf16(ptr %a, i32 8, <32 x i1> %mask, <32 x bfloat> poison)
   ret <32 x bfloat> %load
 }
 
@@ -222,7 +222,7 @@ define <32 x half> @masked_load_v32f16(ptr %a, <32 x i1> %mask) {
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %load = call <32 x half> @llvm.masked.load.v32f16(ptr %a, i32 8, <32 x i1> %mask, <32 x half> undef)
+  %load = call <32 x half> @llvm.masked.load.v32f16(ptr %a, i32 8, <32 x i1> %mask, <32 x half> poison)
   ret <32 x half> %load
 }
 
@@ -233,7 +233,7 @@ define <32 x float> @masked_load_v32f32(ptr %a, <32 x i1> %mask) {
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %load = call <32 x float> @llvm.masked.load.v32f32(ptr %a, i32 8, <32 x i1> %mask, <32 x float> undef)
+  %load = call <32 x float> @llvm.masked.load.v32f32(ptr %a, i32 8, <32 x i1> %mask, <32 x float> poison)
   ret <32 x float> %load
 }
 
@@ -248,7 +248,7 @@ define <32 x double> @masked_load_v32f64(ptr %a, <32 x i1> %mask) {
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vle64.v v16, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %load = call <32 x double> @llvm.masked.load.v32f64(ptr %a, i32 8, <32 x i1> %mask, <32 x double> undef)
+  %load = call <32 x double> @llvm.masked.load.v32f64(ptr %a, i32 8, <32 x i1> %mask, <32 x double> poison)
   ret <32 x double> %load
 }
 
@@ -259,7 +259,7 @@ define <64 x bfloat> @masked_load_v64bf16(ptr %a, <64 x i1> %mask) {
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %load = call <64 x bfloat> @llvm.masked.load.v64bf16(ptr %a, i32 8, <64 x i1> %mask, <64 x bfloat> undef)
+  %load = call <64 x bfloat> @llvm.masked.load.v64bf16(ptr %a, i32 8, <64 x i1> %mask, <64 x bfloat> poison)
   ret <64 x bfloat> %load
 }
 
@@ -270,7 +270,7 @@ define <64 x half> @masked_load_v64f16(ptr %a, <64 x i1> %mask) {
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %load = call <64 x half> @llvm.masked.load.v64f16(ptr %a, i32 8, <64 x i1> %mask, <64 x half> undef)
+  %load = call <64 x half> @llvm.masked.load.v64f16(ptr %a, i32 8, <64 x i1> %mask, <64 x half> poison)
   ret <64 x half> %load
 }
 
@@ -286,7 +286,7 @@ define <64 x float> @masked_load_v64f32(ptr %a, <64 x i1> %mask) {
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; CHECK-NEXT:    vle32.v v16, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %load = call <64 x float> @llvm.masked.load.v64f32(ptr %a, i32 8, <64 x i1> %mask, <64 x float> undef)
+  %load = call <64 x float> @llvm.masked.load.v64f32(ptr %a, i32 8, <64 x i1> %mask, <64 x float> poison)
   ret <64 x float> %load
 }
 
@@ -302,7 +302,7 @@ define <128 x bfloat> @masked_load_v128bf16(ptr %a, <128 x i1> %mask) {
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
 ; CHECK-NEXT:    vle16.v v16, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %load = call <128 x bfloat> @llvm.masked.load.v128bf16(ptr %a, i32 8, <128 x i1> %mask, <128 x bfloat> undef)
+  %load = call <128 x bfloat> @llvm.masked.load.v128bf16(ptr %a, i32 8, <128 x i1> %mask, <128 x bfloat> poison)
   ret <128 x bfloat> %load
 }
 
@@ -318,7 +318,7 @@ define <128 x half> @masked_load_v128f16(ptr %a, <128 x i1> %mask) {
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
 ; CHECK-NEXT:    vle16.v v16, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %load = call <128 x half> @llvm.masked.load.v128f16(ptr %a, i32 8, <128 x i1> %mask, <128 x half> undef)
+  %load = call <128 x half> @llvm.masked.load.v128f16(ptr %a, i32 8, <128 x i1> %mask, <128 x half> poison)
   ret <128 x half> %load
 }
 
@@ -328,6 +328,6 @@ define <7 x float> @masked_load_v7f32(ptr %a, <7 x i1> %mask) {
 ; CHECK-NEXT:    vsetivli zero, 7, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
-  %load = call <7 x float> @llvm.masked.load.v7f32(ptr %a, i32 8, <7 x i1> %mask, <7 x float> undef)
+  %load = call <7 x float> @llvm.masked.load.v7f32(ptr %a, i32 8, <7 x i1> %mask, <7 x float> poison)
   ret <7 x float> %load
 }

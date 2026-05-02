@@ -136,6 +136,18 @@ public:
                                       ArrayRef<uint8_t> Bytes, uint64_t Address,
                                       raw_ostream &CStream) const = 0;
 
+  /// Returns the disassembly of an instruction bundle for VLIW architectures
+  /// like Hexagon.
+  ///
+  /// \param Instr    - An MCInst to populate with the contents of
+  /// the Bundle with sub-instructions encoded as Inst operands.
+  virtual DecodeStatus getInstructionBundle(MCInst &Instr, uint64_t &Size,
+                                            ArrayRef<uint8_t> Bytes,
+                                            uint64_t Address,
+                                            raw_ostream &CStream) const {
+    return Fail;
+  }
+
   /// Used to perform separate target specific disassembly for a particular
   /// symbol. May parse any prelude that precedes instructions after the
   /// start of a symbol, or the entire symbol.

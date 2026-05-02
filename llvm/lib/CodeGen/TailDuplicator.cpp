@@ -363,21 +363,25 @@ void TailDuplicator::processPHI(
   Register SrcReg = MI->getOperand(SrcOpIdx).getReg();
   unsigned SrcSubReg = MI->getOperand(SrcOpIdx).getSubReg();
   const TargetRegisterClass *RC = MRI->getRegClass(DefReg);
-  LocalVRMap.insert(std::make_pair(DefReg, RegSubRegPair(SrcReg, SrcSubReg)));
+  LocalVRMap.try_emplace(DefReg, SrcReg, SrcSubReg);
 
   // Insert a copy from source to the end of the block. The def register is the
   // available value liveout of the block.
   Register NewDef = MRI->createVirtualRegister(RC);
   Copies.push_back(std::make_pair(NewDef, RegSubRegPair(SrcReg, SrcSubReg)));
+  if (!Remove) {
+    // Informing MachineSSAUpdater that DefReg -> NewDef in PredBB is not
+    // correct, because it could be used to update on other PHI. But the DefReg
+    // in the COPY will be properly updated by MachineSSAUpdater.
+    MI->getOperand(SrcOpIdx).setReg(NewDef);
+    MI->getOperand(SrcOpIdx).setSubReg(0);
+    return;
+  }
   if (isDefLiveOut(DefReg, TailBB, MRI) || RegsUsedByPhi.count(DefReg))
     addSSAUpdateEntry(DefReg, NewDef, PredBB);
 
-  if (!Remove)
-    return;
+  MI->removePHIIncomingValueFor(*PredBB);
 
-  // Remove PredBB from the PHI node.
-  MI->removeOperand(SrcOpIdx + 1);
-  MI->removeOperand(SrcOpIdx);
   if (MI->getNumOperands() == 1 && !TailBB->hasAddressTaken())
     MI->eraseFromParent();
   else if (MI->getNumOperands() == 1)
@@ -412,7 +416,7 @@ void TailDuplicator::duplicateInstruction(
       const TargetRegisterClass *RC = MRI->getRegClass(Reg);
       Register NewReg = MRI->createVirtualRegister(RC);
       MO.setReg(NewReg);
-      LocalVRMap.insert(std::make_pair(Reg, RegSubRegPair(NewReg, 0)));
+      LocalVRMap.try_emplace(Reg, NewReg, 0);
       if (isDefLiveOut(Reg, TailBB, MRI) || UsedByPhi.count(Reg))
         addSSAUpdateEntry(Reg, NewReg, PredBB);
       continue;
@@ -462,9 +466,9 @@ void TailDuplicator::duplicateInstruction(
       Register NewReg = MRI->createVirtualRegister(OrigRC);
       BuildMI(*PredBB, NewMI, NewMI.getDebugLoc(), TII->get(TargetOpcode::COPY),
               NewReg)
-          .addReg(VI->second.Reg, 0, VI->second.SubReg);
+          .addReg(VI->second.Reg, {}, VI->second.SubReg);
       LocalVRMap.erase(VI);
-      LocalVRMap.insert(std::make_pair(Reg, RegSubRegPair(NewReg, 0)));
+      LocalVRMap.try_emplace(Reg, NewReg, 0);
       MO.setReg(NewReg);
       // The composed VI.Reg:VI.SubReg is replaced with NewReg, which
       // is equivalent to the whole register Reg. Hence, Reg:subreg
@@ -604,11 +608,20 @@ bool TailDuplicator::shouldTailDuplicate(bool IsSimple,
   bool HasComputedGoto = false;
   if (!TailBB.empty()) {
     HasIndirectbr = TailBB.back().isIndirectBranch();
-    HasComputedGoto = TailBB.terminatorIsComputedGoto();
+    HasComputedGoto = TailBB.terminatorIsComputedGotoWithSuccessors();
   }
 
   if (HasIndirectbr && PreRegAlloc)
     MaxDuplicateCount = TailDupIndirectBranchSize;
+
+  // Allow higher limits when the block has computed-gotos and running after
+  // register allocation. NB. This basically unfactors computed gotos that were
+  // factored early on in the compilation process to speed up edge based data
+  // flow. If we do not unfactor them again, it can seriously pessimize code
+  // with many computed jumps in the source code, such as interpreters.
+  // Therefore we do not restrict the computed gotos.
+  if (HasComputedGoto && !PreRegAlloc)
+    MaxDuplicateCount = std::max(MaxDuplicateCount, 10u);
 
   // Check the instructions in the block to determine whether tail-duplication
   // is invalid or unlikely to be profitable.
@@ -663,12 +676,7 @@ bool TailDuplicator::shouldTailDuplicate(bool IsSimple,
   // Duplicating a BB which has both multiple predecessors and successors will
   // may cause huge amount of PHI nodes. If we want to remove this limitation,
   // we have to address https://github.com/llvm/llvm-project/issues/78578.
-  // NB. This basically unfactors computed gotos that were factored early on in
-  // the compilation process to speed up edge based data flow. If we do not
-  // unfactor them again, it can seriously pessimize code with many computed
-  // jumps in the source code, such as interpreters. Therefore we do not
-  // restrict the computed gotos.
-  if (!HasComputedGoto && TailBB.pred_size() > TailDupPredSize &&
+  if (PreRegAlloc && TailBB.pred_size() > TailDupPredSize &&
       TailBB.succ_size() > TailDupSuccSize) {
     // If TailBB or any of its successors contains a phi, we may have to add a
     // large number of additional phis with additional incoming values.
@@ -1069,7 +1077,7 @@ void TailDuplicator::appendCopies(MachineBasicBlock *MBB,
   const MCInstrDesc &CopyD = TII->get(TargetOpcode::COPY);
   for (auto &CI : CopyInfos) {
     auto C = BuildMI(*MBB, Loc, DebugLoc(), CopyD, CI.first)
-                .addReg(CI.second.Reg, 0, CI.second.SubReg);
+                 .addReg(CI.second.Reg, {}, CI.second.SubReg);
     Copies.push_back(C);
   }
 }
