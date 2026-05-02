@@ -30,6 +30,6 @@ runs:
         script: |
           await github.rest.teams.getMembershipForUserInOrg({
              org: context.repo.owner,
-             team_slug: "llvm-release-managers"
+             team_slug: "llvm-release-managers",
              username: context.actor
           });
