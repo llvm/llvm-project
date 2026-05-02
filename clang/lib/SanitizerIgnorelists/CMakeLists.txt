@@ -2,6 +2,7 @@ set(INSTRUMENTATION_RESOURCE_FILES
     asan_ignorelist.txt
     hwasan_ignorelist.txt
     msan_ignorelist.txt
+    cfi_ignorelist.txt
 )
 
 get_clang_resource_dir(resource_output_dir PREFIX ${LLVM_LIBRARY_OUTPUT_INTDIR}/.. SUBDIR share)
