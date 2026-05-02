@@ -29,6 +29,8 @@ define i32 @find_last_with_select(ptr noalias %a, ptr noalias %b) {
 ; CHECK-NEXT:      WIDEN ir<%load.b> = load vp<[[VP5]]>
 ; CHECK-NEXT:      WIDEN ir<%cmp> = icmp slt ir<%load.a>, ir<%load.b>
 ; CHECK-NEXT:      WIDEN ir<%sel> = select ir<%cmp>, ir<%rdx>, ir<%load.a>
+; CHECK-NEXT:      CLONE ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
+; CHECK-NEXT:      CLONE ir<%exitcond> = icmp eq ir<%iv.next>, ir<500>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
