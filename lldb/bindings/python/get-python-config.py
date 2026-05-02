@@ -74,7 +74,7 @@ def main():
         if args.stable_abi:
             shlib_suffix = sysconfig.get_config_var("SHLIB_SUFFIX")
             if shlib_suffix:
-                print(".abi3%s" % sysconfig.get_config_var("SHLIB_SUFFIX"))
+                print(".abi3%s" % shlib_suffix)
             else:
                 assert os.name == "nt"
                 if sysconfig.get_config_var("EXT_SUFFIX").startswith("_d"):
