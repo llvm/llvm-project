@@ -1846,10 +1846,8 @@ llvm::Expected<RefactoringResult> ExtractOperation::perform(
     if (isMethodExtraction() && IsDefinition &&
         !FD->getDescribedFunctionTemplate()) {
       // Print the class template parameter lists for an out-of-line method.
-      for (unsigned I = 0,
-                    NumTemplateParams = FD->getNumTemplateParameterLists();
-           I < NumTemplateParams; ++I) {
-        FD->getTemplateParameterList(I)->print(OS, Context, PP);
+      for (auto *TPL : FD->getTemplateParameterLists()) {
+        TPL->print(OS, Context, PP);
         OS << "\n";
       }
     }
