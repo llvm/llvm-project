@@ -1143,13 +1143,11 @@ bool Intrinsic::matchIntrinsicSignature(
   return false;
 }
 
-std::pair<bool, uint32_t> Intrinsic::hasStructReturnType(ID id) {
+bool Intrinsic::hasStructReturnType(ID id) {
   using namespace Intrinsic;
   SmallVector<IITDescriptor> Table;
   getIntrinsicInfoTableEntries(id, Table);
-  if (!Table.empty() && Table[0].Kind == IITDescriptor::Struct)
-    return {true, Table[0].StructNumElements};
-  return {false, 0};
+  return !Table.empty() && Table[0].Kind == IITDescriptor::Struct;
 }
 
 bool Intrinsic::isSignatureValid(Intrinsic::ID ID, FunctionType *FT,

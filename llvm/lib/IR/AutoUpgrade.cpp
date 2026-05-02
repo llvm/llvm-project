@@ -1869,7 +1869,7 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
     // intrinsics declared to return a struct, not for intrinsics with
     // overloaded return type, in which case the exact struct type will be
     // mangled into the name.
-    if (Intrinsic::hasStructReturnType(F->getIntrinsicID()).first) {
+    if (Intrinsic::hasStructReturnType(F->getIntrinsicID())) {
       FunctionType *FT = F->getFunctionType();
       auto *NewST = StructType::get(ST->getContext(), ST->elements());
       auto *NewFT = FunctionType::get(NewST, FT->params(), FT->isVarArg());
