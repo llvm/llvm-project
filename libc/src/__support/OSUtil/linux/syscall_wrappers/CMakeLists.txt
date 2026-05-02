@@ -185,3 +185,53 @@ add_header_library(
     libc.hdr.types.struct_timespec
     libc.include.sys_syscall
 )
+
+add_header_library(
+  mmap
+  HDRS
+    mmap.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.hdr.types.off_t
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  munmap
+  HDRS
+    munmap.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  mprotect
+  HDRS
+    mprotect.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  pkey_mprotect
+  HDRS
+    pkey_mprotect.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.hdr.errno_macros
+    libc.include.sys_syscall
+)
