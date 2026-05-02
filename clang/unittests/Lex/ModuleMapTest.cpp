@@ -15,7 +15,6 @@
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
-#include "llvm/TargetParser/Host.h"
 #include "gtest/gtest.h"
 
 #include <vector>
