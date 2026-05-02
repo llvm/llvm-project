@@ -284,18 +284,19 @@ bool isUniquePtrRelease(const CXXMethodDecl &MD) {
 }
 
 bool isIteratorType(const CXXRecordDecl *RD) {
-  // FIXME: Add more iterator names in the future
+  // FIXME: Extend this to cover more iterator wrapper types used by standard
+  // library implementations.
   static const llvm::StringSet<> Iterators = {
-      // Usually not an alias
+      // Standard reverse iterator wrapper.
       "reverse_iterator",
-      // Alias for continuos iterators in gcc
+      // libstdc++ contiguous iterator wrapper.
       "__normal_iterator",
-      // Alias for continuos iterators in clang
+      // libc++ contiguous iterator wrapper.
       "__wrap_iter"};
   return RD && isInStlNamespace(RD) && Iterators.contains(getName(*RD));
 }
 
-bool isPropogatingIteratorOP(OverloadedOperatorKind OP) {
+bool isPropagatingIteratorOp(OverloadedOperatorKind OP) {
   llvm::SmallDenseSet<OverloadedOperatorKind> PropagatingOperators = {
       OO_Plus, OO_Minus, OO_PlusPlus, OO_MinusMinus};
   return PropagatingOperators.contains(OP);

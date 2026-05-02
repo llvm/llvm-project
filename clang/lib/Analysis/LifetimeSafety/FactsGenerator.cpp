@@ -542,7 +542,7 @@ void FactsGenerator::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
     }
   }
 
-  if (OCE->getNumArgs() < 3 && isPropogatingIteratorOP(OCE->getOperator())) {
+  if (OCE->getNumArgs() < 3 && isPropagatingIteratorOp(OCE->getOperator())) {
     const Expr *IteratorArg = nullptr;
     for (const Expr *Arg : OCE->arguments()) {
       if (isIteratorType(Arg->getType()->getAsCXXRecordDecl())) {
