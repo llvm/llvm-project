@@ -727,11 +727,11 @@ foreach Index = [1, 2, 3] in {
 } // End OtherPredicates = [HasSDWA]
 
 // llvm.convert.from.arbitrary.fp i8 -> f32 scalar patterns.
-let OtherPredicates = [NotHasCvtFP8VOP1Bug, HasSDWA] in {
-  // gfx950 has OCP fp8 hardware with SDWA available.
-  def : GCNPat<(f32 (convert_from_arbitrary_fp i32:$src, (i32 fp8_sem))),
+// gfx950 has SDWA and uses the e32 form.
+let OtherPredicates = [HasOCPFP8ConversionInsts, HasSDWA] in {
+  def : GCNPat<(f32 (convert_from_arbitrary_fp i32:$src, Float8E4M3FN)),
                (V_CVT_F32_FP8_e32 $src)>;
-  def : GCNPat<(f32 (convert_from_arbitrary_fp i32:$src, (i32 bf8_sem))),
+  def : GCNPat<(f32 (convert_from_arbitrary_fp i32:$src, Float8E5M2)),
                (V_CVT_F32_BF8_e32 $src)>;
 }
 
@@ -820,18 +820,19 @@ let OtherPredicates = [HasFP8ConversionInsts] in {
   }
   let SubtargetPredicate = isGFX11Plus in
     def : Cvt_F_F8_Pat_ByteSel<int_amdgcn_cvt_f32_bf8, V_CVT_F32_BF8_OP_SEL_e64>;
-
-  // llvm.convert.from.arbitrary.fp i8 -> f32 OCP scalar patterns.
-  let SubtargetPredicate = isGFX11PlusNot12_50 in
-    def : GCNPat<(f32 (convert_from_arbitrary_fp i32:$src0, (i32 fp8_sem))),
-                 (V_CVT_F32_FP8_OP_SEL_e64 $src0, 0)>;
-  let SubtargetPredicate = isGFX125xOnly in
-    def : GCNPat<(f32 (convert_from_arbitrary_fp i32:$src0, (i32 fp8_sem))),
-                 (V_CVT_F32_FP8_gfx1250_e64 $src0, DSTCLAMP.NONE, 0)>;
-  let SubtargetPredicate = isGFX11Plus in
-    def : GCNPat<(f32 (convert_from_arbitrary_fp i32:$src0, (i32 bf8_sem))),
-                 (V_CVT_F32_BF8_OP_SEL_e64 $src0, 0)>;
 }
+
+// llvm.convert.from.arbitrary.fp i8 -> f32 OCP scalar patterns for GFX11+.
+// GFX11+ doesn't have SDWA, so must use OP_SEL form.
+let OtherPredicates = [HasOCPFP8ConversionInsts, isGFX11Plus, isNotGFX1250Plus] in
+  def : GCNPat<(f32 (convert_from_arbitrary_fp i32:$src0, Float8E4M3FN)),
+               (V_CVT_F32_FP8_OP_SEL_e64 $src0, 0)>;
+let OtherPredicates = [HasOCPFP8ConversionInsts, isGFX1250Plus] in
+  def : GCNPat<(f32 (convert_from_arbitrary_fp i32:$src0, Float8E4M3FN)),
+               (V_CVT_F32_FP8_gfx1250_e64 $src0, DSTCLAMP.NONE, 0)>;
+let OtherPredicates = [HasOCPFP8ConversionInsts, isGFX11Plus] in
+  def : GCNPat<(f32 (convert_from_arbitrary_fp i32:$src0, Float8E5M2)),
+               (V_CVT_F32_BF8_OP_SEL_e64 $src0, 0)>;
 
 class Cvt_PK_F32_F8_Pat_OpSel<SDPatternOperator node, int index,
     VOP1_Pseudo inst_e32, VOP3_Pseudo inst_e64> : GCNPat<
@@ -880,20 +881,23 @@ let SubtargetPredicate = HasFP8F16ConversionInsts in {
     def : Cvt_F_F8_Pat_ByteSel<int_amdgcn_cvt_f16_bf8, V_CVT_F16_BF8_fake16_e64, 1>;
   }
 
-  // llvm.convert.from.arbitrary.fp i8 -> f16 OCP scalar patterns.
+} // End SubtargetPredicate = HasFP8F16ConversionInsts
+
+// llvm.convert.from.arbitrary.fp i8 -> f16 OCP scalar patterns.
+let OtherPredicates = [HasOCPFP8ConversionInsts, HasFP8F16ConversionInsts] in {
   let True16Predicate = UseRealTrue16Insts in {
-    def : GCNPat<(f16 (convert_from_arbitrary_fp i32:$src0, (i32 fp8_sem))),
+    def : GCNPat<(f16 (convert_from_arbitrary_fp i32:$src0, Float8E4M3FN)),
                  (V_CVT_F16_FP8_t16_e64 0, $src0, 0)>;
-    def : GCNPat<(f16 (convert_from_arbitrary_fp i32:$src0, (i32 bf8_sem))),
+    def : GCNPat<(f16 (convert_from_arbitrary_fp i32:$src0, Float8E5M2)),
                  (V_CVT_F16_BF8_t16_e64 0, $src0, 0)>;
   }
   let True16Predicate = UseFakeTrue16Insts in {
-    def : GCNPat<(f16 (convert_from_arbitrary_fp i32:$src0, (i32 fp8_sem))),
+    def : GCNPat<(f16 (convert_from_arbitrary_fp i32:$src0, Float8E4M3FN)),
                  (V_CVT_F16_FP8_fake16_e64 0, $src0, 0)>;
-    def : GCNPat<(f16 (convert_from_arbitrary_fp i32:$src0, (i32 bf8_sem))),
+    def : GCNPat<(f16 (convert_from_arbitrary_fp i32:$src0, Float8E5M2)),
                  (V_CVT_F16_BF8_fake16_e64 0, $src0, 0)>;
   }
-} // End SubtargetPredicate = HasFP8F16ConversionInsts
+}
 
 let SubtargetPredicate = isGFX1250Plus in {
   defm V_SAT_PK4_I4_I8 : VOP1Inst_t16<"v_sat_pk4_i4_i8", VOP1_I16_I32, int_amdgcn_sat_pk4_i4_i8>;

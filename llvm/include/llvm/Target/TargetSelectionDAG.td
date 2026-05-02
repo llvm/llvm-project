@@ -1264,6 +1264,15 @@ class ImmLeaf<ValueType vt, code pred, SDNodeXForm xform = NOOP_SDNodeXForm,
 class TImmLeaf<ValueType vt, code pred, SDNodeXForm xform = NOOP_SDNodeXForm,
   SDNode ImmNode = timm> : ImmLeaf<vt, pred, xform, ImmNode>;
 
+// llvm.convert.from.arbitrary.fp format-selector predicates.
+// Only OCP formats are matched here; FNUZ formats use the generic expansion.
+def Float8E4M3FN : TImmLeaf<i32, [{
+  return Imm == APFloatBase::S_Float8E4M3FN;
+}]>;
+def Float8E5M2 : TImmLeaf<i32, [{
+  return Imm == APFloatBase::S_Float8E5M2;
+}]>;
+
 // An ImmLeaf where the `Imm` in the C++ predicate is an `APInt`.
 //
 // This is useful when you need to zero-extend the immediate instead of
