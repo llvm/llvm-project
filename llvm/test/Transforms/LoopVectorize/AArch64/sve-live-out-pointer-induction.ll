@@ -20,14 +20,13 @@ define ptr @test(ptr %start.1, ptr %start.2, ptr %end) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = shl nuw i64 [[TMP10]], 1
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], [[TMP7]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP8:%.*]] = mul i64 [[N_VEC]], 8
+; CHECK-NEXT:    [[TMP8:%.*]] = shl i64 [[N_VEC]], 3
 ; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START_1:%.*]], i64 [[TMP8]]
-; CHECK-NEXT:    [[TMP9:%.*]] = mul i64 [[N_VEC]], 8
-; CHECK-NEXT:    [[IND_END3:%.*]] = getelementptr i8, ptr [[START_2]], i64 [[TMP9]]
+; CHECK-NEXT:    [[IND_END3:%.*]] = getelementptr i8, ptr [[START_2]], i64 [[TMP8]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr i8, ptr [[START_2]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr i64, ptr [[TMP30]], i64 [[TMP10]]
 ; CHECK-NEXT:    store <vscale x 2 x i64> zeroinitializer, ptr [[TMP30]], align 8
