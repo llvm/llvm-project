@@ -959,6 +959,125 @@ end:
 !0 = !{!"function_entry_count", i64 1000}
 !1 = !{!"branch_weights", i32 2, i32 3}
 !2 = !{!"branch_weights", i32 5, i32 7}
+
+
+define i8 @icmp_pos_sgt_select_or(i8 %inl, i8 %y) {
+; CHECK-LABEL: @icmp_pos_sgt_select_or(
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[INL:%.*]], 8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[INL]], -1
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[CMP]], i8 1, i8 [[OR]]
+; CHECK-NEXT:    ret i8 [[S]]
+;
+  %or = or i8 %inl, 8
+  %cmp = icmp sgt i8 %inl, -1
+  %s = select i1 %cmp, i8 1, i8 %or
+  ret i8 %s
+}
+
+define i8 @icmp_pos_sgt_select_or1(i8 %inl, i8 %y) {
+; CHECK-LABEL: @icmp_pos_sgt_select_or1(
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[INL:%.*]], 25
+; CHECK-NEXT:    [[CMP_INV:%.*]] = icmp slt i8 [[INL]], 0
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[CMP_INV]], i8 [[OR]], i8 0
+; CHECK-NEXT:    ret i8 [[S]]
+;
+  %or = or i8 %inl, 25
+  %cmp = icmp sgt i8 %inl, -1
+  %s = select i1 %cmp, i8 0, i8 %or
+  ret i8 %s
+}
+
+define i8 @icmp_pos_sge_select_or(i8 %inl, i8 %y) {
+; CHECK-LABEL: @icmp_pos_sge_select_or(
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[INL:%.*]], 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[INL]], -1
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[CMP]], i8 1, i8 [[OR]]
+; CHECK-NEXT:    ret i8 [[S]]
+;
+  %or = or i8 %inl, 2
+  %cmp = icmp sge i8 %inl, 0
+  %s = select i1 %cmp, i8 1, i8 %or
+  ret i8 %s
+}
+
+define i8 @icmp_pos_sgt_select_or_commuted_op(i8 %inl, i8 %y) {
+; CHECK-LABEL: @icmp_pos_sgt_select_or_commuted_op(
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[INL:%.*]], 8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[INL]], -1
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[CMP]], i8 1, i8 [[OR]]
+; CHECK-NEXT:    ret i8 [[S]]
+;
+  %or = or i8 8, %inl
+  %cmp = icmp sgt i8 %inl, -1
+  %s = select i1 %cmp, i8 1, i8 %or
+  ret i8 %s
+}
+
+define i8 @icmp_pos_sgt_select_or_commuted_select(i8 %inl, i8 %y) {
+; CHECK-LABEL: @icmp_pos_sgt_select_or_commuted_select(
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[INL:%.*]], 8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[INL]], 0
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[CMP]], i8 [[OR]], i8 1
+; CHECK-NEXT:    ret i8 [[S]]
+;
+  %or = or i8 %inl, 8
+  %cmp = icmp sle i8 %inl, -1
+  %s = select i1 %cmp, i8 %or, i8 1
+  ret i8 %s
+}
+
+define i8 @icmp_slt_select_or(i8 %inl) {
+; CHECK-LABEL: @icmp_slt_select_or(
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[INL:%.*]], 8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[INL]], 0
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[CMP]], i8 [[OR]], i8 1
+; CHECK-NEXT:    ret i8 [[S]]
+;
+  %or = or i8 %inl, 8
+  %cmp = icmp slt i8 %inl, 0
+  %s = select i1 %cmp, i8 %or, i8 1
+  ret i8 %s
+}
+
+define i8 @icmp_sle_select_or(i8 %inl) {
+; CHECK-LABEL: @icmp_sle_select_or(
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[INL:%.*]], 15
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[INL]], 0
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[CMP]], i8 [[OR]], i8 0
+; CHECK-NEXT:    ret i8 [[S]]
+;
+  %or = or i8 %inl, 15
+  %cmp = icmp sle i8 %inl, -1
+  %s = select i1 %cmp, i8 %or, i8 0
+  ret i8 %s
+}
+
+define i8 @icmp_neg_slt_select_or(i8 %inl, i8 %y) {
+; CHECK-LABEL: @icmp_neg_slt_select_or(
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[INL:%.*]], 8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[INL]], 0
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[CMP]], i8 [[OR]], i8 1
+; CHECK-NEXT:    ret i8 [[S]]
+;
+  %or = or i8 %inl, 8
+  %cmp = icmp slt i8 %inl, 0
+  %s = select i1 %cmp, i8 %or, i8 1
+  ret i8 %s
+}
+
+define i8 @icmp_pos_sgt_diff_const(i8 %inl, i8 %y) {
+; CHECK-LABEL: @icmp_pos_sgt_diff_const(
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[INL:%.*]], 8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[INL]], 1
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[CMP]], i8 1, i8 [[OR]]
+; CHECK-NEXT:    ret i8 [[S]]
+;
+  %or = or i8 %inl, 8
+  %cmp = icmp sgt i8 %inl, 1
+  %s = select i1 %cmp, i8 1, i8 %or
+  ret i8 %s
+}
+
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
