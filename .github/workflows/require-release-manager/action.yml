@@ -1,0 +1,35 @@
+name: Require Release Manager
+description: >-
+  This checks to make sure the person that initiated the workflow is a
+  release manager.
+inputs:
+  LLVM_TOKEN_GENERATOR_CLIENT_ID:
+    description: >-
+      Client ID for our GitHub App we use for generating access tokens.
+    required: true
+  LLVM_TOKEN_GENERATOR_PRIVATE_KEY:
+    description: >-
+      Private key for our GitHub App we use for generating access tokens.
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - id: app-token
+      uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3  # v3.1.1
+      with:
+        app-id: ${{ inputs.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
+        private-key: ${{ inputs.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
+        owner: ${{ github.repository_owner }}
+        permission-members: read
+
+    - name: Check Permissions
+      uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+      with:
+        github-token: ${{ steps.app-token.outputs.token }}
+        script: |
+          await github.rest.teams.getMembershipForUserInOrg({
+             org: context.repo.owner,
+             team_slug: "llvm-release-managers"
+             username: context.actor
+          });
