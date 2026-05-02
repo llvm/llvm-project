@@ -379,7 +379,7 @@ void Invalidate1Use1IsInvalid() {
   s.strings1.push_back("1");
   *it;
 }
-void Invalidate1Use2IsOk() {
+void Invalidate2Use1IsOk() {
     S s;
     auto it = s.strings1.begin();
     s.strings2.push_back("1");
@@ -390,8 +390,8 @@ void Invalidate1Use2IsOk() {
 void Invalidate1Use2ViaRefIsOk() {
     S s;
     auto it = s.strings2.begin(); // expected-warning {{object whose reference is captured is later invalidated}}
-    auto& strings2 = s.strings2;
-    strings2.push_back("1");      // expected-note {{invalidated here}}
+    auto& strings1 = s.strings1;
+    strings1.push_back("1");      // expected-note {{invalidated here}}
     *it;                          // expected-note {{later used here}}
 }
 void Invalidate1UseSIsOk() {
@@ -414,7 +414,8 @@ void IteratorFromPointerToContainerIsInvalidated() {
   p->push_back("1");                // expected-note {{invalidated here}}
   *it;                              // expected-note {{later used here}}
 }
-// FIXME: `isContainerInvalidationMethod` treats `operator=` as always invalidating.
+// FIXME: Distinguish invalidating an element's contents from invalidating
+// iterators into the outer container.
 void ChangingRegionOwnedByContainerIsOk() {
   std::vector<std::string> subdirs;
   for (std::string& path : subdirs) // expected-warning {{object whose reference is captured is later invalidated}} expected-note {{later used here}}

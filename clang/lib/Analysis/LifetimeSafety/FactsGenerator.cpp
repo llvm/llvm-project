@@ -774,8 +774,9 @@ void FactsGenerator::handleInvalidatingCall(const Expr *Call,
   if (!isContainerInvalidationMethod(*MD))
     return;
 
-  // Skip member field expressions for now. This is not a perfect filter and
-  // will still surface some false positives (e.g. `auto& r = s.v`).
+  // Heuristics to turn-down false positives. Skip member field expressions for
+  // now. This is not a perfect filter and will still surface some false
+  // positives (e.g. `auto& r = s.v`).
   if (!isa<DeclRefExpr>(Args[0]->IgnoreParenImpCasts()))
     return;
 
