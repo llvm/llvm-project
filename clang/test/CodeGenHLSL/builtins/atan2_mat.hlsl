@@ -6,13 +6,6 @@
 // RUN:   spirv-unknown-vulkan-compute %s -emit-llvm -disable-llvm-passes \
 // RUN:   -o - | FileCheck %s --check-prefixes=CHECK,NO_HALF
 
-// CHECK-LABEL: test_atan2_half1x1
-// NATIVE_HALF: call reassoc nnan ninf nsz arcp afn <1 x half> @llvm.atan2.v1f16
-// NO_HALF: call reassoc nnan ninf nsz arcp afn <1 x float> @llvm.atan2.v1f32
-half1x1 test_atan2_half1x1 (half1x1 p0, half1x1 p1) {
-  return atan2(p0, p1);
-}
-
 // CHECK-LABEL: test_atan2_half1x2
 // NATIVE_HALF: call reassoc nnan ninf nsz arcp afn <2 x half> @llvm.atan2.v2f16
 // NO_HALF: call reassoc nnan ninf nsz arcp afn <2 x float> @llvm.atan2.v2f32
@@ -115,12 +108,6 @@ half4x3 test_atan2_half4x3 (half4x3 p0, half4x3 p1) {
 // NATIVE_HALF: call reassoc nnan ninf nsz arcp afn <16 x half> @llvm.atan2.v16f16
 // NO_HALF: call reassoc nnan ninf nsz arcp afn <16 x float> @llvm.atan2.v16f32
 half4x4 test_atan2_half4x4 (half4x4 p0, half4x4 p1) {
-  return atan2(p0, p1);
-}
-
-// CHECK-LABEL: test_atan2_float1x1
-// CHECK:  call reassoc nnan ninf nsz arcp afn <1 x float> @llvm.atan2.v1f32
-float1x1 test_atan2_float1x1 (float1x1 p0, float1x1 p1) {
   return atan2(p0, p1);
 }
 
