@@ -1,6 +1,4 @@
 .. title:: clang-tidy - hicpp-noexcept-move
-.. meta::
-   :http-equiv=refresh: 5;URL=../performance/noexcept-move-constructor.html
 
 hicpp-noexcept-move
 ===================

@@ -1240,3 +1240,41 @@ entry:
   store i64 %or, ptr %a
   ret void
 }
+
+define i64 @pr191165(i32 %a, ptr %b) {
+; NDD-LABEL: pr191165:
+; NDD:       # %bb.0:
+; NDD-NEXT:    movl (%rsi), %eax # encoding: [0x8b,0x06]
+; NDD-NEXT:    orl %edi, %eax # encoding: [0x09,0xf8]
+; NDD-NEXT:    movl %eax, 0 # encoding: [0x89,0x04,0x25,0x00,0x00,0x00,0x00]
+; NDD-NEXT:    movslq %edi, %rax # encoding: [0x48,0x63,0xc7]
+; NDD-NEXT:    retq # encoding: [0xc3]
+;
+; IMMONLY-LABEL: pr191165:
+; IMMONLY:       # %bb.0:
+; IMMONLY-NEXT:    movl (%rsi), %eax # encoding: [0x8b,0x06]
+; IMMONLY-NEXT:    orl %edi, %eax # encoding: [0x09,0xf8]
+; IMMONLY-NEXT:    movl %eax, 0 # encoding: [0x89,0x04,0x25,0x00,0x00,0x00,0x00]
+; IMMONLY-NEXT:    movslq %edi, %rax # encoding: [0x48,0x63,0xc7]
+; IMMONLY-NEXT:    retq # encoding: [0xc3]
+;
+; MEM-LABEL: pr191165:
+; MEM:       # %bb.0:
+; MEM-NEXT:    orl (%rsi), %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x0b,0x3e]
+; MEM-NEXT:    movl %eax, 0 # encoding: [0x89,0x04,0x25,0x00,0x00,0x00,0x00]
+; MEM-NEXT:    movslq %edi, %rax # encoding: [0x48,0x63,0xc7]
+; MEM-NEXT:    retq # encoding: [0xc3]
+;
+; NF-LABEL: pr191165:
+; NF:       # %bb.0:
+; NF-NEXT:    movl (%rsi), %eax # encoding: [0x8b,0x06]
+; NF-NEXT:    orl %edi, %eax # encoding: [0x09,0xf8]
+; NF-NEXT:    movl %eax, 0 # encoding: [0x89,0x04,0x25,0x00,0x00,0x00,0x00]
+; NF-NEXT:    movslq %edi, %rax # encoding: [0x48,0x63,0xc7]
+; NF-NEXT:    retq # encoding: [0xc3]
+  %x = load i32, ptr %b, align 4
+  %y = or i32 %x, %a
+  store volatile i32 %y, ptr null, align 4
+  %z = sext i32 %a to i64
+  ret i64 %z
+}

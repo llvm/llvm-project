@@ -546,8 +546,11 @@ struct input_iterator {
     (*State)++;
     return *this;
   }
+  bool operator==(const input_iterator &Other) const {
+    return *State == *Other.State;
+  }
   bool operator!=(const input_iterator &Other) const {
-    return *State != *Other.State;
+    return !(*this == Other);
   }
 };
 

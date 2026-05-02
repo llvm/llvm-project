@@ -57,6 +57,8 @@ struct KernelPropertiesTy {
   uint32_t Width = 0;
   uint32_t SIMDWidth = 0;
   uint32_t MaxThreadGroupSize = 0;
+  uint32_t NumKernelArgs = 0;
+  std::unique_ptr<uint32_t[]> ArgSizes;
 
   /// Cached input parameters used in the previous launch.
   int32_t NumTeams = -1;
