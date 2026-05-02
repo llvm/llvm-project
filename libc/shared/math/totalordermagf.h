@@ -1,4 +1,4 @@
-//===-- Implementation of totalordermagf function -------------------------===//
+//===-- Shared totalordermagf function --------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/totalordermagf.h"
+#ifndef LLVM_LIBC_SHARED_MATH_TOTALORDERMAGF_H
+#define LLVM_LIBC_SHARED_MATH_TOTALORDERMAGF_H
+
+#include "shared/libc_common.h"
 #include "src/__support/math/totalordermagf.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-LLVM_LIBC_FUNCTION(int, totalordermagf, (const float *x, const float *y)) {
-  return math::totalordermagf(x, y);
-}
+using math::totalordermagf;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SHARED_MATH_TOTALORDERMAGF_H

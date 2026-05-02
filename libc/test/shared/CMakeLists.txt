@@ -345,6 +345,18 @@ add_fp_unittest(
     libc.src.__support.math.ufromfpxf128
     libc.src.__support.math.ufromfpxf16
     libc.src.__support.math.ufromfpxl
+    libc.src.__support.math.totalorder
+    libc.src.__support.math.totalorderbf16
+    libc.src.__support.math.totalorderf
+    libc.src.__support.math.totalorderf128
+    libc.src.__support.math.totalorderf16
+    libc.src.__support.math.totalorderl
+    libc.src.__support.math.totalordermag
+    libc.src.__support.math.totalordermagbf16
+    libc.src.__support.math.totalordermagf
+    libc.src.__support.math.totalordermagf128
+    libc.src.__support.math.totalordermagf16
+    libc.src.__support.math.totalordermagl
 )
 
 add_fp_unittest(
@@ -456,6 +468,18 @@ add_fp_unittest(
     libc.src.__support.math.ufromfpxf128
     libc.src.__support.math.ufromfpxf16
     libc.src.__support.math.ufromfpxl
+    libc.src.__support.math.totalorder
+    libc.src.__support.math.totalorderbf16
+    libc.src.__support.math.totalorderf
+    libc.src.__support.math.totalorderf128
+    libc.src.__support.math.totalorderf16
+    libc.src.__support.math.totalorderl
+    libc.src.__support.math.totalordermag
+    libc.src.__support.math.totalordermagbf16
+    libc.src.__support.math.totalordermagf
+    libc.src.__support.math.totalordermagf128
+    libc.src.__support.math.totalordermagf16
+    libc.src.__support.math.totalordermagl
 )
 
 add_fp_unittest(
