@@ -56,6 +56,7 @@ void run(Atomic& a, Make make_value, const std::array<int, kCandidateCount>& exp
           }
           assert(ok);
         }
+        std::this_thread::yield();
         (void)r;
       }
     });

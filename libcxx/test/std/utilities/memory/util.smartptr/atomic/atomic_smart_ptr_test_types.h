@@ -91,12 +91,12 @@ struct SpValues<Flag> {
 } // namespace libcxx_atomic_smart_ptr_test
 
 // Instantiate the same runtime coverage for every value type.
-#define LIBCXX_ATOMIC_SP_FOR_ALL_RUNTIME_TYPES(M)                                                                              \
-  M(int)                                                                                                                       \
-  M(double)                                                                                                                    \
-  M(std::string)                                                                                                               \
-  M(libcxx_atomic_smart_ptr_test::TrackedPod)                                                                                  \
-  M(libcxx_atomic_smart_ptr_test::Handle)                                                                                      \
+#define LIBCXX_ATOMIC_SP_FOR_ALL_RUNTIME_TYPES(M)                                                                      \
+  M(int)                                                                                                               \
+  M(double)                                                                                                            \
+  M(std::string)                                                                                                       \
+  M(libcxx_atomic_smart_ptr_test::TrackedPod)                                                                          \
+  M(libcxx_atomic_smart_ptr_test::Handle)                                                                              \
   M(libcxx_atomic_smart_ptr_test::Flag)
 
 #endif // LIBCXX_TEST_STD_UTILITIES_MEMORY_UTIL_SMARTPTR_ATOMIC_ATOMIC_SMART_PTR_TEST_TYPES_H

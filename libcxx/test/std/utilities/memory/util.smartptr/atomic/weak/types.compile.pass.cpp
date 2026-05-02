@@ -21,6 +21,7 @@
 
 #include <atomic>
 #include <cassert>
+#include <concepts>
 #include <memory>
 #include <type_traits>
 
