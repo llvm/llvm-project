@@ -306,6 +306,13 @@ enum TransformationMode {
   TM_SuppressedByUser = TM_Disable | TM_Force
 };
 
+/// Return a short prefix describing the loop's vectorizer origin based on
+/// the \c llvm.loop.vectorize.body and \c llvm.loop.vectorize.epilogue
+/// metadata.  The result is one of \c "vectorized epilogue ", \c "vectorized ",
+/// \c "epilogue ", or \c "" (empty) and is intended to be prepended to
+/// loop-kind tokens in optimization remarks.
+LLVM_ABI StringRef getLoopVectorizeKindPrefix(const Loop *L);
+
 /// @{
 /// Get the mode for LLVM's supported loop transformations.
 LLVM_ABI TransformationMode hasUnrollTransformation(const Loop *L);
