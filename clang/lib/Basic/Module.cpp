@@ -404,8 +404,8 @@ void Module::getExportedModules(SmallVectorImpl<Module *> &Exported) const {
   bool UnrestrictedWildcard = false;
   SmallVector<Module *, 4> WildcardRestrictions;
   for (unsigned I = 0, N = Exports.size(); I != N; ++I) {
-    Module *Mod = Exports[I].getPointer();
-    if (!Exports[I].getInt()) {
+    Module *Mod = Exports[I].first;
+    if (!Exports[I].second) {
       // Export a named module directly; no wildcards involved.
       Exported.push_back(Mod);
 
@@ -418,7 +418,7 @@ void Module::getExportedModules(SmallVectorImpl<Module *> &Exported) const {
     if (UnrestrictedWildcard)
       continue;
 
-    if (Module *Restriction = Exports[I].getPointer())
+    if (Module *Restriction = Exports[I].first)
       WildcardRestrictions.push_back(Restriction);
     else {
       WildcardRestrictions.clear();
@@ -581,9 +581,9 @@ void Module::print(raw_ostream &OS, unsigned Indent, bool Dump) const {
   for (unsigned I = 0, N = Exports.size(); I != N; ++I) {
     OS.indent(Indent + 2);
     OS << "export ";
-    if (Module *Restriction = Exports[I].getPointer()) {
+    if (Module *Restriction = Exports[I].first) {
       OS << Restriction->getFullModuleName(true);
-      if (Exports[I].getInt())
+      if (Exports[I].second)
         OS << ".*";
     } else {
       OS << "*";
