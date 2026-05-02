@@ -25,6 +25,7 @@ Implementation Status
    netinet/in
    nl_types
    poll
+   sched
    search
    setjmp
    signal
