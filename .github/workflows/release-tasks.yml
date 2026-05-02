@@ -27,6 +27,9 @@ jobs:
   release-create:
     name: Create a New Release
     runs-on: ubuntu-24.04
+    environment:
+      name: release
+      deployment: false
     permissions:
       contents: write # For creating the release.
     needs: validate-tag
@@ -42,10 +45,18 @@ jobs:
         with:
           persist-credentials: false
 
+      - id: app-token
+        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3  # v3.1.1
+        with:
+          app-id: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
+          private-key: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          permission-members: read
+
       - name: Create Release
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          USER_TOKEN: ${{ secrets.RELEASE_TASKS_USER_TOKEN }}
+          USER_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           ./llvm/utils/release/./github-upload-release.py --token "$GITHUB_TOKEN" --release ${{ needs.validate-tag.outputs.release-version }} --user ${{ github.actor }} --user-token "$USER_TOKEN" create
   release-documentation:
