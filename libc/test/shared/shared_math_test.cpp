@@ -110,6 +110,8 @@ TEST(LlvmLibcSharedMathTest, AllFloat16) {
                LIBC_NAMESPACE::shared::fmaximum_numf16(0.0f16, 0.0f16));
   EXPECT_FP_EQ(0x0p+0f16,
                LIBC_NAMESPACE::shared::fminimum_numf16(0.0f16, 0.0f16));
+  EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::ufromfpf16(0.0f16, 0, 32));
+  EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::ufromfpxf16(0.0f16, 0, 32));
 }
 
 #endif // LIBC_TYPES_HAS_FLOAT16
@@ -226,6 +228,8 @@ TEST(LlvmLibcSharedMathTest, AllFloat) {
   EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::fminf(0.0f, 0.0f));
   EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::fmaximum_numf(0.0f, 0.0f));
   EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::fminimum_numf(0.0f, 0.0f));
+  EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::ufromfpf(0.0f, 0, 32));
+  EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::ufromfpxf(0.0f, 0, 32));
 }
 
 TEST(LlvmLibcSharedMathTest, AllDouble) {
@@ -318,6 +322,8 @@ TEST(LlvmLibcSharedMathTest, AllDouble) {
   EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::fmin(0.0, 0.0));
   EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::fmaximum_num(0.0, 0.0));
   EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::fminimum_num(0.0, 0.0));
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::ufromfp(0.0, 0, 32));
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::ufromfpx(0.0, 0, 32));
 }
 
 // TODO: Enable the tests when double-double type is supported.
@@ -391,6 +397,8 @@ TEST(LlvmLibcSharedMathTest, AllLongDouble) {
   EXPECT_FP_EQ(0x0p+0L, LIBC_NAMESPACE::shared::fminl(0.0L, 0.0L));
   EXPECT_FP_EQ(0x0p+0L, LIBC_NAMESPACE::shared::fmaximum_numl(0.0L, 0.0L));
   EXPECT_FP_EQ(0x0p+0L, LIBC_NAMESPACE::shared::fminimum_numl(0.0L, 0.0L));
+  EXPECT_FP_EQ(0x0p+0L, LIBC_NAMESPACE::shared::ufromfpl(0.0L, 0, 32));
+  EXPECT_FP_EQ(0x0p+0L, LIBC_NAMESPACE::shared::ufromfpxl(0.0L, 0, 32));
 }
 
 #endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
@@ -509,6 +517,10 @@ TEST(LlvmLibcSharedMathTest, AllFloat128) {
                                   float128(0.0), float128(0.0)));
   EXPECT_FP_EQ(float128(0.0), LIBC_NAMESPACE::shared::fminimum_numf128(
                                   float128(0.0), float128(0.0)));
+  EXPECT_FP_EQ(float128(0.0),
+               LIBC_NAMESPACE::shared::ufromfpf128(float128(0.0), 0, 32));
+  EXPECT_FP_EQ(float128(0.0),
+               LIBC_NAMESPACE::shared::ufromfpxf128(float128(0.0), 0, 32));
 }
 
 #endif // LIBC_TYPES_HAS_FLOAT128
@@ -590,4 +602,8 @@ TEST(LlvmLibcSharedMathTest, AllBFloat16) {
                                   bfloat16(0.0), bfloat16(0.0)));
   EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::fminimum_numbf16(
                                   bfloat16(0.0), bfloat16(0.0)));
+  EXPECT_FP_EQ(bfloat16(0.0),
+               LIBC_NAMESPACE::shared::ufromfpbf16(bfloat16(0.0), 0, 32));
+  EXPECT_FP_EQ(bfloat16(0.0),
+               LIBC_NAMESPACE::shared::ufromfpxbf16(bfloat16(0.0), 0, 32));
 }
