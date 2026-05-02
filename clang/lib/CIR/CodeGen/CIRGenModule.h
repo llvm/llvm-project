@@ -897,6 +897,9 @@ private:
   /// Call replaceAllUsesWith on all pairs in replacements.
   void applyReplacements();
 
+  bool getCPUAndFeaturesAttributes(GlobalDecl gd,
+                                   llvm::StringMap<std::string> &attrs,
+                                   bool setTargetFeatures = true);
   void setNonAliasAttributes(GlobalDecl gd, mlir::Operation *op);
 
   /// Map source language used to a CIR attribute.
