@@ -1,3 +1,4 @@
+// REQUIRES: system-aix
 // Check that setting an OBJECT_MODE converts the AIX triple to the right variant.
 // RUN: env OBJECT_MODE=64 \
 // RUN: %clang --target=powerpc-ibm-aix -print-target-triple | FileCheck -check-prefix=CHECK32 %s
