@@ -175,9 +175,15 @@ add_fp_unittest(
     libc.src.__support.math.fmaxf128
     libc.src.__support.math.fmaxf16
     libc.src.__support.math.fmaximum
+    libc.src.__support.math.fmaximum_mag
     libc.src.__support.math.fmaximum_mag_num
     libc.src.__support.math.fmaximum_mag_numbf16
     libc.src.__support.math.fmaximum_mag_numf
+    libc.src.__support.math.fmaximum_magbf16
+    libc.src.__support.math.fmaximum_magf
+    libc.src.__support.math.fmaximum_magf128
+    libc.src.__support.math.fmaximum_magf16
+    libc.src.__support.math.fmaximum_magl
     libc.src.__support.math.fmaximum_num
     libc.src.__support.math.fmaximum_numbf16
     libc.src.__support.math.fmaximum_numf
@@ -196,6 +202,12 @@ add_fp_unittest(
     libc.src.__support.math.fminf128
     libc.src.__support.math.fminf16
     libc.src.__support.math.fminimum
+    libc.src.__support.math.fminimum_mag
+    libc.src.__support.math.fminimum_magbf16
+    libc.src.__support.math.fminimum_magf
+    libc.src.__support.math.fminimum_magf128
+    libc.src.__support.math.fminimum_magf16
+    libc.src.__support.math.fminimum_magl
     libc.src.__support.math.fminimum_num
     libc.src.__support.math.fminimum_numbf16
     libc.src.__support.math.fminimum_numf
@@ -371,9 +383,15 @@ add_fp_unittest(
     libc.src.__support.math.fabsf16
     libc.src.__support.math.fabsl
     libc.src.__support.math.fmaximum
+    libc.src.__support.math.fmaximum_mag
     libc.src.__support.math.fmaximum_mag_num
     libc.src.__support.math.fmaximum_mag_numbf16
     libc.src.__support.math.fmaximum_mag_numf
+    libc.src.__support.math.fmaximum_magbf16
+    libc.src.__support.math.fmaximum_magf
+    libc.src.__support.math.fmaximum_magf128
+    libc.src.__support.math.fmaximum_magf16
+    libc.src.__support.math.fmaximum_magl
     libc.src.__support.math.fmaximum_num
     libc.src.__support.math.fmaximum_numbf16
     libc.src.__support.math.fmaximum_numf
@@ -391,6 +409,12 @@ add_fp_unittest(
     libc.src.__support.math.fminf128
     libc.src.__support.math.fminf16
     libc.src.__support.math.fminimum
+    libc.src.__support.math.fminimum_mag
+    libc.src.__support.math.fminimum_magbf16
+    libc.src.__support.math.fminimum_magf
+    libc.src.__support.math.fminimum_magf128
+    libc.src.__support.math.fminimum_magf16
+    libc.src.__support.math.fminimum_magl
     libc.src.__support.math.fminimum_num
     libc.src.__support.math.fminimum_numbf16
     libc.src.__support.math.fminimum_numf
