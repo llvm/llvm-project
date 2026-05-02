@@ -353,7 +353,7 @@ void Module::markUnavailable(bool Unimportable) {
 
     Current->IsAvailable = false;
     Current->IsUnimportable |= Unimportable;
-    for (auto *Submodule : Current->submodules()) {
+    for (Module *Submodule : Current->submodules()) {
       if (needUpdate(Submodule))
         Stack.push_back(Submodule);
     }
@@ -375,7 +375,7 @@ Module *Module::getGlobalModuleFragment() const {
   assert(isNamedModuleUnit() && "We should only query the global module "
                                 "fragment from the C++20 Named modules");
 
-  for (auto *SubModule : SubModules)
+  for (Module *SubModule : submodules())
     if (SubModule->isExplicitGlobalModule())
       return SubModule;
 
@@ -386,7 +386,7 @@ Module *Module::getPrivateModuleFragment() const {
   assert(isNamedModuleUnit() && "We should only query the private module "
                                 "fragment from the C++20 Named modules");
 
-  for (auto *SubModule : SubModules)
+  for (Module *SubModule : submodules())
     if (SubModule->isPrivateModule())
       return SubModule;
 
@@ -395,13 +395,9 @@ Module *Module::getPrivateModuleFragment() const {
 
 void Module::getExportedModules(SmallVectorImpl<Module *> &Exported) const {
   // All non-explicit submodules are exported.
-  for (std::vector<Module *>::const_iterator I = SubModules.begin(),
-                                             E = SubModules.end();
-       I != E; ++I) {
-    Module *Mod = *I;
+  for (Module *Mod : submodules())
     if (!Mod->IsExplicit)
       Exported.push_back(Mod);
-  }
 
   // Find re-exported modules by filtering the list of imported modules.
   bool AnyWildcard = false;
@@ -574,7 +570,7 @@ void Module::print(raw_ostream &OS, unsigned Indent, bool Dump) const {
     OS << "export_as" << ExportAsModule << "\n";
   }
 
-  for (auto *Submodule : submodules())
+  for (Module *Submodule : submodules())
     // Print inferred subframework modules so that we don't need to re-infer
     // them (requires expensive directory iteration + stat calls) when we build
     // the module. Regular inferred submodules are OK, as we need to look at all

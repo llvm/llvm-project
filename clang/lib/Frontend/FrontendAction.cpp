@@ -685,7 +685,7 @@ static std::error_code collectModuleHeaderIncludes(
   }
 
   // Recurse into submodules.
-  for (auto *Submodule : Module->submodules())
+  for (clang::Module *Submodule : Module->submodules())
     if (std::error_code Err = collectModuleHeaderIncludes(
             LangOpts, PrefixMapper, FileMgr, Diag, ModMap, Submodule, Includes))
       return Err;
