@@ -393,6 +393,11 @@ Changes in existing checks
   - Fixed the `CheckThrowTemporaries` option to correctly reflect its
     configured value in exported settings.
 
+- Improved :doc:`misc-unused-parameters
+  <clang-tidy/checks/misc/unused-parameters>` check by adding
+  `IgnoreMacroParameters` option to suppress warnings for unused parameters
+  whose declarations originate from macro expansions.
+
 - Improved :doc:`misc-unused-using-decls
   <clang-tidy/checks/misc/unused-using-decls>` to not diagnose ``using``
   declarations as unused if they're exported from a module.
