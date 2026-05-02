@@ -151,7 +151,7 @@ LIBC_INLINE constexpr T hypot(T x, T y) {
   StorageType a_mant = a_bits.get_mantissa();
   StorageType b_mant = b_bits.get_mantissa();
   DStorageType a_mant_sq, b_mant_sq;
-  bool sticky_bits;
+  bool sticky_bits = false;
 
   // Add an extra bit to simplify the final rounding bit computation.
   constexpr StorageType ONE = StorageType(1) << (FPBits_t::FRACTION_LEN + 1);
@@ -160,7 +160,7 @@ LIBC_INLINE constexpr T hypot(T x, T y) {
   b_mant <<= 1;
 
   StorageType leading_one;
-  int y_mant_width;
+  int y_mant_width = 0;
   if (a_exp != 0) {
     leading_one = ONE;
     a_mant |= ONE;

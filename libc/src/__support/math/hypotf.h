@@ -51,7 +51,7 @@ LIBC_INLINE constexpr float hypotf(float x, float y) {
   // x^2 and y^2 are exact in double precision.
   double x_sq = xd * xd;
 
-  double sum_sq;
+  double sum_sq = 0.0;
 #ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
   sum_sq = fputil::multiply_add(yd, yd, x_sq);
 #else
