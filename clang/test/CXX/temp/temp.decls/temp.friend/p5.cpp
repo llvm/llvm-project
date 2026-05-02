@@ -141,7 +141,7 @@ namespace test7 {
 }
 
 namespace test8 {
-  template <class T> struct A {
+  template <class T> struct A { // #test8-A
     T h();
   };
 
@@ -167,6 +167,7 @@ namespace test8 {
     c.n = 0;
     // expected-error@-1 {{'n' is a private member of 'test8::C'}}
     //   expected-note@#test8-C-n {{implicitly declared private here}}
+    //   expected-note@#test8-A {{candidate template ignored: could not match 'T *' against 'int'}}
     return 0;
   }
 
