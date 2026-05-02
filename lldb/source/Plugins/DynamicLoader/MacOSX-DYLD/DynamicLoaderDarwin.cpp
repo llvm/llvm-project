@@ -317,8 +317,8 @@ bool DynamicLoaderDarwin::UpdateImageLoadAddress(Module *module,
 
               if (info.segments[i].vmsize != section_sp->GetByteSize())
                 LLDB_LOGF(log,
-                          "%s: In-memory segment size for %s is %" PRIx64
-                          " but file segment size is %" PRIx64,
+                          "%s: In-memory segment size for %s is 0x%" PRIx64
+                          " but file segment size is 0x%" PRIx64,
                           info.file_spec.GetFilename().AsCString(""),
                           info.segments[i].name.AsCString(""),
                           info.segments[i].vmsize, section_sp->GetByteSize());
