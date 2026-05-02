@@ -1,4 +1,4 @@
-//===-- Implementation of fmaximum_mag function----------------------------===//
+//===-- Shared fmaximum_mag function ----------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/fmaximum_mag.h"
+#ifndef LLVM_LIBC_SHARED_MATH_FMAXIMUM_MAG_H
+#define LLVM_LIBC_SHARED_MATH_FMAXIMUM_MAG_H
+
+#include "shared/libc_common.h"
 #include "src/__support/math/fmaximum_mag.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-LLVM_LIBC_FUNCTION(double, fmaximum_mag, (double x, double y)) {
-  return math::fmaximum_mag(x, y);
-}
+using math::fmaximum_mag;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SHARED_MATH_FMAXIMUM_MAG_H
