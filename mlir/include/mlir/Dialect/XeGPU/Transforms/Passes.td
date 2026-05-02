@@ -118,4 +118,5 @@ def XeGPUSgToWiDistributeExperimental : Pass<"xegpu-sg-to-wi-distribute-experime
                            "vector::VectorDialect", "index::IndexDialect"];
 }
 
+
 #endif // MLIR_DIALECT_XEGPU_TRANSFORMS_PASSES_TD
