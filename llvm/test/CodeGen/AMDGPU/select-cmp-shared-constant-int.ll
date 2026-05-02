@@ -953,3 +953,128 @@ entry:
   %sel = select i1 %cmp, i8 %other, i8 -5
   ret i8 %sel
 }
+
+;------------------------------------------------------------------------------
+; I128 Tests
+;------------------------------------------------------------------------------
+
+; Should be folded: icmp eq + select with constant in true value
+define i128 @icmp_select_fold_eq_imm_i128(i128 %arg, i128 %other) {
+; GFX900-LABEL: icmp_select_fold_eq_imm_i128:
+; GFX900:       ; %bb.0: ; %entry
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_xor_b32_e32 v8, 0xa0a0a0a0, v3
+; GFX900-NEXT:    v_xor_b32_e32 v10, 0xb0b0b0b0, v2
+; GFX900-NEXT:    v_xor_b32_e32 v9, 0xc0c0c0c0, v1
+; GFX900-NEXT:    v_xor_b32_e32 v11, 0xd0d0d0d0, v0
+; GFX900-NEXT:    v_or_b32_e32 v9, v9, v8
+; GFX900-NEXT:    v_or_b32_e32 v8, v11, v10
+; GFX900-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[8:9]
+; GFX900-NEXT:    v_cndmask_b32_e32 v0, v4, v0, vcc
+; GFX900-NEXT:    v_cndmask_b32_e32 v1, v5, v1, vcc
+; GFX900-NEXT:    v_cndmask_b32_e32 v2, v6, v2, vcc
+; GFX900-NEXT:    v_cndmask_b32_e32 v3, v7, v3, vcc
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1010-LABEL: icmp_select_fold_eq_imm_i128:
+; GFX1010:       ; %bb.0: ; %entry
+; GFX1010-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1010-NEXT:    v_xor_b32_e32 v8, 0xa0a0a0a0, v3
+; GFX1010-NEXT:    v_xor_b32_e32 v10, 0xb0b0b0b0, v2
+; GFX1010-NEXT:    v_xor_b32_e32 v9, 0xc0c0c0c0, v1
+; GFX1010-NEXT:    v_xor_b32_e32 v11, 0xd0d0d0d0, v0
+; GFX1010-NEXT:    v_or_b32_e32 v9, v9, v8
+; GFX1010-NEXT:    v_or_b32_e32 v8, v11, v10
+; GFX1010-NEXT:    v_cmp_eq_u64_e32 vcc_lo, 0, v[8:9]
+; GFX1010-NEXT:    v_cndmask_b32_e32 v0, v4, v0, vcc_lo
+; GFX1010-NEXT:    v_cndmask_b32_e32 v1, v5, v1, vcc_lo
+; GFX1010-NEXT:    v_cndmask_b32_e32 v2, v6, v2, vcc_lo
+; GFX1010-NEXT:    v_cndmask_b32_e32 v3, v7, v3, vcc_lo
+; GFX1010-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %cmp = icmp eq i128 %arg, u0xa0a0a0a0b0b0b0b0c0c0c0c0d0d0d0d0
+  %sel = select i1 %cmp, i128 u0xa0a0a0a0b0b0b0b0c0c0c0c0d0d0d0d0, i128 %other
+  ret i128 %sel
+}
+
+; Should be folded: icmp ne + select with constant in false value
+define i128 @icmp_select_fold_ne_imm_i128(i128 %arg, i128 %other) {
+; GFX900-LABEL: icmp_select_fold_ne_imm_i128:
+; GFX900:       ; %bb.0: ; %entry
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_xor_b32_e32 v8, 0xa0a0a0a0, v3
+; GFX900-NEXT:    v_xor_b32_e32 v10, 0xb0b0b0b0, v2
+; GFX900-NEXT:    v_xor_b32_e32 v9, 0xc0c0c0c0, v1
+; GFX900-NEXT:    v_xor_b32_e32 v11, 0xd0d0d0d0, v0
+; GFX900-NEXT:    v_or_b32_e32 v9, v9, v8
+; GFX900-NEXT:    v_or_b32_e32 v8, v11, v10
+; GFX900-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[8:9]
+; GFX900-NEXT:    v_cndmask_b32_e32 v0, v0, v4, vcc
+; GFX900-NEXT:    v_cndmask_b32_e32 v1, v1, v5, vcc
+; GFX900-NEXT:    v_cndmask_b32_e32 v2, v2, v6, vcc
+; GFX900-NEXT:    v_cndmask_b32_e32 v3, v3, v7, vcc
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1010-LABEL: icmp_select_fold_ne_imm_i128:
+; GFX1010:       ; %bb.0: ; %entry
+; GFX1010-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1010-NEXT:    v_xor_b32_e32 v8, 0xa0a0a0a0, v3
+; GFX1010-NEXT:    v_xor_b32_e32 v10, 0xb0b0b0b0, v2
+; GFX1010-NEXT:    v_xor_b32_e32 v9, 0xc0c0c0c0, v1
+; GFX1010-NEXT:    v_xor_b32_e32 v11, 0xd0d0d0d0, v0
+; GFX1010-NEXT:    v_or_b32_e32 v9, v9, v8
+; GFX1010-NEXT:    v_or_b32_e32 v8, v11, v10
+; GFX1010-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[8:9]
+; GFX1010-NEXT:    v_cndmask_b32_e32 v0, v0, v4, vcc_lo
+; GFX1010-NEXT:    v_cndmask_b32_e32 v1, v1, v5, vcc_lo
+; GFX1010-NEXT:    v_cndmask_b32_e32 v2, v2, v6, vcc_lo
+; GFX1010-NEXT:    v_cndmask_b32_e32 v3, v3, v7, vcc_lo
+; GFX1010-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %cmp = icmp ne i128 %arg, u0xa0a0a0a0b0b0b0b0c0c0c0c0d0d0d0d0
+  %sel = select i1 %cmp, i128 %other, i128 u0xa0a0a0a0b0b0b0b0c0c0c0c0d0d0d0d0
+  ret i128 %sel
+}
+
+; Should be folded: icmp eq + select with constant in true value
+define i128 @icmp_select_no_fold_i128_other_pos(i128 %arg, i128 %other) {
+; GFX900-LABEL: icmp_select_no_fold_i128_other_pos:
+; GFX900:       ; %bb.0: ; %entry
+; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-NEXT:    v_xor_b32_e32 v3, 0xa0a0a0a0, v3
+; GFX900-NEXT:    v_xor_b32_e32 v2, 0xb0b0b0b0, v2
+; GFX900-NEXT:    v_xor_b32_e32 v1, 0xc0c0c0c0, v1
+; GFX900-NEXT:    v_xor_b32_e32 v0, 0xd0d0d0d0, v0
+; GFX900-NEXT:    v_or_b32_e32 v1, v1, v3
+; GFX900-NEXT:    v_or_b32_e32 v0, v0, v2
+; GFX900-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[0:1]
+; GFX900-NEXT:    v_mov_b32_e32 v2, 0xd0d0d0d0
+; GFX900-NEXT:    v_cndmask_b32_e32 v0, v2, v4, vcc
+; GFX900-NEXT:    v_mov_b32_e32 v1, 0xc0c0c0c0
+; GFX900-NEXT:    v_mov_b32_e32 v2, 0xb0b0b0b0
+; GFX900-NEXT:    v_mov_b32_e32 v3, 0xa0a0a0a0
+; GFX900-NEXT:    v_cndmask_b32_e32 v1, v1, v5, vcc
+; GFX900-NEXT:    v_cndmask_b32_e32 v2, v2, v6, vcc
+; GFX900-NEXT:    v_cndmask_b32_e32 v3, v3, v7, vcc
+; GFX900-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1010-LABEL: icmp_select_no_fold_i128_other_pos:
+; GFX1010:       ; %bb.0: ; %entry
+; GFX1010-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1010-NEXT:    v_xor_b32_e32 v3, 0xa0a0a0a0, v3
+; GFX1010-NEXT:    v_xor_b32_e32 v2, 0xb0b0b0b0, v2
+; GFX1010-NEXT:    v_xor_b32_e32 v1, 0xc0c0c0c0, v1
+; GFX1010-NEXT:    v_xor_b32_e32 v0, 0xd0d0d0d0, v0
+; GFX1010-NEXT:    v_or_b32_e32 v1, v1, v3
+; GFX1010-NEXT:    v_or_b32_e32 v0, v0, v2
+; GFX1010-NEXT:    v_cmp_eq_u64_e32 vcc_lo, 0, v[0:1]
+; GFX1010-NEXT:    v_cndmask_b32_e32 v0, 0xd0d0d0d0, v4, vcc_lo
+; GFX1010-NEXT:    v_cndmask_b32_e32 v1, 0xc0c0c0c0, v5, vcc_lo
+; GFX1010-NEXT:    v_cndmask_b32_e32 v2, 0xb0b0b0b0, v6, vcc_lo
+; GFX1010-NEXT:    v_cndmask_b32_e32 v3, 0xa0a0a0a0, v7, vcc_lo
+; GFX1010-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %cmp = icmp eq i128 %arg, u0xa0a0a0a0b0b0b0b0c0c0c0c0d0d0d0d0
+  %sel = select i1 %cmp, i128 %other, i128 u0xa0a0a0a0b0b0b0b0c0c0c0c0d0d0d0d0
+  ret i128 %sel
+}

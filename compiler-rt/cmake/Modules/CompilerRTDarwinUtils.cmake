@@ -528,7 +528,7 @@ macro(darwin_add_embedded_builtin_libraries)
   # architectures we bail here.
   set(DARWIN_SOFT_FLOAT_ARCHS armv6m armv7m armv7em armv7 armv8m.main armv8.1m.main)
   set(DARWIN_HARD_FLOAT_ARCHS armv7em armv7 armv8m.main armv8.1m.main)
-  if(COMPILER_RT_SUPPORTED_ARCH MATCHES ".*arm.*")
+  if(COMPILER_RT_SUPPORTED_ARCH MATCHES ".*armv.*")
     list(FIND COMPILER_RT_SUPPORTED_ARCH i386 i386_idx)
     if(i386_idx GREATER -1)
       list(APPEND DARWIN_HARD_FLOAT_ARCHS i386)
