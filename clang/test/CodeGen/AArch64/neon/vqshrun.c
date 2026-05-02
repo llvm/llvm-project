@@ -1,10 +1,15 @@
 // REQUIRES: aarch64-registered-target || arm-registered-target
 
-// RUN:                   %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -disable-O0-optnone -flax-vector-conversions=none           -emit-llvm -o - %s | opt -S -passes=mem2reg,sroa,simplifycfg | FileCheck %s --check-prefixes=LLVM
+// RUN:                   %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -disable-O0-optnone -flax-vector-conversions=none           -emit-llvm -o - %s | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=LLVM
 // RUN: %if cir-enabled %{%clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -disable-O0-optnone -flax-vector-conversions=none -fclangir -emit-llvm -o - %s | opt -S -passes=mem2reg,sroa,simplifycfg | FileCheck %s --check-prefixes=LLVM %}
 // RUN: %if cir-enabled %{%clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -disable-O0-optnone -flax-vector-conversions=none -fclangir -emit-cir  -o - %s |                               FileCheck %s --check-prefixes=CIR %}
 
 #include <arm_neon.h>
+
+//===------------------------------------------------------===//
+// Vector Saturating Shift Right and Narrow
+// https://arm-software.github.io/acle/neon_intrinsics/advsimd.html#vector-saturating-shift-right-and-narrow
+//===------------------------------------------------------===//
 
 // LLVM-LABEL: @test_vqshrun_n_s16(
 // CIR-LABEL: @test_vqshrun_n_s16(
