@@ -81,7 +81,8 @@ jobs:
       upload: true
     # Called workflows don't have access to secrets by default, so we need to explicitly pass secrets that we use.
     secrets:
-      RELEASE_TASKS_USER_TOKEN: ${{ secrets.RELEASE_TASKS_USER_TOKEN }}
+      LLVM_TOKEN_GENERATOR_CLIENT_ID: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
+      LLVM_TOKEN_GENERATOR_PRIVATE_KEY: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
 
   # The pypi trusted publishing does not support called workflows, so we
   # can't use them here.
