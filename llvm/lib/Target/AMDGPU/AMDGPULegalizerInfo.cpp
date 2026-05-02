@@ -1036,8 +1036,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .clampMaxNumElementsStrict(0, S16, 2);
   if (ST.hasPackedFP32Ops())
     FNegAbs.clampMaxNumElementsStrict(0, S32, 2);
-  FNegAbs.scalarize(0)
-      .clampScalar(0, S16, S64);
+  FNegAbs.scalarize(0).clampScalar(0, S16, S64);
 
   if (ST.has16BitInsts()) {
     getActionDefinitionsBuilder(G_FSQRT)
