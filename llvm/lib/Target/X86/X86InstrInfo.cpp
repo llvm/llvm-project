@@ -4981,6 +4981,22 @@ bool X86InstrInfo::isRedundantFlagInstr(const MachineInstr &FlagI,
     }
     return FlagI.isIdenticalTo(OI);
   }
+  case X86::LZCNT64rr:
+  case X86::LZCNT32rr:
+  case X86::LZCNT16rr:
+  case X86::TZCNT64rr:
+  case X86::TZCNT32rr:
+  case X86::TZCNT16rr:
+    // LZCNT/TZCNT set CF=1 iff src==0, identical to what SUB src, 1
+    // produces in CF. If FlagI is SUB SrcReg, 1, reuse these flags.
+    if (ImmMask != 0 && ImmValue == 1 && SrcReg2 == 0 &&
+        OI.getNumOperands() > 1 && OI.getOperand(1).isReg() &&
+        OI.getOperand(1).getReg() == SrcReg) {
+      *ImmDelta = 0;
+      *IsSwapped = false;
+      return true;
+    }
+    return false;
   default:
     return false;
   }
