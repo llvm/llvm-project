@@ -540,6 +540,80 @@ void function_captured_ref_invalidated() {
 
 } // namespace callable_wrappers
 
+// FIXME: does not report a double free
+namespace explicit_destructor {
+
+void explicit_destructor_invalidates_pointer() {
+  std::string s = "42";
+  const char *p = s.data(); // expected-warning {{object whose reference is captured is later invalidated}}
+  s.~basic_string();        // expected-note {{invalidated here}}
+  (void)*p;                 // expected-note {{later used here}}
+}
+
+void pointer_destructor_invalidates_pointer() {
+  char storage[sizeof(std::string)];
+  std::string *obj = new (storage) std::string("42"); // expected-warning {{object whose reference is captured is later invalidated}}
+  const char *p = obj->data();
+  obj->~basic_string();                               // expected-note {{invalidated here}}
+  (void)*p;                                           // expected-note {{later used here}}
+}
+
+void destroy_at_invalidates_pointer() {
+  char storage[sizeof(std::string)];
+  std::string *obj = new (storage) std::string("42"); // expected-warning {{object whose reference is captured is later invalidated}}
+  const char *p = obj->data();
+  std::destroy_at(obj);                               // expected-note {{invalidated here}}
+  (void)*p;                                           // expected-note {{later used here}}
+}
+
+void destroy_at_then_placement_new_rescues_pointer() {
+  char storage[sizeof(std::string)];
+  std::string *obj = new (storage) std::string("42");
+  const char *p = obj->data();
+  std::destroy_at(obj);
+  obj = new (storage) std::string("23");
+  p = obj->data();
+  (void)*p;
+}
+
+void destroy_at_invalidates_array_pointer() {
+  std::string arr[1] = {"42"};
+  std::string (&arr_ref)[1] = arr;
+  const char *p = arr[0].data(); // expected-warning {{object whose reference is captured is later invalidated}}
+  std::destroy_at(&arr_ref);     // expected-note {{invalidated here}}
+  (void)*p;                      // expected-note {{later used here}}
+}
+
+void reference_destructor_invalidates_pointer() {
+  std::string s = "42";
+  std::string &ref = s;       // expected-warning {{object whose reference is captured is later invalidated}}
+  const char *p = ref.data();
+  std::destroy_at(&ref);      // expected-note {{invalidated here}}
+  (void)*p;                   // expected-note {{later used here}}
+}
+
+void destroy_at_ternary_operator(bool flag) {
+  std::string* str1 = new std::string; // expected-warning {{object whose reference is captured is later invalidated}}
+  std::string* str2 = new std::string;
+  const char *p = str1->data();
+  std::destroy_at(flag ? str1 : str2); // expected-note {{invalidated here}}
+  (void)*p;                            // expected-note {{later used here}}
+}
+
+struct StringOwner {
+  std::string s, t;
+};
+
+// FIXME: False-positive
+void member_destructor_invalidates_pointer() {
+  StringOwner owner = {"42", "43"};
+  const char *p = owner.s.data(); // expected-warning {{object whose reference is captured is later invalidated}}
+  owner.t.~basic_string();        // expected-note {{invalidated here}}
+  (void)*p;                       // expected-note {{later used here}}
+}
+
+} // namespace explicit_destructor
+
 namespace unique_ptr_invalidation {
 
 void invalid_after_reset() {
