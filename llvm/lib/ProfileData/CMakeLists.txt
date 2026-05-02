@@ -40,7 +40,7 @@ add_llvm_component_library(LLVMProfileData
   TargetParser
   )
 
-set(LLVM_ENABLE_OPENCSD "OFF" CACHE STRING "Enable OpenCSD support in LLVMProfileData")
+set(LLVM_ENABLE_OPENCSD "OFF" CACHE STRING "Use OpenCSD if available. Can be ON, OFF, or FORCE_ON")
 
 set(LLVM_HAVE_OPENCSD OFF CACHE BOOL "Is OpenCSD available" FORCE)
 
@@ -76,7 +76,7 @@ if(NOT LLVM_ENABLE_OPENCSD STREQUAL "OFF")
     message(STATUS "LLVMProfileData: OpenCSD support enabled (found ${OPENCSD_VERSION}).")
     set(LLVM_HAVE_OPENCSD ON CACHE BOOL "Is OpenCSD available" FORCE)
   elseif(OPENCSD_LIB AND OPENCSD_INCLUDE)
-    if(LLVM_ENABLE_OPENCSD STREQUAL "ON")
+    if(LLVM_ENABLE_OPENCSD STREQUAL "FORCE_ON")
       message(FATAL_ERROR
         "OpenCSD found at ${OPENCSD_LIB} but its version "
         "(${OPENCSD_VERSION}) is older than the required "
@@ -88,7 +88,7 @@ if(NOT LLVM_ENABLE_OPENCSD STREQUAL "OFF")
         "${LLVM_OPENCSD_MIN_VERSION}; ETM decoding support disabled.")
     endif()
   else()
-    if(LLVM_ENABLE_OPENCSD STREQUAL "ON")
+    if(LLVM_ENABLE_OPENCSD STREQUAL "FORCE_ON")
       message(FATAL_ERROR "OpenCSD enabled but library or headers not found.")
     else()
       message(STATUS "LLVMProfileData: OpenCSD not found; ETM decoding support disabled.")
