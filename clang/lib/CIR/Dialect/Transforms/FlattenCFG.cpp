@@ -77,6 +77,51 @@ static bool hasNestedOpsToFlatten(mlir::Region &region) {
       .wasInterrupted();
 }
 
+/// True if `op` is a non-returning terminator — currently `cir.unreachable`
+/// or `cir.trap`. Such terminators don't fall through and don't yield a
+/// value, so when flattening a region they can be left in place rather than
+/// being replaced with a branch to the continuation block. Add new ops here
+/// (e.g. a hypothetical `cir.abort`) so every flattening pattern picks them
+/// up at once.
+static bool isNonReturningTerminator(mlir::Operation *op) {
+  return mlir::isa_and_nonnull<cir::UnreachableOp, cir::TrapOp>(op);
+}
+
+/// Rewrite the terminator of `region`'s exit block so that, after
+/// flattening, control falls through to `continueBlock`. The exit
+/// terminator is expected to be either:
+///   - `cir.yield`: replaced with `cir.br` to `continueBlock` (yielded
+///     args become the destination block's arguments).
+///   - non-returning (`cir.unreachable`, `cir.trap`): left in place — no
+///     branch is needed.
+///
+/// On success returns `success()`. If the terminator is anything else, an
+/// error is emitted and `failure()` is returned. NOTE: callers in this
+/// file have typically already mutated IR (splitBlock / createBlock) by
+/// the time this is invoked, so the MLIR pattern rewriter contract
+/// requires them to still return `success()` from the surrounding
+/// pattern; the `failure()` here just signals "stop trying to wire up
+/// this region".
+static mlir::LogicalResult
+rewriteRegionExitToContinue(mlir::PatternRewriter &rewriter,
+                            mlir::Region &region, mlir::Block *continueBlock,
+                            llvm::StringRef regionDescription) {
+  mlir::Operation *terminator = region.back().getTerminator();
+  rewriter.setInsertionPointToEnd(&region.back());
+  if (auto yieldOp = mlir::dyn_cast<cir::YieldOp>(terminator)) {
+    rewriter.replaceOpWithNewOp<cir::BrOp>(yieldOp, yieldOp.getArgs(),
+                                           continueBlock);
+    return mlir::success();
+  }
+  if (isNonReturningTerminator(terminator))
+    return mlir::success();
+  terminator->emitError("unexpected terminator in ")
+      << regionDescription
+      << " region, expected yield, unreachable, or trap, got: "
+      << terminator->getName();
+  return mlir::failure();
+}
+
 struct CIRFlattenCFGPass : public impl::CIRFlattenCFGBase<CIRFlattenCFGPass> {
 
   CIRFlattenCFGPass() = default;
@@ -551,49 +596,22 @@ public:
 
     Region &trueRegion = op.getTrueRegion();
     Block *trueBlock = &trueRegion.front();
-    mlir::Operation *trueTerminator = trueRegion.back().getTerminator();
-    rewriter.setInsertionPointToEnd(&trueRegion.back());
-
-    // Handle both yield and unreachable terminators (throw expressions).
-    // Note: IR has already been modified (splitBlock, createBlock above), so
-    // we must not return failure() from this point onward per the MLIR pattern
-    // rewriter contract.
-    if (auto trueYieldOp = dyn_cast<cir::YieldOp>(trueTerminator)) {
-      rewriter.replaceOpWithNewOp<cir::BrOp>(trueYieldOp, trueYieldOp.getArgs(),
-                                             continueBlock);
-    } else if (isa<cir::UnreachableOp>(trueTerminator)) {
-      // Terminator is unreachable (e.g., from throw), just keep it
-    } else {
-      trueTerminator->emitError("unexpected terminator in ternary true region, "
-                                "expected yield or unreachable, got: ")
-          << trueTerminator->getName();
-      // Return success because IR was already modified
-      // (splitBlock/createBlock).
+    // Wire up the true region's exit (cir.yield -> br, cir.unreachable /
+    // cir.trap kept as-is). IR has already been modified by splitBlock /
+    // createBlock above, so per the MLIR pattern rewriter contract we must
+    // still return success() if the terminator turns out to be unexpected.
+    if (failed(rewriteRegionExitToContinue(rewriter, trueRegion, continueBlock,
+                                           "ternary true")))
       return mlir::success();
-    }
     rewriter.inlineRegionBefore(trueRegion, continueBlock);
 
     Block *falseBlock = continueBlock;
     Region &falseRegion = op.getFalseRegion();
 
     falseBlock = &falseRegion.front();
-    mlir::Operation *falseTerminator = falseRegion.back().getTerminator();
-    rewriter.setInsertionPointToEnd(&falseRegion.back());
-
-    // Handle both yield and unreachable terminators (throw expressions)
-    if (auto falseYieldOp = dyn_cast<cir::YieldOp>(falseTerminator)) {
-      rewriter.replaceOpWithNewOp<cir::BrOp>(
-          falseYieldOp, falseYieldOp.getArgs(), continueBlock);
-    } else if (isa<cir::UnreachableOp>(falseTerminator)) {
-      // Terminator is unreachable (e.g., from throw), just keep it
-    } else {
-      falseTerminator->emitError("unexpected terminator in ternary false "
-                                 "region, expected yield or unreachable, got: ")
-          << falseTerminator->getName();
-      // Return success because IR was already modified
-      // (splitBlock/createBlock).
+    if (failed(rewriteRegionExitToContinue(rewriter, falseRegion, continueBlock,
+                                           "ternary false")))
       return mlir::success();
-    }
     rewriter.inlineRegionBefore(falseRegion, continueBlock);
 
     rewriter.setInsertionPointToEnd(condBlock);
