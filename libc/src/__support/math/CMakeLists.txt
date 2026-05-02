@@ -1275,6 +1275,62 @@ add_header_library(
     libc.src.__support.macros.config
 )
 
+add_header_library(
+  fmod
+  HDRS
+    fmod.h
+  DEPENDS
+    libc.src.__support.FPUtil.generic.fmod
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fmodbf16
+  HDRS
+    fmodbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.generic.fmod
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fmodf
+  HDRS
+    fmodf.h
+  DEPENDS
+    libc.src.__support.FPUtil.generic.fmod
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fmodf128
+  HDRS
+    fmodf128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.generic.fmod
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fmodf16
+  HDRS
+    fmodf16.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.generic.fmod
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fmodl
+  HDRS
+    fmodl.h
+  DEPENDS
+    libc.src.__support.FPUtil.generic.fmod
+    libc.src.__support.macros.config
+)
 
 add_header_library(
   llogbbf16
@@ -1292,6 +1348,63 @@ add_header_library(
     ilogbbf16.h
   DEPENDS
     libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  modf
+  HDRS
+    modf.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  modfbf16
+  HDRS
+    modfbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  modff
+  HDRS
+    modff.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  modff128
+  HDRS
+    modff128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  modff16
+  HDRS
+    modff16.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  modfl
+  HDRS
+    modfl.h
+  DEPENDS
     libc.src.__support.FPUtil.manipulation_functions
     libc.src.__support.macros.config
 )

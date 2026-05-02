@@ -4477,10 +4477,124 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_fmod",
+    hdrs = ["src/__support/math/fmod.h"],
+    deps = [
+        ":__support_fputil_generic_fmod",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fmodbf16",
+    hdrs = ["src/__support/math/fmodbf16.h"],
+    deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_generic_fmod",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fmodf",
+    hdrs = ["src/__support/math/fmodf.h"],
+    deps = [
+        ":__support_fputil_generic_fmod",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fmodf128",
+    hdrs = ["src/__support/math/fmodf128.h"],
+    deps = [
+        ":__support_fputil_generic_fmod",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fmodf16",
+    hdrs = ["src/__support/math/fmodf16.h"],
+    deps = [
+        ":__support_fputil_generic_fmod",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fmodl",
+    hdrs = ["src/__support/math/fmodl.h"],
+    deps = [
+        ":__support_fputil_generic_fmod",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_ilogbbf16",
     hdrs = ["src/__support/math/ilogbbf16.h"],
     deps = [
         ":__support_fputil_bfloat16",
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_modf",
+    hdrs = ["src/__support/math/modf.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_modfbf16",
+    hdrs = ["src/__support/math/modfbf16.h"],
+    deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_modff",
+    hdrs = ["src/__support/math/modff.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_modff128",
+    hdrs = ["src/__support/math/modff128.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_modff16",
+    hdrs = ["src/__support/math/modff16.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_modfl",
+    hdrs = ["src/__support/math/modfl.h"],
+    deps = [
         ":__support_fputil_manipulation_functions",
         ":__support_macros_config",
     ],
@@ -9121,38 +9235,43 @@ libc_math_function(
 
 libc_math_function(
     name = "fmod",
-    additional_deps = [":__support_fputil_generic_fmod"],
+    additional_deps = [
+        ":__support_math_fmod",
+    ],
 )
 
 libc_math_function(
     name = "fmodbf16",
     additional_deps = [
-        ":__support_fputil_bfloat16",
-        ":__support_fputil_generic_fmod",
+        ":__support_math_fmodbf16",
     ],
 )
 
 libc_math_function(
     name = "fmodf",
-    additional_deps = [":__support_fputil_generic_fmod"],
+    additional_deps = [
+        ":__support_math_fmodf",
+    ],
 )
 
 libc_math_function(
     name = "fmodl",
-    additional_deps = [":__support_fputil_generic_fmod"],
+    additional_deps = [
+        ":__support_math_fmodl",
+    ],
 )
 
 libc_math_function(
     name = "fmodf128",
     additional_deps = [
-        ":__support_fputil_generic_fmod",
+        ":__support_math_fmodf128",
     ],
 )
 
 libc_math_function(
     name = "fmodf16",
     additional_deps = [
-        ":__support_fputil_generic_fmod",
+        ":__support_math_fmodf16",
     ],
 )
 
@@ -9588,18 +9707,46 @@ libc_math_function(
     name = "lroundf16",
 )
 
-libc_math_function(name = "modf")
+libc_math_function(
+    name = "modf",
+    additional_deps = [
+        ":__support_math_modf",
+    ],
+)
 
-libc_math_function(name = "modff")
+libc_math_function(
+    name = "modfbf16",
+    additional_deps = [
+        ":__support_math_modfbf16",
+    ],
+)
 
-libc_math_function(name = "modfl")
+libc_math_function(
+    name = "modff",
+    additional_deps = [
+        ":__support_math_modff",
+    ],
+)
+
+libc_math_function(
+    name = "modfl",
+    additional_deps = [
+        ":__support_math_modfl",
+    ],
+)
 
 libc_math_function(
     name = "modff128",
+    additional_deps = [
+        ":__support_math_modff128",
+    ],
 )
 
 libc_math_function(
     name = "modff16",
+    additional_deps = [
+        ":__support_math_modff16",
+    ],
 )
 
 libc_math_function(
