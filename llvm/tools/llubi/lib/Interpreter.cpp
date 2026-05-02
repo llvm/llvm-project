@@ -786,7 +786,8 @@ public:
       const uint64_t Offset = Chunk * EVL;
       if (Offset > Vec.size() || EVL > Vec.size() - Offset)
         return AnyValue::poison();
-      return std::vector(Vec.begin() + Offset, Vec.begin() + Offset + EVL);
+      return std::vector<AnyValue>(Vec.begin() + Offset,
+                                   Vec.begin() + Offset + EVL);
     }
     case Intrinsic::vector_reverse: {
       auto Vec = Args[0].asAggregate();
