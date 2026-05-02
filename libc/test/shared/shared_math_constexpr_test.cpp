@@ -17,7 +17,6 @@
 
 static_assert(0.0 == LIBC_NAMESPACE::shared::ceil(0.0));
 static_assert(0.0 == LIBC_NAMESPACE::shared::copysign(0.0, 0.0));
-static_assert(3.0 == LIBC_NAMESPACE::shared::f16add(1.0, 2.0));
 static_assert(1.0 == LIBC_NAMESPACE::shared::fabs(-1.0));
 static_assert(1.0 == LIBC_NAMESPACE::shared::fdim(1.0, 0.0));
 static_assert(0.0f == LIBC_NAMESPACE::shared::fdiv(0.0, 1.0));
@@ -58,7 +57,6 @@ static_assert(0.0 == LIBC_NAMESPACE::shared::fminimum_mag_num(0.0, 0.0));
 
 static_assert(0.0f == LIBC_NAMESPACE::shared::ceilf(0.0f));
 static_assert(0.0f == LIBC_NAMESPACE::shared::copysignf(0.0f, 0.0f));
-static_assert(3.0f == LIBC_NAMESPACE::shared::f16addf(1.0f, 2.0f));
 static_assert(1.0f == LIBC_NAMESPACE::shared::fabsf(-1.0f));
 static_assert(0.0f == LIBC_NAMESPACE::shared::fadd(0.0, 0.0));
 static_assert(1.0f == LIBC_NAMESPACE::shared::fdimf(1.0f, 0.0f));
@@ -99,6 +97,9 @@ static_assert(0.0f == LIBC_NAMESPACE::shared::fminimum_mag_numf(0.0f, 0.0f));
 
 static_assert(0.0f16 == LIBC_NAMESPACE::shared::ceilf16(0.0f16));
 static_assert(0.0f16 == LIBC_NAMESPACE::shared::copysignf16(0.0f16, 0.0f16));
+static_assert(3.0f16 == LIBC_NAMESPACE::shared::f16add(1.0, 2.0));
+static_assert(3.0f16 == LIBC_NAMESPACE::shared::f16addf(1.0f, 2.0f));
+static_assert(3.0f16 == LIBC_NAMESPACE::shared::f16addl(1.0L, 2.0L));
 static_assert(1.0f16 == LIBC_NAMESPACE::shared::fabsf16(-1.0f16));
 static_assert(1.0f16 == LIBC_NAMESPACE::shared::fdimf16(1.0f16, 0.0f16));
 static_assert(3.0f16 == LIBC_NAMESPACE::shared::floorf16(3.7f16));
@@ -151,7 +152,6 @@ static_assert(0.0L == LIBC_NAMESPACE::shared::ceill(0.0L));
 static_assert(0.0L == LIBC_NAMESPACE::shared::copysignl(0.0L, 0.0L));
 static_assert(0.0 == LIBC_NAMESPACE::shared::ddivl(0.0L, 1.0L));
 static_assert(0.0 == LIBC_NAMESPACE::shared::dmull(0.0L, 1.0L));
-static_assert(3.0f == LIBC_NAMESPACE::shared::f16addl(1.0L, 2.0L));
 static_assert(1.0L == LIBC_NAMESPACE::shared::fabsl(-1.0L));
 static_assert(0.0f == LIBC_NAMESPACE::shared::faddl(0.0L, 0.0L));
 static_assert(1.0L == LIBC_NAMESPACE::shared::fdiml(1.0L, 0.0L));
