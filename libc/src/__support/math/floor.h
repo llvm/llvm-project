@@ -15,8 +15,9 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE double floor(double x) {
-#ifdef __LIBC_USE_BUILTIN_CEIL_FLOOR_RINT_TRUNC
+LIBC_INLINE LIBC_CONSTEXPR double floor(double x) {
+#if defined(__LIBC_USE_BUILTIN_CEIL_FLOOR_RINT_TRUNC) &&                       \
+    !defined(LIBC_HAS_CONSTANT_EVALUATION)
   return __builtin_floor(x);
 #else
   return fputil::floor(x);

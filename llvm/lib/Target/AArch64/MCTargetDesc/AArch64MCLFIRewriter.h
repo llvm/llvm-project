@@ -67,6 +67,16 @@ private:
   void doRewriteInst(const MCInst &Inst, MCStreamer &Out,
                      const MCSubtargetInfo &STI);
 
+  // Control flow.
+  void rewriteIndirectBranch(const MCInst &Inst, MCStreamer &Out,
+                             const MCSubtargetInfo &STI);
+  void rewriteReturn(const MCInst &Inst, MCStreamer &Out,
+                     const MCSubtargetInfo &STI);
+
+  // Link register modification.
+  void rewriteLRModification(const MCInst &Inst, MCStreamer &Out,
+                             const MCSubtargetInfo &STI);
+
   // System instructions.
   void rewriteSyscall(const MCInst &Inst, MCStreamer &Out,
                       const MCSubtargetInfo &STI);

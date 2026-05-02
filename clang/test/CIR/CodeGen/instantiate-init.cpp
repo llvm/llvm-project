@@ -62,9 +62,9 @@ void init_vec_using_initalizer_list() {
 // LLVM:   store i32 1, ptr %[[ELEM_1_PTR]], align 4
 // LLVM:   %[[ELEM_2_PTR:.*]] = getelementptr i32, ptr %[[INIT_LIST_PTR]], i64 2
 // LLVM:   store i32 2, ptr %[[ELEM_2_PTR]], align 4
-// LLVM:   %[[DATA_PTR:.*]] = getelementptr %"class.std::initializer_list<int>", ptr %[[AGG_ADDR]], i32 0, i32 0
+// LLVM:   %[[DATA_PTR:.*]] = getelementptr inbounds nuw %"class.std::initializer_list<int>", ptr %[[AGG_ADDR]], i32 0, i32 0
 // LLVM:   store ptr %[[INIT_LIST_ADDR]], ptr %[[DATA_PTR]], align 8
-// LLVM:   %[[SIZE_PTR:.*]] = getelementptr %"class.std::initializer_list<int>", ptr %[[AGG_ADDR]], i32 0, i32 1
+// LLVM:   %[[SIZE_PTR:.*]] = getelementptr inbounds nuw %"class.std::initializer_list<int>", ptr %[[AGG_ADDR]], i32 0, i32 1
 // LLVM:   store i64 3, ptr %[[SIZE_PTR]], align 8
 // LLVM:   %[[TMP_AGG:.*]] = load %"class.std::initializer_list<int>", ptr %[[AGG_ADDR]], align 8
 // LLVM:   call void @_ZN6VectorC1ESt16initializer_listIiE(ptr noundef nonnull align 1 dereferenceable(1) %[[VEC_ADDR]], %"class.std::initializer_list<int>" %[[TMP_AGG]])

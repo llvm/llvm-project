@@ -789,6 +789,7 @@ public:
   /// InlineDescriptor as well as primitive array elements. This function is
   /// used by std::destroy_at.
   void endLifetime() const;
+  void setLifeState(Lifetime L) const;
 
   /// Strip base casts from this Pointer.
   /// The result is either a root pointer or something
@@ -829,6 +830,12 @@ public:
   bool pointsToStringLiteral() const;
   /// Whether this points to a block created for an AddrLabelExpr.
   bool pointsToLabel() const;
+  /// Returns the AddrLabelExpr the Pointer points to, if any.
+  const AddrLabelExpr *getPointedToLabel() const {
+    if (const Descriptor *Desc = getDeclDesc())
+      return dyn_cast_if_present<AddrLabelExpr>(Desc->asExpr());
+    return nullptr;
+  }
 
   /// Prints the pointer.
   void print(llvm::raw_ostream &OS) const;
@@ -887,6 +894,9 @@ private:
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Pointer &P) {
   P.print(OS);
   OS << ' ';
+  if (P.isZero())
+    return OS;
+
   if (const Descriptor *D = P.getFieldDesc())
     D->dump(OS);
   if (P.isArrayElement()) {
@@ -894,7 +904,9 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Pointer &P) {
       OS << " one-past-the-end";
     else
       OS << " index " << P.getIndex();
-  }
+  } else if (P.isArrayRoot())
+    OS << " arrayroot";
+
   if (P.isBlockPointer() && P.block() && P.block()->isDummy())
     OS << " dummy";
   if (!P.isLive())

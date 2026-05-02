@@ -281,9 +281,9 @@ body:             |
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
     ; RV64I-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[COPY]], [[COPY1]]
     ; RV64I-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; RV64I-NEXT: [[ICMP:%[0-9]+]]:_(s64) = G_ICMP intpred(slt), [[SUB]](s64), [[COPY]]
-    ; RV64I-NEXT: [[ICMP1:%[0-9]+]]:_(s64) = G_ICMP intpred(sgt), [[COPY1]](s64), [[C]]
-    ; RV64I-NEXT: [[XOR:%[0-9]+]]:_(s64) = G_XOR [[ICMP1]], [[ICMP]]
+    ; RV64I-NEXT: [[ICMP:%[0-9]+]]:_(s64) = G_ICMP intpred(slt), [[COPY]](s64), [[COPY1]]
+    ; RV64I-NEXT: [[ICMP1:%[0-9]+]]:_(s64) = G_ICMP intpred(slt), [[SUB]](s64), [[C]]
+    ; RV64I-NEXT: [[XOR:%[0-9]+]]:_(s64) = G_XOR [[ICMP]], [[ICMP1]]
     ; RV64I-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY [[SUB]](s64)
     ; RV64I-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 63
     ; RV64I-NEXT: [[ASHR:%[0-9]+]]:_(s64) = G_ASHR [[COPY2]], [[C1]](s64)

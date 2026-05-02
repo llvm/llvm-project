@@ -23,8 +23,8 @@
 # CHECK-NEXT: LOAD           0x010000 0x0000000010010000 0x0000000010010000 0x010000 0x010000 R E 0x10000
 
 ## Check that executable page is filled with traps at its end.
-# LE: 01fff0 08 00 e0 7f 08 00 e0 7f 08 00 e0 7f 08 00 e0 7f
-# BE: 01fff0 7f e0 00 08 7f e0 00 08 7f e0 00 08 7f e0 00 08
+# LE: {{01fff0|01FFF0}} 08 00 e0 7f 08 00 e0 7f 08 00 e0 7f 08 00 e0 7f
+# BE: {{01fff0|01FFF0}} 7f e0 00 08 7f e0 00 08 7f e0 00 08 7f e0 00 08
 
 .globl _start
 _start:
