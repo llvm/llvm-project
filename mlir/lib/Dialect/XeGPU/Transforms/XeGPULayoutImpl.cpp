@@ -175,9 +175,21 @@ static void propagateRegionResultsToYieldOperands(
       if (successor.isParent()) {
         // For parent successor, get layout from external use points of the
         // parent op's results.
-        layout = getLayoutFromUsePoints(regionBranchOp->getResult(i));
+        auto regionResult = regionBranchOp->getResult(i);
+        layout = getLayoutFromUsePoints(regionResult);
         if (layout)
-          xegpu::setTemporaryLayout(regionBranchOp->getResult(i), layout);
+          xegpu::setTemporaryLayout(regionResult, layout);
+        if (auto tensorDescTy =
+                dyn_cast<xegpu::TensorDescType>(regionResult.getType())) {
+          auto tDescLayout = tensorDescTy.getLayoutAttr();
+          if (!tDescLayout) {
+            auto typeWithLayout = xegpu::TensorDescType::get(
+                tensorDescTy.getContext(), tensorDescTy.getShape(),
+                tensorDescTy.getElementType(), tensorDescTy.getEncoding(),
+                layout);
+            regionResult.setType(typeWithLayout);
+          }
+        }
       } else {
         // For region successor, get layout from the target region's block
         // arg use points (e.g., "before/cond" region args for scf.while
@@ -186,7 +198,9 @@ static void propagateRegionResultsToYieldOperands(
       }
       if (!layout)
         continue;
-      if (isa<VectorType>(succOps[i].getType()))
+      auto operandType = succOps[i].getType();
+      if (isa<VectorType>(operandType) ||
+          dyn_cast<xegpu::TensorDescType>(operandType))
         xegpu::setTemporaryLayout(yieldOp->getOpOperand(beginIdx + i), layout);
     }
   }
