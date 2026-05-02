@@ -57,6 +57,7 @@ struct VPTransformState;
 class raw_ostream;
 class RecurrenceDescriptor;
 class SCEV;
+class SCEVPredicate;
 class Type;
 class VPBasicBlock;
 class VPBuilder;
@@ -2408,6 +2409,11 @@ public:
 
   /// Returns the induction descriptor for the recipe.
   const InductionDescriptor &getInductionDescriptor() const { return IndDesc; }
+
+  /// Returns the SCEV predicates associated with this induction.
+  ArrayRef<const SCEVPredicate *> getPredicates() const {
+    return IndDesc.getPredicates();
+  }
 
   VPValue *getBackedgeValue() override {
     // TODO: All operands of base recipe must exist and be at same index in

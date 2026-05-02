@@ -5850,16 +5850,17 @@ ScalarEvolution::createAddRecFromPHIWithCasts(const SCEVUnknown *SymbolicPHI) {
 // even when the following Equal predicate exists:
 // "%step == (sext ix (trunc iy to ix) to iy)".
 bool PredicatedScalarEvolution::areAddRecsEqualWithPreds(
-    const SCEVAddRecExpr *AR1, const SCEVAddRecExpr *AR2) const {
+    const SCEVAddRecExpr *AR1, const SCEVAddRecExpr *AR2,
+    ArrayRef<const SCEVPredicate *> ExtraPreds) const {
   if (AR1 == AR2)
     return true;
 
-  auto areExprsEqual = [&](const SCEV *Expr1, const SCEV *Expr2) -> bool {
-    if (Expr1 != Expr2 &&
-        !Preds->implies(SE.getEqualPredicate(Expr1, Expr2), SE) &&
-        !Preds->implies(SE.getEqualPredicate(Expr2, Expr1), SE))
-      return false;
-    return true;
+  SCEVUnionPredicate ExtraPred(ExtraPreds, SE);
+  SCEVUnionPredicate AllPreds = Preds->getUnionWith(&ExtraPred, SE);
+  auto areExprsEqual = [&](const SCEV *Expr1, const SCEV *Expr2) {
+    return Expr1 == Expr2 ||
+           AllPreds.implies(SE.getEqualPredicate(Expr1, Expr2), SE) ||
+           AllPreds.implies(SE.getEqualPredicate(Expr2, Expr1), SE);
   };
 
   if (!areExprsEqual(AR1->getStart(), AR2->getStart()) ||
@@ -15603,13 +15604,19 @@ bool PredicatedScalarEvolution::hasNoOverflow(
   return Flags == SCEVWrapPredicate::IncrementAnyWrap;
 }
 
-const SCEVAddRecExpr *PredicatedScalarEvolution::getAsAddRec(Value *V) {
+const SCEVAddRecExpr *PredicatedScalarEvolution::getAsAddRec(
+    Value *V, SmallVectorImpl<const SCEVPredicate *> *ExtraPreds) {
   const SCEV *Expr = this->getSCEV(V);
   SmallVector<const SCEVPredicate *, 4> NewPreds;
   auto *New = SE.convertSCEVToAddRecWithPredicates(Expr, &L, NewPreds);
 
   if (!New)
     return nullptr;
+
+  if (ExtraPreds) {
+    ExtraPreds->append(NewPreds);
+    return New;
+  }
 
   for (const auto *P : NewPreds)
     addPredicate(*P);
