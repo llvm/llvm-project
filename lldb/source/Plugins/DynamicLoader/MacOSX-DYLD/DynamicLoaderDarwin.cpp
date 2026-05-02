@@ -275,6 +275,7 @@ void DynamicLoaderDarwin::UnloadAllImages() {
 bool DynamicLoaderDarwin::UpdateImageLoadAddress(Module *module,
                                                  ImageInfo &info) {
   bool changed = false;
+  Log *log = GetLog(LLDBLog::DynamicLoader);
   if (module) {
     ObjectFile *image_object_file = module->GetObjectFile();
     if (image_object_file) {
@@ -304,6 +305,23 @@ bool DynamicLoaderDarwin::UpdateImageLoadAddress(Module *module,
               // all other sections.
               const bool warn_multiple =
                   section_sp->GetName() != g_section_name_LINKEDIT;
+
+              // If a segment was eliminated for the in-memory image,
+              // don't map it into lldb's target section load list.
+              if (info.segments[i].vmsize == 0) {
+                LLDB_LOGF(log, "%s: Omitting zero-size segment %s",
+                          info.file_spec.GetFilename().AsCString(""),
+                          info.segments[i].name.AsCString(""));
+                continue;
+              }
+
+              if (info.segments[i].vmsize != section_sp->GetByteSize())
+                LLDB_LOGF(log,
+                          "%s: In-memory segment size for %s is %" PRIx64
+                          " but file segment size is %" PRIx64,
+                          info.file_spec.GetFilename().AsCString(""),
+                          info.segments[i].name.AsCString(""),
+                          info.segments[i].vmsize, section_sp->GetByteSize());
 
               changed = m_process->GetTarget().SetSectionLoadAddress(
                   section_sp, new_section_load_addr, warn_multiple);
