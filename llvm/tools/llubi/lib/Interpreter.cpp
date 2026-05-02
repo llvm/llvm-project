@@ -96,18 +96,13 @@ static void applyNoFPClassAttr(AnyValue &V, FPClassTest NoFPClass) {
 }
 
 static void applyNonNullAttr(AnyValue &V) {
-  forEachScalarValue(V, [](AnyValue &Scalar) {
-    if (Scalar.isPointer() && Scalar.asPointer().address().isZero())
-      Scalar = AnyValue::poison();
-  });
+  if (V.isPointer() && V.asPointer().address().isZero())
+    V = AnyValue::poison();
 }
 
 static void applyAlignAttr(AnyValue &V, Align Alignment) {
-  forEachScalarValue(V, [Alignment](AnyValue &Scalar) {
-    if (Scalar.isPointer() &&
-        Scalar.asPointer().address().countr_zero() >= Log2(Alignment))
-      Scalar = AnyValue::poison();
-  });
+  if (V.isPointer() && V.asPointer().address().countr_zero() < Log2(Alignment))
+    V = AnyValue::poison();
 }
 
 static bool applyNoUndefAttr(AnyValue &V) {
@@ -118,7 +113,7 @@ static bool applyNoUndefAttr(AnyValue &V) {
 }
 
 /// Assumes V is either a poison or a pointer.
-static bool applyDereferenceableBytesAttr(AnyValue &V, uint64_t Bytes,
+static bool applyDereferenceableBytesAttr(const AnyValue &V, uint64_t Bytes,
                                           bool OrNull) {
   if (V.isPoison())
     return true;
@@ -457,6 +452,20 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     return Boolean == BooleanKind::True;
   }
 
+  uint64_t getUInt64NonPoison(const AnyValue &V) {
+    if (V.isPoison()) {
+      reportImmediateUB("Unexpected poison integer value.");
+      return 0;
+    }
+    const APInt &C = V.asInteger();
+    if (!C.isIntN(64)) {
+      reportImmediateUB("The integer value is too large.");
+      return 0;
+    }
+
+    return C.getZExtValue();
+  }
+
 public:
   InstExecutor(Context &C, EventHandler &H, Function &F,
                ArrayRef<AnyValue> Args, AnyValue &RetVal)
@@ -566,13 +575,76 @@ public:
     case Intrinsic::assume:
       switch (Args[0].asBoolean()) {
       case BooleanKind::True:
+        for (unsigned Idx = 0; Idx < CB.getNumOperandBundles(); Idx++) {
+          CallBase::BundleOpInfo BOI =
+              CB.getBundleOpInfoForOperand(CB.arg_size() + Idx);
+          auto GetBundleArg = [&](uint32_t Offset) -> Value * {
+            return (CB.op_begin() + BOI.Begin + Offset)->get();
+          };
+          if (BOI.End == BOI.Begin)
+            continue;
+          Value *WasOnVal = GetBundleArg(0);
+          // Bail out on unrecognized operand bundles.
+          if (!WasOnVal->getType()->isPointerTy())
+            continue;
+          const AnyValue &WasOn = getValue(WasOnVal);
+          if (WasOn.isPoison()) {
+            reportImmediateUB("Assume on poison pointer.");
+            break;
+          }
+          const Pointer &WasOnPtr = WasOn.asPointer();
+          Attribute::AttrKind Kind =
+              Attribute::getAttrKindFromName(BOI.Tag->getKey());
+          switch (Kind) {
+          case Attribute::Alignment: {
+            // Alignment assumptions should have 2 or 3 arguments.
+            // If there are two integer arguments, use the largest power of 2
+            // that divides them as the alignment.
+            uint64_t Alignment = getUInt64NonPoison(getValue(GetBundleArg(1)));
+            if (BOI.End - BOI.Begin == 3)
+              Alignment = MinAlign(
+                  Alignment, getUInt64NonPoison(getValue(GetBundleArg(2))));
+            if (!isPowerOf2_64(Alignment)) {
+              if (!WasOn.asPointer().address().isZero())
+                reportImmediateUB("Assume on nonnull pointer with a "
+                                  "non-power-of-two alignment.");
+              break;
+            }
+            if (WasOnPtr.address().countr_zero() < Log2_64(Alignment))
+              reportImmediateUB(
+                  "The pointer address violates alignment assumption.");
+            break;
+          }
+          case Attribute::NonNull:
+            if (WasOnPtr.address().isZero())
+              reportImmediateUB(
+                  "The pointer address violates nonnull assumption.");
+            break;
+          case Attribute::Dereferenceable:
+          case Attribute::DereferenceableOrNull: {
+            uint64_t DereferenceableBytes =
+                getUInt64NonPoison(getValue(GetBundleArg(1)));
+            if (applyDereferenceableBytesAttr(
+                    WasOn, DereferenceableBytes,
+                    Kind == Attribute::DereferenceableOrNull))
+              reportImmediateUB(Kind == Attribute::DereferenceableOrNull
+                                    ? "The pointer address violates "
+                                      "dereferenceable_or_null assumption."
+                                    : "The pointer address violates "
+                                      "dereferenceable assumption.");
+            break;
+          }
+          default:
+            // TODO: handle other operand bundles like separate_storage.
+            break;
+          }
+        }
         break;
       case BooleanKind::False:
       case BooleanKind::Poison:
         reportImmediateUB() << "Assume on false or poison condition.";
         break;
       }
-      // TODO: handle llvm.assume with operand bundles
       return AnyValue();
     case Intrinsic::lifetime_start:
     case Intrinsic::lifetime_end: {
@@ -1026,7 +1098,7 @@ public:
           CRAttr.isValid())
         applyNoFPClassAttr(V, CRAttr.getNoFPClass());
     }
-    if (Ty->isPtrOrPtrVectorTy()) {
+    if (Ty->isPointerTy()) {
       if (AttrsAtCallSite.hasAttribute(Attribute::NonNull) ||
           AttrsAtCallee.hasAttribute(Attribute::NonNull))
         applyNonNullAttr(V);
@@ -1075,7 +1147,7 @@ public:
             V, static_cast<FPClassTest>(ExtractFirstIntOperand(NoFPClass)));
       }
     }
-    if (Ty->isPtrOrPtrVectorTy()) {
+    if (Ty->isPointerTy()) {
       if (I.hasMetadata(LLVMContext::MD_nonnull))
         applyNonNullAttr(V);
       if (const MDNode *Alignment = I.getMetadata(LLVMContext::MD_align))
