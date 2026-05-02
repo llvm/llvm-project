@@ -1132,6 +1132,60 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
     return MakeHalfType(Intrinsic::nvvm_fmin_xorsign_abs,
                         llvm::FixedVectorType::get(Builder.getHalfTy(), 2),
                         BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fmax_f:
+    return MakeHalfType(Intrinsic::nvvm_fmax, Builder.getFloatTy(),
+                        BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fmax_ftz_f:
+    return MakeHalfType(Intrinsic::nvvm_fmax_ftz, Builder.getFloatTy(),
+                        BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fmax_nan_f:
+    return MakeHalfType(Intrinsic::nvvm_fmax_nan, Builder.getFloatTy(),
+                        BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fmax_ftz_nan_f:
+    return MakeHalfType(Intrinsic::nvvm_fmax_ftz_nan, Builder.getFloatTy(),
+                        BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fmax_xorsign_abs_f:
+    return MakeHalfType(Intrinsic::nvvm_fmax_xorsign_abs, Builder.getFloatTy(),
+                        BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fmax_ftz_xorsign_abs_f:
+    return MakeHalfType(Intrinsic::nvvm_fmax_ftz_xorsign_abs,
+                        Builder.getFloatTy(), BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fmax_nan_xorsign_abs_f:
+    return MakeHalfType(Intrinsic::nvvm_fmax_nan_xorsign_abs,
+                        Builder.getFloatTy(), BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fmax_ftz_nan_xorsign_abs_f:
+    return MakeHalfType(Intrinsic::nvvm_fmax_ftz_nan_xorsign_abs,
+                        Builder.getFloatTy(), BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fmax_d:
+    return MakeHalfType(Intrinsic::nvvm_fmax, Builder.getDoubleTy(),
+                        BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fmin_f:
+    return MakeHalfType(Intrinsic::nvvm_fmin, Builder.getFloatTy(),
+                        BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fmin_ftz_f:
+    return MakeHalfType(Intrinsic::nvvm_fmin_ftz, Builder.getFloatTy(),
+                        BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fmin_nan_f:
+    return MakeHalfType(Intrinsic::nvvm_fmin_nan, Builder.getFloatTy(),
+                        BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fmin_ftz_nan_f:
+    return MakeHalfType(Intrinsic::nvvm_fmin_ftz_nan, Builder.getFloatTy(),
+                        BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fmin_xorsign_abs_f:
+    return MakeHalfType(Intrinsic::nvvm_fmin_xorsign_abs, Builder.getFloatTy(),
+                        BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fmin_ftz_xorsign_abs_f:
+    return MakeHalfType(Intrinsic::nvvm_fmin_ftz_xorsign_abs,
+                        Builder.getFloatTy(), BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fmin_nan_xorsign_abs_f:
+    return MakeHalfType(Intrinsic::nvvm_fmin_nan_xorsign_abs,
+                        Builder.getFloatTy(), BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fmin_ftz_nan_xorsign_abs_f:
+    return MakeHalfType(Intrinsic::nvvm_fmin_ftz_nan_xorsign_abs,
+                        Builder.getFloatTy(), BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fmin_d:
+    return MakeHalfType(Intrinsic::nvvm_fmin, Builder.getDoubleTy(),
+                        BuiltinID, E, *this);
   case NVPTX::BI__nvvm_fabs_f:
   case NVPTX::BI__nvvm_abs_bf16:
   case NVPTX::BI__nvvm_abs_bf16x2:
