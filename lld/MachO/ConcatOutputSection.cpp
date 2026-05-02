@@ -243,7 +243,6 @@ void TextOutputSection::finalize() {
       }
       if (auto *thunk = getThunkInRange(*callerIsec, *r, thunkInfo)) {
         deferredBranchRedirects.emplace_back(callerIsec, r, thunk);
-        markBranchAsResolved(r, thunkInfo);
         branchesToProcess.pop_front();
         continue;
       }
@@ -301,12 +300,12 @@ void TextOutputSection::finalize() {
 
   llvm::erase_if(branchesToProcess, [&](auto &pair) {
     auto [callerIsec, r] = pair;
-    bool targetInRange = isTargetKnownInRange(*callerIsec, *r);
+    if (!isTargetKnownInRange(*callerIsec, *r))
+      return false;
     auto *funcSym = cast<Symbol *>(r->referent);
     auto &thunkInfo = thunkMap[{funcSym, r->addend}];
-    if (targetInRange || getThunkInRange(*callerIsec, *r, thunkInfo))
-      markBranchAsResolved(r, thunkInfo);
-    return targetInRange;
+    markBranchAsResolved(r, thunkInfo);
+    return true;
   });
 
 #ifndef NDEBUG
