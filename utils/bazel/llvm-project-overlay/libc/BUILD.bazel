@@ -4859,6 +4859,234 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_llrint",
+    hdrs = ["src/__support/math/llrint.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_llrintbf16",
+    hdrs = ["src/__support/math/llrintbf16.h"],
+    deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_llrintf",
+    hdrs = ["src/__support/math/llrintf.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_llrintf128",
+    hdrs = ["src/__support/math/llrintf128.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_llrintf16",
+    hdrs = ["src/__support/math/llrintf16.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_llrintl",
+    hdrs = ["src/__support/math/llrintl.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_llround",
+    hdrs = ["src/__support/math/llround.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_llroundbf16",
+    hdrs = ["src/__support/math/llroundbf16.h"],
+    deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_llroundf",
+    hdrs = ["src/__support/math/llroundf.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_llroundf128",
+    hdrs = ["src/__support/math/llroundf128.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_llroundf16",
+    hdrs = ["src/__support/math/llroundf16.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_llroundl",
+    hdrs = ["src/__support/math/llroundl.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_lrint",
+    hdrs = ["src/__support/math/lrint.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_lrintbf16",
+    hdrs = ["src/__support/math/lrintbf16.h"],
+    deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_lrintf",
+    hdrs = ["src/__support/math/lrintf.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_lrintf128",
+    hdrs = ["src/__support/math/lrintf128.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_lrintf16",
+    hdrs = ["src/__support/math/lrintf16.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_lrintl",
+    hdrs = ["src/__support/math/lrintl.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_lround",
+    hdrs = ["src/__support/math/lround.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_lroundbf16",
+    hdrs = ["src/__support/math/lroundbf16.h"],
+    deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_lroundf",
+    hdrs = ["src/__support/math/lroundf.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_lroundf128",
+    hdrs = ["src/__support/math/lroundf128.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_lroundf16",
+    hdrs = ["src/__support/math/lroundf16.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_lroundl",
+    hdrs = ["src/__support/math/lroundl.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_modf",
     hdrs = ["src/__support/math/modf.h"],
     deps = [
@@ -10228,32 +10456,88 @@ libc_math_function(
     ],
 )
 
-libc_math_function(name = "llrint")
+libc_math_function(
+    name = "llrint",
+    additional_deps = [
+        ":__support_math_llrint",
+    ],
+)
 
-libc_math_function(name = "llrintf")
+libc_math_function(
+    name = "llrintbf16",
+    additional_deps = [
+        ":__support_math_llrintbf16",
+    ],
+)
 
-libc_math_function(name = "llrintl")
+libc_math_function(
+    name = "llrintf",
+    additional_deps = [
+        ":__support_math_llrintf",
+    ],
+)
+
+libc_math_function(
+    name = "llrintl",
+    additional_deps = [
+        ":__support_math_llrintl",
+    ],
+)
 
 libc_math_function(
     name = "llrintf128",
+    additional_deps = [
+        ":__support_math_llrintf128",
+    ],
 )
 
 libc_math_function(
     name = "llrintf16",
+    additional_deps = [
+        ":__support_math_llrintf16",
+    ],
 )
 
-libc_math_function(name = "llround")
+libc_math_function(
+    name = "llround",
+    additional_deps = [
+        ":__support_math_llround",
+    ],
+)
 
-libc_math_function(name = "llroundf")
+libc_math_function(
+    name = "llroundbf16",
+    additional_deps = [
+        ":__support_math_llroundbf16",
+    ],
+)
 
-libc_math_function(name = "llroundl")
+libc_math_function(
+    name = "llroundf",
+    additional_deps = [
+        ":__support_math_llroundf",
+    ],
+)
+
+libc_math_function(
+    name = "llroundl",
+    additional_deps = [
+        ":__support_math_llroundl",
+    ],
+)
 
 libc_math_function(
     name = "llroundf128",
+    additional_deps = [
+        ":__support_math_llroundf128",
+    ],
 )
 
 libc_math_function(
     name = "llroundf16",
+    additional_deps = [
+        ":__support_math_llroundf16",
+    ],
 )
 
 libc_math_function(
@@ -10382,32 +10666,88 @@ libc_math_function(
     ],
 )
 
-libc_math_function(name = "lrint")
+libc_math_function(
+    name = "lrint",
+    additional_deps = [
+        ":__support_math_lrint",
+    ],
+)
 
-libc_math_function(name = "lrintf")
+libc_math_function(
+    name = "lrintbf16",
+    additional_deps = [
+        ":__support_math_lrintbf16",
+    ],
+)
 
-libc_math_function(name = "lrintl")
+libc_math_function(
+    name = "lrintf",
+    additional_deps = [
+        ":__support_math_lrintf",
+    ],
+)
+
+libc_math_function(
+    name = "lrintl",
+    additional_deps = [
+        ":__support_math_lrintl",
+    ],
+)
 
 libc_math_function(
     name = "lrintf128",
+    additional_deps = [
+        ":__support_math_lrintf128",
+    ],
 )
 
 libc_math_function(
     name = "lrintf16",
+    additional_deps = [
+        ":__support_math_lrintf16",
+    ],
 )
 
-libc_math_function(name = "lround")
+libc_math_function(
+    name = "lround",
+    additional_deps = [
+        ":__support_math_lround",
+    ],
+)
 
-libc_math_function(name = "lroundf")
+libc_math_function(
+    name = "lroundbf16",
+    additional_deps = [
+        ":__support_math_lroundbf16",
+    ],
+)
 
-libc_math_function(name = "lroundl")
+libc_math_function(
+    name = "lroundf",
+    additional_deps = [
+        ":__support_math_lroundf",
+    ],
+)
+
+libc_math_function(
+    name = "lroundl",
+    additional_deps = [
+        ":__support_math_lroundl",
+    ],
+)
 
 libc_math_function(
     name = "lroundf128",
+    additional_deps = [
+        ":__support_math_lroundf128",
+    ],
 )
 
 libc_math_function(
     name = "lroundf16",
+    additional_deps = [
+        ":__support_math_lroundf16",
+    ],
 )
 
 libc_math_function(

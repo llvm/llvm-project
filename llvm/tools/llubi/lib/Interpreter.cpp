@@ -378,7 +378,7 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
   // a poison is found.
   bool getBooleanNonPoison(BooleanKind Boolean) {
     if (Boolean == BooleanKind::Poison)
-      reportImmediateUB("Unexpected poison boolean value");
+      reportImmediateUB() << "Unexpected poison boolean value";
     return Boolean == BooleanKind::True;
   }
 
@@ -410,7 +410,7 @@ public:
       jumpTo(BI, BI.getSuccessor(1));
       return;
     case BooleanKind::Poison:
-      reportImmediateUB("Branch on poison condition.");
+      reportImmediateUB() << "Branch on poison condition.";
       return;
     }
   }
@@ -418,7 +418,7 @@ public:
   void visitSwitchInst(SwitchInst &SI) {
     auto &Cond = getValue(SI.getCondition());
     if (Cond.isPoison()) {
-      reportImmediateUB("Switch on poison condition.");
+      reportImmediateUB() << "Switch on poison condition.";
       return;
     }
     for (auto &Case : SI.cases()) {
@@ -431,7 +431,7 @@ public:
   }
 
   void visitUnreachableInst(UnreachableInst &) {
-    reportImmediateUB("Unreachable code.");
+    reportImmediateUB() << "Unreachable code.";
   }
 
   void visitCallBrInst(CallBrInst &CI) {
@@ -447,7 +447,7 @@ public:
   void visitIndirectBrInst(IndirectBrInst &IBI) {
     auto &Target = getValue(IBI.getAddress());
     if (Target.isPoison()) {
-      reportImmediateUB("Indirect branch on poison.");
+      reportImmediateUB() << "Indirect branch on poison.";
       return;
     }
     if (BasicBlock *DestBB = Ctx.getTargetBlock(Target.asPointer())) {
@@ -455,11 +455,11 @@ public:
                  [DestBB](BasicBlock *Succ) { return Succ == DestBB; }))
         jumpTo(IBI, DestBB);
       else
-        reportImmediateUB("Indirect branch on unlisted target BB.");
+        reportImmediateUB() << "Indirect branch on unlisted target BB.";
 
       return;
     }
-    reportImmediateUB("Indirect branch on invalid target BB.");
+    reportImmediateUB() << "Indirect branch on invalid target BB.";
   }
 
   void returnFromCallee() {
@@ -488,7 +488,7 @@ public:
         break;
       case BooleanKind::False:
       case BooleanKind::Poison:
-        reportImmediateUB("Assume on false or poison condition.");
+        reportImmediateUB() << "Assume on false or poison condition.";
         break;
       }
       // TODO: handle llvm.assume with operand bundles
@@ -941,17 +941,20 @@ public:
 
       auto &CalleeVal = getValue(CalledOperand);
       if (CalleeVal.isPoison()) {
-        reportImmediateUB("Indirect call through poison function pointer.");
+        reportImmediateUB() << "Indirect call through poison function pointer.";
         return;
       }
       Callee = Ctx.getTargetFunction(CalleeVal.asPointer());
       if (!Callee) {
-        reportImmediateUB("Indirect call through invalid function pointer.");
+        reportImmediateUB()
+            << "Indirect call through invalid function pointer.";
         return;
       }
       if (Callee->getFunctionType() != CB.getFunctionType()) {
-        reportImmediateUB("Indirect call through a function pointer with "
-                          "mismatched signature.");
+        reportImmediateUB() << "Indirect call through a function pointer with "
+                               "mismatched signature. Expected: "
+                            << *CB.getFunctionType()
+                            << ", Actual: " << *Callee->getFunctionType();
         return;
       }
     }
@@ -972,7 +975,7 @@ public:
     } else {
       uint32_t MaxStackDepth = Ctx.getMaxStackDepth();
       if (MaxStackDepth && CallStack.size() >= MaxStackDepth) {
-        reportError("Maximum stack depth exceeded.");
+        reportError() << "Maximum stack depth exceeded.";
         return;
       }
       assert(!Callee->empty() && "Expected a defined function.");
@@ -1014,23 +1017,23 @@ public:
     visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
       // Priority: Immediate UB > poison > normal value
       if (RHS.isPoison()) {
-        reportImmediateUB("Division by zero (refine RHS to 0).");
+        reportImmediateUB() << "Division by zero (refine RHS to 0).";
         return AnyValue::poison();
       }
       const APInt &RHSVal = RHS.asInteger();
       if (RHSVal.isZero()) {
-        reportImmediateUB("Division by zero.");
+        reportImmediateUB() << "Division by zero.";
         return AnyValue::poison();
       }
       if (LHS.isPoison()) {
         if (RHSVal.isAllOnes())
-          reportImmediateUB(
-              "Signed division overflow (refine LHS to INT_MIN).");
+          reportImmediateUB()
+              << "Signed division overflow (refine LHS to INT_MIN).";
         return AnyValue::poison();
       }
       const APInt &LHSVal = LHS.asInteger();
       if (LHSVal.isMinSignedValue() && RHSVal.isAllOnes()) {
-        reportImmediateUB("Signed division overflow.");
+        reportImmediateUB() << "Signed division overflow.";
         return AnyValue::poison();
       }
 
@@ -1050,23 +1053,24 @@ public:
     visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
       // Priority: Immediate UB > poison > normal value
       if (RHS.isPoison()) {
-        reportImmediateUB("Division by zero (refine RHS to 0).");
+        reportImmediateUB() << "Division by zero (refine RHS to 0).";
         return AnyValue::poison();
       }
       const APInt &RHSVal = RHS.asInteger();
       if (RHSVal.isZero()) {
-        reportImmediateUB("Division by zero.");
+        reportImmediateUB() << "Division by zero.";
         return AnyValue::poison();
       }
       if (LHS.isPoison()) {
         if (RHSVal.isAllOnes())
-          reportImmediateUB(
-              "Signed division overflow (refine LHS to INT_MIN).");
+          reportImmediateUB()
+              << "Signed division overflow (refine LHS to INT_MIN).";
         return AnyValue::poison();
       }
       const APInt &LHSVal = LHS.asInteger();
       if (LHSVal.isMinSignedValue() && RHSVal.isAllOnes()) {
-        reportImmediateUB("Signed division overflow.");
+        reportImmediateUB() << "Signed division overflow. LHS: " << LHSVal
+                            << ", RHS: " << RHSVal;
         return AnyValue::poison();
       }
 
@@ -1078,12 +1082,12 @@ public:
     visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
       // Priority: Immediate UB > poison > normal value
       if (RHS.isPoison()) {
-        reportImmediateUB("Division by zero (refine RHS to 0).");
+        reportImmediateUB() << "Division by zero (refine RHS to 0).";
         return AnyValue::poison();
       }
       const APInt &RHSVal = RHS.asInteger();
       if (RHSVal.isZero()) {
-        reportImmediateUB("Division by zero.");
+        reportImmediateUB() << "Division by zero.";
         return AnyValue::poison();
       }
       if (LHS.isPoison())
@@ -1106,12 +1110,12 @@ public:
     visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
       // Priority: Immediate UB > poison > normal value
       if (RHS.isPoison()) {
-        reportImmediateUB("Division by zero (refine RHS to 0).");
+        reportImmediateUB() << "Division by zero (refine RHS to 0).";
         return AnyValue::poison();
       }
       const APInt &RHSVal = RHS.asInteger();
       if (RHSVal.isZero()) {
-        reportImmediateUB("Division by zero.");
+        reportImmediateUB() << "Division by zero.";
         return AnyValue::poison();
       }
       if (LHS.isPoison())
@@ -1257,20 +1261,22 @@ public:
     if (AI.isArrayAllocation()) {
       auto &Size = getValue(AI.getArraySize());
       if (Size.isPoison()) {
-        reportImmediateUB("Alloca with poison array size.");
+        reportImmediateUB() << "Alloca with poison array size.";
         return;
       }
       if (Size.asInteger().getActiveBits() > 64) {
-        reportImmediateUB(
-            "Alloca with large array size that overflows uint64_t.");
+        reportImmediateUB()
+            << "Alloca with large array size that overflows uint64_t. Size: "
+            << Size.asInteger();
         return;
       }
       bool Overflowed = false;
       AllocSize = SaturatingMultiply(AllocSize, Size.asInteger().getZExtValue(),
                                      &Overflowed);
       if (Overflowed) {
-        reportImmediateUB(
-            "Alloca with allocation size that overflows uint64_t.");
+        reportImmediateUB()
+            << "Alloca with allocation size that overflows uint64_t. Size: "
+            << Size.asInteger();
         return;
       }
     }
@@ -1284,7 +1290,7 @@ public:
                                             : MemInitKind::Uninitialized,
                             MemAllocKind::Stack);
     if (!Obj) {
-      reportError("Insufficient stack space.");
+      reportError() << "Insufficient stack space.";
       return;
     }
     CurrentFrame->Allocas.push_back(Obj);
@@ -1502,7 +1508,7 @@ public:
         assert(Top.State == FrameState::Running &&
                "Expected to be in running state.");
         if (MaxSteps != 0 && Steps >= MaxSteps) {
-          reportError("Exceeded maximum number of execution steps.");
+          reportError() << "Exceeded maximum number of execution steps.";
           break;
         }
         ++Steps;
