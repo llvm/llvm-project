@@ -608,6 +608,7 @@ cc_test(
     ),
     deps = [
         "//llvm:BinaryFormat",
+        "//llvm:MC",
         "//llvm:Object",
         "//llvm:ObjectYAML",
         "//llvm:Support",
