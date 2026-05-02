@@ -158,6 +158,9 @@ C++17 Feature Support
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Clang now allows omitting ``typename`` before a template name in a
+  conversion operator, implementing `CWG2413 <https://wg21.link/cwg2413>`_.
+
 C Language Changes
 ------------------
 
@@ -310,16 +313,6 @@ Attribute Changes in Clang
   meant to be a low level tool for language runtime authors to associate a
   foreign language personality with a given function. Note that this does not
   perform any ABI validation for the personality routine.
-
-- The ``__attribute__((flatten))`` attribute behavior has changed to match
-  GCC. Previously, Clang only inlined direct callees of the attributed
-  function. Now, all calls are inlined transitively, including calls
-  introduced by inlining. Calls that cannot be inlined are left as-is:
-  this includes callees marked ``noinline``, callees with incompatible ABI
-  attributes (e.g. SME), callees without a visible definition, and
-  recursive calls where a function already appears in the inlining chain.
-  Flatten also works across ThinLTO module boundaries when callee
-  definitions are available.
 
 - The :doc:`ThreadSafetyAnalysis` attributes ``guarded_by`` and
   ``pt_guarded_by`` now accept multiple capability arguments with refined
@@ -526,6 +519,8 @@ Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fix a crash when passing an unresolved overload set to ``__builtin_classify_type``. (#GH175589)
 - Fixed a crash when calling `__builtin_allow_sanitize_check` with no arguments. (#GH183927)
+- ``__annotation`` is now diagnosed as unsupported on non-Windows/UEFI targets, fixing a
+  crash when using it with ``-fms-extensions`` on other platforms. (#GH184318)
 
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -569,10 +564,13 @@ Bug Fixes to C++ Support
   conforming and could lead to recursive constraint satisfaction checking. (#GH149443)
 - Fixed a crash in Itanium C++ name mangling for a lambda in a local class field initializer inside a constructor/destructor. (#GH176395)
 - Fixed crashes in Itanium C++ name mangling for lambdas with trailing requires-clauses involving requires-expressions. (#GH100774) (#GH123854)
+- Fixed an invalid rejection and assertion failure while generating ``operator=`` for fields with the ``__restrict`` qualifier. (#GH37979)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed a bug where explicit nullability property attributes were not stored in AST nodes in Objective-C. (#GH179703)
+- Fixed a bug where alias CTAD, or an invalid template template parameter, could create a template with an empty template
+  parameter list. This also adds asserts to prevent this from happening again.
 - Fixed a crash when parsing Doxygen ``@param`` commands attached to invalid declarations or non-function entities. (#GH182737)
 - Fixed the SourceLocation and SourceRange of reversed rewritten CXXOperatorCallExpr. (#GH192467)
 

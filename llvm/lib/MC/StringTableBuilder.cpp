@@ -201,7 +201,7 @@ void StringTableBuilder::finalizeStringTable(bool Optimize) {
   // specification. In 'initSize()' we reserved the first byte to hold null for
   // this purpose and here we actually add the string to allow 'getOffset()' to
   // be called on an empty string.
-  if (K == ELF)
+  if (K == ELF || K == DXContainer)
     StringIndexMap[CachedHashStringRef("")] = 0;
 }
 

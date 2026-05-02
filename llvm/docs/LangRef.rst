@@ -3395,12 +3395,15 @@ as follows:
     The optional ``<flags>`` are used to specify properties of pointers in this
     address space: the character ``u`` marks pointers as having an unstable
     representation, and ``e`` marks pointers having external state. See
-    :ref:`Non-Integral Pointer Types <nointptrtype>`. The ``<name>`` is an
+    :ref:`Non-Integral Pointer Types <nointptrtype>`. Additionally, the
+    null pointer bit representation can be specified: ``z`` indicates it is
+    all-zeros, and ``o`` indicates it is all-ones. At most one of ``z`` or
+    ``o`` may be specified. If neither ``z`` nor ``o`` is specified, the null
+    pointer bit representation defaults to all-zeros. The ``<name>`` is an
     optional name of that address space, surrounded by ``(`` and ``)``. If the
     name is specified, it must be unique to that address space and cannot be
     ``A``, ``G``, or ``P`` which are pre-defined names used to denote alloca,
     global, and program address space respectively.
-
 ``i<size>:<abi>[:<pref>]``
     This specifies the alignment for an integer type of a given bit
     ``<size>``. The value of ``<size>`` must be in the range [1,2^24).
@@ -7449,9 +7452,13 @@ does not carry useful data and need not be preserved.
 noalias memory-access sets. This means that some collection of memory access
 instructions (loads, stores, memory-accessing calls, etc.) that carry
 ``noalias`` metadata can specifically be specified not to alias with some other
-collection of memory access instructions that carry ``alias.scope`` metadata. If
-accesses from different collections alias, the behavior is undefined. Each type
-of metadata specifies a list of scopes where each scope has an id and a domain.
+collection of memory access instructions that carry ``alias.scope`` metadata.
+These metadata kinds may also be attached to ``fence`` instructions to indicate
+which scoped memory regions the fence does (or does not) concern; this allows
+alias analysis to prove that a fence cannot affect a particular memory location.
+If accesses from different collections alias, the behavior is undefined. Each
+type of metadata specifies a list of scopes where each scope has an id and a
+domain.
 
 When evaluating an aliasing query, if for some domain, the set
 of scopes with that domain in one instruction's ``alias.scope`` list is a
@@ -7968,6 +7975,48 @@ iterations that do not fill a complete set of vector lanes. See
 Attributes in the metadata will be added to both the vectorized and
 epilogue loop.
 See :ref:`Transformation Metadata <transformation-metadata>` for details.
+
+'``llvm.loop.vectorize.body``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This metadata is automatically added by the loop vectorizer to the
+vectorized loop body. It is used by subsequent optimization passes
+(such as the loop unroller and ``WarnMissedTransforms``) to emit more
+precise optimization remarks that identify the loop as a vector loop.
+
+The first operand is the string
+``llvm.loop.vectorize.body`` and the second operand is an
+integer. A value of 1 indicates this is a vectorized loop body:
+
+.. code-block:: llvm
+
+   !0 = !{!"llvm.loop.vectorize.body", i32 1}
+
+'``llvm.loop.vectorize.epilogue``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This metadata is automatically added by the loop vectorizer to the
+scalar remainder (epilogue) loop to identify it as such. It is used by
+subsequent optimization passes (such as the loop unroller and
+``WarnMissedTransforms``) to emit more precise optimization remarks
+that distinguish between the vectorized loop and its scalar remainder.
+
+Together these two attributes provide a four-way classification:
+
+- ``body`` only: main vectorized loop body
+- ``epilogue`` only: scalar epilogue loop after vectorization
+- Both ``body`` and ``epilogue``: vectorized epilogue 
+  (a remainder loop that was itself vectorized during epilogue
+  vectorization)
+- Neither: a plain loop not produced by the vectorizer
+
+The first operand is the string
+``llvm.loop.vectorize.epilogue`` and the second operand is
+an integer. A value of 1 indicates the loop is a remainder loop:
+
+.. code-block:: llvm
+
+   !0 = !{!"llvm.loop.vectorize.epilogue", i32 1}
 
 '``llvm.loop.unroll``'
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -8904,6 +8953,25 @@ function that has had all calls to it inlined.
     call void @foo(), !inline_history !0
 
     !0 = !{ptr @bar, null, ptr @baz}
+
+'``elf_section_properties``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The '``elf_section_properties``' metadata is attached to a function or
+global variable and is used when writing an object file in ELF format to
+specify the values of the global's section type (`sh_type`) and entry
+size (`sh_entsize`) fields. The first operand specifies the type, and
+the second operand specifies the entry size.
+
+Example:
+
+.. code-block:: llvm
+
+    @global = global i32 1, !elf_section_properties !{i32 1879002126, i32 8}
+
+This defines a global with type ``SHT_LLVM_CFI_JUMP_TABLE`` and entry
+size 8.
+
 
 Module Flags Metadata
 =====================

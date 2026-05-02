@@ -65,7 +65,6 @@ class VPRegionBlock;
 class VPlan;
 class VPLane;
 class VPReplicateRecipe;
-class VPlanSlp;
 class Value;
 class LoopVectorizationCostModel;
 
@@ -1221,8 +1220,6 @@ public:
 /// predication.
 class LLVM_ABI_FOR_TEST VPInstruction : public VPRecipeWithIRFlags,
                                         public VPIRMetadata {
-  friend class VPlanSlp;
-
 public:
   /// VPlan opcodes, extending LLVM IR with idiomatics instructions.
   enum {
@@ -1230,8 +1227,6 @@ public:
         Instruction::OtherOpsEnd + 1, // Combines the incoming and previous
                                       // values of a first-order recurrence.
     Not,
-    SLPLoad,
-    SLPStore,
     // Creates a mask where each lane is active (true) whilst the current
     // counter (first operand + index) is less than the second operand. i.e.
     //    mask[i] = icmpt ult (op0 + i), op1
@@ -2872,11 +2867,10 @@ protected:
     assert((!Mask || !IG->isReverse()) &&
            "Reversed masked interleave-group not supported.");
     if (StoredValues.empty()) {
-      for (unsigned I = 0; I < IG->getFactor(); ++I)
-        if (Instruction *Inst = IG->getMember(I)) {
-          assert(!Inst->getType()->isVoidTy() && "must have result");
-          new VPRecipeValue(this, Inst);
-        }
+      for (Instruction *Inst : IG->members()) {
+        assert(!Inst->getType()->isVoidTy() && "must have result");
+        new VPRecipeValue(this, Inst);
+      }
     } else {
       for (auto *SV : StoredValues)
         addOperand(SV);
@@ -4612,8 +4606,8 @@ public:
 
   /// Returns the preheader of the vector loop region, if one exists, or null
   /// otherwise.
-  VPBasicBlock *getVectorPreheader() {
-    VPRegionBlock *VectorRegion = getVectorLoopRegion();
+  VPBasicBlock *getVectorPreheader() const {
+    const VPRegionBlock *VectorRegion = getVectorLoopRegion();
     return VectorRegion
                ? cast<VPBasicBlock>(VectorRegion->getSinglePredecessor())
                : nullptr;
