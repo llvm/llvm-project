@@ -22,11 +22,13 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
 
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <variant>
 #include <vector>
 
 // Match the PluginInitCallback and PluginTermCallback signature. The generated
@@ -76,11 +78,57 @@ struct RegisteredPluginInfo {
 // The plugin namespace here is used so we can operate on all the plugins
 // of a given type so it is easy to enable or disable them as a group.
 using GetPluginInfo = std::function<llvm::SmallVector<RegisteredPluginInfo>()>;
-using SetPluginEnabled = std::function<bool(llvm::StringRef, bool)>;
-struct PluginNamespace {
+using SetPluginEnabledGlobalDomain = std::function<bool(llvm::StringRef, bool)>;
+using SetPluginEnabledAllDomains = std::function<llvm::Error(
+    llvm::StringRef, bool, Debugger &, lldb::PluginDomainKind)>;
+class PluginNamespace {
+public:
+  static constexpr uint8_t kAllDomains = lldb::ePluginDomainKindGlobal |
+                                         lldb::ePluginDomainKindDebugger |
+                                         lldb::ePluginDomainKindTarget;
+
+  /// Plugin that only supports enable/disable in the global domain
+  PluginNamespace(llvm::StringRef name, GetPluginInfo get_info,
+                  SetPluginEnabledGlobalDomain set_enabled)
+      : name(name), get_info(get_info),
+        supported_domains(lldb::ePluginDomainKindGlobal),
+        set_enabled_fn(set_enabled) {}
+
+  /// Plugin that supports enable/disable in all domains.
+  PluginNamespace(llvm::StringRef name, GetPluginInfo get_info,
+                  SetPluginEnabledAllDomains set_enabled)
+      : name(name), get_info(get_info), supported_domains(kAllDomains),
+        set_enabled_fn(set_enabled) {}
+
+  std::optional<SetPluginEnabledGlobalDomain> GetSetEnabledGlobalFn() const {
+    if (SupportsOnlyDomain(lldb::ePluginDomainKindGlobal))
+      return std::get<SetPluginEnabledGlobalDomain>(set_enabled_fn);
+    return std::nullopt;
+  }
+
+  std::optional<SetPluginEnabledAllDomains> GetSetEnabledAllDomainsFn() const {
+    if (supported_domains == kAllDomains)
+      return std::get<SetPluginEnabledAllDomains>(set_enabled_fn);
+    return std::nullopt;
+  }
+
+  bool SupportsDomain(lldb::PluginDomainKind domain) const {
+    assert(llvm::has_single_bit(static_cast<uint8_t>(domain)));
+    return supported_domains & domain;
+  }
+
+  bool SupportsOnlyDomain(lldb::PluginDomainKind domain) const {
+    assert(llvm::has_single_bit(static_cast<uint8_t>(domain)));
+    return supported_domains == domain;
+  }
+
   llvm::StringRef name;
   GetPluginInfo get_info;
-  SetPluginEnabled set_enabled;
+
+private:
+  uint8_t supported_domains;
+  std::variant<SetPluginEnabledGlobalDomain, SetPluginEnabledAllDomains>
+      set_enabled_fn;
 };
 
 struct InstrumentationRuntimeCallbacks {
@@ -757,8 +805,11 @@ public:
 
   static llvm::SmallVector<RegisteredPluginInfo>
   GetInstrumentationRuntimePluginInfo();
-  static bool SetInstrumentationRuntimePluginEnabled(llvm::StringRef name,
-                                                     bool enable);
+  static llvm::StringRef PluginDomainKindToStr(lldb::PluginDomainKind kind);
+  static llvm::Error
+  SetInstrumentationRuntimePluginEnabled(llvm::StringRef name, bool enable,
+                                         Debugger &requesting_debugger,
+                                         lldb::PluginDomainKind domain);
 
   static llvm::SmallVector<RegisteredPluginInfo> GetJITLoaderPluginInfo();
   static bool SetJITLoaderPluginEnabled(llvm::StringRef name, bool enable);
