@@ -362,3 +362,69 @@ TEST(ClassifyWmmaNops, OrderingMostRestrictiveWins) {
   WmmaNopReq Req = classifyWmmaNops("v_wmma_f16_something_iu8");
   EXPECT_EQ(Req.A0Nops, 8);
 }
+
+// -- patchScaleSrc2 -----------------------------------------------------------
+//
+// Pure byte-level tests for the VOP3PX2 scale_src2 bit-field fix.
+// The function patches bits [58:50] of a 16-byte VOP3PX2 encoding to
+// VGPR0 (0x100): byte 6 bits [7:2] cleared, byte 7 bit [2] set,
+// byte 7 bits [1:0] cleared.
+
+TEST(PatchScaleSrc2, ZeroedFieldGetsPatched) {
+  uint8_t Inst[16] = {};
+  EXPECT_TRUE(patchScaleSrc2(Inst));
+  EXPECT_EQ(Inst[6] & 0xFC, 0x00);
+  EXPECT_EQ(Inst[7] & 0x07, 0x04);
+}
+
+TEST(PatchScaleSrc2, PreservesOtherBytes) {
+  uint8_t Inst[16];
+  std::memset(Inst, 0xAA, sizeof(Inst));
+  EXPECT_TRUE(patchScaleSrc2(Inst));
+  for (size_t I = 0; I < 16; ++I) {
+    if (I == 6 || I == 7)
+      continue;
+    EXPECT_EQ(Inst[I], 0xAA) << "byte " << I << " unexpectedly modified";
+  }
+}
+
+TEST(PatchScaleSrc2, AllOnesFieldGetsPatched) {
+  uint8_t Inst[16] = {};
+  Inst[6] = 0xFF;
+  Inst[7] = 0xFF;
+  EXPECT_TRUE(patchScaleSrc2(Inst));
+  EXPECT_EQ(Inst[6] & 0xFC, 0x00);
+  EXPECT_EQ(Inst[7] & 0x07, 0x04);
+  EXPECT_EQ(Inst[7] & 0xF8, 0xF8);
+}
+
+TEST(PatchScaleSrc2, AlreadyVgpr0ReturnsFalse) {
+  uint8_t Inst[16] = {};
+  Inst[7] = 0x04;
+  EXPECT_FALSE(patchScaleSrc2(Inst));
+  EXPECT_EQ(Inst[6], 0x00);
+  EXPECT_EQ(Inst[7], 0x04);
+}
+
+TEST(PatchScaleSrc2, IsIdempotent) {
+  uint8_t Inst[16] = {};
+  Inst[6] = 0xAB;
+  Inst[7] = 0xCD;
+  EXPECT_TRUE(patchScaleSrc2(Inst));
+  uint8_t AfterFirst6 = Inst[6];
+  uint8_t AfterFirst7 = Inst[7];
+  EXPECT_FALSE(patchScaleSrc2(Inst));
+  EXPECT_EQ(Inst[6], AfterFirst6);
+  EXPECT_EQ(Inst[7], AfterFirst7);
+}
+
+TEST(PatchScaleSrc2, PreservesNonScaleSrc2Bits) {
+  uint8_t Inst[16] = {};
+  Inst[6] = 0x03 | 0xA0;
+  Inst[7] = 0xF8 | 0x02;
+  EXPECT_TRUE(patchScaleSrc2(Inst));
+  EXPECT_EQ(Inst[6] & 0x03, 0x03);
+  EXPECT_EQ(Inst[7] & 0xF8, 0xF8);
+  EXPECT_EQ(Inst[6] & 0xFC, 0x00);
+  EXPECT_EQ(Inst[7] & 0x07, 0x04);
+}

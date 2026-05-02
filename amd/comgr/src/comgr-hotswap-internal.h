@@ -376,6 +376,11 @@ struct WmmaNopReq {
 /// Classify the A0/B0 v_nop requirement for a WMMA/SWMMAC mnemonic.
 WmmaNopReq classifyWmmaNops(llvm::StringRef Mnemonic);
 
+/// Patch the VOP3PX2 scale_src2 field (bits [58:50]) to VGPR0 encoding
+/// (0x100) in a 16-byte instruction buffer. Returns true if the field
+/// was modified (false if already set to the target value).
+bool patchScaleSrc2(uint8_t *InstBytes);
+
 // -- VGPR liveness types ------------------------------------------------------
 
 /// Per-instruction def/use bitvectors over the VGPR index space. Populated by
