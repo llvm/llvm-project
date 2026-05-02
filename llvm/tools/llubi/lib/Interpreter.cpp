@@ -460,6 +460,10 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
       return 0;
     }
     const APInt &C = V.asInteger();
+    if (C.isNegative()) {
+      reportImmediateUB("The integer value is negative.");
+      return 0;
+    }
     if (!C.isIntN(64)) {
       reportImmediateUB("The integer value is too large.");
       return 0;
@@ -578,12 +582,11 @@ public:
       switch (Args[0].asBoolean()) {
       case BooleanKind::True:
         for (unsigned Idx = 0; Idx < CB.getNumOperandBundles(); Idx++) {
-          CallBase::BundleOpInfo BOI =
-              CB.getBundleOpInfoForOperand(CB.arg_size() + Idx);
+          OperandBundleUse OBU = CB.getOperandBundleAt(Idx);
           auto GetBundleArg = [&](uint32_t Offset) -> Value * {
-            return (CB.op_begin() + BOI.Begin + Offset)->get();
+            return OBU.Inputs[Offset];
           };
-          if (BOI.End == BOI.Begin)
+          if (OBU.Inputs.empty())
             continue;
           Value *WasOnVal = GetBundleArg(0);
           // Bail out on unrecognized operand bundles.
@@ -596,14 +599,14 @@ public:
           }
           const Pointer &WasOnPtr = WasOn.asPointer();
           Attribute::AttrKind Kind =
-              Attribute::getAttrKindFromName(BOI.Tag->getKey());
+              Attribute::getAttrKindFromName(OBU.getTagName());
           switch (Kind) {
           case Attribute::Alignment: {
             // Alignment assumptions should have 2 or 3 arguments.
             // If there are two integer arguments, use the largest power of 2
             // that divides them as the alignment.
             uint64_t Alignment = getUInt64NonPoison(getValue(GetBundleArg(1)));
-            if (BOI.End - BOI.Begin == 3)
+            if (OBU.Inputs.size() == 3)
               Alignment = MinAlign(
                   Alignment, getUInt64NonPoison(getValue(GetBundleArg(2))));
             if (!isPowerOf2_64(Alignment)) {
@@ -1662,6 +1665,7 @@ public:
     auto RetVal =
         load(getValue(LI.getPointerOperand()), LI.getAlign(), LI.getType());
     // TODO: track volatile loads
+    // TODO: Check undef bits when !noundef is set.
     handleMetadata(LI.getType(), RetVal, LI);
     setResult(LI, std::move(RetVal));
   }

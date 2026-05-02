@@ -2,11 +2,11 @@
 ; RUN: not llubi --verbose < %s 2>&1 | FileCheck %s
 
 define void @main() {
-  call void @llvm.assume(i1 poison)
+  %alloc = alloca i32
+  call void @llvm.assume(i1 true) ["align"(ptr %alloc, i32 2048)]
   ret void
 }
 ; CHECK: Entering function: main
-; CHECK-NEXT: Stacktrace:
-; CHECK-NEXT: #0   call void @llvm.assume(i1 poison) at @main
-; CHECK-NEXT: Immediate UB detected: The value violates noundef attribute.
+; CHECK-NEXT:   %alloc = alloca i32, align 4 => ptr 0x8 [alloc]
+; CHECK-NEXT: Immediate UB detected: The pointer address violates alignment assumption.
 ; CHECK-NEXT: error: Execution of function 'main' failed.
