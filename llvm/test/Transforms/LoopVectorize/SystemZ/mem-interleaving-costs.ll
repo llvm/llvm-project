@@ -27,7 +27,7 @@ for.end:
   ret void
 
 ; CHECK: LV: Creating an interleave group with:  %tmp1 = load i32, ptr %tmp0, align 4
-; CHECK: LV: Found an estimated cost of 3 for VF 4 For instruction:   %tmp1 = load i32, ptr %tmp0, align 4
+; CHECK: Cost of 3 for VF 4: INTERLEAVE-GROUP with factor 2 at %tmp1, ir<%tmp0>
 ;        (vl; vl; vperm)
 }
 
@@ -59,12 +59,10 @@ for.end:
 ; CHECK: LV: Inserted:  %tmp1 = load i32, ptr %tmp0, align 4
 ; CHECK:     into the interleave group with  %tmp3 = load i32, ptr %tmp2, align 4
 
-; CHECK: LV: Found an estimated cost of 4 for VF 4 For instruction:   %tmp1 = load i32, ptr %tmp0, align 4
-; CHECK: LV: Found an estimated cost of 0 for VF 4 For instruction:   %tmp3 = load i32, ptr %tmp2, align 4
+; CHECK: Cost of 4 for VF 4: INTERLEAVE-GROUP with factor 2 at %tmp1, ir<%tmp0>
 ;            (vl; vl; vperm, vpkg)
 
-; CHECK: LV: Found an estimated cost of 0 for VF 4 For instruction:   store i32 %tmp1, ptr %tmp2, align 4
-; CHECK: LV: Found an estimated cost of 4 for VF 4 For instruction:   store i32 %tmp3, ptr %tmp0, align 4
+; CHECK: Cost of 4 for VF 4: INTERLEAVE-GROUP with factor 2 at <badref>, ir<%tmp0>
 ;            (vmrlf; vmrhf; vst; vst)
 }
 

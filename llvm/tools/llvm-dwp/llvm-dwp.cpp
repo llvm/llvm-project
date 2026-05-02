@@ -13,30 +13,18 @@
 #include "llvm/DWP/DWP.h"
 #include "llvm/DWP/DWPError.h"
 #include "llvm/DWP/DWPStringPool.h"
-#include "llvm/MC/MCAsmBackend.h"
-#include "llvm/MC/MCAsmInfo.h"
-#include "llvm/MC/MCCodeEmitter.h"
-#include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCObjectWriter.h"
-#include "llvm/MC/MCRegisterInfo.h"
-#include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/MC/MCTargetOptionsCommandFlags.h"
-#include "llvm/MC/TargetRegistry.h"
+#include "llvm/Object/ObjectFile.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include <optional>
 
 using namespace llvm;
 using namespace llvm::object;
-
-static mc::RegisterMCTargetOptionsFlags MCTargetOptionsFlags;
 
 // Command-line option boilerplate.
 namespace {
@@ -112,14 +100,6 @@ static int error(const Twine &Error, const Twine &Context) {
   return 1;
 }
 
-static Expected<Triple> readTargetTriple(StringRef FileName) {
-  auto ErrOrObj = object::ObjectFile::createObjectFile(FileName);
-  if (!ErrOrObj)
-    return ErrOrObj.takeError();
-
-  return ErrOrObj->getBinary()->makeTriple();
-}
-
 int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
   DwpOptTable Tbl;
   llvm::BumpPtrAllocator A;
@@ -192,11 +172,6 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
   for (const llvm::opt::Arg *A : Args.filtered(OPT_INPUT))
     DWOFilenames.emplace_back(A->getValue());
 
-  llvm::InitializeAllTargetInfos();
-  llvm::InitializeAllTargetMCs();
-  llvm::InitializeAllTargets();
-  llvm::InitializeAllAsmPrinters();
-
   for (const auto &ExecFilename : ExecFilenames) {
     auto DWOs = getDWOFilenames(ExecFilename);
     if (!DWOs) {
@@ -249,70 +224,14 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
     }
   }
 
-  std::string ErrorStr;
-  StringRef Context = "dwarf streamer init";
-
-  auto ErrOrTriple = readTargetTriple(DWOFilenames.front());
-  if (!ErrOrTriple) {
-    logAllUnhandledErrors(
-        handleErrors(ErrOrTriple.takeError(),
-                     [&](std::unique_ptr<ECError> EC) -> Error {
-                       return createFileError(DWOFilenames.front(),
-                                              Error(std::move(EC)));
-                     }),
-        WithColor::error());
-    return 1;
-  }
-
-  // Get the target.
-  const Target *TheTarget =
-      TargetRegistry::lookupTarget("", *ErrOrTriple, ErrorStr);
-  if (!TheTarget)
-    return error(ErrorStr, Context);
-  std::string TripleName = ErrOrTriple->getTriple();
-  Triple TheTriple(TripleName);
-
-  // Create all the MC Objects.
-  std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TheTriple));
-  if (!MRI)
-    return error(Twine("no register info for target ") + TripleName, Context);
-
-  MCTargetOptions MCOptions = llvm::mc::InitMCTargetOptionsFromFlags();
-  std::unique_ptr<MCAsmInfo> MAI(
-      TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
-  if (!MAI)
-    return error("no asm info for target " + TripleName, Context);
-
-  std::unique_ptr<MCSubtargetInfo> MSTI(
-      TheTarget->createMCSubtargetInfo(TheTriple, "", ""));
-  if (!MSTI)
-    return error("no subtarget info for target " + TripleName, Context);
-
-  MCContext MC(*ErrOrTriple, MAI.get(), MRI.get(), MSTI.get());
-  std::unique_ptr<MCObjectFileInfo> MOFI(
-      TheTarget->createMCObjectFileInfo(MC, /*PIC=*/false));
-  MC.setObjectFileInfo(MOFI.get());
-
-  MCTargetOptions Options;
-  auto MAB = TheTarget->createMCAsmBackend(*MSTI, *MRI, Options);
-  if (!MAB)
-    return error("no asm backend for target " + TripleName, Context);
-
-  std::unique_ptr<MCInstrInfo> MII(TheTarget->createMCInstrInfo());
-  if (!MII)
-    return error("no instr info info for target " + TripleName, Context);
-
-  MCCodeEmitter *MCE = TheTarget->createMCCodeEmitter(*MII, MC);
-  if (!MCE)
-    return error("no code emitter for target " + TripleName, Context);
-
   // Create the output file.
   std::error_code EC;
   ToolOutputFile OutFile(OutputFilename, EC, sys::fs::OF_None);
   std::optional<buffer_ostream> BOS;
   raw_pwrite_stream *OS;
   if (EC)
-    return error(Twine(OutputFilename) + ": " + EC.message(), Context);
+    return error(Twine(OutputFilename) + ": " + EC.message(),
+                 "dwp output init");
   if (OutFile.os().supportsSeeking()) {
     OS = &OutFile.os();
   } else {
@@ -320,20 +239,15 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
     OS = &*BOS;
   }
 
-  std::unique_ptr<MCStreamer> MS(TheTarget->createMCObjectStreamer(
-      *ErrOrTriple, MC, std::unique_ptr<MCAsmBackend>(MAB),
-      MAB->createObjectWriter(*OS), std::unique_ptr<MCCodeEmitter>(MCE),
-      *MSTI));
-  if (!MS)
-    return error("no object streamer for target " + TripleName, Context);
+  // Use DWPWriter for direct ELF output, bypassing MCStreamer.
+  DWPWriter Writer;
 
-  if (auto Err =
-          write(*MS, DWOFilenames, OverflowOptValue, Dwarf64StrOffsetsValue)) {
+  if (auto Err = write(Writer, DWOFilenames, OverflowOptValue,
+                       Dwarf64StrOffsetsValue, OS)) {
     logAllUnhandledErrors(std::move(Err), WithColor::error());
     return 1;
   }
 
-  MS->finish();
   OutFile.keep();
   return 0;
 }

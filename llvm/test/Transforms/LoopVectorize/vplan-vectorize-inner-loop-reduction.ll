@@ -33,7 +33,7 @@ define void @inner_loop_reduction(ptr noalias nocapture readonly %a.in, ptr noal
 ; CHECK-NEXT: %[[REDUCTION_NEXT]] = fadd <4 x double> %[[MASKED_GATHER2]], %[[REDUCTION]]
 ; CHECK-NEXT: %[[FOR2_INDEX_NEXT]] = add nuw nsw <4 x i32> %[[FOR2_INDEX]], splat (i32 1)
 ; CHECK-NEXT: %[[VEC_PTR:.*]] = icmp eq <4 x i32> %[[FOR2_INDEX_NEXT]], splat (i32 10000)
-; CHECK-NEXT: %[[EXIT_COND:.*]] = extractelement <4 x i1> %[[VEC_PTR]], i32 0
+; CHECK-NEXT: %[[EXIT_COND:.*]] = extractelement <4 x i1> %[[VEC_PTR]], i64 0
 ; CHECK-NEXT: br i1 %[[EXIT_COND]], label %[[FOR1_LATCH:.*]], label %{{.*}}
 
 ; CHECK: [[FOR1_LATCH]]:

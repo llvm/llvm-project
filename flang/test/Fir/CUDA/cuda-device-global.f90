@@ -65,3 +65,22 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", gpu.conta
 // CHECK-LABEL: gpu.module @cuda_device_mod
 // CHECK: fir.global linkonce_odr @_QMvector_typesE.dt.v2real2
 
+// -----
+
+// Test that when a global already exists in the gpu.module, the pass
+// continues cloning the remaining candidates instead of stopping.
+
+module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", gpu.container_module} {
+  fir.global @_QMmEa(dense<[1, 2, 3]> : tensor<3xi32>) {data_attr = #cuf.cuda<device>} : !fir.array<3xi32>
+  fir.global @_QMmEb(dense<[10, 20, 30]> : tensor<3xi32>) {data_attr = #cuf.cuda<device>} : !fir.array<3xi32>
+  fir.global @_QMmEc(dense<[100, 200, 300]> : tensor<3xi32>) {data_attr = #cuf.cuda<device>} : !fir.array<3xi32>
+
+  gpu.module @cuda_device_mod {
+    fir.global @_QMmEa(dense<[1, 2, 3]> : tensor<3xi32>) {data_attr = #cuf.cuda<device>} : !fir.array<3xi32>
+  }
+}
+
+// CHECK: gpu.module @cuda_device_mod
+// CHECK-DAG: fir.global @_QMmEa
+// CHECK-DAG: fir.global @_QMmEb
+// CHECK-DAG: fir.global @_QMmEc

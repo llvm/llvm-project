@@ -498,6 +498,12 @@ void OMPClauseProfiler::VisitOMPSizesClause(const OMPSizesClause *C) {
       Profiler->VisitExpr(E);
 }
 
+void OMPClauseProfiler::VisitOMPCountsClause(const OMPCountsClause *C) {
+  for (auto *E : C->getCountsRefs())
+    if (E)
+      Profiler->VisitExpr(E);
+}
+
 void OMPClauseProfiler::VisitOMPPermutationClause(
     const OMPPermutationClause *C) {
   for (Expr *E : C->getArgsRefs())
@@ -1048,6 +1054,10 @@ void StmtProfiler::VisitOMPReverseDirective(const OMPReverseDirective *S) {
 
 void StmtProfiler::VisitOMPInterchangeDirective(
     const OMPInterchangeDirective *S) {
+  VisitOMPCanonicalLoopNestTransformationDirective(S);
+}
+
+void StmtProfiler::VisitOMPSplitDirective(const OMPSplitDirective *S) {
   VisitOMPCanonicalLoopNestTransformationDirective(S);
 }
 
@@ -2352,14 +2362,14 @@ void StmtProfiler::VisitSizeOfPackExpr(const SizeOfPackExpr *S) {
 }
 
 void StmtProfiler::VisitPackIndexingExpr(const PackIndexingExpr *E) {
-  VisitExpr(E->getIndexExpr());
-
+  VisitStmtNoChildren(E);
+  Visit(E->getIndexExpr());
   if (E->expandsToEmptyPack() || E->getExpressions().size() != 0) {
     ID.AddInteger(E->getExpressions().size());
     for (const Expr *Sub : E->getExpressions())
       Visit(Sub);
   } else {
-    VisitExpr(E->getPackIdExpression());
+    Visit(E->getPackIdExpression());
   }
 }
 
@@ -2390,35 +2400,7 @@ void StmtProfiler::VisitMaterializeTemporaryExpr(
 }
 
 void StmtProfiler::VisitCXXFoldExpr(const CXXFoldExpr *S) {
-  // For CXXFoldExpr, do not profile the callee as it may
-  // be affected by the context. e.g.,
-  //
-  // "a.h"
-  //
-  //   struct F {
-  //     template <typename... T> requires ((sizeof(T) > 0) && ...)
-  //     void operator()(T...) {}
-  //   } f;
-  //
-  // and
-  //
-  // "c.h"
-  //
-  //   void operator&&(struct X, struct X);
-  //   #include "a.h"
-  //
-  // Here we may give different profile results to F::operator() in
-  // "c.h" vs other use cases of "a.h". This is problematic in
-  // cases where we may have expression coming from different
-  // headers, e.g., modules.
-  if (S->getLHS())
-    Visit(S->getLHS());
-  else
-    ID.AddInteger(0);
-  if (S->getRHS())
-    Visit(S->getRHS());
-  else
-    ID.AddInteger(0);
+  VisitExpr(S);
   ID.AddInteger(S->getOperator());
 }
 

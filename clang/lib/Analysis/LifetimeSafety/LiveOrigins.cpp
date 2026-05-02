@@ -166,6 +166,10 @@ public:
     return Lattice(Factory.remove(In.LiveOrigins, OF.getDestOriginID()));
   }
 
+  Lattice transfer(Lattice In, const KillOriginFact &F) {
+    return Lattice(Factory.remove(In.LiveOrigins, F.getKilledOrigin()));
+  }
+
   Lattice transfer(Lattice In, const ExpireFact &F) {
     if (auto OID = F.getOriginID())
       return Lattice(Factory.remove(In.LiveOrigins, *OID));

@@ -572,3 +572,70 @@ define i32 @fcmp_true(float %a, float %b) nounwind {
   %2 = zext i1 %1 to i32
   ret i32 %2
 }
+
+define i32 @fcmp_ord_same(float %a) nounwind {
+; CHECKIF-LABEL: fcmp_ord_same:
+; CHECKIF:       # %bb.0:
+; CHECKIF-NEXT:    feq.s a0, fa0, fa0
+; CHECKIF-NEXT:    ret
+;
+; RV32I-LABEL: fcmp_ord_same:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    mv a1, a0
+; RV32I-NEXT:    call __unordsf2
+; RV32I-NEXT:    seqz a0, a0
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: fcmp_ord_same:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    mv a1, a0
+; RV64I-NEXT:    call __unordsf2
+; RV64I-NEXT:    sext.w a0, a0
+; RV64I-NEXT:    seqz a0, a0
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+  %1 = fcmp ord float %a, %a
+  %2 = zext i1 %1 to i32
+  ret i32 %2
+}
+
+define i32 @fcmp_uno_same(float %a) nounwind {
+; CHECKIF-LABEL: fcmp_uno_same:
+; CHECKIF:       # %bb.0:
+; CHECKIF-NEXT:    feq.s a0, fa0, fa0
+; CHECKIF-NEXT:    xori a0, a0, 1
+; CHECKIF-NEXT:    ret
+;
+; RV32I-LABEL: fcmp_uno_same:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    mv a1, a0
+; RV32I-NEXT:    call __unordsf2
+; RV32I-NEXT:    snez a0, a0
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: fcmp_uno_same:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    mv a1, a0
+; RV64I-NEXT:    call __unordsf2
+; RV64I-NEXT:    sext.w a0, a0
+; RV64I-NEXT:    snez a0, a0
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+  %1 = fcmp uno float %a, %a
+  %2 = zext i1 %1 to i32
+  ret i32 %2
+}

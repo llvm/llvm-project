@@ -83,10 +83,6 @@
 ; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Basic Alias Analysis (stateless AA impl)
 ; CHECK-NEXT:       Function Alias Analysis Results
-; CHECK-NEXT:       Natural Loop Information
-; CHECK-NEXT:       Lazy Branch Probability Analysis
-; CHECK-NEXT:       Lazy Block Frequency Analysis
-; CHECK-NEXT:       Optimization Remark Emitter
 ; CHECK-NEXT:       AArch64 Stack Tagging
 ; CHECK-NEXT:       Complex Deinterleaving Pass
 ; CHECK-NEXT:       Function Alias Analysis Results
@@ -119,7 +115,6 @@
 ; CHECK-NEXT:       Basic Alias Analysis (stateless AA impl)
 ; CHECK-NEXT:       Function Alias Analysis Results
 ; CHECK-NEXT:       IRTranslator
-; CHECK-NEXT:       Analysis for ComputingKnownBits
 ; CHECK-NEXT:       AArch64O0PreLegalizerCombiner
 ; CHECK-NEXT:       Localizer
 ; CHECK-NEXT:       Analysis containing CSE Info

@@ -930,15 +930,15 @@ protected:
 
   llvm::StringMap<llvm::GlobalVariable *> NSConstantStringMap;
 
-  /// Uniqued CF boolean singletons
+  /// Uniqued CF boolean singletons.
   llvm::GlobalVariable *DefinedCFBooleanTrue = nullptr;
   llvm::GlobalVariable *DefinedCFBooleanFalse = nullptr;
 
-  /// Uniqued `NSNumber`s
+  /// Uniqued `NSNumber`s.
   llvm::DenseMap<NSConstantNumberMapInfo, llvm::GlobalVariable *>
       NSConstantNumberMap;
 
-  /// Cached empty collection singletons
+  /// Cached empty collection singletons.
   llvm::GlobalVariable *DefinedEmptyNSDictionary = nullptr;
   llvm::GlobalVariable *DefinedEmptyNSArray = nullptr;
 
@@ -2253,7 +2253,7 @@ CGObjCCommonMac::GenerateConstantNSString(const StringLiteral *Literal) {
   if (!NSConstantStringType) {
     // NOTE: The existing implementation used a pointer to a Int32Ty not a
     // struct pointer as the ISA type when emitting constant strings so this is
-    // maintained for now
+    // maintained for now.
     NSConstantStringType =
         llvm::StructType::create({CGM.DefaultPtrTy, CGM.Int8PtrTy, CGM.IntTy},
                                  "struct.__builtin_NSString");
@@ -2302,7 +2302,7 @@ CGObjCCommonMac::GenerateConstantNSString(const StringLiteral *Literal) {
   return ConstantAddress(GV, GV->getValueType(), Alignment);
 }
 
-/// Emit the boolean singletons for BOOL literals @YES @NO
+/// Emit the boolean singletons for BOOL literals @YES and @NO.
 ConstantAddress CGObjCCommonMac::GenerateConstantNSNumber(const bool Value,
                                                           const QualType &Ty) {
   llvm::GlobalVariable *Val =
@@ -2310,7 +2310,8 @@ ConstantAddress CGObjCCommonMac::GenerateConstantNSNumber(const bool Value,
   return ConstantAddress(Val, Val->getValueType(), CGM.getPointerAlign());
 }
 
-/// Generate a constant NSConstantIntegerNumber from an ObjC integer literal
+/// Generate a constant NSConstantIntegerNumber from an ObjC integer literal,
+/// e.g., @2.
 /*
   struct __builtin_NSConstantIntegerNumber {
     struct._class_t *isa; // point to _NSConstantIntegerNumberClassReference
@@ -2323,14 +2324,14 @@ CGObjCCommonMac::GenerateConstantNSNumber(const llvm::APSInt &Value,
                                           const QualType &Ty) {
   CharUnits Alignment = CGM.getPointerAlign();
 
-  // check if we've already emitted, if so emit a reference to it
+  // Check if we've already emitted, if so emit a reference to it.
   llvm::GlobalVariable *&Entry =
       NSConstantNumberMap[{CGM.getContext().getCanonicalType(Ty), Value}];
   if (Entry) {
     return ConstantAddress(Entry, Entry->getValueType(), Alignment);
   }
 
-  // The encoding type
+  // The encoding type.
   std::string ObjCEncodingType;
   CodeGenFunction(CGM).getContext().getObjCEncodingForType(Ty,
                                                            ObjCEncodingType);
@@ -2351,9 +2352,11 @@ CGObjCCommonMac::GenerateConstantNSNumber(const llvm::APSInt &Value,
   auto Fields = Builder.beginStruct(NSConstantIntegerNumberType);
 
   // Class pointer.
-  Fields.add(Class);
+  Fields.addSignedPointer(Class,
+                          CGM.getCodeGenOpts().PointerAuth.ObjCIsaPointers,
+                          GlobalDecl(), QualType());
 
-  // add the @encode
+  // add the @encode.
   Fields.add(CGM.GetAddrOfConstantCString(ObjCEncodingType).getPointer());
 
   // add the value stored.
@@ -2362,7 +2365,7 @@ CGObjCCommonMac::GenerateConstantNSNumber(const llvm::APSInt &Value,
 
   Fields.add(IntegerValue);
 
-  // The struct
+  // The struct.
   llvm::GlobalVariable *const GV = Fields.finishAndCreateGlobal(
       "_unnamed_nsconstantintegernumber_", Alignment,
       /* constant */ true, llvm::GlobalVariable::PrivateLinkage);
@@ -2376,14 +2379,16 @@ CGObjCCommonMac::GenerateConstantNSNumber(const llvm::APSInt &Value,
 }
 
 /// Generate either a constant NSConstantFloatNumber or NSConstantDoubleNumber
+/// from an ObjC literal based on it's encoding. @(2.2f) would be
+/// NSConstantFloatNumber. @(2.222) would be NSConstantDoubleNumber.
 /*
   struct __builtin_NSConstantFloatNumber {
-    struct._class_t *isa;
+    struct._class_t *isa; // point to _NSConstantFloatNumberClassReference
     float const _value;
   };
 
   struct __builtin_NSConstantDoubleNumber {
-    struct._class_t *isa;
+    struct._class_t *isa; // point to _NSConstantDoubleNumberClassReference
     double const _value;
   };
 */
@@ -2392,14 +2397,14 @@ CGObjCCommonMac::GenerateConstantNSNumber(const llvm::APFloat &Value,
                                           const QualType &Ty) {
   CharUnits Alignment = CGM.getPointerAlign();
 
-  // check if we've already emitted, if so emit a reference to it
+  // Check if we've already emitted, if so emit a reference to it.
   llvm::GlobalVariable *&Entry =
       NSConstantNumberMap[{CGM.getContext().getCanonicalType(Ty), Value}];
   if (Entry) {
     return ConstantAddress(Entry, Entry->getValueType(), Alignment);
   }
 
-  // @encode type used to pick which class type to use
+  // @encode type used to pick which class type to use.
   std::string ObjCEncodingType;
   CodeGenFunction(CGM).getContext().getObjCEncodingForType(Ty,
                                                            ObjCEncodingType);
@@ -2410,7 +2415,7 @@ CGObjCCommonMac::GenerateConstantNSNumber(const llvm::APFloat &Value,
   llvm::GlobalValue::LinkageTypes Linkage =
       llvm::GlobalVariable::PrivateLinkage;
 
-  // Handle floats
+  // Handle floats.
   if (ObjCEncodingType == "f") {
     llvm::Constant *const Class = getNSConstantFloatNumberClassRef();
 
@@ -2427,13 +2432,15 @@ CGObjCCommonMac::GenerateConstantNSNumber(const llvm::APFloat &Value,
     auto Fields = Builder.beginStruct(NSConstantFloatNumberType);
 
     // Class pointer.
-    Fields.add(Class);
+    Fields.addSignedPointer(Class,
+                            CGM.getCodeGenOpts().PointerAuth.ObjCIsaPointers,
+                            GlobalDecl(), QualType());
 
     // add the value stored.
     llvm::Constant *FV = llvm::ConstantFP::get(CGM.FloatTy, Value);
     Fields.add(FV);
 
-    // The struct
+    // The struct.
     llvm::GlobalVariable *const GV = Fields.finishAndCreateGlobal(
         "_unnamed_nsconstantfloatnumber_", Alignment,
         /*constant*/ true, Linkage);
@@ -2448,7 +2455,7 @@ CGObjCCommonMac::GenerateConstantNSNumber(const llvm::APFloat &Value,
 
   llvm::Constant *const Class = getNSConstantDoubleNumberClassRef();
   if (!NSConstantDoubleNumberType) {
-    // NOTE: this will be padded on some 32-bit targets and is expected
+    // NOTE: this will be padded on some 32-bit targets and is expected.
     NSConstantDoubleNumberType = llvm::StructType::create(
         {
             CGM.DefaultPtrTy, // isa
@@ -2461,13 +2468,15 @@ CGObjCCommonMac::GenerateConstantNSNumber(const llvm::APFloat &Value,
   auto Fields = Builder.beginStruct(NSConstantDoubleNumberType);
 
   // Class pointer.
-  Fields.add(Class);
+  Fields.addSignedPointer(Class,
+                          CGM.getCodeGenOpts().PointerAuth.ObjCIsaPointers,
+                          GlobalDecl(), QualType());
 
   // add the value stored.
   llvm::Constant *DV = llvm::ConstantFP::get(CGM.DoubleTy, Value);
   Fields.add(DV);
 
-  // The struct
+  // The struct.
   llvm::GlobalVariable *const GV = Fields.finishAndCreateGlobal(
       "_unnamed_nsconstantdoublenumber_", Alignment,
       /*constant*/ true, Linkage);
@@ -2481,7 +2490,7 @@ CGObjCCommonMac::GenerateConstantNSNumber(const llvm::APFloat &Value,
 }
 
 /// Shared private method to emit the id array storage for constant NSArray and
-/// NSDictionary literals
+/// NSDictionary literals as they share the same sections and behavior.
 llvm::GlobalVariable *
 CGObjCCommonMac::EmitNSConstantCollectionLiteralArrayStorage(
     const ArrayRef<llvm::Constant *> &Elements) {
@@ -2500,10 +2509,11 @@ CGObjCCommonMac::EmitNSConstantCollectionLiteralArrayStorage(
   return ObjectsGV;
 }
 
-/// Generate a constant NSConstantArray from an ObjC array literal
+/// Generate a constant NSConstantArray from an ObjC array literal,
+/// e.g., @[ @2 ] or the singleton for an empty `__NSArray0__struct`.
 /*
   struct __builtin_NSArray {
-    struct._class_t *isa;
+    struct._class_t *isa; // points to _NSConstantArrayClassReference
     NSUInteger const _count;
     id const *const _objects;
   };
@@ -2537,19 +2547,21 @@ ConstantAddress CGObjCCommonMac::GenerateConstantNSArray(
   auto Fields = Builder.beginStruct(NSConstantArrayType);
 
   // Class pointer.
-  Fields.add(Class);
+  Fields.addSignedPointer(Class,
+                          CGM.getCodeGenOpts().PointerAuth.ObjCIsaPointers,
+                          GlobalDecl(), QualType());
 
-  // count
+  // count.
   uint64_t ObjectCount = Objects.size();
   llvm::Constant *Count = llvm::ConstantInt::get(NSUIntegerTy, ObjectCount);
   Fields.add(Count);
 
-  // objects
+  // objects.
   llvm::GlobalVariable *ObjectsGV =
       EmitNSConstantCollectionLiteralArrayStorage(Objects);
   Fields.add(ObjectsGV);
 
-  // The struct
+  // The struct.
   llvm::GlobalVariable *GV = Fields.finishAndCreateGlobal(
       "_unnamed_nsarray_", Alignment,
       /* constant */ true, llvm::GlobalValue::PrivateLinkage);
@@ -2561,9 +2573,11 @@ ConstantAddress CGObjCCommonMac::GenerateConstantNSArray(
 }
 
 /// Generate a constant NSConstantDictionary from an ObjC dictionary literal
+/// with string keys, e.g., @{ @"someNum" : @2 } or the singleton for an empty
+/// `__NSDictionary0__struct`.
 /*
   struct __builtin_NSDictionary {
-    struct._class_t *isa;
+    struct._class_t *isa; // point to _NSConstantDictionaryClassReference
     NSUInteger const _hashOptions;
     NSUInteger const _count;
     id const *const _keys;
@@ -2603,20 +2617,22 @@ ConstantAddress CGObjCCommonMac::GenerateConstantNSDictionary(
   auto Fields = Builder.beginStruct(NSConstantDictionaryType);
 
   // Class pointer.
-  Fields.add(Class);
+  Fields.addSignedPointer(Class,
+                          CGM.getCodeGenOpts().PointerAuth.ObjCIsaPointers,
+                          GlobalDecl(), QualType());
 
-  // Use the hashing helper to manage the keys and sorting
+  // Use the hashing helper to manage the keys and sorting.
   auto HashOpts(NSDictionaryBuilder::Options::Sorted);
   NSDictionaryBuilder DictBuilder(E, KeysAndObjects, HashOpts);
 
-  // Ask `HashBuilder` for the fully sorted keys / values and the count
+  // Ask `HashBuilder` for the fully sorted keys / values and the count.
   uint64_t const NumElements = DictBuilder.getNumElements();
 
   llvm::Constant *OptionsConstant = llvm::ConstantInt::get(
       NSUIntegerTy, static_cast<uint64_t>(DictBuilder.getOptions()));
   Fields.add(OptionsConstant);
 
-  // count
+  // count.
   llvm::Constant *Count = llvm::ConstantInt::get(NSUIntegerTy, NumElements);
   Fields.add(Count);
 
@@ -2629,17 +2645,17 @@ ConstantAddress CGObjCCommonMac::GenerateConstantNSDictionary(
     SortedObjects.push_back(Obj);
   }
 
-  // keys
+  // keys.
   llvm::GlobalVariable *KeysGV =
       EmitNSConstantCollectionLiteralArrayStorage(SortedKeys);
   Fields.add(KeysGV);
 
-  // objects
+  // objects.
   llvm::GlobalVariable *ObjectsGV =
       EmitNSConstantCollectionLiteralArrayStorage(SortedObjects);
   Fields.add(ObjectsGV);
 
-  // The struct
+  // The struct.
   llvm::GlobalVariable *GV = Fields.finishAndCreateGlobal(
       "_unnamed_nsdictionary_", Alignment,
       /* constant */ true, llvm::GlobalValue::PrivateLinkage);
