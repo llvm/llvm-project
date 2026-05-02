@@ -49,6 +49,11 @@
     }
   },
   "instruction_pre": {
+    "unreachable": {
+      "enabled": true,
+      "id": true,
+      "id.description": "A unique ID associated with the given instrumentor call"
+    },
     "load": {
       "enabled": true,
       "pointer": true,
