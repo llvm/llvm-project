@@ -25060,6 +25060,13 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
   if (ISD::isUnsignedIntSetCC(Cond) &&
       (FlipSigns || ISD::isTrueWhenEqual(Cond)) &&
       TLI.isOperationLegal(ISD::UMIN, VT)) {
+    // If Op0 is a load and Op1 is not, swap them to allow folding the load
+    // into the min/max operation.
+    if (Op0.getOpcode() == ISD::LOAD && Op1.getOpcode() != ISD::LOAD) {
+      std::swap(Op0, Op1);
+      Cond = ISD::getSetCCSwappedOperands(Cond);
+    }
+
     // If we have a constant operand, increment/decrement it and change the
     // condition to avoid an invert.
     if (Cond == ISD::SETUGT) {
