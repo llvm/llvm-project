@@ -6679,7 +6679,7 @@ VPHistogramRecipe *VPRecipeBuilder::widenIfHistogram(VPInstruction *VPI) {
   // Bucket address.
   HGramOps.push_back(VPI->getOperand(1));
   // Increment value.
-  HGramOps.push_back(getVPValueOrAddLiveIn(HI->Update->getOperand(1)));
+  HGramOps.push_back(Plan.getOrAddLiveIn(HI->Update->getOperand(1)));
 
   // In case of predicated execution (due to tail-folding, or conditional
   // execution, or both), pass the relevant mask.
@@ -7039,7 +7039,6 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VPlanPtr Plan,
         Recipe =
             RecipeBuilder.handleReplication(cast<VPInstruction>(VPI), Range);
 
-      RecipeBuilder.setRecipe(Instr, Recipe);
       if (isa<VPWidenIntOrFpInductionRecipe>(Recipe) && isa<TruncInst>(Instr)) {
         // Optimized a truncate to VPWidenIntOrFpInductionRecipe. It needs to be
         // moved to the phi section in the header.
@@ -7116,7 +7115,7 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VPlanPtr Plan,
   // for this VPlan, replace the Recipes widening its memory instructions with a
   // single VPInterleaveRecipe at its insertion point.
   RUN_VPLAN_PASS(VPlanTransforms::createInterleaveGroups, *Plan,
-                 InterleaveGroups, RecipeBuilder, CM.isEpilogueAllowed());
+                 InterleaveGroups, CM.isEpilogueAllowed());
 
   // Replace VPValues for known constant strides.
   RUN_VPLAN_PASS(VPlanTransforms::replaceSymbolicStrides, *Plan, PSE,
