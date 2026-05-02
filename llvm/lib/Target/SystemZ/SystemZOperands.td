@@ -541,10 +541,10 @@ def len8imm64 : Imm64 {
 //===----------------------------------------------------------------------===//
 
 // Floating-point zero.
-def fpimm0 : PatLeaf<(fpimm), [{ return N->isExactlyValue(+0.0); }]>;
+def fpimm0 : FPImmLeaf<fAny, [{ return Imm.isExactlyValue(+0.0); }]>;
 
 // Floating point negative zero.
-def fpimmneg0 : PatLeaf<(fpimm), [{ return N->isExactlyValue(-0.0); }]>;
+def fpimmneg0 : FPImmLeaf<fAny, [{ return Imm.isExactlyValue(-0.0); }]>;
 
 //===----------------------------------------------------------------------===//
 // Symbolic address operands
