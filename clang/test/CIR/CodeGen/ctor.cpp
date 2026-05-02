@@ -250,7 +250,7 @@ void test_derived() {
 // CHECK-NEXT:   cir.store %arg0, %[[THIS_ADDR]]
 // CHECK-NEXT:   cir.store %arg1, %[[VAL_ADDR]]
 // CHECK-NEXT:   %[[THIS:.*]] = cir.load{{.*}} %[[THIS_ADDR]]
-// CHECK-NEXT:   %[[BASE:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_Derived> nonnull [0] -> !cir.ptr<!rec_Base>
+// CHECK-NEXT:   %[[BASE:.*]] = cir.base_class_addr nonnull %[[THIS]] [0] : !cir.ptr<!rec_Derived> -> !cir.ptr<!rec_Base>
 // CHECK-NEXT:   %[[VAL:.*]] = cir.load{{.*}} %[[VAL_ADDR]]
 // CHECK-NEXT:   cir.call @_ZN4BaseC2Ei(%[[BASE]], %[[VAL]])
 // CHECK-NEXT:   cir.return
@@ -309,10 +309,10 @@ void test_derived2() {
 // CHECK-NEXT:   cir.store %arg2, %[[VAL2_ADDR]]
 // CHECK-NEXT:   cir.store %arg3, %[[VAL3_ADDR]]
 // CHECK-NEXT:   %[[THIS:.*]] = cir.load{{.*}} %[[THIS_ADDR]]
-// CHECK-NEXT:   %[[BASE:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_Derived2> nonnull [0] -> !cir.ptr<!rec_Base>
+// CHECK-NEXT:   %[[BASE:.*]] = cir.base_class_addr nonnull %[[THIS]] [0] : !cir.ptr<!rec_Derived2> -> !cir.ptr<!rec_Base>
 // CHECK-NEXT:   %[[VAL1:.*]] = cir.load{{.*}} %[[VAL1_ADDR]]
 // CHECK-NEXT:   cir.call @_ZN4BaseC2Ei(%[[BASE]], %[[VAL1]])
-// CHECK-NEXT:   %[[BASE2:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_Derived2> nonnull [4] -> !cir.ptr<!rec_Base2>
+// CHECK-NEXT:   %[[BASE2:.*]] = cir.base_class_addr nonnull %[[THIS]] [4] : !cir.ptr<!rec_Derived2> -> !cir.ptr<!rec_Base2>
 // CHECK-NEXT:   %[[VAL2:.*]] = cir.load{{.*}} %[[VAL2_ADDR]]
 // CHECK-NEXT:   cir.call @_ZN5Base2C2Ei(%[[BASE2]], %[[VAL2]])
 // CHECK-NEXT:   %[[C_ADDR:.*]] = cir.get_member %[[THIS]][2] {name = "c"}

@@ -28,7 +28,7 @@ void f() {
 // CIR: cir.func {{.*}} @_Z1fv()
 // CIR:   %[[D:.*]] = cir.alloca !rec_Derived, !cir.ptr<!rec_Derived>, ["d", init]
 // CIR:   cir.call @_ZN7DerivedC1Ev(%[[D]]) : (!cir.ptr<!rec_Derived> {{.*}}) -> ()
-// CIR:   %[[D_BASE:.*]] = cir.base_class_addr %[[D]] : !cir.ptr<!rec_Derived> nonnull [0] -> !cir.ptr<!rec_Base>
+// CIR:   %[[D_BASE:.*]] = cir.base_class_addr nonnull %[[D]] [0] : !cir.ptr<!rec_Derived> -> !cir.ptr<!rec_Base>
 // CIR:   cir.call @_ZN4Base1fEv(%[[D_BASE]]) : (!cir.ptr<!rec_Base> {{.*}}) -> ()
 
 // LLVM: define {{.*}}void @_Z1fv()
@@ -51,7 +51,7 @@ void callBaseUsingDerived(Derived *derived) {
 // CIR:   %[[DERIVED_ADDR:.*]] = cir.alloca !cir.ptr<!rec_Derived>, !cir.ptr<!cir.ptr<!rec_Derived>>, ["derived", init]
 // CIR:   cir.store %[[DERIVED_ARG]], %[[DERIVED_ADDR]]
 // CIR:   %[[DERIVED:.*]] = cir.load{{.*}} %[[DERIVED_ADDR]]
-// CIR:   %[[DERIVED_BASE:.*]] = cir.base_class_addr %[[DERIVED]] : !cir.ptr<!rec_Derived> nonnull [0] -> !cir.ptr<!rec_Base>
+// CIR:   %[[DERIVED_BASE:.*]] = cir.base_class_addr nonnull %[[DERIVED]] [0] : !cir.ptr<!rec_Derived> -> !cir.ptr<!rec_Base>
 // CIR:   cir.call @_Z7useBaseP4Base(%[[DERIVED_BASE]]) : (!cir.ptr<!rec_Base> {{.*}}) -> ()
 
 // LLVM: define {{.*}} void @_Z20callBaseUsingDerivedP7Derived(ptr {{.*}} %[[DERIVED_ARG:.*]])
@@ -75,7 +75,7 @@ Base *returnBaseFromDerived(Derived* derived) {
 // CIR:   %[[BASE_ADDR:.*]] = cir.alloca !cir.ptr<!rec_Base>, !cir.ptr<!cir.ptr<!rec_Base>>, ["__retval"]
 // CIR:   cir.store %[[DERIVED_ARG]], %[[DERIVED_ADDR]]
 // CIR:   %[[DERIVED:.*]] = cir.load{{.*}} %[[DERIVED_ADDR]]
-// CIR:   %[[DERIVED_BASE:.*]] = cir.base_class_addr %[[DERIVED]] : !cir.ptr<!rec_Derived> nonnull [0] -> !cir.ptr<!rec_Base>
+// CIR:   %[[DERIVED_BASE:.*]] = cir.base_class_addr nonnull %[[DERIVED]] [0] : !cir.ptr<!rec_Derived> -> !cir.ptr<!rec_Base>
 // CIR:   cir.store %[[DERIVED_BASE]], %[[BASE_ADDR]]
 // CIR:   %[[BASE:.*]] = cir.load{{.*}} %[[BASE_ADDR]]
 // CIR:   cir.return %[[BASE]] : !cir.ptr<!rec_Base>
@@ -99,7 +99,7 @@ void test_volatile_store() {
 // CIR: cir.func {{.*}} @_Z19test_volatile_storev()
 // CIR:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
 // CIR:   %[[DERIVED_OBJ:.*]] = cir.get_global @derivedObj : !cir.ptr<!rec_Derived>
-// CIR:   %[[DERIVED_OBJ_BASE:.*]] = cir.base_class_addr %[[DERIVED_OBJ]] : !cir.ptr<!rec_Derived> nonnull [0] -> !cir.ptr<!rec_Base>
+// CIR:   %[[DERIVED_OBJ_BASE:.*]] = cir.base_class_addr nonnull %[[DERIVED_OBJ]] [0] : !cir.ptr<!rec_Derived> -> !cir.ptr<!rec_Base>
 // CIR:   %[[DERIVED_OBJ_A:.*]] = cir.get_member %[[DERIVED_OBJ_BASE]][0] {name = "a"} : !cir.ptr<!rec_Base> -> !cir.ptr<!s32i>
 // CIR:   cir.store volatile {{.*}} %[[ZERO]], %[[DERIVED_OBJ_A]] : !s32i, !cir.ptr<!s32i>
 
@@ -115,7 +115,7 @@ void test_volatile_load() {
 
 // CIR: cir.func {{.*}} @_Z18test_volatile_loadv()
 // CIR:   %[[DERIVED_OBJ:.*]] = cir.get_global @derivedObj : !cir.ptr<!rec_Derived>
-// CIR:   %[[DERIVED_OBJ_BASE:.*]] = cir.base_class_addr %[[DERIVED_OBJ]] : !cir.ptr<!rec_Derived> nonnull [0] -> !cir.ptr<!rec_Base>
+// CIR:   %[[DERIVED_OBJ_BASE:.*]] = cir.base_class_addr nonnull %[[DERIVED_OBJ]] [0] : !cir.ptr<!rec_Derived> -> !cir.ptr<!rec_Base>
 // CIR:   %[[DERIVED_OBJ_A:.*]] = cir.get_member %[[DERIVED_OBJ_BASE]][0] {name = "a"} : !cir.ptr<!rec_Base> -> !cir.ptr<!s32i>
 // CIR:   %[[VAL:.*]] = cir.load volatile {{.*}} %[[DERIVED_OBJ_A]] : !cir.ptr<!s32i>, !s32i
 

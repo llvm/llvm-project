@@ -211,7 +211,7 @@ C foo3() {
 // CIR: %[[C2_ALLOCA:.*]] = cir.alloca ![[STRUCT_C]], !cir.ptr<![[STRUCT_C]]>, ["c2", init]
 // CIR: %[[B_TMP:.*]] = cir.alloca ![[STRUCT_B]], !cir.ptr<![[STRUCT_B]]>, ["ref.tmp0"]
 // CIR: %[[A_TMP:.*]] = cir.alloca ![[STRUCT_A]], !cir.ptr<![[STRUCT_A]]>, ["ref.tmp1"]
-// CIR: %[[C_BASE:.*]] = cir.base_class_addr %[[C2_ALLOCA]] : !cir.ptr<![[STRUCT_C]]> nonnull [0] -> !cir.ptr<![[STRUCT_B]]>
+// CIR: %[[C_BASE:.*]] = cir.base_class_addr nonnull %[[C2_ALLOCA]] [0] : !cir.ptr<![[STRUCT_C]]> -> !cir.ptr<![[STRUCT_B]]>
 // CIR: %[[GET_A:.*]] = cir.get_member %[[B_TMP]][0] {name = "a"} : !cir.ptr<![[STRUCT_B]]> -> !cir.ptr<![[STRUCT_A]]>
 // CIR: %[[GET_I:.*]] = cir.get_member %[[GET_A]][0] {name = "i"} : !cir.ptr<![[STRUCT_A]]> -> !cir.ptr<!s8i>
 // CIR: %[[ONE:.*]] = cir.const #cir.int<1> : !s8i
@@ -224,7 +224,7 @@ C foo3() {
 // CIR: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
 // CIR: cir.store{{.*}} %[[ONE]], %[[GET_B]] : !s32i, !cir.ptr<!s32i>
 // CIR: cir.copy %[[B_TMP]] to %[[C_BASE]] : !cir.ptr<![[STRUCT_B]]>
-// CIR: %[[C_BASE_A:.*]] = cir.base_class_addr %[[C2_ALLOCA]] : !cir.ptr<![[STRUCT_C]]> nonnull [24] -> !cir.ptr<![[STRUCT_A]]>
+// CIR: %[[C_BASE_A:.*]] = cir.base_class_addr nonnull %[[C2_ALLOCA]] [24] : !cir.ptr<![[STRUCT_C]]> -> !cir.ptr<![[STRUCT_A]]>
 // CIR: %[[GET_I:.*]] = cir.get_member %[[A_TMP]][0] {name = "i"} : !cir.ptr<![[STRUCT_A]]> -> !cir.ptr<!s8i>
 // CIR: %[[NINETYSEVEN:.*]] = cir.const #cir.int<97> : !s8i
 // CIR: cir.store{{.*}} %[[NINETYSEVEN]], %[[GET_I]] : !s8i, !cir.ptr<!s8i>

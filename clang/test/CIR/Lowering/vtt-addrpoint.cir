@@ -20,7 +20,7 @@ module {
     cir.store %arg1, %1 : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!cir.ptr<!cir.ptr<!void>>>
     %2 = cir.load %0 : !cir.ptr<!cir.ptr<!rec_C>>, !cir.ptr<!rec_C>
     %3 = cir.load align(8) %1 : !cir.ptr<!cir.ptr<!cir.ptr<!void>>>, !cir.ptr<!cir.ptr<!void>>
-    %4 = cir.base_class_addr %2 : !cir.ptr<!rec_C> nonnull [0] -> !cir.ptr<!rec_B>
+    %4 = cir.base_class_addr nonnull %2 [0] : !cir.ptr<!rec_C> -> !cir.ptr<!rec_B>
     %5 = cir.vtt.address_point %3 : !cir.ptr<!cir.ptr<!void>>, offset = 1 -> !cir.ptr<!cir.ptr<!void>>
     cir.call @_ZN1BC2Ev(%4, %5) : (!cir.ptr<!rec_B>, !cir.ptr<!cir.ptr<!void>>) -> ()
     %6 = cir.vtt.address_point %3 : !cir.ptr<!cir.ptr<!void>>, offset = 0 -> !cir.ptr<!cir.ptr<!void>>
@@ -41,9 +41,9 @@ module {
     %0 = cir.alloca !cir.ptr<!rec_C>, !cir.ptr<!cir.ptr<!rec_C>>, ["this", init] {alignment = 8 : i64}
     cir.store %arg0, %0 : !cir.ptr<!rec_C>, !cir.ptr<!cir.ptr<!rec_C>>
     %1 = cir.load %0 : !cir.ptr<!cir.ptr<!rec_C>>, !cir.ptr<!rec_C>
-    %2 = cir.base_class_addr %1 : !cir.ptr<!rec_C> nonnull [0] -> !cir.ptr<!rec_A>
+    %2 = cir.base_class_addr nonnull %1 [0] : !cir.ptr<!rec_C> -> !cir.ptr<!rec_A>
     cir.call @_ZN1AC2Ev(%2) : (!cir.ptr<!rec_A>) -> ()
-    %3 = cir.base_class_addr %1 : !cir.ptr<!rec_C> nonnull [0] -> !cir.ptr<!rec_B>
+    %3 = cir.base_class_addr nonnull %1 [0] : !cir.ptr<!rec_C> -> !cir.ptr<!rec_B>
     %4 = cir.vtt.address_point @_ZTT1C, offset = 1 -> !cir.ptr<!cir.ptr<!void>>
     cir.call @_ZN1BC2Ev(%3, %4) : (!cir.ptr<!rec_B>, !cir.ptr<!cir.ptr<!void>>) -> ()
     %5 = cir.vtable.address_point(@_ZTV1C, address_point = <index = 0, offset = 3>) : !cir.vptr

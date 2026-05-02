@@ -38,7 +38,7 @@ struct HasThings : Base {
 // CIR-NEXT:  %[[THIS_LOAD:.*]] = cir.load %[[THIS_ALLOC]] : !cir.ptr<!cir.ptr<!rec_HasThings>>, !cir.ptr<!rec_HasThings>
 // CIR-NEXT:  cir.scope {
 // CIR-NEXT:    cir.try {
-// CIR-NEXT:      %[[BASE_ADDR:.*]] = cir.base_class_addr %[[THIS_LOAD]] : !cir.ptr<!rec_HasThings> nonnull [0] -> !cir.ptr<!rec_Base>
+// CIR-NEXT:      %[[BASE_ADDR:.*]] = cir.base_class_addr nonnull %[[THIS_LOAD]] [0] : !cir.ptr<!rec_HasThings> -> !cir.ptr<!rec_Base>
 // CIR-NEXT:      cir.call @_ZN4BaseC2Ev(%[[BASE_ADDR]]) : (!cir.ptr<!rec_Base>{{.*}}) -> ()
 // CIR-NEXT:      %[[FROMCTOR_ADDR:.*]] = cir.cast bitcast %[[THIS_LOAD]] : !cir.ptr<!rec_HasThings> -> !cir.ptr<!rec_FromCtor>
 // CIR-NEXT:      %[[C_LOAD:.*]] = cir.load %[[C_ALLOC]] : !cir.ptr<!cir.ptr<!rec_Ctor>>, !cir.ptr<!rec_Ctor>
