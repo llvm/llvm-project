@@ -112,8 +112,8 @@ Value *tryToCast(IRBTy &IRB, Value *V, Type *Ty, const DataLayout &DL,
 }
 
 /// Get a constant integer/boolean of type \p IT and value \p Val.
-template <typename Ty> Constant *getCI(Type *IT, Ty Val) {
-  return ConstantInt::get(IT, Val);
+template <typename Ty> Constant *getCI(Type *IT, Ty Val, bool IsSigned=false) {
+  return ConstantInt::get(IT, Val, IsSigned);
 }
 
 /// The core of the instrumentor pass, which instruments the module as the
@@ -337,7 +337,7 @@ Value *InstrumentationOpportunity::getIdPre(Value &V, Type &Ty,
 Value *InstrumentationOpportunity::getIdPost(Value &V, Type &Ty,
                                              InstrumentationConfig &IConf,
                                              InstrumentorIRBuilderTy &IIRB) {
-  return getCI(&Ty, -getIdFromEpoch(IIRB.Epoch));
+  return getCI(&Ty, -getIdFromEpoch(IIRB.Epoch), /*IsSigned=*/true);
 }
 
 Value *InstrumentationOpportunity::forceCast(Value &V, Type &Ty,
