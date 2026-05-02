@@ -41,7 +41,6 @@ void ExecutorBase::reportImmediateUBString(StringRef Msg) {
     return;
   dumpStackTrace();
   requestProgramExit(ProgramExitInfo::ProgramExitKind::Failed);
-  // TODO: Provide stack trace information.
   Handler.onImmediateUB(Msg);
 }
 
