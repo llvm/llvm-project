@@ -1753,7 +1753,6 @@ class LongBccPseudo : Pseudo<(outs),
   let hasSideEffects = 0;
   let mayStore = 0;
   let mayLoad = 0;
-  let isAsmParserOnly = 1;
   let hasNoSchedulingInfo = 1;
 }
 
@@ -1767,7 +1766,6 @@ class LongBcciPseudo<DAGOperand InTyImm, int size>
   let hasSideEffects = 0;
   let mayStore = 0;
   let mayLoad = 0;
-  let isAsmParserOnly = 1;
   let hasNoSchedulingInfo = 1;
 }
 
