@@ -2983,19 +2983,8 @@ genACCHostDataOp(Fortran::lower::AbstractConverter &converter,
               std::get_if<Fortran::parser::AccClause::UseDevice>(&clause.u)) {
         const Fortran::parser::AccObjectList &objectList{useDevice->v};
         for (const auto &accObject : objectList.v) {
-          const Fortran::semantics::Symbol *newSym = nullptr;
-          if (const auto *designator =
-                  std::get_if<Fortran::parser::Designator>(&accObject.u)) {
-            if (const auto *name =
-                    Fortran::parser::GetDesignatorNameIfDataRef(*designator)) {
-              newSym = name->symbol;
-            } else {
-              newSym = Fortran::parser::GetFirstName(*designator).symbol;
-            }
-          } else if (const auto *name =
-                         std::get_if<Fortran::parser::Name>(&accObject.u)) {
-            newSym = name->symbol;
-          }
+          const Fortran::semantics::Symbol *newSym =
+              Fortran::parser::GetFirstName(accObject).symbol;
           if (newSym) {
             const Fortran::semantics::Symbol *origSym =
                 localSymbols.lookupSymbolByName(newSym->name().ToString());
