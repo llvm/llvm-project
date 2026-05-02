@@ -7624,8 +7624,8 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
 
   // For C.
   if (!Ctx.getLangOpts().CPlusPlus) {
-    if (VD->getAnyInitializer() && DeclType.isConstant(Ctx.getASTContext()) &&
-        !VD->isWeak())
+    if (VD->getInit() && DeclType.isConstant(Ctx.getASTContext()) &&
+        !VD->isWeak() && VD->evaluateValue())
       return revisit(VD, /*IsConstexprUnknown=*/false);
     return this->emitDummyPtr(D, E);
   }
