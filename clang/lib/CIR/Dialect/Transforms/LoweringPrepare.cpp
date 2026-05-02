@@ -2360,11 +2360,10 @@ void LoweringPreparePass::buildCUDARegisterGlobalFunctions(
     if (isHIP) {
       // Under HIP, the kernel-handle is a GlobalOp shadow created by CIR
       // codegen and named with the kernel-reference mangled name (e.g.
-      // `@_Z2fnv` pointing at the device-stub function `_Z17__device_stub__fnv`).
-      // The CUDAKernelNameAttr on the device-stub uses the same name, so we
-      // can resolve the shadow by symbol lookup.
-      auto funcHandle =
-          cast<GlobalOp>(mlirModule.lookupSymbol(kernelName));
+      // `@_Z2fnv` pointing at the device-stub function
+      // `_Z17__device_stub__fnv`). The CUDAKernelNameAttr on the device-stub
+      // uses the same name, so we can resolve the shadow by symbol lookup.
+      auto funcHandle = cast<GlobalOp>(mlirModule.lookupSymbol(kernelName));
       mlir::Value hostFunc =
           builder.createBitcast(builder.createGetGlobal(funcHandle), voidPtrTy);
       builder.createCallOp(
