@@ -297,6 +297,15 @@ cl::opt<unsigned> NumberOfStoresToPredicate(
     "vectorize-num-stores-pred", cl::init(1), cl::Hidden,
     cl::desc("Max number of stores to be predicated behind an if."));
 
+static cl::opt<unsigned> VectorizeSCEVCheckThreshold(
+    "vectorize-scev-check-threshold", cl::init(16), cl::Hidden,
+    cl::desc("The maximum number of SCEV checks allowed."));
+
+static cl::opt<unsigned> PragmaVectorizeSCEVCheckThreshold(
+    "pragma-vectorize-scev-check-threshold", cl::init(128), cl::Hidden,
+    cl::desc("The maximum number of SCEV checks allowed with a "
+             "vectorize(enable) pragma"));
+
 static cl::opt<bool> EnableIndVarRegisterHeur(
     "enable-ind-var-reg-heur", cl::init(true), cl::Hidden,
     cl::desc("Count the induction variable only once when interleaving"));
@@ -6837,6 +6846,20 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
 
   RUN_VPLAN_PASS(VPlanTransforms::simplifyRecipes, *VPlan0);
   RUN_VPLAN_PASS(VPlanTransforms::removeDeadRecipes, *VPlan0);
+
+  // Add surviving induction predicates to PSE and check constraints.
+  bool ForceVectorization = Hints.getForce() == LoopVectorizeHints::FK_Enabled;
+  bool NoEpilogueAllowed =
+      !ForceVectorization &&
+      (CM.EpilogueLoweringStatus == CM_EpilogueNotAllowedOptSize ||
+       CM.EpilogueLoweringStatus == CM_EpilogueNotAllowedLowTripLoop);
+  unsigned SCEVCheckThreshold = ForceVectorization
+                                    ? PragmaVectorizeSCEVCheckThreshold
+                                    : VectorizeSCEVCheckThreshold;
+  if (!RUN_VPLAN_PASS(VPlanTransforms::finalizeSCEVPredicates, *VPlan0, PSE,
+                      NoEpilogueAllowed, SCEVCheckThreshold, ORE, OrigLoop))
+    return;
+
   // If we're vectorizing a loop with an uncountable exit, make sure that the
   // recipes are safe to handle.
   // TODO: Remove this once we can properly check the VPlan itself for both
