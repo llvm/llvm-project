@@ -21,10 +21,9 @@
 
 template <class T>
 void test_notify_one_weak() {
-  using libcxx_atomic_smart_ptr_test::SpValues;
   std::atomic<std::weak_ptr<T>> a;
 
-  ASSERT_NOEXCEPT(a.notify_one());
+  static_assert(noexcept(a.notify_one()));
 
 #if __cpp_lib_atomic_wait >= 201907L
   auto sp1             = SpValues<T>::state_a();
@@ -49,9 +48,12 @@ void test_notify_one_weak() {
 #endif
 }
 
+template <class T>
+struct TestNotifyOneWeak {
+  void operator()() const { test_notify_one_weak<T>(); }
+};
+
 int main(int, char**) {
-#define LIBCXX_ATOMIC_SP_RUN_W_N1(T) test_notify_one_weak<T>();
-  LIBCXX_ATOMIC_SP_FOR_ALL_RUNTIME_TYPES(LIBCXX_ATOMIC_SP_RUN_W_N1)
-#undef LIBCXX_ATOMIC_SP_RUN_W_N1
+  ForEachSmartPtrType{}.template operator()<TestNotifyOneWeak>();
   return 0;
 }

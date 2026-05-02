@@ -45,17 +45,20 @@ void traits() {
   }
 
   {
-    auto p = libcxx_atomic_smart_ptr_test::SpValues<T>::state_a();
+    auto p = SpValues<T>::state_a();
     A a((std::shared_ptr<T>(p)));
     assert(a.load().get() == p.get());
     assert(*a.load() == *p);
   }
 }
 
+template <class T>
+struct TestTraitsShared {
+  void operator()() const { traits<T>(); }
+};
+
 int main(int, char**) {
-#define LIBCXX_ATOMIC_SP_RUN_TRAITS(T) traits<T>();
-  LIBCXX_ATOMIC_SP_FOR_ALL_RUNTIME_TYPES(LIBCXX_ATOMIC_SP_RUN_TRAITS)
-#undef LIBCXX_ATOMIC_SP_RUN_TRAITS
+  ForEachSmartPtrType{}.template operator()<TestTraitsShared>();
 
   {
     static_assert(std::is_nothrow_constructible_v<std::atomic<std::shared_ptr<int>>, std::nullptr_t>);

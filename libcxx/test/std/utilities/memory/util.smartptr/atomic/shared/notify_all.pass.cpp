@@ -21,10 +21,9 @@
 
 template <class T>
 void test_notify_all() {
-  using libcxx_atomic_smart_ptr_test::SpValues;
   std::atomic<std::shared_ptr<T>> a;
 
-  ASSERT_NOEXCEPT(a.notify_all());
+  static_assert(noexcept(a.notify_all()));
 
 #if __cpp_lib_atomic_wait >= 201907L
   auto p1 = SpValues<T>::state_a();
@@ -59,9 +58,12 @@ void test_notify_all() {
 #endif
 }
 
+template <class T>
+struct TestNotifyAll {
+  void operator()() const { test_notify_all<T>(); }
+};
+
 int main(int, char**) {
-#define LIBCXX_ATOMIC_SP_RUN_NOTIFY_ALL(T) test_notify_all<T>();
-  LIBCXX_ATOMIC_SP_FOR_ALL_RUNTIME_TYPES(LIBCXX_ATOMIC_SP_RUN_NOTIFY_ALL)
-#undef LIBCXX_ATOMIC_SP_RUN_NOTIFY_ALL
+  ForEachSmartPtrType{}.template operator()<TestNotifyAll>();
   return 0;
 }

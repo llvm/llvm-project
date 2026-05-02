@@ -11,14 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LIBCXX_TEST_STD_UTILITIES_MEMORY_UTIL_SMARTPTR_ATOMIC_ATOMIC_SMART_PTR_TEST_TYPES_H
-#define LIBCXX_TEST_STD_UTILITIES_MEMORY_UTIL_SMARTPTR_ATOMIC_ATOMIC_SMART_PTR_TEST_TYPES_H
+#ifndef TEST_STD_UTILITIES_MEMORY_UTIL_SMARTPTR_ATOMIC_ATOMIC_SMART_PTR_TEST_TYPES_H
+#define TEST_STD_UTILITIES_MEMORY_UTIL_SMARTPTR_ATOMIC_ATOMIC_SMART_PTR_TEST_TYPES_H
 
 #include <cstdint>
 #include <memory>
 #include <string>
-
-namespace libcxx_atomic_smart_ptr_test {
 
 // --- User-defined and semi-random scalar-like types ---------------------------------
 
@@ -88,15 +86,16 @@ struct SpValues<Flag> {
   static std::shared_ptr<Flag> state_c() { return std::make_shared<Flag>(Flag::On); }
 };
 
-} // namespace libcxx_atomic_smart_ptr_test
+struct ForEachSmartPtrType {
+  template <template <class> class Fn>
+  void operator()() const {
+    Fn<int>{}();
+    Fn<double>{}();
+    Fn<std::string>{}();
+    Fn<TrackedPod>{}();
+    Fn<Handle>{}();
+    Fn<Flag>{}();
+  }
+};
 
-// Instantiate the same runtime coverage for every value type.
-#define LIBCXX_ATOMIC_SP_FOR_ALL_RUNTIME_TYPES(M)                                                                      \
-  M(int)                                                                                                               \
-  M(double)                                                                                                            \
-  M(std::string)                                                                                                       \
-  M(libcxx_atomic_smart_ptr_test::TrackedPod)                                                                          \
-  M(libcxx_atomic_smart_ptr_test::Handle)                                                                              \
-  M(libcxx_atomic_smart_ptr_test::Flag)
-
-#endif // LIBCXX_TEST_STD_UTILITIES_MEMORY_UTIL_SMARTPTR_ATOMIC_ATOMIC_SMART_PTR_TEST_TYPES_H
+#endif // TEST_STD_UTILITIES_MEMORY_UTIL_SMARTPTR_ATOMIC_ATOMIC_SMART_PTR_TEST_TYPES_H

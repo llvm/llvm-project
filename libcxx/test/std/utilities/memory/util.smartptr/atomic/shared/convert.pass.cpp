@@ -20,7 +20,7 @@
 
 template <class T>
 void test_convert() {
-  auto p = libcxx_atomic_smart_ptr_test::SpValues<T>::state_a();
+  auto p = SpValues<T>::state_a();
   const std::atomic<std::shared_ptr<T>> a((std::shared_ptr<T>(p)));
 
   std::shared_ptr<T> s = a;
@@ -30,12 +30,15 @@ void test_convert() {
   std::same_as<std::shared_ptr<T>> decltype(auto) s2 = static_cast<std::shared_ptr<T>>(a);
   assert(s2.get() == p.get());
 
-  ASSERT_NOEXCEPT(static_cast<std::shared_ptr<T>>(a));
+  static_assert(noexcept(static_cast<std::shared_ptr<T>>(a)));
 }
 
+template <class T>
+struct TestConvert {
+  void operator()() const { test_convert<T>(); }
+};
+
 int main(int, char**) {
-#define LIBCXX_ATOMIC_SP_RUN_CONVERT(T) test_convert<T>();
-  LIBCXX_ATOMIC_SP_FOR_ALL_RUNTIME_TYPES(LIBCXX_ATOMIC_SP_RUN_CONVERT)
-#undef LIBCXX_ATOMIC_SP_RUN_CONVERT
+  ForEachSmartPtrType{}.template operator()<TestConvert>();
   return 0;
 }

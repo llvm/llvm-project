@@ -21,7 +21,6 @@
 
 template <class T>
 void test_wait_weak() {
-  using libcxx_atomic_smart_ptr_test::SpValues;
   std::atomic<std::weak_ptr<T>> a;
 
 #if __cpp_lib_atomic_wait >= 201907L
@@ -53,12 +52,15 @@ void test_wait_weak() {
   }
 #endif
 
-  ASSERT_NOEXCEPT(a.wait(std::weak_ptr<T>(), std::memory_order_seq_cst));
+  static_assert(noexcept(a.wait(std::weak_ptr<T>(), std::memory_order_seq_cst)));
 }
 
+template <class T>
+struct TestWaitWeak {
+  void operator()() const { test_wait_weak<T>(); }
+};
+
 int main(int, char**) {
-#define LIBCXX_ATOMIC_SP_RUN_W_WAIT(T) test_wait_weak<T>();
-  LIBCXX_ATOMIC_SP_FOR_ALL_RUNTIME_TYPES(LIBCXX_ATOMIC_SP_RUN_W_WAIT)
-#undef LIBCXX_ATOMIC_SP_RUN_W_WAIT
+  ForEachSmartPtrType{}.template operator()<TestWaitWeak>();
   return 0;
 }

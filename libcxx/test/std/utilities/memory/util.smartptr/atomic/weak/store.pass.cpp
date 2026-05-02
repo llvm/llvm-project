@@ -20,7 +20,6 @@
 
 template <class T>
 void test_store_weak() {
-  using libcxx_atomic_smart_ptr_test::SpValues;
   auto sp1             = SpValues<T>::state_a();
   auto sp2             = SpValues<T>::state_b();
   std::weak_ptr<T> wp1 = sp1;
@@ -39,12 +38,15 @@ void test_store_weak() {
     assert(locked && *locked == *sp2);
   }
 
-  ASSERT_NOEXCEPT(a.store(std::weak_ptr<T>(wp1)));
+  static_assert(noexcept(a.store(std::weak_ptr<T>(wp1))));
 }
 
+template <class T>
+struct TestStoreWeak {
+  void operator()() const { test_store_weak<T>(); }
+};
+
 int main(int, char**) {
-#define LIBCXX_ATOMIC_SP_RUN_W_STORE(T) test_store_weak<T>();
-  LIBCXX_ATOMIC_SP_FOR_ALL_RUNTIME_TYPES(LIBCXX_ATOMIC_SP_RUN_W_STORE)
-#undef LIBCXX_ATOMIC_SP_RUN_W_STORE
+  ForEachSmartPtrType{}.template operator()<TestStoreWeak>();
   return 0;
 }

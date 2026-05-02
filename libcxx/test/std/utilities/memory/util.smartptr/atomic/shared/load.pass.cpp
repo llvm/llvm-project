@@ -20,25 +20,27 @@
 template <class T>
 void check(const std::atomic<std::shared_ptr<T>>& asp) {
   std::same_as<std::shared_ptr<T>> decltype(auto) no_arg = asp.load();
-  ASSERT_SAME_TYPE(decltype(asp.load()), std::shared_ptr<T>);
-  ASSERT_NOEXCEPT(asp.load());
+  static_assert(noexcept(asp.load()));
 
   std::same_as<std::shared_ptr<T>> decltype(auto) with_order = asp.load(std::memory_order_seq_cst);
-  ASSERT_SAME_TYPE(decltype(asp.load(std::memory_order_acquire)), std::shared_ptr<T>);
-  ASSERT_NOEXCEPT(asp.load(std::memory_order_seq_cst));
+  static_assert(noexcept(asp.load(std::memory_order_seq_cst)));
   static_cast<void>(no_arg);
   static_cast<void>(with_order);
 
   {
     const std::atomic<std::shared_ptr<T>> const_a;
     static_assert(noexcept(const_a.load()));
-    ASSERT_SAME_TYPE(decltype(const_a.load()), std::shared_ptr<T>);
+    std::same_as<std::shared_ptr<T>> decltype(auto) loaded = const_a.load();
+    (void)loaded;
   }
 }
 
+template <class T>
+struct TestLoadShared {
+  void operator()() const { check<T>(std::atomic<std::shared_ptr<T>>()); }
+};
+
 int main(int, char**) {
-#define LIBCXX_ATOMIC_SP_RUN_LOAD(T) check<T>(std::atomic<std::shared_ptr<T>>());
-  LIBCXX_ATOMIC_SP_FOR_ALL_RUNTIME_TYPES(LIBCXX_ATOMIC_SP_RUN_LOAD)
-#undef LIBCXX_ATOMIC_SP_RUN_LOAD
+  ForEachSmartPtrType{}.template operator()<TestLoadShared>();
   return 0;
 }

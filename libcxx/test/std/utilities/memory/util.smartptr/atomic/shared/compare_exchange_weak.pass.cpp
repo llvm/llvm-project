@@ -21,7 +21,6 @@
 
 template <class T>
 void test_compare_exchange_weak() {
-  using libcxx_atomic_smart_ptr_test::SpValues;
   auto p1 = SpValues<T>::state_a();
   auto p2 = SpValues<T>::state_b();
   std::atomic<std::shared_ptr<T>> a((std::shared_ptr<T>(p1)));
@@ -33,7 +32,7 @@ void test_compare_exchange_weak() {
       ok = a.compare_exchange_weak(expected, std::shared_ptr<T>(p2));
     assert(ok);
     assert(*a.load() == *p2);
-    ASSERT_NOEXCEPT(a.compare_exchange_weak(expected, std::shared_ptr<T>(p2)));
+    static_assert(noexcept(a.compare_exchange_weak(expected, std::shared_ptr<T>(p2))));
   }
 
   {
@@ -56,9 +55,12 @@ void test_compare_exchange_weak() {
   }
 }
 
+template <class T>
+struct TestCompareExchangeWeak {
+  void operator()() const { test_compare_exchange_weak<T>(); }
+};
+
 int main(int, char**) {
-#define LIBCXX_ATOMIC_SP_RUN_CXW(T) test_compare_exchange_weak<T>();
-  LIBCXX_ATOMIC_SP_FOR_ALL_RUNTIME_TYPES(LIBCXX_ATOMIC_SP_RUN_CXW)
-#undef LIBCXX_ATOMIC_SP_RUN_CXW
+  ForEachSmartPtrType{}.template operator()<TestCompareExchangeWeak>();
   return 0;
 }

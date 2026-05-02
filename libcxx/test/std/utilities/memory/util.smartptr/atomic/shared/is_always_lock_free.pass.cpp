@@ -20,21 +20,24 @@
 
 template <class T>
 void check() {
-  using A = std::atomic<std::weak_ptr<T>>;
+  using A = std::atomic<std::shared_ptr<T>>;
 
   static_assert(std::same_as<decltype(A::is_always_lock_free), const bool>);
-  static_assert(A::is_always_lock_free == false);
+  static_assert(!static_cast<bool>(A::is_always_lock_free));
 
-  const A awp;
-  std::same_as<bool> decltype(auto) lf = awp.is_lock_free();
+  const A asp;
+  std::same_as<bool> decltype(auto) lf = asp.is_lock_free();
   (void)lf;
-  ASSERT_NOEXCEPT(A::is_always_lock_free);
-  ASSERT_NOEXCEPT(awp.is_lock_free());
+  static_assert(noexcept(A::is_always_lock_free));
+  static_assert(noexcept(asp.is_lock_free()));
 }
 
+template <class T>
+struct TestIsAlwaysLockFreeShared {
+  void operator()() const { check<T>(); }
+};
+
 int main(int, char**) {
-#define LIBCXX_ATOMIC_SP_RUN_W_IALF(T) check<T>();
-  LIBCXX_ATOMIC_SP_FOR_ALL_RUNTIME_TYPES(LIBCXX_ATOMIC_SP_RUN_W_IALF)
-#undef LIBCXX_ATOMIC_SP_RUN_W_IALF
+  ForEachSmartPtrType{}.template operator()<TestIsAlwaysLockFreeShared>();
   return 0;
 }

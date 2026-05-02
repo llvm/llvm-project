@@ -21,7 +21,6 @@
 
 template <class T>
 void test_wait() {
-  using libcxx_atomic_smart_ptr_test::SpValues;
   std::atomic<std::shared_ptr<T>> a;
 
 #if __cpp_lib_atomic_wait >= 201907L
@@ -47,12 +46,15 @@ void test_wait() {
   assert(*a.load() == *SpValues<T>::state_c());
 #endif
 
-  ASSERT_NOEXCEPT(a.wait(std::shared_ptr<T>(), std::memory_order_seq_cst));
+  static_assert(noexcept(a.wait(std::shared_ptr<T>(), std::memory_order_seq_cst)));
 }
 
+template <class T>
+struct TestWait {
+  void operator()() const { test_wait<T>(); }
+};
+
 int main(int, char**) {
-#define LIBCXX_ATOMIC_SP_RUN_WAIT(T) test_wait<T>();
-  LIBCXX_ATOMIC_SP_FOR_ALL_RUNTIME_TYPES(LIBCXX_ATOMIC_SP_RUN_WAIT)
-#undef LIBCXX_ATOMIC_SP_RUN_WAIT
+  ForEachSmartPtrType{}.template operator()<TestWait>();
   return 0;
 }

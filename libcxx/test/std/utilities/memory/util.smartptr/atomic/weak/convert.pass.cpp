@@ -20,7 +20,6 @@
 
 template <class T>
 void test_convert_weak() {
-  using libcxx_atomic_smart_ptr_test::SpValues;
   auto sp             = SpValues<T>::state_a();
   std::weak_ptr<T> wp = sp;
   const std::atomic<std::weak_ptr<T>> a((std::weak_ptr<T>(wp)));
@@ -33,12 +32,15 @@ void test_convert_weak() {
   auto locked2                                     = w2.lock();
   assert(locked2 && *locked2 == *sp);
 
-  ASSERT_NOEXCEPT(static_cast<std::weak_ptr<T>>(a));
+  static_assert(noexcept(static_cast<std::weak_ptr<T>>(a)));
 }
 
+template <class T>
+struct TestConvertWeak {
+  void operator()() const { test_convert_weak<T>(); }
+};
+
 int main(int, char**) {
-#define LIBCXX_ATOMIC_SP_RUN_W_CONVERT(T) test_convert_weak<T>();
-  LIBCXX_ATOMIC_SP_FOR_ALL_RUNTIME_TYPES(LIBCXX_ATOMIC_SP_RUN_W_CONVERT)
-#undef LIBCXX_ATOMIC_SP_RUN_W_CONVERT
+  ForEachSmartPtrType{}.template operator()<TestConvertWeak>();
   return 0;
 }

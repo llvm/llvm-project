@@ -22,19 +22,22 @@
 template <class T>
 void test_assign() {
   std::atomic<std::shared_ptr<T>> a;
-  auto p = libcxx_atomic_smart_ptr_test::SpValues<T>::state_a();
+  auto p = SpValues<T>::state_a();
   a      = std::shared_ptr<T>(p);
   assert(a.load().get() == p.get());
   assert(*a.load() == *p);
   a = nullptr;
   assert(!a.load());
-  ASSERT_NOEXCEPT(a = nullptr);
-  ASSERT_NOEXCEPT(a = std::shared_ptr<T>(p));
+  static_assert(noexcept(a = nullptr));
+  static_assert(noexcept(a = std::shared_ptr<T>(p)));
 }
 
+template <class T>
+struct TestAssign {
+  void operator()() const { test_assign<T>(); }
+};
+
 int main(int, char**) {
-#define LIBCXX_ATOMIC_SP_RUN_ASSIGN(T) test_assign<T>();
-  LIBCXX_ATOMIC_SP_FOR_ALL_RUNTIME_TYPES(LIBCXX_ATOMIC_SP_RUN_ASSIGN)
-#undef LIBCXX_ATOMIC_SP_RUN_ASSIGN
+  ForEachSmartPtrType{}.template operator()<TestAssign>();
   return 0;
 }

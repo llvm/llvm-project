@@ -20,25 +20,27 @@
 template <class T>
 void check(const std::atomic<std::weak_ptr<T>>& awp) {
   std::same_as<std::weak_ptr<T>> decltype(auto) no_arg = awp.load();
-  ASSERT_SAME_TYPE(decltype(awp.load()), std::weak_ptr<T>);
-  ASSERT_NOEXCEPT(awp.load());
+  static_assert(noexcept(awp.load()));
 
   std::same_as<std::weak_ptr<T>> decltype(auto) with_order = awp.load(std::memory_order_seq_cst);
-  ASSERT_SAME_TYPE(decltype(awp.load(std::memory_order_acquire)), std::weak_ptr<T>);
-  ASSERT_NOEXCEPT(awp.load(std::memory_order_seq_cst));
+  static_assert(noexcept(awp.load(std::memory_order_seq_cst)));
   static_cast<void>(no_arg);
   static_cast<void>(with_order);
 
   {
     const std::atomic<std::weak_ptr<T>> const_a;
     static_assert(noexcept(const_a.load()));
-    ASSERT_SAME_TYPE(decltype(const_a.load()), std::weak_ptr<T>);
+    std::same_as<std::weak_ptr<T>> decltype(auto) loaded = const_a.load();
+    (void)loaded;
   }
 }
 
+template <class T>
+struct TestLoadWeak {
+  void operator()() const { check<T>(std::atomic<std::weak_ptr<T>>()); }
+};
+
 int main(int, char**) {
-#define LIBCXX_ATOMIC_SP_RUN_W_LOAD(T) check<T>(std::atomic<std::weak_ptr<T>>());
-  LIBCXX_ATOMIC_SP_FOR_ALL_RUNTIME_TYPES(LIBCXX_ATOMIC_SP_RUN_W_LOAD)
-#undef LIBCXX_ATOMIC_SP_RUN_W_LOAD
+  ForEachSmartPtrType{}.template operator()<TestLoadWeak>();
   return 0;
 }

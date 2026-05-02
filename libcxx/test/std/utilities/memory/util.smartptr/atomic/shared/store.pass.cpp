@@ -20,7 +20,6 @@
 
 template <class T>
 void test_store() {
-  using libcxx_atomic_smart_ptr_test::SpValues;
   std::atomic<std::shared_ptr<T>> a;
 
   auto p = SpValues<T>::state_a();
@@ -34,16 +33,19 @@ void test_store() {
   a.store(nullptr, std::memory_order_relaxed);
   assert(!a.load());
 
-  ASSERT_NOEXCEPT(a.store(nullptr));
+  static_assert(noexcept(a.store(nullptr)));
   {
     std::shared_ptr<T> desired = std::make_shared<T>(*SpValues<T>::state_c());
-    ASSERT_NOEXCEPT(a.store(std::move(desired), std::memory_order_seq_cst));
+    static_assert(noexcept(a.store(std::move(desired), std::memory_order_seq_cst)));
   }
 }
 
+template <class T>
+struct TestStore {
+  void operator()() const { test_store<T>(); }
+};
+
 int main(int, char**) {
-#define LIBCXX_ATOMIC_SP_RUN_STORE(T) test_store<T>();
-  LIBCXX_ATOMIC_SP_FOR_ALL_RUNTIME_TYPES(LIBCXX_ATOMIC_SP_RUN_STORE)
-#undef LIBCXX_ATOMIC_SP_RUN_STORE
+  ForEachSmartPtrType{}.template operator()<TestStore>();
   return 0;
 }

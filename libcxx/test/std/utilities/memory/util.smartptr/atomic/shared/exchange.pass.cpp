@@ -20,7 +20,6 @@
 
 template <class T>
 void test_exchange() {
-  using libcxx_atomic_smart_ptr_test::SpValues;
   auto p1 = SpValues<T>::state_a();
   auto p2 = SpValues<T>::state_b();
   std::atomic<std::shared_ptr<T>> a((std::shared_ptr<T>(p1)));
@@ -34,12 +33,15 @@ void test_exchange() {
   assert(*out == *p2);
   assert(!a.load());
 
-  ASSERT_NOEXCEPT(a.exchange(nullptr));
+  static_assert(noexcept(a.exchange(nullptr)));
 }
 
+template <class T>
+struct TestExchange {
+  void operator()() const { test_exchange<T>(); }
+};
+
 int main(int, char**) {
-#define LIBCXX_ATOMIC_SP_RUN_EXCHANGE(T) test_exchange<T>();
-  LIBCXX_ATOMIC_SP_FOR_ALL_RUNTIME_TYPES(LIBCXX_ATOMIC_SP_RUN_EXCHANGE)
-#undef LIBCXX_ATOMIC_SP_RUN_EXCHANGE
+  ForEachSmartPtrType{}.template operator()<TestExchange>();
   return 0;
 }

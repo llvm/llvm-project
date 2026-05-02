@@ -46,7 +46,7 @@ void traits() {
   }
 
   {
-    auto sp             = libcxx_atomic_smart_ptr_test::SpValues<T>::state_a();
+    auto sp             = SpValues<T>::state_a();
     std::weak_ptr<T> wp = sp;
     A a((std::weak_ptr<T>(wp)));
     auto locked = a.load().lock();
@@ -54,9 +54,12 @@ void traits() {
   }
 }
 
+template <class T>
+struct TestTraitsWeak {
+  void operator()() const { traits<T>(); }
+};
+
 int main(int, char**) {
-#define LIBCXX_ATOMIC_SP_RUN_W_TRAITS(T) traits<T>();
-  LIBCXX_ATOMIC_SP_FOR_ALL_RUNTIME_TYPES(LIBCXX_ATOMIC_SP_RUN_W_TRAITS)
-#undef LIBCXX_ATOMIC_SP_RUN_W_TRAITS
+  ForEachSmartPtrType{}.template operator()<TestTraitsWeak>();
   return 0;
 }
