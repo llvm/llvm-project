@@ -3489,12 +3489,8 @@ void VPlanTransforms::dropPoisonGeneratingRecipes(
           const InterleaveGroup<Instruction> *InterGroup =
               InterleaveRec->getInterleaveGroup();
           bool NeedPredication = false;
-          for (int I = 0, NumMembers = InterGroup->getNumMembers();
-               I < NumMembers; ++I) {
-            Instruction *Member = InterGroup->getMember(I);
-            if (Member)
-              NeedPredication |= BlockNeedsPredication(Member->getParent());
-          }
+          for (Instruction *Member : InterGroup->members())
+            NeedPredication |= BlockNeedsPredication(Member->getParent());
 
           if (NeedPredication)
             CollectPoisonGeneratingInstrsInBackwardSlice(AddrDef);
