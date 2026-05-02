@@ -121,8 +121,10 @@ class IntElementsAttrAllValuesAtLeast<int minValue> : AttrConstraint<
         minValue # "; })">,
   "all values must be >= " # minValue>;
 
-def SPIRV_PositiveInt32_1DTensorArmOfLength2Attr : ConfinedAttr<RankedI32ElementsAttr<[2]>, [SPIRV_DenseElementAttrsWithTensorArmType, IntElementsAttrAllValuesAtLeast<1>]>;
-def SPIRV_NonNegativeInt32_1DTensorArmOfLength4Attr : ConfinedAttr<RankedI32ElementsAttr<[4]>, [SPIRV_DenseElementAttrsWithTensorArmType, IntElementsAttrAllValuesAtLeast<0>]>;
+def SPIRV_PositiveI32_1DTensorArmOfLength2Attr : ConfinedAttr<RankedI32ElementsAttr<[2]>, [SPIRV_DenseElementAttrsWithTensorArmType, IntElementsAttrAllValuesAtLeast<1>]>;
+def SPIRV_PositiveI32_1DTensorArmOfLength3Attr : ConfinedAttr<RankedI32ElementsAttr<[3]>, [SPIRV_DenseElementAttrsWithTensorArmType, IntElementsAttrAllValuesAtLeast<1>]>;
+def SPIRV_NonNegativeI32_1DTensorArmOfLength4Attr : ConfinedAttr<RankedI32ElementsAttr<[4]>, [SPIRV_DenseElementAttrsWithTensorArmType, IntElementsAttrAllValuesAtLeast<0>]>;
+def SPIRV_NonNegativeI32_1DTensorArmOfLength6Attr : ConfinedAttr<RankedI32ElementsAttr<[6]>, [SPIRV_DenseElementAttrsWithTensorArmType, IntElementsAttrAllValuesAtLeast<0>]>;
 
 class Is1DTensorArmAttrOfLength<list<int> allowedLengths> :
   AttrConstraint<And<[CPred<[{::llvm::cast<::mlir::spirv::TensorArmType>(::llvm::cast<::mlir::DenseElementsAttr>($_self).getType()).getShape().size() == 1 }]>,
@@ -204,15 +206,46 @@ class MatchBroadcastableShapes<string input1, string input2, string output>:
     "})">]>
   >;
 
+class DimOf<string input, int dim> :
+  StrFunc<"::llvm::cast<::mlir::ShapedType>($" # input #
+          ".getType()).getDimSize(" # dim # ")">;
+
+class DimIsDynamic<string input, int dim> :
+  CPred<"::mlir::ShapedType::isDynamic(" # DimOf<input, dim>.result # ")">;
+
+class DimIsOne<string input, int dim> :
+  CPred<DimOf<input, dim>.result # " == 1">;
+
+class DimsMatch<string lhs, int lhsDim, string rhs, int rhsDim> :
+  CPred<DimOf<lhs, lhsDim>.result # " == " # DimOf<rhs, rhsDim>.result>;
+
+class ProductDimsMatch<string lhs, int lhsDim, string rhs, int rhsDim,
+                       string output, int outputDim> :
+  CPred<DimOf<lhs, lhsDim>.result # " * " # DimOf<rhs, rhsDim>.result #
+        " == " # DimOf<output, outputDim>.result>;
+
 class SameDimsOrDynamicPred<string lhs, int lhsDim, string rhs, int rhsDim> :
-  CPred<"[](::mlir::ShapedType lhsType, ::mlir::ShapedType rhsType) { "
-        "  int64_t lhsSize = lhsType.getDimSize(" # lhsDim # "); "
-        "  int64_t rhsSize = rhsType.getDimSize(" # rhsDim # "); "
-        "  return ::mlir::ShapedType::isDynamic(lhsSize) || "
-        "         ::mlir::ShapedType::isDynamic(rhsSize) || lhsSize == rhsSize; "
-        "}("
-        "::llvm::cast<::mlir::ShapedType>($" # lhs # ".getType()), "
-        "::llvm::cast<::mlir::ShapedType>($" # rhs # ".getType()))">;
+  Or<[
+    DimIsDynamic<lhs, lhsDim>,
+    DimIsDynamic<rhs, rhsDim>,
+    DimsMatch<lhs, lhsDim, rhs, rhsDim>
+  ]>;
+
+class SameDimsOrOneOrDynamicPred<string lhs, int lhsDim, string rhs, int rhsDim> :
+  Or<[
+    SameDimsOrDynamicPred<lhs, lhsDim, rhs, rhsDim>,
+    DimIsOne<lhs, lhsDim>
+  ]>;
+
+class ProductDimOrOneOrDynamicPred<string lhs, int lhsDim, string rhs,
+                                   int rhsDim, string output, int outputDim> :
+  Or<[
+    DimIsDynamic<lhs, lhsDim>,
+    DimIsDynamic<rhs, rhsDim>,
+    DimIsDynamic<output, outputDim>,
+    ProductDimsMatch<lhs, lhsDim, rhs, rhsDim, output, outputDim>,
+    DimIsOne<output, outputDim>
+  ]>;
 
 class ValuesIndicesShapesMatch<string values, string indices, string tensor>:
   PredOpTrait<"shapes of " # values # ", " # indices # ", and " # tensor #
@@ -232,6 +265,41 @@ class NHWCInputOutputShapeMatch<string input, string output>:
     And<[
       SameDimsOrDynamicPred<input, 0, output, 0>,
       SameDimsOrDynamicPred<input, 3, output, 3>
+    ]>>;
+
+
+class Conv2DShapeMatch<string input, string weight, string bias, string output>:
+  PredOpTrait<"shapes of " # input # ", " # weight # ", " # bias # ", and " #
+                  output # " must satisfy [N,IH,IW,IC], [OC,KH,KW,IC], "
+                  "[OC/1], [N,OH,OW,OC]",
+    And<[
+      SameDimsOrDynamicPred<input, 0, output, 0>,
+      SameDimsOrDynamicPred<input, 3, weight, 3>,
+      SameDimsOrDynamicPred<weight, 0, output, 3>,
+      SameDimsOrOneOrDynamicPred<bias, 0, output, 3>
+    ]>>;
+
+class Conv3DShapeMatch<string input, string weight, string bias, string output>:
+  PredOpTrait<"shapes of " # input # ", " # weight # ", " # bias # ", and " #
+                  output # " must satisfy [N,ID,IH,IW,IC], [OC,KD,KH,KW,IC], "
+                  "[OC/1], [N,OD,OH,OW,OC]",
+    And<[
+      SameDimsOrDynamicPred<input, 0, output, 0>,
+      SameDimsOrDynamicPred<input, 4, weight, 4>,
+      SameDimsOrDynamicPred<weight, 0, output, 4>,
+      SameDimsOrOneOrDynamicPred<bias, 0, output, 4>
+    ]>>;
+
+class DepthwiseConv2DShapeMatch<string input, string weight, string bias,
+                                string output>:
+  PredOpTrait<"shapes of " # input # ", " # weight # ", " # bias # ", and " #
+                  output # " must satisfy [N,IH,IW,IC], [KH,KW,IC,M], "
+                  "[IC*M/1], [N,OH,OW,IC*M]",
+    And<[
+      SameDimsOrDynamicPred<input, 0, output, 0>,
+      SameDimsOrDynamicPred<input, 3, weight, 2>,
+      ProductDimOrOneOrDynamicPred<input, 3, weight, 3, output, 3>,
+      SameDimsOrOneOrDynamicPred<bias, 0, output, 3>
     ]>>;
 
 class FetchNthIntElementsAttr<string attrName, int idx> :
