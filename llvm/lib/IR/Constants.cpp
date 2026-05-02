@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/ConstantFold.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
@@ -71,25 +72,112 @@ bool Constant::isNegativeZeroValue() const {
   return isNullValue();
 }
 
-bool Constant::isNullValue() const {
-  // 0 is null.
+// ConstantAggregateZero is always zero value. Whether it is also the null value
+// depends on whether the zero value is null value for each element type.
+static bool isZeroAggregateNullValue(Type *Ty, const DataLayout *DL) {
+  if (StructType *STy = dyn_cast<StructType>(Ty)) {
+    for (Type *EltTy : STy->elements()) {
+      if (!Constant::getZeroValue(EltTy, DL)->isNullValue(DL))
+        return false;
+    }
+    return true;
+  }
+
+  if (ArrayType *ATy = dyn_cast<ArrayType>(Ty)) {
+    if (ATy->getNumElements() == 0)
+      return true;
+    return Constant::getZeroValue(ATy->getElementType(), DL)->isNullValue(DL);
+  }
+
+  VectorType *VTy = cast<VectorType>(Ty);
+  return Constant::getZeroValue(VTy->getElementType(), DL)->isNullValue(DL);
+}
+
+template <typename AggregateType>
+static bool
+checkAllAggregateElements(const Constant *C, AggregateType *Ty,
+                          const DataLayout *DL,
+                          bool (Constant::*IsValue)(const DataLayout *) const) {
+  for (uint64_t I = 0, E = Ty->getNumElements(); I != E; ++I) {
+    Constant *Elt = C->getAggregateElement(I);
+    if (!Elt || !(Elt->*IsValue)(DL))
+      return false;
+  }
+  return true;
+}
+
+static bool
+checkAllAggregateElements(const Constant *C, const DataLayout *DL,
+                          bool (Constant::*IsValue)(const DataLayout *) const) {
+  if (StructType *STy = dyn_cast<StructType>(C->getType()))
+    return checkAllAggregateElements(C, STy, DL, IsValue);
+
+  if (ArrayType *ATy = dyn_cast<ArrayType>(C->getType()))
+    return checkAllAggregateElements(C, ATy, DL, IsValue);
+
+  FixedVectorType *VTy = cast<FixedVectorType>(C->getType());
+  return checkAllAggregateElements(C, VTy, DL, IsValue);
+}
+
+bool Constant::isNullValue(const DataLayout *DL) const {
+  if (isa<UndefValue>(this))
+    return false;
+
+  if (isa<ConstantPointerNull>(this))
+    return true;
+
+  if (isa<ConstantAggregateZero>(this))
+    return isZeroAggregateNullValue(getType(), DL);
+
+  if (getType()->isAggregateType() || isa<FixedVectorType>(getType()))
+    return checkAllAggregateElements(this, DL, &Constant::isNullValue);
+
+  if (isa<ScalableVectorType>(getType())) {
+    if (Constant *Splat = getSplatValue())
+      return Splat->isNullValue(DL);
+  }
+
+  return isZeroValue(DL);
+}
+
+bool Constant::isZeroValue(const DataLayout *DL) const {
+  if (isa<UndefValue>(this))
+    return false;
+
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(this))
     return CI->isZero();
 
-  // 0 is null.
   if (const ConstantByte *CB = dyn_cast<ConstantByte>(this))
     return CB->isZero();
 
-  // +0.0 is null.
-  if (const ConstantFP *CFP = dyn_cast<ConstantFP>(this))
+  // +0.0 is zero but -0.0 is not.
+  if (const ConstantFP *CFP = dyn_cast<ConstantFP>(this)) {
     // ppc_fp128 determine isZero using high order double only
     // Should check the bitwise value to make sure all bits are zero.
     return CFP->isExactlyValue(+0.0);
+  }
 
-  // constant zero is zero for aggregates, cpnull is null for pointers, none for
-  // tokens.
-  return isa<ConstantAggregateZero>(this) || isa<ConstantPointerNull>(this) ||
-         isa<ConstantTokenNone>(this) || isa<ConstantTargetNone>(this);
+  if (isa<ConstantAggregateZero>(this) || isa<ConstantTokenNone>(this) ||
+      isa<ConstantTargetNone>(this))
+    return true;
+
+  if (const ConstantPointerNull *CPN = dyn_cast<ConstantPointerNull>(this)) {
+    // FIXME: This should return false once the semantics of ConstantPointerNull
+    // changes.
+    if (!DL)
+      return true;
+    return DL->getNullPtrValue(CPN->getType()->getAddressSpace()).isZero();
+  }
+
+  if (getType()->isAggregateType() || isa<FixedVectorType>(getType()))
+    return checkAllAggregateElements(this, DL, &Constant::isZeroValue);
+
+  if (isa<ScalableVectorType>(getType())) {
+    if (Constant *Splat = getSplatValue())
+      return Splat->isZeroValue(DL);
+  }
+
+  return false;
 }
 
 bool Constant::isAllOnesValue() const {
@@ -386,8 +474,13 @@ bool Constant::containsConstantExpression() const {
   return false;
 }
 
-/// Constructor to create a '0' constant of arbitrary type.
-Constant *Constant::getNullValue(Type *Ty) {
+Constant *Constant::getNullValue(Type *Ty, const DataLayout *DL) {
+  // TODO: when the semantics of ConstantPointerNull changes, a null value is
+  // not necessarily a zero value.
+  return getZeroValue(Ty, DL);
+}
+
+Constant *Constant::getZeroValue(Type *Ty, const DataLayout *DL) {
   switch (Ty->getTypeID()) {
   case Type::ByteTyID:
     return ConstantByte::get(Ty, 0);

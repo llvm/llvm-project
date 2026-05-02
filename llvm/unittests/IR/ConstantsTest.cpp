@@ -10,6 +10,7 @@
 #include "llvm-c/Core.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/ConstantFold.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
@@ -866,6 +867,232 @@ TEST(ConstantsTest, Float128Test) {
   EXPECT_TRUE(val7 != nullptr);
   LLVMDisposeBuilder(Builder);
   LLVMContextDispose(C);
+}
+
+TEST(ConstantsTest, ZeroValueAPIs) {
+  LLVMContext Context;
+
+  Type *Int32Ty = Type::getInt32Ty(Context);
+  Type *FloatTy = Type::getFloatTy(Context);
+  Type *DoubleTy = Type::getDoubleTy(Context);
+  Type *PtrTy = PointerType::get(Context, /*AddressSpace=*/0);
+  Type *Ptr1Ty = PointerType::get(Context, /*AddressSpace=*/1);
+  Type *PtrVecTy = FixedVectorType::get(PtrTy, /*NumElts=*/2);
+  Type *Ptr1VecTy = FixedVectorType::get(Ptr1Ty, /*NumElts=*/2);
+  ArrayType *PtrArrayTy = ArrayType::get(PtrTy, /*NumElements=*/2);
+  ArrayType *Ptr1ArrayTy = ArrayType::get(Ptr1Ty, /*NumElements=*/2);
+  ArrayType *EmptyPtrArrayTy = ArrayType::get(PtrTy, /*NumElements=*/0);
+  StructType *StructTy = StructType::get(Int32Ty, PtrTy);
+  StructType *StructWithAS1PtrTy = StructType::get(Int32Ty, Ptr1Ty);
+  StructType *EmptyStructTy = StructType::get(Context);
+  ArrayType *ArrayTy = ArrayType::get(Int32Ty, /*NumElements=*/4);
+
+  Constant *IntZero = ConstantInt::get(Int32Ty, 0);
+  Constant *IntOne = ConstantInt::get(Int32Ty, 1);
+  Constant *FPZero = ConstantFP::get(FloatTy, 0.0);
+  Constant *FPNegZero = ConstantFP::get(FloatTy, -0.0);
+  Constant *FPOne = ConstantFP::get(FloatTy, 1.0);
+  Constant *PtrNull0 = ConstantPointerNull::get(cast<PointerType>(PtrTy));
+  Constant *PtrNull1 = ConstantPointerNull::get(cast<PointerType>(Ptr1Ty));
+  Constant *PtrVecZero = ConstantAggregateZero::get(PtrVecTy);
+  Constant *Ptr1VecZero = ConstantAggregateZero::get(Ptr1VecTy);
+  Constant *PtrArrayZero = ConstantAggregateZero::get(PtrArrayTy);
+  Constant *Ptr1ArrayZero = ConstantAggregateZero::get(Ptr1ArrayTy);
+  Constant *CAZ = ConstantAggregateZero::get(StructTy);
+  Constant *StructWithAS1PtrZero =
+      ConstantAggregateZero::get(StructWithAS1PtrTy);
+  Constant *EmptyArrayUndef = UndefValue::get(EmptyPtrArrayTy);
+  Constant *EmptyArrayPoison = PoisonValue::get(EmptyPtrArrayTy);
+  Constant *EmptyStructUndef = UndefValue::get(EmptyStructTy);
+  Constant *EmptyStructPoison = PoisonValue::get(EmptyStructTy);
+
+  // TODO: Null and zero are still the same value. The DataLayout argument is
+  // accepted by the API but is not used yet.
+  EXPECT_EQ(Constant::getZeroValue(Int32Ty), Constant::getNullValue(Int32Ty));
+  EXPECT_EQ(Constant::getZeroValue(FloatTy), Constant::getNullValue(FloatTy));
+  EXPECT_EQ(Constant::getZeroValue(PtrTy), Constant::getNullValue(PtrTy));
+  EXPECT_EQ(Constant::getZeroValue(Ptr1Ty), Constant::getNullValue(Ptr1Ty));
+  EXPECT_EQ(Constant::getZeroValue(PtrVecTy), Constant::getNullValue(PtrVecTy));
+  EXPECT_EQ(Constant::getZeroValue(Ptr1VecTy),
+            Constant::getNullValue(Ptr1VecTy));
+  EXPECT_EQ(Constant::getZeroValue(PtrArrayTy),
+            Constant::getNullValue(PtrArrayTy));
+  EXPECT_EQ(Constant::getZeroValue(Ptr1ArrayTy),
+            Constant::getNullValue(Ptr1ArrayTy));
+  EXPECT_EQ(Constant::getZeroValue(StructTy), Constant::getNullValue(StructTy));
+  EXPECT_EQ(Constant::getZeroValue(StructWithAS1PtrTy),
+            Constant::getNullValue(StructWithAS1PtrTy));
+  EXPECT_EQ(Constant::getZeroValue(ArrayTy), Constant::getNullValue(ArrayTy));
+
+  EXPECT_TRUE(IntZero->isZeroValue());
+  EXPECT_FALSE(IntOne->isZeroValue());
+  EXPECT_TRUE(FPZero->isZeroValue());
+  // -0.0 has a non-zero bit pattern (sign bit set), so it is NOT a zero value.
+  EXPECT_FALSE(FPNegZero->isZeroValue());
+  EXPECT_FALSE(FPOne->isZeroValue());
+  EXPECT_TRUE(PtrNull0->isZeroValue());
+  EXPECT_TRUE(PtrNull1->isZeroValue());
+  EXPECT_TRUE(PtrVecZero->isZeroValue());
+  EXPECT_TRUE(Ptr1VecZero->isZeroValue());
+  EXPECT_TRUE(PtrArrayZero->isZeroValue());
+  EXPECT_TRUE(Ptr1ArrayZero->isZeroValue());
+  EXPECT_TRUE(CAZ->isZeroValue());
+  EXPECT_TRUE(StructWithAS1PtrZero->isZeroValue());
+  EXPECT_FALSE(EmptyArrayUndef->isZeroValue());
+  EXPECT_FALSE(EmptyArrayPoison->isZeroValue());
+  EXPECT_FALSE(EmptyStructUndef->isZeroValue());
+  EXPECT_FALSE(EmptyStructPoison->isZeroValue());
+  EXPECT_FALSE(EmptyArrayUndef->isNullValue());
+  EXPECT_FALSE(EmptyArrayPoison->isNullValue());
+  EXPECT_FALSE(EmptyStructUndef->isNullValue());
+  EXPECT_FALSE(EmptyStructPoison->isNullValue());
+
+  // -0.0 is NOT zero (sign bit set = non-zero bit pattern).
+  // Verify consistency with isNullValue: both agree +0.0 is zero, -0.0 is not.
+  EXPECT_TRUE(FPZero->isNullValue());
+  EXPECT_FALSE(FPNegZero->isNullValue());
+  EXPECT_TRUE(FPZero->isZeroValue());
+  EXPECT_FALSE(FPNegZero->isZeroValue());
+
+  Constant *DblZero = ConstantFP::get(DoubleTy, 0.0);
+  Constant *DblNegZero = ConstantFP::get(DoubleTy, -0.0);
+  EXPECT_TRUE(DblZero->isZeroValue());
+  EXPECT_FALSE(DblNegZero->isZeroValue());
+
+  // Vector splats of FP zeros.
+  Constant *VecPosZero =
+      ConstantVector::getSplat(ElementCount::getFixed(2), FPZero);
+  Constant *VecNegZero =
+      ConstantVector::getSplat(ElementCount::getFixed(2), FPNegZero);
+  // Splat of +0.0 collapses to CAZ, which is zero.
+  EXPECT_TRUE(isa<ConstantAggregateZero>(VecPosZero));
+  EXPECT_TRUE(VecPosZero->isZeroValue());
+  // Splat of -0.0 does NOT collapse to CAZ and is NOT zero.
+  EXPECT_FALSE(isa<ConstantAggregateZero>(VecNegZero));
+  EXPECT_FALSE(VecNegZero->isZeroValue());
+
+  DataLayout DefaultDL("");
+  DataLayout AllOnesDL("po1:64:64");
+
+  EXPECT_TRUE(IntZero->isZeroValue(&DefaultDL));
+  EXPECT_FALSE(IntOne->isZeroValue(&DefaultDL));
+  EXPECT_TRUE(FPZero->isZeroValue(&DefaultDL));
+  EXPECT_FALSE(FPNegZero->isZeroValue(&DefaultDL));
+  EXPECT_FALSE(FPOne->isZeroValue(&DefaultDL));
+  EXPECT_TRUE(PtrNull0->isZeroValue(&DefaultDL));
+  EXPECT_TRUE(PtrNull1->isZeroValue(&DefaultDL));
+  EXPECT_TRUE(PtrVecZero->isZeroValue(&DefaultDL));
+  EXPECT_TRUE(Ptr1VecZero->isZeroValue(&DefaultDL));
+  EXPECT_TRUE(PtrArrayZero->isZeroValue(&DefaultDL));
+  EXPECT_TRUE(Ptr1ArrayZero->isZeroValue(&DefaultDL));
+  EXPECT_TRUE(CAZ->isZeroValue(&DefaultDL));
+  EXPECT_TRUE(StructWithAS1PtrZero->isZeroValue(&DefaultDL));
+  EXPECT_FALSE(EmptyArrayUndef->isZeroValue(&DefaultDL));
+  EXPECT_FALSE(EmptyArrayPoison->isZeroValue(&DefaultDL));
+  EXPECT_FALSE(EmptyStructUndef->isZeroValue(&DefaultDL));
+  EXPECT_FALSE(EmptyStructPoison->isZeroValue(&DefaultDL));
+  EXPECT_FALSE(EmptyArrayUndef->isNullValue(&DefaultDL));
+  EXPECT_FALSE(EmptyArrayPoison->isNullValue(&DefaultDL));
+  EXPECT_FALSE(EmptyStructUndef->isNullValue(&DefaultDL));
+  EXPECT_FALSE(EmptyStructPoison->isNullValue(&DefaultDL));
+
+  // AS 1 has an all-ones null pointer representation in this layout, so
+  // ConstantPointerNull is null but not zero there.
+  EXPECT_TRUE(PtrNull0->isZeroValue(&AllOnesDL));
+  EXPECT_FALSE(PtrNull1->isZeroValue(&AllOnesDL));
+  EXPECT_TRUE(PtrNull0->isNullValue(&AllOnesDL));
+  EXPECT_TRUE(PtrNull1->isNullValue(&AllOnesDL));
+  EXPECT_TRUE(PtrVecZero->isZeroValue(&AllOnesDL));
+  EXPECT_TRUE(Ptr1VecZero->isZeroValue(&AllOnesDL));
+  EXPECT_TRUE(PtrVecZero->isNullValue(&AllOnesDL));
+  EXPECT_TRUE(Ptr1VecZero->isNullValue(&AllOnesDL));
+  EXPECT_TRUE(PtrArrayZero->isZeroValue(&AllOnesDL));
+  EXPECT_TRUE(Ptr1ArrayZero->isZeroValue(&AllOnesDL));
+  EXPECT_TRUE(PtrArrayZero->isNullValue(&AllOnesDL));
+  EXPECT_TRUE(Ptr1ArrayZero->isNullValue(&AllOnesDL));
+  EXPECT_TRUE(IntZero->isZeroValue(&AllOnesDL));
+  EXPECT_TRUE(FPZero->isZeroValue(&AllOnesDL));
+  EXPECT_TRUE(CAZ->isZeroValue(&AllOnesDL));
+  EXPECT_TRUE(StructWithAS1PtrZero->isZeroValue(&AllOnesDL));
+  EXPECT_TRUE(StructWithAS1PtrZero->isNullValue(&AllOnesDL));
+
+  EXPECT_EQ(Constant::getNullValue(Int32Ty, /*DL=*/nullptr),
+            Constant::getNullValue(Int32Ty));
+  EXPECT_EQ(Constant::getZeroValue(Int32Ty, /*DL=*/nullptr),
+            Constant::getZeroValue(Int32Ty));
+  EXPECT_EQ(Constant::getNullValue(PtrTy, /*DL=*/nullptr),
+            Constant::getNullValue(PtrTy));
+  EXPECT_EQ(Constant::getZeroValue(PtrTy, /*DL=*/nullptr),
+            Constant::getZeroValue(PtrTy));
+  EXPECT_EQ(Constant::getNullValue(StructTy, /*DL=*/nullptr),
+            Constant::getNullValue(StructTy));
+  EXPECT_EQ(Constant::getZeroValue(StructTy, /*DL=*/nullptr),
+            Constant::getZeroValue(StructTy));
+
+  EXPECT_EQ(Constant::getNullValue(Int32Ty, &DefaultDL),
+            Constant::getNullValue(Int32Ty));
+  EXPECT_EQ(Constant::getZeroValue(Int32Ty, &DefaultDL),
+            Constant::getZeroValue(Int32Ty));
+  EXPECT_EQ(Constant::getNullValue(PtrTy, &DefaultDL),
+            Constant::getNullValue(PtrTy));
+  EXPECT_EQ(Constant::getZeroValue(PtrTy, &DefaultDL),
+            Constant::getZeroValue(PtrTy));
+  EXPECT_EQ(Constant::getNullValue(PtrVecTy, &DefaultDL),
+            Constant::getNullValue(PtrVecTy));
+  EXPECT_EQ(Constant::getZeroValue(PtrVecTy, &DefaultDL),
+            Constant::getZeroValue(PtrVecTy));
+  EXPECT_EQ(Constant::getNullValue(PtrArrayTy, &DefaultDL),
+            Constant::getNullValue(PtrArrayTy));
+  EXPECT_EQ(Constant::getZeroValue(PtrArrayTy, &DefaultDL),
+            Constant::getZeroValue(PtrArrayTy));
+  EXPECT_EQ(Constant::getNullValue(StructTy, &DefaultDL),
+            Constant::getNullValue(StructTy));
+  EXPECT_EQ(Constant::getZeroValue(StructTy, &DefaultDL),
+            Constant::getZeroValue(StructTy));
+  EXPECT_EQ(Constant::getNullValue(ArrayTy, &DefaultDL),
+            Constant::getNullValue(ArrayTy));
+  EXPECT_EQ(Constant::getZeroValue(ArrayTy, &DefaultDL),
+            Constant::getZeroValue(ArrayTy));
+
+  // TODO: The DataLayout argument does not affect getNullValue() or
+  // getZeroValue() yet, even for pointer-containing types in an address space
+  // with a non-zero null pointer value.
+  EXPECT_EQ(Constant::getNullValue(Int32Ty, &AllOnesDL),
+            Constant::getNullValue(Int32Ty));
+  EXPECT_EQ(Constant::getZeroValue(Int32Ty, &AllOnesDL),
+            Constant::getZeroValue(Int32Ty));
+  EXPECT_EQ(Constant::getNullValue(PtrTy, &AllOnesDL),
+            Constant::getNullValue(PtrTy));
+  EXPECT_EQ(Constant::getZeroValue(PtrTy, &AllOnesDL),
+            Constant::getZeroValue(PtrTy));
+  EXPECT_EQ(Constant::getNullValue(Ptr1Ty, &AllOnesDL),
+            Constant::getNullValue(Ptr1Ty));
+  EXPECT_EQ(Constant::getZeroValue(Ptr1Ty, &AllOnesDL),
+            Constant::getZeroValue(Ptr1Ty));
+  EXPECT_EQ(Constant::getNullValue(PtrVecTy, &AllOnesDL),
+            Constant::getNullValue(PtrVecTy));
+  EXPECT_EQ(Constant::getZeroValue(PtrVecTy, &AllOnesDL),
+            Constant::getZeroValue(PtrVecTy));
+  EXPECT_EQ(Constant::getNullValue(Ptr1VecTy, &AllOnesDL),
+            Constant::getNullValue(Ptr1VecTy));
+  EXPECT_EQ(Constant::getZeroValue(Ptr1VecTy, &AllOnesDL),
+            Constant::getZeroValue(Ptr1VecTy));
+  EXPECT_EQ(Constant::getNullValue(PtrArrayTy, &AllOnesDL),
+            Constant::getNullValue(PtrArrayTy));
+  EXPECT_EQ(Constant::getZeroValue(PtrArrayTy, &AllOnesDL),
+            Constant::getZeroValue(PtrArrayTy));
+  EXPECT_EQ(Constant::getNullValue(Ptr1ArrayTy, &AllOnesDL),
+            Constant::getNullValue(Ptr1ArrayTy));
+  EXPECT_EQ(Constant::getZeroValue(Ptr1ArrayTy, &AllOnesDL),
+            Constant::getZeroValue(Ptr1ArrayTy));
+  EXPECT_EQ(Constant::getNullValue(StructTy, &AllOnesDL),
+            Constant::getNullValue(StructTy));
+  EXPECT_EQ(Constant::getZeroValue(StructTy, &AllOnesDL),
+            Constant::getZeroValue(StructTy));
+  EXPECT_EQ(Constant::getNullValue(StructWithAS1PtrTy, &AllOnesDL),
+            Constant::getNullValue(StructWithAS1PtrTy));
+  EXPECT_EQ(Constant::getZeroValue(StructWithAS1PtrTy, &AllOnesDL),
+            Constant::getZeroValue(StructWithAS1PtrTy));
 }
 
 } // end anonymous namespace

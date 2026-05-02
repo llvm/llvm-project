@@ -22,6 +22,7 @@ namespace llvm {
 
 class ConstantRange;
 class APInt;
+class DataLayout;
 
 /// This is an important base class in LLVM. It provides the common facilities
 /// of all constant values in an LLVM program. A constant is a value that is
@@ -52,7 +53,10 @@ public:
   Constant(const Constant &) = delete;
 
   /// Return true if this is the value that would be returned by getNullValue.
-  LLVM_ABI bool isNullValue() const;
+  LLVM_ABI bool isNullValue(const DataLayout *DL = nullptr) const;
+
+  /// Return true iff this constant has an all-zero bit pattern.
+  LLVM_ABI bool isZeroValue(const DataLayout *DL = nullptr) const;
 
   /// Returns true if the value is one.
   LLVM_ABI bool isOneValue() const;
@@ -187,7 +191,21 @@ public:
   ///
   LLVM_ABI void handleOperandChange(Value *, Value *);
 
-  LLVM_ABI static Constant *getNullValue(Type *Ty);
+  /// Constructor to create a null constant of arbitrary type.
+  /// TODO: Currently equivalent to getZeroValue(). Will diverge once the
+  /// semantics of ConstantPointerNull changes: for pointer types in address
+  /// spaces with non-zero null, getNullValue() will return the semantic null
+  /// pointer (ConstantPointerNull) while getZeroValue() will continue to return
+  /// the all-zero-bits value.
+  LLVM_ABI static Constant *getNullValue(Type *Ty,
+                                         const DataLayout *DL = nullptr);
+
+  /// Return the all-zero-bits constant for the given type.
+  /// TODO: For pointer types, it returns ConstantPointerNull but this will
+  /// change once the semantics of ConstantPointerNull changes to represent the
+  /// semantic null pointer.
+  LLVM_ABI static Constant *getZeroValue(Type *Ty,
+                                         const DataLayout *DL = nullptr);
 
   /// @returns the value for an integer or vector of integer constant of the
   /// given type that has all its bits set to true.
