@@ -2307,7 +2307,7 @@ add_entrypoint_object(
   HDRS
     ../fmaximum_mag.h
   DEPENDS
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.math.fmaximum_mag
 )
 
 add_entrypoint_object(
@@ -2317,7 +2317,7 @@ add_entrypoint_object(
   HDRS
     ../fmaximum_magf.h
   DEPENDS
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.math.fmaximum_magf
 )
 
 add_entrypoint_object(
@@ -2327,7 +2327,7 @@ add_entrypoint_object(
   HDRS
     ../fmaximum_magl.h
   DEPENDS
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.math.fmaximum_magl
 )
 
 add_entrypoint_object(
@@ -2337,8 +2337,7 @@ add_entrypoint_object(
   HDRS
     ../fmaximum_magf16.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.math.fmaximum_magf16
 )
 
 add_entrypoint_object(
@@ -2348,8 +2347,7 @@ add_entrypoint_object(
   HDRS
     ../fmaximum_magf128.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.math.fmaximum_magf128
 )
 
 add_entrypoint_object(
@@ -2359,12 +2357,7 @@ add_entrypoint_object(
   HDRS
     ../fmaximum_magbf16.h
   DEPENDS
-    libc.src.__support.FPUtil.basic_operations
-    libc.src.__support.FPUtil.bfloat16
-    libc.src.__support.macros.config
-    libc.src.__support.macros.properties.types
-  FLAGS
-    MISC_MATH_BASIC_OPS_OPT
+    libc.src.__support.math.fmaximum_magbf16
 )
 
 add_entrypoint_object(
@@ -2556,7 +2549,7 @@ add_entrypoint_object(
   HDRS
     ../fminimum_mag.h
   DEPENDS
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.math.fminimum_mag
 )
 
 add_entrypoint_object(
@@ -2566,7 +2559,7 @@ add_entrypoint_object(
   HDRS
     ../fminimum_magf.h
   DEPENDS
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.math.fminimum_magf
 )
 
 add_entrypoint_object(
@@ -2576,7 +2569,7 @@ add_entrypoint_object(
   HDRS
     ../fminimum_magl.h
   DEPENDS
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.math.fminimum_magl
 )
 
 add_entrypoint_object(
@@ -2586,8 +2579,7 @@ add_entrypoint_object(
   HDRS
     ../fminimum_magf16.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.math.fminimum_magf16
 )
 
 add_entrypoint_object(
@@ -2597,8 +2589,7 @@ add_entrypoint_object(
   HDRS
     ../fminimum_magf128.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.math.fminimum_magf128
 )
 
 add_entrypoint_object(
@@ -2608,12 +2599,7 @@ add_entrypoint_object(
   HDRS
     ../fminimum_magbf16.h
   DEPENDS
-    libc.src.__support.FPUtil.basic_operations
-    libc.src.__support.FPUtil.bfloat16
-    libc.src.__support.macros.config
-    libc.src.__support.macros.properties.types
-  FLAGS
-    MISC_MATH_BASIC_OPS_OPT
+    libc.src.__support.math.fminimum_magbf16
 )
 
 add_entrypoint_object(
