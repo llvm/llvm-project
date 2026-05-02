@@ -40,6 +40,9 @@ static int64_t getSubgroupSize(Operation *op) {
 }
 
 /// Helper to compute array_length from FCD and subgroup size.
+/// TODO: Currently, we are only allowing subgroupSize as our new FCD for LANE
+/// level distribution simplicity. But it can be different, and in the future,
+/// we can add that support.
 static int64_t computeArrayLength(int64_t fcdSize, int64_t subgroupSize) {
   if (fcdSize <= subgroupSize)
     return 1;
