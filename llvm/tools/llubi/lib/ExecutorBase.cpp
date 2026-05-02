@@ -169,16 +169,16 @@ unsigned ExecutorBase::getIntSize() const {
 
 void ExecutorBase::dumpStackTrace() const {
   errs() << "Stacktrace:\n";
-  const Frame *Frm = CurrentFrame;
+  const Frame *TheFrame = CurrentFrame;
   unsigned Index = 0;
-  while (Frm != nullptr) {
-    if (Frm->BB) {
-      Instruction &Inst = *Frm->PC;
+  while (TheFrame != nullptr) {
+    if (TheFrame->BB) {
+      Instruction &Inst = *TheFrame->PC;
       errs() << "#" << Index++ << " " << Inst << " at ";
       Inst.getFunction()->printAsOperand(errs(), /*PrintType=*/false);
       errs() << "\n";
     }
-    Frm = Frm->LastFrame;
+    TheFrame = TheFrame->LastFrame;
   }
 }
 } // namespace llvm::ubi

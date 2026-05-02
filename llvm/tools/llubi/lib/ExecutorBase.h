@@ -131,8 +131,14 @@ class DiagnosticReporter {
 public:
   DiagnosticReporter(ExecutorBase &E, DiagnosticKind K)
       : Executor(E), OS(Buf), Kind(K) {}
+
+  DiagnosticReporter(const DiagnosticReporter &) = delete;
+  DiagnosticReporter(DiagnosticReporter &&) noexcept = delete;
+
+  DiagnosticReporter &operator=(const DiagnosticReporter &) = delete;
+  DiagnosticReporter &operator=(DiagnosticReporter &&) noexcept = delete;
+
   ~DiagnosticReporter() {
-    OS.flush();
     switch (Kind) {
     case DiagnosticKind::ImmediateUB:
       Executor.reportImmediateUBString(Buf);
