@@ -631,11 +631,11 @@ getIncludeTreeModule(cas::ObjectStore &DB, Module *M) {
   llvm::BumpPtrAllocator Alloc;
   llvm::StringSaver Saver(Alloc);
   for (Module::ExportDecl &Export : M->Exports) {
-    if (Export.getPointer() == nullptr && Export.getInt()) {
+    if (Export.first == nullptr && Export.second) {
       GlobalWildcardExport = true;
-    } else if (Export.getPointer()) {
-      StringRef Name = Saver.save(Export.getPointer()->getFullModuleName());
-      Exports.push_back({Name, Export.getInt()});
+    } else if (Export.first) {
+      StringRef Name = Saver.save(Export.first->getFullModuleName());
+      Exports.push_back({Name, Export.second});
     }
   }
   std::optional<cas::ObjectRef> ExportList;
