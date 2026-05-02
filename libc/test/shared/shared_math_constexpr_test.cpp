@@ -118,6 +118,17 @@ static_assert(0.0f == LIBC_NAMESPACE::shared::fsub(0.0, 0.0));
 
 static_assert(0.0f16 == LIBC_NAMESPACE::shared::ceilf16(0.0f16));
 static_assert(0.0f16 == LIBC_NAMESPACE::shared::copysignf16(0.0f16, 0.0f16));
+static_assert(3.0f16 == LIBC_NAMESPACE::shared::f16add(1.0, 2.0));
+static_assert(3.0f16 == LIBC_NAMESPACE::shared::f16addf(1.0f, 2.0f));
+
+// TODO: make available after long double problem is fixed
+#if 0
+static_assert(3.0f16 == LIBC_NAMESPACE::shared::f16addl(1.0L, 2.0L));
+#endif
+#ifdef LIBC_TYPES_HAS_FLOAT128
+static_assert(3.0f16 ==
+              LIBC_NAMESPACE::shared::f16addf128(float128(1.0), float128(2.0)));
+#endif
 static_assert(1.0f16 == LIBC_NAMESPACE::shared::fabsf16(-1.0f16));
 static_assert(1.0f16 == LIBC_NAMESPACE::shared::fdimf16(1.0f16, 0.0f16));
 static_assert(3.0f16 == LIBC_NAMESPACE::shared::floorf16(3.7f16));
