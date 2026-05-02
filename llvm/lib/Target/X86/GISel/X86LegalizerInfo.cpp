@@ -1004,22 +1004,22 @@ bool X86LegalizerInfo::legalizeSETROUNDING(MachineInstr &MI,
 bool X86LegalizerInfo::legalizeGLOBAL_VALUE(MachineInstr &MI,
                                             MachineRegisterInfo &MRI,
                                             LegalizerHelper &Helper) const {
-  auto GV = MI.getOperand(1).getGlobal();
+  const GlobalValue *GV = MI.getOperand(1).getGlobal();
   Register Dst = MI.getOperand(0).getReg();
   LLT DstTy = MRI.getType(Dst);
-  auto GVOpFlags = Subtarget.classifyGlobalReference(GV);
+  unsigned GVOpFlags = Subtarget.classifyGlobalReference(GV);
 
   // For stub references (GOT/PLT), we need G_WRAPPER_RIP + load
   if (isGlobalStubReference(GVOpFlags)) {
     MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
     MachineFunction &MF = MIRBuilder.getMF();
 
-    auto StubAddr = MRI.createGenericVirtualRegister(DstTy);
+    Register StubAddr = MRI.createGenericVirtualRegister(DstTy);
     MIRBuilder.buildInstr(X86::G_WRAPPER_RIP)
         .addDef(StubAddr)
         .addGlobalAddress(GV);
 
-    auto MMO = MF.getMachineMemOperand(MachinePointerInfo::getGOT(MF),
+    MachineMemOperand MMO = MF.getMachineMemOperand(MachinePointerInfo::getGOT(MF),
                                        MachineMemOperand::MOLoad, DstTy,
                                        Align(DstTy.getSizeInBytes()));
     MIRBuilder.buildLoad(Dst, StubAddr, *MMO);
