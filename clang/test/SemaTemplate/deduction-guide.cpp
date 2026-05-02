@@ -267,8 +267,8 @@ template <typename X = int>
 using BG = G<int>;
 BG bg(1.0);
 // CHECK-LABEL: Dumping <deduction guide for BG>
-// CHECK: FunctionTemplateDecl {{.*}} implicit <deduction guide for BG>
-// CHECK: |-CXXDeductionGuideDecl {{.*}} 'auto (int) -> G<int>' aggregate
+// CHECK-NOT: FunctionTemplateDecl
+// CHECK: CXXDeductionGuideDecl {{.*}} 'auto (int) -> G<int>' aggregate
 
 template <typename D>
 requires (sizeof(D) == 4)
