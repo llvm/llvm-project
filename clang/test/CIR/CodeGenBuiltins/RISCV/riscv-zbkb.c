@@ -2,8 +2,8 @@
 // RUN: %clang_cc1 -triple riscv64 -target-feature +zbkb -fclangir -emit-cir %s -o - | FileCheck %s --check-prefixes=CIR,CIR64
 // RUN: %clang_cc1 -triple riscv32 -target-feature +zbkb -fclangir -emit-llvm %s -o - | FileCheck %s --check-prefixes=LLVM,LLVM32
 // RUN: %clang_cc1 -triple riscv64 -target-feature +zbkb -fclangir -emit-llvm %s -o - | FileCheck %s --check-prefixes=LLVM,LLVM64
-// RUN: %clang_cc1 -triple riscv32 -target-feature +zbkb -emit-llvm %s -o - | FileCheck %s --check-prefixes=OGCG,OGCG32
-// RUN: %clang_cc1 -triple riscv64 -target-feature +zbkb -emit-llvm %s -o - | FileCheck %s --check-prefixes=OGCG,OGCG64
+// RUN: %clang_cc1 -triple riscv32 -target-feature +zbkb -emit-llvm %s -o - | FileCheck %s --check-prefixes=LLVM,LLVM32
+// RUN: %clang_cc1 -triple riscv64 -target-feature +zbkb -emit-llvm %s -o - | FileCheck %s --check-prefixes=LLVM,LLVM64
 
 // CIR-LABEL: cir.func{{.*}} @test_builtin_brev8_32(
 // CIR: {{%.*}} = cir.call_llvm_intrinsic "riscv.brev8" {{%.*}} : (!u32i) -> !u32i
@@ -11,9 +11,6 @@
 // LLVM-LABEL: @test_builtin_brev8_32(
 // LLVM: call i32 @llvm.riscv.brev8.i32(i32 {{%.*}})
 // LLVM: ret i32
-// OGCG-LABEL: @test_builtin_brev8_32(
-// OGCG: call i32 @llvm.riscv.brev8.i32(i32 {{%.*}})
-// OGCG: ret i32
 unsigned int test_builtin_brev8_32(unsigned int a) {
   return __builtin_riscv_brev8_32(a);
 }
@@ -25,9 +22,6 @@ unsigned int test_builtin_brev8_32(unsigned int a) {
 // LLVM32-LABEL: @test_builtin_zip_32(
 // LLVM32: call i32 @llvm.riscv.zip.i32(i32 {{%.*}})
 // LLVM32: ret i32
-// OGCG32-LABEL: @test_builtin_zip_32(
-// OGCG32: call i32 @llvm.riscv.zip.i32(i32 {{%.*}})
-// OGCG32: ret i32
 unsigned int test_builtin_zip_32(unsigned int a) {
   return __builtin_riscv_zip_32(a);
 }
@@ -38,9 +32,6 @@ unsigned int test_builtin_zip_32(unsigned int a) {
 // LLVM32-LABEL: @test_builtin_unzip_32(
 // LLVM32: call i32 @llvm.riscv.unzip.i32(i32 {{%.*}})
 // LLVM32: ret i32
-// OGCG32-LABEL: @test_builtin_unzip_32(
-// OGCG32: call i32 @llvm.riscv.unzip.i32(i32 {{%.*}})
-// OGCG32: ret i32
 unsigned int test_builtin_unzip_32(unsigned int a) {
   return __builtin_riscv_unzip_32(a);
 }
@@ -53,9 +44,6 @@ unsigned int test_builtin_unzip_32(unsigned int a) {
 // LLVM64-LABEL: @test_builtin_brev8_64(
 // LLVM64: call i64 @llvm.riscv.brev8.i64(i64 {{%.*}})
 // LLVM64: ret i64
-// OGCG64-LABEL: @test_builtin_brev8_64(
-// OGCG64: call i64 @llvm.riscv.brev8.i64(i64 {{%.*}})
-// OGCG64: ret i64
 unsigned long long test_builtin_brev8_64(unsigned long long a) {
   return __builtin_riscv_brev8_64(a);
 }
