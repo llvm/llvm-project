@@ -134,7 +134,9 @@ static void propagateResultsToRegularOperands(Operation *op) {
       result.setType(typeWithLayout);
     }
   }
-  if (resLayout)
+  // Multi-reduction op may reduce to scalar which needs layout.
+  if (isa<VectorType>(resultType) && resLayout ||
+      isa<vector::MultiDimReductionOp>(op))
     xegpu::setTemporaryLayout(result, resLayout);
 
   for (OpOperand &opr : op->getOpOperands()) {

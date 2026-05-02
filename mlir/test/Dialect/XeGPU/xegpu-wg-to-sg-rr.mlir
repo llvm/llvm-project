@@ -21,11 +21,6 @@ gpu.module @test_distribution {
     %load = xegpu.load_nd %tdesc[0, 0] {layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [16, 16], lane_layout = [1, 16], lane_data = [1, 1]>}
       : !xegpu.tensor_desc<256x128xf32>
       -> vector<256x128xf32>
-    %anchor = xegpu.convert_layout %load
-      <{
-        input_layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [16, 16], lane_layout = [1, 16], lane_data = [1, 1]>,
-        target_layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [16, 16], lane_layout = [1, 16], lane_data = [1, 1]>
-      }> : vector<256x128xf32>
     gpu.return
   }
 

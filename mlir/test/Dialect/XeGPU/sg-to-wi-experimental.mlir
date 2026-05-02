@@ -244,12 +244,7 @@ gpu.module @xevm_module{
       : vector<8x16xf32>
     %6 = xegpu.create_nd_tdesc %arg2 : memref<8x16xf32> ->
       !xegpu.tensor_desc<8x16xf32>
-    %anchor = xegpu.convert_layout %5
-      <{
-        input_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
-        target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
-      }> : vector<8x16xf32>
-    xegpu.store_nd %anchor, %6[%c0, %c0] {layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} : vector<8x16xf32>,
+    xegpu.store_nd %5, %6[%c0, %c0] {layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} : vector<8x16xf32>,
       !xegpu.tensor_desc<8x16xf32>
     gpu.return
   }
