@@ -344,7 +344,7 @@ LIBC_INLINE int canonicalize(T &cx, const T &x) {
 }
 
 template <typename T>
-LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, bool>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_floating_point_v<T>, bool>
 totalorder(T x, T y) {
   using FPBits = FPBits<T>;
   FPBits x_bits(x);
@@ -359,7 +359,7 @@ totalorder(T x, T y) {
 }
 
 template <typename T>
-LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, bool>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_floating_point_v<T>, bool>
 totalordermag(T x, T y) {
   return FPBits<T>(x).abs().uintval() <= FPBits<T>(y).abs().uintval();
 }
