@@ -20,14 +20,12 @@
 // <print>
 
 // Tests the implementation of
-//   void __print::__vprint_unicode_windows(FILE* __stream, string_view __fmt,
-//                                          format_args __args, bool __write_nl);
+//   void __print::__output_unicode_windows(FILE* __stream, string_view __text);
 //
 // In the library when the stdout is redirected to a file it is no
 // longer considered a terminal and the special terminal handling is no
 // longer executed. By testing this function we can "force" emulate a
 // terminal.
-// Note __write_nl is tested by the public API.
 
 #include <string_view>
 #include <cstdio>
@@ -62,7 +60,7 @@ static void test_basics() {
   assert(file);
 
   calling = true;
-  std::__print::__vprint_unicode_windows(file, " world", std::make_format_args(), false);
+  std::__print::__output_unicode_windows(file, " world");
 }
 
 // Invalid UTF-8 input is flagged.
@@ -71,7 +69,7 @@ static void test(std::wstring_view output, std::string_view input) {
   assert(file);
 
   expected = output;
-  std::__print::__vprint_unicode_windows(file, input, std::make_format_args(), false);
+  std::__print::__output_unicode_windows(file, input);
   assert(std::ftell(file) == 0);
   std::fclose(file);
 }
