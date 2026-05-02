@@ -100,6 +100,10 @@ static_assert(0.0f16 == LIBC_NAMESPACE::shared::copysignf16(0.0f16, 0.0f16));
 static_assert(3.0f16 == LIBC_NAMESPACE::shared::f16add(1.0, 2.0));
 static_assert(3.0f16 == LIBC_NAMESPACE::shared::f16addf(1.0f, 2.0f));
 static_assert(3.0f16 == LIBC_NAMESPACE::shared::f16addl(1.0L, 2.0L));
+#ifdef LIBC_TYPES_HAS_FLOAT128
+static_assert(3.0f16 ==
+              LIBC_NAMESPACE::shared::f16addf128(float128(1.0), float128(2.0)));
+#endif
 static_assert(1.0f16 == LIBC_NAMESPACE::shared::fabsf16(-1.0f16));
 static_assert(1.0f16 == LIBC_NAMESPACE::shared::fdimf16(1.0f16, 0.0f16));
 static_assert(3.0f16 == LIBC_NAMESPACE::shared::floorf16(3.7f16));
@@ -207,8 +211,6 @@ static_assert(0.0 ==
               LIBC_NAMESPACE::shared::ddivf128(float128(0.0), float128(1.0)));
 static_assert(0.0 ==
               LIBC_NAMESPACE::shared::dmulf128(float128(0.0), float128(1.0)));
-static_assert(3.0f ==
-              LIBC_NAMESPACE::shared::f16addf128(float128(1.0), float128(2.0)));
 static_assert(0.0f ==
               LIBC_NAMESPACE::shared::faddf128(float128(0.0), float128(0.0)));
 static_assert(float128(1.0) ==
