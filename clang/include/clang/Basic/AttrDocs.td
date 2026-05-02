@@ -9990,7 +9990,9 @@ def AlignedDocs : Documentation {
   let Content = [{
 The ``aligned`` attribute specifies a minimum alignment (in bytes) for a 
 variable, structure field, or type definition. The attribute takes an 
-optional integer constant expression that must evaluate to a power of two.
+optional non-negative integral constant expression. If the value is a 
+power of two, the compiler ensures the declaration is aligned to at least 
+that boundary; a value of zero has no effect.
 
 .. code-block:: c++
 
@@ -9998,7 +10000,7 @@ optional integer constant expression that must evaluate to a power of two.
     short f[3]; 
   };
 
-If the alignment factor is omitted, the compiler defaults to the largest 
+If the alignment factor is omitted, the compiler defaults to the largest(the most strict) 
 alignment supported by the target machine for any data type. 
 
 Applying this attribute to a structure or union changes the type's layout 
@@ -10008,9 +10010,13 @@ consistent, the compiler automatically increases the structure's total size
 struct with a natural size of 6 bytes marked ``aligned(8)`` will be 
 padded to 8 bytes.
 
-The attribute is additive and can only increase alignment; it cannot decrease 
-alignment below the type's natural requirement. To force a smaller 
-alignment, ``__attribute__((packed))`` must be used instead. 
+The attribute is additive and follows a "strictest-wins" rule: if multiple 
+alignment specifications are applied to the same declaration—whether 
+through a mix of ``alignas`` and ``aligned`` or multiple ``aligned`` 
+attributes—the largest alignment requirement is honored. While the 
+attribute cannot decrease alignment below a type's natural requirement 
+on its own, it can be used to increase the alignment of a type that has 
+been reduced via ``__attribute__((packed))``.
 
 Furthermore, the attribute is incompatible with entities that do not 
 possess a stable, addressable memory location. It cannot be applied to 
