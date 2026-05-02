@@ -4734,6 +4734,34 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_ldexp",
+    hdrs = ["src/__support/math/ldexp.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_ldexpbf16",
+    hdrs = ["src/__support/math/ldexpbf16.h"],
+    deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_ldexpl",
+    hdrs = ["src/__support/math/ldexpl.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_ilogbbf16",
     hdrs = ["src/__support/math/ilogbbf16.h"],
     deps = [
@@ -4911,6 +4939,132 @@ libc_support_library(
     deps = [
         ":__support_fputil_division_and_remainder_operations",
         ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_scalbln",
+    hdrs = ["src/__support/math/scalbln.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+        ":hdr_float_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_scalblnbf16",
+    hdrs = ["src/__support/math/scalblnbf16.h"],
+    deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+        ":hdr_float_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_scalblnf",
+    hdrs = ["src/__support/math/scalblnf.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+        ":hdr_float_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_scalblnf128",
+    hdrs = ["src/__support/math/scalblnf128.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+        ":hdr_float_macros",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_scalblnf16",
+    hdrs = ["src/__support/math/scalblnf16.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+        ":hdr_float_macros",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_scalblnl",
+    hdrs = ["src/__support/math/scalblnl.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+        ":hdr_float_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_scalbn",
+    hdrs = ["src/__support/math/scalbn.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+        ":hdr_float_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_scalbnbf16",
+    hdrs = ["src/__support/math/scalbnbf16.h"],
+    deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+        ":hdr_float_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_scalbnf",
+    hdrs = ["src/__support/math/scalbnf.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+        ":hdr_float_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_scalbnf128",
+    hdrs = ["src/__support/math/scalbnf128.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+        ":hdr_float_macros",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_scalbnf16",
+    hdrs = ["src/__support/math/scalbnf16.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+        ":hdr_float_macros",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_scalbnl",
+    hdrs = ["src/__support/math/scalbnl.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+        ":hdr_float_macros",
     ],
 )
 
@@ -9869,14 +10023,31 @@ libc_math_function(
     ],
 )
 
-libc_math_function(name = "ldexp")
+libc_math_function(
+    name = "ldexp",
+    additional_deps = [
+        ":__support_math_ldexp",
+    ],
+)
+
+libc_math_function(
+    name = "ldexpbf16",
+    additional_deps = [
+        ":__support_math_ldexpbf16",
+    ],
+)
 
 libc_math_function(
     name = "ldexpf",
     additional_deps = [":__support_math_ldexpf"],
 )
 
-libc_math_function(name = "ldexpl")
+libc_math_function(
+    name = "ldexpl",
+    additional_deps = [
+        ":__support_math_ldexpl",
+    ],
+)
 
 libc_math_function(
     name = "ldexpf128",
@@ -10546,59 +10717,85 @@ libc_math_function(
 
 libc_math_function(
     name = "scalbln",
-    additional_deps = [":hdr_float_macros"],
+    additional_deps = [
+        ":__support_math_scalbln",
+    ],
+)
+
+libc_math_function(
+    name = "scalblnbf16",
+    additional_deps = [
+        ":__support_math_scalblnbf16",
+    ],
 )
 
 libc_math_function(
     name = "scalblnf",
-    additional_deps = [":hdr_float_macros"],
+    additional_deps = [
+        ":__support_math_scalblnf",
+    ],
 )
 
 libc_math_function(
     name = "scalblnl",
-    additional_deps = [":hdr_float_macros"],
+    additional_deps = [
+        ":__support_math_scalblnl",
+    ],
 )
 
 libc_math_function(
     name = "scalblnf128",
     additional_deps = [
-        ":hdr_float_macros",
+        ":__support_math_scalblnf128",
     ],
 )
 
 libc_math_function(
     name = "scalblnf16",
     additional_deps = [
-        ":hdr_float_macros",
+        ":__support_math_scalblnf16",
     ],
 )
 
 libc_math_function(
     name = "scalbn",
-    additional_deps = [":hdr_float_macros"],
+    additional_deps = [
+        ":__support_math_scalbn",
+    ],
+)
+
+libc_math_function(
+    name = "scalbnbf16",
+    additional_deps = [
+        ":__support_math_scalbnbf16",
+    ],
 )
 
 libc_math_function(
     name = "scalbnf",
-    additional_deps = [":hdr_float_macros"],
+    additional_deps = [
+        ":__support_math_scalbnf",
+    ],
 )
 
 libc_math_function(
     name = "scalbnl",
-    additional_deps = [":hdr_float_macros"],
+    additional_deps = [
+        ":__support_math_scalbnl",
+    ],
 )
 
 libc_math_function(
     name = "scalbnf128",
     additional_deps = [
-        ":hdr_float_macros",
+        ":__support_math_scalbnf128",
     ],
 )
 
 libc_math_function(
     name = "scalbnf16",
     additional_deps = [
-        ":hdr_float_macros",
+        ":__support_math_scalbnf16",
     ],
 )
 

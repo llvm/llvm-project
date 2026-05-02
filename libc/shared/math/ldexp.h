@@ -1,4 +1,4 @@
-//===-- Implementation of ldexpl function ---------------------------------===//
+//===-- Shared ldexp function -----------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/ldexpl.h"
-#include "src/__support/math/ldexpl.h"
+#ifndef LLVM_LIBC_SHARED_MATH_LDEXP_H
+#define LLVM_LIBC_SHARED_MATH_LDEXP_H
+
+#include "shared/libc_common.h"
+#include "src/__support/math/ldexp.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-LLVM_LIBC_FUNCTION(long double, ldexpl, (long double x, int exp)) {
-  return math::ldexpl(x, exp);
-}
+using math::ldexp;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SHARED_MATH_LDEXP_H
