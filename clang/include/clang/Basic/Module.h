@@ -366,7 +366,7 @@ private:
 
   /// A mapping from the submodule name to the index into the
   /// \c SubModules vector at which that submodule resides.
-  mutable llvm::StringMap<unsigned> SubModuleIndex;
+  llvm::StringMap<unsigned> SubModuleIndex;
 
   /// The AST file name and key if this is a top-level module which has a
   /// corresponding serialized AST file, or null otherwise.
@@ -766,6 +766,7 @@ public:
   void setParent(Module *M) {
     assert(!Parent);
     Parent = M;
+    Parent->SubModuleIndex[M->Name] = Parent->SubModules.size();
     Parent->SubModules.push_back(this);
   }
 
