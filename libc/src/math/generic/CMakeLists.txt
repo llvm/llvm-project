@@ -4323,7 +4323,7 @@ add_entrypoint_object(
   HDRS
     ../totalorder.h
   DEPENDS
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.math.totalorder
 )
 
 add_entrypoint_object(
@@ -4333,7 +4333,7 @@ add_entrypoint_object(
   HDRS
     ../totalorderf.h
   DEPENDS
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.math.totalorderf
 )
 
 add_entrypoint_object(
@@ -4343,7 +4343,7 @@ add_entrypoint_object(
   HDRS
     ../totalorderl.h
   DEPENDS
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.math.totalorderl
 )
 
 add_entrypoint_object(
@@ -4353,7 +4353,7 @@ add_entrypoint_object(
   HDRS
     ../totalorderf16.h
   DEPENDS
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.math.totalorderf16
 )
 
 add_entrypoint_object(
@@ -4363,8 +4363,7 @@ add_entrypoint_object(
   HDRS
     ../totalorderf128.h
   DEPENDS
-    libc.src.__support.FPUtil.basic_operations
-    libc.src.__support.macros.properties.types
+    libc.src.__support.math.totalorderf128
 )
 
 add_entrypoint_object(
@@ -4374,11 +4373,7 @@ add_entrypoint_object(
   HDRS
     ../totalorderbf16.h
   DEPENDS
-    libc.src.__support.common
-    libc.src.__support.macros.config
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.basic_operations
-    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.math.totalorderbf16
 )
 
 add_entrypoint_object(
@@ -4388,7 +4383,7 @@ add_entrypoint_object(
   HDRS
     ../totalordermag.h
   DEPENDS
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.math.totalordermag
 )
 
 add_entrypoint_object(
@@ -4398,7 +4393,7 @@ add_entrypoint_object(
   HDRS
     ../totalordermagf.h
   DEPENDS
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.math.totalordermagf
 )
 
 add_entrypoint_object(
@@ -4408,7 +4403,7 @@ add_entrypoint_object(
   HDRS
     ../totalordermagl.h
   DEPENDS
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.math.totalordermagl
 )
 
 add_entrypoint_object(
@@ -4418,7 +4413,7 @@ add_entrypoint_object(
   HDRS
     ../totalordermagf16.h
   DEPENDS
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.math.totalordermagf16
 )
 
 add_entrypoint_object(
@@ -4428,8 +4423,7 @@ add_entrypoint_object(
   HDRS
     ../totalordermagf128.h
   DEPENDS
-    libc.src.__support.FPUtil.basic_operations
-    libc.src.__support.macros.properties.types
+    libc.src.__support.math.totalordermagf128
 )
 
 add_entrypoint_object(
@@ -4439,11 +4433,7 @@ add_entrypoint_object(
   HDRS
     ../totalordermagbf16.h
   DEPENDS
-    libc.src.__support.common
-    libc.src.__support.macros.config
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.basic_operations
-    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.math.totalordermagbf16
 )
 
 add_entrypoint_object(

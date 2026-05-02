@@ -7150,6 +7150,120 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_totalorder",
+    hdrs = ["src/__support/math/totalorder.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_totalorderbf16",
+    hdrs = ["src/__support/math/totalorderbf16.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_fputil_bfloat16",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_totalorderf",
+    hdrs = ["src/__support/math/totalorderf.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_totalorderf128",
+    hdrs = ["src/__support/math/totalorderf128.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_totalorderf16",
+    hdrs = ["src/__support/math/totalorderf16.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_totalorderl",
+    hdrs = ["src/__support/math/totalorderl.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_totalordermag",
+    hdrs = ["src/__support/math/totalordermag.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_totalordermagbf16",
+    hdrs = ["src/__support/math/totalordermagbf16.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_fputil_bfloat16",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_totalordermagf",
+    hdrs = ["src/__support/math/totalordermagf.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_totalordermagf128",
+    hdrs = ["src/__support/math/totalordermagf128.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_totalordermagf16",
+    hdrs = ["src/__support/math/totalordermagf16.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_totalordermagl",
+    hdrs = ["src/__support/math/totalordermagl.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_ufromfp",
     hdrs = ["src/__support/math/ufromfp.h"],
     deps = [
@@ -10093,32 +10207,88 @@ libc_math_function(
     additional_deps = [":__support_math_tanpif16"],
 )
 
-libc_math_function(name = "totalorder")
+libc_math_function(
+    name = "totalorder",
+    additional_deps = [
+        ":__support_math_totalorder",
+    ],
+)
 
-libc_math_function(name = "totalorderf")
+libc_math_function(
+    name = "totalorderbf16",
+    additional_deps = [
+        ":__support_math_totalorderbf16",
+    ],
+)
 
-libc_math_function(name = "totalorderl")
+libc_math_function(
+    name = "totalorderf",
+    additional_deps = [
+        ":__support_math_totalorderf",
+    ],
+)
+
+libc_math_function(
+    name = "totalorderl",
+    additional_deps = [
+        ":__support_math_totalorderl",
+    ],
+)
 
 libc_math_function(
     name = "totalorderf128",
+    additional_deps = [
+        ":__support_math_totalorderf128",
+    ],
 )
 
 libc_math_function(
     name = "totalorderf16",
+    additional_deps = [
+        ":__support_math_totalorderf16",
+    ],
 )
 
-libc_math_function(name = "totalordermag")
+libc_math_function(
+    name = "totalordermag",
+    additional_deps = [
+        ":__support_math_totalordermag",
+    ],
+)
 
-libc_math_function(name = "totalordermagf")
+libc_math_function(
+    name = "totalordermagbf16",
+    additional_deps = [
+        ":__support_math_totalordermagbf16",
+    ],
+)
 
-libc_math_function(name = "totalordermagl")
+libc_math_function(
+    name = "totalordermagf",
+    additional_deps = [
+        ":__support_math_totalordermagf",
+    ],
+)
+
+libc_math_function(
+    name = "totalordermagl",
+    additional_deps = [
+        ":__support_math_totalordermagl",
+    ],
+)
 
 libc_math_function(
     name = "totalordermagf128",
+    additional_deps = [
+        ":__support_math_totalordermagf128",
+    ],
 )
 
 libc_math_function(
     name = "totalordermagf16",
+    additional_deps = [
+        ":__support_math_totalordermagf16",
+    ],
 )
 
 libc_math_function(name = "trunc")
