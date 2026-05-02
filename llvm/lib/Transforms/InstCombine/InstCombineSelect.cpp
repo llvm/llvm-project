@@ -4400,7 +4400,8 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     Value *CtpopCmpLHS, *CtpopCmpRHS;
     unsigned CtpopBitWidth = SelType->getScalarSizeInBits();
     if (match(FalseVal, m_Intrinsic<Intrinsic::ctpop>(m_Value(X))) &&
-        match(CondVal, m_ICmp(CtpopPred, m_Value(CtpopCmpLHS), m_Value(CtpopCmpRHS)))) {
+        match(CondVal,
+              m_ICmp(CtpopPred, m_Value(CtpopCmpLHS), m_Value(CtpopCmpRHS)))) {
       if (CtpopCmpLHS == X && CtpopPred == ICmpInst::ICMP_ULT &&
           match(CtpopCmpRHS, m_SpecificInt(2)) && TrueVal == X)
         return replaceInstUsesWith(SI, FalseVal);
