@@ -12273,6 +12273,7 @@ SDValue TargetLowering::expandVecReduce(SDNode *Node, SelectionDAG &DAG) const {
           EVT WideVT = getTypeToTransformTo(*DAG.getContext(), HalfVT);
           if (WideVT.isVector() &&
               WideVT.getScalarType() == HalfVT.getScalarType() &&
+              WideVT.getVectorNumElements() >= HalfVT.getVectorNumElements() &&
               isOperationLegalOrCustom(BaseOpcode, WideVT)) {
             SDValue Lo, Hi;
             std::tie(Lo, Hi) = DAG.SplitVector(Op, dl);
