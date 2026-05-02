@@ -19,6 +19,7 @@
 #include <__memory/uninitialized_algorithms.h>
 #include <__split_buffer>
 #include <__type_traits/is_nothrow_constructible.h>
+#include <__utility/exchange.h>
 #include <__utility/move.h>
 #include <__utility/swap.h>
 
@@ -249,9 +250,9 @@ private:
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 __vector_layout<_Tp, _Alloc>::__vector_layout(__vector_layout&& __other)
     _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value)
-    : __begin_(std::move(__other.__begin_)),
-      __size_(std::move(__other.__size_)),
-      __capacity_(std::move(__other.__capacity_)),
+    : __begin_(std::__exchange(__other.__begin_, nullptr)),
+      __size_(std::__exchange(__other.__size_, 0)),
+      __capacity_(std::__exchange(__other.__capacity_, 0)),
       __alloc_(std::move(__other.__alloc_)) {
 }
 
@@ -393,9 +394,9 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __vector_layout<_Tp, _Alloc>::__invariants() 
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 __vector_layout<_Tp, _Alloc>::__vector_layout(__vector_layout&& __other)
     _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value)
-    : __begin_(std::move(__other.__begin_)),
-      __end_(std::move(__other.__end_)),
-      __capacity_(std::move(__other.__capacity_)),
+    : __begin_(std::__exchange(__other.__begin_, nullptr)),
+      __end_(std::__exchange(__other.__end_, nullptr)),
+      __capacity_(std::__exchange(__other.__capacity_, nullptr)),
       __alloc_(std::move(__other.__alloc_)) {
 }
 
