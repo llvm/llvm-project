@@ -569,6 +569,8 @@ Bug Fixes to C++ Support
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed a bug where explicit nullability property attributes were not stored in AST nodes in Objective-C. (#GH179703)
+- Fixed a bug where alias CTAD, or an invalid template template parameter, could create a template with an empty template
+  parameter list. This also adds asserts to prevent this from happening again.
 - Fixed a crash when parsing Doxygen ``@param`` commands attached to invalid declarations or non-function entities. (#GH182737)
 - Fixed the SourceLocation and SourceRange of reversed rewritten CXXOperatorCallExpr. (#GH192467)
 
