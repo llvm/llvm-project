@@ -283,6 +283,24 @@ bool isUniquePtrRelease(const CXXMethodDecl &MD) {
          MD.getNumParams() == 0 && isStdUniquePtr(*MD.getParent());
 }
 
+bool isIteratorType(const CXXRecordDecl *RD) {
+  // FIXME: Add more iterator names in the future
+  static const llvm::StringSet<> Iterators = {
+      // Usually not an alias
+      "reverse_iterator",
+      // Alias for continuos iterators in gcc
+      "__normal_iterator",
+      // Alias for continuos iterators in clang
+      "__wrap_iter"};
+  return RD && isInStlNamespace(RD) && Iterators.contains(getName(*RD));
+}
+
+bool isPropogatingIteratorOP(OverloadedOperatorKind OP) {
+  llvm::SmallDenseSet<OverloadedOperatorKind> PropagatingOperators = {
+      OO_Plus, OO_Minus, OO_PlusPlus, OO_MinusMinus};
+  return PropagatingOperators.contains(OP);
+}
+
 bool isInvalidationMethod(const CXXMethodDecl &MD) {
   const CXXRecordDecl *RD = MD.getParent();
   if (!isInStlNamespace(RD))
