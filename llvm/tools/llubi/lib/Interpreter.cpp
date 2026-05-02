@@ -72,9 +72,8 @@ static void forEachScalarValue(AnyValue &V,
     return;
 
   if (V.isAggregate()) {
-    for (auto &SubValue : V.asAggregate()) {
+    for (auto &SubValue : V.asAggregate())
       forEachScalarValue(SubValue, Visit);
-    }
     return;
   }
 
@@ -102,7 +101,8 @@ static void applyNonNullAttr(AnyValue &V) {
 
 static void applyAlignAttr(AnyValue &V, Align Alignment) {
   forEachScalarValue(V, [Alignment](AnyValue &Scalar) {
-    if (Scalar.isPointer() && Scalar.asPointer().address().countr_zero() < Log2(Alignment))
+    if (Scalar.isPointer() &&
+        Scalar.asPointer().address().countr_zero() < Log2(Alignment))
       Scalar = AnyValue::poison();
   });
 }
