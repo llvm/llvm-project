@@ -418,6 +418,9 @@ add_fp_unittest(
     libc.src.__support.math.dmulf128
     libc.src.__support.math.dmull
     libc.src.__support.math.dsqrtf128
+    libc.src.__support.math.fadd
+    libc.src.__support.math.faddf128
+    libc.src.__support.math.faddl
     libc.src.__support.math.fdim
     libc.src.__support.math.fdimbf16
     libc.src.__support.math.fdimf
