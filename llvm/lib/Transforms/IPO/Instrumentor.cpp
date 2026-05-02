@@ -366,6 +366,7 @@ void InstrumentationConfig::populate(InstrumentorIRBuilderTy &IIRB) {
   /// List of all instrumentation opportunities.
   FunctionIO::populate(*this, IIRB);
   AllocaIO::populate(*this, IIRB);
+  UnreachableIO::populate(*this, IIRB);
   LoadIO::populate(*this, IIRB);
   StoreIO::populate(*this, IIRB);
 }
@@ -754,6 +755,17 @@ Value *FunctionIO::isMainFunction(Value &V, Type &Ty,
   return getCI(&Ty, Fn.getName() == "main");
 }
 
+///}
+
+/// UnreachableIO
+///{
+void UnreachableIO::init(InstrumentationConfig &IConf,
+                         InstrumentorIRBuilderTy &IIRB, ConfigTy *UserConfig) {
+  if (UserConfig)
+    Config = *UserConfig;
+  addCommonArgs(IConf, IIRB.Ctx, Config.has(PassId));
+  IConf.addChoice(*this, IIRB.Ctx);
+}
 ///}
 
 /// AllocaIO

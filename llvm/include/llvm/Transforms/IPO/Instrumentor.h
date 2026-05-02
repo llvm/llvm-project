@@ -652,6 +652,27 @@ struct AllocaIO final : public InstructionIO<Instruction::Alloca> {
   }
 };
 
+struct UnreachableIO final : public InstructionIO<Instruction::Unreachable> {
+  UnreachableIO() : InstructionIO<Instruction::Unreachable>(/*IsPRE*/ true) {}
+
+  enum ConfigKind {
+    PassId,
+    NumConfig,
+  };
+
+  using ConfigTy = BaseConfigTy<ConfigKind>;
+  ConfigTy Config;
+
+  void init(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
+            ConfigTy *UserConfig = nullptr);
+
+  static void populate(InstrumentationConfig &IConf,
+                       InstrumentorIRBuilderTy &IIRB) {
+    auto *PreIO = IConf.allocate<UnreachableIO>();
+    PreIO->init(IConf, IIRB);
+  }
+};
+
 /// The instrumentation opportunity for store instructions.
 struct StoreIO : public InstructionIO<Instruction::Store> {
   virtual ~StoreIO() {};
