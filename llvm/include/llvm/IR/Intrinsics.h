@@ -257,6 +257,11 @@ namespace Intrinsic {
     }
   };
 
+  /// Returns true if \p id has a struct return type in the first component of
+  /// the return value, and the number of struct elements in the second
+  /// component of the return value.
+  LLVM_ABI std::pair<bool, uint32_t> hasStructReturnType(ID id);
+
   /// Return the IIT table descriptor for the specified intrinsic into an array
   /// of IITDescriptors.
   LLVM_ABI void getIntrinsicInfoTableEntries(ID id,
