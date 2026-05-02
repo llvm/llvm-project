@@ -896,6 +896,65 @@ add_header_library(
 )
 
 add_header_library(
+  fmaximum_mag
+  HDRS
+    fmaximum_mag.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fmaximum_magbf16
+  HDRS
+    fmaximum_magbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.macros.config
+  FLAGS
+    MISC_MATH_BASIC_OPS_OPT
+)
+
+add_header_library(
+  fmaximum_magf
+  HDRS
+    fmaximum_magf.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fmaximum_magf128
+  HDRS
+    fmaximum_magf128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fmaximum_magf16
+  HDRS
+    fmaximum_magf16.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fmaximum_magl
+  HDRS
+    fmaximum_magl.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   fmaximum_num
   HDRS
     fmaximum_num.h
@@ -1078,6 +1137,65 @@ add_header_library(
   fminimuml
   HDRS
     fminimuml.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fminimum_mag
+  HDRS
+    fminimum_mag.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fminimum_magbf16
+  HDRS
+    fminimum_magbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.macros.config
+  FLAGS
+    MISC_MATH_BASIC_OPS_OPT
+)
+
+add_header_library(
+  fminimum_magf
+  HDRS
+    fminimum_magf.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fminimum_magf128
+  HDRS
+    fminimum_magf128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fminimum_magf16
+  HDRS
+    fminimum_magf16.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fminimum_magl
+  HDRS
+    fminimum_magl.h
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.macros.config
