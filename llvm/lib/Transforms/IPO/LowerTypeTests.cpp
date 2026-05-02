@@ -1532,7 +1532,6 @@ Triple::ArchType LowerTypeTestsModule::selectJumpTableArmEncoding(
 // Create location for each function entry which should look like this:
 // frame #0: c::c() (.cfi_jt) at sanitizer/ubsan_interface.h:0:0
 // frame #1: __ubsan_check_cfi_icall_jt at sanitizer/ubsan_interface.h:0
-// frame #2: .cfi.jumptable.81 at sanitizer/ubsan_interface.h:0:0
 static SmallVector<DILocation *>
 createJumpTableDebugInfo(Function *F, ArrayRef<GlobalTypeMember *> Functions) {
   Module &M = *F->getParent();
@@ -1553,18 +1552,13 @@ createJumpTableDebugInfo(Function *F, ArrayRef<GlobalTypeMember *> Functions) {
 
   DISubroutineType *DIFnTy = DIB.createSubroutineType(nullptr);
 
-  DISubprogram *JTSP = DIB.createFunction(CU, F->getName(), {}, File, 0, DIFnTy,
-                                          0, DINode::FlagArtificial,
-                                          DISubprogram::SPFlagDefinition);
-  F->setSubprogram(JTSP);
-
-  DILocation *JTLoc = DILocation::get(M.getContext(), 0, 0, JTSP);
-
   DISubprogram *UbsanSP = DIB.createFunction(
       CU, "__ubsan_check_cfi_icall_jt", {}, File, 0, DIFnTy, 0,
       DINode::FlagArtificial, DISubprogram::SPFlagDefinition);
 
-  DILocation *UbsanLoc = DILocation::get(M.getContext(), 0, 0, UbsanSP, JTLoc);
+  F->setSubprogram(UbsanSP);
+
+  DILocation *UbsanLoc = DILocation::get(M.getContext(), 0, 0, UbsanSP);
 
   SmallVector<DILocation *> Locations;
   Locations.reserve(Functions.size());
