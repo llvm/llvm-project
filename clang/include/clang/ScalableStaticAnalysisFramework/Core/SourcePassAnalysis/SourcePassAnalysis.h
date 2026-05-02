@@ -5,6 +5,9 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+// SourcePassAnalysis applies whole-program analysis (WPA) results to ASTs.
+// A SourcePassAnalysis is an ASTConsumer that depends on a WPA AnalysisResult.
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_SOURCEPASSANALYSIS_SOURCEPASSANALYSIS_H
 #define LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_SOURCEPASSANALYSIS_SOURCEPASSANALYSIS_H
@@ -29,14 +32,15 @@ protected:
   std::unique_ptr<WPASuite> WPAResult;
 };
 
-// FIXME: Expectations on SourcePassAnalysis results are TBD.  For a source pass
-// that associates WPA results to AST, the result type is simply void; for
-// source rewriting tools, it may be serializable CodeReplacements; for
-// diagnostic tools, ti maybe SARIF.
+// FIXME: Expectations on SourcePassAnalysis result types are TBD.  For a source
+// pass that prints WPA results with respect to the AST, the result type can be
+// void; for source rewriting tools, it may be serializable CodeReplacements;
+// for diagnostic tools, it may be SARIF.
 
-///  A SourcePassAnalysis applies WholeProgramAnalysis results to ASTs.
-///  Therefore, it is an `ASTConsumer` that depends on a set of
-///  `clang::ssaf::AnalysisResult`s.
+/// A SourcePassAnalysis applies the result of a whole-program analysis (WPA) to
+/// ASTs. It depends on a single AnalysisResult.
+/// If one finds the need that a SourcePassAnalysis depends on multiple
+/// AnalysisResults, one should create a new WPA that depends on those analyses.
 template <typename ResultT, typename DepResultT>
 class SourcePassAnalysis : public SourcePassAnalysisBase {
   static_assert((std::is_base_of_v<AnalysisResult, DepResultT>),
