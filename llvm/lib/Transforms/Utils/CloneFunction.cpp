@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
@@ -495,8 +495,7 @@ PruningFunctionCloner::cloneInstruction(BasicBlock::const_iterator II) {
   Args.push_back(
       MetadataAsValue::get(Ctx, MDString::get(Ctx, "fpexcept.ignore")));
 
-  SmallVector<Type *> ArgTys =
-      llvm::to_vector(llvm::map_range(Args, &Value::getType));
+  SmallVector<Type *> ArgTys = llvm::map_to_vector(Args, &Value::getType);
   Function *IFn = Intrinsic::getOrInsertDeclaration(NewFunc->getParent(), CIID,
                                                     OldInst.getType(), ArgTys);
   return CallInst::Create(IFn, Args, OldInst.getName() + ".strict");
