@@ -956,13 +956,11 @@ public:
     if (W != CM_Interleave)
       OtherMemberCost = InsertPosCost = Cost / Grp->getNumMembers();
     ;
-    for (unsigned Idx = 0; Idx < Grp->getFactor(); ++Idx) {
-      if (auto *I = Grp->getMember(Idx)) {
-        if (Grp->getInsertPos() == I)
-          WideningDecisions[{I, VF}] = {W, InsertPosCost};
-        else
-          WideningDecisions[{I, VF}] = {W, OtherMemberCost};
-      }
+    for (auto *I : Grp->members()) {
+      if (Grp->getInsertPos() == I)
+        WideningDecisions[{I, VF}] = {W, InsertPosCost};
+      else
+        WideningDecisions[{I, VF}] = {W, OtherMemberCost};
     }
   }
 
@@ -2560,10 +2558,7 @@ bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(
   // If the group involves a non-integral pointer, we may not be able to
   // losslessly cast all values to a common type.
   bool ScalarNI = DL.isNonIntegralPointerType(ScalarTy);
-  for (unsigned Idx = 0; Idx < InterleaveFactor; Idx++) {
-    Instruction *Member = Group->getMember(Idx);
-    if (!Member)
-      continue;
+  for (Instruction *Member : Group->members()) {
     auto *MemberTy = getLoadStoreType(Member);
     bool MemberNI = DL.isNonIntegralPointerType(MemberTy);
     // Don't coerce non-integral pointers to integers or vice versa.
@@ -4833,12 +4828,9 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
       // the cost will actually be assigned to one instruction.
       if (const auto *Group = getInterleavedAccessGroup(&I)) {
         if (Decision == CM_Scalarize) {
-          for (unsigned Idx = 0; Idx < Group->getFactor(); ++Idx) {
-            if (auto *I = Group->getMember(Idx)) {
-              setWideningDecision(I, VF, Decision,
-                                  getMemInstScalarizationCost(I, VF));
-            }
-          }
+          for (Instruction *I : Group->members())
+            setWideningDecision(I, VF, Decision,
+                                getMemInstScalarizationCost(I, VF));
         } else {
           setWideningDecision(Group, VF, Decision, Cost);
         }
@@ -4913,17 +4905,14 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
         // Scalarize all members of this interleaved group when any member
         // is used as an address. The address-used load skips scalarization
         // overhead, other members include it.
-        for (unsigned Idx = 0; Idx < Group->getFactor(); ++Idx) {
-          if (Instruction *Member = Group->getMember(Idx)) {
-            InstructionCost Cost =
-                AddrDefs.contains(Member)
-                    ? (VF.getKnownMinValue() *
-                       getMemoryInstructionCost(Member,
-                                                ElementCount::getFixed(1)))
-                    : getMemInstScalarizationCost(Member, VF);
-            setWideningDecision(Member, VF, CM_Scalarize, Cost);
-            UpdateMemOpUserCost(cast<LoadInst>(Member));
-          }
+        for (Instruction *Member : Group->members()) {
+          InstructionCost Cost = AddrDefs.contains(Member)
+                                     ? (VF.getKnownMinValue() *
+                                        getMemoryInstructionCost(
+                                            Member, ElementCount::getFixed(1)))
+                                     : getMemInstScalarizationCost(Member, VF);
+          setWideningDecision(Member, VF, CM_Scalarize, Cost);
+          UpdateMemOpUserCost(cast<LoadInst>(Member));
         }
       }
     } else {
