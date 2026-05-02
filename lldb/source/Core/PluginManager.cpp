@@ -2464,9 +2464,29 @@ llvm::SmallVector<RegisteredPluginInfo>
 PluginManager::GetInstrumentationRuntimePluginInfo() {
   return GetInstrumentationRuntimeInstances().GetPluginInfoForAllInstances();
 }
-bool PluginManager::SetInstrumentationRuntimePluginEnabled(llvm::StringRef name,
-                                                           bool enable) {
-  return GetInstrumentationRuntimeInstances().SetInstanceEnabled(name, enable);
+
+llvm::StringRef PluginManager::PluginDomainKindToStr(PluginDomainKind kind) {
+  switch (kind) {
+  case ePluginDomainKindGlobal:
+    return "global";
+  case ePluginDomainKindDebugger:
+    return "debugger";
+  case ePluginDomainKindTarget:
+    return "target";
+  }
+  llvm_unreachable("unhandled PluginDomainKind");
+}
+
+llvm::Error PluginManager::SetInstrumentationRuntimePluginEnabled(
+    llvm::StringRef name, bool enable, Debugger &requesting_debugger,
+    PluginDomainKind domain) {
+  if (domain != lldb::ePluginDomainKindGlobal)
+    return llvm::createStringErrorV("{} domain is not supported",
+                                    PluginDomainKindToStr(domain));
+  if (!GetInstrumentationRuntimeInstances().SetInstanceEnabled(name, enable))
+    return llvm::createStringError("plugin could not be found");
+
+  return llvm::Error::success();
 }
 
 llvm::SmallVector<RegisteredPluginInfo>
