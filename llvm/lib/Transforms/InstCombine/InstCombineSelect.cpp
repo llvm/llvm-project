@@ -4391,6 +4391,26 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   if (Instruction *I = canonicalizeScalarSelectOfVecs(SI, *this))
     return I;
 
+  // Fold: select (icmp ult X, 2), X, ctpop(X)  -->  ctpop(X)
+  // Fold: select (icmp eq X, -1), BitWidth, ctpop(X)  -->  ctpop(X)
+  // ctpop(0)==0, ctpop(1)==1, ctpop(-1)==BitWidth, so guards are redundant.
+  {
+    Value *X;
+    CmpPredicate CtpopPred;
+    Value *CtpopCmpLHS, *CtpopCmpRHS;
+    unsigned CtpopBitWidth = SelType->getScalarSizeInBits();
+    if (match(FalseVal, m_Intrinsic<Intrinsic::ctpop>(m_Value(X))) &&
+        match(CondVal, m_ICmp(CtpopPred, m_Value(CtpopCmpLHS), m_Value(CtpopCmpRHS)))) {
+      if (CtpopCmpLHS == X && CtpopPred == ICmpInst::ICMP_ULT &&
+          match(CtpopCmpRHS, m_SpecificInt(2)) && TrueVal == X)
+        return replaceInstUsesWith(SI, FalseVal);
+      if (CtpopCmpLHS == X && CtpopPred == ICmpInst::ICMP_EQ &&
+          match(CtpopCmpRHS, m_AllOnes()) &&
+          match(TrueVal, m_SpecificInt(CtpopBitWidth)))
+        return replaceInstUsesWith(SI, FalseVal);
+    }
+  }
+
   // If the type of select is not an integer type or if the condition and
   // the selection type are not both scalar nor both vector types, there is no
   // point in attempting to match these patterns.
