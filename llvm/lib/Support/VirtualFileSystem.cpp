@@ -127,8 +127,9 @@ FileSystem::getBufferForFile(const llvm::Twine &Name, int64_t FileSize,
 }
 
 llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
-FileSystem::getSliceBufferForFile(const Twine &Name, int64_t Offset,
-                                  int64_t Count, bool IsVolatile, bool IsText) {
+FileSystem::getSliceBufferForFile(const Twine &Name, uint64_t Offset,
+                                  uint64_t Count, bool IsVolatile,
+                                  bool IsText) {
   auto F = IsText ? openFileForRead(Name) : openFileForReadBinary(Name);
   if (!F)
     return F.getError();
@@ -223,7 +224,7 @@ public:
                                                    bool IsVolatile) override;
 
   ErrorOr<std::unique_ptr<MemoryBuffer>>
-  getSliceBuffer(const Twine &Name, int64_t Offset, int64_t Count,
+  getSliceBuffer(const Twine &Name, uint64_t Offset, uint64_t Count,
                  bool IsVolatile) override;
 
   std::error_code close() override;
@@ -262,11 +263,22 @@ RealFile::getBuffer(const Twine &Name, int64_t FileSize,
 }
 
 ErrorOr<std::unique_ptr<MemoryBuffer>>
-RealFile::getSliceBuffer(const Twine &Name, int64_t Offset, int64_t Count,
+RealFile::getSliceBuffer(const Twine &Name, uint64_t Offset, uint64_t Count,
                          bool IsVolatile) {
   auto BypassSandbox = sys::sandbox::scopedDisable();
 
   assert(FD != kInvalidFile && "cannot get buffer for closed file");
+  if (Count == uint64_t(-1)) {
+    sys::fs::file_status Status;
+    if (std::error_code EC = sys::fs::status(FD, Status))
+      return EC;
+    uint64_t FileSize = Status.getSize();
+    if (Offset < FileSize)
+      Count = FileSize - Offset;
+    else
+      Count = 0;
+  }
+
   return MemoryBuffer::getOpenFileSlice(FD, Name, Count, Offset, IsVolatile);
 }
 
@@ -2603,14 +2615,12 @@ public:
 } // namespace
 
 ErrorOr<std::unique_ptr<MemoryBuffer>> File::getSliceBuffer(const Twine &Name,
-                                                            int64_t Offset,
-                                                            int64_t Count,
+                                                            uint64_t Offset,
+                                                            uint64_t Count,
                                                             bool IsVolatile) {
   auto BuffOrError = getBuffer(Name, -1, false, IsVolatile);
   if (!BuffOrError)
     return BuffOrError.getError();
-  assert(Offset >= 0 && "Negative Offset");
-  assert(Count >= 0 && "Negative Count");
   StringRef Bytes = (*BuffOrError)->getBuffer();
   Bytes = Bytes.drop_front(Offset);
   Bytes = Bytes.take_front(Count);

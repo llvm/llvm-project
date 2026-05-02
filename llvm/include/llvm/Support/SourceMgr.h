@@ -203,8 +203,8 @@ public:
   OpenIncludeFile(const std::string &Filename, std::string &IncludedFile);
 
   LLVM_ABI ErrorOr<std::unique_ptr<MemoryBuffer>>
-  OpenSliceIncludeFile(const std::string &Filename, int64_t Offset,
-                       int64_t Count, std::string &IncludedFile);
+  OpenSliceIncludeFile(const std::string &Filename, uint64_t Offset,
+                       uint64_t Count, std::string &IncludedFile);
 
   /// Return the ID of the buffer containing the specified location.
   ///

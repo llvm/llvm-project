@@ -134,7 +134,7 @@ public:
             bool RequiresNullTerminator = true, bool IsVolatile = false) = 0;
 
   virtual ErrorOr<std::unique_ptr<MemoryBuffer>>
-  getSliceBuffer(const Twine &Name, int64_t Offset = 0, int64_t Count = -1,
+  getSliceBuffer(const Twine &Name, uint64_t Offset = 0, uint64_t Count = -1,
                  bool IsVolatile = false);
 
   /// Closes the file.
@@ -301,8 +301,8 @@ public:
                    bool IsText = true);
 
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
-  getSliceBufferForFile(const Twine &Name, int64_t Offset = 0,
-                        int64_t Count = -1, bool IsVolatile = false,
+  getSliceBufferForFile(const Twine &Name, uint64_t Offset = 0,
+                        uint64_t Count = -1, bool IsVolatile = false,
                         bool IsText = true);
 
   /// Get a directory_iterator for \p Dir.

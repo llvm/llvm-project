@@ -91,8 +91,8 @@ SourceMgr::OpenIncludeFile(const std::string &Filename,
 }
 
 ErrorOr<std::unique_ptr<MemoryBuffer>>
-SourceMgr::OpenSliceIncludeFile(const std::string &Filename, int64_t Offset,
-                                int64_t Count, std::string &IncludedFile) {
+SourceMgr::OpenSliceIncludeFile(const std::string &Filename, uint64_t Offset,
+                                uint64_t Count, std::string &IncludedFile) {
   auto GetFileSlice = [this, Offset, Count](StringRef Path) {
     return FS ? FS->getSliceBufferForFile(Path, Offset, Count)
               : MemoryBuffer::getFileSlice(Path, Count, Offset);

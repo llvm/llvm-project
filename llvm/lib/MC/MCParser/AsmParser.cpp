@@ -860,16 +860,15 @@ bool AsmParser::processIncbinFile(const std::string &Filename, int64_t Skip,
   if (SymbolScanningMode)
     return false;
 
-  int64_t BytesToRead = -1; // -1 initially for reading the whole file
+  uint64_t BytesToRead =
+      uint64_t(-1); // -1 initially for reading the whole file
   if (Count) {
     int64_t Res;
     if (!Count->evaluateAsAbsolute(Res, getStreamer().getAssemblerPtr()))
       return Error(Loc, "expected absolute expression");
-    if (Res < 0)
-      return Warning(Loc,
-                     "negative count has no effect"); // don't read if assembly
-    // has negative count
-    BytesToRead = Res;
+    if (Res < 0) // don't read if the assembly has negative count
+      return Warning(Loc, "negative count has no effect");
+    BytesToRead = uint64_t(Res);
   }
 
   std::string IncludedFile;
