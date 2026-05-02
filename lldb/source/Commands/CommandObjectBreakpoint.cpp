@@ -3591,9 +3591,9 @@ private:
 class CommandObjectBreakpointOverrideAdd : public CommandObjectParsed {
 public:
   CommandObjectBreakpointOverrideAdd(CommandInterpreter &interpreter)
-      : CommandObjectParsed(
-            interpreter, "breakpoint override add",
-            "Add a scripted breakpoint override resolver.", nullptr),
+      : CommandObjectParsed(interpreter, "breakpoint override add",
+                            "Add a scripted breakpoint override resolver.",
+                            nullptr),
         m_python_class_options("breakpoint override resolver", true, 'P') {
     // We're picking up all the normal options, commands and disable.
     m_all_options.Append(&m_python_class_options,
@@ -3646,7 +3646,7 @@ protected:
     Target &target =
         m_dummy_options.m_use_dummy ? GetDummyTarget() : GetTarget();
     uint64_t id = target.AddBreakpointResolverOverride(
-        m_python_class_options.GetName(), 
+        m_python_class_options.GetName(),
         m_python_class_options.GetStructuredData(), m_options.m_description);
     result.AppendMessageWithFormatv("{0}", id);
     result.SetStatus(eReturnStatusSuccessFinishResult);
@@ -3662,9 +3662,9 @@ private:
 class CommandObjectBreakpointOverrideDelete : public CommandObjectParsed {
 public:
   CommandObjectBreakpointOverrideDelete(CommandInterpreter &interpreter)
-      : CommandObjectParsed(
-            interpreter, "breakpoint override delete",
-            "Add a scripted breakpoint override resolver.", nullptr) {
+      : CommandObjectParsed(interpreter, "breakpoint override delete",
+                            "Add a scripted breakpoint override resolver.",
+                            nullptr) {
     AddSimpleArgumentList(eArgTypeIndex, eArgRepeatOptional);
     m_all_options.Append(&m_dummy_options, LLDB_OPT_SET_1, LLDB_OPT_SET_1);
     m_all_options.Finalize();
@@ -3676,10 +3676,10 @@ protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     Target &target =
         m_dummy_options.m_use_dummy ? GetDummyTarget() : GetTarget();
-    
+
     const size_t argc = command.GetArgumentCount();
     if (argc == 0) {
-      if(m_interpreter.Confirm("Delete all breakpoint overrides?", false)) {
+      if (m_interpreter.Confirm("Delete all breakpoint overrides?", false)) {
         target.ClearBreakpointResolverOverrides();
       }
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
@@ -3700,7 +3700,7 @@ protected:
         result.AppendErrorWithFormatv("Cannot delete override: {0}", id);
         result.SetStatus(eReturnStatusFailed);
         return;
-      } 
+      }
     }
     result.SetStatus(eReturnStatusSuccessFinishNoResult);
   }
@@ -3715,7 +3715,7 @@ public:
   CommandObjectBreakpointOverrideList(CommandInterpreter &interpreter)
       : CommandObjectParsed(
             interpreter, "breakpoint override list",
-            "List the current scripted breakpoint override resolvers.", 
+            "List the current scripted breakpoint override resolvers.",
             nullptr) {
     AddSimpleArgumentList(eArgTypeIndex, eArgRepeatOptional);
     m_all_options.Append(&m_dummy_options, LLDB_OPT_SET_1, LLDB_OPT_SET_1);
@@ -3728,7 +3728,7 @@ protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     Target &target =
         m_dummy_options.m_use_dummy ? GetDummyTarget() : GetTarget();
-    
+
     const size_t argc = command.GetArgumentCount();
     std::vector<uint64_t> idxs;
     if (argc != 0) {
@@ -3738,7 +3738,8 @@ protected:
         if (entry.ref().getAsInteger(0, id))
           idxs.push_back(id);
         else {
-          result.AppendErrorWithFormatv("Index not an integer: {0}", entry.ref());
+          result.AppendErrorWithFormatv("Index not an integer: {0}",
+                                        entry.ref());
           result.SetStatus(eReturnStatusFailed);
           return;
         }
@@ -3756,11 +3757,11 @@ class CommandObjectBreakpointOverride : public CommandObjectMultiword {
 public:
   CommandObjectBreakpointOverride(CommandInterpreter &interpreter)
       : CommandObjectMultiword(
-            interpreter, "override", "Commands to manage breakpoint override resolvers") {
-  
-            
+            interpreter, "override",
+            "Commands to manage breakpoint override resolvers") {
+
     SetHelpLong(
-            R"(
+        R"(
 Breakpoint override resolvers allow you to intercept breakpoint requests and
 re-implement them using a custom breakpoint resolver.  Override resolvers are
 implemented by a scripted breakpoint resolver that implements the 
@@ -3798,7 +3799,6 @@ Delete an added resolver using:
 
   ~CommandObjectBreakpointOverride() override = default;
 };
-
 
 // CommandObjectMultiwordBreakpoint
 #pragma mark MultiwordBreakpoint

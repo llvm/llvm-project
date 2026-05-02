@@ -12,12 +12,11 @@
 
 namespace lldb_private {
 lldb::BreakpointResolverSP ScriptedBreakpointResolverOverride::CheckForOverride(
-      Target &target, lldb::BreakpointResolverSP initial_sp) {
+    Target &target, lldb::BreakpointResolverSP initial_sp) {
   lldb::BreakpointResolverSP candidate_sp(new BreakpointResolverScripted(
-        {}, m_class_name, initial_sp->GetDepth(), 
-        m_args_data));
+      {}, m_class_name, initial_sp->GetDepth(), m_args_data));
   if (candidate_sp->OverridesResolver(target, initial_sp))
     return candidate_sp;
   return {};
 }
-}
+} // namespace lldb_private

@@ -2,16 +2,18 @@ import lldb
 
 
 class OverrideExample:
-    def __init__(self, bkpt: lldb.SBBreakpoint, extra_args : lldb.SBStructuredData, dict):
+    def __init__(
+        self, bkpt: lldb.SBBreakpoint, extra_args: lldb.SBStructuredData, dict
+    ):
         self.bkpt = bkpt
         self.extra_args = extra_args
         self.set_bkpt = False
         symbol_value = extra_args.GetValueForKey("symbol")
         self.alternate_loc = symbol_value.GetStringValue(1000)
 
-    def __callback__(self, sym_ctx : lldb.SBSymbolContext):
+    def __callback__(self, sym_ctx: lldb.SBSymbolContext):
         """This callback only sets a breakpoint in one place,
-           no matter what file and line you ask for"""
+        no matter what file and line you ask for"""
         if self.set_bkpt == True:
             return
         # FIXME: Do this better...
@@ -22,14 +24,16 @@ class OverrideExample:
         start_addr = alternate_sym.addr
         self.bkpt.AddLocation(start_addr)
         self.set_bkpt = True
-        
+
     def get_short_help(self):
         return f"I am an override resolver, resolving to {self.alternate_loc}."
 
     def set_breakpoint(self, bkpt: lldb.SBBreakpoint):
         self.bkpt = bkpt
 
-    def overrides_resolver(self, target: lldb.SBTarget, initial_resolver: lldb.SBStructuredData):
+    def overrides_resolver(
+        self, target: lldb.SBTarget, initial_resolver: lldb.SBStructuredData
+    ):
         strm = lldb.SBStream()
         initial_resolver.GetAsJSON(strm)
         type = initial_resolver.GetValueForKey("Type").GetStringValue(1000)

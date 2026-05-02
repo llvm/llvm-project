@@ -637,10 +637,11 @@ public:
   ///     The amount of data read in host bytes.
   size_t ReadMemory(const SBAddress addr, void *buf, size_t size,
                     lldb::SBError &error);
-                    
+
   uint64_t AddBreakpointOverride(const char *class_name,
-      const char *description, SBStructuredData &args_data);
-  
+                                 const char *description,
+                                 SBStructuredData &args_data);
+
   bool RemoveBreakpointOverride(uint64_t id);
 
   lldb::SBBreakpoint BreakpointCreateByLocation(const char *file,

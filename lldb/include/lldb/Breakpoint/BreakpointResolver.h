@@ -112,13 +112,14 @@ public:
   virtual StructuredData::ObjectSP SerializeToStructuredData() {
     return StructuredData::ObjectSP();
   }
-  
-  /// The resolver_sp won't have had its breakpoint set by the time we are 
+
+  /// The resolver_sp won't have had its breakpoint set by the time we are
   /// checking the Override, but it might need to access the Target, so we pass
   /// that in here.
-  virtual bool OverridesResolver(Target &target, lldb::BreakpointResolverSP resolver_sp) {
+  virtual bool OverridesResolver(Target &target,
+                                 lldb::BreakpointResolverSP resolver_sp) {
     return false;
-  } 
+  }
 
   static const char *GetSerializationKey() { return "BKPTResolver"; }
 

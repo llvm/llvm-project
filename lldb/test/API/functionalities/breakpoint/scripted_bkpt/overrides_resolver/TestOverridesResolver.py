@@ -50,18 +50,16 @@ class TestOverridesResolver(TestBase):
             result = lldb.SBCommandReturnObject()
             self.ci.HandleCommand(
                 f"breakpoint override add -P {class_name} -k {key} -v {value} -d '{help_text}'",
-                result
+                result,
             )
             self.assertCommandReturn(result, "breakpoint override worked")
             override_id = int(result.GetOutput())
         else:
             extra_args = lldb.SBStructuredData()
-            json_str = '{"' + key + '":"' + value + '"}' 
+            json_str = '{"' + key + '":"' + value + '"}'
             extra_args.SetFromJSON(json_str)
             override_id = target.AddBreakpointOverride(
-                class_name,
-                help_text, 
-                extra_args
+                class_name, help_text, extra_args
             )
 
         # Check the override listing, make sure our new entry is present:
@@ -70,8 +68,7 @@ class TestOverridesResolver(TestBase):
         # Now make a breakpoint by file and line:
         # FIXME: Use source_line to find this line number:
         bkpt = target.BreakpointCreateByLocation(
-            "main.c",
-            line_number("main.c", "I am in the stop symbol")
+            "main.c", line_number("main.c", "I am in the stop symbol")
         )
         self.assertEqual(bkpt.GetNumLocations(), 1, "We make one location")
         # Now continue and we'll hit this breakpoint but not in the
@@ -86,9 +83,8 @@ class TestOverridesResolver(TestBase):
         self.assertEqual(thread.stop_reason_data[1], 1, "First location hit is 1")
         func_name = thread.frames[0].name
         self.assertEqual(
-            func_name,
-            alternate_location,
-            "Stopped at overridden location")
+            func_name, alternate_location, "Stopped at overridden location"
+        )
 
         # Now set a source name breakpoint, that should not get overridden, and
         # when we continue we should hit it:
@@ -105,20 +101,15 @@ class TestOverridesResolver(TestBase):
             self.runCmd(f"breakpoint override delete {override_id}")
         else:
             self.assertTrue(
-                target.DeleteBreakpointOverride(override_id),
-                "Delete the right one"
+                target.DeleteBreakpointOverride(override_id), "Delete the right one"
             )
 
         # FIXME use source_line:
         new_bkpt = target.BreakpointCreateByLocation(
-            "main.c",
-            line_number("main.c", "return 0")
+            "main.c", line_number("main.c", "return 0")
         )
         self.assertEqual(new_bkpt.num_locations, 1, "Made breakpoint")
         threads = lldbutil.continue_to_breakpoint(process, new_bkpt)
         self.assertEqual(len(threads), 1, "Hit our new breakpoint")
         func_name = threads[0].frames[0].name
         self.assertEqual(func_name, "main", "Stopped in unchanged location")
-
-        
-        

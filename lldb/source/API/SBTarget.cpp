@@ -680,17 +680,19 @@ size_t SBTarget::ReadMemory(const SBAddress addr, void *buf, size_t size,
   return bytes_read;
 }
 
-uint64_t SBTarget::AddBreakpointOverride(const char *class_name, 
-  const char *description, SBStructuredData &args_data) {
+uint64_t SBTarget::AddBreakpointOverride(const char *class_name,
+                                         const char *description,
+                                         SBStructuredData &args_data) {
   if (TargetSP target_sp = GetSP()) {
     StructuredDataImpl impl;
     args_data.CopyImpl(impl);
-    ScriptedBreakpointResolverOverride *new_override 
-        = new ScriptedBreakpointResolverOverride(*target_sp.get(), 
-        std::string(description), std::string(class_name), impl);
+    ScriptedBreakpointResolverOverride *new_override =
+        new ScriptedBreakpointResolverOverride(*target_sp.get(),
+                                               std::string(description),
+                                               std::string(class_name), impl);
     return target_sp->AddBreakpointResolverOverride(new_override);
   }
-  return 0;    
+  return 0;
 }
 
 bool SBTarget::RemoveBreakpointOverride(uint64_t id) {
@@ -699,8 +701,6 @@ bool SBTarget::RemoveBreakpointOverride(uint64_t id) {
   }
   return false;
 }
-
-
 
 SBBreakpoint SBTarget::BreakpointCreateByLocation(const char *file,
                                                   uint32_t line) {

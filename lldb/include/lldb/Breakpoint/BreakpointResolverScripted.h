@@ -62,14 +62,14 @@ public:
 
   lldb::BreakpointResolverSP
   CopyForBreakpoint(lldb::BreakpointSP &breakpoint) override;
-  
+
   // OverridesResolver will get called before this resolver has been assigned a
-  // breakpoint.  You should only need to see the resolver to know whether you 
+  // breakpoint.  You should only need to see the resolver to know whether you
   // want to override it, but you may need to check something about the target,
   // which you would normally get to from the breakpoint, so we pass it in here.
-  bool OverridesResolver(Target &target, 
-      lldb::BreakpointResolverSP original_sp) override;
-  
+  bool OverridesResolver(Target &target,
+                         lldb::BreakpointResolverSP original_sp) override;
+
 protected:
   void NotifyBreakpointSet() override;
 private:

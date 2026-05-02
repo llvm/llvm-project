@@ -661,8 +661,7 @@ public:
   lldb::ValueObjectSP
   GetOpaqueTypeFromSBValue(const lldb::SBValue &value) const;
 
-  lldb::TargetSP
-  GetOpaqueTypeFromSBTarget(const lldb::SBTarget &target) const;
+  lldb::TargetSP GetOpaqueTypeFromSBTarget(const lldb::SBTarget &target) const;
 
 protected:
   Debugger &m_debugger;

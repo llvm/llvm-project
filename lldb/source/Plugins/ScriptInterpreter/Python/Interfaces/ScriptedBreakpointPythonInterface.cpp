@@ -37,14 +37,14 @@ ScriptedBreakpointPythonInterface::CreatePluginObject(
                                                      break_sp, args_sp);
 }
 
-bool ScriptedBreakpointPythonInterface::OverridesResolver(Target &target,
-    StructuredDataImpl &resolver_data) {
+bool ScriptedBreakpointPythonInterface::OverridesResolver(
+    Target &target, StructuredDataImpl &resolver_data) {
   Status error;
-  
+
   TargetSP target_sp = target.shared_from_this();
-  
-  StructuredData::ObjectSP obj = Dispatch("overrides_resolver", error, 
-      target_sp, resolver_data);
+
+  StructuredData::ObjectSP obj =
+      Dispatch("overrides_resolver", error, target_sp, resolver_data);
 
   if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
                                                     error)) {
@@ -55,11 +55,11 @@ bool ScriptedBreakpointPythonInterface::OverridesResolver(Target &target,
   return obj->GetBooleanValue();
 }
 
-void ScriptedBreakpointPythonInterface::SetBreakpoint(lldb::BreakpointSP break_sp) 
-{
+void ScriptedBreakpointPythonInterface::SetBreakpoint(
+    lldb::BreakpointSP break_sp) {
   Status error;
   StructuredData::ObjectSP obj = Dispatch("set_breakpoint", error, break_sp);
-   if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
+  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
                                                     error)) {
     Log *log = GetLog(LLDBLog::Script);
     LLDB_LOG(log, "Error calling set_breakpoint method: {1}", error);

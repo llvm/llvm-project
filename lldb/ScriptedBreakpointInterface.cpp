@@ -12,12 +12,12 @@
 
 namespace lldb_private {
 lldb::BreakpointResolverSP ScriptedBreakpointResolverOverride::CheckForOverride(
-      lldb::BreakpointResolverSP initial_sp) {
-  lldb::BreakpointResolverSP candidate_sp(new BreakpointResolverScripted(
-        initial_sp->GetBreakpoint(), m_class_name, initial_sp->GetDepth(), 
-        m_args_data));
+    lldb::BreakpointResolverSP initial_sp) {
+  lldb::BreakpointResolverSP candidate_sp(
+      new BreakpointResolverScripted(initial_sp->GetBreakpoint(), m_class_name,
+                                     initial_sp->GetDepth(), m_args_data));
   if (candidate_sp->OverridesResolver(initial_sp))
     return candidate_sp;
   return {};
 }
-}
+} // namespace lldb_private

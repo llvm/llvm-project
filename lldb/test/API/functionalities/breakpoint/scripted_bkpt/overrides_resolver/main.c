@@ -4,9 +4,7 @@ int g_change_me = 0;
 
 int change_him() { return ++g_change_me; }
 
-void stop_here_instead() {
-  printf("Stopped here instead?\n");
-}
+void stop_here_instead() { printf("Stopped here instead?\n"); }
 
 int stop_symbol() {
   static int s_cnt = 0;

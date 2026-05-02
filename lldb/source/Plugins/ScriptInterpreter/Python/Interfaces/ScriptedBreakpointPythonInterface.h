@@ -30,7 +30,8 @@ public:
     return llvm::SmallVector<AbstractMethodRequirement>({{"__callback__", 2}});
   }
 
-  bool OverridesResolver(Target &target, StructuredDataImpl &resolver_data) override;
+  bool OverridesResolver(Target &target,
+                         StructuredDataImpl &resolver_data) override;
   void SetBreakpoint(lldb::BreakpointSP break_sp) override;
 
   bool ResolverCallback(SymbolContext sym_ctx) override;
