@@ -97,14 +97,25 @@ struct reverse_iterator {
   decltype(*Iterator()) operator*() const;
 };
 
+template <typename Iterator>
+reverse_iterator<Iterator> operator+(int, reverse_iterator<Iterator>);
+template <typename Iterator>
+reverse_iterator<Iterator> operator-(int, reverse_iterator<Iterator>);
+
 template <typename T, typename Alloc = allocator<T>>
 struct vector {
   using iterator = __wrap_iter<T>;
-  using reverse_iterator = reverse_iterator<iterator>;
+  using const_iterator = __wrap_iter<const T>;
+  using reverse_iterator = std::reverse_iterator<iterator>;
+  using const_reverse_iterator = std::reverse_iterator<const_iterator>;
   iterator begin();
   iterator end();
+  const_iterator cbegin() const;
+  const_iterator cend() const;
   reverse_iterator rbegin();
   reverse_iterator rend();
+  const_reverse_iterator crbegin() const;
+  const_reverse_iterator crend() const;
   const T *data() const;
   vector();
   ~vector();

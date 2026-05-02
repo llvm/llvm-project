@@ -255,32 +255,32 @@ void IteratorUsedAfterPushBack(std::vector<int> v) {
 
 void IteratorUsedAfterPreIncrement() {
   std::vector<int> v;
-  auto it = std::begin(v);  // expected-warning {{object whose reference is captured is later invalidated}}
+  auto it = v.begin();      // expected-warning {{object whose reference is captured is later invalidated}}
   auto next = ++it;
   v.push_back(4);           // expected-note {{invalidated here}}
-  *next;                    // expected-note {{later used here}}
+  (void)*next;              // expected-note {{later used here}}
 }
 
 void IteratorUsedAfterPreDecrement(std::vector<int> v) {
-  auto it = std::end(v);    // expected-warning {{object whose reference is captured is later invalidated}}
+  auto it = v.rbegin();     // expected-warning {{object whose reference is captured is later invalidated}}
   auto prev = --it;
   v.resize(8);              // expected-note {{invalidated here}}
-  *prev;                    // expected-note {{later used here}}
+  (void)*prev;              // expected-note {{later used here}}
 }
 
 void IteratorUsedAfterAddition() {
   std::vector<int> v;
-  auto it = std::begin(v);  // expected-warning {{object whose reference is captured is later invalidated}}
+  auto it = v.cbegin();     // expected-warning {{object whose reference is captured is later invalidated}}
   auto next = it + 5;
-  v.insert(it, 0);          // expected-note {{invalidated here}}
-  *next;                    // expected-note {{later used here}}
+  v.insert(v.begin(), 0);   // expected-note {{invalidated here}}
+  (void)*next;              // expected-note {{later used here}}
 }
 
 void IteratorUsedAfterReverseSubtraction(std::vector<int> v) {
-  auto it = std::end(v);    // expected-warning {{object whose reference is captured is later invalidated}}
+  auto it = v.crbegin();    // expected-warning {{object whose reference is captured is later invalidated}}
   auto prev = 5 - it;
   v.clear();                // expected-note {{invalidated here}}
-  *prev;                    // expected-note {{later used here}}
+  (void)*prev;              // expected-note {{later used here}}
 }
 }  // namespace SimpleInvalidIterators
 
