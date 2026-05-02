@@ -37,10 +37,8 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include <algorithm>
-#include <deque>
 #include <optional>
 #include <utility>
-#include <vector>
 
 using namespace clang;
 using namespace CodeGen;
