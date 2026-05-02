@@ -1848,7 +1848,7 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
     addr_t pc = thread_sp->GetRegisterContext()->GetPC();
     BreakpointSiteSP bp_site_sp =
         thread_sp->GetProcess()->GetBreakpointSiteList().FindByAddress(pc);
-    if (bp_site_sp && IsBreakpointSiteEnabled(*bp_site_sp))
+    if (bp_site_sp && IsBreakpointSitePhysicallyEnabled(*bp_site_sp))
       thread_sp->SetThreadStoppedAtUnexecutedBP(pc);
 
     if (exc_type != 0) {
@@ -2032,7 +2032,7 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
           // BreakpointSites in any other location, but we can't know for
           // sure what happened so it's a reasonable default.
           if (bp_site_sp) {
-            if (IsBreakpointSiteEnabled(*bp_site_sp))
+            if (IsBreakpointSitePhysicallyEnabled(*bp_site_sp))
               thread_sp->SetThreadHitBreakpointSite();
 
             if (bp_site_sp->ValidForThisThread(*thread_sp)) {
@@ -3429,7 +3429,7 @@ Status ProcessGDBRemote::EnableBreakpointSite(BreakpointSite *bp_site) {
             site_id, (uint64_t)addr);
 
   // Breakpoint already exists and is enabled
-  if (IsBreakpointSiteEnabled(*bp_site)) {
+  if (IsBreakpointSitePhysicallyEnabled(*bp_site)) {
     LLDB_LOGF(log,
               "ProcessGDBRemote::EnableBreakpointSite (size_id = %" PRIu64
               ") address = 0x%" PRIx64 " -- SUCCESS (already enabled)",
@@ -3450,7 +3450,7 @@ Status ProcessGDBRemote::DisableBreakpointSite(BreakpointSite *bp_site) {
             ") addr = 0x%8.8" PRIx64,
             site_id, (uint64_t)addr);
 
-  if (!IsBreakpointSiteEnabled(*bp_site)) {
+  if (!IsBreakpointSitePhysicallyEnabled(*bp_site)) {
     LLDB_LOGF(log,
               "ProcessGDBRemote::DisableBreakpointSite (site_id = %" PRIu64
               ") addr = 0x%8.8" PRIx64 " -- SUCCESS (already disabled)",
@@ -6112,7 +6112,7 @@ void ProcessGDBRemote::DidForkSwitchSoftwareBreakpoints(
 
   GetBreakpointSiteList().ForEach([this, enable, entry_addr,
                                    log](BreakpointSite *bp_site) {
-    if (IsBreakpointSiteEnabled(*bp_site) &&
+    if (IsBreakpointSitePhysicallyEnabled(*bp_site) &&
         (bp_site->GetType() == BreakpointSite::eSoftware ||
          bp_site->GetType() == BreakpointSite::eExternal)) {
       // During expression evaluation, retain the expression-return trap
@@ -6136,7 +6136,7 @@ void ProcessGDBRemote::DidForkSwitchSoftwareBreakpoints(
 void ProcessGDBRemote::DidForkSwitchHardwareTraps(bool enable) {
   if (m_gdb_comm.SupportsGDBStoppointPacket(eBreakpointHardware)) {
     GetBreakpointSiteList().ForEach([this, enable](BreakpointSite *bp_site) {
-      if (IsBreakpointSiteEnabled(*bp_site) &&
+      if (IsBreakpointSitePhysicallyEnabled(*bp_site) &&
           bp_site->GetType() == BreakpointSite::eHardware) {
         m_gdb_comm.SendGDBStoppointTypePacket(
             eBreakpointHardware, enable, bp_site->GetLoadAddress(),
