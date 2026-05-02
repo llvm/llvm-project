@@ -248,6 +248,20 @@ void primitiveTests() {
     assert(memcmp(&d1, &d2, sizeof(long double)) == 0);
   }
 
+  // _BitInt
+  {
+    using T = _BitInt(97);
+    T i1, i2;
+    memset(&i1, 42, sizeof(T));
+    memset(&i2, 0, sizeof(T));
+
+    i1 = 37;
+    i2 = 37;
+    __builtin_clear_padding(&i1);
+    assert(i1 == 37);
+    assert(memcmp(&i1, &i2, sizeof(T)) == 0);
+  }
+
   // _Complex
   {
     _Complex long double c1, c2;

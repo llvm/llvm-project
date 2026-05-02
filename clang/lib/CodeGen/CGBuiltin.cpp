@@ -28,6 +28,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/TargetInfo.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Intrinsics.h"
@@ -2746,6 +2747,20 @@ private:
     bool VisitVirtualBase;
   };
 
+  uint64_t getScalarOccupiedSizeInBits(QualType Ty) const {
+    if (const auto *BIT = Ty->getAs<BitIntType>())
+      return BIT->getNumBits();
+
+    if (const auto *BT = Ty->getAs<BuiltinType>()) {
+      if (BT->getKind() == BuiltinType::LongDouble &&
+          &CGF.getTarget().getLongDoubleFormat() ==
+              &APFloat::x87DoubleExtended())
+        return APFloat::getSizeInBits(CGF.getTarget().getLongDoubleFormat());
+    }
+
+    return CGF.getContext().getTypeSize(Ty);
+  }
+
   void Visit(const Data &D) {
     if (auto *AT = dyn_cast<ConstantArrayType>(D.Ty)) {
       VisitArray(AT, D.StartBitOffset);
@@ -2769,11 +2784,12 @@ private:
       return;
     }
 
-    auto *Type = CGF.ConvertTypeForMem(D.Ty);
-    auto SizeBit = CGF.CGM.getModule()
-                       .getDataLayout()
-                       .getTypeSizeInBits(Type)
-                       .getKnownMinValue();
+    if (const auto *VT = D.Ty->getAs<clang::VectorType>()) {
+      VisitVector(VT, D.StartBitOffset);
+      return;
+    }
+
+    uint64_t SizeBit = getScalarOccupiedSizeInBits(D.Ty);
     OccuppiedIntervals.push_back(
         BitInterval{D.StartBitOffset, D.StartBitOffset + SizeBit});
   }
@@ -2857,6 +2873,17 @@ private:
                          ElementQualType, /*VisitVirtualBase*/ true});
   }
 
+  void VisitVector(const clang::VectorType *VT, uint64_t StartBitOffset) {
+    ASTContext &Ctx = CGF.getContext();
+    uint64_t SizeBit = [&]() -> uint64_t {
+      if (VT->isPackedVectorBoolType(Ctx))
+        return VT->getNumElements();
+      return Ctx.getTypeInfo(VT->getElementType()).Width * VT->getNumElements();
+    }();
+    OccuppiedIntervals.push_back(
+        BitInterval{StartBitOffset, StartBitOffset + SizeBit});
+  }
+
   void MergeOccuppiedIntervals() {
     std::sort(OccuppiedIntervals.begin(), OccuppiedIntervals.end(),
               [](const BitInterval &lhs, const BitInterval &rhs) {
@@ -2889,7 +2916,7 @@ private:
     llvm::SmallVector<BitInterval> Results;
     if (OccuppiedIntervals.size() == 1 &&
         OccuppiedIntervals.front().First == 0 &&
-        OccuppiedIntervals.end()->Last == SizeInBits) {
+        OccuppiedIntervals.front().Last == SizeInBits) {
       return Results;
     }
     Results.reserve(OccuppiedIntervals.size() + 1);

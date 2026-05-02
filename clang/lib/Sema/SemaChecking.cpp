@@ -3150,13 +3150,13 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     // i.e. __builtin_clear_padding(&var) is OK as long as var is a complete
     // object, either a local variable or a function parameter passed by value
     auto IsAddrOfDeclExpr = [&]() {
-      const Expr *IgnoreCastsAndParens = PtrArg->IgnoreCasts();
-      IgnoreCastsAndParens = IgnoreCastsAndParens->IgnoreParens();
-      const auto *UnaryOp = dyn_cast<UnaryOperator>(IgnoreCastsAndParens);
+      const Expr *Inner = PtrArg->IgnoreParenNoopCasts(Context);
+      const auto *UnaryOp = dyn_cast<UnaryOperator>(Inner);
       if (!UnaryOp || UnaryOp->getOpcode() != UO_AddrOf)
         return false;
 
-      const Expr *Operand = UnaryOp->getSubExpr()->IgnoreParens();
+      const Expr *Operand =
+          UnaryOp->getSubExpr()->IgnoreParenNoopCasts(Context);
       const auto *DeclRef = dyn_cast<DeclRefExpr>(Operand);
       if (!DeclRef)
         return false;

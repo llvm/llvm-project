@@ -98,6 +98,47 @@ void testPrimitiveLongDouble(long double *ld) {
   __builtin_clear_padding(ld);
 }
 
+// LINUX-LABEL: define dso_local void @_Z10testBitIntPDB97_(
+// LINUX-SAME: ptr noundef [[BI:%.*]]) #[[ATTR0]] {
+// LINUX-NEXT:  [[ENTRY:.*:]]
+// LINUX-NEXT:    [[BI_ADDR:%.*]] = alloca ptr, align 8
+// LINUX-NEXT:    store ptr [[BI]], ptr [[BI_ADDR]], align 8
+// LINUX-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[BI_ADDR]], align 8
+// LINUX-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 12
+// LINUX-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 4
+// LINUX-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 1
+// LINUX-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 4
+// LINUX-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 13
+// LINUX-NEXT:    store i8 0, ptr [[TMP4]], align 1
+// LINUX-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0]], i32 14
+// LINUX-NEXT:    store i8 0, ptr [[TMP5]], align 2
+// LINUX-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP0]], i32 15
+// LINUX-NEXT:    store i8 0, ptr [[TMP6]], align 1
+// LINUX-NEXT:    ret void
+//
+// WINDOWS-LABEL: define dso_local void @_Z10testBitIntPDB97_(
+// WINDOWS-SAME: ptr noundef [[BI:%.*]]) #[[ATTR0]] {
+// WINDOWS-NEXT:  [[ENTRY:.*:]]
+// WINDOWS-NEXT:    [[BI_ADDR:%.*]] = alloca ptr, align 8
+// WINDOWS-NEXT:    store ptr [[BI]], ptr [[BI_ADDR]], align 8
+// WINDOWS-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[BI_ADDR]], align 8
+// WINDOWS-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 12
+// WINDOWS-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 4
+// WINDOWS-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 1
+// WINDOWS-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 4
+// WINDOWS-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 13
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP4]], align 1
+// WINDOWS-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0]], i32 14
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP5]], align 2
+// WINDOWS-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP0]], i32 15
+// WINDOWS-NEXT:    store i8 0, ptr [[TMP6]], align 1
+// WINDOWS-NEXT:    ret void
+//
+void testBitInt(_BitInt(97) *bi) {
+  // Storage is widened to 128 bits; clear bits [97, 128).
+  __builtin_clear_padding(bi);
+}
+
 
 // LINUX-LABEL: define dso_local void @_Z30testPrimitiveComplexLongDoublePCe(
 // LINUX-SAME: ptr noundef [[C:%.*]]) #[[ATTR0]] {
