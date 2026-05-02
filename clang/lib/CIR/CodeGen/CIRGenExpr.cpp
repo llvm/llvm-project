@@ -1551,6 +1551,11 @@ LValue CIRGenFunction::emitExtVectorElementExpr(const ExtVectorElementExpr *e) {
                                     base.getBaseInfo());
   }
 
+  if (base.isMatrixRow()) {
+    cgm.errorNYI(e->getSourceRange(), "emitExtVectorElementExpr: isMatrixRow");
+    return {};
+  }
+
   assert(base.isExtVectorElt() && "Can only subscript lvalue vec elts here!");
   mlir::ArrayAttr baseElts = base.getExtVectorElts();
   SmallVector<int64_t> elts;
