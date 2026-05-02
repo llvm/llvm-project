@@ -70,10 +70,10 @@ struct MissingFeatures {
   static bool opFuncArmNewAttr() { return false; }
   static bool opFuncArmStreamingAttr() { return false; }
   static bool opFuncAstDeclAttr() { return false; }
-  static bool opFuncCallingConv() { return false; }
   static bool opFuncColdHotAttr() { return false; }
   static bool opFuncExceptions() { return false; }
   static bool opFuncExtraAttrs() { return false; }
+  static bool opFuncCallingConv() { return false; }
   static bool opFuncMaybeHandleStaticInExternC() { return false; }
   static bool opFuncMinSizeAttr() { return false; }
   static bool opFuncMultipleReturnVals() { return false; }

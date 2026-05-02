@@ -2796,10 +2796,10 @@ void CIRGenModule::setCIRFunctionAttributes(GlobalDecl globalDecl,
 
   // TODO(cir): Check X86_VectorCall incompatibility wiht WinARM64EC
 
-  // TODO(cir): typically the calling conv is set right here, but since
-  // cir::CallingConv is empty and we've not yet added calling-conv to FuncOop,
-  // this isn't really useful here.  This should call func.setCallingConv/etc
-  // later.
+  // TODO(cir): Set the calling convention computed by constructAttributeList
+  // on the function. FuncOp supports calling_conv, but target-specific
+  // CodeGen is needed to set it correctly (e.g., AMDGPU kernel functions
+  // should be marked with AMDGPUKernel).
   assert(!cir::MissingFeatures::opFuncCallingConv());
 }
 
