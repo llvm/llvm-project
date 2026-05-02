@@ -34,14 +34,19 @@ static_assert(0.0 == LIBC_NAMESPACE::shared::ufromfpx(0.0, 0, 32));
 static_assert(0.0 == LIBC_NAMESPACE::shared::fmaximum_mag(0.0, 0.0));
 static_assert(0.0 == LIBC_NAMESPACE::shared::fminimum_mag(0.0, 0.0));
 
-constexpr double totalorder_x = 0.0;
-constexpr double totalorder_y = 0.0;
+constexpr double TOTALORDER_X = 0.0;
+constexpr double TOTALORDER_Y = 0.0;
 static_assert(1 ==
-              LIBC_NAMESPACE::shared::totalorder(&totalorder_x, &totalorder_y));
-constexpr double totalordermag_x = 0.0;
-constexpr double totalordermag_y = 0.0;
-static_assert(1 == LIBC_NAMESPACE::shared::totalordermag(&totalordermag_x,
-                                                         &totalordermag_y));
+              LIBC_NAMESPACE::shared::totalorder(&TOTALORDER_X, &TOTALORDER_Y));
+constexpr double TOTALORDERMAG_X = 0.0;
+constexpr double TOTALORDERMAG_Y = 0.0;
+static_assert(1 == LIBC_NAMESPACE::shared::totalordermag(&TOTALORDERMAG_X,
+                                                         &TOTALORDERMAG_Y));
+static_assert(0.0 == LIBC_NAMESPACE::shared::fmod(4.0, 2.0));
+static_assert(0.0 == [] {
+  double iptr = 0;
+  return LIBC_NAMESPACE::shared::modf(0, &iptr);
+}());
 
 //===----------------------------------------------------------------------===//
 //                       Float Tests
@@ -64,15 +69,19 @@ static_assert(0.0f == LIBC_NAMESPACE::shared::ufromfpxf(0.0f, 0, 32));
 static_assert(0.0f == LIBC_NAMESPACE::shared::fmaximum_magf(0.0f, 0.0f));
 static_assert(0.0f == LIBC_NAMESPACE::shared::fminimum_magf(0.0f, 0.0f));
 
-constexpr float totalorderf_x = 0.0f;
-constexpr float totalorderf_y = 0.0f;
-static_assert(1 == LIBC_NAMESPACE::shared::totalorderf(&totalorderf_x,
-                                                       &totalorderf_y));
-constexpr float totalordermagf_x = 0.0f;
-constexpr float totalordermagf_y = 0.0f;
-static_assert(1 == LIBC_NAMESPACE::shared::totalordermagf(&totalordermagf_x,
-                                                          &totalordermagf_y));
-
+constexpr float TOTALORDERF_X = 0.0f;
+constexpr float TOTALORDERF_Y = 0.0f;
+static_assert(1 == LIBC_NAMESPACE::shared::totalorderf(&TOTALORDERF_X,
+                                                       &TOTALORDERF_Y));
+constexpr float TOTALORDERMAGF_X = 0.0f;
+constexpr float TOTALORDERMAGF_Y = 0.0f;
+static_assert(1 == LIBC_NAMESPACE::shared::totalordermagf(&TOTALORDERMAGF_X,
+                                                          &TOTALORDERMAGF_Y));
+static_assert(0.0f == LIBC_NAMESPACE::shared::fmodf(4.0f, 2.0f));
+static_assert(0.0f == [] {
+  float iptr = 0.0f;
+  return LIBC_NAMESPACE::shared::modff(0.0f, &iptr);
+}());
 //===----------------------------------------------------------------------===//
 //                       Float16 Tests
 //===----------------------------------------------------------------------===//
@@ -99,17 +108,21 @@ static_assert(0.0f16 ==
 static_assert(0.0f16 ==
               LIBC_NAMESPACE::shared::fminimum_magf16(0.0f16, 0.0f16));
 
-constexpr float16 totalorderf16_x = 0.0f16;
-constexpr float16 totalorderf16_y = 0.0f16;
-static_assert(1 == LIBC_NAMESPACE::shared::totalorderf16(&totalorderf16_x,
-                                                         &totalorderf16_y));
+constexpr float16 TOTALORDERF16_X = 0.0f16;
+constexpr float16 TOTALORDERF16_Y = 0.0f16;
+static_assert(1 == LIBC_NAMESPACE::shared::totalorderf16(&TOTALORDERF16_X,
+                                                         &TOTALORDERF16_Y));
 
-constexpr float16 totalordermagf16_x = 0.0f16;
-constexpr float16 totalordermagf16_y = 0.0f16;
+constexpr float16 TOTALORDERMAGF16_X = 0.0f16;
+constexpr float16 TOTALORDERMAGF16_Y = 0.0f16;
 static_assert(1 ==
-              LIBC_NAMESPACE::shared::totalordermagf16(&totalordermagf16_x,
-                                                       &totalordermagf16_y));
-
+              LIBC_NAMESPACE::shared::totalordermagf16(&TOTALORDERMAGF16_X,
+                                                       &TOTALORDERMAGF16_Y));
+static_assert(0.0f16 == LIBC_NAMESPACE::shared::fmodf16(4.0f16, 2.0f16));
+static_assert(0.0f16 == [] {
+  float16 iptr{};
+  return LIBC_NAMESPACE::shared::modff16(0.0f16, &iptr);
+}());
 #endif // LIBC_TYPES_HAS_FLOAT16
 
 //===----------------------------------------------------------------------===//
@@ -140,14 +153,20 @@ static_assert(0.0L == LIBC_NAMESPACE::shared::ufromfpxl(0.0L, 0, 32));
 static_assert(0.0L == LIBC_NAMESPACE::shared::fmaximum_magl(0.0L, 0.0L));
 static_assert(0.0L == LIBC_NAMESPACE::shared::fminimum_magl(0.0L, 0.0L));
 
-constexpr long double totalorderl_x = 0.0L;
-constexpr long double totalorderl_y = 0.0L;
-static_assert(1 == LIBC_NAMESPACE::shared::totalorderl(&totalorderl_x,
-                                                       &totalorderl_y));
-constexpr long double totalordermagl_x = 0.0L;
-constexpr long double totalordermagl_y = 0.0L;
-static_assert(1 == LIBC_NAMESPACE::shared::totalordermagl(&totalordermagl_x,
-                                                          &totalordermagl_y));
+constexpr long double TOTALORDERL_X = 0.0L;
+constexpr long double TOTALORDERL_Y = 0.0L;
+static_assert(1 == LIBC_NAMESPACE::shared::totalorderl(&TOTALORDERL_X,
+                                                       &TOTALORDERL_Y));
+constexpr long double TOTALORDERMAGL_X = 0.0L;
+constexpr long double TOTALORDERMAGL_Y = 0.0L;
+static_assert(1 == LIBC_NAMESPACE::shared::totalordermagl(&TOTALORDERMAGL_X,
+                                                          &TOTALORDERMAGL_Y));
+static_assert(0.0L == LIBC_NAMESPACE::shared::fmodl(4.0L, 2.0L));
+
+static_assert(0.0L == [] {
+  long double iptr{};
+  return LIBC_NAMESPACE::shared::modfl(0.0L, &iptr);
+}());
 
 #endif
 
@@ -201,15 +220,21 @@ static_assert(float128(0.0) ==
 static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::fminimum_magf128(float128(0.0),
                                                        float128(0.0)));
-constexpr float128 totalorderf128_x = float128(0.0);
-constexpr float128 totalorderf128_y = float128(0.0);
-static_assert(1 == LIBC_NAMESPACE::shared::totalorderf128(&totalorderf128_x,
-                                                          &totalorderf128_y));
-constexpr float128 totalordermagf128_x = float128(0.0);
-constexpr float128 totalordermagf128_y = float128(0.0);
+constexpr float128 TOTALORDERF128_X = float128(0.0);
+constexpr float128 TOTALORDERF128_Y = float128(0.0);
+static_assert(1 == LIBC_NAMESPACE::shared::totalorderf128(&TOTALORDERF128_X,
+                                                          &TOTALORDERF128_Y));
+constexpr float128 TOTALORDERMAGF128_X = float128(0.0);
+constexpr float128 TOTALORDERMAGF128_Y = float128(0.0);
 static_assert(1 ==
-              LIBC_NAMESPACE::shared::totalordermagf128(&totalordermagf128_x,
-                                                        &totalordermagf128_y));
+              LIBC_NAMESPACE::shared::totalordermagf128(&TOTALORDERMAGF128_X,
+                                                        &TOTALORDERMAGF128_Y));
+static_assert(0 ==
+              LIBC_NAMESPACE::shared::fmodf128(float128(4.0), float128(2.0)));
+static_assert(float128(0.0) == [] {
+  float128 iptr{};
+  return LIBC_NAMESPACE::shared::modff128(float128(0.0), &iptr);
+}());
 
 #endif // LIBC_TYPES_HAS_FLOAT128
 
@@ -262,14 +287,20 @@ static_assert(bfloat16(0.0) ==
               LIBC_NAMESPACE::shared::fminimum_magbf16(bfloat16(0.0),
                                                        bfloat16(0.0)));
 
-constexpr bfloat16 totalorderbf16_x = bfloat16(0.0);
-constexpr bfloat16 totalorderbf16_y = bfloat16(0.0);
-static_assert(1 == LIBC_NAMESPACE::shared::totalorderbf16(&totalorderbf16_x,
-                                                          &totalorderbf16_y));
-constexpr bfloat16 totalordermagbf16_x = bfloat16(0.0);
-constexpr bfloat16 totalordermagbf16_y = bfloat16(0.0);
+constexpr bfloat16 TOTALORDERBF16_X = bfloat16(0.0);
+constexpr bfloat16 TOTALORDERBF16_Y = bfloat16(0.0);
+static_assert(1 == LIBC_NAMESPACE::shared::totalorderbf16(&TOTALORDERBF16_X,
+                                                          &TOTALORDERBF16_Y));
+constexpr bfloat16 TOTALORDERMAGBF16_X = bfloat16(0.0);
+constexpr bfloat16 TOTALORDERMAGBF16_Y = bfloat16(0.0);
 static_assert(1 ==
-              LIBC_NAMESPACE::shared::totalordermagbf16(&totalordermagbf16_x,
-                                                        &totalordermagbf16_y));
+              LIBC_NAMESPACE::shared::totalordermagbf16(&TOTALORDERMAGBF16_X,
+                                                        &TOTALORDERMAGBF16_Y));
+static_assert(0 ==
+              LIBC_NAMESPACE::shared::fmodbf16(bfloat16(4.0), bfloat16(2.0)));
+static_assert(bfloat16(0.0) == [] {
+  bfloat16 iptr{};
+  return LIBC_NAMESPACE::shared::modfbf16(bfloat16(0.0), &iptr);
+}());
 
 TEST(LlvmLibcSharedMathTest, ConstantEvaluation) {}

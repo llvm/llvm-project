@@ -124,6 +124,11 @@ TEST(LlvmLibcSharedMathTest, AllFloat16) {
   float16 totalordermagf16_y = 0.0f16;
   EXPECT_EQ(1, LIBC_NAMESPACE::shared::totalordermagf16(&totalordermagf16_x,
                                                         &totalordermagf16_y));
+  EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::fmodf16(1.0f16, 1.0f16));
+  float16 modff16_iptr = 0.0f16;
+  EXPECT_FP_EQ(0x0p+0f16,
+               LIBC_NAMESPACE::shared::modff16(0.0f16, &modff16_iptr));
+  EXPECT_FP_EQ(0.0f16, modff16_iptr);
 }
 
 #endif // LIBC_TYPES_HAS_FLOAT16
@@ -252,6 +257,10 @@ TEST(LlvmLibcSharedMathTest, AllFloat) {
   float totalordermagf_y = 0.0f;
   EXPECT_EQ(1, LIBC_NAMESPACE::shared::totalordermagf(&totalordermagf_x,
                                                       &totalordermagf_y));
+  EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::fmodf(1.0f, 1.0f));
+  float modff_iptr = 0.0f;
+  EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::modff(0.0f, &modff_iptr));
+  EXPECT_FP_EQ(0.0f, modff_iptr);
 }
 
 TEST(LlvmLibcSharedMathTest, AllDouble) {
@@ -356,6 +365,10 @@ TEST(LlvmLibcSharedMathTest, AllDouble) {
   double totalordermag_y = 0.0;
   EXPECT_EQ(1, LIBC_NAMESPACE::shared::totalordermag(&totalordermag_x,
                                                      &totalordermag_y));
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::fmod(1.0, 1.0));
+  double modf_iptr = 0.0;
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::modf(0.0, &modf_iptr));
+  EXPECT_FP_EQ(0.0, modf_iptr);
 }
 
 // TODO: Enable the tests when double-double type is supported.
@@ -441,6 +454,10 @@ TEST(LlvmLibcSharedMathTest, AllLongDouble) {
   long double totalordermagl_y = 0.0L;
   EXPECT_EQ(1, LIBC_NAMESPACE::shared::totalordermagl(&totalordermagl_x,
                                                       &totalordermagl_y));
+  EXPECT_FP_EQ(0x0p+0L, LIBC_NAMESPACE::shared::fmodl(1.0L, 1.0L));
+  long double modfl_iptr = 0.0L;
+  EXPECT_FP_EQ(0x0p+0L, LIBC_NAMESPACE::shared::modfl(0.0L, &modfl_iptr));
+  EXPECT_FP_EQ(0.0L, modfl_iptr);
 }
 
 #endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
@@ -575,6 +592,11 @@ TEST(LlvmLibcSharedMathTest, AllFloat128) {
   float128 totalordermagf128_y = float128(0.0);
   EXPECT_EQ(1, LIBC_NAMESPACE::shared::totalordermagf128(&totalordermagf128_x,
                                                          &totalordermagf128_y));
+  LIBC_NAMESPACE::shared::fmodf128(float128(1.0), float128(1.0));
+  float128 modff128_iptr = float128(0.0);
+  EXPECT_FP_EQ(float128(0.0),
+               LIBC_NAMESPACE::shared::modff128(float128(0.0), &modff128_iptr));
+  EXPECT_FP_EQ(float128(0.0), modff128_iptr);
 }
 
 #endif // LIBC_TYPES_HAS_FLOAT128
@@ -672,4 +694,9 @@ TEST(LlvmLibcSharedMathTest, AllBFloat16) {
   bfloat16 totalordermagbf16_y = bfloat16(0.0);
   EXPECT_EQ(1, LIBC_NAMESPACE::shared::totalordermagbf16(&totalordermagbf16_x,
                                                          &totalordermagbf16_y));
+  LIBC_NAMESPACE::shared::fmodbf16(bfloat16(1.0), bfloat16(1.0));
+  bfloat16 modfbf16_iptr = bfloat16(0.0);
+  EXPECT_FP_EQ(bfloat16(0.0),
+               LIBC_NAMESPACE::shared::modfbf16(bfloat16(0.0), &modfbf16_iptr));
+  EXPECT_FP_EQ(bfloat16(0.0), modfbf16_iptr);
 }

@@ -2001,7 +2001,7 @@ add_entrypoint_object(
   HDRS
     ../modf.h
   DEPENDS
-    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.math.modf
 )
 
 add_entrypoint_object(
@@ -2011,7 +2011,7 @@ add_entrypoint_object(
   HDRS
     ../modff.h
   DEPENDS
-    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.math.modff
 )
 
 add_entrypoint_object(
@@ -2021,7 +2021,7 @@ add_entrypoint_object(
   HDRS
     ../modfl.h
   DEPENDS
-    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.math.modfl
 )
 
 add_entrypoint_object(
@@ -2031,8 +2031,7 @@ add_entrypoint_object(
   HDRS
     ../modff16.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.math.modff16
 )
 
 add_entrypoint_object(
@@ -2042,8 +2041,7 @@ add_entrypoint_object(
   HDRS
     ../modff128.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.math.modff128
 )
 
 add_entrypoint_object(
@@ -2053,11 +2051,7 @@ add_entrypoint_object(
   HDRS
     ../modfbf16.h
   DEPENDS
-    libc.src.__support.common
-    libc.src.__support.FPUtil.bfloat16
-    libc.src.__support.FPUtil.manipulation_functions
-    libc.src.__support.macros.config
-    libc.src.__support.macros.properties.types
+    libc.src.__support.math.modfbf16
 )
 
 add_entrypoint_object(
@@ -3475,7 +3469,7 @@ add_entrypoint_object(
   HDRS
     ../fmod.h
   DEPENDS
-    libc.src.__support.FPUtil.generic.fmod
+    libc.src.__support.math.fmod
 )
 
 add_entrypoint_object(
@@ -3485,7 +3479,7 @@ add_entrypoint_object(
   HDRS
     ../fmodf.h
   DEPENDS
-    libc.src.__support.FPUtil.generic.fmod
+    libc.src.__support.math.fmodf
 )
 
 add_entrypoint_object(
@@ -3495,7 +3489,7 @@ add_entrypoint_object(
   HDRS
     ../fmodl.h
   DEPENDS
-    libc.src.__support.FPUtil.generic.fmod
+    libc.src.__support.math.fmodl
 )
 
 add_entrypoint_object(
@@ -3505,8 +3499,7 @@ add_entrypoint_object(
   HDRS
     ../fmodf16.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.generic.fmod
+    libc.src.__support.math.fmodf16
 )
 
 add_entrypoint_object(
@@ -3516,8 +3509,7 @@ add_entrypoint_object(
   HDRS
     ../fmodf128.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.generic.fmod
+    libc.src.__support.math.fmodf128
 )
 
 add_entrypoint_object(
@@ -3527,11 +3519,7 @@ add_entrypoint_object(
   HDRS
     ../fmodbf16.h
   DEPENDS
-    libc.src.__support.common
-    libc.src.__support.macros.config
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.bfloat16
-    libc.src.__support.FPUtil.generic.fmod
+    libc.src.__support.math.fmodbf16
 )
 
 add_entrypoint_object(
