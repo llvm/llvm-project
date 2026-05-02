@@ -59,6 +59,7 @@ if (SPHINX_FOUND)
       netinet/in
       poll
       pthread
+      pwd
       sched
       setjmp
       signal
