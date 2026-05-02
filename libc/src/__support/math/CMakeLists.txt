@@ -955,6 +955,35 @@ add_header_library(
 )
 
 add_header_library(
+  fmaximum_mag_numf128
+  HDRS
+    fmaximum_mag_numf128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fmaximum_mag_numf16
+  HDRS
+    fmaximum_mag_numf16.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fmaximum_mag_numl
+  HDRS
+    fmaximum_mag_numl.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   fmaximum_num
   HDRS
     fmaximum_num.h
@@ -1196,6 +1225,65 @@ add_header_library(
   fminimum_magl
   HDRS
     fminimum_magl.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fminimum_mag_num
+  HDRS
+    fminimum_mag_num.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fminimum_mag_numbf16
+  HDRS
+    fminimum_mag_numbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.macros.config
+  FLAGS
+    MISC_MATH_BASIC_OPS_OPT
+)
+
+add_header_library(
+  fminimum_mag_numf
+  HDRS
+    fminimum_mag_numf.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fminimum_mag_numf128
+  HDRS
+    fminimum_mag_numf128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fminimum_mag_numf16
+  HDRS
+    fminimum_mag_numf16.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fminimum_mag_numl
+  HDRS
+    fminimum_mag_numl.h
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.macros.config

@@ -1,4 +1,4 @@
-//===-- Implementation of fminimum_mag_numf function-----------------------===//
+//===-- Shared fminimum_mag_numf function -----------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/fminimum_mag_numf.h"
+#ifndef LLVM_LIBC_SHARED_MATH_FMINIMUM_MAG_NUMF_H
+#define LLVM_LIBC_SHARED_MATH_FMINIMUM_MAG_NUMF_H
+
+#include "shared/libc_common.h"
 #include "src/__support/math/fminimum_mag_numf.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-LLVM_LIBC_FUNCTION(float, fminimum_mag_numf, (float x, float y)) {
-  return math::fminimum_mag_numf(x, y);
-}
+using math::fminimum_mag_numf;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SHARED_MATH_FMINIMUM_MAG_NUMF_H

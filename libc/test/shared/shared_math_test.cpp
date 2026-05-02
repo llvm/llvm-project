@@ -131,6 +131,10 @@ TEST(LlvmLibcSharedMathTest, AllFloat16) {
   EXPECT_FP_EQ(0x0p+0f16,
                LIBC_NAMESPACE::shared::modff16(0.0f16, &modff16_iptr));
   EXPECT_FP_EQ(0.0f16, modff16_iptr);
+  EXPECT_FP_EQ(0x0p+0f16,
+               LIBC_NAMESPACE::shared::fmaximum_mag_numf16(0.0f16, 0.0f16));
+  EXPECT_FP_EQ(0x0p+0f16,
+               LIBC_NAMESPACE::shared::fminimum_mag_numf16(0.0f16, 0.0f16));
 }
 
 #endif // LIBC_TYPES_HAS_FLOAT16
@@ -265,6 +269,7 @@ TEST(LlvmLibcSharedMathTest, AllFloat) {
   float modff_iptr = 0.0f;
   EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::modff(0.0f, &modff_iptr));
   EXPECT_FP_EQ(0.0f, modff_iptr);
+  EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::fminimum_mag_numf(0.0f, 0.0f));
 }
 
 TEST(LlvmLibcSharedMathTest, AllDouble) {
@@ -375,6 +380,7 @@ TEST(LlvmLibcSharedMathTest, AllDouble) {
   double modf_iptr = 0.0;
   EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::modf(0.0, &modf_iptr));
   EXPECT_FP_EQ(0.0, modf_iptr);
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::fminimum_mag_num(0.0, 0.0));
 }
 
 // TODO: Enable the tests when double-double type is supported.
@@ -466,6 +472,8 @@ TEST(LlvmLibcSharedMathTest, AllLongDouble) {
   long double modfl_iptr = 0.0L;
   EXPECT_FP_EQ(0x0p+0L, LIBC_NAMESPACE::shared::modfl(0.0L, &modfl_iptr));
   EXPECT_FP_EQ(0.0L, modfl_iptr);
+  EXPECT_FP_EQ(0x0p+0L, LIBC_NAMESPACE::shared::fmaximum_mag_numl(0.0L, 0.0L));
+  EXPECT_FP_EQ(0x0p+0L, LIBC_NAMESPACE::shared::fminimum_mag_numl(0.0L, 0.0L));
 }
 
 #endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
@@ -609,6 +617,10 @@ TEST(LlvmLibcSharedMathTest, AllFloat128) {
   EXPECT_FP_EQ(float128(0.0),
                LIBC_NAMESPACE::shared::modff128(float128(0.0), &modff128_iptr));
   EXPECT_FP_EQ(float128(0.0), modff128_iptr);
+  EXPECT_FP_EQ(float128(0.0), LIBC_NAMESPACE::shared::fmaximum_mag_numf128(
+                                  float128(0.0), float128(0.0)));
+  EXPECT_FP_EQ(float128(0.0), LIBC_NAMESPACE::shared::fminimum_mag_numf128(
+                                  float128(0.0), float128(0.0)));
 }
 
 #endif // LIBC_TYPES_HAS_FLOAT128
@@ -715,4 +727,6 @@ TEST(LlvmLibcSharedMathTest, AllBFloat16) {
   EXPECT_FP_EQ(bfloat16(0.0),
                LIBC_NAMESPACE::shared::modfbf16(bfloat16(0.0), &modfbf16_iptr));
   EXPECT_FP_EQ(bfloat16(0.0), modfbf16_iptr);
+  EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::fminimum_mag_numbf16(
+                                  bfloat16(0.0), bfloat16(0.0)));
 }

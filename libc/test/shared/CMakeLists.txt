@@ -179,6 +179,9 @@ add_fp_unittest(
     libc.src.__support.math.fmaximum_mag_num
     libc.src.__support.math.fmaximum_mag_numbf16
     libc.src.__support.math.fmaximum_mag_numf
+    libc.src.__support.math.fmaximum_mag_numf128
+    libc.src.__support.math.fmaximum_mag_numf16
+    libc.src.__support.math.fmaximum_mag_numl
     libc.src.__support.math.fmaximum_magbf16
     libc.src.__support.math.fmaximum_magf
     libc.src.__support.math.fmaximum_magf128
@@ -203,6 +206,12 @@ add_fp_unittest(
     libc.src.__support.math.fminf16
     libc.src.__support.math.fminimum
     libc.src.__support.math.fminimum_mag
+    libc.src.__support.math.fminimum_mag_num
+    libc.src.__support.math.fminimum_mag_numbf16
+    libc.src.__support.math.fminimum_mag_numf
+    libc.src.__support.math.fminimum_mag_numf128
+    libc.src.__support.math.fminimum_mag_numf16
+    libc.src.__support.math.fminimum_mag_numl
     libc.src.__support.math.fminimum_magbf16
     libc.src.__support.math.fminimum_magf
     libc.src.__support.math.fminimum_magf128
@@ -435,6 +444,9 @@ add_fp_unittest(
     libc.src.__support.math.fmaximum_mag_num
     libc.src.__support.math.fmaximum_mag_numbf16
     libc.src.__support.math.fmaximum_mag_numf
+    libc.src.__support.math.fmaximum_mag_numf128
+    libc.src.__support.math.fmaximum_mag_numf16
+    libc.src.__support.math.fmaximum_mag_numl
     libc.src.__support.math.fmaximum_magbf16
     libc.src.__support.math.fmaximum_magf
     libc.src.__support.math.fmaximum_magf128
@@ -458,6 +470,12 @@ add_fp_unittest(
     libc.src.__support.math.fminf16
     libc.src.__support.math.fminimum
     libc.src.__support.math.fminimum_mag
+    libc.src.__support.math.fminimum_mag_num
+    libc.src.__support.math.fminimum_mag_numbf16
+    libc.src.__support.math.fminimum_mag_numf
+    libc.src.__support.math.fminimum_mag_numf128
+    libc.src.__support.math.fminimum_mag_numf16
+    libc.src.__support.math.fminimum_mag_numl
     libc.src.__support.math.fminimum_magbf16
     libc.src.__support.math.fminimum_magf
     libc.src.__support.math.fminimum_magf128

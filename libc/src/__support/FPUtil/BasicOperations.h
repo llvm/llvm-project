@@ -248,7 +248,7 @@ LIBC_INLINE constexpr T fmaximum_mag_num(T x, T y) {
 }
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE T fminimum_mag_num(T x, T y) {
+LIBC_INLINE constexpr T fminimum_mag_num(T x, T y) {
   FPBits<T> bitx(x), bity(y);
 
   if (abs(x) < abs(y))
