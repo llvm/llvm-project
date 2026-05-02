@@ -30,7 +30,6 @@
 #include "llvm/Analysis/InlineAdvisor.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/LazyCallGraph.h"
-#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ReplayInlineAdvisor.h"
@@ -80,14 +79,6 @@ static cl::opt<int> IntraSCCCostMultiplier(
         "this, the inlined call would have the original multiplier "
         "multiplied by intra-scc-cost-multiplier). This is to prevent tons of "
         "inlining through a child SCC which can cause terrible compile times"));
-
-static cl::opt<unsigned> InlinerForwardingScanLimit(
-    "inliner-forwarding-scan-limit", cl::init(16), cl::Hidden,
-    cl::desc("Maximum number of instructions to scan backward for "
-             "store-to-load forwarding in subsequent inlining decisions. "
-             "DefMaxInstsToScan=6 is not enough and misses inlining "
-             "opportunities (e.g. when class stores into mutiple members in "
-             "ctor and afterwards calls a function reading those members)"));
 
 /// A flag for test, so we can print the content of the advisor when running it
 /// as part of the default (e.g. -O3) pipeline.
@@ -332,34 +323,6 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
                           << F.getName() << " -> " << Callee.getName() << "\n");
         setInlineRemark(*CB, "recursive SCC split");
         continue;
-      }
-
-      // Store-to-load forwarding, loads can be sometimes simplified to
-      // constants from stores introduced by previous inlining
-      if (DidInline) {
-        for (Value *Arg : CB->args()) {
-          auto *LI = dyn_cast<LoadInst>(Arg);
-          if (!LI || !LI->isSimple())
-            continue;
-          BasicBlock::iterator BBI = LI->getIterator();
-          Value *Available = FindAvailableLoadedValue(
-              LI, LI->getParent(), BBI, InlinerForwardingScanLimit);
-          if (!Available)
-            continue;
-          auto *C = dyn_cast<Constant>(Available);
-          if (!C)
-            continue;
-          // Handle type mismatches from memset forwarding (e.g. memset
-          // writes i64 0 but the load type is ptr).
-          if (C->getType() != LI->getType()) {
-            if (C->isNullValue())
-              C = Constant::getNullValue(LI->getType());
-            else
-              continue;
-          }
-          LI->replaceAllUsesWith(C);
-          LI->eraseFromParent();
-        }
       }
 
       std::unique_ptr<InlineAdvice> Advice =
