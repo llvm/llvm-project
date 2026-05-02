@@ -43,8 +43,8 @@ SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
 const char *__ubsan_default_options();
 // Users may provide their own implementation of __ubsan_default_suppressions to
 // override the default suppression values.
-SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
-const char *__ubsan_default_suppressions();
+SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE const char *
+__ubsan_default_suppressions();
 }  // extern "C"
 
 #endif  // UBSAN_FLAGS_H

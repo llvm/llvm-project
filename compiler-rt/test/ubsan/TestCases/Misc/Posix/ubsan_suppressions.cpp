@@ -7,9 +7,8 @@
 // REQUIRES: can-symbolize
 // UNSUPPORTED: android
 
-#include <stdint.h>
 #include <sanitizer/ubsan_interface.h>
-
+#include <stdint.h>
 
 extern "C" const char *__ubsan_default_suppressions() {
   return "unsigned-integer-overflow:do_overflow";
