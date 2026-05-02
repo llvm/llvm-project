@@ -2785,7 +2785,7 @@ add_entrypoint_object(
   HDRS
     ../remquof.h
   DEPENDS
-    libc.src.__support.FPUtil.division_and_remainder_operations
+    libc.src.__support.math.remquof
 )
 
 add_entrypoint_object(
@@ -2795,7 +2795,7 @@ add_entrypoint_object(
   HDRS
     ../remquof128.h
   DEPENDS
-    libc.src.__support.FPUtil.division_and_remainder_operations
+    libc.src.__support.math.remquof128
 )
 
 add_entrypoint_object(
@@ -2815,7 +2815,7 @@ add_entrypoint_object(
   HDRS
     ../remquol.h
   DEPENDS
-    libc.src.__support.FPUtil.division_and_remainder_operations
+    libc.src.__support.math.remquol
 )
 
 add_entrypoint_object(
@@ -2825,8 +2825,7 @@ add_entrypoint_object(
   HDRS
     ../remquof16.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.division_and_remainder_operations
+    libc.src.__support.math.remquof16
 )
 
 add_entrypoint_object(
@@ -2836,11 +2835,7 @@ add_entrypoint_object(
   HDRS
     ../remquobf16.h
   DEPENDS
-    libc.src.__support.common
-    libc.src.__support.FPUtil.bfloat16
-    libc.src.__support.FPUtil.division_and_remainder_operations
-    libc.src.__support.macros.properties.types
-    libc.src.__support.macros.config
+    libc.src.__support.math.remquobf16
 )
 
 add_entrypoint_object(
@@ -2850,7 +2845,7 @@ add_entrypoint_object(
   HDRS
     ../remainderf.h
   DEPENDS
-    libc.src.__support.FPUtil.division_and_remainder_operations
+    libc.src.__support.math.remainderf
 )
 
 add_entrypoint_object(
@@ -2870,7 +2865,7 @@ add_entrypoint_object(
   HDRS
     ../remainderl.h
   DEPENDS
-    libc.src.__support.FPUtil.division_and_remainder_operations
+    libc.src.__support.math.remainderl
 )
 
 add_entrypoint_object(
@@ -2880,8 +2875,7 @@ add_entrypoint_object(
   HDRS
     ../remainderf16.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.division_and_remainder_operations
+    libc.src.__support.math.remainderf16
 )
 
 add_entrypoint_object(
@@ -2891,8 +2885,7 @@ add_entrypoint_object(
   HDRS
     ../remainderf128.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.division_and_remainder_operations
+    libc.src.__support.math.remainderf128
 )
 
 add_entrypoint_object(
@@ -2902,11 +2895,7 @@ add_entrypoint_object(
   HDRS
     ../remainderbf16.h
   DEPENDS
-    libc.src.__support.common
-    libc.src.__support.FPUtil.bfloat16
-    libc.src.__support.FPUtil.division_and_remainder_operations
-    libc.src.__support.macros.properties.types
-    libc.src.__support.macros.config
+    libc.src.__support.math.remainderbf16
 )
 
 add_entrypoint_object(

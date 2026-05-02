@@ -135,6 +135,11 @@ TEST(LlvmLibcSharedMathTest, AllFloat16) {
                LIBC_NAMESPACE::shared::fmaximum_mag_numf16(0.0f16, 0.0f16));
   EXPECT_FP_EQ(0x0p+0f16,
                LIBC_NAMESPACE::shared::fminimum_mag_numf16(0.0f16, 0.0f16));
+  EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::remainderf16(1.0f16, 1.0f16));
+  int remquof16_exp = 0;
+  EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::remquof16(1.0f16, 1.0f16,
+                                                            &remquof16_exp));
+  EXPECT_EQ(1, remquof16_exp);
 }
 
 #endif // LIBC_TYPES_HAS_FLOAT16
@@ -270,6 +275,11 @@ TEST(LlvmLibcSharedMathTest, AllFloat) {
   EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::modff(0.0f, &modff_iptr));
   EXPECT_FP_EQ(0.0f, modff_iptr);
   EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::fminimum_mag_numf(0.0f, 0.0f));
+  EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::remainderf(1.0f, 1.0f));
+  int remquof_exp = 0;
+  EXPECT_FP_EQ(0x0p+0f,
+               LIBC_NAMESPACE::shared::remquof(1.0f, 1.0f, &remquof_exp));
+  EXPECT_EQ(1, remquof_exp);
 }
 
 TEST(LlvmLibcSharedMathTest, AllDouble) {
@@ -381,6 +391,10 @@ TEST(LlvmLibcSharedMathTest, AllDouble) {
   EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::modf(0.0, &modf_iptr));
   EXPECT_FP_EQ(0.0, modf_iptr);
   EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::fminimum_mag_num(0.0, 0.0));
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::remainder(1.0, 1.0));
+  int remquo_exp = 0;
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::remquo(1.0, 1.0, &remquo_exp));
+  EXPECT_EQ(1, remquo_exp);
 }
 
 // TODO: Enable the tests when double-double type is supported.
@@ -474,6 +488,11 @@ TEST(LlvmLibcSharedMathTest, AllLongDouble) {
   EXPECT_FP_EQ(0.0L, modfl_iptr);
   EXPECT_FP_EQ(0x0p+0L, LIBC_NAMESPACE::shared::fmaximum_mag_numl(0.0L, 0.0L));
   EXPECT_FP_EQ(0x0p+0L, LIBC_NAMESPACE::shared::fminimum_mag_numl(0.0L, 0.0L));
+  EXPECT_FP_EQ(0x0p+0L, LIBC_NAMESPACE::shared::remainderl(1.0L, 1.0L));
+  int remquol_exp = 0;
+  EXPECT_FP_EQ(0x0p+0L,
+               LIBC_NAMESPACE::shared::remquol(1.0L, 1.0L, &remquol_exp));
+  EXPECT_EQ(1, remquol_exp);
 }
 
 #endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
@@ -621,6 +640,13 @@ TEST(LlvmLibcSharedMathTest, AllFloat128) {
                                   float128(0.0), float128(0.0)));
   EXPECT_FP_EQ(float128(0.0), LIBC_NAMESPACE::shared::fminimum_mag_numf128(
                                   float128(0.0), float128(0.0)));
+  EXPECT_FP_EQ(float128(0.0), LIBC_NAMESPACE::shared::remainderf128(
+                                  float128(1.0), float128(1.0)));
+  int remquof128_exp = 0;
+  EXPECT_FP_EQ(float128(0.0),
+               LIBC_NAMESPACE::shared::remquof128(float128(1.0), float128(1.0),
+                                                  &remquof128_exp));
+  EXPECT_EQ(1, remquof128_exp);
 }
 
 #endif // LIBC_TYPES_HAS_FLOAT128
@@ -729,4 +755,11 @@ TEST(LlvmLibcSharedMathTest, AllBFloat16) {
   EXPECT_FP_EQ(bfloat16(0.0), modfbf16_iptr);
   EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::fminimum_mag_numbf16(
                                   bfloat16(0.0), bfloat16(0.0)));
+  EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::remainderbf16(
+                                  bfloat16(1.0), bfloat16(1.0)));
+  int remquobf16_exp = 0;
+  EXPECT_FP_EQ(bfloat16(0.0),
+               LIBC_NAMESPACE::shared::remquobf16(bfloat16(1.0), bfloat16(1.0),
+                                                  &remquobf16_exp));
+  EXPECT_EQ(1, remquobf16_exp);
 }

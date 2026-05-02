@@ -50,6 +50,11 @@ static_assert(0.0 == [] {
   return LIBC_NAMESPACE::shared::modf(0, &iptr);
 }());
 static_assert(0.0 == LIBC_NAMESPACE::shared::fminimum_mag_num(0.0, 0.0));
+static_assert(0.0 == LIBC_NAMESPACE::shared::remainder(1.0, 1.0));
+static_assert(0.0 == [] {
+  int exp{};
+  return LIBC_NAMESPACE::shared::remquo(1.0, 1.0, &exp);
+}());
 
 //===----------------------------------------------------------------------===//
 //                       Float Tests
@@ -88,6 +93,11 @@ static_assert(0.0f == [] {
   return LIBC_NAMESPACE::shared::modff(0.0f, &iptr);
 }());
 static_assert(0.0f == LIBC_NAMESPACE::shared::fminimum_mag_numf(0.0f, 0.0f));
+static_assert(0.0f == LIBC_NAMESPACE::shared::remainderf(1.0f, 1.0f));
+static_assert(0.0f == [] {
+  int exp{};
+  return LIBC_NAMESPACE::shared::remquof(1.0f, 1.0f, &exp);
+}());
 //===----------------------------------------------------------------------===//
 //                       Float16 Tests
 //===----------------------------------------------------------------------===//
@@ -135,6 +145,11 @@ static_assert(0.0f16 ==
               LIBC_NAMESPACE::shared::fmaximum_mag_numf16(0.0f16, 0.0f16));
 static_assert(0.0f16 ==
               LIBC_NAMESPACE::shared::fminimum_mag_numf16(0.0f16, 0.0f16));
+static_assert(0.0f16 == LIBC_NAMESPACE::shared::remainderf16(1.0f16, 1.0f16));
+static_assert(0.0f16 == [] {
+  int exp{};
+  return LIBC_NAMESPACE::shared::remquof16(1.0f16, 1.0f16, &exp);
+}());
 #endif // LIBC_TYPES_HAS_FLOAT16
 
 //===----------------------------------------------------------------------===//
@@ -183,6 +198,11 @@ static_assert(0.0L == [] {
 }());
 static_assert(0.0L == LIBC_NAMESPACE::shared::fmaximum_mag_numl(0.0L, 0.0L));
 static_assert(0.0L == LIBC_NAMESPACE::shared::fminimum_mag_numl(0.0L, 0.0L));
+static_assert(0.0L == LIBC_NAMESPACE::shared::remainderl(1.0L, 1.0L));
+static_assert(0.0L == [] {
+  int exp{};
+  return LIBC_NAMESPACE::shared::remquol(1.0L, 1.0L, &exp);
+}());
 
 #endif
 
@@ -262,6 +282,13 @@ static_assert(float128(0.0) ==
 static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::fminimum_mag_numf128(float128(0.0),
                                                            float128(0.0)));
+static_assert(float128(0.0) ==
+              LIBC_NAMESPACE::shared::remainderf128(float128(1.0),
+                                                    float128(1.0)));
+static_assert(float128(0.0) == [] {
+  int exp{};
+  return LIBC_NAMESPACE::shared::remquof128(float128(1.0), float128(1.0), &exp);
+}());
 
 #endif // LIBC_TYPES_HAS_FLOAT128
 
@@ -336,5 +363,12 @@ static_assert(bfloat16(0.0) == [] {
 static_assert(bfloat16(0.0) ==
               LIBC_NAMESPACE::shared::fminimum_mag_numbf16(bfloat16(0.0),
                                                            bfloat16(0.0)));
+static_assert(bfloat16(0.0) ==
+              LIBC_NAMESPACE::shared::remainderbf16(bfloat16(1.0),
+                                                    bfloat16(1.0)));
+static_assert(bfloat16(0.0) == [] {
+  int exp{};
+  return LIBC_NAMESPACE::shared::remquobf16(bfloat16(1.0), bfloat16(1.0), &exp);
+}());
 
 TEST(LlvmLibcSharedMathTest, ConstantEvaluation) {}
