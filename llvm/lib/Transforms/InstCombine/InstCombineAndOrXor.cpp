@@ -5631,6 +5631,29 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
   if (Instruction *Abs = canonicalizeAbs(I, Builder))
     return Abs;
 
+  const APInt *AndC, *XorC;
+  // Reassociate to expose the existing demanded-bits fold:
+  //   (A ^ (X & ~C)) ^ C --> ((X & ~C) ^ C) ^ A
+  //   ((X & ~C) ^ C) --> (X | C)
+  if (match(&I,
+            m_c_Xor(m_OneUse(m_c_Xor(m_Value(A, m_Unless(m_ConstantExpr())),
+                                     m_Value(B, m_Unless(m_ConstantExpr())))),
+                    m_APInt(XorC)))) {
+    Value *Masked = B, *Other = A;
+    if (!match(Masked, m_OneUse(m_And(m_Value(X), m_APInt(AndC)))) ||
+        *AndC != ~*XorC) {
+      Masked = A;
+      Other = B;
+      if (!match(Masked, m_OneUse(m_And(m_Value(X), m_APInt(AndC)))) ||
+          *AndC != ~*XorC)
+        Masked = nullptr;
+    }
+    if (Masked)
+      return BinaryOperator::CreateXor(
+          Builder.CreateXor(Masked, ConstantInt::get(I.getType(), *XorC)),
+          Other);
+  }
+
   // Otherwise, if all else failed, try to hoist the xor-by-constant:
   //   (X ^ C) ^ Y --> (X ^ Y) ^ C
   // Just like we do in other places, we completely avoid the fold
