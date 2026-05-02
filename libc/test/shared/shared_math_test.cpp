@@ -284,6 +284,10 @@ TEST(LlvmLibcSharedMathTest, AllFloat) {
   EXPECT_EQ(1, remquof_exp);
   EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::scalblnf(0.0f, 0L));
   EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::scalbnf(0.0f, 0));
+  EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::fmul(0.0L, 0.0L));
+  EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::fmull(0.0L, 0.0L));
+  EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::fsub(0.0, 0.0));
+  EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::fsubl(0.0L, 0.0L));
 }
 
 TEST(LlvmLibcSharedMathTest, AllDouble) {
@@ -402,6 +406,9 @@ TEST(LlvmLibcSharedMathTest, AllDouble) {
   EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::ldexp(0.0, 0));
   EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::scalbln(0.0, 0L));
   EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::scalbn(0.0, 0));
+  int frexp_exp = 0;
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::frexp(0.0, &frexp_exp));
+  EXPECT_EQ(0, frexp_exp);
 }
 
 // TODO: Enable the tests when double-double type is supported.
@@ -503,6 +510,9 @@ TEST(LlvmLibcSharedMathTest, AllLongDouble) {
   EXPECT_FP_EQ(0x0p+0L, LIBC_NAMESPACE::shared::ldexpl(0.0L, 0));
   EXPECT_FP_EQ(0x0p+0L, LIBC_NAMESPACE::shared::scalblnl(0.0L, 0L));
   EXPECT_FP_EQ(0x0p+0L, LIBC_NAMESPACE::shared::scalbnl(0.0L, 0));
+  int frexpl_exp = 0;
+  EXPECT_FP_EQ(0x0p+0L, LIBC_NAMESPACE::shared::frexpl(0.0L, &frexpl_exp));
+  EXPECT_EQ(0, frexpl_exp);
 }
 
 #endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
@@ -661,6 +671,10 @@ TEST(LlvmLibcSharedMathTest, AllFloat128) {
                LIBC_NAMESPACE::shared::scalblnf128(float128(0.0), 0L));
   EXPECT_FP_EQ(float128(0.0),
                LIBC_NAMESPACE::shared::scalbnf128(float128(0.0), 0));
+  EXPECT_FP_EQ(0x0p+0f,
+               LIBC_NAMESPACE::shared::fsubf128(float128(0.0), float128(0.0)));
+  EXPECT_FP_EQ(0x0p+0f,
+               LIBC_NAMESPACE::shared::fmulf128(float128(0.0), float128(0.0)));
 }
 
 #endif // LIBC_TYPES_HAS_FLOAT128
@@ -782,4 +796,8 @@ TEST(LlvmLibcSharedMathTest, AllBFloat16) {
                LIBC_NAMESPACE::shared::scalblnbf16(bfloat16(0.0), 0L));
   EXPECT_FP_EQ(bfloat16(0.0),
                LIBC_NAMESPACE::shared::scalbnbf16(bfloat16(0.0), 0));
+  int frexpbf16_exp = 0;
+  EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::frexpbf16(
+                                  bfloat16(0.0), &frexpbf16_exp));
+  EXPECT_EQ(0, frexpbf16_exp);
 }
