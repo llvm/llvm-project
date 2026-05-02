@@ -19338,6 +19338,7 @@ bool Sema::DefineUsedVTables() {
         !(Class->getOwningModule() &&
           Class->getOwningModule()->isInterfaceOrPartition()) &&
         ClassTSK != TSK_ImplicitInstantiation &&
+        ClassTSK != TSK_ExplicitInstantiationDeclaration &&
         ClassTSK != TSK_ExplicitInstantiationDefinition) {
       const FunctionDecl *KeyFunctionDef = nullptr;
       if (!KeyFunction || (KeyFunction->hasBody(KeyFunctionDef) &&

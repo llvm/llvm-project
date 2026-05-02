@@ -262,41 +262,33 @@ namespace Intrinsic {
   LLVM_ABI void getIntrinsicInfoTableEntries(ID id,
                                              SmallVectorImpl<IITDescriptor> &T);
 
-  enum MatchIntrinsicTypesResult {
-    MatchIntrinsicTypes_Match = 0,
-    MatchIntrinsicTypes_NoMatchRet = 1,
-    MatchIntrinsicTypes_NoMatchArg = 2,
-  };
-
   /// Match the specified function type with the type constraints specified by
   /// the .td file. If the given type is an overloaded type it is pushed to the
   /// OverloadTys vector.
   ///
   /// Returns false if the given type matches with the constraints, true
-  /// otherwise.
-  LLVM_ABI MatchIntrinsicTypesResult
-  matchIntrinsicSignature(FunctionType *FTy, ArrayRef<IITDescriptor> &Infos,
-                          SmallVectorImpl<Type *> &OverloadTys);
+  /// otherwise. If returning true, an error message to indicate the reason of
+  /// mismatch is printed to \p OS.
+  LLVM_ABI bool matchIntrinsicSignature(FunctionType *FTy,
+                                        ArrayRef<IITDescriptor> &Infos,
+                                        SmallVectorImpl<Type *> &OverloadTys,
+                                        raw_ostream &OS);
 
-  /// Verify if the intrinsic has variable arguments. This method is intended to
-  /// be called after all the fixed arguments have been matched first.
-  ///
-  /// This method returns true on error.
-  LLVM_ABI bool matchIntrinsicVarArg(bool isVarArg,
-                                     ArrayRef<IITDescriptor> &Infos);
-
-  /// Gets the overload types of an intrinsic call by matching type contraints
-  /// specified by the .td file. The overloaded types are pushed into the
+  /// Returns true if \p FT is a valid function type for intrinsic \p ID. If
+  /// `ID` is an overloaded intrinsic, the overload types are pushed into the
   /// OverloadTys vector.
   ///
   /// Returns false if the given ID and function type combination is not a
-  /// valid intrinsic call.
-  LLVM_ABI bool getIntrinsicSignature(Intrinsic::ID, FunctionType *FT,
-                                      SmallVectorImpl<Type *> &OverloadTys);
+  /// valid intrinsic call. Also prints the error message to indicate the reason
+  /// of the mismatch to \p OS.
+  LLVM_ABI bool isSignatureValid(Intrinsic::ID ID, FunctionType *FT,
+                                 SmallVectorImpl<Type *> &OverloadTys,
+                                 raw_ostream &OS = nulls());
 
   /// Same as previous, but accepts a Function instead of ID and FunctionType.
-  LLVM_ABI bool getIntrinsicSignature(Function *F,
-                                      SmallVectorImpl<Type *> &OverloadTys);
+  LLVM_ABI bool isSignatureValid(Function *F,
+                                 SmallVectorImpl<Type *> &OverloadTys,
+                                 raw_ostream &OS = nulls());
 
   // Checks if the intrinsic name matches with its signature and if not
   // returns the declaration with the same signature and remangled name.
