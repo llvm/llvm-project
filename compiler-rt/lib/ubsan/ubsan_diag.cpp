@@ -13,9 +13,10 @@
 #include "ubsan_platform.h"
 #if CAN_SANITIZE_UB
 #include "ubsan_diag.h"
-#include "ubsan_init.h"
 #include "ubsan_flags.h"
+#include "ubsan_init.h"
 #include "ubsan_monitor.h"
+
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_placement_new.h"
 #include "sanitizer_common/sanitizer_report_decorator.h"
@@ -23,6 +24,7 @@
 #include "sanitizer_common/sanitizer_stacktrace_printer.h"
 #include "sanitizer_common/sanitizer_suppressions.h"
 #include "sanitizer_common/sanitizer_symbolizer.h"
+
 #include <stdio.h>
 
 using namespace __ubsan;
