@@ -377,3 +377,16 @@ def test_reductions():
 # CHECK:           %[[REDUX_35:.*]] = nvvm.redux.sync fmax %[[ARG2]], %[[ARG1]] : f32 -> f32
 # CHECK:           return
 # CHECK:         }
+
+
+# CHECK-LABEL: TEST: testSpecialRegisterInferredResults
+@constructAndPrintInModule
+def testSpecialRegisterInferredResults():
+    # CHECK: %{{.*}} = nvvm.read.ptx.sreg.tid.x : i32
+    nvvm.ThreadIdXOp()
+    # CHECK: %{{.*}} = nvvm.read.ptx.sreg.clock : i32
+    nvvm.ClockOp()
+    # CHECK: %{{.*}} = nvvm.read.ptx.sreg.clock64 : i64
+    nvvm.Clock64Op()
+    # CHECK: %{{.*}} = nvvm.read.ptx.sreg.globaltimer : i64
+    nvvm.GlobalTimerOp()

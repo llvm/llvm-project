@@ -2,8 +2,8 @@
 # RUN: llvm-objdump --macho --rpaths --arch x86_64 %p/Inputs/Objc2.64bit.exe.macho-x86_64 | FileCheck --implicit-check-not={{.}} %s
 # RUN: llvm-objdump --macho --rpaths %p/Inputs/Objc2.64bit.exe.macho-x86_64 | FileCheck --implicit-check-not={{.}} %s
 
-# CHECK: {{.*}}Objc2.64bit.exe.macho-x86_64:
-# CHECK: @executable_path/../Frameworks
+# CHECK:      {{.*}}Objc2.64bit.exe.macho-x86_64:
+# CHECK-NEXT: @executable_path/../Frameworks
 
 ## Validate binaries with no rpaths should print nothing.
 # RUN: llvm-objdump --macho --no-leading-headers --rpaths %p/Inputs/hello.exe.macho-i386 | count 0

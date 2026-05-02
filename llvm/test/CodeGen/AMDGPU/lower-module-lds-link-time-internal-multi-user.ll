@@ -30,9 +30,6 @@ source_filename = "source_a.hip"
 ; CHECK-DAG: !{ptr @kernel1, ptr addrspace(3) @[[INTERN]]}
 ; CHECK-DAG: !{ptr @kernel2, ptr addrspace(3) @[[INTERN]]}
 
-; Module should be marked with the link-time LDS module flag.
-; CHECK: !{i32 1, !"amdgpu-link-time-lds", i32 1}
-
 define amdgpu_kernel void @kernel1() {
   %gep_a = getelementptr [32 x i32], ptr addrspace(3) @a, i32 0, i32 0
   store i32 1, ptr addrspace(3) %gep_a

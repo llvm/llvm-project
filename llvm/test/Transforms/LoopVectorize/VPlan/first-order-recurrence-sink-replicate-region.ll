@@ -22,8 +22,9 @@ define void @sink_replicate_region_1(i32 %x, ptr %ptr, ptr noalias %dst) optsize
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP4:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK-NEXT:      FIRST-ORDER-RECURRENCE-PHI ir<%0> = phi ir<0>, ir<%conv>
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
@@ -82,13 +83,11 @@ define void @sink_replicate_region_1(i32 %x, ptr %ptr, ptr noalias %dst) optsize
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%scalar.recur.init> = phi [ ir<0>, ir-bb<entry> ]
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:
-; CHECK-NEXT:    IR   %0 = phi i32 [ 0, %entry ], [ %conv, %loop ] (extra operand: vp<%scalar.recur.init> from scalar.ph)
-; CHECK-NEXT:    IR   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ] (extra operand: vp<%bc.resume.val> from scalar.ph)
+; CHECK-NEXT:    IR   %0 = phi i32 [ 0, %entry ], [ %conv, %loop ] (extra operand: ir<0> from scalar.ph)
+; CHECK-NEXT:    IR   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ] (extra operand: ir<0> from scalar.ph)
 ; CHECK-NEXT:    IR   %rem = srem i32 %0, %x
 ; CHECK-NEXT:    IR   %gep = getelementptr i8, ptr %ptr, i32 %iv
 ; CHECK-NEXT:    IR   %lv = load i8, ptr %gep, align 1
@@ -139,8 +138,9 @@ define void @sink_replicate_region_2(i32 %x, i8 %y, ptr %ptr, i32 %z) optsize {
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP4:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK-NEXT:      FIRST-ORDER-RECURRENCE-PHI ir<%recur> = phi ir<0>, ir<%recur.next>
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = icmp ule ir<%iv>, vp<[[VP3]]>
@@ -181,13 +181,11 @@ define void @sink_replicate_region_2(i32 %x, i8 %y, ptr %ptr, i32 %z) optsize {
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%scalar.recur.init> = phi [ ir<0>, ir-bb<entry> ]
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:
-; CHECK-NEXT:    IR   %recur = phi i32 [ 0, %entry ], [ %recur.next, %latch ] (extra operand: vp<%scalar.recur.init> from scalar.ph)
-; CHECK-NEXT:    IR   %iv = phi i32 [ 0, %entry ], [ %iv.next, %latch ] (extra operand: vp<%bc.resume.val> from scalar.ph)
+; CHECK-NEXT:    IR   %recur = phi i32 [ 0, %entry ], [ %recur.next, %latch ] (extra operand: ir<0> from scalar.ph)
+; CHECK-NEXT:    IR   %iv = phi i32 [ 0, %entry ], [ %iv.next, %latch ] (extra operand: ir<0> from scalar.ph)
 ; CHECK-NEXT:    IR   %recur.next = sext i8 %y to i32
 ; CHECK-NEXT:    IR   %cond = icmp eq i32 %iv, %z
 ; CHECK-NEXT:  No successors
@@ -236,8 +234,9 @@ define i32 @sink_replicate_region_3_reduction(i32 %x, i8 %y, ptr %ptr) optsize {
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP4:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK-NEXT:      FIRST-ORDER-RECURRENCE-PHI ir<%recur> = phi ir<0>, ir<%recur.next>
 ; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%and.red> = phi vp<[[VP3]]>, ir<%and.red.next>
 ; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION vp<[[VP4]]>
@@ -279,15 +278,12 @@ define i32 @sink_replicate_region_3_reduction(i32 %x, i8 %y, ptr %ptr) optsize {
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%scalar.recur.init> = phi [ ir<0>, ir-bb<entry> ]
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ ir<0>, ir-bb<entry> ]
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.merge.rdx> = phi [ ir<1234>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:
-; CHECK-NEXT:    IR   %recur = phi i32 [ 0, %entry ], [ %recur.next, %loop ] (extra operand: vp<%scalar.recur.init> from scalar.ph)
-; CHECK-NEXT:    IR   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ] (extra operand: vp<%bc.resume.val> from scalar.ph)
-; CHECK-NEXT:    IR   %and.red = phi i32 [ 1234, %entry ], [ %and.red.next, %loop ] (extra operand: vp<%bc.merge.rdx> from scalar.ph)
+; CHECK-NEXT:    IR   %recur = phi i32 [ 0, %entry ], [ %recur.next, %loop ] (extra operand: ir<0> from scalar.ph)
+; CHECK-NEXT:    IR   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ] (extra operand: ir<0> from scalar.ph)
+; CHECK-NEXT:    IR   %and.red = phi i32 [ 1234, %entry ], [ %and.red.next, %loop ] (extra operand: ir<1234> from scalar.ph)
 ; CHECK-NEXT:    IR   %rem = srem i32 %recur, %x
 ; CHECK-NEXT:    IR   %recur.next = sext i8 %y to i32
 ; CHECK-NEXT:    IR   %add = add i32 %rem, %recur.next
@@ -335,8 +331,9 @@ define void @sink_replicate_region_4_requires_split_at_end_of_block(i32 %x, ptr 
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP4:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK-NEXT:      FIRST-ORDER-RECURRENCE-PHI ir<%0> = phi ir<0>, ir<%conv>
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
@@ -416,13 +413,11 @@ define void @sink_replicate_region_4_requires_split_at_end_of_block(i32 %x, ptr 
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%scalar.recur.init> = phi [ ir<0>, ir-bb<entry> ]
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:
-; CHECK-NEXT:    IR   %0 = phi i32 [ 0, %entry ], [ %conv, %loop ] (extra operand: vp<%scalar.recur.init> from scalar.ph)
-; CHECK-NEXT:    IR   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ] (extra operand: vp<%bc.resume.val> from scalar.ph)
+; CHECK-NEXT:    IR   %0 = phi i32 [ 0, %entry ], [ %conv, %loop ] (extra operand: ir<0> from scalar.ph)
+; CHECK-NEXT:    IR   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ] (extra operand: ir<0> from scalar.ph)
 ; CHECK-NEXT:    IR   %gep = getelementptr i8, ptr %ptr, i32 %iv
 ; CHECK-NEXT:    IR   %rem = srem i32 %0, %x
 ; CHECK-NEXT:    IR   %lv = load i8, ptr %gep, align 1
@@ -481,8 +476,9 @@ define void @sink_replicate_region_after_replicate_region(ptr %ptr, ptr noalias 
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP5:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK-NEXT:      FIRST-ORDER-RECURRENCE-PHI ir<%recur> = phi ir<0>, ir<%recur.next>
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = icmp ule ir<%iv>, vp<[[VP3]]>
@@ -523,13 +519,11 @@ define void @sink_replicate_region_after_replicate_region(ptr %ptr, ptr noalias 
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%scalar.recur.init> = phi [ ir<0>, ir-bb<entry> ]
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:
-; CHECK-NEXT:    IR   %recur = phi i32 [ 0, %entry ], [ %recur.next, %loop ] (extra operand: vp<%scalar.recur.init> from scalar.ph)
-; CHECK-NEXT:    IR   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ] (extra operand: vp<%bc.resume.val> from scalar.ph)
+; CHECK-NEXT:    IR   %recur = phi i32 [ 0, %entry ], [ %recur.next, %loop ] (extra operand: ir<0> from scalar.ph)
+; CHECK-NEXT:    IR   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ] (extra operand: ir<0> from scalar.ph)
 ; CHECK-NEXT:    IR   %rem = srem i32 %recur, %x
 ; CHECK-NEXT:    IR   %rem.div = sdiv i32 20, %rem
 ; CHECK-NEXT:    IR   %recur.next = sext i8 %y to i32
@@ -579,8 +573,9 @@ define void @need_new_block_after_sinking_pr56146(i32 %x, ptr %src, ptr noalias 
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP4:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK-NEXT:      FIRST-ORDER-RECURRENCE-PHI ir<%.pn> = phi ir<0>, ir<%l>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = DERIVED-IV ir<2> + vp<[[VP4]]> * ir<1>
 ; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION vp<[[VP4]]>
@@ -620,13 +615,11 @@ define void @need_new_block_after_sinking_pr56146(i32 %x, ptr %src, ptr noalias 
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ ir<2>, ir-bb<entry> ]
-; CHECK-NEXT:    EMIT-SCALAR vp<%scalar.recur.init> = phi [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:
-; CHECK-NEXT:    IR   %iv = phi i64 [ 2, %entry ], [ %iv.next, %loop ] (extra operand: vp<%bc.resume.val> from scalar.ph)
-; CHECK-NEXT:    IR   %.pn = phi i32 [ 0, %entry ], [ %l, %loop ] (extra operand: vp<%scalar.recur.init> from scalar.ph)
+; CHECK-NEXT:    IR   %iv = phi i64 [ 2, %entry ], [ %iv.next, %loop ] (extra operand: ir<2> from scalar.ph)
+; CHECK-NEXT:    IR   %.pn = phi i32 [ 0, %entry ], [ %l, %loop ] (extra operand: ir<0> from scalar.ph)
 ; CHECK-NEXT:    IR   %val = sdiv i32 %.pn, %x
 ; CHECK-NEXT:    IR   %l = load i32, ptr %src, align 4
 ; CHECK-NEXT:    IR   %gep.dst = getelementptr i32, ptr %dst, i64 %iv

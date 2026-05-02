@@ -1,6 +1,8 @@
 #RUN: dsymutil --linker=parallel -f -oso-prepend-path=%p/../Inputs/ -y %s -o %t.dwarf
 #RUN: llvm-dwarfdump %t.dwarf | FileCheck %s
 
+## FIXME: Support --linker classic
+
 # There should be two typedef DIE named "BarInt" in the resultant .dwarf file.
 # The second should refer to the first, which refer to "Foo<int>".
 # CHECK:      0x[[FIRST_BARINT_ADDR:[0-9a-f]*]]:  DW_TAG_typedef

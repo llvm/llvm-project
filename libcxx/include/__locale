@@ -118,6 +118,9 @@ private:
 
   template <class>
   friend struct __no_destroy;
+
+  friend ios_base;
+
   _LIBCPP_HIDE_FROM_ABI explicit locale(__private_constructor_tag, __imp* __loc) : __locale_(__loc) {}
 
   void __install_ctor(const locale&, facet*, long);

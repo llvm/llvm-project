@@ -438,8 +438,6 @@ define double @v_rcp_f64_arcp_afn(double %x) {
 ; GCN-NEXT:    v_rcp_f64_e32 v[2:3], v[0:1]
 ; GCN-NEXT:    v_fma_f64 v[4:5], -v[0:1], v[2:3], 1.0
 ; GCN-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
-; GCN-NEXT:    v_fma_f64 v[4:5], -v[0:1], v[2:3], 1.0
-; GCN-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
 ; GCN-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[2:3], 1.0
 ; GCN-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], v[2:3]
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
@@ -448,8 +446,6 @@ define double @v_rcp_f64_arcp_afn(double %x) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_rcp_f64_e32 v[2:3], v[0:1]
-; GFX10-NEXT:    v_fma_f64 v[4:5], -v[0:1], v[2:3], 1.0
-; GFX10-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
 ; GFX10-NEXT:    v_fma_f64 v[4:5], -v[0:1], v[2:3], 1.0
 ; GFX10-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
 ; GFX10-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[2:3], 1.0
@@ -464,14 +460,48 @@ define double @v_rcp_f64_arcp_afn(double %x) {
 ; GFX11-NEXT:    v_fma_f64 v[4:5], -v[0:1], v[2:3], 1.0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
-; GFX11-NEXT:    v_fma_f64 v[4:5], -v[0:1], v[2:3], 1.0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_fma_f64 v[2:3], v[4:5], v[2:3], v[2:3]
 ; GFX11-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[2:3], 1.0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], v[2:3]
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %fdiv = fdiv arcp afn double 1.0, %x
+  ret double %fdiv
+}
+
+define double @v_neg_rcp_f64_afn(double %x) {
+; GCN-LABEL: v_neg_rcp_f64_afn:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_rcp_f64_e32 v[2:3], v[0:1]
+; GCN-NEXT:    v_fma_f64 v[4:5], v[0:1], -v[2:3], 1.0
+; GCN-NEXT:    v_fma_f64 v[2:3], v[4:5], -v[2:3], -v[2:3]
+; GCN-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], 1.0
+; GCN-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], v[2:3]
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: v_neg_rcp_f64_afn:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_rcp_f64_e32 v[2:3], v[0:1]
+; GFX10-NEXT:    v_fma_f64 v[4:5], v[0:1], -v[2:3], 1.0
+; GFX10-NEXT:    v_fma_f64 v[2:3], v[4:5], -v[2:3], -v[2:3]
+; GFX10-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], 1.0
+; GFX10-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], v[2:3]
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_neg_rcp_f64_afn:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_rcp_f64_e32 v[2:3], v[0:1]
+; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
+; GFX11-NEXT:    v_fma_f64 v[4:5], v[0:1], -v[2:3], 1.0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_fma_f64 v[2:3], v[4:5], -v[2:3], -v[2:3]
+; GFX11-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], 1.0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], v[2:3]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %fdiv = fdiv afn double -1.0, %x
   ret double %fdiv
 }
 

@@ -67,9 +67,9 @@ std::optional<std::string> Library::readStringFromMemory(const Pointer &Ptr) {
 AnyValue Library::executeMalloc(StringRef Name, Type *Type,
                                 ArrayRef<AnyValue> Args,
                                 MemAllocKind AllocKind) {
-  assert(AllocKind == MemAllocKind::Malloc || AllocKind == MemAllocKind::New ||
-         AllocKind == MemAllocKind::NewArray &&
-             "Unexpected MemAllocKind for malloc()/new/new[]");
+  assert((AllocKind == MemAllocKind::Malloc || AllocKind == MemAllocKind::New ||
+          AllocKind == MemAllocKind::NewArray) &&
+         "Unexpected MemAllocKind for malloc()/new/new[]");
 
   const auto &SizeVal = Args[0];
 
