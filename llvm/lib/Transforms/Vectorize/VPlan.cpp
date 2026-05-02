@@ -31,6 +31,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/IRBuilder.h"
@@ -1793,6 +1794,11 @@ void LoopVectorizationPlanner::updateLoopMetadataAndProfileInfo(
       Hints.setAlreadyVectorized();
     }
   }
+  // Tag the scalar remainder so downstream passes (e.g. the unroller and
+  // WarnMissedTransforms) can produce more informative remarks.  Only emit
+  // when remarks are enabled.
+  if (ORE->enabled() && ScalarPH && ScalarPH->hasPredecessors())
+    OrigLoop->addIntLoopAttribute("llvm.loop.vectorize.epilogue", 1);
 
   if (!VectorLoop)
     return;
@@ -1813,6 +1819,10 @@ void LoopVectorizationPlanner::updateLoopMetadataAndProfileInfo(
       Hints.setAlreadyVectorized();
     }
   }
+  // Tag the vector loop body so downstream passes can identify it.  Only
+  // emit when remarks are enabled.
+  if (ORE->enabled())
+    VectorLoop->addIntLoopAttribute("llvm.loop.vectorize.body", 1);
   TargetTransformInfo::UnrollingPreferences UP;
   TTI.getUnrollingPreferences(VectorLoop, *PSE.getSE(), UP, ORE);
   if (!UP.UnrollVectorizedLoop || VectorizingEpilogue)
