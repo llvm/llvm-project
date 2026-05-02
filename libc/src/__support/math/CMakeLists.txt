@@ -1612,6 +1612,120 @@ add_header_library(
 )
 
 add_header_library(
+  remainder
+  HDRS
+    remainder.h
+  DEPENDS
+    libc.src.__support.FPUtil.division_and_remainder_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  remainderbf16
+  HDRS
+    remainderbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.division_and_remainder_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  remainderf
+  HDRS
+    remainderf.h
+  DEPENDS
+    libc.src.__support.macros.config
+    libc.src.__support.FPUtil.division_and_remainder_operations
+)
+
+add_header_library(
+  remainderf128
+  HDRS
+    remainderf128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.division_and_remainder_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  remainderf16
+  HDRS
+    remainderf16.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.division_and_remainder_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  remainderl
+  HDRS
+    remainderl.h
+  DEPENDS
+    libc.src.__support.FPUtil.division_and_remainder_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  remquo
+  HDRS
+    remquo.h
+  DEPENDS
+    libc.src.__support.FPUtil.division_and_remainder_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  remquobf16
+  HDRS
+    remquobf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.division_and_remainder_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  remquof
+  HDRS
+    remquof.h
+  DEPENDS
+    libc.src.__support.macros.config
+    libc.src.__support.FPUtil.division_and_remainder_operations
+)
+
+add_header_library(
+  remquof128
+  HDRS
+    remquof128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.division_and_remainder_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  remquof16
+  HDRS
+    remquof16.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.division_and_remainder_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  remquol
+  HDRS
+    remquol.h
+  DEPENDS
+    libc.src.__support.FPUtil.division_and_remainder_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   sincos_integer_utils
   HDRS
     sincos_integer_utils.h

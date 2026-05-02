@@ -330,6 +330,18 @@ add_fp_unittest(
     libc.src.__support.math.nextafterf128
     libc.src.__support.math.pow
     libc.src.__support.math.powf
+    libc.src.__support.math.remainder
+    libc.src.__support.math.remainderbf16
+    libc.src.__support.math.remainderf
+    libc.src.__support.math.remainderf128
+    libc.src.__support.math.remainderf16
+    libc.src.__support.math.remainderl
+    libc.src.__support.math.remquo
+    libc.src.__support.math.remquobf16
+    libc.src.__support.math.remquof
+    libc.src.__support.math.remquof128
+    libc.src.__support.math.remquof16
+    libc.src.__support.math.remquol
     libc.src.__support.math.rsqrtf
     libc.src.__support.math.rsqrtf16
     libc.src.__support.math.setpayload
@@ -524,6 +536,18 @@ add_fp_unittest(
     libc.src.__support.math.modff128
     libc.src.__support.math.modff16
     libc.src.__support.math.modfl
+    libc.src.__support.math.remainder
+    libc.src.__support.math.remainderbf16
+    libc.src.__support.math.remainderf
+    libc.src.__support.math.remainderf128
+    libc.src.__support.math.remainderf16
+    libc.src.__support.math.remainderl
+    libc.src.__support.math.remquo
+    libc.src.__support.math.remquobf16
+    libc.src.__support.math.remquof
+    libc.src.__support.math.remquof128
+    libc.src.__support.math.remquof16
+    libc.src.__support.math.remquol
     libc.src.__support.math.sqrtl
     libc.src.__support.math.ufromfp
     libc.src.__support.math.ufromfpbf16

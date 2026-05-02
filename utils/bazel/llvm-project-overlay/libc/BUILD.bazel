@@ -4801,6 +4801,120 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_remainder",
+    hdrs = ["src/__support/math/remainder.h"],
+    deps = [
+        ":__support_fputil_division_and_remainder_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_remainderbf16",
+    hdrs = ["src/__support/math/remainderbf16.h"],
+    deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_division_and_remainder_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_remainderf",
+    hdrs = ["src/__support/math/remainderf.h"],
+    deps = [
+        ":__support_fputil_division_and_remainder_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_remainderf128",
+    hdrs = ["src/__support/math/remainderf128.h"],
+    deps = [
+        ":__support_fputil_division_and_remainder_operations",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_remainderf16",
+    hdrs = ["src/__support/math/remainderf16.h"],
+    deps = [
+        ":__support_fputil_division_and_remainder_operations",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_remainderl",
+    hdrs = ["src/__support/math/remainderl.h"],
+    deps = [
+        ":__support_fputil_division_and_remainder_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_remquo",
+    hdrs = ["src/__support/math/remquo.h"],
+    deps = [
+        ":__support_fputil_division_and_remainder_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_remquobf16",
+    hdrs = ["src/__support/math/remquobf16.h"],
+    deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_division_and_remainder_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_remquof",
+    hdrs = ["src/__support/math/remquof.h"],
+    deps = [
+        ":__support_fputil_division_and_remainder_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_remquof128",
+    hdrs = ["src/__support/math/remquof128.h"],
+    deps = [
+        ":__support_fputil_division_and_remainder_operations",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_remquof16",
+    hdrs = ["src/__support/math/remquof16.h"],
+    deps = [
+        ":__support_fputil_division_and_remainder_operations",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_remquol",
+    hdrs = ["src/__support/math/remquol.h"],
+    deps = [
+        ":__support_fputil_division_and_remainder_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_llogbbf16",
     hdrs = ["src/__support/math/llogbbf16.h"],
     deps = [
@@ -10280,32 +10394,88 @@ libc_math_function(
     ],
 )
 
-libc_math_function(name = "remainder")
+libc_math_function(
+    name = "remainder",
+    additional_deps = [
+        ":__support_math_remainder",
+    ],
+)
 
-libc_math_function(name = "remainderf")
+libc_math_function(
+    name = "remainderbf16",
+    additional_deps = [
+        ":__support_math_remainderbf16",
+    ],
+)
 
-libc_math_function(name = "remainderl")
+libc_math_function(
+    name = "remainderf",
+    additional_deps = [
+        ":__support_math_remainderf",
+    ],
+)
+
+libc_math_function(
+    name = "remainderl",
+    additional_deps = [
+        ":__support_math_remainderl",
+    ],
+)
 
 libc_math_function(
     name = "remainderf128",
+    additional_deps = [
+        ":__support_math_remainderf128",
+    ],
 )
 
 libc_math_function(
     name = "remainderf16",
+    additional_deps = [
+        ":__support_math_remainderf16",
+    ],
 )
 
-libc_math_function(name = "remquo")
+libc_math_function(
+    name = "remquo",
+    additional_deps = [
+        ":__support_math_remquo",
+    ],
+)
 
-libc_math_function(name = "remquof")
+libc_math_function(
+    name = "remquobf16",
+    additional_deps = [
+        ":__support_math_remquobf16",
+    ],
+)
 
-libc_math_function(name = "remquol")
+libc_math_function(
+    name = "remquof",
+    additional_deps = [
+        ":__support_math_remquof",
+    ],
+)
+
+libc_math_function(
+    name = "remquol",
+    additional_deps = [
+        ":__support_math_remquol",
+    ],
+)
 
 libc_math_function(
     name = "remquof128",
+    additional_deps = [
+        ":__support_math_remquof128",
+    ],
 )
 
 libc_math_function(
     name = "remquof16",
+    additional_deps = [
+        ":__support_math_remquof16",
+    ],
 )
 
 libc_math_function(name = "rint")
