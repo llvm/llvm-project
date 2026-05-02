@@ -288,8 +288,8 @@ struct Signature {
 };
 
 struct DebugName {
-  uint16_t Flags;
-  uint16_t NameLength;
+  std::optional<uint16_t> Flags;
+  std::optional<uint16_t> NameLength;
   std::string DebugName;
 };
 

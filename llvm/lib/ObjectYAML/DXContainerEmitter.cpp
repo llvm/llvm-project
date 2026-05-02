@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/BinaryFormat/DXContainer.h"
+#include "llvm/MC/DXContainerInfo.h"
 #include "llvm/MC/DXContainerPSVInfo.h"
 #include "llvm/MC/DXContainerRootSignature.h"
 #include "llvm/ObjectYAML/ObjectYAML.h"
@@ -176,15 +177,15 @@ Error DXContainerWriter::writeParts(raw_ostream &OS) {
       if (!P.DebugName)
         continue;
 
-      dxbc::DebugNameHeader Header;
-      Header.Flags = P.DebugName->Flags;
-      Header.NameLength = P.DebugName->NameLength;
-
-      if (sys::IsBigEndianHost)
-        Header.swapBytes();
-      OS.write(reinterpret_cast<const char *>(&Header),
-               sizeof(dxbc::DebugNameHeader));
-      OS.write(P.DebugName->DebugName.c_str(), P.DebugName->NameLength + 1);
+      mcdxbc::DebugName DebugName;
+      DebugName.setFileName(P.DebugName->DebugName);
+      // Override default flags with value from YAML.
+      if (P.DebugName->Flags)
+        DebugName.BaseData.first.Flags = *P.DebugName->Flags;
+      // Override computed filename length with value from YAML.
+      if (P.DebugName->NameLength)
+        DebugName.BaseData.first.NameLength = *P.DebugName->NameLength;
+      DebugName.write(OS);
       break;
     }
     case dxbc::PartType::SFI0: {
