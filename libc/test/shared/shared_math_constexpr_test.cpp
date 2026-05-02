@@ -58,6 +58,10 @@ static_assert(0.0 == [] {
 static_assert(0.0 == LIBC_NAMESPACE::shared::ldexp(0.0, 0.0));
 static_assert(0.0 == LIBC_NAMESPACE::shared::scalbln(0.0, 0.0));
 static_assert(0.0 == LIBC_NAMESPACE::shared::scalbn(0.0, 0.0));
+static_assert(0.0 == [] {
+  int exp{};
+  return LIBC_NAMESPACE::shared::frexp(0.0, &exp);
+}());
 
 //===----------------------------------------------------------------------===//
 //                       Float Tests
@@ -104,6 +108,8 @@ static_assert(0.0f == [] {
 }());
 static_assert(0.0f == LIBC_NAMESPACE::shared::scalblnf(0.0f, 0.0));
 static_assert(0.0f == LIBC_NAMESPACE::shared::scalbnf(0.0f, 0.0));
+static_assert(0.0f == LIBC_NAMESPACE::shared::fmul(0.0, 0.0));
+static_assert(0.0f == LIBC_NAMESPACE::shared::fsub(0.0, 0.0));
 //===----------------------------------------------------------------------===//
 //                       Float16 Tests
 //===----------------------------------------------------------------------===//
@@ -215,6 +221,12 @@ static_assert(0.0L == [] {
 static_assert(0.0L == LIBC_NAMESPACE::shared::ldexpl(0.0L, 0.0));
 static_assert(0.0L == LIBC_NAMESPACE::shared::scalblnl(0.0L, 0.0));
 static_assert(0.0L == LIBC_NAMESPACE::shared::scalbnl(0.0L, 0.0));
+static_assert(0.0f == LIBC_NAMESPACE::shared::fmull(0.0L, 0.0L));
+static_assert(0.0f == LIBC_NAMESPACE::shared::fsubl(0.0L, 0.0L));
+static_assert(0.0L == [] {
+  int exp{};
+  return LIBC_NAMESPACE::shared::frexpl(0.0L, &exp);
+}());
 
 #endif
 
@@ -307,6 +319,10 @@ static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::scalblnf128(float128(0.0), 0.0));
 static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::scalbnf128(float128(0.0), 0.0));
+static_assert(0.0f ==
+              LIBC_NAMESPACE::shared::fmulf128(float128(0.0), float128(0.0)));
+static_assert(0.0f ==
+              LIBC_NAMESPACE::shared::fsubf128(float128(0.0), float128(0.0)));
 
 #endif // LIBC_TYPES_HAS_FLOAT128
 
@@ -394,5 +410,9 @@ static_assert(bfloat16(0.0) ==
               LIBC_NAMESPACE::shared::scalblnbf16(bfloat16(0.0), 0.0));
 static_assert(bfloat16(0.0) ==
               LIBC_NAMESPACE::shared::scalbnbf16(bfloat16(0.0), 0.0));
+static_assert(bfloat16(0.0) == [] {
+  int exp{};
+  return LIBC_NAMESPACE::shared::frexpbf16(bfloat16(0.0), &exp);
+}());
 
 TEST(LlvmLibcSharedMathTest, ConstantEvaluation) {}

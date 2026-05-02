@@ -4620,6 +4620,65 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_fmul",
+    hdrs = ["src/__support/math/fmul.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_fputil_double_double",
+        ":__support_macros_config",
+        ":hdr_errno_macros",
+        ":hdr_fenv_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fmulf128",
+    hdrs = ["src/__support/math/fmulf128.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fmull",
+    hdrs = ["src/__support/math/fmull.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_frexp",
+    hdrs = ["src/__support/math/frexp.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_frexpbf16",
+    hdrs = ["src/__support/math/frexpbf16.h"],
+    deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_frexpl",
+    hdrs = ["src/__support/math/frexpl.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_fromfp",
     hdrs = ["src/__support/math/fromfp.h"],
     deps = [
@@ -4729,6 +4788,34 @@ libc_support_library(
     hdrs = ["src/__support/math/fromfpxl.h"],
     deps = [
         ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fsub",
+    hdrs = ["src/__support/math/fsub.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fsubf128",
+    hdrs = ["src/__support/math/fsubf128.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fsubl",
+    hdrs = ["src/__support/math/fsubl.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
         ":__support_macros_config",
     ],
 )
@@ -8620,6 +8707,13 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "frexpbf16",
+    additional_deps = [
+        ":__support_math_frexpbf16",
+    ],
+)
+
+libc_math_function(
     name = "fromfpbf16",
     additional_deps = [
         ":__support_math_fromfpbf16",
@@ -9799,26 +9893,42 @@ libc_math_function(
 libc_math_function(
     name = "fmul",
     additional_deps = [
-        ":__support_fputil_double_double",
-        ":hdr_errno_macros",
-        ":hdr_fenv_macros",
+        ":__support_math_fmul",
     ],
 )
 
-libc_math_function(name = "fmull")
+libc_math_function(
+    name = "fmull",
+    additional_deps = [
+        ":__support_math_fmull",
+    ],
+)
 
 libc_math_function(
     name = "fmulf128",
+    additional_deps = [
+        ":__support_math_fmulf128",
+    ],
 )
 
-libc_math_function(name = "frexp")
+libc_math_function(
+    name = "frexp",
+    additional_deps = [
+        ":__support_math_frexp",
+    ],
+)
 
 libc_math_function(
     name = "frexpf",
     additional_deps = [":__support_math_frexpf"],
 )
 
-libc_math_function(name = "frexpl")
+libc_math_function(
+    name = "frexpl",
+    additional_deps = [
+        ":__support_math_frexpl",
+    ],
+)
 
 libc_math_function(
     name = "frexpf128",
@@ -9922,12 +10032,25 @@ libc_math_function(
     ],
 )
 
-libc_math_function(name = "fsub")
+libc_math_function(
+    name = "fsub",
+    additional_deps = [
+        ":__support_math_fsub",
+    ],
+)
 
-libc_math_function(name = "fsubl")
+libc_math_function(
+    name = "fsubl",
+    additional_deps = [
+        ":__support_math_fsubl",
+    ],
+)
 
 libc_math_function(
     name = "fsubf128",
+    additional_deps = [
+        ":__support_math_fsubf128",
+    ],
 )
 
 libc_math_function(
