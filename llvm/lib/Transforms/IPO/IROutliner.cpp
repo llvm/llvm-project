@@ -579,11 +579,54 @@ collectRegionsConstants(OutlinableRegion &Region,
   return ConstantsTheSame;
 }
 
+/// Check whether \p Region contains a non-uniform constant operand that must
+/// remain an immediate argument.
+///
+/// \param Region - The region to check for non-uniform immarg constants.
+/// \param NotSame - The set of global value numbers that do not have the same
+/// constant in each region.
+/// \returns true if \p Region contains a non-uniform immarg constant, and false
+/// otherwise.
+static bool containsNonUniformImmArgConstant(OutlinableRegion &Region,
+                                             DenseSet<unsigned> &NotSame) {
+  IRSimilarityCandidate &C = *Region.Candidate;
+
+  for (IRInstructionData &ID : C) {
+    auto *CB = dyn_cast<CallBase>(ID.Inst);
+    if (!CB)
+      continue;
+
+    for (unsigned ArgIdx = 0, ArgEnd = CB->arg_size(); ArgIdx != ArgEnd;
+         ++ArgIdx) {
+      if (!CB->paramHasAttr(ArgIdx, Attribute::ImmArg))
+        continue;
+
+      Value *Arg = CB->getArgOperand(ArgIdx);
+      if (!isa<Constant>(Arg))
+        continue;
+
+      std::optional<unsigned> GVN = C.getGVN(Arg);
+      assert(GVN && "Expected a GVN for immarg operand?");
+      if (NotSame.contains(*GVN))
+        return true;
+    }
+  }
+
+  return false;
+}
+
 void OutlinableGroup::findSameConstants(DenseSet<unsigned> &NotSame) {
   DenseMap<unsigned, Constant *> GVNToConstant;
 
   for (OutlinableRegion *Region : Regions)
     collectRegionsConstants(*Region, GVNToConstant, NotSame);
+
+  for (OutlinableRegion *Region : Regions) {
+    if (!containsNonUniformImmArgConstant(*Region, NotSame))
+      continue;
+    IgnoreGroup = true;
+    return;
+  }
 }
 
 void OutlinableGroup::collectGVNStoreSets(Module &M) {
