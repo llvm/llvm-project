@@ -1702,6 +1702,24 @@
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=aarch64_be-pc-linux-musl \
 // RUN:   | FileCheck --check-prefix=CHECK-MUSL-AARCH64_BE %s
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=riscv32-pc-linux-musl -march=rv32im -mabi=ilp32 \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-RISCV32-SF %s
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=riscv32-pc-linux-musl -march=rv32imf -mabi=ilp32f \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-RISCV32-SP %s
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=riscv32-pc-linux-musl -march=rv32imfd -mabi=ilp32d \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-RISCV32 %s
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=riscv64-pc-linux-musl -march=rv64im -mabi=lp64 \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-RISCV64-SF %s
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=riscv64-pc-linux-musl -march=rv64imf -mabi=lp64f \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-RISCV64-SP %s
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=riscv64-pc-linux-musl -march=rv64imfd -mabi=lp64d \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-RISCV64 %s
 // CHECK-MUSL-X86:        "-dynamic-linker" "/lib/ld-musl-i386.so.1"
 // CHECK-MUSL-X86_64:     "-dynamic-linker" "/lib/ld-musl-x86_64.so.1"
 // CHECK-MUSL-MIPS:       "-dynamic-linker" "/lib/ld-musl-mips.so.1"
@@ -1717,6 +1735,12 @@
 // CHECK-MUSL-ARMEBHF:    "-dynamic-linker" "/lib/ld-musl-armebhf.so.1"
 // CHECK-MUSL-AARCH64:    "-dynamic-linker" "/lib/ld-musl-aarch64.so.1"
 // CHECK-MUSL-AARCH64_BE: "-dynamic-linker" "/lib/ld-musl-aarch64_be.so.1"
+// CHECK-MUSL-RISCV32-SF: "-dynamic-linker" "/lib/ld-musl-riscv32-sf.so.1"
+// CHECK-MUSL-RISCV32-SP: "-dynamic-linker" "/lib/ld-musl-riscv32-sp.so.1"
+// CHECK-MUSL-RISCV32:    "-dynamic-linker" "/lib/ld-musl-riscv32.so.1"
+// CHECK-MUSL-RISCV64-SF: "-dynamic-linker" "/lib/ld-musl-riscv64-sf.so.1"
+// CHECK-MUSL-RISCV64-SP: "-dynamic-linker" "/lib/ld-musl-riscv64-sp.so.1"
+// CHECK-MUSL-RISCV64:    "-dynamic-linker" "/lib/ld-musl-riscv64.so.1"
 
 // Check whether multilib gcc install works fine on Gentoo with gcc-config
 // RUN: %clang -### %s -Werror -no-pie 2>&1 \
