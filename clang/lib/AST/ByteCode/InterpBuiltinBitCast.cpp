@@ -154,6 +154,9 @@ static Result enumerateData(const Pointer &P, const Context &Ctx, Bits Offset,
     }
     for (const Record::Base &B : R->bases()) {
       Pointer Elem = P.atField(B.Offset);
+      if (!Initialize && !Elem.isInitialized())
+        return Result::Failure;
+
       CharUnits ByteOffset =
           Layout.getBaseClassOffset(cast<CXXRecordDecl>(B.Decl));
       Bits BitOffset = Offset + Bits(Ctx.getASTContext().toBits(ByteOffset));
