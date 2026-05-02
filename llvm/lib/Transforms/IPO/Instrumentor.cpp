@@ -112,7 +112,8 @@ Value *tryToCast(IRBTy &IRB, Value *V, Type *Ty, const DataLayout &DL,
 }
 
 /// Get a constant integer/boolean of type \p IT and value \p Val.
-template <typename Ty> Constant *getCI(Type *IT, Ty Val, bool IsSigned=false) {
+template <typename Ty>
+Constant *getCI(Type *IT, Ty Val, bool IsSigned = false) {
   return ConstantInt::get(IT, Val, IsSigned);
 }
 
