@@ -25,6 +25,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/GraphTraits.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/iterator.h"
 #include <cassert>
 #include <cstddef>
@@ -54,16 +55,15 @@ class scc_iterator : public iterator_facade_base<
 
   /// Element of VisitStack during DFS.
   struct StackElement {
-    NodeRef Node;         ///< The current node pointer.
-    ChildItTy NextChild;  ///< The next child, modified inplace during DFS.
-    unsigned MinVisited;  ///< Minimum uplink value of all children of Node.
+    NodeRef Node;        ///< The current node pointer.
+    ChildItTy NextChild; ///< The next child, modified inplace during DFS.
+    unsigned MinVisited; ///< Minimum uplink value of all children of Node.
 
     StackElement(NodeRef Node, const ChildItTy &Child, unsigned Min)
         : Node(Node), NextChild(Child), MinVisited(Min) {}
 
     bool operator==(const StackElement &Other) const {
-      return Node == Other.Node &&
-             NextChild == Other.NextChild &&
+      return Node == Other.Node && NextChild == Other.NextChild &&
              MinVisited == Other.MinVisited;
     }
   };
@@ -145,6 +145,17 @@ public:
     nodeVisitNumbers[New] = tempVal;
     nodeVisitNumbers.erase(Old);
   }
+
+  /// Returns a filter iterator range containing only nodes from the input
+  /// that haven't been visited (yet) by this scc_iterator.
+  /// This function is only meant to be used after the full iterator has been
+  /// run from beginning to end.
+  // Otherwise the set will contain intermediate results.
+  template <typename RangeT> auto getUnvisitedNodes(RangeT &&Nodes) const {
+    return make_filter_range(std::forward<RangeT>(Nodes), [this](NodeRef N) {
+      return !nodeVisitNumbers.contains(N);
+    });
+  }
 };
 
 template <class GraphT, class GT>
@@ -218,16 +229,15 @@ template <class GraphT, class GT> void scc_iterator<GraphT, GT>::GetNextSCC() {
 
 template <class GraphT, class GT>
 bool scc_iterator<GraphT, GT>::hasCycle() const {
-    assert(!CurrentSCC.empty() && "Dereferencing END SCC iterator!");
-    if (CurrentSCC.size() > 1)
+  assert(!CurrentSCC.empty() && "Dereferencing END SCC iterator!");
+  if (CurrentSCC.size() > 1)
+    return true;
+  NodeRef N = CurrentSCC.front();
+  for (ChildItTy CI = GT::child_begin(N), CE = GT::child_end(N); CI != CE; ++CI)
+    if (*CI == N)
       return true;
-    NodeRef N = CurrentSCC.front();
-    for (ChildItTy CI = GT::child_begin(N), CE = GT::child_end(N); CI != CE;
-         ++CI)
-      if (*CI == N)
-        return true;
-    return false;
-  }
+  return false;
+}
 
 /// Construct the begin iterator for a deduced graph type T.
 template <class T> scc_iterator<T> scc_begin(const T &G) {
@@ -351,8 +361,8 @@ scc_member_iterator<GraphT, GT>::scc_member_iterator(
   for (const auto *Edge : MSTEdges)
     NodeInfoMap[Edge->Target].IncomingMSTEdges.insert(Edge);
 
-  // Walk through SortedEdges to initialize the queue, instead of using NodeInfoMap
-  // to ensure an ordered deterministic push.
+  // Walk through SortedEdges to initialize the queue, instead of using
+  // NodeInfoMap to ensure an ordered deterministic push.
   for (auto *Edge : SortedEdges) {
     auto &Info = NodeInfoMap[Edge->Source];
     if (!Info.Visited && Info.IncomingMSTEdges.empty()) {
