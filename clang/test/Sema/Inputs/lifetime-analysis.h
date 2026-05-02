@@ -11,6 +11,27 @@ template<typename T>
 bool operator==(basic_iterator<T>, basic_iterator<T>);
 template<typename T>
 bool operator!=(basic_iterator<T>, basic_iterator<T>);
+
+// These iterator spellings match libstdc++ names documented at:
+// https://gcc.gnu.org/onlinedocs/libstdc++/libstdc++-html-USERS-4.2/namespace____gnu__cxx.html
+template <typename T>
+struct __normal_iterator {
+  __normal_iterator operator++();
+  __normal_iterator operator--();
+  __normal_iterator operator+(int) const;
+  __normal_iterator operator-(int) const;
+  T& operator*() const;
+  T* operator->() const;
+};
+
+template<typename T>
+bool operator==(__normal_iterator<T>, __normal_iterator<T>);
+template<typename T>
+bool operator!=(__normal_iterator<T>, __normal_iterator<T>);
+template<typename T>
+__normal_iterator<T> operator+(int, __normal_iterator<T>);
+template<typename T>
+__normal_iterator<T> operator-(int, __normal_iterator<T>);
 }
 
 namespace std {
@@ -47,11 +68,43 @@ struct initializer_list {
   const T* ptr; size_t sz;
 };
 template<typename T> class allocator {};
+
+template <typename T>
+struct __wrap_iter {
+  __wrap_iter operator++();
+  __wrap_iter operator--();
+  __wrap_iter operator+(int) const;
+  __wrap_iter operator-(int) const;
+  T& operator*() const;
+  T* operator->() const;
+};
+
+template<typename T>
+bool operator==(__wrap_iter<T>, __wrap_iter<T>);
+template<typename T>
+bool operator!=(__wrap_iter<T>, __wrap_iter<T>);
+template<typename T>
+__wrap_iter<T> operator+(int, __wrap_iter<T>);
+template<typename T>
+__wrap_iter<T> operator-(int, __wrap_iter<T>);
+
+template <typename Iterator>
+struct reverse_iterator {
+  reverse_iterator operator++();
+  reverse_iterator operator--();
+  reverse_iterator operator+(int) const;
+  reverse_iterator operator-(int) const;
+  decltype(*Iterator()) operator*() const;
+};
+
 template <typename T, typename Alloc = allocator<T>>
 struct vector {
-  typedef __gnu_cxx::basic_iterator<T> iterator;
+  using iterator = __wrap_iter<T>;
+  using reverse_iterator = reverse_iterator<iterator>;
   iterator begin();
   iterator end();
+  reverse_iterator rbegin();
+  reverse_iterator rend();
   const T *data() const;
   vector();
   ~vector();

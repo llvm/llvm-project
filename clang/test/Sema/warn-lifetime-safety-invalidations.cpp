@@ -252,6 +252,36 @@ void IteratorUsedAfterPushBack(std::vector<int> v) {
   }
   ++it;             // expected-note {{later used here}}
 }
+
+void IteratorUsedAfterPreIncrement() {
+  std::vector<int> v;
+  auto it = std::begin(v);  // expected-warning {{object whose reference is captured is later invalidated}}
+  auto next = ++it;
+  v.push_back(4);           // expected-note {{invalidated here}}
+  *next;                    // expected-note {{later used here}}
+}
+
+void IteratorUsedAfterPreDecrement(std::vector<int> v) {
+  auto it = std::end(v);    // expected-warning {{object whose reference is captured is later invalidated}}
+  auto prev = --it;
+  v.resize(8);              // expected-note {{invalidated here}}
+  *prev;                    // expected-note {{later used here}}
+}
+
+void IteratorUsedAfterAddition() {
+  std::vector<int> v;
+  auto it = std::begin(v);  // expected-warning {{object whose reference is captured is later invalidated}}
+  auto next = it + 5;
+  v.insert(it, 0);          // expected-note {{invalidated here}}
+  *next;                    // expected-note {{later used here}}
+}
+
+void IteratorUsedAfterReverseSubtraction(std::vector<int> v) {
+  auto it = std::end(v);    // expected-warning {{object whose reference is captured is later invalidated}}
+  auto prev = 5 - it;
+  v.clear();                // expected-note {{invalidated here}}
+  *prev;                    // expected-note {{later used here}}
+}
 }  // namespace SimpleInvalidIterators
 
 namespace ElementReferences {
