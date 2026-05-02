@@ -1333,6 +1333,120 @@ add_header_library(
 )
 
 add_header_library(
+  fromfp
+  HDRS
+    fromfp.h
+  DEPENDS
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fromfpbf16
+  HDRS
+    fromfpbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fromfpf
+  HDRS
+    fromfpf.h
+  DEPENDS
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fromfpf128
+  HDRS
+    fromfpf128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fromfpf16
+  HDRS
+    fromfpf16.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fromfpl
+  HDRS
+    fromfpl.h
+  DEPENDS
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fromfpx
+  HDRS
+    fromfpx.h
+  DEPENDS
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fromfpxbf16
+  HDRS
+    fromfpxbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fromfpxf
+  HDRS
+    fromfpxf.h
+  DEPENDS
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fromfpxf128
+  HDRS
+    fromfpxf128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fromfpxf16
+  HDRS
+    fromfpxf16.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fromfpxl
+  HDRS
+    fromfpxl.h
+  DEPENDS
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   llogbbf16
   HDRS
     llogbbf16.h
