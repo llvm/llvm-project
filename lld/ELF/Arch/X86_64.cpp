@@ -319,7 +319,7 @@ void X86_64::relaxCFIJumpTables() const {
   //   table if small enough.
   // - Move jump table before last called function and delete last branch
   //   instruction.
-  DenseMap<InputSection *, std::vector<InputSection *>> sectionReplacements;
+  DenseMap<InputSection *, SmallVector<InputSection *, 0>> sectionReplacements;
   SmallVector<InputSection *, 0> storage;
   for (OutputSection *osec : ctx.outputSections) {
     if (!(osec->flags & SHF_EXECINSTR))
@@ -332,23 +332,7 @@ void X86_64::relaxCFIJumpTables() const {
       // We're going to replace the jump table with this list of sections. This
       // list will be made up of slices of the original section and function
       // bodies that were moved into the jump table.
-      std::vector<InputSection *> replacements;
-
-      // Add the slice [begin, end) of the original section to the replacement
-      // list. [rbegin, rend) is the slice of the relocation list that covers
-      // [begin, end).
-      auto addSectionSlice = [&](size_t begin, size_t end, Relocation *rbegin,
-                                 Relocation *rend) {
-        auto *slice = make<InputSection>(
-            sec->file, sec->name, sec->type, sec->flags, sec->entsize,
-            sec->entsize,
-            sec->contentMaybeDecompress().slice(begin, end - begin));
-        for (const Relocation &r : ArrayRef<Relocation>(rbegin, rend)) {
-          slice->relocations.push_back(
-              Relocation{r.expr, r.type, r.offset - begin, r.addend, r.sym});
-        }
-        replacements.push_back(slice);
-      };
+      SmallVector<InputSection *, 0> replacements;
 
       // r is the only relocation in a jump table entry. Figure out whether it
       // is a branch pointing to the start of a statically known section that
@@ -378,13 +362,13 @@ void X86_64::relaxCFIJumpTables() const {
         if (sec->addralign > sec->entsize)
           return nullptr;
 
-        Relocation *lastReloc = sec->relocs().end();
-        while (lastReloc != sec->relocs().begin() &&
-               (lastReloc - 1)->offset >= sec->size - sec->entsize)
-          --lastReloc;
-        if (lastReloc + 1 != sec->relocs().end())
+        auto rels = sec->relocs();
+        if (rels.empty() || rels.back().offset < sec->size - sec->entsize)
           return nullptr;
-        return getMovableSection(*lastReloc);
+        if (rels.size() >= 2 &&
+            rels[rels.size() - 2].offset >= sec->size - sec->entsize)
+          return nullptr;
+        return getMovableSection(rels.back());
       }();
       OutputSection *targetOutputSec;
       if (lastSec) {
@@ -418,26 +402,42 @@ void X86_64::relaxCFIJumpTables() const {
       // become the actual relocation targets.
       replacements.push_back(sec);
 
+      // Add the slice [begin, end) of the original section to the replacement
+      // list. [rbegin, rend) is the slice of the relocation list that covers
+      // [begin, end).
+      auto addSectionSlice = [&](size_t begin, size_t end, Relocation *rbegin,
+                                 Relocation *rend) {
+        auto *slice = make<InputSection>(
+            sec->file, sec->name, sec->type, sec->flags, sec->entsize,
+            sec->entsize,
+            sec->contentMaybeDecompress().slice(begin, end - begin));
+        for (const Relocation &r : ArrayRef<Relocation>(rbegin, rend)) {
+          slice->relocations.push_back(
+              Relocation{r.expr, r.type, r.offset - begin, r.addend, r.sym});
+        }
+        replacements.push_back(slice);
+      };
+
       // Walk the jump table entries other than the last one looking for
       // sections that are small enough to be moved into the jump table and in
       // the same section as the jump table's destination.
-      size_t begin = 0;
-      Relocation *rbegin = sec->relocs().begin();
-      size_t cur = begin;
-      Relocation *rcur = rbegin;
+      size_t begin = 0, cur = 0;
+      Relocation *rbegin = sec->relocs().begin(), *rcur = rbegin;
       while (cur != sec->size - sec->entsize) {
         size_t next = cur + sec->entsize;
         Relocation *rnext = rcur;
         while (rnext != sec->relocs().end() && rnext->offset < next)
           ++rnext;
         if (rcur + 1 == rnext) {
-          InputSection *target = getMovableSection(*rcur);
-          if (target && target->size != 0 && target->size <= sec->entsize &&
+          if (InputSection *target = getMovableSection(*rcur);
+              target && target->size != 0 && target->size <= sec->entsize &&
               target->addralign <= sec->entsize &&
               target->getParent() == targetOutputSec) {
             // Okay, we found a small enough section. Move it into the jump
             // table. First add a slice for the unmodified jump table entries
-            // before this one.
+            // before this one. This slice may be of zero size if two
+            // consecutive functions are moved to the jump table, and is
+            // used to correctly align the target function.
             addSectionSlice(begin, cur, rbegin, rcur);
             // Add the target to our replacement list, and set the target's
             // replacement list to the empty list. This removes it from its
@@ -461,14 +461,14 @@ void X86_64::relaxCFIJumpTables() const {
         addSectionSlice(begin, cur, rbegin, rcur);
         replacements.push_back(lastSec);
         sectionReplacements[sec] = {};
-        sectionReplacements[lastSec] = replacements;
         for (auto *s : replacements)
           s->parent = lastSec->parent;
+        sectionReplacements[lastSec] = std::move(replacements);
       } else {
         addSectionSlice(begin, sec->size, rbegin, sec->relocs().end());
-        sectionReplacements[sec] = replacements;
         for (auto *s : replacements)
           s->parent = sec->parent;
+        sectionReplacements[sec] = std::move(replacements);
       }
 
       // Everything from the original section has been recreated, so delete the
@@ -477,6 +477,9 @@ void X86_64::relaxCFIJumpTables() const {
       sec->size = 0;
     }
   }
+
+  if (sectionReplacements.empty())
+    return;
 
   // Now that we have the complete mapping of replacements, go through the input
   // section lists and apply the replacements.

@@ -9,7 +9,7 @@ entry:
   %tobool3 = icmp ne i8 %1, 0
   ret i1 %tobool3
 
-; CHECK: error: couldn't allocate output register for constraint 'wc'
+; CHECK: error: could not allocate output register for constraint 'wc'
 }
 
 attributes #0 = { nounwind "target-features"="-crbits" }

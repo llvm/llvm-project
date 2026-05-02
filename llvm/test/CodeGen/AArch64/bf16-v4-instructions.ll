@@ -8,10 +8,7 @@
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for sub_h
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for mul_h
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for div_h
-; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for s_to_h
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for d_to_h
-; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for h_to_s
-; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for h_to_d
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for sitofp_i8
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for sitofp_i16
 ; CHECK-CVT-GI-NEXT:  warning: Instruction selection used fallback path for sitofp_i32
@@ -43,10 +40,7 @@
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for sub_h
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for mul_h
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for div_h
-; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for s_to_h
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for d_to_h
-; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for h_to_s
-; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for h_to_d
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for sitofp_i8
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for sitofp_i16
 ; CHECK-BF16-GI-NEXT:  warning: Instruction selection used fallback path for sitofp_i32
@@ -227,24 +221,40 @@ entry:
 }
 
 define <4 x bfloat> @s_to_h(<4 x float> %a) {
-; CHECK-CVT-LABEL: s_to_h:
-; CHECK-CVT:       // %bb.0:
-; CHECK-CVT-NEXT:    movi v1.4s, #1
-; CHECK-CVT-NEXT:    movi v2.4s, #127, msl #8
-; CHECK-CVT-NEXT:    ushr v3.4s, v0.4s, #16
-; CHECK-CVT-NEXT:    and v1.16b, v3.16b, v1.16b
-; CHECK-CVT-NEXT:    add v2.4s, v0.4s, v2.4s
-; CHECK-CVT-NEXT:    fcmeq v3.4s, v0.4s, v0.4s
-; CHECK-CVT-NEXT:    orr v0.4s, #64, lsl #16
-; CHECK-CVT-NEXT:    add v1.4s, v1.4s, v2.4s
-; CHECK-CVT-NEXT:    bit v0.16b, v1.16b, v3.16b
-; CHECK-CVT-NEXT:    shrn v0.4h, v0.4s, #16
-; CHECK-CVT-NEXT:    ret
+; CHECK-CVT-SD-LABEL: s_to_h:
+; CHECK-CVT-SD:       // %bb.0:
+; CHECK-CVT-SD-NEXT:    movi v1.4s, #1
+; CHECK-CVT-SD-NEXT:    movi v2.4s, #127, msl #8
+; CHECK-CVT-SD-NEXT:    ushr v3.4s, v0.4s, #16
+; CHECK-CVT-SD-NEXT:    and v1.16b, v3.16b, v1.16b
+; CHECK-CVT-SD-NEXT:    add v2.4s, v0.4s, v2.4s
+; CHECK-CVT-SD-NEXT:    fcmeq v3.4s, v0.4s, v0.4s
+; CHECK-CVT-SD-NEXT:    orr v0.4s, #64, lsl #16
+; CHECK-CVT-SD-NEXT:    add v1.4s, v1.4s, v2.4s
+; CHECK-CVT-SD-NEXT:    bit v0.16b, v1.16b, v3.16b
+; CHECK-CVT-SD-NEXT:    shrn v0.4h, v0.4s, #16
+; CHECK-CVT-SD-NEXT:    ret
 ;
 ; CHECK-BF16-LABEL: s_to_h:
 ; CHECK-BF16:       // %bb.0:
 ; CHECK-BF16-NEXT:    bfcvtn v0.4h, v0.4s
 ; CHECK-BF16-NEXT:    ret
+;
+; CHECK-CVT-GI-LABEL: s_to_h:
+; CHECK-CVT-GI:       // %bb.0:
+; CHECK-CVT-GI-NEXT:    movi v1.4s, #1
+; CHECK-CVT-GI-NEXT:    movi v2.4s, #127, msl #8
+; CHECK-CVT-GI-NEXT:    ushr v3.4s, v0.4s, #16
+; CHECK-CVT-GI-NEXT:    fcmeq v4.4s, v0.4s, v0.4s
+; CHECK-CVT-GI-NEXT:    movi v5.4s, #64, lsl #16
+; CHECK-CVT-GI-NEXT:    and v1.16b, v3.16b, v1.16b
+; CHECK-CVT-GI-NEXT:    add v2.4s, v0.4s, v2.4s
+; CHECK-CVT-GI-NEXT:    mvn v3.16b, v4.16b
+; CHECK-CVT-GI-NEXT:    orr v0.16b, v0.16b, v5.16b
+; CHECK-CVT-GI-NEXT:    add v1.4s, v2.4s, v1.4s
+; CHECK-CVT-GI-NEXT:    bif v0.16b, v1.16b, v3.16b
+; CHECK-CVT-GI-NEXT:    shrn v0.4h, v0.4s, #16
+; CHECK-CVT-GI-NEXT:    ret
   %1 = fptrunc <4 x float> %a to <4 x bfloat>
   ret <4 x bfloat> %1
 }
@@ -286,12 +296,33 @@ define <4 x float> @h_to_s(<4 x bfloat> %a) {
 }
 
 define <4 x double> @h_to_d(<4 x bfloat> %a) {
-; CHECK-LABEL: h_to_d:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-NEXT:    fcvtl2 v1.2d, v0.4s
-; CHECK-NEXT:    fcvtl v0.2d, v0.2s
-; CHECK-NEXT:    ret
+; CHECK-CVT-SD-LABEL: h_to_d:
+; CHECK-CVT-SD:       // %bb.0:
+; CHECK-CVT-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-CVT-SD-NEXT:    fcvtl2 v1.2d, v0.4s
+; CHECK-CVT-SD-NEXT:    fcvtl v0.2d, v0.2s
+; CHECK-CVT-SD-NEXT:    ret
+;
+; CHECK-BF16-SD-LABEL: h_to_d:
+; CHECK-BF16-SD:       // %bb.0:
+; CHECK-BF16-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-SD-NEXT:    fcvtl2 v1.2d, v0.4s
+; CHECK-BF16-SD-NEXT:    fcvtl v0.2d, v0.2s
+; CHECK-BF16-SD-NEXT:    ret
+;
+; CHECK-CVT-GI-LABEL: h_to_d:
+; CHECK-CVT-GI:       // %bb.0:
+; CHECK-CVT-GI-NEXT:    shll v1.4s, v0.4h, #16
+; CHECK-CVT-GI-NEXT:    fcvtl v0.2d, v1.2s
+; CHECK-CVT-GI-NEXT:    fcvtl2 v1.2d, v1.4s
+; CHECK-CVT-GI-NEXT:    ret
+;
+; CHECK-BF16-GI-LABEL: h_to_d:
+; CHECK-BF16-GI:       // %bb.0:
+; CHECK-BF16-GI-NEXT:    shll v1.4s, v0.4h, #16
+; CHECK-BF16-GI-NEXT:    fcvtl v0.2d, v1.2s
+; CHECK-BF16-GI-NEXT:    fcvtl2 v1.2d, v1.4s
+; CHECK-BF16-GI-NEXT:    ret
   %1 = fpext <4 x bfloat> %a to <4 x double>
   ret <4 x double> %1
 }

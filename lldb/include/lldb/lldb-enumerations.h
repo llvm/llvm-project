@@ -344,6 +344,12 @@ enum ValueType {
   eValueTypeVTableEntry = 10, ///< function pointer in virtual function table
 };
 
+/// A mask that we can use to check if the value type is synthetic or not.
+// NOTE: This limits the number of value types to 31, but that's 3x more than
+// what we currently have now. See lldb/Utility/ValueType.h for helpers for
+// working with synthetic value types.
+static constexpr unsigned ValueTypeSyntheticMask = 0x20;
+
 /// Token size/granularities for Input Readers.
 
 enum InputReaderGranularity {
@@ -550,6 +556,12 @@ enum InstrumentationRuntimeType {
   eNumInstrumentationRuntimeTypes
 };
 
+enum PluginDomainKind {
+  ePluginDomainKindGlobal = 0x1,
+  ePluginDomainKindDebugger = 0x2,
+  ePluginDomainKindTarget = 0x4,
+};
+
 enum DynamicValueType {
   eNoDynamicValues = 0,
   eDynamicCanRunTarget = 1,
@@ -678,6 +690,7 @@ enum CommandArgumentType {
   eArgTypeProtocol,
   eArgTypeExceptionStage,
   eArgTypeNameMatchStyle,
+  eArgTypePluginDomain,
   eArgTypeLastArg // Always keep this entry as the last entry in this
                   // enumeration!!
 };

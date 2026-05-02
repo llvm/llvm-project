@@ -999,6 +999,8 @@ def err_undeclared_use_of_module : Error<
   "module %0 does not depend on a module exporting '%1'">;
 def err_undeclared_use_of_module_indirect : Error<
   "module %0 does not directly depend on a module exporting '%1', which is part of indirectly-used module %2">;
+def err_undeclared_use_of_module_private : Error<
+  "module %0 does not depend on a module exporting '%1', which is part of module %2, although its private module does">;
 def warn_non_modular_include_in_framework_module : Warning<
   "include of non-modular header inside framework module '%0': '%1'">,
   InGroup<NonModularIncludeInFrameworkModule>, DefaultIgnore;
@@ -1060,8 +1062,6 @@ def warn_defined_in_object_type_macro : Warning<
 def warn_defined_in_function_type_macro : Extension<
   "macro expansion producing 'defined' has undefined behavior">,
   InGroup<ExpansionToDefined>;
-def err_defined_in_macro : Error<
-  "macro expansion producing 'defined' is not allowed">;
 
 let CategoryName = "Nullability Issue" in {
 
