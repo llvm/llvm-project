@@ -431,6 +431,11 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "hdr_sys_mman_macros",
+    hdrs = ["hdr/sys_mman_macros.h"],
+)
+
+libc_support_library(
     name = "hdr_sys_socket_macros",
     hdrs = ["hdr/sys_socket_macros.h"],
     deps = [
@@ -2050,6 +2055,68 @@ libc_support_library(
         ":__support_macros_config",
         ":__support_osutil_syscall",
         ":types_ssize_t",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_mmap",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/mmap.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":types_off_t",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_munmap",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/munmap.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_mprotect",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/mprotect.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_pkey_mprotect",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/pkey_mprotect.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":hdr_errno_macros",
     ],
 )
 
@@ -12145,22 +12212,10 @@ libc_function(
         ":__support_common",
         ":__support_libc_errno",
         ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_mmap",
         ":__support_osutil_syscall",
         ":errno",
-    ],
-)
-
-libc_support_library(
-    name = "mprotect_common",
-    hdrs = ["src/sys/mman/linux/mprotect_common.h"],
-    deps = [
-        ":__support_common",
-        ":__support_error_or",
-        ":__support_libc_errno",
-        ":__support_macros_attributes",
-        ":__support_macros_config",
-        ":__support_osutil_syscall",
-        ":errno",
+        ":hdr_sys_mman_macros",
     ],
 )
 
@@ -12173,9 +12228,9 @@ libc_function(
         ":__support_error_or",
         ":__support_libc_errno",
         ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_mprotect",
         ":__support_osutil_syscall",
         ":errno",
-        ":mprotect_common",
     ],
 )
 
@@ -12239,6 +12294,7 @@ libc_function(
         ":__support_common",
         ":__support_libc_errno",
         ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_munmap",
         ":__support_osutil_syscall",
         ":errno",
     ],
@@ -12297,10 +12353,11 @@ libc_function(
         ":__support_error_or",
         ":__support_libc_errno",
         ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_mprotect",
+        ":__support_osutil_linux_syscall_wrappers_pkey_mprotect",
         ":__support_osutil_syscall",
         ":errno",
         ":hdr_errno_macros",
-        ":mprotect_common",
         ":types_size_t",
     ],
 )
