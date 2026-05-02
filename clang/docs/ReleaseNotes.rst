@@ -347,6 +347,8 @@ Attribute Changes in Clang
   are used. Use ``amdgpu_waves_per_eu`` instead to control SGPR and VGPR
   usage.
 
+- Clang now allows GNU attributes between a member declarator and bit-field width. (#GH184954)
+
 Improvements to Clang's diagnostics
 -----------------------------------
 - Fixed bug in ``-Wdocumentation`` so that it correctly handles explicit
