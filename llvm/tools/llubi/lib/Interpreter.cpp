@@ -101,8 +101,10 @@ static void applyNonNullAttr(AnyValue &V) {
 }
 
 static void applyAlignAttr(AnyValue &V, Align Alignment) {
-  if (V.isPointer() && V.asPointer().address().countr_zero() < Log2(Alignment))
-    V = AnyValue::poison();
+  forEachScalarValue(V, [Alignment](AnyValue &Scalar) {
+    if (Scalar.isPointer() && Scalar.asPointer().address().countr_zero() < Log2(Alignment))
+      Scalar = AnyValue::poison();
+  });
 }
 
 static bool applyNoUndefAttr(AnyValue &V) {
@@ -1102,6 +1104,8 @@ public:
       if (AttrsAtCallSite.hasAttribute(Attribute::NonNull) ||
           AttrsAtCallee.hasAttribute(Attribute::NonNull))
         applyNonNullAttr(V);
+    }
+    if (Ty->isPtrOrPtrVectorTy()) {
       if (MaybeAlign Align = AttrsAtCallSite.getAlignment())
         applyAlignAttr(V, *Align);
       if (MaybeAlign Align = AttrsAtCallee.getAlignment())
@@ -1150,6 +1154,7 @@ public:
     if (Ty->isPointerTy()) {
       if (I.hasMetadata(LLVMContext::MD_nonnull))
         applyNonNullAttr(V);
+      // Unlike align attributes, !align is only defined for pointer types.
       if (const MDNode *Alignment = I.getMetadata(LLVMContext::MD_align))
         applyAlignAttr(V, Align(ExtractFirstIntOperand(Alignment)));
     }
