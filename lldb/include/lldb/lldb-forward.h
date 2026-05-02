@@ -191,6 +191,7 @@ class ScriptedFrameInterface;
 class ScriptedFrameProviderInterface;
 class ScriptedMetadata;
 class ScriptedBreakpointInterface;
+class ScriptedHookInterface;
 class ScriptedPlatformInterface;
 class ScriptedProcessInterface;
 class ScriptedStopHookInterface;
@@ -425,6 +426,8 @@ typedef std::unique_ptr<lldb_private::ScriptedProcessInterface>
     ScriptedProcessInterfaceUP;
 typedef std::shared_ptr<lldb_private::ScriptedStopHookInterface>
     ScriptedStopHookInterfaceSP;
+typedef std::shared_ptr<lldb_private::ScriptedHookInterface>
+    ScriptedHookInterfaceSP;
 typedef std::shared_ptr<lldb_private::ScriptedThreadInterface>
     ScriptedThreadInterfaceSP;
 typedef std::shared_ptr<lldb_private::ScriptedThreadPlanInterface>
