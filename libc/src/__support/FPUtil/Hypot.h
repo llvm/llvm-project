@@ -105,7 +105,7 @@ template <> struct DoubleLength<uint64_t> {
 //   - HYPOT(x, y) is NaN if x or y is NaN.
 //
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE T hypot(T x, T y) {
+LIBC_INLINE constexpr T hypot(T x, T y) {
   using FPBits_t = FPBits<T>;
   using StorageType = typename FPBits<T>::StorageType;
   using DStorageType = typename DoubleLength<StorageType>::Type;

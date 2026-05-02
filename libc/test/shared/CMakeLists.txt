@@ -514,6 +514,10 @@ add_fp_unittest(
     libc.src.__support.math.fromfpxf128
     libc.src.__support.math.fromfpxf16
     libc.src.__support.math.fromfpxl
+    libc.src.__support.math.hypot
+    libc.src.__support.math.hypotf
+    libc.src.__support.math.hypotbf16
+    libc.src.__support.math.hypotf16
     libc.src.__support.math.llogbbf16
     libc.src.__support.math.log
     libc.src.__support.math.logbbf16

@@ -31,6 +31,7 @@ static_assert(0.0 == LIBC_NAMESPACE::shared::fmaximum_num(0.0, 0.0));
 static_assert(0.0 == LIBC_NAMESPACE::shared::fminimum_num(0.0, 0.0));
 static_assert(0.0 == LIBC_NAMESPACE::shared::fromfp(0.0, 0, 32));
 static_assert(0.0 == LIBC_NAMESPACE::shared::fromfpx(0.0, 0, 32));
+static_assert(5.0 == LIBC_NAMESPACE::shared::hypot(3.0, 4.0));
 static_assert(0.0 == LIBC_NAMESPACE::shared::ufromfp(0.0, 0, 32));
 static_assert(0.0 == LIBC_NAMESPACE::shared::ufromfpx(0.0, 0, 32));
 static_assert(0.0 == LIBC_NAMESPACE::shared::fmaximum_mag(0.0, 0.0));
@@ -70,6 +71,7 @@ static_assert(0.0f == LIBC_NAMESPACE::shared::fmaximum_numf(0.0f, 0.0f));
 static_assert(0.0f == LIBC_NAMESPACE::shared::fminimum_numf(0.0f, 0.0f));
 static_assert(0.0f == LIBC_NAMESPACE::shared::fromfp(0.0f, 0, 32));
 static_assert(0.0f == LIBC_NAMESPACE::shared::fromfpx(0.0f, 0, 32));
+static_assert(5.0f == LIBC_NAMESPACE::shared::hypotf(3.0f, 4.0f));
 static_assert(0.0f == LIBC_NAMESPACE::shared::ufromfpf(0.0f, 0, 32));
 static_assert(0.0f == LIBC_NAMESPACE::shared::ufromfpxf(0.0f, 0, 32));
 static_assert(0.0f == LIBC_NAMESPACE::shared::fmaximum_magf(0.0f, 0.0f));
@@ -110,6 +112,7 @@ static_assert(0.0f16 ==
               LIBC_NAMESPACE::shared::fminimum_numf16(0.0f16, 0.0f16));
 static_assert(0.0f16 == LIBC_NAMESPACE::shared::fromfpf16(0.0f16, 0, 32));
 static_assert(0.0f16 == LIBC_NAMESPACE::shared::fromfpxf16(0.0f16, 0, 32));
+static_assert(5.0f16 == LIBC_NAMESPACE::shared::hypotf16(3.0f16, 4.0f16));
 static_assert(0.0f16 == LIBC_NAMESPACE::shared::ufromfpf16(0.0f16, 0, 32));
 static_assert(0.0f16 == LIBC_NAMESPACE::shared::ufromfpxf16(0.0f16, 0, 32));
 static_assert(0.0f16 ==
@@ -311,6 +314,8 @@ static_assert(bfloat16(0.0) ==
               LIBC_NAMESPACE::shared::fromfpbf16(bfloat16(0.0), 0, 32));
 static_assert(bfloat16(0.0) ==
               LIBC_NAMESPACE::shared::fromfpxbf16(bfloat16(0.0), 0, 32));
+static_assert(bfloat16(5.0) ==
+              LIBC_NAMESPACE::shared::hypotbf16(bfloat16(3.0), bfloat16(4.0)));
 static_assert(bfloat16(0.0) ==
               LIBC_NAMESPACE::shared::ufromfpbf16(bfloat16(0.0), 0, 32));
 static_assert(bfloat16(0.0) ==

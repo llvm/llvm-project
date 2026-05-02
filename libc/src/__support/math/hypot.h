@@ -16,7 +16,9 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE double hypot(double x, double y) { return fputil::hypot(x, y); }
+LIBC_INLINE constexpr double hypot(double x, double y) {
+  return fputil::hypot(x, y);
+}
 
 } // namespace math
 } // namespace LIBC_NAMESPACE_DECL
