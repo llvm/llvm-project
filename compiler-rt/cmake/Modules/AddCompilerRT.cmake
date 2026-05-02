@@ -561,23 +561,6 @@ function(add_compiler_rt_test test_suite test_name arch)
   add_dependencies(${test_suite} T${test_name})
 endfunction()
 
-macro(add_compiler_rt_resource_file target_name file_name component)
-  set(src_file "${CMAKE_CURRENT_SOURCE_DIR}/${file_name}")
-  set(dst_file "${COMPILER_RT_OUTPUT_DIR}/share/${file_name}")
-  add_custom_command(OUTPUT ${dst_file}
-    DEPENDS ${src_file}
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src_file} ${dst_file}
-    COMMENT "Copying ${file_name}...")
-  add_custom_target(${target_name} DEPENDS ${dst_file})
-  # Install in Clang resource directory.
-  install(FILES ${file_name}
-    DESTINATION ${COMPILER_RT_INSTALL_DATA_DIR}
-    COMPONENT ${component})
-  add_dependencies(${component} ${target_name})
-
-  set_target_properties(${target_name} PROPERTIES FOLDER "Compiler-RT/Resources")
-endmacro()
-
 macro(add_compiler_rt_script name)
   set(dst ${COMPILER_RT_EXEC_OUTPUT_DIR}/${name})
   set(src ${CMAKE_CURRENT_SOURCE_DIR}/${name})

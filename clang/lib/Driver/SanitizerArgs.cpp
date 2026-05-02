@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 #include "clang/Driver/SanitizerArgs.h"
 #include "clang/Basic/Sanitizers.h"
+#include "clang/Config/config.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/ToolChain.h"
 #include "clang/Options/Options.h"
@@ -191,6 +192,7 @@ static void validateSpecialCaseListFormat(const Driver &D,
     D.Diag(MalformedSCLErrorDiagID) << BLError;
 }
 
+[[maybe_unused]]
 static void addDefaultIgnorelists(const Driver &D, SanitizerMask Kinds,
                                   std::vector<std::string> &IgnorelistFiles,
                                   bool DiagnoseErrors) {
@@ -774,11 +776,13 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                         options::OPT_fno_sanitize_annotate_debug_info_EQ);
   AnnotateDebugInfoKinds &= Kinds;
 
+#if CLANG_ENABLE_SANITIZER_SYSTEM_IGNORELISTS
   // Setup ignorelist files.
   // Add default ignorelist from resource directory for activated sanitizers,
   // and validate special case lists format.
   if (!Args.hasArgNoClaim(options::OPT_fno_sanitize_ignorelist))
     addDefaultIgnorelists(D, Kinds, SystemIgnorelistFiles, DiagnoseErrors);
+#endif
 
   // Parse -f(no-)?sanitize-ignorelist options.
   // This also validates special case lists format.

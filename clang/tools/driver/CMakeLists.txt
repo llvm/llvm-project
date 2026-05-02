@@ -79,6 +79,9 @@ if(CLANG_PLUGIN_SUPPORT)
 endif()
 
 add_dependencies(clang clang-resource-headers)
+if(CLANG_ENABLE_SANITIZER_SYSTEM_IGNORELISTS)
+  add_dependencies(clang sanitizer-ignorelists)
+endif()
 
 if(NOT CLANG_LINKS_TO_CREATE)
   set(CLANG_LINKS_TO_CREATE clang++ clang-cl clang-cpp)

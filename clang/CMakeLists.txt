@@ -489,6 +489,14 @@ option(CLANG_ENABLE_STATIC_ANALYZER
 
 option(CLANG_ENABLE_PROTO_FUZZER "Build Clang protobuf fuzzer." OFF)
 
+if(APPLE)
+  # Darwin does not use the default system sanitizer ignorelists
+  set(CLANG_ENABLE_SANITIZER_SYSTEM_IGNORELISTS_DEFAULT OFF)
+else()
+  set(CLANG_ENABLE_SANITIZER_SYSTEM_IGNORELISTS_DEFAULT ON)
+endif()
+option(CLANG_ENABLE_SANITIZER_SYSTEM_IGNORELISTS "Enable the system sanitizer ignorelists" CLANG_ENABLE_SANITIZER_SYSTEM_IGNORELISTS_DEFAULT)
+
 if (DEFINED CLANG_ENABLE_ARCMT)
   set(CLANG_ENABLE_OBJC_REWRITER ${CLANG_ENABLE_ARCMT})
   message(DEPRECATION "'CLANG_ENABLE_ARCMT' is deprecated as ARCMigrate has been removed from Clang. Please use 'CLANG_ENABLE_OBJC_REWRITER' instead to enable or disable the Objective-C rewriter.")

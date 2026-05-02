@@ -36,3 +36,7 @@ add_subdirectory(UnifiedSymbolResolution)
 if(CLANG_ENABLE_CIR)
   add_subdirectory(CIR)
 endif()
+
+if(CLANG_ENABLE_SANITIZER_SYSTEM_IGNORELISTS)
+  add_subdirectory(SanitizerIgnorelists)
+endif()
