@@ -18,7 +18,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE constexpr float fmul(double x, double y) {
+LIBC_INLINE LIBC_CONSTEXPR float fmul(double x, double y) {
 
   // Without FMA instructions, fputil::exact_mult is not
   // correctly rounded for all rounding modes, so we fall
