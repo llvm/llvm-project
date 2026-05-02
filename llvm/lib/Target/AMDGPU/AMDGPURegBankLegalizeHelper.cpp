@@ -18,6 +18,7 @@
 #include "AMDGPURegBankLegalizeRules.h"
 #include "AMDGPURegisterBankInfo.h"
 #include "GCNSubtarget.h"
+#include "SIMachineFunctionInfo.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
@@ -1303,6 +1304,56 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
       return false;
     }
     return true;
+  }
+  case DynStackAlloc: {
+    const auto &TFI = *ST.getFrameLowering();
+    // Guard in case the stack growth direction ever changes with scratch
+    // instructions.
+    assert(TFI.getStackGrowthDirection() == TargetFrameLowering::StackGrowsUp &&
+           "Stack grows upwards for AMDGPU");
+
+    Register Dst = MI.getOperand(0).getReg();
+    Register AllocSize = MI.getOperand(1).getReg();
+    Align Alignment = assumeAligned(MI.getOperand(2).getImm());
+
+    // After lowering Dst is used by another instruction, need to erase old MI
+    // to avoid hitting multiple Dst assert since we use CSE builder
+    B.setInsertPt(*MI.getParent(), std::next(MI.getIterator()));
+    MI.eraseFromParent();
+
+    const RegisterBank *SizeBank = MRI.getRegBank(AllocSize);
+    if (SizeBank != SgprRB) {
+      auto WaveReduction =
+          B.buildIntrinsic(Intrinsic::amdgcn_wave_reduce_umax, {SgprRB_S32})
+              .addUse(AllocSize)
+              .addImm(0);
+      AllocSize = WaveReduction.getReg(0);
+    }
+
+    LLT PtrTy = MRI.getType(Dst);
+    LLT IntPtrTy = LLT::scalar(PtrTy.getSizeInBits());
+    const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
+    Register SPReg = Info->getStackPtrOffsetReg();
+
+    auto WaveSize = B.buildConstant(SgprRB_S32, ST.getWavefrontSizeLog2());
+    auto ScaledSize = B.buildShl({SgprRB, IntPtrTy}, AllocSize, WaveSize);
+    auto OldSP = B.buildCopy({SgprRB, PtrTy}, SPReg);
+    
+    if (Alignment > TFI.getStackAlign()) {
+      auto StackAlignMask =
+          (Alignment.value() << ST.getWavefrontSizeLog2()) - 1;
+      auto Tmp1 = B.buildPtrAdd({SgprRB, PtrTy}, OldSP,
+                                B.buildConstant({SgprRB, IntPtrTy}, StackAlignMask));
+      auto MaskReg = B.buildConstant(
+          {SgprRB, IntPtrTy}, maskTrailingZeros<uint64_t>(Log2(Alignment) +
+                                                  ST.getWavefrontSizeLog2()));
+      B.buildPtrMask(Dst, Tmp1, MaskReg);
+    } else {
+      B.buildCopy(Dst, OldSP);
+    }
+    auto PtrAdd = B.buildPtrAdd({SgprRB, PtrTy}, Dst, ScaledSize);
+    B.buildCopy(SPReg, PtrAdd);
+    break;
   }
   case WidenLoad: {
     LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
