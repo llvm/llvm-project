@@ -7150,6 +7150,120 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_ufromfp",
+    hdrs = ["src/__support/math/ufromfp.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_ufromfpbf16",
+    hdrs = ["src/__support/math/ufromfpbf16.h"],
+    deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_ufromfpf",
+    hdrs = ["src/__support/math/ufromfpf.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_ufromfpf128",
+    hdrs = ["src/__support/math/ufromfpf128.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_ufromfpf16",
+    hdrs = ["src/__support/math/ufromfpf16.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_ufromfpl",
+    hdrs = ["src/__support/math/ufromfpl.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_ufromfpx",
+    hdrs = ["src/__support/math/ufromfpx.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_ufromfpxbf16",
+    hdrs = ["src/__support/math/ufromfpxbf16.h"],
+    deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_ufromfpxf",
+    hdrs = ["src/__support/math/ufromfpxf.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_ufromfpxf128",
+    hdrs = ["src/__support/math/ufromfpxf128.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_ufromfpxf16",
+    hdrs = ["src/__support/math/ufromfpxf16.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_ufromfpxl",
+    hdrs = ["src/__support/math/ufromfpxl.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_tanhf",
     hdrs = ["src/__support/math/tanhf.h"],
     deps = [
@@ -10025,32 +10139,88 @@ libc_math_function(
     ],
 )
 
-libc_math_function(name = "ufromfp")
+libc_math_function(
+    name = "ufromfp",
+    additional_deps = [
+        ":__support_math_ufromfp",
+    ],
+)
 
-libc_math_function(name = "ufromfpf")
+libc_math_function(
+    name = "ufromfpbf16",
+    additional_deps = [
+        ":__support_math_ufromfpbf16",
+    ],
+)
 
-libc_math_function(name = "ufromfpl")
+libc_math_function(
+    name = "ufromfpf",
+    additional_deps = [
+        ":__support_math_ufromfpf",
+    ],
+)
+
+libc_math_function(
+    name = "ufromfpl",
+    additional_deps = [
+        ":__support_math_ufromfpl",
+    ],
+)
 
 libc_math_function(
     name = "ufromfpf128",
+    additional_deps = [
+        ":__support_math_ufromfpf128",
+    ],
 )
 
 libc_math_function(
     name = "ufromfpf16",
+    additional_deps = [
+        ":__support_math_ufromfpf16",
+    ],
 )
 
-libc_math_function(name = "ufromfpx")
+libc_math_function(
+    name = "ufromfpx",
+    additional_deps = [
+        ":__support_math_ufromfpx",
+    ],
+)
 
-libc_math_function(name = "ufromfpxf")
+libc_math_function(
+    name = "ufromfpxbf16",
+    additional_deps = [
+        ":__support_math_ufromfpxbf16",
+    ],
+)
 
-libc_math_function(name = "ufromfpxl")
+libc_math_function(
+    name = "ufromfpxf",
+    additional_deps = [
+        ":__support_math_ufromfpxf",
+    ],
+)
+
+libc_math_function(
+    name = "ufromfpxl",
+    additional_deps = [
+        ":__support_math_ufromfpxl",
+    ],
+)
 
 libc_math_function(
     name = "ufromfpxf128",
+    additional_deps = [
+        ":__support_math_ufromfpxf128",
+    ],
 )
 
 libc_math_function(
     name = "ufromfpxf16",
+    additional_deps = [
+        ":__support_math_ufromfpxf16",
+    ],
 )
 
 ############################## inttypes targets ##############################

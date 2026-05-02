@@ -1,4 +1,4 @@
-//===-- Implementation of ufromfpf128 function ----------------------------===//
+//===-- Shared ufromfpbf16 function -----------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/ufromfpf128.h"
-#include "src/__support/math/ufromfpf128.h"
+#ifndef LLVM_LIBC_SHARED_MATH_UFROMFPBF16_H
+#define LLVM_LIBC_SHARED_MATH_UFROMFPBF16_H
+
+#include "shared/libc_common.h"
+#include "src/__support/math/ufromfpbf16.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-LLVM_LIBC_FUNCTION(float128, ufromfpf128,
-                   (float128 x, int rnd, unsigned int width)) {
-  return math::ufromfpf128(x, rnd, width);
-}
+using math::ufromfpbf16;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SHARED_MATH_UFROMFPBF16_H

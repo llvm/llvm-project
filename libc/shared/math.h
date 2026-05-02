@@ -335,5 +335,17 @@
 #include "math/tanhf16.h"
 #include "math/tanpif.h"
 #include "math/tanpif16.h"
+#include "math/ufromfp.h"
+#include "math/ufromfpbf16.h"
+#include "math/ufromfpf.h"
+#include "math/ufromfpf128.h"
+#include "math/ufromfpf16.h"
+#include "math/ufromfpl.h"
+#include "math/ufromfpx.h"
+#include "math/ufromfpxbf16.h"
+#include "math/ufromfpxf.h"
+#include "math/ufromfpxf128.h"
+#include "math/ufromfpxf16.h"
+#include "math/ufromfpxl.h"
 
 #endif // LLVM_LIBC_SHARED_MATH_H
