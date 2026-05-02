@@ -9,18 +9,36 @@
 ; YAML-NEXT: Function:        sibling_root_loops_mismatched_tripcount
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'Stores SLP vectorized with cost '
-; YAML-NEXT:   - Cost:            '31'
+; YAML-NEXT:   - Cost:            '27'
 ; YAML-NEXT:   - String:          ' and with tree size '
-; YAML-NEXT:   - TreeSize:        '11'
+; YAML-NEXT:   - TreeSize:        '9'
 ; YAML:      --- !Passed
 ; YAML-NEXT: Pass:            slp-vectorizer
 ; YAML-NEXT: Name:            StoresVectorized
 ; YAML-NEXT: Function:        sibling_root_loops_mismatched_tripcount
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'Stores SLP vectorized with cost '
-; YAML-NEXT:   - Cost:            '29'
+; YAML-NEXT:   - Cost:            '25'
 ; YAML-NEXT:   - String:          ' and with tree size '
-; YAML-NEXT:   - TreeSize:        '11'
+; YAML-NEXT:   - TreeSize:        '9'
+; YAML:      --- !Passed
+; YAML-NEXT: Pass:            slp-vectorizer
+; YAML-NEXT: Name:            VectorizedList
+; YAML-NEXT: Function:        sibling_root_loops_mismatched_tripcount
+; YAML-NEXT: Args:
+; YAML-NEXT:   - String:          'SLP vectorized with cost '
+; YAML-NEXT:   - Cost:            '4'
+; YAML-NEXT:   - String:          ' and with tree size '
+; YAML-NEXT:   - TreeSize:        '4'
+; YAML:      --- !Passed
+; YAML-NEXT: Pass:            slp-vectorizer
+; YAML-NEXT: Name:            VectorizedList
+; YAML-NEXT: Function:        sibling_root_loops_mismatched_tripcount
+; YAML-NEXT: Args:
+; YAML-NEXT:   - String:          'SLP vectorized with cost '
+; YAML-NEXT:   - Cost:            '4'
+; YAML-NEXT:   - String:          ' and with tree size '
+; YAML-NEXT:   - TreeSize:        '4'
 define void @sibling_root_loops_mismatched_tripcount(ptr %dst, i64 %n, i64 %m, i32 %sel) {
 ; CHECK-LABEL: define void @sibling_root_loops_mismatched_tripcount(
 ; CHECK-SAME: ptr [[DST:%.*]], i64 [[N:%.*]], i64 [[M:%.*]], i32 [[SEL:%.*]]) {
@@ -125,7 +143,7 @@ merge:
 ; YAML-NEXT:   - String:          'Stores SLP vectorized with cost '
 ; YAML-NEXT:   - Cost:            '200'
 ; YAML-NEXT:   - String:          ' and with tree size '
-; YAML-NEXT:   - TreeSize:        '11'
+; YAML-NEXT:   - TreeSize:        '9'
 ; YAML:      --- !Passed
 ; YAML-NEXT: Pass:            slp-vectorizer
 ; YAML-NEXT: Name:            StoresVectorized
@@ -134,7 +152,7 @@ merge:
 ; YAML-NEXT:   - String:          'Stores SLP vectorized with cost '
 ; YAML-NEXT:   - Cost:            '200'
 ; YAML-NEXT:   - String:          ' and with tree size '
-; YAML-NEXT:   - TreeSize:        '11'
+; YAML-NEXT:   - TreeSize:        '9'
 define void @sibling_inner_loops_mismatched_tripcount(ptr %dst, i64 %n, i64 %m, i32 %sel) {
 ; CHECK-LABEL: define void @sibling_inner_loops_mismatched_tripcount(
 ; CHECK-SAME: ptr [[DST:%.*]], i64 [[N:%.*]], i64 [[M:%.*]], i32 [[SEL:%.*]]) {
