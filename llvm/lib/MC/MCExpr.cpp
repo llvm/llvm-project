@@ -226,7 +226,7 @@ MCSymbolRefExpr::MCSymbolRefExpr(const MCSymbol *Symbol, Spec specifier,
 const MCSymbolRefExpr *MCSymbolRefExpr::create(const MCSymbol *Sym,
                                                uint16_t specifier,
                                                MCContext &Ctx, SMLoc Loc) {
-  return new (Ctx) MCSymbolRefExpr(Sym, specifier, Ctx.getAsmInfo(), Loc);
+  return new (Ctx) MCSymbolRefExpr(Sym, specifier, &Ctx.getAsmInfo(), Loc);
 }
 
 /* *** */
@@ -485,9 +485,9 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
     }
     if (Sym.isVariable() && (Kind == 0 || Layout) && !Sym.isWeakExternal()) {
       Sym.setIsResolving(true);
-      auto _ = make_scope_exit([&] { Sym.setIsResolving(false); });
+      llvm::scope_exit _([&] { Sym.setIsResolving(false); });
       bool IsMachO =
-          Asm && Asm->getContext().getAsmInfo()->hasSubsectionsViaSymbols();
+          Asm && Asm->getContext().getAsmInfo().hasSubsectionsViaSymbols();
       if (!Sym.getVariableValue()->evaluateAsRelocatableImpl(Res, Asm,
                                                              InSet || IsMachO))
         return false;
@@ -682,7 +682,7 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
   case Specifier:
     // Fold the expression during relocation generation. As parse time Asm might
     // be null, and targets should not rely on the folding.
-    return Asm && Asm->getContext().getAsmInfo()->evaluateAsRelocatableImpl(
+    return Asm && Asm->getContext().getAsmInfo().evaluateAsRelocatableImpl(
                       cast<MCSpecifierExpr>(*this), Res, Asm);
   }
 

@@ -221,6 +221,12 @@ cl::opt<bool>
                cl::desc("instrument code to generate accurate profile data"),
                cl::cat(BoltOptCategory));
 
+cl::opt<bool> LargeCodeModel(
+    "large-code-model",
+    cl::desc("use large code model for exception handling encodings. "
+             "Auto-detected by the presence of .ltext sections otherwise."),
+    cl::cat(BoltCategory));
+
 cl::opt<bool> Lite("lite", cl::desc("skip processing of cold functions"),
                    cl::cat(BoltCategory));
 
@@ -244,6 +250,16 @@ cl::opt<bool> PrintCacheMetrics(
     "print-cache-metrics",
     cl::desc("calculate and print various metrics for instruction cache"),
     cl::cat(BoltOptCategory));
+
+cl::list<std::string> PrintOnly("print-only", cl::CommaSeparated,
+                                cl::desc("list of functions to print"),
+                                cl::value_desc("func1,func2,func3,..."),
+                                cl::Hidden, cl::cat(BoltCategory));
+
+cl::opt<std::string>
+    PrintOnlyFile("print-only-file",
+                  cl::desc("file with list of functions to print"), cl::Hidden,
+                  cl::cat(BoltCategory));
 
 cl::opt<bool> PrintSections("print-sections",
                             cl::desc("print all registered sections"),

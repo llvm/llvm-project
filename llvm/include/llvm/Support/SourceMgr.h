@@ -103,18 +103,18 @@ private:
 
 public:
   /// Create new source manager without support for include files.
-  SourceMgr();
+  LLVM_ABI SourceMgr();
   /// Create new source manager with the capability of finding include files
   /// via the provided file system.
-  explicit SourceMgr(IntrusiveRefCntPtr<vfs::FileSystem> FS);
+  LLVM_ABI explicit SourceMgr(IntrusiveRefCntPtr<vfs::FileSystem> FS);
   SourceMgr(const SourceMgr &) = delete;
   SourceMgr &operator=(const SourceMgr &) = delete;
-  SourceMgr(SourceMgr &&);
-  SourceMgr &operator=(SourceMgr &&);
-  ~SourceMgr();
+  LLVM_ABI SourceMgr(SourceMgr &&);
+  LLVM_ABI SourceMgr &operator=(SourceMgr &&);
+  LLVM_ABI ~SourceMgr();
 
-  IntrusiveRefCntPtr<vfs::FileSystem> getVirtualFileSystem() const;
-  void setVirtualFileSystem(IntrusiveRefCntPtr<vfs::FileSystem> FS);
+  LLVM_ABI IntrusiveRefCntPtr<vfs::FileSystem> getVirtualFileSystem() const;
+  LLVM_ABI void setVirtualFileSystem(IntrusiveRefCntPtr<vfs::FileSystem> FS);
 
   /// Return the include directories of this source manager.
   ArrayRef<std::string> getIncludeDirs() const { return IncludeDirectories; }

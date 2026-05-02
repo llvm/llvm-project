@@ -21,8 +21,6 @@
 #include "EHFrameSupportImpl.h"
 #include "JITLinkGeneric.h"
 
-#include <list>
-
 namespace llvm {
 namespace jitlink {
 

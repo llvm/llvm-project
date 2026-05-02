@@ -109,9 +109,9 @@ CXXRecordDecl::DefinitionData::DefinitionData(CXXRecordDecl *D)
       ImplicitCopyAssignmentHasConstParam(true),
       HasDeclaredCopyConstructorWithConstParam(false),
       HasDeclaredCopyAssignmentWithConstParam(false),
-      IsAnyDestructorNoReturn(false), IsHLSLIntangible(false), IsLambda(false),
-      IsParsingBaseSpecifiers(false), ComputedVisibleConversions(false),
-      HasODRHash(false), Definition(D) {}
+      IsAnyDestructorNoReturn(false), IsHLSLIntangible(false), IsPFPType(false),
+      IsLambda(false), IsParsingBaseSpecifiers(false),
+      ComputedVisibleConversions(false), HasODRHash(false), Definition(D) {}
 
 CXXBaseSpecifier *CXXRecordDecl::DefinitionData::getBasesSlowCase() const {
   return Bases.get(Definition->getASTContext().getExternalSource());
@@ -455,6 +455,9 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
 
     if (!BaseClassDecl->allowConstDefaultInit())
       data().HasUninitializedFields = true;
+
+    if (BaseClassDecl->isPFPType())
+      data().IsPFPType = true;
 
     addedClassSubobject(BaseClassDecl);
   }
@@ -1408,6 +1411,9 @@ void CXXRecordDecl::addedMember(Decl *D) {
         if (FieldRec->hasVariantMembers() &&
             Field->isAnonymousStructOrUnion())
           data().HasVariantMembers = true;
+
+        if (FieldRec->isPFPType())
+          data().IsPFPType = true;
       }
     } else {
       // Base element type of field is a non-class type.
@@ -1831,6 +1837,11 @@ Decl *CXXRecordDecl::getLambdaContextDecl() const {
   return getLambdaData().ContextDecl.get(Source);
 }
 
+void CXXRecordDecl::setLambdaContextDecl(Decl *ContextDecl) {
+  assert(isLambda() && "Not a lambda closure type!");
+  getLambdaData().ContextDecl = ContextDecl;
+}
+
 void CXXRecordDecl::setLambdaNumbering(LambdaNumbering Numbering) {
   assert(isLambda() && "Not a lambda closure type!");
   getLambdaData().ManglingNumber = Numbering.ManglingNumber;
@@ -1838,7 +1849,6 @@ void CXXRecordDecl::setLambdaNumbering(LambdaNumbering Numbering) {
     getASTContext().DeviceLambdaManglingNumbers[this] =
         Numbering.DeviceManglingNumber;
   getLambdaData().IndexInContext = Numbering.IndexInContext;
-  getLambdaData().ContextDecl = Numbering.ContextDecl;
   getLambdaData().HasKnownInternalLinkage = Numbering.HasKnownInternalLinkage;
 }
 
@@ -2305,6 +2315,14 @@ void CXXRecordDecl::completeDefinition(CXXFinalOverriderMap *FinalOverriders) {
     }
     setHasUninitializedExplicitInitFields(false);
   }
+
+  if (getLangOpts().PointerFieldProtectionABI && !isStandardLayout()) {
+    data().IsPFPType = true;
+  } else if (hasAttr<PointerFieldProtectionAttr>()) {
+    data().IsPFPType = true;
+    data().IsStandardLayout = false;
+    data().IsCXX11StandardLayout = false;
+  }
 }
 
 bool CXXRecordDecl::mayBeAbstract() const {
@@ -2752,6 +2770,40 @@ bool CXXMethodDecl::isMoveAssignmentOperator() const {
   return Context.hasSameUnqualifiedType(ClassType, ParamType);
 }
 
+bool CXXMethodDecl::isCopyOrMoveConstructor() const {
+  if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(this))
+    return Ctor->isCopyOrMoveConstructor();
+  return false;
+}
+
+bool CXXMethodDecl::isCopyOrMoveConstructorOrAssignment() const {
+  return isCopyOrMoveConstructor() || isCopyAssignmentOperator() ||
+         isMoveAssignmentOperator();
+}
+
+bool CXXMethodDecl::isMemcpyEquivalentSpecialMember(
+    const ASTContext &Ctx) const {
+  if (!isCopyOrMoveConstructorOrAssignment())
+    return false;
+
+  // Non-trivially-copyable fields with pointer field protection need to be
+  // copied one by one.
+  const CXXRecordDecl *Parent = getParent();
+  if (!Ctx.arePFPFieldsTriviallyCopyable(Parent) &&
+      Ctx.hasPFPFields(Ctx.getCanonicalTagType(Parent)))
+    return false;
+
+  // We can emit a memcpy for a trivial copy or move constructor/assignment.
+  if (isTrivial() && !Parent->mayInsertExtraPadding())
+    return true;
+
+  // We *must* emit a memcpy for a defaulted union copy or move op.
+  if (Parent->isUnion() && isDefaulted())
+    return true;
+
+  return false;
+}
+
 void CXXMethodDecl::addOverriddenMethod(const CXXMethodDecl *MD) {
   assert(MD->isCanonicalDecl() && "Method is not canonical!");
   assert(MD->isVirtual() && "Method is not virtual!");
@@ -3110,12 +3162,15 @@ CXXDestructorDecl *CXXDestructorDecl::Create(
 }
 
 void CXXDestructorDecl::setOperatorDelete(FunctionDecl *OD, Expr *ThisArg) {
-  auto *First = cast<CXXDestructorDecl>(getFirstDecl());
-  if (OD && !First->OperatorDelete) {
-    First->OperatorDelete = OD;
-    First->OperatorDeleteThisArg = ThisArg;
+  assert(!OD || (OD->getDeclName().getCXXOverloadedOperator() == OO_Delete));
+  if (OD && !getASTContext().dtorHasOperatorDelete(
+                this, ASTContext::OperatorDeleteKind::Regular)) {
+    getASTContext().addOperatorDeleteForVDtor(
+        this, OD, ASTContext::OperatorDeleteKind::Regular);
+    getCanonicalDecl()->OperatorDeleteThisArg = ThisArg;
     if (auto *L = getASTMutationListener())
-      L->ResolvedOperatorDelete(First, OD, ThisArg);
+      L->ResolvedOperatorDelete(cast<CXXDestructorDecl>(getCanonicalDecl()), OD,
+                                ThisArg);
   }
 }
 
@@ -3127,12 +3182,61 @@ void CXXDestructorDecl::setOperatorGlobalDelete(FunctionDecl *OD) {
   assert(!OD ||
          (OD->getDeclName().getCXXOverloadedOperator() == OO_Delete &&
           OD->getDeclContext()->getRedeclContext()->isTranslationUnit()));
-  auto *Canonical = cast<CXXDestructorDecl>(getCanonicalDecl());
-  if (!Canonical->OperatorGlobalDelete) {
-    Canonical->OperatorGlobalDelete = OD;
+  if (OD && !getASTContext().dtorHasOperatorDelete(
+                this, ASTContext::OperatorDeleteKind::GlobalRegular)) {
+    getASTContext().addOperatorDeleteForVDtor(
+        this, OD, ASTContext::OperatorDeleteKind::GlobalRegular);
     if (auto *L = getASTMutationListener())
-      L->ResolvedOperatorGlobDelete(Canonical, OD);
+      L->ResolvedOperatorGlobDelete(cast<CXXDestructorDecl>(getCanonicalDecl()),
+                                    OD);
   }
+}
+
+void CXXDestructorDecl::setOperatorArrayDelete(FunctionDecl *OD) {
+  assert(!OD ||
+         (OD->getDeclName().getCXXOverloadedOperator() == OO_Array_Delete));
+  if (OD && !getASTContext().dtorHasOperatorDelete(
+                this, ASTContext::OperatorDeleteKind::Array)) {
+    getASTContext().addOperatorDeleteForVDtor(
+        this, OD, ASTContext::OperatorDeleteKind::Array);
+    if (auto *L = getASTMutationListener())
+      L->ResolvedOperatorArrayDelete(
+          cast<CXXDestructorDecl>(getCanonicalDecl()), OD);
+  }
+}
+
+void CXXDestructorDecl::setGlobalOperatorArrayDelete(FunctionDecl *OD) {
+  assert(!OD ||
+         (OD->getDeclName().getCXXOverloadedOperator() == OO_Array_Delete &&
+          OD->getDeclContext()->getRedeclContext()->isTranslationUnit()));
+  if (OD && !getASTContext().dtorHasOperatorDelete(
+                this, ASTContext::OperatorDeleteKind::ArrayGlobal)) {
+    getASTContext().addOperatorDeleteForVDtor(
+        this, OD, ASTContext::OperatorDeleteKind::ArrayGlobal);
+    if (auto *L = getASTMutationListener())
+      L->ResolvedOperatorGlobArrayDelete(
+          cast<CXXDestructorDecl>(getCanonicalDecl()), OD);
+  }
+}
+
+const FunctionDecl *CXXDestructorDecl::getOperatorDelete() const {
+  return getASTContext().getOperatorDeleteForVDtor(
+      this, ASTContext::OperatorDeleteKind::Regular);
+}
+
+const FunctionDecl *CXXDestructorDecl::getOperatorGlobalDelete() const {
+  return getASTContext().getOperatorDeleteForVDtor(
+      this, ASTContext::OperatorDeleteKind::GlobalRegular);
+}
+
+const FunctionDecl *CXXDestructorDecl::getArrayOperatorDelete() const {
+  return getASTContext().getOperatorDeleteForVDtor(
+      this, ASTContext::OperatorDeleteKind::Array);
+}
+
+const FunctionDecl *CXXDestructorDecl::getGlobalArrayOperatorDelete() const {
+  return getASTContext().getOperatorDeleteForVDtor(
+      this, ASTContext::OperatorDeleteKind::ArrayGlobal);
 }
 
 bool CXXDestructorDecl::isCalledByDelete(const FunctionDecl *OpDel) const {
@@ -3146,7 +3250,8 @@ bool CXXDestructorDecl::isCalledByDelete(const FunctionDecl *OpDel) const {
   // delete operator, as that destructor is never called, unless the
   // destructor is virtual (see [expr.delete]p8.1) because then the
   // selected operator depends on the dynamic type of the pointer.
-  const FunctionDecl *SelectedOperatorDelete = OpDel ? OpDel : OperatorDelete;
+  const FunctionDecl *SelectedOperatorDelete =
+      OpDel ? OpDel : getOperatorDelete();
   if (!SelectedOperatorDelete)
     return true;
 

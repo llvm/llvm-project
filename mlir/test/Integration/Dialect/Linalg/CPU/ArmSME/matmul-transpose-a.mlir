@@ -22,7 +22,7 @@ func.func @matmul_transpose_a(%A : tensor<?x?xf32>, %B : tensor<?x?xf32>, %C : t
 }
 
 func.func @main() {
-  %c0 = arith.constant 0 : i32
+  %c0 = arith.constant 0.0 : f32
   %c7 = arith.constant 7 : index
 
   %A = arith.constant dense<[
@@ -44,7 +44,7 @@ func.func @main() {
   %A_dyn = tensor.cast %A : tensor<13x7xf32> to tensor<?x?xf32>
 
   %C_init = bufferization.alloc_tensor(%c7, %c7) : tensor<?x?xf32>
-  %C = linalg.fill ins(%c0 : i32) outs(%C_init : tensor<?x?xf32>) -> tensor<?x?xf32>
+  %C = linalg.fill ins(%c0 : f32) outs(%C_init : tensor<?x?xf32>) -> tensor<?x?xf32>
 
   // CHECK: Unranked Memref {{.*}} rank = 2 offset = 0 sizes = [7, 7] strides = [7, 1] data =
   // CHECK: [32955, 33514, 34073, 34632, 35191, 35750, 36309]

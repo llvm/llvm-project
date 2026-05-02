@@ -18,7 +18,7 @@ define arm_aapcs_vfpcc i32 @minmaxval4(ptr nocapture readonly %x, ptr nocapture 
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ splat (i32 2147483647), [[VECTOR_PH]] ], [ [[TMP2:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i32> [ splat (i32 -2147483648), [[VECTOR_PH]] ], [ [[TMP1:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[X:%.*]], i32 [[INDEX]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [4 x i8], ptr [[X:%.*]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP1]] = call <4 x i32> @llvm.smax.v4i32(<4 x i32> [[WIDE_LOAD]], <4 x i32> [[VEC_PHI1]])
 ; CHECK-NEXT:    [[TMP2]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> [[WIDE_LOAD]], <4 x i32> [[VEC_PHI]])
@@ -44,7 +44,7 @@ define arm_aapcs_vfpcc i32 @minmaxval4(ptr nocapture readonly %x, ptr nocapture 
 ; CHECK-NEXT:    [[I_029:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[MIN_028:%.*]] = phi i32 [ [[COND9]], [[FOR_BODY]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[MAX_027:%.*]] = phi i32 [ [[COND]], [[FOR_BODY]] ], [ [[BC_MERGE_RDX2]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[X]], i32 [[I_029]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [4 x i8], ptr [[X]], i32 [[I_029]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[COND]] = call i32 @llvm.smax.i32(i32 [[TMP6]], i32 [[MAX_027]])
 ; CHECK-NEXT:    [[COND9]] = call i32 @llvm.smin.i32(i32 [[TMP6]], i32 [[MIN_028]])
@@ -56,13 +56,13 @@ entry:
   %cmp26.not = icmp eq i32 %N, 0
   br i1 %cmp26.not, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   %max.0.lcssa = phi i32 [ -2147483648, %entry ], [ %cond, %for.body ]
   %min.0.lcssa = phi i32 [ 2147483647, %entry ], [ %cond9, %for.body ]
   store i32 %min.0.lcssa, ptr %minp, align 4
   ret i32 %max.0.lcssa
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.029 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %min.028 = phi i32 [ %cond9, %for.body ], [ 2147483647, %entry ]
   %max.027 = phi i32 [ %cond, %for.body ], [ -2147483648, %entry ]

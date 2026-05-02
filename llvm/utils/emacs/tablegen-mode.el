@@ -1,7 +1,9 @@
-;;; tablegen-mode.el --- Major mode for TableGen description files (part of LLVM project)
+;;; tablegen-mode.el --- Major mode for LLVM TableGen description files -*- lexical-binding: t -*-
 
 ;; Maintainer:  The LLVM team, http://llvm.org/
-;; Version: 1.0
+;; Version: 2.0
+;; Homepage: http://llvm.org/
+;; Package-Requires: ((emacs "24.3"))
 
 ;;; Commentary:
 ;; A major mode for TableGen description files in LLVM.
@@ -13,40 +15,37 @@
 ;; Create mode-specific tables.
 ;;; Code:
 
-(defvar td-decorators-face 'td-decorators-face
+(defface tablegen-decorators-face
+  '((t :inherit font-lock-function-call-face))
   "Face method decorators.")
-(make-face 'td-decorators-face)
 
 (defvar tablegen-font-lock-keywords
   (let ((kw (regexp-opt '("class" "defm" "def" "field" "include" "in"
-                         "let" "multiclass" "foreach" "if" "then" "else"
-                         "defvar" "defset" "dump" "assert")
+                          "let" "multiclass" "foreach" "if" "then" "else"
+                          "defvar" "defset" "dump" "assert")
                         'words))
         (type-kw (regexp-opt '("bit" "bits" "code" "dag" "int" "list" "string")
-                             'words))
-        )
-    (list
-     ;; Comments
-;;     '("\/\/" . font-lock-comment-face)
-     ;; Strings
-     '("\"[^\"]+\"" . font-lock-string-face)
-     ;; Hex constants
-     '("\\<0x[0-9A-Fa-f]+\\>" . font-lock-preprocessor-face)
-     ;; Binary constants
-     '("\\<0b[01]+\\>" . font-lock-preprocessor-face)
-     ;; Integer literals
-     '("\\<[-]?[0-9]+\\>" . font-lock-preprocessor-face)
-     ;; Floating point constants
-     '("\\<[-+]?[0-9]+\.[0-9]*\([eE][-+]?[0-9]+\)?\\>" . font-lock-preprocessor-face)
+                             'words)))
+    `(
+      ;; Strings
+      ("\"[^\"]+\"" . font-lock-string-face)
+      ;; Hex constants
+      ("\\<0x[0-9A-Fa-f]+\\>" . font-lock-preprocessor-face)
+      ;; Binary constants
+      ("\\<0b[01]+\\>" . font-lock-preprocessor-face)
+      ;; Integer literals
+      ("\\<[-]?[0-9]+\\>" . font-lock-preprocessor-face)
+      ;; Floating point constants
+      ("\\<[-+]?[0-9]+\.[0-9]*\([eE][-+]?[0-9]+\)?\\>" . font-lock-preprocessor-face)
 
-     '("^[ \t]*\\(@.+\\)" 1 'td-decorators-face)
-     ;; Keywords
-     kw
-     ;; Type keywords
-     type-kw
-     ))
+      ("^[ \t]*\\(@.+\\)" 1 'tablegen-decorators-face)
+      ;; Operators
+      ("\\![a-zA-Z]+" . font-lock-function-name-face)
+      ;; Keywords
+      (,kw . font-lock-keyword-face)
+      ;; Type keywords
+      (,type-kw . font-lock-type-face)))
   "Additional expressions to highlight in TableGen mode.")
-(put 'tablegen-mode 'font-lock-defaults '(tablegen-font-lock-keywords))
 
 ;; ---------------------- Syntax table ---------------------------
 
@@ -68,18 +67,17 @@
   (modify-syntax-entry ?*   ". 23"   tablegen-mode-syntax-table)
   (modify-syntax-entry ?\n  "> b"    tablegen-mode-syntax-table)
   ;; open paren (`(')
-  (modify-syntax-entry ?\(  "("      tablegen-mode-syntax-table)
-  (modify-syntax-entry ?\[  "("      tablegen-mode-syntax-table)
-  (modify-syntax-entry ?\{  "("      tablegen-mode-syntax-table)
-  (modify-syntax-entry ?\<  "("      tablegen-mode-syntax-table)
+  (modify-syntax-entry ?\(  "()"      tablegen-mode-syntax-table)
+  (modify-syntax-entry ?\[  "(]"      tablegen-mode-syntax-table)
+  (modify-syntax-entry ?\{  "(}"      tablegen-mode-syntax-table)
+  (modify-syntax-entry ?\<  "(>"      tablegen-mode-syntax-table)
   ;; close paren (`)')
-  (modify-syntax-entry ?\)  ")"      tablegen-mode-syntax-table)
-  (modify-syntax-entry ?\]  ")"      tablegen-mode-syntax-table)
-  (modify-syntax-entry ?\}  ")"      tablegen-mode-syntax-table)
-  (modify-syntax-entry ?\>  ")"      tablegen-mode-syntax-table)
+  (modify-syntax-entry ?\)  ")("      tablegen-mode-syntax-table)
+  (modify-syntax-entry ?\]  ")["      tablegen-mode-syntax-table)
+  (modify-syntax-entry ?\}  "){"      tablegen-mode-syntax-table)
+  (modify-syntax-entry ?\>  ")<"      tablegen-mode-syntax-table)
   ;; string quote ('"')
-  (modify-syntax-entry ?\"  "\""     tablegen-mode-syntax-table)
-  )
+  (modify-syntax-entry ?\"  "\"\""     tablegen-mode-syntax-table))
 
 ;; --------------------- Abbrev table -----------------------------
 
@@ -90,36 +88,19 @@
 (defvar tablegen-mode-hook nil)
 (defvar tablegen-mode-map nil)   ; Create a mode-specific keymap.
 
-(if (not tablegen-mode-map)
-    ()  ; Do not change the keymap if it is already set up.
+(unless tablegen-mode-map
   (setq tablegen-mode-map (make-sparse-keymap))
   (define-key tablegen-mode-map "\t"  'tab-to-tab-stop)
   (define-key tablegen-mode-map "\es" 'center-line)
   (define-key tablegen-mode-map "\eS" 'center-paragraph))
 
 ;;;###autoload
-(defun tablegen-mode ()
-  "Major mode for editing TableGen description files.
-\\{tablegen-mode-map}
-  Runs `tablegen-mode-hook' on startup."
-  (interactive)
-  (kill-all-local-variables)
-  (use-local-map tablegen-mode-map)      ; Provides the local keymap.
-  (make-local-variable 'font-lock-defaults)
-  (setq major-mode 'tablegen-mode        ; This is how describe-mode
-                                         ;   finds the doc string to print.
-	mode-name             "TableGen" ; This name goes into the modeline.
-        local-abbrev-table    tablegen-mode-abbrev-table
-	font-lock-defaults    `(tablegen-font-lock-keywords)
-	require-final-newline t
-        )
-
-  (set-syntax-table tablegen-mode-syntax-table)
-  (make-local-variable 'comment-start)
-  (setq comment-start "//")
-  (setq indent-tabs-mode nil)
-  (run-hooks 'tablegen-mode-hook))       ; Finally, this permits the user to
-                                         ;   customize the mode with a hook.
+(define-derived-mode tablegen-mode prog-mode "TableGen"
+  "Major mode for editing TableGen description files."
+  (setq font-lock-defaults `(tablegen-font-lock-keywords))
+  (setq-local require-final-newline t)
+  (setq-local comment-start "//")
+  (setq-local indent-tabs-mode nil))
 
 ;; Associate .td files with tablegen-mode
 ;;;###autoload

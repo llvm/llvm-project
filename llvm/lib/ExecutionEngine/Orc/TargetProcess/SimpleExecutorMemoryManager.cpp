@@ -36,8 +36,6 @@ Expected<ExecutorAddr> SimpleExecutorMemoryManager::reserve(uint64_t Size) {
 
 Expected<ExecutorAddr>
 SimpleExecutorMemoryManager::initialize(tpctypes::FinalizeRequest &FR) {
-  std::vector<shared::WrapperFunctionCall> DeallocationActions;
-
   if (FR.Segments.empty()) {
     if (FR.Actions.empty())
       return make_error<StringError>("Finalization request is empty",
@@ -51,7 +49,7 @@ SimpleExecutorMemoryManager::initialize(tpctypes::FinalizeRequest &FR) {
   ExecutorAddrRange RR(FR.Segments.front().Addr, FR.Segments.front().Addr);
 
   std::vector<sys::MemoryBlock> MBsToReset;
-  auto ResetMBs = make_scope_exit([&]() {
+  llvm::scope_exit ResetMBs([&]() {
     for (auto &MB : MBsToReset)
       sys::Memory::protectMappedMemory(MB, sys::Memory::MF_READ |
                                                sys::Memory::MF_WRITE);
@@ -209,6 +207,19 @@ void SimpleExecutorMemoryManager::addBootstrapSymbols(
       ExecutorAddr::fromPtr(&deinitializeWrapper);
   M[rt::SimpleExecutorMemoryManagerReleaseWrapperName] =
       ExecutorAddr::fromPtr(&releaseWrapper);
+
+  {
+    // Also provide SimpleNativeMemoryMap symbols for compatibility.
+    // FIXME: We should codify a "simple" memory manager interface and make
+    // SimpleExecutorMemoryManager its LLVM-based implementation, and
+    // SimpleNativeMemoryMap its ORC-runtime implementation.
+    const auto &SNs = rt::orc_rt_SimpleNativeMemoryMapSPSSymbols;
+    M[SNs.AllocatorName] = ExecutorAddr::fromPtr(this);
+    M[SNs.ReserveName] = ExecutorAddr::fromPtr(reserveWrapper);
+    M[SNs.InitializeName] = ExecutorAddr::fromPtr(initializeWrapper);
+    M[SNs.DeinitializeName] = ExecutorAddr::fromPtr(deinitializeWrapper);
+    M[SNs.ReleaseName] = ExecutorAddr::fromPtr(releaseWrapper);
+  }
 }
 
 Expected<SimpleExecutorMemoryManager::SlabInfo &>
@@ -308,7 +319,7 @@ SimpleExecutorMemoryManager::getRegionInfo(ExecutorAddr A, StringRef Context) {
   return getRegionInfo(*Slab, A, Context);
 }
 
-llvm::orc::shared::CWrapperFunctionResult
+llvm::orc::shared::CWrapperFunctionBuffer
 SimpleExecutorMemoryManager::reserveWrapper(const char *ArgData,
                                             size_t ArgSize) {
   return shared::WrapperFunction<rt::SPSSimpleRemoteMemoryMapReserveSignature>::
@@ -318,7 +329,7 @@ SimpleExecutorMemoryManager::reserveWrapper(const char *ArgData,
           .release();
 }
 
-llvm::orc::shared::CWrapperFunctionResult
+llvm::orc::shared::CWrapperFunctionBuffer
 SimpleExecutorMemoryManager::initializeWrapper(const char *ArgData,
                                                size_t ArgSize) {
   return shared::
@@ -329,7 +340,7 @@ SimpleExecutorMemoryManager::initializeWrapper(const char *ArgData,
           .release();
 }
 
-llvm::orc::shared::CWrapperFunctionResult
+llvm::orc::shared::CWrapperFunctionBuffer
 SimpleExecutorMemoryManager::deinitializeWrapper(const char *ArgData,
                                                  size_t ArgSize) {
   return shared::WrapperFunction<
@@ -340,7 +351,7 @@ SimpleExecutorMemoryManager::deinitializeWrapper(const char *ArgData,
           .release();
 }
 
-llvm::orc::shared::CWrapperFunctionResult
+llvm::orc::shared::CWrapperFunctionBuffer
 SimpleExecutorMemoryManager::releaseWrapper(const char *ArgData,
                                             size_t ArgSize) {
   return shared::WrapperFunction<rt::SPSSimpleRemoteMemoryMapReleaseSignature>::

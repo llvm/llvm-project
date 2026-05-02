@@ -171,14 +171,14 @@ define void @pr49900(i32 %x, ptr %ptr) {
 entry:
   br label %loop.0
 
-loop.0:                                              ; preds = %bb2, %bb
+loop.0:
   %ec.0 = icmp slt i32 %x, 0
   br i1 %ec.0, label %loop.0, label %loop.1.ph
 
-loop.1.ph:                                              ; preds = %bb2
+loop.1.ph:
   br label %loop.1
 
-loop.1:                                             ; preds = %bb33, %bb5
+loop.1:
   %iv.1 = phi i32 [ 0, %loop.1.ph ], [ %iv.3.next, %loop.1.latch ]
   br label %loop.2
 
@@ -242,11 +242,10 @@ define void @pr52024(ptr %dst, i16 %N) {
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <2 x i16> poison, i16 [[REM_TRUNC]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT6:%.*]] = shufflevector <2 x i16> [[BROADCAST_SPLATINSERT5]], <2 x i16> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul <2 x i16> <i16 0, i16 1>, [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add <2 x i16> zeroinitializer, [[TMP7]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i16> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i16> [ [[TMP7]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <2 x i16> [[VEC_IND]], [[TMP6]]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i32 8, [[INDEX]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = sub <2 x i16> [[VEC_IND]], [[BROADCAST_SPLAT6]]
@@ -254,7 +253,7 @@ define void @pr52024(ptr %dst, i16 %N) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = zext <2 x i16> [[TMP8]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP11:%.*]] = zext <2 x i16> [[TMP9]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[DST]], i32 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i32, ptr [[TMP12]], i32 2
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i32, ptr [[TMP12]], i64 2
 ; CHECK-NEXT:    store <2 x i32> [[TMP10]], ptr [[TMP12]], align 4
 ; CHECK-NEXT:    store <2 x i32> [[TMP11]], ptr [[TMP13]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
@@ -350,7 +349,7 @@ define void @test_expand_secv_in_entry_before_gep(ptr %dst) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[OUTER_IV]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds double, ptr [[GEP_M]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds double, ptr [[TMP3]], i32 2
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds double, ptr [[TMP3]], i64 2
 ; CHECK-NEXT:    store <2 x double> zeroinitializer, ptr [[TMP3]], align 8
 ; CHECK-NEXT:    store <2 x double> zeroinitializer, ptr [[TMP4]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4

@@ -138,7 +138,7 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         /*retType=*/"bool",
         /*methodName=*/"bufferizesToElementwiseAccess",
         /*args=*/(ins "const ::mlir::bufferization::AnalysisState &":$state,
-                      "ArrayRef<OpOperand *>":$opOperands),
+                      "::llvm::ArrayRef<::mlir::OpOperand *>":$opOperands),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           // It is always safe to assume that the op is not element-wise.
@@ -287,8 +287,8 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           // Does not have to be implemented for ops without tensor OpOperands.
-          assert(::llvm::isa<::mlir::TensorType>(opOperand.get().getType()) &&
-                 "expected OpOperand with tensor type");
+          assert(::llvm::isa<::mlir::bufferization::TensorLikeType>(opOperand.get().getType()) &&
+                 "expected OpOperand with tensor like type");
           llvm_unreachable("getAliasingValues not implemented");
         }]
       >,
@@ -358,8 +358,8 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
                       "const ::mlir::bufferization::AnalysisState &":$state),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
-          assert(isa<::mlir::TensorType>(value.getType()) &&
-                 "expected tensor type");
+          assert(isa<::mlir::bufferization::TensorLikeType>(value.getType()) &&
+                 "expected tensor like type");
           return ::mlir::bufferization::detail::defaultGetAliasingOpOperands(
               value, state);
         }]

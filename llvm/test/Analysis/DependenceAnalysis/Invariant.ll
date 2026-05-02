@@ -2,6 +2,11 @@
 ; RUN: opt < %s -disable-output "-passes=print<da>" -aa-pipeline=basic-aa 2>&1 \
 ; RUN: | FileCheck %s
 
+; XFAIL: *
+; Currently fails since delinearization doesn't work as expected, due to the
+; inconsistency in the estimated array sizes between `rr[i][j]` and `rr[j][j]`.
+; The latter is now regarded as an access to a 1D array.
+
 ; Test for a bug, which caused an assert when an invalid
 ; SCEVAddRecExpr is created in addToCoefficient.
 

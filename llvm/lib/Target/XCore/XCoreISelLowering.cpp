@@ -42,7 +42,7 @@ using namespace llvm;
 
 XCoreTargetLowering::XCoreTargetLowering(const TargetMachine &TM,
                                          const XCoreSubtarget &Subtarget)
-    : TargetLowering(TM), TM(TM), Subtarget(Subtarget) {
+    : TargetLowering(TM, Subtarget), TM(TM), Subtarget(Subtarget) {
 
   // Set up the register classes.
   addRegisterClass(MVT::i32, &XCore::GRRegsRegClass);

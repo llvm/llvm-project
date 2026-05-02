@@ -43,6 +43,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TrailingObjects.h"
 #include "llvm/Support/raw_ostream.h"
@@ -725,11 +726,12 @@ void VarMapBuilder::VisitCallExpr(const CallExpr *CE) {
       }
     }
 
-    if (VDec && Ctx.lookup(VDec)) {
+    if (VDec)
       Ctx = VMap->clearDefinition(VDec, Ctx);
-      VMap->saveContext(CE, Ctx);
-    }
   }
+  // Save the context after the call where escaped variables' definitions (if
+  // they exist) are cleared.
+  VMap->saveContext(CE, Ctx);
 }
 
 // Computes the intersection of two contexts.  The intersection is the
@@ -1277,6 +1279,11 @@ public:
                           const Expr *Exp, AccessKind AK, Expr *MutexExp,
                           ProtectedOperationKind POK, til::SExpr *Self,
                           SourceLocation Loc);
+  void warnIfAnyMutexNotHeldForRead(const FactSet &FSet, const NamedDecl *D,
+                                    const Expr *Exp,
+                                    llvm::ArrayRef<Expr *> Args,
+                                    ProtectedOperationKind POK,
+                                    SourceLocation Loc);
   void warnIfMutexHeld(const FactSet &FSet, const NamedDecl *D, const Expr *Exp,
                        Expr *MutexExp, til::SExpr *Self, SourceLocation Loc);
 
@@ -1681,7 +1688,7 @@ void ThreadSafetyAnalyzer::getEdgeLockset(FactSet& Result,
           return LocalVarMap.lookupExpr(D, Ctx);
         });
   }
-  auto Cleanup = llvm::make_scope_exit(
+  llvm::scope_exit Cleanup(
       [this] { SxBuilder.setLookupLocalVarExpr(nullptr); });
 
   const auto *Exp = getTrylockCallExpr(Cond, LVarCtx, Negate);
@@ -1728,7 +1735,8 @@ class BuildLockset : public ConstStmtVisitor<BuildLockset> {
   LocalVariableMap::Context LVarCtx;
   unsigned CtxIndex;
 
-  // To update and adjust the context.
+  // To update the context used in attr-expr translation.  If `S` is non-null,
+  // the context is updated to the program point right after 'S'.
   void updateLocalVarMapCtx(const Stmt *S) {
     if (S)
       LVarCtx = Analyzer->LocalVarMap.getNextContext(CtxIndex, S, LVarCtx);
@@ -1770,6 +1778,8 @@ public:
   }
 
   ~BuildLockset() { Analyzer->SxBuilder.setLookupLocalVarExpr(nullptr); }
+  BuildLockset(const BuildLockset &) = delete;
+  BuildLockset &operator=(const BuildLockset &) = delete;
 
   void VisitUnaryOperator(const UnaryOperator *UO);
   void VisitBinaryOperator(const BinaryOperator *BO);
@@ -1841,6 +1851,38 @@ void ThreadSafetyAnalyzer::warnIfMutexNotHeld(
   if (NoError && LDat && !LDat->isAtLeast(LK)) {
     Handler.handleMutexNotHeld(Cp.getKind(), D, POK, Cp.toString(), LK, Loc);
   }
+}
+
+void ThreadSafetyAnalyzer::warnIfAnyMutexNotHeldForRead(
+    const FactSet &FSet, const NamedDecl *D, const Expr *Exp,
+    llvm::ArrayRef<Expr *> Args, ProtectedOperationKind POK,
+    SourceLocation Loc) {
+  SmallVector<CapabilityExpr, 2> Caps;
+  for (auto *Arg : Args) {
+    CapabilityExpr Cp = SxBuilder.translateAttrExpr(Arg, D, Exp, nullptr);
+    if (Cp.isInvalid()) {
+      warnInvalidLock(Handler, Arg, D, Exp, Cp.getKind());
+      continue;
+    }
+    if (Cp.shouldIgnore())
+      continue;
+    const FactEntry *LDat = FSet.findLockUniv(FactMan, Cp);
+    if (LDat && LDat->isAtLeast(LK_Shared))
+      return; // At least one held — read access is safe.
+    // FIXME: try findPartialMatch as a fallback to support
+    //        -Wno-thread-safety-precise, as warnIfMutexNotHeld does.
+    Caps.push_back(Cp);
+  }
+  if (Caps.empty())
+    return;
+  // Materialize names only now that we know we are going to warn.
+  SmallVector<std::string, 2> NameStorage;
+  SmallVector<StringRef, 2> Names;
+  for (const auto &Cp : Caps) {
+    NameStorage.push_back(Cp.toString());
+    Names.push_back(NameStorage.back());
+  }
+  Handler.handleGuardedByAnyReadNotHeld(D, POK, Names, Loc);
 }
 
 /// Warn if the LSet contains the given lock.
@@ -1929,8 +1971,18 @@ void ThreadSafetyAnalyzer::checkAccess(const FactSet &FSet, const Expr *Exp,
     Handler.handleNoMutexHeld(D, POK, AK, Loc);
   }
 
-  for (const auto *I : D->specific_attrs<GuardedByAttr>())
-    warnIfMutexNotHeld(FSet, D, Exp, AK, I->getArg(), POK, nullptr, Loc);
+  for (const auto *I : D->specific_attrs<GuardedByAttr>()) {
+    if (AK == AK_Written || I->args_size() == 1) {
+      // Write requires all capabilities; single-arg read uses the normal
+      // per-lock warning path.
+      for (auto *Arg : I->args())
+        warnIfMutexNotHeld(FSet, D, Exp, AK, Arg, POK, nullptr, Loc);
+    } else {
+      // Multi-arg read: holding any one of the listed capabilities is
+      // sufficient (a writer must hold all, so any one prevents writes).
+      warnIfAnyMutexNotHeldForRead(FSet, D, Exp, I->args(), POK, Loc);
+    }
+  }
 }
 
 /// Checks pt_guarded_by and pt_guarded_var attributes.
@@ -1993,9 +2045,20 @@ void ThreadSafetyAnalyzer::checkPtAccess(const FactSet &FSet, const Expr *Exp,
   if (D->hasAttr<PtGuardedVarAttr>() && FSet.isEmpty(FactMan))
     Handler.handleNoMutexHeld(D, PtPOK, AK, Exp->getExprLoc());
 
-  for (auto const *I : D->specific_attrs<PtGuardedByAttr>())
-    warnIfMutexNotHeld(FSet, D, Exp, AK, I->getArg(), PtPOK, nullptr,
-                       Exp->getExprLoc());
+  for (auto const *I : D->specific_attrs<PtGuardedByAttr>()) {
+    if (AK == AK_Written || I->args_size() == 1) {
+      // Write requires all capabilities; single-arg read uses the normal
+      // per-lock warning path.
+      for (auto *Arg : I->args())
+        warnIfMutexNotHeld(FSet, D, Exp, AK, Arg, PtPOK, nullptr,
+                           Exp->getExprLoc());
+    } else {
+      // Multi-arg read: holding any one of the listed capabilities is
+      // sufficient (a writer must hold all, so any one prevents writes).
+      warnIfAnyMutexNotHeldForRead(FSet, D, Exp, I->args(), PtPOK,
+                                   Exp->getExprLoc());
+    }
+  }
 }
 
 /// Process a function call, method call, constructor call,
@@ -2269,9 +2332,8 @@ void BuildLockset::VisitUnaryOperator(const UnaryOperator *UO) {
 void BuildLockset::VisitBinaryOperator(const BinaryOperator *BO) {
   if (!BO->isAssignmentOp())
     return;
-
-  updateLocalVarMapCtx(BO);
   checkAccess(BO->getLHS(), AK_Written);
+  updateLocalVarMapCtx(BO);
 }
 
 /// Whenever we do an LValue to Rvalue cast, we are reading a variable and
@@ -2316,8 +2378,6 @@ void BuildLockset::examineArguments(const FunctionDecl *FD,
 }
 
 void BuildLockset::VisitCallExpr(const CallExpr *Exp) {
-  updateLocalVarMapCtx(Exp);
-
   if (const auto *CE = dyn_cast<CXXMemberCallExpr>(Exp)) {
     const auto *ME = dyn_cast<MemberExpr>(CE->getCallee());
     // ME can be null when calling a method pointer
@@ -2381,9 +2441,9 @@ void BuildLockset::VisitCallExpr(const CallExpr *Exp) {
   }
 
   auto *D = dyn_cast_or_null<NamedDecl>(Exp->getCalleeDecl());
-  if (!D)
-    return;
-  handleCall(Exp, D);
+  if (D)
+    handleCall(Exp, D);
+  updateLocalVarMapCtx(Exp);
 }
 
 void BuildLockset::VisitCXXConstructExpr(const CXXConstructExpr *Exp) {
@@ -2412,8 +2472,6 @@ static const Expr *UnpackConstruction(const Expr *E) {
 }
 
 void BuildLockset::VisitDeclStmt(const DeclStmt *S) {
-  updateLocalVarMapCtx(S);
-
   for (auto *D : S->getDeclGroup()) {
     if (auto *VD = dyn_cast_or_null<VarDecl>(D)) {
       const Expr *E = VD->getInit();
@@ -2433,6 +2491,7 @@ void BuildLockset::VisitDeclStmt(const DeclStmt *S) {
       }
     }
   }
+  updateLocalVarMapCtx(S);
 }
 
 void BuildLockset::VisitMaterializeTemporaryExpr(
@@ -2820,7 +2879,13 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
         case CFGElement::AutomaticObjectDtor: {
           CFGAutomaticObjDtor AD = BI.castAs<CFGAutomaticObjDtor>();
           const auto *DD = AD.getDestructorDecl(AC.getASTContext());
-          if (!DD->hasAttrs())
+          // Function parameters as they are constructed in caller's context and
+          // the CFG does not contain the ctors. Ignore them as their
+          // capabilities cannot be analysed because of this missing
+          // information.
+          if (isa_and_nonnull<ParmVarDecl>(AD.getVarDecl()))
+            break;
+          if (!DD || !DD->hasAttrs())
             break;
 
           LocksetBuilder.handleCall(

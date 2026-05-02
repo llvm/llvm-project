@@ -10,6 +10,7 @@
 #define LLVM_DEBUGINFO_PDB_NATIVE_SYMBOLCACHE_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/IntervalMap.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/Line.h"
@@ -69,8 +70,13 @@ class SymbolCache {
   /// Map from global symbol offset to SymIndexId.
   mutable DenseMap<uint32_t, SymIndexId> GlobalOffsetToSymbolId;
 
-  /// Map from segment and code offset to function symbols.
-  mutable DenseMap<std::pair<uint32_t, uint32_t>, SymIndexId> AddressToSymbolId;
+  /// Map from virtual address range to function symbols.
+  using IMapTy =
+      IntervalMap<uint64_t, SymIndexId, 8, IntervalMapHalfOpenInfo<uint64_t>>;
+  IMapTy::Allocator IMapAllocator;
+  mutable IMapTy AddressToSymbolId;
+  DenseSet<uint16_t> FuncSymCachedModIndexes;
+
   /// Map from segment and code offset to public symbols.
   mutable DenseMap<std::pair<uint32_t, uint32_t>, SymIndexId>
       AddressToPublicSymId;
@@ -116,8 +122,7 @@ class SymbolCache {
   SymIndexId createSimpleType(codeview::TypeIndex TI,
                               codeview::ModifierOptions Mods) const;
 
-  std::unique_ptr<PDBSymbol> findFunctionSymbolBySectOffset(uint32_t Sect,
-                                                            uint32_t Offset);
+  std::unique_ptr<PDBSymbol> findFunctionSymbolByVA(uint64_t VA);
   std::unique_ptr<PDBSymbol> findPublicSymbolBySectOffset(uint32_t Sect,
                                                           uint32_t Offset);
 
@@ -175,8 +180,8 @@ public:
                                               uint16_t Modi,
                                               uint32_t RecordOffset) const;
 
-  LLVM_ABI std::unique_ptr<PDBSymbol>
-  findSymbolBySectOffset(uint32_t Sect, uint32_t Offset, PDB_SymType Type);
+  LLVM_ABI std::unique_ptr<PDBSymbol> findSymbolByVA(uint64_t VA,
+                                                     PDB_SymType Type);
 
   LLVM_ABI std::unique_ptr<IPDBEnumLineNumbers>
   findLineNumbersByVA(uint64_t VA, uint32_t Length) const;

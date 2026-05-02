@@ -67,6 +67,9 @@ static constexpr Log::Category g_categories[] = {
     {{"disassembler"},
      {"log disassembler related activities"},
      LLDBLog::Disassembler},
+    {{"instrumentation-runtime"},
+     {"log instrumentation runtime plugin related activities"},
+     LLDBLog::InstrumentationRuntime},
 };
 
 static Log::Channel g_log_channel(g_categories,
@@ -81,6 +84,6 @@ template <> Log::Channel &lldb_private::LogChannelFor<LLDBLog>() {
   return g_log_channel;
 }
 
-void lldb_private::InitializeLldbChannel() {
-  Log::Register("lldb", g_log_channel);
-}
+void LLDBLogChannel::Initialize() { Log::Register("lldb", g_log_channel); }
+
+void LLDBLogChannel::Terminate() { Log::Unregister("lldb"); }

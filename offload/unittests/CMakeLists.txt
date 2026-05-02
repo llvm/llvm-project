@@ -26,7 +26,7 @@ function(add_offload_test_device_code test_filename test_name)
 
   # Try to build with support for NVPTX devices.
   if("cuda" IN_LIST LIBOMPTARGET_PLUGINS_TO_BUILD)
-    find_package(CUDAToolkit QUIET)
+    find_package(CUDAToolkit QUIET ${OFFLOAD_MIN_CUDA_VERSION})
     if(CUDAToolkit_FOUND)
       get_filename_component(cuda_path "${CUDAToolkit_BIN_DIR}" DIRECTORY ABSOLUTE)
     endif()
@@ -102,6 +102,24 @@ function(add_offload_test_device_code test_filename test_name)
     endif()
   endif()
 
+  # Try to build with support for Level Zero SPIRV devices.
+  if("level_zero" IN_LIST LIBOMPTARGET_PLUGINS_TO_BUILD)
+    set(spirv_compile_flags ${OFFLOAD_TESTS_UNPARSED_ARGUMENTS})
+    set(output_file "${CMAKE_CURRENT_BINARY_DIR}/${test_name}.spirv64.bin")
+    # TODO: Building for specific devices is not implemented yet.
+    # TODO: Remove the -ffreestanding flag once libc can be built for spirv64.
+    add_custom_command(
+      OUTPUT ${output_file}
+      COMMAND ${CMAKE_CXX_COMPILER}
+      -I${OFFLOAD_UNITTESTS_DIR}
+      --target=spirv64-intel
+      -ffreestanding
+      -nogpulib -flto ${spirv_compile_flags} ${SRC_PATH} -o ${output_file}
+      DEPENDS ${SRC_PATH}
+    )
+    add_custom_target(${test_name}.spirv64 DEPENDS ${output_file})
+  endif()
+
   # Create a single dependency target for the device code.
   add_custom_target(${test_name}.bin)
   if(TARGET ${test_name}.amdgpu)
@@ -109,6 +127,9 @@ function(add_offload_test_device_code test_filename test_name)
   endif()
   if(TARGET ${test_name}.nvptx64)
     add_dependencies(${test_name}.bin ${test_name}.nvptx64)
+  endif()
+  if(TARGET ${test_name}.spirv64)
+    add_dependencies(${test_name}.bin ${test_name}.spirv64)
   endif()
 endfunction()
 

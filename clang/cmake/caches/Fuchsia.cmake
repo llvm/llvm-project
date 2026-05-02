@@ -97,7 +97,7 @@ set(LLVM_ENABLE_ASSERTIONS ON CACHE BOOL "")
 set(LLVM_ENABLE_BACKTRACES ON CACHE BOOL "")
 set(CMAKE_BUILD_TYPE Release CACHE STRING "")
 if(APPLE)
-  set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "")
+  set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "")
 elseif(WIN32)
   set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded" CACHE STRING "")
 endif()
@@ -140,7 +140,7 @@ else()
   set(SANITIZER_TEST_CXX "libc++" CACHE STRING "")
   set(SANITIZER_TEST_CXX_INTREE ON CACHE BOOL "")
   set(LLVM_ENABLE_RUNTIMES "compiler-rt;libcxx;libcxxabi;libunwind" CACHE STRING "")
-  set(RUNTIMES_CMAKE_ARGS "-DCMAKE_OSX_DEPLOYMENT_TARGET=10.13;-DCMAKE_OSX_ARCHITECTURES=arm64|x86_64" CACHE STRING "")
+  set(RUNTIMES_CMAKE_ARGS "-DCMAKE_OSX_DEPLOYMENT_TARGET=11.0;-DCMAKE_OSX_ARCHITECTURES=arm64|x86_64" CACHE STRING "")
 endif()
 
 if(BOOTSTRAP_CMAKE_SYSTEM_NAME)
@@ -190,6 +190,7 @@ if(FUCHSIA_ENABLE_PGO)
     stage2-install-toolchain-distribution-toolchain
     stage2-check-all
     stage2-check-clang
+    stage2-check-clang-extra
     stage2-check-lld
     stage2-check-llvm
     stage2-check-polly
@@ -207,6 +208,7 @@ else()
  set(_FUCHSIA_BOOTSTRAP_TARGETS
    check-all
    check-clang
+   check-clang-extra
    check-lld
    check-llvm
    check-polly

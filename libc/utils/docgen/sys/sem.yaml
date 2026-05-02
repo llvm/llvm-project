@@ -1,0 +1,25 @@
+functions:
+  semctl:
+    in-latest-posix: ''
+  semget:
+    in-latest-posix: ''
+  semop:
+    in-latest-posix: ''
+
+macros:
+  GETALL:
+    in-latest-posix: ''
+  GETNCNT:
+    in-latest-posix: ''
+  GETPID:
+    in-latest-posix: ''
+  GETVAL:
+    in-latest-posix: ''
+  GETZCNT:
+    in-latest-posix: ''
+  SEM_UNDO:
+    in-latest-posix: ''
+  SETALL:
+    in-latest-posix: ''
+  SETVAL:
+    in-latest-posix: ''

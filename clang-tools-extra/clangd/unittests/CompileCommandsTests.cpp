@@ -140,7 +140,7 @@ TEST(CommandMangler, ClangPathResolve) {
               ok());
   // /var/tmp is a symlink on Mac. Resolve it so we're asserting the right path.
   ASSERT_THAT(llvm::sys::fs::real_path(TempDir.str(), TempDir), ok());
-  auto CleanDir = llvm::make_scope_exit(
+  llvm::scope_exit CleanDir(
       [&] { llvm::sys::fs::remove_directories(TempDir); });
   ASSERT_THAT(llvm::sys::fs::create_directory(TempDir + "/bin"), ok());
   ASSERT_THAT(llvm::sys::fs::create_directory(TempDir + "/lib"), ok());
@@ -163,10 +163,9 @@ TEST(CommandMangler, ClangPathResolve) {
 
   // Set PATH to point to temp/bin so we can find 'foo' on it.
   ASSERT_TRUE(::getenv("PATH"));
-  auto RestorePath =
-      llvm::make_scope_exit([OldPath = std::string(::getenv("PATH"))] {
-        ::setenv("PATH", OldPath.c_str(), 1);
-      });
+  llvm::scope_exit RestorePath([OldPath = std::string(::getenv("PATH"))] {
+    ::setenv("PATH", OldPath.c_str(), 1);
+  });
   ::setenv("PATH", (TempDir + "/bin").str().c_str(), /*overwrite=*/1);
 
   // Test the case where the driver is a $PATH-relative path to a symlink.
@@ -536,13 +535,31 @@ TEST(CommandMangler, StdLatestFlag) {
   EXPECT_THAT(llvm::join(Cmd.CommandLine, " "), HasSubstr("/std:c++latest"));
 }
 
-TEST(CommandMangler, StdLatestFlag_Inference) {
+TEST(CommandMangler, ClangClStdFlags_Inference) {
+  // Check that clang-cl-specific /std: flags are not dropped during inference.
   const auto Mangler = CommandMangler::forTests();
-  tooling::CompileCommand Cmd;
-  Cmd.CommandLine = {"clang-cl", "/std:c++latest", "--", "/Users/foo.cc"};
-  Mangler(Cmd, "/Users/foo.hpp");
-  // Check that the /std:c++latest flag is not dropped during inference
-  EXPECT_THAT(llvm::join(Cmd.CommandLine, " "), HasSubstr("/std:c++latest"));
+
+  {
+    tooling::CompileCommand Cmd;
+    Cmd.CommandLine = {"clang-cl", "/std:c++23preview", "--", "/Users/foo.cc"};
+    Mangler(Cmd, "/Users/foo.hpp");
+    EXPECT_THAT(llvm::join(Cmd.CommandLine, " "),
+                HasSubstr("/std:c++23preview"));
+  }
+
+  {
+    tooling::CompileCommand Cmd;
+    Cmd.CommandLine = {"clang-cl", "/std:clatest", "--", "/Users/foo.c"};
+    Mangler(Cmd, "/Users/foo.h");
+    EXPECT_THAT(llvm::join(Cmd.CommandLine, " "), HasSubstr("/std:clatest"));
+  }
+
+  {
+    tooling::CompileCommand Cmd;
+    Cmd.CommandLine = {"clang-cl", "/std:c++latest", "--", "/Users/foo.cc"};
+    Mangler(Cmd, "/Users/foo.hpp");
+    EXPECT_THAT(llvm::join(Cmd.CommandLine, " "), HasSubstr("/std:c++latest"));
+  }
 }
 
 } // namespace

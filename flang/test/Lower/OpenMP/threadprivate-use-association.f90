@@ -4,7 +4,6 @@
 !RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s
 
 !CHECK-DAG: fir.global common @blk_(dense<0> : vector<24xi8>) {alignment = 4 : i64} : !fir.array<24xi8>
-!CHECK-DAG: fir.global @_QMtestEy : f32 {
 
 module test
   integer :: x
@@ -72,6 +71,8 @@ program main
 !CHECK-DAG:    %{{.*}} = fir.load %[[DECX1]]#0 : !fir.ref<i32>
 !CHECK-DAG:    %{{.*}} = fir.load %[[DECY]]#0 : !fir.ref<f32>
 !CHECK-DAG:    %{{.*}} = fir.embox %[[DECZ1]]#0(%{{.*}}) : (!fir.ref<!fir.array<5xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<5xf32>>
+!CHECK-DAG: fir.global @_QMtestEy : f32 {
+
     print *, x1, y, z1
   !$omp end parallel
 

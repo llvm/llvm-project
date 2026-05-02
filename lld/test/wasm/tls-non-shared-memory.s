@@ -63,38 +63,38 @@ tls1:
 # CHECK-NEXT:         Mutable:         true
 # CHECK-NEXT:         InitExpr:
 # CHECK-NEXT:           Opcode:          I32_CONST
-# CHECK-NEXT:           Value:           66576
+# CHECK-NEXT:           Value:           65536
 # __tls_base
 # CHECK-NEXT:       - Index:           1
 # CHECK-NEXT:         Type:            I32
 # CHECK-NEXT:         Mutable:         false
 # CHECK-NEXT:         InitExpr:
 # CHECK-NEXT:           Opcode:          I32_CONST
-# CHECK-NEXT:           Value:           1024
+# CHECK-NEXT:           Value:           65536
 # GOT.data.internal.tls1
 # CHECK-NEXT:       - Index:           2
 # CHECK-NEXT:         Type:            I32
 # CHECK-NEXT:         Mutable:         false
 # CHECK-NEXT:         InitExpr:
 # CHECK-NEXT:           Opcode:          I32_CONST
-# CHECK-NEXT:           Value:           1024
+# CHECK-NEXT:           Value:           65536
 # CHECK-NEXT:   - Type:            EXPORT
 
 #      CHECK:  - Type:            DATA
 # .data
 # CHECK-NEXT:    Segments:
-# CHECK-NEXT:      - SectionOffset:   7
+# CHECK-NEXT:      - SectionOffset:   8
 # CHECK-NEXT:        InitFlags:       0
 # CHECK-NEXT:        Offset:
 # CHECK-NEXT:          Opcode:          I32_CONST
-# CHECK-NEXT:          Value:           1024
+# CHECK-NEXT:          Value:           65536
 # CHECK-NEXT:        Content:         2B000000
 # .tdata
-# CHECK-NEXT:      - SectionOffset:   17
+# CHECK-NEXT:      - SectionOffset:   19
 # CHECK-NEXT:        InitFlags:       0
 # CHECK-NEXT:        Offset:
 # CHECK-NEXT:          Opcode:          I32_CONST
-# CHECK-NEXT:          Value:           1028
+# CHECK-NEXT:          Value:           65540
 # CHECK-NEXT:        Content:         2A000000
 # CHECK-NEXT:  - Type:            CUSTOM
 

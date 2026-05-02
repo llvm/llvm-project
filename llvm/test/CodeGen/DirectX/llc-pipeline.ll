@@ -5,6 +5,7 @@
 
 ; CHECK-LABEL: Pass Arguments:
 ; CHECK-NEXT: Target Library Information
+; CHECK-NEXT: Runtime Library Function Analysis
 ; CHECK-NEXT: DXIL Resource Type Analysis
 ; CHECK-NEXT: Target Transform Information
 ; CHECK-NEXT: Assumption Cache Tracker
@@ -13,12 +14,15 @@
 ; CHECK-OBJ-NEXT: Create Garbage Collector Module Metadata
 
 ; CHECK-NEXT: ModulePass Manager
+; CHECK-NEXT:   FunctionPass Manager
+; CHECK-NEXT:     Strip convergence intrinsics and operand bundles
 ; CHECK-NEXT:   DXIL Finalize Linkage
 ; CHECK-NEXT:   Dead Global Elimination
+; CHECK-NEXT:   DXIL Memory Intrinsic Elimination
+; CHECK-NEXT:   DXIL CBuffer Access
 ; CHECK-NEXT:   FunctionPass Manager
 ; CHECK-NEXT:     DXIL Resource Access
 ; CHECK-NEXT:   DXIL Intrinsic Expansion
-; CHECK-NEXT:   DXIL CBuffer Access
 ; CHECK-NEXT:   DXIL Data Scalarization
 ; CHECK-NEXT:   FunctionPass Manager
 ; CHECK-NEXT:     Dominator Tree Construction
@@ -32,7 +36,7 @@
 ; CHECK-NEXT:     Function Alias Analysis Results
 ; CHECK-NEXT:     Post-Dominator Tree Construction
 ; CHECK-NEXT:     Memory SSA
-; CHECK-NEXT:     Natural Loop Information
+; CHECK-NEXT:     Cycle Info Analysis
 ; CHECK-NEXT:     Dead Store Elimination
 ; CHECK-NEXT:     DXIL Legalizer
 ; CHECK-NEXT:   DXIL Resource Binding Analysis

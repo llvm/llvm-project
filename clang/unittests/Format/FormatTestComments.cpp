@@ -106,24 +106,12 @@ TEST_F(FormatTestComments, UnderstandsSingleLineComments) {
                "  // line c\n"
                "  c\n"
                "};",
-               "enum A {\n"
-               "  // line a\n"
-               "  a,\n"
-               "  b, // line b\n"
-               "\n"
-               "  // line c\n"
-               "  c\n"
-               "};",
                Style20);
-  verifyFormat("enum A {\n"
-               "  a, // line 1\n"
-               "  // line 2\n"
-               "};",
-               "enum A {\n"
-               "  a, // line 1\n"
-               "  // line 2\n"
-               "};",
-               Style20);
+  verifyNoChange("enum A {\n"
+                 "  a, // line 1\n"
+                 "  // line 2\n"
+                 "};",
+                 Style20);
   verifyFormat("enum A {\n"
                "  a, // line 1\n"
                "     // line 2\n"
@@ -133,17 +121,12 @@ TEST_F(FormatTestComments, UnderstandsSingleLineComments) {
                "   // line 2\n"
                "};",
                Style20);
-  verifyFormat("enum A {\n"
-               "  a, // line 1\n"
-               "  // line 2\n"
-               "  b\n"
-               "};",
-               "enum A {\n"
-               "  a, // line 1\n"
-               "  // line 2\n"
-               "  b\n"
-               "};",
-               Style20);
+  verifyNoChange("enum A {\n"
+                 "  a, // line 1\n"
+                 "  // line 2\n"
+                 "  b\n"
+                 "};",
+                 Style20);
   verifyFormat("enum A {\n"
                "  a, // line 1\n"
                "     // line 2\n"
@@ -204,11 +187,10 @@ TEST_F(FormatTestComments, UnderstandsSingleLineComments) {
 
   verifyGoogleFormat("#endif  // HEADER_GUARD");
 
-  verifyFormat("const char *test[] = {\n"
-               "    // A\n"
-               "    \"aaaa\",\n"
-               "    // B\n"
-               "    \"aaaaa\"};");
+  verifyFormat("const char *test[] = {// A\n"
+               "                      \"aaaa\",\n"
+               "                      // B\n"
+               "                      \"aaaaa\"};");
   verifyGoogleFormat(
       "aaaaaaaaaaaaaaaaaaaaaaaaaa(\n"
       "    aaaaaaaaaaaaaaaaaaaaaa);  // 81_cols_with_this_comment");
@@ -366,7 +348,7 @@ TEST_F(FormatTestComments, KeepsParameterWithTrailingCommentsOnTheirOwnLine) {
                "aaaa, bbbbb);");
 
   FormatStyle BreakAlways = getLLVMStyle();
-  BreakAlways.BinPackParameters = FormatStyle::BPPS_AlwaysOnePerLine;
+  BreakAlways.PackParameters.BinPack = FormatStyle::BPPS_AlwaysOnePerLine;
   verifyFormat("int SomeFunction(a,\n"
                "                 b, // comment\n"
                "                 c,\n"
@@ -422,7 +404,7 @@ TEST_F(FormatTestComments, UnderstandsBlockComments) {
       "                  /* 3rd */ int dddddddddddd);");
 
   auto Style = getLLVMStyle();
-  Style.BinPackParameters = FormatStyle::BPPS_OnePerLine;
+  Style.PackParameters.BinPack = FormatStyle::BPPS_OnePerLine;
   verifyFormat("aaaaaaaa(/* parameter 1 */ aaaaaa,\n"
                "         /* parameter 2 */ aaaaaa,\n"
                "         /* parameter 3 */ aaaaaa,\n"
@@ -434,7 +416,7 @@ TEST_F(FormatTestComments, UnderstandsBlockComments) {
                "                  /* 3rd */ int dddddddddddd);",
                Style);
 
-  Style.BinPackParameters = FormatStyle::BPPS_AlwaysOnePerLine;
+  Style.PackParameters.BinPack = FormatStyle::BPPS_AlwaysOnePerLine;
   verifyFormat("int a(/* 1st */ int b,\n"
                "      /* 2nd */ int c);",
                Style);
@@ -487,12 +469,9 @@ TEST_F(FormatTestComments, AlignsBlockComments) {
                " Don't try to outdent if there's not enough indentation.\n"
                " */");
 
-  verifyFormat("int i; /* Comment with empty...\n"
-               "        *\n"
-               "        * line. */",
-               "int i; /* Comment with empty...\n"
-               "        *\n"
-               "        * line. */");
+  verifyNoChange("int i; /* Comment with empty...\n"
+                 "        *\n"
+                 "        * line. */");
   verifyFormat("int foobar = 0; /* comment */\n"
                "int bar = 0;    /* multiline\n"
                "                   comment 1 */\n"
@@ -555,8 +534,6 @@ TEST_F(FormatTestComments, CommentReflowingCanApplyOnlyToIndents) {
 
 TEST_F(FormatTestComments, CorrectlyHandlesLengthOfBlockComments) {
   verifyFormat("double *x; /* aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
-               "              aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa */",
-               "double *x; /* aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
                "              aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa */");
   verifyFormat(
       "void ffffffffffff(\n"
@@ -680,17 +657,12 @@ TEST_F(FormatTestComments, SplitsLongCxxComments) {
   verifyFormat("#define XXX // q w e r\n"
                "            // t y u i",
                "#define XXX //q w e r t y u i", Style22);
-  verifyFormat("{\n"
-               "  //\n"
-               "  //\\\n"
-               "  // long 1 2 3 4 5\n"
-               "}",
-               "{\n"
-               "  //\n"
-               "  //\\\n"
-               "  // long 1 2 3 4 5\n"
-               "}",
-               Style20);
+  verifyNoChange("{\n"
+                 "  //\n"
+                 "  //\\\n"
+                 "  // long 1 2 3 4 5\n"
+                 "}",
+                 Style20);
   verifyFormat("{\n"
                "  //\n"
                "  //\\\n"
@@ -730,19 +702,13 @@ TEST_F(FormatTestComments, PreservesHangingIndentInCxxComments) {
 }
 
 TEST_F(FormatTestComments, DontSplitLineCommentsWithEscapedNewlines) {
-  verifyFormat("// aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\\\n"
-               "// aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\\\n"
-               "// aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-               "// aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\\\n"
-               "// aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\\\n"
-               "// aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
-  verifyFormat("int a; // AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\\\n"
-               "       // AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\\\n"
-               "       // AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
-               "int a; // AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\\\n"
-               "       // AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\\\n"
-               "       // AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
-               getLLVMStyleWithColumns(50));
+  verifyNoChange("// aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\\\n"
+                 "// aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\\\n"
+                 "// aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+  verifyNoChange("int a; // AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\\\n"
+                 "       // AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\\\n"
+                 "       // AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+                 getLLVMStyleWithColumns(50));
   verifyFormat("double\n"
                "    a; // AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\\\n"
                "       // AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\\\n"
@@ -773,10 +739,8 @@ TEST_F(FormatTestComments, DontIntroduceMultilineComments) {
 TEST_F(FormatTestComments, DontSplitLineCommentsWithPragmas) {
   FormatStyle Pragmas = getLLVMStyleWithColumns(30);
   Pragmas.CommentPragmas = "^ IWYU pragma:";
-  verifyFormat("// IWYU pragma: aaaaaaaaaaaaaaaaaa bbbbbbbbbbbbbb",
-               "// IWYU pragma: aaaaaaaaaaaaaaaaaa bbbbbbbbbbbbbb", Pragmas);
-  verifyFormat("/* IWYU pragma: aaaaaaaaaaaaaaaaaa bbbbbbbbbbbbbb */",
-               "/* IWYU pragma: aaaaaaaaaaaaaaaaaa bbbbbbbbbbbbbb */", Pragmas);
+  verifyFormat("// IWYU pragma: aaaaaaaaaaaaaaaaaa bbbbbbbbbbbbbb", Pragmas);
+  verifyFormat("/* IWYU pragma: aaaaaaaaaaaaaaaaaa bbbbbbbbbbbbbb */", Pragmas);
 }
 
 TEST_F(FormatTestComments, PriorityOfCommentBreaking) {
@@ -812,26 +776,17 @@ TEST_F(FormatTestComments, PriorityOfCommentBreaking) {
 
 TEST_F(FormatTestComments, MultiLineCommentsInDefines) {
   const auto Style17 = getLLVMStyleWithColumns(17);
-  verifyFormat("#define A(x) /* \\\n"
-               "  a comment     \\\n"
-               "  inside */     \\\n"
-               "  f();",
-               "#define A(x) /* \\\n"
-               "  a comment     \\\n"
-               "  inside */     \\\n"
-               "  f();",
-               Style17);
-  verifyFormat("#define A(      \\\n"
-               "    x) /*       \\\n"
-               "  a comment     \\\n"
-               "  inside */     \\\n"
-               "  f();",
-               "#define A(      \\\n"
-               "    x) /*       \\\n"
-               "  a comment     \\\n"
-               "  inside */     \\\n"
-               "  f();",
-               Style17);
+  verifyNoChange("#define A(x) /* \\\n"
+                 "  a comment     \\\n"
+                 "  inside */     \\\n"
+                 "  f();",
+                 Style17);
+  verifyNoChange("#define A(      \\\n"
+                 "    x) /*       \\\n"
+                 "  a comment     \\\n"
+                 "  inside */     \\\n"
+                 "  f();",
+                 Style17);
 }
 
 TEST_F(FormatTestComments, LineCommentsInMacrosDoNotGetEscapedNewlines) {
@@ -865,33 +820,20 @@ TEST_F(FormatTestComments, ParsesCommentsAdjacentToPPDirectives) {
 TEST_F(FormatTestComments, KeepsLevelOfCommentBeforePPDirective) {
   // Keep the current level if the comment was originally not aligned with
   // the preprocessor directive.
-  verifyFormat("void f() {\n"
-               "  int i;\n"
-               "  /* comment */\n"
-               "#ifdef A\n"
-               "  int j;\n"
-               "}",
-               "void f() {\n"
-               "  int i;\n"
-               "  /* comment */\n"
-               "#ifdef A\n"
-               "  int j;\n"
-               "}");
+  verifyNoChange("void f() {\n"
+                 "  int i;\n"
+                 "  /* comment */\n"
+                 "#ifdef A\n"
+                 "  int j;\n"
+                 "}");
 
-  verifyFormat("void f() {\n"
-               "  int i;\n"
-               "  /* comment */\n"
-               "\n"
-               "#ifdef A\n"
-               "  int j;\n"
-               "}",
-               "void f() {\n"
-               "  int i;\n"
-               "  /* comment */\n"
-               "\n"
-               "#ifdef A\n"
-               "  int j;\n"
-               "}");
+  verifyNoChange("void f() {\n"
+                 "  int i;\n"
+                 "  /* comment */\n"
+                 "\n"
+                 "#ifdef A\n"
+                 "  int j;\n"
+                 "}");
 
   verifyFormat("int f(int i) {\n"
                "  if (true) {\n"
@@ -1060,18 +1002,12 @@ TEST_F(FormatTestComments, KeepsLevelOfCommentBeforePPDirective) {
   // Align with the preprocessor directive if the comment was originally aligned
   // with the preprocessor directive and there is no newline between the comment
   // and the preprocessor directive.
-  verifyFormat("void f() {\n"
-               "  int i;\n"
-               "/* comment */\n"
-               "#ifdef A\n"
-               "  int j;\n"
-               "}",
-               "void f() {\n"
-               "  int i;\n"
-               "/* comment */\n"
-               "#ifdef A\n"
-               "  int j;\n"
-               "}");
+  verifyNoChange("void f() {\n"
+                 "  int i;\n"
+                 "/* comment */\n"
+                 "#ifdef A\n"
+                 "  int j;\n"
+                 "}");
 
   verifyFormat("int f(int i) {\n"
                "  if (true) {\n"
@@ -1245,13 +1181,10 @@ TEST_F(FormatTestComments, SplitsLongLinesInComments) {
                "   wherever_a_space_occurs                             \n"
                " */",
                Style20);
-  verifyFormat("/*\n"
-               " *    This_comment_can_not_be_broken_into_lines\n"
-               " */",
-               "/*\n"
-               " *    This_comment_can_not_be_broken_into_lines\n"
-               " */",
-               Style20);
+  verifyNoChange("/*\n"
+                 " *    This_comment_can_not_be_broken_into_lines\n"
+                 " */",
+                 Style20);
   verifyFormat("{\n"
                "  /*\n"
                "  This is another\n"
@@ -1445,17 +1378,12 @@ TEST_F(FormatTestComments, AlignsPPElseEndifComments) {
                "int iiii; // CC\n"
                "#endif // B",
                Style20);
-  verifyFormat("#if A\n"
-               "#else  // A1\n"
-               "       // A2\n"
-               "int ii;\n"
-               "#endif // B",
-               "#if A\n"
-               "#else  // A1\n"
-               "       // A2\n"
-               "int ii;\n"
-               "#endif // B",
-               Style20);
+  verifyNoChange("#if A\n"
+                 "#else  // A1\n"
+                 "       // A2\n"
+                 "int ii;\n"
+                 "#endif // B",
+                 Style20);
 }
 
 TEST_F(FormatTestComments, CommentsInStaticInitializers) {
@@ -1492,12 +1420,11 @@ TEST_F(FormatTestComments, CommentsInStaticInitializers) {
                "       {// Group #3\n"
                "        g, h, i}};");
 
-  verifyFormat("S s = {\n"
-               "    // Some comment\n"
-               "    a,\n"
+  verifyFormat("S s = {// Some comment\n"
+               "       a,\n"
                "\n"
-               "    // Comment after empty line\n"
-               "    b}",
+               "       // Comment after empty line\n"
+               "       b}",
                "S s =    {\n"
                "      // Some comment\n"
                "  a,\n"
@@ -1505,12 +1432,11 @@ TEST_F(FormatTestComments, CommentsInStaticInitializers) {
                "     // Comment after empty line\n"
                "      b\n"
                "}");
-  verifyFormat("S s = {\n"
-               "    /* Some comment */\n"
-               "    a,\n"
+  verifyFormat("S s = {/* Some comment */\n"
+               "       a,\n"
                "\n"
-               "    /* Comment after empty line */\n"
-               "    b}",
+               "       /* Comment after empty line */\n"
+               "       b}",
                "S s =    {\n"
                "      /* Some comment */\n"
                "  a,\n"
@@ -1526,10 +1452,6 @@ TEST_F(FormatTestComments, CommentsInStaticInitializers) {
 
 TEST_F(FormatTestComments, LineCommentsAfterRightBrace) {
   verifyFormat("if (true) { // comment about branch\n"
-               "  // comment about f\n"
-               "  f();\n"
-               "}",
-               "if (true) { // comment about branch\n"
                "  // comment about f\n"
                "  f();\n"
                "}");
@@ -1582,6 +1504,7 @@ TEST_F(FormatTestComments, LineCommentsAfterRightBrace) {
 TEST_F(FormatTestComments, ReflowsComments) {
   const auto Style20 = getLLVMStyleWithColumns(20);
   const auto Style22 = getLLVMStyleWithColumns(22);
+
   // Break a long line and reflow with the full next line.
   verifyFormat("// long long long\n"
                "// long long",
@@ -2149,11 +2072,9 @@ TEST_F(FormatTestComments, ReflowsComments) {
                Style20);
 
   // Don't break or reflow comments on import lines.
-  verifyFormat("#include \"t\" /* l l l\n"
-               "                * l */",
-               "#include \"t\" /* l l l\n"
-               "                * l */",
-               Style20);
+  verifyNoChange("#include \"t\" /* l l l\n"
+                 "                * l */",
+                 Style20);
 
   // Don't reflow between different trailing comment sections.
   verifyFormat("int i; // long long\n"
@@ -2209,7 +2130,9 @@ TEST_F(FormatTestComments, ReflowsCommentsPrecise) {
                "// some text that reflows\n"
                "// into   foo",
                Style);
+
   Style.ColumnLimit = 21;
+
   // Given one more column, "// reflows into   foo" does fit the limit, so we
   // do not compress the whitespace.
   verifyFormat("// some text that\n"
@@ -2228,6 +2151,7 @@ TEST_F(FormatTestComments, ReflowsCommentsPrecise) {
                "// some text that reflows\n"
                "// into1234567",
                Style);
+
   // Secondly, when the next line ends later, but the first word in that line
   // is precisely one column over the limit, do not reflow.
   verifyFormat("// some text that\n"
@@ -2240,6 +2164,7 @@ TEST_F(FormatTestComments, ReflowsCommentsPrecise) {
 
 TEST_F(FormatTestComments, ReflowsCommentsWithExtraWhitespace) {
   const auto Style16 = getLLVMStyleWithColumns(16);
+
   // Baseline.
   verifyFormat("// some text\n"
                "// that re flows",
@@ -2516,7 +2441,7 @@ TEST_F(FormatTestComments, BlockComments) {
                getLLVMStyleWithColumns(50));
 
   FormatStyle NoBinPacking = getLLVMStyle();
-  NoBinPacking.BinPackParameters = FormatStyle::BPPS_OnePerLine;
+  NoBinPacking.PackParameters.BinPack = FormatStyle::BPPS_OnePerLine;
   verifyFormat("someFunction(1, /* comment 1 */\n"
                "             2, /* comment 2 */\n"
                "             3, /* comment 3 */\n"
@@ -2546,37 +2471,23 @@ TEST_F(FormatTestComments, BlockComments) {
 
   verifyFormat("void f(int * /* unused */) {}");
 
-  verifyFormat("/*\n"
-               " **\n"
-               " */",
-               "/*\n"
-               " **\n"
-               " */");
-  verifyFormat("/*\n"
-               " *q\n"
-               " */",
-               "/*\n"
-               " *q\n"
-               " */");
-  verifyFormat("/*\n"
-               " * q\n"
-               " */",
-               "/*\n"
-               " * q\n"
-               " */");
-  verifyFormat("/*\n"
-               " **/",
-               "/*\n"
-               " **/");
-  verifyFormat("/*\n"
-               " ***/",
-               "/*\n"
-               " ***/");
+  verifyNoChange("/*\n"
+                 " **\n"
+                 " */");
+  verifyNoChange("/*\n"
+                 " *q\n"
+                 " */");
+  verifyNoChange("/*\n"
+                 " * q\n"
+                 " */");
+  verifyNoChange("/*\n"
+                 " **/");
+  verifyNoChange("/*\n"
+                 " ***/");
 }
 
 TEST_F(FormatTestComments, BlockCommentsInMacros) {
   const auto Style20 = getLLVMStyleWithColumns(20);
-
   verifyFormat("#define A          \\\n"
                "  {                \\\n"
                "    /* one line */ \\\n"
@@ -2599,7 +2510,6 @@ TEST_F(FormatTestComments, BlockCommentsInMacros) {
 
 TEST_F(FormatTestComments, BlockCommentsAtEndOfLine) {
   const auto Style15 = getLLVMStyleWithColumns(15);
-
   verifyFormat("a = {\n"
                "    1111 /*    */\n"
                "};",
@@ -2770,11 +2680,6 @@ TEST_F(FormatTestComments, AlignTrailingComments) {
   // Align comment line sections aligned with the next token with the next
   // token.
   verifyFormat("class A {\n"
-               "public: // public comment\n"
-               "  // comment about a\n"
-               "  int a;\n"
-               "};",
-               "class A {\n"
                "public: // public comment\n"
                "  // comment about a\n"
                "  int a;\n"
@@ -3106,41 +3011,26 @@ TEST_F(FormatTestComments, AlignTrailingCommentsLeave) {
   FormatStyle Style = getLLVMStyle();
   Style.AlignTrailingComments.Kind = FormatStyle::TCAS_Leave;
 
-  verifyFormat("int a;// do not touch\n"
-               "int b; // any comments\n"
-               "int c;  // comment\n"
-               "int d;   // comment",
-               "int a;// do not touch\n"
-               "int b; // any comments\n"
-               "int c;  // comment\n"
-               "int d;   // comment",
-               Style);
+  verifyNoChange("int a;// do not touch\n"
+                 "int b; // any comments\n"
+                 "int c;  // comment\n"
+                 "int d;   // comment",
+                 Style);
 
-  verifyFormat("int a;   // do not touch\n"
-               "int b;  // any comments\n"
-               "int c; // comment\n"
-               "int d;// comment",
-               "int a;   // do not touch\n"
-               "int b;  // any comments\n"
-               "int c; // comment\n"
-               "int d;// comment",
-               Style);
+  verifyNoChange("int a;   // do not touch\n"
+                 "int b;  // any comments\n"
+                 "int c; // comment\n"
+                 "int d;// comment",
+                 Style);
 
-  verifyFormat("// do not touch\n"
-               "int a;  // any comments\n"
-               "\n"
-               "   // comment\n"
-               "// comment\n"
-               "\n"
-               "// comment",
-               "// do not touch\n"
-               "int a;  // any comments\n"
-               "\n"
-               "   // comment\n"
-               "// comment\n"
-               "\n"
-               "// comment",
-               Style);
+  verifyNoChange("// do not touch\n"
+                 "int a;  // any comments\n"
+                 "\n"
+                 "   // comment\n"
+                 "// comment\n"
+                 "\n"
+                 "// comment",
+                 Style);
 
   verifyFormat("// do not touch\n"
                "int a;  // any comments\n"
@@ -3178,23 +3068,15 @@ TEST_F(FormatTestComments, AlignTrailingCommentsLeave) {
 
   // Allow to keep 2 empty lines
   Style.MaxEmptyLinesToKeep = 2;
-  verifyFormat("// do not touch\n"
-               "int a;  // any comments\n"
-               "\n"
-               "\n"
-               "   // comment\n"
-               "// comment\n"
-               "\n"
-               "// comment",
-               "// do not touch\n"
-               "int a;  // any comments\n"
-               "\n"
-               "\n"
-               "   // comment\n"
-               "// comment\n"
-               "\n"
-               "// comment",
-               Style);
+  verifyNoChange("// do not touch\n"
+                 "int a;  // any comments\n"
+                 "\n"
+                 "\n"
+                 "   // comment\n"
+                 "// comment\n"
+                 "\n"
+                 "// comment",
+                 Style);
   Style.MaxEmptyLinesToKeep = 1;
 
   // Just format comments normally when leaving exceeds the column limit
@@ -3233,16 +3115,16 @@ TEST_F(FormatTestComments, DontAlignNamespaceComments) {
   Style.NamespaceMacros.push_back("TESTSUITE");
   Style.ShortNamespaceLines = 0;
 
-  StringRef Input = "namespace A {\n"
-                    "  TESTSUITE(B) {\n"
-                    "    namespace C {\n"
-                    "      namespace D { //\n"
-                    "      } // namespace D\n"
-                    "      std::string Foo = Bar; // Comment\n"
-                    "      std::string BazString = Baz;   // C2\n"
-                    "    }          // namespace C\n"
-                    "  }\n"
-                    "} // NaMeSpAcE A";
+  constexpr StringRef Input("namespace A {\n"
+                            "  TESTSUITE(B) {\n"
+                            "    namespace C {\n"
+                            "      namespace D { //\n"
+                            "      } // namespace D\n"
+                            "      std::string Foo = Bar; // Comment\n"
+                            "      std::string BazString = Baz;   // C2\n"
+                            "    }          // namespace C\n"
+                            "  }\n"
+                            "} // NaMeSpAcE A");
 
   EXPECT_TRUE(Style.FixNamespaceComments);
   EXPECT_EQ(Style.AlignTrailingComments.Kind, FormatStyle::TCAS_Always);
@@ -3326,21 +3208,21 @@ TEST_F(FormatTestComments, DontAlignNamespaceComments) {
 
   Style.AlignTrailingComments.Kind = FormatStyle::TCAS_Always;
   Style.FixNamespaceComments = true;
-  Input = "namespace A {\n"
-          "  int Foo;\n"
-          "  int Bar;\n"
-          "}\n"
-          "// Comment";
+  constexpr StringRef Code("namespace A {\n"
+                           "  int Foo;\n"
+                           "  int Bar;\n"
+                           "}\n"
+                           "// Comment");
 
   verifyFormat("namespace A {\n"
                "  int Foo;\n"
                "  int Bar;\n"
                "} // namespace A\n"
                "// Comment",
-               Input, Style);
+               Code, Style);
 
   Style.FixNamespaceComments = false;
-  verifyFormat(Input, Style);
+  verifyFormat(Code, Style);
 }
 
 TEST_F(FormatTestComments, DontAlignOverScope) {
@@ -3493,15 +3375,73 @@ TEST_F(FormatTestComments, DontAlignOverScope) {
                "int foobar; // group");
 }
 
+TEST_F(FormatTestComments, DontAlignOverPPDirective) {
+  auto Style = getLLVMStyle();
+  Style.AlignTrailingComments.AlignPPAndNotPP = false;
+
+  verifyFormat("int i;    // Aligned\n"
+               "int long; // with this\n"
+               "#define FOO    // only aligned\n"
+               "#define LOOONG // with other pp directives\n"
+               "int loooong; // new alignment",
+               "int i;//Aligned\n"
+               "int long;//with this\n"
+               "#define FOO //only aligned\n"
+               "#define LOOONG //with other pp directives\n"
+               "int loooong; //new alignment",
+               Style);
+
+  verifyFormat("#define A  // Comment\n"
+               "#define AB // Comment",
+               Style);
+
+  Style.ColumnLimit = 30;
+  verifyNoChange("#define A // Comment\n"
+                 "          // Continued\n"
+                 "int i = 0; // New Stuff\n"
+                 "           // Continued\n"
+                 "#define Func(X)              \\\n"
+                 "  X();                       \\\n"
+                 "  X(); // Comment\n"
+                 "       // Continued\n"
+                 "long loong = 1; // Dont align",
+                 Style);
+
+  verifyFormat("#define A   // Comment that\n"
+               "            // would wrap\n"
+               "#define FOO // For the\n"
+               "            // alignment\n"
+               "#define B   // Also\n"
+               "            // aligned",
+               "#define A // Comment that would wrap\n"
+               "#define FOO // For the alignment\n"
+               "#define B // Also\n"
+               " // aligned",
+               Style);
+
+  Style.AlignTrailingComments.OverEmptyLines = 1;
+  verifyNoChange("#define A // Comment\n"
+                 "\n"
+                 "          // Continued\n"
+                 "int i = 0; // New Stuff\n"
+                 "\n"
+                 "           // Continued\n"
+                 "#define Func(X)              \\\n"
+                 "  X();                       \\\n"
+                 "  X(); // Comment\n"
+                 "\n"
+                 "       // Continued\n"
+                 "long loong = 1; // Dont align",
+                 Style);
+}
+
 TEST_F(FormatTestComments, AlignsBlockCommentDecorations) {
   verifyFormat("/*\n"
                " */",
                "/*\n"
                "*/");
-  verifyFormat("/*\n"
-               " */",
-               "/*\n"
-               " */");
+  verifyNoChange("/*\n"
+                 " */");
   verifyFormat("/*\n"
                " */",
                "/*\n"
@@ -3512,10 +3452,8 @@ TEST_F(FormatTestComments, AlignsBlockCommentDecorations) {
                " * line */",
                "/*\n"
                "* line */");
-  verifyFormat("/*\n"
-               " * line */",
-               "/*\n"
-               " * line */");
+  verifyNoChange("/*\n"
+                 " * line */");
   verifyFormat("/*\n"
                " * line */",
                "/*\n"
@@ -3528,10 +3466,8 @@ TEST_F(FormatTestComments, AlignsBlockCommentDecorations) {
                " * line */",
                "/**\n"
                "* line */");
-  verifyFormat("/**\n"
-               " * line */",
-               "/**\n"
-               " * line */");
+  verifyNoChange("/**\n"
+                 " * line */");
   verifyFormat("/**\n"
                " * line */",
                "/**\n"
@@ -3566,10 +3502,8 @@ TEST_F(FormatTestComments, AlignsBlockCommentDecorations) {
                "  */");
 
   // Align two lines.
-  verifyFormat("/* line 1\n"
-               " * line 2 */",
-               "/* line 1\n"
-               " * line 2 */");
+  verifyNoChange("/* line 1\n"
+                 " * line 2 */");
   verifyFormat("/* line 1\n"
                " * line 2 */",
                "/* line 1\n"
@@ -3590,10 +3524,8 @@ TEST_F(FormatTestComments, AlignsBlockCommentDecorations) {
                "        * line 2 */",
                "int i; /* line 1\n"
                "* line 2 */");
-  verifyFormat("int i; /* line 1\n"
-               "        * line 2 */",
-               "int i; /* line 1\n"
-               "        * line 2 */");
+  verifyNoChange("int i; /* line 1\n"
+                 "        * line 2 */");
   verifyFormat("int i; /* line 1\n"
                "        * line 2 */",
                "int i; /* line 1\n"
@@ -3695,6 +3627,7 @@ TEST_F(FormatTestComments, NonTrailingBlockComments) {
 
 TEST_F(FormatTestComments, PythonStyleComments) {
   const auto ProtoStyle20 = getTextProtoStyleWithColumns(20);
+
   // Keeps a space after '#'.
   verifyFormat("# comment\n"
                "key: value",
@@ -3798,8 +3731,6 @@ TEST_F(FormatTestComments, ReflowBackslashCrash) {
 TEST_F(FormatTestComments, IndentsLongJavadocAnnotatedLines) {
   FormatStyle Style = getGoogleStyle(FormatStyle::LK_Java);
   Style.ColumnLimit = 60;
-  FormatStyle Style20 = getGoogleStyle(FormatStyle::LK_Java);
-  Style20.ColumnLimit = 20;
   verifyFormat("/**\n"
                " * @param x long long long long long long long long long\n"
                " *     long\n"
@@ -3827,6 +3758,10 @@ TEST_F(FormatTestComments, IndentsLongJavadocAnnotatedLines) {
                "long long long long long long long long long long long\n"
                " */",
                Style);
+
+  FormatStyle Style20 = getGoogleStyle(FormatStyle::LK_Java);
+  Style20.ColumnLimit = 20;
+
   verifyFormat("/**\n"
                " * Sentence that\n"
                " * should be broken.\n"
@@ -3895,7 +3830,6 @@ TEST_F(FormatTestComments, IndentsLongJavadocAnnotatedLines) {
 }
 
 TEST_F(FormatTestComments, SpaceAtLineCommentBegin) {
-  FormatStyle Style = getLLVMStyle();
   constexpr StringRef NoTextInComment(" //       \n"
                                       "\n"
                                       "void foo() {// \n"
@@ -3907,8 +3841,9 @@ TEST_F(FormatTestComments, SpaceAtLineCommentBegin) {
                "void foo() { //\n"
                "  //\n"
                "}",
-               NoTextInComment, Style);
+               NoTextInComment);
 
+  auto Style = getLLVMStyle();
   Style.SpacesInLineCommentPrefix.Minimum = 0;
   verifyFormat("//#comment", Style);
   verifyFormat("//\n"
@@ -3927,7 +3862,6 @@ TEST_F(FormatTestComments, SpaceAtLineCommentBegin) {
                "}",
                NoTextInComment, Style);
 
-  Style = getLLVMStyle();
   constexpr StringRef Code(
       "//Free comment without space\n"
       "\n"
@@ -4216,8 +4150,9 @@ TEST_F(FormatTestComments, SpaceAtLineCommentBegin) {
       "//  vv will only move\n"
       "//  } if the line above does");
 
-  verifyFormat(Code2, Code, Style);
+  verifyFormat(Code2, Code);
 
+  Style = getLLVMStyle();
   Style.SpacesInLineCommentPrefix = {0, 0};
   verifyFormat("//#comment", "//   #comment", Style);
   verifyFormat(Code3, Code, Style);
@@ -4226,12 +4161,12 @@ TEST_F(FormatTestComments, SpaceAtLineCommentBegin) {
   verifyFormat(Code4, Code, Style);
 
   Style = getLLVMStyleWithColumns(20);
-  StringRef WrapCode = "//Lorem ipsum dolor sit amet\n"
-                       "\n"
-                       "//  Lorem   ipsum   dolor   sit   amet\n"
-                       "\n"
-                       "void f() {//Hello World\n"
-                       "}";
+  constexpr StringRef WrapCode("//Lorem ipsum dolor sit amet\n"
+                               "\n"
+                               "//  Lorem   ipsum   dolor   sit   amet\n"
+                               "\n"
+                               "void f() {//Hello World\n"
+                               "}");
 
   verifyFormat("// Lorem ipsum dolor\n"
                "// sit amet\n"
@@ -4506,20 +4441,20 @@ TEST_F(FormatTestComments, SplitCommentIntroducers) {
 }
 
 TEST_F(FormatTestComments, LineCommentsOnStartOfFunctionCall) {
-  auto Style = getLLVMStyle();
-
-  EXPECT_EQ(Style.Cpp11BracedListStyle, FormatStyle::BLS_AlignFirstComment);
   verifyFormat("Type name{// Comment\n"
-               "          value};",
-               Style);
+               "          value};");
 
+  auto Style = getLLVMStyle();
+  EXPECT_EQ(Style.Cpp11BracedListStyle, FormatStyle::BLS_AlignFirstComment);
   Style.Cpp11BracedListStyle = FormatStyle::BLS_Block;
+
   verifyFormat("Type name{ // Comment\n"
                "           value\n"
                "};",
                Style);
 
   Style.Cpp11BracedListStyle = FormatStyle::BLS_FunctionCall;
+
   verifyFormat("Type name{ // Comment\n"
                "    value};",
                Style);

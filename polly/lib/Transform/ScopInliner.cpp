@@ -21,7 +21,6 @@
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/RegionInfo.h"
 #include "llvm/IR/Dominators.h"
-#include "llvm/IR/PassManager.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
 
@@ -35,7 +34,9 @@ namespace {
 
 /// Inliner implementation that works with both, LPM (using SCC_t=CallGraph) and
 /// NPM (using SCC_t=LazyCallGraph::SCC)
-template <typename SCC_t> bool runScopInlinerImpl(Function *F, SCC_t &SCC) {
+template <typename SCC_t>
+bool runScopInlinerImpl(Function *F, SCC_t &SCC,
+                        IntrusiveRefCntPtr<vfs::FileSystem> FS) {
   // We do not try to inline non-trivial SCCs because this would lead to
   // "infinite" inlining if we are not careful.
   if (SCC.size() > 1)
@@ -51,7 +52,11 @@ template <typename SCC_t> bool runScopInlinerImpl(Function *F, SCC_t &SCC) {
     return false;
   }
 
-  PassBuilder PB;
+  PassBuilder PB(
+      /*TM=*/nullptr,
+      /*PipelineTuningOptions=*/{},
+      /*PGOOpt=*/{},
+      /*PIC=*/nullptr, std::move(FS));
   // Populate analysis managers and register Polly-specific analyses.
   LoopAnalysisManager LAM;
   FunctionAnalysisManager FAM;
@@ -95,55 +100,10 @@ template <typename SCC_t> bool runScopInlinerImpl(Function *F, SCC_t &SCC) {
 
   return Changed;
 }
-
-class ScopInlinerWrapperPass final : public CallGraphSCCPass {
-  using llvm::Pass::doInitialization;
-
-public:
-  static char ID;
-
-  ScopInlinerWrapperPass() : CallGraphSCCPass(ID) {}
-
-  bool doInitialization(CallGraph &CG) override {
-    if (!polly::PollyAllowFullFunction) {
-      report_fatal_error(
-          "Aborting from ScopInliner because it only makes sense to run with "
-          "-polly-allow-full-function. "
-          "The heurtistic for ScopInliner checks that the full function is a "
-          "Scop, which happens if and only if polly-allow-full-function is "
-          " enabled. "
-          " If not, the entry block is not included in the Scop");
-    }
-    return true;
-  }
-
-  bool runOnSCC(CallGraphSCC &SCC) override {
-    Function *F = (*SCC.begin())->getFunction();
-    return runScopInlinerImpl(F, SCC);
-  };
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    CallGraphSCCPass::getAnalysisUsage(AU);
-  }
-};
 } // namespace
-char ScopInlinerWrapperPass::ID;
 
-Pass *polly::createScopInlinerWrapperPass() {
-  ScopInlinerWrapperPass *pass = new ScopInlinerWrapperPass();
-  return pass;
-}
-
-INITIALIZE_PASS_BEGIN(
-    ScopInlinerWrapperPass, "polly-scop-inliner",
-    "inline functions based on how much of the function is a scop.", false,
-    false)
-INITIALIZE_PASS_END(
-    ScopInlinerWrapperPass, "polly-scop-inliner",
-    "inline functions based on how much of the function is a scop.", false,
-    false)
-
-polly::ScopInlinerPass::ScopInlinerPass() {
+polly::ScopInlinerPass::ScopInlinerPass(IntrusiveRefCntPtr<vfs::FileSystem> FS)
+    : FS(std::move(FS)) {
   if (!polly::PollyAllowFullFunction) {
     report_fatal_error(
         "Aborting from ScopInliner because it only makes sense to run with "
@@ -160,6 +120,6 @@ PreservedAnalyses polly::ScopInlinerPass::run(llvm::LazyCallGraph::SCC &SCC,
                                               llvm::LazyCallGraph &CG,
                                               llvm::CGSCCUpdateResult &UR) {
   Function *F = &SCC.begin()->getFunction();
-  bool Changed = runScopInlinerImpl(F, SCC);
+  bool Changed = runScopInlinerImpl(F, SCC, FS);
   return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }

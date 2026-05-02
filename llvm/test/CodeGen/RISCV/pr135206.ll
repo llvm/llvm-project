@@ -3,7 +3,6 @@
 
 %"buff" = type { [4096 x i64] }
 
-declare void @llvm.memset.p0.i64(ptr, i8, i64, i1)
 declare void @bar()
 
 define i1 @foo() nounwind "probe-stack"="inline-asm" "target-features"="+v" {

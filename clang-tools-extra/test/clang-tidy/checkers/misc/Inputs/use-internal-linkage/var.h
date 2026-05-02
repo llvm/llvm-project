@@ -1,3 +1,3 @@
 #pragma once
 
-extern int gloabl_header;
+extern int global_header;

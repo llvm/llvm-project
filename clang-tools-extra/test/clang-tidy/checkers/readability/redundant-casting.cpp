@@ -5,12 +5,12 @@
 // RUN: %check_clang_tidy -std=c++11,c++14,c++17 -check-suffix=,ALIASES %s readability-redundant-casting %t -- \
 // RUN:   -config='{CheckOptions: { readability-redundant-casting.IgnoreTypeAliases: true }}' \
 // RUN:   -- -fno-delayed-template-parsing
-// RUN: %check_clang_tidy -std=c++20 %s readability-redundant-casting %t -- \
+// RUN: %check_clang_tidy -std=c++20-or-later %s readability-redundant-casting %t -- \
 // RUN:   -- -fno-delayed-template-parsing -D CXX_20=1
-// RUN: %check_clang_tidy -std=c++20 -check-suffix=,MACROS %s readability-redundant-casting %t -- \
+// RUN: %check_clang_tidy -std=c++20-or-later -check-suffix=,MACROS %s readability-redundant-casting %t -- \
 // RUN:   -config='{CheckOptions: { readability-redundant-casting.IgnoreMacros: false }}' \
 // RUN:   -- -fno-delayed-template-parsing -D CXX_20=1
-// RUN: %check_clang_tidy -std=c++20 -check-suffix=,ALIASES %s readability-redundant-casting %t -- \
+// RUN: %check_clang_tidy -std=c++20-or-later -check-suffix=,ALIASES %s readability-redundant-casting %t -- \
 // RUN:   -config='{CheckOptions: { readability-redundant-casting.IgnoreTypeAliases: true }}' \
 // RUN:   -- -fno-delayed-template-parsing -D CXX_20=1
 
@@ -235,3 +235,13 @@ void testRedundantDependentNTTPCasting() {
   // CHECK-MESSAGES: :[[@LINE-4]]:25: note: source type originates from referencing this non-type template parameter
   // CHECK-FIXES: T a = V;
 }
+
+namespace gh170476 {
+int f(void);
+int g1() {
+  int (*fp)() = (int(*)(void))&f;
+  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: redundant explicit casting to the same type 'int (*)()' as the sub-expression, remove this casting [readability-redundant-casting]
+  // CHECK-FIXES: int (*fp)() = (&f);
+  return fp();
+}
+} // namespace gh170476

@@ -171,11 +171,18 @@
 // || `[0x36000000, 0x39ffffff]` || ShadowGap  ||
 // || `[0x30000000, 0x35ffffff]` || LowShadow  ||
 // || `[0x00000000, 0x2fffffff]` || LowMem     ||
+//
+// Default Hexagon/Linux mapping (32-bit, 4 GB VA):
+// || `[0x40000000, 0xffffffff]` || HighMem    ||
+// || `[0x28000000, 0x3fffffff]` || HighShadow ||
+// || `[0x24000000, 0x27ffffff]` || ShadowGap  ||
+// || `[0x20000000, 0x23ffffff]` || LowShadow  ||
+// || `[0x00000000, 0x1fffffff]` || LowMem     ||
 
 #define ASAN_SHADOW_SCALE 3
 
 #if SANITIZER_FUCHSIA
-#  define ASAN_SHADOW_OFFSET_CONST (0)
+#  define ASAN_SHADOW_OFFSET_DYNAMIC
 #elif SANITIZER_WORDSIZE == 32
 #  if SANITIZER_ANDROID
 #    define ASAN_SHADOW_OFFSET_DYNAMIC
@@ -189,6 +196,8 @@
 #    define ASAN_SHADOW_OFFSET_CONST 0x30000000
 #  elif SANITIZER_IOS
 #    define ASAN_SHADOW_OFFSET_DYNAMIC
+#  elif defined(__hexagon__)
+#    define ASAN_SHADOW_OFFSET_CONST 0x20000000
 #  else
 #    define ASAN_SHADOW_OFFSET_CONST 0x20000000
 #  endif
@@ -285,7 +294,7 @@ extern uptr kHighMemEnd, kMidMemBeg, kMidMemEnd;  // Initialized in __asan_init.
 #    include "asan_mapping_sparc64.h"
 #  else
 #    define MEM_TO_SHADOW(mem) \
-      (((mem) >> ASAN_SHADOW_SCALE) + (ASAN_SHADOW_OFFSET))
+      ((STRIP_MTE_TAG(mem) >> ASAN_SHADOW_SCALE) + (ASAN_SHADOW_OFFSET))
 #    define SHADOW_TO_MEM(mem) \
       (((mem) - (ASAN_SHADOW_OFFSET)) << (ASAN_SHADOW_SCALE))
 
@@ -377,6 +386,7 @@ static inline uptr MemToShadowSize(uptr size) {
 
 static inline bool AddrIsInMem(uptr a) {
   PROFILE_ASAN_MAPPING();
+  a = STRIP_MTE_TAG(a);
   return AddrIsInLowMem(a) || AddrIsInMidMem(a) || AddrIsInHighMem(a) ||
          (flags()->protect_shadow_gap == 0 && AddrIsInShadowGap(a));
 }
@@ -389,6 +399,7 @@ static inline uptr MemToShadow(uptr p) {
 
 static inline bool AddrIsInShadow(uptr a) {
   PROFILE_ASAN_MAPPING();
+  a = STRIP_MTE_TAG(a);
   return AddrIsInLowShadow(a) || AddrIsInMidShadow(a) || AddrIsInHighShadow(a);
 }
 

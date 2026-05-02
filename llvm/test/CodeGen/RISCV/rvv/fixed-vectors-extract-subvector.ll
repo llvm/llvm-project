@@ -176,7 +176,6 @@ define void @extract_v2i32_nxv16i32_0(<vscale x 16 x i32> %x, ptr %y) {
   ret void
 }
 
-
 define void @extract_v2i32_nxv16i32_2(<vscale x 16 x i32> %x, ptr %y) {
 ; CHECK-LABEL: extract_v2i32_nxv16i32_2:
 ; CHECK:       # %bb.0:
@@ -834,25 +833,3 @@ define void @extract_v2f16_v4f16_2(ptr %x, ptr %y) {
   ret void
 }
 
-declare <2 x i1> @llvm.vector.extract.v2i1.v64i1(<64 x i1> %vec, i64 %idx)
-declare <8 x i1> @llvm.vector.extract.v8i1.v64i1(<64 x i1> %vec, i64 %idx)
-
-declare <2 x i1> @llvm.vector.extract.v2i1.nxv2i1(<vscale x 2 x i1> %vec, i64 %idx)
-declare <8 x i1> @llvm.vector.extract.v8i1.nxv2i1(<vscale x 2 x i1> %vec, i64 %idx)
-
-declare <2 x i1> @llvm.vector.extract.v2i1.nxv32i1(<vscale x 32 x i1> %vec, i64 %idx)
-declare <8 x i1> @llvm.vector.extract.v8i1.nxv32i1(<vscale x 32 x i1> %vec, i64 %idx)
-
-declare <2 x i1> @llvm.vector.extract.v2i1.nxv64i1(<vscale x 64 x i1> %vec, i64 %idx)
-declare <8 x i1> @llvm.vector.extract.v8i1.nxv64i1(<vscale x 64 x i1> %vec, i64 %idx)
-
-declare <2 x i8> @llvm.vector.extract.v2i8.v4i8(<4 x i8> %vec, i64 %idx)
-declare <2 x i8> @llvm.vector.extract.v2i8.v8i8(<8 x i8> %vec, i64 %idx)
-
-declare <1 x i32> @llvm.vector.extract.v1i32.v8i32(<8 x i32> %vec, i64 %idx)
-declare <2 x i32> @llvm.vector.extract.v2i32.v8i32(<8 x i32> %vec, i64 %idx)
-
-declare <2 x i8> @llvm.vector.extract.v2i8.nxv2i8(<vscale x 2 x i8> %vec, i64 %idx)
-
-declare <2 x i32> @llvm.vector.extract.v2i32.nxv16i32(<vscale x 16 x i32> %vec, i64 %idx)
-declare <8 x i32> @llvm.vector.extract.v8i32.nxv16i32(<vscale x 16 x i32> %vec, i64 %idx)

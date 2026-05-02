@@ -96,7 +96,7 @@ subroutine lastprivate_iv_i1
 end subroutine
 
 !CHECK:    omp.wsloop private(@_QFlastprivate_iv_pointerEi_private_box_ptr_i32 %{{.*}}#0 -> %[[PRIVATE_IV:.*]] : !fir.ref<!fir.box<!fir.ptr<i32>>>) {
-!CHECK:      omp.loop_nest (%[[LOOP_INDEX:.*]]) : i64 
+!CHECK:      omp.loop_nest (%[[LOOP_INDEX:.*]]) : i64
 !CHECK:        %[[PRIVATE_IV_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_IV]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFlastprivate_iv_pointerEi"} : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> (!fir.ref<!fir.box<!fir.ptr<i32>>>, !fir.ref<!fir.box<!fir.ptr<i32>>>)
 !CHECK:        %[[LOOP_INDEX_INCR:.*]] = arith.addi %[[LOOP_INDEX]], %{{.*}} : i64
 !CHECK:        fir.if %{{.*}} {

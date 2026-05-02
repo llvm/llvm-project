@@ -74,11 +74,23 @@ const char *RegisterEHFrameSectionAllocActionName =
 const char *DeregisterEHFrameSectionAllocActionName =
     "llvm_orc_deregisterEHFrameAllocAction";
 
+const char *RegisterJITLoaderGDBAllocActionName =
+    "llvm_orc_registerJITLoaderGDBAllocAction";
+
 const char *RunAsMainWrapperName = "__llvm_orc_bootstrap_run_as_main_wrapper";
 const char *RunAsVoidFunctionWrapperName =
     "__llvm_orc_bootstrap_run_as_void_function_wrapper";
 const char *RunAsIntFunctionWrapperName =
     "__llvm_orc_bootstrap_run_as_int_function_wrapper";
+
+const SimpleExecutorMemoryManagerSymbolNames
+    orc_rt_SimpleNativeMemoryMapSPSSymbols = {
+        "orc_rt_SimpleNativeMemoryMap_Instance",
+        "orc_rt_SimpleNativeMemoryMap_reserve_sps_wrapper",
+        "orc_rt_SimpleNativeMemoryMap_initialize_sps_wrapper",
+        "orc_rt_SimpleNativeMemoryMap_deinitializeMultiple_sps_wrapper",
+        "orc_rt_SimpleNativeMemoryMap_releaseMultiple_sps_wrapper",
+};
 
 } // end namespace rt
 namespace rt_alt {
@@ -86,6 +98,7 @@ const char *UnwindInfoManagerRegisterActionName =
     "orc_rt_alt_UnwindInfoManager_register";
 const char *UnwindInfoManagerDeregisterActionName =
     "orc_rt_alt_UnwindInfoManager_deregister";
+
 } // end namespace rt_alt
 } // end namespace orc
 } // end namespace llvm

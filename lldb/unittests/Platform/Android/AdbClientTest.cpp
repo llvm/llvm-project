@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Plugins/Platform/Android/AdbClient.h"
+#include "TestingSupport/Host/SocketTestUtilities.h"
 #include "lldb/Host/Socket.h"
 #include "lldb/Host/common/TCPSocket.h"
 #include "gtest/gtest.h"
@@ -97,6 +98,7 @@ TEST_F(AdbClientTest, AdbSyncService_OperationsFailWhenNotConnected) {
   EXPECT_TRUE(push_result.Fail());
 }
 
+#ifndef _WIN32
 static uint16_t FindUnusedPort() {
   auto temp_socket = std::make_unique<TCPSocket>(true);
   Status error = temp_socket->Listen("localhost:0", 1);
@@ -108,10 +110,12 @@ static uint16_t FindUnusedPort() {
   return port;
 }
 
-#ifndef _WIN32
 // This test is disabled on Windows due to platform-specific socket behavior
 // that causes assertion failures in TCPSocket::Listen()
 TEST_F(AdbClientTest, RealTcpConnection) {
+  if (!HostSupportsIPv4() && !HostSupportsIPv6())
+    GTEST_SKIP() << "TCP sockets unavailable";
+
   uint16_t unused_port = FindUnusedPort();
   ASSERT_NE(unused_port, 0) << "Failed to find an unused port";
 

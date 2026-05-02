@@ -9,8 +9,8 @@ const reference.
 
 The check is only applied if it is safe to replace the copy by a const
 reference. This is the case when the variable is const qualified or when it is
-only used as a const, i.e. only const methods or operators are invoked on it, or
-it is used as const reference or value argument in constructors or function
+only used as a const, i.e. only const methods or operators are invoked on it,
+or it is used as const reference or value argument in constructors or function
 calls.
 
 Example:

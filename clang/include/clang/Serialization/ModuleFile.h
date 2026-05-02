@@ -32,6 +32,7 @@
 #include <cassert>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -120,6 +121,33 @@ public:
   bool isNotFound() const { return Val.getInt() == NotFound; }
 };
 
+/// Describes a single change detected in a module file or input file.
+struct Change {
+  enum ModificationKind {
+    Size,
+    ModTime,
+    Content,
+    None,
+  } Kind = None;
+  std::optional<int64_t> Old = std::nullopt;
+  std::optional<int64_t> New = std::nullopt;
+};
+
+/// Specifies the high-level result of validating input files.
+enum class InputFilesValidation {
+  /// Initial value, before the validation has been performed.
+  NotStarted = 0,
+  /// When the validation is disabled. For example, for a precompiled header.
+  Disabled,
+  /// When the validation is skipped because it was already done in the current
+  /// build session.
+  SkippedInBuildSession,
+  /// When the validation is done only for user files as an optimization.
+  UserFiles,
+  /// When the validation is done both for user files and system files.
+  AllFiles,
+};
+
 /// Information about a module that has been loaded by the ASTReader.
 ///
 /// Each instance of the Module class corresponds to a single AST file, which
@@ -129,8 +157,12 @@ public:
 /// other modules.
 class ModuleFile {
 public:
-  ModuleFile(ModuleKind Kind, FileEntryRef File, unsigned Generation)
-      : Kind(Kind), File(File), Generation(Generation) {}
+  ModuleFile(ModuleKind Kind, ModuleFileKey FileKey, unsigned Generation)
+      : Kind(Kind), FileKey(std::move(FileKey)), Generation(Generation),
+        InputFilesValidationStatus(Kind == MK_ExplicitModule ||
+                                           Kind == MK_PrebuiltModule
+                                       ? InputFilesValidation::Disabled
+                                       : InputFilesValidation::NotStarted) {}
   ~ModuleFile();
 
   // === General information ===
@@ -142,7 +174,10 @@ public:
   ModuleKind Kind;
 
   /// The file name of the module file.
-  std::string FileName;
+  ModuleFileName FileName;
+
+  /// The key ModuleManager used for the module file.
+  ModuleFileKey FileKey;
 
   /// The name of the module.
   std::string ModuleName;
@@ -181,8 +216,11 @@ public:
   /// Whether the top-level module has been read from the AST file.
   bool DidReadTopLevelSubmodule = false;
 
-  /// The file entry for the module file.
-  FileEntryRef File;
+  /// Size of the module file.
+  off_t Size = 0;
+
+  /// Modification of the module file.
+  time_t ModTime = 0;
 
   /// The signature of the module file, which may be used instead of the size
   /// and modification time to identify this particular file.
@@ -276,6 +314,13 @@ public:
   /// The time is specified in seconds since the start of the Epoch.
   uint64_t InputFilesValidationTimestamp = 0;
 
+  /// Captures the high-level result of validating input files.
+  ///
+  /// Useful when encountering a changed input file. This way, we can check
+  /// what kind of validation has been done already and can try to figure out
+  /// why a changed file hasn't been discovered earlier.
+  InputFilesValidation InputFilesValidationStatus;
+
   // === Source Locations ===
 
   /// Cursor used to read source location entries.
@@ -353,9 +398,6 @@ public:
   /// Base macro ID for macros local to this module.
   serialization::MacroID BaseMacroID = 0;
 
-  /// Remapping table for macro IDs in this module.
-  ContinuousRangeMap<uint32_t, int, 2> MacroRemap;
-
   /// The offset of the start of the set of defined macros.
   uint64_t MacroStartOffset = 0;
 
@@ -371,9 +413,6 @@ public:
   /// Base preprocessed entity ID for preprocessed entities local to
   /// this module.
   serialization::PreprocessedEntityID BasePreprocessedEntityID = 0;
-
-  /// Remapping table for preprocessed entity IDs in this module.
-  ContinuousRangeMap<uint32_t, int, 2> PreprocessedEntityRemap;
 
   const PPEntityOffset *PreprocessedEntityOffsets = nullptr;
   unsigned NumPreprocessedEntities = 0;

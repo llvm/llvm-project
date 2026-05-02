@@ -1,7 +1,10 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++23 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++23 -fsyntax-only -verify %s -falloc-token-max=0
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++23 -fsyntax-only -verify %s -fexperimental-new-constant-interpreter
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++23 -fsyntax-only -verify %s -falloc-token-mode=typehash -DMODE_TYPEHASH
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++23 -fsyntax-only -verify %s -falloc-token-max=2 -DTOKEN_MAX=2
+// RUN: %clang_cc1 -triple arm-linux-androideabi -std=c++23 -fsyntax-only -verify %s -falloc-token-max=2 -DTOKEN_MAX=2
+// RUN: %clang_cc1 -triple arm-linux-androideabi -std=c++23 -fsyntax-only -verify %s -falloc-token-max=2 -DTOKEN_MAX=2 -fexperimental-new-constant-interpreter
 
 #if !__has_builtin(__builtin_infer_alloc_token)
 #error "missing __builtin_infer_alloc_token"
@@ -76,4 +79,9 @@ void negative_tests() {
   negative_template_test<void>(); // expected-note {{in instantiation of function template specialization 'negative_template_test<void>' requested here}}
   constexpr auto inference_fail = __builtin_infer_alloc_token(123); // expected-error {{must be initialized by a constant expression}} \
                                                                     // expected-note {{could not infer allocation type for __builtin_infer_alloc_token}}
+
+  // PR178892: Ensure struct arguments don't crash the bytecode interpreter.
+  struct S {};
+  constexpr auto struct_arg = __builtin_infer_alloc_token(S()); // expected-error {{must be initialized by a constant expression}} \
+                                                                // expected-note {{could not infer allocation type for __builtin_infer_alloc_token}}
 }

@@ -18,6 +18,7 @@
 #include "CIRGenModule.h"
 #include "EHScopeStack.h"
 #include "mlir/IR/Value.h"
+#include "clang/AST/StmtCXX.h"
 
 namespace clang::CIRGen {
 
@@ -30,19 +31,17 @@ struct CatchTypeInfo {
 
 /// A protected scope for zero-cost EH handling.
 class EHScope {
+  EHScopeStack::stable_iterator enclosingEHScope;
+
   class CommonBitFields {
     friend class EHScope;
     unsigned kind : 3;
   };
   enum { NumCommonBits = 3 };
 
-protected:
-  class CatchBitFields {
-    friend class EHCatchScope;
-    unsigned : NumCommonBits;
-    unsigned numHandlers : 32 - NumCommonBits;
-  };
+  bool scopeMayThrow;
 
+protected:
   class CleanupBitFields {
     friend class EHCleanupScope;
     unsigned : NumCommonBits;
@@ -72,14 +71,16 @@ protected:
 
   union {
     CommonBitFields commonBits;
-    CatchBitFields catchBits;
     CleanupBitFields cleanupBits;
   };
 
 public:
-  enum Kind { Cleanup, Catch, Terminate, Filter };
+  enum Kind { Cleanup, Terminate, Filter };
 
-  EHScope(Kind kind) { commonBits.kind = kind; }
+  EHScope(Kind kind, EHScopeStack::stable_iterator enclosingEHScope)
+      : enclosingEHScope(enclosingEHScope) {
+    commonBits.kind = kind;
+  }
 
   Kind getKind() const { return static_cast<Kind>(commonBits.kind); }
 
@@ -87,65 +88,13 @@ public:
     // Traditional LLVM codegen also checks for `!block->use_empty()`, but
     // in CIRGen the block content is not important, just used as a way to
     // signal `hasEHBranches`.
-    assert(!cir::MissingFeatures::ehstackBranches());
-    return false;
-  }
-};
-
-/// A scope which attempts to handle some, possibly all, types of
-/// exceptions.
-///
-/// Objective C \@finally blocks are represented using a cleanup scope
-/// after the catch scope.
-
-class EHCatchScope : public EHScope {
-  // In effect, we have a flexible array member
-  //   Handler Handlers[0];
-  // But that's only standard in C99, not C++, so we have to do
-  // annoying pointer arithmetic instead.
-
-public:
-  struct Handler {
-    /// A type info value, or null MLIR attribute for a catch-all
-    CatchTypeInfo type;
-
-    /// The catch handler for this type.
-    mlir::Region *region;
-  };
-
-private:
-  friend class EHScopeStack;
-
-  Handler *getHandlers() { return reinterpret_cast<Handler *>(this + 1); }
-
-public:
-  static size_t getSizeForNumHandlers(unsigned n) {
-    return sizeof(EHCatchScope) + n * sizeof(Handler);
+    return scopeMayThrow;
   }
 
-  EHCatchScope(unsigned numHandlers) : EHScope(Catch) {
-    catchBits.numHandlers = numHandlers;
-    assert(catchBits.numHandlers == numHandlers && "NumHandlers overflow?");
-  }
+  void setMayThrow(bool mayThrow) { scopeMayThrow = mayThrow; }
 
-  unsigned getNumHandlers() const { return catchBits.numHandlers; }
-
-  void setHandler(unsigned i, CatchTypeInfo type, mlir::Region *region) {
-    assert(i < getNumHandlers());
-    getHandlers()[i].type = type;
-    getHandlers()[i].region = region;
-  }
-
-  // Clear all handler blocks.
-  // FIXME: it's better to always call clearHandlerBlocks in DTOR and have a
-  // 'takeHandler' or some such function which removes ownership from the
-  // EHCatchScope object if the handlers should live longer than EHCatchScope.
-  void clearHandlerBlocks() {
-    // The blocks are owned by TryOp, nothing to delete.
-  }
-
-  static bool classof(const EHScope *scope) {
-    return scope->getKind() == Catch;
+  EHScopeStack::stable_iterator getEnclosingEHScope() const {
+    return enclosingEHScope;
   }
 };
 
@@ -159,10 +108,12 @@ class alignas(EHScopeStack::ScopeStackAlignment) EHCleanupScope
   /// created if needed before the cleanup is popped.
   mlir::Block *normalBlock = nullptr;
 
-  /// The number of fixups required by enclosing scopes (not including
-  /// this one).  If this is the top cleanup scope, all the fixups
-  /// from this index onwards belong to this scope.
-  unsigned fixupDepth = 0;
+  /// An optional boolean variable indicating whether this cleanup has been
+  /// activated yet.
+  Address activeFlag = Address::invalid();
+
+  /// Cleanup scope op that represent the current scope in CIR
+  cir::CleanupScopeOp cleanupScopeOp;
 
 public:
   /// Gets the size required for a lazy cleanup scope with the given
@@ -175,14 +126,14 @@ public:
     return sizeof(EHCleanupScope) + cleanupBits.cleanupSize;
   }
 
-  EHCleanupScope(unsigned cleanupSize, unsigned fixupDepth,
-                 EHScopeStack::stable_iterator enclosingNormal)
-      : EHScope(EHScope::Cleanup), enclosingNormal(enclosingNormal),
-        fixupDepth(fixupDepth) {
-    // TODO(cir): When exception handling is upstreamed, isNormalCleanup and
-    // isEHCleanup will be arguments to the constructor.
-    cleanupBits.isNormalCleanup = true;
-    cleanupBits.isEHCleanup = false;
+  EHCleanupScope(bool isNormal, bool isEH, unsigned cleanupSize,
+                 cir::CleanupScopeOp cleanupScopeOp,
+                 EHScopeStack::stable_iterator enclosingNormal,
+                 EHScopeStack::stable_iterator enclosingEH)
+      : EHScope(EHScope::Cleanup, enclosingEH),
+        enclosingNormal(enclosingNormal), cleanupScopeOp(cleanupScopeOp) {
+    cleanupBits.isNormalCleanup = isNormal;
+    cleanupBits.isEHCleanup = isEH;
     cleanupBits.isActive = true;
     cleanupBits.isLifetimeMarker = false;
     cleanupBits.testFlagInNormalCleanup = false;
@@ -200,11 +151,31 @@ public:
   void setNormalBlock(mlir::Block *bb) { normalBlock = bb; }
 
   bool isNormalCleanup() const { return cleanupBits.isNormalCleanup; }
+  bool isEHCleanup() const { return cleanupBits.isEHCleanup; }
 
   bool isActive() const { return cleanupBits.isActive; }
   void setActive(bool isActive) { cleanupBits.isActive = isActive; }
 
-  unsigned getFixupDepth() const { return fixupDepth; }
+  bool isLifetimeMarker() const { return cleanupBits.isLifetimeMarker; }
+
+  bool hasActiveFlag() const { return activeFlag.isValid(); }
+  Address getActiveFlag() const { return activeFlag; }
+  void setActiveFlag(Address var) { activeFlag = var; }
+
+  void setTestFlagInNormalCleanup(bool value) {
+    cleanupBits.testFlagInNormalCleanup = value;
+  }
+  bool shouldTestFlagInNormalCleanup() const {
+    return cleanupBits.testFlagInNormalCleanup;
+  }
+
+  void setTestFlagInEHCleanup(bool value) {
+    cleanupBits.testFlagInEHCleanup = value;
+  }
+  bool shouldTestFlagInEHCleanup() const {
+    return cleanupBits.testFlagInEHCleanup;
+  }
+
   EHScopeStack::stable_iterator getEnclosingNormalCleanup() const {
     return enclosingNormal;
   }
@@ -215,6 +186,8 @@ public:
   EHScopeStack::Cleanup *getCleanup() {
     return reinterpret_cast<EHScopeStack::Cleanup *>(getCleanupBuffer());
   }
+
+  cir::CleanupScopeOp getCleanupScopeOp() { return cleanupScopeOp; }
 
   static bool classof(const EHScope *scope) {
     return (scope->getKind() == Cleanup);
@@ -235,11 +208,38 @@ public:
 
   EHScope *get() const { return reinterpret_cast<EHScope *>(ptr); }
 
+  EHScope *operator->() const { return get(); }
   EHScope &operator*() const { return *get(); }
+
+  iterator &operator++() {
+    size_t size;
+    switch (get()->getKind()) {
+    case EHScope::Filter:
+      llvm_unreachable("EHScopeStack::iterator Filter");
+      break;
+
+    case EHScope::Cleanup:
+      size = static_cast<const EHCleanupScope *>(get())->getAllocatedSize();
+      break;
+
+    case EHScope::Terminate:
+      llvm_unreachable("EHScopeStack::iterator Terminate");
+      break;
+    }
+    ptr += llvm::alignTo(size, ScopeStackAlignment);
+    return *this;
+  }
+
+  bool operator==(iterator other) const { return ptr == other.ptr; }
+  bool operator!=(iterator other) const { return ptr != other.ptr; }
 };
 
 inline EHScopeStack::iterator EHScopeStack::begin() const {
   return iterator(startOfData);
+}
+
+inline EHScopeStack::iterator EHScopeStack::end() const {
+  return iterator(endOfBuffer);
 }
 
 inline EHScopeStack::iterator
@@ -248,14 +248,6 @@ EHScopeStack::find(stable_iterator savePoint) const {
   assert(savePoint.size <= stable_begin().size &&
          "finding savepoint after pop");
   return iterator(endOfBuffer - savePoint.size);
-}
-
-inline void EHScopeStack::popCatch() {
-  assert(!empty() && "popping exception stack when not empty");
-
-  EHCatchScope &scope = llvm::cast<EHCatchScope>(*begin());
-  assert(!cir::MissingFeatures::innermostEHScope());
-  deallocate(EHCatchScope::getSizeForNumHandlers(scope.getNumHandlers()));
 }
 
 /// The exceptions personality for a function.

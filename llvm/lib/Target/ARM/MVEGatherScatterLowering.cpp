@@ -230,7 +230,7 @@ Value *MVEGatherScatterLowering::decomposePtr(Value *Ptr, Value *&Offsets,
   if (auto *GEP = dyn_cast<GetElementPtrInst>(Ptr)) {
     if (Value *V = decomposeGEP(Offsets, Ty, GEP, Builder)) {
       Scale =
-          computeScale(GEP->getSourceElementType()->getPrimitiveSizeInBits(),
+          computeScale(DL->getTypeAllocSizeInBits(GEP->getSourceElementType()),
                        MemoryTy->getScalarSizeInBits());
       return Scale == -1 ? nullptr : V;
     }
@@ -752,7 +752,7 @@ Instruction *MVEGatherScatterLowering::tryCreateIncrementingGatScat(
   // The gep was in charge of making sure the offsets are scaled correctly
   // - calculate that factor so it can be applied by hand
   int TypeScale =
-      computeScale(DL->getTypeSizeInBits(GEP->getSourceElementType()),
+      computeScale(DL->getTypeAllocSizeInBits(GEP->getSourceElementType()),
                    DL->getTypeSizeInBits(GEP->getType()) /
                        cast<FixedVectorType>(GEP->getType())->getNumElements());
   if (TypeScale == -1)
@@ -888,8 +888,9 @@ void MVEGatherScatterLowering::pushOutAdd(PHINode *&Phi,
                                           Value *OffsSecondOperand,
                                           unsigned StartIndex) {
   LLVM_DEBUG(dbgs() << "masked gathers/scatters: optimising add instruction\n");
-  BasicBlock::iterator InsertionPoint =
-      Phi->getIncomingBlock(StartIndex)->back().getIterator();
+  assert(Phi->getNumIncomingValues() == 2);
+  BasicBlock *NewIndexBlock = Phi->getIncomingBlock(StartIndex);
+  BasicBlock::iterator InsertionPoint = NewIndexBlock->back().getIterator();
   // Initialize the phi with a vector that contains a sum of the constants
   Instruction *NewIndex = BinaryOperator::Create(
       Instruction::Add, Phi->getIncomingValue(StartIndex), OffsSecondOperand,
@@ -897,11 +898,12 @@ void MVEGatherScatterLowering::pushOutAdd(PHINode *&Phi,
   unsigned IncrementIndex = StartIndex == 0 ? 1 : 0;
 
   // Order such that start index comes first (this reduces mov's)
-  Phi->addIncoming(NewIndex, Phi->getIncomingBlock(StartIndex));
-  Phi->addIncoming(Phi->getIncomingValue(IncrementIndex),
-                   Phi->getIncomingBlock(IncrementIndex));
-  Phi->removeIncomingValue(1);
-  Phi->removeIncomingValue((unsigned)0);
+  Value *IncrementIndexValue = Phi->getIncomingValue(IncrementIndex);
+  BasicBlock *IncrementIndexBlock = Phi->getIncomingBlock(IncrementIndex);
+  Phi->setIncomingValue(0, NewIndex);
+  Phi->setIncomingBlock(0, NewIndexBlock);
+  Phi->setIncomingValue(1, IncrementIndexValue);
+  Phi->setIncomingBlock(1, IncrementIndexBlock);
 }
 
 void MVEGatherScatterLowering::pushOutMulShl(unsigned Opcode, PHINode *&Phi,
@@ -910,11 +912,13 @@ void MVEGatherScatterLowering::pushOutMulShl(unsigned Opcode, PHINode *&Phi,
                                              unsigned LoopIncrement,
                                              IRBuilder<> &Builder) {
   LLVM_DEBUG(dbgs() << "masked gathers/scatters: optimising mul instruction\n");
+  assert(Phi->getNumIncomingValues() == 2);
 
   // Create a new scalar add outside of the loop and transform it to a splat
   // by which loop variable can be incremented
-  BasicBlock::iterator InsertionPoint =
-      Phi->getIncomingBlock(LoopIncrement == 1 ? 0 : 1)->back().getIterator();
+  BasicBlock *StartIndexBlock =
+      Phi->getIncomingBlock(LoopIncrement == 1 ? 0 : 1);
+  BasicBlock::iterator InsertionPoint = StartIndexBlock->back().getIterator();
 
   // Create a new index
   Value *StartIndex =
@@ -925,20 +929,19 @@ void MVEGatherScatterLowering::pushOutMulShl(unsigned Opcode, PHINode *&Phi,
   Instruction *Product =
       BinaryOperator::Create((Instruction::BinaryOps)Opcode, IncrementPerRound,
                              OffsSecondOperand, "Product", InsertionPoint);
-
+  BasicBlock *NewIncrementBlock = Phi->getIncomingBlock(LoopIncrement);
   BasicBlock::iterator NewIncrInsertPt =
-      Phi->getIncomingBlock(LoopIncrement)->back().getIterator();
+      NewIncrementBlock->back().getIterator();
   NewIncrInsertPt = std::prev(NewIncrInsertPt);
 
   // Increment NewIndex by Product instead of the multiplication
   Instruction *NewIncrement = BinaryOperator::Create(
       Instruction::Add, Phi, Product, "IncrementPushedOutMul", NewIncrInsertPt);
 
-  Phi->addIncoming(StartIndex,
-                   Phi->getIncomingBlock(LoopIncrement == 1 ? 0 : 1));
-  Phi->addIncoming(NewIncrement, Phi->getIncomingBlock(LoopIncrement));
-  Phi->removeIncomingValue((unsigned)0);
-  Phi->removeIncomingValue((unsigned)0);
+  Phi->setIncomingValue(0, StartIndex);
+  Phi->setIncomingBlock(0, StartIndexBlock);
+  Phi->setIncomingValue(1, NewIncrement);
+  Phi->setIncomingBlock(1, NewIncrementBlock);
 }
 
 // Check whether all usages of this instruction are as offsets of

@@ -18,7 +18,7 @@ unsigned char cxxstaticcast_0(unsigned int x) {
 // CIR:    cir.return %[[R]] : !u8i
 // CIR:  }
 
-// LLVM: define{{.*}} i8 @_Z15cxxstaticcast_0j(i32 %{{[0-9]+}})
+// LLVM: define{{.*}} i8 @_Z15cxxstaticcast_0j(i32 {{.*}} %{{[0-9]+}})
 // LLVM: %[[LOAD:[0-9]+]] = load i32, ptr %{{[0-9]+}}, align 4
 // LLVM: %[[TRUNC:[0-9]+]] = trunc i32 %[[LOAD]] to i8
 // LLVM: store i8 %[[TRUNC]], ptr %[[RV:[0-9]+]], align 1
@@ -95,7 +95,7 @@ bool cptr(void *d) {
 // CIR:   %[[DVAL:[0-9]+]] = cir.load{{.*}} %[[DPTR]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
 // CIR:   %{{[0-9]+}} = cir.cast ptr_to_bool %[[DVAL]] : !cir.ptr<!void> -> !cir.bool
 
-// LLVM-LABEL: define{{.*}} i1 @_Z4cptrPv(ptr %0)
+// LLVM-LABEL: define{{.*}} i1 @_Z4cptrPv(ptr {{.*}} %0)
 // LLVM:         %[[ARG_STORAGE:.*]] = alloca ptr, i64 1
 // LLVM:         %[[RETVAL:.*]] = alloca i8, i64 1
 // LLVM:         %[[X_STORAGE:.*]] = alloca i8, i64 1
@@ -139,7 +139,7 @@ void f(long int start) {
 // CIR: %[[MID:.*]] = cir.cast integral %[[L]] : !s64i -> !u64i
 // CIR:          cir.cast int_to_ptr %[[MID]] : !u64i -> !cir.ptr<!void>
 
-// LLVM-LABEL: define{{.*}} void @_Z1fl(i64 %0)
+// LLVM-LABEL: define{{.*}} void @_Z1fl(i64 {{.*}} %0)
 // LLVM: %[[ADDR:.*]] = alloca i64, i64 1, align 8
 // LLVM: %[[PADDR:.*]] = alloca ptr, i64 1, align 8
 // LLVM: store i64 %0, ptr %[[ADDR]], align 8
@@ -164,3 +164,22 @@ void null_cast(long) {
 // CIR:    cir.store{{.*}} %{{.*}}, %[[NULLPTR]] : !s32i, !cir.ptr<!s32i>
 // CIR:    %[[NULLPTR_A:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!rec_A>
 // CIR:    %[[A_X:.*]] = cir.get_member %[[NULLPTR_A]][0] {name = "x"} : !cir.ptr<!rec_A> -> !cir.ptr<!s32i>
+
+struct B {
+  int *p;
+  operator int *() const { return p; }
+};
+
+int test_unser_defined_cast_with_aligned_load(B x) {
+  return *x;
+}
+
+// CIR: cir.func{{.*}} @_Z41test_unser_defined_cast_with_aligned_load1B
+// CIR:   cir.store %{{.*}}, %[[B_PTR:.*]] : !rec_B, !cir.ptr<!rec_B>
+// CIR:   %[[CAST:.*]] = cir.call @_ZNK1BcvPiEv(%[[B_PTR]])
+// CIR:   %[[LOAD:.*]] = cir.load{{.*}} %[[CAST]]
+
+// LLVM: define{{.*}} i32 @_Z41test_unser_defined_cast_with_aligned_load1B
+// LLVM:   store %struct.B %{{.*}}, ptr %[[B_PTR:.*]], align 8
+// LLVM:   %[[CAST:.*]] = call {{.*}} ptr @_ZNK1BcvPiEv(ptr {{.*}} %[[B_PTR]])
+// LLVM:   %[[LOAD:.*]] = load i32, ptr %[[CAST]]

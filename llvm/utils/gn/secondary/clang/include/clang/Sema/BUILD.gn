@@ -10,6 +10,11 @@ clang_tablegen("AttrParsedAttrKinds") {
   td_file = "../Basic/Attr.td"
 }
 
+clang_tablegen("AttrIsTypeDependent") {
+  args = [ "-gen-clang-attr-is-type-dependent" ]
+  td_file = "../Basic/Attr.td"
+}
+
 clang_tablegen("AttrSpellingListIndex") {
   args = [ "-gen-clang-attr-spelling-index" ]
   td_file = "../Basic/Attr.td"

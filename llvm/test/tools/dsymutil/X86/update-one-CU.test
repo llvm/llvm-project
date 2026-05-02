@@ -1,5 +1,5 @@
-RUN: dsymutil -oso-prepend-path=%p/.. %p/../Inputs/objc.macho.x86_64 -o %t.dSYM
-RUN: dsymutil -update %t.dSYM
+RUN: dsymutil --linker classic -oso-prepend-path=%p/.. %p/../Inputs/objc.macho.x86_64 -o %t.dSYM
+RUN: dsymutil --linker classic -update %t.dSYM
 RUN: llvm-dwarfdump -apple-types -apple-objc %t.dSYM | FileCheck %s
 
 CHECK: .apple_types contents:
@@ -33,3 +33,5 @@ CHECK-NEXT:   Data 0 [
 CHECK-NEXT:     Atom[0]: 0x0000007a
 CHECK-NEXT:   ]
 CHECK-NEXT: }
+
+## FIXME: Support --linker parallel

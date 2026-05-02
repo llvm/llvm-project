@@ -26,8 +26,10 @@ static void convTypes(bool &hasAnnotation, TypeRange types,
                       SmallVectorImpl<Type> &convTypes,
                       SmallVectorImpl<Type> *extraTypes, bool directOut) {
   for (auto type : types) {
-    // All "dense" data passes through unmodified.
-    if (!getSparseTensorEncoding(type)) {
+    // All "dense" data passes through unmodified. Note: getSparseTensorEncoding
+    // also returns non-null for StorageSpecifierType (which is not a
+    // RankedTensorType), so we must check isa<RankedTensorType> as well.
+    if (!getSparseTensorEncoding(type) || !isa<RankedTensorType>(type)) {
       convTypes.push_back(type);
       continue;
     }
@@ -62,8 +64,10 @@ static void convVals(OpBuilder &builder, Location loc, TypeRange types,
                      bool directOut) {
   unsigned idx = 0;
   for (auto type : types) {
-    // All "dense" data passes through unmodified.
-    if (!getSparseTensorEncoding(type)) {
+    // All "dense" data passes through unmodified. Note: getSparseTensorEncoding
+    // also returns non-null for StorageSpecifierType (which is not a
+    // RankedTensorType), so we must check isa<RankedTensorType> as well.
+    if (!getSparseTensorEncoding(type) || !isa<RankedTensorType>(type)) {
       toVals.push_back(fromVals[idx++]);
       continue;
     }
@@ -189,8 +193,10 @@ struct SparseFuncAssembler : public OpRewritePattern<func::FuncOp> {
     // Modify the original method into an internal, private method.
     auto orgName = funcOp.getName();
     std::string wrapper = llvm::formatv("_internal_{0}", orgName).str();
-    funcOp.setName(wrapper);
-    funcOp.setPrivate();
+    rewriter.modifyOpInPlace(funcOp, [&]() {
+      funcOp.setName(wrapper);
+      funcOp.setPrivate();
+    });
 
     // Start the new public wrapper method with original name.
     Location loc = funcOp.getLoc();
@@ -231,7 +237,9 @@ struct SparseFuncAssembler : public OpRewritePattern<func::FuncOp> {
             LLVM::LLVMDialect::getEmitCWrapperAttrName())) {
       func->setAttr(LLVM::LLVMDialect::getEmitCWrapperAttrName(),
                     UnitAttr::get(context));
-      funcOp->removeAttr(LLVM::LLVMDialect::getEmitCWrapperAttrName());
+      rewriter.modifyOpInPlace(funcOp, [&]() {
+        funcOp->removeAttr(LLVM::LLVMDialect::getEmitCWrapperAttrName());
+      });
     }
     return success();
   }

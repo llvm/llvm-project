@@ -156,7 +156,7 @@ OffloadBundleFatBin::create(MemoryBufferRef Buf, uint64_t SectionOffset,
     return errorCodeToError(object_error::parse_failed);
 
   std::unique_ptr<OffloadBundleFatBin> TheBundle(
-      new OffloadBundleFatBin(Buf, FileName));
+      new OffloadBundleFatBin(Buf, FileName, Decompress));
 
   // Read the Bundle Entries.
   Error Err =
@@ -188,7 +188,9 @@ Error OffloadBundleFatBin::extractBundle(const ObjectFile &Source) {
 
 Error object::extractOffloadBundleFatBinary(
     const ObjectFile &Obj, SmallVectorImpl<OffloadBundleFatBin> &Bundles) {
-  assert((Obj.isELF() || Obj.isCOFF()) && "Invalid file type");
+  // Ignore unsupported object formats.
+  if (!Obj.isELF() && !Obj.isCOFF())
+    return Error::success();
 
   // Iterate through Sections until we find an offload_bundle section.
   for (SectionRef Sec : Obj.sections()) {

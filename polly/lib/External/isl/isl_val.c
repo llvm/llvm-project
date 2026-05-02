@@ -1589,6 +1589,17 @@ __isl_give isl_val *isl_val_zero_on_domain(__isl_take isl_local_space *ls)
 #include <isl_multi_tuple_id_templ.c>
 #include <isl_multi_zero_templ.c>
 
+/* Is "mv1" equal to "mv2"?
+ *
+ * Call the generic isl_multi_val_plain_is_equal, which compares values
+ * using isl_val_plain_is_equal, i.e., isl_val_eq.
+ */
+isl_bool isl_multi_val_is_equal(__isl_keep isl_multi_val *mv1,
+	__isl_keep isl_multi_val *mv2)
+{
+	return isl_multi_val_plain_is_equal(mv1, mv2);
+}
+
 /* Does "mv" consist of only zeros?
  */
 isl_bool isl_multi_val_is_zero(__isl_keep isl_multi_val *mv)

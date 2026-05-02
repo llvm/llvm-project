@@ -13,7 +13,9 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Lexer.h"
 
-using namespace clang;
+using namespace clang::ast_matchers;
+
+namespace clang::tidy::modernize {
 
 namespace {
 
@@ -21,14 +23,10 @@ struct FindArgsResult {
   const Expr *First;
   const Expr *Last;
   const Expr *Compare;
-  SmallVector<const clang::Expr *, 2> Args;
+  SmallVector<const Expr *, 2> Args;
 };
 
 } // anonymous namespace
-
-using namespace clang::ast_matchers;
-
-namespace clang::tidy::modernize {
 
 static FindArgsResult findArgs(const CallExpr *Call) {
   FindArgsResult Result;
@@ -243,7 +241,6 @@ void MinMaxUseInitializerListCheck::registerPPCallbacks(
 
 void MinMaxUseInitializerListCheck::check(
     const MatchFinder::MatchResult &Match) {
-
   const auto *TopCall = Match.Nodes.getNodeAs<CallExpr>("topCall");
 
   const FindArgsResult Result = findArgs(TopCall);

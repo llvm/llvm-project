@@ -193,6 +193,33 @@ def testFuseOpAttributes(target):
 
 @run
 @create_sequence
+def testFuseOpPackedTileSizes(target):
+    tiles = structured.MatchOp.match_op_names(target, ["arith.constant"])
+    structured.FuseOp(target, tile_sizes=tiles)
+    # CHECK-LABEL: TEST: testFuseOpPackedTileSizes
+    # CHECK: transform.sequence
+    # CHECK: %[[T:.*]] = transform.structured.match
+    # CHECK: %{{.+}}, %{{.+}} = transform.structured.fuse
+    # CHECK-SAME: tile_sizes *(%[[T]])
+    # CHECK-SAME: (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
+
+
+@run
+@create_sequence
+def testFuseOpPackedTileSizesForall(target):
+    tiles = structured.MatchOp.match_op_names(target, ["arith.constant"])
+    structured.FuseOp(target, tile_sizes=tiles, use_forall=True)
+    # CHECK-LABEL: TEST: testFuseOpPackedTileSizesForall
+    # CHECK: transform.sequence
+    # CHECK: %[[T:.*]] = transform.structured.match
+    # CHECK: %{{.+}}, %{{.+}} = transform.structured.fuse
+    # CHECK-SAME: tile_sizes *(%[[T]])
+    # CHECK-SAME: {use_forall}
+    # CHECK-SAME: (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
+
+
+@run
+@create_sequence
 def testGeneralize(target):
     structured.GeneralizeOp(target)
     # CHECK-LABEL: TEST: testGeneralize
@@ -627,12 +654,16 @@ def testVectorizeChildrenAndApplyPatternsAllAttrs(target):
         disable_transfer_permutation_map_lowering_patterns=True,
         vectorize_nd_extract=True,
         vectorize_padding=True,
+        flatten_1d_depthwise_conv=True,
+        fold_type_extensions_into_contract=True,
     )
     # CHECK-LABEL: TEST: testVectorizeChildrenAndApplyPatternsAllAttrs
     # CHECK: transform.sequence
     # CHECK: = transform.structured.vectorize
     # CHECK-SAME: disable_multi_reduction_to_contract_patterns
     # CHECK-SAME: disable_transfer_permutation_map_lowering_patterns
+    # CHECK-SAME: flatten_1d_depthwise_conv
+    # CHECK-SAME: fold_type_extensions_into_contract
     # CHECK-SAME: vectorize_nd_extract
     # CHECK-SAME: vectorize_padding
 
@@ -646,12 +677,16 @@ def testVectorizeChildrenAndApplyPatternsNoAttrs(target):
         disable_transfer_permutation_map_lowering_patterns=False,
         vectorize_nd_extract=False,
         vectorize_padding=False,
+        flatten_1d_depthwise_conv=False,
+        fold_type_extensions_into_contract=False,
     )
     # CHECK-LABEL: TEST: testVectorizeChildrenAndApplyPatternsNoAttrs
     # CHECK: transform.sequence
     # CHECK: = transform.structured.vectorize
     # CHECK-NOT: disable_multi_reduction_to_contract_patterns
     # CHECK-NOT: disable_transfer_permutation_map_lowering_patterns
+    # CHECK-NOT: flatten_1d_depthwise_conv
+    # CHECK-NOT: fold_type_extensions_into_contract
     # CHECK-NOT: vectorize_nd_extract
     # CHECK-NOT: vectorize_padding
 

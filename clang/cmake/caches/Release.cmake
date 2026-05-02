@@ -36,13 +36,14 @@ if (${CMAKE_HOST_SYSTEM_NAME} MATCHES "Linux")
   list(APPEND DEFAULT_PROJECTS "bolt")
 endif()
 
+set (DEFAULT_RUNTIMES "compiler-rt;libcxx;openmp")
 # Don't build flang on Darwin due to:
 # https://github.com/llvm/llvm-project/issues/160546
 if (NOT ${CMAKE_HOST_SYSTEM_NAME} MATCHES "Darwin")
   list(APPEND DEFAULT_PROJECTS "flang")
+  list(APPEND DEFAULT_RUNTIMES "flang-rt")
 endif()
 
-set (DEFAULT_RUNTIMES "compiler-rt;libcxx")
 if (NOT WIN32)
   list(APPEND DEFAULT_RUNTIMES "libcxxabi" "libunwind")
 endif()
@@ -171,6 +172,10 @@ set_final_stage_var(CPACK_GENERATOR "TXZ" STRING)
 set_final_stage_var(CPACK_ARCHIVE_THREADS "0" STRING)
 
 set_final_stage_var(LLVM_USE_STATIC_ZSTD "ON" BOOL)
+if (${CMAKE_HOST_SYSTEM_NAME} MATCHES "Linux")
+  set_final_stage_var(LLVM_USE_STATIC_LIBXML2 "ON" BOOL)
+endif()
+
 if (LLVM_RELEASE_ENABLE_LTO)
   set_final_stage_var(LLVM_ENABLE_FATLTO "ON" BOOL)
   set_final_stage_var(CPACK_PRE_BUILD_SCRIPTS "${CMAKE_CURRENT_LIST_DIR}/release_cpack_pre_build_strip_lto.cmake" STRING)

@@ -17,6 +17,9 @@ class ExpandPostRAPseudosPass : public PassInfoMixin<ExpandPostRAPseudosPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
+  // We need to expand pseudoinstructions regardless of optimization level or
+  // otherwise later passes (e.g., AsmPrinter) will fail.
+  static bool isRequired() { return true; }
 };
 
 } // namespace llvm

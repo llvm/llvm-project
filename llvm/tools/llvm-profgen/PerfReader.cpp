@@ -11,11 +11,14 @@
 #include "ProfileGenerator.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
+#include "llvm/ProfileData/ETMTraceDecoder.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/Timer.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/TargetParser/Triple.h"
 
 #define DEBUG_TYPE "perf-reader"
 
@@ -59,6 +62,12 @@ static cl::opt<int> CSProfMaxUnsymbolizedCtxDepth(
     cl::desc("Keep the last K contexts while merging unsymbolized profile. -1 "
              "means no depth limit."),
     cl::cat(ProfGenCategory));
+
+cl::opt<bool> TimeProfGen("time-profgen", cl::desc("Time llvm-profgen phases"),
+                          cl::init(false), cl::cat(ProfGenCategory));
+
+static const char *TimerGroupName = "profgen";
+static const char *TimerGroupDesc = "llvm-profgen";
 
 namespace sampleprof {
 
@@ -344,32 +353,31 @@ bool VirtualUnwinder::unwind(const PerfSample *Sample, uint64_t Repeat) {
 }
 
 std::unique_ptr<PerfReaderBase>
-PerfReaderBase::create(ProfiledBinary *Binary, PerfInputFile &PerfInput,
+PerfReaderBase::create(ProfiledBinary *Binary, InputFile &Input,
                        std::optional<int32_t> PIDFilter) {
   std::unique_ptr<PerfReaderBase> PerfReader;
 
-  if (PerfInput.Format == PerfFormat::UnsymbolizedProfile) {
+  if (Input.Format == InputFormat::UnsymbolizedProfile) {
     PerfReader.reset(
-        new UnsymbolizedProfileReader(Binary, PerfInput.InputFile));
+        new UnsymbolizedProfileReader(Binary, Input.InputFilePath));
     return PerfReader;
   }
 
   // For perf data input, we need to convert them into perf script first.
   // If this is a kernel perf file, there is no need for retrieving PIDs.
-  if (PerfInput.Format == PerfFormat::PerfData)
-    PerfInput = PerfScriptReader::convertPerfDataToTrace(
-        Binary, Binary->isKernel(), PerfInput, PIDFilter);
+  if (Input.Format == InputFormat::PerfData)
+    Input = PerfScriptReader::convertPerfDataToTrace(Binary, Binary->isKernel(),
+                                                     Input, PIDFilter);
 
-  assert((PerfInput.Format == PerfFormat::PerfScript) &&
+  assert((Input.Format == InputFormat::PerfScript) &&
          "Should be a perfscript!");
 
-  PerfInput.Content =
-      PerfScriptReader::checkPerfScriptType(PerfInput.InputFile);
-  if (PerfInput.Content == PerfContent::LBRStack) {
+  Input.Content = PerfScriptReader::checkPerfScriptType(Input.InputFilePath);
+  if (Input.Content == PerfContent::LBRStack) {
     PerfReader.reset(
-        new HybridPerfReader(Binary, PerfInput.InputFile, PIDFilter));
-  } else if (PerfInput.Content == PerfContent::LBR) {
-    PerfReader.reset(new LBRPerfReader(Binary, PerfInput.InputFile, PIDFilter));
+        new HybridPerfReader(Binary, Input.InputFilePath, PIDFilter));
+  } else if (Input.Content == PerfContent::LBR) {
+    PerfReader.reset(new LBRPerfReader(Binary, Input.InputFilePath, PIDFilter));
   } else {
     exitWithError("Unsupported perfscript!");
   }
@@ -448,11 +456,11 @@ Error PerfReaderBase::parseDataAccessPerfTraces(
   return Error::success();
 }
 
-PerfInputFile
+InputFile
 PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary, bool SkipPID,
-                                         PerfInputFile &File,
+                                         InputFile &File,
                                          std::optional<int32_t> PIDFilter) {
-  StringRef PerfData = File.InputFile;
+  StringRef PerfData = File.InputFilePath;
   // Run perf script to retrieve PIDs matching binary we're interested in.
   auto PerfExecutable = sys::Process::FindInEnvPath("PATH", "perf");
   if (!PerfExecutable) {
@@ -514,7 +522,7 @@ PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary, bool SkipPID,
   }
   sys::ExecuteAndWait(PerfPath, ScriptSampleArgs, std::nullopt, Redirects);
 
-  return {std::string(PerfTraceFile), PerfFormat::PerfScript,
+  return {std::string(PerfTraceFile), InputFormat::PerfScript,
           PerfContent::UnknownContent};
 }
 
@@ -611,6 +619,8 @@ static std::string getContextKeyStr(ContextKey *K,
 }
 
 void HybridPerfReader::unwindSamples() {
+  NamedRegionTimer T("unwind", "Unwind samples", TimerGroupName, TimerGroupDesc,
+                     TimeProfGen);
   VirtualUnwinder Unwinder(&SampleCounters, Binary);
   for (const auto &Item : AggregatedSamples) {
     const PerfSample *Sample = Item.first.getPtr();
@@ -654,6 +664,13 @@ void HybridPerfReader::unwindSamples() {
                      "frame to match.");
 }
 
+/// Parse a hex address from \p Str.
+static bool parseAddress(StringRef Str, uint64_t &Addr, bool HasPrefix) {
+  if (Str.consume_front("0x") != HasPrefix)
+    return true;
+  return Str.getAsInteger(16, Addr);
+}
+
 bool PerfScriptReader::extractLBRStack(TraceStream &TraceIt,
                                        SmallVectorImpl<LBREntry> &LBRStack) {
   // The raw format of LBR stack is like:
@@ -672,7 +689,7 @@ bool PerfScriptReader::extractLBRStack(TraceStream &TraceIt,
   size_t Index = 0;
   uint64_t LeadingAddr;
   if (!Records.empty() && !Records[0].contains('/')) {
-    if (Records[0].getAsInteger(16, LeadingAddr)) {
+    if (parseAddress(Records[0], LeadingAddr, false)) {
       WarnInvalidLBR(TraceIt);
       TraceIt.advance();
       return false;
@@ -694,8 +711,8 @@ bool PerfScriptReader::extractLBRStack(TraceStream &TraceIt,
     uint64_t Dst;
 
     // Stop at broken LBR records.
-    if (Addresses.size() < 2 || Addresses[0].substr(2).getAsInteger(16, Src) ||
-        Addresses[1].substr(2).getAsInteger(16, Dst)) {
+    if (Addresses.size() < 2 || parseAddress(Addresses[0], Src, true) ||
+        parseAddress(Addresses[1], Dst, true)) {
       WarnInvalidLBR(TraceIt);
       break;
     }
@@ -731,7 +748,7 @@ bool PerfScriptReader::extractCallstack(TraceStream &TraceIt,
   while (!TraceIt.isAtEoF() && !TraceIt.getCurrentLine().starts_with(" 0x")) {
     StringRef FrameStr = TraceIt.getCurrentLine().ltrim();
     uint64_t FrameAddr = 0;
-    if (FrameStr.getAsInteger(16, FrameAddr)) {
+    if (parseAddress(FrameStr, FrameAddr, false)) {
       // We might parse a non-perf sample line like empty line and comments,
       // skip it
       TraceIt.advance();
@@ -1143,6 +1160,8 @@ void PerfScriptReader::parseEventOrSample(TraceStream &TraceIt) {
 }
 
 void PerfScriptReader::parseAndAggregateTrace() {
+  NamedRegionTimer T("parseTrace", "Parse and aggregate trace", TimerGroupName,
+                     TimerGroupDesc, TimeProfGen);
   // Trace line iterator
   TraceStream TraceIt(PerfTraceFile);
   while (!TraceIt.isAtEoF())
@@ -1198,7 +1217,7 @@ PerfContent PerfScriptReader::checkPerfScriptType(StringRef FileName) {
     // Detect sample with call stack
     int32_t Count = 0;
     while (!TraceIt.isAtEoF() &&
-           !TraceIt.getCurrentLine().ltrim().getAsInteger(16, FrameAddr)) {
+           !parseAddress(TraceIt.getCurrentLine().ltrim(), FrameAddr, false)) {
       Count++;
       TraceIt.advance();
     }
@@ -1284,6 +1303,7 @@ void PerfScriptReader::warnInvalidRange() {
   uint64_t TotalRangeNum = 0;
   uint64_t InstNotBoundary = 0;
   uint64_t UnmatchedRange = 0;
+  uint64_t RecoveredRange = 0;
   uint64_t RangeCrossFunc = 0;
   uint64_t BogusRange = 0;
 
@@ -1309,6 +1329,9 @@ void PerfScriptReader::warnInvalidRange() {
       continue;
     }
 
+    if (FRange->Func->NameStatus != DwarfNameStatus::Matched)
+      RecoveredRange += I.second;
+
     if (EndAddress >= FRange->EndAddress) {
       RangeCrossFunc += I.second;
       WarnInvalidRange(StartAddress, EndAddress, RangeCrossFuncMsg);
@@ -1328,6 +1351,9 @@ void PerfScriptReader::warnInvalidRange() {
   emitWarningSummary(
       UnmatchedRange, TotalRangeNum,
       "of samples are from ranges that do not belong to any functions.");
+  emitWarningSummary(RecoveredRange, TotalRangeNum,
+                     "of samples are from ranges that belong to functions "
+                     "recovered from symbol table.");
   emitWarningSummary(
       RangeCrossFunc, TotalRangeNum,
       "of samples are from ranges that do cross function boundaries.");
@@ -1335,6 +1361,48 @@ void PerfScriptReader::warnInvalidRange() {
       BogusRange, TotalRangeNum,
       "of samples are from ranges that have range start after or too far from "
       "range end acrossing the unconditinal jmp.");
+}
+
+void PerfScriptReader::warnIfBranchTargetMismatch() {
+  // Collect unique branch source and target addresses from LBR samples,
+  // then check what percentage don't match known instructions in the binary.
+
+  uint64_t MismatchedBranches = 0;
+  uint64_t MismatchedIndirectTargets = 0;
+  uint64_t MismatchedTargets = 0;
+  uint64_t TotalSamples = 0;
+
+  for (const auto &Item : AggregatedSamples) {
+    const PerfSample *Sample = Item.first.getPtr();
+    for (const LBREntry &LBR : Sample->LBRStack) {
+      uint64_t Source = LBR.Source;
+      uint64_t Target = LBR.Target;
+      if (Source == ExternalAddr || Target == ExternalAddr)
+        continue;
+      TotalSamples++;
+
+      // Validate Branch sources are Call/Branch/Indirect Branch
+      if (!Binary->addressIsTransfer(Source))
+        MismatchedBranches++;
+
+      // Validate Indirect Branch targets landed in code. This may over estimate
+      // the vaid targets only because there's no good way to determine jump
+      // table targets
+      if (Binary->addressIsIndirectBranch(Source)) {
+        if (!Binary->addressIsCode(Target))
+          MismatchedIndirectTargets++;
+      } else if (!Binary->addressIsBranchTarget(Target) &&
+                 !Binary->findFuncRangeForStartAddr(Target))
+        MismatchedTargets++;
+    }
+  }
+
+  emitWarningSummary(MismatchedBranches, TotalSamples,
+                     "of branch samples do not match the binary.");
+  emitWarningSummary(MismatchedTargets, TotalSamples,
+                     "of branch targets do not match the binary.");
+  emitWarningSummary(MismatchedIndirectTargets, TotalSamples,
+                     "of indirect branch targets do not match the binary.");
 }
 
 void PerfScriptReader::parsePerfTraces() {
@@ -1353,6 +1421,7 @@ void PerfScriptReader::parsePerfTraces() {
   // Generate unsymbolized profile.
   warnTruncatedStack();
   warnInvalidRange();
+  warnIfBranchTargetMismatch();
   generateUnsymbolizedProfile();
   AggregatedSamples.clear();
 
@@ -1361,6 +1430,60 @@ void PerfScriptReader::parsePerfTraces() {
 }
 
 SmallVector<CleanupInstaller, 2> PerfScriptReader::TempFileCleanups;
+
+void ETMReader::recordProcessedRange(uint64_t Start, uint64_t End,
+                                     uint64_t Count) {
+  assert(!Counters.empty() && "Counters should not be empty!");
+  auto &Counter = Counters.begin()->second;
+  Counter.recordRangeCount(Start, End, Count);
+}
+
+class ETMCallback : public ETMDecoder::Callback {
+  ETMReader *Reader;
+
+public:
+  ETMCallback(ETMReader *R) : Reader(R) {}
+  void processInstructionRange(uint64_t Start, uint64_t End) override {
+    Reader->recordProcessedRange(Start, End, 1);
+  }
+};
+
+void ETMReader::parseETMTraces() {
+  auto BufferOrErr = MemoryBuffer::getFile(TraceFile);
+  if (std::error_code EC = BufferOrErr.getError())
+    exitWithError("Could not open ETM trace file: " + EC.message());
+
+  ArrayRef<uint8_t> Data(
+      reinterpret_cast<const uint8_t *>((*BufferOrErr)->getBufferStart()),
+      (*BufferOrErr)->getBufferSize());
+
+  // There is no context for ETM instruction traces.
+  // Initialize the SampleCounters map with a single empty context key
+  // to aggregate all instruction hits into a global bucket.
+  auto Key = std::make_shared<StringBasedCtxKey>();
+  Counters.emplace(Hashable<ContextKey>(Key), SampleCounter());
+
+  // The protocol utilizes a 0x80 byte as an initial synchronization header.
+  // Perform a manual search for this sync point to discard any leading
+  // padding or truncated packets before decoding begins.
+  size_t StartIdx = 0;
+  while (StartIdx < Data.size() && Data[StartIdx] != 0x80)
+    StartIdx++;
+  if (StartIdx >= Data.size())
+    exitWithError("No synchronization header (0x80) found in the bitstream.");
+  ArrayRef<uint8_t> TraceSlice = Data.slice(StartIdx);
+
+  auto DecoderOrErr = ETMDecoder::create(
+      Binary->getBinary(), Binary->getTriple(), static_cast<uint8_t>(TraceID));
+
+  if (!DecoderOrErr)
+    exitWithError(toString(DecoderOrErr.takeError()));
+  auto Decoder = std::move(*DecoderOrErr);
+
+  ETMCallback CB(this);
+  if (Error E = Decoder->processTrace(TraceSlice, CB))
+    exitWithError(toString(std::move(E)));
+}
 
 } // end namespace sampleprof
 } // end namespace llvm

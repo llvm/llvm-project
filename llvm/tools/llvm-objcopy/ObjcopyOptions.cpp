@@ -811,16 +811,17 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> ArgsArr,
             .Case("boot_application",
                   COFF::IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION)
             .Case("console", COFF::IMAGE_SUBSYSTEM_WINDOWS_CUI)
-            .Cases("efi_application", "efi-app",
+            .Cases({"efi_application", "efi-app"},
                    COFF::IMAGE_SUBSYSTEM_EFI_APPLICATION)
-            .Cases("efi_boot_service_driver", "efi-bsd",
+            .Cases({"efi_boot_service_driver", "efi-bsd"},
                    COFF::IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER)
             .Case("efi_rom", COFF::IMAGE_SUBSYSTEM_EFI_ROM)
-            .Cases("efi_runtime_driver", "efi-rtd",
+            .Cases({"efi_runtime_driver", "efi-rtd"},
                    COFF::IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER)
             .Case("native", COFF::IMAGE_SUBSYSTEM_NATIVE)
             .Case("posix", COFF::IMAGE_SUBSYSTEM_POSIX_CUI)
             .Case("windows", COFF::IMAGE_SUBSYSTEM_WINDOWS_GUI)
+            .Case("xbox", COFF::IMAGE_SUBSYSTEM_XBOX)
             .Default(COFF::IMAGE_SUBSYSTEM_UNKNOWN);
     if (*COFFConfig.Subsystem == COFF::IMAGE_SUBSYSTEM_UNKNOWN)
       return createStringError(errc::invalid_argument,

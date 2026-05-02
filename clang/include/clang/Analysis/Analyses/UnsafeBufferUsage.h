@@ -117,8 +117,9 @@ public:
   ///  safe pattern;
   ///  is 3 if string arguments do not guarantee null-termination
   ///  is 4 if the callee takes va_list
+  ///  has bit 3 (0x8) set if the callee is a function with the format attribute
   /// \param UnsafeArg one of the actual arguments that is unsafe, non-null
-  /// only when `2 <= PrintfInfo <= 3`
+  /// only when `2 <= PrintfInfo <= 3 (ignoring the "format attribute" bit)`
   virtual void handleUnsafeLibcCall(const CallExpr *Call, unsigned PrintfInfo,
                                     ASTContext &Ctx,
                                     const Expr *UnsafeArg = nullptr) = 0;
@@ -178,6 +179,11 @@ public:
   virtual bool
   ignoreUnsafeBufferInLibcCall(const SourceLocation &Loc) const = 0;
 
+  /// \return true iff array subscript accesses on fixed size arrays should NOT
+  /// be reported at `Loc`
+  virtual bool
+  ignoreUnsafeBufferInStaticSizedArray(const SourceLocation &Loc) const = 0;
+
   virtual std::string
   getUnsafeBufferUsageAttributeTextAt(SourceLocation Loc,
                                       StringRef WSSuffix = "") const = 0;
@@ -195,7 +201,10 @@ bool anyConflict(const llvm::SmallVectorImpl<FixItHint> &FixIts,
                  const SourceManager &SM);
 } // namespace internal
 
-std::set<const Expr *> findUnsafePointers(const FunctionDecl *FD);
+/// \return true iff `N` is an unsafe buffer usage and populates the unsafe
+/// pointers in `UnsafePointers`
+bool matchUnsafePointers(const DynTypedNode &N, ASTContext &Ctx,
+                         std::set<const Expr *> &UnsafePointers);
 } // end namespace clang
 
 #endif /* LLVM_CLANG_ANALYSIS_ANALYSES_UNSAFEBUFFERUSAGE_H */

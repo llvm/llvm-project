@@ -77,6 +77,16 @@ public:
   /// Unlink this Block from its parent region and delete it.
   void erase();
 
+  /// Compute the position of this block within its parent region using an O(N)
+  /// linear scan.
+  ///
+  /// Note: There is no semantic meaning to a block number. Blocks are used for
+  /// unstructured control flow and relying on block numbers for functional
+  /// purposes may indicate a design flaw. (You can give semantic meaning to
+  /// region numbers instead.) Block numbers are useful for debugging purposes
+  /// and for error messages.
+  unsigned computeBlockNumber();
+
   //===--------------------------------------------------------------------===//
   // Block argument management
   //===--------------------------------------------------------------------===//
