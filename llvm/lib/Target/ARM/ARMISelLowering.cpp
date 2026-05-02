@@ -1273,9 +1273,6 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setOperationAction(ISD::STRICT_FSETCCS, MVT::f64, Custom);
   }
 
-  setOperationAction(ISD::FSINCOS, MVT::f64, Expand);
-  setOperationAction(ISD::FSINCOS, MVT::f32, Expand);
-
   // FP-ARMv8 implements a lot of rounding-like FP operations.
   if (Subtarget->hasFPARMv8Base()) {
     for (auto Op :
