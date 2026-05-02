@@ -55,6 +55,13 @@ static_assert(0.0 == [] {
   int exp{};
   return LIBC_NAMESPACE::shared::remquo(1.0, 1.0, &exp);
 }());
+static_assert(0.0 == LIBC_NAMESPACE::shared::ldexp(0.0, 0.0));
+static_assert(0.0 == LIBC_NAMESPACE::shared::scalbln(0.0, 0.0));
+static_assert(0.0 == LIBC_NAMESPACE::shared::scalbn(0.0, 0.0));
+static_assert(0.0 == [] {
+  int exp{};
+  return LIBC_NAMESPACE::shared::frexp(0.0, &exp);
+}());
 
 //===----------------------------------------------------------------------===//
 //                       Float Tests
@@ -99,6 +106,10 @@ static_assert(0.0f == [] {
   int exp{};
   return LIBC_NAMESPACE::shared::remquof(1.0f, 1.0f, &exp);
 }());
+static_assert(0.0f == LIBC_NAMESPACE::shared::scalblnf(0.0f, 0.0));
+static_assert(0.0f == LIBC_NAMESPACE::shared::scalbnf(0.0f, 0.0));
+static_assert(0.0f == LIBC_NAMESPACE::shared::fmul(0.0, 0.0));
+static_assert(0.0f == LIBC_NAMESPACE::shared::fsub(0.0, 0.0));
 //===----------------------------------------------------------------------===//
 //                       Float16 Tests
 //===----------------------------------------------------------------------===//
@@ -151,6 +162,8 @@ static_assert(0.0f16 == [] {
   int exp{};
   return LIBC_NAMESPACE::shared::remquof16(1.0f16, 1.0f16, &exp);
 }());
+static_assert(0.0f16 == LIBC_NAMESPACE::shared::scalblnf16(0.0f16, 0.0));
+static_assert(0.0f16 == LIBC_NAMESPACE::shared::scalbnf16(0.0f16, 0.0));
 #endif // LIBC_TYPES_HAS_FLOAT16
 
 //===----------------------------------------------------------------------===//
@@ -204,6 +217,15 @@ static_assert(0.0L == LIBC_NAMESPACE::shared::remainderl(1.0L, 1.0L));
 static_assert(0.0L == [] {
   int exp{};
   return LIBC_NAMESPACE::shared::remquol(1.0L, 1.0L, &exp);
+}());
+static_assert(0.0L == LIBC_NAMESPACE::shared::ldexpl(0.0L, 0.0));
+static_assert(0.0L == LIBC_NAMESPACE::shared::scalblnl(0.0L, 0.0));
+static_assert(0.0L == LIBC_NAMESPACE::shared::scalbnl(0.0L, 0.0));
+static_assert(0.0f == LIBC_NAMESPACE::shared::fmull(0.0L, 0.0L));
+static_assert(0.0f == LIBC_NAMESPACE::shared::fsubl(0.0L, 0.0L));
+static_assert(0.0L == [] {
+  int exp{};
+  return LIBC_NAMESPACE::shared::frexpl(0.0L, &exp);
 }());
 
 #endif
@@ -293,6 +315,14 @@ static_assert(float128(0.0) == [] {
   int exp{};
   return LIBC_NAMESPACE::shared::remquof128(float128(1.0), float128(1.0), &exp);
 }());
+static_assert(float128(0.0) ==
+              LIBC_NAMESPACE::shared::scalblnf128(float128(0.0), 0.0));
+static_assert(float128(0.0) ==
+              LIBC_NAMESPACE::shared::scalbnf128(float128(0.0), 0.0));
+static_assert(0.0f ==
+              LIBC_NAMESPACE::shared::fmulf128(float128(0.0), float128(0.0)));
+static_assert(0.0f ==
+              LIBC_NAMESPACE::shared::fsubf128(float128(0.0), float128(0.0)));
 
 #endif // LIBC_TYPES_HAS_FLOAT128
 
@@ -373,6 +403,16 @@ static_assert(bfloat16(0.0) ==
 static_assert(bfloat16(0.0) == [] {
   int exp{};
   return LIBC_NAMESPACE::shared::remquobf16(bfloat16(1.0), bfloat16(1.0), &exp);
+}());
+static_assert(bfloat16(0.0) ==
+              LIBC_NAMESPACE::shared::ldexpbf16(bfloat16(0.0), 0.0));
+static_assert(bfloat16(0.0) ==
+              LIBC_NAMESPACE::shared::scalblnbf16(bfloat16(0.0), 0.0));
+static_assert(bfloat16(0.0) ==
+              LIBC_NAMESPACE::shared::scalbnbf16(bfloat16(0.0), 0.0));
+static_assert(bfloat16(0.0) == [] {
+  int exp{};
+  return LIBC_NAMESPACE::shared::frexpbf16(bfloat16(0.0), &exp);
 }());
 
 TEST(LlvmLibcSharedMathTest, ConstantEvaluation) {}

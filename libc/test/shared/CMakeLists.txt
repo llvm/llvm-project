@@ -235,9 +235,15 @@ add_fp_unittest(
     libc.src.__support.math.fmodf128
     libc.src.__support.math.fmodf16
     libc.src.__support.math.fmodl
+    libc.src.__support.math.fmul
+    libc.src.__support.math.fmulf128
+    libc.src.__support.math.fmull
+    libc.src.__support.math.frexp
+    libc.src.__support.math.frexpbf16
     libc.src.__support.math.frexpf
     libc.src.__support.math.frexpf128
     libc.src.__support.math.frexpf16
+    libc.src.__support.math.frexpl
     libc.src.__support.math.fromfp
     libc.src.__support.math.fromfpbf16
     libc.src.__support.math.fromfpf
@@ -253,6 +259,9 @@ add_fp_unittest(
     libc.src.__support.math.fsqrt
     libc.src.__support.math.fsqrtf128
     libc.src.__support.math.fsqrtl
+    libc.src.__support.math.fsub
+    libc.src.__support.math.fsubf128
+    libc.src.__support.math.fsubl
     libc.src.__support.math.getpayload
     libc.src.__support.math.getpayloadbf16
     libc.src.__support.math.getpayloadf
@@ -269,7 +278,10 @@ add_fp_unittest(
     libc.src.__support.math.ilogbf16
     libc.src.__support.math.ilogbf128
     libc.src.__support.math.ilogbl
+    libc.src.__support.math.ldexp
+    libc.src.__support.math.ldexpbf16
     libc.src.__support.math.ldexpf
+    libc.src.__support.math.ldexpl
     libc.src.__support.math.llogb
     libc.src.__support.math.llogbbf16
     libc.src.__support.math.log
@@ -344,6 +356,18 @@ add_fp_unittest(
     libc.src.__support.math.remquol
     libc.src.__support.math.rsqrtf
     libc.src.__support.math.rsqrtf16
+    libc.src.__support.math.scalbln
+    libc.src.__support.math.scalblnbf16
+    libc.src.__support.math.scalblnf
+    libc.src.__support.math.scalblnf128
+    libc.src.__support.math.scalblnf16
+    libc.src.__support.math.scalblnl
+    libc.src.__support.math.scalbn
+    libc.src.__support.math.scalbnbf16
+    libc.src.__support.math.scalbnf
+    libc.src.__support.math.scalbnf128
+    libc.src.__support.math.scalbnf16
+    libc.src.__support.math.scalbnl
     libc.src.__support.math.setpayload
     libc.src.__support.math.setpayloadbf16
     libc.src.__support.math.setpayloadf
@@ -514,6 +538,12 @@ add_fp_unittest(
     libc.src.__support.math.fmodf128
     libc.src.__support.math.fmodf16
     libc.src.__support.math.fmodl
+    libc.src.__support.math.fmul
+    libc.src.__support.math.fmulf128
+    libc.src.__support.math.fmull
+    libc.src.__support.math.frexp
+    libc.src.__support.math.frexpbf16
+    libc.src.__support.math.frexpl
     libc.src.__support.math.fromfp
     libc.src.__support.math.fromfpbf16
     libc.src.__support.math.fromfpf
@@ -526,6 +556,12 @@ add_fp_unittest(
     libc.src.__support.math.fromfpxf128
     libc.src.__support.math.fromfpxf16
     libc.src.__support.math.fromfpxl
+    libc.src.__support.math.fsub
+    libc.src.__support.math.fsubf128
+    libc.src.__support.math.fsubl
+    libc.src.__support.math.ldexp
+    libc.src.__support.math.ldexpbf16
+    libc.src.__support.math.ldexpl
     libc.src.__support.math.llogbbf16
     libc.src.__support.math.log
     libc.src.__support.math.logbbf16
@@ -548,6 +584,18 @@ add_fp_unittest(
     libc.src.__support.math.remquof128
     libc.src.__support.math.remquof16
     libc.src.__support.math.remquol
+    libc.src.__support.math.scalbln
+    libc.src.__support.math.scalblnbf16
+    libc.src.__support.math.scalblnf
+    libc.src.__support.math.scalblnf128
+    libc.src.__support.math.scalblnf16
+    libc.src.__support.math.scalblnl
+    libc.src.__support.math.scalbn
+    libc.src.__support.math.scalbnbf16
+    libc.src.__support.math.scalbnf
+    libc.src.__support.math.scalbnf128
+    libc.src.__support.math.scalbnf16
+    libc.src.__support.math.scalbnl
     libc.src.__support.math.sqrtl
     libc.src.__support.math.ufromfp
     libc.src.__support.math.ufromfpbf16
