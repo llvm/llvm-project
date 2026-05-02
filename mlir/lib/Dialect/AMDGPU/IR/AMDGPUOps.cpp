@@ -147,6 +147,15 @@ static bool hasGlobalMemorySpace(Attribute memorySpace) {
   return false;
 }
 
+static bool hasExplicitGlobalMemorySpace(Attribute memorySpace) {
+  if (auto intMemorySpace = dyn_cast_if_present<IntegerAttr>(memorySpace))
+    return intMemorySpace.getInt() == 1;
+  if (auto gpuMemorySpace =
+          dyn_cast_if_present<gpu::AddressSpaceAttr>(memorySpace))
+    return gpuMemorySpace.getValue() == gpu::AddressSpace::Global;
+  return false;
+}
+
 static bool hasWorkgroupMemorySpace(Attribute memorySpace) {
   if (!memorySpace)
     return false;
@@ -1016,31 +1025,78 @@ void GatherToLDSOp::getCanonicalizationPatterns(RewritePatternSet &results,
 // GlobalLoadAsyncToLDSOp
 //===----------------------------------------------------------------------===//
 
+static std::optional<int64_t> getTransferSizeInBits(Type transferType) {
+  Type elementType = transferType;
+  int64_t numElements = 1;
+  if (auto vectorType = dyn_cast<VectorType>(transferType)) {
+    elementType = vectorType.getElementType();
+    numElements = vectorType.getNumElements();
+  }
+
+  if (!elementType.isIntOrFloat())
+    return std::nullopt;
+
+  return numElements * elementType.getIntOrFloatBitWidth();
+}
+
+static LogicalResult
+verifyGlobalLoadAsyncToLDSLike(Operation *op, MemRefType srcType,
+                               MemRefType dstType, OperandRange srcIndices,
+                               OperandRange dstIndices, Type transferType,
+                               bool requireExplicitGlobal) {
+  if (srcType.getElementType() != dstType.getElementType())
+    return op->emitOpError("source and destination element types must match");
+
+  if (srcType.getRank() != static_cast<int64_t>(srcIndices.size()))
+    return op->emitOpError("source index count must match source memref rank");
+
+  if (dstType.getRank() != static_cast<int64_t>(dstIndices.size()))
+    return op->emitOpError(
+        "destination index count must match destination memref rank");
+
+  std::optional<int64_t> transferSize = getTransferSizeInBits(transferType);
+  if (!transferSize)
+    return op->emitOpError(
+        "transfer type must be an integer, float, or vector of integers or "
+        "floats");
+
+  if (!llvm::is_contained({8, 32, 64, 128}, *transferSize))
+    return op->emitOpError("transfer type size must be 8, 32, 64, or 128 bits");
+
+  bool hasValidGlobalMemorySpace =
+      requireExplicitGlobal
+          ? hasExplicitGlobalMemorySpace(srcType.getMemorySpace())
+          : hasGlobalMemorySpace(srcType.getMemorySpace());
+  if (!hasValidGlobalMemorySpace)
+    return op->emitOpError("source memory address space must be global");
+
+  if (!hasWorkgroupMemorySpace(dstType.getMemorySpace()))
+    return op->emitOpError(
+        "destination memory address space must be Workgroup");
+
+  return success();
+}
+
 LogicalResult GlobalLoadAsyncToLDSOp::verify() {
   MemRefType srcType = cast<MemRefType>(getSrc().getType());
   MemRefType dstType = cast<MemRefType>(getDst().getType());
+  return verifyGlobalLoadAsyncToLDSLike(*this, srcType, dstType,
+                                        getSrcIndices(), getDstIndices(),
+                                        getTransferType(),
+                                        /*requireExplicitGlobal=*/false);
+}
 
-  if (srcType.getElementType() != dstType.getElementType())
-    return emitOpError("source and destination element types must match");
+//===----------------------------------------------------------------------===//
+// ClusterLoadAsyncToLDSOp
+//===----------------------------------------------------------------------===//
 
-  Type transferType = getTransferType();
-  int transferSize;
-  if (auto vectorTransfer = dyn_cast<VectorType>(transferType)) {
-    transferSize = vectorTransfer.getNumElements() *
-                   vectorTransfer.getElementTypeBitWidth();
-  } else {
-    transferSize = transferType.getIntOrFloatBitWidth();
-  }
-  if (!llvm::is_contained({8, 32, 64, 128}, transferSize))
-    return emitOpError("transfer type size must be 8, 32, 64, or 128 bits");
-
-  if (!hasGlobalMemorySpace(srcType.getMemorySpace()))
-    return emitOpError("source memory address space must be global");
-
-  if (!hasWorkgroupMemorySpace(dstType.getMemorySpace()))
-    return emitOpError("destination memory address space must be Workgroup");
-
-  return success();
+LogicalResult ClusterLoadAsyncToLDSOp::verify() {
+  MemRefType srcType = cast<MemRefType>(getSrc().getType());
+  MemRefType dstType = cast<MemRefType>(getDst().getType());
+  return verifyGlobalLoadAsyncToLDSLike(*this, srcType, dstType,
+                                        getSrcIndices(), getDstIndices(),
+                                        getTransferType(),
+                                        /*requireExplicitGlobal=*/true);
 }
 
 //===----------------------------------------------------------------------===//

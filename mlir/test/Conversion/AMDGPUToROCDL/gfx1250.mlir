@@ -1031,3 +1031,67 @@ func.func @global_load_async_to_lds_b128_masked(
       memref<64x64xf32, #gpu.address_space<workgroup>>
   func.return
 }
+
+// -----
+// cluster_load_async_to_lds_bN
+
+// CHECK-LABEL: func @cluster_load_async_to_lds_b32
+func.func @cluster_load_async_to_lds_b32(
+    %global : memref<128x72xf32, #gpu.address_space<global>>,
+    %mask : i32) {
+  %c0 = arith.constant 0 : index
+  %c12 = arith.constant 12 : index
+  %c32 = arith.constant 32 : index
+  %alloc = memref.alloc() : memref<64x64xf32, #gpu.address_space<workgroup>>
+  // CHECK: rocdl.cluster.load.async.to.lds.b32
+  amdgpu.cluster_load_async_to_lds %global[%c12, %c0],
+    %alloc[%c32, %c0], %mask
+    : f32, memref<128x72xf32, #gpu.address_space<global>>,
+      memref<64x64xf32, #gpu.address_space<workgroup>>
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @cluster_load_async_to_lds_b8
+func.func @cluster_load_async_to_lds_b8(
+    %global : memref<128x72xi8, #gpu.address_space<global>>, %mask : i32) {
+  %c0 = arith.constant 0 : index
+  %alloc = memref.alloc() : memref<64x64xi8, #gpu.address_space<workgroup>>
+  // CHECK: rocdl.cluster.load.async.to.lds.b8
+  amdgpu.cluster_load_async_to_lds %global[%c0, %c0], %alloc[%c0, %c0],
+    %mask
+    : i8, memref<128x72xi8, #gpu.address_space<global>>,
+      memref<64x64xi8, #gpu.address_space<workgroup>>
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @cluster_load_async_to_lds_b64
+func.func @cluster_load_async_to_lds_b64(
+    %global : memref<128x72xf32, #gpu.address_space<global>>,
+    %mask : i32) {
+  %c0 = arith.constant 0 : index
+  %alloc = memref.alloc() : memref<64x64xf32, #gpu.address_space<workgroup>>
+  // CHECK: rocdl.cluster.load.async.to.lds.b64 {{.*}}, {{.*}}, 0, 0, {{.*}}
+  amdgpu.cluster_load_async_to_lds %global[%c0, %c0], %alloc[%c0, %c0],
+    %mask
+    : vector<2xf32>, memref<128x72xf32, #gpu.address_space<global>>,
+      memref<64x64xf32, #gpu.address_space<workgroup>>
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @cluster_load_async_to_lds_b128_dynamic_indices
+func.func @cluster_load_async_to_lds_b128_dynamic_indices(
+    %global : memref<512xi32, #gpu.address_space<global>>,
+    %src_idx : index, %dst_idx : index, %mask : i32) {
+  %alloc = memref.alloc() : memref<256xi32, #gpu.address_space<workgroup>>
+  // CHECK: rocdl.cluster.load.async.to.lds.b128
+  amdgpu.cluster_load_async_to_lds %global[%src_idx], %alloc[%dst_idx], %mask
+    : vector<4xi32>, memref<512xi32, #gpu.address_space<global>>,
+      memref<256xi32, #gpu.address_space<workgroup>>
+  func.return
+}
