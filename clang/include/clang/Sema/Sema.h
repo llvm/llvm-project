@@ -13110,7 +13110,7 @@ public:
   void DeclareImplicitDeductionGuides(TemplateDecl *Template,
                                       SourceLocation Loc);
 
-  FunctionTemplateDecl *DeclareAggregateDeductionGuideFromInitList(
+  CXXDeductionGuideDecl *DeclareAggregateDeductionGuideFromInitList(
       TemplateDecl *Template, MutableArrayRef<QualType> ParamTypes,
       SourceLocation Loc);
 
