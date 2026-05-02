@@ -1585,6 +1585,10 @@ public:
         // blocks), verifying that each intermediate block contains only a
         // branch terminator, until we find end_catch as the last
         // non-terminator in some block.
+        // Verify that end_catch is reachable on some predecessor path
+        // before this yield.  After cleanup scope flattening, end_catch
+        // may be separated from yield by conditional branches (e.g.,
+        // from flattened cir.if inside the catch body).
         assert(([&]() {
                  if (mlir::Operation *prev = yieldOp->getPrevNode())
                    return isa<cir::EndCatchOp>(prev);
@@ -1597,17 +1601,17 @@ public:
                    if (!visited.insert(b).second)
                      continue;
                    mlir::Operation *term = b->getTerminator();
-                   if (mlir::Operation *prev = term->getPrevNode())
-                     return isa<cir::EndCatchOp>(prev);
-                   if (!isa<cir::BrOp>(term))
-                     return false;
+                   if (mlir::Operation *prev = term->getPrevNode()) {
+                     if (isa<cir::EndCatchOp>(prev))
+                       return true;
+                   }
                    for (mlir::Block *pred : b->getPredecessors())
                      worklist.push_back(pred);
                  }
                  return false;
                }()) &&
-               "expected end_catch as last operation before yield "
-               "in catch handler, with only branches in between");
+               "expected end_catch reachable before yield "
+               "in catch handler");
         rewriter.setInsertionPoint(yieldOp);
         rewriter.replaceOpWithNewOp<cir::BrOp>(yieldOp, continueBlock);
       }
