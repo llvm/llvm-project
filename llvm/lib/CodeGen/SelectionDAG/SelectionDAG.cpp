@@ -6078,9 +6078,8 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
     if (InterestedClasses & fcNan)
       InterestedSrcs |= KnownFPClass::OrderedLessThanZeroMask;
 
-    KnownFPClass KnownSrc = computeKnownFPClass(
-        Op.getOperand(0), DemandedElts, InterestedSrcs, Depth + 1);
-
+    KnownFPClass KnownSrc = computeKnownFPClass(Op.getOperand(0), DemandedElts,
+                                                InterestedSrcs, Depth + 1);
 
     DenormalMode Mode = DenormalMode::getDynamic();
 
