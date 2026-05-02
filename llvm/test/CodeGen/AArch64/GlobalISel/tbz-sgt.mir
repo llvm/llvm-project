@@ -27,9 +27,9 @@ body:             |
   bb.0:
     successors: %bb.0, %bb.1
     liveins: $x0
-    %copy:gpr(s64) = COPY $x0
-    %negative_one:gpr(s64) = G_CONSTANT i64 -1
-    %cmp:gpr(s32) = G_ICMP intpred(sgt), %copy(s64), %negative_one
+    %copy:gpr(i64) = COPY $x0
+    %negative_one:gpr(i64) = G_CONSTANT i64 -1
+    %cmp:gpr(i32) = G_ICMP intpred(sgt), %copy(i64), %negative_one
     G_BRCOND %cmp, %bb.1
     G_BR %bb.0
   bb.1:
@@ -56,9 +56,9 @@ body:             |
   bb.0:
     successors: %bb.0, %bb.1
     liveins: $x0
-    %copy:gpr(s32) = COPY $w0
-    %negative_one:gpr(s32) = G_CONSTANT i32 -1
-    %cmp:gpr(s32) = G_ICMP intpred(sgt), %copy(s32), %negative_one
+    %copy:gpr(i32) = COPY $w0
+    %negative_one:gpr(i32) = G_CONSTANT i32 -1
+    %cmp:gpr(i32) = G_ICMP intpred(sgt), %copy(i32), %negative_one
     G_BRCOND %cmp, %bb.1
     G_BR %bb.0
   bb.1:
@@ -86,9 +86,9 @@ body:             |
   bb.0:
     successors: %bb.0, %bb.1
     liveins: $x0
-    %copy:gpr(s32) = COPY $w0
-    %one:gpr(s32) = G_CONSTANT i32 1
-    %cmp:gpr(s32) = G_ICMP intpred(sgt), %copy(s32), %one
+    %copy:gpr(i32) = COPY $w0
+    %one:gpr(i32) = G_CONSTANT i32 1
+    %cmp:gpr(i32) = G_ICMP intpred(sgt), %copy(i32), %one
     G_BRCOND %cmp, %bb.1
     G_BR %bb.0
   bb.1:
@@ -117,12 +117,12 @@ body:             |
   bb.0:
     successors: %bb.0, %bb.1
     liveins: $x0
-    %copy:gpr(s64) = COPY $x0
-    %bit:gpr(s64) = G_CONSTANT i64 8
-    %negative_one:gpr(s64) = G_CONSTANT i64 -1
-    %c:gpr(s64) = G_CONSTANT i64 8
-    %and:gpr(s64) = G_AND %copy, %bit
-    %cmp:gpr(s32) = G_ICMP intpred(sgt), %and(s64), %negative_one
+    %copy:gpr(i64) = COPY $x0
+    %bit:gpr(i64) = G_CONSTANT i64 8
+    %negative_one:gpr(i64) = G_CONSTANT i64 -1
+    %c:gpr(i64) = G_CONSTANT i64 8
+    %and:gpr(i64) = G_AND %copy, %bit
+    %cmp:gpr(i32) = G_ICMP intpred(sgt), %and(i64), %negative_one
     G_BRCOND %cmp, %bb.1
     G_BR %bb.0
   bb.1:
@@ -151,9 +151,9 @@ body:             |
   bb.0:
     successors: %bb.0, %bb.1
     liveins: $x0
-    %copy:gpr(s64) = COPY $x0
-    %negative_one:gpr(s64) = G_CONSTANT i64 -1
-    %cmp:gpr(s32) = G_ICMP intpred(sgt), %negative_one, %copy(s64)
+    %copy:gpr(i64) = COPY $x0
+    %negative_one:gpr(i64) = G_CONSTANT i64 -1
+    %cmp:gpr(i32) = G_ICMP intpred(sgt), %negative_one, %copy(i64)
     G_BRCOND %cmp, %bb.1
     G_BR %bb.0
   bb.1:

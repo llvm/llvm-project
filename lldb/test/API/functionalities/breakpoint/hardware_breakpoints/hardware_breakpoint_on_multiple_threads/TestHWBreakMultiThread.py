@@ -11,6 +11,7 @@ from lldbsuite.test import lldbutil
 from functionalities.breakpoint.hardware_breakpoints.base import *
 
 
+@skipIfTargetDoesNotSupportThreads()
 class HardwareBreakpointMultiThreadTestCase(HardwareBreakpointTestBase):
     @skipTestIfFn(HardwareBreakpointTestBase.hw_breakpoints_unsupported)
     def test_hw_break_set_delete_multi_thread_macos(self):

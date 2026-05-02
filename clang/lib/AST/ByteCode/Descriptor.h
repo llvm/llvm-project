@@ -54,6 +54,8 @@ static_assert(sizeof(GlobalInlineDescriptor) == sizeof(void *), "");
 
 enum class Lifetime : uint8_t {
   Started,
+  NotStarted,
+  Destroyed,
   Ended,
 };
 

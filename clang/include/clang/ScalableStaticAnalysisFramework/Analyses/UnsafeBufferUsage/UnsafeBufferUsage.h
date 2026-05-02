@@ -12,14 +12,10 @@
 #include "clang/ScalableStaticAnalysisFramework/Analyses/EntityPointerLevel/EntityPointerLevel.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/SummaryName.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/EntitySummary.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/iterator_range.h"
-#include <set>
 
 namespace clang::ssaf {
-
-/// An UnsafeBufferUsageEntitySummary is an immutable set of unsafe buffers, in
-/// the form of EntityPointerLevel.
+/// An UnsafeBufferUsageEntitySummary contains a set of EntityPointerLevels
+/// extracted from unsafe buffer pointers contributed by an entity.
 class UnsafeBufferUsageEntitySummary final : public EntitySummary {
   const EntityPointerLevelSet UnsafeBuffers;
 
@@ -29,7 +25,7 @@ class UnsafeBufferUsageEntitySummary final : public EntitySummary {
   friend llvm::iterator_range<EntityPointerLevelSet::const_iterator>
   getUnsafeBuffers(const UnsafeBufferUsageEntitySummary &);
 
-  UnsafeBufferUsageEntitySummary(EntityPointerLevelSet UnsafeBuffers)
+  explicit UnsafeBufferUsageEntitySummary(EntityPointerLevelSet UnsafeBuffers)
       : EntitySummary(), UnsafeBuffers(std::move(UnsafeBuffers)) {}
 
 public:

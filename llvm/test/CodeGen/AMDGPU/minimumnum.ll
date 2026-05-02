@@ -3,34 +3,34 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 < %s | FileCheck -check-prefixes=GFX7,GFX7-GISEL %s
 
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 < %s | FileCheck -check-prefixes=GFX8,GFX8-SDAG %s
-; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 < %s | FileCheck -check-prefixes=GFX8,GFX8-GISEL %s
+; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 < %s | FileCheck -check-prefixes=GFX8,GFX8-GISEL %s
 
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefixes=GFX9,GFX900,GFX9-SDAG,GFX900-SDAG %s
-; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefixes=GFX9,GFX900,GFX9-GISEL,GFX900-GISEL %s
+; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefixes=GFX9,GFX900,GFX9-GISEL,GFX900-GISEL %s
 
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 < %s | FileCheck -check-prefixes=GFX9,GFX950,GFX9-SDAG,GFX950-SDAG %s
-; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 < %s | FileCheck -check-prefixes=GFX9,GFX950,GFX9-GISEL,GFX950-GISEL %s
+; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 < %s | FileCheck -check-prefixes=GFX9,GFX950,GFX9-GISEL,GFX950-GISEL %s
 
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1030 < %s | FileCheck -check-prefixes=GFX10,GFX10-SDAG %s
-; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1030 < %s | FileCheck -check-prefixes=GFX10,GFX10-GISEL %s
+; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1030 < %s | FileCheck -check-prefixes=GFX10,GFX10-GISEL %s
 
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX11,GFX11-TRUE16,GFX11-SDAG,GFX11-TRUE16-SDAG %s
-; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX11,GFX11-TRUE16,GFX11-GISEL,GFX11-TRUE16-GISEL %s
+; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX11,GFX11-TRUE16,GFX11-GISEL,GFX11-TRUE16-GISEL %s
 
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX11,GFX11-FAKE16,GFX11-SDAG,GFX11-FAKE16-SDAG %s
-; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX11,GFX11-FAKE16,GFX11-GISEL,GFX11-FAKE16-GISEL %s
+; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX11,GFX11-FAKE16,GFX11-GISEL,GFX11-FAKE16-GISEL %s
 
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1170 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX1170,GFX1170-TRUE16,GFX1170-SDAG,GFX1170-TRUE16-SDAG %s
-; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1170 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX1170,GFX1170-TRUE16,GFX1170-GISEL,GFX1170-TRUE16-GISEL %s
+; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1170 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX1170,GFX1170-TRUE16,GFX1170-GISEL,GFX1170-TRUE16-GISEL %s
 
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1170 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX1170,GFX1170-FAKE16,GFX1170-SDAG,GFX1170-FAKE16-SDAG %s
-; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1170 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX1170,GFX1170-FAKE16,GFX1170-GISEL,GFX1170-FAKE16-GISEL %s
+; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1170 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX1170,GFX1170-FAKE16,GFX1170-GISEL,GFX1170-FAKE16-GISEL %s
 
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX12,GFX12-TRUE16,GFX12-SDAG,GFX12-TRUE16-SDAG %s
-; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX12,GFX12-TRUE16,GFX12-GISEL,GFX12-TRUE16-GISEL %s
+; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX12,GFX12-TRUE16,GFX12-GISEL,GFX12-TRUE16-GISEL %s
 
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX12,GFX12-FAKE16,GFX12-SDAG,GFX12-FAKE16-SDAG %s
-; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX12,GFX12-FAKE16,GFX12-GISEL,GFX12-FAKE16-GISEL %s
+; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX12,GFX12-FAKE16,GFX12-GISEL,GFX12-FAKE16-GISEL %s
 
 define half @v_minimumnum_f16(half %x, half %y) {
 ; GFX7-SDAG-LABEL: v_minimumnum_f16:
@@ -1411,9 +1411,13 @@ define half @v_minimumnum_f16_s_s(half inreg %x, half inreg %y) {
 ; GFX1170-TRUE16-GISEL:       ; %bb.0:
 ; GFX1170-TRUE16-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1170-TRUE16-GISEL-NEXT:    v_max_num_f16_e64 v0.l, s0, s0
-; GFX1170-TRUE16-GISEL-NEXT:    v_max_num_f16_e64 v0.h, s1, s1
-; GFX1170-TRUE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1170-TRUE16-GISEL-NEXT:    v_min_num_f16_e32 v0.l, v0.l, v0.h
+; GFX1170-TRUE16-GISEL-NEXT:    v_max_num_f16_e64 v1.l, s1, s1
+; GFX1170-TRUE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1170-TRUE16-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1170-TRUE16-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX1170-TRUE16-GISEL-NEXT:    s_min_f16 s0, s0, s1
+; GFX1170-TRUE16-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
+; GFX1170-TRUE16-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX1170-TRUE16-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1170-FAKE16-SDAG-LABEL: v_minimumnum_f16_s_s:
@@ -1430,8 +1434,12 @@ define half @v_minimumnum_f16_s_s(half inreg %x, half inreg %y) {
 ; GFX1170-FAKE16-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1170-FAKE16-GISEL-NEXT:    v_max_num_f16_e64 v0, s0, s0
 ; GFX1170-FAKE16-GISEL-NEXT:    v_max_num_f16_e64 v1, s1, s1
-; GFX1170-FAKE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1170-FAKE16-GISEL-NEXT:    v_min_num_f16_e32 v0, v0, v1
+; GFX1170-FAKE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1170-FAKE16-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1170-FAKE16-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX1170-FAKE16-GISEL-NEXT:    s_min_f16 s0, s0, s1
+; GFX1170-FAKE16-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
+; GFX1170-FAKE16-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX1170-FAKE16-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-TRUE16-SDAG-LABEL: v_minimumnum_f16_s_s:
@@ -1455,9 +1463,14 @@ define half @v_minimumnum_f16_s_s(half inreg %x, half inreg %y) {
 ; GFX12-TRUE16-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-TRUE16-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-GISEL-NEXT:    v_max_num_f16_e64 v0.l, s0, s0
-; GFX12-TRUE16-GISEL-NEXT:    v_max_num_f16_e64 v0.h, s1, s1
-; GFX12-TRUE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-TRUE16-GISEL-NEXT:    v_min_num_f16_e32 v0.l, v0.l, v0.h
+; GFX12-TRUE16-GISEL-NEXT:    v_max_num_f16_e64 v1.l, s1, s1
+; GFX12-TRUE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-TRUE16-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-TRUE16-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX12-TRUE16-GISEL-NEXT:    s_min_num_f16 s0, s0, s1
+; GFX12-TRUE16-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-TRUE16-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_2)
+; GFX12-TRUE16-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX12-TRUE16-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-SDAG-LABEL: v_minimumnum_f16_s_s:
@@ -1482,8 +1495,13 @@ define half @v_minimumnum_f16_s_s(half inreg %x, half inreg %y) {
 ; GFX12-FAKE16-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-FAKE16-GISEL-NEXT:    v_max_num_f16_e64 v0, s0, s0
 ; GFX12-FAKE16-GISEL-NEXT:    v_max_num_f16_e64 v1, s1, s1
-; GFX12-FAKE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-FAKE16-GISEL-NEXT:    v_min_num_f16_e32 v0, v0, v1
+; GFX12-FAKE16-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-FAKE16-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-FAKE16-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX12-FAKE16-GISEL-NEXT:    s_min_num_f16 s0, s0, s1
+; GFX12-FAKE16-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-FAKE16-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_2)
+; GFX12-FAKE16-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX12-FAKE16-GISEL-NEXT:    s_setpc_b64 s[30:31]
  %result = call half @llvm.minimumnum.f16(half %x, half %y)
   ret half %result
@@ -1894,8 +1912,12 @@ define float @v_minimumnum_f32_s_s(float inreg %x, float inreg %y) {
 ; GFX1170-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1170-GISEL-NEXT:    v_max_num_f32_e64 v0, s0, s0
 ; GFX1170-GISEL-NEXT:    v_max_num_f32_e64 v1, s1, s1
-; GFX1170-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1170-GISEL-NEXT:    v_min_num_f32_e32 v0, v0, v1
+; GFX1170-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1170-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1170-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX1170-GISEL-NEXT:    s_min_f32 s0, s0, s1
+; GFX1170-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
+; GFX1170-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX1170-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-SDAG-LABEL: v_minimumnum_f32_s_s:
@@ -1920,8 +1942,13 @@ define float @v_minimumnum_f32_s_s(float inreg %x, float inreg %y) {
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-NEXT:    v_max_num_f32_e64 v0, s0, s0
 ; GFX12-GISEL-NEXT:    v_max_num_f32_e64 v1, s1, s1
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-GISEL-NEXT:    v_min_num_f32_e32 v0, v0, v1
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX12-GISEL-NEXT:    s_min_num_f32 s0, s0, s1
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_2)
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
  %result = call float @llvm.minimumnum.f32(float %x, float %y)
   ret float %result

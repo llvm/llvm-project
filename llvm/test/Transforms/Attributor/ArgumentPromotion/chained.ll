@@ -15,7 +15,7 @@ define internal i32 @test(ptr %x) {
 ; CHECK-LABEL: define {{[^@]+}}@test
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[Z:%.*]] = load i32, ptr @G1, align 4
+; CHECK-NEXT:    [[Z:%.*]] = load i32, ptr @G1, align 4, !invariant.load [[META0:![0-9]+]]
 ; CHECK-NEXT:    ret i32 [[Z]]
 ;
 entry:
@@ -46,9 +46,13 @@ entry:
 
 ;.
 ; TUNIT: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
-; TUNIT: attributes #[[ATTR1]] = { nofree nosync nounwind willreturn memory(read) }
+; TUNIT: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind willreturn memory(read) }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR2]] = { nofree nosync willreturn }
+;.
+; TUNIT: [[META0]] = !{}
+;.
+; CGSCC: [[META0]] = !{}
 ;.

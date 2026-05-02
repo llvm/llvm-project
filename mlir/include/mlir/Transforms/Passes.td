@@ -48,7 +48,17 @@ def CanonicalizerPass : Pass<"canonicalize"> {
     Option<"maxNumRewrites", "max-num-rewrites", "int64_t", /*default=*/"-1",
            "Max. number of pattern rewrites within an iteration">,
     Option<"testConvergence", "test-convergence", "bool", /*default=*/"false",
-           "Test only: Fail pass on non-convergence to detect cyclic pattern">
+           "Test only: Fail pass on non-convergence to detect cyclic pattern">,
+    Option<"cseBetweenIterations", "cse-between-iterations", "bool",
+           /*default=*/"false",
+           "Run full CSE between each pattern-application iteration. "
+           "CSE-driven changes trigger extra iterations, so this may push "
+           "the iteration count up to max-iterations and affect convergence "
+           "under test-convergence.">,
+    ListOption<"filterDialects", "filter-dialects", "std::string",
+               "If non-empty, only collect canonicalization patterns from the"
+               " dialects with the given namespaces. The listed dialects are"
+               " force-loaded into the context as dependent dialects.">
   ] # RewritePassUtils.options;
 }
 
@@ -87,6 +97,30 @@ def CSEPass : Pass<"cse"> {
   let statistics = [
     Statistic<"numCSE", "num-cse'd", "Number of operations CSE'd">,
     Statistic<"numDCE", "num-dce'd", "Number of operations DCE'd">
+  ];
+}
+
+def TrivialDeadCodeEliminationPass : Pass<"trivial-dce"> {
+  let summary = "Remove trivially dead operations and blocks";
+  let description = [{
+    This pass eliminates only trivially dead operations; that is,
+    side-effect-free operations with no users. By default, it also removes
+    trivially dead blocks; that is, blocks that are unreachable from their
+    region entry block. The `remove-blocks` option can be disabled to preserve
+    unreachable blocks.
+
+    This pass does not run a liveness analysis and does not remove dead
+    use-def cycles.
+
+    By default, this pass recursively visits nested regions. The `recursive`
+    option can be disabled to restrict the pass to only the immediate regions
+    nested under the current operation.
+  }];
+  let options = [
+    Option<"recursive", "recursive", "bool", /*default=*/"true",
+           "Recursively visit nested regions">,
+    Option<"removeBlocks", "remove-blocks", "bool", /*default=*/"true",
+           "Remove unreachable blocks">
   ];
 }
 

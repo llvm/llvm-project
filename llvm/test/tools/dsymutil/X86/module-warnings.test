@@ -23,7 +23,7 @@
 # RUN: cp %p/../Inputs/module-warnings/1.o %t.dir
 # RUN: cp %p/../Inputs/module-warnings/Foo.pcm %t.dir/ModuleCache
 #
-# RUN: dsymutil -verify -f -oso-prepend-path=%t.dir -y \
+# RUN: dsymutil --linker classic -verify -f -oso-prepend-path=%t.dir -y \
 # RUN:   %p/dummy-debug-map.map -o %t 2>&1 | FileCheck %s
 #
 # Module-not-found should be reported only once.
@@ -32,12 +32,12 @@
 # CHECK-NOT: warning: {{.*}}Bar.pcm:
 #
 # RUN: cp %p/../Inputs/module-warnings/libstatic.a %t.dir
-# RUN: dsymutil -verify -f -oso-prepend-path=%t.dir -y %s -o %t 2>&1 | FileCheck %s
+# RUN: dsymutil --linker classic -verify -f -oso-prepend-path=%t.dir -y %s -o %t 2>&1 | FileCheck %s
 # CHECK: rebuild the module cache
 # CHECK-NOT: static libraries
 #
 # RUN: rm -rf %t.dir/ModuleCache
-# RUN: dsymutil -verify -f -oso-prepend-path=%t.dir -y %s -o %t 2>&1 \
+# RUN: dsymutil --linker classic -verify -f -oso-prepend-path=%t.dir -y %s -o %t 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=STATIC
 # STATIC: warning: {{.*}}Bar.pcm:
 # STATIC: note: Linking a static library
@@ -52,3 +52,5 @@ objects:
     symbols:
       - { sym: __Z3foov, objAddr: 0x0, binAddr: 0x10000, size: 0x10 }
 ...
+
+## FIXME: Support --linker parallel
