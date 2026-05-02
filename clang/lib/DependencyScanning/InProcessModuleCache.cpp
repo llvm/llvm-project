@@ -179,7 +179,8 @@ public:
     }
     Size = Entry.Buffer->getBufferSize();
     ModTime = Entry.ModTime;
-    return llvm::MemoryBuffer::getMemBuffer(*Entry.Buffer);
+    return llvm::MemoryBuffer::getMemBuffer(*Entry.Buffer,
+                                            /* RequiresNullTerminator */ false);
   }
 };
 } // namespace
