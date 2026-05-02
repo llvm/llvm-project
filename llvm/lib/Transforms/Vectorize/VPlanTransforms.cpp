@@ -1680,6 +1680,11 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
+  if (match(Def, m_Broadcast(m_VPValue(X))))
+    return Def->replaceUsesWithIf(X, [Def](const VPUser &U, unsigned) {
+      return U.usesFirstLaneOnly(Def);
+    });
+
   if (isa<VPPhi, VPWidenPHIRecipe, VPHeaderPHIRecipe>(Def)) {
     if (Def->getNumOperands() == 1) {
       Def->replaceAllUsesWith(Def->getOperand(0));
