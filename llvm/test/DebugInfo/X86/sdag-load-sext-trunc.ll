@@ -2,7 +2,7 @@
 ; However, in this case, the load has multiple uses.
 
 ; RUN: llc %s -mtriple=x86_64-unkown-linux -start-before=x86-isel -stop-after=x86-isel -o -  -experimental-debug-variable-locations=true | FileCheck %s --check-prefix=MIR
-; RUN: llc -O2 %s -start-before=x86-isel -mtriple=x86_64-unkown-linux --filetype=obj -o %t.o -experimental-debug-variable-locations=true 
+; RUN: llc -O2 %s -start-before=x86-isel -mtriple=x86_64-unkown-linux --filetype=obj -o %t.o -experimental-debug-variable-locations=true
 ; RUN: llvm-dwarfdump %t.o --name Idx | FileCheck %s --check-prefix=DUMP
 ; RUN: llvm-dwarfdump %t.o --name Idx2 | FileCheck %s --check-prefix=DUMP2
 
