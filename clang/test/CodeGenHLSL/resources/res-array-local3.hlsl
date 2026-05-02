@@ -23,12 +23,12 @@ void SomeFn(RWBuffer<int> B[2], uint Idx, int Val0) {
 // CHECK-NEXT: call {{.*}} @_ZN4hlsl8RWBufferIiEaSERKS1_(ptr {{.*}} %[[B_0_Ptr]], ptr {{.*}} @_ZL1Y)
   B[0] = Y;
 
-// NOTE: _ZN4hlsl8RWBufferIiEixEj is the subscript operator for RWBuffer<int>
+// NOTE: _ZNK4hlsl8RWBufferIiEixEj is the subscript operator for RWBuffer<int>
 
 // CHECK-NEXT: %[[Val0:.*]] = load i32, ptr %[[Val0_addr]], align 4
 // CHECK-NEXT: %[[B_0_Ptr:.*]] = getelementptr inbounds [2 x %"class.hlsl::RWBuffer"], ptr %B, i32 0, i32 0
 // CHECK-NEXT: %[[Idx:.*]] = load i32, ptr %[[Idx_addr]], align 4
-// CHECK-NEXT: %[[BufPtr:.*]] = call {{.*}} ptr @_ZN4hlsl8RWBufferIiEixEj(ptr {{.*}} %[[B_0_Ptr]], i32 noundef %[[Idx]])
+// CHECK-NEXT: %[[BufPtr:.*]] = call {{.*}} ptr @_ZNK4hlsl8RWBufferIiEixEj(ptr {{.*}} %[[B_0_Ptr]], i32 noundef %[[Idx]])
 // CHECK-NEXT: store i32 %[[Val0]], ptr %[[BufPtr]], align 4
   B[0][Idx] = Val0;
 }
@@ -56,7 +56,7 @@ void main(uint GI : SV_GroupIndex) {
 
 // CHECK-NEXT: %[[A_0_Ptr:.*]] = getelementptr inbounds [2 x %"class.hlsl::RWBuffer"], ptr %A, i32 0, i32 0
 // CHECK-NEXT: %[[GI:.*]] = load i32, ptr %[[GI_addr]], align 4
-// CHECK-NEXT: %[[BufPtr:.*]] = call {{.*}} ptr @_ZN4hlsl8RWBufferIiEixEj(ptr {{.*}} %[[A_0_Ptr]], i32 noundef %[[GI]])
+// CHECK-NEXT: %[[BufPtr:.*]] = call {{.*}} ptr @_ZNK4hlsl8RWBufferIiEixEj(ptr {{.*}} %[[A_0_Ptr]], i32 noundef %[[GI]])
 // CHECK-NEXT: store i32 2, ptr %[[BufPtr]], align 4
   A[0][GI] = 2;
 }
