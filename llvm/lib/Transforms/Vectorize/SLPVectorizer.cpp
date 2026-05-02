@@ -17537,9 +17537,9 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
   const bool ThresholdSet = SLPCostThreshold.getNumOccurrences() > 0;
   const bool ThresholdNonNegative = SLPCostThreshold >= 0;
 
-  constexpr int Limit = 4;
+  constexpr unsigned Limit = 4;
   constexpr unsigned LargeTree = 20;
-  constexpr int LimitTreeSize = 36;
+  constexpr unsigned LimitTreeSize = 36;
 
   // The remaining size-1/size-<=MinTreeSize early bail-outs only apply to
   // non-reduction trees; group them under a single guard to avoid 3 separate
@@ -17582,7 +17582,7 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
   if (TreeSize == 3 && SLPCostThreshold == 0 &&
       (!ForReduction || Front.getVectorFactor() <= 2) &&
       all_of(ArrayRef(VectorizableTree).drop_front(),
-             [](const std::unique_ptr<TreeEntry> &TE) {
+             [&](const std::unique_ptr<TreeEntry> &TE) {
                return TE->isGather() && TE->getVectorFactor() <= Limit &&
                       !all_of(
                           TE->Scalars,
@@ -17599,7 +17599,7 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
     // is default. The cost of vectorized PHI nodes is almost always 0 + the
     // cost of gathers/buildvectors.
     if (!ThresholdSet &&
-        all_of(VectorizableTree, [](const std::unique_ptr<TreeEntry> &TE) {
+        all_of(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
           const bool IsGather = TE->isGather();
           const bool HasState = TE->hasState();
           const unsigned Op = HasState ? TE->getOpcode() : 0u;
