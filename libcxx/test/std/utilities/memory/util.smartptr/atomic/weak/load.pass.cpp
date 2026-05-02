@@ -12,6 +12,7 @@
 // weak_ptr<T> load(memory_order order = memory_order::seq_cst) const noexcept;
 
 #include <atomic>
+#include <concepts> // needed on Armv7/Armv8 with -fmodules
 #include <memory>
 
 #include "../atomic_smart_ptr_test_types.h"
