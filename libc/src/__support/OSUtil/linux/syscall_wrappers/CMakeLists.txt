@@ -12,6 +12,20 @@ add_header_library(
 )
 
 add_header_library(
+  sched_getaffinity
+  HDRS
+    sched_getaffinity.h
+  DEPENDS
+    libc.hdr.types.pid_t
+    libc.src.__support.CPP.span
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
   close
   HDRS
     close.h

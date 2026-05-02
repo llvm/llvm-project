@@ -14,6 +14,14 @@ macros:
     macro_header: unistd-macros.h
   - macro_name: STDERR_FILENO
     macro_header: unistd-macros.h
+  - macro_name: _SC_PAGESIZE
+    macro_header: unistd-macros.h
+  - macro_name: _SC_PAGE_SIZE
+    macro_header: unistd-macros.h
+  - macro_name: _SC_NPROCESSORS_CONF
+    macro_header: unistd-macros.h
+  - macro_name: _SC_NPROCESSORS_ONLN
+    macro_header: unistd-macros.h
 types:
   - type_name: uid_t
   - type_name: gid_t
@@ -364,7 +372,7 @@ functions:
   - name: sysconf
     standards:
       - POSIX
-    return_type: int
+    return_type: long
     arguments:
       - type: int
   - name: truncate
