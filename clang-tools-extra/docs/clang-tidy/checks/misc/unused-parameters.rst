@@ -45,3 +45,11 @@ Options
 
   Determines whether virtual method parameters should be inspected.
   Set to `true` to ignore them. Default is `false`.
+
+.. option:: IgnoreMacroParameters
+
+  When `true`, the check will not report unused parameters whose declarations
+  originate from a macro expansion. This suppresses false positives in code
+  that uses macros to define function signatures where parameters are
+  structurally required by the macro but not used in every expansion.
+  Default is `false`.

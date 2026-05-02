@@ -1708,7 +1708,6 @@ if (current_toolchain == default_toolchain) {
       "functional",
       "future",
       "initializer_list",
-      "inttypes.h",
       "iomanip",
       "ios",
       "iosfwd",

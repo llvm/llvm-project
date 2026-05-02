@@ -23,10 +23,14 @@ Implementation Status
    math/index.rst
    net/if
    netinet/in
+   nl_types
    poll
+   pwd
+   sched
    search
    setjmp
    signal
+   spawn
    stdbit
    stdfix
    stdio
