@@ -6094,9 +6094,6 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
 
     Known = KnownFPClass::sqrt(KnownSrc, Mode);
 
-    if (HasNSZ)
-      Known.knownNot(fcNegZero);
-
     if (nnan)
       Known.knownNot(fcNan);
     break;
