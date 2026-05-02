@@ -1994,10 +1994,8 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateParameterListHelper(
 template <typename Derived>
 template <typename T>
 bool RecursiveASTVisitor<Derived>::TraverseDeclTemplateParameterLists(T *D) {
-  for (unsigned i = 0; i < D->getNumTemplateParameterLists(); i++) {
-    TemplateParameterList *TPL = D->getTemplateParameterList(i);
+  for (TemplateParameterList *TPL : D->getTemplateParameterLists())
     TraverseTemplateParameterListHelper(TPL);
-  }
   return true;
 }
 
