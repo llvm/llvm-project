@@ -7,9 +7,7 @@
 
 #include <pthread.h>
 
-void *f(void *p) {
-  return NULL;
-}
+void *f(void *p) { return NULL; }
 
 int main(void) {
   pthread_t t;
