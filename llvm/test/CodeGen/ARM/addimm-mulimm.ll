@@ -447,9 +447,9 @@ define i16 @fold_add251_mul353_i16(i16 %a) {
 ;
 ; CHECK-ARMV7-LABEL: fold_add251_mul353_i16:
 ; CHECK-ARMV7:       @ %bb.0:
-; CHECK-ARMV7-NEXT:    movw r1, #23067
-; CHECK-ARMV7-NEXT:    movw r2, #353
-; CHECK-ARMV7-NEXT:    mla r0, r0, r2, r1
+; CHECK-ARMV7-NEXT:    movw r1, #353
+; CHECK-ARMV7-NEXT:    movw r2, #23067
+; CHECK-ARMV7-NEXT:    mla r0, r0, r1, r2
 ; CHECK-ARMV7-NEXT:    bx lr
 ;
 ; CHECK-THUMBV6M-LABEL: fold_add251_mul353_i16:

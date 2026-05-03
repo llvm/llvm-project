@@ -9,29 +9,30 @@
 define i1 @test_srem_odd(i29 %X) nounwind {
 ; ARM5-LABEL: test_srem_odd:
 ; ARM5:       @ %bb.0:
-; ARM5-NEXT:    ldr r2, .LCPI0_1
 ; ARM5-NEXT:    ldr r1, .LCPI0_0
-; ARM5-NEXT:    mla r3, r0, r2, r1
+; ARM5-NEXT:    mul r2, r0, r1
+; ARM5-NEXT:    ldr r0, .LCPI0_1
+; ARM5-NEXT:    add r0, r2, r0
 ; ARM5-NEXT:    ldr r2, .LCPI0_2
+; ARM5-NEXT:    bic r1, r0, #-536870912
 ; ARM5-NEXT:    mov r0, #0
-; ARM5-NEXT:    bic r1, r3, #-536870912
 ; ARM5-NEXT:    cmp r1, r2
 ; ARM5-NEXT:    movlo r0, #1
 ; ARM5-NEXT:    bx lr
 ; ARM5-NEXT:    .p2align 2
 ; ARM5-NEXT:  @ %bb.1:
 ; ARM5-NEXT:  .LCPI0_0:
-; ARM5-NEXT:    .long 2711469 @ 0x295fad
-; ARM5-NEXT:  .LCPI0_1:
 ; ARM5-NEXT:    .long 526025035 @ 0x1f5a814b
+; ARM5-NEXT:  .LCPI0_1:
+; ARM5-NEXT:    .long 2711469 @ 0x295fad
 ; ARM5-NEXT:  .LCPI0_2:
 ; ARM5-NEXT:    .long 5422939 @ 0x52bf5b
 ;
 ; ARM6-LABEL: test_srem_odd:
 ; ARM6:       @ %bb.0:
-; ARM6-NEXT:    ldr r2, .LCPI0_1
 ; ARM6-NEXT:    ldr r1, .LCPI0_0
-; ARM6-NEXT:    mla r0, r0, r2, r1
+; ARM6-NEXT:    ldr r2, .LCPI0_1
+; ARM6-NEXT:    mla r0, r0, r1, r2
 ; ARM6-NEXT:    ldr r2, .LCPI0_2
 ; ARM6-NEXT:    bic r1, r0, #-536870912
 ; ARM6-NEXT:    mov r0, #0
@@ -41,19 +42,19 @@ define i1 @test_srem_odd(i29 %X) nounwind {
 ; ARM6-NEXT:    .p2align 2
 ; ARM6-NEXT:  @ %bb.1:
 ; ARM6-NEXT:  .LCPI0_0:
-; ARM6-NEXT:    .long 2711469 @ 0x295fad
-; ARM6-NEXT:  .LCPI0_1:
 ; ARM6-NEXT:    .long 526025035 @ 0x1f5a814b
+; ARM6-NEXT:  .LCPI0_1:
+; ARM6-NEXT:    .long 2711469 @ 0x295fad
 ; ARM6-NEXT:  .LCPI0_2:
 ; ARM6-NEXT:    .long 5422939 @ 0x52bf5b
 ;
 ; ARM7-LABEL: test_srem_odd:
 ; ARM7:       @ %bb.0:
-; ARM7-NEXT:    movw r1, #24493
-; ARM7-NEXT:    movw r2, #33099
-; ARM7-NEXT:    movt r1, #41
-; ARM7-NEXT:    movt r2, #8026
-; ARM7-NEXT:    mla r0, r0, r2, r1
+; ARM7-NEXT:    movw r1, #33099
+; ARM7-NEXT:    movw r2, #24493
+; ARM7-NEXT:    movt r1, #8026
+; ARM7-NEXT:    movt r2, #41
+; ARM7-NEXT:    mla r0, r0, r1, r2
 ; ARM7-NEXT:    movw r2, #48987
 ; ARM7-NEXT:    movt r2, #82
 ; ARM7-NEXT:    bic r1, r0, #-536870912
@@ -64,11 +65,11 @@ define i1 @test_srem_odd(i29 %X) nounwind {
 ;
 ; ARM8-LABEL: test_srem_odd:
 ; ARM8:       @ %bb.0:
-; ARM8-NEXT:    movw r1, #24493
-; ARM8-NEXT:    movw r2, #33099
-; ARM8-NEXT:    movt r1, #41
-; ARM8-NEXT:    movt r2, #8026
-; ARM8-NEXT:    mla r0, r0, r2, r1
+; ARM8-NEXT:    movw r1, #33099
+; ARM8-NEXT:    movw r2, #24493
+; ARM8-NEXT:    movt r1, #8026
+; ARM8-NEXT:    movt r2, #41
+; ARM8-NEXT:    mla r0, r0, r1, r2
 ; ARM8-NEXT:    movw r2, #48987
 ; ARM8-NEXT:    movt r2, #82
 ; ARM8-NEXT:    bic r1, r0, #-536870912
@@ -79,11 +80,11 @@ define i1 @test_srem_odd(i29 %X) nounwind {
 ;
 ; NEON7-LABEL: test_srem_odd:
 ; NEON7:       @ %bb.0:
-; NEON7-NEXT:    movw r1, #24493
-; NEON7-NEXT:    movw r2, #33099
-; NEON7-NEXT:    movt r1, #41
-; NEON7-NEXT:    movt r2, #8026
-; NEON7-NEXT:    mla r0, r0, r2, r1
+; NEON7-NEXT:    movw r1, #33099
+; NEON7-NEXT:    movw r2, #24493
+; NEON7-NEXT:    movt r1, #8026
+; NEON7-NEXT:    movt r2, #41
+; NEON7-NEXT:    mla r0, r0, r1, r2
 ; NEON7-NEXT:    movw r2, #48987
 ; NEON7-NEXT:    movt r2, #82
 ; NEON7-NEXT:    bic r1, r0, #-536870912
@@ -94,11 +95,11 @@ define i1 @test_srem_odd(i29 %X) nounwind {
 ;
 ; NEON8-LABEL: test_srem_odd:
 ; NEON8:       @ %bb.0:
-; NEON8-NEXT:    movw r1, #24493
-; NEON8-NEXT:    movw r2, #33099
-; NEON8-NEXT:    movt r1, #41
-; NEON8-NEXT:    movt r2, #8026
-; NEON8-NEXT:    mla r0, r0, r2, r1
+; NEON8-NEXT:    movw r1, #33099
+; NEON8-NEXT:    movw r2, #24493
+; NEON8-NEXT:    movt r1, #8026
+; NEON8-NEXT:    movt r2, #41
+; NEON8-NEXT:    mla r0, r0, r1, r2
 ; NEON8-NEXT:    movw r2, #48987
 ; NEON8-NEXT:    movt r2, #82
 ; NEON8-NEXT:    bic r1, r0, #-536870912
@@ -119,9 +120,8 @@ define i1 @test_srem_even(i4 %X) nounwind {
 ; ARM5-NEXT:    add r1, r1, r1, lsl #1
 ; ARM5-NEXT:    lsr r2, r1, #4
 ; ARM5-NEXT:    add r1, r2, r1, lsr #31
-; ARM5-NEXT:    mov r2, #6
-; ARM5-NEXT:    mul r3, r1, r2
-; ARM5-NEXT:    sub r0, r0, r3
+; ARM5-NEXT:    add r1, r1, r1, lsl #1
+; ARM5-NEXT:    sub r0, r0, r1, lsl #1
 ; ARM5-NEXT:    and r0, r0, #15
 ; ARM5-NEXT:    sub r0, r0, #1
 ; ARM5-NEXT:    clz r0, r0
@@ -135,9 +135,8 @@ define i1 @test_srem_even(i4 %X) nounwind {
 ; ARM6-NEXT:    add r1, r1, r1, lsl #1
 ; ARM6-NEXT:    lsr r2, r1, #4
 ; ARM6-NEXT:    add r1, r2, r1, lsr #31
-; ARM6-NEXT:    mov r2, #6
-; ARM6-NEXT:    mul r1, r1, r2
-; ARM6-NEXT:    sub r0, r0, r1
+; ARM6-NEXT:    add r1, r1, r1, lsl #1
+; ARM6-NEXT:    sub r0, r0, r1, lsl #1
 ; ARM6-NEXT:    and r0, r0, #15
 ; ARM6-NEXT:    sub r0, r0, #1
 ; ARM6-NEXT:    clz r0, r0
