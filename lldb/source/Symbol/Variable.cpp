@@ -480,9 +480,6 @@ static void PrivateAutoComplete(
 /// completion. Returns an invalid CompilerType if not in a method context.
 static CompilerType GetInstanceVariableType(StackFrame &frame,
                                             VariableList &variable_list) {
-  auto *lang = Language::FindPlugin(frame.GetLanguage().AsLanguageType());
-  if (!lang)
-    return {};
   SymbolContext sc = frame.GetSymbolContext(eSymbolContextFunction |
                                             eSymbolContextBlock);
   llvm::StringRef instance_name = sc.GetInstanceVariableName();
@@ -758,7 +755,7 @@ static void PrivateAutoComplete(
           // access).
           CompilerType instance_type =
               GetInstanceVariableType(*frame, *variable_list);
-          if (instance_type)
+          if (instance_type.IsValid())
             PrivateAutoCompleteMembers(frame, token, remaining_partial_path,
                                        prefix_path, instance_type, request);
         }
