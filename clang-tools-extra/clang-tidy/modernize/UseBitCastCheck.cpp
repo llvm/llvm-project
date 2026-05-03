@@ -8,6 +8,8 @@
 
 #include "UseBitCastCheck.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DeclFriend.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Type.h"
@@ -66,9 +68,159 @@ static bool canAssignBitCastResult(QualType Type) {
          Record->hasSimpleMoveAssignment();
 }
 
+static QualType getUnqualifiedCanonicalNonReferenceType(QualType Type) {
+  if (Type.isNull())
+    return {};
+  return Type.getCanonicalType().getNonReferenceType().getUnqualifiedType();
+}
+
 static bool isSameUnqualifiedCanonicalType(QualType LHS, QualType RHS) {
   return LHS.getCanonicalType().getUnqualifiedType() ==
          RHS.getCanonicalType().getUnqualifiedType();
+}
+
+static bool isSameOrDerivedFrom(QualType Type, QualType Other) {
+  Type = getUnqualifiedCanonicalNonReferenceType(Type);
+  Other = getUnqualifiedCanonicalNonReferenceType(Other);
+  if (Type == Other)
+    return true;
+
+  const auto *Record = Type->getAsCXXRecordDecl();
+  const auto *OtherRecord = Other->getAsCXXRecordDecl();
+  return Record && OtherRecord && Record->hasDefinition() &&
+         OtherRecord->hasDefinition() && Record->isDerivedFrom(OtherRecord);
+}
+
+// This is only a cheap candidate search for preserving comma behavior in
+// fix-its. It intentionally does not run overload resolution for the
+// synthesized replacement expression.
+static bool canBindCommaOperand(QualType OperandType, QualType ParamType) {
+  OperandType = getUnqualifiedCanonicalNonReferenceType(OperandType);
+  ParamType = getUnqualifiedCanonicalNonReferenceType(ParamType);
+  if (OperandType.isNull() || ParamType.isNull())
+    return false;
+
+  if (OperandType->isDependentType() || ParamType->isDependentType())
+    return true;
+
+  if (isSameOrDerivedFrom(OperandType, ParamType))
+    return true;
+
+  if (OperandType->isArithmeticType() && ParamType->isArithmeticType())
+    return true;
+
+  if (OperandType->isIntegralOrEnumerationType() &&
+      ParamType->isIntegralOrEnumerationType())
+    return true;
+
+  return OperandType->isAnyPointerType() && ParamType->isAnyPointerType();
+}
+
+static bool isPotentialCommaOperatorForTypes(const FunctionDecl *Function,
+                                             QualType LHS, QualType RHS) {
+  if (!Function || Function->getOverloadedOperator() != OO_Comma)
+    return false;
+
+  if (isa<CXXMethodDecl>(Function))
+    return false;
+
+  if (Function->getNumParams() != 2)
+    return true;
+
+  return canBindCommaOperand(LHS, Function->getParamDecl(0)->getType()) &&
+         canBindCommaOperand(RHS, Function->getParamDecl(1)->getType());
+}
+
+static bool isPotentialCommaOperatorForTypes(const NamedDecl *Decl,
+                                             QualType LHS, QualType RHS) {
+  if (!Decl)
+    return false;
+
+  if (const auto *FunctionTemplate = dyn_cast<FunctionTemplateDecl>(Decl))
+    return isPotentialCommaOperatorForTypes(
+        FunctionTemplate->getTemplatedDecl(), LHS, RHS);
+  return isPotentialCommaOperatorForTypes(Decl->getAsFunction(), LHS, RHS);
+}
+
+static bool hasPotentialNamespaceCommaOperator(const DeclContext *Context,
+                                               const ASTContext &ASTContext,
+                                               QualType LHS, QualType RHS) {
+  if (!Context)
+    return false;
+
+  const DeclarationName CommaOperatorName =
+      ASTContext.DeclarationNames.getCXXOperatorName(OO_Comma);
+  for (; Context; Context = Context->getParent()) {
+    if (!isa<NamespaceDecl, TranslationUnitDecl>(Context))
+      continue;
+
+    for (const NamedDecl *Decl :
+         Context->getRedeclContext()->lookup(CommaOperatorName)) {
+      if (isPotentialCommaOperatorForTypes(Decl, LHS, RHS))
+        return true;
+    }
+  }
+
+  return false;
+}
+
+static const CXXRecordDecl *getDefinition(const CXXRecordDecl *Record) {
+  if (!Record)
+    return nullptr;
+  if (const auto *Definition = Record->getDefinition())
+    return Definition;
+  return Record;
+}
+
+static bool hasMemberCommaOperator(const CXXRecordDecl *Record) {
+  Record = getDefinition(Record);
+  return Record &&
+         llvm::any_of(Record->methods(), [](const CXXMethodDecl *Method) {
+           return Method->getOverloadedOperator() == OO_Comma;
+         });
+}
+
+static bool hasPotentialFriendCommaOperator(const CXXRecordDecl *Record,
+                                            QualType LHS, QualType RHS) {
+  Record = getDefinition(Record);
+  return Record &&
+         llvm::any_of(Record->friends(), [&](const FriendDecl *Friend) {
+           return isPotentialCommaOperatorForTypes(Friend->getFriendDecl(), LHS,
+                                                   RHS);
+         });
+}
+
+static bool mayFindAssociatedCommaOperator(QualType Type,
+                                           const ASTContext &ASTContext,
+                                           QualType LHS, QualType RHS,
+                                           bool IncludeMemberOperators) {
+  Type = getUnqualifiedCanonicalNonReferenceType(Type);
+  if (Type.isNull())
+    return false;
+
+  if (const auto *Record = Type->getAsCXXRecordDecl())
+    return (IncludeMemberOperators && hasMemberCommaOperator(Record)) ||
+           hasPotentialFriendCommaOperator(Record, LHS, RHS) ||
+           hasPotentialNamespaceCommaOperator(Record->getDeclContext(),
+                                              ASTContext, LHS, RHS);
+
+  if (const auto *Enum = Type->getAs<EnumType>())
+    return hasPotentialNamespaceCommaOperator(Enum->getDecl()->getDeclContext(),
+                                              ASTContext, LHS, RHS);
+
+  return false;
+}
+
+static bool mayCallOverloadedComma(QualType AssignmentType,
+                                   const Expr *CommaRHS,
+                                   const ASTContext &ASTContext) {
+  const QualType CommaRHSType = CommaRHS ? CommaRHS->getType() : QualType();
+  return mayFindAssociatedCommaOperator(AssignmentType, ASTContext,
+                                        AssignmentType, CommaRHSType,
+                                        /*IncludeMemberOperators=*/true) ||
+         mayFindAssociatedCommaOperator(CommaRHSType, ASTContext,
+                                        AssignmentType, CommaRHSType,
+                                        /*IncludeMemberOperators=*/false);
 }
 
 static bool isMatchingSizeOfExpression(const Expr *SizeExpr, QualType SrcType,
@@ -138,11 +290,11 @@ AST_MATCHER(CallExpr, hasBitCastReplacementContext) {
                CXXBindTemporaryExpr, ParenExpr>(ExprNode);
   };
   const auto BindReplacementContext = [&](const Expr &ReplacementRoot,
-                                          const BinaryOperator *CommaLHS) {
+                                          const BinaryOperator *CommaContext) {
     Builder->setBinding("replacementRoot",
                         DynTypedNode::create(ReplacementRoot));
-    if (CommaLHS)
-      Builder->setBinding("commaLHS", DynTypedNode::create(*CommaLHS));
+    if (CommaContext)
+      Builder->setBinding("commaContext", DynTypedNode::create(*CommaContext));
     return true;
   };
 
@@ -255,7 +407,8 @@ void UseBitCastCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *DstExpr = Result.Nodes.getNodeAs<Expr>("dstExpr");
   const auto *SrcExpr = Result.Nodes.getNodeAs<Expr>("srcExpr");
   const auto *ReplacementRoot = Result.Nodes.getNodeAs<Expr>("replacementRoot");
-  const auto *CommaLHS = Result.Nodes.getNodeAs<BinaryOperator>("commaLHS");
+  const auto *CommaContext =
+      Result.Nodes.getNodeAs<BinaryOperator>("commaContext");
   assert(MemcpyCall);
   assert(DstExpr);
   assert(SrcExpr);
@@ -276,7 +429,8 @@ void UseBitCastCheck::check(const MatchFinder::MatchResult &Result) {
     std::string Assignment = llvm::formatv("{0} = std::bit_cast<{1}>({2})",
                                            DstText, DstTypeName, SrcText)
                                  .str();
-    if (CommaLHS)
+    if (CommaContext && mayCallOverloadedComma(DstType, CommaContext->getRHS(),
+                                               *Result.Context))
       return llvm::formatv("(void)({0})", Assignment).str();
     return Assignment;
   }();
