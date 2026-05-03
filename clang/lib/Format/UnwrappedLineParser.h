@@ -164,7 +164,7 @@ private:
   void parseCaseLabel();
   void parseSwitch(bool IsExpr);
   void parseNamespace();
-  bool parseModuleImport();
+  bool parseCppModuleImport();
   void parseNew();
   void parseAccessSpecifier();
   bool parseEnum();

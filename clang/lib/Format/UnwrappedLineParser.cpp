@@ -1350,7 +1350,7 @@ static bool isC78ParameterDecl(const FormatToken *Tok, const FormatToken *Next,
   return Tok->Previous && Tok->Previous->isOneOf(tok::l_paren, tok::comma);
 }
 
-bool UnwrappedLineParser::parseModuleImport() {
+bool UnwrappedLineParser::parseCppModuleImport() {
   assert(FormatTok->is(Keywords.kw_import) && "'import' expected");
 
   if (auto Token = Tokens->peekNextToken(/*SkipComment=*/true);
@@ -1628,7 +1628,7 @@ void UnwrappedLineParser::parseStructuralElement(
         parseCppExportBlock();
         return;
       }
-      if (FormatTok->is(Keywords.kw_import) && parseModuleImport())
+      if (FormatTok->is(Keywords.kw_import) && parseCppModuleImport())
         return;
     }
     if (Style.isJavaScript()) {
@@ -1658,7 +1658,7 @@ void UnwrappedLineParser::parseStructuralElement(
       return;
     }
     if (FormatTok->is(Keywords.kw_import)) {
-      if (IsCpp && parseModuleImport())
+      if (IsCpp && parseCppModuleImport())
         return;
       if (Style.isJavaScript()) {
         parseJavaScriptEs6ImportExport();
