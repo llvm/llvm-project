@@ -130,6 +130,11 @@ C++ Specific Potentially Breaking Changes
 - ``VarTemplateSpecializationDecl::getTemplateArgsAsWritten()`` method now
   returns ``nullptr`` for implicitly instantiated declarations.
 
+- Template argument deduction now treats the ``N`` in ``_BitInt(N)``
+  as being of type ``std::size_t`` instead of ``int``,
+  matching the deduction of array sizes from ``int(&)[N]``.
+  This is a breaking change for code that depended on the previously deduced type. (#GH195033)
+
 ABI Changes in This Version
 ---------------------------
 - Fix AArch64 argument passing for C++ empty classes with large explicitly specified alignment.
