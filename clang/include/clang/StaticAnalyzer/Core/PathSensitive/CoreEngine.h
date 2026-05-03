@@ -316,21 +316,6 @@ public:
   void addNodes(ExplodedNode *N) { Frontier.insert(N); }
 };
 
-/// BranchNodeBuilder is responsible for constructing the nodes
-/// corresponding to the two branches of the if statement - true and false.
-class BranchNodeBuilder : public NodeBuilder {
-  const CFGBlock *DstT;
-  const CFGBlock *DstF;
-
-public:
-  BranchNodeBuilder(ExplodedNodeSet &DstSet, const NodeBuilderContext &C,
-                    const CFGBlock *DT, const CFGBlock *DF)
-      : NodeBuilder(DstSet, C), DstT(DT), DstF(DF) {}
-
-  ExplodedNode *generateNode(ProgramStateRef State, bool branch,
-                             ExplodedNode *Pred);
-};
-
 } // namespace ento
 
 } // namespace clang

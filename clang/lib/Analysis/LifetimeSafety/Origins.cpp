@@ -68,6 +68,7 @@ public:
   }
 
   bool shouldVisitLambdaBody() const { return false; }
+  bool shouldVisitTemplateInstantiations() const { return true; }
 
   const llvm::SmallVector<QualType> &getCollectedTypes() const {
     return CollectedTypes;
@@ -107,6 +108,10 @@ bool OriginManager::hasOrigins(QualType QT) const {
   const auto *RD = QT->getAsCXXRecordDecl();
   if (!RD)
     return false;
+  // Standard library callable wrappers (e.g., std::function) can propagate the
+  // stored lambda's origins.
+  if (isStdCallableWrapperType(RD))
+    return true;
   // TODO: Limit to lambdas for now. This will be extended to user-defined
   // structs with pointer-like fields.
   if (!RD->isLambda())
@@ -181,6 +186,10 @@ OriginList *OriginManager::createNode(const Expr *E, QualType QT) {
   return new (ListAllocator.Allocate<OriginList>()) OriginList(NewID);
 }
 
+OriginList *OriginManager::createSingleOriginList(OriginID OID) {
+  return new (ListAllocator.Allocate<OriginList>()) OriginList(OID);
+}
+
 template <typename T>
 OriginList *OriginManager::buildListForType(QualType QT, const T *Node) {
   assert(hasOrigins(QT) && "buildListForType called for non-pointer type");
@@ -232,7 +241,7 @@ OriginList *OriginManager::getOrCreateList(const Expr *E) {
     ReferencedDecl = DRE->getDecl();
   else if (auto *ME = dyn_cast<MemberExpr>(E))
     if (auto *Field = dyn_cast<FieldDecl>(ME->getMemberDecl());
-        Field && isa<CXXThisExpr>(ME->getBase()))
+        Field && isa<CXXThisExpr>(ME->getBase()->IgnoreParenImpCasts()))
       ReferencedDecl = Field;
   if (ReferencedDecl) {
     OriginList *Head = nullptr;

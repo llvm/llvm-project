@@ -228,8 +228,9 @@ namespace {
 
       // Provide some coverage mapping even for methods that aren't emitted.
       // Don't do this for templated classes though, as they may not be
-      // instantiable.
-      if (!D->getLexicalDeclContext()->isDependentContext())
+      // instantiable. Also skip consteval methods as they are never emitted.
+      if (!D->getLexicalDeclContext()->isDependentContext() &&
+          !D->getAsFunction()->isImmediateFunction())
         Builder->AddDeferredUnusedCoverageMapping(D);
     }
 

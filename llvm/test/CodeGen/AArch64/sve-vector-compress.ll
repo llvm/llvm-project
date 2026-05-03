@@ -197,8 +197,8 @@ define <4 x i32> @test_compress_v4i32_with_sve(<4 x i32> %vec, <4 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    shl v1.4s, v1.4s, #31
-; CHECK-NEXT:    cmpne p0.s, p0/z, z1.s, #0
-; CHECK-NEXT:    compact z0.s, p0, z0.s
+; CHECK-NEXT:    cmpne p1.s, p0/z, z1.s, #0
+; CHECK-NEXT:    compact z0.s, p1, z0.s
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
     %out = call <4 x i32> @llvm.experimental.vector.compress(<4 x i32> %vec, <4 x i1> %mask, <4 x i32> poison)
@@ -213,8 +213,8 @@ define <4 x i16> @test_compress_v4i16_with_sve(<4 x i16> %vec, <4 x i1> %mask) {
 ; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-NEXT:    cmlt v1.4h, v1.4h, #0
 ; CHECK-NEXT:    sshll v1.4s, v1.4h, #0
-; CHECK-NEXT:    cmpne p0.s, p0/z, z1.s, #0
-; CHECK-NEXT:    compact z0.s, p0, z0.s
+; CHECK-NEXT:    cmpne p1.s, p0/z, z1.s, #0
+; CHECK-NEXT:    compact z0.s, p1, z0.s
 ; CHECK-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-NEXT:    ret
     %out = call <4 x i16> @llvm.experimental.vector.compress(<4 x i16> %vec, <4 x i1> %mask, <4 x i16> poison)
@@ -229,8 +229,8 @@ define <4 x half> @test_compress_v4f16_with_sve(<4 x half> %vec, <4 x i1> %mask)
 ; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-NEXT:    cmlt v1.4h, v1.4h, #0
 ; CHECK-NEXT:    sshll v1.4s, v1.4h, #0
-; CHECK-NEXT:    cmpne p0.s, p0/z, z1.s, #0
-; CHECK-NEXT:    compact z0.s, p0, z0.s
+; CHECK-NEXT:    cmpne p1.s, p0/z, z1.s, #0
+; CHECK-NEXT:    compact z0.s, p1, z0.s
 ; CHECK-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-NEXT:    ret
     %out = call <4 x half> @llvm.experimental.vector.compress(<4 x half> %vec, <4 x i1> %mask, <4 x half> poison)
@@ -245,8 +245,8 @@ define <4 x bfloat> @test_compress_v4bf16_with_sve(<4 x bfloat> %vec, <4 x i1> %
 ; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-NEXT:    cmlt v1.4h, v1.4h, #0
 ; CHECK-NEXT:    sshll v1.4s, v1.4h, #0
-; CHECK-NEXT:    cmpne p0.s, p0/z, z1.s, #0
-; CHECK-NEXT:    compact z0.s, p0, z0.s
+; CHECK-NEXT:    cmpne p1.s, p0/z, z1.s, #0
+; CHECK-NEXT:    compact z0.s, p1, z0.s
 ; CHECK-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-NEXT:    ret
     %out = call <4 x bfloat> @llvm.experimental.vector.compress(<4 x bfloat> %vec, <4 x i1> %mask, <4 x bfloat> poison)
@@ -261,8 +261,8 @@ define <1 x i32> @test_compress_v1i32_with_sve(<1 x i32> %vec, <1 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.s, vl2
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov v1.s[0], w8
-; CHECK-NEXT:    cmpne p0.s, p0/z, z1.s, #0
-; CHECK-NEXT:    compact z0.s, p0, z0.s
+; CHECK-NEXT:    cmpne p1.s, p0/z, z1.s, #0
+; CHECK-NEXT:    compact z0.s, p1, z0.s
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
     %out = call <1 x i32> @llvm.experimental.vector.compress(<1 x i32> %vec, <1 x i1> %mask, <1 x i32> poison)
@@ -287,11 +287,11 @@ define <4 x double> @test_compress_v4f64_with_sve(<4 x double> %vec, <4 x i1> %m
 ; CHECK-NEXT:    shl v4.2d, v5.2d, #63
 ; CHECK-NEXT:    addp v2.2s, v2.2s, v2.2s
 ; CHECK-NEXT:    cmpne p1.d, p0/z, z3.d, #0
-; CHECK-NEXT:    cmpne p0.d, p0/z, z4.d, #0
+; CHECK-NEXT:    cmpne p2.d, p0/z, z4.d, #0
 ; CHECK-NEXT:    fmov w8, s2
 ; CHECK-NEXT:    compact z0.d, p1, z0.d
 ; CHECK-NEXT:    and x8, x8, #0x3
-; CHECK-NEXT:    compact z1.d, p0, z1.d
+; CHECK-NEXT:    compact z1.d, p2, z1.d
 ; CHECK-NEXT:    lsl x8, x8, #3
 ; CHECK-NEXT:    str q0, [sp]
 ; CHECK-NEXT:    str q1, [x9, x8]
@@ -307,8 +307,8 @@ define <2 x i16> @test_compress_v2i16_with_sve(<2 x i16> %vec, <2 x i1> %mask) {
 ; CHECK-NEXT:    shl v1.2s, v1.2s, #31
 ; CHECK-NEXT:    ptrue p0.s, vl2
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    cmpne p0.s, p0/z, z1.s, #0
-; CHECK-NEXT:    compact z0.s, p0, z0.s
+; CHECK-NEXT:    cmpne p1.s, p0/z, z1.s, #0
+; CHECK-NEXT:    compact z0.s, p1, z0.s
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
     %out = call <2 x i16> @llvm.experimental.vector.compress(<2 x i16> %vec, <2 x i1> %mask, <2 x i16> poison)

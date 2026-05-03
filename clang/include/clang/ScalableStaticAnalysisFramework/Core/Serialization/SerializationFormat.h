@@ -119,52 +119,23 @@ protected:
     /// dispatch to the plugin's concrete functions.
     ///
     /// There is one \c Codec type (and one \c llvm::Registry<Codec>) per
-    /// format. All analysis-specific \c ConcreteCodec<AnalysisResultT>
-    /// subclasses for a given format register into that single registry. The \c
-    /// FormatT phantom type parameter on the enclosing class ensures that
-    /// different formats produce distinct \c Codec types and thus separate
-    /// registries.
+    /// format. All analysis-specific concrete subclasses for a given format
+    /// register into that single registry. The \c FormatT phantom type
+    /// parameter on the enclosing class ensures that different formats
+    /// produce distinct \c Codec types and thus separate registries.
     struct Codec {
       virtual ~Codec() = default;
       virtual SerRet serialize(const AnalysisResult &, SerArgs...) const = 0;
       virtual DesRet deserialize(DesArgs...) const = 0;
     };
 
-    /// Per-\c AnalysisResultT subclass of \c Codec. The \c serialize()
-    /// override performs the downcast from \c AnalysisResult to
-    /// \c AnalysisResultT.
-    template <class AnalysisResultT> struct ConcreteCodec final : Codec {
+    template <class AnalysisResultT> struct Add {
       using TypedSerializerFn =
           llvm::function_ref<SerRet(const AnalysisResultT &, SerArgs...)>;
 
-      /// The plugin's serializer and deserializer are stored as \c static
-      /// \c inline members because \c llvm::Registry instantiates entries
-      /// via a zero-argument constructor so there is no way to pass them
-      /// as constructor arguments. The \c Add constructor writes these
-      /// members before registration, and the virtual methods read them
-      /// on invocation. \c inline avoids the need for separate out-of-line
-      /// definitions that a bare \c static member in a class template
-      /// would require.
-      static inline TypedSerializerFn SavedSerialize;
-      static inline DeserializerFn SavedDeserialize;
-
-      SerRet serialize(const AnalysisResult &Base,
-                       SerArgs... args) const override {
-        return SavedSerialize(static_cast<const AnalysisResultT &>(Base),
-                              args...);
-      }
-
-      DesRet deserialize(DesArgs... args) const override {
-        return SavedDeserialize(args...);
-      }
-    };
-
-    template <class AnalysisResultT> struct Add {
       /// Takes the plugin's typed serializer and the deserializer, and
       /// inserts them into \c llvm::Registry<Codec>.
-      Add(typename ConcreteCodec<AnalysisResultT>::TypedSerializerFn
-              TypedSerialize,
-          DeserializerFn Deserialize) {
+      Add(TypedSerializerFn TypedSerialize, DeserializerFn Deserialize) {
         /// Per-\c AnalysisResultT guard: each template instantiation gets
         /// its own \c static \c bool, so double-registration of the same
         /// analysis is caught even across translation units.
@@ -175,8 +146,35 @@ protected:
         }
         Registered = true;
 
-        ConcreteCodec<AnalysisResultT>::SavedSerialize = TypedSerialize;
-        ConcreteCodec<AnalysisResultT>::SavedDeserialize = Deserialize;
+        /// The plugin's serializer and deserializer are captured in
+        /// function-local statics so that the \c ConcreteCodec default
+        /// constructor (required by \c llvm::Registry) can read them.
+        /// They are stored as instance members of \c ConcreteCodec rather
+        /// than \c static \c inline class members to avoid symbol
+        /// visibility issues across shared library boundaries on Linux
+        /// (where \c dlopen with \c RTLD_LOCAL can give the host and
+        /// plugin separate copies of \c static \c inline members).
+        static TypedSerializerFn SavedSerialize = TypedSerialize;
+        static DeserializerFn SavedDeserialize = Deserialize;
+
+        /// Concrete subclass of \c Codec for \c AnalysisResultT.
+        /// The \c serialize() override performs the downcast from
+        /// \c AnalysisResult to \c AnalysisResultT.
+        struct ConcreteCodec final : Codec {
+          TypedSerializerFn SerFn;
+          DeserializerFn DesFn;
+
+          ConcreteCodec() : SerFn(SavedSerialize), DesFn(SavedDeserialize) {}
+
+          SerRet serialize(const AnalysisResult &Base,
+                           SerArgs... args) const override {
+            return SerFn(static_cast<const AnalysisResultT &>(Base), args...);
+          }
+
+          DesRet deserialize(DesArgs... args) const override {
+            return DesFn(args...);
+          }
+        };
 
         /// \c llvm::Registry stores the name as a \c StringRef, so the
         /// underlying string must be kept alive with a static declaration.
@@ -187,9 +185,9 @@ protected:
         /// ConcreteCodec to the global \c llvm::Registry<Codec>. \c static
         /// ensures the `Registry::Add` object lives for the entire program,
         /// keeping its codec and node alive in the registry's linked list.
-        [[maybe_unused]] static typename llvm::Registry<Codec>::template Add<
-            ConcreteCodec<AnalysisResultT>> RegisterUsingCtorSideEffect(NameStr,
-                                                                        "");
+        [[maybe_unused]] static
+            typename llvm::Registry<Codec>::template Add<ConcreteCodec>
+                RegisterUsingCtorSideEffect(NameStr, "");
       }
     };
 

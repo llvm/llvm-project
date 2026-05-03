@@ -184,3 +184,19 @@ gpu.module @cuda_events {
     gpu.return
   }
 }
+
+// -----
+
+// Test that the order of materialization legalization is deterministic.
+// Multiple unresolvable materializations are created; the first one (in
+// insertion/walk order) should always fail first. With a DenseMap for
+// unresolvedMaterializations, the processing order would depend on pointer
+// hashes and could differ with LLVM_ENABLE_REVERSE_ITERATION.
+
+func.func @test_deterministic_materialization_order() {
+  // expected-error@below {{failed to legalize unresolved materialization from ('f64') to ('f16') that remained live after conversion}}
+  %a = "test.type_producer"() : () -> f16
+  %b = "test.type_producer"() : () -> f16
+  // expected-note@below {{see existing live user here}}
+  "foo.return"(%a, %b) : (f16, f16) -> ()
+}

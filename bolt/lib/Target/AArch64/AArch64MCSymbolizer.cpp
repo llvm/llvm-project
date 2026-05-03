@@ -104,6 +104,7 @@ AArch64MCSymbolizer::adjustRelocation(const Relocation &Rel,
     default:
       break;
     case ELF::R_AARCH64_TLSDESC_LD64_LO12:
+    case ELF::R_AARCH64_TLSDESC_ADD_LO12:
     case ELF::R_AARCH64_TLSDESC_ADR_PAGE21:
     case ELF::R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
     case ELF::R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:

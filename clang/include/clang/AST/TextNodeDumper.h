@@ -395,6 +395,7 @@ public:
   void VisitLinkageSpecDecl(const LinkageSpecDecl *D);
   void VisitAccessSpecDecl(const AccessSpecDecl *D);
   void VisitFriendDecl(const FriendDecl *D);
+  void VisitExplicitInstantiationDecl(const ExplicitInstantiationDecl *D);
   void VisitObjCIvarDecl(const ObjCIvarDecl *D);
   void VisitObjCMethodDecl(const ObjCMethodDecl *D);
   void VisitObjCTypeParamDecl(const ObjCTypeParamDecl *D);
