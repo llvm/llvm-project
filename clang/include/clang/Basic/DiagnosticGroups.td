@@ -624,12 +624,19 @@ Warning to detect invalidation of references.
   }];
 }
 
+def LifetimeSafetyLifetimeboundViolation : DiagGroup<"lifetime-safety-lifetimebound-violation"> {
+  code Documentation = [{
+Warning to detect lifetimebound violations introduced by marking parameter as lifetimebound but not actually returning it.
+  }];
+}
+
 def LifetimeSafetyPermissive : DiagGroup<"lifetime-safety-permissive",
                                          [LifetimeSafetyUseAfterScope,
                                          LifetimeSafetyReturnStackAddr,
                                          LifetimeSafetyDanglingField,
                                          LifetimeSafetyDanglingGlobal,
-                                         LifetimeSafetyUseAfterFree]>;
+                                         LifetimeSafetyUseAfterFree,
+                                         LifetimeSafetyLifetimeboundViolation]>;
 
 def LifetimeSafetyStrict : DiagGroup<"lifetime-safety-strict",
                                     [LifetimeSafetyPermissive,

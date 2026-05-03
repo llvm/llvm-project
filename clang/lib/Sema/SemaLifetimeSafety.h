@@ -172,6 +172,13 @@ public:
           << EscapeField->getSourceRange();
   }
 
+  void reportLifetimeboundViolation(
+      const ParmVarDecl *ParmWithLifetimebound) override {
+    S.Diag(ParmWithLifetimebound->getLocation(),
+           diag::warn_lifetime_safety_param_lifetimebound_violation)
+        << ParmWithLifetimebound->getSourceRange();
+  }
+
   void suggestLifetimeboundToImplicitThis(SuggestionScope Scope,
                                           const CXXMethodDecl *MD,
                                           const Expr *EscapeExpr) override {

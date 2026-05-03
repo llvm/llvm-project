@@ -3269,7 +3269,7 @@ void uaf_via_lifetimebound() {
 namespace GH126600 {
 struct [[gsl::Pointer]] function_ref {
   template <typename Callable>
-  function_ref(Callable &&callable [[clang::lifetimebound]]) : ref(callable) {}
+  function_ref(Callable &&callable [[clang::lifetimebound]]) : ref(callable) {} // expected-warning {{parameter is marked as [[clang::lifetimebound]] but doesn't escape}}
   void (*ref)();
 };
 
@@ -3279,7 +3279,7 @@ struct [[gsl::Pointer]] function_ref {
 // avoid this warning for non-capturing lambdas.
 void assign_non_capturing_to_function_ref(function_ref &r) {
   r = []() {}; // expected-warning {{object whose reference is captured does not live long enough}} \
-               // expected-note {{destroyed here}}
+               // expected-note {{destroyed here}} function-note {{requested here}}
   (void)r; // expected-note {{later used here}}
 }
 

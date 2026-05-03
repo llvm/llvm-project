@@ -60,6 +60,7 @@ private:
   llvm::DenseMap<LoanID, PendingWarning> FinalWarningsMap;
   llvm::DenseMap<AnnotationTarget, EscapingTarget> AnnotationWarningsMap;
   llvm::DenseMap<const ParmVarDecl *, EscapingTarget> NoescapeWarningsMap;
+  llvm::DenseSet<const ParmVarDecl *> VerifiedLiftimeboundEscapes;
   const LoanPropagationAnalysis &LoanPropagation;
   const MovedLoansAnalysis &MovedLoans;
   const LiveOriginsAnalysis &LiveOrigins;
@@ -101,6 +102,7 @@ public:
     issuePendingWarnings();
     suggestAnnotations();
     reportNoescapeViolations();
+    reportLifetimeboundViolations();
     //  Annotation inference is currently guarded by a frontend flag. In the
     //  future, this might be replaced by a design that differentiates between
     //  explicit and inferred findings with separate warning groups.
@@ -137,6 +139,8 @@ public:
         else if (auto *FieldEsc = dyn_cast<FieldEscapeFact>(OEF);
                  FieldEsc && isa<CXXConstructorDecl>(FD))
           AnnotationWarningsMap.try_emplace(PVD, FieldEsc->getFieldDecl());
+      } else {
+        VerifiedLiftimeboundEscapes.insert(PVD);
       }
       // TODO: Suggest lifetime_capture_by(this) for parameter escaping to a
       // field!
@@ -358,6 +362,17 @@ public:
     }
   }
 
+  void reportLifetimeboundViolations() {
+    if (!isa<FunctionDecl>(FD))
+      return;
+    for (const ParmVarDecl *PVD : cast<FunctionDecl>(FD)->parameters()) {
+      if (!PVD->hasAttr<LifetimeBoundAttr>())
+        return;
+      if (!PVD->getAttr<LifetimeBoundAttr>()->isImplicit() &&
+          !VerifiedLiftimeboundEscapes.contains(PVD))
+        SemaHelper->reportLifetimeboundViolation(PVD);
+    }
+  }
   void inferAnnotations() {
     for (auto [Target, EscapeTarget] : AnnotationWarningsMap) {
       if (const auto *MD = Target.dyn_cast<const CXXMethodDecl *>()) {
