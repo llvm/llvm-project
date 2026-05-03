@@ -356,6 +356,18 @@ func.func @global_load_async_to_lds_bad_size_16bit(%idx1 : index,
 
 // -----
 
+func.func @global_load_async_to_lds_non_numeric_transfer_type(%idx1 : index,
+    %mem1 : memref<32xf32, #gpu.address_space<global>>,
+    %mem2 : memref<32xf32, #gpu.address_space<workgroup>>) {
+  // expected-error@+1 {{'amdgpu.global_load_async_to_lds' op transfer type must be an integer, float, or vector of integers or floats}}
+  amdgpu.global_load_async_to_lds %mem1[%idx1], %mem2[%idx1]
+    : index, memref<32xf32, #gpu.address_space<global>>,
+      memref<32xf32, #gpu.address_space<workgroup>>
+  func.return
+}
+
+// -----
+
 func.func @global_load_async_to_lds_src_not_global(%idx1 : index,
     %mem1 : memref<32xf32, #gpu.address_space<workgroup>>,
     %mem2 : memref<32xf32, #gpu.address_space<workgroup>>) {
@@ -398,6 +410,18 @@ func.func @cluster_load_async_to_lds_bad_size_16bit(%idx1 : index, %mask : i32,
   amdgpu.cluster_load_async_to_lds %mem1[%idx1], %mem2[%idx1], %mask
     : f16, memref<32xf16, #gpu.address_space<global>>,
       memref<32xf16, #gpu.address_space<workgroup>>
+  func.return
+}
+
+// -----
+
+func.func @cluster_load_async_to_lds_non_numeric_transfer_type(%idx1 : index,
+    %mask : i32, %mem1 : memref<32xf32, #gpu.address_space<global>>,
+    %mem2 : memref<32xf32, #gpu.address_space<workgroup>>) {
+  // expected-error@+1 {{'amdgpu.cluster_load_async_to_lds' op transfer type must be an integer, float, or vector of integers or floats}}
+  amdgpu.cluster_load_async_to_lds %mem1[%idx1], %mem2[%idx1], %mask
+    : vector<2xindex>, memref<32xf32, #gpu.address_space<global>>,
+      memref<32xf32, #gpu.address_space<workgroup>>
   func.return
 }
 

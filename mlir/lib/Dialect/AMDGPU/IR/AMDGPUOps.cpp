@@ -1016,18 +1016,11 @@ void GatherToLDSOp::getCanonicalizationPatterns(RewritePatternSet &results,
 // GlobalLoadAsyncToLDSOp
 //===----------------------------------------------------------------------===//
 
-static std::optional<unsigned> getTransferSizeInBits(Type transferType) {
-  Type elementType = transferType;
-  unsigned numElements = 1;
-  if (auto vectorType = dyn_cast<VectorType>(transferType)) {
-    elementType = vectorType.getElementType();
-    numElements = vectorType.getNumElements();
-  }
-
-  if (!elementType.isIntOrFloat())
-    return std::nullopt;
-
-  return numElements * elementType.getIntOrFloatBitWidth();
+static unsigned getTransferSizeInBits(Type transferType) {
+  if (VectorType transferVectorType = dyn_cast<VectorType>(transferType))
+    return transferVectorType.getNumElements() *
+           transferVectorType.getElementTypeBitWidth();
+  return transferType.getIntOrFloatBitWidth();
 }
 
 static LogicalResult
@@ -1044,13 +1037,16 @@ verifyGlobalLoadAsyncToLDSLike(Operation *op, MemRefType srcType,
     return op->emitOpError(
         "destination index count must match destination memref rank");
 
-  std::optional<unsigned> transferSize = getTransferSizeInBits(transferType);
-  if (!transferSize)
+  Type transferElementType = transferType;
+  if (auto vectorType = dyn_cast<VectorType>(transferType))
+    transferElementType = vectorType.getElementType();
+  if (!transferElementType.isIntOrFloat())
     return op->emitOpError(
         "transfer type must be an integer, float, or vector of integers or "
         "floats");
 
-  if (!llvm::is_contained({8u, 32u, 64u, 128u}, transferSize.value()))
+  unsigned transferSize = getTransferSizeInBits(transferType);
+  if (!llvm::is_contained({8u, 32u, 64u, 128u}, transferSize))
     return op->emitOpError("transfer type size must be 8, 32, 64, or 128 bits");
 
   if (!hasGlobalMemorySpace(srcType.getMemorySpace()))
