@@ -204,11 +204,11 @@ public:
     const unsigned WordShift = N / BitwordBits;
     const unsigned BitShift = N % BitwordBits;
     if (BitShift == 0) {
-      for (int I = NumWords - 1; I >= static_cast<int>(WordShift); --I)
+      for (unsigned I = NumWords; I-- > WordShift;)
         Bits[I] = Bits[I - WordShift];
     } else {
       const unsigned CarryShift = BitwordBits - BitShift;
-      for (int I = NumWords - 1; I > static_cast<int>(WordShift); --I) {
+      for (unsigned I = NumWords - 1; I > WordShift; --I) {
         Bits[I] = (Bits[I - WordShift] << BitShift) |
                   (Bits[I - WordShift - 1] >> CarryShift);
       }
@@ -274,7 +274,7 @@ public:
 
   /// Return the index of the highest set bit, or -1 if no bits are set.
   constexpr int findLastSet() const {
-    for (int I = NumWords - 1; I >= 0; --I)
+    for (unsigned I = NumWords; I-- > 0;)
       if (Bits[I] != 0)
         return I * BitwordBits +
                (BitwordBits - 1 - countl_zero_constexpr(Bits[I]));
