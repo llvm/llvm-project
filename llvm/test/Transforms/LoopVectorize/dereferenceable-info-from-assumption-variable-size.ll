@@ -183,8 +183,7 @@ define void @deref_assumption_in_preheader_too_small_non_constant_trip_count_acc
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP15]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
 ; CHECK:       [[PRED_LOAD_IF]]:
-; CHECK-NEXT:    [[TMP19:%.*]] = add i64 [[TMP0]], 0
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP19]]
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = load i32, ptr [[TMP16]], align 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i32> poison, i32 [[TMP17]], i64 0
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE]]
@@ -280,8 +279,7 @@ define void @deref_assumption_in_preheader_too_small2_non_constant_trip_count_ac
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP15]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
 ; CHECK:       [[PRED_LOAD_IF]]:
-; CHECK-NEXT:    [[TMP19:%.*]] = add i64 [[TMP0]], 0
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP19]]
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = load i32, ptr [[TMP16]], align 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i32> poison, i32 [[TMP17]], i64 0
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE]]
@@ -459,8 +457,7 @@ define void @deref_assumption_in_preheader_non_constant_trip_count_access_i32_al
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i1> [[TMP3]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
 ; CHECK:       [[PRED_LOAD_IF]]:
-; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> poison, i32 [[TMP7]], i64 0
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE]]
@@ -566,8 +563,7 @@ define void @deref_assumption_loop_access_start_variable(i8 %v, ptr noundef %P, 
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP4]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
 ; CHECK:       [[PRED_LOAD_IF]]:
-; CHECK-NEXT:    [[TMP16:%.*]] = add i64 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP16]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = load i32, ptr [[TMP7]], align 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> poison, i32 [[TMP19]], i64 0
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE]]
@@ -677,8 +673,7 @@ define void @deref_assumption_loop_access_start_variable_unknown_range(i8 %v, pt
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP4]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
 ; CHECK:       [[PRED_LOAD_IF]]:
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i32> poison, i32 [[TMP8]], i64 0
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE]]
