@@ -2,9 +2,10 @@
 
 bugprone-stringview-nullptr
 ===========================
-Checks for various ways that the ``const CharT*`` constructor of
-``std::basic_string_view`` can be passed a null argument and replaces them
-with calls to the default constructor or the empty string (``""``) as appropriate.
+Checks for cases where the ``const CharT*`` constructor of
+``std::basic_string_view`` is passed a null pointer argument and replaces them
+with calls to the default constructor or construction from the empty string
+(``""``) as appropriate.
 
 This prevents code from invoking behavior which is unconditionally undefined.
 The single-argument ``const CharT*`` constructor does not check for the null
@@ -40,7 +41,7 @@ becomes...
 
   accepts_sv("");
 
-  accepts_sv("");  // A
+  accepts_sv({});  // A
 
   accepts_sv({nullptr, 0});  // B
 
