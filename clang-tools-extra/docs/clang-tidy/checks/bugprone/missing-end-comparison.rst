@@ -73,28 +73,19 @@ Supported algorithms:
 - ``std::ranges::min_element``
 - ``std::ranges::upper_bound``
 
-Limitations
------------
-
-This check has the following known limitations:
-
-- It only tracks variables that are directly initialized by a call to one of
-  the supported algorithms. Intermediate variable assignments or values passed
-  through function calls are not followed.
-
 Options
 -------
 
 .. option:: ExtraAlgorithms
 
-   A semicolon-separated list of extra algorithms to check.
-   The list can contain:
+  A semicolon-separated list of extra algorithms to check.
+  The list can contain:
 
-   - Iterator-based algorithms. These should follow the standard iterator
-     pattern: ``func(Iter, Iter, ...)``.
+  - Iterator-based algorithms. These should follow the standard iterator
+    pattern: ``func(Iter, Iter, ...)``.
 
-   - Range-based algorithms. These are heuristically detected if they take
-     exactly two arguments and the first argument is a container or range.
-     The fix will insert ``std::end(Container)``.
+  - Range-based algorithms. These are heuristically detected if they take
+    exactly two arguments and the first argument is a container or range.
+    The fix will insert ``std::end(Container)``.
 
-   Default is an empty string.
+  Default is an empty string.

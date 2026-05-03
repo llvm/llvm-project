@@ -167,7 +167,9 @@ void MissingEndComparisonCheck::registerMatchers(MatchFinder *Finder) {
                 callee(cxxConversionDecl(returns(booleanType()))),
                 on(ignoringParenImpCasts(declRefExpr(to(VarWithAlgoInit))))));
 
-  const auto BoolUsage = expr(anyOf(IsBoolUsage, IsVariableBoolUsage));
+  const auto BoolUsage =
+      expr(anyOf(IsBoolUsage, IsVariableBoolUsage),
+           optionally(hasParent(varDecl().bind("boolOpParentVar"))));
 
   Finder->addMatcher(
       unaryOperator(hasOperatorName("!"),
@@ -213,16 +215,12 @@ void MissingEndComparisonCheck::check(const MatchFinder::MatchResult &Result) {
 
   // Suppress fix-it if the expression is part of a variable declaration or a
   // condition variable declaration.
-  if (const auto *InitVar = Result.Nodes.getNodeAs<VarDecl>("initVar")) {
-    if (InitVar->getType()->isBooleanType())
-      return;
+  if (const auto *InitVar = Result.Nodes.getNodeAs<VarDecl>("initVar");
+      InitVar && (InitVar->getType()->isBooleanType() ||
+                  Result.Nodes.getNodeAs<Stmt>("condVarParent")))
+    return;
 
-    if (Result.Nodes.getNodeAs<Stmt>("condVarParent"))
-      return;
-  }
-
-  const auto &Parents = Result.Context->getParents(*BoolOp);
-  if (!Parents.empty() && Parents[0].get<VarDecl>())
+  if (Result.Nodes.getNodeAs<VarDecl>("boolOpParentVar"))
     return;
 
   const SourceLocation AfterBoolOp =
