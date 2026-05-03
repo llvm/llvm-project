@@ -1260,7 +1260,6 @@ unsigned Pattern::computeMatchDistance(StringRef Buffer) const {
 
 void Pattern::printSubstitutions(const SourceMgr &SM, StringRef Buffer,
                                  SMRange Range,
-                                 FileCheckDiag::MatchType MatchTy,
                                  FileCheckDiagList *Diags) const {
   // Print what we know about substitutions.
   if (!Substitutions.empty()) {
@@ -1280,13 +1279,13 @@ void Pattern::printSubstitutions(const SourceMgr &SM, StringRef Buffer,
       OS.write_escaped(Substitution->getFromString()) << "\" equal to ";
       OS << *MatchedValue;
 
-      // We report only the start of the match/search range to suggest we are
-      // reporting the substitutions as set at the start of the match/search.
-      // Indicating a non-zero-length range might instead seem to imply that the
+      // Unlike MatchCustomNoteDiag, PrintMessage needs a location.  We report
+      // only the start of the match/search range to suggest we are reporting
+      // the substitutions as set at the start of the match/search.  Indicating
+      // a non-zero-length range might instead seem to imply that the
       // substitution matches or was captured from exactly that range.
       if (Diags)
-        Diags->emplace<MatchNoteDiag>(
-            MatchTy, SMRange(Range.Start, Range.Start), OS.str());
+        Diags->emplace<MatchCustomNoteDiag>(OS.str());
       else
         SM.PrintMessage(Range.Start, SourceMgr::DK_Note, OS.str());
     }
@@ -1294,7 +1293,6 @@ void Pattern::printSubstitutions(const SourceMgr &SM, StringRef Buffer,
 }
 
 void Pattern::printVariableDefs(const SourceMgr &SM,
-                                FileCheckDiag::MatchType MatchTy,
                                 FileCheckDiagList *Diags) const {
   if (VariableDefs.empty() && NumericVariableDefs.empty())
     return;
@@ -1340,7 +1338,7 @@ void Pattern::printVariableDefs(const SourceMgr &SM,
     raw_svector_ostream OS(Msg);
     OS << "captured var \"" << VC.Name << "\"";
     if (Diags)
-      Diags->emplace<MatchNoteDiag>(MatchTy, VC.Range, OS.str());
+      Diags->emplace<MatchCustomNoteDiag>(VC.Range, OS.str());
     else
       SM.PrintMessage(VC.Range.Start, SourceMgr::DK_Note, OS.str(), VC.Range);
   }
@@ -1397,10 +1395,10 @@ void Pattern::printFuzzyMatch(const SourceMgr &SM, StringRef Buffer,
   // reasonable and not equal to what we showed in the "scanning from here"
   // line.
   if (Best && Best != StringRef::npos && BestQuality < 50) {
-    SMRange MatchRange = buildMatchRange(Buffer, Best, 0);
+    SMLoc MatchStart = SMLoc::getFromPointer(Buffer.data() + Best);
     if (Diags)
-      Diags->emplace<MatchNoteDiag>(FileCheckDiag::MatchFuzzy, MatchRange);
-    SM.PrintMessage(MatchRange.Start, SourceMgr::DK_Note,
+      Diags->emplace<MatchFuzzyDiag>(MatchStart);
+    SM.PrintMessage(MatchStart, SourceMgr::DK_Note,
                     "possible intended match here");
 
     // FIXME: If we wanted to be really friendly we would show why the match
@@ -1507,6 +1505,8 @@ StringRef FileCheck::CanonicalizeFile(MemoryBuffer &MB,
 }
 
 FileCheckDiag::~FileCheckDiag() {}
+MatchResultDiag::~MatchResultDiag() {}
+MatchNoteDiag::~MatchNoteDiag() {}
 
 static bool IsPartOfWord(char c) {
   return (isAlnum(c) || c == '-' || c == '_');
@@ -2027,15 +2027,16 @@ static Error printMatch(bool ExpectedMatch, const SourceMgr &SM,
   }
 
   // Add "found" diagnostic, substitutions, and variable definitions to Diags.
-  FileCheckDiag::MatchType MatchTy = ExpectedMatch
-                                         ? FileCheckDiag::MatchFoundAndExpected
-                                         : FileCheckDiag::MatchFoundButExcluded;
+  MatchFoundDiag::StatusTy Status =
+      ExpectedMatch ? MatchFoundDiag::Success : MatchFoundDiag::Excluded;
   SMRange MatchRange = buildMatchRange(Buffer, MatchResult.TheMatch->Pos,
                                        MatchResult.TheMatch->Len);
+  SMRange SearchRange = buildSearchRange(Buffer);
   if (Diags) {
-    Diags->emplace<MatchResultDiag>(Pat.getCheckTy(), Loc, MatchTy, MatchRange);
-    Pat.printSubstitutions(SM, Buffer, MatchRange, MatchTy, Diags);
-    Pat.printVariableDefs(SM, MatchTy, Diags);
+    Diags->emplace<MatchFoundDiag>(Pat.getCheckTy(), Loc, Status, MatchRange,
+                                   SearchRange);
+    Pat.printSubstitutions(SM, Buffer, MatchRange, Diags);
+    Pat.printVariableDefs(SM, Diags);
   }
   if (!PrintDiag) {
     assert(!HasError && "expected to report more diagnostics for error");
@@ -2055,8 +2056,8 @@ static Error printMatch(bool ExpectedMatch, const SourceMgr &SM,
                   {MatchRange});
 
   // Print additional information, which can be useful even if there are errors.
-  Pat.printSubstitutions(SM, Buffer, MatchRange, MatchTy, nullptr);
-  Pat.printVariableDefs(SM, MatchTy, nullptr);
+  Pat.printSubstitutions(SM, Buffer, MatchRange, nullptr);
+  Pat.printVariableDefs(SM, nullptr);
 
   // Print errors and add them to Diags.  We report these errors after the match
   // itself because we found them after the match.  If we had found them before
@@ -2065,9 +2066,9 @@ static Error printMatch(bool ExpectedMatch, const SourceMgr &SM,
                   [&](const ErrorDiagnostic &E) {
                     E.log(errs());
                     if (Diags) {
-                      Diags->emplace<MatchNoteDiag>(
-                          FileCheckDiag::MatchFoundErrorNote, E.getRange(),
-                          E.getMessage().str());
+                      Diags->emplace<MatchCustomNoteDiag>(E.getRange(),
+                                                          E.getMessage().str(),
+                                                          /*AddsError=*/true);
                     }
                   });
   return ErrorReported::reportedOrSuccess(HasError);
@@ -2083,15 +2084,14 @@ static Error printNoMatch(bool ExpectedMatch, const SourceMgr &SM,
   // Print any pattern errors, and record them to be added to Diags later.
   bool HasError = ExpectedMatch;
   bool HasPatternError = false;
-  FileCheckDiag::MatchType MatchTy = ExpectedMatch
-                                         ? FileCheckDiag::MatchNoneButExpected
-                                         : FileCheckDiag::MatchNoneAndExcluded;
+  MatchNoneDiag::StatusTy Status =
+      ExpectedMatch ? MatchNoneDiag::Expected : MatchNoneDiag::Success;
   SmallVector<std::string, 4> ErrorMsgs;
   handleAllErrors(
       std::move(MatchError),
       [&](const ErrorDiagnostic &E) {
         HasError = HasPatternError = true;
-        MatchTy = FileCheckDiag::MatchNoneForInvalidPattern;
+        Status = MatchNoneDiag::InvalidPattern;
         E.log(errs());
         if (Diags)
           ErrorMsgs.push_back(E.getMessage().str());
@@ -2119,12 +2119,10 @@ static Error printNoMatch(bool ExpectedMatch, const SourceMgr &SM,
   // diagnostic is all we have to anchor them.
   SMRange SearchRange = buildSearchRange(Buffer);
   if (Diags) {
-    Diags->emplace<MatchResultDiag>(Pat.getCheckTy(), Loc, MatchTy,
-                                    SearchRange);
-    SMRange NoteRange = SMRange(SearchRange.Start, SearchRange.Start);
+    Diags->emplace<MatchNoneDiag>(Pat.getCheckTy(), Loc, Status, SearchRange);
     for (StringRef ErrorMsg : ErrorMsgs)
-      Diags->emplace<MatchNoteDiag>(MatchTy, NoteRange, ErrorMsg);
-    Pat.printSubstitutions(SM, Buffer, SearchRange, MatchTy, Diags);
+      Diags->emplace<MatchCustomNoteDiag>(ErrorMsg);
+    Pat.printSubstitutions(SM, Buffer, SearchRange, Diags);
   }
   if (!PrintDiag) {
     assert(!HasError && "expected to report more diagnostics for error");
@@ -2150,7 +2148,7 @@ static Error printNoMatch(bool ExpectedMatch, const SourceMgr &SM,
 
   // Print additional information, which can be useful even after a pattern
   // error.
-  Pat.printSubstitutions(SM, Buffer, SearchRange, MatchTy, nullptr);
+  Pat.printSubstitutions(SM, Buffer, SearchRange, nullptr);
   if (ExpectedMatch)
     Pat.printFuzzyMatch(SM, Buffer, Diags);
   return ErrorReported::reportedOrSuccess(HasError);
@@ -2254,11 +2252,12 @@ size_t FileCheckString::Check(const SourceMgr &SM, StringRef Buffer,
     if (CheckNext(SM, SkippedRegion)) {
       if (Diags) {
         if (Req.Verbose) {
-          Diags->adjustPrevDiags(FileCheckDiag::MatchFoundButWrongLine);
+          Diags->adjustPrevMatchFoundDiag(MatchFoundDiag::WrongLine);
         } else {
-          Diags->emplace<MatchResultDiag>(
-              Pat.getCheckTy(), Loc, FileCheckDiag::MatchFoundButWrongLine,
-              buildMatchRange(MatchBuffer, MatchPos, MatchLen));
+          Diags->emplace<MatchFoundDiag>(
+              Pat.getCheckTy(), Loc, MatchFoundDiag::WrongLine,
+              buildMatchRange(MatchBuffer, MatchPos, MatchLen),
+              buildSearchRange(MatchBuffer));
         }
       }
       return StringRef::npos;
@@ -2269,11 +2268,12 @@ size_t FileCheckString::Check(const SourceMgr &SM, StringRef Buffer,
     if (CheckSame(SM, SkippedRegion)) {
       if (Diags) {
         if (Req.Verbose) {
-          Diags->adjustPrevDiags(FileCheckDiag::MatchFoundButWrongLine);
+          Diags->adjustPrevMatchFoundDiag(MatchFoundDiag::WrongLine);
         } else {
-          Diags->emplace<MatchResultDiag>(
-              Pat.getCheckTy(), Loc, FileCheckDiag::MatchFoundButWrongLine,
-              buildMatchRange(MatchBuffer, MatchPos, MatchLen));
+          Diags->emplace<MatchFoundDiag>(
+              Pat.getCheckTy(), Loc, MatchFoundDiag::WrongLine,
+              buildMatchRange(MatchBuffer, MatchPos, MatchLen),
+              buildSearchRange(MatchBuffer));
         }
       }
       return StringRef::npos;
@@ -2464,7 +2464,7 @@ FileCheckString::CheckDag(const SourceMgr &SM, StringRef Buffer,
         // we're gathering them for a different rendering, but we always print
         // other diagnostics.
         if (Diags) {
-          Diags->adjustPrevDiags(FileCheckDiag::MatchFoundButDiscarded);
+          Diags->adjustPrevMatchFoundDiag(MatchFoundDiag::Discarded);
         } else {
           SMLoc OldStart = SMLoc::getFromPointer(Buffer.data() + MI->Pos);
           SMLoc OldEnd = SMLoc::getFromPointer(Buffer.data() + MI->End);

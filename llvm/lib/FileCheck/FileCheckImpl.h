@@ -733,8 +733,7 @@ public:
                                       const SourceMgr &SM) const;
   /// Prints the value of successful substitutions.
   void printSubstitutions(const SourceMgr &SM, StringRef Buffer,
-                          SMRange MatchRange, FileCheckDiag::MatchType MatchTy,
-                          FileCheckDiagList *Diags) const;
+                          SMRange MatchRange, FileCheckDiagList *Diags) const;
   void printFuzzyMatch(const SourceMgr &SM, StringRef Buffer,
                        FileCheckDiagList *Diags) const;
 
@@ -742,7 +741,6 @@ public:
     return !(Substitutions.empty() && VariableDefs.empty());
   }
   LLVM_ABI_FOR_TEST void printVariableDefs(const SourceMgr &SM,
-                                           FileCheckDiag::MatchType MatchTy,
                                            FileCheckDiagList *Diags) const;
 
   Check::FileCheckType getCheckTy() const { return CheckTy; }
