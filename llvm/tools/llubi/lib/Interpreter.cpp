@@ -114,13 +114,13 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
   }
 
   AnyValue
-  visitIntUnOpWithResult(Instruction &I,
+  visitIntUnOpWithResult(Type *RetTy, const AnyValue &Operand,
                          function_ref<AnyValue(const APInt &)> ScalarFn) {
-    return computeUnOp(I.getType(), getValue(I.getOperand(0)),
-                       [&](const AnyValue &Operand) -> AnyValue {
-                         if (Operand.isPoison())
+    return computeUnOp(RetTy, Operand,
+                       [&](const AnyValue &OperandInner) -> AnyValue {
+                         if (OperandInner.isPoison())
                            return AnyValue::poison();
-                         return ScalarFn(Operand.asInteger());
+                         return ScalarFn(OperandInner.asInteger());
                        });
   }
 
@@ -157,23 +157,21 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
   }
 
   AnyValue visitIntBinOpWithResult(
-      Instruction &I,
+      Type *RetTy, const AnyValue &LHS, const AnyValue &RHS,
       function_ref<AnyValue(const APInt &, const APInt &)> ScalarFn) {
     return computeBinOp(
-        I.getType(), getValue(I.getOperand(0)), getValue(I.getOperand(1)),
-        [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
-          if (LHS.isPoison() || RHS.isPoison())
+        RetTy, LHS, RHS,
+        [&](const AnyValue &LHSInner, const AnyValue &RHSInner) -> AnyValue {
+          if (LHSInner.isPoison() || RHSInner.isPoison())
             return AnyValue::poison();
-          return ScalarFn(LHS.asInteger(), RHS.asInteger());
+          return ScalarFn(LHSInner.asInteger(), RHSInner.asInteger());
         });
   }
 
   AnyValue visitOverflowIntBinOpWithResult(
-      CallBase &CB,
+      Type *RetTy, const AnyValue &LHS, const AnyValue &RHS,
       function_ref<std::pair<APInt, bool>(const APInt &, const APInt &)>
           ScalarFn) {
-    const AnyValue &LHS = getValue(CB.getOperand(0));
-    const AnyValue &RHS = getValue(CB.getOperand(1));
     if (!LHS.isAggregate()) {
       if (LHS.isPoison() || RHS.isPoison())
         return std::vector{AnyValue::poison(), AnyValue::poison()};
@@ -246,17 +244,18 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
   }
 
   AnyValue visitIntTriOpWithResult(
-      Instruction &I,
+      Type *RetTy, const AnyValue &Op1, const AnyValue &Op2,
+      const AnyValue &Op3,
       function_ref<AnyValue(const APInt &, const APInt &, const APInt &)>
           ScalarFn) {
     return computeTriOp(
-        I.getType(), getValue(I.getOperand(0)), getValue(I.getOperand(1)),
-        getValue(I.getOperand(2)),
-        [&](const AnyValue &Op1, const AnyValue &Op2,
-            const AnyValue &Op3) -> AnyValue {
-          if (Op1.isPoison() || Op2.isPoison() || Op3.isPoison())
+        RetTy, Op1, Op2, Op3,
+        [&](const AnyValue &Op1Inner, const AnyValue &Op2Inner,
+            const AnyValue &Op3Inner) -> AnyValue {
+          if (Op1Inner.isPoison() || Op2Inner.isPoison() || Op3Inner.isPoison())
             return AnyValue::poison();
-          return ScalarFn(Op1.asInteger(), Op2.asInteger(), Op3.asInteger());
+          return ScalarFn(Op1Inner.asInteger(), Op2Inner.asInteger(),
+                          Op3Inner.asInteger());
         });
   }
 
@@ -524,33 +523,38 @@ public:
     }
     case Intrinsic::abs: {
       const bool IsIntMinPoison = getBooleanNonPoison(Args[1].asBoolean());
-      return visitIntUnOpWithResult(CB, [&](const APInt &Operand) -> AnyValue {
-        if (IsIntMinPoison && Operand.isMinSignedValue())
-          return AnyValue::poison();
-        return Operand.abs();
-      });
+      return visitIntUnOpWithResult(
+          RetTy, Args[0], [&](const APInt &Operand) -> AnyValue {
+            if (IsIntMinPoison && Operand.isMinSignedValue())
+              return AnyValue::poison();
+            return Operand.abs();
+          });
     }
     case Intrinsic::smax: {
       return visitIntBinOpWithResult(
-          CB, [](const APInt &LHS, const APInt &RHS) -> AnyValue {
+          RetTy, Args[0], Args[1],
+          [](const APInt &LHS, const APInt &RHS) -> AnyValue {
             return APIntOps::smax(LHS, RHS);
           });
     }
     case Intrinsic::smin: {
       return visitIntBinOpWithResult(
-          CB, [](const APInt &LHS, const APInt &RHS) -> AnyValue {
+          RetTy, Args[0], Args[1],
+          [](const APInt &LHS, const APInt &RHS) -> AnyValue {
             return APIntOps::smin(LHS, RHS);
           });
     }
     case Intrinsic::umax: {
       return visitIntBinOpWithResult(
-          CB, [](const APInt &LHS, const APInt &RHS) -> AnyValue {
+          RetTy, Args[0], Args[1],
+          [](const APInt &LHS, const APInt &RHS) -> AnyValue {
             return APIntOps::umax(LHS, RHS);
           });
     }
     case Intrinsic::umin: {
       return visitIntBinOpWithResult(
-          CB, [](const APInt &LHS, const APInt &RHS) -> AnyValue {
+          RetTy, Args[0], Args[1],
+          [](const APInt &LHS, const APInt &RHS) -> AnyValue {
             return APIntOps::umin(LHS, RHS);
           });
     }
@@ -558,7 +562,8 @@ public:
     case Intrinsic::ucmp: {
       const unsigned BitWidth = RetTy->getScalarSizeInBits();
       return visitIntBinOpWithResult(
-          CB, [&](const APInt &LHS, const APInt &RHS) -> AnyValue {
+          RetTy, Args[0], Args[1],
+          [&](const APInt &LHS, const APInt &RHS) -> AnyValue {
             if (LHS == RHS)
               return APInt::getZero(BitWidth);
             if (IID == Intrinsic::scmp)
@@ -569,35 +574,38 @@ public:
           });
     }
     case Intrinsic::bitreverse: {
-      return visitIntUnOpWithResult(CB, [](const APInt &Operand) -> AnyValue {
-        return Operand.reverseBits();
-      });
+      return visitIntUnOpWithResult(RetTy, Args[0],
+                                    [](const APInt &Operand) -> AnyValue {
+                                      return Operand.reverseBits();
+                                    });
     }
     case Intrinsic::bswap: {
-      return visitIntUnOpWithResult(CB, [](const APInt &Operand) -> AnyValue {
-        return Operand.byteSwap();
-      });
+      return visitIntUnOpWithResult(
+          RetTy, Args[0],
+          [](const APInt &Operand) -> AnyValue { return Operand.byteSwap(); });
     }
     case Intrinsic::ctpop: {
-      return visitIntUnOpWithResult(CB, [](const APInt &Operand) -> AnyValue {
-        return APInt(Operand.getBitWidth(), Operand.popcount());
-      });
+      return visitIntUnOpWithResult(
+          RetTy, Args[0], [](const APInt &Operand) -> AnyValue {
+            return APInt(Operand.getBitWidth(), Operand.popcount());
+          });
     }
     case Intrinsic::ctlz:
     case Intrinsic::cttz: {
       const bool IsZeroPoison = getBooleanNonPoison(Args[1].asBoolean());
-      return visitIntUnOpWithResult(CB, [&](const APInt &Operand) -> AnyValue {
-        if (IsZeroPoison && Operand.isZero())
-          return AnyValue::poison();
-        if (IID == Intrinsic::ctlz)
-          return APInt(Operand.getBitWidth(), Operand.countl_zero());
-        return APInt(Operand.getBitWidth(), Operand.countr_zero());
-      });
+      return visitIntUnOpWithResult(
+          RetTy, Args[0], [&](const APInt &Operand) -> AnyValue {
+            if (IsZeroPoison && Operand.isZero())
+              return AnyValue::poison();
+            if (IID == Intrinsic::ctlz)
+              return APInt(Operand.getBitWidth(), Operand.countl_zero());
+            return APInt(Operand.getBitWidth(), Operand.countr_zero());
+          });
     }
     case Intrinsic::fshl:
     case Intrinsic::fshr: {
       return visitIntTriOpWithResult(
-          CB,
+          RetTy, Args[0], Args[1], Args[2],
           [IID](const APInt &Op1, const APInt &Op2,
                 const APInt &Op3) -> AnyValue {
             const unsigned BitWidth = Op1.getBitWidth();
@@ -614,7 +622,8 @@ public:
     }
     case Intrinsic::clmul: {
       return visitIntBinOpWithResult(
-          CB, [](const APInt &LHS, const APInt &RHS) -> AnyValue {
+          RetTy, Args[0], Args[1],
+          [](const APInt &LHS, const APInt &RHS) -> AnyValue {
             return APIntOps::clmul(LHS, RHS);
           });
     }
@@ -625,7 +634,7 @@ public:
     case Intrinsic::smul_with_overflow:
     case Intrinsic::umul_with_overflow: {
       return visitOverflowIntBinOpWithResult(
-          CB,
+          RetTy, Args[0], Args[1],
           [IID](const APInt &LHS, const APInt &RHS) -> std::pair<APInt, bool> {
             APInt Res;
             bool Overflow = false;
@@ -661,7 +670,8 @@ public:
     case Intrinsic::sshl_sat:
     case Intrinsic::ushl_sat: {
       return visitIntBinOpWithResult(
-          CB, [IID](const APInt &LHS, const APInt &RHS) -> AnyValue {
+          RetTy, Args[0], Args[1],
+          [IID](const APInt &LHS, const APInt &RHS) -> AnyValue {
             switch (IID) {
             case Intrinsic::sadd_sat:
               return LHS.sadd_sat(RHS);

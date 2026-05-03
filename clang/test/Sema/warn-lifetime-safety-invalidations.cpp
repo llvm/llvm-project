@@ -236,13 +236,12 @@ void IteratorUsedAfterErase(std::vector<int> v) {
   }
 }
 
-// FIXME: Detect this. We currently skip invalidation through ref/pointers to containers.
-void IteratorUsedAfterPushBackParam(std::vector<int>& v) {
+void IteratorUsedAfterPushBackParam(std::vector<int>& v) { // expected-warning {{parameter is later invalidated}}
   auto it = std::begin(v);
   if (it != std::end(v) && *it == 3) {
-    v.push_back(4);
+    v.push_back(4); // expected-note {{invalidated here}}
   }
-  ++it;
+  ++it; // expected-note {{later used here}}
 }
 
 void IteratorUsedAfterPushBack(std::vector<int> v) {
@@ -253,6 +252,46 @@ void IteratorUsedAfterPushBack(std::vector<int> v) {
   ++it;             // expected-note {{later used here}}
 }
 }  // namespace SimpleInvalidIterators
+
+namespace InvalidatingThroughContainerAliases {
+void IteratorInvalidatedThroughLocalReferenceAlias() {
+  std::vector<int> vv;
+  std::vector<int> &v = vv;
+  auto it = vv.begin(); // expected-warning {{object whose reference is captured is later invalidated}}
+  v.push_back(42);      // expected-note {{invalidated here}}
+  (void)it;             // expected-note {{later used here}}
+}
+
+void IteratorInvalidatedThroughPointerParameter(std::vector<int> *v) { // expected-warning {{parameter is later invalidated}}
+  auto it = v->begin();
+  v->push_back(42); // expected-note {{invalidated here}}
+  (void)it;         // expected-note {{later used here}}
+}
+} // namespace InvalidatingThroughContainerAliases
+
+namespace ContainerObjectAliases {
+// FIXME: Distinguish owner-borrow from content-borrow.
+void PointerParameterObjectUseIsOk(std::vector<int> *v) { // expected-warning {{parameter is later invalidated}}
+  v->push_back(42); // expected-note {{invalidated here}}
+  (void)v;          // expected-note {{later used here}}
+}
+
+// FIXME: Distinguish owner-borrow from content-borrow.
+void LocalPointerAliasObjectUseIsOk() {
+  std::vector<int> vv;
+  std::vector<int> *v = &vv; // expected-warning {{object whose reference is captured is later invalidated}}
+  v->push_back(42);          // expected-note {{invalidated here}}
+  (void)*v;                  // expected-note {{later used here}}
+}
+
+// FIXME: Distinguish owner-borrow from content-borrow.
+void LocalReferenceAliasObjectUseIsOk() {
+  std::vector<int> vv;
+  std::vector<int> &v = vv; // expected-warning {{object whose reference is captured is later invalidated}}
+  v.push_back(42);          // expected-note {{invalidated here}}
+  (void)v;                  // expected-note {{later used here}}
+}
+} // namespace ContainerObjectAliases
 
 namespace ElementReferences {
 // Testing raw pointers and references to elements, not just iterators.
@@ -289,7 +328,7 @@ void SelfInvalidatingMap() {
   // insertion and following is unsafe for this container.
   mp[1] = "42";
   mp[2]     // expected-note {{invalidated here}}
-    = 
+    =
     mp[1];  // expected-warning {{object whose reference is captured is later invalidated}} expected-note {{later used here}}
 }
 
@@ -297,7 +336,7 @@ void InvalidateErase() {
   std::flat_map<int, std::string> mp;
   // None of these containers provide iterator stability. So following is unsafe:
   auto it = mp.find(3); // expected-warning {{object whose reference is captured is later invalidated}}
-  mp.erase(mp.find(4)); // expected-note {{invalidated here}} 
+  mp.erase(mp.find(4)); // expected-note {{invalidated here}}
   if (it != mp.end())   // expected-note {{later used here}}
     *it;
 }
@@ -340,17 +379,20 @@ void Invalidate1Use1IsInvalid() {
   s.strings1.push_back("1");
   *it;
 }
-void Invalidate1Use2IsOk() {
+void Invalidate2Use1IsOk() {
     S s;
     auto it = s.strings1.begin();
     s.strings2.push_back("1");
     *it;
-}void Invalidate1Use2ViaRefIsOk() {
+}
+
+// FIXME: Requires field-sensitive AccessPaths to fix.
+void Invalidate1Use2ViaRefIsOk() {
     S s;
-    auto it = s.strings2.begin();
-    auto& strings2 = s.strings2;
-    strings2.push_back("1");
-    *it;
+    auto it = s.strings2.begin(); // expected-warning {{object whose reference is captured is later invalidated}}
+    auto& strings1 = s.strings1;
+    strings1.push_back("1");      // expected-note {{invalidated here}}
+    *it;                          // expected-note {{later used here}}
 }
 void Invalidate1UseSIsOk() {
   S s;
@@ -358,24 +400,26 @@ void Invalidate1UseSIsOk() {
   s.strings2.push_back("1");
   (void)*p;
 }
+// FIXME: Distinguish owner-borrow from content-borrow.
 void PointerToContainerIsOk() {
   std::vector<std::string> s;
-  std::vector<std::string>* p = &s;
-  p->push_back("1");
-  (void)*p;
+  std::vector<std::string>* p = &s; // expected-warning {{object whose reference is captured is later invalidated}}
+  p->push_back("1");                // expected-note {{invalidated here}}
+  (void)*p;                         // expected-note {{later used here}}
 }
 void IteratorFromPointerToContainerIsInvalidated() {
-  // FIXME: Detect this.
   std::vector<std::string> s;
-  std::vector<std::string>* p = &s;
+  std::vector<std::string>* p = &s; // expected-warning {{object whose reference is captured is later invalidated}}
   auto it = p->begin();
-  p->push_back("1");
-  *it;
+  p->push_back("1");                // expected-note {{invalidated here}}
+  *it;                              // expected-note {{later used here}}
 }
+// FIXME: Distinguish invalidating an element's contents from invalidating
+// iterators into the outer container.
 void ChangingRegionOwnedByContainerIsOk() {
   std::vector<std::string> subdirs;
-  for (std::string& path : subdirs)
-    path = std::string();
+  for (std::string& path : subdirs) // expected-warning {{object whose reference is captured is later invalidated}} expected-note {{later used here}}
+    path = std::string();           // expected-note {{invalidated here}}
 }
 
 } // namespace ContainersAsFields
