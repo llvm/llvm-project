@@ -4393,7 +4393,7 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
 
   // Fold: select (icmp ult X, 2), X, ctpop(X)  -->  ctpop(X)
   // ctpop(0)==0 and ctpop(1)==1, so the guard is always redundant.
-  if (match(FalseVal, m_Intrinsic<Intrinsic::ctpop>(m_Specific(TrueVal))) &&
+  if (match(FalseVal, m_Ctpop(m_Specific(TrueVal))) &&
       match(CondVal, 
             m_SpecificICmp(ICmpInst::ICMP_ULT, m_Specific(TrueVal), m_SpecificInt(2)))) {
     cast<Instruction>(FalseVal)->dropPoisonGeneratingAnnotations();
