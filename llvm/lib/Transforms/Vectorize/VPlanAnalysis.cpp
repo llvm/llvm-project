@@ -308,8 +308,7 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
                 return inferScalarType(R->getOperand(0));
               })
           // VPInstructionWithType must be handled before VPInstruction.
-          .Case<VPInstructionWithType, VPWidenIntrinsicRecipe,
-                VPWidenCastRecipe>(
+          .Case<VPInstructionWithType, VPWidenIntrinsicRecipe>(
               [](const auto *R) { return R->getResultType(); })
           .Case<VPBlendRecipe, VPInstruction, VPWidenRecipe, VPReplicateRecipe,
                 VPWidenCallRecipe, VPWidenMemoryRecipe>(

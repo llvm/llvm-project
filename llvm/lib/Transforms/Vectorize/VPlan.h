@@ -437,7 +437,6 @@ public:
     VPVectorEndPointerSC,
     VPWidenCallSC,
     VPWidenCanonicalIVSC,
-    VPWidenCastSC,
     VPWidenGEPSC,
     VPWidenIntrinsicSC,
     VPWidenLoadEVLSC,
@@ -626,7 +625,6 @@ public:
     case VPRecipeBase::VPVectorEndPointerSC:
     case VPRecipeBase::VPWidenCallSC:
     case VPRecipeBase::VPWidenCanonicalIVSC:
-    case VPRecipeBase::VPWidenCastSC:
     case VPRecipeBase::VPWidenGEPSC:
     case VPRecipeBase::VPWidenIntrinsicSC:
     case VPRecipeBase::VPWidenSC:
@@ -1118,7 +1116,6 @@ struct VPRecipeWithIRFlags : public VPSingleDefRecipe, public VPIRFlags {
            R->getVPRecipeID() == VPRecipeBase::VPWidenSC ||
            R->getVPRecipeID() == VPRecipeBase::VPWidenGEPSC ||
            R->getVPRecipeID() == VPRecipeBase::VPWidenCallSC ||
-           R->getVPRecipeID() == VPRecipeBase::VPWidenCastSC ||
            R->getVPRecipeID() == VPRecipeBase::VPWidenIntrinsicSC ||
            R->getVPRecipeID() == VPRecipeBase::VPReductionSC ||
            R->getVPRecipeID() == VPRecipeBase::VPReductionEVLSC ||
@@ -1512,6 +1509,17 @@ class VPInstructionWithType : public VPInstruction {
   /// Scalar result type produced by the recipe.
   Type *ResultTy;
 
+  /// Whether the recipe produces a single scalar result (as opposed to a
+  /// vector/wide result with one lane per VF).
+  bool IsSingleScalar;
+
+  /// Returns the default value of IsSingleScalar for \p Opcode: true for
+  /// opcodes that produce a single scalar (loads, casts, vscale).
+  static bool defaultIsSingleScalar(unsigned Opcode) {
+    return Instruction::isCast(Opcode) || Opcode == Instruction::Load ||
+           Opcode == VPInstruction::VScale;
+  }
+
 public:
   VPInstructionWithType(unsigned Opcode, ArrayRef<VPValue *> Operands,
                         Type *ResultTy, const VPIRFlags &Flags = {},
@@ -1519,7 +1527,22 @@ public:
                         DebugLoc DL = DebugLoc::getUnknown(),
                         const Twine &Name = "")
       : VPInstruction(Opcode, Operands, Flags, Metadata, DL, Name),
-        ResultTy(ResultTy) {}
+        ResultTy(ResultTy), IsSingleScalar(defaultIsSingleScalar(Opcode)) {}
+
+  /// Create a new VPInstructionWithType representing a wide (vector-producing)
+  /// cast that mirrors the semantics of the legacy VPWidenCastRecipe.
+  static VPInstructionWithType *
+  createWide(unsigned Opcode, VPValue *Op, Type *ResultTy,
+             CastInst *CI = nullptr, const VPIRFlags &Flags = {},
+             const VPIRMetadata &Metadata = {},
+             DebugLoc DL = DebugLoc::getUnknown()) {
+    assert(Instruction::isCast(Opcode) && "Expected a cast opcode");
+    auto *VPI =
+        new VPInstructionWithType(Opcode, {Op}, ResultTy, Flags, Metadata, DL);
+    VPI->IsSingleScalar = false;
+    VPI->setUnderlyingValue(CI);
+    return VPI;
+  }
 
   static inline bool classof(const VPRecipeBase *R) {
     // VPInstructionWithType are VPInstructions with specific opcodes requiring
@@ -1544,10 +1567,20 @@ public:
     return isa<VPInstructionWithType>(cast<VPRecipeBase>(R));
   }
 
+  static inline bool classof(const VPValue *V) {
+    auto *R = V->getDefiningRecipe();
+    return R && classof(R);
+  }
+
+  static inline bool classof(const VPSingleDefRecipe *R) {
+    return classof(static_cast<const VPRecipeBase *>(R));
+  }
+
   VPInstruction *clone() override {
     auto *New =
         new VPInstructionWithType(getOpcode(), operands(), getResultType(),
                                   *this, *this, getDebugLoc(), getName());
+    New->IsSingleScalar = IsSingleScalar;
     New->setUnderlyingValue(getUnderlyingValue());
     return New;
   }
@@ -1559,6 +1592,16 @@ public:
                               VPCostContext &Ctx) const override;
 
   Type *getResultType() const { return ResultTy; }
+
+  /// Returns the cast opcode of this recipe; the opcode must be a cast.
+  Instruction::CastOps getCastOpcode() const {
+    assert(Instruction::isCast(getOpcode()) && "not a cast opcode");
+    return static_cast<Instruction::CastOps>(getOpcode());
+  }
+
+  /// Returns true if this recipe produces a single scalar result (rather than
+  /// a vector with VF lanes).
+  bool isSingleScalar() const { return IsSingleScalar; }
 
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1823,58 +1866,6 @@ protected:
     return Opcode == Instruction::Select && Op == getOperand(0) &&
            Op->isDefinedOutsideLoopRegions();
   }
-};
-
-/// VPWidenCastRecipe is a recipe to create vector cast instructions.
-class VPWidenCastRecipe : public VPRecipeWithIRFlags, public VPIRMetadata {
-  /// Cast instruction opcode.
-  Instruction::CastOps Opcode;
-
-  /// Result type for the cast.
-  Type *ResultTy;
-
-public:
-  VPWidenCastRecipe(Instruction::CastOps Opcode, VPValue *Op, Type *ResultTy,
-                    CastInst *CI = nullptr, const VPIRFlags &Flags = {},
-                    const VPIRMetadata &Metadata = {},
-                    DebugLoc DL = DebugLoc::getUnknown())
-      : VPRecipeWithIRFlags(VPRecipeBase::VPWidenCastSC, Op, Flags, DL),
-        VPIRMetadata(Metadata), Opcode(Opcode), ResultTy(ResultTy) {
-    assert(flagsValidForOpcode(Opcode) &&
-           "Set flags not supported for the provided opcode");
-    assert(hasRequiredFlagsForOpcode(Opcode) &&
-           "Opcode requires specific flags to be set");
-    setUnderlyingValue(CI);
-  }
-
-  ~VPWidenCastRecipe() override = default;
-
-  VPWidenCastRecipe *clone() override {
-    return new VPWidenCastRecipe(Opcode, getOperand(0), ResultTy,
-                                 cast_or_null<CastInst>(getUnderlyingValue()),
-                                 *this, *this, getDebugLoc());
-  }
-
-  VP_CLASSOF_IMPL(VPRecipeBase::VPWidenCastSC)
-
-  /// Produce widened copies of the cast.
-  LLVM_ABI_FOR_TEST void execute(VPTransformState &State) override;
-
-  /// Return the cost of this VPWidenCastRecipe.
-  LLVM_ABI_FOR_TEST InstructionCost
-  computeCost(ElementCount VF, VPCostContext &Ctx) const override;
-
-  Instruction::CastOps getOpcode() const { return Opcode; }
-
-  /// Returns the result type of the cast.
-  Type *getResultType() const { return ResultTy; }
-
-protected:
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe.
-  LLVM_ABI_FOR_TEST void printRecipe(raw_ostream &O, const Twine &Indent,
-                                     VPSlotTracker &SlotTracker) const override;
-#endif
 };
 
 /// A recipe for widening vector intrinsics.
@@ -3346,15 +3337,15 @@ class VPExpressionRecipe : public VPSingleDefRecipe {
                      ArrayRef<VPSingleDefRecipe *> ExpressionRecipes);
 
 public:
-  VPExpressionRecipe(VPWidenCastRecipe *Ext, VPReductionRecipe *Red)
+  VPExpressionRecipe(VPInstructionWithType *Ext, VPReductionRecipe *Red)
       : VPExpressionRecipe(ExpressionTypes::ExtendedReduction, {Ext, Red}) {}
   VPExpressionRecipe(VPWidenRecipe *Mul, VPReductionRecipe *Red)
       : VPExpressionRecipe(ExpressionTypes::MulAccReduction, {Mul, Red}) {}
-  VPExpressionRecipe(VPWidenCastRecipe *Ext0, VPWidenCastRecipe *Ext1,
+  VPExpressionRecipe(VPInstructionWithType *Ext0, VPInstructionWithType *Ext1,
                      VPWidenRecipe *Mul, VPReductionRecipe *Red)
       : VPExpressionRecipe(ExpressionTypes::ExtMulAccReduction,
                            {Ext0, Ext1, Mul, Red}) {}
-  VPExpressionRecipe(VPWidenCastRecipe *Ext0, VPWidenCastRecipe *Ext1,
+  VPExpressionRecipe(VPInstructionWithType *Ext0, VPInstructionWithType *Ext1,
                      VPWidenRecipe *Mul, VPWidenRecipe *Sub,
                      VPReductionRecipe *Red)
       : VPExpressionRecipe(ExpressionTypes::ExtNegatedMulAccReduction,
@@ -4091,11 +4082,10 @@ struct CastInfo<VPIRMetadata, VPRecipeBase *>
   /// Used by isa.
   static inline bool isPossible(VPRecipeBase *R) {
     // NOTE: Each recipe inheriting from VPIRMetadata must be listed here.
-    return isa<VPInstruction, VPWidenRecipe, VPWidenCastRecipe,
-               VPWidenIntrinsicRecipe, VPWidenCallRecipe, VPReplicateRecipe,
-               VPInterleaveRecipe, VPInterleaveEVLRecipe, VPWidenLoadRecipe,
-               VPWidenLoadEVLRecipe, VPWidenStoreRecipe, VPWidenStoreEVLRecipe>(
-        R);
+    return isa<VPInstruction, VPWidenRecipe, VPWidenIntrinsicRecipe,
+               VPWidenCallRecipe, VPReplicateRecipe, VPInterleaveRecipe,
+               VPInterleaveEVLRecipe, VPWidenLoadRecipe, VPWidenLoadEVLRecipe,
+               VPWidenStoreRecipe, VPWidenStoreEVLRecipe>(R);
   }
 
   /// Used by cast.
@@ -4105,8 +4095,6 @@ struct CastInfo<VPIRMetadata, VPRecipeBase *>
       return cast<VPInstruction>(R);
     case VPRecipeBase::VPWidenSC:
       return cast<VPWidenRecipe>(R);
-    case VPRecipeBase::VPWidenCastSC:
-      return cast<VPWidenCastRecipe>(R);
     case VPRecipeBase::VPWidenIntrinsicSC:
       return cast<VPWidenIntrinsicRecipe>(R);
     case VPRecipeBase::VPWidenCallSC:

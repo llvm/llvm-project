@@ -54,7 +54,7 @@ define void @print_call_and_memory(i64 %n, ptr noalias %y, ptr noalias %x) {
 ; CHECK-NEXT:    IR   %iv = phi i64 [ %iv.next, %for.body ], [ 0, %for.body.preheader ] (extra operand: vp<%bc.resume.val> from scalar.ph)
 ; CHECK-NEXT:    IR   %arrayidx = getelementptr inbounds float, ptr %y, i64 %iv
 ; CHECK-NEXT:    IR   %lv = load float, ptr %arrayidx, align 4
-; CHECK-NEXT:    IR   %call = tail call float @llvm.sqrt.f32(float %lv)
+; CHECK-NEXT:    IR   %call = tail call float @llvm.sqrt.f32(float %lv) #2
 ; CHECK-NEXT:    IR   %arrayidx2 = getelementptr inbounds float, ptr %x, i64 %iv
 ; CHECK-NEXT:    IR   store float %call, ptr %arrayidx2, align 4
 ; CHECK-NEXT:    IR   %iv.next = add i64 %iv, 1
@@ -982,7 +982,7 @@ define void @zext_nneg(ptr noalias %p, ptr noalias %p1) {
 ; CHECK-NEXT:      CLONE ir<%idx> = getelementptr ir<%p>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer ir<%idx>
 ; CHECK-NEXT:      WIDEN ir<%l> = load vp<[[VP5]]>
-; CHECK-NEXT:      WIDEN-CAST ir<%zext> = zext nneg ir<%l> to i64
+; CHECK-NEXT:      EMIT ir<%zext> = zext nneg ir<%l> to i64
 ; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = extract-last-part ir<%zext>
 ; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = extract-last-lane vp<[[VP6]]>
 ; CHECK-NEXT:      CLONE store vp<[[VP7]]>, ir<%p1>

@@ -86,8 +86,10 @@ bool vputils::isHeaderMask(const VPValue *V, const VPlan &Plan) {
 /// Returns true if \p R propagates poison from any operand to its result.
 static bool propagatesPoisonFromRecipeOp(const VPRecipeBase *R) {
   return TypeSwitch<const VPRecipeBase *, bool>(R)
-      .Case<VPWidenGEPRecipe, VPWidenCastRecipe>(
-          [](const VPRecipeBase *) { return true; })
+      .Case<VPWidenGEPRecipe>([](const VPRecipeBase *) { return true; })
+      .Case([](const VPInstructionWithType *R) {
+        return Instruction::isCast(R->getOpcode());
+      })
       .Case([](const VPReplicateRecipe *Rep) {
         // GEP and casts propagate poison from all operands.
         unsigned Opcode = Rep->getOpcode();
@@ -380,10 +382,15 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
     return preservesUniformity(WidenR->getOpcode()) &&
            all_of(WidenR->operands(), isSingleScalar);
   }
-  if (auto *VPI = dyn_cast<VPInstruction>(VPV))
+  if (auto *VPI = dyn_cast<VPInstruction>(VPV)) {
+    // VPInstructionWithType carries an explicit IsSingleScalar flag that
+    // takes precedence over uniformity-based inference.
+    if (auto *VPIT = dyn_cast<VPInstructionWithType>(VPI))
+      return VPIT->isSingleScalar();
     return VPI->isSingleScalar() || VPI->isVectorToScalar() ||
            (preservesUniformity(VPI->getOpcode()) &&
             all_of(VPI->operands(), isSingleScalar));
+  }
   if (auto *RR = dyn_cast<VPReductionRecipe>(VPV))
     return !RR->isPartialReduction();
   if (isa<VPVectorPointerRecipe, VPVectorEndPointerRecipe, VPDerivedIVRecipe>(
@@ -431,10 +438,6 @@ bool vputils::isUniformAcrossVFsAndUFs(const VPValue *V) {
       .Case([](const VPInstruction *VPI) {
         return preservesUniformity(VPI->getOpcode()) &&
                all_of(VPI->operands(), isUniformAcrossVFsAndUFs);
-      })
-      .Case([](const VPWidenCastRecipe *R) {
-        // A cast is uniform according to its operand.
-        return isUniformAcrossVFsAndUFs(R->getOperand(0));
       })
       .Default([](const VPRecipeBase *) { // A value is considered non-uniform
                                           // unless proven otherwise.

@@ -415,9 +415,9 @@ public:
     return createScalarCast(CastOp, Op, ResultTy, DL);
   }
 
-  VPWidenCastRecipe *createWidenCast(Instruction::CastOps Opcode, VPValue *Op,
-                                     Type *ResultTy) {
-    return tryInsertInstruction(new VPWidenCastRecipe(
+  VPInstructionWithType *createWidenCast(Instruction::CastOps Opcode,
+                                         VPValue *Op, Type *ResultTy) {
+    return tryInsertInstruction(VPInstructionWithType::createWide(
         Opcode, Op, ResultTy, nullptr, VPIRFlags::getDefaultFlags(Opcode)));
   }
 

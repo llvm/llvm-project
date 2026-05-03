@@ -37,16 +37,16 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; CHECK: Cost of 0 for VF 2: CLONE ir<%arrayidx> = getelementptr inbounds ir<%a>, vp<[[STEPS]]>
 ; CHECK: Cost of 0 for VF 2: vp<[[VECP1:%.+]]> = vector-pointer inbounds ir<%arrayidx>
 ; CHECK: Cost of 1 for VF 2: WIDEN ir<%0> = load vp<[[VECP1]]>
-; CHECK: Cost of 0 for VF 2: WIDEN-CAST ir<%conv> = zext ir<%0> to i32
+; CHECK: Cost of 0 for VF 2: EMIT ir<%conv> = zext ir<%0> to i32
 ; CHECK: Cost of 0 for VF 2: CLONE ir<%arrayidx2> = getelementptr inbounds ir<%b>, vp<[[STEPS]]>
 ; CHECK: Cost of 0 for VF 2: vp<[[VECP2:%.+]]> = vector-pointer inbounds ir<%arrayidx2>
 ; CHECK: Cost of 1 for VF 2: WIDEN ir<%1> = load vp<[[VECP2]]>
-; CHECK: Cost of 0 for VF 2: WIDEN-CAST ir<%conv3> = zext ir<%1> to i32
+; CHECK: Cost of 0 for VF 2: EMIT ir<%conv3> = zext ir<%1> to i32
 ; CHECK: Cost of 0 for VF 2: WIDEN ir<%conv4> = and ir<%sum.013>, ir<255>
 ; CHECK: Cost of 1 for VF 2: WIDEN ir<%add> = add ir<%conv>, ir<%conv4>
 ; CHECK: Cost of 1 for VF 2: WIDEN ir<%add5> = add ir<%add>, ir<%conv3>
-; CHECK: Cost of 0 for VF 2: WIDEN-CAST vp<[[TRUNC:%.+]]> = trunc ir<%add5> to i8
-; CHECK: Cost of 0 for VF 2: WIDEN-CAST vp<[[EXT]]> = zext vp<[[TRUNC]]> to i32
+; CHECK: Cost of 0 for VF 2: EMIT vp<[[TRUNC:%.+]]> = trunc ir<%add5> to i8
+; CHECK: Cost of 0 for VF 2: EMIT vp<[[EXT]]> = zext vp<[[TRUNC]]> to i32
 ; CHECK: Cost of 0 for VF 2: EMIT vp<%index.next> = add nuw vp<[[CAN_IV]]>, vp<{{.+}}>
 ; CHECK: Cost of 0 for VF 2: EMIT branch-on-count vp<%index.next>, vp<{{.+}}>
 ;

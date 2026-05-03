@@ -48,7 +48,7 @@ define void @sink_replicate_region_1(i32 %x, ptr %ptr, ptr noalias %dst) optsize
 ; CHECK-NEXT:    Successor(s): loop.0
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    loop.0:
-; CHECK-NEXT:      WIDEN-CAST ir<%conv> = sext vp<[[VP7]]> to i32
+; CHECK-NEXT:      EMIT ir<%conv> = sext vp<[[VP7]]> to i32
 ; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = first-order splice ir<%0>, ir<%conv>
 ; CHECK-NEXT:    Successor(s): pred.store
 ; CHECK-EMPTY:
@@ -134,7 +134,7 @@ define void @sink_replicate_region_2(i32 %x, i8 %y, ptr %ptr, i32 %z) optsize {
 ; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
-; CHECK-NEXT:    WIDEN-CAST ir<%recur.next> = sext ir<%y> to i32
+; CHECK-NEXT:    EMIT ir<%recur.next> = sext ir<%y> to i32
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
@@ -230,7 +230,7 @@ define i32 @sink_replicate_region_3_reduction(i32 %x, i8 %y, ptr %ptr) optsize {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
 ; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = reduction-start-vector ir<1234>, ir<-1>, ir<1>
-; CHECK-NEXT:    WIDEN-CAST ir<%recur.next> = sext ir<%y> to i32
+; CHECK-NEXT:    EMIT ir<%recur.next> = sext ir<%y> to i32
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
@@ -357,7 +357,7 @@ define void @sink_replicate_region_4_requires_split_at_end_of_block(i32 %x, ptr 
 ; CHECK-NEXT:    Successor(s): loop.0
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    loop.0:
-; CHECK-NEXT:      WIDEN-CAST ir<%conv> = sext vp<[[VP7]]> to i32
+; CHECK-NEXT:      EMIT ir<%conv> = sext vp<[[VP7]]> to i32
 ; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = first-order splice ir<%0>, ir<%conv>
 ; CHECK-NEXT:    Successor(s): pred.load
 ; CHECK-EMPTY:
@@ -380,7 +380,7 @@ define void @sink_replicate_region_4_requires_split_at_end_of_block(i32 %x, ptr 
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    loop.2:
 ; CHECK-NEXT:      WIDEN ir<%add.1> = add ir<%conv>, vp<[[VP9]]>
-; CHECK-NEXT:      WIDEN-CAST ir<%conv.lv.2> = sext vp<[[VP10]]> to i32
+; CHECK-NEXT:      EMIT ir<%conv.lv.2> = sext vp<[[VP10]]> to i32
 ; CHECK-NEXT:      WIDEN ir<%add> = add ir<%add.1>, ir<%conv.lv.2>
 ; CHECK-NEXT:    Successor(s): pred.store
 ; CHECK-EMPTY:
@@ -472,7 +472,7 @@ define void @sink_replicate_region_after_replicate_region(ptr %ptr, ptr noalias 
 ; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
-; CHECK-NEXT:    WIDEN-CAST ir<%recur.next> = sext ir<%y> to i32
+; CHECK-NEXT:    EMIT ir<%recur.next> = sext ir<%y> to i32
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {

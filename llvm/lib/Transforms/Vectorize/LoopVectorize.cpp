@@ -3245,8 +3245,7 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
             .Case([](const VPWidenLoadRecipe *R) { return Instruction::Load; })
             .Case<VPWidenCallRecipe, VPWidenIntrinsicRecipe>(
                 [](const auto *R) { return Instruction::Call; })
-            .Case<VPInstruction, VPWidenRecipe, VPReplicateRecipe,
-                  VPWidenCastRecipe>(
+            .Case<VPInstruction, VPWidenRecipe, VPReplicateRecipe>(
                 [](const auto *R) { return R->getOpcode(); })
             .Case([](const VPInterleaveRecipe *R) {
               return R->getStoredValues().empty() ? Instruction::Load
@@ -3317,7 +3316,6 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       case VPRecipeBase::VPDerivedIVSC:
       case VPRecipeBase::VPScalarIVStepsSC:
       case VPRecipeBase::VPReplicateSC:
-      case VPRecipeBase::VPInstructionSC:
       case VPRecipeBase::VPCurrentIterationPHISC:
       case VPRecipeBase::VPVectorPointerSC:
       case VPRecipeBase::VPVectorEndPointerSC:
@@ -3325,11 +3323,21 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       case VPRecipeBase::VPPredInstPHISC:
       case VPRecipeBase::VPBranchOnMaskSC:
         continue;
+      case VPRecipeBase::VPInstructionSC: {
+        // VPInstructionWithType for wide casts still produces a vector
+        // result, so only skip single-scalar VPInstructions. All other
+        // VPInstructions are treated as not producing vectors to preserve
+        // existing behavior.
+        if (auto *VPIT = dyn_cast<VPInstructionWithType>(&R)) {
+          if (Instruction::isCast(VPIT->getOpcode()) && !VPIT->isSingleScalar())
+            break;
+        }
+        continue;
+      }
       case VPRecipeBase::VPReductionSC:
       case VPRecipeBase::VPActiveLaneMaskPHISC:
       case VPRecipeBase::VPWidenCallSC:
       case VPRecipeBase::VPWidenCanonicalIVSC:
-      case VPRecipeBase::VPWidenCastSC:
       case VPRecipeBase::VPWidenGEPSC:
       case VPRecipeBase::VPWidenIntrinsicSC:
       case VPRecipeBase::VPWidenSC:
@@ -6818,9 +6826,9 @@ VPRecipeBuilder::tryToCreateWidenNonPhiRecipe(VPSingleDefRecipe *R,
   if (Instruction::isCast(VPI->getOpcode())) {
     auto *CI = cast<CastInst>(Instr);
     auto *CastR = cast<VPInstructionWithType>(VPI);
-    return new VPWidenCastRecipe(CI->getOpcode(), VPI->getOperand(0),
-                                 CastR->getResultType(), CI, *VPI, *VPI,
-                                 VPI->getDebugLoc());
+    return VPInstructionWithType::createWide(
+        CI->getOpcode(), VPI->getOperand(0), CastR->getResultType(), CI, *VPI,
+        *VPI, VPI->getDebugLoc());
   }
 
   return tryToWiden(VPI);
@@ -7306,10 +7314,10 @@ void LoopVectorizationPlanner::addReductionResultComputation(
       assert(!RecurrenceDescriptor::isMinMaxRecurrenceKind(RecurrenceKind) &&
              "Unexpected truncated min-max recurrence!");
       Type *RdxTy = RdxDesc.getRecurrenceType();
-      VPWidenCastRecipe *Trunc;
+      VPInstructionWithType *Trunc;
       Instruction::CastOps ExtendOpc =
           RdxDesc.isSigned() ? Instruction::SExt : Instruction::ZExt;
-      VPWidenCastRecipe *Extnd;
+      VPInstructionWithType *Extnd;
       {
         VPBuilder::InsertPointGuard Guard(Builder);
         Builder.setInsertPoint(

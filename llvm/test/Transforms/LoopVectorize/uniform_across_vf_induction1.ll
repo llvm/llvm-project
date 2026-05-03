@@ -918,10 +918,10 @@ define void @test_step_is_not_invariant(ptr %A) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = udiv <2 x i16> [[TMP3]], splat (i16 6)
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext <2 x i16> [[TMP4]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i64> [[TMP5]], i64 0
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i64> [[TMP5]], i64 1
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i16, ptr [[A]], i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i16, ptr [[A]], i64 [[TMP7]]
-; CHECK-NEXT:    store i16 [[TMP0]], ptr [[TMP8]], align 2
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i16, ptr [[A]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i64> [[TMP5]], i64 1
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i16, ptr [[A]], i64 [[TMP8]]
+; CHECK-NEXT:    store i16 [[TMP0]], ptr [[TMP7]], align 2
 ; CHECK-NEXT:    store i16 [[TMP1]], ptr [[TMP9]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <2 x i32> [[VEC_IND]], splat (i32 2)

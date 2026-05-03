@@ -24,9 +24,9 @@ define void @test_widen_metadata(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; CHECK-NEXT:      CLONE ir<%gep.A> = getelementptr inbounds ir<%A>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds ir<%gep.A>
 ; CHECK-NEXT:      WIDEN ir<%lv> = load vp<[[VP5]]> (!tbaa !0)
-; CHECK-NEXT:      WIDEN-CAST ir<%conv> = sitofp ir<%lv> to float (!fpmath !4)
+; CHECK-NEXT:      EMIT ir<%conv> = sitofp ir<%lv> to float (!fpmath !4)
 ; CHECK-NEXT:      WIDEN ir<%mul> = fmul ir<%conv>, ir<2.000000e+00> (!fpmath !4)
-; CHECK-NEXT:      WIDEN-CAST ir<%conv.back> = fptosi ir<%mul> to i32
+; CHECK-NEXT:      EMIT ir<%conv.back> = fptosi ir<%mul> to i32
 ; CHECK-NEXT:      CLONE ir<%gep.B> = getelementptr inbounds ir<%B>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds ir<%gep.B>
 ; CHECK-NEXT:      WIDEN store vp<[[VP6]]>, ir<%conv.back> (!tbaa !0)
@@ -179,9 +179,9 @@ define void @test_widen_with_multiple_metadata(ptr noalias %A, ptr noalias %B, i
 ; CHECK-NEXT:      CLONE ir<%gep.A> = getelementptr inbounds ir<%A>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds ir<%gep.A>
 ; CHECK-NEXT:      WIDEN ir<%lv> = load vp<[[VP5]]> (!tbaa !0)
-; CHECK-NEXT:      WIDEN-CAST ir<%conv> = sitofp ir<%lv> to float
+; CHECK-NEXT:      EMIT ir<%conv> = sitofp ir<%lv> to float
 ; CHECK-NEXT:      WIDEN ir<%mul> = fmul ir<%conv>, ir<2.000000e+00>
-; CHECK-NEXT:      WIDEN-CAST ir<%conv.back> = fptosi ir<%mul> to i32
+; CHECK-NEXT:      EMIT ir<%conv.back> = fptosi ir<%mul> to i32
 ; CHECK-NEXT:      CLONE ir<%gep.B> = getelementptr inbounds ir<%B>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds ir<%gep.B>
 ; CHECK-NEXT:      WIDEN store vp<[[VP6]]>, ir<%conv.back> (!tbaa !0)
