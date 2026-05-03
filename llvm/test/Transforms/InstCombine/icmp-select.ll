@@ -917,7 +917,7 @@ define i1 @shl_failed_to_simplify(i8 %a, i1 %cond) {
 define i1 @shl_nuw_ne(i8 %a, i8 %b, i8 %c, i1 %cond) {
 ; CHECK-LABEL: @shl_nuw_ne(
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND:%.*]], i8 [[B:%.*]], i8 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[TMP1]], [[A:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[A:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %shl_a = shl nuw i8 %a, 3

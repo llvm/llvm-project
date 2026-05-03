@@ -14,12 +14,15 @@
 #include "ExecutorBase.h"
 #include "Library.h"
 #include "Value.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Allocator.h"
+
+#include <limits>
 
 namespace llvm::ubi {
 
@@ -111,13 +114,13 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
   }
 
   AnyValue
-  visitIntUnOpWithResult(Instruction &I,
+  visitIntUnOpWithResult(Type *RetTy, const AnyValue &Operand,
                          function_ref<AnyValue(const APInt &)> ScalarFn) {
-    return computeUnOp(I.getType(), getValue(I.getOperand(0)),
-                       [&](const AnyValue &Operand) -> AnyValue {
-                         if (Operand.isPoison())
+    return computeUnOp(RetTy, Operand,
+                       [&](const AnyValue &OperandInner) -> AnyValue {
+                         if (OperandInner.isPoison())
                            return AnyValue::poison();
-                         return ScalarFn(Operand.asInteger());
+                         return ScalarFn(OperandInner.asInteger());
                        });
   }
 
@@ -154,23 +157,21 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
   }
 
   AnyValue visitIntBinOpWithResult(
-      Instruction &I,
+      Type *RetTy, const AnyValue &LHS, const AnyValue &RHS,
       function_ref<AnyValue(const APInt &, const APInt &)> ScalarFn) {
     return computeBinOp(
-        I.getType(), getValue(I.getOperand(0)), getValue(I.getOperand(1)),
-        [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
-          if (LHS.isPoison() || RHS.isPoison())
+        RetTy, LHS, RHS,
+        [&](const AnyValue &LHSInner, const AnyValue &RHSInner) -> AnyValue {
+          if (LHSInner.isPoison() || RHSInner.isPoison())
             return AnyValue::poison();
-          return ScalarFn(LHS.asInteger(), RHS.asInteger());
+          return ScalarFn(LHSInner.asInteger(), RHSInner.asInteger());
         });
   }
 
   AnyValue visitOverflowIntBinOpWithResult(
-      CallBase &CB,
+      Type *RetTy, const AnyValue &LHS, const AnyValue &RHS,
       function_ref<std::pair<APInt, bool>(const APInt &, const APInt &)>
           ScalarFn) {
-    const AnyValue &LHS = getValue(CB.getOperand(0));
-    const AnyValue &RHS = getValue(CB.getOperand(1));
     if (!LHS.isAggregate()) {
       if (LHS.isPoison() || RHS.isPoison())
         return std::vector{AnyValue::poison(), AnyValue::poison()};
@@ -243,17 +244,18 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
   }
 
   AnyValue visitIntTriOpWithResult(
-      Instruction &I,
+      Type *RetTy, const AnyValue &Op1, const AnyValue &Op2,
+      const AnyValue &Op3,
       function_ref<AnyValue(const APInt &, const APInt &, const APInt &)>
           ScalarFn) {
     return computeTriOp(
-        I.getType(), getValue(I.getOperand(0)), getValue(I.getOperand(1)),
-        getValue(I.getOperand(2)),
-        [&](const AnyValue &Op1, const AnyValue &Op2,
-            const AnyValue &Op3) -> AnyValue {
-          if (Op1.isPoison() || Op2.isPoison() || Op3.isPoison())
+        RetTy, Op1, Op2, Op3,
+        [&](const AnyValue &Op1Inner, const AnyValue &Op2Inner,
+            const AnyValue &Op3Inner) -> AnyValue {
+          if (Op1Inner.isPoison() || Op2Inner.isPoison() || Op3Inner.isPoison())
             return AnyValue::poison();
-          return ScalarFn(Op1.asInteger(), Op2.asInteger(), Op3.asInteger());
+          return ScalarFn(Op1Inner.asInteger(), Op2Inner.asInteger(),
+                          Op3Inner.asInteger());
         });
   }
 
@@ -375,7 +377,7 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
   // a poison is found.
   bool getBooleanNonPoison(BooleanKind Boolean) {
     if (Boolean == BooleanKind::Poison)
-      reportImmediateUB("Unexpected poison boolean value");
+      reportImmediateUB() << "Unexpected poison boolean value";
     return Boolean == BooleanKind::True;
   }
 
@@ -407,7 +409,7 @@ public:
       jumpTo(BI, BI.getSuccessor(1));
       return;
     case BooleanKind::Poison:
-      reportImmediateUB("Branch on poison condition.");
+      reportImmediateUB() << "Branch on poison condition.";
       return;
     }
   }
@@ -415,7 +417,7 @@ public:
   void visitSwitchInst(SwitchInst &SI) {
     auto &Cond = getValue(SI.getCondition());
     if (Cond.isPoison()) {
-      reportImmediateUB("Switch on poison condition.");
+      reportImmediateUB() << "Switch on poison condition.";
       return;
     }
     for (auto &Case : SI.cases()) {
@@ -428,7 +430,7 @@ public:
   }
 
   void visitUnreachableInst(UnreachableInst &) {
-    reportImmediateUB("Unreachable code.");
+    reportImmediateUB() << "Unreachable code.";
   }
 
   void visitCallBrInst(CallBrInst &CI) {
@@ -444,7 +446,7 @@ public:
   void visitIndirectBrInst(IndirectBrInst &IBI) {
     auto &Target = getValue(IBI.getAddress());
     if (Target.isPoison()) {
-      reportImmediateUB("Indirect branch on poison.");
+      reportImmediateUB() << "Indirect branch on poison.";
       return;
     }
     if (BasicBlock *DestBB = Ctx.getTargetBlock(Target.asPointer())) {
@@ -452,11 +454,11 @@ public:
                  [DestBB](BasicBlock *Succ) { return Succ == DestBB; }))
         jumpTo(IBI, DestBB);
       else
-        reportImmediateUB("Indirect branch on unlisted target BB.");
+        reportImmediateUB() << "Indirect branch on unlisted target BB.";
 
       return;
     }
-    reportImmediateUB("Indirect branch on invalid target BB.");
+    reportImmediateUB() << "Indirect branch on invalid target BB.";
   }
 
   void returnFromCallee() {
@@ -485,7 +487,7 @@ public:
         break;
       case BooleanKind::False:
       case BooleanKind::Poison:
-        reportImmediateUB("Assume on false or poison condition.");
+        reportImmediateUB() << "Assume on false or poison condition.";
         break;
       }
       // TODO: handle llvm.assume with operand bundles
@@ -521,33 +523,38 @@ public:
     }
     case Intrinsic::abs: {
       const bool IsIntMinPoison = getBooleanNonPoison(Args[1].asBoolean());
-      return visitIntUnOpWithResult(CB, [&](const APInt &Operand) -> AnyValue {
-        if (IsIntMinPoison && Operand.isMinSignedValue())
-          return AnyValue::poison();
-        return Operand.abs();
-      });
+      return visitIntUnOpWithResult(
+          RetTy, Args[0], [&](const APInt &Operand) -> AnyValue {
+            if (IsIntMinPoison && Operand.isMinSignedValue())
+              return AnyValue::poison();
+            return Operand.abs();
+          });
     }
     case Intrinsic::smax: {
       return visitIntBinOpWithResult(
-          CB, [](const APInt &LHS, const APInt &RHS) -> AnyValue {
+          RetTy, Args[0], Args[1],
+          [](const APInt &LHS, const APInt &RHS) -> AnyValue {
             return APIntOps::smax(LHS, RHS);
           });
     }
     case Intrinsic::smin: {
       return visitIntBinOpWithResult(
-          CB, [](const APInt &LHS, const APInt &RHS) -> AnyValue {
+          RetTy, Args[0], Args[1],
+          [](const APInt &LHS, const APInt &RHS) -> AnyValue {
             return APIntOps::smin(LHS, RHS);
           });
     }
     case Intrinsic::umax: {
       return visitIntBinOpWithResult(
-          CB, [](const APInt &LHS, const APInt &RHS) -> AnyValue {
+          RetTy, Args[0], Args[1],
+          [](const APInt &LHS, const APInt &RHS) -> AnyValue {
             return APIntOps::umax(LHS, RHS);
           });
     }
     case Intrinsic::umin: {
       return visitIntBinOpWithResult(
-          CB, [](const APInt &LHS, const APInt &RHS) -> AnyValue {
+          RetTy, Args[0], Args[1],
+          [](const APInt &LHS, const APInt &RHS) -> AnyValue {
             return APIntOps::umin(LHS, RHS);
           });
     }
@@ -555,7 +562,8 @@ public:
     case Intrinsic::ucmp: {
       const unsigned BitWidth = RetTy->getScalarSizeInBits();
       return visitIntBinOpWithResult(
-          CB, [&](const APInt &LHS, const APInt &RHS) -> AnyValue {
+          RetTy, Args[0], Args[1],
+          [&](const APInt &LHS, const APInt &RHS) -> AnyValue {
             if (LHS == RHS)
               return APInt::getZero(BitWidth);
             if (IID == Intrinsic::scmp)
@@ -566,35 +574,38 @@ public:
           });
     }
     case Intrinsic::bitreverse: {
-      return visitIntUnOpWithResult(CB, [](const APInt &Operand) -> AnyValue {
-        return Operand.reverseBits();
-      });
+      return visitIntUnOpWithResult(RetTy, Args[0],
+                                    [](const APInt &Operand) -> AnyValue {
+                                      return Operand.reverseBits();
+                                    });
     }
     case Intrinsic::bswap: {
-      return visitIntUnOpWithResult(CB, [](const APInt &Operand) -> AnyValue {
-        return Operand.byteSwap();
-      });
+      return visitIntUnOpWithResult(
+          RetTy, Args[0],
+          [](const APInt &Operand) -> AnyValue { return Operand.byteSwap(); });
     }
     case Intrinsic::ctpop: {
-      return visitIntUnOpWithResult(CB, [](const APInt &Operand) -> AnyValue {
-        return APInt(Operand.getBitWidth(), Operand.popcount());
-      });
+      return visitIntUnOpWithResult(
+          RetTy, Args[0], [](const APInt &Operand) -> AnyValue {
+            return APInt(Operand.getBitWidth(), Operand.popcount());
+          });
     }
     case Intrinsic::ctlz:
     case Intrinsic::cttz: {
       const bool IsZeroPoison = getBooleanNonPoison(Args[1].asBoolean());
-      return visitIntUnOpWithResult(CB, [&](const APInt &Operand) -> AnyValue {
-        if (IsZeroPoison && Operand.isZero())
-          return AnyValue::poison();
-        if (IID == Intrinsic::ctlz)
-          return APInt(Operand.getBitWidth(), Operand.countl_zero());
-        return APInt(Operand.getBitWidth(), Operand.countr_zero());
-      });
+      return visitIntUnOpWithResult(
+          RetTy, Args[0], [&](const APInt &Operand) -> AnyValue {
+            if (IsZeroPoison && Operand.isZero())
+              return AnyValue::poison();
+            if (IID == Intrinsic::ctlz)
+              return APInt(Operand.getBitWidth(), Operand.countl_zero());
+            return APInt(Operand.getBitWidth(), Operand.countr_zero());
+          });
     }
     case Intrinsic::fshl:
     case Intrinsic::fshr: {
       return visitIntTriOpWithResult(
-          CB,
+          RetTy, Args[0], Args[1], Args[2],
           [IID](const APInt &Op1, const APInt &Op2,
                 const APInt &Op3) -> AnyValue {
             const unsigned BitWidth = Op1.getBitWidth();
@@ -611,7 +622,8 @@ public:
     }
     case Intrinsic::clmul: {
       return visitIntBinOpWithResult(
-          CB, [](const APInt &LHS, const APInt &RHS) -> AnyValue {
+          RetTy, Args[0], Args[1],
+          [](const APInt &LHS, const APInt &RHS) -> AnyValue {
             return APIntOps::clmul(LHS, RHS);
           });
     }
@@ -622,7 +634,7 @@ public:
     case Intrinsic::smul_with_overflow:
     case Intrinsic::umul_with_overflow: {
       return visitOverflowIntBinOpWithResult(
-          CB,
+          RetTy, Args[0], Args[1],
           [IID](const APInt &LHS, const APInt &RHS) -> std::pair<APInt, bool> {
             APInt Res;
             bool Overflow = false;
@@ -658,7 +670,8 @@ public:
     case Intrinsic::sshl_sat:
     case Intrinsic::ushl_sat: {
       return visitIntBinOpWithResult(
-          CB, [IID](const APInt &LHS, const APInt &RHS) -> AnyValue {
+          RetTy, Args[0], Args[1],
+          [IID](const APInt &LHS, const APInt &RHS) -> AnyValue {
             switch (IID) {
             case Intrinsic::sadd_sat:
               return LHS.sadd_sat(RHS);
@@ -682,6 +695,204 @@ public:
               llvm_unreachable("Unexpected intrinsic ID");
             }
           });
+    }
+    case Intrinsic::vector_reduce_add:
+    case Intrinsic::vector_reduce_mul:
+    case Intrinsic::vector_reduce_and:
+    case Intrinsic::vector_reduce_or:
+    case Intrinsic::vector_reduce_xor:
+    case Intrinsic::vector_reduce_smax:
+    case Intrinsic::vector_reduce_smin:
+    case Intrinsic::vector_reduce_umax:
+    case Intrinsic::vector_reduce_umin: {
+      std::optional<APInt> Res;
+      for (const auto &V : Args[0].asAggregate()) {
+        if (V.isPoison()) {
+          Res.reset();
+          break;
+        }
+        const auto &IntV = V.asInteger();
+        if (!Res) {
+          Res = IntV;
+          continue;
+        }
+        switch (IID) {
+        case Intrinsic::vector_reduce_add:
+          *Res += IntV;
+          break;
+        case Intrinsic::vector_reduce_mul:
+          *Res *= IntV;
+          break;
+        case Intrinsic::vector_reduce_and:
+          *Res &= IntV;
+          break;
+        case Intrinsic::vector_reduce_or:
+          *Res |= IntV;
+          break;
+        case Intrinsic::vector_reduce_xor:
+          *Res ^= IntV;
+          break;
+        case Intrinsic::vector_reduce_smax:
+          *Res = APIntOps::smax(*Res, IntV);
+          break;
+        case Intrinsic::vector_reduce_smin:
+          *Res = APIntOps::smin(*Res, IntV);
+          break;
+        case Intrinsic::vector_reduce_umax:
+          *Res = APIntOps::umax(*Res, IntV);
+          break;
+        case Intrinsic::vector_reduce_umin:
+          *Res = APIntOps::umin(*Res, IntV);
+          break;
+        default:
+          llvm_unreachable("Unexpected intrinsic ID");
+        }
+      }
+      return Res ? *Res : AnyValue::poison();
+    }
+    case Intrinsic::vector_insert: {
+      if (Args[2].isPoison())
+        return AnyValue::poison();
+      const auto &Vec = Args[0].asAggregate();
+      const auto &SubVec = Args[1].asAggregate();
+      const auto &Idx = Args[2].asInteger();
+      auto EC =
+          cast<VectorType>(CB.getArgOperand(1)->getType())->getElementCount();
+      const uint64_t RawOffset = Idx.getZExtValue();
+      const uint32_t MinSize = EC.getKnownMinValue();
+      if (RawOffset % MinSize != 0)
+        return AnyValue::poison();
+      const uint64_t Chunk = RawOffset / MinSize;
+      const uint64_t EVL = Ctx.getEVL(EC);
+      if (Chunk > std::numeric_limits<uint64_t>::max() / EVL)
+        return AnyValue::poison();
+      const uint64_t Offset = Chunk * EVL;
+      if (Offset > Vec.size() || SubVec.size() > Vec.size() - Offset)
+        return AnyValue::poison();
+      std::vector<AnyValue> Res;
+      Res.reserve(Vec.size());
+      for (size_t I = 0; I != Vec.size(); ++I) {
+        if (I >= Offset && I < Offset + SubVec.size())
+          Res.push_back(SubVec[I - Offset]);
+        else
+          Res.push_back(Vec[I]);
+      }
+      return std::move(Res);
+    }
+    case Intrinsic::vector_extract: {
+      if (Args[1].isPoison())
+        return AnyValue::poison();
+      const auto &Vec = Args[0].asAggregate();
+      const auto &Idx = Args[1].asInteger();
+      auto EC = cast<VectorType>(RetTy)->getElementCount();
+      const uint64_t RawOffset = Idx.getZExtValue();
+      const uint32_t MinSize = EC.getKnownMinValue();
+      if (RawOffset % MinSize != 0)
+        return AnyValue::poison();
+      const uint64_t Chunk = RawOffset / MinSize;
+      const uint64_t EVL = Ctx.getEVL(EC);
+      if (Chunk > std::numeric_limits<uint64_t>::max() / EVL)
+        return AnyValue::poison();
+      const uint64_t Offset = Chunk * EVL;
+      if (Offset > Vec.size() || EVL > Vec.size() - Offset)
+        return AnyValue::poison();
+      return std::vector<AnyValue>(Vec.begin() + Offset,
+                                   Vec.begin() + Offset + EVL);
+    }
+    case Intrinsic::vector_reverse: {
+      auto Vec = Args[0].asAggregate();
+      std::reverse(Vec.begin(), Vec.end());
+      return std::move(Vec);
+    }
+    case Intrinsic::vector_deinterleave2:
+    case Intrinsic::vector_deinterleave3:
+    case Intrinsic::vector_deinterleave4:
+    case Intrinsic::vector_deinterleave5:
+    case Intrinsic::vector_deinterleave6:
+    case Intrinsic::vector_deinterleave7:
+    case Intrinsic::vector_deinterleave8: {
+      const unsigned Factor = getDeinterleaveIntrinsicFactor(IID);
+      if (Factor == 0)
+        llvm_unreachable("Unexpected intrinsic ID");
+      const auto &Vec = Args[0].asAggregate();
+      std::vector<std::vector<AnyValue>> Res(Factor);
+      for (auto &SubVec : Res)
+        SubVec.reserve(Vec.size() / Factor);
+      for (size_t I = 0, E = Vec.size(); I != E; ++I)
+        Res[I % Factor].push_back(Vec[I]);
+
+      std::vector<AnyValue> AggRes;
+      AggRes.reserve(Factor);
+      for (auto &SubVec : Res)
+        AggRes.emplace_back(std::move(SubVec));
+      return AnyValue(std::move(AggRes));
+    }
+    case Intrinsic::vector_interleave2:
+    case Intrinsic::vector_interleave3:
+    case Intrinsic::vector_interleave4:
+    case Intrinsic::vector_interleave5:
+    case Intrinsic::vector_interleave6:
+    case Intrinsic::vector_interleave7:
+    case Intrinsic::vector_interleave8: {
+      const unsigned Factor = getInterleaveIntrinsicFactor(IID);
+      if (Factor == 0)
+        llvm_unreachable("Unexpected intrinsic ID");
+      const auto &Vec = Args[0].asAggregate();
+      std::vector<AnyValue> Res;
+      Res.reserve(Vec.size() * Factor);
+      for (size_t I = 0, E = Vec.size(); I != E; ++I) {
+        for (unsigned J = 0; J != Factor; ++J)
+          Res.push_back(Args[J].asAggregate()[I]);
+      }
+      return std::move(Res);
+    }
+    case Intrinsic::vector_splice_left: {
+      if (Args[2].isPoison())
+        return AnyValue::poison();
+      const auto &LHS = Args[0].asAggregate();
+      const auto &RHS = Args[1].asAggregate();
+      const auto &Off = Args[2].asInteger();
+      const size_t Len = LHS.size();
+      if (Off.ugt(Len))
+        return AnyValue::poison();
+      uint64_t Offset = Off.getZExtValue();
+      std::vector<AnyValue> Res;
+      Res.reserve(Len);
+      for (size_t I = 0; I != Len; ++I) {
+        size_t Pos = I + Offset;
+        Res.push_back(Pos < Len ? LHS[Pos] : RHS[Pos - Len]);
+      }
+      return std::move(Res);
+    }
+    case Intrinsic::vector_splice_right: {
+      if (Args[2].isPoison())
+        return AnyValue::poison();
+      const auto &LHS = Args[0].asAggregate();
+      const auto &RHS = Args[1].asAggregate();
+      const auto &Off = Args[2].asInteger();
+      const size_t Len = LHS.size();
+      if (Off.ugt(Len))
+        return AnyValue::poison();
+      uint64_t Offset = Len - Off.getZExtValue();
+      std::vector<AnyValue> Res;
+      Res.reserve(Len);
+      for (size_t I = 0; I != Len; ++I) {
+        size_t Pos = I + Offset;
+        Res.push_back(Pos < Len ? LHS[Pos] : RHS[Pos - Len]);
+      }
+      return std::move(Res);
+    }
+    case Intrinsic::stepvector: {
+      std::vector<AnyValue> Res;
+      const uint32_t Len =
+          Ctx.getEVL(cast<VectorType>(RetTy)->getElementCount());
+      const unsigned BitWidth = RetTy->getScalarSizeInBits();
+      Res.reserve(Len);
+      for (uint64_t I = 0; I != Len; ++I) {
+        Res.push_back(
+            APInt(BitWidth, I, /*IsSigned=*/false, /*ImplicitTrunc=*/true));
+      }
+      return std::move(Res);
     }
     default:
       Handler.onUnrecognizedInstruction(CB);
@@ -740,17 +951,20 @@ public:
 
       auto &CalleeVal = getValue(CalledOperand);
       if (CalleeVal.isPoison()) {
-        reportImmediateUB("Indirect call through poison function pointer.");
+        reportImmediateUB() << "Indirect call through poison function pointer.";
         return;
       }
       Callee = Ctx.getTargetFunction(CalleeVal.asPointer());
       if (!Callee) {
-        reportImmediateUB("Indirect call through invalid function pointer.");
+        reportImmediateUB()
+            << "Indirect call through invalid function pointer.";
         return;
       }
       if (Callee->getFunctionType() != CB.getFunctionType()) {
-        reportImmediateUB("Indirect call through a function pointer with "
-                          "mismatched signature.");
+        reportImmediateUB() << "Indirect call through a function pointer with "
+                               "mismatched signature. Expected: "
+                            << *CB.getFunctionType()
+                            << ", Actual: " << *Callee->getFunctionType();
         return;
       }
     }
@@ -771,7 +985,7 @@ public:
     } else {
       uint32_t MaxStackDepth = Ctx.getMaxStackDepth();
       if (MaxStackDepth && CallStack.size() >= MaxStackDepth) {
-        reportError("Maximum stack depth exceeded.");
+        reportError() << "Maximum stack depth exceeded.";
         return;
       }
       assert(!Callee->empty() && "Expected a defined function.");
@@ -813,23 +1027,23 @@ public:
     visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
       // Priority: Immediate UB > poison > normal value
       if (RHS.isPoison()) {
-        reportImmediateUB("Division by zero (refine RHS to 0).");
+        reportImmediateUB() << "Division by zero (refine RHS to 0).";
         return AnyValue::poison();
       }
       const APInt &RHSVal = RHS.asInteger();
       if (RHSVal.isZero()) {
-        reportImmediateUB("Division by zero.");
+        reportImmediateUB() << "Division by zero.";
         return AnyValue::poison();
       }
       if (LHS.isPoison()) {
         if (RHSVal.isAllOnes())
-          reportImmediateUB(
-              "Signed division overflow (refine LHS to INT_MIN).");
+          reportImmediateUB()
+              << "Signed division overflow (refine LHS to INT_MIN).";
         return AnyValue::poison();
       }
       const APInt &LHSVal = LHS.asInteger();
       if (LHSVal.isMinSignedValue() && RHSVal.isAllOnes()) {
-        reportImmediateUB("Signed division overflow.");
+        reportImmediateUB() << "Signed division overflow.";
         return AnyValue::poison();
       }
 
@@ -849,23 +1063,24 @@ public:
     visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
       // Priority: Immediate UB > poison > normal value
       if (RHS.isPoison()) {
-        reportImmediateUB("Division by zero (refine RHS to 0).");
+        reportImmediateUB() << "Division by zero (refine RHS to 0).";
         return AnyValue::poison();
       }
       const APInt &RHSVal = RHS.asInteger();
       if (RHSVal.isZero()) {
-        reportImmediateUB("Division by zero.");
+        reportImmediateUB() << "Division by zero.";
         return AnyValue::poison();
       }
       if (LHS.isPoison()) {
         if (RHSVal.isAllOnes())
-          reportImmediateUB(
-              "Signed division overflow (refine LHS to INT_MIN).");
+          reportImmediateUB()
+              << "Signed division overflow (refine LHS to INT_MIN).";
         return AnyValue::poison();
       }
       const APInt &LHSVal = LHS.asInteger();
       if (LHSVal.isMinSignedValue() && RHSVal.isAllOnes()) {
-        reportImmediateUB("Signed division overflow.");
+        reportImmediateUB() << "Signed division overflow. LHS: " << LHSVal
+                            << ", RHS: " << RHSVal;
         return AnyValue::poison();
       }
 
@@ -877,12 +1092,12 @@ public:
     visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
       // Priority: Immediate UB > poison > normal value
       if (RHS.isPoison()) {
-        reportImmediateUB("Division by zero (refine RHS to 0).");
+        reportImmediateUB() << "Division by zero (refine RHS to 0).";
         return AnyValue::poison();
       }
       const APInt &RHSVal = RHS.asInteger();
       if (RHSVal.isZero()) {
-        reportImmediateUB("Division by zero.");
+        reportImmediateUB() << "Division by zero.";
         return AnyValue::poison();
       }
       if (LHS.isPoison())
@@ -905,12 +1120,12 @@ public:
     visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
       // Priority: Immediate UB > poison > normal value
       if (RHS.isPoison()) {
-        reportImmediateUB("Division by zero (refine RHS to 0).");
+        reportImmediateUB() << "Division by zero (refine RHS to 0).";
         return AnyValue::poison();
       }
       const APInt &RHSVal = RHS.asInteger();
       if (RHSVal.isZero()) {
-        reportImmediateUB("Division by zero.");
+        reportImmediateUB() << "Division by zero.";
         return AnyValue::poison();
       }
       if (LHS.isPoison())
@@ -1056,20 +1271,22 @@ public:
     if (AI.isArrayAllocation()) {
       auto &Size = getValue(AI.getArraySize());
       if (Size.isPoison()) {
-        reportImmediateUB("Alloca with poison array size.");
+        reportImmediateUB() << "Alloca with poison array size.";
         return;
       }
       if (Size.asInteger().getActiveBits() > 64) {
-        reportImmediateUB(
-            "Alloca with large array size that overflows uint64_t.");
+        reportImmediateUB()
+            << "Alloca with large array size that overflows uint64_t. Size: "
+            << Size.asInteger();
         return;
       }
       bool Overflowed = false;
       AllocSize = SaturatingMultiply(AllocSize, Size.asInteger().getZExtValue(),
                                      &Overflowed);
       if (Overflowed) {
-        reportImmediateUB(
-            "Alloca with allocation size that overflows uint64_t.");
+        reportImmediateUB()
+            << "Alloca with allocation size that overflows uint64_t. Size: "
+            << Size.asInteger();
         return;
       }
     }
@@ -1083,7 +1300,7 @@ public:
                                             : MemInitKind::Uninitialized,
                             MemAllocKind::Stack);
     if (!Obj) {
-      reportError("Insufficient stack space.");
+      reportError() << "Insufficient stack space.";
       return;
     }
     CurrentFrame->Allocas.push_back(Obj);
@@ -1301,7 +1518,7 @@ public:
         assert(Top.State == FrameState::Running &&
                "Expected to be in running state.");
         if (MaxSteps != 0 && Steps >= MaxSteps) {
-          reportError("Exceeded maximum number of execution steps.");
+          reportError() << "Exceeded maximum number of execution steps.";
           break;
         }
         ++Steps;

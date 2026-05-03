@@ -40,6 +40,7 @@ template<typename T, int N>
 T *begin(T (&array)[N]);
 
 using size_t = decltype(sizeof(0));
+using nullptr_t = decltype(nullptr);
 
 template<typename T>
 struct initializer_list {
@@ -199,6 +200,8 @@ struct unique_ptr {
   explicit unique_ptr(T*);
   unique_ptr(unique_ptr<T>&&);
   unique_ptr& operator=(unique_ptr<T>&&);
+  unique_ptr& operator=(std::nullptr_t);
+  void reset();
   ~unique_ptr();
   T* release();
   T &operator*();
@@ -210,6 +213,9 @@ template<typename T, typename... Args>
 unique_ptr<T> make_unique(Args&&... args) {
   return unique_ptr<T>(new T(args...));
 }
+
+template <class T>
+void destroy_at(T *);
 
 template<typename T>
 struct shared_ptr {

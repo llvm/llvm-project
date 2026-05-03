@@ -2225,12 +2225,7 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
     return cgf.performAddrSpaceCast(Visit(subExpr), convertType(destTy));
   }
 
-  case CK_AtomicToNonAtomic: {
-    cgf.getCIRGenModule().errorNYI(subExpr->getSourceRange(),
-                                   "CastExpr: ", ce->getCastKindName());
-    mlir::Location loc = cgf.getLoc(subExpr->getSourceRange());
-    return cgf.createDummyValue(loc, destTy);
-  }
+  case CK_AtomicToNonAtomic:
   case CK_NonAtomicToAtomic:
   case CK_UserDefinedConversion:
     return Visit(const_cast<Expr *>(subExpr));
@@ -2781,10 +2776,10 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
 
   // OpenCL: If the condition is a vector, we can treat this condition like
   // the select function.
-  if ((cgf.getLangOpts().OpenCL && condType->isVectorType()) ||
-      condType->isExtVectorType()) {
+  if (cgf.getLangOpts().OpenCL &&
+      (condType->isVectorType() || condType->isExtVectorType())) {
     assert(!cir::MissingFeatures::vectorType());
-    cgf.cgm.errorNYI(e->getSourceRange(), "vector ternary op");
+    cgf.cgm.errorNYI(e->getSourceRange(), "OpenCL vector ternary op");
   }
 
   if (condType->isVectorType() || condType->isSveVLSBuiltinType()) {

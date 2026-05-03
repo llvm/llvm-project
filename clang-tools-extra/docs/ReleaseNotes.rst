@@ -272,6 +272,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/macro-parentheses>` check by printing the macro
   definition in the warning message if the macro is defined on command line.
 
+- Improved :doc:`bugprone-move-forwarding-reference
+  <clang-tidy/checks/bugprone/move-forwarding-reference>` check by fixing some
+  false positives in the context of moved lambda captures.
+
 - Improved :doc:`bugprone-narrowing-conversions
   <clang-tidy/checks/bugprone/narrowing-conversions>` check by fixing a false
   positive when converting a ``bool`` to a signed integer type.
@@ -389,6 +393,11 @@ Changes in existing checks
   - Fixed the `CheckThrowTemporaries` option to correctly reflect its
     configured value in exported settings.
 
+- Improved :doc:`misc-unused-parameters
+  <clang-tidy/checks/misc/unused-parameters>` check by adding
+  `IgnoreMacroParameters` option to suppress warnings for unused parameters
+  whose declarations originate from macro expansions.
+
 - Improved :doc:`misc-unused-using-decls
   <clang-tidy/checks/misc/unused-using-decls>` to not diagnose ``using``
   declarations as unused if they're exported from a module.
@@ -504,9 +513,16 @@ Changes in existing checks
   it easier to see which specific enumerators need explicit initialization.
 
 - Improved :doc:`readability-identifier-length
-  <clang-tidy/checks/readability/identifier-length>` check by adding a new
-  option, named `LineCountThreshold`, to silence warnings for short-lived
-  variables, based on distance between declaration and last use.
+  <clang-tidy/checks/readability/identifier-length>` check:
+
+  - A new option, named `LineCountThreshold`, is added to silence warnings for
+    short-lived variables, based on distance between declaration and last use.
+
+  - Support for structured bindings is added. Two new options, named
+    `MinimumBindingNameLength` and `IgnoredBindingNames` respectively, are
+    added to configure the behavior of the check regarding this new identifier
+    kind. By default, names with at least 2 characters are required and the
+    only exception allowed is `_`.
 
 - Improved :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check:
