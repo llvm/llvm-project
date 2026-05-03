@@ -26,28 +26,13 @@ entry:
   ret <4 x float> %interleaved.vec
 }
 
-; Expected to not transform
+; Expected to transform
 define arm_aapcs_vfpcc <4 x float> @simple_mul_no_contract(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: simple_mul_no_contract:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .vsave {d8, d9, d10, d11}
-; CHECK-NEXT:    vpush {d8, d9, d10, d11}
-; CHECK-NEXT:    vmov.f32 s8, s5
-; CHECK-NEXT:    vmov.f32 s12, s1
-; CHECK-NEXT:    vmov.f32 s9, s7
-; CHECK-NEXT:    vmov.f32 s13, s3
-; CHECK-NEXT:    vmov.f32 s1, s2
-; CHECK-NEXT:    vmul.f32 q4, q3, q2
-; CHECK-NEXT:    vmov.f32 s5, s6
-; CHECK-NEXT:    vmul.f32 q2, q2, q0
-; CHECK-NEXT:    vmul.f32 q5, q1, q0
-; CHECK-NEXT:    vfma.f32 q2, q1, q3
-; CHECK-NEXT:    vsub.f32 q4, q5, q4
-; CHECK-NEXT:    vmov.f32 s1, s8
-; CHECK-NEXT:    vmov.f32 s0, s16
-; CHECK-NEXT:    vmov.f32 s2, s17
-; CHECK-NEXT:    vmov.f32 s3, s9
-; CHECK-NEXT:    vpop {d8, d9, d10, d11}
+; CHECK-NEXT:    vcmul.f32       q2, q0, q1, #90
+; CHECK-NEXT:    vcmul.f32       q3, q0, q1, #0
+; CHECK-NEXT:    vadd.f32        q0, q3, q2
 ; CHECK-NEXT:    bx lr
 entry:
   %strided.vec = shufflevector <4 x float> %a, <4 x float> poison, <2 x i32> <i32 0, i32 2>

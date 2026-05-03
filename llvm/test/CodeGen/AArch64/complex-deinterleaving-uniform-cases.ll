@@ -27,22 +27,15 @@ entry:
   ret <4 x float> %interleaved.vec
 }
 
-; Expected to not transform
+; Expected to transform
 define <4 x float> @simple_mul_no_contract(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: simple_mul_no_contract:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    ext v3.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    zip1 v4.2s, v0.2s, v2.2s
-; CHECK-NEXT:    zip2 v0.2s, v0.2s, v2.2s
-; CHECK-NEXT:    zip1 v2.2s, v1.2s, v3.2s
-; CHECK-NEXT:    zip2 v1.2s, v1.2s, v3.2s
-; CHECK-NEXT:    fmul v3.2s, v1.2s, v4.2s
-; CHECK-NEXT:    fmul v4.2s, v2.2s, v4.2s
-; CHECK-NEXT:    fmul v1.2s, v0.2s, v1.2s
-; CHECK-NEXT:    fmla v3.2s, v0.2s, v2.2s
-; CHECK-NEXT:    fsub v0.2s, v4.2s, v1.2s
-; CHECK-NEXT:    zip1 v0.4s, v0.4s, v3.4s
+; CHECK-NEXT:    movi    v2.2d, #0000000000000000
+; CHECK-NEXT:    movi    v3.2d, #0000000000000000
+; CHECK-NEXT:    fcmla   v3.4s, v1.4s, v0.4s, #0
+; CHECK-NEXT:    fcmla   v2.4s, v1.4s, v0.4s, #90
+; CHECK-NEXT:    fadd    v0.4s, v3.4s, v2.4s
 ; CHECK-NEXT:    ret
 entry:
   %strided.vec = shufflevector <4 x float> %a, <4 x float> poison, <2 x i32> <i32 0, i32 2>
