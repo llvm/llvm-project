@@ -1396,8 +1396,10 @@ public:
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPInstructionSC)
 
-  VPInstruction *clone() override {
-    auto *New = new VPInstruction(Opcode, operands(), *this, *this,
+  VPInstruction *clone() override { return cloneWithOperands(operands()); }
+
+  VPInstruction *cloneWithOperands(ArrayRef<VPValue *> NewOperands) {
+    auto *New = new VPInstruction(Opcode, NewOperands, *this, *this,
                                   getDebugLoc(), Name);
     if (getUnderlyingValue())
       New->setUnderlyingValue(getUnderlyingInstr());
@@ -1804,11 +1806,13 @@ public:
 
   ~VPWidenRecipe() override = default;
 
-  VPWidenRecipe *clone() override {
+  VPWidenRecipe *clone() override { return cloneWithOperands(operands()); }
+
+  VPWidenRecipe *cloneWithOperands(ArrayRef<VPValue *> NewOperands) {
     if (auto *UV = getUnderlyingValue())
-      return new VPWidenRecipe(*cast<Instruction>(UV), operands(), *this, *this,
-                               getDebugLoc());
-    return new VPWidenRecipe(Opcode, operands(), *this, *this, getDebugLoc());
+      return new VPWidenRecipe(*cast<Instruction>(UV), NewOperands, *this,
+                               *this, getDebugLoc());
+    return new VPWidenRecipe(Opcode, NewOperands, *this, *this, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenSC)
@@ -2568,10 +2572,19 @@ public:
 
   ~VPWidenIntOrFpInductionRecipe() override = default;
 
+  VPWidenIntOrFpInductionRecipe *cloneWithOperands(VPIRValue *Start,
+                                                   VPValue *Step, VPValue *VF) {
+    if (Trunc)
+      return new VPWidenIntOrFpInductionRecipe(getPHINode(), Start, Step, VF,
+                                               getInductionDescriptor(), Trunc,
+                                               *this, getDebugLoc());
+    return new VPWidenIntOrFpInductionRecipe(getPHINode(), Start, Step, VF,
+                                             getInductionDescriptor(), *this,
+                                             getDebugLoc());
+  }
+
   VPWidenIntOrFpInductionRecipe *clone() override {
-    return new VPWidenIntOrFpInductionRecipe(
-        getPHINode(), getStartValue(), getStepValue(), getVFValue(),
-        getInductionDescriptor(), Trunc, *this, getDebugLoc());
+    return cloneWithOperands(getStartValue(), getStepValue(), getVFValue());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenIntOrFpInductionSC)
@@ -2801,11 +2814,15 @@ public:
 
   ~VPReductionPHIRecipe() override = default;
 
-  VPReductionPHIRecipe *clone() override {
+  VPReductionPHIRecipe *cloneWithOperands(VPValue *Start,
+                                          VPValue *BackedgeValue) {
     return new VPReductionPHIRecipe(
         dyn_cast_or_null<PHINode>(getUnderlyingValue()), getRecurrenceKind(),
-        *getOperand(0), *getBackedgeValue(), Style, *this,
-        HasUsesOutsideReductionChain);
+        *Start, *BackedgeValue, Style, *this, HasUsesOutsideReductionChain);
+  }
+
+  VPReductionPHIRecipe *clone() override {
+    return cloneWithOperands(getOperand(0), getBackedgeValue());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPReductionPHISC)
