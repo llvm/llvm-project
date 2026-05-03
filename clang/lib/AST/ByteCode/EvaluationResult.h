@@ -17,6 +17,7 @@ namespace clang {
 namespace interp {
 class EvalEmitter;
 class Context;
+class MemberPointer;
 class Pointer;
 class SourceInfo;
 class InterpState;
@@ -39,9 +40,7 @@ public:
   using DeclTy = llvm::PointerUnion<const Decl *, const Expr *>;
 
 private:
-#ifndef NDEBUG
-  const Context *Ctx = nullptr;
-#endif
+  const Context &Ctx;
   APValue Value;
   ResultKind Kind = Empty;
   DeclTy Source = nullptr;
@@ -62,31 +61,37 @@ private:
     Kind = Valid;
   }
 
+  QualType getStorageType() const;
+
 public:
-#ifndef NDEBUG
-  EvaluationResult(const Context *Ctx) : Ctx(Ctx) {}
-#else
-  EvaluationResult(const Context *Ctx) {}
-#endif
+  EvaluationResult(const Context &Ctx) : Ctx(Ctx) {}
 
   bool empty() const { return Kind == Empty; }
   bool isInvalid() const { return Kind == Invalid; }
-
-  /// Returns an APValue for the evaluation result.
-  APValue toAPValue() const {
-    assert(!empty());
-    assert(!isInvalid());
-    return Value;
-  }
-
   APValue stealAPValue() { return std::move(Value); }
 
   /// Check that all subobjects of the given pointer have been initialized.
   bool checkFullyInitialized(InterpState &S, const Pointer &Ptr) const;
   /// Check that none of the blocks the given pointer (transitively) points
   /// to are dynamically allocated.
-  bool checkReturnValue(InterpState &S, const Context &Ctx, const Pointer &Ptr,
-                        const SourceInfo &Info);
+  bool checkDynamicAllocations(InterpState &S, const Context &Ctx,
+                               const Pointer &Ptr, SourceInfo Info);
+
+  /// Check the given pointer as an lvalue, i.e. make sure it's a global
+  /// lvalue and diagnose if it's not.
+  bool checkLValue(InterpState &S, const Pointer &Ptr, SourceInfo Info,
+                   ConstantExprKind ConstexprKind);
+  /// Check all fields of the given pointer.
+  bool checkLValueFields(InterpState &S, const Pointer &Ptr, SourceInfo Info,
+                         ConstantExprKind ConstexprKind);
+
+  /// Check if the given member pointer can be returned from an evaluation.
+  static bool checkMemberPointer(InterpState &S, const MemberPointer &MemberPtr,
+                                 SourceInfo Info,
+                                 ConstantExprKind ConstexprKind);
+  /// Check if the given function pointer can be returned from an evaluation.
+  bool checkFunctionPointer(InterpState &S, const Pointer &Ptr, SourceInfo Info,
+                            ConstantExprKind ConstexprKind);
 
   QualType getSourceType() const {
     if (const auto *D =

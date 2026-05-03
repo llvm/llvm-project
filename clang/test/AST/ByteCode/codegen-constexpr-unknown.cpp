@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -fcxx-exceptions -o - %s                                                  | FileCheck %s --check-prefix=CHECK
-// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -fcxx-exceptions -o - %s -fexperimental-new-constant-interpreter -DINTERP | FileCheck %s --check-prefix=CHECK
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -fcxx-exceptions -o - %s                                                  | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -fcxx-exceptions -o - %s -fexperimental-new-constant-interpreter -DINTERP | FileCheck %s
 
 /// CodeGenFunction::ConstantFoldsToSimpleInteger() for the if condition
 /// needs to succeed and return true.
@@ -21,6 +21,7 @@ void rightscope() {
 // CHECK-NEXT: entry:
 // CHECK-NEXT: %p = alloca i32
 // CHECK-NEXT: store i32 0, ptr %p
+// CHECK-NEXT: ret void
 
 
 /// In the if expression below, the read from s.i should fail.
