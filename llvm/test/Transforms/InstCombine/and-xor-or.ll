@@ -607,10 +607,9 @@ define i8 @xor_lshr_multiuse(i8 %x, i8 %y, i8 %z, i8 %shamt) {
 ; CHECK-LABEL: define {{[^@]+}}@xor_lshr_multiuse
 ; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[Z:%.*]], i8 [[SHAMT:%.*]]) {
 ; CHECK-NEXT:    [[SX:%.*]] = lshr i8 [[X]], [[SHAMT]]
+; CHECK-NEXT:    [[SY:%.*]] = lshr i8 [[Y]], [[SHAMT]]
 ; CHECK-NEXT:    [[A:%.*]] = xor i8 [[SX]], [[Z]]
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr i8 [[TMP1]], [[SHAMT]]
-; CHECK-NEXT:    [[R:%.*]] = xor i8 [[TMP2]], [[Z]]
+; CHECK-NEXT:    [[R:%.*]] = xor i8 [[A]], [[SY]]
 ; CHECK-NEXT:    [[R2:%.*]] = sdiv i8 [[A]], [[R]]
 ; CHECK-NEXT:    ret i8 [[R2]]
 ;

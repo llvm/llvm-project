@@ -6,8 +6,9 @@ define void @f1(ptr %ret, ptr %src, ptr %b) {
 ; CHECK-LABEL: f1:
 ; CHECK: [[FBL:%f[0-9]+]], 0(%r4)
 ; CHECK: [[FBH:%f[0-9]+]], 8(%r4)
-; CHECK: [[FSL:%f[0-9]+]], 0(%r3)
-; CHECK: [[FSH:%f[0-9]+]], 8(%r3)
+; CHECK: lpq [[RIL:%r[0-9]+]], 0(%r3)
+; CHECK: ldgr [[FSL:%f[0-9]+]], [[RIL]]
+; CHECK: ldgr [[FSH:%f[0-9]+]],
 ; CHECK: [[LABEL:\.L.+]]:
 ; CHECK: lgdr [[RISH:%r[0-9]+]], [[FSH]]
 ; CHECK: lgdr [[RISL:%r[0-9]+]], [[FSL]]

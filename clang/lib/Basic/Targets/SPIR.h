@@ -491,6 +491,8 @@ public:
   void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
               const TargetInfo *Aux) override {
     TargetInfo::adjust(Diags, Opts, Aux);
+
+    AtomicOpts = AtomicOptions(Opts);
   }
 
   bool hasInt128Type() const override { return TargetInfo::hasInt128Type(); }

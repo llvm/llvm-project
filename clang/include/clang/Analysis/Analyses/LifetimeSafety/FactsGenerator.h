@@ -53,6 +53,8 @@ public:
   void VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *MTE);
   void VisitLambdaExpr(const LambdaExpr *LE);
   void VisitArraySubscriptExpr(const ArraySubscriptExpr *ASE);
+  void VisitCXXNewExpr(const CXXNewExpr *NE);
+  void VisitCXXDeleteExpr(const CXXDeleteExpr *DE);
 
 private:
   OriginList *getOriginsList(const ValueDecl &D);
@@ -101,6 +103,10 @@ private:
   // For instance methods, Args[0] is the implicit 'this' pointer.
   void handleInvalidatingCall(const Expr *Call, const FunctionDecl *FD,
                               ArrayRef<const Expr *> Args);
+
+  // Detect explicit destructor calls/`std::destroy_at`
+  void handleDestructiveCall(const Expr *Call, const FunctionDecl *FD,
+                             ArrayRef<const Expr *> Args);
 
   template <typename Destination, typename Source>
   void flowOrigin(const Destination &D, const Source &S) {

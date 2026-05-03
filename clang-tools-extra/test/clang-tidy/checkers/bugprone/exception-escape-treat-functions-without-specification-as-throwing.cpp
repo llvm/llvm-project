@@ -11,6 +11,8 @@
 // RUN:       "bugprone-exception-escape.TreatFunctionsWithoutSpecificationAsThrowing": "None" \
 // RUN:     }}' -- -fexceptions
 
+#include <string>
+
 void unannotated_no_throw_body() {}
 
 void calls_unannotated() noexcept {
@@ -92,4 +94,29 @@ void calls_explicit_throw() noexcept {
   // CHECK-MESSAGES-NONE: :[[@LINE-9]]:25: note: frame #0: unhandled exception of type 'int' may be thrown in function 'explicit_throw' here
   // CHECK-MESSAGES-NONE: :[[@LINE+1]]:3: note: frame #1: function 'calls_explicit_throw' calls function 'explicit_throw' here
   explicit_throw();
+}
+
+struct ImplicitDtor {
+  ImplicitDtor() = default;
+};
+
+struct DefaultedDtor {
+  DefaultedDtor() = default;
+  ~DefaultedDtor() = default;
+};
+
+struct WithString {
+  WithString(const ImplicitDtor &Implicit, const DefaultedDtor &Defaulted,
+             const std::string &Text)
+      : Implicit(Implicit), Defaulted(Defaulted), Text(Text) {}
+
+  ImplicitDtor Implicit;
+  DefaultedDtor Defaulted;
+  std::string Text;
+};
+
+void constructs_with_string() {
+  ImplicitDtor Implicit;
+  DefaultedDtor Defaulted;
+  WithString Value(Implicit, Defaulted, "");
 }

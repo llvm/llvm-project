@@ -30,7 +30,7 @@ class LUSummaryConsumer;
 ///
 /// Known to the registry and LUSummaryConsumer. Receives entities one at a
 /// time via \c addSummary(), is finalized via \c finalize(), and transfers
-/// ownership of the built data via \c getData().
+/// ownership of the built data via \c takeData().
 class SummaryDataBuilderBase {
   friend class LUSummaryConsumer;
 
@@ -49,7 +49,7 @@ private:
   /// Transfers ownership of the built data. Called by LUSummaryConsumer after
   /// finalize(). The rvalue ref-qualifier enforces single use — the builder
   /// cannot be accessed after this call.
-  virtual std::unique_ptr<SummaryData> getData() && = 0;
+  virtual std::unique_ptr<SummaryData> takeData() && = 0;
 };
 
 /// Typed intermediate template that concrete builders inherit from.
@@ -60,7 +60,7 @@ template <typename DataT, typename SummaryT>
 class SummaryDataBuilder : public SummaryDataBuilderBase {
   static_assert(std::is_base_of_v<SummaryData, DataT>,
                 "DataT must derive from SummaryData");
-  static_assert(HasSummaryName<DataT>::value,
+  static_assert(HasSummaryName_v<DataT>,
                 "DataT must have a static summaryName() method");
   static_assert(std::is_base_of_v<EntitySummary, SummaryT>,
                 "SummaryT must derive from EntitySummary");
@@ -81,7 +81,9 @@ protected:
   DataT &getData() & { return *Data; }
 
 private:
-  std::unique_ptr<SummaryData> getData() && override { return std::move(Data); }
+  std::unique_ptr<SummaryData> takeData() && override {
+    return std::move(Data);
+  }
 
   /// Seals the base overload, downcasts, and dispatches to the typed overload.
   void addSummary(EntityId Id, std::unique_ptr<EntitySummary> Summary) final {
