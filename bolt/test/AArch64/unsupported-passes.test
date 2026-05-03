@@ -15,7 +15,9 @@ CHECK-INDIRECT-CALL-PROMOTION: BOLT-ERROR: indirect-call-promotion is supported 
 
 // Passes specific to X86 arch
 RUN: not llvm-bolt %t -o %t.bolt --cmov-conversion 2>&1 | FileCheck %s --check-prefix=CHECK-CMOV-CONV
+RUN: not llvm-bolt %t -o %t.bolt --reg-reassign 2>&1 | FileCheck %s --check-prefix=CHECK-REG-REASSIGN
 CHECK-CMOV-CONV: BOLT-ERROR: CMOV conversion is supported only on X86
+CHECK-REG-REASSIGN: BOLT-ERROR: reg-reassign is supported only on X86
 
 RUN: not llvm-bolt %t -o %t.bolt split-functions --split-strategy=cdsplit 2>&1 | FileCheck %s --check-prefix=CHECK-CDSPLIT
 CHECK-CDSPLIT: BOLT-ERROR: CDSplit is not supported with LongJmp. Try with '--compact-code-model'

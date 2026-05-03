@@ -88,10 +88,9 @@ public:
   _LIBCPP_HIDE_FROM_ABI explicit shuffle_order_engine(_Engine&& __e) : __e_(std::move(__e)) { __init(); }
 #endif // _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI explicit shuffle_order_engine(result_type __sd) : __e_(__sd) { __init(); }
-  template <
-      class _Sseq,
-      __enable_if_t<__is_seed_sequence<_Sseq, shuffle_order_engine>::value && !is_convertible<_Sseq, _Engine>::value,
-                    int> = 0>
+  template <class _Sseq,
+            __enable_if_t<__is_seed_sequence_v<_Sseq, shuffle_order_engine> && !is_convertible<_Sseq, _Engine>::value,
+                          int> = 0>
   _LIBCPP_HIDE_FROM_ABI explicit shuffle_order_engine(_Sseq& __q) : __e_(__q) {
     __init();
   }
@@ -103,7 +102,7 @@ public:
     __e_.seed(__sd);
     __init();
   }
-  template <class _Sseq, __enable_if_t<__is_seed_sequence<_Sseq, shuffle_order_engine>::value, int> = 0>
+  template <class _Sseq, __enable_if_t<__is_seed_sequence_v<_Sseq, shuffle_order_engine>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI void seed(_Sseq& __q) {
     __e_.seed(__q);
     __init();

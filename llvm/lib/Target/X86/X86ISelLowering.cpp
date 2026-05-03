@@ -1159,6 +1159,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::SMIN, VT, VT == MVT::v8i16 ? Legal : Custom);
       setOperationAction(ISD::UMAX, VT, VT == MVT::v16i8 ? Legal : Custom);
       setOperationAction(ISD::UMIN, VT, VT == MVT::v16i8 ? Legal : Custom);
+      setOperationAction(ISD::VECREDUCE_AND, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_OR, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_XOR, VT, Custom);
     }
 
     // SSE2 can use basic vector unrolling.
@@ -1420,6 +1423,15 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, VT, Legal);
     }
 
+    // Allow v4i32/v2i64 minmax reductions with SSE41 vector comparison,
+    // select and minmax handling.
+    for (auto VT : { MVT::v4i32, MVT::v2i64 }) {
+      setOperationAction(ISD::VECREDUCE_SMAX, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_SMIN, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_UMAX, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_UMIN, VT, Custom);
+    }
+
     // SSE41 also has vector sign/zero extending loads, PMOV[SZ]X
     for (auto LoadExtOp : { ISD::SEXTLOAD, ISD::ZEXTLOAD }) {
       setLoadExtAction(LoadExtOp, MVT::v8i16, MVT::v8i8,  Legal);
@@ -1552,6 +1564,13 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::SRA,             VT, Custom);
       setOperationAction(ISD::ABDS,            VT, Custom);
       setOperationAction(ISD::ABDU,            VT, Custom);
+      setOperationAction(ISD::VECREDUCE_AND,   VT, Custom);
+      setOperationAction(ISD::VECREDUCE_OR,    VT, Custom);
+      setOperationAction(ISD::VECREDUCE_XOR,   VT, Custom);
+      setOperationAction(ISD::VECREDUCE_SMAX,  VT, Custom);
+      setOperationAction(ISD::VECREDUCE_SMIN,  VT, Custom);
+      setOperationAction(ISD::VECREDUCE_UMAX,  VT, Custom);
+      setOperationAction(ISD::VECREDUCE_UMIN,  VT, Custom);
       if (VT == MVT::v4i64) continue;
       setOperationAction(ISD::ROTL,            VT, Custom);
       setOperationAction(ISD::ROTR,            VT, Custom);
@@ -2021,6 +2040,13 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::ABDS,             VT, Custom);
       setOperationAction(ISD::ABDU,             VT, Custom);
       setOperationAction(ISD::BITREVERSE,       VT, Custom);
+      setOperationAction(ISD::VECREDUCE_AND,    VT, Custom);
+      setOperationAction(ISD::VECREDUCE_OR,     VT, Custom);
+      setOperationAction(ISD::VECREDUCE_XOR,    VT, Custom);
+      setOperationAction(ISD::VECREDUCE_SMAX,   VT, Custom);
+      setOperationAction(ISD::VECREDUCE_SMIN,   VT, Custom);
+      setOperationAction(ISD::VECREDUCE_UMAX,   VT, Custom);
+      setOperationAction(ISD::VECREDUCE_UMIN,   VT, Custom);
 
       // The condition codes aren't legal in SSE/AVX and under AVX512 we use
       // setcc all the way to isel and prefer SETGT in some isel patterns.
@@ -29648,6 +29674,43 @@ static SDValue LowerCTTZ(SDValue Op, const X86Subtarget &Subtarget,
   return DAG.getNode(X86ISD::CMOV, dl, VT, Ops);
 }
 
+// Generic x86 vector reduction expansion.
+static SDValue LowerVECREDUCE(SDValue Op, const X86Subtarget &Subtarget,
+                              SelectionDAG &DAG) {
+  ISD::NodeType BinOp = ISD::getVecReduceBaseOpcode(Op.getOpcode());
+  assert(DAG.getTargetLoweringInfo().isBinOp(BinOp) &&
+         "Only binops expected to be used by reductions");
+
+  EVT ExtractVT = Op.getValueType();
+  SDValue Src = Op.getOperand(0);
+  EVT SrcVT = Src.getValueType();
+  EVT SrcSVT = SrcVT.getScalarType();
+  SDLoc DL(Op);
+
+  if (SrcSVT != ExtractVT || (SrcVT.getSizeInBits() % 128) != 0)
+    return SDValue();
+
+  // Split vector down to 128-bits, performing bin to lo/hi subvectors.
+  while (SrcVT.getSizeInBits() > 128) {
+    SDValue Lo, Hi;
+    std::tie(Lo, Hi) = splitVector(Src, DAG, DL);
+    SrcVT = Lo.getValueType();
+    Src = DAG.getNode(BinOp, DL, SrcVT, Lo, Hi);
+  }
+  assert(SrcVT.is128BitVector() && "Unexpected value type");
+
+  // Expand 128-bit shuffle tree + reduction binops.
+  unsigned NumSrcElts = SrcVT.getVectorNumElements();
+  for (unsigned NumElts = NumSrcElts; NumElts != 1; NumElts /= 2) {
+    SmallVector<int, 16> Mask(NumSrcElts, -1);
+    std::iota(Mask.begin(), Mask.begin() + (NumElts / 2), NumElts / 2);
+    SDValue Upper =
+        DAG.getVectorShuffle(SrcVT, DL, Src, DAG.getUNDEF(SrcVT), Mask);
+    Src = DAG.getNode(BinOp, DL, SrcVT, Src, Upper);
+  }
+  return DAG.getExtractVectorElt(DL, ExtractVT, Src, 0);
+}
+
 static SDValue lowerAddSub(SDValue Op, SelectionDAG &DAG,
                            const X86Subtarget &Subtarget) {
   MVT VT = Op.getSimpleValueType();
@@ -29840,20 +29903,18 @@ static SDValue LowerMINMAX(SDValue Op, const X86Subtarget &Subtarget,
 static SDValue LowerMINMAX_REDUCE(SDValue Op, const X86Subtarget &Subtarget,
                                   SelectionDAG &DAG) {
   EVT ExtractVT = Op.getValueType();
-  if (ExtractVT != MVT::i16 && ExtractVT != MVT::i8)
-    return SDValue();
-
-  // Check for SMAX/SMIN/UMAX/UMIN horizontal reduction patterns.
-  ISD::NodeType BinOp = ISD::getVecReduceBaseOpcode(Op.getOpcode());
+  if (!Subtarget.hasSSE41() || (ExtractVT != MVT::i16 && ExtractVT != MVT::i8))
+    return LowerVECREDUCE(Op, Subtarget, DAG);
 
   SDValue Src = Op.getOperand(0);
   EVT SrcVT = Src.getValueType();
   EVT SrcSVT = SrcVT.getScalarType();
   if (SrcSVT != ExtractVT || (SrcVT.getSizeInBits() % 128) != 0)
-    return SDValue();
+    return LowerVECREDUCE(Op, Subtarget, DAG);
 
   SDLoc DL(Op);
   SDValue MinPos = Src;
+  ISD::NodeType BinOp = ISD::getVecReduceBaseOpcode(Op.getOpcode());
 
   // First, reduce the source down to 128-bit, applying BinOp to lo/hi.
   while (SrcVT.getSizeInBits() > 128) {
@@ -29865,20 +29926,6 @@ static SDValue LowerMINMAX_REDUCE(SDValue Op, const X86Subtarget &Subtarget,
   assert(((SrcVT == MVT::v8i16 && ExtractVT == MVT::i16) ||
           (SrcVT == MVT::v16i8 && ExtractVT == MVT::i8)) &&
          "Unexpected value type");
-
-  // Without SSE41, we need to unroll.
-  if (!Subtarget.hasSSE41()) {
-    unsigned NumSrcElts = SrcVT.getVectorNumElements();
-    for (unsigned NumElts = NumSrcElts; NumElts != 1; NumElts /= 2) {
-      SmallVector<int, 16> Mask(NumSrcElts, -1);
-      std::iota(Mask.begin(), Mask.begin() + (NumElts / 2), NumElts / 2);
-      SDValue Upper =
-          DAG.getVectorShuffle(SrcVT, DL, MinPos, DAG.getUNDEF(SrcVT), Mask);
-      MinPos = DAG.getNode(BinOp, DL, SrcVT, MinPos, Upper);
-    }
-    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ExtractVT, MinPos,
-                       DAG.getVectorIdxConstant(0, DL));
-  }
 
   // PHMINPOSUW applies to UMIN(v8i16), for SMIN/SMAX/UMAX we must apply a mask
   // to flip the value accordingly.
@@ -34480,6 +34527,9 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::VECREDUCE_SMIN:
   case ISD::VECREDUCE_UMAX:
   case ISD::VECREDUCE_UMIN:     return LowerMINMAX_REDUCE(Op, Subtarget, DAG);
+  case ISD::VECREDUCE_AND:
+  case ISD::VECREDUCE_OR:
+  case ISD::VECREDUCE_XOR:      return LowerVECREDUCE(Op, Subtarget, DAG);
   case ISD::FMINIMUM:
   case ISD::FMAXIMUM:
   case ISD::FMINIMUMNUM:
@@ -47055,7 +47105,7 @@ static SDValue createPSADBW(SelectionDAG &DAG, SDValue N0, SDValue N1,
 static SDValue combineMinMaxReduction(SDNode *Extract, SelectionDAG &DAG,
                                       const X86Subtarget &Subtarget) {
   EVT ExtractVT = Extract->getValueType(0);
-  if (ExtractVT != MVT::i16 && ExtractVT != MVT::i8)
+  if (!DAG.getTargetLoweringInfo().isTypeLegal(ExtractVT))
     return SDValue();
 
   // Check for SMAX/SMIN/UMAX/UMIN horizontal reduction patterns.
@@ -47066,8 +47116,7 @@ static SDValue combineMinMaxReduction(SDNode *Extract, SelectionDAG &DAG,
     return SDValue();
 
   EVT SrcVT = Src.getValueType();
-  EVT SrcSVT = SrcVT.getScalarType();
-  if (SrcSVT != ExtractVT || (SrcVT.getSizeInBits() % 128) != 0)
+  if ((SrcVT.getSizeInBits() % 128) != 0)
     return SDValue();
 
   ISD::NodeType RdxOp;

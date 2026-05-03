@@ -34,7 +34,6 @@
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
-#include "llvm/CodeGen/WasmEHFuncInfo.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/Target/TargetMachine.h"
 using namespace llvm;
@@ -2173,8 +2172,34 @@ bool WebAssemblyCFGStackify::fixCatchUnwindMismatches(MachineFunction &MF) {
   // The right destination may be another EH pad or the caller. (The example
   // here shows the case it is the caller.)
 
-  const auto *EHInfo = MF.getWasmEHFuncInfo();
-  assert(EHInfo);
+  // Returns whether the next unwind destination exists when an exception is not
+  // caught by the given EHPad. It is guaranteed that the next successor of the
+  // given EHPad's predecessor is the next unwind destination, due to the order
+  // we add successors in findUnwindDestinations in SelectionDAGBuilder.
+  auto HasUnwindDest = [&](const MachineBasicBlock *EHPad) {
+    assert(!EHPad->pred_empty() && "EHPad has no predecessors");
+    auto *InvokeBB = *EHPad->pred_begin();
+    for (auto I = InvokeBB->succ_begin(), E = InvokeBB->succ_end(); I != E; ++I)
+      if (*I == EHPad)
+        return std::next(I) != E;
+    llvm_unreachable("EHPad not found in its predecessor's successors");
+  };
+
+  // Returns the next unwind destination when an exception is not caught by the
+  // given EHPad. Returns nullptr when it doesn't exist.
+  auto GetUnwindDest = [&](const MachineBasicBlock *EHPad) {
+    assert(!EHPad->pred_empty() && "EHPad has no predecessors");
+    auto *InvokeBB = *EHPad->pred_begin();
+    for (auto I = InvokeBB->succ_begin(), E = InvokeBB->succ_end(); I != E;
+         ++I) {
+      if (*I == EHPad) {
+        auto *Next = std::next(I);
+        return Next == E ? nullptr : *Next;
+      }
+    }
+    llvm_unreachable("EHPad not found in its predecessor's successors");
+  };
+
   SmallVector<const MachineBasicBlock *, 8> EHPadStack;
   // For EH pads that have catch unwind mismatches, a map of <EH pad, its
   // correct unwind destination>.
@@ -2196,7 +2221,7 @@ bool WebAssemblyCFGStackify::fixCatchUnwindMismatches(MachineFunction &MF) {
 
         // This can happen when the unwind dest was removed during the
         // optimization, e.g. because it was unreachable.
-        else if (EHPadStack.empty() && EHInfo->hasUnwindDest(EHPad)) {
+        else if (EHPadStack.empty() && HasUnwindDest(EHPad)) {
           LLVM_DEBUG(dbgs() << "EHPad (" << getBBName(EHPad)
                             << "'s unwind destination does not exist anymore"
                             << "\n\n");
@@ -2205,7 +2230,7 @@ bool WebAssemblyCFGStackify::fixCatchUnwindMismatches(MachineFunction &MF) {
         // The EHPad's next unwind destination is the caller, but we incorrectly
         // unwind to another EH pad.
         else if (!EHPadStack.empty() && EHPadStack.back() != FakeCallerBB &&
-                 !EHInfo->hasUnwindDest(EHPad)) {
+                 !HasUnwindDest(EHPad)) {
           EHPadToUnwindDest[EHPad] = getFakeCallerBlock(MF);
           LLVM_DEBUG(dbgs()
                      << "- Catch unwind mismatch:\nEHPad = " << getBBName(EHPad)
@@ -2215,8 +2240,8 @@ bool WebAssemblyCFGStackify::fixCatchUnwindMismatches(MachineFunction &MF) {
 
         // The EHPad's next unwind destination is an EH pad, whereas we
         // incorrectly unwind to another EH pad.
-        else if (!EHPadStack.empty() && EHInfo->hasUnwindDest(EHPad)) {
-          auto *UnwindDest = EHInfo->getUnwindDest(EHPad);
+        else if (!EHPadStack.empty() && HasUnwindDest(EHPad)) {
+          auto *UnwindDest = GetUnwindDest(EHPad);
           if (EHPadStack.back() != UnwindDest) {
             EHPadToUnwindDest[EHPad] = UnwindDest;
             LLVM_DEBUG(dbgs() << "- Catch unwind mismatch:\nEHPad = "

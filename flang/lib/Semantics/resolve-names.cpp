@@ -5904,7 +5904,7 @@ bool DeclarationVisitor::Pre(const parser::NamedConstantDef &x) {
   auto &symbol{HandleAttributeStmt(Attr::PARAMETER, name)};
   ConvertToObjectEntity(symbol);
   auto *details{symbol.detailsIf<ObjectEntityDetails>()};
-  if (!details || symbol.test(Symbol::Flag::CrayPointer) ||
+  if (!details || IsPointer(symbol) || symbol.test(Symbol::Flag::CrayPointer) ||
       symbol.test(Symbol::Flag::CrayPointee)) {
     SayWithDecl(
         name, symbol, "PARAMETER attribute not allowed on '%s'"_err_en_US);
