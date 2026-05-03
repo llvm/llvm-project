@@ -9,6 +9,7 @@
 #ifndef _LIBCPP___NUMERIC_PSTL_H
 #define _LIBCPP___NUMERIC_PSTL_H
 
+#include "__pstl/backend_fwd.h"
 #include <__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -163,6 +164,36 @@ _LIBCPP_HIDE_FROM_ABI _Tp transform_reduce(
       std::move(__init),
       std::move(__reduce),
       std::move(__transform));
+}
+
+template <class _ExecutionPolicy,
+          class _ForwardIterator1,
+          class _ForwardIterator2,
+          class _Tp,
+          class _BinaryOperation,
+          class _UnaryOperation,
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
+_LIBCPP_HIDE_FROM_ABI _ForwardIterator2 transform_exclusive_scan(
+    _ExecutionPolicy&& __policy,
+    _ForwardIterator1 __first,
+    _ForwardIterator1 __last,
+    _ForwardIterator2 __result,
+    _Tp __init,
+    _BinaryOperation __binary_op,
+    _UnaryOperation __unary_op) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator1, "transform_exclusive_scan requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator2, "transform_exclusive_scan requires ForwardIterators");
+  using _Implementation =
+      __pstl::__dispatch<__pstl::__transform_exclusive_scan, __pstl::__current_configuration, _RawPolicy>;
+  return __pstl::__handle_exception<_Implementation>(
+      std::forward<_ExecutionPolicy>(__policy),
+      std::move(__first),
+      std::move(__last),
+      std::move(__result),
+      std::move(__init),
+      std::move(__binary_op),
+      std::move(__unary_op));
 }
 
 _LIBCPP_END_NAMESPACE_STD
