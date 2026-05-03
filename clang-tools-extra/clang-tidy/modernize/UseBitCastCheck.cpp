@@ -14,8 +14,8 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/FormatVariadic.h"
 
 using namespace clang::ast_matchers;
 
@@ -27,14 +27,15 @@ static bool isSupportedMemcpyObjectExpr(const Expr *ExprNode) {
   if (isa<DeclRefExpr>(ExprNode))
     return true;
 
-  const auto *Member = dyn_cast<MemberExpr>(ExprNode);
-  if (!Member || !isa<FieldDecl>(Member->getMemberDecl()))
-    if (const auto *MemberPointer = dyn_cast<BinaryOperator>(ExprNode))
-      if (MemberPointer->getOpcode() == BO_PtrMemD ||
-          MemberPointer->getOpcode() == BO_PtrMemI)
-        return isSupportedMemcpyObjectExpr(MemberPointer->getLHS());
+  if (const auto *MemberPointer = dyn_cast<BinaryOperator>(ExprNode))
+    return MemberPointer->isPtrMemOp() &&
+           isSupportedMemcpyObjectExpr(MemberPointer->getLHS());
 
-  return Member && isSupportedMemcpyObjectExpr(Member->getBase());
+  if (const auto *Member = dyn_cast<MemberExpr>(ExprNode))
+    return isa<FieldDecl>(Member->getMemberDecl()) &&
+           isSupportedMemcpyObjectExpr(Member->getBase());
+
+  return false;
 }
 
 static const Expr *extractMemcpyObjectExpr(const Expr *ExprNode) {
@@ -51,8 +52,7 @@ static bool isBitCastableMemcpyObjectType(QualType Type,
                                           const ASTContext &Context) {
   Type = Type.getCanonicalType().getNonReferenceType();
   return !Type.isNull() && !Type.isVolatileQualified() &&
-         !Type->isAnyPointerType() && !Type->isFunctionType() &&
-         Type.isTriviallyCopyableType(Context) &&
+         !Type->isAnyPointerType() && Type.isTriviallyCopyableType(Context) &&
          Type.isBitwiseCloneableType(Context);
 }
 
@@ -272,13 +272,14 @@ void UseBitCastCheck::check(const MatchFinder::MatchResult &Result) {
   const QualType DstType =
       DstExpr->getType().getNonReferenceType().getUnqualifiedType();
   const std::string DstTypeName = DstType.getAsString(Policy);
-  const std::string Replacement =
-      [&](const llvm::Twine &Assignment) -> std::string {
+  const std::string Replacement = [&]() -> std::string {
+    std::string Assignment = llvm::formatv("{0} = std::bit_cast<{1}>({2})",
+                                           DstText, DstTypeName, SrcText)
+                                 .str();
     if (CommaLHS)
-      return ("(void)(" + Assignment + ")").str();
-    return Assignment.str();
-  }(llvm::Twine(DstText) + " = std::bit_cast<" + DstTypeName + ">(" + SrcText +
-                                         ")");
+      return llvm::formatv("(void)({0})", Assignment).str();
+    return Assignment;
+  }();
 
   const DiagnosticBuilder Diag =
       diag(MemcpyCall->getBeginLoc(),

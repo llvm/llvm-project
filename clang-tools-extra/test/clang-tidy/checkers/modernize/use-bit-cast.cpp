@@ -93,6 +93,28 @@ void sizeof_type_destination_case() {
   // CHECK-FIXES: dst = std::bit_cast<unsigned int>(src);
 }
 
+void sizeof_dereferenced_source_pointer_case() {
+  float src = 1.0f;
+  float *srcp = &src;
+  unsigned int dst;
+  std::memcpy(&dst, &src, sizeof(*srcp));
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'std::bit_cast' instead of 'memcpy' for type punning
+  // CHECK-FIXES: dst = std::bit_cast<unsigned int>(src);
+  std::memcpy(&dst, srcp, sizeof(*srcp));
+  // CHECK-MESSAGES-NOT: :[[@LINE-1]]:3: warning: use 'std::bit_cast' instead of 'memcpy' for type punning
+}
+
+void sizeof_dereferenced_destination_pointer_case() {
+  float src = 1.0f;
+  unsigned int dst;
+  unsigned int *dstp = &dst;
+  std::memcpy(&dst, &src, sizeof(*dstp));
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'std::bit_cast' instead of 'memcpy' for type punning
+  // CHECK-FIXES: dst = std::bit_cast<unsigned int>(src);
+  std::memcpy(dstp, &src, sizeof(*dstp));
+  // CHECK-MESSAGES-NOT: :[[@LINE-1]]:3: warning: use 'std::bit_cast' instead of 'memcpy' for type punning
+}
+
 void std_array_case() {
   std::array<float, 1> src{{1.0f}};
   std::array<unsigned int, 1> dst{};
