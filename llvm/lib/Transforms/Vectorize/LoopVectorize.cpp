@@ -1312,6 +1312,12 @@ public:
   /// trivially hoistable.
   bool shouldConsiderInvariant(Value *Op);
 
+  /// Returns true if \p I has been forced to be scalarized at \p VF.
+  bool isForcedScalar(Instruction *I, ElementCount VF) const {
+    auto FS = ForcedScalars.find(VF);
+    return FS != ForcedScalars.end() && FS->second.contains(I);
+  }
+
 private:
   unsigned NumPredStores = 0;
 
@@ -5848,6 +5854,32 @@ uint64_t VPCostContext::getPredBlockCostDivisor(BasicBlock *BB) const {
   return CM.getPredBlockCostDivisor(CostKind, BB);
 }
 
+bool VPCostContext::willBeScalarized(Instruction *I, ElementCount VF) const {
+  return CM.isScalarWithPredication(I, VF) ||
+         CM.isUniformAfterVectorization(I, VF) || CM.isForcedScalar(I, VF) ||
+         (VF.isVector() && CM.isProfitableToScalarize(I, VF));
+}
+
+bool VPCostContext::isMaskRequired(Instruction *I) const {
+  return CM.isMaskRequired(I);
+}
+
+std::optional<VPCostContext::CallWideningKind>
+VPCostContext::getLegacyCallKind(CallInst *CI, ElementCount VF) const {
+  if (VF.isScalar())
+    return std::nullopt;
+  switch (CM.getCallWideningDecision(CI, VF).Kind) {
+  case LoopVectorizationCostModel::CM_Scalarize:
+    return CallWideningKind::Scalarize;
+  case LoopVectorizationCostModel::CM_IntrinsicCall:
+    return CallWideningKind::Intrinsic;
+  case LoopVectorizationCostModel::CM_VectorCall:
+    return CallWideningKind::VectorVariant;
+  default:
+    return std::nullopt;
+  }
+}
+
 InstructionCost
 LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
                                           VPCostContext &CostCtx) const {
@@ -6491,90 +6523,6 @@ VPRecipeBuilder::tryToOptimizeInductionTruncate(VPInstruction *VPI,
       Phi, Start, Step, &Plan.getVF(), IndDesc, I, Flags, VPI->getDebugLoc());
 }
 
-VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(VPInstruction *VPI,
-                                                   VFRange &Range) {
-  CallInst *CI = cast<CallInst>(VPI->getUnderlyingInstr());
-  bool IsPredicated = LoopVectorizationPlanner::getDecisionAndClampRange(
-      [this, CI](ElementCount VF) {
-        return CM.isScalarWithPredication(CI, VF);
-      },
-      Range);
-
-  if (IsPredicated)
-    return nullptr;
-
-  Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
-  if (VPCostContext::isFreeScalarIntrinsic(ID))
-    return nullptr;
-
-  SmallVector<VPValue *, 4> Ops(VPI->op_begin(),
-                                VPI->op_begin() + CI->arg_size());
-
-  // Is it beneficial to perform intrinsic call compared to lib call?
-  bool ShouldUseVectorIntrinsic =
-      ID && LoopVectorizationPlanner::getDecisionAndClampRange(
-                [&](ElementCount VF) -> bool {
-                  return CM.getCallWideningDecision(CI, VF).Kind ==
-                         LoopVectorizationCostModel::CM_IntrinsicCall;
-                },
-                Range);
-  if (ShouldUseVectorIntrinsic)
-    return new VPWidenIntrinsicRecipe(*CI, ID, Ops, CI->getType(), *VPI, *VPI,
-                                      VPI->getDebugLoc());
-
-  Function *Variant = nullptr;
-  std::optional<unsigned> MaskPos;
-  // Is better to call a vectorized version of the function than to to scalarize
-  // the call?
-  auto ShouldUseVectorCall = LoopVectorizationPlanner::getDecisionAndClampRange(
-      [&](ElementCount VF) -> bool {
-        // The following case may be scalarized depending on the VF.
-        // The flag shows whether we can use a usual Call for vectorized
-        // version of the instruction.
-
-        // If we've found a variant at a previous VF, then stop looking. A
-        // vectorized variant of a function expects input in a certain shape
-        // -- basically the number of input registers, the number of lanes
-        // per register, and whether there's a mask required.
-        // We store a pointer to the variant in the VPWidenCallRecipe, so
-        // once we have an appropriate variant it's only valid for that VF.
-        // This will force a different vplan to be generated for each VF that
-        // finds a valid variant.
-        if (Variant)
-          return false;
-        LoopVectorizationCostModel::CallWideningDecision Decision =
-            CM.getCallWideningDecision(CI, VF);
-        if (Decision.Kind == LoopVectorizationCostModel::CM_VectorCall) {
-          Variant = Decision.Variant;
-          MaskPos = Decision.MaskPos;
-          return true;
-        }
-
-        return false;
-      },
-      Range);
-  if (ShouldUseVectorCall) {
-    if (MaskPos.has_value()) {
-      // We have 2 cases that would require a mask:
-      //   1) The call needs to be predicated, either due to a conditional
-      //      in the scalar loop or use of an active lane mask with
-      //      tail-folding, and we use the appropriate mask for the block.
-      //   2) No mask is required for the call instruction, but the only
-      //      available vector variant at this VF requires a mask, so we
-      //      synthesize an all-true mask.
-      VPValue *Mask = VPI->isMasked() ? VPI->getMask() : Plan.getTrue();
-
-      Ops.insert(Ops.begin() + *MaskPos, Mask);
-    }
-
-    Ops.push_back(VPI->getOperand(VPI->getNumOperandsWithoutMask() - 1));
-    return new VPWidenCallRecipe(CI, Variant, Ops, *VPI, *VPI,
-                                 VPI->getDebugLoc());
-  }
-
-  return nullptr;
-}
-
 bool VPRecipeBuilder::shouldWiden(Instruction *I, VFRange &Range) const {
   assert((!isa<UncondBrInst, CondBrInst, PHINode, LoadInst, StoreInst>(I)) &&
          "Instruction should have been handled earlier");
@@ -6760,10 +6708,12 @@ VPRecipeBuilder::tryToCreateWidenNonPhiRecipe(VPSingleDefRecipe *R,
                                               VFRange &Range) {
   assert(!R->isPhi() && "phis must be handled earlier");
   // First, check for specific widening recipes that deal with optimizing
-  // truncates, calls and memory operations.
+  // truncates and memory operations
+  auto *VPI = cast<VPInstruction>(R);
+  assert(VPI->getOpcode() != Instruction::Call &&
+         "Call should have been handled by makeCallWideningDecisions");
 
   VPRecipeBase *Recipe;
-  auto *VPI = cast<VPInstruction>(R);
   if (VPI->getOpcode() == Instruction::Trunc &&
       (Recipe = tryToOptimizeInductionTruncate(VPI, Range)))
     return Recipe;
@@ -6772,9 +6722,6 @@ VPRecipeBuilder::tryToCreateWidenNonPhiRecipe(VPSingleDefRecipe *R,
   if (LoopVectorizationPlanner::getDecisionAndClampRange(
           [&](ElementCount VF) { return VF.isScalar(); }, Range))
     return nullptr;
-
-  if (VPI->getOpcode() == Instruction::Call)
-    return tryToWidenCall(VPI, Range);
 
   Instruction *Instr = R->getUnderlyingInstr();
   assert(!is_contained({Instruction::Load, Instruction::Store},
@@ -6972,7 +6919,7 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VPlanPtr Plan,
   // Construct wide recipes and apply predication for original scalar
   // VPInstructions in the loop.
   // ---------------------------------------------------------------------------
-  VPRecipeBuilder RecipeBuilder(*Plan, TLI, Legal, CM, Builder);
+  VPRecipeBuilder RecipeBuilder(*Plan, Legal, CM, Builder);
 
   // Scan the body of the loop in a topological order to visit each basic block
   // after having visited its predecessor basic blocks.
@@ -6991,6 +6938,9 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VPlanPtr Plan,
 
   RUN_VPLAN_PASS(VPlanTransforms::makeScalarizationDecisions, *Plan, Range);
 
+  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::makeCallWideningDecisions, *Plan,
+                           Range, RecipeBuilder, CostCtx);
+
   // Now process all other blocks and instructions.
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
     // Convert input VPInstructions to widened recipes.
@@ -7000,8 +6950,8 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VPlanPtr Plan,
       // transformed.
       if (isa<VPWidenCanonicalIVRecipe, VPBlendRecipe, VPReductionRecipe,
               VPReplicateRecipe, VPWidenLoadRecipe, VPWidenStoreRecipe,
-              VPVectorPointerRecipe, VPVectorEndPointerRecipe,
-              VPHistogramRecipe>(&R))
+              VPWidenCallRecipe, VPWidenIntrinsicRecipe, VPVectorPointerRecipe,
+              VPVectorEndPointerRecipe, VPHistogramRecipe>(&R))
         continue;
       auto *VPI = cast<VPInstruction>(&R);
       if (!VPI->getUnderlyingValue())

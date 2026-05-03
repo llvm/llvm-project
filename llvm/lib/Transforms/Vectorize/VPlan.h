@@ -70,10 +70,6 @@ class LoopVectorizationCostModel;
 
 struct VPCostContext;
 
-namespace Intrinsic {
-typedef unsigned ID;
-}
-
 using VPlanPtr = std::unique_ptr<VPlan>;
 
 /// \enum UncountableExitStyle
@@ -1951,6 +1947,12 @@ public:
   /// Produce a widened version of the vector intrinsic.
   LLVM_ABI_FOR_TEST void execute(VPTransformState &State) override;
 
+  /// Compute the cost of a vector intrinsic with \p ID and \p Operands.
+  static InstructionCost
+  computeIntrinsicCost(Intrinsic::ID ID, ArrayRef<const VPValue *> Operands,
+                       const VPRecipeWithIRFlags &R, ElementCount VF,
+                       VPCostContext &Ctx);
+
   /// Return the cost of this vector intrinsic.
   LLVM_ABI_FOR_TEST InstructionCost
   computeCost(ElementCount VF, VPCostContext &Ctx) const override;
@@ -2020,6 +2022,10 @@ public:
   /// Return the cost of this VPWidenCallRecipe.
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override;
+
+  /// Return the cost of widening a call using the vector function \p Variant.
+  static InstructionCost computeVectorCallCost(Function *Variant,
+                                               VPCostContext &Ctx);
 
   Function *getCalledScalarFunction() const {
     return cast<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue());
@@ -3231,6 +3237,13 @@ public:
   /// Return the cost of this VPReplicateRecipe.
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override;
+
+  /// Return the cost of scalarizing a call to \p CalledFn with argument
+  /// operands \p ArgOps for a given \p VF.
+  static InstructionCost
+  computeScalarCallCost(Function *CalledFn, Type *ResultTy,
+                        ArrayRef<const VPValue *> ArgOps, bool IsSingleScalar,
+                        ElementCount VF, VPCostContext &Ctx);
 
   bool isSingleScalar() const { return IsSingleScalar; }
 
