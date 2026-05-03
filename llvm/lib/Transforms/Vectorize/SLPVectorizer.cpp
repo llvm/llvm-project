@@ -10631,6 +10631,26 @@ ArrayRef<const Loop *> BoUpSLP::getLoopNest(const Loop *L) {
   return Res;
 }
 
+/// Detects an extractvalue bundle that can be widened by vectorizing the
+/// underlying struct-returning calls.
+///
+/// \p VL is a bundle whose state \p S is Instruction::ExtractValue. The
+/// bundle is acceptable for widening into one struct-of-vectors call only
+/// when:
+///   - every element of \p VL is an ExtractValueInst,
+///   - every ExtractValueInst extracts the same struct field (its
+///     getIndices() matches the main op's indices),
+///   - the aggregate operands form a uniform set of CallInsts (per
+///     getSameOpcode) that is not an alt-shuffle and whose return type is
+///     a literal struct, and
+///   - every user of every such call is itself an ExtractValueInst, so the
+///     external-use extraction code can rebuild scalars via extractvalue +
+///     extractelement without needing an insertvalue chain.
+///
+/// On success returns true and fills \p Indices with the common field
+/// index path and \p Calls with the per-lane aggregate calls (in VL order),
+/// for the caller to feed as the operand of the new tree entry. Otherwise
+/// returns false and leaves the output parameters untouched.
 static bool checkEVsForVecCalls(ArrayRef<Value *> VL,
                                 const InstructionsState &S,
                                 const TargetLibraryInfo &TLI,
@@ -10658,6 +10678,14 @@ static bool checkEVsForVecCalls(ArrayRef<Value *> VL,
   if (AggState && AggState.getOpcode() == Instruction::Call &&
       !AggState.isAltShuffle() &&
       isa<StructType>(AggState.getMainOp()->getType())) {
+    // The struct-returning call may have non-bundle users too. The external
+    // extraction code rebuilds scalars by extractvalue + extractelement,
+    // which only works when every user of the call is an ExtractValueInst.
+    // Bail out if any aggregate has a different kind of user.
+    for (Value *Agg : Aggregates) {
+      if (!all_of(Agg->users(), IsaPred<ExtractValueInst>))
+        return false;
+    }
     Indices.assign(VL0Indices.begin(), VL0Indices.end());
     Calls.swap(Aggregates);
     return true;
@@ -19548,6 +19576,11 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
         if (KeepScalar) {
           ExternalUsesAsOriginalScalar.insert(EU.Scalar);
           for (Value *V : Inst->operands()) {
+            // Struct operands cannot be rebuilt by the !User extraction
+            // path (it has no insertvalue chain), so leave their existing
+            // ExtractValueInst user in place.
+            if (isa<StructType>(V->getType()))
+              continue;
             auto It = ValueToExtUses->find(V);
             if (It != ValueToExtUses->end()) {
               // Replace all uses to avoid compiler crash.
@@ -19563,6 +19596,8 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
             // compiler crash.
             if (auto *IOp = dyn_cast<Instruction>(Inst->getOperand(0))) {
               for (Value *V : IOp->operands()) {
+                if (isa<StructType>(V->getType()))
+                  continue;
                 auto It = ValueToExtUses->find(V);
                 if (It != ValueToExtUses->end()) {
                   // Replace all uses to avoid compiler crash.
@@ -23893,6 +23928,12 @@ Value *BoUpSLP::vectorizeTree(
   SmallDenseMap<std::pair<Value *, SmallVector<unsigned, 1>>,
                 DenseMap<BasicBlock *, std::pair<Value *, Value *>>>
       ScalarToEEs;
+  // Maps (struct-of-vectors Vec, field-index path) to the corresponding
+  // per-block extractvalue, so different external lanes that need the same
+  // struct field of the same vectorized call share a single extractvalue.
+  SmallDenseMap<std::pair<Value *, SmallVector<unsigned, 1>>,
+                DenseMap<BasicBlock *, Value *>>
+      StructFieldExtracts;
   SmallDenseSet<Value *, 4> UsedInserts;
   DenseMap<std::pair<Value *, Type *>, Value *> VectorCasts;
   SmallDenseSet<Value *, 4> ScalarsWithNullptrUser;
@@ -23996,7 +24037,27 @@ Value *BoUpSLP::vectorizeTree(
             if (isa<StructType>(Vec->getType())) {
               assert(isa<StructType>(Scalar->getType()) &&
                      "Vec is struct of vectors only when Scalar is struct.");
-              Vec = Builder.CreateExtractValue(Vec, Indices);
+              auto FieldKey = std::make_pair(Vec, Indices);
+              BasicBlock *EVBB = Builder.GetInsertBlock();
+              Value *FieldVec = nullptr;
+              auto FieldIt = StructFieldExtracts.find(FieldKey);
+              if (FieldIt != StructFieldExtracts.end()) {
+                auto BBIt = FieldIt->second.find(EVBB);
+                if (BBIt != FieldIt->second.end())
+                  FieldVec = BBIt->second;
+              }
+              if (!FieldVec) {
+                FieldVec = Builder.CreateExtractValue(Vec, Indices);
+                StructFieldExtracts[FieldKey][EVBB] = FieldVec;
+              } else if (auto *FieldI = dyn_cast<Instruction>(FieldVec);
+                         FieldI && Builder.GetInsertPoint() != EVBB->end() &&
+                         Builder.GetInsertPoint()->comesBefore(FieldI)) {
+                // Cached extractvalue is below the current insertion point;
+                // move it up so the extractelement we are about to emit can
+                // use it.
+                FieldI->moveBefore(*EVBB, Builder.GetInsertPoint());
+              }
+              Vec = FieldVec;
             }
             Ex = Builder.CreateExtractElement(Vec, Lane);
           }
