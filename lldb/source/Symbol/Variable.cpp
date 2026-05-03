@@ -626,7 +626,7 @@ static void PrivateAutoComplete(
           // completed (eg "frame variable member" for "this->member").
           CompilerType instance_type =
               GetInstanceVariableType(*frame, *variable_list);
-          if (instance_type)
+          if (instance_type.IsValid())
             PrivateAutoCompleteMembers(frame, "", "", "", instance_type,
                                        request);
         }
