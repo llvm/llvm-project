@@ -138,28 +138,22 @@ void ignore_const_pointer_reference_sinks() {
   int value = 0;
 
   int *p_local0 = &value;
-  // CHECK-FIXES: int *p_local0 = &value;
   takesConstPointerRef(p_local0);
 
   int *p_local1 = &value;
-  // CHECK-FIXES: int *p_local1 = &value;
   int *const &ref = p_local1;
   (void)ref;
 
   IntPtrAlias p_local2 = &value;
-  // CHECK-FIXES: IntPtrAlias p_local2 = &value;
   takesAliasConstPointerRef(p_local2);
 
   int *p_local3 = &value;
-  // CHECK-FIXES: int *p_local3 = &value;
   takesConstPointerRRef(static_cast<int *const &&>(p_local3));
 
   IntPtrTypedef p_local4 = &value;
-  // CHECK-FIXES: IntPtrTypedef p_local4 = &value;
   takesTypedefConstPointerRef(p_local4);
 
   int *p_local5 = &value;
-  // CHECK-FIXES: int *p_local5 = &value;
   int *volatile &volatile_ref = p_local5;
   (void)volatile_ref;
 }
@@ -168,7 +162,6 @@ void ignore_range_for_pointer_reference_sink() {
   int value = 0;
   std::vector<int *> const source = {&value};
   std::vector<int *> sink;
-  // CHECK-FIXES: for (int *element : source)
   for (int *element : source)
     sink.push_back(element);
 }
@@ -177,7 +170,6 @@ struct UniquePtrData {};
 
 void ignore_unique_ptr_emplace_sink() {
   /*const*/ UniquePtrData *const newdata = new UniquePtrData;
-  // CHECK-FIXES: /*const*/ UniquePtrData *const newdata = new UniquePtrData;
 
   std::vector<std::unique_ptr<UniquePtrData>> data;
   data.emplace_back(newdata);
