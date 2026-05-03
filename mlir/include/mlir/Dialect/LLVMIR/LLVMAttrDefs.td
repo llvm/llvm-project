@@ -550,7 +550,7 @@ def LLVM_DIDerivedTypeAttr : LLVM_Attr<"DIDerivedType", "di_derived_type",
     OptionalParameter<"uint64_t">:$offsetInBits,
     OptionalParameter<"std::optional<unsigned>">:$dwarfAddressSpace,
     OptionalParameter<"DIFlags", "DIFlags::Zero">:$flags,
-    OptionalParameter<"::mlir::Attribute">:$extraData
+    OptionalParameter<"Attribute">:$extraData
   );
   let assemblyFormat = "`<` struct(params) `>`";
   let genVerifyDecl = 1;
