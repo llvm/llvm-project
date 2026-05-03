@@ -53,6 +53,58 @@ multiclass RMWIByte<SDPatternOperator operator, AddressingMode mode,
   def : RMWI<z_anyextloadi8, operator, truncstorei8, mode, imm64, insn>;
 }
 
+// Handle RMW operations on the Least Significant Byte (LSB) of wider types.
+// This allows targeting byte-level instructions (NI, NIY, etc.) for i16, i32,
+// and i64 memory locations when only the last byte is modified.
+multiclass RMWIByteLSB<SDPatternOperator operator, AddressingMode mode,
+                       Instruction insn> {
+
+  // Base + Displacement.
+  // Uses XForms to adjust the displacement to target the LSB.
+  let AddedComplexity = 20 in {
+    def : Pat<(truncstorei16 (i32 (operator (i32 (anyextloadi16_20bit:$src 
+                                                  mode:$addr)),
+                                            (i32 immLSB8:$imm))),
+                             mode:$addr),
+              (insn (get_base_from_load $src), 
+                    (get_disp_lsb1 $src), 
+                    (as_i32imm $imm))>;
+
+    def : Pat<(store (i32 (operator (i32 (load_20bit:$src mode:$addr)),
+                                    (i32 immLSB8:$imm))),
+                     mode:$addr),
+              (insn (get_base_from_load $src), 
+                    (get_disp_lsb3 $src), 
+                    (as_i32imm $imm))>;
+
+    def : Pat<(store (i64 (operator (i64 (load_20bit:$src mode:$addr)),
+                                    (i64 immLSB8:$imm))),
+                     mode:$addr),
+              (insn (get_base_from_load $src), 
+                    (get_disp_lsb7 $src), 
+                    (as_i32imm $imm))>;
+  }
+
+  // Register-only fallback (for AGFI or legalized addresses).
+  // Targets out-of-range addresses legalized into registers.
+  let AddedComplexity = 15 in {
+    def : Pat<(truncstorei16 (i32 (operator (i32 (anyextloadi16 ADDR64:$base)),
+                                            (i32 immLSB8:$imm))),
+                             ADDR64:$base),
+              (insn ADDR64:$base, 1, (as_i32imm $imm))>;
+
+    def : Pat<(store (i32 (operator (i32 (load ADDR64:$base)),
+                                    (i32 immLSB8:$imm))),
+                     ADDR64:$base),
+              (insn ADDR64:$base, 3, (as_i32imm $imm))>;
+
+    def : Pat<(store (i64 (operator (i64 (load ADDR64:$base)),
+                                    (i64 immLSB8:$imm))),
+                     ADDR64:$base),
+              (insn ADDR64:$base, 7, (as_i32imm $imm))>;
+  }
+}
+
 // Record that INSN performs insertion TYPE into a register of class CLS.
 // The inserted operand is loaded using LOAD from an address of mode MODE.
 multiclass InsertMem<string type, Instruction insn, RegisterOperand cls,

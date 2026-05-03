@@ -694,3 +694,46 @@ def cond4 : ImmLeaf<i32, [{ return (Imm.getZExtValue() < 16); }],
   let IsAPInt = true;
   let FastIselShouldIgnore = true;
 }
+
+// Extracts the base register from the load node.
+def get_base_from_load : SDNodeXForm<ld, [{
+  SDValue Addr = cast<MemSDNode>(N)->getBasePtr();
+  // If the address is (Base + Disp), return Base.
+  // Otherwise, return the whole Addr.
+  if (Addr.getOpcode() == ISD::ADD && isa<ConstantSDNode>(Addr.getOperand(1)))
+    return Addr.getOperand(0);
+  return Addr;
+}]>;
+
+// i16: Target the displacement of the load and add +1 for Big-Endian LSB.
+def get_disp_lsb1 : SDNodeXForm<ld, [{
+  SDValue Addr = cast<MemSDNode>(N)->getBasePtr();
+  int64_t Disp = 0;
+  if (Addr.getOpcode() == ISD::ADD && isa<ConstantSDNode>(Addr.getOperand(1)))
+    Disp = cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue();
+  return CurDAG->getTargetConstant(Disp + 1, SDLoc(N), MVT::i64);
+}]>;
+
+// i32: Target the displacement of the load and add +3 for Big-Endian LSB.
+def get_disp_lsb3 : SDNodeXForm<ld, [{
+  SDValue Addr = cast<MemSDNode>(N)->getBasePtr();
+  int64_t Disp = 0;
+  if (Addr.getOpcode() == ISD::ADD && isa<ConstantSDNode>(Addr.getOperand(1)))
+    Disp = cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue();
+  return CurDAG->getTargetConstant(Disp + 3, SDLoc(N), MVT::i64);
+}]>;
+
+// i64: Target the displacement of the load and add +7 for Big-Endian LSB.
+def get_disp_lsb7 : SDNodeXForm<ld, [{
+  SDValue Addr = cast<MemSDNode>(N)->getBasePtr();
+  int64_t Disp = 0;
+  if (Addr.getOpcode() == ISD::ADD && isa<ConstantSDNode>(Addr.getOperand(1)))
+    Disp = cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue();
+  return CurDAG->getTargetConstant(Disp + 7, SDLoc(N), MVT::i64);
+}]>;
+
+// Normalizes the immediate to i32.
+def as_i32imm : SDNodeXForm<imm, [{
+  uint64_t Val = N->getAPIntValue().zextOrTrunc(32).getZExtValue();
+  return CurDAG->getTargetConstant(Val, SDLoc(N), MVT::i32);
+}]>;
