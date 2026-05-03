@@ -2521,8 +2521,7 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
         if (!NTTP)
           return TemplateDeductionResult::Success;
 
-        // P3666 suggested wording for [temp.deduct.type]:
-        //   The type of N in the type _BitInt(N) is std::size_t.
+        // Deduce the size parameter of _BitInt as std::size_t
         QualType T = S.Context.getSizeType();
         llvm::APSInt ArgSize(S.Context.getTypeSize(T), false);
         ArgSize = IA->getNumBits();
