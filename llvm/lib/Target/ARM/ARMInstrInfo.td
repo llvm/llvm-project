@@ -4477,10 +4477,12 @@ def MULv5: ARMPseudoExpand<(outs GPRnopc:$Rd), (ins GPRnopc:$Rn, GPRnopc:$Rm,
            Sched<[WriteMUL32, ReadMUL, ReadMUL]>;
 }
 
+// No DAG pattern: avoid ISel folding add(mul,) -> MLA before machine scheduling.
+// MLA is formed by the ARM machine combiner (see ARMBaseInstrInfo.cpp).
 def MLA  : AsMul1I32<0b0000001, (outs GPRnopc:$Rd),
                      (ins GPRnopc:$Rn, GPRnopc:$Rm, GPRnopc:$Ra),
                      IIC_iMAC32, "mla", "\t$Rd, $Rn, $Rm, $Ra",
-        [(set GPRnopc:$Rd, (add (mul GPRnopc:$Rn, GPRnopc:$Rm), GPRnopc:$Ra))]>,
+                     []>,
                      Requires<[IsARM, HasV6, UseMulOps]>,
         Sched<[WriteMAC32, ReadMUL, ReadMUL, ReadMAC]> {
   bits<4> Ra;
@@ -4491,14 +4493,15 @@ let Constraints = "@earlyclobber $Rd" in
 def MLAv5: ARMPseudoExpand<(outs GPRnopc:$Rd),
                            (ins GPRnopc:$Rn, GPRnopc:$Rm, GPRnopc:$Ra,
                             pred:$p, cc_out:$s), 4, IIC_iMAC32,
-         [(set GPRnopc:$Rd, (add (mul GPRnopc:$Rn, GPRnopc:$Rm), GPRnopc:$Ra))],
+                           [],
   (MLA GPRnopc:$Rd, GPRnopc:$Rn, GPRnopc:$Rm, GPRnopc:$Ra, pred:$p, cc_out:$s)>,
                            Requires<[IsARM, NoV6]>,
            Sched<[WriteMAC32, ReadMUL, ReadMUL, ReadMAC]>;
 
+// No DAG pattern; MLS is formed by the ARM machine combiner.
 def MLS  : AMul1I<0b0000011, (outs GPR:$Rd), (ins GPR:$Rn, GPR:$Rm, GPR:$Ra),
                    IIC_iMAC32, "mls", "\t$Rd, $Rn, $Rm, $Ra",
-                   [(set GPR:$Rd, (sub GPR:$Ra, (mul GPR:$Rn, GPR:$Rm)))]>,
+                   []>,
                    Requires<[IsARM, HasV6T2, UseMulOps]>,
           Sched<[WriteMAC32, ReadMUL, ReadMUL, ReadMAC]> {
   bits<4> Rd;
