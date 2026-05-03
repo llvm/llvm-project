@@ -569,6 +569,46 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
                  std::string("unimplemented NVPTX builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinId));
     return mlir::Value{};
+  case NVPTX::BI__nvvm_fma_rn_oob_f16:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented NVPTX builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinId));
+    return mlir::Value{};
+  case NVPTX::BI__nvvm_fma_rn_oob_f16x2:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented NVPTX builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinId));
+    return mlir::Value{};
+  case NVPTX::BI__nvvm_fma_rn_oob_bf16:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented NVPTX builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinId));
+    return mlir::Value{};
+  case NVPTX::BI__nvvm_fma_rn_oob_bf16x2:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented NVPTX builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinId));
+    return mlir::Value{};
+  case NVPTX::BI__nvvm_fma_rn_oob_relu_f16:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented NVPTX builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinId));
+    return mlir::Value{};
+  case NVPTX::BI__nvvm_fma_rn_oob_relu_f16x2:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented NVPTX builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinId));
+    return mlir::Value{};
+  case NVPTX::BI__nvvm_fma_rn_oob_relu_bf16:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented NVPTX builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinId));
+    return mlir::Value{};
+  case NVPTX::BI__nvvm_fma_rn_oob_relu_bf16x2:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented NVPTX builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinId));
+    return mlir::Value{};
   case NVPTX::BI__nvvm_fmax_f16:
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented NVPTX builtin call: ") +
@@ -746,6 +786,17 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
                      getContext().BuiltinInfo.getName(builtinId));
     return mlir::Value{};
   case NVPTX::BI__nvvm_fabs_d:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented NVPTX builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinId));
+    return mlir::Value{};
+  case NVPTX::BI__nvvm_ex2_approx_d:
+  case NVPTX::BI__nvvm_ex2_approx_f:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented NVPTX builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinId));
+    return mlir::Value{};
+  case NVPTX::BI__nvvm_ex2_approx_ftz_f:
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented NVPTX builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinId));
@@ -942,6 +993,23 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
                  std::string("unimplemented NVPTX builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinId));
     return mlir::Value{};
+  case NVPTX::BI__nvvm_bar0_and:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented NVPTX builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinId));
+    return mlir::Value{};
+
+  case NVPTX::BI__nvvm_bar0_or:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented NVPTX builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinId));
+    return mlir::Value{};
+  case NVPTX::BI__nvvm_bar0_popc:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented NVPTX builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinId));
+    return mlir::Value{};
+
   default:
     return std::nullopt;
   }
