@@ -2357,6 +2357,7 @@ void LoweringPreparePass::buildCUDARegisterGlobalFunctions(
     mlir::Value deviceFunc = builder.createBitcast(
         builder.createGetGlobal(deviceFuncStr), voidPtrTy);
 
+    mlir::Value hostFunc;
     if (isHIP) {
       // Under HIP, the kernel-handle is a GlobalOp shadow created by CIR
       // codegen and named with the kernel-reference mangled name (e.g.
@@ -2364,25 +2365,20 @@ void LoweringPreparePass::buildCUDARegisterGlobalFunctions(
       // `_Z17__device_stub__fnv`). The CUDAKernelNameAttr on the device-stub
       // uses the same name, so we can resolve the shadow by symbol lookup.
       auto funcHandle = cast<GlobalOp>(mlirModule.lookupSymbol(kernelName));
-      mlir::Value hostFunc =
+      hostFunc =
           builder.createBitcast(builder.createGetGlobal(funcHandle), voidPtrTy);
-      builder.createCallOp(
-          loc, cudaRegisterFunction,
-          {fatbinHandle, hostFunc, deviceFunc, deviceFunc,
-           ConstantOp::create(builder, loc, IntAttr::get(intTy, -1)),
-           cirNullPtr, cirNullPtr, cirNullPtr, cirNullPtr, cirNullPtr});
     } else {
-      mlir::Value hostFunc = builder.createBitcast(
+      hostFunc = builder.createBitcast(
           GetGlobalOp::create(
               builder, loc, PointerType::get(deviceStub.getFunctionType()),
               mlir::FlatSymbolRefAttr::get(deviceStub.getSymNameAttr())),
           voidPtrTy);
-      builder.createCallOp(
-          loc, cudaRegisterFunction,
-          {fatbinHandle, hostFunc, deviceFunc, deviceFunc,
-           ConstantOp::create(builder, loc, IntAttr::get(intTy, -1)),
-           cirNullPtr, cirNullPtr, cirNullPtr, cirNullPtr, cirNullPtr});
     }
+    builder.createCallOp(
+        loc, cudaRegisterFunction,
+        {fatbinHandle, hostFunc, deviceFunc, deviceFunc,
+         ConstantOp::create(builder, loc, IntAttr::get(intTy, -1)), cirNullPtr,
+         cirNullPtr, cirNullPtr, cirNullPtr, cirNullPtr});
   }
 }
 
