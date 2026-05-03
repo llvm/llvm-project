@@ -456,16 +456,16 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
 
   uint64_t getUInt64NonPoison(const AnyValue &V) {
     if (V.isPoison()) {
-      reportImmediateUB("Unexpected poison integer value.");
+      reportImmediateUB() << "Unexpected poison integer value.";
       return 0;
     }
     const APInt &C = V.asInteger();
     if (C.isNegative()) {
-      reportImmediateUB("The integer value is negative.");
+      reportImmediateUB() << "Unexpected negative value " << C << '.';
       return 0;
     }
     if (!C.isIntN(64)) {
-      reportImmediateUB("The integer value is too large.");
+      reportImmediateUB() << "The integer value " << C << " is too large.";
       return 0;
     }
 
@@ -594,7 +594,7 @@ public:
             continue;
           const AnyValue &WasOn = getValue(WasOnVal);
           if (WasOn.isPoison()) {
-            reportImmediateUB("Assume on poison pointer.");
+            reportImmediateUB() << "Assume on poison pointer.";
             break;
           }
           const Pointer &WasOnPtr = WasOn.asPointer();
@@ -611,19 +611,22 @@ public:
                   Alignment, getUInt64NonPoison(getValue(GetBundleArg(2))));
             if (!isPowerOf2_64(Alignment)) {
               if (!WasOn.asPointer().address().isZero())
-                reportImmediateUB("Assume on nonnull pointer with a "
-                                  "non-power-of-two alignment.");
+                reportImmediateUB() << "Assume on nonnull pointer " << WasOn
+                                    << " with a "
+                                       "non-power-of-two alignment "
+                                    << Alignment << '.';
               break;
             }
             if (WasOnPtr.address().countr_zero() < Log2_64(Alignment))
-              reportImmediateUB(
-                  "The pointer address violates alignment assumption.");
+              reportImmediateUB()
+                  << "The pointer " << WasOn << " violates align(" << Alignment
+                  << ") assumption.";
             break;
           }
           case Attribute::NonNull:
             if (WasOnPtr.address().isZero())
-              reportImmediateUB(
-                  "The pointer address violates nonnull assumption.");
+              reportImmediateUB()
+                  << "The pointer " << WasOn << " violates nonnull assumption.";
             break;
           case Attribute::Dereferenceable:
           case Attribute::DereferenceableOrNull: {
@@ -632,11 +635,11 @@ public:
             if (applyDereferenceableBytesAttr(
                     WasOn, DereferenceableBytes,
                     Kind == Attribute::DereferenceableOrNull))
-              reportImmediateUB(Kind == Attribute::DereferenceableOrNull
-                                    ? "The pointer address violates "
-                                      "dereferenceable_or_null assumption."
-                                    : "The pointer address violates "
-                                      "dereferenceable assumption.");
+              reportImmediateUB() << "The pointer " << WasOn << " violates "
+                                  << (Kind == Attribute::DereferenceableOrNull
+                                          ? "dereferenceable_or_null("
+                                          : "dereferenceable(")
+                                  << DereferenceableBytes << ") assumption.";
             break;
           }
           default:
@@ -1117,7 +1120,8 @@ public:
     if ((AttrsAtCallSite.hasAttribute(Attribute::NoUndef) ||
          AttrsAtCallee.hasAttribute(Attribute::NoUndef)) &&
         applyNoUndefAttr(V)) {
-      reportImmediateUB("The value violates noundef attribute.");
+      reportImmediateUB() << "The value " << V
+                          << " violates noundef attribute.";
       return;
     }
     if (Ty->isPointerTy()) {
@@ -1126,14 +1130,18 @@ public:
                        AttrsAtCallee.getDereferenceableBytes())) {
         if (applyDereferenceableBytesAttr(V, DereferenceableBytes,
                                           /*OrNull=*/false))
-          reportImmediateUB("The value violates dereferenceable attribute.");
+          reportImmediateUB()
+              << "The value " << V << " violates dereferenceable("
+              << DereferenceableBytes << ") attribute.";
       } else if (uint64_t DereferenceableOrNullBytes =
                      std::max(AttrsAtCallSite.getDereferenceableOrNullBytes(),
                               AttrsAtCallee.getDereferenceableOrNullBytes())) {
         if (applyDereferenceableBytesAttr(V, DereferenceableOrNullBytes,
                                           /*OrNull=*/true))
-          reportImmediateUB("The value violates "
-                            "dereferenceable_or_null attribute.");
+          reportImmediateUB() << "The value " << V
+                              << " violates "
+                                 "dereferenceable_or_null("
+                              << DereferenceableOrNullBytes << ") attribute.";
       }
     }
   }
@@ -1162,23 +1170,27 @@ public:
         applyAlignAttr(V, Align(ExtractFirstIntOperand(Alignment)));
     }
     if (I.hasMetadata(LLVMContext::MD_noundef) && applyNoUndefAttr(V)) {
-      reportImmediateUB("The value violates !noundef metadata.");
+      reportImmediateUB() << "The value " << V
+                          << " violates !noundef metadata.";
       return;
     }
     if (Ty->isPointerTy()) {
       if (const MDNode *DereferenceableBytes =
               I.getMetadata(LLVMContext::MD_dereferenceable)) {
-        if (applyDereferenceableBytesAttr(
-                V, ExtractFirstIntOperand(DereferenceableBytes),
-                /*OrNull=*/false))
-          reportImmediateUB("The value violates !dereferenceable metadata.");
+        uint64_t Bytes = ExtractFirstIntOperand(DereferenceableBytes);
+        if (applyDereferenceableBytesAttr(V, Bytes,
+                                          /*OrNull=*/false))
+          reportImmediateUB()
+              << "The value " << V << " violates !dereferenceable !{i64 "
+              << Bytes << "} metadata.";
       } else if (const MDNode *DereferenceableOrNullBytes =
                      I.getMetadata(LLVMContext::MD_dereferenceable_or_null)) {
-        if (applyDereferenceableBytesAttr(
-                V, ExtractFirstIntOperand(DereferenceableOrNullBytes),
-                /*OrNull=*/true))
-          reportImmediateUB("The value violates "
-                            "!dereferenceable_or_null metadata.");
+        uint64_t Bytes = ExtractFirstIntOperand(DereferenceableOrNullBytes);
+        if (applyDereferenceableBytesAttr(V, Bytes,
+                                          /*OrNull=*/true))
+          reportImmediateUB()
+              << "The value " << V << " violates !dereferenceable_or_null!{i64 "
+              << Bytes << "} metadata.";
       }
     }
   }

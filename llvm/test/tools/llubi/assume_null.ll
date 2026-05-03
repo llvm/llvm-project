@@ -6,5 +6,7 @@ define void @main() {
   ret void
 }
 ; CHECK: Entering function: main
-; CHECK-NEXT: Immediate UB detected: The pointer address violates nonnull assumption.
+; CHECK-NEXT: Stacktrace:
+; CHECK-NEXT: #0   call void @llvm.assume(i1 true) [ "nonnull"(ptr null) ] at @main
+; CHECK-NEXT: Immediate UB detected: The pointer ptr 0x0 [dangling] violates nonnull assumption.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

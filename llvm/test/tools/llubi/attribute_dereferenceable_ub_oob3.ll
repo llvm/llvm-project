@@ -14,5 +14,7 @@ define void @main() {
 ; CHECK: Entering function: main
 ; CHECK-NEXT:   %alloc = alloca i32, align 4 => ptr 0x8 [alloc]
 ; CHECK-NEXT:   %gep = getelementptr i8, ptr %alloc, i32 2 => ptr 0xA [alloc + 2]
-; CHECK-NEXT: Immediate UB detected: The value violates dereferenceable{{(_or_null)?}} attribute.
+; CHECK-NEXT: Stacktrace:
+; CHECK-NEXT: #0   call void @callee(ptr %gep) at @main
+; CHECK-NEXT: Immediate UB detected: The value ptr 0xA [alloc + 2] violates dereferenceable{{(_or_null)?}}(3) attribute.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

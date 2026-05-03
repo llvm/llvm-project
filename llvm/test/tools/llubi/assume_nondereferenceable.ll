@@ -8,5 +8,7 @@ define void @main() {
 }
 ; CHECK: Entering function: main
 ; CHECK-NEXT:   %alloc = alloca i32, align 4 => ptr 0x8 [alloc]
-; CHECK-NEXT: Immediate UB detected: The pointer address violates dereferenceable{{(_or_null)?}} assumption.
+; CHECK-NEXT: Stacktrace:
+; CHECK-NEXT: #0   call void @llvm.assume(i1 true) [ "dereferenceable{{(_or_null)?}}"(ptr %alloc, i32 2048) ] at @main
+; CHECK-NEXT: Immediate UB detected: The pointer ptr 0x8 [alloc] violates dereferenceable{{(_or_null)?}}(2048) assumption.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

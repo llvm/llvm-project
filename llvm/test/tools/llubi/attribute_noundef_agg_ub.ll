@@ -10,5 +10,7 @@ define void @main() {
   ret void
 }
 ; CHECK: Entering function: main
-; CHECK-NEXT: Immediate UB detected: The value violates noundef attribute.
+; CHECK-NEXT: Stacktrace:
+; CHECK-NEXT: #0   call void @callee({ i32, i32 } { i32 0, i32 poison }) at @main
+; CHECK-NEXT: Immediate UB detected: The value { i32 0, poison } violates noundef attribute.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

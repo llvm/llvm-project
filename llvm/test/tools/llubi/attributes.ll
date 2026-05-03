@@ -153,9 +153,9 @@ define void @main() {
 ; CHECK-NEXT: Exiting function: add_with_range_vec
 ; CHECK-NEXT:   %range_vec = call <4 x i32> @add_with_range_vec(<4 x i32> <i32 0, i32 poison, i32 3, i32 1>) => { i32 1, poison, poison, poison }
 ; CHECK-NEXT:   %range_intrinsic_valid = call i32 @llvm.ctpop.i32(i32 range(i32 1, 255) 15) => i32 4
-; CHECK-NEXT:   %range_intrinsic_invalid_input = call i32 @llvm.ctpop.i32(i32 range(i32 1, 255) 1500) => i32 7
+; CHECK-NEXT:   %range_intrinsic_invalid_input = call i32 @llvm.ctpop.i32(i32 range(i32 1, 255) 1500) => poison
 ; CHECK-NEXT:   %range_intrinsic_invalid_output = call range(i32 1, 32) i32 @llvm.ctpop.i32(i32 0) => poison
-; CHECK-NEXT:   %range_intrinsic_vec = call range(i32 1, 32) <4 x i32> @llvm.ctpop.v4i32(<4 x i32> range(i32 1, 255) <i32 15, i32 1500, i32 0, i32 poison>) => { i32 4, i32 7, poison, poison }
+; CHECK-NEXT:   %range_intrinsic_vec = call range(i32 1, 32) <4 x i32> @llvm.ctpop.v4i32(<4 x i32> range(i32 1, 255) <i32 15, i32 1500, i32 0, i32 poison>) => { i32 4, poison, poison, poison }
 ; CHECK-NEXT: Entering function: identity_nofpclass
 ; CHECK-NEXT:   half %x = half 1.000000e+00
 ; CHECK-NEXT:   ret half %x

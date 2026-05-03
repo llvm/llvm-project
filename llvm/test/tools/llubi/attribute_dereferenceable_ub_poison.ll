@@ -10,5 +10,7 @@ define void @main() {
   ret void
 }
 ; CHECK: Entering function: main
-; CHECK-NEXT: Immediate UB detected: The value violates dereferenceable{{(_or_null)?}} attribute.
+; CHECK-NEXT: Stacktrace:
+; CHECK-NEXT: #0   call void @callee(ptr poison) at @main
+; CHECK-NEXT: Immediate UB detected: The value poison violates dereferenceable{{(_or_null)?}}(4) attribute.
 ; CHECK-NEXT: error: Execution of function 'main' failed.
