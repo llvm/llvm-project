@@ -15,3 +15,10 @@ func.func @testImportedInterface() -> i1 {
   %value = "builtin.unrealized_conversion_cast"() : () -> (i1)
   return %value : i1
 }
+
+// CHECK-LABEL: func @testWithConstraint
+func.func @testWithConstraint(%a: i32) {
+    // CHECK: test.success
+    %b = "test.op_a"(%a) { attr = 0 : i32} : (i32) -> (i32)
+    return
+}
