@@ -14,6 +14,7 @@
 #define LLVM_LIB_TARGET_AARCH64_MCTARGETDESC_AARCH64MCASMINFO_H
 
 #include "Utils/AArch64BaseInfo.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/MC/MCAsmInfoCOFF.h"
 #include "llvm/MC/MCAsmInfoDarwin.h"
 #include "llvm/MC/MCAsmInfoELF.h"
@@ -26,6 +27,7 @@ class MCValue;
 class Triple;
 
 struct AArch64MCAsmInfoDarwin : public MCAsmInfoDarwin {
+  StringSet<> ReservedIdentifiers;
   explicit AArch64MCAsmInfoDarwin(bool IsILP32, const MCTargetOptions &Options);
   const MCExpr *
   getExprForPersonalitySymbol(const MCSymbol *Sym, unsigned Encoding,
@@ -34,30 +36,37 @@ struct AArch64MCAsmInfoDarwin : public MCAsmInfoDarwin {
                           const MCSpecifierExpr &Expr) const override;
   bool evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr, MCValue &Res,
                                  const MCAssembler *Asm) const override;
+  bool isValidUnquotedName(StringRef Name) const override;
 };
 
 struct AArch64MCAsmInfoELF : public MCAsmInfoELF {
+  StringSet<> ReservedIdentifiers;
   explicit AArch64MCAsmInfoELF(const Triple &T, const MCTargetOptions &Options);
   void printSpecifierExpr(raw_ostream &OS,
                           const MCSpecifierExpr &Expr) const override;
   bool evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr, MCValue &Res,
                                  const MCAssembler *Asm) const override;
+  bool isValidUnquotedName(StringRef Name) const override;
 };
 
 struct AArch64MCAsmInfoMicrosoftCOFF : public MCAsmInfoMicrosoft {
+  StringSet<> ReservedIdentifiers;
   explicit AArch64MCAsmInfoMicrosoftCOFF(const MCTargetOptions &Options);
   void printSpecifierExpr(raw_ostream &OS,
                           const MCSpecifierExpr &Expr) const override;
   bool evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr, MCValue &Res,
                                  const MCAssembler *Asm) const override;
+  bool isValidUnquotedName(StringRef Name) const override;
 };
 
 struct AArch64MCAsmInfoGNUCOFF : public MCAsmInfoGNUCOFF {
+  StringSet<> ReservedIdentifiers;
   explicit AArch64MCAsmInfoGNUCOFF(const MCTargetOptions &Options);
   void printSpecifierExpr(raw_ostream &OS,
                           const MCSpecifierExpr &Expr) const override;
   bool evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr, MCValue &Res,
                                  const MCAssembler *Asm) const override;
+  bool isValidUnquotedName(StringRef Name) const override;
 };
 
 namespace AArch64 {

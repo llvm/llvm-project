@@ -72,8 +72,8 @@ entry:
 define ghccc void @foo_double () nounwind {
 entry:
   ; CHECK-LABEL: foo_double
-  ; CHECK:       adrp    {{x[0-9]+}}, d1
-  ; CHECK-NEXT:  ldr     d12, [{{x[0-9]+}}, :lo12:d1]
+  ; CHECK:       adrp    {{x[0-9]+}}, "d1"
+  ; CHECK-NEXT:  ldr     d12, [{{x[0-9]+}}, :lo12:"d1"]
   ; CHECK-NEXT:  bl      bar_double
   ; CHECK-NEXT:  ret
 

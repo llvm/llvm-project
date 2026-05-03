@@ -104,8 +104,8 @@ declare i32 @__stdio_common_vsprintf(i64, ptr, i64, ptr, ptr, ptr) local_unnamed
 declare ptr @__local_stdio_printf_options() local_unnamed_addr #4
 
 define i32 @fp(ptr, i64, ptr, ...) local_unnamed_addr #6 {
-; CHECK-LABEL: fp:
-; CHECK:       .seh_proc fp
+; CHECK-LABEL: "fp":
+; CHECK:       .seh_proc "fp"
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    stp x19, x20, [sp, #-96]! // 16-byte Folded Spill
 ; CHECK-NEXT:    .seh_save_regp_x x19, 96
