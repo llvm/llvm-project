@@ -18464,12 +18464,8 @@ static void RemoveNestedImmediateInvocation(
       return E;
     }
 
-    // Default TransformOpaqueValueExpr asserts on OVEs that have a SourceExpr.
-    // __builtin_dump_struct binds the record pointer in an OpaqueValueExpr
-    // inside a PseudoObjectExpr; ComplexRemove can root inside the PSE's
-    // semantic form and reach that OVE without the binding setup the assert
-    // expects. The PSE owns the binding; nothing under ComplexRemove needs to
-    // rebuild the OVE's source here.
+    // We do not have enough information to transform opaque expressions and
+    // assume they do not contain immediate subexpressions.
     ExprResult TransformOpaqueValueExpr(OpaqueValueExpr *E) { return E; }
 
     bool AlwaysRebuild() { return false; }
