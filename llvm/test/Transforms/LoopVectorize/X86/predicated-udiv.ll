@@ -95,66 +95,66 @@ define void @simplify_udiv_4_in_replicate_region2(i8 %arg, ptr noalias %src, ptr
 ; CHECK-NEXT:    br i1 [[TMP28]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
 ; CHECK:       [[PRED_LOAD_IF]]:
 ; CHECK-NEXT:    [[TMP29:%.*]] = load i8, ptr [[TMP12]], align 1
-; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <4 x i8> poison, i8 [[TMP29]], i64 0
+; CHECK-NEXT:    [[TMP31:%.*]] = insertelement <4 x i8> poison, i8 [[TMP29]], i64 0
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE]]
 ; CHECK:       [[PRED_LOAD_CONTINUE]]:
-; CHECK-NEXT:    [[TMP27:%.*]] = phi <4 x i8> [ poison, %[[VECTOR_BODY]] ], [ [[TMP24]], %[[PRED_LOAD_IF]] ]
+; CHECK-NEXT:    [[TMP30:%.*]] = phi <4 x i8> [ poison, %[[VECTOR_BODY]] ], [ [[TMP31]], %[[PRED_LOAD_IF]] ]
 ; CHECK-NEXT:    [[TMP32:%.*]] = extractelement <4 x i1> [[TMP10]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP32]], label %[[PRED_LOAD_IF2:.*]], label %[[PRED_LOAD_CONTINUE3:.*]]
 ; CHECK:       [[PRED_LOAD_IF2]]:
 ; CHECK-NEXT:    [[TMP33:%.*]] = load i8, ptr [[TMP13]], align 1
-; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <4 x i8> [[TMP27]], i8 [[TMP33]], i64 1
+; CHECK-NEXT:    [[TMP35:%.*]] = insertelement <4 x i8> [[TMP30]], i8 [[TMP33]], i64 1
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE3]]
 ; CHECK:       [[PRED_LOAD_CONTINUE3]]:
-; CHECK-NEXT:    [[TMP26:%.*]] = phi <4 x i8> [ [[TMP27]], %[[PRED_LOAD_CONTINUE]] ], [ [[TMP25]], %[[PRED_LOAD_IF2]] ]
+; CHECK-NEXT:    [[TMP34:%.*]] = phi <4 x i8> [ [[TMP30]], %[[PRED_LOAD_CONTINUE]] ], [ [[TMP35]], %[[PRED_LOAD_IF2]] ]
 ; CHECK-NEXT:    [[TMP36:%.*]] = extractelement <4 x i1> [[TMP10]], i64 2
 ; CHECK-NEXT:    br i1 [[TMP36]], label %[[PRED_LOAD_IF4:.*]], label %[[PRED_LOAD_CONTINUE5:.*]]
 ; CHECK:       [[PRED_LOAD_IF4]]:
 ; CHECK-NEXT:    [[TMP37:%.*]] = load i8, ptr [[TMP14]], align 1
-; CHECK-NEXT:    [[TMP31:%.*]] = insertelement <4 x i8> [[TMP26]], i8 [[TMP37]], i64 2
+; CHECK-NEXT:    [[TMP39:%.*]] = insertelement <4 x i8> [[TMP34]], i8 [[TMP37]], i64 2
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE5]]
 ; CHECK:       [[PRED_LOAD_CONTINUE5]]:
-; CHECK-NEXT:    [[TMP30:%.*]] = phi <4 x i8> [ [[TMP26]], %[[PRED_LOAD_CONTINUE3]] ], [ [[TMP31]], %[[PRED_LOAD_IF4]] ]
+; CHECK-NEXT:    [[TMP38:%.*]] = phi <4 x i8> [ [[TMP34]], %[[PRED_LOAD_CONTINUE3]] ], [ [[TMP39]], %[[PRED_LOAD_IF4]] ]
 ; CHECK-NEXT:    [[TMP40:%.*]] = extractelement <4 x i1> [[TMP10]], i64 3
 ; CHECK-NEXT:    br i1 [[TMP40]], label %[[PRED_LOAD_IF6:.*]], label %[[PRED_LOAD_CONTINUE7:.*]]
 ; CHECK:       [[PRED_LOAD_IF6]]:
 ; CHECK-NEXT:    [[TMP41:%.*]] = load i8, ptr [[TMP15]], align 1
-; CHECK-NEXT:    [[TMP34:%.*]] = insertelement <4 x i8> [[TMP30]], i8 [[TMP41]], i64 3
+; CHECK-NEXT:    [[TMP42:%.*]] = insertelement <4 x i8> [[TMP38]], i8 [[TMP41]], i64 3
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE7]]
 ; CHECK:       [[PRED_LOAD_CONTINUE7]]:
-; CHECK-NEXT:    [[TMP43:%.*]] = phi <4 x i8> [ [[TMP30]], %[[PRED_LOAD_CONTINUE5]] ], [ [[TMP34]], %[[PRED_LOAD_IF6]] ]
+; CHECK-NEXT:    [[TMP43:%.*]] = phi <4 x i8> [ [[TMP38]], %[[PRED_LOAD_CONTINUE5]] ], [ [[TMP42]], %[[PRED_LOAD_IF6]] ]
 ; CHECK-NEXT:    [[TMP44:%.*]] = extractelement <4 x i1> [[TMP11]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP44]], label %[[PRED_LOAD_IF8:.*]], label %[[PRED_LOAD_CONTINUE9:.*]]
 ; CHECK:       [[PRED_LOAD_IF8]]:
 ; CHECK-NEXT:    [[TMP45:%.*]] = load i8, ptr [[TMP20]], align 1
-; CHECK-NEXT:    [[TMP39:%.*]] = insertelement <4 x i8> poison, i8 [[TMP45]], i64 0
+; CHECK-NEXT:    [[TMP47:%.*]] = insertelement <4 x i8> poison, i8 [[TMP45]], i64 0
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE9]]
 ; CHECK:       [[PRED_LOAD_CONTINUE9]]:
-; CHECK-NEXT:    [[TMP38:%.*]] = phi <4 x i8> [ poison, %[[PRED_LOAD_CONTINUE7]] ], [ [[TMP39]], %[[PRED_LOAD_IF8]] ]
+; CHECK-NEXT:    [[TMP46:%.*]] = phi <4 x i8> [ poison, %[[PRED_LOAD_CONTINUE7]] ], [ [[TMP47]], %[[PRED_LOAD_IF8]] ]
 ; CHECK-NEXT:    [[TMP48:%.*]] = extractelement <4 x i1> [[TMP11]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP48]], label %[[PRED_LOAD_IF10:.*]], label %[[PRED_LOAD_CONTINUE11:.*]]
 ; CHECK:       [[PRED_LOAD_IF10]]:
 ; CHECK-NEXT:    [[TMP49:%.*]] = load i8, ptr [[TMP21]], align 1
-; CHECK-NEXT:    [[TMP47:%.*]] = insertelement <4 x i8> [[TMP38]], i8 [[TMP49]], i64 1
+; CHECK-NEXT:    [[TMP51:%.*]] = insertelement <4 x i8> [[TMP46]], i8 [[TMP49]], i64 1
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE11]]
 ; CHECK:       [[PRED_LOAD_CONTINUE11]]:
-; CHECK-NEXT:    [[TMP42:%.*]] = phi <4 x i8> [ [[TMP38]], %[[PRED_LOAD_CONTINUE9]] ], [ [[TMP47]], %[[PRED_LOAD_IF10]] ]
+; CHECK-NEXT:    [[TMP50:%.*]] = phi <4 x i8> [ [[TMP46]], %[[PRED_LOAD_CONTINUE9]] ], [ [[TMP51]], %[[PRED_LOAD_IF10]] ]
 ; CHECK-NEXT:    [[TMP52:%.*]] = extractelement <4 x i1> [[TMP11]], i64 2
 ; CHECK-NEXT:    br i1 [[TMP52]], label %[[PRED_LOAD_IF12:.*]], label %[[PRED_LOAD_CONTINUE13:.*]]
 ; CHECK:       [[PRED_LOAD_IF12]]:
 ; CHECK-NEXT:    [[TMP53:%.*]] = load i8, ptr [[TMP22]], align 1
-; CHECK-NEXT:    [[TMP50:%.*]] = insertelement <4 x i8> [[TMP42]], i8 [[TMP53]], i64 2
+; CHECK-NEXT:    [[TMP55:%.*]] = insertelement <4 x i8> [[TMP50]], i8 [[TMP53]], i64 2
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE13]]
 ; CHECK:       [[PRED_LOAD_CONTINUE13]]:
-; CHECK-NEXT:    [[TMP46:%.*]] = phi <4 x i8> [ [[TMP42]], %[[PRED_LOAD_CONTINUE11]] ], [ [[TMP50]], %[[PRED_LOAD_IF12]] ]
+; CHECK-NEXT:    [[TMP54:%.*]] = phi <4 x i8> [ [[TMP50]], %[[PRED_LOAD_CONTINUE11]] ], [ [[TMP55]], %[[PRED_LOAD_IF12]] ]
 ; CHECK-NEXT:    [[TMP56:%.*]] = extractelement <4 x i1> [[TMP11]], i64 3
 ; CHECK-NEXT:    br i1 [[TMP56]], label %[[PRED_LOAD_IF14:.*]], label %[[PRED_LOAD_CONTINUE15:.*]]
 ; CHECK:       [[PRED_LOAD_IF14]]:
 ; CHECK-NEXT:    [[TMP57:%.*]] = load i8, ptr [[TMP23]], align 1
-; CHECK-NEXT:    [[TMP51:%.*]] = insertelement <4 x i8> [[TMP46]], i8 [[TMP57]], i64 3
+; CHECK-NEXT:    [[TMP58:%.*]] = insertelement <4 x i8> [[TMP54]], i8 [[TMP57]], i64 3
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE15]]
 ; CHECK:       [[PRED_LOAD_CONTINUE15]]:
-; CHECK-NEXT:    [[TMP59:%.*]] = phi <4 x i8> [ [[TMP46]], %[[PRED_LOAD_CONTINUE13]] ], [ [[TMP51]], %[[PRED_LOAD_IF14]] ]
+; CHECK-NEXT:    [[TMP59:%.*]] = phi <4 x i8> [ [[TMP54]], %[[PRED_LOAD_CONTINUE13]] ], [ [[TMP58]], %[[PRED_LOAD_IF14]] ]
 ; CHECK-NEXT:    [[TMP60:%.*]] = lshr <4 x i8> [[TMP43]], splat (i8 1)
 ; CHECK-NEXT:    [[TMP61:%.*]] = lshr <4 x i8> [[TMP59]], splat (i8 1)
 ; CHECK-NEXT:    br i1 [[TMP28]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]

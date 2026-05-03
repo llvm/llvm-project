@@ -52,34 +52,34 @@ define i32 @chained_smax(i32 %x, ptr %src) {
 ; CHECK-NEXT:    br i1 true, label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
 ; CHECK:       [[PRED_LOAD_IF]]:
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[SRC]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[TMP5]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> poison, i32 [[TMP5]], i64 0
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE]]
 ; CHECK:       [[PRED_LOAD_CONTINUE]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = phi <4 x i32> [ poison, %[[VECTOR_BODY]] ], [ [[TMP2]], %[[PRED_LOAD_IF]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = phi <4 x i32> [ poison, %[[VECTOR_BODY]] ], [ [[TMP3]], %[[PRED_LOAD_IF]] ]
 ; CHECK-NEXT:    br i1 true, label %[[PRED_LOAD_IF1:.*]], label %[[PRED_LOAD_CONTINUE2:.*]]
 ; CHECK:       [[PRED_LOAD_IF1]]:
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr [3 x i32], ptr [[SRC]], i64 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[TMP10]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[TMP11]], i64 1
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> [[TMP6]], i32 [[TMP11]], i64 1
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE2]]
 ; CHECK:       [[PRED_LOAD_CONTINUE2]]:
-; CHECK-NEXT:    [[TMP7:%.*]] = phi <4 x i32> [ [[TMP3]], %[[PRED_LOAD_CONTINUE]] ], [ [[TMP6]], %[[PRED_LOAD_IF1]] ]
+; CHECK-NEXT:    [[TMP8:%.*]] = phi <4 x i32> [ [[TMP6]], %[[PRED_LOAD_CONTINUE]] ], [ [[TMP7]], %[[PRED_LOAD_IF1]] ]
 ; CHECK-NEXT:    br i1 false, label %[[PRED_LOAD_IF3:.*]], label %[[PRED_LOAD_CONTINUE4:.*]]
 ; CHECK:       [[PRED_LOAD_IF3]]:
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr [3 x i32], ptr [[SRC]], i64 2
 ; CHECK-NEXT:    [[TMP17:%.*]] = load i32, ptr [[TMP16]], align 4
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i32> [[TMP7]], i32 [[TMP17]], i64 2
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i32> [[TMP8]], i32 [[TMP17]], i64 2
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE4]]
 ; CHECK:       [[PRED_LOAD_CONTINUE4]]:
-; CHECK-NEXT:    [[TMP13:%.*]] = phi <4 x i32> [ [[TMP7]], %[[PRED_LOAD_CONTINUE2]] ], [ [[TMP12]], %[[PRED_LOAD_IF3]] ]
+; CHECK-NEXT:    [[TMP12:%.*]] = phi <4 x i32> [ [[TMP8]], %[[PRED_LOAD_CONTINUE2]] ], [ [[TMP13]], %[[PRED_LOAD_IF3]] ]
 ; CHECK-NEXT:    br i1 false, label %[[PRED_LOAD_IF5:.*]], label %[[PRED_LOAD_CONTINUE6:.*]]
 ; CHECK:       [[PRED_LOAD_IF5]]:
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr [3 x i32], ptr [[SRC]], i64 3
 ; CHECK-NEXT:    [[TMP23:%.*]] = load i32, ptr [[TMP22]], align 4
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x i32> [[TMP13]], i32 [[TMP23]], i64 3
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x i32> [[TMP12]], i32 [[TMP23]], i64 3
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE6]]
 ; CHECK:       [[PRED_LOAD_CONTINUE6]]:
-; CHECK-NEXT:    [[TMP20:%.*]] = phi <4 x i32> [ [[TMP13]], %[[PRED_LOAD_CONTINUE4]] ], [ [[TMP14]], %[[PRED_LOAD_IF5]] ]
+; CHECK-NEXT:    [[TMP20:%.*]] = phi <4 x i32> [ [[TMP12]], %[[PRED_LOAD_CONTINUE4]] ], [ [[TMP15]], %[[PRED_LOAD_IF5]] ]
 ; CHECK-NEXT:    [[TMP21:%.*]] = call <4 x i32> @llvm.smax.v4i32(<4 x i32> [[TMP20]], <4 x i32> [[TMP1]])
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:

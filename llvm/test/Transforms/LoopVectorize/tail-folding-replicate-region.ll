@@ -29,34 +29,34 @@ define void @f(ptr %p, i64 %n) {
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
 ; CHECK:       [[PRED_LOAD_IF]]:
 ; CHECK-NEXT:    [[TMP13:%.*]] = load i32, ptr [[TMP4]], align 4
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> poison, i32 [[TMP13]], i64 0
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x i32> poison, i32 [[TMP13]], i64 0
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE]]
 ; CHECK:       [[PRED_LOAD_CONTINUE]]:
-; CHECK-NEXT:    [[TMP11:%.*]] = phi <4 x i32> [ poison, %[[VECTOR_BODY]] ], [ [[TMP10]], %[[PRED_LOAD_IF]] ]
+; CHECK-NEXT:    [[TMP15:%.*]] = phi <4 x i32> [ poison, %[[VECTOR_BODY]] ], [ [[TMP14]], %[[PRED_LOAD_IF]] ]
 ; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x i1> [[TMP3]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP16]], label %[[PRED_LOAD_IF1:.*]], label %[[PRED_LOAD_CONTINUE2:.*]]
 ; CHECK:       [[PRED_LOAD_IF1]]:
 ; CHECK-NEXT:    [[TMP17:%.*]] = load i32, ptr [[TMP5]], align 4
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x i32> [[TMP11]], i32 [[TMP17]], i64 1
+; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x i32> [[TMP15]], i32 [[TMP17]], i64 1
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE2]]
 ; CHECK:       [[PRED_LOAD_CONTINUE2]]:
-; CHECK-NEXT:    [[TMP15:%.*]] = phi <4 x i32> [ [[TMP11]], %[[PRED_LOAD_CONTINUE]] ], [ [[TMP14]], %[[PRED_LOAD_IF1]] ]
+; CHECK-NEXT:    [[TMP19:%.*]] = phi <4 x i32> [ [[TMP15]], %[[PRED_LOAD_CONTINUE]] ], [ [[TMP18]], %[[PRED_LOAD_IF1]] ]
 ; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <4 x i1> [[TMP3]], i64 2
 ; CHECK-NEXT:    br i1 [[TMP20]], label %[[PRED_LOAD_IF3:.*]], label %[[PRED_LOAD_CONTINUE4:.*]]
 ; CHECK:       [[PRED_LOAD_IF3]]:
 ; CHECK-NEXT:    [[TMP21:%.*]] = load i32, ptr [[TMP6]], align 4
-; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x i32> [[TMP15]], i32 [[TMP21]], i64 2
+; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <4 x i32> [[TMP19]], i32 [[TMP21]], i64 2
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE4]]
 ; CHECK:       [[PRED_LOAD_CONTINUE4]]:
-; CHECK-NEXT:    [[TMP19:%.*]] = phi <4 x i32> [ [[TMP15]], %[[PRED_LOAD_CONTINUE2]] ], [ [[TMP18]], %[[PRED_LOAD_IF3]] ]
+; CHECK-NEXT:    [[TMP23:%.*]] = phi <4 x i32> [ [[TMP19]], %[[PRED_LOAD_CONTINUE2]] ], [ [[TMP22]], %[[PRED_LOAD_IF3]] ]
 ; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x i1> [[TMP3]], i64 3
 ; CHECK-NEXT:    br i1 [[TMP24]], label %[[PRED_LOAD_IF5:.*]], label %[[PRED_LOAD_CONTINUE6:.*]]
 ; CHECK:       [[PRED_LOAD_IF5]]:
 ; CHECK-NEXT:    [[TMP25:%.*]] = load i32, ptr [[TMP7]], align 4
-; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <4 x i32> [[TMP19]], i32 [[TMP25]], i64 3
+; CHECK-NEXT:    [[TMP26:%.*]] = insertelement <4 x i32> [[TMP23]], i32 [[TMP25]], i64 3
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE6]]
 ; CHECK:       [[PRED_LOAD_CONTINUE6]]:
-; CHECK-NEXT:    [[TMP27:%.*]] = phi <4 x i32> [ [[TMP19]], %[[PRED_LOAD_CONTINUE4]] ], [ [[TMP22]], %[[PRED_LOAD_IF5]] ]
+; CHECK-NEXT:    [[TMP27:%.*]] = phi <4 x i32> [ [[TMP23]], %[[PRED_LOAD_CONTINUE4]] ], [ [[TMP26]], %[[PRED_LOAD_IF5]] ]
 ; CHECK-NEXT:    [[TMP28:%.*]] = add <4 x i32> [[TMP27]], splat (i32 1)
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:

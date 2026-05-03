@@ -46,15 +46,6 @@ class Value;
 /// vectors it is an expression determined at runtime.
 Value *getRuntimeVF(IRBuilderBase &B, Type *Ty, ElementCount VF);
 
-/// Compute the transformed value of Index at offset StartValue using step
-/// StepValue.
-/// For integer induction, returns StartValue + Index * StepValue.
-/// For pointer induction, returns StartValue[Index * StepValue].
-Value *emitTransformedIndex(IRBuilderBase &B, Value *Index, Value *StartValue,
-                            Value *Step,
-                            InductionDescriptor::InductionKind InductionKind,
-                            const BinaryOperator *InductionBinOp);
-
 /// A range of powers-of-2 vectorization factors with fixed start and
 /// adjustable end. The range includes start and excludes end, e.g.,:
 /// [1, 16) = {1, 2, 4, 8}
