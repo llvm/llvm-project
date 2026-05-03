@@ -65,6 +65,13 @@ public:
   bool combineMachineInstrs();
 
 protected:
+  virtual bool canMatchOpcode(unsigned Opc) const { return true; }
+
+  /// Return false to skip adding \p MI to the initial worklist.
+  virtual bool shouldAddToWorkList(MachineInstr &MI) const {
+    return canMatchOpcode(MI.getOpcode());
+  }
+
   const CombinerInfo &CInfo;
   GISelChangeObserver &Observer;
   MachineIRBuilder &B;

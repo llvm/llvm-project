@@ -759,6 +759,7 @@ public:
   bool tryCombineAll(MachineInstr &I) const override;
 
   bool tryCombineAllImpl(MachineInstr &I) const;
+  bool shouldAddToWorkList(MachineInstr &MI) const override;
 
 private:
 #define GET_GICOMBINER_CLASS_MEMBERS
@@ -783,6 +784,22 @@ AArch64PreLegalizerCombinerImpl::AArch64PreLegalizerCombinerImpl(
 #include "AArch64GenPreLegalizeGICombiner.inc"
 #undef GET_GICOMBINER_CONSTRUCTOR_INITS
 {
+}
+
+bool AArch64PreLegalizerCombinerImpl::shouldAddToWorkList(
+    MachineInstr &MI) const {
+  switch (MI.getOpcode()) {
+  // Keep this in sync with the handwritten opcodes in tryCombineAll().
+  case TargetOpcode::G_SHUFFLE_VECTOR:
+  case TargetOpcode::G_UADDO:
+  case TargetOpcode::G_MEMCPY_INLINE:
+  case TargetOpcode::G_MEMCPY:
+  case TargetOpcode::G_MEMMOVE:
+  case TargetOpcode::G_MEMSET:
+    return true;
+  default:
+    return canMatchOpcode(MI.getOpcode());
+  }
 }
 
 bool AArch64PreLegalizerCombinerImpl::tryCombineAll(MachineInstr &MI) const {
