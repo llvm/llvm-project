@@ -480,8 +480,8 @@ static void PrivateAutoComplete(
 /// completion. Returns an invalid CompilerType if not in a method context.
 static CompilerType GetInstanceVariableType(StackFrame &frame,
                                             VariableList &variable_list) {
-  SymbolContext sc = frame.GetSymbolContext(eSymbolContextFunction |
-                                            eSymbolContextBlock);
+  SymbolContext sc =
+      frame.GetSymbolContext(eSymbolContextFunction | eSymbolContextBlock);
   llvm::StringRef instance_name = sc.GetInstanceVariableName();
   if (instance_name.empty())
     return {};
