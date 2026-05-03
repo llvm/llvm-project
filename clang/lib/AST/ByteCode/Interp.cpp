@@ -910,6 +910,8 @@ static bool CheckInvoke(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
       return false;
     if (!IsCtorDtor && !CheckLifetime(S, OpPC, Ptr, AK_MemberCall))
       return false;
+    if (!CheckMutable(S, OpPC, Ptr))
+      return false;
   }
   return true;
 }
@@ -1781,6 +1783,14 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
       if (!CheckInvoke(S, OpPC, ThisPtr,
                        Func->isConstructor() || Func->isDestructor()))
         return cleanup();
+
+      if (Func->isCopyOrMoveOperator() || Func->isCopyOrMoveConstructor()) {
+        const Pointer &RVOPtr =
+            S.Stk.peek<Pointer>(ThisOffset - align(sizeof(Pointer)));
+        if (!CheckInvoke(S, OpPC, RVOPtr, /*IsCtorDtor=*/true))
+          return cleanup();
+      }
+
       if (!Func->isConstructor() && !Func->isDestructor() &&
           !CheckActive(S, OpPC, ThisPtr, AK_MemberCall))
         return false;
