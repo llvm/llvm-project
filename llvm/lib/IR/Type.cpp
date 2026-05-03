@@ -67,6 +67,18 @@ bool Type::isScalableTy(SmallPtrSetImpl<const Type *> &Visited) const {
 }
 
 bool Type::isScalableTy() const {
+  switch (getTypeID()) {
+  case ScalableVectorTyID:
+    return true;
+  case TargetExtTyID:
+    return isScalableTargetExtTy();
+  case ArrayTyID:
+  case StructTyID:
+    break;
+  default:
+    return false;
+  }
+
   SmallPtrSet<const Type *, 4> Visited;
   return isScalableTy(Visited);
 }
