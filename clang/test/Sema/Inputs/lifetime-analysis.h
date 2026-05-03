@@ -3,6 +3,11 @@ namespace __gnu_cxx {
 template <typename T>
 struct basic_iterator {
   basic_iterator operator++();
+  basic_iterator operator++(int);
+  basic_iterator operator--();
+  basic_iterator operator--(int);
+  basic_iterator operator+(int);
+  basic_iterator operator-(int);
   T& operator*() const;
   T* operator->() const;
 };
@@ -11,29 +16,10 @@ template<typename T>
 bool operator==(basic_iterator<T>, basic_iterator<T>);
 template<typename T>
 bool operator!=(basic_iterator<T>, basic_iterator<T>);
-
-// These iterator spellings match libstdc++ names documented at:
-// https://gcc.gnu.org/onlinedocs/libstdc++/libstdc++-html-USERS-4.2/namespace____gnu__cxx.html
-template <typename T>
-struct __normal_iterator {
-  __normal_iterator operator++();
-  __normal_iterator operator++(int);
-  __normal_iterator operator--();
-  __normal_iterator operator--(int);
-  __normal_iterator operator+(int) const;
-  __normal_iterator operator-(int) const;
-  T& operator*() const;
-  T* operator->() const;
-};
-
 template<typename T>
-bool operator==(__normal_iterator<T>, __normal_iterator<T>);
+basic_iterator<T> operator+(int, basic_iterator<T>);
 template<typename T>
-bool operator!=(__normal_iterator<T>, __normal_iterator<T>);
-template<typename T>
-__normal_iterator<T> operator+(int, __normal_iterator<T>);
-template<typename T>
-__normal_iterator<T> operator-(int, __normal_iterator<T>);
+basic_iterator<T> operator-(int, basic_iterator<T>);
 }
 
 namespace std {
@@ -71,27 +57,6 @@ struct initializer_list {
 };
 template<typename T> class allocator {};
 
-template <typename T>
-struct __wrap_iter {
-  __wrap_iter operator++();
-  __wrap_iter operator++(int);
-  __wrap_iter operator--();
-  __wrap_iter operator--(int);
-  __wrap_iter operator+(int) const;
-  __wrap_iter operator-(int) const;
-  T& operator*() const;
-  T* operator->() const;
-};
-
-template<typename T>
-bool operator==(__wrap_iter<T>, __wrap_iter<T>);
-template<typename T>
-bool operator!=(__wrap_iter<T>, __wrap_iter<T>);
-template<typename T>
-__wrap_iter<T> operator+(int, __wrap_iter<T>);
-template<typename T>
-__wrap_iter<T> operator-(int, __wrap_iter<T>);
-
 template <typename Iterator>
 struct reverse_iterator {
   reverse_iterator operator++();
@@ -110,13 +75,8 @@ reverse_iterator<Iterator> operator-(int, reverse_iterator<Iterator>);
 
 template <typename T, typename Alloc = allocator<T>>
 struct vector {
-#ifdef USE_LIBSTDCPP_ITERATORS
-  using iterator = __gnu_cxx::__normal_iterator<T>;
-  using const_iterator = __gnu_cxx::__normal_iterator<const T>;
-#else
-  using iterator = __wrap_iter<T>;
-  using const_iterator = __wrap_iter<const T>;
-#endif
+  using iterator = __gnu_cxx::basic_iterator<T>;
+  using const_iterator = __gnu_cxx::basic_iterator<const T>;
   using reverse_iterator = std::reverse_iterator<iterator>;
   using const_reverse_iterator = std::reverse_iterator<const_iterator>;
   iterator begin();

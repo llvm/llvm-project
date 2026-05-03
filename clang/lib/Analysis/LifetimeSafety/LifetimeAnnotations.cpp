@@ -13,6 +13,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
+#include "clang/Basic/OperatorKinds.h"
 #include "llvm/ADT/StringSet.h"
 
 namespace clang::lifetimes {
@@ -139,8 +140,10 @@ bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee,
   if (RunningUnderLifetimeSafety &&
       isGslPointerType(Callee->getFunctionObjectParameterType()) &&
       isReferenceOrPointerLikeType(Callee->getReturnType())) {
-    if (Callee->getOverloadedOperator() == OverloadedOperatorKind::OO_Star ||
-        Callee->getOverloadedOperator() == OverloadedOperatorKind::OO_Arrow)
+    auto Op = Callee->getOverloadedOperator();
+    llvm::SmallDenseSet<OverloadedOperatorKind> PropagatingOps = {
+        OO_Star, OO_Arrow, OO_PlusPlus, OO_MinusMinus, OO_Plus, OO_Minus};
+    if (PropagatingOps.contains(Op))
       return true;
     if (Callee->getIdentifier() &&
         (IteratorMembers.contains(Callee->getName()) ||
@@ -230,6 +233,19 @@ bool shouldTrackFirstArgument(const FunctionDecl *FD) {
   return false;
 }
 
+bool shouldTrackSecondArgument(const FunctionDecl *FD) {
+  if (FD->getNumParams() < 2)
+    return false;
+  if (!isInStlNamespace(FD))
+    return false;
+  const auto *RD = FD->getParamDecl(1)->getType()->getAsCXXRecordDecl();
+  if (!RD || !isInStlNamespace(RD))
+    return false;
+  return RD->hasAttr<PointerAttr>() &&
+         (FD->getOverloadedOperator() == OO_Plus ||
+          FD->getOverloadedOperator() == OO_Minus);
+}
+
 template <typename T> static bool isRecordWithAttr(QualType Type) {
   auto *RD = Type->getAsCXXRecordDecl();
   if (!RD)
@@ -281,25 +297,6 @@ static bool isStdUniquePtr(const CXXRecordDecl &RD) {
 bool isUniquePtrRelease(const CXXMethodDecl &MD) {
   return MD.getIdentifier() && MD.getName() == "release" &&
          MD.getNumParams() == 0 && isStdUniquePtr(*MD.getParent());
-}
-
-bool isIteratorType(const CXXRecordDecl *RD) {
-  // FIXME: Extend this to cover more iterator wrapper types used by standard
-  // library implementations.
-  static const llvm::StringSet<> Iterators = {
-      // Standard reverse iterator wrapper.
-      "reverse_iterator",
-      // libstdc++ contiguous iterator wrapper.
-      "__normal_iterator",
-      // libc++ contiguous iterator wrapper.
-      "__wrap_iter"};
-  return RD && isInStlNamespace(RD) && Iterators.contains(getName(*RD));
-}
-
-bool isPropagatingIteratorOp(OverloadedOperatorKind OP) {
-  llvm::SmallDenseSet<OverloadedOperatorKind> PropagatingOperators = {
-      OO_Plus, OO_Minus, OO_PlusPlus, OO_MinusMinus};
-  return PropagatingOperators.contains(OP);
 }
 
 bool isInvalidationMethod(const CXXMethodDecl &MD) {

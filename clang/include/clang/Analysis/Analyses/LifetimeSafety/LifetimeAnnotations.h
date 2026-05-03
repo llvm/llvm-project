@@ -61,6 +61,8 @@ bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee,
 // std::any_cast.
 bool shouldTrackFirstArgument(const FunctionDecl *FD);
 
+bool shouldTrackSecondArgument(const FunctionDecl *FD);
+
 // Tells whether the type is annotated with [[gsl::Pointer]].
 bool isGslPointerType(QualType QT);
 // Tells whether the type is annotated with [[gsl::Owner]].
@@ -71,9 +73,6 @@ bool isGslOwnerType(QualType QT);
 // when ownership is manually transferred.
 bool isUniquePtrRelease(const CXXMethodDecl &MD);
 
-bool isIteratorType(const CXXRecordDecl *RD);
-
-bool isPropagatingIteratorOp(OverloadedOperatorKind OP);
 // Returns true if the given method invalidates references tracked by lifetime
 // analysis (e.g. vector::push_back). Methods that only invalidate iterators but
 // not references (e.g. unordered_map::emplace) are not considered invalidating

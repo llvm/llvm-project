@@ -542,23 +542,6 @@ void FactsGenerator::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
     }
   }
 
-  if (OCE->getNumArgs() < 3 && isPropagatingIteratorOp(OCE->getOperator())) {
-    const Expr *IteratorArg = nullptr;
-    for (const Expr *Arg : OCE->arguments()) {
-      if (isIteratorType(Arg->getType()->getAsCXXRecordDecl())) {
-        IteratorArg = Arg;
-        break;
-      }
-    }
-
-    if (IteratorArg) {
-      flow(getOriginsList(*OCE),
-           getRValueOrigins(IteratorArg, getOriginsList(*IteratorArg)),
-           /*Kill=*/true);
-      return;
-    }
-  }
-
   ArrayRef Args = {OCE->getArgs(), OCE->getNumArgs()};
   // For `static operator()`, the first argument is the object argument,
   // remove it from the argument list to avoid off-by-one errors.
@@ -913,6 +896,8 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
         // declaration.
         PVD = Method->getParamDecl(I - 1);
     } else if (I == 0 && shouldTrackFirstArgument(FD)) {
+      return true;
+    } else if (I == 1 && shouldTrackSecondArgument(FD)) {
       return true;
     } else if (I < FD->getNumParams()) {
       // For free functions or static methods.
