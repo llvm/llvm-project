@@ -1344,3 +1344,25 @@ void g() {
     f<int>();
 }
 }  // namespace GH156579
+
+namespace GH192846 {
+// Regression for GH192846: the default TransformOpaqueValueExpr asserts on
+// OVEs bound by __builtin_dump_struct when the printing callback is
+// immediate-escalated. ComplexRemove must not reach that path.
+
+struct S {};
+
+consteval void F(S &out, const char *fmt, ...) {}
+
+template <class T>
+class C {
+  T value = {};
+};
+
+constexpr C<int> g_c{};
+
+void bar() {
+  S s;
+  __builtin_dump_struct(&g_c, F, s);
+}
+}  // namespace GH192846
