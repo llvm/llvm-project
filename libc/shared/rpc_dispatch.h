@@ -194,10 +194,10 @@ RPC_ATTRS constexpr void finish_args(rpc::Server::Port &port, State &&state,
 
 // Dispatch a function call to the server through the RPC mechanism. Copies the
 // argument list through the RPC interface.
-template <uint32_t OPCODE, typename FnTy, typename... CallArgs>
-RPC_ATTRS constexpr typename function_traits<FnTy>::return_type
-dispatch(rpc::Client &client, FnTy, CallArgs... args) {
-  using Traits = function_traits<FnTy>;
+template <uint32_t OPCODE, auto Fn, typename... CallArgs>
+RPC_ATTRS constexpr typename function_traits<decltype(Fn)>::return_type
+dispatch(rpc::Client &client, CallArgs... args) {
+  using Traits = function_traits<decltype(Fn)>;
   using RetTy = typename Traits::return_type;
   using TupleTy = typename Traits::arg_types;
   using Bytes = tuple_bytes<rpc::remove_span_t<CallArgs>...>;

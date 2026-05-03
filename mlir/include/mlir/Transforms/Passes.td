@@ -100,6 +100,30 @@ def CSEPass : Pass<"cse"> {
   ];
 }
 
+def TrivialDeadCodeEliminationPass : Pass<"trivial-dce"> {
+  let summary = "Remove trivially dead operations and blocks";
+  let description = [{
+    This pass eliminates only trivially dead operations; that is,
+    side-effect-free operations with no users. By default, it also removes
+    trivially dead blocks; that is, blocks that are unreachable from their
+    region entry block. The `remove-blocks` option can be disabled to preserve
+    unreachable blocks.
+
+    This pass does not run a liveness analysis and does not remove dead
+    use-def cycles.
+
+    By default, this pass recursively visits nested regions. The `recursive`
+    option can be disabled to restrict the pass to only the immediate regions
+    nested under the current operation.
+  }];
+  let options = [
+    Option<"recursive", "recursive", "bool", /*default=*/"true",
+           "Recursively visit nested regions">,
+    Option<"removeBlocks", "remove-blocks", "bool", /*default=*/"true",
+           "Remove unreachable blocks">
+  ];
+}
+
 def RemoveDeadValuesPass : Pass<"remove-dead-values"> {
   let summary = "Remove dead values";
   let description = [{

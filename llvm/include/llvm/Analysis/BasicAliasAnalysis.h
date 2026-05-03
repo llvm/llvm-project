@@ -75,6 +75,7 @@ public:
 
   LLVM_ABI AliasResult aliasErrno(const MemoryLocation &Loc, const Module *M);
 
+  using AAResultBase::getModRefInfo;
   LLVM_ABI ModRefInfo getModRefInfo(const CallBase *Call,
                                     const MemoryLocation &Loc,
                                     AAQueryInfo &AAQI);

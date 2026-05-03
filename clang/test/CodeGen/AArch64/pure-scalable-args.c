@@ -478,3 +478,15 @@ void test_tuple_reg_count_bool(svboolx4_t x, svboolx4_t y) {
 }
 // CHECK-AAPCS:  declare void @test_tuple_reg_count_bool_callee(<vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, ptr noundef dead_on_return)
 // CHECK-DARWIN: declare void @test_tuple_reg_count_bool_callee(<vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>)
+
+// Regression test for incorrect counting of SIMD registers (NSRN) when consumerd by `__mfp8`.
+//   0.0 -> d0-d6
+//   x   -> v7
+//   *p  -> memory, address -> x0
+void test_mfp8_reg_count(SmallPST *p, __mfp8 x) {
+    void test_mfp8_reg_count_callee(double, double, double, double, double,
+                                     double, double, __mfp8, SmallPST);
+    test_mfp8_reg_count_callee(.0, .0, .0, .0, .0, .0, .0, x, *p);
+}
+// CHECK-AAPCS:  declare void @test_mfp8_reg_count_callee(double noundef, double noundef, double noundef, double noundef, double noundef, double noundef, double noundef, <1 x i8>, ptr noundef dead_on_return)
+// CHECK-DARWIN: declare void @test_mfp8_reg_count_callee(double noundef, double noundef, double noundef, double noundef, double noundef, double noundef, double noundef, <1 x i8>, i128)

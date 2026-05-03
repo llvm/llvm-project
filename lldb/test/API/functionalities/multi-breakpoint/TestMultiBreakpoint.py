@@ -12,37 +12,20 @@ from lldbsuite.test import lldbutil
 from lldbsuite.test.gdbclientutils import *
 
 
-@skipIfWindows # No server on Windows.
+@skipIfWindows  # No server on Windows.
 @skipIfOutOfTreeDebugserver
 # Runs on systems where we can always predict the software break size
 @skipIf(archs=no_match(["x86_64", "arm64", "aarch64"]))
 class TestMultiBreakpoint(TestBase):
-    def send_packet(self, packet_str):
-        packet_str = escape_binary(packet_str)
-        self.runCmd(f"process plugin packet send '{packet_str}'", check=False)
-        output = self.res.GetOutput()
-        reply = output.split("\n")
-        # The output is of the form:
-        #  packet: <packet_str>
-        #  response: <response>
-        packet_line = None
-        response_line = None
-        for line in reply:
-            line = line.strip()
-            if line.startswith("packet:"):
-                packet_line = line
-            elif line.startswith("response:"):
-                response_line = line
-        self.assertIsNotNone(packet_line, f'No "packet:" line in output: {output}')
-        self.assertIsNotNone(response_line, f'No "response:" line in output: {output}')
-        return response_line[len("response:") :].strip()
-
     def check_invalid_packet(self, packet_str):
-        reply = self.send_packet(packet_str)
+        reply = lldbutil.send_packet_get_reply(self, packet_str)
         if reply.startswith("E"):
             return
         else:
             self.assertMultiResponse(reply, ["error"])
+
+    def send_packet(self, packet_str):
+        return lldbutil.send_packet_get_reply(self, packet_str)
 
     def assertMultiResponse(self, reply, expected):
         """Assert a JSON-array multi-response matches the expected pattern.
@@ -84,8 +67,8 @@ class TestMultiBreakpoint(TestBase):
         )
 
         # Verify the server advertises jMultiBreakpoint support.
-        reply = self.send_packet("qSupported")
-        self.assertIn("jMultiBreakpoint+", reply)
+        capabilities = lldbutil.get_qsupported_capabilities(self)
+        self.assertIn("jMultiBreakpoint+", capabilities)
 
         addr_a = self.get_function_address("func_a")
         addr_b = self.get_function_address("func_b")

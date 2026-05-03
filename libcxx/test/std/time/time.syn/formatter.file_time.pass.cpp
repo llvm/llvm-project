@@ -155,15 +155,9 @@ static void test_valid_values_month() {
         file_seconds(2'000'000'000s)); // 03:33:20 UTC on Wednesday, 18 May 2033
 
   // Use the global locale (fr_FR)
-#if defined(__APPLE__)
-  check(SV("%b='jan'\t%h='jan'\t%B='janvier'\t%m='01'\t%Om='01'\n"),
-        lfmt,
-        file_seconds(0s)); // 00:00:00 UTC Thursday, 1 January 1970
-#else
   check(SV("%b='janv.'\t%h='janv.'\t%B='janvier'\t%m='01'\t%Om='01'\n"),
         lfmt,
         file_seconds(0s)); // 00:00:00 UTC Thursday, 1 January 1970
-#endif
 
   check(SV("%b='mai'\t%h='mai'\t%B='mai'\t%m='05'\t%Om='05'\n"),
         lfmt,
@@ -180,7 +174,7 @@ static void test_valid_values_month() {
         SV("%b='5'\t%h='5'\t%B='5月'\t%m='05'\t%Om='05'\n"),
         lfmt,
         file_seconds(2'000'000'000s)); // 03:33:20 UTC on Wednesday, 18 May 2033
-#elif defined(_AIX)                    // _WIN32
+#elif defined(_AIX)
   check(loc,
         SV("%b='1月'\t%h='1月'\t%B='1月'\t%m='01'\t%Om='01'\n"),
         lfmt,
@@ -190,17 +184,7 @@ static void test_valid_values_month() {
         SV("%b='5月'\t%h='5月'\t%B='5月'\t%m='05'\t%Om='05'\n"),
         lfmt,
         file_seconds(2'000'000'000s)); // 03:33:20 UTC on Wednesday, 18 May 2033
-#elif defined(__APPLE__)               // _WIN32
-  check(loc,
-        SV("%b=' 1'\t%h=' 1'\t%B='1月'\t%m='01'\t%Om='01'\n"),
-        lfmt,
-        file_seconds(0s)); // 00:00:00 UTC Thursday, 1 January 1970
-
-  check(loc,
-        SV("%b=' 5'\t%h=' 5'\t%B='5月'\t%m='05'\t%Om='05'\n"),
-        lfmt,
-        file_seconds(2'000'000'000s)); // 03:33:20 UTC on Wednesday, 18 May 2033
-#elif defined(__FreeBSD__)             // _WIN32
+#elif defined(__FreeBSD__) || defined(__APPLE__) // _WIN32
   check(loc,
         SV("%b=' 1月'\t%h=' 1月'\t%B='1月'\t%m='01'\t%Om='01'\n"),
         lfmt,
@@ -300,15 +284,6 @@ static void test_valid_values_weekday() {
         file_seconds(4'294'967'295s)); // 06:28:15 UTC on Sunday, 7 February 2106
 
   // Use the global locale (fr_FR)
-#if defined(__APPLE__)
-  check(SV("%a='Jeu'\t%A='Jeudi'\t%u='4'\t%Ou='4'\t%w='4'\t%Ow='4'\n"),
-        lfmt,
-        file_seconds(0s)); // 00:00:00 UTC Thursday, 1 January 1970
-
-  check(SV("%a='Dim'\t%A='Dimanche'\t%u='7'\t%Ou='7'\t%w='0'\t%Ow='0'\n"),
-        lfmt,
-        file_seconds(4'294'967'295s)); // 06:28:15 UTC on Sunday, 7 February 2106
-#else
   check(SV("%a='jeu.'\t%A='jeudi'\t%u='4'\t%Ou='4'\t%w='4'\t%Ow='4'\n"),
         lfmt,
         file_seconds(0s)); // 00:00:00 UTC Thursday, 1 January 1970
@@ -316,7 +291,6 @@ static void test_valid_values_weekday() {
   check(SV("%a='dim.'\t%A='dimanche'\t%u='7'\t%Ou='7'\t%w='0'\t%Ow='0'\n"),
         lfmt,
         file_seconds(4'294'967'295s)); // 06:28:15 UTC on Sunday, 7 February 2106
-#endif
 
   // Use supplied locale (ja_JP).
   // This locale has a different alternate, but not on all platforms
@@ -812,11 +786,9 @@ static void test_valid_values_date_time() {
       SV("%c='jeu. 01 janv. 1970 00:00:00 GMT'\t%Ec='jeu. 01 janv. 1970 00:00:00 GMT'\n"),
 #elif defined(_AIX)
       SV("%c=' 1 janvier 1970 à 00:00:00 UTC'\t%Ec=' 1 janvier 1970 à 00:00:00 UTC'\n"),
-#elif defined(__APPLE__)
-      SV("%c='Jeu  1 jan 00:00:00 1970'\t%Ec='Jeu  1 jan 00:00:00 1970'\n"),
 #elif defined(_WIN32)
       SV("%c='01/01/1970 00:00:00'\t%Ec='01/01/1970 00:00:00'\n"),
-#elif defined(__FreeBSD__)
+#elif defined(__FreeBSD__) || defined(__APPLE__)
       SV("%c='jeu.  1 janv. 00:00:00 1970'\t%Ec='jeu.  1 janv. 00:00:00 1970'\n"),
 #else
       SV("%c='jeu. 01 janv. 1970 00:00:00'\t%Ec='jeu. 01 janv. 1970 00:00:00'\n"),
@@ -832,11 +804,9 @@ static void test_valid_values_date_time() {
       SV("%c='ven. 13 févr. 2009 23:31:30 GMT'\t%Ec='ven. 13 févr. 2009 23:31:30 GMT'\n"),
 #elif defined(_AIX)
       SV("%c='13 février 2009 à 23:31:30 UTC'\t%Ec='13 février 2009 à 23:31:30 UTC'\n"),
-#elif defined(__APPLE__)
-      SV("%c='Ven 13 fév 23:31:30 2009'\t%Ec='Ven 13 fév 23:31:30 2009'\n"),
 #elif defined(_WIN32)
       SV("%c='13/02/2009 23:31:30'\t%Ec='13/02/2009 23:31:30'\n"),
-#elif defined(__FreeBSD__)
+#elif defined(__FreeBSD__) || defined(__APPLE__)
       SV("%c='ven. 13 févr. 23:31:30 2009'\t%Ec='ven. 13 févr. 23:31:30 2009'\n"),
 #else
       SV("%c='ven. 13 févr. 2009 23:31:30'\t%Ec='ven. 13 févr. 2009 23:31:30'\n"),

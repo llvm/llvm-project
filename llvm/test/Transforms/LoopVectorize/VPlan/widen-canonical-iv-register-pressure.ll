@@ -23,23 +23,26 @@ define i32 @two_reductions(i64 %N, ptr %a, ptr %b) {
 ; UF1-NEXT:    EMIT vp<%trip.count.minus.1> = sub ir<%N>, ir<1>
 ; UF1-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = reduction-start-vector ir<0>, ir<0>, ir<1>
 ; UF1-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = broadcast vp<%trip.count.minus.1>
+; UF1-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = step-vector i64
+; UF1-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = broadcast ir<4>
 ; UF1-NEXT:  Successor(s): vector.body
 ; UF1-EMPTY:
 ; UF1-NEXT:  vector.body:
 ; UF1-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%index.next>, vector.body ]
 ; UF1-NEXT:    WIDEN-REDUCTION-PHI ir<%sum.a> = phi vp<[[VP2]]>, ir<%sum.a.next>
 ; UF1-NEXT:    WIDEN-REDUCTION-PHI ir<%sum.b> = phi vp<[[VP2]]>, ir<%sum.b.next>
-; UF1-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION vp<%index>
-; UF1-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = icmp ule vp<[[VP4]]>, vp<[[VP3]]>
+; UF1-NEXT:    WIDEN-PHI vp<[[VP6:%[0-9]+]]> = phi [ vp<[[VP4]]>, vector.ph ], [ vp<%vec.ind.next>, vector.body ]
+; UF1-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = icmp ule vp<[[VP6]]>, vp<[[VP3]]>
 ; UF1-NEXT:    CLONE ir<%ga> = getelementptr inbounds ir<%a>, vp<%index>
 ; UF1-NEXT:    CLONE ir<%gb> = getelementptr inbounds ir<%b>, vp<%index>
-; UF1-NEXT:    WIDEN ir<%la> = load ir<%ga>, vp<[[VP5]]>
-; UF1-NEXT:    WIDEN ir<%lb> = load ir<%gb>, vp<[[VP5]]>
+; UF1-NEXT:    WIDEN ir<%la> = load ir<%ga>, vp<[[VP7]]>
+; UF1-NEXT:    WIDEN ir<%lb> = load ir<%gb>, vp<[[VP7]]>
 ; UF1-NEXT:    WIDEN ir<%sum.a.next> = add ir<%sum.a>, ir<%la>
 ; UF1-NEXT:    WIDEN ir<%sum.b.next> = add ir<%sum.b>, ir<%lb>
 ; UF1-NEXT:    EMIT vp<%index.next> = add vp<%index>, ir<4>
-; UF1-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = icmp eq vp<%index.next>, vp<%n.vec>
-; UF1-NEXT:    EMIT branch-on-cond vp<[[VP6]]>
+; UF1-NEXT:    EMIT vp<%vec.ind.next> = add vp<[[VP6]]>, vp<[[VP5]]>
+; UF1-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = icmp eq vp<%index.next>, vp<%n.vec>
+; UF1-NEXT:    EMIT branch-on-cond vp<[[VP8]]>
 ; UF1-NEXT:  Successor(s): middle.block, vector.body
 ; UF1-EMPTY:
 ; UF1-NEXT:  middle.block:

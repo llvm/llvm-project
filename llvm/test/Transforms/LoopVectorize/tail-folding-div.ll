@@ -12,11 +12,9 @@ define void @test_sdiv_variant_divisor_induction(ptr noalias %a, ptr noalias %c)
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND1:%.*]] = phi <2 x i64> [ <i64 1, i64 2>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND2:%.*]] = phi <2 x i16> [ <i16 0, i16 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT2:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[INDEX]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[INDEX]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[VEC_IV:%.*]] = add <2 x i64> [[BROADCAST_SPLAT]], <i64 0, i64 1>
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule <2 x i64> [[VEC_IV]], splat (i64 1024)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule <2 x i16> [[VEC_IND2]], splat (i16 1024)
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr [[A]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = call <2 x i64> @llvm.masked.load.v2i64.p0(ptr align 4 [[TMP4]], <2 x i1> [[TMP2]], <2 x i64> poison)
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = select <2 x i1> [[TMP2]], <2 x i64> [[VEC_IND1]], <2 x i64> splat (i64 1)
@@ -25,6 +23,7 @@ define void @test_sdiv_variant_divisor_induction(ptr noalias %a, ptr noalias %c)
 ; CHECK-NEXT:    call void @llvm.masked.store.v2i64.p0(<2 x i64> [[TMP13]], ptr align 4 [[TMP15]], <2 x i1> [[TMP2]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND1]], splat (i64 2)
+; CHECK-NEXT:    [[VEC_IND_NEXT2]] = add nuw <2 x i16> [[VEC_IND2]], splat (i16 2)
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1026
 ; CHECK-NEXT:    br i1 [[TMP20]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -60,10 +59,8 @@ define void @test_sdiv_variant_divisor_load(ptr noalias %a, ptr noalias %b, ptr 
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE:.*]]
 ; CHECK:       [[PRED_LOAD_CONTINUE]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi i64 [ 0, %[[VECTOR_BODY]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_LOAD_CONTINUE]] ]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[TMP1]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[VEC_IV:%.*]] = add <2 x i64> [[BROADCAST_SPLAT]], <i64 0, i64 1>
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule <2 x i64> [[VEC_IV]], splat (i64 1024)
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i16> [ <i16 0, i16 1>, %[[VECTOR_BODY]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_LOAD_CONTINUE]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule <2 x i16> [[VEC_IND]], splat (i16 1024)
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i64, ptr [[A]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = call <2 x i64> @llvm.masked.load.v2i64.p0(ptr align 4 [[TMP13]], <2 x i1> [[TMP2]], <2 x i64> poison)
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i64, ptr [[B]], i64 [[TMP1]]
@@ -73,6 +70,7 @@ define void @test_sdiv_variant_divisor_load(ptr noalias %a, ptr noalias %b, ptr 
 ; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr i64, ptr [[C]], i64 [[TMP1]]
 ; CHECK-NEXT:    call void @llvm.masked.store.v2i64.p0(<2 x i64> [[TMP22]], ptr align 4 [[TMP27]], <2 x i1> [[TMP2]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP1]], 2
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw <2 x i16> [[VEC_IND]], splat (i16 2)
 ; CHECK-NEXT:    [[TMP29:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1026
 ; CHECK-NEXT:    br i1 [[TMP29]], label %[[MIDDLE_BLOCK:.*]], label %[[PRED_LOAD_CONTINUE]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -112,10 +110,8 @@ define void @test_sdiv_invariant_divisor_nonconst(ptr noalias %a, i64 %b, ptr no
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE:.*]]
 ; CHECK:       [[PRED_LOAD_CONTINUE]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_LOAD_CONTINUE]] ]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x i64> poison, i64 [[TMP1]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT1]], <2 x i64> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[VEC_IV:%.*]] = add <2 x i64> [[BROADCAST_SPLAT2]], <i64 0, i64 1>
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule <2 x i64> [[VEC_IV]], splat (i64 1024)
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i16> [ <i16 0, i16 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_LOAD_CONTINUE]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule <2 x i16> [[VEC_IND]], splat (i16 1024)
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i64, ptr [[A]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = call <2 x i64> @llvm.masked.load.v2i64.p0(ptr align 4 [[TMP9]], <2 x i1> [[TMP2]], <2 x i64> poison)
 ; CHECK-NEXT:    [[TMP13:%.*]] = select <2 x i1> [[TMP2]], <2 x i64> [[BROADCAST_SPLAT]], <2 x i64> splat (i64 1)
@@ -123,6 +119,7 @@ define void @test_sdiv_invariant_divisor_nonconst(ptr noalias %a, i64 %b, ptr no
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i64, ptr [[C]], i64 [[TMP1]]
 ; CHECK-NEXT:    call void @llvm.masked.store.v2i64.p0(<2 x i64> [[TMP14]], ptr align 4 [[TMP19]], <2 x i1> [[TMP2]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP1]], 2
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw <2 x i16> [[VEC_IND]], splat (i16 2)
 ; CHECK-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1026
 ; CHECK-NEXT:    br i1 [[TMP21]], label %[[MIDDLE_BLOCK:.*]], label %[[PRED_LOAD_CONTINUE]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -158,10 +155,8 @@ define void @test_sdiv_invariant_divisor_minusone(ptr noalias %a, ptr noalias %c
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE:.*]]
 ; CHECK:       [[PRED_LOAD_CONTINUE]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi i64 [ 0, %[[VECTOR_BODY]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_LOAD_CONTINUE]] ]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[TMP1]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[VEC_IV:%.*]] = add <2 x i64> [[BROADCAST_SPLAT]], <i64 0, i64 1>
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule <2 x i64> [[VEC_IV]], splat (i64 1024)
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i16> [ <i16 0, i16 1>, %[[VECTOR_BODY]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_LOAD_CONTINUE]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule <2 x i16> [[VEC_IND]], splat (i16 1024)
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i64, ptr [[A]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = call <2 x i64> @llvm.masked.load.v2i64.p0(ptr align 4 [[TMP9]], <2 x i1> [[TMP2]], <2 x i64> poison)
 ; CHECK-NEXT:    [[TMP13:%.*]] = select <2 x i1> [[TMP2]], <2 x i64> splat (i64 -1), <2 x i64> splat (i64 1)
@@ -169,6 +164,7 @@ define void @test_sdiv_invariant_divisor_minusone(ptr noalias %a, ptr noalias %c
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i64, ptr [[C]], i64 [[TMP1]]
 ; CHECK-NEXT:    call void @llvm.masked.store.v2i64.p0(<2 x i64> [[TMP14]], ptr align 4 [[TMP19]], <2 x i1> [[TMP2]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP1]], 2
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw <2 x i16> [[VEC_IND]], splat (i16 2)
 ; CHECK-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1026
 ; CHECK-NEXT:    br i1 [[TMP21]], label %[[MIDDLE_BLOCK:.*]], label %[[PRED_LOAD_CONTINUE]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -204,16 +200,15 @@ define void @test_sdiv_invariant_divisor_safeimm(ptr noalias %a, ptr noalias %c)
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE:.*]]
 ; CHECK:       [[PRED_LOAD_CONTINUE]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi i64 [ 0, %[[VECTOR_BODY]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_LOAD_CONTINUE]] ]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[TMP1]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[VEC_IV:%.*]] = add <2 x i64> [[BROADCAST_SPLAT]], <i64 0, i64 1>
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule <2 x i64> [[VEC_IV]], splat (i64 1024)
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i16> [ <i16 0, i16 1>, %[[VECTOR_BODY]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_LOAD_CONTINUE]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule <2 x i16> [[VEC_IND]], splat (i16 1024)
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i64, ptr [[A]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = call <2 x i64> @llvm.masked.load.v2i64.p0(ptr align 4 [[TMP9]], <2 x i1> [[TMP0]], <2 x i64> poison)
 ; CHECK-NEXT:    [[TMP13:%.*]] = sdiv <2 x i64> [[TMP12]], splat (i64 3)
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr i64, ptr [[C]], i64 [[TMP1]]
 ; CHECK-NEXT:    call void @llvm.masked.store.v2i64.p0(<2 x i64> [[TMP13]], ptr align 4 [[TMP18]], <2 x i1> [[TMP0]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP1]], 2
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw <2 x i16> [[VEC_IND]], splat (i16 2)
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1026
 ; CHECK-NEXT:    br i1 [[TMP20]], label %[[MIDDLE_BLOCK:.*]], label %[[PRED_LOAD_CONTINUE]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -296,10 +291,8 @@ define void @test_sdiv_both_invariant_nonconst(ptr noalias %a, i64 %b, i64 %b2, 
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE:.*]]
 ; CHECK:       [[PRED_LOAD_CONTINUE]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_LOAD_CONTINUE]] ]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <2 x i64> poison, i64 [[TMP2]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT3]], <2 x i64> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[VEC_IV:%.*]] = add <2 x i64> [[BROADCAST_SPLAT4]], <i64 0, i64 1>
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ule <2 x i64> [[VEC_IV]], splat (i64 1024)
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i16> [ <i16 0, i16 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_LOAD_CONTINUE]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ule <2 x i16> [[VEC_IND]], splat (i16 1024)
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i64, ptr [[A]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = call <2 x i64> @llvm.masked.load.v2i64.p0(ptr align 4 [[TMP10]], <2 x i1> [[TMP3]], <2 x i64> poison)
 ; CHECK-NEXT:    [[TMP13:%.*]] = select <2 x i1> [[TMP3]], <2 x i64> [[BROADCAST_SPLAT2]], <2 x i64> splat (i64 1)
@@ -308,6 +301,7 @@ define void @test_sdiv_both_invariant_nonconst(ptr noalias %a, i64 %b, i64 %b2, 
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i64, ptr [[C]], i64 [[TMP2]]
 ; CHECK-NEXT:    call void @llvm.masked.store.v2i64.p0(<2 x i64> [[TMP14]], ptr align 4 [[TMP19]], <2 x i1> [[TMP3]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP2]], 2
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw <2 x i16> [[VEC_IND]], splat (i16 2)
 ; CHECK-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1026
 ; CHECK-NEXT:    br i1 [[TMP21]], label %[[MIDDLE_BLOCK:.*]], label %[[PRED_LOAD_CONTINUE]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:

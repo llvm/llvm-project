@@ -363,6 +363,12 @@ MLIR_CAPI_EXPORTED bool mlirLocationIsAName(MlirLocation location);
 /// Creates a location with unknown position owned by the given context.
 MLIR_CAPI_EXPORTED MlirLocation mlirLocationUnknownGet(MlirContext context);
 
+/// TypeID Getter for Unknown.
+MLIR_CAPI_EXPORTED MlirTypeID mlirLocationUnknownGetTypeID(void);
+
+/// Checks whether the given location is an Unknown.
+MLIR_CAPI_EXPORTED bool mlirLocationIsAUnknown(MlirLocation location);
+
 /// Gets the context that a location was created with.
 MLIR_CAPI_EXPORTED MlirContext mlirLocationGetContext(MlirLocation location);
 

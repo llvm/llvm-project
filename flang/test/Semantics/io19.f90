@@ -36,13 +36,27 @@
   !ERROR: Unexpected '.' in format expression
   write(*, '(AT10.2)') str
 
-  ! AT with width on input produces two independent errors.
+  ! AT with width on input produces two and three independent errors.
   !ERROR: 'AT' edit descriptor does not accept a width value
   !ERROR: 'AT' edit descriptor must not be used for input
   read(*, '(AT10)') str
+  !ERROR: 'AT' edit descriptor does not accept a width value
+  !ERROR: 'AT' edit descriptor must not be used for input
+  !ERROR: Unexpected '.' in format expression
+  read(*, '(AT10.2)') str
 
   ! FORMAT statements are standalone; the compiler cannot know if they will
   ! be used with READ or WRITE, so no compile-time error is expected here.
 2 format(AT)
   read(*,2) str
+
+  ! AT with width in FORMAT statements; report compiling error, but not
+  ! READ error.
+  !ERROR: 'AT' edit descriptor does not accept a width value
+3 format(AT10)
+  write(*,3) str
+  !ERROR: 'AT' edit descriptor does not accept a width value
+  !ERROR: Unexpected '.' in format expression
+4 format(AT10.2)
+  read(*,4) str
 end

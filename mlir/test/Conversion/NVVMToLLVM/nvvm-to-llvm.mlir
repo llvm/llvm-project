@@ -771,3 +771,20 @@ llvm.func @cvt_i8_bf16(%a : i8)  {
                           -> i16
   llvm.return  
 }
+
+
+// CHECK-LABEL: @inline_ptx_single_rw_no_result(
+// CHECK-SAME: %[[arg0:[a-zA-Z0-9_]+]]: f32, %[[arg1:[a-zA-Z0-9_]+]]: f32)
+llvm.func @inline_ptx_single_rw_no_result(%a : f32, %b : f32) -> f32 {
+  // Single read-write operand and no declared results: the inline asm result
+  // value represents the post-asm value of the RW operand and must replace
+  // its uses (without trying to replace the wrapper op's non-existent result).
+  // CHECK: %[[C:.+]] = llvm.fadd %[[arg0]], %[[arg1]] : f32
+  // CHECK: %[[S0:.+]] = llvm.inline_asm has_side_effects asm_dialect = att "asm1 ", "=f,0" %[[C]] : (f32) -> f32
+  // CHECK: %[[R:.+]] = llvm.fadd %[[S0]], %[[arg0]] : f32
+  // CHECK: llvm.return %[[R]] : f32
+  %c = llvm.fadd %a, %b : f32
+  nvvm.inline_ptx "asm1 " rw(%c : f32)
+  %a2 = llvm.fadd %c, %a : f32
+  llvm.return %a2 : f32
+}

@@ -355,6 +355,11 @@ private:
   LogicalResult emitDecoration(uint32_t target, spirv::Decoration decoration,
                                ArrayRef<uint32_t> params = {});
 
+  /// Emits an OpDecorateId instruction to decorate the given `target` with the
+  /// given `decoration` whose extra operands are SPIR-V <id>s.
+  LogicalResult emitDecorationId(uint32_t target, spirv::Decoration decoration,
+                                 ArrayRef<uint32_t> operandIds);
+
   /// Emits an OpLine instruction with the given `loc` location information into
   /// the given `binary` vector.
   LogicalResult emitDebugLine(SmallVectorImpl<uint32_t> &binary, Location loc);

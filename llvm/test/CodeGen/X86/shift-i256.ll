@@ -172,7 +172,7 @@ define i256 @shl_i256(i256 %a0, i256 %a1) nounwind {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $112, %esp
-; X86-NEXT:    movl 44(%ebp), %ecx
+; X86-NEXT:    movzbl 44(%ebp), %ecx
 ; X86-NEXT:    movl 12(%ebp), %eax
 ; X86-NEXT:    movl 16(%ebp), %edx
 ; X86-NEXT:    movl 20(%ebp), %esi
@@ -239,7 +239,6 @@ define i256 @shl_i256(i256 %a0, i256 %a1) nounwind {
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
 ; X86-NEXT:    movl %edi, %edx
 ; X86-NEXT:    shll %cl, %edx
-; X86-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
 ; X86-NEXT:    shldl %cl, %edi, %esi
 ; X86-NEXT:    movl %esi, 4(%eax)
@@ -408,7 +407,7 @@ define i256 @lshr_i256(i256 %a0, i256 %a1) nounwind {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $112, %esp
-; X86-NEXT:    movl 44(%ebp), %ecx
+; X86-NEXT:    movzbl 44(%ebp), %ecx
 ; X86-NEXT:    movl 12(%ebp), %eax
 ; X86-NEXT:    movl 16(%ebp), %edx
 ; X86-NEXT:    movl 20(%ebp), %esi
@@ -457,7 +456,6 @@ define i256 @lshr_i256(i256 %a0, i256 %a1) nounwind {
 ; X86-NEXT:    shrdl %cl, %edx, %esi
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; X86-NEXT:    shrdl %cl, %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
-; X86-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X86-NEXT:    shrl %cl, %edx
 ; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    movl %edx, 28(%eax)
@@ -647,7 +645,7 @@ define i256 @ashr_i256(i256 %a0, i256 %a1) nounwind {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $112, %esp
-; X86-NEXT:    movl 44(%ebp), %ecx
+; X86-NEXT:    movzbl 44(%ebp), %ecx
 ; X86-NEXT:    movl 12(%ebp), %eax
 ; X86-NEXT:    movl 16(%ebp), %edx
 ; X86-NEXT:    movl 20(%ebp), %esi
@@ -697,7 +695,6 @@ define i256 @ashr_i256(i256 %a0, i256 %a1) nounwind {
 ; X86-NEXT:    shrdl %cl, %edx, %esi
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; X86-NEXT:    shrdl %cl, %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
-; X86-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X86-NEXT:    sarl %cl, %edx
 ; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    movl %edx, 28(%eax)
@@ -897,7 +894,7 @@ define i256 @shl_i256_load(ptr %p0, i256 %a1) nounwind {
 ; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl 16(%ebp), %ecx
+; X86-NEXT:    movzbl 16(%ebp), %ecx
 ; X86-NEXT:    movl %edi, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
@@ -954,7 +951,6 @@ define i256 @shl_i256_load(ptr %p0, i256 %a1) nounwind {
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
 ; X86-NEXT:    movl %edi, %edx
 ; X86-NEXT:    shll %cl, %edx
-; X86-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
 ; X86-NEXT:    shldl %cl, %edi, %esi
 ; X86-NEXT:    movl %esi, 4(%eax)
@@ -1132,7 +1128,7 @@ define i256 @lshr_i256_load(ptr %p0, i256 %a1) nounwind {
 ; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl 16(%ebp), %ecx
+; X86-NEXT:    movzbl 16(%ebp), %ecx
 ; X86-NEXT:    movl %edi, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
@@ -1171,7 +1167,6 @@ define i256 @lshr_i256_load(ptr %p0, i256 %a1) nounwind {
 ; X86-NEXT:    shrdl %cl, %edx, %esi
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; X86-NEXT:    shrdl %cl, %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
-; X86-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X86-NEXT:    shrl %cl, %edx
 ; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    movl %edx, 28(%eax)
@@ -1388,7 +1383,7 @@ define i256 @ashr_i256_load(ptr %p0, i256 %a1) nounwind {
 ; X86-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl 16(%ebp), %ecx
+; X86-NEXT:    movzbl 16(%ebp), %ecx
 ; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl %edi, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
@@ -1428,7 +1423,6 @@ define i256 @ashr_i256_load(ptr %p0, i256 %a1) nounwind {
 ; X86-NEXT:    shrdl %cl, %edx, %esi
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; X86-NEXT:    shrdl %cl, %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
-; X86-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X86-NEXT:    sarl %cl, %edx
 ; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    movl %edx, 28(%eax)
@@ -2048,7 +2042,7 @@ define i256 @shl_1_i256(i256 %a0) nounwind {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $112, %esp
-; X86-NEXT:    movl 12(%ebp), %ecx
+; X86-NEXT:    movzbl 12(%ebp), %ecx
 ; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
@@ -2107,7 +2101,6 @@ define i256 @shl_1_i256(i256 %a0) nounwind {
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
 ; X86-NEXT:    movl %edi, %edx
 ; X86-NEXT:    shll %cl, %edx
-; X86-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
 ; X86-NEXT:    shldl %cl, %edi, %esi
 ; X86-NEXT:    movl %esi, 4(%eax)
@@ -2267,7 +2260,7 @@ define i256 @lshr_signbit_i256(i256 %a0) nounwind {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $112, %esp
-; X86-NEXT:    movl 12(%ebp), %ecx
+; X86-NEXT:    movzbl 12(%ebp), %ecx
 ; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
@@ -2308,7 +2301,6 @@ define i256 @lshr_signbit_i256(i256 %a0) nounwind {
 ; X86-NEXT:    shrdl %cl, %edx, %esi
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; X86-NEXT:    shrdl %cl, %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
-; X86-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X86-NEXT:    shrl %cl, %edx
 ; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    movl %edx, 28(%eax)
@@ -2481,7 +2473,7 @@ define i256 @ashr_signbit_i256(i256 %a0) nounwind {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $112, %esp
-; X86-NEXT:    movl 12(%ebp), %ecx
+; X86-NEXT:    movzbl 12(%ebp), %ecx
 ; X86-NEXT:    movl $-1, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl $-1, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl $-1, {{[0-9]+}}(%esp)
@@ -2522,7 +2514,6 @@ define i256 @ashr_signbit_i256(i256 %a0) nounwind {
 ; X86-NEXT:    shrdl %cl, %edx, %esi
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; X86-NEXT:    shrdl %cl, %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
-; X86-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X86-NEXT:    sarl %cl, %edx
 ; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    movl %edx, 28(%eax)
@@ -2706,7 +2697,7 @@ define i256 @shl_allbits_i256(i256 %a0) nounwind {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $112, %esp
-; X86-NEXT:    movl 12(%ebp), %ecx
+; X86-NEXT:    movzbl 12(%ebp), %ecx
 ; X86-NEXT:    movl $-1, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl $-1, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl $-1, {{[0-9]+}}(%esp)
@@ -2765,7 +2756,6 @@ define i256 @shl_allbits_i256(i256 %a0) nounwind {
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
 ; X86-NEXT:    movl %edi, %edx
 ; X86-NEXT:    shll %cl, %edx
-; X86-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
 ; X86-NEXT:    shldl %cl, %edi, %esi
 ; X86-NEXT:    movl %esi, 4(%eax)
@@ -2926,7 +2916,7 @@ define i256 @lshr_allbits_i256(i256 %a0) nounwind {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $112, %esp
-; X86-NEXT:    movl 12(%ebp), %ecx
+; X86-NEXT:    movzbl 12(%ebp), %ecx
 ; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
@@ -2967,7 +2957,6 @@ define i256 @lshr_allbits_i256(i256 %a0) nounwind {
 ; X86-NEXT:    shrdl %cl, %edx, %esi
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; X86-NEXT:    shrdl %cl, %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
-; X86-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X86-NEXT:    shrl %cl, %edx
 ; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    movl %edx, 28(%eax)
@@ -3090,7 +3079,7 @@ define i64 @lshr_extract_i256_i64(i256 %a0, i256 %a1) nounwind {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $64, %esp
-; X86-NEXT:    movl 40(%ebp), %ecx
+; X86-NEXT:    movzbl 40(%ebp), %ecx
 ; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    movl 12(%ebp), %edx
 ; X86-NEXT:    movl 16(%ebp), %esi
@@ -3123,7 +3112,6 @@ define i64 @lshr_extract_i256_i64(i256 %a0, i256 %a1) nounwind {
 ; X86-NEXT:    movl 4(%esp,%edx,4), %edi
 ; X86-NEXT:    movl %edi, %edx
 ; X86-NEXT:    shrdl %cl, %esi, %edx
-; X86-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X86-NEXT:    shrdl %cl, %edi, %eax
 ; X86-NEXT:    leal -8(%ebp), %esp
 ; X86-NEXT:    popl %esi
@@ -3164,7 +3152,7 @@ define i64 @ashr_extract_i256_i64(i256 %a0, i256 %a1) nounwind {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $64, %esp
-; X86-NEXT:    movl 40(%ebp), %ecx
+; X86-NEXT:    movzbl 40(%ebp), %ecx
 ; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    movl 12(%ebp), %edx
 ; X86-NEXT:    movl 16(%ebp), %esi
@@ -3198,7 +3186,6 @@ define i64 @ashr_extract_i256_i64(i256 %a0, i256 %a1) nounwind {
 ; X86-NEXT:    movl 4(%esp,%edx,4), %edi
 ; X86-NEXT:    movl %edi, %edx
 ; X86-NEXT:    shrdl %cl, %esi, %edx
-; X86-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X86-NEXT:    shrdl %cl, %edi, %eax
 ; X86-NEXT:    leal -8(%ebp), %esp
 ; X86-NEXT:    popl %esi
@@ -3321,7 +3308,7 @@ define i64 @lshr_extract_load_i256_i64(ptr %p0, i256 %a1) nounwind {
 ; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl 12(%ebp), %ecx
+; X86-NEXT:    movzbl 12(%ebp), %ecx
 ; X86-NEXT:    movl %edi, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
@@ -3344,7 +3331,6 @@ define i64 @lshr_extract_load_i256_i64(ptr %p0, i256 %a1) nounwind {
 ; X86-NEXT:    movl 20(%esp,%edx,4), %edi
 ; X86-NEXT:    movl %edi, %edx
 ; X86-NEXT:    shrdl %cl, %esi, %edx
-; X86-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X86-NEXT:    shrdl %cl, %edi, %eax
 ; X86-NEXT:    leal -12(%ebp), %esp
 ; X86-NEXT:    popl %esi
@@ -3452,7 +3438,7 @@ define i64 @ashr_extract_load_i256_i64(ptr %p0, i256 %a1) nounwind {
 ; X86-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl 12(%ebp), %ecx
+; X86-NEXT:    movzbl 12(%ebp), %ecx
 ; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl %edi, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
@@ -3476,7 +3462,6 @@ define i64 @ashr_extract_load_i256_i64(ptr %p0, i256 %a1) nounwind {
 ; X86-NEXT:    movl 20(%esp,%edx,4), %edi
 ; X86-NEXT:    movl %edi, %edx
 ; X86-NEXT:    shrdl %cl, %esi, %edx
-; X86-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X86-NEXT:    shrdl %cl, %edi, %eax
 ; X86-NEXT:    leal -12(%ebp), %esp
 ; X86-NEXT:    popl %esi

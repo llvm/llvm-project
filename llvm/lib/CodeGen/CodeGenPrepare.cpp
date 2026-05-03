@@ -1806,8 +1806,7 @@ bool CodeGenPrepare::unfoldPowerOf2Test(CmpInst *Cmp) {
   const APInt *C;
 
   // (icmp (ctpop x), c)
-  if (!match(Cmp, m_ICmp(Pred, m_Intrinsic<Intrinsic::ctpop>(m_Value(X)),
-                         m_APIntAllowPoison(C))))
+  if (!match(Cmp, m_ICmp(Pred, m_Ctpop(m_Value(X)), m_APIntAllowPoison(C))))
     return false;
 
   // We're only interested in "is power of 2 [or zero]" patterns.

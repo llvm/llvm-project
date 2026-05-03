@@ -4,6 +4,7 @@ set(files
   SimpleSymbolTable.cpp
   Error.cpp
   ExecutorProcessInfo.cpp
+  NativeDylibManager.cpp
   QueueingTaskDispatcher.cpp
   RTTI.cpp
   Service.cpp
@@ -12,6 +13,8 @@ set(files
   TaskDispatcher.cpp
   ThreadPoolTaskDispatcher.cpp
   sps-ci/AllSPSCI.cpp
+  sps-ci/MemoryAccessSPSCI.cpp
+  sps-ci/NativeDylibManagerSPSCI.cpp
   sps-ci/SimpleNativeMemoryMapSPSCI.cpp
   )
 

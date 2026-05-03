@@ -1,5 +1,7 @@
-#RUN: dsymutil -f -oso-prepend-path=%p/Inputs/ -y %s -no-output 2>&1 \
+#RUN: dsymutil --linker classic -f -oso-prepend-path=%p/Inputs/ -y %s -no-output 2>&1 \
 #RUN:   |  FileCheck %s
+
+## FIXME: Support --linker parallel
 
 # CHECK: warning: could not find referenced DIE
 

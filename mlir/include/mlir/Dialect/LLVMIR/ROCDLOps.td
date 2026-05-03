@@ -536,6 +536,19 @@ def ROCDL_BarrierOp : ROCDL_Op<"barrier"> {
   let assemblyFormat = "attr-dict";
 }
 
+def ROCDL_WaveBarrierOp : ROCDL_ConcreteNonMemIntrOp<"wave.barrier", [], 0> {
+  let assemblyFormat = "attr-dict";
+  let description = [{
+    Insert a wave-level (subgroup) barrier. Synchronizes lanes within a
+    single wave/wavefront without any memory ordering guarantees.
+
+    Example:
+    ```mlir
+    rocdl.wave.barrier
+    ```
+  }];
+}
+
 def ROCDLGlobalBuffer : LLVM_PointerInAddressSpace<1>;
 def ROCDLBufferLDS : LLVM_PointerInAddressSpace<3>;
 
@@ -1907,6 +1920,44 @@ foreach bitsVal = [8, 32, 64, 128] in {
       ```mlir
       // Async }] # !cast<string>(bitsVal) # [{-bit load from global to LDS.
       rocdl.global.load.async.to.lds.}] # bitsStr # [{ %src, %dst, 0, 0 : !llvm.ptr<1>, !llvm.ptr<3>
+      ```
+    }];
+
+    let extraClassDefinition = [{
+      ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
+        return {getGlobalPtr(), getLdsPtr()};
+      }
+    }];
+  }
+}
+
+//===---------------------------------------------------------------------===//
+// Async store from LDS intrinsic (available in GFX1250)
+//===---------------------------------------------------------------------===//
+
+foreach bitsVal = [8, 32, 64, 128] in {
+  defvar bitsStr = "b" # !cast<string>(bitsVal);
+  def ROCDL_GlobalStoreAsyncFromLDS # !toupper(bitsStr) # Op :
+    ROCDL_IntrOp<"global.store.async.from.lds." # bitsStr, [], [], [], 0, 0, 1, 0, [2, 3], ["offset", "aux"]> {
+    dag args = (ins Arg<ROCDLGlobalBuffer, "", [MemWrite]>:$globalPtr,
+                   Arg<ROCDLBufferLDS, "", [MemRead]>:$ldsPtr,
+                   I32Attr:$offset,
+                   I32Attr:$aux);
+    let arguments = !con(args, baseArgs);
+    let assemblyFormat = [{
+      $globalPtr `,`  $ldsPtr `,` $offset `,` $aux
+      attr-dict `:` qualified(type($globalPtr)) `,` qualified(type($ldsPtr))
+    }];
+    let description = [{
+      Asynchronously stores }] # !cast<string>(bitsVal) # [{ bits of data from a Local Data Share (LDS)
+      pointer to a global memory pointer.
+
+      Available on gfx1250+.
+
+      Example:
+      ```mlir
+      // Async }] # !cast<string>(bitsVal) # [{-bit store from LDS to global.
+      rocdl.global.store.async.from.lds.}] # bitsStr # [{ %dst, %src, 0, 0 : !llvm.ptr<1>, !llvm.ptr<3>
       ```
     }];
 

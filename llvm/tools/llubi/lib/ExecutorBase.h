@@ -15,7 +15,10 @@
 
 #include "Context.h"
 #include "Value.h"
+#include "llvm/Support/raw_ostream.h"
 #include <optional>
+#include <string>
+#include <utility>
 
 namespace llvm::ubi {
 
@@ -68,7 +71,16 @@ struct Frame {
         const TargetLibraryInfoImpl &TLIImpl);
 };
 
+enum class DiagnosticKind {
+  ImmediateUB,
+  Error,
+};
+
+class DiagnosticReporter;
+
 class ExecutorBase {
+  friend class DiagnosticReporter;
+
 protected:
   Context &Ctx;
   EventHandler &Handler;
@@ -79,9 +91,13 @@ protected:
       : Ctx(C), Handler(H), ExitInfo(std::nullopt) {}
   ~ExecutorBase() = default;
 
+private:
+  void reportImmediateUBString(StringRef Msg);
+  void reportErrorString(StringRef Msg);
+
 public:
-  void reportImmediateUB(StringRef Msg);
-  void reportError(StringRef Msg);
+  DiagnosticReporter reportImmediateUB();
+  DiagnosticReporter reportError();
 
   /// Check if the upcoming memory access is valid. Returns the offset relative
   /// to the underlying object if it is valid.
@@ -102,6 +118,41 @@ public:
   std::optional<ProgramExitInfo> getExitInfo() const;
 
   unsigned getIntSize() const;
+
+  void dumpStackTrace() const;
+};
+
+class DiagnosticReporter {
+  ExecutorBase &Executor;
+  std::string Buf;
+  raw_string_ostream OS;
+  DiagnosticKind Kind;
+
+public:
+  DiagnosticReporter(ExecutorBase &E, DiagnosticKind K)
+      : Executor(E), OS(Buf), Kind(K) {}
+
+  DiagnosticReporter(const DiagnosticReporter &) = delete;
+  DiagnosticReporter(DiagnosticReporter &&) noexcept = delete;
+
+  DiagnosticReporter &operator=(const DiagnosticReporter &) = delete;
+  DiagnosticReporter &operator=(DiagnosticReporter &&) noexcept = delete;
+
+  ~DiagnosticReporter() {
+    switch (Kind) {
+    case DiagnosticKind::ImmediateUB:
+      Executor.reportImmediateUBString(Buf);
+      break;
+    case DiagnosticKind::Error:
+      Executor.reportErrorString(Buf);
+      break;
+    }
+  }
+
+  template <typename T> DiagnosticReporter &operator<<(const T &Val) {
+    OS << Val;
+    return *this;
+  }
 };
 
 } // namespace llvm::ubi

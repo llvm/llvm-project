@@ -54,17 +54,22 @@ if (SPHINX_FOUND)
       glob
       inttypes
       locale
+      nl_types
       net/if
       netinet/in
       poll
       pthread
+      pwd
+      sched
       setjmp
       signal
+      spawn
       stdbit
       stdio
       stdlib
       string
       strings
+      sys/ipc
       sys/mman
       sys/resource
       sys/select

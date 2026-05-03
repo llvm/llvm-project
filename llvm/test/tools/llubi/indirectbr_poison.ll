@@ -9,5 +9,7 @@ exit:
   ret void
 }
 ; CHECK: Entering function: main
+; CHECK-NEXT: Stacktrace:
+; CHECK-NEXT: #0   indirectbr ptr poison, [label %exit] at @main
 ; CHECK-NEXT: Immediate UB detected: Indirect branch on poison.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

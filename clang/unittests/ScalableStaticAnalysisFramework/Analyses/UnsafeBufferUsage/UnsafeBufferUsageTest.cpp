@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/ScalableStaticAnalysisFramework/Analyses/UnsafeBufferUsage/UnsafeBufferUsage.h"
+#include "FindDecl.h"
 #include "TestFixture.h"
 #include "clang/AST/ASTConsumer.h"
-#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/ScalableStaticAnalysisFramework/Analyses/EntityPointerLevel/EntityPointerLevel.h"
 #include "clang/ScalableStaticAnalysisFramework/Analyses/UnsafeBufferUsage/UnsafeBufferUsageTest.h"
@@ -36,36 +36,6 @@ using namespace ssaf;
 using testing::UnorderedElementsAre;
 
 namespace {
-template <typename SomeDecl = NamedDecl>
-const SomeDecl *findDeclByName(StringRef Name, ASTContext &Ctx) {
-  class NamedDeclFinder : public DynamicRecursiveASTVisitor {
-  public:
-    StringRef SearchingName;
-    const NamedDecl *FoundDecl = nullptr;
-
-    NamedDeclFinder(StringRef SearchingName) : SearchingName(SearchingName) {}
-
-    bool VisitDecl(Decl *D) override {
-      if (const auto *ND = dyn_cast<SomeDecl>(D)) {
-        if (ND->getNameAsString() == SearchingName) {
-          FoundDecl = ND;
-          return false;
-        }
-      }
-      return true;
-    }
-  };
-
-  NamedDeclFinder Finder(Name);
-
-  Finder.TraverseDecl(Ctx.getTranslationUnitDecl());
-  return dyn_cast_or_null<SomeDecl>(Finder.FoundDecl);
-}
-
-const FunctionDecl *findFnByName(StringRef Name, ASTContext &Ctx) {
-  return findDeclByName<FunctionDecl>(Name, Ctx);
-}
-
 class UnsafeBufferUsageTest : public TestFixture {
 protected:
   TUSummary TUSum;

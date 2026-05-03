@@ -17,7 +17,7 @@ using RegistryT = llvm::Registry<AnalysisBase>;
 
 // NOLINTNEXTLINE(misc-use-internal-linkage)
 volatile int SSAFAnalysisRegistryAnchorSource = 0;
-LLVM_INSTANTIATE_REGISTRY(RegistryT)
+LLVM_DEFINE_REGISTRY(RegistryT)
 
 std::vector<AnalysisName> &AnalysisRegistry::getAnalysisNames() {
   static std::vector<AnalysisName> Names;

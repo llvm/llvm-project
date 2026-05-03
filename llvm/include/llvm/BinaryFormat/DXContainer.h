@@ -562,6 +562,8 @@ struct ResourceBindInfo : public v0::ResourceBindInfo {
 
 namespace v3 {
 struct RuntimeInfo : public v2::RuntimeInfo {
+  // Offset into the string table, which is stored separately in the PSV0 part.
+  // The entry name string itself is not stored in the RuntimeInfo record.
   uint32_t EntryNameOffset;
 
   void swapBytes() {

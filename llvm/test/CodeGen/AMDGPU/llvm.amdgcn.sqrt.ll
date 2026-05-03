@@ -3,6 +3,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=fiji < %s | FileCheck -check-prefix=GCN %s
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=hawaii < %s | FileCheck -check-prefix=GCN %s
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=fiji < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 < %s | FileCheck -check-prefix=GFX12 %s
 
 define float @v_sqrt_f32(float %src)  {
 ; GCN-LABEL: v_sqrt_f32:
@@ -67,6 +68,15 @@ define double @v_fneg_fabs_sqrt_f64(double %src)  {
   %fabs.src = call double @llvm.fabs.f64(double %src)
   %neg.fabs.src = fneg double %fabs.src
   %sqrt = call double @llvm.amdgcn.sqrt.f64(double %neg.fabs.src)
+  ret double %sqrt
+}
+
+define double @s_sqrt_f64(double inreg %src) {
+; GFX12-LABEL: s_sqrt_f64:
+; GFX12:       ; %bb.0:
+; GFX12:       v_sqrt_f64_e32 v[0:1], s[0:1]
+; GFX12-NEXT:  s_setpc_b64 s[30:31]
+  %sqrt = call double @llvm.amdgcn.sqrt.f64(double %src)
   ret double %sqrt
 }
 

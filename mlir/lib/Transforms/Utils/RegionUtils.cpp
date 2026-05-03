@@ -19,6 +19,7 @@
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Support/LogicalResult.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
@@ -185,7 +186,8 @@ SmallVector<Value> mlir::makeRegionIsolatedFromAbove(
 /// if any blocks were erased, failure otherwise.
 // TODO: We could likely merge this with the DCE algorithm below.
 LogicalResult mlir::eraseUnreachableBlocks(RewriterBase &rewriter,
-                                           MutableArrayRef<Region> regions) {
+                                           MutableArrayRef<Region> regions,
+                                           bool recurse) {
   LDBG() << "Starting eraseUnreachableBlocks with " << regions.size()
          << " regions";
 
@@ -217,9 +219,10 @@ LogicalResult mlir::eraseUnreachableBlocks(RewriterBase &rewriter,
 
     // If this is a single block region, just collect the nested regions.
     if (region->hasOneBlock()) {
-      for (Operation &op : region->front())
-        for (Region &region : op.getRegions())
-          worklist.push_back(&region);
+      if (recurse)
+        for (Operation &op : region->front())
+          for (Region &region : op.getRegions())
+            worklist.push_back(&region);
       continue;
     }
 
@@ -243,9 +246,10 @@ LogicalResult mlir::eraseUnreachableBlocks(RewriterBase &rewriter,
       }
 
       // Walk any regions within this block.
-      for (Operation &op : block)
-        for (Region &region : op.getRegions())
-          worklist.push_back(&region);
+      if (recurse)
+        for (Operation &op : block)
+          for (Region &region : op.getRegions())
+            worklist.push_back(&region);
     }
   }
 
@@ -504,6 +508,143 @@ LogicalResult mlir::runRegionDCE(RewriterBase &rewriter,
   } while (liveMap.hasChanged());
 
   return deleteDeadness(rewriter, regions, liveMap);
+}
+
+bool mlir::eliminateTriviallyDeadOps(RewriterBase &rewriter, Region &region,
+                                     bool includeNestedRegions) {
+  LDBG() << "Starting eliminateTriviallyDeadOps with "
+         << region.getBlocks().size()
+         << " blocks, includeNestedRegions=" << includeNestedRegions;
+  if (Operation *parentOp = region.getParentOp())
+    LDBG(2) << " -> parent operation: "
+            << OpWithFlags(parentOp, OpPrintingFlags().skipRegions());
+
+  bool changed = false;
+  unsigned erasedOps = 0;
+  unsigned seededOps = 0;
+  unsigned enqueuedDefs = 0;
+
+  // Step 1: walk each op in reverse program order. If the op is already
+  // trivially dead, erase it outright — there's no point recursing into
+  // regions that will be destroyed with it. Otherwise, if
+  // `includeNestedRegions` is set, recurse into its nested regions so values
+  // defined in `region` may lose their last user and show up as dead in
+  // step 2's seed. Reverse iteration lets dead chains propagate within this
+  // single pass.
+  for (Block &block : llvm::reverse(region)) {
+    LDBG(2) << "Scanning block " << &block << " with "
+            << block.getOperations().size() << " operations";
+    for (Operation &op :
+         llvm::make_early_inc_range(llvm::reverse(block.getOperations()))) {
+      LDBG(3) << "Visiting operation: "
+              << OpWithFlags(&op, OpPrintingFlags().skipRegions());
+      if (isOpTriviallyDead(&op)) {
+        LDBG() << "Erasing trivially dead operation: "
+               << OpWithFlags(&op, OpPrintingFlags().skipRegions());
+        rewriter.eraseOp(&op);
+        changed = true;
+        ++erasedOps;
+        continue;
+      }
+      if (includeNestedRegions) {
+        unsigned regionIdx = 0;
+        for (Region &nested : op.getRegions()) {
+          LDBG(2) << "Recursing into nested region #" << regionIdx
+                  << " of operation " << op.getName();
+          bool nestedChanged =
+              eliminateTriviallyDeadOps(rewriter, nested, includeNestedRegions);
+          LDBG(2) << "Finished nested region #" << regionIdx << " of operation "
+                  << op.getName() << ", changed=" << nestedChanged;
+          changed |= nestedChanged;
+          ++regionIdx;
+        }
+      }
+    }
+  }
+
+  // Step 2: worklist over ops in this region only.
+  //
+  // Worklist invariant: an op is pushed *only* once we have verified it is
+  // trivially dead. No speculative enqueues — every op on the worklist will
+  // be erased when popped. Two things enforce this:
+  //   - the initial seed below calls isOpTriviallyDead before enqueueing,
+  //   - the propagation inside the loop drops the erasing op's use of
+  //     `defOp` *before* re-checking isOpTriviallyDead(defOp), so the check
+  //     sees the post-erase use count and only enqueues when actually dead.
+  // Deadness is monotonic within this pass (we never add users, only remove
+  // them), so an op that was dead at enqueue time is still dead at pop time.
+  // The `visited` set is just for dedup; no re-check is needed on pop.
+  SmallVector<Operation *> worklist;
+  DenseSet<Operation *> visited;
+
+  LDBG(2) << "Stage 2: Seeding trivially dead operation worklist";
+  for (Operation &op : region.getOps()) {
+    if (isOpTriviallyDead(&op) && visited.insert(&op).second) {
+      LDBG(2) << "Seeded worklist with operation: "
+              << OpWithFlags(&op, OpPrintingFlags().skipRegions());
+      worklist.push_back(&op);
+      changed = true;
+      ++seededOps;
+    }
+  }
+  LDBG(2) << "Initial worklist size: " << worklist.size();
+
+  while (!worklist.empty()) {
+    Operation *op = worklist.pop_back_val();
+    LDBG(2) << "Popped operation from worklist: "
+            << OpWithFlags(op, OpPrintingFlags().skipRegions());
+    /// Erase each operand to drop its use count before checking its defining
+    /// op: by the time we call isOpTriviallyDead on defOp, the
+    /// about-to-be-erased `op` is no longer counted as a user. Only
+    /// actually-dead ops enter the worklist.
+    ///
+    /// Walk nested operations as well because erasing `op` also implicitly
+    /// erases every operation nested under it and therefore drops their operand
+    /// uses.
+    op->walk([&](Operation *erasedOp) {
+      LDBG(3) << "Processing operands of operation erased: "
+              << OpWithFlags(erasedOp, OpPrintingFlags().skipRegions());
+      for (OpOperand &opOperand : erasedOp->getOpOperands()) {
+        Operation *defOp = opOperand.get().getDefiningOp();
+        if (!defOp) {
+          LDBG(4) << "Skipping operand #" << opOperand.getOperandNumber()
+                  << ": value has no defining operation";
+          continue;
+        }
+        if (defOp->getParentRegion() != &region) {
+          LDBG(4) << "Skipping operand #" << opOperand.getOperandNumber()
+                  << ": defining operation is outside the current region";
+          continue;
+        }
+        if (visited.count(defOp)) {
+          LDBG(4) << "Skipping operand #" << opOperand.getOperandNumber()
+                  << ": defining operation was already visited";
+          continue;
+        }
+        LDBG(4) << "Dropping operand #" << opOperand.getOperandNumber()
+                << " from defining operation: "
+                << OpWithFlags(defOp, OpPrintingFlags().skipRegions());
+        opOperand.drop();
+        if (isOpTriviallyDead(defOp)) {
+          LDBG(2) << "Enqueued newly trivially dead defining operation: "
+                  << OpWithFlags(defOp, OpPrintingFlags().skipRegions());
+          worklist.push_back(defOp);
+          ++enqueuedDefs;
+        } else {
+          LDBG(4) << "Defining operation is still not trivially dead: "
+                  << OpWithFlags(defOp, OpPrintingFlags().skipRegions());
+        }
+      }
+    });
+    LDBG() << "Erasing trivially dead worklist operation: "
+           << OpWithFlags(op, OpPrintingFlags().skipRegions());
+    rewriter.eraseOp(op);
+    ++erasedOps;
+  }
+  LDBG() << "Finished eliminateTriviallyDeadOps, erased " << erasedOps
+         << " operations, seeded " << seededOps << " operations, enqueued "
+         << enqueuedDefs << " defining operations, changed=" << changed;
+  return changed;
 }
 
 //===----------------------------------------------------------------------===//

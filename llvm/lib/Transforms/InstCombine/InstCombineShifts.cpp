@@ -1105,8 +1105,8 @@ static bool setShiftFlags(BinaryOperator &I, const SimplifyQuery &Q) {
       return true;
     }
     // Infer 'exact' flag if shift amount is cttz(x) on the same operand.
-    if (match(I.getOperand(1), m_Intrinsic<Intrinsic::cttz>(
-                                   m_Specific(I.getOperand(0)), m_Value()))) {
+    if (match(I.getOperand(1),
+              m_Cttz(m_Specific(I.getOperand(0)), m_Value()))) {
       I.setIsExact();
       return true;
     }
@@ -1376,8 +1376,7 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
 
     // Canonicalize "extract lowest set bit" using cttz to and-with-negate:
     // 1 << (cttz X) --> -X & X
-    if (match(Op1,
-              m_OneUse(m_Intrinsic<Intrinsic::cttz>(m_Value(X), m_Value())))) {
+    if (match(Op1, m_OneUse(m_Cttz(m_Value(X), m_Value())))) {
       Value *NegX = Builder.CreateNeg(X, "neg");
       return BinaryOperator::CreateAnd(NegX, X);
     }
@@ -1734,7 +1733,7 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
   Value *Shl0_Op0, *Shl0_Op1, *Shl1_Op1;
   BinaryOperator *Shl1;
   if (match(Op0, m_Shl(m_Value(Shl0_Op0), m_Value(Shl0_Op1))) &&
-      match(Op1, m_Intrinsic<Intrinsic::cttz>(m_BinOp(Shl1))) &&
+      match(Op1, m_Cttz(m_BinOp(Shl1), m_Value())) &&
       match(Shl1, m_Shl(m_Specific(Shl0_Op0), m_Value(Shl1_Op1))) &&
       isKnownToBeAPowerOfTwo(Shl0_Op0, /*OrZero=*/true, &I)) {
     auto *Shl0 = cast<BinaryOperator>(Op0);

@@ -338,6 +338,13 @@ inline VPInstruction_match<VPInstruction::BuildVector> m_BuildVector() {
   return m_VPInstruction<VPInstruction::BuildVector>();
 }
 
+/// BuildStructVector matches only its opcode, w/o matching its operands as the
+/// number of operands is not fixed.
+inline VPInstruction_match<VPInstruction::BuildStructVector>
+m_BuildStructVector() {
+  return m_VPInstruction<VPInstruction::BuildStructVector>();
+}
+
 template <typename Op0_t>
 inline VPInstruction_match<Instruction::Freeze, Op0_t>
 m_Freeze(const Op0_t &Op0) {
@@ -387,6 +394,12 @@ template <typename Op0_t, typename Op1_t>
 inline VPInstruction_match<Instruction::ExtractElement, Op0_t, Op1_t>
 m_ExtractElement(const Op0_t &Op0, const Op1_t &Op1) {
   return m_VPInstruction<Instruction::ExtractElement>(Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t, typename Op2_t>
+inline VPInstruction_match<Instruction::InsertElement, Op0_t, Op1_t, Op2_t>
+m_InsertElement(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
+  return m_VPInstruction<Instruction::InsertElement>(Op0, Op1, Op2);
 }
 
 template <typename Op0_t, typename Op1_t>
@@ -785,10 +798,15 @@ inline auto m_c_LogicalOr(const Op0_t &Op0, const Op1_t &Op1) {
   return m_c_Select(Op0, m_True(), Op1);
 }
 
-inline auto m_CanonicalIV() {
-  // TODO: Don't assume all region values are canonical IVs.
-  return m_Isa<VPRegionValue>();
-}
+/// Match the canonical induction variable (IV) of any loop region.
+struct canonical_iv_match {
+  template <typename ArgTy> bool match(const ArgTy *V) const {
+    const auto *RV = dyn_cast<VPRegionValue>(V);
+    return RV && RV->getDefiningRegion()->getCanonicalIV() == RV;
+  }
+};
+
+inline canonical_iv_match m_CanonicalIV() { return {}; }
 
 template <typename Op0_t, typename Op1_t, typename Op2_t>
 inline auto m_ScalarIVSteps(const Op0_t &Op0, const Op1_t &Op1,

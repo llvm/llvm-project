@@ -21,6 +21,7 @@
 // unreadable, the middle usable normally. By placing test data at the edges
 // between the middle page and the others, we can test for bad accesses.
 
+#include "hdr/sys_mman_macros.h"
 #include "src/__support/CPP/array.h"
 #include "src/string/memory_utils/inline_memset.h"
 #include "src/string/string_utils.h"

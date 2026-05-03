@@ -63,6 +63,7 @@ llvm::Triple::ArchType darwin::getArchTypeForMachOArchName(StringRef Str) {
       .Cases({"arm", "armv4t", "armv5", "armv6", "armv6m"}, llvm::Triple::arm)
       .Cases({"armv7", "armv7em", "armv7k", "armv7m"}, llvm::Triple::arm)
       .Cases({"armv7s", "xscale"}, llvm::Triple::arm)
+      .Cases({"armv8m.base", "armv8m.main", "armv8.1m.main"}, llvm::Triple::arm)
       .Cases({"arm64", "arm64e"}, llvm::Triple::aarch64)
       .Case("arm64_32", llvm::Triple::aarch64_32)
       .Case("r600", llvm::Triple::r600)
@@ -88,7 +89,10 @@ void darwin::setTripleTypeForMachOArchName(llvm::Triple &T, StringRef Str,
   if ((T.getOS() != llvm::Triple::Firmware) &&
       (ArchKind == llvm::ARM::ArchKind::ARMV6M ||
        ArchKind == llvm::ARM::ArchKind::ARMV7M ||
-       ArchKind == llvm::ARM::ArchKind::ARMV7EM)) {
+       ArchKind == llvm::ARM::ArchKind::ARMV7EM ||
+       ArchKind == llvm::ARM::ArchKind::ARMV8MBaseline ||
+       ArchKind == llvm::ARM::ArchKind::ARMV8MMainline ||
+       ArchKind == llvm::ARM::ArchKind::ARMV8_1MMainline)) {
     // Don't reject these -version-min= if we have the appropriate triple.
     if (T.getOS() == llvm::Triple::IOS)
       for (Arg *A : Args.filtered(options::OPT_mios_version_min_EQ))
@@ -1063,6 +1067,9 @@ static const char *ArmMachOArchName(StringRef Arch) {
       .Cases({"armv7k", "armv7-k"}, "armv7k")
       .Cases({"armv7m", "armv7-m"}, "armv7m")
       .Cases({"armv7s", "armv7-s"}, "armv7s")
+      .Cases({"armv8-m.base", "armv8m.base"}, "armv8m.base")
+      .Cases({"armv8-m.main", "armv8m.main"}, "armv8m.main")
+      .Cases({"armv8.1-m.main", "armv8m.main"}, "armv8.1m.main")
       .Default(nullptr);
 }
 
@@ -2437,7 +2444,8 @@ inferDeploymentTargetFromArch(DerivedArgList &Args, const Darwin &Toolchain,
   else if (MachOArchName == "armv7k" || MachOArchName == "arm64_32")
     OSTy = llvm::Triple::WatchOS;
   else if (MachOArchName != "armv6m" && MachOArchName != "armv7m" &&
-           MachOArchName != "armv7em")
+           MachOArchName != "armv7em" && MachOArchName != "armv8m.base" &&
+           MachOArchName != "armv8m.main" && MachOArchName != "armv8.1m.main")
     OSTy = llvm::Triple::MacOSX;
   if (OSTy == llvm::Triple::UnknownOS)
     return std::nullopt;
@@ -3267,6 +3275,12 @@ DerivedArgList *MachO::TranslateArgs(const DerivedArgList &Args,
       DAL->AddJoinedArg(nullptr, MArch, "armv7m");
     else if (Name == "armv7s")
       DAL->AddJoinedArg(nullptr, MArch, "armv7s");
+    else if (Name == "armv8-m.base" || Name == "armv8m.base")
+      DAL->AddJoinedArg(nullptr, MArch, "armv8m.base");
+    else if (Name == "armv8-m.main" || Name == "armv8m.main")
+      DAL->AddJoinedArg(nullptr, MArch, "armv8m.main");
+    else if (Name == "armv8.1-m.main" || Name == "armv8.1m.main")
+      DAL->AddJoinedArg(nullptr, MArch, "armv8.1m.main");
   }
 
   return DAL;

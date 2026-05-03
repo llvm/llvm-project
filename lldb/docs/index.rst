@@ -139,6 +139,7 @@ interesting areas to contribute to lldb.
 
    use/variable
    use/formatting
+   use/repeat-commands
    use/symbolication
    use/symbols
    use/ondemand

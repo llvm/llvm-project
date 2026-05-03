@@ -47,7 +47,7 @@ define i8 @bad_rounding(half %v) {
 }
 
 ;--- ptr-to-arbitrary-fp.ll
-; PTR-TO-FP: Intrinsic has incorrect argument type!
+; PTR-TO-FP: intrinsic has incorrect argument type!
 
 declare i8 @llvm.convert.to.arbitrary.fp.i8.ptr(ptr, metadata, metadata, i1)
 
@@ -58,7 +58,7 @@ define i8 @bad_ptr_to_fp(ptr %p) {
 }
 
 ;--- arbitrary-fp-to-ptr.ll
-; FP-TO-PTR: Intrinsic has incorrect return type!
+; FP-TO-PTR: intrinsic has incorrect return type!
 
 declare ptr @llvm.convert.from.arbitrary.fp.ptr.i8(i8, metadata)
 
@@ -69,7 +69,7 @@ define ptr @bad_fp_to_ptr(i8 %v) {
 }
 
 ;--- int-to-arbitrary-fp.ll
-; INT-TO-FP: Intrinsic has incorrect argument type!
+; INT-TO-FP: intrinsic has incorrect argument type!
 
 declare i8 @llvm.convert.to.arbitrary.fp.i8.i32(i32, metadata, metadata, i1)
 
@@ -80,7 +80,7 @@ define i8 @bad_int_to_fp(i32 %v) {
 }
 
 ;--- arbitrary-fp-to-int.ll
-; FP-TO-INT: Intrinsic has incorrect return type!
+; FP-TO-INT: intrinsic has incorrect return type!
 
 declare i32 @llvm.convert.from.arbitrary.fp.i32.i8(i8, metadata)
 
@@ -91,7 +91,7 @@ define i32 @bad_fp_to_int(i8 %v) {
 }
 
 ;--- vec-ptr-to-arbitrary-fp.ll
-; VEC-PTR-TO-FP: Intrinsic has incorrect argument type!
+; VEC-PTR-TO-FP: intrinsic has incorrect argument type!
 
 declare <4 x i8> @llvm.convert.to.arbitrary.fp.v4i8.v4ptr(<4 x ptr>, metadata, metadata, i1)
 

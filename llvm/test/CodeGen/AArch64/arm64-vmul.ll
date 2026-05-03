@@ -3630,18 +3630,18 @@ define <2 x i64> @sqdmlsl2_lane_2d_lib(<2 x i64> %dst, <4 x i32> %v1, <4 x i32> 
 define <16 x i16> @or_sext_v16i8_i16(<16 x i8> %s0, <16 x i8> %s1, <16 x i16> %b) {
 ; CHECK-SD-LABEL: or_sext_v16i8_i16:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    smull v4.8h, v0.8b, v1.8b
-; CHECK-SD-NEXT:    smull2 v0.8h, v0.16b, v1.16b
-; CHECK-SD-NEXT:    orr v1.16b, v0.16b, v3.16b
-; CHECK-SD-NEXT:    orr v0.16b, v4.16b, v2.16b
+; CHECK-SD-NEXT:    smlal2 v3.8h, v0.16b, v1.16b
+; CHECK-SD-NEXT:    smlal v2.8h, v0.8b, v1.8b
+; CHECK-SD-NEXT:    mov v0.16b, v2.16b
+; CHECK-SD-NEXT:    mov v1.16b, v3.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: or_sext_v16i8_i16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    smull v4.8h, v0.8b, v1.8b
-; CHECK-GI-NEXT:    smull2 v1.8h, v0.16b, v1.16b
-; CHECK-GI-NEXT:    orr v0.16b, v4.16b, v2.16b
-; CHECK-GI-NEXT:    orr v1.16b, v1.16b, v3.16b
+; CHECK-GI-NEXT:    smlal v2.8h, v0.8b, v1.8b
+; CHECK-GI-NEXT:    smlal2 v3.8h, v0.16b, v1.16b
+; CHECK-GI-NEXT:    mov v0.16b, v2.16b
+; CHECK-GI-NEXT:    mov v1.16b, v3.16b
 ; CHECK-GI-NEXT:    ret
 entry:
   %s0s = sext <16 x i8> %s0 to <16 x i16>
@@ -3654,18 +3654,18 @@ entry:
 define <16 x i16> @or_zext_v16i8_i16(<16 x i8> %s0, <16 x i8> %s1, <16 x i16> %b) {
 ; CHECK-SD-LABEL: or_zext_v16i8_i16:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    umull v4.8h, v0.8b, v1.8b
-; CHECK-SD-NEXT:    umull2 v0.8h, v0.16b, v1.16b
-; CHECK-SD-NEXT:    orr v1.16b, v0.16b, v3.16b
-; CHECK-SD-NEXT:    orr v0.16b, v4.16b, v2.16b
+; CHECK-SD-NEXT:    umlal2 v3.8h, v0.16b, v1.16b
+; CHECK-SD-NEXT:    umlal v2.8h, v0.8b, v1.8b
+; CHECK-SD-NEXT:    mov v0.16b, v2.16b
+; CHECK-SD-NEXT:    mov v1.16b, v3.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: or_zext_v16i8_i16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    umull v4.8h, v0.8b, v1.8b
-; CHECK-GI-NEXT:    umull2 v1.8h, v0.16b, v1.16b
-; CHECK-GI-NEXT:    orr v0.16b, v4.16b, v2.16b
-; CHECK-GI-NEXT:    orr v1.16b, v1.16b, v3.16b
+; CHECK-GI-NEXT:    umlal v2.8h, v0.8b, v1.8b
+; CHECK-GI-NEXT:    umlal2 v3.8h, v0.16b, v1.16b
+; CHECK-GI-NEXT:    mov v0.16b, v2.16b
+; CHECK-GI-NEXT:    mov v1.16b, v3.16b
 ; CHECK-GI-NEXT:    ret
 entry:
   %s0s = zext <16 x i8> %s0 to <16 x i16>
@@ -3679,20 +3679,20 @@ define <16 x i16> @or_sext_idx_v16i8_i16(<16 x i8> %s0, <16 x i8> %s1, <16 x i16
 ; CHECK-SD-LABEL: or_sext_idx_v16i8_i16:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    dup v0.16b, v0.b[3]
-; CHECK-SD-NEXT:    smull v4.8h, v0.8b, v1.8b
-; CHECK-SD-NEXT:    smull2 v0.8h, v0.16b, v1.16b
-; CHECK-SD-NEXT:    orr v1.16b, v0.16b, v3.16b
-; CHECK-SD-NEXT:    orr v0.16b, v4.16b, v2.16b
+; CHECK-SD-NEXT:    smlal2 v3.8h, v0.16b, v1.16b
+; CHECK-SD-NEXT:    smlal v2.8h, v0.8b, v1.8b
+; CHECK-SD-NEXT:    mov v0.16b, v2.16b
+; CHECK-SD-NEXT:    mov v1.16b, v3.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: or_sext_idx_v16i8_i16:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    dup v0.8b, v0.b[3]
 ; CHECK-GI-NEXT:    mov d4, v1.d[1]
-; CHECK-GI-NEXT:    smull v1.8h, v0.8b, v1.8b
-; CHECK-GI-NEXT:    smull v4.8h, v0.8b, v4.8b
-; CHECK-GI-NEXT:    orr v0.16b, v1.16b, v2.16b
-; CHECK-GI-NEXT:    orr v1.16b, v4.16b, v3.16b
+; CHECK-GI-NEXT:    smlal v2.8h, v0.8b, v1.8b
+; CHECK-GI-NEXT:    smlal v3.8h, v0.8b, v4.8b
+; CHECK-GI-NEXT:    mov v0.16b, v2.16b
+; CHECK-GI-NEXT:    mov v1.16b, v3.16b
 ; CHECK-GI-NEXT:    ret
 entry:
   %s0a = shufflevector <16 x i8> %s0, <16 x i8> poison, <16 x i32> splat (i32 3)
@@ -3707,20 +3707,20 @@ define <16 x i16> @or_zext_idx_v16i8_i16(<16 x i8> %s0, <16 x i8> %s1, <16 x i16
 ; CHECK-SD-LABEL: or_zext_idx_v16i8_i16:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    dup v0.16b, v0.b[3]
-; CHECK-SD-NEXT:    umull v4.8h, v0.8b, v1.8b
-; CHECK-SD-NEXT:    umull2 v0.8h, v0.16b, v1.16b
-; CHECK-SD-NEXT:    orr v1.16b, v0.16b, v3.16b
-; CHECK-SD-NEXT:    orr v0.16b, v4.16b, v2.16b
+; CHECK-SD-NEXT:    umlal2 v3.8h, v0.16b, v1.16b
+; CHECK-SD-NEXT:    umlal v2.8h, v0.8b, v1.8b
+; CHECK-SD-NEXT:    mov v0.16b, v2.16b
+; CHECK-SD-NEXT:    mov v1.16b, v3.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: or_zext_idx_v16i8_i16:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    dup v0.8b, v0.b[3]
 ; CHECK-GI-NEXT:    mov d4, v1.d[1]
-; CHECK-GI-NEXT:    umull v1.8h, v0.8b, v1.8b
-; CHECK-GI-NEXT:    umull v4.8h, v0.8b, v4.8b
-; CHECK-GI-NEXT:    orr v0.16b, v1.16b, v2.16b
-; CHECK-GI-NEXT:    orr v1.16b, v4.16b, v3.16b
+; CHECK-GI-NEXT:    umlal v2.8h, v0.8b, v1.8b
+; CHECK-GI-NEXT:    umlal v3.8h, v0.8b, v4.8b
+; CHECK-GI-NEXT:    mov v0.16b, v2.16b
+; CHECK-GI-NEXT:    mov v1.16b, v3.16b
 ; CHECK-GI-NEXT:    ret
 entry:
   %s0a = shufflevector <16 x i8> %s0, <16 x i8> poison, <16 x i32> splat (i32 3)
@@ -3761,18 +3761,18 @@ entry:
 define <8 x i32> @or_zext_v8i16_i32(<8 x i16> %s0, <8 x i16> %s1, <8 x i32> %b) {
 ; CHECK-SD-LABEL: or_zext_v8i16_i32:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    umull v4.4s, v0.4h, v1.4h
-; CHECK-SD-NEXT:    umull2 v0.4s, v0.8h, v1.8h
-; CHECK-SD-NEXT:    orr v1.16b, v0.16b, v3.16b
-; CHECK-SD-NEXT:    orr v0.16b, v4.16b, v2.16b
+; CHECK-SD-NEXT:    umlal2 v3.4s, v0.8h, v1.8h
+; CHECK-SD-NEXT:    umlal v2.4s, v0.4h, v1.4h
+; CHECK-SD-NEXT:    mov v0.16b, v2.16b
+; CHECK-SD-NEXT:    mov v1.16b, v3.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: or_zext_v8i16_i32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    umull v4.4s, v0.4h, v1.4h
-; CHECK-GI-NEXT:    umull2 v1.4s, v0.8h, v1.8h
-; CHECK-GI-NEXT:    orr v0.16b, v4.16b, v2.16b
-; CHECK-GI-NEXT:    orr v1.16b, v1.16b, v3.16b
+; CHECK-GI-NEXT:    umlal v2.4s, v0.4h, v1.4h
+; CHECK-GI-NEXT:    umlal2 v3.4s, v0.8h, v1.8h
+; CHECK-GI-NEXT:    mov v0.16b, v2.16b
+; CHECK-GI-NEXT:    mov v1.16b, v3.16b
 ; CHECK-GI-NEXT:    ret
 entry:
   %s0s = zext <8 x i16> %s0 to <8 x i32>
@@ -3785,19 +3785,19 @@ entry:
 define <8 x i32> @or_sext_idx_v8i16_i32(<8 x i16> %s0, <8 x i16> %s1, <8 x i32> %b) {
 ; CHECK-SD-LABEL: or_sext_idx_v8i16_i32:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    smull v4.4s, v1.4h, v0.h[3]
-; CHECK-SD-NEXT:    smull2 v0.4s, v1.8h, v0.h[3]
-; CHECK-SD-NEXT:    orr v1.16b, v0.16b, v3.16b
-; CHECK-SD-NEXT:    orr v0.16b, v4.16b, v2.16b
+; CHECK-SD-NEXT:    smlal2 v3.4s, v1.8h, v0.h[3]
+; CHECK-SD-NEXT:    smlal v2.4s, v1.4h, v0.h[3]
+; CHECK-SD-NEXT:    mov v0.16b, v2.16b
+; CHECK-SD-NEXT:    mov v1.16b, v3.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: or_sext_idx_v8i16_i32:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov d4, v1.d[1]
-; CHECK-GI-NEXT:    smull v1.4s, v1.4h, v0.h[3]
-; CHECK-GI-NEXT:    smull v4.4s, v4.4h, v0.h[3]
-; CHECK-GI-NEXT:    orr v0.16b, v1.16b, v2.16b
-; CHECK-GI-NEXT:    orr v1.16b, v4.16b, v3.16b
+; CHECK-GI-NEXT:    smlal v2.4s, v1.4h, v0.h[3]
+; CHECK-GI-NEXT:    smlal v3.4s, v4.4h, v0.h[3]
+; CHECK-GI-NEXT:    mov v0.16b, v2.16b
+; CHECK-GI-NEXT:    mov v1.16b, v3.16b
 ; CHECK-GI-NEXT:    ret
 entry:
   %s0a = shufflevector <8 x i16> %s0, <8 x i16> poison, <8 x i32> splat (i32 3)
@@ -3811,19 +3811,19 @@ entry:
 define <8 x i32> @or_zext_idx_v8i16_i32(<8 x i16> %s0, <8 x i16> %s1, <8 x i32> %b) {
 ; CHECK-SD-LABEL: or_zext_idx_v8i16_i32:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    umull v4.4s, v1.4h, v0.h[3]
-; CHECK-SD-NEXT:    umull2 v0.4s, v1.8h, v0.h[3]
-; CHECK-SD-NEXT:    orr v1.16b, v0.16b, v3.16b
-; CHECK-SD-NEXT:    orr v0.16b, v4.16b, v2.16b
+; CHECK-SD-NEXT:    umlal2 v3.4s, v1.8h, v0.h[3]
+; CHECK-SD-NEXT:    umlal v2.4s, v1.4h, v0.h[3]
+; CHECK-SD-NEXT:    mov v0.16b, v2.16b
+; CHECK-SD-NEXT:    mov v1.16b, v3.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: or_zext_idx_v8i16_i32:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov d4, v1.d[1]
-; CHECK-GI-NEXT:    umull v1.4s, v1.4h, v0.h[3]
-; CHECK-GI-NEXT:    umull v4.4s, v4.4h, v0.h[3]
-; CHECK-GI-NEXT:    orr v0.16b, v1.16b, v2.16b
-; CHECK-GI-NEXT:    orr v1.16b, v4.16b, v3.16b
+; CHECK-GI-NEXT:    umlal v2.4s, v1.4h, v0.h[3]
+; CHECK-GI-NEXT:    umlal v3.4s, v4.4h, v0.h[3]
+; CHECK-GI-NEXT:    mov v0.16b, v2.16b
+; CHECK-GI-NEXT:    mov v1.16b, v3.16b
 ; CHECK-GI-NEXT:    ret
 entry:
   %s0a = shufflevector <8 x i16> %s0, <8 x i16> poison, <8 x i32> splat (i32 3)
@@ -3837,18 +3837,18 @@ entry:
 define <4 x i64> @or_sext_v4i32_i64(<4 x i32> %s0, <4 x i32> %s1, <4 x i64> %b) {
 ; CHECK-SD-LABEL: or_sext_v4i32_i64:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    smull v4.2d, v0.2s, v1.2s
-; CHECK-SD-NEXT:    smull2 v0.2d, v0.4s, v1.4s
-; CHECK-SD-NEXT:    orr v1.16b, v0.16b, v3.16b
-; CHECK-SD-NEXT:    orr v0.16b, v4.16b, v2.16b
+; CHECK-SD-NEXT:    smlal2 v3.2d, v0.4s, v1.4s
+; CHECK-SD-NEXT:    smlal v2.2d, v0.2s, v1.2s
+; CHECK-SD-NEXT:    mov v0.16b, v2.16b
+; CHECK-SD-NEXT:    mov v1.16b, v3.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: or_sext_v4i32_i64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    smull v4.2d, v0.2s, v1.2s
-; CHECK-GI-NEXT:    smull2 v1.2d, v0.4s, v1.4s
-; CHECK-GI-NEXT:    orr v0.16b, v4.16b, v2.16b
-; CHECK-GI-NEXT:    orr v1.16b, v1.16b, v3.16b
+; CHECK-GI-NEXT:    smlal v2.2d, v0.2s, v1.2s
+; CHECK-GI-NEXT:    smlal2 v3.2d, v0.4s, v1.4s
+; CHECK-GI-NEXT:    mov v0.16b, v2.16b
+; CHECK-GI-NEXT:    mov v1.16b, v3.16b
 ; CHECK-GI-NEXT:    ret
 entry:
   %s0s = sext <4 x i32> %s0 to <4 x i64>
@@ -3861,18 +3861,18 @@ entry:
 define <4 x i64> @or_zext_v4i32_i64(<4 x i32> %s0, <4 x i32> %s1, <4 x i64> %b) {
 ; CHECK-SD-LABEL: or_zext_v4i32_i64:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    umull v4.2d, v0.2s, v1.2s
-; CHECK-SD-NEXT:    umull2 v0.2d, v0.4s, v1.4s
-; CHECK-SD-NEXT:    orr v1.16b, v0.16b, v3.16b
-; CHECK-SD-NEXT:    orr v0.16b, v4.16b, v2.16b
+; CHECK-SD-NEXT:    umlal2 v3.2d, v0.4s, v1.4s
+; CHECK-SD-NEXT:    umlal v2.2d, v0.2s, v1.2s
+; CHECK-SD-NEXT:    mov v0.16b, v2.16b
+; CHECK-SD-NEXT:    mov v1.16b, v3.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: or_zext_v4i32_i64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    umull v4.2d, v0.2s, v1.2s
-; CHECK-GI-NEXT:    umull2 v1.2d, v0.4s, v1.4s
-; CHECK-GI-NEXT:    orr v0.16b, v4.16b, v2.16b
-; CHECK-GI-NEXT:    orr v1.16b, v1.16b, v3.16b
+; CHECK-GI-NEXT:    umlal v2.2d, v0.2s, v1.2s
+; CHECK-GI-NEXT:    umlal2 v3.2d, v0.4s, v1.4s
+; CHECK-GI-NEXT:    mov v0.16b, v2.16b
+; CHECK-GI-NEXT:    mov v1.16b, v3.16b
 ; CHECK-GI-NEXT:    ret
 entry:
   %s0s = zext <4 x i32> %s0 to <4 x i64>
@@ -3885,19 +3885,19 @@ entry:
 define <4 x i64> @or_sext_idx_v4i32_i64(<4 x i32> %s0, <4 x i32> %s1, <4 x i64> %b) {
 ; CHECK-SD-LABEL: or_sext_idx_v4i32_i64:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    smull v4.2d, v1.2s, v0.s[3]
-; CHECK-SD-NEXT:    smull2 v0.2d, v1.4s, v0.s[3]
-; CHECK-SD-NEXT:    orr v1.16b, v0.16b, v3.16b
-; CHECK-SD-NEXT:    orr v0.16b, v4.16b, v2.16b
+; CHECK-SD-NEXT:    smlal2 v3.2d, v1.4s, v0.s[3]
+; CHECK-SD-NEXT:    smlal v2.2d, v1.2s, v0.s[3]
+; CHECK-SD-NEXT:    mov v0.16b, v2.16b
+; CHECK-SD-NEXT:    mov v1.16b, v3.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: or_sext_idx_v4i32_i64:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov d4, v1.d[1]
-; CHECK-GI-NEXT:    smull v1.2d, v1.2s, v0.s[3]
-; CHECK-GI-NEXT:    smull v4.2d, v4.2s, v0.s[3]
-; CHECK-GI-NEXT:    orr v0.16b, v1.16b, v2.16b
-; CHECK-GI-NEXT:    orr v1.16b, v4.16b, v3.16b
+; CHECK-GI-NEXT:    smlal v2.2d, v1.2s, v0.s[3]
+; CHECK-GI-NEXT:    smlal v3.2d, v4.2s, v0.s[3]
+; CHECK-GI-NEXT:    mov v0.16b, v2.16b
+; CHECK-GI-NEXT:    mov v1.16b, v3.16b
 ; CHECK-GI-NEXT:    ret
 entry:
   %s0a = shufflevector <4 x i32> %s0, <4 x i32> poison, <4 x i32> splat (i32 3)
@@ -3911,19 +3911,19 @@ entry:
 define <4 x i64> @or_zext_idx_v4i32_i64(<4 x i32> %s0, <4 x i32> %s1, <4 x i64> %b) {
 ; CHECK-SD-LABEL: or_zext_idx_v4i32_i64:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    umull v4.2d, v1.2s, v0.s[3]
-; CHECK-SD-NEXT:    umull2 v0.2d, v1.4s, v0.s[3]
-; CHECK-SD-NEXT:    orr v1.16b, v0.16b, v3.16b
-; CHECK-SD-NEXT:    orr v0.16b, v4.16b, v2.16b
+; CHECK-SD-NEXT:    umlal2 v3.2d, v1.4s, v0.s[3]
+; CHECK-SD-NEXT:    umlal v2.2d, v1.2s, v0.s[3]
+; CHECK-SD-NEXT:    mov v0.16b, v2.16b
+; CHECK-SD-NEXT:    mov v1.16b, v3.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: or_zext_idx_v4i32_i64:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov d4, v1.d[1]
-; CHECK-GI-NEXT:    umull v1.2d, v1.2s, v0.s[3]
-; CHECK-GI-NEXT:    umull v4.2d, v4.2s, v0.s[3]
-; CHECK-GI-NEXT:    orr v0.16b, v1.16b, v2.16b
-; CHECK-GI-NEXT:    orr v1.16b, v4.16b, v3.16b
+; CHECK-GI-NEXT:    umlal v2.2d, v1.2s, v0.s[3]
+; CHECK-GI-NEXT:    umlal v3.2d, v4.2s, v0.s[3]
+; CHECK-GI-NEXT:    mov v0.16b, v2.16b
+; CHECK-GI-NEXT:    mov v1.16b, v3.16b
 ; CHECK-GI-NEXT:    ret
 entry:
   %s0a = shufflevector <4 x i32> %s0, <4 x i32> poison, <4 x i32> splat (i32 3)

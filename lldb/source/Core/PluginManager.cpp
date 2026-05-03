@@ -571,13 +571,13 @@ public:
   // Note that this is a copy of the internal state so modifications
   // to the returned instances will not be reflected back to instances
   // stored by the PluginInstances object.
-  llvm::SmallVector<Instance> GetSnapshot() const {
+  llvm::SmallVector<Instance> GetSnapshot(bool enabled_only = true) const {
     std::lock_guard<std::mutex> guard(m_mutex);
 
     llvm::SmallVector<Instance> enabled_instances;
     enabled_instances.reserve(m_instances.size());
     for (const auto &instance : m_instances) {
-      if (instance.enabled)
+      if (!enabled_only || instance.enabled)
         enabled_instances.push_back(instance);
     }
     return enabled_instances;
@@ -590,17 +590,33 @@ public:
         [&](const Instance &instance) { return count++ == idx; });
   }
 
-  std::optional<Instance> GetInstanceForName(llvm::StringRef name) {
+  std::optional<Instance> GetInstanceForName(llvm::StringRef name,
+                                             bool enabled_only = true) {
     if (name.empty())
       return std::nullopt;
 
-    return FindEnabledInstance(
-        [&](const Instance &instance) { return instance.name == name; });
+    auto predicate = [&](const Instance &instance) {
+      return instance.name == name;
+    };
+    if (enabled_only)
+      return FindEnabledInstance(predicate);
+
+    return FindInstance(predicate);
   }
 
   std::optional<Instance>
   FindEnabledInstance(std::function<bool(const Instance &)> predicate) const {
     for (const auto &instance : GetSnapshot()) {
+      if (predicate(instance))
+        return instance;
+    }
+    return std::nullopt;
+  }
+
+  std::optional<Instance>
+  FindInstance(std::function<bool(const Instance &)> predicate) const {
+    std::lock_guard<std::mutex> guard(m_mutex);
+    for (const auto &instance : m_instances) {
       if (predicate(instance))
         return instance;
     }
@@ -1859,8 +1875,16 @@ struct InstrumentationRuntimeInstance
   InstrumentationRuntimeGetType get_type_callback = nullptr;
 };
 
-typedef PluginInstances<InstrumentationRuntimeInstance>
-    InstrumentationRuntimeInstances;
+struct InstrumentationRuntimeInstances
+    : public PluginInstances<InstrumentationRuntimeInstance> {
+
+  InstrumentationRuntimeGetType GetTypeCallbackForName(llvm::StringRef name,
+                                                       bool enabled_only) {
+    if (auto instance = GetInstanceForName(name, enabled_only))
+      return instance->get_type_callback;
+    return nullptr;
+  }
+};
 
 static InstrumentationRuntimeInstances &GetInstrumentationRuntimeInstances() {
   static InstrumentationRuntimeInstances g_instances;
@@ -1881,8 +1905,9 @@ bool PluginManager::UnregisterPlugin(
 }
 
 llvm::SmallVector<InstrumentationRuntimeCallbacks>
-PluginManager::GetInstrumentationRuntimeCallbacks() {
-  auto instances = GetInstrumentationRuntimeInstances().GetSnapshot();
+PluginManager::GetInstrumentationRuntimeCallbacks(bool enabled_only) {
+  auto instances =
+      GetInstrumentationRuntimeInstances().GetSnapshot(enabled_only);
   llvm::SmallVector<InstrumentationRuntimeCallbacks> result;
   result.reserve(instances.size());
   for (auto &instance : instances)
@@ -2462,9 +2487,29 @@ llvm::SmallVector<RegisteredPluginInfo>
 PluginManager::GetInstrumentationRuntimePluginInfo() {
   return GetInstrumentationRuntimeInstances().GetPluginInfoForAllInstances();
 }
-bool PluginManager::SetInstrumentationRuntimePluginEnabled(llvm::StringRef name,
-                                                           bool enable) {
-  return GetInstrumentationRuntimeInstances().SetInstanceEnabled(name, enable);
+
+llvm::StringRef PluginManager::PluginDomainKindToStr(PluginDomainKind kind) {
+  switch (kind) {
+  case ePluginDomainKindGlobal:
+    return "global";
+  case ePluginDomainKindDebugger:
+    return "debugger";
+  case ePluginDomainKindTarget:
+    return "target";
+  }
+  llvm_unreachable("unhandled PluginDomainKind");
+}
+
+llvm::Error PluginManager::SetInstrumentationRuntimePluginEnabled(
+    llvm::StringRef name, bool enable, Debugger &requesting_debugger,
+    PluginDomainKind domain) {
+  if (domain != lldb::ePluginDomainKindGlobal)
+    return llvm::createStringErrorV("{} domain is not supported",
+                                    PluginDomainKindToStr(domain));
+  if (!GetInstrumentationRuntimeInstances().SetInstanceEnabled(name, enable))
+    return llvm::createStringError("plugin could not be found");
+
+  return llvm::Error::success();
 }
 
 llvm::SmallVector<RegisteredPluginInfo>

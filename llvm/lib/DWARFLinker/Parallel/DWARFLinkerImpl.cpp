@@ -27,11 +27,12 @@ DWARFLinkerImpl::DWARFLinkerImpl(MessageHandlerTy ErrorHandler,
 }
 
 DWARFLinkerImpl::LinkContext::LinkContext(LinkingGlobalData &GlobalData,
-                                          DWARFFile &File,
+                                          DWARFFile &File, uint64_t ObjFileIdx,
                                           StringMap<uint64_t> &ClangModules,
                                           std::atomic<size_t> &UniqueUnitID)
     : OutputSections(GlobalData), InputDWARFFile(File),
-      ClangModules(ClangModules), UniqueUnitID(UniqueUnitID) {
+      ObjectFileIdx(ObjFileIdx), ClangModules(ClangModules),
+      UniqueUnitID(UniqueUnitID) {
 
   if (File.Dwarf) {
     if (!File.Dwarf->compile_units().empty())
@@ -61,7 +62,7 @@ void DWARFLinkerImpl::LinkContext::addModulesCompileUnit(
 void DWARFLinkerImpl::addObjectFile(DWARFFile &File, ObjFileLoaderTy Loader,
                                     CompileUnitHandlerTy OnCUDieLoaded) {
   ObjectContexts.emplace_back(std::make_unique<LinkContext>(
-      GlobalData, File, ClangModules, UniqueUnitID));
+      GlobalData, File, ObjectContexts.size(), ClangModules, UniqueUnitID));
 
   if (ObjectContexts.back()->InputDWARFFile.Dwarf) {
     for (const std::unique_ptr<DWARFUnit> &CU :
@@ -452,6 +453,13 @@ Error DWARFLinkerImpl::LinkContext::link(TypeUnit *ArtificialTypeUnit) {
   InputDWARFFile.Dwarf->getDebugMacinfo();
   InputDWARFFile.Dwarf->getDebugMacro();
 
+  // Assign deterministic priorities to module CUs for type DIE allocation.
+  uint64_t LocalCUIdx = 0;
+  for (auto &Mod : ModulesCompileUnits) {
+    if (Error E = Mod.Unit->setPriority(ObjectFileIdx, LocalCUIdx++))
+      return E;
+  }
+
   // Link modules compile units first.
   parallelForEach(ModulesCompileUnits, [&](RefModuleUnit &RefModule) {
     linkSingleCompileUnit(*RefModule.Unit, ArtificialTypeUnit);
@@ -483,6 +491,9 @@ Error DWARFLinkerImpl::LinkContext::link(TypeUnit *ArtificialTypeUnit) {
       CompileUnits.emplace_back(std::make_unique<CompileUnit>(
           GlobalData, *OrigCU, UniqueUnitID.fetch_add(1), "", InputDWARFFile,
           getUnitForOffset, OrigCU->getFormParams(), getEndianness()));
+      if (llvm::Error E =
+              CompileUnits.back()->setPriority(ObjectFileIdx, LocalCUIdx++))
+        return E;
 
       // Preload line table, as it can't be loaded asynchronously.
       CompileUnits.back()->loadLineTable();
@@ -1030,12 +1041,20 @@ void DWARFLinkerImpl::forEachOutputString(
         if (Patch.Die == nullptr)
           return;
 
+        TypeEntryBody *TypeEntry = Patch.TypeName->getValue().load();
+        if (&TypeEntry->getFinalDie() != Patch.Die)
+          return;
+
         StringHandler(StringDestinationKind::DebugStr, Patch.String);
       });
 
       OutSection.ListDebugTypeLineStrPatch.forEach(
           [&](DebugTypeLineStrPatch &Patch) {
             if (Patch.Die == nullptr)
+              return;
+
+            TypeEntryBody *TypeEntry = Patch.TypeName->getValue().load();
+            if (&TypeEntry->getFinalDie() != Patch.Die)
               return;
 
             StringHandler(StringDestinationKind::DebugStr, Patch.String);

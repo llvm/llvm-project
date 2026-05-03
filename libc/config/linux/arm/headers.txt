@@ -20,6 +20,8 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.wchar
     libc.include.wctype
 
+    libc.include.sys_personality
+
     # Disabled due to epoll_wait syscalls not being available on this platform.
     # libc.include.sys_epoll
 )

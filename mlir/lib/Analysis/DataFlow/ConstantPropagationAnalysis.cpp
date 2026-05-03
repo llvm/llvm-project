@@ -103,9 +103,13 @@ LogicalResult SparseConstantPropagation::visitOperation(
       propagateIfChanged(lattice,
                          lattice->join(ConstantValue(attr, op->getDialect())));
     } else {
-      LDBG() << "Folded to value: " << cast<Value>(foldResult);
+      Value foldValue = cast<Value>(foldResult);
+      LDBG() << "Folded to value: " << foldValue;
+      // The folded value may not be an operand of `op`, so we need to use
+      // `getLatticeElementFor` (and not `getLatticeElement`) so that
+      // this operation is revisited if that value's lattice widens later.
       AbstractSparseForwardDataFlowAnalysis::join(
-          lattice, *getLatticeElement(cast<Value>(foldResult)));
+          lattice, *getLatticeElementFor(getProgramPointAfter(op), foldValue));
     }
   }
   return success();

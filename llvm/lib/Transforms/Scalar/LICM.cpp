@@ -2328,7 +2328,9 @@ static bool noConflictingReadWrites(Instruction *I, MemorySSA *MSSA,
     auto *Accesses = MSSA->getBlockAccesses(BB);
     if (!Accesses)
       continue;
-    for (const auto &MA : *Accesses)
+    for (const auto &MA : *Accesses) {
+      if (!Flags.getIsSink() && MSSA->dominates(IMD, &MA))
+        continue;
       if (const auto *MU = dyn_cast<MemoryUse>(&MA)) {
         auto *MD = getClobberingMemoryAccess(*MSSA, BAA, Flags,
                                              const_cast<MemoryUse *>(MU));
@@ -2361,6 +2363,7 @@ static bool noConflictingReadWrites(Instruction *I, MemorySSA *MSSA,
           }
         }
       }
+    }
   }
   return true;
 }

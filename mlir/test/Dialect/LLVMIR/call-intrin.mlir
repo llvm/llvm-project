@@ -61,7 +61,7 @@ llvm.func @no_intrinsic() {
 
 llvm.func @bad_types() {
   %0 = llvm.mlir.constant(1 : i8) : i8
-  // expected-error@below {{call intrinsic signature i8 (i8) to overloaded intrinsic "llvm.round" does not match any of the overloads}}
+  // expected-error@below {{call intrinsic signature i8 (i8) to overloaded intrinsic "llvm.round" does not match any of the overloads: intrinsic has incorrect return type}}
   // expected-error@below {{LLVM Translation failed for operation: llvm.call_intrinsic}}
   llvm.call_intrinsic "llvm.round"(%0) {} : (i8) -> i8
   llvm.return

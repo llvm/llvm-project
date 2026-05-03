@@ -256,6 +256,12 @@ add_macro_header(
 )
 
 add_macro_header(
+  sys_personality_macros
+  HDR
+    sys-personality-macros.h
+)
+
+add_macro_header(
   sys_queue_macros
   HDR
     sys-queue-macros.h
@@ -371,7 +377,7 @@ add_macro_header(
 add_macro_header(
   nl_types_macros
   HDR
-    nl-types-macros.h
+    nl_types-macros.h
 )
 
 add_macro_header(

@@ -707,16 +707,16 @@ static void emitBinaryParser(raw_ostream &OS, indent Indent,
     return;
   }
 
-  if (OpInfo.fields().empty()) {
+  if (OpInfo.Fields.empty()) {
     // Only a constant part. The old behavior is to not decode this operand.
     if (IgnoreFullyDefinedOperands)
       return;
     // Initialize `tmp` with the constant part.
     OS << Indent << "tmp = " << format_hex(*OpInfo.InitValue, 0) << ";\n";
-  } else if (OpInfo.fields().size() == 1 && !OpInfo.InitValue.value_or(0)) {
+  } else if (OpInfo.Fields.size() == 1 && !OpInfo.InitValue.value_or(0)) {
     // One variable part and no/zero constant part. Initialize `tmp` with the
     // variable part.
-    auto [Base, Width, Offset] = OpInfo.fields().front();
+    auto [Base, Width, Offset] = OpInfo.Fields.front();
     OS << Indent << "tmp = fieldFromInstruction(insn, " << Base << ", " << Width
        << ')';
     if (Offset)
@@ -727,7 +727,7 @@ static void emitBinaryParser(raw_ostream &OS, indent Indent,
     // insert the variable parts into it.
     OS << Indent << "tmp = " << format_hex(OpInfo.InitValue.value_or(0), 0)
        << ";\n";
-    for (auto [Base, Width, Offset] : OpInfo.fields()) {
+    for (auto [Base, Width, Offset] : OpInfo.Fields) {
       OS << Indent << "tmp |= fieldFromInstruction(insn, " << Base << ", "
          << Width << ')';
       if (Offset)

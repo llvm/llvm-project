@@ -60,7 +60,7 @@ result in something like:
       }
    }
 
-which is very hard to make sense of.
+which is very hard to understand.
 
 Note: ``frame variable <var>`` prints out the variable ``<var>`` in the current
 frame.
@@ -84,7 +84,8 @@ Note: you can also use ``v <var>`` instead of ``frame variable <var>``.
 
 It's worth mentioning that the ``size=5`` string is produced by a summary
 provider and the list of children is produced by a synthetic child provider.
-More information about these providers is available later in this document.
+More information about these providers is available in :ref:`type-summary` and
+:ref:`synthetic-children`, respectively.
 
 
 There are several features related to data visualization: formats, summaries,
@@ -129,7 +130,7 @@ This is done by typing
 
 at the LLDB command line.
 
-The ``--format`` (which you can shorten to -f) option accepts a `format
+The ``--format`` (which you can shorten to ``-f``) option accepts a `format
 name`_. Then, you provide one or more types to which you want the
 new format applied.
 
@@ -170,8 +171,8 @@ values of type B will be shown as hex and values of type D as byte arrays, as in
    (D) d = {0x04 0x00 0x00 0x00}
 
 This is because by default LLDB cascades formats through typedef chains. In
-order to avoid that you can use the option -C no to prevent cascading, thus
-making the two commands required to achieve your goal:
+order to prevent cascading, use the option ``-C`` with the value ``no`` when
+defining the type format:
 
 ::
 
@@ -179,7 +180,7 @@ making the two commands required to achieve your goal:
    (lldb) type format add -C no -f uint8_t[] C
 
 
-which provides the desired output:
+Without cascading, the same command gives different results:
 
 ::
 
@@ -189,7 +190,8 @@ which provides the desired output:
    (C) c = {0x03 0x00 0x00 0x00}
    (D) d = 4
 
-Note, that qualifiers such as const and volatile will be stripped when matching types for example:
+Note that qualifiers such as ``const`` and ``volatile`` will be stripped when
+matching types. For example:
 
 ::
 
@@ -203,9 +205,13 @@ Note, that qualifiers such as const and volatile will be stripped when matching 
    (const int) y = 0x00000002
    (volatile int) z = 0x00000004
 
-Two additional options that you will want to look at are --skip-pointers (-p)
-and --skip-references (-r). These two options prevent LLDB from applying a
-format for type T to values of type T* and T& respectively.
+Type formats *can* be applied to pointers and references by using the
+``pointer`` "adjective" before the type in the ``type format`` command.
+However, they specify the format to be applied to the pointer or reference
+and not the value being referenced or pointed to. Use ``--skip-pointers`` (``-p``)
+and ``--skip-references`` (``-r``) to change this behavior. These two
+options prevent LLDB from applying a format defined for type ``T`` to
+values of type ``T*`` and ``T&``, respectively.
 
 ::
 
@@ -218,33 +224,31 @@ format for type T to values of type T* and T& respectively.
    (int *) pointer = 0x0000000100100180
    (int) *pointer = {1.53302e-42}
 
-While they can be applied to pointers and references, formats will make no
-attempt to dereference the pointer and extract the value before applying the
-format, which means you are effectively formatting the address stored in the
-pointer rather than the pointee value. For this reason, you may want to use the
--p option when defining formats.
+If you need to delete a custom format type, use ``type format delete`` followed
+by the name of the type for which to delete the format.
 
-If you need to delete a custom format simply type type format delete followed
-by the name of the type to which the format applies.Even if you defined the
-same format for multiple types on the same command, type format delete will
-only remove the format for the type name passed as argument.
 
-To delete ALL formats, use ``type format clear``. To see all the formats
-defined, use type format list.
+::
 
-If all you need to do, however, is display one variable in a custom format,
-while leaving the others of the same type untouched, you can simply type:
+   (lldb) type format delete int
+
+To delete *all* formats, use ``type format clear``.
+
+To see all the formats defined, use ``type format list``.
+
+Instead of installing a type format for the entire debugging session, you
+can specify type formats in an ad hoc manner using the ``-f``
+option to the ``frame variable`` command. For example:
 
 ::
 
    (lldb) frame variable counter -f hex
 
-This has the effect of displaying the value of counter as an hexadecimal
-number, and will keep showing it this way until you either pick a different
-format or till you let your program run again.
+Will display the value of counter as an hexadecimal number.
 
-Finally, this is a list of formatting options available out of which you can
-pick:
+
+Type Formats
+++++++++++++
 
 .. _`format name`:
 
@@ -323,96 +327,153 @@ pick:
 | ``void``                                      | v                | don't show anything                                                      |
 +-----------------------------------------------+------------------+--------------------------------------------------------------------------+
 
+.. _type-summary:
+
 Type Summary
 ------------
 
-Type formats work by showing a different kind of display for the value of a
-variable. However, they only work for basic types. When you want to display a
-class or struct in a custom format, you cannot do that using formats.
+Type formats specify the way to format a variable/value with a fundamental type.
+When you want to display a variable/value for a user-defined type,\ [#]_ you need
+another tool, type summaries.
 
-A different feature, type summaries, works by extracting information from
-classes, structures, ... (aggregate types) and arranging it in a user-defined
-format, as in the following example:
+Type summaries work by extracting information from aggregate types and arranging it
+in a user-defined format. Consider the following example:
 
-before adding a summary...
+Before adding a type summary, for a C++ program with a ``struct`` declared like
+
+.. code-block:: C++
+
+   struct Person {
+      std::string name;
+      int age;
+   };
+
+
+LLDB will format a variable that is an instance of the ``Person`` type as
 
 ::
 
-   (lldb) frame variable -T one
-   (i_am_cool) one = {
-      (int) x = 3
-      (float) y = 3.14159
-      (char) z = 'E'
+   (lldb) frame variable -T p
+   (Person) p = {
+      (std::string) name = "Jaime"
+      (int) age = 44
    }
 
-after adding a summary...
+Using a type summary, the LLDB user can specify that an instance of
+the ``Person`` type be formatted as
 
 ::
 
-   (lldb) frame variable one
-   (i_am_cool) one = int = 3, float = 3.14159, char = 69
+   (lldb) frame variable -T p
+   (Person) p = The person is named "Jaime" and is 44 years old.
 
-There are two ways to use type summaries: the first one is to bind a summary
-string to the type; the second is to write a Python script that returns the
-string to be used as summary. Both options are enabled by the type summary add
-command.
+There are two methods for specifying type summaries: 
+1. by binding a Summary String to the type; and
+2. by writing and registering a Python script that returns the Summary String for a type.
 
-The command to obtain the output shown in the example is:
+
+Method (1) was used to format the ``Person`` type shown above:
 
 ::
 
-(lldb) type summary add --summary-string "int = ${var.x}, float = ${var.y}, char = ${var.z%u}" i_am_cool
-
-Initially, we will focus on summary strings, and then describe the Python
-binding mechanism.
+(lldb) type summary add --summary-string "The person is named ${var.name} and is ${var.age} years old." Person
 
 Summary Format Matching On Pointers
 -----------------------------------
 
-A summary formatter for a type ``T`` might or might not be appropriate to use
-for pointers to that type. If the formatter is only appropriate for the type and
-not its pointers, use the ``-p`` option to restrict it to match SBValues of type
-``T``. If you want the formatter to also match pointers to the type, you can use
-the ``-d`` option to specify how many pointer layers the formatter should match.
-The default value is 1, so if you don't specify ``-p`` or ``-d``, your formatter
-will be used on SBValues of type ``T`` and ``T*``. If you want to also match
-``T**`` set ``-d`` to 2, etc. In all cases, the SBValue passed to the summary
-formatter will be the matched ValueObject. lldb doesn't dereference the matched
-value down to the SBValue of type ``T`` before passing it to your formatter.
+A summary formatter for a type ``T`` may not be appropriate to use
+for pointers to that type. 
+
+- If the formatter is only appropriate for the type and
+  not its pointers, use the ``-p`` option to ``type summary`` to restrict it to match
+  values of type ``T``.
+- If the formatter is appropriate for the type and its pointers, 
+  use the ``-d <number>`` option to ``type summary`` to specify the number of
+  pointer indirections the formatter should match. The default value is 1. If you want
+  to also match ``T**`` set ``-d`` to 2, and so on. 
+
+In all cases, the value passed to the summary formatter for interpolation
+into the Summary String (see :ref:`summary-strings`) will be dereferenced to the type ``T``
+if the type ``T`` is reached in at most the number of dereferences you specify
+to the ``-d`` option (or once (1), when using the default).
+
+For example, assume that the ``Person`` struct is in the scope of a C++
+program with the following declarations:
+
+.. code-block:: C++
+
+  Person p{.name = "Jaime", .age = 44};
+  Person *q{new Person{.name = "Jaime", .age = 44}};
+  Person **r{&q};
+
+And the following Summary String has been bound to ``Person`` type using the ``type summary``
+command shown here:
+
+::
+
+   (lldb) type summary add --summary-string "The person is named ${var.name} and is ${var.age} years old." Person
+
+
+Then LLDB will produce output which, at first, is unexpected:
+
+::
+
+   (lldb) frame var p
+   (Person) The person is named "Jaime" and is 44 years old.
+   (lldb) frame var q
+   (Person *) 0x00000000004172b0 The person is named "Jaime" and is 44 years old.
+   (lldb) frame var r
+   (Person **) 0x00007fffffffd658 error: summary string parsing error
+
+Upon closer inspection, LLDB is doing exactly as instructed. ``p`` has type ``T``
+and needs to be dereferenced 0 times to reach type ``T``. ``q``
+has type ``*T`` and needs to be dereferenced 1 time to reach type ``T``. Because
+the Summary String was installed with the default ``-d`` value of 1, the summary formatter
+will use ``*q`` for interpolation.
+
+However, ``r`` has type ``**T`` and needs to be dereferenced 2 times to reach ``T``. Because
+the Summary String was installed with the default ``-d`` value of 1, the summary formatter
+will use ``*r`` for interpolation. Because ``*r`` has type ``*T`` (and not ``T``), the error
+above is reasonable.
+
+
+.. _summary-strings:
 
 Summary Strings
 ---------------
+A Summary String contains a sequence of tokens that are processed by LLDB to
+generate the summary for a user-defined type. Summary Strings are written in
+an LLDB-specific control language.\ [#]_
 
-Summary strings are written using a simple control language, exemplified by the
-snippet above. A summary string contains a sequence of tokens that are
-processed by LLDB to generate the summary.
+Summary Strings can contain
 
-Summary strings can contain plain text, control characters and special
-variables that have access to information about the current object and the
-overall program state.
+- references to the instance of the user-defined type being formatted by the
+  Summary String
+- plain text,
+- control characters, and
+- special variables that have access to information about the current object
+  and the overall program state.
+
+``${var}`` can be used refer to the variable being formatted by the Summary String.
 
 Plain text is any sequence of characters that doesn't contain a ``{``, ``}``, ``$``,
 or ``\`` character, which are the syntax control characters.
 
-The special variables are found in between a "${" prefix, and end with a "}"
-suffix. Variables can be a simple name or they can refer to complex objects
-that have subitems themselves. In other words, a variable looks like
-``${object}`` or ``${object.child.otherchild}``. A variable can also be
-prefixed or suffixed with other symbols meant to change the way its value is
-handled. An example is ``${*var.int_pointer[0-3]}``.
+Special variables can be used between ``${`` prefix, and ``}`` suffix. For example,
+``var`` could be used to refer to the instance of the variable being
+formatted by the Summary String. Children of variables can be accessed using the
+variable itself (e.g. ``${var.child.otherchild}`` or ``${file.basename}``). A variable
+can also be prefixed or suffixed with other symbols to change the way its value is
+handled. For example, ``${*var.int_pointer[0-3]}``.
 
-Basically, the syntax is the same one described Frame and Thread Formatting
-plus additional symbols specific for summary strings. The main of them is
-${var, which is used refer to the variable that a summary is being created for.
+The simplest thing you can do is access a member variable of a class or structure
+by typing its expression path. The expression path for a field named ``y`` in a
+user-defined type is simply ``.y``. Thus, to ask the Summary String to display
+field ``y`` of an instance of ``struct A`` (below) you would type ``${var.y}``.
 
-The simplest thing you can do is grab a member variable of a class or structure
-by typing its expression path. In the previous example, the expression path for
-the field float y is simply .y. Thus, to ask the summary string to display y
-you would type ${var.y}.
+If you have code in a C++ program with the following declarations:
 
-If you have code like the following:
-
-::
+.. code-block:: C++
 
    struct A {
       int x;
@@ -424,17 +485,17 @@ If you have code like the following:
       int *z;
    };
 
-the expression path for the y member of the x member of an object of type B
-would be .x.y and you would type ``${var.x.y}`` to display it in a summary
-string for type B.
+And were writing a Summary String to format an instance of ``B``, the expression
+path for the ``y`` member of the ``x`` member would be ``.x.y`` and you would
+use ``${var.x.y}`` in the Summary String.
 
-By default, a summary defined for type T, also works for types T* and T& (you
-can disable this behavior if desired). For this reason, expression paths do not
-differentiate between . and ->, and the above expression path .x.y would be
-just as good if you were displaying a B*, or even if the actual definition of B
-were:
+By default, a summary defined for type ``T``, also works for types ``T*`` and ``T&``
+(as mentioned above, you can disable this behavior if desired). For this reason,
+expression paths do not differentiate between ``.`` and ``->``, and the above
+expression path ``.x.y`` would be valid for displaying a value with type ``B*``,
+``B`` or even if the actual declaration of ``B`` were instead:
 
-::
+.. code-block:: C++
 
    struct B {
       A *x;
@@ -442,41 +503,39 @@ were:
       int *z;
    };
 
-This is unlike the behavior of frame variable which, on the contrary, will
-enforce the distinction. As hinted above, the rationale for this choice is that
-waiving this distinction enables you to write a summary string once for type T
-and use it for both T and T* instances. As a summary string is mostly about
+This behavior differs from ``frame variable`` which does enforce the distinction
+between ``T`` and ``T*``. The rationale for this choice is that ignoring this
+distinction enables you to write a Summary String once for type ``T`` and use
+it for both ``T`` and ``T*`` instances. As a Summary String is mostly about
 extracting nested members' information, a pointer to an object is just as good
-as the object itself for the purpose.
+as the object itself for that purpose.
 
-If you need to access the value of the integer pointed to by B::z, you cannot
-simply say ${var.z} because that symbol refers to the pointer z. In order to
-dereference it and get the pointed value, you should say ``${*var.z}``. The
-``${*var`` tells LLDB to get the object that the expression paths leads to, and
-then dereference it. In this example is it equivalent to ``*(bObject.z)`` in
-C/C++ syntax. Because ``.`` and ``->`` operators can both be used, there is no
-need to have dereferences in the middle of an expression path (e.g. you do not
-need to type ``${*(var.x).x}``) to read A::x as contained in ``*(B::x)``. To
-achieve that effect you can simply write ``${var.x->x}``, or even
-``${var.x.x}``. The ``*`` operator only binds to the result of the whole
-expression path, rather than piecewise, and there is no way to use parentheses
-to change that behavior.
-
-Of course, a summary string can contain more than one ${var specifier, and can
-use ``${var`` and ``${*var`` specifiers together.
+If you need to access the value of the integer pointed to by ``B::z``, your
+Summary String cannot simply use expression path ``.z`` because that symbol
+refers to the pointer ``z``. To access the value of the integer pointed to by
+``B::z`` in your Summary String, you should use the same expression path but
+dereference it: ``${*var.z}``. The ``*`` tells LLDB to get the object that
+the expression path leads to and then dereference it. In this example, it is
+equivalent to ``*(bObject.z)`` in C/C++ syntax. Because ``.`` and ``->``
+operators can be used interchangeably, there is no need to have dereferences
+in the middle of an expression path. For example, you do not need to type
+``${*(var.x).x}`` to read ``A::x`` as contained in ``*(B::x)``. Instead, you
+can simply write ``${var.x->x}``, or even ``${var.x.x}``. The ``*`` operator
+only binds to the result of the whole expression path, rather than piecewise,
+and there is no way to use parentheses to change that behavior.
 
 Formatting Summary Elements
 ---------------------------
 
 An expression path can include formatting codes. Much like the type formats
 discussed previously, you can also customize the way variables are displayed in
-summary strings, regardless of the format they have applied to their types. To
+Summary Strings, regardless of the format they have applied to their types. To
 do that, you can use %format inside an expression path, as in ${var.x->x%u},
 which would display the value of x as an unsigned integer.
 
 Additionally, custom output can be achieved by using an LLVM format string,
 commencing with the ``:`` marker. To illustrate, compare ``${var.byte%x}`` and
-``${var.byte:x-}``. The former uses lldb's builtin hex formatting (``x``),
+``${var.byte:x-}``. The former uses LLDB's builtin hex formatting (``x``),
 which unconditionally inserts a ``0x`` prefix, and also zero pads the value to
 match the size of the type. The latter uses ``llvm::formatv`` formatting
 (``:x-``), and will print only the hex value, with no ``0x`` prefix, and no
@@ -509,7 +568,7 @@ themselves, but which carry a special meaning when used in this context:
 | ``%>``     | Print the expression path for this item                                  |
 +------------+--------------------------------------------------------------------------+
 
-Since lldb 3.7.0, you can also specify ``${script.var:pythonFuncName}``.
+Since LLDB 3.7.0, you can also specify ``${script.var:pythonFuncName}``.
 
 It is expected that the function name you use specifies a function whose
 signature is the same as a Python summary function. The return string from the
@@ -528,7 +587,7 @@ is not valid and will cause the summary to fail to evaluate.
 Element Inlining
 ----------------
 
-Option --inline-children (-c) to type summary add tells LLDB not to look for a summary string, but instead to just print a listing of all the object's children on one line.
+Option --inline-children (-c) to type summary add tells LLDB not to look for a Summary String, but instead to just print a listing of all the object's children on one line.
 
 As an example, given a type pair:
 
@@ -591,7 +650,7 @@ hard to read for real-life scenarios.
 To cope with the issue, LLDB supports native bitfield formatting in summary
 strings. If your expression paths leads to a so-called scalar type (the usual
 int, float, char, double, short, long, long long, double, long double and
-unsigned variants), you can ask LLDB to only grab some bits out of the value
+unsigned variants), you can ask LLDB to only access some bits out of the value
 and display them in any format you like. If you only need one bit you can use
 the [n], just like indexing an array. To extract multiple bits, you can use a
 slice-like syntax: [n-m], e.g.
@@ -613,8 +672,11 @@ extracting bitfields out of a float object.
 When typing a range, the extremes n and m are always included, and the order of
 the indices is irrelevant.
 
-LLDB also allows to use a similar syntax to display array members inside a summary string. For instance, you may want to display all arrays of a given type using a more compact notation than the default, and then just delve into individual array members that prove interesting to your debugging task. You can tell LLDB to format arrays in special ways, possibly independent of the way the array members' datatype is formatted.
-e.g.
+LLDB also allows to use a similar syntax to display array members inside a Summary String.
+For instance, you may want to display all arrays of a given type using a more compact
+notation than the default, and then just delve into individual array members that prove
+interesting to your debugging task. You can tell LLDB to format arrays in special ways,
+possibly independent of the way the array members' datatype is formatted. For example:
 
 ::
 
@@ -642,7 +704,10 @@ e.g.
    (lldb) frame variable sarray
    (Simple [3]) sarray = [1,4,7]
 
-The [] symbol amounts to: if var is an array and I know its size, apply this summary string to every element of the array. Here, we are asking LLDB to display .x for every element of the array, and in fact this is what happens. If you find some of those integers anomalous, you can then inspect that one item in greater detail, without the array format getting in the way:
+The [] symbol amounts to: if ``var`` is an array and I know its size, apply this Summary String
+to every element of the array. Here, we are asking LLDB to display ``.x`` for every element of
+the array, and in fact this is what happens. If you find some of those integers anomalous,
+you can then inspect that one item in greater detail, without the array format getting in the way:
 
 ::
 
@@ -683,7 +748,7 @@ square brackets, as in:
 This syntax works for char* as well as for char[] because LLDB can rely on the
 final \0 terminator to know when the string has ended.
 
-LLDB has default summary strings for char* and char[] that use this special
+LLDB has default Summary Strings for char* and char[] that use this special
 case. On debugger startup, the following are defined automatically:
 
 ::
@@ -708,15 +773,15 @@ the square brackets operator to get the expected output.
 Python Scripting
 ----------------
 
-Most of the times, summary strings prove good enough for the job of summarizing
+Most of the times, Summary Strings prove good enough for the job of summarizing
 the contents of a variable. However, as soon as you need to do more than
-picking some values and rearranging them for display, summary strings stop
-being an effective tool. This is because summary strings lack the power to
+picking some values and rearranging them for display, Summary Strings stop
+being an effective tool. This is because Summary Strings lack the power to
 actually perform any kind of computation on the value of variables.
 
 To solve this issue, you can bind some Python scripting code as a summary for
-your datatype, and that script has the ability to both extract children
-variables as the summary strings do and to perform active computation on the
+your datatype, and that script has the ability to both extract child
+variables as the Summary Strings do, and to perform active computation on the
 extracted values. As a small example, let's say we have a Rectangle class:
 
 ::
@@ -735,7 +800,7 @@ extracted values. As a small example, let's say we have a Rectangle class:
       int GetWidth() { return width; }
    };
 
-Summary strings are effective to reduce the screen real estate used by the
+Summary Strings are effective to reduce the screen real estate used by the
 default viewing mode, but are not effective if we want to display the area and
 perimeter of Rectangle objects
 
@@ -784,8 +849,8 @@ retrieve an `SBData` object by calling ``GetData()`` and then read the object's
 contents out of the `SBData`.
 
 If you need to delve into several levels of hierarchy, as you can do with
-summary strings, you can use the method ``GetValueForExpressionPath()``,
-passing it an expression path just like those you could use for summary strings
+Summary Strings, you can use the method ``GetValueForExpressionPath()``,
+passing it an expression path just like those you could use for Summary Strings
 (one of the differences is that dereferencing a pointer does not occur by
 prefixing the path with a ``*```, but by calling the ``Dereference()`` method
 on the returned `SBValue`). If you need to access array slices, you cannot do
@@ -820,7 +885,7 @@ you to input a Python script as a summary:
 Regular Expression Typenames
 ----------------------------
 
-As you noticed, in order to associate the custom summary string to the array
+As you noticed, in order to associate the custom Summary String to the array
 types, one must give the array size as part of the typename. This can long
 become tiresome when using arrays of different sizes, Simple [3], Simple [9],
 Simple [12], ...
@@ -859,7 +924,7 @@ Names Summaries
 For a given type, there may be different meaningful summary representations.
 However, currently, only one summary can be associated to a type at each
 moment. If you need to temporarily override the association for a variable,
-without changing the summary string for to its type, you can use named
+without changing the Summary String for to its type, you can use named
 summaries.
 
 Named summaries work by attaching a name to a summary when creating it. Then,
@@ -877,13 +942,15 @@ given instead of the default one.
 
 When defining a named summary, binding it to one or more types becomes
 optional. Even if you bind the named summary to a type, and later change the
-summary string for that type, the named summary will not be changed by that.
+Summary String for that type, the named summary will not be changed by that.
 You can delete named summaries by using the type summary delete command, as if
 the summary name was the datatype that the summary is applied to
 
 A summary attached to a variable using the --summary option, has the same
 semantics that a custom format attached using the -f option has: it stays
 attached till you attach a new one, or till you let your program run again.
+
+.. _synthetic-children:
 
 Synthetic Children
 ------------------
@@ -994,15 +1061,15 @@ Being more specific, in case of exceptions, LLDB might assume that the given
 object has no children or it might skip printing some children, as they are
 printed one by one.
 
-[1] The ``max_children`` argument is optional (since lldb 3.8.0) and indicates the
-maximum number of children that lldb is interested in (at this moment). If the
+[1] The ``max_children`` argument is optional (since LLDB 3.8.0) and indicates the
+maximum number of children that LLDB is interested in (at this moment). If the
 computation of the number of children is expensive (for example, requires
 traversing a linked list to determine its size) your implementation may return
 ``max_children`` rather than the actual number. If the computation is cheap (e.g., the
 number is stored as a field of the object), then you can always return the true
 number of children (that is, ignore the ``max_children`` argument).
 
-[2] This method is optional. Also, a boolean value must be returned (since lldb
+[2] This method is optional. Also, a boolean value must be returned (since LLDB
 3.1.0). If ``False`` is returned, then whenever the process reaches a new stop,
 this method will be invoked again to generate an updated list of the children
 for a given variable. Otherwise, if ``True`` is returned, then the value is
@@ -1010,11 +1077,11 @@ cached and this method won't be called again, effectively freezing the state of
 the value in subsequent stops. Beware that returning ``True`` incorrectly could
 show misleading information to the user.
 
-[3] This method is optional (since lldb 3.2.0). While implementing it in terms
+[3] This method is optional (since LLDB 3.2.0). While implementing it in terms
 of num_children is acceptable, implementors are encouraged to look for
 optimized coding alternatives whenever reasonable.
 
-[4] This method is optional (since lldb 3.5.2). The `SBValue` you return here
+[4] This method is optional (since LLDB 3.5.2). The `SBValue` you return here
 will most likely be a numeric type (int, float, ...) as its value bytes will be
 used as-if they were the value of the root `SBValue` proper.  As a shortcut for
 this, you can inherit from lldb.SBSyntheticValueProvider, and just define
@@ -1083,7 +1150,7 @@ LLDB has synthetic children providers for a core subset of STL classes, both in
 the version provided by libstdcpp and by libcxx, as well as for several
 Foundation classes.
 
-Synthetic children extend summary strings by enabling a new special variable:
+Synthetic children extend Summary Strings by enabling a new special variable:
 ``${svar``.
 
 This symbol tells LLDB to refer expression paths to the synthetic children
@@ -1101,8 +1168,8 @@ instead of the real ones. For instance,
    }
 
 It's important to mention that LLDB invokes the synthetic child provider before
-invoking the summary string provider, which allows the latter to have access to
-the actual displayable children. This applies to both inlined summary strings
+invoking the Summary String provider, which allows the latter to have access to
+the actual displayable children. This applies to both inlined Summary Strings
 and python-based summary providers.
 
 
@@ -1115,7 +1182,7 @@ won't show ``__begin`` as child anymore, even through the SB API. It will have
 instead the children calculated by the provider. In case the actual raw
 children are needed, a call to ``value.GetNonSyntheticValue()`` is enough to
 get a raw version of the value. It is import to remember this when implementing
-summary string providers, as they run after the synthetic child provider.
+Summary String providers, as they run after the synthetic child provider.
 
 
 In some cases, if LLDB is unable to use the real object to get a child
@@ -1319,7 +1386,7 @@ not-empty category.
 Finding Formatters 101
 ----------------------
 
-Searching for a formatter (including formats, since lldb 3.4.0) given a
+Searching for a formatter (including formats, since LLDB 3.4.0) given a
 variable goes through a rather intricate set of rules. Namely, what happens is
 that LLDB starts looking in each enabled category, according to the order in
 which they were enabled (latest enabled first). In each category, LLDB does the
@@ -1354,3 +1421,9 @@ through typedef chains, but also through inheritance chains. This feature has
 been removed since it significantly degrades performance. You need to set up
 your formatters for every type in inheritance chains to which you want the
 formatter to apply.
+
+.. [#] These types of variables go by different names depending on the language. In C++, in
+   particular, they are known as compound types.
+
+.. [#] If you are familiar with the syntax for Frame and Thread Formatting
+   you will feel right at home with the syntax for Summary Strings.

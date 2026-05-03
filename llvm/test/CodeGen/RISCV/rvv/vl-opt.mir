@@ -1178,3 +1178,37 @@ body: |
     %z:vr = PseudoVADD_VV_M1 $noreg, %y, $noreg, 1, 5 /* e32 */, 0 /* tu, mu */
     $v8 = COPY %z
 ...
+---
+name:            vl_sink_end_of_bb
+body:             |
+  ; CHECK-LABEL: name: vl_sink_end_of_bb
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $v8m4
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vrm4 = COPY $v8m4
+  ; CHECK-NEXT:   [[ADDI:%[0-9]+]]:gprnox0 = ADDI $x0, 1
+  ; CHECK-NEXT:   early-clobber %1:vrm4 = PseudoVRGATHER_VI_M4 $noreg, [[COPY]], 0, [[ADDI]] /* vl */, 6 /* e64 */, 1 /* ta, mu */
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   early-clobber %3:vr = PseudoVMSEQ_VI_M4 %1, 0, [[ADDI]] /* vl */, 6 /* e64 */
+  ; CHECK-NEXT:   [[PseudoVMCLR_M_B16_:%[0-9]+]]:vr = PseudoVMCLR_M_B16 [[ADDI]] /* vl */, 0 /* e8 */
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vmv0 = COPY [[PseudoVMCLR_M_B16_]]
+  ; CHECK-NEXT:   [[PseudoVFIRST_M_B16_MASK:%[0-9]+]]:gpr = PseudoVFIRST_M_B16_MASK killed %3, killed [[COPY1]], [[ADDI]] /* vl */, 0 /* e8 */
+  ; CHECK-NEXT:   $x10 = COPY [[PseudoVFIRST_M_B16_MASK]]
+  ; CHECK-NEXT:   PseudoRET implicit $x10
+  bb.0:
+    liveins: $v8m4
+
+    %2:vrm4 = COPY $v8m4
+    early-clobber %0:vrm4 = PseudoVRGATHER_VI_M4 $noreg, %2, 0, -1 /* vl=VLMAX */, 6 /* e64 */, 1 /* ta, mu */
+    %1:gprnox0 = ADDI $x0, 1
+
+  bb.1:
+    early-clobber %3:vr = PseudoVMSEQ_VI_M4 %0, 0, -1 /* vl=VLMAX */, 6 /* e64 */
+    %4:vr = PseudoVMCLR_M_B16 -1 /* vl=VLMAX */, 0 /* e8 */
+    %6:vmv0 = COPY %4
+    %5:gpr = PseudoVFIRST_M_B16_MASK killed %3, killed %6, %1 /* vl */, 0 /* e8 */
+    $x10 = COPY %5
+    PseudoRET implicit $x10
+...

@@ -272,9 +272,10 @@ void Property::Dump(const ExecutionContext *exe_ctx, Stream &strm,
   }
 }
 
-void Property::DumpDescription(CommandInterpreter &interpreter, Stream &strm,
-                               uint32_t output_width,
-                               bool display_qualified_name) const {
+void Property::DumpDescription(
+    CommandInterpreter &interpreter, Stream &strm, uint32_t output_width,
+    bool display_qualified_name,
+    std::optional<Stream::HighlightSettings> highlight) const {
   if (!m_value_sp)
     return;
   llvm::StringRef desc = GetDescription();
@@ -295,10 +296,10 @@ void Property::DumpDescription(CommandInterpreter &interpreter, Stream &strm,
       StreamString qualified_name;
       DumpQualifiedName(qualified_name);
       interpreter.OutputFormattedHelpText(strm, qualified_name.GetString(),
-                                          "--", desc, output_width);
+                                          "--", desc, output_width, highlight);
     } else {
       interpreter.OutputFormattedHelpText(strm, m_name, "--", desc,
-                                          output_width);
+                                          output_width, highlight);
     }
   }
 }

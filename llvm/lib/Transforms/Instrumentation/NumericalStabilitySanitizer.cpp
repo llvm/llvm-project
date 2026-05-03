@@ -1580,7 +1580,7 @@ Value *NumericalStabilitySanitizer::maybeHandleKnownCallBase(
   // Check that the widened intrinsic is valid.
   SmallVector<Type *, 4> OverloadTys;
   [[maybe_unused]] bool IsValid =
-      Intrinsic::getIntrinsicSignature(WidenedId, WidenedFnTy, OverloadTys);
+      Intrinsic::isSignatureValid(WidenedId, WidenedFnTy, OverloadTys);
   assert(IsValid && "invalid widened intrinsic");
   // For known intrinsic functions, we create a second call to the same
   // intrinsic with a different type.

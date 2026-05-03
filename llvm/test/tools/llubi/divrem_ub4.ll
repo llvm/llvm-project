@@ -6,5 +6,7 @@ define void @main() {
   ret void
 }
 ; CHECK: Entering function: main
+; CHECK-NEXT: Stacktrace:
+; CHECK-NEXT: #0 %res = {{sdiv|udiv|srem|urem}} i8 poison, -1 at @main
 ; CHECK-NEXT: Immediate UB detected: Signed division overflow (refine LHS to INT_MIN).
 ; CHECK-NEXT: error: Execution of function 'main' failed.

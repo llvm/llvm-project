@@ -1422,3 +1422,18 @@ def skipUnlessPackageAvailable(name):
         available = False
 
     return unittest.skipUnless(available, f"requires the '{name}' package")
+
+
+def skipUnlessTargetIsHost(func):
+    """Skip the test case if the test binary architecture does not match LLDB.framework."""
+
+    def check_arch_match():
+        # The lldb executable is built the same as the framework.
+        lldb_arch = lldbplatformutil.getLLDBArchitecture()
+        test_arch = lldbplatformutil.getArchitecture()
+
+        if lldb_arch != test_arch:
+            return "Test binary architecture differs from host architecture"
+        return None
+
+    return skipTestIfFn(check_arch_match)(func)

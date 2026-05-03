@@ -273,7 +273,7 @@ static void collectAllSubModulesWithUmbrellaHeader(
     const Module &Mod, SmallVectorImpl<const Module *> &SubMods) {
   if (Mod.getUmbrellaHeaderAsWritten())
     SubMods.push_back(&Mod);
-  for (auto *M : Mod.submodules())
+  for (Module *M : Mod.submodules())
     collectAllSubModulesWithUmbrellaHeader(*M, SubMods);
 }
 

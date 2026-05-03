@@ -13,8 +13,9 @@ define void @f1(ptr align 16 %ret, ptr align 16 %src, ptr align 16 %b) {
 ; CHECK-NEXT:    .cfi_offset %r15, -40
 ; CHECK-NEXT:    lg %r1, 8(%r4)
 ; CHECK-NEXT:    lg %r0, 0(%r4)
-; CHECK-NEXT:    lg %r4, 8(%r3)
-; CHECK-NEXT:    lg %r5, 0(%r3)
+; CHECK-NEXT:    lpq %r12, 0(%r3)
+; CHECK-NEXT:    lgr %r4, %r13
+; CHECK-NEXT:    lgr %r5, %r12
 ; CHECK-NEXT:  .LBB0_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    lgr %r12, %r5
@@ -45,22 +46,23 @@ define void @f1_fpuse(ptr align 16 %ret, ptr align 16 %src, ptr align 16 %b) {
 ; HARDFP-NEXT:    .cfi_def_cfa_offset 336
 ; HARDFP-NEXT:    ld %f0, 0(%r4)
 ; HARDFP-NEXT:    ld %f2, 8(%r4)
-; HARDFP-NEXT:    lg %r0, 8(%r3)
-; HARDFP-NEXT:    lg %r1, 0(%r3)
+; HARDFP-NEXT:    lpq %r12, 0(%r3)
 ; HARDFP-NEXT:    axbr %f0, %f0
-; HARDFP-NEXT:    lgdr %r5, %f2
-; HARDFP-NEXT:    lgdr %r4, %f0
+; HARDFP-NEXT:    lgdr %r1, %f2
+; HARDFP-NEXT:    lgdr %r0, %f0
+; HARDFP-NEXT:    lgr %r4, %r13
+; HARDFP-NEXT:    lgr %r5, %r12
 ; HARDFP-NEXT:  .LBB1_1: # %atomicrmw.start
 ; HARDFP-NEXT:    # =>This Inner Loop Header: Depth=1
-; HARDFP-NEXT:    lgr %r12, %r1
-; HARDFP-NEXT:    lgr %r13, %r0
-; HARDFP-NEXT:    cdsg %r12, %r4, 0(%r3)
-; HARDFP-NEXT:    lgr %r0, %r13
-; HARDFP-NEXT:    lgr %r1, %r12
+; HARDFP-NEXT:    lgr %r12, %r5
+; HARDFP-NEXT:    lgr %r13, %r4
+; HARDFP-NEXT:    cdsg %r12, %r0, 0(%r3)
+; HARDFP-NEXT:    lgr %r4, %r13
+; HARDFP-NEXT:    lgr %r5, %r12
 ; HARDFP-NEXT:    jl .LBB1_1
 ; HARDFP-NEXT:  # %bb.2: # %atomicrmw.end
-; HARDFP-NEXT:    stg %r1, 160(%r15)
-; HARDFP-NEXT:    stg %r0, 168(%r15)
+; HARDFP-NEXT:    stg %r5, 160(%r15)
+; HARDFP-NEXT:    stg %r4, 168(%r15)
 ; HARDFP-NEXT:    ld %f0, 160(%r15)
 ; HARDFP-NEXT:    ld %f2, 168(%r15)
 ; HARDFP-NEXT:    axbr %f0, %f0
@@ -92,8 +94,9 @@ define void @f1_fpuse(ptr align 16 %ret, ptr align 16 %src, ptr align 16 %b) {
 ; SOFTFP-NEXT:    brasl %r14, __addtf3@PLT
 ; SOFTFP-NEXT:    lg %r3, 248(%r15)
 ; SOFTFP-NEXT:    lg %r2, 240(%r15)
-; SOFTFP-NEXT:    lg %r0, 8(%r12)
-; SOFTFP-NEXT:    lg %r1, 0(%r12)
+; SOFTFP-NEXT:    lpq %r4, 0(%r12)
+; SOFTFP-NEXT:    lgr %r0, %r5
+; SOFTFP-NEXT:    lgr %r1, %r4
 ; SOFTFP-NEXT:  .LBB1_1: # %atomicrmw.start
 ; SOFTFP-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SOFTFP-NEXT:    lgr %r4, %r1

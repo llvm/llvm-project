@@ -1977,6 +1977,22 @@ LLVM_ABI SDValue peekThroughInsertVectorElt(SDValue V,
 /// If \p V is not a truncation, it is returned as-is.
 LLVM_ABI SDValue peekThroughTruncates(SDValue V);
 
+/// Return the non-frozen source operand of \p V if it exists.
+/// If \p V is not a freeze, it is returned as-is.
+inline SDValue peekThroughFreeze(SDValue V) {
+  if (V.getOpcode() == ISD::FREEZE)
+    return V.getOperand(0);
+  return V;
+}
+
+/// Return the non-frozen source operand of \p V if it exists and \p V has
+/// a single use. If \p V is not a single-use freeze, it is returned as-is.
+inline SDValue peekThroughOneUseFreeze(SDValue V) {
+  if (V.getOpcode() == ISD::FREEZE && V.hasOneUse())
+    return V.getOperand(0);
+  return V;
+}
+
 /// Returns true if \p V is a bitwise not operation. Assumes that an all ones
 /// constant is canonicalized to be operand 1.
 LLVM_ABI bool isBitwiseNot(SDValue V, bool AllowUndefs = false);

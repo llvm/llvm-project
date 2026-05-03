@@ -462,6 +462,7 @@ void SPIRVSerializer::init() {
 #if LLVM_HAS_SPIRV_TARGET
 static const std::vector<std::string> getDefaultSPIRVExtensions() {
   return {
+      "SPV_KHR_bfloat16",
       "SPV_EXT_relaxed_printf_string_address_space",
       "SPV_INTEL_cache_controls",
       "SPV_INTEL_variable_length_array",

@@ -53,7 +53,7 @@ LIBC_INLINE constexpr T frexp(T x, int &exp) {
 }
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE T modf(T x, T &iptr) {
+LIBC_INLINE constexpr T modf(T x, T &iptr) {
   FPBits<T> bits(x);
   if (bits.is_zero() || bits.is_nan()) {
     iptr = x;

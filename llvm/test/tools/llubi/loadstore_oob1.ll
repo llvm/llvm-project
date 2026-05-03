@@ -10,5 +10,7 @@ define void @main() {
 ; CHECK: Entering function: main
 ; CHECK-NEXT: %alloc = alloca [2 x i32], align 4 => ptr 0x8 [alloc]
 ; CHECK-NEXT: %gep = getelementptr inbounds [2 x i32], ptr %alloc, i64 0, i64 2 => ptr 0x10 [alloc + 8]
-; CHECK-NEXT: Immediate UB detected: Memory access is out of bounds.
+; CHECK-NEXT: Stacktrace:
+; CHECK-NEXT: #0   {{store i32 0|%res = load i32}}, ptr %gep, align 4 at @main
+; CHECK-NEXT: Immediate UB detected: Memory access is out of bounds. Accessed size: 4, Address: 0x10, Object base: 0x8, Object size: 8.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

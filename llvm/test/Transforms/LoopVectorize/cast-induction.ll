@@ -414,3 +414,155 @@ loop:
 exit:
   ret void
 }
+
+define i64 @induction_cast_chain_cleared_by_dce(i64 %n, i64 %mask.init) {
+; VF4-LABEL: define i64 @induction_cast_chain_cleared_by_dce(
+; VF4-SAME: i64 [[N:%.*]], i64 [[MASK_INIT:%.*]]) {
+; VF4-NEXT:  [[ENTRY:.*]]:
+; VF4-NEXT:    [[MASK:%.*]] = and i64 [[MASK_INIT]], -4294967296
+; VF4-NEXT:    [[TMP0:%.*]] = add nuw nsw i64 [[MASK]], 2
+; VF4-NEXT:    [[SMAX1:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 [[TMP0]])
+; VF4-NEXT:    [[TMP1:%.*]] = add i64 [[SMAX1]], -1
+; VF4-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], [[MASK]]
+; VF4-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[MASK]], 1
+; VF4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 4
+; VF4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
+; VF4:       [[VECTOR_SCEVCHECK]]:
+; VF4-NEXT:    [[TMP4:%.*]] = add nuw nsw i64 [[MASK]], 2
+; VF4-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 [[TMP4]])
+; VF4-NEXT:    [[TMP5:%.*]] = add i64 [[SMAX]], -2
+; VF4-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP5]], [[MASK]]
+; VF4-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i32
+; VF4-NEXT:    [[TMP8:%.*]] = add i32 1, [[TMP7]]
+; VF4-NEXT:    [[TMP9:%.*]] = icmp ult i32 [[TMP8]], 1
+; VF4-NEXT:    [[TMP10:%.*]] = icmp ugt i64 [[TMP6]], 4294967295
+; VF4-NEXT:    [[TMP11:%.*]] = or i1 [[TMP9]], [[TMP10]]
+; VF4-NEXT:    [[TMP12:%.*]] = add nuw nsw i64 [[MASK]], 1
+; VF4-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[TMP12]], 1
+; VF4-NEXT:    [[TMP13:%.*]] = or i1 [[TMP11]], [[IDENT_CHECK]]
+; VF4-NEXT:    br i1 [[TMP13]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; VF4:       [[VECTOR_PH]]:
+; VF4-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 4
+; VF4-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
+; VF4-NEXT:    [[TMP14:%.*]] = mul i64 [[N_VEC]], [[TMP3]]
+; VF4-NEXT:    [[TMP15:%.*]] = add i64 1, [[TMP14]]
+; VF4-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[TMP3]], i64 0
+; VF4-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
+; VF4-NEXT:    [[TMP16:%.*]] = mul <4 x i64> <i64 0, i64 1, i64 2, i64 3>, [[BROADCAST_SPLAT]]
+; VF4-NEXT:    [[INDUCTION:%.*]] = add <4 x i64> splat (i64 1), [[TMP16]]
+; VF4-NEXT:    [[TMP17:%.*]] = shl i64 [[TMP3]], 2
+; VF4-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <4 x i64> poison, i64 [[TMP17]], i64 0
+; VF4-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT2]], <4 x i64> poison, <4 x i32> zeroinitializer
+; VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
+; VF4:       [[VECTOR_BODY]]:
+; VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VF4-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP18:%.*]], %[[VECTOR_BODY]] ]
+; VF4-NEXT:    [[TMP18]] = add <4 x i64> [[VEC_PHI]], [[VEC_IND]]
+; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; VF4-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT3]]
+; VF4-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; VF4-NEXT:    br i1 [[TMP19]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; VF4:       [[MIDDLE_BLOCK]]:
+; VF4-NEXT:    [[TMP20:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP18]])
+; VF4-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
+; VF4-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; VF4:       [[SCALAR_PH]]:
+; VF4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP15]], %[[MIDDLE_BLOCK]] ], [ 1, %[[ENTRY]] ], [ 1, %[[VECTOR_SCEVCHECK]] ]
+; VF4-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[TMP20]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
+; VF4-NEXT:    br label %[[LOOP:.*]]
+; VF4:       [[LOOP]]:
+; VF4-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; VF4-NEXT:    [[ACC:%.*]] = phi i64 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[ACC_NEXT:%.*]], %[[LOOP]] ]
+; VF4-NEXT:    [[LO:%.*]] = and i64 [[IV]], 4294967295
+; VF4-NEXT:    [[COMBINED:%.*]] = or disjoint i64 [[MASK]], [[LO]]
+; VF4-NEXT:    [[ACC_NEXT]] = add i64 [[ACC]], [[IV]]
+; VF4-NEXT:    [[IV_NEXT]] = add i64 [[COMBINED]], 1
+; VF4-NEXT:    [[CMP:%.*]] = icmp slt i64 [[IV_NEXT]], [[N]]
+; VF4-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT]], !llvm.loop [[LOOP9:![0-9]+]]
+; VF4:       [[EXIT]]:
+; VF4-NEXT:    [[ACC_NEXT_LCSSA:%.*]] = phi i64 [ [[ACC_NEXT]], %[[LOOP]] ], [ [[TMP20]], %[[MIDDLE_BLOCK]] ]
+; VF4-NEXT:    ret i64 [[ACC_NEXT_LCSSA]]
+;
+; IC2-LABEL: define i64 @induction_cast_chain_cleared_by_dce(
+; IC2-SAME: i64 [[N:%.*]], i64 [[MASK_INIT:%.*]]) {
+; IC2-NEXT:  [[ENTRY:.*]]:
+; IC2-NEXT:    [[MASK:%.*]] = and i64 [[MASK_INIT]], -4294967296
+; IC2-NEXT:    [[TMP0:%.*]] = add nuw nsw i64 [[MASK]], 2
+; IC2-NEXT:    [[SMAX1:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 [[TMP0]])
+; IC2-NEXT:    [[TMP1:%.*]] = add i64 [[SMAX1]], -1
+; IC2-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], [[MASK]]
+; IC2-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[MASK]], 1
+; IC2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 2
+; IC2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
+; IC2:       [[VECTOR_SCEVCHECK]]:
+; IC2-NEXT:    [[TMP4:%.*]] = add nuw nsw i64 [[MASK]], 2
+; IC2-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 [[TMP4]])
+; IC2-NEXT:    [[TMP5:%.*]] = add i64 [[SMAX]], -2
+; IC2-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP5]], [[MASK]]
+; IC2-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i32
+; IC2-NEXT:    [[TMP8:%.*]] = add i32 1, [[TMP7]]
+; IC2-NEXT:    [[TMP9:%.*]] = icmp ult i32 [[TMP8]], 1
+; IC2-NEXT:    [[TMP10:%.*]] = icmp ugt i64 [[TMP6]], 4294967295
+; IC2-NEXT:    [[TMP11:%.*]] = or i1 [[TMP9]], [[TMP10]]
+; IC2-NEXT:    [[TMP12:%.*]] = add nuw nsw i64 [[MASK]], 1
+; IC2-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[TMP12]], 1
+; IC2-NEXT:    [[TMP13:%.*]] = or i1 [[TMP11]], [[IDENT_CHECK]]
+; IC2-NEXT:    br i1 [[TMP13]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; IC2:       [[VECTOR_PH]]:
+; IC2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 2
+; IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
+; IC2-NEXT:    [[TMP14:%.*]] = mul i64 [[N_VEC]], [[TMP3]]
+; IC2-NEXT:    [[TMP15:%.*]] = add i64 1, [[TMP14]]
+; IC2-NEXT:    br label %[[VECTOR_BODY:.*]]
+; IC2:       [[VECTOR_BODY]]:
+; IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; IC2-NEXT:    [[VEC_PHI:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[TMP20:%.*]], %[[VECTOR_BODY]] ]
+; IC2-NEXT:    [[VEC_PHI2:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[TMP21:%.*]], %[[VECTOR_BODY]] ]
+; IC2-NEXT:    [[TMP16:%.*]] = mul i64 [[INDEX]], [[TMP3]]
+; IC2-NEXT:    [[TMP17:%.*]] = add i64 1, [[TMP16]]
+; IC2-NEXT:    [[TMP18:%.*]] = mul i64 1, [[TMP3]]
+; IC2-NEXT:    [[TMP19:%.*]] = add i64 [[TMP17]], [[TMP18]]
+; IC2-NEXT:    [[TMP20]] = add i64 [[VEC_PHI]], [[TMP17]]
+; IC2-NEXT:    [[TMP21]] = add i64 [[VEC_PHI2]], [[TMP19]]
+; IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; IC2-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; IC2-NEXT:    br i1 [[TMP22]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; IC2:       [[MIDDLE_BLOCK]]:
+; IC2-NEXT:    [[BIN_RDX:%.*]] = add i64 [[TMP21]], [[TMP20]]
+; IC2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
+; IC2-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; IC2:       [[SCALAR_PH]]:
+; IC2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP15]], %[[MIDDLE_BLOCK]] ], [ 1, %[[ENTRY]] ], [ 1, %[[VECTOR_SCEVCHECK]] ]
+; IC2-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[BIN_RDX]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
+; IC2-NEXT:    br label %[[LOOP:.*]]
+; IC2:       [[LOOP]]:
+; IC2-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; IC2-NEXT:    [[ACC:%.*]] = phi i64 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[ACC_NEXT:%.*]], %[[LOOP]] ]
+; IC2-NEXT:    [[LO:%.*]] = and i64 [[IV]], 4294967295
+; IC2-NEXT:    [[COMBINED:%.*]] = or disjoint i64 [[MASK]], [[LO]]
+; IC2-NEXT:    [[ACC_NEXT]] = add i64 [[ACC]], [[IV]]
+; IC2-NEXT:    [[IV_NEXT]] = add i64 [[COMBINED]], 1
+; IC2-NEXT:    [[CMP:%.*]] = icmp slt i64 [[IV_NEXT]], [[N]]
+; IC2-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT]], !llvm.loop [[LOOP10:![0-9]+]]
+; IC2:       [[EXIT]]:
+; IC2-NEXT:    [[ACC_NEXT_LCSSA:%.*]] = phi i64 [ [[ACC_NEXT]], %[[LOOP]] ], [ [[BIN_RDX]], %[[MIDDLE_BLOCK]] ]
+; IC2-NEXT:    ret i64 [[ACC_NEXT_LCSSA]]
+;
+entry:
+  %mask = and i64 %mask.init, -4294967296
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 1, %entry ], [ %iv.next, %loop ]
+  %acc = phi i64 [ 0, %entry ], [ %acc.next, %loop ]
+  %lo = and i64 %iv, 4294967295
+  %combined = or disjoint i64 %mask, %lo
+  %acc.next = add i64 %acc, %iv
+  %iv.next = add i64 %combined, 1
+  %cmp = icmp slt i64 %iv.next, %n
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret i64 %acc.next
+}

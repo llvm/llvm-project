@@ -12,5 +12,7 @@ exit:
   ret void
 }
 ; CHECK: Entering function: main
+; CHECK-NEXT: Stacktrace:
+; CHECK-NEXT: #0   indirectbr ptr blockaddress(@main, %bb2), [label %exit] at @main
 ; CHECK-NEXT: Immediate UB detected: Indirect branch on unlisted target BB.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

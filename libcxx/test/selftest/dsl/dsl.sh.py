@@ -143,6 +143,12 @@ class TestSourceBuilds(SetupConfigs):
         self.assertFalse(dsl.sourceBuilds(self.config, source))
 
 
+def line_breaks_conversion(origin):
+    if os.linesep == "\r\n":
+        return origin.replace("\r\n", "\n")
+    return origin
+
+
 class TestProgramOutput(SetupConfigs):
     """
     Tests for libcxx.test.dsl.programOutput
@@ -161,7 +167,8 @@ class TestProgramOutput(SetupConfigs):
         int main(int, char**) { std::printf("FOOBAR\\n"); return 0; }
         """
         self.assertEqual(
-            dsl.programOutput(self.config, source), "FOOBAR%s" % os.linesep
+            line_breaks_conversion(dsl.programOutput(self.config, source)),
+            "FOOBAR\n",
         )
 
     def test_valid_program_returns_no_output(self):
@@ -225,15 +232,15 @@ class TestProgramOutput(SetupConfigs):
             "%{compile_flags}",
             compileFlags + " -DMACRO=1",
         )
-        output1 = dsl.programOutput(self.config, source)
-        self.assertEqual(output1, "MACRO=1%s" % os.linesep)
+        output1 = line_breaks_conversion(dsl.programOutput(self.config, source))
+        self.assertEqual(output1, "MACRO=1\n")
 
         self.config.substitutions[compileFlagsIndex] = (
             "%{compile_flags}",
             compileFlags + " -DMACRO=2",
         )
-        output2 = dsl.programOutput(self.config, source)
-        self.assertEqual(output2, "MACRO=2%s" % os.linesep)
+        output2 = line_breaks_conversion(dsl.programOutput(self.config, source))
+        self.assertEqual(output2, "MACRO=2\n")
 
     def test_program_stderr_is_not_conflated_with_stdout(self):
         # Run a program that produces stdout output and stderr output too, making

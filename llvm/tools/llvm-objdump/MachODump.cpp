@@ -2311,6 +2311,18 @@ static void printCPUType(uint32_t cputype, uint32_t cpusubtype) {
       outs() << "    cputype CPU_TYPE_ARM\n";
       outs() << "    cpusubtype CPU_SUBTYPE_ARM_V7S\n";
       break;
+    case MachO::CPU_SUBTYPE_ARM_V8M_MAIN:
+      outs() << "    cputype CPU_TYPE_ARM\n";
+      outs() << "    cpusubtype CPU_SUBTYPE_ARM_V8M_MAIN\n";
+      break;
+    case MachO::CPU_SUBTYPE_ARM_V8M_BASE:
+      outs() << "    cputype CPU_TYPE_ARM\n";
+      outs() << "    cpusubtype CPU_SUBTYPE_ARM_V8M_BASE\n";
+      break;
+    case MachO::CPU_SUBTYPE_ARM_V8_1M_MAIN:
+      outs() << "    cputype CPU_TYPE_ARM\n";
+      outs() << "    cpusubtype CPU_SUBTYPE_ARM_V8_1M_MAIN\n";
+      break;
     default:
       printUnknownCPUType(cputype, cpusubtype);
       break;
@@ -8372,6 +8384,15 @@ static void PrintMachHeader(uint32_t magic, uint32_t cputype,
         break;
       case MachO::CPU_SUBTYPE_ARM_V7S:
         outs() << "        V7S";
+        break;
+      case MachO::CPU_SUBTYPE_ARM_V8M_MAIN:
+        outs() << "       V8M_MAIN";
+        break;
+      case MachO::CPU_SUBTYPE_ARM_V8M_BASE:
+        outs() << "       V8M_BASE";
+        break;
+      case MachO::CPU_SUBTYPE_ARM_V8_1M_MAIN:
+        outs() << "       V8_1M_MAIN";
         break;
       default:
         outs() << format(" %10d", cpusubtype & ~MachO::CPU_SUBTYPE_MASK);

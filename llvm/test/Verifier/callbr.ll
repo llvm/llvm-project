@@ -73,7 +73,7 @@ abnormal:
 declare i32 @llvm.callbr.landingpad.i64(i64)
 define void @callbrpad_bad_type() {
 entry:
-; CHECK: Intrinsic has incorrect argument type!
+; CHECK: intrinsic has incorrect argument type!
 ; CHECK-NEXT: ptr @llvm.callbr.landingpad.i64
   %foo = call i32 @llvm.callbr.landingpad.i64(i64 42)
   ret void

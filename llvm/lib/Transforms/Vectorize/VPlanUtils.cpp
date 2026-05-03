@@ -396,14 +396,14 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
   return isa<VPExpandSCEVRecipe>(VPV);
 }
 
-bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
+bool vputils::isUniformAcrossVFsAndUFs(const VPValue *V) {
   // Live-ins and region values are uniform.
   if (isa<VPIRValue, VPSymbolicValue, VPRegionValue>(V))
     return true;
 
-  VPRecipeBase *R = V->getDefiningRecipe();
-  VPBasicBlock *VPBB = R ? R->getParent() : nullptr;
-  VPlan *Plan = VPBB ? VPBB->getPlan() : nullptr;
+  const VPRecipeBase *R = V->getDefiningRecipe();
+  const VPBasicBlock *VPBB = R ? R->getParent() : nullptr;
+  const VPlan *Plan = VPBB ? VPBB->getPlan() : nullptr;
   if (VPBB) {
     if ((VPBB == Plan->getVectorPreheader() || VPBB == Plan->getEntry())) {
       if (match(V->getDefiningRecipe(),

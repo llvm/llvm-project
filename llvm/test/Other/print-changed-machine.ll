@@ -7,8 +7,7 @@
 ; VERBOSE-NEXT:  Function Live Ins: $w0
 ; VERBOSE-EMPTY:
 ; VERBOSE-NEXT:  bb.1.entry:
-; VERBOSE:       *** IR Dump After Analysis for ComputingKnownBits (gisel-known-bits) on foo omitted because no change ***
-; VERBOSE-NEXT:  *** IR Dump After AArch64O0PreLegalizerCombiner (aarch64-O0-prelegalizer-combiner) on foo omitted because no change ***
+; VERBOSE:       *** IR Dump After AArch64O0PreLegalizerCombiner (aarch64-O0-prelegalizer-combiner) on foo omitted because no change ***
 ; VERBOSE:       *** IR Dump After Legalizer (legalizer) on foo ***
 ; VERBOSE-NEXT:  # Machine code for function foo: IsSSA, TracksLiveness, Legalized
 ; VERBOSE-NEXT:  Function Live Ins: $w0

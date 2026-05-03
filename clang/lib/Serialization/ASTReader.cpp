@@ -5115,8 +5115,8 @@ ASTReader::ASTReadResult ASTReader::ReadAST(ModuleFileName FileName,
 
     case UnresolvedModuleRef::Export:
       if (ResolvedMod || Unresolved.IsWildcard)
-        Unresolved.Mod->Exports.push_back(
-          Module::ExportDecl(ResolvedMod, Unresolved.IsWildcard));
+        Unresolved.Mod->Exports.push_back(Module::ExportDecl(
+            ResolvedMod, static_cast<bool>(Unresolved.IsWildcard)));
       continue;
     }
   }

@@ -21,7 +21,7 @@ define i8 @xchg_acq_rel_i8_global_cta(ptr addrspace(1) %addr, i8 %val) {
 ; SM60-NEXT:    shl.b32 %r9, %r8, %r1;
 ; SM60-NEXT:    not.b32 %r2, %r9;
 ; SM60-NEXT:    shl.b32 %r3, %r5, %r1;
-; SM60-NEXT:    ld.global.b32 %r13, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r13, [%rd1];
 ; SM60-NEXT:  $L__BB0_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    and.b32 %r10, %r13, %r2;
@@ -58,7 +58,7 @@ define i16 @xchg_acq_rel_i16_global_cta(ptr addrspace(1) %addr, i16 %val) {
 ; SM60-NEXT:    shl.b32 %r9, %r8, %r1;
 ; SM60-NEXT:    not.b32 %r2, %r9;
 ; SM60-NEXT:    shl.b32 %r3, %r5, %r1;
-; SM60-NEXT:    ld.global.b32 %r13, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r13, [%rd1];
 ; SM60-NEXT:  $L__BB1_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    and.b32 %r10, %r13, %r2;
@@ -126,7 +126,7 @@ define i8 @add_acq_rel_i8_global_cta(ptr addrspace(1) %addr, i8 %val) {
 ; SM60-NEXT:    shl.b32 %r2, %r9, %r1;
 ; SM60-NEXT:    not.b32 %r3, %r2;
 ; SM60-NEXT:    shl.b32 %r4, %r6, %r1;
-; SM60-NEXT:    ld.global.b32 %r15, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r15, [%rd1];
 ; SM60-NEXT:  $L__BB4_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    add.s32 %r10, %r15, %r4;
@@ -165,7 +165,7 @@ define i16 @add_acq_rel_i16_global_cta(ptr addrspace(1) %addr, i16 %val) {
 ; SM60-NEXT:    shl.b32 %r2, %r9, %r1;
 ; SM60-NEXT:    not.b32 %r3, %r2;
 ; SM60-NEXT:    shl.b32 %r4, %r6, %r1;
-; SM60-NEXT:    ld.global.b32 %r15, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r15, [%rd1];
 ; SM60-NEXT:  $L__BB5_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    add.s32 %r10, %r15, %r4;
@@ -235,7 +235,7 @@ define i8 @sub_acq_rel_i8_global_cta(ptr addrspace(1) %addr, i8 %val) {
 ; SM60-NEXT:    shl.b32 %r2, %r9, %r1;
 ; SM60-NEXT:    not.b32 %r3, %r2;
 ; SM60-NEXT:    shl.b32 %r4, %r6, %r1;
-; SM60-NEXT:    ld.global.b32 %r15, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r15, [%rd1];
 ; SM60-NEXT:  $L__BB8_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    sub.s32 %r10, %r15, %r4;
@@ -274,7 +274,7 @@ define i16 @sub_acq_rel_i16_global_cta(ptr addrspace(1) %addr, i16 %val) {
 ; SM60-NEXT:    shl.b32 %r2, %r9, %r1;
 ; SM60-NEXT:    not.b32 %r3, %r2;
 ; SM60-NEXT:    shl.b32 %r4, %r6, %r1;
-; SM60-NEXT:    ld.global.b32 %r15, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r15, [%rd1];
 ; SM60-NEXT:  $L__BB9_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    sub.s32 %r10, %r15, %r4;
@@ -433,7 +433,7 @@ define i8 @nand_acq_rel_i8_global_cta(ptr addrspace(1) %addr, i8 %val) {
 ; SM60-NEXT:    shl.b32 %r2, %r9, %r1;
 ; SM60-NEXT:    not.b32 %r3, %r2;
 ; SM60-NEXT:    shl.b32 %r4, %r6, %r1;
-; SM60-NEXT:    ld.global.b32 %r16, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r16, [%rd1];
 ; SM60-NEXT:  $L__BB16_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    and.b32 %r10, %r16, %r4;
@@ -473,7 +473,7 @@ define i16 @nand_acq_rel_i16_global_cta(ptr addrspace(1) %addr, i16 %val) {
 ; SM60-NEXT:    shl.b32 %r2, %r9, %r1;
 ; SM60-NEXT:    not.b32 %r3, %r2;
 ; SM60-NEXT:    shl.b32 %r4, %r6, %r1;
-; SM60-NEXT:    ld.global.b32 %r16, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r16, [%rd1];
 ; SM60-NEXT:  $L__BB17_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    and.b32 %r10, %r16, %r4;
@@ -505,7 +505,7 @@ define i32 @nand_acq_rel_i32_global_cta(ptr addrspace(1) %addr, i32 %val) {
 ; SM60-NEXT:    ld.param.b32 %r2, [nand_acq_rel_i32_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b64 %rd1, [nand_acq_rel_i32_global_cta_param_0];
 ; SM60-NEXT:    membar.cta;
-; SM60-NEXT:    ld.global.b32 %r5, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r5, [%rd1];
 ; SM60-NEXT:  $L__BB18_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    and.b32 %r3, %r5, %r2;
@@ -532,7 +532,7 @@ define i64 @nand_acq_rel_i64_global_cta(ptr addrspace(1) %addr, i64 %val) {
 ; SM60-NEXT:    ld.param.b64 %rd3, [nand_acq_rel_i64_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b64 %rd2, [nand_acq_rel_i64_global_cta_param_0];
 ; SM60-NEXT:    membar.cta;
-; SM60-NEXT:    ld.global.b64 %rd6, [%rd2];
+; SM60-NEXT:    ld.volatile.global.b64 %rd6, [%rd2];
 ; SM60-NEXT:  $L__BB19_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    and.b64 %rd4, %rd6, %rd3;
@@ -726,7 +726,7 @@ define i8 @max_acq_rel_i8_global_cta(ptr addrspace(1) %addr, i8 %val) {
 ; SM60-NEXT:    mov.b32 %r6, 255;
 ; SM60-NEXT:    shl.b32 %r7, %r6, %r1;
 ; SM60-NEXT:    not.b32 %r2, %r7;
-; SM60-NEXT:    ld.global.b32 %r15, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r15, [%rd1];
 ; SM60-NEXT:    cvt.s16.s8 %rs3, %rs1;
 ; SM60-NEXT:  $L__BB28_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -770,7 +770,7 @@ define i16 @max_acq_rel_i16_global_cta(ptr addrspace(1) %addr, i16 %val) {
 ; SM60-NEXT:    mov.b32 %r6, 65535;
 ; SM60-NEXT:    shl.b32 %r7, %r6, %r1;
 ; SM60-NEXT:    not.b32 %r2, %r7;
-; SM60-NEXT:    ld.global.b32 %r14, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r14, [%rd1];
 ; SM60-NEXT:  $L__BB29_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    shr.u32 %r8, %r14, %r1;
@@ -843,7 +843,7 @@ define i8 @min_acq_rel_i8_global_cta(ptr addrspace(1) %addr, i8 %val) {
 ; SM60-NEXT:    mov.b32 %r6, 255;
 ; SM60-NEXT:    shl.b32 %r7, %r6, %r1;
 ; SM60-NEXT:    not.b32 %r2, %r7;
-; SM60-NEXT:    ld.global.b32 %r15, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r15, [%rd1];
 ; SM60-NEXT:    cvt.s16.s8 %rs3, %rs1;
 ; SM60-NEXT:  $L__BB32_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -887,7 +887,7 @@ define i16 @min_acq_rel_i16_global_cta(ptr addrspace(1) %addr, i16 %val) {
 ; SM60-NEXT:    mov.b32 %r6, 65535;
 ; SM60-NEXT:    shl.b32 %r7, %r6, %r1;
 ; SM60-NEXT:    not.b32 %r2, %r7;
-; SM60-NEXT:    ld.global.b32 %r14, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r14, [%rd1];
 ; SM60-NEXT:  $L__BB33_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    shr.u32 %r8, %r14, %r1;
@@ -960,7 +960,7 @@ define i8 @umax_acq_rel_i8_global_cta(ptr addrspace(1) %addr, i8 %val) {
 ; SM60-NEXT:    mov.b32 %r6, 255;
 ; SM60-NEXT:    shl.b32 %r7, %r6, %r1;
 ; SM60-NEXT:    not.b32 %r2, %r7;
-; SM60-NEXT:    ld.global.b32 %r14, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r14, [%rd1];
 ; SM60-NEXT:  $L__BB36_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    shr.u32 %r8, %r14, %r1;
@@ -1003,7 +1003,7 @@ define i16 @umax_acq_rel_i16_global_cta(ptr addrspace(1) %addr, i16 %val) {
 ; SM60-NEXT:    mov.b32 %r6, 65535;
 ; SM60-NEXT:    shl.b32 %r7, %r6, %r1;
 ; SM60-NEXT:    not.b32 %r2, %r7;
-; SM60-NEXT:    ld.global.b32 %r14, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r14, [%rd1];
 ; SM60-NEXT:  $L__BB37_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    shr.u32 %r8, %r14, %r1;
@@ -1076,7 +1076,7 @@ define i8 @umin_acq_rel_i8_global_cta(ptr addrspace(1) %addr, i8 %val) {
 ; SM60-NEXT:    mov.b32 %r6, 255;
 ; SM60-NEXT:    shl.b32 %r7, %r6, %r1;
 ; SM60-NEXT:    not.b32 %r2, %r7;
-; SM60-NEXT:    ld.global.b32 %r14, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r14, [%rd1];
 ; SM60-NEXT:  $L__BB40_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    shr.u32 %r8, %r14, %r1;
@@ -1119,7 +1119,7 @@ define i16 @umin_acq_rel_i16_global_cta(ptr addrspace(1) %addr, i16 %val) {
 ; SM60-NEXT:    mov.b32 %r6, 65535;
 ; SM60-NEXT:    shl.b32 %r7, %r6, %r1;
 ; SM60-NEXT:    not.b32 %r2, %r7;
-; SM60-NEXT:    ld.global.b32 %r14, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r14, [%rd1];
 ; SM60-NEXT:  $L__BB41_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    shr.u32 %r8, %r14, %r1;
@@ -1192,7 +1192,7 @@ define i8 @uinc_wrap_acq_rel_i8_global_cta(ptr addrspace(1) %addr, i8 %val) {
 ; SM60-NEXT:    mov.b32 %r6, 255;
 ; SM60-NEXT:    shl.b32 %r7, %r6, %r1;
 ; SM60-NEXT:    not.b32 %r2, %r7;
-; SM60-NEXT:    ld.global.b32 %r15, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r15, [%rd1];
 ; SM60-NEXT:  $L__BB44_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    shr.u32 %r8, %r15, %r1;
@@ -1238,7 +1238,7 @@ define i16 @uinc_wrap_acq_rel_i16_global_cta(ptr addrspace(1) %addr, i16 %val) {
 ; SM60-NEXT:    mov.b32 %r6, 65535;
 ; SM60-NEXT:    shl.b32 %r7, %r6, %r1;
 ; SM60-NEXT:    not.b32 %r2, %r7;
-; SM60-NEXT:    ld.global.b32 %r14, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r14, [%rd1];
 ; SM60-NEXT:  $L__BB45_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    shr.u32 %r8, %r14, %r1;
@@ -1289,7 +1289,7 @@ define i64 @uinc_wrap_acq_rel_i64_global_cta(ptr addrspace(1) %addr, i64 %val) {
 ; SM60-NEXT:    ld.param.b64 %rd3, [uinc_wrap_acq_rel_i64_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b64 %rd2, [uinc_wrap_acq_rel_i64_global_cta_param_0];
 ; SM60-NEXT:    membar.cta;
-; SM60-NEXT:    ld.global.b64 %rd6, [%rd2];
+; SM60-NEXT:    ld.volatile.global.b64 %rd6, [%rd2];
 ; SM60-NEXT:  $L__BB47_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    add.s64 %rd4, %rd6, 1;
@@ -1326,7 +1326,7 @@ define i8 @udec_wrap_acq_rel_i8_global_cta(ptr addrspace(1) %addr, i8 %val) {
 ; SM60-NEXT:    mov.b32 %r6, 255;
 ; SM60-NEXT:    shl.b32 %r7, %r6, %r1;
 ; SM60-NEXT:    not.b32 %r2, %r7;
-; SM60-NEXT:    ld.global.b32 %r15, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r15, [%rd1];
 ; SM60-NEXT:  $L__BB48_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    shr.u32 %r8, %r15, %r1;
@@ -1374,7 +1374,7 @@ define i16 @udec_wrap_acq_rel_i16_global_cta(ptr addrspace(1) %addr, i16 %val) {
 ; SM60-NEXT:    mov.b32 %r6, 65535;
 ; SM60-NEXT:    shl.b32 %r7, %r6, %r1;
 ; SM60-NEXT:    not.b32 %r2, %r7;
-; SM60-NEXT:    ld.global.b32 %r14, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r14, [%rd1];
 ; SM60-NEXT:  $L__BB49_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    shr.u32 %r8, %r14, %r1;
@@ -1427,7 +1427,7 @@ define i64 @udec_wrap_acq_rel_i64_global_cta(ptr addrspace(1) %addr, i64 %val) {
 ; SM60-NEXT:    ld.param.b64 %rd3, [udec_wrap_acq_rel_i64_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b64 %rd2, [udec_wrap_acq_rel_i64_global_cta_param_0];
 ; SM60-NEXT:    membar.cta;
-; SM60-NEXT:    ld.global.b64 %rd7, [%rd2];
+; SM60-NEXT:    ld.volatile.global.b64 %rd7, [%rd2];
 ; SM60-NEXT:  $L__BB51_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    add.s64 %rd4, %rd7, -1;
@@ -1466,7 +1466,7 @@ define i8 @usub_cond_acq_rel_i8_global_cta(ptr addrspace(1) %addr, i8 %val) {
 ; SM60-NEXT:    mov.b32 %r6, 255;
 ; SM60-NEXT:    shl.b32 %r7, %r6, %r1;
 ; SM60-NEXT:    not.b32 %r2, %r7;
-; SM60-NEXT:    ld.global.b32 %r15, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r15, [%rd1];
 ; SM60-NEXT:  $L__BB52_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    shr.u32 %r8, %r15, %r1;
@@ -1512,7 +1512,7 @@ define i16 @usub_cond_acq_rel_i16_global_cta(ptr addrspace(1) %addr, i16 %val) {
 ; SM60-NEXT:    mov.b32 %r6, 65535;
 ; SM60-NEXT:    shl.b32 %r7, %r6, %r1;
 ; SM60-NEXT:    not.b32 %r2, %r7;
-; SM60-NEXT:    ld.global.b32 %r14, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r14, [%rd1];
 ; SM60-NEXT:  $L__BB53_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    shr.u32 %r8, %r14, %r1;
@@ -1548,7 +1548,7 @@ define i32 @usub_cond_acq_rel_i32_global_cta(ptr addrspace(1) %addr, i32 %val) {
 ; SM60-NEXT:    ld.param.b32 %r2, [usub_cond_acq_rel_i32_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b64 %rd1, [usub_cond_acq_rel_i32_global_cta_param_0];
 ; SM60-NEXT:    membar.cta;
-; SM60-NEXT:    ld.global.b32 %r5, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r5, [%rd1];
 ; SM60-NEXT:  $L__BB54_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    setp.ge.u32 %p1, %r5, %r2;
@@ -1576,7 +1576,7 @@ define i64 @usub_cond_acq_rel_i64_global_cta(ptr addrspace(1) %addr, i64 %val) {
 ; SM60-NEXT:    ld.param.b64 %rd3, [usub_cond_acq_rel_i64_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b64 %rd2, [usub_cond_acq_rel_i64_global_cta_param_0];
 ; SM60-NEXT:    membar.cta;
-; SM60-NEXT:    ld.global.b64 %rd6, [%rd2];
+; SM60-NEXT:    ld.volatile.global.b64 %rd6, [%rd2];
 ; SM60-NEXT:  $L__BB55_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    setp.ge.u64 %p1, %rd6, %rd3;
@@ -1613,7 +1613,7 @@ define i8 @usub_sat_acq_rel_i8_global_cta(ptr addrspace(1) %addr, i8 %val) {
 ; SM60-NEXT:    mov.b32 %r6, 255;
 ; SM60-NEXT:    shl.b32 %r7, %r6, %r1;
 ; SM60-NEXT:    not.b32 %r2, %r7;
-; SM60-NEXT:    ld.global.b32 %r14, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r14, [%rd1];
 ; SM60-NEXT:  $L__BB56_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    shr.u32 %r8, %r14, %r1;
@@ -1657,7 +1657,7 @@ define i16 @usub_sat_acq_rel_i16_global_cta(ptr addrspace(1) %addr, i16 %val) {
 ; SM60-NEXT:    mov.b32 %r6, 65535;
 ; SM60-NEXT:    shl.b32 %r7, %r6, %r1;
 ; SM60-NEXT:    not.b32 %r2, %r7;
-; SM60-NEXT:    ld.global.b32 %r14, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r14, [%rd1];
 ; SM60-NEXT:  $L__BB57_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    shr.u32 %r8, %r14, %r1;
@@ -1692,7 +1692,7 @@ define i32 @usub_sat_acq_rel_i32_global_cta(ptr addrspace(1) %addr, i32 %val) {
 ; SM60-NEXT:    ld.param.b32 %r2, [usub_sat_acq_rel_i32_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b64 %rd1, [usub_sat_acq_rel_i32_global_cta_param_0];
 ; SM60-NEXT:    membar.cta;
-; SM60-NEXT:    ld.global.b32 %r5, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r5, [%rd1];
 ; SM60-NEXT:  $L__BB58_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    max.u32 %r3, %r5, %r2;
@@ -1719,7 +1719,7 @@ define i64 @usub_sat_acq_rel_i64_global_cta(ptr addrspace(1) %addr, i64 %val) {
 ; SM60-NEXT:    ld.param.b64 %rd3, [usub_sat_acq_rel_i64_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b64 %rd2, [usub_sat_acq_rel_i64_global_cta_param_0];
 ; SM60-NEXT:    membar.cta;
-; SM60-NEXT:    ld.global.b64 %rd6, [%rd2];
+; SM60-NEXT:    ld.volatile.global.b64 %rd6, [%rd2];
 ; SM60-NEXT:  $L__BB59_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    max.u64 %rd4, %rd6, %rd3;
@@ -1763,7 +1763,7 @@ define float @fsub_acq_rel_float_global_cta(ptr addrspace(1) %addr, float %val) 
 ; SM60-NEXT:    ld.param.b32 %r2, [fsub_acq_rel_float_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b64 %rd1, [fsub_acq_rel_float_global_cta_param_0];
 ; SM60-NEXT:    membar.cta;
-; SM60-NEXT:    ld.global.b32 %r4, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r4, [%rd1];
 ; SM60-NEXT:  $L__BB61_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    sub.rn.f32 %r3, %r4, %r2;
@@ -1790,7 +1790,7 @@ define float @fmin_acq_rel_float_global_cta(ptr addrspace(1) %addr, float %val) 
 ; SM60-NEXT:    ld.param.b32 %r2, [fmin_acq_rel_float_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b64 %rd1, [fmin_acq_rel_float_global_cta_param_0];
 ; SM60-NEXT:    membar.cta;
-; SM60-NEXT:    ld.global.b32 %r4, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r4, [%rd1];
 ; SM60-NEXT:  $L__BB62_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    min.f32 %r3, %r4, %r2;
@@ -1817,7 +1817,7 @@ define float @fmax_acq_rel_float_global_cta(ptr addrspace(1) %addr, float %val) 
 ; SM60-NEXT:    ld.param.b32 %r2, [fmax_acq_rel_float_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b64 %rd1, [fmax_acq_rel_float_global_cta_param_0];
 ; SM60-NEXT:    membar.cta;
-; SM60-NEXT:    ld.global.b32 %r4, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r4, [%rd1];
 ; SM60-NEXT:  $L__BB63_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    max.f32 %r3, %r4, %r2;
@@ -1844,7 +1844,7 @@ define float @fminimum_acq_rel_float_global_cta(ptr addrspace(1) %addr, float %v
 ; SM60-NEXT:    ld.param.b32 %r2, [fminimum_acq_rel_float_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b64 %rd1, [fminimum_acq_rel_float_global_cta_param_0];
 ; SM60-NEXT:    membar.cta;
-; SM60-NEXT:    ld.global.b32 %r8, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r8, [%rd1];
 ; SM60-NEXT:    setp.eq.b32 %p3, %r2, -2147483648;
 ; SM60-NEXT:  $L__BB64_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -1879,7 +1879,7 @@ define float @fmaximum_acq_rel_float_global_cta(ptr addrspace(1) %addr, float %v
 ; SM60-NEXT:    ld.param.b32 %r2, [fmaximum_acq_rel_float_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b64 %rd1, [fmaximum_acq_rel_float_global_cta_param_0];
 ; SM60-NEXT:    membar.cta;
-; SM60-NEXT:    ld.global.b32 %r8, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r8, [%rd1];
 ; SM60-NEXT:    setp.eq.b32 %p3, %r2, 0;
 ; SM60-NEXT:  $L__BB65_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -1928,7 +1928,7 @@ define double @fsub_acq_rel_double_global_cta(ptr addrspace(1) %addr, double %va
 ; SM60-NEXT:    ld.param.b64 %rd3, [fsub_acq_rel_double_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b64 %rd2, [fsub_acq_rel_double_global_cta_param_0];
 ; SM60-NEXT:    membar.cta;
-; SM60-NEXT:    ld.global.b64 %rd5, [%rd2];
+; SM60-NEXT:    ld.volatile.global.b64 %rd5, [%rd2];
 ; SM60-NEXT:  $L__BB67_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    sub.rn.f64 %rd4, %rd5, %rd3;
@@ -1954,7 +1954,7 @@ define double @fmin_acq_rel_double_global_cta(ptr addrspace(1) %addr, double %va
 ; SM60-NEXT:    ld.param.b64 %rd3, [fmin_acq_rel_double_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b64 %rd2, [fmin_acq_rel_double_global_cta_param_0];
 ; SM60-NEXT:    membar.cta;
-; SM60-NEXT:    ld.global.b64 %rd5, [%rd2];
+; SM60-NEXT:    ld.volatile.global.b64 %rd5, [%rd2];
 ; SM60-NEXT:  $L__BB68_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    min.f64 %rd4, %rd5, %rd3;
@@ -1980,7 +1980,7 @@ define double @fmax_acq_rel_double_global_cta(ptr addrspace(1) %addr, double %va
 ; SM60-NEXT:    ld.param.b64 %rd3, [fmax_acq_rel_double_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b64 %rd2, [fmax_acq_rel_double_global_cta_param_0];
 ; SM60-NEXT:    membar.cta;
-; SM60-NEXT:    ld.global.b64 %rd5, [%rd2];
+; SM60-NEXT:    ld.volatile.global.b64 %rd5, [%rd2];
 ; SM60-NEXT:  $L__BB69_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    max.f64 %rd4, %rd5, %rd3;
@@ -2006,7 +2006,7 @@ define double @fminimum_acq_rel_double_global_cta(ptr addrspace(1) %addr, double
 ; SM60-NEXT:    ld.param.b64 %rd3, [fminimum_acq_rel_double_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b64 %rd2, [fminimum_acq_rel_double_global_cta_param_0];
 ; SM60-NEXT:    membar.cta;
-; SM60-NEXT:    ld.global.b64 %rd9, [%rd2];
+; SM60-NEXT:    ld.volatile.global.b64 %rd9, [%rd2];
 ; SM60-NEXT:    setp.eq.b64 %p3, %rd3, -9223372036854775808;
 ; SM60-NEXT:  $L__BB70_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -2040,7 +2040,7 @@ define double @fmaximum_acq_rel_double_global_cta(ptr addrspace(1) %addr, double
 ; SM60-NEXT:    ld.param.b64 %rd3, [fmaximum_acq_rel_double_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b64 %rd2, [fmaximum_acq_rel_double_global_cta_param_0];
 ; SM60-NEXT:    membar.cta;
-; SM60-NEXT:    ld.global.b64 %rd9, [%rd2];
+; SM60-NEXT:    ld.volatile.global.b64 %rd9, [%rd2];
 ; SM60-NEXT:    setp.eq.b64 %p3, %rd3, 0;
 ; SM60-NEXT:  $L__BB71_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -2083,7 +2083,7 @@ define half @fadd_acq_rel_half_global_cta(ptr addrspace(1) %addr, half %val) {
 ; SM60-NEXT:    mov.b32 %r6, 65535;
 ; SM60-NEXT:    shl.b32 %r7, %r6, %r1;
 ; SM60-NEXT:    not.b32 %r2, %r7;
-; SM60-NEXT:    ld.global.b32 %r14, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r14, [%rd1];
 ; SM60-NEXT:  $L__BB72_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    shr.u32 %r8, %r14, %r1;
@@ -2125,7 +2125,7 @@ define half @fsub_acq_rel_half_global_cta(ptr addrspace(1) %addr, half %val) {
 ; SM60-NEXT:    mov.b32 %r6, 65535;
 ; SM60-NEXT:    shl.b32 %r7, %r6, %r1;
 ; SM60-NEXT:    not.b32 %r2, %r7;
-; SM60-NEXT:    ld.global.b32 %r14, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r14, [%rd1];
 ; SM60-NEXT:  $L__BB73_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    shr.u32 %r8, %r14, %r1;
@@ -2167,7 +2167,7 @@ define half @fmin_acq_rel_half_global_cta(ptr addrspace(1) %addr, half %val) {
 ; SM60-NEXT:    mov.b32 %r6, 65535;
 ; SM60-NEXT:    shl.b32 %r7, %r6, %r1;
 ; SM60-NEXT:    not.b32 %r2, %r7;
-; SM60-NEXT:    ld.global.b32 %r17, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r17, [%rd1];
 ; SM60-NEXT:    cvt.f32.f16 %r10, %rs1;
 ; SM60-NEXT:  $L__BB74_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -2212,7 +2212,7 @@ define half @fmax_acq_rel_half_global_cta(ptr addrspace(1) %addr, half %val) {
 ; SM60-NEXT:    mov.b32 %r6, 65535;
 ; SM60-NEXT:    shl.b32 %r7, %r6, %r1;
 ; SM60-NEXT:    not.b32 %r2, %r7;
-; SM60-NEXT:    ld.global.b32 %r17, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r17, [%rd1];
 ; SM60-NEXT:    cvt.f32.f16 %r10, %rs1;
 ; SM60-NEXT:  $L__BB75_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -2257,7 +2257,7 @@ define half @fminimum_acq_rel_half_global_cta(ptr addrspace(1) %addr, half %val)
 ; SM60-NEXT:    mov.b32 %r6, 65535;
 ; SM60-NEXT:    shl.b32 %r7, %r6, %r1;
 ; SM60-NEXT:    not.b32 %r2, %r7;
-; SM60-NEXT:    ld.global.b32 %r14, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r14, [%rd1];
 ; SM60-NEXT:    setp.eq.b16 %p4, %rs1, -32768;
 ; SM60-NEXT:  $L__BB76_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -2309,7 +2309,7 @@ define half @fmaximum_acq_rel_half_global_cta(ptr addrspace(1) %addr, half %val)
 ; SM60-NEXT:    mov.b32 %r6, 65535;
 ; SM60-NEXT:    shl.b32 %r7, %r6, %r1;
 ; SM60-NEXT:    not.b32 %r2, %r7;
-; SM60-NEXT:    ld.global.b32 %r14, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r14, [%rd1];
 ; SM60-NEXT:    setp.eq.b16 %p4, %rs1, 0;
 ; SM60-NEXT:  $L__BB77_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -2361,7 +2361,7 @@ define bfloat @fadd_acq_rel_bfloat_global_cta(ptr addrspace(1) %addr, bfloat %va
 ; SM60-NEXT:    mov.b32 %r6, 65535;
 ; SM60-NEXT:    shl.b32 %r7, %r6, %r1;
 ; SM60-NEXT:    not.b32 %r2, %r7;
-; SM60-NEXT:    ld.global.b32 %r23, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r23, [%rd1];
 ; SM60-NEXT:    cvt.u32.u16 %r10, %rs1;
 ; SM60-NEXT:    shl.b32 %r11, %r10, 16;
 ; SM60-NEXT:  $L__BB78_1: // %atomicrmw.start
@@ -2411,7 +2411,7 @@ define bfloat @fsub_acq_rel_bfloat_global_cta(ptr addrspace(1) %addr, bfloat %va
 ; SM60-NEXT:    mov.b32 %r6, 65535;
 ; SM60-NEXT:    shl.b32 %r7, %r6, %r1;
 ; SM60-NEXT:    not.b32 %r2, %r7;
-; SM60-NEXT:    ld.global.b32 %r23, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r23, [%rd1];
 ; SM60-NEXT:    cvt.u32.u16 %r10, %rs1;
 ; SM60-NEXT:    shl.b32 %r11, %r10, 16;
 ; SM60-NEXT:  $L__BB79_1: // %atomicrmw.start
@@ -2461,7 +2461,7 @@ define bfloat @fmin_acq_rel_bfloat_global_cta(ptr addrspace(1) %addr, bfloat %va
 ; SM60-NEXT:    mov.b32 %r6, 65535;
 ; SM60-NEXT:    shl.b32 %r7, %r6, %r1;
 ; SM60-NEXT:    not.b32 %r2, %r7;
-; SM60-NEXT:    ld.global.b32 %r23, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r23, [%rd1];
 ; SM60-NEXT:    cvt.u32.u16 %r10, %rs1;
 ; SM60-NEXT:    shl.b32 %r11, %r10, 16;
 ; SM60-NEXT:  $L__BB80_1: // %atomicrmw.start
@@ -2511,7 +2511,7 @@ define bfloat @fmax_acq_rel_bfloat_global_cta(ptr addrspace(1) %addr, bfloat %va
 ; SM60-NEXT:    mov.b32 %r6, 65535;
 ; SM60-NEXT:    shl.b32 %r7, %r6, %r1;
 ; SM60-NEXT:    not.b32 %r2, %r7;
-; SM60-NEXT:    ld.global.b32 %r23, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r23, [%rd1];
 ; SM60-NEXT:    cvt.u32.u16 %r10, %rs1;
 ; SM60-NEXT:    shl.b32 %r11, %r10, 16;
 ; SM60-NEXT:  $L__BB81_1: // %atomicrmw.start
@@ -2561,7 +2561,7 @@ define bfloat @fminimum_acq_rel_bfloat_global_cta(ptr addrspace(1) %addr, bfloat
 ; SM60-NEXT:    mov.b32 %r6, 65535;
 ; SM60-NEXT:    shl.b32 %r7, %r6, %r1;
 ; SM60-NEXT:    not.b32 %r2, %r7;
-; SM60-NEXT:    ld.global.b32 %r19, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r19, [%rd1];
 ; SM60-NEXT:    cvt.u32.u16 %r10, %rs1;
 ; SM60-NEXT:    shl.b32 %r11, %r10, 16;
 ; SM60-NEXT:    setp.eq.b16 %p4, %rs1, -32768;
@@ -2617,7 +2617,7 @@ define bfloat @fmaximum_acq_rel_bfloat_global_cta(ptr addrspace(1) %addr, bfloat
 ; SM60-NEXT:    mov.b32 %r6, 65535;
 ; SM60-NEXT:    shl.b32 %r7, %r6, %r1;
 ; SM60-NEXT:    not.b32 %r2, %r7;
-; SM60-NEXT:    ld.global.b32 %r19, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r19, [%rd1];
 ; SM60-NEXT:    cvt.u32.u16 %r10, %rs1;
 ; SM60-NEXT:    shl.b32 %r11, %r10, 16;
 ; SM60-NEXT:    setp.eq.b16 %p4, %rs1, 0;
@@ -2672,7 +2672,7 @@ define i8 @add_monotonic_i8_global_cta(ptr addrspace(1) %addr, i8 %val) {
 ; SM60-NEXT:    shl.b32 %r2, %r9, %r1;
 ; SM60-NEXT:    not.b32 %r3, %r2;
 ; SM60-NEXT:    shl.b32 %r4, %r6, %r1;
-; SM60-NEXT:    ld.global.b32 %r15, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r15, [%rd1];
 ; SM60-NEXT:  $L__BB84_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    add.s32 %r10, %r15, %r4;
@@ -2709,7 +2709,7 @@ define i8 @add_acquire_i8_global_cta(ptr addrspace(1) %addr, i8 %val) {
 ; SM60-NEXT:    shl.b32 %r2, %r9, %r1;
 ; SM60-NEXT:    not.b32 %r3, %r2;
 ; SM60-NEXT:    shl.b32 %r4, %r6, %r1;
-; SM60-NEXT:    ld.global.b32 %r15, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r15, [%rd1];
 ; SM60-NEXT:  $L__BB85_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    add.s32 %r10, %r15, %r4;
@@ -2748,7 +2748,7 @@ define i8 @add_release_i8_global_cta(ptr addrspace(1) %addr, i8 %val) {
 ; SM60-NEXT:    shl.b32 %r2, %r9, %r1;
 ; SM60-NEXT:    not.b32 %r3, %r2;
 ; SM60-NEXT:    shl.b32 %r4, %r6, %r1;
-; SM60-NEXT:    ld.global.b32 %r15, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r15, [%rd1];
 ; SM60-NEXT:  $L__BB86_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    add.s32 %r10, %r15, %r4;
@@ -2786,7 +2786,7 @@ define i8 @add_seq_cst_i8_global_cta(ptr addrspace(1) %addr, i8 %val) {
 ; SM60-NEXT:    shl.b32 %r2, %r9, %r1;
 ; SM60-NEXT:    not.b32 %r3, %r2;
 ; SM60-NEXT:    shl.b32 %r4, %r6, %r1;
-; SM60-NEXT:    ld.global.b32 %r15, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r15, [%rd1];
 ; SM60-NEXT:  $L__BB87_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    add.s32 %r10, %r15, %r4;
@@ -2889,7 +2889,7 @@ define i8 @nand_monotonic_i8_global_cta(ptr addrspace(1) %addr, i8 %val) {
 ; SM60-NEXT:    shl.b32 %r2, %r9, %r1;
 ; SM60-NEXT:    not.b32 %r3, %r2;
 ; SM60-NEXT:    shl.b32 %r4, %r6, %r1;
-; SM60-NEXT:    ld.global.b32 %r16, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r16, [%rd1];
 ; SM60-NEXT:  $L__BB92_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    and.b32 %r10, %r16, %r4;
@@ -2927,7 +2927,7 @@ define i8 @nand_acquire_i8_global_cta(ptr addrspace(1) %addr, i8 %val) {
 ; SM60-NEXT:    shl.b32 %r2, %r9, %r1;
 ; SM60-NEXT:    not.b32 %r3, %r2;
 ; SM60-NEXT:    shl.b32 %r4, %r6, %r1;
-; SM60-NEXT:    ld.global.b32 %r16, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r16, [%rd1];
 ; SM60-NEXT:  $L__BB93_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    and.b32 %r10, %r16, %r4;
@@ -2967,7 +2967,7 @@ define i8 @nand_release_i8_global_cta(ptr addrspace(1) %addr, i8 %val) {
 ; SM60-NEXT:    shl.b32 %r2, %r9, %r1;
 ; SM60-NEXT:    not.b32 %r3, %r2;
 ; SM60-NEXT:    shl.b32 %r4, %r6, %r1;
-; SM60-NEXT:    ld.global.b32 %r16, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r16, [%rd1];
 ; SM60-NEXT:  $L__BB94_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    and.b32 %r10, %r16, %r4;
@@ -3006,7 +3006,7 @@ define i8 @nand_seq_cst_i8_global_cta(ptr addrspace(1) %addr, i8 %val) {
 ; SM60-NEXT:    shl.b32 %r2, %r9, %r1;
 ; SM60-NEXT:    not.b32 %r3, %r2;
 ; SM60-NEXT:    shl.b32 %r4, %r6, %r1;
-; SM60-NEXT:    ld.global.b32 %r16, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r16, [%rd1];
 ; SM60-NEXT:  $L__BB95_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    and.b32 %r10, %r16, %r4;
@@ -3037,7 +3037,7 @@ define i32 @nand_monotonic_i32_global_cta(ptr addrspace(1) %addr, i32 %val) {
 ; SM60-NEXT:  // %bb.0:
 ; SM60-NEXT:    ld.param.b32 %r2, [nand_monotonic_i32_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b64 %rd1, [nand_monotonic_i32_global_cta_param_0];
-; SM60-NEXT:    ld.global.b32 %r5, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r5, [%rd1];
 ; SM60-NEXT:  $L__BB96_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    and.b32 %r3, %r5, %r2;
@@ -3063,7 +3063,7 @@ define i32 @nand_acquire_i32_global_cta(ptr addrspace(1) %addr, i32 %val) {
 ; SM60-NEXT:  // %bb.0:
 ; SM60-NEXT:    ld.param.b32 %r2, [nand_acquire_i32_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b64 %rd1, [nand_acquire_i32_global_cta_param_0];
-; SM60-NEXT:    ld.global.b32 %r5, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r5, [%rd1];
 ; SM60-NEXT:  $L__BB97_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    and.b32 %r3, %r5, %r2;
@@ -3091,7 +3091,7 @@ define i32 @nand_release_i32_global_cta(ptr addrspace(1) %addr, i32 %val) {
 ; SM60-NEXT:    ld.param.b32 %r2, [nand_release_i32_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b64 %rd1, [nand_release_i32_global_cta_param_0];
 ; SM60-NEXT:    membar.cta;
-; SM60-NEXT:    ld.global.b32 %r5, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r5, [%rd1];
 ; SM60-NEXT:  $L__BB98_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    and.b32 %r3, %r5, %r2;
@@ -3118,7 +3118,7 @@ define i32 @nand_seq_cst_i32_global_cta(ptr addrspace(1) %addr, i32 %val) {
 ; SM60-NEXT:    ld.param.b32 %r2, [nand_seq_cst_i32_global_cta_param_1];
 ; SM60-NEXT:    ld.param.b64 %rd1, [nand_seq_cst_i32_global_cta_param_0];
 ; SM60-NEXT:    membar.cta;
-; SM60-NEXT:    ld.global.b32 %r5, [%rd1];
+; SM60-NEXT:    ld.volatile.global.b32 %r5, [%rd1];
 ; SM60-NEXT:  $L__BB99_1: // %atomicrmw.start
 ; SM60-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM60-NEXT:    and.b32 %r3, %r5, %r2;

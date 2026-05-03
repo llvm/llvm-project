@@ -41,6 +41,12 @@ add_header(
 )
 
 add_header(
+  sys_personality_macros
+  HDR
+    sys-personality-macros.h
+)
+
+add_header(
   sys_random_macros
   HDR
     sys-random-macros.h

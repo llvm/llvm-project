@@ -7,5 +7,7 @@ entry:
   ret void
 }
 ; CHECK: Entering function: main
+; CHECK-NEXT: Stacktrace:
+; CHECK-NEXT: #0   call void poison() at @main
 ; CHECK-NEXT: Immediate UB detected: Indirect call through poison function pointer.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

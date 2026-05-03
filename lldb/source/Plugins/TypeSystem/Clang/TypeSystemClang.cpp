@@ -1632,6 +1632,8 @@ TypeSystemClang::CreateTemplateTemplateParmDecl(const char *template_name) {
   llvm::SmallVector<NamedDecl *, 8> template_param_decls;
 
   TypeSystemClang::TemplateParameterInfos template_param_infos;
+  template_param_infos.SetParameterPack(
+      std::make_unique<TemplateParameterInfos>());
   TemplateParameterList *template_param_list = CreateTemplateParameterList(
       ast, template_param_infos, template_param_decls);
 

@@ -56,5 +56,43 @@
 // RUN:   | FileCheck %s -check-prefix=CHECK7 -match-full-lines
 // CHECK7: int i;
 
+// RUN: echo "foo.h" > .clang-format-ignore
+// RUN: echo "!foo.c" >> .clang-format-ignore
+// RUN: echo "int i ;" > foo.c
+// RUN: echo "int i ;" > foo.h
+// RUN: clang-format -verbose foo.c 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=CHECK8 -match-full-lines
+// CHECK8: Formatting [1/1] foo.c
+// RUN: clang-format -verbose foo.h 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=CHECK9 -allow-empty
+// CHECK9-NOT: int
+
+// RUN: mkdir -p %t.dir/ignore.dir/format.dir
+// RUN: echo "ignore.dir/*" > .clang-format-ignore
+// RUN: echo "!ignore.dir/format.dir/*" >> .clang-format-ignore
+// RUN: echo "int i ;" > ignore.dir/foo.c
+// RUN: echo "int i ;" > ignore.dir/format.dir/bar.c
+// RUN: clang-format -verbose ignore.dir/**/*.c 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=CHECK10 -match-full-lines
+// CHECK10: {{Formatting \[1/1] .*ignore\.dir[/\\]format\.dir[/\\]bar\.c}}
+
+// RUN: echo "foo.*" > .clang-format-ignore
+// RUN: clang-format -verbose foo.c 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=CHECK11 -allow-empty
+// CHECK11-NOT: int
+// RUN: echo "!foo.c" >> .clang-format-ignore
+// RUN: clang-format -verbose foo.c 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=CHECK12 -match-full-lines
+// CHECK12: Formatting [1/1] foo.c
+
+// RUN: echo "!foo.*" > .clang-format-ignore
+// RUN: clang-format -verbose foo.c 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=CHECK13 -match-full-lines
+// CHECK13: Formatting [1/1] foo.c
+// RUN: echo "foo.c" >> .clang-format-ignore
+// RUN: clang-format -verbose foo.c 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=CHECK14 -allow-empty
+// CHECK14-NOT: int
+
 // RUN: cd ..
 // RUN: rm -r %t.dir

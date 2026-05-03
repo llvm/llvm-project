@@ -4711,7 +4711,7 @@ void SemaCodeCompletion::CodeCompleteModuleImport(SourceLocation ImportLoc,
         /*IsInclusionDirective=*/false);
     // Enumerate submodules.
     if (Mod) {
-      for (auto *Submodule : Mod->submodules()) {
+      for (Module *Submodule : Mod->submodules()) {
         Builder.AddTypedTextChunk(
             Builder.getAllocator().CopyString(Submodule->Name));
         Results.AddResult(Result(

@@ -13,8 +13,8 @@
 
 // NOLINTNEXTLINE(misc-use-internal-linkage)
 volatile int SSAFJSONFormatAnchorSource = 0;
-LLVM_INSTANTIATE_REGISTRY(llvm::Registry<clang::ssaf::JSONFormat::FormatInfo>)
-LLVM_INSTANTIATE_REGISTRY(
+LLVM_DEFINE_REGISTRY(llvm::Registry<clang::ssaf::JSONFormat::FormatInfo>)
+LLVM_DEFINE_REGISTRY(
     llvm::Registry<clang::ssaf::JSONFormat::AnalysisResultRegistry::Codec>)
 
 static clang::ssaf::SerializationFormatRegistry::Add<clang::ssaf::JSONFormat>

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/ScalableStaticAnalysisFramework/Core/ASTEntityMapping.h"
+#include "FindDecl.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
@@ -20,23 +21,11 @@ using namespace clang::ast_matchers;
 namespace clang::ssaf {
 namespace {
 
-// Helper function to find a declaration by name
-template <typename DeclType>
-const DeclType *findDecl(ASTContext &Ctx, StringRef Name) {
-  auto Matcher = namedDecl(hasName(Name)).bind("decl");
-  auto Matches = match(Matcher, Ctx);
-  if (Matches.empty())
-    return nullptr;
-  if (auto Result = Matches[0].getNodeAs<DeclType>("decl"))
-    return dyn_cast<DeclType>(Result->getCanonicalDecl());
-  return nullptr;
-}
-
 TEST(ASTEntityMappingTest, FunctionDecl) {
   auto AST = tooling::buildASTFromCode(R"cpp(void foo() {})cpp");
   auto &Ctx = AST->getASTContext();
 
-  const auto *FD = findDecl<FunctionDecl>(Ctx, "foo");
+  const auto *FD = findFnByName("foo", Ctx);
   ASSERT_NE(FD, nullptr);
 
   auto EntityName = getEntityName(FD);
@@ -47,7 +36,7 @@ TEST(ASTEntityMappingTest, VarDecl) {
   auto AST = tooling::buildASTFromCode(R"cpp(int x = 42;)cpp");
   auto &Ctx = AST->getASTContext();
 
-  const auto *VD = findDecl<VarDecl>(Ctx, "x");
+  const auto *VD = findDeclByName<VarDecl>("x", Ctx);
   ASSERT_NE(VD, nullptr);
 
   auto EntityName = getEntityName(VD);
@@ -58,7 +47,7 @@ TEST(ASTEntityMappingTest, ParmVarDecl) {
   auto AST = tooling::buildASTFromCode(R"cpp(void foo(int x) {})cpp");
   auto &Ctx = AST->getASTContext();
 
-  const auto *FD = findDecl<FunctionDecl>(Ctx, "foo");
+  const auto *FD = findFnByName("foo", Ctx);
   ASSERT_NE(FD, nullptr);
   ASSERT_EQ(FD->param_size(), 1u);
 
@@ -73,7 +62,7 @@ TEST(ASTEntityMappingTest, RecordDecl) {
   auto AST = tooling::buildASTFromCode(R"cpp(struct S {};)cpp");
   auto &Ctx = AST->getASTContext();
 
-  const auto *RD = findDecl<RecordDecl>(Ctx, "S");
+  const auto *RD = findDeclByName<RecordDecl>("S", Ctx);
   ASSERT_NE(RD, nullptr);
 
   auto EntityName = getEntityName(RD);
@@ -84,7 +73,7 @@ TEST(ASTEntityMappingTest, FieldDecl) {
   auto AST = tooling::buildASTFromCode(R"cpp(struct S { int field; };)cpp");
   auto &Ctx = AST->getASTContext();
 
-  const auto *FD = findDecl<FieldDecl>(Ctx, "field");
+  const auto *FD = findDeclByName<FieldDecl>("field", Ctx);
   ASSERT_NE(FD, nullptr);
 
   auto EntityName = getEntityName(FD);
@@ -143,7 +132,7 @@ TEST(ASTEntityMappingTest, UnsupportedDecl) {
   auto AST = tooling::buildASTFromCode(R"cpp(namespace N {})cpp");
   auto &Ctx = AST->getASTContext();
 
-  const auto *ND = findDecl<NamespaceDecl>(Ctx, "N");
+  const auto *ND = findDeclByName<NamespaceDecl>("N", Ctx);
   ASSERT_NE(ND, nullptr);
 
   auto EntityName = getEntityName(ND);
@@ -154,7 +143,7 @@ TEST(ASTEntityMappingTest, FunctionReturn) {
   auto AST = tooling::buildASTFromCode(R"cpp(int foo() { return 42; })cpp");
   auto &Ctx = AST->getASTContext();
 
-  const auto *FD = findDecl<FunctionDecl>(Ctx, "foo");
+  const auto *FD = findFnByName("foo", Ctx);
   ASSERT_NE(FD, nullptr);
 
   auto EntityName = getEntityNameForReturn(FD);
@@ -196,8 +185,8 @@ TEST(ASTEntityMappingTest, DifferentFunctionsDifferentNames) {
   )cpp");
   auto &Ctx = AST->getASTContext();
 
-  const auto *Foo = findDecl<FunctionDecl>(Ctx, "foo");
-  const auto *Bar = findDecl<FunctionDecl>(Ctx, "bar");
+  const auto *Foo = findFnByName("foo", Ctx);
+  const auto *Bar = findFnByName("bar", Ctx);
   ASSERT_NE(Foo, nullptr);
   ASSERT_NE(Bar, nullptr);
 

@@ -30,7 +30,7 @@
 ; clang -g -c -O1 b.cpp -gdwarf-4 -o 2.o
 
 RUN: rm -rf %t.dir && mkdir -p %t.dir
-RUN: dsymutil -y %p/dummy-debug-map-arm64.map -oso-prepend-path=%p/../Inputs/DWARF5-DWARF4-combination -o %t.dir/dwarf5-dwarf4-combination-macho.dSYM
+RUN: dsymutil --linker classic -y %p/dummy-debug-map-arm64.map -oso-prepend-path=%p/../Inputs/DWARF5-DWARF4-combination -o %t.dir/dwarf5-dwarf4-combination-macho.dSYM
 RUN: llvm-dwarfdump %t.dir/dwarf5-dwarf4-combination-macho.dSYM -a --verbose | FileCheck %s --check-prefixes=CHECK,WITH-PARENTS
 
 RUN: rm -rf %t.dir && mkdir -p %t.dir

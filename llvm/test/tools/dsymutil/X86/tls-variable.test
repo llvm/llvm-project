@@ -9,12 +9,12 @@
 # RUN: echo '    symbols:' >> %t2.map
 # RUN: echo '      - { sym: __Z3foov, objAddr: 0x0, binAddr: 0x10000, size: 0x10 }' >> %t2.map
 # RUN: echo '...' >> %t2.map
-# RUN: dsymutil -y %t2.map --keep-function-for-static -f -o - | llvm-dwarfdump -a - | FileCheck %s
+# RUN: dsymutil --linker classic -y %t2.map --keep-function-for-static -f -o - | llvm-dwarfdump -a - | FileCheck %s
 # RUN: dsymutil --linker parallel -y %t2.map --keep-function-for-static -f -o - | llvm-dwarfdump -a - | FileCheck %s
 #
 ## In update mode, markEverythingAsKept must also handle DW_OP_GNU_push_tls_address.
-# RUN: dsymutil -y %t2.map --keep-function-for-static -f -o %t.dSYM
-# RUN: dsymutil -u %t.dSYM -f -o - | llvm-dwarfdump -a - | FileCheck %s --check-prefix=UPDATE
+# RUN: dsymutil --linker classic -y %t2.map --keep-function-for-static -f -o %t.dSYM
+# RUN: dsymutil --linker classic -u %t.dSYM -f -o - | llvm-dwarfdump -a - | FileCheck %s --check-prefix=UPDATE
 
 # CHECK: file format Mach-O 64-bit x86-64
 # CHECK: .debug_info contents:
