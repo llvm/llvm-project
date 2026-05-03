@@ -2240,8 +2240,8 @@ struct GatherToLDSOpLowering : public ConvertOpToLLVMPattern<GatherToLDSOp> {
 
     Location loc = op.getLoc();
 
-    MemRefType srcMemRefType = cast<MemRefType>(op.getSrc().getType());
-    MemRefType dstMemRefType = cast<MemRefType>(op.getDst().getType());
+    auto srcMemRefType = cast<MemRefType>(op.getSrc().getType());
+    auto dstMemRefType = cast<MemRefType>(op.getDst().getType());
 
     // TODO: instead of only transfering one element per thread, we could
     // augment it to transfer multiple elements per thread by issuing multiple
@@ -2289,7 +2289,7 @@ struct GatherToLDSOpLowering : public ConvertOpToLLVMPattern<GatherToLDSOp> {
   }
 };
 
-static int64_t getTransferSizeInBits(Type transferType) {
+static unsigned getTransferSizeInBits(Type transferType) {
   if (VectorType transferVectorType = dyn_cast<VectorType>(transferType))
     return transferVectorType.getNumElements() *
            transferVectorType.getElementTypeBitWidth();
@@ -2318,7 +2318,7 @@ struct GlobalLoadAsyncToLDSOpLowering
     auto dstMemRefType = cast<MemRefType>(op.getDst().getType());
 
     Type transferType = op.getTransferType();
-    int64_t transferBits = getTransferSizeInBits(transferType);
+    unsigned transferBits = getTransferSizeInBits(transferType);
 
     Value srcPtr =
         getStridedElementPtr(rewriter, loc, srcMemRefType, adaptor.getSrc(),
@@ -2391,7 +2391,7 @@ struct ClusterLoadAsyncToLDSOpLowering
     auto dstMemRefType = cast<MemRefType>(op.getDst().getType());
 
     Type transferType = op.getTransferType();
-    int64_t transferBits = getTransferSizeInBits(transferType);
+    unsigned transferBits = getTransferSizeInBits(transferType);
 
     Value srcPtr =
         getStridedElementPtr(rewriter, loc, srcMemRefType, adaptor.getSrc(),

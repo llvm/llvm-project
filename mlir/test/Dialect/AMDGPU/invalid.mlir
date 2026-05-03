@@ -415,28 +415,6 @@ func.func @cluster_load_async_to_lds_src_not_global(%idx1 : index, %mask : i32,
 
 // -----
 
-func.func @cluster_load_async_to_lds_src_default_memory_space(
-    %idx1 : index, %mask : i32, %mem1 : memref<32xf32>,
-    %mem2 : memref<32xf32, #gpu.address_space<workgroup>>) {
-  // expected-error@+1 {{'amdgpu.cluster_load_async_to_lds' op source memory address space must be global}}
-  amdgpu.cluster_load_async_to_lds %mem1[%idx1], %mem2[%idx1], %mask
-    : f32, memref<32xf32>, memref<32xf32, #gpu.address_space<workgroup>>
-  func.return
-}
-
-// -----
-
-func.func @cluster_load_async_to_lds_src_memory_space_zero(
-    %idx1 : index, %mask : i32, %mem1 : memref<32xf32, 0>,
-    %mem2 : memref<32xf32, #gpu.address_space<workgroup>>) {
-  // expected-error@+1 {{'amdgpu.cluster_load_async_to_lds' op source memory address space must be global}}
-  amdgpu.cluster_load_async_to_lds %mem1[%idx1], %mem2[%idx1], %mask
-    : f32, memref<32xf32, 0>, memref<32xf32, #gpu.address_space<workgroup>>
-  func.return
-}
-
-// -----
-
 func.func @cluster_load_async_to_lds_src_index_count(%idx1 : index,
     %mask : i32, %mem1 : memref<32x32xf32, #gpu.address_space<global>>,
     %mem2 : memref<32xf32, #gpu.address_space<workgroup>>) {
