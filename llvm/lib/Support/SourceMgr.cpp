@@ -93,9 +93,22 @@ SourceMgr::OpenIncludeFile(const std::string &Filename,
 ErrorOr<std::unique_ptr<MemoryBuffer>>
 SourceMgr::OpenSliceIncludeFile(const std::string &Filename, uint64_t Offset,
                                 uint64_t Count, std::string &IncludedFile) {
-  auto GetFileSlice = [this, Offset, Count](StringRef Path) {
-    return FS ? FS->getSliceBufferForFile(Path, Offset, Count)
-              : MemoryBuffer::getFileSlice(Path, Count, Offset);
+  auto GetFileSlice =
+      [this, Offset,
+       Count](StringRef Path) -> ErrorOr<std::unique_ptr<MemoryBuffer>> {
+    if (FS)
+      return FS->getSliceBufferForFile(Path, Offset, Count);
+
+    if (Count != uint64_t(-1))
+      return MemoryBuffer::getFileSlice(Path, Count, Offset);
+
+    auto BufOrErr = MemoryBuffer::getFile(Path);
+    if (!BufOrErr)
+      return BufOrErr.getError();
+    std::unique_ptr<MemoryBuffer> Buff = std::move(*BufOrErr);
+    StringRef Bytes = Buff->getBuffer();
+    Bytes = Bytes.drop_front(Offset);
+    return MemoryBuffer::getMemBufferCopy(Bytes, Buff->getBufferIdentifier());
   };
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> NewBufOrErr = GetFileSlice(Filename);
