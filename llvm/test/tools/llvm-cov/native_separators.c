@@ -7,14 +7,15 @@
 
 // RUN: llvm-profdata merge %S/Inputs/double_dots.proftext -o %t.profdata
 // RUN: llvm-cov show %S/Inputs/native_separators.covmapping -instr-profile=%t.profdata -o %t.dir
-// RUN: FileCheck -check-prefixes=TEXT-INDEX -input-file=%t.dir/index.txt %s
+// Forward or backward slashes can be used depending on LLVM_WINDOWS_PREFER_FORWARD_SLASH.
+// RUN: FileCheck -check-prefixes=TEXT-INDEX -input-file=%t.dir/index.txt %s -DSEP=%{fs-sep}
 // RUN: llvm-cov show -format=html %S/Inputs/native_separators.covmapping -instr-profile=%t.profdata -path-equivalence=/tmp,%S %S/../llvm-"config"/../llvm-"cov"/native_separators.c -o %t.dir
-// RUN: FileCheck -check-prefixes=HTML-INDEX -input-file=%t.dir/index.html %s
+// RUN: FileCheck -check-prefixes=HTML-INDEX -input-file=%t.dir/index.html %s -DSEP=%{fs-sep}
 // RUN: llvm-cov show -format=html %S/Inputs/native_separators.covmapping -instr-profile=%t.profdata -path-equivalence=/tmp,%S %s -o %t.dir
-// RUN: FileCheck -check-prefixes=HTML -input-file=%t.dir/coverage/tmp/native_separators.c.html %s
+// RUN: FileCheck -check-prefixes=HTML -input-file=%t.dir/coverage/tmp/native_separators.c.html %s -DSEP=%{fs-sep}
 
-// TEXT-INDEX: \tmp\native_separators.c
-// HTML-INDEX: >tmp\native_separators.c</a>
-// HTML: <pre>\tmp\native_separators.c</pre>
+// TEXT-INDEX: [[SEP]]tmp[[SEP]]native_separators.c
+// HTML-INDEX: >tmp[[SEP]]native_separators.c</a>
+// HTML: <pre>[[SEP]]tmp[[SEP]]native_separators.c</pre>
 
 int main() {}

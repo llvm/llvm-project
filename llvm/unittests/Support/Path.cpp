@@ -2825,7 +2825,20 @@ TEST_F(FileSystemTest, makeLongFormPath) {
   ASSERT_FALSE(DotAndDotDot.empty())
       << "Expected short 8.3 form path for test directory.";
   auto ContainsDotAndDotDot = [](llvm::StringRef S) {
-    return S.contains("\\.\\") && S.contains("\\..\\");
+    // Both forward and backward slashes can be used as separators on Windows.
+    // The preferred separator depends on LLVM_WINDOWS_PREFER_FORWARD_SLASH,
+    // but some Windows APIs (like GetShortPathName) might still return
+    // backslashes.
+    auto has = [&](llvm::StringRef Comp) {
+      for (char Sep1 : {'/', '\\'})
+        for (char Sep2 : {'/', '\\'}) {
+          std::string Pattern = (std::string(1, Sep1) + Comp.str() + Sep2);
+          if (S.contains(Pattern))
+            return true;
+        }
+      return false;
+    };
+    return has(".") && has("..");
   };
   ASSERT_TRUE(ContainsDotAndDotDot(DotAndDotDot))
       << "Expected '.' and '..' components in: " << DotAndDotDot;

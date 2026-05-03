@@ -25,6 +25,7 @@
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <algorithm>
 #include <fstream>
 #include <stdlib.h>
 #include <string>
@@ -1072,7 +1073,14 @@ TEST(CommandLineTest, RecursiveResponseFiles) {
   ASSERT_FALSE((bool)EC);
   std::string ExpectedMessage =
       std::string("recursive expansion of: '") + std::string(FilePath) + "'";
-  ASSERT_TRUE(toString(std::move(Err)) == ExpectedMessage);
+  // Normalize path separators to '/' to ensure robust comparison on Windows,
+  // as the actual separator depends on LLVM_WINDOWS_PREFER_FORWARD_SLASH.
+  std::string ActualMessage = toString(std::move(Err));
+  std::replace(ActualMessage.begin(), ActualMessage.end(), '\\', '/');
+  std::string NormalizedExpectedMessage = ExpectedMessage;
+  std::replace(NormalizedExpectedMessage.begin(),
+               NormalizedExpectedMessage.end(), '\\', '/');
+  ASSERT_EQ(ActualMessage, NormalizedExpectedMessage);
 
   EXPECT_THAT(Argv,
               testing::Pointwise(StringEquality(),
