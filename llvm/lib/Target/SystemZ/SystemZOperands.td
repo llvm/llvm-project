@@ -686,8 +686,11 @@ def bdvaddr12only     : BDVMode<            "64", "12">;
 //===----------------------------------------------------------------------===//
 
 // A 4-bit condition-code mask.
-def cond4 : PatLeaf<(i32 timm), [{ return (N->getZExtValue() < 16); }]>,
+def cond4 : ImmLeaf<i32, [{ return (Imm.getZExtValue() < 16); }],
+                    NOOP_SDNodeXForm, timm>,
             Operand<i32> {
   let PrintMethod = "printCond4Operand";
   let OperandType = "OPERAND_IMMEDIATE";
+  let IsAPInt = true;
+  let FastIselShouldIgnore = true;
 }
