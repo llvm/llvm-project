@@ -607,8 +607,8 @@ public:
                     std::min(Alignment.countr_zero(), Offset.countr_zero()));
             }
             if (!Alignment.isPowerOf2()) {
-              if (!WasOnPtr.isNullPtr(AS, DL))
-                reportImmediateUB() << "Assume on nonnull pointer " << WasOn
+              if (!WasOnPtr.address().isZero())
+                reportImmediateUB() << "Assume on nonzero pointer " << WasOn
                                     << " with a "
                                        "non-power-of-two alignment "
                                     << Alignment << '.';
@@ -630,7 +630,7 @@ public:
             APInt DereferenceableBytes =
                 getIntNonPoison(getValue(GetBundleArg(1)));
             // Only n > 0 implies that the pointer is dereferenceable.
-            if (!DereferenceableBytes.isStrictlyPositive())
+            if (DereferenceableBytes.isZero())
               break;
             if (violatesDereferenceableBytesAttr(
                     WasOn, DereferenceableBytes.getLimitedValue(),
