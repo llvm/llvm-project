@@ -648,9 +648,13 @@ static void removeRedundantInductionCasts(VPlan &Plan) {
           break;
         }
       }
+      // A cast recipe in the chain may have been removed by earlier DCE.
+      if (!FoundUserCast)
+        break;
       FindMyCast = FoundUserCast;
     }
-    FindMyCast->replaceAllUsesWith(IV);
+    if (FindMyCast != IV)
+      FindMyCast->replaceAllUsesWith(IV);
   }
 }
 
@@ -1053,8 +1057,7 @@ static VPValue *optimizeEarlyExitInductionUser(VPlan &Plan,
   VPBuilder B(cast<VPBasicBlock>(PredVPBB));
 
   DebugLoc DL = cast<VPInstruction>(Op)->getDebugLoc();
-  VPValue *FirstActiveLane =
-      B.createNaryOp(VPInstruction::FirstActiveLane, Mask, DL);
+  VPValue *FirstActiveLane = B.createFirstActiveLane(Mask, DL);
   Type *FirstActiveLaneType = TypeInfo.inferScalarType(FirstActiveLane);
   FirstActiveLane = B.createScalarZExtOrTrunc(FirstActiveLane, CanonicalIVType,
                                               FirstActiveLaneType, DL);
@@ -1802,11 +1805,9 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
   }
 
   if (match(Def, m_ExtractLastLane(m_VPValue(A))) &&
-      ((isa<VPInstruction>(A) && vputils::isSingleScalar(A)) ||
-       (isa<VPReplicateRecipe>(A) &&
-        cast<VPReplicateRecipe>(A)->isSingleScalar())) &&
-      all_of(A->users(),
-             [Def, A](VPUser *U) { return U->usesScalars(A) || Def == U; })) {
+      vputils::isSingleScalar(A) && all_of(A->users(), [Def, A](VPUser *U) {
+        return U->usesScalars(A) || Def == U;
+      })) {
     return Def->replaceAllUsesWith(A);
   }
 
@@ -3531,6 +3532,14 @@ void VPlanTransforms::createInterleaveGroups(
   // single VPInterleaveRecipe at its insertion point.
   VPDominatorTree VPDT(Plan);
   for (const auto *IG : InterleaveGroups) {
+    // Skip interleave groups where members don't have recipes. This can happen
+    // when removeDeadRecipes removes recipes that are part of interleave groups
+    // but have no users.
+    if (llvm::any_of(IG->members(), [&IRMemberToRecipe](Instruction *Member) {
+          return !IRMemberToRecipe.contains(Member);
+        }))
+      continue;
+
     auto *Start = IRMemberToRecipe.lookup(IG->getMember(0));
     VPIRMetadata InterleaveMD(*Start);
     SmallVector<VPValue *, 4> StoredValues;
@@ -3966,9 +3975,8 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
         }
 
         // Create FirstActiveLane on the inverted masks.
-        VPValue *FirstInactiveLane = Builder.createNaryOp(
-            VPInstruction::FirstActiveLane, NotMasks,
-            LastActiveL->getDebugLoc(), "first.inactive.lane");
+        VPValue *FirstInactiveLane = Builder.createFirstActiveLane(
+            NotMasks, LastActiveL->getDebugLoc(), "first.inactive.lane");
 
         // Subtract 1 to get the last active lane.
         VPValue *One =
@@ -4162,10 +4170,10 @@ void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
   VPBasicBlock *DispatchVPBB =
       Exits.size() == 1 ? VectorEarlyExitVPBBs[0]
                         : Plan.createVPBasicBlock("vector.early.exit.check");
+  DispatchVPBB->setPredecessors({LatchVPBB});
   VPBuilder DispatchBuilder(DispatchVPBB, DispatchVPBB->begin());
-  VPValue *FirstActiveLane =
-      DispatchBuilder.createNaryOp(VPInstruction::FirstActiveLane, {Combined},
-                                   DebugLoc::getUnknown(), "first.active.lane");
+  VPValue *FirstActiveLane = DispatchBuilder.createFirstActiveLane(
+      {Combined}, DebugLoc::getUnknown(), "first.active.lane");
 
   // For each early exit, disconnect the original exiting block
   // (early.exiting.I) from the exit block (ir-bb<exit.I>) and route through a
@@ -4284,7 +4292,6 @@ void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
                        {IsAnyExitTaken, IsLatchExitTaken}, LatchDL);
   LatchVPBB->clearSuccessors();
   LatchVPBB->setSuccessors({DispatchVPBB, MiddleVPBB, HeaderVPBB});
-  DispatchVPBB->setPredecessors({LatchVPBB});
 }
 
 /// This function tries convert extended in-loop reductions to

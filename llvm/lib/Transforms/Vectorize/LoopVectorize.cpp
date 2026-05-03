@@ -6862,6 +6862,7 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
     return;
 
   RUN_VPLAN_PASS(VPlanTransforms::simplifyRecipes, *VPlan0);
+  RUN_VPLAN_PASS(VPlanTransforms::removeDeadRecipes, *VPlan0);
   // If we're vectorizing a loop with an uncountable exit, make sure that the
   // recipes are safe to handle.
   // TODO: Remove this once we can properly check the VPlan itself for both
@@ -7005,14 +7006,8 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VPlanPtr Plan,
   ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
       HeaderVPBB);
 
-  // Collect blocks that need predication for in-loop reduction recipes.
-  DenseSet<BasicBlock *> BlocksNeedingPredication;
-  for (BasicBlock *BB : OrigLoop->blocks())
-    if (CM.blockNeedsPredicationForAnyReason(BB))
-      BlocksNeedingPredication.insert(BB);
-
   RUN_VPLAN_PASS(VPlanTransforms::createInLoopReductionRecipes, *Plan,
-                 BlocksNeedingPredication, Range.Start);
+                 Range.Start);
 
   VPCostContext CostCtx(CM.TTI, *CM.TLI, *Plan, CM, Config.CostKind, CM.PSE,
                         OrigLoop);
@@ -7116,6 +7111,10 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VPlanPtr Plan,
                    Range);
   }
 
+  // Ensure scalar VF plans only contain VF=1, as required by hasScalarVFOnly.
+  if (Range.Start.isScalar())
+    Range.End = Range.Start * 2;
+
   for (ElementCount VF : Range)
     Plan->addVF(VF);
   Plan->setName("Initial VPlan");
@@ -7201,9 +7200,7 @@ void LoopVectorizationPlanner::addReductionResultComputation(
   for (VPRecipeBase &R :
        Plan->getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
     VPReductionPHIRecipe *PhiR = dyn_cast<VPReductionPHIRecipe>(&R);
-    // TODO: Remove check for constant incoming value once removeDeadRecipes is
-    // used on VPlan0.
-    if (!PhiR || isa<VPIRValue>(PhiR->getOperand(1)))
+    if (!PhiR)
       continue;
 
     RecurKind RecurrenceKind = PhiR->getRecurrenceKind();
