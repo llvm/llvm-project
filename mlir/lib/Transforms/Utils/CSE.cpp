@@ -52,8 +52,9 @@ namespace {
 /// Simple common sub-expression elimination.
 class CSEDriver {
 public:
-  CSEDriver(RewriterBase &rewriter, DominanceInfo *domInfo)
-      : rewriter(rewriter), domInfo(domInfo) {}
+  CSEDriver(RewriterBase &rewriter, DominanceInfo *domInfo,
+            PostDominanceInfo *postDomInfo)
+      : rewriter(rewriter), domInfo(domInfo), postDomInfo(postDomInfo) {}
 
   /// Simplify all operations within the given op.
   void simplify(Operation *op, bool *changed = nullptr);
@@ -118,6 +119,7 @@ private:
   /// Operations marked as dead and to be erased.
   std::vector<Operation *> opsToErase;
   DominanceInfo *domInfo = nullptr;
+  PostDominanceInfo *postDomInfo = nullptr;
   MemEffectsCache memEffectsCache;
 
   // Various statistics.
@@ -389,8 +391,11 @@ void CSEDriver::eraseDeadOps(bool *changed) {
   // Erase any operations that were marked as dead during simplification, and
   // remove their associated dominator trees.
   for (auto *op : opsToErase) {
-    for (Region &region : op->getRegions())
+    for (Region &region : op->getRegions()) {
       domInfo->invalidate(&region);
+      if (postDomInfo != nullptr)
+        postDomInfo->invalidate(&region);
+    }
     rewriter.eraseOp(op);
   }
   if (changed)
@@ -418,8 +423,9 @@ void CSEDriver::simplify(Region &region, bool *changed) {
 void mlir::eliminateCommonSubExpressions(RewriterBase &rewriter,
                                          DominanceInfo &domInfo, Operation *op,
                                          bool *changed, int64_t *numCSE,
-                                         int64_t *numDCE) {
-  CSEDriver driver(rewriter, &domInfo);
+                                         int64_t *numDCE,
+                                         PostDominanceInfo *postDomInfo) {
+  CSEDriver driver(rewriter, &domInfo, postDomInfo);
   driver.simplify(op, changed);
   if (numCSE)
     *numCSE = driver.getNumCSE();
@@ -429,7 +435,8 @@ void mlir::eliminateCommonSubExpressions(RewriterBase &rewriter,
 
 void mlir::eliminateCommonSubExpressions(RewriterBase &rewriter,
                                          DominanceInfo &domInfo, Region &region,
-                                         bool *changed) {
-  CSEDriver driver(rewriter, &domInfo);
+                                         bool *changed,
+                                         PostDominanceInfo *postDomInfo) {
+  CSEDriver driver(rewriter, &domInfo, postDomInfo);
   driver.simplify(region, changed);
 }
