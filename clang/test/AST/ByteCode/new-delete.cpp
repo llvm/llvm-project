@@ -612,6 +612,16 @@ namespace CastedDelete {
   }
   static_assert(foo() == 1); // both-error {{not an integral constant expression}} \
                              // both-note {{in call to}}
+
+  constexpr bool nvdtor() { // both-error {{never produces a constant expression}}
+    struct S {
+      constexpr ~S() {}
+    };
+    struct T : S {};
+    delete (S*)new T; // both-note {{delete of object with dynamic type 'T' through pointer to base class type 'S' with non-virtual destructor}}
+    return true;
+  }
+
 }
 
 constexpr void use_after_free_2() { // both-error {{never produces a constant expression}}
@@ -703,7 +713,7 @@ namespace OperatorNewDelete {
   static_assert(zeroAlloc());
 
   constexpr int arrayAlloc() {
-    int *F = std::allocator<int>().allocate(2);
+    int *F = std::allocator<int>().allocate(2); // both-note {{heap allocation performed here}}
     F[0] = 10; // both-note {{assignment to object outside its lifetime is not allowed in a constant expression}}
     F[1] = 13;
     int Res = F[1] + F[0];
@@ -721,7 +731,7 @@ namespace OperatorNewDelete {
 
   /// FIXME: This is broken in the current interpreter.
   constexpr bool structAlloc() {
-    S *s = std::allocator<S>().allocate(1);
+    S *s = std::allocator<S>().allocate(1); // ref-note {{heap allocation performed here}}
 
     s->i = 12; // ref-note {{assignment to object outside its lifetime is not allowed in a constant expression}}
 
@@ -734,7 +744,7 @@ namespace OperatorNewDelete {
                                 // ref-note {{in call to}}
 
   constexpr bool structAllocArray() {
-    S *s = std::allocator<S>().allocate(9);
+    S *s = std::allocator<S>().allocate(9); // ref-note {{heap allocation performed here}}
 
     s[2].i = 12; // ref-note {{assignment to object outside its lifetime is not allowed in a constant expression}}
     bool Res = (s[2].i == 12);
@@ -900,7 +910,7 @@ namespace IncompleteArray {
   };
   constexpr int test1() {
     int n = 5;
-    int* a = new int[n];
+    int* a = new int[n]; // both-note {{heap allocation performed here}}
     int c = a[0]; // both-note {{read of uninitialized object}}
     delete[] a;
     return c;
@@ -1155,6 +1165,7 @@ static_assert(a() == 1, ""); // both-error {{not an integral constant expression
 
 
 static_assert(true ? *new int : 4, ""); // both-error {{expression is not an integral constant expression}} \
-                                        // both-note {{read of uninitialized object is not allowed in a constant expression}}
+                                        // both-note {{read of uninitialized object is not allowed in a constant expression}} \
+                                        // both-note {{heap allocation performed here}}
 
 #endif

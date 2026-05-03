@@ -2856,23 +2856,23 @@ define i128 @extract_v2i128_c(<2 x i128> %a, i32 %c) {
 ; CHECK-SD-NEXT:    sub sp, sp, #64
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-SD-NEXT:    adds x9, x0, x0
-; CHECK-SD-NEXT:    mov w8, w4
+; CHECK-SD-NEXT:    mov w8, #1 // =0x1
+; CHECK-SD-NEXT:    // kill: def $w4 killed $w4 def $x4
 ; CHECK-SD-NEXT:    adc x10, x1, x1
 ; CHECK-SD-NEXT:    adds x11, x2, x2
 ; CHECK-SD-NEXT:    fmov d1, x9
 ; CHECK-SD-NEXT:    fmov d0, x11
-; CHECK-SD-NEXT:    adc x12, x3, x3
-; CHECK-SD-NEXT:    add x8, x8, x8
-; CHECK-SD-NEXT:    and x9, x8, #0x2
-; CHECK-SD-NEXT:    orr w8, w8, #0x1
-; CHECK-SD-NEXT:    mov x11, sp
+; CHECK-SD-NEXT:    adc x11, x3, x3
+; CHECK-SD-NEXT:    orr w8, w8, w4, lsl #1
+; CHECK-SD-NEXT:    ubfiz x9, x4, #4, #1
 ; CHECK-SD-NEXT:    mov v1.d[1], x10
 ; CHECK-SD-NEXT:    add x10, sp, #32
 ; CHECK-SD-NEXT:    and x8, x8, #0x3
-; CHECK-SD-NEXT:    mov v0.d[1], x12
+; CHECK-SD-NEXT:    mov v0.d[1], x11
+; CHECK-SD-NEXT:    mov x11, sp
 ; CHECK-SD-NEXT:    stp q1, q0, [sp]
 ; CHECK-SD-NEXT:    stp q1, q0, [sp, #32]
-; CHECK-SD-NEXT:    ldr x0, [x10, x9, lsl #3]
+; CHECK-SD-NEXT:    ldr x0, [x10, x9]
 ; CHECK-SD-NEXT:    ldr x1, [x11, x8, lsl #3]
 ; CHECK-SD-NEXT:    add sp, sp, #64
 ; CHECK-SD-NEXT:    ret

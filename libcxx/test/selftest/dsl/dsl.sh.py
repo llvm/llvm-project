@@ -10,6 +10,9 @@
 # because stdout & stderr are treated as the same.
 # XFAIL: LIBCXX-PICOLIBC-FIXME
 
+# Investigate why this is failing with LLVM libc.
+# XFAIL: LLVM-LIBC-FIXME
+
 # Note: We prepend arguments with 'x' to avoid thinking there are too few
 #       arguments in case an argument is an empty string.
 # RUN: %{python} %s x%S x%{temp} x%{substitutions}

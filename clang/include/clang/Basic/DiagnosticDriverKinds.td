@@ -635,6 +635,9 @@ def err_modules_driver_named_module_redefinition : Error<
 def remark_printing_module_graph : Remark<
   "printing module dependency graph">,
   InGroup<ModulesDriver>;
+def err_module_defined_outside_of_module_source : Error<
+  "module '%0' is defined in file '%1', but module declarations are only "
+  "allowed in C++ module inputs; use the '.cppm' extension or '-x c++module'">;
 
 def warn_drv_delayed_template_parsing_after_cxx20 : Warning<
   "-fdelayed-template-parsing is deprecated after C++20">,
@@ -873,6 +876,9 @@ def err_drv_hlsl_bad_shader_unsupported : Error<
 def warn_drv_dxc_missing_dxv : Warning<
   "dxv not found; resulting DXIL will not be validated or signed for use in "
   "release environment">, InGroup<DXILValidation>;
+def warn_drv_dxc_missing_spirv_val : Warning<
+  "spirv-val not found; resulting SPIR-V will not be validated">,
+  InGroup<SPIRVValidation>;
 
 def err_drv_invalid_range_dxil_validator_version : Error<
   "invalid validator version : %0; validator version must be less than or "

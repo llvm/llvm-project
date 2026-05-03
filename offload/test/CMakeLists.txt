@@ -16,7 +16,7 @@ endif()
 # char into the lit command.
 string(REPLACE " " ";" LIBOMPTARGET_LIT_ARG_LIST "${LIBOMPTARGET_LIT_ARGS}")
 
-find_package(CUDAToolkit QUIET)
+find_package(CUDAToolkit QUIET ${OFFLOAD_MIN_CUDA_VERSION})
 if(CUDAToolkit_FOUND)
   get_filename_component(CUDA_ROOT "${CUDAToolkit_BIN_DIR}" DIRECTORY ABSOLUTE)
   get_filename_component(CUDA_LIBDIR "${CUDA_cudart_static_LIBRARY}" DIRECTORY)

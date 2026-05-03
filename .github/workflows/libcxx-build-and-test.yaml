@@ -47,14 +47,14 @@ jobs:
           'generic-cxx26',
           'generic-modules'
         ]
-        cc: [  'clang-22' ]
-        cxx: [ 'clang++-22' ]
+        cc: [  'clang-23' ]
+        cxx: [ 'clang++-23' ]
         include:
           - config: 'generic-gcc'
             cc: 'gcc-15'
             cxx: 'g++-15'
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
       - name: ${{ matrix.config }}.${{ matrix.cxx }}
@@ -66,7 +66,7 @@ jobs:
         env:
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
-      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
           name: ${{ matrix.config }}-${{ matrix.cxx }}-results
@@ -92,20 +92,20 @@ jobs:
           'generic-cxx20',
           'generic-cxx23'
         ]
-        cc: [ 'clang-22' ]
-        cxx: [ 'clang++-22' ]
+        cc: [ 'clang-23' ]
+        cxx: [ 'clang++-23' ]
         include:
           - config: 'generic-gcc-cxx11'
             cc: 'gcc-15'
             cxx: 'g++-15'
           - config: 'generic-cxx26'
+            cc: 'clang-22'
+            cxx: 'clang++-22'
+          - config: 'generic-cxx26'
             cc: 'clang-21'
             cxx: 'clang++-21'
-          - config: 'generic-cxx26'
-            cc: 'clang-20'
-            cxx: 'clang++-20'
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
       - name: ${{ matrix.config }}
@@ -117,7 +117,7 @@ jobs:
         env:
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
-      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()  # Upload artifacts even if the build or test suite fails
         with:
           name: ${{ matrix.config }}-${{ matrix.cxx }}-results
@@ -144,6 +144,7 @@ jobs:
           'generic-hardening-mode-extensive-observe-semantic',
           'generic-hardening-mode-fast',
           'generic-hardening-mode-fast-with-abi-breaks',
+          'generic-llvm-libc',
           'generic-merged',
           'generic-modules-cxx17-lsv',
           'generic-no-exceptions',
@@ -166,7 +167,7 @@ jobs:
           'bootstrapping-build'
         ]
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
       - name: ${{ matrix.config }}
@@ -176,9 +177,9 @@ jobs:
           pip install -r libcxx/test/requirements.txt
           libcxx/utils/ci/run-buildbot ${{ matrix.config }}
         env:
-          CC: clang-22
-          CXX: clang++-22
-      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+          CC: clang-23
+          CXX: clang++-23
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
           name: ${{ matrix.config }}-results
@@ -220,10 +221,10 @@ jobs:
           os: macos-15
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
-      - uses: maxim-lobanov/setup-xcode@60606e260d2fc5762a71e64e74b2174e8ea3c8bd # v1.6.0
+      - uses: maxim-lobanov/setup-xcode@ed7a3b1fda3918c0306d1b724322adc0b8cc0a90 # v1.7.0
         with:
           # https://github.com/actions/runner-images/blob/main/images/macos/macos-15-Readme.md
           xcode-version: '26.0'
@@ -237,7 +238,7 @@ jobs:
         env:
           CC: clang
           CXX: clang++
-      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()  # Upload artifacts even if the build or test suite fails
         with:
           name: macos-${{ matrix.config }}-results
@@ -267,7 +268,7 @@ jobs:
         - { config: mingw-static,             mingw: true,  cc: cc,       cxx: c++, runner: windows-11-arm }
     runs-on: ${{ matrix.runner != '' && matrix.runner || 'windows-2022' }}
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
       - name: Install dependencies
@@ -276,11 +277,11 @@ jobs:
       - name: Install a current LLVM
         if: ${{ matrix.mingw != true }}
         run: |
-          choco install -y llvm --version=20.1.8 --allow-downgrade
+          choco install -y llvm --version=21.1.8 --allow-downgrade
       - name: Install llvm-mingw
         if: ${{ matrix.mingw == true }}
         run: |
-          curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20250709/llvm-mingw-20250709-ucrt-${{ matrix.runner == 'windows-11-arm' && 'aarch64' || 'x86_64' }}.zip
+          curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20251216/llvm-mingw-20251216-ucrt-${{ matrix.runner == 'windows-11-arm' && 'aarch64' || 'x86_64' }}.zip
           powershell Expand-Archive llvm-mingw*.zip -DestinationPath .
           del llvm-mingw*.zip
           mv llvm-mingw* c:\llvm-mingw

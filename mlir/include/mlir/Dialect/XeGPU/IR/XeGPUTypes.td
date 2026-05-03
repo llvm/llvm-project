@@ -25,10 +25,10 @@ def XeGPU_DpasOprType: FixedVectorOfRankAndType<[1, 2, 3], [XeGPU_ScalarType]>;
 def XeGPU_DpasResType: FixedVectorOfRankAndType<[1, 2], [XeGPU_ScalarType]>;
 def XeGPU_OffsetType: FixedVectorOfNonZeroRankOf<[Index]>;
 def XeGPU_MaskType: FixedVectorOfNonZeroRankOf<[I1]>;
-def XeGPU_ValueType: VectorOfRankAndType<[1,2,3,4,5,6], [XeGPU_ScalarType]>;
+def XeGPU_ValueType: VectorOfRankAndType<[1,2,3,4,5,6,7,8], [XeGPU_ScalarType]>;
 def XeGPU_ValueOrScalarType : AnyTypeOf<[XeGPU_ValueType, XeGPU_ScalarType]>;
 def XeGPU_VectorOrScalarType
-    : AnyTypeOf<[VectorOfRankAndType<[1,2,3,4,5,6], [XeGPU_ScalarType, Index]>, XeGPU_ScalarType]>;
+    : AnyTypeOf<[VectorOfRankAndType<[1,2,3,4,5,6,7,8], [XeGPU_ScalarType, Index]>, XeGPU_ScalarType]>;
 def XeGPU_GatherScatterBaseAddrType
     : AnyTypeOf<[MemRefRankOf<[XeGPU_ScalarType], [1]>, XeGPU_PointerType]>;
 
@@ -39,7 +39,7 @@ class XeGPUTypeDef<string name, string typeMnemonic, list<Trait> traits = [],
   let mnemonic = typeMnemonic;
 }
 
-def isSharedPred : CPred<"isSharedMemory(llvm::cast<mlir::MemRefType>($_self))">;
+def isSharedPred : CPred<"XeGPUDialect::isSharedMemory(llvm::cast<mlir::MemRefType>($_self))">;
 class StaticShared1DMemRefOf<list<Type> allowedTypes> :
   ConfinedType<MemRefRankOf<allowedTypes, [1]>, [HasStaticShapePred, isSharedPred],
      "reside in share memory and statically 1d shaped " # MemRefOf<allowedTypes>.summary # " ",
@@ -60,18 +60,13 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
     and DPAS (matrix multiplication instruction) on Intel GPUs. It encodes the following information:
 
     * shape:  the sizes/shape of the interested data block, e.g., 8x16 means 8 rows
-              and each row contains 16 contiguous data element. The rows could be
-              either contiguous or not, depends on the encoding attribute. If the
-              encoding is a BlockTensorDescAttr, rows are contiguous. If the encoding
-              is a ScatterTensorDescAttr, rows are not necessary to be contiguous. If
-              encoding is not set, it is considered as a default BlockTensorDescAttr.
+              and each row contains 16 contiguous data elements.
 
     * element_type: the data type of the data element, e.g., f16, f32.
 
     Similar to the built-in tensor, it also provides optional attributes for encoding
-    additional information via either BlockTensorDescAttr or ScatterTensorDescAttr, or
-    supporting Workgroup, Subgroup, and workitem (or SIMT) level programmings via the
-    Layout attribute. Please check their definition for details.
+    additional information via BlockTensorDescAttr, or supporting Workgroup & Subgroup
+    level programmings via the Layout attribute. Please check their definition for details.
 
     Syntax:
 
@@ -81,7 +76,7 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
     dim-list := (static-dim-list `x`)?
     static-dim-list ::= decimal-literal `x` decimal-literal
     attr-list = (, encoding-attr)? (, layout-attr)?
-    enconding-attr = (, memory_space = value)? (, arr_len = value)? (, boundary_check = value)? (, scattered = value)?
+    enconding-attr = (, memory_space = value)? (, arr_len = value)? (, boundary_check = value)?
     layout-attr = DistributeLayoutAttr
     ```
 
@@ -127,12 +122,6 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
       CArg<"int", "1">: $array_length,
       CArg<"bool", "true">: $boundary_check,
       CArg<"xegpu::MemorySpace", "xegpu::MemorySpace::Global">:$memory_space,
-      CArg<"mlir::Attribute", "mlir::Attribute()">:$layout)>,
-    TypeBuilderWithInferredContext<(ins
-      "llvm::ArrayRef<int64_t>": $shape,
-      "mlir::Type": $elementType,
-      CArg<"int", "1">: $chunk_size,
-      CArg<"xegpu::MemorySpace", "xegpu::MemorySpace::Global">:$memory_space,
       CArg<"mlir::Attribute", "mlir::Attribute()">:$layout)>
   ];
 
@@ -150,12 +139,8 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
       return llvm::cast<TensorDescType>(cloneWith(getShape(), elementType));
     }
 
-    template <typename T,
-              typename = std::enable_if_t<
-                            std::is_same_v<T, BlockTensorDescAttr> ||
-                            std::is_same_v<T, ScatterTensorDescAttr>>>
-    T getEncodingOfType() const {
-      return llvm::dyn_cast_if_present<T>(getEncoding());
+    BlockTensorDescAttr getBlockAttr() const {
+      return llvm::dyn_cast_if_present<BlockTensorDescAttr>(getEncoding());
     }
 
     DistributeLayoutAttr getLayoutAttr() const {
@@ -163,35 +148,16 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
     }
 
     xegpu::MemorySpace getMemorySpace() const {
-      if (auto attr = getEncodingOfType<BlockTensorDescAttr>())
-        return attr.getMemorySpace().getValue();
-
-      auto attr = getEncodingOfType<ScatterTensorDescAttr>();
-      return attr.getMemorySpace().getValue();
+      return getBlockAttr().getMemorySpace().getValue();
     }
 
     // get the ArrayLength for blocked TensorDesc
     int getArrayLength() {
-      auto attr = getEncodingOfType<BlockTensorDescAttr>();
-      assert(attr && "invalid on non BlockTensorDescAttr.");
-      return attr.getArrayLength().getInt();
+      return getBlockAttr().getArrayLength().getInt();
     }
 
     bool getBoundaryCheck() {
-      auto attr = getEncodingOfType<BlockTensorDescAttr>();
-      assert(attr && "invalid on non BlockTensorDescAttr.");
-      return attr.getBoundaryCheck().getValue();
-    }
-
-    bool isScattered() {
-      return bool(getEncodingOfType<ScatterTensorDescAttr>());
-    }
-
-    // get the ChunkSize for scattered TensorDesc
-    int getChunkSizeAsInt() {
-      auto attr = getEncodingOfType<ScatterTensorDescAttr>();
-      assert(attr && "invalid on non ScatterTensorDescAttr.");
-      return attr.getChunkSizeAsInt();
+      return getBlockAttr().getBoundaryCheck().getValue();
     }
 
     /// Helper to drop all layout information from the TensorDesc type.

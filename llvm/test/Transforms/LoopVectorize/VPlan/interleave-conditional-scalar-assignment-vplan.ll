@@ -2,7 +2,7 @@
 ; RUN: opt -passes=loop-vectorize -vplan-print-after="printFinalVPlan$" \
 ; RUN: -force-vector-width=4 -force-vector-interleave=2 -force-target-supports-masked-memory-ops -disable-output 2>&1 < %s | FileCheck %s --check-prefix=IC2
 ; RUN: opt -passes=loop-vectorize -vplan-print-after="printFinalVPlan$" \
-; RUN: -force-vector-width=4 -force-vector-interleave=2 -force-target-supports-masked-memory-ops -prefer-predicate-over-epilogue=predicate-dont-vectorize \
+; RUN: -force-vector-width=4 -force-vector-interleave=2 -force-target-supports-masked-memory-ops -tail-folding-policy=must-fold-tail \
 ; RUN: -disable-output 2>&1 < %s | FileCheck %s --check-prefix=IC2-TF
 
 ; This function is derived from the following C program:

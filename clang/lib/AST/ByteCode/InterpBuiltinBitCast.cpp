@@ -8,6 +8,7 @@
 #include "InterpBuiltinBitCast.h"
 #include "BitcastBuffer.h"
 #include "Boolean.h"
+#include "Char.h"
 #include "Context.h"
 #include "Floating.h"
 #include "Integral.h"
@@ -311,7 +312,12 @@ bool clang::interp::readPointerToBuffer(const Context &Ctx,
 
           Buffer.markInitialized(BitOffset, NumBits);
         } else {
-          BITCAST_TYPE_SWITCH(T, { P.deref<T>().bitcastToMemory(Buff.get()); });
+          BITCAST_TYPE_SWITCH(T, {
+            auto Val = P.deref<T>();
+            if (!Val.isNumber())
+              return false;
+            Val.bitcastToMemory(Buff.get());
+          });
 
           if (llvm::sys::IsBigEndianHost)
             swapBytes(Buff.get(), FullBitWidth.roundToBytes());
@@ -471,7 +477,7 @@ bool clang::interp::DoBitCastPtr(InterpState &S, CodePtr OpPC,
 
 using PrimTypeVariant =
     std::variant<Pointer, FunctionPointer, MemberPointer, FixedPoint,
-                 Integral<8, false>, Integral<8, true>, Integral<16, false>,
+                 Char<false>, Char<true>, Integral<16, false>,
                  Integral<16, true>, Integral<32, false>, Integral<32, true>,
                  Integral<64, false>, Integral<64, true>, IntegralAP<true>,
                  IntegralAP<false>, Boolean, Floating>;

@@ -242,7 +242,8 @@ public:
 
 protected:
   static Expected<std::unique_ptr<ObjectLayer>>
-  createObjectLinkingLayer(LLJITBuilderState &S, ExecutionSession &ES);
+  createObjectLinkingLayer(LLJITBuilderState &S, ExecutionSession &ES,
+                           jitlink::JITLinkMemoryManager &MemMgr);
 
   static Expected<std::unique_ptr<IRCompileLayer::IRCompiler>>
   createCompileFunction(LLJITBuilderState &S, JITTargetMachineBuilder JTMB);
@@ -308,7 +309,8 @@ private:
 class LLJITBuilderState {
 public:
   using ObjectLinkingLayerCreator =
-      std::function<Expected<std::unique_ptr<ObjectLayer>>(ExecutionSession &)>;
+      std::function<Expected<std::unique_ptr<ObjectLayer>>(
+          ExecutionSession &, jitlink::JITLinkMemoryManager &)>;
 
   using CompileFunctionCreator =
       std::function<Expected<std::unique_ptr<IRCompileLayer::IRCompiler>>(

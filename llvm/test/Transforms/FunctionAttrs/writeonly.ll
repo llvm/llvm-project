@@ -151,7 +151,7 @@ define void @test_volatile(ptr %p) {
 ; FNATTRS-NEXT:    store volatile i8 0, ptr [[P]], align 1
 ; FNATTRS-NEXT:    ret void
 ;
-; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
+; ATTRIBUTOR: Function Attrs: nofree norecurse nounwind memory(argmem: readwrite)
 ; ATTRIBUTOR-LABEL: define {{[^@]+}}@test_volatile
 ; ATTRIBUTOR-SAME: (ptr nofree [[P:%.*]]) #[[ATTR6:[0-9]+]] {
 ; ATTRIBUTOR-NEXT:    store volatile i8 0, ptr [[P]], align 1
@@ -170,7 +170,7 @@ define void @test_atomicrmw(ptr %p) {
 ;
 ; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
 ; ATTRIBUTOR-LABEL: define {{[^@]+}}@test_atomicrmw
-; ATTRIBUTOR-SAME: (ptr nofree nonnull captures(none) [[P:%.*]]) #[[ATTR6]] {
+; ATTRIBUTOR-SAME: (ptr nofree nonnull captures(none) [[P:%.*]]) #[[ATTR7:[0-9]+]] {
 ; ATTRIBUTOR-NEXT:    [[TMP1:%.*]] = atomicrmw add ptr [[P]], i8 0 seq_cst, align 1
 ; ATTRIBUTOR-NEXT:    ret void
 ;
@@ -189,7 +189,7 @@ define void @test_ptrmask(ptr %p) {
 ; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; ATTRIBUTOR-LABEL: define {{[^@]+}}@test_ptrmask
 ; ATTRIBUTOR-SAME: (ptr nofree writeonly [[P:%.*]]) #[[ATTR3]] {
-; ATTRIBUTOR-NEXT:    [[MASK:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[P]], i64 -5) #[[ATTR9:[0-9]+]]
+; ATTRIBUTOR-NEXT:    [[MASK:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[P]], i64 -5) #[[ATTR10:[0-9]+]]
 ; ATTRIBUTOR-NEXT:    store i8 0, ptr [[MASK]], align 1
 ; ATTRIBUTOR-NEXT:    ret void
 ;
@@ -224,8 +224,8 @@ define void @direct2(ptr %p) {
 ;
 ; ATTRIBUTOR: Function Attrs: memory(write)
 ; ATTRIBUTOR-LABEL: define {{[^@]+}}@direct2
-; ATTRIBUTOR-SAME: (ptr writeonly [[P:%.*]]) #[[ATTR8:[0-9]+]] {
-; ATTRIBUTOR-NEXT:    call void @direct2_callee(ptr [[P]]) #[[ATTR8]]
+; ATTRIBUTOR-SAME: (ptr writeonly [[P:%.*]]) #[[ATTR9:[0-9]+]] {
+; ATTRIBUTOR-NEXT:    call void @direct2_callee(ptr [[P]]) #[[ATTR9]]
 ; ATTRIBUTOR-NEXT:    ret void
 ;
   call void @direct2_callee(ptr %p)
@@ -242,8 +242,8 @@ define void @direct2b(ptr %p) {
 ;
 ; ATTRIBUTOR: Function Attrs: memory(write)
 ; ATTRIBUTOR-LABEL: define {{[^@]+}}@direct2b
-; ATTRIBUTOR-SAME: (ptr writeonly captures(none) [[P:%.*]]) #[[ATTR8]] {
-; ATTRIBUTOR-NEXT:    call void @direct2_callee(ptr writeonly captures(none) [[P]]) #[[ATTR8]]
+; ATTRIBUTOR-SAME: (ptr writeonly captures(none) [[P:%.*]]) #[[ATTR9]] {
+; ATTRIBUTOR-NEXT:    call void @direct2_callee(ptr writeonly captures(none) [[P]]) #[[ATTR9]]
 ; ATTRIBUTOR-NEXT:    ret void
 ;
   call void @direct2_callee(ptr nocapture %p)
@@ -331,8 +331,8 @@ define void @fptr_test3(ptr %p, ptr %f) {
 ;
 ; ATTRIBUTOR: Function Attrs: memory(write)
 ; ATTRIBUTOR-LABEL: define {{[^@]+}}@fptr_test3
-; ATTRIBUTOR-SAME: (ptr writeonly captures(none) [[P:%.*]], ptr nofree nonnull writeonly captures(none) [[F:%.*]]) #[[ATTR8]] {
-; ATTRIBUTOR-NEXT:    call void [[F]](ptr captures(none) [[P]]) #[[ATTR8]]
+; ATTRIBUTOR-SAME: (ptr writeonly captures(none) [[P:%.*]], ptr nofree nonnull writeonly captures(none) [[F:%.*]]) #[[ATTR9]] {
+; ATTRIBUTOR-NEXT:    call void [[F]](ptr captures(none) [[P]]) #[[ATTR9]]
 ; ATTRIBUTOR-NEXT:    ret void
 ;
   call void %f(ptr nocapture %p) writeonly
@@ -347,7 +347,7 @@ define void @test_argmem_none_callee(ptr %p) {
 ;
 ; ATTRIBUTOR-LABEL: define {{[^@]+}}@test_argmem_none_callee
 ; ATTRIBUTOR-SAME: (ptr captures(none) [[P:%.*]]) {
-; ATTRIBUTOR-NEXT:    call void @direct1_callee(ptr captures(none) [[P]]) #[[ATTR10:[0-9]+]]
+; ATTRIBUTOR-NEXT:    call void @direct1_callee(ptr captures(none) [[P]]) #[[ATTR11:[0-9]+]]
 ; ATTRIBUTOR-NEXT:    ret void
 ;
   call void @direct1_callee(ptr nocapture %p) memory(readwrite, argmem: none)
@@ -362,7 +362,7 @@ define void @test_argmem_read_callee(ptr %p) {
 ;
 ; ATTRIBUTOR-LABEL: define {{[^@]+}}@test_argmem_read_callee
 ; ATTRIBUTOR-SAME: (ptr captures(none) [[P:%.*]]) {
-; ATTRIBUTOR-NEXT:    call void @direct1_callee(ptr captures(none) [[P]]) #[[ATTR11:[0-9]+]]
+; ATTRIBUTOR-NEXT:    call void @direct1_callee(ptr captures(none) [[P]]) #[[ATTR12:[0-9]+]]
 ; ATTRIBUTOR-NEXT:    ret void
 ;
   call void @direct1_callee(ptr nocapture %p) memory(readwrite, argmem: read)
@@ -377,7 +377,7 @@ define void @test_argmem_write_callee(ptr %p) {
 ;
 ; ATTRIBUTOR-LABEL: define {{[^@]+}}@test_argmem_write_callee
 ; ATTRIBUTOR-SAME: (ptr captures(none) [[P:%.*]]) {
-; ATTRIBUTOR-NEXT:    call void @direct1_callee(ptr captures(none) [[P]]) #[[ATTR12:[0-9]+]]
+; ATTRIBUTOR-NEXT:    call void @direct1_callee(ptr captures(none) [[P]]) #[[ATTR13:[0-9]+]]
 ; ATTRIBUTOR-NEXT:    ret void
 ;
   call void @direct1_callee(ptr nocapture %p) memory(readwrite, argmem: write)

@@ -1816,6 +1816,61 @@ func.func @transfer_folding_1(%t0: tensor<2x3x4xf32>, %t1: tensor<2x3x4xf32>)
 
 // -----
 
+// CHECK-LABEL: func @negative_transfer_folding_masked_read
+//       CHECK:   vector.transfer_read {{.*}}, {{.*}}, %[[MASK:.*]]
+//       CHECK:   %[[R:.*]] = vector.transfer_write
+//       CHECK:   return %[[R]]
+func.func @negative_transfer_folding_masked_read(
+    %t0: tensor<2x3x4xf32>, %t1: tensor<2x3x4xf32>,
+    %mask: vector<2x3x4xi1>) -> tensor<2x3x4xf32> {
+  %c0 = arith.constant 0 : index
+  %pad = arith.constant 0.0 : f32
+  %v = vector.transfer_read %t0[%c0, %c0, %c0], %pad, %mask {in_bounds = [true, true, true]} :
+    tensor<2x3x4xf32>, vector<2x3x4xf32>
+  %r = vector.transfer_write %v, %t1[%c0, %c0, %c0] {in_bounds = [true, true, true]} :
+    vector<2x3x4xf32>, tensor<2x3x4xf32>
+  return %r : tensor<2x3x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @negative_transfer_folding_masked_write
+//       CHECK:   vector.transfer_read
+//       CHECK:   %[[R:.*]] = vector.transfer_write {{.*}}, {{.*}}, %[[MASK:.*]]
+//       CHECK:   return %[[R]]
+func.func @negative_transfer_folding_masked_write(
+    %t0: tensor<2x3x4xf32>, %t1: tensor<2x3x4xf32>,
+    %mask: vector<2x3x4xi1>) -> tensor<2x3x4xf32> {
+  %c0 = arith.constant 0 : index
+  %pad = arith.constant 0.0 : f32
+  %v = vector.transfer_read %t0[%c0, %c0, %c0], %pad {in_bounds = [true, true, true]} :
+    tensor<2x3x4xf32>, vector<2x3x4xf32>
+  %r = vector.transfer_write %v, %t1[%c0, %c0, %c0], %mask {in_bounds = [true, true, true]} :
+    vector<2x3x4xf32>, tensor<2x3x4xf32>
+  return %r : tensor<2x3x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @negative_transfer_folding_masked_read_and_write
+//  CHECK-SAME:   %[[MASK:[0-9a-zA-Z_]+]]: vector<2x3x4xi1>
+//       CHECK:   %[[V:.*]] = vector.transfer_read {{.*}}, {{.*}}, %[[MASK]]
+//       CHECK:   %[[R:.*]] = vector.transfer_write %[[V]], {{.*}}, %[[MASK]]
+//       CHECK:   return %[[R]]
+func.func @negative_transfer_folding_masked_read_and_write(
+    %t0: tensor<2x3x4xf32>, %t1: tensor<2x3x4xf32>,
+    %mask: vector<2x3x4xi1>) -> tensor<2x3x4xf32> {
+  %c0 = arith.constant 0 : index
+  %pad = arith.constant 0.0 : f32
+  %v = vector.transfer_read %t0[%c0, %c0, %c0], %pad, %mask {in_bounds = [true, true, true]} :
+    tensor<2x3x4xf32>, vector<2x3x4xf32>
+  %r = vector.transfer_write %v, %t1[%c0, %c0, %c0], %mask {in_bounds = [true, true, true]} :
+    vector<2x3x4xf32>, tensor<2x3x4xf32>
+  return %r : tensor<2x3x4xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @store_after_load_tensor
 //  CHECK-SAME: (%[[ARG:.*]]: tensor<4x4xf32>)
 //   CHECK-NOT:   vector.transfer_read
@@ -2198,6 +2253,26 @@ func.func @masked_vector_multi_reduction_single_parallel(%arg0: vector<2xf32>, %
     %0 = vector.mask %mask { vector.multi_reduction <mul>, %arg0, %acc [] : vector<2xf32> to vector<2xf32> } : vector<2xi1> -> vector<2xf32>
 //       CHECK:   return %[[VAL_0]] : vector<2xf32>
     return %0 : vector<2xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @vector_multi_reduction_no_reduction_dims_nd(
+//  CHECK-SAME:     %[[v:.*]]: vector<2x3xf32>,
+func.func @vector_multi_reduction_no_reduction_dims_nd(%arg0: vector<2x3xf32>, %acc: vector<2x3xf32>) -> vector<2x3xf32> {
+    %0 = vector.multi_reduction <add>, %arg0, %acc [] : vector<2x3xf32> to vector<2x3xf32>
+//       CHECK:   return %[[v]] : vector<2x3xf32>
+    return %0 : vector<2x3xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @masked_vector_multi_reduction_no_reduction_dims_nd(
+//  CHECK-SAME:     %[[VAL_0:.*]]: vector<2x3xf32>, %{{.*}}: vector<2x3xf32>,
+func.func @masked_vector_multi_reduction_no_reduction_dims_nd(%arg0: vector<2x3xf32>, %acc: vector<2x3xf32>, %mask: vector<2x3xi1>) -> vector<2x3xf32> {
+    %0 = vector.mask %mask { vector.multi_reduction <add>, %arg0, %acc [] : vector<2x3xf32> to vector<2x3xf32> } : vector<2x3xi1> -> vector<2x3xf32>
+//       CHECK:   return %[[VAL_0]] : vector<2x3xf32>
+    return %0 : vector<2x3xf32>
 }
 
 // -----
@@ -2814,6 +2889,16 @@ func.func @shuffle_both_operands_used(%v0 : vector<3xi32>, %v1 : vector<3xi32>) 
 func.func @shuffle_poison_unused(%1: vector<2xi32>) -> vector<4xi32> {
   %0 = ub.poison : vector<2xi32>
   %r = vector.shuffle %0, %1 [0, 1, -1, -1] : vector<2xi32>, vector<2xi32>
+  return %r : vector<4xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @fold_poison_into_mask
+//       CHECK:   vector.shuffle %{{.*}}, %{{.*}} [-1, -1, 2, -1] : vector<2xi32>, vector<2xi32>
+func.func @fold_poison_into_mask(%1: vector<2xi32>) -> vector<4xi32> {
+  %0 = ub.poison : vector<2xi32>
+  %r = vector.shuffle %0, %1 [0, 1, 2, 1] : vector<2xi32>, vector<2xi32>
   return %r : vector<4xi32>
 }
 

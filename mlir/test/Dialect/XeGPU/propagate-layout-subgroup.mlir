@@ -27,24 +27,24 @@ gpu.module @test {
   // CHECK-SAME: %[[ARG_1:.*]]: memref<128x256xf32>
   func.func @vector_transpose(%src: memref<256x128xf32>, %src1: memref<128x256xf32>) {
     // CHECK: %[[TDESC_LD:.*]] = xegpu.create_nd_tdesc %[[ARG_0]] : memref<256x128xf32> ->
-    // CHECK-SAME: !xegpu.tensor_desc<256x128xf32, #xegpu.layout<sg_layout = [4, 8], sg_data = [64, 32], order = [0, 1]>>
+    // CHECK-SAME: !xegpu.tensor_desc<256x128xf32, #xegpu.layout<sg_layout = [4, 8], sg_data = [64, 16], order = [0, 1]>>
     // CHECK: %[[TDESC_ST:.*]] = xegpu.create_nd_tdesc %[[ARG_1]] : memref<128x256xf32> ->
-    // CHECK-SAME: !xegpu.tensor_desc<128x256xf32, #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 64], order = [1, 0]>>
+    // CHECK-SAME: !xegpu.tensor_desc<128x256xf32, #xegpu.layout<sg_layout = [8, 4], sg_data = [16, 64], order = [1, 0]>>
 
-    // CHECK: %[[LOAD:.*]] = xegpu.load_nd %[[TDESC_LD]][0, 0] <{layout = #xegpu.layout<sg_layout = [4, 8], sg_data = [64, 32], order = [0, 1]>}>
-    // CHECK-SAME: !xegpu.tensor_desc<256x128xf32, #xegpu.layout<sg_layout = [4, 8], sg_data = [64, 32], order = [0, 1]>> -> vector<256x128xf32>
+    // CHECK: %[[LOAD:.*]] = xegpu.load_nd %[[TDESC_LD]][0, 0] <{layout = #xegpu.layout<sg_layout = [4, 8], sg_data = [64, 16], order = [0, 1]>}>
+    // CHECK-SAME: !xegpu.tensor_desc<256x128xf32, #xegpu.layout<sg_layout = [4, 8], sg_data = [64, 16], order = [0, 1]>> -> vector<256x128xf32>
 
     // CHECK: %[[TRANSPOSED:.*]] = vector.transpose %2, [1, 0]
-    // CHECK-SAME {layout_result_0 = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 64], order = [1, 0]>} : vector<256x128xf32> to vector<128x256xf32>
+    // CHECK-SAME {layout_result_0 = #xegpu.layout<sg_layout = [8, 4], sg_data = [16, 64], order = [1, 0]>} : vector<256x128xf32> to vector<128x256xf32>
 
     // CHECK: xegpu.store_nd %[[TRANSPOSED]], %[[TDESC_ST]][0, 0]
-    // CHECK-SAME: <{layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 64], order = [1, 0]>}> : vector<128x256xf32>,
-    // CHECK-SAME: !xegpu.tensor_desc<128x256xf32, #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 64], order = [1, 0]>>
+    // CHECK-SAME: <{layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [16, 64], order = [1, 0]>}> : vector<128x256xf32>,
+    // CHECK-SAME: !xegpu.tensor_desc<128x256xf32, #xegpu.layout<sg_layout = [8, 4], sg_data = [16, 64], order = [1, 0]>>
     %tdesc = xegpu.create_nd_tdesc %src : memref<256x128xf32> -> !xegpu.tensor_desc<256x128xf32>
     %tdesc1 = xegpu.create_nd_tdesc %src1 : memref<128x256xf32> -> !xegpu.tensor_desc<128x256xf32>
     %load = xegpu.load_nd %tdesc[0, 0] : !xegpu.tensor_desc<256x128xf32> -> vector<256x128xf32>
     %trans = vector.transpose %load, [1, 0] : vector<256x128xf32> to vector<128x256xf32>
-    xegpu.store_nd %trans, %tdesc1[0, 0] <{layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 64], order = [1, 0]>}>
+    xegpu.store_nd %trans, %tdesc1[0, 0] <{layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [16, 64], order = [1, 0]>}>
         : vector<128x256xf32>, !xegpu.tensor_desc<128x256xf32>
     return
   }
@@ -329,6 +329,24 @@ gpu.module @xevm_module{
       // CHECK: xegpu.store_matrix %{{.*}} <{layout = #xegpu.layout<sg_layout = [1, 4, 2], sg_data = [1, 8, 16]>}>
       xegpu.store_matrix %1, %arg0[%c0, %c0, %c0] <{layout = #xegpu.layout<sg_layout = [1, 4, 2], sg_data = [1, 8, 16]>}> : vector<1x32x32xf32>, !xegpu.mem_desc<1x64x128xf32>, index, index, index
     }
+    gpu.return
+  }
+}
+
+// -----
+gpu.module @test {
+// CHECK-LABEL: gpu.func @convert_layout
+// CHECK-SAME: %[[ARG0:.*]]: !xegpu.mem_desc<32x128xf32>
+  gpu.func @convert_layout(%arg0: !xegpu.mem_desc<32x128xf32>) {
+    // CHECK: %[[C0:.*]] = arith.constant 0 : index
+    %c0 = arith.constant 0 : index
+    // CHECK: %[[V0:.*]] = xegpu.load_matrix %[[ARG0]][%[[C0]], %[[C0]]]
+    // CHECK-SAME: layout = #xegpu.layout<sg_layout = [4, 8], sg_data = [8, 16]>
+    %1 = xegpu.load_matrix %arg0[%c0, %c0] : !xegpu.mem_desc<32x128xf32>, index, index -> vector<32x128xf32>
+    %2 = xegpu.convert_layout %1
+       <{input_layout = #xegpu.layout<sg_layout=[4, 8], sg_data=[8, 16]>,
+        target_layout = #xegpu.layout<sg_layout=[4, 8], sg_data=[8, 16]>}>
+       : vector<32x128xf32>
     gpu.return
   }
 }

@@ -99,6 +99,23 @@ std::string mangle(StringRef baseName, ArrayRef<Type> types,
   return os.str();
 }
 
+std::string builtinElemType(ElemType elemType) {
+  switch (elemType) {
+  case ElemType::BF8:
+    return "bf8";
+  case ElemType::F8:
+    return "hf8";
+  case ElemType::BF16:
+    return "bf";
+  case ElemType::F16:
+    return "hf";
+  case ElemType::F32:
+    return "f";
+  default:
+    return stringifyElemType(elemType).str();
+  }
+}
+
 static int32_t getL1CacheControl(LoadCacheControl cc) {
   int32_t control = 0;
   switch (cc) {
@@ -1220,21 +1237,18 @@ class MMAMxToOCLPattern : public OpConversionPattern<MMAMxOp> {
     if (cOrigTy != cTy)
       c = LLVM::BitcastOp::create(rewriter, loc, cTy, c);
 
-    constexpr int32_t systolicDepth{8};
     std::string fnName =
-        llvm::formatv("intel_sub_group_{0}_{1}_scaled_matrix_mad_k{2}_{3}",
-                      stringifyElemType(op.getTypes().getA()).str(),
-                      stringifyElemType(op.getTypes().getB()).str(),
-                      systolicDepth *
-                          getNumOperandsPerDword(op.getTypes().getA()),
-                      stringifyElemType(op.getTypes().getC()).str())
+        llvm::formatv("__builtin_IB_sub_group16_bdpas_{0}_{1}_{2}_{3}_8_8",
+                      builtinElemType(op.getTypes().getD()),
+                      builtinElemType(op.getTypes().getC()),
+                      builtinElemType(op.getTypes().getA()),
+                      builtinElemType(op.getTypes().getB()))
             .str();
     auto scaleA = op.getScaleA();
     auto scaleB = op.getScaleB();
-    SmallVector<Type> argTypes{a.getType(), b.getType(), cTy, scaleA.getType(),
+    SmallVector<Type> argTypes{cTy, a.getType(), b.getType(), scaleA.getType(),
                                scaleB.getType()};
-    fnName = mangle(fnName, argTypes);
-    SmallVector<Value> args{a, b, c, scaleA, scaleB};
+    SmallVector<Value> args{c, a, b, scaleA, scaleB};
 
     auto memAttr = rewriter.getAttr<LLVM::MemoryEffectsAttr>(
         /*other=*/LLVM::ModRefInfo::NoModRef,

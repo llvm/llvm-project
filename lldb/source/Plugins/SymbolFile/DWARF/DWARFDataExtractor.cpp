@@ -16,9 +16,5 @@ llvm::DWARFDataExtractor DWARFDataExtractor::GetAsLLVMDWARF() const {
                                   GetByteOrder() == lldb::eByteOrderLittle,
                                   GetAddressByteSize());
 }
-llvm::DataExtractor DWARFDataExtractor::GetAsLLVM() const {
-  return llvm::DataExtractor(llvm::ArrayRef(GetDataStart(), GetByteSize()),
-                             GetByteOrder() == lldb::eByteOrderLittle,
-                             GetAddressByteSize());
-}
+
 } // namespace lldb_private

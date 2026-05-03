@@ -405,7 +405,7 @@ gpu.module @test_distribution {
 
   // CHECK-LABEL: gpu.func @vector_reduce_scalar_cross_sg
   // CHECK-SAME: (%[[ARG0:.*]]: memref<32x32xf32>)
-  // CHECK-DAG: %[[CST:.*]] = arith.constant {{.*}} 0.000000e+00 : f32
+  // CHECK-DAG: %[[CST:.*]] = arith.constant 0.000000e+00 : f32
   // CHECK-DAG: %[[LOAD:.*]] = xegpu.load_nd %{{.*}} : !xegpu.tensor_desc<8x8xf32> -> vector<8x8xf32>
   // CHECK-DAG: %[[CST_ACC:.*]] = arith.constant 0.000000e+00 : f32
   // CHECK-DAG: %[[LOCAL:.*]] = vector.multi_reduction <add>, %[[LOAD]], %[[CST_ACC]] [0, 1] : vector<8x8xf32> to f32
@@ -957,6 +957,30 @@ gpu.module @test_distribution {
       -> !xegpu.tensor_desc<256x128xf32, #xegpu.layout<sg_layout = [16, 1], sg_data = [16, 128], inst_data = [8, 16]>>
     xegpu.store_nd %val, %tdesc[0, 0] <{layout = #xegpu.layout<sg_layout = [16, 1], sg_data = [16, 128], inst_data = [8, 16]>}>
       : vector<256x128xf32>, !xegpu.tensor_desc<256x128xf32, #xegpu.layout<sg_layout = [16, 1], sg_data = [16, 128], inst_data = [8, 16]>>
+    gpu.return
+  }
+
+  // CHECK-LABEL: @shape_cast_used_by_elementwise
+  gpu.func @shape_cast_used_by_elementwise(%dst: memref<1x1x16xf32>) {
+    // Regression test: shape_cast expanding unit dimensions can be used by elementwise ops
+    // This previously failed with "ShapeCast ops that expand unit dimensions and are used by
+    // non-broadcast operations are not supported."
+
+    // CHECK: vector.step : vector<16xindex>
+    // CHECK: vector.shape_cast {{.*}} : vector<16xindex> to vector<1x1x16xindex>
+    // CHECK: arith.addi {{.*}} : vector<1x1x16xindex>
+    // CHECK: xegpu.store {{.*}} : vector<1x1x16xf32>, i64, vector<1x1x16xindex>, vector<1x1x16xi1>
+    %step = vector.step : vector<16xindex>
+    %shape_cast = vector.shape_cast %step : vector<16xindex> to vector<1x1x16xindex>
+    %cst = arith.constant dense<10> : vector<1x1x16xindex>
+    %add = arith.addi %shape_cast, %cst : vector<1x1x16xindex>
+
+    %cst_val = arith.constant dense<1.0> : vector<1x1x16xf32>
+    %intptr = memref.extract_aligned_pointer_as_index %dst : memref<1x1x16xf32> -> index
+    %ptr = arith.index_cast %intptr : index to i64
+    %mask = arith.constant dense<true> : vector<1x1x16xi1>
+
+    xegpu.store %cst_val, %ptr[%add], %mask {layout = #xegpu.layout<sg_layout = [1, 1, 1], sg_data = [1, 1, 16]>} : vector<1x1x16xf32>, i64, vector<1x1x16xindex>, vector<1x1x16xi1>
     gpu.return
   }
 

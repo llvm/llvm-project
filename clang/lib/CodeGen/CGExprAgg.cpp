@@ -288,13 +288,18 @@ void AggExprEmitter::withReturnValueSlot(
   // its lifetime before we have the chance to emit a proper destructor call.
   //
   // We also need a temporary if the destination is in a different address space
-  // from the alloca AS, to avoid an invalid addrspacecast on the sret pointer.
-  // Look through addrspacecasts to avoid unnecessary temps when the
-  // destination is already in the alloca AS.
-  unsigned SRetAS = CGF.getContext().getTargetAddressSpace(
-      CGF.CGM.getASTAllocaAddressSpace());
-  bool DestASMismatch = !Dest.isIgnored() &&
-                        RetTy.isTriviallyCopyableType(CGF.getContext()) &&
+  // from the sret AS. Use the target hook to get the actual sret AS for this
+  // return type.
+  const CXXRecordDecl *RD = RetTy->getAsCXXRecordDecl();
+  LangAS SRetLangAS = CGF.CGM.getTargetCodeGenInfo().getSRetAddrSpace(RD);
+  unsigned SRetAS = CGF.getContext().getTargetAddressSpace(SRetLangAS);
+  bool CanAggregateCopy =
+      RD ? (RD->hasTrivialCopyConstructor() ||
+            RD->hasTrivialMoveConstructor() || RD->hasTrivialCopyAssignment() ||
+            RD->hasTrivialMoveAssignment() || RD->hasAttr<TrivialABIAttr>() ||
+            RD->isUnion())
+         : RetTy.isTriviallyCopyableType(CGF.getContext());
+  bool DestASMismatch = !Dest.isIgnored() && CanAggregateCopy &&
                         Dest.getAddress()
                                 .getBasePointer()
                                 ->stripPointerCasts()

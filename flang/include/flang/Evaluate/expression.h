@@ -408,7 +408,20 @@ public:
   Expr<Result> &elseValue() { return elseValue_.value(); }
   const Expr<Result> &elseValue() const { return elseValue_.value(); }
   int Rank() const { return thenValue().Rank(); }
-  std::optional<DynamicType> GetType() const { return thenValue().GetType(); }
+  std::optional<DynamicType> GetType() const {
+    const auto thenType{thenValue().GetType()};
+    if constexpr (T::category == TypeCategory::Derived) {
+      // F2023 10.1.4(7) A conditional-expr is polymorphic if any branch is
+      if (thenType && !thenType->IsPolymorphic()) {
+        if (const auto elseType{elseValue().GetType()}) {
+          if (elseType->IsPolymorphic()) {
+            return elseType;
+          }
+        }
+      }
+    }
+    return thenType;
+  }
   static constexpr int Corank() { return 0; }
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
 

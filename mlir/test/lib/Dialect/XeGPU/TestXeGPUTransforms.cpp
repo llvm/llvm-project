@@ -61,8 +61,8 @@ struct TestXeGPUUnrollingPatterns
                                  -> std::optional<SmallVector<int64_t>> {
       if (isa<xegpu::CreateNdDescOp, xegpu::UpdateNdOffsetOp,
               xegpu::PrefetchNdOp, xegpu::LoadNdOp, xegpu::StoreNdOp,
-              xegpu::CreateDescOp, xegpu::UpdateOffsetOp, xegpu::PrefetchOp,
-              xegpu::LoadGatherOp, xegpu::StoreScatterOp>(op)) {
+              xegpu::PrefetchOp, xegpu::LoadGatherOp, xegpu::StoreScatterOp>(
+              op)) {
         xegpu::TensorDescType tdescTy;
         if (auto createNdOp = dyn_cast<xegpu::CreateNdDescOp>(op)) {
           tdescTy = createNdOp.getType();
@@ -74,10 +74,6 @@ struct TestXeGPUUnrollingPatterns
           tdescTy = loadNdOp.getTensorDescType();
         } else if (auto storeNdOp = dyn_cast<xegpu::StoreNdOp>(op)) {
           tdescTy = storeNdOp.getTensorDescType();
-        } else if (auto createOp = dyn_cast<xegpu::CreateDescOp>(op)) {
-          tdescTy = createOp.getType();
-        } else if (auto updateOp = dyn_cast<xegpu::UpdateOffsetOp>(op)) {
-          tdescTy = updateOp.getTensorDescType();
         } else if (auto prefetchOp = dyn_cast<xegpu::PrefetchOp>(op)) {
           tdescTy = prefetchOp.getTensorDescType();
         } else if (auto loadOp = dyn_cast<xegpu::LoadGatherOp>(op)) {
@@ -130,24 +126,6 @@ struct TestXeGPUUnrollingPatterns
             Attribute encoding = tdescTy.getEncoding();
             auto layout = tdescTy.getLayoutAttr();
 
-            // If the encoding is a ScatterTensorDescAttr, we need to
-            // potentially adjust the chunk size based on the inst_data.
-            if (tdescTy.isScattered()) {
-              int64_t chunkSize = tdescTy.getChunkSizeAsInt();
-
-              if (chunkSize > 1) {
-                int64_t blockedChunkSize = chunkSize;
-                auto instData = layout.getEffectiveInstDataAsInt();
-                if (!instData.empty())
-                  blockedChunkSize = instData.back();
-
-                // To create a new attribute with a different chunk_size:
-                auto newEncoding = xegpu::ScatterTensorDescAttr::get(
-                    ctx, tdescTy.getMemorySpace(), blockedChunkSize);
-
-                encoding = newEncoding;
-              }
-            }
             if (layout) {
               if (layout.getEffectiveLaneLayoutAsInt().empty())
                 layout = xegpu::LayoutAttr();
@@ -222,6 +200,38 @@ class TestStepOpPattern : public OpConversionPattern<vector::StepOp> {
     }
     rewriter.replaceOpWithMultiple(op, {newOps});
     return success();
+  }
+};
+
+struct TestXeGPURecoverTemporaryLayouts
+    : public PassWrapper<TestXeGPURecoverTemporaryLayouts,
+                         OperationPass<gpu::GPUModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestXeGPURecoverTemporaryLayouts)
+
+  StringRef getArgument() const final {
+    return "test-xegpu-recover-temporary-layouts";
+  }
+
+  StringRef getDescription() const final {
+    return "Test the implementation of XeGPU temporary layout recovery";
+  }
+
+  void getDependentDialects(::mlir::DialectRegistry &registry) const override {
+    registry.insert<arith::ArithDialect>();
+    registry.insert<memref::MemRefDialect>();
+    registry.insert<xegpu::XeGPUDialect>();
+    registry.insert<vector::VectorDialect>();
+    registry.insert<gpu::GPUDialect>();
+  }
+
+  TestXeGPURecoverTemporaryLayouts() = default;
+  TestXeGPURecoverTemporaryLayouts(const TestXeGPURecoverTemporaryLayouts &pass)
+      : PassWrapper(pass) {}
+
+  void runOnOperation() override {
+    Operation *op = getOperation();
+    if (!xegpu::recoverTemporaryLayouts(op))
+      signalPassFailure();
   }
 };
 
@@ -479,6 +489,7 @@ namespace test {
 void registerTestXeGPULowerings() {
   PassRegistration<TestXeGPUUnrollingPatterns>();
   PassRegistration<TestXeGPULayoutInterface>();
+  PassRegistration<TestXeGPURecoverTemporaryLayouts>();
   PassRegistration<TestXeGPUSGDistribute>();
   PassRegistration<TestXeGPUSgToWiDistributeExperimental>();
   PassRegistration<TestXeGPUMoveFuncBodyToWarpOp>();

@@ -1466,12 +1466,12 @@ multiclass Z22Form_FRTA5_SH6r<bits<6> opcode, bits<9> xo, dag OOL, dag IOL,
 
 let hasCtrlDep = 1 in {
 let Defs = [R1], Uses = [R1] in {
-def ADJCALLSTACKDOWN : PPCEmitTimePseudo<(outs), (ins u16imm:$amt1, u16imm:$amt2),
+def ADJCALLSTACKDOWN : PPCEmitTimePseudo<(outs), (ins u32imm:$amt1, u32imm:$amt2),
                               "#ADJCALLSTACKDOWN $amt1 $amt2",
-                              [(callseq_start timm:$amt1, timm:$amt2)]>;
-def ADJCALLSTACKUP   : PPCEmitTimePseudo<(outs), (ins u16imm:$amt1, u16imm:$amt2),
+                              [(callseq_start u32imm_timm:$amt1, u32imm_timm:$amt2)]>;
+def ADJCALLSTACKUP   : PPCEmitTimePseudo<(outs), (ins u32imm:$amt1, u32imm:$amt2),
                               "#ADJCALLSTACKUP $amt1 $amt2",
-                              [(callseq_end timm:$amt1, timm:$amt2)]>;
+                              [(callseq_end u32imm_timm:$amt1, u32imm_timm:$amt2)]>;
 }
 } // hasCtrlDep
 
@@ -2164,6 +2164,12 @@ def LWAT : X_RD5_RS5_IM5<31, 582, (outs g8prc:$RST), (ins g8prc:$RSTi, ptr_rc_no
            Requires<[IsISA3_0]>,
            RegConstraint<"$RSTi = $RST">;
 
+let hasExtraSrcRegAllocReq = 1, mayLoad = 1,
+       mayStore = 1, isCodeGenOnly = 1, hasNoSchedulingInfo = 1 in
+def LWAT_CSNE : X_RD5_RS5_IM5<31, 582, (outs g8rc:$RST), (ins ptr_rc_nor0:$RA, u5imm:$RB),
+                         "lwat $RST, $RA, $RB", IIC_LdStLoad>,
+           Requires<[IsISA3_0]>;
+
 def LWAT_PSEUDO : PPCCustomInserterPseudo<
     (outs gprc:$dst),
     (ins ptr_rc_nor0:$ptr, gprc:$val, u5imm:$fc),
@@ -2175,6 +2181,13 @@ def LWAT_COND_PSEUDO : PPCCustomInserterPseudo <
     (ins ptr_rc_nor0:$ptr, u5imm:$fc),
     "#LWAT_COND_PSEUDO",
     [(set i32:$dst, (int_ppc_amo_lwat_cond ptr_rc_nor0:$ptr, u5imm_timm:$fc))]>;
+
+let Defs = [R8, R9, R10], Uses = [R9, R10] in
+def LWAT_CSNE_PSEUDO : PPCPostRAExpPseudo<
+    (outs gprc:$dst),
+    (ins ptr_rc_nor0:$ptr),
+    "#LWAT_CSNE_PSEUDO",
+    [(set i32:$dst, (int_ppc_amo_lwat_csne ptr_rc_nor0:$ptr, R9, R10))]>;
 
 let Defs = [CR0], mayStore = 1, mayLoad = 1, hasSideEffects = 1 in {
 def STBCX : XForm_1_memOp<31, 694, (outs), (ins gprc:$RST, (memrr $RA, $RB):$addr),

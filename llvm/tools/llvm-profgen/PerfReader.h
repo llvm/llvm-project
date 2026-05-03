@@ -650,6 +650,8 @@ protected:
   void warnTruncatedStack();
   // Warn if range is invalid.
   void warnInvalidRange();
+  // Warn if sampled branch/target addresses don't match the binary.
+  void warnIfBranchTargetMismatch();
   // Extract call stack from the perf trace lines
   bool extractCallstack(TraceStream &TraceIt,
                         SmallVectorImpl<uint64_t> &CallStack);

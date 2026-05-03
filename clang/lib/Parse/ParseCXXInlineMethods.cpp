@@ -131,7 +131,8 @@ NamedDecl *Parser::ParseCXXInlineMethodDef(
         << Delete;
       SkipUntil(tok::semi);
     } else if (ExpectAndConsume(tok::semi, diag::err_expected_after,
-                                Delete ? "delete" : "default")) {
+                                Delete ? "delete" : "default") &&
+               !isLikelyAtStartOfNewDeclaration()) {
       SkipUntil(tok::semi);
     }
 
@@ -268,12 +269,12 @@ void Parser::ParseCXXNonStaticMemberInitializer(Decl *VarD) {
   Toks.push_back(Eof);
 }
 
-Parser::LateParsedDeclaration::~LateParsedDeclaration() {}
-void Parser::LateParsedDeclaration::ParseLexedMethodDeclarations() {}
-void Parser::LateParsedDeclaration::ParseLexedMemberInitializers() {}
-void Parser::LateParsedDeclaration::ParseLexedMethodDefs() {}
-void Parser::LateParsedDeclaration::ParseLexedAttributes() {}
-void Parser::LateParsedDeclaration::ParseLexedPragmas() {}
+LateParsedDeclaration::~LateParsedDeclaration() {}
+void LateParsedDeclaration::ParseLexedMethodDeclarations() {}
+void LateParsedDeclaration::ParseLexedMemberInitializers() {}
+void LateParsedDeclaration::ParseLexedMethodDefs() {}
+void LateParsedDeclaration::ParseLexedAttributes() {}
+void LateParsedDeclaration::ParseLexedPragmas() {}
 
 Parser::LateParsedClass::LateParsedClass(Parser *P, ParsingClass *C)
   : Self(P), Class(C) {}
@@ -314,7 +315,7 @@ void Parser::LateParsedMemberInitializer::ParseLexedMemberInitializers() {
   Self->ParseLexedMemberInitializer(*this);
 }
 
-void Parser::LateParsedAttribute::ParseLexedAttributes() {
+void LateParsedAttribute::ParseLexedAttributes() {
   Self->ParseLexedAttribute(*this, true, false);
 }
 

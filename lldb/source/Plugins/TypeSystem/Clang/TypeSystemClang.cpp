@@ -1345,8 +1345,6 @@ QualType GetValueParamType(const clang::TemplateArgument &argument) {
     return argument.getIntegralType();
   case TemplateArgument::StructuralValue:
     return argument.getStructuralValueType();
-  case TemplateArgument::Declaration:
-    return argument.getParamTypeForDecl();
   default:
     return {};
   }
@@ -6357,8 +6355,8 @@ llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
       if (omit_empty_base_classes) {
         CompilerType base_class_clang_type = GetType(
             getASTContext().getObjCInterfaceType(superclass_interface_decl));
-        if (llvm::expectedToStdOptional(base_class_clang_type.GetNumChildren(
-                                            omit_empty_base_classes, exe_ctx))
+        if (llvm::expectedToOptional(base_class_clang_type.GetNumChildren(
+                                         omit_empty_base_classes, exe_ctx))
                 .value_or(0) > 0) {
           if (idx == 0) {
             clang::QualType ivar_qual_type(getASTContext().getObjCInterfaceType(

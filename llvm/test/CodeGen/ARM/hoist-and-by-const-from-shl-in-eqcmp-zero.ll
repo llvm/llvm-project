@@ -64,12 +64,10 @@ define i1 @scalar_i8_lowestbit_eq(i8 %x, i8 %y) nounwind {
 ; THUMB6-LABEL: scalar_i8_lowestbit_eq:
 ; THUMB6:       @ %bb.0:
 ; THUMB6-NEXT:    uxtb r1, r1
-; THUMB6-NEXT:    uxtb r0, r0
-; THUMB6-NEXT:    lsrs r0, r1
-; THUMB6-NEXT:    movs r1, #1
-; THUMB6-NEXT:    ands r1, r0
-; THUMB6-NEXT:    rsbs r0, r1, #0
-; THUMB6-NEXT:    adcs r0, r1
+; THUMB6-NEXT:    uxtb r2, r0
+; THUMB6-NEXT:    lsrs r2, r1
+; THUMB6-NEXT:    movs r0, #1
+; THUMB6-NEXT:    bics r0, r2
 ; THUMB6-NEXT:    bx lr
 ;
 ; THUMB78-LABEL: scalar_i8_lowestbit_eq:
@@ -173,12 +171,10 @@ define i1 @scalar_i16_lowestbit_eq(i16 %x, i16 %y) nounwind {
 ; THUMB6-LABEL: scalar_i16_lowestbit_eq:
 ; THUMB6:       @ %bb.0:
 ; THUMB6-NEXT:    uxth r1, r1
-; THUMB6-NEXT:    uxth r0, r0
-; THUMB6-NEXT:    lsrs r0, r1
-; THUMB6-NEXT:    movs r1, #1
-; THUMB6-NEXT:    ands r1, r0
-; THUMB6-NEXT:    rsbs r0, r1, #0
-; THUMB6-NEXT:    adcs r0, r1
+; THUMB6-NEXT:    uxth r2, r0
+; THUMB6-NEXT:    lsrs r2, r1
+; THUMB6-NEXT:    movs r0, #1
+; THUMB6-NEXT:    bics r0, r2
 ; THUMB6-NEXT:    bx lr
 ;
 ; THUMB78-LABEL: scalar_i16_lowestbit_eq:
@@ -275,9 +271,8 @@ define i1 @scalar_i32_lowestbit_eq(i32 %x, i32 %y) nounwind {
 ; THUMB6:       @ %bb.0:
 ; THUMB6-NEXT:    lsrs r0, r1
 ; THUMB6-NEXT:    movs r1, #1
-; THUMB6-NEXT:    ands r0, r1
-; THUMB6-NEXT:    rsbs r1, r0, #0
-; THUMB6-NEXT:    adcs r0, r1
+; THUMB6-NEXT:    bics r1, r0
+; THUMB6-NEXT:    mov r0, r1
 ; THUMB6-NEXT:    bx lr
 ;
 ; THUMB78-LABEL: scalar_i32_lowestbit_eq:
@@ -403,9 +398,8 @@ define i1 @scalar_i64_lowestbit_eq(i64 %x, i64 %y) nounwind {
 ; THUMB6-NEXT:    push {r7, lr}
 ; THUMB6-NEXT:    bl __lshrdi3
 ; THUMB6-NEXT:    movs r1, #1
-; THUMB6-NEXT:    ands r0, r1
-; THUMB6-NEXT:    rsbs r1, r0, #0
-; THUMB6-NEXT:    adcs r0, r1
+; THUMB6-NEXT:    bics r1, r0
+; THUMB6-NEXT:    mov r0, r1
 ; THUMB6-NEXT:    pop {r7, pc}
 ;
 ; THUMB78-LABEL: scalar_i64_lowestbit_eq:
@@ -529,29 +523,28 @@ define <4 x i1> @vec_4xi32_splat_eq(<4 x i32> %x, <4 x i32> %y) nounwind {
 ;
 ; THUMB6-LABEL: vec_4xi32_splat_eq:
 ; THUMB6:       @ %bb.0:
-; THUMB6-NEXT:    push {r4, r5, r7, lr}
-; THUMB6-NEXT:    ldr r4, [sp, #16]
-; THUMB6-NEXT:    lsrs r0, r4
+; THUMB6-NEXT:    push {r4, r5, r6, lr}
+; THUMB6-NEXT:    mov r5, r0
+; THUMB6-NEXT:    ldr r0, [sp, #16]
+; THUMB6-NEXT:    lsrs r5, r0
 ; THUMB6-NEXT:    movs r4, #1
-; THUMB6-NEXT:    ands r0, r4
-; THUMB6-NEXT:    rsbs r5, r0, #0
-; THUMB6-NEXT:    adcs r0, r5
+; THUMB6-NEXT:    mov r0, r4
+; THUMB6-NEXT:    bics r0, r5
 ; THUMB6-NEXT:    ldr r5, [sp, #20]
 ; THUMB6-NEXT:    lsrs r1, r5
-; THUMB6-NEXT:    ands r1, r4
-; THUMB6-NEXT:    rsbs r5, r1, #0
-; THUMB6-NEXT:    adcs r1, r5
-; THUMB6-NEXT:    ldr r5, [sp, #24]
-; THUMB6-NEXT:    lsrs r2, r5
-; THUMB6-NEXT:    ands r2, r4
-; THUMB6-NEXT:    rsbs r5, r2, #0
-; THUMB6-NEXT:    adcs r2, r5
-; THUMB6-NEXT:    ldr r5, [sp, #28]
-; THUMB6-NEXT:    lsrs r3, r5
-; THUMB6-NEXT:    ands r3, r4
-; THUMB6-NEXT:    rsbs r4, r3, #0
-; THUMB6-NEXT:    adcs r3, r4
-; THUMB6-NEXT:    pop {r4, r5, r7, pc}
+; THUMB6-NEXT:    mov r5, r4
+; THUMB6-NEXT:    bics r5, r1
+; THUMB6-NEXT:    ldr r1, [sp, #24]
+; THUMB6-NEXT:    lsrs r2, r1
+; THUMB6-NEXT:    mov r6, r4
+; THUMB6-NEXT:    bics r6, r2
+; THUMB6-NEXT:    ldr r1, [sp, #28]
+; THUMB6-NEXT:    lsrs r3, r1
+; THUMB6-NEXT:    bics r4, r3
+; THUMB6-NEXT:    mov r1, r5
+; THUMB6-NEXT:    mov r2, r6
+; THUMB6-NEXT:    mov r3, r4
+; THUMB6-NEXT:    pop {r4, r5, r6, pc}
 ;
 ; THUMB78-LABEL: vec_4xi32_splat_eq:
 ; THUMB78:       @ %bb.0:
@@ -616,24 +609,24 @@ define <4 x i1> @vec_4xi32_nonsplat_eq(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; THUMB6-LABEL: vec_4xi32_nonsplat_eq:
 ; THUMB6:       @ %bb.0:
 ; THUMB6-NEXT:    push {r4, lr}
-; THUMB6-NEXT:    ldr r0, [sp, #12]
-; THUMB6-NEXT:    lsrs r1, r0
+; THUMB6-NEXT:    ldr r0, [sp, #16]
+; THUMB6-NEXT:    lsrs r2, r0
+; THUMB6-NEXT:    ldr r0, .LCPI13_0
+; THUMB6-NEXT:    ands r2, r0
+; THUMB6-NEXT:    rsbs r0, r2, #0
+; THUMB6-NEXT:    adcs r2, r0
+; THUMB6-NEXT:    ldr r0, [sp, #20]
+; THUMB6-NEXT:    lsrs r3, r0
 ; THUMB6-NEXT:    movs r0, #1
-; THUMB6-NEXT:    ands r1, r0
-; THUMB6-NEXT:    rsbs r4, r1, #0
-; THUMB6-NEXT:    adcs r1, r4
-; THUMB6-NEXT:    ldr r4, [sp, #16]
-; THUMB6-NEXT:    lsrs r2, r4
-; THUMB6-NEXT:    ldr r4, .LCPI13_0
-; THUMB6-NEXT:    ands r2, r4
-; THUMB6-NEXT:    rsbs r4, r2, #0
-; THUMB6-NEXT:    adcs r2, r4
-; THUMB6-NEXT:    ldr r4, [sp, #20]
-; THUMB6-NEXT:    lsrs r3, r4
 ; THUMB6-NEXT:    lsls r4, r0, #31
 ; THUMB6-NEXT:    ands r3, r4
 ; THUMB6-NEXT:    rsbs r4, r3, #0
 ; THUMB6-NEXT:    adcs r3, r4
+; THUMB6-NEXT:    ldr r4, [sp, #12]
+; THUMB6-NEXT:    lsrs r1, r4
+; THUMB6-NEXT:    mov r4, r0
+; THUMB6-NEXT:    bics r4, r1
+; THUMB6-NEXT:    mov r1, r4
 ; THUMB6-NEXT:    pop {r4, pc}
 ; THUMB6-NEXT:    .p2align 2
 ; THUMB6-NEXT:  @ %bb.1:
@@ -698,24 +691,24 @@ define <4 x i1> @vec_4xi32_nonsplat_undef0_eq(<4 x i32> %x, <4 x i32> %y) nounwi
 ;
 ; THUMB6-LABEL: vec_4xi32_nonsplat_undef0_eq:
 ; THUMB6:       @ %bb.0:
-; THUMB6-NEXT:    push {r4, lr}
-; THUMB6-NEXT:    ldr r2, [sp, #8]
+; THUMB6-NEXT:    push {r4, r5, r6, lr}
+; THUMB6-NEXT:    ldr r2, [sp, #16]
 ; THUMB6-NEXT:    lsrs r0, r2
 ; THUMB6-NEXT:    movs r2, #1
-; THUMB6-NEXT:    ands r0, r2
-; THUMB6-NEXT:    rsbs r4, r0, #0
-; THUMB6-NEXT:    adcs r0, r4
-; THUMB6-NEXT:    ldr r4, [sp, #12]
-; THUMB6-NEXT:    lsrs r1, r4
-; THUMB6-NEXT:    ands r1, r2
-; THUMB6-NEXT:    rsbs r4, r1, #0
-; THUMB6-NEXT:    adcs r1, r4
-; THUMB6-NEXT:    ldr r4, [sp, #20]
-; THUMB6-NEXT:    lsrs r3, r4
-; THUMB6-NEXT:    ands r3, r2
-; THUMB6-NEXT:    rsbs r4, r3, #0
-; THUMB6-NEXT:    adcs r3, r4
-; THUMB6-NEXT:    pop {r4, pc}
+; THUMB6-NEXT:    mov r4, r2
+; THUMB6-NEXT:    bics r4, r0
+; THUMB6-NEXT:    ldr r0, [sp, #20]
+; THUMB6-NEXT:    lsrs r1, r0
+; THUMB6-NEXT:    mov r5, r2
+; THUMB6-NEXT:    bics r5, r1
+; THUMB6-NEXT:    ldr r0, [sp, #28]
+; THUMB6-NEXT:    lsrs r3, r0
+; THUMB6-NEXT:    mov r6, r2
+; THUMB6-NEXT:    bics r6, r3
+; THUMB6-NEXT:    mov r0, r4
+; THUMB6-NEXT:    mov r1, r5
+; THUMB6-NEXT:    mov r3, r6
+; THUMB6-NEXT:    pop {r4, r5, r6, pc}
 ;
 ; THUMB78-LABEL: vec_4xi32_nonsplat_undef0_eq:
 ; THUMB78:       @ %bb.0:
@@ -765,24 +758,23 @@ define <4 x i1> @vec_4xi32_nonsplat_undef1_eq(<4 x i32> %x, <4 x i32> %y) nounwi
 ;
 ; THUMB6-LABEL: vec_4xi32_nonsplat_undef1_eq:
 ; THUMB6:       @ %bb.0:
-; THUMB6-NEXT:    push {r4, lr}
-; THUMB6-NEXT:    ldr r2, [sp, #8]
+; THUMB6-NEXT:    push {r4, r5, r7, lr}
+; THUMB6-NEXT:    ldr r2, [sp, #16]
 ; THUMB6-NEXT:    lsrs r0, r2
 ; THUMB6-NEXT:    movs r2, #1
-; THUMB6-NEXT:    ands r0, r2
-; THUMB6-NEXT:    rsbs r4, r0, #0
-; THUMB6-NEXT:    adcs r0, r4
-; THUMB6-NEXT:    ldr r4, [sp, #12]
-; THUMB6-NEXT:    lsrs r1, r4
-; THUMB6-NEXT:    ands r1, r2
-; THUMB6-NEXT:    rsbs r4, r1, #0
-; THUMB6-NEXT:    adcs r1, r4
-; THUMB6-NEXT:    ldr r4, [sp, #20]
-; THUMB6-NEXT:    lsrs r3, r4
-; THUMB6-NEXT:    ands r3, r2
-; THUMB6-NEXT:    rsbs r2, r3, #0
-; THUMB6-NEXT:    adcs r3, r2
-; THUMB6-NEXT:    pop {r4, pc}
+; THUMB6-NEXT:    mov r4, r2
+; THUMB6-NEXT:    bics r4, r0
+; THUMB6-NEXT:    ldr r0, [sp, #20]
+; THUMB6-NEXT:    lsrs r1, r0
+; THUMB6-NEXT:    mov r5, r2
+; THUMB6-NEXT:    bics r5, r1
+; THUMB6-NEXT:    ldr r0, [sp, #28]
+; THUMB6-NEXT:    lsrs r3, r0
+; THUMB6-NEXT:    bics r2, r3
+; THUMB6-NEXT:    mov r0, r4
+; THUMB6-NEXT:    mov r1, r5
+; THUMB6-NEXT:    mov r3, r2
+; THUMB6-NEXT:    pop {r4, r5, r7, pc}
 ;
 ; THUMB78-LABEL: vec_4xi32_nonsplat_undef1_eq:
 ; THUMB78:       @ %bb.0:
@@ -831,24 +823,23 @@ define <4 x i1> @vec_4xi32_nonsplat_undef2_eq(<4 x i32> %x, <4 x i32> %y) nounwi
 ;
 ; THUMB6-LABEL: vec_4xi32_nonsplat_undef2_eq:
 ; THUMB6:       @ %bb.0:
-; THUMB6-NEXT:    push {r4, lr}
-; THUMB6-NEXT:    ldr r2, [sp, #8]
+; THUMB6-NEXT:    push {r4, r5, r7, lr}
+; THUMB6-NEXT:    ldr r2, [sp, #16]
 ; THUMB6-NEXT:    lsrs r0, r2
 ; THUMB6-NEXT:    movs r2, #1
-; THUMB6-NEXT:    ands r0, r2
-; THUMB6-NEXT:    rsbs r4, r0, #0
-; THUMB6-NEXT:    adcs r0, r4
-; THUMB6-NEXT:    ldr r4, [sp, #12]
-; THUMB6-NEXT:    lsrs r1, r4
-; THUMB6-NEXT:    ands r1, r2
-; THUMB6-NEXT:    rsbs r4, r1, #0
-; THUMB6-NEXT:    adcs r1, r4
-; THUMB6-NEXT:    ldr r4, [sp, #20]
-; THUMB6-NEXT:    lsrs r3, r4
-; THUMB6-NEXT:    ands r3, r2
-; THUMB6-NEXT:    rsbs r2, r3, #0
-; THUMB6-NEXT:    adcs r3, r2
-; THUMB6-NEXT:    pop {r4, pc}
+; THUMB6-NEXT:    mov r4, r2
+; THUMB6-NEXT:    bics r4, r0
+; THUMB6-NEXT:    ldr r0, [sp, #20]
+; THUMB6-NEXT:    lsrs r1, r0
+; THUMB6-NEXT:    mov r5, r2
+; THUMB6-NEXT:    bics r5, r1
+; THUMB6-NEXT:    ldr r0, [sp, #28]
+; THUMB6-NEXT:    lsrs r3, r0
+; THUMB6-NEXT:    bics r2, r3
+; THUMB6-NEXT:    mov r0, r4
+; THUMB6-NEXT:    mov r1, r5
+; THUMB6-NEXT:    mov r3, r2
+; THUMB6-NEXT:    pop {r4, r5, r7, pc}
 ;
 ; THUMB78-LABEL: vec_4xi32_nonsplat_undef2_eq:
 ; THUMB78:       @ %bb.0:
@@ -923,10 +914,8 @@ define i1 @scalar_i32_x_is_const_eq(i32 %y) nounwind {
 ; THUMB6:       @ %bb.0:
 ; THUMB6-NEXT:    ldr r1, .LCPI18_0
 ; THUMB6-NEXT:    lsls r1, r0
-; THUMB6-NEXT:    movs r2, #1
-; THUMB6-NEXT:    ands r2, r1
-; THUMB6-NEXT:    rsbs r0, r2, #0
-; THUMB6-NEXT:    adcs r0, r2
+; THUMB6-NEXT:    movs r0, #1
+; THUMB6-NEXT:    bics r0, r1
 ; THUMB6-NEXT:    bx lr
 ; THUMB6-NEXT:    .p2align 2
 ; THUMB6-NEXT:  @ %bb.1:
