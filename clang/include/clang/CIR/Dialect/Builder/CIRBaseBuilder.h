@@ -200,6 +200,13 @@ public:
   cir::BoolAttr getTrueAttr() { return getCIRBoolAttr(true); }
   cir::BoolAttr getFalseAttr() { return getCIRBoolAttr(false); }
 
+  cir::TokenType getTokenTy() { return cir::TokenType::get(getContext()); }
+
+  cir::ConstantOp getTokenNone(mlir::Location loc) {
+    return cir::ConstantOp::create(
+        *this, loc, cir::TokenNoneAttr::get(cir::TokenType::get(getContext())));
+  }
+
   mlir::Value createComplexCreate(mlir::Location loc, mlir::Value real,
                                   mlir::Value imag) {
     auto resultComplexTy = cir::ComplexType::get(real.getType());

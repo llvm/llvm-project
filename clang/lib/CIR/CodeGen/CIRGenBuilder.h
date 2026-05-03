@@ -383,6 +383,8 @@ public:
   cir::ConstantOp getConstFP(mlir::Location loc, mlir::Type t,
                              llvm::APFloat fpVal);
 
+  cir::TokenType getTokenTy() { return typeCache.tokenTy; }
+
   bool isInt8Ty(mlir::Type i) {
     return i == typeCache.uInt8Ty || i == typeCache.sInt8Ty;
   }

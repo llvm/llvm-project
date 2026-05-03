@@ -51,6 +51,8 @@ struct CIRGenTypeCache {
   cir::FP80Type fP80Ty;
   cir::FP128Type fP128Ty;
 
+  cir::TokenType tokenTy;
+
   /// ClangIR char
   mlir::Type uCharTy;
 

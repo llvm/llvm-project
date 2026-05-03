@@ -15,8 +15,8 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/TargetInfo.h"
-#include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/IR/Intrinsics.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -208,7 +208,6 @@ emitBodyAndFallthrough(CIRGenFunction &cgf, const CoroutineBodyStmt &s,
 
 cir::CallOp CIRGenFunction::emitCoroIDBuiltinCall(mlir::Location loc,
                                                   mlir::Value nullPtr) {
-  cir::IntType int32Ty = builder.getUInt32Ty();
 
   const TargetInfo &ti = cgm.getASTContext().getTargetInfo();
   unsigned newAlign = ti.getNewAlign() / ti.getCharWidth();
@@ -217,9 +216,11 @@ cir::CallOp CIRGenFunction::emitCoroIDBuiltinCall(mlir::Location loc,
 
   cir::FuncOp fnOp;
   if (!builtin) {
+    IntrinsicTypeOptions opts;
+    opts.isSigned = false;
     fnOp = cgm.createCIRBuiltinFunction(
         loc, cgm.builtinCoroId,
-        cir::FuncType::get({int32Ty, voidPtrTy, voidPtrTy, voidPtrTy}, int32Ty),
+        getIntrinsicType(&getMLIRContext(), llvm::Intrinsic::coro_id, opts),
         /*FD=*/nullptr);
     assert(fnOp && "should always succeed");
   } else {
@@ -232,15 +233,17 @@ cir::CallOp CIRGenFunction::emitCoroIDBuiltinCall(mlir::Location loc,
 }
 
 cir::CallOp CIRGenFunction::emitCoroAllocBuiltinCall(mlir::Location loc) {
-  cir::BoolType boolTy = builder.getBoolTy();
 
   mlir::Operation *builtin = cgm.getGlobalValue(cgm.builtinCoroAlloc);
 
   cir::FuncOp fnOp;
   if (!builtin) {
-    fnOp = cgm.createCIRBuiltinFunction(loc, cgm.builtinCoroAlloc,
-                                        cir::FuncType::get({uInt32Ty}, boolTy),
-                                        /*fd=*/nullptr);
+    IntrinsicTypeOptions opts;
+    opts.treatInt1AsBool = true;
+    fnOp = cgm.createCIRBuiltinFunction(
+        loc, cgm.builtinCoroAlloc,
+        getIntrinsicType(&getMLIRContext(), llvm::Intrinsic::coro_alloc, opts),
+        /*fd=*/nullptr);
     assert(fnOp && "should always succeed");
   } else {
     fnOp = cast<cir::FuncOp>(builtin);
@@ -259,7 +262,7 @@ CIRGenFunction::emitCoroBeginBuiltinCall(mlir::Location loc,
   if (!builtin) {
     fnOp = cgm.createCIRBuiltinFunction(
         loc, cgm.builtinCoroBegin,
-        cir::FuncType::get({uInt32Ty, voidPtrTy}, voidPtrTy),
+        getIntrinsicType(&getMLIRContext(), llvm::Intrinsic::coro_begin, {}),
         /*fd=*/nullptr);
     assert(fnOp && "should always succeed");
   } else {
@@ -272,15 +275,17 @@ CIRGenFunction::emitCoroBeginBuiltinCall(mlir::Location loc,
 }
 
 cir::CallOp CIRGenFunction::emitCoroEndBuiltinCall(mlir::Location loc,
-                                                   mlir::Value nullPtr) {
-  cir::BoolType boolTy = builder.getBoolTy();
+                                                   mlir::Value nullPtr,
+                                                   cir::ConstantOp unwind) {
   mlir::Operation *builtin = cgm.getGlobalValue(cgm.builtinCoroEnd);
 
   cir::FuncOp fnOp;
   if (!builtin) {
+    IntrinsicTypeOptions opts;
+    opts.treatInt1AsBool = true;
     fnOp = cgm.createCIRBuiltinFunction(
         loc, cgm.builtinCoroEnd,
-        cir::FuncType::get({voidPtrTy, boolTy}, boolTy),
+        getIntrinsicType(&getMLIRContext(), llvm::Intrinsic::coro_end, opts),
         /*fd=*/nullptr);
     assert(fnOp && "should always succeed");
   } else {
@@ -288,7 +293,7 @@ cir::CallOp CIRGenFunction::emitCoroEndBuiltinCall(mlir::Location loc,
   }
 
   return builder.createCallOp(
-      loc, fnOp, mlir::ValueRange{nullPtr, builder.getBool(false, loc)});
+      loc, fnOp, mlir::ValueRange{nullPtr, unwind, builder.getTokenNone(loc)});
 }
 
 cir::CallOp CIRGenFunction::emitCoroFreeBuiltin(const CallExpr *e) {
@@ -298,7 +303,8 @@ cir::CallOp CIRGenFunction::emitCoroFreeBuiltin(const CallExpr *e) {
   if (!builtin) {
     fnOp = cgm.createCIRBuiltinFunction(
         loc, cgm.builtinCoroFree,
-        cir::FuncType::get({uInt32Ty, voidPtrTy}, voidPtrTy),
+        getIntrinsicType(&getMLIRContext(), llvm::Intrinsic::coro_free,
+                         /*opts*/ {}),
         /*fd=*/nullptr);
     assert(fnOp && "should always succeed");
   } else {
@@ -454,7 +460,8 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
   }
 
   emitCoroEndBuiltinCall(
-      openCurlyLoc, builder.getNullPtr(builder.getVoidPtrTy(), openCurlyLoc));
+      openCurlyLoc, builder.getNullPtr(builder.getVoidPtrTy(), openCurlyLoc),
+      builder.getBool(false, openCurlyLoc));
   if (auto *ret = cast_or_null<ReturnStmt>(s.getReturnStmt())) {
     // Since we already emitted the return value above, so we shouldn't
     // emit it again here.
