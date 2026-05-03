@@ -3866,16 +3866,15 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
         DstNanEnc == fltNanEncoding::AllOnes)
       DstMaxMantAtMaxExp = DstMantMask - 1;
 
+    // FIXME: ConstantFP inputs may not fully fold through this expansion.
+
     // Source format parameters.
     EVT SrcVT = FloatVal.getValueType();
     const fltSemantics &SrcSem = SrcVT.getFltSemantics();
     const unsigned SrcBits = APFloat::getSizeInBits(SrcSem);
     const unsigned SrcPrecision = APFloat::semanticsPrecision(SrcSem);
     const unsigned SrcMant = SrcPrecision - 1;
-    const unsigned SrcExpBits = SrcBits - SrcMant - 1;
-    const int SrcBias = 1 - APFloat::semanticsMinExponent(SrcSem);
     const uint64_t SrcMantMask = (1ULL << SrcMant) - 1;
-    const uint64_t SrcExpMask = (1ULL << SrcExpBits) - 1;
 
     // Work in the source integer type.
     EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), SrcBits);
@@ -3884,77 +3883,37 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     SDValue Zero = DAG.getConstant(0, dl, IntVT);
     SDValue One = DAG.getConstant(1, dl, IntVT);
 
-    // Bitcast source float to integer and extract bit fields.
+    // Bitcast source float to integer to extract the sign bit.
     SDValue Src = DAG.getNode(ISD::BITCAST, dl, IntVT, FloatVal);
-    SDValue SrcMantField = DAG.getNode(ISD::AND, dl, IntVT, Src,
-                                       DAG.getConstant(SrcMantMask, dl, IntVT));
-
-    SDValue SrcExpField =
-        DAG.getNode(ISD::AND, dl, IntVT,
-                    DAG.getNode(ISD::SRL, dl, IntVT, Src,
-                                DAG.getShiftAmountConstant(SrcMant, IntVT, dl)),
-                    DAG.getConstant(SrcExpMask, dl, IntVT));
-
     SDValue SignBit =
         DAG.getNode(ISD::SRL, dl, IntVT, Src,
                     DAG.getShiftAmountConstant(SrcBits - 1, IntVT, dl));
 
-    // Classify the input value.
-    SDValue SrcExpAllOnes = DAG.getConstant(SrcExpMask, dl, IntVT);
-    SDValue IsExpAllOnes =
-        DAG.getSetCC(dl, SetCCVT, SrcExpField, SrcExpAllOnes, ISD::SETEQ);
-    SDValue IsExpZero =
-        DAG.getSetCC(dl, SetCCVT, SrcExpField, Zero, ISD::SETEQ);
-    SDValue IsMantZero =
-        DAG.getSetCC(dl, SetCCVT, SrcMantField, Zero, ISD::SETEQ);
-    SDValue IsMantNonZero =
-        DAG.getSetCC(dl, SetCCVT, SrcMantField, Zero, ISD::SETNE);
+    // Classify the input.
+    SDValue IsNaN = DAG.getNode(ISD::IS_FPCLASS, dl, SetCCVT, FloatVal,
+                                DAG.getTargetConstant(fcNan, dl, MVT::i32));
+    SDValue IsInf = DAG.getNode(ISD::IS_FPCLASS, dl, SetCCVT, FloatVal,
+                                DAG.getTargetConstant(fcInf, dl, MVT::i32));
+    SDValue IsZero = DAG.getNode(ISD::IS_FPCLASS, dl, SetCCVT, FloatVal,
+                                 DAG.getTargetConstant(fcZero, dl, MVT::i32));
 
-    // If source is IEEE fp, tehn NaN = exp_all_ones && mant != 0.
-    SDValue IsNaN =
-        DAG.getNode(ISD::AND, dl, SetCCVT, IsExpAllOnes, IsMantNonZero);
-    // Inf = exp_all_ones && mant == 0.
-    SDValue IsInf =
-        DAG.getNode(ISD::AND, dl, SetCCVT, IsExpAllOnes, IsMantZero);
-    // Zero = exp == 0 && mant == 0.
-    SDValue IsZero = DAG.getNode(ISD::AND, dl, SetCCVT, IsExpZero, IsMantZero);
-    // Source denorm = exp == 0 && mant != 0.
-    SDValue IsSrcDenorm =
-        DAG.getNode(ISD::AND, dl, SetCCVT, IsExpZero, IsMantNonZero);
+    // Split into a normalized fraction and unbiased exponent. FFREXP normalizes
+    // source denormals automatically. The result is unspecified for Inf/NaN,
+    // but those inputs are detected above and override the final result.
+    EVT FrexpExpVT = MVT::i32;
+    SDValue Frexp = DAG.getNode(ISD::FFREXP, dl,
+                                DAG.getVTList(SrcVT, FrexpExpVT), FloatVal);
+    SDValue FrexpFrac = Frexp.getValue(0);
+    SDValue FrexpExp = Frexp.getValue(1);
 
-    // Source denormal normalization.
-    // For a source denormal, the true exponent is (1 - SrcBias) and the
-    // mantissa has no implicit leading 1. Normalize by finding the position
-    // of the leading 1 in the mantissa.
-    SDValue LeadingZeros =
-        DAG.getNode(ISD::CTLZ_ZERO_UNDEF, dl, IntVT, SrcMantField);
+    SDValue FrexpFracInt = DAG.getNode(ISD::BITCAST, dl, IntVT, FrexpFrac);
+    SDValue EffSrcMant = DAG.getNode(ISD::AND, dl, IntVT, FrexpFracInt,
+                                     DAG.getConstant(SrcMantMask, dl, IntVT));
 
-    // normShift = LeadingZeros - (SrcBits - 1 - SrcMant).
-    const unsigned LZOffset = SrcBits - 1 - SrcMant;
-    SDValue NormShift = DAG.getNode(ISD::SUB, dl, IntVT, LeadingZeros,
-                                    DAG.getConstant(LZOffset, dl, IntVT));
-
-    // Normalized mantissa.
-    SDValue NormMant =
-        DAG.getNode(ISD::AND, dl, IntVT,
-                    DAG.getNode(ISD::SHL, dl, IntVT, SrcMantField, NormShift),
-                    DAG.getConstant(SrcMantMask, dl, IntVT));
-
-    // effective_exp = 1 - NormShift.
-    SDValue DenormSrcExp = DAG.getNode(ISD::SUB, dl, IntVT, One, NormShift);
-
-    // Select between normal and denorm source.
-    SDValue EffSrcExp =
-        DAG.getSelect(dl, IntVT, IsSrcDenorm, DenormSrcExp, SrcExpField);
-    SDValue EffSrcMant =
-        DAG.getSelect(dl, IntVT, IsSrcDenorm, NormMant, SrcMantField);
-
-    // Compute new biased exponent for destination.
-    // new_exp = src_exp - SrcBias + DstBias
-    const int BiasAdjust = DstBias - SrcBias;
+    SDValue FrexpExpExt = DAG.getSExtOrTrunc(FrexpExp, dl, IntVT);
     SDValue NewExp = DAG.getNode(
-        ISD::ADD, dl, IntVT, EffSrcExp,
-        DAG.getConstant(APInt(SrcBits, BiasAdjust, true), dl, IntVT));
+        ISD::ADD, dl, IntVT, FrexpExpExt,
+        DAG.getConstant(APInt(SrcBits, DstBias - 1, true), dl, IntVT));
 
     // Compute rounding increment given the round bit, sticky bits, and LSB
     // of the truncated mantissa.
