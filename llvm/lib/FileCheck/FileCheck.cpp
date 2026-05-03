@@ -1285,8 +1285,8 @@ void Pattern::printSubstitutions(const SourceMgr &SM, StringRef Buffer,
       // Indicating a non-zero-length range might instead seem to imply that the
       // substitution matches or was captured from exactly that range.
       if (Diags)
-        Diags->emplace_back(SM, CheckTy, getLoc(), MatchTy,
-                            SMRange(Range.Start, Range.Start), OS.str());
+        Diags->emplace<MatchNoteDiag>(
+            MatchTy, SMRange(Range.Start, Range.Start), OS.str());
       else
         SM.PrintMessage(Range.Start, SourceMgr::DK_Note, OS.str());
     }
@@ -1340,7 +1340,7 @@ void Pattern::printVariableDefs(const SourceMgr &SM,
     raw_svector_ostream OS(Msg);
     OS << "captured var \"" << VC.Name << "\"";
     if (Diags)
-      Diags->emplace_back(SM, CheckTy, getLoc(), MatchTy, VC.Range, OS.str());
+      Diags->emplace<MatchNoteDiag>(MatchTy, VC.Range, OS.str());
     else
       SM.PrintMessage(VC.Range.Start, SourceMgr::DK_Note, OS.str(), VC.Range);
   }
@@ -1399,8 +1399,7 @@ void Pattern::printFuzzyMatch(const SourceMgr &SM, StringRef Buffer,
   if (Best && Best != StringRef::npos && BestQuality < 50) {
     SMRange MatchRange = buildMatchRange(Buffer, Best, 0);
     if (Diags)
-      Diags->emplace_back(SM, getCheckTy(), getLoc(), FileCheckDiag::MatchFuzzy,
-                          MatchRange);
+      Diags->emplace<MatchNoteDiag>(FileCheckDiag::MatchFuzzy, MatchRange);
     SM.PrintMessage(MatchRange.Start, SourceMgr::DK_Note,
                     "possible intended match here");
 
@@ -1507,18 +1506,7 @@ StringRef FileCheck::CanonicalizeFile(MemoryBuffer &MB,
   return StringRef(OutputBuffer.data(), OutputBuffer.size() - 1);
 }
 
-FileCheckDiag::FileCheckDiag(const SourceMgr &SM,
-                             const Check::FileCheckType &CheckTy,
-                             SMLoc CheckLoc, MatchType MatchTy,
-                             SMRange InputRange, StringRef Note)
-    : CheckTy(CheckTy), CheckLoc(CheckLoc), MatchTy(MatchTy), Note(Note) {
-  auto Start = SM.getLineAndColumn(InputRange.Start);
-  auto End = SM.getLineAndColumn(InputRange.End);
-  InputStartLine = Start.first;
-  InputStartCol = Start.second;
-  InputEndLine = End.first;
-  InputEndCol = End.second;
-}
+FileCheckDiag::~FileCheckDiag() {}
 
 static bool IsPartOfWord(char c) {
   return (isAlnum(c) || c == '-' || c == '_');
@@ -2045,7 +2033,7 @@ static Error printMatch(bool ExpectedMatch, const SourceMgr &SM,
   SMRange MatchRange = buildMatchRange(Buffer, MatchResult.TheMatch->Pos,
                                        MatchResult.TheMatch->Len);
   if (Diags) {
-    Diags->emplace_back(SM, Pat.getCheckTy(), Loc, MatchTy, MatchRange);
+    Diags->emplace<MatchResultDiag>(Pat.getCheckTy(), Loc, MatchTy, MatchRange);
     Pat.printSubstitutions(SM, Buffer, MatchRange, MatchTy, Diags);
     Pat.printVariableDefs(SM, MatchTy, Diags);
   }
@@ -2077,9 +2065,9 @@ static Error printMatch(bool ExpectedMatch, const SourceMgr &SM,
                   [&](const ErrorDiagnostic &E) {
                     E.log(errs());
                     if (Diags) {
-                      Diags->emplace_back(SM, Pat.getCheckTy(), Loc,
-                                          FileCheckDiag::MatchFoundErrorNote,
-                                          E.getRange(), E.getMessage().str());
+                      Diags->emplace<MatchNoteDiag>(
+                          FileCheckDiag::MatchFoundErrorNote, E.getRange(),
+                          E.getMessage().str());
                     }
                   });
   return ErrorReported::reportedOrSuccess(HasError);
@@ -2131,11 +2119,11 @@ static Error printNoMatch(bool ExpectedMatch, const SourceMgr &SM,
   // diagnostic is all we have to anchor them.
   SMRange SearchRange = buildSearchRange(Buffer);
   if (Diags) {
-    Diags->emplace_back(SM, Pat.getCheckTy(), Loc, MatchTy, SearchRange);
+    Diags->emplace<MatchResultDiag>(Pat.getCheckTy(), Loc, MatchTy,
+                                    SearchRange);
     SMRange NoteRange = SMRange(SearchRange.Start, SearchRange.Start);
     for (StringRef ErrorMsg : ErrorMsgs)
-      Diags->emplace_back(SM, Pat.getCheckTy(), Loc, MatchTy, NoteRange,
-                          ErrorMsg);
+      Diags->emplace<MatchNoteDiag>(MatchTy, NoteRange, ErrorMsg);
     Pat.printSubstitutions(SM, Buffer, SearchRange, MatchTy, Diags);
   }
   if (!PrintDiag) {
@@ -2268,9 +2256,9 @@ size_t FileCheckString::Check(const SourceMgr &SM, StringRef Buffer,
         if (Req.Verbose) {
           Diags->adjustPrevDiags(FileCheckDiag::MatchFoundButWrongLine);
         } else {
-          Diags->emplace_back(SM, Pat.getCheckTy(), Loc,
-                              FileCheckDiag::MatchFoundButWrongLine,
-                              buildMatchRange(MatchBuffer, MatchPos, MatchLen));
+          Diags->emplace<MatchResultDiag>(
+              Pat.getCheckTy(), Loc, FileCheckDiag::MatchFoundButWrongLine,
+              buildMatchRange(MatchBuffer, MatchPos, MatchLen));
         }
       }
       return StringRef::npos;
@@ -2283,9 +2271,9 @@ size_t FileCheckString::Check(const SourceMgr &SM, StringRef Buffer,
         if (Req.Verbose) {
           Diags->adjustPrevDiags(FileCheckDiag::MatchFoundButWrongLine);
         } else {
-          Diags->emplace_back(SM, Pat.getCheckTy(), Loc,
-                              FileCheckDiag::MatchFoundButWrongLine,
-                              buildMatchRange(MatchBuffer, MatchPos, MatchLen));
+          Diags->emplace<MatchResultDiag>(
+              Pat.getCheckTy(), Loc, FileCheckDiag::MatchFoundButWrongLine,
+              buildMatchRange(MatchBuffer, MatchPos, MatchLen));
         }
       }
       return StringRef::npos;
