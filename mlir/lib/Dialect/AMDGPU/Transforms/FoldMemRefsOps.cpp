@@ -65,48 +65,35 @@ static LogicalResult foldMemrefViewOp(PatternRewriter &rewriter, Location loc,
       });
 }
 
-static LogicalResult
-foldMemrefViewOps(PatternRewriter &rewriter, Operation *op, Value source,
-                  mlir::OperandRange sourceIndices, Value dest,
-                  mlir::OperandRange destIndices,
-                  SmallVectorImpl<Value> &resolvedSourceIndices,
-                  SmallVectorImpl<Value> &resolvedDestIndices,
-                  Value &sourceBase, Value &destBase) {
-  Location loc = op->getLoc();
-
-  LogicalResult didFoldSource =
-      foldMemrefViewOp(rewriter, loc, source, sourceIndices,
-                       resolvedSourceIndices, sourceBase, "source");
-  if (failed(didFoldSource)) {
-    sourceBase = source;
-    resolvedSourceIndices.assign(sourceIndices.begin(), sourceIndices.end());
-  }
-
-  LogicalResult didFoldDest =
-      foldMemrefViewOp(rewriter, loc, dest, destIndices, resolvedDestIndices,
-                       destBase, "destination");
-  if (failed(didFoldDest)) {
-    destBase = dest;
-    resolvedDestIndices.assign(destIndices.begin(), destIndices.end());
-  }
-
-  if (failed(didFoldSource) && failed(didFoldDest))
-    return rewriter.notifyMatchFailure(op, "no fold found");
-
-  return success();
-}
-
 struct FoldMemRefOpsIntoGatherToLDSOp final : OpRewritePattern<GatherToLDSOp> {
   using Base::Base;
   LogicalResult matchAndRewrite(GatherToLDSOp op,
                                 PatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+
     SmallVector<Value> sourceIndices, destIndices;
     Value memrefSource, memrefDest;
 
-    if (failed(foldMemrefViewOps(rewriter, op, op.getSrc(), op.getSrcIndices(),
-                                 op.getDst(), op.getDstIndices(), sourceIndices,
-                                 destIndices, memrefSource, memrefDest)))
-      return failure();
+    auto foldSrcResult =
+        foldMemrefViewOp(rewriter, loc, op.getSrc(), op.getSrcIndices(),
+                         sourceIndices, memrefSource, "source");
+
+    if (failed(foldSrcResult)) {
+      memrefSource = op.getSrc();
+      sourceIndices = op.getSrcIndices();
+    }
+
+    auto foldDstResult =
+        foldMemrefViewOp(rewriter, loc, op.getDst(), op.getDstIndices(),
+                         destIndices, memrefDest, "destination");
+
+    if (failed(foldDstResult)) {
+      memrefDest = op.getDst();
+      destIndices = op.getDstIndices();
+    }
+
+    if (failed(foldSrcResult) && failed(foldDstResult))
+      return rewriter.notifyMatchFailure(op, "no fold found");
 
     rewriter.replaceOpWithNewOp<GatherToLDSOp>(
         op, memrefSource, sourceIndices, memrefDest, destIndices,
@@ -121,13 +108,31 @@ struct FoldMemRefOpsIntoGlobalLoadAsyncToLDSOp final
   using Base::Base;
   LogicalResult matchAndRewrite(GlobalLoadAsyncToLDSOp op,
                                 PatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+
     SmallVector<Value> sourceIndices, destIndices;
     Value memrefSource, memrefDest;
 
-    if (failed(foldMemrefViewOps(rewriter, op, op.getSrc(), op.getSrcIndices(),
-                                 op.getDst(), op.getDstIndices(), sourceIndices,
-                                 destIndices, memrefSource, memrefDest)))
-      return failure();
+    auto foldSrcResult =
+        foldMemrefViewOp(rewriter, loc, op.getSrc(), op.getSrcIndices(),
+                         sourceIndices, memrefSource, "source");
+
+    if (failed(foldSrcResult)) {
+      memrefSource = op.getSrc();
+      sourceIndices = op.getSrcIndices();
+    }
+
+    auto foldDstResult =
+        foldMemrefViewOp(rewriter, loc, op.getDst(), op.getDstIndices(),
+                         destIndices, memrefDest, "destination");
+
+    if (failed(foldDstResult)) {
+      memrefDest = op.getDst();
+      destIndices = op.getDstIndices();
+    }
+
+    if (failed(foldSrcResult) && failed(foldDstResult))
+      return rewriter.notifyMatchFailure(op, "no fold found");
 
     rewriter.replaceOpWithNewOp<GlobalLoadAsyncToLDSOp>(
         op, memrefSource, sourceIndices, memrefDest, destIndices,
