@@ -1027,9 +1027,9 @@ bool X86LegalizerInfo::legalizeGLOBAL_VALUE(MachineInstr &MI,
         .addDef(StubAddr)
         .addGlobalAddress(GV);
 
-    MachineMemOperand MMO = MF.getMachineMemOperand(MachinePointerInfo::getGOT(MF),
-                                       MachineMemOperand::MOLoad, DstTy,
-                                       Align(DstTy.getSizeInBytes()));
+    MachineMemOperand *MMO = MF.getMachineMemOperand(
+        MachinePointerInfo::getGOT(MF), MachineMemOperand::MOLoad, DstTy,
+        Align(DstTy.getSizeInBytes()));
     MIRBuilder.buildLoad(Dst, StubAddr, *MMO);
     MI.eraseFromParent();
   }
