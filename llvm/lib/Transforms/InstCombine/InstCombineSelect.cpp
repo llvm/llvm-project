@@ -2365,8 +2365,8 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
   if (Value *V = foldSelectInstWithICmpConst(SI, ICI, Builder))
     return replaceInstUsesWith(SI, V);
 
-  // if (Value *V = foldSelectInstWithICmpOr(SI, ICI, Builder, SQ))
-  //   return replaceInstUsesWith(SI, V);
+  if (Value *V = foldSelectInstWithICmpOr(SI, ICI, Builder, SQ))
+    return replaceInstUsesWith(SI, V);
 
   if (Value *V = canonicalizeClampLike(SI, *ICI, Builder, *this))
     return replaceInstUsesWith(SI, V);
