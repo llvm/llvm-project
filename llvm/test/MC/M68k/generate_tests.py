@@ -2,6 +2,7 @@
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from enum import IntEnum
 from typing import Generator
 
 
@@ -78,6 +79,59 @@ class Long(Size):
         return 0b10
 
 
+# Data registers
+
+
+class DataRegister(IntEnum):
+    D0 = 0
+    D1 = 1
+    D2 = 2
+    D3 = 3
+    D4 = 4
+    D5 = 5
+    D6 = 6
+    D7 = 7
+
+    def permutations() -> Generator["DataRegister", None, None]:
+        # d0, d1 and d7 are considered representative permutations, in order to test:
+        # - all bits 0
+        # - all bits 1
+        # - the bit ordering
+        for register in [DataRegister.D0, DataRegister.D1, DataRegister.D7]:
+            yield register
+
+    def asm(self) -> str:
+        return f"%d{self}"
+
+
+# Address registers
+
+
+class AddressRegister(IntEnum):
+    A0 = 0
+    A1 = 1
+    A2 = 2
+    A3 = 3
+    A4 = 4
+    A5 = 5
+    A6 = 6
+    SP = 7
+
+    def permutations() -> Generator["AddressRegister", None, None]:
+        # a0, a1 and a7 (sp) are considered representative permutations, in order to test:
+        # - all bits 0
+        # - all bits 1
+        # - the bit ordering
+        for register in [AddressRegister.A0, AddressRegister.A1, AddressRegister.SP]:
+            yield register
+
+    def asm(self) -> str:
+        if self is AddressRegister.SP:
+            return "%sp"
+        else:
+            return f"%a{self}"
+
+
 # Effective addressing modes
 # https://m680x0.github.io/ref/M68000PM_AD_Rev_1_Programmers_Reference_Manual_1992.html#pf3c
 
@@ -108,24 +162,20 @@ class EffectiveAddressingMode(ABC):
 class DataRegisterDirect(EffectiveAddressingMode):
     """Represents the contents of a particular data register."""
 
-    registerNumber: int
+    register: DataRegister
 
     def permutations() -> Generator["DataRegisterDirect", None, None]:
-        # d0, d1 and d7 are considered representative permutations, in order to test:
-        # - all bits 0
-        # - all bits 1
-        # - the bit ordering
-        for registerNumber in [0, 1, 7]:
-            yield DataRegisterDirect(registerNumber)
+        for register in DataRegister.permutations():
+            yield DataRegisterDirect(register)
 
     def asm(self) -> str:
-        return f"%d{self.registerNumber}"
+        return self.register.asm()
 
     def modeField(self) -> int:
         return 0b000
 
     def registerField(self) -> int:
-        return self.registerNumber
+        return self.register
 
 
 # https://m680x0.github.io/ref/M68000PM_AD_Rev_1_Programmers_Reference_Manual_1992.html#pf2e
@@ -134,27 +184,20 @@ class DataRegisterDirect(EffectiveAddressingMode):
 class AddressRegisterDirect(EffectiveAddressingMode):
     """Represents the contents of a particular address register."""
 
-    registerNumber: int
+    register: AddressRegister
 
     def permutations() -> Generator["AddressRegisterDirect", None, None]:
-        # a0, a1 and a7 (sp) are considered representative permutations, in order to test:
-        # - all bits 0
-        # - all bits 1
-        # - the bit ordering
-        for registerNumber in [0, 1, 7]:
-            yield AddressRegisterDirect(registerNumber)
+        for register in AddressRegister.permutations():
+            yield AddressRegisterDirect(register)
 
     def asm(self) -> str:
-        if self.registerNumber == 7:
-            return "%sp"
-        else:
-            return f"%a{self.registerNumber}"
+        return self.register.asm()
 
     def modeField(self) -> int:
         return 0b001
 
     def registerField(self) -> int:
-        return self.registerNumber
+        return self.register
 
 
 # Instructions
