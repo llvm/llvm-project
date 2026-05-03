@@ -111,7 +111,11 @@ class DataRegisterDirect(EffectiveAddressingMode):
     registerNumber: int
 
     def permutations() -> Generator["DataRegisterDirect", None, None]:
-        for registerNumber in range(8):
+        # d0, d1 and d7 are considered representative permutations, in order to test:
+        # - all bits 0
+        # - all bits 1
+        # - the bit ordering
+        for registerNumber in [0, 1, 7]:
             yield DataRegisterDirect(registerNumber)
 
     def asm(self) -> str:
@@ -133,7 +137,11 @@ class AddressRegisterDirect(EffectiveAddressingMode):
     registerNumber: int
 
     def permutations() -> Generator["AddressRegisterDirect", None, None]:
-        for registerNumber in range(8):
+        # a0, a1 and a7 (sp) are considered representative permutations, in order to test:
+        # - all bits 0
+        # - all bits 1
+        # - the bit ordering
+        for registerNumber in [0, 1, 7]:
             yield AddressRegisterDirect(registerNumber)
 
     def asm(self) -> str:
