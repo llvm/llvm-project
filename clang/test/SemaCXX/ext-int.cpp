@@ -61,18 +61,8 @@ template<typename T>
 void deduced_whole_type(T){}
 template<int I>
 void deduced_bound(_BitInt(I)){}
-
-// Ensure ext-int can be used in template places.
-void Templates() {
-  ExtIntTemplParam<13> a;
-  constexpr _BitInt(3) b = 1;
-  ExtIntTemplParam<b> c;
-  constexpr _BitInt(9) d = 1;
-  ExtIntTemplParam<b> e;
-
-  deduced_whole_type(b);
-  deduced_bound(b);
-}
+template<int I>
+void deduced_bound_unsigned(unsigned _BitInt(I)){}
 
 template <typename T, typename U>
 struct is_same {
@@ -82,6 +72,48 @@ template <typename T>
 struct is_same<T,T> {
   static constexpr bool value = true;
 };
+
+using size_t = decltype(sizeof(0));
+
+#if __cplusplus >= 201703L
+template<auto X> void deduced_bound_auto(_BitInt(X)) {
+  static_assert(is_same<decltype(X), size_t>::value, "");
+  static_assert(X == 9, "");
+}
+template<auto X> void deduced_bound_auto_unsigned(unsigned _BitInt(X)) {
+  static_assert(is_same<decltype(X), size_t>::value, "");
+  static_assert(X == 11, "");
+}
+template<typename T, T V> void deduced_bound_dependent(_BitInt(V)) {
+  static_assert(is_same<T, size_t>::value, "");
+  static_assert(V == 9, "");
+}
+template<typename T, T V> void deduced_bound_dependent_unsigned(unsigned _BitInt(V)) {
+  static_assert(is_same<T, size_t>::value, "");
+  static_assert(V == 11, "");
+}
+#endif
+
+// Ensure ext-int can be used in template places.
+void Templates() {
+  ExtIntTemplParam<13> a;
+  constexpr _BitInt(3) b = 1;
+  ExtIntTemplParam<b> c;
+  constexpr _BitInt(9) d = 1;
+  ExtIntTemplParam<b> e;
+  constexpr unsigned _BitInt(11) f = 1;
+
+  deduced_whole_type(b);
+  deduced_whole_type(f);
+  deduced_bound(b);
+  deduced_bound_unsigned(f);
+#if __cplusplus >= 201703L
+  deduced_bound_auto(d);
+  deduced_bound_auto_unsigned(f);
+  deduced_bound_dependent(d);
+  deduced_bound_dependent_unsigned(f);
+#endif
+}
 
 // Reject vector types:
 // expected-error@+1{{'_BitInt' vector element width must be a power of 2}}

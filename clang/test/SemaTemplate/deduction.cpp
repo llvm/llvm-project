@@ -633,33 +633,6 @@ namespace dependent_list_deduction {
   }
 }
 
-namespace bitint_deduction {
-#if __cplusplus >= 201703L
-  template<auto X> void f(unsigned _BitInt(X)) {
-    static_assert(is_same<decltype(X), decltype(sizeof(0))>::value, "");
-    static_assert(X == 31, "");
-  }
-  template<auto X> void g(_BitInt(X)) {
-    static_assert(is_same<decltype(X), decltype(sizeof(0))>::value, "");
-    static_assert(X == 32, "");
-  }
-  template<typename T, T V> void i(unsigned _BitInt(V)) {
-    static_assert(is_same<T, decltype(sizeof(0))>::value, "");
-    static_assert(V == 33, "");
-  }
-  template<typename T, T V> void j(_BitInt(V)) {
-    static_assert(is_same<T, decltype(sizeof(0))>::value, "");
-    static_assert(V == 34, "");
-  }
-  void h() {
-    f(static_cast<unsigned _BitInt(31)>(0));
-    g(static_cast<_BitInt(32)>(0));
-    i(static_cast<unsigned _BitInt(33)>(0));
-    j(static_cast<_BitInt(34)>(0));
-  }
-#endif
-}
-
 namespace designators {
   template<typename T, int N> constexpr int f(T (&&)[N]) { return N; } // expected-note 2{{couldn't infer template argument 'T'}}
   static_assert(f({1, 2, [20] = 3}) == 3, ""); // expected-error {{no matching function}} expected-warning 2{{C99}} expected-note {{}}
