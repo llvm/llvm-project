@@ -3234,6 +3234,8 @@ Sema::SubstParmVarDecl(ParmVarDecl *OldParm,
 
   InstantiateAttrs(TemplateArgs, OldParm, NewParm);
 
+  NewParm->deduceParmAddressSpace(Context);
+
   return NewParm;
 }
 
@@ -3411,7 +3413,7 @@ Sema::SubstBaseSpecifiers(CXXRecordDecl *Instantiation,
   bool Invalid = false;
   SmallVector<CXXBaseSpecifier*, 4> InstantiatedBases;
   for (const auto &Base : Pattern->bases()) {
-    if (!Base.getType()->isDependentType()) {
+    if (!Base.getType()->isInstantiationDependentType()) {
       if (const CXXRecordDecl *RD = Base.getType()->getAsCXXRecordDecl()) {
         if (RD->isInvalidDecl())
           Instantiation->setInvalidDecl();
@@ -3871,7 +3873,8 @@ bool Sema::InstantiateInClassInitializer(
   // we don't have a scope.
   ContextRAII SavedContext(*this, Instantiation->getParent());
   EnterExpressionEvaluationContext EvalContext(
-      *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
+      *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated,
+      Instantiation);
   ExprEvalContexts.back().DelayedDefaultInitializationContext = {
       PointOfInstantiation, Instantiation, CurContext};
 

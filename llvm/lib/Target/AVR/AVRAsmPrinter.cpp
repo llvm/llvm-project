@@ -162,7 +162,13 @@ bool AVRAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
     return true; // Unknown modifier
 
   const MachineOperand &MO = MI->getOperand(OpNum);
-  (void)MO;
+
+  // Print direct memory operands.
+  if (MO.isGlobal() || MO.isSymbol() || MO.isMCSymbol()) {
+    PrintSymbolOperand(MO, O);
+    return false;
+  }
+
   assert(MO.isReg() && "Unexpected inline asm memory operand");
 
   // TODO: We should be able to look up the alternative name for

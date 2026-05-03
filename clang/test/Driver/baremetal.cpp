@@ -176,6 +176,18 @@
 // RUN:   | FileCheck %s --check-prefix=CHECK-RTLIB-GCC
 // CHECK-RTLIB-GCC: -lgcc
 
+// RUN: %clang -### --target=arm-none-eabi -rtlib=compiler-rt \
+// RUN:   -fprofile-instr-generate %s 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PROFILE
+// CHECK-PROFILE: "{{[^"]*}}libclang_rt.profile.a"
+
+// RUN: %clang -### --target=arm-none-eabi -nostdlib -rtlib=compiler-rt \
+// RUN:   -fprofile-instr-generate %s 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-PROFILE-NOSTDLIB
+// CHECK-PROFILE-NOSTDLIB: "{{[^"]*}}libclang_rt.profile.a"
+// CHECK-PROFILE-NOSTDLIB-NOT: "-lc"
+// CHECK-PROFILE-NOSTDLIB-NOT: "{{[^"]*}}libclang_rt.builtins.a"
+
 // RUN: %clang -### --target=arm-none-eabi -nolibc -rtlib=compiler-rt %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-NOLIBC
 // CHECK-NOLIBC-NOT: "-lc"
