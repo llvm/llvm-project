@@ -314,6 +314,27 @@ struct __transform_exclusive_scan;
 //            _Tp __init,
 //            _BinaryOperation __binary_op,
 //            _UnaryOperation __unary_op) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __transform_inclusive_scan;
+// template <class _Policy, class _ForwardIterator1, class _ForwardIterator2,
+//           class _BinaryOperation, class _UnaryOperation>
+// optional<_ForwardIterator2>
+// operator()(_Policy&&,
+//            _ForwardIterator1 __first, _ForwardIterator1 __last,
+//            _ForwardIterator2 __result,
+//            _BinaryOperation __binary_op,
+//            _UnaryOperation __unary_op) const noexcept;
+//
+// template <class _Policy, class _ForwardIterator1, class _ForwardIterator2,
+//           class _BinaryOperation, class _UnaryOperation, class _Tp>
+// optional<_ForwardIterator2>
+// operator()(_Policy&&,
+//            _ForwardIterator1 __first, _ForwardIterator1 __last,
+//            _ForwardIterator2 __result,
+//            _BinaryOperation __binary_op,
+//            _UnaryOperation __unary_op,
+//            _Tp __init) const noexcept;
 } // namespace __pstl
 _LIBCPP_END_NAMESPACE_STD
 
