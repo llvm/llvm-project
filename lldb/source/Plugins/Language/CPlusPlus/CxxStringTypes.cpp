@@ -60,6 +60,16 @@ static bool CharStringSummaryProvider(ValueObject &valobj, Stream &stream) {
   options.SetStream(&stream);
   options.SetPrefixToken(getElementTraits(ElemType).first);
 
+  CompilerType ty = valobj.GetCompilerType();
+  uint64_t size = 0;
+  if (ty.IsArrayType(nullptr, &size) && size > 0) {
+    options.SetSourceSize(size);
+    options.SetHasSourceSize(true);
+    options.SetBinaryZeroIsTerminator(false);
+    options.SetNeedsZeroTermination(false);
+    options.SetTrimTrailingZeros(true);
+  }
+
   if (!StringPrinter::ReadStringAndDumpToStream<ElemType>(options))
     stream.Printf("Summary Unavailable");
 
@@ -126,6 +136,16 @@ bool lldb_private::formatters::WCharStringSummaryProvider(
   options.SetTargetSP(valobj.GetTargetSP());
   options.SetStream(&stream);
   options.SetPrefixToken("L");
+
+  CompilerType ty = valobj.GetCompilerType();
+  uint64_t arr_size = 0;
+  if (ty.IsArrayType(nullptr, &arr_size) && arr_size > 0) {
+    options.SetSourceSize(arr_size);
+    options.SetHasSourceSize(true);
+    options.SetBinaryZeroIsTerminator(false);
+    options.SetNeedsZeroTermination(false);
+    options.SetTrimTrailingZeros(true);
+  }
 
   switch (wchar_size) {
   case 1:

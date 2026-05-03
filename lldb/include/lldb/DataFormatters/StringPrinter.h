@@ -62,6 +62,10 @@ public:
 
     bool GetBinaryZeroIsTerminator() const { return m_zero_is_terminator; }
 
+    void SetTrimTrailingZeros(bool v) { m_trim_trailing_zeros = v; }
+
+    bool GetTrimTrailingZeros() const { return m_trim_trailing_zeros; }
+
     void SetEscapeNonPrintables(bool e) { m_escape_non_printables = e; }
 
     bool GetEscapeNonPrintables() const { return m_escape_non_printables; }
@@ -95,6 +99,9 @@ public:
     /// True iff a zero bytes ('\0') should terminate the memory region that
     /// is being dumped.
     bool m_zero_is_terminator = true;
+    /// True iff trailing zero bytes should be stripped from the string.
+    /// Mutually exclusive with `m_zero_is_terminator`.
+    bool m_trim_trailing_zeros = false;
     /// The language-specific style for escaping special characters.
     EscapeStyle m_escape_style = EscapeStyle::CXX;
   };

@@ -280,6 +280,11 @@ static bool DumpEncodedBufferToStream(
     const SourceDataType *data_end_ptr = data_ptr + source_size;
 
     const bool zero_is_terminator = dump_options.GetBinaryZeroIsTerminator();
+    const bool trim_trailing_zeros = dump_options.GetTrimTrailingZeros();
+
+    assert((!zero_is_terminator || !trim_trailing_zeros) &&
+           "BinaryZeroIsTerminator and "
+           "TrimTrailingZeros are mutually exclusive");
 
     if (zero_is_terminator) {
       while (data_ptr < data_end_ptr) {
@@ -291,6 +296,12 @@ static bool DumpEncodedBufferToStream(
       }
 
       data_ptr = (const SourceDataType *)data.GetDataStart();
+    } else if (trim_trailing_zeros) {
+      while (data_end_ptr != data_ptr) {
+        if (*(data_end_ptr - 1))
+          break;
+        data_end_ptr--;
+      }
     }
 
     lldb::WritableDataBufferSP utf8_data_buffer_sp;
@@ -385,6 +396,7 @@ lldb_private::formatters::StringPrinter::ReadBufferAndDumpToStreamOptions::
   SetQuote(options.GetQuote());
   SetEscapeNonPrintables(options.GetEscapeNonPrintables());
   SetBinaryZeroIsTerminator(options.GetBinaryZeroIsTerminator());
+  SetTrimTrailingZeros(options.GetTrimTrailingZeros());
   SetEscapeStyle(options.GetEscapeStyle());
 }
 
