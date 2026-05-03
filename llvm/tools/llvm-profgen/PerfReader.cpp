@@ -11,12 +11,14 @@
 #include "ProfileGenerator.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
+#include "llvm/ProfileData/ETMTraceDecoder.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/TargetParser/Triple.h"
 
 #define DEBUG_TYPE "perf-reader"
 
@@ -66,6 +68,13 @@ cl::opt<bool> TimeProfGen("time-profgen", cl::desc("Time llvm-profgen phases"),
 
 static const char *TimerGroupName = "profgen";
 static const char *TimerGroupDesc = "llvm-profgen";
+
+static cl::opt<std::string> FilterBuildID(
+    "filter-build-id",
+    cl::desc("Override auto-detected build ID for filtering perfscript "
+             "addresses in [buildid:]addr format. When set, only addresses "
+             "with a matching build ID prefix are kept."),
+    cl::cat(ProfGenCategory));
 
 namespace sampleprof {
 
@@ -351,32 +360,31 @@ bool VirtualUnwinder::unwind(const PerfSample *Sample, uint64_t Repeat) {
 }
 
 std::unique_ptr<PerfReaderBase>
-PerfReaderBase::create(ProfiledBinary *Binary, PerfInputFile &PerfInput,
+PerfReaderBase::create(ProfiledBinary *Binary, InputFile &Input,
                        std::optional<int32_t> PIDFilter) {
   std::unique_ptr<PerfReaderBase> PerfReader;
 
-  if (PerfInput.Format == PerfFormat::UnsymbolizedProfile) {
+  if (Input.Format == InputFormat::UnsymbolizedProfile) {
     PerfReader.reset(
-        new UnsymbolizedProfileReader(Binary, PerfInput.InputFile));
+        new UnsymbolizedProfileReader(Binary, Input.InputFilePath));
     return PerfReader;
   }
 
   // For perf data input, we need to convert them into perf script first.
   // If this is a kernel perf file, there is no need for retrieving PIDs.
-  if (PerfInput.Format == PerfFormat::PerfData)
-    PerfInput = PerfScriptReader::convertPerfDataToTrace(
-        Binary, Binary->isKernel(), PerfInput, PIDFilter);
+  if (Input.Format == InputFormat::PerfData)
+    Input = PerfScriptReader::convertPerfDataToTrace(Binary, Binary->isKernel(),
+                                                     Input, PIDFilter);
 
-  assert((PerfInput.Format == PerfFormat::PerfScript) &&
+  assert((Input.Format == InputFormat::PerfScript) &&
          "Should be a perfscript!");
 
-  PerfInput.Content =
-      PerfScriptReader::checkPerfScriptType(PerfInput.InputFile);
-  if (PerfInput.Content == PerfContent::LBRStack) {
+  Input.Content = PerfScriptReader::checkPerfScriptType(Input.InputFilePath);
+  if (Input.Content == PerfContent::LBRStack) {
     PerfReader.reset(
-        new HybridPerfReader(Binary, PerfInput.InputFile, PIDFilter));
-  } else if (PerfInput.Content == PerfContent::LBR) {
-    PerfReader.reset(new LBRPerfReader(Binary, PerfInput.InputFile, PIDFilter));
+        new HybridPerfReader(Binary, Input.InputFilePath, PIDFilter));
+  } else if (Input.Content == PerfContent::LBR) {
+    PerfReader.reset(new LBRPerfReader(Binary, Input.InputFilePath, PIDFilter));
   } else {
     exitWithError("Unsupported perfscript!");
   }
@@ -455,11 +463,11 @@ Error PerfReaderBase::parseDataAccessPerfTraces(
   return Error::success();
 }
 
-PerfInputFile
+InputFile
 PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary, bool SkipPID,
-                                         PerfInputFile &File,
+                                         InputFile &File,
                                          std::optional<int32_t> PIDFilter) {
-  StringRef PerfData = File.InputFile;
+  StringRef PerfData = File.InputFilePath;
   // Run perf script to retrieve PIDs matching binary we're interested in.
   auto PerfExecutable = sys::Process::FindInEnvPath("PATH", "perf");
   if (!PerfExecutable) {
@@ -521,7 +529,7 @@ PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary, bool SkipPID,
   }
   sys::ExecuteAndWait(PerfPath, ScriptSampleArgs, std::nullopt, Redirects);
 
-  return {std::string(PerfTraceFile), PerfFormat::PerfScript,
+  return {std::string(PerfTraceFile), InputFormat::PerfScript,
           PerfContent::UnknownContent};
 }
 
@@ -663,6 +671,38 @@ void HybridPerfReader::unwindSamples() {
                      "frame to match.");
 }
 
+/// Parse a hex address from \p Str.
+/// Parse an optional [buildid:] prefix into \p BuildID.
+static bool parseAddress(StringRef Str, uint64_t &Addr, bool HasPrefix,
+                         StringRef &BuildID) {
+  size_t ColonPos = Str.find(':');
+  if (ColonPos != StringRef::npos) {
+    BuildID = Str.substr(0, ColonPos);
+    Str = Str.substr(ColonPos + 1);
+  }
+  if (Str.consume_front("0x") != HasPrefix)
+    return true;
+  return Str.getAsInteger(16, Addr);
+}
+
+/// Return the build ID to use for filtering perfscript addresses.
+/// If --filter-build-id is specified, use it as an override (with a warning
+/// if it doesn't match the binary's auto-detected build ID).
+/// Otherwise, use the auto-detected value from the binary.
+static StringRef getFilterBuildID(const ProfiledBinary *Binary) {
+  StringRef BinaryBuildID = Binary->getFilterBuildID();
+  if (FilterBuildID.getNumOccurrences() == 0)
+    return BinaryBuildID;
+  static bool Warned = false;
+  if (!Warned && !BinaryBuildID.empty() && FilterBuildID != BinaryBuildID) {
+    WithColor::warning() << "--filter-build-id=" << FilterBuildID
+                         << " does not match binary build ID " << BinaryBuildID
+                         << "\n";
+    Warned = true;
+  }
+  return FilterBuildID;
+}
+
 bool PerfScriptReader::extractLBRStack(TraceStream &TraceIt,
                                        SmallVectorImpl<LBREntry> &LBRStack) {
   // The raw format of LBR stack is like:
@@ -680,8 +720,9 @@ bool PerfScriptReader::extractLBRStack(TraceStream &TraceIt,
   // Skip the leading instruction pointer.
   size_t Index = 0;
   uint64_t LeadingAddr;
+  StringRef LeadingBuildID;
   if (!Records.empty() && !Records[0].contains('/')) {
-    if (Records[0].getAsInteger(16, LeadingAddr)) {
+    if (parseAddress(Records[0], LeadingAddr, false, LeadingBuildID)) {
       WarnInvalidLBR(TraceIt);
       TraceIt.advance();
       return false;
@@ -701,10 +742,12 @@ bool PerfScriptReader::extractLBRStack(TraceStream &TraceIt,
     Token.split(Addresses, "/");
     uint64_t Src;
     uint64_t Dst;
+    StringRef SrcBuildID, DstBuildID;
 
     // Stop at broken LBR records.
-    if (Addresses.size() < 2 || Addresses[0].substr(2).getAsInteger(16, Src) ||
-        Addresses[1].substr(2).getAsInteger(16, Dst)) {
+    if (Addresses.size() < 2 ||
+        parseAddress(Addresses[0], Src, true, SrcBuildID) ||
+        parseAddress(Addresses[1], Dst, true, DstBuildID)) {
       WarnInvalidLBR(TraceIt);
       break;
     }
@@ -712,8 +755,12 @@ bool PerfScriptReader::extractLBRStack(TraceStream &TraceIt,
     // Canonicalize to use preferred load address as base address.
     Src = Binary->canonicalizeVirtualAddress(Src);
     Dst = Binary->canonicalizeVirtualAddress(Dst);
-    bool SrcIsInternal = Binary->addressIsCode(Src);
-    bool DstIsInternal = Binary->addressIsCode(Dst);
+    // Filter by build ID.
+    StringRef BinaryBuildID = getFilterBuildID(Binary);
+    bool SrcIsInternal =
+        SrcBuildID == BinaryBuildID && Binary->addressIsCode(Src);
+    bool DstIsInternal =
+        DstBuildID == BinaryBuildID && Binary->addressIsCode(Dst);
     if (!SrcIsInternal)
       Src = ExternalAddr;
     if (!DstIsInternal)
@@ -731,16 +778,17 @@ bool PerfScriptReader::extractLBRStack(TraceStream &TraceIt,
 bool PerfScriptReader::extractCallstack(TraceStream &TraceIt,
                                         SmallVectorImpl<uint64_t> &CallStack) {
   // The raw format of call stack is like:
-  //            4005dc      # leaf frame
+  //            4005dc               # leaf frame (no buildid)
   //	          400634
-  //	          400684      # root frame
+  //	          deadbeef:400684      # root frame (with buildid prefix)
   // It's in bottom-up order with each frame in one line.
 
   // Extract stack frames from sample
-  while (!TraceIt.isAtEoF() && !TraceIt.getCurrentLine().starts_with(" 0x")) {
+  while (!TraceIt.isAtEoF() && !isLBRSample(TraceIt.getCurrentLine(), true)) {
     StringRef FrameStr = TraceIt.getCurrentLine().ltrim();
     uint64_t FrameAddr = 0;
-    if (FrameStr.getAsInteger(16, FrameAddr)) {
+    StringRef FrameBuildID;
+    if (parseAddress(FrameStr, FrameAddr, false, FrameBuildID)) {
       // We might parse a non-perf sample line like empty line and comments,
       // skip it
       TraceIt.advance();
@@ -750,7 +798,9 @@ bool PerfScriptReader::extractCallstack(TraceStream &TraceIt,
 
     FrameAddr = Binary->canonicalizeVirtualAddress(FrameAddr);
     // Currently intermixed frame from different binaries is not supported.
-    if (!Binary->addressIsCode(FrameAddr)) {
+    bool IsExternal = FrameBuildID != getFilterBuildID(Binary) ||
+                      !Binary->addressIsCode(FrameAddr);
+    if (IsExternal) {
       if (CallStack.empty())
         NumLeafExternalFrame++;
       // Push a special value(ExternalAddr) for the external frames so that
@@ -785,7 +835,7 @@ bool PerfScriptReader::extractCallstack(TraceStream &TraceIt,
   // Skip other unrelated line, find the next valid LBR line
   // Note that even for empty call stack, we should skip the address at the
   // bottom, otherwise the following pass may generate a truncated callstack
-  while (!TraceIt.isAtEoF() && !TraceIt.getCurrentLine().starts_with(" 0x")) {
+  while (!TraceIt.isAtEoF() && !isLBRSample(TraceIt.getCurrentLine(), true)) {
     TraceIt.advance();
   }
   // Filter out broken stack sample. We may not have complete frame info
@@ -830,14 +880,14 @@ void HybridPerfReader::parseSample(TraceStream &TraceIt, uint64_t Count) {
   // Parsing call stack and populate into PerfSample.CallStack
   if (!extractCallstack(TraceIt, Sample->CallStack)) {
     // Skip the next LBR line matched current call stack
-    if (!TraceIt.isAtEoF() && TraceIt.getCurrentLine().starts_with(" 0x"))
+    if (!TraceIt.isAtEoF() && isLBRSample(TraceIt.getCurrentLine(), true))
       TraceIt.advance();
     return;
   }
 
   warnIfMissingMMap();
 
-  if (!TraceIt.isAtEoF() && TraceIt.getCurrentLine().starts_with(" 0x")) {
+  if (!TraceIt.isAtEoF() && isLBRSample(TraceIt.getCurrentLine(), true)) {
     // Parsing LBR stack and populate into PerfSample.LBRStack
     if (extractLBRStack(TraceIt, Sample->LBRStack)) {
       if (IgnoreStackSamples) {
@@ -1163,14 +1213,17 @@ void PerfScriptReader::parseAndAggregateTrace() {
 // A LBR sample is like:
 // 40062f 0x5c6313f/0x5c63170/P/-/-/0  0x5c630e7/0x5c63130/P/-/-/0 ...
 // A heuristic for fast detection by checking whether a
-// leading "  0x" and the '/' exist.
-bool PerfScriptReader::isLBRSample(StringRef Line) {
+// leading "  0x" or " buildid:0x" and the '/' exist.
+bool PerfScriptReader::isLBRSample(StringRef Line, bool CheckLineStart) {
   // Skip the leading instruction pointer
   SmallVector<StringRef, 32> Records;
-  Line.trim().split(Records, " ", 2, false);
+  if (!CheckLineStart)
+    Line = Line.trim();
+  Line.split(Records, " ", 2, CheckLineStart);
   if (Records.size() < 2)
     return false;
-  if (Records[1].starts_with("0x") && Records[1].contains('/'))
+  if ((Records[1].starts_with("0x") || Records[1].contains(":0x")) &&
+      Records[1].contains('/'))
     return true;
   return false;
 }
@@ -1208,13 +1261,15 @@ PerfContent PerfScriptReader::checkPerfScriptType(StringRef FileName) {
 
     // Detect sample with call stack
     int32_t Count = 0;
+    StringRef FrameBuildId;
     while (!TraceIt.isAtEoF() &&
-           !TraceIt.getCurrentLine().ltrim().getAsInteger(16, FrameAddr)) {
+           !parseAddress(TraceIt.getCurrentLine().ltrim(), FrameAddr, false,
+                         FrameBuildId)) {
       Count++;
       TraceIt.advance();
     }
     if (!TraceIt.isAtEoF()) {
-      if (isLBRSample(TraceIt.getCurrentLine())) {
+      if (isLBRSample(TraceIt.getCurrentLine(), false)) {
         if (Count > 0)
           return PerfContent::LBRStack;
         else
@@ -1422,6 +1477,60 @@ void PerfScriptReader::parsePerfTraces() {
 }
 
 SmallVector<CleanupInstaller, 2> PerfScriptReader::TempFileCleanups;
+
+void ETMReader::recordProcessedRange(uint64_t Start, uint64_t End,
+                                     uint64_t Count) {
+  assert(!Counters.empty() && "Counters should not be empty!");
+  auto &Counter = Counters.begin()->second;
+  Counter.recordRangeCount(Start, End, Count);
+}
+
+class ETMCallback : public ETMDecoder::Callback {
+  ETMReader *Reader;
+
+public:
+  ETMCallback(ETMReader *R) : Reader(R) {}
+  void processInstructionRange(uint64_t Start, uint64_t End) override {
+    Reader->recordProcessedRange(Start, End, 1);
+  }
+};
+
+void ETMReader::parseETMTraces() {
+  auto BufferOrErr = MemoryBuffer::getFile(TraceFile);
+  if (std::error_code EC = BufferOrErr.getError())
+    exitWithError("Could not open ETM trace file: " + EC.message());
+
+  ArrayRef<uint8_t> Data(
+      reinterpret_cast<const uint8_t *>((*BufferOrErr)->getBufferStart()),
+      (*BufferOrErr)->getBufferSize());
+
+  // There is no context for ETM instruction traces.
+  // Initialize the SampleCounters map with a single empty context key
+  // to aggregate all instruction hits into a global bucket.
+  auto Key = std::make_shared<StringBasedCtxKey>();
+  Counters.emplace(Hashable<ContextKey>(Key), SampleCounter());
+
+  // The protocol utilizes a 0x80 byte as an initial synchronization header.
+  // Perform a manual search for this sync point to discard any leading
+  // padding or truncated packets before decoding begins.
+  size_t StartIdx = 0;
+  while (StartIdx < Data.size() && Data[StartIdx] != 0x80)
+    StartIdx++;
+  if (StartIdx >= Data.size())
+    exitWithError("No synchronization header (0x80) found in the bitstream.");
+  ArrayRef<uint8_t> TraceSlice = Data.slice(StartIdx);
+
+  auto DecoderOrErr = ETMDecoder::create(
+      Binary->getBinary(), Binary->getTriple(), static_cast<uint8_t>(TraceID));
+
+  if (!DecoderOrErr)
+    exitWithError(toString(DecoderOrErr.takeError()));
+  auto Decoder = std::move(*DecoderOrErr);
+
+  ETMCallback CB(this);
+  if (Error E = Decoder->processTrace(TraceSlice, CB))
+    exitWithError(toString(std::move(E)));
+}
 
 } // end namespace sampleprof
 } // end namespace llvm

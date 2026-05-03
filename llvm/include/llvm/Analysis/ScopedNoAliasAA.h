@@ -22,6 +22,7 @@
 
 namespace llvm {
 
+class FenceInst;
 class Function;
 class MDNode;
 class MemoryLocation;
@@ -47,6 +48,9 @@ public:
                                     AAQueryInfo &AAQI);
   LLVM_ABI ModRefInfo getModRefInfo(const CallBase *Call1,
                                     const CallBase *Call2, AAQueryInfo &AAQI);
+  LLVM_ABI ModRefInfo getModRefInfo(const FenceInst *F,
+                                    const MemoryLocation &Loc,
+                                    AAQueryInfo &AAQI);
 
   LLVM_ABI static void
   collectScopedDomains(const MDNode *NoAlias,

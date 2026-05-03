@@ -374,14 +374,11 @@ public:
         Intrinsic::experimental_vp_strided_store,
         Intrinsic::experimental_vp_reverse,
         Intrinsic::experimental_vp_splice,
-        Intrinsic::vp_add,
         Intrinsic::vp_cttz_elts,
         Intrinsic::vp_gather,
-        Intrinsic::vp_is_fpclass,
         Intrinsic::vp_load,
         Intrinsic::vp_load_ff,
         Intrinsic::vp_merge,
-        Intrinsic::vp_mul,
         Intrinsic::vp_reduce_add,
         Intrinsic::vp_reduce_and,
         Intrinsic::vp_reduce_fadd,
@@ -399,15 +396,10 @@ public:
         Intrinsic::vp_reduce_xor,
         Intrinsic::vp_scatter,
         Intrinsic::vp_sdiv,
-        Intrinsic::vp_select,
-        Intrinsic::vp_sext,
         Intrinsic::vp_srem,
         Intrinsic::vp_store,
-        Intrinsic::vp_sub,
-        Intrinsic::vp_trunc,
         Intrinsic::vp_udiv,
-        Intrinsic::vp_urem,
-        Intrinsic::vp_zext};
+        Intrinsic::vp_urem};
     if (!ST->hasVInstructions() ||
         (PI.getIntrinsicID() == Intrinsic::vp_reduce_mul &&
          cast<VectorType>(PI.getArgOperand(1)->getType())
