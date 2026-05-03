@@ -22,6 +22,7 @@
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "CodeGenPGO.h"
+#include "QualTypeMapper.h"
 #include "TargetInfo.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
@@ -33,6 +34,7 @@
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/CodeGen/SwiftCallingConv.h"
 #include "llvm/ABI/FunctionInfo.h"
+#include "llvm/ABI/IRTypeMapper.h"
 #include "llvm/ABI/TargetInfo.h"
 #include "llvm/ABI/Types.h"
 #include "llvm/ADT/STLExtras.h"
@@ -830,23 +832,48 @@ void computeSPIRKernelABIInfo(CodeGenModule &CGM, CGFunctionInfo &FI);
 } // namespace CodeGen
 } // namespace clang
 
-ABIArgInfo CodeGenTypes::convertABIArgInfo(const llvm::abi::ArgInfo &AbiInfo,
-                                           QualType Type) {
+void CodeGenModule::computeABIInfoUsingLib(CGFunctionInfo &FI) {
+  SmallVector<const llvm::abi::Type *> MappedArgTypes;
+  MappedArgTypes.reserve(FI.arg_size());
+  for (const auto &Arg : FI.arguments())
+    MappedArgTypes.push_back(AbiMapper->convertType(Arg.type));
+
+  std::optional<unsigned> NumRequired;
+  RequiredArgs Required = FI.getRequiredArgs();
+  if (Required.allowsOptionalArgs())
+    NumRequired = Required.getNumRequiredArgs();
+
+  llvm::abi::FunctionInfo *AbiFI = llvm::abi::FunctionInfo::create(
+      FI.getCallingConvention(), AbiMapper->convertType(FI.getReturnType()),
+      MappedArgTypes, NumRequired);
+
+  getLLVMABITargetInfo(AbiMapper->getTypeBuilder()).computeInfo(*AbiFI);
+
+  FI.getReturnInfo() =
+      convertABIArgInfo(AbiFI->getReturnInfo(), FI.getReturnType());
+
+  for (auto [CGArg, AbiArg] :
+       llvm::zip_equal(FI.arguments(), AbiFI->arguments()))
+    CGArg.info = convertABIArgInfo(AbiArg.Info, CGArg.type);
+}
+
+ABIArgInfo CodeGenModule::convertABIArgInfo(const llvm::abi::ArgInfo &AbiInfo,
+                                            QualType Type) {
   switch (AbiInfo.getKind()) {
   case llvm::abi::ArgInfo::Direct: {
     llvm::Type *CoercedType = nullptr;
     if (AbiInfo.getCoerceToType())
-      CoercedType = AbiReverseMapper.convertType(AbiInfo.getCoerceToType());
+      CoercedType = AbiReverseMapper->convertType(AbiInfo.getCoerceToType());
     if (!CoercedType)
-      CoercedType = ConvertType(Type);
+      CoercedType = getTypes().ConvertType(Type);
     return ABIArgInfo::getDirect(CoercedType, AbiInfo.getDirectOffset());
   }
   case llvm::abi::ArgInfo::Extend: {
     llvm::Type *CoercedType = nullptr;
     if (AbiInfo.getCoerceToType())
-      CoercedType = AbiReverseMapper.convertType(AbiInfo.getCoerceToType());
+      CoercedType = AbiReverseMapper->convertType(AbiInfo.getCoerceToType());
     if (!CoercedType)
-      CoercedType = ConvertType(Type);
+      CoercedType = getTypes().ConvertType(Type);
     if (AbiInfo.isSignExt())
       return ABIArgInfo::getSignExtend(Type, CoercedType);
     if (AbiInfo.isZeroExt())
@@ -916,26 +943,7 @@ const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
   } else if (info.getCC() == CC_Swift || info.getCC() == CC_SwiftAsync) {
     swiftcall::computeABIInfo(CGM, *FI);
   } else if (CGM.shouldUseLLVMABILowering()) {
-    SmallVector<const llvm::abi::Type *, 8> MappedArgTypes;
-    MappedArgTypes.reserve(argTypes.size());
-    for (CanQualType ArgType : argTypes)
-      MappedArgTypes.push_back(AbiMapper.convertType(ArgType));
-
-    std::optional<unsigned> NumRequired;
-    if (required.allowsOptionalArgs())
-      NumRequired = required.getNumRequiredArgs();
-
-    llvm::abi::FunctionInfo *AbiFI = llvm::abi::FunctionInfo::create(
-        CC, AbiMapper.convertType(resultType), MappedArgTypes, NumRequired);
-
-    CGM.getLLVMABITargetInfo(AbiMapper.getTypeBuilder()).computeInfo(*AbiFI);
-
-    FI->getReturnInfo() =
-        convertABIArgInfo(AbiFI->getReturnInfo(), FI->getReturnType());
-
-    for (auto [CGArg, AbiArg] :
-         llvm::zip_equal(FI->arguments(), AbiFI->arguments()))
-      CGArg.info = convertABIArgInfo(AbiArg.Info, CGArg.type);
+    CGM.computeABIInfoUsingLib(*FI);
   } else {
     CGM.getABIInfo().computeInfo(*FI);
   }

@@ -145,14 +145,10 @@ IRTypeMapper::createStructFromFields(ArrayRef<abi::FieldInfo> Fields,
           FieldTypes.push_back(PaddingType);
         CurrentOffset = Field.OffsetInBits;
       }
+      assert(!Field.IsBitField && "bitfields should not reach IR type mapping");
       llvm::Type *FieldType = convertType(Field.FieldType);
-      if (Field.IsBitField && Field.BitFieldWidth > 0) {
-        FieldType = llvm::IntegerType::get(Context, Field.BitFieldWidth);
-        CurrentOffset += Field.BitFieldWidth;
-      } else {
-        FieldTypes.push_back(FieldType);
-        CurrentOffset += Field.FieldType->getSizeInBits().getFixedValue();
-      }
+      FieldTypes.push_back(FieldType);
+      CurrentOffset += Field.FieldType->getSizeInBits().getFixedValue();
     }
     uint64_t TotalSizeBits = Size.getFixedValue();
     if (CurrentOffset < TotalSizeBits) {

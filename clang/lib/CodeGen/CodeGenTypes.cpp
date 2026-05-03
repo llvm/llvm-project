@@ -33,10 +33,7 @@ using namespace CodeGen;
 
 CodeGenTypes::CodeGenTypes(CodeGenModule &cgm)
     : CGM(cgm), Context(cgm.getContext()), TheModule(cgm.getModule()),
-      Target(cgm.getTarget()),
-      AbiMapper(cgm.getContext(), cgm.getModule().getDataLayout(), AbiAlloc),
-      AbiReverseMapper(cgm.getModule().getContext(),
-                       cgm.getModule().getDataLayout()) {
+      Target(cgm.getTarget()) {
   SkippedLayout = false;
   LongDoubleReferenced = false;
 }
