@@ -14192,7 +14192,9 @@ static SDValue PerformMULCombine(SDNode *N, SelectionDAG &DAG,
   if (!Subtarget->isThumb()) {
     auto IsAddSubWith1 = [&](SDValue V) -> bool {
       AddSubOpc = V->getOpcode();
-      if ((AddSubOpc == ISD::ADD || AddSubOpc == ISD::SUB) && V->hasOneUse()) {
+      if ((AddSubOpc == ISD::ADD ||
+           (AddSubOpc == ISD::SUB && Subtarget->hasV6T2Ops())) &&
+          V->hasOneUse()) {
         SDValue Opnd = V->getOperand(1);
         MulOper = V->getOperand(0);
         if (AddSubOpc == ISD::SUB)

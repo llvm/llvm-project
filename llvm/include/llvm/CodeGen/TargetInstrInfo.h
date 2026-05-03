@@ -1307,7 +1307,7 @@ public:
   /// Return true when a code sequence can improve throughput. It
   /// should be called only for instructions in loops.
   /// \param Pattern - combiner pattern
-  virtual bool isThroughputPattern(unsigned Pattern) const;
+  virtual bool isThroughputPattern(unsigned Pattern) const { return false; }
 
   /// Return the objective of a combiner pattern.
   /// \param Pattern - combiner pattern

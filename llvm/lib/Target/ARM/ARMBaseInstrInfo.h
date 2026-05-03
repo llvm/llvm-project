@@ -39,6 +39,20 @@ namespace llvm {
 class ARMBaseRegisterInfo;
 class ARMSubtarget;
 
+
+// ARM MachineCombiner patterns
+enum ARMMachineCombinerPattern : unsigned {
+  // These are patterns used to reduce the length of dependence chain.
+  SUBADD_OP1 = MachineCombinerPattern::TARGET_PATTERN_START,
+  SUBADD_OP2,
+
+  // These are multiply-add patterns matched by the ARM machine combiner.
+  MULADD_OP1,
+  MULADD_OP2,
+  MULSUB_OP1,
+  MULSUB_OP2
+};
+
 class ARMBaseInstrInfo : public ARMGenInstrInfo {
   const ARMSubtarget &Subtarget;
 
@@ -185,6 +199,19 @@ public:
                          bool SkipDead) const override;
 
   bool isPredicable(const MachineInstr &MI) const override;
+
+  /// Return true when there is potentially a faster code sequence
+  /// for an instruction chain ending in ``Root``. All potential patterns are
+  /// listed in the ``Patterns`` array.
+  bool getMachineCombinerPatterns(MachineInstr &Root,
+                                  SmallVectorImpl<unsigned> &Patterns,
+                                  bool DoRegPressureReduce) const override;
+
+  void genAlternativeCodeSequence(
+      MachineInstr &Root, unsigned Pattern,
+      SmallVectorImpl<MachineInstr *> &InsInstrs,
+      SmallVectorImpl<MachineInstr *> &DelInstrs,
+      DenseMap<Register, unsigned> &InstrIdxForVirtReg) const override;
 
   bool isAssociativeAndCommutative(const MachineInstr &Inst,
                                    bool Invert) const override;

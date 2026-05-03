@@ -1183,11 +1183,6 @@ bool TargetInstrInfo::getMachineCombinerPatterns(
   return false;
 }
 
-/// Return true when a code sequence can improve loop throughput.
-bool TargetInstrInfo::isThroughputPattern(unsigned Pattern) const {
-  return false;
-}
-
 CombinerObjective
 TargetInstrInfo::getCombinerObjective(unsigned Pattern) const {
   switch (Pattern) {

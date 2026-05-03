@@ -600,6 +600,291 @@ template <> bool IsCPSRDead<MachineInstr>(const MachineInstr *MI) {
 
 } // end namespace llvm
 
+//
+// Utility routine that checks if \param MO is defined by an
+// \param CombineOpc instruction in the basic block \param MBB.
+// ARM GPR \p MUL does not use AArch64-style MADD-with-zero; require \p MUL.
+static bool canCombine(MachineBasicBlock &MBB, MachineOperand &MO,
+                       unsigned CombineOpc) {
+  MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+  MachineInstr *MI = nullptr;
+
+  if (MO.isReg() && MO.getReg().isVirtual())
+    MI = MRI.getUniqueVRegDef(MO.getReg());
+  // And it needs to be in the trace (otherwise, it won't have a depth).
+  if (!MI || MI->getParent() != &MBB || MI->getOpcode() != CombineOpc)
+    return false;
+  // Must only used by the user we combine with.
+  if (!MRI.hasOneNonDBGUse(MI->getOperand(0).getReg()))
+    return false;
+
+  return llvm::IsCPSRDead(MI);
+}
+
+//
+// Is \param MO defined by an integer multiply and can be combined?
+static bool canCombineWithMUL(MachineBasicBlock &MBB, MachineOperand &MO,
+                              unsigned MulOpc) {
+  return canCombine(MBB, MO, MulOpc);
+}
+
+// GPR register/register add/sub roots that can fuse with ARM-mode \p MUL.
+static bool isCombineInstrCandidate(unsigned Opc) {
+  switch (Opc) {
+  case ARM::ADDrr:
+  case ARM::SUBrr:
+    return true;
+  default:
+    return false;
+  }
+}
+
+/// Append predicate / cc operands from \p Root onto \p MIB so they match \p
+/// NewDesc's trailing operands (MLS has predicate only; MLA matches Root).
+static void armAppendConditionOperands(MachineInstrBuilder &MIB,
+                                       const MachineInstr &Root,
+                                       const MCInstrDesc &NewDesc) {
+  int RP = Root.findFirstPredOperandIdx();
+  int NP = NewDesc.findFirstPredOperandIdx();
+  assert(RP >= 0 && NP >= 0 && "Expected predicate operands");
+  unsigned NTailNew = NewDesc.getNumOperands() - NP;
+  assert(RP + NTailNew <= Root.getNumOperands() &&
+         "Root does not supply enough predicate/cc operands");
+  for (unsigned i = 0; i < NTailNew; ++i)
+    MIB.add(Root.getOperand(RP + i));
+}
+
+/// Emit MLA merging ARM-mode \p Root with ARM::MUL feeding operand \p IdxMulOpd.
+static MachineInstr *genArmGPRMLA(MachineFunction &MF,
+                                  MachineRegisterInfo &MRI,
+                                  const TargetInstrInfo *TII, MachineInstr &Root,
+                                  SmallVectorImpl<MachineInstr *> &InsInstrs,
+                                  unsigned IdxMulOpd,
+                                  const TargetRegisterClass *RC) {
+  assert(IdxMulOpd == 1 || IdxMulOpd == 2);
+  MachineInstr *Mul =
+      MRI.getUniqueVRegDef(Root.getOperand(IdxMulOpd).getReg());
+  assert(Mul->getOpcode() == ARM::MUL && "Expected ARM-mode MUL");
+
+  Register Dst = Root.getOperand(0).getReg();
+  Register MulRn = Mul->getOperand(1).getReg();
+  bool MulRnKill = Mul->getOperand(1).isKill();
+  Register MulRm = Mul->getOperand(2).getReg();
+  bool MulRmKill = Mul->getOperand(2).isKill();
+  unsigned IdxOther = IdxMulOpd == 1 ? 2 : 1;
+  Register Other = Root.getOperand(IdxOther).getReg();
+  bool OtherKill = Root.getOperand(IdxOther).isKill();
+
+  if (Dst.isVirtual())
+    MRI.constrainRegClass(Dst, RC);
+  if (MulRn.isVirtual())
+    MRI.constrainRegClass(MulRn, RC);
+  if (MulRm.isVirtual())
+    MRI.constrainRegClass(MulRm, RC);
+  if (Other.isVirtual())
+    MRI.constrainRegClass(Other, RC);
+
+  MachineInstrBuilder MIB =
+      BuildMI(MF, MIMetadata(Root), TII->get(ARM::MLA), Dst)
+          .addReg(MulRn, getKillRegState(MulRnKill))
+          .addReg(MulRm, getKillRegState(MulRmKill))
+          .addReg(Other, getKillRegState(OtherKill));
+  armAppendConditionOperands(MIB, Root, TII->get(ARM::MLA));
+  InsInstrs.push_back(MIB);
+  return Mul;
+}
+
+/// Emit MLS Rd = Ra - Rn*Rm for SUBrr where \p IdxMulOpd points at the product.
+static MachineInstr *genArmGPRMLS(MachineFunction &MF,
+                                  MachineRegisterInfo &MRI,
+                                  const TargetInstrInfo *TII, MachineInstr &Root,
+                                  SmallVectorImpl<MachineInstr *> &InsInstrs,
+                                  unsigned IdxMulOpd,
+                                  const TargetRegisterClass *RC) {
+  assert(IdxMulOpd == 2 &&
+         "MLS fusion only matches SUB when multiply uses subtract operand");
+  MachineInstr *Mul =
+      MRI.getUniqueVRegDef(Root.getOperand(IdxMulOpd).getReg());
+  assert(Mul->getOpcode() == ARM::MUL && "Expected ARM-mode MUL");
+
+  Register Dst = Root.getOperand(0).getReg();
+  Register MulRn = Mul->getOperand(1).getReg();
+  bool MulRnKill = Mul->getOperand(1).isKill();
+  Register MulRm = Mul->getOperand(2).getReg();
+  bool MulRmKill = Mul->getOperand(2).isKill();
+  Register Ra = Root.getOperand(1).getReg();
+  bool RaKill = Root.getOperand(1).isKill();
+
+  if (Dst.isVirtual())
+    MRI.constrainRegClass(Dst, RC);
+  if (MulRn.isVirtual())
+    MRI.constrainRegClass(MulRn, RC);
+  if (MulRm.isVirtual())
+    MRI.constrainRegClass(MulRm, RC);
+  if (Ra.isVirtual())
+    MRI.constrainRegClass(Ra, RC);
+
+  MachineInstrBuilder MIB =
+      BuildMI(MF, MIMetadata(Root), TII->get(ARM::MLS), Dst)
+          .addReg(MulRn, getKillRegState(MulRnKill))
+          .addReg(MulRm, getKillRegState(MulRmKill))
+          .addReg(Ra, getKillRegState(RaKill));
+  armAppendConditionOperands(MIB, Root, TII->get(ARM::MLS));
+  InsInstrs.push_back(MIB);
+  return Mul;
+}
+
+/// SUBrr with mul on operand 1: emit RSB + MLA like AArch64 SUB+0 + MADD.
+static MachineInstr *genArmGPRMLASubMulOp1(
+    MachineFunction &MF, MachineRegisterInfo &MRI, const TargetInstrInfo *TII,
+    MachineInstr &Root, SmallVectorImpl<MachineInstr *> &InsInstrs,
+    DenseMap<Register, unsigned> &InstrIdxForVirtReg) {
+  MachineInstr *Mul =
+      MRI.getUniqueVRegDef(Root.getOperand(1).getReg());
+  assert(Mul->getOpcode() == ARM::MUL && "Expected ARM-mode MUL");
+
+  Register Dst = Root.getOperand(0).getReg();
+  Register Other = Root.getOperand(2).getReg();
+  bool OtherKill = Root.getOperand(2).isKill();
+  Register MulRn = Mul->getOperand(1).getReg();
+  bool MulRnKill = Mul->getOperand(1).isKill();
+  Register MulRm = Mul->getOperand(2).getReg();
+  bool MulRmKill = Mul->getOperand(2).isKill();
+
+  const TargetRegisterClass *MLARc = &ARM::GPRnopcRegClass;
+  Register NegVr = MRI.createVirtualRegister(MLARc);
+  MachineInstrBuilder RsbMIB =
+      BuildMI(MF, MIMetadata(Root), TII->get(ARM::RSBri), NegVr)
+          .addReg(Other, getKillRegState(OtherKill))
+          .addImm(0);
+  armAppendConditionOperands(RsbMIB, Root, TII->get(ARM::RSBri));
+  InsInstrs.push_back(RsbMIB);
+  InstrIdxForVirtReg.insert(std::make_pair(NegVr, 0));
+
+  if (Dst.isVirtual())
+    MRI.constrainRegClass(Dst, MLARc);
+  if (MulRn.isVirtual())
+    MRI.constrainRegClass(MulRn, MLARc);
+  if (MulRm.isVirtual())
+    MRI.constrainRegClass(MulRm, MLARc);
+
+  MachineInstrBuilder MlaMIB =
+      BuildMI(MF, MIMetadata(Root), TII->get(ARM::MLA), Dst)
+          .addReg(MulRn, getKillRegState(MulRnKill))
+          .addReg(MulRm, getKillRegState(MulRmKill))
+          .addReg(NegVr, RegState::Kill);
+  armAppendConditionOperands(MlaMIB, Root, TII->get(ARM::MLA));
+  InsInstrs.push_back(MlaMIB);
+  return Mul;
+}
+
+/// Find instructions that can be turned into MLA / MLS (ARM-state GPR).
+static bool getMaddPatterns(const ARMSubtarget &Subtarget, MachineInstr &Root,
+                            SmallVectorImpl<unsigned> &Patterns) {
+  unsigned Opc = Root.getOpcode();
+  MachineBasicBlock &MBB = *Root.getParent();
+  bool Found = false;
+
+  if (!isCombineInstrCandidate(Opc))
+    return false;
+
+  // Do not fuse if this root defines live CPSR (mla/mls handling must preserve
+  // flags semantics separately).
+  if (!llvm::IsCPSRDead(&Root))
+    return false;
+
+  const bool CanMLS = Subtarget.hasV6T2Ops();
+
+  auto setFound = [&](unsigned OperandIdx, unsigned Pattern) {
+    if (!Root.getOperand(OperandIdx).isReg())
+      return;
+    if (canCombineWithMUL(MBB, Root.getOperand(OperandIdx), ARM::MUL)) {
+      Patterns.push_back(Pattern);
+      Found = true;
+    }
+  };
+
+  typedef ARMMachineCombinerPattern MCP;
+
+  switch (Opc) {
+  default:
+    break;
+  case ARM::ADDrr:
+
+    assert(Root.getOperand(1).isReg() && Root.getOperand(2).isReg() &&
+           "ADDrr must use register operands");
+    setFound(1, MCP::MULADD_OP1);
+    setFound(2, MCP::MULADD_OP2);
+    break;
+  case ARM::SUBrr:
+    if (CanMLS)
+      setFound(2, MCP::MULSUB_OP2);
+    setFound(1, MCP::MULSUB_OP1);
+    break;
+  }
+  return Found;
+}
+
+bool ARMBaseInstrInfo::getMachineCombinerPatterns(
+    MachineInstr &Root, SmallVectorImpl<unsigned> &Patterns,
+    bool DoRegPressureReduce) const {
+
+  if (!Subtarget.isThumb()) {
+    if (getMaddPatterns(Subtarget, Root, Patterns))
+      return true;
+  }
+
+  return TargetInstrInfo::getMachineCombinerPatterns(Root, Patterns,
+                                                     DoRegPressureReduce);
+}
+
+void ARMBaseInstrInfo::genAlternativeCodeSequence(
+    MachineInstr &Root, unsigned Pattern,
+    SmallVectorImpl<MachineInstr *> &InsInstrs,
+    SmallVectorImpl<MachineInstr *> &DelInstrs,
+    DenseMap<Register, unsigned> &InstrIdxForVirtReg) const {
+  MachineBasicBlock &MBB = *Root.getParent();
+  MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+  MachineFunction &MF = *MBB.getParent();
+  const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
+
+  MachineInstr *MulToDelete = nullptr;
+  typedef ARMMachineCombinerPattern MCP;
+
+  switch (Pattern) {
+  default:
+    TargetInstrInfo::genAlternativeCodeSequence(Root, Pattern, InsInstrs,
+                                                DelInstrs, InstrIdxForVirtReg);
+    return;
+  case MCP::MULADD_OP1:
+    MulToDelete =
+        genArmGPRMLA(MF, MRI, TII, Root, InsInstrs, 1, &ARM::GPRnopcRegClass);
+    break;
+  case MCP::MULADD_OP2:
+    MulToDelete =
+        genArmGPRMLA(MF, MRI, TII, Root, InsInstrs, 2, &ARM::GPRnopcRegClass);
+    break;
+  case MCP::MULSUB_OP1:
+    MulToDelete = genArmGPRMLASubMulOp1(MF, MRI, TII, Root, InsInstrs,
+                                        InstrIdxForVirtReg);
+    break;
+  case MCP::MULSUB_OP2:
+    MulToDelete =
+        genArmGPRMLS(MF, MRI, TII, Root, InsInstrs, 2, &ARM::GPRRegClass);
+    break;
+  }
+
+  if (MulToDelete)
+    DelInstrs.push_back(MulToDelete);
+  DelInstrs.push_back(&Root);
+
+  uint32_t Flags = Root.getFlags();
+  if (MulToDelete)
+    Flags = Root.mergeFlagsWith(*MulToDelete);
+  for (MachineInstr *MI : InsInstrs)
+    MI->setFlags(Flags);
+}
+
 /// GetInstSize - Return the size of the specified MachineInstr.
 ///
 unsigned ARMBaseInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
