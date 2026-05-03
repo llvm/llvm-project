@@ -65,6 +65,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/UndefPoisonKind.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
@@ -17870,7 +17871,7 @@ SDValue DAGCombiner::visitBUILD_PAIR(SDNode *N) {
 SDValue DAGCombiner::visitFREEZE(SDNode *N) {
   SDValue N0 = N->getOperand(0);
 
-  if (DAG.isGuaranteedNotToBeUndefOrPoison(N0, /*PoisonOnly*/ false))
+  if (DAG.isGuaranteedNotToBeUndefOrPoison(N0, UndefPoisonKind::UndefOrPoison))
     return N0;
 
   // If we have frozen and unfrozen users of N0, update so everything uses N.
@@ -17901,7 +17902,7 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
   // guaranteed-non-poison operands (or is a BUILD_VECTOR or similar) then push
   // the freeze through to the operands that are not guaranteed non-poison.
   // NOTE: we will strip poison-generating flags, so ignore them here.
-  if (DAG.canCreateUndefOrPoison(N0, /*PoisonOnly*/ false,
+  if (DAG.canCreateUndefOrPoison(N0, UndefPoisonKind::UndefOrPoison,
                                  /*ConsiderFlags*/ false) ||
       N0->getNumValues() != 1 || !N0->hasOneUse())
     return SDValue();
@@ -17942,7 +17943,8 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
   SmallSet<SDValue, 8> MaybePoisonOperands;
   SmallVector<unsigned, 8> MaybePoisonOperandNumbers;
   for (auto [OpNo, Op] : enumerate(N0->ops())) {
-    if (DAG.isGuaranteedNotToBeUndefOrPoison(Op, /*PoisonOnly=*/false))
+    if (DAG.isGuaranteedNotToBeUndefOrPoison(Op,
+                                             UndefPoisonKind::UndefOrPoison))
       continue;
     bool HadMaybePoisonOperands = !MaybePoisonOperands.empty();
     bool IsNewMaybePoisonOperand = MaybePoisonOperands.insert(Op).second;
@@ -24827,8 +24829,8 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
             // Make sure to freeze the source vector in case any of the elements
             // overwritten by the insert may be poison. Otherwise those elements
             // could end up being poison instead of 0/-1 after the AND/OR.
-            CurVec =
-                DAG.getFreeze(CurVec, InsertedEltMask, /*PoisonOnly=*/true);
+            CurVec = DAG.getFreeze(CurVec, InsertedEltMask,
+                                   UndefPoisonKind::PoisonOnly);
             return DAG.getNode(MaskOpcode, DL, VT, CurVec,
                                DAG.getBuildVector(VT, DL, Mask));
           };

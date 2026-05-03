@@ -33,6 +33,7 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/Support/UndefPoisonKind.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
 #include <numeric>
@@ -1785,14 +1786,6 @@ static bool shiftAmountKnownInRange(Register ShiftAmount,
   }
 
   return true;
-}
-
-namespace {
-enum class UndefPoisonKind {
-  PoisonOnly = (1 << 0),
-  UndefOnly = (1 << 1),
-  UndefOrPoison = PoisonOnly | UndefOnly,
-};
 }
 
 static bool includesPoison(UndefPoisonKind Kind) {

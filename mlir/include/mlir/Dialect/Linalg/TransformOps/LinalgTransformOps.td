@@ -768,10 +768,10 @@ def LowerUnPackOp : Op<Transform_Dialect, "structured.lower_unpack", [
   let arguments = (ins Transform_ConcreteOpType<"linalg.unpack">:$target,
                        DefaultValuedAttr<BoolAttr, "true">:$lowerUnpadLikeWithExtractSlice);
   let results = (outs Transform_ConcreteOpType<"tensor.empty">:$empty_op,
-                      Transform_ConcreteOpType<"linalg.transpose">:$transpose_op,
-                      Transform_ConcreteOpType<"tensor.collapse_shape">:$collapse_shape_op,
-                      Transform_ConcreteOpType<"tensor.extract_slice">:$extract_slice_op,
-                      Transform_ConcreteOpType<"linalg.copy">:$copy_op);
+      Transform_ConcreteOpType<"linalg.transpose">:$transpose_op,
+      Transform_ConcreteOpType<"tensor.collapse_shape">:$collapse_shape_op,
+      Transform_ConcreteOpType<"tensor.extract_slice">:$extract_slice_op,
+      Transform_ConcreteOpType<"linalg.copy">:$copy_op);
   let assemblyFormat = [{
     $target attr-dict `:` functional-type(operands, results)
   }];

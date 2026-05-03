@@ -75,6 +75,7 @@
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/KnownFPClass.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/UndefPoisonKind.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include <algorithm>
 #include <cassert>
@@ -7633,12 +7634,6 @@ static bool shiftAmountKnownInRange(const Value *ShiftAmount) {
   return Safe;
 }
 
-enum class UndefPoisonKind {
-  PoisonOnly = (1 << 0),
-  UndefOnly = (1 << 1),
-  UndefOrPoison = PoisonOnly | UndefOnly,
-};
-
 static bool includesPoison(UndefPoisonKind Kind) {
   return (unsigned(Kind) & unsigned(UndefPoisonKind::PoisonOnly)) != 0;
 }
@@ -7796,7 +7791,8 @@ bool llvm::impliesPoison(const Value *ValAssumedPoison, const Value *V) {
   return ::impliesPoison(ValAssumedPoison, V, /* Depth */ 0);
 }
 
-static bool programUndefinedIfUndefOrPoison(const Value *V, bool PoisonOnly);
+static bool programUndefinedIfUndefOrPoison(const Value *V,
+                                            UndefPoisonKind Kind);
 
 static bool isGuaranteedNotToBeUndefOrPoison(
     const Value *V, AssumptionCache *AC, const Instruction *CtxI,
@@ -7904,7 +7900,9 @@ static bool isGuaranteedNotToBeUndefOrPoison(
         I->hasMetadata(LLVMContext::MD_dereferenceable_or_null))
       return true;
 
-  if (programUndefinedIfUndefOrPoison(V, !includesUndef(Kind)))
+  if (programUndefinedIfUndefOrPoison(V, includesUndef(Kind)
+                                             ? UndefPoisonKind::UndefOrPoison
+                                             : UndefPoisonKind::PoisonOnly))
     return true;
 
   // CxtI may be null or a cloned instruction.
@@ -8301,7 +8299,7 @@ bool llvm::mustTriggerUB(const Instruction *I,
 }
 
 static bool programUndefinedIfUndefOrPoison(const Value *V,
-                                            bool PoisonOnly) {
+                                            UndefPoisonKind Kind) {
   // We currently only look for uses of values within the same basic
   // block, as that makes it easier to guarantee that the uses will be
   // executed given that Inst is executed.
@@ -8329,7 +8327,7 @@ static bool programUndefinedIfUndefOrPoison(const Value *V,
   unsigned ScanLimit = 32;
   BasicBlock::const_iterator End = BB->end();
 
-  if (!PoisonOnly) {
+  if (includesUndef(Kind)) {
     // Since undef does not propagate eagerly, be conservative & just check
     // whether a value is directly passed to an instruction that must take
     // well-defined operands.
@@ -8393,13 +8391,13 @@ static bool programUndefinedIfUndefOrPoison(const Value *V,
   }
   return false;
 }
-
 bool llvm::programUndefinedIfUndefOrPoison(const Instruction *Inst) {
-  return ::programUndefinedIfUndefOrPoison(Inst, false);
+  return ::programUndefinedIfUndefOrPoison(Inst,
+                                           UndefPoisonKind::UndefOrPoison);
 }
 
 bool llvm::programUndefinedIfPoison(const Instruction *Inst) {
-  return ::programUndefinedIfUndefOrPoison(Inst, true);
+  return ::programUndefinedIfUndefOrPoison(Inst, UndefPoisonKind::PoisonOnly);
 }
 
 static bool isKnownNonNaN(const Value *V, FastMathFlags FMF) {

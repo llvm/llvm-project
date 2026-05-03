@@ -29,9 +29,9 @@ include "mlir/Interfaces/InferTypeOpInterface.td"
 def OpenACC_ReductionInitOp
     : OpenACC_Op<"reduction_init",
                  [SameOperandsAndResultType, RecursiveMemoryEffects,
-                  DeclareOpInterfaceMethods<RegionBranchOpInterface,
-                                            ["getRegionInvocationBounds",
-                                             "getSuccessorInputs"]>,
+                  DeclareOpInterfaceMethods<
+                      RegionBranchOpInterface, ["getRegionInvocationBounds",
+                                                "getSuccessorInputs"]>,
                   SingleBlockImplicitTerminator<"YieldOp">]> {
   let summary = "Allocate and initialize a reduction variable from a recipe";
   let description = [{
@@ -44,7 +44,7 @@ def OpenACC_ReductionInitOp
     reduction_operator specifies the reduction kind (e.g. add, mul).
   }];
   let arguments = (ins OpenACC_AnyPointerOrMappableType:$var,
-                       OpenACC_ReductionOperatorAttr:$reductionOperator);
+      OpenACC_ReductionOperatorAttr:$reductionOperator);
   let results = (outs OpenACC_AnyPointerOrMappableType:$result);
   let regions = (region AnyRegion:$region);
   let assemblyFormat = [{
@@ -60,9 +60,9 @@ def OpenACC_ReductionInitOp
 def OpenACC_ReductionCombineRegionOp
     : OpenACC_Op<"reduction_combine_region",
                  [SameTypeOperands, RecursiveMemoryEffects,
-                  DeclareOpInterfaceMethods<RegionBranchOpInterface,
-                                            ["getRegionInvocationBounds",
-                                             "getSuccessorInputs"]>,
+                  DeclareOpInterfaceMethods<
+                      RegionBranchOpInterface, ["getRegionInvocationBounds",
+                                                "getSuccessorInputs"]>,
                   SingleBlockImplicitTerminator<"YieldOp">]> {
   let summary = "Combine a reduction private value with its original (recipe)";
   let description = [{
@@ -76,7 +76,7 @@ def OpenACC_ReductionCombineRegionOp
     The srcVar operand is typically the result of acc.reduction_init.
   }];
   let arguments = (ins OpenACC_AnyPointerOrMappableType:$destVar,
-                       OpenACC_AnyPointerOrMappableType:$srcVar);
+      OpenACC_AnyPointerOrMappableType:$srcVar);
   let results = (outs);
   let regions = (region AnyRegion:$region);
   let assemblyFormat = [{
