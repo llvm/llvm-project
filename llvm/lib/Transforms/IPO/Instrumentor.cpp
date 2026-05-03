@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
+// The implementation of the Instrumentor, a highly configurable instrumentation
+// pass.
+//
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/Instrumentor.h"
@@ -285,27 +288,20 @@ PreservedAnalyses InstrumentorPass::run(Module &M, ModuleAnalysisManager &MAM) {
 }
 
 BaseConfigurationOption *
-BaseConfigurationOption::getBoolOption(InstrumentationConfig &IConf,
-                                       StringRef Name, StringRef Description,
-                                       bool DefaultValue) {
-  auto *BCO = new BaseConfigurationOption();
-  BCO->Name = Name;
-  BCO->Description = Description;
-  BCO->Kind = BOOLEAN;
-  BCO->Value.Bool = DefaultValue;
+BaseConfigurationOption::createBoolOption(InstrumentationConfig &IConf,
+                                          StringRef Name, StringRef Description,
+                                          bool DefaultValue) {
+  auto *BCO = new BaseConfigurationOption(Name, Description, BOOLEAN);
+  BCO->setBool(DefaultValue);
   IConf.addBaseChoice(BCO);
   return BCO;
 }
 
-BaseConfigurationOption *
-BaseConfigurationOption::getStringOption(InstrumentationConfig &IConf,
-                                         StringRef Name, StringRef Description,
-                                         StringRef DefaultValue) {
-  auto *BCO = new BaseConfigurationOption();
-  BCO->Name = Name;
-  BCO->Description = Description;
-  BCO->Kind = STRING;
-  BCO->Value.String = DefaultValue;
+BaseConfigurationOption *BaseConfigurationOption::createStringOption(
+    InstrumentationConfig &IConf, StringRef Name, StringRef Description,
+    StringRef DefaultValue) {
+  auto *BCO = new BaseConfigurationOption(Name, Description, STRING);
+  BCO->setString(DefaultValue);
   IConf.addBaseChoice(BCO);
   return BCO;
 }
@@ -366,9 +362,7 @@ Value *InstrumentationOpportunity::replaceValue(Value &V, Value &NewV,
   V.replaceUsesWithIf(NewVCasted, [&](Use &U) {
     if (IIRB.NewInsts.lookup(cast<Instruction>(U.getUser())) == IIRB.Epoch)
       return false;
-    if (isa<LifetimeIntrinsic>(U.getUser()) || U.getUser()->isDroppable())
-      return false;
-    return true;
+    return !isa<LifetimeIntrinsic>(U.getUser()) && !U.getUser()->isDroppable();
   });
 
   return &V;
@@ -387,10 +381,9 @@ IRTCallDescription::IRTCallDescription(InstrumentationOpportunity &IO,
     MightRequireIndirection = RequiresIndirection = true;
 }
 
-FunctionType *
-IRTCallDescription::createLLVMSignature(InstrumentationConfig &IConf,
-                                        LLVMContext &Ctx, const DataLayout &DL,
-                                        bool ForceIndirection) {
+FunctionType *IRTCallDescription::createLLVMSignature(
+    InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
+    const DataLayout &DL, bool ForceIndirection) {
   assert(((ForceIndirection && MightRequireIndirection) ||
           (!ForceIndirection && !RequiresIndirection)) &&
          "Wrong indirection setting!");
@@ -407,12 +400,12 @@ IRTCallDescription::createLLVMSignature(InstrumentationConfig &IConf,
     }
 
     // The indirection pointer and the size of the value.
-    ParamTypes.push_back(PointerType::get(Ctx, 0));
+    ParamTypes.push_back(IIRB.PtrTy);
     if (!(It.Flags & IRTArg::INDIRECT_HAS_SIZE))
-      ParamTypes.push_back(IntegerType::getInt32Ty(Ctx));
+      ParamTypes.push_back(IIRB.Int32Ty);
   }
   if (!RetTy)
-    RetTy = Type::getVoidTy(Ctx);
+    RetTy = IIRB.VoidTy;
 
   return FunctionType::get(RetTy, ParamTypes, /*isVarArg=*/false);
 }
@@ -493,8 +486,7 @@ CallInst *IRTCallDescription::createLLVMCall(Value *&V,
     IIRB.IRB.SetInsertPoint(IP);
   ensureDbgLoc(IIRB.IRB);
 
-  auto *FnTy =
-      createLLVMSignature(IConf, V->getContext(), DL, ForceIndirection);
+  auto *FnTy = createLLVMSignature(IConf, IIRB, DL, ForceIndirection);
   auto CompleteName =
       IConf.getRTName(IO.IP.isPRE() ? "pre_" : "post_", IO.getName(),
                       ForceIndirection ? "_ind" : "");
@@ -546,7 +538,7 @@ void StoreIO::init(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
   }
   if (Config.has(PassStoredValue)) {
     IRTArgs.push_back(
-        IRTArg(getValueType(IIRB.Ctx), "value", "The stored value.",
+        IRTArg(getValueType(IIRB), "value", "The stored value.",
                IRTArg::POTENTIALLY_INDIRECT |
                    (Config.has(PassStoredValueSize) ? IRTArg::INDIRECT_HAS_SIZE
                                                     : IRTArg::NONE),
@@ -669,7 +661,7 @@ void LoadIO::init(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
   }
   if (!IsPRE && Config.has(PassValue)) {
     IRTArgs.push_back(
-        IRTArg(getValueType(IIRB.Ctx), "value", "The loaded value.",
+        IRTArg(getValueType(IIRB), "value", "The loaded value.",
                Config.has(ReplaceValue)
                    ? IRTArg::REPLACABLE | IRTArg::POTENTIALLY_INDIRECT |
                          (Config.has(PassValueSize) ? IRTArg::INDIRECT_HAS_SIZE

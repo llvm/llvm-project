@@ -1,4 +1,4 @@
-//===- Transforms/IPO/InstrumentorUtils.h ---------------------------------===//
+//===-- Transforms/IPO/InstrumentorUtils.h --------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -93,12 +93,10 @@ struct InstrumentorIRBuilderTy {
   const DataLayout &DL = M.getDataLayout();
 
   Type *VoidTy = Type::getVoidTy(Ctx);
-  Type *IntptrTy = M.getDataLayout().getIntPtrType(Ctx);
-  PointerType *PtrTy = PointerType::getUnqual(Ctx);
+  PointerType *PtrTy = PointerType::get(Ctx, 0);
   IntegerType *Int8Ty = Type::getInt8Ty(Ctx);
   IntegerType *Int32Ty = Type::getInt32Ty(Ctx);
   IntegerType *Int64Ty = Type::getInt64Ty(Ctx);
-  Constant *NullPtrVal = Constant::getNullValue(PtrTy);
   ///}
 
   using AllocaListTy = SmallVector<AllocaInst *>;

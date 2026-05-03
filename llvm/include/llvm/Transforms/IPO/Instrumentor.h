@@ -1,4 +1,4 @@
-//===- Transforms/IPO/Instrumentor.h --------------------------------------===//
+//===-- Instrumentor.h - Highly configurable instrumentation pass ---------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// A highly configurable instrumentation pass.
+// The Instrumentor, a highly configurable instrumentation pass.
 //
 //===----------------------------------------------------------------------===//
 
@@ -51,7 +51,7 @@ using SetterCallbackTy = std::function<Value *(
     Value &, Value &, InstrumentationConfig &, InstrumentorIRBuilderTy &)>;
 ///}
 
-/// Helper to represent an argument to a instrumentation runtime function.
+/// Helper to represent an argument to an instrumentation runtime function.
 struct IRTArg {
   /// Flags describing the possible properties of an argument.
   enum IRArgFlagTy {
@@ -107,7 +107,8 @@ struct IRTCallDescription {
 
   /// Create the type of the instrumentation function.
   FunctionType *createLLVMSignature(InstrumentationConfig &IConf,
-                                    LLVMContext &Ctx, const DataLayout &DL,
+                                    InstrumentorIRBuilderTy &IIRB,
+                                    const DataLayout &DL,
                                     bool ForceIndirection);
 
   /// Create a call instruction that calls to the instrumentation function and
@@ -272,17 +273,17 @@ struct BaseConfigurationOption {
 
   /// Create a boolean option with \p Name name, \p Description description and
   /// \p DefaultValue as boolean default value.
-  static BaseConfigurationOption *getBoolOption(InstrumentationConfig &IC,
-                                                StringRef Name,
-                                                StringRef Description,
-                                                bool DefaultValue);
+  static BaseConfigurationOption *createBoolOption(InstrumentationConfig &IC,
+                                                   StringRef Name,
+                                                   StringRef Description,
+                                                   bool DefaultValue);
 
   /// Create a string option with \p Name name, \p Description description and
   /// \p DefaultValue as string default value.
-  static BaseConfigurationOption *getStringOption(InstrumentationConfig &IC,
-                                                  StringRef Name,
-                                                  StringRef Description,
-                                                  StringRef DefaultValue);
+  static BaseConfigurationOption *createStringOption(InstrumentationConfig &IC,
+                                                     StringRef Name,
+                                                     StringRef Description,
+                                                     StringRef DefaultValue);
 
   /// Helper union that holds any possible option type.
   union ValueTy {
@@ -321,6 +322,10 @@ struct BaseConfigurationOption {
   KindTy Kind;
   ValueTy Value = {0};
   ///}
+
+  /// Construct a base configuration option.
+  BaseConfigurationOption(StringRef Name, StringRef Desc, KindTy Kind)
+      : Name(Name), Description(Desc), Kind(Kind) {}
 };
 
 /// The class that contains the configuration for the instrumentor. It holds the
@@ -332,16 +337,16 @@ struct InstrumentationConfig {
 
   /// Construct an instrumentation configuration with the base options.
   InstrumentationConfig() : SS(StringAllocator) {
-    RuntimePrefix = BaseConfigurationOption::getStringOption(
+    RuntimePrefix = BaseConfigurationOption::createStringOption(
         *this, "runtime_prefix", "The runtime API prefix.", "__instrumentor_");
-    TargetRegex = BaseConfigurationOption::getStringOption(
+    TargetRegex = BaseConfigurationOption::createStringOption(
         *this, "target_regex",
         "Regular expression to be matched against the module target. "
         "Only targets that match this regex will be instrumented",
         "");
-    HostEnabled = BaseConfigurationOption::getBoolOption(
+    HostEnabled = BaseConfigurationOption::createBoolOption(
         *this, "host_enabled", "Instrument non-GPU targets", true);
-    GPUEnabled = BaseConfigurationOption::getBoolOption(
+    GPUEnabled = BaseConfigurationOption::createBoolOption(
         *this, "gpu_enabled", "Instrument GPU targets", true);
   }
 
@@ -548,8 +553,8 @@ struct StoreIO : public InstructionIO<Instruction::Store> {
   ///}
 
   /// Get the type of the stored value.
-  virtual Type *getValueType(LLVMContext &Ctx) const {
-    return IntegerType::getInt64Ty(Ctx);
+  virtual Type *getValueType(InstrumentorIRBuilderTy &IIRB) const {
+    return IIRB.Int64Ty;
   }
 
   /// Initialize the store opportunity using the instrumentation config \p IConf
@@ -625,8 +630,8 @@ struct LoadIO : public InstructionIO<Instruction::Load> {
   ///}
 
   /// Get the type of the loaded value.
-  virtual Type *getValueType(LLVMContext &Ctx) const {
-    return IntegerType::getInt64Ty(Ctx);
+  virtual Type *getValueType(InstrumentorIRBuilderTy &IIRB) const {
+    return IIRB.Int64Ty;
   }
 
   /// Initialize the load opportunity using the instrumentation config \p IConf
