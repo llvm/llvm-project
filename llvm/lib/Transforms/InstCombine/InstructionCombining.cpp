@@ -882,8 +882,7 @@ Instruction *InstCombinerImpl::tryFoldInstWithCtpopWithNot(Instruction *I) {
 
   Value *Op;
   // Find ctpop.
-  if (!match(I->getOperand(1 - ConstIdx),
-             m_OneUse(m_Intrinsic<Intrinsic::ctpop>(m_Value(Op)))))
+  if (!match(I->getOperand(1 - ConstIdx), m_OneUse(m_Ctpop(m_Value(Op)))))
     return nullptr;
 
   Constant *C;
