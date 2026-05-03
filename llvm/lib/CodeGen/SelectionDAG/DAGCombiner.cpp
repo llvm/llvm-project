@@ -13957,8 +13957,13 @@ static SDValue combineVSelectWithAllOnesOrZeros(SDValue Cond, SDValue TVal,
       ISD::isConstantSplatVector(TVal.getNode(), TValAPInt) &&
       TValAPInt.isOne() &&
       ISD::isConstantSplatVectorAllOnes(Cond.getOperand(1).getNode()) &&
-      ISD::isConstantSplatVectorAllOnes(FVal.getNode())) {
-    return SDValue();
+      ISD::isConstantSplatVectorAllOnes(FVal.getNode()) &&
+      !TLI.shouldAvoidTransformToShift(VT, VT.getScalarSizeInBits() - 1)) {
+    SDValue LHS = Cond.getOperand(0);
+    SDValue ShiftC =
+        DAG.getShiftAmountConstant(VT.getScalarSizeInBits() - 1, VT, DL);
+    SDValue Shift = DAG.getNode(ISD::SRA, DL, VT, LHS, ShiftC);
+    return DAG.getNode(ISD::OR, DL, VT, Shift, TVal);
   }
 
   // To use the condition operand as a bitwise mask, it must have elements that
@@ -27161,7 +27166,8 @@ static SDValue narrowExtractedVectorBinOp(EVT VT, SDValue Src, unsigned Index,
                         : DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NarrowBVT,
                                       BinOp.getOperand(1), IndexC);
 
-    SDValue NarrowBinOp = DAG.getNode(BOpcode, DL, NarrowBVT, X, Y);
+    SDValue NarrowBinOp =
+        DAG.getNode(BOpcode, DL, NarrowBVT, X, Y, BinOp->getFlags());
     return DAG.getBitcast(VT, NarrowBinOp);
   }
 

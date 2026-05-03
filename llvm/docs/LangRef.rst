@@ -7976,6 +7976,48 @@ Attributes in the metadata will be added to both the vectorized and
 epilogue loop.
 See :ref:`Transformation Metadata <transformation-metadata>` for details.
 
+'``llvm.loop.vectorize.body``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This metadata is automatically added by the loop vectorizer to the
+vectorized loop body. It is used by subsequent optimization passes
+(such as the loop unroller and ``WarnMissedTransforms``) to emit more
+precise optimization remarks that identify the loop as a vector loop.
+
+The first operand is the string
+``llvm.loop.vectorize.body`` and the second operand is an
+integer. A value of 1 indicates this is a vectorized loop body:
+
+.. code-block:: llvm
+
+   !0 = !{!"llvm.loop.vectorize.body", i32 1}
+
+'``llvm.loop.vectorize.epilogue``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This metadata is automatically added by the loop vectorizer to the
+scalar remainder (epilogue) loop to identify it as such. It is used by
+subsequent optimization passes (such as the loop unroller and
+``WarnMissedTransforms``) to emit more precise optimization remarks
+that distinguish between the vectorized loop and its scalar remainder.
+
+Together these two attributes provide a four-way classification:
+
+- ``body`` only: main vectorized loop body
+- ``epilogue`` only: scalar epilogue loop after vectorization
+- Both ``body`` and ``epilogue``: vectorized epilogue 
+  (a remainder loop that was itself vectorized during epilogue
+  vectorization)
+- Neither: a plain loop not produced by the vectorizer
+
+The first operand is the string
+``llvm.loop.vectorize.epilogue`` and the second operand is
+an integer. A value of 1 indicates the loop is a remainder loop:
+
+.. code-block:: llvm
+
+   !0 = !{!"llvm.loop.vectorize.epilogue", i32 1}
+
 '``llvm.loop.unroll``'
 ^^^^^^^^^^^^^^^^^^^^^^
 

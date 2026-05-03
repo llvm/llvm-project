@@ -158,6 +158,9 @@ C++17 Feature Support
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Clang now allows omitting ``typename`` before a template name in a
+  conversion operator, implementing `CWG2413 <https://wg21.link/cwg2413>`_.
+
 C Language Changes
 ------------------
 
@@ -310,16 +313,6 @@ Attribute Changes in Clang
   meant to be a low level tool for language runtime authors to associate a
   foreign language personality with a given function. Note that this does not
   perform any ABI validation for the personality routine.
-
-- The ``__attribute__((flatten))`` attribute behavior has changed to match
-  GCC. Previously, Clang only inlined direct callees of the attributed
-  function. Now, all calls are inlined transitively, including calls
-  introduced by inlining. Calls that cannot be inlined are left as-is:
-  this includes callees marked ``noinline``, callees with incompatible ABI
-  attributes (e.g. SME), callees without a visible definition, and
-  recursive calls where a function already appears in the inlining chain.
-  Flatten also works across ThinLTO module boundaries when callee
-  definitions are available.
 
 - The :doc:`ThreadSafetyAnalysis` attributes ``guarded_by`` and
   ``pt_guarded_by`` now accept multiple capability arguments with refined
@@ -576,6 +569,8 @@ Bug Fixes to C++ Support
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed a bug where explicit nullability property attributes were not stored in AST nodes in Objective-C. (#GH179703)
+- Fixed a bug where alias CTAD, or an invalid template template parameter, could create a template with an empty template
+  parameter list. This also adds asserts to prevent this from happening again.
 - Fixed a crash when parsing Doxygen ``@param`` commands attached to invalid declarations or non-function entities. (#GH182737)
 - Fixed the SourceLocation and SourceRange of reversed rewritten CXXOperatorCallExpr. (#GH192467)
 
