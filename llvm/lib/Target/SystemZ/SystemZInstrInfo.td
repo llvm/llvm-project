@@ -1318,6 +1318,8 @@ let Defs = [CC] in {
 }
 defm : RMWIByte<and, bdaddr12pair, NI>;
 defm : RMWIByte<and, bdaddr20pair, NIY>;
+defm : RMWIByteLSB<and, bdaddr12pair, NI>;
+defm : RMWIByteLSB<and, bdaddr20pair, NIY>;
 
 //===----------------------------------------------------------------------===//
 // OR
@@ -1375,6 +1377,8 @@ let Defs = [CC] in {
 }
 defm : RMWIByte<or, bdaddr12pair, OI>;
 defm : RMWIByte<or, bdaddr20pair, OIY>;
+defm : RMWIByteLSB<or,  bdaddr12pair, OI>;
+defm : RMWIByteLSB<or,  bdaddr20pair, OIY>;
 
 //===----------------------------------------------------------------------===//
 // XOR
@@ -1415,6 +1419,8 @@ let Defs = [CC] in {
 }
 defm : RMWIByte<xor, bdaddr12pair, XI>;
 defm : RMWIByte<xor, bdaddr20pair, XIY>;
+defm : RMWIByteLSB<xor, bdaddr12pair, XI>;
+defm : RMWIByteLSB<xor, bdaddr20pair, XIY>;
 
 //===----------------------------------------------------------------------===//
 // Combined logical operations
