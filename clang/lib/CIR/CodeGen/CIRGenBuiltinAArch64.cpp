@@ -740,18 +740,6 @@ static mlir::Value emitCommonNeonBuiltinExpr(
                      std::string("unimplemented AArch64 builtin call: ") +
                          ctx.BuiltinInfo.getName(builtinID));
     return mlir::Value{};
-  case NEON::BI__builtin_neon_vshl_v:
-  case NEON::BI__builtin_neon_vshlq_v: {
-    llvm::StringRef llvmIntrName =
-        getLLVMIntrNameNoPrefix(static_cast<llvm::Intrinsic::ID>(
-            usgn ? llvmIntrinsic : altLLVMIntrinsic));
-    mlir::Value result =
-        emitNeonCall(cgf.getCIRGenModule(), cgf.getBuilder(),
-                     /*argTypes=*/{vTy, vTy}, ops, llvmIntrName,
-                     /*funcResTy=*/vTy, loc);
-    mlir::Type resultType = cgf.convertType(expr->getType());
-    return cgf.getBuilder().createBitcast(result, resultType);
-  }
   case NEON::BI__builtin_neon_vmul_v:
   case NEON::BI__builtin_neon_vmulq_v:
     return cgf.getBuilder().emitIntrinsicCallOp(loc, "aarch64.neon.pmul", vTy,
@@ -762,17 +750,22 @@ static mlir::Value emitCommonNeonBuiltinExpr(
   case NEON::BI__builtin_neon_vbfdot_f32:
   case NEON::BI__builtin_neon_vbfdotq_f32:
   case NEON::BI__builtin_neon___a32_vcvt_bf16_f32:
-  default:
-    cgf.cgm.errorNYI(expr->getSourceRange(),
-                     std::string("unimplemented AArch64 builtin call: ") +
-                         ctx.BuiltinInfo.getName(builtinID));
-    return mlir::Value{};
-
     cgf.cgm.errorNYI(expr->getSourceRange(),
                      std::string("unimplemented AArch64 builtin call: ") +
                          ctx.BuiltinInfo.getName(builtinID));
     return mlir::Value{};
   }
+
+   llvm::StringRef llvmIntrName =
+        getLLVMIntrNameNoPrefix(static_cast<llvm::Intrinsic::ID>(
+            usgn ? llvmIntrinsic : altLLVMIntrinsic));
+            
+    mlir::Value result =
+        emitNeonCall(cgf.getCIRGenModule(), cgf.getBuilder(),
+                     /*argTypes=*/{vTy, vTy}, ops, llvmIntrName,
+                     /*funcResTy=*/vTy, loc);
+    mlir::Type resultType = cgf.convertType(expr->getType());
+    return cgf.getBuilder().createBitcast(result, resultType);
 }
 
 // Emit an intrinsic where all operands are of the same type as the result.
