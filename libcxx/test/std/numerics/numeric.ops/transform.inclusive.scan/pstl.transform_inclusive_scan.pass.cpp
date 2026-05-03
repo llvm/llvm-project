@@ -52,8 +52,7 @@ struct TestNoInit {
         a[i] = i + 1;
 
       std::vector<int> expected(size);
-      std::transform_inclusive_scan(
-          a.begin(), a.end(), expected.begin(), std::plus{}, [](int x) { return x + 1; });
+      std::transform_inclusive_scan(a.begin(), a.end(), expected.begin(), std::plus{}, [](int x) { return x + 1; });
 
       std::vector<int> result(size);
       auto ret = std::transform_inclusive_scan(

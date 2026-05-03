@@ -42,8 +42,7 @@ struct Test {
         a[i] = i;
 
       std::vector<int> expected(size);
-      std::transform_exclusive_scan(
-          a.begin(), a.end(), expected.begin(), 0, std::plus{}, [](int x) { return x + 1; });
+      std::transform_exclusive_scan(a.begin(), a.end(), expected.begin(), 0, std::plus{}, [](int x) { return x + 1; });
 
       std::vector<int> result(size);
       auto ret = std::transform_exclusive_scan(
