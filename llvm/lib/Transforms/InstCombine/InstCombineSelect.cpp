@@ -1437,7 +1437,7 @@ static Instruction *foldSelectCtlzToCttz(ICmpInst *ICI, Value *TrueVal,
              m_Xor(m_Value(Ctlz), m_SpecificInt(BitWidth - 1))))
     return nullptr;
 
-  if (!match(Ctlz, m_Intrinsic<Intrinsic::ctlz>()))
+  if (!match(Ctlz, m_Ctlz(m_Value(), m_Value())))
     return nullptr;
 
   if (TrueVal != Ctlz && !match(TrueVal, m_SpecificInt(BitWidth)))
@@ -1489,8 +1489,8 @@ static Value *foldSelectCttzCtlz(ICmpInst *ICI, Value *TrueVal, Value *FalseVal,
   // Check that 'Count' is a call to intrinsic cttz/ctlz. Also check that the
   // input to the cttz/ctlz is used as LHS for the compare instruction.
   Value *X;
-  if (!match(Count, m_Intrinsic<Intrinsic::cttz>(m_Value(X))) &&
-      !match(Count, m_Intrinsic<Intrinsic::ctlz>(m_Value(X))))
+  if (!match(Count, m_Cttz(m_Value(X), m_Value())) &&
+      !match(Count, m_Ctlz(m_Value(X), m_Value())))
     return nullptr;
 
   // (X == 0) ? BitWidth : ctz(X)
@@ -4026,7 +4026,7 @@ static Instruction *foldBitCeil(SelectInst &SI, IRBuilderBase &Builder,
       !match(TrueVal,
              m_OneUse(m_Shl(m_One(), m_OneUse(m_Sub(m_SpecificInt(BitWidth),
                                                     m_Value(Ctlz)))))) ||
-      !match(Ctlz, m_Intrinsic<Intrinsic::ctlz>(m_Value(CtlzOp), m_Value())) ||
+      !match(Ctlz, m_Ctlz(m_Value(CtlzOp), m_Value())) ||
       !isSafeToRemoveBitCeilSelect(Pred, Cond0, Cond1, CtlzOp, BitWidth,
                                    ShouldDropNoWrap))
     return nullptr;

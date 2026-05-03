@@ -7980,7 +7980,7 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
   // fold (and (freeze (load x)), 255) -> (freeze (zextload x, i8))
   // fold (and (freeze (extload x, i16)), 255) -> (freeze (zextload x, i8))
   if (N1C && !VT.isVector()) {
-    SDValue Inner = N0.getOpcode() == ISD::FREEZE ? N0.getOperand(0) : N0;
+    SDValue Inner = peekThroughFreeze(N0);
     if (Inner.getOpcode() == ISD::LOAD)
       if (SDValue Res = reduceLoadWidth(N))
         return Res;

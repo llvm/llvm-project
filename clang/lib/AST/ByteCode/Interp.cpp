@@ -2083,8 +2083,9 @@ static void setLifeStateRecurse(const Pointer &Ptr, Lifetime L) {
 
   if (const Descriptor *FieldDesc = Ptr.getFieldDesc();
       FieldDesc->isCompositeArray()) {
-    // No endLifetime() for array roots.
-    assert(Ptr.getLifetime() == Lifetime::Started);
+    // No endLifetime() for primitive array roots.
+    if (Ptr.getFieldDesc()->isPrimitiveArray())
+      assert(Ptr.getLifetime() == Lifetime::Started);
     for (unsigned I = 0; I != FieldDesc->getNumElems(); ++I)
       setLifeStateRecurse(Ptr.atIndex(I).narrow(), L);
     return;
