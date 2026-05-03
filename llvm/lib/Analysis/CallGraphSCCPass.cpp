@@ -70,8 +70,8 @@ public:
   /// whether any of the passes modifies the module, and if so, return true.
   bool runOnModule(Module &M) override;
 
-  using ModulePass::doFinalization;
   using ModulePass::doInitialization;
+  using ModulePass::doFinalization;
 
   bool doInitialization(CallGraph &CG);
   bool doFinalization(CallGraph &CG);
@@ -90,11 +90,11 @@ public:
 
   // Print passes managed by this manager
   void dumpPassStructure(unsigned Offset) override {
-    errs().indent(Offset * 2) << "Call Graph SCC Pass Manager\n";
+    errs().indent(Offset*2) << "Call Graph SCC Pass Manager\n";
     for (unsigned Index = 0; Index < getNumContainedPasses(); ++Index) {
       Pass *P = getContainedPass(Index);
       P->dumpPassStructure(Offset + 1);
-      dumpLastUses(P, Offset + 1);
+      dumpLastUses(P, Offset+1);
     }
   }
 
@@ -111,8 +111,9 @@ private:
   bool RunAllPassesOnSCC(CallGraphSCC &CurSCC, CallGraph &CG,
                          bool &DevirtualizedCall);
 
-  bool RunPassOnSCC(Pass *P, CallGraphSCC &CurSCC, CallGraph &CG,
-                    bool &CallGraphUpToDate, bool &DevirtualizedCall);
+  bool RunPassOnSCC(Pass *P, CallGraphSCC &CurSCC,
+                    CallGraph &CG, bool &CallGraphUpToDate,
+                    bool &DevirtualizedCall);
   bool RefreshCallGraph(const CallGraphSCC &CurSCC, CallGraph &CG,
                         bool IsCheckingMode);
 };
@@ -121,8 +122,8 @@ private:
 
 char CGPassManager::ID = 0;
 
-bool CGPassManager::RunPassOnSCC(Pass *P, CallGraphSCC &CurSCC, CallGraph &CG,
-                                 bool &CallGraphUpToDate,
+bool CGPassManager::RunPassOnSCC(Pass *P, CallGraphSCC &CurSCC,
+                                 CallGraph &CG, bool &CallGraphUpToDate,
                                  bool &DevirtualizedCall) {
   bool Changed = false;
   PMDataManager *PM = P->getAsPMDataManager();
@@ -171,7 +172,7 @@ bool CGPassManager::RunPassOnSCC(Pass *P, CallGraphSCC &CurSCC, CallGraph &CG,
 
   assert(PM->getPassManagerType() == PMT_FunctionPassManager &&
          "Invalid CGPassManager member");
-  FPPassManager *FPP = (FPPassManager *)P;
+  FPPassManager *FPP = (FPPassManager*)P;
 
   // Run pass P on all functions in the current SCC.
   for (CallGraphNode *CGN : CurSCC) {
@@ -210,7 +211,8 @@ bool CGPassManager::RefreshCallGraph(const CallGraphSCC &CurSCC, CallGraph &CG,
 
   LLVM_DEBUG(dbgs() << "CGSCCPASSMGR: Refreshing SCC with " << CurSCC.size()
                     << " nodes:\n";
-             for (CallGraphNode *CGN : CurSCC) CGN->dump(););
+             for (CallGraphNode *CGN
+                  : CurSCC) CGN->dump(););
 
   bool MadeChange = false;
   bool DevirtualizedCall = false;
@@ -221,8 +223,7 @@ bool CGPassManager::RefreshCallGraph(const CallGraphSCC &CurSCC, CallGraph &CG,
        SCCIdx != E; ++SCCIdx, ++FunctionNo) {
     CallGraphNode *CGN = *SCCIdx;
     Function *F = CGN->getFunction();
-    if (!F || F->isDeclaration())
-      continue;
+    if (!F || F->isDeclaration()) continue;
 
     // Walk the function body looking for call sites.  Sync up the call sites in
     // CGN with those actually in the function.
@@ -409,16 +410,15 @@ bool CGPassManager::RefreshCallGraph(const CallGraphSCC &CurSCC, CallGraph &CG,
       Calls.clear();
   }
 
-  LLVM_DEBUG(
-      if (MadeChange) {
-        dbgs() << "CGSCCPASSMGR: Refreshed SCC is now:\n";
-        for (CallGraphNode *CGN : CurSCC)
-          CGN->dump();
-        if (DevirtualizedCall)
-          dbgs() << "CGSCCPASSMGR: Refresh devirtualized a call!\n";
-      } else {
-        dbgs() << "CGSCCPASSMGR: SCC Refresh didn't change call graph.\n";
-      });
+  LLVM_DEBUG(if (MadeChange) {
+    dbgs() << "CGSCCPASSMGR: Refreshed SCC is now:\n";
+    for (CallGraphNode *CGN : CurSCC)
+      CGN->dump();
+    if (DevirtualizedCall)
+      dbgs() << "CGSCCPASSMGR: Refresh devirtualized a call!\n";
+  } else {
+    dbgs() << "CGSCCPASSMGR: SCC Refresh didn't change call graph.\n";
+  });
   (void)MadeChange;
 
   return DevirtualizedCall;
@@ -441,22 +441,22 @@ bool CGPassManager::RunAllPassesOnSCC(CallGraphSCC &CurSCC, CallGraph &CG,
   bool CallGraphUpToDate = true;
 
   // Run all passes on current SCC.
-  for (unsigned PassNo = 0, e = getNumContainedPasses(); PassNo != e;
-       ++PassNo) {
+  for (unsigned PassNo = 0, e = getNumContainedPasses();
+       PassNo != e; ++PassNo) {
     Pass *P = getContainedPass(PassNo);
 
     // If we're in -debug-pass=Executions mode, construct the SCC node list,
     // otherwise avoid constructing this string as it is expensive.
     if (isPassDebuggingExecutionsOrMore()) {
       std::string Functions;
-#ifndef NDEBUG
+  #ifndef NDEBUG
       raw_string_ostream OS(Functions);
       ListSeparator LS;
       for (const CallGraphNode *CGN : CurSCC) {
         OS << LS;
         CGN->print(OS);
       }
-#endif
+  #endif
       dumpPassInfo(P, EXECUTION_MSG, ON_CG_MSG, Functions);
     }
     dumpRequiredSet(P);
@@ -625,10 +625,9 @@ bool CGPassManager::doInitialization(CallGraph &CG) {
     if (PMDataManager *PM = getContainedPass(i)->getAsPMDataManager()) {
       assert(PM->getPassManagerType() == PMT_FunctionPassManager &&
              "Invalid CGPassManager member");
-      Changed |= ((FPPassManager *)PM)->doInitialization(CG.getModule());
+      Changed |= ((FPPassManager*)PM)->doInitialization(CG.getModule());
     } else {
-      Changed |=
-          ((CallGraphSCCPass *)getContainedPass(i))->doInitialization(CG);
+      Changed |= ((CallGraphSCCPass*)getContainedPass(i))->doInitialization(CG);
     }
   }
   return Changed;
@@ -641,9 +640,9 @@ bool CGPassManager::doFinalization(CallGraph &CG) {
     if (PMDataManager *PM = getContainedPass(i)->getAsPMDataManager()) {
       assert(PM->getPassManagerType() == PMT_FunctionPassManager &&
              "Invalid CGPassManager member");
-      Changed |= ((FPPassManager *)PM)->doFinalization(CG.getModule());
+      Changed |= ((FPPassManager*)PM)->doFinalization(CG.getModule());
     } else {
-      Changed |= ((CallGraphSCCPass *)getContainedPass(i))->doFinalization(CG);
+      Changed |= ((CallGraphSCCPass*)getContainedPass(i))->doFinalization(CG);
     }
   }
   return Changed;
@@ -657,10 +656,9 @@ bool CGPassManager::doFinalization(CallGraph &CG) {
 /// Old node has been deleted, and New is to be used in its place.
 void CallGraphSCC::ReplaceNode(CallGraphNode *Old, CallGraphNode *New) {
   assert(Old != New && "Should not replace node with self");
-  for (unsigned i = 0;; ++i) {
+  for (unsigned i = 0; ; ++i) {
     assert(i != Nodes.size() && "Node not in SCC");
-    if (Nodes[i] != Old)
-      continue;
+    if (Nodes[i] != Old) continue;
     if (New)
       Nodes[i] = New;
     else
@@ -670,7 +668,7 @@ void CallGraphSCC::ReplaceNode(CallGraphNode *Old, CallGraphNode *New) {
 
   // Update the active scc_iterator so that it doesn't contain dangling
   // pointers to the old CallGraphNode.
-  scc_iterator<CallGraph *> *CGI = (scc_iterator<CallGraph *> *)Context;
+  scc_iterator<CallGraph*> *CGI = (scc_iterator<CallGraph*>*)Context;
   CGI->ReplaceNode(Old, New);
 }
 
@@ -694,7 +692,7 @@ void CallGraphSCCPass::assignPassManager(PMStack &PMS,
   CGPassManager *CGP;
 
   if (PMS.top()->getPassManagerType() == PMT_CallGraphPassManager)
-    CGP = (CGPassManager *)PMS.top();
+    CGP = (CGPassManager*)PMS.top();
   else {
     // Create new Call Graph SCC Pass Manager if it does not exist.
     assert(!PMS.empty() && "Unable to create Call Graph Pass Manager");
@@ -733,63 +731,63 @@ void CallGraphSCCPass::getAnalysisUsage(AnalysisUsage &AU) const {
 
 namespace {
 
-/// PrintCallGraphPass - Print a Module corresponding to a call graph.
-///
-class PrintCallGraphPass : public CallGraphSCCPass {
-  std::string Banner;
-  raw_ostream &OS; // raw_ostream to print on.
+  /// PrintCallGraphPass - Print a Module corresponding to a call graph.
+  ///
+  class PrintCallGraphPass : public CallGraphSCCPass {
+    std::string Banner;
+    raw_ostream &OS;       // raw_ostream to print on.
 
-public:
-  static char ID;
+  public:
+    static char ID;
 
-  PrintCallGraphPass(const std::string &B, raw_ostream &OS)
+    PrintCallGraphPass(const std::string &B, raw_ostream &OS)
       : CallGraphSCCPass(ID), Banner(B), OS(OS) {}
 
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
-  }
+    void getAnalysisUsage(AnalysisUsage &AU) const override {
+      AU.setPreservesAll();
+    }
 
-  bool runOnSCC(CallGraphSCC &SCC) override {
-    bool BannerPrinted = false;
-    auto PrintBannerOnce = [&]() {
-      if (BannerPrinted)
-        return;
-      OS << Banner;
-      BannerPrinted = true;
-    };
+    bool runOnSCC(CallGraphSCC &SCC) override {
+      bool BannerPrinted = false;
+      auto PrintBannerOnce = [&]() {
+        if (BannerPrinted)
+          return;
+        OS << Banner;
+        BannerPrinted = true;
+      };
 
-    bool NeedModule = llvm::forcePrintModuleIR();
-    if (isFunctionInPrintList("*") && NeedModule) {
-      PrintBannerOnce();
-      OS << "\n";
-      SCC.getCallGraph().getModule().print(OS, nullptr);
+      bool NeedModule = llvm::forcePrintModuleIR();
+      if (isFunctionInPrintList("*") && NeedModule) {
+        PrintBannerOnce();
+        OS << "\n";
+        SCC.getCallGraph().getModule().print(OS, nullptr);
+        return false;
+      }
+      bool FoundFunction = false;
+      for (CallGraphNode *CGN : SCC) {
+        if (Function *F = CGN->getFunction()) {
+          if (!F->isDeclaration() && isFunctionInPrintList(F->getName())) {
+            FoundFunction = true;
+            if (!NeedModule) {
+              PrintBannerOnce();
+              F->print(OS);
+            }
+          }
+        } else if (isFunctionInPrintList("*")) {
+          PrintBannerOnce();
+          OS << "\nPrinting <null> Function\n";
+        }
+      }
+      if (NeedModule && FoundFunction) {
+        PrintBannerOnce();
+        OS << "\n";
+        SCC.getCallGraph().getModule().print(OS, nullptr);
+      }
       return false;
     }
-    bool FoundFunction = false;
-    for (CallGraphNode *CGN : SCC) {
-      if (Function *F = CGN->getFunction()) {
-        if (!F->isDeclaration() && isFunctionInPrintList(F->getName())) {
-          FoundFunction = true;
-          if (!NeedModule) {
-            PrintBannerOnce();
-            F->print(OS);
-          }
-        }
-      } else if (isFunctionInPrintList("*")) {
-        PrintBannerOnce();
-        OS << "\nPrinting <null> Function\n";
-      }
-    }
-    if (NeedModule && FoundFunction) {
-      PrintBannerOnce();
-      OS << "\n";
-      SCC.getCallGraph().getModule().print(OS, nullptr);
-    }
-    return false;
-  }
 
-  StringRef getPassName() const override { return "Print CallGraph IR"; }
-};
+    StringRef getPassName() const override { return "Print CallGraph IR"; }
+  };
 
 } // end anonymous namespace.
 
