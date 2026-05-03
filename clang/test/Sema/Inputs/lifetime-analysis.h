@@ -17,7 +17,9 @@ bool operator!=(basic_iterator<T>, basic_iterator<T>);
 template <typename T>
 struct __normal_iterator {
   __normal_iterator operator++();
+  __normal_iterator operator++(int);
   __normal_iterator operator--();
+  __normal_iterator operator--(int);
   __normal_iterator operator+(int) const;
   __normal_iterator operator-(int) const;
   T& operator*() const;
@@ -72,7 +74,9 @@ template<typename T> class allocator {};
 template <typename T>
 struct __wrap_iter {
   __wrap_iter operator++();
+  __wrap_iter operator++(int);
   __wrap_iter operator--();
+  __wrap_iter operator--(int);
   __wrap_iter operator+(int) const;
   __wrap_iter operator-(int) const;
   T& operator*() const;
@@ -91,7 +95,9 @@ __wrap_iter<T> operator-(int, __wrap_iter<T>);
 template <typename Iterator>
 struct reverse_iterator {
   reverse_iterator operator++();
+  reverse_iterator operator++(int);
   reverse_iterator operator--();
+  reverse_iterator operator--(int);
   reverse_iterator operator+(int) const;
   reverse_iterator operator-(int) const;
   decltype(*Iterator()) operator*() const;
@@ -104,8 +110,13 @@ reverse_iterator<Iterator> operator-(int, reverse_iterator<Iterator>);
 
 template <typename T, typename Alloc = allocator<T>>
 struct vector {
+#ifdef USE_LIBSTDCPP_ITERATORS
+  using iterator = __gnu_cxx::__normal_iterator<T>;
+  using const_iterator = __gnu_cxx::__normal_iterator<const T>;
+#else
   using iterator = __wrap_iter<T>;
   using const_iterator = __wrap_iter<const T>;
+#endif
   using reverse_iterator = std::reverse_iterator<iterator>;
   using const_reverse_iterator = std::reverse_iterator<const_iterator>;
   iterator begin();

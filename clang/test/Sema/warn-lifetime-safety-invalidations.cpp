@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wno-dangling -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wno-dangling -verify -DUSE_LIBSTDCPP_ITERATORS %s
 
 #include "Inputs/lifetime-analysis.h"
 
@@ -257,14 +258,14 @@ void IteratorUsedAfterPreIncrement() {
   std::vector<int> v;
   auto it = v.begin();      // expected-warning {{object whose reference is captured is later invalidated}}
   auto next = ++it;
-  v.push_back(4);           // expected-note {{invalidated here}}
+  v.push_back(1);           // expected-note {{invalidated here}}
   (void)*next;              // expected-note {{later used here}}
 }
 
-void IteratorUsedAfterPreDecrement(std::vector<int> v) {
+void IteratorUsedAfterPostDecrement(std::vector<int> v) {
   auto it = v.rbegin();     // expected-warning {{object whose reference is captured is later invalidated}}
-  auto prev = --it;
-  v.resize(8);              // expected-note {{invalidated here}}
+  auto prev = it--;
+  v.push_back(1);           // expected-note {{invalidated here}}
   (void)*prev;              // expected-note {{later used here}}
 }
 
@@ -272,14 +273,14 @@ void IteratorUsedAfterAddition() {
   std::vector<int> v;
   auto it = v.cbegin();     // expected-warning {{object whose reference is captured is later invalidated}}
   auto next = it + 5;
-  v.insert(v.begin(), 0);   // expected-note {{invalidated here}}
+  v.push_back(1);           // expected-note {{invalidated here}}
   (void)*next;              // expected-note {{later used here}}
 }
 
 void IteratorUsedAfterReverseSubtraction(std::vector<int> v) {
   auto it = v.crbegin();    // expected-warning {{object whose reference is captured is later invalidated}}
   auto prev = 5 - it;
-  v.clear();                // expected-note {{invalidated here}}
+  v.push_back(1);           // expected-note {{invalidated here}}
   (void)*prev;              // expected-note {{later used here}}
 }
 }  // namespace SimpleInvalidIterators
