@@ -608,20 +608,20 @@ def pcrel32 : PCRelAddress<i64, "pcrel32", PCRel32> {
 // Addressing modes
 //===----------------------------------------------------------------------===//
 
-class DispOp<ValueType vt, code pred> : Operand<vt>, PatLeaf<(vt imm), pred>;
+class DispOp<ValueType vt, code pred> : Operand<vt>, IntImmLeaf<vt, pred>;
 
 // 12-bit displacement operands.
 let EncoderMethod = "getImmOpValue<SystemZ::FK_390_U12Imm>",
     DecoderMethod = "decodeU12ImmOperand" in {
-  def disp12imm32 : DispOp<i32, [{ return N->getAPIntValue().isIntN(12); }]>;
-  def disp12imm64 : DispOp<i64, [{ return N->getAPIntValue().isIntN(12); }]>;
+  def disp12imm32 : DispOp<i32, [{ return Imm.isIntN(12); }]>;
+  def disp12imm64 : DispOp<i64, [{ return Imm.isIntN(12); }]>;
 }
 
 // 20-bit displacement operands.
 let EncoderMethod = "getImmOpValue<SystemZ::FK_390_S20Imm>",
     DecoderMethod = "decodeS20ImmOperand" in {
-  def disp20imm32 : DispOp<i32, [{ return N->getAPIntValue().isSignedIntN(20); }]>;
-  def disp20imm64 : DispOp<i64, [{ return N->getAPIntValue().isSignedIntN(20); }]>;
+  def disp20imm32 : DispOp<i32, [{ return Imm.isSignedIntN(20); }]>;
+  def disp20imm64 : DispOp<i64, [{ return Imm.isSignedIntN(20); }]>;
 }
 
 def BDAddr32Disp12      : AddressAsmOperand<"BDAddr",   "32", "12">;
