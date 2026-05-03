@@ -64,7 +64,7 @@ intermediate LLVM representation.
    AMDGPUUsage
    AMDGPUAsyncOperations
    AMDGPUDwarfExtensionsForHeterogeneousDebugging
-   AMDGPUDwarfExtensionAllowLocationDescriptionOnTheDwarfExpressionStack
+   AMDGPUDwarfExtensionAllowLocationDescriptionOnTheDwarfExpressionStack/AMDGPUDwarfExtensionAllowLocationDescriptionOnTheDwarfExpressionStack
    SPIRVUsage
    DirectXUsage
    RISCVUsage
