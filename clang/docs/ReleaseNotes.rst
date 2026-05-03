@@ -62,6 +62,9 @@ ABI Changes in This Version
   types, or ``_Complex float`` types are passed, and may introduce
   incompatibilities with code compiled by earlier versions of Clang that uses
   the ``__regcall`` calling convention on these targets. (#GH62999) (#GH98635)
+- Fixed Itanium mangling for lambdas in instantiated non-static data member
+  initializers by preserving the field-name closure-prefix. This changes the
+  mangled names for affected lambdas. (#GH190555)
 
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
@@ -157,6 +160,9 @@ C++17 Feature Support
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Clang now allows omitting ``typename`` before a template name in a
+  conversion operator, implementing `CWG2413 <https://wg21.link/cwg2413>`_.
 
 C Language Changes
 ------------------
@@ -310,16 +316,6 @@ Attribute Changes in Clang
   meant to be a low level tool for language runtime authors to associate a
   foreign language personality with a given function. Note that this does not
   perform any ABI validation for the personality routine.
-
-- The ``__attribute__((flatten))`` attribute behavior has changed to match
-  GCC. Previously, Clang only inlined direct callees of the attributed
-  function. Now, all calls are inlined transitively, including calls
-  introduced by inlining. Calls that cannot be inlined are left as-is:
-  this includes callees marked ``noinline``, callees with incompatible ABI
-  attributes (e.g. SME), callees without a visible definition, and
-  recursive calls where a function already appears in the inlining chain.
-  Flatten also works across ThinLTO module boundaries when callee
-  definitions are available.
 
 - The :doc:`ThreadSafetyAnalysis` attributes ``guarded_by`` and
   ``pt_guarded_by`` now accept multiple capability arguments with refined
@@ -571,10 +567,13 @@ Bug Fixes to C++ Support
   conforming and could lead to recursive constraint satisfaction checking. (#GH149443)
 - Fixed a crash in Itanium C++ name mangling for a lambda in a local class field initializer inside a constructor/destructor. (#GH176395)
 - Fixed crashes in Itanium C++ name mangling for lambdas with trailing requires-clauses involving requires-expressions. (#GH100774) (#GH123854)
+- Fixed an invalid rejection and assertion failure while generating ``operator=`` for fields with the ``__restrict`` qualifier. (#GH37979)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed a bug where explicit nullability property attributes were not stored in AST nodes in Objective-C. (#GH179703)
+- Fixed a bug where alias CTAD, or an invalid template template parameter, could create a template with an empty template
+  parameter list. This also adds asserts to prevent this from happening again.
 - Fixed a crash when parsing Doxygen ``@param`` commands attached to invalid declarations or non-function entities. (#GH182737)
 - Fixed the SourceLocation and SourceRange of reversed rewritten CXXOperatorCallExpr. (#GH192467)
 
@@ -750,6 +749,7 @@ Static Analyzer
 
 Sanitizers
 ----------
+- UndefinedBehaviorSanitizer now supports ``__ubsan_default_suppressions``.
 
 Python Binding Changes
 ----------------------

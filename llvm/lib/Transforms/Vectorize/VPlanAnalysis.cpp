@@ -73,6 +73,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
 
   switch (Opcode) {
   case Instruction::ExtractElement:
+  case Instruction::InsertElement:
   case Instruction::Freeze:
   case Instruction::PHI:
   case VPInstruction::Broadcast:
