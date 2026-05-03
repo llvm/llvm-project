@@ -14067,8 +14067,7 @@ TEST_F(FormatTest, HandlesIncludeDirectives) {
   // Protocol buffer definition or missing "#".
   auto Style = getLLVMStyleWithColumns(30);
   Style.Language = FormatStyle::LK_Proto;
-  verifyFormat("import \"aaaaaaaaaaaaaaaaa/aaaaaaaaaaaaaaa\";",
-               Style);
+  verifyFormat("import \"aaaaaaaaaaaaaaaaa/aaaaaaaaaaaaaaa\";", Style);
 
   Style = getLLVMStyle();
   Style.AlwaysBreakBeforeMultilineStrings = true;
