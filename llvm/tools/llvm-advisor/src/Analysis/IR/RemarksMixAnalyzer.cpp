@@ -25,8 +25,7 @@ RemarksMixAnalyzer::run(const CapabilityContext &Context) {
                 Path, [&](const remarks::Remark &R) -> Error {
                   for (const remarks::Argument &A : R.Args) {
                     ++TotalArgs;
-                    std::string K = A.Key.str();
-                    json::Value &Val = Keys[K];
+                    json::Value &Val = Keys[A.Key];
                     Val = Val.getAsInteger().value_or(0) + 1;
                   }
                   return Error::success();

@@ -35,9 +35,9 @@ RemarksSizeDiffAnalyzer::run(const CapabilityContext &Context) {
                     ++DeltaCount;
                     DeltaSum += *V;
                     Entries.push_back(json::Object{
-                        {"function", R.FunctionName.str()},
-                        {"remark", R.RemarkName.str()},
-                        {"key", Key.str()},
+                        {"function", R.FunctionName},
+                        {"remark", R.RemarkName},
+                        {"key", Key},
                         {"value", *V},
                     });
                   }

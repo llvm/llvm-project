@@ -25,8 +25,7 @@ RemarksAnalyzer::run(const CapabilityContext &Context) {
         if (Error E = foreachRemark(
                 Path, [&](const remarks::Remark &R) -> Error {
                   ++Count;
-                  std::string PassKey = R.PassName.str();
-                  json::Value &PassVal = ByPass[PassKey];
+                  json::Value &PassVal = ByPass[R.PassName];
                   PassVal = PassVal.getAsInteger().value_or(0) + 1;
 
                   StringRef Ty = remarks::typeToStr(R.RemarkType);
