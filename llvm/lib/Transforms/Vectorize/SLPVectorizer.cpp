@@ -10631,6 +10631,40 @@ ArrayRef<const Loop *> BoUpSLP::getLoopNest(const Loop *L) {
   return Res;
 }
 
+static bool checkEVsForVecCalls(ArrayRef<Value *> VL,
+                                const InstructionsState &S,
+                                const TargetLibraryInfo &TLI,
+                                SmallVectorImpl<unsigned> &Indices,
+                                SmallVectorImpl<Value *> &Calls) {
+  assert(S && S.getOpcode() == Instruction::ExtractValue &&
+         "Expected extractvalue instruction state.");
+  if (!all_of(VL, IsaPred<ExtractValueInst>))
+    return false;
+  auto *VL0 = cast<ExtractValueInst>(S.getMainOp());
+  ArrayRef<unsigned> VL0Indices = VL0->getIndices();
+  SmallVector<Value *> Aggregates;
+  for (Value *V : VL) {
+    if (V == VL0) {
+      Aggregates.push_back(VL0->getAggregateOperand());
+      continue;
+    }
+    auto *IV = cast<ExtractValueInst>(V);
+    if (IV->getIndices() != VL0Indices)
+      return false;
+    Value *Agg = IV->getAggregateOperand();
+    Aggregates.push_back(Agg);
+  }
+  const InstructionsState AggState = getSameOpcode(Aggregates, TLI);
+  if (AggState && AggState.getOpcode() == Instruction::Call &&
+      !AggState.isAltShuffle() &&
+      isa<StructType>(AggState.getMainOp()->getType())) {
+    Indices.assign(VL0Indices.begin(), VL0Indices.end());
+    Calls.swap(Aggregates);
+    return true;
+  }
+  return false;
+}
+
 BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
     const InstructionsState &S, ArrayRef<Value *> VL,
     bool IsScatterVectorizeUserTE, OrdersType &CurrentOrder,
@@ -10675,6 +10709,11 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
   case Instruction::ExtractValue: {
     bool Reuse = canReuseExtract(VL, CurrentOrder);
     if (Reuse || !CurrentOrder.empty())
+      return TreeEntry::Vectorize;
+    SmallVector<unsigned> Indices;
+    SmallVector<Value *> Calls;
+    if (ShuffleOrOp == Instruction::ExtractValue &&
+        checkEVsForVecCalls(VL, S, *TLI, Indices, Calls))
       return TreeEntry::Vectorize;
     LLVM_DEBUG(dbgs() << "SLP: Gather extract sequence.\n");
     return TreeEntry::NeedToGather;
@@ -11717,7 +11756,16 @@ class InstructionsCompatibilityAnalysis {
                            Handler.getOperands(I).end());
       return;
     }
-    case Instruction::ExtractValue:
+    case Instruction::ExtractValue: {
+      SmallVector<unsigned> Indices;
+      SmallVector<Value *> Calls;
+      if (checkEVsForVecCalls(VL, S, TLI, Indices, Calls)) {
+        Operands.assign(1, {});
+        Operands[0].swap(Calls);
+        return;
+      }
+      [[fallthrough]];
+    }
     case Instruction::ExtractElement:
       // This is a special case, as it does not gather, but at the same time
       // we are not extending buildTree_rec() towards the operands.
@@ -12891,6 +12939,12 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
       // This is a special case, as it does not gather, but at the same time
       // we are not extending buildTreeRec() towards the operands.
       TE->setOperands(Operands);
+      if (ShuffleOrOp == Instruction::ExtractValue) {
+        SmallVector<unsigned> Indices;
+        SmallVector<Value *> Calls;
+        if (checkEVsForVecCalls(VL, S, *TLI, Indices, Calls))
+          buildTreeRec(Operands.front(), Depth + 1, {TE, 0});
+      }
       return;
     }
     case Instruction::InsertElement: {
@@ -17749,6 +17803,18 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
   if (VectorizableTree.empty()) {
     assert(ExternalUses.empty() && "We shouldn't have any external users");
 
+    return true;
+  }
+
+  // FIXME: support buildvector of the gather nodes with struct types.
+  if (any_of(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
+        return TE->isGather() && TE->hasState() &&
+               TE->getOpcode() == Instruction::Call &&
+               isa<StructType>(TE->getMainOp()->getType());
+      })) {
+    LLVM_DEBUG(
+        dbgs() << "SLP: rejecting tree with buildvector struct values of size "
+               << VectorizableTree.size() << ".\n");
     return true;
   }
 
@@ -22640,6 +22706,19 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       return V;
     }
     case Instruction::ExtractValue: {
+      SmallVector<unsigned> Indices;
+      SmallVector<Value *> Calls;
+      if (checkEVsForVecCalls(E->Scalars, E->getOperations(), *TLI, Indices,
+                              Calls)) {
+        setInsertPointAfterBundle(E);
+        Value *V = vectorizeOperand(E, 0);
+        V = Builder.CreateExtractValue(V, Indices);
+        if (auto *I = dyn_cast<Instruction>(V))
+          V = ::propagateMetadata(I, E->Scalars);
+        V = FinalShuffle(V, E);
+        E->VectorizedValue = V;
+        return V;
+      }
       auto *LI = cast<LoadInst>(E->getSingleOperand(0));
       Builder.SetInsertPoint(LI);
       Value *Ptr = LI->getPointerOperand();
