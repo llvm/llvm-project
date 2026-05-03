@@ -58,3 +58,22 @@ func.func @simple4(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 func.func @simple5() {
   return
 }
+
+// -----
+
+// This test case will be reduced by ReplaceOperandsPattern.
+// crash's i32 operands should be replaced by %arg0.
+// Extra dead operations should be removed.
+
+// CHECK-LABEL: func.func @replace(%arg0: i32) -> i32 {
+func.func @replace(%arg0: i32) -> i32 {
+  // CHECK-NOT: {{.*}} = arith.constant 1 : i32
+  %0 = arith.constant 1 : i32
+  // CHECK: {{.*}} = arith.constant 2.000000e+00 : f32
+  %1 = arith.constant 2.0 : f32
+  // CHECK-NOT: {{.*}} = arith.constant 3.0 : i32
+  %2 = arith.constant 3 : i32
+  // CHECK: {{.*}} = "test.op_crash"(%arg0, {{.*}}, %arg0) : (i32, f32, i32) -> i32
+  %crash = "test.op_crash"(%0, %1, %2) : (i32, f32, i32) -> i32
+  return %crash : i32
+}

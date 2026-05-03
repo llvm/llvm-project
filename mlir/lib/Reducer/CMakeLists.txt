@@ -3,6 +3,7 @@ add_mlir_library(MLIRReduce
    ReductionNode.cpp
    ReductionTreePass.cpp
    Tester.cpp
+   Patterns/ReplaceOperands.cpp
 
    LINK_LIBS PUBLIC
    MLIRIR
