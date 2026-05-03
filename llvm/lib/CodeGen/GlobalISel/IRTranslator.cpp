@@ -129,19 +129,23 @@ class IRTranslatorImpl {
     inline const_vreg_iterator vregs_end() const { return ValToVRegs.end(); }
 
     VRegListT *getVRegs(const Value &V) {
-      auto It = ValToVRegs.find(&V);
-      if (It != ValToVRegs.end())
+      auto [It, Inserted] = ValToVRegs.try_emplace(&V);
+      if (!Inserted)
         return It->second;
 
-      return insertVRegs(V);
+      // We placement new using our fast allocator since we never try to free
+      // the vectors until translation is finished.
+      It->second = new (VRegAlloc.Allocate()) VRegListT();
+      return It->second;
     }
 
     OffsetListT *getOffsets(const Value &V) {
-      auto It = TypeToOffsets.find(V.getType());
-      if (It != TypeToOffsets.end())
+      auto [It, Inserted] = TypeToOffsets.try_emplace(V.getType());
+      if (!Inserted)
         return It->second;
 
-      return insertOffsets(V);
+      It->second = new (OffsetAlloc.Allocate()) OffsetListT();
+      return It->second;
     }
 
     const_vreg_iterator findVRegs(const Value &V) const {
@@ -158,23 +162,6 @@ class IRTranslatorImpl {
     }
 
   private:
-    VRegListT *insertVRegs(const Value &V) {
-      assert(!ValToVRegs.contains(&V) && "Value already exists");
-
-      // We placement new using our fast allocator since we never try to free
-      // the vectors until translation is finished.
-      auto *VRegList = new (VRegAlloc.Allocate()) VRegListT();
-      ValToVRegs[&V] = VRegList;
-      return VRegList;
-    }
-
-    OffsetListT *insertOffsets(const Value &V) {
-      assert(!TypeToOffsets.contains(V.getType()) && "Type already exists");
-
-      auto *OffsetList = new (OffsetAlloc.Allocate()) OffsetListT();
-      TypeToOffsets[V.getType()] = OffsetList;
-      return OffsetList;
-    }
     SpecificBumpPtrAllocator<VRegListT> VRegAlloc;
     SpecificBumpPtrAllocator<OffsetListT> OffsetAlloc;
 
