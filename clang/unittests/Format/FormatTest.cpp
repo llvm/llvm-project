@@ -14065,10 +14065,12 @@ TEST_F(FormatTest, HandlesIncludeDirectives) {
   verifyFormat("#define F __has_include_next(<a/b>)");
 
   // Protocol buffer definition or missing "#".
+  auto Style = getLLVMStyleWithColumns(30);
+  Style.Language = FormatStyle::LK_Proto;
   verifyFormat("import \"aaaaaaaaaaaaaaaaa/aaaaaaaaaaaaaaa\";",
-               getLLVMStyleWithColumns(30));
+               Style);
 
-  FormatStyle Style = getLLVMStyle();
+  Style = getLLVMStyle();
   Style.AlwaysBreakBeforeMultilineStrings = true;
   Style.ColumnLimit = 0;
   verifyFormat("#import \"abc.h\"", Style);

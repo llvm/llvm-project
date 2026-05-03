@@ -132,8 +132,7 @@ public:
     // namespace.
     if (auto Next = First->getNextNonComment()) {
       return !Next->isMemberAccess() &&
-             Next->isNoneOf(tok::coloncolon, tok::star) &&
-             !Next->isStringLiteral();
+             Next->isNoneOf(tok::coloncolon, tok::star);
     }
 
     return false;
