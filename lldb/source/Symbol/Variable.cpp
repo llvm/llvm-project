@@ -483,7 +483,9 @@ static CompilerType GetInstanceVariableType(StackFrame &frame,
   auto *lang = Language::FindPlugin(frame.GetLanguage().AsLanguageType());
   if (!lang)
     return {};
-  llvm::StringRef instance_name = lang->GetInstanceVariableName();
+  SymbolContext sc = frame.GetSymbolContext(eSymbolContextFunction |
+                                            eSymbolContextBlock);
+  llvm::StringRef instance_name = sc.GetInstanceVariableName();
   if (instance_name.empty())
     return {};
   VariableSP var_sp = variable_list.FindVariable(ConstString(instance_name));
