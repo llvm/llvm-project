@@ -60,9 +60,9 @@ bool isHeaderMask(const VPValue *V, const VPlan &Plan);
 
 /// Checks if \p V is uniform across all VF lanes and UF parts. It is considered
 /// as such if it is either loop invariant (defined outside the vector region)
-/// or its operand is known to be uniform across all VFs and UFs (e.g.
-/// VPDerivedIV or VPCanonicalIVPHI).
-bool isUniformAcrossVFsAndUFs(VPValue *V);
+/// or its operands are known to be uniform across all VFs and UFs (e.g.
+/// VPDerivedIV or the canonical IV).
+bool isUniformAcrossVFsAndUFs(const VPValue *V);
 
 /// Returns the header block of the first, top-level loop, or null if none
 /// exist.
@@ -72,6 +72,10 @@ VPBasicBlock *getFirstLoopHeader(VPlan &Plan, VPDominatorTree &VPDT);
 /// one.
 unsigned getVFScaleFactor(VPRecipeBase *R);
 
+/// Return true if we do not know how to (mechanically) hoist or sink \p R.
+/// When sinking, passing \p Sinking = true ensures that assumes aren't sunk.
+bool cannotHoistOrSinkRecipe(const VPRecipeBase &R, bool Sinking = false);
+
 /// Returns the VPValue representing the uncountable exit comparison used by
 /// AnyOf if the recipes it depends on can be traced back to live-ins and
 /// the addresses (in GEP/PtrAdd form) of any (non-masked) load used in
@@ -80,9 +84,9 @@ unsigned getVFScaleFactor(VPRecipeBase *R);
 /// \p GEPs.
 LLVM_ABI_FOR_TEST
 std::optional<VPValue *>
-getRecipesForUncountableExit(VPlan &Plan,
-                             SmallVectorImpl<VPRecipeBase *> &Recipes,
-                             SmallVectorImpl<VPRecipeBase *> &GEPs);
+getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
+                             SmallVectorImpl<VPInstruction *> &GEPs,
+                             VPBasicBlock *LatchVPBB);
 
 /// Return a MemoryLocation for \p R with noalias metadata populated from
 /// \p R, if the recipe is supported and std::nullopt otherwise. The pointer of
@@ -130,6 +134,7 @@ inline VPRecipeBase *findRecipe(VPValue *Start, PredT Pred) {
 /// return nullptr;
 template <typename MatchT>
 static VPRecipeBase *findUserOf(VPValue *V, const MatchT &P) {
+  using namespace llvm::VPlanPatternMatch;
   auto It = find_if(V->users(), match_fn(P));
   return It == V->user_end() ? nullptr : cast<VPRecipeBase>(*It);
 }
@@ -140,6 +145,15 @@ template <unsigned Opcode> static VPInstruction *findUserOf(VPValue *V) {
   using namespace llvm::VPlanPatternMatch;
   return cast_or_null<VPInstruction>(findUserOf(V, m_VPInstruction<Opcode>()));
 }
+
+template <typename RecipeTy> static RecipeTy *findUserOf(VPValue *V) {
+  using namespace llvm::VPlanPatternMatch;
+  return cast_or_null<RecipeTy>(findUserOf(V, m_Isa<RecipeTy>()));
+}
+
+/// Find the canonical IV increment of \p Plan's vector loop region. Returns
+/// nullptr if not found.
+VPInstruction *findCanonicalIVIncrement(VPlan &Plan);
 
 /// Find the ComputeReductionResult recipe for \p PhiR, looking through selects
 /// inserted for predicated reductions or tail folding.
@@ -260,10 +274,16 @@ public:
     Old->clearSuccessors();
   }
 
+  /// Clone the CFG for all nodes reachable from \p Entry, including cloning
+  /// the blocks and their recipes. Operands of cloned recipes will NOT be
+  /// updated. Remapping of operands must be done separately. Returns a pair
+  /// with the new entry and exiting blocks of the cloned region. If \p Entry
+  /// isn't part of a region, return nullptr for the exiting block.
+  static std::pair<VPBlockBase *, VPBlockBase *> cloneFrom(VPBlockBase *Entry);
+
   /// Return an iterator range over \p Range which only includes \p BlockTy
   /// blocks. The accesses are casted to \p BlockTy.
-  template <typename BlockTy, typename T>
-  static auto blocksOnly(const T &Range) {
+  template <typename BlockTy, typename T> static auto blocksOnly(T &&Range) {
     // Create BaseTy with correct const-ness based on BlockTy.
     using BaseTy = std::conditional_t<std::is_const<BlockTy>::value,
                                       const VPBlockBase, VPBlockBase>;
@@ -278,6 +298,12 @@ public:
       return cast<BlockTy>(&Block);
     });
   }
+
+  /// Returns the blocks between \p FirstBB and \p LastBB, where FirstBB
+  /// to LastBB forms a single-sucessor chain.
+  static SmallVector<VPBasicBlock *>
+  blocksInSingleSuccessorChainBetween(VPBasicBlock *FirstBB,
+                                      VPBasicBlock *LastBB);
 
   /// Inserts \p BlockPtr on the edge between \p From and \p To. That is, update
   /// \p From's successor to \p To to point to \p BlockPtr and \p To's

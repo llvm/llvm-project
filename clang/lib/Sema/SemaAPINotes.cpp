@@ -271,8 +271,7 @@ static void ProcessAPINotes(Sema &S, Decl *D,
               /*Strict=*/false,
               /*Replacement=*/StringRef(),
               /*Priority=*/Sema::AP_Explicit,
-              /*Environment=*/nullptr,
-              /*OrigAnyAppleOSVersion=*/VersionTuple());
+              /*Environment=*/nullptr);
         },
         [](const Decl *D) {
           return llvm::find_if(D->attrs(), [](const Attr *next) -> bool {
@@ -577,6 +576,14 @@ static void ProcessAPINotes(Sema &S, FunctionOrMethod AnyFunc,
   // Nullability of return type.
   if (Info.NullabilityAudited)
     applyNullability(S, D, Info.getReturnTypeInfo(), Metadata);
+
+  // Add [[clang::unsafe_buffer_usage]]
+  if (Info.UnsafeBufferUsage && !D->getAttr<UnsafeBufferUsageAttr>()) {
+    handleAPINotedAttribute<UnsafeBufferUsageAttr>(S, D, true, Metadata, [&]() {
+      return UnsafeBufferUsageAttr::Create(S.getASTContext(),
+                                           getPlaceholderAttrInfo());
+    });
+  }
 
   // Parameters.
   unsigned NumParams = FD ? FD->getNumParams() : MD->param_size();

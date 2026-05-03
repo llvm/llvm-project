@@ -63,9 +63,9 @@ void test5(read_only pipe int4 p) {
 
 typedef read_only pipe int MyPipe;
 kernel void test6(MyPipe p) {
-// LINUX: define{{.*}} spir_kernel void @test6
-// WINDOWS: define dso_local spir_kernel void @test6
-// OCLWINDOWS: define dso_local spir_kernel void @test6
+// LINUX: define{{.*}} void @test6
+// WINDOWS: define dso_local void @test6
+// OCLWINDOWS: define dso_local void @test6
 }
 
 struct Person {

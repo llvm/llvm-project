@@ -166,6 +166,18 @@ PowIStrengthReduction<PowIOpTy, DivOpTy, MulOpTy>::matchAndRewrite(
   else
     return failure();
 
+  // Compute abs(exponent) and check the threshold before creating any IR,
+  // so that returning failure() here does not violate the pattern API contract.
+  bool exponentIsNegative = false;
+  if (exponentValue < 0) {
+    exponentIsNegative = true;
+    exponentValue *= -1;
+  }
+
+  // Bail out if `abs(exponent)` exceeds the threshold (exponent==0 is free).
+  if (exponentValue != 0 && exponentValue > exponentThreshold)
+    return failure();
+
   // Maybe broadcasts scalar value into vector type compatible with `op`.
   auto bcast = [&loc, &op, &rewriter](Value value) -> Value {
     if (auto vec = dyn_cast<VectorType>(op.getType()))
@@ -195,16 +207,6 @@ PowIStrengthReduction<PowIOpTy, DivOpTy, MulOpTy>::matchAndRewrite(
     rewriter.replaceOp(op, bcast(one));
     return success();
   }
-
-  bool exponentIsNegative = false;
-  if (exponentValue < 0) {
-    exponentIsNegative = true;
-    exponentValue *= -1;
-  }
-
-  // Bail out if `abs(exponent)` exceeds the threshold.
-  if (exponentValue > exponentThreshold)
-    return failure();
 
   Value result = base;
   // Transform to naive sequence of multiplications:

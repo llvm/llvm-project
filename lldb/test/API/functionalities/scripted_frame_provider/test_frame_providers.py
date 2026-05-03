@@ -460,6 +460,65 @@ class AddBazFrameProvider(ScriptedFrameProvider):
         return None
 
 
+class ThreadValidatingFrame(ScriptedFrame):
+    """Frame that validates thread member is correctly set after init.
+
+    This catches the regression where ScriptedFrame.__init__ used
+    GetThreadByIndexID(tid) instead of GetThreadByID(tid). The thread ID
+    and index ID are different, so using the wrong API produces an invalid
+    thread. The validation result is encoded in the function name so the
+    test can verify it through the SB API.
+    """
+
+    def __init__(self, thread, idx):
+        args = lldb.SBStructuredData()
+        super().__init__(thread, args)
+        self.idx = idx
+        # Store validation results after base class init
+        self.thread_valid = self.thread is not None and self.thread.IsValid()
+        self.thread_id = self.thread.GetThreadID() if self.thread_valid else 0
+
+    def get_id(self):
+        return self.idx
+
+    def get_function_name(self):
+        # Encode validation in function name so test can verify via SB API
+        if self.thread_valid:
+            return f"thread_valid_id_{self.thread_id:#x}"
+        return "thread_INVALID"
+
+    def is_artificial(self):
+        return False
+
+    def is_hidden(self):
+        return False
+
+    def get_register_context(self):
+        return None
+
+
+class ThreadValidatingFrameProvider(ScriptedFrameProvider):
+    """Provider that validates ScriptedFrame.thread member initialization.
+
+    Uses ThreadValidatingFrame to verify that self.thread is correctly set
+    via GetThreadByID (not GetThreadByIndexID) after ScriptedFrame.__init__.
+    """
+
+    def __init__(self, input_frames, args):
+        super().__init__(input_frames, args)
+
+    @staticmethod
+    def get_description():
+        return "Validate ScriptedFrame.thread member initialization"
+
+    def get_frame_at_index(self, index):
+        if index == 0:
+            return ThreadValidatingFrame(self.thread, 0)
+        elif index - 1 < len(self.input_frames):
+            return index - 1
+        return None
+
+
 class ValueProvidingFrame(ScriptedFrame):
     """Scripted frame with a valid PC but no associated module."""
 
@@ -500,6 +559,10 @@ class ValueProvidingFrame(ScriptedFrame):
         """"""
         out = lldb.SBValueList()
         out.Append(self.variable)
+        # Produce a fake value to be displayed.
+        out.Append(
+            self.variable.CreateValueFromExpression("_handler_one", "(uint32_t)1")
+        )
         return out
 
     def get_value_for_variable_expression(self, expr, options, error: lldb.SBError):

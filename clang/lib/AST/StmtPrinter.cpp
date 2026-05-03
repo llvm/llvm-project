@@ -800,6 +800,11 @@ void StmtPrinter::VisitOMPInterchangeDirective(OMPInterchangeDirective *Node) {
   PrintOMPExecutableDirective(Node);
 }
 
+void StmtPrinter::VisitOMPSplitDirective(OMPSplitDirective *Node) {
+  Indent() << "#pragma omp split";
+  PrintOMPExecutableDirective(Node);
+}
+
 void StmtPrinter::VisitOMPFuseDirective(OMPFuseDirective *Node) {
   Indent() << "#pragma omp fuse";
   PrintOMPExecutableDirective(Node);
@@ -2463,7 +2468,7 @@ void StmtPrinter::VisitLambdaExpr(LambdaExpr *Node) {
 
   // Print the body.
   OS << ' ';
-  if (Policy.TerseOutput)
+  if (Policy.TerseOutput || Policy.SuppressLambdaBody)
     OS << "{}";
   else
     PrintRawCompoundStmt(Node->getCompoundStmtBody());

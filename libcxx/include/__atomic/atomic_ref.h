@@ -30,9 +30,10 @@
 #include <__cstddef/byte.h>
 #include <__cstddef/ptrdiff_t.h>
 #include <__memory/addressof.h>
+#include <__memory/is_sufficiently_aligned.h>
+#include <__type_traits/copy_cv.h>
 #include <__type_traits/has_unique_object_representation.h>
 #include <__type_traits/is_trivially_copyable.h>
-#include <cstdint>
 #include <cstring>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -224,7 +225,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI void notify_one() const noexcept { std::__atomic_notify_one(*this); }
   _LIBCPP_HIDE_FROM_ABI void notify_all() const noexcept { std::__atomic_notify_all(*this); }
 #  if _LIBCPP_STD_VER >= 26
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp* address() const noexcept { return __ptr_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __copy_cv_t<_Tp, void>* address() const noexcept { return __ptr_; }
 #  endif
 
 protected:
@@ -254,7 +255,7 @@ struct atomic_ref : public __atomic_ref_base<_Tp> {
 
   _LIBCPP_HIDE_FROM_ABI explicit atomic_ref(_Tp& __obj) : __base(__obj) {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
-        reinterpret_cast<uintptr_t>(std::addressof(__obj)) % __base::required_alignment == 0,
+        std::__is_sufficiently_aligned<__base::required_alignment>(std::addressof(__obj)),
         "atomic_ref ctor: referenced object must be aligned to required_alignment");
   }
 
@@ -274,7 +275,7 @@ struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
 
   _LIBCPP_HIDE_FROM_ABI explicit atomic_ref(_Tp& __obj) : __base(__obj) {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
-        reinterpret_cast<uintptr_t>(std::addressof(__obj)) % __base::required_alignment == 0,
+        std::__is_sufficiently_aligned<__base::required_alignment>(std::addressof(__obj)),
         "atomic_ref ctor: referenced object must be aligned to required_alignment");
   }
 
@@ -320,7 +321,7 @@ struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
 
   _LIBCPP_HIDE_FROM_ABI explicit atomic_ref(_Tp& __obj) : __base(__obj) {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
-        reinterpret_cast<uintptr_t>(std::addressof(__obj)) % __base::required_alignment == 0,
+        std::__is_sufficiently_aligned<__base::required_alignment>(std::addressof(__obj)),
         "atomic_ref ctor: referenced object must be aligned to required_alignment");
   }
 

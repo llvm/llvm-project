@@ -24,9 +24,9 @@ void f() noexcept {
 // CIR: cir.throw %{{.*}} : !cir.ptr<!cir.ptr<!cir.func<()>>>, @_ZTIPDoFvvE
 
 // LLVM-DAG: @_ZTSFvvE = linkonce_odr global [5 x i8] c"FvvE\00", comdat
-// LLVM-DAG: @_ZTIFvvE = constant { ptr, ptr } { ptr getelementptr (i8, ptr @_ZTVN10__cxxabiv120__function_type_infoE, i64 16), ptr @_ZTSFvvE }
+// LLVM-DAG: @_ZTIFvvE = linkonce_odr constant { ptr, ptr } { ptr getelementptr (i8, ptr @_ZTVN10__cxxabiv120__function_type_infoE, i64 16), ptr @_ZTSFvvE }, comdat
 // LLVM-DAG: @_ZTSPDoFvvE = linkonce_odr global [8 x i8] c"PDoFvvE\00", comdat
-// LLVM-DAG: @_ZTIPDoFvvE = constant { ptr, ptr, i32, ptr } { ptr getelementptr (i8, ptr @_ZTVN10__cxxabiv119__pointer_type_infoE, i64 16), ptr @_ZTSPDoFvvE, i32 64, ptr @_ZTIFvvE }
+// LLVM-DAG: @_ZTIPDoFvvE = linkonce_odr constant { ptr, ptr, i32, ptr } { ptr getelementptr (i8, ptr @_ZTVN10__cxxabiv119__pointer_type_infoE, i64 16), ptr @_ZTSPDoFvvE, i32 64, ptr @_ZTIFvvE }, comdat
 // LLVM: call void @__cxa_throw(ptr %{{.*}}, ptr @_ZTIPDoFvvE, ptr null)
 
 // OGCG-DAG: @_ZTSFvvE = linkonce_odr constant [5 x i8] c"FvvE\00", comdat

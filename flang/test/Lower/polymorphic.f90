@@ -66,14 +66,6 @@ module polymorphic_test
     lhs%b = rhs
   End Subroutine
 
-! CHECK-LABEL: func.func @_QMpolymorphic_testPhost_assoc(
-! CHECK-SAME: %[[THIS:.*]]: !fir.class<!fir.type<_QMpolymorphic_testTp1{{(,sequence)?}}{a:i32,b:i32}>>) {
-! CHECK: %[[TUPLE:.*]] = fir.alloca tuple<!fir.class<!fir.type<_QMpolymorphic_testTp1{{(,sequence)?}}{a:i32,b:i32}>>>
-! CHECK: %[[POS_IN_TUPLE:.*]] = arith.constant 0 : i32
-! CHECK: %[[COORD_OF_CLASS:.*]] = fir.coordinate_of %[[TUPLE]], %[[POS_IN_TUPLE]] : (!fir.ref<tuple<!fir.class<!fir.type<_QMpolymorphic_testTp1{{(,sequence)?}}{a:i32,b:i32}>>>>, i32) -> !fir.ref<!fir.class<!fir.type<_QMpolymorphic_testTp1{{(,sequence)?}}{a:i32,b:i32}>>>
-! CHECK: fir.store %[[THIS]] to %[[COORD_OF_CLASS]] : !fir.ref<!fir.class<!fir.type<_QMpolymorphic_testTp1{{(,sequence)?}}{a:i32,b:i32}>>>
-! CHECK: fir.call @_QMpolymorphic_testFhost_assocPinternal(%[[TUPLE]]) {{.*}} : (!fir.ref<tuple<!fir.class<!fir.type<_QMpolymorphic_testTp1{{(,sequence)?}}{a:i32,b:i32}>>>>) -> ()
-
   elemental integer function elemental_fct(this)
     class(p1), intent(in) :: this
     elemental_fct = this%a
@@ -514,6 +506,14 @@ module polymorphic_test
 ! CHECK: }
 ! CHECK: fir.array_merge_store %[[LOAD_PA]], %[[DO_RES]] to %[[PA]] : !fir.array<3x!fir.type<_QMpolymorphic_testTp1{{(,sequence)?}}{a:i32,b:i32}>>, !fir.array<3x!fir.type<_QMpolymorphic_testTp1{{(,sequence)?}}{a:i32,b:i32}>>, !fir.ref<!fir.array<3x!fir.type<_QMpolymorphic_testTp1{{(,sequence)?}}{a:i32,b:i32}>>>
 ! CHECK: return
+
+! CHECK-LABEL: func.func @_QMpolymorphic_testPhost_assoc(
+! CHECK-SAME: %[[THIS:.*]]: !fir.class<!fir.type<_QMpolymorphic_testTp1{{(,sequence)?}}{a:i32,b:i32}>> {fir.bindc_name = "this"}) {
+! CHECK: %[[TUPLE:.*]] = fir.alloca tuple<!fir.class<!fir.type<_QMpolymorphic_testTp1{{(,sequence)?}}{a:i32,b:i32}>>>
+! CHECK: %[[POS_IN_TUPLE:.*]] = arith.constant 0 : i32
+! CHECK: %[[COORD_OF_CLASS:.*]] = fir.coordinate_of %[[TUPLE]], %[[POS_IN_TUPLE]] : (!fir.ref<tuple<!fir.class<!fir.type<_QMpolymorphic_testTp1{{(,sequence)?}}{a:i32,b:i32}>>>>, i32) -> !fir.ref<!fir.class<!fir.type<_QMpolymorphic_testTp1{{(,sequence)?}}{a:i32,b:i32}>>>
+! CHECK: fir.store %[[THIS]] to %[[COORD_OF_CLASS]] : !fir.ref<!fir.class<!fir.type<_QMpolymorphic_testTp1{{(,sequence)?}}{a:i32,b:i32}>>>
+! CHECK: fir.call @_QMpolymorphic_testFhost_assocPinternal(%[[TUPLE]]) {{.*}} : (!fir.ref<tuple<!fir.class<!fir.type<_QMpolymorphic_testTp1{{(,sequence)?}}{a:i32,b:i32}>>>>) -> ()
 
   subroutine host_assoc(this)
     class(p1) :: this
@@ -1014,10 +1014,10 @@ module polymorphic_test
 ! CHECK:  %[[LOAD_S:.*]] = fir.load %[[S]] : !fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolymorphic_testTp1{{(,sequence)?}}{a:i32,b:i32}>>>>
 ! CHECK:  fir.select_type %[[LOAD_S]] : !fir.class<!fir.heap<!fir.type<_QMpolymorphic_testTp1{{(,sequence)?}}{a:i32,b:i32}>>> [#fir.type_is<!fir.type<_QMpolymorphic_testTp2{{(,sequence)?}}{a:i32,b:i32,c:f32}>>, ^bb1, unit, ^bb2]
 ! CHECK: ^bb1:
-! CHECK:  %[[CONV_S:.*]] = fir.convert %[[LOAD_S]] : (!fir.class<!fir.heap<!fir.type<_QMpolymorphic_testTp1{{(,sequence)?}}{a:i32,b:i32}>>>) -> !fir.box<!fir.heap<!fir.type<_QMpolymorphic_testTp2{{(,sequence)?}}{a:i32,b:i32,c:f32}>>>
-! CHECK:  %[[REBOX_P1:.*]] = fir.rebox %[[CONV_S]] : (!fir.box<!fir.heap<!fir.type<_QMpolymorphic_testTp2{{(,sequence)?}}{a:i32,b:i32,c:f32}>>>) -> !fir.box<!fir.type<_QMpolymorphic_testTp1{{(,sequence)?}}{a:i32,b:i32}>>
+! CHECK:  %[[CONV_S:.*]] = fir.box_addr %[[LOAD_S]] : (!fir.class<!fir.heap<!fir.type<_QMpolymorphic_testTp1{{(,sequence)?}}{a:i32,b:i32}>>>) -> !fir.ref<!fir.type<_QMpolymorphic_testTp2{{(,sequence)?}}{a:i32,b:i32,c:f32}>>
+! CHECK:  %[[EMBOX_P1:.*]] = fir.embox %[[CONV_S]] : (!fir.ref<!fir.type<_QMpolymorphic_testTp2{{(,sequence)?}}{a:i32,b:i32,c:f32}>>) -> !fir.box<!fir.type<_QMpolymorphic_testTp1{{(,sequence)?}}{a:i32,b:i32}>>
 ! CHECK:  %[[LOAD_P:.*]] = fir.load %[[P]] : !fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolymorphic_testTp1{{(,sequence)?}}{a:i32,b:i32}>>>>
-! CHECK:  %[[LHS_CONV:.*]] = fir.convert %[[REBOX_P1]] : (!fir.box<!fir.type<_QMpolymorphic_testTp1{{(,sequence)?}}{a:i32,b:i32}>>) -> !fir.ref<!fir.box<none>>
+! CHECK:  %[[LHS_CONV:.*]] = fir.convert %[[EMBOX_P1]] : (!fir.box<!fir.type<_QMpolymorphic_testTp1{{(,sequence)?}}{a:i32,b:i32}>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:  %[[RHS_CONV:.*]] = fir.convert %[[LOAD_P]] : (!fir.class<!fir.heap<!fir.type<_QMpolymorphic_testTp1{{(,sequence)?}}{a:i32,b:i32}>>>) -> !fir.box<none>
 ! CHECK:  fir.call @_FortranAAssign(%[[LHS_CONV]], %[[RHS_CONV]], %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
 

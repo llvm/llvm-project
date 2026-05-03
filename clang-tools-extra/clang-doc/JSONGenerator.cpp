@@ -206,7 +206,7 @@ static Object serializeComment(const CommentInfo &I, Object &Description) {
   auto &CARef = *ChildArr.getAsArray();
   CARef.reserve(I.Children.size());
   for (const auto &C : I.Children)
-    CARef.emplace_back(serializeComment(*C, Description));
+    CARef.emplace_back(serializeComment(C, Description));
 
   switch (I.Kind) {
   case CommentKind::CK_TextComment: {
@@ -385,7 +385,7 @@ static void serializeDescription(llvm::ArrayRef<CommentInfo> Description,
   auto &Comments = Description.front().Children;
   Object DescriptionObj = Object();
   for (const auto &CommentInfo : Comments) {
-    json::Value Comment = serializeComment(*CommentInfo, DescriptionObj);
+    json::Value Comment = serializeComment(CommentInfo, DescriptionObj);
     // if a ParagraphComment is returned, then it is a top-level comment that
     // needs to be inserted manually.
     if (auto *ParagraphComment = Comment.getAsObject();
@@ -460,8 +460,6 @@ void JSONGenerator::serializeMDReference(const Reference &Ref,
   ReferenceObj["BasePath"] = Path;
 }
 
-typedef std::function<void(const Reference &, Object &)> ReferenceFunc;
-
 // Although namespaces and records both have ScopeChildren, they serialize them
 // differently. Only enums, records, and typedefs are handled here.
 void JSONGenerator::serializeCommonChildren(
@@ -493,13 +491,16 @@ static void serializeArray(const Container &Records, Object &Obj, StringRef Key,
   json::Value RecordsArray = Array();
   auto &RecordsArrayRef = *RecordsArray.getAsArray();
   RecordsArrayRef.reserve(Records.size());
-  for (size_t Index = 0; Index < Records.size(); ++Index) {
+  size_t Index = 0;
+  size_t Size = Records.size();
+  for (const auto &Item : Records) {
     json::Value ItemVal = Object();
     auto &ItemObj = *ItemVal.getAsObject();
-    SerializeInfo(Records[Index], ItemObj);
-    if (Index == Records.size() - 1)
+    SerializeInfo(Item, ItemObj);
+    if (Index == Size - 1)
       ItemObj[EndKey] = true;
     RecordsArrayRef.push_back(ItemVal);
+    ++Index;
   }
   Obj[Key] = RecordsArray;
   UpdateJson(Obj);
@@ -655,8 +656,8 @@ void JSONGenerator::serializeInfo(const FriendInfo &I, Object &Obj) {
   Obj["IsClass"] = I.IsClass;
   if (I.Template)
     serializeInfo(I.Template.value(), Obj);
-  if (I.Params)
-    serializeArray(I.Params.value(), Obj, "Params", serializeInfoLambda());
+  if (!I.Params.empty())
+    serializeArray(I.Params, Obj, "Params", serializeInfoLambda());
   if (I.ReturnType) {
     auto ReturnTypeObj = Object();
     serializeInfo(I.ReturnType.value(), ReturnTypeObj);
@@ -769,12 +770,6 @@ void JSONGenerator::serializeInfo(const NamespaceInfo &I, json::Object &Obj) {
   if (I.USR == GlobalNamespaceID)
     Obj["Name"] = "Global Namespace";
 
-  if (!I.Children.Namespaces.empty()) {
-    serializeArray(I.Children.Namespaces, Obj, "Namespaces",
-                   serializeReferenceLambda());
-    Obj["HasNamespaces"] = true;
-  }
-
   if (!I.Children.Functions.empty()) {
     serializeArray(I.Children.Functions, Obj, "Functions",
                    serializeInfoLambda());
@@ -837,11 +832,11 @@ static OwningVec<Index> preprocessCDCtxIndex(Index CDCtxIndex) {
   Processed.reserve(CDCtxIndex.Children.size());
   for (const auto *Idx : CDCtxIndex.getSortedChildren()) {
     Index NewIdx = *Idx;
-    auto NewPath = NewIdx.getRelativeFilePath("");
+    SmallString<128> NewPath(NewIdx.getRelativeFilePath(""));
     sys::path::native(NewPath, sys::path::Style::posix);
     sys::path::append(NewPath, sys::path::Style::posix,
                       NewIdx.getFileBaseName() + ".md");
-    NewIdx.Path = NewPath;
+    NewIdx.Path = internString(NewPath);
     Processed.push_back(NewIdx);
   }
 
@@ -922,7 +917,12 @@ static void serializeContexts(Info *I, StringMap<OwnedPtr<Info>> &Infos) {
   auto ParentUSR = I->ParentUSR;
 
   while (true) {
-    auto &ParentInfo = Infos.at(llvm::toHex(ParentUSR));
+    // Infos may not have the ParentUSR, if its been filtered (public or path),
+    // so we can't use at() for the lookup, since it would abort.
+    auto Iter = Infos.find(llvm::toHex(ParentUSR));
+    if (Iter == Infos.end())
+      break;
+    auto &ParentInfo = Iter->second;
 
     if (ParentInfo && ParentInfo->USR == GlobalNamespaceID) {
       Context GlobalRef(ParentInfo->USR, "Global Namespace",
@@ -963,7 +963,7 @@ Error JSONGenerator::generateDocumentation(
     if (FileToInfos.contains(Path))
       continue;
     FileToInfos[Path].push_back(Info);
-    Info->DocumentationFileName = FileName;
+    Info->DocumentationFileName = internString(FileName);
   }
 
   if (CDCtx.Format == OutputFormatTy::md_mustache) {

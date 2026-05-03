@@ -13,6 +13,8 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
+#include "lldb/Expression/DWARFExpressionList.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Interpreter/Interfaces/ScriptedFrameInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedThreadInterface.h"
@@ -28,8 +30,14 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StructuredData.h"
+#include "lldb/Utility/ValueType.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/ValueObject/ValueObjectList.h"
+#include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-forward.h"
+#include "llvm/Support/ErrorHandling.h"
+
+#include <memory>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -144,7 +152,7 @@ const char *ScriptedFrame::GetFunctionName() {
   std::optional<std::string> function_name = GetInterface()->GetFunctionName();
   if (!function_name)
     return StackFrame::GetFunctionName();
-  return ConstString(function_name->c_str()).AsCString();
+  return ConstString(function_name->c_str()).AsCString(nullptr);
 }
 
 const char *ScriptedFrame::GetDisplayFunctionName() {
@@ -153,7 +161,7 @@ const char *ScriptedFrame::GetDisplayFunctionName() {
       GetInterface()->GetDisplayFunctionName();
   if (!function_name)
     return StackFrame::GetDisplayFunctionName();
-  return ConstString(function_name->c_str()).AsCString();
+  return ConstString(function_name->c_str()).AsCString(nullptr);
 }
 
 bool ScriptedFrame::IsInlined() { return GetInterface()->IsInlined(); }
@@ -269,19 +277,22 @@ lldb::RegisterContextSP ScriptedFrame::GetRegisterContext() {
 }
 
 VariableList *ScriptedFrame::GetVariableList(bool get_file_globals,
+                                             bool include_synthetic_vars,
                                              Status *error_ptr) {
-  PopulateVariableListFromInterface();
+  PopulateVariableListFromInterface(include_synthetic_vars);
   return m_variable_list_sp.get();
 }
 
 lldb::VariableListSP
 ScriptedFrame::GetInScopeVariableList(bool get_file_globals,
+                                      bool include_synthetic_vars,
                                       bool must_have_valid_location) {
-  PopulateVariableListFromInterface();
+  PopulateVariableListFromInterface(include_synthetic_vars);
   return m_variable_list_sp;
 }
 
-void ScriptedFrame::PopulateVariableListFromInterface() {
+void ScriptedFrame::PopulateVariableListFromInterface(
+    bool include_synthetic_vars) {
   // Fetch values from the interface.
   ValueObjectListSP value_list_sp = GetInterface()->GetVariables();
   if (!value_list_sp)
@@ -295,12 +306,28 @@ void ScriptedFrame::PopulateVariableListFromInterface() {
       continue;
 
     VariableSP var = v->GetVariable();
-    // TODO: We could in theory ask the scripted frame to *produce* a
-    //       variable for this value object.
-    if (!var)
-      continue;
+    if (!var && include_synthetic_vars) {
+      // Construct the value type as an synthetic verison of what the value type
+      // is. That'll allow the user to tell the scope and the 'synthetic-ness'
+      // of the variable.
+      lldb::ValueType vt = GetSyntheticValueType(v->GetValueType());
 
-    m_variable_list_sp->AddVariable(var);
+      // Just make up a variable - the frame variable dumper just passes it
+      // back in to GetValueObjectForFrameVariable, so we really just need to
+      // make sure the name and type are correct. We create IDs based on
+      // value_list_sp in order to make sure they're unique.
+      var = std::make_shared<lldb_private::Variable>(
+          (lldb::user_id_t)value_list_sp->GetSize() + i,
+          v->GetName().GetCString(), v->GetName().GetCString(), nullptr, vt,
+          /*owner_scope=*/nullptr,
+          /*scope_range=*/Variable::RangeList{},
+          /*decl=*/nullptr, DWARFExpressionList{}, /*external=*/false,
+          /*artificial=*/true, /*location_is_constant_data=*/false);
+    }
+
+    // Only append the variable if we have one (had already, or just created).
+    if (var)
+      m_variable_list_sp->AddVariable(var);
   }
 }
 
@@ -311,7 +338,17 @@ lldb::ValueObjectSP ScriptedFrame::GetValueObjectForFrameVariable(
   if (!values)
     return {};
 
-  return values->FindValueObjectByValueName(variable_sp->GetName().AsCString());
+  return values->FindValueObjectByValueName(
+      variable_sp->GetName().AsCString(nullptr));
+}
+
+lldb::ValueObjectSP ScriptedFrame::FindVariable(ConstString name) {
+  // Fetch values from the interface.
+  ValueObjectListSP values = m_scripted_frame_interface_sp->GetVariables();
+  if (!values)
+    return {};
+
+  return values->FindValueObjectByValueName(name.AsCString(nullptr));
 }
 
 lldb::ValueObjectSP ScriptedFrame::GetValueForVariableExpressionPath(

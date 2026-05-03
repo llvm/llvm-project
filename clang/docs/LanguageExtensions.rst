@@ -653,8 +653,6 @@ differences:
   boolean vectors.
 * Casting a scalar bool value to a boolean vector type means broadcasting the
   scalar value onto all lanes (same as general ext_vector_type).
-* It is not possible to access or swizzle elements of a boolean vector
-  (different than general ext_vector_type).
 
 The size and alignment are both the number of bits rounded up to the next power
 of two, but the alignment is at most the maximum vector alignment of the
@@ -3999,6 +3997,63 @@ be used within constant expressions.
   unsigned _BitInt(20) value = 0xABCDE;
   unsigned _BitInt(20) rotated = __builtin_stdc_rotate_left(value, 5);
 
+``__builtin_stdc_*`` bit utilities
+----------------------------------
+
+**Syntax**:
+
+.. code-block:: c
+
+  unsigned int __builtin_stdc_leading_zeros(T value);
+  unsigned int __builtin_stdc_leading_ones(T value);
+  unsigned int __builtin_stdc_trailing_zeros(T value);
+  unsigned int __builtin_stdc_trailing_ones(T value);
+  unsigned int __builtin_stdc_first_leading_zero(T value);
+  unsigned int __builtin_stdc_first_leading_one(T value);
+  unsigned int __builtin_stdc_first_trailing_zero(T value);
+  unsigned int __builtin_stdc_first_trailing_one(T value);
+  unsigned int __builtin_stdc_count_zeros(T value);
+  unsigned int __builtin_stdc_count_ones(T value);
+  bool         __builtin_stdc_has_single_bit(T value);
+  unsigned int __builtin_stdc_bit_width(T value);
+  T            __builtin_stdc_bit_floor(T value);
+  T            __builtin_stdc_bit_ceil(T value);
+
+where ``T`` is any unsigned integer type except ``bool`` and enumeration types,
+including ``_BitInt`` types.
+
+**Description**:
+
+These builtins implement the C23 ``<stdbit.h>`` operations. Following the C23
+standard, ``unsigned int`` is used as the ``generic_return_type`` for count and
+position queries (``leading_zeros``, ``leading_ones``, ``trailing_zeros``,
+``trailing_ones``, ``first_leading_zero``, ``first_leading_one``,
+``first_trailing_zero``, ``first_trailing_one``, ``count_zeros``,
+``count_ones``, ``bit_width``); ``has_single_bit`` returns ``bool``; and
+``bit_floor``/``bit_ceil`` return the same type as the operand. Zero and
+all-ones cases follow the C23 definitions. All are usable in constant
+expressions.
+
+``bool`` and enumeration types are rejected as arguments because C23 does not
+permit them for these functions.
+
+As a Clang extension, ``_BitInt`` types of arbitrary widths are supported. C23
+only requires support for bit-precise integers whose width matches a standard
+or extended integer type.
+
+**Examples**:
+
+.. code-block:: c
+
+  unsigned _BitInt(9) x = 0x11;
+  unsigned int lz  = __builtin_stdc_leading_zeros(x);
+  unsigned int tz  = __builtin_stdc_trailing_zeros(x);
+  unsigned int fto = __builtin_stdc_first_trailing_one(x);
+  unsigned int cz  = __builtin_stdc_count_zeros(x);
+  bool has_one    = __builtin_stdc_has_single_bit(x);
+  unsigned _BitInt(9) ceilv  = __builtin_stdc_bit_ceil((unsigned _BitInt(9))5);
+  unsigned _BitInt(9) floorv = __builtin_stdc_bit_floor((unsigned _BitInt(9))5);
+
 ``__builtin_unreachable``
 -------------------------
 
@@ -5557,6 +5612,120 @@ If no address spaces names are provided, all address spaces are fenced.
   // Fence only requested address spaces.
   __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "workgroup", "local")
   __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "workgroup", "local", "global")
+
+__builtin_amdgcn_processor_is and __builtin_amdgcn_is_invocable
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``__builtin_amdgcn_processor_is`` and ``__builtin_amdgcn_is_invocable`` provide
+a functional mechanism for programatically querying:
+
+* the identity of the current target processor;
+* the capability of the current target processor to invoke a particular builtin.
+
+**Syntax**:
+
+.. code-block:: c
+
+  __amdgpu_feature_predicate_t __builtin_amdgcn_processor_is(const char*);
+  __amdgpu_feature_predicate_t __builtin_amdgcn_is_invocable(builtin_name);
+
+**Example of use**:
+
+.. code-block:: c++
+
+  if (__builtin_amdgcn_processor_is("gfx1201") ||
+      __builtin_amdgcn_is_invocable(__builtin_amdgcn_s_sleep_var))
+    __builtin_amdgcn_s_sleep_var(x);
+
+  if (!__builtin_amdgcn_processor_is("gfx906"))
+    __builtin_amdgcn_s_wait_event_export_ready();
+  else if (__builtin_amdgcn_processor_is("gfx1010") ||
+           __builtin_amdgcn_processor_is("gfx1101"))
+    __builtin_amdgcn_s_ttracedata_imm(1);
+
+  while (__builtin_amdgcn_processor_is("gfx1101")) *p += x;
+
+  do {
+    break;
+  } while (__builtin_amdgcn_processor_is("gfx1010"));
+
+  for (; __builtin_amdgcn_processor_is("gfx1201"); ++*p) break;
+
+  if (__builtin_amdgcn_is_invocable(__builtin_amdgcn_s_wait_event_export_ready))
+    __builtin_amdgcn_s_wait_event_export_ready();
+  else if (__builtin_amdgcn_is_invocable(__builtin_amdgcn_s_ttracedata_imm))
+    __builtin_amdgcn_s_ttracedata_imm(1);
+
+  do {
+    break;
+  } while (
+      __builtin_amdgcn_is_invocable(__builtin_amdgcn_global_load_tr_b64_i32));
+
+  for (; __builtin_amdgcn_is_invocable(__builtin_amdgcn_permlane64); ++*p)
+    break;
+
+**Description**:
+
+The builtins return a value of type ``__amdgpu_feature_predicate_t``, which is a
+target specific type that behaves as if its C++ definition was the following:
+
+.. code-block:: c++
+
+  struct __amdgpu_feature_predicate_t {
+    __amdgpu_feature_predicate_t() = delete;
+    __amdgpu_feature_predicate_t(const __amdgpu_feature_predicate_t&) = delete;
+    __amdgpu_feature_predicate_t(__amdgpu_feature_predicate_t&&) = delete;
+
+    explicit
+    operator bool() const noexcept;
+  };
+
+The builtins can be used in C as well, wherein the
+``__amdgpu_feature_predicate_t`` type behaves as an opaque, forward declared
+type with conditional automated conversion to ``_Bool`` when used as the
+predicate argument to a control structure:
+
+.. code-block:: c
+
+  struct __amdgpu_feature_predicate_t ret();     // Error
+  void arg(struct __amdgpu_feature_predicate_t); // Error
+  void local() {
+    struct __amdgpu_feature_predicate_t x;       // Error
+    struct __amdgpu_feature_predicate_t y =
+        __builtin_amdgcn_processor_is("gfx900"); // Error
+  }
+  void valid_use() {
+    _Bool x = (_Bool)__builtin_amdgcn_processor_is("gfx900"); // OK
+    if (__builtin_amdgcn_processor_is("gfx900"))       // Implicit cast to _Bool
+      return;
+    for (; __builtin_amdgcn_processor_is("gfx900");)   // Implicit cast to _Bool
+      break;
+    while (__builtin_amdgcn_processor_is("gfx900"))    // Implicit cast to _Bool
+      break;
+    do {
+      break;
+    } while (__builtin_amdgcn_processor_is("gfx900")); // Implicit cast to _Bool
+
+    __builtin_amdgcn_processor_is("gfx900") ? x : !x;
+  }
+
+The boolean interpretation of the predicate values returned by the builtins:
+
+* indicates whether the current target matches the argument; the argument MUST
+  be a string literal and a valid AMDGPU target
+* indicates whether the builtin function passed as the argument can be invoked
+  by the current target; the argument MUST be either a generic or AMDGPU
+  specific builtin name
+
+When invoked while compiling for a concrete target, the builtins are evaluated
+early by Clang, and never produce any CodeGen effects / have no observable
+side-effects in IR. Conversely, when compiling for AMDGCN flavoured SPIR-v,
+which is an abstract target, a series of specialization constants are implicitly
+created, in correspondence with the predicates. These predicates get resolved
+when finalizing the compilation process for a concrete target, and shall reflect
+the latter's identity and features. Thus, it is possible to author high-level
+code, in e.g. HIP, that is target adaptive in a dynamic fashion, contrary to
+macro based mechanisms.
 
 __builtin_amdgcn_ballot_w{32,64}
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

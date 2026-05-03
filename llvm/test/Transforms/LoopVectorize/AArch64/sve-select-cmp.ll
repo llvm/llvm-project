@@ -1,7 +1,7 @@
 ; RUN: opt -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -S \
-; RUN:   -prefer-predicate-over-epilogue=scalar-epilogue < %s | FileCheck %s --check-prefix=CHECK-VF4IC1
+; RUN:   -tail-folding-policy=dont-fold-tail < %s | FileCheck %s --check-prefix=CHECK-VF4IC1
 ; RUN: opt -passes=loop-vectorize -force-vector-interleave=4 -force-vector-width=4 -S \
-; RUN:   -prefer-predicate-over-epilogue=scalar-epilogue < %s | FileCheck %s --check-prefix=CHECK-VF4IC4
+; RUN:   -tail-folding-policy=dont-fold-tail < %s | FileCheck %s --check-prefix=CHECK-VF4IC4
 
 target triple = "aarch64-linux-gnu"
 
@@ -43,7 +43,7 @@ define i32 @select_const_i32_from_icmp(ptr nocapture readonly %v, i64 %n) #0 {
 entry:
   br label %for.body
 
-for.body:                                      ; preds = %entry, %for.body
+for.body:
   %0 = phi i64 [ 0, %entry ], [ %6, %for.body ]
   %1 = phi i32 [ 3, %entry ], [ %5, %for.body ]
   %2 = getelementptr inbounds i32, ptr %v, i64 %0
@@ -54,7 +54,7 @@ for.body:                                      ; preds = %entry, %for.body
   %7 = icmp eq i64 %6, %n
   br i1 %7, label %exit, label %for.body, !llvm.loop !0
 
-exit:                                     ; preds = %for.body
+exit:
   ret i32 %5
 }
 
@@ -79,7 +79,7 @@ define i32 @select_i32_from_icmp(ptr nocapture readonly %v, i32 %a, i32 %b, i64 
 entry:
   br label %for.body
 
-for.body:                                      ; preds = %entry, %for.body
+for.body:
   %0 = phi i64 [ 0, %entry ], [ %6, %for.body ]
   %1 = phi i32 [ %a, %entry ], [ %5, %for.body ]
   %2 = getelementptr inbounds i32, ptr %v, i64 %0
@@ -90,7 +90,7 @@ for.body:                                      ; preds = %entry, %for.body
   %7 = icmp eq i64 %6, %n
   br i1 %7, label %exit, label %for.body, !llvm.loop !0
 
-exit:                                     ; preds = %for.body
+exit:
   ret i32 %5
 }
 
@@ -112,7 +112,7 @@ define i32 @select_const_i32_from_fcmp(ptr nocapture readonly %v, i64 %n) #0 {
 entry:
   br label %for.body
 
-for.body:                                      ; preds = %entry, %for.body
+for.body:
   %0 = phi i64 [ 0, %entry ], [ %6, %for.body ]
   %1 = phi i32 [ 2, %entry ], [ %5, %for.body ]
   %2 = getelementptr inbounds float, ptr %v, i64 %0
@@ -123,7 +123,7 @@ for.body:                                      ; preds = %entry, %for.body
   %7 = icmp eq i64 %6, %n
   br i1 %7, label %exit, label %for.body, !llvm.loop !0
 
-exit:                                     ; preds = %for.body
+exit:
   ret i32 %5
 }
 
@@ -146,7 +146,7 @@ define float @select_const_f32_from_icmp(ptr nocapture readonly %v, i64 %n) #0 {
 entry:
   br label %for.body
 
-for.body:                                      ; preds = %entry, %for.body
+for.body:
   %0 = phi i64 [ 0, %entry ], [ %6, %for.body ]
   %1 = phi fast float [ 3.0, %entry ], [ %5, %for.body ]
   %2 = getelementptr inbounds i32, ptr %v, i64 %0
@@ -157,7 +157,7 @@ for.body:                                      ; preds = %entry, %for.body
   %7 = icmp eq i64 %6, %n
   br i1 %7, label %exit, label %for.body, !llvm.loop !0
 
-exit:                                     ; preds = %for.body
+exit:
   ret float %5
 }
 
@@ -182,7 +182,7 @@ define i32 @pred_select_const_i32_from_icmp(ptr noalias nocapture readonly %src1
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.inc
+for.body:
   %i.013 = phi i64 [ %inc, %for.inc ], [ 0, %entry ]
   %r.012 = phi i32 [ %r.1, %for.inc ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i32, ptr %src1, i64 %i.013
@@ -190,20 +190,20 @@ for.body:                                         ; preds = %entry, %for.inc
   %cmp1 = icmp sgt i32 %0, 35
   br i1 %cmp1, label %if.then, label %for.inc
 
-if.then:                                          ; preds = %for.body
+if.then:
   %arrayidx2 = getelementptr inbounds i32, ptr %src2, i64 %i.013
   %1 = load i32, ptr %arrayidx2, align 4
   %cmp3 = icmp eq i32 %1, 2
   %spec.select = select i1 %cmp3, i32 1, i32 %r.012
   br label %for.inc
 
-for.inc:                                          ; preds = %if.then, %for.body
+for.inc:
   %r.1 = phi i32 [ %r.012, %for.body ], [ %spec.select, %if.then ]
   %inc = add nuw nsw i64 %i.013, 1
   %exitcond.not = icmp eq i64 %inc, %n
   br i1 %exitcond.not, label %for.end.loopexit, label %for.body, !llvm.loop !0
 
-for.end.loopexit:                                 ; preds = %for.inc
+for.end.loopexit:
   %r.1.lcssa = phi i32 [ %r.1, %for.inc ]
   ret i32 %r.1.lcssa
 }

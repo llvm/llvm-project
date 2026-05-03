@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
@@ -22,31 +21,33 @@ using namespace llvm;
 /// DisableFramePointerElim - This returns true if frame pointer elimination
 /// optimization should be disabled for the given machine function.
 bool TargetOptions::DisableFramePointerElim(const MachineFunction &MF) const {
-  const Function &F = MF.getFunction();
-
-  Attribute FPAttr = F.getFnAttribute("frame-pointer");
-  if (!FPAttr.isValid())
-    return false;
-  StringRef FP = FPAttr.getValueAsString();
-  if (FP == "all")
+  FramePointerKind FP = MF.getFrameInfo().getFramePointerPolicy();
+  switch (FP) {
+  case FramePointerKind::All:
     return true;
-  if (FP == "non-leaf" || FP == "non-leaf-no-reserve")
+  case FramePointerKind::NonLeaf:
+  case FramePointerKind::NonLeafNoReserve:
     return MF.getFrameInfo().hasCalls();
-  if (FP == "none" || FP == "reserved")
+  case FramePointerKind::None:
+  case FramePointerKind::Reserved:
     return false;
+  }
   llvm_unreachable("unknown frame pointer flag");
 }
 
 bool TargetOptions::FramePointerIsReserved(const MachineFunction &MF) const {
-  const Function &F = MF.getFunction();
-  Attribute FPAttr = F.getFnAttribute("frame-pointer");
-  if (!FPAttr.isValid())
+  FramePointerKind FP = MF.getFrameInfo().getFramePointerPolicy();
+  switch (FP) {
+  case FramePointerKind::All:
+  case FramePointerKind::NonLeaf:
+  case FramePointerKind::Reserved:
+    return true;
+  case FramePointerKind::NonLeafNoReserve:
+    return MF.getFrameInfo().hasCalls();
+  case FramePointerKind::None:
     return false;
-
-  return StringSwitch<bool>(FPAttr.getValueAsString())
-      .Cases({"all", "non-leaf", "reserved"}, true)
-      .Case(("non-leaf-no-reserve"), MF.getFrameInfo().hasCalls())
-      .Case("none", false);
+  }
+  llvm_unreachable("unknown frame pointer flag");
 }
 
 /// HonorSignDependentRoundingFPMath - Return true if the codegen must assume

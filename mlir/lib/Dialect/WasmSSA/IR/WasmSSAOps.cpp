@@ -362,7 +362,7 @@ Block *IfOp::getLabelTarget() { return getTarget(); }
 
 LogicalResult LocalOp::inferReturnTypes(
     MLIRContext *context, ::std::optional<Location> location,
-    ValueRange operands, DictionaryAttr attributes, OpaqueProperties properties,
+    ValueRange operands, DictionaryAttr attributes, PropertyRef properties,
     RegionRange regions, SmallVectorImpl<Type> &inferredReturnTypes) {
   LocalOp::GenericAdaptor<ValueRange> adaptor{operands, attributes, properties,
                                               regions};
@@ -380,7 +380,7 @@ LogicalResult LocalOp::inferReturnTypes(
 
 LogicalResult LocalGetOp::inferReturnTypes(
     MLIRContext *context, ::std::optional<Location> location,
-    ValueRange operands, DictionaryAttr attributes, OpaqueProperties properties,
+    ValueRange operands, DictionaryAttr attributes, PropertyRef properties,
     RegionRange regions, SmallVectorImpl<Type> &inferredReturnTypes) {
   return inferTeeGetResType(operands, inferredReturnTypes);
 }
@@ -401,7 +401,7 @@ LogicalResult LocalSetOp::verify() {
 
 LogicalResult LocalTeeOp::inferReturnTypes(
     MLIRContext *context, ::std::optional<Location> location,
-    ValueRange operands, DictionaryAttr attributes, OpaqueProperties properties,
+    ValueRange operands, DictionaryAttr attributes, PropertyRef properties,
     RegionRange regions, SmallVectorImpl<Type> &inferredReturnTypes) {
   return inferTeeGetResType(operands, inferredReturnTypes);
 }

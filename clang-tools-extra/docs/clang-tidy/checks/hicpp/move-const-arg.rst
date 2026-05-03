@@ -1,6 +1,4 @@
 .. title:: clang-tidy - hicpp-move-const-arg
-.. meta::
-   :http-equiv=refresh: 5;URL=../performance/move-const-arg.html
 
 hicpp-move-const-arg
 ====================

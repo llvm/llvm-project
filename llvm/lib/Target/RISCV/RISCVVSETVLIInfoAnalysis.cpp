@@ -354,9 +354,9 @@ RISCVVSETVLIInfoAnalysis::getInfoForVSETVLI(const MachineInstr &MI) const {
   if (MI.getOpcode() == RISCV::PseudoVSETIVLI) {
     NewInfo.setAVLImm(MI.getOperand(1).getImm());
   } else if (RISCVInstrInfo::isXSfmmVectorConfigTNInstr(MI)) {
-    assert(MI.getOpcode() == RISCV::PseudoSF_VSETTNT ||
-           MI.getOpcode() == RISCV::PseudoSF_VSETTNTX0);
     switch (MI.getOpcode()) {
+    default:
+      llvm_unreachable("Unexpected opcode");
     case RISCV::PseudoSF_VSETTNTX0:
       NewInfo.setAVLVLMAX();
       break;

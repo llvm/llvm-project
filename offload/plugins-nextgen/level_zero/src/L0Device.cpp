@@ -18,6 +18,8 @@
 #include "L0Trace.h"
 
 #include "GlobalHandler.h"
+#include "OffloadAPI.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Object/ELF.h"
 
 namespace llvm::omp::target::plugin {
@@ -194,6 +196,7 @@ Error L0DeviceTy::initImpl(GenericPluginTy &Plugin) {
                     &MemoryProperties);
   CALL_ZE_RET_ERROR(zeDeviceGetCacheProperties, zeDevice, &Count,
                     &CacheProperties);
+  CALL_ZE_RET_ERROR(zeDeviceGetModuleProperties, zeDevice, &ModuleProperties);
 
   DeviceName = std::string(DeviceProperties.name);
 
@@ -638,6 +641,74 @@ Expected<InfoTreeNode> L0DeviceTy::obtainInfoImpl() {
            DeviceInfo::MEMORY_CLOCK_RATE);
   Info.add("Memory Address Size", uint64_t{64u}, "bits",
            DeviceInfo::ADDRESS_BITS);
+
+  // FP64 (Double precision).
+  Info.add("Double FP Support", supportsFP64(), "",
+           DeviceInfo::DOUBLE_FP_SUPPORT);
+  ol_device_fp_capability_flags_t DoubleFPCapabilities = 0;
+  ze_device_fp_flags_t ZeDoubleFPFlags = getFP64Flags();
+  if (ZeDoubleFPFlags & ZE_DEVICE_FP_FLAG_DENORM)
+    DoubleFPCapabilities |= OL_DEVICE_FP_CAPABILITY_FLAG_DENORM;
+  if (ZeDoubleFPFlags & ZE_DEVICE_FP_FLAG_INF_NAN)
+    DoubleFPCapabilities |= OL_DEVICE_FP_CAPABILITY_FLAG_INF_NAN;
+  if (ZeDoubleFPFlags & ZE_DEVICE_FP_FLAG_ROUND_TO_NEAREST)
+    DoubleFPCapabilities |= OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_NEAREST;
+  if (ZeDoubleFPFlags & ZE_DEVICE_FP_FLAG_ROUND_TO_ZERO)
+    DoubleFPCapabilities |= OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_ZERO;
+  if (ZeDoubleFPFlags & ZE_DEVICE_FP_FLAG_ROUND_TO_INF)
+    DoubleFPCapabilities |= OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_INF;
+  if (ZeDoubleFPFlags & ZE_DEVICE_FP_FLAG_FMA)
+    DoubleFPCapabilities |= OL_DEVICE_FP_CAPABILITY_FLAG_FMA;
+  if (ZeDoubleFPFlags & ZE_DEVICE_FP_FLAG_ROUNDED_DIVIDE_SQRT)
+    DoubleFPCapabilities |=
+        OL_DEVICE_FP_CAPABILITY_FLAG_CORRECTLY_ROUNDED_DIVIDE_SQRT;
+  Info.add("Double FP Capabilities", DoubleFPCapabilities, "",
+           DeviceInfo::DOUBLE_FP_CONFIG);
+
+  // FP16 (Half precision).
+  Info.add("Half FP Support", supportsFP16(), "", DeviceInfo::HALF_FP_SUPPORT);
+  ol_device_fp_capability_flags_t HalfFPCapabilities = 0;
+  ze_device_fp_flags_t ZeHalfFPFlags = getFP16Flags();
+  if (ZeHalfFPFlags & ZE_DEVICE_FP_FLAG_DENORM)
+    HalfFPCapabilities |= OL_DEVICE_FP_CAPABILITY_FLAG_DENORM;
+  if (ZeHalfFPFlags & ZE_DEVICE_FP_FLAG_INF_NAN)
+    HalfFPCapabilities |= OL_DEVICE_FP_CAPABILITY_FLAG_INF_NAN;
+  if (ZeHalfFPFlags & ZE_DEVICE_FP_FLAG_ROUND_TO_NEAREST)
+    HalfFPCapabilities |= OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_NEAREST;
+  if (ZeHalfFPFlags & ZE_DEVICE_FP_FLAG_ROUND_TO_ZERO)
+    HalfFPCapabilities |= OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_ZERO;
+  if (ZeHalfFPFlags & ZE_DEVICE_FP_FLAG_ROUND_TO_INF)
+    HalfFPCapabilities |= OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_INF;
+  if (ZeHalfFPFlags & ZE_DEVICE_FP_FLAG_FMA)
+    HalfFPCapabilities |= OL_DEVICE_FP_CAPABILITY_FLAG_FMA;
+  if (ZeHalfFPFlags & ZE_DEVICE_FP_FLAG_ROUNDED_DIVIDE_SQRT)
+    HalfFPCapabilities |=
+        OL_DEVICE_FP_CAPABILITY_FLAG_CORRECTLY_ROUNDED_DIVIDE_SQRT;
+  Info.add("Half FP Capabilities", HalfFPCapabilities, "",
+           DeviceInfo::HALF_FP_CONFIG);
+
+  // FP32 (Single FP).
+  Info.add("Single FP Support", true, "", DeviceInfo::SINGLE_FP_SUPPORT);
+  ol_device_fp_capability_flags_t SingleFPCapabilities = 0;
+  ze_device_fp_flags_t ZeSingleFPFlags = getFP32Flags();
+  if (ZeSingleFPFlags & ZE_DEVICE_FP_FLAG_DENORM)
+    SingleFPCapabilities |= OL_DEVICE_FP_CAPABILITY_FLAG_DENORM;
+  if (ZeSingleFPFlags & ZE_DEVICE_FP_FLAG_INF_NAN)
+    SingleFPCapabilities |= OL_DEVICE_FP_CAPABILITY_FLAG_INF_NAN;
+  if (ZeSingleFPFlags & ZE_DEVICE_FP_FLAG_ROUND_TO_NEAREST)
+    SingleFPCapabilities |= OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_NEAREST;
+  if (ZeSingleFPFlags & ZE_DEVICE_FP_FLAG_ROUND_TO_ZERO)
+    SingleFPCapabilities |= OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_ZERO;
+  if (ZeSingleFPFlags & ZE_DEVICE_FP_FLAG_ROUND_TO_INF)
+    SingleFPCapabilities |= OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_INF;
+  if (ZeSingleFPFlags & ZE_DEVICE_FP_FLAG_FMA)
+    SingleFPCapabilities |= OL_DEVICE_FP_CAPABILITY_FLAG_FMA;
+  if (ZeSingleFPFlags & ZE_DEVICE_FP_FLAG_ROUNDED_DIVIDE_SQRT)
+    SingleFPCapabilities |=
+        OL_DEVICE_FP_CAPABILITY_FLAG_CORRECTLY_ROUNDED_DIVIDE_SQRT;
+  Info.add("Single FP Capabilities", SingleFPCapabilities, "",
+           DeviceInfo::SINGLE_FP_CONFIG);
+
   return Info;
 }
 
@@ -700,30 +771,36 @@ Expected<OmpInteropTy> L0DeviceTy::createInterop(int32_t InteropContext,
   Ret->rtl_property = new L0Interop::Property();
   if (InteropContext == kmp_interop_type_targetsync) {
     Ret->async_info = new __tgt_async_info();
+
+    // Ensure cleanup on error
+    llvm::scope_exit CleanupOnError([&]() {
+      if (Ret->async_info)
+        delete Ret->async_info;
+      if (Ret->rtl_property)
+        delete static_cast<L0Interop::Property *>(Ret->rtl_property);
+      delete Ret;
+    });
+
     auto L0 = static_cast<L0Interop::Property *>(Ret->rtl_property);
 
     bool InOrder = InteropSpec.attrs.inorder;
     Ret->attrs.inorder = InOrder;
     if (useImmForInterop()) {
       auto CmdListOrErr = createImmCmdList(InOrder);
-      if (!CmdListOrErr) {
-        delete Ret->async_info;
-        delete Ret;
+      if (!CmdListOrErr)
         return CmdListOrErr.takeError();
-      }
       Ret->async_info->Queue = *CmdListOrErr;
       L0->ImmCmdList = *CmdListOrErr;
     } else {
       auto QueueOrErr = createCommandQueue(InOrder);
-      if (!QueueOrErr) {
-        delete Ret->async_info;
-        delete Ret;
+      if (!QueueOrErr)
         return QueueOrErr.takeError();
-      }
       Ret->async_info->Queue = *QueueOrErr;
       L0->CommandQueue =
           static_cast<ze_command_queue_handle_t>(Ret->async_info->Queue);
     }
+
+    CleanupOnError.release();
   }
 
   return Ret;
@@ -791,9 +868,12 @@ Error L0DeviceTy::enqueueMemCopy(void *Dst, const void *Src, size_t Size,
     CALL_ZE_RET_ERROR(zeCommandListAppendMemoryCopy, CmdList, Dst, Src, Size,
                       nullptr, 0, nullptr);
     CALL_ZE_RET_ERROR(zeCommandListClose, CmdList);
+    llvm::scope_exit ResetOnExit(
+        [&]() { CALL_ZE_SILENT(zeCommandListReset, CmdList); });
     CALL_ZE_RET_ERROR_MTX(zeCommandQueueExecuteCommandLists, getMutex(),
                           CmdQueue, 1, &CmdList, nullptr);
     CALL_ZE_RET_ERROR(zeCommandQueueSynchronize, CmdQueue, L0DefaultTimeout);
+    ResetOnExit.release();
     CALL_ZE_RET_ERROR(zeCommandListReset, CmdList);
   }
   return Plugin::success();
@@ -1141,8 +1221,12 @@ Error L0DeviceTy::dataFence(__tgt_async_info *Async) {
     CmdQueue = *CmdQueueOrerr;
     CALL_ZE_RET_ERROR(zeCommandListAppendBarrier, CmdList, nullptr, 0, nullptr);
     CALL_ZE_RET_ERROR(zeCommandListClose, CmdList);
+    llvm::scope_exit ResetOnExit(
+        [&]() { CALL_ZE_SILENT(zeCommandListReset, CmdList); });
     CALL_ZE_RET_ERROR(zeCommandQueueExecuteCommandLists, CmdQueue, 1, &CmdList,
                       nullptr);
+    CALL_ZE_RET_ERROR(zeCommandQueueSynchronize, CmdQueue, L0DefaultTimeout);
+    ResetOnExit.release();
     CALL_ZE_RET_ERROR(zeCommandListReset, CmdList);
   }
 
@@ -1291,10 +1375,7 @@ Error L0DeviceTy::callGlobalCtorDtorCommon(GenericPluginTy &Plugin,
                           KernelArgs, KernelLaunchParamsTy{}, AsyncInfoWrapper);
 
   AsyncInfoWrapper.finalize(Err);
-  if (Err)
-    return CleanupBufferAndErr(std::move(Err));
-
-  return CleanupBufferAndErr(Plugin::success());
+  return CleanupBufferAndErr(std::move(Err));
 }
 
 } // namespace llvm::omp::target::plugin
