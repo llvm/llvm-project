@@ -6556,18 +6556,14 @@ VPSingleDefRecipe *VPRecipeBuilder::handleReplication(VPInstruction *VPI,
   assert((Range.Start.isScalar() || !IsUniform || !IsPredicated ||
           (Range.Start.isScalable() && isa<IntrinsicInst>(I))) &&
          "Should not predicate a uniform recipe");
-  if (IsUniform && Instruction::isCast(VPI->getOpcode())) {
-    assert(!IsPredicated && "IsUniform implies unpredicated");
-    auto *CastR = cast<VPInstructionWithType>(VPI);
-    auto *Recipe = new VPInstructionWithType(
-        VPI->getOpcode(), VPI->operandsWithoutMask(), CastR->getResultType(),
-        *VPI, *VPI, VPI->getDebugLoc(), I->getName());
-    Recipe->setUnderlyingValue(I);
-    return Recipe;
+  if (IsUniform) {
+    return VPBuilder::createSingleScalarOp(I, VPI->operandsWithoutMask(),
+                                           BlockInMask, *VPI, *VPI,
+                                           VPI->getDebugLoc());
   }
-  auto *Recipe =
-      new VPReplicateRecipe(I, VPI->operandsWithoutMask(), IsUniform,
-                            BlockInMask, *VPI, *VPI, VPI->getDebugLoc());
+  auto *Recipe = new VPReplicateRecipe(I, VPI->operandsWithoutMask(),
+                                       /*IsSingleScalar=*/false, BlockInMask,
+                                       *VPI, *VPI, VPI->getDebugLoc());
   return Recipe;
 }
 
@@ -6840,7 +6836,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
       if (isa<VPWidenCanonicalIVRecipe, VPBlendRecipe, VPReductionRecipe,
               VPReplicateRecipe, VPWidenLoadRecipe, VPWidenStoreRecipe,
               VPWidenCallRecipe, VPWidenIntrinsicRecipe, VPVectorPointerRecipe,
-              VPVectorEndPointerRecipe, VPHistogramRecipe>(&R))
+              VPVectorEndPointerRecipe, VPHistogramRecipe>(&R) ||
+          (R.isScalarCast() &&
+           vputils::onlyFirstLaneUsed(cast<VPSingleDefRecipe>(&R))))
         continue;
       auto *VPI = cast<VPInstruction>(&R);
       if (!VPI->getUnderlyingValue())

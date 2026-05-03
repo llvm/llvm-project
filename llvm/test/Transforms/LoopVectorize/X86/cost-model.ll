@@ -702,20 +702,20 @@ define i32 @narrowed_reduction(ptr %a, i1 %cmp) #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i32> [[VEC_PHI1]], splat (i32 1)
 ; CHECK-NEXT:    [[TMP2:%.*]] = or <4 x i32> [[TMP0]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i32> [[TMP1]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc <4 x i32> [[TMP2]] to <4 x i1>
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc <4 x i32> [[TMP3]] to <4 x i1>
-; CHECK-NEXT:    [[TMP6]] = zext <4 x i1> [[TMP4]] to <4 x i32>
-; CHECK-NEXT:    [[TMP7]] = zext <4 x i1> [[TMP5]] to <4 x i32>
+; CHECK-NEXT:    [[TMP9:%.*]] = trunc <4 x i32> [[TMP2]] to <4 x i1>
+; CHECK-NEXT:    [[TMP10:%.*]] = trunc <4 x i32> [[TMP3]] to <4 x i1>
+; CHECK-NEXT:    [[TMP6]] = zext <4 x i1> [[TMP9]] to <4 x i32>
+; CHECK-NEXT:    [[TMP7]] = zext <4 x i1> [[TMP10]] to <4 x i32>
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], 48
 ; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP23:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[BIN_RDX:%.*]] = or <4 x i1> [[TMP5]], [[TMP4]]
-; CHECK-NEXT:    [[TMP9:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[BIN_RDX]])
-; CHECK-NEXT:    [[TMP10:%.*]] = zext i1 [[TMP9]] to i32
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = or <4 x i1> [[TMP10]], [[TMP9]]
+; CHECK-NEXT:    [[TMP4:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[BIN_RDX]])
+; CHECK-NEXT:    [[TMP5:%.*]] = zext i1 [[TMP4]] to i32
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    ret i32 [[TMP10]]
+; CHECK-NEXT:    ret i32 [[TMP5]]
 ;
 entry:
   %conv = zext i1 %cmp to i32

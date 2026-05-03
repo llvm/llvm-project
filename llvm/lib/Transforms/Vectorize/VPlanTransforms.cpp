@@ -1373,16 +1373,8 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
         unsigned ExtOpcode = match(Def->getOperand(0), m_SExt(m_VPValue()))
                                  ? Instruction::SExt
                                  : Instruction::ZExt;
-        VPSingleDefRecipe *Ext;
-        if (vputils::isSingleScalar(Def)) {
-          Ext = new VPInstructionWithType(Instruction::CastOps(ExtOpcode), {A},
-                                          TruncTy, {}, {}, Def->getDebugLoc());
-          Builder.getInsertBlock()->insert(Ext, Builder.getInsertPoint());
-        } else {
-          Ext = Builder.createWidenCast(Instruction::CastOps(ExtOpcode), A,
-                                        TruncTy);
-        }
-
+        auto *Ext = Builder.createWidenCast(Instruction::CastOps(ExtOpcode), A,
+                                            TruncTy);
         if (auto *UnderlyingExt = Def->getOperand(0)->getUnderlyingValue()) {
           // UnderlyingExt has distinct return type, used to retain legacy cost.
           Ext->setUnderlyingValue(UnderlyingExt);
@@ -1935,10 +1927,10 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
           }))
         continue;
 
-      auto *Clone = new VPReplicateRecipe(
-          RepOrWidenR->getUnderlyingInstr(), RepOrWidenR->operands(),
-          true /*IsSingleScalar*/, nullptr, *RepOrWidenR);
-      Clone->insertBefore(RepOrWidenR);
+      VPBuilder Builder(RepOrWidenR);
+      auto *Clone =
+          Builder.createSingleScalarOp(RepOrWidenR->getUnderlyingInstr(),
+                                       RepOrWidenR->operands(), *RepOrWidenR);
       RepOrWidenR->replaceAllUsesWith(Clone);
       if (isDeadRecipe(*RepOrWidenR))
         RepOrWidenR->eraseFromParent();
@@ -6576,10 +6568,8 @@ void VPlanTransforms::makeScalarizationDecisions(VPlan &Plan, VFRange &Range) {
       if (!vputils::onlyFirstLaneUsed(VPI))
         continue;
 
-      auto *Recipe = new VPReplicateRecipe(
-          I, VPI->operandsWithoutMask(), /*IsSingleScalar=*/true,
-          /*Mask=*/nullptr, *VPI, *VPI, VPI->getDebugLoc());
-      Recipe->insertBefore(VPI);
+      auto *Recipe = VPBuilder(VPI).createSingleScalarOp(
+          I, VPI->operandsWithoutMask(), *VPI, *VPI, VPI->getDebugLoc());
       VPI->replaceAllUsesWith(Recipe);
       VPI->eraseFromParent();
     }
