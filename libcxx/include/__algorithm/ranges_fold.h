@@ -31,6 +31,7 @@
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <optional>
+#include <__iterator/reverse_iterator.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -187,6 +188,63 @@ struct __fold_left_first {
 };
 
 inline constexpr auto fold_left_first = __fold_left_first();
+
+template <class _Fp, class _Tp, class _Ip, class _Rp, class _Up = decay_t<_Rp>>
+concept __indirectly_binary_right_foldable_impl =
+    convertible_to<_Rp, _Up> &&
+    movable<_Tp> &&
+    movable<_Up> &&
+    convertible_to<_Tp, _Up> &&
+    invocable<_Fp&, iter_reference_t<_Ip>, _Up> &&
+    assignable_from<_Up&, invoke_result_t<_Fp&, iter_reference_t<_Ip>, _Up>>;
+
+template <class _Fp, class _Tp, class _Ip>
+concept __indirectly_binary_right_foldable =
+    copy_constructible<_Fp> &&
+    invocable<_Fp&, iter_reference_t<_Ip>, _Tp> &&
+    __indirectly_binary_right_foldable_impl<_Fp, _Tp, _Ip, invoke_result_t<_Fp&, iter_reference_t<_Ip>, _Tp>>;
+
+struct __fold_right_last{
+
+  template <bidirectional_iterator _Iter,
+            sentinel_for<_Iter> _Sp,
+            __indirectly_binary_right_foldable<iter_value_t<_Iter>, _Iter> _Func>
+  requires constructible_from<iter_value_t<_Iter>, iter_reference_t<_Iter>>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto
+  operator()(_Iter __first, _Sp __last, _Func __func){
+    using _Value = iter_value_t<_Iter>;
+    using _Up = decay_t<invoke_result_t<_Func&, _Value, _Value>>;
+
+    if (__first == __last)
+      return std::optional<_Up>(nullopt);
+
+    _Iter __tail = ranges::next(__first, __last);
+    --__tail;
+
+    _Up __result(*__tail);
+
+    __identity __proj;
+    std::__for_each(
+        std::make_reverse_iterator(__tail),
+        std::make_reverse_iterator(__first),
+        [&](auto&& __element) {
+          __result = std::invoke(__func, std::forward<decltype(__element)>(__element), std::move(__result));
+        },
+        __proj);
+
+    return std::optional<_Up>(in_place, std::move(__result));
+  }
+
+  template <bidirectional_range _Range,
+            __indirectly_binary_right_foldable<range_value_t<_Range>, iterator_t<_Range>> _Func>
+    requires constructible_from<range_value_t<_Range>, range_reference_t<_Range>>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto
+  operator()(_Range&& __range, _Func __func) {
+    return operator()(ranges::begin(__range), ranges::end(__range), std::ref(__func));
+  }
+
+};
+inline constexpr auto fold_right_last = __fold_right_last();
 } // namespace ranges
 
 #endif // _LIBCPP_STD_VER >= 23
