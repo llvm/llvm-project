@@ -788,12 +788,24 @@ static bool getMaddPatterns(const ARMSubtarget &Subtarget, MachineInstr &Root,
   if (!isCombineInstrCandidate(Opc))
     return false;
 
-  // Do not fuse if this root defines live CPSR (mla/mls handling must preserve
-  // flags semantics separately).
-  if (!llvm::IsCPSRDead(&Root))
+  // MLA/MLS do not provide ADD/SUB-with-S-bit flag semantics. Do not fuse when
+  // the root defines CPSR: conditional ARM instructions depend on flags without
+  // necessarily listing an explicit CPSR use, so IsCPSRDead(&Root) is unreliable.
+  //
+  // Contrast AArch64 getMaddPatterns: ADDS/SUBS use separate opcodes and may be
+  // converted to non-flag ADD/SUB for fusion when an NZCV def operand exists.
+  // ARM keeps one ADDrr/SUBrr opcode with optional cc_out (explicit CPSR def
+  // when the S bit is used). If this root has any explicit CPSR def operand,
+  // do not fuse. (AArch64 passes isDead=true there to match only dead NZCV
+  // defs before ADDS→ADD conversion; ARM must not fuse on any CPSR-def add.)
+  if (Root.findRegisterDefOperandIdx(ARM::CPSR, /*TRI=*/nullptr, false) != -1)
     return false;
 
-  const bool CanMLS = Subtarget.hasV6T2Ops();
+  // Match TableGen Requires on MLA / MLS (ARMInstrInfo.td).
+  const bool CanMLA =
+      Subtarget.useMulOps() && Subtarget.hasV6Ops() && Subtarget.hasARMOps();
+  const bool CanMLS =
+      Subtarget.useMulOps() && Subtarget.hasV6T2Ops() && Subtarget.hasARMOps();
 
   auto setFound = [&](unsigned OperandIdx, unsigned Pattern) {
     if (!Root.getOperand(OperandIdx).isReg())
@@ -810,7 +822,8 @@ static bool getMaddPatterns(const ARMSubtarget &Subtarget, MachineInstr &Root,
   default:
     break;
   case ARM::ADDrr:
-
+    if (!CanMLA)
+      break;
     assert(Root.getOperand(1).isReg() && Root.getOperand(2).isReg() &&
            "ADDrr must use register operands");
     setFound(1, MCP::MULADD_OP1);
@@ -819,7 +832,8 @@ static bool getMaddPatterns(const ARMSubtarget &Subtarget, MachineInstr &Root,
   case ARM::SUBrr:
     if (CanMLS)
       setFound(2, MCP::MULSUB_OP2);
-    setFound(1, MCP::MULSUB_OP1);
+    if (CanMLA)
+      setFound(1, MCP::MULSUB_OP1);
     break;
   }
   return Found;

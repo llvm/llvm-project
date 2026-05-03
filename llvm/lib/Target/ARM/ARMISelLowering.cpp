@@ -14192,16 +14192,22 @@ static SDValue PerformMULCombine(SDNode *N, SelectionDAG &DAG,
   if (!Subtarget->isThumb()) {
     auto IsAddSubWith1 = [&](SDValue V) -> bool {
       AddSubOpc = V->getOpcode();
-      if ((AddSubOpc == ISD::ADD ||
-           (AddSubOpc == ISD::SUB && Subtarget->hasV6T2Ops())) &&
-          V->hasOneUse()) {
-        SDValue Opnd = V->getOperand(1);
-        MulOper = V->getOperand(0);
-        if (AddSubOpc == ISD::SUB)
-          std::swap(Opnd, MulOper);
-        if (auto C = dyn_cast<ConstantSDNode>(Opnd))
-          return C->isOne();
-      }
+      if (AddSubOpc == ISD::ADD) {
+        if (!(Subtarget->hasV6Ops() && Subtarget->useMulOps()))
+          return false;
+      } else if (AddSubOpc == ISD::SUB) {
+        if (!(Subtarget->hasV6T2Ops() && Subtarget->useMulOps()))
+          return false;
+      } else
+        return false;
+      if (!V->hasOneUse())
+        return false;
+      SDValue Opnd = V->getOperand(1);
+      MulOper = V->getOperand(0);
+      if (AddSubOpc == ISD::SUB)
+        std::swap(Opnd, MulOper);
+      if (auto C = dyn_cast<ConstantSDNode>(Opnd))
+        return C->isOne();
       return false;
     };
 
@@ -14231,10 +14237,15 @@ static SDValue PerformMULCombine(SDNode *N, SelectionDAG &DAG,
                             isZeroExtended(N0.getNode(), DAG)))
       return SDValue();
     // Conservatively do not lower to shift+add+shift if the mul might be
-    // folded into madd or msub.
-    if (N->hasOneUse() && (N->user_begin()->getOpcode() == ISD::ADD ||
-                           N->user_begin()->getOpcode() == ISD::SUB))
-      return SDValue();
+    // folded into MLA / MLS on ARM-mode GPR paths (same gates as the machine
+    // combiner and IsAddSubWith1 above).
+    if (N->hasOneUse() && Subtarget->hasARMOps() && Subtarget->useMulOps()) {
+      unsigned UOpc = N->user_begin()->getOpcode();
+      if (UOpc == ISD::ADD && Subtarget->hasV6Ops())
+        return SDValue();
+      if (UOpc == ISD::SUB && Subtarget->hasV6T2Ops())
+        return SDValue();
+    }
   }
 
   // Use ShiftedConstValue instead of ConstValue to support both shift+add/sub

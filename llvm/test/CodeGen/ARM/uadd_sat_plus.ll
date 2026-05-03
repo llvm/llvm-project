@@ -32,9 +32,10 @@ define i32 @func32(i32 %x, i32 %y, i32 %z) nounwind {
 ;
 ; CHECK-ARM-LABEL: func32:
 ; CHECK-ARM:       @ %bb.0:
-; CHECK-ARM-NEXT:    mul r1, r1, r2
-; CHECK-ARM-NEXT:    adds r0, r0, r1
-; CHECK-ARM-NEXT:    mvnhs r0, #0
+; CHECK-ARM-NEXT:    mla r1, r1, r2, r0
+; CHECK-ARM-NEXT:    cmp r1, r0
+; CHECK-ARM-NEXT:    mvnlo r1, #0
+; CHECK-ARM-NEXT:    mov r0, r1
 ; CHECK-ARM-NEXT:    bx lr
   %a = mul i32 %y, %z
   %tmp = call i32 @llvm.uadd.sat.i32(i32 %x, i32 %a)
