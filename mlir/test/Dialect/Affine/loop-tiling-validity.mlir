@@ -1,5 +1,4 @@
 // RUN: mlir-opt %s  -split-input-file -affine-loop-tile="tile-size=32" -verify-diagnostics | FileCheck %s
-// RUN: mlir-opt %s -split-input-file -affine-loop-tile="tile-sizes=16,16" | FileCheck %s --check-prefix=TILE16
 
 // -----
 
@@ -51,16 +50,18 @@ func.func @illegal_loop_with_diag_dependence() {
 
 // -----
 
-// Verify that tiling is not applied when anti-dependences would be violated.
+// Verify that tiling is not applied when a flow dependence with distance
+// vector (1, -1) would be violated.
 
-// TILE16-LABEL: func @anti_dep
-// TILE16:       affine.for %{{.*}} = 0 to 1023 {
-// TILE16-NEXT:    affine.for %{{.*}} = 1 to 1024 {
-// TILE16-NOT:     affine.for %{{.*}} = 0 to 1023 step 16
-func.func @anti_dep(%arr: memref<1024x1024xi32>) {
-  affine.for %i = 0 to 1023 {
-    affine.for %j = 1 to 1024 {
-      %val = affine.load %arr[%i + 1, %j - 1] : memref<1024x1024xi32>
+// CHECK-LABEL: func @flow_dep_distance_1_neg1
+// CHECK:       affine.for %{{.*}} = 1 to 1024 {
+// CHECK-NEXT:    affine.for %{{.*}} = 0 to 1023 {
+// CHECK-NOT:     affine.for %{{.*}} = 1 to 1024 step 32
+// CHECK-NOT:     affine.for %{{.*}} = 0 to 1023 step 32
+func.func @flow_dep_distance_1_neg1(%arr: memref<1024x1024xi32>) {
+  affine.for %i = 1 to 1024 {
+    affine.for %j = 0 to 1023 {
+      %val = affine.load %arr[%i - 1, %j + 1] : memref<1024x1024xi32>
       affine.store %val, %arr[%i, %j] : memref<1024x1024xi32>
     }
   }
