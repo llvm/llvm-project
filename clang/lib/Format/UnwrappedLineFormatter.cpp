@@ -1563,11 +1563,12 @@ unsigned UnwrappedLineFormatter::format(
 
       NextLine = Joiner.getNextMergedLine(DryRun, IndentTracker);
       unsigned ColumnLimit = getColumnLimit(TheLine.InPPDirective, NextLine);
-      bool FitsIntoOneLine =
+      const bool FitsIntoOneLine =
           !TheLine.ContainsMacroCall &&
           (TheLine.Last->TotalLength + Indent <= ColumnLimit ||
            (TheLine.Type == LT_ImportStatement &&
             (!Style.isJavaScript() || !Style.JavaScriptWrapImports)) ||
+           TheLine.Type == LT_CppModuleStatement ||
            (Style.isCSharp() &&
             TheLine.InPPDirective)); // don't split #regions in C#
       if (Style.ColumnLimit == 0) {

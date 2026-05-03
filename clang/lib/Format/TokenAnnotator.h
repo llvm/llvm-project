@@ -35,6 +35,7 @@ enum LineType {
   LT_CommentAbovePPDirective,
   LT_RequiresExpression,
   LT_SimpleRequirement,
+  LT_CppModuleStatement,
 };
 
 enum ScopeType {
@@ -127,10 +128,13 @@ public:
     if (First->isNoneOf(Keywords.kw_module, Keywords.kw_import))
       return false;
 
-    // Pre C++20 code using import (or module) as identifier e.g. for a
+    // Pre-C++20 code using import (or module) as identifier e.g. for a
     // namespace.
-    if (auto Next = First->getNextNonComment())
-      return Next->isNoneOf(tok::coloncolon, tok::period, tok::star);
+    if (auto Next = First->getNextNonComment()) {
+      return !Next->isMemberAccess() &&
+             Next->isNoneOf(tok::coloncolon, tok::star) &&
+             !Next->isStringLiteral();
+    }
 
     return false;
   }

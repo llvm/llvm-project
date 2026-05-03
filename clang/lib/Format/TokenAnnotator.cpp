@@ -2008,7 +2008,7 @@ public:
       while (CurrentToken)
         if (!consumeToken())
           return LT_Invalid;
-      return LT_ImportStatement;
+      return LT_CppModuleStatement;
     }
 
     // Directly allow to 'import <string-literal>' to support protocol buffer

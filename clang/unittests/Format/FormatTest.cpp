@@ -24625,6 +24625,10 @@ TEST_F(FormatTest, Cpp20ModulesSupport) {
   verifyFormat("module", Style);
   verifyFormat("export", Style);
 
+  verifyFormat("module :private;", Style);
+  verifyFormat("import <Foo/Bar> /* comment */;", Style);
+  verifyFormat("import <Foo/Bar>; // Trailing comment", Style);
+
   Style.ColumnLimit = 10;
   verifyFormat("import Foo.Bar;", Style);
   verifyFormat("export import Foo.Bar;", Style);
@@ -24632,8 +24636,10 @@ TEST_F(FormatTest, Cpp20ModulesSupport) {
   verifyFormat("import Foo.Bar:Baz;", Style);
   verifyFormat("export import Foo.Bar:Baz;", Style);
   verifyFormat("export module Foo.Bar:Baz;", Style);
+  verifyFormat("import <Foo/Bar> /* comment */;", Style);
+  verifyFormat("import <Foo/Bar>; // Trailing comment", Style);
 
-  // Somewhat gracefully handle import in pre C++20 code.
+  // Somewhat gracefully handle import in pre-C++20 code.
   verifyFormat("import /* not keyword */ = val ? 2 : 1;");
   verifyFormat("_world->import<engine_module>();");
 

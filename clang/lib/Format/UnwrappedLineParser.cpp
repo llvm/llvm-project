@@ -1359,26 +1359,21 @@ bool UnwrappedLineParser::parseModuleImport() {
     return false;
   }
 
-  nextToken();
-  while (!eof()) {
+  for (nextToken(); !eof(); nextToken()) {
     // Handle import <foo/bar.h> as we would an include statement.
     if (FormatTok->is(tok::less)) {
-      nextToken();
-      while (FormatTok->isNoneOf(tok::semi, tok::greater) && !eof()) {
-        // Mark tokens up to the trailing line comments as implicit string
-        // literals.
-        if (FormatTok->isNot(tok::comment) &&
-            !FormatTok->TokenText.starts_with("//")) {
-          FormatTok->setFinalizedType(TT_ImplicitStringLiteral);
-        }
-        nextToken();
+
+      for (nextToken(); FormatTok->isNoneOf(tok::semi, tok::greater) && !eof();
+           nextToken()) {
+        // Mark tokens as implicit string literals, so that import <A/Foo> will
+        // neither be broken nor have a space added.
+        FormatTok->setFinalizedType(TT_ImplicitStringLiteral);
       }
     }
     if (FormatTok->is(tok::semi)) {
       nextToken();
       break;
     }
-    nextToken();
   }
 
   addUnwrappedLine();
@@ -1623,14 +1618,6 @@ void UnwrappedLineParser::parseStructuralElement(
     }
     break;
   case tok::kw_export:
-    if (Style.isJavaScript()) {
-      parseJavaScriptEs6ImportExport();
-      return;
-    }
-    if (Style.isVerilog()) {
-      parseVerilogExtern();
-      return;
-    }
     if (IsCpp) {
       nextToken();
       if (FormatTok->is(tok::kw_namespace)) {
@@ -1643,6 +1630,14 @@ void UnwrappedLineParser::parseStructuralElement(
       }
       if (FormatTok->is(Keywords.kw_import) && parseModuleImport())
         return;
+    }
+    if (Style.isJavaScript()) {
+      parseJavaScriptEs6ImportExport();
+      return;
+    }
+    if (Style.isVerilog()) {
+      parseVerilogExtern();
+      return;
     }
     break;
   case tok::kw_inline:
@@ -1663,6 +1658,8 @@ void UnwrappedLineParser::parseStructuralElement(
       return;
     }
     if (FormatTok->is(Keywords.kw_import)) {
+      if (IsCpp && parseModuleImport())
+        return;
       if (Style.isJavaScript()) {
         parseJavaScriptEs6ImportExport();
         return;
@@ -1683,8 +1680,6 @@ void UnwrappedLineParser::parseStructuralElement(
         parseVerilogExtern();
         return;
       }
-      if (IsCpp && parseModuleImport())
-        return;
     }
     if (IsCpp && FormatTok->isOneOf(Keywords.kw_signals, Keywords.kw_qsignals,
                                     Keywords.kw_slots, Keywords.kw_qslots)) {
