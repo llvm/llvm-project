@@ -36,11 +36,6 @@ class ImmOpWithPattern<ValueType vt, string asmop, code pred, SDNodeXForm xform,
   let FastIselShouldIgnore = true;
 }
 
-// class ImmediatePatLeaf<ValueType vt, code pred,
-//       SDNodeXForm xform, SDNode ImmNode>
-//   : PatLeaf<(vt ImmNode), pred, xform>;
-
-
 // Constructs both a DAG pattern and instruction operand for an immediate
 // of type VT.  PRED returns true if a node is acceptable and XFORM returns
 // the operand value associated with the node.  ASMOP is the name of the
