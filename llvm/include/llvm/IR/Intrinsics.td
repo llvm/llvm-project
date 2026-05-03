@@ -705,27 +705,6 @@ class TypeInfoGen<list<LLVMType> RetTypes, list<LLVMType> ParamTypes> {
 
   bit isOverloaded = !not(!empty(OverloadTypes));
 
-  // Validate that the overload index referenced by dependent types always
-  // references an LLVMAnyType type.
-  list<int> InvalidOverload = !foreach(ty, AllTypes,
-    // an entry in the list will be 1 if its a dependent type and it
-    // references another overload type that is not `Any`.
-    !and(
-      !isa<LLVMDependentType>(ty),
-      !if(!ge(!cast<LLVMDependentType>(ty).OverloadIndex, !size(OverloadTypes)),
-        1,
-        !not(!isa<LLVMAnyType>(OverloadTypes[!cast<LLVMDependentType>(ty).OverloadIndex]))
-      )
-    )
-  );
-  assert !eq(!foldl(0, InvalidOverload, a, x, !add(a, x)), 0),
-     "dependent types must reference an overload index of an \'llvm_any\' type";
-
-  list<LLVMType> Types = !foreach(ty, AllTypes,
-    !if(!isa<LLVMDependentType>(ty),
-        OverloadTypes[!cast<LLVMDependentType>(ty).OverloadIndex],
-        ty));
-
   list<int> TypeSig = !listflatten(!listconcat(
     [!cond(
       !eq(!size(RetTypes), 0): [IIT_Done.Number],
