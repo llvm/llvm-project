@@ -1397,8 +1397,16 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
         unsigned ExtOpcode = match(Def->getOperand(0), m_SExt(m_VPValue()))
                                  ? Instruction::SExt
                                  : Instruction::ZExt;
-        auto *Ext = Builder.createWidenCast(Instruction::CastOps(ExtOpcode), A,
-                                            TruncTy);
+        VPSingleDefRecipe *Ext;
+        if (vputils::isSingleScalar(Def)) {
+          Ext = new VPInstructionWithType(Instruction::CastOps(ExtOpcode), {A},
+                                          TruncTy, {}, {}, Def->getDebugLoc());
+          Builder.getInsertBlock()->insert(Ext, Builder.getInsertPoint());
+        } else {
+          Ext = Builder.createWidenCast(Instruction::CastOps(ExtOpcode), A,
+                                        TruncTy);
+        }
+
         if (auto *UnderlyingExt = Def->getOperand(0)->getUnderlyingValue()) {
           // UnderlyingExt has distinct return type, used to retain legacy cost.
           Ext->setUnderlyingValue(UnderlyingExt);

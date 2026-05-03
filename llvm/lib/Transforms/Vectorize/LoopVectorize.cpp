@@ -6708,7 +6708,7 @@ bool VPRecipeBuilder::replaceWithFinalIfReductionStore(
   return false;
 }
 
-VPReplicateRecipe *VPRecipeBuilder::handleReplication(VPInstruction *VPI,
+VPSingleDefRecipe *VPRecipeBuilder::handleReplication(VPInstruction *VPI,
                                                       VFRange &Range) {
   auto *I = VPI->getUnderlyingInstr();
   bool IsUniform = LoopVectorizationPlanner::getDecisionAndClampRange(
@@ -6766,6 +6766,15 @@ VPReplicateRecipe *VPRecipeBuilder::handleReplication(VPInstruction *VPI,
   assert((Range.Start.isScalar() || !IsUniform || !IsPredicated ||
           (Range.Start.isScalable() && isa<IntrinsicInst>(I))) &&
          "Should not predicate a uniform recipe");
+  if (IsUniform && Instruction::isCast(VPI->getOpcode())) {
+    assert(!IsPredicated && "IsUniform implies unpredicated");
+    auto *CastR = cast<VPInstructionWithType>(VPI);
+    auto *Recipe = new VPInstructionWithType(
+        VPI->getOpcode(), VPI->operandsWithoutMask(), CastR->getResultType(),
+        *VPI, *VPI, VPI->getDebugLoc(), I->getName());
+    Recipe->setUnderlyingValue(I);
+    return Recipe;
+  }
   auto *Recipe =
       new VPReplicateRecipe(I, VPI->operandsWithoutMask(), IsUniform,
                             BlockInMask, *VPI, *VPI, VPI->getDebugLoc());
