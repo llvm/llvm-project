@@ -309,7 +309,7 @@
 "`LWG4492 <https://wg21.link/LWG4492>`__","``std::generate`` and ``std::ranges::generate`` wording is unclear for parallel algorithms","2026-03 (Croydon)","","","`#189851 <https://github.com/llvm/llvm-project/issues/189851>`__",""
 "`LWG4493 <https://wg21.link/LWG4493>`__","Specification for some functions of bit reference types seems missing","2026-03 (Croydon)","","","`#189852 <https://github.com/llvm/llvm-project/issues/189852>`__",""
 "`LWG4496 <https://wg21.link/LWG4496>`__","Precedes vs Reachable in [meta.reflection]","2026-03 (Croydon)","","","`#189853 <https://github.com/llvm/llvm-project/issues/189853>`__",""
-"`LWG4497 <https://wg21.link/LWG4497>`__","``std::nullopt_t`` should be comparable","2026-03 (Croydon)","","","`#189854 <https://github.com/llvm/llvm-project/issues/189854>`__",""
+"`LWG4497 <https://wg21.link/LWG4497>`__","``std::nullopt_t`` should be comparable","2026-03 (Croydon)","|Complete|","23","`#189854 <https://github.com/llvm/llvm-project/issues/189854>`__",""
 "`LWG4499 <https://wg21.link/LWG4499>`__","``flat_set::insert_range`` specification may be problematic","2026-03 (Croydon)","","","`#189855 <https://github.com/llvm/llvm-project/issues/189855>`__",""
 "`LWG4500 <https://wg21.link/LWG4500>`__","``constant_wrapper`` wording problems","2026-03 (Croydon)","|Complete|","23","`#189856 <https://github.com/llvm/llvm-project/issues/189856>`__",""
 "`LWG4504 <https://wg21.link/LWG4504>`__","Wording problem in ``{simple_}counting_scope``","2026-03 (Croydon)","","","`#189857 <https://github.com/llvm/llvm-project/issues/189857>`__",""
