@@ -35,7 +35,10 @@ define i1 @sqrt_negnormal_f32(float %a0) {
 define i1 @sqrt_nsz_negzero_f32(float %a0) {
 ; CHECK-LABEL: sqrt_nsz_negzero_f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    fsqrt.s fa5, fa0
+; CHECK-NEXT:    fclass.s a0, fa5
+; CHECK-NEXT:    slli a0, a0, 60
+; CHECK-NEXT:    srli a0, a0, 63
 ; CHECK-NEXT:    ret
   %sqr = call nsz float @llvm.sqrt.f32(float %a0)
   %res = tail call i1 @llvm.is.fpclass.f32(float %sqr, i32 32)
@@ -97,8 +100,10 @@ define <vscale x 2 x i1> @vsqrt_negnormal_nxv2f32(<vscale x 2 x float> %a0) {
 define <vscale x 2 x i1> @vsqrt_nsz_negzero_nxv2f32(<vscale x 2 x float> %a0) {
 ; CHECK-LABEL: vsqrt_nsz_negzero_nxv2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
-; CHECK-NEXT:    vmclr.m v0
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vfsqrt.v v8, v8
+; CHECK-NEXT:    vfclass.v v8, v8
+; CHECK-NEXT:    vmseq.vi v0, v8, 8
 ; CHECK-NEXT:    ret
   %sqr = call nsz <vscale x 2 x float> @llvm.sqrt.nxv2f32(<vscale x 2 x float> %a0)
   %res = tail call <vscale x 2 x i1> @llvm.is.fpclass.nxv2f32(<vscale x 2 x float> %sqr, i32 32)
