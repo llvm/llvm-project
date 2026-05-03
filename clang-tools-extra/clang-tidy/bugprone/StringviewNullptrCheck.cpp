@@ -10,7 +10,7 @@
 #include "../utils/LexerUtils.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 
-using namespace ::clang::ast_matchers;
+using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
@@ -44,39 +44,46 @@ void StringviewNullptrCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *ConstructExpr =
       Result.Nodes.getNodeAs<CXXConstructExpr>("construct_expr");
   const Expr *NullArg = ConstructExpr->getArg(0);
+  const SourceLocation NullArgExpansionLoc =
+      Result.SourceManager->getExpansionLoc(NullArg->getBeginLoc());
 
-  auto Diag = diag(NullArg->getBeginLoc(),
+  auto Diag = diag(NullArgExpansionLoc,
                    "constructing basic_string_view from null is undefined");
 
-  const std::optional<Token> PrevToken = utils::lexer::getPreviousToken(
-      NullArg->getBeginLoc(), *Result.SourceManager, getLangOpts());
+  const std::optional<Token> TokenBeforeNullArg =
+      utils::lexer::getPreviousToken(NullArgExpansionLoc, *Result.SourceManager,
+                                     getLangOpts());
 
-  if (!PrevToken)
+  if (!TokenBeforeNullArg)
     return;
 
   const auto NullArgReplacement = [&]() -> StringRef {
     // 'sv = nullptr;' -> 'sv = {};'
     // '(std::string_view)nullptr' -> '(std::string_view){}'
     // 'return nullptr;' -> 'return {};'
-    if (PrevToken->isOneOf(tok::equal, tok::r_paren) ||
-        (PrevToken->is(tok::raw_identifier) &&
-         PrevToken->getRawIdentifier() == "return"))
+    if (TokenBeforeNullArg->isOneOf(tok::equal, tok::r_paren) ||
+        (TokenBeforeNullArg->is(tok::raw_identifier) &&
+         TokenBeforeNullArg->getRawIdentifier() == "return"))
       return "{}";
 
     // Implicit constructor call.
     if (ConstructExpr->getSourceRange() == NullArg->getSourceRange())
       return "\"\"";
 
-    if (PrevToken->is(tok::l_brace))
+    // 'std::string_view {nullptr}' -> 'std::string_view {}'
+    // 'std::string_view sv {nullptr};' -> 'std::string_view sv {};'
+    if (TokenBeforeNullArg->is(tok::l_brace))
       return {};
 
-    if (PrevToken->is(tok::l_paren)) {
+    if (TokenBeforeNullArg->is(tok::l_paren)) {
       const DynTypedNodeList Parents =
           Result.Context->getParentMapContext().getParents(*ConstructExpr);
 
       if (Parents.empty())
         return {};
 
+      // 'static_cast<std::string_view>(nullptr)'
+      //     -> 'static_cast<std::string_view>("")'
       if (Parents[0].get<CXXStaticCastExpr>())
         return "\"\"";
 

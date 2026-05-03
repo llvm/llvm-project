@@ -1,9 +1,8 @@
 // RUN: %check_clang_tidy %s bugprone-stringview-nullptr -std=c++17-or-later %t
 
-namespace std {
+#include <cstddef>
 
-using size_t = unsigned long long;
-using nullptr_t = decltype(nullptr);
+namespace std {
 
 template <typename T>
 T &&declval();
@@ -1464,6 +1463,84 @@ void equality_comparison(std::string_view sv) /* n */ {
   }
 }
 
+void pointer_equality_comparison(std::string_view *sv_ptr) /* o */ {
+  // Empty Without Parens
+  {
+    (void)(*sv_ptr == nullptr) /* o1 */;
+    // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: constructing
+    // CHECK-FIXES: (void)(*sv_ptr == "") /* o1 */; 
+
+    (void)(*sv_ptr == (nullptr)) /* o2 */;
+    // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: constructing
+    // CHECK-FIXES: (void)(*sv_ptr == "") /* o2 */;
+
+    (void)(nullptr == *sv_ptr) /* o3 */;
+    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: constructing
+    // CHECK-FIXES: (void)("" == *sv_ptr) /* o3 */;
+
+    (void)((nullptr) == *sv_ptr) /* o4 */;
+    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: constructing
+    // CHECK-FIXES: (void)("" == *sv_ptr) /* o4 */;
+  }
+
+  // Empty With Parens
+  {
+    (void)((*sv_ptr) == nullptr) /* o5 */;
+    // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: constructing
+    // CHECK-FIXES: (void)((*sv_ptr) == "") /* o5 */;
+
+    (void)((*sv_ptr) == (nullptr)) /* o6 */;
+    // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: constructing
+    // CHECK-FIXES: (void)((*sv_ptr) == "") /* o6 */;
+
+    (void)(nullptr == (*sv_ptr)) /* o7 */;
+    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: constructing
+    // CHECK-FIXES: (void)("" == (*sv_ptr)) /* o7 */;
+
+    (void)((nullptr) == (*sv_ptr)) /* o8 */;
+    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: constructing
+    // CHECK-FIXES: (void)("" == (*sv_ptr)) /* o8 */;
+  }
+
+  // Non-Empty With Parens
+  {
+    (void)((*sv_ptr) != nullptr) /* o9 */;
+    // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: constructing
+    // CHECK-FIXES: (void)((*sv_ptr) != "") /* o9 */;
+
+    (void)((*sv_ptr) != (nullptr)) /* o10 */;
+    // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: constructing
+    // CHECK-FIXES: (void)((*sv_ptr) != "") /* o10 */;
+
+    (void)(nullptr != (*sv_ptr)) /* o11 */;
+    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: constructing
+    // CHECK-FIXES: (void)("" != (*sv_ptr)) /* o11 */;
+
+    (void)((nullptr) != (*sv_ptr)) /* o12 */;
+    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: constructing
+    // CHECK-FIXES: (void)("" != (*sv_ptr)) /* o12 */;
+  }
+
+  // Non-Empty Without Parens
+  {
+    (void)(*sv_ptr != nullptr) /* o13 */;
+    // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: constructing
+    // CHECK-FIXES: (void)(*sv_ptr != "") /* o13 */;
+
+    (void)(*sv_ptr != (nullptr)) /* o14 */;
+    // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: constructing
+    // CHECK-FIXES: (void)(*sv_ptr != "") /* o14 */;
+
+    (void)(nullptr != *sv_ptr) /* o15 */;
+    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: constructing
+    // CHECK-FIXES: (void)("" != *sv_ptr) /* o15 */;
+
+    (void)((nullptr) != *sv_ptr) /* o16 */;
+    // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: constructing
+    // CHECK-FIXES: (void)("" != *sv_ptr) /* o16 */;
+  }
+}
+
 void equality_comparison_with_temporary(std::string_view sv) /* p */ {
   (void)(sv == std::string_view(nullptr)) /* p1 */;
   // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: constructing
@@ -1557,4 +1634,19 @@ void constructor_invocation() /* r */ {
   AcceptsSV r3{nullptr};
   // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: constructing
   // CHECK-FIXES: AcceptsSV r3{""};
+}
+
+void different_ways_of_spelling_nullptr() {
+  std::string_view sv1 {0};
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: constructing
+  // CHECK-FIXES: std::string_view sv1 {};
+
+  std::string_view sv2 {NULL};
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: constructing
+  // CHECK-FIXES: std::string_view sv2 {};
+
+  const char * const null_char_ptr = nullptr;
+  std::string_view sv3 {null_char_ptr};
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: constructing
+  // CHECK-FIXES: std::string_view sv3 {};
 }
