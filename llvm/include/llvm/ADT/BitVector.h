@@ -171,7 +171,7 @@ public:
       clear_unused_bits();
   }
 
-  /// returns whether there are no bits in this bitvector.
+  /// Returns whether there are no bits in this bitvector.
   bool empty() const { return Size == 0; }
 
   /// Returns the number of bits in this bitvector.
@@ -359,14 +359,17 @@ public:
     clear_unused_bits();
   }
 
+  /// Reserve space for atleast \p N bits in the bitvector.
   void reserve(unsigned N) { Bits.reserve(NumBitWords(N)); }
 
+  /// Set all bits in the bitvector.
   BitVector &set() {
     init_words(true);
     clear_unused_bits();
     return *this;
   }
 
+  // Set bit \p Idx in the bitvector.
   BitVector &set(unsigned Idx) {
     assert(Idx < Size && "access in bound");
     Bits[Idx / BITWORD_SIZE] |= BitWord(1) << (Idx % BITWORD_SIZE);
@@ -402,11 +405,13 @@ public:
     return *this;
   }
 
+  /// Reset all bits in the bitvector.
   BitVector &reset() {
     init_words(false);
     return *this;
   }
 
+  /// Reset bit \p Idx in the bitvector.
   BitVector &reset(unsigned Idx) {
     Bits[Idx / BITWORD_SIZE] &= ~(BitWord(1) << (Idx % BITWORD_SIZE));
     return *this;
@@ -441,6 +446,7 @@ public:
     return *this;
   }
 
+  /// Flip all bits in the bitvector.
   BitVector &flip() {
     for (auto &Bit : Bits)
       Bit = ~Bit;
@@ -448,6 +454,7 @@ public:
     return *this;
   }
 
+  /// Flip bit \p Idx in the bitvector.
   BitVector &flip(unsigned Idx) {
     Bits[Idx / BITWORD_SIZE] ^= BitWord(1) << (Idx % BITWORD_SIZE);
     return *this;
@@ -465,17 +472,18 @@ public:
     return (Bits[Idx / BITWORD_SIZE] & Mask) != 0;
   }
 
-  /// Return the last element in the vector.
+  /// Return the last element in the bitvector.
   bool back() const {
     assert(!empty() && "Getting last element of empty vector.");
     return (*this)[size() - 1];
   }
 
+  /// Returns true if bit \p Idx is set.
   bool test(unsigned Idx) const {
     return (*this)[Idx];
   }
 
-  // Push single bit to end of vector.
+  // Push single bit to end of bitvector.
   void push_back(bool Val) {
     unsigned OldSize = Size;
     unsigned NewSize = Size + 1;
@@ -518,7 +526,7 @@ public:
 
   bool operator!=(const BitVector &RHS) const { return !(*this == RHS); }
 
-  /// Intersection, union, disjoint union.
+  /// Intersection of this bitvector with \p RHS.
   BitVector &operator&=(const BitVector &RHS) {
     unsigned ThisWords = Bits.size();
     unsigned RHSWords = RHS.Bits.size();
@@ -575,6 +583,7 @@ public:
     return Out;
   }
 
+  /// Union of this bitvector with \p RHS.
   BitVector &operator|=(const BitVector &RHS) {
     if (size() < RHS.size())
       resize(RHS.size());
@@ -583,6 +592,7 @@ public:
     return *this;
   }
 
+  /// Disjoint union of this bitvector with \p RHS.
   BitVector &operator^=(const BitVector &RHS) {
     if (size() < RHS.size())
       resize(RHS.size());
