@@ -6,16 +6,12 @@
 ; This fold is valid because ctpop(0)==0 and ctpop(1)==1, so the guard
 ; is always redundant. The guard only existed to skip slow software emulation.
 
+
 ; RUN: opt < %s -S -passes=instcombine | FileCheck %s
 
-declare i64 @llvm.ctpop.i64(i64)
-declare i32 @llvm.ctpop.i32(i32)
-declare <4 x i32> @llvm.ctpop.v4i32(<4 x i32>)
-declare <2 x i64> @llvm.ctpop.v2i64(<2 x i64>)
 
 ;------------------------------------------------------------------------------
-; Pattern 1: select (icmp ule X, 1), X, ctpop(X)  -->  ctpop(X)
-; ctpop(0)==0 and ctpop(1)==1, so the guard is always redundant.
+; Positive tests: select (icmp ule X, 1), X, ctpop(X)  -->  ctpop(X)
 ;------------------------------------------------------------------------------
 
 define i64 @fold_ule1_i64(i64 %x) {
@@ -40,35 +36,59 @@ define i32 @fold_ule1_i32(i32 %x) {
   ret i32 %res
 }
 
-;------------------------------------------------------------------------------
-; Pattern 2: vector -- fold is unconditional.
-; All SIMD lanes wait regardless, so the branch never saves work.
-;------------------------------------------------------------------------------
-
 define <4 x i32> @fold_vector_ule1(<4 x i32> %x) {
 ; CHECK-LABEL: @fold_vector_ule1(
 ; CHECK-NEXT:    [[POP:%.*]] = call range(i32 0, 33) <4 x i32> @llvm.ctpop.v4i32(<4 x i32> [[X:%.*]])
 ; CHECK-NEXT:    ret <4 x i32> [[POP]]
 ;
-  %cmp = icmp ule <4 x i32> %x, <i32 1, i32 1, i32 1, i32 1>
+  %cmp = icmp ule <4 x i32> %x, splat(i32 1)
   %pop = call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %x)
   %res = select <4 x i1> %cmp, <4 x i32> %x, <4 x i32> %pop
   ret <4 x i32> %res
 }
 
 ;------------------------------------------------------------------------------
-; Negative test: select (icmp eq X, -1), BitWidth, ctpop(X) should NOT be
-; folded here -- it is handled by foldSelectValueEquivalence, and folding
-; when ctpop has a range annotation that excludes BitWidth would be incorrect.
+; Negative tests: should NOT fold.
 ;------------------------------------------------------------------------------
 
-define i32 @no_fold_allones_i32(i32 %x) {
-; CHECK-LABEL: @no_fold_allones_i32(
-; CHECK-NEXT:    [[POP:%.*]] = call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[X:%.*]])
-; CHECK-NEXT:    ret i32 [[POP]]
+; Wrong predicate (ugt instead of ult/ule)
+define i32 @no_fold_wrong_pred(i32 %x) {
+; CHECK-LABEL: @no_fold_wrong_pred(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[POP:%.*]] = call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[X]])
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP]], i32 [[X]], i32 [[POP]]
+; CHECK-NEXT:    ret i32 [[RES]]
 ;
-  %cmp = icmp eq i32 %x, -1
+  %cmp = icmp ugt i32 %x, 1
   %pop = call i32 @llvm.ctpop.i32(i32 %x)
-  %res = select i1 %cmp, i32 32, i32 %pop
+  %res = select i1 %cmp, i32 %x, i32 %pop
+  ret i32 %res
+}
+
+; Wrong constant (ult 3 instead of ult 2)
+define i32 @no_fold_wrong_const(i32 %x) {
+; CHECK-LABEL: @no_fold_wrong_const(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X:%.*]], 3
+; CHECK-NEXT:    [[POP:%.*]] = call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[X]])
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP]], i32 [[X]], i32 [[POP]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %cmp = icmp ult i32 %x, 3
+  %pop = call i32 @llvm.ctpop.i32(i32 %x)
+  %res = select i1 %cmp, i32 %x, i32 %pop
+  ret i32 %res
+}
+
+; Mismatched variables (condition uses Y, ctpop uses X)
+define i32 @no_fold_mismatch_var(i32 %x, i32 %y) {
+; CHECK-LABEL: @no_fold_mismatch_var(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[Y:%.*]], 2
+; CHECK-NEXT:    [[POP:%.*]] = call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[X:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP]], i32 [[Y]], i32 [[POP]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %cmp = icmp ult i32 %y, 2
+  %pop = call i32 @llvm.ctpop.i32(i32 %x)
+  %res = select i1 %cmp, i32 %y, i32 %pop
   ret i32 %res
 }

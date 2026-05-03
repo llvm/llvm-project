@@ -4392,20 +4392,13 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     return I;
 
   // Fold: select (icmp ult X, 2), X, ctpop(X)  -->  ctpop(X)
-  // ctpop(0)==0 and ctpop(1)==1, so the guard is redundant.
-  {
-    Value *X;
-    CmpPredicate CtpopPred;
-    Value *CtpopCmpLHS, *CtpopCmpRHS;
-    if (match(FalseVal, m_Intrinsic<Intrinsic::ctpop>(m_Value(X))) &&
-        match(CondVal,
-              m_ICmp(CtpopPred, m_Value(CtpopCmpLHS), m_Value(CtpopCmpRHS))) &&
-        CtpopCmpLHS == X && CtpopPred == ICmpInst::ICMP_ULT &&
-        match(CtpopCmpRHS, m_SpecificInt(2)) && TrueVal == X) {
-      cast<Instruction>(FalseVal)->dropPoisonGeneratingAnnotations();
-      addToWorklist(cast<Instruction>(FalseVal));
-      return replaceInstUsesWith(SI, FalseVal);
-    }
+  // ctpop(0)==0 and ctpop(1)==1, so the guard is always redundant.
+  if (match(FalseVal, m_Intrinsic<Intrinsic::ctpop>(m_Specific(TrueVal))) &&
+      match(CondVal, 
+            m_SpecificICmp(ICmpInst::ICMP_ULT, m_Specific(TrueVal), m_SpecificInt(2)))) {
+    cast<Instruction>(FalseVal)->dropPoisonGeneratingAnnotations();
+    addToWorklist(cast<Instruction>(FalseVal));
+    return replaceInstUsesWith(SI, FalseVal);
   }
 
   // If the type of select is not an integer type or if the condition and
