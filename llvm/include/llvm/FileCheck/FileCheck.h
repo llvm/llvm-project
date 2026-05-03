@@ -174,6 +174,30 @@ struct FileCheckDiag {
                          StringRef Note = "");
 };
 
+/// A \c FileCheckDiag series emitted by the FileCheck library.
+class FileCheckDiagList {
+private:
+  std::vector<std::unique_ptr<FileCheckDiag>> DiagList;
+
+public:
+  /// Emplace a new \c FileCheckDiag.
+  template <typename... ArgTys> void emplace_back(const ArgTys &...Args) {
+    DiagList.emplace_back(std::make_unique<FileCheckDiag>(Args...));
+  }
+  /// Adjust recent consecutive diagnostics of the same \c CheckLoc to have
+  /// \c MatchTy.
+  void adjustPrevDiags(FileCheckDiag::MatchType MatchTy) {
+    SMLoc CheckLoc = (*DiagList.rbegin())->CheckLoc;
+    for (auto I = DiagList.rbegin(), E = DiagList.rend();
+         I != E && (*I)->CheckLoc == CheckLoc; ++I)
+      (*I)->MatchTy = MatchTy;
+  }
+  /// The \c FileCheckDiag list.
+  const std::vector<std::unique_ptr<FileCheckDiag>> &getList() const {
+    return DiagList;
+  }
+};
+
 class FileCheckPatternContext;
 struct FileCheckString;
 
@@ -211,7 +235,7 @@ public:
   ///
   /// \returns false if the input fails to satisfy the checks.
   LLVM_ABI bool checkInput(SourceMgr &SM, StringRef Buffer,
-                           std::vector<FileCheckDiag> *Diags = nullptr);
+                           FileCheckDiagList *Diags = nullptr);
 };
 
 } // namespace llvm

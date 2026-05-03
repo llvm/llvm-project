@@ -915,7 +915,7 @@ public:
   }
 
   void printVariableDefs(FileCheckDiag::MatchType MatchTy,
-                         std::vector<FileCheckDiag> &Diags) {
+                         FileCheckDiagList &Diags) {
     P.printVariableDefs(SM, MatchTy, &Diags);
   }
 };
@@ -1641,20 +1641,20 @@ TEST_F(FileCheckTest, CapturedVarDiags) {
   PatternTester Tester;
   ASSERT_FALSE(Tester.parsePattern("[[STRVAR:[a-z]+]] [[#NUMVAR:@LINE]]"));
   EXPECT_THAT_EXPECTED(Tester.match("foobar 2"), Succeeded());
-  std::vector<FileCheckDiag> Diags;
+  FileCheckDiagList Diags;
   Tester.printVariableDefs(FileCheckDiag::MatchFoundAndExpected, Diags);
-  EXPECT_EQ(Diags.size(), 2ul);
-  for (const FileCheckDiag &Diag : Diags) {
-    EXPECT_EQ(Diag.CheckTy, Check::CheckPlain);
-    EXPECT_EQ(Diag.MatchTy, FileCheckDiag::MatchFoundAndExpected);
-    EXPECT_EQ(Diag.InputStartLine, 1u);
-    EXPECT_EQ(Diag.InputEndLine, 1u);
+  EXPECT_EQ(Diags.getList().size(), 2ul);
+  for (const std::unique_ptr<FileCheckDiag> &Diag : Diags.getList()) {
+    EXPECT_EQ(Diag->CheckTy, Check::CheckPlain);
+    EXPECT_EQ(Diag->MatchTy, FileCheckDiag::MatchFoundAndExpected);
+    EXPECT_EQ(Diag->InputStartLine, 1u);
+    EXPECT_EQ(Diag->InputEndLine, 1u);
   }
-  EXPECT_EQ(Diags[0].InputStartCol, 1u);
-  EXPECT_EQ(Diags[0].InputEndCol, 7u);
-  EXPECT_EQ(Diags[1].InputStartCol, 8u);
-  EXPECT_EQ(Diags[1].InputEndCol, 9u);
-  EXPECT_EQ(Diags[0].Note, "captured var \"STRVAR\"");
-  EXPECT_EQ(Diags[1].Note, "captured var \"NUMVAR\"");
+  EXPECT_EQ(Diags.getList()[0]->InputStartCol, 1u);
+  EXPECT_EQ(Diags.getList()[0]->InputEndCol, 7u);
+  EXPECT_EQ(Diags.getList()[1]->InputStartCol, 8u);
+  EXPECT_EQ(Diags.getList()[1]->InputEndCol, 9u);
+  EXPECT_EQ(Diags.getList()[0]->Note, "captured var \"STRVAR\"");
+  EXPECT_EQ(Diags.getList()[1]->Note, "captured var \"NUMVAR\"");
 }
 } // namespace
