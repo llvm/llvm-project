@@ -45,8 +45,8 @@ struct RangeTextInfo {
 
 } // namespace
 
-static bool hasNonWhitespace(StringRef Text) {
-  return Text.find_first_not_of(" \t\n\r\f\v") != StringRef::npos;
+static StringRef::size_type findFirstNonWhitespace(StringRef Text) {
+  return Text.find_first_not_of(" \t\n\r\f\v");
 }
 
 static std::optional<std::string> getSourceText(CharSourceRange Range,
@@ -221,11 +221,8 @@ getSuffixTextInfo(bool FunctionPointerCase, bool IsFirstTypedefInGroup,
 }
 
 static void stripLeadingComma(RangeTextInfo &Info) {
-  if (!hasNonWhitespace(Info.Text))
-    return;
-
-  const size_t NonWs = Info.Text.find_first_not_of(" \t\n\r\f\v");
-  if (NonWs != std::string::npos && Info.Text[NonWs] == ',')
+  const StringRef::size_type NonWs = findFirstNonWhitespace(Info.Text);
+  if (NonWs != StringRef::npos && Info.Text[NonWs] == ',')
     Info.Text.erase(0, NonWs + 1);
 }
 
@@ -446,7 +443,8 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
   std::string SuffixText;
   if (SuffixHasComment) {
     SuffixText = SuffixTextInfo.Text;
-  } else if (QualifierStr.empty() && hasNonWhitespace(SuffixTextInfo.Text) &&
+  } else if (QualifierStr.empty() &&
+             findFirstNonWhitespace(SuffixTextInfo.Text) != StringRef::npos &&
              SuffixTextInfo.Tokens.HasPointerOrRef &&
              !SuffixTextInfo.Tokens.HasIdentifier) {
     SuffixText = SuffixTextInfo.Text;
