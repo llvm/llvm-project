@@ -19374,7 +19374,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
       if (auto *ST = dyn_cast<StructType>(VecTy)) {
         assert(EU.User && "Expected user for struct extract");
         const auto *EV = cast<ExtractValueInst>(EU.User);
-        ExtractTy = ST->getTypeAtIndex(EV->getIndices().front());
+        ExtractTy = ExtractValueInst::getIndexedType(ST, EV->getIndices());
       }
       ExtraCost = getVectorInstrCost(
           *TTI, ScalarTy, Instruction::ExtractElement, ExtractTy, CostKind,
@@ -21144,6 +21144,15 @@ Value *BoUpSLP::gather(
                 InsElt = User;
               assert(InsElt &&
                      "Failed to find shufflevector, caused by resize.");
+            } else if (SLPReVec && isa<ShuffleVectorInst>(InsElt)) {
+              // ReVec gather used V directly as a shufflevector operand.
+              // Register a nullptr-User external use so all remaining
+              // in-IR uses of V get rewritten via replaceAllUsesWith,
+              // and track V in ExternalUsesWithNonUsers to match the
+              // bookkeeping done by buildExternalUses.
+              unsigned FoundLane = (*It)->findLaneForValue(V);
+              ExternalUses.emplace_back(V, nullptr, **It, FoundLane);
+              ExternalUsesWithNonUsers.insert(V);
             }
           }
           UserOp = InsElt;
@@ -27614,8 +27623,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
   // determining vectorization factor for scalar instructions.
   for (Value *V : VL) {
     Type *Ty = V->getType();
-    if (!isa<InsertElementInst>(V) && !isValidElementType(Ty) &&
-        S.getOpcode() != Instruction::Call) {
+    if (!isa<InsertElementInst>(V) && !isValidElementType(Ty)) {
       // NOTE: the following will give user internal llvm type name, which may
       // not be useful.
       R.getORE()->emit([&]() {
