@@ -237,7 +237,7 @@ def write_encoding_test(f, instruction: Instruction):
 def write_encoding_tests(cls):
     """Writes tests for all permutations of an instruction to a new file."""
     name = cls.__name__
-    with open(f"Generated/{name}.s", "w") as f:
+    with open(f"{name}.s", "w") as f:
         write_encoding_tests_header(f)
         for instruction in cls.permutations():
             f.write("\n")
