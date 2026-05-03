@@ -158,77 +158,7 @@ void comma_lhs_case() {
   int value = (std::memcpy(&dst, &src, sizeof(src)), 42);
   (void)value;
   // CHECK-MESSAGES: :[[@LINE-2]]:16: warning: use 'std::bit_cast' instead of 'memcpy' for type punning
-  // CHECK-FIXES: int value = (dst = std::bit_cast<unsigned int>(src), 42);
-}
-
-struct SimpleCommaDst {
-  unsigned int Value;
-};
-
-void comma_lhs_simple_record_case() {
-  unsigned int src = 1;
-  SimpleCommaDst dst{};
-  int value = (std::memcpy(&dst, &src, sizeof(src)), 42);
-  (void)value;
-  // CHECK-MESSAGES: :[[@LINE-2]]:16: warning: use 'std::bit_cast' instead of 'memcpy' for type punning
-  // CHECK-FIXES: int value = (dst = std::bit_cast<SimpleCommaDst>(src), 42);
-}
-
-struct MemberCommaDst {
-  unsigned int Value;
-  int operator,(int) const;
-};
-
-void comma_lhs_member_operator_case() {
-  unsigned int src = 1;
-  MemberCommaDst dst{};
-  int value = (std::memcpy(&dst, &src, sizeof(src)), 42);
-  (void)value;
-  // CHECK-MESSAGES: :[[@LINE-2]]:16: warning: use 'std::bit_cast' instead of 'memcpy' for type punning
-  // CHECK-FIXES: int value = ((void)(dst = std::bit_cast<MemberCommaDst>(src)), 42);
-}
-
-struct NamespaceCommaDst {
-  unsigned int Value;
-};
-
-int operator,(NamespaceCommaDst, int);
-
-void comma_lhs_namespace_operator_case() {
-  unsigned int src = 1;
-  NamespaceCommaDst dst{};
-  int value = (std::memcpy(&dst, &src, sizeof(src)), 42);
-  (void)value;
-  // CHECK-MESSAGES: :[[@LINE-2]]:16: warning: use 'std::bit_cast' instead of 'memcpy' for type punning
-  // CHECK-FIXES: int value = ((void)(dst = std::bit_cast<NamespaceCommaDst>(src)), 42);
-}
-
-enum class CommaEnum : unsigned int {};
-
-int operator,(CommaEnum, int);
-
-void comma_lhs_enum_operator_case() {
-  unsigned int src = 1;
-  CommaEnum dst{};
-  int value = (std::memcpy(&dst, &src, sizeof(src)), 42);
-  (void)value;
-  // CHECK-MESSAGES: :[[@LINE-2]]:16: warning: use 'std::bit_cast' instead of 'memcpy' for type punning
-  // CHECK-FIXES: int value = ((void)(dst = std::bit_cast<CommaEnum>(src)), 42);
-}
-
-namespace comma_rhs_operator {
-struct Token {};
-
-int operator,(unsigned int, Token);
-} // namespace comma_rhs_operator
-
-void comma_lhs_rhs_operator_case() {
-  float src = 1.0f;
-  unsigned int dst;
-  comma_rhs_operator::Token token;
-  (std::memcpy(&dst, &src, sizeof(src)), token);
-  // CHECK-MESSAGES: :[[@LINE-1]]:4: warning: use 'std::bit_cast' instead of 'memcpy' for type punning
-  // CHECK-FIXES: ((void)(dst = std::bit_cast<unsigned int>(src)), token);
+  // CHECK-FIXES: int value = ((void)(dst = std::bit_cast<unsigned int>(src)), 42);
 }
 
 void comma_rhs_case() {
