@@ -476,8 +476,8 @@ static void PrivateAutoComplete(
         &prefix_path, // Anything that has been resolved already will be in here
     const CompilerType &compiler_type, CompletionRequest &request);
 
-// Get the CompilerType of the instance variable (this/self) for direct ivar
-// completion. Returns an invalid CompilerType if not in a method context.
+/// Get the CompilerType of the instance variable (this/self) for direct ivar
+/// completion. Returns an invalid CompilerType if not in a method context.
 static CompilerType GetInstanceVariableType(StackFrame &frame,
                                             VariableList &variable_list) {
   auto *lang = Language::FindPlugin(frame.GetLanguage().AsLanguageType());
