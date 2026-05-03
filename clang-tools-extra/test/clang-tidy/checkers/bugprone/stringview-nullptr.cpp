@@ -148,7 +148,7 @@ void temporary_construction() /* a */ {
     // CHECK-FIXES: (void)(std::string_view()) /* a4 */;
 
     // Default `const CharT*`
-    (void)(std::string_view({})) /* a5 */; 
+    (void)(std::string_view({})) /* a5 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: constructing
     // CHECK-FIXES: (void)(std::string_view()) /* a5 */;
   }
@@ -1468,7 +1468,7 @@ void pointer_equality_comparison(std::string_view *sv_ptr) /* o */ {
   {
     (void)(*sv_ptr == nullptr) /* o1 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: constructing
-    // CHECK-FIXES: (void)(*sv_ptr == "") /* o1 */; 
+    // CHECK-FIXES: (void)(*sv_ptr == "") /* o1 */;
 
     (void)(*sv_ptr == (nullptr)) /* o2 */;
     // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: constructing
