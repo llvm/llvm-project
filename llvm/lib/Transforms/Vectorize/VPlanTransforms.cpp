@@ -6510,15 +6510,12 @@ void VPlanTransforms::makeScalarizationDecisions(VPlan &Plan, VFRange &Range) {
       if (!VPI)
         continue;
 
-      // For now we (effectively) only scalarize to first-lane-only address
-      // computation chain for the memory operations.
-
       auto *I = cast_or_null<Instruction>(VPI->getUnderlyingValue());
       // Wouldn't be able to create a `VPReplicateRecipe` anyway.
       if (!I)
         continue;
 
-      // If "executing" other lanes produces side-effects we can't avoid them.
+      // If executing other lanes produces side-effects we can't avoid them.
       if (VPI->mayHaveSideEffects())
         continue;
 
