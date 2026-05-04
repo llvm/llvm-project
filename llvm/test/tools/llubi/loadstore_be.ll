@@ -110,7 +110,7 @@ define void @main() {
   %alloc_struct_padding = alloca {i8, i32}
   store {i8, i32} zeroinitializer, ptr %alloc_struct_padding
   %load_struct_noundef = load {i8, i32}, ptr %alloc_struct_padding, !noundef !{}
-  
+
   %alloc_ptr = alloca ptr
   store ptr %alloc_ptr, ptr %alloc_ptr
   ; It should recover the provenance.
@@ -200,10 +200,13 @@ define void @main() {
 ; CHECK-NEXT:   %load_int_non_zero_padding = load i33, ptr %alloc_padding_vec, align 8 => i33 255
 ; CHECK-NEXT:   %load_vec_non_zero_padding = load <3 x i11>, ptr %alloc_padding_vec, align 8 => { i11 0, i11 0, i11 255 }
 ; CHECK-NEXT:   %alloc_struct_padding = alloca { i8, i32 }, align 8 => ptr 0x88 [alloc_struct_padding]
+; CHECK-NEXT:   store { i8, i32 } zeroinitializer, ptr %alloc_struct_padding, align 4
 ; CHECK-NEXT:   %load_struct_noundef = load { i8, i32 }, ptr %alloc_struct_padding, align 4, !noundef !0 => { i8 0, i32 0 }
-; CHECK-NEXT:   %alloc_ptr = alloca ptr, align 8 => ptr 0x88 [alloc_ptr]
-; CHECK-NEXT:   %ptr_with_provenance = load ptr, ptr %alloc_ptr, align 8 => ptr 0x88 [alloc_ptr]
+; CHECK-NEXT:   %alloc_ptr = alloca ptr, align 8 => ptr 0x90 [alloc_ptr]
+; CHECK-NEXT:   store ptr %alloc_ptr, ptr %alloc_ptr, align 8
+; CHECK-NEXT:   %ptr_with_provenance = load ptr, ptr %alloc_ptr, align 8 => ptr 0x90 [alloc_ptr]
 ; CHECK-NEXT:   %addr_bits = load i8, ptr %alloc_ptr, align 1 => i8 0
 ; CHECK-NEXT:   store i8 %addr_bits, ptr %alloc_ptr, align 1
-; CHECK-NEXT:   %ptr_without_provenance = load ptr, ptr %alloc_ptr, align 8 => ptr 0x88 [nullary]
+; CHECK-NEXT:   %ptr_without_provenance = load ptr, ptr %alloc_ptr, align 8 => ptr 0x90 [nullary]
 ; CHECK-NEXT:   ret void
+; CHECK-NEXT: Exiting function: main
