@@ -1,6 +1,27 @@
 header: unistd.h
-header_template: unistd.h.def
-macros: []
+standards:
+  - posix
+macros:
+  - macro_name: SEEK_SET
+    macro_header: file-seek-macros.h
+  - macro_name: SEEK_CUR
+    macro_header: file-seek-macros.h
+  - macro_name: SEEK_END
+    macro_header: file-seek-macros.h
+  - macro_name: STDIN_FILENO
+    macro_header: unistd-macros.h
+  - macro_name: STDOUT_FILENO
+    macro_header: unistd-macros.h
+  - macro_name: STDERR_FILENO
+    macro_header: unistd-macros.h
+  - macro_name: _SC_PAGESIZE
+    macro_header: unistd-macros.h
+  - macro_name: _SC_PAGE_SIZE
+    macro_header: unistd-macros.h
+  - macro_name: _SC_NPROCESSORS_CONF
+    macro_header: unistd-macros.h
+  - macro_name: _SC_NPROCESSORS_ONLN
+    macro_header: unistd-macros.h
 types:
   - type_name: uid_t
   - type_name: gid_t
@@ -351,7 +372,7 @@ functions:
   - name: sysconf
     standards:
       - POSIX
-    return_type: int
+    return_type: long
     arguments:
       - type: int
   - name: truncate

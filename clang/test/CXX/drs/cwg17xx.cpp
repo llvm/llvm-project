@@ -222,3 +222,33 @@ template <template <typename> class Template, typename Argument>
 using Bind = Instantiate<Internal<Template>::template Bind, Argument>;
 #endif
 } // namespace cwg1794
+
+namespace cwg1780 { // cwg1780: 23
+#if __cplusplus >= 201103L
+
+auto l = []() -> int { return 5; };
+using L = decltype(l);
+class A {
+#if __cplusplus >= 201703L
+    friend constexpr auto L::operator()() const -> int; // expected-error{{a member of a lambda should not be the target of a friend declaration}}
+#else
+    friend auto L::operator()() const -> int; // expected-error{{a member of a lambda should not be the target of a friend declaration}}
+#endif
+};
+
+#if __cplusplus >= 201402L
+auto gl = [](auto a) { return 5; };
+using GL = decltype(gl);
+
+template <>
+auto GL::operator()(int a) const { // expected-error{{lambda call operator should not be explicitly specialized or instantiated}}
+    return 6;
+}
+
+auto gll = [](auto a) { return 5; }; // expected-error{{lambda call operator should not be explicitly specialized or instantiated}}
+using GLL = decltype(gll);
+template auto GLL::operator()<int>(int a) const; // expected-note{{in instantiation of function template specialization 'cwg1780::(lambda)::operator()<int>' requested here}}
+#endif
+
+#endif
+} // namespace cwg1780

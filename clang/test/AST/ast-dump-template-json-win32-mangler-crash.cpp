@@ -244,6 +244,7 @@ int main()
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
+// CHECK-NEXT:    "isReferenced": true,
 // CHECK-NEXT:    "name": "integral_constant",
 // CHECK-NEXT:    "inner": [
 // CHECK-NEXT:     {
@@ -815,6 +816,7 @@ int main()
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
+// CHECK-NEXT:    "isReferenced": true,
 // CHECK-NEXT:    "name": "bool_constant",
 // CHECK-NEXT:    "inner": [
 // CHECK-NEXT:     {
@@ -867,6 +869,7 @@ int main()
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
+// CHECK-NEXT:      "isReferenced": true,
 // CHECK-NEXT:      "name": "bool_constant",
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "integral_constant<bool, _Val>"

@@ -3990,7 +3990,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   }
   case ISD::VECTOR_DEINTERLEAVE: {
     unsigned Factor = Node->getNumOperands();
-    if (Factor <= 2 || !isPowerOf2_32(Factor))
+    if (Factor <= 2 || Factor % 2 != 0)
       break;
     SmallVector<SDValue, 8> Ops(Node->ops());
     EVT VecVT = Node->getValueType(0);
@@ -4015,7 +4015,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   }
   case ISD::VECTOR_INTERLEAVE: {
     unsigned Factor = Node->getNumOperands();
-    if (Factor <= 2 || !isPowerOf2_32(Factor))
+    if (Factor <= 2 || Factor % 2 != 0)
       break;
     EVT VecVT = Node->getValueType(0);
     SmallVector<EVT> HalfVTs(Factor / 2, VecVT);

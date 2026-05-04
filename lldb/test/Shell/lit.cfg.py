@@ -86,8 +86,10 @@ if re.match(r".*-(windows-msvc)$", config.target_triple):
 if re.match(r".*-(windows-gnu|mingw32)$", config.target_triple):
     config.available_features.add("windows-gnu")
 
-for arch in config.targets_to_build.split(";"):
-    config.available_features.add(arch.lower() + "-registered-target")
+if config.targets_to_build:
+    for arch in config.targets_to_build.split(";"):
+        if arch:
+            config.available_features.add(arch.lower() + "-registered-target")
 
 def calculate_arch_features(arch_string):
     # This will add a feature such as x86, arm, mips, etc for each built
@@ -177,6 +179,12 @@ if config.objc_gnustep_dir:
 
 if config.have_dia_sdk:
     config.available_features.add("diasdk")
+
+if platform.system() == "Windows":
+    # Use anonymous pipes instead of ConPTY for all tests. ConPTY injects VT
+    # escape sequences into the output stream, which breaks tests that check
+    # for specific stdout/stderr content.
+    config.environment["LLDB_LAUNCH_FLAG_USE_PIPES"] = "1"
 
 # NetBSD permits setting dbregs either if one is root
 # or if user_set_dbregs is enabled

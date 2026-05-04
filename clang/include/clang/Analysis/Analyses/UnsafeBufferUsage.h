@@ -201,14 +201,10 @@ bool anyConflict(const llvm::SmallVectorImpl<FixItHint> &FixIts,
                  const SourceManager &SM);
 } // namespace internal
 
-/// Find unsafe pointers in body/initializer of `D`, if `D` is one of the
-/// followings:
-///   VarDecl
-///   FieldDecl
-///   FunctionDecl
-///   BlockDecl
-///   ObjCMethodDecl
-std::set<const Expr *> findUnsafePointers(const Decl *D);
+/// \return true iff `N` is an unsafe buffer usage and populates the unsafe
+/// pointers in `UnsafePointers`
+bool matchUnsafePointers(const DynTypedNode &N, ASTContext &Ctx,
+                         std::set<const Expr *> &UnsafePointers);
 } // end namespace clang
 
 #endif /* LLVM_CLANG_ANALYSIS_ANALYSES_UNSAFEBUFFERUSAGE_H */

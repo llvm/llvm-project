@@ -135,6 +135,8 @@ private:
   void updateCmpInstr(MachineInstr *CmpMI, int NewImm, unsigned NewOpc);
   void updateCondInstr(MachineInstr *CondMI, AArch64CC::CondCode NewCC);
   void applyCmpAdjustment(CmpCondPair &Pair, const CmpInfo &Info);
+  bool commitPendingPair(std::optional<CmpCondPair> &PendingPair,
+                         SmallDenseMap<Register, CmpCondPair> &PairsByReg);
   bool tryOptimizePair(CmpCondPair &First, CmpCondPair &Second);
   bool optimizeIntraBlock(MachineBasicBlock &MBB);
   bool optimizeCrossBlock(MachineBasicBlock &HBB);
@@ -397,6 +399,7 @@ void AArch64ConditionOptimizerImpl::applyCmpAdjustment(CmpCondPair &Pair,
                                                        const CmpInfo &Info) {
   updateCmpInstr(Pair.CmpMI, Info.Imm, Info.Opc);
   updateCondInstr(Pair.CondMI, Info.CC);
+  Pair.CC = Info.CC;
 }
 
 // Extracts the condition code from the result of analyzeBranch.
@@ -511,9 +514,31 @@ bool AArch64ConditionOptimizerImpl::tryOptimizePair(CmpCondPair &First,
   return false;
 }
 
-// This function transforms two CMP+CSINC pairs within the same basic block
-// when both conditions are the same (GT/GT or LT/LT) and immediates differ
-// by 1.
+bool AArch64ConditionOptimizerImpl::commitPendingPair(
+    std::optional<CmpCondPair> &PendingPair,
+    SmallDenseMap<Register, CmpCondPair> &PairsByReg) {
+  if (!PendingPair)
+    return false;
+
+  Register Reg = PendingPair->CmpMI->getOperand(1).getReg();
+  Register Key = Reg.isVirtual() ? TRI->lookThruCopyLike(Reg, MRI) : Reg;
+
+  auto MatchingPair = PairsByReg.find(Key);
+  bool Changed = MatchingPair != PairsByReg.end() &&
+                 tryOptimizePair(MatchingPair->second, *PendingPair);
+
+  PairsByReg[Key] = *PendingPair;
+  PendingPair = std::nullopt;
+  return Changed;
+}
+
+// This function transforms cmps and their consuming conditionals (CmpCondPairs)
+// 1. Same direction: when both conditions are the same (e.g. GT/GT or LT/LT)
+//    and immediates differ by 1
+// 2. Opposite direction: when both conditions are adjustable to a common middle
+//    (e.g., GT/LT) and immediates differ by 2.
+// The compare instructions are made to match to enable CSE.
+// All cmp/cond pairs within a basic block are examined
 //
 // Example transformation:
 //   cmp  w8, #10
@@ -524,85 +549,65 @@ bool AArch64ConditionOptimizerImpl::tryOptimizePair(CmpCondPair &First,
 // Into:
 //   cmp  w8, #10
 //   csinc w9, w0, w1, gt     ; w9 = (w8 > 10) ? w0 : w1+1
+//   cmp w8, #10              ; <- CSE can remove the redundant cmp
 //   csinc w10, w0, w1, ge    ; w10 = (w8 >= 10) ? w0 : w1+1
 //
-// The second CMP is eliminated, enabling CSE to remove the redundant
-// comparison.
 bool AArch64ConditionOptimizerImpl::optimizeIntraBlock(MachineBasicBlock &MBB) {
-  MachineInstr *FirstCSINC = nullptr;
-  MachineInstr *SecondCSINC = nullptr;
+  SmallDenseMap<Register, CmpCondPair> PairsByReg;
+  std::optional<CmpCondPair> PendingPair;
+  MachineInstr *ActiveCmp = nullptr;
+  bool Changed = false;
 
-  // Find two CSINC instructions
   for (MachineInstr &MI : MBB) {
+    if (MI.isDebugInstr())
+      continue;
+
+    if (isCmpInstruction(MI.getOpcode()) && canAdjustCmp(MI)) {
+      Changed |= commitPendingPair(PendingPair, PairsByReg);
+      ActiveCmp = &MI;
+      continue;
+    }
+
+    if (MI.modifiesRegister(AArch64::NZCV, /*TRI=*/nullptr)) {
+      // Non-CMP clobber: commit any pending pair and reset all state, since
+      // unknown flag state at this point invalidates all prior pairs
+      Changed |= commitPendingPair(PendingPair, PairsByReg);
+      ActiveCmp = nullptr;
+      PairsByReg.clear();
+      continue;
+    }
+
     if (isCSINCInstruction(MI.getOpcode())) {
-      if (!FirstCSINC) {
-        FirstCSINC = &MI;
-      } else if (!SecondCSINC) {
-        SecondCSINC = &MI;
-        break; // Found both
+      if (PendingPair) {
+        // A second conditional consuming the same CMP would invalidate any
+        // optimization: modifying the CMP would silently change what both
+        // consumers compare against. Mark the CMP spent.
+        PendingPair = std::nullopt;
+        ActiveCmp = nullptr;
+      } else if (ActiveCmp) {
+        int CCOpIdx =
+            AArch64InstrInfo::findCondCodeUseOperandIdxForBranchOrSelect(MI);
+        assert(CCOpIdx >= 0 && "Unsupported conditional instruction");
+        AArch64CC::CondCode CC =
+            (AArch64CC::CondCode)(int)MI.getOperand(CCOpIdx).getImm();
+        PendingPair = CmpCondPair{ActiveCmp, &MI, CC};
       }
+      continue;
+    }
+
+    if (MI.readsRegister(AArch64::NZCV, /*TRI=*/nullptr)) {
+      ActiveCmp = nullptr;
+      PendingPair = std::nullopt;
+      continue;
     }
   }
 
-  if (!FirstCSINC || !SecondCSINC) {
-    return false;
-  }
+  // Only commit the final pending pair if NZCV doesn't live out: a cross-block
+  // consumer would be affected by any CMP adjustment we make.
+  if (!nzcvLivesOut(&MBB))
+    Changed |= commitPendingPair(PendingPair, PairsByReg);
 
-  // Since we may modify cmps in this MBB, make sure NZCV does not live out.
-  if (nzcvLivesOut(&MBB))
-    return false;
-
-  // Find the CMPs controlling each CSINC
-  MachineInstr *FirstCmpMI = findAdjustableCmp(FirstCSINC);
-  MachineInstr *SecondCmpMI = findAdjustableCmp(SecondCSINC);
-  if (!FirstCmpMI || !SecondCmpMI)
-    return false;
-
-  // Ensure we have two distinct CMPs
-  if (FirstCmpMI == SecondCmpMI) {
-    LLVM_DEBUG(dbgs() << "Both CSINCs already controlled by same CMP\n");
-    return false;
-  }
-
-  if (!registersMatch(FirstCmpMI, SecondCmpMI))
-    return false;
-
-  // Check that nothing else modifies the flags between the first CMP and second
-  // conditional
-  for (auto It = std::next(MachineBasicBlock::iterator(FirstCmpMI));
-       It != std::next(MachineBasicBlock::iterator(SecondCSINC)); ++It) {
-    if (&*It != SecondCmpMI &&
-        It->modifiesRegister(AArch64::NZCV, /*TRI=*/nullptr)) {
-      LLVM_DEBUG(dbgs() << "Flags modified between CMPs by: " << *It << '\n');
-      return false;
-    }
-  }
-
-  // Check flags aren't read after second conditional within the same block
-  for (auto It = std::next(MachineBasicBlock::iterator(SecondCSINC));
-       It != MBB.end(); ++It) {
-    if (It->readsRegister(AArch64::NZCV, /*TRI=*/nullptr)) {
-      LLVM_DEBUG(dbgs() << "Flags read after second CSINC by: " << *It << '\n');
-      return false;
-    }
-  }
-
-  // Extract condition codes from both CSINCs (operand 3)
-  AArch64CC::CondCode FirstCondCode =
-      (AArch64CC::CondCode)(int)FirstCSINC->getOperand(3).getImm();
-  AArch64CC::CondCode SecondCondCode =
-      (AArch64CC::CondCode)(int)SecondCSINC->getOperand(3).getImm();
-
-  LLVM_DEBUG(dbgs() << "Comparing intra-block CSINCs: "
-                    << AArch64CC::getCondCodeName(FirstCondCode) << " #"
-                    << FirstCmpMI->getOperand(2).getImm() << " and "
-                    << AArch64CC::getCondCodeName(SecondCondCode) << " #"
-                    << SecondCmpMI->getOperand(2).getImm() << '\n');
-
-  CmpCondPair First{FirstCmpMI, FirstCSINC, FirstCondCode};
-  CmpCondPair Second{SecondCmpMI, SecondCSINC, SecondCondCode};
-
-  return tryOptimizePair(First, Second);
+  return Changed;
 }
 
 // Optimizes CMP+Bcc pairs across two basic blocks in the dominator tree.

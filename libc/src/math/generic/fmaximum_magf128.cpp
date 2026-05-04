@@ -7,14 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/fmaximum_magf128.h"
-#include "src/__support/FPUtil/BasicOperations.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/math/fmaximum_magf128.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float128, fmaximum_magf128, (float128 x, float128 y)) {
-  return fputil::fmaximum_mag(x, y);
+  return math::fmaximum_magf128(x, y);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

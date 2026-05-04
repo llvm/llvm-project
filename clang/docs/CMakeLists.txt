@@ -112,6 +112,16 @@ if (LLVM_ENABLE_SPHINX)
       "${CMAKE_CURRENT_BINARY_DIR}"
     )
 
+    add_custom_command(TARGET copy-clang-rst-docs POST_BUILD
+      COMMAND "${Python3_EXECUTABLE}"
+      ARGS "${CMAKE_CURRENT_BINARY_DIR}/CIR/_raw/PostProcessCIRDocs.py"
+           "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}"
+      BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/CIR/CIRDialect.md
+    )
+    if (CLANG_ENABLE_CIR)
+      add_dependencies(copy-clang-rst-docs clang-cir-doc)
+    endif()
+
     set(docs_targets "")
 
     if (${SPHINX_OUTPUT_HTML})

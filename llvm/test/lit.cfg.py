@@ -71,7 +71,7 @@ if config.enable_profcheck:
     config.excludes.append("AMDGPU")
     # TODO targets where profiling may make sense but will be addressed later
     config.excludes.extend(
-        ["Hexagon", "NVPTX", "PowerPC", "RISCV", "SPARC", "WebAssembly"]
+        ["Hexagon", "NVPTX", "PowerPC", "RISCV", "SPARC", "SPIRV", "WebAssembly"]
     )
     # these passes aren't hooked up to the pass pipeline:
     config.excludes.extend(["IRCE", "LoopBoundSplit", "LoopInterchange", "Scalarizer"])
@@ -588,6 +588,9 @@ if config.link_llvm_dylib:
 
 if config.have_tf_aot:
     config.available_features.add("have_tf_aot")
+
+if getattr(config, "have_opencsd", False):
+    config.available_features.add("opencsd")
 
 if config.have_tflite:
     config.available_features.add("have_tflite")

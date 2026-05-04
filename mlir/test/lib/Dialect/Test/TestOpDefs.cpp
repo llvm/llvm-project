@@ -1796,6 +1796,19 @@ convertTensorToBuffer(mlir::Operation *op,
   return mlir::success();
 }
 
+mlir::FailureOr<mlir::bufferization::BufferLikeType>
+test::TestDummyTensorOp::getBufferType(
+    mlir::Value value, const mlir::bufferization::BufferizationOptions &,
+    const mlir::bufferization::BufferizationState &,
+    llvm::SmallVector<::mlir::Value> &) {
+  const auto type = dyn_cast<test::TestTensorType>(value.getType());
+  if (type == nullptr)
+    return failure();
+
+  return cast<mlir::bufferization::BufferLikeType>(test::TestMemrefType::get(
+      getContext(), type.getShape(), type.getElementType(), nullptr));
+}
+
 ::mlir::LogicalResult test::TestCreateTensorOp::bufferize(
     ::mlir::RewriterBase &rewriter,
     const ::mlir::bufferization::BufferizationOptions &options,

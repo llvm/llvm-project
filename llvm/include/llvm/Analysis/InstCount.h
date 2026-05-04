@@ -21,6 +21,8 @@ class Function;
 
 struct InstCountPass : PassInfoMixin<InstCountPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &);
+
+  static bool isRequired() { return true; }
 };
 
 } // end namespace llvm

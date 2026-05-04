@@ -117,7 +117,7 @@ define void @reduced(ptr %0, ptr %1, i64 %iv, ptr %2, i64 %iv76, i64 %iv93) {
 entry:
   br label %loop.1
 
-loop.1:                                         ; preds = %loop.1, %entry
+loop.1:
   %iv761 = phi i64 [ 0, %entry ], [ %iv.next77, %loop.1 ]
   %iv4 = phi i64 [ 0, %entry ], [ %iv.next, %loop.1 ]
   %iv.next77 = add i64 %iv761, 1
@@ -126,15 +126,15 @@ loop.1:                                         ; preds = %loop.1, %entry
   %exitcond.not = icmp eq i64 %iv4, %iv
   br i1 %exitcond.not, label %loop.2.preheader, label %loop.1
 
-loop.2.preheader:                             ; preds = %loop.1
+loop.2.preheader:
   br label %loop.2
 
-loop.3.lr.ph:                                 ; preds = %loop.2
+loop.3.lr.ph:
   %idxprom.i.i61 = and i64 %iv761, 1
   %arrayidx.i.i62 = getelementptr i32, ptr %0, i64 %idxprom.i.i61
   br label %loop.3
 
-loop.2:                                       ; preds = %loop.2, %loop.2.preheader
+loop.2:
   %iv846 = phi i64 [ %iv.next85, %loop.2 ], [ 0, %loop.2.preheader ]
   %iv.next87 = add i64 0, 0
   %arrayidx.i.i56 = getelementptr i32, ptr %0, i64 %iv761
@@ -144,7 +144,7 @@ loop.2:                                       ; preds = %loop.2, %loop.2.prehead
   %exitcond92.not = icmp eq i64 %iv846, %iv
   br i1 %exitcond92.not, label %loop.3.lr.ph, label %loop.2
 
-loop.3:                                       ; preds = %loop.3, %loop.3.lr.ph
+loop.3:
   %iv932 = phi i64 [ 0, %loop.3.lr.ph ], [ %iv.next94, %loop.3 ]
   %4 = load i32, ptr %arrayidx.i.i62, align 4
   %arrayidx.i.i653 = getelementptr i32, ptr %2, i64 %iv93
@@ -153,6 +153,6 @@ loop.3:                                       ; preds = %loop.3, %loop.3.lr.ph
   %exitcond97.not = icmp eq i64 %iv932, %iv
   br i1 %exitcond97.not, label %loop.cleanup, label %loop.3
 
-loop.cleanup:                               ; preds = %loop.3
+loop.cleanup:
   ret void
 }

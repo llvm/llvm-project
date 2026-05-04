@@ -1284,9 +1284,8 @@ DisassemblerLLVMC::MCDisasmInstance::Create(const char *triple_name,
   if (!asm_info_up)
     return Instance();
 
-  std::unique_ptr<llvm::MCContext> context_up(
-      new llvm::MCContext(llvm::Triple(triple), asm_info_up.get(),
-                          reg_info_up.get(), subtarget_info_up.get()));
+  std::unique_ptr<llvm::MCContext> context_up(new llvm::MCContext(
+      llvm::Triple(triple), *asm_info_up, *reg_info_up, *subtarget_info_up));
   if (!context_up)
     return Instance();
 
@@ -1457,7 +1456,7 @@ bool DisassemblerLLVMC::MCDisasmInstance::IsAuthenticated(
 void DisassemblerLLVMC::UpdateSubtargetFeatures(
     llvm::StringRef subtarget_features, std::string &user_feature_overrides) {
 
-  std::vector<std::string> valid_user_flags;
+  llvm::SmallVector<std::string, 0> valid_user_flags;
   llvm::StringSet<> user_disabled_features;
 
   for (llvm::StringRef flag : llvm::split(user_feature_overrides, ",")) {
@@ -1473,7 +1472,7 @@ void DisassemblerLLVMC::UpdateSubtargetFeatures(
     // 1. Must be at least 2 chars (e.g., "+a").
     // 2. Name cannot start with a digit (e.g. "+123" is invalid).
     // 3. Must start with '+' or '-'.
-    // 4. All characters after the sign must be alphabets.
+    // 4. All characters after the sign must be alphanumeric or '_'.
     if (flag.size() < 2) {
       is_valid = false;
       ostream << "must have a name";
@@ -1491,7 +1490,7 @@ void DisassemblerLLVMC::UpdateSubtargetFeatures(
     }
     if (!is_valid) {
       std::string message =
-          ("feature flag '" + flag + "': " + warning_reason + ".").str();
+          ("feature flag '" + flag + "': " + warning_reason).str();
       lldb_private::Debugger::ReportWarning(message, std::nullopt);
       continue;
     }
@@ -1502,7 +1501,7 @@ void DisassemblerLLVMC::UpdateSubtargetFeatures(
   }
 
   // User feature string with only valid flags.
-  std::vector<std::string> final_features;
+  llvm::SmallVector<std::string, 0> final_features;
 
   // Allow users to override default additional features.
   if (!subtarget_features.empty()) {
@@ -1517,13 +1516,11 @@ void DisassemblerLLVMC::UpdateSubtargetFeatures(
       bool add_flag = true;
       if (flag.size() >= 2 && flag.starts_with('+')) {
         llvm::StringRef feature_name = flag.substr(1);
-        if (user_disabled_features.count(feature_name)) {
+        if (user_disabled_features.count(feature_name))
           add_flag = false;
-        }
       }
-      if (add_flag) {
+      if (add_flag)
         final_features.push_back(flag.str());
-      }
     }
   }
 

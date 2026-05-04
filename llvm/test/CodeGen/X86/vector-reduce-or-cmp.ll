@@ -1146,56 +1146,35 @@ define zeroext i1 @PR44781(ptr %0) {
 }
 
 define i32 @mask_v3i1(<3 x i32> %a, <3 x i32> %b) {
-; SSE2-LABEL: mask_v3i1:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
-; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE2-NEXT:    pxor %xmm0, %xmm1
-; SSE2-NEXT:    movd %xmm1, %eax
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
-; SSE2-NEXT:    movd %xmm0, %ecx
-; SSE2-NEXT:    orl %eax, %ecx
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
-; SSE2-NEXT:    movd %xmm0, %eax
-; SSE2-NEXT:    orl %ecx, %eax
-; SSE2-NEXT:    testb $1, %al
-; SSE2-NEXT:    je .LBB30_2
-; SSE2-NEXT:  # %bb.1:
-; SSE2-NEXT:    xorl %eax, %eax
-; SSE2-NEXT:    retq
-; SSE2-NEXT:  .LBB30_2:
-; SSE2-NEXT:    movl $1, %eax
-; SSE2-NEXT:    retq
-;
-; SSE41-LABEL: mask_v3i1:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    pcmpeqd %xmm1, %xmm0
-; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE41-NEXT:    pxor %xmm0, %xmm1
-; SSE41-NEXT:    pextrd $1, %xmm1, %eax
-; SSE41-NEXT:    movd %xmm1, %ecx
-; SSE41-NEXT:    orl %eax, %ecx
-; SSE41-NEXT:    pextrd $2, %xmm1, %eax
-; SSE41-NEXT:    orl %ecx, %eax
-; SSE41-NEXT:    testb $1, %al
-; SSE41-NEXT:    je .LBB30_2
-; SSE41-NEXT:  # %bb.1:
-; SSE41-NEXT:    xorl %eax, %eax
-; SSE41-NEXT:    retq
-; SSE41-NEXT:  .LBB30_2:
-; SSE41-NEXT:    movl $1, %eax
-; SSE41-NEXT:    retq
+; SSE-LABEL: mask_v3i1:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pcmpeqd %xmm1, %xmm0
+; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE-NEXT:    pxor %xmm0, %xmm1
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
+; SSE-NEXT:    por %xmm1, %xmm0
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,1,1]
+; SSE-NEXT:    por %xmm0, %xmm1
+; SSE-NEXT:    movd %xmm1, %eax
+; SSE-NEXT:    testb $1, %al
+; SSE-NEXT:    je .LBB30_2
+; SSE-NEXT:  # %bb.1:
+; SSE-NEXT:    xorl %eax, %eax
+; SSE-NEXT:    retq
+; SSE-NEXT:  .LBB30_2:
+; SSE-NEXT:    movl $1, %eax
+; SSE-NEXT:    retq
 ;
 ; AVX1OR2-LABEL: mask_v3i1:
 ; AVX1OR2:       # %bb.0:
 ; AVX1OR2-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
 ; AVX1OR2-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; AVX1OR2-NEXT:    vpxor %xmm1, %xmm0, %xmm0
-; AVX1OR2-NEXT:    vpextrd $1, %xmm0, %eax
-; AVX1OR2-NEXT:    vmovd %xmm0, %ecx
-; AVX1OR2-NEXT:    orl %eax, %ecx
-; AVX1OR2-NEXT:    vpextrd $2, %xmm0, %eax
-; AVX1OR2-NEXT:    orl %ecx, %eax
+; AVX1OR2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; AVX1OR2-NEXT:    vpor %xmm1, %xmm0, %xmm1
+; AVX1OR2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; AVX1OR2-NEXT:    vpor %xmm0, %xmm1, %xmm0
+; AVX1OR2-NEXT:    vmovd %xmm0, %eax
 ; AVX1OR2-NEXT:    testb $1, %al
 ; AVX1OR2-NEXT:    je .LBB30_2
 ; AVX1OR2-NEXT:  # %bb.1:

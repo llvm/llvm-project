@@ -151,7 +151,7 @@ LLVM_ABI void initializeInstructionSelectPass(PassRegistry &);
 LLVM_ABI void initializeInterleavedAccessPass(PassRegistry &);
 LLVM_ABI void initializeInterleavedLoadCombinePass(PassRegistry &);
 LLVM_ABI void initializeJMCInstrumenterPass(PassRegistry &);
-LLVM_ABI void initializeKCFIPass(PassRegistry &);
+LLVM_ABI void initializeMachineKCFILegacyPass(PassRegistry &);
 LLVM_ABI void initializeLCSSAVerificationPassPass(PassRegistry &);
 LLVM_ABI void initializeLCSSAWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeLazyBFIPassPass(PassRegistry &);
@@ -322,6 +322,8 @@ LLVM_ABI void initializeStackSafetyInfoWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeStackSlotColoringLegacyPass(PassRegistry &);
 LLVM_ABI void
 initializeStraightLineStrengthReduceLegacyPassPass(PassRegistry &);
+LLVM_ABI void
+initializeStripConvergenceIntrinsicsLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeStripDebugMachineModulePass(PassRegistry &);
 LLVM_ABI void initializeStructurizeCFGLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeTailCallElimPass(PassRegistry &);

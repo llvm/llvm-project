@@ -481,6 +481,36 @@ func.func @test_negf_scalable_vector(%arg0 : vector<[8]xf64>) -> vector<[8]xf64>
   return %0 : vector<[8]xf64>
 }
 
+// CHECK-LABEL: test_flush_denormals
+func.func @test_flush_denormals(%arg0 : f32) -> f32 {
+  %0 = arith.flush_denormals %arg0 : f32
+  return %0 : f32
+}
+
+// CHECK-LABEL: test_flush_denormals_tensor
+func.func @test_flush_denormals_tensor(%arg0 : tensor<8x8xf32>) -> tensor<8x8xf32> {
+  %0 = arith.flush_denormals %arg0 : tensor<8x8xf32>
+  return %0 : tensor<8x8xf32>
+}
+
+// CHECK-LABEL: test_flush_denormals_vector
+func.func @test_flush_denormals_vector(%arg0 : vector<8xf32>) -> vector<8xf32> {
+  %0 = arith.flush_denormals %arg0 : vector<8xf32>
+  return %0 : vector<8xf32>
+}
+
+// CHECK-LABEL: test_flush_denormals_scalable_vector
+func.func @test_flush_denormals_scalable_vector(%arg0 : vector<[8]xf32>) -> vector<[8]xf32> {
+  %0 = arith.flush_denormals %arg0 : vector<[8]xf32>
+  return %0 : vector<[8]xf32>
+}
+
+// CHECK-LABEL: test_flush_denormals_bf16
+func.func @test_flush_denormals_bf16(%arg0 : bf16) -> bf16 {
+  %0 = arith.flush_denormals %arg0 : bf16
+  return %0 : bf16
+}
+
 // CHECK-LABEL: test_addf
 func.func @test_addf(%arg0 : f64, %arg1 : f64) -> f64 {
   %0 = arith.addf %arg0, %arg1 : f64
@@ -1216,12 +1246,14 @@ func.func @fastmath(%arg0: f32, %arg1: f32, %arg2: i32) {
 // CHECK: {{.*}} = arith.divf %arg0, %arg1 fastmath<fast> : f32
 // CHECK: {{.*}} = arith.remf %arg0, %arg1 fastmath<fast> : f32
 // CHECK: {{.*}} = arith.negf %arg0 fastmath<fast> : f32
+// CHECK: {{.*}} = arith.flush_denormals %arg0 fastmath<fast> : f32
   %0 = arith.addf %arg0, %arg1 fastmath<fast> : f32
   %1 = arith.subf %arg0, %arg1 fastmath<fast> : f32
   %2 = arith.mulf %arg0, %arg1 fastmath<fast> : f32
   %3 = arith.divf %arg0, %arg1 fastmath<fast> : f32
   %4 = arith.remf %arg0, %arg1 fastmath<fast> : f32
   %5 = arith.negf %arg0 fastmath<fast> : f32
+  %flush = arith.flush_denormals %arg0 fastmath<fast> : f32
 // CHECK: {{.*}} = arith.addf %arg0, %arg1 : f32
   %6 = arith.addf %arg0, %arg1 fastmath<none> : f32
 // CHECK: {{.*}} = arith.addf %arg0, %arg1 fastmath<nnan,ninf> : f32
@@ -1231,6 +1263,21 @@ func.func @fastmath(%arg0: f32, %arg1: f32, %arg2: i32) {
 // CHECK: {{.*}} = arith.cmpf oeq, %arg0, %arg1 fastmath<fast> : f32
   %9 = arith.cmpf oeq, %arg0, %arg1 fastmath<fast> : f32
 
+  return
+}
+
+// CHECK-LABEL: @roundingmode
+func.func @roundingmode(%arg0: f32, %arg1: f32) {
+// CHECK: {{.*}} = arith.addf %arg0, %arg1 to_nearest_even : f32
+  %0 = arith.addf %arg0, %arg1 to_nearest_even : f32
+// CHECK: {{.*}} = arith.subf %arg0, %arg1 downward : f32
+  %1 = arith.subf %arg0, %arg1 downward : f32
+// CHECK: {{.*}} = arith.mulf %arg0, %arg1 upward : f32
+  %2 = arith.mulf %arg0, %arg1 upward : f32
+// CHECK: {{.*}} = arith.divf %arg0, %arg1 toward_zero : f32
+  %3 = arith.divf %arg0, %arg1 toward_zero : f32
+// CHECK: {{.*}} = arith.addf %arg0, %arg1 to_nearest_even fastmath<fast> : f32
+  %4 = arith.addf %arg0, %arg1 to_nearest_even fastmath<fast> : f32
   return
 }
 

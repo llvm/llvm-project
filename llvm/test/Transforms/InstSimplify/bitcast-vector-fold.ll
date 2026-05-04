@@ -433,3 +433,350 @@ define <2 x i64> @bitcast_constexpr_4f32_2i64_1111() {
   %res = bitcast <4 x float> splat (float 1.0) to <2 x i64>
   ret <2 x i64> %res
 }
+
+define <2 x b64> @bitcast_constexpr_16i8_2b64() {
+; CHECK-LABEL: @bitcast_constexpr_16i8_2b64(
+; CHECK-NEXT:    ret <2 x b64> splat (b64 144680345676153346)
+;
+  %res = bitcast <16 x i8> splat (i8 2) to <2 x b64>
+  ret <2 x b64> %res
+}
+
+define <2 x b64> @bitcast_constexpr_16b8_2b64() {
+; CHECK-LABEL: @bitcast_constexpr_16b8_2b64(
+; CHECK-NEXT:    ret <2 x b64> splat (b64 144680345676153346)
+;
+  %res = bitcast <16 x b8> splat (b8 2) to <2 x b64>
+  ret <2 x b64> %res
+}
+
+define <2 x i64> @bitcast_constexpr_4b32_2i64() {
+; LE-LABEL: @bitcast_constexpr_4b32_2i64(
+; LE-NEXT:    ret <2 x i64> <i64 4294967296, i64 12884901890>
+;
+; BE-LABEL: @bitcast_constexpr_4b32_2i64(
+; BE-NEXT:    ret <2 x i64> <i64 1, i64 8589934595>
+;
+  %res = bitcast <4 x b32> <b32 0, b32 1, b32 2, b32 3> to <2 x i64>
+  ret <2 x i64> %res
+}
+
+define <4 x i32> @bitcast_constexpr_2b64_4i32() {
+; LE-LABEL: @bitcast_constexpr_2b64_4i32(
+; LE-NEXT:    ret <4 x i32> <i32 0, i32 0, i32 1, i32 0>
+;
+; BE-LABEL: @bitcast_constexpr_2b64_4i32(
+; BE-NEXT:    ret <4 x i32> <i32 0, i32 0, i32 0, i32 1>
+;
+  %res = bitcast <2 x b64> <b64 0, b64 1> to <4 x i32>
+  ret <4 x i32> %res
+}
+
+define <2 x b64> @bitcast_constexpr_4i32_2b64() {
+; LE-LABEL: @bitcast_constexpr_4i32_2b64(
+; LE-NEXT:    ret <2 x b64> <b64 4294967296, b64 12884901890>
+;
+; BE-LABEL: @bitcast_constexpr_4i32_2b64(
+; BE-NEXT:    ret <2 x b64> <b64 1, b64 8589934595>
+;
+  %res = bitcast <4 x i32> <i32 0, i32 1, i32 2, i32 3> to <2 x b64>
+  ret <2 x b64> %res
+}
+
+define <4 x b32> @bitcast_constexpr_2i64_4b32() {
+; LE-LABEL: @bitcast_constexpr_2i64_4b32(
+; LE-NEXT:    ret <4 x b32> <b32 0, b32 0, b32 1, b32 0>
+;
+; BE-LABEL: @bitcast_constexpr_2i64_4b32(
+; BE-NEXT:    ret <4 x b32> <b32 0, b32 0, b32 0, b32 1>
+;
+  %res = bitcast <2 x i64> <i64 0, i64 1> to <4 x b32>
+  ret <4 x b32> %res
+}
+
+define <2 x b64> @bitcast_constexpr_4b32_2b64() {
+; LE-LABEL: @bitcast_constexpr_4b32_2b64(
+; LE-NEXT:    ret <2 x b64> <b64 4294967296, b64 12884901890>
+;
+; BE-LABEL: @bitcast_constexpr_4b32_2b64(
+; BE-NEXT:    ret <2 x b64> <b64 1, b64 8589934595>
+;
+  %res = bitcast <4 x b32> <b32 0, b32 1, b32 2, b32 3> to <2 x b64>
+  ret <2 x b64> %res
+}
+
+define <16 x b8> @bitcast_constexpr_2b64_16b8() {
+; LE-LABEL: @bitcast_constexpr_2b64_16b8(
+; LE-NEXT:    ret <16 x b8> <b8 0, b8 0, b8 0, b8 0, b8 0, b8 0, b8 0, b8 0, b8 1, b8 0, b8 0, b8 0, b8 0, b8 0, b8 0, b8 0>
+;
+; BE-LABEL: @bitcast_constexpr_2b64_16b8(
+; BE-NEXT:    ret <16 x b8> <b8 0, b8 0, b8 0, b8 0, b8 0, b8 0, b8 0, b8 0, b8 0, b8 0, b8 0, b8 0, b8 0, b8 0, b8 0, b8 1>
+;
+  %res = bitcast <2 x b64> <b64 0, b64 1> to <16 x b8>
+  ret <16 x b8> %res
+}
+
+define <2 x i32> @bitcast_constexpr_scalar_b64_to_vector_2i32() {
+; LE-LABEL: @bitcast_constexpr_scalar_b64_to_vector_2i32(
+; LE-NEXT:    ret <2 x i32> <i32 1, i32 0>
+;
+; BE-LABEL: @bitcast_constexpr_scalar_b64_to_vector_2i32(
+; BE-NEXT:    ret <2 x i32> <i32 0, i32 1>
+;
+  %res = bitcast b64 1 to <2 x i32>
+  ret <2 x i32> %res
+}
+
+define <2 x b32> @bitcast_constexpr_scalar_i64_to_vector_2b32() {
+; LE-LABEL: @bitcast_constexpr_scalar_i64_to_vector_2b32(
+; LE-NEXT:    ret <2 x b32> <b32 1, b32 0>
+;
+; BE-LABEL: @bitcast_constexpr_scalar_i64_to_vector_2b32(
+; BE-NEXT:    ret <2 x b32> <b32 0, b32 1>
+;
+  %res = bitcast i64 1 to <2 x b32>
+  ret <2 x b32> %res
+}
+
+define <2 x b64> @bitcast_constexpr_4f32_2b64() {
+; CHECK-LABEL: @bitcast_constexpr_4f32_2b64(
+; CHECK-NEXT:    ret <2 x b64> splat (b64 4575657222473777152)
+;
+  %res = bitcast <4 x float> splat (float 1.0) to <2 x b64>
+  ret <2 x b64> %res
+}
+
+define <4 x float> @bitcast_constexpr_2b64_4f32() {
+; LE-LABEL: @bitcast_constexpr_2b64_4f32(
+; LE-NEXT:    ret <4 x float> <float 0.000000e+00, float 0.000000e+00, float 0x36A0000000000000, float 0.000000e+00>
+;
+; BE-LABEL: @bitcast_constexpr_2b64_4f32(
+; BE-NEXT:    ret <4 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0x36A0000000000000>
+;
+  %res = bitcast <2 x b64> <b64 0, b64 1> to <4 x float>
+  ret <4 x float> %res
+}
+
+define <2 x i64> @bitcast_constexpr_allones_4b32_2i64() {
+; CHECK-LABEL: @bitcast_constexpr_allones_4b32_2i64(
+; CHECK-NEXT:    ret <2 x i64> splat (i64 -1)
+;
+  %res = bitcast <4 x b32> splat (b32 -1) to <2 x i64>
+  ret <2 x i64> %res
+}
+
+define <4 x i32> @bitcast_constexpr_allones_4b32_4i32() {
+; CHECK-LABEL: @bitcast_constexpr_allones_4b32_4i32(
+; CHECK-NEXT:    ret <4 x i32> splat (i32 -1)
+;
+  %res = bitcast <4 x b32> splat (b32 -1) to <4 x i32>
+  ret <4 x i32> %res
+}
+
+define <4 x b32> @bitcast_constexpr_allones_2i64_4b32() {
+; CHECK-LABEL: @bitcast_constexpr_allones_2i64_4b32(
+; CHECK-NEXT:    ret <4 x b32> splat (b32 -1)
+;
+  %res = bitcast <2 x i64> splat (i64 -1) to <4 x b32>
+  ret <4 x b32> %res
+}
+
+define <4 x b32> @bitcast_constexpr_allones_4i32_4b32() {
+; CHECK-LABEL: @bitcast_constexpr_allones_4i32_4b32(
+; CHECK-NEXT:    ret <4 x b32> splat (b32 -1)
+;
+  %res = bitcast <4 x i32> splat (i32 -1) to <4 x b32>
+  ret <4 x b32> %res
+}
+
+define <2 x b64> @bitcast_constexpr_4b32_2b64_poison() {
+; CHECK-LABEL: @bitcast_constexpr_4b32_2b64_poison(
+; CHECK-NEXT:    ret <2 x b64> bitcast (<4 x b32> <b32 poison, b32 1, b32 2, b32 3> to <2 x b64>)
+;
+  %res = bitcast <4 x b32> <b32 poison, b32 1, b32 2, b32 3> to <2 x b64>
+  ret <2 x b64> %res
+}
+
+define <2 x b64> @bitcast_constexpr_4i32_2b64_poison() {
+; CHECK-LABEL: @bitcast_constexpr_4i32_2b64_poison(
+; CHECK-NEXT:    ret <2 x b64> bitcast (<4 x i32> <i32 0, i32 1, i32 poison, i32 3> to <2 x b64>)
+;
+  %res = bitcast <4 x i32> <i32 0, i32 1, i32 poison, i32 3> to <2 x b64>
+  ret <2 x b64> %res
+}
+
+define <2 x b64> @bitcast_constexpr_4f32_2b64_poison() {
+; CHECK-LABEL: @bitcast_constexpr_4f32_2b64_poison(
+; CHECK-NEXT:    ret <2 x b64> bitcast (<4 x float> <float 1.000000e+00, float poison, float 2.000000e+00, float 3.000000e+00> to <2 x b64>)
+;
+  %res = bitcast <4 x float> <float 1.0, float poison, float 2.0, float 3.0> to <2 x b64>
+  ret <2 x b64> %res
+}
+
+define <2 x b64> @bitcast_constexpr_8b16_2b64_poison() {
+; CHECK-LABEL: @bitcast_constexpr_8b16_2b64_poison(
+; CHECK-NEXT:    ret <2 x b64> bitcast (<8 x b16> <b16 0, b16 1, b16 2, b16 poison, b16 4, b16 5, b16 6, b16 7> to <2 x b64>)
+;
+  %res = bitcast <8 x b16> <b16 0, b16 1, b16 2, b16 poison, b16 4, b16 5, b16 6, b16 7> to <2 x b64>
+  ret <2 x b64> %res
+}
+
+define <2 x b64> @bitcast_constexpr_4b32_2b64_all_poison_group() {
+; LE-LABEL: @bitcast_constexpr_4b32_2b64_all_poison_group(
+; LE-NEXT:    ret <2 x b64> <b64 poison, b64 12884901890>
+;
+; BE-LABEL: @bitcast_constexpr_4b32_2b64_all_poison_group(
+; BE-NEXT:    ret <2 x b64> <b64 poison, b64 8589934595>
+;
+  %res = bitcast <4 x b32> <b32 poison, b32 poison, b32 2, b32 3> to <2 x b64>
+  ret <2 x b64> %res
+}
+
+define <2 x b64> @bitcast_constexpr_4i32_2b64_all_poison_group() {
+; LE-LABEL: @bitcast_constexpr_4i32_2b64_all_poison_group(
+; LE-NEXT:    ret <2 x b64> <b64 poison, b64 12884901890>
+;
+; BE-LABEL: @bitcast_constexpr_4i32_2b64_all_poison_group(
+; BE-NEXT:    ret <2 x b64> <b64 poison, b64 8589934595>
+;
+  %res = bitcast <4 x i32> <i32 poison, i32 poison, i32 2, i32 3> to <2 x b64>
+  ret <2 x b64> %res
+}
+
+define <2 x i64> @bitcast_constexpr_4b32_2i64_poison() {
+; LE-LABEL: @bitcast_constexpr_4b32_2i64_poison(
+; LE-NEXT:    ret <2 x i64> <i64 poison, i64 12884901890>
+;
+; BE-LABEL: @bitcast_constexpr_4b32_2i64_poison(
+; BE-NEXT:    ret <2 x i64> <i64 poison, i64 8589934595>
+;
+  %res = bitcast <4 x b32> <b32 poison, b32 1, b32 2, b32 3> to <2 x i64>
+  ret <2 x i64> %res
+}
+
+define <4 x b32> @bitcast_constexpr_2b64_4b32_poison() {
+; LE-LABEL: @bitcast_constexpr_2b64_4b32_poison(
+; LE-NEXT:    ret <4 x b32> <b32 poison, b32 poison, b32 1, b32 0>
+;
+; BE-LABEL: @bitcast_constexpr_2b64_4b32_poison(
+; BE-NEXT:    ret <4 x b32> <b32 poison, b32 poison, b32 0, b32 1>
+;
+  %res = bitcast <2 x b64> <b64 poison, b64 1> to <4 x b32>
+  ret <4 x b32> %res
+}
+
+define <2 x b64> @bitcast_constexpr_4b32_2b64_all_poison() {
+; CHECK-LABEL: @bitcast_constexpr_4b32_2b64_all_poison(
+; CHECK-NEXT:    ret <2 x b64> poison
+;
+  %res = bitcast <4 x b32> splat (b32 poison) to <2 x b64>
+  ret <2 x b64> %res
+}
+
+define <4 x i32> @bitcast_constexpr_2b64_4i32_poison() {
+; LE-LABEL: @bitcast_constexpr_2b64_4i32_poison(
+; LE-NEXT:    ret <4 x i32> <i32 poison, i32 poison, i32 1, i32 0>
+;
+; BE-LABEL: @bitcast_constexpr_2b64_4i32_poison(
+; BE-NEXT:    ret <4 x i32> <i32 poison, i32 poison, i32 0, i32 1>
+;
+  %res = bitcast <2 x b64> <b64 poison, b64 1> to <4 x i32>
+  ret <4 x i32> %res
+}
+
+define <2 x double> @bitcast_constexpr_4b32_2f64_poison() {
+; LE-LABEL: @bitcast_constexpr_4b32_2f64_poison(
+; LE-NEXT:    ret <2 x double> <double poison, double 0x300000002>
+;
+; BE-LABEL: @bitcast_constexpr_4b32_2f64_poison(
+; BE-NEXT:    ret <2 x double> <double poison, double 0x200000003>
+;
+  %res = bitcast <4 x b32> <b32 poison, b32 1, b32 2, b32 3> to <2 x double>
+  ret <2 x double> %res
+}
+
+define <4 x float> @bitcast_constexpr_2b64_4f32_poison() {
+; LE-LABEL: @bitcast_constexpr_2b64_4f32_poison(
+; LE-NEXT:    ret <4 x float> <float poison, float poison, float 0x36A0000000000000, float 0.000000e+00>
+;
+; BE-LABEL: @bitcast_constexpr_2b64_4f32_poison(
+; BE-NEXT:    ret <4 x float> <float poison, float poison, float 0.000000e+00, float 0x36A0000000000000>
+;
+  %res = bitcast <2 x b64> <b64 poison, b64 1> to <4 x float>
+  ret <4 x float> %res
+}
+
+define i128 @bitcast_constexpr_2b64_i128() {
+; LE-LABEL: @bitcast_constexpr_2b64_i128(
+; LE-NEXT:    ret i128 18446744073709551618
+;
+; BE-LABEL: @bitcast_constexpr_2b64_i128(
+; BE-NEXT:    ret i128 36893488147419103233
+;
+  %res = bitcast <2 x b64> <b64 2, b64 1> to i128
+  ret i128 %res
+}
+
+define i128 @bitcast_constexpr_2b64_i128_poison() {
+; CHECK-LABEL: @bitcast_constexpr_2b64_i128_poison(
+; CHECK-NEXT:    ret i128 poison
+;
+  %res = bitcast <2 x b64> <b64 poison, b64 1> to i128
+  ret i128 %res
+}
+
+define double @bitcast_constexpr_2b32_f64() {
+; LE-LABEL: @bitcast_constexpr_2b32_f64(
+; LE-NEXT:    ret double 0x100000002
+;
+; BE-LABEL: @bitcast_constexpr_2b32_f64(
+; BE-NEXT:    ret double 0x200000001
+;
+  %res = bitcast <2 x b32> <b32 2, b32 1> to double
+  ret double %res
+}
+
+define double @bitcast_constexpr_2b32_f64_poison() {
+; CHECK-LABEL: @bitcast_constexpr_2b32_f64_poison(
+; CHECK-NEXT:    ret double poison
+;
+  %res = bitcast <2 x b32> <b32 poison, b32 1> to double
+  ret double %res
+}
+
+define <3 x b8> @bitcast_constexpr_8b3_3b8() {
+; LE-LABEL: @bitcast_constexpr_8b3_3b8(
+; LE-NEXT:    ret <3 x b8> <b8 -120, b8 -58, b8 -6>
+;
+; BE-LABEL: @bitcast_constexpr_8b3_3b8(
+; BE-NEXT:    ret <3 x b8> <b8 5, b8 57, b8 119>
+;
+  %res = bitcast <8 x b3> <b3 0, b3 1, b3 2, b3 3, b3 4, b3 5, b3 6, b3 7> to <3 x b8>
+  ret <3 x b8> %res
+}
+
+define <3 x b8> @bitcast_constexpr_8b3_3b8_poison() {
+; CHECK-LABEL: @bitcast_constexpr_8b3_3b8_poison(
+; CHECK-NEXT:    ret <3 x b8> bitcast (<8 x b3> <b3 poison, b3 poison, b3 1, b3 2, b3 3, b3 -4, b3 -3, b3 -2> to <3 x b8>)
+;
+  %res = bitcast <8 x b3> <b3 poison, b3 poison, b3 1, b3 2, b3 3, b3 4, b3 5, b3 6> to <3 x b8>
+  ret <3 x b8> %res
+}
+
+; TODO: this can be folded.
+define <3 x i8> @bitcast_constexpr_8b3_3i8_poison() {
+; CHECK-LABEL: @bitcast_constexpr_8b3_3i8_poison(
+; CHECK-NEXT:    ret <3 x i8> bitcast (<8 x b3> <b3 poison, b3 poison, b3 1, b3 2, b3 3, b3 -4, b3 -3, b3 -2> to <3 x i8>)
+;
+  %res = bitcast <8 x b3> <b3 poison, b3 poison, b3 1, b3 2, b3 3, b3 4, b3 5, b3 6> to <3 x i8>
+  ret <3 x i8> %res
+}
+
+; TODO: this can be folded.
+define <3 x i8> @bitcast_constexpr_8b3_3i8_crossing_poison() {
+; CHECK-LABEL: @bitcast_constexpr_8b3_3i8_crossing_poison(
+; CHECK-NEXT:    ret <3 x i8> bitcast (<8 x b3> <b3 1, b3 2, b3 poison, b3 3, b3 -4, b3 -3, b3 -2, b3 -1> to <3 x i8>)
+;
+  %res = bitcast <8 x b3> <b3 1, b3 2, b3 poison, b3 3, b3 4, b3 5, b3 6, b3 7> to <3 x i8>
+  ret <3 x i8> %res
+}

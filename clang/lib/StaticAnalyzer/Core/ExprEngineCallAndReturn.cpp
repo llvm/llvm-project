@@ -297,11 +297,10 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
   if (CE) {
     if (const ReturnStmt *RS = dyn_cast_or_null<ReturnStmt>(LastSt)) {
       const LocationContext *LCtx = CEBNode->getLocationContext();
-      // FIXME: This tries to look up the return statement in the environment,
-      // which is special cased to look up the subexpression RS->getRetValue()
-      // in environment. Instead of relying on this hack, pass
-      // RS->getRetValue() to getSVal() after checking it for nullness.
-      SVal V = State->getSVal(RS, LCtx);
+
+      SVal V = UndefinedVal();
+      if (RS->getRetValue())
+        V = State->getSVal(RS->getRetValue(), LCtx);
 
       // Ensure that the return type matches the type of the returned Expr.
       if (wasDifferentDeclUsedForInlining(Call, CalleeCtx)) {
@@ -667,11 +666,9 @@ void ExprEngine::finishArgumentConstruction(ExplodedNodeSet &Dst,
 
   const Expr *E = Call.getOriginExpr();
   const LocationContext *LC = Call.getLocationContext();
-  NodeBuilder B(Pred, Dst, *currBldrCtx);
   static SimpleProgramPointTag Tag("ExprEngine",
                                    "Finish argument construction");
-  PreStmt PP(E, LC, &Tag);
-  B.generateNode(PP, CleanedState, Pred);
+  Dst.insert(Engine.makeNode(PreStmt(E, LC, &Tag), CleanedState, Pred));
 }
 
 void ExprEngine::evalCall(ExplodedNodeSet &Dst, ExplodedNode *Pred,
@@ -713,7 +710,6 @@ void ExprEngine::evalCall(ExplodedNodeSet &Dst, ExplodedNode *Pred,
   for (ExplodedNode *I : dstPostCall) {
     ProgramStateRef State = I->getState();
     CallEventRef<> Call = CallTemplate.cloneWithState(State);
-    NodeBuilder B(I, Dst, *currBldrCtx);
     Escaped.clear();
     {
       unsigned Arg = -1;
@@ -734,10 +730,10 @@ void ExprEngine::evalCall(ExplodedNodeSet &Dst, ExplodedNode *Pred,
     State = processPointerEscapedOnBind(State, Escaped, I->getLocationContext(),
                                         PSK_EscapeOutParameters, &*Call);
 
-    if (State == I->getState())
-      Dst.insert(I);
-    else
-      B.generateNode(I->getLocation(), State, I);
+    if (State != I->getState())
+      I = Engine.makeNode(I->getLocation(), State, I);
+
+    Dst.insert(I);
   }
 }
 

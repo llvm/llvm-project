@@ -124,7 +124,8 @@ def Tosa_AvgPool2dOp : Tosa_InferShapedTypeOp<"avg_pool2d", [NoMemoryEffect]> {
 //===----------------------------------------------------------------------===//
 // Operator: avg_pool2d_adaptive
 //===----------------------------------------------------------------------===//
-def Tosa_AvgPool2dAdaptiveOp : Tosa_InferShapedTypeOp<"avg_pool2d_adaptive"> {
+def Tosa_AvgPool2dAdaptiveOp
+    : Tosa_InferShapedTypeOp<"avg_pool2d_adaptive", [NoMemoryEffect]> {
   let summary = "Performs average pooling on the input with shape operands.";
 
   let description = [{
@@ -520,6 +521,41 @@ def Tosa_MaxPool2dOp : Tosa_InferShapedTypeOp<"max_pool2d", [Pure]> {
   ];
 
   let hasCanonicalizer = 1;
+  let hasVerifier = 1;
+  let hasCustomAssemblyFormat = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// Operator: max_pool2d_adaptive
+//===----------------------------------------------------------------------===//
+def Tosa_MaxPool2dAdaptiveOp
+    : Tosa_InferShapedTypeOp<"max_pool2d_adaptive", [Pure]> {
+  let summary = "Performs max pooling on the input.";
+
+  let description = [{
+    This performs a max pooling over the given input tensor. A sliding window of
+    size given by <kernel size> is passed over the input tensor, with the
+    maximum value being placed in the output tensor.
+    Compared to MAX_POOL2D, MAX_POOL2D_ADAPTIVE has the kernel, stride, 
+    pad arguments as inputs rather than attributes.
+  }];
+
+  let arguments =
+      (ins Tosa_Tensor4D:$input, Rank2TosaShape:$kernel, Rank2TosaShape:$stride,
+          Rank4TosaShape:$pad,
+
+          DefaultValuedAttr<
+              Tosa_NanPropagationModeAttr,
+              "::mlir::tosa::NanPropagationMode::PROPAGATE">:$nan_mode);
+
+  let results = (outs Tosa_Tensor4D:$output);
+
+  list<Availability> availability =
+      [Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
+       Extension<[Tosa_EXT_INT16, Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2,
+                  Tosa_EXT_BF16]>,
+  ];
+
   let hasVerifier = 1;
   let hasCustomAssemblyFormat = 1;
 }
@@ -2271,6 +2307,45 @@ def Tosa_ReshapeOp : Tosa_InferTensorTypeOp<"reshape", [Pure]> {
 }
 
 //===----------------------------------------------------------------------===//
+// Operator: reshape_block_scaled
+//===----------------------------------------------------------------------===//
+def Tosa_ReshapeBlockScaledOp
+    : Tosa_InferTensorTypeOp<"reshape_block_scaled", [Pure]> {
+  let summary = "Reshape with support for block scaled tensors.";
+
+  let description = [{
+    Returns a tensor-list with the same type/values as the input, with a new
+    shape specified by the shape argument. Reshape may operate on block-scaled
+    tensors (values tensor followed by scale tensor) of rank 1 or higher; or a
+    single non-block-scaled tensor of any rank. No data conversion happens during
+    a reshape operation. Reshape must retain the relationship between values
+    and their scale in a block for block-scaled content.
+  }];
+
+  let hasVerifier = 1;
+
+  let arguments = (ins Variadic<Tosa_Tensor>:$input,
+      Tosa_Shape:$new_value_shape, Tosa_BlockSizeAttr:$block_size);
+
+  let results = (outs Variadic<Tosa_Tensor>:$output);
+
+  list<Availability> availability = [Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
+                                     // NOTE: Validation of extensions is
+                                     // disabled for this op
+                                     Extension<[]>,
+  ];
+
+  let extraClassDeclaration = [{
+    /// Returns true when two result types are compatible for this op;
+    /// Method used by InferTypeOpInterface.
+    static bool isCompatibleReturnTypes(TypeRange l, TypeRange r);
+  }];
+
+  let assemblyFormat =
+      "operands attr-dict `:` functional-type(operands, results)";
+}
+
+//===----------------------------------------------------------------------===//
 // Operator: reverse
 //===----------------------------------------------------------------------===//
 def Tosa_ReverseOp: Tosa_Op<"reverse", [
@@ -2443,6 +2518,49 @@ def Tosa_GatherOp : Tosa_InferShapedTypeOp<"gather", [NoMemoryEffect]> {
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
     Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16, Tosa_EXT_INT64]>,
+  ];
+
+  let hasVerifier = 1;
+
+  let assemblyFormat =
+      "operands attr-dict `:` functional-type(operands, results)";
+}
+
+//===----------------------------------------------------------------------===//
+// Operator: row_gather_block_scaled
+//===----------------------------------------------------------------------===//
+def Tosa_RowGatherBlockScaledOp
+    : Tosa_InferShapedTypeOp<"row_gather_block_scaled", [NoMemoryEffect]> {
+  let summary =
+      "Row gather operation for block-scaled and non-block-scaled data.";
+
+  let description = [{
+    Generate a tensor-list which contains a data tensor and an optional scale
+    tensor based on the input indices and row_count. The number of consecutive
+    rows gathered for each index is specified in row_count.
+
+    The variadic `values` operands and results model the flattened
+    `tensor_list_t` form from the TOSA spec:
+    - non-block-scaled: 1 input value tensor and 1 result tensor
+    - block-scaled: data + scale input tensors and data + scale result tensors
+
+    This operation follows the TOSA 1.1 draft specification and may evolve as
+    the specification is updated.
+
+    This operation is not pure. Undefined behaviour may occur if the specified
+    indices are out of range.
+  }];
+
+  let arguments = (ins Variadic<Tosa_Tensor3D>:$values,
+      Tosa_IndexTensor2D:$indices, Tosa_ScalarInt32Tensor:$row_count,
+      Tosa_BlockSizeAttr:$block_size);
+
+  let results = (outs Variadic<Tosa_Tensor3D>:$output);
+
+  list<Availability> availability = [Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
+                                     Extension<[Tosa_EXT_FP8E4M3,
+                                                Tosa_EXT_FP8E5M2, Tosa_EXT_BF16,
+                                                Tosa_EXT_MXFP, Tosa_EXT_INT64]>,
   ];
 
   let hasVerifier = 1;

@@ -21,10 +21,10 @@ entry:
   %cmp5 = icmp eq i32 %N, 0
   br i1 %cmp5, label %for.end, label %for.body.preheader
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %i.06 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i32 %i.06
   %0 = load i32, ptr %arrayidx, align 4
@@ -37,10 +37,10 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond = icmp eq i32 %inc, %N
   br i1 %exitcond, label %for.end.loopexit, label %for.body
 
-for.end.loopexit:                                 ; preds = %for.body
+for.end.loopexit:
   br label %for.end
 
-for.end:                                          ; preds = %for.end.loopexit, %entry
+for.end:
   ret void
 }
 
@@ -56,10 +56,10 @@ entry:
   %cmp5 = icmp eq i32 %N, 0
   br i1 %cmp5, label %for.end, label %for.body.preheader
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %i.06 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ]
   %arrayidx = getelementptr inbounds float, ptr %A, i32 %i.06
   %0 = load float, ptr %arrayidx, align 4
@@ -72,10 +72,10 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond = icmp eq i32 %inc, %N
   br i1 %exitcond, label %for.end.loopexit, label %for.body
 
-for.end.loopexit:                                 ; preds = %for.body
+for.end.loopexit:
   br label %for.end
 
-for.end:                                          ; preds = %for.end.loopexit, %entry
+for.end:
   ret void
 }
 
@@ -86,10 +86,10 @@ define i32 @redi(ptr noalias nocapture readonly %a, ptr noalias nocapture readon
 entry:
   br label %for.body.preheader
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %i.07 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ]
   %Red.06 = phi i32 [ %add, %for.body ], [ 0, %for.body.preheader ]
   %arrayidx = getelementptr inbounds i32, ptr %a, i32 %i.07
@@ -102,11 +102,11 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond = icmp eq i32 %inc, %N
   br i1 %exitcond, label %for.end.loopexit, label %for.body
 
-for.end.loopexit:                                 ; preds = %for.body
+for.end.loopexit:
   %add.lcssa = phi i32 [ %add, %for.body ]
   br label %for.end
 
-for.end:                                          ; preds = %for.end.loopexit
+for.end:
   ret i32 %add.lcssa
 }
 
@@ -121,10 +121,10 @@ define float @redf(ptr noalias nocapture readonly %a, ptr noalias nocapture read
 entry:
   br label %for.body.preheader
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %i.07 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ]
   %Red.06 = phi float [ %add, %for.body ], [ 0.0e+00, %for.body.preheader ]
   %arrayidx = getelementptr inbounds float, ptr %a, i32 %i.07
@@ -137,11 +137,11 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond = icmp eq i32 %inc, %N
   br i1 %exitcond, label %for.end.loopexit, label %for.body
 
-for.end.loopexit:                                 ; preds = %for.body
+for.end.loopexit:
   %add.lcssa = phi float [ %add, %for.body ]
   br label %for.end
 
-for.end:                                          ; preds = %for.end.loopexit
+for.end:
   ret float %add.lcssa
 }
 
@@ -155,7 +155,7 @@ entry:
   %cmp10 = icmp eq i32 %N, 0
   br i1 %cmp10, label %for.end, label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.011 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds float, ptr %A, i32 %i.011
   %0 = load float, ptr %arrayidx, align 4
@@ -169,7 +169,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %inc, %N
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
@@ -181,10 +181,10 @@ entry:
   %cmp5 = icmp eq i32 %N, 0
   br i1 %cmp5, label %for.end, label %for.body.preheader
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %i.06 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i32 %i.06
   %0 = load i32, ptr %arrayidx, align 4
@@ -197,10 +197,10 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond = icmp eq i32 %inc, %N
   br i1 %exitcond, label %for.end.loopexit, label %for.body
 
-for.end.loopexit:                                 ; preds = %for.body
+for.end.loopexit:
   br label %for.end
 
-for.end:                                          ; preds = %for.end.loopexit, %entry
+for.end:
   ret void
 }
 
@@ -212,10 +212,10 @@ entry:
   %cmp5 = icmp eq i32 %N, 0
   br i1 %cmp5, label %for.end, label %for.body.preheader
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %i.06 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ]
   %arrayidx = getelementptr inbounds float, ptr %A, i32 %i.06
   %0 = load float, ptr %arrayidx, align 4
@@ -228,10 +228,10 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond = icmp eq i32 %inc, %N
   br i1 %exitcond, label %for.end.loopexit, label %for.body
 
-for.end.loopexit:                                 ; preds = %for.body
+for.end.loopexit:
   br label %for.end
 
-for.end:                                          ; preds = %for.end.loopexit, %entry
+for.end:
   ret void
 }
 
@@ -243,10 +243,10 @@ entry:
   %cmp5 = icmp eq i32 %N, 0
   br i1 %cmp5, label %for.end, label %for.body.preheader
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %i.07 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ]
   %Red.06 = phi i32 [ %add, %for.body ], [ 0, %for.body.preheader ]
   %arrayidx = getelementptr inbounds i32, ptr %a, i32 %i.07
@@ -259,11 +259,11 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond = icmp eq i32 %inc, %N
   br i1 %exitcond, label %for.end.loopexit, label %for.body
 
-for.end.loopexit:                                 ; preds = %for.body
+for.end.loopexit:
   %add.lcssa = phi i32 [ %add, %for.body ]
   br label %for.end
 
-for.end:                                          ; preds = %for.end.loopexit, %entry
+for.end:
   %Red.0.lcssa = phi i32 [ 0, %entry ], [ %add.lcssa, %for.end.loopexit ]
   ret i32 %Red.0.lcssa
 }
@@ -275,10 +275,10 @@ define float @redf_fast(ptr noalias nocapture readonly %a, ptr noalias nocapture
 entry:
   br label %for.body.preheader
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %i.07 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ]
   %Red.06 = phi float [ %add, %for.body ], [ 0.0e+00, %for.body.preheader ]
   %arrayidx = getelementptr inbounds float, ptr %a, i32 %i.07
@@ -291,11 +291,11 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond = icmp eq i32 %inc, %N
   br i1 %exitcond, label %for.end.loopexit, label %for.body
 
-for.end.loopexit:                                 ; preds = %for.body
+for.end.loopexit:
   %add.lcssa = phi float [ %add, %for.body ]
   br label %for.end
 
-for.end:                                          ; preds = %for.end.loopexit
+for.end:
   ret float %add.lcssa
 }
 
@@ -307,7 +307,7 @@ entry:
   %cmp10 = icmp eq i32 %N, 0
   br i1 %cmp10, label %for.end, label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.011 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds float, ptr %A, i32 %i.011
   %0 = load float, ptr %arrayidx, align 4
@@ -321,7 +321,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %inc, %N
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 

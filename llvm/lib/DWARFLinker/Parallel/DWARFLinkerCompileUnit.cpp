@@ -233,6 +233,18 @@ StringEntry *CompileUnit::getFileName(unsigned FileIdx,
   return nullptr;
 }
 
+llvm::Error CompileUnit::setPriority(uint64_t ObjFileIdx, uint64_t LocalIdx) {
+  if (ObjFileIdx > std::numeric_limits<uint32_t>::max())
+    return llvm::createStringError("cannot compute priority when number of "
+                                   "object files exceeds UINT32_MAX");
+  if (LocalIdx > std::numeric_limits<uint32_t>::max())
+    return llvm::createStringError("cannot compute priority when number of "
+                                   "local index exceeds UINT32_MAX");
+
+  Priority = (ObjFileIdx << 32) | LocalIdx;
+  return llvm::Error::success();
+}
+
 void CompileUnit::cleanupDataAfterClonning() {
   AbbreviationsSet.clear();
   ResolvedFullPaths.shrink_and_clear();
@@ -392,8 +404,14 @@ std::optional<UnitEntryPairTy> CompileUnit::resolveDIEReference(
 
   if (RefCU == this) {
     // Referenced DIE is in current compile unit.
-    if (std::optional<uint32_t> RefDieIdx = getDIEIndexForOffset(RefDIEOffset))
-      return UnitEntryPairTy{this, getDebugInfoEntry(*RefDieIdx)};
+    if (std::optional<uint32_t> RefDieIdx =
+            getDIEIndexForOffset(RefDIEOffset)) {
+      const DWARFDebugInfoEntry *RefEntry = getDebugInfoEntry(*RefDieIdx);
+      // In a file with broken references, an attribute might point to a
+      // NULL DIE. Treat that as a resolution failure so callers can warn.
+      if (RefEntry && RefEntry->getAbbreviationDeclarationPtr())
+        return UnitEntryPairTy{this, RefEntry};
+    }
   } else if (RefCU && CanResolveInterCUReferences) {
     // Referenced DIE is in other compile unit.
 
@@ -403,8 +421,12 @@ std::optional<UnitEntryPairTy> CompileUnit::resolveDIEReference(
       return UnitEntryPairTy{RefCU, nullptr};
 
     if (std::optional<uint32_t> RefDieIdx =
-            RefCU->getDIEIndexForOffset(RefDIEOffset))
-      return UnitEntryPairTy{RefCU, RefCU->getDebugInfoEntry(*RefDieIdx)};
+            RefCU->getDIEIndexForOffset(RefDIEOffset)) {
+      const DWARFDebugInfoEntry *RefEntry =
+          RefCU->getDebugInfoEntry(*RefDieIdx);
+      if (RefEntry && RefEntry->getAbbreviationDeclarationPtr())
+        return UnitEntryPairTy{RefCU, RefEntry};
+    }
   } else {
     return UnitEntryPairTy{RefCU, nullptr};
   }
@@ -1419,46 +1441,53 @@ DIE *CompileUnit::allocateTypeDie(TypeEntryBody *TypeDescriptor,
                                   DIEGenerator &TypeDIEGenerator,
                                   dwarf::Tag DieTag, bool IsDeclaration,
                                   bool IsParentDeclaration) {
-  DIE *DefinitionDie = TypeDescriptor->Die;
-  // Do not allocate any new DIE if definition DIE is already met.
-  if (DefinitionDie)
-    return nullptr;
+  uint64_t Priority = getPriority();
 
-  DIE *DeclarationDie = TypeDescriptor->DeclarationDie;
-  bool OldParentIsDeclaration = TypeDescriptor->ParentIsDeclaration;
+  // Lock-free pre-checks: skip the lock (and downstream cloning) when this CU
+  // has no chance of winning the type slot.
+  if (!IsDeclaration && !IsParentDeclaration) {
+    // DiePriority only ever decreases, so a relaxed read that is <= our
+    // priority means we definitely cannot win.
+    if (Priority >= TypeDescriptor->DiePriority.load(std::memory_order_relaxed))
+      return nullptr;
+  } else {
+    // Once a definition exists the declaration slot is dead.
+    if (TypeDescriptor->Die.load(std::memory_order_relaxed))
+      return nullptr;
+  }
 
-  if (IsDeclaration && !DeclarationDie) {
-    // Alocate declaration DIE.
-    DIE *NewDie = TypeDIEGenerator.createDIE(DieTag, 0);
-    if (TypeDescriptor->DeclarationDie.compare_exchange_strong(DeclarationDie,
-                                                               NewDie))
-      return NewDie;
-  } else if (IsDeclaration && !IsParentDeclaration && OldParentIsDeclaration) {
-    // Overwrite existing declaration DIE if it's parent is also an declaration
-    // while parent of current declaration DIE is a definition.
-    if (TypeDescriptor->ParentIsDeclaration.compare_exchange_strong(
-            OldParentIsDeclaration, false)) {
-      DIE *NewDie = TypeDIEGenerator.createDIE(DieTag, 0);
-      TypeDescriptor->DeclarationDie = NewDie;
-      return NewDie;
+  while (TypeDescriptor->Lock.test_and_set(std::memory_order_acquire))
+    ; // spin
+
+  DIE *Result = nullptr;
+
+  if (!IsDeclaration && !IsParentDeclaration) {
+    // Definition: lowest priority wins.
+    if (Priority <
+        TypeDescriptor->DiePriority.load(std::memory_order_relaxed)) {
+      TypeDescriptor->DiePriority.store(Priority, std::memory_order_relaxed);
+      Result = TypeDIEGenerator.createDIE(DieTag, 0);
+      TypeDescriptor->Die.store(Result, std::memory_order_relaxed);
     }
-  } else if (!IsDeclaration && IsParentDeclaration && !DeclarationDie) {
-    // Alocate declaration DIE since parent of current DIE is marked as
-    // declaration.
-    DIE *NewDie = TypeDIEGenerator.createDIE(DieTag, 0);
-    if (TypeDescriptor->DeclarationDie.compare_exchange_strong(DeclarationDie,
-                                                               NewDie))
-      return NewDie;
-  } else if (!IsDeclaration && !IsParentDeclaration) {
-    // Allocate definition DIE.
-    DIE *NewDie = TypeDIEGenerator.createDIE(DieTag, 0);
-    if (TypeDescriptor->Die.compare_exchange_strong(DefinitionDie, NewDie)) {
-      TypeDescriptor->ParentIsDeclaration = false;
-      return NewDie;
+  } else if (!TypeDescriptor->Die.load(std::memory_order_relaxed)) {
+    // Declaration (no definition exists yet).
+    // Prefer declarations whose parent is a definition (better context);
+    // break ties by CU priority (lower wins).
+    bool WorseParent =
+        IsParentDeclaration && !TypeDescriptor->DeclarationParentIsDeclaration;
+    bool BetterParent =
+        !IsParentDeclaration && TypeDescriptor->DeclarationParentIsDeclaration;
+    if (!WorseParent &&
+        (BetterParent || Priority < TypeDescriptor->DeclarationDiePriority)) {
+      TypeDescriptor->DeclarationDiePriority = Priority;
+      TypeDescriptor->DeclarationParentIsDeclaration = IsParentDeclaration;
+      Result = TypeDIEGenerator.createDIE(DieTag, 0);
+      TypeDescriptor->DeclarationDie.store(Result, std::memory_order_relaxed);
     }
   }
 
-  return nullptr;
+  TypeDescriptor->Lock.clear(std::memory_order_release);
+  return Result;
 }
 
 TypeEntry *CompileUnit::createTypeDIEandCloneAttributes(

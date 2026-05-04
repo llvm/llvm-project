@@ -284,6 +284,8 @@ public:
   InstructionCost
   getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) const override;
 
+  bool isLegalMaskedExpandLoad(Type *DataTy, Align Alignment) const override;
+
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP,
                                OptimizationRemarkEmitter *ORE) const override;
@@ -473,7 +475,7 @@ public:
 
   unsigned getEpilogueVectorizationMinVF() const override;
 
-  bool preferPredicateOverEpilogue(TailFoldingInfo *TFI) const override;
+  bool preferTailFoldingOverEpilogue(TailFoldingInfo *TFI) const override;
 
   bool supportsScalableVectors() const override {
     return ST->isSVEorStreamingSVEAvailable();

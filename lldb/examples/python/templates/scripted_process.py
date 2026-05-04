@@ -432,7 +432,7 @@ class ScriptedFrame(metaclass=ABCMeta):
                 self.arch = triple.split("-")[0]
             tid = thread.tid if isinstance(thread, ScriptedThread) else thread.id
             self.originating_thread = thread
-            self.thread = self.process.GetThreadByIndexID(tid)
+            self.thread = self.process.GetThreadByID(tid)
             self.get_register_info()
 
     @abstractmethod

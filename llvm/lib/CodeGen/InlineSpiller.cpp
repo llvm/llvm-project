@@ -482,6 +482,14 @@ bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
   --MII; // Point to store instruction.
   LLVM_DEBUG(dbgs() << "\thoisted: " << SrcVNI->def << '\t' << *MII);
 
+  // When the def is a PHI, SkipPHIsLabelsAndDebug may place the store past
+  // prologue instructions. Therefore if that copy was the end of a segment
+  // we need to extend it to the store.
+  if (SrcVNI->isPHIDef()) {
+    SlotIndex StoreUseIdx = LIS.getInstructionIndex(*MII).getRegSlot(true);
+    SrcLI.extendInBlock(LIS.getMBBStartIdx(MBB), StoreUseIdx);
+  }
+
   // If there is only 1 store instruction is required for spill, add it
   // to mergeable list. In X86 AMX, 2 intructions are required to store.
   // We disable the merge for this case.
@@ -1016,9 +1024,11 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>> Ops,
       MI->untieRegOperand(Idx);
     }
 
+  MachineInstr *CopyMI = nullptr;
   MachineInstr *FoldMI =
-      LoadMI ? TII.foldMemoryOperand(*MI, FoldOps, *LoadMI, &LIS)
-             : TII.foldMemoryOperand(*MI, FoldOps, StackSlot, &LIS, &VRM);
+      LoadMI
+          ? TII.foldMemoryOperand(*MI, FoldOps, *LoadMI, CopyMI, &LIS)
+          : TII.foldMemoryOperand(*MI, FoldOps, StackSlot, CopyMI, &LIS, &VRM);
   if (!FoldMI) {
     // Re-tie operands.
     for (auto Tied : TiedOps)
@@ -1050,7 +1060,15 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>> Ops,
   if (TII.isStoreToStackSlot(*MI, FI) &&
       HSpiller.rmFromMergeableSpills(*MI, FI))
     --NumSpills;
-  LIS.ReplaceMachineInstrInMaps(*MI, *FoldMI);
+  SlotIndex FoldIdx = LIS.ReplaceMachineInstrInMaps(*MI, *FoldMI);
+  if (CopyMI) {
+    SlotIndex CopyIdx = LIS.InsertMachineInstrInMaps(*CopyMI).getRegSlot();
+    if (!MRI.isSSA()) {
+      LiveInterval &LI = LIS.getInterval(CopyMI->getOperand(0).getReg());
+      VNInfo *VNI = LI.getNextValue(CopyIdx, LIS.getVNInfoAllocator());
+      LI.addSegment(LiveRange::Segment(CopyIdx, FoldIdx.getRegSlot(), VNI));
+    }
+  }
   // Update the call info.
   if (MI->isCandidateForAdditionalCallInfo())
     MI->getMF()->moveAdditionalCallInfo(MI, FoldMI);
@@ -1092,8 +1110,18 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>> Ops,
   // Insert any new instructions other than FoldMI into the LIS maps.
   assert(!MIS.empty() && "Unexpected empty span of instructions!");
   for (MachineInstr &MI : MIS)
-    if (&MI != FoldMI)
+    if (&MI != FoldMI && &MI != CopyMI)
       LIS.InsertMachineInstrInMaps(MI);
+
+  if (CopyMI) {
+    Register R = CopyMI->getOperand(1).getReg();
+    if (R.isVirtual()) {
+      LiveInterval &LI = LIS.getInterval(R);
+      LIS.shrinkToUses(&LI);
+    } else {
+      assert(MRI.isReserved(R) && "Unexpected PhysReg in source operand!");
+    }
+  }
 
   // TII.foldMemoryOperand may have left some implicit operands on the
   // instruction.  Strip them.

@@ -555,3 +555,30 @@ define i8 @scmp_from_select_eq_and_gt(i32 %x, i32 %y) {
   %r = select i1 %eq, i8 0, i8 %sel1
   ret i8 %r
 }
+
+define i64 @sext_ucmp(i32 %x, i32 %y) {
+; CHECK-LABEL: define i64 @sext_ucmp(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.ucmp.i64.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    ret i64 [[TMP1]]
+;
+  %cmp = call i8 @llvm.ucmp(i32 %x, i32 %y)
+  %ext = sext i8 %cmp to i64
+  ret i64 %ext
+}
+
+; Don't fold when ucmp has multiple uses: would leave the narrow ucmp alive
+; and add a second wider ucmp.
+define i64 @sext_ucmp_multiuse(i32 %x, i32 %y) {
+; CHECK-LABEL: define i64 @sext_ucmp_multiuse(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    call void @use(i8 [[CMP]])
+; CHECK-NEXT:    [[EXT:%.*]] = sext i8 [[CMP]] to i64
+; CHECK-NEXT:    ret i64 [[EXT]]
+;
+  %cmp = call i8 @llvm.ucmp(i32 %x, i32 %y)
+  call void @use(i8 %cmp)
+  %ext = sext i8 %cmp to i64
+  ret i64 %ext
+}

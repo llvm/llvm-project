@@ -23,6 +23,8 @@
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
+#include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/CodeGen/AsmPrinterAnalysis.h"
 #include "llvm/CodeGen/BranchFoldingPass.h"
 #include "llvm/CodeGen/CodeGenPrepare.h"
 #include "llvm/CodeGen/DeadMachineInstructionElim.h"
@@ -34,6 +36,7 @@
 #include "llvm/CodeGen/FEntryInserter.h"
 #include "llvm/CodeGen/FinalizeISel.h"
 #include "llvm/CodeGen/FixupStatepointCallerSaved.h"
+#include "llvm/CodeGen/GCEmptyBasicBlocks.h"
 #include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/GlobalMerge.h"
 #include "llvm/CodeGen/GlobalMergeFunctions.h"
@@ -102,6 +105,7 @@
 #include "llvm/IRPrinter/IRPrintingPasses.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
@@ -163,9 +167,6 @@ private:
   friend class CodeGenPassBuilder;
 };
 
-using CreateMCStreamer =
-    std::function<Expected<std::unique_ptr<MCStreamer>>(TargetMachine &)>;
-
 /// This class provides access to building LLVM's passes.
 ///
 /// Its members provide the baseline state available to passes during their
@@ -197,9 +198,9 @@ public:
       Opt.OptimizeRegAlloc = getOptLevel() != CodeGenOptLevel::None;
   }
 
-  Error buildPipeline(ModulePassManager &MPM, raw_pwrite_stream &Out,
-                      raw_pwrite_stream *DwoOut, CodeGenFileType FileType,
-                      MCContext &Ctx) const;
+  Error buildPipeline(ModulePassManager &MPM, ModuleAnalysisManager &MAM,
+                      raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
+                      CodeGenFileType FileType, MCContext &Ctx) const;
 
   PassInstrumentationCallbacks *getPassInstrumentationCallbacks() const {
     return PIC;
@@ -489,18 +490,15 @@ protected:
 
   void addPostBBSections(PassManagerWrapper &PMW) const {}
 
-  void addAsmPrinterBegin(PassManagerWrapper &PMW,
-                          CreateMCStreamer CreateStreamer) const {
+  void addAsmPrinterBegin(PassManagerWrapper &PMW) const {
     llvm_unreachable("addAsmPrinterBegin is not overriden");
   }
 
-  void addAsmPrinter(PassManagerWrapper &PMW,
-                     CreateMCStreamer CreateStreamer) const {
+  void addAsmPrinter(PassManagerWrapper &PMW) const {
     llvm_unreachable("addAsmPrinter is not overridden");
   }
 
-  void addAsmPrinterEnd(PassManagerWrapper &PMW,
-                        CreateMCStreamer CreateStreamer) const {
+  void addAsmPrinterEnd(PassManagerWrapper &PMW) const {
     llvm_unreachable("addAsmPrinterEnd is not overriden");
   }
 
@@ -572,8 +570,8 @@ private:
 
 template <typename Derived, typename TargetMachineT>
 Error CodeGenPassBuilder<Derived, TargetMachineT>::buildPipeline(
-    ModulePassManager &MPM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
-    CodeGenFileType FileType, MCContext &Ctx) const {
+    ModulePassManager &MPM, ModuleAnalysisManager &MAM, raw_pwrite_stream &Out,
+    raw_pwrite_stream *DwoOut, CodeGenFileType FileType, MCContext &Ctx) const {
   auto StartStopInfo = TargetPassConfig::getStartStopInfo(*PIC);
   if (!StartStopInfo)
     return StartStopInfo.takeError();
@@ -598,12 +596,18 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::buildPipeline(
   addISelPasses(PMW);
   flushFPMsToMPM(PMW);
 
-  CreateMCStreamer CreateStreamer = [&Out, DwoOut, FileType,
-                                     &Ctx](TargetMachine &TM) {
-    return TM.createMCStreamer(Out, DwoOut, FileType, Ctx);
-  };
-  if (PrintAsm)
-    derived().addAsmPrinterBegin(PMW, CreateStreamer);
+  if (PrintAsm) {
+    Expected<std::unique_ptr<MCStreamer>> MCStreamerOrErr =
+        TM.createMCStreamer(Out, DwoOut, FileType, Ctx);
+    if (!MCStreamerOrErr)
+      return MCStreamerOrErr.takeError();
+    std::unique_ptr<AsmPrinter> Printer(
+        TM.getTarget().createAsmPrinter(TM, std::move(*MCStreamerOrErr)));
+    if (!Printer)
+      return createStringError("failed to create AsmPrinter");
+    MAM.registerPass([&] { return AsmPrinterAnalysis(std::move(Printer)); });
+    derived().addAsmPrinterBegin(PMW);
+  }
 
   if (PrintMIR)
     addModulePass(PrintMIRPreparePass(Out), PMW, /*Force=*/true);
@@ -618,9 +622,9 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::buildPipeline(
     addMachineFunctionPass(MachineVerifierPass(), PMW);
 
   if (PrintAsm) {
-    derived().addAsmPrinter(PMW, CreateStreamer);
+    derived().addAsmPrinter(PMW);
     flushFPMsToMPM(PMW, /*FreeMachineFunctions=*/true);
-    derived().addAsmPrinterEnd(PMW, CreateStreamer);
+    derived().addAsmPrinterEnd(PMW);
   } else {
     if (PrintMIR)
       addMachineFunctionPass(PrintMIRPass(Out), PMW, /*Force=*/true);
@@ -788,9 +792,8 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addIRPasses(
 template <typename Derived, typename TargetMachineT>
 void CodeGenPassBuilder<Derived, TargetMachineT>::addPassesToHandleExceptions(
     PassManagerWrapper &PMW) const {
-  const MCAsmInfo *MCAI = TM.getMCAsmInfo();
-  assert(MCAI && "No MCAsmInfo");
-  switch (MCAI->getExceptionHandlingType()) {
+  const MCAsmInfo &MCAI = TM.getMCAsmInfo();
+  switch (MCAI.getExceptionHandlingType()) {
   case ExceptionHandling::SjLj:
     // SjLj piggy-backs on dwarf for this bit. The cleanups done apply to both
     // Dwarf EH prepare needs to be run after SjLj prepare. Otherwise,
@@ -1073,6 +1076,9 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addMachinePasses(
       addModulePass(MachineOutlinerPass(Opt.EnableMachineOutliner), PMW);
     }
   }
+
+  if (Opt.EnableGCEmptyBlocks)
+    addMachineFunctionPass(GCEmptyBasicBlocksPass(), PMW);
 
   derived().addPostBBSections(PMW);
 

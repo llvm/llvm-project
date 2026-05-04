@@ -29,7 +29,6 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/KnownBits.h"
-#include "llvm/Transforms/Utils/UnrollLoop.h"
 #include <optional>
 
 using namespace llvm;
@@ -128,7 +127,10 @@ void AMDGPUTTIImpl::getUnrollingPreferences(
   // We want to run unroll even for the loops which have been vectorized.
   UP.UnrollVectorizedLoop = true;
 
-  // TODO: Do we want runtime unrolling?
+  // Enable runtime unrolling for loops whose trip count is not known at
+  // compile time.  Use a reduced PartialThreshold to limit code-size growth.
+  UP.Runtime = true;
+  UP.PartialThreshold = UP.Threshold / 4;
 
   // Maximum alloca size than can fit registers. Reserve 16 registers.
   const unsigned MaxAlloca = (256 - 16) * 4;
@@ -271,11 +273,6 @@ void AMDGPUTTIImpl::getUnrollingPreferences(
     if (L->isInnermost() && BB->size() < UnrollMaxBlockToAnalyze)
       UP.MaxIterationsCountToAnalyze = 32;
   }
-  // If a user provided an explicit unroll pragma (with or without count),
-  // override expensive trip count checks
-  UnrollPragmaInfo PInfo(L);
-  if (PInfo.PragmaEnableUnroll || PInfo.PragmaCount > 0)
-    UP.AllowExpensiveTripCount = true;
 }
 
 void AMDGPUTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,

@@ -171,7 +171,7 @@ TEST_F(TestMCDisasmInstanceRISCV, MergesDefaults) {
   CheckFeatures("+m,+c", "", "+m,+c");
 }
 
-TEST_F(TestMCDisasmInstanceRISCV, UpdateFeatureString_AddSingle) {
+TEST_F(TestMCDisasmInstanceRISCV, AcceptsValidPlusMinus) {
   CheckFeatures("", "+a,-b", "+a,-b");
 
   // Should remove invalid flags.

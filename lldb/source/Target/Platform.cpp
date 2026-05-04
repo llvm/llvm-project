@@ -190,7 +190,7 @@ Platform::LocateExecutableScriptingResourcesFromSafePaths(
           ->GetSanitizedScriptingModuleName(
               module_spec.GetFileNameStrippingExtension().GetStringRef());
 
-  FileSpecList paths = Debugger::GetSafeAutoLoadPaths();
+  FileSpecList paths = target.GetSafeAutoLoadPaths();
 
   // Iterate in reverse so we consider the latest appended path first.
   for (FileSpec path : llvm::reverse(paths)) {
@@ -215,7 +215,7 @@ Platform::LocateExecutableScriptingResourcesFromSafePaths(
 
     if (FileSystem::Instance().Exists(script_fspec)) {
       LoadScriptFromSymFile load_style =
-          Platform::GetScriptLoadStyleForModule(script_fspec, target);
+          Platform::GetScriptLoadStyleForModule(module_spec, target);
       file_specs.try_emplace(std::move(script_fspec), load_style);
     }
 

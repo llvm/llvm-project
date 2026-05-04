@@ -4172,8 +4172,9 @@ HexagonTargetLowering::combineConcatOfScalarPreds(SDValue Op, unsigned BitBytes,
 
   SmallVector<SDValue> Cats;
   // (8 / BitBytes) is the desired length of the result of the inner concat.
+  MVT InnerTy = MVT::getVectorVT(MVT::i1, 8 / BitBytes);
   for (unsigned i = 0; i != ResLen / (8 / BitBytes); ++i) {
-    SDValue Cat = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v8i1,
+    SDValue Cat = DAG.getNode(ISD::CONCAT_VECTORS, dl, InnerTy,
                               Inputs.slice(SliceLen * i, SliceLen));
     Cats.push_back(Cat);
   }
