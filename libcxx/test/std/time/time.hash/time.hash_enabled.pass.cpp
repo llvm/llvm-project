@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// No member named `leapsecond'.
-// XFAIL: LLVM-LIBC-FIXME
-
 // REQUIRES: std-at-least-c++26
 
 // <chrono>

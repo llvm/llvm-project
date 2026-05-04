@@ -5,5 +5,6 @@ add_entrypoint_object(
   HDRS
     dl_iterate_phdr.h
   DEPENDS
+    libc.src.__support.OSUtil.linux.auxv
     libc.hdr.stdint_proxy
 )
