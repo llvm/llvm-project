@@ -5,6 +5,17 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
 
+_Atomic int g1;
+_Atomic int g2 = 42;
+// CIR: cir.global external @g2 = #cir.int<42> : !s32i {alignment = 4 : i64}
+// CIR: cir.global external @g1 = #cir.int<0> : !s32i {alignment = 4 : i64}
+
+// LLVM: @g2 = global i32 42, align 4
+// LLVM: @g1 = global i32 0, align 4
+
+// OGCG: @g2 = global i32 42, align 4
+// OGCG: @g1 = global i32 0, align 4
+
 void f1(void) {
   _Atomic(int) x = 42;
 }
