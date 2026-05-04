@@ -1543,8 +1543,11 @@ Currently, only the following parameter attributes are defined:
       is null is captured in some other way.
 
 ``nofree``
-    This indicates that the callee does not free the pointer argument. This is not
-    a valid attribute for return values.
+    This indicates that the callee does not free the pointer argument, or
+    cause it to be freed through synchronization.
+
+    This is not a valid attribute for return values. This attribute applies
+    only to the particular copy of the pointer passed in this argument.
 
 .. _nest:
 
@@ -2328,20 +2331,17 @@ For example:
 ``nofree``
     This function attribute indicates that the function does not, directly or
     transitively, call a memory-deallocation function (``free``, for example)
-    on a memory allocation which existed before the call.
+    on a memory allocation which existed before the call, or make such a call
+    visible through synchronization.
 
-    As a result, uncaptured pointers that are known to be dereferenceable
-    prior to a call to a function with the ``nofree`` attribute are still
-    known to be dereferenceable after the call. The capturing condition is
-    necessary in environments where the function might communicate the
-    pointer to another thread which then deallocates the memory.  Alternatively,
-    ``nosync`` would ensure such communication cannot happen and even captured
-    pointers cannot be freed by the function.
+    As a result, pointers that are known to be dereferenceable prior to a call
+    to a function with the ``nofree`` attribute are still known to be
+    dereferenceable after the call.
 
     A ``nofree`` function is explicitly allowed to free memory which it
-    allocated or (if not ``nosync``) arrange for another thread to free
-    memory on its behalf.  As a result, perhaps surprisingly, a ``nofree``
-    function can return a pointer to a previously deallocated
+    allocated or arrange for another thread to free such memory on its behalf.
+    As a result, perhaps surprisingly, a ``nofree`` function can return a
+    pointer to a previously deallocated
     :ref:`allocated object<allocatedobjects>`.
 ``noimplicitfloat``
     Disallows implicit floating-point code. This inhibits optimizations that
