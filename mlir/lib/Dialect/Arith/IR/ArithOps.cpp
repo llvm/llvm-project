@@ -1105,7 +1105,7 @@ OpFoldResult arith::XOrIOp::fold(FoldAdaptor adaptor) {
 
 void arith::XOrIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                                 MLIRContext *context) {
-  patterns.add<XOrINotCmpI, XOrIOfExtUI, XOrIOfExtSI>(context);
+  patterns.add<XOrIXOrIConstant, XOrINotCmpI, XOrIOfExtUI, XOrIOfExtSI>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1828,7 +1828,7 @@ LogicalResult arith::ScalingTruncFOp::verify() {
 
 void arith::AndIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                                 MLIRContext *context) {
-  patterns.add<AndOfExtUI, AndOfExtSI>(context);
+  patterns.add<AndIAndIConstant, AndOfExtUI, AndOfExtSI>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1837,7 +1837,7 @@ void arith::AndIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 
 void arith::OrIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                                MLIRContext *context) {
-  patterns.add<OrOfExtUI, OrOfExtSI>(context);
+  patterns.add<OrIOrIConstant, OrOfExtUI, OrOfExtSI>(context);
 }
 
 //===----------------------------------------------------------------------===//
