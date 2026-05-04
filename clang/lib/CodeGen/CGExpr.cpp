@@ -3621,7 +3621,7 @@ LValue CodeGenFunction::EmitOMPCapturedBindingLValue(const BindingDecl *BD) {
     FieldDecl *Field = cast<FieldDecl>(ME->getMemberDecl());
     return EmitLValueForField(CapLVal, Field);
   }
-  if (auto *ASE = dyn_cast<ArraySubscriptExpr>(BindingExpr)) {
+  if (dyn_cast<ArraySubscriptExpr>(BindingExpr)) {
     // Array binding - access element.
     return EmitLValue(BD->getBinding(), NotKnownNonNull);
   }
