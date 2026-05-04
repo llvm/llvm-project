@@ -13,6 +13,7 @@
 #include <__iterator/concepts.h>
 #include <__iterator/iterator_traits.h>
 #include <__numeric/transform_exclusive_scan.h>
+#include <__numeric/transform_inclusive_scan.h>
 #include <__pstl/backend_fwd.h>
 #include <__pstl/cpu_algos/cpu_traits.h>
 #include <__type_traits/is_execution_policy.h>
@@ -65,6 +66,67 @@ struct __cpu_parallel_transform_exclusive_scan {
           std::move(__init),
           std::move(__binary_op),
           std::move(__unary_op));
+    }
+  }
+};
+
+template <class _Backend, class _RawExecutionPolicy>
+struct __cpu_parallel_transform_inclusive_scan {
+  template <class _Policy,
+            class _ForwardIterator1,
+            class _ForwardIterator2,
+            class _BinaryOperation,
+            class _UnaryOperation>
+  _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator2>
+  operator()(_Policy&&,
+             _ForwardIterator1 __first,
+             _ForwardIterator1 __last,
+             _ForwardIterator2 __result,
+             _BinaryOperation __binary_op,
+             _UnaryOperation __unary_op) const noexcept {
+    if constexpr (__is_parallel_execution_policy_v<_RawExecutionPolicy> &&
+                  __has_random_access_iterator_category_or_concept<_ForwardIterator1>::value &&
+                  __has_random_access_iterator_category_or_concept<_ForwardIterator2>::value) {
+      return __cpu_traits<_Backend>::__transform_inclusive_scan(
+          std::move(__first), std::move(__last), std::move(__result), std::move(__binary_op), std::move(__unary_op));
+    } else {
+      return std::transform_inclusive_scan(
+          std::move(__first), std::move(__last), std::move(__result), std::move(__binary_op), std::move(__unary_op));
+    }
+  }
+
+  template <class _Policy,
+            class _ForwardIterator1,
+            class _ForwardIterator2,
+            class _BinaryOperation,
+            class _UnaryOperation,
+            class _Tp>
+  _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator2> operator()(
+      _Policy&&,
+      _ForwardIterator1 __first,
+      _ForwardIterator1 __last,
+      _ForwardIterator2 __result,
+      _BinaryOperation __binary_op,
+      _UnaryOperation __unary_op,
+      _Tp __init) const noexcept {
+    if constexpr (__is_parallel_execution_policy_v<_RawExecutionPolicy> &&
+                  __has_random_access_iterator_category_or_concept<_ForwardIterator1>::value &&
+                  __has_random_access_iterator_category_or_concept<_ForwardIterator2>::value) {
+      return __cpu_traits<_Backend>::__transform_inclusive_scan(
+          std::move(__first),
+          std::move(__last),
+          std::move(__result),
+          std::move(__binary_op),
+          std::move(__unary_op),
+          std::move(__init));
+    } else {
+      return std::transform_inclusive_scan(
+          std::move(__first),
+          std::move(__last),
+          std::move(__result),
+          std::move(__binary_op),
+          std::move(__unary_op),
+          std::move(__init));
     }
   }
 };
