@@ -14,7 +14,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-class MipsMTInst : MipsInst<(outs), (ins), "", [], NoItinerary, FrmOther> {
+class MipsMTInst : MipsInst<(outs), (ins), "", [], FrmOther> {
   let DecoderNamespace = "Mips";
   let EncodingPredicates = [HasStdEnc];
 }

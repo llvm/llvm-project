@@ -14251,6 +14251,10 @@ public:
   };
   typedef SmallVector<LateInstantiatedAttribute, 1> LateInstantiatedAttrVec;
 
+  /// Recheck instantiated thread-safety attributes that could not be validated
+  /// on the dependent pattern declaration.
+  bool checkInstantiatedThreadSafetyAttrs(const Decl *D, const Attr *A);
+
   void InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
                         const Decl *Pattern, Decl *Inst,
                         LateInstantiatedAttrVec *LateAttrs = nullptr,

@@ -544,6 +544,42 @@ GUARDED_VAR and PT_GUARDED_VAR
 Use of these attributes has been deprecated.
 
 
+Function Pointers
+-----------------
+
+Thread safety attributes may also be applied to function pointer variables and
+fields.  The attributes describe the locking behavior of calling through that
+pointer, and the analysis will check calls through the pointer accordingly.
+
+.. code-block:: c++
+
+  Mutex mu;
+  int x GUARDED_BY(mu);
+
+  void (*lock_fn)(void)   ACQUIRE(mu);
+  void (*unlock_fn)(void) RELEASE(mu);
+
+  struct Ops {
+    void (*read)(void) REQUIRES(mu);
+  };
+
+  void test(Ops *ops) {
+    lock_fn();
+    x = 1;
+    ops->read();
+    unlock_fn();
+  }
+
+Note that the attributes are on the *variable* (or field), not on the function
+pointer type.  Assigning a function with different (or no) attributes to an
+annotated function pointer variable is not diagnosed.  The analysis trusts the
+annotations on the variable at the call site.
+
+This support is limited to plain function pointers.  Pointers-to-member
+functions, blocks, and wrapper types such as ``std::function`` are not
+supported yet.
+
+
 Warning flags
 -------------
 

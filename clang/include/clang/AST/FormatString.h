@@ -51,10 +51,11 @@ public:
 
   // Overloaded operators for bool like qualities
   explicit operator bool() const { return flag; }
-  OptionalFlag& operator=(const bool &rhs) {
+  OptionalFlag &operator=(const bool &rhs) {
     flag = rhs;
-    return *this;  // Return a reference to myself.
+    return *this; // Return a reference to myself.
   }
+
 private:
   const char *representation;
   const char *position;
@@ -66,46 +67,42 @@ class LengthModifier {
 public:
   enum Kind {
     None,
-    AsChar,       // 'hh'
-    AsShort,      // 'h'
-    AsShortLong,  // 'hl' (OpenCL float/int vector element)
-    AsLong,       // 'l'
-    AsLongLong,   // 'll'
-    AsQuad,       // 'q' (BSD, deprecated, for 64-bit integer types)
-    AsIntMax,     // 'j'
-    AsSizeT,      // 'z'
-    AsPtrDiff,    // 't'
-    AsInt32,      // 'I32' (MSVCRT, like __int32)
-    AsInt3264,    // 'I'   (MSVCRT, like __int3264 from MIDL)
-    AsInt64,      // 'I64' (MSVCRT, like __int64)
-    AsLongDouble, // 'L'
-    AsAllocate,   // for '%as', GNU extension to C90 scanf
-    AsMAllocate,  // for '%ms', GNU extension to scanf
-    AsWide,       // 'w' (MSVCRT, like l but only for c, C, s, S, or Z
+    AsChar,             // 'hh'
+    AsShort,            // 'h'
+    AsShortLong,        // 'hl' (OpenCL float/int vector element)
+    AsLong,             // 'l'
+    AsLongLong,         // 'll'
+    AsQuad,             // 'q' (BSD, deprecated, for 64-bit integer types)
+    AsIntMax,           // 'j'
+    AsSizeT,            // 'z'
+    AsPtrDiff,          // 't'
+    AsInt32,            // 'I32' (MSVCRT, like __int32)
+    AsInt3264,          // 'I'   (MSVCRT, like __int3264 from MIDL)
+    AsInt64,            // 'I64' (MSVCRT, like __int64)
+    AsLongDouble,       // 'L'
+    AsAllocate,         // for '%as', GNU extension to C90 scanf
+    AsMAllocate,        // for '%ms', GNU extension to scanf
+    AsWide,             // 'w' (MSVCRT, like l but only for c, C, s, S, or Z
     AsWideChar = AsLong // for '%ls', only makes sense for printf
   };
 
-  LengthModifier()
-    : Position(nullptr), kind(None) {}
-  LengthModifier(const char *pos, Kind k)
-    : Position(pos), kind(k) {}
+  LengthModifier() : Position(nullptr), kind(None) {}
+  LengthModifier(const char *pos, Kind k) : Position(pos), kind(k) {}
 
-  const char *getStart() const {
-    return Position;
-  }
+  const char *getStart() const { return Position; }
 
   unsigned getLength() const {
     switch (kind) {
-      default:
-        return 1;
-      case AsLongLong:
-      case AsChar:
-        return 2;
-      case AsInt32:
-      case AsInt64:
-        return 3;
-      case None:
-        return 0;
+    default:
+      return 1;
+    case AsLongLong:
+    case AsChar:
+      return 2;
+    case AsInt32:
+    case AsInt64:
+      return 3;
+    case None:
+      return 0;
     }
   }
 
@@ -203,31 +200,27 @@ public:
   };
 
   ConversionSpecifier(bool isPrintf = true)
-    : IsPrintf(isPrintf), Position(nullptr), EndScanList(nullptr),
-      kind(InvalidSpecifier) {}
+      : IsPrintf(isPrintf), Position(nullptr), EndScanList(nullptr),
+        kind(InvalidSpecifier) {}
 
   ConversionSpecifier(bool isPrintf, const char *pos, Kind k)
-    : IsPrintf(isPrintf), Position(pos), EndScanList(nullptr), kind(k) {}
+      : IsPrintf(isPrintf), Position(pos), EndScanList(nullptr), kind(k) {}
 
-  const char *getStart() const {
-    return Position;
-  }
+  const char *getStart() const { return Position; }
 
-  StringRef getCharacters() const {
-    return StringRef(getStart(), getLength());
-  }
+  StringRef getCharacters() const { return StringRef(getStart(), getLength()); }
 
   bool consumesDataArgument() const {
     switch (kind) {
-      case PrintErrno:
-        assert(IsPrintf);
-        return false;
-      case PercentArg:
-        return false;
-      case InvalidSpecifier:
-        return false;
-      default:
-        return true;
+    case PrintErrno:
+      assert(IsPrintf);
+      return false;
+    case PercentArg:
+      return false;
+    case InvalidSpecifier:
+      return false;
+    default:
+      return true;
     }
   }
 
@@ -238,8 +231,10 @@ public:
   }
   void setEndScanList(const char *pos) { EndScanList = pos; }
 
-  bool isIntArg() const { return (kind >= IntArgBeg && kind <= IntArgEnd) ||
-    kind == FreeBSDrArg || kind == FreeBSDyArg; }
+  bool isIntArg() const {
+    return (kind >= IntArgBeg && kind <= IntArgEnd) || kind == FreeBSDrArg ||
+           kind == FreeBSDyArg;
+  }
   bool isUIntArg() const { return kind >= UIntArgBeg && kind <= UIntArgEnd; }
   bool isAnyIntArg() const { return kind >= IntArgBeg && kind <= UIntArgEnd; }
   bool isDoubleArg() const {
@@ -264,8 +259,17 @@ protected:
 
 class ArgType {
 public:
-  enum Kind { UnknownTy, InvalidTy, SpecificTy, ObjCPointerTy, CPointerTy,
-              AnyCharTy, CStrTy, WCStrTy, WIntTy };
+  enum Kind {
+    UnknownTy,
+    InvalidTy,
+    SpecificTy,
+    ObjCPointerTy,
+    CPointerTy,
+    AnyCharTy,
+    CStrTy,
+    WCStrTy,
+    WIntTy
+  };
 
   /// How well a given conversion specifier matches its argument.
   enum MatchKind {
@@ -315,7 +319,7 @@ public:
   bool isPtrdiffT() const { return TK == TypeKind::PtrdiffT; }
 
   /// Create an ArgType which corresponds to the type pointer to A.
-  static ArgType PtrTo(const ArgType& A) {
+  static ArgType PtrTo(const ArgType &A) {
     assert(A.K >= InvalidTy && "ArgType cannot be pointer to invalid/unknown");
     ArgType Res = A;
     Res.Ptr = true;
@@ -351,25 +355,21 @@ class OptionalAmount {
 public:
   enum HowSpecified { NotSpecified, Constant, Arg, Invalid };
 
-  OptionalAmount(HowSpecified howSpecified,
-                 unsigned amount,
-                 const char *amountStart,
-                 unsigned amountLength,
+  OptionalAmount(HowSpecified howSpecified, unsigned amount,
+                 const char *amountStart, unsigned amountLength,
                  bool usesPositionalArg)
-  : start(amountStart), length(amountLength), hs(howSpecified), amt(amount),
-  UsesPositionalArg(usesPositionalArg), UsesDotPrefix(false) {}
+      : start(amountStart), length(amountLength), hs(howSpecified), amt(amount),
+        UsesPositionalArg(usesPositionalArg), UsesDotPrefix(false) {}
 
   OptionalAmount(bool valid = true)
-  : start(nullptr),length(0), hs(valid ? NotSpecified : Invalid), amt(0),
-  UsesPositionalArg(false), UsesDotPrefix(false) {}
+      : start(nullptr), length(0), hs(valid ? NotSpecified : Invalid), amt(0),
+        UsesPositionalArg(false), UsesDotPrefix(false) {}
 
   explicit OptionalAmount(unsigned Amount)
-    : start(nullptr), length(0), hs(Constant), amt(Amount),
-    UsesPositionalArg(false), UsesDotPrefix(false) {}
+      : start(nullptr), length(0), hs(Constant), amt(Amount),
+        UsesPositionalArg(false), UsesDotPrefix(false) {}
 
-  bool isInvalid() const {
-    return hs == Invalid;
-  }
+  bool isInvalid() const { return hs == Invalid; }
 
   HowSpecified getHowSpecified() const { return hs; }
   void setHowSpecified(HowSpecified h) { hs = h; }
@@ -400,7 +400,7 @@ public:
 
   void toString(raw_ostream &os) const;
 
-  bool usesPositionalArg() const { return (bool) UsesPositionalArg; }
+  bool usesPositionalArg() const { return (bool)UsesPositionalArg; }
   unsigned getPositionalArgIndex() const {
     assert(hasDataArgument());
     return amt + 1;
@@ -418,7 +418,6 @@ private:
   bool UsesDotPrefix;
 };
 
-
 class FormatSpecifier {
 protected:
   LengthModifier LM;
@@ -431,48 +430,31 @@ protected:
   ///  http://www.opengroup.org/onlinepubs/009695399/functions/printf.html
   bool UsesPositionalArg;
   unsigned argIndex;
+
 public:
   FormatSpecifier(bool isPrintf)
-    : CS(isPrintf), VectorNumElts(false),
-      UsesPositionalArg(false), argIndex(0) {}
+      : CS(isPrintf), VectorNumElts(false), UsesPositionalArg(false),
+        argIndex(0) {}
 
-  void setLengthModifier(LengthModifier lm) {
-    LM = lm;
-  }
+  void setLengthModifier(LengthModifier lm) { LM = lm; }
 
   void setUsesPositionalArg() { UsesPositionalArg = true; }
 
-  void setArgIndex(unsigned i) {
-    argIndex = i;
-  }
+  void setArgIndex(unsigned i) { argIndex = i; }
 
-  unsigned getArgIndex() const {
-    return argIndex;
-  }
+  unsigned getArgIndex() const { return argIndex; }
 
-  unsigned getPositionalArgIndex() const {
-    return argIndex + 1;
-  }
+  unsigned getPositionalArgIndex() const { return argIndex + 1; }
 
-  const LengthModifier &getLengthModifier() const {
-    return LM;
-  }
+  const LengthModifier &getLengthModifier() const { return LM; }
 
-  const OptionalAmount &getFieldWidth() const {
-    return FieldWidth;
-  }
+  const OptionalAmount &getFieldWidth() const { return FieldWidth; }
 
-  void setVectorNumElts(const OptionalAmount &Amt) {
-    VectorNumElts = Amt;
-  }
+  void setVectorNumElts(const OptionalAmount &Amt) { VectorNumElts = Amt; }
 
-  const OptionalAmount &getVectorNumElts() const {
-    return VectorNumElts;
-  }
+  const OptionalAmount &getVectorNumElts() const { return VectorNumElts; }
 
-  void setFieldWidth(const OptionalAmount &Amt) {
-    FieldWidth = Amt;
-  }
+  void setFieldWidth(const OptionalAmount &Amt) { FieldWidth = Amt; }
 
   bool usesPositionalArg() const { return UsesPositionalArg; }
 
@@ -493,25 +475,26 @@ public:
                                         LengthModifier &LM);
 };
 
-} // end analyze_format_string namespace
+} // namespace analyze_format_string
 
 //===----------------------------------------------------------------------===//
 /// Pieces specific to fprintf format strings.
 
 namespace analyze_printf {
 
-class PrintfConversionSpecifier :
-  public analyze_format_string::ConversionSpecifier  {
+class PrintfConversionSpecifier
+    : public analyze_format_string::ConversionSpecifier {
 public:
   PrintfConversionSpecifier()
-    : ConversionSpecifier(true, nullptr, InvalidSpecifier) {}
+      : ConversionSpecifier(true, nullptr, InvalidSpecifier) {}
 
   PrintfConversionSpecifier(const char *pos, Kind k)
-    : ConversionSpecifier(true, pos, k) {}
+      : ConversionSpecifier(true, pos, k) {}
 
   bool isObjCArg() const { return kind >= ObjCBeg && kind <= ObjCEnd; }
-  bool isDoubleArg() const { return kind >= DoubleArgBeg &&
-                                    kind <= DoubleArgEnd; }
+  bool isDoubleArg() const {
+    return kind >= DoubleArgBeg && kind <= DoubleArgEnd;
+  }
 
   static bool classof(const analyze_format_string::ConversionSpecifier *CS) {
     return CS->isPrintfKind();
@@ -525,11 +508,11 @@ using analyze_format_string::OptionalFlag;
 
 class PrintfSpecifier : public analyze_format_string::FormatSpecifier {
   OptionalFlag HasThousandsGrouping; // ''', POSIX extension.
-  OptionalFlag IsLeftJustified; // '-'
-  OptionalFlag HasPlusPrefix; // '+'
-  OptionalFlag HasSpacePrefix; // ' '
-  OptionalFlag HasAlternativeForm; // '#'
-  OptionalFlag HasLeadingZeroes; // '0'
+  OptionalFlag IsLeftJustified;      // '-'
+  OptionalFlag HasPlusPrefix;        // '+'
+  OptionalFlag HasSpacePrefix;       // ' '
+  OptionalFlag HasAlternativeForm;   // '#'
+  OptionalFlag HasLeadingZeroes;     // '0'
   OptionalFlag HasObjCTechnicalTerm; // '[tt]'
   OptionalFlag IsPrivate;            // '{private}'
   OptionalFlag IsPublic;             // '{public}'
@@ -549,10 +532,8 @@ public:
 
   static PrintfSpecifier Parse(const char *beg, const char *end);
 
-    // Methods for incrementally constructing the PrintfSpecifier.
-  void setConversionSpecifier(const PrintfConversionSpecifier &cs) {
-    CS = cs;
-  }
+  // Methods for incrementally constructing the PrintfSpecifier.
+  void setConversionSpecifier(const PrintfConversionSpecifier &cs) { CS = cs; }
   void setHasThousandsGrouping(const char *position) {
     HasThousandsGrouping.setPosition(position);
   }
@@ -581,7 +562,7 @@ public:
   }
   void setUsesPositionalArg() { UsesPositionalArg = true; }
 
-    // Methods for querying the format specifier.
+  // Methods for querying the format specifier.
 
   const PrintfConversionSpecifier &getConversionSpecifier() const {
     return cast<PrintfConversionSpecifier>(CS);
@@ -592,9 +573,7 @@ public:
     Precision.setUsesDotPrefix();
   }
 
-  const OptionalAmount &getPrecision() const {
-    return Precision;
-  }
+  const OptionalAmount &getPrecision() const { return Precision; }
 
   bool consumesDataArgument() const {
     return getConversionSpecifier().consumesDataArgument();
@@ -608,14 +587,16 @@ public:
   ArgType getArgType(ASTContext &Ctx, bool IsObjCLiteral) const;
 
   const OptionalFlag &hasThousandsGrouping() const {
-      return HasThousandsGrouping;
+    return HasThousandsGrouping;
   }
   const OptionalFlag &isLeftJustified() const { return IsLeftJustified; }
   const OptionalFlag &hasPlusPrefix() const { return HasPlusPrefix; }
   const OptionalFlag &hasAlternativeForm() const { return HasAlternativeForm; }
   const OptionalFlag &hasLeadingZeros() const { return HasLeadingZeroes; }
   const OptionalFlag &hasSpacePrefix() const { return HasSpacePrefix; }
-  const OptionalFlag &hasObjCTechnicalTerm() const { return HasObjCTechnicalTerm; }
+  const OptionalFlag &hasObjCTechnicalTerm() const {
+    return HasObjCTechnicalTerm;
+  }
   const OptionalFlag &isPrivate() const { return IsPrivate; }
   const OptionalFlag &isPublic() const { return IsPublic; }
   const OptionalFlag &isSensitive() const { return IsSensitive; }
@@ -643,21 +624,21 @@ public:
   bool hasValidPrecision() const;
   bool hasValidFieldWidth() const;
 };
-}  // end analyze_printf namespace
+} // namespace analyze_printf
 
 //===----------------------------------------------------------------------===//
 /// Pieces specific to fscanf format strings.
 
 namespace analyze_scanf {
 
-class ScanfConversionSpecifier :
-    public analyze_format_string::ConversionSpecifier  {
+class ScanfConversionSpecifier
+    : public analyze_format_string::ConversionSpecifier {
 public:
   ScanfConversionSpecifier()
-    : ConversionSpecifier(false, nullptr, InvalidSpecifier) {}
+      : ConversionSpecifier(false, nullptr, InvalidSpecifier) {}
 
   ScanfConversionSpecifier(const char *pos, Kind k)
-    : ConversionSpecifier(false, pos, k) {}
+      : ConversionSpecifier(false, pos, k) {}
 
   static bool classof(const analyze_format_string::ConversionSpecifier *CS) {
     return !CS->isPrintfKind();
@@ -672,9 +653,8 @@ using analyze_format_string::OptionalFlag;
 class ScanfSpecifier : public analyze_format_string::FormatSpecifier {
   OptionalFlag SuppressAssignment; // '*'
 public:
-  ScanfSpecifier() :
-    FormatSpecifier(/* isPrintf = */ false),
-    SuppressAssignment("*") {}
+  ScanfSpecifier()
+      : FormatSpecifier(/* isPrintf = */ false), SuppressAssignment("*") {}
 
   void setSuppressAssignment(const char *position) {
     SuppressAssignment.setPosition(position);
@@ -684,9 +664,7 @@ public:
     return SuppressAssignment;
   }
 
-  void setConversionSpecifier(const ScanfConversionSpecifier &cs) {
-    CS = cs;
-  }
+  void setConversionSpecifier(const ScanfConversionSpecifier &cs) { CS = cs; }
 
   const ScanfConversionSpecifier &getConversionSpecifier() const {
     return cast<ScanfConversionSpecifier>(CS);
@@ -706,7 +684,7 @@ public:
   static ScanfSpecifier Parse(const char *beg, const char *end);
 };
 
-} // end analyze_scanf namespace
+} // namespace analyze_scanf
 
 //===----------------------------------------------------------------------===//
 // Parsing and processing of format strings (both fprintf and fscanf).
@@ -738,15 +716,15 @@ public:
   virtual void HandleInvalidObjCModifierFlag(const char *startFlag,
                                              unsigned flagLen) {}
 
-  virtual void HandleObjCFlagsWithNonObjCConversion(const char *flagsStart,
-                                            const char *flagsEnd,
-                                            const char *conversionPosition) {}
+  virtual void
+  HandleObjCFlagsWithNonObjCConversion(const char *flagsStart,
+                                       const char *flagsEnd,
+                                       const char *conversionPosition) {}
   // Printf-specific handlers.
 
   virtual bool HandleInvalidPrintfConversionSpecifier(
-                                      const analyze_printf::PrintfSpecifier &FS,
-                                      const char *startSpecifier,
-                                      unsigned specifierLen) {
+      const analyze_printf::PrintfSpecifier &FS, const char *startSpecifier,
+      unsigned specifierLen) {
     return true;
   }
 
@@ -760,10 +738,10 @@ public:
   /// Handle mask types whose sizes are not between one and eight bytes.
   virtual void handleInvalidMaskType(StringRef MaskType) {}
 
-    // Scanf-specific handlers.
+  // Scanf-specific handlers.
 
-  virtual bool HandleInvalidScanfConversionSpecifier(
-                                        const analyze_scanf::ScanfSpecifier &FS,
+  virtual bool
+  HandleInvalidScanfConversionSpecifier(const analyze_scanf::ScanfSpecifier &FS,
                                         const char *startSpecifier,
                                         unsigned specifierLen) {
     return true;
@@ -778,16 +756,15 @@ public:
   virtual void HandleIncompleteScanList(const char *start, const char *end) {}
 };
 
-bool ParsePrintfString(FormatStringHandler &H,
-                       const char *beg, const char *end, const LangOptions &LO,
-                       const TargetInfo &Target, bool isFreeBSDKPrintf);
+bool ParsePrintfString(FormatStringHandler &H, const char *beg, const char *end,
+                       const LangOptions &LO, const TargetInfo &Target,
+                       bool isFreeBSDKPrintf);
 
 bool ParseFormatStringHasSArg(const char *beg, const char *end,
                               const LangOptions &LO, const TargetInfo &Target);
 
-bool ParseScanfString(FormatStringHandler &H,
-                      const char *beg, const char *end, const LangOptions &LO,
-                      const TargetInfo &Target);
+bool ParseScanfString(FormatStringHandler &H, const char *beg, const char *end,
+                      const LangOptions &LO, const TargetInfo &Target);
 
 /// Return true if the given string has at least one formatting specifier.
 bool parseFormatStringHasFormattingSpecifiers(const char *Begin,
@@ -795,6 +772,6 @@ bool parseFormatStringHasFormattingSpecifiers(const char *Begin,
                                               const LangOptions &LO,
                                               const TargetInfo &Target);
 
-} // end analyze_format_string namespace
-} // end clang namespace
+} // namespace analyze_format_string
+} // namespace clang
 #endif

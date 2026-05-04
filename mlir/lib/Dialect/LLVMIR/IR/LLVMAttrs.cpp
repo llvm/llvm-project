@@ -205,6 +205,21 @@ bool DITypeAttr::classof(Attribute attr) {
 }
 
 //===----------------------------------------------------------------------===//
+// DIDerivedTypeAttr
+//===----------------------------------------------------------------------===//
+
+LogicalResult DIDerivedTypeAttr::verify(
+    function_ref<InFlightDiagnostic()> emitError, unsigned tag, StringAttr name,
+    DIFileAttr file, uint32_t line, DIScopeAttr scope, DITypeAttr baseType,
+    uint64_t sizeInBits, uint32_t alignInBits, uint64_t offsetInBits,
+    std::optional<unsigned> dwarfAddressSpace, DIFlags flags,
+    Attribute extraData) {
+  if (extraData && !llvm::isa<DINodeAttr, IntegerAttr>(extraData))
+    return emitError() << "extraData must be a DINodeAttr or an IntegerAttr";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // TBAANodeAttr
 //===----------------------------------------------------------------------===//
 
@@ -320,14 +335,14 @@ DICompositeTypeAttr::withRecId(DistinctAttr recId) {
       getContext(), recId, getIsRecSelf(), getTag(), getName(), getFile(),
       getLine(), getScope(), getBaseType(), getFlags(), getSizeInBits(),
       getAlignInBits(), getDataLocation(), getRank(), getAllocated(),
-      getAssociated(), getElements());
+      getAssociated(), getIdentifier(), getDiscriminator(), getElements());
 }
 
 DIRecursiveTypeAttrInterface
 DICompositeTypeAttr::getRecSelf(DistinctAttr recId) {
   return DICompositeTypeAttr::get(recId.getContext(), recId, /*isRecSelf=*/true,
                                   0, {}, {}, 0, {}, {}, DIFlags(), 0, 0, {}, {},
-                                  {}, {}, {});
+                                  {}, {}, {}, {}, {});
 }
 
 //===----------------------------------------------------------------------===//

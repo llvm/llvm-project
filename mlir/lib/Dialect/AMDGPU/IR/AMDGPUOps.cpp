@@ -1080,6 +1080,43 @@ LogicalResult TransposeLoadOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// GlobalTransposeLoadOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult GlobalTransposeLoadOp::verify() {
+  MemRefType srcType = cast<MemRefType>(getSrc().getType());
+
+  if (!hasGlobalMemorySpace(srcType.getMemorySpace()))
+    return emitOpError("source memory address space must be Global");
+
+  auto resultType = cast<VectorType>(getType());
+  size_t numElements = resultType.getNumElements();
+  size_t elementTypeSize = resultType.getElementType().getIntOrFloatBitWidth();
+
+  // ElementSize -> NumElements. Chipset gating (gfx1200 vs gfx1250) is
+  // enforced in the lowering.
+  static const llvm::SmallDenseMap<size_t, size_t> kValidLoadSizeMap = {
+      {4, 16}, // global_load_tr4_b64  (gfx1250+)
+      {6, 16}, // global_load_tr6_b96  (gfx1250+)
+      {8, 8},  // global_load_tr_b64   (gfx1200+)
+      {16, 8}, // global_load_tr_b128  (gfx1200+)
+  };
+
+  auto validNumElems = kValidLoadSizeMap.find(elementTypeSize);
+  if (validNumElems == kValidLoadSizeMap.end())
+    return emitOpError(
+               "unsupported element type size for global transpose load: ")
+           << elementTypeSize << " bits";
+
+  if (numElements != validNumElems->second)
+    return emitOpError(
+               "transferring type size mismatch: expected num of elements: ")
+           << validNumElems->second;
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // MakeDmaBaseOp
 //===----------------------------------------------------------------------===//
 

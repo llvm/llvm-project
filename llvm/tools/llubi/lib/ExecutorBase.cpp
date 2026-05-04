@@ -100,7 +100,8 @@ std::optional<uint64_t> ExecutorBase::verifyMemAccess(const MemoryObject &MO,
   return Offset.getZExtValue();
 }
 
-AnyValue ExecutorBase::load(const AnyValue &Ptr, Align Alignment, Type *ValTy) {
+AnyValue ExecutorBase::load(const AnyValue &Ptr, Align Alignment, Type *ValTy,
+                            bool NoUndef) {
   if (Ptr.isPoison()) {
     reportImmediateUB() << "Invalid memory access with a poison pointer.";
     return AnyValue::getPoisonValue(Ctx, ValTy);
@@ -121,7 +122,12 @@ AnyValue ExecutorBase::load(const AnyValue &Ptr, Align Alignment, Type *ValTy) {
     if (MO->getState() == MemoryObjectState::Dead)
       return AnyValue::getPoisonValue(Ctx, ValTy);
 
-    return Ctx.load(*MO, *Offset, ValTy);
+    bool ContainsUndefinedBits = false;
+    AnyValue Res = Ctx.load(*MO, *Offset, ValTy,
+                            NoUndef ? &ContainsUndefinedBits : nullptr);
+    if (NoUndef && ContainsUndefinedBits)
+      reportImmediateUB() << "The value loaded contains undefined bits.";
+    return Res;
   }
   return AnyValue::getPoisonValue(Ctx, ValTy);
 }

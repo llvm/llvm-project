@@ -993,8 +993,9 @@ void RegsForValue::getCopyToRegs(SDValue Val, SelectionDAG &DAG,
                                *DAG.getContext(), *CallConv, RegVTs[Value])
                          : RegVTs[Value];
 
-    if (ExtendKind == ISD::ANY_EXTEND && TLI.isZExtFree(Val, RegisterVT))
-      ExtendKind = ISD::ZERO_EXTEND;
+    if (ExtendKind == ISD::ANY_EXTEND)
+      if (TLI.isZExtFree(peekThroughFreeze(Val), RegisterVT))
+        ExtendKind = ISD::ZERO_EXTEND;
 
     getCopyToParts(DAG, dl, Val.getValue(Val.getResNo() + Value), &Parts[Part],
                    NumParts, RegisterVT, V, CallConv, ExtendKind);

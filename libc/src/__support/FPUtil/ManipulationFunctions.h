@@ -210,7 +210,7 @@ template <typename T, typename U,
                                cpp::is_floating_point_v<U> &&
                                (sizeof(T) <= sizeof(U)),
                            int> = 0>
-LIBC_INLINE T nextafter(T from, U to) {
+LIBC_INLINE constexpr T nextafter(T from, U to) {
   FPBits<T> from_bits(from);
   if (from_bits.is_nan())
     return from;

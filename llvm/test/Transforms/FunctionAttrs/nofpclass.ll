@@ -308,8 +308,8 @@ define float @caller_transitive_nonan(float %arg, ptr %ptr) {
   ret float %ret
 }
 ;.
-; CHECK: attributes #[[ATTR0]] = { nofree norecurse nounwind memory(argmem: readwrite, inaccessiblemem: readwrite) }
-; CHECK: attributes #[[ATTR1]] = { nofree nounwind memory(argmem: readwrite, inaccessiblemem: readwrite) }
+; CHECK: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind memory(argmem: readwrite, inaccessiblemem: readwrite) }
+; CHECK: attributes #[[ATTR1]] = { nofree nosync nounwind memory(argmem: readwrite, inaccessiblemem: readwrite) }
 ; CHECK: attributes #[[ATTR2]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; CHECK: attributes #[[ATTR3]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read) }
 ;.

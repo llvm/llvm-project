@@ -243,7 +243,7 @@ size_t DIEAttributeCloner::cloneDieRefAttr(
       InUnit.resolveDIEReference(Val, ResolveInterCUReferencesMode::Resolve);
   if (!RefDiePair || !RefDiePair->DieEntry) {
     // If the referenced DIE is not found,  drop the attribute.
-    InUnit.warn("cann't find referenced DIE.", InputDieEntry);
+    InUnit.warn("could not find referenced DIE", InputDieEntry);
     return 0;
   }
 

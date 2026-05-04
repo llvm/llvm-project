@@ -408,6 +408,11 @@ Changes in existing checks
   Because it only sees one file at a time, the check can't be sure
   such entities aren't referenced in any other files of that module.
 
+- Improved :doc:`modernize-deprecated-headers
+  <clang-tidy/checks/modernize/deprecated-headers>` check by avoiding false
+  positives on project headers that use the same name as a standard library
+  header.
+
 - Improved :doc:`modernize-pass-by-value
   <clang-tidy/checks/modernize/pass-by-value>` check by adding `IgnoreMacros`
   option to suppress warnings in macros.
@@ -439,8 +444,12 @@ Changes in existing checks
   macros appearing in the return type of a function.
 
 - Improved :doc:`modernize-use-using
-  <clang-tidy/checks/modernize/use-using>` check by avoiding the generation
-  of invalid code for function types with redundant parentheses.
+  <clang-tidy/checks/modernize/use-using>` check:
+
+  - Avoid generating invalid code for function types with redundant
+    parentheses.
+
+  - Preserve inline comment blocks that appear between the ``typedef``'s parts.
 
 - Improved :doc:`performance-enum-size
   <clang-tidy/checks/performance/enum-size>` check:

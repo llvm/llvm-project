@@ -1669,7 +1669,7 @@ Value *llvm::emitStrChr(Value *Ptr, char C, IRBuilderBase &B,
   Type *CharPtrTy = B.getPtrTy();
   Type *IntTy = getIntTy(B, TLI);
   return emitLibCall(LibFunc_strchr, CharPtrTy, {CharPtrTy, IntTy},
-                     {Ptr, ConstantInt::get(IntTy, C)}, B, TLI);
+                     {Ptr, ConstantInt::get(IntTy, (unsigned char)C)}, B, TLI);
 }
 
 Value *llvm::emitStrNCmp(Value *Ptr1, Value *Ptr2, Value *Len, IRBuilderBase &B,

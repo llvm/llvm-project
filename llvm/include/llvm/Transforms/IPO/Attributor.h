@@ -3612,9 +3612,6 @@ struct AANoSync
   /// or monotonic ordering
   LLVM_ABI static bool isNonRelaxedAtomic(const Instruction *I);
 
-  /// Helper function specific for intrinsics which are potentially volatile.
-  LLVM_ABI static bool isNoSyncIntrinsic(const Instruction *I);
-
   /// Helper function to determine if \p CB is an aligned (GPU) barrier. Aligned
   /// barriers have to be executed by all threads. The flag \p ExecutedAligned
   /// indicates if the call is executed by all threads in a (thread) block in an

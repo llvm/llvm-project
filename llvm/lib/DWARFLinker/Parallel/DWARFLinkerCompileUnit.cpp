@@ -404,8 +404,14 @@ std::optional<UnitEntryPairTy> CompileUnit::resolveDIEReference(
 
   if (RefCU == this) {
     // Referenced DIE is in current compile unit.
-    if (std::optional<uint32_t> RefDieIdx = getDIEIndexForOffset(RefDIEOffset))
-      return UnitEntryPairTy{this, getDebugInfoEntry(*RefDieIdx)};
+    if (std::optional<uint32_t> RefDieIdx =
+            getDIEIndexForOffset(RefDIEOffset)) {
+      const DWARFDebugInfoEntry *RefEntry = getDebugInfoEntry(*RefDieIdx);
+      // In a file with broken references, an attribute might point to a
+      // NULL DIE. Treat that as a resolution failure so callers can warn.
+      if (RefEntry && RefEntry->getAbbreviationDeclarationPtr())
+        return UnitEntryPairTy{this, RefEntry};
+    }
   } else if (RefCU && CanResolveInterCUReferences) {
     // Referenced DIE is in other compile unit.
 
@@ -415,8 +421,12 @@ std::optional<UnitEntryPairTy> CompileUnit::resolveDIEReference(
       return UnitEntryPairTy{RefCU, nullptr};
 
     if (std::optional<uint32_t> RefDieIdx =
-            RefCU->getDIEIndexForOffset(RefDIEOffset))
-      return UnitEntryPairTy{RefCU, RefCU->getDebugInfoEntry(*RefDieIdx)};
+            RefCU->getDIEIndexForOffset(RefDIEOffset)) {
+      const DWARFDebugInfoEntry *RefEntry =
+          RefCU->getDebugInfoEntry(*RefDieIdx);
+      if (RefEntry && RefEntry->getAbbreviationDeclarationPtr())
+        return UnitEntryPairTy{RefCU, RefEntry};
+    }
   } else {
     return UnitEntryPairTy{RefCU, nullptr};
   }

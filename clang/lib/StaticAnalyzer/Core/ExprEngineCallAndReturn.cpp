@@ -534,15 +534,12 @@ void ExprEngine::inlineCall(WorkList *WList, const CallEvent &Call,
 
   const LocationContext *CurLC = Pred->getLocationContext();
   const StackFrameContext *CallerSFC = CurLC->getStackFrame();
-  const LocationContext *ParentOfCallee = CallerSFC;
+  const BlockDataRegion *BlockInvocationData = nullptr;
   if (Call.getKind() == CE_Block &&
       !cast<BlockCall>(Call).isConversionFromLambda()) {
-    const BlockDataRegion *BR = cast<BlockCall>(Call).getBlockRegion();
-    assert(BR && "If we have the block definition we should have its region");
-    AnalysisDeclContext *BlockCtx = AMgr.getAnalysisDeclContext(D);
-    ParentOfCallee = BlockCtx->getBlockInvocationContext(CallerSFC,
-                                                         cast<BlockDecl>(D),
-                                                         BR);
+    BlockInvocationData = cast<BlockCall>(Call).getBlockRegion();
+    assert(BlockInvocationData &&
+           "If we have the block definition we should have its region");
   }
 
   // This may be NULL, but that's fine.
@@ -550,9 +547,9 @@ void ExprEngine::inlineCall(WorkList *WList, const CallEvent &Call,
 
   // Construct a new stack frame for the callee.
   AnalysisDeclContext *CalleeADC = AMgr.getAnalysisDeclContext(D);
-  const StackFrameContext *CalleeSFC =
-      CalleeADC->getStackFrame(ParentOfCallee, CallE, getCurrBlock(),
-                               getNumVisitedCurrent(), currStmtIdx);
+  const StackFrameContext *CalleeSFC = CalleeADC->getStackFrame(
+      CallerSFC, BlockInvocationData, CallE, getCurrBlock(),
+      getNumVisitedCurrent(), currStmtIdx);
 
   CallEnter Loc(CallE, CalleeSFC, CurLC);
 

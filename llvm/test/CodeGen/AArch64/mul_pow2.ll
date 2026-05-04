@@ -109,11 +109,17 @@ define i32 @test6_madd(i32 %x, i32 %y) {
 }
 
 define i32 @test6_msub(i32 %x, i32 %y) {
-; CHECK-LABEL: test6_msub:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #6 // =0x6
-; CHECK-NEXT:    msub w0, w0, w8, w1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: test6_msub:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    mov w8, #6 // =0x6
+; CHECK-SD-NEXT:    msub w0, w0, w8, w1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test6_msub:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov w8, #-6 // =0xfffffffa
+; CHECK-GI-NEXT:    madd w0, w0, w8, w1
+; CHECK-GI-NEXT:    ret
 
   %mul = mul nsw i32 %x, 6
   %sub = sub i32 %y, %mul
@@ -147,11 +153,18 @@ define i64 @test6_smaddl(i32 %x, i64 %y) {
 }
 
 define i64 @test6_umsubl(i32 %x, i64 %y) {
-; CHECK-LABEL: test6_umsubl:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #6 // =0x6
-; CHECK-NEXT:    umsubl x0, w0, w8, x1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: test6_umsubl:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    mov w8, #6 // =0x6
+; CHECK-SD-NEXT:    umsubl x0, w0, w8, x1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test6_umsubl:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov x8, #-6 // =0xfffffffffffffffa
+; CHECK-GI-NEXT:    mov w9, w0
+; CHECK-GI-NEXT:    madd x0, x9, x8, x1
+; CHECK-GI-NEXT:    ret
 
   %ext = zext i32 %x to i64
   %mul = mul nsw i64 %ext, 6
@@ -160,11 +173,17 @@ define i64 @test6_umsubl(i32 %x, i64 %y) {
 }
 
 define i64 @test6_smsubl(i32 %x, i64 %y) {
-; CHECK-LABEL: test6_smsubl:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #6 // =0x6
-; CHECK-NEXT:    smsubl x0, w0, w8, x1
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: test6_smsubl:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    mov w8, #6 // =0x6
+; CHECK-SD-NEXT:    smsubl x0, w0, w8, x1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test6_smsubl:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov w8, #-6 // =0xfffffffa
+; CHECK-GI-NEXT:    smaddl x0, w0, w8, x1
+; CHECK-GI-NEXT:    ret
 
   %ext = sext i32 %x to i64
   %mul = mul nsw i64 %ext, 6
@@ -173,11 +192,18 @@ define i64 @test6_smsubl(i32 %x, i64 %y) {
 }
 
 define i64 @test6_umnegl(i32 %x) {
-; CHECK-LABEL: test6_umnegl:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #6 // =0x6
-; CHECK-NEXT:    umnegl x0, w0, w8
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: test6_umnegl:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    mov w8, #6 // =0x6
+; CHECK-SD-NEXT:    umnegl x0, w0, w8
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test6_umnegl:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov x8, #-6 // =0xfffffffffffffffa
+; CHECK-GI-NEXT:    mov w9, w0
+; CHECK-GI-NEXT:    mul x0, x9, x8
+; CHECK-GI-NEXT:    ret
 
   %ext = zext i32 %x to i64
   %mul = mul nsw i64 %ext, 6
@@ -186,11 +212,17 @@ define i64 @test6_umnegl(i32 %x) {
 }
 
 define i64 @test6_smnegl(i32 %x) {
-; CHECK-LABEL: test6_smnegl:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #6 // =0x6
-; CHECK-NEXT:    smnegl x0, w0, w8
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: test6_smnegl:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    mov w8, #6 // =0x6
+; CHECK-SD-NEXT:    smnegl x0, w0, w8
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test6_smnegl:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov w8, #-6 // =0xfffffffa
+; CHECK-GI-NEXT:    smull x0, w0, w8
+; CHECK-GI-NEXT:    ret
 
   %ext = sext i32 %x to i64
   %mul = mul nsw i64 %ext, 6

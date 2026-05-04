@@ -309,10 +309,7 @@ define void @fun17(ptr %Dst, ptr %Src, i8 %val) {
 define void @fun17_unaligned(ptr %Dst, ptr %Src, i8 %val) {
 ; CHECK-LABEL: fun17_unaligned:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lb %r0, 16(%r3)
-; CHECK-NEXT:    stc %r0, 16(%r2)
-; CHECK-NEXT:    vl %v0, 0(%r3)
-; CHECK-NEXT:    vst %v0, 0(%r2)
+; CHECK-NEXT:    mvc 0(17,%r2), 0(%r3)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %Dst, ptr align 1 %Src, i64 17, i1 false)
   ret void
@@ -321,10 +318,7 @@ define void @fun17_unaligned(ptr %Dst, ptr %Src, i8 %val) {
 define void @fun17_unalignedSrc(ptr %Dst, ptr %Src, i8 %val) {
 ; CHECK-LABEL: fun17_unalignedSrc:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lb %r0, 16(%r3)
-; CHECK-NEXT:    stc %r0, 16(%r2)
-; CHECK-NEXT:    vl %v0, 0(%r3)
-; CHECK-NEXT:    vst %v0, 0(%r2)
+; CHECK-NEXT:    mvc 0(17,%r2), 0(%r3)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memcpy.p0.p0.i64(ptr align 16 %Dst, ptr align 4 %Src, i64 17, i1 false)
   ret void
@@ -345,10 +339,7 @@ define void @fun18(ptr %Dst, ptr %Src, i8 %val) {
 define void @fun18_unaligned(ptr %Dst, ptr %Src, i8 %val) {
 ; CHECK-LABEL: fun18_unaligned:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lh %r0, 16(%r3)
-; CHECK-NEXT:    sth %r0, 16(%r2)
-; CHECK-NEXT:    vl %v0, 0(%r3)
-; CHECK-NEXT:    vst %v0, 0(%r2)
+; CHECK-NEXT:    mvc 0(18,%r2), 0(%r3)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %Dst, ptr align 1 %Src, i64 18, i1 false)
   ret void
@@ -357,10 +348,7 @@ define void @fun18_unaligned(ptr %Dst, ptr %Src, i8 %val) {
 define void @fun18_unalignedDst(ptr %Dst, ptr %Src, i8 %val) {
 ; CHECK-LABEL: fun18_unalignedDst:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lh %r0, 16(%r3)
-; CHECK-NEXT:    sth %r0, 16(%r2)
-; CHECK-NEXT:    vl %v0, 0(%r3)
-; CHECK-NEXT:    vst %v0, 0(%r2)
+; CHECK-NEXT:    mvc 0(18,%r2), 0(%r3)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memcpy.p0.p0.i64(ptr align 2 %Dst, ptr align 16 %Src, i64 18, i1 false)
   ret void
@@ -381,10 +369,7 @@ define void @fun19(ptr %Dst, ptr %Src, i8 %val) {
 define void @fun19_unaligned(ptr %Dst, ptr %Src, i8 %val) {
 ; CHECK-LABEL: fun19_unaligned:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    l %r0, 15(%r3)
-; CHECK-NEXT:    st %r0, 15(%r2)
-; CHECK-NEXT:    vl %v0, 0(%r3)
-; CHECK-NEXT:    vst %v0, 0(%r2)
+; CHECK-NEXT:    mvc 0(19,%r2), 0(%r3)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %Dst, ptr align 1 %Src, i64 19, i1 false)
   ret void
@@ -405,10 +390,7 @@ define void @fun20(ptr %Dst, ptr %Src, i8 %val) {
 define void @fun20_unaligned(ptr %Dst, ptr %Src, i8 %val) {
 ; CHECK-LABEL: fun20_unaligned:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    l %r0, 16(%r3)
-; CHECK-NEXT:    st %r0, 16(%r2)
-; CHECK-NEXT:    vl %v0, 0(%r3)
-; CHECK-NEXT:    vst %v0, 0(%r2)
+; CHECK-NEXT:    mvc 0(20,%r2), 0(%r3)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %Dst, ptr align 1 %Src, i64 20, i1 false)
   ret void
@@ -444,10 +426,7 @@ define void @fun21(ptr %Dst, ptr %Src, i8 %val) {
 define void @fun21_unaligned(ptr %Dst, ptr %Src, i8 %val) {
 ; CHECK-LABEL: fun21_unaligned:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lg %r0, 13(%r3)
-; CHECK-NEXT:    stg %r0, 13(%r2)
-; CHECK-NEXT:    vl %v0, 0(%r3)
-; CHECK-NEXT:    vst %v0, 0(%r2)
+; CHECK-NEXT:    mvc 0(21,%r2), 0(%r3)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %Dst, ptr align 1 %Src, i64 21, i1 false)
   ret void
@@ -468,10 +447,7 @@ define void @fun22(ptr %Dst, ptr %Src, i8 %val) {
 define void @fun22_unaligned(ptr %Dst, ptr %Src, i8 %val) {
 ; CHECK-LABEL: fun22_unaligned:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lg %r0, 14(%r3)
-; CHECK-NEXT:    stg %r0, 14(%r2)
-; CHECK-NEXT:    vl %v0, 0(%r3)
-; CHECK-NEXT:    vst %v0, 0(%r2)
+; CHECK-NEXT:    mvc 0(22,%r2), 0(%r3)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %Dst, ptr align 1 %Src, i64 22, i1 false)
   ret void
@@ -492,10 +468,7 @@ define void @fun23(ptr %Dst, ptr %Src, i8 %val) {
 define void @fun23_unaligned(ptr %Dst, ptr %Src, i8 %val) {
 ; CHECK-LABEL: fun23_unaligned:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lg %r0, 15(%r3)
-; CHECK-NEXT:    stg %r0, 15(%r2)
-; CHECK-NEXT:    vl %v0, 0(%r3)
-; CHECK-NEXT:    vst %v0, 0(%r2)
+; CHECK-NEXT:    mvc 0(23,%r2), 0(%r3)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %Dst, ptr align 1 %Src, i64 23, i1 false)
   ret void
@@ -516,10 +489,7 @@ define void @fun24(ptr %Dst, ptr %Src, i8 %val) {
 define void @fun24_unaligned(ptr %Dst, ptr %Src, i8 %val) {
 ; CHECK-LABEL: fun24_unaligned:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lg %r0, 16(%r3)
-; CHECK-NEXT:    stg %r0, 16(%r2)
-; CHECK-NEXT:    vl %v0, 0(%r3)
-; CHECK-NEXT:    vst %v0, 0(%r2)
+; CHECK-NEXT:    mvc 0(24,%r2), 0(%r3)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %Dst, ptr align 1 %Src, i64 24, i1 false)
   ret void
@@ -528,10 +498,7 @@ define void @fun24_unaligned(ptr %Dst, ptr %Src, i8 %val) {
 define void @fun25(ptr %Dst, ptr %Src, i8 %val) {
 ; CHECK-LABEL: fun25:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl %v0, 9(%r3)
-; CHECK-NEXT:    vst %v0, 9(%r2)
-; CHECK-NEXT:    vl %v0, 0(%r3), 3
-; CHECK-NEXT:    vst %v0, 0(%r2), 3
+; CHECK-NEXT:    mvc 0(25,%r2), 0(%r3)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %Dst, ptr align 8 %Src, i64 25, i1 false)
   ret void
@@ -540,10 +507,7 @@ define void @fun25(ptr %Dst, ptr %Src, i8 %val) {
 define void @fun25_unaligned(ptr %Dst, ptr %Src, i8 %val) {
 ; CHECK-LABEL: fun25_unaligned:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl %v0, 9(%r3)
-; CHECK-NEXT:    vst %v0, 9(%r2)
-; CHECK-NEXT:    vl %v0, 0(%r3)
-; CHECK-NEXT:    vst %v0, 0(%r2)
+; CHECK-NEXT:    mvc 0(25,%r2), 0(%r3)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %Dst, ptr align 1 %Src, i64 25, i1 false)
   ret void
@@ -552,10 +516,7 @@ define void @fun25_unaligned(ptr %Dst, ptr %Src, i8 %val) {
 define void @fun26(ptr %Dst, ptr %Src, i8 %val) {
 ; CHECK-LABEL: fun26:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl %v0, 10(%r3)
-; CHECK-NEXT:    vst %v0, 10(%r2)
-; CHECK-NEXT:    vl %v0, 0(%r3), 3
-; CHECK-NEXT:    vst %v0, 0(%r2), 3
+; CHECK-NEXT:    mvc 0(26,%r2), 0(%r3)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %Dst, ptr align 8 %Src, i64 26, i1 false)
   ret void
@@ -564,10 +525,7 @@ define void @fun26(ptr %Dst, ptr %Src, i8 %val) {
 define void @fun26_unaligned(ptr %Dst, ptr %Src, i8 %val) {
 ; CHECK-LABEL: fun26_unaligned:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl %v0, 10(%r3)
-; CHECK-NEXT:    vst %v0, 10(%r2)
-; CHECK-NEXT:    vl %v0, 0(%r3)
-; CHECK-NEXT:    vst %v0, 0(%r2)
+; CHECK-NEXT:    mvc 0(26,%r2), 0(%r3)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %Dst, ptr align 1 %Src, i64 26, i1 false)
   ret void
@@ -576,10 +534,7 @@ define void @fun26_unaligned(ptr %Dst, ptr %Src, i8 %val) {
 define void @fun27(ptr %Dst, ptr %Src, i8 %val) {
 ; CHECK-LABEL: fun27:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl %v0, 11(%r3)
-; CHECK-NEXT:    vst %v0, 11(%r2)
-; CHECK-NEXT:    vl %v0, 0(%r3), 3
-; CHECK-NEXT:    vst %v0, 0(%r2), 3
+; CHECK-NEXT:    mvc 0(27,%r2), 0(%r3)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %Dst, ptr align 8 %Src, i64 27, i1 false)
   ret void
@@ -588,10 +543,7 @@ define void @fun27(ptr %Dst, ptr %Src, i8 %val) {
 define void @fun27_unaligned(ptr %Dst, ptr %Src, i8 %val) {
 ; CHECK-LABEL: fun27_unaligned:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl %v0, 11(%r3)
-; CHECK-NEXT:    vst %v0, 11(%r2)
-; CHECK-NEXT:    vl %v0, 0(%r3)
-; CHECK-NEXT:    vst %v0, 0(%r2)
+; CHECK-NEXT:    mvc 0(27,%r2), 0(%r3)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %Dst, ptr align 1 %Src, i64 27, i1 false)
   ret void
@@ -600,10 +552,7 @@ define void @fun27_unaligned(ptr %Dst, ptr %Src, i8 %val) {
 define void @fun28(ptr %Dst, ptr %Src, i8 %val) {
 ; CHECK-LABEL: fun28:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl %v0, 12(%r3)
-; CHECK-NEXT:    vst %v0, 12(%r2)
-; CHECK-NEXT:    vl %v0, 0(%r3), 3
-; CHECK-NEXT:    vst %v0, 0(%r2), 3
+; CHECK-NEXT:    mvc 0(28,%r2), 0(%r3)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %Dst, ptr align 8 %Src, i64 28, i1 false)
   ret void
@@ -612,10 +561,7 @@ define void @fun28(ptr %Dst, ptr %Src, i8 %val) {
 define void @fun28_unaligned(ptr %Dst, ptr %Src, i8 %val) {
 ; CHECK-LABEL: fun28_unaligned:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl %v0, 12(%r3)
-; CHECK-NEXT:    vst %v0, 12(%r2)
-; CHECK-NEXT:    vl %v0, 0(%r3)
-; CHECK-NEXT:    vst %v0, 0(%r2)
+; CHECK-NEXT:    mvc 0(28,%r2), 0(%r3)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %Dst, ptr align 1 %Src, i64 28, i1 false)
   ret void
@@ -624,10 +570,7 @@ define void @fun28_unaligned(ptr %Dst, ptr %Src, i8 %val) {
 define void @fun29(ptr %Dst, ptr %Src, i8 %val) {
 ; CHECK-LABEL: fun29:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl %v0, 13(%r3)
-; CHECK-NEXT:    vst %v0, 13(%r2)
-; CHECK-NEXT:    vl %v0, 0(%r3), 3
-; CHECK-NEXT:    vst %v0, 0(%r2), 3
+; CHECK-NEXT:    mvc 0(29,%r2), 0(%r3)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %Dst, ptr align 8 %Src, i64 29, i1 false)
   ret void
@@ -636,10 +579,7 @@ define void @fun29(ptr %Dst, ptr %Src, i8 %val) {
 define void @fun29_unaligned(ptr %Dst, ptr %Src, i8 %val) {
 ; CHECK-LABEL: fun29_unaligned:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl %v0, 13(%r3)
-; CHECK-NEXT:    vst %v0, 13(%r2)
-; CHECK-NEXT:    vl %v0, 0(%r3)
-; CHECK-NEXT:    vst %v0, 0(%r2)
+; CHECK-NEXT:    mvc 0(29,%r2), 0(%r3)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %Dst, ptr align 1 %Src, i64 29, i1 false)
   ret void
@@ -648,10 +588,7 @@ define void @fun29_unaligned(ptr %Dst, ptr %Src, i8 %val) {
 define void @fun30(ptr %Dst, ptr %Src, i8 %val) {
 ; CHECK-LABEL: fun30:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl %v0, 14(%r3)
-; CHECK-NEXT:    vst %v0, 14(%r2)
-; CHECK-NEXT:    vl %v0, 0(%r3), 3
-; CHECK-NEXT:    vst %v0, 0(%r2), 3
+; CHECK-NEXT:    mvc 0(30,%r2), 0(%r3)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %Dst, ptr align 8 %Src, i64 30, i1 false)
   ret void
@@ -660,10 +597,7 @@ define void @fun30(ptr %Dst, ptr %Src, i8 %val) {
 define void @fun30_unaligned(ptr %Dst, ptr %Src, i8 %val) {
 ; CHECK-LABEL: fun30_unaligned:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl %v0, 14(%r3)
-; CHECK-NEXT:    vst %v0, 14(%r2)
-; CHECK-NEXT:    vl %v0, 0(%r3)
-; CHECK-NEXT:    vst %v0, 0(%r2)
+; CHECK-NEXT:    mvc 0(30,%r2), 0(%r3)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %Dst, ptr align 1 %Src, i64 30, i1 false)
   ret void
@@ -672,10 +606,7 @@ define void @fun30_unaligned(ptr %Dst, ptr %Src, i8 %val) {
 define void @fun31(ptr %Dst, ptr %Src, i8 %val) {
 ; CHECK-LABEL: fun31:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl %v0, 15(%r3)
-; CHECK-NEXT:    vst %v0, 15(%r2)
-; CHECK-NEXT:    vl %v0, 0(%r3), 3
-; CHECK-NEXT:    vst %v0, 0(%r2), 3
+; CHECK-NEXT:    mvc 0(31,%r2), 0(%r3)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %Dst, ptr align 8 %Src, i64 31, i1 false)
   ret void
@@ -684,10 +615,7 @@ define void @fun31(ptr %Dst, ptr %Src, i8 %val) {
 define void @fun31_unaligned(ptr %Dst, ptr %Src, i8 %val) {
 ; CHECK-LABEL: fun31_unaligned:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl %v0, 15(%r3)
-; CHECK-NEXT:    vst %v0, 15(%r2)
-; CHECK-NEXT:    vl %v0, 0(%r3)
-; CHECK-NEXT:    vst %v0, 0(%r2)
+; CHECK-NEXT:    mvc 0(31,%r2), 0(%r3)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %Dst, ptr align 1 %Src, i64 31, i1 false)
   ret void
@@ -708,10 +636,7 @@ define void @fun32(ptr %Dst, ptr %Src, i8 %val) {
 define void @fun32_unaligned(ptr %Dst, ptr %Src, i8 %val) {
 ; CHECK-LABEL: fun32_unaligned:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vl %v0, 16(%r3)
-; CHECK-NEXT:    vst %v0, 16(%r2)
-; CHECK-NEXT:    vl %v0, 0(%r3)
-; CHECK-NEXT:    vst %v0, 0(%r2)
+; CHECK-NEXT:    mvc 0(32,%r2), 0(%r3)
 ; CHECK-NEXT:    br %r14
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %Dst, ptr align 1 %Src, i64 32, i1 false)
   ret void

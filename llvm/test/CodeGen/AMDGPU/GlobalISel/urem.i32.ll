@@ -217,9 +217,9 @@ define i32 @v_urem_i32_oddk_denom(i32 %num) {
 ; CHECK-NEXT:    v_lshrrev_b32_e32 v2, 1, v2
 ; CHECK-NEXT:    v_add_i32_e32 v1, vcc, v2, v1
 ; CHECK-NEXT:    v_lshrrev_b32_e32 v1, 20, v1
-; CHECK-NEXT:    v_mov_b32_e32 v2, 0x12d8fb
+; CHECK-NEXT:    v_mov_b32_e32 v2, 0xffed2705
 ; CHECK-NEXT:    v_mul_lo_u32 v1, v1, v2
-; CHECK-NEXT:    v_sub_i32_e32 v0, vcc, v0, v1
+; CHECK-NEXT:    v_add_i32_e32 v0, vcc, v0, v1
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %result = urem i32 %num, 1235195
   ret i32 %result
@@ -230,7 +230,7 @@ define <2 x i32> @v_urem_v2i32_oddk_denom(<2 x i32> %num) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0xb2a50881
-; CHECK-NEXT:    v_mov_b32_e32 v3, 0x12d8fb
+; CHECK-NEXT:    v_mov_b32_e32 v3, 0xffed2705
 ; CHECK-NEXT:    v_mul_hi_u32 v4, v0, v2
 ; CHECK-NEXT:    v_mul_hi_u32 v2, v1, v2
 ; CHECK-NEXT:    v_sub_i32_e32 v5, vcc, v0, v4
@@ -243,8 +243,8 @@ define <2 x i32> @v_urem_v2i32_oddk_denom(<2 x i32> %num) {
 ; CHECK-NEXT:    v_lshrrev_b32_e32 v2, 20, v2
 ; CHECK-NEXT:    v_mul_lo_u32 v4, v4, v3
 ; CHECK-NEXT:    v_mul_lo_u32 v2, v2, v3
-; CHECK-NEXT:    v_sub_i32_e32 v0, vcc, v0, v4
-; CHECK-NEXT:    v_sub_i32_e32 v1, vcc, v1, v2
+; CHECK-NEXT:    v_add_i32_e32 v0, vcc, v0, v4
+; CHECK-NEXT:    v_add_i32_e32 v1, vcc, v1, v2
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %result = urem <2 x i32> %num, <i32 1235195, i32 1235195>
   ret <2 x i32> %result

@@ -57,7 +57,7 @@ public:
           for (Type elementType : concreteType.getElementTypes())
             add(elementType);
         })
-        .Case<SamplerType>([](auto) { /* no extensions */ })
+        .Case<SamplerType, NamedBarrierType>([](auto) { /* no extensions */ })
         .DefaultUnreachable("Unhandled type");
   }
 
@@ -109,6 +109,11 @@ public:
             add(elementType);
         })
         .Case<SamplerType>([](auto) { /* no capabilities */ })
+        .Case<NamedBarrierType>([this](auto) {
+          static const Capability caps[] = {Capability::NamedBarrier};
+          ArrayRef<Capability> ref(caps, std::size(caps));
+          capabilities.push_back(ref);
+        })
         .DefaultUnreachable("Unhandled type");
   }
 
@@ -817,6 +822,14 @@ SamplerType SamplerType::get(MLIRContext *context) {
 }
 
 //===----------------------------------------------------------------------===//
+// NamedBarrierType
+//===----------------------------------------------------------------------===//
+
+NamedBarrierType NamedBarrierType::get(MLIRContext *context) {
+  return Base::get(context);
+}
+
+//===----------------------------------------------------------------------===//
 // StructType
 //===----------------------------------------------------------------------===//
 
@@ -1352,7 +1365,7 @@ TensorArmType::verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
 //===----------------------------------------------------------------------===//
 
 void SPIRVDialect::registerTypes() {
-  addTypes<ArrayType, CooperativeMatrixType, ImageType, MatrixType, PointerType,
-           RuntimeArrayType, SampledImageType, SamplerType, StructType,
-           TensorArmType>();
+  addTypes<ArrayType, CooperativeMatrixType, ImageType, MatrixType,
+           NamedBarrierType, PointerType, RuntimeArrayType, SampledImageType,
+           SamplerType, StructType, TensorArmType>();
 }

@@ -639,7 +639,7 @@ bool DependencyTracker::maybeAddReferencedRoots(
                  ? ResolveInterCUReferencesMode::Resolve
                  : ResolveInterCUReferencesMode::AvoidResolving);
     if (!RefDie) {
-      Entry.CU->warn("cann't find referenced DIE", Entry.DieEntry);
+      Entry.CU->warn("could not find referenced DIE", Entry.DieEntry);
       continue;
     }
 

@@ -808,5 +808,5 @@ entry:
 
 
 ; CHECK: attributes [[NUW]] = { nounwind }
-; CHECK: attributes #1 = { nocallback nofree nounwind willreturn memory(argmem: write) }
+; CHECK: attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 ; CHECK: attributes #2 = { nonlazybind }

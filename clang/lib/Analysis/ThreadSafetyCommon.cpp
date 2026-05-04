@@ -187,10 +187,15 @@ CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
   }
 
   // If the attribute has no arguments, then assume the argument is "this".
-  if (!AttrExp)
+  // SelfArg may be null for non-method callees (e.g. function pointers).
+  if (!AttrExp) {
+    if (!Ctx.SelfArg)
+      return CapabilityExpr();
     return translateAttrExpr(cast<const Expr *>(Ctx.SelfArg), nullptr);
-  else  // For most attributes.
-    return translateAttrExpr(AttrExp, &Ctx);
+  }
+
+  // For most attributes.
+  return translateAttrExpr(AttrExp, &Ctx);
 }
 
 /// Translate a clang expression in an attribute to a til::SExpr.
@@ -374,6 +379,30 @@ til::SExpr *SExprBuilder::translate(const Stmt *S, CallingContext *Ctx) {
   return new (Arena) til::Undefined(S);
 }
 
+/// Helper to extract the canonical parameter declaration from a function or
+/// function pointer. This unwraps pointer and reference types to reach the
+/// underlying function prototype.
+static const ParmVarDecl *getCanonicalParamDecl(const Decl *D, unsigned I) {
+  if (const auto *FD = dyn_cast<FunctionDecl>(D))
+    return FD->getCanonicalDecl()->getParamDecl(I);
+  if (const auto *MD = dyn_cast<ObjCMethodDecl>(D))
+    return MD->getCanonicalDecl()->getParamDecl(I);
+  if (const auto *DD = dyn_cast<DeclaratorDecl>(D)) {
+    if (auto *TSI = DD->getTypeSourceInfo()) {
+      TypeLoc TL = TSI->getTypeLoc();
+      if (auto RTL = TL.getAsAdjusted<ReferenceTypeLoc>())
+        TL = RTL.getPointeeLoc();
+      // A function pointer can be multiple levels deep.
+      while (auto PTL = TL.getAsAdjusted<PointerTypeLoc>())
+        TL = PTL.getPointeeLoc();
+      if (auto FPTL = TL.getAsAdjusted<FunctionProtoTypeLoc>())
+        if (I < FPTL.getNumParams())
+          return FPTL.getParam(I);
+    }
+  }
+  return nullptr;
+}
+
 til::SExpr *SExprBuilder::translateDeclRefExpr(const DeclRefExpr *DRE,
                                                CallingContext *Ctx) {
   const auto *VD = cast<ValueDecl>(DRE->getDecl()->getCanonicalDecl());
@@ -384,9 +413,17 @@ til::SExpr *SExprBuilder::translateDeclRefExpr(const DeclRefExpr *DRE,
     const DeclContext *D = PV->getDeclContext();
     if (Ctx && Ctx->FunArgs) {
       const Decl *Canonical = Ctx->AttrDecl->getCanonicalDecl();
-      if (isa<FunctionDecl>(D)
-              ? (cast<FunctionDecl>(D)->getCanonicalDecl() == Canonical)
-              : (cast<ObjCMethodDecl>(D)->getCanonicalDecl() == Canonical)) {
+      bool Match = false;
+      if (const auto *FD = dyn_cast<FunctionDecl>(D))
+        Match = (FD->getCanonicalDecl() == Canonical);
+      else if (const auto *MD = dyn_cast<ObjCMethodDecl>(D))
+        Match = (MD->getCanonicalDecl() == Canonical);
+      else if (getCanonicalParamDecl(Canonical, I) == PV->getCanonicalDecl())
+        Match = true;
+      else
+        llvm_unreachable("ParmVarDecl does not belong to current declaration");
+
+      if (Match) {
         // Substitute call arguments for references to function parameters
         if (const Expr *const *FunArgs =
                 dyn_cast<const Expr *const *>(Ctx->FunArgs)) {
@@ -400,9 +437,8 @@ til::SExpr *SExprBuilder::translateDeclRefExpr(const DeclRefExpr *DRE,
     }
     // Map the param back to the param of the original function declaration
     // for consistent comparisons.
-    VD = isa<FunctionDecl>(D)
-             ? cast<FunctionDecl>(D)->getCanonicalDecl()->getParamDecl(I)
-             : cast<ObjCMethodDecl>(D)->getCanonicalDecl()->getParamDecl(I);
+    if (const auto *PVD = getCanonicalParamDecl(cast<Decl>(D), I))
+      VD = PVD;
   }
 
   if (const auto *VarD = dyn_cast<VarDecl>(VD))

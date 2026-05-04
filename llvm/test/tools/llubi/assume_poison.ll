@@ -8,5 +8,5 @@ define void @main() {
 ; CHECK: Entering function: main
 ; CHECK-NEXT: Stacktrace:
 ; CHECK-NEXT: #0   call void @llvm.assume(i1 poison) at @main
-; CHECK-NEXT: Immediate UB detected: Assume on false or poison condition.
+; CHECK-NEXT: Immediate UB detected: The value poison violates noundef attribute.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

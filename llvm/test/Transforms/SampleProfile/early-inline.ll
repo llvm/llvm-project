@@ -58,19 +58,21 @@ attributes #0 = {"target-features"="+sse4.1" "use-sample-profile"}
 attributes #1 = {"target-features"="+sse4.2" "use-sample-profile"}
 
 !llvm.dbg.cu = !{!0}
+!18 = !{null}
+!19 = !DISubroutineType(types: !18)
 !llvm.module.flags = !{!3, !4}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1)
 !1 = !DIFile(filename: "a", directory: "b/")
 !3 = !{i32 2, !"Dwarf Version", i32 4}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
-!6 = distinct !DISubprogram(linkageName: "_Z3foov", scope: !1, file: !1, line: 5, scopeLine: 5, unit: !0)
+!6 = distinct !DISubprogram(linkageName: "_Z3foov", scope: !1, file: !1, line: 5, scopeLine: 5, type: !19, unit: !0)
 !9 = !DILocation(line: 6, column: 3, scope: !6)
 !10 = !DILocation(line: 8, column: 5, scope: !11)
 !11 = distinct !DILexicalBlock(scope: !6, file: !1, line: 7, column: 7)
-!12 = distinct !DISubprogram(linkageName: "_ZL3barv", scope: !1, file: !1, line: 20, scopeLine: 20, unit: !0)
-!13 = distinct !DISubprogram(linkageName: "recursive", scope: !1, file: !1, line: 20, scopeLine: 20, unit: !0)
+!12 = distinct !DISubprogram(linkageName: "_ZL3barv", scope: !1, file: !1, line: 20, scopeLine: 20, type: !19, unit: !0)
+!13 = distinct !DISubprogram(linkageName: "recursive", scope: !1, file: !1, line: 20, scopeLine: 20, type: !19, unit: !0)
 !14 = !DILocation(line: 21, column: 3, scope: !13)
 !15 = !DILocation(line: 22, column: 3, scope: !13)
 !16 = !DILocation(line: 7, column: 3, scope: !6)
-!17 = distinct !DISubprogram(linkageName: "no_inline", scope: !1, file: !1, line: 20, scopeLine: 20, unit: !0)
+!17 = distinct !DISubprogram(linkageName: "no_inline", scope: !1, file: !1, line: 20, scopeLine: 20, type: !19, unit: !0)

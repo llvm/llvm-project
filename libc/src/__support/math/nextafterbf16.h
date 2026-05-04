@@ -17,7 +17,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE bfloat16 nextafterbf16(bfloat16 x, bfloat16 y) {
+LIBC_INLINE constexpr bfloat16 nextafterbf16(bfloat16 x, bfloat16 y) {
   return fputil::nextafter(x, y);
 }
 

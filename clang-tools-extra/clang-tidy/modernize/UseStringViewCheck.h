@@ -42,6 +42,10 @@ private:
   StringRef U32StringViewClass = "std::u32string_view";
 
   const std::vector<StringRef> IgnoredFunctions;
+  // If true, the check will also consider overloaded functions for
+  // string_view conversion suggestions. When false (default), overloaded
+  // functions are skipped to avoid potential issues with ambiguous conversions.
+  bool CheckOverloadedFunctions = false;
 };
 
 } // namespace clang::tidy::modernize

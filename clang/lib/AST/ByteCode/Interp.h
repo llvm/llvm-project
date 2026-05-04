@@ -1977,6 +1977,11 @@ inline bool GetRefLocal(InterpState &S, CodePtr OpPC, uint32_t I) {
   return handleReference(S, OpPC, LocalBlock);
 }
 
+inline bool CheckRefInit(InterpState &S, CodePtr OpPC) {
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  return CheckRange(S, OpPC, Ptr, AK_Read);
+}
+
 inline bool GetPtrParam(InterpState &S, CodePtr OpPC, uint32_t Index) {
   if (S.Current->isBottomFrame())
     return false;
@@ -3428,6 +3433,12 @@ inline bool CopyArray(InterpState &S, CodePtr OpPC, uint32_t SrcIndex,
     return false;
 
   if (!SrcPtr.isBlockPointer() || !DestPtr.isBlockPointer())
+    return false;
+
+  const Descriptor *SrcDesc = SrcPtr.getFieldDesc();
+  const Descriptor *DestDesc = DestPtr.getFieldDesc();
+  if (!SrcDesc->isPrimitiveArray() || !DestDesc->isPrimitiveArray() ||
+      SrcDesc->getPrimType() != Name || DestDesc->getPrimType() != Name)
     return false;
 
   for (uint32_t I = 0; I != Size; ++I) {

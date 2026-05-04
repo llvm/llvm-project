@@ -78,7 +78,7 @@ declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1) nounwind willreturn
 ; CHECK: attributes #3 = { mustprogress nounwind willreturn }
 ; CHECK: attributes #4 = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) }
 ; CHECK: attributes #5 = { nounwind willreturn }
-; CHECK: attributes #6 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+; CHECK: attributes #6 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 
 ; Root note.
 !0 = !{ }

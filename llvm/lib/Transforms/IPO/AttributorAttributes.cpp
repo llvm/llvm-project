@@ -2194,15 +2194,6 @@ bool AANoSync::isNonRelaxedAtomic(const Instruction *I) {
           Ordering != AtomicOrdering::Monotonic);
 }
 
-/// Return true if this intrinsic is nosync.  This is only used for intrinsics
-/// which would be nosync except that they have a volatile flag.  All other
-/// intrinsics are simply annotated with the nosync attribute in Intrinsics.td.
-bool AANoSync::isNoSyncIntrinsic(const Instruction *I) {
-  if (auto *MI = dyn_cast<MemIntrinsic>(I))
-    return !MI->isVolatile();
-  return false;
-}
-
 namespace {
 struct AANoSyncImpl : AANoSync {
   AANoSyncImpl(const IRPosition &IRP, Attributor &A) : AANoSync(IRP, A) {}
@@ -2366,8 +2357,11 @@ struct AANoFreeFloating : AANoFreeImpl {
         Follow = true;
         return true;
       }
-      if (isa<StoreInst>(UserI) || isa<LoadInst>(UserI))
+      if (isa<LoadInst>(UserI))
         return true;
+
+      if (isa<StoreInst>(UserI))
+        return U.getOperandNo() == StoreInst::getPointerOperandIndex();
 
       if (isa<ReturnInst>(UserI) && getIRPosition().isArgumentPosition())
         return true;

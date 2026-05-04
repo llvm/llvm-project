@@ -340,12 +340,12 @@ define <2 x i32> @v_sdiv_v2i32_oddk_denom(<2 x i32> %num) {
 ; GISEL-NEXT:    v_add_i32_e32 v4, vcc, v4, v7
 ; GISEL-NEXT:    v_mul_hi_u32 v7, v0, v4
 ; GISEL-NEXT:    v_mul_hi_u32 v4, v1, v4
-; GISEL-NEXT:    v_mul_lo_u32 v8, v7, v3
+; GISEL-NEXT:    v_mul_lo_u32 v8, v7, v5
 ; GISEL-NEXT:    v_add_i32_e32 v9, vcc, 1, v7
-; GISEL-NEXT:    v_mul_lo_u32 v10, v4, v3
+; GISEL-NEXT:    v_mul_lo_u32 v10, v4, v5
 ; GISEL-NEXT:    v_add_i32_e32 v11, vcc, 1, v4
-; GISEL-NEXT:    v_sub_i32_e32 v0, vcc, v0, v8
-; GISEL-NEXT:    v_sub_i32_e32 v1, vcc, v1, v10
+; GISEL-NEXT:    v_add_i32_e32 v0, vcc, v0, v8
+; GISEL-NEXT:    v_add_i32_e32 v1, vcc, v1, v10
 ; GISEL-NEXT:    v_cmp_ge_u32_e64 s[4:5], v0, v3
 ; GISEL-NEXT:    v_cndmask_b32_e64 v7, v7, v9, s[4:5]
 ; GISEL-NEXT:    v_add_i32_e32 v5, vcc, v0, v5

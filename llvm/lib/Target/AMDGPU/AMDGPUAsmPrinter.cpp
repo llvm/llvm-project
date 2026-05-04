@@ -122,7 +122,7 @@ StringRef AMDGPUAsmPrinter::getPassName() const {
 }
 
 const MCSubtargetInfo *AMDGPUAsmPrinter::getGlobalSTI() const {
-  return TM.getMCSubtargetInfo();
+  return &TM.getMCSubtargetInfo();
 }
 
 AMDGPUTargetStreamer *AMDGPUAsmPrinter::getTargetStreamer() const {

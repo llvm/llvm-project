@@ -278,7 +278,7 @@ define void @unknown_norecurse_call(ptr %fn) {
 ; FNATTRS: attributes #[[ATTR2]] = { nofree nosync memory(none) }
 ; FNATTRS: attributes #[[ATTR3:[0-9]+]] = { memory(none) }
 ; FNATTRS: attributes #[[ATTR4]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) }
-; FNATTRS: attributes #[[ATTR5:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+; FNATTRS: attributes #[[ATTR5:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; FNATTRS: attributes #[[ATTR6]] = { nofree norecurse nosync memory(none) }
 ; FNATTRS: attributes #[[ATTR7]] = { norecurse }
 ;.
@@ -287,7 +287,7 @@ define void @unknown_norecurse_call(ptr %fn) {
 ; ATTRIBUTOR: attributes #[[ATTR2]] = { nosync memory(none) }
 ; ATTRIBUTOR: attributes #[[ATTR3:[0-9]+]] = { memory(none) }
 ; ATTRIBUTOR: attributes #[[ATTR4]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) }
-; ATTRIBUTOR: attributes #[[ATTR5:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+; ATTRIBUTOR: attributes #[[ATTR5:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; ATTRIBUTOR: attributes #[[ATTR6]] = { norecurse nosync memory(none) }
 ; ATTRIBUTOR: attributes #[[ATTR7]] = { nosync }
 ; ATTRIBUTOR: attributes #[[ATTR8]] = { nofree willreturn }

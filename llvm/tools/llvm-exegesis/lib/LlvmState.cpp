@@ -157,7 +157,7 @@ bool LLVMState::canAssemble(const MCInst &Inst) const {
   SmallVector<char, 16> Tmp;
   SmallVector<MCFixup, 4> Fixups;
   CodeEmitter->encodeInstruction(Inst, Tmp, Fixups,
-                                 *TheTargetMachine->getMCSubtargetInfo());
+                                 TheTargetMachine->getMCSubtargetInfo());
   return Tmp.size() > 0;
 }
 

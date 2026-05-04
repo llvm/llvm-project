@@ -1679,7 +1679,7 @@ define i32 @readExtInitZeroInit() {
 ; TUNIT: attributes #[[ATTR5]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(write) }
 ; TUNIT: attributes #[[ATTR6:[0-9]+]] = { speculatable memory(none) }
 ; TUNIT: attributes #[[ATTR7]] = { norecurse nosync memory(none) }
-; TUNIT: attributes #[[ATTR8:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+; TUNIT: attributes #[[ATTR8:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; TUNIT: attributes #[[ATTR9]] = { nofree nosync nounwind willreturn memory(none) }
 ; TUNIT: attributes #[[ATTR10]] = { nofree willreturn }
 ; TUNIT: attributes #[[ATTR11]] = { nofree nosync nounwind willreturn memory(write) }
@@ -1700,7 +1700,7 @@ define i32 @readExtInitZeroInit() {
 ; CGSCC: attributes #[[ATTR8:[0-9]+]] = { speculatable memory(none) }
 ; CGSCC: attributes #[[ATTR9]] = { norecurse nosync memory(none) }
 ; CGSCC: attributes #[[ATTR10]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(write) }
-; CGSCC: attributes #[[ATTR11:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+; CGSCC: attributes #[[ATTR11:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; CGSCC: attributes #[[ATTR12]] = { nofree nosync willreturn }
 ; CGSCC: attributes #[[ATTR13]] = { nofree willreturn }
 ; CGSCC: attributes #[[ATTR14]] = { nofree nounwind willreturn }

@@ -324,6 +324,8 @@ private:
 
   LogicalResult processSamplerType(ArrayRef<uint32_t> operands);
 
+  LogicalResult processNamedBarrierType(ArrayRef<uint32_t> operands);
+
   LogicalResult processRuntimeArrayType(ArrayRef<uint32_t> operands);
 
   LogicalResult processStructType(ArrayRef<uint32_t> operands);

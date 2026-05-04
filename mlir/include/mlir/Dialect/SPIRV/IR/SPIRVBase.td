@@ -4272,6 +4272,7 @@ def SPIRV_IsPtrType : CPred<"::llvm::isa<::mlir::spirv::PointerType>($_self)">;
 def SPIRV_IsRTArrayType : CPred<"::llvm::isa<::mlir::spirv::RuntimeArrayType>($_self)">;
 def SPIRV_IsSampledImageType : CPred<"::llvm::isa<::mlir::spirv::SampledImageType>($_self)">;
 def SPIRV_IsSamplerType : CPred<"::llvm::isa<::mlir::spirv::SamplerType>($_self)">;
+def SPIRV_IsNamedBarrierType : CPred<"::llvm::isa<::mlir::spirv::NamedBarrierType>($_self)">;
 def SPIRV_IsStructType : CPred<"::llvm::isa<::mlir::spirv::StructType>($_self)">;
 def SPIRV_IsTensorArmType : CPred<"::llvm::isa<::mlir::spirv::TensorArmType>($_self)">;
 
@@ -4317,6 +4318,8 @@ def SPIRV_AnySampledImage : DialectType<SPIRV_Dialect, SPIRV_IsSampledImageType,
                                 "any SPIR-V sampled image type">;
 def SPIRV_AnySampler : DialectType<SPIRV_Dialect, SPIRV_IsSamplerType,
                                 "any SPIR-V sampler type">;
+def SPIRV_AnyNamedBarrier : DialectType<SPIRV_Dialect, SPIRV_IsNamedBarrierType,
+                                "any SPIR-V named barrier type">;
 def SPIRV_AnyTensorArm : DialectType<SPIRV_Dialect, SPIRV_IsTensorArmType,
                                  "any SPIR-V tensorArm type">;
 
@@ -4605,6 +4608,9 @@ def SPIRV_OC_OpGroupFMax                      : I32EnumAttrCase<"OpGroupFMax", 2
 def SPIRV_OC_OpGroupUMax                      : I32EnumAttrCase<"OpGroupUMax", 270>;
 def SPIRV_OC_OpGroupSMax                      : I32EnumAttrCase<"OpGroupSMax", 271>;
 def SPIRV_OC_OpNoLine                         : I32EnumAttrCase<"OpNoLine", 317>;
+def SPIRV_OC_OpTypeNamedBarrier               : I32EnumAttrCase<"OpTypeNamedBarrier", 327>;
+def SPIRV_OC_OpNamedBarrierInitialize         : I32EnumAttrCase<"OpNamedBarrierInitialize", 328>;
+def SPIRV_OC_OpMemoryNamedBarrier             : I32EnumAttrCase<"OpMemoryNamedBarrier", 329>;
 def SPIRV_OC_OpModuleProcessed                : I32EnumAttrCase<"OpModuleProcessed", 330>;
 def SPIRV_OC_OpExecutionModeId                : I32EnumAttrCase<"OpExecutionModeId", 331>;
 def SPIRV_OC_OpDecorateId                     : I32EnumAttrCase<"OpDecorateId", 332>;
@@ -4757,6 +4763,8 @@ def SPIRV_OpcodeAttr :
       SPIRV_OC_OpGroupSMin, SPIRV_OC_OpGroupFMax, SPIRV_OC_OpGroupUMax,
       SPIRV_OC_OpGroupSMax, SPIRV_OC_OpNoLine, SPIRV_OC_OpModuleProcessed,
       SPIRV_OC_OpExecutionModeId, SPIRV_OC_OpDecorateId,
+      SPIRV_OC_OpTypeNamedBarrier, SPIRV_OC_OpNamedBarrierInitialize,
+      SPIRV_OC_OpMemoryNamedBarrier,
       SPIRV_OC_OpGroupNonUniformElect, SPIRV_OC_OpGroupNonUniformAll,
       SPIRV_OC_OpGroupNonUniformAny, SPIRV_OC_OpGroupNonUniformAllEqual,
       SPIRV_OC_OpGroupNonUniformBroadcast, SPIRV_OC_OpGroupNonUniformBroadcastFirst,

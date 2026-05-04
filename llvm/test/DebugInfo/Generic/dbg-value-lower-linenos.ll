@@ -85,13 +85,15 @@ declare i32 @lookup(...)
 ; CHECK: ![[MAPVAR]] = !DILocalVariable(name: "floogie",
 ; CHECK: ![[UNKNOWN2]] = !DILocation(line: 0
 
+!28 = !{null}
+!29 = !DISubroutineType(types: !28)
 !llvm.module.flags = !{!4}
 !llvm.dbg.cu = !{!2}
 !1 = !DILocalVariable(name: "bees", scope: !5, type: null)
 !2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, producer: "beards", isOptimized: true, runtimeVersion: 4, emissionKind: FullDebug)
 !3 = !DIFile(filename: "bees.cpp", directory: "")
 !4 = !{i32 2, !"Debug Info Version", i32 3}
-!5 = distinct !DISubprogram(name: "nope", scope: !3, file: !3, line: 1, unit: !2)
+!5 = distinct !DISubprogram(name: "nope", scope: !3, file: !3, line: 1, type: !29, unit: !2)
 !6 = !DILocation(line: 1, scope: !5)
 !7 = !DILocalVariable(name: "flannel", scope: !5, type: null)
 !8 = !DILocation(line: 2, scope: !5)
@@ -101,9 +103,9 @@ declare i32 @lookup(...)
 !12 = !DILocation(line: 6, scope: !5)
 !13 = !DILocation(line: 7, scope: !5)
 !14 = !DILocation(line: 8, scope: !5)
-!15 = distinct !DISubprogram(name: "wat", scope: !2, file: !3, line: 10, unit: !2)
+!15 = distinct !DISubprogram(name: "wat", scope: !2, file: !3, line: 10, type: !29, unit: !2)
 !16 = !DILocation(line: 9, scope: !15, inlinedAt: !14)
-!20 = distinct !DISubprogram(name: "thin", scope: !3, file: !3, line: 20, unit: !2)
+!20 = distinct !DISubprogram(name: "thin", scope: !3, file: !3, line: 20, type: !29, unit: !2)
 !21 = !DILocalVariable(name: "floogie", scope: !20, type: null)
 !22 = !DILocation(line: 21, scope: !20)
 !23 = !DILocation(line: 22, scope: !20)
