@@ -114,9 +114,9 @@ void CodeMetrics::collectEphemeralValues(
 }
 
 /// Check if a block was previously marked dead by setting the terminator to
-/// `unreachable` and the condiational branch to the block is statically
-/// evaluated. This is done for instance within the unroll pass, between
-/// unrolling inner/outer loops.
+/// `unreachable` and their is a statically evaluated conditional branch to NOT
+/// branch to the block. This is done for instance within the unroll pass,
+/// between unrolling inner/outer loops.
 static bool isBlockMarkedDead(const BasicBlock *BB) {
   if (!isa<UnreachableInst>(BB->getTerminator()))
     return false;
