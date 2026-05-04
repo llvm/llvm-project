@@ -25,7 +25,6 @@
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
-#include <cassert>
 #include <string>
 #include <vector>
 
@@ -94,6 +93,8 @@ SmallVector<std::string, 8> getCandidateBinPaths(StringRef ExeDir) {
   SmallString<256> Parent(sys::path::parent_path(ExeDir));
   for (int Depth = 0; Depth < MaxParentLevels && !Parent.empty(); ++Depth) {
     SmallString<256> GrandParent(sys::path::parent_path(Parent));
+    if (StringRef(GrandParent) == StringRef(Parent))
+      break;
     SmallString<256> Candidate(Parent);
     sys::path::append(Candidate, "bin");
     std::string CandStr = sys::path::convert_to_slash(Candidate);
@@ -102,8 +103,6 @@ SmallVector<std::string, 8> getCandidateBinPaths(StringRef ExeDir) {
     };
     if (llvm::none_of(Paths, IsDup))
       Paths.push_back(CandStr);
-    if (StringRef(GrandParent) == StringRef(Parent))
-      break;
     Parent = GrandParent;
   }
   return Paths;
@@ -142,7 +141,10 @@ static std::vector<std::string> getSearchPaths() {
       Paths.push_back(Utf8WindowsDir);
   }
 
-  // CWD deliberately excluded — DLL planting risk.
+  // Get the current working directory
+  SmallVector<char, 256> CWD;
+  if (sys::fs::current_path(CWD))
+    Paths.push_back(std::string(CWD.begin(), CWD.end()));
 
   // Get the PATH environment variable
   if (std::optional<std::string> PathEnv = sys::Process::GetEnv("PATH")) {
@@ -226,10 +228,9 @@ static void primeLibraryLoad(StringRef Path) {
   // One DLL primed per process; subsequent calls are no-ops.
   // Not thread-safe, but offload-arch is single-threaded.
   static HMODULE PinnedModule = nullptr;
-  if (PinnedModule)
+  if (PinnedModule || !sys::path::is_absolute(Path))
     return;
   SmallVector<wchar_t, 256> WPath;
-  assert(sys::path::is_absolute(Path) && "priming requires absolute path");
   if (!convertUTF8ToUTF16String(Path, WPath))
     return;
   WPath.push_back(L'\0'); // ensure null-termination for LoadLibraryExW
@@ -255,10 +256,8 @@ int printGPUsByHIP() {
   std::string ErrMsg;
 #ifdef _WIN32
   // Prime DLL load so transitive deps resolve from its directory.
-  if (!IsFallback) {
-    if (sys::path::is_absolute(DynamicHIPPath))
-      primeLibraryLoad(DynamicHIPPath);
-  }
+  if (!IsFallback)
+    primeLibraryLoad(DynamicHIPPath);
 #endif
   auto DynlibHandle = std::make_unique<llvm::sys::DynamicLibrary>(
       llvm::sys::DynamicLibrary::getPermanentLibrary(DynamicHIPPath.c_str(),

@@ -8,6 +8,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/CommandLine.h"
 #include "gtest/gtest.h"
 #include <algorithm>
 #include <string>
@@ -19,6 +20,9 @@ llvm::SmallVector<std::string, 8> getCandidateBinPaths(llvm::StringRef ExeDir);
 #endif
 
 using namespace llvm;
+
+cl::opt<bool> Verbose("offload-arch-test-verbose", cl::Hidden,
+                      cl::init(false));
 
 #ifdef _WIN32
 
@@ -90,14 +94,22 @@ TEST(CandidateBinPaths, RootInput) {
 
 TEST(CandidateBinPaths, NonAsciiPath) {
   // Paths with non-ASCII characters should not crash.
-  auto Paths = getCandidateBinPaths(u8"C:/üser/äpp/bin");
+  auto Paths = getCandidateBinPaths("C:/\xC3\xBCser/\xC3\xA4pp/bin");
   EXPECT_GE(Paths.size(), 1u);
 }
 
 TEST(CandidateBinPaths, UnicodePathDedup) {
-  auto Paths = getCandidateBinPaths(u8"C:/日本語/lib/bin");
+  auto Paths = getCandidateBinPaths(
+      "C:/\xE6\x97\xA5\xE6\x9C\xAC\xE8\xAA\x9E/lib/bin");
   // Should produce entries without crashing on CJK characters.
   EXPECT_GE(Paths.size(), 1u);
+}
+
+TEST(CandidateBinPaths, NoDriveRootBin) {
+  auto Paths = getCandidateBinPaths("C:\\Program Files\\AMD\\HIP\\bin");
+  for (const auto &P : Paths)
+    EXPECT_FALSE(StringRef(P).equals_insensitive("C:/bin"))
+        << "Drive-root bin/ must not appear (DLL planting risk)";
 }
 
 #endif // _WIN32
