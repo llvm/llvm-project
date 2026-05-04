@@ -1,4 +1,5 @@
-! RUN: %python %S/../test_symbols.py %s %flang_fc1 -fopenmp -fopenmp-version=50
+! REQUIRES: openmp_runtime
+! RUN: %python %S/../test_symbols.py %s %flang_fc1 %openmp_flags -fopenmp-version=50
 
 ! Test that variables in a DETACH clause get predetermined shared DSA.
 
