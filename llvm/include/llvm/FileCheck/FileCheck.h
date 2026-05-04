@@ -181,8 +181,9 @@ private:
 
 public:
   /// Emplace a new \c FileCheckDiag.
-  template <typename... ArgTys> void emplace_back(const ArgTys &...Args) {
-    DiagList.emplace_back(std::make_unique<FileCheckDiag>(Args...));
+  template <typename... ArgTys> void emplace_back(ArgTys &&...Args) {
+    DiagList.emplace_back(
+        std::make_unique<FileCheckDiag>(std::forward<ArgTys>(Args)...));
   }
   /// Adjust recent consecutive diagnostics of the same \c CheckLoc to have
   /// \c MatchTy.
