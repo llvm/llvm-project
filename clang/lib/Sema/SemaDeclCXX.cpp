@@ -1405,6 +1405,7 @@ static bool checkTupleLikeDecomposition(Sema &S,
                         /*TInfo=*/nullptr, Src->getStorageClass());
     BindingVD->setLexicalDeclContext(Src->getLexicalDeclContext());
     BindingVD->setTSCSpec(Src->getTSCSpec());
+    BindingVD->setConstexpr(Src->isConstexpr());
     BindingVD->setImplicit();
     if (Src->isInlineSpecified())
       BindingVD->setInlineSpecified();
