@@ -25,6 +25,7 @@ namespace cwg3151 { // cwg3151: 2.7
 #if __cplusplus >= 201402L
 auto lambda = []{};
 struct S : decltype(lambda) {};
+static_assert(!__is_final(decltype(lambda)), "");
 #endif
 } // namespace cwg3151
 
