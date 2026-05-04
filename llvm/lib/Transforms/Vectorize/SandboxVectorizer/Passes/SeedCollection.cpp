@@ -9,7 +9,7 @@
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/SeedCollection.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/SandboxIR/Module.h"
-#include "llvm/Transforms/Vectorize/SandboxVectorizer/RegionWithScore.h"
+#include "llvm/SandboxIR/Region.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/SandboxVectorizerPassBuilder.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/SeedCollector.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/VecUtils.h"
@@ -101,7 +101,7 @@ bool SeedCollection::runOnFunction(Function &F, const Analyses &A) {
 
           // Create a region containing the seed slice.
           auto &Ctx = F.getContext();
-          RegionWithScore Rgn(Ctx, A.getTTI());
+          Region Rgn(Ctx, A.getTTI());
           Rgn.setAux(SeedSlice);
           // Run the region pass pipeline.
           Change |= RPM.runOnRegion(Rgn, A);

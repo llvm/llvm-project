@@ -16,7 +16,6 @@ add_llvm_component_library(LLVMVectorize
   SandboxVectorizer/Passes/SeedCollection.cpp
   SandboxVectorizer/Passes/TransactionAcceptOrRevert.cpp
   SandboxVectorizer/Passes/TransactionSave.cpp
-  SandboxVectorizer/RegionWithScore.cpp
   SandboxVectorizer/SandboxVectorizer.cpp
   SandboxVectorizer/SandboxVectorizerPassBuilder.cpp
   SandboxVectorizer/Scheduler.cpp
