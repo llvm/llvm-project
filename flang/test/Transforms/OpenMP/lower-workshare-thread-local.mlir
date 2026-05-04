@@ -403,3 +403,83 @@ func.func @forall_pattern_in_workshare(%shared: !fir.ref<i32>) {
 // CHECK:         }
 // CHECK:         omp.barrier
 // CHECK:       }
+
+
+// Check that a store through a pointer dereference is NOT considered
+// thread-local, even if the pointer descriptor itself is in a thread-local
+// alloca. This models the "parallel workshare firstprivate(P)" case where P
+// is a Fortran POINTER: each thread gets its own copy of the descriptor, but
+// P(i) accesses shared target data through the pointer.
+
+// CHECK-LABEL: func.func @pointer_deref_not_thread_local
+func.func @pointer_deref_not_thread_local() {
+  omp.parallel {
+    // Thread-local alloca for the pointer descriptor (models firstprivate)
+    %desc = fir.alloca !fir.box<!fir.ptr<!fir.array<?xi32>>>
+    %decl = fir.declare %desc {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "p"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+    omp.workshare {
+      // Load the pointer box and access the target data via array_coor.
+      // Even though %desc is thread-local, the target data is shared.
+      %box = fir.load %decl : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+      %c0 = arith.constant 0 : index
+      %dims:3 = fir.box_dims %box, %c0 : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, index) -> (index, index, index)
+      %shift = fir.shift %dims#0 : (index) -> !fir.shift<1>
+      %c1_i64 = arith.constant 1 : i64
+      %elem = fir.array_coor %box(%shift) %c1_i64 : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, !fir.shift<1>, i64) -> !fir.ref<i32>
+      %c42 = arith.constant 42 : i32
+      // This store goes to shared target data (through pointer deref),
+      // so it MUST be in omp.single, not parallelized.
+      fir.store %c42 to %elem : !fir.ref<i32>
+      omp.terminator
+    }
+    omp.terminator
+  }
+  return
+}
+
+// The store through the pointer dereference must be inside omp.single.
+// CHECK:       omp.parallel {
+// CHECK:         fir.alloca !fir.box<!fir.ptr<!fir.array<?xi32>>>
+// CHECK:         omp.single
+// CHECK:           fir.load
+// CHECK:           fir.box_dims
+// CHECK:           fir.array_coor
+// CHECK:           fir.store
+// CHECK:           omp.terminator
+// CHECK-NEXT:    }
+// CHECK:         omp.barrier
+// CHECK:       }
+
+
+// Check that a direct store to the pointer descriptor alloca (not through
+// the pointer target) IS still recognized as thread-local.
+
+// CHECK-LABEL: func.func @pointer_descriptor_store_is_thread_local
+func.func @pointer_descriptor_store_is_thread_local() {
+  omp.parallel {
+    %desc = fir.alloca !fir.box<!fir.ptr<!fir.array<?xi32>>>
+    omp.workshare {
+      %null = fir.zero_bits !fir.ptr<!fir.array<?xi32>>
+      %c0 = arith.constant 0 : index
+      %shape = fir.shape %c0 : (index) -> !fir.shape<1>
+      %box = fir.embox %null(%shape) : (!fir.ptr<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?xi32>>>
+      // This store updates the descriptor itself (thread-local alloca),
+      // NOT the pointer target, so it should be parallelized.
+      fir.store %box to %desc : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+      omp.terminator
+    }
+    omp.terminator
+  }
+  return
+}
+
+// The store to the descriptor alloca is thread-local and should NOT be in omp.single.
+// CHECK:       omp.parallel {
+// CHECK-NEXT:    %[[DESC:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xi32>>>
+// CHECK:         fir.zero_bits
+// CHECK:         fir.shape
+// CHECK:         fir.embox
+// CHECK:         fir.store {{.*}} to %[[DESC]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+// CHECK-NEXT:    omp.barrier
+// CHECK-NEXT:    omp.terminator
+// CHECK-NEXT:  }

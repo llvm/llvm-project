@@ -156,6 +156,11 @@ static bool isOpenMPThreadLocalMemory(Operation *op, Value mem) {
   fir::AliasAnalysis aliasAnalysis;
   fir::AliasAnalysis::Source source = aliasAnalysis.getSource(mem);
 
+  // With firstprivate(P) where P is a pointer, each thread gets its own copy
+  // of the descriptor, but P(i) accesses shared target data.
+  if (source.accessPath.hasPointerDeref())
+    return false;
+
   // Check if the source is a Value (not a global symbol).
   mlir::Value sourceValue =
       llvm::dyn_cast_if_present<mlir::Value>(source.origin.u);
@@ -370,10 +375,34 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
     SmallVector<Value> copyPrivate;
     bool allParallelized = true;
 
+    // "firstprivate" pointer initialization creates: (1) alloca, (2) store
+    // null box, (3) copy original. If step (2) is duplicated into the
+    // parallel block, it runs after initialization of the private copy and
+    // overwrites the pointer descriptor with null, causing a segfault on
+    // dereference.
+    SmallPtrSet<Value, 4> hoistedCopyprivateAllocas;
+
     for (Operation &op : llvm::make_range(sr.begin, sr.end)) {
       if (isSafeToParallelize(&op)) {
         singleBuilder.clone(op, singleMapping);
-        if (llvm::all_of(op.getOperands(), [&](Value opr) {
+        // Check if this operation writes to a hoisted copyprivate alloca.
+        // Such stores must stay only in the single block; the copyprivate
+        // mechanism handles broadcasting the final value to all threads.
+        bool writesToCopyprivateAlloca = false;
+        if (!hoistedCopyprivateAllocas.empty()) {
+          if (auto memEffects = dyn_cast<MemoryEffectOpInterface>(&op)) {
+            SmallVector<MemoryEffects::EffectInstance> effects;
+            memEffects.getEffects(effects);
+            writesToCopyprivateAlloca =
+                llvm::any_of(effects, [&](const auto &eff) {
+                  return isa<MemoryEffects::Write>(eff.getEffect()) &&
+                         eff.getValue() &&
+                         hoistedCopyprivateAllocas.contains(eff.getValue());
+                });
+          }
+        }
+        if (!writesToCopyprivateAlloca &&
+            llvm::all_of(op.getOperands(), [&](Value opr) {
               // Either we have already remapped it
               bool remapped = rootMapping.contains(opr);
               // Or it is available because it dominates `sr`
@@ -399,6 +428,7 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
         rootMapping.map(&*alloca, &*hoisted);
         rootMapping.map(alloca.getResult(), hoisted.getResult());
         copyPrivate.push_back(hoisted);
+        hoistedCopyprivateAllocas.insert(alloca.getResult());
         allParallelized = false;
       } else {
         singleBuilder.clone(op, singleMapping);
