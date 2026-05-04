@@ -132,8 +132,8 @@ define amdgpu_kernel void @uniform_value_i16(ptr addrspace(1) %out, i16 %in) {
   ret void
 }
 
-define void @divergnet_value_i16(ptr addrspace(1) %out, i16 %in) {
-; GFX8DAGISEL-LABEL: divergnet_value_i16:
+define void @divergent_value_i16(ptr addrspace(1) %out, i16 %in) {
+; GFX8DAGISEL-LABEL: divergent_value_i16:
 ; GFX8DAGISEL:       ; %bb.0: ; %entry
 ; GFX8DAGISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8DAGISEL-NEXT:    s_mov_b64 s[4:5], exec
@@ -152,7 +152,7 @@ define void @divergnet_value_i16(ptr addrspace(1) %out, i16 %in) {
 ; GFX8DAGISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8DAGISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX8GISEL-LABEL: divergnet_value_i16:
+; GFX8GISEL-LABEL: divergent_value_i16:
 ; GFX8GISEL:       ; %bb.0: ; %entry
 ; GFX8GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8GISEL-NEXT:    s_mov_b64 s[4:5], exec
@@ -171,7 +171,7 @@ define void @divergnet_value_i16(ptr addrspace(1) %out, i16 %in) {
 ; GFX8GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9DAGISEL-LABEL: divergnet_value_i16:
+; GFX9DAGISEL-LABEL: divergent_value_i16:
 ; GFX9DAGISEL:       ; %bb.0: ; %entry
 ; GFX9DAGISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9DAGISEL-NEXT:    s_mov_b64 s[4:5], exec
@@ -190,7 +190,7 @@ define void @divergnet_value_i16(ptr addrspace(1) %out, i16 %in) {
 ; GFX9DAGISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9DAGISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9GISEL-LABEL: divergnet_value_i16:
+; GFX9GISEL-LABEL: divergent_value_i16:
 ; GFX9GISEL:       ; %bb.0: ; %entry
 ; GFX9GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9GISEL-NEXT:    s_mov_b64 s[4:5], exec
@@ -209,7 +209,7 @@ define void @divergnet_value_i16(ptr addrspace(1) %out, i16 %in) {
 ; GFX9GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1064DAGISEL-LABEL: divergnet_value_i16:
+; GFX1064DAGISEL-LABEL: divergent_value_i16:
 ; GFX1064DAGISEL:       ; %bb.0: ; %entry
 ; GFX1064DAGISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1064DAGISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v2
@@ -227,7 +227,7 @@ define void @divergnet_value_i16(ptr addrspace(1) %out, i16 %in) {
 ; GFX1064DAGISEL-NEXT:    global_store_short v[0:1], v2, off
 ; GFX1064DAGISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1064GISEL-LABEL: divergnet_value_i16:
+; GFX1064GISEL-LABEL: divergent_value_i16:
 ; GFX1064GISEL:       ; %bb.0: ; %entry
 ; GFX1064GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1064GISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v2
@@ -245,7 +245,7 @@ define void @divergnet_value_i16(ptr addrspace(1) %out, i16 %in) {
 ; GFX1064GISEL-NEXT:    global_store_short v[0:1], v2, off
 ; GFX1064GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1032DAGISEL-LABEL: divergnet_value_i16:
+; GFX1032DAGISEL-LABEL: divergent_value_i16:
 ; GFX1032DAGISEL:       ; %bb.0: ; %entry
 ; GFX1032DAGISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1032DAGISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v2
@@ -263,7 +263,7 @@ define void @divergnet_value_i16(ptr addrspace(1) %out, i16 %in) {
 ; GFX1032DAGISEL-NEXT:    global_store_short v[0:1], v2, off
 ; GFX1032DAGISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1032GISEL-LABEL: divergnet_value_i16:
+; GFX1032GISEL-LABEL: divergent_value_i16:
 ; GFX1032GISEL:       ; %bb.0: ; %entry
 ; GFX1032GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1032GISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v2
@@ -281,7 +281,7 @@ define void @divergnet_value_i16(ptr addrspace(1) %out, i16 %in) {
 ; GFX1032GISEL-NEXT:    global_store_short v[0:1], v2, off
 ; GFX1032GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1164DAGISEL-LABEL: divergnet_value_i16:
+; GFX1164DAGISEL-LABEL: divergent_value_i16:
 ; GFX1164DAGISEL:       ; %bb.0: ; %entry
 ; GFX1164DAGISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1164DAGISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v2
@@ -300,7 +300,7 @@ define void @divergnet_value_i16(ptr addrspace(1) %out, i16 %in) {
 ; GFX1164DAGISEL-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX1164DAGISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1164GISEL-LABEL: divergnet_value_i16:
+; GFX1164GISEL-LABEL: divergent_value_i16:
 ; GFX1164GISEL:       ; %bb.0: ; %entry
 ; GFX1164GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1164GISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v2
@@ -319,7 +319,7 @@ define void @divergnet_value_i16(ptr addrspace(1) %out, i16 %in) {
 ; GFX1164GISEL-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX1164GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1132DAGISEL-LABEL: divergnet_value_i16:
+; GFX1132DAGISEL-LABEL: divergent_value_i16:
 ; GFX1132DAGISEL:       ; %bb.0: ; %entry
 ; GFX1132DAGISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1132DAGISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v2
@@ -338,7 +338,7 @@ define void @divergnet_value_i16(ptr addrspace(1) %out, i16 %in) {
 ; GFX1132DAGISEL-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX1132DAGISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1132GISEL-LABEL: divergnet_value_i16:
+; GFX1132GISEL-LABEL: divergent_value_i16:
 ; GFX1132GISEL:       ; %bb.0: ; %entry
 ; GFX1132GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1132GISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v2
