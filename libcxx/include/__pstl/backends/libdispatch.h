@@ -255,6 +255,83 @@ struct __cpu_traits<__libdispatch_backend_tag> {
         __combiner);
   }
 
+  template < class _RandomAccessIterator1,
+             class _RandomAccessIterator2,
+             class _Tp,
+             class _BinaryOperation,
+             class _UnaryOperation>
+  _LIBCPP_HIDE_FROM_ABI static optional<_RandomAccessIterator2> __transform_exclusive_scan(
+      _RandomAccessIterator1 __first,
+      _RandomAccessIterator1 __last,
+      _RandomAccessIterator2 __result,
+      _Tp __init,
+      _BinaryOperation __binary_op,
+      _UnaryOperation __unary_op) noexcept {
+    auto __n = __last - __first;
+    if (__n == 0)
+      return __result;
+
+    auto __partitions  = __libdispatch::__partition_chunks(__n);
+    auto __chunk_count = __partitions.__chunk_count_;
+
+    auto __destroy = [__chunk_count](_Tp* __ptr) {
+      std::destroy_n(__ptr, __chunk_count);
+      std::allocator<_Tp>().deallocate(__ptr, __chunk_count);
+    };
+    unique_ptr<_Tp[], decltype(__destroy)> __chunk_totals(
+        [&]() -> _Tp* {
+#  if _LIBCPP_HAS_EXCEPTIONS
+          try {
+#  endif
+            return std::allocator<_Tp>().allocate(__chunk_count);
+#  if _LIBCPP_HAS_EXCEPTIONS
+          } catch (const std::bad_alloc&) {
+            return nullptr;
+          }
+#  endif
+        }(),
+        std::move(__destroy));
+    if (!__chunk_totals)
+      return nullopt;
+
+    // Phase 1: parallel chunk totals
+    __libdispatch::__dispatch_apply(__chunk_count, [&](size_t __chunk) {
+      auto __this_chunk_size = __chunk == 0 ? __partitions.__first_chunk_size_ : __partitions.__chunk_size_;
+      auto __index           = __chunk == 0 ? 0
+                                            : (__chunk * __partitions.__chunk_size_) +
+                                        (__partitions.__first_chunk_size_ - __partitions.__chunk_size_);
+      std::__construct_at(
+          __chunk_totals.get() + __chunk,
+          std::transform_reduce(
+              __first + __index, __first + __index + __this_chunk_size, _Tp{}, __binary_op, __unary_op));
+    });
+
+    // Phase 2: serial exclusive prefix of totals to per-chunk offsets (in-place)
+    std::exclusive_scan(
+        __chunk_totals.get(),
+        __chunk_totals.get() + __chunk_count,
+        __chunk_totals.get(),
+        std::move(__init),
+        __binary_op);
+
+    // Phase 3: parallel per-chunk serial scan
+    __libdispatch::__dispatch_apply(__chunk_count, [&](size_t __chunk) {
+      auto __this_chunk_size = __chunk == 0 ? __partitions.__first_chunk_size_ : __partitions.__chunk_size_;
+      auto __index           = __chunk == 0 ? 0
+                                            : (__chunk * __partitions.__chunk_size_) +
+                                        (__partitions.__first_chunk_size_ - __partitions.__chunk_size_);
+      std::transform_exclusive_scan(
+          __first + __index,
+          __first + __index + __this_chunk_size,
+          __result + __index,
+          std::move(__chunk_totals.get()[__chunk]),
+          __binary_op,
+          __unary_op);
+    });
+
+    return __result + __n;
+  }
+
   template <class _RandomAccessIterator, class _Comp, class _LeafSort>
   _LIBCPP_HIDE_FROM_ABI static optional<__empty>
   __stable_sort(_RandomAccessIterator __first, _RandomAccessIterator __last, _Comp __comp, _LeafSort __leaf_sort) {
