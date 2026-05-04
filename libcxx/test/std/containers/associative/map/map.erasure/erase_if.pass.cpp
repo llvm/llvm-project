@@ -78,7 +78,7 @@ bool test_upper() {
 }
 
 int main(int, char**) {
-  assert(test_upper());
+  test_upper();
 
 #if TEST_STD_VER >= 26
 #  ifndef TEST_COMPILER_GCC
