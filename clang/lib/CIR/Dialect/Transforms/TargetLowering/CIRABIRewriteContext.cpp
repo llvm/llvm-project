@@ -27,6 +27,10 @@ using namespace mlir::abi;
 namespace {
 
 bool needsRewrite(const FunctionClassification &fc) {
+  // Direct without coercion is a true pass-through; any other kind (or a
+  // coerced Direct) means the rewriter must touch the IR.  Extend is
+  // technically attribute-only at the IR level but still counts because the
+  // attribute attachment changes observable behavior.
   if ((fc.returnInfo.kind != ArgKind::Direct) || fc.returnInfo.coercedType)
     return true;
   for (const ArgClassification &ac : fc.argInfos)
@@ -72,9 +76,14 @@ LogicalResult buildNewArgTypes(ArrayRef<Type> oldArgTypes,
                   << " not yet implemented in CallConvLowering";
       return failure();
     case ArgKind::Extend:
-      emitError() << "Extend at arg " << idx
-                  << " not yet implemented in CallConvLowering";
-      return failure();
+      // Extend keeps the original (narrow) type in the signature; the
+      // sign/zero extension is communicated to LLVM via the llvm.signext /
+      // llvm.zeroext arg attribute, attached separately below.  Any
+      // coercedType the classifier set on the Extend ArgClassification is
+      // informational (typically the register-width type the value gets
+      // extended to in registers) but does not change the CIR signature.
+      newArgTypes.push_back(origTy);
+      break;
     case ArgKind::Indirect:
       emitError() << "Indirect at arg " << idx
                   << " not yet implemented in CallConvLowering";
@@ -105,8 +114,10 @@ Type computeNewReturnType(Type origRetTy, const ArgClassification &retInfo,
                 << "it in EmitFunctionEpilog)";
     return nullptr;
   case ArgKind::Extend:
-    emitError() << "Extend return not yet implemented in CallConvLowering";
-    return nullptr;
+    // Same convention as Extend args: keep the original return type in the
+    // signature; the sign/zero extension is communicated via the
+    // llvm.signext / llvm.zeroext res attribute attached separately below.
+    return origRetTy;
   case ArgKind::Indirect:
     emitError() << "Indirect return (sret) not yet implemented in "
                 << "CallConvLowering";
@@ -122,6 +133,67 @@ Type computeNewReturnType(Type origRetTy, const ArgClassification &retInfo,
 /// pattern that would suggest we have a value when we don't.
 Value createIgnoredValue(OpBuilder &builder, Location loc, Type ty) {
   return cir::ConstantOp::create(builder, loc, ty, cir::PoisonAttr::get(ty));
+}
+
+/// Build an updated arg_attrs ArrayAttr that drops Ignore'd args and adds
+/// llvm.signext / llvm.zeroext on Extend args.  Preserves any existing arg
+/// attributes on retained arg slots.
+ArrayAttr updateArgAttrs(MLIRContext *ctx, unsigned numNewArgs,
+                         ArrayAttr existingArgAttrs,
+                         const FunctionClassification &fc) {
+  SmallVector<Attribute> newArgAttrs(numNewArgs, DictionaryAttr::get(ctx));
+
+  // Step 1: copy existing arg attrs over to their new positions, skipping
+  // Ignore'd args.
+  if (existingArgAttrs) {
+    unsigned newIdx = 0;
+    for (unsigned oldIdx = 0; oldIdx < existingArgAttrs.size(); ++oldIdx) {
+      if (oldIdx < fc.argInfos.size() &&
+          fc.argInfos[oldIdx].kind == ArgKind::Ignore)
+        continue;
+      if (newIdx < numNewArgs)
+        newArgAttrs[newIdx] = existingArgAttrs[oldIdx];
+      ++newIdx;
+    }
+  }
+
+  // Step 2: layer llvm.signext / llvm.zeroext onto each Extend arg.  The new
+  // arg index for Extend at original index `oldIdx` is `oldIdx` minus the
+  // number of Ignore'd args that came before it.
+  unsigned newIdx = 0;
+  for (auto [oldIdx, ac] : llvm::enumerate(fc.argInfos)) {
+    if (ac.kind == ArgKind::Ignore)
+      continue;
+    if (ac.kind == ArgKind::Extend && newIdx < numNewArgs) {
+      auto existing = cast<DictionaryAttr>(newArgAttrs[newIdx]);
+      SmallVector<NamedAttribute> attrs(existing.begin(), existing.end());
+      StringRef attrName = ac.signExtend ? "llvm.signext" : "llvm.zeroext";
+      attrs.push_back(
+          NamedAttribute(StringAttr::get(ctx, attrName), UnitAttr::get(ctx)));
+      newArgAttrs[newIdx] = DictionaryAttr::get(ctx, attrs);
+    }
+    ++newIdx;
+  }
+
+  return ArrayAttr::get(ctx, newArgAttrs);
+}
+
+/// Build an updated res_attrs ArrayAttr (single entry, since CIR funcs have
+/// at most one result) that adds llvm.signext / llvm.zeroext on an Extend
+/// return.  Preserves any existing res attributes.
+ArrayAttr updateResAttrs(MLIRContext *ctx, ArrayAttr existingResAttrs,
+                         const ArgClassification &retInfo) {
+  if (retInfo.kind != ArgKind::Extend)
+    return existingResAttrs;
+
+  SmallVector<NamedAttribute> attrs;
+  if (existingResAttrs && !existingResAttrs.empty())
+    for (NamedAttribute na : cast<DictionaryAttr>(existingResAttrs[0]))
+      attrs.push_back(na);
+  StringRef attrName = retInfo.signExtend ? "llvm.signext" : "llvm.zeroext";
+  attrs.push_back(
+      NamedAttribute(StringAttr::get(ctx, attrName), UnitAttr::get(ctx)));
+  return ArrayAttr::get(ctx, {DictionaryAttr::get(ctx, attrs)});
 }
 
 } // namespace
@@ -212,22 +284,23 @@ LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
   Type newFnTy = funcOp.cloneTypeWith(newArgTypes, newResultTypes);
   funcOp.setFunctionTypeAttr(TypeAttr::get(newFnTy));
 
-  // Keep the arg_attrs array in sync with the new argument count by
-  // dropping entries for every Ignored argument.  Without this the
-  // attribute array would have stale entries that no longer match any
-  // block argument.
-  SmallVector<unsigned> ignored = ignoredArgIndices(fc);
-  if (!ignored.empty()) {
-    if (auto existing = funcOp->getAttrOfType<ArrayAttr>("arg_attrs")) {
-      SmallVector<Attribute> kept;
-      kept.reserve(newArgTypes.size());
-      for (auto [oldIdx, attr] : llvm::enumerate(existing.getValue())) {
-        if (oldIdx >= fc.argInfos.size() ||
-            fc.argInfos[oldIdx].kind != ArgKind::Ignore)
-          kept.push_back(attr);
-      }
-      funcOp->setAttr("arg_attrs", ArrayAttr::get(ctx, kept));
-    }
+  // Rebuild arg_attrs: drop entries for Ignore'd args, layer
+  // llvm.signext / llvm.zeroext onto Extend args, preserve everything else.
+  bool needsArgAttrUpdate =
+      llvm::any_of(fc.argInfos, [](const ArgClassification &ac) {
+        return ac.kind == ArgKind::Ignore || ac.kind == ArgKind::Extend;
+      });
+  if (needsArgAttrUpdate) {
+    auto existing = funcOp->getAttrOfType<ArrayAttr>("arg_attrs");
+    funcOp->setAttr("arg_attrs",
+                    updateArgAttrs(ctx, newArgTypes.size(), existing, fc));
+  }
+
+  // Rebuild res_attrs: layer llvm.signext / llvm.zeroext onto an Extend
+  // return.
+  if (fc.returnInfo.kind == ArgKind::Extend) {
+    auto existing = funcOp->getAttrOfType<ArrayAttr>("res_attrs");
+    funcOp->setAttr("res_attrs", updateResAttrs(ctx, existing, fc.returnInfo));
   }
 
   return success();
@@ -247,6 +320,8 @@ LogicalResult CIRABIRewriteContext::rewriteCallSite(
     return call.emitOpError()
            << "indirect call not yet implemented in CallConvLowering";
 
+  MLIRContext *ctx = callOp->getContext();
+
   for (auto [idx, ac] : llvm::enumerate(fc.argInfos)) {
     switch (ac.kind) {
     case ArgKind::Direct:
@@ -261,8 +336,9 @@ LogicalResult CIRABIRewriteContext::rewriteCallSite(
       return call.emitOpError() << "Expand at call-site arg " << idx
                                 << " not yet implemented in CallConvLowering";
     case ArgKind::Extend:
-      return call.emitOpError() << "Extend at call-site arg " << idx
-                                << " not yet implemented in CallConvLowering";
+      // Extend at the call site is just an attribute change (llvm.signext /
+      // llvm.zeroext on the call's arg_attrs); no IR-level cast.
+      break;
     case ArgKind::Indirect:
       return call.emitOpError() << "Indirect at call-site arg " << idx
                                 << " not yet implemented in CallConvLowering";
@@ -284,15 +360,13 @@ LogicalResult CIRABIRewriteContext::rewriteCallSite(
   }
 
   bool hasResult = call.getNumResults() > 0;
-  Type origRetTy = hasResult ? call.getResult().getType()
-                             : cir::VoidType::get(callOp->getContext());
+  Type origRetTy =
+      hasResult ? call.getResult().getType() : cir::VoidType::get(ctx);
   Type callRetTy = origRetTy;
   if (fc.returnInfo.kind == ArgKind::Ignore && hasResult)
-    callRetTy = cir::VoidType::get(callOp->getContext());
-  if ((fc.returnInfo.kind == ArgKind::Direct ||
-       fc.returnInfo.kind == ArgKind::Extend) &&
-      fc.returnInfo.coercedType)
-    return call.emitOpError() << "Direct/Extend return with coerced type at "
+    callRetTy = cir::VoidType::get(ctx);
+  if (fc.returnInfo.kind == ArgKind::Direct && fc.returnInfo.coercedType)
+    return call.emitOpError() << "Direct return with coerced type at "
                               << "call-site not yet implemented in "
                               << "CallConvLowering";
 
@@ -302,6 +376,24 @@ LogicalResult CIRABIRewriteContext::rewriteCallSite(
   for (NamedAttribute attr : call->getAttrs())
     if (!newCall->hasAttr(attr.getName()))
       newCall->setAttr(attr.getName(), attr.getValue());
+
+  // Layer llvm.signext / llvm.zeroext onto the new call's arg_attrs and
+  // res_attrs for Extend args/return.
+  bool needsArgAttrUpdate = false;
+  for (const ArgClassification &ac : fc.argInfos)
+    if (ac.kind == ArgKind::Extend || ac.kind == ArgKind::Ignore) {
+      needsArgAttrUpdate = true;
+      break;
+    }
+  if (needsArgAttrUpdate) {
+    auto existing = call->getAttrOfType<ArrayAttr>("arg_attrs");
+    newCall->setAttr("arg_attrs",
+                     updateArgAttrs(ctx, newArgs.size(), existing, fc));
+  }
+  if (fc.returnInfo.kind == ArgKind::Extend) {
+    auto existing = call->getAttrOfType<ArrayAttr>("res_attrs");
+    newCall->setAttr("res_attrs", updateResAttrs(ctx, existing, fc.returnInfo));
+  }
 
   if (hasResult && fc.returnInfo.kind == ArgKind::Ignore) {
     // The new call returns void, but the original call's result may still
