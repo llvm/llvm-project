@@ -218,5 +218,45 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
 __detail::enable_if_t<__detail::is_arithmetic<T>::Value, vector<T, 4>> select(
     vector<bool, 4>, T, T);
 
+//===----------------------------------------------------------------------===//
+// InterlockedAdd builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn void InterlockedAdd(inout T dest, T value)
+/// \fn void InterlockedAdd(inout T dest, T value, out T original_value)
+/// \brief Performs a guaranteed atomic add of \a value to \a dest.
+/// \param dest [inout] The destination memory location.
+/// \param value [in] The value to add.
+/// \param original_value [out] Optional. Receives the original value of
+///   \a dest before the atomic add.
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_interlocked_add)
+void InterlockedAdd(inout int, int);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_interlocked_add)
+void InterlockedAdd(inout int, int, out int);
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_interlocked_add)
+void InterlockedAdd(inout uint, uint);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_interlocked_add)
+void InterlockedAdd(inout uint, uint, out uint);
+
+_HLSL_AVAILABILITY(shadermodel, 6.6)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_interlocked_add)
+void InterlockedAdd(inout int64_t, int64_t);
+_HLSL_AVAILABILITY(shadermodel, 6.6)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_interlocked_add)
+void InterlockedAdd(inout int64_t, int64_t, out int64_t);
+
+_HLSL_AVAILABILITY(shadermodel, 6.6)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_interlocked_add)
+void InterlockedAdd(inout uint64_t, uint64_t);
+_HLSL_AVAILABILITY(shadermodel, 6.6)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_interlocked_add)
+void InterlockedAdd(inout uint64_t, uint64_t, out uint64_t);
+
 } // namespace hlsl
 #endif //_HLSL_HLSL_ALIAS_INTRINSICS_H_

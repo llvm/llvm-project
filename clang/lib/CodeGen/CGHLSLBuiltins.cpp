@@ -1382,6 +1382,41 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
                                &CGM.getModule(), ID, {Op->getType()}),
                            ArrayRef{Op}, "hlsl.wave.active.bit.and");
   }
+  case Builtin::BI__builtin_hlsl_interlocked_add: {
+    // HLSL signatures:
+    //   void InterlockedAdd(inout T dest, T value);
+    //   void InterlockedAdd(inout T dest, T value, out T original_value);
+    // The `inout` / `out` parameters are wrapped in HLSLOutArgExpr by Sema, so
+    // we can unconditionally cast and use the underlying lvalue directly. This
+    // ensures the atomic targets the original storage rather than the
+    // writeback temporary.
+    assert(isa<HLSLOutArgExpr>(E->getArg(0)) &&
+           "InterlockedAdd dest argument must be an HLSLOutArgExpr (inout)");
+    const auto *DestOut = cast<HLSLOutArgExpr>(E->getArg(0));
+    LValue DestLV = EmitLValue(DestOut->getArgLValue());
+    Value *Ptr = DestLV.getAddress().emitRawPointer(*this);
+    Value *Val = EmitScalarExpr(E->getArg(1));
+    assert(E->getArg(1)->getType()->isIntegerType() &&
+           "Intrinsic InterlockedAdd value operand must be an integer");
+
+    Intrinsic::ID ID = CGM.getHLSLRuntime().getInterlockedAddIntrinsic();
+    Value *Call = EmitRuntimeCall(
+        Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID,
+                                          {Val->getType(), Ptr->getType()}),
+        ArrayRef<Value *>{Ptr, Val}, "hlsl.interlocked.add");
+
+    // The 3-arg overload writes the old value (the intrinsic's return value)
+    // into the `out original_value` parameter.
+    if (E->getNumArgs() == 3) {
+      assert(isa<HLSLOutArgExpr>(E->getArg(2)) &&
+             "InterlockedAdd original_value argument must be an HLSLOutArgExpr "
+             "(out)");
+      const auto *OrigOut = cast<HLSLOutArgExpr>(E->getArg(2));
+      LValue OrigLV = EmitLValue(OrigOut->getArgLValue());
+      EmitStoreThroughLValue(RValue::get(Call), OrigLV);
+    }
+    return Call;
+  }
   case Builtin::BI__builtin_hlsl_wave_active_ballot: {
     [[maybe_unused]] Value *Op = EmitScalarExpr(E->getArg(0));
     assert(Op->getType()->isIntegerTy(1) &&
