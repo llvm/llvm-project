@@ -640,7 +640,7 @@ private:
   /// The calculation is cached in FramesModifying.
   bool isModifiedInFrame(const ExplodedNode *CallExitBeginN);
 
-  void markFrameAsModifying(const StackFrame *SCtx);
+  void markFrameAsModifying(const StackFrame *SF);
 
   /// Write to \c FramesModifying all stack frames along the path in the current
   /// stack frame which modifies the state.

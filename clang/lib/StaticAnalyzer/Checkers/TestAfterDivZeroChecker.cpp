@@ -34,7 +34,7 @@ public:
   ZeroState(SymbolRef S, unsigned B, const StackFrame *SF)
       : ZeroSymbol(S), BlockID(B), SF(SF) {}
 
-  const StackFrame *getStackFrameContext() const { return SF; }
+  const StackFrame *getStackFrame() const { return SF; }
 
   bool operator==(const ZeroState &X) const {
     return BlockID == X.BlockID && SF == X.SF && ZeroSymbol == X.ZeroSymbol;
@@ -184,7 +184,7 @@ void TestAfterDivZeroChecker::checkEndFunction(const ReturnStmt *,
 
   DivZeroMapTy::Factory &F = State->get_context<DivZeroMap>();
   for (const ZeroState &ZS : DivZeroes) {
-    if (ZS.getStackFrameContext() == C.getStackFrame())
+    if (ZS.getStackFrame() == C.getStackFrame())
       DivZeroes = F.remove(DivZeroes, ZS);
   }
   C.addTransition(State->set<DivZeroMap>(DivZeroes));

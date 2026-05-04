@@ -921,26 +921,26 @@ const REG *MemRegionManager::LazyAllocate(REG*& region, ARG a) {
 }
 
 const StackLocalsSpaceRegion *
-MemRegionManager::getStackLocalsRegion(const StackFrame *STC) {
-  assert(STC);
-  StackLocalsSpaceRegion *&R = StackLocalsSpaceRegions[STC];
+MemRegionManager::getStackLocalsRegion(const StackFrame *SF) {
+  assert(SF);
+  StackLocalsSpaceRegion *&R = StackLocalsSpaceRegions[SF];
 
   if (R)
     return R;
 
-  R = new (A) StackLocalsSpaceRegion(*this, STC);
+  R = new (A) StackLocalsSpaceRegion(*this, SF);
   return R;
 }
 
 const StackArgumentsSpaceRegion *
-MemRegionManager::getStackArgumentsRegion(const StackFrame *STC) {
-  assert(STC);
-  StackArgumentsSpaceRegion *&R = StackArgumentsSpaceRegions[STC];
+MemRegionManager::getStackArgumentsRegion(const StackFrame *SF) {
+  assert(SF);
+  StackArgumentsSpaceRegion *&R = StackArgumentsSpaceRegions[SF];
 
   if (R)
     return R;
 
-  R = new (A) StackArgumentsSpaceRegion(*this, STC);
+  R = new (A) StackArgumentsSpaceRegion(*this, SF);
   return R;
 }
 
@@ -1111,22 +1111,21 @@ const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
     if (const auto *VR = dyn_cast_if_present<const VarRegion *>(V))
       return VR;
 
-    const auto *STC = cast<const StackFrame *>(V);
+    const auto *SF = cast<const StackFrame *>(V);
 
-    if (!STC) {
+    if (!SF) {
       // FIXME: Assign a more sensible memory space to static locals
       // we see from within blocks that we analyze as top-level declarations.
       sReg = getUnknownRegion();
     } else {
       if (D->hasLocalStorage()) {
-        sReg =
-            isa<ParmVarDecl, ImplicitParamDecl>(D)
-                ? static_cast<const MemRegion *>(getStackArgumentsRegion(STC))
-                : static_cast<const MemRegion *>(getStackLocalsRegion(STC));
+        sReg = isa<ParmVarDecl, ImplicitParamDecl>(D)
+                   ? static_cast<const MemRegion *>(getStackArgumentsRegion(SF))
+                   : static_cast<const MemRegion *>(getStackLocalsRegion(SF));
       }
       else {
         assert(D->isStaticLocal());
-        const Decl *STCD = STC->getDecl();
+        const Decl *STCD = SF->getDecl();
         if (isa<FunctionDecl, ObjCMethodDecl>(STCD))
           sReg = getGlobalsRegion(MemRegion::StaticGlobalSpaceRegionKind,
                                   getFunctionCodeRegion(cast<NamedDecl>(STCD)));
@@ -1146,9 +1145,8 @@ const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
           }
           T = getContext().getBlockPointerType(T);
 
-          const BlockCodeRegion *BTR =
-            getBlockCodeRegion(BD, Ctx.getCanonicalType(T),
-                               STC->getAnalysisDeclContext());
+          const BlockCodeRegion *BTR = getBlockCodeRegion(
+              BD, Ctx.getCanonicalType(T), SF->getAnalysisDeclContext());
           sReg = getGlobalsRegion(MemRegion::StaticGlobalSpaceRegionKind,
                                   BTR);
         }
@@ -1200,9 +1198,9 @@ MemRegionManager::getBlockDataRegion(const BlockCodeRegion *BC,
     if (!IsArcManagedBlock && LC) {
       // FIXME: Once we implement scope handling, we want the parent region
       // to be the scope.
-      const StackFrame *STC = LC->getStackFrame();
-      assert(STC);
-      sReg = getStackLocalsRegion(STC);
+      const StackFrame *SF = LC->getStackFrame();
+      assert(SF);
+      sReg = getStackLocalsRegion(SF);
     } else {
       // We allow 'LC' to be NULL for cases where want BlockDataRegions
       // without context-sensitivity.
@@ -1221,9 +1219,9 @@ MemRegionManager::getCompoundLiteralRegion(const CompoundLiteralExpr *CL,
   if (CL->isFileScope())
     sReg = getGlobalsRegion();
   else {
-    const StackFrame *STC = LC->getStackFrame();
-    assert(STC);
-    sReg = getStackLocalsRegion(STC);
+    const StackFrame *SF = LC->getStackFrame();
+    assert(SF);
+    sReg = getStackLocalsRegion(SF);
   }
 
   return getSubRegion<CompoundLiteralRegion>(CL, sReg);
@@ -1385,17 +1383,17 @@ MemRegionManager::getCXXThisRegion(QualType thisPointerTy,
     LC = LC->getParent();
     D = dyn_cast<CXXMethodDecl>(LC->getDecl());
   }
-  const StackFrame *STC = LC->getStackFrame();
-  assert(STC);
-  return getSubRegion<CXXThisRegion>(PT, getStackArgumentsRegion(STC));
+  const StackFrame *SF = LC->getStackFrame();
+  assert(SF);
+  return getSubRegion<CXXThisRegion>(PT, getStackArgumentsRegion(SF));
 }
 
 const AllocaRegion*
 MemRegionManager::getAllocaRegion(const Expr *E, unsigned cnt,
                                   const LocationContext *LC) {
-  const StackFrame *STC = LC->getStackFrame();
-  assert(STC);
-  return getSubRegion<AllocaRegion>(E, cnt, getStackLocalsRegion(STC));
+  const StackFrame *SF = LC->getStackFrame();
+  assert(SF);
+  return getSubRegion<AllocaRegion>(E, cnt, getStackLocalsRegion(SF));
 }
 
 const MemSpaceRegion *MemRegion::getRawMemorySpace() const {

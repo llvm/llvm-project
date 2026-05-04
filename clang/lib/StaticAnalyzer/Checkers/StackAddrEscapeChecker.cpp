@@ -278,9 +278,9 @@ private:
     if (!SSR)
       return;
 
-    const StackFrame *CapturedSFC = SSR->getStackFrame();
-    if (CapturedSFC == PoppedStackFrame ||
-        PoppedStackFrame->isParentOf(CapturedSFC))
+    const StackFrame *CapturedSF = SSR->getStackFrame();
+    if (CapturedSF == PoppedStackFrame ||
+        PoppedStackFrame->isParentOf(CapturedSF))
       EscapingStackRegions.push_back(MR);
   }
 

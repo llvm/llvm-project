@@ -1471,12 +1471,12 @@ public:
 
   /// getStackLocalsRegion - Retrieve the memory region associated with the
   ///  specified stack frame.
-  const StackLocalsSpaceRegion *getStackLocalsRegion(const StackFrame *STC);
+  const StackLocalsSpaceRegion *getStackLocalsRegion(const StackFrame *SF);
 
   /// getStackArgumentsRegion - Retrieve the memory region associated with
   ///  function/method arguments of the specified stack frame.
   const StackArgumentsSpaceRegion *
-  getStackArgumentsRegion(const StackFrame *STC);
+  getStackArgumentsRegion(const StackFrame *SF);
 
   /// getGlobalsRegion - Retrieve the memory region associated with
   ///  global variables.

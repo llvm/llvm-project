@@ -346,7 +346,7 @@ public:
   /// enterStackFrame - Returns the state for entry to the given stack frame,
   ///  preserving the current state.
   [[nodiscard]] ProgramStateRef
-  enterStackFrame(const CallEvent &Call, const StackFrame *CalleeCtx) const;
+  enterStackFrame(const CallEvent &Call, const StackFrame *CalleeSF) const;
 
   /// Return the value of 'self' if available in the given context.
   SVal getSelfSVal(const LocationContext *LC) const;
@@ -584,7 +584,7 @@ public:
   ExprEngine &getOwningEngine() { return *Eng; }
 
   ProgramStateRef removeDeadBindingsFromEnvironmentAndStore(
-      ProgramStateRef St, const StackFrame *LCtx, SymbolReaper &SymReaper);
+      ProgramStateRef St, const StackFrame *SF, SymbolReaper &SymReaper);
 
 public:
 

@@ -193,7 +193,7 @@ public:
   std::optional<const MemRegion *> castRegion(const MemRegion *region,
                                               QualType CastToTy);
 
-  virtual StoreRef removeDeadBindings(Store store, const StackFrame *LCtx,
+  virtual StoreRef removeDeadBindings(Store store, const StackFrame *SF,
                                       SymbolReaper &SymReaper) = 0;
 
   virtual bool includedInBindings(Store store,
@@ -249,7 +249,7 @@ public:
   /// enterStackFrame - Let the StoreManager to do something when execution
   /// engine is about to execute into a callee.
   BindResult enterStackFrame(Store store, const CallEvent &Call,
-                             const StackFrame *CalleeCtx);
+                             const StackFrame *CalleeSF);
 
   /// Finds the transitive closure of symbols within the given region.
   ///
