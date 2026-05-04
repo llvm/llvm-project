@@ -24,6 +24,15 @@ def SubIntAttrs : NativeCodeCall<"subIntegerAttrs($_builder, $0, $1, $2)">;
 // Multiply two integer attributes and create a new one with the result.
 def MulIntAttrs : NativeCodeCall<"mulIntegerAttrs($_builder, $0, $1, $2)">;
 
+// Bitwise-and two integer attributes and create a new one with the result.
+def AndIntAttrs : NativeCodeCall<"andIntegerAttrs($_builder, $0, $1, $2)">;
+
+// Bitwise-or two integer attributes and create a new one with the result.
+def OrIntAttrs : NativeCodeCall<"orIntegerAttrs($_builder, $0, $1, $2)">;
+
+// Bitwise-xor two integer attributes and create a new one with the result.
+def XorIntAttrs : NativeCodeCall<"xorIntegerAttrs($_builder, $0, $1, $2)">;
+
 // Merge overflow flags from 2 ops, selecting the most conservative combination.
 def MergeOverflow : NativeCodeCall<"mergeOverflowFlags($0, $1)">;
 
@@ -209,6 +218,15 @@ def MulUIExtendedToMulI :
 // xori is commutative and will be canonicalized to have its constants appear
 // as the second operand.
 
+// xori(xori(x, c0), c1) -> xori(x, c0 ^ c1)
+def XOrIXOrIConstant :
+    Pat<(Arith_XOrIOp:$res
+          (Arith_XOrIOp $x, (ConstantLikeMatcher APIntAttr:$c0)),
+          (ConstantLikeMatcher APIntAttr:$c1)),
+        (Arith_XOrIOp $x, (Arith_ConstantOp (XorIntAttrs $res, $c0, $c1))),
+             [(Constraint<CPred<"$0.getType() == cast<IntegerAttr>($1).getType()">> $res, $c0),
+              (Constraint<CPred<"$0.getType() == cast<IntegerAttr>($1).getType()">> $res, $c1)]>;
+
 // not(cmpi(pred, a, b)) -> cmpi(~pred, a, b), where not(x) is xori(x, 1)
 def InvertPredicate : NativeCodeCall<"invertPredicate($0)">;
 def XOrINotCmpI :
@@ -323,6 +341,15 @@ def ExtSIOfExtUI :
 // AndIOp
 //===----------------------------------------------------------------------===//
 
+// andi(andi(x, c0), c1) -> andi(x, c0 & c1)
+def AndIAndIConstant :
+    Pat<(Arith_AndIOp:$res
+          (Arith_AndIOp $x, (ConstantLikeMatcher APIntAttr:$c0)),
+          (ConstantLikeMatcher APIntAttr:$c1)),
+        (Arith_AndIOp $x, (Arith_ConstantOp (AndIntAttrs $res, $c0, $c1))),
+             [(Constraint<CPred<"$0.getType() == cast<IntegerAttr>($1).getType()">> $res, $c0),
+              (Constraint<CPred<"$0.getType() == cast<IntegerAttr>($1).getType()">> $res, $c1)]>;
+
 // and extui(x), extui(y) -> extui(and(x,y))
 // AND can only clear bits, so if either operand is non-negative (sign bit 0),
 // the result also has sign bit 0. Preserves nneg if either operand has it.
@@ -341,6 +368,15 @@ def AndOfExtSI :
 //===----------------------------------------------------------------------===//
 // OrIOp
 //===----------------------------------------------------------------------===//
+
+// ori(ori(x, c0), c1) -> ori(x, c0 | c1)
+def OrIOrIConstant :
+    Pat<(Arith_OrIOp:$res
+          (Arith_OrIOp $x, (ConstantLikeMatcher APIntAttr:$c0)),
+          (ConstantLikeMatcher APIntAttr:$c1)),
+        (Arith_OrIOp $x, (Arith_ConstantOp (OrIntAttrs $res, $c0, $c1))),
+             [(Constraint<CPred<"$0.getType() == cast<IntegerAttr>($1).getType()">> $res, $c0),
+              (Constraint<CPred<"$0.getType() == cast<IntegerAttr>($1).getType()">> $res, $c1)]>;
 
 // or extui(x), extui(y) -> extui(or(x,y))
 // OR preserves nneg only if both operands are non-negative: or of two values
