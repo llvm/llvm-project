@@ -50,15 +50,15 @@ end subroutine
 !CHECK-PARSE-NEXT: | | | | | | | | | | | Scalar -> Expr = 'i'
 !CHECK-PARSE-NEXT: | | | | | | | | | | | | Designator -> DataRef -> Name = 'i'
 !CHECK-PARSE-NEXT: | | | | | | | | | Block
-!CHECK-PARSE-NEXT: | | | | | | | | | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> AssignmentStmt = 'y(int(i,kind=8))=5_4*y(int(i,kind=8))'
-!CHECK-PARSE-NEXT: | | | | | | | | | | | Variable = 'y(int(i,kind=8))'
+!CHECK-PARSE-NEXT: | | | | | | | | | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> AssignmentStmt = 'y(__builtin_int(i,kind=8))=5_4*y(__builtin_int(i,kind=8))'
+!CHECK-PARSE-NEXT: | | | | | | | | | | | Variable = 'y(__builtin_int(i,kind=8))'
 !CHECK-PARSE-NEXT: | | | | | | | | | | | | Designator -> DataRef -> ArrayElement
 !CHECK-PARSE-NEXT: | | | | | | | | | | | | | DataRef -> Name = 'y'
 !CHECK-PARSE-NEXT: | | | | | | | | | | | | | SectionSubscript -> Integer -> Expr = 'i'
 !CHECK-PARSE-NEXT: | | | | | | | | | | | | | | Designator -> DataRef -> Name = 'i'
-!CHECK-PARSE-NEXT: | | | | | | | | | | | Expr = '5_4*y(int(i,kind=8))'
+!CHECK-PARSE-NEXT: | | | | | | | | | | | Expr = '5_4*y(__builtin_int(i,kind=8))'
 !CHECK-PARSE-NEXT: | | | | | | | | | | | | Multiply
-!CHECK-PARSE-NEXT: | | | | | | | | | | | | | Expr = 'y(int(i,kind=8))'
+!CHECK-PARSE-NEXT: | | | | | | | | | | | | | Expr = 'y(__builtin_int(i,kind=8))'
 !CHECK-PARSE-NEXT: | | | | | | | | | | | | | | Designator -> DataRef -> ArrayElement
 !CHECK-PARSE-NEXT: | | | | | | | | | | | | | | | DataRef -> Name = 'y'
 !CHECK-PARSE-NEXT: | | | | | | | | | | | | | | | SectionSubscript -> Integer -> Expr = 'i'
@@ -88,7 +88,7 @@ end subroutine
 !CHECK-UNPARSE-NEXT: !$OMP UNROLL PARTIAL(1_4)
 !CHECK-UNPARSE-NEXT: !$OMP TILE
 !CHECK-UNPARSE-NEXT:  DO i=1_4,i
-!CHECK-UNPARSE-NEXT:    y(int(i,kind=8))=5_4*y(int(i,kind=8))
+!CHECK-UNPARSE-NEXT:    y(__builtin_int(i,kind=8))=5_4*y(__builtin_int(i,kind=8))
 !CHECK-UNPARSE-NEXT:  END DO
 !CHECK-UNPARSE-NEXT: !$OMP END TILE
 !CHECK-UNPARSE-NEXT: !$OMP END UNROLL
