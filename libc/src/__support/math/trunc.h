@@ -15,7 +15,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE constexpr double trunc(double x) {
+LIBC_INLINE LIBC_CONSTEXPR double trunc(double x) {
 #if defined(__LIBC_USE_BUILTIN_CEIL_FLOOR_RINT_TRUNC) &&                       \
     !defined(LIBC_HAS_CONSTANT_EVALUATION)
   return __builtin_trunc(x);

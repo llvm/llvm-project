@@ -15,7 +15,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE constexpr double round(double x) {
+LIBC_INLINE LIBC_CONSTEXPR double round(double x) {
 #if defined(__LIBC_USE_BUILTIN_ROUND) && !defined(LIBC_HAS_CONSTANT_EVALUATION)
   return __builtin_round(x);
 #else

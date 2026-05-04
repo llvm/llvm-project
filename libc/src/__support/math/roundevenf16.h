@@ -21,7 +21,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE constexpr float16 roundevenf16(float16 x) {
+LIBC_INLINE LIBC_CONSTEXPR float16 roundevenf16(float16 x) {
 #if defined(__LIBC_USE_BUILTIN_ROUNDEVEN) &&                                   \
     defined(LIBC_TARGET_CPU_HAS_FAST_FLOAT16_OPS) &&                           \
     !defined(LIBC_HAS_CONSTANT_EVALUATION)
