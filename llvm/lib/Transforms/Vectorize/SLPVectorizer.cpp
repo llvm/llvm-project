@@ -26678,6 +26678,56 @@ SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
 }
 
 namespace {
+/// Walk a build-vector chain (a sequence of insertelement instructions feeding
+/// undef/poison) starting at \p V and collect the lane values plus the chain
+/// instructions. Returns true when V is a complete fixed-vector buildvector
+/// that fully covers all lanes.
+///
+/// The walk goes from the stored value toward the root, so for a lane that is
+/// inserted more than once, the later insert is seen first and wins (matching
+/// the runtime semantics of repeated insertelement).
+static bool collectBuildVector(Value *V, SmallVectorImpl<Value *> &Elts,
+                               SmallVectorImpl<Instruction *> &Insts) {
+  auto *VecTy = dyn_cast<FixedVectorType>(V->getType());
+  if (!VecTy)
+    return false;
+  Elts.assign(VecTy->getNumElements(), nullptr);
+  Value *Cur = V;
+  while (auto *IE = dyn_cast<InsertElementInst>(Cur)) {
+    if (!IE->hasOneUse())
+      return false;
+    auto *Idx = dyn_cast<ConstantInt>(IE->getOperand(2));
+    if (!Idx || Idx->getValue().uge(Elts.size()))
+      return false;
+    unsigned LaneIdx = Idx->getZExtValue();
+    if (!Elts[LaneIdx])
+      Elts[LaneIdx] = IE->getOperand(1);
+    Insts.push_back(IE);
+    Cur = IE->getOperand(0);
+  }
+  if (!isa<UndefValue>(Cur))
+    return false;
+  return all_of(Elts, [](Value *Elt) { return Elt != nullptr; });
+}
+
+/// Return the lane-element type of \p SI. For a normal scalar store this is
+/// the value type; for a build-vector store it is the inserted-element type.
+static Type *getStoreChainType(StoreInst *SI) {
+  SmallVector<Value *, 16> Elts;
+  SmallVector<Instruction *, 16> Insts;
+  if (collectBuildVector(SI->getValueOperand(), Elts, Insts))
+    return Elts.front()->getType();
+  return SI->getValueOperand()->getType();
+}
+
+/// Returns true if SI's value is built from a fixed-vector insertelement chain
+/// rooted at undef/poison.
+static bool isBuildVectorStore(StoreInst *SI) {
+  SmallVector<Value *, 16> Elts;
+  SmallVector<Instruction *, 16> Insts;
+  return collectBuildVector(SI->getValueOperand(), Elts, Insts);
+}
+
 /// A group of related stores which we are in the process of vectorizing,
 /// a subset of which may already be vectorized. Stores context information
 /// about the group as a whole as well as information about what VFs need
@@ -27249,6 +27299,22 @@ bool SLPVectorizerPass::vectorizeStores(
     ArrayRef<StoreInst *> Stores, BoUpSLP &R,
     DenseSet<std::tuple<Value *, Value *, Value *, Value *, unsigned>>
         &Visited) {
+  // Build-vector stores reach this entry through the lane-aware sorter/matcher
+  // updates earlier in this commit, but the chain machinery here still treats
+  // each StoreInst as one lane. Filter them out for now and process only the
+  // scalar stores; a later commit teaches vectorizeStores to expand build-
+  // vector stores into per-lane elements and dispatch through a dedicated
+  // TreeEntry state.
+  SmallVector<StoreInst *> ScalarOnly;
+  if (any_of(Stores, isBuildVectorStore)) {
+    for (StoreInst *SI : Stores)
+      if (!isBuildVectorStore(SI))
+        ScalarOnly.push_back(SI);
+    Stores = ScalarOnly;
+  }
+  if (Stores.size() < 2)
+    return false;
+
   // We may run into multiple chains that merge into a single chain. We mark the
   // stores that we vectorized so that we don't visit the same store twice.
   BoUpSLP::ValueSet VectorizedStores;
@@ -27467,7 +27533,9 @@ void SLPVectorizerPass::collectSeedInstructions(BasicBlock *BB) {
     if (auto *SI = dyn_cast<StoreInst>(&I)) {
       if (!SI->isSimple())
         continue;
-      if (!isValidElementType(SI->getValueOperand()->getType()))
+      // Build-vector stores are accepted: their per-lane element type drives
+      // the chain so a store of <4 x float> behaves like 4 lanes of float.
+      if (!isValidElementType(getStoreChainType(SI)))
         continue;
       Stores[getUnderlyingObject(SI->getPointerOperand())].push_back(SI);
     }
@@ -31258,11 +31326,13 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
   // compatible (have the same opcode, same parent), otherwise it is
   // definitely not profitable to try to vectorize them.
   auto &&StoreSorter = [this](StoreInst *V, StoreInst *V2) {
-    if (V->getValueOperand()->getType()->getTypeID() <
-        V2->getValueOperand()->getType()->getTypeID())
+    // Sort by lane-element type so build-vector stores group with scalar
+    // stores of the same element type (e.g. <4 x float> with float).
+    Type *Ty = getStoreChainType(V);
+    Type *Ty2 = getStoreChainType(V2);
+    if (Ty->getTypeID() < Ty2->getTypeID())
       return true;
-    if (V->getValueOperand()->getType()->getTypeID() >
-        V2->getValueOperand()->getType()->getTypeID())
+    if (Ty->getTypeID() > Ty2->getTypeID())
       return false;
     if (V->getPointerOperandType()->getTypeID() <
         V2->getPointerOperandType()->getTypeID())
@@ -31270,11 +31340,9 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
     if (V->getPointerOperandType()->getTypeID() >
         V2->getPointerOperandType()->getTypeID())
       return false;
-    if (V->getValueOperand()->getType()->getScalarSizeInBits() <
-        V2->getValueOperand()->getType()->getScalarSizeInBits())
+    if (Ty->getScalarSizeInBits() < Ty2->getScalarSizeInBits())
       return true;
-    if (V->getValueOperand()->getType()->getScalarSizeInBits() >
-        V2->getValueOperand()->getType()->getScalarSizeInBits())
+    if (Ty->getScalarSizeInBits() > Ty2->getScalarSizeInBits())
       return false;
     // UndefValues are compatible with all other values.
     auto *I1 = dyn_cast<Instruction>(V->getValueOperand());
@@ -31308,10 +31376,16 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
     StoreInst *V2 = VL.back();
     if (V1 == V2)
       return true;
-    if (V1->getValueOperand()->getType() != V2->getValueOperand()->getType())
+    bool IsBuildVectorStore = isBuildVectorStore(V1) || isBuildVectorStore(V2);
+    if (getStoreChainType(V1) != getStoreChainType(V2))
       return false;
     if (V1->getPointerOperandType() != V2->getPointerOperandType())
       return false;
+    // Build-vector stores skip the value-operand-instruction compatibility
+    // check below since their value comes from an insertelement chain. A
+    // later commit handles them via a dedicated TreeEntry path.
+    if (IsBuildVectorStore)
+      return true;
     // Undefs are compatible with any other value.
     if (isa<UndefValue>(V1->getValueOperand()) ||
         isa<UndefValue>(V2->getValueOperand()))
@@ -31357,7 +31431,7 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
     LLVM_DEBUG(dbgs() << "SLP: Analyzing a store chain of length "
                       << Pair.second.size() << ".\n");
 
-    if (!isValidElementType(Pair.second.front()->getValueOperand()->getType()))
+    if (!isValidElementType(getStoreChainType(Pair.second.front())))
       continue;
 
     // Reverse stores to do bottom-to-top analysis. This is important if the
