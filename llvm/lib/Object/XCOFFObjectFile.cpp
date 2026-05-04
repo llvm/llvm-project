@@ -867,7 +867,7 @@ XCOFFObjectFile::getSectionByType(XCOFF::SectionTypeFlags SectType) const {
   DataRefImpl Result;
   Result.p = 0;
   if (Error E = is64Bit() ? findUniqueSection(sections64(), SectType, Result)
-                           : findUniqueSection(sections32(), SectType, Result))
+                          : findUniqueSection(sections32(), SectType, Result))
     return std::move(E);
   return Result;
 }
