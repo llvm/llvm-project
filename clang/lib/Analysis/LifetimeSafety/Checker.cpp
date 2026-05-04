@@ -367,12 +367,13 @@ public:
       return;
     for (const ParmVarDecl *PVD : cast<FunctionDecl>(FD)->parameters()) {
       if (!PVD->hasAttr<LifetimeBoundAttr>())
-        return;
+        continue;
       if (!PVD->getAttr<LifetimeBoundAttr>()->isImplicit() &&
           !VerifiedLiftimeboundEscapes.contains(PVD))
         SemaHelper->reportLifetimeboundViolation(PVD);
     }
   }
+
   void inferAnnotations() {
     for (auto [Target, EscapeTarget] : AnnotationWarningsMap) {
       if (const auto *MD = Target.dyn_cast<const CXXMethodDecl *>()) {
