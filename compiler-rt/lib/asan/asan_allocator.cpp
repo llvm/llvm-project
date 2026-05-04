@@ -788,7 +788,8 @@ struct Allocator {
     QuarantineChunk(m, ptr, stack);
   }
 
-  void *Reallocate(void *old_ptr, uptr new_size, BufferedStackTrace *stack) {
+  void *Reallocate(void *old_ptr, uptr new_size, BufferedStackTrace *stack,
+                   uptr alignment = 8) {
     CHECK(old_ptr && new_size);
     uptr p = reinterpret_cast<uptr>(old_ptr);
     uptr chunk_beg = p - kChunkHeaderSize;
@@ -798,9 +799,7 @@ struct Allocator {
     thread_stats.reallocs++;
     thread_stats.realloced += new_size;
 
-    // Preserve the original allocation's alignment.
-    uptr orig_align = ComputeUserAlignment(m->user_requested_alignment_log);
-    void* new_ptr = Allocate(new_size, orig_align, stack, FROM_MALLOC, true);
+    void *new_ptr = Allocate(new_size, alignment, stack, FROM_MALLOC, true);
     if (new_ptr) {
       u8 chunk_state = atomic_load(&m->chunk_state, memory_order_acquire);
       if (chunk_state != CHUNK_ALLOCATED)
@@ -1089,7 +1088,14 @@ void* asan_vec_realloc(void* p, uptr size, BufferedStackTrace* stack) {
   if (!p)
     return SetErrnoOnNull(
         instance.Allocate(size, 16, stack, FROM_MALLOC, true));
-  return asan_realloc(p, size, stack);
+  if (size == 0) {
+    if (flags()->allocator_frees_and_returns_null_on_realloc_zero) {
+      instance.Deallocate(p, 0, 0, stack, FROM_MALLOC);
+      return nullptr;
+    }
+    size = 1;
+  }
+  return SetErrnoOnNull(instance.Reallocate(p, size, stack, 16));
 }
 #endif
 
