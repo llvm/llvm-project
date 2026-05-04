@@ -29,6 +29,12 @@ void test_constant() {
 // LLVM:   %[[ALLOCA:.*]] = alloca i32
 // LLVM:   call void @b(ptr noundef %[[ALLOCA]], i64 noundef 4)
 
+// OGCG: define dso_local void @test_constant()
+// OGCG:   %[[A:.*]] = alloca i32
+// OGCG:   call void @b(ptr noundef %[[A]], i64 noundef 4)
+
+// OGCG: declare void @b(ptr noundef, i64 noundef)
+
 void test_vla(int n) {
   int d[n];
   b(d);
@@ -50,12 +56,6 @@ void test_vla(int n) {
 // LLVM:   call void @b(ptr noundef %[[VLA]], i64 noundef %[[SIZE1]])
 // LLVM:   %[[SIZE2:.*]] = call i64 @llvm.objectsize.i64.p0(ptr %[[VLA]], i1 true, i1 true, i1 false)
 // LLVM:   call void @e(ptr noundef %[[VLA]], i64 noundef %[[SIZE2]])
-
-// OGCG: define dso_local void @test_constant()
-// OGCG:   %[[A:.*]] = alloca i32
-// OGCG:   call void @b(ptr noundef %[[A]], i64 noundef 4)
-
-// OGCG: declare void @b(ptr noundef, i64 noundef)
 
 // OGCG: define dso_local void @test_vla(i32 noundef %{{.*}})
 // OGCG:   %[[VLA:.*]] = alloca i32, i64 %{{.*}}, align 16
