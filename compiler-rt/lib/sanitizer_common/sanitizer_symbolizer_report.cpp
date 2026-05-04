@@ -262,9 +262,10 @@ static void ReportDeadlySignalImpl(const SignalContext &sig, u32 tid,
             : (sig.write_flag == SignalContext::Read ? "READ" : "UNKNOWN");
     Report("The signal is caused by a %s memory access.\n", access_type);
     if (!sig.is_true_faulting_addr)
-      Report("HINT: this fault was caused by a dereference of a high value "
-             "address (see register values below).  Disassemble the provided "
-             "pc to learn which register was used.\n");
+      Report(
+          "HINT: this fault was caused by a dereference of a high value "
+          "address (see register values below).  Disassemble the provided "
+          "pc to learn which register was used.\n");
     else if (sig.addr < GetPageSizeCached())
       Report("HINT: address points to the zero page.\n");
   }
