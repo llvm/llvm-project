@@ -986,15 +986,7 @@ public:
 #    else
       _NOEXCEPT
 #    endif
-      // Turning off ASan instrumentation for variable initialization with a no_sanitize("address") attribute
-      // does not work consistently during initialization of __r_, so we instead unpoison __str's memory manually first.
-      // __str's memory needs to be unpoisoned only in the case where it's a short string.
-      : __rep_([](basic_string& __s) -> decltype(__s.__rep_)&& {
-          if (!__s.__is_long())
-            __s.__annotate_delete();
-          return std::move(__s.__rep_);
-        }(__str)),
-        __alloc_(std::move(__str.__alloc_)) {
+      : __rep_(std::move(__str.__rep_)), __alloc_(std::move(__str.__alloc_)) {
     __str.__rep_ = __rep();
     __str.__annotate_new(0);
     if (!__is_long())
