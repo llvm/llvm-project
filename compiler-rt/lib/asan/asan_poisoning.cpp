@@ -45,7 +45,7 @@ void AddPoisonRecord(const PoisonRecord &new_record) {
   poison_records->push(new_record);
 }
 
-bool FindPoisonRecord(uptr addr, PoisonRecord &match, bool& is_full) {
+bool FindPoisonRecord(uptr addr, PoisonRecord& match, bool& is_full) {
   if (flags()->poison_history_size <= 0)
     return false;
 
