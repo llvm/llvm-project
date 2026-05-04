@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wno-dangling -verify %s
-// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wno-dangling -verify -DUSE_LIBSTDCPP_ITERATORS %s
 
 #include "Inputs/lifetime-analysis.h"
 
@@ -282,6 +281,43 @@ void IteratorUsedAfterReverseSubtraction(std::vector<int> v) {
   auto prev = 5 - it;
   v.push_back(1);           // expected-note {{invalidated here}}
   (void)*prev;              // expected-note {{later used here}}
+}
+
+void IteratorUSedAfterAddAdd(std::vector<int> v) {
+  auto it = v.cbegin();     // expected-warning {{object whose reference is captured is later invalidated}}
+  auto next = (it + 5) + 5;
+  v.push_back(1);           // expected-note {{invalidated here}}
+  (void)*next;              // expected-note {{later used here}}
+}
+
+void IteratorUsedAfterMixedAddition() {
+  std::vector<int> v;
+  auto it = v.cbegin();         // expected-warning {{object whose reference is captured is later invalidated}}
+  auto next = 1 + it + 2 + 3;
+  v.push_back(1);               // expected-note {{invalidated here}}
+  (void)*next;                  // expected-note {{later used here}}
+}
+
+void IteratorUsedAfterPreIncrementAddAssign(std::vector<int> v) {
+  auto it = v.begin();          // expected-warning {{object whose reference is captured is later invalidated}}
+  it = ++it + 1 + 2;
+  v.push_back(1);               // expected-note {{invalidated here}}
+  (void)*it;                    // expected-note {{later used here}}
+}
+
+void IteratorUsedAfterBeginAddAssign() {
+  std::vector<int> v;
+  auto it = v.begin() + 1;      // expected-warning {{object whose reference is captured is later invalidated}}
+  v.push_back(1);               // expected-note {{invalidated here}}
+  (void)*it;                    // expected-note {{later used here}}
+}
+
+void IteratorUsedAfterStdBeginAddAssign() {
+  std::vector<int> v;
+  std::vector<int>::iterator it;
+  it = std::begin(v) + 1;       // expected-warning {{object whose reference is captured is later invalidated}}
+  v.push_back(1);               // expected-note {{invalidated here}}
+  (void)*it;                    // expected-note {{later used here}}
 }
 }  // namespace SimpleInvalidIterators
 

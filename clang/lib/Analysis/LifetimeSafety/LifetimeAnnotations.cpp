@@ -140,11 +140,17 @@ bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee,
   if (RunningUnderLifetimeSafety &&
       isGslPointerType(Callee->getFunctionObjectParameterType()) &&
       isReferenceOrPointerLikeType(Callee->getReturnType())) {
-    auto Op = Callee->getOverloadedOperator();
-    llvm::SmallDenseSet<OverloadedOperatorKind> PropagatingOps = {
-        OO_Star, OO_Arrow, OO_PlusPlus, OO_MinusMinus, OO_Plus, OO_Minus};
-    if (PropagatingOps.contains(Op))
+    switch (Callee->getOverloadedOperator()) {
+    case OO_Arrow:
+    case OO_Star:
+    case OO_Plus:
+    case OO_Minus:
+    case OO_PlusPlus:
+    case OO_MinusMinus:
       return true;
+    default:
+      break;
+    }
     if (Callee->getIdentifier() &&
         (IteratorMembers.contains(Callee->getName()) ||
          InnerPointerGetters.contains(Callee->getName())))
@@ -236,14 +242,14 @@ bool shouldTrackFirstArgument(const FunctionDecl *FD) {
 bool shouldTrackSecondArgument(const FunctionDecl *FD) {
   if (FD->getNumParams() < 2)
     return false;
-  if (!isInStlNamespace(FD))
-    return false;
   const auto *RD = FD->getParamDecl(1)->getType()->getAsCXXRecordDecl();
-  if (!RD || !isInStlNamespace(RD))
+  if (!RD)
     return false;
   return RD->hasAttr<PointerAttr>() &&
          (FD->getOverloadedOperator() == OO_Plus ||
-          FD->getOverloadedOperator() == OO_Minus);
+          FD->getOverloadedOperator() == OO_Minus) &&
+         ASTContext::hasSameUnqualifiedType(FD->getParamDecl(1)->getType(),
+                                            FD->getReturnType());
 }
 
 template <typename T> static bool isRecordWithAttr(QualType Type) {

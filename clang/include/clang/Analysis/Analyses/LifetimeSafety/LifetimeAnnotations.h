@@ -49,8 +49,9 @@ bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD);
 // Returns true if the implicit object argument (this) of a method call should
 // be tracked for GSL lifetime analysis. This applies to STL methods that return
 // pointers or references that depend on the lifetime of the object, such as
-// container iterators (begin, end), data accessors (c_str, data, get), or
-// element accessors (operator[], operator*, front, back, at).
+// container iterators (begin, end), data accessors (c_str, data, get),
+// element accessors (operator[], operator*, front, back, at), or propogating
+// operations (operator+, operator-, operator++, operator--).
 bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee,
                                   bool RunningUnderLifetimeSafety);
 
@@ -61,6 +62,9 @@ bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee,
 // std::any_cast.
 bool shouldTrackFirstArgument(const FunctionDecl *FD);
 
+// Returns true if the second argument of a free function should be tracked for
+// GSL lifetime analysis. This applies to free operator functions that take GSL
+// Pointer as it's second argument.
 bool shouldTrackSecondArgument(const FunctionDecl *FD);
 
 // Tells whether the type is annotated with [[gsl::Pointer]].
