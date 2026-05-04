@@ -1955,6 +1955,63 @@ add_header_library(
 )
 
 add_header_library(
+  nearbyint
+  HDRS
+    nearbyint.h
+  DEPENDS
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  nearbyintbf16
+  HDRS
+    nearbyintbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  nearbyintf
+  HDRS
+    nearbyintf.h
+  DEPENDS
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  nearbyintf128
+  HDRS
+    nearbyintf128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  nearbyintf16
+  HDRS
+    nearbyintf16.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  nearbyintl
+  HDRS
+    nearbyintl.h
+  DEPENDS
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   remainder
   HDRS
     remainder.h
@@ -2065,6 +2122,72 @@ add_header_library(
     remquol.h
   DEPENDS
     libc.src.__support.FPUtil.division_and_remainder_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  rint
+  HDRS
+    rint.h
+  DEPENDS
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+  FLAGS
+    ROUND_OPT
+)
+
+add_header_library(
+  rintbf16
+  HDRS
+    rintbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+  FLAGS
+    ROUND_OPT
+)
+
+add_header_library(
+  rintf
+  HDRS
+    rintf.h
+  DEPENDS
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+  FLAGS
+    ROUND_OPT
+)
+
+add_header_library(
+  rintf128
+  HDRS
+    rintf128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  rintf16
+  HDRS
+    rintf16.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.config
+  FLAGS
+    ROUND_OPT
+)
+
+add_header_library(
+  rintl
+  HDRS
+    rintl.h
+  DEPENDS
+    libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.config
 )
 

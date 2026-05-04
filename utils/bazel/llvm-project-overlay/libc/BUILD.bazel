@@ -5144,6 +5144,63 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_nearbyint",
+    hdrs = ["src/__support/math/nearbyint.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_nearbyintbf16",
+    hdrs = ["src/__support/math/nearbyintbf16.h"],
+    deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_nearbyintf",
+    hdrs = ["src/__support/math/nearbyintf.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_nearbyintf128",
+    hdrs = ["src/__support/math/nearbyintf128.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_nearbyintf16",
+    hdrs = ["src/__support/math/nearbyintf16.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_nearbyintl",
+    hdrs = ["src/__support/math/nearbyintl.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_remainder",
     hdrs = ["src/__support/math/remainder.h"],
     deps = [
@@ -5253,6 +5310,65 @@ libc_support_library(
     hdrs = ["src/__support/math/remquol.h"],
     deps = [
         ":__support_fputil_division_and_remainder_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_rint",
+    hdrs = ["src/__support/math/rint.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_rintbf16",
+    hdrs = ["src/__support/math/rintbf16.h"],
+    deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_rintf",
+    hdrs = ["src/__support/math/rintf.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_rintf128",
+    hdrs = ["src/__support/math/rintf128.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_rintf16",
+    hdrs = ["src/__support/math/rintf16.h"],
+    deps = [
+        ":__support_fputil_cast",
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+        ":__support_macros_properties_cpu_features",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_rintl",
+    hdrs = ["src/__support/math/rintl.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
         ":__support_macros_config",
     ],
 )
@@ -10837,18 +10953,46 @@ libc_math_function(
     ],
 )
 
-libc_math_function(name = "nearbyint")
+libc_math_function(
+    name = "nearbyint",
+    additional_deps = [
+        ":__support_math_nearbyint",
+    ],
+)
 
-libc_math_function(name = "nearbyintf")
+libc_math_function(
+    name = "nearbyintbf16",
+    additional_deps = [
+        ":__support_math_nearbyintbf16",
+    ],
+)
 
-libc_math_function(name = "nearbyintl")
+libc_math_function(
+    name = "nearbyintf",
+    additional_deps = [
+        ":__support_math_nearbyintf",
+    ],
+)
+
+libc_math_function(
+    name = "nearbyintl",
+    additional_deps = [
+        ":__support_math_nearbyintl",
+    ],
+)
 
 libc_math_function(
     name = "nearbyintf128",
+    additional_deps = [
+        ":__support_math_nearbyintf128",
+    ],
 )
 
 libc_math_function(
     name = "nearbyintf16",
+    additional_deps = [
+        ":__support_math_nearbyintf16",
+    ],
 )
 
 libc_math_function(
@@ -11112,21 +11256,45 @@ libc_math_function(
     ],
 )
 
-libc_math_function(name = "rint")
+libc_math_function(
+    name = "rint",
+    additional_deps = [
+        ":__support_math_rint",
+    ],
+)
 
-libc_math_function(name = "rintf")
+libc_math_function(
+    name = "rintbf16",
+    additional_deps = [
+        ":__support_math_rintbf16",
+    ],
+)
 
-libc_math_function(name = "rintl")
+libc_math_function(
+    name = "rintf",
+    additional_deps = [
+        ":__support_math_rintf",
+    ],
+)
+
+libc_math_function(
+    name = "rintl",
+    additional_deps = [
+        ":__support_math_rintl",
+    ],
+)
 
 libc_math_function(
     name = "rintf128",
+    additional_deps = [
+        ":__support_math_rintf128",
+    ],
 )
 
 libc_math_function(
     name = "rintf16",
     additional_deps = [
-        ":__support_fputil_cast",
-        ":__support_macros_properties_cpu_features",
+        ":__support_math_rintf16",
     ],
 )
 
