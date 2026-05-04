@@ -126,7 +126,7 @@ _Bool *f1(struct s1 *p) {
 // NOPQ-NEXT:    unreachable, !annotation [[META4]]
 // NOPQ:       [[CONT2]]:
 // NOPQ-NEXT:    [[TMP3:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
-// NOPQ-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP3]] to i1
+// NOPQ-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP3]], 0
 // NOPQ-NEXT:    ret i1 [[LOADEDV]]
 //
 // OPQ-LABEL: define dso_local i1 @f2(
@@ -160,7 +160,7 @@ _Bool *f1(struct s1 *p) {
 // OPQ-NEXT:    unreachable, !annotation [[META4]]
 // OPQ:       [[CONT2]]:
 // OPQ-NEXT:    [[TMP3:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
-// OPQ-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP3]] to i1
+// OPQ-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP3]], 0
 // OPQ-NEXT:    ret i1 [[LOADEDV]]
 //
 _Bool f2(_Bool *__bidi_indexable p, int i) {
