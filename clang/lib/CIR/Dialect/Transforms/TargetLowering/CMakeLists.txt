@@ -1,4 +1,5 @@
 add_clang_library(MLIRCIRTargetLowering
+  CIRABIRewriteContext.cpp
   CIRCXXABI.cpp
   LowerModule.cpp
   LowerItaniumCXXABI.cpp
@@ -15,6 +16,7 @@ add_clang_library(MLIRCIRTargetLowering
   LINK_LIBS PUBLIC
 
   clangBasic
+  MLIRABI
   MLIRIR
   MLIRPass
   MLIRDLTIDialect

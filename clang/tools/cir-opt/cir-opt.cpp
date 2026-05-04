@@ -74,6 +74,10 @@ int main(int argc, char **argv) {
     return mlir::createCXXABILoweringPass();
   });
 
+  ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {
+    return mlir::createCallConvLoweringPass();
+  });
+
   mlir::omp::registerOpenMPPasses();
   mlir::registerTransformsPasses();
 
