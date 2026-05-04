@@ -215,7 +215,7 @@ LIBC_INLINE constexpr T fminimum_num(T x, T y) {
 }
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE T fmaximum_mag(T x, T y) {
+LIBC_INLINE constexpr T fmaximum_mag(T x, T y) {
   FPBits<T> bitx(x), bity(y);
 
   if (abs(x) > abs(y))
@@ -226,7 +226,7 @@ LIBC_INLINE T fmaximum_mag(T x, T y) {
 }
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE T fminimum_mag(T x, T y) {
+LIBC_INLINE constexpr T fminimum_mag(T x, T y) {
   FPBits<T> bitx(x), bity(y);
 
   if (abs(x) < abs(y))
@@ -248,7 +248,7 @@ LIBC_INLINE constexpr T fmaximum_mag_num(T x, T y) {
 }
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE T fminimum_mag_num(T x, T y) {
+LIBC_INLINE constexpr T fminimum_mag_num(T x, T y) {
   FPBits<T> bitx(x), bity(y);
 
   if (abs(x) < abs(y))
@@ -344,7 +344,7 @@ LIBC_INLINE int canonicalize(T &cx, const T &x) {
 }
 
 template <typename T>
-LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, bool>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_floating_point_v<T>, bool>
 totalorder(T x, T y) {
   using FPBits = FPBits<T>;
   FPBits x_bits(x);
@@ -359,13 +359,14 @@ totalorder(T x, T y) {
 }
 
 template <typename T>
-LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, bool>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_floating_point_v<T>, bool>
 totalordermag(T x, T y) {
   return FPBits<T>(x).abs().uintval() <= FPBits<T>(y).abs().uintval();
 }
 
 template <typename T>
-LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, T> getpayload(T x) {
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_floating_point_v<T>, T>
+getpayload(T x) {
   using FPBits = FPBits<T>;
   using StorageType = typename FPBits::StorageType;
   FPBits x_bits(x);
@@ -385,7 +386,7 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, T> getpayload(T x) {
 }
 
 template <bool IsSignaling, typename T>
-LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, bool>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_floating_point_v<T>, bool>
 setpayload(T &res, T pl) {
   using FPBits = FPBits<T>;
   FPBits pl_bits(pl);

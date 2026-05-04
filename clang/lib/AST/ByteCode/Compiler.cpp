@@ -3231,23 +3231,32 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
 
   // FIXME: Find a test case where Adjustments matters.
 
-  // When we're initializing a global variable *or* the storage duration of
+  // When we're extending a global variable *or* the storage duration of
   // the temporary is explicitly static, create a global variable.
   OptPrimType InnerT = classify(Inner);
-  if (E->getStorageDuration() == SD_Static) {
+  const ValueDecl *ExtendingDecl = E->getExtendingDecl();
+  bool IsStatic = E->getStorageDuration() == SD_Static;
+  if (IsStatic ||
+      (ExtendingDecl && Context::shouldBeGloballyIndexed(ExtendingDecl))) {
     UnsignedOrNone GlobalIndex = P.createGlobal(E, Inner->getType());
     if (!GlobalIndex)
       return false;
 
     const LifetimeExtendedTemporaryDecl *TempDecl =
         E->getLifetimeExtendedTemporaryDecl();
-    assert(TempDecl);
 
     if (InnerT) {
       if (!this->visit(Inner))
         return false;
-      if (!this->emitInitGlobalTemp(*InnerT, *GlobalIndex, TempDecl, E))
-        return false;
+
+      if (IsStatic) {
+        assert(TempDecl);
+        if (!this->emitInitGlobalTemp(*InnerT, *GlobalIndex, TempDecl, E))
+          return false;
+      } else {
+        if (!this->emitInitGlobal(*InnerT, *GlobalIndex, E))
+          return false;
+      }
       return this->emitGetPtrGlobal(*GlobalIndex, E);
     }
 
@@ -3258,7 +3267,11 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
       return false;
     if (!this->visitInitializer(Inner))
       return false;
-    return this->emitInitGlobalTempComp(TempDecl, E);
+    if (IsStatic) {
+      assert(TempDecl);
+      return this->emitInitGlobalTempComp(TempDecl, E);
+    }
+    return true;
   }
 
   ScopeKind VarScope = E->getStorageDuration() == SD_FullExpression
