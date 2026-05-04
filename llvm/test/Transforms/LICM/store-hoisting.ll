@@ -689,3 +689,38 @@ merge:
 exit:
   ret void
 }
+
+@g1 = external global i8
+@g2 = external global i8
+
+; The store should not be hoisted here, because the location is accessed by the
+; preceding load. However, the clobbering memory access for that load is
+; liveOnEntry, because the pointer on the backedge does not alias. As such,
+; only checking whether the clobbering access is outside the loop is
+; insufficient.
+define i8 @load_before_store_with_out_of_loop_def(i1 %c) {
+; CHECK-LABEL: define i8 @load_before_store_with_out_of_loop_def(
+; CHECK-SAME: i1 [[C:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ @g1, %[[ENTRY]] ], [ @g2, %[[LOOP]] ]
+; CHECK-NEXT:    [[V:%.*]] = load i8, ptr [[PHI]], align 1
+; CHECK-NEXT:    store i8 1, ptr @g1, align 1
+; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[V_LCSSA:%.*]] = phi i8 [ [[V]], %[[LOOP]] ]
+; CHECK-NEXT:    ret i8 [[V_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %phi = phi ptr [ @g1, %entry ], [ @g2, %loop ]
+  %v = load i8, ptr %phi
+  store i8 1, ptr @g1
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret i8 %v
+}
