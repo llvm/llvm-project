@@ -15,6 +15,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
+#undef isnanl
 LIBC_INLINE LIBC_CONSTEXPR int isnanl(long double x) {
 #if defined(__LIBC_USE_BUILTIN_ISNAN) && !defined(LIBC_HAS_CONSTANT_EVALUATION)
   return __builtin_isnan(x);
