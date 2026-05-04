@@ -33,7 +33,7 @@ struct initializer_list {
   #if __cplusplus >= 201402L
   constexpr
   #endif
-  const T* begin() const { return {}; };
+  const T* begin() const { return p; };
 };
 #endif
 
@@ -222,7 +222,7 @@ constexpr bool b3 = p == p;
 constexpr std::initializer_list<int *> il1 = { (int *)nullptr };
 constexpr std::initializer_list<unsigned long> il2 = { 0 };
 constexpr bool b7 = il1.begin() == (void *)il2.begin();
-// FIXME-error@-1 {{constexpr variable 'b2' must be initialized by a constant expression}}
+// FIXME-error@-1 {{constexpr variable 'b7' must be initialized by a constant expression}}
 //   FIXME-note@-2 {{address of a constexpr-unknown object cannot be used for comparison}}
 #endif
 } // namespace cwg2765
