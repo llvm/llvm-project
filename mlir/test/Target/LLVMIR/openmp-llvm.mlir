@@ -2468,10 +2468,31 @@ llvm.func @omp_atomic_compare(
     omp.yield(%sel0 : i32)
   }
 
-  // Float equality  →  bitcast + cmpxchg
+  // Float equality  →  check both x and e for ±0.0 in one branch.
+  // If both are ±0.0, cmpxchg uses x's bit-pattern; else original cmpxchg.
   // CHECK: %[[EBC:.*]] = bitcast float %[[EF]] to i32
   // CHECK: %[[DBC:.*]] = bitcast float %[[DF]] to i32
+  // CHECK: load atomic i32, ptr %[[XF]] monotonic
+  // CHECK: %[[XISZERO:.*]] = fcmp oeq float %{{.*}}, 0.000000e+00
+  // CHECK: %[[EISZERO:.*]] = fcmp oeq float %[[EF]], 0.000000e+00
+  // CHECK: %[[BOTH:.*]] = and i1 %[[XISZERO]], %[[EISZERO]]
+  // CHECK: br i1 %[[BOTH]], label %[[ZERO:[^,]+]], label %[[NORMAL:[^,]+]]
+  // ZeroBB: cmpxchg with x's bit-pattern; goto end.
+  // CHECK: [[ZERO]]:
+  // CHECK: cmpxchg ptr %[[XF]], i32 %{{.*}}, i32 %[[DBC]] monotonic monotonic
+  // CHECK-NEXT: extractvalue
+  // CHECK-NEXT: extractvalue
+  // CHECK-NEXT: br label %[[EXIT:[^ ]+]]
+  // NormalBB: original cmpxchg; goto end.
+  // CHECK: [[NORMAL]]:
   // CHECK: cmpxchg ptr %[[XF]], i32 %[[EBC]], i32 %[[DBC]] monotonic monotonic
+  // CHECK-NEXT: extractvalue
+  // CHECK-NEXT: extractvalue
+  // CHECK-NEXT: br label %[[EXIT]]
+  // ExitBB: phi merge.
+  // CHECK: [[EXIT]]:
+  // CHECK-NEXT: phi i32 [ %{{.*}}, %[[ZERO]] ], [ %{{.*}}, %[[NORMAL]] ]
+  // CHECK-NEXT: phi i1 [ %{{.*}}, %[[ZERO]] ], [ %{{.*}}, %[[NORMAL]] ]
   omp.atomic.compare %xf : !llvm.ptr {
   ^bb0(%xval : f32):
     %cmp1 = llvm.fcmp "oeq" %xval, %ef : f32
@@ -2562,6 +2583,45 @@ llvm.func @omp_atomic_compare(
     omp.yield(%sel7 : !llvm.struct<(f32, f32)>)
   }
 
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: @omp_atomic_compare_float_neg_zero
+// CHECK-SAME: (ptr %[[XF:.*]], float %[[EF:.*]], float %[[DF:.*]])
+// Verify the ±0.0 handling: single branch on (x==±0.0 AND e==±0.0).
+// On zero-path failure, cmpxchg goes to end — no fallthrough to normal.
+llvm.func @omp_atomic_compare_float_neg_zero(%xf : !llvm.ptr, %ef : f32, %df : f32) {
+  // CHECK: %[[EBC:.*]] = bitcast float %[[EF]] to i32
+  // CHECK: %[[DBC:.*]] = bitcast float %[[DF]] to i32
+  // CHECK: load atomic i32, ptr %[[XF]] monotonic
+  // CHECK: %[[XISZERO:.*]] = fcmp oeq float %{{.*}}, 0.000000e+00
+  // CHECK: %[[EISZERO:.*]] = fcmp oeq float %[[EF]], 0.000000e+00
+  // CHECK: %[[BOTH:.*]] = and i1 %[[XISZERO]], %[[EISZERO]]
+  // CHECK: br i1 %[[BOTH]], label %[[ZERO:[^,]+]], label %[[NORMAL:[^,]+]]
+  // ZeroBB: cmpxchg with X's loaded bit-pattern; goto end directly.
+  // CHECK: [[ZERO]]:
+  // CHECK: cmpxchg ptr %[[XF]], i32 %{{.*}}, i32 %[[DBC]] monotonic monotonic
+  // CHECK-NEXT: extractvalue
+  // CHECK-NEXT: extractvalue
+  // CHECK-NEXT: br label %[[EXIT:[^ ]+]]
+  // NormalBB: original bitwise cmpxchg; goto end.
+  // CHECK: [[NORMAL]]:
+  // CHECK: cmpxchg ptr %[[XF]], i32 %[[EBC]], i32 %[[DBC]] monotonic monotonic
+  // CHECK-NEXT: extractvalue
+  // CHECK-NEXT: extractvalue
+  // CHECK-NEXT: br label %[[EXIT]]
+  // ExitBB: phi merge — ZeroBB flows here regardless of success/failure.
+  // CHECK: [[EXIT]]:
+  // CHECK-NEXT: phi i32 [ %{{.*}}, %[[ZERO]] ], [ %{{.*}}, %[[NORMAL]] ]
+  // CHECK-NEXT: phi i1 [ %{{.*}}, %[[ZERO]] ], [ %{{.*}}, %[[NORMAL]] ]
+  omp.atomic.compare %xf : !llvm.ptr {
+  ^bb0(%xval : f32):
+    %cmp = llvm.fcmp "oeq" %xval, %ef : f32
+    %sel = llvm.select %cmp, %df, %xval : i1, f32
+    omp.yield(%sel : f32)
+  }
   llvm.return
 }
 
