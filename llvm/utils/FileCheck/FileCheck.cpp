@@ -379,7 +379,7 @@ static std::string GetCheckTypeAbbreviation(Check::FileCheckType Ty) {
 static void
 buildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
                       const std::pair<unsigned, unsigned> &ImpPatBufferIDRange,
-                      const std::vector<std::unique_ptr<FileCheckDiag>> &Diags,
+                      const FileCheckDiagList &Diags,
                       std::vector<InputAnnotation> &Annotations,
                       unsigned &LabelWidth) {
   struct CompareSMLoc {
@@ -389,8 +389,8 @@ buildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
   };
   // How many diagnostics does each pattern have?
   std::map<SMLoc, unsigned, CompareSMLoc> DiagCountPerPattern;
-  for (const std::unique_ptr<FileCheckDiag> &Diag : Diags)
-    ++DiagCountPerPattern[Diag->getMatchResultDiag().getCheckLoc()];
+  for (const FileCheckDiag &Diag : Diags)
+    ++DiagCountPerPattern[Diag.getMatchResultDiag().getCheckLoc()];
   // How many diagnostics have we seen so far per pattern?
   std::map<SMLoc, unsigned, CompareSMLoc> DiagIndexPerPattern;
   // How many total diagnostics have we seen so far?
@@ -400,10 +400,10 @@ buildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
   // The label prefix that uniquely identifies the current MatchResultDiag and
   // its MatchNoteDiag series.
   std::string CurLabelPrefix;
-  for (const std::unique_ptr<FileCheckDiag> &Diag : Diags) {
+  for (const FileCheckDiag &Diag : Diags) {
     InputAnnotation A;
     A.DiagIndex = DiagIndex++;
-    if (MatchResultDiag *MRD = dyn_cast<MatchResultDiag>(Diag.get())) {
+    if (const MatchResultDiag *MRD = dyn_cast<MatchResultDiag>(&Diag)) {
       CurLabelPrefix.clear();
       llvm::raw_string_ostream LabelStrm(CurLabelPrefix);
       LabelStrm << GetCheckTypeAbbreviation(MRD->getCheckTy()) << ":";
@@ -422,15 +422,15 @@ buildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
     // Build label that uniquely identifies this FileCheckDiag.
     llvm::raw_string_ostream LabelStrm(A.Label);
     LabelStrm << CurLabelPrefix;
-    if (DiagCountPerPattern[Diag->getMatchResultDiag().getCheckLoc()] > 1)
+    if (DiagCountPerPattern[Diag.getMatchResultDiag().getCheckLoc()] > 1)
       LabelStrm
           << "'"
-          << DiagIndexPerPattern[Diag->getMatchResultDiag().getCheckLoc()]++;
+          << DiagIndexPerPattern[Diag.getMatchResultDiag().getCheckLoc()]++;
     LabelWidth = std::max((std::string::size_type)LabelWidth, A.Label.size());
 
-    A.Marker = GetMarker(Diag->getMatchType());
+    A.Marker = GetMarker(Diag.getMatchType());
     std::optional<StringRef> CustomNote = std::nullopt;
-    if (const MatchNoteDiag *NoteDiag = dyn_cast<MatchNoteDiag>(&*Diag)) {
+    if (const MatchNoteDiag *NoteDiag = dyn_cast<MatchNoteDiag>(&Diag)) {
       CustomNote = NoteDiag->getCustomNote();
       if (CustomNote) {
         A.Marker.Note = *CustomNote;
@@ -440,21 +440,21 @@ buildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
         // actually have for the marker simply points to the start of the
         // match/search range for the full pattern of which the substitution is
         // potentially just one component.
-        SMRange InputRange = Diag->getInputRange();
+        SMRange InputRange = Diag.getInputRange();
         if (InputRange.Start == InputRange.End)
           A.Marker.Lead = ' ';
       }
     }
-    if (Diag->getMatchType() == FileCheckDiag::MatchFoundErrorNote) {
+    if (Diag.getMatchType() == FileCheckDiag::MatchFoundErrorNote) {
       assert(CustomNote && "expected custom note for MatchFoundErrorNote");
       A.Marker.Note = "error: " + A.Marker.Note;
     }
     A.FoundAndExpectedMatch =
-        Diag->getMatchType() == FileCheckDiag::MatchFoundAndExpected;
+        Diag.getMatchType() == FileCheckDiag::MatchFoundAndExpected;
 
     // Compute the mark location, and break annotation into multiple
     // annotations if it spans multiple lines.
-    SMRange InputRange = Diag->getInputRange();
+    SMRange InputRange = Diag.getInputRange();
     auto InputStartLineAndCol = SM.getLineAndColumn(InputRange.Start);
     auto InputEndLineAndCol = SM.getLineAndColumn(InputRange.End);
     unsigned InputStartLine = InputStartLineAndCol.first;
@@ -884,8 +884,8 @@ int main(int argc, char **argv) {
            << "\n";
     std::vector<InputAnnotation> Annotations;
     unsigned LabelWidth;
-    buildInputAnnotations(SM, CheckFileBufferID, ImpPatBufferIDRange,
-                          Diags.getList(), Annotations, LabelWidth);
+    buildInputAnnotations(SM, CheckFileBufferID, ImpPatBufferIDRange, Diags,
+                          Annotations, LabelWidth);
     DumpAnnotatedInput(errs(), Req, DumpInputFilter, DumpInputContext,
                        InputFileText, Annotations, LabelWidth);
   }
