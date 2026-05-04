@@ -155,7 +155,7 @@ void UpdateVCEPass::runOnOperation() {
 
     // Per the SPIR-V spec Decoration table, the `LinkageAttributes` decoration
     // requires the `Linkage` capability, and specific linkage types pull in
-    // additional extensions (e.g. `LinkOnceODR` -> `SPV_KHR_linkonce_odr`).
+    // additional extensions (e.g., `LinkOnceODR` -> `SPV_KHR_linkonce_odr`).
     auto requireLinkage = [&](spirv::LinkageType linkageType) -> LogicalResult {
       if (auto caps = spirv::getCapabilities(linkageType)) {
         SmallVector<ArrayRef<spirv::Capability>, 1> capCandidates = {*caps};
