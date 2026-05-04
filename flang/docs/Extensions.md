@@ -529,7 +529,7 @@ end program
   exponent letter for compatibility with other compilers.
 * Relax some restrictions to make `C_LOC` more like `LOC` for
   compatibility with legacy code that should be fixed. This is
-  is unsafe and can be used to create aliases that the compiler
+  unsafe and can be used to create aliases that the compiler
   does not know about. Locations obtained this way should be
   passed directly to C code. This could be removed at any time.
   [-frelaxed-c-loc]
