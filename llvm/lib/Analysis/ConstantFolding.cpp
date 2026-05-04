@@ -707,14 +707,14 @@ Constant *FoldReinterpretLoadFromConst(Constant *C, Type *LoadTy,
                                   DL.getTypeSizeInBits(LoadTy).getFixedValue());
     if (Constant *Res =
             FoldReinterpretLoadFromConst(C, MapTy, OrigLoadTy, Offset, DL)) {
-      if (Res->isNullValue() && !LoadTy->isX86_AMXTy())
+      if (Res->isZeroValue() && !LoadTy->isX86_AMXTy())
         // Materializing a zero can be done trivially without a bitcast
         return Constant::getNullValue(LoadTy);
       Type *CastTy = LoadTy->isPtrOrPtrVectorTy() ? DL.getIntPtrType(LoadTy) : LoadTy;
       Res = FoldBitCast(Res, CastTy, DL);
       if (LoadTy->isPtrOrPtrVectorTy()) {
         // For vector of pointer, we needed to first convert to a vector of integer, then do vector inttoptr
-        if (Res->isNullValue() && !LoadTy->isX86_AMXTy())
+        if (Res->isZeroValue() && !LoadTy->isX86_AMXTy())
           return Constant::getNullValue(LoadTy);
         if (DL.isNonIntegralPointerType(LoadTy->getScalarType()))
           // Be careful not to replace a load of an addrspace value with an inttoptr here
@@ -912,7 +912,7 @@ Constant *llvm::ConstantFoldLoadFromUniformValue(Constant *C, Type *Ty,
   // uniform.
   if (!DL.typeSizeEqualsStoreSize(C->getType()))
     return nullptr;
-  if (C->isNullValue() && !Ty->isX86_AMXTy())
+  if (C->isZeroValue() && !Ty->isX86_AMXTy())
     return Constant::getNullValue(Ty);
   if (C->isAllOnesValue() &&
       (Ty->isIntOrIntVectorTy() || Ty->isByteOrByteVectorTy() ||
@@ -1093,7 +1093,7 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
     }
   }
 
-  if ((Ptr->isNullValue() || BaseIntVal != 0) &&
+  if ((Ptr->isZeroValue() || BaseIntVal != 0) &&
       !DL.mustNotIntroduceIntToPtr(Ptr->getType())) {
 
     // If the index size is smaller than the pointer size, add to the low
@@ -1343,7 +1343,7 @@ Constant *llvm::ConstantFoldCompareInstOperands(
   // ConstantExpr::getCompare cannot do this, because it doesn't have DL
   // around to know if bit truncation is happening.
   if (auto *CE0 = dyn_cast<ConstantExpr>(Ops0)) {
-    if (Ops1->isNullValue()) {
+    if (Ops1->isZeroValue()) {
       if (CE0->getOpcode() == Instruction::IntToPtr) {
         Type *IntPtrTy = DL.getIntPtrType(CE0->getType());
         // Convert the integer value to the right size to ensure we get the
@@ -1649,7 +1649,7 @@ Constant *llvm::ConstantFoldCastOperand(unsigned Opcode, Constant *C,
         APInt BaseOffset(BitWidth, 0);
         auto *Base = cast<Constant>(GEP->stripAndAccumulateConstantOffsets(
             DL, BaseOffset, /*AllowNonInbounds=*/true));
-        if (Base->isNullValue()) {
+        if (Base->isZeroValue()) {
           FoldedValue = ConstantInt::get(CE->getContext(), BaseOffset);
         } else {
           // ptrtoint/ptrtoaddr (gep i8, Ptr, (sub 0, V))
@@ -1661,7 +1661,7 @@ Constant *llvm::ConstantFoldCastOperand(unsigned Opcode, Constant *C,
             Type *IntIdxTy = DL.getIndexType(Ptr->getType());
             if (Sub && Sub->getType() == IntIdxTy &&
                 Sub->getOpcode() == Instruction::Sub &&
-                Sub->getOperand(0)->isNullValue())
+                Sub->getOperand(0)->isZeroValue())
               FoldedValue = ConstantExpr::getSub(
                   ConstantExpr::getCast(Opcode, Ptr, IntIdxTy),
                   Sub->getOperand(1));
@@ -2327,15 +2327,15 @@ Constant *constantFoldVectorReduce(Intrinsic::ID IID, Constant *Op) {
     case Intrinsic::vector_reduce_umax:
       return SplatVal;
     case Intrinsic::vector_reduce_add:
-      if (SplatVal->isNullValue())
+      if (SplatVal->isZeroValue())
         return SplatVal;
       break;
     case Intrinsic::vector_reduce_mul:
-      if (SplatVal->isNullValue() || SplatVal->isOneValue())
+      if (SplatVal->isZeroValue() || SplatVal->isOneValue())
         return SplatVal;
       break;
     case Intrinsic::vector_reduce_xor:
-      if (SplatVal->isNullValue())
+      if (SplatVal->isZeroValue())
         return SplatVal;
       if (OpVT->getElementCount().isKnownMultipleOf(2))
         return Constant::getNullValue(OpVT->getElementType());
@@ -3265,7 +3265,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       break;
 
     case Intrinsic::wasm_anytrue:
-      return Op->isNullValue() ? ConstantInt::get(Ty, 0)
+      return Op->isZeroValue() ? ConstantInt::get(Ty, 0)
                                : ConstantInt::get(Ty, 1);
 
     case Intrinsic::wasm_alltrue:
@@ -3274,7 +3274,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       for (unsigned I = 0; I != E; ++I) {
         Constant *Elt = Op->getAggregateElement(I);
         // Return false as soon as we find a non-true element.
-        if (Elt && Elt->isNullValue())
+        if (Elt && Elt->isZeroValue())
           return ConstantInt::get(Ty, 0);
         // Bail as soon as we find an element we cannot prove to be true.
         if (!Elt || !isa<ConstantInt>(Elt))
@@ -3971,7 +3971,7 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
       Constant *Elt = Operands[0]->getAggregateElement(I);
       if (!Elt)
         return nullptr;
-      if (isa<UndefValue>(Elt) || Elt->isNullValue())
+      if (isa<UndefValue>(Elt) || Elt->isZeroValue())
         continue;
       return ConstantInt::get(Ty, I);
     }
@@ -4300,7 +4300,7 @@ static Constant *ConstantFoldFixedVectorCall(
         else
           return nullptr;
       }
-      if (MaskElt->isNullValue()) {
+      if (MaskElt->isZeroValue()) {
         if (!PassthruElt)
           return nullptr;
         NewElements.push_back(PassthruElt);
@@ -4489,7 +4489,7 @@ static Constant *ConstantFoldScalableVectorCall(
   switch (IntrinsicID) {
   case Intrinsic::aarch64_sve_convert_from_svbool: {
     Constant *Src = Operands[0];
-    if (!Src->isNullValue())
+    if (!Src->isZeroValue())
       break;
 
     return ConstantInt::getFalse(SVTy);

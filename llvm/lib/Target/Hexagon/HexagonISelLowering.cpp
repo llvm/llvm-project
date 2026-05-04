@@ -1148,7 +1148,7 @@ HexagonTargetLowering::LowerConstantPool(SDValue Op, SelectionDAG &DAG) const {
       assert(isPowerOf2_32(VecLen) &&
              "conversion only supported for pow2 VectorSize");
       for (unsigned i = 0; i < VecLen; ++i)
-        NewConst.push_back(IRB.getInt8(CV->getOperand(i)->isNullValue()));
+        NewConst.push_back(IRB.getInt8(CV->getOperand(i)->isZeroValue()));
 
       CVal = ConstantVector::get(NewConst);
       isVTi1Type = true;

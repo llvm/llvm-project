@@ -1372,7 +1372,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // ZExt cannot convert between vector and scalar
     Value *ConvertedShadow = convertShadowToScalar(Shadow, IRB);
     if (auto *ConstantShadow = dyn_cast<Constant>(ConvertedShadow)) {
-      if (!ClCheckConstantShadow || ConstantShadow->isNullValue()) {
+      if (!ClCheckConstantShadow || ConstantShadow->isZeroValue()) {
         // Origin is not needed: value is initialized or const shadow is
         // ignored.
         return;
@@ -1535,7 +1535,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       Value *ConvertedShadow = ShadowData.Shadow;
 
       if (auto *ConstantShadow = dyn_cast<Constant>(ConvertedShadow)) {
-        if (!ClCheckConstantShadow || ConstantShadow->isNullValue()) {
+        if (!ClCheckConstantShadow || ConstantShadow->isZeroValue()) {
           // Skip, value is initialized or const shadow is ignored.
           continue;
         }
@@ -2759,7 +2759,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         } else {
           Constant *ConstOrigin = dyn_cast<Constant>(OpOrigin);
           // No point in adding something that might result in 0 origin value.
-          if (!ConstOrigin || !ConstOrigin->isNullValue()) {
+          if (!ConstOrigin || !ConstOrigin->isZeroValue()) {
             Value *Cond = MSV->convertToBool(OpShadow, IRB);
             Origin = IRB.CreateSelect(Cond, OpOrigin, Origin);
           }
@@ -3201,7 +3201,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       return;
     }
 
-    if ((constOp->isNullValue() &&
+    if ((constOp->isZeroValue() &&
          (pre == CmpInst::ICMP_SLT || pre == CmpInst::ICMP_SGE)) ||
         (constOp->isAllOnesValue() &&
          (pre == CmpInst::ICMP_SGT || pre == CmpInst::ICMP_SLE))) {
@@ -3550,7 +3550,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     // If zero poison is requested, mix in with the shadow
     Constant *IsZeroPoison = cast<Constant>(I.getOperand(1));
-    if (!IsZeroPoison->isNullValue()) {
+    if (!IsZeroPoison->isZeroValue()) {
       Value *BoolZeroPoison = IRB.CreateIsNull(Src, "_mscz_bzp");
       OutputShadow = IRB.CreateOr(OutputShadow, BoolZeroPoison, "_mscz_bs");
     }
@@ -7547,7 +7547,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
           Store = IRB.CreateAlignedStore(ArgShadow, ArgShadowBase,
                                          kShadowTLSAlignment);
           Constant *Cst = dyn_cast<Constant>(ArgShadow);
-          if (MS.TrackOrigins && !(Cst && Cst->isNullValue())) {
+          if (MS.TrackOrigins && !(Cst && Cst->isZeroValue())) {
             IRB.CreateStore(getOrigin(A),
                             getOriginPtrForArgument(IRB, ArgOffset));
           }

@@ -581,7 +581,7 @@ struct is_zero {
   template <typename ITy> bool match(ITy *V) const {
     auto *C = dyn_cast<Constant>(V);
     // FIXME: this should be able to do something for scalable vectors
-    return C && (C->isNullValue() || cst_pred_ty<is_zero_int>().match(C));
+    return C && (C->isZeroValue() || cst_pred_ty<is_zero_int>().match(C));
   }
 };
 /// Match any null constant or a vector with all elements equal to 0.
@@ -3325,7 +3325,7 @@ struct LogicalOp_match {
 
       if (Opcode == Instruction::And) {
         auto *C = dyn_cast<Constant>(FVal);
-        if (C && C->isNullValue())
+        if (C && C->isZeroValue())
           return (L.match(Cond) && R.match(TVal)) ||
                  (Commutable && L.match(TVal) && R.match(Cond));
       } else {

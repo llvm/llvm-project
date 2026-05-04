@@ -255,7 +255,7 @@ static bool isOnlyUsedInComparisonWithZero(Value *V) {
   for (User *U : V->users()) {
     if (ICmpInst *IC = dyn_cast<ICmpInst>(U))
       if (Constant *C = dyn_cast<Constant>(IC->getOperand(1)))
-        if (C->isNullValue())
+        if (C->isZeroValue())
           continue;
     // Unknown instruction.
     return false;
@@ -1654,7 +1654,7 @@ Value *LibCallSimplifier::optimizeMemCCpy(CallInst *CI, IRBuilderBase &B) {
     return Dst;
   // memccpy(d, s, c, 0) -> nullptr
   if (N) {
-    if (N->isNullValue())
+    if (N->isZeroValue())
       return Constant::getNullValue(CI->getType());
     if (!getConstantStringInfo(Src, SrcStr, /*TrimAtNul=*/false) ||
         // TODO: Handle zeroinitializer.

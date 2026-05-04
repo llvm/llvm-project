@@ -1782,7 +1782,7 @@ static bool isZeroSize(Value *Size) {
       Size = Res;
   // Treat undef/poison size like zero.
   if (auto *C = dyn_cast<Constant>(Size))
-    return isa<UndefValue>(C) || C->isNullValue();
+    return isa<UndefValue>(C) || C->isZeroValue();
   return false;
 }
 

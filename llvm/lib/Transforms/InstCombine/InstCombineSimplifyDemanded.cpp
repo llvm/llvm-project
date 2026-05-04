@@ -1820,8 +1820,8 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
       for (unsigned i = 0; i < VWidth; i++) {
         Constant *CElt = CV->getAggregateElement(i);
 
-        // isNullValue() always returns false when called on a ConstantExpr.
-        if (CElt->isNullValue())
+        // isZeroValue() always returns false when called on a ConstantExpr.
+        if (CElt->isZeroValue())
           DemandedLHS.clearBit(i);
         else if (CElt->isOneValue())
           DemandedRHS.clearBit(i);
@@ -1915,7 +1915,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
       if (auto *CMask = dyn_cast<Constant>(II->getOperand(1))) {
         for (unsigned i = 0; i < VWidth; i++) {
           if (Constant *CElt = CMask->getAggregateElement(i)) {
-            if (CElt->isNullValue())
+            if (CElt->isZeroValue())
               DemandedPtrs.clearBit(i);
             else if (CElt->isAllOnesValue())
               DemandedPassThrough.clearBit(i);

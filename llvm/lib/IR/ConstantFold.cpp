@@ -175,7 +175,7 @@ Constant *llvm::ConstantFoldCastInstruction(unsigned opc, Constant *V,
     return UndefValue::get(DestTy);
   }
 
-  if (V->isNullValue() && !DestTy->isX86_AMXTy() &&
+  if (V->isZeroValue() && !DestTy->isX86_AMXTy() &&
       opc != Instruction::AddrSpaceCast)
     return Constant::getNullValue(DestTy);
 
@@ -295,7 +295,8 @@ Constant *llvm::ConstantFoldCastInstruction(unsigned opc, Constant *V,
 Constant *llvm::ConstantFoldSelectInstruction(Constant *Cond,
                                               Constant *V1, Constant *V2) {
   // Check for i1 and vector true/false conditions.
-  if (Cond->isNullValue()) return V2;
+  if (Cond->isZeroValue())
+    return V2;
   if (Cond->isAllOnesValue()) return V1;
 
   // If the condition is a vector constant, fold the result elementwise.
@@ -318,7 +319,7 @@ Constant *llvm::ConstantFoldSelectInstruction(Constant *Cond,
         V = isa<UndefValue>(V1Element) ? V1Element : V2Element;
       } else {
         if (!isa<ConstantInt>(Cond)) break;
-        V = Cond->isNullValue() ? V2Element : V1Element;
+        V = Cond->isZeroValue() ? V2Element : V1Element;
       }
       Result.push_back(V);
     }
@@ -442,7 +443,7 @@ Constant *llvm::ConstantFoldInsertElementInstruction(Constant *Val,
 
   // Inserting null into all zeros is still all zeros.
   // TODO: This is true for undef and poison splats too.
-  if (Val->isNullValue() && Elt->isNullValue())
+  if (Val->isZeroValue() && Elt->isZeroValue())
     return Val;
 
   ConstantInt *CIdx = dyn_cast<ConstantInt>(Idx);
@@ -498,7 +499,8 @@ Constant *llvm::ConstantFoldShuffleVectorInstruction(Constant *V1, Constant *V2,
 
     // For scalable vectors, make sure this doesn't fold back into a
     // shufflevector.
-    if (!MaskEltCount.isScalable() || Elt->isNullValue() || isa<UndefValue>(Elt))
+    if (!MaskEltCount.isScalable() || Elt->isZeroValue() ||
+        isa<UndefValue>(Elt))
       return ConstantVector::getSplat(MaskEltCount, Elt);
   }
 
@@ -910,7 +912,7 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
   if (auto *VTy = dyn_cast<VectorType>(C1->getType())) {
     // Fast path for splatted constants.
     if (Constant *C2Splat = C2->getSplatValue()) {
-      if (Instruction::isIntDivRem(Opcode) && C2Splat->isNullValue())
+      if (Instruction::isIntDivRem(Opcode) && C2Splat->isZeroValue())
         return PoisonValue::get(VTy);
       if (Constant *C1Splat = C1->getSplatValue()) {
         Constant *Res =
@@ -1170,7 +1172,7 @@ Constant *llvm::ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
     return ConstantInt::get(ResultTy, CmpInst::isUnordered(Predicate));
   }
 
-  if (C2->isNullValue()) {
+  if (C2->isZeroValue()) {
     // The caller is expected to commute the operands if the constant expression
     // is C2.
     // C1 >= 0 --> true
@@ -1335,7 +1337,7 @@ Constant *llvm::ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
       return ConstantInt::get(ResultTy, Result);
 
     if ((!isa<ConstantExpr>(C1) && isa<ConstantExpr>(C2)) ||
-        (C1->isNullValue() && !C2->isNullValue())) {
+        (C1->isZeroValue() && !C2->isZeroValue())) {
       // If C2 is a constant expr and C1 isn't, flip them around and fold the
       // other way if possible.
       // Also, if C1 is null and C2 isn't, flip them around.
@@ -1367,7 +1369,7 @@ Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
 
     return all_of(Idxs, [](Value *Idx) {
       Constant *IdxC = cast<Constant>(Idx);
-      return IdxC->isNullValue() || isa<UndefValue>(IdxC);
+      return IdxC->isZeroValue() || isa<UndefValue>(IdxC);
     });
   };
   if (IsNoOp())

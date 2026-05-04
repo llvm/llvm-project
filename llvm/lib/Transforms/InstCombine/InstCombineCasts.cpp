@@ -2717,7 +2717,7 @@ static bool collectInsertionElements(Value *V, unsigned Shift,
   if (V->getType() == VecEltTy) {
     // Inserting null doesn't actually insert any elements.
     if (Constant *C = dyn_cast<Constant>(V))
-      if (C->isNullValue())
+      if (C->isZeroValue())
         return true;
 
     unsigned ElementIndex = getTypeSizeIndex(Shift, VecEltTy);

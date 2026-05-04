@@ -485,7 +485,7 @@ bool foldFuncPtrAndConstToNull(LLVMContext &Context, Module *TheModule,
 
   Constant *C = ConstantFoldBinaryInstruction(Instruction::And, TheConstantExpr,
                                               TheConstant);
-  bool Result = C && C->isNullValue();
+  bool Result = C && C->isZeroValue();
 
   if (!TheModule) {
     // If the Module exists then it will delete the Function.
@@ -572,12 +572,12 @@ TEST(ConstantsTest, FoldGlobalVariablePtr) {
   Constant *PtrToInt = ConstantExpr::getPtrToInt(Global.get(), IntType);
   ASSERT_TRUE(
       ConstantFoldBinaryInstruction(Instruction::And, PtrToInt, TheConstant)
-          ->isNullValue());
+          ->isZeroValue());
 
   Constant *PtrToAddr = ConstantExpr::getPtrToAddr(Global.get(), IntType);
   ASSERT_TRUE(
       ConstantFoldBinaryInstruction(Instruction::And, PtrToAddr, TheConstant)
-          ->isNullValue());
+          ->isZeroValue());
 }
 
 // Check that containsUndefOrPoisonElement and containsPoisonElement is working

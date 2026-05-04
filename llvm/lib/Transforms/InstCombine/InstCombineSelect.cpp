@@ -891,7 +891,7 @@ static Value *foldSelectICmpAndBinOp(Value *CondVal, Value *TrueVal,
   auto *IdentityC =
       ConstantExpr::getBinOpIdentity(BinOp->getOpcode(), BinOp->getType(),
                                      /*AllowRHSConstant*/ true);
-  if (IdentityC == nullptr || !IdentityC->isNullValue())
+  if (IdentityC == nullptr || !IdentityC->isZeroValue())
     return nullptr;
 
   unsigned C2Log = C2->logBase2();
@@ -2713,7 +2713,7 @@ static Instruction *canonicalizeSelectToShuffle(SelectInst &SI) {
     if (Elt->isOneValue()) {
       // If the select condition element is true, choose from the 1st vector.
       Mask.push_back(i);
-    } else if (Elt->isNullValue()) {
+    } else if (Elt->isZeroValue()) {
       // If the select condition element is false, choose from the 2nd vector.
       Mask.push_back(i + NumElts);
     } else if (isa<UndefValue>(Elt)) {

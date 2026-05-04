@@ -2256,7 +2256,7 @@ bool DSEState::tryFoldIntoCalloc(MemoryDef *Def, const Value *DefUO) {
     // TODO: Could handle zero store to small allocation as well.
     return false;
   Constant *StoredConstant = dyn_cast<Constant>(MemSet->getValue());
-  if (!StoredConstant || !StoredConstant->isNullValue())
+  if (!StoredConstant || !StoredConstant->isZeroValue())
     return false;
 
   if (!isRemovable(DefI))

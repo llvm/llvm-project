@@ -360,7 +360,7 @@ static Value *matchAddReduction(const ExtractElementInst &EE,
   ReduceInOneBB = true;
   // Make sure we're extracting index 0.
   auto *Index = dyn_cast<ConstantInt>(EE.getIndexOperand());
-  if (!Index || !Index->isNullValue())
+  if (!Index || !Index->isZeroValue())
     return nullptr;
 
   const auto *BO = dyn_cast<BinaryOperator>(EE.getVectorOperand());

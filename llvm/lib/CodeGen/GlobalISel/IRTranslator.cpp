@@ -582,7 +582,7 @@ bool IRTranslator::shouldEmitAsBranches(
   if (Cases[0].CmpRHS == Cases[1].CmpRHS &&
       Cases[0].PredInfo.Pred == Cases[1].PredInfo.Pred &&
       isa<Constant>(Cases[0].CmpRHS) &&
-      cast<Constant>(Cases[0].CmpRHS)->isNullValue()) {
+      cast<Constant>(Cases[0].CmpRHS)->isZeroValue()) {
     if (Cases[0].PredInfo.Pred == CmpInst::ICMP_EQ &&
         Cases[0].TrueBB == Cases[1].ThisBB)
       return false;

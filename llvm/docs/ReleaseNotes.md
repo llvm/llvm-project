@@ -82,11 +82,10 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to LLVM infrastructure
 
-* Removed ``Constant::isZeroValue``. It was functionally identical to
-  ``Constant::isNullValue`` for all types except floating-point negative
-  zero. All callers should use ``isNullValue`` instead. ``isZeroValue``
-  will be reintroduced in the future with bitwise-all-zeros semantics
-  to support non-zero null pointers.
+* `Constant::isNullValue` is now an alias of `Constant::isZeroValue`, as they
+  are functionally identical. `Constant::isNullValue` has been deprecated and
+  will be removed in a future release, to be reintroduced with updated semantics
+  once `ConstantPointerNull` changes.
 
 * Added support for specifying the null pointer bit representation per
   address space in `DataLayout`. Pointer specifications (`p`) accept new

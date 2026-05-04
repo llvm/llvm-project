@@ -2187,7 +2187,7 @@ static std::optional<Instruction *> instCombineSVELast(InstCombiner &IC,
   }
 
   auto *C = dyn_cast<Constant>(Pg);
-  if (IsAfter && C && C->isNullValue()) {
+  if (IsAfter && C && C->isZeroValue()) {
     // The intrinsic is extracting lane 0 so use an extract instead.
     auto *IdxTy = Type::getInt64Ty(II.getContext());
     auto *Extract = ExtractElementInst::Create(Vec, ConstantInt::get(IdxTy, 0));

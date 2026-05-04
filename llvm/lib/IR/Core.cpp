@@ -1290,7 +1290,7 @@ LLVMBool LLVMIsConstant(LLVMValueRef Ty) {
 
 LLVMBool LLVMIsNull(LLVMValueRef Val) {
   if (Constant *C = dyn_cast<Constant>(unwrap(Val)))
-    return C->isNullValue();
+    return C->isZeroValue();
   return false;
 }
 

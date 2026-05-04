@@ -821,7 +821,7 @@ computeUnlikelySuccessors(const BasicBlock *BB, Loop *L,
           CI->getPredicate(), CmpLHSConst, CmpConst, DL);
       // If the result means we don't branch to the block then that block is
       // unlikely.
-      if (Result && ((Result->isNullValue() && B == BI->getSuccessor(0)) ||
+      if (Result && ((Result->isZeroValue() && B == BI->getSuccessor(0)) ||
                      (Result->isOneValue() && B == BI->getSuccessor(1))))
         UnlikelyBlocks.insert(B);
     }

@@ -345,7 +345,7 @@ Value *llvm::findScalarElement(Value *V, unsigned EltNo) {
   Value *Val; Constant *C;
   if (match(V, m_Add(m_Value(Val), m_Constant(C))))
     if (Constant *Elt = C->getAggregateElement(EltNo))
-      if (Elt->isNullValue())
+      if (Elt->isZeroValue())
         return findScalarElement(Val, EltNo);
 
   // If the vector is a splat then we can trivially find the scalar element.
@@ -1259,7 +1259,7 @@ bool llvm::maskIsAllZeroOrUndef(Value *Mask) {
   auto *ConstMask = dyn_cast<Constant>(Mask);
   if (!ConstMask)
     return false;
-  if (ConstMask->isNullValue() || isa<UndefValue>(ConstMask))
+  if (ConstMask->isZeroValue() || isa<UndefValue>(ConstMask))
     return true;
   if (isa<ScalableVectorType>(ConstMask->getType()))
     return false;
@@ -1268,7 +1268,7 @@ bool llvm::maskIsAllZeroOrUndef(Value *Mask) {
            E = cast<FixedVectorType>(ConstMask->getType())->getNumElements();
        I != E; ++I) {
     if (auto *MaskElt = ConstMask->getAggregateElement(I))
-      if (MaskElt->isNullValue() || isa<UndefValue>(MaskElt))
+      if (MaskElt->isZeroValue() || isa<UndefValue>(MaskElt))
         continue;
     return false;
   }
@@ -1340,7 +1340,7 @@ APInt llvm::possiblyDemandedEltsInMask(Value *Mask) {
   APInt DemandedElts = APInt::getAllOnes(VWidth);
   if (auto *CV = dyn_cast<ConstantVector>(Mask))
     for (unsigned i = 0; i < VWidth; i++)
-      if (CV->getAggregateElement(i)->isNullValue())
+      if (CV->getAggregateElement(i)->isZeroValue())
         DemandedElts.clearBit(i);
   return DemandedElts;
 }

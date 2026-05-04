@@ -84,10 +84,10 @@ bool Constant::isNegativeZeroValue() const {
     return false;
 
   // Otherwise, just use +0.0.
-  return isNullValue();
+  return isZeroValue();
 }
 
-bool Constant::isNullValue() const {
+bool Constant::isZeroValue() const {
   // 0 is null.
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(this))
     return CI->isZero();
@@ -1514,7 +1514,7 @@ Constant *ConstantArray::getImpl(ArrayType *Ty, ArrayRef<Constant*> V) {
   if (isa<UndefValue>(C) && rangeOnlyContains(V.begin(), V.end(), C))
     return UndefValue::get(Ty);
 
-  if (C->isNullValue() && rangeOnlyContains(V.begin(), V.end(), C))
+  if (C->isZeroValue() && rangeOnlyContains(V.begin(), V.end(), C))
     return ConstantAggregateZero::get(Ty);
 
   // Check to see if all of the elements are ConstantFP or ConstantInt or
@@ -1566,11 +1566,11 @@ Constant *ConstantStruct::get(StructType *ST, ArrayRef<Constant*> V) {
   if (!V.empty()) {
     isUndef = isa<UndefValue>(V[0]);
     isPoison = isa<PoisonValue>(V[0]);
-    isZero = V[0]->isNullValue();
+    isZero = V[0]->isZeroValue();
     // PoisonValue inherits UndefValue, so its check is not necessary.
     if (isUndef || isZero) {
       for (Constant *C : V) {
-        if (!C->isNullValue())
+        if (!C->isZeroValue())
           isZero = false;
         if (!isa<PoisonValue>(C))
           isPoison = false;
@@ -1611,7 +1611,7 @@ Constant *ConstantVector::getImpl(ArrayRef<Constant*> V) {
   // If this is an all-undef or all-zero vector, return a
   // ConstantAggregateZero or UndefValue.
   Constant *C = V[0];
-  bool isZero = C->isNullValue();
+  bool isZero = C->isZeroValue();
   bool isUndef = isa<UndefValue>(C);
   bool isPoison = isa<PoisonValue>(C);
   bool isSplatFP = UseConstantFPForFixedLengthSplat && isa<ConstantFP>(C);
@@ -1667,7 +1667,7 @@ Constant *ConstantVector::getSplat(ElementCount EC, Constant *V) {
 
   if (!EC.isScalable()) {
     // Maintain special handling of zero.
-    if (!V->isNullValue()) {
+    if (!V->isZeroValue()) {
       if (UseConstantIntForFixedLengthSplat && isa<ConstantInt>(V))
         return ConstantInt::get(V->getContext(), EC,
                                 cast<ConstantInt>(V)->getValue());
@@ -1691,7 +1691,7 @@ Constant *ConstantVector::getSplat(ElementCount EC, Constant *V) {
   }
 
   // Maintain special handling of zero.
-  if (!V->isNullValue()) {
+  if (!V->isZeroValue()) {
     if (UseConstantIntForScalableSplat && isa<ConstantInt>(V))
       return ConstantInt::get(V->getContext(), EC,
                               cast<ConstantInt>(V)->getValue());
@@ -1706,7 +1706,7 @@ Constant *ConstantVector::getSplat(ElementCount EC, Constant *V) {
 
   Type *VTy = VectorType::get(V->getType(), EC);
 
-  if (V->isNullValue())
+  if (V->isZeroValue())
     return ConstantAggregateZero::get(VTy);
   if (isa<PoisonValue>(V))
     return PoisonValue::get(VTy);
@@ -2210,7 +2210,7 @@ Value *DSOLocalEquivalent::handleOperandChangeImpl(Value *From, Value *To) {
 
   // If the argument is replaced with a null value, just replace this constant
   // with a null value.
-  if (cast<Constant>(To)->isNullValue())
+  if (cast<Constant>(To)->isZeroValue())
     return To;
 
   // The replacement could be a bitcast or an alias to another function. We can
@@ -2354,7 +2354,7 @@ bool ConstantPtrAuth::isKnownCompatibleWith(const Value *Key,
                                             const DataLayout &DL) const {
   // This function may only be validly called to analyze a ptrauth operation
   // with no deactivation symbol, so if we have one it isn't compatible.
-  if (!getDeactivationSymbol()->isNullValue())
+  if (!getDeactivationSymbol()->isZeroValue())
     return false;
 
   // If the keys are different, there's no chance for this to be compatible.
@@ -2376,7 +2376,7 @@ bool ConstantPtrAuth::isKnownCompatibleWith(const Value *Key,
   const Value *AddrDiscriminator = nullptr;
 
   // This constant may or may not have an integer discriminator (instead of 0).
-  if (!getDiscriminator()->isNullValue()) {
+  if (!getDiscriminator()->isZeroValue()) {
     // If it does, there's an implicit blend.  We need to have a matching blend
     // intrinsic in the provided full discriminator.
     if (!match(Discriminator,
@@ -3645,7 +3645,7 @@ Value *ConstantArray::handleOperandChangeImpl(Value *From, Value *To) {
     AllSame &= Val == ToC;
   }
 
-  if (AllSame && ToC->isNullValue())
+  if (AllSame && ToC->isZeroValue())
     return ConstantAggregateZero::get(getType());
 
   if (AllSame && isa<UndefValue>(ToC))
@@ -3685,7 +3685,7 @@ Value *ConstantStruct::handleOperandChangeImpl(Value *From, Value *To) {
     AllSame &= Val == ToC;
   }
 
-  if (AllSame && ToC->isNullValue())
+  if (AllSame && ToC->isZeroValue())
     return ConstantAggregateZero::get(getType());
 
   if (AllSame && isa<UndefValue>(ToC))

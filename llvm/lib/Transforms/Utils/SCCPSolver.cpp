@@ -491,7 +491,7 @@ static void inferAttribute(Function *F, unsigned AttrIndex,
   }
   // Infer nonnull attribute.
   if (Val.isNotConstant() && Val.getNotConstant()->getType()->isPointerTy() &&
-      Val.getNotConstant()->isNullValue() &&
+      Val.getNotConstant()->isZeroValue() &&
       !F->hasAttributeAtIndex(AttrIndex, Attribute::NonNull)) {
     F->addAttributeAtIndex(AttrIndex,
                            Attribute::get(F->getContext(), Attribute::NonNull));
@@ -1811,7 +1811,7 @@ void SCCPInstVisitor::visitGetElementPtrInst(GetElementPtrInst &I) {
     return;
 
   // gep inbounds/nuw of non-null is non-null.
-  if (PtrState.isNotConstant() && PtrState.getNotConstant()->isNullValue()) {
+  if (PtrState.isNotConstant() && PtrState.getNotConstant()->isZeroValue()) {
     if (I.hasNoUnsignedWrap() ||
         (I.isInBounds() &&
          !NullPointerIsDefined(I.getFunction(), I.getAddressSpace())))

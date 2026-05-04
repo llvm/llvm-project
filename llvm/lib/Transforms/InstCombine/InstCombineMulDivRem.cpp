@@ -1297,7 +1297,7 @@ Instruction *InstCombinerImpl::commonIDivRemTransforms(BinaryOperator &I) {
     unsigned NumElts = VTy->getNumElements();
     for (unsigned i = 0; i != NumElts; ++i) {
       Constant *Elt = Op1C->getAggregateElement(i);
-      if (Elt && (Elt->isNullValue() || isa<UndefValue>(Elt)))
+      if (Elt && (Elt->isZeroValue() || isa<UndefValue>(Elt)))
         return replaceInstUsesWith(I, PoisonValue::get(Ty));
     }
   }

@@ -1680,7 +1680,7 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
       // If already constant, nothing to do. However, if this is an
       // unconditional exit, we can still replace header phis with their
       // preheader value.
-      if (!L->contains(BI->getSuccessor(CI->isNullValue())))
+      if (!L->contains(BI->getSuccessor(CI->isZeroValue())))
         replaceLoopPHINodesWithPreheaderValues(LI, L, DeadInsts, *SE);
       return true;
     }

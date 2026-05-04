@@ -1224,7 +1224,7 @@ public:
 Constant *FatPtrConstMaterializer::materializeBufferFatPtrConst(Constant *C) {
   Type *SrcTy = C->getType();
   auto *NewTy = dyn_cast<StructType>(TypeMap->remapType(SrcTy));
-  if (C->isNullValue())
+  if (C->isZeroValue())
     return ConstantAggregateZero::getNullValue(NewTy);
   if (isa<PoisonValue>(C)) {
     return ConstantStruct::get(NewTy,
@@ -2042,7 +2042,7 @@ PtrParts SplitPtrStructs::visitAddrSpaceCastInst(AddrSpaceCastInst &I) {
   // Special case for null pointers, undef, and poison, which can be created by
   // address space propagation.
   auto *InConst = dyn_cast<Constant>(In);
-  if (InConst && InConst->isNullValue()) {
+  if (InConst && InConst->isZeroValue()) {
     Value *NullRsrc = Constant::getNullValue(RsrcTy);
     SplitUsers.insert(&I);
     return {NullRsrc, ZeroOff};

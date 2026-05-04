@@ -1865,10 +1865,10 @@ TEST_F(PatternMatchTest, VectorUndefFloat) {
 
   CC = nullptr;
   EXPECT_TRUE(match(VectorZero, m_CheckedFp(CC, CheckTrue)));
-  EXPECT_TRUE(CC->isNullValue());
+  EXPECT_TRUE(CC->isZeroValue());
   CC = nullptr;
   EXPECT_TRUE(match(VectorZero, m_CheckedFp(CC, CheckNonNaN)));
-  EXPECT_TRUE(CC->isNullValue());
+  EXPECT_TRUE(CC->isZeroValue());
 
   // Splats with undef are never allowed.
   // Whether splats with poison can be matched depends on the matcher.

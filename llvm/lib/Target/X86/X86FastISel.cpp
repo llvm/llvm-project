@@ -1485,7 +1485,7 @@ bool X86FastISel::X86SelectCmp(const Instruction *I) {
   // %x again on the RHS.
   if (Predicate == CmpInst::FCMP_ORD || Predicate == CmpInst::FCMP_UNO) {
     const auto *RHSC = dyn_cast<ConstantFP>(RHS);
-    if (RHSC && RHSC->isNullValue())
+    if (RHSC && RHSC->isZeroValue())
       RHS = LHS;
   }
 
@@ -1673,7 +1673,7 @@ bool X86FastISel::X86SelectBranch(const Instruction *I) {
       // use %x again on the RHS.
       if (Predicate == CmpInst::FCMP_ORD || Predicate == CmpInst::FCMP_UNO) {
         const auto *CmpRHSC = dyn_cast<ConstantFP>(CmpRHS);
-        if (CmpRHSC && CmpRHSC->isNullValue())
+        if (CmpRHSC && CmpRHSC->isZeroValue())
           CmpRHS = CmpLHS;
       }
 
@@ -2186,7 +2186,7 @@ bool X86FastISel::X86FastEmitSSESelect(MVT RetVT, const Instruction *I) {
   // %x again on the RHS.
   if (Predicate == CmpInst::FCMP_ORD || Predicate == CmpInst::FCMP_UNO) {
     const auto *CmpRHSC = dyn_cast<ConstantFP>(CmpRHS);
-    if (CmpRHSC && CmpRHSC->isNullValue())
+    if (CmpRHSC && CmpRHSC->isZeroValue())
       CmpRHS = CmpLHS;
   }
 
@@ -3766,7 +3766,7 @@ Register X86FastISel::X86MaterializeInt(const ConstantInt *CI, MVT VT) {
 }
 
 Register X86FastISel::X86MaterializeFP(const ConstantFP *CFP, MVT VT) {
-  if (CFP->isNullValue())
+  if (CFP->isZeroValue())
     return fastMaterializeFloatZero(CFP);
 
   // Can't handle alternate code models yet.

@@ -1175,7 +1175,7 @@ void InstrLowerer::lowerCover(InstrProfCoverInst *CoverInstruction) {
 
 void InstrLowerer::lowerTimestamp(
     InstrProfTimestampInst *TimestampInstruction) {
-  assert(TimestampInstruction->getIndex()->isNullValue() &&
+  assert(TimestampInstruction->getIndex()->isZeroValue() &&
          "timestamp probes are always the first probe for a function");
   auto &Ctx = M.getContext();
   auto *TimestampAddr = getCounterAddress(TimestampInstruction);
@@ -1204,7 +1204,7 @@ void InstrLowerer::lowerIncrement(InstrProfIncrementInst *Inc) {
         ConstantPointerNull::get(PointerType::getUnqual(M.getContext()));
     Builder.CreateCall(Callee, {CastAddr, Uniform, Inc->getStep()});
   } else if (Options.Atomic || AtomicCounterUpdateAll ||
-             (Inc->getIndex()->isNullValue() && AtomicFirstCounter)) {
+             (Inc->getIndex()->isZeroValue() && AtomicFirstCounter)) {
     Builder.CreateAtomicRMW(AtomicRMWInst::Add, Addr, Inc->getStep(),
                             MaybeAlign(), AtomicOrdering::Monotonic);
   } else {

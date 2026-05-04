@@ -119,7 +119,7 @@ struct TernTester {
 
       auto *C = dyn_cast<Constant>(V);
       assert(C);
-      if (C->isNullValue())
+      if (C->isZeroValue())
         return 0;
       if (C->isAllOnesValue())
         return ((~uint64_t(0)) >> (ElemWidth % 64));

@@ -2080,13 +2080,13 @@ static Constant *getPredicateResult(CmpInst::Predicate Pred, Constant *C,
       // !C1 == C -> false iff C1 == C.
       Constant *Res = ConstantFoldCompareInstOperands(
           ICmpInst::ICMP_NE, Val.getNotConstant(), C, DL);
-      if (Res && Res->isNullValue())
+      if (Res && Res->isZeroValue())
         return ConstantInt::getFalse(ResTy);
     } else if (Pred == ICmpInst::ICMP_NE) {
       // !C1 != C -> true iff C1 == C.
       Constant *Res = ConstantFoldCompareInstOperands(
           ICmpInst::ICMP_NE, Val.getNotConstant(), C, DL);
-      if (Res && Res->isNullValue())
+      if (Res && Res->isZeroValue())
         return ConstantInt::getTrue(ResTy);
     }
     return nullptr;
@@ -2115,7 +2115,7 @@ Constant *LazyValueInfo::getPredicateAt(CmpInst::Predicate Pred, Value *V,
   // return it quickly. But this is only a fastpath, and falling
   // through would still be correct.
   const DataLayout &DL = CxtI->getDataLayout();
-  if (V->getType()->isPointerTy() && C->isNullValue() &&
+  if (V->getType()->isPointerTy() && C->isZeroValue() &&
       isKnownNonZero(V->stripPointerCastsSameRepresentation(), DL)) {
     Type *ResTy = CmpInst::makeCmpResultType(C->getType());
     if (Pred == ICmpInst::ICMP_EQ)

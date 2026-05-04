@@ -581,7 +581,7 @@ Register SPIRVGlobalRegistry::getOrCreateCompositeOrNull(
   if (Register R = find(CA, CurMF); R.isValid())
     return R;
 
-  bool IsNull = Val->isNullValue() && ZeroAsNull;
+  bool IsNull = Val->isZeroValue() && ZeroAsNull;
   Register ElemReg;
   if (!IsNull)
     ElemReg =

@@ -52,7 +52,7 @@ static bool isOne(Use &Op) {
 
 static bool isZero(Use &Op) {
   auto *C = dyn_cast<Constant>(Op);
-  return C && C->isNullValue();
+  return C && C->isZeroValue();
 }
 
 static bool isZeroOrOneFP(Value *Op) {

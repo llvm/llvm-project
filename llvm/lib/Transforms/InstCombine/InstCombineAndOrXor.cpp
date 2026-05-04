@@ -2659,7 +2659,7 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
         Constant *Log2C1 = ConstantExpr::getExactLogBase2(C1);
         Constant *Cmp =
             ConstantFoldCompareInstOperands(ICmpInst::ICMP_ULT, Log2C3, C2, DL);
-        if (Cmp && Cmp->isNullValue()) {
+        if (Cmp && Cmp->isZeroValue()) {
           // iff C1,C3 is pow2 and Log2(C3) >= C2:
           // ((C1 >> X) << C2) & C3 -> X == (cttz(C1)+C2-cttz(C3)) ? C3 : 0
           Constant *ShlC = ConstantExpr::getAdd(C2, Log2C1);
@@ -3707,7 +3707,7 @@ static bool matchSubIntegerPackFromVector(Value *V, Value *&Vec,
         const unsigned ConstIdx = ShuffleIdx - NumVecElts;
         auto *ConstElt =
             dyn_cast<ConstantInt>(ConstVec->getAggregateElement(ConstIdx));
-        if (!ConstElt || !ConstElt->isNullValue())
+        if (!ConstElt || !ConstElt->isZeroValue())
           return false;
         continue;
       }
@@ -5410,7 +5410,7 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
                        m_AShr(m_Value(X), m_APIntAllowPoison(CA))))) &&
         *CA == X->getType()->getScalarSizeInBits() - 1 &&
         !match(C1, m_AllOnes())) {
-      assert(!C1->isNullValue() && "Unexpected xor with 0");
+      assert(!C1->isZeroValue() && "Unexpected xor with 0");
       Value *IsNotNeg = Builder.CreateIsNotNeg(X);
       return createSelectInstWithUnknownProfile(IsNotNeg, Op1,
                                                 Builder.CreateNot(Op1));

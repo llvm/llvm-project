@@ -2262,7 +2262,7 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   case Intrinsic::x86_bmi_pext_32:
   case Intrinsic::x86_bmi_pext_64:
     if (auto *MaskC = dyn_cast<ConstantInt>(II.getArgOperand(1))) {
-      if (MaskC->isNullValue()) {
+      if (MaskC->isZeroValue()) {
         return IC.replaceInstUsesWith(II, ConstantInt::get(II.getType(), 0));
       }
       if (MaskC->isAllOnesValue()) {
@@ -2306,7 +2306,7 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   case Intrinsic::x86_bmi_pdep_32:
   case Intrinsic::x86_bmi_pdep_64:
     if (auto *MaskC = dyn_cast<ConstantInt>(II.getArgOperand(1))) {
-      if (MaskC->isNullValue()) {
+      if (MaskC->isZeroValue()) {
         return IC.replaceInstUsesWith(II, ConstantInt::get(II.getType(), 0));
       }
       if (MaskC->isAllOnesValue()) {

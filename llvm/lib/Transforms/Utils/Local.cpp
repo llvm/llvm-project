@@ -513,7 +513,7 @@ bool llvm::wouldInstructionBeTriviallyDead(const Instruction *I,
   if (auto *Call = dyn_cast<CallBase>(I)) {
     if (Value *FreedOp = getFreedOperand(Call, TLI))
       if (Constant *C = dyn_cast<Constant>(FreedOp))
-        return C->isNullValue() || isa<UndefValue>(C);
+        return C->isZeroValue() || isa<UndefValue>(C);
     if (isMathLibCallNoop(Call, TLI))
       return true;
   }

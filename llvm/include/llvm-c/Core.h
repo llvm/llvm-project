@@ -2393,6 +2393,13 @@ LLVM_C_ABI LLVMValueRef LLVMGetPoison(LLVMTypeRef Ty);
 LLVM_C_ABI LLVMBool LLVMIsNull(LLVMValueRef Val);
 
 /**
+ * Determine whether a value instance is a zero value.
+ *
+ * @see llvm::Constant::isZeroValue()
+ */
+LLVM_C_ABI LLVMBool LLVMIsZeroValue(LLVMValueRef Val);
+
+/**
  * Obtain a constant that is a constant pointer pointing to NULL for a
  * specified type.
  */

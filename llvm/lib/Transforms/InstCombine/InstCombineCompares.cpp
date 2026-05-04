@@ -693,7 +693,7 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
   }
 
   if (GEPLHS->isInBounds() && ICmpInst::isEquality(Cond) &&
-      isa<Constant>(RHS) && cast<Constant>(RHS)->isNullValue() &&
+      isa<Constant>(RHS) && cast<Constant>(RHS)->isZeroValue() &&
       !NullPointerIsDefined(I.getFunction(),
                             RHS->getType()->getPointerAddressSpace())) {
     // For most address spaces, an allocation can't be placed at null, but null
@@ -4328,7 +4328,7 @@ Instruction *InstCombinerImpl::foldICmpInstWithConstantNotInt(ICmpInst &I) {
   switch (LHSI->getOpcode()) {
   case Instruction::IntToPtr:
     // icmp pred inttoptr(X), null -> icmp pred X, 0
-    if (RHSC->isNullValue() &&
+    if (RHSC->isZeroValue() &&
         DL.getIntPtrType(RHSC->getType()) == LHSI->getOperand(0)->getType())
       return new ICmpInst(
           I.getPredicate(), LHSI->getOperand(0),
@@ -4840,7 +4840,7 @@ foldShiftIntoShiftInAnotherHandOfAndInICmp(ICmpInst &I, const SimplifyQuery SQ,
                                     : NewShAmt;
       // If it's edge-case shift (by 0 or by WidestBitWidth-1) we can fold.
       if (NewShAmtSplat &&
-          (NewShAmtSplat->isNullValue() ||
+          (NewShAmtSplat->isZeroValue() ||
            NewShAmtSplat->getUniqueInteger() == WidestBitWidth - 1))
         return true;
       // We consider *min* leading zeros so a single outlier
@@ -8402,20 +8402,20 @@ Instruction *InstCombinerImpl::foldCmpSelectOfConstants(CmpInst &I) {
   if (!Res00 || !Res01 || !Res10 || !Res11)
     return nullptr;
 
-  if ((!Res00->isNullValue() && !Res00->isAllOnesValue()) ||
-      (!Res01->isNullValue() && !Res01->isAllOnesValue()) ||
-      (!Res10->isNullValue() && !Res10->isAllOnesValue()) ||
-      (!Res11->isNullValue() && !Res11->isAllOnesValue()))
+  if ((!Res00->isZeroValue() && !Res00->isAllOnesValue()) ||
+      (!Res01->isZeroValue() && !Res01->isAllOnesValue()) ||
+      (!Res10->isZeroValue() && !Res10->isAllOnesValue()) ||
+      (!Res11->isZeroValue() && !Res11->isAllOnesValue()))
     return nullptr;
 
   std::bitset<4> Table;
-  if (!Res00->isNullValue())
+  if (!Res00->isZeroValue())
     Table.set(0);
-  if (!Res01->isNullValue())
+  if (!Res01->isZeroValue())
     Table.set(1);
-  if (!Res10->isNullValue())
+  if (!Res10->isZeroValue())
     Table.set(2);
-  if (!Res11->isNullValue())
+  if (!Res11->isZeroValue())
     Table.set(3);
 
   Value *Res = createLogicFromTable(Table, C1, C2, Builder,

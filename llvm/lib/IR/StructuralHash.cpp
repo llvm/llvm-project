@@ -121,7 +121,7 @@ public:
     Type *Ty = C->getType();
     Hashes.emplace_back(hashType(Ty));
 
-    if (C->isNullValue()) {
+    if (C->isZeroValue()) {
       Hashes.emplace_back(static_cast<stable_hash>('N'));
       return stable_hash_combine(Hashes);
     }

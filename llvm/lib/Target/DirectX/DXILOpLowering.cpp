@@ -630,7 +630,7 @@ public:
 
       // Copy coordinates and offsets into Args.
       extractElementsIntoArgs(IRB, Args, 2, Coords, 3);
-      if (auto *C = dyn_cast<Constant>(Offsets); !C || !C->isNullValue())
+      if (auto *C = dyn_cast<Constant>(Offsets); !C || !C->isZeroValue())
         extractElementsIntoArgs(IRB, Args, 5, Offsets, 3);
 
       Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(

@@ -52,7 +52,11 @@ public:
   Constant(const Constant &) = delete;
 
   /// Return true if this is the value that would be returned by getNullValue.
-  LLVM_ABI bool isNullValue() const;
+  /// TODO: Remove this after the migration to isZeroValue is complete.
+  LLVM_ABI bool isNullValue() const { return isZeroValue(); }
+
+  /// Return true if the value is zero.
+  LLVM_ABI bool isZeroValue() const;
 
   /// Returns true if the value is one.
   LLVM_ABI bool isOneValue() const;

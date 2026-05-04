@@ -5676,7 +5676,7 @@ AArch64InstructionSelector::emitConstantVector(Register Dst, Constant *CV,
   assert((DstSize == 64 || DstSize == 128) &&
          "Unexpected vector constant size");
 
-  if (CV->isNullValue()) {
+  if (CV->isZeroValue()) {
     if (DstSize == 128) {
       auto Mov =
           MIRBuilder.buildInstr(AArch64::MOVIv2d_ns, {Dst}, {}).addImm(0);

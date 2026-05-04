@@ -2613,7 +2613,7 @@ bool CallAnalyzer::visitSelectInst(SelectInst &SI) {
 
   // Select condition is a constant.
   Value *SelectedV = CondC->isAllOnesValue()  ? TrueVal
-                     : (CondC->isNullValue()) ? FalseVal
+                     : (CondC->isZeroValue()) ? FalseVal
                                               : nullptr;
   if (!SelectedV) {
     // Condition is a vector constant that is not all 1s or all 0s.  If all

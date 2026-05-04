@@ -53,7 +53,7 @@ static inline const MCExpr *lowerAddrSpaceCast(const Constant *CV,
   if (CE && CE->getOpcode() == Instruction::AddrSpaceCast) {
     auto *Op = CE->getOperand(0);
     auto SrcAddr = Op->getType()->getPointerAddressSpace();
-    if (Op->isNullValue() && AMDGPU::getNullPointerValue(SrcAddr) == 0) {
+    if (Op->isZeroValue() && AMDGPU::getNullPointerValue(SrcAddr) == 0) {
       auto DstAddr = CE->getType()->getPointerAddressSpace();
       return MCConstantExpr::create(AMDGPU::getNullPointerValue(DstAddr),
                                     OutContext);

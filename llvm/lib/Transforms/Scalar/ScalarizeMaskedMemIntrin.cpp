@@ -182,7 +182,7 @@ static void scalarizeMaskedLoad(const DataLayout &DL, bool HasBranchDivergence,
 
   if (isConstantIntVector(Mask)) {
     for (unsigned Idx = 0; Idx < VectorWidth; ++Idx) {
-      if (cast<Constant>(Mask)->getAggregateElement(Idx)->isNullValue())
+      if (cast<Constant>(Mask)->getAggregateElement(Idx)->isZeroValue())
         continue;
       Value *Gep = Builder.CreateConstInBoundsGEP1_32(EltTy, Ptr, Idx);
       LoadInst *Load = Builder.CreateAlignedLoad(EltTy, Gep, AdjustedAlignVal);
@@ -348,7 +348,7 @@ static void scalarizeMaskedStore(const DataLayout &DL, bool HasBranchDivergence,
 
   if (isConstantIntVector(Mask)) {
     for (unsigned Idx = 0; Idx < VectorWidth; ++Idx) {
-      if (cast<Constant>(Mask)->getAggregateElement(Idx)->isNullValue())
+      if (cast<Constant>(Mask)->getAggregateElement(Idx)->isZeroValue())
         continue;
       Value *OneElt = Builder.CreateExtractElement(Src, Idx);
       Value *Gep = Builder.CreateConstInBoundsGEP1_32(EltTy, Ptr, Idx);
@@ -492,7 +492,7 @@ static void scalarizeMaskedGather(const DataLayout &DL,
   // Shorten the way if the mask is a vector of constants.
   if (isConstantIntVector(Mask)) {
     for (unsigned Idx = 0; Idx < VectorWidth; ++Idx) {
-      if (cast<Constant>(Mask)->getAggregateElement(Idx)->isNullValue())
+      if (cast<Constant>(Mask)->getAggregateElement(Idx)->isZeroValue())
         continue;
       Value *Ptr = Builder.CreateExtractElement(Ptrs, Idx, "Ptr" + Twine(Idx));
       LoadInst *Load =
@@ -630,7 +630,7 @@ static void scalarizeMaskedScatter(const DataLayout &DL,
   // Shorten the way if the mask is a vector of constants.
   if (isConstantIntVector(Mask)) {
     for (unsigned Idx = 0; Idx < VectorWidth; ++Idx) {
-      if (cast<Constant>(Mask)->getAggregateElement(Idx)->isNullValue())
+      if (cast<Constant>(Mask)->getAggregateElement(Idx)->isZeroValue())
         continue;
       Value *OneElt =
           Builder.CreateExtractElement(Src, Idx, "Elt" + Twine(Idx));
@@ -739,7 +739,7 @@ static void scalarizeMaskedExpandLoad(const DataLayout &DL,
     SmallVector<int, 16> ShuffleMask(VectorWidth, PoisonMaskElem);
     for (unsigned Idx = 0; Idx < VectorWidth; ++Idx) {
       Value *InsertElt;
-      if (cast<Constant>(Mask)->getAggregateElement(Idx)->isNullValue()) {
+      if (cast<Constant>(Mask)->getAggregateElement(Idx)->isZeroValue()) {
         InsertElt = PoisonValue::get(EltTy);
         ShuffleMask[Idx] = Idx + VectorWidth;
       } else {
@@ -869,7 +869,7 @@ static void scalarizeMaskedCompressStore(const DataLayout &DL,
   if (isConstantIntVector(Mask)) {
     unsigned MemIndex = 0;
     for (unsigned Idx = 0; Idx < VectorWidth; ++Idx) {
-      if (cast<Constant>(Mask)->getAggregateElement(Idx)->isNullValue())
+      if (cast<Constant>(Mask)->getAggregateElement(Idx)->isZeroValue())
         continue;
       Value *OneElt =
           Builder.CreateExtractElement(Src, Idx, "Elt" + Twine(Idx));
@@ -1000,7 +1000,7 @@ static void scalarizeMaskedVectorHistogram(const DataLayout &DL, CallInst *CI,
   // Shorten the way if the mask is a vector of constants.
   if (isConstantIntVector(Mask)) {
     for (unsigned Idx = 0; Idx < VectorWidth; ++Idx) {
-      if (cast<Constant>(Mask)->getAggregateElement(Idx)->isNullValue())
+      if (cast<Constant>(Mask)->getAggregateElement(Idx)->isZeroValue())
         continue;
       Value *Ptr = Builder.CreateExtractElement(Ptrs, Idx, "Ptr" + Twine(Idx));
       LoadInst *Load = Builder.CreateLoad(EltTy, Ptr, "Load" + Twine(Idx));

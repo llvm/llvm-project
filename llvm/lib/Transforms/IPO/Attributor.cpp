@@ -393,7 +393,7 @@ Value *AA::getWithType(Value &V, Type &Ty) {
   if (isa<UndefValue>(V))
     return UndefValue::get(&Ty);
   if (auto *C = dyn_cast<Constant>(&V)) {
-    if (C->isNullValue() && !Ty.isPtrOrPtrVectorTy())
+    if (C->isZeroValue() && !Ty.isPtrOrPtrVectorTy())
       return Constant::getNullValue(&Ty);
     if (C->getType()->isPointerTy() && Ty.isPointerTy())
       return ConstantExpr::getPointerCast(C, &Ty);
@@ -492,7 +492,7 @@ static bool getPotentialCopiesOfMemoryValue(
         NullOnly = false;
       else if (isa<UndefValue>(*V))
         /* No op */;
-      else if (isa<Constant>(*V) && cast<Constant>(*V)->isNullValue())
+      else if (isa<Constant>(*V) && cast<Constant>(*V)->isZeroValue())
         NullRequired = !IsExact;
       else
         NullOnly = false;

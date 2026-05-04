@@ -441,7 +441,7 @@ static APInt trimTrailingZerosInVector(InstCombiner &IC, Value *UseV,
       break;
 
     if (auto *ConstElt = dyn_cast<Constant>(Elt)) {
-      if (!ConstElt->isNullValue() && !isa<UndefValue>(Elt))
+      if (!ConstElt->isZeroValue() && !isa<UndefValue>(Elt))
         break;
     } else {
       break;
@@ -1304,7 +1304,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       if (auto *CSrc1 = dyn_cast<Constant>(Src1)) {
         Constant *CCmp = ConstantFoldCompareInstOperands(
             (ICmpInst::Predicate)CCVal, CSrc0, CSrc1, DL);
-        if (CCmp && CCmp->isNullValue()) {
+        if (CCmp && CCmp->isZeroValue()) {
           return IC.replaceInstUsesWith(
               II, IC.Builder.CreateSExt(CCmp, II.getType()));
         }
@@ -1525,7 +1525,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     auto *BC = cast<ConstantInt>(II.getArgOperand(5));
     auto *RM = cast<ConstantInt>(II.getArgOperand(3));
     auto *BM = cast<ConstantInt>(II.getArgOperand(4));
-    if (BC->isNullValue() || RM->getZExtValue() != 0xF ||
+    if (BC->isZeroValue() || RM->getZExtValue() != 0xF ||
         BM->getZExtValue() != 0xF || isa<PoisonValue>(Old))
       break;
 

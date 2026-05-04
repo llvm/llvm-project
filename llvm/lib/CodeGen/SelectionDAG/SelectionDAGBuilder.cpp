@@ -1962,13 +1962,13 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
       return getValue(NC->getGlobalValue());
 
     if (VT == MVT::aarch64svcount) {
-      assert(C->isNullValue() && "Can only zero this target type!");
+      assert(C->isZeroValue() && "Can only zero this target type!");
       return DAG.getNode(ISD::BITCAST, getCurSDLoc(), VT,
                          DAG.getConstant(0, getCurSDLoc(), MVT::nxv16i1));
     }
 
     if (VT.isRISCVVectorTuple()) {
-      assert(C->isNullValue() && "Can only zero this target type!");
+      assert(C->isZeroValue() && "Can only zero this target type!");
       return DAG.getNode(
           ISD::BITCAST, getCurSDLoc(), VT,
           DAG.getNode(
@@ -2781,10 +2781,9 @@ SelectionDAGBuilder::ShouldEmitAsBranches(const std::vector<CaseBlock> &Cases) {
 
   // Handle: (X != null) | (Y != null) --> (X|Y) != 0
   // Handle: (X == null) & (Y == null) --> (X|Y) == 0
-  if (Cases[0].CmpRHS == Cases[1].CmpRHS &&
-      Cases[0].CC == Cases[1].CC &&
+  if (Cases[0].CmpRHS == Cases[1].CmpRHS && Cases[0].CC == Cases[1].CC &&
       isa<Constant>(Cases[0].CmpRHS) &&
-      cast<Constant>(Cases[0].CmpRHS)->isNullValue()) {
+      cast<Constant>(Cases[0].CmpRHS)->isZeroValue()) {
     if (Cases[0].CC == ISD::SETEQ && Cases[0].TrueBB == Cases[1].ThisBB)
       return false;
     if (Cases[0].CC == ISD::SETNE && Cases[0].FalseBB == Cases[1].ThisBB)

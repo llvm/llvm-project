@@ -5784,7 +5784,7 @@ bool CombinerHelper::matchUDivOrURemByConst(MachineInstr &MI) const {
   if (Opcode == TargetOpcode::G_UDIV &&
       MI.getFlag(MachineInstr::MIFlag::IsExact)) {
     return matchUnaryPredicate(
-        MRI, RHS, [](const Constant *C) { return C && !C->isNullValue(); });
+        MRI, RHS, [](const Constant *C) { return C && !C->isZeroValue(); });
   }
 
   auto *RHSDef = MRI.getVRegDef(RHS);
@@ -5808,7 +5808,7 @@ bool CombinerHelper::matchUDivOrURemByConst(MachineInstr &MI) const {
   }
 
   return matchUnaryPredicate(
-      MRI, RHS, [](const Constant *C) { return C && !C->isNullValue(); });
+      MRI, RHS, [](const Constant *C) { return C && !C->isZeroValue(); });
 }
 
 void CombinerHelper::applyUDivOrURemByConst(MachineInstr &MI) const {
@@ -5842,7 +5842,7 @@ bool CombinerHelper::matchSDivOrSRemByConst(MachineInstr &MI) const {
   if (Opcode == TargetOpcode::G_SDIV &&
       MI.getFlag(MachineInstr::MIFlag::IsExact)) {
     return matchUnaryPredicate(
-        MRI, RHS, [](const Constant *C) { return C && !C->isNullValue(); });
+        MRI, RHS, [](const Constant *C) { return C && !C->isZeroValue(); });
   }
 
   auto *RHSDef = MRI.getVRegDef(RHS);
@@ -5862,7 +5862,7 @@ bool CombinerHelper::matchSDivOrSRemByConst(MachineInstr &MI) const {
   }
 
   return matchUnaryPredicate(
-      MRI, RHS, [](const Constant *C) { return C && !C->isNullValue(); });
+      MRI, RHS, [](const Constant *C) { return C && !C->isZeroValue(); });
 }
 
 void CombinerHelper::applySDivOrSRemByConst(MachineInstr &MI) const {

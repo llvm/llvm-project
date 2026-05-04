@@ -1471,7 +1471,7 @@ static bool isFunctionMallocLike(Function *F, const SCCNodeSet &SCCNodes) {
     Value *RetVal = FlowsToReturn[i];
 
     if (Constant *C = dyn_cast<Constant>(RetVal)) {
-      if (!C->isNullValue() && !isa<UndefValue>(C))
+      if (!C->isZeroValue() && !isa<UndefValue>(C))
         return false;
 
       continue;

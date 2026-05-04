@@ -168,7 +168,7 @@ static void addConditions(CallBase &CB, const ConditionsTy &Conditions) {
     Constant *ConstVal = cast<Constant>(Cond.first->getOperand(1));
     if (Cond.second == ICmpInst::ICMP_EQ)
       setConstantInArgument(CB, Arg, ConstVal);
-    else if (ConstVal->getType()->isPointerTy() && ConstVal->isNullValue()) {
+    else if (ConstVal->getType()->isPointerTy() && ConstVal->isZeroValue()) {
       assert(Cond.second == ICmpInst::ICMP_NE);
       addNonNullAttribute(CB, Arg);
     }

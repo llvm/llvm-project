@@ -3970,7 +3970,7 @@ static Value *simplifyICmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
 
         // Otherwise the upper bits of LHS are zero while RHS has a non-zero bit
         // there.  Use this to work out the result of the comparison.
-        if (AnyEq->isNullValue()) {
+        if (AnyEq->isZeroValue()) {
           switch (Pred) {
           default:
             llvm_unreachable("Unknown ICmp predicate!");
@@ -4047,7 +4047,7 @@ static Value *simplifyICmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
 
         // Otherwise the upper bits of LHS are all equal, while RHS has varying
         // bits there.  Use this to work out the result of the comparison.
-        if (AnyEq->isNullValue()) {
+        if (AnyEq->isZeroValue()) {
           switch (Pred) {
           default:
             llvm_unreachable("Unknown ICmp predicate!");
@@ -6795,20 +6795,20 @@ static Value *simplifySVEIntReduction(Intrinsic::ID IID, Type *ReturnType,
   case Intrinsic::aarch64_sve_saddv:
   case Intrinsic::aarch64_sve_uaddv:
   case Intrinsic::aarch64_sve_umaxv:
-    if ((C0 && C0->isNullValue()) || (C1 && C1->isNullValue()))
+    if ((C0 && C0->isZeroValue()) || (C1 && C1->isZeroValue()))
       return ConstantInt::get(ReturnType, 0);
     break;
   case Intrinsic::aarch64_sve_andv:
   case Intrinsic::aarch64_sve_uminv:
-    if ((C0 && C0->isNullValue()) || (C1 && C1->isAllOnesValue()))
+    if ((C0 && C0->isZeroValue()) || (C1 && C1->isAllOnesValue()))
       return ConstantInt::get(ReturnType, APInt::getMaxValue(Width));
     break;
   case Intrinsic::aarch64_sve_smaxv:
-    if ((C0 && C0->isNullValue()) || (C1 && C1->isMinSignedValue()))
+    if ((C0 && C0->isZeroValue()) || (C1 && C1->isMinSignedValue()))
       return ConstantInt::get(ReturnType, APInt::getSignedMinValue(Width));
     break;
   case Intrinsic::aarch64_sve_sminv:
-    if ((C0 && C0->isNullValue()) || (C1 && C1->isMaxSignedValue()))
+    if ((C0 && C0->isZeroValue()) || (C1 && C1->isMaxSignedValue()))
       return ConstantInt::get(ReturnType, APInt::getSignedMaxValue(Width));
     break;
   }
