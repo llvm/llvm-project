@@ -514,19 +514,25 @@ size_t DIEAttributeCloner::cloneScalarAttr(
   } else if (AttrSpec.Attr == dwarf::DW_AT_declaration && Value)
     AttrInfo.IsDeclaration = true;
 
+  // DW_AT_LLVM_stmt_sequence refers to line info in this unit's
+  // .debug_line contribution, which only exists for compile units.
+  // DependencyTracker can route a module-scope subprogram to a type
+  // unit when ODR deduplication applies (see
+  // DependencyTracker.cpp: DW_TAG_subprogram case), so drop the
+  // attribute on that path — mirroring how cloneBlockAttr handles
+  // type-unit placement.
+  if (AttrSpec.Attr == dwarf::DW_AT_LLVM_stmt_sequence &&
+      !OutUnit.isCompileUnit())
+    return 0;
+
   auto Result =
       Generator.addScalarAttribute(AttrSpec.Attr, ResultingForm, Value);
   // Record DW_AT_LLVM_stmt_sequence so the attribute value can be
   // rewritten with the correct .debug_line offset after the line table
   // for this CU has been emitted. We also register a DebugOffsetPatch so
   // that the final-section offset of .debug_line gets added when the
-  // section is placed in the combined output. The assert encodes
-  // dsymutil's placement policy: subprograms (which carry
-  // DW_AT_LLVM_stmt_sequence) are placed in compile units, not type
-  // units, so this attribute should never appear on a type-unit DIE.
+  // section is placed in the combined output.
   if (AttrSpec.Attr == dwarf::DW_AT_LLVM_stmt_sequence) {
-    assert(OutUnit.isCompileUnit() &&
-           "DW_AT_LLVM_stmt_sequence on a non-compile-unit DIE");
     // Resolve the attribute's stmt-sequence offset to the index of the
     // referenced sequence's first row in the input .debug_line rows
     // vector, so that after line-table emission the attribute can be
