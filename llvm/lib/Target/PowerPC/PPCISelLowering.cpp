@@ -13486,6 +13486,10 @@ PPCTargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
                   std::next(MachineBasicBlock::iterator(MI)), MBB->end());
   sinkMBB->transferSuccessorsAndUpdatePHIs(MBB);
 
+ // Note that the structure of the jmp_buf used here is not compatible
+ // with that used by libc, and is not designed to be. Specifically, it
+  // stores only those 'reserved' registers that LLVM does not otherwise
+  // understand how to spill.
   // Buffer layout:
   //   buf[0] = Frame Pointer
   //   buf[1] = IP (return address / LR)
