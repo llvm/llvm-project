@@ -1089,3 +1089,11 @@ NativeProcessFreeBSD::SaveCore(llvm::StringRef path_hint) {
       "PT_COREDUMP not supported in the FreeBSD version used to build LLDB");
 #endif
 }
+
+void NativeProcessFreeBSD::DoStopIDBumped(uint32_t newBumpId) {
+  Log *log = GetLog(POSIXLog::Process);
+  LLDB_LOG(log, "newBumpId={0}", newBumpId);
+  LLDB_LOG(log, "clearing {0} entries from memory region cache",
+           m_mem_region_cache.size());
+  m_mem_region_cache.clear();
+}
