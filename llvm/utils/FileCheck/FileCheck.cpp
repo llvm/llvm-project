@@ -475,8 +475,8 @@ buildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
       assert(isa<MatchNoteDiag>(Diag.get()) &&
              "expected only MatchNoteDiag to have no input range");
       const MatchResultDiag &MRD = Diag->getMatchResultDiag();
-      InputRange = MRD.getMatchRange() ? *MRD.getMatchRange()
-                                       : MRD.getSearchRange();
+      InputRange =
+          MRD.getMatchRange() ? *MRD.getMatchRange() : MRD.getSearchRange();
       InputRange.End = InputRange.Start;
     }
     auto [InputStartLine, InputStartCol] =
