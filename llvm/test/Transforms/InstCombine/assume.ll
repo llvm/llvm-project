@@ -626,7 +626,8 @@ define void @nonnull_gep_inbounds(ptr %p, i64 %i) {
 
 define void @nonnull_gep_not_inbounds(ptr %p, i64 %i) {
 ; CHECK-LABEL: @nonnull_gep_not_inbounds(
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[P:%.*]]) ]
+; CHECK-NEXT:    [[P:%.*]] = getelementptr i8, ptr [[P1:%.*]], i64 [[I:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[P]]) ]
 ; CHECK-NEXT:    ret void
 ;
   %p2 = getelementptr i8, ptr %p, i64 %i
