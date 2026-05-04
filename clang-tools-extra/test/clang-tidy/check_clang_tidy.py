@@ -460,10 +460,13 @@ C_STANDARDS = ["c99", ("c11", "c1x"), "c17", ("c23", "c2x"), "c2y"]
 
 
 def expand_std(std: str) -> List[str]:
-    split_std, or_later, _ = std.partition("-or-later")
+    split_std, or_later, suffix = std.partition("-or-later")
 
     if not or_later:
         return [split_std]
+
+    if suffix:
+        return [std]
 
     for standard_list in (CPP_STANDARDS, C_STANDARDS):
         item = next(
