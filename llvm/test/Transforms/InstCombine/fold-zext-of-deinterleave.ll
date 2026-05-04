@@ -154,3 +154,27 @@ define <8 x i64> @negative_zext_shufflevector_invalid_zext(<16 x i16> %v) {
   %r = mul <8 x i64> %z0, %z1
   ret <8 x i64> %r
 }
+
+define <2 x i64> @negative_zext_shufflevector_invalid_shuffle_mask1(<2 x i32> %v) {
+; CHECK-LABEL: define <2 x i64> @negative_zext_shufflevector_invalid_shuffle_mask1(
+; CHECK-SAME: <2 x i32> [[V:%.*]]) {
+; CHECK-NEXT:    [[F1:%.*]] = shufflevector <2 x i32> [[V]], <2 x i32> poison, <2 x i32> <i32 1, i32 poison>
+; CHECK-NEXT:    [[Z1:%.*]] = zext <2 x i32> [[F1]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[Z1]]
+;
+  %f1 = shufflevector <2 x i32> %v, <2 x i32> poison, <2 x i32> <i32 1, i32 3>
+  %z1 = zext <2 x i32> %f1 to <2 x i64>
+  ret <2 x i64> %z1
+}
+
+define <2 x i64> @negative_zext_shufflevector_invalid_shuffle_mask2(<8 x i32> %v) {
+; CHECK-LABEL: define <2 x i64> @negative_zext_shufflevector_invalid_shuffle_mask2(
+; CHECK-SAME: <8 x i32> [[V:%.*]]) {
+; CHECK-NEXT:    [[F1:%.*]] = shufflevector <8 x i32> [[V]], <8 x i32> poison, <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[Z1:%.*]] = zext <2 x i32> [[F1]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[Z1]]
+;
+  %f1 = shufflevector <8 x i32> %v, <8 x i32> poison, <2 x i32> <i32 0, i32 2>
+  %z1 = zext <2 x i32> %f1 to <2 x i64>
+  ret <2 x i64> %z1
+}

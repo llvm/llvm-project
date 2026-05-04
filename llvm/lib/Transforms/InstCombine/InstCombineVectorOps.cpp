@@ -3337,9 +3337,17 @@ bool InstCombinerImpl::foldExtractionOfVectorDeinterleave(Instruction *DI) {
     // Not sure if we'll see `shufflevector poison, <vec0>, <mask>` in the
     // future.
     if (match(I, m_Shuffle(m_Value(V), m_Undef(), m_Mask(ShuffleMask))) &&
-        ShuffleVectorInst::isDeInterleaveMaskOfFactor(ShuffleMask, 2, Index) &&
-        Index < 2)
-      return {V, Index};
+        isa<FixedVectorType>(V->getType())) {
+      unsigned NumInputElements =
+          cast<VectorType>(V->getType())->getElementCount().getFixedValue();
+      if (ShuffleVectorInst::isDeInterleaveMaskOfFactor(ShuffleMask, 2,
+                                                        Index) &&
+          Index < 2 &&
+          ShuffleVectorInst::isSingleSourceMask(ShuffleMask,
+                                                NumInputElements) &&
+          ShuffleMask.size() * 2 == NumInputElements)
+        return {V, Index};
+    }
     return {nullptr, UINT_MAX};
   };
 
