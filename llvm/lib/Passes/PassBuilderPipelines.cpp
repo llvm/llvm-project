@@ -1723,6 +1723,8 @@ PassBuilder::buildFatLTODefaultPipeline(OptimizationLevel Level, bool ThinLTO,
     // otherwise, just use module optimization
     MPM.addPass(
         buildModuleOptimizationPipeline(Level, ThinOrFullLTOPhase::None));
+    // EmbeddedJIT AOT module pass (PASS2-4).
+    MPM.addPass(EJitAotModulePass());
     // Emit annotation remarks.
     addAnnotationRemarksPass(MPM);
   }
@@ -1834,6 +1836,8 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
     // globals in the object file.
     MPM.addPass(EliminateAvailableExternallyPass());
     MPM.addPass(GlobalDCEPass());
+    // EmbeddedJIT AOT module pass (PASS2-4).
+    MPM.addPass(EJitAotModulePass());
     return MPM;
   }
   if (!UseCtxProfile.empty()) {
@@ -1975,6 +1979,9 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
                                    lowertypetests::DropTestKind::Assume));
 
     MPM.addPass(buildCoroWrapper(ThinOrFullLTOPhase::FullLTOPostLink));
+
+    // EmbeddedJIT AOT module pass (PASS2-4).
+    MPM.addPass(EJitAotModulePass());
 
     invokeFullLinkTimeOptimizationLastEPCallbacks(MPM, Level);
 

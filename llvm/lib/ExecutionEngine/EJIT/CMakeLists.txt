@@ -16,6 +16,7 @@ add_llvm_component_library(LLVMEJIT
   EJitOptimizer.cpp
 
   LINK_COMPONENTS
+  BitReader
   Core
   ExecutionEngine
   OrcJIT

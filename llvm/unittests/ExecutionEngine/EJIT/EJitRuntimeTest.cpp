@@ -12,13 +12,20 @@
 
 #include "llvm/ExecutionEngine/EJIT/EJit.h"
 #include "llvm/ExecutionEngine/EJIT/EJitCache.h"
-#include "llvm/Support/Error.h"
 #include "llvm/ExecutionEngine/EJIT/EJitCommon.h"
 #include "llvm/ExecutionEngine/EJIT/EJitLogger.h"
 #include "llvm/ExecutionEngine/EJIT/EJitModuleLoader.h"
 #include "llvm/ExecutionEngine/EJIT/EJitOptions.h"
+#include "llvm/ExecutionEngine/EJIT/EJitOptimizer.h"
 #include "llvm/ExecutionEngine/EJIT/EJitRegistrationStore.h"
 #include "llvm/ExecutionEngine/EJIT/EJitRuntimeState.h"
+#include "llvm/ExecutionEngine/EJIT/EJitStructFieldPass.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
+#include "llvm/Passes/PassBuilder.h"
+#include "llvm/Support/Error.h"
 #include "gtest/gtest.h"
 #include <thread>
 
@@ -538,10 +545,10 @@ TEST(EJit, CompileMode) {
 
 TEST(EJit, OptimizationLevel) {
   EJit ejit(Config{});
-  EXPECT_EQ(ejit.getOptimizationLevel(), OptimizationLevel::L2);
+  EXPECT_EQ(ejit.getOptimizationLevel(), llvm::ejit::OptimizationLevel::L2);
 
-  ejit.setOptimizationLevel(OptimizationLevel::L3);
-  EXPECT_EQ(ejit.getOptimizationLevel(), OptimizationLevel::L3);
+  ejit.setOptimizationLevel(llvm::ejit::OptimizationLevel::L3);
+  EXPECT_EQ(ejit.getOptimizationLevel(), llvm::ejit::OptimizationLevel::L3);
 }
 
 //===----------------------------------------------------------------------===//
@@ -659,6 +666,301 @@ TEST(EJitCApi, ActivationCycleWithRuntimeIndex) {
       EXPECT_FALSE(ejit_is_active("cycle", workload[i]));
   }
   ejit_shutdown();
+}
+
+//===----------------------------------------------------------------------===//
+// PeriodArrayRegistry::getArrayByBaseAddr tests
+//===----------------------------------------------------------------------===//
+
+TEST(PeriodArrayRegistry, GetArrayByBaseAddr) {
+  PeriodArrayRegistry reg;
+  int data[10];
+  reg.registerArray("cell", "my_cells", data, 10);
+
+  const auto *info = reg.getArrayByBaseAddr(data);
+  ASSERT_NE(info, nullptr);
+  EXPECT_EQ(info->varName, "my_cells");
+  EXPECT_EQ(info->periodName, "cell");
+  EXPECT_EQ(info->arraySize, 10u);
+
+  // Non-registered pointer returns nullptr
+  int other;
+  EXPECT_EQ(reg.getArrayByBaseAddr(&other), nullptr);
+  EXPECT_EQ(reg.getArrayByBaseAddr(nullptr), nullptr);
+}
+
+TEST(PeriodArrayRegistry, GetArrayByBaseAddrMultipleArrays) {
+  PeriodArrayRegistry reg;
+  int data1[5], data2[10];
+  reg.registerArray("cell", "a", data1, 5);
+  reg.registerArray("trp", "b", data2, 10);
+
+  const auto *info1 = reg.getArrayByBaseAddr(data1);
+  ASSERT_NE(info1, nullptr);
+  EXPECT_EQ(info1->varName, "a");
+  EXPECT_EQ(info1->periodName, "cell");
+
+  const auto *info2 = reg.getArrayByBaseAddr(data2);
+  ASSERT_NE(info2, nullptr);
+  EXPECT_EQ(info2->varName, "b");
+  EXPECT_EQ(info2->periodName, "trp");
+}
+
+//===----------------------------------------------------------------------===//
+// EJitOptimizer tests
+//===----------------------------------------------------------------------===//
+
+static std::unique_ptr<Module> createTestModule(LLVMContext &Ctx,
+                                                const std::string &Name) {
+  auto M = std::make_unique<Module>("test", Ctx);
+  M->setTargetTriple(Triple("x86_64-unknown-linux-gnu"));
+  return M;
+}
+
+/// Create a simple function with a period-array-index argument metadata.
+static Function *createPeriodIndFunc(LLVMContext &Ctx, Module &M,
+                                     const std::string &name) {
+  IRBuilder<> B(Ctx);
+  Type *RetTy = B.getInt32Ty();
+  Type *ParamTy = B.getInt32Ty();
+  FunctionType *FT = FunctionType::get(RetTy, {ParamTy}, false);
+  auto *F = Function::Create(FT, GlobalValue::ExternalLinkage, name, &M);
+  F->setName(name);
+
+  auto &Arg = *F->arg_begin();
+  Arg.setName("period_idx");
+
+  BasicBlock *BB = BasicBlock::Create(Ctx, "entry", F);
+  B.SetInsertPoint(BB);
+  B.CreateRet(B.CreateAdd(&Arg, B.getInt32(1)));
+
+  // Attach !ejit.metadata with a sub-node for period-array-index:
+  //   !ejit.metadata = !{!0}
+  //   !0 = !{!"ejit_period_arr_ind", !"cell", i32 0}
+  Metadata *MDOps[] = {
+      MDString::get(Ctx, TAG_EJIT_PERIOD_ARR_IND),
+      MDString::get(Ctx, "cell"),
+      ConstantAsMetadata::get(ConstantInt::get(B.getInt32Ty(), 0)),
+  };
+  MDNode *Sub = MDNode::get(Ctx, MDOps);
+  F->setMetadata(MD_EJIT_METADATA, MDNode::get(Ctx, {Sub}));
+
+  return F;
+}
+
+TEST(EJitOptimizer, PreReplacePeriodIndices) {
+  LLVMContext Ctx;
+  auto M = createTestModule(Ctx, "preReplaceTest");
+  Function *F = createPeriodIndFunc(Ctx, *M, "test_func");
+  ASSERT_NE(F, nullptr);
+
+  PeriodArrayRegistry reg;
+  SpecializationContext ctx;
+  ctx.fnName = "test_func";
+  ctx.dimensions.push_back({"cell", 42});
+
+  // Before replacement: argument is used
+  auto &Arg = *F->arg_begin();
+  EXPECT_TRUE(Arg.hasNUsesOrMore(1));
+
+  EJitOptimizer opt(reg);
+  opt.preReplacePeriodIndices(*M, ctx);
+
+  // After replacement: the arg should have zero uses (replaced by constant 42)
+  EXPECT_EQ(Arg.getNumUses(), 0u);
+}
+
+TEST(EJitOptimizer, OptimizationPipelineL1) {
+  LLVMContext Ctx;
+  auto M = createTestModule(Ctx, "optL1");
+  createPeriodIndFunc(Ctx, *M, "f");
+
+  PeriodArrayRegistry reg;
+  EJitOptimizer opt(reg);
+
+  // L1 should not crash
+  opt.runOptimizationPipeline(*M, llvm::ejit::OptimizationLevel::L1);
+}
+
+TEST(EJitOptimizer, OptimizationPipelineL2) {
+  LLVMContext Ctx;
+  auto M = createTestModule(Ctx, "optL2");
+  createPeriodIndFunc(Ctx, *M, "f");
+
+  PeriodArrayRegistry reg;
+  EJitOptimizer opt(reg);
+
+  // L2 should not crash
+  opt.runOptimizationPipeline(*M, llvm::ejit::OptimizationLevel::L2);
+}
+
+TEST(EJitOptimizer, OptimizationPipelineL3) {
+  LLVMContext Ctx;
+  auto M = createTestModule(Ctx, "optL3");
+  createPeriodIndFunc(Ctx, *M, "f");
+
+  PeriodArrayRegistry reg;
+  EJitOptimizer opt(reg);
+
+  // L3 should not crash
+  opt.runOptimizationPipeline(*M, llvm::ejit::OptimizationLevel::L3);
+}
+
+TEST(EJitOptimizer, FullPipelineEndToEnd) {
+  LLVMContext Ctx;
+  auto M = createTestModule(Ctx, "fullPipeline");
+  createPeriodIndFunc(Ctx, *M, "test_fn");
+
+  PeriodArrayRegistry reg;
+  SpecializationContext ctx;
+  ctx.fnName = "test_fn";
+  ctx.dimensions.push_back({"cell", 100});
+  ctx.optLevel = llvm::ejit::OptimizationLevel::L3;
+
+  EJitOptimizer opt(reg);
+
+  // 1. Pre-replace
+  opt.preReplacePeriodIndices(*M, ctx);
+
+  // 2. InstCombine
+  opt.runInstCombine(*M);
+
+  // 3. Inline (no-op for a single function, but shouldn't crash)
+  opt.runInline(*M);
+
+  // 4. Optimization pipeline at L3
+  opt.runOptimizationPipeline(*M, llvm::ejit::OptimizationLevel::L3);
+}
+
+//===----------------------------------------------------------------------===//
+// EJitStructFieldPass tests
+//===----------------------------------------------------------------------===//
+
+/// Create a function with a GEP + load from a global array (simulating
+/// a period array access marked with !ejit.may_const).
+/// The GEP index is a constant so the pass can compute the offset.
+/// Also adds !ejit.metadata to the global to identify it as a period array.
+static Function *createStructFieldFunc(LLVMContext &Ctx, Module &M,
+                                       uint64_t gepIdx = 2) {
+  IRBuilder<> B(Ctx);
+  Type *Int32Ty = B.getInt32Ty();
+
+  // Create a global array: int32_t g_arr[4]
+  auto *ArrTy = ArrayType::get(Int32Ty, 4);
+  auto *GVar = new GlobalVariable(M, ArrTy, false,
+                                   GlobalValue::InternalLinkage,
+                                   ConstantAggregateZero::get(ArrTy), "g_arr");
+
+  // Add !ejit.metadata to GVar: !g_arr = !{!"ejit_period_arr", !"cell", i32 4}
+  Metadata *ArrMDOps[] = {
+      MDString::get(Ctx, TAG_EJIT_PERIOD_ARR),
+      MDString::get(Ctx, "cell"),
+      ConstantAsMetadata::get(ConstantInt::get(Int32Ty, 4)),
+  };
+  GVar->setMetadata(MD_EJIT_METADATA,
+                    MDNode::get(Ctx, {MDNode::get(Ctx, ArrMDOps)}));
+
+  // Function: int32_t test_load()
+  FunctionType *FT = FunctionType::get(Int32Ty, {}, false);
+  auto *F = Function::Create(FT, GlobalValue::ExternalLinkage, "test_load", &M);
+
+  BasicBlock *BB = BasicBlock::Create(Ctx, "entry", F);
+  B.SetInsertPoint(BB);
+
+  // GEP: &g_arr[gepIdx] with constant index
+  Value *IdxList[] = {B.getInt32(0), B.getInt64(gepIdx)};
+  auto *GEP = B.CreateInBoundsGEP(ArrTy, GVar, IdxList, "gep");
+  auto *Load = B.CreateLoad(Int32Ty, GEP, "load");
+
+  // Add !ejit.may_const metadata to the load
+  Load->setMetadata("ejit.may_const", MDNode::get(Ctx, MDString::get(Ctx, "ejit")));
+
+  B.CreateRet(Load);
+  return F;
+}
+
+TEST(EJitStructFieldPass, MayConstLoadSubstitution) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("test_struct", Ctx);
+  M->setTargetTriple(Triple("x86_64-unknown-linux-gnu"));
+  Function *F = createStructFieldFunc(Ctx, *M, 2); // g_arr[2] = 30
+  ASSERT_NE(F, nullptr);
+
+  // Create real memory representing the period array data.
+  // The StructFieldPass reads from the registry's baseAddr at the GEP offset.
+  int32_t mockArr[4] = {10, 20, 30, 40};
+
+  PeriodArrayRegistry reg;
+  GlobalVariable *GV = M->getGlobalVariable("g_arr", true);
+  ASSERT_NE(GV, nullptr) << "g_arr not found in module";
+  reg.registerArray("cell", "g_arr", mockArr, 4);
+
+  // Run the StructFieldPass
+  EJitStructFieldPass structPass(reg);
+  FunctionAnalysisManager FAM;
+  LoopAnalysisManager LAM;
+  CGSCCAnalysisManager CGAM;
+  ModuleAnalysisManager MAM;
+  PassBuilder PB;
+  PB.registerFunctionAnalyses(FAM);
+  PB.registerLoopAnalyses(LAM);
+  PB.registerCGSCCAnalyses(CGAM);
+  PB.registerModuleAnalyses(MAM);
+  PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+
+  auto PA = structPass.run(*F, FAM);
+
+  // The pass should find the GEP+load, compute offset for g_arr[2] = 8 bytes,
+  // read mockArr + 8 = mockArr[2] = 30, and replace the load.
+  EXPECT_FALSE(PA.areAllPreserved());
+
+  // Verify the load was replaced: the ret should now use a ConstantInt(30)
+  bool loadRemoved = true;
+  for (BasicBlock &BB : *F)
+    for (Instruction &I : BB)
+      if (isa<LoadInst>(&I))
+        loadRemoved = false;
+  EXPECT_TRUE(loadRemoved);
+
+  // Check that the return value is constant 30
+  auto *Ret = dyn_cast_or_null<ReturnInst>(&F->back().back());
+  ASSERT_NE(Ret, nullptr);
+  auto *RetVal = dyn_cast<ConstantInt>(Ret->getReturnValue());
+  ASSERT_NE(RetVal, nullptr);
+  EXPECT_EQ(RetVal->getSExtValue(), 30);
+}
+
+TEST(EJitStructFieldPass, NoMayConstNoChange) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("test_nochange", Ctx);
+  M->setTargetTriple(Triple("x86_64-unknown-linux-gnu"));
+
+  IRBuilder<> B(Ctx);
+  Type *Int32Ty = B.getInt32Ty();
+  FunctionType *FT = FunctionType::get(Int32Ty, {Int32Ty}, false);
+  auto *F = Function::Create(FT, GlobalValue::ExternalLinkage, "noop", M.get());
+
+  BasicBlock *BB = BasicBlock::Create(Ctx, "entry", F);
+  B.SetInsertPoint(BB);
+  auto *Add = B.CreateAdd(F->getArg(0), B.getInt32(1));
+  B.CreateRet(Add);
+
+  PeriodArrayRegistry reg;
+  EJitStructFieldPass structPass(reg);
+  FunctionAnalysisManager FAM;
+  LoopAnalysisManager LAM;
+  CGSCCAnalysisManager CGAM;
+  ModuleAnalysisManager MAM;
+  PassBuilder PB;
+  PB.registerFunctionAnalyses(FAM);
+  PB.registerLoopAnalyses(LAM);
+  PB.registerCGSCCAnalyses(CGAM);
+  PB.registerModuleAnalyses(MAM);
+  PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+  auto PA = structPass.run(*F, FAM);
+
+  // Pass should preserve all analyses when there's nothing to do
+  EXPECT_TRUE(PA.areAllPreserved());
 }
 
 

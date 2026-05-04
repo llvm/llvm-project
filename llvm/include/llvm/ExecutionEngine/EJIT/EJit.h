@@ -51,6 +51,9 @@ public:
   void setOptimizationLevel(OptimizationLevel level);
   OptimizationLevel getOptimizationLevel() const;
 
+  // Registry access (for C API validation)
+  const PeriodArrayRegistry &getRegistry() const { return runtimeState_->getRegistry(); }
+
   // Statistics
   EJitCache::Stats getStats() const;
 

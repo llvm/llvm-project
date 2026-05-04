@@ -39,7 +39,7 @@ ejit_status_t ejit_init(const ejit_config_t *config) {
 
   gEJIT = new EJit(cfg);
   if (!gEJIT)
-    return EJIT_ERROR_OOM;
+    return EJIT_ERR_MEMORY;
 
   return EJIT_OK;
 }
@@ -51,14 +51,14 @@ void ejit_shutdown(void) {
 
 ejit_status_t ejit_activate(const char *periodName, uint8_t cellIdx) {
   if (!gEJIT)
-    return EJIT_ERROR_NOT_INITIALIZED;
+    return EJIT_ERR_NOT_ACTIVE;
   gEJIT->activate(periodName, cellIdx);
   return EJIT_OK;
 }
 
 ejit_status_t ejit_deactivate(const char *periodName, uint8_t cellIdx) {
   if (!gEJIT)
-    return EJIT_ERROR_NOT_INITIALIZED;
+    return EJIT_ERR_NOT_ACTIVE;
   gEJIT->deactivate(periodName, cellIdx);
   return EJIT_OK;
 }
@@ -66,7 +66,13 @@ ejit_status_t ejit_deactivate(const char *periodName, uint8_t cellIdx) {
 ejit_status_t ejit_activate_array(const char *periodName, void *arrayPtr,
                                    uint8_t cellIdx) {
   if (!gEJIT)
-    return EJIT_ERROR_NOT_INITIALIZED;
+    return EJIT_ERR_NOT_ACTIVE;
+  // Validate that arrayPtr is a registered period array.
+  auto *info = gEJIT->getRegistry().getArrayByBaseAddr(arrayPtr);
+  if (!info)
+    return EJIT_ERR_INVALID_PARAM;
+  if (info->periodName != periodName)
+    return EJIT_ERR_INVALID_PARAM;
   gEJIT->activate(periodName, cellIdx);
   return EJIT_OK;
 }
@@ -74,21 +80,27 @@ ejit_status_t ejit_activate_array(const char *periodName, void *arrayPtr,
 ejit_status_t ejit_deactivate_array(const char *periodName, void *arrayPtr,
                                      uint8_t cellIdx) {
   if (!gEJIT)
-    return EJIT_ERROR_NOT_INITIALIZED;
+    return EJIT_ERR_NOT_ACTIVE;
+  // Validate that arrayPtr is a registered period array.
+  auto *info = gEJIT->getRegistry().getArrayByBaseAddr(arrayPtr);
+  if (!info)
+    return EJIT_ERR_INVALID_PARAM;
+  if (info->periodName != periodName)
+    return EJIT_ERR_INVALID_PARAM;
   gEJIT->deactivate(periodName, cellIdx);
   return EJIT_OK;
 }
 
 ejit_status_t ejit_activate_all(const char *periodName) {
   if (!gEJIT)
-    return EJIT_ERROR_NOT_INITIALIZED;
+    return EJIT_ERR_NOT_ACTIVE;
   gEJIT->activateAll(periodName);
   return EJIT_OK;
 }
 
 ejit_status_t ejit_deactivate_all(const char *periodName) {
   if (!gEJIT)
-    return EJIT_ERROR_NOT_INITIALIZED;
+    return EJIT_ERR_NOT_ACTIVE;
   gEJIT->deactivateAll(periodName);
   return EJIT_OK;
 }
@@ -127,9 +139,9 @@ void ejit_invalidate(const char *periodName, uint8_t cellIdx) {
 
 ejit_status_t ejit_get_stats(ejit_stats_t *stats) {
   if (!gEJIT)
-    return EJIT_ERROR_NOT_INITIALIZED;
+    return EJIT_ERR_NOT_ACTIVE;
   if (!stats)
-    return EJIT_ERROR_INVALID_ARG;
+    return EJIT_ERR_INVALID_PARAM;
 
   auto s = gEJIT->getStats();
   stats->entryCount = s.entryCount;

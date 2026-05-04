@@ -17,13 +17,13 @@ namespace ejit {
 
 enum class ErrorCode {
   Success = 0,
-  BitcodeLoadFailed,
+  BitcodeNotFound,
   SpecializationFailed,
   CompilationFailed,
   CacheFull,
-  OutOfMemory,
-  NotInitialized,
-  InvalidArgument,
+  Memory,
+  NotActive,
+  InvalidParam,
   TimeWindowNotActive,
 };
 

@@ -50,7 +50,7 @@ void *EJitCompileDriver::getOrCompile(
   auto bitcodeOrErr = loader_.getBitcode(funcName);
   if (!bitcodeOrErr) {
     if (logger_)
-      logger_->log(ErrorCode::BitcodeLoadFailed,
+      logger_->log(ErrorCode::BitcodeNotFound,
                    "No bitcode for function", funcName, cacheKey);
     return nullptr;
   }
@@ -67,7 +67,7 @@ void *EJitCompileDriver::getOrCompile(
   // Sync compile
   if (!syncEngine_) {
     if (logger_)
-      logger_->log(ErrorCode::NotInitialized,
+      logger_->log(ErrorCode::NotActive,
                    "Sync engine not initialized", funcName, cacheKey);
     return nullptr;
   }
