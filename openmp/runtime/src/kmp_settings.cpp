@@ -16,6 +16,7 @@
 #if KMP_USE_HIER_SCHED
 #include "kmp_dispatch_hier.h"
 #endif
+#include "kmp_device_env.h"
 #include "kmp_environment.h"
 #include "kmp_i18n.h"
 #include "kmp_io.h"
@@ -6089,6 +6090,8 @@ static void __kmp_aux_env_initialize(kmp_env_blk_t *block) {
 
   /* OMP_NUM_THREADS */
   value = __kmp_env_blk_var(block, "OMP_NUM_THREADS");
+  if (value == NULL)
+    value = __kmp_env_blk_var(block, "OMP_NUM_THREADS_ALL");
   if (value) {
     ompc_set_num_threads(__kmp_dflt_team_nth);
   }
@@ -6133,7 +6136,8 @@ void __kmp_env_initialize(char const *string) {
   }
   __kmp_env_blk_init(&block, string);
 
-  // update the set flag on all entries that have an env var
+  // Device-scope env-var pre-pass: route `<ENV>_ALL`,
+  // `<ENV>_DEV`, `<ENV>_DEV_<d>` into the device-scope registry.
   for (i = 0; i < block.count; ++i) {
     if ((block.vars[i].name == NULL) || (*block.vars[i].name == '\0')) {
       continue;
@@ -6141,6 +6145,10 @@ void __kmp_env_initialize(char const *string) {
     if (block.vars[i].value == NULL) {
       continue;
     }
+    if (__kmp_device_env_record(block.vars[i].name, block.vars[i].value))
+      continue;
+    __kmp_device_env_observe_host(block.vars[i].name, block.vars[i].value);
+
     kmp_setting_t *setting = __kmp_stg_find(block.vars[i].name);
     if (setting != NULL) {
       setting->set = 1;
@@ -6248,6 +6256,25 @@ void __kmp_env_initialize(char const *string) {
   // Now process all of the settings.
   for (i = 0; i < block.count; ++i) {
     __kmp_stg_parse(block.vars[i].name, block.vars[i].value);
+  }
+
+  // Device-scope env-var post-pass: when the current block has `<ENV>_ALL` but
+  // no unsuffixed `<ENV>`, replay `_ALL` so the host ICV picks it up. We query
+  // the block (not the registry) so an unrelated kmp_set_defaults does not
+  // accidentally replay a stale `_ALL`.
+  for (int e = 0;; ++e) {
+    char const *base = __kmp_device_env_eligible_name(e);
+    if (base == NULL)
+      break;
+    if (__kmp_env_blk_var(&block, base) != NULL)
+      continue;
+    char *all_name = __kmp_str_format("%s_ALL", base);
+    char const *all_v = __kmp_env_blk_var(&block, all_name);
+    __kmp_str_free(&all_name);
+    if (all_v != NULL) {
+      __kmp_stg_parse(base, all_v);
+      __kmp_device_env_observe_host(base, all_v);
+    }
   }
 
   // If user locks have been allocated yet, don't reset the lock vptr table.
