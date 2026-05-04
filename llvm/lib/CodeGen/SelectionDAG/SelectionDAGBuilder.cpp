@@ -10390,7 +10390,7 @@ static bool prepareDAGLevelOperands(ConstraintDecisionInfo &Info,
         // C_RegisterClass, and a target-defined fashion for
         // C_Immediate/C_Other). Find a register that we can use.
         if (OpInfo.AssignedRegs.Regs.empty()) {
-          Info.ErrorMsg << "couldn't allocate output register for "
+          Info.ErrorMsg << "could not allocate output register for "
                         << "constraint '" << OpInfo.ConstraintCode << "'";
           return true;
         }
@@ -10420,8 +10420,8 @@ static bool prepareDAGLevelOperands(ConstraintDecisionInfo &Info,
         if (Flag.isRegDefKind() || Flag.isRegDefEarlyClobberKind()) {
           if (OpInfo.isIndirect) {
             // This happens on gcc/testsuite/gcc.dg/pr8788-1.c
-            Info.ErrorMsg << "inline asm not supported yet: don't know how "
-                          << "to handle tied indirect register inputs";
+            Info.ErrorMsg << "inline asm not supported yet: cannot handle "
+                          << "tied indirect register inputs";
             return true;
           }
 
@@ -10552,14 +10552,14 @@ static bool prepareDAGLevelOperands(ConstraintDecisionInfo &Info,
 
       // TODO: Support this.
       if (OpInfo.isIndirect) {
-        Info.ErrorMsg << "Don't know how to handle indirect register inputs "
-                      << "yet for constraint '" << OpInfo.ConstraintCode << "'";
+        Info.ErrorMsg << "cannot handle indirect register inputs yet for "
+                      << "constraint '" << OpInfo.ConstraintCode << "'";
         return true;
       }
 
       // Copy the input into the appropriate registers.
       if (OpInfo.AssignedRegs.Regs.empty()) {
-        Info.ErrorMsg << "couldn't allocate input reg for constraint '"
+        Info.ErrorMsg << "could not allocate input reg for constraint '"
                       << OpInfo.ConstraintCode << "'";
         return true;
       }

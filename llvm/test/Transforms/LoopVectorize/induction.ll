@@ -1961,9 +1961,8 @@ define i32 @scalarize_induction_variable_05(ptr %a, i32 %x, i1 %c, i32 %n) {
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[PRED_UDIV_IF:%.*]], label [[PRED_UDIV_CONTINUE:%.*]]
 ; CHECK:       pred.udiv.if:
-; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32> [[WIDE_LOAD]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = udiv i32 [[TMP5]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = udiv i32 [[TMP5]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i32> poison, i32 [[TMP6]], i64 0
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE]]
 ; CHECK:       pred.udiv.continue:
@@ -2178,9 +2177,8 @@ define i32 @scalarize_induction_variable_05(ptr %a, i32 %x, i1 %c, i32 %n) {
 ; UNROLL-NO-IC-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x i32>, ptr [[TMP2]], align 4
 ; UNROLL-NO-IC-NEXT:    br i1 [[C:%.*]], label [[PRED_UDIV_IF:%.*]], label [[PRED_UDIV_CONTINUE:%.*]]
 ; UNROLL-NO-IC:       pred.udiv.if:
-; UNROLL-NO-IC-NEXT:    [[TMP7:%.*]] = add i32 [[INDEX]], 0
 ; UNROLL-NO-IC-NEXT:    [[TMP8:%.*]] = extractelement <2 x i32> [[WIDE_LOAD]], i64 0
-; UNROLL-NO-IC-NEXT:    [[TMP9:%.*]] = udiv i32 [[TMP8]], [[TMP7]]
+; UNROLL-NO-IC-NEXT:    [[TMP9:%.*]] = udiv i32 [[TMP8]], [[INDEX]]
 ; UNROLL-NO-IC-NEXT:    [[TMP10:%.*]] = insertelement <2 x i32> poison, i32 [[TMP9]], i64 0
 ; UNROLL-NO-IC-NEXT:    br label [[PRED_UDIV_CONTINUE]]
 ; UNROLL-NO-IC:       pred.udiv.continue:
@@ -4916,8 +4914,7 @@ define i32 @PR32419(i32 %a, i16 %b) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i1> [[TMP3]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[PRED_UREM_IF:%.*]], label [[PRED_UREM_CONTINUE:%.*]]
 ; CHECK:       pred.urem.if:
-; CHECK-NEXT:    [[TMP5:%.*]] = add i16 [[TMP1]], 0
-; CHECK-NEXT:    [[TMP6:%.*]] = urem i16 [[B:%.*]], [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = urem i16 [[B:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i16> poison, i16 [[TMP6]], i64 0
 ; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE]]
 ; CHECK:       pred.urem.continue:
@@ -5073,8 +5070,7 @@ define i32 @PR32419(i32 %a, i16 %b) {
 ; UNROLL-NO-IC-NEXT:    [[TMP6:%.*]] = extractelement <2 x i1> [[TMP4]], i64 0
 ; UNROLL-NO-IC-NEXT:    br i1 [[TMP6]], label [[PRED_UREM_IF:%.*]], label [[PRED_UREM_CONTINUE:%.*]]
 ; UNROLL-NO-IC:       pred.urem.if:
-; UNROLL-NO-IC-NEXT:    [[TMP7:%.*]] = add i16 [[TMP1]], 0
-; UNROLL-NO-IC-NEXT:    [[TMP8:%.*]] = urem i16 [[B:%.*]], [[TMP7]]
+; UNROLL-NO-IC-NEXT:    [[TMP8:%.*]] = urem i16 [[B:%.*]], [[TMP1]]
 ; UNROLL-NO-IC-NEXT:    [[TMP9:%.*]] = insertelement <2 x i16> poison, i16 [[TMP8]], i64 0
 ; UNROLL-NO-IC-NEXT:    br label [[PRED_UREM_CONTINUE]]
 ; UNROLL-NO-IC:       pred.urem.continue:

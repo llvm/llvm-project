@@ -81,7 +81,7 @@ protected:
     SrcMgr.AddNewSourceBuffer(std::move(Buffer), SMLoc());
     EXPECT_EQ(Buffer, nullptr);
 
-    Ctx.reset(new MCContext(Triple, *MAI, MRI.get(), STI.get(), &SrcMgr));
+    Ctx.reset(new MCContext(Triple, *MAI, *MRI, *STI, &SrcMgr));
     MOFI.reset(TheTarget->createMCObjectFileInfo(*Ctx, /*PIC=*/false,
                                                  /*LargeCodeModel=*/false));
     Ctx->setObjectFileInfo(MOFI.get());
