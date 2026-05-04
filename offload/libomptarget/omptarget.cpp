@@ -1401,6 +1401,12 @@ static int targetDataContiguous(ident_t *Loc, DeviceTy &Device, void *ArgsBase,
     return OFFLOAD_SUCCESS;
   }
 
+  if (ArgSize == 0) {
+    ODBG(ODT_Mapping) << "hst data:" << HstPtrBegin
+                      << " zero size, becomes a noop";
+    return OFFLOAD_SUCCESS;
+  }
+
   if (ArgType & OMP_TGT_MAPTYPE_TO) {
     ODBG(ODT_Mapping) << "Moving " << ArgSize << " bytes (hst:" << HstPtrBegin
                       << ") -> (tgt:" << TgtPtrBegin << ")";

@@ -19,7 +19,8 @@ end subroutine
 !CHECK:    %[[BOX_ADDR:.*]] = fir.box_offset %{{.*}} base_addr : (!fir.ref<!fir.box<!fir.array<?xi32>>>) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
 !CHECK:    %[[LOAD_BOX:.*]] = fir.load %[[BOX_ADDR]] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
 !CHECK:    %[[MAP_ADDR:.*]] = omp.map.info var_ptr(%[[LOAD_BOX]] : !fir.ref<!fir.array<?xi32>>, i32) map_clauses(to) capture(ByRef) bounds(%{{.*}}) -> !fir.ref<!fir.array<?xi32>> {name = "assumed_arr"}
-!CHECK:    omp.target_enter_data map_entries(%[[MAP_ADDR]] : !fir.ref<!fir.array<?xi32>>)
+!CHECK:    %[[ATTACH_MAP:.*]] = omp.map.info var_ptr(%{{.*}} : !fir.ref<!fir.box<!fir.array<?xi32>>>, !fir.box<!fir.array<?xi32>>) map_clauses(attach, ref_ptr_ptee) capture(ByRef) var_ptr_ptr(%{{.*}} : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>, i32) bounds(%{{.*}}) -> !fir.ref<!fir.array<?xi32>> {name = "assumed_arr"}
+!CHECK:    omp.target_enter_data map_entries(%[[MAP_ADDR]], %[[ATTACH_MAP]] : !fir.ref<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>)
 
 !CHECK:    %[[BOX_ADDR:.*]] = fir.box_offset %{{.*}} base_addr : (!fir.ref<!fir.box<!fir.array<?xi32>>>) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
 !CHECK:    %[[MAP_ADDR:.*]] = omp.map.info var_ptr(%{{.*}} : !fir.ref<!fir.box<!fir.array<?xi32>>>, !fir.box<!fir.array<?xi32>>) map_clauses(implicit, tofrom) capture(ByRef) var_ptr_ptr(%[[BOX_ADDR]] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>, i32) bounds(%{{.*}}) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>> {name = ""}
@@ -30,7 +31,8 @@ end subroutine
 !CHECK:    %[[BOX_ADDR:.*]] = fir.box_offset %{{.*}} base_addr : (!fir.ref<!fir.box<!fir.array<?xi32>>>) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
 !CHECK:    %[[LOAD_BOX:.*]] = fir.load %[[BOX_ADDR]] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
 !CHECK:    %[[MAP_ADDR:.*]] = omp.map.info var_ptr(%[[LOAD_BOX]] : !fir.ref<!fir.array<?xi32>>, i32) map_clauses(from) capture(ByRef) bounds(%{{.*}}) -> !fir.ref<!fir.array<?xi32>> {name = "assumed_arr"}
-!CHECK:    omp.target_exit_data map_entries(%[[MAP_ADDR]] : !fir.ref<!fir.array<?xi32>>)
+!CHECK:    %[[ATTACH_MAP:.*]] = omp.map.info var_ptr(%{{.*}} : !fir.ref<!fir.box<!fir.array<?xi32>>>, !fir.box<!fir.array<?xi32>>) map_clauses(attach, ref_ptr_ptee) capture(ByRef) var_ptr_ptr(%{{.*}} : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>, i32) bounds(%{{.*}}) -> !fir.ref<!fir.array<?xi32>> {name = "assumed_arr"}
+!CHECK:    omp.target_exit_data map_entries(%[[MAP_ADDR]], %[[ATTACH_MAP]] : !fir.ref<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>)
 
 subroutine assume_alloca_map_target_enter_exit(assumed_arr)
     integer, allocatable :: assumed_arr(:)
@@ -55,7 +57,8 @@ end subroutine
 !CHECK:    %[[BOX_ADDR:.*]] = fir.box_offset %{{.*}} base_addr : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
 !CHECK:    %[[BOX_ADDR_MAP:.*]] = omp.map.info var_ptr(%{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(from) capture(ByRef) var_ptr_ptr(%[[BOX_ADDR]] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>, i32) bounds(%{{.*}}) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>> {name = ""}
 !CHECK:    %[[DESC_MAP:.*]] = omp.map.info var_ptr(%{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(descriptor, from) capture(ByRef) members(%[[BOX_ADDR_MAP]] : [0] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {name = "assumed_arr"}
-!CHECK:    omp.target_exit_data map_entries(%[[DESC_MAP]], %[[BOX_ADDR_MAP]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>)
+!CHECK:    %[[ATTACH_MAP:.*]] = omp.map.info var_ptr(%{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(attach, ref_ptr_ptee) capture(ByRef) var_ptr_ptr(%{{.*}} : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>, i32) bounds(%{{.*}}) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {name = "assumed_arr"}
+!CHECK:    omp.target_exit_data map_entries(%[[DESC_MAP]], %[[ATTACH_MAP]], %[[BOX_ADDR_MAP]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>)
 
 subroutine assume_pointer_map_target_enter_exit(assumed_arr)
     integer, pointer :: assumed_arr(:)
@@ -80,7 +83,8 @@ end subroutine
 !CHECK:    %[[BOX_ADDR:.*]] = fir.box_offset %{{.*}} base_addr : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
 !CHECK:    %[[BOX_ADDR_MAP:.*]] = omp.map.info var_ptr(%{{.*}} : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.box<!fir.ptr<!fir.array<?xi32>>>) map_clauses(from) capture(ByRef) var_ptr_ptr(%[[BOX_ADDR]] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>, i32) bounds(%{{.*}}) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>> {name = ""}
 !CHECK:    %[[DESC_MAP:.*]] = omp.map.info var_ptr(%{{.*}} : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.box<!fir.ptr<!fir.array<?xi32>>>) map_clauses(descriptor, from) capture(ByRef) members(%[[BOX_ADDR_MAP]] : [0] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>> {name = "assumed_arr"}
-!CHECK:    omp.target_exit_data map_entries(%[[DESC_MAP]], %[[BOX_ADDR_MAP]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>)
+!CHECK:    %[[ATTACH_MAP:.*]] = omp.map.info var_ptr(%{{.*}} : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.box<!fir.ptr<!fir.array<?xi32>>>) map_clauses(attach, ref_ptr_ptee) capture(ByRef) var_ptr_ptr(%{{.*}} : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>, i32) bounds(%{{.*}}) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>> {name = "assumed_arr"}
+!CHECK:    omp.target_exit_data map_entries(%[[DESC_MAP]], %[[ATTACH_MAP]], %[[BOX_ADDR_MAP]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>)
 
 subroutine assume_map_target_data(assumed_arr)
     integer :: assumed_arr(:)

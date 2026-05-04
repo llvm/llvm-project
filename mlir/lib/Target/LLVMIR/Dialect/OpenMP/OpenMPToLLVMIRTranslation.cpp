@@ -5474,7 +5474,16 @@ static void collectMapDataFromMapOperands(
       // the same base pointer and an equivelant member count, but
       // that is a loose definition, we may have to extend to check
       // for other fields (varPtrPtr/invidiual members being mapped)
-      if (basePtr == val && mapData.IsAMapping[index] &&
+      // Note: Attach maps are not the same as a normal data transfer
+      // they specify to the runtime to perform an attach map and they
+      // (at least at the moment) are never something we would aim to
+      // return in a use_dev_* clause, so they are skipped in terms of
+      // duplicate maps.
+      bool isAttachMap =
+          (mapData.Types[index] &
+           llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ATTACH) ==
+          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ATTACH;
+      if (!isAttachMap && basePtr == val && mapData.IsAMapping[index] &&
           memberCount == mapOp.getMembers().size()) {
         found = true;
         mapData.Types[index] |=
@@ -5505,20 +5514,7 @@ static void collectMapDataFromMapOperands(
                                 ? mapOp.getVarPtrPtrType().value()
                                 : mapOp.getVarPtrType();
         mapData.BaseType.push_back(moduleTranslation.convertType(baseTy));
-
-        // If we're an attach map, we need to maintain the size currently, even
-        // if we're not sending data, as the runtime (at least currently)
-        // expects a size greater than 0.
-        if ((convertClauseMapFlags(mapOp.getMapType()) &
-             llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ATTACH) ==
-            llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ATTACH) {
-          mapData.Sizes.push_back(getSizeInBytes(
-              dl, baseTy, mapOp, mapData.Pointers.back(),
-              mapData.BaseType.back(), builder, moduleTranslation));
-        } else {
-          mapData.Sizes.push_back(builder.getInt64(0));
-        }
-
+        mapData.Sizes.push_back(builder.getInt64(0));
         mapData.MapClause.push_back(mapOp.getOperation());
         mapData.Types.push_back(
             llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_RETURN_PARAM);
