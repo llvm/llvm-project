@@ -784,8 +784,6 @@ void __sanitizer_copy_contiguous_container_annotations(const void *src_beg_p,
   uptr dst_beg = reinterpret_cast<uptr>(dst_beg_p);
   uptr dst_end = reinterpret_cast<uptr>(dst_end_p);
 
-  // RecordPoison(dst_beg, dst_end);
-
   constexpr uptr granularity = ASAN_SHADOW_GRANULARITY;
 
   if (src_beg > src_end || (dst_end - dst_beg) != (src_end - src_beg)) {
@@ -796,6 +794,9 @@ void __sanitizer_copy_contiguous_container_annotations(const void *src_beg_p,
 
   if (src_beg == src_end || src_beg == dst_beg)
     return;
+
+  // FIXME: Consider RecordPoison.
+
   // Due to support for overlapping buffers, we may have to copy elements
   // in reversed order, when destination buffer starts in the middle of
   // the source buffer (or shares first granule with it).
