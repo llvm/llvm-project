@@ -51,7 +51,7 @@
 
 # INVALID-OFFSET: error: '({{.*}})({{.*}})': invalid offset "[[OFFSET]]" in section-relative address
 
-## Test that a leading-zero value is treated as octal by getAsInteger(0,...).
+## Test that a leading-zero offset is treated as octal.
 ## +010 is octal 8, so TEXT_BASE(0x100) + 8 = 0x108 = .bar.
 ## If +010 were parsed as decimal 10 instead, the address would be 0x10a,
 ## which has no symbol (output would be "??").
@@ -143,7 +143,7 @@ Symbols:
         StorageMappingClass:  XMC_PR
         SectionOrLength:      4
 
-## Document 3: ELF object (non-XCOFF) for testing the format-check error.
+## Document 3: ELF object (non-XCOFF) for testing the format check error.
 --- !ELF
 FileHeader:
   Class:   ELFCLASS64

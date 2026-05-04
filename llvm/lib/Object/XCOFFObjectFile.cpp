@@ -842,28 +842,32 @@ static StringRef getSectionTypeName(XCOFF::SectionTypeFlags SectType) {
   return "";
 }
 
+template <typename SectionHeader>
+static Error findUniqueSection(ArrayRef<SectionHeader> Sections,
+                               XCOFF::SectionTypeFlags SectType,
+                               DataRefImpl &Result) {
+  for (const SectionHeader &Sec : Sections) {
+    if (Sec.getSectionType() != SectType)
+      continue;
+    if (Result.p != 0) {
+      StringRef Name = getSectionTypeName(SectType);
+      if (!Name.empty())
+        return createStringError("multiple '" + Name.str() +
+                                 "' sections found in XCOFF object");
+      return createStringError("multiple XCOFF sections have type flag 0x" +
+                               Twine::utohexstr(SectType));
+    }
+    Result.p = reinterpret_cast<uintptr_t>(&Sec);
+  }
+  return Error::success();
+}
+
 Expected<DataRefImpl>
 XCOFFObjectFile::getSectionByType(XCOFF::SectionTypeFlags SectType) const {
   DataRefImpl Result;
   Result.p = 0;
-  auto FindSection = [&](const auto &Sections) -> Error {
-    for (const auto &Sec : Sections) {
-      if (Sec.getSectionType() != SectType)
-        continue;
-      if (Result.p != 0) {
-        StringRef Name = getSectionTypeName(SectType);
-        if (!Name.empty())
-          return createStringError("multiple '" + Name.str() +
-                                   "' sections found in XCOFF object");
-        return createStringError("multiple XCOFF sections have type flag 0x" +
-                                 Twine::utohexstr(SectType));
-      }
-      Result.p = reinterpret_cast<uintptr_t>(&Sec);
-    }
-    return Error::success();
-  };
-  if (Error E =
-          is64Bit() ? FindSection(sections64()) : FindSection(sections32()))
+  if (Error E = is64Bit() ? findUniqueSection(sections64(), SectType, Result)
+                           : findUniqueSection(sections32(), SectType, Result))
     return std::move(E);
   return Result;
 }

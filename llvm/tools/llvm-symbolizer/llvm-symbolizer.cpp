@@ -195,8 +195,8 @@ resolveXCOFFSectionAddress(StringRef ModulePath, StringRef SectionType,
 
 // Parses (SECTION_TYPE)(+offset) syntax from AddrSpec.
 // Returns true (with SectionType and Offset set) if the syntax matches and is
-// valid; returns false if AddrSpec does not start with this syntax;
-// returns an error if the syntax is recognized but invalid.
+// valid, false if AddrSpec does not start with this syntax, or
+// an error if the syntax is recognized but invalid.
 static Expected<bool> tryParseSectionRelativeAddress(StringRef AddrSpec,
                                                      StringRef &SectionType,
                                                      uint64_t &Offset) {

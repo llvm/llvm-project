@@ -66,7 +66,8 @@ LLVMSymbolizer::getXCOFFSectionAddress(StringRef ModulePath,
   if (!ObjOrErr)
     return ObjOrErr.takeError();
 
-  const auto *XCOFFObj = dyn_cast<object::XCOFFObjectFile>(*ObjOrErr);
+  const object::XCOFFObjectFile *XCOFFObj =
+      dyn_cast<object::XCOFFObjectFile>(*ObjOrErr);
   if (!XCOFFObj)
     return createStringError(
         "section type syntax is only supported for XCOFF objects");
