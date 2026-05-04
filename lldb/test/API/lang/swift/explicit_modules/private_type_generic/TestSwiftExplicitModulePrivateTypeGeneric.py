@@ -16,12 +16,6 @@ class TestSwiftExplicitModulePrivateTypeGeneric(lldbtest.TestBase):
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, "break here", lldb.SBFileSpec("main.swift"),
             extra_images=["Dylib"])
-        log = self.getBuildArtifact("types.log")
-        self.expect('log enable lldb types symbols -f "%s"' % log)
-        self.expect("expr -d run -- s", error=True)
-        # FIXME: Expression shouldn't depend on all local variables.
-        self.expect("expression 1+1", error=True)
-        self.filecheck_log(log, __file__)
-        # CHECK: Turning off implicit modules
-        # CHECK: ReconstructType
-        # CHECK: Turning on implicit modules
+        self.expect("v s", substrs=["t = (value = 42)"])
+        self.expect("expr -d run -- s", substrs=["t = (value = 42)"])
+        self.expect("expression 1+1", substrs=["(Int)", "= 2"])
