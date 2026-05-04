@@ -1958,7 +1958,7 @@ void LoweringPreparePass::buildCUDAModuleCtor() {
                                         GlobalLinkageKind::PrivateLinkage);
   fatbinStr.setAlignment(8);
   fatbinStr.setInitialValueAttr(cir::ConstArrayAttr::get(
-      fatbinType, builder.getStringAttr(gpuBinary->getBuffer())));
+      fatbinType, StringAttr::get(gpuBinary->getBuffer(), fatbinType)));
   fatbinStr.setSection(fatbinConstName);
   fatbinStr.setPrivate();
 
@@ -2199,7 +2199,7 @@ void LoweringPreparePass::buildCUDARegisterGlobalFunctions(
 
     // We must make the string zero-terminated.
     tmpString.setInitialValueAttr(ConstArrayAttr::get(
-        strType, StringAttr::get(&getContext(), str + "\0")));
+        strType, StringAttr::get(str + "\0", strType)));
     tmpString.setPrivate();
     return tmpString;
   };
