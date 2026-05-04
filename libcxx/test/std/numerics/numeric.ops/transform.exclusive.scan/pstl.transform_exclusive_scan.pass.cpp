@@ -24,6 +24,7 @@
 //                            UnaryOperation unary_op);
 
 #include <cassert>
+#include <functional>
 #include <numeric>
 #include <string>
 #include <vector>

@@ -34,6 +34,7 @@
 //                            T init);
 
 #include <cassert>
+#include <functional>
 #include <numeric>
 #include <string>
 #include <vector>
