@@ -77,6 +77,10 @@ class StatementContext;
 
 using ExprToValueMap = llvm::DenseMap<const SomeExpr *, mlir::Value>;
 
+/// Forward declaration only; the full definition lives in
+/// `flang/Lower/OpenMP.h`.
+struct OMPGroupprivateDeviceTypeInfo;
+
 //===----------------------------------------------------------------------===//
 // AbstractConverter interface
 //===----------------------------------------------------------------------===//
@@ -400,6 +404,13 @@ public:
   virtual mlir::SymbolTable *getMLIRSymbolTable() = 0;
 
   virtual mlir::StateStack &getStateStack() = 0;
+
+  /// Return the per-converter table recording the device_type clause
+  /// associated with each groupprivate symbol. Used to communicate state from
+  /// the lowering of a `!$omp groupprivate` directive to the later creation of
+  /// `omp.groupprivate` operations inside teams regions. The returned object
+  /// is fully defined in `flang/Lower/OpenMP.h`.
+  virtual OMPGroupprivateDeviceTypeInfo &getOMPGroupprivateDeviceTypeInfo() = 0;
 
 private:
   /// Options controlling lowering behavior.

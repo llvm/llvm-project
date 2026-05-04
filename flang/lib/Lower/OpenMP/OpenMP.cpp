@@ -793,7 +793,6 @@ static void groupprivatizeVars(lower::AbstractConverter &converter,
   auto module = converter.getModuleOp();
 
   // Create a groupprivate operation for the symbol.
-  // TODO: Extract device_type from the groupprivate directive.
   auto genGroupprivateOp = [&](const semantics::Symbol &sym) -> mlir::Value {
     std::string globalName = converter.mangleName(sym);
     fir::GlobalOp global = module.lookupSymbol<fir::GlobalOp>(globalName);
@@ -801,8 +800,15 @@ static void groupprivatizeVars(lower::AbstractConverter &converter,
       return mlir::Value();
     }
 
+    // Look up the device_type recorded when the !$omp groupprivate directive
+    // was lowered. Default to 'any' if no explicit device_type was given.
     mlir::omp::DeclareTargetDeviceType deviceTypeEnum =
         mlir::omp::DeclareTargetDeviceType::any;
+    const auto &deviceTypeMap =
+        converter.getOMPGroupprivateDeviceTypeInfo().map;
+    auto it = deviceTypeMap.find(&sym.GetUltimate());
+    if (it != deviceTypeMap.end())
+      deviceTypeEnum = it->second;
     mlir::omp::DeclareTargetDeviceTypeAttr deviceTypeAttr =
         mlir::omp::DeclareTargetDeviceTypeAttr::get(firOpBuilder.getContext(),
                                                     deviceTypeEnum);
@@ -4720,8 +4726,21 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
                    const parser::OpenMPGroupprivate &directive) {
-  // The groupprivate directive is lowered when the variable is referenced
-  // inside target/teams regions.
+  // The omp.groupprivate operation itself is created lazily when the symbol
+  // is referenced inside a teams region (see groupprivatizeVars). Here we
+  // only extract the device_type clause (if any) and record it per-symbol so
+  // that the later op-creation can emit it on omp.groupprivate.
+  ObjectList objects = makeObjects(directive.v.Arguments(), semaCtx);
+  List<Clause> clauses = makeClauses(directive.v.Clauses(), semaCtx);
+  ClauseProcessor cp(converter, semaCtx, clauses);
+  mlir::omp::DeviceTypeClauseOps deviceTypeOps;
+  cp.processDeviceType(deviceTypeOps);
+
+  auto &deviceTypeMap = converter.getOMPGroupprivateDeviceTypeInfo().map;
+  for (const Object &obj : objects) {
+    if (const semantics::Symbol *sym = obj.sym())
+      deviceTypeMap[&sym->GetUltimate()] = deviceTypeOps.deviceType;
+  }
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,

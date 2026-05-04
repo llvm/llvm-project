@@ -1432,6 +1432,11 @@ private:
 
   mlir::StateStack &getStateStack() override { return stateStack; }
 
+  Fortran::lower::OMPGroupprivateDeviceTypeInfo &
+  getOMPGroupprivateDeviceTypeInfo() override {
+    return ompGroupprivateDeviceTypeInfo;
+  }
+
   /// Add the symbol to the local map and return `true`. If the symbol is
   /// already in the map and \p forced is `false`, the map is not updated.
   /// Instead the value `false` is returned.
@@ -7025,6 +7030,12 @@ private:
   /// a module.
   llvm::SmallVector<Fortran::lower::OMPDeferredDeclareTargetInfo>
       ompDeferredDeclareTarget;
+
+  /// Per-converter table recording the `device_type` clause for each symbol
+  /// declared in a `!$omp groupprivate` directive. Populated when the
+  /// directive is lowered and consumed when `omp.groupprivate` ops are emitted
+  /// inside teams regions.
+  Fortran::lower::OMPGroupprivateDeviceTypeInfo ompGroupprivateDeviceTypeInfo;
 
   const Fortran::lower::ExprToValueMap *exprValueOverrides{nullptr};
 

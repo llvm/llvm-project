@@ -184,3 +184,25 @@ subroutine test_multi_common_groupprivate()
     b1 = 2
   !$omp end teams
 end subroutine
+
+! Test 10: device_type(host) and device_type(nohost) clauses are honored.
+module m_dt
+  implicit none
+  integer, save :: gp_h
+  integer, save :: gp_nh
+  !$omp groupprivate(gp_h)  device_type(host)
+  !$omp groupprivate(gp_nh) device_type(nohost)
+end module
+
+! CHECK-LABEL: func.func @_QPtest_device_type_groupprivate
+! CHECK: omp.teams
+! CHECK-DAG: omp.groupprivate @_QMm_dtEgp_h device_type (host) : !fir.ref<i32>
+! CHECK-DAG: omp.groupprivate @_QMm_dtEgp_nh device_type (nohost) : !fir.ref<i32>
+subroutine test_device_type_groupprivate()
+  use m_dt
+
+  !$omp teams
+    gp_h = 1
+    gp_nh = 2
+  !$omp end teams
+end subroutine
