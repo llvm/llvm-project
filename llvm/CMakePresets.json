@@ -1,0 +1,56 @@
+{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "ejit-minimal",
+      "displayName": "EJIT Minimal (size-optimized)",
+      "description": "Minimal LLVM build for EmbeddedJIT. Static linking, Release+Os, AArch64 only, LTO, sections GC. Targets <10MB total.",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/../build-ejit-minimal",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "LLVM_TARGETS_TO_BUILD": "AArch64",
+        "BUILD_SHARED_LIBS": "OFF",
+        "LLVM_ENABLE_ASSERTIONS": "OFF",
+        "LLVM_INCLUDE_TESTS": "OFF",
+        "LLVM_INCLUDE_EXAMPLES": "OFF",
+        "LLVM_INCLUDE_DOCS": "OFF",
+        "LLVM_INCLUDE_BENCHMARKS": "OFF",
+        "LLVM_ENABLE_PROJECTS": "clang",
+        "LLVM_OPTIMIZED_TABLEGEN": "ON",
+        "LLVM_USE_LINKER": "lld",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_C_COMPILER_LAUNCHER": "ccache",
+        "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
+        "LLVM_ENABLE_TERMINFO": "OFF",
+        "LLVM_ENABLE_ZLIB": "OFF",
+        "LLVM_ENABLE_ZSTD": "OFF",
+        "LLVM_ENABLE_LIBXML2": "OFF",
+        "CMAKE_C_FLAGS": "-ffunction-sections -fdata-sections -fno-omit-frame-pointer",
+        "CMAKE_CXX_FLAGS": "-ffunction-sections -fdata-sections -fno-omit-frame-pointer",
+        "CMAKE_C_FLAGS_RELEASE": "-Os -DNDEBUG",
+        "CMAKE_CXX_FLAGS_RELEASE": "-Os -DNDEBUG",
+        "CMAKE_EXE_LINKER_FLAGS": "-Wl,--gc-sections -Wl,--strip-all",
+        "CMAKE_SHARED_LINKER_FLAGS": "-Wl,--gc-sections -Wl,--strip-all",
+        "CMAKE_STATIC_LINKER_FLAGS": "",
+        "EJIT_DEFAULT_TARGET_TRIPLE": ""
+      }
+    },
+    {
+      "name": "ejit-minimal-aarch64",
+      "displayName": "EJIT Minimal (AArch64 cross-compile)",
+      "description": "AArch64 cross-compilation for EmbeddedJIT minimal build. Requires aarch64-linux-gnu- toolchain.",
+      "inherits": "ejit-minimal",
+      "binaryDir": "${sourceDir}/../build-ejit-minimal-aarch64",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "aarch64-linux-gnu-gcc",
+        "CMAKE_CXX_COMPILER": "aarch64-linux-gnu-g++",
+        "CMAKE_CROSSCOMPILING": "ON",
+        "LLVM_HOST_TRIPLE": "aarch64-linux-gnu",
+        "LLVM_DEFAULT_TARGET_TRIPLE": "aarch64-linux-gnu",
+        "EJIT_DEFAULT_TARGET_TRIPLE": "aarch64-linux-gnu"
+      }
+    }
+  ]
+}

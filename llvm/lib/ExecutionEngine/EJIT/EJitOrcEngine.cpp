@@ -11,6 +11,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 using namespace llvm::ejit;
@@ -33,9 +34,15 @@ EJitOrcEngine::Create(const Config &config,
   engine->P->periodReg = &periodReg;
   engine->P->runtimeState = &runtimeState;
 
+  // Use compile-time target triple when set (e.g. for ARM embedded),
+  // otherwise detect the host architecture.
+#ifdef EJIT_DEFAULT_TRIPLE
+  auto JTMB = orc::JITTargetMachineBuilder(Triple(EJIT_DEFAULT_TRIPLE));
+#else
   auto JTMB = orc::JITTargetMachineBuilder::detectHost();
   if (!JTMB)
     return JTMB.takeError();
+#endif
 
   orc::LLJITBuilder Builder;
   Builder.setJITTargetMachineBuilder(*JTMB);
