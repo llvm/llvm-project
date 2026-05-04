@@ -159,7 +159,7 @@ static_assert(0.0f16 ==
               LIBC_NAMESPACE::shared::fminimum_numf16(0.0f16, 0.0f16));
 static_assert(0.0f16 == LIBC_NAMESPACE::shared::fromfpf16(0.0f16, 0, 32));
 static_assert(0.0f16 == LIBC_NAMESPACE::shared::fromfpxf16(0.0f16, 0, 32));
-static_assert(static_cast<float16>(-1.0) == [] {
+static_assert(-1.0f16 == [] {
   float16 getpayload_x = 0.0f16;
   return LIBC_NAMESPACE::shared::getpayloadf16(&getpayload_x);
 }());
@@ -321,7 +321,7 @@ static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::fromfpf128(float128(0.0), 0, 32));
 static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::fromfpxf128(float128(0.0), 0, 32));
-static_assert(static_cast<float128>(-1.0) == [] {
+static_assert(float128(-1.0) == [] {
   float128 getpayload_x = float128(0.0);
   return LIBC_NAMESPACE::shared::getpayloadf128(&getpayload_x);
 }());
@@ -422,7 +422,7 @@ static_assert(bfloat16(0.0) ==
 static_assert(bfloat16(0.0) ==
               LIBC_NAMESPACE::shared::fromfpxbf16(bfloat16(0.0), 0, 32));
 
-static_assert(static_cast<bfloat16>(-1.0) == [] {
+static_assert(bfloat16(-1.0) == [] {
   bfloat16 getpayload_x = bfloat16(0.0);
   return LIBC_NAMESPACE::shared::getpayloadbf16(&getpayload_x);
 }());
