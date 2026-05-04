@@ -69,14 +69,12 @@ TEST_CONSTEXPR_CXX26 bool test() {
 #endif // _LIBCPP_VERSION
   {
     typedef std::list<MoveOnly, some_alloc<MoveOnly>> C;
-#if TEST_STD_VER >= 14
+#if TEST_STD_VER >= 14 || defined(_LIBCPP_VERSION)
     //  In C++14, if POCS is set, swapping the allocator is required not to throw
     static_assert(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
-#else
-    static_assert(!noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
 #endif
   }
-#if TEST_STD_VER >= 14
+#if TEST_STD_VER >= 14 || defined(_LIBCPP_VERSION)
   {
     typedef std::list<MoveOnly, some_alloc2<MoveOnly>> C;
     //  if the allocators are always equal, then the swap can be noexcept
