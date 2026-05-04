@@ -15,6 +15,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 -global-isel=1 -new-reg-bank-select -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GFX1164GISEL,GFX1164GISEL-TRUE16 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 -global-isel=0 < %s | FileCheck -check-prefixes=GFX1132DAGISEL,GFX1132DAGISEL-TRUE16 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 -global-isel=1 -new-reg-bank-select < %s | FileCheck -check-prefixes=GFX1132GISEL,GFX1132GISEL-TRUE16 %s
+
 define amdgpu_kernel void @uniform_value_i16(ptr addrspace(1) %out, i16 %in) {
 ; GFX8DAGISEL-LABEL: uniform_value_i16:
 ; GFX8DAGISEL:       ; %bb.0: ; %entry
