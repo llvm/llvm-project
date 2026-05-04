@@ -2288,12 +2288,18 @@ private:
     if (__size > max_size())
       __throw_length_error();
 
-    if (__fits_in_sso(__size)) {
+    size_type __min_cap_val = __size;
+#  if _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS_FOR_STRING
+    if (!__libcpp_is_constant_evaluated())
+      __min_cap_val = std::max(__min_cap_val, size_type(32));
+#  endif
+
+    if (__fits_in_sso(__min_cap_val)) {
       __set_short_size(__size);
       __annotate_new(__size);
       return __get_short_pointer();
     } else {
-      __rep_.__l = __allocate_long_buffer(__alloc_, __size);
+      __rep_.__l = __allocate_long_buffer(__alloc_, __size, __min_cap_val);
       __annotate_new(__size);
       return __get_long_pointer();
     }
@@ -2327,7 +2333,11 @@ private:
 #  endif
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_new(size_type __current_size) const _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_new(size_type __current_size) _NOEXCEPT {
+#  if _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS_FOR_STRING
+    if (__libcpp_is_constant_evaluated() && !__is_long())
+      __rep_.__l = __allocate_long_buffer(__alloc_, __current_size, 32);
+#  endif
     __annotate_contiguous_container(data() + capacity() + 1, data() + __current_size + 1);
   }
 
