@@ -66,6 +66,33 @@ namespace __pstl {
 //      Size of SIMD lanes.
 //      TODO: Merge this with __native_vector_size from __algorithm/simd_utils.h
 //
+// Optional extended operations
+// ============================
+// Backends may specialize these to provide a parallel implementation.
+// If not specialized, the dispatch chain falls through to the next backend (typically default.h serial).
+//
+//  template <class _RandomAccessIterator1, class _RandomAccessIterator2,
+//            class _Tp, class _BinaryOperation, class _UnaryOperation>
+//  optional<_RandomAccessIterator2>
+//  __transform_exclusive_scan(_RandomAccessIterator1 __first, _RandomAccessIterator1 __last,
+//                             _RandomAccessIterator2 __result, _Tp __init,
+//                             _BinaryOperation __binary_op, _UnaryOperation __unary_op);
+//
+//  // without init (_Tp{} used as identity for chunk-0 offset)
+//  template <class _RandomAccessIterator1, class _RandomAccessIterator2,
+//            class _BinaryOperation, class _UnaryOperation>
+//  optional<_RandomAccessIterator2>
+//  __transform_inclusive_scan(_RandomAccessIterator1 __first, _RandomAccessIterator1 __last,
+//                             _RandomAccessIterator2 __result,
+//                             _BinaryOperation __binary_op, _UnaryOperation __unary_op);
+//
+//  // with init
+//  template <class _RandomAccessIterator1, class _RandomAccessIterator2,
+//            class _BinaryOperation, class _UnaryOperation, class _Tp>
+//  optional<_RandomAccessIterator2>
+//  __transform_inclusive_scan(_RandomAccessIterator1 __first, _RandomAccessIterator1 __last,
+//                             _RandomAccessIterator2 __result,
+//                             _BinaryOperation __binary_op, _UnaryOperation __unary_op, _Tp __init);
 //
 // Exception handling
 // ==================
