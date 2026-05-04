@@ -7,7 +7,11 @@ The `llvm-bolt-binary-analysis` tool enables running requested analyses
 on binaries, and generating reports. It does this by building on top of the
 analyses implemented in the BOLT libraries.
 
-Contents
+For now, the only analysis implemented is validation of Pointer Authentication
+hardening on AArch64, more types of analyses can be added later.
+
+## Contents
+
 1. [Background and motivation](#background-and-motivation)
 2. [Usage](#usage)
 3. [Pointer Authentication validator](#pointer-authentication-validator)
@@ -38,7 +42,7 @@ containing the return address between an instruction authenticating it and a
 return instruction using it.
 
 From time to time, however, a bug gets found in the implementation of such
-mitigations in toolchains. Also, code that is manually written in assembler
+mitigations in toolchains. Also, code that is manually written in assembly
 requires the developer to ensure these security properties by hand.
 
 In short, it is sometimes found that a few places in the binary code are not
@@ -81,9 +85,10 @@ compiler to implement various hardenings transparently to the programmer.
 
 Probably the most simple variant of hardening based on Pointer Authentication is
 [`pac-ret`](https://llsoftsec.github.io/llsoftsecbook/#sec:pac-ret), a security
-hardening scheme implemented in compilers such as GCC and Clang, using the
-command line option `-mbranch-protection=pac-ret`. This option is enabled by
-default on most widely used Linux distributions. The hardening scheme mitigates
+hardening scheme implemented in compilers such as GCC and Clang, which can be
+enabled with a command line option like `-mbranch-protection=pac-ret`.
+On AArch64, `pac-ret` hardening is enabled by default on most widely used Linux
+distributions. The hardening scheme mitigates
 [Return-Oriented Programming (ROP)](https://llsoftsec.github.io/llsoftsecbook/#return-oriented-programming)
 attacks by making sure that return addresses are only ever stored to memory
 in a signed form. This makes it substantially harder for attackers to divert
@@ -106,9 +111,10 @@ controlled and whether it can be inspected by an attacker under the
 Then, for a number of sensitive instruction kinds (such as function calls and
 pointer signing instructions), the properties of input or output operands are
 inspected to check if the particular instruction is emitted in a safe manner.
-For example, for a return instruction this usually means that either the link
-register (x30) was never clobbered in the function or that it was authenticated
-at some point and never written to since then:
+As an example, for a return instruction this usually means that either the link
+register (`x30`, which is also referred to as LR on AArch64) was never clobbered
+in the function, or that it was authenticated at some point and never written to
+since then:
 
 ```
 foo:
@@ -153,9 +159,8 @@ The only analysis which is currently implemented is validation of a number of
 Pointer Authentication-based hardening schemes such as pac-ret and PAuth ABI.
 The specific set of gadget kinds which are searched for depends on command line
 options. Each gadget found by PtrAuth gadget scanner results in a plain text
-report printed at the end of the analysis.
-Furthermore, an attempt is made to provide additional information on the
-instructions that made the register unsafe.
+report printed at the end of the analysis. Furthermore, an attempt is made to
+provide additional information on the instructions that made the register unsafe.
 Please note that this extra information is provided on a best-effort basis and
 is not expected to be as accurate as the reports themselves.
 
@@ -441,7 +446,7 @@ bad_call_dataflow:
 Reports signing of untrusted values, as this could make arbitrary and possibly
 attacker-controlled values indistinguishable from perfectly trusted and protected ones.
 
-In absence of `--auth-traps-on-failure` command line option, this detector
+Note that in absence of `--auth-traps-on-failure` command line option, this detector
 reports auth+sign pairs unless an explicit check is emitted to make sure the
 authentication operation succeeded. This corresponds to the way LLVM emits
 instructions on AArch64.
@@ -564,15 +569,16 @@ interlinked basic blocks) and the reports (if any) are printed without the
 `, basic block <name>` part in the first line.
 
 Furthermore, it is possible that CFG information is returned by BOLT for a
-function, even though the graph is imprecise (known issues are tracked in
+function, even though the graph is imprecise. Inaccurate CFG information may
+result in false positives and false negatives, thus PtrAuth gadget scanner
+produces warning messages (at most once per function) for non-entry basic blocks
+without any predecessors in CFG: while unreachable basic blocks are technically
+correct, truly unreachable blocks are unlikely to exist in an optimized code.
+
+Known gadget scanner issues related to CFG reconstruction are tracked in
 [#177761](https://github.com/llvm/llvm-project/issues/177761),
 [#178058](https://github.com/llvm/llvm-project/issues/178058),
-[#178232](https://github.com/llvm/llvm-project/issues/178232)).
-Inaccurate CFG information may result in false positives and false negatives,
-thus PtrAuth gadget scanner produces warning messages (at most once per
-function) for non-entry basic blocks without any predecessors in CFG: while
-unreachable basic blocks are technically correct, truly unreachable blocks are
-unlikely to exist in optimized code.
+[#178232](https://github.com/llvm/llvm-project/issues/178232).
 
 #### Last writing instructions
 
@@ -590,7 +596,15 @@ Some of the reports contain extra information along these lines
 This information is provided on a best-effort basis and is less reliable than
 gadget reports themselves.
 
-#### Feature: scan for unsafe computation of discriminator value
+#### Feature: scan for unsafe computation of discriminators
+
+On AArch64, signing and authentication operations are parameterized by the pair
+of the key identifier and a 64-bit *discriminator* value. The key is one of
+`IA`, `IB`, `DA`, or `DB`, and its identifier is directly encoded into the
+instruction (the `GA` key differs significantly and is thus out of scope here).
+The discriminator, on the other hand, is computed at run-time and is intended
+to be [derived independently](https://clang.llvm.org/docs/PointerAuthentication.html#discriminators)
+at the signing and authentication sites.
 
 There is a common pattern on AArch64 to compute the discriminator as a blend
 of an address and an integer modifier by inserting a compile-time constant
@@ -599,11 +613,11 @@ possible to prevent an attacker from modifying the storage address, but the
 insertion of 16-bit constant modifier can always be performed immediately before
 the discriminator value is used by signing or authentication instruction.
 
-While not as bad as signing an arbitrary value or spilling an already authenticated
-value to memory, spilling a "ready-to-use" discriminator value instead of computing
-it right before usage is something we would rather avoid. On the other hand,
-using an arbitrary value as the discriminator should probably be allowed, making
-it hard to distinguish the below patterns:
+While not as bad as signing an arbitrary untrusted pointer, spilling a
+"ready-to-use" discriminator and then reloading a potentially modified value
+later is something we would rather avoid. On the other hand, using an arbitrary
+value as the discriminator should probably be allowed, making it hard to
+distinguish the below patterns:
 
 ```asm
 ; Valid and not reported.
@@ -678,12 +692,13 @@ computation.
 As an example of false-negative, it is possible that an instruction like
 `add x0, x0, #1` could be called in a loop with an attacker-controlled number
 of iterations, making it technically possible for an attacker to replace a
-valid pointer with a pointer to an arbitrary *higher* address.
+valid pointer with a pointer to an arbitrary address.
 
 #### Tail call detection
 
-`ptrauth-tail-calls` detector uses a heuristic to classify each branch
-instruction either as a tail call or as an unrelated branch instruction.
+`ptrauth-tail-calls` detector uses a heuristic to guess which branch instructions
+(both direct and indirect) correspond to performing tail calls, as opposed to
+other kinds of control flow.
 
 Most other parts of BOLT should not break code when rewriting. Unlike them,
 this analyzer tries to keep reasonable balance between false positive reports
