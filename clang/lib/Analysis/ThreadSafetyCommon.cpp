@@ -480,7 +480,7 @@ til::SExpr *SExprBuilder::translateObjCIVarRefExpr(const ObjCIvarRefExpr *IVRE,
   til::SExpr *BE = translate(IVRE->getBase(), Ctx);
   til::SExpr *E = new (Arena) til::SApply(BE);
 
-  const auto *D = cast<ObjCIvarDecl>(IVRE->getDecl()->getCanonicalDecl());
+  const ObjCIvarDecl *D = IVRE->getDecl()->getCanonicalDecl();
 
   til::Project *P = new (Arena) til::Project(E, D);
   if (hasAnyPointerType(BE))
@@ -526,8 +526,7 @@ til::SExpr *SExprBuilder::translateCXXMemberCallExpr(
       // return E;
     }
   }
-  return translateCallExpr(cast<CallExpr>(ME), Ctx,
-                           ME->getImplicitObjectArgument());
+  return translateCallExpr(ME, Ctx, ME->getImplicitObjectArgument());
 }
 
 til::SExpr *SExprBuilder::translateCXXOperatorCallExpr(
@@ -541,7 +540,7 @@ til::SExpr *SExprBuilder::translateCXXOperatorCallExpr(
       // return E;
     }
   }
-  return translateCallExpr(cast<CallExpr>(OCE), Ctx);
+  return translateCallExpr(OCE, Ctx);
 }
 
 til::SExpr *SExprBuilder::translateUnaryOperator(const UnaryOperator *UO,

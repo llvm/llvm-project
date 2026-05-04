@@ -362,7 +362,7 @@ public:
     for (auto [Target, EscapeTarget] : AnnotationWarningsMap) {
       if (const auto *MD = Target.dyn_cast<const CXXMethodDecl *>()) {
         if (!implicitObjectParamIsLifetimeBound(MD))
-          SemaHelper->addLifetimeBoundToImplicitThis(cast<CXXMethodDecl>(MD));
+          SemaHelper->addLifetimeBoundToImplicitThis(MD);
       } else if (const auto *PVD = Target.dyn_cast<const ParmVarDecl *>()) {
         const auto *FD = dyn_cast<FunctionDecl>(PVD->getDeclContext());
         if (!FD)

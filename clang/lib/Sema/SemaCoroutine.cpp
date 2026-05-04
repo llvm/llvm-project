@@ -736,7 +736,7 @@ bool Sema::ActOnCoroutineBodyStart(Scope *SC, SourceLocation KWLoc,
       Diag(KWLoc, diag::note_declared_coroutine_here) << Keyword;
       return StmtError();
     }
-    return cast<Stmt>(Suspend.get());
+    return Suspend.get();
   };
 
   StmtResult InitSuspend = buildSuspends("initial_suspend");

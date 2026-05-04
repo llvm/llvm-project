@@ -246,8 +246,7 @@ void IvarInvalidationCheckerImpl::containsInvalidationMethod(
   // Check all methods.
   for (const auto *MDI : D->methods())
     if (isInvalidationMethod(MDI, Partial))
-      OutInfo.addInvalidationMethod(
-          cast<ObjCMethodDecl>(MDI->getCanonicalDecl()));
+      OutInfo.addInvalidationMethod(MDI->getCanonicalDecl());
 
   // If interface, check all parent protocols and super.
   if (const ObjCInterfaceDecl *InterfD = dyn_cast<ObjCInterfaceDecl>(D)) {
@@ -286,7 +285,7 @@ bool IvarInvalidationCheckerImpl::trackIvar(const ObjCIvarDecl *Iv,
   InvalidationInfo Info;
   containsInvalidationMethod(IvInterf, Info, /*LookForPartial*/ false);
   if (Info.needsInvalidation()) {
-    const ObjCIvarDecl *I = cast<ObjCIvarDecl>(Iv->getCanonicalDecl());
+    const ObjCIvarDecl *I = Iv->getCanonicalDecl();
     TrackedIvars[I] = std::move(Info);
     if (!*FirstIvarDecl)
       *FirstIvarDecl = I;

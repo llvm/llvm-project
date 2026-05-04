@@ -1069,7 +1069,7 @@ pointerAuthResignMemberFunctionPointer(llvm::Constant *Src, QualType DestType,
   }
 
   llvm::Constant *ConstPtr = pointerAuthResignConstant(
-      cast<llvm::User>(MemFnPtr)->getOperand(0), CurAuthInfo, NewAuthInfo, CGM);
+      MemFnPtr->getOperand(0), CurAuthInfo, NewAuthInfo, CGM);
   ConstPtr = llvm::ConstantExpr::getPtrToInt(ConstPtr, MemFnPtr->getType());
   return ConstantFoldInsertValueInstruction(Src, ConstPtr, 0);
 }
@@ -3364,8 +3364,7 @@ void ItaniumCXXABI::EmitThreadLocalInitFuncs(
       llvm::Function *Func = llvm::Function::Create(
           InitFnTy, Var->getLinkage(), InitFnName.str(), &CGM.getModule());
       const CGFunctionInfo &FI = CGM.getTypes().arrangeNullaryFunction();
-      CGM.SetLLVMFunctionAttributes(GlobalDecl(), FI,
-                                    cast<llvm::Function>(Func),
+      CGM.SetLLVMFunctionAttributes(GlobalDecl(), FI, Func,
                                     /*IsThunk=*/false);
       // Create a function body that just returns
       llvm::BasicBlock *Entry = llvm::BasicBlock::Create(Context, "", Func);

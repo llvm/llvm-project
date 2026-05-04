@@ -1324,8 +1324,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     llvm::SmallVector<TemplateArgument, 8> TemplateArgs;
     if (DS.isConstrainedAuto()) {
       if (TemplateIdAnnotation *TemplateId = DS.getRepAsTemplateId()) {
-        TypeConstraintConcept =
-            cast<TemplateDecl>(TemplateId->Template.get().getAsTemplateDecl());
+        TypeConstraintConcept = TemplateId->Template.get().getAsTemplateDecl();
         TemplateArgumentListInfo TemplateArgsInfo;
         TemplateArgsInfo.setLAngleLoc(TemplateId->LAngleLoc);
         TemplateArgsInfo.setRAngleLoc(TemplateId->RAngleLoc);
@@ -6145,9 +6144,9 @@ namespace {
       NamedDecl *FoundDecl;
       if (auto TN = TemplateId->Template.get();
           UsingShadowDecl *USD = TN.getAsUsingShadowDecl())
-        FoundDecl = cast<NamedDecl>(USD);
+        FoundDecl = USD;
       else
-        FoundDecl = cast_if_present<NamedDecl>(TN.getAsTemplateDecl());
+        FoundDecl = TN.getAsTemplateDecl();
 
       auto *CR = ConceptReference::Create(
           Context, NNS, TemplateId->TemplateKWLoc, DNI, FoundDecl,

@@ -12,6 +12,7 @@
 #include "clang/AST/ASTConcept.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclTemplate.h"
@@ -1169,7 +1170,7 @@ bool Sema::BuildTypeConstraint(const CXXScopeSpec &SS,
     return true;
 
   TemplateName TN = TypeConstr->Template.get();
-  TemplateDecl *CD = cast<TemplateDecl>(TN.getAsTemplateDecl());
+  TemplateDecl *CD = TN.getAsTemplateDecl();
   UsingShadowDecl *USD = TN.getAsUsingShadowDecl();
 
   DeclarationNameInfo ConceptName(DeclarationName(TypeConstr->Name),
@@ -5831,10 +5832,9 @@ static bool diagnoseMissingArgument(Sema &S, SourceLocation Loc,
   // missing a module import.
   llvm::SmallVector<Module*, 8> Modules;
   if (D->hasDefaultArgument() && !S.hasReachableDefaultArgument(D, &Modules)) {
-    S.diagnoseMissingImport(Loc, cast<NamedDecl>(TD),
-                            D->getDefaultArgumentLoc(), Modules,
+    S.diagnoseMissingImport(Loc, TD, D->getDefaultArgumentLoc(), Modules,
                             Sema::MissingImportKind::DefaultArgument,
-                            /*Recover*/true);
+                            /*Recover*/ true);
     return true;
   }
 
@@ -10214,7 +10214,7 @@ static bool ScopeSpecifierHasTemplateId(const CXXScopeSpec &SS) {
 /// effect.
 static void dllExportImportClassTemplateSpecialization(
     Sema &S, ClassTemplateSpecializationDecl *Def) {
-  auto *A = cast_or_null<InheritableAttr>(getDLLAttr(Def));
+  InheritableAttr *A = getDLLAttr(Def);
   assert(A && "dllExportImportClassTemplateSpecialization called "
               "on Def without dllexport or dllimport");
 
@@ -10620,8 +10620,7 @@ Sema::ActOnExplicitInstantiation(Scope *S, SourceLocation ExternLoc,
   CheckExplicitInstantiation(*this, Record, NameLoc, true, TSK);
 
   // Verify that it is okay to explicitly instantiate here.
-  CXXRecordDecl *PrevDecl
-    = cast_or_null<CXXRecordDecl>(Record->getPreviousDecl());
+  CXXRecordDecl *PrevDecl = Record->getPreviousDecl();
   if (!PrevDecl && Record->getDefinition())
     PrevDecl = Record;
   if (PrevDecl) {
@@ -10651,14 +10650,12 @@ Sema::ActOnExplicitInstantiation(Scope *S, SourceLocation ExternLoc,
     }
   }
 
-  CXXRecordDecl *RecordDef
-    = cast_or_null<CXXRecordDecl>(Record->getDefinition());
+  CXXRecordDecl *RecordDef = Record->getDefinition();
   if (!RecordDef) {
     // C++ [temp.explicit]p3:
     //   A definition of a member class of a class template shall be in scope
     //   at the point of an explicit instantiation of the member class.
-    CXXRecordDecl *Def
-      = cast_or_null<CXXRecordDecl>(Pattern->getDefinition());
+    CXXRecordDecl *Def = Pattern->getDefinition();
     if (!Def) {
       Diag(TemplateLoc, diag::err_explicit_instantiation_undefined_member)
         << 0 << Record->getDeclName() << Record->getDeclContext();
@@ -10671,7 +10668,7 @@ Sema::ActOnExplicitInstantiation(Scope *S, SourceLocation ExternLoc,
                            TSK))
         return true;
 
-      RecordDef = cast_or_null<CXXRecordDecl>(Record->getDefinition());
+      RecordDef = Record->getDefinition();
       if (!RecordDef)
         return true;
     }
@@ -11014,7 +11011,7 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
                                                   Best)) {
     case OR_Success:
     case OR_Deleted:
-      Specialization = cast<FunctionDecl>(Best->Function);
+      Specialization = Best->Function;
       break;
     case OR_Ambiguous:
       Msg = diag::err_explicit_instantiation_ambiguous;

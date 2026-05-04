@@ -3954,8 +3954,8 @@ Decl *TemplateDeclInstantiator::VisitBaseUsingDecls(BaseUsingDecl *D,
       InstTarget = UnresolvedUsingIfExistsDecl::Create(
           SemaRef.Context, Owner, EmptyD->getLocation(), EmptyD->getDeclName());
     } else {
-      InstTarget = cast_or_null<NamedDecl>(SemaRef.FindInstantiatedDecl(
-          Shadow->getLocation(), OldTarget, TemplateArgs));
+      InstTarget = SemaRef.FindInstantiatedDecl(Shadow->getLocation(),
+                                                OldTarget, TemplateArgs);
     }
     if (!InstTarget)
       return nullptr;
@@ -6952,8 +6952,7 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
         assert(ArgPackSubstIndex &&
                "found declaration pack but not pack expanding");
         typedef LocalInstantiationScope::DeclArgumentPack DeclArgumentPack;
-        return cast<NamedDecl>(
-            (*cast<DeclArgumentPack *>(*Found))[*ArgPackSubstIndex]);
+        return (*cast<DeclArgumentPack *>(*Found))[*ArgPackSubstIndex];
       }
     }
 

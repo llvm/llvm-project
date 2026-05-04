@@ -831,7 +831,7 @@ void TextNodeDumper::Visit(const APValue &Value, QualType Ty) {
     {
       ColorScope Color(OS, ShowColors, ASTDumpColor::Value);
       if (const FieldDecl *FD = Value.getUnionField())
-        OS << " ." << *cast<NamedDecl>(FD);
+        OS << " ." << *FD;
     }
     // If the union value is considered to be simple, fold it into the
     // current line to save some vertical space.

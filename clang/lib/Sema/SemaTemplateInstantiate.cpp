@@ -3529,8 +3529,7 @@ bool Sema::InstantiateClassImpl(
     CXXRecordDecl *Pattern, const MultiLevelTemplateArgumentList &TemplateArgs,
     TemplateSpecializationKind TSK, bool Complain) {
 
-  CXXRecordDecl *PatternDef
-    = cast_or_null<CXXRecordDecl>(Pattern->getDefinition());
+  CXXRecordDecl *PatternDef = Pattern->getDefinition();
   if (DiagnoseUninstantiableTemplate(PointOfInstantiation, Instantiation,
                                 Instantiation->getInstantiatedFromMemberClass(),
                                      Pattern, PatternDef, TSK, Complain))
@@ -4318,7 +4317,7 @@ Sema::InstantiateClassMembers(SourceLocation PointOfInstantiation,
         }
       }
 
-      Pattern = cast_or_null<CXXRecordDecl>(Record->getDefinition());
+      Pattern = Record->getDefinition();
       if (Pattern)
         InstantiateClassMembers(PointOfInstantiation, Pattern, TemplateArgs,
                                 TSK);

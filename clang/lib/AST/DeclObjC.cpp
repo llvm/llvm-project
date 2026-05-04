@@ -264,8 +264,7 @@ ObjCPropertyDecl *ObjCContainerDecl::FindPropertyDeclaration(
   }
 
   if (ObjCPropertyDecl *PD =
-        ObjCPropertyDecl::findPropertyDecl(cast<DeclContext>(this), PropertyId,
-                                           QueryKind))
+          ObjCPropertyDecl::findPropertyDecl(this, PropertyId, QueryKind))
     return PD;
 
   switch (getKind()) {
@@ -386,8 +385,7 @@ ObjCPropertyDecl *ObjCInterfaceDecl::FindPropertyVisibleInPrimaryClass(
     LoadExternalDefinition();
 
   if (ObjCPropertyDecl *PD =
-      ObjCPropertyDecl::findPropertyDecl(cast<DeclContext>(this), PropertyId,
-                                         QueryKind))
+          ObjCPropertyDecl::findPropertyDecl(this, PropertyId, QueryKind))
     return PD;
 
   // Look through protocols.

@@ -452,8 +452,7 @@ void FinalOverriderCollector::Collect(const CXXRecordDecl *RD,
                                       CXXFinalOverriderMap &Overriders) {
   unsigned SubobjectNumber = 0;
   if (!VirtualBase)
-    SubobjectNumber
-      = ++SubobjectCount[cast<CXXRecordDecl>(RD->getCanonicalDecl())];
+    SubobjectNumber = ++SubobjectCount[RD->getCanonicalDecl()];
 
   for (const auto &Base : RD->bases()) {
     if (const auto *BaseDecl = Base.getType()->getAsCXXRecordDecl()) {

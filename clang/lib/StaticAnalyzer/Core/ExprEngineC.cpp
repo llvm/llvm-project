@@ -973,7 +973,7 @@ void ExprEngine::VisitUnaryOperator(const UnaryOperator* U, ExplodedNode *Pred,
         if (isa<CXXMethodDecl, FieldDecl, IndirectFieldDecl>(VD)) {
           ProgramStateRef State = N->getState();
           const LocationContext *LCtx = N->getLocationContext();
-          SVal SV = svalBuilder.getMemberPointer(cast<NamedDecl>(VD));
+          SVal SV = svalBuilder.getMemberPointer(VD);
           Bldr.generateNode(U, N, State->BindExpr(U, LCtx, SV));
           break;
         }

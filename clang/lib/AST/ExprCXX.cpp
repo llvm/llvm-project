@@ -1353,7 +1353,7 @@ Stmt *LambdaExpr::getBody() const {
 const CompoundStmt *LambdaExpr::getCompoundStmtBody() const {
   Stmt *Body = getBody();
   if (const auto *CoroBody = dyn_cast<CoroutineBodyStmt>(Body))
-    return cast<CompoundStmt>(CoroBody->getBody());
+    return CoroBody->getBody();
   return cast<CompoundStmt>(Body);
 }
 

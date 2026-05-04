@@ -1778,8 +1778,7 @@ CXXMethodDecl *CXXRecordDecl::getLambdaStaticInvoker(CallingConv CC) const {
   DeclContext::lookup_result Invoker = getLambdaStaticInvokers(*this);
 
   for (NamedDecl *ND : Invoker) {
-    const auto *FTy =
-        cast<ValueDecl>(ND->getAsFunction())->getType()->castAs<FunctionType>();
+    const auto *FTy = ND->getAsFunction()->getType()->castAs<FunctionType>();
     if (FTy->getCallConv() == CC)
       return getInvokerAsMethod(ND);
   }
@@ -3169,8 +3168,7 @@ void CXXDestructorDecl::setOperatorDelete(FunctionDecl *OD, Expr *ThisArg) {
         this, OD, ASTContext::OperatorDeleteKind::Regular);
     getCanonicalDecl()->OperatorDeleteThisArg = ThisArg;
     if (auto *L = getASTMutationListener())
-      L->ResolvedOperatorDelete(cast<CXXDestructorDecl>(getCanonicalDecl()), OD,
-                                ThisArg);
+      L->ResolvedOperatorDelete(getCanonicalDecl(), OD, ThisArg);
   }
 }
 
@@ -3187,8 +3185,7 @@ void CXXDestructorDecl::setOperatorGlobalDelete(FunctionDecl *OD) {
     getASTContext().addOperatorDeleteForVDtor(
         this, OD, ASTContext::OperatorDeleteKind::GlobalRegular);
     if (auto *L = getASTMutationListener())
-      L->ResolvedOperatorGlobDelete(cast<CXXDestructorDecl>(getCanonicalDecl()),
-                                    OD);
+      L->ResolvedOperatorGlobDelete(getCanonicalDecl(), OD);
   }
 }
 
@@ -3200,8 +3197,7 @@ void CXXDestructorDecl::setOperatorArrayDelete(FunctionDecl *OD) {
     getASTContext().addOperatorDeleteForVDtor(
         this, OD, ASTContext::OperatorDeleteKind::Array);
     if (auto *L = getASTMutationListener())
-      L->ResolvedOperatorArrayDelete(
-          cast<CXXDestructorDecl>(getCanonicalDecl()), OD);
+      L->ResolvedOperatorArrayDelete(getCanonicalDecl(), OD);
   }
 }
 
@@ -3214,8 +3210,7 @@ void CXXDestructorDecl::setGlobalOperatorArrayDelete(FunctionDecl *OD) {
     getASTContext().addOperatorDeleteForVDtor(
         this, OD, ASTContext::OperatorDeleteKind::ArrayGlobal);
     if (auto *L = getASTMutationListener())
-      L->ResolvedOperatorGlobArrayDelete(
-          cast<CXXDestructorDecl>(getCanonicalDecl()), OD);
+      L->ResolvedOperatorGlobArrayDelete(getCanonicalDecl(), OD);
   }
 }
 

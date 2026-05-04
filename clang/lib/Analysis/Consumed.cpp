@@ -804,7 +804,7 @@ void ConsumedStmtVisitor::VisitCXXMemberCallExpr(
 
 void ConsumedStmtVisitor::VisitCXXOperatorCallExpr(
     const CXXOperatorCallExpr *Call) {
-  const auto *FunDecl = dyn_cast_or_null<FunctionDecl>(Call->getDirectCallee());
+  const FunctionDecl *FunDecl = Call->getDirectCallee();
   if (!FunDecl) return;
 
   if (Call->getOperator() == OO_Equal) {

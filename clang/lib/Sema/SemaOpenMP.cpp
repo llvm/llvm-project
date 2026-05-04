@@ -7835,7 +7835,7 @@ SemaOpenMP::checkOpenMPDeclareVariantFunction(SemaOpenMP::DeclGroupPtrTy DG,
           /*TemplatesSupported=*/true, /*ConstexprSupported=*/false,
           /*CLinkageMayDiffer=*/true))
     return std::nullopt;
-  return std::make_pair(FD, cast<Expr>(DRE));
+  return std::make_pair(FD, DRE);
 }
 
 void SemaOpenMP::ActOnOpenMPDeclareVariantDirective(
@@ -23309,7 +23309,7 @@ static ExprResult buildImplicitMapper(Sema &S, QualType BaseType,
     S.PushOnScopeChains(DMD, Scope, /*AddToContext=*/false);
   DCT->addDecl(DMD);
   DMD->setAccess(clang::AS_none);
-  auto *VD = cast<DeclRefExpr>(MapperVarRef)->getDecl();
+  ValueDecl *VD = MapperVarRef->getDecl();
   VD->setDeclContext(DMD);
   VD->setLexicalDeclContext(DMD);
   DMD->addDecl(VD);
@@ -25807,8 +25807,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPUsesAllocatorClause(
              diag::err_omp_predefined_allocator_with_traits)
             << D.AllocatorTraits->getSourceRange();
         Diag(D.Allocator->getExprLoc(), diag::note_omp_predefined_allocator)
-            << cast<NamedDecl>(DRE->getDecl())->getName()
-            << D.Allocator->getSourceRange();
+            << DRE->getDecl()->getName() << D.Allocator->getSourceRange();
         continue;
       }
       // OpenMP [2.12.5, target Construct]

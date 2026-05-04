@@ -3140,7 +3140,7 @@ static bool isSmartPtrType(QualType QT) {
     if (!TD)
       return false;
 
-    const auto *ND = dyn_cast_or_null<NamedDecl>(TD->getTemplatedDecl());
+    const NamedDecl *ND = TD->getTemplatedDecl();
     if (!ND)
       return false;
 

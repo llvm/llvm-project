@@ -1284,7 +1284,7 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
         else if (OID->hasAttr<DLLExportAttr>())
           Storage = llvm::GlobalValue::DLLExportStorageClass;
 
-        cast<llvm::GlobalValue>(ClassSymbol)->setDLLStorageClass(Storage);
+        ClassSymbol->setDLLStorageClass(Storage);
       }
     }
     assert(ClassSymbol->getName() == SymbolName);
@@ -1990,7 +1990,8 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
       // we can't import a class struct.
       if (OID->getClassInterface()->hasAttr<DLLExportAttr>()) {
         classStruct->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
-        cast<llvm::GlobalValue>(classRefSymbol)->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
+        classRefSymbol->setDLLStorageClass(
+            llvm::GlobalValue::DLLExportStorageClass);
       }
 
       if (SuperClass) {

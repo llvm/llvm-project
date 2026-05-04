@@ -946,9 +946,8 @@ llvm::Function *CGOpenMPRuntimeGPU::emitParallelOutlinedFunction(
   // Emit target region as a standalone region.
   bool PrevIsInTTDRegion = IsInTTDRegion;
   IsInTTDRegion = false;
-  auto *OutlinedFun =
-      cast<llvm::Function>(CGOpenMPRuntime::emitParallelOutlinedFunction(
-          CGF, D, ThreadIDVar, InnermostKind, CodeGen));
+  llvm::Function *OutlinedFun = CGOpenMPRuntime::emitParallelOutlinedFunction(
+      CGF, D, ThreadIDVar, InnermostKind, CodeGen);
   IsInTTDRegion = PrevIsInTTDRegion;
   if (getExecutionMode() != CGOpenMPRuntimeGPU::EM_SPMD) {
     llvm::Function *WrapperFun =

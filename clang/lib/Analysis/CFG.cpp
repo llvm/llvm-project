@@ -6133,7 +6133,7 @@ static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
       return;
     CXXDeleteExpr *DelExpr =
         const_cast<CXXDeleteExpr*>(DE.getDeleteExpr());
-    Helper.handledStmt(cast<Stmt>(DelExpr->getArgument()), OS);
+    Helper.handledStmt(DelExpr->getArgument(), OS);
     OS << "->~" << RD->getName().str() << "()";
     OS << " (Implicit destructor)";
     break;
