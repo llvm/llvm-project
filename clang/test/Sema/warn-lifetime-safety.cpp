@@ -3329,14 +3329,14 @@ View return_through_two_lifetimebound_calls(
   return keep_lb2(obj);
 }
 
-View return_through_broken_chain(
-    const MyObj &obj [[clang::lifetimebound]]) {
-  return lose_lb(obj);
-}
-
 View fwd_view(View v) { return v; }
 
 View fwd_view_lb(View v [[clang::lifetimebound]]) { return v; }
+
+View return_through_nested_broken_chain(
+    const MyObj &obj [[clang::lifetimebound]]) { // function-warning {{parameter is marked as [[clang::lifetimebound]] but doesn't escape}}
+  return fwd_view(fwd_view_lb(View(obj)));
+}
 
 View return_constructed_view_through_unannotated_forwarder(
     const MyObj &obj [[clang::lifetimebound]]) { // function-warning {{parameter is marked as [[clang::lifetimebound]] but doesn't escape}}
