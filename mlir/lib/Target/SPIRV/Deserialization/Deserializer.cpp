@@ -1710,8 +1710,7 @@ spirv::Deserializer::processSamplerType(ArrayRef<uint32_t> operands) {
 LogicalResult
 spirv::Deserializer::processNamedBarrierType(ArrayRef<uint32_t> operands) {
   if (operands.size() != 1)
-    return emitError(unknownLoc,
-                     "OpTypeNamedBarrier must have no parameters");
+    return emitError(unknownLoc, "OpTypeNamedBarrier must have no parameters");
 
   typeMap[operands[0]] = spirv::NamedBarrierType::get(context);
   return success();

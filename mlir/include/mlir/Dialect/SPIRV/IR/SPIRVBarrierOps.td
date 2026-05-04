@@ -151,6 +151,8 @@ def SPIRV_NamedBarrierInitializeOp
   let assemblyFormat = [{
     $subgroup_count attr-dict `:` type($subgroup_count) `->` type($result)
   }];
+
+  let hasVerifier = 0;
 }
 
 // -----
