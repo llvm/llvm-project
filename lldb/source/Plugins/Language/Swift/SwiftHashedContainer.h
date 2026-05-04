@@ -78,6 +78,7 @@ private:
 
   lldb::ValueObjectSP
   CocoaObjectAtAddress(
+    ValueObject &valobj, // The ValueObject this Cocoa object is a child of
     const ExecutionContext &exe_ctx,
     lldb::addr_t address) const;
 
@@ -123,7 +124,7 @@ public:
 
   virtual CompilerType GetElementType() = 0;
 
-  virtual lldb::ValueObjectSP GetElementAtIndex(size_t) = 0;
+  virtual lldb::ValueObjectSP GetElementAtIndex(size_t, ValueObject *parent) = 0;
 
   virtual bool IsValid() = 0;
 

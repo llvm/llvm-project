@@ -21,6 +21,7 @@
 #include "Plugins/Language/Swift/LogChannelSwift.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "Plugins/TypeSystem/Swift/SwiftDemangle.h"
+#include "lldb/DataFormatters/ValueObjectPrinter.h"
 #include "lldb/Host/SafeMachO.h"
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Symbol/VariableList.h"
@@ -1664,7 +1665,7 @@ SwiftLanguageRuntime::ProjectEnum(ValueObject &valobj) {
 
     return ValueObjectMemory::Create(exe_ctx.GetBestExecutionContextScope(),
                                      "$indirect." + field_info.Name,
-                                     payload_addr, payload_type);
+                                     payload_addr, payload_type, &valobj);
   };
 
   // Type infos of single case enums simply are the payload's type's type info,
@@ -1714,10 +1715,10 @@ SwiftLanguageRuntime::ProjectEnum(ValueObject &valobj) {
     } else {
       payload_type = ts.GetBuiltinRawPointerType(flavor);
     }
-
+    
     return ValueObjectMemory::Create(exe_ctx.GetBestExecutionContextScope(),
                                      "$indirect.$single_case", payload,
-                                     payload_type);
+                                     payload_type, &valobj);
   };
 
   // Is this single-case indirect enum? These get lowered into their payload

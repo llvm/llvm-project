@@ -576,7 +576,7 @@ ExtractChildrenFromSwiftPointerValueObject(ValueObjectSP valobj_sp,
   // UnsafePointer/UnsafeMutablePointer have a `pointee` property.
   if (unsafe_ptr.HasPointee()) {
     DataExtractor data(buffer_data, 0, element_stride);
-    children.push_back(ValueObject::CreateValueObjectFromData(
+    children.push_back(valobj_sp->CreateChildValueObjectFromData(
         "pointee", data, exe_ctx_ref, element_type));
     return children;
   }
@@ -585,7 +585,7 @@ ExtractChildrenFromSwiftPointerValueObject(ValueObjectSP valobj_sp,
     StreamString idx_name;
     idx_name.Printf("[%zu]", i);
     DataExtractor data(buffer_data, i * element_stride, element_stride);
-    children.push_back(ValueObject::CreateValueObjectFromData(
+    children.push_back(valobj_sp->CreateChildValueObjectFromData(
         idx_name.GetString(), data, exe_ctx_ref, element_type));
   }
 
