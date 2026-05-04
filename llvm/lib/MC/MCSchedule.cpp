@@ -15,10 +15,17 @@
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/Support/CommandLine.h"
 #include <optional>
 #include <type_traits>
 
 using namespace llvm;
+
+static cl::opt<float> ReservationStationScaleFactor(
+    "reservation-station-scale-factor", cl::Hidden, cl::init(1.0f),
+    cl::desc("Scale buffer size for all reservation stations by a non-negative "
+             "factor. Can only scale non-negative buffer sizes. Computed sizes "
+             "are truncated towards zero"));
 
 static_assert(std::is_trivial_v<MCSchedModel>,
               "MCSchedModel is required to be a trivial type");
@@ -211,4 +218,26 @@ unsigned MCSchedModel::getBypassDelayCycles(const MCSubtargetInfo &STI,
 
   // Unable to find WriteResourceID in MCReadAdvanceEntry Entries
   return 0;
+}
+
+int MCSchedModel::getResourceBufferSize(unsigned ProcResourceIdx) const {
+  int BufferSize = getProcResource(ProcResourceIdx)->BufferSize;
+
+  // Early exit by default
+  if (ReservationStationScaleFactor == 1)
+    return BufferSize;
+
+  if (ReservationStationScaleFactor < 0 || BufferSize <= 0)
+    return BufferSize;
+
+  // Do not scale load/store queues
+  if (hasExtraProcessorInfo()) {
+    const auto &EPI = getExtraProcessorInfo();
+    if (ProcResourceIdx == EPI.LoadQueueID ||
+        ProcResourceIdx == EPI.StoreQueueID)
+      return BufferSize;
+  }
+
+  // Scale and truncate a non-negative computed size towards zero
+  return static_cast<int>(BufferSize * ReservationStationScaleFactor);
 }

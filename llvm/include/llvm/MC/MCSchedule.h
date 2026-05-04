@@ -420,6 +420,11 @@ struct MCSchedModel {
   LLVM_ABI static unsigned getBypassDelayCycles(const MCSubtargetInfo &STI,
                                                 const MCSchedClassDesc &SCDesc);
 
+  /// Return the buffer size of the resource. If a valid scale factor
+  /// is provided, the size is being scaled accordingly.
+  /// \return The scaled buffer size of the resource or -1 for unlimited.
+  LLVM_ABI int getResourceBufferSize(unsigned ProcResourceIdx) const;
+
   /// Returns the default initialized model.
   LLVM_ABI static const MCSchedModel Default;
 };
