@@ -94,11 +94,9 @@ static_assert(0.0f == LIBC_NAMESPACE::shared::ufromfpf(0.0f, 0, 32));
 static_assert(0.0f == LIBC_NAMESPACE::shared::ufromfpxf(0.0f, 0, 32));
 static_assert(0.0f == LIBC_NAMESPACE::shared::fmaximum_magf(0.0f, 0.0f));
 static_assert(0.0f == LIBC_NAMESPACE::shared::fminimum_magf(0.0f, 0.0f));
-static_assert(42.0f == [] {
-  float nan = LIBC_NAMESPACE::fputil::FPBits<float>::quiet_nan(
-                  LIBC_NAMESPACE::Sign::POS, 42)
-                  .get_val();
-  return LIBC_NAMESPACE::shared::getpayloadf(&nan);
+static_assert(-1.0f == [] {
+  float getpayload_x = 0.0f;
+  return LIBC_NAMESPACE::shared::getpayloadf(&getpayload_x);
 }());
 
 constexpr float TOTALORDERF_X = 0.0f;
@@ -161,11 +159,9 @@ static_assert(0.0f16 ==
               LIBC_NAMESPACE::shared::fminimum_numf16(0.0f16, 0.0f16));
 static_assert(0.0f16 == LIBC_NAMESPACE::shared::fromfpf16(0.0f16, 0, 32));
 static_assert(0.0f16 == LIBC_NAMESPACE::shared::fromfpxf16(0.0f16, 0, 32));
-static_assert(static_cast<float16>(42.0) == [] {
-  float16 nan = LIBC_NAMESPACE::fputil::FPBits<float16>::quiet_nan(
-                    LIBC_NAMESPACE::Sign::POS, 42)
-                    .get_val();
-  return LIBC_NAMESPACE::shared::getpayloadf16(&nan);
+static_assert(static_cast<float16>(-1.0) == [] {
+  float16 getpayload_x = 0.0f16;
+  return LIBC_NAMESPACE::shared::getpayloadf16(&getpayload_x);
 }());
 static_assert(0.0f16 == LIBC_NAMESPACE::shared::ufromfpf16(0.0f16, 0, 32));
 static_assert(0.0f16 == LIBC_NAMESPACE::shared::ufromfpxf16(0.0f16, 0, 32));
@@ -233,9 +229,9 @@ static_assert(0.0L == LIBC_NAMESPACE::shared::fminimum_numl(0.0L, 0.0L));
 static_assert(0.0L == LIBC_NAMESPACE::shared::fromfpl(0.0L, 0, 32));
 static_assert(0.0L == LIBC_NAMESPACE::shared::fromfpxl(0.0L, 0, 32));
 static_assert(0.0L == LIBC_NAMESPACE::shared::ufromfpl(0.0L, 0, 32));
-static_assert(42.0L == [] {
-  long double nan = LIBC_NAMESPACE::fputil::FPBits<long double>::quiet_nan(LIBC_NAMESPACE::Sign::POS, 42).get_val();
-  return LIBC_NAMESPACE::shared::getpayloadl(&nan);
+static_assert(-1.0L == [] {
+  long double getpayload_x = 0.0L;
+  return LIBC_NAMESPACE::shared::getpayloadl(&getpayload_x);
 }());
 static_assert(0.0L == LIBC_NAMESPACE::shared::ufromfpxl(0.0L, 0, 32));
 static_assert(0.0L == LIBC_NAMESPACE::shared::fmaximum_magl(0.0L, 0.0L));
@@ -325,11 +321,9 @@ static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::fromfpf128(float128(0.0), 0, 32));
 static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::fromfpxf128(float128(0.0), 0, 32));
-static_assert(static_cast<float128>(42.0) == [] {
-  float128 nan = LIBC_NAMESPACE::fputil::FPBits<float128>::quiet_nan(
-                     LIBC_NAMESPACE::Sign::POS, 42)
-                     .get_val();
-  return LIBC_NAMESPACE::shared::getpayloadf128(&nan);
+static_assert(static_cast<float128>(-1.0) == [] {
+  float128 getpayload_x = float128(0.0);
+  return LIBC_NAMESPACE::shared::getpayloadf128(&getpayload_x);
 }());
 static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::ufromfpf128(float128(0.0), 0, 32));
@@ -428,12 +422,9 @@ static_assert(bfloat16(0.0) ==
 static_assert(bfloat16(0.0) ==
               LIBC_NAMESPACE::shared::fromfpxbf16(bfloat16(0.0), 0, 32));
 
-static_assert(static_cast<bfloat16>(42.0) == [] {
-  bfloat16 nan =
-      static_cast<bfloat16>(LIBC_NAMESPACE::fputil::FPBits<bfloat16>::quiet_nan(
-                                LIBC_NAMESPACE::Sign::POS, 42)
-                                .get_val());
-  return LIBC_NAMESPACE::shared::getpayloadbf16(&nan);
+static_assert(static_cast<bfloat16>(-1.0) == [] {
+  bfloat16 getpayload_x = bfloat16(0.0);
+  return LIBC_NAMESPACE::shared::getpayloadbf16(&getpayload_x);
 }());
 
 static_assert(bfloat16(0.0) ==
