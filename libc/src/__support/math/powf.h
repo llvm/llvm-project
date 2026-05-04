@@ -569,9 +569,9 @@ LIBC_INLINE constexpr bool larger_exponent(double a, double b) {
 //   y6: 2^6 * y.
 //   lo6_hi: the high part of 2^6 * (y - (hi + mid))
 //   exp2_hi_mid: high part of 2^(hi + mid)
-LIBC_INLINE double powf_double_double(int idx_x, double dx, double y6,
-                                      double lo6_hi,
-                                      const DoubleDouble &exp2_hi_mid) {
+LIBC_INLINE LIBC_CONSTEXPR double
+powf_double_double(int idx_x, double dx, double y6, double lo6_hi,
+                   const DoubleDouble &exp2_hi_mid) {
   using DoubleBits = typename fputil::FPBits<double>;
 
   // Perform a second range reduction step:
@@ -661,7 +661,7 @@ LIBC_INLINE double powf_double_double(int idx_x, double dx, double y6,
 
 } // namespace powf_internal
 
-LIBC_INLINE float powf(float x, float y) {
+LIBC_INLINE LIBC_CONSTEXPR float powf(float x, float y) {
   using namespace powf_internal;
   using FloatBits = typename fputil::FPBits<float>;
   using DoubleBits [[maybe_unused]] = typename fputil::FPBits<double>;

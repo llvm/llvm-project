@@ -150,7 +150,7 @@ LIBC_INLINE constexpr T hypot(T x, T y) {
   uint64_t out_exp = a_exp;
   StorageType a_mant = a_bits.get_mantissa();
   StorageType b_mant = b_bits.get_mantissa();
-  DStorageType a_mant_sq, b_mant_sq;
+  DStorageType a_mant_sq{}, b_mant_sq{};
   bool sticky_bits{};
 
   // Add an extra bit to simplify the final rounding bit computation.

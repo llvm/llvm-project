@@ -203,7 +203,7 @@ LIBC_INLINE constexpr bool is_integer(double x) {
 
 } // namespace pow_internal
 
-LIBC_INLINE double pow(double x, double y) {
+LIBC_INLINE LIBC_CONSTEXPR double pow(double x, double y) {
   using namespace pow_internal;
   using FPBits = fputil::FPBits<double>;
 

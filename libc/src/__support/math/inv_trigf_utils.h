@@ -235,7 +235,7 @@ constexpr double ASINPI_COEFFS[13] = {
 //     r0 = q0 + q1*v8        r1 = q2
 //   Level 3 (using v16):
 //     result = r0 + r1*v16
-LIBC_INLINE double asinpi_eval(double v2) {
+LIBC_INLINE LIBC_CONSTEXPR double asinpi_eval(double v2) {
   double v4 = v2 * v2;
   double v8 = v4 * v4;
   double v16 = v8 * v8;

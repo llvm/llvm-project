@@ -51,7 +51,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE float sinf(float x) {
+LIBC_INLINE LIBC_CONSTEXPR float sinf(float x) {
   using namespace sincosf_utils_internal;
   using FPBits = typename fputil::FPBits<float>;
   FPBits xbits(x);
@@ -178,7 +178,7 @@ LIBC_INLINE float sinf(float x) {
   //          = sin(y*pi/32) * cos(k*pi/32) + cos(y*pi/32) * sin(k*pi/32)
   //          = sin_y * cos_k + (1 + cosm1_y) * sin_k
   //          = sin_y * cos_k + (cosm1_y * sin_k + sin_k)
-  double sin_k, cos_k, sin_y, cosm1_y;
+  double sin_k{}, cos_k{}, sin_y{}, cosm1_y{};
 
   sincosf_eval(xd, x_abs, sin_k, cos_k, sin_y, cosm1_y);
 

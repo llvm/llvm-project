@@ -22,7 +22,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE float tanhf(float x) {
+LIBC_INLINE LIBC_CONSTEXPR float tanhf(float x) {
   // 2^6 * log2(e)
   constexpr double LOG2_E_EXP2_6 = ExpBase::LOG2_B * 2.0;
 

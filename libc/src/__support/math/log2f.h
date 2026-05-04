@@ -58,7 +58,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE float log2f(float x) {
+LIBC_INLINE LIBC_CONSTEXPR float log2f(float x) {
   using namespace common_constants_internal;
   using FPBits = typename fputil::FPBits<float>;
 
