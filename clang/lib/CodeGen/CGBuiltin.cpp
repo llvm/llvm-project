@@ -5597,12 +5597,17 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     SmallVector<Metadata *, 1> Strings;
     for (const Expr *Arg : E->arguments()) {
       const auto *Str = cast<StringLiteral>(Arg->IgnoreParenCasts());
-      assert(Str->getCharByteWidth() == 2);
+      assert(Str->getCharByteWidth() == 2 || Str->getCharByteWidth() == 4);
       StringRef WideBytes = Str->getBytes();
       std::string StrUtf8;
-      if (!convertUTF16ToUTF8String(
-              ArrayRef(WideBytes.data(), WideBytes.size()), StrUtf8)) {
-        CGM.ErrorUnsupported(E, "non-UTF16 __annotation argument");
+      bool Converted =
+          (Str->getCharByteWidth() == 2)
+              ? convertUTF16ToUTF8String(
+                    ArrayRef(WideBytes.data(), WideBytes.size()), StrUtf8)
+              : convertUTF32ToUTF8String(
+                    ArrayRef(WideBytes.data(), WideBytes.size()), StrUtf8);
+      if (!Converted) {
+        CGM.ErrorUnsupported(E, "non-Unicode __annotation argument");
         continue;
       }
       Strings.push_back(llvm::MDString::get(getLLVMContext(), StrUtf8));

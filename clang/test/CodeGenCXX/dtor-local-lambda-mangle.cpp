@@ -18,7 +18,7 @@ E::E() {
 template<typename T>
 E::E(T t) {
   struct {
-    // CHECK-DAG: _ZTSN1EC1IiEUt_UlvE_E
+    // CHECK-DAG: _ZTSN1EC1IiEUt_12anotherValueMUlvE_E
     int anotherValue = [x = 1] { return x; }();
   } obj;
 }
