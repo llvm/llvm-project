@@ -5,7 +5,7 @@
 !--------------------------
 ! RUN: %flang -E -Xflang -fno-reformat %S/Inputs/free-line-length-test.f90  2>&1 | FileCheck %s --check-prefix=UNLIMITEDLENGTH
 ! RUN: not %flang -E -Xflang -fno-reformat -ffree-line-length=-2 %S/Inputs/free-line-length-test.f90  2>&1 | FileCheck %s --check-prefix=NEGATIVELENGTH
-! RUN: not %flang -E -Xflang -fno-reformat -ffree-line-length-abcd %S/Inputs/free-line-length-test.f90  2>&1 | FileCheck %s --check-prefix=INVALIDLENGTH
+! RUN: not %flang -E -Xflang -fno-reformat -ffree-line-length=abcd %S/Inputs/free-line-length-test.f90  2>&1 | FileCheck %s --check-prefix=INVALIDLENGTH
 ! RUN: %flang -E -Xflang -fno-reformat -ffree-line-length=none %S/Inputs/free-line-length-test.f90  2>&1 | FileCheck %s --check-prefix=UNLIMITEDLENGTH
 ! RUN: %flang -E -Xflang -fno-reformat -ffree-line-length=0 %S/Inputs/free-line-length-test.f90  2>&1 | FileCheck %s --check-prefix=UNLIMITEDLENGTH
 ! RUN: %flang -E -Xflang -fno-reformat -ffree-line-length=13 %S/Inputs/free-line-length-test.f90  2>&1 | FileCheck %s --check-prefix=LENGTH13
