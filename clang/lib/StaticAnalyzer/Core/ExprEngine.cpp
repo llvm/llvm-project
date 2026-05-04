@@ -3735,7 +3735,7 @@ void ExprEngine::evalBind(ExplodedNodeSet &Dst, const Stmt *StoreE,
   getCheckerManager().runCheckersForBind(CheckedSet, Pred, location, Val,
                                          StoreE, AtDeclInit, *this, *PP);
 
-  NodeBuilder Bldr(CheckedSet, Dst, *currBldrCtx);
+  Dst.insert(CheckedSet);
 
   // If the location is not a 'Loc', it will already be handled by
   // the checkers.  There is nothing left to do.
@@ -3744,7 +3744,8 @@ void ExprEngine::evalBind(ExplodedNodeSet &Dst, const Stmt *StoreE,
                                      /*tag*/nullptr);
     ProgramStateRef state = Pred->getState();
     state = processPointerEscapedOnBind(state, location, Val, LC);
-    Bldr.generateNode(L, state, Pred);
+    Dst.erase(Pred);
+    Dst.insert(Engine.makeNode(L, state, Pred));
     return;
   }
 
@@ -3766,7 +3767,8 @@ void ExprEngine::evalBind(ExplodedNodeSet &Dst, const Stmt *StoreE,
     }
 
     const ProgramPoint L = PostStore(StoreE, LC, LocReg, nullptr);
-    Bldr.generateNode(L, state, PredI);
+    Dst.erase(PredI);
+    Dst.insert(Engine.makeNode(L, state, PredI));
   }
 }
 
