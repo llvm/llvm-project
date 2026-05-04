@@ -127,6 +127,15 @@ private:
   void addConcrete(TensorArmType type);
   void addConcrete(VectorType type);
 
+  // Helper to push one or more compile-time-known capabilities. The vector
+  // stores ArrayRefs whose backing storage must outlive them, so the list is
+  // materialized as a static constexpr array.
+  template <Capability... Cs>
+  void pushCaps() {
+    static constexpr Capability caps[] = {Cs...};
+    capabilities.push_back(caps);
+  }
+
   SPIRVType::CapabilityArrayRefVector &capabilities;
   std::optional<StorageClass> storage;
   llvm::SmallDenseSet<std::pair<Type, std::optional<StorageClass>>> seen;
@@ -449,66 +458,41 @@ void TypeCapabilityVisitor::addConcrete(ImageType type) {
   bool needSampler = sampler == ImageSamplerUseInfo::NeedSampler;
 
   switch (dim) {
-  case Dim::Dim1D: {
-    if (needSampler) {
-      static constexpr auto cap = Capability::Sampled1D;
-      capabilities.push_back(cap);
-    } else if (noSampler) {
-      static constexpr auto cap = Capability::Image1D;
-      capabilities.push_back(cap);
-    } else {
-      static constexpr Capability caps[] = {Capability::Image1D,
-                                            Capability::Sampled1D};
-      capabilities.push_back(caps);
-    }
+  case Dim::Dim1D:
+    if (needSampler)
+      pushCaps<Capability::Sampled1D>();
+    else if (noSampler)
+      pushCaps<Capability::Image1D>();
+    else
+      pushCaps<Capability::Image1D, Capability::Sampled1D>();
     break;
-  }
   case Dim::Dim2D:
-    if (isMultisampled && noSampler) {
-      static constexpr auto cap = Capability::StorageImageMultisample;
-      capabilities.push_back(cap);
-    }
-    if (isMultisampled && isArrayed) {
-      static constexpr auto cap = Capability::ImageMSArray;
-      capabilities.push_back(cap);
-    }
+    if (isMultisampled && noSampler)
+      pushCaps<Capability::StorageImageMultisample>();
+    if (isMultisampled && isArrayed)
+      pushCaps<Capability::ImageMSArray>();
     break;
   case Dim::Dim3D:
     break;
-  case Dim::Cube: {
-    static constexpr auto shaderCap = Capability::Shader;
-    capabilities.push_back(shaderCap);
-    if (isArrayed) {
-      static constexpr auto cap = Capability::ImageCubeArray;
-      capabilities.push_back(cap);
-    }
+  case Dim::Cube:
+    pushCaps<Capability::Shader>();
+    if (isArrayed)
+      pushCaps<Capability::ImageCubeArray>();
     break;
-  }
-  case Dim::Rect: {
-    static constexpr Capability caps[] = {Capability::ImageRect,
-                                          Capability::SampledRect};
-    capabilities.push_back(caps);
+  case Dim::Rect:
+    pushCaps<Capability::ImageRect, Capability::SampledRect>();
     break;
-  }
-  case Dim::Buffer: {
-    if (needSampler) {
-      static constexpr auto cap = Capability::SampledBuffer;
-      capabilities.push_back(cap);
-    } else if (noSampler) {
-      static constexpr auto cap = Capability::ImageBuffer;
-      capabilities.push_back(cap);
-    } else {
-      static constexpr Capability caps[] = {Capability::ImageBuffer,
-                                            Capability::SampledBuffer};
-      capabilities.push_back(caps);
-    }
+  case Dim::Buffer:
+    if (needSampler)
+      pushCaps<Capability::SampledBuffer>();
+    else if (noSampler)
+      pushCaps<Capability::ImageBuffer>();
+    else
+      pushCaps<Capability::ImageBuffer, Capability::SampledBuffer>();
     break;
-  }
-  case Dim::SubpassData: {
-    static constexpr auto cap = Capability::InputAttachment;
-    capabilities.push_back(cap);
+  case Dim::SubpassData:
+    pushCaps<Capability::InputAttachment>();
     break;
-  }
   }
 
   if (auto fmtCaps = spirv::getCapabilities(type.getImageFormat()))
@@ -516,10 +500,8 @@ void TypeCapabilityVisitor::addConcrete(ImageType type) {
 
   // OpTypeImage with a 64-bit integer Sampled Type requires Int64ImageEXT.
   if (auto intTy = dyn_cast<IntegerType>(type.getElementType());
-      intTy && intTy.getWidth() == 64) {
-    static constexpr auto cap = Capability::Int64ImageEXT;
-    capabilities.push_back(cap);
-  }
+      intTy && intTy.getWidth() == 64)
+    pushCaps<Capability::Int64ImageEXT>();
 
   add(type.getElementType());
 }
