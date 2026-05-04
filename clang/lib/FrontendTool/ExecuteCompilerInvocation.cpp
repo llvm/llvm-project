@@ -215,7 +215,8 @@ CreateFrontendAction(CompilerInstance &CI) {
         std::move(Act));
   }
   if (!FEOpts.SSAFApplySourcePass.empty()) {
-    Act = std::make_unique<ssaf::SourcePassAnalysisFrontendAction>(std::move(Act));
+    Act = std::make_unique<ssaf::SourcePassAnalysisFrontendAction>(
+        std::move(Act));
   }
   return Act;
 }
