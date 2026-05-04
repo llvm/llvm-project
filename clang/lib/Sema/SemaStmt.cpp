@@ -4696,8 +4696,28 @@ buildCapturedStmtCaptureList(Sema &S, CapturedRegionScopeInfo *RSI,
     // FIXME: Bail out now if the capture is not used and the initializer has
     // no side-effects.
 
-    // Create a field for this capture.
-    FieldDecl *Field = S.BuildCaptureField(RSI->TheRecordDecl, Cap);
+    // Build the capture field. For OpenMP BindingDecl captures redirected
+    // to their DecompositionDecl, the field type must use the
+    // DecompositionDecl's type (e.g. int[2]) not the BindingDecl's type (e.g.
+    // int).
+    FieldDecl *Field = nullptr;
+    if (RSI->CapRegionKind == CR_OpenMP && CapVar &&
+        CapVar != Cap.getVariable() && isa<DecompositionDecl>(CapVar)) {
+      // Manually build a reference field with the DecompositionDecl's type.
+      QualType DDType = cast<VarDecl>(CapVar)->getType();
+      QualType RefType = S.Context.getLValueReferenceType(DDType);
+      TypeSourceInfo *TSI =
+          S.Context.getTrivialTypeSourceInfo(RefType, Cap.getLocation());
+      Field = FieldDecl::Create(S.Context, RSI->TheRecordDecl,
+                                Cap.getLocation(), Cap.getLocation(),
+                                /*Id=*/nullptr, RefType, TSI,
+                                /*BW=*/nullptr, /*Mutable=*/false, ICIS_NoInit);
+      Field->setImplicit(true);
+      Field->setAccess(AS_private);
+      RSI->TheRecordDecl->addDecl(Field);
+    } else {
+      Field = S.BuildCaptureField(RSI->TheRecordDecl, Cap);
+    }
 
     // Add the capture to our list of captures.
     if (Cap.isThisCapture()) {

@@ -3623,16 +3623,7 @@ LValue CodeGenFunction::EmitOMPCapturedBindingLValue(const BindingDecl *BD) {
   }
   if (auto *ASE = dyn_cast<ArraySubscriptExpr>(BindingExpr)) {
     // Array binding - access element.
-    Address Base = CapLVal.getAddress();
-    llvm::Value *Idx = EmitScalarExpr(ASE->getIdx());
-    llvm::Value *Indices[] = {llvm::ConstantInt::get(Int32Ty, 0), Idx};
-    llvm::Type *ElemTy = CGM.getTypes().ConvertTypeForMem(ASE->getType());
-    llvm::Value *EltPtr = Builder.CreateInBoundsGEP(
-        Base.getElementType(), Base.emitRawPointer(*this), Indices, "arrayidx");
-    CharUnits Align = Base.getAlignment().alignmentOfArrayElement(
-        getContext().getTypeSizeInChars(ASE->getType()));
-    Address EltAddr(EltPtr, ElemTy, Align);
-    return MakeAddrLValue(EltAddr, ASE->getType());
+    return EmitLValue(BD->getBinding(), NotKnownNonNull);
   }
 
   // TODO: Tuple bindings (std::tuple, std::pair via tuple protocol)
