@@ -9,26 +9,26 @@ define i32 @test(i128 %add134.i8203) {
 ; CHECK-NEXT:    [[SUB9_I3318:%.*]] = or i64 [[REASS_SUB6909]], 0
 ; CHECK-NEXT:    br label %[[CONT90_I:.*]]
 ; CHECK:       [[CONT90_I]]:
-; CHECK-NEXT:    [[T_I_SROA_488_1:%.*]] = phi i64 [ [[SUB9_I3318]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[T_I_SROA_488_2:%.*]] = phi i64 [ [[SUB9_I3318]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[T_I_SROA_488_1:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[T_I_SROA_457_1:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[T_I_SROA_426_1:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[CONV61_I8293:%.*]] = zext i64 [[T_I_SROA_426_1]] to i128
 ; CHECK-NEXT:    [[CONV66_I8295:%.*]] = zext i64 [[T_I_SROA_457_1]] to i128
-; CHECK-NEXT:    [[MUL127_I8312:%.*]] = mul i128 0, [[CONV66_I8295]]
-; CHECK-NEXT:    [[MUL132_I8313:%.*]] = mul i128 0, [[CONV61_I8293]]
+; CHECK-NEXT:    [[CONV76_I8298:%.*]] = zext i64 [[T_I_SROA_488_1]] to i128
+; CHECK-NEXT:    [[MUL127_I8312:%.*]] = mul i128 0, [[CONV76_I8298]]
+; CHECK-NEXT:    [[MUL132_I8313:%.*]] = mul i128 0, [[CONV66_I8295]]
 ; CHECK-NEXT:    [[ADD135_I8317:%.*]] = or i128 0, [[MUL132_I8313]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i128 [[ADD135_I8317]] to i64
 ; CHECK-NEXT:    [[CONV137_I8321:%.*]] = and i64 [[TMP0]], 0
 ; CHECK-NEXT:    [[ADD153_I8337:%.*]] = or i128 0, [[MUL127_I8312]]
 ; CHECK-NEXT:    [[ADD155_I8339:%.*]] = or i128 [[ADD153_I8337]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i128 [[ADD155_I8339]] to i64
-; CHECK-NEXT:    [[CONV76_I8298:%.*]] = zext i64 [[T_I_SROA_488_1]] to i128
-; CHECK-NEXT:    [[MUL57_I8179:%.*]] = mul i128 0, [[CONV66_I8295]]
+; CHECK-NEXT:    [[CONV76_I8299:%.*]] = zext i64 [[T_I_SROA_488_2]] to i128
+; CHECK-NEXT:    [[MUL57_I8179:%.*]] = mul i128 0, [[CONV76_I8298]]
 ; CHECK-NEXT:    [[ADD135_I8204:%.*]] = or i128 [[ADD134_I8203]], [[MUL57_I8179]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i128 [[ADD135_I8204]] to i64
 ; CHECK-NEXT:    [[CONV137_I8208:%.*]] = and i64 [[TMP2]], 0
 ; CHECK-NEXT:    [[ADD179_I8250:%.*]] = or i64 0, [[CONV137_I8208]]
-; CHECK-NEXT:    [[MUL45_I8175:%.*]] = mul i128 0, [[CONV76_I8298]]
+; CHECK-NEXT:    [[MUL45_I8175:%.*]] = mul i128 0, [[CONV76_I8299]]
 ; CHECK-NEXT:    [[ADD153_I8224:%.*]] = or i128 0, [[MUL45_I8175]]
 ; CHECK-NEXT:    [[ADD155_I8226:%.*]] = or i128 [[ADD153_I8224]], 0
 ; CHECK-NEXT:    [[SHR168_I8352:%.*]] = lshr i128 0, 0

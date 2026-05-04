@@ -302,6 +302,16 @@ class NVVM_SingleResultIntrinsicOp<string mnemonic, list<Trait> traits = [], str
   }];
 }
 
+class NVVM_F32UnaryApproxOp<string mnemonic, list<Trait> traits = []> :
+    NVVM_SingleResultIntrinsicOp<mnemonic,
+        traits # [Pure, SameOperandsAndResultType]> {
+  let arguments = (ins F32:$src,
+                       DefaultValuedAttr<BoolAttr, "false">:$ftz);
+  let results = (outs F32:$res);
+  let assemblyFormat = "$src attr-dict `:` type($src)";
+}
+
+
 //===----------------------------------------------------------------------===//
 // NVVM special register op definitions
 //===----------------------------------------------------------------------===//
@@ -529,64 +539,43 @@ def NVVM_RcpApproxFtzF32Op : NVVM_IntrOp<"rcp.approx.ftz.f", [Pure], 1> {
 // keeps the NVVM dialect self-contained -- users don't need to reach for
 // `math.*` ops for something that already has a PTX instruction.
 
-def NVVM_SinOp : NVVM_SingleResultIntrinsicOp<"sin",
-    [Pure, SameOperandsAndResultType]> {
+def NVVM_SinOp : NVVM_F32UnaryApproxOp<"sin"> {
   let summary = "Sine (fast approximation)";
   let description = [{
     Computes a fast approximation of the sine of the input value (in radians).
-    The `ftz` attribute, when set, flushes subnormal inputs and results to 
+    The `ftz` attribute, when set, flushes subnormal inputs and results to
     sign-preserving zero.
 
     For more information, see PTX ISA:
     [sin](https://docs.nvidia.com/cuda/parallel-thread-execution/#floating-point-instructions-sin)
   }];
-  let arguments = (ins F32:$src,
-                       DefaultValuedAttr<BoolAttr, "false">:$ftz);
-  let results = (outs F32:$res);
-  let assemblyFormat = "$src attr-dict `:` type($src)";
 }
 
-
-def NVVM_CosOp : NVVM_SingleResultIntrinsicOp<"cos",
-    [Pure, SameOperandsAndResultType]> {
+def NVVM_CosOp : NVVM_F32UnaryApproxOp<"cos"> {
   let summary = "Cosine (fast approximation)";
   let description = [{
     Computes a fast approximation of the cosine of the input value (in
     radians). The `ftz` attribute, when set, flushes subnormal inputs
     and results to sign-preserving zero.
   }];
-  let arguments = (ins F32:$src,
-                       DefaultValuedAttr<BoolAttr, "false">:$ftz);
-  let results = (outs F32:$res);
-  let assemblyFormat = "$src attr-dict `:` type($src)";
 }
 
-def NVVM_Log2Op : NVVM_SingleResultIntrinsicOp<"log2",
-    [Pure, SameOperandsAndResultType]> {
+def NVVM_Log2Op : NVVM_F32UnaryApproxOp<"log2"> {
   let summary = "Base-2 logarithm (fast approximation)";
   let description = [{
     Computes a fast approximation of the base-2 logarithm of the input
     value. The `ftz` attribute, when set, flushes subnormal inputs and
     results to sign-preserving zero.
   }];
-  let arguments = (ins F32:$src,
-                       DefaultValuedAttr<BoolAttr, "false">:$ftz);
-  let results = (outs F32:$res);
-  let assemblyFormat = "$src attr-dict `:` type($src)";
 }
 
-def NVVM_Ex2Op : NVVM_SingleResultIntrinsicOp<"ex2",
-    [Pure, SameOperandsAndResultType]> {
+def NVVM_Ex2Op : NVVM_F32UnaryApproxOp<"ex2"> {
   let summary = "Base-2 exponential (fast approximation)";
   let description = [{
     Computes a fast approximation of 2 raised to the power of the input
     value. The `ftz` attribute, when set, flushes subnormal inputs and
     results to sign-preserving zero.
   }];
-  let arguments = (ins F32:$src,
-                       DefaultValuedAttr<BoolAttr, "false">:$ftz);
-  let results = (outs F32:$res);
-  let assemblyFormat = "$src attr-dict `:` type($src)";
 }
 
 //===----------------------------------------------------------------------===//

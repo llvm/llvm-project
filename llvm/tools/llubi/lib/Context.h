@@ -211,7 +211,7 @@ class Context {
   // the provenance.
   std::map<uint64_t, IntrusiveRefCntPtr<MemoryObject>> MemoryObjects;
   AnyValue fromBytes(ConstBytesView Bytes, Type *Ty, uint32_t OffsetInBits,
-                     bool CheckPaddingBits);
+                     bool CheckPaddingBits, bool *ContainsUndefinedBits);
   void toBytes(const AnyValue &Val, Type *Ty, uint32_t OffsetInBits,
                MutableBytesView Bytes, bool PaddingBits);
 
@@ -279,11 +279,15 @@ public:
   Pointer deriveFromMemoryObject(IntrusiveRefCntPtr<MemoryObject> Obj);
   /// Convert byte sequence to a value of the given type. Uninitialized bits are
   /// flushed according to the options.
-  AnyValue fromBytes(ArrayRef<Byte> Bytes, Type *Ty);
+  /// If \p ContainsUndefinedBits is provided, it will be set to true when there
+  /// are poison or undef bits in the value (i.e., padding bits are ignored).
+  AnyValue fromBytes(ArrayRef<Byte> Bytes, Type *Ty,
+                     bool *ContainsUndefinedBits = nullptr);
   /// Convert a value to byte sequence. Padding bits are set to zero.
   void toBytes(const AnyValue &Val, Type *Ty, MutableArrayRef<Byte> Bytes);
   /// Direct memory load without checks.
-  AnyValue load(MemoryObject &MO, uint64_t Offset, Type *ValTy);
+  AnyValue load(MemoryObject &MO, uint64_t Offset, Type *ValTy,
+                bool *ContainsUndefinedBits = nullptr);
   /// Direct memory store without checks.
   void store(MemoryObject &MO, uint64_t Offset, const AnyValue &Val,
              Type *ValTy);

@@ -201,6 +201,20 @@ public:
         Opcode, Operands, ResultTy, Flags, {}, DL, Name));
   }
 
+  VPInstruction *createFirstActiveLane(ArrayRef<VPValue *> Masks,
+                                       DebugLoc DL = DebugLoc::getUnknown(),
+                                       const Twine &Name = "") {
+    return tryInsertInstruction(new VPInstruction(
+        VPInstruction::FirstActiveLane, Masks, {}, {}, DL, Name));
+  }
+
+  VPInstruction *createLastActiveLane(ArrayRef<VPValue *> Masks,
+                                      DebugLoc DL = DebugLoc::getUnknown(),
+                                      const Twine &Name = "") {
+    return tryInsertInstruction(new VPInstruction(VPInstruction::LastActiveLane,
+                                                  Masks, {}, {}, DL, Name));
+  }
+
   VPInstruction *createOverflowingOp(
       unsigned Opcode, ArrayRef<VPValue *> Operands,
       VPRecipeWithIRFlags::WrapFlagsTy WrapFlags = {false, false},

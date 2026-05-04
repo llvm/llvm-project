@@ -2414,11 +2414,12 @@ For example:
     If an invocation of an annotated function does not return control back
     to a point in the call stack, the behavior is undefined.
 ``nosync``
-    This function attribute indicates that the function does not communicate
-    (synchronize) with another thread through memory or other well-defined means.
-    Synchronization is considered possible in the presence of `atomic` accesses
-    that enforce an order, thus not "unordered" and "monotonic", `volatile` accesses,
-    as well as `convergent` function calls.
+    This function attribute indicates that the function does not introduce any
+    *synchronizes-with* edges in the sense of the memory model.
+
+    In particular, synchronization is considered possible in the presence of
+    `atomic` accesses that enforce an order, thus not "unordered" and
+    "monotonic", as well as `convergent` function calls.
 
     Note that `convergent` operations can involve communication that is
     considered to be not through memory and does not necessarily imply an
@@ -3151,7 +3152,7 @@ the behavior is undefined, unless one of the following exceptions applies:
 
 * ``"align"`` operand bundles may specify a non-power-of-two alignment
   (including a zero alignment). If this is the case, then the pointer value
-  must be a null pointer, otherwise the behavior is undefined.
+  must be an all-zero pointer, otherwise the behavior is undefined.
 
 * ``dereferenceable(<n>)`` operand bundles only guarantee the pointer is
   dereferenceable at the point of the assumption. The pointer may not be
@@ -7976,6 +7977,48 @@ Attributes in the metadata will be added to both the vectorized and
 epilogue loop.
 See :ref:`Transformation Metadata <transformation-metadata>` for details.
 
+'``llvm.loop.vectorize.body``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This metadata is automatically added by the loop vectorizer to the
+vectorized loop body. It is used by subsequent optimization passes
+(such as the loop unroller and ``WarnMissedTransforms``) to emit more
+precise optimization remarks that identify the loop as a vector loop.
+
+The first operand is the string
+``llvm.loop.vectorize.body`` and the second operand is an
+integer. A value of 1 indicates this is a vectorized loop body:
+
+.. code-block:: llvm
+
+   !0 = !{!"llvm.loop.vectorize.body", i32 1}
+
+'``llvm.loop.vectorize.epilogue``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This metadata is automatically added by the loop vectorizer to the
+scalar remainder (epilogue) loop to identify it as such. It is used by
+subsequent optimization passes (such as the loop unroller and
+``WarnMissedTransforms``) to emit more precise optimization remarks
+that distinguish between the vectorized loop and its scalar remainder.
+
+Together these two attributes provide a four-way classification:
+
+- ``body`` only: main vectorized loop body
+- ``epilogue`` only: scalar epilogue loop after vectorization
+- Both ``body`` and ``epilogue``: vectorized epilogue 
+  (a remainder loop that was itself vectorized during epilogue
+  vectorization)
+- Neither: a plain loop not produced by the vectorizer
+
+The first operand is the string
+``llvm.loop.vectorize.epilogue`` and the second operand is
+an integer. A value of 1 indicates the loop is a remainder loop:
+
+.. code-block:: llvm
+
+   !0 = !{!"llvm.loop.vectorize.epilogue", i32 1}
+
 '``llvm.loop.unroll``'
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -9209,6 +9252,16 @@ flags metadata, using the following key-value pairs:
          call to the checker function and then one to the target.
        * 2 --- CFG uses the "dispatch" mechanism. This calls a dispatcher
          function which both checks and then calls the target.
+
+Other Module Flags
+------------------
+
+``require-logical-pointer``
+    This flag indicates this module must only use logical pointer intrinsics
+    such as :ref:`@llvm.structured.gep <i_structured_gep>` or
+    :ref:`@llvm.structured.alloca <i_structured_alloca>`.
+    Using a normal :ref:`getelementptr <i_getelementptr>` or
+    :ref:`alloca <i_alloca>` is illegal.
 
 Embedded Objects Names Metadata
 ===============================
