@@ -36,7 +36,7 @@ TEST(TimeIntrinsics, Timef) {
   // TODO: remove this after TIMEF() is implemented on Windows
   GTEST_SKIP() << "Timef() is not implemented on Windows";
 #endif
-  
+
   // We can't really test that we get the "right" result for Timef, but we
   // can have a smoke test to see that we get something reasonable on the
   // platforms where we expect to support it.
