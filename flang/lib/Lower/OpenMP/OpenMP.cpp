@@ -3527,6 +3527,17 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDoSimd(
   genSimdClauses(converter, semaCtx, simdItem->clauses, loc, simdClauseOps,
                  simdReductionSyms, &reductionVarCache);
 
+  // Same as genCompositeDoSimd.
+  if (!simdClauseOps.linearVars.empty()) {
+    wsloopClauseOps.linearVars = std::move(simdClauseOps.linearVars);
+    wsloopClauseOps.linearStepVars = std::move(simdClauseOps.linearStepVars);
+    wsloopClauseOps.linearVarTypes = simdClauseOps.linearVarTypes;
+    wsloopClauseOps.linearModifiers = simdClauseOps.linearModifiers;
+    simdClauseOps.linearVars.clear();
+    simdClauseOps.linearStepVars.clear();
+    simdClauseOps.linearVarTypes = nullptr;
+    simdClauseOps.linearModifiers = nullptr;
+  }
   DataSharingProcessor simdItemDSP(converter, semaCtx, simdItem->clauses, eval,
                                    /*shouldCollectPreDeterminedSymbols=*/true,
                                    /*useDelayedPrivatization=*/true, symTable);
@@ -3662,6 +3673,19 @@ static mlir::omp::WsloopOp genCompositeDoSimd(
   genSimdClauses(converter, semaCtx, simdItem->clauses, loc, simdClauseOps,
                  simdReductionSyms, &reductionVarCache);
 
+  // omp.simd writes back linear vars unconditionally, causing a race when
+  // inside a parallel region. Move them to wsloop which has proper last-iter
+  // write-back guarded by a barrier.
+  if (!simdClauseOps.linearVars.empty()) {
+    wsloopClauseOps.linearVars = std::move(simdClauseOps.linearVars);
+    wsloopClauseOps.linearStepVars = std::move(simdClauseOps.linearStepVars);
+    wsloopClauseOps.linearVarTypes = simdClauseOps.linearVarTypes;
+    wsloopClauseOps.linearModifiers = simdClauseOps.linearModifiers;
+    simdClauseOps.linearVars.clear();
+    simdClauseOps.linearStepVars.clear();
+    simdClauseOps.linearVarTypes = nullptr;
+    simdClauseOps.linearModifiers = nullptr;
+  }
   DataSharingProcessor wsloopItemDSP(
       converter, semaCtx, doItem->clauses, eval,
       /*shouldCollectPreDeterminedSymbols=*/false,
