@@ -33,8 +33,7 @@ cir.func @construct_catch_param_basic() {
     } catch [type #cir.global_view<@_ZTI1E> : !cir.ptr<!u8i>]
         (%eh_token: !cir.eh_token) {
       cir.construct_catch_param non_trivial_copy %eh_token to %param
-        : !cir.eh_token, !cir.ptr<!rec_E>,
-          copy_fn = @__clang_cir_catch_copy__ZTS1E
+        using @__clang_cir_catch_copy__ZTS1E : !cir.ptr<!rec_E>
       %catch_token, %exn_ptr = cir.begin_catch %eh_token
         : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
       cir.cleanup.scope {
@@ -56,8 +55,7 @@ cir.func @construct_catch_param_basic() {
 // CHECK:         } catch [type #cir.global_view<@_ZTI1E> : !cir.ptr<!u8i>]
 // CHECK-SAME:        (%[[EH:.*]]: !cir.eh_token) {
 // CHECK:           cir.construct_catch_param non_trivial_copy %[[EH]] to %[[E]]
-// CHECK-SAME:        : !cir.eh_token, !cir.ptr<!rec_E>,
-// CHECK-SAME:          copy_fn = @__clang_cir_catch_copy__ZTS1E
+// CHECK-SAME:        using @__clang_cir_catch_copy__ZTS1E : !cir.ptr<!rec_E>
 // CHECK:           cir.begin_catch %[[EH]]
 
 }

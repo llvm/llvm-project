@@ -17,8 +17,8 @@ cir.func @copy_fn_missing() {
     } catch [type #cir.global_view<@_ZTI1E> : !cir.ptr<!u8i>]
         (%eh_token: !cir.eh_token) {
       // expected-error @below {{'__not_a_func' does not reference a valid cir.func}}
-      cir.construct_catch_param non_trivial_copy %eh_token to %p
-        : !cir.eh_token, !cir.ptr<!rec_E>, copy_fn = @__not_a_func
+      cir.construct_catch_param non_trivial_copy %eh_token to %p using @__not_a_func
+        : !cir.ptr<!rec_E>
       %catch_token, %exn_ptr = cir.begin_catch %eh_token
         : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
       cir.end_catch %catch_token : !cir.catch_token
@@ -51,8 +51,8 @@ cir.func @copy_fn_wrong_arity() {
     } catch [type #cir.global_view<@_ZTI1E> : !cir.ptr<!u8i>]
         (%eh_token: !cir.eh_token) {
       // expected-error @below {{catch-init copy_fn must take two pointer arguments and return void}}
-      cir.construct_catch_param non_trivial_copy %eh_token to %p
-        : !cir.eh_token, !cir.ptr<!rec_E>, copy_fn = @bad_copy_fn_arity
+      cir.construct_catch_param non_trivial_copy %eh_token to %p using @bad_copy_fn_arity
+        : !cir.ptr<!rec_E>
       %catch_token, %exn_ptr = cir.begin_catch %eh_token
         : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
       cir.end_catch %catch_token : !cir.catch_token
@@ -87,8 +87,8 @@ cir.func @copy_fn_non_void_return() {
     } catch [type #cir.global_view<@_ZTI1E> : !cir.ptr<!u8i>]
         (%eh_token: !cir.eh_token) {
       // expected-error @below {{catch-init copy_fn must take two pointer arguments and return void}}
-      cir.construct_catch_param non_trivial_copy %eh_token to %p
-        : !cir.eh_token, !cir.ptr<!rec_E>, copy_fn = @bad_copy_fn_ret
+      cir.construct_catch_param non_trivial_copy %eh_token to %p using @bad_copy_fn_ret
+        : !cir.ptr<!rec_E>
       %catch_token, %exn_ptr = cir.begin_catch %eh_token
         : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
       cir.end_catch %catch_token : !cir.catch_token
@@ -124,8 +124,8 @@ cir.func @copy_fn_first_arg_mismatch() {
     } catch [type #cir.global_view<@_ZTI1E> : !cir.ptr<!u8i>]
         (%eh_token: !cir.eh_token) {
       // expected-error @below {{first argument of catch-init copy_fn must match the type of 'param_addr'}}
-      cir.construct_catch_param non_trivial_copy %eh_token to %p
-        : !cir.eh_token, !cir.ptr<!rec_E>, copy_fn = @bad_copy_fn_first_arg
+      cir.construct_catch_param non_trivial_copy %eh_token to %p using @bad_copy_fn_first_arg
+        : !cir.ptr<!rec_E>
       %catch_token, %exn_ptr = cir.begin_catch %eh_token
         : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
       cir.end_catch %catch_token : !cir.catch_token
@@ -161,8 +161,8 @@ cir.func @copy_fn_second_arg_mismatch() {
     } catch [type #cir.global_view<@_ZTI1E> : !cir.ptr<!u8i>]
         (%eh_token: !cir.eh_token) {
       // expected-error @below {{second argument of catch-init copy_fn must be a pointer to the catch type}}
-      cir.construct_catch_param non_trivial_copy %eh_token to %p
-        : !cir.eh_token, !cir.ptr<!rec_E>, copy_fn = @bad_copy_fn_second_arg
+      cir.construct_catch_param non_trivial_copy %eh_token to %p using @bad_copy_fn_second_arg
+        : !cir.ptr<!rec_E>
       %catch_token, %exn_ptr = cir.begin_catch %eh_token
         : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
       cir.end_catch %catch_token : !cir.catch_token
@@ -200,9 +200,8 @@ cir.func @construct_not_followed_by_begin_catch() {
       cir.yield
     } catch [type #cir.global_view<@_ZTI1E> : !cir.ptr<!u8i>]
         (%eh_token: !cir.eh_token) {
-      cir.construct_catch_param non_trivial_copy %eh_token to %p
-        : !cir.eh_token, !cir.ptr<!rec_E>,
-          copy_fn = @__clang_cir_catch_copy__ZTS1E
+      cir.construct_catch_param non_trivial_copy %eh_token to %p using @__clang_cir_catch_copy__ZTS1E
+        : !cir.ptr<!rec_E>
       cir.yield
     }
   }

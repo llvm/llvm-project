@@ -7717,7 +7717,7 @@ def CIR_ConstructCatchParamOp : CIR_Op<"construct_catch_param", [
     that must be performed before `cir.begin_catch` to bind the in-flight
     exception object to the local alloca used for the catch parameter.
 
-    For example, for non-pointer, non-reference catch parameters whose type has
+    For example: for non-pointer, non-reference catch parameters whose type has
     a non-trivial copy constructor, the Itanium C++ ABI requires
     calling `__cxa_get_exception_ptr` to obtain the adjusted exception pointer
     and then invoking the catch parameter's copy constructor to create a local
@@ -7736,7 +7736,7 @@ def CIR_ConstructCatchParamOp : CIR_Op<"construct_catch_param", [
 
     ```
     cir.construct_catch_param non_trivial_copy %eh_token to %param_addr
-      copy_fn = @__clang_cir_catch_init_T : !cir.eh_token, !cir.ptr<!rec_T>
+      using @__clang_cir_catch_init_T : !cir.ptr<!rec_T>
     ```
   }];
 
@@ -7748,8 +7748,8 @@ def CIR_ConstructCatchParamOp : CIR_Op<"construct_catch_param", [
   );
 
   let assemblyFormat = [{
-    $kind $eh_token `to` $param_addr `:` qualified(type($eh_token)) `,`
-      qualified(type($param_addr)) `,` `copy_fn` `=` $copy_fn attr-dict
+    $kind $eh_token `to` $param_addr `using` $copy_fn `:`
+      qualified(type($param_addr)) attr-dict
   }];
 
   let hasLLVMLowering = false;

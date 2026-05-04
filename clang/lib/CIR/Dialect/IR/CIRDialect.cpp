@@ -4144,7 +4144,7 @@ LogicalResult cir::TryOp::verify() {
     if (entryBlock.empty())
       return emitOpError("catch handler region must not be empty");
     mlir::Operation *firstOp = &entryBlock.front();
-    if (mlir::isa<cir::ConstructCatchParamOp>(firstOp))
+    if (mlir::isa_and_present<cir::ConstructCatchParamOp>(firstOp))
       firstOp = firstOp->getNextNode();
     if (!firstOp || !mlir::isa<cir::BeginCatchOp>(firstOp))
       return emitOpError(
