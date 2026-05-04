@@ -21,14 +21,15 @@
 #include <arm_neon.h>
 
 //===------------------------------------------------------===//
-// Fused multiply-accumulate, vector quad forms
+// 2.6.1.9.3 Fused multiply-accumulate, vector quad forms
 //===------------------------------------------------------===//
 
-// CIR-LABEL: @vfmaq_f32(
-// CIR: cir.call_llvm_intrinsic "fma" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<4 x !cir.float>, !cir.vector<4 x !cir.float>, !cir.vector<4 x !cir.float>) -> !cir.vector<4 x !cir.float>
 
 // LLVM-LABEL: @test_vfmaq_f32(
+// CIR-LABEL: @vfmaq_f32(
 float32x4_t test_vfmaq_f32(float32x4_t a, float32x4_t b, float32x4_t c) {
+// CIR: cir.call_llvm_intrinsic "fma" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<4 x !cir.float>, !cir.vector<4 x !cir.float>, !cir.vector<4 x !cir.float>) -> !cir.vector<4 x !cir.float>
+
 // LLVM-SAME: <4 x float> {{.*}} [[A:%.*]], <4 x float> {{.*}} [[B:%.*]], <4 x float> {{.*}} [[C:%.*]]) {{.*}} {
 // LLVM:      [[A_I:%.*]] = bitcast <4 x float> [[A]] to <4 x i32>
 // LLVM-NEXT: [[B_I:%.*]] = bitcast <4 x float> [[B]] to <4 x i32>
@@ -44,11 +45,11 @@ float32x4_t test_vfmaq_f32(float32x4_t a, float32x4_t b, float32x4_t c) {
   return vfmaq_f32(a, b, c);
 }
 
+// LLVM-LABEL: @test_vfmaq_f64(
 // CIR-LABEL: @vfmaq_f64(
+float64x2_t test_vfmaq_f64(float64x2_t a, float64x2_t b, float64x2_t c) {
 // CIR: cir.call_llvm_intrinsic "fma" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<2 x !cir.double>, !cir.vector<2 x !cir.double>, !cir.vector<2 x !cir.double>) -> !cir.vector<2 x !cir.double>
 
-// LLVM-LABEL: @test_vfmaq_f64(
-float64x2_t test_vfmaq_f64(float64x2_t a, float64x2_t b, float64x2_t c) {
 // LLVM-SAME: <2 x double> {{.*}} [[A:%.*]], <2 x double> {{.*}} [[B:%.*]], <2 x double> {{.*}} [[C:%.*]]) {{.*}} {
 // LLVM:      [[A_I:%.*]] = bitcast <2 x double> [[A]] to <2 x i64>
 // LLVM-NEXT: [[B_I:%.*]] = bitcast <2 x double> [[B]] to <2 x i64>
