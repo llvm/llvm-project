@@ -306,6 +306,7 @@ TEST(LlvmLibcSharedMathTest, AllFloat) {
   EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::rintf(0.0f));
   EXPECT_EQ(1, LIBC_NAMESPACE::shared::iscanonicalf(0.0f));
   EXPECT_EQ(0, LIBC_NAMESPACE::shared::issignalingf(0.0f));
+  EXPECT_TRUE(FPBits(LIBC_NAMESPACE::shared::nanf("")).is_nan());
 }
 
 TEST(LlvmLibcSharedMathTest, AllDouble) {
@@ -436,6 +437,7 @@ TEST(LlvmLibcSharedMathTest, AllDouble) {
   EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::rint(0.0));
   EXPECT_EQ(1, LIBC_NAMESPACE::shared::iscanonical(0.0L));
   EXPECT_EQ(0, LIBC_NAMESPACE::shared::issignaling(0.0));
+  EXPECT_TRUE(FPBits(LIBC_NAMESPACE::shared::nan("")).is_nan());
 }
 
 // TODO: Enable the tests when double-double type is supported.
@@ -548,6 +550,7 @@ TEST(LlvmLibcSharedMathTest, AllLongDouble) {
   EXPECT_FP_EQ(0x0p+0L, LIBC_NAMESPACE::shared::rintl(0.0L));
   EXPECT_EQ(1, LIBC_NAMESPACE::shared::iscanonicall(0.0L));
   EXPECT_EQ(0, LIBC_NAMESPACE::shared::issignalingl(0.0L));
+  EXPECT_TRUE(FPBits(LIBC_NAMESPACE::shared::nanl("")).is_nan());
 }
 
 #endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
