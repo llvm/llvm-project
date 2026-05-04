@@ -339,7 +339,7 @@ template <typename T, typename ST> struct omptarget_nvptx_LoopSupport {
 
   static uint64_t NextIter() {
     __kmpc_impl_lanemask_t active = mapping::activemask();
-    uint32_t leader = utils::ffs(active) - 1;
+    uint32_t leader = utils::ctz(active);
     uint32_t change = utils::popc(active);
     __kmpc_impl_lanemask_t lane_mask_lt = mapping::lanemaskLT();
     unsigned int rank = utils::popc(active & lane_mask_lt);

@@ -8,25 +8,20 @@
 
 #include "src/sys/mman/mprotect.h"
 
-#include "src/__support/OSUtil/syscall.h" // For internal syscall function.
+#include "src/__support/OSUtil/linux/syscall_wrappers/mprotect.h"
 #include "src/__support/common.h"
-
-#include "src/__support/error_or.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/sys/mman/linux/mprotect_common.h"
-#include <sys/syscall.h> // For syscall numbers.
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, mprotect, (void *addr, size_t size, int prot)) {
-  ErrorOr<int> result =
-      LIBC_NAMESPACE::mprotect_common::mprotect_impl(addr, size, prot);
-  if (!result.has_value()) {
+  auto result = linux_syscalls::mprotect(addr, size, prot);
+  if (!result) {
     libc_errno = result.error();
     return -1;
   }
-  return result.value();
+  return 0;
 }
 
 } // namespace LIBC_NAMESPACE_DECL

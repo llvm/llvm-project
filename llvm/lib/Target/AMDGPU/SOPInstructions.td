@@ -1736,6 +1736,7 @@ def ASYNCMARK : SPseudoInstSI<(outs), (ins),
 def WAIT_ASYNCMARK : SOPP_Pseudo <"", (ins s16imm:$simm16), "$simm16",
     [(int_amdgcn_wait_asyncmark timm:$simm16)]> {
     let maybeAtomic = 0;
+    let Size = 0;
     let isMeta = 1;
 }
 }

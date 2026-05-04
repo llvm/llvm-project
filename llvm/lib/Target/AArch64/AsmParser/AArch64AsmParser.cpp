@@ -4693,7 +4693,7 @@ bool AArch64AsmParser::parseSymbolicImmVal(const MCExpr *&ImmVal) {
     ImmVal = MCSpecifierExpr::create(ImmVal, RefKind, getContext(), Loc);
 
   SMLoc EndLoc;
-  if (getContext().getAsmInfo()->hasSubsectionsViaSymbols()) {
+  if (getContext().getAsmInfo().hasSubsectionsViaSymbols()) {
     if (getParser().parseAtSpecifier(ImmVal, EndLoc))
       return true;
     const MCExpr *Term;
