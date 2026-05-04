@@ -166,6 +166,16 @@ int main(int argc, char **argv) {
     return 1;
   }
 
+  if (VScale == 0) {
+    WithColor::error() << "--vscale value must be positive\n";
+    return 1;
+  }
+
+  if (!isPowerOf2_32(VScale)) {
+    WithColor::error() << "--vscale value must be a power of 2\n";
+    return 1;
+  }
+
   LLVMContext Context;
 
   // Load the bitcode...

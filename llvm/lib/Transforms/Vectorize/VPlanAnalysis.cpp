@@ -73,6 +73,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
 
   switch (Opcode) {
   case Instruction::ExtractElement:
+  case Instruction::InsertElement:
   case Instruction::Freeze:
   case Instruction::PHI:
   case VPInstruction::Broadcast:
@@ -392,24 +393,26 @@ bool VPDominatorTree::properlyDominates(const VPRecipeBase *A,
   return Base::properlyDominates(ParentA, ParentB);
 }
 
-InstructionCost VPRegisterUsage::spillCost(VPCostContext &Ctx,
-                                           unsigned OverrideMaxNumRegs) const {
+InstructionCost
+VPRegisterUsage::spillCost(const TargetTransformInfo &TTI,
+                           TargetTransformInfo::TargetCostKind CostKind,
+                           unsigned OverrideMaxNumRegs) const {
   InstructionCost Cost;
   for (const auto &[RegClass, MaxUsers] : MaxLocalUsers) {
     unsigned AvailableRegs = OverrideMaxNumRegs > 0
                                  ? OverrideMaxNumRegs
-                                 : Ctx.TTI.getNumberOfRegisters(RegClass);
+                                 : TTI.getNumberOfRegisters(RegClass);
     if (MaxUsers > AvailableRegs) {
       // Assume that for each register used past what's available we get one
       // spill and reload.
       unsigned Spills = MaxUsers - AvailableRegs;
       InstructionCost SpillCost =
-          Ctx.TTI.getRegisterClassSpillCost(RegClass, Ctx.CostKind) +
-          Ctx.TTI.getRegisterClassReloadCost(RegClass, Ctx.CostKind);
+          TTI.getRegisterClassSpillCost(RegClass, CostKind) +
+          TTI.getRegisterClassReloadCost(RegClass, CostKind);
       InstructionCost TotalCost = Spills * SpillCost;
       LLVM_DEBUG(dbgs() << "LV(REG): Cost of " << TotalCost << " from "
                         << Spills << " spills of "
-                        << Ctx.TTI.getRegisterClassName(RegClass) << "\n");
+                        << TTI.getRegisterClassName(RegClass) << "\n");
       Cost += TotalCost;
     }
   }

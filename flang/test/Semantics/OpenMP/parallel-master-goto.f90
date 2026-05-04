@@ -4,7 +4,6 @@
 !$omp parallel
 do i = 1, 2
 !ERROR: invalid branch into an OpenMP structured block
-!ERROR: invalid branch leaving an OpenMP structured block
   goto 10
 end do
 !$omp master

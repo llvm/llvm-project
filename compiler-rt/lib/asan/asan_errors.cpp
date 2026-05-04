@@ -454,14 +454,14 @@ static bool AdjacentShadowValuesAreFullyPoisoned(u8 *s) {
 }
 
 ErrorGeneric::ErrorGeneric(u32 tid, uptr pc_, uptr bp_, uptr sp_, uptr addr,
-                           AccessType access_type_, uptr access_size_)
+                           bool is_write_, uptr access_size_)
     : ErrorBase(tid),
       addr_description(addr, access_size_, /*shouldLockThreadRegistry=*/false),
       pc(pc_),
       bp(bp_),
       sp(sp_),
       access_size(access_size_),
-      access_type(access_type_),
+      is_write(is_write_),
       shadow_val(0) {
   scariness.Clear();
   if (access_size) {
@@ -472,13 +472,7 @@ ErrorGeneric::ErrorGeneric(u32 tid, uptr pc_, uptr bp_, uptr sp_, uptr addr,
     } else if (access_size >= 10) {
       scariness.Scare(15, "multi-byte");
     }
-    if (access_type == AccessType::Write) {
-      scariness.Scare(20, "write");
-    } else if (access_type == AccessType::Read) {
-      scariness.Scare(1, "read");
-    } else if (access_type == AccessType::Assumption) {
-      scariness.Scare(1, "assumption");
-    }
+    is_write ? scariness.Scare(20, "write") : scariness.Scare(1, "read");
 
     // Determine the error type.
     bug_descr = "unknown-crash";
@@ -504,8 +498,7 @@ ErrorGeneric::ErrorGeneric(u32 tid, uptr pc_, uptr bp_, uptr sp_, uptr addr,
         case kAsanHeapFreeMagic:
           bug_descr = "heap-use-after-free";
           bug_type_score = 20;
-          if (access_type == AccessType::Read)
-            read_after_free_bonus = 18;
+          if (!is_write) read_after_free_bonus = 18;
           break;
         case kAsanStackLeftRedzoneMagic:
           bug_descr = "stack-buffer-underflow";
@@ -525,8 +518,7 @@ ErrorGeneric::ErrorGeneric(u32 tid, uptr pc_, uptr bp_, uptr sp_, uptr addr,
         case kAsanStackAfterReturnMagic:
           bug_descr = "stack-use-after-return";
           bug_type_score = 30;
-          if (access_type == AccessType::Read)
-            read_after_free_bonus = 18;
+          if (!is_write) read_after_free_bonus = 18;
           break;
         case kAsanUserPoisonedMemoryMagic:
           bug_descr = "use-after-poison";
@@ -665,8 +657,11 @@ static void CheckPoisonRecords(uptr addr) {
     shadow_addr++;
   u8 shadow_val = *shadow_addr;
 
-  if (shadow_val != kAsanUserPoisonedMemoryMagic)
+  if (shadow_val != kAsanUserPoisonedMemoryMagic &&
+      shadow_val != kAsanContiguousContainerOOBMagic &&
+      shadow_val >= ASAN_SHADOW_GRANULARITY) {
     return;
+  }
 
   Printf("\n");
 
@@ -682,13 +677,12 @@ static void CheckPoisonRecords(uptr addr) {
 
   PoisonRecord record;
   if (FindPoisonRecord(addr, record)) {
+    Printf("Memory was manually poisoned by thread T%u:\n", record.thread_id);
     StackTrace poison_stack = StackDepotGet(record.stack_id);
-    if (poison_stack.size > 0) {
-      Printf("Memory was manually poisoned by thread T%u:\n", record.thread_id);
+    if (poison_stack.size > 0)
       poison_stack.Print();
-    }
   } else {
-    Printf("ERROR: no matching poison tracking record found.\n");
+    Printf("NOTE: no matching poison tracking record found.\n");
     Printf("Try a larger value for ASAN_OPTIONS=poison_history_size=<size>.\n");
   }
 }
@@ -701,23 +695,9 @@ void ErrorGeneric::Print() {
          bug_descr, (void *)addr, (void *)pc, (void *)bp, (void *)sp);
   Printf("%s", d.Default());
 
-  const char* access_type = "ACCESS";
-  if (access_size) {
-    switch (this->access_type) {
-      case AccessType::Assumption:
-        access_type = "ASSUME";
-        break;
-      case AccessType::Read:
-        access_type = "READ";
-        break;
-      case AccessType::Write:
-        access_type = "WRITE";
-        break;
-    }
-  }
-  Printf("%s%s of size %zu at %p thread %s%s\n", d.Access(), access_type,
-         access_size, (void*)addr, AsanThreadIdAndName(tid).c_str(),
-         d.Default());
+  Printf("%s%s of size %zu at %p thread %s%s\n", d.Access(),
+         access_size ? (is_write ? "WRITE" : "READ") : "ACCESS", access_size,
+         (void *)addr, AsanThreadIdAndName(tid).c_str(), d.Default());
 
   scariness.Print();
   GET_STACK_TRACE_FATAL(pc, bp);

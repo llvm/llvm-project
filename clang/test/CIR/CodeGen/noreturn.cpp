@@ -6,7 +6,7 @@
 // RUN: FileCheck --input-file=%t.ll %s -check-prefixes=LLVM,OGCG
 
 extern "C" {
-// CIR: cir.func {{.*}} @bar() -> !s32i attributes {noreturn, nothrow} {
+// CIR: cir.func {{.*}} @bar() -> !s32i attributes {{{.*}}noreturn, nothrow} {
 // LLVM: Function Attrs:{{.*}} noreturn
 // LLVM-NEXT: define {{.*}} i32 @bar() #[[BAR_FOO_ATTR:.*]] {
 __attribute((noreturn))
@@ -17,7 +17,7 @@ int bar() { }
 // lowering puts the trap decl at the end, so it isn't here to worry about.
 // OGCG: declare void @llvm.trap
 
-// CIR: cir.func {{.*}} @foo() -> !s32i attributes {noreturn, nothrow} {
+// CIR: cir.func {{.*}} @foo() -> !s32i attributes {{{.*}}noreturn, nothrow} {
 // LLVM: Function Attrs:{{.*}} noreturn
 // LLVM-NEXT: define {{.*}} i32 @foo() #[[BAR_FOO_ATTR]] {
 [[noreturn]]

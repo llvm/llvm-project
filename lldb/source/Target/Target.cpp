@@ -38,6 +38,7 @@
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/Interfaces/ScriptedBreakpointInterface.h"
+#include "lldb/Interpreter/Interfaces/ScriptedHookInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedStopHookInterface.h"
 #include "lldb/Interpreter/OptionGroupWatchpoint.h"
 #include "lldb/Interpreter/OptionValueEnumeration.h"
@@ -222,6 +223,8 @@ void Target::PrimeFromDummyTarget(Target &target) {
   m_stop_hooks = target.m_stop_hooks;
   m_stop_hook_next_id = target.m_stop_hook_next_id;
   m_internal_stop_hooks = target.m_internal_stop_hooks;
+  m_hooks = target.m_hooks;
+  m_hook_next_id = target.m_hook_next_id;
 
   for (const auto &breakpoint_sp : target.m_breakpoint_list.Breakpoints()) {
     if (breakpoint_sp->IsInternal())
@@ -1859,6 +1862,7 @@ void Target::ModulesDidLoad(ModuleList &module_list) {
     if (m_process_sp) {
       m_process_sp->ModulesDidLoad(module_list);
     }
+    RunModuleHooks(/*is_load=*/true);
     auto data_sp =
         std::make_shared<TargetEventData>(shared_from_this(), module_list);
     BroadcastEvent(eBroadcastBitModulesLoaded, data_sp);
@@ -1918,6 +1922,8 @@ void Target::ModulesDidUnload(ModuleList &module_list, bool delete_locations) {
 
     if (should_flush_type_systems)
       m_scratch_type_system_map.Clear();
+
+    RunModuleHooks(/*is_load=*/false);
   }
 }
 
@@ -3149,7 +3155,16 @@ bool Target::RunStopHooks(bool at_initial_stop) {
     if (is_active(hook))
       active_hooks.push_back(hook);
   }
-  if (active_hooks.empty())
+
+  // Also collect unified hooks that fire on process stop.
+  std::vector<HookSP> active_unified_hooks;
+  for (auto &[_, hook] : m_hooks) {
+    if (hook->IsEnabled() && hook->FiresOn(Hook::kProcessStop) &&
+        (!at_initial_stop || hook->GetRunAtInitialStop()))
+      active_unified_hooks.push_back(hook);
+  }
+
+  if (active_hooks.empty() && active_unified_hooks.empty())
     return false;
 
   // Make sure we check that we are not stopped because of us running a user
@@ -3161,8 +3176,6 @@ bool Target::RunStopHooks(bool at_initial_stop) {
   uint32_t last_natural_stop = m_process_sp->GetModIDRef().GetLastNaturalStopID();
   if (last_natural_stop != 0 && m_latest_stop_hook_id == last_natural_stop)
     return false;
-
-  m_latest_stop_hook_id = last_natural_stop;
 
   std::vector<ExecutionContext> exc_ctx_with_reasons;
 
@@ -3195,11 +3208,15 @@ bool Target::RunStopHooks(bool at_initial_stop) {
     }
   }
 
+  m_latest_stop_hook_id = last_natural_stop;
+
   StreamSP output_sp = m_debugger.GetAsyncOutputStream();
   llvm::scope_exit on_exit([output_sp] { output_sp->Flush(); });
 
   size_t num_hooks_with_output = llvm::count_if(
       active_hooks, [](auto h) { return !h->GetSuppressOutput(); });
+  num_hooks_with_output += llvm::count_if(
+      active_unified_hooks, [](auto h) { return !h->GetSuppressOutput(); });
   bool print_hook_header = (num_hooks_with_output > 1);
   bool print_thread_header = (num_exe_ctx > 1);
   bool should_stop = false;
@@ -3258,6 +3275,53 @@ bool Target::RunStopHooks(bool at_initial_stop) {
         // FIXME: if we are doing non-stop mode for real, we would have to
         // check that OUR thread was restarted, otherwise we should keep
         // processing stop hooks.
+        return true;
+      }
+    }
+  }
+
+  // Run unified hooks that fire on process stop.
+  for (auto cur_hook_sp : active_unified_hooks) {
+    bool any_thread_matched = false;
+    for (auto exc_ctx : exc_ctx_with_reasons) {
+      if (!cur_hook_sp->ExecutionContextPasses(exc_ctx))
+        continue;
+
+      bool suppress_output = cur_hook_sp->GetSuppressOutput();
+      if (print_hook_header && !any_thread_matched && !suppress_output) {
+        StreamString s;
+        cur_hook_sp->GetDescription(s, eDescriptionLevelBrief);
+        if (s.GetSize() != 0)
+          output_sp->Printf("\n- Hook %" PRIu64 " (%s)\n", cur_hook_sp->GetID(),
+                            s.GetData());
+        else
+          output_sp->Printf("\n- Hook %" PRIu64 "\n", cur_hook_sp->GetID());
+        any_thread_matched = true;
+      }
+
+      if (print_thread_header && !suppress_output)
+        output_sp->Printf("-- Thread %d\n",
+                          exc_ctx.GetThreadPtr()->GetIndexID());
+
+      auto result = cur_hook_sp->HandleStop(exc_ctx, output_sp);
+      switch (result) {
+      case StopHook::StopHookResult::KeepStopped:
+        if (cur_hook_sp->GetAutoContinue())
+          requested_continue = true;
+        else
+          should_stop = true;
+        break;
+      case StopHook::StopHookResult::RequestContinue:
+        requested_continue = true;
+        break;
+      case StopHook::StopHookResult::NoPreference:
+        break;
+      case StopHook::StopHookResult::AlreadyContinued:
+        output_sp->Printf("\nAborting stop hooks, hook %" PRIu64
+                          " set the program running.\n"
+                          "  Consider using '-G true' to make "
+                          "stop hooks auto-continue.\n",
+                          cur_hook_sp->GetID());
         return true;
       }
     }
@@ -4247,6 +4311,427 @@ void Target::StopHookScripted::GetSubclassDescription(
   };
 
   as_dict->ForEach(print_one_element);
+}
+
+// Hook
+
+Target::Hook::Hook(lldb::TargetSP target_sp, lldb::user_id_t uid, HookKind kind)
+    : UserID(uid), m_target_sp(std::move(target_sp)), m_kind(kind) {}
+
+Target::Hook::Hook(const Hook &rhs)
+    : UserID(rhs.GetID()), m_target_sp(rhs.m_target_sp), m_kind(rhs.m_kind),
+      m_enabled(rhs.m_enabled), m_trigger_mask(rhs.m_trigger_mask),
+      m_sc_specifier_sp(rhs.m_sc_specifier_sp),
+      m_at_initial_stop(rhs.m_at_initial_stop),
+      m_auto_continue(rhs.m_auto_continue),
+      m_suppress_output(rhs.m_suppress_output) {
+  if (rhs.m_thread_spec_up)
+    m_thread_spec_up = std::make_unique<ThreadSpec>(*rhs.m_thread_spec_up);
+}
+
+void Target::Hook::SetSCSpecifier(SymbolContextSpecifier *specifier) {
+  m_sc_specifier_sp.reset(specifier);
+}
+
+void Target::Hook::SetThreadSpecifier(ThreadSpec *specifier) {
+  m_thread_spec_up.reset(specifier);
+}
+
+bool Target::Hook::ExecutionContextPasses(const ExecutionContext &exc_ctx) {
+  SymbolContextSpecifier *specifier = GetSCSpecifier();
+  if (!specifier)
+    return true;
+
+  bool will_run = true;
+  if (exc_ctx.GetFramePtr())
+    will_run = specifier->SymbolContextMatches(
+        exc_ctx.GetFramePtr()->GetSymbolContext(eSymbolContextEverything));
+  if (will_run && GetThreadSpecifier() != nullptr)
+    will_run =
+        GetThreadSpecifier()->ThreadPassesBasicTests(exc_ctx.GetThreadRef());
+
+  return will_run;
+}
+
+void Target::Hook::GetDescription(Stream &s,
+                                  lldb::DescriptionLevel level) const {
+  s.Printf("Hook: %" PRIu64 "\n", GetID());
+  if (level == eDescriptionLevelBrief)
+    return;
+  s.IndentMore();
+  s.Indent();
+  s.Printf("State: %s\n", m_enabled ? "enabled" : "disabled");
+
+  {
+    std::string fires_on;
+    if (m_trigger_mask & kModulesLoaded)
+      fires_on += "load";
+    if (m_trigger_mask & kModulesUnloaded) {
+      if (!fires_on.empty())
+        fires_on += ", ";
+      fires_on += "unload";
+    }
+    if (m_trigger_mask & kProcessStop) {
+      if (!fires_on.empty())
+        fires_on += ", ";
+      fires_on += "stop";
+    }
+    if (!fires_on.empty()) {
+      s.Indent();
+      s.Printf("Triggers: %s\n", fires_on.c_str());
+    }
+  }
+  // Subclasses add their content (commands or class) then call
+  // GetFilterDescription to print filters.
+  s.IndentLess();
+}
+
+void Target::Hook::GetFilterDescription(Stream &s,
+                                        lldb::DescriptionLevel level) const {
+  s.IndentMore();
+
+  if (m_auto_continue)
+    s.Indent("AutoContinue on\n");
+
+  if (m_sc_specifier_sp) {
+    s.Indent();
+    s.PutCString("Specifier:\n");
+    s.IndentMore();
+    m_sc_specifier_sp->GetDescription(&s, level);
+    s.IndentLess();
+  }
+
+  if (m_thread_spec_up) {
+    StreamString tmp;
+    s.Indent("Thread:\n");
+    m_thread_spec_up->GetDescription(&tmp, level);
+    s.IndentMore();
+    s.Indent(tmp.GetString());
+    s.PutCString("\n");
+    s.IndentLess();
+  }
+
+  s.IndentLess();
+}
+
+void Target::HookCommandLine::GetDescription(
+    Stream &s, lldb::DescriptionLevel level) const {
+  Hook::GetDescription(s, level);
+  if (level == eDescriptionLevelBrief) {
+    if (m_commands.GetSize() == 1)
+      s.PutCString(m_commands.GetStringAtIndex(0));
+    else
+      s.Printf("%" PRIu64 " commands", (uint64_t)m_commands.GetSize());
+    return;
+  }
+
+  // Commands come after the header (ID, State, Triggers) but before filters.
+  s.IndentMore();
+  s.Indent("Commands: \n");
+  s.IndentMore();
+  for (uint32_t i = 0; i < m_commands.GetSize(); i++) {
+    s.Indent(m_commands.GetStringAtIndex(i));
+    s.PutCString("\n");
+  }
+  s.IndentLess();
+  s.IndentLess();
+
+  GetFilterDescription(s, level);
+}
+
+// HookCommandLine
+
+void Target::HookCommandLine::SetActionFromString(const std::string &string) {
+  GetCommands().SplitIntoLines(string);
+}
+
+void Target::HookCommandLine::SetActionFromStrings(
+    const std::vector<std::string> &strings) {
+  for (const auto &string : strings)
+    GetCommands().AppendString(string.c_str());
+}
+
+void Target::HookCommandLine::HandleModuleLoaded(StreamSP output_sp) {
+  if (!m_commands.GetSize())
+    return;
+
+  TargetSP target_sp = GetTarget();
+  if (!target_sp)
+    return;
+
+  CommandReturnObject result(false);
+  result.SetImmediateOutputStream(output_sp);
+  result.SetInteractive(false);
+  Debugger &debugger = target_sp->GetDebugger();
+
+  ExecutionContext exe_ctx;
+  if (target_sp->GetProcessSP())
+    exe_ctx.SetContext(target_sp->GetProcessSP());
+  else
+    exe_ctx.SetContext(target_sp, false);
+
+  CommandInterpreterRunOptions options;
+  options.SetStopOnContinue(true);
+  options.SetStopOnError(true);
+  options.SetEchoCommands(false);
+  options.SetPrintResults(true);
+  options.SetPrintErrors(true);
+  options.SetAddToHistory(false);
+
+  bool old_async = debugger.GetAsyncExecution();
+  debugger.SetAsyncExecution(true);
+  debugger.GetCommandInterpreter().HandleCommands(GetCommands(), exe_ctx,
+                                                  options, result);
+  debugger.SetAsyncExecution(old_async);
+}
+
+void Target::HookCommandLine::HandleModuleUnloaded(StreamSP output_sp) {
+  // Command-based hooks run the same commands on unload as on load.
+  HandleModuleLoaded(output_sp);
+}
+
+Target::StopHook::StopHookResult
+Target::HookCommandLine::HandleStop(ExecutionContext &exc_ctx,
+                                    StreamSP output_sp) {
+  assert(exc_ctx.GetTargetPtr() && "Can't call HandleStop on a context "
+                                   "with no target");
+
+  if (!m_commands.GetSize())
+    return StopHook::StopHookResult::KeepStopped;
+
+  CommandReturnObject result(false);
+  result.SetImmediateOutputStream(output_sp);
+  result.SetInteractive(false);
+  Debugger &debugger = exc_ctx.GetTargetPtr()->GetDebugger();
+  CommandInterpreterRunOptions options;
+  options.SetStopOnContinue(true);
+  options.SetStopOnError(true);
+  options.SetEchoCommands(false);
+  options.SetPrintResults(true);
+  options.SetPrintErrors(true);
+  options.SetAddToHistory(false);
+
+  bool old_async = debugger.GetAsyncExecution();
+  debugger.SetAsyncExecution(true);
+  debugger.GetCommandInterpreter().HandleCommands(GetCommands(), exc_ctx,
+                                                  options, result);
+  debugger.SetAsyncExecution(old_async);
+  lldb::ReturnStatus status = result.GetStatus();
+  if (status == eReturnStatusSuccessContinuingNoResult ||
+      status == eReturnStatusSuccessContinuingResult)
+    return StopHook::StopHookResult::AlreadyContinued;
+  return StopHook::StopHookResult::KeepStopped;
+}
+
+// HookScripted
+
+Status Target::HookScripted::SetScriptCallback(
+    std::string class_name, StructuredData::ObjectSP extra_args_sp) {
+  ScriptInterpreter *script_interp =
+      GetTarget()->GetDebugger().GetScriptInterpreter();
+  if (!script_interp)
+    return Status::FromErrorString("No script interpreter installed.");
+
+  m_interface_sp = script_interp->CreateScriptedHookInterface();
+  if (!m_interface_sp)
+    return Status::FromErrorStringWithFormat(
+        "ScriptedHook::%s () - ERROR: %s", __FUNCTION__,
+        "Script interpreter couldn't create Scripted Hook Interface");
+
+  m_class_name = std::move(class_name);
+  m_extra_args.SetObjectSP(extra_args_sp);
+
+  auto obj_or_err = m_interface_sp->CreatePluginObject(
+      m_class_name, GetTarget(), m_extra_args);
+  if (!obj_or_err)
+    return Status::FromError(obj_or_err.takeError());
+
+  StructuredData::ObjectSP object_sp = *obj_or_err;
+  if (!object_sp || !object_sp->IsValid())
+    return Status::FromErrorStringWithFormat(
+        "ScriptedHook::%s () - ERROR: %s", __FUNCTION__,
+        "Failed to create valid script object");
+
+  // Determine which triggers the class supports by checking which callback
+  // methods it implements.
+  auto methods = m_interface_sp->GetSupportedMethods();
+  if (!methods.any())
+    return Status::FromErrorString(
+        "hook class implements none of the expected methods "
+        "(handle_module_loaded, handle_module_unloaded, handle_stop)");
+
+  if (methods.handle_module_loaded)
+    m_trigger_mask |= kModulesLoaded;
+  if (methods.handle_module_unloaded)
+    m_trigger_mask |= kModulesUnloaded;
+  if (methods.handle_stop)
+    m_trigger_mask |= kProcessStop;
+
+  return {};
+}
+
+void Target::HookScripted::HandleModuleLoaded(StreamSP output_sp) {
+  if (!m_interface_sp)
+    return;
+
+  StreamSP stream = std::make_shared<StreamString>();
+  m_interface_sp->HandleModuleLoaded(stream);
+  output_sp->PutCString(static_cast<StreamString *>(stream.get())->GetData());
+}
+
+void Target::HookScripted::HandleModuleUnloaded(StreamSP output_sp) {
+  if (!m_interface_sp)
+    return;
+
+  StreamSP stream = std::make_shared<StreamString>();
+  m_interface_sp->HandleModuleUnloaded(stream);
+  output_sp->PutCString(static_cast<StreamString *>(stream.get())->GetData());
+}
+
+Target::StopHook::StopHookResult
+Target::HookScripted::HandleStop(ExecutionContext &exc_ctx,
+                                 StreamSP output_sp) {
+  assert(exc_ctx.GetTargetPtr() && "Can't call HandleStop on a context "
+                                   "with no target");
+
+  if (!m_interface_sp)
+    return StopHook::StopHookResult::KeepStopped;
+
+  lldb::StreamSP stream = std::make_shared<lldb_private::StreamString>();
+  auto should_stop_or_err = m_interface_sp->HandleStop(exc_ctx, stream);
+  output_sp->PutCString(static_cast<StreamString *>(stream.get())->GetData());
+  if (!should_stop_or_err)
+    return StopHook::StopHookResult::KeepStopped;
+
+  return *should_stop_or_err ? StopHook::StopHookResult::KeepStopped
+                             : StopHook::StopHookResult::RequestContinue;
+}
+
+void Target::HookScripted::GetDescription(Stream &s,
+                                          lldb::DescriptionLevel level) const {
+  Hook::GetDescription(s, level);
+  if (level == eDescriptionLevelBrief) {
+    s.PutCString(m_class_name);
+    return;
+  }
+
+  // Class and args come after the header (ID, State, Triggers) but before
+  // filters.
+  s.IndentMore();
+  s.Indent("Class: ");
+  s.Printf("%s\n", m_class_name.c_str());
+
+  if (m_extra_args.IsValid()) {
+    StructuredData::ObjectSP object_sp = m_extra_args.GetObjectSP();
+    if (object_sp && object_sp->IsValid()) {
+      StructuredData::Dictionary *as_dict = object_sp->GetAsDictionary();
+      if (as_dict && as_dict->IsValid() && as_dict->GetSize() > 0) {
+        s.Indent("Args:\n");
+        s.IndentMore();
+
+        auto print_one_element = [&s](llvm::StringRef key,
+                                      StructuredData::Object *object) {
+          s.Indent();
+          s.Format("{0} : {1}\n", key, object->GetStringValue());
+          return true;
+        };
+
+        as_dict->ForEach(print_one_element);
+        s.IndentLess();
+      }
+    }
+  }
+  s.IndentLess();
+
+  GetFilterDescription(s, level);
+}
+
+// Hook management methods
+
+Target::HookSP Target::CreateHook(Hook::HookKind kind) {
+  lldb::user_id_t new_uid = ++m_hook_next_id;
+  HookSP hook_sp;
+  switch (kind) {
+  case Hook::HookKind::CommandBased:
+    hook_sp.reset(new HookCommandLine(shared_from_this(), new_uid));
+    break;
+  case Hook::HookKind::ScriptBased:
+    hook_sp.reset(new HookScripted(shared_from_this(), new_uid));
+    break;
+  }
+  m_hooks[new_uid] = hook_sp;
+  return hook_sp;
+}
+
+void Target::UndoCreateHook(lldb::user_id_t uid) {
+  if (!RemoveHookByID(uid))
+    return;
+  if (uid > 0)
+    --m_hook_next_id;
+}
+
+bool Target::RemoveHookByID(lldb::user_id_t uid) {
+  size_t num_removed = m_hooks.erase(uid);
+  return (num_removed != 0);
+}
+
+void Target::RemoveAllHooks() { m_hooks.clear(); }
+
+Target::HookSP Target::GetHookByID(lldb::user_id_t uid) {
+  auto iter = m_hooks.find(uid);
+  if (iter == m_hooks.end())
+    return {};
+  return iter->second;
+}
+
+Target::HookSP Target::GetHookAtIndex(size_t index) {
+  if (index >= m_hooks.size())
+    return {};
+  auto iter = m_hooks.begin();
+  std::advance(iter, index);
+  return iter->second;
+}
+
+bool Target::SetHookEnabledStateByID(lldb::user_id_t uid, bool enabled) {
+  auto iter = m_hooks.find(uid);
+  if (iter == m_hooks.end())
+    return false;
+  iter->second->SetIsEnabled(enabled);
+  return true;
+}
+
+void Target::SetAllHooksEnabledState(bool enabled) {
+  for (auto &[_, hook] : m_hooks)
+    hook->SetIsEnabled(enabled);
+}
+
+void Target::RunModuleHooks(bool is_load) {
+  if (m_hooks.empty())
+    return;
+
+  uint32_t trigger = is_load ? Hook::kModulesLoaded : Hook::kModulesUnloaded;
+
+  // Copy active hooks into a local vector before iterating, in case a
+  // callback modifies m_hooks (same pattern as RunStopHooks).
+  std::vector<HookSP> active_hooks;
+  for (auto &[_, hook_sp] : m_hooks) {
+    if (hook_sp->IsEnabled() && hook_sp->FiresOn(trigger))
+      active_hooks.push_back(hook_sp);
+  }
+
+  if (active_hooks.empty())
+    return;
+
+  StreamSP output_sp = m_debugger.GetAsyncOutputStream();
+
+  for (auto &hook_sp : active_hooks) {
+    if (is_load)
+      hook_sp->HandleModuleLoaded(output_sp);
+    else
+      hook_sp->HandleModuleUnloaded(output_sp);
+  }
+
+  output_sp->Flush();
 }
 
 static constexpr OptionEnumValueElement g_dynamic_value_types[] = {
