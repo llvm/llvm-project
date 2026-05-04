@@ -462,8 +462,7 @@ public:
     auto It = Infos.find(Ty);
     if (It != Infos.end())
       return It->second;
-    auto [NewIt, Inserted] = Infos.try_emplace(Ty, Ty);
-    return NewIt->second;
+    return Infos.try_emplace(Ty, Ty).first->second;
   }
 };
 
