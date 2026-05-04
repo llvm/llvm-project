@@ -26,6 +26,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/MatrixUtils.h"
 #include "clang/AST/ParentMapContext.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtVisitor.h"
@@ -2247,8 +2248,8 @@ Value *ScalarExprEmitter::VisitMatrixSingleSubscriptExpr(
 
   for (unsigned Col = 0; Col != NumColumns; ++Col) {
     Value *ColVal = llvm::ConstantInt::get(RowIdx->getType(), Col);
-    bool IsMatrixRowMajor = CGF.getLangOpts().getDefaultMatrixMemoryLayout() ==
-                            LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+    bool IsMatrixRowMajor =
+        isMatrixRowMajor(CGF.getLangOpts(), E->getBase()->getType());
     Value *EltIdx = MB.CreateIndex(RowIdx, ColVal, NumRows, NumColumns,
                                    IsMatrixRowMajor, "matrix_row_idx");
     Value *Elt =
@@ -2274,8 +2275,8 @@ Value *ScalarExprEmitter::VisitMatrixSubscriptExpr(MatrixSubscriptExpr *E) {
   Value *Idx;
   unsigned NumCols = MatrixTy->getNumColumns();
   unsigned NumRows = MatrixTy->getNumRows();
-  bool IsMatrixRowMajor = CGF.getLangOpts().getDefaultMatrixMemoryLayout() ==
-                          LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+  bool IsMatrixRowMajor =
+      isMatrixRowMajor(CGF.getLangOpts(), E->getBase()->getType());
   Idx = MB.CreateIndex(RowIdx, ColumnIdx, NumRows, NumCols, IsMatrixRowMajor);
 
   if (CGF.CGM.getCodeGenOpts().OptimizationLevel > 0)
@@ -2360,8 +2361,7 @@ Value *ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
   // column-major positions rather than inserting sequentially and shuffling.
   const ConstantMatrixType *ColMajorMT = nullptr;
   if (const auto *MT = E->getType()->getAs<ConstantMatrixType>();
-      MT && CGF.getLangOpts().getDefaultMatrixMemoryLayout() ==
-                LangOptions::MatrixMemoryLayout::MatrixColMajor)
+      MT && isMatrixColumnMajor(CGF.getLangOpts(), E->getType()))
     ColMajorMT = MT;
 
   // Loop over initializers collecting the Value for each, and remembering
@@ -2600,8 +2600,7 @@ static Value *EmitHLSLElementwiseCast(CodeGenFunction &CGF, LValue SrcVal,
            "Flattened type on RHS must have the same number or more elements "
            "than vector on LHS.");
 
-    bool IsRowMajor = CGF.getLangOpts().getDefaultMatrixMemoryLayout() ==
-                      LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+    bool IsRowMajor = isMatrixRowMajor(CGF.getLangOpts(), DestTy);
 
     llvm::Value *V = CGF.Builder.CreateLoad(
         CGF.CreateIRTempWithoutCast(DestTy, "flatcast.tmp"));
@@ -3180,8 +3179,11 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
       assert(SrcMatTy && "Source type must be a matrix type.");
       assert(NumRows <= SrcMatTy->getNumRows());
       assert(NumCols <= SrcMatTy->getNumColumns());
-      bool IsRowMajor = CGF.getLangOpts().getDefaultMatrixMemoryLayout() ==
-                        LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+
+      // isMatrixRowMajor needs the full sugared QualType to find matrix layout
+      // attrs. So use Use E->getType() (the source QualType) rather than
+      // SrcMatTy b\c getAs<ConstantMatrixType>() strips the sugar.
+      bool IsRowMajor = isMatrixRowMajor(CGF.getLangOpts(), E->getType());
       for (unsigned R = 0; R < NumRows; R++)
         for (unsigned C = 0; C < NumCols; C++)
           Mask[MatTy->getFlattenedIndex(R, C, IsRowMajor)] =

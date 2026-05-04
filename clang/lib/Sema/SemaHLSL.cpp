@@ -2704,6 +2704,35 @@ static bool isMatrixOrArrayOfMatrix(const ASTContext &Ctx, QualType QT) {
   return Ty->isDependentType() || Ty->isConstantMatrixType();
 }
 
+/// Embeds the row/column-major layout ( \p AttrK ) directly into the
+/// matrix QualType of \p T, preserving any surrounding type sugar.
+static QualType wrapMatrixWithLayoutAttr(ASTContext &C, QualType T,
+                                         attr::Kind AttrK) {
+  if (T.isNull() || T->isDependentType())
+    return T;
+
+  if (const auto *AT = dyn_cast<ArrayType>(T.getTypePtr())) {
+    QualType Inner = wrapMatrixWithLayoutAttr(C, AT->getElementType(), AttrK);
+    if (Inner == AT->getElementType())
+      return T;
+
+    // fallthrough Inner != AT->getElementType()
+    if (const auto *CAT = dyn_cast<ConstantArrayType>(T.getTypePtr()))
+      return C.getConstantArrayType(Inner, CAT->getSize(), CAT->getSizeExpr(),
+                                    CAT->getSizeModifier(),
+                                    CAT->getIndexTypeCVRQualifiers());
+    // Note The IncompleteArrayType case would handle something like row_major
+    // float2x3 arr[] but HLSL doesn't support this syntax. so we can't test it.
+    // consider removing.
+    if (const auto *IAT = dyn_cast<IncompleteArrayType>(T.getTypePtr()))
+      return C.getIncompleteArrayType(Inner, IAT->getSizeModifier(),
+                                      IAT->getIndexTypeCVRQualifiers());
+  }
+  if (T->isConstantMatrixType())
+    return C.getAttributedType(AttrK, T, T);
+  return T;
+}
+
 static bool diagnoseMatrixLayoutOnNonMatrix(Sema &SemaRef, Decl *D,
                                             SourceLocation Loc,
                                             const IdentifierInfo *AttrName) {
@@ -2731,6 +2760,53 @@ static bool diagnoseMatrixLayoutOnNonMatrix(Sema &SemaRef, Decl *D,
   return true;
 }
 
+/// Embeds layout attributes into the matrix type so no decl lookups are
+/// needed.
+static void applyHLSLMatrixLayoutTypeAttr(ASTContext &Ctx, Decl *D,
+                                          const ParsedAttr &AL) {
+  attr::Kind AttrK =
+      AL.getSemanticSpelling() == HLSLMatrixLayoutAttr::Keyword_row_major
+          ? attr::HLSLRowMajor
+          : attr::HLSLColumnMajor;
+
+  auto *TD = dyn_cast<TypedefNameDecl>(D);
+  auto *VD = dyn_cast<ValueDecl>(D);
+
+  if (!TD && !VD)
+    return;
+
+  if (auto *FD = dyn_cast<FunctionDecl>(D)) {
+    const auto *FPT = FD->getType()->getAs<FunctionProtoType>();
+    if (!FPT)
+      return;
+
+    QualType NewRet =
+        wrapMatrixWithLayoutAttr(Ctx, FPT->getReturnType(), AttrK);
+    if (NewRet == FPT->getReturnType())
+      return;
+
+    FD->setType(Ctx.getFunctionType(NewRet, FPT->getParamTypes(),
+                                    FPT->getExtProtoInfo()));
+    return;
+  }
+
+  if (VD) {
+    QualType OldT = VD->getType();
+    QualType NewT = wrapMatrixWithLayoutAttr(Ctx, OldT, AttrK);
+    if (NewT != OldT)
+      VD->setType(NewT);
+    return;
+  }
+
+  if (TD) {
+    QualType OldT = TD->getUnderlyingType();
+    QualType NewT = wrapMatrixWithLayoutAttr(Ctx, OldT, AttrK);
+    if (NewT != OldT)
+      TD->setModedTypeSourceInfo(TD->getTypeSourceInfo(), NewT);
+    return;
+  }
+}
+
 void SemaHLSL::handleMatrixLayoutAttr(Decl *D, const ParsedAttr &AL) {
   // row_major and column_major are only valid on matrix types.
   if (diagnoseMatrixLayoutOnNonMatrix(SemaRef, D, AL.getLoc(),
@@ -2752,6 +2828,9 @@ void SemaHLSL::handleMatrixLayoutAttr(Decl *D, const ParsedAttr &AL) {
   }
 
   D->addAttr(::new (getASTContext()) HLSLMatrixLayoutAttr(getASTContext(), AL));
+
+  ASTContext &Ctx = getASTContext();
+  applyHLSLMatrixLayoutTypeAttr(Ctx, D, AL);
 }
 
 bool SemaHLSL::diagnoseInstantiatedMatrixLayoutAttr(

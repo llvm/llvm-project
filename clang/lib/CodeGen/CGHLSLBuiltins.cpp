@@ -13,6 +13,7 @@
 #include "CGBuiltin.h"
 #include "CGHLSLRuntime.h"
 #include "CodeGenFunction.h"
+#include "clang/AST/MatrixUtils.h"
 #include "llvm/IR/MatrixBuilder.h"
 
 using namespace clang;
@@ -1206,8 +1207,9 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     // The matrix multiply intrinsic only operates on column-major order
     // matrices. Therefore matrix memory layout transforms must be inserted
     // before and after matrix multiply intrinsics.
-    bool IsRowMajor = getLangOpts().getDefaultMatrixMemoryLayout() ==
-                      LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+    // Use whichever operand is a matrix to discover its declared layout.
+    QualType MatTy = IsMat0 ? QTy0 : QTy1;
+    bool IsRowMajor = isMatrixRowMajor(getLangOpts(), MatTy);
 
     llvm::MatrixBuilder MB(Builder);
     if (IsVec0 && IsMat1) {
@@ -1259,8 +1261,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     // For row-major, a row-major RxC matrix is equivalent to a column-major
     // CxR matrix, so transposing with swapped dimensions produces the correct
     // row-major CxR result directly.
-    bool IsRowMajor = getLangOpts().getDefaultMatrixMemoryLayout() ==
-                      LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+    bool IsRowMajor = isMatrixRowMajor(getLangOpts(), E->getArg(0)->getType());
     if (IsRowMajor)
       return MB.CreateMatrixTranspose(Op0, Cols, Rows);
     return MB.CreateMatrixTranspose(Op0, Rows, Cols);

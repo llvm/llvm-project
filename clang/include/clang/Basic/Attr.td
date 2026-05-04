@@ -5299,6 +5299,22 @@ def HLSLMatrixLayout : InheritableAttr {
   let Documentation = [HLSLMatrixLayoutDocs];
 }
 
+// Internal type-attribute markers attached to matrix QualTypes by Sema when
+// a decl carries `[[hlsl::row_major]]` / `[[hlsl::column_major]]`. They let
+// CodeGen / const-eval recover the layout from any matrix-typed expression
+// without re-walking back to the source decl.
+def HLSLRowMajor : TypeAttr {
+  let Spellings = [];
+  let LangOpts = [HLSL];
+  let Documentation = [InternalOnly];
+}
+
+def HLSLColumnMajor : TypeAttr {
+  let Spellings = [];
+  let LangOpts = [HLSL];
+  let Documentation = [InternalOnly];
+}
+
 def RandomizeLayout : InheritableAttr {
   let Spellings = [GCC<"randomize_layout">];
   let Subjects = SubjectList<[Record]>;

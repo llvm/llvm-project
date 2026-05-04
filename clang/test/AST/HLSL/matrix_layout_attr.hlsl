@@ -19,6 +19,17 @@ struct S {
   column_major float3x3 m2;
 };
 
+
+// Check to make sure the internal type-sugar marker is invisible in the
+//printed type (it has no spelling), but the `AttributedType` node and
+// the `HLSLMatrixLayoutAttr` child still appear in the AST dump.
+
 // CHECK: TypedefDecl {{.*}} RM44 'float4x4'
+// CHECK: AttributedType {{.*}} 'float4x4' sugar
 // CHECK: HLSLMatrixLayoutAttr {{.*}} row_major
 typedef row_major float4x4 RM44;
+
+// CHECK-LABEL: TypedefDecl {{.*}} CM44 'float4x4'
+// CHECK:       AttributedType {{.*}} 'float4x4' sugar
+// CHECK:       HLSLMatrixLayoutAttr {{.*}} column_major
+typedef column_major float4x4 CM44;
