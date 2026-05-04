@@ -69,6 +69,7 @@ add_header_library(
     libc.hdr.types.struct_stat
     libc.src.__support.OSUtil.linux.syscall_wrappers.statx
     libc.src.__support.common
+    libc.src.__support.libc_errno
 )
 
 add_entrypoint_object(
@@ -81,7 +82,6 @@ add_entrypoint_object(
     .kernel_statx
     libc.hdr.fcntl_macros
     libc.hdr.types.struct_stat
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -94,7 +94,6 @@ add_entrypoint_object(
     .kernel_statx
     libc.hdr.fcntl_macros
     libc.hdr.types.struct_stat
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -107,7 +106,6 @@ add_entrypoint_object(
     .kernel_statx
     libc.hdr.fcntl_macros
     libc.hdr.types.struct_stat
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(

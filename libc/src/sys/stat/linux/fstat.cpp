@@ -8,7 +8,6 @@
 
 #include "src/sys/stat/fstat.h"
 #include "kernel_statx.h"
-#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 
 #include "src/__support/common.h"
@@ -19,12 +18,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, fstat, (int fd, struct stat *statbuf)) {
-  int err = statx(fd, "", AT_EMPTY_PATH, statbuf);
-  if (err != 0) {
-    libc_errno = err;
-    return -1;
-  }
-  return 0;
+  return statx(fd, "", AT_EMPTY_PATH, statbuf);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

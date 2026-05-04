@@ -12,6 +12,7 @@
 #include "hdr/stdint_proxy.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/statx.h"
 #include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 
 #include "hdr/types/struct_stat.h"
@@ -75,8 +76,10 @@ LIBC_INLINE int statx(int dirfd, const char *__restrict path, int flags,
   ::statx_buf xbuf;
   auto result = linux_syscalls::statx(dirfd, path, flags,
                                       ::STATX_BASIC_STATS_MASK, &xbuf);
-  if (!result)
-    return result.error();
+  if (!result) {
+    libc_errno = result.error();
+    return -1;
+  }
 
   statbuf->st_dev = MKDEV(xbuf.stx_dev_major, xbuf.stx_dev_minor);
   statbuf->st_ino = static_cast<decltype(statbuf->st_ino)>(xbuf.stx_ino);
