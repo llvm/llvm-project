@@ -9,6 +9,7 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
 #include "AvoidPragmaOnceCheck.h"
+#include "DeprecatedPosixFunctionsCheck.h"
 #include "NoAssemblerCheck.h"
 #include "RestrictSystemIncludesCheck.h"
 #include "SIMDIntrinsicsCheck.h"
@@ -24,6 +25,8 @@ public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
     CheckFactories.registerCheck<AvoidPragmaOnceCheck>(
         "portability-avoid-pragma-once");
+    CheckFactories.registerCheck<DeprecatedPosixFunctionsCheck>(
+        "portability-deprecated-posix-functions");
     CheckFactories.registerCheck<NoAssemblerCheck>("portability-no-assembler");
     CheckFactories.registerCheck<RestrictSystemIncludesCheck>(
         "portability-restrict-system-includes");
