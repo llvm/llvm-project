@@ -971,9 +971,7 @@ public:
       __init_copy_ctor_external(std::__to_address(__str.__get_long_pointer()), __str.__get_long_size());
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20
-  basic_string(const basic_string& __str, const allocator_type& __a)
-      : __alloc_(__a) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string(const basic_string& __str, const allocator_type& __a) : __alloc_(__a) {
     if (!__str.__is_long()) {
       __rep_ = __str.__rep_;
       __annotate_new(__get_short_size());
@@ -1176,8 +1174,7 @@ public:
     return __self_view(typename __self_view::__assume_valid(), data(), size());
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string&
-  operator=(const basic_string& __str);
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& operator=(const basic_string& __str);
 
   template <class _Tp,
             __enable_if_t<__can_be_converted_to_string_view_v<_CharT, _Traits, _Tp> &&
@@ -2089,8 +2086,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __invariants() const;
 
 private:
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
-  __is_long() const _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __is_long() const _NOEXCEPT {
     if (__libcpp_is_constant_evaluated() && __builtin_constant_p(__rep_.__l.__is_long_)) {
       return __rep_.__l.__is_long_;
     }
@@ -2158,15 +2154,13 @@ private:
   // internal buffer accessors
   // -------------------------
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
-  __set_short_size(size_type __s) _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __set_short_size(size_type __s) _NOEXCEPT {
     _LIBCPP_ASSERT_INTERNAL(__s < __min_cap, "__s should never be greater than or equal to the short string capacity");
     __rep_.__s.__size_    = __s;
     __rep_.__s.__is_long_ = false;
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type
-  __get_short_size() const _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type __get_short_size() const _NOEXCEPT {
     _LIBCPP_ASSERT_INTERNAL(!__rep_.__s.__is_long_, "String has to be short when trying to get the short size");
     return __rep_.__s.__size_;
   }
@@ -2202,13 +2196,11 @@ private:
     return __rep_.__l.__data_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pointer
-  __get_short_pointer() _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pointer __get_short_pointer() _NOEXCEPT {
     return pointer_traits<pointer>::pointer_to(__rep_.__s.__data_[0]);
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_pointer
-  __get_short_pointer() const _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_pointer __get_short_pointer() const _NOEXCEPT {
     return pointer_traits<const_pointer>::pointer_to(__rep_.__s.__data_[0]);
   }
 
@@ -2452,8 +2444,7 @@ private:
 #  ifndef _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
   __move_assign(basic_string& __str, false_type) noexcept(__alloc_traits::is_always_equal::value);
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
-  __move_assign(basic_string& __str, true_type)
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __move_assign(basic_string& __str, true_type)
 #    if _LIBCPP_STD_VER >= 17
       noexcept;
 #    else
