@@ -672,7 +672,8 @@ static void CheckPoisonRecords(uptr addr) {
     Printf("NOTE: no matching poison tracking record found.\n");
     if (is_full) {
       Printf(
-          "HINT: Try a larger value for ASAN_OPTIONS=poison_history_size=<size>.\n");
+          "HINT: Try a larger value for "
+          "ASAN_OPTIONS=poison_history_size=<size>.\n");
     }
   }
 }
