@@ -1016,31 +1016,67 @@ void GatherToLDSOp::getCanonicalizationPatterns(RewritePatternSet &results,
 // GlobalLoadAsyncToLDSOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult GlobalLoadAsyncToLDSOp::verify() {
-  MemRefType srcType = cast<MemRefType>(getSrc().getType());
-  MemRefType dstType = cast<MemRefType>(getDst().getType());
+static unsigned getTransferSizeInBits(Type transferType) {
+  if (VectorType transferVectorType = dyn_cast<VectorType>(transferType))
+    return transferVectorType.getNumElements() *
+           transferVectorType.getElementTypeBitWidth();
+  return transferType.getIntOrFloatBitWidth();
+}
 
+static LogicalResult
+verifyGlobalLoadAsyncToLDSLike(Operation *op, MemRefType srcType,
+                               MemRefType dstType, OperandRange srcIndices,
+                               OperandRange dstIndices, Type transferType) {
   if (srcType.getElementType() != dstType.getElementType())
-    return emitOpError("source and destination element types must match");
+    return op->emitOpError("source and destination element types must match");
 
-  Type transferType = getTransferType();
-  int transferSize;
-  if (auto vectorTransfer = dyn_cast<VectorType>(transferType)) {
-    transferSize = vectorTransfer.getNumElements() *
-                   vectorTransfer.getElementTypeBitWidth();
-  } else {
-    transferSize = transferType.getIntOrFloatBitWidth();
-  }
-  if (!llvm::is_contained({8, 32, 64, 128}, transferSize))
-    return emitOpError("transfer type size must be 8, 32, 64, or 128 bits");
+  if (srcType.getRank() != static_cast<int64_t>(srcIndices.size()))
+    return op->emitOpError("source index count must match source memref rank");
+
+  if (dstType.getRank() != static_cast<int64_t>(dstIndices.size()))
+    return op->emitOpError(
+        "destination index count must match destination memref rank");
+
+  Type transferElementType = transferType;
+  if (auto vectorType = dyn_cast<VectorType>(transferType))
+    transferElementType = vectorType.getElementType();
+  if (!transferElementType.isIntOrFloat())
+    return op->emitOpError(
+        "transfer type must be an integer, float, or vector of integers or "
+        "floats");
+
+  unsigned transferSize = getTransferSizeInBits(transferType);
+  if (!llvm::is_contained({8u, 32u, 64u, 128u}, transferSize))
+    return op->emitOpError("transfer type size must be 8, 32, 64, or 128 bits");
 
   if (!hasGlobalMemorySpace(srcType.getMemorySpace()))
-    return emitOpError("source memory address space must be global");
+    return op->emitOpError("source memory address space must be global");
 
   if (!hasWorkgroupMemorySpace(dstType.getMemorySpace()))
-    return emitOpError("destination memory address space must be Workgroup");
+    return op->emitOpError(
+        "destination memory address space must be Workgroup");
 
   return success();
+}
+
+LogicalResult GlobalLoadAsyncToLDSOp::verify() {
+  auto srcType = cast<MemRefType>(getSrc().getType());
+  auto dstType = cast<MemRefType>(getDst().getType());
+  return verifyGlobalLoadAsyncToLDSLike(*this, srcType, dstType,
+                                        getSrcIndices(), getDstIndices(),
+                                        getTransferType());
+}
+
+//===----------------------------------------------------------------------===//
+// ClusterLoadAsyncToLDSOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult ClusterLoadAsyncToLDSOp::verify() {
+  auto srcType = cast<MemRefType>(getSrc().getType());
+  auto dstType = cast<MemRefType>(getDst().getType());
+  return verifyGlobalLoadAsyncToLDSLike(*this, srcType, dstType,
+                                        getSrcIndices(), getDstIndices(),
+                                        getTransferType());
 }
 
 //===----------------------------------------------------------------------===//

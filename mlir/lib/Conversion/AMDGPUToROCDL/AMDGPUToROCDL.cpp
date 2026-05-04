@@ -2289,6 +2289,13 @@ struct GatherToLDSOpLowering : public ConvertOpToLLVMPattern<GatherToLDSOp> {
   }
 };
 
+static unsigned getTransferSizeInBits(Type transferType) {
+  if (VectorType transferVectorType = dyn_cast<VectorType>(transferType))
+    return transferVectorType.getNumElements() *
+           transferVectorType.getElementTypeBitWidth();
+  return transferType.getIntOrFloatBitWidth();
+}
+
 struct GlobalLoadAsyncToLDSOpLowering
     : public ConvertOpToLLVMPattern<GlobalLoadAsyncToLDSOp> {
   GlobalLoadAsyncToLDSOpLowering(const LLVMTypeConverter &converter,
@@ -2311,11 +2318,7 @@ struct GlobalLoadAsyncToLDSOpLowering
     auto dstMemRefType = cast<MemRefType>(op.getDst().getType());
 
     Type transferType = op.getTransferType();
-    int transferBits =
-        isa<VectorType>(transferType)
-            ? cast<VectorType>(transferType).getNumElements() *
-                  cast<VectorType>(transferType).getElementTypeBitWidth()
-            : transferType.getIntOrFloatBitWidth();
+    unsigned transferBits = getTransferSizeInBits(transferType);
 
     Value srcPtr =
         getStridedElementPtr(rewriter, loc, srcMemRefType, adaptor.getSrc(),
@@ -2358,6 +2361,68 @@ struct GlobalLoadAsyncToLDSOpLowering
       rewriter.replaceOpWithNewOp<ROCDL::GlobalLoadAsyncToLDSB128Op>(
           op, srcPtr, dstPtr, offset, aux, ArrayAttr{}, ArrayAttr{},
           ArrayAttr{});
+      break;
+    default:
+      return op.emitOpError("unsupported transfer width");
+    }
+    return success();
+  }
+};
+
+struct ClusterLoadAsyncToLDSOpLowering
+    : public ConvertOpToLLVMPattern<ClusterLoadAsyncToLDSOp> {
+  ClusterLoadAsyncToLDSOpLowering(const LLVMTypeConverter &converter,
+                                  Chipset chipset)
+      : ConvertOpToLLVMPattern<ClusterLoadAsyncToLDSOp>(converter),
+        chipset(chipset) {}
+
+  Chipset chipset;
+
+  LogicalResult
+  matchAndRewrite(ClusterLoadAsyncToLDSOp op,
+                  ClusterLoadAsyncToLDSOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (chipset < kGfx1250)
+      return op.emitOpError(
+          "cluster_load_async_to_lds is only supported on gfx1250+");
+
+    Location loc = op.getLoc();
+    auto srcMemRefType = cast<MemRefType>(op.getSrc().getType());
+    auto dstMemRefType = cast<MemRefType>(op.getDst().getType());
+
+    Type transferType = op.getTransferType();
+    unsigned transferBits = getTransferSizeInBits(transferType);
+
+    Value srcPtr =
+        getStridedElementPtr(rewriter, loc, srcMemRefType, adaptor.getSrc(),
+                             adaptor.getSrcIndices());
+    Value dstPtr =
+        getStridedElementPtr(rewriter, loc, dstMemRefType, adaptor.getDst(),
+                             adaptor.getDstIndices());
+    IntegerAttr offset = rewriter.getI32IntegerAttr(0);
+    IntegerAttr cpol = rewriter.getI32IntegerAttr(0);
+    Value clusterMask = adaptor.getClusterMask();
+
+    switch (transferBits) {
+    case 8:
+      rewriter.replaceOpWithNewOp<ROCDL::ClusterLoadAsyncToLDSB8Op>(
+          op, srcPtr, dstPtr, offset, cpol, clusterMask, ArrayAttr{},
+          ArrayAttr{}, ArrayAttr{});
+      break;
+    case 32:
+      rewriter.replaceOpWithNewOp<ROCDL::ClusterLoadAsyncToLDSB32Op>(
+          op, srcPtr, dstPtr, offset, cpol, clusterMask, ArrayAttr{},
+          ArrayAttr{}, ArrayAttr{});
+      break;
+    case 64:
+      rewriter.replaceOpWithNewOp<ROCDL::ClusterLoadAsyncToLDSB64Op>(
+          op, srcPtr, dstPtr, offset, cpol, clusterMask, ArrayAttr{},
+          ArrayAttr{}, ArrayAttr{});
+      break;
+    case 128:
+      rewriter.replaceOpWithNewOp<ROCDL::ClusterLoadAsyncToLDSB128Op>(
+          op, srcPtr, dstPtr, offset, cpol, clusterMask, ArrayAttr{},
+          ArrayAttr{}, ArrayAttr{});
       break;
     default:
       return op.emitOpError("unsupported transfer width");
@@ -4407,8 +4472,9 @@ void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
            ScaledExtPackedMatrixOpLowering, ScaledExtPackedOpLowering,
            PackedScaledTruncOpLowering, PackedTrunc2xFp8OpLowering,
            PackedStochRoundFp8OpLowering, GatherToLDSOpLowering,
-           GlobalLoadAsyncToLDSOpLowering, TransposeLoadOpLowering,
-           AMDGPUPermlaneLowering, AMDGPUMakeDmaBaseLowering<MakeDmaBaseOp>,
+           GlobalLoadAsyncToLDSOpLowering, ClusterLoadAsyncToLDSOpLowering,
+           TransposeLoadOpLowering, AMDGPUPermlaneLowering,
+           AMDGPUMakeDmaBaseLowering<MakeDmaBaseOp>,
            AMDGPUMakeDmaBaseLowering<MakeGatherDmaBaseOp>,
            AMDGPULowerDescriptor<MakeDmaDescriptorOp>,
            AMDGPULowerDescriptor<MakeGatherDmaDescriptorOp>,

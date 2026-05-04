@@ -1382,7 +1382,8 @@ def AMDGPU_GlobalLoadAsyncToLDSOp :
     AMDGPU wrapper for `global.load.async.to.lds` instructions, which performs
     asynchronous load of data from global memory into LDS while bypassing VGPRs.
 
-    * `$src`: global memory memref to read from (global addrspace only, no fat buffer).
+    * `$src`: global memory memref to read from (global addrspace only, no
+      fat buffer).
     * `$srcIndices`: indices into `$src` for this thread's global read location.
     * `$dst`: LDS memref to write to (workgroup addrspace).
     * `$dstIndices`: indices into `$dst` for this thread's LDS write location.
@@ -1410,6 +1411,47 @@ def AMDGPU_GlobalLoadAsyncToLDSOp :
   }];
   let assemblyFormat = [{
     $src `[` $srcIndices `]` `,` $dst `[` $dstIndices `]`  (`,` $mask^)?
+    attr-dict `:` $transferType `,` type($src) `,` type($dst)
+  }];
+  let hasVerifier = 1;
+}
+
+def AMDGPU_ClusterLoadAsyncToLDSOp :
+    AMDGPU_Op<"cluster_load_async_to_lds", [AttrSizedOperandSegments]>,
+    Arguments<(ins
+                   Arg<AnyMemRef, "global memory to load from", [MemRead]>:$src,
+                   Variadic<Index>:$srcIndices,
+                   Arg<AnyMemRef, "LDS memory to write to", [MemWrite]>:$dst,
+                   Variadic<Index>:$dstIndices,
+                   I32:$clusterMask,
+                   TypeAttr:$transferType
+                   )>,
+    Results<(outs)> {
+  let summary = "MLIR wrapper for async cluster global load to LDS instructions";
+  let description = [{
+    AMDGPU wrapper for `cluster.load.async.to.lds` instructions, which broadcast
+    a global memory load to LDS from a single wave (subgroup) across a cluster of
+    workgroups while bypassing VGPRs.
+
+    * `$src`: global memory memref to read from (global addrspace only, no fat buffer).
+    * `$srcIndices`: indices into `$src` for this thread's global read location.
+    * `$dst`: LDS memref to write to (workgroup addrspace).
+    * `$dstIndices`: indices into `$dst` for this thread's LDS write location.
+    * `$clusterMask`: i32 mask selecting the workgroups which are part of the cluster.
+    * `$transferType`: type of data to be transferred. Must be an 8, 32, 64, or 128 bit
+      scalar or vector type.
+
+    Note: only supported on gfx1250 and later.
+
+    Example:
+    ```mlir
+      amdgpu.cluster_load_async_to_lds %src[%i, %j], %dst[%k, %l], %mask
+        : f32, memref<128x64xf32, #gpu.address_space<global>>,
+          memref<64x64xf32, #gpu.address_space<workgroup>>
+    ```
+  }];
+  let assemblyFormat = [{
+    $src `[` $srcIndices `]` `,` $dst `[` $dstIndices `]` `,` $clusterMask
     attr-dict `:` $transferType `,` type($src) `,` type($dst)
   }];
   let hasVerifier = 1;
