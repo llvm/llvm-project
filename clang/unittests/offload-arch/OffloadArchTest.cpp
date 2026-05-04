@@ -21,8 +21,7 @@ llvm::SmallVector<std::string, 8> getCandidateBinPaths(llvm::StringRef ExeDir);
 
 using namespace llvm;
 
-cl::opt<bool> Verbose("offload-arch-test-verbose", cl::Hidden,
-                      cl::init(false));
+cl::opt<bool> Verbose("offload-arch-test-verbose", cl::Hidden, cl::init(false));
 
 #ifdef _WIN32
 
@@ -99,8 +98,8 @@ TEST(CandidateBinPaths, NonAsciiPath) {
 }
 
 TEST(CandidateBinPaths, UnicodePathDedup) {
-  auto Paths = getCandidateBinPaths(
-      "C:/\xE6\x97\xA5\xE6\x9C\xAC\xE8\xAA\x9E/lib/bin");
+  auto Paths =
+      getCandidateBinPaths("C:/\xE6\x97\xA5\xE6\x9C\xAC\xE8\xAA\x9E/lib/bin");
   // Should produce entries without crashing on CJK characters.
   EXPECT_GE(Paths.size(), 1u);
 }
