@@ -1,5 +1,9 @@
 //===-- EJitRuntimeTest.cpp - EmbeddedJIT Runtime Unit Tests ---------------===//
 //
+// NOTE: To call the C API functions, we need to include the C runtime header
+// which is in the non-canonical include path. We declare the symbols we need
+// via extern "C" declarations instead, since they're provided by libLLVMEJIT.
+//
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
@@ -539,3 +543,122 @@ TEST(EJit, OptimizationLevel) {
   ejit.setOptimizationLevel(OptimizationLevel::L3);
   EXPECT_EQ(ejit.getOptimizationLevel(), OptimizationLevel::L3);
 }
+
+//===----------------------------------------------------------------------===//
+// C API tests with runtime-dynamic cellIdx (T3-21)
+//===----------------------------------------------------------------------===//
+
+extern "C" {
+  typedef enum { EJIT_OK_C = 0 } ejit_status_test_t;
+  extern ejit_status_test_t ejit_init(const void *config);
+  extern void ejit_shutdown(void);
+  extern ejit_status_test_t ejit_activate(const char *, uint8_t);
+  extern ejit_status_test_t ejit_deactivate(const char *, uint8_t);
+  extern bool ejit_is_active(const char *, uint8_t);
+  extern void ejit_invalidate(const char *, uint8_t);
+  extern void ejit_clear_cache(void);
+}
+
+TEST(EJitCApi, ActivateWithDynamicCellIdx) {
+  ASSERT_EQ(ejit_init(nullptr), EJIT_OK_C);
+  uint8_t idx = 42;
+  EXPECT_EQ(ejit_activate("dynamic", idx), EJIT_OK_C);
+  EXPECT_TRUE(ejit_is_active("dynamic", idx));
+  EXPECT_EQ(ejit_deactivate("dynamic", idx), EJIT_OK_C);
+  EXPECT_FALSE(ejit_is_active("dynamic", idx));
+  ejit_shutdown();
+}
+
+TEST(EJitCApi, LoopWithDynamicCellIdx) {
+  ASSERT_EQ(ejit_init(nullptr), EJIT_OK_C);
+  for (uint8_t i = 0; i < 10; i++)
+    EXPECT_EQ(ejit_activate("loop", i), EJIT_OK_C);
+  for (uint8_t i = 0; i < 10; i++)
+    EXPECT_TRUE(ejit_is_active("loop", i));
+  for (uint8_t i = 10; i > 0; i--)
+    EXPECT_EQ(ejit_deactivate("loop", i - 1), EJIT_OK_C);
+  for (uint8_t i = 0; i < 10; i++)
+    EXPECT_FALSE(ejit_is_active("loop", i));
+  ejit_shutdown();
+}
+
+static uint8_t computeCellIdx(int x, int y) {
+  return static_cast<uint8_t>((x + y) % 256);
+}
+
+TEST(EJitCApi, ActivateWithComputedCellIdx) {
+  ASSERT_EQ(ejit_init(nullptr), EJIT_OK_C);
+  uint8_t idx = computeCellIdx(100, 55);
+  EXPECT_EQ(idx, 155);
+  EXPECT_EQ(ejit_activate("compute", idx), EJIT_OK_C);
+  EXPECT_TRUE(ejit_is_active("compute", idx));
+  idx = computeCellIdx(200, 200);
+  EXPECT_EQ(idx, 144);
+  EXPECT_EQ(ejit_activate("compute", idx), EJIT_OK_C);
+  EXPECT_TRUE(ejit_is_active("compute", idx));
+  EXPECT_FALSE(ejit_is_active("other", 155));
+  ejit_shutdown();
+}
+
+TEST(EJitCApi, DynamicCellIdxBoundaries) {
+  ASSERT_EQ(ejit_init(nullptr), EJIT_OK_C);
+  EXPECT_EQ(ejit_activate("bound", (uint8_t)0), EJIT_OK_C);
+  EXPECT_TRUE(ejit_is_active("bound", (uint8_t)0));
+  EXPECT_EQ(ejit_activate("bound", (uint8_t)255), EJIT_OK_C);
+  EXPECT_TRUE(ejit_is_active("bound", (uint8_t)255));
+  ejit_deactivate("bound", 0);
+  EXPECT_FALSE(ejit_is_active("bound", 0));
+  EXPECT_TRUE(ejit_is_active("bound", (uint8_t)255));
+  ejit_shutdown();
+}
+
+TEST(EJitCApi, MultiPeriodDynamicIndices) {
+  ASSERT_EQ(ejit_init(nullptr), EJIT_OK_C);
+  uint8_t indices[] = {3, 7, 15, 31, 63};
+  for (size_t i = 0; i < sizeof(indices)/sizeof(indices[0]); i++) {
+    EXPECT_EQ(ejit_activate("cell", indices[i]), EJIT_OK_C);
+    EXPECT_EQ(ejit_activate("trp", indices[i]), EJIT_OK_C);
+  }
+  for (size_t i = 0; i < sizeof(indices)/sizeof(indices[0]); i++) {
+    EXPECT_TRUE(ejit_is_active("cell", indices[i]));
+    EXPECT_TRUE(ejit_is_active("trp", indices[i]));
+  }
+  for (size_t i = 0; i < sizeof(indices)/sizeof(indices[0]); i++)
+    ejit_deactivate("trp", indices[i]);
+  for (size_t i = 0; i < sizeof(indices)/sizeof(indices[0]); i++) {
+    EXPECT_TRUE(ejit_is_active("cell", indices[i]));
+    EXPECT_FALSE(ejit_is_active("trp", indices[i]));
+  }
+  ejit_shutdown();
+}
+
+TEST(EJitCApi, InvalidateWithDynamicCellIdx) {
+  ASSERT_EQ(ejit_init(nullptr), EJIT_OK_C);
+  for (uint8_t i = 0; i < 5; i++)
+    ejit_activate("inv", i);
+  for (uint8_t i = 0; i < 5; i++)
+    EXPECT_TRUE(ejit_is_active("inv", i));
+  for (uint8_t i = 0; i < 5; i++)
+    ejit_invalidate("inv", i);
+  for (uint8_t i = 0; i < 5; i++)
+    EXPECT_TRUE(ejit_is_active("inv", i));
+  ejit_shutdown();
+}
+
+TEST(EJitCApi, ActivationCycleWithRuntimeIndex) {
+  ASSERT_EQ(ejit_init(nullptr), EJIT_OK_C);
+  uint8_t workload[] = {10, 20, 30, 40, 50};
+  for (size_t cycle = 0; cycle < 3; cycle++) {
+    for (size_t i = 0; i < sizeof(workload)/sizeof(workload[0]); i++)
+      EXPECT_EQ(ejit_activate("cycle", workload[i]), EJIT_OK_C);
+    for (size_t i = 0; i < sizeof(workload)/sizeof(workload[0]); i++)
+      EXPECT_TRUE(ejit_is_active("cycle", workload[i]));
+    for (size_t i = 0; i < sizeof(workload)/sizeof(workload[0]); i++)
+      EXPECT_EQ(ejit_deactivate("cycle", workload[i]), EJIT_OK_C);
+    for (size_t i = 0; i < sizeof(workload)/sizeof(workload[0]); i++)
+      EXPECT_FALSE(ejit_is_active("cycle", workload[i]));
+  }
+  ejit_shutdown();
+}
+
+
