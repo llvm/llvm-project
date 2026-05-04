@@ -813,13 +813,11 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
         {ISD::CTPOP, MVT::v8i8, 1},
         {ISD::CTPOP, MVT::i32, 5},
         // SVE types (For targets that override NEON for fixed length vectors)
-        {ISD::CTPOP, MVT::nxv2i64, 2},
-        {ISD::CTPOP, MVT::nxv4i32, 2},
+        {ISD::CTPOP, MVT::nxv2i64, 1},
+        {ISD::CTPOP, MVT::nxv4i32, 1},
         {ISD::CTPOP, MVT::nxv8i16, 1},
-        {ISD::CTPOP, MVT::nxv16i8, 1},
-        {ISD::CTPOP, MVT::nxv2i32, 2},
-        {ISD::CTPOP, MVT::nxv4i16, 2},
-        {ISD::CTPOP, MVT::nxv8i8, 1},
+        {ISD::CTPOP, MVT::nxv2i32, 1},
+        {ISD::CTPOP, MVT::nxv4i16, 1},
     };
     auto LT = getTypeLegalizationCost(RetTy);
     MVT MTy = LT.second;
@@ -827,12 +825,12 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     // When SVE is available, fixed-length vector ctpop is lowered using SVE
     // (useSVEForFixedLengthVectorVT with OverrideNEON=true), so look up the
     // scalable equivalent type for accurate costing.
-    if (ST->isSVEorStreamingSVEAvailable() && MTy.isFixedLengthVector()) {
-      EVT ScalableVT = MVT::getScalableVectorVT(
-          MTy.getVectorElementType(),
-          MTy.is128BitVector()
-              ? 128 / MTy.getVectorElementType().getSizeInBits()
-              : 64 / MTy.getVectorElementType().getSizeInBits());
+    // TODO: Handle type promotion case.
+    if (ST->isSVEorStreamingSVEAvailable() && MTy.isFixedLengthVector() &&
+        MTy.getScalarSizeInBits() > 8 &&
+        MTy.getScalarSizeInBits() == RetTy->getScalarSizeInBits()) {
+      EVT ScalableVT = MVT::getScalableVectorVT(MTy.getVectorElementType(),
+                                                MTy.getVectorNumElements());
       if (const auto *Entry = CostTableLookup(CtpopCostTbl, ISD::CTPOP,
                                               ScalableVT.getSimpleVT()))
         return LT.first * Entry->Cost;
