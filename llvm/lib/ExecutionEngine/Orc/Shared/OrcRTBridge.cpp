@@ -90,7 +90,7 @@ const SimpleExecutorMemoryManagerSymbolNames
         "orc_rt_ci_sps_SimpleNativeMemoryMap_initialize",
         "orc_rt_ci_sps_SimpleNativeMemoryMap_deinitializeMultiple",
         "orc_rt_ci_sps_SimpleNativeMemoryMap_releaseMultiple",
-    };
+};
 
 } // end namespace rt
 namespace rt_alt {
