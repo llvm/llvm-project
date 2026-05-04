@@ -2161,6 +2161,7 @@ int testTypeID(MlirContext ctx) {
 
   return 0;
 }
+
 int testSymbolTable(MlirContext ctx) {
   fprintf(stderr, "@testSymbolTable\n");
 
@@ -2251,6 +2252,7 @@ int testSymbolTable(MlirContext ctx) {
 
   return 0;
 }
+
 typedef struct {
   const char *x;
 } callBackData;
