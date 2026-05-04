@@ -786,8 +786,8 @@ public: // Part of public interface to class.
 
   /// removeDeadBindings - Scans the RegionStore of 'state' for dead values.
   ///  It returns a new Store with these values removed.
-  StoreRef removeDeadBindings(Store store, const StackFrameContext *LCtx,
-                              SymbolReaper& SymReaper) override;
+  StoreRef removeDeadBindings(Store store, const StackFrame *LCtx,
+                              SymbolReaper &SymReaper) override;
 
   //===------------------------------------------------------------------===//
   // Utility methods.
@@ -2949,15 +2949,14 @@ class RemoveDeadBindingsWorker
     : public ClusterAnalysis<RemoveDeadBindingsWorker> {
   SmallVector<const SymbolicRegion *, 12> Postponed;
   SymbolReaper &SymReaper;
-  const StackFrameContext *CurrentLCtx;
+  const StackFrame *CurrentLCtx;
 
 public:
   RemoveDeadBindingsWorker(RegionStoreManager &rm,
-                           ProgramStateManager &stateMgr,
-                           RegionBindingsRef b, SymbolReaper &symReaper,
-                           const StackFrameContext *LCtx)
-    : ClusterAnalysis<RemoveDeadBindingsWorker>(rm, stateMgr, b),
-      SymReaper(symReaper), CurrentLCtx(LCtx) {}
+                           ProgramStateManager &stateMgr, RegionBindingsRef b,
+                           SymbolReaper &symReaper, const StackFrame *LCtx)
+      : ClusterAnalysis<RemoveDeadBindingsWorker>(rm, stateMgr, b),
+        SymReaper(symReaper), CurrentLCtx(LCtx) {}
 
   // Called by ClusterAnalysis.
   void VisitAddedToCluster(const MemRegion *baseR, const ClusterBindings &C);
@@ -3006,7 +3005,7 @@ void RemoveDeadBindingsWorker::VisitAddedToCluster(const MemRegion *baseR,
   if (const CXXThisRegion *TR = dyn_cast<CXXThisRegion>(baseR)) {
     const auto *StackReg =
         cast<StackArgumentsSpaceRegion>(TR->getSuperRegion());
-    const StackFrameContext *RegCtx = StackReg->getStackFrame();
+    const StackFrame *RegCtx = StackReg->getStackFrame();
     if (CurrentLCtx &&
         (RegCtx == CurrentLCtx || RegCtx->isParentOf(CurrentLCtx)))
       AddToWorkList(TR, &C);
@@ -3081,8 +3080,8 @@ bool RemoveDeadBindingsWorker::UpdatePostponed() {
 }
 
 StoreRef RegionStoreManager::removeDeadBindings(Store store,
-                                                const StackFrameContext *LCtx,
-                                                SymbolReaper& SymReaper) {
+                                                const StackFrame *LCtx,
+                                                SymbolReaper &SymReaper) {
   RegionBindingsRef B = getRegionBindings(store);
   RemoveDeadBindingsWorker W(*this, StateMgr, B, SymReaper, LCtx);
   W.GenerateClusters();

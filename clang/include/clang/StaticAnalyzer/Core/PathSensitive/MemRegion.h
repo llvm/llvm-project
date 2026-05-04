@@ -49,7 +49,7 @@ class AnalysisDeclContext;
 class CXXRecordDecl;
 class Decl;
 class LocationContext;
-class StackFrameContext;
+class StackFrame;
 
 namespace ento {
 
@@ -419,10 +419,10 @@ public:
 class StackSpaceRegion : public MemSpaceRegion {
   virtual void anchor();
 
-  const StackFrameContext *SFC;
+  const StackFrame *SFC;
 
 protected:
-  StackSpaceRegion(MemRegionManager &mgr, Kind k, const StackFrameContext *sfc)
+  StackSpaceRegion(MemRegionManager &mgr, Kind k, const StackFrame *sfc)
       : MemSpaceRegion(mgr, k), SFC(sfc) {
     assert(classof(this));
     assert(sfc);
@@ -430,7 +430,7 @@ protected:
 
 public:
   LLVM_ATTRIBUTE_RETURNS_NONNULL
-  const StackFrameContext *getStackFrame() const { return SFC; }
+  const StackFrame *getStackFrame() const { return SFC; }
 
   void Profile(llvm::FoldingSetNodeID &ID) const override;
 
@@ -443,7 +443,7 @@ public:
 class StackLocalsSpaceRegion : public StackSpaceRegion {
   friend class MemRegionManager;
 
-  StackLocalsSpaceRegion(MemRegionManager &mgr, const StackFrameContext *sfc)
+  StackLocalsSpaceRegion(MemRegionManager &mgr, const StackFrame *sfc)
       : StackSpaceRegion(mgr, StackLocalsSpaceRegionKind, sfc) {}
 
 public:
@@ -458,7 +458,7 @@ class StackArgumentsSpaceRegion : public StackSpaceRegion {
 private:
   friend class MemRegionManager;
 
-  StackArgumentsSpaceRegion(MemRegionManager &mgr, const StackFrameContext *sfc)
+  StackArgumentsSpaceRegion(MemRegionManager &mgr, const StackFrame *sfc)
       : StackSpaceRegion(mgr, StackArgumentsSpaceRegionKind, sfc) {}
 
 public:
@@ -994,7 +994,7 @@ public:
   const VarDecl *getDecl() const override = 0;
 
   /// It might return null.
-  const StackFrameContext *getStackFrame() const;
+  const StackFrame *getStackFrame() const;
 
   QualType getValueType() const override {
     // FIXME: We can cache this if needed.
@@ -1287,7 +1287,7 @@ public:
   const Expr *getExpr() const { return Ex; }
 
   LLVM_ATTRIBUTE_RETURNS_NONNULL
-  const StackFrameContext *getStackFrame() const;
+  const StackFrame *getStackFrame() const;
 
   QualType getValueType() const override { return Ex->getType(); }
 
@@ -1326,7 +1326,7 @@ public:
   LLVM_ATTRIBUTE_RETURNS_NONNULL
   const ValueDecl *getExtendingDecl() const { return ExD; }
   /// It might return null.
-  const StackFrameContext *getStackFrame() const;
+  const StackFrame *getStackFrame() const;
 
   QualType getValueType() const override { return Ex->getType(); }
 
@@ -1444,10 +1444,10 @@ class MemRegionManager {
   GlobalSystemSpaceRegion *SystemGlobals = nullptr;
   GlobalImmutableSpaceRegion *ImmutableGlobals = nullptr;
 
-  llvm::DenseMap<const StackFrameContext *, StackLocalsSpaceRegion *>
-    StackLocalsSpaceRegions;
-  llvm::DenseMap<const StackFrameContext *, StackArgumentsSpaceRegion *>
-    StackArgumentsSpaceRegions;
+  llvm::DenseMap<const StackFrame *, StackLocalsSpaceRegion *>
+      StackLocalsSpaceRegions;
+  llvm::DenseMap<const StackFrame *, StackArgumentsSpaceRegion *>
+      StackArgumentsSpaceRegions;
   llvm::DenseMap<const CodeTextRegion *, StaticGlobalSpaceRegion *>
     StaticsGlobalSpaceRegions;
 
@@ -1471,13 +1471,12 @@ public:
 
   /// getStackLocalsRegion - Retrieve the memory region associated with the
   ///  specified stack frame.
-  const StackLocalsSpaceRegion *
-  getStackLocalsRegion(const StackFrameContext *STC);
+  const StackLocalsSpaceRegion *getStackLocalsRegion(const StackFrame *STC);
 
   /// getStackArgumentsRegion - Retrieve the memory region associated with
   ///  function/method arguments of the specified stack frame.
   const StackArgumentsSpaceRegion *
-  getStackArgumentsRegion(const StackFrameContext *STC);
+  getStackArgumentsRegion(const StackFrame *STC);
 
   /// getGlobalsRegion - Retrieve the memory region associated with
   ///  global variables.

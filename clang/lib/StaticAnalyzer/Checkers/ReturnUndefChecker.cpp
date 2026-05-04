@@ -42,7 +42,7 @@ void ReturnUndefChecker::checkPreStmt(const ReturnStmt *RS,
     return;
   SVal RetVal = C.getSVal(RetE);
 
-  const StackFrameContext *SFC = C.getStackFrame();
+  const StackFrame *SFC = C.getStackFrame();
   QualType RT = CallEvent::getDeclaredResultType(SFC->getDecl());
 
   if (RetVal.isUndef()) {

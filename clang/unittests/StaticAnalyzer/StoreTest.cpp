@@ -54,7 +54,7 @@ class VariableBindConsumer : public StoreTestConsumer {
 
     ASSERT_TRUE(VDX0 && VDY0 && VDZ0 && VDX1 && VDY1);
 
-    const StackFrameContext *SFC =
+    const StackFrame *SFC =
         Eng.getAnalysisDeclContextManager().getStackFrame(D);
 
     Loc LX0 = loc::MemRegionVal(MRManager.getVarRegion(VDX0, SFC));
@@ -119,7 +119,7 @@ class LiteralCompoundConsumer : public StoreTestConsumer {
 
     const auto *CL = findNode<CompoundLiteralExpr>(D, compoundLiteralExpr());
 
-    const StackFrameContext *SFC =
+    const StackFrame *SFC =
         Eng.getAnalysisDeclContextManager().getStackFrame(D);
 
     QualType Int = ASTCtxt.IntTy;

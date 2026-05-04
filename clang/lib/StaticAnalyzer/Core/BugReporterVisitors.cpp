@@ -379,14 +379,13 @@ BugReporterVisitor::getDefaultEndPath(const BugReporterContext &BRC,
 
 bool NoStateChangeFuncVisitor::isModifiedInFrame(const ExplodedNode *N) {
   const LocationContext *Ctx = N->getLocationContext();
-  const StackFrameContext *SCtx = Ctx->getStackFrame();
+  const StackFrame *SCtx = Ctx->getStackFrame();
   if (!FramesModifyingCalculated.count(SCtx))
     findModifyingFrames(N);
   return FramesModifying.count(SCtx);
 }
 
-void NoStateChangeFuncVisitor::markFrameAsModifying(
-    const StackFrameContext *SCtx) {
+void NoStateChangeFuncVisitor::markFrameAsModifying(const StackFrame *SCtx) {
   while (!SCtx->inTopFrame()) {
     auto p = FramesModifying.insert(SCtx);
     if (!p.second)
@@ -400,7 +399,7 @@ static const ExplodedNode *getMatchingCallExitEnd(const ExplodedNode *N) {
   assert(N->getLocationAs<CallEnter>());
   // The stackframe of the callee is only found in the nodes succeeding
   // the CallEnter node. CallEnter's stack frame refers to the caller.
-  const StackFrameContext *OrigSCtx = N->getFirstSucc()->getStackFrame();
+  const StackFrame *OrigSCtx = N->getFirstSucc()->getStackFrame();
 
   // Similarly, the nodes preceding CallExitEnd refer to the callee's stack
   // frame.
@@ -421,11 +420,11 @@ void NoStateChangeFuncVisitor::findModifyingFrames(
 
   assert(CallExitBeginN->getLocationAs<CallExitBegin>());
 
-  const StackFrameContext *const OriginalSCtx =
+  const StackFrame *const OriginalSCtx =
       CallExitBeginN->getLocationContext()->getStackFrame();
 
   const ExplodedNode *CurrCallExitBeginN = CallExitBeginN;
-  const StackFrameContext *CurrentSCtx = OriginalSCtx;
+  const StackFrame *CurrentSCtx = OriginalSCtx;
 
   for (const ExplodedNode *CurrN = CallExitBeginN; CurrN;
        CurrN = CurrN->getFirstPred()) {
@@ -467,7 +466,7 @@ PathDiagnosticPieceRef NoStateChangeFuncVisitor::VisitNode(
     const ExplodedNode *N, BugReporterContext &BR, PathSensitiveBugReport &R) {
 
   const LocationContext *Ctx = N->getLocationContext();
-  const StackFrameContext *SCtx = Ctx->getStackFrame();
+  const StackFrame *SCtx = Ctx->getStackFrame();
   ProgramStateRef State = N->getState();
   auto CallExitLoc = N->getLocationAs<CallExitBegin>();
 
@@ -901,7 +900,7 @@ namespace {
 /// This visitor is intended to be used when another visitor discovers that an
 /// interesting value comes from an inlined function call.
 class ReturnVisitor : public TrackingBugReporterVisitor {
-  const StackFrameContext *CalleeSFC;
+  const StackFrame *CalleeSFC;
   enum {
     Initial,
     MaybeUnsuppress,
@@ -914,7 +913,7 @@ class ReturnVisitor : public TrackingBugReporterVisitor {
   bugreporter::TrackingKind TKind;
 
 public:
-  ReturnVisitor(TrackerRef ParentTracker, const StackFrameContext *Frame,
+  ReturnVisitor(TrackerRef ParentTracker, const StackFrame *Frame,
                 bool Suppressed, AnalyzerOptions &Options,
                 bugreporter::TrackingKind TKind)
       : TrackingBugReporterVisitor(ParentTracker), CalleeSFC(Frame),
@@ -1139,7 +1138,7 @@ class StoreSiteFinder final : public TrackingBugReporterVisitor {
   bool Satisfied = false;
 
   TrackingOptions Options;
-  const StackFrameContext *OriginSFC;
+  const StackFrame *OriginSFC;
 
 public:
   /// \param V We're searching for the store where \c R received this value.
@@ -1154,7 +1153,7 @@ public:
   ///        much.
   StoreSiteFinder(bugreporter::TrackerRef ParentTracker, SVal V,
                   const MemRegion *R, TrackingOptions Options,
-                  const StackFrameContext *OriginSFC = nullptr)
+                  const StackFrame *OriginSFC = nullptr)
       : TrackingBugReporterVisitor(ParentTracker), R(R), V(V), Options(Options),
         OriginSFC(OriginSFC) {
     assert(R);
@@ -2296,7 +2295,7 @@ public:
                          const ExplodedNode *LVNode,
                          TrackingOptions Opts) override {
     ProgramStateRef LVState = LVNode->getState();
-    const StackFrameContext *SFC = LVNode->getStackFrame();
+    const StackFrame *SFC = LVNode->getStackFrame();
     PathSensitiveBugReport &Report = getParentTracker().getReport();
     Tracker::Result Result;
 
@@ -2388,7 +2387,7 @@ class InlinedFunctionCallHandler final : public ExpressionHandler {
     const bool BypassCXXNewExprEval = isa<CXXNewExpr>(E);
 
     // This is moving forward when we enter into another context.
-    const StackFrameContext *CurrentSFC = ExprNode->getStackFrame();
+    const StackFrame *CurrentSFC = ExprNode->getStackFrame();
 
     do {
       // If that is satisfied we found our statement as an inlined call.
@@ -2402,7 +2401,7 @@ class InlinedFunctionCallHandler final : public ExpressionHandler {
       if (!ExprNode)
         break;
 
-      const StackFrameContext *PredSFC = ExprNode->getStackFrame();
+      const StackFrame *PredSFC = ExprNode->getStackFrame();
 
       // If that is satisfied we found our statement.
       // FIXME: This code currently bypasses the call site for the
@@ -2427,7 +2426,7 @@ class InlinedFunctionCallHandler final : public ExpressionHandler {
     if (!CEE)
       return {};
 
-    const StackFrameContext *CalleeContext = CEE->getCalleeContext();
+    const StackFrame *CalleeContext = CEE->getCalleeContext();
     if (CalleeContext->getCallSite() != E)
       return {};
 
@@ -2464,7 +2463,7 @@ public:
                          const ExplodedNode *LVNode,
                          TrackingOptions Opts) override {
     ProgramStateRef LVState = LVNode->getState();
-    const StackFrameContext *SFC = LVNode->getStackFrame();
+    const StackFrame *SFC = LVNode->getStackFrame();
     PathSensitiveBugReport &Report = getParentTracker().getReport();
     Tracker::Result Result;
 
@@ -2621,7 +2620,7 @@ Tracker::Result Tracker::track(const Expr *E, const ExplodedNode *N,
 }
 
 Tracker::Result Tracker::track(SVal V, const MemRegion *R, TrackingOptions Opts,
-                               const StackFrameContext *Origin) {
+                               const StackFrame *Origin) {
   if (!V.isUnknown()) {
     Report.addVisitor<StoreSiteFinder>(this, V, R, Opts, Origin);
     return {true};
@@ -2654,7 +2653,7 @@ bool bugreporter::trackExpressionValue(const ExplodedNode *InputNode,
 void bugreporter::trackStoredValue(SVal V, const MemRegion *R,
                                    PathSensitiveBugReport &Report,
                                    TrackingOptions Opts,
-                                   const StackFrameContext *Origin) {
+                                   const StackFrame *Origin) {
   Tracker::create(Report)->track(V, R, Opts, Origin);
 }
 

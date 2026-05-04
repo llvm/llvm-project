@@ -16,8 +16,7 @@ namespace ento {
 namespace {
 
 class ParamRegionTestConsumer : public ExprEngineConsumer {
-  void checkForSameParamRegions(MemRegionManager &MRMgr,
-                                const StackFrameContext *SFC,
+  void checkForSameParamRegions(MemRegionManager &MRMgr, const StackFrame *SFC,
                                 const ParmVarDecl *PVD) {
     ASSERT_TRUE(llvm::all_of(PVD->redecls(), [&](const clang::VarDecl *D2) {
       return MRMgr.getVarRegion(PVD, SFC) ==
@@ -28,7 +27,7 @@ class ParamRegionTestConsumer : public ExprEngineConsumer {
   void performTest(const Decl *D) {
     StoreManager &StMgr = Eng.getStoreManager();
     MemRegionManager &MRMgr = StMgr.getRegionManager();
-    const StackFrameContext *SFC =
+    const StackFrame *SFC =
         Eng.getAnalysisDeclContextManager().getStackFrame(D);
 
     if (const auto *FD = dyn_cast<FunctionDecl>(D)) {

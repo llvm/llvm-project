@@ -152,7 +152,7 @@ static bool isInMIGCall(CheckerContext &C) {
   const LocationContext *LC = C.getLocationContext();
   assert(LC && "Unknown location context");
 
-  const StackFrameContext *SFC;
+  const StackFrame *SFC;
   // Find the top frame.
   while (LC) {
     SFC = LC->getStackFrame();

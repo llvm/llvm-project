@@ -578,7 +578,7 @@ class SymbolReaper {
   // lazyCompoundVal.
   RegionSetTy LazilyCopiedRegionRoots;
 
-  const StackFrameContext *LCtx;
+  const StackFrame *LCtx;
   const Stmt *Loc;
   SymbolManager& SymMgr;
   StoreRef reapedStore;
@@ -592,8 +592,8 @@ public:
   /// considered live.
   /// If the stack frame context is NULL, everything on stack is considered
   /// dead.
-  SymbolReaper(const StackFrameContext *Ctx, const Stmt *s,
-               SymbolManager &symmgr, StoreManager &storeMgr)
+  SymbolReaper(const StackFrame *Ctx, const Stmt *s, SymbolManager &symmgr,
+               StoreManager &storeMgr)
       : LCtx(Ctx), Loc(s), SymMgr(symmgr), reapedStore(nullptr, storeMgr) {}
 
   /// It might return null.

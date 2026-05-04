@@ -64,7 +64,7 @@ class CallDescriptionConsumer : public ExprEngineConsumer {
     if (!D->hasBody())
       return;
 
-    const StackFrameContext *SFC =
+    const StackFrame *SFC =
         Eng.getAnalysisDeclContextManager().getStackFrame(D);
     const ProgramStateRef State = Eng.getInitialState(SFC);
 

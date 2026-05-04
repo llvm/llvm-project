@@ -408,14 +408,14 @@ SymbolReaper::isLive(const Expr *ExprVal, const LocationContext *ELCtx) const {
 }
 
 bool SymbolReaper::isLive(const VarRegion *VR, bool includeStoreBindings) const{
-  const StackFrameContext *VarContext = VR->getStackFrame();
+  const StackFrame *VarContext = VR->getStackFrame();
 
   if (!VarContext)
     return true;
 
   if (!LCtx)
     return false;
-  const StackFrameContext *CurrentContext = LCtx->getStackFrame();
+  const StackFrame *CurrentContext = LCtx->getStackFrame();
 
   if (VarContext == CurrentContext) {
     // If no statement is provided, everything is live.

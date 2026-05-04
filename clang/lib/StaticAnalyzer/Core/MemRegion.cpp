@@ -163,18 +163,17 @@ MemRegionManager &SubRegion::getMemRegionManager() const {
   } while (true);
 }
 
-const StackFrameContext *VarRegion::getStackFrame() const {
+const StackFrame *VarRegion::getStackFrame() const {
   const auto *SSR = dyn_cast<StackSpaceRegion>(getRawMemorySpace());
   return SSR ? SSR->getStackFrame() : nullptr;
 }
 
-const StackFrameContext *
-CXXLifetimeExtendedObjectRegion::getStackFrame() const {
+const StackFrame *CXXLifetimeExtendedObjectRegion::getStackFrame() const {
   const auto *SSR = dyn_cast<StackSpaceRegion>(getRawMemorySpace());
   return SSR ? SSR->getStackFrame() : nullptr;
 }
 
-const StackFrameContext *CXXTempObjectRegion::getStackFrame() const {
+const StackFrame *CXXTempObjectRegion::getStackFrame() const {
   assert(isa<StackSpaceRegion>(getRawMemorySpace()) &&
          "A temporary object can only be allocated on the stack");
   return cast<StackSpaceRegion>(getRawMemorySpace())->getStackFrame();
@@ -921,8 +920,8 @@ const REG *MemRegionManager::LazyAllocate(REG*& region, ARG a) {
   return region;
 }
 
-const StackLocalsSpaceRegion*
-MemRegionManager::getStackLocalsRegion(const StackFrameContext *STC) {
+const StackLocalsSpaceRegion *
+MemRegionManager::getStackLocalsRegion(const StackFrame *STC) {
   assert(STC);
   StackLocalsSpaceRegion *&R = StackLocalsSpaceRegions[STC];
 
@@ -934,7 +933,7 @@ MemRegionManager::getStackLocalsRegion(const StackFrameContext *STC) {
 }
 
 const StackArgumentsSpaceRegion *
-MemRegionManager::getStackArgumentsRegion(const StackFrameContext *STC) {
+MemRegionManager::getStackArgumentsRegion(const StackFrame *STC) {
   assert(STC);
   StackArgumentsSpaceRegion *&R = StackArgumentsSpaceRegions[STC];
 
@@ -994,14 +993,14 @@ MemRegionManager::getObjCStringRegion(const ObjCStringLiteral *Str){
 }
 
 /// Look through a chain of LocationContexts to either find the
-/// StackFrameContext that matches a DeclContext, or find a VarRegion
+/// StackFrame that matches a DeclContext, or find a VarRegion
 /// for a variable captured by a block.
-static llvm::PointerUnion<const StackFrameContext *, const VarRegion *>
+static llvm::PointerUnion<const StackFrame *, const VarRegion *>
 getStackOrCaptureRegionForDeclContext(const LocationContext *LC,
                                       const DeclContext *DC,
                                       const VarDecl *VD) {
   while (LC) {
-    if (const auto *SFC = dyn_cast<StackFrameContext>(LC)) {
+    if (const auto *SFC = dyn_cast<StackFrame>(LC)) {
       if (cast<DeclContext>(SFC->getDecl()) == DC)
         return SFC;
       if (SFC->getData()) {
@@ -1019,7 +1018,7 @@ getStackOrCaptureRegionForDeclContext(const LocationContext *LC,
 
     LC = LC->getParent();
   }
-  return (const StackFrameContext *)nullptr;
+  return (const StackFrame *)nullptr;
 }
 
 static bool isStdStreamVar(const VarDecl *D) {
@@ -1043,7 +1042,7 @@ const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
   const auto *PVD = dyn_cast<ParmVarDecl>(D);
   if (PVD) {
     unsigned Index = PVD->getFunctionScopeIndex();
-    const StackFrameContext *SFC = LC->getStackFrame();
+    const StackFrame *SFC = LC->getStackFrame();
     const Expr *CallSite = SFC->getCallSite();
     if (CallSite) {
       const Decl *CalleeDecl = SFC->getDecl();
@@ -1106,13 +1105,13 @@ const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
     // FIXME: Once we implement scope handling, we will need to properly lookup
     // 'D' to the proper LocationContext.
     const DeclContext *DC = D->getDeclContext();
-    llvm::PointerUnion<const StackFrameContext *, const VarRegion *> V =
-      getStackOrCaptureRegionForDeclContext(LC, DC, D);
+    llvm::PointerUnion<const StackFrame *, const VarRegion *> V =
+        getStackOrCaptureRegionForDeclContext(LC, DC, D);
 
     if (const auto *VR = dyn_cast_if_present<const VarRegion *>(V))
       return VR;
 
-    const auto *STC = cast<const StackFrameContext *>(V);
+    const auto *STC = cast<const StackFrame *>(V);
 
     if (!STC) {
       // FIXME: Assign a more sensible memory space to static locals
@@ -1176,7 +1175,7 @@ MemRegionManager::getNonParamVarRegion(const VarDecl *D,
 const ParamVarRegion *
 MemRegionManager::getParamVarRegion(const Expr *OriginExpr, unsigned Index,
                                     const LocationContext *LC) {
-  const StackFrameContext *SFC = LC->getStackFrame();
+  const StackFrame *SFC = LC->getStackFrame();
   assert(SFC);
   return getSubRegion<ParamVarRegion>(OriginExpr, Index,
                                       getStackArgumentsRegion(SFC));
@@ -1201,7 +1200,7 @@ MemRegionManager::getBlockDataRegion(const BlockCodeRegion *BC,
     if (!IsArcManagedBlock && LC) {
       // FIXME: Once we implement scope handling, we want the parent region
       // to be the scope.
-      const StackFrameContext *STC = LC->getStackFrame();
+      const StackFrame *STC = LC->getStackFrame();
       assert(STC);
       sReg = getStackLocalsRegion(STC);
     } else {
@@ -1222,7 +1221,7 @@ MemRegionManager::getCompoundLiteralRegion(const CompoundLiteralExpr *CL,
   if (CL->isFileScope())
     sReg = getGlobalsRegion();
   else {
-    const StackFrameContext *STC = LC->getStackFrame();
+    const StackFrame *STC = LC->getStackFrame();
     assert(STC);
     sReg = getStackLocalsRegion(STC);
   }
@@ -1300,7 +1299,7 @@ MemRegionManager::getObjCIvarRegion(const ObjCIvarDecl *d,
 const CXXTempObjectRegion*
 MemRegionManager::getCXXTempObjectRegion(Expr const *E,
                                          LocationContext const *LC) {
-  const StackFrameContext *SFC = LC->getStackFrame();
+  const StackFrame *SFC = LC->getStackFrame();
   assert(SFC);
   return getSubRegion<CXXTempObjectRegion>(E, getStackLocalsRegion(SFC));
 }
@@ -1308,7 +1307,7 @@ MemRegionManager::getCXXTempObjectRegion(Expr const *E,
 const CXXLifetimeExtendedObjectRegion *
 MemRegionManager::getCXXLifetimeExtendedObjectRegion(
     const Expr *Ex, const ValueDecl *VD, const LocationContext *LC) {
-  const StackFrameContext *SFC = LC->getStackFrame();
+  const StackFrame *SFC = LC->getStackFrame();
   assert(SFC);
   return getSubRegion<CXXLifetimeExtendedObjectRegion>(
       Ex, VD, getStackLocalsRegion(SFC));
@@ -1386,7 +1385,7 @@ MemRegionManager::getCXXThisRegion(QualType thisPointerTy,
     LC = LC->getParent();
     D = dyn_cast<CXXMethodDecl>(LC->getDecl());
   }
-  const StackFrameContext *STC = LC->getStackFrame();
+  const StackFrame *STC = LC->getStackFrame();
   assert(STC);
   return getSubRegion<CXXThisRegion>(PT, getStackArgumentsRegion(STC));
 }
@@ -1394,7 +1393,7 @@ MemRegionManager::getCXXThisRegion(QualType thisPointerTy,
 const AllocaRegion*
 MemRegionManager::getAllocaRegion(const Expr *E, unsigned cnt,
                                   const LocationContext *LC) {
-  const StackFrameContext *STC = LC->getStackFrame();
+  const StackFrame *STC = LC->getStackFrame();
   assert(STC);
   return getSubRegion<AllocaRegion>(E, cnt, getStackLocalsRegion(STC));
 }

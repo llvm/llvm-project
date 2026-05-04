@@ -28,13 +28,13 @@ class ZeroState {
 private:
   SymbolRef ZeroSymbol;
   unsigned BlockID;
-  const StackFrameContext *SFC;
+  const StackFrame *SFC;
 
 public:
-  ZeroState(SymbolRef S, unsigned B, const StackFrameContext *SFC)
+  ZeroState(SymbolRef S, unsigned B, const StackFrame *SFC)
       : ZeroSymbol(S), BlockID(B), SFC(SFC) {}
 
-  const StackFrameContext *getStackFrameContext() const { return SFC; }
+  const StackFrame *getStackFrameContext() const { return SFC; }
 
   bool operator==(const ZeroState &X) const {
     return BlockID == X.BlockID && SFC == X.SFC && ZeroSymbol == X.ZeroSymbol;
@@ -55,11 +55,11 @@ public:
 class DivisionBRVisitor : public BugReporterVisitor {
 private:
   SymbolRef ZeroSymbol;
-  const StackFrameContext *SFC;
+  const StackFrame *SFC;
   bool Satisfied;
 
 public:
-  DivisionBRVisitor(SymbolRef ZeroSymbol, const StackFrameContext *SFC)
+  DivisionBRVisitor(SymbolRef ZeroSymbol, const StackFrame *SFC)
       : ZeroSymbol(ZeroSymbol), SFC(SFC), Satisfied(false) {}
 
   void Profile(llvm::FoldingSetNodeID &ID) const override {

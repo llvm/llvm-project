@@ -159,8 +159,7 @@ AnalysisDeclContext *CallEvent::getCalleeAnalysisDeclContext() const {
   return ADC;
 }
 
-const StackFrameContext *
-CallEvent::getCalleeStackFrame(unsigned BlockCount) const {
+const StackFrame *CallEvent::getCalleeStackFrame(unsigned BlockCount) const {
   AnalysisDeclContext *ADC = getCalleeAnalysisDeclContext();
   if (!ADC)
     return nullptr;
@@ -191,7 +190,7 @@ CallEvent::getCalleeStackFrame(unsigned BlockCount) const {
 
 const ParamVarRegion
 *CallEvent::getParameterLocation(unsigned Index, unsigned BlockCount) const {
-  const StackFrameContext *SFC = getCalleeStackFrame(BlockCount);
+  const StackFrame *SFC = getCalleeStackFrame(BlockCount);
   // We cannot construct a VarRegion without a stack frame.
   if (!SFC)
     return nullptr;
@@ -476,11 +475,11 @@ static SVal castArgToParamTypeIfNeeded(const CallEvent &Call, unsigned ArgIdx,
   return SVB.evalCast(ArgVal, Param->getType(), ArgExpr->getType());
 }
 
-static void addParameterValuesToBindings(const StackFrameContext *CalleeCtx,
+static void addParameterValuesToBindings(const StackFrame *CalleeCtx,
                                          CallEvent::BindingsTy &Bindings,
                                          SValBuilder &SVB,
                                          const CallEvent &Call,
-                                         ArrayRef<ParmVarDecl*> parameters) {
+                                         ArrayRef<ParmVarDecl *> parameters) {
   MemRegionManager &MRMgr = SVB.getRegionManager();
 
   // If the function has fewer parameters than the call has arguments, we simply
@@ -519,7 +518,7 @@ static void addParameterValuesToBindings(const StackFrameContext *CalleeCtx,
 }
 
 const ConstructionContext *CallEvent::getConstructionContext() const {
-  const StackFrameContext *StackFrame = getCalleeStackFrame(0);
+  const StackFrame *StackFrame = getCalleeStackFrame(0);
   if (!StackFrame)
     return nullptr;
 
@@ -633,9 +632,8 @@ RuntimeDefinition AnyFunctionCall::getRuntimeDefinition() const {
   return RuntimeDefinition(*CTUDeclOrError, /*Foreign=*/true);
 }
 
-void AnyFunctionCall::getInitialStackFrameContents(
-                                        const StackFrameContext *CalleeCtx,
-                                        BindingsTy &Bindings) const {
+void AnyFunctionCall::getInitialStackFrameContents(const StackFrame *CalleeCtx,
+                                                   BindingsTy &Bindings) const {
   const auto *D = cast<FunctionDecl>(CalleeCtx->getDecl());
   SValBuilder &SVB = getState()->getStateManager().getSValBuilder();
   addParameterValuesToBindings(CalleeCtx, Bindings, SVB, *this,
@@ -847,9 +845,8 @@ RuntimeDefinition CXXInstanceCall::getRuntimeDefinition() const {
   return RuntimeDefinition(Definition, /*DispatchRegion=*/nullptr);
 }
 
-void CXXInstanceCall::getInitialStackFrameContents(
-                                            const StackFrameContext *CalleeCtx,
-                                            BindingsTy &Bindings) const {
+void CXXInstanceCall::getInitialStackFrameContents(const StackFrame *CalleeCtx,
+                                                   BindingsTy &Bindings) const {
   AnyFunctionCall::getInitialStackFrameContents(CalleeCtx, Bindings);
 
   // Handle the binding of 'this' in the new stack frame.
@@ -930,7 +927,7 @@ void BlockCall::getExtraInvalidatedValues(ValueList &Values,
     Values.push_back(loc::MemRegionVal(R));
 }
 
-void BlockCall::getInitialStackFrameContents(const StackFrameContext *CalleeCtx,
+void BlockCall::getInitialStackFrameContents(const StackFrame *CalleeCtx,
                                              BindingsTy &Bindings) const {
   SValBuilder &SVB = getState()->getStateManager().getSValBuilder();
   ArrayRef<ParmVarDecl*> Params;
@@ -977,8 +974,7 @@ void AnyCXXConstructorCall::getExtraInvalidatedValues(ValueList &Values,
 }
 
 void AnyCXXConstructorCall::getInitialStackFrameContents(
-                                             const StackFrameContext *CalleeCtx,
-                                             BindingsTy &Bindings) const {
+    const StackFrame *CalleeCtx, BindingsTy &Bindings) const {
   AnyFunctionCall::getInitialStackFrameContents(CalleeCtx, Bindings);
 
   SVal ThisVal = getCXXThisVal();
@@ -990,9 +986,8 @@ void AnyCXXConstructorCall::getInitialStackFrameContents(
   }
 }
 
-const StackFrameContext *
-CXXInheritedConstructorCall::getInheritingStackFrame() const {
-  const StackFrameContext *SFC = getLocationContext()->getStackFrame();
+const StackFrame *CXXInheritedConstructorCall::getInheritingStackFrame() const {
+  const StackFrame *SFC = getLocationContext()->getStackFrame();
   while (isa<CXXInheritedCtorInitExpr>(SFC->getCallSite()))
     SFC = SFC->getParent()->getStackFrame();
   return SFC;
@@ -1422,9 +1417,8 @@ bool ObjCMethodCall::argumentsMayEscape() const {
   return CallEvent::argumentsMayEscape();
 }
 
-void ObjCMethodCall::getInitialStackFrameContents(
-                                             const StackFrameContext *CalleeCtx,
-                                             BindingsTy &Bindings) const {
+void ObjCMethodCall::getInitialStackFrameContents(const StackFrame *CalleeCtx,
+                                                  BindingsTy &Bindings) const {
   const auto *D = cast<ObjCMethodDecl>(CalleeCtx->getDecl());
   SValBuilder &SVB = getState()->getStateManager().getSValBuilder();
   addParameterValuesToBindings(CalleeCtx, Bindings, SVB, *this,
@@ -1471,9 +1465,8 @@ CallEventManager::getSimpleCall(const CallExpr *CE, ProgramStateRef State,
   return create<SimpleFunctionCall>(CE, State, LCtx, ElemRef);
 }
 
-CallEventRef<>
-CallEventManager::getCaller(const StackFrameContext *CalleeCtx,
-                            ProgramStateRef State) {
+CallEventRef<> CallEventManager::getCaller(const StackFrame *CalleeCtx,
+                                           ProgramStateRef State) {
   const LocationContext *ParentCtx = CalleeCtx->getParent();
   const LocationContext *CallerCtx = ParentCtx->getStackFrame();
   CFGBlock::ConstCFGElementRef ElemRef = {CalleeCtx->getCallSiteBlock(),

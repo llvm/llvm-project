@@ -312,14 +312,14 @@ SValBuilder::getCastedMemRegionVal(const MemRegion *R, QualType Ty) {
 
 /// Return a memory region for the 'this' object reference.
 loc::MemRegionVal SValBuilder::getCXXThis(const CXXMethodDecl *D,
-                                          const StackFrameContext *SFC) {
+                                          const StackFrame *SFC) {
   return loc::MemRegionVal(
       getRegionManager().getCXXThisRegion(D->getThisType(), SFC));
 }
 
 /// Return a memory region for the 'this' object reference.
 loc::MemRegionVal SValBuilder::getCXXThis(const CXXRecordDecl *D,
-                                          const StackFrameContext *SFC) {
+                                          const StackFrame *SFC) {
   CanQualType PT =
       getContext().getPointerType(getContext().getCanonicalTagType(D));
   return loc::MemRegionVal(getRegionManager().getCXXThisRegion(PT, SFC));

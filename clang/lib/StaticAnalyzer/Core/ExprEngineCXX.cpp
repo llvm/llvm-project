@@ -212,7 +212,7 @@ SVal ExprEngine::computeObjectUnderConstruction(
       // The temporary is to be managed by the parent stack frame.
       // So build it in the parent stack frame if we're not in the
       // top frame of the analysis.
-      const StackFrameContext *SFC = LCtx->getStackFrame();
+      const StackFrame *SFC = LCtx->getStackFrame();
       if (const LocationContext *CallerLCtx = SFC->getParent()) {
         auto RTC = (*SFC->getCallSiteBlock())[SFC->getIndex()]
                        .getAs<CFGCXXRecordTypedCall>();
@@ -431,7 +431,7 @@ ProgramStateRef ExprEngine::updateObjectsUnderConstruction(
     }
     case ConstructionContext::SimpleReturnedValueKind:
     case ConstructionContext::CXX17ElidedCopyReturnedValueKind: {
-      const StackFrameContext *SFC = LCtx->getStackFrame();
+      const StackFrame *SFC = LCtx->getStackFrame();
       const LocationContext *CallerLCtx = SFC->getParent();
       if (!CallerLCtx) {
         // No extra work is necessary in top frame.

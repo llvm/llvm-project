@@ -182,7 +182,7 @@ public:
     return L.getPointer();
   }
 
-  const StackFrameContext *getStackFrame() const {
+  const StackFrame *getStackFrame() const {
     return getLocationContext()->getStackFrame();
   }
 
@@ -637,21 +637,21 @@ private:
 /// CallEnter uses the caller's location context.
 class CallEnter : public ProgramPoint {
 public:
-  CallEnter(const Stmt *stmt, const StackFrameContext *calleeCtx,
+  CallEnter(const Stmt *stmt, const StackFrame *calleeCtx,
             const LocationContext *callerCtx)
-    : ProgramPoint(stmt, calleeCtx, CallEnterKind, callerCtx, nullptr) {}
+      : ProgramPoint(stmt, calleeCtx, CallEnterKind, callerCtx, nullptr) {}
 
   const Stmt *getCallExpr() const {
     return static_cast<const Stmt *>(getData1());
   }
 
-  const StackFrameContext *getCalleeContext() const {
-    return static_cast<const StackFrameContext *>(getData2());
+  const StackFrame *getCalleeContext() const {
+    return static_cast<const StackFrame *>(getData2());
   }
 
   /// Returns the entry block in the CFG for the entered function.
   const CFGBlock *getEntry() const {
-    const StackFrameContext *CalleeCtx = getCalleeContext();
+    const StackFrame *CalleeCtx = getCalleeContext();
     const CFG *CalleeCFG = CalleeCtx->getCFG();
     return &(CalleeCFG->getEntry());
   }
@@ -676,8 +676,8 @@ private:
 class CallExitBegin : public ProgramPoint {
 public:
   // CallExitBegin uses the callee's location context.
-  CallExitBegin(const StackFrameContext *L, const ReturnStmt *RS)
-    : ProgramPoint(RS, CallExitBeginKind, L, nullptr) { }
+  CallExitBegin(const StackFrame *L, const ReturnStmt *RS)
+      : ProgramPoint(RS, CallExitBeginKind, L, nullptr) {}
 
   const ReturnStmt *getReturnStmt() const {
     return static_cast<const ReturnStmt *>(getData1());
@@ -696,12 +696,11 @@ private:
 class CallExitEnd : public ProgramPoint {
 public:
   // CallExitEnd uses the caller's location context.
-  CallExitEnd(const StackFrameContext *CalleeCtx,
-              const LocationContext *CallerCtx)
-    : ProgramPoint(CalleeCtx, CallExitEndKind, CallerCtx, nullptr) {}
+  CallExitEnd(const StackFrame *CalleeCtx, const LocationContext *CallerCtx)
+      : ProgramPoint(CalleeCtx, CallExitEndKind, CallerCtx, nullptr) {}
 
-  const StackFrameContext *getCalleeContext() const {
-    return static_cast<const StackFrameContext *>(getData1());
+  const StackFrame *getCalleeContext() const {
+    return static_cast<const StackFrame *>(getData1());
   }
 
 private:

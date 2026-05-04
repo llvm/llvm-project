@@ -78,7 +78,7 @@ static std::pair<const Stmt*,
                  const CFGBlock*> getLastStmt(const ExplodedNode *Node) {
   const Stmt *S = nullptr;
   const CFGBlock *Blk = nullptr;
-  const StackFrameContext *SF = Node->getStackFrame();
+  const StackFrame *SF = Node->getStackFrame();
 
   // Back up through the ExplodedGraph until we reach a statement node in this
   // stack frame.
@@ -185,7 +185,7 @@ void ExprEngine::removeDeadOnEndOfFunction(ExplodedNode *Pred,
 }
 
 static bool wasDifferentDeclUsedForInlining(CallEventRef<> Call,
-    const StackFrameContext *calleeCtx) {
+                                            const StackFrame *calleeCtx) {
   const Decl *RuntimeCallee = calleeCtx->getDecl();
   const Decl *StaticDecl = Call->getDecl();
   assert(RuntimeCallee);
@@ -253,11 +253,11 @@ ProgramStateRef ExprEngine::removeStateTraitsUsedForArrayEvaluation(
 /// steps 4-5. happen in the caller context.
 void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
   // Step 1 CEBNode was generated before the call.
-  const StackFrameContext *CalleeCtx = CEBNode->getStackFrame();
+  const StackFrame *CalleeCtx = CEBNode->getStackFrame();
 
   // The parent context might not be a stack frame, so make sure we
   // look up the first enclosing stack frame.
-  const StackFrameContext *CallerCtx = CalleeCtx->getParent()->getStackFrame();
+  const StackFrame *CallerCtx = CalleeCtx->getParent()->getStackFrame();
 
   const Expr *CE = CalleeCtx->getCallSite();
   ProgramStateRef State = CEBNode->getState();
@@ -461,7 +461,7 @@ void ExprEngine::examineStackFrames(const Decl *D, const LocationContext *LCtx,
   StackDepth = 0;
 
   while (LCtx) {
-    if (const StackFrameContext *SFC = dyn_cast<StackFrameContext>(LCtx)) {
+    if (const StackFrame *SFC = dyn_cast<StackFrame>(LCtx)) {
       const Decl *DI = SFC->getDecl();
 
       // Mark recursive (and mutually recursive) functions and always count
@@ -533,7 +533,7 @@ void ExprEngine::inlineCall(WorkList *WList, const CallEvent &Call,
   assert(D);
 
   const LocationContext *CurLC = Pred->getLocationContext();
-  const StackFrameContext *CallerSFC = CurLC->getStackFrame();
+  const StackFrame *CallerSFC = CurLC->getStackFrame();
   const BlockDataRegion *BlockInvocationData = nullptr;
   if (Call.getKind() == CE_Block &&
       !cast<BlockCall>(Call).isConversionFromLambda()) {
@@ -547,7 +547,7 @@ void ExprEngine::inlineCall(WorkList *WList, const CallEvent &Call,
 
   // Construct a new stack frame for the callee.
   AnalysisDeclContext *CalleeADC = AMgr.getAnalysisDeclContext(D);
-  const StackFrameContext *CalleeSFC = CalleeADC->getStackFrame(
+  const StackFrame *CalleeSFC = CalleeADC->getStackFrame(
       CallerSFC, BlockInvocationData, CallE, getCurrBlock(),
       getNumVisitedCurrent(), currStmtIdx);
 
@@ -840,7 +840,7 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
                               AnalyzerOptions &Opts,
                               const EvalCallOptions &CallOpts) {
   const LocationContext *CurLC = Pred->getLocationContext();
-  const StackFrameContext *CallerSFC = CurLC->getStackFrame();
+  const StackFrame *CallerSFC = CurLC->getStackFrame();
   switch (Call.getKind()) {
   case CE_Function:
   case CE_CXXStaticOperator:

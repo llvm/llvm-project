@@ -514,8 +514,7 @@ SourceLocation PathDiagnosticLocation::getValidSourceLocation(
 }
 
 static PathDiagnosticLocation
-getLocationForCaller(const StackFrameContext *SFC,
-                     const LocationContext *CallerCtx,
+getLocationForCaller(const StackFrame *SFC, const LocationContext *CallerCtx,
                      const SourceManager &SM) {
   const CFGBlock &Block = *SFC->getCallSiteBlock();
   CFGElement Source = Block[SFC->getIndex()];
@@ -866,7 +865,7 @@ PathDiagnosticCallPiece::construct(PathPieces &path,
 
 void PathDiagnosticCallPiece::setCallee(const CallEnter &CE,
                                         const SourceManager &SM) {
-  const StackFrameContext *CalleeCtx = CE.getCalleeContext();
+  const StackFrame *CalleeCtx = CE.getCalleeContext();
   Callee = CalleeCtx->getDecl();
 
   callEnterWithin = PathDiagnosticLocation::createBegin(Callee, SM);
