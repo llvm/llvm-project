@@ -26,19 +26,19 @@ namespace llvm {
 class Module;
 
 class HipStdParAcceleratorCodeSelectionPass
-    : public MandatoryPassInfoMixin<HipStdParAcceleratorCodeSelectionPass> {
+    : public RequiredPassInfoMixin<HipStdParAcceleratorCodeSelectionPass> {
 public:
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };
 
 class HipStdParAllocationInterpositionPass
-    : public MandatoryPassInfoMixin<HipStdParAllocationInterpositionPass> {
+    : public RequiredPassInfoMixin<HipStdParAllocationInterpositionPass> {
 public:
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };
 
 class HipStdParMathFixupPass
-    : public MandatoryPassInfoMixin<HipStdParMathFixupPass> {
+    : public RequiredPassInfoMixin<HipStdParMathFixupPass> {
 public:
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };

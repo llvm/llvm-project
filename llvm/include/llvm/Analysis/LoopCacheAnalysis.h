@@ -279,7 +279,7 @@ raw_ostream &operator<<(raw_ostream &OS, const CacheCost &CC);
 
 /// Printer pass for the \c CacheCost results.
 class LoopCachePrinterPass
-    : public MandatoryPassInfoMixin<LoopCachePrinterPass> {
+    : public RequiredPassInfoMixin<LoopCachePrinterPass> {
   raw_ostream &OS;
 
 public:

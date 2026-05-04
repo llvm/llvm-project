@@ -69,12 +69,12 @@ using llvm::Function;
 using llvm::FunctionAnalysisManager;
 using llvm::IntrinsicInst;
 using llvm::LoopInfo;
-using llvm::MandatoryPassInfoMixin;
 using llvm::Module;
 using llvm::OptimizationRemarkEmitter;
 using llvm::OptionalPassInfoMixin;
 using llvm::PreservedAnalyses;
 using llvm::RegionInfo;
+using llvm::RequiredPassInfoMixin;
 using llvm::ScalarEvolution;
 using llvm::SCEVUnknown;
 using llvm::SetVector;
@@ -628,7 +628,7 @@ struct ScopAnalysis : AnalysisInfoMixin<ScopAnalysis> {
 };
 
 struct ScopAnalysisPrinterPass final
-    : MandatoryPassInfoMixin<ScopAnalysisPrinterPass> {
+    : RequiredPassInfoMixin<ScopAnalysisPrinterPass> {
   ScopAnalysisPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);

@@ -14,7 +14,7 @@
 namespace llvm {
 
 class ExpandPostRAPseudosPass
-    : public MandatoryPassInfoMixin<ExpandPostRAPseudosPass> {
+    : public RequiredPassInfoMixin<ExpandPostRAPseudosPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

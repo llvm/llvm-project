@@ -22,7 +22,7 @@ namespace llvm {
 class Function;
 
 class AddDiscriminatorsPass
-    : public MandatoryPassInfoMixin<AddDiscriminatorsPass> {
+    : public RequiredPassInfoMixin<AddDiscriminatorsPass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };

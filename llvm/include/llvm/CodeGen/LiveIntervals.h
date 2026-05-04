@@ -528,7 +528,7 @@ public:
 };
 
 class LiveIntervalsPrinterPass
-    : public MandatoryPassInfoMixin<LiveIntervalsPrinterPass> {
+    : public RequiredPassInfoMixin<LiveIntervalsPrinterPass> {
   raw_ostream &OS;
 
 public:

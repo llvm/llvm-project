@@ -19,7 +19,7 @@ class Function;
 
 /// A pass to instrument code and perform run-time bounds checking on loads,
 /// stores, and other memory intrinsics.
-class BoundsCheckingPass : public MandatoryPassInfoMixin<BoundsCheckingPass> {
+class BoundsCheckingPass : public RequiredPassInfoMixin<BoundsCheckingPass> {
 
 public:
   struct Options {

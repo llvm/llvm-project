@@ -21,7 +21,7 @@ enum class StructuralHashOptions {
 
 /// Printer pass for  StructuralHashes
 class StructuralHashPrinterPass
-    : public MandatoryPassInfoMixin<StructuralHashPrinterPass> {
+    : public RequiredPassInfoMixin<StructuralHashPrinterPass> {
   raw_ostream &OS;
   const StructuralHashOptions Options;
 

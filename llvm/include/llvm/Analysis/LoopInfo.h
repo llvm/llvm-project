@@ -597,7 +597,7 @@ public:
 };
 
 /// Printer pass for the \c LoopAnalysis results.
-class LoopPrinterPass : public MandatoryPassInfoMixin<LoopPrinterPass> {
+class LoopPrinterPass : public RequiredPassInfoMixin<LoopPrinterPass> {
   raw_ostream &OS;
 
 public:
@@ -606,7 +606,7 @@ public:
 };
 
 /// Verifier pass for the \c LoopAnalysis results.
-struct LoopVerifierPass : public MandatoryPassInfoMixin<LoopVerifierPass> {
+struct LoopVerifierPass : public RequiredPassInfoMixin<LoopVerifierPass> {
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 

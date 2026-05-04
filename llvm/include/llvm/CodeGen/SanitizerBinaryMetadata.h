@@ -14,7 +14,7 @@
 namespace llvm {
 
 class MachineSanitizerBinaryMetadataPass
-    : public MandatoryPassInfoMixin<MachineSanitizerBinaryMetadataPass> {
+    : public RequiredPassInfoMixin<MachineSanitizerBinaryMetadataPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

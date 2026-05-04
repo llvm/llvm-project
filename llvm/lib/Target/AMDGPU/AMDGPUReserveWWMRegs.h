@@ -13,7 +13,7 @@
 
 namespace llvm {
 class AMDGPUReserveWWMRegsPass
-    : public MandatoryPassInfoMixin<AMDGPUReserveWWMRegsPass> {
+    : public RequiredPassInfoMixin<AMDGPUReserveWWMRegsPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

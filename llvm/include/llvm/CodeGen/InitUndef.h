@@ -13,7 +13,7 @@
 
 namespace llvm {
 
-class InitUndefPass : public MandatoryPassInfoMixin<InitUndefPass> {
+class InitUndefPass : public RequiredPassInfoMixin<InitUndefPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

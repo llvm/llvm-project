@@ -420,7 +420,7 @@ public:
 };
 
 class SIMemoryLegalizerPass
-    : public MandatoryPassInfoMixin<SIMemoryLegalizerPass> {
+    : public RequiredPassInfoMixin<SIMemoryLegalizerPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
@@ -440,7 +440,7 @@ public:
 };
 
 class SIInsertWaitcntsPass
-    : public MandatoryPassInfoMixin<SIInsertWaitcntsPass> {
+    : public RequiredPassInfoMixin<SIInsertWaitcntsPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
@@ -454,14 +454,14 @@ public:
 };
 
 class SILateBranchLoweringPass
-    : public MandatoryPassInfoMixin<SILateBranchLoweringPass> {
+    : public RequiredPassInfoMixin<SILateBranchLoweringPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
 };
 
 class SIPreEmitPeepholePass
-    : public MandatoryPassInfoMixin<SIPreEmitPeepholePass> {
+    : public RequiredPassInfoMixin<SIPreEmitPeepholePass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

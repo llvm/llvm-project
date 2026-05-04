@@ -228,7 +228,7 @@ FunctionPass *createX86LowerTileCopyLegacyPass();
 /// ensures that the open interval of function start and end PCs contains all
 /// return addresses for the benefit of the Windows x64 unwinder.
 class X86AvoidTrailingCallPass
-    : public MandatoryPassInfoMixin<X86AvoidTrailingCallPass> {
+    : public RequiredPassInfoMixin<X86AvoidTrailingCallPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
@@ -363,7 +363,7 @@ FunctionPass *createX86WinEHUnwindV2LegacyPass();
 
 /// The pass transforms load/store <256 x i32> to AMX load/store intrinsics
 /// or split the data to two <128 x i32>.
-class X86LowerAMXTypePass : public MandatoryPassInfoMixin<X86LowerAMXTypePass> {
+class X86LowerAMXTypePass : public RequiredPassInfoMixin<X86LowerAMXTypePass> {
 private:
   const TargetMachine *TM;
 
@@ -387,7 +387,7 @@ FunctionPass *createX86SuppressAPXForRelocationLegacyPass();
 /// The pass transforms amx intrinsics to scalar operation if the function has
 /// optnone attribute or it is O0.
 class X86LowerAMXIntrinsicsPass
-    : public MandatoryPassInfoMixin<X86LowerAMXIntrinsicsPass> {
+    : public RequiredPassInfoMixin<X86LowerAMXIntrinsicsPass> {
 private:
   const TargetMachine *TM;
 

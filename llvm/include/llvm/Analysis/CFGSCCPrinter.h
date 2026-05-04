@@ -13,7 +13,7 @@
 
 namespace llvm {
 
-class CFGSCCPrinterPass : public MandatoryPassInfoMixin<CFGSCCPrinterPass> {
+class CFGSCCPrinterPass : public RequiredPassInfoMixin<CFGSCCPrinterPass> {
   raw_ostream &OS;
 
 public:

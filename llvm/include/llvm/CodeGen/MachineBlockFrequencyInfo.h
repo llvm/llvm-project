@@ -125,7 +125,7 @@ public:
 
 /// Printer pass for the \c MachineBlockFrequencyInfo results.
 class MachineBlockFrequencyPrinterPass
-    : public MandatoryPassInfoMixin<MachineBlockFrequencyPrinterPass> {
+    : public RequiredPassInfoMixin<MachineBlockFrequencyPrinterPass> {
   raw_ostream &OS;
 
 public:

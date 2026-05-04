@@ -63,7 +63,7 @@ public:
 };
 
 class MachineCycleInfoPrinterPass
-    : public MandatoryPassInfoMixin<MachineCycleInfoPrinterPass> {
+    : public RequiredPassInfoMixin<MachineCycleInfoPrinterPass> {
   raw_ostream &OS;
 
 public:

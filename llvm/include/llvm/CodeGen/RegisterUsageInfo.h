@@ -96,7 +96,7 @@ public:
 };
 
 class PhysicalRegisterUsageInfoPrinterPass
-    : public MandatoryPassInfoMixin<PhysicalRegisterUsageInfoPrinterPass> {
+    : public RequiredPassInfoMixin<PhysicalRegisterUsageInfoPrinterPass> {
   raw_ostream &OS;
 
 public:

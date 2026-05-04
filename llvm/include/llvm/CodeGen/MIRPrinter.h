@@ -26,7 +26,7 @@ class MachineModuleInfo;
 class Module;
 template <typename T> class SmallVectorImpl;
 
-class PrintMIRPreparePass : public MandatoryPassInfoMixin<PrintMIRPreparePass> {
+class PrintMIRPreparePass : public RequiredPassInfoMixin<PrintMIRPreparePass> {
   raw_ostream &OS;
 
 public:
@@ -34,7 +34,7 @@ public:
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MFAM);
 };
 
-class PrintMIRPass : public MandatoryPassInfoMixin<PrintMIRPass> {
+class PrintMIRPass : public RequiredPassInfoMixin<PrintMIRPass> {
   raw_ostream &OS;
 
 public:

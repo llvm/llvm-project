@@ -24,7 +24,7 @@ class Module;
 class raw_ostream;
 
 class ThinLTOBitcodeWriterPass
-    : public MandatoryPassInfoMixin<ThinLTOBitcodeWriterPass> {
+    : public RequiredPassInfoMixin<ThinLTOBitcodeWriterPass> {
   raw_ostream &OS;
   raw_ostream *ThinLinkOS;
   const bool ShouldPreserveUseListOrder;

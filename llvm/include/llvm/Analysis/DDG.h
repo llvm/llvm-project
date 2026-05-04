@@ -422,7 +422,7 @@ private:
 
 /// Textual printer pass for the DDG of a loop.
 class DDGAnalysisPrinterPass
-    : public MandatoryPassInfoMixin<DDGAnalysisPrinterPass> {
+    : public RequiredPassInfoMixin<DDGAnalysisPrinterPass> {
 public:
   explicit DDGAnalysisPrinterPass(raw_ostream &OS) : OS(OS) {}
   LLVM_ABI PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,

@@ -14,7 +14,7 @@
 #include <string>
 
 namespace llvm {
-class MachineVerifierPass : public MandatoryPassInfoMixin<MachineVerifierPass> {
+class MachineVerifierPass : public RequiredPassInfoMixin<MachineVerifierPass> {
   std::string Banner;
 
 public:

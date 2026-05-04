@@ -19,7 +19,7 @@
 
 namespace llvm {
 
-class MachineKCFIPass : public MandatoryPassInfoMixin<MachineKCFIPass> {
+class MachineKCFIPass : public RequiredPassInfoMixin<MachineKCFIPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

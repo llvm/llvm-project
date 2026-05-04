@@ -81,7 +81,7 @@ public:
 };
 
 class MachinePostDominatorTreePrinterPass
-    : public MandatoryPassInfoMixin<MachinePostDominatorTreePrinterPass> {
+    : public RequiredPassInfoMixin<MachinePostDominatorTreePrinterPass> {
   raw_ostream &OS;
 
 public:

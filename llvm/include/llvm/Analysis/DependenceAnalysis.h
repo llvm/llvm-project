@@ -727,7 +727,7 @@ private:
 
 /// Printer pass to dump DA results.
 struct DependenceAnalysisPrinterPass
-    : public MandatoryPassInfoMixin<DependenceAnalysisPrinterPass> {
+    : public RequiredPassInfoMixin<DependenceAnalysisPrinterPass> {
   DependenceAnalysisPrinterPass(raw_ostream &OS, bool NormalizeResults = false)
       : OS(OS), NormalizeResults(NormalizeResults) {}
 

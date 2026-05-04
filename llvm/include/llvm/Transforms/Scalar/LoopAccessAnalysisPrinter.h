@@ -18,7 +18,7 @@ class raw_ostream;
 
 /// Printer pass for the \c LoopAccessInfo results.
 class LoopAccessInfoPrinterPass
-    : public MandatoryPassInfoMixin<LoopAccessInfoPrinterPass> {
+    : public RequiredPassInfoMixin<LoopAccessInfoPrinterPass> {
   raw_ostream &OS;
   bool AllowPartial;
 

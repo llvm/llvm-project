@@ -2547,14 +2547,14 @@ public:
 
 /// Verifier pass for the \c ScalarEvolutionAnalysis results.
 class ScalarEvolutionVerifierPass
-    : public MandatoryPassInfoMixin<ScalarEvolutionVerifierPass> {
+    : public RequiredPassInfoMixin<ScalarEvolutionVerifierPass> {
 public:
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 /// Printer pass for the \c ScalarEvolutionAnalysis results.
 class ScalarEvolutionPrinterPass
-    : public MandatoryPassInfoMixin<ScalarEvolutionPrinterPass> {
+    : public RequiredPassInfoMixin<ScalarEvolutionPrinterPass> {
   raw_ostream &OS;
 
 public:

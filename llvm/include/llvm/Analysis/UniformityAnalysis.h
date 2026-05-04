@@ -42,7 +42,7 @@ public:
 
 /// Printer pass for the \c UniformityInfo.
 class UniformityInfoPrinterPass
-    : public MandatoryPassInfoMixin<UniformityInfoPrinterPass> {
+    : public RequiredPassInfoMixin<UniformityInfoPrinterPass> {
   raw_ostream &OS;
 
 public:

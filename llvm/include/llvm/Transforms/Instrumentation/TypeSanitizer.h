@@ -21,7 +21,7 @@ class Function;
 class FunctionPass;
 class Module;
 
-struct TypeSanitizerPass : public MandatoryPassInfoMixin<TypeSanitizerPass> {
+struct TypeSanitizerPass : public RequiredPassInfoMixin<TypeSanitizerPass> {
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 

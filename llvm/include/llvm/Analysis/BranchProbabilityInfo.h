@@ -213,7 +213,7 @@ public:
 
 /// Printer pass for the \c BranchProbabilityAnalysis results.
 class BranchProbabilityPrinterPass
-    : public MandatoryPassInfoMixin<BranchProbabilityPrinterPass> {
+    : public RequiredPassInfoMixin<BranchProbabilityPrinterPass> {
   raw_ostream &OS;
 
 public:

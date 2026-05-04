@@ -14,7 +14,7 @@
 namespace llvm {
 /// Printer pass for cost modeling results.
 class CostModelPrinterPass
-    : public MandatoryPassInfoMixin<CostModelPrinterPass> {
+    : public RequiredPassInfoMixin<CostModelPrinterPass> {
   raw_ostream &OS;
 
 public:

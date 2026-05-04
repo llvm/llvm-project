@@ -56,7 +56,7 @@ template <typename MarkerTy> struct ShouldRunExtraPasses {
 /// simplifications after loop-vectorization, if runtime checks have been added.
 template <typename MarkerTy>
 class ExtraFunctionPassManager
-    : public MandatoryPassInfoMixin<ExtraFunctionPassManager<MarkerTy>> {
+    : public RequiredPassInfoMixin<ExtraFunctionPassManager<MarkerTy>> {
   FunctionPassManager InnerFPM;
 
 public:
@@ -78,7 +78,7 @@ public:
 /// An example is doing additional runs of SimpleLoopUnswitch.
 template <typename MarkerTy>
 class ExtraLoopPassManager
-    : public MandatoryPassInfoMixin<ExtraLoopPassManager<MarkerTy>> {
+    : public RequiredPassInfoMixin<ExtraLoopPassManager<MarkerTy>> {
   LoopPassManager InnerLPM;
 
 public:

@@ -211,7 +211,7 @@ public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };
 
-class X86AsmPrinterPass : public MandatoryPassInfoMixin<X86AsmPrinterPass> {
+class X86AsmPrinterPass : public RequiredPassInfoMixin<X86AsmPrinterPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

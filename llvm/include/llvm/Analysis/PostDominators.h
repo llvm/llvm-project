@@ -62,7 +62,7 @@ public:
 
 /// Printer pass for the \c PostDominatorTree.
 class PostDominatorTreePrinterPass
-    : public MandatoryPassInfoMixin<PostDominatorTreePrinterPass> {
+    : public RequiredPassInfoMixin<PostDominatorTreePrinterPass> {
   raw_ostream &OS;
 
 public:

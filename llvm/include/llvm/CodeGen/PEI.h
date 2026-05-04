@@ -14,7 +14,7 @@
 namespace llvm {
 
 class PrologEpilogInserterPass
-    : public MandatoryPassInfoMixin<PrologEpilogInserterPass> {
+    : public RequiredPassInfoMixin<PrologEpilogInserterPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

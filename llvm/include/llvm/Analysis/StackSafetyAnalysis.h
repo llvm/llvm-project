@@ -100,7 +100,7 @@ public:
 
 /// Printer pass for the \c StackSafetyAnalysis results.
 class StackSafetyPrinterPass
-    : public MandatoryPassInfoMixin<StackSafetyPrinterPass> {
+    : public RequiredPassInfoMixin<StackSafetyPrinterPass> {
   raw_ostream &OS;
 
 public:
@@ -138,7 +138,7 @@ public:
 
 /// Printer pass for the \c StackSafetyGlobalAnalysis results.
 class StackSafetyGlobalPrinterPass
-    : public MandatoryPassInfoMixin<StackSafetyGlobalPrinterPass> {
+    : public RequiredPassInfoMixin<StackSafetyGlobalPrinterPass> {
   raw_ostream &OS;
 
 public:

@@ -387,7 +387,7 @@ private:
 
 /// Printer pass that uses \c ProfileSummaryAnalysis.
 class ProfileSummaryPrinterPass
-    : public MandatoryPassInfoMixin<ProfileSummaryPrinterPass> {
+    : public RequiredPassInfoMixin<ProfileSummaryPrinterPass> {
   raw_ostream &OS;
 
 public:

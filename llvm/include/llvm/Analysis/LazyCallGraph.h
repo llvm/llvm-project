@@ -1283,7 +1283,7 @@ public:
 ///
 /// This is primarily useful for testing the analysis.
 class LazyCallGraphPrinterPass
-    : public MandatoryPassInfoMixin<LazyCallGraphPrinterPass> {
+    : public RequiredPassInfoMixin<LazyCallGraphPrinterPass> {
   raw_ostream &OS;
 
 public:
@@ -1296,7 +1296,7 @@ public:
 ///
 /// This is primarily useful for visualization purposes.
 class LazyCallGraphDOTPrinterPass
-    : public MandatoryPassInfoMixin<LazyCallGraphDOTPrinterPass> {
+    : public RequiredPassInfoMixin<LazyCallGraphDOTPrinterPass> {
   raw_ostream &OS;
 
 public:

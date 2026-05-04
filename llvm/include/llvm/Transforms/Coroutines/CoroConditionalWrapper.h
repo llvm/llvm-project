@@ -17,7 +17,7 @@ class Module;
 
 // Only runs passes in the contained pass manager if the module contains any
 // coroutine intrinsic declarations.
-struct CoroConditionalWrapper : MandatoryPassInfoMixin<CoroConditionalWrapper> {
+struct CoroConditionalWrapper : RequiredPassInfoMixin<CoroConditionalWrapper> {
   CoroConditionalWrapper(ModulePassManager &&);
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 

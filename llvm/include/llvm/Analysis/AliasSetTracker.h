@@ -271,7 +271,7 @@ inline raw_ostream& operator<<(raw_ostream &OS, const AliasSetTracker &AST) {
 }
 
 class AliasSetsPrinterPass
-    : public MandatoryPassInfoMixin<AliasSetsPrinterPass> {
+    : public RequiredPassInfoMixin<AliasSetsPrinterPass> {
   raw_ostream &OS;
 
 public:

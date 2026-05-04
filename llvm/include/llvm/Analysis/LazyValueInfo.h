@@ -147,7 +147,7 @@ private:
 
 /// Printer pass for the LazyValueAnalysis results.
 class LazyValueInfoPrinterPass
-    : public MandatoryPassInfoMixin<LazyValueInfoPrinterPass> {
+    : public RequiredPassInfoMixin<LazyValueInfoPrinterPass> {
   raw_ostream &OS;
 
 public:

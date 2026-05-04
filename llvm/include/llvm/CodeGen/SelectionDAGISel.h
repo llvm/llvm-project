@@ -582,7 +582,7 @@ public:
 };
 
 class SelectionDAGISelPass
-    : public MandatoryPassInfoMixin<SelectionDAGISelPass> {
+    : public RequiredPassInfoMixin<SelectionDAGISelPass> {
   std::unique_ptr<SelectionDAGISel> Selector;
 
 protected:

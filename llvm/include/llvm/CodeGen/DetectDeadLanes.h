@@ -116,7 +116,7 @@ private:
   BitVector DefinedByCopy;
 };
 
-class DetectDeadLanesPass : public MandatoryPassInfoMixin<DetectDeadLanesPass> {
+class DetectDeadLanesPass : public RequiredPassInfoMixin<DetectDeadLanesPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

@@ -63,7 +63,7 @@ public:
 };
 
 class CycleInfoPrinterPass
-    : public MandatoryPassInfoMixin<CycleInfoPrinterPass> {
+    : public RequiredPassInfoMixin<CycleInfoPrinterPass> {
   raw_ostream &OS;
 
 public:
@@ -72,7 +72,7 @@ public:
 };
 
 struct CycleInfoVerifierPass
-    : public MandatoryPassInfoMixin<CycleInfoVerifierPass> {
+    : public RequiredPassInfoMixin<CycleInfoVerifierPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 

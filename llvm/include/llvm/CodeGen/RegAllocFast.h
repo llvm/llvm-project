@@ -14,7 +14,7 @@
 
 namespace llvm {
 
-class RegAllocFastPass : public MandatoryPassInfoMixin<RegAllocFastPass> {
+class RegAllocFastPass : public RequiredPassInfoMixin<RegAllocFastPass> {
 public:
   struct Options {
     RegAllocFilterFunc Filter;

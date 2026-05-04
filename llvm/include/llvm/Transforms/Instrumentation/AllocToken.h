@@ -33,7 +33,7 @@ struct AllocTokenOptions {
 
 /// A module pass that rewrites heap allocations to use token-enabled
 /// allocation functions based on various source-level properties.
-class AllocTokenPass : public MandatoryPassInfoMixin<AllocTokenPass> {
+class AllocTokenPass : public RequiredPassInfoMixin<AllocTokenPass> {
 public:
   LLVM_ABI explicit AllocTokenPass(AllocTokenOptions Opts = {});
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);

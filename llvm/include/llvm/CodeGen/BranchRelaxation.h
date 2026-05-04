@@ -14,7 +14,7 @@
 namespace llvm {
 
 class BranchRelaxationPass
-    : public MandatoryPassInfoMixin<BranchRelaxationPass> {
+    : public RequiredPassInfoMixin<BranchRelaxationPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

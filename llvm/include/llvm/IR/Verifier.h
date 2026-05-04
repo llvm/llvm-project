@@ -131,7 +131,7 @@ public:
 ///
 /// Note that this creates a pass suitable for the legacy pass manager. It has
 /// nothing to do with \c VerifierPass.
-class VerifierPass : public MandatoryPassInfoMixin<VerifierPass> {
+class VerifierPass : public RequiredPassInfoMixin<VerifierPass> {
   bool FatalErrors;
 
 public:

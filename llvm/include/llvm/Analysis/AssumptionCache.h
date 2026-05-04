@@ -190,7 +190,7 @@ public:
 
 /// Printer pass for the \c AssumptionAnalysis results.
 class AssumptionPrinterPass
-    : public MandatoryPassInfoMixin<AssumptionPrinterPass> {
+    : public RequiredPassInfoMixin<AssumptionPrinterPass> {
   raw_ostream &OS;
 
 public:

@@ -70,7 +70,7 @@ using HasRunOnLoopT = decltype(std::declval<PassT>().run(
 template <>
 class PassManager<Loop, LoopAnalysisManager, LoopStandardAnalysisResults &,
                   LPMUpdater &>
-    : public MandatoryPassInfoMixin<
+    : public RequiredPassInfoMixin<
           PassManager<Loop, LoopAnalysisManager, LoopStandardAnalysisResults &,
                       LPMUpdater &>> {
 public:
@@ -184,7 +184,7 @@ typedef PassManager<Loop, LoopAnalysisManager, LoopStandardAnalysisResults &,
 template <typename AnalysisT>
 struct RequireAnalysisPass<AnalysisT, Loop, LoopAnalysisManager,
                            LoopStandardAnalysisResults &, LPMUpdater &>
-    : MandatoryPassInfoMixin<
+    : RequiredPassInfoMixin<
           RequireAnalysisPass<AnalysisT, Loop, LoopAnalysisManager,
                               LoopStandardAnalysisResults &, LPMUpdater &>> {
   PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
@@ -394,7 +394,7 @@ std::optional<PreservedAnalyses> LoopPassManager::runSinglePass(
 /// \fn createLoopFunctionToLoopPassAdaptor to see when loop mode and loop-nest
 /// mode are used.
 class FunctionToLoopPassAdaptor
-    : public MandatoryPassInfoMixin<FunctionToLoopPassAdaptor> {
+    : public RequiredPassInfoMixin<FunctionToLoopPassAdaptor> {
 public:
   using PassConceptT =
       detail::PassConcept<Loop, LoopAnalysisManager,

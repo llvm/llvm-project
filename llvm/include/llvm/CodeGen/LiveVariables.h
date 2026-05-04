@@ -310,7 +310,7 @@ public:
 };
 
 class LiveVariablesPrinterPass
-    : public MandatoryPassInfoMixin<LiveVariablesPrinterPass> {
+    : public RequiredPassInfoMixin<LiveVariablesPrinterPass> {
   raw_ostream &OS;
 
 public:

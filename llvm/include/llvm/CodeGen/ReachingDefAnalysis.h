@@ -326,7 +326,7 @@ public:
 
 /// Printer pass for the \c ReachingDefInfo results.
 class ReachingDefPrinterPass
-    : public MandatoryPassInfoMixin<ReachingDefPrinterPass> {
+    : public RequiredPassInfoMixin<ReachingDefPrinterPass> {
   raw_ostream &OS;
 
 public:

@@ -211,7 +211,7 @@ public:
 };
 
 /// Printer pass for the \c LoopNest results.
-class LoopNestPrinterPass : public MandatoryPassInfoMixin<LoopNestPrinterPass> {
+class LoopNestPrinterPass : public RequiredPassInfoMixin<LoopNestPrinterPass> {
   raw_ostream &OS;
 
 public:

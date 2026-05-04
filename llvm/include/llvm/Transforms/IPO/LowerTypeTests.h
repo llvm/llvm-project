@@ -201,7 +201,7 @@ enum class DropTestKind {
 
 } // end namespace lowertypetests
 
-class LowerTypeTestsPass : public MandatoryPassInfoMixin<LowerTypeTestsPass> {
+class LowerTypeTestsPass : public RequiredPassInfoMixin<LowerTypeTestsPass> {
   bool UseCommandLine = false;
 
   ModuleSummaryIndex *ExportSummary = nullptr;
@@ -216,7 +216,7 @@ public:
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
-class DropTypeTestsPass : public MandatoryPassInfoMixin<DropTypeTestsPass> {
+class DropTypeTestsPass : public RequiredPassInfoMixin<DropTypeTestsPass> {
   lowertypetests::DropTestKind Kind = lowertypetests::DropTestKind::Assume;
 
 public:

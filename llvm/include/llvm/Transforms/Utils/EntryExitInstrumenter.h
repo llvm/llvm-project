@@ -22,7 +22,7 @@ namespace llvm {
 class Function;
 
 struct EntryExitInstrumenterPass
-    : public MandatoryPassInfoMixin<EntryExitInstrumenterPass> {
+    : public RequiredPassInfoMixin<EntryExitInstrumenterPass> {
   EntryExitInstrumenterPass(bool PostInlining) : PostInlining(PostInlining) {}
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);

@@ -21,7 +21,7 @@
 
 namespace llvm {
 
-class DXILFinalizeLinkage : public MandatoryPassInfoMixin<DXILFinalizeLinkage> {
+class DXILFinalizeLinkage : public RequiredPassInfoMixin<DXILFinalizeLinkage> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
 };

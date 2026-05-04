@@ -30,7 +30,7 @@ class Pass;
 
 /// Pass (for the new pass manager) for printing a Module as
 /// LLVM's text IR assembly.
-class PrintModulePass : public MandatoryPassInfoMixin<PrintModulePass> {
+class PrintModulePass : public RequiredPassInfoMixin<PrintModulePass> {
   raw_ostream &OS;
   std::string Banner;
   bool ShouldPreserveUseListOrder;
@@ -47,7 +47,7 @@ public:
 
 /// Pass (for the new pass manager) for printing a Function as
 /// LLVM's text IR assembly.
-class PrintFunctionPass : public MandatoryPassInfoMixin<PrintFunctionPass> {
+class PrintFunctionPass : public RequiredPassInfoMixin<PrintFunctionPass> {
   raw_ostream &OS;
   std::string Banner;
 

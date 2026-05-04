@@ -23,13 +23,13 @@ class ModulePass;
 
 /// Pass for printing the call graph to a dot file
 class CallGraphDOTPrinterPass
-    : public MandatoryPassInfoMixin<CallGraphDOTPrinterPass> {
+    : public RequiredPassInfoMixin<CallGraphDOTPrinterPass> {
 public:
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 /// Pass for viewing the call graph
-class CallGraphViewerPass : public MandatoryPassInfoMixin<CallGraphViewerPass> {
+class CallGraphViewerPass : public RequiredPassInfoMixin<CallGraphViewerPass> {
 public:
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };

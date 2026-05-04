@@ -40,8 +40,7 @@ struct MemorySanitizerOptions {
 /// inserts calls to runtime library functions. If the functions aren't declared
 /// yet, the pass inserts the declarations. Otherwise the existing globals are
 /// used.
-struct MemorySanitizerPass
-    : public MandatoryPassInfoMixin<MemorySanitizerPass> {
+struct MemorySanitizerPass : public RequiredPassInfoMixin<MemorySanitizerPass> {
   MemorySanitizerPass(MemorySanitizerOptions Options) : Options(Options) {}
 
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);

@@ -16,7 +16,7 @@ namespace llvm {
 
 class TargetMachine;
 
-class ExpandIRInstsPass : public MandatoryPassInfoMixin<ExpandIRInstsPass> {
+class ExpandIRInstsPass : public RequiredPassInfoMixin<ExpandIRInstsPass> {
 private:
   const TargetMachine *TM;
   CodeGenOptLevel OptLevel;

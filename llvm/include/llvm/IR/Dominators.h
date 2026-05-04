@@ -289,7 +289,7 @@ public:
 
 /// Printer pass for the \c DominatorTree.
 class DominatorTreePrinterPass
-    : public MandatoryPassInfoMixin<DominatorTreePrinterPass> {
+    : public RequiredPassInfoMixin<DominatorTreePrinterPass> {
   raw_ostream &OS;
 
 public:
@@ -300,7 +300,7 @@ public:
 
 /// Verifier pass for the \c DominatorTree.
 struct DominatorTreeVerifierPass
-    : MandatoryPassInfoMixin<DominatorTreeVerifierPass> {
+    : RequiredPassInfoMixin<DominatorTreeVerifierPass> {
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 

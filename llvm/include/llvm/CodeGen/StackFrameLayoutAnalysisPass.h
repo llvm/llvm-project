@@ -14,7 +14,7 @@
 namespace llvm {
 
 class StackFrameLayoutAnalysisPass
-    : public MandatoryPassInfoMixin<StackFrameLayoutAnalysisPass> {
+    : public RequiredPassInfoMixin<StackFrameLayoutAnalysisPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

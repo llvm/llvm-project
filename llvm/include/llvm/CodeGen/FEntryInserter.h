@@ -13,7 +13,7 @@
 
 namespace llvm {
 
-class FEntryInserterPass : public MandatoryPassInfoMixin<FEntryInserterPass> {
+class FEntryInserterPass : public RequiredPassInfoMixin<FEntryInserterPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

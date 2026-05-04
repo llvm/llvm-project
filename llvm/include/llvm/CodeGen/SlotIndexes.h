@@ -660,7 +660,7 @@ class raw_ostream;
   };
 
   class SlotIndexesPrinterPass
-      : public MandatoryPassInfoMixin<SlotIndexesPrinterPass> {
+      : public RequiredPassInfoMixin<SlotIndexesPrinterPass> {
     raw_ostream &OS;
 
   public:

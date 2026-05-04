@@ -235,7 +235,7 @@ private:
 
 /// Printer pass for \c PredicateInfo.
 class PredicateInfoPrinterPass
-    : public MandatoryPassInfoMixin<PredicateInfoPrinterPass> {
+    : public RequiredPassInfoMixin<PredicateInfoPrinterPass> {
   raw_ostream &OS;
 
 public:
@@ -245,7 +245,7 @@ public:
 
 /// Verifier pass for \c PredicateInfo.
 struct PredicateInfoVerifierPass
-    : MandatoryPassInfoMixin<PredicateInfoVerifierPass> {
+    : RequiredPassInfoMixin<PredicateInfoVerifierPass> {
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 

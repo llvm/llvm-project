@@ -18,7 +18,7 @@
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
-class KCFIPass : public MandatoryPassInfoMixin<KCFIPass> {
+class KCFIPass : public RequiredPassInfoMixin<KCFIPass> {
 public:
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };

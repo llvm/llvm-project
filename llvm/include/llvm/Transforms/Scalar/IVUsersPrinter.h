@@ -18,7 +18,7 @@ class Loop;
 class raw_ostream;
 
 /// Printer pass for the \c IVUsers for a loop.
-class IVUsersPrinterPass : public MandatoryPassInfoMixin<IVUsersPrinterPass> {
+class IVUsersPrinterPass : public RequiredPassInfoMixin<IVUsersPrinterPass> {
   raw_ostream &OS;
 
 public:

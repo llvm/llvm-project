@@ -944,7 +944,7 @@ public:
 
 /// Printer pass for \c MemorySSA.
 class MemorySSAPrinterPass
-    : public MandatoryPassInfoMixin<MemorySSAPrinterPass> {
+    : public RequiredPassInfoMixin<MemorySSAPrinterPass> {
   raw_ostream &OS;
   bool EnsureOptimizedUses;
 
@@ -957,7 +957,7 @@ public:
 
 /// Printer pass for \c MemorySSA via the walker.
 class MemorySSAWalkerPrinterPass
-    : public MandatoryPassInfoMixin<MemorySSAWalkerPrinterPass> {
+    : public RequiredPassInfoMixin<MemorySSAWalkerPrinterPass> {
   raw_ostream &OS;
 
 public:
@@ -967,7 +967,7 @@ public:
 };
 
 /// Verifier pass for \c MemorySSA.
-struct MemorySSAVerifierPass : MandatoryPassInfoMixin<MemorySSAVerifierPass> {
+struct MemorySSAVerifierPass : RequiredPassInfoMixin<MemorySSAVerifierPass> {
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 

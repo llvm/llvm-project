@@ -64,7 +64,7 @@ public:
 };
 
 class MachineUniformityPrinterPass
-    : public MandatoryPassInfoMixin<MachineUniformityPrinterPass> {
+    : public RequiredPassInfoMixin<MachineUniformityPrinterPass> {
   raw_ostream &OS;
 
 public:

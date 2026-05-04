@@ -112,7 +112,7 @@ public:
 
 /// \brief Machine function pass which print \c MachineDominatorTree.
 class MachineDominatorTreePrinterPass
-    : public MandatoryPassInfoMixin<MachineDominatorTreePrinterPass> {
+    : public RequiredPassInfoMixin<MachineDominatorTreePrinterPass> {
   raw_ostream &OS;
 
 public:

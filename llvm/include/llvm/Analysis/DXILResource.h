@@ -623,7 +623,7 @@ public:
 
 /// Printer pass for the \c DXILResourceAnalysis results.
 class DXILResourcePrinterPass
-    : public MandatoryPassInfoMixin<DXILResourcePrinterPass> {
+    : public RequiredPassInfoMixin<DXILResourcePrinterPass> {
   raw_ostream &OS;
 
 public:

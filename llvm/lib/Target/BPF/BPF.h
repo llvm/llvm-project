@@ -45,7 +45,7 @@ void initializeBPFMIPreEmitPeepholePass(PassRegistry &);
 void initializeBPFMISimplifyPatchablePass(PassRegistry &);
 
 class BPFAbstractMemberAccessPass
-    : public MandatoryPassInfoMixin<BPFAbstractMemberAccessPass> {
+    : public RequiredPassInfoMixin<BPFAbstractMemberAccessPass> {
   BPFTargetMachine *TM;
 
 public:
@@ -54,18 +54,18 @@ public:
 };
 
 class BPFPreserveDITypePass
-    : public MandatoryPassInfoMixin<BPFPreserveDITypePass> {
+    : public RequiredPassInfoMixin<BPFPreserveDITypePass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-class BPFIRPeepholePass : public MandatoryPassInfoMixin<BPFIRPeepholePass> {
+class BPFIRPeepholePass : public RequiredPassInfoMixin<BPFIRPeepholePass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 class BPFASpaceCastSimplifyPass
-    : public MandatoryPassInfoMixin<BPFASpaceCastSimplifyPass> {
+    : public RequiredPassInfoMixin<BPFASpaceCastSimplifyPass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
@@ -76,7 +76,7 @@ public:
 };
 
 class BPFPreserveStaticOffsetPass
-    : public MandatoryPassInfoMixin<BPFPreserveStaticOffsetPass> {
+    : public RequiredPassInfoMixin<BPFPreserveStaticOffsetPass> {
   bool AllowPartial;
 
 public:

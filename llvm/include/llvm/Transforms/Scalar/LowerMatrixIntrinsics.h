@@ -17,7 +17,7 @@
 
 namespace llvm {
 class LowerMatrixIntrinsicsPass
-    : public MandatoryPassInfoMixin<LowerMatrixIntrinsicsPass> {
+    : public RequiredPassInfoMixin<LowerMatrixIntrinsicsPass> {
   bool Minimal;
 
 public:

@@ -59,7 +59,7 @@ public:
 
 /// Printer pass for the \c DXILMetadataAnalysis results.
 class DXILMetadataAnalysisPrinterPass
-    : public MandatoryPassInfoMixin<DXILMetadataAnalysisPrinterPass> {
+    : public RequiredPassInfoMixin<DXILMetadataAnalysisPrinterPass> {
   raw_ostream &OS;
 
 public:

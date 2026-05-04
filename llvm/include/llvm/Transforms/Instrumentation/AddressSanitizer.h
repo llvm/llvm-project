@@ -38,7 +38,7 @@ struct AddressSanitizerOptions {
 /// This adds 'asan.module_ctor' to 'llvm.global_ctors'. This pass may also
 /// run intependently of the function address sanitizer.
 class AddressSanitizerPass
-    : public MandatoryPassInfoMixin<AddressSanitizerPass> {
+    : public RequiredPassInfoMixin<AddressSanitizerPass> {
 public:
   LLVM_ABI
   AddressSanitizerPass(const AddressSanitizerOptions &Options,

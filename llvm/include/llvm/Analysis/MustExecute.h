@@ -544,7 +544,7 @@ private:
 };
 
 class MustExecutePrinterPass
-    : public MandatoryPassInfoMixin<MustExecutePrinterPass> {
+    : public RequiredPassInfoMixin<MustExecutePrinterPass> {
   raw_ostream &OS;
 
 public:
@@ -553,7 +553,7 @@ public:
 };
 
 class MustBeExecutedContextPrinterPass
-    : public MandatoryPassInfoMixin<MustBeExecutedContextPrinterPass> {
+    : public RequiredPassInfoMixin<MustBeExecutedContextPrinterPass> {
   raw_ostream &OS;
 
 public:

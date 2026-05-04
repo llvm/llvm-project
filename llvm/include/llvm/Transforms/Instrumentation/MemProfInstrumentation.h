@@ -27,7 +27,7 @@ class Module;
 /// calls to the MemProfiler runtime library functions. The runtime library
 /// essentially replaces malloc() and free() with custom implementations that
 /// record data about the allocations.
-class MemProfilerPass : public MandatoryPassInfoMixin<MemProfilerPass> {
+class MemProfilerPass : public RequiredPassInfoMixin<MemProfilerPass> {
 public:
   LLVM_ABI explicit MemProfilerPass();
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
@@ -36,7 +36,7 @@ public:
 /// Public interface to the memory profiler module pass for instrumenting code
 /// to profile memory allocations and accesses.
 class ModuleMemProfilerPass
-    : public MandatoryPassInfoMixin<ModuleMemProfilerPass> {
+    : public RequiredPassInfoMixin<ModuleMemProfilerPass> {
 public:
   LLVM_ABI explicit ModuleMemProfilerPass();
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);

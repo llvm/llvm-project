@@ -1195,7 +1195,7 @@ private:
 
 /// Printer pass that uses \c IRSimilarityAnalysis.
 class IRSimilarityAnalysisPrinterPass
-    : public MandatoryPassInfoMixin<IRSimilarityAnalysisPrinterPass> {
+    : public RequiredPassInfoMixin<IRSimilarityAnalysisPrinterPass> {
   raw_ostream &OS;
 
 public:

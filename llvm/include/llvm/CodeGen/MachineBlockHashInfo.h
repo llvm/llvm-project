@@ -118,7 +118,7 @@ public:
 
 /// Printer pass for the \c MachineBlockHashInfoAnalysis results.
 class MachineBlockHashInfoPrinterPass
-    : public MandatoryPassInfoMixin<MachineBlockHashInfoPrinterPass> {
+    : public RequiredPassInfoMixin<MachineBlockHashInfoPrinterPass> {
   raw_ostream &OS;
 
 public:

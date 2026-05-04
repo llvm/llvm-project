@@ -128,7 +128,7 @@ public:
 /// but instead first uses the PhiValues to analyze all the phis in the function
 /// so the complete information is printed.
 class PhiValuesPrinterPass
-    : public MandatoryPassInfoMixin<PhiValuesPrinterPass> {
+    : public RequiredPassInfoMixin<PhiValuesPrinterPass> {
   raw_ostream &OS;
 
 public:

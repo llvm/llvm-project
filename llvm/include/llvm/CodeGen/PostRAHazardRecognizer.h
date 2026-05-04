@@ -14,7 +14,7 @@
 namespace llvm {
 
 class PostRAHazardRecognizerPass
-    : public MandatoryPassInfoMixin<PostRAHazardRecognizerPass> {
+    : public RequiredPassInfoMixin<PostRAHazardRecognizerPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

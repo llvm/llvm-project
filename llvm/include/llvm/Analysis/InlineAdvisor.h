@@ -339,7 +339,7 @@ private:
 
 /// Printer pass for the InlineAdvisorAnalysis results.
 class InlineAdvisorAnalysisPrinterPass
-    : public MandatoryPassInfoMixin<InlineAdvisorAnalysisPrinterPass> {
+    : public RequiredPassInfoMixin<InlineAdvisorAnalysisPrinterPass> {
   raw_ostream &OS;
 
 public:

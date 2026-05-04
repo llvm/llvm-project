@@ -38,22 +38,22 @@ namespace llvm {
 class ModuleSlotTracker;
 
 template <class GraphType> struct GraphTraits;
-class CFGViewerPass : public MandatoryPassInfoMixin<CFGViewerPass> {
+class CFGViewerPass : public RequiredPassInfoMixin<CFGViewerPass> {
 public:
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-class CFGOnlyViewerPass : public MandatoryPassInfoMixin<CFGOnlyViewerPass> {
+class CFGOnlyViewerPass : public RequiredPassInfoMixin<CFGOnlyViewerPass> {
 public:
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-class CFGPrinterPass : public MandatoryPassInfoMixin<CFGPrinterPass> {
+class CFGPrinterPass : public RequiredPassInfoMixin<CFGPrinterPass> {
 public:
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-class CFGOnlyPrinterPass : public MandatoryPassInfoMixin<CFGOnlyPrinterPass> {
+class CFGOnlyPrinterPass : public RequiredPassInfoMixin<CFGOnlyPrinterPass> {
 public:
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };

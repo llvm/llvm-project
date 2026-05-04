@@ -229,7 +229,7 @@ public:
 };
 
 class VirtRegMapPrinterPass
-    : public MandatoryPassInfoMixin<VirtRegMapPrinterPass> {
+    : public RequiredPassInfoMixin<VirtRegMapPrinterPass> {
   raw_ostream &OS;
 
 public:
@@ -238,7 +238,7 @@ public:
                                  MachineFunctionAnalysisManager &MFAM);
 };
 
-class VirtRegRewriterPass : public MandatoryPassInfoMixin<VirtRegRewriterPass> {
+class VirtRegRewriterPass : public RequiredPassInfoMixin<VirtRegRewriterPass> {
   bool ClearVirtRegs = true;
 
 public:

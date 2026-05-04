@@ -14,7 +14,7 @@
 namespace llvm {
 
 class LocalStackSlotAllocationPass
-    : public MandatoryPassInfoMixin<LocalStackSlotAllocationPass> {
+    : public RequiredPassInfoMixin<LocalStackSlotAllocationPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF, MachineFunctionAnalysisManager &);
 };

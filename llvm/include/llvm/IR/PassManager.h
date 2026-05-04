@@ -68,7 +68,7 @@ template <typename IRUnitT, typename... ExtraArgTs> class AnalysisManager;
 ///
 /// This provides some boilerplate for types that are passes.
 ///
-/// Actual passes should inherit from MandatoryPassInfoMixin or
+/// Actual passes should inherit from RequiredPassInfoMixin or
 /// OptionalPassInfoMixin.
 template <typename DerivedT> struct PassInfoMixin {
   /// Gets the name of the pass we are mixed into.
@@ -93,7 +93,7 @@ template <typename DerivedT> struct PassInfoMixin {
 
 /// A CRTP mix-in for passes that should not be skipped.
 template <typename DerivedT>
-struct MandatoryPassInfoMixin : PassInfoMixin<DerivedT> {
+struct RequiredPassInfoMixin : PassInfoMixin<DerivedT> {
   static bool isRequired() { return true; }
 };
 
@@ -177,7 +177,7 @@ getAnalysisResult(AnalysisManager<IRUnitT, AnalysisArgTs...> &AM, IRUnitT &IR,
 template <typename IRUnitT,
           typename AnalysisManagerT = AnalysisManager<IRUnitT>,
           typename... ExtraArgTs>
-class PassManager : public MandatoryPassInfoMixin<
+class PassManager : public RequiredPassInfoMixin<
                         PassManager<IRUnitT, AnalysisManagerT, ExtraArgTs...>> {
 public:
   /// Construct a pass manager.
@@ -864,7 +864,7 @@ using ModuleAnalysisManagerFunctionProxy =
 /// analyses are not invalidated while the function passes are running, so they
 /// may be stale.  Function analyses will not be stale.
 class ModuleToFunctionPassAdaptor
-    : public MandatoryPassInfoMixin<ModuleToFunctionPassAdaptor> {
+    : public RequiredPassInfoMixin<ModuleToFunctionPassAdaptor> {
 public:
   using PassConceptT = detail::PassConcept<Function, FunctionAnalysisManager>;
 
@@ -912,7 +912,7 @@ template <typename AnalysisT, typename IRUnitT,
           typename AnalysisManagerT = AnalysisManager<IRUnitT>,
           typename... ExtraArgTs>
 struct RequireAnalysisPass
-    : MandatoryPassInfoMixin<RequireAnalysisPass<
+    : RequiredPassInfoMixin<RequireAnalysisPass<
           AnalysisT, IRUnitT, AnalysisManagerT, ExtraArgTs...>> {
   /// Run this pass over some unit of IR.
   ///
@@ -939,7 +939,7 @@ struct RequireAnalysisPass
 /// to be invalidated.
 template <typename AnalysisT>
 struct InvalidateAnalysisPass
-    : MandatoryPassInfoMixin<InvalidateAnalysisPass<AnalysisT>> {
+    : RequiredPassInfoMixin<InvalidateAnalysisPass<AnalysisT>> {
   /// Run this pass over some unit of IR.
   ///
   /// This pass can be run over any unit of IR and use any analysis manager,
@@ -965,7 +965,7 @@ struct InvalidateAnalysisPass
 /// Because this preserves no analyses, any analysis passes queried after this
 /// pass runs will recompute fresh results.
 struct InvalidateAllAnalysesPass
-    : MandatoryPassInfoMixin<InvalidateAllAnalysesPass> {
+    : RequiredPassInfoMixin<InvalidateAllAnalysesPass> {
   /// Run this pass over some unit of IR.
   template <typename IRUnitT, typename AnalysisManagerT, typename... ExtraArgTs>
   PreservedAnalyses run(IRUnitT &, AnalysisManagerT &, ExtraArgTs &&...) {

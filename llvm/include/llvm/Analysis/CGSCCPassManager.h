@@ -148,7 +148,7 @@ using CGSCCPassManager =
 template <typename AnalysisT>
 struct RequireAnalysisPass<AnalysisT, LazyCallGraph::SCC, CGSCCAnalysisManager,
                            LazyCallGraph &, CGSCCUpdateResult &>
-    : MandatoryPassInfoMixin<RequireAnalysisPass<
+    : RequiredPassInfoMixin<RequireAnalysisPass<
           AnalysisT, LazyCallGraph::SCC, CGSCCAnalysisManager, LazyCallGraph &,
           CGSCCUpdateResult &>> {
   PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
@@ -313,7 +313,7 @@ struct CGSCCUpdateResult {
 /// pass over the module to enable a \c FunctionAnalysisManager to be used
 /// within this run safely.
 class ModuleToPostOrderCGSCCPassAdaptor
-    : public MandatoryPassInfoMixin<ModuleToPostOrderCGSCCPassAdaptor> {
+    : public RequiredPassInfoMixin<ModuleToPostOrderCGSCCPassAdaptor> {
 public:
   using PassConceptT =
       detail::PassConcept<LazyCallGraph::SCC, CGSCCAnalysisManager,
@@ -443,7 +443,7 @@ LLVM_ABI LazyCallGraph::SCC &updateCGAndAnalysisManagerForCGSCCPass(
 /// pass over the SCC to enable a \c FunctionAnalysisManager to be used
 /// within this run safely.
 class CGSCCToFunctionPassAdaptor
-    : public MandatoryPassInfoMixin<CGSCCToFunctionPassAdaptor> {
+    : public RequiredPassInfoMixin<CGSCCToFunctionPassAdaptor> {
 public:
   using PassConceptT = detail::PassConcept<Function, FunctionAnalysisManager>;
 

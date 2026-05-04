@@ -300,7 +300,7 @@ public:
 
 /// Printer pass for the \c CallGraphAnalysis results.
 class CallGraphPrinterPass
-    : public MandatoryPassInfoMixin<CallGraphPrinterPass> {
+    : public RequiredPassInfoMixin<CallGraphPrinterPass> {
   raw_ostream &OS;
 
 public:
@@ -311,7 +311,7 @@ public:
 
 /// Printer pass for the summarized \c CallGraphAnalysis results.
 class CallGraphSCCsPrinterPass
-    : public MandatoryPassInfoMixin<CallGraphSCCsPrinterPass> {
+    : public RequiredPassInfoMixin<CallGraphSCCsPrinterPass> {
   raw_ostream &OS;
 
 public:

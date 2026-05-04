@@ -19,7 +19,7 @@
 namespace llvm {
 
 /// A pass that lowers atomic intrinsic into non-atomic intrinsics.
-class LowerAtomicPass : public MandatoryPassInfoMixin<LowerAtomicPass> {
+class LowerAtomicPass : public RequiredPassInfoMixin<LowerAtomicPass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &);
 };

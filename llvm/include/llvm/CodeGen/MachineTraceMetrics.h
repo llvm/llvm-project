@@ -462,7 +462,7 @@ public:
 
 /// Verifier pass for \c MachineTraceMetrics.
 struct MachineTraceMetricsVerifierPass
-    : MandatoryPassInfoMixin<MachineTraceMetricsVerifierPass> {
+    : RequiredPassInfoMixin<MachineTraceMetricsVerifierPass> {
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
 };

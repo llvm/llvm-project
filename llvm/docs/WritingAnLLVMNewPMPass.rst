@@ -26,7 +26,7 @@ defined via inheritance, passes under the new pass manager rely on
 concept-based polymorphism, meaning there is no explicit interface (see
 comments in ``PassManager.h`` for more details). All LLVM passes inherit from
 the CRTP mix-in ``OptionalPassInfoMixin<PassT>`` or
-``MandatoryPassInfoMixin<PassT>``. The pass should have a ``run()``
+``RequiredPassInfoMixin<PassT>``. The pass should have a ``run()``
 method which returns a ``PreservedAnalyses`` and takes in some unit of IR
 along with an analysis manager. For example, a function pass would have a
 ``PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);`` method.
@@ -94,9 +94,9 @@ contain the following boilerplate:
 
 This creates the class for the pass with a declaration of the ``run()``
 method which actually runs the pass. Inheriting from
-``OptionalPassInfoMixin<PassT>`` or ``MandatoryPassInfoMixin<PassT>`` sets up
+``OptionalPassInfoMixin<PassT>`` or ``RequiredPassInfoMixin<PassT>`` sets up
 some more boilerplate so that we don't have to write it ourselves.
-``MandatoryPassInfoMixin`` should be used for passes that cannot be skipped
+``RequiredPassInfoMixin`` should be used for passes that cannot be skipped
 (e.g. ``AlwaysInlinerPass``), while ``OptionalPassInfoMixin`` should be used
 for passes that can be skipped (e.g. optimization passes).
 
@@ -215,11 +215,11 @@ FAQs
 Required passes
 ---------------
 
-A pass that inherits from ``MandatoryPassInfoMixin<PassT>`` is a required pass. For example:
+A pass that inherits from ``RequiredPassInfoMixin<PassT>`` is a required pass. For example:
 
 .. code-block:: c++
 
-  class HelloWorldPass : public MandatoryPassInfoMixin<HelloWorldPass> {
+  class HelloWorldPass : public RequiredPassInfoMixin<HelloWorldPass> {
   public:
     PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
   };

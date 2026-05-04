@@ -21,7 +21,7 @@ namespace llvm {
 class Function;
 
 struct AnnotationRemarksPass
-    : public MandatoryPassInfoMixin<AnnotationRemarksPass> {
+    : public RequiredPassInfoMixin<AnnotationRemarksPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 } // namespace llvm

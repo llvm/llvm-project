@@ -146,7 +146,7 @@ public:
 
 /// Printer pass for the \c DominanceFrontier.
 class DominanceFrontierPrinterPass
-    : public MandatoryPassInfoMixin<DominanceFrontierPrinterPass> {
+    : public RequiredPassInfoMixin<DominanceFrontierPrinterPass> {
   raw_ostream &OS;
 
 public:

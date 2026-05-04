@@ -21,7 +21,7 @@ namespace llvm {
 
 class TargetMachine;
 
-class KernelInfoPrinter : public MandatoryPassInfoMixin<KernelInfoPrinter> {
+class KernelInfoPrinter : public RequiredPassInfoMixin<KernelInfoPrinter> {
   TargetMachine *TM;
 
 public:

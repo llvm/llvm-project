@@ -147,7 +147,7 @@ public:
 };
 
 class CtxProfAnalysisPrinterPass
-    : public MandatoryPassInfoMixin<CtxProfAnalysisPrinterPass> {
+    : public RequiredPassInfoMixin<CtxProfAnalysisPrinterPass> {
 public:
   enum class PrintMode { Everything, YAML };
   LLVM_ABI explicit CtxProfAnalysisPrinterPass(raw_ostream &OS);

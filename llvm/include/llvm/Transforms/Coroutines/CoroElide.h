@@ -22,7 +22,7 @@ namespace llvm {
 
 class Function;
 
-struct CoroElidePass : MandatoryPassInfoMixin<CoroElidePass> {
+struct CoroElidePass : RequiredPassInfoMixin<CoroElidePass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 } // end namespace llvm

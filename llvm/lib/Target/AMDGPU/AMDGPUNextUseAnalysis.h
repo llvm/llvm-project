@@ -364,7 +364,7 @@ protected:
 };
 
 class AMDGPUNextUseAnalysisPrinterPass
-    : public MandatoryPassInfoMixin<AMDGPUNextUseAnalysisPrinterPass> {
+    : public RequiredPassInfoMixin<AMDGPUNextUseAnalysisPrinterPass> {
   raw_ostream &OS;
 
 public:

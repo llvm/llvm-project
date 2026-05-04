@@ -53,7 +53,7 @@ inline constexpr char kSanitizerBinaryMetadataAtomicsSection[] =
 //
 /// The pass should be inserted after optimizations.
 class SanitizerBinaryMetadataPass
-    : public MandatoryPassInfoMixin<SanitizerBinaryMetadataPass> {
+    : public RequiredPassInfoMixin<SanitizerBinaryMetadataPass> {
 public:
   LLVM_ABI explicit SanitizerBinaryMetadataPass(
       SanitizerBinaryMetadataOptions Opts = {},

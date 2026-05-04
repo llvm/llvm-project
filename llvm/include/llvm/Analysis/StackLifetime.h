@@ -180,7 +180,7 @@ inline raw_ostream &operator<<(raw_ostream &OS,
 
 /// Printer pass for testing.
 class StackLifetimePrinterPass
-    : public MandatoryPassInfoMixin<StackLifetimePrinterPass> {
+    : public RequiredPassInfoMixin<StackLifetimePrinterPass> {
   StackLifetime::LivenessType Type;
   raw_ostream &OS;
 

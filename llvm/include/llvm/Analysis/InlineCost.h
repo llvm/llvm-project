@@ -351,7 +351,7 @@ LLVM_ABI InlineResult isInlineViable(Function &Callee);
 // debugging and analysis. The main purpose of the pass is to see and test
 // inliner's decisions when creating new optimizations to InlineCost.
 struct InlineCostAnnotationPrinterPass
-    : MandatoryPassInfoMixin<InlineCostAnnotationPrinterPass> {
+    : RequiredPassInfoMixin<InlineCostAnnotationPrinterPass> {
   raw_ostream &OS;
 
 public:

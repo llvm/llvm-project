@@ -40,7 +40,7 @@ LLVM_ABI bool isBitcodeWriterPass(Pass *P);
 ///
 /// Note that this is intended for use with the new pass manager. To construct
 /// a pass for the legacy pass manager, use the function above.
-class BitcodeWriterPass : public MandatoryPassInfoMixin<BitcodeWriterPass> {
+class BitcodeWriterPass : public RequiredPassInfoMixin<BitcodeWriterPass> {
   raw_ostream &OS;
   bool ShouldPreserveUseListOrder;
   bool EmitSummaryIndex;

@@ -38,7 +38,7 @@ struct HWAddressSanitizerOptions {
 /// instrumenting code to check for various memory errors at runtime, similar to
 /// AddressSanitizer but based on partial hardware assistance.
 class HWAddressSanitizerPass
-    : public MandatoryPassInfoMixin<HWAddressSanitizerPass> {
+    : public RequiredPassInfoMixin<HWAddressSanitizerPass> {
 public:
   explicit HWAddressSanitizerPass(HWAddressSanitizerOptions Options)
       : Options(Options){};

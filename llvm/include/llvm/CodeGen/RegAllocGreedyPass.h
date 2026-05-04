@@ -15,7 +15,7 @@
 
 using namespace llvm;
 
-class RAGreedyPass : public MandatoryPassInfoMixin<RAGreedyPass> {
+class RAGreedyPass : public RequiredPassInfoMixin<RAGreedyPass> {
 public:
   struct Options {
     RegAllocFilterFunc Filter;

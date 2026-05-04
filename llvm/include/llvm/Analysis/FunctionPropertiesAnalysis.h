@@ -173,7 +173,7 @@ public:
 
 /// Printer pass for the FunctionPropertiesAnalysis results.
 class FunctionPropertiesPrinterPass
-    : public MandatoryPassInfoMixin<FunctionPropertiesPrinterPass> {
+    : public RequiredPassInfoMixin<FunctionPropertiesPrinterPass> {
   raw_ostream &OS;
 
 public:
@@ -184,7 +184,7 @@ public:
 
 /// Statistics pass for the FunctionPropertiesAnalysis results.
 class FunctionPropertiesStatisticsPass
-    : public MandatoryPassInfoMixin<FunctionPropertiesStatisticsPass> {
+    : public RequiredPassInfoMixin<FunctionPropertiesStatisticsPass> {
 public:
   explicit FunctionPropertiesStatisticsPass() {}
 

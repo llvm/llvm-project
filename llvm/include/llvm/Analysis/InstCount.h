@@ -19,7 +19,7 @@ namespace llvm {
 
 class Function;
 
-class InstCountPass : public MandatoryPassInfoMixin<InstCountPass> {
+class InstCountPass : public RequiredPassInfoMixin<InstCountPass> {
 public:
   explicit InstCountPass() {}
 

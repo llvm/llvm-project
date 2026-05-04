@@ -35,7 +35,7 @@ struct EmbedBitcodeOptions {
 
 /// Pass embeds a copy of the module optimized with the provided pass pipeline
 /// into a global variable.
-class EmbedBitcodePass : public MandatoryPassInfoMixin<EmbedBitcodePass> {
+class EmbedBitcodePass : public RequiredPassInfoMixin<EmbedBitcodePass> {
   bool IsThinLTO;
   bool EmitLTOSummary;
 

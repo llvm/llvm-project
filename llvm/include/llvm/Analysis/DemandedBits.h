@@ -117,7 +117,7 @@ public:
 
 /// Printer pass for DemandedBits
 class DemandedBitsPrinterPass
-    : public MandatoryPassInfoMixin<DemandedBitsPrinterPass> {
+    : public RequiredPassInfoMixin<DemandedBitsPrinterPass> {
   raw_ostream &OS;
 
 public:

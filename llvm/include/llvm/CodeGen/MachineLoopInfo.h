@@ -149,7 +149,7 @@ public:
 
 /// Printer pass for the \c LoopAnalysis results.
 class MachineLoopPrinterPass
-    : public MandatoryPassInfoMixin<MachineLoopPrinterPass> {
+    : public RequiredPassInfoMixin<MachineLoopPrinterPass> {
   raw_ostream &OS;
 
 public:

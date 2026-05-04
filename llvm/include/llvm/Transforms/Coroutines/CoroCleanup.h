@@ -20,7 +20,7 @@ namespace llvm {
 
 class Module;
 
-struct CoroCleanupPass : MandatoryPassInfoMixin<CoroCleanupPass> {
+struct CoroCleanupPass : RequiredPassInfoMixin<CoroCleanupPass> {
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };
 } // end namespace llvm

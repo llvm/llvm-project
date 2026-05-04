@@ -12,7 +12,7 @@
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
-class MemDerefPrinterPass : public MandatoryPassInfoMixin<MemDerefPrinterPass> {
+class MemDerefPrinterPass : public RequiredPassInfoMixin<MemDerefPrinterPass> {
   raw_ostream &OS;
 
 public:

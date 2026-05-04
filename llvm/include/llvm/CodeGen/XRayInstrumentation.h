@@ -14,7 +14,7 @@
 namespace llvm {
 
 class XRayInstrumentationPass
-    : public MandatoryPassInfoMixin<XRayInstrumentationPass> {
+    : public RequiredPassInfoMixin<XRayInstrumentationPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

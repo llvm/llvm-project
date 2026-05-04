@@ -23,7 +23,7 @@ namespace llvm {
 
 class Module;
 
-struct CoroEarlyPass : MandatoryPassInfoMixin<CoroEarlyPass> {
+struct CoroEarlyPass : RequiredPassInfoMixin<CoroEarlyPass> {
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 } // end namespace llvm

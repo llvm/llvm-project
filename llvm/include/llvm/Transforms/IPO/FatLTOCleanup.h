@@ -24,7 +24,7 @@ namespace llvm {
 class Module;
 class ModuleSummaryIndex;
 
-class FatLtoCleanup : public MandatoryPassInfoMixin<FatLtoCleanup> {
+class FatLtoCleanup : public RequiredPassInfoMixin<FatLtoCleanup> {
 public:
   FatLtoCleanup() = default;
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);

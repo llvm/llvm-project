@@ -975,7 +975,7 @@ public:
 
 /// Printer pass for the \c RegionInfo.
 class RegionInfoPrinterPass
-    : public MandatoryPassInfoMixin<RegionInfoPrinterPass> {
+    : public RequiredPassInfoMixin<RegionInfoPrinterPass> {
   raw_ostream &OS;
 
 public:
@@ -985,7 +985,7 @@ public:
 };
 
 /// Verifier pass for the \c RegionInfo.
-struct RegionInfoVerifierPass : MandatoryPassInfoMixin<RegionInfoVerifierPass> {
+struct RegionInfoVerifierPass : RequiredPassInfoMixin<RegionInfoVerifierPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 

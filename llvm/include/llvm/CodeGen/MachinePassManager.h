@@ -189,7 +189,7 @@ private:
 };
 
 class FunctionToMachineFunctionPassAdaptor
-    : public MandatoryPassInfoMixin<FunctionToMachineFunctionPassAdaptor> {
+    : public RequiredPassInfoMixin<FunctionToMachineFunctionPassAdaptor> {
 public:
   using PassConceptT =
       detail::PassConcept<MachineFunction, MachineFunctionAnalysisManager>;

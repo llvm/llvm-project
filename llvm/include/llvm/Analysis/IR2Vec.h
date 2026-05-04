@@ -652,7 +652,7 @@ public:
 
 /// This pass prints the IR2Vec embeddings for instructions, basic blocks, and
 /// functions.
-class IR2VecPrinterPass : public MandatoryPassInfoMixin<IR2VecPrinterPass> {
+class IR2VecPrinterPass : public RequiredPassInfoMixin<IR2VecPrinterPass> {
   raw_ostream &OS;
 
 public:
@@ -662,7 +662,7 @@ public:
 
 /// This pass prints the embeddings in the vocabulary
 class IR2VecVocabPrinterPass
-    : public MandatoryPassInfoMixin<IR2VecVocabPrinterPass> {
+    : public RequiredPassInfoMixin<IR2VecVocabPrinterPass> {
   raw_ostream &OS;
 
 public:

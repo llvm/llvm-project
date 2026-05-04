@@ -28,7 +28,7 @@ class BaseABI;
 struct Shape;
 } // namespace coro
 
-struct CoroSplitPass : MandatoryPassInfoMixin<CoroSplitPass> {
+struct CoroSplitPass : RequiredPassInfoMixin<CoroSplitPass> {
   using BaseABITy =
       std::function<std::unique_ptr<coro::BaseABI>(Function &, coro::Shape &)>;
 

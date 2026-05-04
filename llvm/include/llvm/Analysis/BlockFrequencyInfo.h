@@ -132,7 +132,7 @@ public:
 
 /// Printer pass for the \c BlockFrequencyInfo results.
 class BlockFrequencyPrinterPass
-    : public MandatoryPassInfoMixin<BlockFrequencyPrinterPass> {
+    : public RequiredPassInfoMixin<BlockFrequencyPrinterPass> {
   raw_ostream &OS;
 
 public:

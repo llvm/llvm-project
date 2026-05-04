@@ -58,7 +58,7 @@ struct PassConcept {
   /// Polymorphic method to let a pass optionally exempted from skipping by
   /// PassInstrumentation.
   /// To opt-in, pass should implement `static bool isRequired()`, or inherit
-  /// from `MandatoryPassInfoMixin` or `OptionalPassInfoMixin`.
+  /// from `RequiredPassInfoMixin` or `OptionalPassInfoMixin`.
   /// It's no-op to have `isRequired` always return false since that is the
   /// default.
   virtual bool isRequired() const = 0;

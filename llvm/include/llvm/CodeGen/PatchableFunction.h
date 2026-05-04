@@ -14,7 +14,7 @@
 namespace llvm {
 
 class PatchableFunctionPass
-    : public MandatoryPassInfoMixin<PatchableFunctionPass> {
+    : public RequiredPassInfoMixin<PatchableFunctionPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

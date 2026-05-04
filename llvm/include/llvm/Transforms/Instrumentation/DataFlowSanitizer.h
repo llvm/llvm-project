@@ -18,7 +18,7 @@ namespace llvm {
 class Module;
 
 class DataFlowSanitizerPass
-    : public MandatoryPassInfoMixin<DataFlowSanitizerPass> {
+    : public RequiredPassInfoMixin<DataFlowSanitizerPass> {
 private:
   std::vector<std::string> ABIListFiles;
   IntrusiveRefCntPtr<vfs::FileSystem> FS;

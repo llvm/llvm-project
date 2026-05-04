@@ -32,7 +32,7 @@ class FileSystem;
 /// module for trace PC guards and 8bit counters if they are requested, and
 /// appends globals to llvm.compiler.used.
 class SanitizerCoveragePass
-    : public MandatoryPassInfoMixin<SanitizerCoveragePass> {
+    : public RequiredPassInfoMixin<SanitizerCoveragePass> {
 public:
   LLVM_ABI explicit SanitizerCoveragePass(
       SanitizerCoverageOptions Options = SanitizerCoverageOptions(),
