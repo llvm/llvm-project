@@ -140,6 +140,8 @@ bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee,
   if (RunningUnderLifetimeSafety &&
       isGslPointerType(Callee->getFunctionObjectParameterType()) &&
       isReferenceOrPointerLikeType(Callee->getReturnType())) {
+    // Propagate origins through GSL pointer arithmetic and dereference
+    // operators.
     switch (Callee->getOverloadedOperator()) {
     case OO_Arrow:
     case OO_Star:
