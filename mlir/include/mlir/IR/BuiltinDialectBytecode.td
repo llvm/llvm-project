@@ -294,6 +294,8 @@ def UnrankedTensorType : DialectType<(type
   Type:$elementType
 )>;
 
+def TokenType : DialectType<(type)>;
+
 let cType = "VectorType" in {
 def VectorType : DialectType<(type
   Array<SignedVarIntList>:$shape,
@@ -371,7 +373,8 @@ def BuiltinDialectTypes : DialectTypes<"Builtin"> {
     UnrankedMemRefTypeWithMemSpace,
     UnrankedTensorType,
     VectorType,
-    VectorTypeWithScalableDims
+    VectorTypeWithScalableDims,
+    TokenType
   ];
 }
 

@@ -238,13 +238,41 @@ Type LLVMStructType::parse(AsmParser &parser) {
 }
 
 /// Parses a type appearing inside another LLVM dialect-compatible type. This
-/// will try to parse any type in full form (including types with the `!llvm`
-/// prefix), and on failure fall back to parsing the short-hand version of the
-/// LLVM dialect types without the `!llvm` prefix.
+/// will first try to parse the LLVM dialect's short-hand keyword form (e.g.
+/// `token`, `void`, `ptr`, ...) and, failing that, fall back to parsing any
+/// MLIR type in full form (including types with the `!llvm` prefix).
+///
+/// Trying the short-hand form first matters because some LLVM short-hand
+/// keywords (notably `token`) collide with builtin type keywords whose
+/// semantics differ from the LLVM dialect's. Inside an `!llvm.<...>` type, the
+/// LLVM-specific meaning must always win.
 static Type dispatchParse(AsmParser &parser, bool allowAny = true) {
   SMLoc keyLoc = parser.getCurrentLocation();
+  MLIRContext *ctx = parser.getContext();
 
-  // Try parsing any MLIR type.
+  // Try parsing the LLVM dialect's short-hand keyword form first.
+  StringRef key;
+  if (succeeded(parser.parseOptionalKeyword(
+          &key, {"void", "ppc_fp128", "token", "label", "metadata", "func",
+                 "ptr", "array", "struct", "target", "x86_amx"}))) {
+    // `parseOptionalKeyword` already restricted `key` to one of the cases
+    // below, so the `Default` is unreachable.
+    return StringSwitch<function_ref<Type()>>(key)
+        .Case("void", [&] { return LLVMVoidType::get(ctx); })
+        .Case("ppc_fp128", [&] { return LLVMPPCFP128Type::get(ctx); })
+        .Case("token", [&] { return LLVMTokenType::get(ctx); })
+        .Case("label", [&] { return LLVMLabelType::get(ctx); })
+        .Case("metadata", [&] { return LLVMMetadataType::get(ctx); })
+        .Case("func", [&] { return LLVMFunctionType::parse(parser); })
+        .Case("ptr", [&] { return LLVMPointerType::parse(parser); })
+        .Case("array", [&] { return LLVMArrayType::parse(parser); })
+        .Case("struct", [&] { return LLVMStructType::parse(parser); })
+        .Case("target", [&] { return LLVMTargetExtType::parse(parser); })
+        .Case("x86_amx", [&] { return LLVMX86AMXType::get(ctx); })
+        .Default([] { return Type(); })();
+  }
+
+  // Otherwise, try parsing any MLIR type (only when allowed).
   Type type;
   OptionalParseResult result = parser.parseOptionalType(type);
   if (result.has_value()) {
@@ -257,28 +285,12 @@ static Type dispatchParse(AsmParser &parser, bool allowAny = true) {
     return type;
   }
 
-  // If no type found, fallback to the shorthand form.
-  StringRef key;
+  // Neither a known LLVM short-hand keyword nor a parseable MLIR type.
+  // Re-run `parseKeyword` to produce a useful error message.
   if (failed(parser.parseKeyword(&key)))
     return Type();
-
-  MLIRContext *ctx = parser.getContext();
-  return StringSwitch<function_ref<Type()>>(key)
-      .Case("void", [&] { return LLVMVoidType::get(ctx); })
-      .Case("ppc_fp128", [&] { return LLVMPPCFP128Type::get(ctx); })
-      .Case("token", [&] { return LLVMTokenType::get(ctx); })
-      .Case("label", [&] { return LLVMLabelType::get(ctx); })
-      .Case("metadata", [&] { return LLVMMetadataType::get(ctx); })
-      .Case("func", [&] { return LLVMFunctionType::parse(parser); })
-      .Case("ptr", [&] { return LLVMPointerType::parse(parser); })
-      .Case("array", [&] { return LLVMArrayType::parse(parser); })
-      .Case("struct", [&] { return LLVMStructType::parse(parser); })
-      .Case("target", [&] { return LLVMTargetExtType::parse(parser); })
-      .Case("x86_amx", [&] { return LLVMX86AMXType::get(ctx); })
-      .Default([&] {
-        parser.emitError(keyLoc) << "unknown LLVM type: " << key;
-        return Type();
-      })();
+  parser.emitError(keyLoc) << "unknown LLVM type: " << key;
+  return Type();
 }
 
 /// Helper to use in parse lists.
