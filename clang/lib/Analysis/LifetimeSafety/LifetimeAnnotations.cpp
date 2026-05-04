@@ -247,11 +247,14 @@ bool shouldTrackSecondArgument(const FunctionDecl *FD) {
   const auto *RD = FD->getParamDecl(1)->getType()->getAsCXXRecordDecl();
   if (!RD)
     return false;
+  // For free-standing `+`/`-` operators annotated with `gsl::Pointer`, track
+  // the second parameter when its type matches the return type.
   return RD->hasAttr<PointerAttr>() &&
          (FD->getOverloadedOperator() == OO_Plus ||
           FD->getOverloadedOperator() == OO_Minus) &&
          ASTContext::hasSameUnqualifiedType(FD->getParamDecl(1)->getType(),
-                                            FD->getReturnType());
+                                            FD->getReturnType()) &&
+         !isa<CXXMethodDecl>(FD);
 }
 
 template <typename T> static bool isRecordWithAttr(QualType Type) {
