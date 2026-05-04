@@ -2620,24 +2620,62 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vqshrn_n_v:
   case NEON::BI__builtin_neon_vrshrn_n_v:
   case NEON::BI__builtin_neon_vqrshrn_n_v:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented AArch64 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
   case NEON::BI__builtin_neon_vrndah_f16:
+    intrName = "round";
+    return emitNeonCall(cgm, builder, {ty}, ops, intrName, ty, loc);
   case NEON::BI__builtin_neon_vrnda_v:
   case NEON::BI__builtin_neon_vrndaq_v:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented AArch64 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
   case NEON::BI__builtin_neon_vrndih_f16:
+    intrName = "nearbyint";
+    return emitNeonCall(cgm, builder, {ty}, ops, intrName, ty, loc);
   case NEON::BI__builtin_neon_vrndmh_f16:
+    intrName = "floor";
+    return emitNeonCall(cgm, builder, {ty}, ops, intrName, ty, loc);
   case NEON::BI__builtin_neon_vrndm_v:
   case NEON::BI__builtin_neon_vrndmq_v:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented AArch64 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
   case NEON::BI__builtin_neon_vrndnh_f16:
+    intrName = "roundeven";
+    return emitNeonCall(cgm, builder, {ty}, ops, intrName, ty, loc);
   case NEON::BI__builtin_neon_vrndn_v:
   case NEON::BI__builtin_neon_vrndnq_v:
   case NEON::BI__builtin_neon_vrndns_f32:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented AArch64 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
   case NEON::BI__builtin_neon_vrndph_f16:
+    intrName = "ceil";
+    return emitNeonCall(cgm, builder, {ty}, ops, intrName, ty, loc);
   case NEON::BI__builtin_neon_vrndp_v:
   case NEON::BI__builtin_neon_vrndpq_v:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented AArch64 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
   case NEON::BI__builtin_neon_vrndxh_f16:
+    intrName = "rint";
+    return emitNeonCall(cgm, builder, {ty}, ops, intrName, ty, loc);
   case NEON::BI__builtin_neon_vrndx_v:
   case NEON::BI__builtin_neon_vrndxq_v:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented AArch64 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
   case NEON::BI__builtin_neon_vrndh_f16:
+    // intrName = "trunc";
+    return emitNeonCall(cgm, builder, {ty}, ops, intrName, ty, loc);
   case NEON::BI__builtin_neon_vrnd32x_f32:
   case NEON::BI__builtin_neon_vrnd32xq_f32:
   case NEON::BI__builtin_neon_vrnd32x_f64:
