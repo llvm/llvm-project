@@ -1140,9 +1140,13 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     llvm::Type *Xty = Op0->getType();
     llvm::Type *retType = llvm::Type::getInt1Ty(this->getLLVMContext());
     if (Xty->isVectorTy()) {
-      auto *XVecTy = E->getArg(0)->getType()->castAs<VectorType>();
-      retType = llvm::VectorType::get(
-          retType, ElementCount::getFixed(XVecTy->getNumElements()));
+      unsigned NumElts;
+      if (auto *MatTy = E->getArg(0)->getType()->getAs<ConstantMatrixType>())
+        NumElts = MatTy->getNumRows() * MatTy->getNumColumns();
+      else
+        NumElts =
+            E->getArg(0)->getType()->castAs<VectorType>()->getNumElements();
+      retType = llvm::VectorType::get(retType, ElementCount::getFixed(NumElts));
     }
     if (!E->getArg(0)->getType()->hasFloatingRepresentation())
       llvm_unreachable("isinf operand must have a float representation");
@@ -1155,9 +1159,13 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     llvm::Type *Xty = Op0->getType();
     llvm::Type *retType = llvm::Type::getInt1Ty(this->getLLVMContext());
     if (Xty->isVectorTy()) {
-      auto *XVecTy = E->getArg(0)->getType()->castAs<VectorType>();
-      retType = llvm::VectorType::get(
-          retType, ElementCount::getFixed(XVecTy->getNumElements()));
+      unsigned NumElts;
+      if (auto *MatTy = E->getArg(0)->getType()->getAs<ConstantMatrixType>())
+        NumElts = MatTy->getNumRows() * MatTy->getNumColumns();
+      else
+        NumElts =
+            E->getArg(0)->getType()->castAs<VectorType>()->getNumElements();
+      retType = llvm::VectorType::get(retType, ElementCount::getFixed(NumElts));
     }
     if (!E->getArg(0)->getType()->hasFloatingRepresentation())
       llvm_unreachable("isnan operand must have a float representation");

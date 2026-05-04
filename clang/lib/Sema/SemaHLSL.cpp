@@ -3282,6 +3282,8 @@ static bool CheckFloatRepresentation(Sema *S, SourceLocation Loc,
   clang::QualType BaseType =
       PassedType->isVectorType()
           ? PassedType->castAs<clang::VectorType>()->getElementType()
+      : PassedType->getAs<clang::ConstantMatrixType>()
+          ? PassedType->castAs<clang::ConstantMatrixType>()->getElementType()
           : PassedType;
   if (!BaseType->isFloat32Type())
     return S->Diag(Loc, diag::err_builtin_invalid_arg_type)
@@ -3402,10 +3404,13 @@ static bool CheckExpectedBitWidth(Sema *S, CallExpr *TheCall,
 
 static void SetElementTypeAsReturnType(Sema *S, CallExpr *TheCall,
                                        QualType ReturnType) {
-  auto *VecTyA = TheCall->getArg(0)->getType()->getAs<VectorType>();
-  if (VecTyA)
+  if (auto *VecTyA = TheCall->getArg(0)->getType()->getAs<VectorType>())
     ReturnType =
         S->Context.getExtVectorType(ReturnType, VecTyA->getNumElements());
+  else if (auto *MatTyA =
+               TheCall->getArg(0)->getType()->getAs<ConstantMatrixType>())
+    ReturnType = S->Context.getConstantMatrixType(
+        ReturnType, MatTyA->getNumRows(), MatTyA->getNumColumns());
 
   TheCall->setType(ReturnType);
 }
