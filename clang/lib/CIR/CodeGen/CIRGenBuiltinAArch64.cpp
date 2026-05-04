@@ -842,16 +842,16 @@ static mlir::Value emitCommonNeonBuiltinExpr(
     return mlir::Value{};
   }
 
-   llvm::StringRef llvmIntrName =
-        getLLVMIntrNameNoPrefix(static_cast<llvm::Intrinsic::ID>(
-            usgn ? llvmIntrinsic : altLLVMIntrinsic));
+  llvm::StringRef llvmIntrName =
+      getLLVMIntrNameNoPrefix(static_cast<llvm::Intrinsic::ID>(
+        usgn ? llvmIntrinsic : altLLVMIntrinsic));
             
-    mlir::Value result =
-        emitNeonCall(cgf.getCIRGenModule(), cgf.getBuilder(),
-                     /*argTypes=*/{vTy, vTy}, ops, llvmIntrName,
-                     /*funcResTy=*/vTy, loc);
-    mlir::Type resultType = cgf.convertType(expr->getType());
-    return cgf.getBuilder().createBitcast(result, resultType);
+  mlir::Value result =
+      emitNeonCall(cgf.getCIRGenModule(), cgf.getBuilder(),
+                   /*argTypes=*/{vTy, vTy}, ops, llvmIntrName,
+                   /*funcResTy=*/vTy, loc);
+  mlir::Type resultType = cgf.convertType(expr->getType());
+  return cgf.getBuilder().createBitcast(result, resultType);
 }
 
 // Emit an intrinsic where all operands are of the same type as the result.
