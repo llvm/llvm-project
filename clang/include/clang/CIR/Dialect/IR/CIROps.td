@@ -3628,9 +3628,16 @@ def CIR_OptionalPriorityAttr : OptionalAttr<
   >
 >;
 
-// TODO(CIR): CallingConv is a placeholder here so we can use it in
-// infrastructure calls, but it currently has no values.
-def CIR_CallingConv : CIR_I32EnumAttr<"CallingConv", "calling convention", []>;
+// The enumeration cases are ordered to match `llvm::CallingConv`. The values
+// are CIR-specific and are not in sync with `llvm::CallingConv` or
+// `clang::CallingConv`.
+def CIR_CallingConv : CIR_I32EnumAttr<"CallingConv", "calling convention", [
+  I32EnumAttrCase<"C", 0, "c">,
+  I32EnumAttrCase<"PTXKernel", 1, "ptx_kernel">,
+  I32EnumAttrCase<"SpirFunction", 2, "spir_function">,
+  I32EnumAttrCase<"SpirKernel", 3, "spir_kernel">,
+  I32EnumAttrCase<"AMDGPUKernel", 4, "amdgpu_kernel">
+]>;
 
 def CIR_FuncOp : CIR_Op<"func", [
   AutomaticAllocationScope, CallableOpInterface, FunctionOpInterface,
@@ -3645,6 +3652,11 @@ def CIR_FuncOp : CIR_Op<"func", [
 
     The function linkage information is specified by `linkage`, as defined by
     `GlobalLinkageKind` attribute.
+
+    The `calling_conv` attribute specifies the calling convention of the function.
+    By default calling convention is `CallingConv::C`. When printed, C calling
+    convention is omitted. Other calling conventions are printed as `cc(<mnemonic>)`,
+    e.g. `cc(amdgpu_kernel)`.
 
     A compiler builtin function must be marked as `builtin` for further
     processing when lowering from CIR.
@@ -3687,6 +3699,9 @@ def CIR_FuncOp : CIR_Op<"func", [
     // Linkage information
     cir.func linkonce_odr @some_method(...)
 
+    // Calling convention information
+    cir.func @func1(...) cc(amdgpu_kernel)
+
     // Inline information
     cir.func no_inline @some_method(...)
     
@@ -3718,6 +3733,10 @@ def CIR_FuncOp : CIR_Op<"func", [
       CIR_GlobalLinkageKind,
       "cir::GlobalLinkageKind::ExternalLinkage"
     >:$linkage,
+    DefaultValuedAttr<
+      CIR_CallingConv,
+      "cir::CallingConv::C"
+    >:$calling_conv,
     OptionalAttr<StrAttr>:$sym_visibility,
     UnitAttr:$comdat,
     OptionalAttr<DictArrayAttr>:$arg_attrs,
@@ -3737,7 +3756,8 @@ def CIR_FuncOp : CIR_Op<"func", [
 
   let builders = [OpBuilder<(ins
     "llvm::StringRef":$sym_name, "FuncType":$type,
-    CArg<"cir::GlobalLinkageKind", "cir::GlobalLinkageKind::ExternalLinkage">:$linkage)
+    CArg<"cir::GlobalLinkageKind", "cir::GlobalLinkageKind::ExternalLinkage">:$linkage,
+    CArg<"cir::CallingConv", "cir::CallingConv::C">:$callingConv)
   >];
 
   let extraClassDeclaration = [{
@@ -7679,6 +7699,57 @@ def CIR_InitCatchParamOp : CIR_Op<"init_catch_param"> {
   let assemblyFormat = [{
     $kind $exn_ptr `to` $param_addr `:`
       qualified(type($exn_ptr)) `,` qualified(type($param_addr)) attr-dict
+  }];
+
+  let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
+// EH Operations: ConstructCatchParamOp
+//===----------------------------------------------------------------------===//
+
+def CIR_ConstructCatchParamOp : CIR_Op<"construct_catch_param", [
+    DeclareOpInterfaceMethods<SymbolUserOpInterface>
+  ]> {
+  let summary = "Construct a catch parameter from the in-flight exception";
+  let description = [{
+    `cir.construct_catch_param` abstractly represents the target-specific work
+    that must be performed before `cir.begin_catch` to bind the in-flight
+    exception object to the local alloca used for the catch parameter.
+
+    For example: for non-pointer, non-reference catch parameters whose type has
+    a non-trivial copy constructor, the Itanium C++ ABI requires
+    calling `__cxa_get_exception_ptr` to obtain the adjusted exception pointer
+    and then invoking the catch parameter's copy constructor to create a local
+    copy of the object before `__cxa_begin_catch` is invoked.
+
+    This operation takes a `!cir.eh_token` that represents the in-flight
+    exception and the alloca value that is used for the local copy of the
+    exception object. The `copy_fn` attribute is a flat symbol reference to a
+    `cir.func` thunk that copies the exception object to a local alloca value.
+
+    This operation is replaced with a target-specific representation during
+    the EHABI lowering pass. For some targets, such as the Microsoft ABI,
+    this operation is a no-op and is simply erased during lowering.
+
+    Example:
+
+    ```
+    cir.construct_catch_param non_trivial_copy %eh_token to %param_addr
+      using @__clang_cir_catch_init_T : !cir.ptr<!rec_T>
+    ```
+  }];
+
+  let arguments = (ins
+      CIR_EhTokenType:$eh_token,
+      CIR_PointerType:$param_addr,
+      CIR_InitCatchKind:$kind,
+      FlatSymbolRefAttr:$copy_fn
+  );
+
+  let assemblyFormat = [{
+    $kind $eh_token `to` $param_addr `using` $copy_fn `:`
+      qualified(type($param_addr)) attr-dict
   }];
 
   let hasLLVMLowering = false;

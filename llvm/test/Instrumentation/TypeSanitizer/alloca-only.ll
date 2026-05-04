@@ -81,7 +81,7 @@ declare void @foo(ptr)
 ;.
 ; CHECK-INLINE: attributes #[[ATTR0:[0-9]+]] = { sanitize_type }
 ; CHECK-INLINE: attributes #[[ATTR1:[0-9]+]] = { nounwind }
-; CHECK-INLINE: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
+; CHECK-INLINE: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 ;.
 ; CHECK-OUTLINE: attributes #[[ATTR0:[0-9]+]] = { sanitize_type }
 ; CHECK-OUTLINE: attributes #[[ATTR1:[0-9]+]] = { nounwind }
