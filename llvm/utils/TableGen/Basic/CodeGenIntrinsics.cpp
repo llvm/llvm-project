@@ -184,8 +184,7 @@ static bool doesSuffixLookLikeMangledType(StringRef Suffix) {
 // The annotation stores the TableGen *record name* of the dominator
 // (e.g. `"int_foo"`), not the mangled intrinsic name (`"llvm.foo"`),
 // so the lookup goes through `RecordKeeper::getDef`.
-static void
-CheckKnownOverloadConflictExistence(const RecordKeeper &RC) {
+static void CheckKnownOverloadConflictExistence(const RecordKeeper &RC) {
   for (const Record *Def : RC.getAllDerivedDefinitions("Intrinsic")) {
     const StringRef Allow = Def->getValueAsString("KnownOverloadConflict");
     if (Allow.empty())
@@ -196,7 +195,8 @@ CheckKnownOverloadConflictExistence(const RecordKeeper &RC) {
       PrintError(Def->getLoc(),
                  "intrinsic `" + Def->getName() +
                      "` has KnownOverloadConflict referencing unknown "
-                     "intrinsic `" + Allow + "`");
+                     "intrinsic `" +
+                     Allow + "`");
       continue;
     }
 
