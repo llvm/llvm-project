@@ -1,3 +1,6 @@
+// RUN: %clang_cc1 %s --std=c++11 -triple nvptx-unknown-unknown -fcuda-is-device \
+// RUN:   -emit-llvm -o /dev/null -verify -verify-ignore-unexpected=note
+
 // RUN: %clang_cc1 %s --std=c++17 -triple nvptx-unknown-unknown -fcuda-is-device \
 // RUN:   -emit-llvm -o /dev/null -verify -verify-ignore-unexpected=note
 
@@ -139,6 +142,7 @@ __host__ __device__ void TmplStruct<int>::fn<int>() { host_fn(); }
 
 __device__ void double_specialization() { TmplStruct<int>().fn<int>(); }
 
+#if __cplusplus >= 201703L
 namespace template_if_constexpr {
   template<bool B>
   __host__ __device__ void fn() {
@@ -151,3 +155,4 @@ namespace template_if_constexpr {
     fn<true>(); // expected-error@-5 {{reference to __host__ function 'host_fn' in __host__ __device__ function}}
   }
 }
+#endif
