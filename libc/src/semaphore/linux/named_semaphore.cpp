@@ -14,6 +14,7 @@
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/CPP/string_view.h"
+#include "src/__support/ctype_utils.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/close.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/ftruncate.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/getrandom.h"
@@ -69,11 +70,10 @@ ErrorOr<TmpPath> generate_tmp_path() {
   inline_memcpy(path.data(), SEM_TMP_PREFIX.data(), SEM_TMP_PREFIX.size());
 
   // Encode each random byte as two hex digits, and fill out tmp path.
-  constexpr char hex_table[] = "0123456789abcdef";
   char *dst = path.data() + SEM_TMP_PREFIX.size();
   for (size_t i = 0; i < RANDOM_SUFFIX_BYTES; ++i) {
-    *dst++ = hex_table[rand_bytes[i] >> 4];
-    *dst++ = hex_table[rand_bytes[i] & 0xf];
+    *dst++ = internal::int_to_b36_char(rand_bytes[i] >> 4);
+    *dst++ = internal::int_to_b36_char(rand_bytes[i] & 0xf);
   }
   *dst = '\0';
   return path;

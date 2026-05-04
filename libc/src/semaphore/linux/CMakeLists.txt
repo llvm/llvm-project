@@ -23,6 +23,7 @@ add_object_library(
     libc.src.__support.CPP.limits
     libc.src.__support.CPP.new
     libc.src.__support.CPP.string_view
+    libc.src.__support.ctype_utils
     libc.src.__support.error_or
     libc.src.__support.OSUtil.linux.syscall_wrappers.close
     libc.src.__support.OSUtil.linux.syscall_wrappers.ftruncate
