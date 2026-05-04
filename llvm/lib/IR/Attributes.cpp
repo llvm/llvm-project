@@ -410,8 +410,8 @@ StringRef Attribute::getValueAsString() const {
 }
 
 uint64_t Attribute::getValueAsParsedInteger(uint64_t Default) const {
-  if (!isStringAttribute())
-    return Default;
+  assert(isStringAttribute() &&
+         "Expected the attribute to be a string attribute!");
   uint64_t Result = Default;
   if (getValueAsString().getAsInteger(0, Result))
     reportFatalUsageError("cannot parse integer attribute " +
