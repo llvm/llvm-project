@@ -38,7 +38,7 @@ using namespace llvm::offload::ompt;
 #endif
 
 using namespace llvm::offload::plugin;
-using namespace llvm::offload::debug;
+using namespace llvm::omp::target::debug;
 
 int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
                                             AsyncInfoTy &AsyncInfo) const {

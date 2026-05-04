@@ -576,10 +576,6 @@ constexpr const char *OLDT_Alloc = "Alloc";
 constexpr const char *OLDT_Tool = "Tool";
 constexpr const char *OLDT_Module = "Module";
 
-} // namespace llvm::offload::debug
-
-namespace llvm::offload::debug {
-
 enum OmpDebugLevel : uint32_t {
   ODL_Default = 1,
   ODL_Error = ODL_Default,
@@ -609,6 +605,11 @@ constexpr const char *ODT_Alloc = OLDT_Alloc;
 constexpr const char *ODT_Tool = OLDT_Tool;
 constexpr const char *ODT_Module = OLDT_Module;
 constexpr const char *ODT_Interop = "Interop";
+
+} // namespace llvm::offload::debug
+
+namespace llvm::omp::target::debug {
+using namespace llvm::offload::debug;
 
 static inline odbg_ostream reportErrorStream() {
 #ifdef OMPTARGET_DEBUG
@@ -643,7 +644,7 @@ static inline odbg_ostream reportErrorStream() {
 
 // helper macro to support old DP and REPORT macros with printf syntax
 #define FORMAT_TO_STR(Format, ...)                                             \
-  ::llvm::offload::debug::formatToStr(Format __VA_OPT__(, ) __VA_ARGS__)
+  ::llvm::omp::target::debug::formatToStr(Format __VA_OPT__(, ) __VA_ARGS__)
 
 template <uint32_t InfoId> static constexpr const char *InfoIdToODT() {
   constexpr auto getId = []() {
@@ -675,7 +676,7 @@ template <uint32_t InfoId> static constexpr const char *InfoIdToODT() {
 
 // Transform the INFO id to the corresponding debug type and print the message
 #define INFO_DEBUG_INT(_flags, _id, ...)                                       \
-  ODBG(::llvm::offload::debug::InfoIdToODT<_flags>())                          \
+  ODBG(::llvm::omp::target::debug::InfoIdToODT<_flags>())                      \
       << FORMAT_TO_STR(__VA_ARGS__);
 
 // Define default format for pointers
@@ -693,8 +694,8 @@ static inline raw_ostream &operator<<(raw_ostream &Os, void *Ptr) {
 #endif // OMPTARGET_DEBUG
 
 // New REPORT macro in the same style as ODBG
-#define REPORT() ::llvm::offload::debug::reportErrorStream()
+#define REPORT() ::llvm::omp::target::debug::reportErrorStream()
 
-} // namespace llvm::offload::debug
+} // namespace llvm::omp::target::debug
 
 #endif // OMPTARGET_SHARED_DEBUG_H

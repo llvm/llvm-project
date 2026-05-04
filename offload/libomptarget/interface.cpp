@@ -36,7 +36,7 @@
 #ifdef OMPT_SUPPORT
 using namespace llvm::offload::ompt;
 #endif
-using namespace llvm::offload::debug;
+using namespace llvm::omp::target::debug;
 
 // If offload is enabled, ensure that device DeviceID has been initialized.
 //
@@ -436,7 +436,7 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
                     /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
   int Rc = OFFLOAD_SUCCESS;
-  Rc = target(Loc, *DeviceOrErr, HostPtr, *KernelArgs, AsyncInfo);
+  Rc = ::target(Loc, *DeviceOrErr, HostPtr, *KernelArgs, AsyncInfo);
   { // required to show synchronization
     TIMESCOPE_WITH_DETAILS_AND_IDENT("Runtime: synchronize", "", Loc);
     if (Rc == OFFLOAD_SUCCESS)

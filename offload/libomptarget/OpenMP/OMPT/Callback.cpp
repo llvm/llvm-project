@@ -38,7 +38,7 @@ FOREACH_OMPT_EMI_EVENT(defineOmptCallback)
 #define omp_initial_device -1
 
 using namespace llvm::offload::ompt;
-using namespace llvm::offload::debug;
+using namespace llvm::omp::target::debug;
 
 /// Forward declaration
 class LibomptargetRtlFinalizer;

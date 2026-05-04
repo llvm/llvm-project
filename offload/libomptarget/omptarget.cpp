@@ -41,7 +41,7 @@ using llvm::SmallVector;
 #ifdef OMPT_SUPPORT
 using namespace llvm::offload::ompt;
 #endif
-using namespace llvm::offload::debug;
+using namespace llvm::omp::target::debug;
 
 int AsyncInfoTy::synchronize() {
   int Result = OFFLOAD_SUCCESS;
