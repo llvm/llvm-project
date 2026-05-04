@@ -828,6 +828,13 @@ bool DependencyTracker::isLiveSubprogramEntry(const UnitEntryPairTy &Entry) {
                              .Addresses->getAssemblyRangeForAddress(*LowPc)) {
           Entry.CU->addFunctionRange(Range->LowPC, Range->HighPC,
                                      *RelocAdjustment);
+          if (Entry.CU->getGlobalData().getOptions().Verbose) {
+            outs() << "Keeping subprogram DIE:";
+            DIDumpOptions DumpOpts;
+            DumpOpts.ChildRecurseDepth = 0;
+            DumpOpts.Verbose = Entry.CU->getGlobalData().getOptions().Verbose;
+            DIE.dump(outs(), 8 /* Indent */, DumpOpts);
+          }
           return true;
         }
       }
