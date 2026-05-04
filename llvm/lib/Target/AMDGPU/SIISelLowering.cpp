@@ -6153,64 +6153,50 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
           IsWave32 ? AMDGPU::S_FF1_I32_B32 : AMDGPU::S_FF1_I32_B64;
       BuildMI(*ComputeLoop, I, DL, TII->get(SFFOpc), FF1Reg)
           .addReg(ActiveBitsReg);
-      if (is32BitOpc || is16BitOpc) {
+      if (is16BitOpc || is32BitOpc) {
+        Register LaneValVgpr = MRI.createVirtualRegister(SrcRegClass);
+        Register VgprResultReg = MRI.createVirtualRegister(SrcRegClass);
+        Register LaneVal = LaneValueReg;
+        Register OpDstReg = DstReg;
+        bool hasSrc0Modifier = AMDGPU::getNamedOperandIdx(
+                                   Opc, AMDGPU::OpName::src0_modifiers) != -1;
+        bool hasSrc1Modifier = AMDGPU::getNamedOperandIdx(
+                                   Opc, AMDGPU::OpName::src1_modifiers) != -1;
+        bool hasClamp =
+            AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::clamp) != -1;
+        bool hasOpSel =
+            AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel) != -1;
+        bool hasOMod =
+            AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::omod) != -1;
+
         BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::V_READLANE_B32),
                 LaneValueReg)
             .addReg(SrcReg)
             .addReg(FF1Reg);
-        if (is16BitOpc) {
-          Register LaneValVgpr = MRI.createVirtualRegister(SrcRegClass);
-          Register VgprResultReg = MRI.createVirtualRegister(SrcRegClass);
-          bool hasSrc0Modifier = AMDGPU::getNamedOperandIdx(
-                                     Opc, AMDGPU::OpName::src0_modifiers) != -1;
-          bool hasSrc1Modifier = AMDGPU::getNamedOperandIdx(
-                                     Opc, AMDGPU::OpName::src1_modifiers) != -1;
-          bool hasClamp =
-              AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::clamp) != -1;
-          bool hasOpSel =
-              AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel) != -1;
+        if (ST.getInstrInfo()->isVALU(Opc)) {
           // Get the Lane Value in VGPR to avoid the Constant Bus Restriction
           BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::COPY), LaneValVgpr)
               .addReg(LaneValueReg);
-          auto OpInstr =
-              BuildMI(*ComputeLoop, I, DL, TII->get(Opc), VgprResultReg);
-          if (hasSrc0Modifier)
-            OpInstr.addImm(SISrcMods::NONE); // src0 modifier
-          OpInstr.addReg(AccumulatorReg);    // src0
-          if (hasSrc1Modifier)
-            OpInstr.addImm(SISrcMods::NONE); // src1 modifier
-          OpInstr.addReg(LaneValVgpr);       // src1
-          if (hasClamp)
-            OpInstr.addImm(0); // clamp
-          if (hasOpSel)
-            OpInstr.addImm(0); // opsel
-          NewAccumulator =
-              BuildMI(*ComputeLoop, I, DL,
-                      TII->get(AMDGPU::V_READFIRSTLANE_B32), DstReg)
-                  .addReg(VgprResultReg);
-        } else if (isFPOp) {
-          Register LaneValVreg =
-              MRI.createVirtualRegister(MRI.getRegClass(SrcReg));
-          Register DstVreg = MRI.createVirtualRegister(MRI.getRegClass(SrcReg));
-          // Get the Lane Value in VGPR to avoid the Constant Bus Restriction
-          BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::V_MOV_B32_e32),
-                  LaneValVreg)
-              .addReg(LaneValueReg);
-          BuildMI(*ComputeLoop, I, DL, TII->get(Opc), DstVreg)
-              .addImm(0) // src0 modifier
-              .addReg(Accumulator->getOperand(0).getReg())
-              .addImm(0) // src1 modifier
-              .addReg(LaneValVreg)
-              .addImm(0)  // clamp
-              .addImm(0); // omod
-          NewAccumulator =
-              BuildMI(*ComputeLoop, I, DL,
-                      TII->get(AMDGPU::V_READFIRSTLANE_B32), DstReg)
-                  .addReg(DstVreg);
-        } else {
-          NewAccumulator = BuildMI(*ComputeLoop, I, DL, TII->get(Opc), DstReg)
-                               .addReg(AccumulatorReg)
-                               .addReg(LaneValueReg);
+          OpDstReg = VgprResultReg;
+          LaneVal = LaneValVgpr;
+        }
+        auto OpInstr = BuildMI(*ComputeLoop, I, DL, TII->get(Opc), OpDstReg);
+        if (hasSrc0Modifier)
+          OpInstr.addImm(SISrcMods::NONE); // src0 modifier
+        OpInstr.addReg(AccumulatorReg);    // src0
+        if (hasSrc1Modifier)
+          OpInstr.addImm(SISrcMods::NONE); // src1 modifier
+        OpInstr.addReg(LaneVal);           // src1
+        if (hasClamp)
+          OpInstr.addImm(0); // clamp
+        if (hasOpSel)
+          OpInstr.addImm(0); // opsel
+        if (hasOMod)
+          OpInstr.addImm(0); // omod
+        if (ST.getInstrInfo()->isVALU(Opc)) {
+          BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32),
+                  DstReg)
+              .addReg(OpDstReg);
         }
       } else {
         Register LaneValueLoReg =
