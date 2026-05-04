@@ -142,6 +142,11 @@ bool Expr::isKnownToHaveBooleanValue(bool Semantic) const {
   // If this is a non-scalar-integer type, we don't care enough to try.
   if (!E->getType()->isIntegralOrEnumerationType()) return false;
 
+  if (!Semantic)
+    if (const auto *BIT = E->getType()->getAs<BitIntType>();
+        BIT && BIT->isUnsigned() && BIT->getNumBits() == 1)
+      return true;
+
   if (const UnaryOperator *UO = dyn_cast<UnaryOperator>(E)) {
     switch (UO->getOpcode()) {
     case UO_Plus:
