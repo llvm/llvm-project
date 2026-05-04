@@ -786,7 +786,8 @@ private:
   /// \returns the newly created interleave group.
   InterleaveGroup<Instruction> *
   createInterleaveGroup(Instruction *Instr, int Stride, Align Alignment) {
-    auto [It, Inserted] = InterleaveGroupMap.try_emplace(Instr);
+    [[maybe_unused]] auto [It, Inserted] =
+        InterleaveGroupMap.try_emplace(Instr);
     assert(Inserted && "Already in an interleaved access group");
     It->second = new InterleaveGroup<Instruction>(Instr, Stride, Alignment);
     InterleaveGroups.insert(It->second);
