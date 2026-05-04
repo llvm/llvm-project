@@ -651,11 +651,14 @@ static void CheckPoisonRecords(uptr addr) {
   if (!AddrIsInMem(addr))
     return;
 
-  u8 *shadow_addr = (u8 *)MemToShadow(addr);
+  const u8* shadow_addr = (const u8*)MemToShadow(addr);
+  u8 shadow_val = shadow_addr[0];
   // If we are in the partial right redzone, look at the next shadow byte.
-  if (*shadow_addr > 0 && *shadow_addr < 128)
-    shadow_addr++;
-  u8 shadow_val = *shadow_addr;
+  if (shadow_val > 0 && shadow_val < ASAN_SHADOW_GRANULARITY) {
+    u8 shadow_next = shadow_addr[1];
+    if (shadow_next >= ASAN_SHADOW_GRANULARITY)
+      shadow_val = shadow_next;
+  }
 
   if (shadow_val != kAsanUserPoisonedMemoryMagic)
     return;
@@ -674,11 +677,10 @@ static void CheckPoisonRecords(uptr addr) {
 
   PoisonRecord record;
   if (FindPoisonRecord(addr, record)) {
+    Printf("Memory was manually poisoned by thread T%u:\n", record.thread_id);
     StackTrace poison_stack = StackDepotGet(record.stack_id);
-    if (poison_stack.size > 0) {
-      Printf("Memory was manually poisoned by thread T%u:\n", record.thread_id);
+    if (poison_stack.size > 0)
       poison_stack.Print();
-    }
   } else {
     Printf("ERROR: no matching poison tracking record found.\n");
     Printf("Try a larger value for ASAN_OPTIONS=poison_history_size=<size>.\n");
