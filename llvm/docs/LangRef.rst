@@ -3692,17 +3692,17 @@ These two cases are discussed in more detail in the following.
 Provenance capture
 ^^^^^^^^^^^^^^^^^^
 
-If an argument does not capture the provenance the pointer, accesses that are
+If an argument does not capture the provenance of the pointer, accesses that are
 based on the argument and are performed after the function returns (or unwinds)
 cause undefined behavior. In the case where only read provenance is captured,
 only stores cause undefined behavior.
 
-More formally, an argument that does not capture provenance will return a new
-pointer with the same address and a derived provenance, where the derived
-provenance initially has the same permissions as the original, but all access
-permissions are removed once the function returns (or unwinds). Or in the case
-of only capturing read provenance, the permissions are changed to only allow
-read accesses.
+More formally, an argument that does not capture provenance effectively provides
+the callee a new pointer with the same address and a derived provenance, where
+the derived provenance initially has the same permissions as the original, but
+all access permissions are removed once the function returns (or unwinds). Or
+in the case of only capturing read provenance, the permissions are changed to
+only allow read accesses.
 
 This means that the following code is well-defined in isolation:
 
@@ -3714,7 +3714,7 @@ This means that the following code is well-defined in isolation:
     }
 
 Even though the pointer is stored in another location that persists past the
-return of the function, this does not cause undefined behavior in itself. It
+return of the function, this does not cause undefined behavior by itself. It
 depends on whether/how the pointer will be used in the future.
 
 .. code-block:: llvm
@@ -3726,11 +3726,22 @@ depends on whether/how the pointer will be used in the future.
 In this example, the persisted pointer is accessed after the return of the
 function, which causes undefined behavior.
 
+.. code-block:: llvm
+
+    call void @f(ptr captures(address, read_provenance) %a, ptr %b)
+    %a2 = load ptr, ptr %b
+    load i64, ptr %a2 ; This is still well-defined
+    store i64 0, ptr %a2 ; This causes undefined behavior
+
+In this example, we additionally declare that ``read_provenance`` is captured.
+This means that the ``load`` after the function return is still well-defined,
+while the store causes undefined behavior.
+
 Address capture
 ^^^^^^^^^^^^^^^
 
 The address of the pointer is considered to be captured if the function can
-exhibit different behavior based on the address of the pointer.
+exhibit different observable behavior based on the address of the pointer.
 
 For example, the following function captures the address of ``%a``, because
 it will return a different value if the address has a specific value:
@@ -3797,6 +3808,26 @@ ultimately only contributes to the return value:
 
 This definition is chosen to allow capture analysis to continue with the return
 value in the usual fashion.
+
+Inference
+^^^^^^^^^
+
+The definitions given above are permissive to facilitate frontend-driven
+annotations based on language semantics. It is useful to also consider in
+which cases we can infer lack of captures based on conservative function-local
+analysis. In that case, the following rules hold:
+
+ * Volatile memory accesses capture the address of the pointer.
+ * getelementptr, bitcast, addrspacecast, select, phi: Do not capture anything.
+ * load, va_arg: Do not capture anything (unless volatile).
+ * icmp, ptrtoaddr: Captures only address.
+ * ptrtoint: Captures address and provenance.
+ * call/invoke: Depends on ``captures`` on arguments. The callee is never
+   captured.
+ * store, atomicrmw, cmpxchg: Capture the address and provenance of the value
+   operand. Do not capture the pointer operand (unless volatile).
+ * Other (including insertvalue and insertelement): Conservatively assume
+   address and provenance are captured.
 
 .. _volatile:
 
