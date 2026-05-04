@@ -15,8 +15,9 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE constexpr float rintf(float x) {
-#ifdef __LIBC_USE_BUILTIN_CEIL_FLOOR_RINT_TRUNC
+LIBC_INLINE LIBC_CONSTEXPR float rintf(float x) {
+#if defined(__LIBC_USE_BUILTIN_CEIL_FLOOR_RINT_TRUNC) &&                       \
+    !defined(LIBC_HAS_CONSTANT_EVALUATED)
   return __builtin_rintf(x);
 #else
   return fputil::round_using_current_rounding_mode(x);
