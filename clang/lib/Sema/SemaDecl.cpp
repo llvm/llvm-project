@@ -16958,6 +16958,21 @@ ParmVarDecl *Sema::CheckParameter(DeclContext *DC, SourceLocation StartLoc,
                                   TypeSourceInfo *TSInfo, StorageClass SC) {
   // Perform Objective-C ARC adjustments.
   T = ObjC().AdjustParameterTypeForObjCAutoRefCount(T, NameLoc, TSInfo);
+
+  if (getLangOpts().OpenCL) {
+    assert(!isa<DecayedType>(T));
+    if (T->isArrayType() && !T.hasAddressSpace()) {
+      QualType ET = Context.getAsArrayType(T)->getElementType();
+      if (!ET.hasAddressSpace()) {
+        // Add the private address space to the contents of the pointer when a
+        // pointer parameter is declared as an array and not declared.
+        LangAS ImplAS = LangAS::opencl_private;
+        T = Context.getAddrSpaceQualType(T, ImplAS);
+        T = QualType(Context.getAsArrayType(T), 0);
+      }
+    }
+  }
+
   /*TO_UPSTREAM(BoundsSafety) ON*/
   QualType Adjusted = Context.getAdjustedParameterType(T);
 
@@ -16993,20 +17008,6 @@ ParmVarDecl *Sema::CheckParameter(DeclContext *DC, SourceLocation StartLoc,
     }
   }
   /*TO_UPSTREAM(BoundsSafety) OFF*/
-
-  if (getLangOpts().OpenCL) {
-    assert(!isa<DecayedType>(T));
-    if (T->isArrayType() && !T.hasAddressSpace()) {
-      QualType ET = Context.getAsArrayType(T)->getElementType();
-      if (!ET.hasAddressSpace()) {
-        // Add the private address space to the contents of the pointer when a
-        // pointer parameter is declared as an array and not declared.
-        LangAS ImplAS = LangAS::opencl_private;
-        T = Context.getAddrSpaceQualType(T, ImplAS);
-        T = QualType(Context.getAsArrayType(T), 0);
-      }
-    }
-  }
 
   ParmVarDecl *New = ParmVarDecl::Create(Context, DC, StartLoc, NameLoc, Name,
                                          Adjusted, TSInfo, SC, nullptr);
