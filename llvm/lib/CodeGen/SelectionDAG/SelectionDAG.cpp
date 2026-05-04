@@ -1839,6 +1839,8 @@ SDValue SelectionDAG::getConstant(const ConstantInt &Val, const SDLoc &DL,
 
   if (!N) {
     N = newSDNode<ConstantSDNode>(isT, isO, Elt, VTs);
+    if (!isT)
+      N->setDebugLoc(DL.getDebugLoc());
     CSEMap.InsertNode(N, IP);
     InsertNode(N);
     NewSDValueDbgMsg(SDValue(N, 0), "Creating constant: ", this);
@@ -6141,12 +6143,33 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
     Known.fabs();
     break;
   }
+  case ISD::FCOPYSIGN: {
+    Known = computeKnownFPClass(Op.getOperand(0), DemandedElts,
+                                InterestedClasses, Depth + 1);
+    KnownFPClass KnownSign = computeKnownFPClass(Op.getOperand(1), DemandedElts,
+                                                 InterestedClasses, Depth + 1);
+    Known.copysign(KnownSign);
+    break;
+  }
   case ISD::AssertNoFPClass: {
     Known = computeKnownFPClass(Op.getOperand(0), DemandedElts,
                                 InterestedClasses, Depth + 1);
     FPClassTest AssertedClasses =
         static_cast<FPClassTest>(Op->getConstantOperandVal(1));
     Known.KnownFPClasses &= ~AssertedClasses;
+    break;
+  }
+  case ISD::SELECT:
+  case ISD::VSELECT: {
+    // TODO: Add adjustKnownFPClassForSelectArm clamp recognition as in
+    // IR-level ValueTracking.
+    KnownFPClass KnownFalseClass = computeKnownFPClass(
+        Op.getOperand(2), DemandedElts, InterestedClasses, Depth + 1);
+    if (KnownFalseClass.isUnknown())
+      break;
+    KnownFPClass KnownTrueClass = computeKnownFPClass(
+        Op.getOperand(1), DemandedElts, InterestedClasses, Depth + 1);
+    Known = KnownTrueClass.intersectWith(KnownFalseClass);
     break;
   }
   default:
@@ -7766,6 +7789,13 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
           return getBitcast(VT, getBuildVector(BVVT, DL, Ops));
         }
       }
+    }
+    // Logic ops can be folded from raw integer bits - mainly for AVX512 masks.
+    if (ISD::isBitwiseLogicOp(Opcode) && isa<ConstantSDNode>(N1) &&
+        isa<ConstantSDNode>(N2)) {
+      if (SDValue Res = FoldConstantArithmetic(Opcode, DL, N1.getValueType(),
+                                               {N1, N2}, Flags))
+        return getBitcast(VT, Res);
     }
   }
 

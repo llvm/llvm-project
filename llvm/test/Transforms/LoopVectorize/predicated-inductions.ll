@@ -607,8 +607,7 @@ define void @two_used_predicated_ivs(ptr %dst1, ptr %dst2, i64 %n) {
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX6]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC]] to i32
 ; CHECK-NEXT:    [[TMP9:%.*]] = mul i32 [[DOTCAST]], 9
-; CHECK-NEXT:    [[DOTCAST7:%.*]] = trunc i64 [[N_VEC]] to i32
-; CHECK-NEXT:    [[TMP10:%.*]] = mul i32 [[DOTCAST7]], 5
+; CHECK-NEXT:    [[TMP16:%.*]] = mul i32 [[DOTCAST]], 5
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -630,13 +629,13 @@ define void @two_used_predicated_ivs(ptr %dst1, ptr %dst2, i64 %n) {
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL10:%.*]] = phi i32 [ [[TMP9]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL11:%.*]] = phi i32 [ [[TMP10]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL9:%.*]] = phi i32 [ [[TMP9]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL10:%.*]] = phi i32 [ [[TMP16]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[PRED_IV1:%.*]] = phi i32 [ [[BC_RESUME_VAL10]], %[[SCALAR_PH]] ], [ [[PRED_NEXT1:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[PRED_IV2:%.*]] = phi i32 [ [[BC_RESUME_VAL11]], %[[SCALAR_PH]] ], [ [[PRED_NEXT2:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[PRED_IV1:%.*]] = phi i32 [ [[BC_RESUME_VAL9]], %[[SCALAR_PH]] ], [ [[PRED_NEXT1:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[PRED_IV2:%.*]] = phi i32 [ [[BC_RESUME_VAL10]], %[[SCALAR_PH]] ], [ [[PRED_NEXT2:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[MASKED1:%.*]] = and i32 [[PRED_IV1]], 255
 ; CHECK-NEXT:    [[PRED_NEXT1]] = add nuw nsw i32 [[MASKED1]], 9

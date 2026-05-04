@@ -3957,3 +3957,30 @@ func.func @omp_free_shared_mem(%n: i64) {
   omp.free_shared_mem [%n x f32 : (i64) align(32)] %1 : !llvm.ptr
   return
 }
+
+// CHECK-LABEL: func.func @omp_groupprivate_device_type
+func.func @omp_groupprivate_device_type() {
+  %1 = arith.constant 2 : i32
+
+  // CHECK: {{.*}} = omp.groupprivate @gp : !llvm.ptr
+  %group_private_addr = omp.groupprivate @gp : !llvm.ptr
+
+  // CHECK: {{.*}} = omp.groupprivate @any device_type (any) : !llvm.ptr
+  %group_private_any = omp.groupprivate @any device_type(any) : !llvm.ptr
+  llvm.store %1, %group_private_any : i32, !llvm.ptr
+
+  // CHECK: {{.*}} = omp.groupprivate @host device_type (host) : !llvm.ptr
+  %group_private_host = omp.groupprivate @host device_type(host) : !llvm.ptr
+  llvm.store %1, %group_private_host : i32, !llvm.ptr
+
+  // CHECK: {{.*}} = omp.groupprivate @nohost device_type (nohost) : !llvm.ptr
+  %group_private_nohost = omp.groupprivate @nohost device_type(nohost) : !llvm.ptr
+  llvm.store %1, %group_private_nohost : i32, !llvm.ptr
+
+  return
+}
+
+llvm.mlir.global internal @gp() : i32
+llvm.mlir.global internal @any() : i32
+llvm.mlir.global internal @host() : i32
+llvm.mlir.global internal @nohost() : i32

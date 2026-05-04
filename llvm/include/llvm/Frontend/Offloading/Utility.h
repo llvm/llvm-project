@@ -84,12 +84,16 @@ LLVM_ABI StructType *getEntryTy(Module &M);
 /// \param Data Extra data storage associated with the entry.
 /// \param SectionName The section this entry will be placed at.
 /// \param AuxAddr An extra pointer if needed.
+/// Returns the section name for offloading entries based on the target triple.
+/// ELF: "llvm_offload_entries", COFF: "llvm_offload_entries",
+/// Mach-O: "__LLVM,offload_entries".
+LLVM_ABI StringRef getOffloadEntrySection(Module &M);
+
 /// \return The emitted global variable containing the offloading entry.
 LLVM_ABI GlobalVariable *
 emitOffloadingEntry(Module &M, object::OffloadKind Kind, Constant *Addr,
                     StringRef Name, uint64_t Size, uint32_t Flags,
-                    uint64_t Data, Constant *AuxAddr = nullptr,
-                    StringRef SectionName = "llvm_offload_entries");
+                    uint64_t Data, Constant *AuxAddr = nullptr);
 
 /// Create a constant struct initializer used to register this global at
 /// runtime.
@@ -102,7 +106,7 @@ getOffloadingEntryInitializer(Module &M, object::OffloadKind Kind,
 /// Creates a pair of globals used to iterate the array of offloading entries by
 /// accessing the section variables provided by the linker.
 LLVM_ABI std::pair<GlobalVariable *, GlobalVariable *>
-getOffloadEntryArray(Module &M, StringRef SectionName = "llvm_offload_entries");
+getOffloadEntryArray(Module &M);
 
 namespace amdgpu {
 /// Check if an image is compatible with current system's environment. The
