@@ -2004,16 +2004,16 @@ define i32 @foo(i32 %arg0, i32 %arg1) {
   // Check nested checkpoint: save,save,revert,revert.
   EXPECT_EQ(Add1->getOperand(0), Add0);
   Ctx.save();
-  EXPECT_EQ(Ctx.getTracker().nesting(), 1u);
+  EXPECT_EQ(Ctx.getTracker().nestingDepth(), 1u);
   Add1->setOperand(0, Arg0);
   Ctx.save();
-  EXPECT_EQ(Ctx.getTracker().nesting(), 2u);
+  EXPECT_EQ(Ctx.getTracker().nestingDepth(), 2u);
   Add1->setOperand(0, Arg1);
   Ctx.revert();
-  EXPECT_EQ(Ctx.getTracker().nesting(), 1u);
+  EXPECT_EQ(Ctx.getTracker().nestingDepth(), 1u);
   EXPECT_EQ(Add1->getOperand(0), Arg0);
   Ctx.revert();
-  EXPECT_EQ(Ctx.getTracker().nesting(), 0u);
+  EXPECT_EQ(Ctx.getTracker().nestingDepth(), 0u);
   EXPECT_EQ(Add1->getOperand(0), Add0);
 
   Checker.expectNoDiff();
@@ -2021,36 +2021,36 @@ define i32 @foo(i32 %arg0, i32 %arg1) {
   // Check nested checkpoint: save,revert,save,revert
   EXPECT_EQ(Add1->getOperand(0), Add0);
   Ctx.save();
-  EXPECT_EQ(Ctx.getTracker().nesting(), 1u);
+  EXPECT_EQ(Ctx.getTracker().nestingDepth(), 1u);
   Add1->setOperand(0, Arg0);
   Ctx.revert();
-  EXPECT_EQ(Ctx.getTracker().nesting(), 0u);
+  EXPECT_EQ(Ctx.getTracker().nestingDepth(), 0u);
   EXPECT_EQ(Add1->getOperand(0), Add0);
   Checker.expectNoDiff();
 
   Ctx.save();
-  EXPECT_EQ(Ctx.getTracker().nesting(), 1u);
+  EXPECT_EQ(Ctx.getTracker().nestingDepth(), 1u);
   Add1->setOperand(0, Arg1);
   Ctx.revert();
-  EXPECT_EQ(Ctx.getTracker().nesting(), 0u);
+  EXPECT_EQ(Ctx.getTracker().nestingDepth(), 0u);
   EXPECT_EQ(Add1->getOperand(0), Add0);
   Checker.expectNoDiff();
 
   // Check nested checkpoint: save,accept,save,revert
   EXPECT_EQ(Add1->getOperand(0), Add0);
   Ctx.save();
-  EXPECT_EQ(Ctx.getTracker().nesting(), 1u);
+  EXPECT_EQ(Ctx.getTracker().nestingDepth(), 1u);
   Add1->setOperand(0, Arg0);
   Ctx.accept();
-  EXPECT_EQ(Ctx.getTracker().nesting(), 0u);
+  EXPECT_EQ(Ctx.getTracker().nestingDepth(), 0u);
   EXPECT_EQ(Add1->getOperand(0), Arg0);
 
   Checker.save();
   Ctx.save();
-  EXPECT_EQ(Ctx.getTracker().nesting(), 1u);
+  EXPECT_EQ(Ctx.getTracker().nestingDepth(), 1u);
   Add1->setOperand(0, Arg1);
   Ctx.revert();
-  EXPECT_EQ(Ctx.getTracker().nesting(), 0u);
+  EXPECT_EQ(Ctx.getTracker().nestingDepth(), 0u);
   EXPECT_EQ(Add1->getOperand(0), Arg0);
   Checker.expectNoDiff();
 }

@@ -511,7 +511,7 @@ public:
   /// Stops tracking and reverts to saved state.
   LLVM_ABI void revert();
   /// \returns the number of nested (outstanding) checkpoints.
-  unsigned nesting() const { return Snapshots.size(); }
+  unsigned nestingDepth() const { return Snapshots.size(); }
 
 #ifndef NDEBUG
   void dump(raw_ostream &OS) const;
