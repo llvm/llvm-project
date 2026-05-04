@@ -644,6 +644,7 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #  include <__type_traits/remove_cvref.h>
 #  include <__utility/default_three_way_comparator.h>
 #  include <__utility/exception_guard.h>
+#  include <__utility/exchange.h>
 #  include <__utility/forward.h>
 #  include <__utility/is_pointer_in_range.h>
 #  include <__utility/move.h>
@@ -1490,8 +1491,7 @@ public:
     size_type __old_sz = __str.size();
     if (!__str.__is_long())
       __str.__annotate_delete();
-    __rep_       = __str.__rep_;
-    __str.__rep_ = __rep();
+    __rep_ = std::__exchange(__str.__rep_, __rep());
     __str.__annotate_new(0);
 
     _Traits::move(data(), data() + __pos, __len);
