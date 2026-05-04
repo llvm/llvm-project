@@ -103,14 +103,11 @@ TEST_CONSTEXPR_CXX26 bool test_move_assign() {
 
 int main(int, char**) {
   test_move_assign<MoveOnly>();
-#if TEST_STD_VER >= 26
-  // FIXME: Within __tree, it is not allowed to move from a `const MoveOnly` which prevents this from executing during constant evaluation
-// static_assert(test_move_assign<MoveOnly>());
-#endif
-
   test_move_assign<CopyConstructible>();
 
 #if TEST_STD_VER >= 26
+  // FIXME: It is not yet possible to replace a `const MoveOnly` key subobject during constant evaluation.
+  // static_assert(test_move_assign<MoveOnly>());
   static_assert(test_move_assign<CopyConstructible>());
 #endif
 
