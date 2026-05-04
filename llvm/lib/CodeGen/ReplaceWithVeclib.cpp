@@ -93,9 +93,11 @@ static void replaceWithTLIFunction(IntrinsicInst *II, VFInfo &Info,
 
   auto *Replacement = IRBuilder.CreateCall(TLIVecFunc, Args, OpBundles);
   II->replaceAllUsesWith(Replacement);
-  // Preserve fast math flags for FP math.
-  if (isa<FPMathOperator>(Replacement))
+  // Preserve fast math flags and fpmath for FP math
+  if (isa<FPMathOperator>(Replacement)) {
     Replacement->copyFastMathFlags(II);
+    Replacement->copyMetadata(*II, {LLVMContext::MD_fpmath});
+  }
   Replacement->setCallingConv(TLIVecFunc->getCallingConv());
 }
 
@@ -249,12 +251,12 @@ static bool trySplitVectorSinCos(const TargetLibraryInfo &TLI,
   // expandMultipleResultFPLibCall when the runtime libcall impl is enabled.
   if (hasIntrinsicVectorMapping(TLI, Intrinsic::sincos, ScalarTy, EC, M))
     return false;
-  StringRef LibcallName;
+  LibFunc LF = NotLibFunc;
   if (ScalarTy->isFloatTy())
-    LibcallName = "sincosf";
+    LF = LibFunc_sincosf;
   else if (ScalarTy->isDoubleTy())
-    LibcallName = "sincos";
-  if (!LibcallName.empty() && hasVectorMapping(TLI, LibcallName, EC))
+    LF = LibFunc_sincos;
+  if (LF != NotLibFunc && hasVectorMapping(TLI, TLI.getName(LF), EC))
     return false;
 
   // Splitting is only worthwhile when both sin and cos have vector mappings.
@@ -262,12 +264,9 @@ static bool trySplitVectorSinCos(const TargetLibraryInfo &TLI,
       !hasIntrinsicVectorMapping(TLI, Intrinsic::cos, ScalarTy, EC, M))
     return false;
 
-  // All users must be extractvalue with index 0 or 1; otherwise we cannot
-  // safely rewire results.
+  // All users must be extractvalue.
   for (User *U : II->users()) {
-    auto *EV = dyn_cast<ExtractValueInst>(U);
-    if (!EV || EV->getNumIndices() != 1 ||
-        (EV->getIndices()[0] != 0 && EV->getIndices()[0] != 1))
+    if (!isa<ExtractValueInst>(U))
       return false;
   }
 
@@ -280,9 +279,11 @@ static bool trySplitVectorSinCos(const TargetLibraryInfo &TLI,
   CallInst *CosCall = B.CreateCall(CosFn, {Arg}, "cos");
   SinCall->copyFastMathFlags(II);
   CosCall->copyFastMathFlags(II);
+  SinCall->copyMetadata(*II, {LLVMContext::MD_fpmath});
+  CosCall->copyMetadata(*II, {LLVMContext::MD_fpmath});
 
   // Forward extractvalue uses to the new calls.
-  for (User *U : llvm::make_early_inc_range(II->users())) {
+  for (User *U : make_early_inc_range(II->users())) {
     auto *EV = cast<ExtractValueInst>(U);
     EV->replaceAllUsesWith(EV->getIndices()[0] == 0 ? SinCall : CosCall);
     EV->eraseFromParent();
