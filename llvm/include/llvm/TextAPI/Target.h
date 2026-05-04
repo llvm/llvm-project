@@ -38,6 +38,10 @@ public:
 
   LLVM_ABI static llvm::Expected<Target> create(StringRef Target);
 
+  LLVM_ABI bool isValid() const {
+    return Arch != AK_unknown && Platform != PLATFORM_UNKNOWN;
+  }
+
   LLVM_ABI operator std::string() const;
 
   Architecture Arch;
