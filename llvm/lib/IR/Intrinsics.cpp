@@ -1154,6 +1154,13 @@ static bool isSignatureValid(FunctionType *FTy,
   return true;
 }
 
+bool Intrinsic::hasStructReturnType(ID id) {
+  using namespace Intrinsic;
+  SmallVector<IITDescriptor> Table;
+  getIntrinsicInfoTableEntries(id, Table);
+  return !Table.empty() && Table[0].Kind == IITDescriptor::Struct;
+}
+
 bool Intrinsic::isSignatureValid(Intrinsic::ID ID, FunctionType *FT,
                                  SmallVectorImpl<Type *> &OverloadTys,
                                  raw_ostream &OS) {
