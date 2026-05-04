@@ -62,6 +62,9 @@ ABI Changes in This Version
   types, or ``_Complex float`` types are passed, and may introduce
   incompatibilities with code compiled by earlier versions of Clang that uses
   the ``__regcall`` calling convention on these targets. (#GH62999) (#GH98635)
+- Fixed Itanium mangling for lambdas in instantiated non-static data member
+  initializers by preserving the field-name closure-prefix. This changes the
+  mangled names for affected lambdas. (#GH190555)
 
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
