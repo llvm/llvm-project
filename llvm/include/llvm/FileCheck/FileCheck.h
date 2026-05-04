@@ -418,8 +418,9 @@ public:
   /// can add a \c MatchNoteDiag without a previous \c MatchResultDiag.
   /// Otherwise, there should always be a previous \c MatchResultDiag.
   template <typename DiagTy, typename... ArgTys>
-  void emplace(const ArgTys &...Args) {
-    DiagList.emplace_back(std::make_unique<DiagTy>(Args...));
+  void emplace(ArgTys &&...Args) {
+    DiagList.emplace_back(
+        std::make_unique<DiagTy>(std::forward<ArgTys>(Args)...));
     FileCheckDiag *Diag = DiagList.back().get();
     if (MatchResultDiag *MRD = dyn_cast<MatchResultDiag>(Diag)) {
       CurMatchResultDiag = MRD;
