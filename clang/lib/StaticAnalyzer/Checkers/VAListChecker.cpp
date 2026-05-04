@@ -143,7 +143,7 @@ const CallDescription VAListChecker::VaStart(CDM::CLibrary,
 
 void VAListChecker::checkPreCall(const CallEvent &Call,
                                  CheckerContext &C) const {
-  if (VaStart.matches(Call) || VaStartC23.matches(Call))
+  if (matchesAny(Call, VaStart, VaStartC23))
     checkVAListStartCall(Call, C);
   else if (VaCopy.matches(Call))
     checkVAListCopyCall(Call, C);

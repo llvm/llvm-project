@@ -13,4 +13,4 @@ typedef __builtin_va_list va_list;
 #define va_arg(ap, type)   __builtin_va_arg(ap, type)
 #define va_copy(dst, src)  __builtin_va_copy(dst, src)
 
-int vprintf(const char *restrict format, va_list arg);
+int vprintf(const char *__restrict format, va_list arg);
