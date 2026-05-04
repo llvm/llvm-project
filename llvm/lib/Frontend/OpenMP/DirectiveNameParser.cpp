@@ -61,7 +61,8 @@ DirectiveNameParser::insertTransition(State *From, StringRef Tok) {
   if (State *Next = From->next(Tok))
     return Next;
 
-  auto [Where, DidIt] = From->Transition->try_emplace(Tok, State());
+  [[maybe_unused]] auto [Where, DidIt] =
+      From->Transition->try_emplace(Tok, State());
   assert(DidIt && "Map insertion failed");
   return &Where->second;
 }
