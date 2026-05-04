@@ -9,6 +9,7 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/DiagnosticOptions.h"
+#include "clang/Config/config.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Job.h"
@@ -101,10 +102,18 @@ TEST_F(SanitizerArgsTest, Ignorelists) {
                      std::string("-fsanitize-ignorelist=") + UserIgnorelist},
       /*ExtraFiles=*/{ASanIgnorelist, UserIgnorelist});
 
+#if CLANG_ENABLE_SANITIZER_SYSTEM_IGNORELISTS
   // System ignorelists are added based on resource-dir.
   EXPECT_THAT(Command.getArguments(),
               Contains(StrEq(std::string("-fsanitize-system-ignorelist=") +
                              ASanIgnorelist)));
+#else
+  // Sanitizer system ignorelists should not be added
+  EXPECT_THAT(Command.getArguments(),
+              Not(Contains(StrEq(std::string("-fsanitize-system-ignorelist=") +
+                             ASanIgnorelist))));
+#endif
+
   // User ignorelists should also be added.
   EXPECT_THAT(
       Command.getArguments(),
