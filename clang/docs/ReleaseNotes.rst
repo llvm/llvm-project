@@ -749,6 +749,7 @@ Static Analyzer
 
 Sanitizers
 ----------
+- UndefinedBehaviorSanitizer now supports ``__ubsan_default_suppressions``.
 
 Python Binding Changes
 ----------------------
