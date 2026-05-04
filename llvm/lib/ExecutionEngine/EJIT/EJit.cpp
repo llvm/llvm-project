@@ -43,6 +43,8 @@ EJit::EJit(const Config &config) : config_(config) {
   auto engine = EJitOrcEngine::Create(config, reg, *runtimeState_);
   if (engine)
     compileDriver_->setSyncEngine(std::move(*engine));
+  else
+    llvm::consumeError(engine.takeError());
 }
 
 EJit::~EJit() {
