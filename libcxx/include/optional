@@ -953,11 +953,35 @@ private:
     }
   };
 
+  template <class _QualUp>
+  struct _CheckOptionalLikeRefConstructor {
+    template <class>
+    _LIBCPP_HIDE_FROM_ABI static constexpr bool __enable_implicit() {
+      return !is_convertible_v<_QualUp, _Tp&>;
+    }
+
+    template <class>
+    _LIBCPP_HIDE_FROM_ABI static constexpr bool __enable_explicit() {
+      return is_convertible_v<_QualUp, _Tp&>;
+    }
+
+    template <class>
+    _LIBCPP_HIDE_FROM_ABI constexpr bool __enable_assign() {
+      return false;
+    }
+  };
+
   template <class _Up, class _QualUp>
   using _CheckOptionalLikeCtor _LIBCPP_NODEBUG =
-      _If< _And< _IsNotSame<_Up, _Tp>, is_constructible<_Tp, _QualUp> >::value,
-           _CheckOptionalLikeConstructor<_QualUp>,
-           __check_tuple_constructor_fail >;
+      _If<_And<is_lvalue_reference<_Tp>, // optional<T&>
+               _IsNotSame<__remove_cvref_t<_Tp>, optional<_Up>>,
+               _IsNotSame<_Tp&, _Up>,
+               is_constructible<_Tp&, _QualUp>>::value,
+          _CheckOptionalLikeRefConstructor<_QualUp>,
+          _If< _And< _IsNotSame<_Up, _Tp>, is_constructible<_Tp, _QualUp> >::value, // optional<T>
+               _CheckOptionalLikeConstructor<_QualUp>,
+               __check_tuple_constructor_fail > >;
+
   template <class _Up, class _QualUp>
   using _CheckOptionalLikeAssign _LIBCPP_NODEBUG =
       _If< _And< _IsNotSame<_Up, _Tp>, is_constructible<_Tp, _QualUp>, is_assignable<_Tp&, _QualUp> >::value,
