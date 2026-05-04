@@ -1633,6 +1633,18 @@ static bool interp__builtin_operator_delete(InterpState &S, CodePtr OpPC,
   const Expr *Source = nullptr;
   const Block *BlockToDelete = nullptr;
 
+  assert(Call->getNumArgs() >= 1);
+  unsigned NumArgs = Call->getNumArgs();
+
+  // The std::nothrow_t argument never put on the stack.
+  if (Call->getArg(NumArgs - 1)->getType()->isNothrowT())
+    --NumArgs;
+
+  // Args are pushed in source order. The trailing sized/aligned delete
+  // operands are above the pointer on the stack.
+  for (unsigned I = NumArgs; I > 1; --I)
+    discard(S.Stk, *S.getContext().classify(Call->getArg(I - 1)));
+
   if (S.checkingPotentialConstantExpression()) {
     S.Stk.discard<Pointer>();
     return false;
