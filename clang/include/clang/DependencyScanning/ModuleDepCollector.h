@@ -40,12 +40,11 @@ struct PrebuiltModuleDep {
   std::string ModuleName;
   std::string PCMFile;
   std::string ModuleMapFile;
-  std::optional<std::string> ModuleCacheKey;
+  std::string ModuleCacheKey;
 
   explicit PrebuiltModuleDep(const serialization::ModuleFile *MF)
       : ModuleName(MF->ModuleName), PCMFile(MF->FileName.str()),
-        ModuleMapFile(MF->ModuleMapPath),
-        ModuleCacheKey(MF->ModuleCacheKey){}
+        ModuleMapFile(MF->ModuleMapPath), ModuleCacheKey(MF->ModuleCacheKey) {}
 };
 
 /// Attributes loaded from AST files of prebuilt modules collected prior to

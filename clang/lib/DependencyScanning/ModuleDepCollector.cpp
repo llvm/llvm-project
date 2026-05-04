@@ -368,12 +368,12 @@ ModuleDepCollector::getInvocationAdjustedForModuleBuildWithoutOutputs(
 
   // Report the prebuilt modules this module uses.
   for (const auto &PrebuiltModule : Deps.PrebuiltModuleDeps) {
-    if (PrebuiltModule.ModuleCacheKey) {
+    if (!PrebuiltModule.ModuleCacheKey.empty()) {
       // canonicalize the PCM path if using CAS.
       auto PCMFile = llvm::sys::path::filename(PrebuiltModule.PCMFile);
       CI.getMutFrontendOpts().ModuleFiles.push_back(PCMFile.str());
       CI.getMutFrontendOpts().ModuleCacheKeys.emplace_back(
-          PCMFile, *PrebuiltModule.ModuleCacheKey);
+          PCMFile, PrebuiltModule.ModuleCacheKey);
     } else
       CI.getMutFrontendOpts().ModuleFiles.push_back(PrebuiltModule.PCMFile);
   }
