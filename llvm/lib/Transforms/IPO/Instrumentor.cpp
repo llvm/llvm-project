@@ -161,6 +161,9 @@ private:
   /// The instrumentor configuration.
   InstrumentationConfig &IConf;
 
+  /// The function regex filter, if any.
+  Regex ParsedFunctionRegex;
+
   /// The underlying module.
   Module &M;
 
@@ -171,22 +174,28 @@ protected:
 
 } // end anonymous namespace
 
+static Regex createRegex(StringRef Str, StringRef Name, LLVMContext &Ctx) {
+  if (!Str.empty()) {
+    Regex RX(Str);
+    std::string ErrMsg;
+    if (!RX.isValid(ErrMsg)) {
+      Ctx.diagnose(DiagnosticInfoInstrumentation(
+          Twine("failed to parse ") + Name + " regex: " + ErrMsg, DS_Error));
+      return Regex();
+    }
+    return RX;
+  }
+  return Regex();
+}
+
 bool InstrumentorImpl::shouldInstrumentTarget() {
   const Triple &T = M.getTargetTriple();
   const bool IsGPU = T.isAMDGPU() || T.isNVPTX();
 
   bool RegexMatches = true;
-  const auto TargetRegexStr = IConf.TargetRegex->getString();
-  if (!TargetRegexStr.empty()) {
-    llvm::Regex TargetRegex(TargetRegexStr);
-    std::string ErrMsg;
-    if (!TargetRegex.isValid(ErrMsg)) {
-      IIRB.Ctx.diagnose(DiagnosticInfoInstrumentation(
-          Twine("failed to parse target regex: ") + ErrMsg, DS_Warning));
-      return false;
-    }
-    RegexMatches = TargetRegex.match(T.str());
-  }
+  Regex RX = createRegex(IConf.TargetRegex->getString(), "target", IIRB.Ctx);
+  if (RX.isValid())
+    RegexMatches = RX.match(T.str());
 
   // Only instrument the module if the target has to be instrumented.
   return ((IsGPU && IConf.GPUEnabled->getBool()) ||
@@ -197,7 +206,10 @@ bool InstrumentorImpl::shouldInstrumentTarget() {
 bool InstrumentorImpl::shouldInstrumentFunction(Function &Fn) {
   if (Fn.isDeclaration())
     return false;
-  return !Fn.getName().starts_with(IConf.getRTName()) ||
+  bool RegexMatches = true;
+  if (ParsedFunctionRegex.isValid())
+    RegexMatches = ParsedFunctionRegex.match(Fn.getName());
+  return (RegexMatches && !Fn.getName().starts_with(IConf.getRTName())) ||
          Fn.hasFnAttribute("instrument");
 }
 
@@ -282,6 +294,9 @@ bool InstrumentorImpl::instrument() {
   bool Changed = false;
   if (!shouldInstrumentTarget())
     return Changed;
+
+  StringRef FunctionRegexStr = IConf.FunctionRegex->getString();
+  ParsedFunctionRegex = createRegex(FunctionRegexStr, "function", IIRB.Ctx);
 
   for (auto &[Name, IO] :
        IConf.IChoices[InstrumentationLocation::INSTRUCTION_PRE])
