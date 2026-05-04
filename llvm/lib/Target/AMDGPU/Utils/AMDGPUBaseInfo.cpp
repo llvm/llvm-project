@@ -1180,6 +1180,8 @@ std::string AMDGPUTargetID::toString() const {
 unsigned getInstCacheLineSize(const MCSubtargetInfo *STI) {
   if (STI->getFeatureBits().test(FeatureInstCacheLineSize128))
     return 128;
+  if (STI->getFeatureBits().test(FeatureInstCacheLineSize64))
+    return 128;
   return 64;
 }
 
