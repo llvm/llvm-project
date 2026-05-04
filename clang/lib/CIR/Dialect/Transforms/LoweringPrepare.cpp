@@ -2198,8 +2198,8 @@ void LoweringPreparePass::buildCUDARegisterGlobalFunctions(
         /*linkage=*/cir::GlobalLinkageKind::PrivateLinkage);
 
     // We must make the string zero-terminated.
-    tmpString.setInitialValueAttr(ConstArrayAttr::get(
-        strType, StringAttr::get(str + "\0", strType)));
+    tmpString.setInitialValueAttr(
+        ConstArrayAttr::get(strType, StringAttr::get(str + "\0", strType)));
     tmpString.setPrivate();
     return tmpString;
   };
