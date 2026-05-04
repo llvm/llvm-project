@@ -19,6 +19,8 @@ RemarksMixAnalyzer::run(const CapabilityContext &Context) {
   return withRemarksFile(
       Context, CapID, UnitID,
       [&](StringRef Path) -> Expected<std::unique_ptr<CapabilityResult>> {
+        // Note: this counts frequencies of *all* argument keys across *all*
+        // remark types, not strictly asm-printer InstructionMix remarks.
         int64_t TotalArgs = 0;
         json::Object Keys;
         if (Error E = foreachRemark(

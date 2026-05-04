@@ -19,6 +19,9 @@ RemarksSizeDiffAnalyzer::run(const CapabilityContext &Context) {
   return withRemarksFile(
       Context, CapID, UnitID,
       [&](StringRef Path) -> Expected<std::unique_ptr<CapabilityResult>> {
+        // Heuristic: look for arguments whose key name contains "size" or
+        // "delta" (case-insensitive) and treat their integer values as size
+        // deltas. This is intentionally broad to catch varying remark formats.
         int64_t DeltaCount = 0;
         int64_t DeltaSum = 0;
         json::Array Entries;

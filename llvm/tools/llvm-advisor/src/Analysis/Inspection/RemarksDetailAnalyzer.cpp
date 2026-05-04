@@ -20,11 +20,14 @@ RemarksDetailAnalyzer::run(const CapabilityContext &Context) {
       Context, CapID, UnitID,
       [&](StringRef Path) -> Expected<std::unique_ptr<CapabilityResult>> {
         json::Array Items;
+        bool Truncated = false;
         constexpr size_t Limit = 200;
         if (Error E = foreachRemark(
                 Path, [&](const remarks::Remark &R) -> Error {
-                  if (Items.size() >= Limit)
+                  if (Items.size() >= Limit) {
+                    Truncated = true;
                     return Error::success();
+                  }
                   json::Object Item{
                       {"pass", R.PassName},
                       {"name", R.RemarkName},
@@ -47,6 +50,7 @@ RemarksDetailAnalyzer::run(const CapabilityContext &Context) {
         return makeJSONResult(CapID, UnitID, json::Object{
             {"remarks_path", Path},
             {"count", static_cast<int64_t>(Items.size())},
+            {"truncated", Truncated},
             {"remarks", std::move(Items)}});
       });
 }
