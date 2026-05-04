@@ -15853,6 +15853,69 @@ static SDValue ConvertSETCCToXori(SDNode *N, SelectionDAG &DAG) {
   llvm_unreachable("Should not reach here.");
 }
 
+// Match `sext(setcc X, 0, eq)` and turn it into an ADDIC/SUBFE sequence.
+//
+// This generates code for:
+//   X == 0 ? -1 : 0
+//
+// On pre-ISA 3.1 targets, this is better than the longer CNTLZW/SRWI/NEG
+// sequence. This is useful for cases like:
+//   uint8_t f(uint8_t x) { return (x == 0) ? -1 : 0; }
+//
+// ISA 3.1+ is skipped because those targets can use SETBC.
+
+SDValue PPCTargetLowering::combineSignExtendSetCC(SDNode *N,
+                                                  DAGCombinerInfo &DCI) const {
+  if (Subtarget.isISA3_1())
+    return SDValue();
+
+  if (N->getValueType(0) != MVT::i32 && N->getValueType(0) != MVT::i64)
+    return SDValue();
+
+  SDValue N0 = N->getOperand(0);
+  if (N0.getOpcode() != ISD::SETCC)
+    return SDValue();
+
+  ISD::CondCode CC = cast<CondCodeSDNode>(N0.getOperand(2))->get();
+  SDValue LHS = N0.getOperand(0);
+  SDValue RHS = N0.getOperand(1);
+
+  // Not match: sext (setcc x, 0, eq) or sext (setcc 0, x, eq)
+  if (CC != ISD::SETEQ || (!isNullConstant(LHS) && !isNullConstant(RHS)))
+    return SDValue();
+
+  SDLoc dl(N);
+  SelectionDAG &DAG = DCI.DAG;
+  EVT VT = N->getValueType(0);
+  SDValue X = isNullConstant(LHS) ? RHS : LHS;
+  EVT XVT = X.getValueType(); // The type of x in the setcc x, 0, eq.
+
+  // On PPC64, i32 carry operations use the full 64-bit XER register,
+  // so we must use i64 operations to avoid incorrect results.
+  // Use i64 operations and truncate the result if needed.
+  EVT OpVT = VT;
+  if (Subtarget.isPPC64() && VT == MVT::i32)
+    OpVT = MVT::i64;
+
+  // Zero-extend if input type differs from operation type.
+  if (XVT != OpVT)
+    X = DAG.getNode(ISD::ZERO_EXTEND, dl, OpVT, X);
+
+  // Generate: SUBFE(ADDC(X, -1)).
+  SDValue MinusOne = DAG.getAllOnesConstant(dl, OpVT);
+  SDValue Addc =
+      DAG.getNode(PPCISD::ADDC, dl, DAG.getVTList(OpVT, MVT::i32), X, MinusOne);
+  SDValue Carry = Addc.getValue(1);
+  SDValue Sube = DAG.getNode(PPCISD::SUBE, dl, DAG.getVTList(OpVT, MVT::i32),
+                             Addc, Addc, Carry);
+
+  // Truncate back to i32 if we used i64 operations.
+  if (OpVT != VT)
+    return DAG.getNode(ISD::TRUNCATE, dl, VT, Sube);
+
+  return Sube;
+}
+
 SDValue PPCTargetLowering::combineSetCC(SDNode *N,
                                         DAGCombinerInfo &DCI) const {
   assert(N->getOpcode() == ISD::SETCC &&
@@ -17523,11 +17586,14 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
         return N->getOperand(0);
     }
     break;
+  case ISD::SIGN_EXTEND:
+    if (SDValue SECC = combineSignExtendSetCC(N, DCI))
+      return SECC;
+    [[fallthrough]];
   case ISD::ZERO_EXTEND:
     if (SDValue RetV = combineZextSetccWithZero(N, DCI.DAG))
       return RetV;
     [[fallthrough]];
-  case ISD::SIGN_EXTEND:
   case ISD::ANY_EXTEND:
     return DAGCombineExtBoolTrunc(N, DCI);
   case ISD::TRUNCATE:

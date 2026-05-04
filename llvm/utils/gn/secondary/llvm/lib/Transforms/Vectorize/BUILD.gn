@@ -11,6 +11,7 @@ static_library("Vectorize") {
     "LoadStoreVectorizer.cpp",
     "LoopIdiomVectorize.cpp",
     "LoopVectorizationLegality.cpp",
+    "LoopVectorizationPlanner.cpp",
     "LoopVectorize.cpp",
     "SLPVectorizer.cpp",
     "SandboxVectorizer/DependencyGraph.cpp",

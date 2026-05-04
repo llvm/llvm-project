@@ -1161,17 +1161,6 @@ struct WgToSgVectorShapeCastOp
       xegpu::DistributeLayoutAttr sourceLayout =
           xegpu::getTemporaryLayout(op->getOpOperand(0));
 
-      auto usedByBroadcastOp = [](vector::ShapeCastOp op) {
-        return llvm::all_of(op.getResult().getUsers(), [](Operation *user) {
-          return isa<vector::BroadcastOp>(user);
-        });
-      };
-
-      if (!usedByBroadcastOp(op))
-        return rewriter.notifyMatchFailure(
-            op, "ShapeCast ops that expand unit dimensions and are used by "
-                "non-broadcast operations are not supported.");
-
       if (!sourceLayout.isSliceOf(layout))
         return rewriter.notifyMatchFailure(
             op, "The ShapeCast op only expands dimensions, the input layout "

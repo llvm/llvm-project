@@ -3623,6 +3623,94 @@ float64x1_t test_vcvt_n_f64_u64(uint64x1_t a) {
   return vcvt_n_f64_u64(a, 64);
 }
 
+// ALL-LABEL: @test_vcvts_n_f32_s32(
+float32_t test_vcvts_n_f32_s32(int32_t a) {
+// CIR:     [[CST:%.*]] = cir.const #cir.int<1>
+// CIR:     cir.call_llvm_intrinsic "aarch64.neon.vcvtfxs2fp" %{{.*}}, [[CST]]
+
+// LLVM-SAME: i32 {{.*}} [[A:%.*]])
+// LLVM:    [[VCVTS_N_F32_S32:%.*]] = call float @llvm.aarch64.neon.vcvtfxs2fp.f32.i32(i32 [[A]], i32 1)
+// LLVM:    ret float [[VCVTS_N_F32_S32]]
+  return vcvts_n_f32_s32(a, 1);
+}
+
+// ALL-LABEL: @test_vcvts_n_f32_u32(
+float32_t test_vcvts_n_f32_u32(uint32_t a) {
+// CIR:     [[CST:%.*]] = cir.const #cir.int<32>
+// CIR:     cir.call_llvm_intrinsic "aarch64.neon.vcvtfxu2fp" %{{.*}}, [[CST]]
+
+// LLVM-SAME: i32 {{.*}} [[A:%.*]])
+// LLVM:    [[VCVTS_N_F32_U32:%.*]] = call float @llvm.aarch64.neon.vcvtfxu2fp.f32.i32(i32 [[A]], i32 32)
+// LLVM:    ret float [[VCVTS_N_F32_U32]]
+  return vcvts_n_f32_u32(a, 32);
+}
+
+// ALL-LABEL: @test_vcvts_n_s32_f32(
+int32_t test_vcvts_n_s32_f32(float32_t a) {
+// CIR:     [[CST:%.*]] = cir.const #cir.int<1>
+// CIR:     cir.call_llvm_intrinsic "aarch64.neon.vcvtfp2fxs" %{{.*}}, [[CST]]
+
+// LLVM-SAME: float {{.*}} [[A:%.*]])
+// LLVM:    [[VCVTS_N_S32_F32:%.*]] = call i32 @llvm.aarch64.neon.vcvtfp2fxs.i32.f32(float [[A]], i32 1)
+// LLVM:    ret i32 [[VCVTS_N_S32_F32]]
+  return (int32_t)vcvts_n_s32_f32(a, 1);
+}
+
+// ALL-LABEL: @test_vcvts_n_u32_f32(
+uint32_t test_vcvts_n_u32_f32(float32_t a) {
+// CIR:     [[CST:%.*]] = cir.const #cir.int<32>
+// CIR:     cir.call_llvm_intrinsic "aarch64.neon.vcvtfp2fxu" %{{.*}}, [[CST]]
+
+// LLVM-SAME: float {{.*}} [[A:%.*]])
+// LLVM:    [[VCVTS_N_U32_F32:%.*]] = call i32 @llvm.aarch64.neon.vcvtfp2fxu.i32.f32(float [[A]], i32 32)
+// LLVM:    ret i32 [[VCVTS_N_U32_F32]]
+  return (uint32_t)vcvts_n_u32_f32(a, 32);
+}
+
+// ALL-LABEL: @test_vcvtd_n_f64_s64(
+float64_t test_vcvtd_n_f64_s64(int64_t a) {
+// CIR:     [[CST:%.*]] = cir.const #cir.int<1>
+// CIR:     cir.call_llvm_intrinsic "aarch64.neon.vcvtfxs2fp" %{{.*}}, [[CST]]
+
+// LLVM-SAME: i64 {{.*}} [[A:%.*]])
+// LLVM:    [[VCVTD_N_F64_S64:%.*]] = call double @llvm.aarch64.neon.vcvtfxs2fp.f64.i64(i64 [[A]], i32 1)
+// LLVM:    ret double [[VCVTD_N_F64_S64]]
+  return vcvtd_n_f64_s64(a, 1);
+}
+
+// ALL-LABEL: @test_vcvtd_n_f64_u64(
+float64_t test_vcvtd_n_f64_u64(uint64_t a) {
+// CIR:     [[CST:%.*]] = cir.const #cir.int<64>
+// CIR:     cir.call_llvm_intrinsic "aarch64.neon.vcvtfxu2fp" %{{.*}}, [[CST]]
+
+// LLVM-SAME: i64 {{.*}} [[A:%.*]])
+// LLVM:    [[VCVTD_N_F64_U64:%.*]] = call double @llvm.aarch64.neon.vcvtfxu2fp.f64.i64(i64 [[A]], i32 64)
+// LLVM:    ret double [[VCVTD_N_F64_U64]]
+  return vcvtd_n_f64_u64(a, 64);
+}
+
+// ALL-LABEL: @test_vcvtd_n_s64_f64(
+int64_t test_vcvtd_n_s64_f64(float64_t a) {
+// CIR:     [[CST:%.*]] = cir.const #cir.int<1>
+// CIR:     cir.call_llvm_intrinsic "aarch64.neon.vcvtfp2fxs" %{{.*}}, [[CST]]
+
+// LLVM-SAME: double {{.*}}[[A:%.*]])
+// LLVM:    [[VCVTD_N_S64_F64:%.*]] = call i64 @llvm.aarch64.neon.vcvtfp2fxs.i64.f64(double [[A]], i32 1)
+// LLVM:    ret i64 [[VCVTD_N_S64_F64]]
+  return (int64_t)vcvtd_n_s64_f64(a, 1);
+}
+
+// ALL-LABEL: @test_vcvtd_n_u64_f64(
+uint64_t test_vcvtd_n_u64_f64(float64_t a) {
+// CIR:     [[CST:%.*]] = cir.const #cir.int<64>
+// CIR:     cir.call_llvm_intrinsic "aarch64.neon.vcvtfp2fxu" %{{.*}}, [[CST]]
+
+// LLVM-SAME: double {{.*}} [[A:%.*]])
+// LLVM:    [[VCVTD_N_U64_F64:%.*]] = call i64 @llvm.aarch64.neon.vcvtfp2fxu.i64.f64(double [[A]], i32 64)
+// LLVM:    ret i64 [[VCVTD_N_U64_F64]]
+  return (uint64_t)vcvtd_n_u64_f64(a, 64);
+}
+
 //===------------------------------------------------------===//
 // 2.1.3.2.4 Vector rounding shift right and accumulate
 // https://arm-software.github.io/acle/neon_intrinsics/advsimd.html#vector-rounding-shift-right-and-accumulate
@@ -3938,4 +4026,230 @@ uint64_t test_vrsrad_n_u64(uint64_t a, uint64_t b) {
   // LLVM: [[RES:%.*]] = add i64 [[A]], [[RSH]]
   // LLVM: ret i64 [[RES]]
   return (uint64_t)vrsrad_n_u64(a, b, 63);
+}
+
+//===------------------------------------------------------===//
+// 2.1.1.13.4. Minimum across vector 
+// https://arm-software.github.io/acle/neon_intrinsics/advsimd.html#minimum-across-vector
+//===------------------------------------------------------===//
+
+// LLVM-LABEL: @test_vminv_s8(
+// CIR-LABEL: @vminv_s8(
+int8_t test_vminv_s8(int8x8_t a) {
+// CIR: cir.call_llvm_intrinsic "vector.reduce.smin" %{{.*}} : (!cir.vector<8 x !s8i>) -> !s8i
+// CIR: cir.return %{{.*}} : !s8i
+
+// LLVM-SAME: <8 x i8> {{.*}} [[A:%.*]])
+// LLVM:    [[VMINV_S8_I:%.*]] = call i8 @llvm.vector.reduce.smin.v8i8(<8 x i8> [[A]])
+// LLVM-NEXT:    ret i8 [[VMINV_S8_I]]
+  return vminv_s8(a);
+}
+
+// LLVM-LABEL: @test_vminvq_s8(
+// CIR-LABEL: @vminvq_s8(
+int8_t test_vminvq_s8(int8x16_t a) {
+// CIR: cir.call_llvm_intrinsic "vector.reduce.smin" %{{.*}} : (!cir.vector<16 x !s8i>) -> !s8i
+// CIR: cir.return %{{.*}} : !s8i
+
+// LLVM-SAME: <16 x i8> {{.*}} [[A:%.*]])
+// LLVM:    [[VMINVQ_S8_I:%.*]] = call i8 @llvm.vector.reduce.smin.v16i8(<16 x i8> [[A]])
+// LLVM-NEXT:    ret i8 [[VMINVQ_S8_I]]
+  return vminvq_s8(a);
+}
+
+// LLVM-LABEL: @test_vminv_s16(
+// CIR-LABEL: @vminv_s16(
+int16_t test_vminv_s16(int16x4_t a) {
+// CIR: cir.call_llvm_intrinsic "vector.reduce.smin" %{{.*}} : (!cir.vector<4 x !s16i>) -> !s16i
+// CIR: cir.return %{{.*}} : !s16i
+
+// LLVM-SAME: <4 x i16> {{.*}} [[A:%.*]])
+// LLVM:    [[VMINV_S16_I:%.*]] = call i16 @llvm.vector.reduce.smin.v4i16(<4 x i16> [[A]])
+// LLVM-NEXT:    ret i16 [[VMINV_S16_I]]
+  return vminv_s16(a);
+}
+
+// LLVM-LABEL: @test_vminvq_s16(
+// CIR-LABEL: @vminvq_s16(
+int16_t test_vminvq_s16(int16x8_t a) {
+// CIR: cir.call_llvm_intrinsic "vector.reduce.smin" %{{.*}} : (!cir.vector<8 x !s16i>) -> !s16i
+// CIR: cir.return %{{.*}} : !s16i
+
+// LLVM-SAME: <8 x i16> {{.*}} [[A:%.*]])
+// LLVM:    [[VMINVQ_S16_I:%.*]] = call i16 @llvm.vector.reduce.smin.v8i16(<8 x i16> [[A]])
+// LLVM-NEXT:    ret i16 [[VMINVQ_S16_I]]
+  return vminvq_s16(a);
+}
+
+// LLVM-LABEL: @test_vminv_s32(
+// CIR-LABEL: @vminv_s32(
+int32_t test_vminv_s32(int32x2_t a) {
+// CIR: cir.call_llvm_intrinsic "vector.reduce.smin" %{{.*}} : (!cir.vector<2 x !s32i>) -> !s32i
+// CIR: cir.return %{{.*}} : !s32i
+
+// LLVM-SAME: <2 x i32> {{.*}} [[A:%.*]])
+// LLVM:    [[VMINV_S32_I:%.*]] = call i32 @llvm.vector.reduce.smin.v2i32(<2 x i32> [[A]])
+// LLVM-NEXT:    ret i32 [[VMINV_S32_I]]
+  return vminv_s32(a);
+}
+
+// LLVM-LABEL: @test_vminvq_s32(
+// CIR-LABEL: @vminvq_s32(
+int32_t test_vminvq_s32(int32x4_t a) {
+// CIR: cir.call_llvm_intrinsic "vector.reduce.smin" %{{.*}} : (!cir.vector<4 x !s32i>) -> !s32i
+// CIR: cir.return %{{.*}} : !s32i
+
+// LLVM-SAME: <4 x i32> {{.*}} [[A:%.*]])
+// LLVM:    [[VMINVQ_S32_I:%.*]] = call i32 @llvm.vector.reduce.smin.v4i32(<4 x i32> [[A]])
+// LLVM-NEXT:    ret i32 [[VMINVQ_S32_I]]
+  return vminvq_s32(a);
+}
+
+// LLVM-LABEL: @test_vminv_u8(
+// CIR-LABEL: @vminv_u8(
+uint8_t test_vminv_u8(uint8x8_t a) {
+// CIR: cir.call_llvm_intrinsic "vector.reduce.umin" %{{.*}} : (!cir.vector<8 x !u8i>) -> !u8i
+// CIR: cir.return %{{.*}} : !u8i
+
+// LLVM-SAME: <8 x i8> {{.*}} [[A:%.*]])
+// LLVM:    [[VMINV_U8_I:%.*]] = call i8 @llvm.vector.reduce.umin.v8i8(<8 x i8> [[A]])
+// LLVM-NEXT:    ret i8 [[VMINV_U8_I]]
+  return vminv_u8(a);
+}
+
+// LLVM-LABEL: @test_vminvq_u8(
+// CIR-LABEL: @vminvq_u8(
+uint8_t test_vminvq_u8(uint8x16_t a) {
+// CIR: cir.call_llvm_intrinsic "vector.reduce.umin" %{{.*}} : (!cir.vector<16 x !u8i>) -> !u8i
+// CIR: cir.return %{{.*}} : !u8i
+
+// LLVM-SAME: <16 x i8> {{.*}} [[A:%.*]])
+// LLVM:    [[VMINVQ_U8_I:%.*]] = call i8 @llvm.vector.reduce.umin.v16i8(<16 x i8> [[A]])
+// LLVM-NEXT:    ret i8 [[VMINVQ_U8_I]]
+  return vminvq_u8(a);
+}
+
+// LLVM-LABEL: @test_vminv_u16(
+// CIR-LABEL: @vminv_u16(
+uint16_t test_vminv_u16(uint16x4_t a) {
+// CIR: cir.call_llvm_intrinsic "vector.reduce.umin" %{{.*}} : (!cir.vector<4 x !u16i>) -> !u16i
+// CIR: cir.return %{{.*}} : !u16i
+
+// LLVM-SAME: <4 x i16> {{.*}} [[A:%.*]])
+// LLVM:    [[VMINV_U16_I:%.*]] = call i16 @llvm.vector.reduce.umin.v4i16(<4 x i16> [[A]])
+// LLVM-NEXT:    ret i16 [[VMINV_U16_I]]
+  return vminv_u16(a);
+}
+
+// LLVM-LABEL: @test_vminvq_u16(
+// CIR-LABEL: @vminvq_u16(
+uint16_t test_vminvq_u16(uint16x8_t a) {
+// CIR: cir.call_llvm_intrinsic "vector.reduce.umin" %{{.*}} : (!cir.vector<8 x !u16i>) -> !u16i
+// CIR: cir.return %{{.*}} : !u16i
+
+// LLVM-SAME: <8 x i16> {{.*}} [[A:%.*]])
+// LLVM:    [[VMINVQ_U16_I:%.*]] = call i16 @llvm.vector.reduce.umin.v8i16(<8 x i16> [[A]])
+// LLVM-NEXT:    ret i16 [[VMINVQ_U16_I]]
+  return vminvq_u16(a);
+}
+
+// LLVM-LABEL: @test_vminv_u32(
+// CIR-LABEL: @vminv_u32(
+uint32_t test_vminv_u32(uint32x2_t a) {
+// CIR: cir.call_llvm_intrinsic "vector.reduce.umin" %{{.*}} : (!cir.vector<2 x !u32i>) -> !u32i
+// CIR: cir.return %{{.*}} : !u32i
+
+// LLVM-SAME: <2 x i32> {{.*}} [[A:%.*]])
+// LLVM:    [[VMINV_U32_I:%.*]] = call i32 @llvm.vector.reduce.umin.v2i32(<2 x i32> [[A]])
+// LLVM-NEXT:    ret i32 [[VMINV_U32_I]]
+  return vminv_u32(a);
+}
+
+// LLVM-LABEL: @test_vminvq_u32(
+// CIR-LABEL: @vminvq_u32(
+uint32_t test_vminvq_u32(uint32x4_t a) {
+// CIR: cir.call_llvm_intrinsic "vector.reduce.umin" %{{.*}} : (!cir.vector<4 x !u32i>) -> !u32i
+// CIR: cir.return %{{.*}} : !u32i
+
+// LLVM-SAME: <4 x i32> {{.*}} [[A:%.*]])
+// LLVM:    [[VMINVQ_U32_I:%.*]] = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> [[A]])
+// LLVM-NEXT:    ret i32 [[VMINVQ_U32_I]]
+  return vminvq_u32(a);
+}
+
+// LLVM-LABEL: @test_vminv_f32(
+// CIR-LABEL: @vminv_f32(
+float32_t test_vminv_f32(float32x2_t a) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.fminv" %{{.*}} : (!cir.vector<2 x !cir.float>) -> !cir.float
+// CIR: cir.return %{{.*}} : !cir.float
+
+// LLVM-SAME: <2 x float> {{.*}} [[A:%.*]])
+// LLVM:    [[VMINV_F32_I:%.*]] = call float @llvm.aarch64.neon.fminv.f32.v2f32(<2 x float> [[A]])
+// LLVM-NEXT:    ret float [[VMINV_F32_I]]
+  return vminv_f32(a);
+}
+
+// LLVM-LABEL: @test_vminvq_f32(
+// CIR-LABEL: @vminvq_f32(
+float32_t test_vminvq_f32(float32x4_t a) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.fminv" %{{.*}} : (!cir.vector<4 x !cir.float>) -> !cir.float
+// CIR: cir.return %{{.*}} : !cir.float
+
+// LLVM-SAME: <4 x float> {{.*}} [[A:%.*]])
+// LLVM:    [[VMINVQ_F32_I:%.*]] = call float @llvm.aarch64.neon.fminv.f32.v4f32(<4 x float> [[A]])
+// LLVM-NEXT:    ret float [[VMINVQ_F32_I]]
+  return vminvq_f32(a);
+}
+
+// LLVM-LABEL: @test_vminvq_f64(
+// CIR-LABEL: @vminvq_f64(
+float64_t test_vminvq_f64(float64x2_t a) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.fminv" %{{.*}} : (!cir.vector<2 x !cir.double>) -> !cir.double
+// CIR: cir.return %{{.*}} : !cir.double
+
+// LLVM-SAME: <2 x double> {{.*}} [[A:%.*]])
+// LLVM:    [[VMINVQ_F64_I:%.*]] = call double @llvm.aarch64.neon.fminv.f64.v2f64(<2 x double> [[A]])
+// LLVM-NEXT:    ret double [[VMINVQ_F64_I]]
+  return vminvq_f64(a);
+}
+
+//===------------------------------------------------------===//
+// 2.1.1.13.6. Minimum across vector (IEEE754)
+// https://arm-software.github.io/acle/neon_intrinsics/advsimd.html#markdown-toc-maximum-across-vector-ieee754
+//===------------------------------------------------------===//
+
+// LLVM-LABEL: @test_vminnmv_f32(
+// CIR-LABEL: @vminnmv_f32(
+float32_t test_vminnmv_f32(float32x2_t a) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.fminnmv" %{{.*}} : (!cir.vector<2 x !cir.float>) -> !cir.float
+// CIR: cir.return %{{.*}} : !cir.float
+
+// LLVM-SAME: <2 x float> {{.*}} [[A:%.*]])
+// LLVM:    [[VMINNMV_F32_I:%.*]] = call float @llvm.aarch64.neon.fminnmv.f32.v2f32(<2 x float> [[A]])
+// LLVM-NEXT:    ret float [[VMINNMV_F32_I]]
+  return vminnmv_f32(a);
+}
+
+// LLVM-LABEL: @test_vminnmvq_f32(
+// CIR-LABEL: @vminnmvq_f32(
+float32_t test_vminnmvq_f32(float32x4_t a) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.fminnmv" %{{.*}} : (!cir.vector<4 x !cir.float>) -> !cir.float
+// CIR: cir.return %{{.*}} : !cir.float
+
+// LLVM-SAME: <4 x float> {{.*}} [[A:%.*]])
+// LLVM:    [[VMINNMVQ_F32_I:%.*]] = call float @llvm.aarch64.neon.fminnmv.f32.v4f32(<4 x float> [[A]])
+// LLVM-NEXT:    ret float [[VMINNMVQ_F32_I]]
+  return vminnmvq_f32(a);
+}
+
+// LLVM-LABEL: @test_vminnmvq_f64(
+// CIR-LABEL: @vminnmvq_f64(
+float64_t test_vminnmvq_f64(float64x2_t a) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.fminnmv" %{{.*}} : (!cir.vector<2 x !cir.double>) -> !cir.double
+// CIR: cir.return %{{.*}} : !cir.double
+
+// LLVM-SAME: <2 x double> {{.*}} [[A:%.*]])
+// LLVM:    [[VMINNMVQ_F64_I:%.*]] = call double @llvm.aarch64.neon.fminnmv.f64.v2f64(<2 x double> [[A]])
+// LLVM-NEXT:    ret double [[VMINNMVQ_F64_I]]
+  return vminnmvq_f64(a);
 }

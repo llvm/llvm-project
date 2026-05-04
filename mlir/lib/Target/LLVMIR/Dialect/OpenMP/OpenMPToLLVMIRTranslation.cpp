@@ -1010,7 +1010,7 @@ makeAtomicReductionGen(omp::DeclareReductionOp decl,
 static OwningDataPtrPtrReductionGen
 makeRefDataPtrGen(omp::DeclareReductionOp decl, llvm::IRBuilderBase &builder,
                   LLVM::ModuleTranslation &moduleTranslation, bool isByRef) {
-  if (!isByRef)
+  if (!isByRef || decl.getDataPtrPtrRegion().empty())
     return OwningDataPtrPtrReductionGen();
 
   OwningDataPtrPtrReductionGen refDataPtrGen =

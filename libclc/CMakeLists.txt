@@ -34,7 +34,7 @@ set( LIBCLC_TARGETS_ALL
   spirv64-mesa3d-
 )
 
-set(LIBCLC_TARGET ${LLVM_RUNTIMES_TARGET})
+set(LIBCLC_TARGET ${LLVM_DEFAULT_TARGET_TRIPLE})
 
 if(NOT LIBCLC_TARGET)
   message(FATAL_ERROR "libclc target is empty\n")
@@ -67,6 +67,11 @@ else()
   # always available so don't warn here.
   if( NOT LLVM_RUNTIMES_BUILD AND NOT clang IN_LIST LLVM_ENABLE_PROJECTS )
     message(FATAL_ERROR "Clang is not enabled, but is required to build libclc in-tree")
+  endif()
+
+  # The package version is required to find the resource directory.
+  if( LLVM_PACKAGE_VERSION AND NOT PACKAGE_VERSION )
+    set( PACKAGE_VERSION "${LLVM_PACKAGE_VERSION}" )
   endif()
 
   get_host_tool_path( llvm-link LLVM_LINK llvm-link_exe llvm-link_target )
@@ -264,6 +269,8 @@ add_libclc_library(libclc-${LIBCLC_TARGET}
   OUTPUT_FILENAME libclc
   PARENT_TARGET libclc-opencl-builtins
 )
+
+set(LIBCLC_UNRESOLVED_SYMBOL_TEST_TARGETS libclc-${LIBCLC_TARGET})
 
 if(LLVM_INCLUDE_TESTS)
   add_subdirectory(test)

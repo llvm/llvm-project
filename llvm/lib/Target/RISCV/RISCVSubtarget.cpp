@@ -127,6 +127,12 @@ const SelectionDAGTargetInfo *RISCVSubtarget::getSelectionDAGInfo() const {
   return TSInfo.get();
 }
 
+const InlineAsmLowering *RISCVSubtarget::getInlineAsmLowering() const {
+  if (!InlineAsmLoweringInfo)
+    InlineAsmLoweringInfo.reset(new InlineAsmLowering(getTargetLowering()));
+  return InlineAsmLoweringInfo.get();
+}
+
 const CallLowering *RISCVSubtarget::getCallLowering() const {
   if (!CallLoweringInfo)
     CallLoweringInfo.reset(new RISCVCallLowering(*getTargetLowering()));

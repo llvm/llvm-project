@@ -259,19 +259,19 @@ exit:
 define void @slp_profitable(ptr %A, ptr %B, float %0) {
 ; CHECK-LABEL: @slp_profitable(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[GEP_A_1:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 1
 ; CHECK-NEXT:    [[SUB_I1096:%.*]] = fsub fast float 1.000000e+00, [[TMP0:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[A:%.*]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> poison, float [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = fmul fast <2 x float> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> poison, float [[SUB_I1096]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x float> [[TMP6]], <2 x float> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = fmul fast <2 x float> [[TMP1]], [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = fadd fast <2 x float> [[TMP5]], [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = fsub fast <2 x float> [[TMP5]], [[TMP8]]
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x float> [[TMP9]], <2 x float> [[TMP10]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    store <2 x float> [[TMP11]], ptr [[B:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[A]], align 4
+; CHECK-NEXT:    [[MUL_I1100:%.*]] = fmul fast float [[TMP1]], [[SUB_I1096]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[GEP_A_1]], align 4
+; CHECK-NEXT:    [[MUL7_I1101:%.*]] = fmul fast float [[TMP2]], [[TMP0]]
+; CHECK-NEXT:    [[ADD_I1102:%.*]] = fadd fast float [[MUL7_I1101]], [[MUL_I1100]]
+; CHECK-NEXT:    [[MUL14_I:%.*]] = fmul fast float [[TMP1]], [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast float [[TMP2]], [[SUB_I1096]]
+; CHECK-NEXT:    [[ADD15_I:%.*]] = fsub fast float [[MUL14_I]], [[TMP3]]
+; CHECK-NEXT:    store float [[ADD_I1102]], ptr [[B:%.*]], align 4
+; CHECK-NEXT:    [[GEP_B_1:%.*]] = getelementptr inbounds float, ptr [[B]], i64 1
+; CHECK-NEXT:    store float [[ADD15_I]], ptr [[GEP_B_1]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

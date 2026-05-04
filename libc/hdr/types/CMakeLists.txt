@@ -413,6 +413,15 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  struct_sockaddr_storage
+  HDRS
+    struct_sockaddr_storage.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_sockaddr_storage
+    libc.include.sys_socket
+)
+
+add_proxy_header_library(
   struct_sockaddr_un
   HDRS
     struct_sockaddr_un.h

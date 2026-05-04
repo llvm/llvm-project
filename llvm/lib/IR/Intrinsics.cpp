@@ -206,11 +206,17 @@ static_assert(IIT_Done == 0, "IIT_Done expected to be 0");
 
 static void
 DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
-              IIT_Info LastInfo,
               SmallVectorImpl<Intrinsic::IITDescriptor> &OutputTable) {
   using namespace Intrinsic;
 
-  bool IsScalableVector = LastInfo == IIT_SCALABLE_VEC;
+  auto IsScalableVector = [&]() {
+    IIT_Info NextInfo = IIT_Info(Infos[NextElt]);
+    if (NextInfo != IIT_SCALABLE_VEC)
+      return false;
+    // Eat the IIT_SCALABLE_VEC token.
+    ++NextElt;
+    return true;
+  };
 
   IIT_Info Info = IIT_Info(Infos[NextElt++]);
 
@@ -279,68 +285,68 @@ DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
     OutputTable.push_back(IITDescriptor::get(IITDescriptor::Integer, 128));
     return;
   case IIT_V1:
-    OutputTable.push_back(IITDescriptor::getVector(1, IsScalableVector));
-    DecodeIITType(NextElt, Infos, Info, OutputTable);
+    OutputTable.push_back(IITDescriptor::getVector(1, IsScalableVector()));
+    DecodeIITType(NextElt, Infos, OutputTable);
     return;
   case IIT_V2:
-    OutputTable.push_back(IITDescriptor::getVector(2, IsScalableVector));
-    DecodeIITType(NextElt, Infos, Info, OutputTable);
+    OutputTable.push_back(IITDescriptor::getVector(2, IsScalableVector()));
+    DecodeIITType(NextElt, Infos, OutputTable);
     return;
   case IIT_V3:
-    OutputTable.push_back(IITDescriptor::getVector(3, IsScalableVector));
-    DecodeIITType(NextElt, Infos, Info, OutputTable);
+    OutputTable.push_back(IITDescriptor::getVector(3, IsScalableVector()));
+    DecodeIITType(NextElt, Infos, OutputTable);
     return;
   case IIT_V4:
-    OutputTable.push_back(IITDescriptor::getVector(4, IsScalableVector));
-    DecodeIITType(NextElt, Infos, Info, OutputTable);
+    OutputTable.push_back(IITDescriptor::getVector(4, IsScalableVector()));
+    DecodeIITType(NextElt, Infos, OutputTable);
     return;
   case IIT_V6:
-    OutputTable.push_back(IITDescriptor::getVector(6, IsScalableVector));
-    DecodeIITType(NextElt, Infos, Info, OutputTable);
+    OutputTable.push_back(IITDescriptor::getVector(6, IsScalableVector()));
+    DecodeIITType(NextElt, Infos, OutputTable);
     return;
   case IIT_V8:
-    OutputTable.push_back(IITDescriptor::getVector(8, IsScalableVector));
-    DecodeIITType(NextElt, Infos, Info, OutputTable);
+    OutputTable.push_back(IITDescriptor::getVector(8, IsScalableVector()));
+    DecodeIITType(NextElt, Infos, OutputTable);
     return;
   case IIT_V10:
-    OutputTable.push_back(IITDescriptor::getVector(10, IsScalableVector));
-    DecodeIITType(NextElt, Infos, Info, OutputTable);
+    OutputTable.push_back(IITDescriptor::getVector(10, IsScalableVector()));
+    DecodeIITType(NextElt, Infos, OutputTable);
     return;
   case IIT_V16:
-    OutputTable.push_back(IITDescriptor::getVector(16, IsScalableVector));
-    DecodeIITType(NextElt, Infos, Info, OutputTable);
+    OutputTable.push_back(IITDescriptor::getVector(16, IsScalableVector()));
+    DecodeIITType(NextElt, Infos, OutputTable);
     return;
   case IIT_V32:
-    OutputTable.push_back(IITDescriptor::getVector(32, IsScalableVector));
-    DecodeIITType(NextElt, Infos, Info, OutputTable);
+    OutputTable.push_back(IITDescriptor::getVector(32, IsScalableVector()));
+    DecodeIITType(NextElt, Infos, OutputTable);
     return;
   case IIT_V64:
-    OutputTable.push_back(IITDescriptor::getVector(64, IsScalableVector));
-    DecodeIITType(NextElt, Infos, Info, OutputTable);
+    OutputTable.push_back(IITDescriptor::getVector(64, IsScalableVector()));
+    DecodeIITType(NextElt, Infos, OutputTable);
     return;
   case IIT_V128:
-    OutputTable.push_back(IITDescriptor::getVector(128, IsScalableVector));
-    DecodeIITType(NextElt, Infos, Info, OutputTable);
+    OutputTable.push_back(IITDescriptor::getVector(128, IsScalableVector()));
+    DecodeIITType(NextElt, Infos, OutputTable);
     return;
   case IIT_V256:
-    OutputTable.push_back(IITDescriptor::getVector(256, IsScalableVector));
-    DecodeIITType(NextElt, Infos, Info, OutputTable);
+    OutputTable.push_back(IITDescriptor::getVector(256, IsScalableVector()));
+    DecodeIITType(NextElt, Infos, OutputTable);
     return;
   case IIT_V512:
-    OutputTable.push_back(IITDescriptor::getVector(512, IsScalableVector));
-    DecodeIITType(NextElt, Infos, Info, OutputTable);
+    OutputTable.push_back(IITDescriptor::getVector(512, IsScalableVector()));
+    DecodeIITType(NextElt, Infos, OutputTable);
     return;
   case IIT_V1024:
-    OutputTable.push_back(IITDescriptor::getVector(1024, IsScalableVector));
-    DecodeIITType(NextElt, Infos, Info, OutputTable);
+    OutputTable.push_back(IITDescriptor::getVector(1024, IsScalableVector()));
+    DecodeIITType(NextElt, Infos, OutputTable);
     return;
   case IIT_V2048:
-    OutputTable.push_back(IITDescriptor::getVector(2048, IsScalableVector));
-    DecodeIITType(NextElt, Infos, Info, OutputTable);
+    OutputTable.push_back(IITDescriptor::getVector(2048, IsScalableVector()));
+    DecodeIITType(NextElt, Infos, OutputTable);
     return;
   case IIT_V4096:
-    OutputTable.push_back(IITDescriptor::getVector(4096, IsScalableVector));
-    DecodeIITType(NextElt, Infos, Info, OutputTable);
+    OutputTable.push_back(IITDescriptor::getVector(4096, IsScalableVector()));
+    DecodeIITType(NextElt, Infos, OutputTable);
     return;
   case IIT_EXTERNREF:
     OutputTable.push_back(IITDescriptor::get(IITDescriptor::Pointer, 10));
@@ -404,7 +410,7 @@ DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
         IITDescriptor::get(IITDescriptor::Struct, StructElts));
 
     for (unsigned i = 0; i != StructElts; ++i)
-      DecodeIITType(NextElt, Infos, Info, OutputTable);
+      DecodeIITType(NextElt, Infos, OutputTable);
     return;
   }
   case IIT_SUBDIVIDE2_ARG: {
@@ -425,16 +431,14 @@ DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
         IITDescriptor::get(IITDescriptor::VecElement, OverloadIndex));
     return;
   }
-  case IIT_SCALABLE_VEC: {
-    DecodeIITType(NextElt, Infos, Info, OutputTable);
-    return;
-  }
   case IIT_VEC_OF_BITCASTS_TO_INT: {
     unsigned OverloadIndex = Infos[NextElt++];
     OutputTable.push_back(
         IITDescriptor::get(IITDescriptor::VecOfBitcastsToInt, OverloadIndex));
     return;
   }
+  case IIT_SCALABLE_VEC:
+    break;
   }
   llvm_unreachable("unhandled");
 }
@@ -487,9 +491,9 @@ void Intrinsic::getIntrinsicInfoTableEntries(
   }
 
   // Okay, decode the table into the output vector of IITDescriptors.
-  DecodeIITType(NextElt, IITEntries, IIT_Done, T);
+  DecodeIITType(NextElt, IITEntries, T);
   while (IITEntries[NextElt] != IIT_Done)
-    DecodeIITType(NextElt, IITEntries, IIT_Done, T);
+    DecodeIITType(NextElt, IITEntries, T);
 }
 
 static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,

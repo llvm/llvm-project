@@ -187,3 +187,15 @@ add_libc_unittest(
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
+
+add_libc_unittest(
+  sockaddr_storage_test
+  SUITE
+    libc_sys_socket_unittests
+  SRCS
+    sockaddr_storage_test.cpp
+    sockaddr_storage_helper.cpp
+  DEPENDS
+    libc.hdr.types.struct_sockaddr_storage
+    libc.hdr.types.struct_sockaddr_un
+)

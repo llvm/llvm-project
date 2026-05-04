@@ -878,6 +878,13 @@ rnb_err_t RNBRemote::SendErrorPacket(std::string errcode,
   return SendPacket(errcode);
 }
 
+rnb_err_t RNBRemote::SendErrorPacket(uint32_t errcode,
+                                     const std::string &errmsg) {
+  char error_str[8];
+  snprintf(error_str, sizeof(error_str), "E%02x", errcode);
+  return SendErrorPacket(error_str, errmsg);
+}
+
 /* Get a packet via gdb remote protocol.
  Strip off the prefix/suffix, verify the checksum to make sure
  a valid packet was received, send an ACK if they match.  */
@@ -2830,9 +2837,8 @@ rnb_err_t RNBRemote::SendStopReplyPacketForThread(nub_thread_t tid) {
               } else if (pc_regval.info.size == 8) {
                 pc = pc_regval.value.uint64;
               }
-              if (pc != INVALID_NUB_ADDRESS) {
+              if (pc != INVALID_NUB_ADDRESS)
                 pc_values.push_back(pc);
-              }
             }
           }
         }
@@ -2978,6 +2984,38 @@ rnb_err_t RNBRemote::SendStopReplyPacketForThread(nub_thread_t tid) {
         ostrm << "memory:" << HEXBASE << stack_memory.first << '=';
         append_hex_value(ostrm, stack_memory.second.bytes,
                          stack_memory.second.length, false);
+        ostrm << ';';
+      }
+    }
+
+    std::vector<uint64_t> added_binaries;
+    JSONGenerator::ObjectSP detailed_binary_infos;
+
+    // If we've stopped with a breakpoint exception on this
+    // thread, and we're stopped at the dyld notification
+    // function address, collect information about libraries
+    // that have been loaded, expedite that information in
+    // the stop packet.
+    if (tid_stop_info.details.exception.type == EXC_BREAKPOINT &&
+        DNBGetBinariesLoadedInfo(pid, tid, added_binaries,
+                                 detailed_binary_infos)) {
+      ostrm << std::hex << "added-binaries:";
+      bool first = true;
+      for (nub_addr_t addr : added_binaries) {
+        if (first)
+          first = false;
+        else
+          ostrm << ",";
+        ostrm << addr;
+      }
+      ostrm << ";";
+
+      if (detailed_binary_infos) {
+        ostrm << std::hex << "detailed-binaries-info:";
+        std::ostringstream json_strm;
+        detailed_binary_infos->Dump(json_strm);
+        detailed_binary_infos->Clear();
+        append_hexified_string(ostrm, json_strm.str());
         ostrm << ';';
       }
     }
@@ -4077,38 +4115,35 @@ rnb_err_t RNBRemote::HandlePacket_T(const char *p) {
   return SendPacket("OK");
 }
 
-rnb_err_t RNBRemote::HandlePacket_z(const char *p) {
+RNBRemote::BreakpointResult RNBRemote::ExecuteBreakpointRequest(const char *p) {
   if (p == NULL || *p == '\0')
-    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
-                                  "No thread specified in z packet");
+    return BreakpointResult::CreateIllFormed("No thread specified in z packet");
 
   if (!m_ctx.HasValidProcessID())
-    return SendErrorPacket("E15");
+    return BreakpointResult::CreateError(0x15);
 
   char packet_cmd = *p++;
   char break_type = *p++;
 
   if (*p++ != ',')
-    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
-                                  "Comma separator missing in z packet");
+    return BreakpointResult::CreateIllFormed(
+        "Comma separator missing in z packet");
 
   char *c = NULL;
   nub_process_t pid = m_ctx.ProcessID();
   errno = 0;
   nub_addr_t addr = strtoull(p, &c, 16);
   if (errno != 0 && addr == 0)
-    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
-                                  "Invalid address in z packet");
+    return BreakpointResult::CreateIllFormed("Invalid address in z packet");
   p = c;
   if (*p++ != ',')
-    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
-                                  "Comma separator missing in z packet");
+    return BreakpointResult::CreateIllFormed(
+        "Comma separator missing in z packet");
 
   errno = 0;
   auto byte_size = strtoul(p, &c, 16);
   if (errno != 0 && byte_size == 0)
-    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
-                                  "Invalid length in z packet");
+    return BreakpointResult::CreateIllFormed("Invalid length in z packet");
 
   if (packet_cmd == 'Z') {
     // set
@@ -4116,18 +4151,12 @@ rnb_err_t RNBRemote::HandlePacket_z(const char *p) {
     case '0': // set software breakpoint
     case '1': // set hardware breakpoint
     {
-      // gdb can send multiple Z packets for the same address and
-      // these calls must be ref counted.
       bool hardware = (break_type == '1');
 
       if (DNBBreakpointSet(pid, addr, byte_size, hardware)) {
-        // We successfully created a breakpoint, now lets full out
-        // a ref count structure with the breakID and add it to our
-        // map.
-        return SendPacket("OK");
+        return BreakpointResult::CreateOK();
       } else {
-        // We failed to set the software breakpoint
-        return SendErrorPacket("E09");
+        return BreakpointResult::CreateError(0x09);
       }
     } break;
 
@@ -4145,10 +4174,9 @@ rnb_err_t RNBRemote::HandlePacket_z(const char *p) {
         watch_flags = WATCH_TYPE_READ | WATCH_TYPE_WRITE;
 
       if (DNBWatchpointSet(pid, addr, byte_size, watch_flags, hardware)) {
-        return SendPacket("OK");
+        return BreakpointResult::CreateOK();
       } else {
-        // We failed to set the watchpoint
-        return SendErrorPacket("E09");
+        return BreakpointResult::CreateError(0x09);
       }
     } break;
 
@@ -4161,9 +4189,9 @@ rnb_err_t RNBRemote::HandlePacket_z(const char *p) {
     case '0': // remove software breakpoint
     case '1': // remove hardware breakpoint
       if (DNBBreakpointClear(pid, addr)) {
-        return SendPacket("OK");
+        return BreakpointResult::CreateOK();
       } else {
-        return SendErrorPacket("E08");
+        return BreakpointResult::CreateError(0x08);
       }
       break;
 
@@ -4171,9 +4199,9 @@ rnb_err_t RNBRemote::HandlePacket_z(const char *p) {
     case '3': // remove read watchpoint
     case '4': // remove access watchpoint
       if (DNBWatchpointClear(pid, addr)) {
-        return SendPacket("OK");
+        return BreakpointResult::CreateOK();
       } else {
-        return SendErrorPacket("E08");
+        return BreakpointResult::CreateError(0x08);
       }
       break;
 
@@ -4181,7 +4209,23 @@ rnb_err_t RNBRemote::HandlePacket_z(const char *p) {
       break;
     }
   }
-  return HandlePacket_UNIMPLEMENTED(p);
+  return BreakpointResult::CreateUnimplemented();
+}
+
+rnb_err_t RNBRemote::HandlePacket_z(const char *p) {
+  BreakpointResult result = ExecuteBreakpointRequest(p);
+  switch (result.kind) {
+  case BreakpointResult::Kind::OK:
+    return SendPacket("OK");
+  case BreakpointResult::Kind::Error:
+    return SendErrorPacket(result.error_code);
+  case BreakpointResult::Kind::IllFormed:
+    return HandlePacket_ILLFORMED(__FILE__, __LINE__, p,
+                                  result.message.c_str());
+  case BreakpointResult::Kind::Unimplemented:
+    return HandlePacket_UNIMPLEMENTED(p);
+  }
+  assert(false && "unhandled BreakpointResult kind");
 }
 
 // Extract the thread number from the thread suffix that might be appended to
@@ -5741,6 +5785,28 @@ RNBRemote::GetJSONThreadsInfo(bool threads_with_valid_stop_info_only) {
           }
           thread_dict_sp->AddItem("memory", memory_array_sp);
         }
+      }
+
+      std::vector<uint64_t> added_binaries;
+      JSONGenerator::ObjectSP detailed_binary_infos;
+
+      // If we've stopped with a breakpoint exception on this
+      // thread, and we're stopped at the dyld notification
+      // function address, collect information about libraries
+      // that have been loaded, expedite that information in
+      // the stop packet.
+      if (tid_stop_info.details.exception.type == EXC_BREAKPOINT &&
+          DNBGetBinariesLoadedInfo(pid, tid, added_binaries,
+                                   detailed_binary_infos)) {
+        JSONGenerator::ArraySP load_addresses;
+        load_addresses = std::make_shared<JSONGenerator::Array>();
+        for (nub_addr_t addr : added_binaries)
+          load_addresses->AddIntegerItem(addr);
+        thread_dict_sp->AddItem("added-binaries", load_addresses);
+
+        if (detailed_binary_infos)
+          thread_dict_sp->AddItem("detailed-binaries-info",
+                                  detailed_binary_infos);
       }
 
       threads_array_sp->AddItem(thread_dict_sp);

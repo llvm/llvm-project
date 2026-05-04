@@ -30,15 +30,14 @@ extern int target_activate_rr(DeviceTy &Device, uint64_t MemorySize,
                               void *ReqAddr, bool IsRecord, bool SaveOutput,
                               bool EmitReport, const char *OutputDirPath);
 
-extern int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
-                         void *DeviceMemory, int64_t DeviceMemorySize,
-                         const llvm::offloading::EntryTy *Globals,
-                         int32_t NumGlobals, void **TgtArgs,
-                         ptrdiff_t *TgtOffsets, int32_t NumArgs,
-                         int32_t NumTeams, int32_t ThreadLimit,
-                         uint32_t SharedMemorySize, uint64_t LoopTripCount,
-                         AsyncInfoTy &AsyncInfo,
-                         KernelReplayOutcomeTy *ReplayOutcome);
+extern int
+target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr, void *DeviceMemory,
+              int64_t DeviceMemorySize, void *ReuseDeviceAlloc,
+              const llvm::offloading::EntryTy *Globals, int32_t NumGlobals,
+              void **TgtArgs, ptrdiff_t *TgtOffsets, int32_t NumArgs,
+              int32_t NumTeams, int32_t ThreadLimit, uint32_t SharedMemorySize,
+              uint64_t LoopTripCount, AsyncInfoTy &AsyncInfo,
+              KernelReplayOutcomeTy *ReplayOutcome);
 
 extern void handleTargetOutcome(bool Success, ident_t *Loc);
 

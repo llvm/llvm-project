@@ -10,6 +10,9 @@ jobs:
   automate-issues-labels:
     permissions:
       issues: write
+    environment:
+      name: main-branch-only
+      deployment: false
     runs-on: ubuntu-24.04
     if: github.repository == 'llvm/llvm-project'
     steps:

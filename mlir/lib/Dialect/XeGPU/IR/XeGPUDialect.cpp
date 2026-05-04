@@ -8,6 +8,8 @@
 
 #include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/LLVMIR/XeVMDialect.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
@@ -119,6 +121,20 @@ static SmallVector<SmallVector<int64_t>> genStaticCoordinates(
     coordinates.push_back(coord);
   }
   return coordinates;
+}
+
+// Checks if the given memref type represents shared local memory (SLM).
+bool XeGPUDialect::isSharedMemory(const MemRefType &memrefTy) {
+  Attribute attr = memrefTy.getMemorySpace();
+  if (!attr)
+    return false; // Default memory space is not shared local memory
+  if (auto intAttr = llvm::dyn_cast_if_present<IntegerAttr>(attr))
+    return intAttr.getInt() == 3;
+  if (auto memrefSpace = llvm::dyn_cast_if_present<MemorySpaceAttr>(attr))
+    return memrefSpace.getValue() == MemorySpace::SLM;
+  if (auto xevmSpace = llvm::dyn_cast_if_present<xevm::AddrSpaceAttr>(attr))
+    return xevmSpace.getValue() == xevm::AddrSpace::SHARED;
+  return gpu::GPUDialect::isWorkgroupMemoryAddressSpace(attr);
 }
 
 //===----------------------------------------------------------------------===//

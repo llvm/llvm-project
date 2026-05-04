@@ -212,6 +212,23 @@ unique_ptr<T> make_unique(Args&&... args) {
 }
 
 template<typename T>
+struct shared_ptr {
+  shared_ptr();
+  explicit shared_ptr(T*);
+  shared_ptr(const shared_ptr<T>&);
+  shared_ptr(shared_ptr<T>&&);
+  
+  template<typename U>
+  shared_ptr(unique_ptr<U>&& up) : ptr_(up.get()) { up.release(); }
+
+  ~shared_ptr();
+  T &operator*();
+  T *operator->();
+  T *get() const;
+  T* ptr_;
+};
+
+template<typename T>
 struct optional {
   optional();
   optional(const T&);

@@ -29,11 +29,24 @@ if (LIBOMP_FORTRAN_MODULES_COMPILER)
   # compile the Fortran module files.
   message(STATUS "configuring openmp to build Fortran module files using '${LIBOMP_FORTRAN_MODULES_COMPILER}'")
   set(LIBOMP_FORTRAN_SOURCE_FILE omp_lib.F90)
+  # omp_lib_kinds uses iso_c_binding, which depends on these intrinsic modules.
+  # List them so omp_lib.mod is regenerated when intrinsic modules change; otherwise
+  # stale omp_lib.mod can reference an incompatible iso_c_binding.mod (see flang
+  # tests that load omp_lib.mod with -J).
+  set(_libomp_flang_intrinsic_mod_deps "")
+  if(LLVM_BINARY_DIR)
+    set(_flang_intrinsic_mod_dir "${LLVM_BINARY_DIR}/include/flang")
+    list(APPEND _libomp_flang_intrinsic_mod_deps
+      "${_flang_intrinsic_mod_dir}/__fortran_builtins.mod"
+      "${_flang_intrinsic_mod_dir}/__fortran_type_info.mod"
+      "${_flang_intrinsic_mod_dir}/iso_c_binding.mod"
+    )
+  endif()
   add_custom_target(libomp-mod ALL DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/../runtime/src/omp_lib.mod" "${CMAKE_CURRENT_BINARY_DIR}/../runtime/src/omp_lib_kinds.mod")
   add_custom_command(
     OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/../runtime/src/omp_lib.mod" "${CMAKE_CURRENT_BINARY_DIR}/../runtime/src/omp_lib_kinds.mod"
     COMMAND ${LIBOMP_FORTRAN_MODULES_COMPILER} -cpp -fsyntax-only ${LIBOMP_FORTRAN_SOURCE_FILE} "-J${CMAKE_CURRENT_BINARY_DIR}/../runtime/src"
-    DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/${LIBOMP_FORTRAN_SOURCE_FILE}"
+    DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/${LIBOMP_FORTRAN_SOURCE_FILE}" ${_libomp_flang_intrinsic_mod_deps}
   )
   set(BUILD_FORTRAN_MODULES True)
 elseif (LIBOMP_FORTRAN_MODULES)

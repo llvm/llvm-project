@@ -627,7 +627,8 @@ cir::GlobalOp CIRGenFunction::addInitializerToStaticVarDecl(
     // We have a constant initializer, but a nontrivial destructor. We still
     // need to perform a guarded "initialization" in order to register the
     // destructor.
-    cgm.errorNYI(d.getSourceRange(), "C++ guarded init");
+    emitCXXGuardedInit(d, gv, /*performInit=*/false);
+    gvAddr.setStaticLocal(true);
   }
 
   return gv;
@@ -676,7 +677,7 @@ void CIRGenFunction::emitStaticVarDecl(const VarDecl &d,
   // There are a lot of attributes that need to be handled here. Until
   // we start to support them, we just report an error if there are any.
   if (d.hasAttr<AnnotateAttr>())
-    cgm.errorNYI(d.getSourceRange(), "emitStaticVarDecl: Global annotations");
+    cgm.addGlobalAnnotations(&d, var);
   if (d.getAttr<PragmaClangBSSSectionAttr>())
     cgm.errorNYI(d.getSourceRange(),
                  "emitStaticVarDecl: CIR global BSS section attribute");
@@ -831,6 +832,7 @@ void CIRGenFunction::emitDecl(const Decl &d, bool evaluateConditionDecl) {
 
   case Decl::Function:     // void X();
   case Decl::EnumConstant: // enum ? { X = ? }
+  case Decl::ExplicitInstantiation:
   case Decl::StaticAssert: // static_assert(X, ""); [C++0x]
   case Decl::Label:        // __label__ x;
   case Decl::Import:
@@ -895,7 +897,7 @@ void CIRGenFunction::emitDecl(const Decl &d, bool evaluateConditionDecl) {
     QualType ty = cast<TypedefNameDecl>(d).getUnderlyingType();
     assert(!cir::MissingFeatures::generateDebugInfo());
     if (ty->isVariablyModifiedType())
-      cgm.errorNYI(d.getSourceRange(), "emitDecl: variably modified type");
+      emitVariablyModifiedType(ty);
     return;
   }
   case Decl::ImplicitConceptSpecialization:
