@@ -1480,6 +1480,7 @@ public:
       llvm::ArrayRef<SourceName> componentPath, parser::Designator &designator);
 
 private:
+  Symbol *CopyUseDeviceSymbol(const Symbol &symbol);
   SemanticsContext &context_;
 };
 
@@ -1617,18 +1618,39 @@ void AccVisitor::CopySymbolWithDevice(const parser::Name *name) {
   // New symbols are created for those appearing in the use_device clause.
   // These new symbols get the CUDA device attribute.
   if (name && name->symbol) {
-    Symbol *copy{currScope().CopySymbol(name->symbol->GetUltimate())};
+    Symbol *copy{CopyUseDeviceSymbol(*name->symbol)};
     if (copy) {
-      if (auto *object{copy->GetUltimate().detailsIf<ObjectEntityDetails>()}) {
+      if (auto *object{copy->detailsIf<ObjectEntityDetails>()}) {
         object->set_cudaDataAttr(common::CUDADataAttr::Device);
       }
-    } else {
-      copy = FindInScope(currScope(), name->symbol->GetUltimate().name());
-    }
-    if (copy) {
       name->symbol = copy;
     }
   }
+}
+
+Symbol *AccVisitor::CopyUseDeviceSymbol(const Symbol &symbol) {
+  const Symbol &ultimate{symbol.GetUltimate()};
+  Symbol *copy{currScope().CopySymbol(ultimate)};
+  if (!copy) {
+    copy = FindInScope(currScope(), ultimate.name());
+  }
+  if (copy && copy->has<HostAssocDetails>()) {
+    if (const auto *hostAssoc{copy->detailsIf<HostAssocDetails>()};
+        hostAssoc && copy->owner().kind() == Scope::Kind::OpenACCConstruct) {
+      Scope &hostScope{currScope().parent()};
+      if (!FindInScope(hostScope, ultimate.name())) {
+        hostScope.CopySymbol(*copy);
+      }
+    }
+    if (const auto *object{ultimate.detailsIf<ObjectEntityDetails>()}) {
+      currScope().erase(copy->name());
+      auto pair{currScope().try_emplace(
+          ultimate.name(), ultimate.attrs(), ObjectEntityDetails{*object})};
+      copy = &*pair.first->second;
+      copy->flags() = ultimate.flags();
+    }
+  }
+  return copy;
 }
 
 void AccVisitor::CopySymbolWithDeviceStructurePath(const parser::Name *baseName,
@@ -1636,11 +1658,7 @@ void AccVisitor::CopySymbolWithDeviceStructurePath(const parser::Name *baseName,
   if (!baseName || !baseName->symbol || componentPath.empty()) {
     return;
   }
-  const Symbol &orig{*baseName->symbol};
-  Symbol *copy{currScope().CopySymbol(orig)};
-  if (!copy) {
-    copy = FindInScope(currScope(), baseName->symbol->name());
-  }
+  Symbol *copy{CopyUseDeviceSymbol(*baseName->symbol)};
   if (!copy) {
     return;
   }
