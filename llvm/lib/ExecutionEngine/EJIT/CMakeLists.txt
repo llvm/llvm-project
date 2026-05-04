@@ -4,12 +4,16 @@ add_llvm_component_library(LLVMEJIT
   EJitRegistration.cpp
   EJitOrcEngine.cpp
   EJitJITLinkMemoryManager.cpp
+  EJitSyncCompiler.cpp
+  EJitAsyncCompiler.cpp
   EJitCompileDriver.cpp
   EJitCache.cpp
   EJitRuntimeState.cpp
   EJitModuleLoader.cpp
   EJitLogger.cpp
   EJitRegistrationStore.cpp
+  EJitStructFieldPass.cpp
+  EJitOptimizer.cpp
 
   LINK_COMPONENTS
   Core
@@ -17,4 +21,10 @@ add_llvm_component_library(LLVMEJIT
   OrcJIT
   JITLink
   Support
+  Passes
+  Scalar
+  InstCombine
+  IPO
+  TransformUtils
+  Analysis
   )

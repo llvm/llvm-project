@@ -1,0 +1,45 @@
+//===-- EJitOptimizer.h - JIT Optimization Pipeline -----------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_EXECUTIONENGINE_EJIT_EJITOPTIMIZER_H
+#define LLVM_EXECUTIONENGINE_EJIT_EJITOPTIMIZER_H
+
+#include "llvm/ExecutionEngine/EJIT/EJitOptions.h"
+#include "llvm/ExecutionEngine/EJIT/EJitOrcEngine.h"
+#include "llvm/ExecutionEngine/EJIT/EJitRuntimeState.h"
+#include "llvm/IR/Module.h"
+
+namespace llvm {
+namespace ejit {
+
+/// JIT optimization pipeline. Runs on the extracted bitcode module during
+/// JIT compilation to specialize the code for the current time-window values.
+class EJitOptimizer {
+public:
+  EJitOptimizer(PeriodArrayRegistry &reg);
+
+  /// Replace ejit_period_arr_ind parameters with their runtime constants.
+  void preReplacePeriodIndices(Module &M, const SpecializationContext &ctx);
+
+  /// Run InstCombine on all functions.
+  void runInstCombine(Module &M);
+
+  /// Run the inliner.
+  void runInline(Module &M);
+
+  /// Run the full optimization pipeline at the given level (L1/L2/L3).
+  void runOptimizationPipeline(Module &M, OptimizationLevel level);
+
+private:
+  PeriodArrayRegistry &registry_;
+};
+
+} // namespace ejit
+} // namespace llvm
+
+#endif
