@@ -367,7 +367,7 @@ TEST_F(StringMapTest, NonDefaultConstructable) {
 }
 
 struct Immovable {
-  Immovable() {}
+  Immovable() = default;
   Immovable(Immovable &&) = delete; // will disable the other special members
 };
 

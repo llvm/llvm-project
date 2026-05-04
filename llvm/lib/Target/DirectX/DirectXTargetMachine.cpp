@@ -19,6 +19,7 @@
 #include "DXILForwardHandleAccesses.h"
 #include "DXILIntrinsicExpansion.h"
 #include "DXILLegalizePass.h"
+#include "DXILMemIntrinsics.h"
 #include "DXILOpLowering.h"
 #include "DXILPostOptimizationValidation.h"
 #include "DXILPrettyPrinter.h"
@@ -49,14 +50,17 @@
 #include "llvm/Transforms/IPO/GlobalDCE.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/Scalarizer.h"
+#include "llvm/Transforms/Utils.h"
 #include <optional>
 
 using namespace llvm;
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeDirectXTarget() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeDirectXTarget() {
   RegisterTargetMachine<DirectXTargetMachine> X(getTheDirectXTarget());
   auto *PR = PassRegistry::getPassRegistry();
   initializeDXILIntrinsicExpansionLegacyPass(*PR);
+  initializeDXILMemIntrinsicsLegacyPass(*PR);
   initializeDXILDataScalarizationLegacyPass(*PR);
   initializeDXILFlattenArraysLegacyPass(*PR);
   initializeScalarizerLegacyPassPass(*PR);
@@ -78,6 +82,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeDirectXTarget() {
   initializeDXILForwardHandleAccessesLegacyPass(*PR);
   initializeDSELegacyPassPass(*PR);
   initializeDXILCBufferAccessLegacyPass(*PR);
+  initializeStripConvergenceIntrinsicsLegacyPassPass(*PR);
 }
 
 class DXILTargetObjectFile : public TargetLoweringObjectFile {
@@ -107,11 +112,13 @@ public:
 
   FunctionPass *createTargetRegisterAllocator(bool) override { return nullptr; }
   void addCodeGenPrepare() override {
+    addPass(createStripConvergenceIntrinsicsPass());
     addPass(createDXILFinalizeLinkageLegacyPass());
     addPass(createGlobalDCEPass());
+    addPass(createDXILMemIntrinsicsLegacyPass());
+    addPass(createDXILCBufferAccessLegacyPass());
     addPass(createDXILResourceAccessLegacyPass());
     addPass(createDXILIntrinsicExpansionLegacyPass());
-    addPass(createDXILCBufferAccessLegacyPass());
     addPass(createDXILDataScalarizationLegacyPass());
     ScalarizerPassOptions DxilScalarOptions;
     DxilScalarOptions.ScalarizeLoadStore = true;
@@ -205,7 +212,7 @@ DirectXTargetMachine::getTargetTransformInfo(const Function &F) const {
 
 DirectXTargetLowering::DirectXTargetLowering(const DirectXTargetMachine &TM,
                                              const DirectXSubtarget &STI)
-    : TargetLowering(TM) {
+    : TargetLowering(TM, STI) {
   addRegisterClass(MVT::i32, &dxil::DXILClassRegClass);
   computeRegisterProperties(STI.getRegisterInfo());
 }

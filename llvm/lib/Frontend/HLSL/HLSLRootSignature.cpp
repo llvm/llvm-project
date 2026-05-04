@@ -12,6 +12,7 @@
 
 #include "llvm/Frontend/HLSL/HLSLRootSignature.h"
 #include "llvm/Support/DXILABI.h"
+#include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/ScopedPrinter.h"
 
 namespace llvm {
@@ -113,6 +114,13 @@ static raw_ostream &operator<<(raw_ostream &OS,
   return OS;
 }
 
+static raw_ostream &operator<<(raw_ostream &OS,
+                               const llvm::dxbc::StaticSamplerFlags &Flags) {
+  printFlags(OS, Flags, dxbc::getStaticSamplerFlags());
+
+  return OS;
+}
+
 raw_ostream &operator<<(raw_ostream &OS, const dxbc::RootFlags &Flags) {
   OS << "RootFlags(";
   printFlags(OS, Flags, dxbc::getRootFlags());
@@ -172,7 +180,7 @@ raw_ostream &operator<<(raw_ostream &OS, const StaticSampler &Sampler) {
      << ", borderColor = " << Sampler.BorderColor
      << ", minLOD = " << Sampler.MinLOD << ", maxLOD = " << Sampler.MaxLOD
      << ", space = " << Sampler.Space << ", visibility = " << Sampler.Visibility
-     << ")";
+     << ", flags = " << Sampler.Flags << ")";
   return OS;
 }
 
@@ -201,15 +209,7 @@ raw_ostream &operator<<(raw_ostream &OS, const RootElement &Element) {
 }
 
 void dumpRootElements(raw_ostream &OS, ArrayRef<RootElement> Elements) {
-  OS << " RootElements{";
-  bool First = true;
-  for (const RootElement &Element : Elements) {
-    if (!First)
-      OS << ",";
-    OS << " " << Element;
-    First = false;
-  }
-  OS << "}";
+  OS << " RootElements" << interleaved(Elements, ", ", "{", "}");
 }
 
 } // namespace rootsig

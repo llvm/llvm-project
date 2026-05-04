@@ -45,6 +45,7 @@ namespace mlir::remark {
 /// mlir::emitRemarks.
 LogicalResult enableOptimizationRemarksWithLLVMStreamer(
     MLIRContext &ctx, StringRef filePath, llvm::remarks::Format fmt,
+    std::unique_ptr<detail::RemarkEmittingPolicyBase> remarkEmittingPolicy,
     const RemarkCategories &cat, bool printAsEmitRemarks = false);
 
 } // namespace mlir::remark

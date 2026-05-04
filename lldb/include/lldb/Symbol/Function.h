@@ -342,19 +342,11 @@ public:
   Function *GetCallee(ModuleList &images, ExecutionContext &exe_ctx) override;
 
 private:
-  void ParseSymbolFileAndResolve(ModuleList &images);
+  Function *ResolveCallee(ModuleList &images);
 
-  // Used to describe a direct call.
-  //
-  // Either the callee's mangled name or its definition, discriminated by
-  // \ref resolved.
-  union {
-    const char *symbol_name;
-    Function *def;
-  } lazy_callee;
-
-  /// Whether or not an attempt was made to find the callee's definition.
-  bool resolved = false;
+  const char *m_symbol_name;
+  std::once_flag m_resolved_flag;
+  Function *m_callee_def = nullptr;
 };
 
 /// An indirect call site. Used to represent call sites where the address of
@@ -469,12 +461,12 @@ public:
   ///
   /// \param[out] line_no
   ///     The line number.
-  void GetStartLineSourceInfo(lldb::SupportFileSP &source_file_sp,
+  void GetStartLineSourceInfo(SupportFileNSP &source_file_sp,
                               uint32_t &line_no);
 
   using SourceRange = Range<uint32_t, uint32_t>;
   /// Find the file and line number range of the function.
-  llvm::Expected<std::pair<lldb::SupportFileSP, SourceRange>> GetSourceInfo();
+  llvm::Expected<std::pair<SupportFileNSP, SourceRange>> GetSourceInfo();
 
   /// Get the outgoing call edges from this function, sorted by their return
   /// PC addresses (in increasing order).

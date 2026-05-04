@@ -370,7 +370,7 @@ define void @negative_shl_non_commute(ptr noalias nocapture %A, ptr noalias noca
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <8 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>, [[ENTRY]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[I:%.*]] = shl nsw <8 x i64> [[DOTSPLAT]], [[VEC_IND]]
 ; CHECK-NEXT:    [[I1:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], <8 x i64> [[I]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> [[I1]], i32 4, <8 x i1> splat (i1 true), <8 x i32> poison)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> align 4 [[I1]], <8 x i1> splat (i1 true), <8 x i32> poison)
 ; CHECK-NEXT:    [[I2:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, ptr [[I2]], align 1
 ; CHECK-NEXT:    [[I4:%.*]] = add <8 x i32> [[WIDE_LOAD]], [[WIDE_MASKED_GATHER]]
@@ -622,11 +622,6 @@ for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
 
-declare <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr>, i32 immarg, <32 x i1>, <32 x i8>)
-declare <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr>, i32 immarg, <8 x i1>, <8 x i32>)
-declare void @llvm.masked.scatter.v32i8.v32p0(<32 x i8>, <32 x ptr>, i32 immarg, <32 x i1>)
-declare void @llvm.masked.scatter.v8i32.v8p0(<8 x i32>, <8 x ptr>, i32 immarg, <8 x i1>)
-
 ; Make sure we don't crash in getTgtMemIntrinsic for a vector of pointers.
 define void @gather_of_pointers(ptr noalias nocapture %arg, ptr noalias nocapture readonly %arg1) {
 ; V-LABEL: @gather_of_pointers(
@@ -663,8 +658,8 @@ define void @gather_of_pointers(ptr noalias nocapture %arg, ptr noalias nocaptur
 ; ZVE32F-NEXT:    [[I6:%.*]] = add <2 x i64> [[I5]], splat (i64 10)
 ; ZVE32F-NEXT:    [[I7:%.*]] = getelementptr inbounds ptr, ptr [[ARG1:%.*]], <2 x i64> [[I4]]
 ; ZVE32F-NEXT:    [[I8:%.*]] = getelementptr inbounds ptr, ptr [[ARG1]], <2 x i64> [[I6]]
-; ZVE32F-NEXT:    [[I9:%.*]] = call <2 x ptr> @llvm.masked.gather.v2p0.v2p0(<2 x ptr> [[I7]], i32 8, <2 x i1> splat (i1 true), <2 x ptr> poison)
-; ZVE32F-NEXT:    [[I10:%.*]] = call <2 x ptr> @llvm.masked.gather.v2p0.v2p0(<2 x ptr> [[I8]], i32 8, <2 x i1> splat (i1 true), <2 x ptr> poison)
+; ZVE32F-NEXT:    [[I9:%.*]] = call <2 x ptr> @llvm.masked.gather.v2p0.v2p0(<2 x ptr> align 8 [[I7]], <2 x i1> splat (i1 true), <2 x ptr> poison)
+; ZVE32F-NEXT:    [[I10:%.*]] = call <2 x ptr> @llvm.masked.gather.v2p0.v2p0(<2 x ptr> align 8 [[I8]], <2 x i1> splat (i1 true), <2 x ptr> poison)
 ; ZVE32F-NEXT:    [[I11:%.*]] = getelementptr inbounds ptr, ptr [[ARG:%.*]], i64 [[I]]
 ; ZVE32F-NEXT:    store <2 x ptr> [[I9]], ptr [[I11]], align 8
 ; ZVE32F-NEXT:    [[I13:%.*]] = getelementptr inbounds ptr, ptr [[I11]], i64 2
@@ -701,8 +696,6 @@ bb2:                                              ; preds = %bb2, %bb
 bb18:                                             ; preds = %bb2
   ret void
 }
-
-declare <2 x ptr> @llvm.masked.gather.v2p0.v2p0(<2 x ptr>, i32 immarg, <2 x i1>, <2 x ptr>)
 
 ; Make sure we don't crash in getTgtMemIntrinsic for a vector of pointers.
 define void @scatter_of_pointers(ptr noalias nocapture %arg, ptr noalias nocapture readonly %arg1) {
@@ -744,8 +737,8 @@ define void @scatter_of_pointers(ptr noalias nocapture %arg, ptr noalias nocaptu
 ; ZVE32F-NEXT:    [[I12:%.*]] = add <2 x i64> [[I11]], splat (i64 10)
 ; ZVE32F-NEXT:    [[I13:%.*]] = getelementptr inbounds ptr, ptr [[ARG:%.*]], <2 x i64> [[I10]]
 ; ZVE32F-NEXT:    [[I14:%.*]] = getelementptr inbounds ptr, ptr [[ARG]], <2 x i64> [[I12]]
-; ZVE32F-NEXT:    call void @llvm.masked.scatter.v2p0.v2p0(<2 x ptr> [[I6]], <2 x ptr> [[I13]], i32 8, <2 x i1> splat (i1 true))
-; ZVE32F-NEXT:    call void @llvm.masked.scatter.v2p0.v2p0(<2 x ptr> [[I9]], <2 x ptr> [[I14]], i32 8, <2 x i1> splat (i1 true))
+; ZVE32F-NEXT:    call void @llvm.masked.scatter.v2p0.v2p0(<2 x ptr> [[I6]], <2 x ptr> align 8 [[I13]], <2 x i1> splat (i1 true))
+; ZVE32F-NEXT:    call void @llvm.masked.scatter.v2p0.v2p0(<2 x ptr> [[I9]], <2 x ptr> align 8 [[I14]], <2 x i1> splat (i1 true))
 ; ZVE32F-NEXT:    [[I15]] = add nuw i64 [[I]], 4
 ; ZVE32F-NEXT:    [[I16]] = add <2 x i64> [[I3]], splat (i64 4)
 ; ZVE32F-NEXT:    [[I17:%.*]] = icmp eq i64 [[I15]], 1024
@@ -778,8 +771,6 @@ bb2:                                              ; preds = %bb2, %bb
 bb18:                                             ; preds = %bb2
   ret void
 }
-
-declare void @llvm.masked.scatter.v2p0.v2p0(<2 x ptr>, <2 x ptr>, i32 immarg, <2 x i1>)
 
 define void @strided_load_startval_add_with_splat(ptr noalias nocapture %arg, ptr noalias nocapture readonly %arg1, i32 signext %arg2) {
 ; CHECK-LABEL: @strided_load_startval_add_with_splat(
@@ -896,9 +887,6 @@ bb35:                                             ; preds = %bb35, %bb32
   br i1 %i45, label %bb34, label %bb35
 }
 
-declare <16 x i8> @llvm.masked.gather.v16i8.v16p0(<16 x ptr>, i32 immarg, <16 x i1>, <16 x i8>)
-declare void @llvm.masked.scatter.v16i8.v16p0(<16 x i8>, <16 x ptr>, i32 immarg, <16 x i1>)
-
 define void @gather_no_scalar_remainder(ptr noalias nocapture noundef %arg, ptr noalias nocapture noundef readonly %arg1, i64 noundef %arg2) {
 ; CHECK-LABEL: @gather_no_scalar_remainder(
 ; CHECK-NEXT:  bb:
@@ -964,8 +952,6 @@ entry:
   ret <8 x i8> %3
 }
 
-declare <8 x i8> @llvm.masked.gather.v8i8.v8p0(<8 x ptr>, i32 immarg, <8 x i1>, <8 x i8>)
-
 define void @gather_narrow_idx(ptr noalias nocapture %A, ptr noalias nocapture readonly %B) {
 ; CHECK-LABEL: @gather_narrow_idx(
 ; CHECK-NEXT:  entry:
@@ -975,7 +961,7 @@ define void @gather_narrow_idx(ptr noalias nocapture %A, ptr noalias nocapture r
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <32 x i16> [ <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19, i16 20, i16 21, i16 22, i16 23, i16 24, i16 25, i16 26, i16 27, i16 28, i16 29, i16 30, i16 31>, [[ENTRY]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[I:%.*]] = mul nuw nsw <32 x i16> [[VEC_IND]], splat (i16 5)
 ; CHECK-NEXT:    [[I1:%.*]] = getelementptr inbounds i8, ptr [[B:%.*]], <32 x i16> [[I]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr> [[I1]], i32 1, <32 x i1> splat (i1 true), <32 x i8> poison)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr> align 1 [[I1]], <32 x i1> splat (i1 true), <32 x i8> poison)
 ; CHECK-NEXT:    [[I2:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <32 x i8>, ptr [[I2]], align 1
 ; CHECK-NEXT:    [[I4:%.*]] = add <32 x i8> [[WIDE_LOAD]], [[WIDE_MASKED_GATHER]]
@@ -1100,7 +1086,6 @@ vector.body:                                      ; preds = %vector.body, %entry
   %wide.load = load <32 x i8>, ptr %i, align 1
   %i2 = mul nuw nsw <32 x i64> %vec.ind, splat (i64 5)
   %i3 = getelementptr inbounds i8, ptr %A, <32 x i64> %i2
-
 
   %elems = sub i64 1024, %index
   %evl = call i32 @llvm.experimental.get.vector.length.i64(i64 %elems, i32 32, i1 false)

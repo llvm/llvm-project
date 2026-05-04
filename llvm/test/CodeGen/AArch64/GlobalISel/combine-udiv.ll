@@ -177,7 +177,7 @@ define <16 x i8> @combine_vec_udiv_nonuniform4(<16 x i8> %x) {
 ; GISEL-NEXT:    neg v2.16b, v3.16b
 ; GISEL-NEXT:    shl v3.16b, v4.16b, #7
 ; GISEL-NEXT:    ushl v1.16b, v1.16b, v2.16b
-; GISEL-NEXT:    sshr v2.16b, v3.16b, #7
+; GISEL-NEXT:    cmlt v2.16b, v3.16b, #0
 ; GISEL-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; GISEL-NEXT:    ret
   %div = udiv <16 x i8> %x, <i8 -64, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
@@ -229,7 +229,7 @@ define <8 x i16> @pr38477(<8 x i16> %a0) {
 ; GISEL-NEXT:    add v1.8h, v2.8h, v1.8h
 ; GISEL-NEXT:    neg v2.8h, v4.8h
 ; GISEL-NEXT:    ushl v1.8h, v1.8h, v2.8h
-; GISEL-NEXT:    sshr v2.8h, v3.8h, #15
+; GISEL-NEXT:    cmlt v2.8h, v3.8h, #0
 ; GISEL-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; GISEL-NEXT:    ret
   %1 = udiv <8 x i16> %a0, <i16 1, i16 119, i16 73, i16 -111, i16 -3, i16 118, i16 32, i16 31>

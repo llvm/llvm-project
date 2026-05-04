@@ -13,7 +13,7 @@ define i16 @test(ptr %in) {
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[I_LCSSA:%.*]] = phi i32 [ [[I]], [[LOOP]] ]
 ; CHECK-NEXT:    [[GEP_LE:%.*]] = getelementptr <4 x i16>, ptr [[IN:%.*]], i32 [[I_LCSSA]]
-; CHECK-NEXT:    [[LOAD_LE:%.*]] = call <4 x i16> @llvm.masked.load.v4i16.p0(ptr [[GEP_LE]], i32 2, <4 x i1> <i1 true, i1 false, i1 true, i1 false>, <4 x i16> <i16 0, i16 poison, i16 0, i16 poison>), !alias.scope [[META0:![0-9]+]], !noalias [[META0]]
+; CHECK-NEXT:    [[LOAD_LE:%.*]] = call <4 x i16> @llvm.masked.load.v4i16.p0(ptr align 2 [[GEP_LE]], <4 x i1> <i1 true, i1 false, i1 true, i1 false>, <4 x i16> <i16 0, i16 poison, i16 0, i16 poison>), !alias.scope [[META0:![0-9]+]], !noalias [[META0]]
 ; CHECK-NEXT:    [[REDUCE_LE:%.*]] = call i16 @llvm.vector.reduce.add.v4i16(<4 x i16> [[LOAD_LE]])
 ; CHECK-NEXT:    ret i16 [[REDUCE_LE]]
 ;

@@ -1577,7 +1577,7 @@ public:
   }
 
   /// Get the source location of the point where the field was defined.
-  const SMLoc &getLoc() const { return Loc; }
+  SMLoc getLoc() const { return Loc; }
 
   /// Is this a field where nonconcrete values are okay?
   bool isNonconcreteOK() const {

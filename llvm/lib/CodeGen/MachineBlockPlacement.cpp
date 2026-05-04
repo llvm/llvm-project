@@ -638,9 +638,7 @@ class MachineBlockPlacementLegacy : public MachineFunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  MachineBlockPlacementLegacy() : MachineFunctionPass(ID) {
-    initializeMachineBlockPlacementLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  MachineBlockPlacementLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     if (skipFunction(MF.getFunction()))
@@ -700,7 +698,6 @@ static std::string getBlockName(const MachineBasicBlock *BB) {
   raw_string_ostream OS(Result);
   OS << printMBBReference(*BB);
   OS << " ('" << BB->getName() << "')";
-  OS.flush();
   return Result;
 }
 #endif
@@ -1455,11 +1452,15 @@ getLayoutSuccessorProbThreshold(const MachineBasicBlock *BB) {
        *   So the threshold T in the calculation below
        *   (1-T) * Prob(BB->Succ) > T * Prob(BB->Pred)
        *   So T / (1 - T) = 2, Yielding T = 2/3
-       * Also adding user specified branch bias, we have
-       *   T = (2/3)*(ProfileLikelyProb/50)
-       *     = (2*ProfileLikelyProb)/150)
+       *
+       * Then remap the user-controlled ProfileLikelyProb into
+       * a triangle-specific threshold T.
+       *   T = (2/3) * (ProfileLikelyProb / 50)
+       *     = (2 * ProfileLikelyProb) / 150
+       * This preserves T = 2/3 at ProfileLikelyProb = 50.
+       * The result is capped at 1.
        */
-      return BranchProbability(2 * ProfileLikelyProb, 150);
+      return BranchProbability(ProfileLikelyProb, 150) * 2;
     }
   }
   return BranchProbability(ProfileLikelyProb, 100);
@@ -3547,14 +3548,13 @@ MachineBlockPlacementPass::run(MachineFunction &MF,
   if (!PSI)
     report_fatal_error("MachineBlockPlacement requires ProfileSummaryAnalysis",
                        false);
-
   MachineBlockPlacement MBP(MBPI, MLI, PSI, std::move(MBFI), MPDT,
                             AllowTailMerge);
 
-  if (!MBP.run(MF))
-    return PreservedAnalyses::all();
+  if (MBP.run(MF))
+    return getMachineFunctionPassPreservedAnalyses();
 
-  return getMachineFunctionPassPreservedAnalyses();
+  return PreservedAnalyses::all();
 }
 
 void MachineBlockPlacementPass::printPipeline(
@@ -3597,10 +3597,10 @@ bool MachineBlockPlacement::run(MachineFunction &MF) {
   bool UseExtTspForPerf = false;
   bool UseExtTspForSize = false;
   if (3 <= MF.size() && MF.size() <= ExtTspBlockPlacementMaxBlocks) {
-    UseExtTspForPerf =
-        EnableExtTspBlockPlacement &&
-        (ApplyExtTspWithoutProfile || MF.getFunction().hasProfileData());
     UseExtTspForSize = OptForSize && ApplyExtTspForSize;
+    UseExtTspForPerf =
+        !UseExtTspForSize && EnableExtTspBlockPlacement &&
+        (ApplyExtTspWithoutProfile || MF.getFunction().hasProfileData());
   }
 
   // Apply tail duplication.
@@ -3771,11 +3771,6 @@ void MachineBlockPlacement::assignBlockOrder(
     const std::vector<const MachineBasicBlock *> &NewBlockOrder) {
   assert(F->size() == NewBlockOrder.size() && "Incorrect size of block order");
   F->RenumberBlocks();
-  // At this point, we possibly removed blocks from the function, so we can't
-  // renumber the domtree. At this point, we don't need it anymore, though.
-  // TODO: move this to the point where the dominator tree is actually
-  // invalidated (i.e., where blocks are removed without updating the domtree).
-  MPDT = nullptr;
 
   bool HasChanges = false;
   for (size_t I = 0; I < NewBlockOrder.size(); I++) {
@@ -3868,10 +3863,7 @@ class MachineBlockPlacementStatsLegacy : public MachineFunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  MachineBlockPlacementStatsLegacy() : MachineFunctionPass(ID) {
-    initializeMachineBlockPlacementStatsLegacyPass(
-        *PassRegistry::getPassRegistry());
-  }
+  MachineBlockPlacementStatsLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &F) override {
     auto *MBPI =

@@ -256,6 +256,11 @@ def BufferResultsToOutParamsPass
               "Add the attribute 'bufferize.result' to all output parameters.">,
        Option<"hoistStaticAllocs", "hoist-static-allocs", "bool",
               /*default=*/"false", "Hoist static allocations to call sites.">,
+       Option<"hoistDynamicAllocs", "hoist-dynamic-allocs", "bool",
+              /*default=*/"false", "Hoist dynamic allocations to call sites.">,
+       Option<"modifyPublicFunctions", "modify-public-functions", "bool",
+              /*default=*/"false", "Modify function signatures of public "
+              "functions.">,
   ];
   let dependentDialects = ["memref::MemRefDialect"];
 }
@@ -271,6 +276,11 @@ def DropEquivalentBufferResultsPass
     Note: If a bbArg buffer is not returned directly but casted to beforehand,
     the buffer is still considered equivalent.
   }];
+  let options = [
+    Option<"modifyPublicFunctions", "modify-public-functions", "bool",
+           /*default=*/"false", "Modify function signatures of public "
+           "functions.">,
+  ];
   let dependentDialects = ["memref::MemRefDialect"];
 }
 

@@ -76,20 +76,20 @@ matchAndReplaceDepthwiseConv(Operation *operation, Value input, Value kernel,
   SmallVector<NamedAttribute> preservedAttrs;
   Operation *newConv =
       TypeSwitch<Operation *, Operation *>(operation)
-          .Case<DepthwiseConv2DNhwcHwcmOp>([&](auto op) {
+          .Case([&](DepthwiseConv2DNhwcHwcmOp op) {
             preservedAttrs = getPrunedAttributeList(op);
             return DepthwiseConv2DNhwcHwcOp::create(
                 rewriter, loc, newInitTy, ValueRange{input, collapsedKernel},
                 ValueRange{collapsedInit}, stride, dilation);
           })
-          .Case<DepthwiseConv2DNhwcHwcmQOp>([&](auto op) {
+          .Case([&](DepthwiseConv2DNhwcHwcmQOp op) {
             preservedAttrs = getPrunedAttributeList(op);
             return DepthwiseConv2DNhwcHwcQOp::create(
                 rewriter, loc, newInitTy,
                 ValueRange{input, collapsedKernel, iZp, kZp},
                 ValueRange{collapsedInit}, stride, dilation);
           })
-          .Default([](Operation *op) { return nullptr; });
+          .Default(nullptr);
   if (!newConv)
     return failure();
   for (auto attr : preservedAttrs)

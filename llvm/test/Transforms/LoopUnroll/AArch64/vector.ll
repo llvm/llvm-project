@@ -9,7 +9,7 @@ define void @reverse(ptr %dst, ptr %src, i64 %len) {
 ; APPLE-NEXT:    [[TMP0:%.*]] = add i64 [[LEN]], -1
 ; APPLE-NEXT:    [[XTRAITER:%.*]] = and i64 [[LEN]], 7
 ; APPLE-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], 7
-; APPLE-NEXT:    br i1 [[TMP1]], label %[[EXIT_UNR_LCSSA:.*]], label %[[ENTRY_NEW:.*]]
+; APPLE-NEXT:    br i1 [[TMP1]], label %[[FOR_BODY_EPIL_PREHEADER:.*]], label %[[ENTRY_NEW:.*]]
 ; APPLE:       [[ENTRY_NEW]]:
 ; APPLE-NEXT:    [[UNROLL_ITER:%.*]] = sub i64 [[LEN]], [[XTRAITER]]
 ; APPLE-NEXT:    br label %[[FOR_BODY:.*]]
@@ -66,18 +66,18 @@ define void @reverse(ptr %dst, ptr %src, i64 %len) {
 ; APPLE-NEXT:    [[IV_NEXT_7]] = add nuw nsw i64 [[IV]], 8
 ; APPLE-NEXT:    [[NITER_NEXT_7]] = add i64 [[NITER]], 8
 ; APPLE-NEXT:    [[NITER_NCMP_7:%.*]] = icmp eq i64 [[NITER_NEXT_7]], [[UNROLL_ITER]]
-; APPLE-NEXT:    br i1 [[NITER_NCMP_7]], label %[[EXIT_UNR_LCSSA_LOOPEXIT:.*]], label %[[FOR_BODY]]
-; APPLE:       [[EXIT_UNR_LCSSA_LOOPEXIT]]:
-; APPLE-NEXT:    [[IV_UNR_PH:%.*]] = phi i64 [ [[IV_NEXT_7]], %[[FOR_BODY]] ]
-; APPLE-NEXT:    br label %[[EXIT_UNR_LCSSA]]
+; APPLE-NEXT:    br i1 [[NITER_NCMP_7]], label %[[EXIT_UNR_LCSSA:.*]], label %[[FOR_BODY]]
 ; APPLE:       [[EXIT_UNR_LCSSA]]:
-; APPLE-NEXT:    [[IV_UNR:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_UNR_PH]], %[[EXIT_UNR_LCSSA_LOOPEXIT]] ]
+; APPLE-NEXT:    [[IV_UNR:%.*]] = phi i64 [ [[IV_NEXT_7]], %[[FOR_BODY]] ]
 ; APPLE-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0
-; APPLE-NEXT:    br i1 [[LCMP_MOD]], label %[[FOR_BODY_EPIL_PREHEADER:.*]], label %[[EXIT:.*]]
+; APPLE-NEXT:    br i1 [[LCMP_MOD]], label %[[FOR_BODY_EPIL_PREHEADER]], label %[[EXIT:.*]]
 ; APPLE:       [[FOR_BODY_EPIL_PREHEADER]]:
+; APPLE-NEXT:    [[IV_EPIL_INIT:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_UNR]], %[[EXIT_UNR_LCSSA]] ]
+; APPLE-NEXT:    [[LCMP_MOD1:%.*]] = icmp ne i64 [[XTRAITER]], 0
+; APPLE-NEXT:    call void @llvm.assume(i1 [[LCMP_MOD1]])
 ; APPLE-NEXT:    br label %[[FOR_BODY_EPIL:.*]]
 ; APPLE:       [[FOR_BODY_EPIL]]:
-; APPLE-NEXT:    [[IV_EPIL:%.*]] = phi i64 [ [[IV_UNR]], %[[FOR_BODY_EPIL_PREHEADER]] ], [ [[IV_NEXT_EPIL:%.*]], %[[FOR_BODY_EPIL]] ]
+; APPLE-NEXT:    [[IV_EPIL:%.*]] = phi i64 [ [[IV_EPIL_INIT]], %[[FOR_BODY_EPIL_PREHEADER]] ], [ [[IV_NEXT_EPIL:%.*]], %[[FOR_BODY_EPIL]] ]
 ; APPLE-NEXT:    [[EPIL_ITER:%.*]] = phi i64 [ 0, %[[FOR_BODY_EPIL_PREHEADER]] ], [ [[EPIL_ITER_NEXT:%.*]], %[[FOR_BODY_EPIL]] ]
 ; APPLE-NEXT:    [[TMP18:%.*]] = sub nsw i64 [[LEN]], [[IV_EPIL]]
 ; APPLE-NEXT:    [[ARRAYIDX_EPIL:%.*]] = getelementptr inbounds <4 x float>, ptr [[SRC]], i64 [[TMP18]]
@@ -100,7 +100,7 @@ define void @reverse(ptr %dst, ptr %src, i64 %len) {
 ; CORTEXA55-NEXT:    [[TMP0:%.*]] = add i64 [[LEN]], -1
 ; CORTEXA55-NEXT:    [[XTRAITER:%.*]] = and i64 [[LEN]], 3
 ; CORTEXA55-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], 3
-; CORTEXA55-NEXT:    br i1 [[TMP1]], label %[[EXIT_UNR_LCSSA:.*]], label %[[ENTRY_NEW:.*]]
+; CORTEXA55-NEXT:    br i1 [[TMP1]], label %[[FOR_BODY_EPIL_PREHEADER:.*]], label %[[ENTRY_NEW:.*]]
 ; CORTEXA55:       [[ENTRY_NEW]]:
 ; CORTEXA55-NEXT:    [[UNROLL_ITER:%.*]] = sub i64 [[LEN]], [[XTRAITER]]
 ; CORTEXA55-NEXT:    br label %[[FOR_BODY:.*]]
@@ -133,15 +133,15 @@ define void @reverse(ptr %dst, ptr %src, i64 %len) {
 ; CORTEXA55-NEXT:    [[IV_NEXT_3]] = add nuw nsw i64 [[IV]], 4
 ; CORTEXA55-NEXT:    [[NITER_NEXT_3]] = add i64 [[NITER]], 4
 ; CORTEXA55-NEXT:    [[NITER_NCMP_3:%.*]] = icmp eq i64 [[NITER_NEXT_3]], [[UNROLL_ITER]]
-; CORTEXA55-NEXT:    br i1 [[NITER_NCMP_3]], label %[[EXIT_UNR_LCSSA_LOOPEXIT:.*]], label %[[FOR_BODY]]
-; CORTEXA55:       [[EXIT_UNR_LCSSA_LOOPEXIT]]:
-; CORTEXA55-NEXT:    [[IV_UNR_PH:%.*]] = phi i64 [ [[IV_NEXT_3]], %[[FOR_BODY]] ]
-; CORTEXA55-NEXT:    br label %[[EXIT_UNR_LCSSA]]
+; CORTEXA55-NEXT:    br i1 [[NITER_NCMP_3]], label %[[EXIT_UNR_LCSSA:.*]], label %[[FOR_BODY]]
 ; CORTEXA55:       [[EXIT_UNR_LCSSA]]:
-; CORTEXA55-NEXT:    [[IV_UNR:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_UNR_PH]], %[[EXIT_UNR_LCSSA_LOOPEXIT]] ]
+; CORTEXA55-NEXT:    [[IV_UNR1:%.*]] = phi i64 [ [[IV_NEXT_3]], %[[FOR_BODY]] ]
 ; CORTEXA55-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0
-; CORTEXA55-NEXT:    br i1 [[LCMP_MOD]], label %[[FOR_BODY_EPIL_PREHEADER:.*]], label %[[EXIT:.*]]
+; CORTEXA55-NEXT:    br i1 [[LCMP_MOD]], label %[[FOR_BODY_EPIL_PREHEADER]], label %[[EXIT:.*]]
 ; CORTEXA55:       [[FOR_BODY_EPIL_PREHEADER]]:
+; CORTEXA55-NEXT:    [[IV_UNR:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_UNR1]], %[[EXIT_UNR_LCSSA]] ]
+; CORTEXA55-NEXT:    [[LCMP_MOD1:%.*]] = icmp ne i64 [[XTRAITER]], 0
+; CORTEXA55-NEXT:    call void @llvm.assume(i1 [[LCMP_MOD1]])
 ; CORTEXA55-NEXT:    br label %[[FOR_BODY_EPIL:.*]]
 ; CORTEXA55:       [[FOR_BODY_EPIL]]:
 ; CORTEXA55-NEXT:    [[TMP10:%.*]] = sub nsw i64 [[LEN]], [[IV_UNR]]

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -verify=both,ref      -triple x86_64-linux %s -Wno-tautological-pointer-compare -Wno-pointer-to-int-cast
-// RUN: %clang_cc1 -fsyntax-only -verify=both,expected -triple x86_64-linux %s -Wno-tautological-pointer-compare -Wno-pointer-to-int-cast -fexperimental-new-constant-interpreter -DNEW_INTERP
+// RUN: %clang_cc1 -fsyntax-only -verify=both,ref      -triple x86_64-linux            %s -Wno-tautological-pointer-compare -Wno-pointer-to-int-cast
+// RUN: %clang_cc1 -fsyntax-only -verify=both,expected -triple x86_64-linux            %s -Wno-tautological-pointer-compare -Wno-pointer-to-int-cast -fexperimental-new-constant-interpreter -DNEW_INTERP
 // RUN: %clang_cc1 -fsyntax-only -verify=both,ref      -triple powerpc64-ibm-aix-xcoff %s -Wno-tautological-pointer-compare -Wno-pointer-to-int-cast
 // RUN: %clang_cc1 -fsyntax-only -verify=both,expected -triple powerpc64-ibm-aix-xcoff %s -Wno-tautological-pointer-compare -Wno-pointer-to-int-cast -fexperimental-new-constant-interpreter -DNEW_INTERP
 
@@ -144,7 +144,7 @@ EVAL_EXPR(52, &pr24622 == (void *)&PR24622);
 
 // We evaluate these by providing 2s' complement semantics in constant
 // expressions, like we do for integers.
-void *PR28739a = (__int128)(unsigned long)-1 + &PR28739a;                  // both-warning {{the pointer incremented by 18446744073709551615 refers past the last possible element for an array in 64-bit address space containing 64-bit (8-byte) elements (max possible 2305843009213693952 elements)}}
+void *PR28739a = (__int128)(unsigned long)-1 + &PR28739a;                  // both-warning {{the pointer incremented by 18'446'744'073'709'551'615 refers past the last possible element for an array in 64-bit address space containing 64-bit (8-byte) elements (max possible 2'305'843'009'213'693'952 elements)}}
 
 void *PR28739b = &PR28739b + (__int128)(unsigned long)-1;                  // both-warning {{refers past the last possible element}}
 __int128 PR28739c = (&PR28739c + (__int128)(unsigned long)-1) - &PR28739c; // both-warning {{refers past the last possible element}}
@@ -173,6 +173,15 @@ _Static_assert(A > B, "");
 int * GH149500_p = &(*(int *)0x400);
 static const void *GH149500_q = &(*(const struct sysrq_key_op *)0);
 
+
+void f0(void) { static intptr_t l0 = (unsigned)(intptr_t) f0;} // both-error {{initializer element is not a compile-time constant}}
+
 #else
 #error :(
 #endif
+
+struct ToUnion_X { int a; };
+union ToUnion_U { struct ToUnion_X x; double y; int z : 3; };
+_Static_assert(((union ToUnion_U)(struct ToUnion_X){67}).x.a == 67, "");
+_Static_assert(((union ToUnion_U)1.0).y == 1.0, "");
+_Static_assert(((union ToUnion_U)9).z == 1, "");

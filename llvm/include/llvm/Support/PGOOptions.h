@@ -14,16 +14,10 @@
 #ifndef LLVM_SUPPORT_PGOOPTIONS_H
 #define LLVM_SUPPORT_PGOOPTIONS_H
 
-#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
-
-namespace vfs {
-class FileSystem;
-} // namespace vfs
-
 /// A struct capturing PGO tunables.
 struct PGOOptions {
   enum PGOAction { NoAction, IRInstr, IRUse, SampleUse };
@@ -31,9 +25,7 @@ struct PGOOptions {
   enum class ColdFuncOpt { Default, OptSize, MinSize, OptNone };
   LLVM_ABI PGOOptions(std::string ProfileFile, std::string CSProfileGenFile,
                       std::string ProfileRemappingFile,
-                      std::string MemoryProfile,
-                      IntrusiveRefCntPtr<vfs::FileSystem> FS,
-                      PGOAction Action = NoAction,
+                      std::string MemoryProfile, PGOAction Action = NoAction,
                       CSPGOAction CSAction = NoCSAction,
                       ColdFuncOpt ColdType = ColdFuncOpt::Default,
                       bool DebugInfoForProfiling = false,
@@ -53,7 +45,6 @@ struct PGOOptions {
   bool DebugInfoForProfiling;
   bool PseudoProbeForProfiling;
   bool AtomicCounterUpdate;
-  IntrusiveRefCntPtr<vfs::FileSystem> FS;
 };
 } // namespace llvm
 

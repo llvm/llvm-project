@@ -22,6 +22,12 @@ include "mlir/Dialect/Tosa/IR/TosaOpBase.td"
 // Tosa Type Definitions.
 //===----------------------------------------------------------------------===//
 
+// The base class for Tosa dialect types.
+class Tosa_Type<string name, string typeMnemonic, list<Trait> traits = []>
+    : TypeDef<Tosa_Dialect, name, traits> {
+  let mnemonic = typeMnemonic;
+}
+
 // The base class of a quantized type.
 // Param tuple is: [bitwidth, zeropt, smantissa, sexp, low_end, high_end].
 // Where low and high ends are 0,255 when unsigned, -128,127 when signed, for
@@ -79,10 +85,27 @@ def Tosa_QuantizedInt : AnyTypeOf<[Tosa_QuantizedType<"uint8", [8], 0>,
                                    Tosa_QuantizedType<"int32", [32, 0], 1>]>;
 
 //===----------------------------------------------------------------------===//
+// Custom TOSA element types.
+//===----------------------------------------------------------------------===//
+
+// MLIR doesn't have a builtin type for mxint8 yet. For now declared it as a
+// custom TOSA type. This may be changed in the future.
+def Tosa_MXInt8 : Tosa_Type<"mxint8", "mxint8"> {
+  let summary = "INT8 type as defined by OCP-MX";
+  let description = [{
+    8-bit integer format with an implicit 1/64 scale defined by OCP-MX.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // Multi-category types.
 //===----------------------------------------------------------------------===//
-def Tosa_AnyNumber : AnyTypeOf<[Tosa_Int, Tosa_QuantizedInt, AnyFloat],
+def Tosa_AnyNumber : AnyTypeOf<[Tosa_Int, Tosa_QuantizedInt, AnyFloat, Tosa_MXInt8],
                                 "number">;
+
+def Tosa_MXFPNumber : AnyTypeOf<[F8E4M3FN, F8E5M2, F4E2M1FN, F6E2M3FN, F6E3M2FN, Tosa_MXInt8],
+                                "micro-scaling format number">;
+def Tosa_MXFPScaleNumber : AnyTypeOf<[F8E8M0FNU], "micro-scaling format scale number">;
 
 //===----------------------------------------------------------------------===//
 // TOSA Tensor Conformance
@@ -153,6 +176,7 @@ def Tosa_Rank0Tensor : TosaTensorRankOf<[Tosa_AnyNumber], [0]>;
 def Tosa_ScalarTensor : AnyTypeOf<[TosaUnrankedTensorOf<[Tosa_Int, AnyFloat]>, TosaScalarTensorOf<[Tosa_AnyNumber], [1]>]>;
 def Tosa_ScalarInt8Tensor : AnyTypeOf<[TosaUnrankedTensorOf<[Tosa_Int8]>, TosaScalarTensorOf<[Tosa_Int8], [1]>]>;
 def Tosa_ScalarIntOrFloatTensor : AnyTypeOf<[TosaUnrankedTensorOf<[Tosa_Int, AnyFloat]>, TosaScalarTensorOf<[Tosa_Int, AnyFloat], [1]>]>;
+def Tosa_ScalarInt32Tensor : AnyTypeOf<[TosaUnrankedTensorOf<[Tosa_Int32]>, TosaScalarTensorOf<[Tosa_Int32], [1]>]>;
 
 // We include unranked tensors as a supported type for all possible tosa
 // Tensors as unranked does not guarantee invalid. If unranked tensors exist
@@ -179,13 +203,40 @@ def Tosa_Tensor1Dto6D : AnyTypeOf<[
 def Tosa_TensorUpto4D : AnyTypeOf<[
   Tosa_UnrankedTensor, TosaTensorRankOf<[Tosa_AnyNumber], [0,1,2,3,4]>]>;
 
-def Tosa_Int32TensorUpto4D : AnyTypeOf<[
-  Tosa_UnrankedTensor, TosaTensorRankOf<[Tosa_Int32], [0,1,2,3,4]>]>;
-def Tosa_Int32Tensor2D : AnyTypeOf<[
-  Tosa_UnrankedTensor, TosaTensorRankOf<[Tosa_Int32], [2]>]>;
+def Tosa_IndexTensor1D : AnyTypeOf<[
+  Tosa_UnrankedTensor, TosaTensorRankOf<[Tosa_Int32, Tosa_Int64], [1]>]>;
+def Tosa_IndexTensor2D : AnyTypeOf<[
+  Tosa_UnrankedTensor, TosaTensorRankOf<[Tosa_Int32, Tosa_Int64], [2]>]>;
 
 def Tosa_TensorAtLeast1D : AnyTypeOf<[
   Tosa_UnrankedTensor, TosaRankedTensorOf<[Tosa_AnyNumber], [AtLeastRankOne]>], "tosa-conformant tensor of at least rank 1", "::mlir::TensorType">;
+
+def Tosa_MXFPDataTensor3D : AnyTypeOf<[
+  TosaUnrankedTensorOf<[Tosa_MXFPNumber]>,
+  TosaTensorRankOf<[Tosa_MXFPNumber], [3]>
+]>;
+def Tosa_MXFPScaleTensor3D : AnyTypeOf<[
+  TosaUnrankedTensorOf<[Tosa_MXFPScaleNumber]>,
+  TosaTensorRankOf<[Tosa_MXFPScaleNumber], [3]>
+]>;
+def Tosa_MXFPDataTensor4D : AnyTypeOf<[
+  TosaUnrankedTensorOf<[Tosa_MXFPNumber]>,
+  TosaTensorRankOf<[Tosa_MXFPNumber], [4]>
+]>;
+def Tosa_MXFPScaleTensor4D : AnyTypeOf<[
+  TosaUnrankedTensorOf<[Tosa_MXFPScaleNumber]>,
+  TosaTensorRankOf<[Tosa_MXFPScaleNumber], [4]>
+]>;
+def Tosa_MXFPDataTensorAtLeast1D : AnyTypeOf<[
+  TosaUnrankedTensorOf<[Tosa_MXFPNumber]>,
+  TosaRankedTensorOf<[Tosa_MXFPNumber], [AtLeastRankOne]>],
+  "tosa-conformant tensor of at least rank 1", "::mlir::TensorType"
+>;
+def Tosa_MXFPScaleTensorAtLeast1D : AnyTypeOf<[
+  TosaUnrankedTensorOf<[Tosa_MXFPScaleNumber]>,
+  TosaRankedTensorOf<[Tosa_MXFPScaleNumber], [AtLeastRankOne]>],
+  "tosa-conformant tensor of at least rank 1", "::mlir::TensorType"
+>;
 
 //===----------------------------------------------------------------------===//
 // Generic scalar, vector, or tensor of a particular type.
@@ -243,16 +294,6 @@ def Tosa_TupleBuffer : NestedTupleOf<[Tosa_Buffer]>;
 def Tosa_BufOrTuple : AnyTypeOf<[Tosa_Buffer, Tosa_TupleBuffer]>;
 
 //===----------------------------------------------------------------------===//
-// Tosa Type Definitions.
-//===----------------------------------------------------------------------===//
-
-// The base class for Tosa dialect types.
-class Tosa_Type<string name, string typeMnemonic, list<Trait> traits = []>
-    : TypeDef<Tosa_Dialect, name, traits> {
-  let mnemonic = typeMnemonic;
-}
-
-//===----------------------------------------------------------------------===//
 // ShapeType
 //===----------------------------------------------------------------------===//
 def Tosa_Shape : Tosa_Type<"shape", "shape"> {
@@ -282,8 +323,7 @@ def Tosa_Shape : Tosa_Type<"shape", "shape"> {
      !tosa.shape<0>
     ```
   }];
-  let parameters = (ins "int" : $rank);
-  let builders = [TypeBuilder<(ins "int" : $rank)>];
+  let parameters = (ins "int":$rank);
   let assemblyFormat = "`<` $rank `>`";
 
   let genVerifyDecl = 1;

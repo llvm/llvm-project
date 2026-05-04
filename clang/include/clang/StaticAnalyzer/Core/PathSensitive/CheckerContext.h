@@ -89,9 +89,7 @@ public:
 
   /// Returns the number of times the current block has been visited
   /// along the analyzed path.
-  unsigned blockCount() const {
-    return NB.getContext().blockCount();
-  }
+  unsigned blockCount() const { return Eng.getNumVisitedCurrent(); }
 
   ASTContext &getASTContext() {
     return Eng.getContext();
@@ -155,9 +153,7 @@ public:
   }
 
   /// Get the blockID.
-  unsigned getBlockID() const {
-    return NB.getContext().getBlock()->getBlockID();
-  }
+  unsigned getBlockID() const { return Eng.getCurrBlock()->getBlockID(); }
 
   /// If the given node corresponds to a PostStore program point,
   /// retrieve the location region as it was uttered in the code.
@@ -172,9 +168,7 @@ public:
   }
 
   /// Get the value of arbitrary expressions at this point in the path.
-  SVal getSVal(const Stmt *S) const {
-    return Pred->getSVal(S);
-  }
+  SVal getSVal(const Expr *E) const { return Pred->getSVal(E); }
 
   ConstCFGElementRef getCFGElementRef() const { return Eng.getCFGElementRef(); }
 
@@ -434,7 +428,7 @@ public:
   /// If AF_INET is a macro, the result should be treated as a source of taint.
   ///
   /// \sa clang::Lexer::getSpelling(), clang::Lexer::getImmediateMacroName().
-  StringRef getMacroNameOrSpelling(SourceLocation &Loc);
+  std::string getMacroNameOrSpelling(SourceLocation &Loc);
 
 private:
   ExplodedNode *addTransitionImpl(ProgramStateRef State,

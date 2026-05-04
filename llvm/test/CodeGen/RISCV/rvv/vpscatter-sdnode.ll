@@ -8,8 +8,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zvfhmin,+zvfbfmin,+v,+m \
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s --check-prefixes=RV64
 
-declare void @llvm.vp.scatter.nxv1i8.nxv1p0(<vscale x 1 x i8>, <vscale x 1 x ptr>, <vscale x 1 x i1>, i32)
-
 define void @vpscatter_nxv1i8(<vscale x 1 x i8> %val, <vscale x 1 x ptr> %ptrs, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_nxv1i8:
 ; RV32:       # %bb.0:
@@ -25,8 +23,6 @@ define void @vpscatter_nxv1i8(<vscale x 1 x i8> %val, <vscale x 1 x ptr> %ptrs, 
   call void @llvm.vp.scatter.nxv1i8.nxv1p0(<vscale x 1 x i8> %val, <vscale x 1 x ptr> %ptrs, <vscale x 1 x i1> %m, i32 %evl)
   ret void
 }
-
-declare void @llvm.vp.scatter.nxv2i8.nxv2p0(<vscale x 2 x i8>, <vscale x 2 x ptr>, <vscale x 2 x i1>, i32)
 
 define void @vpscatter_nxv2i8(<vscale x 2 x i8> %val, <vscale x 2 x ptr> %ptrs, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_nxv2i8:
@@ -113,8 +109,6 @@ define void @vpscatter_nxv2i64_truncstore_nxv2i8(<vscale x 2 x i64> %val, <vscal
   ret void
 }
 
-declare void @llvm.vp.scatter.nxv4i8.nxv4p0(<vscale x 4 x i8>, <vscale x 4 x ptr>, <vscale x 4 x i1>, i32)
-
 define void @vpscatter_nxv4i8(<vscale x 4 x i8> %val, <vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_nxv4i8:
 ; RV32:       # %bb.0:
@@ -146,8 +140,6 @@ define void @vpscatter_truemask_nxv4i8(<vscale x 4 x i8> %val, <vscale x 4 x ptr
   call void @llvm.vp.scatter.nxv4i8.nxv4p0(<vscale x 4 x i8> %val, <vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> splat (i1 1), i32 %evl)
   ret void
 }
-
-declare void @llvm.vp.scatter.nxv8i8.nxv8p0(<vscale x 8 x i8>, <vscale x 8 x ptr>, <vscale x 8 x i1>, i32)
 
 define void @vpscatter_nxv8i8(<vscale x 8 x i8> %val, <vscale x 8 x ptr> %ptrs, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_nxv8i8:
@@ -186,8 +178,6 @@ define void @vpscatter_baseidx_nxv8i8(<vscale x 8 x i8> %val, ptr %base, <vscale
   ret void
 }
 
-declare void @llvm.vp.scatter.nxv1i16.nxv1p0(<vscale x 1 x i16>, <vscale x 1 x ptr>, <vscale x 1 x i1>, i32)
-
 define void @vpscatter_nxv1i16(<vscale x 1 x i16> %val, <vscale x 1 x ptr> %ptrs, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_nxv1i16:
 ; RV32:       # %bb.0:
@@ -203,8 +193,6 @@ define void @vpscatter_nxv1i16(<vscale x 1 x i16> %val, <vscale x 1 x ptr> %ptrs
   call void @llvm.vp.scatter.nxv1i16.nxv1p0(<vscale x 1 x i16> %val, <vscale x 1 x ptr> %ptrs, <vscale x 1 x i1> %m, i32 %evl)
   ret void
 }
-
-declare void @llvm.vp.scatter.nxv2i16.nxv2p0(<vscale x 2 x i16>, <vscale x 2 x ptr>, <vscale x 2 x i1>, i32)
 
 define void @vpscatter_nxv2i16(<vscale x 2 x i16> %val, <vscale x 2 x ptr> %ptrs, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_nxv2i16:
@@ -264,8 +252,6 @@ define void @vpscatter_nxv2i64_truncstore_nxv2i16(<vscale x 2 x i64> %val, <vsca
   ret void
 }
 
-declare void @llvm.vp.scatter.nxv4i16.nxv4p0(<vscale x 4 x i16>, <vscale x 4 x ptr>, <vscale x 4 x i1>, i32)
-
 define void @vpscatter_nxv4i16(<vscale x 4 x i16> %val, <vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_nxv4i16:
 ; RV32:       # %bb.0:
@@ -297,8 +283,6 @@ define void @vpscatter_truemask_nxv4i16(<vscale x 4 x i16> %val, <vscale x 4 x p
   call void @llvm.vp.scatter.nxv4i16.nxv4p0(<vscale x 4 x i16> %val, <vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> splat (i1 1), i32 %evl)
   ret void
 }
-
-declare void @llvm.vp.scatter.nxv8i16.nxv8p0(<vscale x 8 x i16>, <vscale x 8 x ptr>, <vscale x 8 x i1>, i32)
 
 define void @vpscatter_nxv8i16(<vscale x 8 x i16> %val, <vscale x 8 x ptr> %ptrs, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_nxv8i16:
@@ -406,20 +390,19 @@ define void @vpscatter_baseidx_nxv8i16(<vscale x 8 x i16> %val, ptr %base, <vsca
   ret void
 }
 
-declare <vscale x 8 x i32> @llvm.vp.sext.nxv8i16.nxv8i32(<vscale x 8 x i16>, <vscale x 8 x i1>, i32)
 define void @vpscatter_baseidx_vpsext_nxv8i16_nxv8i16(<vscale x 8 x i16> %val, ptr %base, <vscale x 8 x i16> %idxs, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_baseidx_vpsext_nxv8i16_nxv8i16:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetvli zero, a1, e16, m2, ta, ma
-; RV32-NEXT:    vwadd.vv v12, v10, v10, v0.t
+; RV32-NEXT:    vwadd.vv v12, v10, v10
 ; RV32-NEXT:    vsoxei32.v v8, (a0), v12, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_baseidx_vpsext_nxv8i16_nxv8i16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, a1, e32, m4, ta, ma
-; RV64-NEXT:    vsext.vf2 v12, v10, v0.t
-; RV64-NEXT:    vwadd.vv v16, v12, v12
+; RV64-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
+; RV64-NEXT:    vsext.vf4 v16, v10
+; RV64-NEXT:    vadd.vv v16, v16, v16
 ; RV64-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (a0), v16, v0.t
 ; RV64-NEXT:    ret
@@ -429,22 +412,19 @@ define void @vpscatter_baseidx_vpsext_nxv8i16_nxv8i16(<vscale x 8 x i16> %val, p
   ret void
 }
 
-declare <vscale x 8 x i32> @llvm.vp.zext.nxv8i16.nxv8i32(<vscale x 8 x i16>, <vscale x 8 x i1>, i32)
 define void @vpscatter_baseidx_vpzext_nxv8i16_nxv8i16(<vscale x 8 x i16> %val, ptr %base, <vscale x 8 x i16> %idxs, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_baseidx_vpzext_nxv8i16_nxv8i16:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetvli zero, a1, e16, m2, ta, ma
-; RV32-NEXT:    vwaddu.vv v12, v10, v10, v0.t
+; RV32-NEXT:    vwaddu.vv v12, v10, v10
 ; RV32-NEXT:    vsoxei32.v v8, (a0), v12, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_baseidx_vpzext_nxv8i16_nxv8i16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, a1, e32, m4, ta, ma
-; RV64-NEXT:    vzext.vf2 v12, v10, v0.t
-; RV64-NEXT:    vwadd.vv v16, v12, v12
-; RV64-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; RV64-NEXT:    vsoxei64.v v8, (a0), v16, v0.t
+; RV64-NEXT:    vsetvli zero, a1, e16, m2, ta, ma
+; RV64-NEXT:    vwaddu.vv v12, v10, v10
+; RV64-NEXT:    vsoxei32.v v8, (a0), v12, v0.t
 ; RV64-NEXT:    ret
   %eidxs = call <vscale x 8 x i32> @llvm.vp.zext.nxv8i16.nxv8i32(<vscale x 8 x i16> %idxs, <vscale x 8 x i1> %m, i32 %evl)
   %ptrs = getelementptr inbounds i16, ptr %base, <vscale x 8 x i32> %eidxs
@@ -452,14 +432,10 @@ define void @vpscatter_baseidx_vpzext_nxv8i16_nxv8i16(<vscale x 8 x i16> %val, p
   ret void
 }
 
-declare <vscale x 8 x i64> @llvm.vp.sext.nxv8i32.nxv8i64(<vscale x 8 x i32>, <vscale x 8 x i1>, i32)
 define void @vpscatter_baseidx_vpsext_nxv8i32_nxv8i16(<vscale x 8 x i16> %val, ptr %base, <vscale x 8 x i32> %idxs, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_baseidx_vpsext_nxv8i32_nxv8i16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
-; RV32-NEXT:    vsext.vf2 v16, v12, v0.t
-; RV32-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; RV32-NEXT:    vnsrl.wi v12, v16, 0
+; RV32-NEXT:    vsetvli zero, a1, e32, m4, ta, ma
 ; RV32-NEXT:    vadd.vv v12, v12, v12
 ; RV32-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (a0), v12, v0.t
@@ -468,7 +444,7 @@ define void @vpscatter_baseidx_vpsext_nxv8i32_nxv8i16(<vscale x 8 x i16> %val, p
 ; RV64-LABEL: vpscatter_baseidx_vpsext_nxv8i32_nxv8i16:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetvli zero, a1, e32, m4, ta, ma
-; RV64-NEXT:    vwadd.vv v16, v12, v12, v0.t
+; RV64-NEXT:    vwadd.vv v16, v12, v12
 ; RV64-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (a0), v16, v0.t
 ; RV64-NEXT:    ret
@@ -478,14 +454,10 @@ define void @vpscatter_baseidx_vpsext_nxv8i32_nxv8i16(<vscale x 8 x i16> %val, p
   ret void
 }
 
-declare <vscale x 8 x i64> @llvm.vp.zext.nxv8i32.nxv8i64(<vscale x 8 x i32>, <vscale x 8 x i1>, i32)
 define void @vpscatter_baseidx_vpzext_nxv8i32_nxv8i16(<vscale x 8 x i16> %val, ptr %base, <vscale x 8 x i32> %idxs, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_baseidx_vpzext_nxv8i32_nxv8i16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
-; RV32-NEXT:    vzext.vf2 v16, v12, v0.t
-; RV32-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; RV32-NEXT:    vnsrl.wi v12, v16, 0
+; RV32-NEXT:    vsetvli zero, a1, e32, m4, ta, ma
 ; RV32-NEXT:    vadd.vv v12, v12, v12
 ; RV32-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (a0), v12, v0.t
@@ -494,7 +466,7 @@ define void @vpscatter_baseidx_vpzext_nxv8i32_nxv8i16(<vscale x 8 x i16> %val, p
 ; RV64-LABEL: vpscatter_baseidx_vpzext_nxv8i32_nxv8i16:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetvli zero, a1, e32, m4, ta, ma
-; RV64-NEXT:    vwaddu.vv v16, v12, v12, v0.t
+; RV64-NEXT:    vwaddu.vv v16, v12, v12
 ; RV64-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (a0), v16, v0.t
 ; RV64-NEXT:    ret
@@ -503,8 +475,6 @@ define void @vpscatter_baseidx_vpzext_nxv8i32_nxv8i16(<vscale x 8 x i16> %val, p
   call void @llvm.vp.scatter.nxv8i16.nxv8p0(<vscale x 8 x i16> %val, <vscale x 8 x ptr> %ptrs, <vscale x 8 x i1> %m, i32 %evl)
   ret void
 }
-
-declare void @llvm.vp.scatter.nxv1i32.nxv1p0(<vscale x 1 x i32>, <vscale x 1 x ptr>, <vscale x 1 x i1>, i32)
 
 define void @vpscatter_nxv1i32(<vscale x 1 x i32> %val, <vscale x 1 x ptr> %ptrs, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_nxv1i32:
@@ -521,8 +491,6 @@ define void @vpscatter_nxv1i32(<vscale x 1 x i32> %val, <vscale x 1 x ptr> %ptrs
   call void @llvm.vp.scatter.nxv1i32.nxv1p0(<vscale x 1 x i32> %val, <vscale x 1 x ptr> %ptrs, <vscale x 1 x i1> %m, i32 %evl)
   ret void
 }
-
-declare void @llvm.vp.scatter.nxv2i32.nxv2p0(<vscale x 2 x i32>, <vscale x 2 x ptr>, <vscale x 2 x i1>, i32)
 
 define void @vpscatter_nxv2i32(<vscale x 2 x i32> %val, <vscale x 2 x ptr> %ptrs, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_nxv2i32:
@@ -559,8 +527,6 @@ define void @vpscatter_nxv2i64_truncstore_nxv2i32(<vscale x 2 x i64> %val, <vsca
   ret void
 }
 
-declare void @llvm.vp.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32>, <vscale x 4 x ptr>, <vscale x 4 x i1>, i32)
-
 define void @vpscatter_nxv4i32(<vscale x 4 x i32> %val, <vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_nxv4i32:
 ; RV32:       # %bb.0:
@@ -592,8 +558,6 @@ define void @vpscatter_truemask_nxv4i32(<vscale x 4 x i32> %val, <vscale x 4 x p
   call void @llvm.vp.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> %val, <vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> splat (i1 1), i32 %evl)
   ret void
 }
-
-declare void @llvm.vp.scatter.nxv8i32.nxv8p0(<vscale x 8 x i32>, <vscale x 8 x ptr>, <vscale x 8 x i1>, i32)
 
 define void @vpscatter_nxv8i32(<vscale x 8 x i32> %val, <vscale x 8 x ptr> %ptrs, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_nxv8i32:
@@ -771,8 +735,6 @@ define void @vpscatter_baseidx_nxv8i32(<vscale x 8 x i32> %val, ptr %base, <vsca
   ret void
 }
 
-declare void @llvm.vp.scatter.nxv1i64.nxv1p0(<vscale x 1 x i64>, <vscale x 1 x ptr>, <vscale x 1 x i1>, i32)
-
 define void @vpscatter_nxv1i64(<vscale x 1 x i64> %val, <vscale x 1 x ptr> %ptrs, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_nxv1i64:
 ; RV32:       # %bb.0:
@@ -789,8 +751,6 @@ define void @vpscatter_nxv1i64(<vscale x 1 x i64> %val, <vscale x 1 x ptr> %ptrs
   ret void
 }
 
-declare void @llvm.vp.scatter.nxv2i64.nxv2p0(<vscale x 2 x i64>, <vscale x 2 x ptr>, <vscale x 2 x i1>, i32)
-
 define void @vpscatter_nxv2i64(<vscale x 2 x i64> %val, <vscale x 2 x ptr> %ptrs, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_nxv2i64:
 ; RV32:       # %bb.0:
@@ -806,8 +766,6 @@ define void @vpscatter_nxv2i64(<vscale x 2 x i64> %val, <vscale x 2 x ptr> %ptrs
   call void @llvm.vp.scatter.nxv2i64.nxv2p0(<vscale x 2 x i64> %val, <vscale x 2 x ptr> %ptrs, <vscale x 2 x i1> %m, i32 %evl)
   ret void
 }
-
-declare void @llvm.vp.scatter.nxv4i64.nxv4p0(<vscale x 4 x i64>, <vscale x 4 x ptr>, <vscale x 4 x i1>, i32)
 
 define void @vpscatter_nxv4i64(<vscale x 4 x i64> %val, <vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_nxv4i64:
@@ -840,8 +798,6 @@ define void @vpscatter_truemask_nxv4i64(<vscale x 4 x i64> %val, <vscale x 4 x p
   call void @llvm.vp.scatter.nxv4i64.nxv4p0(<vscale x 4 x i64> %val, <vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> splat (i1 1), i32 %evl)
   ret void
 }
-
-declare void @llvm.vp.scatter.nxv8i64.nxv8p0(<vscale x 8 x i64>, <vscale x 8 x ptr>, <vscale x 8 x i1>, i32)
 
 define void @vpscatter_nxv8i64(<vscale x 8 x i64> %val, <vscale x 8 x ptr> %ptrs, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_nxv8i64:
@@ -1086,8 +1042,6 @@ define void @vpscatter_baseidx_nxv8i64(<vscale x 8 x i64> %val, ptr %base, <vsca
   ret void
 }
 
-declare void @llvm.vp.scatter.nxv1bf16.nxv1p0(<vscale x 1 x bfloat>, <vscale x 1 x ptr>, <vscale x 1 x i1>, i32)
-
 define void @vpscatter_nxv1bf16(<vscale x 1 x bfloat> %val, <vscale x 1 x ptr> %ptrs, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_nxv1bf16:
 ; RV32:       # %bb.0:
@@ -1104,8 +1058,6 @@ define void @vpscatter_nxv1bf16(<vscale x 1 x bfloat> %val, <vscale x 1 x ptr> %
   ret void
 }
 
-declare void @llvm.vp.scatter.nxv2bf16.nxv2p0(<vscale x 2 x bfloat>, <vscale x 2 x ptr>, <vscale x 2 x i1>, i32)
-
 define void @vpscatter_nxv2bf16(<vscale x 2 x bfloat> %val, <vscale x 2 x ptr> %ptrs, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_nxv2bf16:
 ; RV32:       # %bb.0:
@@ -1121,8 +1073,6 @@ define void @vpscatter_nxv2bf16(<vscale x 2 x bfloat> %val, <vscale x 2 x ptr> %
   call void @llvm.vp.scatter.nxv2bf16.nxv2p0(<vscale x 2 x bfloat> %val, <vscale x 2 x ptr> %ptrs, <vscale x 2 x i1> %m, i32 %evl)
   ret void
 }
-
-declare void @llvm.vp.scatter.nxv4bf16.nxv4p0(<vscale x 4 x bfloat>, <vscale x 4 x ptr>, <vscale x 4 x i1>, i32)
 
 define void @vpscatter_nxv4bf16(<vscale x 4 x bfloat> %val, <vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_nxv4bf16:
@@ -1155,8 +1105,6 @@ define void @vpscatter_truemask_nxv4bf16(<vscale x 4 x bfloat> %val, <vscale x 4
   call void @llvm.vp.scatter.nxv4bf16.nxv4p0(<vscale x 4 x bfloat> %val, <vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> splat (i1 1), i32 %evl)
   ret void
 }
-
-declare void @llvm.vp.scatter.nxv8bf16.nxv8p0(<vscale x 8 x bfloat>, <vscale x 8 x ptr>, <vscale x 8 x i1>, i32)
 
 define void @vpscatter_nxv8bf16(<vscale x 8 x bfloat> %val, <vscale x 8 x ptr> %ptrs, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_nxv8bf16:
@@ -1264,8 +1212,6 @@ define void @vpscatter_baseidx_nxv8bf16(<vscale x 8 x bfloat> %val, ptr %base, <
   ret void
 }
 
-declare void @llvm.vp.scatter.nxv1f16.nxv1p0(<vscale x 1 x half>, <vscale x 1 x ptr>, <vscale x 1 x i1>, i32)
-
 define void @vpscatter_nxv1f16(<vscale x 1 x half> %val, <vscale x 1 x ptr> %ptrs, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_nxv1f16:
 ; RV32:       # %bb.0:
@@ -1282,8 +1228,6 @@ define void @vpscatter_nxv1f16(<vscale x 1 x half> %val, <vscale x 1 x ptr> %ptr
   ret void
 }
 
-declare void @llvm.vp.scatter.nxv2f16.nxv2p0(<vscale x 2 x half>, <vscale x 2 x ptr>, <vscale x 2 x i1>, i32)
-
 define void @vpscatter_nxv2f16(<vscale x 2 x half> %val, <vscale x 2 x ptr> %ptrs, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_nxv2f16:
 ; RV32:       # %bb.0:
@@ -1299,8 +1243,6 @@ define void @vpscatter_nxv2f16(<vscale x 2 x half> %val, <vscale x 2 x ptr> %ptr
   call void @llvm.vp.scatter.nxv2f16.nxv2p0(<vscale x 2 x half> %val, <vscale x 2 x ptr> %ptrs, <vscale x 2 x i1> %m, i32 %evl)
   ret void
 }
-
-declare void @llvm.vp.scatter.nxv4f16.nxv4p0(<vscale x 4 x half>, <vscale x 4 x ptr>, <vscale x 4 x i1>, i32)
 
 define void @vpscatter_nxv4f16(<vscale x 4 x half> %val, <vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_nxv4f16:
@@ -1333,8 +1275,6 @@ define void @vpscatter_truemask_nxv4f16(<vscale x 4 x half> %val, <vscale x 4 x 
   call void @llvm.vp.scatter.nxv4f16.nxv4p0(<vscale x 4 x half> %val, <vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> splat (i1 1), i32 %evl)
   ret void
 }
-
-declare void @llvm.vp.scatter.nxv8f16.nxv8p0(<vscale x 8 x half>, <vscale x 8 x ptr>, <vscale x 8 x i1>, i32)
 
 define void @vpscatter_nxv8f16(<vscale x 8 x half> %val, <vscale x 8 x ptr> %ptrs, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_nxv8f16:
@@ -1442,8 +1382,6 @@ define void @vpscatter_baseidx_nxv8f16(<vscale x 8 x half> %val, ptr %base, <vsc
   ret void
 }
 
-declare void @llvm.vp.scatter.nxv1f32.nxv1p0(<vscale x 1 x float>, <vscale x 1 x ptr>, <vscale x 1 x i1>, i32)
-
 define void @vpscatter_nxv1f32(<vscale x 1 x float> %val, <vscale x 1 x ptr> %ptrs, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_nxv1f32:
 ; RV32:       # %bb.0:
@@ -1460,8 +1398,6 @@ define void @vpscatter_nxv1f32(<vscale x 1 x float> %val, <vscale x 1 x ptr> %pt
   ret void
 }
 
-declare void @llvm.vp.scatter.nxv2f32.nxv2p0(<vscale x 2 x float>, <vscale x 2 x ptr>, <vscale x 2 x i1>, i32)
-
 define void @vpscatter_nxv2f32(<vscale x 2 x float> %val, <vscale x 2 x ptr> %ptrs, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_nxv2f32:
 ; RV32:       # %bb.0:
@@ -1477,8 +1413,6 @@ define void @vpscatter_nxv2f32(<vscale x 2 x float> %val, <vscale x 2 x ptr> %pt
   call void @llvm.vp.scatter.nxv2f32.nxv2p0(<vscale x 2 x float> %val, <vscale x 2 x ptr> %ptrs, <vscale x 2 x i1> %m, i32 %evl)
   ret void
 }
-
-declare void @llvm.vp.scatter.nxv4f32.nxv4p0(<vscale x 4 x float>, <vscale x 4 x ptr>, <vscale x 4 x i1>, i32)
 
 define void @vpscatter_nxv4f32(<vscale x 4 x float> %val, <vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_nxv4f32:
@@ -1511,8 +1445,6 @@ define void @vpscatter_truemask_nxv4f32(<vscale x 4 x float> %val, <vscale x 4 x
   call void @llvm.vp.scatter.nxv4f32.nxv4p0(<vscale x 4 x float> %val, <vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> splat (i1 1), i32 %evl)
   ret void
 }
-
-declare void @llvm.vp.scatter.nxv8f32.nxv8p0(<vscale x 8 x float>, <vscale x 8 x ptr>, <vscale x 8 x i1>, i32)
 
 define void @vpscatter_nxv8f32(<vscale x 8 x float> %val, <vscale x 8 x ptr> %ptrs, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_nxv8f32:
@@ -1690,8 +1622,6 @@ define void @vpscatter_baseidx_nxv8f32(<vscale x 8 x float> %val, ptr %base, <vs
   ret void
 }
 
-declare void @llvm.vp.scatter.nxv1f64.nxv1p0(<vscale x 1 x double>, <vscale x 1 x ptr>, <vscale x 1 x i1>, i32)
-
 define void @vpscatter_nxv1f64(<vscale x 1 x double> %val, <vscale x 1 x ptr> %ptrs, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_nxv1f64:
 ; RV32:       # %bb.0:
@@ -1708,8 +1638,6 @@ define void @vpscatter_nxv1f64(<vscale x 1 x double> %val, <vscale x 1 x ptr> %p
   ret void
 }
 
-declare void @llvm.vp.scatter.nxv2f64.nxv2p0(<vscale x 2 x double>, <vscale x 2 x ptr>, <vscale x 2 x i1>, i32)
-
 define void @vpscatter_nxv2f64(<vscale x 2 x double> %val, <vscale x 2 x ptr> %ptrs, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_nxv2f64:
 ; RV32:       # %bb.0:
@@ -1725,8 +1653,6 @@ define void @vpscatter_nxv2f64(<vscale x 2 x double> %val, <vscale x 2 x ptr> %p
   call void @llvm.vp.scatter.nxv2f64.nxv2p0(<vscale x 2 x double> %val, <vscale x 2 x ptr> %ptrs, <vscale x 2 x i1> %m, i32 %evl)
   ret void
 }
-
-declare void @llvm.vp.scatter.nxv4f64.nxv4p0(<vscale x 4 x double>, <vscale x 4 x ptr>, <vscale x 4 x i1>, i32)
 
 define void @vpscatter_nxv4f64(<vscale x 4 x double> %val, <vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_nxv4f64:
@@ -1759,8 +1685,6 @@ define void @vpscatter_truemask_nxv4f64(<vscale x 4 x double> %val, <vscale x 4 
   call void @llvm.vp.scatter.nxv4f64.nxv4p0(<vscale x 4 x double> %val, <vscale x 4 x ptr> %ptrs, <vscale x 4 x i1> splat (i1 1), i32 %evl)
   ret void
 }
-
-declare void @llvm.vp.scatter.nxv6f64.nxv6p0(<vscale x 6 x double>, <vscale x 6 x ptr>, <vscale x 6 x i1>, i32)
 
 define void @vpscatter_nxv6f64(<vscale x 6 x double> %val, <vscale x 6 x ptr> %ptrs, <vscale x 6 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_nxv6f64:
@@ -2005,8 +1929,6 @@ define void @vpscatter_baseidx_nxv6f64(<vscale x 6 x double> %val, ptr %base, <v
   ret void
 }
 
-declare void @llvm.vp.scatter.nxv8f64.nxv8p0(<vscale x 8 x double>, <vscale x 8 x ptr>, <vscale x 8 x i1>, i32)
-
 define void @vpscatter_nxv8f64(<vscale x 8 x double> %val, <vscale x 8 x ptr> %ptrs, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_nxv8f64:
 ; RV32:       # %bb.0:
@@ -2249,8 +2171,6 @@ define void @vpscatter_baseidx_nxv8f64(<vscale x 8 x double> %val, ptr %base, <v
   call void @llvm.vp.scatter.nxv8f64.nxv8p0(<vscale x 8 x double> %val, <vscale x 8 x ptr> %ptrs, <vscale x 8 x i1> %m, i32 %evl)
   ret void
 }
-
-declare void @llvm.vp.scatter.nxv16f64.nxv16p0(<vscale x 16 x double>, <vscale x 16 x ptr>, <vscale x 16 x i1>, i32)
 
 define void @vpscatter_nxv16f64(<vscale x 16 x double> %val, <vscale x 16 x ptr> %ptrs, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_nxv16f64:

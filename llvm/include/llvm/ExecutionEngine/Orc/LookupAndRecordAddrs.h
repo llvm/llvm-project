@@ -18,6 +18,7 @@
 
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/ExecutionEngine/Orc/DylibManager.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/Support/Compiler.h"
 
@@ -53,15 +54,6 @@ LLVM_ABI void lookupAndRecordAddrs(
 /// Blocking version.
 LLVM_ABI Error lookupAndRecordAddrs(
     ExecutionSession &ES, LookupKind K, const JITDylibSearchOrder &SearchOrder,
-    std::vector<std::pair<SymbolStringPtr, ExecutorAddr *>> Pairs,
-    SymbolLookupFlags LookupFlags = SymbolLookupFlags::RequiredSymbol);
-
-/// Record addresses of given symbols in the given ExecutorAddrs.
-///
-/// ExecutorProcessControl lookup version. Lookups are always implicitly
-/// weak.
-LLVM_ABI Error lookupAndRecordAddrs(
-    ExecutorProcessControl &EPC, tpctypes::DylibHandle H,
     std::vector<std::pair<SymbolStringPtr, ExecutorAddr *>> Pairs,
     SymbolLookupFlags LookupFlags = SymbolLookupFlags::RequiredSymbol);
 

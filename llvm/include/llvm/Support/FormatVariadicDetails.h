@@ -63,8 +63,8 @@ template <typename T> class missing_format_adapter;
 template <class T> class has_FormatProvider {
 public:
   using Decayed = std::decay_t<T>;
-  typedef void (*Signature_format)(const Decayed &, llvm::raw_ostream &,
-                                   StringRef);
+  using Signature_format = void (*)(const Decayed &, llvm::raw_ostream &,
+                                    StringRef);
 
   template <typename U> using check = SameType<Signature_format, &U::format>;
 
@@ -92,8 +92,7 @@ public:
 // based format() invocation.
 template <typename T>
 struct uses_format_member
-    : public std::bool_constant<
-          std::is_base_of_v<format_adapter, std::remove_reference_t<T>>> {};
+    : public std::is_base_of<format_adapter, std::remove_reference_t<T>> {};
 
 // Simple template that decides whether a type T should use the format_provider
 // based format() invocation.  The member function takes priority, so this test

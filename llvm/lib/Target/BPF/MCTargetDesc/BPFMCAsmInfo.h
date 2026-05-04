@@ -20,12 +20,13 @@ namespace llvm {
 
 class BPFMCAsmInfo : public MCAsmInfoELF {
 public:
-  explicit BPFMCAsmInfo(const Triple &TT, const MCTargetOptions &Options) {
+  explicit BPFMCAsmInfo(const Triple &TT, const MCTargetOptions &Options)
+      : MCAsmInfoELF(Options) {
     if (TT.getArch() == Triple::bpfeb)
       IsLittleEndian = false;
 
-    PrivateGlobalPrefix = ".L";
-    PrivateLabelPrefix = "L";
+    InternalSymbolPrefix = ".L";
+    PrivateLabelPrefix = ".L";
     WeakRefDirective = "\t.weak\t";
 
     UsesELFSectionDirectiveForBSS = true;
@@ -49,7 +50,7 @@ public:
     DwarfUsesRelocationsAcrossSections = enable;
   }
 
-  MCSection *getNonexecutableStackSection(MCContext &Ctx) const override {
+  MCSection *getStackSection(MCContext &Ctx, bool Exec) const override {
     return nullptr;
   }
 };

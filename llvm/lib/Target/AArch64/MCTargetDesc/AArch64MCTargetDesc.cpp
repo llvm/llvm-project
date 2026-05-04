@@ -13,6 +13,7 @@
 #include "AArch64MCTargetDesc.h"
 #include "AArch64ELFStreamer.h"
 #include "AArch64MCAsmInfo.h"
+#include "AArch64MCLFIRewriter.h"
 #include "AArch64WinCOFFStreamer.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64InstPrinter.h"
@@ -348,13 +349,14 @@ static MCAsmInfo *createAArch64MCAsmInfo(const MCRegisterInfo &MRI,
                                          const MCTargetOptions &Options) {
   MCAsmInfo *MAI;
   if (TheTriple.isOSBinFormatMachO())
-    MAI = new AArch64MCAsmInfoDarwin(TheTriple.getArch() == Triple::aarch64_32);
+    MAI = new AArch64MCAsmInfoDarwin(TheTriple.getArch() == Triple::aarch64_32,
+                                     Options);
   else if (TheTriple.isOSBinFormatELF())
-    MAI = new AArch64MCAsmInfoELF(TheTriple);
+    MAI = new AArch64MCAsmInfoELF(TheTriple, Options);
   else if (TheTriple.isWindowsMSVCEnvironment())
-    MAI = new AArch64MCAsmInfoMicrosoftCOFF();
+    MAI = new AArch64MCAsmInfoMicrosoftCOFF(Options);
   else if (TheTriple.isOSBinFormatCOFF())
-    MAI = new AArch64MCAsmInfoGNUCOFF();
+    MAI = new AArch64MCAsmInfoGNUCOFF(Options);
   else
     reportFatalUsageError("unsupported object format");
 
@@ -503,6 +505,13 @@ static MCInstrAnalysis *createAArch64InstrAnalysis(const MCInstrInfo *Info) {
   return new AArch64MCInstrAnalysis(Info);
 }
 
+static MCLFIRewriter *
+createAArch64MCLFIRewriter(MCContext &Ctx,
+                           std::unique_ptr<MCRegisterInfo> &&RegInfo,
+                           std::unique_ptr<MCInstrInfo> &&InstInfo) {
+  return new AArch64MCLFIRewriter(Ctx, std::move(RegInfo), std::move(InstInfo));
+}
+
 // Force static initialization.
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeAArch64TargetMC() {
@@ -531,6 +540,9 @@ LLVMInitializeAArch64TargetMC() {
     TargetRegistry::RegisterELFStreamer(*T, createAArch64ELFStreamer);
     TargetRegistry::RegisterMachOStreamer(*T, createMachOStreamer);
     TargetRegistry::RegisterCOFFStreamer(*T, createAArch64WinCOFFStreamer);
+
+    // Register the LFI rewriter.
+    TargetRegistry::RegisterMCLFIRewriter(*T, createAArch64MCLFIRewriter);
 
     // Register the obj target streamer.
     TargetRegistry::RegisterObjectTargetStreamer(

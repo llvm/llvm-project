@@ -451,21 +451,21 @@ class FunctionDifferenceEngine {
         tryUnify(LI.getDefaultDest(), RI.getDefaultDest());
       return false;
 
-    } else if (isa<BranchInst>(L)) {
-      const BranchInst *LI = cast<BranchInst>(L);
-      const BranchInst *RI = cast<BranchInst>(R);
-      if (LI->isConditional() != RI->isConditional()) {
-        if (Complain) Engine.log("branch conditionality differs");
+    } else if (isa<UncondBrInst>(L)) {
+      if (TryUnify)
+        tryUnify(L->getSuccessor(0), R->getSuccessor(0));
+      return false;
+
+    } else if (isa<CondBrInst>(L)) {
+      const CondBrInst *LI = cast<CondBrInst>(L);
+      const CondBrInst *RI = cast<CondBrInst>(R);
+      if (!equivalentAsOperands(LI->getCondition(), RI->getCondition(), AC)) {
+        if (Complain)
+          Engine.log("branch conditions differ");
         return true;
       }
-
-      if (LI->isConditional()) {
-        if (!equivalentAsOperands(LI->getCondition(), RI->getCondition(), AC)) {
-          if (Complain) Engine.log("branch conditions differ");
-          return true;
-        }
-        if (TryUnify) tryUnify(LI->getSuccessor(1), RI->getSuccessor(1));
-      }
+      if (TryUnify)
+        tryUnify(LI->getSuccessor(1), RI->getSuccessor(1));
       if (TryUnify) tryUnify(LI->getSuccessor(0), RI->getSuccessor(0));
       return false;
 
@@ -910,8 +910,7 @@ void FunctionDifferenceEngine::runBlockDiff(BasicBlock::const_iterator LStart,
   // the results and the destinations.
   const Instruction *LTerm = LStart->getParent()->getTerminator();
   const Instruction *RTerm = RStart->getParent()->getTerminator();
-  if (isa<BranchInst>(LTerm) && isa<InvokeInst>(RTerm)) {
-    if (cast<BranchInst>(LTerm)->isConditional()) return;
+  if (isa<UncondBrInst>(LTerm) && isa<InvokeInst>(RTerm)) {
     BasicBlock::const_iterator I = LTerm->getIterator();
     if (I == LStart->getParent()->begin()) return;
     --I;
@@ -924,8 +923,7 @@ void FunctionDifferenceEngine::runBlockDiff(BasicBlock::const_iterator LStart,
     if (!LCall->use_empty())
       Values[LCall] = RInvoke;
     tryUnify(LTerm->getSuccessor(0), RInvoke->getNormalDest());
-  } else if (isa<InvokeInst>(LTerm) && isa<BranchInst>(RTerm)) {
-    if (cast<BranchInst>(RTerm)->isConditional()) return;
+  } else if (isa<InvokeInst>(LTerm) && isa<UncondBrInst>(RTerm)) {
     BasicBlock::const_iterator I = RTerm->getIterator();
     if (I == RStart->getParent()->begin()) return;
     --I;

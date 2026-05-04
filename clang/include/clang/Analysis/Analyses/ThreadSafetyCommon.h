@@ -35,8 +35,8 @@
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/raw_ostream.h"
 #include <functional>
-#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -91,9 +91,10 @@ inline bool partiallyMatches(const til::SExpr *E1, const til::SExpr *E2) {
 }
 
 inline std::string toString(const til::SExpr *E) {
-  std::stringstream ss;
+  std::string s;
+  llvm::raw_string_ostream ss(s);
   til::StdPrinter::print(E, ss);
-  return ss.str();
+  return s;
 }
 
 }  // namespace sx
@@ -213,10 +214,8 @@ public:
 
         case CFGElement::AutomaticObjectDtor: {
           CFGAutomaticObjDtor AD = BI.castAs<CFGAutomaticObjDtor>();
-          auto *DD = const_cast<CXXDestructorDecl *>(
-              AD.getDestructorDecl(ACtx->getASTContext()));
-          auto *VD = const_cast<VarDecl *>(AD.getVarDecl());
-          V.handleDestructorCall(VD, DD);
+          V.handleDestructorCall(AD.getVarDecl(),
+                                 AD.getDestructorDecl(ACtx->getASTContext()));
           break;
         }
         default:
@@ -543,10 +542,14 @@ private:
   til::BasicBlock *CurrentBB = nullptr;
   BlockInfo *CurrentBlockInfo = nullptr;
 
+  // The closure that captures state required for the lookup; this may be
+  // mutable, so we have to save/restore before/after recursive lookups.
+  using LookupLocalVarExprClosure =
+      std::function<const Expr *(const NamedDecl *)>;
   // Recursion guard.
   llvm::DenseSet<const ValueDecl *> VarsBeingTranslated;
   // Context-dependent lookup of currently valid definitions of local variables.
-  std::function<const Expr *(const NamedDecl *)> LookupLocalVarExpr;
+  LookupLocalVarExprClosure LookupLocalVarExpr;
 };
 
 #ifndef NDEBUG

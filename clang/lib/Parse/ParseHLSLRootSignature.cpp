@@ -485,6 +485,9 @@ std::optional<StaticSampler> RootSignatureParser::parseStaticSampler() {
   if (Params->Visibility.has_value())
     Sampler.Visibility = Params->Visibility.value();
 
+  if (Params->Flags.has_value())
+    Sampler.Flags = Params->Flags.value();
+
   return Sampler;
 }
 
@@ -926,6 +929,20 @@ RootSignatureParser::parseStaticSamplerParams() {
       if (!Visibility.has_value())
         return std::nullopt;
       Params.Visibility = Visibility;
+    } else if (tryConsumeExpectedToken(TokenKind::kw_flags)) {
+      // `flags` `=` STATIC_SAMPLE_FLAGS
+      if (Params.Flags.has_value()) {
+        reportDiag(diag::err_hlsl_rootsig_repeat_param) << CurToken.TokKind;
+        return std::nullopt;
+      }
+
+      if (consumeExpectedToken(TokenKind::pu_equal))
+        return std::nullopt;
+
+      auto Flags = parseStaticSamplerFlags(TokenKind::kw_flags);
+      if (!Flags.has_value())
+        return std::nullopt;
+      Params.Flags = Flags;
     } else {
       consumeNextToken(); // let diagnostic be at the start of invalid token
       reportDiag(diag::err_hlsl_invalid_token)
@@ -1255,6 +1272,50 @@ RootSignatureParser::parseDescriptorRangeFlags(TokenKind Context) {
   return Flags;
 }
 
+std::optional<llvm::dxbc::StaticSamplerFlags>
+RootSignatureParser::parseStaticSamplerFlags(TokenKind Context) {
+  assert(CurToken.TokKind == TokenKind::pu_equal &&
+         "Expects to only be invoked starting at given keyword");
+
+  // Handle the edge-case of '0' to specify no flags set
+  if (tryConsumeExpectedToken(TokenKind::int_literal)) {
+    if (!verifyZeroFlag()) {
+      reportDiag(diag::err_hlsl_rootsig_non_zero_flag);
+      return std::nullopt;
+    }
+    return llvm::dxbc::StaticSamplerFlags::None;
+  }
+
+  TokenKind Expected[] = {
+#define STATIC_SAMPLER_FLAG_ENUM(NAME, LIT) TokenKind::en_##NAME,
+#include "clang/Lex/HLSLRootSignatureTokenKinds.def"
+  };
+
+  std::optional<llvm::dxbc::StaticSamplerFlags> Flags;
+
+  do {
+    if (tryConsumeExpectedToken(Expected)) {
+      switch (CurToken.TokKind) {
+#define STATIC_SAMPLER_FLAG_ENUM(NAME, LIT)                                    \
+  case TokenKind::en_##NAME:                                                   \
+    Flags = maybeOrFlag<llvm::dxbc::StaticSamplerFlags>(                       \
+        Flags, llvm::dxbc::StaticSamplerFlags::NAME);                          \
+    break;
+#include "clang/Lex/HLSLRootSignatureTokenKinds.def"
+      default:
+        llvm_unreachable("Switch for consumed enum token was not provided");
+      }
+    } else {
+      consumeNextToken(); // consume token to point at invalid token
+      reportDiag(diag::err_hlsl_invalid_token)
+          << /*value=*/1 << /*value of*/ Context;
+      return std::nullopt;
+    }
+  } while (tryConsumeExpectedToken(TokenKind::pu_or));
+
+  return Flags;
+}
+
 std::optional<uint32_t> RootSignatureParser::handleUIntLiteral() {
   // Parse the numeric value and do semantic checks on its specification
   clang::NumericLiteralParser Literal(
@@ -1334,7 +1395,7 @@ std::optional<float> RootSignatureParser::handleFloatLiteral(bool Negated) {
   llvm::APFloat::opStatus Status(Literal.GetFloatValue(Val, DXCRoundingMode));
 
   // Note: we do not error when opStatus::opInexact by itself as this just
-  // denotes that rounding occured but not that it is invalid
+  // denotes that rounding occurred but not that it is invalid
   assert(!(Status & llvm::APFloat::opStatus::opInvalidOp) &&
          "NumSpelling consists only of [0-9.ef+-]. Any malformed NumSpelling "
          "will be caught and reported by NumericLiteralParser.");

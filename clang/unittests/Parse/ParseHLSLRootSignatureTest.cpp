@@ -263,7 +263,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseStaticSamplerTest) {
       filter = FILTER_MAXIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT,
       maxLOD = 9000, addressU = TEXTURE_ADDRESS_MIRROR,
       comparisonFunc = COMPARISON_NOT_EQUAL,
-      borderColor = STATIC_BORDER_COLOR_OPAQUE_BLACK_UINT
+      borderColor = STATIC_BORDER_COLOR_OPAQUE_BLACK_UINT,
+      flags = 0
     )
   )cc";
 
@@ -332,6 +333,37 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseStaticSamplerTest) {
   ASSERT_EQ(std::get<StaticSampler>(Elem).Space, 4u);
   ASSERT_EQ(std::get<StaticSampler>(Elem).Visibility,
             llvm::dxbc::ShaderVisibility::Domain);
+
+  ASSERT_TRUE(Consumer->isSatisfied());
+}
+
+TEST_F(ParseHLSLRootSignatureTest, ValidStaticSamplerFlagsTest) {
+  const llvm::StringLiteral Source = R"cc(
+    StaticSampler(s0, flags = UINT_BORDER_COLOR | NON_NORMALIZED_COORDINATES)
+  )cc";
+
+  auto Ctx = createMinimalASTContext();
+  StringLiteral *Signature = wrapSource(Ctx, Source);
+
+  TrivialModuleLoader ModLoader;
+  auto PP = createPP(Source, ModLoader);
+
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
+
+  // Test no diagnostics produced
+  Consumer->setNoDiag();
+
+  ASSERT_FALSE(Parser.parse());
+
+  auto Elements = Parser.getElements();
+  ASSERT_EQ(Elements.size(), 1u);
+
+  RootElement Elem = Elements[0].getElement();
+  ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
+  auto ValidStaticSamplerFlags =
+      llvm::dxbc::StaticSamplerFlags::NonNormalizedCoordinates |
+      llvm::dxbc::StaticSamplerFlags::UintBorderColor;
+  ASSERT_EQ(std::get<StaticSampler>(Elem).Flags, ValidStaticSamplerFlags);
 
   ASSERT_TRUE(Consumer->isSatisfied());
 }

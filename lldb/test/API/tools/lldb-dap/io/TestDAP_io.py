@@ -14,24 +14,15 @@ EXIT_SUCCESS = 0
 
 class TestDAP_io(lldbdap_testcase.DAPTestCaseBase):
     def launch(self):
-        log_file_path = self.getBuildArtifact("dap.txt")
-        process, _ = dap_server.DebugAdapterServer.launch(
-            executable=self.lldbDAPExec, log_file=log_file_path
-        )
+        self.create_debug_adapter()
+        self.assertIsNotNone(self.dap_server.process)
+        process = self.dap_server.process
 
         def cleanup():
-            # If the process is still alive, terminate it.
+            # If the process is still alive, kill it.
             if process.poll() is None:
-                process.terminate()
+                process.kill()
                 process.wait()
-            stdout_data = process.stdout.read().decode()
-            print("========= STDOUT =========", file=sys.stderr)
-            print(stdout_data, file=sys.stderr)
-            print("========= END =========", file=sys.stderr)
-            print("========= DEBUG ADAPTER PROTOCOL LOGS =========", file=sys.stderr)
-            with open(log_file_path, "r") as file:
-                print(file.read(), file=sys.stderr)
-            print("========= END =========", file=sys.stderr)
 
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
@@ -44,7 +35,7 @@ class TestDAP_io(lldbdap_testcase.DAPTestCaseBase):
         """
         process = self.launch()
         process.stdin.close()
-        self.assertEqual(process.wait(timeout=5.0), EXIT_SUCCESS)
+        self.assertEqual(process.wait(timeout=self.DEFAULT_TIMEOUT), EXIT_SUCCESS)
 
     def test_invalid_header(self):
         """
@@ -54,7 +45,7 @@ class TestDAP_io(lldbdap_testcase.DAPTestCaseBase):
         process = self.launch()
         process.stdin.write(b"not the correct message header")
         process.stdin.close()
-        self.assertEqual(process.wait(timeout=5.0), EXIT_FAILURE)
+        self.assertEqual(process.wait(timeout=self.DEFAULT_TIMEOUT), EXIT_FAILURE)
 
     def test_partial_header(self):
         """
@@ -64,7 +55,7 @@ class TestDAP_io(lldbdap_testcase.DAPTestCaseBase):
         process = self.launch()
         process.stdin.write(b"Content-Length: ")
         process.stdin.close()
-        self.assertEqual(process.wait(timeout=5.0), EXIT_FAILURE)
+        self.assertEqual(process.wait(timeout=self.DEFAULT_TIMEOUT), EXIT_FAILURE)
 
     def test_incorrect_content_length(self):
         """
@@ -74,7 +65,7 @@ class TestDAP_io(lldbdap_testcase.DAPTestCaseBase):
         process = self.launch()
         process.stdin.write(b"Content-Length: abc")
         process.stdin.close()
-        self.assertEqual(process.wait(timeout=5.0), EXIT_FAILURE)
+        self.assertEqual(process.wait(timeout=self.DEFAULT_TIMEOUT), EXIT_FAILURE)
 
     def test_partial_content_length(self):
         """
@@ -84,4 +75,4 @@ class TestDAP_io(lldbdap_testcase.DAPTestCaseBase):
         process = self.launch()
         process.stdin.write(b"Content-Length: 10\r\n\r\n{")
         process.stdin.close()
-        self.assertEqual(process.wait(timeout=5.0), EXIT_FAILURE)
+        self.assertEqual(process.wait(timeout=self.DEFAULT_TIMEOUT), EXIT_FAILURE)

@@ -5,21 +5,6 @@
 ; The following tests check whether inserting VSETVLI avoids inserting
 ; unneeded vsetvlis across basic blocks.
 
-declare i64 @llvm.riscv.vsetvli(i64, i64, i64)
-
-declare <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(<vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, i64, i64)
-declare <vscale x 2 x float> @llvm.riscv.vfadd.nxv2f32.nxv2f32(<vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, i64, i64)
-
-declare <vscale x 1 x double> @llvm.riscv.vfsub.nxv1f64.nxv1f64(<vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, i64, i64)
-
-declare <vscale x 1 x double> @llvm.riscv.vfmul.nxv1f64.nxv1f64(<vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, i64, i64)
-
-declare <vscale x 1 x double> @llvm.riscv.vfmv.v.f.nxv1f64.f64(<vscale x 1 x double>, double, i64)
-declare <vscale x 2 x float> @llvm.riscv.vfmv.v.f.nxv2f32.f32( <vscale x 2 x float>, float, i64)
-
-declare void @llvm.riscv.vse.nxv1f64(<vscale x 1 x double>, ptr nocapture, i64)
-declare void @llvm.riscv.vse.nxv2f32(<vscale x 2 x float>, ptr nocapture, i64)
-
 define <vscale x 1 x double> @test1(i64 %avl, i8 zeroext %cond, <vscale x 1 x double> %a, <vscale x 1 x double> %b) nounwind {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0: # %entry
@@ -123,13 +108,13 @@ define <vscale x 1 x double> @test4(i64 %avl, i8 zeroext %cond, <vscale x 1 x do
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    beqz a1, .LBB3_2
 ; CHECK-NEXT:  # %bb.1: # %if.then
-; CHECK-NEXT:    lui a1, %hi(.LCPI3_0)
-; CHECK-NEXT:    fld fa5, %lo(.LCPI3_0)(a1)
-; CHECK-NEXT:    lui a1, %hi(.LCPI3_1)
-; CHECK-NEXT:    fld fa4, %lo(.LCPI3_1)(a1)
+; CHECK-NEXT:    li a1, 1023
+; CHECK-NEXT:    slli a1, a1, 52
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
-; CHECK-NEXT:    vfmv.v.f v10, fa5
-; CHECK-NEXT:    vfmv.v.f v11, fa4
+; CHECK-NEXT:    vmv.v.x v10, a1
+; CHECK-NEXT:    li a1, 1
+; CHECK-NEXT:    slli a1, a1, 62
+; CHECK-NEXT:    vmv.v.x v11, a1
 ; CHECK-NEXT:    vfadd.vv v10, v10, v11
 ; CHECK-NEXT:    lui a1, %hi(scratch)
 ; CHECK-NEXT:    addi a1, a1, %lo(scratch)
@@ -242,12 +227,12 @@ define <vscale x 1 x double> @test6(i64 %avl, i8 zeroext %cond, <vscale x 1 x do
 ; CHECK-NEXT:    andi a1, a1, 2
 ; CHECK-NEXT:    beqz a1, .LBB5_4
 ; CHECK-NEXT:  .LBB5_2: # %if.then4
-; CHECK-NEXT:    lui a1, %hi(.LCPI5_0)
-; CHECK-NEXT:    fld fa5, %lo(.LCPI5_0)(a1)
-; CHECK-NEXT:    lui a1, %hi(.LCPI5_1)
-; CHECK-NEXT:    fld fa4, %lo(.LCPI5_1)(a1)
-; CHECK-NEXT:    vfmv.v.f v9, fa5
-; CHECK-NEXT:    vfmv.v.f v10, fa4
+; CHECK-NEXT:    li a1, 1023
+; CHECK-NEXT:    slli a1, a1, 52
+; CHECK-NEXT:    vmv.v.x v9, a1
+; CHECK-NEXT:    li a1, 1
+; CHECK-NEXT:    slli a1, a1, 62
+; CHECK-NEXT:    vmv.v.x v10, a1
 ; CHECK-NEXT:    vfadd.vv v9, v9, v10
 ; CHECK-NEXT:    lui a1, %hi(scratch)
 ; CHECK-NEXT:    addi a1, a1, %lo(scratch)
@@ -533,11 +518,6 @@ for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 
-declare i64 @llvm.riscv.vsetvli.i64(i64, i64 immarg, i64 immarg)
-declare <vscale x 16 x float> @llvm.riscv.vle.nxv16f32.i64(<vscale x 16 x float>, ptr nocapture, i64)
-declare <vscale x 16 x float> @llvm.riscv.vfmacc.nxv16f32.f32.i64(<vscale x 16 x float>, float, <vscale x 16 x float>, i64, i64, i64)
-declare void @llvm.riscv.vse.nxv16f32.i64(<vscale x 16 x float>, ptr nocapture, i64)
-
 ; We need a vsetvli in the last block because the predecessors have different
 ; VTYPEs. The AVL is the same and the SEW/LMUL ratio implies the same VLMAX so
 ; we don't need to read AVL and can keep VL unchanged.
@@ -570,10 +550,6 @@ if.end:
   %e = call <vscale x 2 x i32> @llvm.riscv.vadd.nxv2i32(<vscale x 2 x i32> poison, <vscale x 2 x i32> %a, <vscale x 2 x i32> %d, i64 %vl)
   ret <vscale x 2 x i32> %e
 }
-declare <vscale x 2 x i32> @llvm.riscv.vle.nxv2i32(<vscale x 2 x i32>, ptr, i64)
-declare <vscale x 2 x i16> @llvm.riscv.vle.nxv2i16(<vscale x 2 x i16>, ptr, i64)
-declare <vscale x 2 x i32> @llvm.riscv.vwadd.nxv2i32(<vscale x 2 x i32>, <vscale x 2 x i16>, i16, i64)
-declare <vscale x 2 x i32> @llvm.riscv.vadd.nxv2i32(<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, i64)
 
 ; We can use X0, X0 vsetvli in if2 and if2.end. The merge point as if.end will
 ; see two different vtypes with the same SEW/LMUL ratio. At if2.end we will only
@@ -625,7 +601,6 @@ if2.end:
   %h = call <vscale x 2 x i32> @llvm.riscv.vadd.nxv2i32(<vscale x 2 x i32> poison, <vscale x 2 x i32> %g, <vscale x 2 x i32> %w, i64 %vl)
   ret <vscale x 2 x i32> %h
 }
-declare <vscale x 2 x i32> @llvm.riscv.vwadd.w.nxv2i32.nxv2i16(<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i16>, i64)
 
 ; We should only need 1 vsetvli for this code.
 define void @vlmax(i64 %N, ptr %c, ptr %a, ptr %b) {
@@ -1017,18 +992,6 @@ vector.body:
 exit:
   ret void
 }
-
-declare i64 @llvm.riscv.vsetvlimax.i64(i64, i64)
-declare <vscale x 1 x double> @llvm.riscv.vle.nxv1f64.i64(<vscale x 1 x double>, ptr nocapture, i64)
-declare <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64.i64(<vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, i64, i64)
-declare void @llvm.riscv.vse.nxv1f64.i64(<vscale x 1 x double>, ptr nocapture, i64)
-declare <vscale x 4 x i32> @llvm.riscv.vadd.mask.nxv4i32.nxv4i32(
-  <vscale x 4 x i32>,
-  <vscale x 4 x i32>,
-  <vscale x 4 x i32>,
-  <vscale x 4 x i1>,
-  i64,
-  i64);
 
 ; Normally a pseudo's AVL is already live in its block, so it will already be
 ; live where we're inserting the vsetvli, before the pseudo.  In some cases the

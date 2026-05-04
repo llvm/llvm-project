@@ -1,37 +1,34 @@
-; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info --print-after=spirv-nonsemantic-debug-info -O0 -mtriple=spirv64-unknown-unknown %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-MIR
-; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
-; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --check-prefix=CHECK-OPTION 
-; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --check-prefix=CHECK-OPTION
+; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; CHECK-MIR-DAG: [[type_void:%[0-9]+\:type]] = OpTypeVoid
-; CHECK-MIR-DAG: [[type_i64:%[0-9]+\:type\(s64\)]] = OpTypeInt 32, 0
-; CHECK-MIR-DAG: [[dwarf_version:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i64]], 5
-; CHECK-MIR-DAG: [[debug_info_version:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i64]], 3
-; CHECK-MIR-DAG: [[source_language_sycl:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i64]], 7
-; CHECK-MIR-DAG: [[source_language_cpp:%[0-9]+\:iid\(s32\)]] = OpConstantI [[type_i64]], 4
-; CHECK-MIR-DAG: [[filename_str_sycl:%[0-9]+\:id\(s32\)]] = OpString 1094795567, 1094795585, 792805697, 1111638594, 1111638594, 1128481583, 1128481603, {{1697596227|1700545347}}, 1886216568, 1663985004, 0
-; CHECK-MIR-DAG: [[filename_str_cpp:%[0-9]+\:id\(s32\)]] = OpString 1145324591, 1145324612, 793003076, 1162167621, 1162167621, 1179010607, 1179010630, {{1697596998|1700546118}}, 1886216568, 774989164, 7368803
-; CHECK-MIR-DAG: [[debug_source_sycl:%[0-9]+\:id\(s32\)]] = OpExtInst [[type_void]], 3, 35, [[filename_str_sycl]]
-; CHECK-MIR-DAG: OpExtInst [[type_void]], 3, 1, [[debug_info_version]], [[dwarf_version]], [[debug_source_sycl]], [[source_language_sycl]]
-; CHECK-MIR-DAG: [[debug_source_cpp:%[0-9]+\:id\(s32\)]] = OpExtInst [[type_void]], 3, 35, [[filename_str_cpp]]
-; CHECK-MIR-DAG: OpExtInst [[type_void]], 3, 1, [[debug_info_version]], [[dwarf_version]], [[debug_source_cpp]], [[source_language_cpp]]
+; The old SPIRVEmitNonSemanticDI MachineFunctionPass emitted DebugSource and
+; DebugCompilationUnit instructions as MachineInstructions, which were tested via
+; --print-after=spirv-nonsemantic-debug-info (CHECK-MIR prefix).
+; SPIRVNonSemanticDebugHandler replaces that pass. It emits NSDI instructions
+; directly as MCInsts at print time, with no MIR representation. CHECK-SPIRV
+; tests the same instructions at the SPIR-V text output level.
 
 ; CHECK-SPIRV: [[ext_inst_non_semantic:%[0-9]+]] = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
+; OpString is in section 7 (before types/constants), so it appears before OpTypeVoid.
 ; CHECK-SPIRV: [[filename_str_sycl:%[0-9]+]] = OpString "/AAAAAAAAAA/BBBBBBBB/CCCCCCCCC{{[/\\]}}example.c"
 ; CHECK-SPIRV: [[filename_str_cpp:%[0-9]+]] = OpString "/DDDDDDDDDD/EEEEEEEE/FFFFFFFFF{{[/\\]}}example1.cpp"
+; Types and constants appear after OpString (sections 9+) but before DebugSource.
+; Source language constants are pre-emitted before the DebugSource loop, so they
+; can be matched here as a DAG group together with the types.
 ; CHECK-SPIRV-DAG: [[type_void:%[0-9]+]] = OpTypeVoid
 ; CHECK-SPIRV-DAG: [[type_i32:%[0-9]+]] = OpTypeInt 32 0
+; CHECK-SPIRV-DAG: [[debug_info_version:%[0-9]+]] = OpConstant [[type_i32]] 100
 ; CHECK-SPIRV-DAG: [[dwarf_version:%[0-9]+]] = OpConstant [[type_i32]] 5
 ; CHECK-SPIRV-DAG: [[source_language_sycl:%[0-9]+]] = OpConstant [[type_i32]] 7
 ; CHECK-SPIRV-DAG: [[source_language_cpp:%[0-9]+]] = OpConstant [[type_i32]] 4
-; CHECK-SPIRV-DAG: [[debug_info_version:%[0-9]+]] = OpConstant [[type_i32]] 3
 ; CHECK-SPIRV: [[debug_source_sycl:%[0-9]+]] = OpExtInst [[type_void]] [[ext_inst_non_semantic]] DebugSource [[filename_str_sycl]]
 ; CHECK-SPIRV: OpExtInst [[type_void]] [[ext_inst_non_semantic]] DebugCompilationUnit [[debug_info_version]] [[dwarf_version]] [[debug_source_sycl]] [[source_language_sycl]]
 ; CHECK-SPIRV: [[debug_source_cpp:%[0-9]+]] = OpExtInst [[type_void]] [[ext_inst_non_semantic]] DebugSource [[filename_str_cpp]]
 ; CHECK-SPIRV: OpExtInst [[type_void]] [[ext_inst_non_semantic]] DebugCompilationUnit [[debug_info_version]] [[dwarf_version]] [[debug_source_cpp]] [[source_language_cpp]]
 
-; CHECK-OPTION-NOT: OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
-; CHECK-OPTION-NOT: OpString "/AAAAAAAAAA/BBBBBBBB/CCCCCCCCC{{[/\\]}}example.c"
+; CHECK-OPTION: OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
+; CHECK-OPTION: OpString "/AAAAAAAAAA/BBBBBBBB/CCCCCCCCC{{[/\\]}}example.c"
 
 define spir_func void @foo() {
 entry:

@@ -216,7 +216,7 @@ char f3(int a) {
 // CIR-NEXT:   %[[RETVAL:.*]] = cir.load{{.*}} %[[RETVAL_ADDR]]
 // CIR-NEXT:   cir.return %[[RETVAL]]
 
-// LLVM:      define{{.*}} i8 @f3(i32 %[[ARG_A:.*]])
+// LLVM:      define{{.*}} i8 @f3(i32{{.*}} %[[ARG_A:.*]])
 // LLVM-NEXT:   %[[A_ADDR:.*]] = alloca i32, i64 1, align 4
 // LLVM-NEXT:   %[[RETVAL_ADDR:.*]] = alloca i8, i64 1, align 1
 // LLVM-NEXT:   store i32 %[[ARG_A]], ptr %[[A_ADDR]], align 4
@@ -233,7 +233,7 @@ char f3(int a) {
 // OGCG-NEXT:   store i32 %[[ARG_A]], ptr %[[A_ADDR]], align 4
 // OGCG-NEXT:   %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR]], align 4
 // OGCG-NEXT:   store i32 %[[A_VAL]], ptr @cs, align 4
-// OGCG-NEXT:   %[[CS_B_VAL:.*]] = load i8, ptr getelementptr inbounds nuw (%struct.CompleteS, ptr @cs, i32 0, i32 1), align 4
+// OGCG-NEXT:   %[[CS_B_VAL:.*]] = load i8, ptr getelementptr inbounds nuw (i8, ptr @cs, i64 4), align 4
 // OGCG-NEXT:   ret i8 %[[CS_B_VAL]]
 
 char f4(int a, struct CompleteS *p) {
@@ -258,7 +258,7 @@ char f4(int a, struct CompleteS *p) {
 // CIR-NEXT:   %[[RETVAL:.*]] = cir.load{{.*}} %[[RETVAL_ADDR]]
 // CIR-NEXT:   cir.return %[[RETVAL]]
 
-// LLVM:      define{{.*}} i8 @f4(i32 %[[ARG_A:.*]], ptr %[[ARG_P:.*]])
+// LLVM:      define{{.*}} i8 @f4(i32{{.*}} %[[ARG_A:.*]], ptr{{.*}} %[[ARG_P:.*]])
 // LLVM-NEXT:   %[[A_ADDR:.*]] = alloca i32, i64 1, align 4
 // LLVM-NEXT:   %[[P_ADDR:.*]] = alloca ptr, i64 1, align 8
 // LLVM-NEXT:   %[[RETVAL_ADDR:.*]] = alloca i8, i64 1, align 1
@@ -266,10 +266,10 @@ char f4(int a, struct CompleteS *p) {
 // LLVM-NEXT:   store ptr %[[ARG_P]], ptr %[[P_ADDR]], align 8
 // LLVM-NEXT:   %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR]], align 4
 // LLVM-NEXT:   %[[P_VAL:.*]] = load ptr, ptr %[[P_ADDR]], align 8
-// LLVM-NEXT:   %[[P_A:.*]] = getelementptr %struct.CompleteS, ptr %[[P_VAL]], i32 0, i32 0
+// LLVM-NEXT:   %[[P_A:.*]] = getelementptr inbounds nuw %struct.CompleteS, ptr %[[P_VAL]], i32 0, i32 0
 // LLVM-NEXT:   store i32 %[[A_VAL]], ptr %[[P_A]], align 4
 // LLVM-NEXT:   %[[P_VAL2:.*]] = load ptr, ptr %[[P_ADDR]], align 8
-// LLVM-NEXT:   %[[P_B:.*]] = getelementptr %struct.CompleteS, ptr %[[P_VAL2]], i32 0, i32 1
+// LLVM-NEXT:   %[[P_B:.*]] = getelementptr inbounds nuw %struct.CompleteS, ptr %[[P_VAL2]], i32 0, i32 1
 // LLVM-NEXT:   %[[P_B_VAL:.*]] = load i8, ptr %[[P_B]], align 4
 // LLVM-NEXT:   store i8 %[[P_B_VAL]], ptr %[[RETVAL_ADDR]], align 1
 // LLVM-NEXT:   %[[RETVAL:.*]] = load i8, ptr %[[RETVAL_ADDR]], align 1
@@ -299,7 +299,7 @@ void f5(struct NodeS* a) {
 // CIR:   cir.store {{.*}}, %[[NEXT]]
 
 // LLVM: define{{.*}} void @f5
-// LLVM:   %[[NEXT:.*]] = getelementptr %struct.NodeS, ptr %{{.*}}, i32 0, i32 0
+// LLVM:   %[[NEXT:.*]] = getelementptr inbounds nuw %struct.NodeS, ptr %{{.*}}, i32 0, i32 0
 // LLVM:   store ptr null, ptr %[[NEXT]]
 
 // OGCG: define{{.*}} void @f5
@@ -318,9 +318,9 @@ void f6(struct CycleStart *start) {
 // CIR:   %[[START2:.*]] = cir.get_member %{{.*}}[0] {name = "start"} : !cir.ptr<!rec_CycleEnd> -> !cir.ptr<!cir.ptr<!rec_CycleStart>>
 
 // LLVM: define{{.*}} void @f6
-// LLVM:   %[[MIDDLE:.*]] = getelementptr %struct.CycleStart, ptr %{{.*}}, i32 0, i32 0
-// LLVM:   %[[END:.*]] = getelementptr %struct.CycleMiddle, ptr %{{.*}}, i32 0, i32 0
-// LLVM:   %[[START2:.*]] = getelementptr %struct.CycleEnd, ptr %{{.*}}, i32 0, i32 0
+// LLVM:   %[[MIDDLE:.*]] = getelementptr inbounds nuw %struct.CycleStart, ptr %{{.*}}, i32 0, i32 0
+// LLVM:   %[[END:.*]] = getelementptr inbounds nuw %struct.CycleMiddle, ptr %{{.*}}, i32 0, i32 0
+// LLVM:   %[[START2:.*]] = getelementptr inbounds nuw %struct.CycleEnd, ptr %{{.*}}, i32 0, i32 0
 
 // OGCG: define{{.*}} void @f6
 // OGCG:   %[[MIDDLE:.*]] = getelementptr inbounds nuw %struct.CycleStart, ptr %{{.*}}, i32 0, i32 0

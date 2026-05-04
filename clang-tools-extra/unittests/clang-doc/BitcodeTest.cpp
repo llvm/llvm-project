@@ -10,6 +10,8 @@
 #include "BitcodeWriter.h"
 #include "ClangDocTest.h"
 #include "Representation.h"
+#include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticOptions.h"
 #include "llvm/Bitstream/BitstreamReader.h"
 #include "llvm/Bitstream/BitstreamWriter.h"
 #include "gtest/gtest.h"
@@ -17,41 +19,42 @@
 namespace clang {
 namespace doc {
 
-template <typename T> static std::string writeInfo(T &I) {
+template <typename T>
+static std::string writeInfo(T &I, DiagnosticsEngine &Diags) {
   SmallString<2048> Buffer;
   llvm::BitstreamWriter Stream(Buffer);
-  ClangDocBitcodeWriter Writer(Stream);
+  ClangDocBitcodeWriter Writer(Stream, Diags);
   Writer.emitBlock(I);
   return Buffer.str().str();
 }
 
-static std::string writeInfo(Info *I) {
+static std::string writeInfo(Info *I, DiagnosticsEngine &Diags) {
   switch (I->IT) {
   case InfoType::IT_namespace:
-    return writeInfo(*static_cast<NamespaceInfo *>(I));
+    return writeInfo(*static_cast<NamespaceInfo *>(I), Diags);
   case InfoType::IT_record:
-    return writeInfo(*static_cast<RecordInfo *>(I));
+    return writeInfo(*static_cast<RecordInfo *>(I), Diags);
   case InfoType::IT_enum:
-    return writeInfo(*static_cast<EnumInfo *>(I));
+    return writeInfo(*static_cast<EnumInfo *>(I), Diags);
   case InfoType::IT_function:
-    return writeInfo(*static_cast<FunctionInfo *>(I));
+    return writeInfo(*static_cast<FunctionInfo *>(I), Diags);
   case InfoType::IT_typedef:
-    return writeInfo(*static_cast<TypedefInfo *>(I));
+    return writeInfo(*static_cast<TypedefInfo *>(I), Diags);
   case InfoType::IT_concept:
-    return writeInfo(*static_cast<ConceptInfo *>(I));
+    return writeInfo(*static_cast<ConceptInfo *>(I), Diags);
   case InfoType::IT_variable:
-    return writeInfo(*static_cast<VarInfo *>(I));
+    return writeInfo(*static_cast<VarInfo *>(I), Diags);
   case InfoType::IT_friend:
-    return writeInfo(*static_cast<FriendInfo *>(I));
+    return writeInfo(*static_cast<FriendInfo *>(I), Diags);
   case InfoType::IT_default:
     return "";
   }
 }
 
-static std::vector<std::unique_ptr<Info>> readInfo(StringRef Bitcode,
-                                                   size_t NumInfos) {
+static OwningPtrVec<Info> readInfo(StringRef Bitcode, size_t NumInfos,
+                                   DiagnosticsEngine &Diags) {
   llvm::BitstreamCursor Stream(Bitcode);
-  doc::ClangDocBitcodeReader Reader(Stream);
+  doc::ClangDocBitcodeReader Reader(Stream, Diags);
   auto Infos = Reader.readBitcode();
 
   // Check that there was no error in the read.
@@ -60,25 +63,27 @@ static std::vector<std::unique_ptr<Info>> readInfo(StringRef Bitcode,
   return std::move(Infos.get());
 }
 
-TEST(BitcodeTest, emitNamespaceInfoBitcode) {
+class BitcodeTest : public ClangDocContextTest {};
+
+TEST_F(BitcodeTest, emitNamespaceInfoBitcode) {
   NamespaceInfo I;
   I.Name = "r";
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
-  I.Children.Namespaces.emplace_back(EmptySID, "ChildNamespace",
-                                     InfoType::IT_namespace);
+  Reference NewNamespace(EmptySID, "ChildNamespace", InfoType::IT_namespace);
+  I.Children.Namespaces.push_back(NewNamespace);
   I.Children.Records.emplace_back(EmptySID, "ChildStruct", InfoType::IT_record);
   I.Children.Functions.emplace_back();
   I.Children.Enums.emplace_back();
 
-  std::string WriteResult = writeInfo(&I);
+  std::string WriteResult = writeInfo(&I, this->Diags);
   EXPECT_TRUE(WriteResult.size() > 0);
-  std::vector<std::unique_ptr<Info>> ReadResults = readInfo(WriteResult, 1);
+  OwningPtrVec<Info> ReadResults = readInfo(WriteResult, 1, this->Diags);
 
   CheckNamespaceInfo(&I, InfoAsNamespace(ReadResults[0].get()));
 }
 
-TEST(BitcodeTest, emitRecordInfoBitcode) {
+TEST_F(BitcodeTest, emitRecordInfoBitcode) {
   RecordInfo I;
   I.Name = "r";
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
@@ -98,29 +103,26 @@ TEST(BitcodeTest, emitRecordInfoBitcode) {
   I.VirtualParents.emplace_back(EmptySID, "G", InfoType::IT_record);
 
   // Documentation for the data member.
-  CommentInfo TopComment;
-  TopComment.Kind = CommentKind::CK_FullComment;
-  TopComment.Children.emplace_back(std::make_unique<CommentInfo>());
-  CommentInfo *Brief = TopComment.Children.back().get();
-  Brief->Kind = CommentKind::CK_ParagraphComment;
-  Brief->Children.emplace_back(std::make_unique<CommentInfo>());
-  Brief->Children.back()->Kind = CommentKind::CK_TextComment;
-  Brief->Children.back()->Name = "ParagraphComment";
-  Brief->Children.back()->Text = "Value of the thing.";
+  CommentInfo BriefChildren[] = {CommentInfo(CommentKind::CK_TextComment, {},
+                                             "Value of the thing.",
+                                             "ParagraphComment")};
+  CommentInfo TopCommentChildren[] = {
+      CommentInfo(CommentKind::CK_ParagraphComment, BriefChildren)};
+  CommentInfo TopComment(CommentKind::CK_FullComment, TopCommentChildren);
   I.Bases.back().Members.back().Description.emplace_back(std::move(TopComment));
 
   I.Children.Records.emplace_back(EmptySID, "ChildStruct", InfoType::IT_record);
   I.Children.Functions.emplace_back();
   I.Children.Enums.emplace_back();
 
-  std::string WriteResult = writeInfo(&I);
+  std::string WriteResult = writeInfo(&I, this->Diags);
   EXPECT_TRUE(WriteResult.size() > 0);
-  std::vector<std::unique_ptr<Info>> ReadResults = readInfo(WriteResult, 1);
+  OwningPtrVec<Info> ReadResults = readInfo(WriteResult, 1, this->Diags);
 
   CheckRecordInfo(&I, InfoAsRecord(ReadResults[0].get()));
 }
 
-TEST(BitcodeTest, emitFunctionInfoBitcode) {
+TEST_F(BitcodeTest, emitFunctionInfoBitcode) {
   FunctionInfo I;
   I.Name = "f";
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
@@ -133,14 +135,14 @@ TEST(BitcodeTest, emitFunctionInfoBitcode) {
 
   I.Access = AccessSpecifier::AS_none;
 
-  std::string WriteResult = writeInfo(&I);
+  std::string WriteResult = writeInfo(&I, this->Diags);
   EXPECT_TRUE(WriteResult.size() > 0);
-  std::vector<std::unique_ptr<Info>> ReadResults = readInfo(WriteResult, 1);
+  OwningPtrVec<Info> ReadResults = readInfo(WriteResult, 1, this->Diags);
 
   CheckFunctionInfo(&I, InfoAsFunction(ReadResults[0].get()));
 }
 
-TEST(BitcodeTest, emitMethodInfoBitcode) {
+TEST_F(BitcodeTest, emitMethodInfoBitcode) {
   FunctionInfo I;
   I.Name = "f";
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
@@ -155,14 +157,14 @@ TEST(BitcodeTest, emitMethodInfoBitcode) {
 
   I.Access = AccessSpecifier::AS_public;
 
-  std::string WriteResult = writeInfo(&I);
+  std::string WriteResult = writeInfo(&I, this->Diags);
   EXPECT_TRUE(WriteResult.size() > 0);
-  std::vector<std::unique_ptr<Info>> ReadResults = readInfo(WriteResult, 1);
+  OwningPtrVec<Info> ReadResults = readInfo(WriteResult, 1, this->Diags);
 
   CheckFunctionInfo(&I, InfoAsFunction(ReadResults[0].get()));
 }
 
-TEST(BitcodeTest, emitEnumInfoBitcode) {
+TEST_F(BitcodeTest, emitEnumInfoBitcode) {
   EnumInfo I;
   I.Name = "e";
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
@@ -173,14 +175,14 @@ TEST(BitcodeTest, emitEnumInfoBitcode) {
   I.Members.emplace_back("X");
   I.Scoped = true;
 
-  std::string WriteResult = writeInfo(&I);
+  std::string WriteResult = writeInfo(&I, this->Diags);
   EXPECT_TRUE(WriteResult.size() > 0);
-  std::vector<std::unique_ptr<Info>> ReadResults = readInfo(WriteResult, 1);
+  OwningPtrVec<Info> ReadResults = readInfo(WriteResult, 1, this->Diags);
 
   CheckEnumInfo(&I, InfoAsEnum(ReadResults[0].get()));
 }
 
-TEST(BitcodeTest, emitTypedefInfoBitcode) {
+TEST_F(BitcodeTest, emitTypedefInfoBitcode) {
   TypedefInfo I;
   I.Name = "MyInt";
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
@@ -189,20 +191,16 @@ TEST(BitcodeTest, emitTypedefInfoBitcode) {
   I.Underlying = TypeInfo("unsigned");
   I.IsUsing = true;
 
-  CommentInfo Top;
-  Top.Kind = CommentKind::CK_FullComment;
-
-  Top.Children.emplace_back(std::make_unique<CommentInfo>());
-  CommentInfo *BlankLine = Top.Children.back().get();
-  BlankLine->Kind = CommentKind::CK_ParagraphComment;
-  BlankLine->Children.emplace_back(std::make_unique<CommentInfo>());
-  BlankLine->Children.back()->Kind = CommentKind::CK_TextComment;
+  CommentInfo BlankChildren[] = {CommentInfo(CommentKind::CK_TextComment)};
+  CommentInfo TopChildren[] = {
+      CommentInfo(CommentKind::CK_ParagraphComment, BlankChildren)};
+  CommentInfo Top(CommentKind::CK_FullComment, TopChildren);
 
   I.Description.emplace_back(std::move(Top));
 
-  std::string WriteResult = writeInfo(&I);
+  std::string WriteResult = writeInfo(&I, this->Diags);
   EXPECT_TRUE(WriteResult.size() > 0);
-  std::vector<std::unique_ptr<Info>> ReadResults = readInfo(WriteResult, 1);
+  OwningPtrVec<Info> ReadResults = readInfo(WriteResult, 1, this->Diags);
 
   CheckTypedefInfo(&I, InfoAsTypedef(ReadResults[0].get()));
 
@@ -212,126 +210,94 @@ TEST(BitcodeTest, emitTypedefInfoBitcode) {
   I2.IsUsing = false;
   I2.Underlying = TypeInfo("int");
 
-  WriteResult = writeInfo(&I2);
+  WriteResult = writeInfo(&I2, this->Diags);
   EXPECT_TRUE(WriteResult.size() > 0);
-  ReadResults = readInfo(WriteResult, 1);
+  ReadResults = readInfo(WriteResult, 1, this->Diags);
   CheckTypedefInfo(&I2, InfoAsTypedef(ReadResults[0].get()));
 }
 
-TEST(SerializeTest, emitInfoWithCommentBitcode) {
+TEST_F(BitcodeTest, emitInfoWithCommentBitcode) {
   FunctionInfo F;
   F.Name = "F";
   F.ReturnType = TypeInfo("void");
   F.DefLoc = Location(0, 0, "test.cpp");
   F.Params.emplace_back(TypeInfo("int"), "I");
 
-  CommentInfo Top;
-  Top.Kind = CommentKind::CK_FullComment;
+  // BlankLine
+  CommentInfo BlankChildren[] = {CommentInfo(CommentKind::CK_TextComment)};
+  CommentInfo BlankLine(CommentKind::CK_ParagraphComment, BlankChildren);
 
-  Top.Children.emplace_back(std::make_unique<CommentInfo>());
-  CommentInfo *BlankLine = Top.Children.back().get();
-  BlankLine->Kind = CommentKind::CK_ParagraphComment;
-  BlankLine->Children.emplace_back(std::make_unique<CommentInfo>());
-  BlankLine->Children.back()->Kind = CommentKind::CK_TextComment;
+  // Brief
+  CommentInfo BriefChildren[] = {CommentInfo(CommentKind::CK_TextComment, {},
+                                             " Brief description.",
+                                             "ParagraphComment")};
+  CommentInfo Brief(CommentKind::CK_ParagraphComment, BriefChildren);
 
-  Top.Children.emplace_back(std::make_unique<CommentInfo>());
-  CommentInfo *Brief = Top.Children.back().get();
-  Brief->Kind = CommentKind::CK_ParagraphComment;
-  Brief->Children.emplace_back(std::make_unique<CommentInfo>());
-  Brief->Children.back()->Kind = CommentKind::CK_TextComment;
-  Brief->Children.back()->Name = "ParagraphComment";
-  Brief->Children.back()->Text = " Brief description.";
+  // Extended
+  CommentInfo ExtChildren[] = {CommentInfo(CommentKind::CK_TextComment, {},
+                                           " Extended description that"),
+                               CommentInfo(CommentKind::CK_TextComment, {},
+                                           " continues onto the next line.")};
+  CommentInfo Extended(CommentKind::CK_ParagraphComment, ExtChildren);
 
-  Top.Children.emplace_back(std::make_unique<CommentInfo>());
-  CommentInfo *Extended = Top.Children.back().get();
-  Extended->Kind = CommentKind::CK_ParagraphComment;
-  Extended->Children.emplace_back(std::make_unique<CommentInfo>());
-  Extended->Children.back()->Kind = CommentKind::CK_TextComment;
-  Extended->Children.back()->Text = " Extended description that";
-  Extended->Children.emplace_back(std::make_unique<CommentInfo>());
-  Extended->Children.back()->Kind = CommentKind::CK_TextComment;
-  Extended->Children.back()->Text = " continues onto the next line.";
+  // HTML
+  StringRef HtmlKeys[] = {"class"};
+  StringRef HtmlValues[] = {"test"};
+  CommentInfo HtmlStart(CommentKind::CK_HTMLStartTagComment, {}, "", "ul", "",
+                        "", "", false, false, HtmlKeys, HtmlValues);
+  CommentInfo HtmlStartLi(CommentKind::CK_HTMLStartTagComment, {}, "", "li");
+  CommentInfo HtmlEnd(CommentKind::CK_HTMLEndTagComment, {}, "", "ul", "", "",
+                      "", false, true);
 
-  Top.Children.emplace_back(std::make_unique<CommentInfo>());
-  CommentInfo *HTML = Top.Children.back().get();
-  HTML->Kind = CommentKind::CK_ParagraphComment;
-  HTML->Children.emplace_back(std::make_unique<CommentInfo>());
-  HTML->Children.back()->Kind = CommentKind::CK_TextComment;
-  HTML->Children.emplace_back(std::make_unique<CommentInfo>());
-  HTML->Children.back()->Kind = CommentKind::CK_HTMLStartTagComment;
-  HTML->Children.back()->Name = "ul";
-  HTML->Children.back()->AttrKeys.emplace_back("class");
-  HTML->Children.back()->AttrValues.emplace_back("test");
-  HTML->Children.emplace_back(std::make_unique<CommentInfo>());
-  HTML->Children.back()->Kind = CommentKind::CK_HTMLStartTagComment;
-  HTML->Children.back()->Name = "li";
-  HTML->Children.emplace_back(std::make_unique<CommentInfo>());
-  HTML->Children.back()->Kind = CommentKind::CK_TextComment;
-  HTML->Children.back()->Text = " Testing.";
-  HTML->Children.emplace_back(std::make_unique<CommentInfo>());
-  HTML->Children.back()->Kind = CommentKind::CK_HTMLEndTagComment;
-  HTML->Children.back()->Name = "ul";
-  HTML->Children.back()->SelfClosing = true;
+  CommentInfo HtmlChildren[] = {
+      CommentInfo(CommentKind::CK_TextComment), HtmlStart, HtmlStartLi,
+      CommentInfo(CommentKind::CK_TextComment, {}, " Testing."), HtmlEnd};
+  CommentInfo HTML(CommentKind::CK_ParagraphComment, HtmlChildren);
 
-  Top.Children.emplace_back(std::make_unique<CommentInfo>());
-  CommentInfo *Verbatim = Top.Children.back().get();
-  Verbatim->Kind = CommentKind::CK_VerbatimBlockComment;
-  Verbatim->Name = "verbatim";
-  Verbatim->CloseName = "endverbatim";
-  Verbatim->Children.emplace_back(std::make_unique<CommentInfo>());
-  Verbatim->Children.back()->Kind = CommentKind::CK_VerbatimBlockLineComment;
-  Verbatim->Children.back()->Text = " The description continues.";
+  // Verbatim
+  CommentInfo VerbLine(CommentKind::CK_VerbatimBlockLineComment, {},
+                       " The description continues.");
+  CommentInfo VerbChildren[] = {VerbLine};
+  CommentInfo Verbatim(CommentKind::CK_VerbatimBlockComment, VerbChildren, "",
+                       "verbatim", "endverbatim");
 
-  Top.Children.emplace_back(std::make_unique<CommentInfo>());
-  CommentInfo *ParamOut = Top.Children.back().get();
-  ParamOut->Kind = CommentKind::CK_ParamCommandComment;
-  ParamOut->Direction = "[out]";
-  ParamOut->ParamName = "I";
-  ParamOut->Explicit = true;
-  ParamOut->Children.emplace_back(std::make_unique<CommentInfo>());
-  ParamOut->Children.back()->Kind = CommentKind::CK_ParagraphComment;
-  ParamOut->Children.back()->Children.emplace_back(
-      std::make_unique<CommentInfo>());
-  ParamOut->Children.back()->Children.back()->Kind =
-      CommentKind::CK_TextComment;
-  ParamOut->Children.back()->Children.emplace_back(
-      std::make_unique<CommentInfo>());
-  ParamOut->Children.back()->Children.back()->Kind =
-      CommentKind::CK_TextComment;
-  ParamOut->Children.back()->Children.back()->Text = " is a parameter.";
+  // ParamOut
+  CommentInfo ParamOutParaChildren[] = {
+      CommentInfo(CommentKind::CK_TextComment),
+      CommentInfo(CommentKind::CK_TextComment, {}, " is a parameter.")};
+  CommentInfo ParamOutPara(CommentKind::CK_ParagraphComment,
+                           ParamOutParaChildren);
+  CommentInfo ParamOutChildren[] = {ParamOutPara};
+  CommentInfo ParamOut(CommentKind::CK_ParamCommandComment, ParamOutChildren,
+                       "", "", "", "[out]", "I", true);
 
-  Top.Children.emplace_back(std::make_unique<CommentInfo>());
-  CommentInfo *ParamIn = Top.Children.back().get();
-  ParamIn->Kind = CommentKind::CK_ParamCommandComment;
-  ParamIn->Direction = "[in]";
-  ParamIn->ParamName = "J";
-  ParamIn->Children.emplace_back(std::make_unique<CommentInfo>());
-  ParamIn->Children.back()->Kind = CommentKind::CK_ParagraphComment;
-  ParamIn->Children.back()->Children.emplace_back(
-      std::make_unique<CommentInfo>());
-  ParamIn->Children.back()->Children.back()->Kind = CommentKind::CK_TextComment;
-  ParamIn->Children.back()->Children.back()->Text = " is a parameter.";
-  ParamIn->Children.back()->Children.emplace_back(
-      std::make_unique<CommentInfo>());
-  ParamIn->Children.back()->Children.back()->Kind = CommentKind::CK_TextComment;
+  // ParamIn
+  CommentInfo ParamInParaChildren[] = {
+      CommentInfo(CommentKind::CK_TextComment, {}, " is a parameter."),
+      CommentInfo(CommentKind::CK_TextComment)};
+  CommentInfo ParamInPara(CommentKind::CK_ParagraphComment,
+                          ParamInParaChildren);
+  CommentInfo ParamInChildren[] = {ParamInPara};
+  CommentInfo ParamIn(CommentKind::CK_ParamCommandComment, ParamInChildren, "",
+                      "", "", "[in]", "J");
 
-  Top.Children.emplace_back(std::make_unique<CommentInfo>());
-  CommentInfo *Return = Top.Children.back().get();
-  Return->Kind = CommentKind::CK_BlockCommandComment;
-  Return->Name = "return";
-  Return->Explicit = true;
-  Return->Children.emplace_back(std::make_unique<CommentInfo>());
-  Return->Children.back()->Kind = CommentKind::CK_ParagraphComment;
-  Return->Children.back()->Children.emplace_back(
-      std::make_unique<CommentInfo>());
-  Return->Children.back()->Children.back()->Kind = CommentKind::CK_TextComment;
-  Return->Children.back()->Children.back()->Text = "void";
+  // Return
+  CommentInfo ReturnParaChildren[] = {
+      CommentInfo(CommentKind::CK_TextComment, {}, "void")};
+  CommentInfo ReturnPara(CommentKind::CK_ParagraphComment, ReturnParaChildren);
+  CommentInfo ReturnChildren[] = {ReturnPara};
+  CommentInfo Return(CommentKind::CK_BlockCommandComment, ReturnChildren, "",
+                     "return", "", "", "", true);
+
+  CommentInfo TopChildren[] = {BlankLine, Brief,    Extended, HTML,
+                               Verbatim,  ParamOut, ParamIn,  Return};
+  CommentInfo Top(CommentKind::CK_FullComment, TopChildren);
 
   F.Description.emplace_back(std::move(Top));
 
-  std::string WriteResult = writeInfo(&F);
+  std::string WriteResult = writeInfo(&F, this->Diags);
   EXPECT_TRUE(WriteResult.size() > 0);
-  std::vector<std::unique_ptr<Info>> ReadResults = readInfo(WriteResult, 1);
+  OwningPtrVec<Info> ReadResults = readInfo(WriteResult, 1, this->Diags);
 
   CheckFunctionInfo(&F, InfoAsFunction(ReadResults[0].get()));
 }

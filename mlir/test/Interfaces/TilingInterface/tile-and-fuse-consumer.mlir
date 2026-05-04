@@ -1,8 +1,8 @@
-// RUN: mlir-opt --transform-interpreter --cse --split-input-file --verify-diagnostics %s | FileCheck %s
+// RUN: mlir-opt --transform-interpreter --cse --split-input-file --verify-diagnostics --mlir-print-local-scope %s | FileCheck %s
 
 #map = affine_map<(d0) -> (d0)>
 module {
-  func.func @fuse_tileable_consumer_scf_for(%arg0: tensor<32xf32>, %arg1: tensor<32xf32>, %arg2: tensor<64xf32>) -> tensor<64xf32> {
+  func.func @fuse_tilable_consumer_scf_for(%arg0: tensor<32xf32>, %arg1: tensor<32xf32>, %arg2: tensor<64xf32>) -> tensor<64xf32> {
     %c4 = arith.constant 4 : index
     %c64 = arith.constant 64 : index
     %c0 = arith.constant 0 : index
@@ -28,14 +28,14 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
     %loop = transform.structured.match ops{["scf.for"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    %yield = transform.structured.match ops{["tensor.insert_slice"]} in %arg1
+    %add = transform.structured.match ops{["linalg.add"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    %a, %b = transform.test.fuse_consumer %yield in (%loop)
+    %a, %new_loop = transform.test.fuse_consumer %add into (%loop)
       : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
     transform.yield
   }
 }
-//      CHECK: func.func @fuse_tileable_consumer_scf_for(
+//      CHECK: func.func @fuse_tilable_consumer_scf_for(
 // CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: tensor<32xf32>
 // CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: tensor<32xf32>
 // CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: tensor<64xf32>)
@@ -60,8 +60,61 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+#map = affine_map<(d0) -> (d0)>
 module {
-  func.func @fuse_tileable_consumer_scf_forall(%arg0: tensor<32x32xf32>, %arg1: tensor<32x32xf32>, %arg2: tensor<64x64xf32>) -> tensor<64x64xf32> {
+  func.func @fuse_tilable_consumer_nested_scf_for(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>, %arg2 : tensor<?x?xf32>,
+      %lb0 : index, %ub0 : index, %step0 : index,
+      %lb1 : index, %ub1 : index, %step1 : index) -> tensor<?x?xf32> {
+    %0 = scf.for %arg3 = %lb0 to %ub0 step %step0 iter_args(%init0 = %arg0) -> tensor<?x?xf32> {
+      %1 = scf.for %arg4 = %lb1 to %ub1 step %step1 iter_args(%init1 = %init0) -> tensor<?x?xf32> {
+        %extracted_slice = tensor.extract_slice %init1[%arg3, %arg4] [%step0, %step1] [1, 1] : tensor<?x?xf32> to tensor<?x?xf32>
+        %2 = tensor.insert_slice %extracted_slice into %init1[%arg3, %arg4] [%step0, %step1] [1, 1] : tensor<?x?xf32> into tensor<?x?xf32>
+        scf.yield %2 : tensor<?x?xf32>
+      }
+      scf.yield %1 : tensor<?x?xf32>
+    }
+    %2 = linalg.add ins(%0, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>) outs(%arg2 : tensor<?x?xf32>) -> tensor<?x?xf32>
+    return %2 : tensor<?x?xf32>
+  }
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
+    %loops = transform.structured.match ops{["scf.for"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %loop0, %loop1 = transform.split_handle %loops
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    %add = transform.structured.match ops{["linalg.add"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %a, %new_loop0, %new_loop1 = transform.test.fuse_consumer %add into (%loop0, %loop1)
+      : (!transform.any_op, !transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+//      CHECK: func @fuse_tilable_consumer_nested_scf_for(
+// CHECK-SAME:     %[[ARG0:[a-zA-Z0-9_]+]]: tensor<?x?xf32>
+// CHECK-SAME:     %[[ARG1:[a-zA-Z0-9_]+]]: tensor<?x?xf32>
+// CHECK-SAME:     %[[ARG2:[a-zA-Z0-9_]+]]: tensor<?x?xf32>
+//      CHECK: %[[OUTER_RESULT:.+]]:2 = scf.for
+// CHECK-SAME:     iter_args(%[[INIT00:[a-zA-Z0-9_]+]] = %[[ARG0]], %[[INIT01:[a-zA-Z0-9_]+]] = %[[ARG2]])
+//      CHECK:   %[[INNER_RESULT:.+]]:2 = scf.for
+// CHECK-SAME:       iter_args(%[[INIT10:[a-zA-Z0-9_]+]] = %[[INIT00]], %[[INIT11:[a-zA-Z0-9_]+]] = %[[INIT01]])
+//  CHECK-DAG:     %[[OPERAND1:.+]] = tensor.extract_slice %[[INIT10]]
+//  CHECK-DAG:     %[[OLD_INSERT_SLICE:.+]] = tensor.insert_slice %[[OPERAND1]] into %[[INIT10]]
+//  CHECK-DAG:     %[[OPERAND2:.+]] = tensor.extract_slice %[[ARG1]]
+//  CHECK-DAG:     %[[INIT:.+]] = tensor.extract_slice %[[INIT11]]
+//      CHECK:     %[[ADD:.+]] = linalg.add
+// CHECK-SAME:         ins(%[[OPERAND1]], %[[OPERAND2]] :
+// CHECK-SAME:         outs(%[[INIT]] :
+//      CHECK:     %[[INSERT_SLICE:.+]] = tensor.insert_slice %[[ADD]] into %[[INIT11]]
+//      CHECK:     scf.yield %[[OLD_INSERT_SLICE]], %[[INSERT_SLICE]]
+//      CHECK:   scf.yield %[[INNER_RESULT]]#0, %[[INNER_RESULT]]#1
+//      CHECK: return %[[OUTER_RESULT]]#1
+
+// -----
+
+module {
+  func.func @fuse_tilable_consumer_scf_forall(%arg0: tensor<32x32xf32>, %arg1: tensor<32x32xf32>, %arg2: tensor<64x64xf32>) -> tensor<64x64xf32> {
     %c4 = arith.constant 4 : index
     %c64 = arith.constant 64 : index
     %c0 = arith.constant 0 : index
@@ -83,19 +136,16 @@ module {
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
-    %slice_ops = transform.structured.match ops{["tensor.parallel_insert_slice"]} in %arg1
+    %add = transform.structured.match ops{["linalg.add"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
     %loop = transform.structured.match ops{["scf.forall"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    %first_slice_op, %second_slice_op = transform.split_handle %slice_ops
-        : (!transform.any_op)
-        -> (!transform.any_op, !transform.any_op)
-    %a, %b = transform.test.fuse_consumer %first_slice_op in (%loop)
+    %a, %new_loop = transform.test.fuse_consumer %add into (%loop)
       : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
     transform.yield
   }
 }
-//      CHECK: func.func @fuse_tileable_consumer_scf_forall(
+//      CHECK: func.func @fuse_tilable_consumer_scf_forall(
 // CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: tensor<32x32xf32>
 // CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: tensor<32x32xf32>
 // CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: tensor<64x64xf32>)
@@ -124,7 +174,7 @@ module attributes {transform.with_named_sequence} {
 
 #map = affine_map<(d0) -> (d0)>
 module {
-  func.func @fuse_tileable_consumer_scf_for_multi_yielding_consumer(%arg0: tensor<32xf32>, %arg1: tensor<32xf32>, %arg2: tensor<64xf32>) -> tensor<64xf32> {
+  func.func @fuse_tilable_consumer_scf_for_multi_yielding_consumer(%arg0: tensor<32xf32>, %arg1: tensor<32xf32>, %arg2: tensor<64xf32>) -> tensor<64xf32> {
     %c4 = arith.constant 4 : index
     %c64 = arith.constant 64 : index
     %c0 = arith.constant 0 : index
@@ -155,16 +205,18 @@ module {
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
-    %yield = transform.structured.match ops{["tensor.insert_slice"]} in %arg1
+    %generics = transform.structured.match ops{["linalg.generic"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
+    %producer, %consumer = transform.split_handle %generics
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
     %loop = transform.structured.match ops{["scf.for"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    %a, %b = transform.test.fuse_consumer %yield in (%loop)
+    %a, %new_loop = transform.test.fuse_consumer %consumer into (%loop)
       : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
     transform.yield
   }
 }
-//      CHECK: func.func @fuse_tileable_consumer_scf_for_multi_yielding_consumer(
+//      CHECK: func.func @fuse_tilable_consumer_scf_for_multi_yielding_consumer(
 // CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: tensor<32xf32>
 // CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: tensor<32xf32>
 // CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: tensor<64xf32>)
@@ -193,7 +245,7 @@ module attributes {transform.with_named_sequence} {
 
 #map = affine_map<(d0, d1) -> (d0, d1)>
 module {
-  func.func @fuse_tileable_consumer_scf_forall_multi_yielding_consumer(%arg0: tensor<32x32xf32>, %arg1: tensor<32x32xf32>, %arg2: tensor<64x64xf32>, %arg3: tensor<64x32xf32>) -> (tensor<64x64xf32>, tensor<2048xf32>) {
+  func.func @fuse_tilable_consumer_scf_forall_multi_yielding_consumer(%arg0: tensor<32x32xf32>, %arg1: tensor<32x32xf32>, %arg2: tensor<64x64xf32>, %arg3: tensor<64x32xf32>) -> (tensor<64x64xf32>, tensor<2048xf32>) {
     %c4 = arith.constant 4 : index
     %c64 = arith.constant 64 : index
     %c0 = arith.constant 0 : index
@@ -224,19 +276,16 @@ module {
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
-    %slice_ops = transform.structured.match ops{["tensor.parallel_insert_slice"]} in %arg1
+    %generic = transform.structured.match ops{["linalg.generic"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
     %loop = transform.structured.match ops{["scf.forall"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    %first_slice_op, %second_slice_op = transform.split_handle %slice_ops
-        : (!transform.any_op)
-        -> (!transform.any_op, !transform.any_op)
-    %a, %b = transform.test.fuse_consumer %first_slice_op in (%loop)
+    %a, %new_loops = transform.test.fuse_consumer %generic into (%loop)
       : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
     transform.yield
   }
 }
-//      CHECK: func.func @fuse_tileable_consumer_scf_forall_multi_yielding_consumer(
+//      CHECK: func.func @fuse_tilable_consumer_scf_forall_multi_yielding_consumer(
 // CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: tensor<32x32xf32>
 // CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: tensor<32x32xf32>
 // CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: tensor<64x64xf32>
@@ -293,17 +342,15 @@ module {
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
-    %slice_op = transform.structured.match ops{["tensor.parallel_insert_slice"]} in %arg1
+    %consumer = transform.structured.match ops{["linalg.unpack"]} in %arg1
     : (!transform.any_op) -> !transform.any_op
     %loop = transform.structured.match ops{["scf.forall"]} in %arg1
     : (!transform.any_op) -> !transform.any_op
-    %a, %b = transform.test.fuse_consumer %slice_op in (%loop)
+    %a, %new_loop = transform.test.fuse_consumer %consumer into (%loop)
     : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
     transform.yield
   }
 }
-//  CHECK-DAG: #[[UNPACK_RESULT_OFFSET_MAP:.*]] = affine_map<(d0) -> (d0 * 32)>
-//  CHECK-DAG: #[[UNPACK_RESULT_SIZE_MAP:.*]] = affine_map<(d0) -> (1024, d0 * -32 + 2048)>
 //      CHECK: func.func @fuse_unpack_consumer_into_scf_forall(
 // CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: tensor<32x32xf32>
 // CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: tensor<32x32xf32>
@@ -315,8 +362,8 @@ module attributes {transform.with_named_sequence} {
 //      CHECK:      %[[GENERIC_OUT_SLICE:.*]] = tensor.extract_slice %[[FIRST_OUT_ARG]][%[[IV1]], %[[IV2]]] [32, 32] [1, 1]
 //      CHECK:      %[[GENERIC_OUT:.*]] = linalg.generic
 // CHECK-SAME:              outs(%[[GENERIC_OUT_SLICE]] :
-//  CHECK-DAG:      %[[UNPACK_RESULT_OFFSET:.*]] = affine.apply #[[UNPACK_RESULT_OFFSET_MAP]](%[[IV1]])
-//  CHECK-DAG:      %[[UNPACK_RESULT_SIZE:.*]] = affine.min #[[UNPACK_RESULT_SIZE_MAP]](%[[IV1]])
+//  CHECK-DAG:      %[[UNPACK_RESULT_OFFSET:.*]] = affine.apply affine_map<(d0) -> (d0 * 32)>(%[[IV1]])
+//  CHECK-DAG:      %[[UNPACK_RESULT_SIZE:.*]] = affine.min affine_map<(d0) -> (1024, d0 * -32 + 2048)>(%[[IV1]])
 //      CHECK:      %[[TILED_UNPACK_DEST:.*]] = tensor.extract_slice %[[UNPACK_OUT_ARG]][%[[UNPACK_RESULT_OFFSET]]] [%[[UNPACK_RESULT_SIZE]]] [1]
 //      CHECK:      %[[TILED_UNPACK_OUT:.*]] = linalg.unpack %[[GENERIC_OUT]]
 // CHECK-SAME:                              outer_dims_perm = [0] inner_dims_pos = [0] inner_tiles = [32]
@@ -356,17 +403,15 @@ module {
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
-    %slice_op = transform.structured.match ops{["tensor.parallel_insert_slice"]} in %arg1
+    %consumer = transform.structured.match ops{["linalg.unpack"]} in %arg1
     : (!transform.any_op) -> !transform.any_op
     %loop = transform.structured.match ops{["scf.forall"]} in %arg1
     : (!transform.any_op) -> !transform.any_op
-    %a, %b = transform.test.fuse_consumer %slice_op in (%loop)
+    %a, %new_loop = transform.test.fuse_consumer %consumer into (%loop)
     : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
     transform.yield
   }
 }
-//  CHECK-DAG: #[[UNPACK_RESULT_OFFSET_MAP:.*]] = affine_map<(d0) -> (d0 * 32)>
-//  CHECK-DAG: #[[UNPACK_RESULT_SIZE_MAP:.*]] = affine_map<(d0) -> (1024, d0 * -32 + 2047)>
 //      CHECK: func.func @fuse_unaligned_unpack_consumer_into_scf_forall(
 // CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: tensor<32x32xf32>
 // CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: tensor<32x32xf32>
@@ -378,8 +423,8 @@ module attributes {transform.with_named_sequence} {
 //      CHECK:      %[[GENERIC_OUT_SLICE:.*]] = tensor.extract_slice %[[FIRST_OUT_ARG]][%[[IV1]], %[[IV2]]] [32, 32] [1, 1]
 //      CHECK:      %[[GENERIC_OUT:.*]] = linalg.generic
 // CHECK-SAME:              outs(%[[GENERIC_OUT_SLICE]] :
-//  CHECK-DAG:      %[[UNPACK_RESULT_OFFSET:.*]] = affine.apply #[[UNPACK_RESULT_OFFSET_MAP]](%[[IV1]])
-//  CHECK-DAG:      %[[UNPACK_RESULT_SIZE:.*]] = affine.min #[[UNPACK_RESULT_SIZE_MAP]](%[[IV1]])
+//  CHECK-DAG:      %[[UNPACK_RESULT_OFFSET:.*]] = affine.apply affine_map<(d0) -> (d0 * 32)>(%[[IV1]])
+//  CHECK-DAG:      %[[UNPACK_RESULT_SIZE:.*]] = affine.min affine_map<(d0) -> (1024, d0 * -32 + 2047)>(%[[IV1]])
 //      CHECK:      %[[TILED_UNPACK_DEST:.*]] = tensor.extract_slice %[[UNPACK_OUT_ARG]][%[[UNPACK_RESULT_OFFSET]]] [%[[UNPACK_RESULT_SIZE]]] [1]
 //      CHECK:      %[[TILED_UNPACK_OUT:.*]] = linalg.unpack %[[GENERIC_OUT]]
 // CHECK-SAME:                              outer_dims_perm = [0] inner_dims_pos = [0] inner_tiles = [32]
@@ -419,16 +464,15 @@ module {
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
-    %slice_op = transform.structured.match ops{["tensor.parallel_insert_slice"]} in %arg1
+    %consumer = transform.structured.match ops{["linalg.pack"]} in %arg1
     : (!transform.any_op) -> !transform.any_op
     %loop = transform.structured.match ops{["scf.forall"]} in %arg1
     : (!transform.any_op) -> !transform.any_op
-    %a, %b = transform.test.fuse_consumer %slice_op in (%loop)
+    %a, %new_loop = transform.test.fuse_consumer %consumer into (%loop)
     : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
     transform.yield
   }
 }
-//      CHECK: #[[PACK_RESULT_MAP:.*]] = affine_map<(d0) -> (d0 floordiv 16)>
 //      CHECK: func.func @fuse_perfect_tiling_pack_consumer(
 // CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: tensor<32x32xf32>
 // CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: tensor<32x32xf32>
@@ -440,7 +484,7 @@ module attributes {transform.with_named_sequence} {
 //      CHECK:      %[[GENERIC_OUT_SLICE:.*]] = tensor.extract_slice %[[FIRST_OUT_ARG]][%[[IV1]], %[[IV2]]] [32, 32] [1, 1]
 //      CHECK:      %[[GENERIC_OUT:.*]] = linalg.generic
 // CHECK-SAME:              outs(%[[GENERIC_OUT_SLICE]] :
-//      CHECK:      %[[PACK_RESULT_OFFSET:.*]] = affine.apply #[[PACK_RESULT_MAP]](%[[IV1]])
+//      CHECK:      %[[PACK_RESULT_OFFSET:.*]] = affine.apply affine_map<(d0) -> (d0 floordiv 16)>(%[[IV1]])
 //      CHECK:      %[[TILED_PACK_DEST:.*]] = tensor.extract_slice %[[PACK_OUT_ARG]][%[[PACK_RESULT_OFFSET]], %[[IV2]], 0] [2, 32, 16] [1, 1, 1]
 //      CHECK:      %[[TILED_PACK_OUT:.*]] = linalg.pack %[[GENERIC_OUT]]
 // CHECK-SAME:                              inner_dims_pos = [0] inner_tiles = [16]
@@ -471,13 +515,12 @@ func.func @fuse_pack_consumer_if_single_iteration(%arg0: tensor<4x4xf32>) -> ten
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
-    %0 = transform.structured.match ops{["tensor.parallel_insert_slice"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    %consumer = transform.structured.match ops{["linalg.pack"]} in %arg0 : (!transform.any_op) -> !transform.any_op
     %1 = transform.structured.match ops{["scf.forall"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-    %consumer, %fused_consumer = transform.test.fuse_consumer %0 in(%1) : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
+    %fused_consumer, %new_loop = transform.test.fuse_consumer %consumer into(%1) : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
     transform.yield
   }
 }
-//      CHECK: #[[MAP:.*]] = affine_map<(d0) -> (-d0 + 4, 16)>
 //      CHECK: func.func @fuse_pack_consumer_if_single_iteration(
 // CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]
 //  CHECK-DAG:   %[[PACK_INIT:.*]] = tensor.empty() : tensor<1x4x16x1xf32>
@@ -485,7 +528,7 @@ module attributes {transform.with_named_sequence} {
 //  CHECK-DAG:   %[[PAD_VAL:.*]] = arith.constant 0.000000e+00 : f32
 //      CHECK:   %{{.*}}:2 = scf.forall (%[[IV:.*]]) = (0) to (4) step (16)
 // CHECK-SAME:      shared_outs(%[[ELEM_OUT_ARG:.*]] = %[[ELEM_INIT]], %[[PACK_OUT_ARG:.*]] = %[[PACK_INIT]])
-//  CHECK-DAG:      %[[SIZE:.+]] = affine.min #[[MAP]](%[[IV]])
+//  CHECK-DAG:      %[[SIZE:.+]] = affine.min affine_map<(d0) -> (-d0 + 4, 16)>(%[[IV]])
 //  CHECK-DAG:      %[[ELEM_SRC:.*]] = tensor.extract_slice %[[ARG0]][%[[IV]], 0] [%[[SIZE]], 4] [1, 1]
 //  CHECK-DAG:      %[[ELEM_DEST:.*]] = tensor.extract_slice %[[ELEM_OUT_ARG]][%[[IV]], 0] [%[[SIZE]], 4] [1, 1]
 //      CHECK:      %[[ELEM:.*]] = linalg.exp
@@ -517,13 +560,12 @@ func.func @fuse_perfect_tiling_pack_consumer_with_outer_dims_perm(%arg0: tensor<
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
-    %0 = transform.structured.match ops{["tensor.parallel_insert_slice"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    %0 = transform.structured.match ops{["linalg.pack"]} in %arg0 : (!transform.any_op) -> !transform.any_op
     %1 = transform.structured.match ops{["scf.forall"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-    %consumer, %fused_consumer = transform.test.fuse_consumer %0 in(%1) : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
+    %fused_consumer, %new_loop = transform.test.fuse_consumer %0 into(%1) : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
     transform.yield
   }
 }
-//      CHECK: #[[PACK_RESULT_MAP:.*]] = affine_map<(d0) -> (d0 floordiv 16)>
 //      CHECK: func.func @fuse_perfect_tiling_pack_consumer_with_outer_dims_perm(
 // CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]
 // CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]
@@ -535,7 +577,7 @@ module attributes {transform.with_named_sequence} {
 //      CHECK:      %[[ELEM:.*]] = linalg.exp
 // CHECK-SAME:        ins(%[[ELEM_SRC]]
 // CHECK-SAME:        outs(%[[ELEM_DEST]]
-//  CHECK-DAG:      %[[PACK_RESULT_OFFSET:.*]] = affine.apply #[[PACK_RESULT_MAP]](%[[IV]])
+//  CHECK-DAG:      %[[PACK_RESULT_OFFSET:.*]] = affine.apply affine_map<(d0) -> (d0 floordiv 16)>(%[[IV]])
 //  CHECK-DAG:      %[[TILED_PACK_DEST:.*]] = tensor.extract_slice %[[PACK_OUT_ARG]][%[[PACK_RESULT_OFFSET]], 0, 0, 0] [1, 64, 16, 1] [1, 1, 1, 1]
 //      CHECK:      %[[PACK:.*]] = linalg.pack %[[ELEM]]
 // CHECK-SAME:        outer_dims_perm = [1, 0] inner_dims_pos = [1, 0] inner_tiles = [16, 1]
@@ -566,13 +608,12 @@ func.func @fuse_pack_consumer_with_no_pad_dynamic_dim(%arg0: tensor<64x?xf32>, %
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
-    %0 = transform.structured.match ops{["tensor.parallel_insert_slice"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    %0 = transform.structured.match ops{["linalg.pack"]} in %arg0 : (!transform.any_op) -> !transform.any_op
     %1 = transform.structured.match ops{["scf.forall"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-    %consumer, %fused_consumer = transform.test.fuse_consumer %0 in(%1) : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
+    %fused_consumer, %new_loop = transform.test.fuse_consumer %0 into(%1) : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
     transform.yield
   }
 }
-//      CHECK: #[[PACK_RESULT_MAP:.*]] = affine_map<(d0) -> (d0 floordiv 16)>
 //      CHECK: func.func @fuse_pack_consumer_with_no_pad_dynamic_dim(
 // CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]
 // CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]
@@ -584,7 +625,7 @@ module attributes {transform.with_named_sequence} {
 //      CHECK:      %[[ELEM:.*]] = linalg.exp
 // CHECK-SAME:        ins(%[[ELEM_SRC]]
 // CHECK-SAME:        outs(%[[ELEM_DEST]]
-//  CHECK-DAG:      %[[PACK_RESULT_OFFSET:.*]] = affine.apply #[[PACK_RESULT_MAP]](%[[IV]])
+//  CHECK-DAG:      %[[PACK_RESULT_OFFSET:.*]] = affine.apply affine_map<(d0) -> (d0 floordiv 16)>(%[[IV]])
 //  CHECK-DAG:      %[[TILED_PACK_DEST:.*]] = tensor.extract_slice %[[PACK_OUT_ARG]][0, %[[PACK_RESULT_OFFSET]], 0] [64, 1, 16] [1, 1, 1]
 //      CHECK:      %[[PACK:.*]] = linalg.pack %[[ELEM]]
 // CHECK-SAME:        inner_dims_pos = [1] inner_tiles = [16]
@@ -616,16 +657,12 @@ func.func @fuse_pack_consumer_with_padding_semantics(%arg0: tensor<64x32xf32>, %
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
-    %0 = transform.structured.match ops{["tensor.parallel_insert_slice"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    %0 = transform.structured.match ops{["linalg.pack"]} in %arg0 : (!transform.any_op) -> !transform.any_op
     %1 = transform.structured.match ops{["scf.forall"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-    %consumer, %fused_consumer = transform.test.fuse_consumer %0 in(%1) : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
+    %fused_consumer, %new_loop = transform.test.fuse_consumer %0 into(%1) : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
     transform.yield
   }
 }
-//  CHECK-DAG: #[[MAP0:.*]] = affine_map<(d0) -> (-d0 + 64, 15)>
-//  CHECK-DAG: #[[MAP1:.*]] = affine_map<(d0) -> (d0 floordiv 3)>
-//  CHECK-DAG: #[[MAP2:.*]] = affine_map<(d0) -> (d0 ceildiv 3)>
-//  CHECK-DAG: #[[MAP3:.*]] = affine_map<(d0) -> (d0 floordiv 16)>
 //      CHECK: func.func @fuse_pack_consumer_with_padding_semantics(
 // CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]
 // CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]
@@ -633,7 +670,7 @@ module attributes {transform.with_named_sequence} {
 //  CHECK-DAG:   %[[PAD_VAL:.*]] = arith.constant 0.000000e+00 : f32
 //      CHECK:   %{{.*}}:2 = scf.forall (%[[I:.*]], %[[J:.*]]) = (0, 0) to (64, 32) step (15, 16)
 // CHECK-SAME:      shared_outs(%[[ELEM_OUT:.*]] = %[[ARG1]], %[[PACK_OUT:.*]] = %[[OUT_INIT]])
-//      CHECK:      %[[SIZE:.+]] = affine.min #[[MAP0]](%[[I]])
+//      CHECK:      %[[SIZE:.+]] = affine.min affine_map<(d0) -> (-d0 + 64, 15)>(%[[I]])
 //      CHECK:      %[[ELEM_SRC:.*]] = tensor.extract_slice %[[ARG0]]
 // CHECK-SAME:        [%[[I]], %[[J]]] [%[[SIZE]], 16] [1, 1]
 //      CHECK:      %[[ELEM_DEST:.*]] = tensor.extract_slice %[[ELEM_OUT]]
@@ -641,9 +678,9 @@ module attributes {transform.with_named_sequence} {
 //      CHECK:      %[[ELEM:.*]] = linalg.exp
 // CHECK-SAME:        ins(%[[ELEM_SRC]]
 // CHECK-SAME:        outs(%[[ELEM_DEST]]
-//  CHECK-DAG:      %[[D0_OFFSET:.*]] = affine.apply #[[MAP1]](%[[I]])
-//  CHECK-DAG:      %[[D0_SIZE:.*]] = affine.apply #[[MAP2]](%[[SIZE]])
-//  CHECK-DAG:      %[[D1_OFFSET:.*]] = affine.apply #[[MAP3]](%[[J]])
+//  CHECK-DAG:      %[[D0_OFFSET:.*]] = affine.apply affine_map<(d0) -> (d0 floordiv 3)>(%[[I]])
+//  CHECK-DAG:      %[[D0_SIZE:.*]] = affine.apply affine_map<(d0) -> (d0 ceildiv 3)>(%[[SIZE]])
+//  CHECK-DAG:      %[[D1_OFFSET:.*]] = affine.apply affine_map<(d0) -> (d0 floordiv 16)>(%[[J]])
 //  CHECK-DAG:      %[[PACK_INIT:.*]] = tensor.extract_slice %[[PACK_OUT]]
 // CHECK-SAME:        [%[[D0_OFFSET]], %[[D1_OFFSET]], 0, 0] [%[[D0_SIZE]], 1, 3, 16] [1, 1, 1, 1]
 //      CHECK:      %[[PACK:.*]] = linalg.pack %[[ELEM]]
@@ -674,20 +711,21 @@ func.func @nofuse_pack_with_imperfect_tiling(%arg0: tensor<30xf32>) -> tensor<5x
       linalg.yield %5 : f32
     } -> tensor<5xf32>
     scf.forall.in_parallel {
-      // expected-error @below {{failed to fuse consumer of slice}}
+      
       tensor.parallel_insert_slice %4 into %arg2[%3] [5] [1] : tensor<5xf32> into tensor<30xf32>
     }
   }
   %2 = tensor.empty() : tensor<5x6xf32>
+  // expected-error @below {{failed to fuse consumer of slice}}
   %pack = linalg.pack %1 outer_dims_perm = [0] inner_dims_pos = [0] inner_tiles = [6] into %2 : tensor<30xf32> -> tensor<5x6xf32>
   return %pack : tensor<5x6xf32>
 }
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
-    %0 = transform.structured.match ops{["tensor.parallel_insert_slice"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    %0 = transform.structured.match ops{["linalg.pack"]} in %arg0 : (!transform.any_op) -> !transform.any_op
     %1 = transform.structured.match ops{["scf.forall"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-    %consumer, %fused_consumer = transform.test.fuse_consumer %0 in(%1) : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
+    %fused_consumer, %new_loop = transform.test.fuse_consumer %0 into(%1) : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
     transform.yield
   }
 }
@@ -717,11 +755,15 @@ module {
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
-    %slice_op = transform.structured.match ops{["tensor.insert_slice"]} in %arg1
+    %mulop = transform.structured.match ops{["linalg.mul"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
     %loop = transform.structured.match ops{["scf.for"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    %a, %b = transform.test.fuse_consumer %slice_op in (%loop) num_consumer_to_fuse = 2
+    %fused_consumer, %new_loop = transform.test.fuse_consumer %mulop into (%loop)
+      : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
+    %expop = transform.structured.match ops{["linalg.exp"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %fused_consumer_2, %new_loop_2 = transform.test.fuse_consumer %expop into (%new_loop)
       : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -741,64 +783,20 @@ module attributes {transform.with_named_sequence} {
 // CHECK-SAME:                ins(%[[ADD_INS0_SLICE]], %[[ADD_INS1_SLICE]] :
 // CHECK-SAME:                outs(%[[ADD_OUT_SLICE]] :
 //      CHECK:          %[[INSERT_ADD:.*]] = tensor.insert_slice %[[TILED_ADD_OUT]] into %[[FIRST_OUT_ARG]][%[[IV1]], 0] [64, 256] [1, 1]
-//      CHECK:          %[[EXP_OUT_SLICE:.*]] = tensor.extract_slice %[[SECOND_OUT_ARG]][%[[IV1]], 0] [64, 256] [1, 1]
-//      CHECK:          %[[TILED_EXP_OUT:.*]] = linalg.exp
-// CHECK-SAME:                ins(%[[TILED_ADD_OUT]] :
-// CHECK-SAME:                outs(%[[EXP_OUT_SLICE]] :
 //      CHECK:          %[[MUL_INS2_SLICE:.*]] = tensor.extract_slice %[[ARG2]][%[[IV1]], 0] [64, 256] [1, 1]
-//      CHECK:          %[[MUL_OUT_SLICE:.*]] = tensor.extract_slice %[[THIRD_OUT_ARG]][%[[IV1]], 0] [64, 256] [1, 1]
+//      CHECK:          %[[MUL_OUT_SLICE:.*]] = tensor.extract_slice %[[SECOND_OUT_ARG]][%[[IV1]], 0] [64, 256] [1, 1]
 //      CHECK:          %[[TILED_MUL_OUT:.*]] = linalg.mul
 // CHECK-SAME:                ins(%[[TILED_ADD_OUT]], %[[MUL_INS2_SLICE]] :
 // CHECK-SAME:                outs(%[[MUL_OUT_SLICE]] :
-//      CHECK:          %[[INSERT_EXP:.*]] = tensor.insert_slice %[[TILED_EXP_OUT]] into %[[SECOND_OUT_ARG]][%[[IV1]], 0] [64, 256] [1, 1]
-//      CHECK:          %[[INSERT_MUL:.*]] = tensor.insert_slice %[[TILED_MUL_OUT]] into %[[THIRD_OUT_ARG]][%[[IV1]], 0] [64, 256] [1, 1]
-//      CHECK:          scf.yield %[[INSERT_ADD]], %[[INSERT_EXP]], %[[INSERT_MUL]] :
+//      CHECK:          %[[EXP_OUT_SLICE:.*]] = tensor.extract_slice %[[THIRD_OUT_ARG]][%[[IV1]], 0] [64, 256] [1, 1]
+//      CHECK:          %[[TILED_EXP_OUT:.*]] = linalg.exp
+// CHECK-SAME:                ins(%[[TILED_ADD_OUT]] :
+// CHECK-SAME:                outs(%[[EXP_OUT_SLICE]] :
+//      CHECK:          %[[INSERT_MUL:.*]] = tensor.insert_slice %[[TILED_MUL_OUT]] into %[[SECOND_OUT_ARG]][%[[IV1]], 0] [64, 256] [1, 1]
+//      CHECK:          %[[INSERT_EXP:.*]] = tensor.insert_slice %[[TILED_EXP_OUT]] into %[[THIRD_OUT_ARG]][%[[IV1]], 0] [64, 256] [1, 1]
+//      CHECK:          scf.yield %[[INSERT_ADD]], %[[INSERT_MUL]], %[[INSERT_EXP]] :
 //      CHECK:   }
-//      CHECK:   return %[[LOOP_RESULT]]#2, %[[LOOP_RESULT]]#1 :
-
-// -----
-
-module {
-  func.func @no_fuse_only_dps_consumer(%arg0: tensor<256x256xf32>, %arg1: tensor<256x256xf32>, %arg2: tensor<256x256xf32>) -> (tensor<256x256xf32>, tensor<258x258xf32>) {
-    %c0 = arith.constant 0 : index
-    %c64 = arith.constant 64 : index
-    %c256 = arith.constant 256 : index
-    %cst = arith.constant 0.000000e+00 : f32
-    %dest0 = tensor.empty() : tensor<256x256xf32>
-    %1 = scf.for %arg3 = %c0 to %c256 step %c64 iter_args(%arg4 = %dest0) -> (tensor<256x256xf32>) {
-        %extracted_slice_1 = tensor.extract_slice %arg4[%arg3, 0] [64, 256] [1, 1] : tensor<256x256xf32> to tensor<64x256xf32>
-        %extracted_slice_2 = tensor.extract_slice %arg0[%arg3, 0] [64, 256] [1, 1] : tensor<256x256xf32> to tensor<64x256xf32>
-        %extracted_slice_3 = tensor.extract_slice %arg1[%arg3, 0] [64, 256] [1, 1] : tensor<256x256xf32> to tensor<64x256xf32>
-        %3 = linalg.add ins(%extracted_slice_2, %extracted_slice_3 : tensor<64x256xf32>, tensor<64x256xf32>) outs(%extracted_slice_1 : tensor<64x256xf32>) -> tensor<64x256xf32>
-        %insert_slice = tensor.insert_slice %3 into %arg4[%arg3, 0] [64, 256] [1, 1] : tensor<64x256xf32> into tensor<256x256xf32>
-        scf.yield %insert_slice : tensor<256x256xf32>
-    }
-    %dest1 = tensor.empty() : tensor<258x258xf32>
-    %4 = tensor.insert_slice %1 into %dest1[0, 0] [256, 256] [1, 1] : tensor<256x256xf32> into tensor<258x258xf32>
-    %5 = linalg.mul ins(%1, %arg2 : tensor<256x256xf32>, tensor<256x256xf32>) outs(%dest0 : tensor<256x256xf32>) -> tensor<256x256xf32>
-    return %5, %4 : tensor<256x256xf32>, tensor<258x258xf32>
-  }
-}
-
-module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
-    %slice_ops = transform.structured.match ops{["tensor.insert_slice"]} in %arg1
-      : (!transform.any_op) -> !transform.any_op
-    %loop = transform.structured.match ops{["scf.for"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %slice_op, %other_slice = transform.split_handle %slice_ops : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
-    %a, %b = transform.test.fuse_consumer %slice_op in (%loop) num_consumer_to_fuse = 1
-      : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
-    transform.yield
-  }
-}
-//      CHECK: func.func @no_fuse_only_dps_consumer(
-//      CHECK:   %[[LOOP_RESULT:.*]]:2 = scf.for {{.*}} {
-//      CHECK:     linalg.add
-//      CHECK:     linalg.mul
-//      CHECK:     scf.yield
-//      CHECK:   }
-//      CHECK:   %[[RES_SLICE:.+]] = tensor.insert_slice
-//      CHECK:   return %[[LOOP_RESULT]]#1, %[[RES_SLICE]]
+//      CHECK:   return %[[LOOP_RESULT]]#1, %[[LOOP_RESULT]]#2 :
 
 // -----
 
@@ -829,40 +827,41 @@ module {
   }
 }
 
-// CHECK: func.func @fuse_with_tilable_consumer_with_projected_permutations(%[[VAL_0:.*]]: tensor<256x256xf32>, %[[VAL_1:.*]]: tensor<256x256xf32>, %[[VAL_2:.*]]: tensor<24xf32>) -> tensor<256x256x24xf32> {
-// CHECK:             %[[VAL_3:.*]] = arith.constant 0 : index
-// CHECK:             %[[VAL_4:.*]] = arith.constant 64 : index
-// CHECK:             %[[VAL_5:.*]] = arith.constant 256 : index
-// CHECK:             %[[VAL_6:.*]] = tensor.empty() : tensor<256x256xf32>
-// CHECK:             %[[VAL_7:.*]] = tensor.empty() : tensor<256x256x24xf32>
-// CHECK:             %[[VAL_8:.*]]:2 = scf.for %[[VAL_9:.*]] = %[[VAL_3]] to %[[VAL_5]] step %[[VAL_4]] iter_args(%[[VAL_10:.*]] = %[[VAL_6]], %[[VAL_11:.*]] = %[[VAL_7]]) -> (tensor<256x256xf32>, tensor<256x256x24xf32>) {
-// CHECK:               %[[VAL_12:.*]] = tensor.extract_slice %[[VAL_10]]{{\[}}%[[VAL_9]], 0] [64, 256] [1, 1]
-// CHECK:               %[[VAL_13:.*]] = tensor.extract_slice %[[VAL_0]]{{\[}}%[[VAL_9]], 0] [64, 256] [1, 1]
-// CHECK:               %[[VAL_14:.*]] = tensor.extract_slice %[[VAL_1]]{{\[}}%[[VAL_9]], 0] [64, 256] [1, 1]
-// CHECK:               %[[VAL_15:.*]] = linalg.add ins(%[[VAL_13]], %[[VAL_14]] : tensor<64x256xf32>, tensor<64x256xf32>) outs(%[[VAL_12]] : tensor<64x256xf32>) -> tensor<64x256xf32>
-// CHECK:               %[[VAL_16:.*]] = tensor.insert_slice %[[VAL_15]] into %[[VAL_10]]{{\[}}%[[VAL_9]], 0] [64, 256] [1, 1]
-// CHECK:               %[[VAL_17:.*]] = tensor.extract_slice %[[VAL_2]][0] [24] [1] : tensor<24xf32> to tensor<24xf32>
-// CHECK:               %[[VAL_18:.*]] = tensor.extract_slice %[[VAL_11]]{{\[}}%[[VAL_9]], 0, 0] [64, 256, 24] [1, 1, 1]
-// CHECK:               %[[VAL_19:.*]] = linalg.generic {indexing_maps = [#map, #map1, #map2], iterator_types = ["parallel", "parallel", "parallel"]} ins(%[[VAL_15]], %[[VAL_17]] : tensor<64x256xf32>, tensor<24xf32>) outs(%[[VAL_18]] : tensor<64x256x24xf32>) {
-// CHECK:               ^bb0(%[[VAL_20:.*]]: f32, %[[VAL_21:.*]]: f32, %[[VAL_22:.*]]: f32):
-// CHECK:                 %[[VAL_23:.*]] = arith.addf %[[VAL_20]], %[[VAL_21]] : f32
-// CHECK:                 linalg.yield %[[VAL_23]] : f32
-// CHECK:               } -> tensor<64x256x24xf32>
-// CHECK:               %[[VAL_24:.*]] = tensor.insert_slice %[[VAL_25:.*]] into %[[VAL_11]]{{\[}}%[[VAL_9]], 0, 0] [64, 256, 24] [1, 1, 1]
-// CHECK:               scf.yield %[[VAL_16]], %[[VAL_24]] : tensor<256x256xf32>, tensor<256x256x24xf32>
-// CHECK:             }
-
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
-    %slice_op = transform.structured.match ops{["tensor.insert_slice"]} in %arg1
+    %consumer = transform.structured.match ops{["linalg.generic"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
     %loop = transform.structured.match ops{["scf.for"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    %a, %b = transform.test.fuse_consumer %slice_op in (%loop) num_consumer_to_fuse = 1
+    %a, %b = transform.test.fuse_consumer %consumer into (%loop)
       : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
     transform.yield
   }
 }
+//      CHECK: func.func @fuse_with_tilable_consumer_with_projected_permutations(
+// CHECK-SAME:     %[[VAL_0:.*]]: tensor<256x256xf32>, %[[VAL_1:.*]]: tensor<256x256xf32>, %[[VAL_2:.*]]: tensor<24xf32>) -> tensor<256x256x24xf32> {
+//      CHECK:   %[[VAL_3:.*]] = arith.constant 0 : index
+//      CHECK:   %[[VAL_4:.*]] = arith.constant 64 : index
+//      CHECK:   %[[VAL_5:.*]] = arith.constant 256 : index
+//      CHECK:   %[[VAL_6:.*]] = tensor.empty() : tensor<256x256xf32>
+//      CHECK:   %[[VAL_7:.*]] = tensor.empty() : tensor<256x256x24xf32>
+//      CHECK:   %[[VAL_8:.*]]:2 = scf.for %[[VAL_9:.*]] = %[[VAL_3]] to %[[VAL_5]] step %[[VAL_4]] iter_args(%[[VAL_10:.*]] = %[[VAL_6]], %[[VAL_11:.*]] = %[[VAL_7]]) -> (tensor<256x256xf32>, tensor<256x256x24xf32>) {
+//      CHECK:     %[[VAL_12:.*]] = tensor.extract_slice %[[VAL_10]]{{\[}}%[[VAL_9]], 0] [64, 256] [1, 1]
+//      CHECK:     %[[VAL_13:.*]] = tensor.extract_slice %[[VAL_0]]{{\[}}%[[VAL_9]], 0] [64, 256] [1, 1]
+//      CHECK:     %[[VAL_14:.*]] = tensor.extract_slice %[[VAL_1]]{{\[}}%[[VAL_9]], 0] [64, 256] [1, 1]
+//      CHECK:     %[[VAL_15:.*]] = linalg.add ins(%[[VAL_13]], %[[VAL_14]] : tensor<64x256xf32>, tensor<64x256xf32>) outs(%[[VAL_12]] : tensor<64x256xf32>) -> tensor<64x256xf32>
+//      CHECK:     %[[VAL_16:.*]] = tensor.insert_slice %[[VAL_15]] into %[[VAL_10]]{{\[}}%[[VAL_9]], 0] [64, 256] [1, 1]
+//      CHECK:     %[[VAL_17:.*]] = tensor.extract_slice %[[VAL_2]][0] [24] [1] : tensor<24xf32> to tensor<24xf32>
+//      CHECK:     %[[VAL_18:.*]] = tensor.extract_slice %[[VAL_11]]{{\[}}%[[VAL_9]], 0, 0] [64, 256, 24] [1, 1, 1]
+//      CHECK:     %[[VAL_19:.*]] = linalg.generic
+// CHECK-SAME:         ins(%[[VAL_15]], %[[VAL_17]] : tensor<64x256xf32>, tensor<24xf32>) outs(%[[VAL_18]] : tensor<64x256x24xf32>) {
+//      CHECK:     ^bb0(%[[VAL_20:.*]]: f32, %[[VAL_21:.*]]: f32, %[[VAL_22:.*]]: f32):
+//      CHECK:       %[[VAL_23:.*]] = arith.addf %[[VAL_20]], %[[VAL_21]] : f32
+//      CHECK:       linalg.yield %[[VAL_23]] : f32
+//      CHECK:     } -> tensor<64x256x24xf32>
+//      CHECK:     %[[VAL_24:.*]] = tensor.insert_slice %[[VAL_25:.*]] into %[[VAL_11]]{{\[}}%[[VAL_9]], 0, 0] [64, 256, 24] [1, 1, 1]
+//      CHECK:     scf.yield %[[VAL_16]], %[[VAL_24]] : tensor<256x256xf32>, tensor<256x256x24xf32>
+//      CHECK:   }
 
 // -----
 
@@ -878,12 +877,12 @@ func.func @multi_slice_fusion1(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?xf32>, %
     %init1_slice = tensor.extract_slice %init1[%iv0] [%tilesize] [1] : tensor<?xf32> to tensor<?xf32>
     %generic:2 = linalg.generic {
         indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d0)>, affine_map<(d0, d1) -> (d0)>],
-	iterator_types = ["parallel", "reduction"]}
-	ins(%arg0_slice : tensor<?x?xf32>) outs(%init0_slice, %init1_slice : tensor<?xf32>, tensor<?xf32>) {
+      	iterator_types = ["parallel", "reduction"]}
+	      ins(%arg0_slice : tensor<?x?xf32>) outs(%init0_slice, %init1_slice : tensor<?xf32>, tensor<?xf32>) {
       ^bb0(%b0 : f32, %b1 : f32, %b2 : f32):
         %0 = arith.mulf %b0, %b1 : f32
-	%1 = arith.addf %b0, %b2 : f32
-	linalg.yield %0, %1 : f32, f32
+	      %1 = arith.addf %b0, %b2 : f32
+	      linalg.yield %0, %1 : f32, f32
     } -> (tensor<?xf32>, tensor<?xf32>)
     scf.forall.in_parallel {
       tensor.parallel_insert_slice %generic#0 into %init0[%iv0] [%tilesize] [1] : tensor<?xf32> into tensor<?xf32>
@@ -901,6 +900,19 @@ func.func @multi_slice_fusion1(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?xf32>, %
   } -> tensor<?xf32>
   return %result : tensor<?xf32>
 }
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
+    %generics = transform.structured.match ops{["linalg.generic"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %loop = transform.structured.match ops{["scf.forall"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %producer, %consumer = transform.split_handle %generics : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    %a, %b = transform.test.fuse_consumer %consumer into (%loop)
+      : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
 // CHECK-LABEL: func @multi_slice_fusion1(
 //  CHECK-SAME:     %[[ARG0:.+]]: tensor<?x?xf32>
 //       CHECK:   %[[C0:.+]] = arith.constant 0
@@ -916,22 +928,8 @@ func.func @multi_slice_fusion1(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?xf32>, %
 //       CHECK:     tensor.parallel_insert_slice %[[FUSED]] into %[[INIT]][%[[IV]]] [%[[TILESIZE]]]
 //       CHECK:   return %[[RESULT]]#2
 
-module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
-    %loop = transform.structured.match ops{["scf.forall"]} in %arg1
-      : (!transform.any_op) -> !transform.any_op
-    %yield = transform.structured.match ops{["tensor.parallel_insert_slice"]} in %arg1
-      : (!transform.any_op) -> !transform.any_op
-    %yield0, %yield1 = transform.split_handle %yield : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
-    %a, %b = transform.test.fuse_consumer %yield0, %yield1 in (%loop)
-      : (!transform.any_op, !transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
-    transform.yield
-  }
-}
 
 // -----
-
-// Check that when the given operand tiles are inconsistent, tiling fails.
 
 func.func @multi_slice_fusion2(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?xf32>, %arg2 : tensor<?xf32>, %arg3 : index) -> tensor<?xf32> {
   %c0 = arith.constant 0 : index
@@ -944,20 +942,20 @@ func.func @multi_slice_fusion2(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?xf32>, %
     %init0_slice = tensor.extract_slice %init0[%iv0] [%tilesize] [1] : tensor<?xf32> to tensor<?xf32>
     %generic0 = linalg.generic {
         indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d0)>],
-	iterator_types = ["parallel", "reduction"]}
-	ins(%arg0_slice : tensor<?x?xf32>) outs(%init0_slice : tensor<?xf32>) {
+      	iterator_types = ["parallel", "reduction"]}
+	      ins(%arg0_slice : tensor<?x?xf32>) outs(%init0_slice : tensor<?xf32>) {
       ^bb0(%b0 : f32, %b1 : f32):
         %0 = arith.mulf %b0, %b1 : f32
-	linalg.yield %0 : f32
+	      linalg.yield %0 : f32
     } -> tensor<?xf32>
     %init1_slice = tensor.extract_slice %init1[%iv0] [%tilesize] [1] : tensor<?xf32> to tensor<?xf32>
     %generic1 = linalg.generic {
         indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d0)>],
-	iterator_types = ["parallel", "reduction"]}
-	ins(%arg0_slice : tensor<?x?xf32>) outs(%init1_slice: tensor<?xf32>) {
+	      iterator_types = ["parallel", "reduction"]}
+	      ins(%arg0_slice : tensor<?x?xf32>) outs(%init1_slice: tensor<?xf32>) {
       ^bb0(%b0 : f32, %b1 : f32):
-	%0 = arith.addf %b0, %b1 : f32
-	linalg.yield %0: f32
+	      %0 = arith.addf %b0, %b1 : f32
+       	linalg.yield %0: f32
     } -> tensor<?xf32>
     scf.forall.in_parallel {
       tensor.parallel_insert_slice %generic0 into %init0[%iv0] [%tilesize] [1] : tensor<?xf32> into tensor<?xf32>
@@ -975,6 +973,19 @@ func.func @multi_slice_fusion2(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?xf32>, %
   } -> tensor<?xf32>
   return %result : tensor<?xf32>
 }
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
+    %loop = transform.structured.match ops{["scf.forall"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %generics = transform.structured.match ops{["linalg.generic"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %producer1, %producer2, %consumer = transform.split_handle %generics : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    %a, %b = transform.test.fuse_consumer %consumer into (%loop)
+      : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
 // CHECK-LABEL: func @multi_slice_fusion2(
 //  CHECK-SAME:     %[[ARG0:.+]]: tensor<?x?xf32>
 //       CHECK:   %[[C0:.+]] = arith.constant 0
@@ -990,19 +1001,6 @@ func.func @multi_slice_fusion2(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?xf32>, %
 //  CHECK-SAME:         ins(%[[GENERIC0]], %[[GENERIC1]] :
 //       CHECK:     tensor.parallel_insert_slice %[[FUSED]] into %[[INIT]][%[[IV]]] [%[[TILESIZE]]]
 //       CHECK:   return %[[RESULT]]#2
-
-module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
-    %loop = transform.structured.match ops{["scf.forall"]} in %arg1
-      : (!transform.any_op) -> !transform.any_op
-    %yield = transform.structured.match ops{["tensor.parallel_insert_slice"]} in %arg1
-      : (!transform.any_op) -> !transform.any_op
-    %yield0, %yield1 = transform.split_handle %yield : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
-    %a, %b = transform.test.fuse_consumer %yield0, %yield1 in (%loop)
-      : (!transform.any_op, !transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
-    transform.yield
-  }
-}
 
 // -----
 
@@ -1060,11 +1058,11 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
     %loop = transform.structured.match ops{["scf.forall"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    %yield = transform.structured.match ops{["tensor.parallel_insert_slice"]} in %arg1
+    %generics = transform.structured.match ops{["linalg.generic"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    %yield0, %yield1 = transform.split_handle %yield : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
-    %a, %b = transform.test.fuse_consumer %yield0, %yield1 in (%loop)
-      : (!transform.any_op, !transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
+    %producer_1, %producer_2, %consumer = transform.split_handle %generics : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    %a, %b = transform.test.fuse_consumer %consumer into (%loop)
+      : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
     transform.yield
   }
 }
@@ -1124,7 +1122,6 @@ func.func @multi_slice_fusion_invalid(%arg0 : tensor<?x?x?xf32>, %arg1 : tensor<
 	      linalg.yield %0: f32
     } -> tensor<?x?xf32>
     scf.forall.in_parallel {
-      // expected-error @below {{failed to fuse consumer of slice}}
       tensor.parallel_insert_slice %generic0 into %init0[%iv0, %iv1] [%tilesize0, %tilesize1] [1, 1]
           : tensor<?x?xf32> into tensor<?x?xf32>
       tensor.parallel_insert_slice %generic1 into %init1[%iv0, %iv1] [%tilesize0, %tilesize1] [1, 1]
@@ -1132,6 +1129,7 @@ func.func @multi_slice_fusion_invalid(%arg0 : tensor<?x?x?xf32>, %arg1 : tensor<
     }
   }
   %empty = tensor.empty(%dim0, %dim1) : tensor<?x?xf32>
+  // expected-error @below {{failed to fuse consumer of slice}}
   %result = linalg.generic {
       indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d1, d0)>, affine_map<(d0, d1) -> (d0, d1)>],
       iterator_types = ["parallel", "parallel"]}
@@ -1146,11 +1144,11 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
     %loop = transform.structured.match ops{["scf.forall"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    %yield = transform.structured.match ops{["tensor.parallel_insert_slice"]} in %arg1
+    %generics = transform.structured.match ops{["linalg.generic"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    %yield0, %yield1 = transform.split_handle %yield : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
-    %a, %b = transform.test.fuse_consumer %yield0, %yield1 in (%loop)
-      : (!transform.any_op, !transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
+    %producer_1, %producer_2, %consumer = transform.split_handle %generics : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    %a, %b = transform.test.fuse_consumer %consumer into (%loop)
+      : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
     transform.yield
   }
 }

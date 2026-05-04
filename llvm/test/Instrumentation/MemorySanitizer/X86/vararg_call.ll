@@ -16,15 +16,15 @@ entry:
   ret i32 %call
 }
 
-; CHECK: store i32 0, {{.*}} @__msan_param_tls {{.*}} i64 8
-; CHECK: store i32 0, {{.*}} @__msan_param_tls {{.*}} i64 16
-; CHECK: store i32 0, {{.*}} @__msan_param_tls {{.*}} i64 24
-; CHECK: store i32 0, {{.*}} @__msan_va_arg_tls {{.*}} i64 8
-; CHECK-ORIGIN: store i32 0, {{.*}} @__msan_va_arg_origin_tls {{.*}} i64 8
-; CHECK: store i32 0, {{.*}} @__msan_va_arg_tls {{.*}} i64 16
-; CHECK-ORIGIN: store i32 0, {{.*}} @__msan_va_arg_origin_tls {{.*}} i64 16
-; CHECK: store i32 0, {{.*}} @__msan_va_arg_tls {{.*}} i64 24
-; CHECK-ORIGIN: store i32 0, {{.*}} @__msan_va_arg_origin_tls {{.*}} i64 24
+; CHECK: store i32 0, {{.*}} @__msan_param_tls, i64 8
+; CHECK: store i32 0, {{.*}} @__msan_param_tls, i64 16
+; CHECK: store i32 0, {{.*}} @__msan_param_tls, i64 24
+; CHECK: store i32 0, {{.*}} @__msan_va_arg_tls, i64 8
+; CHECK-ORIGIN: store i32 0, {{.*}} @__msan_va_arg_origin_tls, i64 8
+; CHECK: store i32 0, {{.*}} @__msan_va_arg_tls, i64 16
+; CHECK-ORIGIN: store i32 0, {{.*}} @__msan_va_arg_origin_tls, i64 16
+; CHECK: store i32 0, {{.*}} @__msan_va_arg_tls, i64 24
+; CHECK-ORIGIN: store i32 0, {{.*}} @__msan_va_arg_origin_tls, i64 24
 
 define dso_local i32 @sum(i32 %n, ...) local_unnamed_addr #0 {
 entry:

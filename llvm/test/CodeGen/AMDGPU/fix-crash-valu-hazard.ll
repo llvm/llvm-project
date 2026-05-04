@@ -54,7 +54,6 @@ define amdgpu_ps void @global_load_lds_dword_saddr(ptr addrspace(1) inreg nocapt
 ; GFX90A-NEXT:    s_mov_b32 m0, s4
 ; GFX90A-NEXT:    s_nop 0
 ; GFX90A-NEXT:    global_load_dword v0, s[2:3] offset:32 slc lds
-; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NEXT:    global_store_dwordx2 v0, v[2:3], s[0:1]
 ; GFX90A-NEXT:    s_endpgm
 main_body:

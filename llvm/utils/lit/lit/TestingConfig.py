@@ -89,6 +89,14 @@ class TestingConfig(object):
             # the current user.
             environment["__COMPAT_LAYER"] = "RunAsInvoker"
 
+        if sys.platform == "zos":
+            pass_vars.append("_BPXK_AUTOCVT")
+            pass_vars.append("_CEE_RUNOPTS")
+            pass_vars.append("_TAG_REDIR_ERR")
+            pass_vars.append("_TAG_REDIR_IN")
+            pass_vars.append("_TAG_REDIR_OUT")
+            pass_vars.append("LIBPATH")
+
         for var in pass_vars:
             val = os.environ.get(var, "")
             # Check for empty string as some variables such as LD_PRELOAD cannot be empty
@@ -143,8 +151,7 @@ class TestingConfig(object):
         cfg_globals["__file__"] = path
         try:
             exec(compile(data, path, "exec"), cfg_globals, None)
-            if litConfig.debug:
-                litConfig.note("... loaded config %r" % path)
+            litConfig.dbg("... loaded config %r" % path)
         except SystemExit:
             e = sys.exc_info()[1]
             # We allow normal system exit inside a config file to just

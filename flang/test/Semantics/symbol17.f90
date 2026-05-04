@@ -79,7 +79,7 @@ type(fwdpdt(kind(0))) function f2(n)
  type :: fwdpdt(k)
   !REF: /f2/fwdpdt/k
   integer, kind :: k
-  !REF: /f2/fwdpdt/k
+  !DEF: /f2/DerivedType2/k TypeParam INTEGER(4)
   !DEF: /f2/fwdpdt/n ObjectEntity INTEGER(int(int(k,kind=4),kind=8))
   integer(kind=k) :: n
  end type
@@ -99,7 +99,7 @@ subroutine s2 (q1)
  type :: fwdpdt(k)
   !REF: /s2/fwdpdt/k
   integer, kind :: k
-  !REF: /s2/fwdpdt/k
+  !DEF: /s2/DerivedType2/k TypeParam INTEGER(4)
   !DEF: /s2/fwdpdt/n ObjectEntity INTEGER(int(int(k,kind=4),kind=8))
   integer(kind=k) :: n
  end type
@@ -110,31 +110,31 @@ end subroutine
 !DEF: /m1 Module
 module m1
  !DEF: /m1/forward PRIVATE DerivedType
-  private :: forward
+ private :: forward
  !DEF: /m1/base PUBLIC DerivedType
-  type :: base
+ type :: base
   !REF: /m1/forward
   !DEF: /m1/base/p POINTER ObjectEntity CLASS(forward)
-    class(forward), pointer :: p
-  end type
+  class(forward), pointer :: p
+ end type
  !REF: /m1/base
  !REF: /m1/forward
-  type, extends(base) :: forward
+ type, extends(base) :: forward
   !DEF: /m1/forward/n ObjectEntity INTEGER(4)
-    integer :: n
-  end type
- contains
+  integer :: n
+ end type
+contains
  !DEF: /m1/test PUBLIC (Subroutine) Subprogram
-  subroutine test
+ subroutine test
   !REF: /m1/forward
   !DEF: /m1/test/object TARGET ObjectEntity TYPE(forward)
-    type(forward), target :: object
+  type(forward), target :: object
   !REF: /m1/test/object
   !REF: /m1/base/p
-    object%p => object
+  object%p => object
   !REF: /m1/test/object
   !REF: /m1/base/p
   !REF: /m1/forward/n
-    object%p%n = 666
-  end subroutine
+  object%p%n = 666
+ end subroutine
 end module

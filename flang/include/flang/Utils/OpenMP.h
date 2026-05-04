@@ -13,6 +13,7 @@
 
 namespace fir {
 class FirOpBuilder;
+class RecordType;
 } // namespace fir
 
 namespace Fortran::utils::openmp {
@@ -29,8 +30,9 @@ mlir::omp::MapInfoOp createMapInfoOp(mlir::OpBuilder &builder,
     mlir::Location loc, mlir::Value baseAddr, mlir::Value varPtrPtr,
     llvm::StringRef name, llvm::ArrayRef<mlir::Value> bounds,
     llvm::ArrayRef<mlir::Value> members, mlir::ArrayAttr membersIndex,
-    uint64_t mapType, mlir::omp::VariableCaptureKind mapCaptureType,
-    mlir::Type retTy, bool partialMap = false,
+    mlir::omp::ClauseMapFlags mapType,
+    mlir::omp::VariableCaptureKind mapCaptureType, mlir::Type retTy,
+    bool partialMap = false,
     mlir::FlatSymbolRefAttr mapperId = mlir::FlatSymbolRefAttr());
 
 /// For an mlir value that does not have storage, allocate temporary storage
@@ -58,6 +60,14 @@ mlir::Value mapTemporaryValue(fir::FirOpBuilder &firOpBuilder,
 /// maps.
 void cloneOrMapRegionOutsiders(
     fir::FirOpBuilder &firOpBuilder, mlir::omp::TargetOp targetOp);
+
+using RecordMemberMapperMangler =
+    std::function<void(std::string &mapperId, llvm::StringRef memberName)>;
+
+mlir::FlatSymbolRefAttr getOrGenImplicitDefaultDeclareMapper(
+    fir::FirOpBuilder &firOpBuilder, mlir::Location loc,
+    fir::RecordType recordType, llvm::StringRef mapperNameStr,
+    RecordMemberMapperMangler mangler = {});
 } // namespace Fortran::utils::openmp
 
 #endif // FORTRAN_UTILS_OPENMP_H_

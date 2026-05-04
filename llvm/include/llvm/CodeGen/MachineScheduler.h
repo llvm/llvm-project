@@ -82,6 +82,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachinePassRegistry.h"
 #include "llvm/CodeGen/RegisterPressure.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
@@ -117,6 +118,7 @@ enum Direction {
 
 LLVM_ABI extern cl::opt<MISched::Direction> PreRADirection;
 LLVM_ABI extern cl::opt<bool> VerifyScheduling;
+
 #ifndef NDEBUG
 extern cl::opt<bool> ViewMISchedDAGs;
 extern cl::opt<bool> PrintDAGs;
@@ -147,6 +149,7 @@ struct LLVM_ABI MachineSchedContext {
   const TargetMachine *TM = nullptr;
   AAResults *AA = nullptr;
   LiveIntervals *LIS = nullptr;
+  MachineBlockFrequencyInfo *MBFI = nullptr;
 
   RegisterClassInfo *RegClassInfo;
 
@@ -214,6 +217,9 @@ struct MachineSchedPolicy {
 
   // Compute DFSResult for use in scheduling heuristics.
   bool ComputeDFSResult = false;
+
+  // If enabled, some extra cases of physreg defs will be biased towards user.
+  bool BiasPRegsExtra = false;
 
   MachineSchedPolicy() = default;
 };
@@ -309,6 +315,7 @@ class LLVM_ABI ScheduleDAGMI : public ScheduleDAGInstrs {
 protected:
   AAResults *AA;
   LiveIntervals *LIS;
+  MachineBlockFrequencyInfo *MBFI;
   std::unique_ptr<MachineSchedStrategy> SchedImpl;
 
   /// Ordered list of DAG postprocessing steps.
@@ -330,7 +337,7 @@ public:
   ScheduleDAGMI(MachineSchedContext *C, std::unique_ptr<MachineSchedStrategy> S,
                 bool RemoveKillFlags)
       : ScheduleDAGInstrs(*C->MF, C->MLI, RemoveKillFlags), AA(C->AA),
-        LIS(C->LIS), SchedImpl(std::move(S)) {}
+        LIS(C->LIS), MBFI(C->MBFI), SchedImpl(std::move(S)) {}
 
   // Provide a vtable anchor
   ~ScheduleDAGMI() override;
@@ -829,7 +836,7 @@ private:
 
 public:
   // constructor for empty set
-  explicit ResourceSegments(){};
+  explicit ResourceSegments() = default;
   bool empty() const { return _Intervals.empty(); }
   explicit ResourceSegments(const std::list<IntervalTy> &Intervals)
       : _Intervals(Intervals) {
@@ -1038,7 +1045,7 @@ public:
   getNextResourceCycle(const MCSchedClassDesc *SC, unsigned PIdx,
                        unsigned ReleaseAtCycle, unsigned AcquireAtCycle);
 
-  bool isUnbufferedGroup(unsigned PIdx) const {
+  bool isReservedGroup(unsigned PIdx) const {
     return SchedModel->getProcResource(PIdx)->SubUnitsIdxBegin &&
            !SchedModel->getProcResource(PIdx)->BufferSize;
   }
@@ -1229,6 +1236,7 @@ private:
 };
 
 // Utility functions used by heuristics in tryCandidate().
+LLVM_ABI unsigned computeRemLatency(SchedBoundary &CurrZone);
 LLVM_ABI bool tryLess(int TryVal, int CandVal,
                       GenericSchedulerBase::SchedCandidate &TryCand,
                       GenericSchedulerBase::SchedCandidate &Cand,
@@ -1247,8 +1255,12 @@ LLVM_ABI bool tryPressure(const PressureChange &TryP,
                           GenericSchedulerBase::CandReason Reason,
                           const TargetRegisterInfo *TRI,
                           const MachineFunction &MF);
+LLVM_ABI bool tryBiasPhysRegs(GenericSchedulerBase::SchedCandidate &TryCand,
+                              GenericSchedulerBase::SchedCandidate &Cand,
+                              SchedBoundary *Zone, bool BiasPRegsExtra);
 LLVM_ABI unsigned getWeakLeft(const SUnit *SU, bool isTop);
-LLVM_ABI int biasPhysReg(const SUnit *SU, bool isTop);
+LLVM_ABI int biasPhysReg(const SUnit *SU, bool isTop,
+                         bool BiasPRegsExtra = false);
 
 /// GenericScheduler shrinks the unscheduled zone using heuristics to balance
 /// the schedule.

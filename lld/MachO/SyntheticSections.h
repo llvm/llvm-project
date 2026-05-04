@@ -571,18 +571,10 @@ public:
   uint64_t getSize() const override { return size; }
   void finalizeContents() override;
   void writeTo(uint8_t *buf) const override;
-
-  struct StringOffset {
-    uint8_t trailingZeros;
-    uint64_t outSecOff = UINT64_MAX;
-
-    explicit StringOffset(uint8_t zeros) : trailingZeros(zeros) {}
-  };
-
-  StringOffset getStringOffset(StringRef str) const;
+  uint64_t getStringOffset(StringRef str) const;
 
 private:
-  llvm::DenseMap<llvm::CachedHashStringRef, StringOffset> stringOffsetMap;
+  llvm::DenseMap<llvm::CachedHashStringRef, uint64_t> stringOffsetMap;
   size_t size = 0;
 };
 

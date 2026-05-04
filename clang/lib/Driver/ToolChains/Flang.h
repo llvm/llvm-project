@@ -78,6 +78,9 @@ private:
   void AddAMDGPUTargetArgs(const llvm::opt::ArgList &Args,
                            llvm::opt::ArgStringList &CmdArgs) const;
 
+  void AddNVPTXTargetArgs(const llvm::opt::ArgList &Args,
+                          llvm::opt::ArgStringList &CmdArgs) const;
+
   /// Add specific options for LoongArch64 target.
   ///
   /// \param [in] Args The list of input driver arguments
@@ -125,12 +128,16 @@ private:
   void addCodegenOptions(const llvm::opt::ArgList &Args,
                          llvm::opt::ArgStringList &CmdArgs) const;
 
-  /// Extract other compilation options from the driver arguments and add them
+  /// Extract debug compilation options from the driver arguments and add them
   /// to the command arguments.
   ///
   /// \param [in] Args The list of input driver arguments
+  /// \param [in] JA The job action
+  /// \param [in] Output The output information on the current file output
+  /// \param [in] Input The input information on the current file input
   /// \param [out] CmdArgs The list of output command arguments
-  void addOtherOptions(const llvm::opt::ArgList &Args,
+  void addDebugOptions(const llvm::opt::ArgList &Args, const JobAction &JA,
+                       const InputInfo &Output, const InputInfo &Input,
                        llvm::opt::ArgStringList &CmdArgs) const;
 
 public:

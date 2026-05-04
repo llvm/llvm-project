@@ -24,28 +24,28 @@
 )
 */
 
-// CHECK-LABEL: wasmssa.func @rem_u_i32() -> i32 {
+// CHECK-LABEL: wasmssa.func exported @rem_u_i32() -> i32 {
 // CHECK:    %0 = wasmssa.const 10 : i32
 // CHECK:    %1 = wasmssa.const 3 : i32
 // CHECK:    %2 = wasmssa.rem_ui %0 %1 : i32
 // CHECK:    wasmssa.return %2 : i32
 // CHECK:  }
 
-// CHECK-LABEL: wasmssa.func @rem_u_i64() -> i64 {
+// CHECK-LABEL: wasmssa.func exported @rem_u_i64() -> i64 {
 // CHECK:    %0 = wasmssa.const 10 : i64
 // CHECK:    %1 = wasmssa.const 3 : i64
 // CHECK:    %2 = wasmssa.rem_ui %0 %1 : i64
 // CHECK:    wasmssa.return %2 : i64
 // CHECK:  }
 
-// CHECK-LABEL:  wasmssa.func @rem_s_i32() -> i32 {
+// CHECK-LABEL:  wasmssa.func exported @rem_s_i32() -> i32 {
 // CHECK:    %0 = wasmssa.const 10 : i32
 // CHECK:    %1 = wasmssa.const 3 : i32
 // CHECK:    %2 = wasmssa.rem_si %0 %1 : i32
 // CHECK:    wasmssa.return %2 : i32
 // CHECK:  }
 
-// CHECK-LABEL:  wasmssa.func @rem_s_i64() -> i64 {
+// CHECK-LABEL:  wasmssa.func exported @rem_s_i64() -> i64 {
 // CHECK:    %0 = wasmssa.const 10 : i64
 // CHECK:    %1 = wasmssa.const 3 : i64
 // CHECK:    %2 = wasmssa.rem_si %0 %1 : i64

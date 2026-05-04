@@ -85,7 +85,7 @@ inline std::string mlirTypeToIntrinsicFortran(fir::FirOpBuilder &builder,
       return "REAL(KIND="s + std::to_string(*kind) + ")";
   } else if (auto cplxTy = mlir::dyn_cast<mlir::ComplexType>(type)) {
     if (std::optional<int> kind = mlirFloatTypeToKind(cplxTy.getElementType()))
-      return "COMPLEX(KIND+"s + std::to_string(*kind) + ")";
+      return "COMPLEX(KIND="s + std::to_string(*kind) + ")";
   } else if (type.isUnsignedInteger()) {
     if (type.isInteger(8))
       return "UNSIGNED(KIND=1)";
@@ -200,6 +200,12 @@ std::optional<llvm::ArrayRef<int64_t>> getComponentLowerBoundsIfNonDefault(
     fir::RecordType recordType, llvm::StringRef component,
     mlir::ModuleOp module, const mlir::SymbolTable *symbolTable = nullptr);
 
+/// Indicate if a derived type has final routine. Returns std::nullopt if that
+/// information is not in the IR;
+std::optional<bool>
+isRecordWithFinalRoutine(fir::RecordType recordType, mlir::ModuleOp module,
+                         const mlir::SymbolTable *symbolTable = nullptr);
+
 /// Generate a LLVM constant value of type `ity`, using the provided offset.
 mlir::LLVM::ConstantOp
 genConstantIndex(mlir::Location loc, mlir::Type ity,
@@ -231,6 +237,13 @@ mlir::Value integerCast(const fir::LLVMTypeConverter &converter,
                         mlir::Location loc,
                         mlir::ConversionPatternRewriter &rewriter,
                         mlir::Type ty, mlir::Value val, bool fold = false);
+
+/// Check if the given operation result is a new allocation
+/// as specified by the MemoryEffects of the operation.
+/// The function returns true iff it is a new allocation,
+/// it return false iff it is not a new allocation,
+/// otherwise it returns std::nullopt.
+std::optional<bool> isNewAllocationResult(mlir::OpResult result);
 } // namespace fir
 
 #endif // FORTRAN_OPTIMIZER_SUPPORT_UTILS_H

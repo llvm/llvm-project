@@ -97,12 +97,15 @@ class kmp_stats_list;
 // OMPD_SKIP_HWLOC used in libompd/omp-icv.cpp to avoid OMPD depending on hwloc
 #if KMP_USE_HWLOC && KMP_AFFINITY_SUPPORTED && !defined(OMPD_SKIP_HWLOC)
 #include "hwloc.h"
+#define KMP_HWLOC_ENABLED 1
 #ifndef HWLOC_OBJ_NUMANODE
 #define HWLOC_OBJ_NUMANODE HWLOC_OBJ_NODE
 #endif
 #ifndef HWLOC_OBJ_PACKAGE
 #define HWLOC_OBJ_PACKAGE HWLOC_OBJ_SOCKET
 #endif
+#else
+#define KMP_HWLOC_ENABLED 0
 #endif
 
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
@@ -672,10 +675,10 @@ typedef BOOL (*kmp_SetThreadGroupAffinity_t)(HANDLE, const GROUP_AFFINITY *,
 extern kmp_SetThreadGroupAffinity_t __kmp_SetThreadGroupAffinity;
 #endif /* KMP_OS_WINDOWS */
 
-#if KMP_USE_HWLOC && !defined(OMPD_SKIP_HWLOC)
+#if KMP_HWLOC_ENABLED
 extern hwloc_topology_t __kmp_hwloc_topology;
 extern int __kmp_hwloc_error;
-#endif
+#endif // KMP_HWLOC_ENABLED
 
 extern size_t __kmp_affin_mask_size;
 #define KMP_AFFINITY_CAPABLE() (__kmp_affin_mask_size > 0)
@@ -784,10 +787,10 @@ public:
   static void destroy_api();
   enum api_type {
     NATIVE_OS
-#if KMP_USE_HWLOC
+#if KMP_HWLOC_ENABLED
     ,
     HWLOC
-#endif
+#endif // KMP_HWLOC_ENABLED
   };
   virtual api_type get_api_type() const {
     KMP_ASSERT(0);
@@ -856,9 +859,9 @@ enum affinity_top_method {
   affinity_top_method_group,
 #endif /* KMP_GROUP_AFFINITY */
   affinity_top_method_flat,
-#if KMP_USE_HWLOC
+#if KMP_HWLOC_ENABLED
   affinity_top_method_hwloc,
-#endif
+#endif // KMP_HWLOC_ENABLED
   affinity_top_method_default
 };
 
@@ -1069,6 +1072,7 @@ extern omp_memspace_handle_t const omp_large_cap_mem_space;
 extern omp_memspace_handle_t const omp_const_mem_space;
 extern omp_memspace_handle_t const omp_high_bw_mem_space;
 extern omp_memspace_handle_t const omp_low_lat_mem_space;
+extern omp_memspace_handle_t const omp_cgroup_mem_space;
 extern omp_memspace_handle_t const llvm_omp_target_host_mem_space;
 extern omp_memspace_handle_t const llvm_omp_target_shared_mem_space;
 extern omp_memspace_handle_t const llvm_omp_target_device_mem_space;
@@ -1125,9 +1129,9 @@ typedef struct kmp_allocator_t {
   omp_alloctrait_value_t target_access;
   omp_alloctrait_value_t atomic_scope;
   size_t part_size;
-#if KMP_USE_HWLOC
+#if KMP_HWLOC_ENABLED
   omp_alloctrait_value_t membind;
-#endif
+#endif // KMP_HWLOC_ENABLED
 } kmp_allocator_t;
 
 extern omp_allocator_handle_t __kmpc_init_allocator(int gtid,
@@ -2087,12 +2091,12 @@ typedef struct dispatch_shared_info {
 #if KMP_USE_HIER_SCHED
   void *hier;
 #endif
-#if KMP_USE_HWLOC
+#if KMP_HWLOC_ENABLED
   // When linking with libhwloc, the ORDERED EPCC test slows down on big
   // machines (> 48 cores). Performance analysis showed that a cache thrash
   // was occurring and this padding helps alleviate the problem.
   char padding[64];
-#endif
+#endif // KMP_HWLOC_ENABLED
 } dispatch_shared_info_t;
 
 typedef struct kmp_disp {
@@ -2627,7 +2631,7 @@ typedef struct {
   } ed;
 } kmp_event_t;
 
-#if OMPX_TASKGRAPH
+#if OMP_TASKGRAPH_EXPERIMENTAL
 // Initial number of allocated nodes while recording
 #define INIT_MAPSIZE 50
 
@@ -2687,7 +2691,7 @@ extern kmp_int32 __kmp_num_tdg;
 typedef struct kmp_tasking_flags { /* Total struct must be exactly 32 bits */
 #if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
   /* Same fields as in the #else branch, but in reverse order */
-#if OMPX_TASKGRAPH
+#if OMP_TASKGRAPH_EXPERIMENTAL
   unsigned reserved31 : 4;
   unsigned onced : 1;
 #else
@@ -2704,7 +2708,8 @@ typedef struct kmp_tasking_flags { /* Total struct must be exactly 32 bits */
   unsigned tasking_ser : 1;
   unsigned task_serial : 1;
   unsigned tasktype : 1;
-  unsigned reserved : 8;
+  unsigned reserved : 7;
+  unsigned transparent : 1;
   unsigned free_agent_eligible : 1;
   unsigned detachable : 1;
   unsigned priority_specified : 1;
@@ -2728,7 +2733,8 @@ typedef struct kmp_tasking_flags { /* Total struct must be exactly 32 bits */
   unsigned detachable : 1; /* 1 == can detach */
   unsigned free_agent_eligible : 1; /* set if task can be executed by a
                                        free-agent thread */
-  unsigned reserved : 8; /* reserved for compiler use */
+  unsigned transparent : 1; /* transparent task support (compiler uses this) */
+  unsigned reserved : 7; /* reserved for compiler use */
 
   /* Library flags */ /* Total library flags must be 16 bits */
   unsigned tasktype : 1; /* task is either explicit(1) or implicit (0) */
@@ -2746,7 +2752,7 @@ typedef struct kmp_tasking_flags { /* Total struct must be exactly 32 bits */
   unsigned native : 1; /* 1==gcc-compiled task, 0==intel */
   unsigned target : 1;
   unsigned hidden_helper : 1; /* 1 == hidden helper task */
-#if OMPX_TASKGRAPH
+#if OMP_TASKGRAPH_EXPERIMENTAL
   unsigned onced : 1; /* 1==ran once already, 0==never ran, record & replay purposes */
   unsigned reserved31 : 4; /* reserved for library use */
 #else
@@ -2801,7 +2807,7 @@ struct kmp_taskdata { /* aligned during dynamic allocation       */
 #if OMPT_SUPPORT
   ompt_task_info_t ompt_task_info;
 #endif
-#if OMPX_TASKGRAPH
+#if OMP_TASKGRAPH_EXPERIMENTAL
   bool is_taskgraph = 0; // whether the task is within a TDG
   kmp_tdg_info_t *tdg; // used to associate task with a TDG
   kmp_int32 td_tdg_task_id; // local task id in its TDG
@@ -3896,7 +3902,8 @@ extern void __kmp_check_stack_overlap(kmp_info_t *thr);
 extern void __kmp_expand_host_name(char *buffer, size_t size);
 extern void __kmp_expand_file_name(char *result, size_t rlen, char *pattern);
 
-#if KMP_ARCH_X86 || KMP_ARCH_X86_64 || (KMP_OS_WINDOWS && (KMP_ARCH_AARCH64 || KMP_ARCH_ARM))
+#if KMP_ARCH_X86 || KMP_ARCH_X86_64 ||                                         \
+    (KMP_OS_WINDOWS && (KMP_ARCH_AARCH64 || KMP_ARCH_ARM || KMP_ARCH_ARM64EC))
 extern void
 __kmp_initialize_system_tick(void); /* Initialize timer tick value */
 #endif
@@ -4379,7 +4386,7 @@ KMP_EXPORT void __kmpc_init_nest_lock_with_hint(ident_t *loc, kmp_int32 gtid,
                                                 void **user_lock,
                                                 uintptr_t hint);
 
-#if OMPX_TASKGRAPH
+#if OMP_TASKGRAPH_EXPERIMENTAL
 // Taskgraph's Record & Replay mechanism
 // __kmp_tdg_is_recording: check whether a given TDG is recording
 // status: the tdg's current status

@@ -30,6 +30,8 @@
 #include "llvm/Support/Compiler.h"
 using namespace llvm;
 
+namespace llvm {
+
 // FIXME: Flag used for an ablation performance test, Issue #147390. Placing it
 // here because referencing IR should be feasible from anywhere. Will be
 // removed after the ablation test.
@@ -37,6 +39,8 @@ cl::opt<bool> ProfcheckDisableMetadataFixes(
     "profcheck-disable-metadata-fixes", cl::Hidden, cl::init(false),
     cl::desc(
         "Disable metadata propagation fixes discovered through Issue #147390"));
+
+} // end namespace llvm
 
 InsertPosition::InsertPosition(Instruction *InsertBefore)
     : InsertAt(InsertBefore ? InsertBefore->getIterator()
@@ -70,9 +74,13 @@ Instruction::~Instruction() {
   if (isUsedByMetadata())
     ValueAsMetadata::handleRAUW(this, PoisonValue::get(getType()));
 
-  // Explicitly remove DIAssignID metadata to clear up ID -> Instruction(s)
-  // mapping in LLVMContext.
-  setMetadata(LLVMContext::MD_DIAssignID, nullptr);
+  // Remove associated metadata from context.
+  if (hasMetadata()) {
+    // Explicitly remove DIAssignID metadata to clear up ID -> Instruction(s)
+    // mapping in LLVMContext.
+    updateDIAssignIDMapping(nullptr);
+    clearMetadata();
+  }
 }
 
 const Module *Instruction::getModule() const {
@@ -469,6 +477,19 @@ void Instruction::dropPoisonGeneratingFlags() {
   case Instruction::ICmp:
     cast<ICmpInst>(this)->setSameSign(false);
     break;
+
+  case Instruction::Call: {
+    if (auto *II = dyn_cast<IntrinsicInst>(this)) {
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::ctlz:
+      case Intrinsic::cttz:
+      case Intrinsic::abs:
+        II->setOperand(1, ConstantInt::getFalse(getContext()));
+        break;
+      }
+    }
+    break;
+  }
   }
 
   if (isa<FPMathOperator>(this)) {
@@ -512,25 +533,35 @@ void Instruction::dropPoisonGeneratingMetadata() {
     eraseMetadata(ID);
 }
 
-bool Instruction::hasPoisonGeneratingReturnAttributes() const {
+bool Instruction::hasPoisonGeneratingAttributes() const {
   if (const auto *CB = dyn_cast<CallBase>(this)) {
-    AttributeSet RetAttrs = CB->getAttributes().getRetAttrs();
-    return RetAttrs.hasAttribute(Attribute::Range) ||
-           RetAttrs.hasAttribute(Attribute::Alignment) ||
-           RetAttrs.hasAttribute(Attribute::NonNull);
+    auto HasPoisonGeneratingAttributes = [](AttributeSet Attrs) {
+      return Attrs.hasAttribute(Attribute::Range) ||
+             Attrs.hasAttribute(Attribute::Alignment) ||
+             Attrs.hasAttribute(Attribute::NonNull) ||
+             Attrs.hasAttribute(Attribute::NoFPClass);
+    };
+    if (HasPoisonGeneratingAttributes(CB->getRetAttributes()))
+      return true;
+    for (unsigned ArgNo = 0; ArgNo < CB->arg_size(); ArgNo++)
+      if (HasPoisonGeneratingAttributes(CB->getParamAttributes(ArgNo)))
+        return true;
   }
   return false;
 }
 
-void Instruction::dropPoisonGeneratingReturnAttributes() {
+void Instruction::dropPoisonGeneratingAttributes() {
   if (auto *CB = dyn_cast<CallBase>(this)) {
     AttributeMask AM;
     AM.addAttribute(Attribute::Range);
     AM.addAttribute(Attribute::Alignment);
     AM.addAttribute(Attribute::NonNull);
+    AM.addAttribute(Attribute::NoFPClass);
     CB->removeRetAttrs(AM);
+    for (unsigned ArgNo = 0; ArgNo < CB->arg_size(); ArgNo++)
+      CB->removeParamAttrs(ArgNo, AM);
   }
-  assert(!hasPoisonGeneratingReturnAttributes() && "must be kept in sync");
+  assert(!hasPoisonGeneratingAttributes() && "must be kept in sync");
 }
 
 void Instruction::dropUBImplyingAttrsAndUnknownMetadata(
@@ -555,11 +586,13 @@ void Instruction::dropUBImplyingAttrsAndUnknownMetadata(
 void Instruction::dropUBImplyingAttrsAndMetadata(ArrayRef<unsigned> Keep) {
   // !annotation and !prof metadata does not impact semantics.
   // !range, !nonnull and !align produce poison, so they are safe to speculate.
+  // !fpmath specifies floating-point precision and does not imply UB.
   // !noundef and various AA metadata must be dropped, as it generally produces
   // immediate undefined behavior.
   static const unsigned KnownIDs[] = {
       LLVMContext::MD_annotation, LLVMContext::MD_range,
-      LLVMContext::MD_nonnull, LLVMContext::MD_align, LLVMContext::MD_prof};
+      LLVMContext::MD_nonnull,    LLVMContext::MD_align,
+      LLVMContext::MD_fpmath,     LLVMContext::MD_prof};
   SmallVector<unsigned> KeepIDs;
   KeepIDs.reserve(Keep.size() + std::size(KnownIDs));
   append_range(KeepIDs, (!ProfcheckDisableMetadataFixes ? KnownIDs
@@ -778,7 +811,8 @@ const char *Instruction::getOpcodeName(unsigned OpCode) {
   switch (OpCode) {
   // Terminators
   case Ret:    return "ret";
-  case Br:     return "br";
+  case UncondBr: return "br";
+  case CondBr: return "br";
   case Switch: return "switch";
   case IndirectBr: return "indirectbr";
   case Invoke: return "invoke";
@@ -861,7 +895,7 @@ const char *Instruction::getOpcodeName(unsigned OpCode) {
 }
 
 /// This must be kept in sync with FunctionComparator::cmpOperations in
-/// lib/Transforms/IPO/MergeFunctions.cpp.
+/// lib/Transforms/Utils/FunctionComparator.cpp.
 bool Instruction::hasSameSpecialState(const Instruction *I2,
                                       bool IgnoreAlignment,
                                       bool IntersectAttrs) const {
@@ -909,6 +943,12 @@ bool Instruction::hasSameSpecialState(const Instruction *I2,
     return CI->getCallingConv() == cast<CallBrInst>(I2)->getCallingConv() &&
            CheckAttrsSame(CI, cast<CallBrInst>(I2)) &&
            CI->hasIdenticalOperandBundleSchema(*cast<CallBrInst>(I2));
+  if (const SwitchInst *SI = dyn_cast<SwitchInst>(I1)) {
+    for (auto [Case1, Case2] : zip(SI->cases(), cast<SwitchInst>(I2)->cases()))
+      if (Case1.getCaseValue() != Case2.getCaseValue())
+        return false;
+    return true;
+  }
   if (const InsertValueInst *IVI = dyn_cast<InsertValueInst>(I1))
     return IVI->getIndices() == cast<InsertValueInst>(I2)->getIndices();
   if (const ExtractValueInst *EVI = dyn_cast<ExtractValueInst>(I1))
@@ -1224,9 +1264,9 @@ bool Instruction::isSafeToRemove() const {
 }
 
 bool Instruction::willReturn() const {
-  // Volatile store isn't guaranteed to return; see LangRef.
-  if (auto *SI = dyn_cast<StoreInst>(this))
-    return !SI->isVolatile();
+  // Volatile operations are not guaranteed to return.
+  if (isVolatile())
+    return false;
 
   if (const auto *CB = dyn_cast<CallBase>(this))
     return CB->hasFnAttr(Attribute::WillReturn);
@@ -1267,6 +1307,7 @@ bool Instruction::isAssociative() const {
 
   switch (Opcode) {
   case FMul:
+    return cast<FPMathOperator>(this)->hasAllowReassoc();
   case FAdd:
     return cast<FPMathOperator>(this)->hasAllowReassoc() &&
            cast<FPMathOperator>(this)->hasNoSignedZeros();
@@ -1278,6 +1319,13 @@ bool Instruction::isAssociative() const {
 bool Instruction::isCommutative() const {
   if (auto *II = dyn_cast<IntrinsicInst>(this))
     return II->isCommutative();
+  // TODO: Should allow icmp/fcmp?
+  return isCommutative(getOpcode());
+}
+
+bool Instruction::isCommutableOperand(unsigned Op) const {
+  if (auto *II = dyn_cast<IntrinsicInst>(this))
+    return II->isCommutableOperand(Op);
   // TODO: Should allow icmp/fcmp?
   return isCommutative(getOpcode());
 }
@@ -1318,11 +1366,24 @@ void Instruction::setSuccessor(unsigned idx, BasicBlock *B) {
   llvm_unreachable("not a terminator");
 }
 
+iterator_range<Instruction::const_succ_iterator>
+Instruction::successors() const {
+  switch (getOpcode()) {
+#define HANDLE_TERM_INST(N, OPC, CLASS)                                        \
+  case Instruction::OPC:                                                       \
+    return static_cast<const CLASS *>(this)->successors();
+#include "llvm/IR/Instruction.def"
+  default:
+    break;
+  }
+  llvm_unreachable("not a terminator");
+}
+
 void Instruction::replaceSuccessorWith(BasicBlock *OldBB, BasicBlock *NewBB) {
-  for (unsigned Idx = 0, NumSuccessors = Instruction::getNumSuccessors();
-       Idx != NumSuccessors; ++Idx)
-    if (getSuccessor(Idx) == OldBB)
-      setSuccessor(Idx, NewBB);
+  auto Succs = successors();
+  for (auto I = Succs.begin(), E = Succs.end(); I != E; ++I)
+    if (*I == OldBB)
+      I.getUse()->set(NewBB);
 }
 
 Instruction *Instruction::cloneImpl() const {

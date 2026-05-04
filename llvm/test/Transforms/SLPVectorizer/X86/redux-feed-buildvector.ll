@@ -14,7 +14,7 @@ define void @test(ptr nocapture readonly %arg, ptr nocapture readonly %arg1, ptr
 ; CHECK-NEXT:    [[GEP2_0:%.*]] = getelementptr inbounds double, ptr [[ARG1:%.*]], i64 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[GEP2_0]], align 8
 ; CHECK-NEXT:    [[GEP2_4:%.*]] = getelementptr inbounds double, ptr [[ARG1]], i64 20
-; CHECK-NEXT:    [[TMP1:%.*]] = call <15 x double> @llvm.masked.load.v15f64.p0(ptr [[GEP1_0]], i32 8, <15 x i1> <i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true>, <15 x double> poison)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <15 x double> @llvm.masked.load.v15f64.p0(ptr align 8 [[GEP1_0]], <15 x i1> <i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true>, <15 x double> poison)
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <15 x double> [[TMP1]], <15 x double> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x double>, ptr [[ARG1]], align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul fast <8 x double> [[TMP3]], [[TMP2]]
@@ -29,7 +29,7 @@ define void @test(ptr nocapture readonly %arg, ptr nocapture readonly %arg1, ptr
 ; CHECK-NEXT:    [[I142:%.*]] = insertelement <2 x double> poison, double [[TMP7]], i64 0
 ; CHECK-NEXT:    [[I143:%.*]] = insertelement <2 x double> [[I142]], double [[TMP11]], i64 1
 ; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds double, ptr [[ARG2:%.*]], <2 x i64> <i64 0, i64 16>
-; CHECK-NEXT:    call void @llvm.masked.scatter.v2f64.v2p0(<2 x double> [[I143]], <2 x ptr> [[P]], i32 8, <2 x i1> splat (i1 true))
+; CHECK-NEXT:    call void @llvm.masked.scatter.v2f64.v2p0(<2 x double> [[I143]], <2 x ptr> align 8 [[P]], <2 x i1> splat (i1 true))
 ; CHECK-NEXT:    ret void
 ;
 entry:

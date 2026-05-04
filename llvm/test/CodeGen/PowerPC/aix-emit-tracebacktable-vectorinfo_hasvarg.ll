@@ -15,7 +15,7 @@ entry:
 ;CHECK-ASM:             .vbyte  4, 0x00000000                   # Traceback table begin
 ;CHECK-ASM-NEXT:        .byte   0x00                            # Version = 0
 ;CHECK-ASM-NEXT:        .byte   0x09                            # Language = CPlusPlus
-;CHECK-ASM-NEXT:        .byte   0x20                            # -IsGlobaLinkage, -IsOutOfLineEpilogOrPrologue
+;CHECK-ASM-NEXT:        .byte   0x20                            # -IsGlobalLinkage, -IsOutOfLineEpilogOrPrologue
 ;CHECK-ASM-NEXT:                                         # +HasTraceBackTableOffset, -IsInternalProcedure
 ;CHECK-ASM-NEXT:                                         # -HasControlledStorage, -IsTOCless
 ;CHECK-ASM-NEXT:                                         # -IsFloatingPointPresent

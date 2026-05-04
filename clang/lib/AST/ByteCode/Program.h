@@ -54,11 +54,13 @@ public:
     }
   }
 
+  const Context &getContext() const { return Ctx; }
+
   /// Marshals a native pointer to an ID for embedding in bytecode.
   unsigned getOrCreateNativePointer(const void *Ptr);
 
   /// Returns the value of a marshalled native pointer.
-  const void *getNativePointer(unsigned Idx);
+  const void *getNativePointer(unsigned Idx) const;
 
   /// Emits a string literal among global data.
   unsigned createGlobalString(const StringLiteral *S,
@@ -92,7 +94,7 @@ public:
   UnsignedOrNone createGlobal(const ValueDecl *VD, const Expr *Init);
 
   /// Creates a global from a lifetime-extended temporary.
-  UnsignedOrNone createGlobal(const Expr *E);
+  UnsignedOrNone createGlobal(const Expr *E, QualType ExprType);
 
   /// Creates a new function from a code range.
   template <typename... Ts>
@@ -205,7 +207,6 @@ private:
     const Block *block() const { return &B; }
 
   private:
-    /// Required metadata - does not actually track pointers.
     Block B;
   };
 

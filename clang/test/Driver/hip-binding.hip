@@ -1,4 +1,4 @@
-// RUN: %clang -ccc-print-bindings --target=x86_64-linux-gnu \
+// RUN: %clang -Werror=openmp-target -ccc-print-bindings --target=x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s \
 // RUN:   --no-offload-new-driver -c 2>&1 | FileCheck -check-prefix=NRDCS %s
 // RUN: %clang -ccc-print-bindings --target=x86_64-linux-gnu --offload-new-driver \
@@ -101,6 +101,6 @@
 // RUN: | FileCheck -check-prefix=LTO-NO-RDC %s
 //      LTO-NO-RDC: # "amdgcn-amd-amdhsa" - "clang", inputs: ["[[INPUT:.+]]"], output: "[[LTO_908:.+]]"
 // LTO-NO-RDC-NEXT: # "amdgcn-amd-amdhsa" - "clang", inputs: ["[[INPUT]]"], output: "[[LTO_90A:.+]]"
-// LTO-NO-RDC-NEXT: # "x86_64-unknown-linux-gnu" - "Offload::Packager", inputs: ["[[LTO_908]]", "[[LTO_90A]]"], output: "[[PKG:.+]]"
-// LTO-NO-RDC-NEXT: # "x86_64-unknown-linux-gnu" - "clang", inputs: ["[[INPUT]]", "[[PKG]]"], output: "[[OBJ:.+]]"
-// LTO-NO-RDC-NEXT: # "x86_64-unknown-linux-gnu" - "Offload::Linker", inputs: ["[[OBJ]]"], output: "hip-binding.o"
+// LTO-NO-RDC-NEXT: # "amdgcn-amd-amdhsa" - "Offload::Packager", inputs: ["[[LTO_908]]", "[[LTO_90A]]"], output: "[[PKG:.+]]"
+// LTO-NO-RDC-NEXT: # "amdgcn-amd-amdhsa" - "Offload::Linker", inputs: ["[[PKG]]"], output: "[[HIPFB:.+]]"
+// LTO-NO-RDC-NEXT: # "x86_64-unknown-linux-gnu" - "clang", inputs: ["[[INPUT]]", "[[HIPFB]]"], output: "hip-binding.o"

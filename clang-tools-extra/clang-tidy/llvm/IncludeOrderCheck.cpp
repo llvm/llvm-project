@@ -12,8 +12,6 @@
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/STLExtras.h"
 
-#include <map>
-
 namespace clang::tidy::llvm_check {
 
 namespace {
@@ -42,7 +40,7 @@ private:
   };
 
   using FileIncludes = std::vector<IncludeDirective>;
-  std::map<clang::FileID, FileIncludes> IncludeDirectives;
+  llvm::DenseMap<FileID, FileIncludes> IncludeDirectives;
   bool LookForMainModule = true;
 
   ClangTidyCheck &Check;
@@ -162,15 +160,15 @@ void IncludeOrderPPCallbacks::EndOfMainFile() {
           continue;
         const IncludeDirective &CopyFrom = FileDirectives[IncludeIndices[I]];
 
-        SourceLocation FromLoc = CopyFrom.Range.getBegin();
+        const SourceLocation FromLoc = CopyFrom.Range.getBegin();
         const char *FromData = SM.getCharacterData(FromLoc);
-        unsigned FromLen = std::strcspn(FromData, "\n");
+        const unsigned FromLen = std::strcspn(FromData, "\n");
 
-        StringRef FixedName(FromData, FromLen);
+        const StringRef FixedName(FromData, FromLen);
 
-        SourceLocation ToLoc = FileDirectives[I].Range.getBegin();
+        const SourceLocation ToLoc = FileDirectives[I].Range.getBegin();
         const char *ToData = SM.getCharacterData(ToLoc);
-        unsigned ToLen = std::strcspn(ToData, "\n");
+        const unsigned ToLen = std::strcspn(ToData, "\n");
         auto ToRange =
             CharSourceRange::getCharRange(ToLoc, ToLoc.getLocWithOffset(ToLen));
 

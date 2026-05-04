@@ -26,7 +26,7 @@ entry:
 declare signext i32 @do_something(ptr)
 
 ; CHECK: name:            test
-; CHECK: alignment:       16
+; CHECK: alignment:       4
 ; CHECK: liveins:
 ; CHECK64:   - { reg: '$x3', virtual-reg: '' }
 ; CHECK32:   - { reg: '$r3', virtual-reg: '' }

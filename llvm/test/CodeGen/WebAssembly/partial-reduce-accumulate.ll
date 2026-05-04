@@ -19,10 +19,10 @@ define hidden i32 @accumulate_add_u8_u8(ptr noundef readonly  %a, ptr noundef re
 ; MAX-BANDWIDTH: v128.load
 ; MAX-BANDWIDTH: i16x8.extadd_pairwise_i8x16_u
 ; MAX-BANDWIDTH: i32x4.extadd_pairwise_i16x8_u
-; MAX-BANDWIDTH: i32x4.add
 ; MAX-BANDWIDTH: v128.load
 ; MAX-BANDWIDTH: i16x8.extadd_pairwise_i8x16_u
 ; MAX-BANDWIDTH: i32x4.extadd_pairwise_i16x8_u
+; MAX-BANDWIDTH: i32x4.add
 ; MAX-BANDWIDTH: i32x4.add
 
 entry:
@@ -65,10 +65,10 @@ define hidden i32 @accumulate_add_s8_s8(ptr noundef readonly  %a, ptr noundef re
 ; MAX-BANDWIDTH: v128.load
 ; MAX-BANDWIDTH: i16x8.extadd_pairwise_i8x16_s
 ; MAX-BANDWIDTH: i32x4.extadd_pairwise_i16x8_s
-; MAX-BANDWIDTH: i32x4.add
 ; MAX-BANDWIDTH: v128.load
 ; MAX-BANDWIDTH: i16x8.extadd_pairwise_i8x16_s
 ; MAX-BANDWIDTH: i32x4.extadd_pairwise_i16x8_s
+; MAX-BANDWIDTH: i32x4.add
 ; MAX-BANDWIDTH: i32x4.add
 entry:
   %cmp8.not = icmp eq i32 %N, 0
@@ -108,12 +108,11 @@ define hidden i32 @accumulate_add_s8_u8(ptr noundef readonly  %a, ptr noundef re
 
 ; MAX-BANDWIDTH: loop
 ; MAX-BANDWIDTH: v128.load
-; MAX-BANDWIDTH: i16x8.extadd_pairwise_i8x16_s
-; MAX-BANDWIDTH: i32x4.extadd_pairwise_i16x8_s
-; MAX-BANDWIDTH: i32x4.add
-; MAX-BANDWIDTH: v128.load
 ; MAX-BANDWIDTH: i16x8.extadd_pairwise_i8x16_u
 ; MAX-BANDWIDTH: i32x4.extadd_pairwise_i16x8_u
+; MAX-BANDWIDTH: v128.load
+; MAX-BANDWIDTH: i16x8.extadd_pairwise_i8x16_s
+; MAX-BANDWIDTH: i32x4.extadd_pairwise_i16x8_s
 ; MAX-BANDWIDTH: i32x4.add
 entry:
   %cmp8.not = icmp eq i32 %N, 0
@@ -151,30 +150,25 @@ define hidden i32 @accumulate_add_s8_s16(ptr noundef readonly  %a, ptr noundef r
 
 ; MAX-BANDWIDTH: loop
 ; MAX-BANDWIDTH: v128.load
-; MAX-BANDWIDTH: i16x8.extend_low_i8x16_s
-; MAX-BANDWIDTH: i32x4.extend_low_i16x8_s
-; MAX-BANDWIDTH: i32x4.add
-; MAX-BANDWIDTH: v128.load
-; MAX-BANDWIDTH: i32x4.extend_low_i16x8_s
-; MAX-BANDWIDTH: i32x4.add
-; MAX-BANDWIDTH: i8x16.shuffle	12, 13, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; MAX-BANDWIDTH: i16x8.extend_low_i8x16_s
-; MAX-BANDWIDTH: i32x4.extend_low_i16x8_s
+; MAX-BANDWIDTH: i16x8.extend_high_i8x16_s
+; MAX-BANDWIDTH: i32x4.extend_high_i16x8_s
 ; MAX-BANDWIDTH: i32x4.add
 ; MAX-BANDWIDTH: v128.load
 ; MAX-BANDWIDTH: i32x4.extend_high_i16x8_s
 ; MAX-BANDWIDTH: i32x4.add
-; MAX-BANDWIDTH: i8x16.shuffle	8, 9, 10, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; MAX-BANDWIDTH: i32x4.extend_low_i16x8_s
+; MAX-BANDWIDTH: i32x4.add
+; MAX-BANDWIDTH: i32x4.extend_low_i16x8_s
+; MAX-BANDWIDTH: i32x4.add
 ; MAX-BANDWIDTH: i16x8.extend_low_i8x16_s
-; MAX-BANDWIDTH: i32x4.extend_low_i16x8_s
-; MAX-BANDWIDTH: i32x4.add
-; MAX-BANDWIDTH: i32x4.extend_low_i16x8_s
-; MAX-BANDWIDTH: i32x4.add
-; MAX-BANDWIDTH: i8x16.shuffle	4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; MAX-BANDWIDTH: i16x8.extend_low_i8x16_s
-; MAX-BANDWIDTH: i32x4.extend_low_i16x8_s
-; MAX-BANDWIDTH: i32x4.add
 ; MAX-BANDWIDTH: i32x4.extend_high_i16x8_s
+; MAX-BANDWIDTH: i32x4.add
+; MAX-BANDWIDTH: v128.load
+; MAX-BANDWIDTH: i32x4.extend_high_i16x8_s
+; MAX-BANDWIDTH: i32x4.add
+; MAX-BANDWIDTH: i32x4.extend_low_i16x8_s
+; MAX-BANDWIDTH: i32x4.add
+; MAX-BANDWIDTH: i32x4.extend_low_i16x8_s
 ; MAX-BANDWIDTH: i32x4.add
 entry:
   %cmp8.not = icmp eq i32 %N, 0
@@ -363,9 +357,9 @@ define hidden i32 @accumulate_add_u16_u16(ptr noundef readonly  %a, ptr noundef 
 ; MAX-BANDWIDTH: loop
 ; MAX-BANDWIDTH: v128.load
 ; MAX-BANDWIDTH: i32x4.extadd_pairwise_i16x8_u
-; MAX-BANDWIDTH: i32x4.add
 ; MAX-BANDWIDTH: v128.load
 ; MAX-BANDWIDTH: i32x4.extadd_pairwise_i16x8_u
+; MAX-BANDWIDTH: i32x4.add
 ; MAX-BANDWIDTH: i32x4.add
 entry:
   %cmp8.not = icmp eq i32 %N, 0
@@ -402,9 +396,9 @@ define hidden i32 @accumulate_add_s16_s16(ptr noundef readonly  %a, ptr noundef 
 ; MAX-BANDWIDTH: loop
 ; MAX-BANDWIDTH: v128.load
 ; MAX-BANDWIDTH: i32x4.extadd_pairwise_i16x8_s
-; MAX-BANDWIDTH: i32x4.add
 ; MAX-BANDWIDTH: v128.load
 ; MAX-BANDWIDTH: i32x4.extadd_pairwise_i16x8_s
+; MAX-BANDWIDTH: i32x4.add
 ; MAX-BANDWIDTH: i32x4.add
 entry:
   %cmp8.not = icmp eq i32 %N, 0
@@ -512,29 +506,25 @@ define hidden i32 @accumulate_sub_s8_s8(ptr noundef readonly  %a, ptr noundef re
 
 ; MAX-BANDWIDTH: loop
 ; MAX-BANDWIDTH: v128.load
-; MAX-BANDWIDTH: i8x16.shuffle	12, 13, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; MAX-BANDWIDTH: i16x8.extend_low_i8x16_s
-; MAX-BANDWIDTH: i32x4.extend_low_i16x8_s
+; MAX-BANDWIDTH: i16x8.extend_high_i8x16_s
+; MAX-BANDWIDTH: i32x4.extend_high_i16x8_s
 ; MAX-BANDWIDTH: i32x4.add
 ; MAX-BANDWIDTH: v128.load
-; MAX-BANDWIDTH: i8x16.shuffle	12, 13, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; MAX-BANDWIDTH: i16x8.extend_low_i8x16_s
-; MAX-BANDWIDTH: i32x4.extend_low_i16x8_s
+; MAX-BANDWIDTH: i16x8.extend_high_i8x16_s
+; MAX-BANDWIDTH: i32x4.extend_high_i16x8_s
 ; MAX-BANDWIDTH: i32x4.sub
-; MAX-BANDWIDTH: i8x16.shuffle	8, 9, 10, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; MAX-BANDWIDTH: i16x8.extend_low_i8x16_s
 ; MAX-BANDWIDTH: i32x4.extend_low_i16x8_s
 ; MAX-BANDWIDTH: i32x4.add
-; MAX-BANDWIDTH: i8x16.shuffle	8, 9, 10, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; MAX-BANDWIDTH: i16x8.extend_low_i8x16_s
 ; MAX-BANDWIDTH: i32x4.extend_low_i16x8_s
 ; MAX-BANDWIDTH: i32x4.sub
-; MAX-BANDWIDTH: i8x16.shuffle	4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 ; MAX-BANDWIDTH: i16x8.extend_low_i8x16_s
+; MAX-BANDWIDTH: i32x4.extend_high_i16x8_s
+; MAX-BANDWIDTH: i32x4.add
+; MAX-BANDWIDTH: i16x8.extend_low_i8x16_s
+; MAX-BANDWIDTH: i32x4.extend_high_i16x8_s
+; MAX-BANDWIDTH: i32x4.sub
 ; MAX-BANDWIDTH: i32x4.extend_low_i16x8_s
 ; MAX-BANDWIDTH: i32x4.add
-; MAX-BANDWIDTH: i8x16.shuffle	4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; MAX-BANDWIDTH: i16x8.extend_low_i8x16_s
 ; MAX-BANDWIDTH: i32x4.extend_low_i16x8_s
 ; MAX-BANDWIDTH: i32x4.sub
 entry:

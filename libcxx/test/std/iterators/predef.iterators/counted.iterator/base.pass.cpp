@@ -11,7 +11,9 @@
 // constexpr const I& base() const &;
 // constexpr I base() &&;
 
+#include <cassert>
 #include <iterator>
+#include <utility>
 
 #include "test_macros.h"
 #include "test_iterators.h"

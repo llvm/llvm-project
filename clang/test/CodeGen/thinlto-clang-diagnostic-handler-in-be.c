@@ -7,7 +7,7 @@
 // RUN: llvm-lto -thinlto -o %t %t1.bo
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -O2 -x ir %t1.bo -fthinlto-index=%t.thinlto.bc -emit-obj -Rpass-analysis=info 2>&1 | FileCheck %s -check-prefix=CHECK-REMARK
 // RUN: llvm-profdata merge -o %t2.profdata %S/Inputs/thinlto_expect2.proftext
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -O2 -x ir %t1.bo -fthinlto-index=%t.thinlto.bc -fprofile-instrument-use-path=%t2.profdata -emit-obj 2>&1 | FileCheck %s -allow-empty -check-prefix=CHECK-NOWARNING
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -O2 -x ir %t1.bo -fthinlto-index=%t.thinlto.bc -fprofile-instrument-use=llvm -fprofile-instrument-use-path=%t2.profdata -emit-obj 2>&1 | FileCheck %s -allow-empty -check-prefix=CHECK-NOWARNING
 
 int sum;
 __attribute__((noinline)) void bar(void) {

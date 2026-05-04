@@ -8,7 +8,7 @@
 
 ; CHECK-EXT: OpCapability FloatControls2
 ; CHECK-EXT: OpExtension "SPV_KHR_float_controls2"
-; CHECK-EXT: OpDecorate {{%[0-9]+}} FPFastMathMode NotNaN|NotInf|NSZ|AllowRecip|Fast
+; CHECK-EXT: OpDecorate {{%[0-9]+}} FPFastMathMode NotNaN|NotInf|NSZ|AllowRecip|AllowContract|AllowReassoc|AllowTransform
 
 define hidden spir_func float @foo(float  %0) local_unnamed_addr {
   %2 = fmul reassoc nnan ninf nsz arcp afn float %0, 2.000000e+00

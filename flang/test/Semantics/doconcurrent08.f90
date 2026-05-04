@@ -1,5 +1,5 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
-! C1140 -- A statement that might result in the deallocation of a polymorphic 
+! C1140 -- A statement that might result in the deallocation of a polymorphic
 ! entity shall not appear within a DO CONCURRENT construct.
 module m1
   ! Base type with scalar components

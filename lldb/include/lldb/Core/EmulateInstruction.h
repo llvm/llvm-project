@@ -385,8 +385,8 @@ public:
                                         const RegisterInfo *reg_info,
                                         const RegisterValue &reg_value);
 
-  // Type to represent the condition of an instruction. The UINT32 value is
-  // reserved for the unconditional case and all other value can be used in an
+  // Type to represent the condition of an instruction. The UINT32_MAX value is
+  // reserved for the unconditional case and all other values can be used in an
   // architecture dependent way.
   typedef uint32_t InstructionCondition;
   static const InstructionCondition UnconditionalCondition = UINT32_MAX;
@@ -452,8 +452,8 @@ public:
                              lldb::RegisterKind reg_kind, uint32_t reg_num,
                              uint64_t reg_value);
 
-  size_t ReadMemory(const Context &context, lldb::addr_t addr, void *dst,
-                    size_t dst_len);
+  bool ReadMemory(const Context &context, lldb::addr_t addr, void *dst,
+                  size_t dst_len);
 
   uint64_t ReadMemoryUnsigned(const Context &context, lldb::addr_t addr,
                               size_t byte_size, uint64_t fail_value,

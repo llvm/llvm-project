@@ -357,7 +357,7 @@ define <4 x i32> @or_sext_v4i8_to_v4i32_constant_with_loss(<4 x i8> %a) {
 define <4 x i16> @and_trunc_nuw_nsw_constant(<4 x i32> %a) {
 ; CHECK-LABEL: @and_trunc_nuw_nsw_constant(
 ; CHECK-NEXT:    [[AND_INNER:%.*]] = and <4 x i32> [[A:%.*]], <i32 1, i32 2, i32 3, i32 4>
-; CHECK-NEXT:    [[AND:%.*]] = trunc <4 x i32> [[AND_INNER]] to <4 x i16>
+; CHECK-NEXT:    [[AND:%.*]] = trunc nuw nsw <4 x i32> [[AND_INNER]] to <4 x i16>
 ; CHECK-NEXT:    ret <4 x i16> [[AND]]
 ;
   %t1 = trunc nuw nsw <4 x i32> %a to <4 x i16>
@@ -368,7 +368,7 @@ define <4 x i16> @and_trunc_nuw_nsw_constant(<4 x i32> %a) {
 define <4 x i8> @and_trunc_nuw_nsw_minus_constant(<4 x i32> %a) {
 ; CHECK-LABEL: @and_trunc_nuw_nsw_minus_constant(
 ; CHECK-NEXT:    [[AND_INNER:%.*]] = and <4 x i32> [[A:%.*]], <i32 240, i32 241, i32 242, i32 243>
-; CHECK-NEXT:    [[AND:%.*]] = trunc <4 x i32> [[AND_INNER]] to <4 x i8>
+; CHECK-NEXT:    [[AND:%.*]] = trunc nuw <4 x i32> [[AND_INNER]] to <4 x i8>
 ; CHECK-NEXT:    ret <4 x i8> [[AND]]
 ;
   %t1 = trunc nuw nsw <4 x i32> %a to <4 x i8>
@@ -379,7 +379,7 @@ define <4 x i8> @and_trunc_nuw_nsw_minus_constant(<4 x i32> %a) {
 define <4 x i8> @and_trunc_nuw_nsw_multiconstant(<4 x i32> %a) {
 ; CHECK-LABEL: @and_trunc_nuw_nsw_multiconstant(
 ; CHECK-NEXT:    [[AND_INNER:%.*]] = and <4 x i32> [[A:%.*]], <i32 240, i32 1, i32 242, i32 3>
-; CHECK-NEXT:    [[AND:%.*]] = trunc <4 x i32> [[AND_INNER]] to <4 x i8>
+; CHECK-NEXT:    [[AND:%.*]] = trunc nuw <4 x i32> [[AND_INNER]] to <4 x i8>
 ; CHECK-NEXT:    ret <4 x i8> [[AND]]
 ;
   %t1 = trunc nuw nsw <4 x i32> %a to <4 x i8>
@@ -391,7 +391,7 @@ define <4 x i8> @and_trunc_nuw_nsw_multiconstant(<4 x i32> %a) {
 define <4 x i32> @or_zext_nneg_constant(<4 x i16> %a) {
 ; CHECK-LABEL: @or_zext_nneg_constant(
 ; CHECK-NEXT:    [[OR_INNER:%.*]] = or <4 x i16> [[A:%.*]], <i16 1, i16 2, i16 3, i16 4>
-; CHECK-NEXT:    [[OR:%.*]] = zext <4 x i16> [[OR_INNER]] to <4 x i32>
+; CHECK-NEXT:    [[OR:%.*]] = zext nneg <4 x i16> [[OR_INNER]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[OR]]
 ;
   %z1 = zext nneg <4 x i16> %a to <4 x i32>

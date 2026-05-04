@@ -136,12 +136,12 @@ createArrayTemp(mlir::Location loc, fir::FirOpBuilder &builder,
 static mlir::Value copyInTempAndPackage(mlir::Location loc,
                                         fir::FirOpBuilder &builder,
                                         hlfir::Entity source) {
-  auto [temp, cleanup] = hlfir::createTempFromMold(loc, builder, source);
+  auto [temp, mustFree] = hlfir::createTempFromMold(loc, builder, source);
   assert(!temp.isAllocatable() && "expect temp to already be allocated");
   hlfir::AssignOp::create(builder, loc, source, temp, /*realloc=*/false,
                           /*keep_lhs_length_if_realloc=*/false,
                           /*temporary_lhs=*/true);
-  return packageBufferizedExpr(loc, builder, temp, cleanup);
+  return packageBufferizedExpr(loc, builder, temp, mustFree);
 }
 
 struct AsExprOpConversion : public mlir::OpConversionPattern<hlfir::AsExprOp> {
@@ -382,11 +382,12 @@ static bool allOtherUsesAreSafeForAssociate(mlir::Value value,
         if (!endAssociate)
           continue;
         // If useOp dominates the endAssociate, then it is definitely safe.
-        if (useOp->getBlock() != endAssociate->getBlock())
+        if (useOp->getBlock() != endAssociate->getBlock()) {
           if (mlir::DominanceInfo{}.dominates(useOp, endAssociate))
             continue;
-        if (useOp->isBeforeInBlock(endAssociate))
+        } else if (useOp->isBeforeInBlock(endAssociate)) {
           continue;
+        }
       }
       return false;
     }

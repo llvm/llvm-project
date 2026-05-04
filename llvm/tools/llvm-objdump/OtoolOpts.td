@@ -4,6 +4,7 @@ def help : Flag<["--"], "help">, HelpText<"print help">;
 def help_hidden : Flag<["--"], "help-hidden">,
   HelpText<"print help for hidden flags">;
 
+def a : Flag<["-"], "a">, HelpText<"print archive header">;
 def arch : Separate<["-"], "arch">,
   HelpText<"select slice of universal Mach-O file">;
 def C : Flag<["-"], "C">, HelpText<"print linker optimization hints">;
@@ -14,7 +15,7 @@ def G : Flag<["-"], "G">, HelpText<"print data-in-code table">;
 def h : Flag<["-"], "h">, HelpText<"print mach header">;
 def I : Flag<["-"], "I">, HelpText<"print indirect symbol table">;
 def j : Flag<["-"], "j">, HelpText<"print opcode bytes">;
-def l : Flag<["-"], "l">, HelpText<"print load commnads">;
+def l : Flag<["-"], "l">, HelpText<"print load commands">;
 def L : Flag<["-"], "L">, HelpText<"print used shared libraries">;
 def mcpu_EQ : Joined<["-"], "mcpu=">, HelpText<"select cpu for disassembly">;
 def o : Flag<["-"], "o">, HelpText<"print Objective-C segment">;
@@ -43,7 +44,6 @@ def dyld_info : Flag<["-"], "dyld_info">,
   HelpText<"print bind and rebase information">;
 
 // Not (yet?) implemented:
-// def a : Flag<["-"], "a">, HelpText<"print archive header">;
 // -c print argument strings of a core file
 // -m don't use archive(member) syntax
 // -dyld_opcodes

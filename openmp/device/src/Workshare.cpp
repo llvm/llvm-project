@@ -339,7 +339,7 @@ template <typename T, typename ST> struct omptarget_nvptx_LoopSupport {
 
   static uint64_t NextIter() {
     __kmpc_impl_lanemask_t active = mapping::activemask();
-    uint32_t leader = utils::ffs(active) - 1;
+    uint32_t leader = utils::ctz(active);
     uint32_t change = utils::popc(active);
     __kmpc_impl_lanemask_t lane_mask_lt = mapping::lanemaskLT();
     unsigned int rank = utils::popc(active & lane_mask_lt);
@@ -800,10 +800,6 @@ public:
 
     // If we know we have more threads than iterations we can indicate that to
     // avoid an outer loop.
-    if (config::getAssumeThreadsOversubscription()) {
-      OneIterationPerThread = true;
-    }
-
     if (OneIterationPerThread)
       ASSERT(NumThreads >= NumIters, "Broken assumption");
 
@@ -851,10 +847,6 @@ public:
 
     // If we know we have more blocks than iterations we can indicate that to
     // avoid an outer loop.
-    if (config::getAssumeTeamsOversubscription()) {
-      OneIterationPerThread = true;
-    }
-
     if (OneIterationPerThread)
       ASSERT(NumBlocks >= NumIters, "Broken assumption");
 
@@ -914,11 +906,6 @@ public:
 
     // If we know we have more threads (across all blocks) than iterations we
     // can indicate that to avoid an outer loop.
-    if (config::getAssumeTeamsOversubscription() &
-        config::getAssumeThreadsOversubscription()) {
-      OneIterationPerThread = true;
-    }
-
     if (OneIterationPerThread)
       ASSERT(NumBlocks * NumThreads >= NumIters, "Broken assumption");
 

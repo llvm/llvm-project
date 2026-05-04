@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fms-compatibility -fms-compatibility-version=19.33 -std=c++20 -ast-dump %s | FileCheck %s
+// RUN: %clang_cc1 -fms-compatibility -fms-compatibility-version=19.33 -std=c++20 -ast-dump %s -fexperimental-new-constant-interpreter | FileCheck %s
 
 // CHECK: used operator new
 // CHECK: MSConstexprAttr 0x{{[0-9a-f]+}} <col:17, col:23>

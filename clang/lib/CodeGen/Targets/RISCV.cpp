@@ -234,7 +234,7 @@ bool RISCVABIInfo::detectFPCCEligibleStructHelper(QualType Ty, CharUnits CurOff,
     // Non-zero-length arrays of empty records make the struct ineligible for
     // the FP calling convention in C++.
     if (const auto *RTy = EltTy->getAsCanonical<RecordType>()) {
-      if (ArraySize != 0 && isa<CXXRecordDecl>(RTy->getOriginalDecl()) &&
+      if (ArraySize != 0 && isa<CXXRecordDecl>(RTy->getDecl()) &&
           isEmptyRecord(getContext(), EltTy, true, true))
         return false;
     }
@@ -256,7 +256,7 @@ bool RISCVABIInfo::detectFPCCEligibleStructHelper(QualType Ty, CharUnits CurOff,
       return false;
     if (isEmptyRecord(getContext(), Ty, true, true))
       return true;
-    const RecordDecl *RD = RTy->getOriginalDecl()->getDefinitionOrSelf();
+    const RecordDecl *RD = RTy->getDecl()->getDefinitionOrSelf();
     // Unions aren't eligible unless they're empty (which is caught above).
     if (RD->isUnion())
       return false;
@@ -283,6 +283,13 @@ bool RISCVABIInfo::detectFPCCEligibleStructHelper(QualType Ty, CharUnits CurOff,
         // bitwidth is XLen or less.
         if (getContext().getTypeSize(QTy) > XLen && BitWidth <= XLen)
           QTy = getContext().getIntTypeForBitwidth(XLen, false);
+        // Trim type to bitwidth if possible
+        else if (getContext().getTypeSize(QTy) > BitWidth) {
+          bool IsSigned =
+              FD->getType().getTypePtr()->hasSignedIntegerRepresentation();
+          unsigned Bits = std::max(8U, (unsigned)llvm::PowerOf2Ceil(BitWidth));
+          QTy = getContext().getIntTypeForBitwidth(Bits, IsSigned);
+        }
         if (BitWidth == 0) {
           ZeroWidthBitFieldCount++;
           continue;
@@ -680,21 +687,21 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
     if (const auto *ED = Ty->getAsEnumDecl())
       Ty = ED->getIntegerType();
 
-    // All integral types are promoted to XLen width
-    if (Size < XLen && Ty->isIntegralOrEnumerationType()) {
-      return extendType(Ty, CGT.ConvertType(Ty));
+    if (const auto *EIT = Ty->getAs<BitIntType>()) {
+
+      if (XLen == 64 && EIT->getNumBits() == 32)
+        return extendType(Ty, CGT.ConvertType(Ty));
+
+      if (EIT->getNumBits() <= 2 * XLen)
+        return ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty));
+      return getNaturalAlignIndirect(
+          Ty, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
+          /*ByVal=*/false);
     }
 
-    if (const auto *EIT = Ty->getAs<BitIntType>()) {
-      if (EIT->getNumBits() < XLen)
-        return extendType(Ty, CGT.ConvertType(Ty));
-      if (EIT->getNumBits() > 128 ||
-          (!getContext().getTargetInfo().hasInt128Type() &&
-           EIT->getNumBits() > 64))
-        return getNaturalAlignIndirect(
-            Ty, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
-            /*ByVal=*/false);
-    }
+    // All integral types are promoted to XLen width
+    if (Size < XLen && Ty->isIntegralOrEnumerationType())
+      return extendType(Ty, CGT.ConvertType(Ty));
 
     return ABIArgInfo::getDirect();
   }
@@ -721,18 +728,18 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
   if (Size <= 2 * XLen) {
     unsigned Alignment = getContext().getTypeAlign(Ty);
 
-    // Use a single XLen int if possible, 2*XLen if 2*XLen alignment is
-    // required, and a 2-element XLen array if only XLen alignment is required.
     if (Size <= XLen) {
+      // Use the smallest integer type we can.
       return ABIArgInfo::getDirect(
-          llvm::IntegerType::get(getVMContext(), XLen));
-    } else if (Alignment == 2 * XLen) {
+          llvm::IntegerType::get(getVMContext(), Size));
+    }
+    // Use 2*XLen if 2*XLen alignment is required.
+    if (Alignment == 2 * XLen)
       return ABIArgInfo::getDirect(
           llvm::IntegerType::get(getVMContext(), 2 * XLen));
-    } else {
-      return ABIArgInfo::getDirect(llvm::ArrayType::get(
-          llvm::IntegerType::get(getVMContext(), XLen), 2));
-    }
+    // Use 2-element XLen array if only XLen alignment is required.
+    return ABIArgInfo::getDirect(
+        llvm::ArrayType::get(llvm::IntegerType::get(getVMContext(), XLen), 2));
   }
   return getNaturalAlignIndirect(
       Ty, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),

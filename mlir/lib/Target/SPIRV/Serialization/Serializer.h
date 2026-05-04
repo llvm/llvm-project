@@ -304,6 +304,8 @@ private:
 
   LogicalResult processBranchOp(spirv::BranchOp branchOp);
 
+  LogicalResult processSwitchOp(spirv::SwitchOp switchOp);
+
   //===--------------------------------------------------------------------===//
   // Operations
   //===--------------------------------------------------------------------===//
@@ -352,6 +354,11 @@ private:
   /// given `decoration`.
   LogicalResult emitDecoration(uint32_t target, spirv::Decoration decoration,
                                ArrayRef<uint32_t> params = {});
+
+  /// Emits an OpDecorateId instruction to decorate the given `target` with the
+  /// given `decoration` whose extra operands are SPIR-V <id>s.
+  LogicalResult emitDecorationId(uint32_t target, spirv::Decoration decoration,
+                                 ArrayRef<uint32_t> operandIds);
 
   /// Emits an OpLine instruction with the given `loc` location information into
   /// the given `binary` vector.

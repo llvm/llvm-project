@@ -58,7 +58,9 @@ struct DebugLine {
 };
 
 /// Map from a selection/loop's header block to its merge (and continue) target.
-using BlockMergeInfoMap = DenseMap<Block *, BlockMergeInfo>;
+/// Use `MapVector<>` to ensure a deterministic iteration order with a pointer
+/// key.
+using BlockMergeInfoMap = llvm::MapVector<Block *, BlockMergeInfo>;
 
 /// A "deferred struct type" is a struct type with one or more member types not
 /// known when the Deserializer first encounters the struct. This happens, for
@@ -175,6 +177,11 @@ private:
   /// Processes an OpDecorate instruction.
   LogicalResult processDecoration(ArrayRef<uint32_t> words);
 
+  /// Resolves all OpDecorateId entries previously queued during
+  /// processDecoration. Called after all module ops have been deserialized so
+  /// the operand <id>s can be looked up as MLIR symbols.
+  LogicalResult resolveDeferredIdDecorations();
+
   // Processes an OpMemberDecorate instruction.
   LogicalResult processMemberDecoration(ArrayRef<uint32_t> words);
 
@@ -278,11 +285,11 @@ private:
     return opBuilder.getStringAttr(attrName);
   }
 
-  /// Move a conditional branch into a separate basic block to avoid unnecessary
-  /// sinking of defs that may be required outside a selection region. This
-  /// function also ensures that a single block cannot be a header block of one
-  /// selection construct and the merge block of another.
-  LogicalResult splitConditionalBlocks();
+  /// Move a conditional branch or a switch into a separate basic block to avoid
+  /// unnecessary sinking of defs that may be required outside a selection
+  /// region. This function also ensures that a single block cannot be a header
+  /// block of one selection construct and the merge block of another.
+  LogicalResult splitSelectionHeader();
 
   //===--------------------------------------------------------------------===//
   // Type
@@ -314,6 +321,8 @@ private:
   LogicalResult processImageType(ArrayRef<uint32_t> operands);
 
   LogicalResult processSampledImageType(ArrayRef<uint32_t> operands);
+
+  LogicalResult processSamplerType(ArrayRef<uint32_t> operands);
 
   LogicalResult processRuntimeArrayType(ArrayRef<uint32_t> operands);
 
@@ -471,6 +480,9 @@ private:
 
   /// Processes a SPIR-V OpPhi instruction with the given `operands`.
   LogicalResult processPhi(ArrayRef<uint32_t> operands);
+
+  /// Processes a SPIR-V OpSwitch instruction with the given `operands`.
+  LogicalResult processSwitch(ArrayRef<uint32_t> operands);
 
   /// Creates block arguments on predecessors previously recorded when handling
   /// OpPhi instructions.
@@ -674,6 +686,16 @@ private:
 
   // Result <id> to decorations mapping.
   DenseMap<uint32_t, NamedAttrList> decorations;
+
+  // Decoration entries from OpDecorateId whose operand <id>s must be resolved
+  // to MLIR symbols after all module ops have been deserialized.
+  struct DeferredIdDecoration {
+    uint32_t targetID;
+    spirv::Decoration decoration;
+    uint32_t operandID;
+    Location loc;
+  };
+  SmallVector<DeferredIdDecoration> pendingIdDecorations;
 
   // Result <id> to type decorations.
   DenseMap<uint32_t, uint32_t> typeDecorations;

@@ -240,8 +240,8 @@ body:             |
   bb.0:
     ; GCN-LABEL: name: s_mov_b32_imm_literal_copy_s_to_av_32
     ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 999
-    ; GCN-NEXT: [[AV_MOV_:%[0-9]+]]:av_32 = AV_MOV_B32_IMM_PSEUDO [[S_MOV_B32_]], implicit $exec
-    ; GCN-NEXT: $agpr0 = COPY [[AV_MOV_]]
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:av_32 = COPY [[S_MOV_B32_]]
+    ; GCN-NEXT: $agpr0 = COPY [[COPY]]
     ; GCN-NEXT: S_ENDPGM 0
     %0:sreg_32 = S_MOV_B32 999
     %1:av_32 = COPY %0
@@ -257,8 +257,8 @@ body:             |
   bb.0:
     ; GCN-LABEL: name: v_mov_b32_imm_literal_copy_v_to_av_32
     ; GCN: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 999, implicit $exec
-    ; GCN-NEXT: [[AV_MOV_:%[0-9]+]]:av_32 = AV_MOV_B32_IMM_PSEUDO [[V_MOV_B32_e32_]], implicit $exec
-    ; GCN-NEXT: $agpr0 = COPY [[AV_MOV_]]
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:av_32 = COPY [[V_MOV_B32_e32_]]
+    ; GCN-NEXT: $agpr0 = COPY [[COPY]]
     ; GCN-NEXT: S_ENDPGM 0
     %0:vgpr_32 = V_MOV_B32_e32 999, implicit $exec
     %1:av_32 = COPY %0

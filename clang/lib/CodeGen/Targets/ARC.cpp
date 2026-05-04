@@ -112,8 +112,7 @@ ABIArgInfo ARCABIInfo::classifyArgumentType(QualType Ty,
 
   if (isAggregateTypeForABI(Ty)) {
     // Structures with flexible arrays are always indirect.
-    if (RT &&
-        RT->getOriginalDecl()->getDefinitionOrSelf()->hasFlexibleArrayMember())
+    if (RT && RT->getDecl()->getDefinitionOrSelf()->hasFlexibleArrayMember())
       return getIndirectByValue(Ty);
 
     // Ignore empty structs/unions.

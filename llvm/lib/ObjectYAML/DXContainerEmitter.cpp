@@ -242,7 +242,8 @@ Error DXContainerWriter::writeParts(raw_ostream &OS) {
                                 P.Info->PatchOutputMap.end());
 
       PSV.finalize(static_cast<Triple::EnvironmentType>(
-          Triple::Pixel + P.Info->Info.ShaderStage));
+                       Triple::Pixel + P.Info->Info.ShaderStage),
+                   P.Info->Version);
       PSV.write(OS, P.Info->Version);
       break;
     }
@@ -342,6 +343,9 @@ Error DXContainerWriter::writeParts(raw_ostream &OS) {
         NewSampler.ShaderRegister = Param.ShaderRegister;
         NewSampler.RegisterSpace = Param.RegisterSpace;
         NewSampler.ShaderVisibility = Param.ShaderVisibility;
+
+        if (RS.Version > 2)
+          NewSampler.Flags = Param.getEncodedFlags();
 
         RS.StaticSamplers.push_back(NewSampler);
       }

@@ -17,8 +17,8 @@ float crealf(float _Complex);
 // NONEWSTRUCTPATHTBAA-SAME: ptr noundef readonly captures(none) [[NUM:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // NONEWSTRUCTPATHTBAA-NEXT:  [[ENTRY:.*:]]
 // NONEWSTRUCTPATHTBAA-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[NUM]], i64 40
-// NONEWSTRUCTPATHTBAA-NEXT:    [[TMP0:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !tbaa [[FLOAT_TBAA2:![0-9]+]]
-// NONEWSTRUCTPATHTBAA-NEXT:    [[CALL:%.*]] = tail call float @expf(float noundef [[TMP0]]) #[[ATTR9:[0-9]+]], !tbaa [[INT_TBAA6:![0-9]+]]
+// NONEWSTRUCTPATHTBAA-NEXT:    [[TMP0:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !tbaa [[FLOAT_TBAA6:![0-9]+]]
+// NONEWSTRUCTPATHTBAA-NEXT:    [[CALL:%.*]] = tail call float @expf(float noundef [[TMP0]]) #[[ATTR9:[0-9]+]], !tbaa [[INT_TBAA2:![0-9]+]]
 // NONEWSTRUCTPATHTBAA-NEXT:    [[MUL:%.*]] = fmul float [[TMP0]], [[CALL]]
 // NONEWSTRUCTPATHTBAA-NEXT:    ret float [[MUL]]
 //
@@ -26,8 +26,8 @@ float crealf(float _Complex);
 // NEWSTRUCTPATHTBAA-SAME: ptr noundef readonly captures(none) [[NUM:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // NEWSTRUCTPATHTBAA-NEXT:  [[ENTRY:.*:]]
 // NEWSTRUCTPATHTBAA-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[NUM]], i64 40
-// NEWSTRUCTPATHTBAA-NEXT:    [[TMP0:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA2:![0-9]+]]
-// NEWSTRUCTPATHTBAA-NEXT:    [[CALL:%.*]] = tail call float @expf(float noundef [[TMP0]]) #[[ATTR9:[0-9]+]], !tbaa [[TBAA6:![0-9]+]]
+// NEWSTRUCTPATHTBAA-NEXT:    [[TMP0:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA6:![0-9]+]]
+// NEWSTRUCTPATHTBAA-NEXT:    [[CALL:%.*]] = tail call float @expf(float noundef [[TMP0]]) #[[ATTR9:[0-9]+]], !tbaa [[TBAA2:![0-9]+]]
 // NEWSTRUCTPATHTBAA-NEXT:    [[MUL:%.*]] = fmul float [[TMP0]], [[CALL]]
 // NEWSTRUCTPATHTBAA-NEXT:    ret float [[MUL]]
 //
@@ -41,8 +41,8 @@ float test_expf (float num[]) {
 // NONEWSTRUCTPATHTBAA-SAME: ptr noundef readonly captures(none) [[NUM:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // NONEWSTRUCTPATHTBAA-NEXT:  [[ENTRY:.*:]]
 // NONEWSTRUCTPATHTBAA-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[NUM]], i64 40
-// NONEWSTRUCTPATHTBAA-NEXT:    [[TMP0:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !tbaa [[FLOAT_TBAA2]]
-// NONEWSTRUCTPATHTBAA-NEXT:    [[CALL:%.*]] = tail call float @expf(float noundef [[TMP0]]) #[[ATTR9]], !tbaa [[INT_TBAA6]]
+// NONEWSTRUCTPATHTBAA-NEXT:    [[TMP0:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !tbaa [[FLOAT_TBAA6]]
+// NONEWSTRUCTPATHTBAA-NEXT:    [[CALL:%.*]] = tail call float @expf(float noundef [[TMP0]]) #[[ATTR9]], !tbaa [[INT_TBAA2]]
 // NONEWSTRUCTPATHTBAA-NEXT:    [[MUL:%.*]] = fmul float [[TMP0]], [[CALL]]
 // NONEWSTRUCTPATHTBAA-NEXT:    ret float [[MUL]]
 //
@@ -50,8 +50,8 @@ float test_expf (float num[]) {
 // NEWSTRUCTPATHTBAA-SAME: ptr noundef readonly captures(none) [[NUM:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // NEWSTRUCTPATHTBAA-NEXT:  [[ENTRY:.*:]]
 // NEWSTRUCTPATHTBAA-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[NUM]], i64 40
-// NEWSTRUCTPATHTBAA-NEXT:    [[TMP0:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA2]]
-// NEWSTRUCTPATHTBAA-NEXT:    [[CALL:%.*]] = tail call float @expf(float noundef [[TMP0]]) #[[ATTR9]], !tbaa [[TBAA6]]
+// NEWSTRUCTPATHTBAA-NEXT:    [[TMP0:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA6]]
+// NEWSTRUCTPATHTBAA-NEXT:    [[CALL:%.*]] = tail call float @expf(float noundef [[TMP0]]) #[[ATTR9]], !tbaa [[TBAA2]]
 // NEWSTRUCTPATHTBAA-NEXT:    [[MUL:%.*]] = fmul float [[TMP0]], [[CALL]]
 // NEWSTRUCTPATHTBAA-NEXT:    ret float [[MUL]]
 //
@@ -92,7 +92,7 @@ double test_fabs (double num[]) {
 // NONEWSTRUCTPATHTBAA-NEXT:  [[ENTRY:.*:]]
 // NONEWSTRUCTPATHTBAA-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[NUM]], i64 80
 // NONEWSTRUCTPATHTBAA-NEXT:    [[TMP0:%.*]] = load double, ptr [[ARRAYIDX]], align 8, !tbaa [[DOUBLE_TBAA8]]
-// NONEWSTRUCTPATHTBAA-NEXT:    [[CALL:%.*]] = tail call double @remainder(double noundef [[TMP0]], double noundef [[A]]) #[[ATTR9]], !tbaa [[INT_TBAA6]]
+// NONEWSTRUCTPATHTBAA-NEXT:    [[CALL:%.*]] = tail call double @remainder(double noundef [[TMP0]], double noundef [[A]]) #[[ATTR9]], !tbaa [[INT_TBAA2]]
 // NONEWSTRUCTPATHTBAA-NEXT:    [[MUL:%.*]] = fmul double [[TMP0]], [[CALL]]
 // NONEWSTRUCTPATHTBAA-NEXT:    ret double [[MUL]]
 //
@@ -101,7 +101,7 @@ double test_fabs (double num[]) {
 // NEWSTRUCTPATHTBAA-NEXT:  [[ENTRY:.*:]]
 // NEWSTRUCTPATHTBAA-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[NUM]], i64 80
 // NEWSTRUCTPATHTBAA-NEXT:    [[TMP0:%.*]] = load double, ptr [[ARRAYIDX]], align 8, !tbaa [[TBAA8]]
-// NEWSTRUCTPATHTBAA-NEXT:    [[CALL:%.*]] = tail call double @remainder(double noundef [[TMP0]], double noundef [[A]]) #[[ATTR9]], !tbaa [[TBAA6]]
+// NEWSTRUCTPATHTBAA-NEXT:    [[CALL:%.*]] = tail call double @remainder(double noundef [[TMP0]], double noundef [[A]]) #[[ATTR9]], !tbaa [[TBAA2]]
 // NEWSTRUCTPATHTBAA-NEXT:    [[MUL:%.*]] = fmul double [[TMP0]], [[CALL]]
 // NEWSTRUCTPATHTBAA-NEXT:    ret double [[MUL]]
 //
@@ -156,12 +156,12 @@ double test_frexp (double num[]) {
 // NONEWSTRUCTPATHTBAA-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[SIN]]) #[[ATTR9]]
 // NONEWSTRUCTPATHTBAA-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[COS]]) #[[ATTR9]]
 // NONEWSTRUCTPATHTBAA-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[NUM]], i64 8
-// NONEWSTRUCTPATHTBAA-NEXT:    [[TMP0:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !tbaa [[FLOAT_TBAA2]]
+// NONEWSTRUCTPATHTBAA-NEXT:    [[TMP0:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !tbaa [[FLOAT_TBAA6]]
 // NONEWSTRUCTPATHTBAA-NEXT:    call void @sincos(float noundef [[TMP0]], ptr noundef nonnull [[SIN]], ptr noundef nonnull [[COS]]) #[[ATTR9]]
-// NONEWSTRUCTPATHTBAA-NEXT:    [[TMP1:%.*]] = load float, ptr [[SIN]], align 4, !tbaa [[FLOAT_TBAA2]]
-// NONEWSTRUCTPATHTBAA-NEXT:    [[TMP2:%.*]] = load float, ptr [[COS]], align 4, !tbaa [[FLOAT_TBAA2]]
+// NONEWSTRUCTPATHTBAA-NEXT:    [[TMP1:%.*]] = load float, ptr [[SIN]], align 4, !tbaa [[FLOAT_TBAA6]]
+// NONEWSTRUCTPATHTBAA-NEXT:    [[TMP2:%.*]] = load float, ptr [[COS]], align 4, !tbaa [[FLOAT_TBAA6]]
 // NONEWSTRUCTPATHTBAA-NEXT:    [[MUL:%.*]] = fmul float [[TMP1]], [[TMP2]]
-// NONEWSTRUCTPATHTBAA-NEXT:    [[TMP3:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !tbaa [[FLOAT_TBAA2]]
+// NONEWSTRUCTPATHTBAA-NEXT:    [[TMP3:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !tbaa [[FLOAT_TBAA6]]
 // NONEWSTRUCTPATHTBAA-NEXT:    [[ADD:%.*]] = fadd float [[MUL]], [[TMP3]]
 // NONEWSTRUCTPATHTBAA-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[COS]]) #[[ATTR9]]
 // NONEWSTRUCTPATHTBAA-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[SIN]]) #[[ATTR9]]
@@ -175,12 +175,12 @@ double test_frexp (double num[]) {
 // NEWSTRUCTPATHTBAA-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[SIN]]) #[[ATTR9]]
 // NEWSTRUCTPATHTBAA-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[COS]]) #[[ATTR9]]
 // NEWSTRUCTPATHTBAA-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[NUM]], i64 8
-// NEWSTRUCTPATHTBAA-NEXT:    [[TMP0:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA2]]
+// NEWSTRUCTPATHTBAA-NEXT:    [[TMP0:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA6]]
 // NEWSTRUCTPATHTBAA-NEXT:    call void @sincos(float noundef [[TMP0]], ptr noundef nonnull [[SIN]], ptr noundef nonnull [[COS]]) #[[ATTR9]]
-// NEWSTRUCTPATHTBAA-NEXT:    [[TMP1:%.*]] = load float, ptr [[SIN]], align 4, !tbaa [[TBAA2]]
-// NEWSTRUCTPATHTBAA-NEXT:    [[TMP2:%.*]] = load float, ptr [[COS]], align 4, !tbaa [[TBAA2]]
+// NEWSTRUCTPATHTBAA-NEXT:    [[TMP1:%.*]] = load float, ptr [[SIN]], align 4, !tbaa [[TBAA6]]
+// NEWSTRUCTPATHTBAA-NEXT:    [[TMP2:%.*]] = load float, ptr [[COS]], align 4, !tbaa [[TBAA6]]
 // NEWSTRUCTPATHTBAA-NEXT:    [[MUL:%.*]] = fmul float [[TMP1]], [[TMP2]]
-// NEWSTRUCTPATHTBAA-NEXT:    [[TMP3:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA2]]
+// NEWSTRUCTPATHTBAA-NEXT:    [[TMP3:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA6]]
 // NEWSTRUCTPATHTBAA-NEXT:    [[ADD:%.*]] = fadd float [[MUL]], [[TMP3]]
 // NEWSTRUCTPATHTBAA-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[COS]]) #[[ATTR9]]
 // NEWSTRUCTPATHTBAA-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[SIN]]) #[[ATTR9]]
@@ -198,12 +198,12 @@ float test_sincos (float num[]) {
 // NONEWSTRUCTPATHTBAA-SAME: ptr noundef readonly captures(none) [[NUM:%.*]]) local_unnamed_addr #[[ATTR7]] {
 // NONEWSTRUCTPATHTBAA-NEXT:  [[ENTRY:.*:]]
 // NONEWSTRUCTPATHTBAA-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[NUM]], i64 8
-// NONEWSTRUCTPATHTBAA-NEXT:    [[TMP0:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !tbaa [[FLOAT_TBAA2]]
+// NONEWSTRUCTPATHTBAA-NEXT:    [[TMP0:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !tbaa [[FLOAT_TBAA6]]
 // NONEWSTRUCTPATHTBAA-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue [2 x float] poison, float [[TMP0]], 0
 // NONEWSTRUCTPATHTBAA-NEXT:    [[DOTFCA_1_INSERT:%.*]] = insertvalue [2 x float] [[DOTFCA_0_INSERT]], float 0.000000e+00, 1
 // NONEWSTRUCTPATHTBAA-NEXT:    [[CALL:%.*]] = tail call { float, float } @cacoshf([2 x float] noundef alignstack(8) [[DOTFCA_1_INSERT]]) #[[ATTR9]]
 // NONEWSTRUCTPATHTBAA-NEXT:    [[TMP1:%.*]] = extractvalue { float, float } [[CALL]], 0
-// NONEWSTRUCTPATHTBAA-NEXT:    [[TMP2:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !tbaa [[FLOAT_TBAA2]]
+// NONEWSTRUCTPATHTBAA-NEXT:    [[TMP2:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !tbaa [[FLOAT_TBAA6]]
 // NONEWSTRUCTPATHTBAA-NEXT:    [[ADD:%.*]] = fadd float [[TMP1]], [[TMP2]]
 // NONEWSTRUCTPATHTBAA-NEXT:    ret float [[ADD]]
 //
@@ -211,12 +211,12 @@ float test_sincos (float num[]) {
 // NEWSTRUCTPATHTBAA-SAME: ptr noundef readonly captures(none) [[NUM:%.*]]) local_unnamed_addr #[[ATTR7]] {
 // NEWSTRUCTPATHTBAA-NEXT:  [[ENTRY:.*:]]
 // NEWSTRUCTPATHTBAA-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[NUM]], i64 8
-// NEWSTRUCTPATHTBAA-NEXT:    [[TMP0:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA2]]
+// NEWSTRUCTPATHTBAA-NEXT:    [[TMP0:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA6]]
 // NEWSTRUCTPATHTBAA-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue [2 x float] poison, float [[TMP0]], 0
 // NEWSTRUCTPATHTBAA-NEXT:    [[DOTFCA_1_INSERT:%.*]] = insertvalue [2 x float] [[DOTFCA_0_INSERT]], float 0.000000e+00, 1
 // NEWSTRUCTPATHTBAA-NEXT:    [[CALL:%.*]] = tail call { float, float } @cacoshf([2 x float] noundef alignstack(8) [[DOTFCA_1_INSERT]]) #[[ATTR9]]
 // NEWSTRUCTPATHTBAA-NEXT:    [[TMP1:%.*]] = extractvalue { float, float } [[CALL]], 0
-// NEWSTRUCTPATHTBAA-NEXT:    [[TMP2:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA2]]
+// NEWSTRUCTPATHTBAA-NEXT:    [[TMP2:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA6]]
 // NEWSTRUCTPATHTBAA-NEXT:    [[ADD:%.*]] = fadd float [[TMP1]], [[TMP2]]
 // NEWSTRUCTPATHTBAA-NEXT:    ret float [[ADD]]
 //
@@ -227,21 +227,21 @@ float test_cacoshf (float num[]) {
 }
 
 //.
-// NONEWSTRUCTPATHTBAA: [[FLOAT_TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
-// NONEWSTRUCTPATHTBAA: [[META3]] = !{!"float", [[META4:![0-9]+]], i64 0}
+// NONEWSTRUCTPATHTBAA: [[INT_TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
+// NONEWSTRUCTPATHTBAA: [[META3]] = !{!"int", [[META4:![0-9]+]], i64 0}
 // NONEWSTRUCTPATHTBAA: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
 // NONEWSTRUCTPATHTBAA: [[META5]] = !{!"Simple C/C++ TBAA"}
-// NONEWSTRUCTPATHTBAA: [[INT_TBAA6]] = !{[[META7:![0-9]+]], [[META7]], i64 0}
-// NONEWSTRUCTPATHTBAA: [[META7]] = !{!"int", [[META4]], i64 0}
+// NONEWSTRUCTPATHTBAA: [[FLOAT_TBAA6]] = !{[[META7:![0-9]+]], [[META7]], i64 0}
+// NONEWSTRUCTPATHTBAA: [[META7]] = !{!"float", [[META4]], i64 0}
 // NONEWSTRUCTPATHTBAA: [[DOUBLE_TBAA8]] = !{[[META9:![0-9]+]], [[META9]], i64 0}
 // NONEWSTRUCTPATHTBAA: [[META9]] = !{!"double", [[META4]], i64 0}
 //.
 // NEWSTRUCTPATHTBAA: [[TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0, i64 4}
-// NEWSTRUCTPATHTBAA: [[META3]] = !{[[META4:![0-9]+]], i64 4, !"float"}
+// NEWSTRUCTPATHTBAA: [[META3]] = !{[[META4:![0-9]+]], i64 4, !"int"}
 // NEWSTRUCTPATHTBAA: [[META4]] = !{[[META5:![0-9]+]], i64 1, !"omnipotent char"}
 // NEWSTRUCTPATHTBAA: [[META5]] = !{!"Simple C/C++ TBAA"}
 // NEWSTRUCTPATHTBAA: [[TBAA6]] = !{[[META7:![0-9]+]], [[META7]], i64 0, i64 4}
-// NEWSTRUCTPATHTBAA: [[META7]] = !{[[META4]], i64 4, !"int"}
+// NEWSTRUCTPATHTBAA: [[META7]] = !{[[META4]], i64 4, !"float"}
 // NEWSTRUCTPATHTBAA: [[TBAA8]] = !{[[META9:![0-9]+]], [[META9]], i64 0, i64 8}
 // NEWSTRUCTPATHTBAA: [[META9]] = !{[[META4]], i64 8, !"double"}
 //.

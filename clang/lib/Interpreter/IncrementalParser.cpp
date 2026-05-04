@@ -13,11 +13,13 @@
 #include "IncrementalParser.h"
 #include "IncrementalAction.h"
 
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclContextInternals.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Interpreter/PartialTranslationUnit.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Sema/Sema.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/Error.h"
@@ -37,6 +39,10 @@ IncrementalParser::IncrementalParser(CompilerInstance &Instance,
   llvm::ErrorAsOutParameter EAO(&Err);
   Consumer = &S.getASTConsumer();
   P.reset(new Parser(S.getPreprocessor(), S, /*SkipBodies=*/false));
+
+  if (ExternalASTSource *External = S.getASTContext().getExternalSource())
+    External->StartTranslationUnit(Consumer);
+
   P->Initialize();
 }
 
@@ -125,8 +131,17 @@ IncrementalParser::Parse(llvm::StringRef input) {
   SourceLocation NewLoc = SM.getLocForStartOfFile(SM.getMainFileID());
 
   // Create FileID for the current buffer.
-  FileID FID = SM.createFileID(std::move(MB), SrcMgr::C_User, /*LoadedID=*/0,
-                               /*LoadedOffset=*/0, NewLoc);
+  FileID FID;
+  // Create FileEntry and FileID for the current buffer.
+  FileEntryRef FE = SM.getFileManager().getVirtualFileRef(
+      SourceName.str(), InputSize, 0 /* mod time*/);
+  SM.overrideFileContents(FE, std::move(MB));
+
+  // Ensure HeaderFileInfo exists before lookup to prevent assertion
+  HeaderSearch &HS = PP.getHeaderSearchInfo();
+  HS.getFileInfo(FE);
+
+  FID = SM.createFileID(FE, NewLoc, SrcMgr::C_User);
 
   // NewLoc only used for diags.
   if (PP.EnterSourceFile(FID, /*DirLookup=*/nullptr, NewLoc))
@@ -174,6 +189,29 @@ void IncrementalParser::CleanUpPTU(TranslationUnitDecl *MostRecentTU) {
       } else {
         for (NamedDecl *D : NamedDeclsToRemove)
           List.remove(D);
+      }
+    }
+  }
+
+  ExternCContextDecl *ECCD = S.getASTContext().getExternCContextDecl();
+  if (StoredDeclsMap *Map = ECCD->getPrimaryContext()->getLookupPtr()) {
+    for (auto &&[Key, List] : *Map) {
+      DeclContextLookupResult R = List.getLookupResult();
+      llvm::SmallVector<NamedDecl *, 4> NamedDeclsToRemove;
+      for (NamedDecl *D : R) {
+        // Implicitly generated C decl is not attached to the current TU but
+        // lexically attached to the recent TU, so we need to check the lexical
+        // context.
+        DeclContext *LDC = D->getLexicalDeclContext();
+        while (LDC && !isa<TranslationUnitDecl>(LDC))
+          LDC = LDC->getLexicalParent();
+        TranslationUnitDecl *TopTU = cast_or_null<TranslationUnitDecl>(LDC);
+        if (TopTU == MostRecentTU)
+          NamedDeclsToRemove.push_back(D);
+      }
+      for (NamedDecl *D : NamedDeclsToRemove) {
+        List.remove(D);
+        S.IdResolver.RemoveDecl(D);
       }
     }
   }

@@ -26,7 +26,7 @@ define void @test_tc_between_8_and_17(ptr %A, i64 range(i64 8, 17) %N) {
 ; VF8UF1-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !prof [[PROF0:![0-9]+]], !llvm.loop [[LOOP1:![0-9]+]]
 ; VF8UF1:       [[MIDDLE_BLOCK]]:
 ; VF8UF1-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; VF8UF1-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH:.*]], !prof [[PROF4:![0-9]+]]
+; VF8UF1-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH:.*]], !prof [[PROF5:![0-9]+]]
 ; VF8UF1:       [[SCALAR_PH]]:
 ; VF8UF1-NEXT:    br label %[[LOOP:.*]]
 ; VF8UF1:       [[LOOP]]:
@@ -38,7 +38,7 @@ define void @test_tc_between_8_and_17(ptr %A, i64 range(i64 8, 17) %N) {
 ; VF8UF1-NEXT:    store i8 [[ADD]], ptr [[P_SRC]], align 1
 ; VF8UF1-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 1
 ; VF8UF1-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; VF8UF1-NEXT:    br i1 [[CMP]], label %[[EXIT]], label %[[LOOP]], !prof [[PROF5:![0-9]+]], !llvm.loop [[LOOP6:![0-9]+]]
+; VF8UF1-NEXT:    br i1 [[CMP]], label %[[EXIT]], label %[[LOOP]], !prof [[PROF6:![0-9]+]], !llvm.loop [[LOOP7:![0-9]+]]
 ; VF8UF1:       [[EXIT]]:
 ; VF8UF1-NEXT:    ret void
 ;
@@ -53,7 +53,7 @@ define void @test_tc_between_8_and_17(ptr %A, i64 range(i64 8, 17) %N) {
 ; VF8UF2-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A]], i64 [[N_VEC]]
 ; VF8UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF8UF2:       [[VECTOR_BODY]]:
-; VF8UF2-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[A]], i32 8
+; VF8UF2-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[A]], i64 8
 ; VF8UF2-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i8>, ptr [[A]], align 1
 ; VF8UF2-NEXT:    [[WIDE_LOAD1:%.*]] = load <8 x i8>, ptr [[TMP2]], align 1
 ; VF8UF2-NEXT:    [[TMP3:%.*]] = add nsw <8 x i8> [[WIDE_LOAD]], splat (i8 10)

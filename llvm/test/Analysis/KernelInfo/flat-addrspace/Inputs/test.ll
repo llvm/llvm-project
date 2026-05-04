@@ -8,7 +8,7 @@ entry:
   ; CHECK: remark: test.c:3:11: in function 'f', 'load' instruction ('%load0') accesses memory in flat address space
   %load0 = load i32, ptr addrspace(0) null, align 4, !dbg !6
   %load1 = load i32, ptr addrspace(1) null, align 4, !dbg !6
-  %load2 = load i32, ptr addrspace(2) null, align 4, !dbg !6
+  %load2 = load i32, ptr addrspace(2) zeroinitializer, align 4, !dbg !6
 
   ; store
   ; CHECK: remark: test.c:4:6: in function 'f', 'store' instruction accesses memory in flat address space

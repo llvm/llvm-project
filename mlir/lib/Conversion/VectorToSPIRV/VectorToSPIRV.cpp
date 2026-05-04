@@ -22,7 +22,6 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Location.h"
-#include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -76,20 +75,6 @@ struct VectorShapeCast final : public OpConversionPattern<vector::ShapeCastOp> {
 
     // Lowering for size-n vectors when n > 1 hasn't been implemented.
     return failure();
-  }
-};
-
-// Convert `vector.splat` to `vector.broadcast`. There is a path from
-// `vector.broadcast` to SPIRV via other patterns.
-struct VectorSplatToBroadcast final
-    : public OpConversionPattern<vector::SplatOp> {
-  using Base::Base;
-  LogicalResult
-  matchAndRewrite(vector::SplatOp splat, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(splat, splat.getType(),
-                                                     adaptor.getInput());
-    return success();
   }
 };
 
@@ -431,16 +416,42 @@ struct VectorReductionPattern final : OpConversionPattern<vector::ReductionOp> {
 
     auto [resultType, extractedElements] = *reductionInfo;
     Location loc = reduceOp->getLoc();
+
+    // Handle boolean reductions with spirv.Any / spirv.All.
+    if (resultType.isInteger(1)) {
+      vector::CombiningKind kind = reduceOp.getKind();
+
+      if (kind == vector::CombiningKind::OR) {
+        Value result = spirv::AnyOp::create(rewriter, loc, resultType,
+                                            adaptor.getVector());
+        if (Value acc = adaptor.getAcc())
+          result = spirv::LogicalOrOp::create(rewriter, loc, resultType, result,
+                                              acc);
+        rewriter.replaceOp(reduceOp, result);
+        return success();
+      }
+
+      if (kind == vector::CombiningKind::AND) {
+        Value result = spirv::AllOp::create(rewriter, loc, resultType,
+                                            adaptor.getVector());
+        if (Value acc = adaptor.getAcc())
+          result = spirv::LogicalAndOp::create(rewriter, loc, resultType,
+                                               result, acc);
+        rewriter.replaceOp(reduceOp, result);
+        return success();
+      }
+    }
+
     Value result = extractedElements.front();
     for (Value next : llvm::drop_begin(extractedElements)) {
       switch (reduceOp.getKind()) {
 
 #define INT_AND_FLOAT_CASE(kind, iop, fop)                                     \
   case vector::CombiningKind::kind:                                            \
-    if (llvm::isa<IntegerType>(resultType)) {                                  \
+    if (isa<IntegerType>(resultType)) {                                        \
       result = spirv::iop::create(rewriter, loc, resultType, result, next);    \
     } else {                                                                   \
-      assert(llvm::isa<FloatType>(resultType));                                \
+      assert(isa<FloatType>(resultType));                                      \
       result = spirv::fop::create(rewriter, loc, resultType, result, next);    \
     }                                                                          \
     break
@@ -450,22 +461,28 @@ struct VectorReductionPattern final : OpConversionPattern<vector::ReductionOp> {
     result = fop::create(rewriter, loc, resultType, result, next);             \
     break
 
+#define INT_CASE(kind, iop)                                                    \
+  case vector::CombiningKind::kind:                                            \
+    assert(isa<IntegerType>(resultType));                                      \
+    result = spirv::iop::create(rewriter, loc, resultType, result, next);      \
+    break
+
         INT_AND_FLOAT_CASE(ADD, IAddOp, FAddOp);
         INT_AND_FLOAT_CASE(MUL, IMulOp, FMulOp);
         INT_OR_FLOAT_CASE(MINUI, SPIRVUMinOp);
         INT_OR_FLOAT_CASE(MINSI, SPIRVSMinOp);
         INT_OR_FLOAT_CASE(MAXUI, SPIRVUMaxOp);
         INT_OR_FLOAT_CASE(MAXSI, SPIRVSMaxOp);
+        INT_CASE(AND, BitwiseAndOp);
+        INT_CASE(OR, BitwiseOrOp);
+        INT_CASE(XOR, BitwiseXorOp);
 
-      case vector::CombiningKind::AND:
-      case vector::CombiningKind::OR:
-      case vector::CombiningKind::XOR:
-        return rewriter.notifyMatchFailure(reduceOp, "unimplemented");
       default:
         return rewriter.notifyMatchFailure(reduceOp, "not handled here");
       }
 #undef INT_AND_FLOAT_CASE
 #undef INT_OR_FLOAT_CASE
+#undef INT_CASE
     }
 
     rewriter.replaceOp(reduceOp, result);
@@ -753,7 +770,7 @@ struct VectorLoadOpConverter final
     spirv::MemoryAccessAttr memoryAccessAttr;
     IntegerAttr alignmentAttr;
     if (alignment.has_value()) {
-      memoryAccess = memoryAccess | spirv::MemoryAccess::Aligned;
+      memoryAccess |= spirv::MemoryAccess::Aligned;
       memoryAccessAttr =
           spirv::MemoryAccessAttr::get(rewriter.getContext(), memoryAccess);
       alignmentAttr = rewriter.getI32IntegerAttr(alignment.value());
@@ -822,7 +839,7 @@ struct VectorStoreOpConverter final
     spirv::MemoryAccessAttr memoryAccessAttr;
     IntegerAttr alignmentAttr;
     if (alignment.has_value()) {
-      memoryAccess = memoryAccess | spirv::MemoryAccess::Aligned;
+      memoryAccess |= spirv::MemoryAccess::Aligned;
       memoryAccessAttr =
           spirv::MemoryAccessAttr::get(rewriter.getContext(), memoryAccess);
       alignmentAttr = rewriter.getI32IntegerAttr(alignment.value());
@@ -838,7 +855,7 @@ struct VectorStoreOpConverter final
 
 struct VectorReductionToIntDotProd final
     : OpRewritePattern<vector::ReductionOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::ReductionOp op,
                                 PatternRewriter &rewriter) const override {
@@ -1092,10 +1109,10 @@ void mlir::populateVectorToSPIRVPatterns(
       VectorReductionPattern<CL_INT_MAX_MIN_OPS>,
       VectorReductionFloatMinMax<CL_FLOAT_MAX_MIN_OPS>,
       VectorReductionFloatMinMax<GL_FLOAT_MAX_MIN_OPS>, VectorShapeCast,
-      VectorSplatToBroadcast, VectorInsertStridedSliceOpConvert,
-      VectorShuffleOpConvert, VectorInterleaveOpConvert,
-      VectorDeinterleaveOpConvert, VectorScalarBroadcastPattern,
-      VectorLoadOpConverter, VectorStoreOpConverter, VectorStepOpConvert>(
+      VectorInsertStridedSliceOpConvert, VectorShuffleOpConvert,
+      VectorInterleaveOpConvert, VectorDeinterleaveOpConvert,
+      VectorScalarBroadcastPattern, VectorLoadOpConverter,
+      VectorStoreOpConverter, VectorStepOpConvert>(
       typeConverter, patterns.getContext(), PatternBenefit(1));
 
   // Make sure that the more specialized dot product pattern has higher benefit

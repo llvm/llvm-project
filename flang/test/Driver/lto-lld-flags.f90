@@ -1,4 +1,5 @@
 ! UNSUPPORTED: system-windows
+! REQUIRES: lld
 ! check flto-partitions is passed to lld, and not to fc1
 ! RUN: %flang -### -fuse-ld=lld -flto=full -flto-partitions=16 %s 2>&1 | FileCheck %s --check-prefixes=LLD-PART,FC1-PART
 

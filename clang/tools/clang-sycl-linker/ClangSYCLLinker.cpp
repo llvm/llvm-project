@@ -12,6 +12,7 @@
 // with the fully linked source bitcode file(s), running several SYCL specific
 // post-link steps on the fully linked bitcode file(s), and finally generating
 // target-specific device code.
+//
 //===---------------------------------------------------------------------===//
 
 #include "clang/Basic/OffloadArch.h"
@@ -21,28 +22,24 @@
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/CodeGen/CommandFlags.h"
+#include "llvm/Frontend/Offloading/Utility.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Linker/Linker.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Object/Archive.h"
-#include "llvm/Object/ArchiveWriter.h"
 #include "llvm/Object/Binary.h"
-#include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/IRObjectFile.h"
-#include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
-#include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/InitLLVM.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
@@ -57,10 +54,7 @@ using namespace llvm::opt;
 using namespace llvm::object;
 using namespace clang;
 
-/// Save intermediary results.
-static bool SaveTemps = false;
-
-/// Print arguments without executing.
+/// Print commands/steps with arguments without executing.
 static bool DryRun = false;
 
 /// Print verbose output.
@@ -318,13 +312,15 @@ Expected<StringRef> linkDeviceCode(ArrayRef<std::string> InputFiles,
   return *BitcodeOutput;
 }
 
-/// Run LLVM to SPIR-V translation.
-/// Converts 'File' from LLVM bitcode to SPIR-V format using SPIR-V backend.
-/// 'Args' encompasses all arguments required for linking device code and will
-/// be parsed to generate options required to be passed into the backend.
-static Error runSPIRVCodeGen(StringRef File, const ArgList &Args,
-                             StringRef OutputFile, LLVMContext &C) {
-  llvm::TimeTraceScope TimeScope("SPIR-V code generation");
+/// Run Code Generation using LLVM backend.
+/// \param 'File' The input LLVM IR bitcode file.
+/// \param 'Args' encompasses all arguments required for linking device code and
+/// will be parsed to generate options required to be passed into the backend.
+/// \param 'OutputFile' The output file name.
+/// \param 'C' The LLVM context.
+static Error runCodeGen(StringRef File, const ArgList &Args,
+                        StringRef OutputFile, LLVMContext &C) {
+  llvm::TimeTraceScope TimeScope("Code generation");
 
   // Parse input module.
   SMDiagnostic Err;
@@ -338,13 +334,13 @@ static Error runSPIRVCodeGen(StringRef File, const ArgList &Args,
   Triple TargetTriple(Args.getLastArgValue(OPT_triple_EQ));
   M->setTargetTriple(TargetTriple);
 
-  // Get a handle to SPIR-V target backend.
+  // Get a handle to a target backend.
   std::string Msg;
   const Target *T = TargetRegistry::lookupTarget(M->getTargetTriple(), Msg);
   if (!T)
     return createStringError(Msg + ": " + M->getTargetTriple().str());
 
-  // Allocate SPIR-V target machine.
+  // Allocate target machine.
   TargetOptions Options;
   std::optional<Reloc::Model> RM;
   std::optional<CodeModel::Model> CM;
@@ -364,17 +360,16 @@ static Error runSPIRVCodeGen(StringRef File, const ArgList &Args,
     return errorCodeToError(EC);
   auto OS = std::make_unique<llvm::raw_fd_ostream>(FD, true);
 
-  // Run SPIR-V codegen passes to generate SPIR-V file.
   legacy::PassManager CodeGenPasses;
   TargetLibraryInfoImpl TLII(M->getTargetTriple());
   CodeGenPasses.add(new TargetLibraryInfoWrapperPass(TLII));
   if (TM->addPassesToEmitFile(CodeGenPasses, *OS, nullptr,
                               CodeGenFileType::ObjectFile))
-    return createStringError("Failed to execute SPIR-V Backend");
+    return createStringError("Failed to execute LLVM backend");
   CodeGenPasses.run(*M);
 
   if (Verbose)
-    errs() << formatv("SPIR-V Backend: input: {0}, output: {1}\n", File,
+    errs() << formatv("LLVM backend: input: {0}, output: {1}\n", File,
                       OutputFile);
 
   return Error::success();
@@ -457,10 +452,10 @@ static Error runAOTCompileIntelGPU(StringRef InputFile, StringRef OutputFile,
 static Error runAOTCompile(StringRef InputFile, StringRef OutputFile,
                            const ArgList &Args) {
   StringRef Arch = Args.getLastArgValue(OPT_arch_EQ);
-  OffloadArch OffloadArch = StringToOffloadArch(Arch);
-  if (IsIntelGPUOffloadArch(OffloadArch))
+  OffloadArch OA = StringToOffloadArch(Arch);
+  if (IsIntelGPUOffloadArch(OA))
     return runAOTCompileIntelGPU(InputFile, OutputFile, Args);
-  if (IsIntelCPUOffloadArch(OffloadArch))
+  if (IsIntelCPUOffloadArch(OA))
     return runAOTCompileIntelCPU(InputFile, OutputFile, Args);
 
   return createStringError(inconvertibleErrorCode(), "Unsupported arch");
@@ -486,33 +481,52 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
   SmallVector<std::string> SplitModules;
   SplitModules.emplace_back(*LinkedFile);
 
+  // Generate symbol table.
+  SmallVector<SmallString<0>> SymbolTable;
+  for (size_t I = 0, E = SplitModules.size(); I != E; ++I) {
+    Expected<std::unique_ptr<Module>> ModOrErr =
+        getBitcodeModule(SplitModules[I], C);
+    if (!ModOrErr)
+      return ModOrErr.takeError();
+
+    SmallVector<StringRef> KernelNames;
+    for (Function &F : **ModOrErr) {
+      // TODO: Consider using LLVM-IR metadata to identify globals of interest
+      if (F.hasKernelCallingConv())
+        KernelNames.push_back(F.getName());
+    }
+    SmallString<0> SymbolData;
+    llvm::offloading::sycl::writeSymbolTable(KernelNames, SymbolData);
+    SymbolTable.emplace_back(std::move(SymbolData));
+  }
+
   bool IsAOTCompileNeeded = IsIntelOffloadArch(
       StringToOffloadArch(Args.getLastArgValue(OPT_arch_EQ)));
 
-  // SPIR-V code generation step.
+  StringRef OutputFileNameExt = ".spv";
+
+  // Code generation step.
   for (size_t I = 0, E = SplitModules.size(); I != E; ++I) {
     StringRef Stem = OutputFile.rsplit('.').first;
-    std::string SPVFile = (Stem + "_" + Twine(I) + ".spv").str();
-    if (Error Err = runSPIRVCodeGen(SplitModules[I], Args, SPVFile, C))
+    std::string CodeGenFile = (Stem + "_" + Twine(I) + OutputFileNameExt).str();
+
+    if (Error Err = runCodeGen(SplitModules[I], Args, CodeGenFile, C))
       return Err;
-    if (!IsAOTCompileNeeded) {
-      SplitModules[I] = SPVFile;
-    } else {
-      // AOT compilation step.
+
+    SplitModules[I] = CodeGenFile;
+    if (IsAOTCompileNeeded) {
       std::string AOTFile = (Stem + "_" + Twine(I) + ".out").str();
-      if (Error Err = runAOTCompile(SPVFile, AOTFile, Args))
+      if (Error Err = runAOTCompile(CodeGenFile, AOTFile, Args))
         return Err;
       SplitModules[I] = AOTFile;
     }
   }
 
-  // Write the final output into file.
-  int FD = -1;
-  if (std::error_code EC = sys::fs::openFileForWrite(OutputFile, FD))
-    return errorCodeToError(EC);
-  llvm::raw_fd_ostream FS(FD, /*shouldClose=*/true);
-
+  // Collect all images to be packed into a single OffloadBinary.
+  SmallVector<OffloadingImage> Images;
   for (size_t I = 0, E = SplitModules.size(); I != E; ++I) {
+    if (SymbolTable[I].empty())
+      continue;
     auto File = SplitModules[I];
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> FileOrErr =
         llvm::MemoryBuffer::getFileOrSTDIN(File);
@@ -523,20 +537,26 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
         return createFileError(File, EC);
     }
     OffloadingImage TheImage{};
-    TheImage.TheImageKind = IMG_Object;
+    TheImage.TheImageKind = IsAOTCompileNeeded ? IMG_Object : IMG_SPIRV;
     TheImage.TheOffloadKind = OFK_SYCL;
     TheImage.StringData["triple"] =
         Args.MakeArgString(Args.getLastArgValue(OPT_triple_EQ));
     TheImage.StringData["arch"] =
         Args.MakeArgString(Args.getLastArgValue(OPT_arch_EQ));
+    TheImage.StringData["symbols"] = SymbolTable[I];
     TheImage.Image = std::move(*FileOrErr);
-
-    llvm::SmallString<0> Buffer = OffloadBinary::write(TheImage);
-    if (Buffer.size() % OffloadBinary::getAlignment() != 0)
-      return createStringError("Offload binary has invalid size alignment");
-    FS << Buffer;
+    Images.emplace_back(std::move(TheImage));
   }
-  return Error::success();
+
+  llvm::SmallString<0> Buffer = OffloadBinary::write(Images);
+  if (Buffer.size() % OffloadBinary::getAlignment() != 0)
+    return createStringError("Offload binary has invalid size alignment");
+
+  auto OutputOrErr = FileOutputBuffer::create(OutputFile, Buffer.size());
+  if (!OutputOrErr)
+    return OutputOrErr.takeError();
+  llvm::copy(Buffer, (*OutputOrErr)->getBufferStart());
+  return (*OutputOrErr)->commit();
 }
 
 } // namespace
@@ -575,7 +595,6 @@ int main(int argc, char **argv) {
 
   Verbose = Args.hasArg(OPT_verbose);
   DryRun = Args.hasArg(OPT_dry_run);
-  SaveTemps = Args.hasArg(OPT_save_temps);
 
   if (!Args.hasArg(OPT_o))
     reportError(createStringError("Output file must be specified"));

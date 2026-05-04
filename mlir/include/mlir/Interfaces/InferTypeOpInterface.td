@@ -53,7 +53,7 @@ def InferTypeOpInterface : OpInterface<"InferTypeOpInterface"> {
                     "::std::optional<::mlir::Location>":$location,
                     "::mlir::ValueRange":$operands,
                     "::mlir::DictionaryAttr":$attributes,
-                    "::mlir::OpaqueProperties":$properties,
+                    "::mlir::PropertyRef":$properties,
                     "::mlir::RegionRange":$regions,
                     "::llvm::SmallVectorImpl<::mlir::Type>&":$inferredReturnTypes)
     >,
@@ -87,7 +87,7 @@ def InferTypeOpInterface : OpInterface<"InferTypeOpInterface"> {
                     "::std::optional<::mlir::Location>":$location,
                     "::mlir::ValueRange":$operands,
                     "::mlir::DictionaryAttr":$attributes,
-                    "::mlir::OpaqueProperties":$properties,
+                    "::mlir::PropertyRef":$properties,
                     "::mlir::RegionRange":$regions,
                     "::llvm::SmallVectorImpl<::mlir::Type>&":$returnTypes),
       /*methodBody=*/[{}],
@@ -164,7 +164,7 @@ def InferShapedTypeOpInterface : OpInterface<"InferShapedTypeOpInterface"> {
                     "::std::optional<::mlir::Location>":$location,
                     "::mlir::ValueShapeRange":$operands,
                     "::mlir::DictionaryAttr":$attributes,
-                    "::mlir::OpaqueProperties":$properties,
+                    "::mlir::PropertyRef":$properties,
                     "::mlir::RegionRange":$regions,
                     "::llvm::SmallVectorImpl<::mlir::ShapedTypeComponents>&":
                       $inferredReturnShapes),
@@ -220,7 +220,7 @@ class InferTypeOpAdaptorBase<code additionalDecls = [{}]> : TraitList<
         $cppClass::inferReturnTypes(::mlir::MLIRContext *context,
                           std::optional<::mlir::Location> location,
                           ::mlir::ValueRange operands, ::mlir::DictionaryAttr attributes,
-                          ::mlir::OpaqueProperties properties, ::mlir::RegionRange regions,
+                          ::mlir::PropertyRef properties, ::mlir::RegionRange regions,
                           ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {
           $cppClass::Adaptor adaptor(operands, attributes, properties, regions);
           return $cppClass::inferReturnTypes(context,
@@ -258,7 +258,7 @@ class InferShapedTypeOpAdaptorBase<list<string> overridenMethods = []> : TraitLi
         $cppClass::inferReturnTypeComponents(::mlir::MLIRContext *context,
                           std::optional<::mlir::Location> location,
                           ::mlir::ValueShapeRange operands, ::mlir::DictionaryAttr attributes,
-                          ::mlir::OpaqueProperties properties, ::mlir::RegionRange regions,
+                          ::mlir::PropertyRef properties, ::mlir::RegionRange regions,
                           ::llvm::SmallVectorImpl<::mlir::ShapedTypeComponents> &inferredReturnShapes) {
           $cppClass::Adaptor adaptor(operands, attributes, properties, regions);
           return $cppClass::inferReturnTypeComponents(context,
@@ -293,7 +293,7 @@ class InferTensorTypeBase<list<string> overridenMethods = []> : TraitList<
         $cppClass::inferReturnTypes(::mlir::MLIRContext *context,
                           std::optional<::mlir::Location> location,
                           ::mlir::ValueRange operands, ::mlir::DictionaryAttr attributes,
-                          ::mlir::OpaqueProperties properties, ::mlir::RegionRange regions,
+                          ::mlir::PropertyRef properties, ::mlir::RegionRange regions,
                           ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {
           ::llvm::SmallVector<::mlir::ShapedTypeComponents, 2> retComponents;
           if (failed($cppClass::inferReturnTypeComponents(context, location,
@@ -331,7 +331,7 @@ class InferTensorTypeAdaptorBase<list<string> overridenMethods = []> : TraitList
         $cppClass::inferReturnTypes(::mlir::MLIRContext *context,
                           std::optional<::mlir::Location> location,
                           ::mlir::ValueRange operands, ::mlir::DictionaryAttr attributes,
-                          ::mlir::OpaqueProperties properties, ::mlir::RegionRange regions,
+                          ::mlir::PropertyRef properties, ::mlir::RegionRange regions,
                           ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {
           SmallVector<ShapedTypeComponents, 2> retComponents;
           if (failed($cppClass::inferReturnTypeComponents(context, location,
@@ -361,20 +361,76 @@ def ReifyRankedShapedTypeOpInterface :
   let methods = [
     InterfaceMethod<
       /*desc=*/[{
-        Reify the shape of the result of an operation (typically in terms of the
-        shape of its operands).
+        Reify the shapes of all the result of an operation (typically in terms 
+        of the shape of its operands).
 
         `reifiedReturnShapes` is populated with one vector per op result. Each
         of those vectors contains an OpFoldResult for each dimension of the
         shaped type. The given builder may be used to insert ops that compute
         result shapes.
 
-        If the shape of a particular result cannot be computed it must be empty.
+        If the shape of a particular result cannot be computed it in terms of
+        its operands it must be left empty. If any dimension of the result cannot
+        be computed it must be set to OpFoldResult().
       }],
       /*retTy=*/"::llvm::LogicalResult",
       /*methodName=*/"reifyResultShapes",
       /*args=*/(ins "::mlir::OpBuilder &":$builder,
-        "::mlir::ReifiedRankedShapedTypeDims &":$reifiedReturnShapes)
+        "::mlir::ReifiedRankedShapedTypeDims &":$reifiedReturnShapes),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{ return ::mlir::failure(); }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Reify the shape of a single result of an operation (typically in terms 
+        of the shape of its operands).
+
+        Returns the shape of a single result of the operation as a
+        `SmallVector<OpFoldResult>`, one per dimension of the shaped type. The
+        given builder may be used to insert ops that compute result shapes.
+
+        If any dimension of the result cannot be computed it must be set to
+        OpFoldResult().
+      }],
+      /*retTy=*/"::llvm::FailureOr<::llvm::SmallVector<::mlir::OpFoldResult>>",
+      /*methodName=*/"reifyShapeOfResult",
+      /*args=*/(ins "::mlir::OpBuilder &":$builder,
+        "int":$resultIndex),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        ReifiedRankedShapedTypeDims reifiedShapes;
+        if (failed(cast<ReifyRankedShapedTypeOpInterface>($_op.getOperation()).reifyResultShapes(builder, reifiedShapes)))
+          return failure();
+        if (resultIndex < 0 || resultIndex >= static_cast<int>(reifiedShapes.size()))
+          return $_op.emitOpError("invalid result index");
+        return reifiedShapes[resultIndex];
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Reify the shape of a dimension of a given result of an operation
+        (typically in terms of the shape of its operands).
+
+        Returns the shape of a specific dimension of a result of the operation as
+        an OpFoldResult. The given builder may be used to insert ops that compute
+        the shapes.
+
+        If the dimension of the result cannot be computed the method must return
+        `failure()`.
+      }],
+      /*retTy=*/"::llvm::FailureOr<::mlir::OpFoldResult>",
+      /*methodName=*/"reifyDimOfResult",
+      /*args=*/(ins "::mlir::OpBuilder &":$builder,
+        "int":$resultIndex, "int":$dim),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        auto shapes = cast<ReifyRankedShapedTypeOpInterface>($_op.getOperation()).reifyShapeOfResult(builder, resultIndex);
+        if (failed(shapes))
+          return failure();
+        if (dim < 0 || dim >= static_cast<int>((*shapes).size()))
+          return $_op.emitOpError("invalid dimension");
+        return (*shapes)[dim];
+      }]
     >
   ];
 }

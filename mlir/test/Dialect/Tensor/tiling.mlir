@@ -149,7 +149,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
     %copy = transform.structured.match ops{["linalg.copy"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    %a, %b, %c = transform.structured.fuse %copy [2, 3]
+    %a, %b, %c = transform.structured.fuse %copy tile_sizes [2, 3]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
     transform.yield
   }

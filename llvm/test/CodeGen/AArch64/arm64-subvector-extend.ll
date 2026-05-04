@@ -524,8 +524,8 @@ define <32 x i8> @sext_v32i1(<32 x i1> %arg) {
 ; CHECK-GI-NEXT:    mov.b v1[15], w9
 ; CHECK-GI-NEXT:    shl.16b v0, v0, #7
 ; CHECK-GI-NEXT:    shl.16b v1, v1, #7
-; CHECK-GI-NEXT:    sshr.16b v0, v0, #7
-; CHECK-GI-NEXT:    sshr.16b v1, v1, #7
+; CHECK-GI-NEXT:    cmlt.16b v0, v0, #0
+; CHECK-GI-NEXT:    cmlt.16b v1, v1, #0
 ; CHECK-GI-NEXT:    ret
   %res = sext <32 x i1> %arg to <32 x i8>
   ret <32 x i8> %res
@@ -934,10 +934,10 @@ define <64 x i8> @sext_v64i1(<64 x i1> %arg) {
 ; CHECK-GI-NEXT:    shl.16b v1, v1, #7
 ; CHECK-GI-NEXT:    shl.16b v2, v2, #7
 ; CHECK-GI-NEXT:    shl.16b v3, v3, #7
-; CHECK-GI-NEXT:    sshr.16b v0, v0, #7
-; CHECK-GI-NEXT:    sshr.16b v1, v1, #7
-; CHECK-GI-NEXT:    sshr.16b v2, v2, #7
-; CHECK-GI-NEXT:    sshr.16b v3, v3, #7
+; CHECK-GI-NEXT:    cmlt.16b v0, v0, #0
+; CHECK-GI-NEXT:    cmlt.16b v1, v1, #0
+; CHECK-GI-NEXT:    cmlt.16b v2, v2, #0
+; CHECK-GI-NEXT:    cmlt.16b v3, v3, #0
 ; CHECK-GI-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-GI-NEXT:    ret
   %res = sext <64 x i1> %arg to <64 x i8>

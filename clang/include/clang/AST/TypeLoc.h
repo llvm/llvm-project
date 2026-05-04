@@ -199,11 +199,6 @@ public:
   NestedNameSpecifierLoc getPrefix() const;
 
   /// This returns the position of the type after any elaboration, such as the
-  /// 'struct' keyword, and name qualifiers. This will the 'template' keyword if
-  /// present, or the name location otherwise.
-  SourceLocation getNonPrefixBeginLoc() const;
-
-  /// This returns the position of the type after any elaboration, such as the
   /// 'struct' keyword. This may be the position of the name qualifiers,
   /// 'template' keyword, or the name location otherwise.
   SourceLocation getNonElaboratedBeginLoc() const;
@@ -798,7 +793,7 @@ struct TagTypeLocInfo {
 class TagTypeLoc : public ConcreteTypeLoc<UnqualTypeLoc, TagTypeLoc, TagType,
                                           TagTypeLocInfo> {
 public:
-  TagDecl *getOriginalDecl() const { return getTypePtr()->getOriginalDecl(); }
+  TagDecl *getDecl() const { return getTypePtr()->getDecl(); }
 
   /// True if the tag was defined in this type specifier.
   bool isDefinition() const;
@@ -859,9 +854,7 @@ class RecordTypeLoc : public InheritingConcreteTypeLoc<TagTypeLoc,
                                                        RecordTypeLoc,
                                                        RecordType> {
 public:
-  RecordDecl *getOriginalDecl() const {
-    return getTypePtr()->getOriginalDecl();
-  }
+  RecordDecl *getDecl() const { return getTypePtr()->getDecl(); }
 };
 
 /// Wrapper for source info for enum types.
@@ -869,7 +862,7 @@ class EnumTypeLoc : public InheritingConcreteTypeLoc<TagTypeLoc,
                                                      EnumTypeLoc,
                                                      EnumType> {
 public:
-  EnumDecl *getOriginalDecl() const { return getTypePtr()->getOriginalDecl(); }
+  EnumDecl *getDecl() const { return getTypePtr()->getDecl(); }
 };
 
 /// Wrapper for source info for injected class names of class
@@ -878,9 +871,7 @@ class InjectedClassNameTypeLoc
     : public InheritingConcreteTypeLoc<TagTypeLoc, InjectedClassNameTypeLoc,
                                        InjectedClassNameType> {
 public:
-  CXXRecordDecl *getOriginalDecl() const {
-    return getTypePtr()->getOriginalDecl();
-  }
+  CXXRecordDecl *getDecl() const { return getTypePtr()->getDecl(); }
 };
 
 /// Wrapper for template type parameters.
@@ -1082,6 +1073,34 @@ public:
   QualType getInnerType() const { return getTypePtr()->getWrappedType(); }
 };
 
+struct OverflowBehaviorLocInfo {
+  SourceLocation AttrLoc;
+};
+
+class OverflowBehaviorTypeLoc
+    : public ConcreteTypeLoc<UnqualTypeLoc, OverflowBehaviorTypeLoc,
+                             OverflowBehaviorType, OverflowBehaviorLocInfo> {
+public:
+  TypeLoc getWrappedLoc() const { return getInnerTypeLoc(); }
+
+  /// The no_sanitize type attribute.
+  OverflowBehaviorType::OverflowBehaviorKind getBehaviorKind() const {
+    return getTypePtr()->getBehaviorKind();
+  }
+
+  SourceRange getLocalSourceRange() const;
+
+  void initializeLocal(ASTContext &Context, SourceLocation loc) {
+    setAttrLoc(loc);
+  }
+
+  SourceLocation getAttrLoc() const { return getLocalData()->AttrLoc; }
+
+  void setAttrLoc(SourceLocation loc) { getLocalData()->AttrLoc = loc; }
+
+  QualType getInnerType() const { return getTypePtr()->getUnderlyingType(); }
+};
+
 struct HLSLAttributedResourceLocInfo {
   SourceRange Range;
   TypeSourceInfo *ContainedTyInfo;
@@ -1105,7 +1124,8 @@ public:
   void setSourceRange(const SourceRange &R) { getLocalData()->Range = R; }
   SourceRange getLocalSourceRange() const { return getLocalData()->Range; }
   void initializeLocal(ASTContext &Context, SourceLocation loc) {
-    setSourceRange(SourceRange());
+    setSourceRange(SourceRange(loc));
+    setContainedTypeSourceInfo(nullptr);
   }
   QualType getInnerType() const { return getTypePtr()->getWrappedType(); }
   unsigned getLocalDataSize() const {

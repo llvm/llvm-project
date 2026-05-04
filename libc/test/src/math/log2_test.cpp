@@ -117,10 +117,10 @@ TEST_F(LlvmLibcLog2Test, InDoubleRange) {
         }
       }
     }
-    tlog << " Log2 failed: " << fails << "/" << count << "/" << cc
-         << " tests.\n";
-    tlog << "   Max ULPs is at most: " << static_cast<uint64_t>(tol) << ".\n";
     if (fails) {
+      tlog << " Log2 failed: " << fails << "/" << count << "/" << cc
+           << " tests.\n";
+      tlog << "   Max ULPs is at most: " << static_cast<uint64_t>(tol) << ".\n";
       EXPECT_MPFR_MATCH(mpfr::Operation::Log2, mx, mr, 0.5, rounding_mode);
     }
   };

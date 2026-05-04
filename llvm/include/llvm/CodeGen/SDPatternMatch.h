@@ -17,16 +17,20 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/Support/KnownBits.h"
+
+#include <type_traits>
 
 namespace llvm {
 namespace SDPatternMatch {
 
 /// MatchContext can repurpose existing patterns to behave differently under
-/// a certain context. For instance, `m_Opc(ISD::ADD)` matches plain ADD nodes
-/// in normal circumstances, but matches VP_ADD nodes under a custom
+/// a certain context. For instance, `m_SpecificOpc(ISD::ADD)` matches plain ADD
+/// nodes in normal circumstances, but matches VP_ADD nodes under a custom
 /// VPMatchContext. This design is meant to facilitate code / pattern reusing.
 class BasicMatchContext {
   const SelectionDAG *DAG;
@@ -155,9 +159,78 @@ struct Opcode_match {
   }
 };
 
-inline Opcode_match m_Opc(unsigned Opcode) { return Opcode_match(Opcode); }
+// === Patterns combinators ===
+template <typename... Preds> struct And {
+  template <typename MatchContext> bool match(const MatchContext &, SDValue N) {
+    return true;
+  }
+};
 
-inline Opcode_match m_Undef() { return Opcode_match(ISD::UNDEF); }
+template <typename Pred, typename... Preds>
+struct And<Pred, Preds...> : And<Preds...> {
+  Pred P;
+  And(const Pred &p, const Preds &...preds) : And<Preds...>(preds...), P(p) {}
+
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    return P.match(Ctx, N) && And<Preds...>::match(Ctx, N);
+  }
+};
+
+template <typename... Preds> struct Or {
+  template <typename MatchContext> bool match(const MatchContext &, SDValue N) {
+    return false;
+  }
+};
+
+template <typename Pred, typename... Preds>
+struct Or<Pred, Preds...> : Or<Preds...> {
+  Pred P;
+  Or(const Pred &p, const Preds &...preds) : Or<Preds...>(preds...), P(p) {}
+
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    return P.match(Ctx, N) || Or<Preds...>::match(Ctx, N);
+  }
+};
+
+template <typename Pred> struct Not {
+  Pred P;
+
+  explicit Not(const Pred &P) : P(P) {}
+
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    return !P.match(Ctx, N);
+  }
+};
+// Explicit deduction guide.
+template <typename Pred> Not(const Pred &P) -> Not<Pred>;
+
+/// Match if the inner pattern does NOT match.
+template <typename Pred> inline Not<Pred> m_Unless(const Pred &P) {
+  return Not{P};
+}
+
+template <typename... Preds> And<Preds...> m_AllOf(const Preds &...preds) {
+  return And<Preds...>(preds...);
+}
+
+template <typename... Preds> Or<Preds...> m_AnyOf(const Preds &...preds) {
+  return Or<Preds...>(preds...);
+}
+
+template <typename... Preds> auto m_NoneOf(const Preds &...preds) {
+  return m_Unless(m_AnyOf(preds...));
+}
+
+inline Opcode_match m_SpecificOpc(unsigned Opcode) {
+  return Opcode_match(Opcode);
+}
+
+inline auto m_Undef() {
+  return m_AnyOf(Opcode_match(ISD::UNDEF), Opcode_match(ISD::POISON));
+}
 
 inline Opcode_match m_Poison() { return Opcode_match(ISD::POISON); }
 
@@ -191,18 +264,30 @@ template <unsigned N> inline NUses_match<N, Value_match> m_NUses() {
   return NUses_match<N, Value_match>(m_Value());
 }
 
-struct Value_bind {
+template <typename PredPattern> struct Value_bind {
   SDValue &BindVal;
+  PredPattern Pred;
 
-  explicit Value_bind(SDValue &N) : BindVal(N) {}
+  Value_bind(SDValue &N, const PredPattern &P) : BindVal(N), Pred(P) {}
 
-  template <typename MatchContext> bool match(const MatchContext &, SDValue N) {
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    if (!Pred.match(Ctx, N))
+      return false;
+
     BindVal = N;
     return true;
   }
 };
 
-inline Value_bind m_Value(SDValue &N) { return Value_bind(N); }
+inline auto m_Value(SDValue &N) {
+  return Value_bind<Value_match>(N, m_Value());
+}
+/// Conditionally bind an SDValue based on the predicate.
+template <typename PredPattern>
+inline auto m_Value(SDValue &N, const PredPattern &P) {
+  return Value_bind<PredPattern>(N, P);
+}
 
 template <typename Pattern, typename PredFuncT> struct TLI_pred_match {
   Pattern P;
@@ -250,19 +335,29 @@ inline SwitchContext<MatchContext, Pattern> m_Context(const MatchContext &Ctx,
 }
 
 // === Value type ===
-struct ValueType_bind {
+
+template <typename Pattern> struct ValueType_bind {
   EVT &BindVT;
+  Pattern P;
 
-  explicit ValueType_bind(EVT &Bind) : BindVT(Bind) {}
+  explicit ValueType_bind(EVT &Bind, const Pattern &P) : BindVT(Bind), P(P) {}
 
-  template <typename MatchContext> bool match(const MatchContext &, SDValue N) {
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
     BindVT = N.getValueType();
-    return true;
+    return P.match(Ctx, N);
   }
 };
 
+template <typename Pattern>
+ValueType_bind(const Pattern &P) -> ValueType_bind<Pattern>;
+
 /// Retreive the ValueType of the current SDValue.
-inline ValueType_bind m_VT(EVT &VT) { return ValueType_bind(VT); }
+inline auto m_VT(EVT &VT) { return ValueType_bind(VT, m_Value()); }
+
+template <typename Pattern> inline auto m_VT(EVT &VT, const Pattern &P) {
+  return ValueType_bind(VT, P);
+}
 
 template <typename Pattern, typename PredFuncT> struct ValueType_match {
   PredFuncT PredFunc;
@@ -373,71 +468,6 @@ template <typename Pattern> inline auto m_LegalType(const Pattern &P) {
                         P};
 }
 
-// === Patterns combinators ===
-template <typename... Preds> struct And {
-  template <typename MatchContext> bool match(const MatchContext &, SDValue N) {
-    return true;
-  }
-};
-
-template <typename Pred, typename... Preds>
-struct And<Pred, Preds...> : And<Preds...> {
-  Pred P;
-  And(const Pred &p, const Preds &...preds) : And<Preds...>(preds...), P(p) {}
-
-  template <typename MatchContext>
-  bool match(const MatchContext &Ctx, SDValue N) {
-    return P.match(Ctx, N) && And<Preds...>::match(Ctx, N);
-  }
-};
-
-template <typename... Preds> struct Or {
-  template <typename MatchContext> bool match(const MatchContext &, SDValue N) {
-    return false;
-  }
-};
-
-template <typename Pred, typename... Preds>
-struct Or<Pred, Preds...> : Or<Preds...> {
-  Pred P;
-  Or(const Pred &p, const Preds &...preds) : Or<Preds...>(preds...), P(p) {}
-
-  template <typename MatchContext>
-  bool match(const MatchContext &Ctx, SDValue N) {
-    return P.match(Ctx, N) || Or<Preds...>::match(Ctx, N);
-  }
-};
-
-template <typename Pred> struct Not {
-  Pred P;
-
-  explicit Not(const Pred &P) : P(P) {}
-
-  template <typename MatchContext>
-  bool match(const MatchContext &Ctx, SDValue N) {
-    return !P.match(Ctx, N);
-  }
-};
-// Explicit deduction guide.
-template <typename Pred> Not(const Pred &P) -> Not<Pred>;
-
-/// Match if the inner pattern does NOT match.
-template <typename Pred> inline Not<Pred> m_Unless(const Pred &P) {
-  return Not{P};
-}
-
-template <typename... Preds> And<Preds...> m_AllOf(const Preds &...preds) {
-  return And<Preds...>(preds...);
-}
-
-template <typename... Preds> Or<Preds...> m_AnyOf(const Preds &...preds) {
-  return Or<Preds...>(preds...);
-}
-
-template <typename... Preds> auto m_NoneOf(const Preds &...preds) {
-  return m_Unless(m_AnyOf(preds...));
-}
-
 // === Generic node matching ===
 template <unsigned OpIdx, typename... OpndPreds> struct Operands_match {
   template <typename MatchContext>
@@ -469,7 +499,8 @@ struct Operands_match<OpIdx, OpndPred, OpndPreds...>
 
 template <typename... OpndPreds>
 auto m_Node(unsigned Opcode, const OpndPreds &...preds) {
-  return m_AllOf(m_Opc(Opcode), Operands_match<0, OpndPreds...>(preds...));
+  return m_AllOf(m_SpecificOpc(Opcode),
+                 Operands_match<0, OpndPreds...>(preds...));
 }
 
 /// Provide number of operands that are not chain or glue, as well as the first
@@ -519,7 +550,7 @@ struct TernaryOpc_match {
 
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
-    if (sd_context_match(N, Ctx, m_Opc(Opcode))) {
+    if (sd_context_match(N, Ctx, m_SpecificOpc(Opcode))) {
       EffectiveOperands<ExcludeChain> EO(N, Ctx);
       assert(EO.Size == 3);
       return ((Op0.match(Ctx, N->getOperand(EO.FirstIndex)) &&
@@ -559,6 +590,11 @@ m_VSelect(const T0_P &Cond, const T1_P &T, const T2_P &F) {
 }
 
 template <typename T0_P, typename T1_P, typename T2_P>
+inline auto m_SelectLike(const T0_P &Cond, const T1_P &T, const T2_P &F) {
+  return m_AnyOf(m_Select(Cond, T, F), m_VSelect(Cond, T, F));
+}
+
+template <typename T0_P, typename T1_P, typename T2_P>
 inline Result_match<0, TernaryOpc_match<T0_P, T1_P, T2_P>>
 m_Load(const T0_P &Ch, const T1_P &Ptr, const T2_P &Offset) {
   return m_Result<0>(
@@ -576,6 +612,18 @@ template <typename LHS, typename RHS, typename IDX>
 inline TernaryOpc_match<LHS, RHS, IDX>
 m_InsertSubvector(const LHS &Base, const RHS &Sub, const IDX &Idx) {
   return TernaryOpc_match<LHS, RHS, IDX>(ISD::INSERT_SUBVECTOR, Base, Sub, Idx);
+}
+
+template <typename T0_P, typename T1_P, typename T2_P>
+inline TernaryOpc_match<T0_P, T1_P, T2_P>
+m_TernaryOp(unsigned Opc, const T0_P &Op0, const T1_P &Op1, const T2_P &Op2) {
+  return TernaryOpc_match<T0_P, T1_P, T2_P>(Opc, Op0, Op1, Op2);
+}
+
+template <typename T0_P, typename T1_P, typename T2_P>
+inline TernaryOpc_match<T0_P, T1_P, T2_P, true>
+m_c_TernaryOp(unsigned Opc, const T0_P &Op0, const T1_P &Op1, const T2_P &Op2) {
+  return TernaryOpc_match<T0_P, T1_P, T2_P, true>(Opc, Op0, Op1, Op2);
 }
 
 template <typename LTy, typename RTy, typename TTy, typename FTy, typename CCTy>
@@ -604,7 +652,7 @@ struct BinaryOpc_match {
 
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
-    if (sd_context_match(N, Ctx, m_Opc(Opcode))) {
+    if (sd_context_match(N, Ctx, m_SpecificOpc(Opcode))) {
       EffectiveOperands<ExcludeChain> EO(N, Ctx);
       assert(EO.Size == 2);
       if (!((LHS.match(Ctx, N->getOperand(EO.FirstIndex)) &&
@@ -679,15 +727,15 @@ struct MaxMin_match {
              (Commutable && LHS.match(Ctx, R) && RHS.match(Ctx, L));
     };
 
-    if (sd_context_match(N, Ctx, m_Opc(ISD::SELECT)) ||
-        sd_context_match(N, Ctx, m_Opc(ISD::VSELECT))) {
+    if (sd_context_match(N, Ctx, m_SpecificOpc(ISD::SELECT)) ||
+        sd_context_match(N, Ctx, m_SpecificOpc(ISD::VSELECT))) {
       EffectiveOperands<ExcludeChain> EO_SELECT(N, Ctx);
       assert(EO_SELECT.Size == 3);
       SDValue Cond = N->getOperand(EO_SELECT.FirstIndex);
       SDValue TrueValue = N->getOperand(EO_SELECT.FirstIndex + 1);
       SDValue FalseValue = N->getOperand(EO_SELECT.FirstIndex + 2);
 
-      if (sd_context_match(Cond, Ctx, m_Opc(ISD::SETCC))) {
+      if (sd_context_match(Cond, Ctx, m_SpecificOpc(ISD::SETCC))) {
         EffectiveOperands<ExcludeChain> EO_SETCC(Cond, Ctx);
         assert(EO_SETCC.Size == 3);
         SDValue L = Cond->getOperand(EO_SETCC.FirstIndex);
@@ -698,7 +746,7 @@ struct MaxMin_match {
       }
     }
 
-    if (sd_context_match(N, Ctx, m_Opc(ISD::SELECT_CC))) {
+    if (sd_context_match(N, Ctx, m_SpecificOpc(ISD::SELECT_CC))) {
       EffectiveOperands<ExcludeChain> EO_SELECT(N, Ctx);
       assert(EO_SELECT.Size == 5);
       SDValue L = N->getOperand(EO_SELECT.FirstIndex);
@@ -744,13 +792,15 @@ struct umin_pred_ty {
 
 template <typename LHS, typename RHS>
 inline BinaryOpc_match<LHS, RHS> m_BinOp(unsigned Opc, const LHS &L,
-                                         const RHS &R) {
-  return BinaryOpc_match<LHS, RHS>(Opc, L, R);
+                                         const RHS &R,
+                                         SDNodeFlags Flgs = SDNodeFlags()) {
+  return BinaryOpc_match<LHS, RHS>(Opc, L, R, Flgs);
 }
 template <typename LHS, typename RHS>
-inline BinaryOpc_match<LHS, RHS, true> m_c_BinOp(unsigned Opc, const LHS &L,
-                                                 const RHS &R) {
-  return BinaryOpc_match<LHS, RHS, true>(Opc, L, R);
+inline BinaryOpc_match<LHS, RHS, true>
+m_c_BinOp(unsigned Opc, const LHS &L, const RHS &R,
+          SDNodeFlags Flgs = SDNodeFlags()) {
+  return BinaryOpc_match<LHS, RHS, true>(Opc, L, R, Flgs);
 }
 
 template <typename LHS, typename RHS>
@@ -811,6 +861,12 @@ inline auto m_BitwiseLogic(const LHS &L, const RHS &R) {
   return m_AnyOf(m_And(L, R), m_Or(L, R), m_Xor(L, R));
 }
 
+template <unsigned Opc, typename Pred, typename LHS, typename RHS>
+inline auto m_MaxMinLike(const LHS &L, const RHS &R) {
+  return m_AnyOf(BinaryOpc_match<LHS, RHS, true>(Opc, L, R),
+                 MaxMin_match<LHS, RHS, Pred, true>(L, R));
+}
+
 template <typename LHS, typename RHS>
 inline BinaryOpc_match<LHS, RHS, true> m_SMin(const LHS &L, const RHS &R) {
   return BinaryOpc_match<LHS, RHS, true>(ISD::SMIN, L, R);
@@ -818,8 +874,10 @@ inline BinaryOpc_match<LHS, RHS, true> m_SMin(const LHS &L, const RHS &R) {
 
 template <typename LHS, typename RHS>
 inline auto m_SMinLike(const LHS &L, const RHS &R) {
-  return m_AnyOf(BinaryOpc_match<LHS, RHS, true>(ISD::SMIN, L, R),
-                 MaxMin_match<LHS, RHS, smin_pred_ty, true>(L, R));
+  return m_AnyOf(
+      m_MaxMinLike<ISD::SMIN, smin_pred_ty>(L, R),
+      m_MaxMinLike<ISD::UMIN, umin_pred_ty>(m_NonNegative(L), m_NonNegative(R)),
+      m_MaxMinLike<ISD::UMIN, umin_pred_ty>(m_Negative(L), m_Negative(R)));
 }
 
 template <typename LHS, typename RHS>
@@ -829,8 +887,10 @@ inline BinaryOpc_match<LHS, RHS, true> m_SMax(const LHS &L, const RHS &R) {
 
 template <typename LHS, typename RHS>
 inline auto m_SMaxLike(const LHS &L, const RHS &R) {
-  return m_AnyOf(BinaryOpc_match<LHS, RHS, true>(ISD::SMAX, L, R),
-                 MaxMin_match<LHS, RHS, smax_pred_ty, true>(L, R));
+  return m_AnyOf(
+      m_MaxMinLike<ISD::SMAX, smax_pred_ty>(L, R),
+      m_MaxMinLike<ISD::UMAX, umax_pred_ty>(m_NonNegative(L), m_NonNegative(R)),
+      m_MaxMinLike<ISD::UMAX, umax_pred_ty>(m_Negative(L), m_Negative(R)));
 }
 
 template <typename LHS, typename RHS>
@@ -840,8 +900,10 @@ inline BinaryOpc_match<LHS, RHS, true> m_UMin(const LHS &L, const RHS &R) {
 
 template <typename LHS, typename RHS>
 inline auto m_UMinLike(const LHS &L, const RHS &R) {
-  return m_AnyOf(BinaryOpc_match<LHS, RHS, true>(ISD::UMIN, L, R),
-                 MaxMin_match<LHS, RHS, umin_pred_ty, true>(L, R));
+  return m_AnyOf(
+      m_MaxMinLike<ISD::UMIN, umin_pred_ty>(L, R),
+      m_MaxMinLike<ISD::SMIN, smin_pred_ty>(m_NonNegative(L), m_NonNegative(R)),
+      m_MaxMinLike<ISD::SMIN, smin_pred_ty>(m_Negative(L), m_Negative(R)));
 }
 
 template <typename LHS, typename RHS>
@@ -851,8 +913,10 @@ inline BinaryOpc_match<LHS, RHS, true> m_UMax(const LHS &L, const RHS &R) {
 
 template <typename LHS, typename RHS>
 inline auto m_UMaxLike(const LHS &L, const RHS &R) {
-  return m_AnyOf(BinaryOpc_match<LHS, RHS, true>(ISD::UMAX, L, R),
-                 MaxMin_match<LHS, RHS, umax_pred_ty, true>(L, R));
+  return m_AnyOf(
+      m_MaxMinLike<ISD::UMAX, umax_pred_ty>(L, R),
+      m_MaxMinLike<ISD::SMAX, smax_pred_ty>(m_NonNegative(L), m_NonNegative(R)),
+      m_MaxMinLike<ISD::SMAX, smax_pred_ty>(m_Negative(L), m_Negative(R)));
 }
 
 template <typename LHS, typename RHS>
@@ -886,6 +950,11 @@ template <typename LHS, typename RHS>
 inline BinaryOpc_match<LHS, RHS> m_Srl(const LHS &L, const RHS &R) {
   return BinaryOpc_match<LHS, RHS>(ISD::SRL, L, R);
 }
+template <typename LHS, typename RHS>
+inline auto m_ExactSr(const LHS &L, const RHS &R) {
+  return m_AnyOf(BinaryOpc_match<LHS, RHS>(ISD::SRA, L, R, SDNodeFlags::Exact),
+                 BinaryOpc_match<LHS, RHS>(ISD::SRL, L, R, SDNodeFlags::Exact));
+}
 
 template <typename LHS, typename RHS>
 inline BinaryOpc_match<LHS, RHS> m_Rotl(const LHS &L, const RHS &R) {
@@ -895,6 +964,80 @@ inline BinaryOpc_match<LHS, RHS> m_Rotl(const LHS &L, const RHS &R) {
 template <typename LHS, typename RHS>
 inline BinaryOpc_match<LHS, RHS> m_Rotr(const LHS &L, const RHS &R) {
   return BinaryOpc_match<LHS, RHS>(ISD::ROTR, L, R);
+}
+
+template <typename T0_P, typename T1_P, typename T2_P>
+inline TernaryOpc_match<T0_P, T1_P, T2_P>
+m_FShL(const T0_P &Op0, const T1_P &Op1, const T2_P &Op2) {
+  return m_TernaryOp(ISD::FSHL, Op0, Op1, Op2);
+}
+
+template <typename T0_P, typename T1_P, typename T2_P>
+inline TernaryOpc_match<T0_P, T1_P, T2_P>
+m_FShR(const T0_P &Op0, const T1_P &Op1, const T2_P &Op2) {
+  return m_TernaryOp(ISD::FSHR, Op0, Op1, Op2);
+}
+
+template <typename T0_P, typename T1_P, typename T2_P, bool Left>
+struct FunnelShiftLike_match {
+  T0_P Op0;
+  T1_P Op1;
+  T2_P Op2;
+
+  FunnelShiftLike_match(const T0_P &Op0, const T1_P &Op1, const T2_P &Op2)
+      : Op0(Op0), Op1(Op1), Op2(Op2) {}
+
+  static bool hasComplementaryConstantShifts(const APInt &ShlV,
+                                             const APInt &SrlV,
+                                             unsigned BitWidth) {
+    unsigned SumWidth = std::max(ShlV.getBitWidth(), SrlV.getBitWidth()) + 1;
+    unsigned BitWidthBits = llvm::bit_width(BitWidth);
+    if (BitWidthBits > SumWidth)
+      return false;
+
+    return ShlV.zext(SumWidth) + SrlV.zext(SumWidth) ==
+           APInt(SumWidth, BitWidth);
+  }
+
+  template <typename MatchContext>
+  bool matchOperands(const MatchContext &Ctx, SDValue X, SDValue Y, SDValue Z) {
+    return Op0.match(Ctx, X) && Op1.match(Ctx, Y) && Op2.match(Ctx, Z);
+  }
+
+  template <typename MatchContext>
+  bool matchShiftOr(const MatchContext &Ctx, SDValue N, unsigned BitWidth);
+
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    if (sd_context_match(N, Ctx,
+                         Left ? m_FShL(Op0, Op1, Op2) : m_FShR(Op0, Op1, Op2)))
+      return true;
+
+    SDValue X, Z;
+    if (sd_context_match(N, Ctx,
+                         Left ? m_Rotl(m_Value(X), m_Value(Z))
+                              : m_Rotr(m_Value(X), m_Value(Z))))
+      return matchOperands(Ctx, X, X, Z);
+
+    return matchShiftOr(Ctx, N, N.getValueType().getScalarSizeInBits());
+  }
+};
+
+template <typename T0_P, typename T1_P, typename T2_P>
+inline FunnelShiftLike_match<T0_P, T1_P, T2_P, true>
+m_FShLLike(const T0_P &Op0, const T1_P &Op1, const T2_P &Op2) {
+  return FunnelShiftLike_match<T0_P, T1_P, T2_P, true>(Op0, Op1, Op2);
+}
+
+template <typename T0_P, typename T1_P, typename T2_P>
+inline FunnelShiftLike_match<T0_P, T1_P, T2_P, false>
+m_FShRLike(const T0_P &Op0, const T1_P &Op1, const T2_P &Op2) {
+  return FunnelShiftLike_match<T0_P, T1_P, T2_P, false>(Op0, Op1, Op2);
+}
+
+template <typename LHS, typename RHS>
+inline BinaryOpc_match<LHS, RHS, true> m_Clmul(const LHS &L, const RHS &R) {
+  return BinaryOpc_match<LHS, RHS, true>(ISD::CLMUL, L, R);
 }
 
 template <typename LHS, typename RHS>
@@ -948,22 +1091,20 @@ inline BinaryOpc_match<LHS, RHS> m_ExtractSubvector(const LHS &Vec,
 template <typename Opnd_P, bool ExcludeChain = false> struct UnaryOpc_match {
   unsigned Opcode;
   Opnd_P Opnd;
-  std::optional<SDNodeFlags> Flags;
+  SDNodeFlags Flags;
   UnaryOpc_match(unsigned Opc, const Opnd_P &Op,
-                 std::optional<SDNodeFlags> Flgs = std::nullopt)
+                 SDNodeFlags Flgs = SDNodeFlags())
       : Opcode(Opc), Opnd(Op), Flags(Flgs) {}
 
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
-    if (sd_context_match(N, Ctx, m_Opc(Opcode))) {
+    if (sd_context_match(N, Ctx, m_SpecificOpc(Opcode))) {
       EffectiveOperands<ExcludeChain> EO(N, Ctx);
       assert(EO.Size == 1);
       if (!Opnd.match(Ctx, N->getOperand(EO.FirstIndex)))
         return false;
-      if (!Flags.has_value())
-        return true;
 
-      return (*Flags & N->getFlags()) == *Flags;
+      return (Flags & N->getFlags()) == Flags;
     }
 
     return false;
@@ -1017,6 +1158,10 @@ template <typename Opnd> inline UnaryOpc_match<Opnd> m_Trunc(const Opnd &Op) {
 
 template <typename Opnd> inline UnaryOpc_match<Opnd> m_Abs(const Opnd &Op) {
   return UnaryOpc_match<Opnd>(ISD::ABS, Op);
+}
+
+template <typename Opnd> inline UnaryOpc_match<Opnd> m_FAbs(const Opnd &Op) {
+  return UnaryOpc_match<Opnd>(ISD::FABS, Op);
 }
 
 /// Match a zext or identity
@@ -1099,11 +1244,71 @@ struct ConstantInt_match {
                                       BindVal ? *BindVal : Discard);
   }
 };
+
+template <typename T> struct Constant64_match {
+  static_assert(sizeof(T) == 8, "T must be 64 bits wide");
+
+  T &BindVal;
+
+  explicit Constant64_match(T &V) : BindVal(V) {}
+
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    APInt V;
+    if (!ConstantInt_match(&V).match(Ctx, N))
+      return false;
+
+    if constexpr (std::is_signed_v<T>) {
+      if (std::optional<int64_t> TrySExt = V.trySExtValue()) {
+        BindVal = *TrySExt;
+        return true;
+      }
+    }
+
+    if constexpr (std::is_unsigned_v<T>) {
+      if (std::optional<uint64_t> TryZExt = V.tryZExtValue()) {
+        BindVal = *TryZExt;
+        return true;
+      }
+    }
+
+    return false;
+  }
+};
+
 /// Match any integer constants or splat of an integer constant.
 inline ConstantInt_match m_ConstInt() { return ConstantInt_match(nullptr); }
 /// Match any integer constants or splat of an integer constant; return the
 /// specific constant or constant splat value.
 inline ConstantInt_match m_ConstInt(APInt &V) { return ConstantInt_match(&V); }
+/// Match any integer constants or splat of an integer constant that can fit in
+/// 64 bits; return the specific constant or constant splat value, zero-extended
+/// to 64 bits.
+inline Constant64_match<uint64_t> m_ConstInt(uint64_t &V) {
+  return Constant64_match<uint64_t>(V);
+}
+/// Match any integer constants or splat of an integer constant that can fit in
+/// 64 bits; return the specific constant or constant splat value, sign-extended
+/// to 64 bits.
+inline Constant64_match<int64_t> m_ConstInt(int64_t &V) {
+  return Constant64_match<int64_t>(V);
+}
+
+template <typename T0_P, typename T1_P, typename T2_P, bool Left>
+template <typename MatchContext>
+bool FunnelShiftLike_match<T0_P, T1_P, T2_P, Left>::matchShiftOr(
+    const MatchContext &Ctx, SDValue N, unsigned BitWidth) {
+  SDValue X, Y, ShlAmt, SrlAmt;
+  APInt ShlConst, SrlConst;
+  if (!sd_context_match(
+          N, Ctx,
+          m_Or(m_Shl(m_Value(X), m_Value(ShlAmt, m_ConstInt(ShlConst))),
+               m_Srl(m_Value(Y), m_Value(SrlAmt, m_ConstInt(SrlConst))))) ||
+      !hasComplementaryConstantShifts(ShlConst, SrlConst, BitWidth))
+    return false;
+
+  return matchOperands(Ctx, X, Y, Left ? ShlAmt : SrlAmt);
+}
 
 struct SpecificInt_match {
   APInt IntVal;
@@ -1126,6 +1331,68 @@ inline SpecificInt_match m_SpecificInt(APInt V) {
 inline SpecificInt_match m_SpecificInt(uint64_t V) {
   return SpecificInt_match(APInt(64, V));
 }
+
+struct SpecificFP_match {
+  APFloat Val;
+
+  explicit SpecificFP_match(APFloat V) : Val(V) {}
+
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue V) {
+    if (const auto *CFP = dyn_cast<ConstantFPSDNode>(V.getNode()))
+      return CFP->isExactlyValue(Val);
+    if (ConstantFPSDNode *C = isConstOrConstSplatFP(V, /*AllowUndefs=*/true))
+      return C->getValueAPF().compare(Val) == APFloat::cmpEqual;
+    return false;
+  }
+};
+
+/// Match a specific float constant.
+inline SpecificFP_match m_SpecificFP(APFloat V) { return SpecificFP_match(V); }
+
+inline SpecificFP_match m_SpecificFP(double V) {
+  return SpecificFP_match(APFloat(V));
+}
+
+struct Negative_match {
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    const SelectionDAG *DAG = Ctx.getDAG();
+    return DAG && DAG->computeKnownBits(N).isNegative();
+  }
+};
+
+struct NonNegative_match {
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    const SelectionDAG *DAG = Ctx.getDAG();
+    return DAG && DAG->computeKnownBits(N).isNonNegative();
+  }
+};
+
+struct StrictlyPositive_match {
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    const SelectionDAG *DAG = Ctx.getDAG();
+    return DAG && DAG->computeKnownBits(N).isStrictlyPositive();
+  }
+};
+
+struct NonPositive_match {
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    const SelectionDAG *DAG = Ctx.getDAG();
+    return DAG && DAG->computeKnownBits(N).isNonPositive();
+  }
+};
+
+struct NonZero_match {
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    const SelectionDAG *DAG = Ctx.getDAG();
+    return DAG && DAG->computeKnownBits(N).isNonZero();
+  }
+};
 
 struct Zero_match {
   bool AllowUndefs;
@@ -1158,6 +1425,28 @@ struct AllOnes_match {
   }
 };
 
+inline Negative_match m_Negative() { return Negative_match(); }
+template <typename Pattern> inline auto m_Negative(const Pattern &P) {
+  return m_AllOf(m_Negative(), P);
+}
+inline NonNegative_match m_NonNegative() { return NonNegative_match(); }
+template <typename Pattern> inline auto m_NonNegative(const Pattern &P) {
+  return m_AllOf(m_NonNegative(), P);
+}
+inline StrictlyPositive_match m_StrictlyPositive() {
+  return StrictlyPositive_match();
+}
+template <typename Pattern> inline auto m_StrictlyPositive(const Pattern &P) {
+  return m_AllOf(m_StrictlyPositive(), P);
+}
+inline NonPositive_match m_NonPositive() { return NonPositive_match(); }
+template <typename Pattern> inline auto m_NonPositive(const Pattern &P) {
+  return m_AllOf(m_NonPositive(), P);
+}
+inline NonZero_match m_NonZero() { return NonZero_match(); }
+template <typename Pattern> inline auto m_NonZero(const Pattern &P) {
+  return m_AllOf(m_NonZero(), P);
+}
 inline Ones_match m_One(bool AllowUndefs = false) {
   return Ones_match(AllowUndefs);
 }
@@ -1253,60 +1542,100 @@ inline BinaryOpc_match<ValTy, AllOnes_match, true> m_Not(const ValTy &V) {
   return m_Xor(V, m_AllOnes());
 }
 
+template <unsigned IntrinsicId, typename... OpndPreds>
+inline auto m_IntrinsicWOChain(const OpndPreds &...Opnds) {
+  return m_Node(ISD::INTRINSIC_WO_CHAIN, m_SpecificInt(IntrinsicId), Opnds...);
+}
+
+struct SpecificNeg_match {
+  SDValue V;
+
+  explicit SpecificNeg_match(SDValue V) : V(V) {}
+
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    if (sd_context_match(N, Ctx, m_Neg(m_Specific(V))))
+      return true;
+
+    return ISD::matchBinaryPredicate(
+        V, N, [](ConstantSDNode *LHS, ConstantSDNode *RHS) {
+          return LHS->getAPIntValue() == -RHS->getAPIntValue();
+        });
+  }
+};
+
+/// Match a negation of a specific value V, either as sub(0, V) or as
+/// constant(s) that are the negation of V's constant(s).
+inline SpecificNeg_match m_SpecificNeg(SDValue V) {
+  return SpecificNeg_match(V);
+}
+
 template <typename... PatternTs> struct ReassociatableOpc_match {
   unsigned Opcode;
   std::tuple<PatternTs...> Patterns;
+  constexpr static size_t NumPatterns =
+      std::tuple_size_v<std::tuple<PatternTs...>>;
+
+  SDNodeFlags Flags;
 
   ReassociatableOpc_match(unsigned Opcode, const PatternTs &...Patterns)
       : Opcode(Opcode), Patterns(Patterns...) {}
 
+  ReassociatableOpc_match(unsigned Opcode, SDNodeFlags Flags,
+                          const PatternTs &...Patterns)
+      : Opcode(Opcode), Patterns(Patterns...), Flags(Flags) {}
+
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
-    constexpr size_t NumPatterns = std::tuple_size_v<std::tuple<PatternTs...>>;
-
-    SmallVector<SDValue> Leaves;
-    collectLeaves(N, Leaves);
-    if (Leaves.size() != NumPatterns)
+    std::array<SDValue, NumPatterns> Leaves;
+    size_t LeavesIdx = 0;
+    if (!(collectLeaves(N, Leaves, LeavesIdx) && (LeavesIdx == NumPatterns)))
       return false;
 
-    // Matches[I][J] == true iff sd_context_match(Leaves[I], Ctx,
-    // std::get<J>(Patterns)) == true
-    std::array<SmallBitVector, NumPatterns> Matches;
-    for (size_t I = 0; I != NumPatterns; I++) {
-      std::apply(
-          [&](auto &...P) {
-            (Matches[I].push_back(sd_context_match(Leaves[I], Ctx, P)), ...);
-          },
-          Patterns);
-    }
-
-    SmallBitVector Used(NumPatterns);
-    return reassociatableMatchHelper(Matches, Used);
+    Bitset<NumPatterns> Used;
+    return std::apply(
+        [&](auto &...P) -> bool {
+          return reassociatableMatchHelper(Ctx, Leaves, Used, P...);
+        },
+        Patterns);
   }
 
-  void collectLeaves(SDValue V, SmallVector<SDValue> &Leaves) {
-    if (V->getOpcode() == Opcode) {
+  bool collectLeaves(SDValue V, std::array<SDValue, NumPatterns> &Leaves,
+                     std::size_t &LeafIdx) {
+    if (V->getOpcode() == Opcode && (Flags & V->getFlags()) == Flags) {
       for (size_t I = 0, N = V->getNumOperands(); I < N; I++)
-        collectLeaves(V->getOperand(I), Leaves);
+        if ((LeafIdx == NumPatterns) ||
+            !collectLeaves(V->getOperand(I), Leaves, LeafIdx))
+          return false;
     } else {
-      Leaves.emplace_back(V);
+      Leaves[LeafIdx] = V;
+      LeafIdx++;
     }
+    return true;
   }
 
+  // Searchs for a matching leaf for every sub-pattern.
+  template <typename MatchContext, typename PatternHd, typename... PatternTl>
   [[nodiscard]] inline bool
-  reassociatableMatchHelper(const ArrayRef<SmallBitVector> Matches,
-                            SmallBitVector &Used, size_t Curr = 0) {
-    if (Curr == Matches.size())
-      return true;
-    for (size_t Match = 0, N = Matches[Curr].size(); Match < N; Match++) {
-      if (!Matches[Curr][Match] || Used[Match])
+  reassociatableMatchHelper(const MatchContext &Ctx, ArrayRef<SDValue> Leaves,
+                            Bitset<NumPatterns> &Used, PatternHd &HeadPattern,
+                            PatternTl &...TailPatterns) {
+    for (size_t Match = 0, N = Used.size(); Match < N; Match++) {
+      if (Used[Match] || !(sd_context_match(Leaves[Match], Ctx, HeadPattern)))
         continue;
-      Used[Match] = true;
-      if (reassociatableMatchHelper(Matches, Used, Curr + 1))
+      Used.set(Match);
+      if (reassociatableMatchHelper(Ctx, Leaves, Used, TailPatterns...))
         return true;
-      Used[Match] = false;
+      Used.reset(Match);
     }
     return false;
+  }
+
+  template <typename MatchContext>
+  [[nodiscard]] inline bool
+  reassociatableMatchHelper(const MatchContext &Ctx, ArrayRef<SDValue> Leaves,
+                            Bitset<NumPatterns> &Used) {
+    return true;
   }
 };
 
@@ -1332,6 +1661,20 @@ template <typename... PatternTs>
 inline ReassociatableOpc_match<PatternTs...>
 m_ReassociatableMul(const PatternTs &...Patterns) {
   return ReassociatableOpc_match<PatternTs...>(ISD::MUL, Patterns...);
+}
+
+template <typename... PatternTs>
+inline ReassociatableOpc_match<PatternTs...>
+m_ReassociatableNSWAdd(const PatternTs &...Patterns) {
+  return ReassociatableOpc_match<PatternTs...>(
+      ISD::ADD, SDNodeFlags::NoSignedWrap, Patterns...);
+}
+
+template <typename... PatternTs>
+inline ReassociatableOpc_match<PatternTs...>
+m_ReassociatableNUWAdd(const PatternTs &...Patterns) {
+  return ReassociatableOpc_match<PatternTs...>(
+      ISD::ADD, SDNodeFlags::NoUnsignedWrap, Patterns...);
 }
 
 } // namespace SDPatternMatch
