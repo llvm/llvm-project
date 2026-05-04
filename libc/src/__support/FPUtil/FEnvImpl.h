@@ -25,7 +25,7 @@
 #undef LIBC_MATH_USE_SYSTEM_FENV
 #endif // LIBC_FULL_BUILD
 
-#if defined(LIBC_MATH_USE_SYSTEM_FENV)
+#if defined(LIBC_MATH_USE_SYSTEM_FENV) && !defined(LIBC_HAS_CONSTANT_EVALUATION)
 
 // Simply call the system libc fenv.h functions, only for those that are used in
 // math function implementations.
@@ -65,7 +65,8 @@ LIBC_INLINE int set_round(int rounding_mode) {
 
 #else // !LIBC_MATH_USE_SYSTEM_FENV
 
-#if defined(LIBC_TARGET_ARCH_IS_AARCH64) && defined(__ARM_FP)
+#if defined(LIBC_TARGET_ARCH_IS_AARCH64) && defined(__ARM_FP) &&               \
+    !defined(LIBC_HAS_CONSTANT_EVALUATION)
 #if defined(__APPLE__)
 #include "aarch64/fenv_darwin_impl.h"
 #else

@@ -838,7 +838,8 @@ TEST(LlvmLibcSharedMathTest, AllBFloat16) {
   bfloat16 totalordermagbf16_y = bfloat16(0.0);
   EXPECT_EQ(1, LIBC_NAMESPACE::shared::totalordermagbf16(&totalordermagbf16_x,
                                                          &totalordermagbf16_y));
-  LIBC_NAMESPACE::shared::fmodbf16(bfloat16(1.0), bfloat16(1.0));
+  EXPECT_FP_EQ(bfloat16(0.0),
+               LIBC_NAMESPACE::shared::fmodbf16(bfloat16(1.0), bfloat16(1.0)));
   bfloat16 modfbf16_iptr = bfloat16(0.0);
   EXPECT_FP_EQ(bfloat16(0.0),
                LIBC_NAMESPACE::shared::modfbf16(bfloat16(0.0), &modfbf16_iptr));

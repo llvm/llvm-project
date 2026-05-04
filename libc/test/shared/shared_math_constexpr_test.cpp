@@ -564,6 +564,7 @@ static_assert(0.0L == LIBC_NAMESPACE::shared::truncl(0.0L));
 static_assert(0 == LIBC_NAMESPACE::shared::isnanl(0.0L));
 static_assert(0.0f == LIBC_NAMESPACE::shared::nexttowardf(0.0f, 0.0L));
 static_assert(0.0 == LIBC_NAMESPACE::shared::nexttoward(0.0, 0.0L));
+static_assert(bfloat16(0.0) == LIBC_NAMESPACE::shared::nexttowardbf16(bfloat16(0.0), 0.0L));
 
 #endif
 
@@ -826,12 +827,10 @@ static_assert(bfloat16(0.0) ==
               LIBC_NAMESPACE::shared::fromfpbf16(bfloat16(0.0), 0, 32));
 static_assert(bfloat16(0.0) ==
               LIBC_NAMESPACE::shared::fromfpxbf16(bfloat16(0.0), 0, 32));
-
 static_assert(bfloat16(-1.0) == [] {
   bfloat16 getpayload_x = bfloat16(0.0);
   return LIBC_NAMESPACE::shared::getpayloadbf16(&getpayload_x);
 }());
-
 static_assert(bfloat16(0.0) ==
               LIBC_NAMESPACE::shared::ufromfpbf16(bfloat16(0.0), 0, 32));
 static_assert(bfloat16(0.0) ==
@@ -842,7 +841,6 @@ static_assert(bfloat16(0.0) ==
 static_assert(bfloat16(0.0) ==
               LIBC_NAMESPACE::shared::fminimum_magbf16(bfloat16(0.0),
                                                        bfloat16(0.0)));
-
 constexpr bfloat16 TOTALORDERBF16_X = bfloat16(0.0);
 constexpr bfloat16 TOTALORDERBF16_Y = bfloat16(0.0);
 static_assert(1 == LIBC_NAMESPACE::shared::totalorderbf16(&TOTALORDERBF16_X,
@@ -900,6 +898,161 @@ static_assert(bfloat16(1) == [] {
              LIBC_NAMESPACE::shared::nanbf16(&arg))
       .is_nan();
 }());
+static_assert(bfloat16(0.0) ==
+              LIBC_NAMESPACE::shared::roundbf16(bfloat16(0.0)));
+static_assert(bfloat16(0.0) ==
+              LIBC_NAMESPACE::shared::roundevenbf16(bfloat16(0.0)));
+static_assert(bfloat16(0.0) ==
+              LIBC_NAMESPACE::shared::truncbf16(bfloat16(0.0)));
+
+static_assert(bfloat16(0.0) == LIBC_NAMESPACE::shared::atanbf16(bfloat16(0.0)));
+static_assert(bfloat16(0.0) == LIBC_NAMESPACE::shared::asinbf16(bfloat16(0.0)));
+static_assert(bfloat16(5.0) == LIBC_NAMESPACE::shared::bf16add(2.0, 3.0));
+static_assert(bfloat16(2.0f) == LIBC_NAMESPACE::shared::bf16divf(4.0f, 2.0f));
+static_assert(bfloat16(2.0) == LIBC_NAMESPACE::shared::bf16div(4.0, 2.0));
+
+static_assert([] {
+  bfloat16 canonicalizebf16_cx = bfloat16(0.0);
+  bfloat16 canonicalizebf16_x = bfloat16(0.0);
+  return 0 == LIBC_NAMESPACE::shared::canonicalizebf16(&canonicalizebf16_cx,
+                                                       &canonicalizebf16_x);
+}());
+static_assert(bfloat16(0.0) == LIBC_NAMESPACE::shared::cbrtbf16(bfloat16(0.0)));
+static_assert(bfloat16(0.0) == LIBC_NAMESPACE::shared::ceilbf16(bfloat16(0.0)));
+static_assert(bfloat16(0.0) ==
+              LIBC_NAMESPACE::shared::copysignbf16(bfloat16(0.0),
+                                                   bfloat16(0.0)));
+static_assert(bfloat16(0.0) == LIBC_NAMESPACE::shared::fabsbf16(bfloat16(0.0)));
+static_assert(bfloat16(0.0) ==
+              LIBC_NAMESPACE::shared::floorbf16(bfloat16(0.0)));
+static_assert(bfloat16(0.0) ==
+              LIBC_NAMESPACE::shared::fdimbf16(bfloat16(0.0), bfloat16(0.0)));
+static_assert(bfloat16(10.0) == LIBC_NAMESPACE::shared::fmabf16(bfloat16(2.0),
+                                                                bfloat16(3.0),
+                                                                bfloat16(4.0)));
+static_assert(bfloat16(0.0) ==
+              LIBC_NAMESPACE::shared::fmaxbf16(bfloat16(0.0), bfloat16(0.0)));
+static_assert(0.0f ==
+              LIBC_NAMESPACE::shared::fmaximum_mag_numbf16(bfloat16(0.0),
+                                                           bfloat16(0.0)));
+static_assert([] {
+  bfloat16 getpayloadbf16_x = bfloat16(0.0);
+  return bfloat16(-1.0) ==
+         LIBC_NAMESPACE::shared::getpayloadbf16(&getpayloadbf16_x);
+}());
+static_assert(bfloat16(5.0) ==
+              LIBC_NAMESPACE::shared::hypotbf16(bfloat16(4.0), bfloat16(3.0)));
+static_assert(bfloat16(0.0) ==
+              LIBC_NAMESPACE::shared::logbbf16(bfloat16(1.0f)));
+static_assert([] {
+  bfloat16 setpayloadbf16_res = bfloat16(0.0);
+  return 0 == LIBC_NAMESPACE::shared::setpayloadbf16(&setpayloadbf16_res,
+                                                     bfloat16(0.0));
+}());
+static_assert([] {
+  bfloat16 setpayloadsigbf16_res = bfloat16(0.0);
+  return 1 == LIBC_NAMESPACE::shared::setpayloadsigbf16(&setpayloadsigbf16_res,
+                                                        bfloat16(0.0));
+}());
+static_assert(bfloat16(0.0) == LIBC_NAMESPACE::shared::log_bf16(bfloat16(1.0)));
+
+static_assert(LIBC_NAMESPACE::fputil::FPBits<bfloat16>::min_subnormal(
+                  LIBC_NAMESPACE::Sign::NEG)
+                  .get_val() ==
+              LIBC_NAMESPACE::shared::nextdownbf16(bfloat16(0.0)));
+static_assert(LIBC_NAMESPACE::fputil::FPBits<bfloat16>::min_subnormal(
+                  LIBC_NAMESPACE::Sign ::POS)
+                  .get_val() ==
+              LIBC_NAMESPACE::shared::nextupbf16(bfloat16(0.0)));
+
+static_assert(bfloat16(0.0) ==
+              LIBC_NAMESPACE::shared::nextafterbf16(bfloat16(0.0),
+                                                    bfloat16(0.0)));
+static_assert(bfloat16(1.0) == LIBC_NAMESPACE::shared::sqrtbf16(bfloat16(1.0)));
+static_assert(0 == LIBC_NAMESPACE::shared::ilogbbf16(bfloat16(1.0)));
+static_assert(0L == LIBC_NAMESPACE::shared::llogbbf16(bfloat16(1.0)));
+
+static_assert(bfloat16(0.0) ==
+              LIBC_NAMESPACE::shared::fmaximumbf16(bfloat16(0.0),
+                                                   bfloat16(0.0)));
+static_assert(bfloat16(0.0) ==
+              LIBC_NAMESPACE::shared::fminimumbf16(bfloat16(0.0),
+                                                   bfloat16(0.0)));
+static_assert(bfloat16(0.0) ==
+              LIBC_NAMESPACE::shared::fminbf16(bfloat16(0.0), bfloat16(0.0)));
+static_assert(bfloat16(0.0) ==
+              LIBC_NAMESPACE::shared::fmaximum_numbf16(bfloat16(0.0),
+                                                       bfloat16(0.0)));
+static_assert(bfloat16(0.0) ==
+              LIBC_NAMESPACE::shared::fminimum_numbf16(bfloat16(0.0),
+                                                       bfloat16(0.0)));
+static_assert(bfloat16(0.0) ==
+              LIBC_NAMESPACE::shared::fromfpbf16(bfloat16(0.0), 0, 32));
+static_assert(bfloat16(0.0) ==
+              LIBC_NAMESPACE::shared::fromfpxbf16(bfloat16(0.0), 0, 32));
+static_assert(bfloat16(0.0) ==
+              LIBC_NAMESPACE::shared::ufromfpbf16(bfloat16(0.0), 0, 32));
+static_assert(bfloat16(0.0) ==
+              LIBC_NAMESPACE::shared::ufromfpxbf16(bfloat16(0.0), 0, 32));
+static_assert(bfloat16(0.0) ==
+              LIBC_NAMESPACE::shared::fmaximum_magbf16(bfloat16(0.0),
+                                                       bfloat16(0.0)));
+static_assert(bfloat16(0.0) ==
+              LIBC_NAMESPACE::shared::fminimum_magbf16(bfloat16(0.0),
+                                                       bfloat16(0.0)));
+static_assert([] {
+  bfloat16 totalorderbf16_x = bfloat16(0.0);
+  bfloat16 totalorderbf16_y = bfloat16(0.0);
+  return 1 == LIBC_NAMESPACE::shared::totalorderbf16(&totalorderbf16_x,
+                                                     &totalorderbf16_y);
+}());
+static_assert([] {
+  bfloat16 totalordermagbf16_x = bfloat16(0.0);
+  bfloat16 totalordermagbf16_y = bfloat16(0.0);
+  return 1 == LIBC_NAMESPACE::shared::totalordermagbf16(&totalordermagbf16_x,
+                                                        &totalordermagbf16_y);
+}());
+static_assert(bfloat16(0.0) ==
+              LIBC_NAMESPACE::shared::fmodbf16(bfloat16(1.0), bfloat16(1.0)));
+static_assert([] {
+  bfloat16 modfbf16_iptr = bfloat16(0.0);
+  return bfloat16(0.0) ==
+         LIBC_NAMESPACE::shared::modfbf16(bfloat16(0.0), &modfbf16_iptr);
+}());
+static_assert(bfloat16(0.0) ==
+              LIBC_NAMESPACE::shared::fminimum_mag_numbf16(bfloat16(0.0),
+                                                           bfloat16(0.0)));
+static_assert(bfloat16(0.0) ==
+              LIBC_NAMESPACE::shared::remainderbf16(bfloat16(1.0),
+                                                    bfloat16(1.0)));
+static_assert([] {
+  int remquobf16_exp = 0;
+  return bfloat16(0.0) == LIBC_NAMESPACE::shared::remquobf16(
+                              bfloat16(1.0), bfloat16(1.0), &remquobf16_exp);
+}());
+static_assert(bfloat16(0.0) ==
+              LIBC_NAMESPACE::shared::ldexpbf16(bfloat16(0.0), 0));
+static_assert(bfloat16(0.0) ==
+              LIBC_NAMESPACE::shared::scalblnbf16(bfloat16(0.0), 0L));
+static_assert(bfloat16(0.0) ==
+              LIBC_NAMESPACE::shared::scalbnbf16(bfloat16(0.0), 0));
+static_assert([] {
+  int frexpbf16_exp = 0;
+  return bfloat16(0.0) ==
+         LIBC_NAMESPACE::shared::frexpbf16(bfloat16(0.0), &frexpbf16_exp);
+}());
+static_assert(0L == LIBC_NAMESPACE::shared::lrintbf16(bfloat16(0.0)));
+static_assert(0L == LIBC_NAMESPACE::shared::lroundbf16(bfloat16(0.0)));
+static_assert(0LL == LIBC_NAMESPACE::shared::llrintbf16(bfloat16(0.0)));
+static_assert(0LL == LIBC_NAMESPACE::shared::llroundbf16(bfloat16(0.0)));
+static_assert(bfloat16(0.0) ==
+              LIBC_NAMESPACE::shared::nearbyintbf16(bfloat16(0.0)));
+static_assert(bfloat16(0.0) == LIBC_NAMESPACE::shared::rintbf16(bfloat16(0.0)));
+static_assert(1 == LIBC_NAMESPACE::shared::iscanonicalbf16(bfloat16(0.0)));
+static_assert(0 == LIBC_NAMESPACE::shared::issignalingbf16(bfloat16(0.0)));
+static_assert(LIBC_NAMESPACE::fputil::FPBits<bfloat16>(
+                  LIBC_NAMESPACE::shared::nanbf16(""))
+                  .is_nan());
 static_assert(bfloat16(0.0) ==
               LIBC_NAMESPACE::shared::roundbf16(bfloat16(0.0)));
 static_assert(bfloat16(0.0) ==
