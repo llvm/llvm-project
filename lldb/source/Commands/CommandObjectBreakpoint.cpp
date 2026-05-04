@@ -3734,7 +3734,6 @@ protected:
     if (argc != 0) {
       for (auto &entry : command.entries()) {
         uint64_t id;
-        bool success;
         if (entry.ref().getAsInteger(0, id))
           idxs.push_back(id);
         else {
