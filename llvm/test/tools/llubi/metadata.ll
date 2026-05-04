@@ -25,13 +25,11 @@ define void @main() {
   %nofpclass_load_valid = load float, ptr %alloc, !noundef !{}, !nofpclass !{i32 3}
   %nofpclass_load_invalid = load float, ptr %alloc, !nofpclass !{i32 99}
 
-  ; TODO: Test dereferenceable[_or_null] after provenance support is ready
-
   %alloc_ptr = alloca ptr
   store ptr %alloc_ptr, ptr %alloc_ptr
-  %align_nonnull_load_valid = load ptr, ptr %alloc_ptr, !nonnull !{}, !align !{i32 8}, !noundef !{}
+  %align_nonnull_load_valid = load ptr, ptr %alloc_ptr, !nonnull !{}, !align !{i32 8}, !noundef !{}, !dereferenceable !{i32 8}, !dereferenceable_or_null !{i32 8}
   store ptr null, ptr %alloc_ptr
-  %align_load_valid = load ptr, ptr %alloc_ptr, !align !{i32 8}, !noundef !{}
+  %align_load_valid = load ptr, ptr %alloc_ptr, !align !{i32 8}, !noundef !{}, !dereferenceable_or_null !{i32 8}
   %nonnull_load_invalid = load ptr, ptr %alloc_ptr, !nonnull !{}
 
   %range_call_valid = call i32 @callee(), !noundef !{}, !range !{i32 0, i32 11}
@@ -60,9 +58,9 @@ define void @main() {
 ; CHECK-NEXT:   %nofpclass_load_invalid = load float, ptr %alloc, align 4, !nofpclass !5 => poison
 ; CHECK-NEXT:   %alloc_ptr = alloca ptr, align 8 => ptr 0x40 [alloc_ptr]
 ; CHECK-NEXT:   store ptr %alloc_ptr, ptr %alloc_ptr, align 8
-; CHECK-NEXT:   %align_nonnull_load_valid = load ptr, ptr %alloc_ptr, align 8, !nonnull !1, !align !6, !noundef !1 => ptr 0x40 [dangling]
+; CHECK-NEXT:   %align_nonnull_load_valid = load ptr, ptr %alloc_ptr, align 8, !nonnull !1, !dereferenceable !6, !dereferenceable_or_null !6, !align !6, !noundef !1 => ptr 0x40 [alloc_ptr]
 ; CHECK-NEXT:   store ptr null, ptr %alloc_ptr, align 8
-; CHECK-NEXT:   %align_load_valid = load ptr, ptr %alloc_ptr, align 8, !align !6, !noundef !1 => ptr 0x0 [dangling]
+; CHECK-NEXT:   %align_load_valid = load ptr, ptr %alloc_ptr, align 8, !dereferenceable_or_null !6, !align !6, !noundef !1 => ptr 0x0 [nullary]
 ; CHECK-NEXT:   %nonnull_load_invalid = load ptr, ptr %alloc_ptr, align 8, !nonnull !1 => poison
 ; CHECK-NEXT: Entering function: callee
 ; CHECK-NEXT:   ret i32 10
@@ -86,12 +84,12 @@ define void @main() {
 ; CHECK-NEXT: Exiting function: callee_ptr
 ; CHECK-NEXT:   %nonnull_align_call_valid = call ptr @callee_ptr(ptr %alloc_ptr), !nonnull !1, !align !6, !noundef !1 => ptr 0x40 [alloc_ptr]
 ; CHECK-NEXT: Entering function: callee_ptr
-; CHECK-NEXT:   ptr %x = ptr 0x0 [dangling]
+; CHECK-NEXT:   ptr %x = ptr 0x0 [nullary]
 ; CHECK-NEXT:   ret ptr %x
 ; CHECK-NEXT: Exiting function: callee_ptr
-; CHECK-NEXT:   %align_call_invalid = call ptr @callee_ptr(ptr null), !align !6, !noundef !1 => ptr 0x0 [dangling]
+; CHECK-NEXT:   %align_call_invalid = call ptr @callee_ptr(ptr null), !align !6, !noundef !1 => ptr 0x0 [nullary]
 ; CHECK-NEXT: Entering function: callee_ptr
-; CHECK-NEXT:   ptr %x = ptr 0x0 [dangling]
+; CHECK-NEXT:   ptr %x = ptr 0x0 [nullary]
 ; CHECK-NEXT:   ret ptr %x
 ; CHECK-NEXT: Exiting function: callee_ptr
 ; CHECK-NEXT:   %nonnull_call_invalid = call ptr @callee_ptr(ptr null), !nonnull !1 => poison
@@ -106,9 +104,9 @@ define void @main() {
 ; CHECK-NEXT: Exiting function: callee_ptr
 ; CHECK-NEXT:   %dereferenceable_or_null_call_valid1 = call ptr @callee_ptr(ptr %alloc_ptr), !dereferenceable_or_null !6 => ptr 0x40 [alloc_ptr]
 ; CHECK-NEXT: Entering function: callee_ptr
-; CHECK-NEXT:   ptr %x = ptr 0x0 [dangling]
+; CHECK-NEXT:   ptr %x = ptr 0x0 [nullary]
 ; CHECK-NEXT:   ret ptr %x
 ; CHECK-NEXT: Exiting function: callee_ptr
-; CHECK-NEXT:   %dereferenceable_or_null_call_valid2 = call ptr @callee_ptr(ptr null), !dereferenceable_or_null !6 => ptr 0x0 [dangling]
+; CHECK-NEXT:   %dereferenceable_or_null_call_valid2 = call ptr @callee_ptr(ptr null), !dereferenceable_or_null !6 => ptr 0x0 [nullary]
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main
