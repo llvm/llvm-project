@@ -2894,7 +2894,7 @@ TEST_F(DICompileUnitTest, get) {
   uint64_t DWOId = 0x10000000c0ffee;
   MDTuple *Macros = getTuple();
   StringRef SysRoot = "/";
-  StringRef SDK = "MacOSX.sdk";
+  StringRef SDK = "TestSDK";
   auto *N = DICompileUnit::getDistinct(
       Context, DISourceLanguageName(SourceLanguage), File, Producer,
       IsOptimized, Flags, RuntimeVersion, SplitDebugFilename, EmissionKind,
@@ -2944,6 +2944,39 @@ TEST_F(DICompileUnitTest, get) {
   auto *Clone = MDNode::replaceWithPermanent(std::move(Temp));
   EXPECT_TRUE(Clone->isDistinct());
   EXPECT_EQ(TempAddress, Clone);
+}
+
+TEST_F(DICompileUnitTest, getWithDialect) {
+  unsigned SourceLanguage = 1;
+  DIFile *File = getFile();
+  StringRef Producer = "some producer";
+  bool IsOptimized = false;
+  StringRef Flags = "flag after flag";
+  unsigned RuntimeVersion = 2;
+  StringRef SplitDebugFilename = "another/file";
+  auto EmissionKind = DICompileUnit::FullDebug;
+  MDTuple *EnumTypes = getTuple();
+  MDTuple *RetainedTypes = getTuple();
+  MDTuple *GlobalVariables = getTuple();
+  MDTuple *ImportedEntities = getTuple();
+  uint64_t DWOId = 0x10000000c0ffee;
+  MDTuple *Macros = getTuple();
+  StringRef SysRoot = "/";
+  StringRef SDK = "MacOSX.sdk";
+  auto *Dialect = MDString::get(Context, "simt");
+  auto *N = DICompileUnit::getDistinct(
+      Context, DISourceLanguageName(SourceLanguage, Dialect), File, Producer,
+      IsOptimized, Flags, RuntimeVersion, SplitDebugFilename, EmissionKind,
+      EnumTypes, RetainedTypes, GlobalVariables, ImportedEntities, Macros,
+      DWOId, true, false, DICompileUnit::DebugNameTableKind::Default, false,
+      SysRoot, SDK);
+
+  EXPECT_EQ(StringRef("simt"), N->getDialect());
+  EXPECT_EQ(Dialect, N->getRawDialect());
+
+  TempDICompileUnit Temp = N->clone();
+  EXPECT_EQ(StringRef("simt"), Temp->getDialect());
+  EXPECT_EQ(Dialect, Temp->getRawDialect());
 }
 
 TEST_F(DICompileUnitTest, replaceArrays) {

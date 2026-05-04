@@ -90,6 +90,10 @@ class DISourceLanguageName {
 
   /// Optional target-specific language dialect for DWARF that can be used to
   /// indicate the programming/execution model.
+  ///
+  /// This is intentionally not modeled as a DICompileUnit operand. Code that
+  /// introspects DICompileUnit through getNumOperands()/getOperand(i) will not
+  /// see this field.
   MDString *Dialect = nullptr;
 
 public:
@@ -2219,6 +2223,7 @@ public:
   Metadata *getRawMacros() const { return getOperand(8); }
   MDString *getRawSysRoot() const { return getOperandAs<MDString>(9); }
   MDString *getRawSDK() const { return getOperandAs<MDString>(10); }
+  /// Returns the out-of-band dialect payload carried by SourceLanguage.
   MDString *getRawDialect() const { return SourceLanguage.getRawDialect(); }
 
   /// Replace arrays.

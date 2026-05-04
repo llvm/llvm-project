@@ -1966,8 +1966,9 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
         Record.size() <= 18 ? 0 : Record[18],
         Record.size() <= 19 ? false : Record[19],
         // Keep these guarded for backwards-compatibility with older bitcode
-        // records. In the current METADATA_COMPILE_UNIT layout, index 20 is
-        // sysroot, 21 is SDK, 22 is source-language version, and 23 is dialect.
+        // records. Keep this index layout in sync with writeDICompileUnit:
+        // index 20 is sysroot, 21 is SDK, 22 is source-language version, and
+        // 23 is dialect (read above via getMDString(Record[23])).
         Record.size() <= 20 ? nullptr : getMDString(Record[20]),
         Record.size() <= 21 ? nullptr : getMDString(Record[21]));
 

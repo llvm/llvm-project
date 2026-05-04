@@ -29,6 +29,9 @@
 
 using namespace llvm;
 
+static constexpr StringLiteral SimtDialect = "simt";
+static constexpr StringLiteral TileDialect = "tile";
+
 // Command line option to control inlined_at enhancement to lineinfo support.
 // Valid only when debuginfo emissionkind is DebugDirectivesOnly or
 // LineTablesOnly.
@@ -285,12 +288,14 @@ void NVPTXDwarfDebug::finishTargetUnitAttributes(const DICompileUnit &DIUnit,
                                                  DwarfCompileUnit &NewCU) {
   StringRef Dialect = DIUnit.getSourceLanguage().getDialect();
   if (!Dialect.empty()) {
-    if (Dialect != "simt" && Dialect != "tile") {
-      std::string Msg = ("unknown NVPTX language dialect '" + Dialect +
-                         "' on DICompileUnit; expected 'simt' or 'tile'")
-                            .str();
+    if (Dialect != SimtDialect && Dialect != TileDialect &&
+        WarnedDialectCUs.insert(&DIUnit).second) {
       DIUnit.getContext().diagnose(
-          DiagnosticInfoGeneric(Twine(Msg), DS_Warning));
+          DiagnosticInfoGeneric(
+              Twine("unknown NVPTX language dialect '") + Dialect +
+                  "' on DICompileUnit; expected '" + SimtDialect + "' or '" +
+                  TileDialect + "'",
+              DS_Warning));
     }
     NewCU.addString(NewCU.getUnitDie(), dwarf::DW_AT_LLVM_language_dialect,
                     Dialect);

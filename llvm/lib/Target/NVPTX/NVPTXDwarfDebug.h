@@ -33,6 +33,9 @@ private:
   /// Used to avoid redundant emission of parent chain .loc directives.
   DenseSet<const DILocation *> EmittedInlinedAtLocs;
 
+  /// Set of compile units that already emitted an invalid dialect warning.
+  DenseSet<const DICompileUnit *> WarnedDialectCUs;
+
 public:
   NVPTXDwarfDebug(AsmPrinter *A);
 
