@@ -204,6 +204,9 @@ LLDBMemoryReader::resolvePointerAsSymbol(swift::remote::RemoteAddress address) {
   }
 
   if (auto *symbol = addr.CalculateSymbolContextSymbol()) {
+    if (triple.isOSWindows() &&
+        addr.GetFileAddress() != symbol->GetAddressRef().GetFileAddress())
+      return {};
     auto mangledName = symbol->GetMangled().GetMangledName().GetStringRef();
     // MemoryReader requires this to be a Swift symbol. LLDB can also be
     // aware of local symbols, so avoid returning those.
