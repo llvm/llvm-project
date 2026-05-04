@@ -3764,7 +3764,7 @@ const SCEV *ScalarEvolution::getUDivExactExpr(SCEVUse LHS, SCEVUse RHS) {
         Operands.push_back(Op);
         continue;
       }
-      if (!isa<SCEVConstant>(Op) || Op->isZero())
+      if (!isa<SCEVConstant>(Op)) // Constant is guaranteed non-zero is MulExpr
         OnlyNonZero = false;
       CurrSCEV = NewSCEV;
     }
@@ -3788,9 +3788,7 @@ const SCEV *ScalarEvolution::getUDivExactExpr(SCEVUse LHS, SCEVUse RHS) {
     if (const auto *LHSCst = dyn_cast<SCEVConstant>(Mul->getOperand(0))) {
       if (LHSCst == RHSCst) {
         SmallVector<SCEVUse, 2> Operands(drop_begin(Mul->operands()));
-        return getMulExpr(
-            Operands, LHSCst->isZero() ? SCEVNoWrapFlags::FlagAnyWrap
-                                       : Mul->getNoWrapFlags() & SCEV::FlagNUW);
+        return getMulExpr(Operands, Mul->getNoWrapFlags() & SCEV::FlagNUW);
       }
 
       // We can't just assume that LHSCst divides RHSCst cleanly, it could be
