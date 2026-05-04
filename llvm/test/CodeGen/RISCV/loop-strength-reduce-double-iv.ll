@@ -23,7 +23,7 @@ define double @repro_lean(double %div, double %base) {
 ; CHECK-NEXT:    li s3, 0
 ; CHECK-NEXT:    li s2, 1
 ; CHECK-NEXT:    lui s4, 38147
-; CHECK-NEXT:    addi s4, s4, -113
+; CHECK-NEXT:    addi s4, s4, -112
 ; CHECK-NEXT:  .LBB0_1: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    mv a0, s2
@@ -37,10 +37,9 @@ define double @repro_lean(double %div, double %base) {
 ; CHECK-NEXT:    call __adddf3
 ; CHECK-NEXT:    mv a1, s3
 ; CHECK-NEXT:    call __adddf3
-; CHECK-NEXT:    mv s3, a0
-; CHECK-NEXT:    addi s4, s4, -1
 ; CHECK-NEXT:    addi s2, s2, 1
-; CHECK-NEXT:    bnez s4, .LBB0_1
+; CHECK-NEXT:    mv s3, a0
+; CHECK-NEXT:    bne s2, s4, .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %for.end
 ; CHECK-NEXT:    mv a0, s3
 ; CHECK-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload

@@ -4728,8 +4728,9 @@ void LSRInstance::GenerateCrossUseConstantOffsets() {
           // If the new formula has a constant in a register, and adding the
           // constant value to the immediate would produce a value closer to
           // zero than the immediate itself, then the formula isn't worthwhile.
-          for (const SCEV *NewReg : NewF.BaseRegs)
-            if (const SCEVConstant *C = dyn_cast<SCEVConstant>(NewReg)) {
+          for (size_t R = 0; R < NewF.BaseRegs.size(); ++R) {
+            if (const SCEVConstant *C =
+                    dyn_cast<SCEVConstant>(NewF.BaseRegs[R])) {
               if (NewF.BaseOffset.isNonZero() && NewF.BaseOffset.isScalable())
                 goto skip_formula;
               if ((C->getAPInt() + NewF.BaseOffset.getFixedValue())
@@ -4740,7 +4741,32 @@ void LSRInstance::GenerateCrossUseConstantOffsets() {
                       (unsigned)llvm::countr_zero<uint64_t>(
                           NewF.BaseOffset.getFixedValue()))
                 goto skip_formula;
+
+              if (R != N && NewF.BaseOffset.isNonZero() &&
+                  !NewF.BaseOffset.isScalable()) {
+                if (!C->getAPInt().isMinSignedValue() &&
+                    !C->getAPInt().isMaxSignedValue()) {
+                  bool Overflow = false;
+                  APInt Combined = C->getAPInt().sadd_ov(
+                      APInt(C->getAPInt().getBitWidth(),
+                            NewF.BaseOffset.getFixedValue(), true),
+                      Overflow);
+                  if (!Overflow) {
+                    Formula FoldedF = NewF;
+                    FoldedF.BaseRegs[R] = SE.getConstant(Combined);
+                    FoldedF.BaseOffset = Immediate::getFixed(0);
+                    FoldedF.canonicalize(*this->L);
+                    if (LU.Kind == LSRUse::ICmpZero && FoldedF.Scale == 1) {
+                      FoldedF.Scale = -1;
+                      FoldedF.BaseRegs[R] =
+                          SE.getNegativeSCEV(FoldedF.BaseRegs[R]);
+                    }
+                    (void)InsertFormula(LU, LUIdx, FoldedF);
+                  }
+                }
+              }
             }
+          }
 
           // Ok, looks good.
           NewF.canonicalize(*this->L);
