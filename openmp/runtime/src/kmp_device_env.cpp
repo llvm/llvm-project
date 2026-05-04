@@ -297,14 +297,16 @@ extern "C" char const *__kmp_resolve_device_env(char const *base_name,
     return NULL;
   kmp_device_env_state_t *st = &__kmp_device_env_states[idx];
 
-  if (device_id < 0) {
-    // Host: <ENV> > <ENV>_ALL > default.
+  // Host: <ENV> > <ENV>_ALL
+  if (device_id == -1) {
     if (st->host_value != NULL)
       return st->host_value;
     if (st->all_value != NULL)
       return st->all_value;
     return NULL;
   }
+  if (device_id < 0)
+    return NULL;
 
   // Non-host device d: <ENV>_DEV_<d> > <ENV>_DEV > <ENV>_ALL > default.
   for (kmp_device_env_dev_node_t *n = st->per_device; n != NULL; n = n->next) {
