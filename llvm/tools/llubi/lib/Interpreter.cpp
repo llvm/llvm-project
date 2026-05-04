@@ -1691,10 +1691,9 @@ public:
   }
 
   void visitLoadInst(LoadInst &LI) {
-    auto RetVal =
-        load(getValue(LI.getPointerOperand()), LI.getAlign(), LI.getType());
+    auto RetVal = load(getValue(LI.getPointerOperand()), LI.getAlign(),
+                       LI.getType(), LI.hasMetadata(LLVMContext::MD_noundef));
     // TODO: track volatile loads
-    // TODO: Check undef bits when !noundef is set.
     handleMetadata(LI.getType(), RetVal, LI);
     setResult(LI, std::move(RetVal));
   }
