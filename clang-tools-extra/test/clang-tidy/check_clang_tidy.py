@@ -462,25 +462,28 @@ C_STANDARDS = ["c99", ("c11", "c1x"), "c17", ("c23", "c2x"), "c2y"]
 def expand_std(std: str) -> List[str]:
     split_std, or_later, suffix = std.partition("-or-later")
 
-    if not or_later:
-        return [split_std]
+    if or_later:
+        if suffix:
+            # Keep malformed -or-later spellings unchanged so clang diagnoses them.
+            return [std]
 
-    if suffix:
-        return [std]
-
-    for standard_list in (CPP_STANDARDS, C_STANDARDS):
-        item = next(
-            (
-                i
-                for i, v in enumerate(standard_list)
-                if (split_std in v if isinstance(v, (list, tuple)) else split_std == v)
-            ),
-            None,
-        )
-        if item is not None:
-            return [split_std] + [
-                x if isinstance(x, str) else x[0] for x in standard_list[item + 1 :]
-            ]
+        for standard_list in (CPP_STANDARDS, C_STANDARDS):
+            item = next(
+                (
+                    i
+                    for i, v in enumerate(standard_list)
+                    if (
+                        split_std in v
+                        if isinstance(v, (list, tuple))
+                        else split_std == v
+                    )
+                ),
+                None,
+            )
+            if item is not None:
+                return [split_std] + [
+                    x if isinstance(x, str) else x[0] for x in standard_list[item + 1 :]
+                ]
     return [std]
 
 
