@@ -34,9 +34,9 @@
 #include <vector>
 
 #ifdef OMPT_SUPPORT
-using namespace llvm::omp::target::ompt;
+using namespace llvm::offload::ompt;
 #endif
-using namespace llvm::omp::target::debug;
+using namespace llvm::offload::debug;
 
 // If offload is enabled, ensure that device DeviceID has been initialized.
 //

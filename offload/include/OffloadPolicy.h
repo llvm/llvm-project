@@ -16,7 +16,7 @@
 
 #include "PluginManager.h"
 
-using namespace llvm::omp::target::debug;
+using namespace llvm::offload::debug;
 
 enum kmp_target_offload_kind_t {
   tgt_disabled = 0,

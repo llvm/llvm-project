@@ -30,8 +30,7 @@
 #include <string>
 
 namespace llvm {
-namespace omp {
-namespace target {
+namespace offload {
 namespace plugin {
 
 class ErrorReporter {
@@ -370,8 +369,7 @@ public:
 };
 
 } // namespace plugin
-} // namespace target
-} // namespace omp
+} // namespace offload
 } // namespace llvm
 
 #endif // OFFLOAD_PLUGINS_NEXTGEN_COMMON_ERROR_REPORTING_H

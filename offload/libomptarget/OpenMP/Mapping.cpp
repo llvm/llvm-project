@@ -15,7 +15,7 @@
 #include "Shared/Requirements.h"
 #include "device.h"
 
-using namespace llvm::omp::target::debug;
+using namespace llvm::offload::debug;
 
 /// Dump a table of all the host-target pointer pairs on failure
 void dumpTargetPointerMappings(const ident_t *Loc, DeviceTy &Device,

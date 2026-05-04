@@ -27,7 +27,7 @@
 #include <mutex>
 #include <thread>
 
-namespace llvm::omp::target {
+namespace llvm::offload {
 namespace plugin {
 struct GenericPluginTy;
 struct GenericDeviceTy;
@@ -166,6 +166,6 @@ public:
   std::unique_ptr<ServerThread> Thread;
 };
 
-} // namespace llvm::omp::target
+} // namespace llvm::offload
 
 #endif

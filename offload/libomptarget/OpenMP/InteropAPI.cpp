@@ -18,7 +18,7 @@
 #include <cstdlib>
 #include <cstring>
 
-using namespace llvm::omp::target::debug;
+using namespace llvm::offload::debug;
 
 namespace {
 omp_interop_rc_t getPropertyErrorType(omp_interop_property_t Property) {

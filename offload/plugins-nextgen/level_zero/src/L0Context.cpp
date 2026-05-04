@@ -13,7 +13,7 @@
 #include "L0Context.h"
 #include "L0Plugin.h"
 
-namespace llvm::omp::target::plugin {
+namespace llvm::offload::plugin {
 
 Error L0ContextTy::init() {
   auto cleanupOnError = [&]() {
@@ -68,4 +68,4 @@ StagingBufferTy &L0ContextTy::getStagingBuffer() {
   return Buffer;
 }
 
-} // namespace llvm::omp::target::plugin
+} // namespace llvm::offload::plugin

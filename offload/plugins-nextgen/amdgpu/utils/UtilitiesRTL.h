@@ -21,8 +21,7 @@
 #include "llvm/Frontend/Offloading/Utility.h"
 
 namespace llvm {
-namespace omp {
-namespace target {
+namespace offload {
 namespace plugin {
 namespace hsa_utils {
 
@@ -75,6 +74,5 @@ void initImplArg(AMDGPUImplicitArgsTy *Base,
 
 } // namespace hsa_utils
 } // namespace plugin
-} // namespace target
-} // namespace omp
+} // namespace offload
 } // namespace llvm

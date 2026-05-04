@@ -17,7 +17,7 @@
 
 #include "llvm/ADT/ScopeExit.h"
 
-namespace llvm::omp::target::plugin {
+namespace llvm::offload::plugin {
 
 bool KernelPropertiesTy::reuseGroupParams(const int32_t NumTeamsIn,
                                           const int32_t ThreadLimitIn,
@@ -521,4 +521,4 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   return launchKernelWithCmdQueue(l0Device, zeKernel, KEnv);
 }
 
-} // namespace llvm::omp::target::plugin
+} // namespace llvm::offload::plugin

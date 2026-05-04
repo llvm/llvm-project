@@ -56,10 +56,10 @@
 #include "llvm/TargetParser/Triple.h"
 
 using namespace llvm::offload::debug;
+using namespace llvm::omp;
 
 namespace llvm {
-namespace omp {
-namespace target {
+namespace offload {
 
 namespace plugin {
 
@@ -1940,8 +1940,7 @@ protected:
 };
 
 } // namespace plugin
-} // namespace target
-} // namespace omp
+} // namespace offload
 } // namespace llvm
 
 #endif // OPENMP_LIBOMPTARGET_PLUGINS_COMMON_PLUGININTERFACE_H

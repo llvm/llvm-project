@@ -29,7 +29,7 @@
 
 #define performIfOmptInitialized(stmt)                                         \
   do {                                                                         \
-    if (llvm::omp::target::ompt::Initialized) {                                \
+    if (llvm::offload::ompt::Initialized) {                                    \
       stmt;                                                                    \
     }                                                                          \
   } while (0)
@@ -45,8 +45,7 @@
 typedef uint64_t (*IdInterfaceTy)();
 
 namespace llvm {
-namespace omp {
-namespace target {
+namespace offload {
 namespace ompt {
 
 #define declareOmptCallback(Name, Type, Code) extern Name##_t Name##_fn;
@@ -92,8 +91,7 @@ void connectLibrary();
 extern bool Initialized;
 
 } // namespace ompt
-} // namespace target
-} // namespace omp
+} // namespace offload
 } // namespace llvm
 
 #pragma pop_macro("DEBUG_PREFIX")

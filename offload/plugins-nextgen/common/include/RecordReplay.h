@@ -33,8 +33,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
-namespace omp {
-namespace target {
+namespace offload {
 namespace plugin {
 
 struct GenericKernelTy;
@@ -295,8 +294,7 @@ private:
 };
 
 } // namespace plugin
-} // namespace target
-} // namespace omp
+} // namespace offload
 } // namespace llvm
 
 #endif // OPENMP_LIBOMPTARGET_PLUGINS_COMMON_RECORDREPLAY_H

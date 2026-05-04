@@ -17,9 +17,9 @@
 #include "Shared/Profile.h"
 
 #ifdef OMPT_SUPPORT
-using namespace llvm::omp::target::ompt;
+using namespace llvm::offload::ompt;
 #endif
-using namespace llvm::omp::target::debug;
+using namespace llvm::offload::debug;
 
 EXTERN void __tgt_target_data_begin(int64_t DeviceId, int32_t ArgNum,
                                     void **ArgsBase, void **Args,

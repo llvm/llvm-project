@@ -22,7 +22,7 @@
 
 using namespace llvm;
 using namespace llvm::sys;
-using namespace llvm::omp::target::debug;
+using namespace llvm::offload::debug;
 
 PluginManager *PM = nullptr;
 

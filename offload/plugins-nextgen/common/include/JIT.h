@@ -32,8 +32,7 @@ struct __tgt_device_image;
 namespace llvm {
 class MemoryBuffer;
 
-namespace omp {
-namespace target {
+namespace offload {
 namespace plugin {
 struct GenericDeviceTy;
 } // namespace plugin
@@ -52,7 +51,7 @@ struct JITEngine {
   /// return \p Image. It is expected to return a memory buffer containing the
   /// generated device image that could be loaded to the device directly.
   Expected<std::unique_ptr<MemoryBuffer>>
-  process(StringRef Image, target::plugin::GenericDeviceTy &Device);
+  process(StringRef Image, plugin::GenericDeviceTy &Device);
 
 private:
   /// Compile the bitcode image \p Image and generate the binary image that can
@@ -107,8 +106,7 @@ private:
   BoolEnvar JITSkipOpt = BoolEnvar("LIBOMPTARGET_JIT_SKIP_OPT", false);
 };
 
-} // namespace target
-} // namespace omp
+} // namespace offload
 } // namespace llvm
 
 #endif // OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_JIT_H

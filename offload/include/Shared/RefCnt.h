@@ -17,8 +17,7 @@
 #include <memory>
 
 namespace llvm {
-namespace omp {
-namespace target {
+namespace offload {
 
 /// Utility class for thread-safe reference counting. Any class that needs
 /// objects' reference counting can inherit from this entity or have it as a
@@ -49,8 +48,7 @@ private:
   /// The atomic reference counter.
   std::atomic<Ty> Refs;
 };
-} // namespace target
-} // namespace omp
+} // namespace offload
 } // namespace llvm
 
 #endif
