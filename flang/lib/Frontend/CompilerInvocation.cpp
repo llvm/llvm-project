@@ -809,9 +809,10 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
 
   // Set fixedFormColumns based on -ffixed-line-length=<value> or
   // set freeFormColumns based on -ffree-line-length=<value>.
-  if (const auto *arg =
-          args.getLastArg(clang::options::OPT_ffixed_line_length_EQ,
-                          clang::options::OPT_ffree_line_length_EQ)) {
+  for (const auto *arg :
+       args.filtered(clang::options::OPT_ffixed_line_length_EQ,
+                     clang::options::OPT_ffree_line_length_EQ)) {
+
     llvm::StringRef argValue = llvm::StringRef(arg->getValue());
     bool isFixedLineFlag =
         arg->getOption().matches(clang::options::OPT_ffixed_line_length_EQ);
