@@ -30,6 +30,7 @@ set_source_files_properties(${LIBUNWIND_C_SOURCES}
 set(LIBUNWIND_ASM_SOURCES
     UnwindRegistersRestore.S
     UnwindRegistersSave.S
+    __cpp_exception.S
     )
 
 set(LIBUNWIND_HEADERS
