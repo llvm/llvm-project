@@ -47,8 +47,8 @@ define void @dynamicIndex(ptr %addr, ptr %addr2, i32 %index) {
 ; CHECK-NEXT:    sub.w r4, r7, #8
 ; CHECK-NEXT:    lsls r0, r0, #2
 ; CHECK-NEXT:    vst1.64 {d16, d17}, [r3:128], r0
-; CHECK-NEXT:    lsls r0, r2, #1
-; CHECK-NEXT:    adds r0, #1
+; CHECK-NEXT:    movs r0, #1
+; CHECK-NEXT:    orr.w r0, r0, r2, lsl #1
 ; CHECK-NEXT:    and r0, r0, #3
 ; CHECK-NEXT:    ldr r2, [r3]
 ; CHECK-NEXT:    vldr d18, [r1]
