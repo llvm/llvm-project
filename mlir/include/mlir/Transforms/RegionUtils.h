@@ -15,6 +15,8 @@
 
 #include "llvm/ADT/SetVector.h"
 
+#include <cstdint>
+
 namespace mlir {
 class DominanceInfo;
 class RewriterBase;
@@ -108,6 +110,19 @@ LogicalResult moveValueDefinitions(RewriterBase &rewriter, ValueRange values,
                                    DominanceInfo &dominance);
 LogicalResult moveValueDefinitions(RewriterBase &rewriter, ValueRange values,
                                    Operation *insertionPoint);
+
+/// Remove trivially dead operations starting with the provided worklist.
+///
+/// The provided \p worklist must contain only operations directly in \p region
+/// that are already known to be trivially dead. Operand-defining ops are
+/// re-evaluated after each erasure, so chains of dead ops are eliminated in a
+/// single pass.
+/// An optional callback \p markOpForDeletionInParent can be provided to mark
+/// operations for deletion in a parent region. Returns the number of erased
+/// worklist operations.
+int64_t eliminateTriviallyDeadOps(
+    RewriterBase &rewriter, Region &region, SmallVector<Operation *> &worklist,
+    function_ref<void(Operation *)> markOpForDeletionInParent = nullptr);
 
 /// Remove trivially dead operations from \p region. An operation is trivially
 /// dead when it has no users and is side-effect-free. Operand-defining ops are

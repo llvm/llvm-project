@@ -16,9 +16,11 @@
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/RecyclingAllocator.h"
 #include <deque>
 
@@ -56,10 +58,22 @@ public:
       : rewriter(rewriter), domInfo(domInfo) {}
 
   /// Simplify all operations within the given op.
-  void simplify(Operation *op, bool *changed = nullptr);
+  ///
+  /// When simplifying nested regions, \p markOpForDeletionInParent is used to
+  /// notify the enclosing region that one of its directly nested ops may have
+  /// become trivially dead.
+  void
+  simplify(Operation *op, bool *changed = nullptr,
+           function_ref<void(Operation *)> markOpForDeletionInParent = nullptr);
 
   /// Simplify operations within the given region.
-  void simplify(Region &region, bool *changed = nullptr);
+  ///
+  /// When simplifying a nested region, \p markOpForDeletionInParent is used to
+  /// notify the enclosing region that one of its directly nested ops may have
+  /// become trivially dead.
+  void
+  simplify(Region &region, bool *changed = nullptr,
+           function_ref<void(Operation *)> markOpForDeletionInParent = nullptr);
 
   int64_t getNumCSE() const { return numCSE; }
   int64_t getNumDCE() const { return numDCE; }
@@ -95,18 +109,45 @@ private:
     bool processed = false;
   };
 
-  /// Attempt to eliminate a redundant operation. Returns success if the
-  /// operation was marked for removal, failure otherwise.
-  LogicalResult simplifyOperation(ScopedMapTy &knownValues, Operation *op,
-                                  bool hasSSADominance);
-  void simplifyBlock(ScopedMapTy &knownValues, Block *bb, bool hasSSADominance);
-  void simplifyRegion(ScopedMapTy &knownValues, Region &region);
+  /// Attempt to CSE \p op against an equivalent known operation.
+  ///
+  /// If CSE succeeds, uses of \p op that are valid to rewrite are replaced with
+  /// the existing operation's results. If \p op then has no remaining uses,
+  /// \p markCSEDuplicateForDeletion records it as a CSE duplicate that should
+  /// be erased after the current traversal scope unwinds.
+  LogicalResult
+  simplifyOperation(ScopedMapTy &knownValues, Operation *op,
+                    function_ref<void(Operation *)> markCSEDuplicateForDeletion,
+                    bool hasSSADominance);
+  /// Simplify operations in \p bb.
+  ///
+  /// \p markKnownDeadOpForDeletion records operations that are already
+  /// trivially dead before CSE inspects them. \p markCSEDuplicateForDeletion
+  /// records operations whose uses were replaced by CSE.
+  bool
+  simplifyBlock(ScopedMapTy &knownValues, Block *bb, bool hasSSADominance,
+                function_ref<void(Operation *)> markKnownDeadOpForDeletion,
+                function_ref<void(Operation *)> markCSEDuplicateForDeletion);
+  /// Simplify operations in \p region.
+  ///
+  /// \p markKnownDeadOpForDeletionInParent is forwarded to nested regions so
+  /// they can notify this region when deleting nested uses makes a parent
+  /// operation trivially dead.
+  bool simplifyRegion(
+      ScopedMapTy &knownValues, Region &region,
+      function_ref<void(Operation *)> markKnownDeadOpForDeletionInParent);
 
-  /// Erase all operations queued for deletion by the simplification routines.
-  void eraseDeadOps(bool *changed);
-
-  void replaceUsesAndDelete(ScopedMapTy &knownValues, Operation *op,
-                            Operation *existing, bool hasSSADominance);
+  /// Replace uses of \p op with \p existing and schedule \p op for deletion
+  /// when all remaining uses can be removed safely.
+  ///
+  /// In regions with SSA dominance, all uses can be replaced immediately. In
+  /// graph regions, only uses owned by operations that have not already been
+  /// visited are rewritten. If no uses remain, \p markCSEDuplicateForDeletion
+  /// records \p op as a duplicate produced by CSE.
+  void replaceUsesAndDelete(
+      ScopedMapTy &knownValues, Operation *op, Operation *existing,
+      function_ref<void(Operation *)> markCSEDuplicateForDeletion,
+      bool hasSSADominance);
 
   /// Check if there is side-effecting operations other than the given effect
   /// between the two operations.
@@ -115,8 +156,6 @@ private:
   /// A rewriter for modifying the IR.
   RewriterBase &rewriter;
 
-  /// Operations marked as dead and to be erased.
-  std::vector<Operation *> opsToErase;
   DominanceInfo *domInfo = nullptr;
   MemEffectsCache memEffectsCache;
 
@@ -126,9 +165,10 @@ private:
 };
 } // namespace
 
-void CSEDriver::replaceUsesAndDelete(ScopedMapTy &knownValues, Operation *op,
-                                     Operation *existing,
-                                     bool hasSSADominance) {
+void CSEDriver::replaceUsesAndDelete(
+    ScopedMapTy &knownValues, Operation *op, Operation *existing,
+    function_ref<void(Operation *)> markCSEDuplicateForDeletion,
+    bool hasSSADominance) {
   // If we find one then replace all uses of the current operation with the
   // existing one and mark it for deletion. We can only replace an operand in
   // an operation if it has not been visited yet.
@@ -137,7 +177,7 @@ void CSEDriver::replaceUsesAndDelete(ScopedMapTy &knownValues, Operation *op,
     // visited any use of the current operation.
     // Replace all uses, but do not remove the operation yet.
     rewriter.replaceAllOpUsesWith(op, existing->getResults());
-    opsToErase.push_back(op);
+    markCSEDuplicateForDeletion(op);
   } else {
     // When the region does not have SSA dominance, we need to check if we
     // have visited a use before replacing any use.
@@ -157,7 +197,7 @@ void CSEDriver::replaceUsesAndDelete(ScopedMapTy &knownValues, Operation *op,
 
     // There may be some remaining uses of the operation.
     if (op->use_empty())
-      opsToErase.push_back(op);
+      markCSEDuplicateForDeletion(op);
   }
 
   // If the existing operation has an unknown location and the current
@@ -246,9 +286,10 @@ bool CSEDriver::hasOtherSideEffectingOpInBetween(Operation *fromOp,
 }
 
 /// Attempt to eliminate a redundant operation.
-LogicalResult CSEDriver::simplifyOperation(ScopedMapTy &knownValues,
-                                           Operation *op,
-                                           bool hasSSADominance) {
+LogicalResult CSEDriver::simplifyOperation(
+    ScopedMapTy &knownValues, Operation *op,
+    function_ref<void(Operation *)> markCSEDuplicateForDeletion,
+    bool hasSSADominance) {
   // Don't simplify terminator operations.
   if (op->hasTrait<OpTrait::IsTerminator>())
     return failure();
@@ -275,7 +316,8 @@ LogicalResult CSEDriver::simplifyOperation(ScopedMapTy &knownValues,
         // The operation that can be deleted has been reach with no
         // side-effecting operations in between the existing operation and
         // this one so we can remove the duplicate.
-        replaceUsesAndDelete(knownValues, op, existing, hasSSADominance);
+        replaceUsesAndDelete(knownValues, op, existing,
+                             markCSEDuplicateForDeletion, hasSSADominance);
         return success();
       }
     }
@@ -285,7 +327,8 @@ LogicalResult CSEDriver::simplifyOperation(ScopedMapTy &knownValues,
 
   // Look for an existing definition for the operation.
   if (auto *existing = knownValues.lookup(op)) {
-    replaceUsesAndDelete(knownValues, op, existing, hasSSADominance);
+    replaceUsesAndDelete(knownValues, op, existing, markCSEDuplicateForDeletion,
+                         hasSSADominance);
     return success();
   }
 
@@ -294,15 +337,17 @@ LogicalResult CSEDriver::simplifyOperation(ScopedMapTy &knownValues,
   return failure();
 }
 
-void CSEDriver::simplifyBlock(ScopedMapTy &knownValues, Block *bb,
-                              bool hasSSADominance) {
+bool CSEDriver::simplifyBlock(
+    ScopedMapTy &knownValues, Block *bb, bool hasSSADominance,
+    function_ref<void(Operation *)> markKnownDeadOpForDeletion,
+    function_ref<void(Operation *)> markCSEDuplicateForDeletion) {
+  bool changed = false;
   for (auto &op : llvm::make_early_inc_range(*bb)) {
     // If the operation is already trivially dead just add it to the erase list.
     // This also avoids calling `simplifyRegion` on dead region ops
     // unnecessarily.
     if (isOpTriviallyDead(&op)) {
-      opsToErase.push_back(&op);
-      ++numDCE;
+      markKnownDeadOpForDeletion(&op);
       continue;
     }
 
@@ -314,41 +359,118 @@ void CSEDriver::simplifyBlock(ScopedMapTy &knownValues, Block *bb,
       if (op.mightHaveTrait<OpTrait::IsIsolatedFromAbove>()) {
         ScopedMapTy nestedKnownValues;
         for (auto &region : op.getRegions())
-          simplifyRegion(nestedKnownValues, region);
+          changed |= simplifyRegion(nestedKnownValues, region,
+                                    markKnownDeadOpForDeletion);
       } else {
         // Otherwise, process nested regions normally.
         for (auto &region : op.getRegions())
-          simplifyRegion(knownValues, region);
+          changed |=
+              simplifyRegion(knownValues, region, markKnownDeadOpForDeletion);
       }
     }
 
-    // If the operation is simplified, we don't process any held regions.
-    if (succeeded(simplifyOperation(knownValues, &op, hasSSADominance)))
+    if (succeeded(simplifyOperation(
+            knownValues, &op, markCSEDuplicateForDeletion, hasSSADominance)))
       continue;
   }
   // Clear the MemoryEffects cache since its usage is by block only.
   memEffectsCache.clear();
+  return changed;
 }
 
-void CSEDriver::simplifyRegion(ScopedMapTy &knownValues, Region &region) {
+bool CSEDriver::simplifyRegion(
+    ScopedMapTy &knownValues, Region &region,
+    function_ref<void(Operation *)> markKnownDeadOpForDeletionInParent) {
   // If the region is empty there is nothing to do.
   if (region.empty())
-    return;
+    return false;
 
   bool hasSSADominance = domInfo->hasSSADominance(&region);
+  bool changed = false;
+
+  // Operations that were already trivially dead when encountered during CSE.
+  // These go through the DCE helper so deleting them can propagate deadness to
+  // their producers, including producers in parent regions.
+  SmallVector<Operation *> triviallyDeadOps;
+
+  // Operations whose uses were replaced by CSE. Keep these separate from
+  // triviallyDeadOps so CSE erasures are not counted as DCE erasures.
+  SmallVector<Operation *> deadOpsAfterCSE;
+
+  // Install a listener while erasing deferred ops so dominance caches for
+  // nested regions owned by erased ops are invalidated before the operation
+  // storage is destroyed.
+  struct CSEErasureListener final : RewriterBase::ForwardingListener {
+    CSEErasureListener(OpBuilder::Listener *listener, DominanceInfo &domInfo)
+        : RewriterBase::ForwardingListener(listener), domInfo(domInfo) {}
+
+    void notifyOperationErased(Operation *op) override {
+      for (Region &region : op->getRegions())
+        domInfo.invalidate(&region);
+      RewriterBase::ForwardingListener::notifyOperationErased(op);
+    }
+
+    DominanceInfo &domInfo;
+  };
+
+  // Record an operation that is known to be trivially dead independently of
+  // CSE. If the op belongs to the parent region, notify the parent traversal
+  // instead of queuing it in this region.
+  auto markKnownDeadOpForDeletion = [&](Operation *op) {
+    LDBG(2) << "Marking operation for deletion: "
+            << OpWithFlags(op, OpPrintingFlags().skipRegions());
+    if (op->getParentRegion() != &region) {
+      LDBG(2) << "Operation is not in the current region";
+      if (markKnownDeadOpForDeletionInParent)
+        markKnownDeadOpForDeletionInParent(op);
+      return;
+    }
+    if (isOpTriviallyDead(op))
+      triviallyDeadOps.push_back(op);
+  };
+
+  // Record a duplicate operation whose uses have been replaced by CSE. These
+  // ops are erased after the current scoped known-values table has unwound.
+  auto markCSEDuplicateForDeletion = [&](Operation *op) {
+    LDBG(2) << "Marking CSE duplicate for deletion: "
+            << OpWithFlags(op, OpPrintingFlags().skipRegions());
+    deadOpsAfterCSE.push_back(op);
+  };
+
+  // Erase queued ops after the traversal scope has unwound. Known-dead ops use
+  // the DCE helper so deadness propagates through operands; CSE duplicates are
+  // erased separately so they remain classified as CSE erasures.
+  auto eraseOpsToDelete = [&]() {
+    OpBuilder::Listener *previousListener = rewriter.getListener();
+    CSEErasureListener listener(previousListener, *domInfo);
+    rewriter.setListener(&listener);
+    int64_t erasedCount = eliminateTriviallyDeadOps(
+        rewriter, region, triviallyDeadOps, markKnownDeadOpForDeletionInParent);
+    numDCE += erasedCount;
+    int64_t cseErasedCount = deadOpsAfterCSE.size();
+    for (Operation *op : deadOpsAfterCSE)
+      rewriter.eraseOp(op);
+    rewriter.setListener(previousListener);
+    return erasedCount != 0 || cseErasedCount != 0;
+  };
 
   // If the region only contains one block, then simplify it directly.
   if (region.hasOneBlock()) {
-    ScopedMapTy::ScopeTy scope(knownValues);
-    simplifyBlock(knownValues, &region.front(), hasSSADominance);
-    return;
+    {
+      ScopedMapTy::ScopeTy scope(knownValues);
+      changed |= simplifyBlock(knownValues, &region.front(), hasSSADominance,
+                               markKnownDeadOpForDeletion,
+                               markCSEDuplicateForDeletion);
+    }
+    changed |= eraseOpsToDelete();
+    return changed;
   }
 
   // If the region does not have dominanceInfo, then skip it.
   // TODO: Regions without SSA dominance should define a different
   // traversal order which is appropriate and can be used here.
   if (!hasSSADominance)
-    return;
+    return false;
 
   // Note, deque is being used here because there was significant performance
   // gains over vector when the container becomes very large due to the
@@ -368,8 +490,9 @@ void CSEDriver::simplifyRegion(ScopedMapTy &knownValues, Region &region) {
     // Check to see if we need to process this node.
     if (!currentNode->processed) {
       currentNode->processed = true;
-      simplifyBlock(knownValues, currentNode->node->getBlock(),
-                    hasSSADominance);
+      changed |= simplifyBlock(knownValues, currentNode->node->getBlock(),
+                               hasSSADominance, markKnownDeadOpForDeletion,
+                               markCSEDuplicateForDeletion);
     }
 
     // Otherwise, check to see if we need to process a child node.
@@ -383,36 +506,31 @@ void CSEDriver::simplifyRegion(ScopedMapTy &knownValues, Region &region) {
       stack.pop_back();
     }
   }
+  changed |= eraseOpsToDelete();
+  return changed;
 }
 
-void CSEDriver::eraseDeadOps(bool *changed) {
-  // Erase any operations that were marked as dead during simplification, and
-  // remove their associated dominator trees.
-  for (auto *op : opsToErase) {
-    for (Region &region : op->getRegions())
-      domInfo->invalidate(&region);
-    rewriter.eraseOp(op);
-  }
-  if (changed)
-    *changed = !opsToErase.empty();
-  opsToErase.clear();
-
-  // Note: CSE does currently not remove ops with regions, so DominanceInfo
-  // does not have to be invalidated.
-}
-
-void CSEDriver::simplify(Operation *op, bool *changed) {
+void CSEDriver::simplify(
+    Operation *op, bool *changed,
+    function_ref<void(Operation *)> markOpForDeletionInParent) {
   // Simplify all regions.
   ScopedMapTy knownValues;
+  bool anyChanged = false;
   for (auto &region : op->getRegions())
-    simplifyRegion(knownValues, region);
-  eraseDeadOps(changed);
+    anyChanged |=
+        simplifyRegion(knownValues, region, markOpForDeletionInParent);
+  if (changed)
+    *changed = anyChanged;
 }
 
-void CSEDriver::simplify(Region &region, bool *changed) {
+void CSEDriver::simplify(
+    Region &region, bool *changed,
+    function_ref<void(Operation *)> markOpForDeletionInParent) {
   ScopedMapTy knownValues;
-  simplifyRegion(knownValues, region);
-  eraseDeadOps(changed);
+  bool anyChanged =
+      simplifyRegion(knownValues, region, markOpForDeletionInParent);
+  if (changed)
+    *changed = anyChanged;
 }
 
 void mlir::eliminateCommonSubExpressions(RewriterBase &rewriter,

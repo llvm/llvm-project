@@ -387,21 +387,22 @@ DiagnosedSilenceableFailure transform::ApplyPatternsOp::applyToOne(
     return DiagnosedSilenceableFailure::success();
   }
 
-  // Non-isolated case: gather the ops manually because the op-list
-  // GreedyPatternRewriteDriver overload only performs a single iteration and
-  // does not simplify regions. CSE is driven externally to reach a fixpoint.
-  SmallVector<Operation *> ops;
-  target->walk([&](Operation *nestedOp) {
-    if (target != nestedOp)
-      ops.push_back(nestedOp);
-  });
-
   // One or two iterations should be sufficient. Stop iterating after a certain
   // threshold to make debugging easier.
   static const int64_t kNumMaxIterations = 50;
   int64_t iteration = 0;
   bool cseChanged = false;
   do {
+    // Non-isolated case: gather the ops manually because the op-list
+    // GreedyPatternRewriteDriver overload only performs a single iteration and
+    // does not simplify regions. Refresh the list on every iteration because
+    // the greedy driver and CSE may erase payload ops.
+    SmallVector<Operation *> ops;
+    target->walk([&](Operation *nestedOp) {
+      if (target != nestedOp)
+        ops.push_back(nestedOp);
+    });
+
     if (failed(applyOpPatternsGreedily(ops, frozenPatterns, config))) {
       return emitSilenceableFailure(target)
              << "greedy pattern application failed";

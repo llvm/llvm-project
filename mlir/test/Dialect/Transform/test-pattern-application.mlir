@@ -278,6 +278,32 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// CHECK-LABEL: func @non_isolated_apply_patterns_cse_changed_resets()
+//   CHECK:       "test.ssacfg_region"
+//   CHECK:       %[[C0:.*]] = arith.constant 0 : index
+//   CHECK-NEXT:  "test.use"(%[[C0]], %[[C0]]) : (index, index) -> ()
+func.func @non_isolated_apply_patterns_cse_changed_resets() {
+  "test.ssacfg_region"() ({
+    %c0 = arith.constant 0 : index
+    %c0_dup = arith.constant 0 : index
+    "test.use"(%c0, %c0_dup) : (index, index) -> ()
+  }) : () -> ()
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op) {
+    %0 = transform.structured.match ops{["test.ssacfg_region"]} in %arg1
+        : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %0 {
+      transform.apply_patterns.canonicalization
+    } {apply_cse} : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
 // CHECK-LABEL: func @full_dialect_conversion
 //  CHECK-NEXT:   %[[m:.*]] = "test.new_op"() : () -> memref<5xf32>
 //  CHECK-NEXT:   %[[cast:.*]] = builtin.unrealized_conversion_cast %0 : memref<5xf32> to tensor<5xf32>
