@@ -46,7 +46,7 @@ public:
   /// Returns nullptr if compilation cannot proceed (e.g., time window
   /// not active, no bitcode found, or compile failure).
   void *getOrCompile(const std::string &funcName,
-                     const std::pair<std::string, unsigned> *dims,
+                     const std::pair<std::string, uint8_t> *dims,
                      unsigned count);
 
   EJitCache &getCache() { return cache_; }

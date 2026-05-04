@@ -24,6 +24,7 @@ typedef enum {
   EJIT_ERROR_INVALID_ARG = -3,
   EJIT_ERROR_CACHE_FULL = -4,
   EJIT_ERROR_OOM = -5,
+  EJIT_ERR_BITCODE_NOT_FOUND = -6,
 } ejit_status_t;
 
 typedef enum {
@@ -39,7 +40,7 @@ typedef enum {
 
 typedef struct {
   const char *periodName;
-  uint32_t index;
+  uint8_t index;
 } ejit_dim_t;
 
 typedef struct {
@@ -72,15 +73,15 @@ ejit_status_t ejit_init(const ejit_config_t *config);
 void ejit_shutdown(void);
 
 // Lifecycle
-ejit_status_t ejit_activate(const char *periodName, uint32_t cellIdx);
-ejit_status_t ejit_deactivate(const char *periodName, uint32_t cellIdx);
+ejit_status_t ejit_activate(const char *periodName, uint8_t cellIdx);
+ejit_status_t ejit_deactivate(const char *periodName, uint8_t cellIdx);
 ejit_status_t ejit_activate_array(const char *periodName, void *arrayPtr,
-                                   uint32_t cellIdx);
+                                   uint8_t cellIdx);
 ejit_status_t ejit_deactivate_array(const char *periodName, void *arrayPtr,
-                                     uint32_t cellIdx);
+                                     uint8_t cellIdx);
 ejit_status_t ejit_activate_all(const char *periodName);
 ejit_status_t ejit_deactivate_all(const char *periodName);
-bool ejit_is_active(const char *periodName, uint32_t cellIdx);
+bool ejit_is_active(const char *periodName, uint8_t cellIdx);
 
 // Compilation
 void *ejit_compile_or_get(const char *funcName,
@@ -89,7 +90,7 @@ void *ejit_compile_or_get(const char *funcName,
 
 // Cache
 void ejit_clear_cache(void);
-void ejit_invalidate(const char *periodName, uint32_t cellIdx);
+void ejit_invalidate(const char *periodName, uint8_t cellIdx);
 
 // Statistics
 ejit_status_t ejit_get_stats(ejit_stats_t *stats);

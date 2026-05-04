@@ -56,11 +56,11 @@ EJit::~EJit() {
   runtimeState_.reset();
 }
 
-void EJit::activate(const std::string &periodName, unsigned cellIdx) {
+void EJit::activate(const std::string &periodName, uint8_t cellIdx) {
   runtimeState_->activate(periodName, cellIdx);
 }
 
-void EJit::deactivate(const std::string &periodName, unsigned cellIdx) {
+void EJit::deactivate(const std::string &periodName, uint8_t cellIdx) {
   runtimeState_->deactivate(periodName, cellIdx);
 }
 
@@ -72,12 +72,12 @@ void EJit::deactivateAll(const std::string &periodName) {
   runtimeState_->deactivateAll(periodName);
 }
 
-bool EJit::isActive(const std::string &periodName, unsigned cellIdx) const {
+bool EJit::isActive(const std::string &periodName, uint8_t cellIdx) const {
   return runtimeState_->isActive(periodName, cellIdx);
 }
 
 void *EJit::getOrCompile(const std::string &funcName,
-                         const std::pair<std::string, unsigned> *dims,
+                         const std::pair<std::string, uint8_t> *dims,
                          unsigned count) {
   return compileDriver_->getOrCompile(funcName, dims, count);
 }
@@ -87,7 +87,7 @@ void EJit::clearCache() {
 }
 
 void EJit::invalidateByPeriod(const std::string &periodName,
-                              unsigned cellIdx) {
+                              uint8_t cellIdx) {
   cache_->invalidateByPeriod(periodName, cellIdx);
 }
 

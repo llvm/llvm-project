@@ -53,7 +53,7 @@ public:
            size_t codeSize, const std::set<std::string> &periodDeps = {});
 
   /// Invalidate all entries that depend on a specific period/cell.
-  void invalidateByPeriod(const std::string &periodName, unsigned cellIdx);
+  void invalidateByPeriod(const std::string &periodName, uint8_t cellIdx);
 
   /// Clear all cached entries.
   void clear();
@@ -62,7 +62,7 @@ public:
 
   /// Build a deterministic cache key from function name and dimension array.
   static std::string buildCacheKey(const std::string &fnName,
-      const std::pair<std::string, unsigned> *dims, unsigned count);
+      const std::pair<std::string, uint8_t> *dims, unsigned count);
 
 private:
   void evictLRU();

@@ -49,14 +49,14 @@ void ejit_shutdown(void) {
   gEJIT = nullptr;
 }
 
-ejit_status_t ejit_activate(const char *periodName, uint32_t cellIdx) {
+ejit_status_t ejit_activate(const char *periodName, uint8_t cellIdx) {
   if (!gEJIT)
     return EJIT_ERROR_NOT_INITIALIZED;
   gEJIT->activate(periodName, cellIdx);
   return EJIT_OK;
 }
 
-ejit_status_t ejit_deactivate(const char *periodName, uint32_t cellIdx) {
+ejit_status_t ejit_deactivate(const char *periodName, uint8_t cellIdx) {
   if (!gEJIT)
     return EJIT_ERROR_NOT_INITIALIZED;
   gEJIT->deactivate(periodName, cellIdx);
@@ -64,7 +64,7 @@ ejit_status_t ejit_deactivate(const char *periodName, uint32_t cellIdx) {
 }
 
 ejit_status_t ejit_activate_array(const char *periodName, void *arrayPtr,
-                                   uint32_t cellIdx) {
+                                   uint8_t cellIdx) {
   if (!gEJIT)
     return EJIT_ERROR_NOT_INITIALIZED;
   gEJIT->activate(periodName, cellIdx);
@@ -72,7 +72,7 @@ ejit_status_t ejit_activate_array(const char *periodName, void *arrayPtr,
 }
 
 ejit_status_t ejit_deactivate_array(const char *periodName, void *arrayPtr,
-                                     uint32_t cellIdx) {
+                                     uint8_t cellIdx) {
   if (!gEJIT)
     return EJIT_ERROR_NOT_INITIALIZED;
   gEJIT->deactivate(periodName, cellIdx);
@@ -93,7 +93,7 @@ ejit_status_t ejit_deactivate_all(const char *periodName) {
   return EJIT_OK;
 }
 
-bool ejit_is_active(const char *periodName, uint32_t cellIdx) {
+bool ejit_is_active(const char *periodName, uint8_t cellIdx) {
   if (!gEJIT)
     return false;
   return gEJIT->isActive(periodName, cellIdx);
@@ -105,7 +105,7 @@ void *ejit_compile_or_get(const char *funcName,
   if (!gEJIT)
     return nullptr;
 
-  SmallVector<std::pair<std::string, unsigned>, 4> cppDims;
+  SmallVector<std::pair<std::string, uint8_t>, 4> cppDims;
   for (uint32_t i = 0; i < count && i < 4; ++i)
     cppDims.push_back({dims[i].periodName, dims[i].index});
 
@@ -120,7 +120,7 @@ void ejit_clear_cache(void) {
     gEJIT->clearCache();
 }
 
-void ejit_invalidate(const char *periodName, uint32_t cellIdx) {
+void ejit_invalidate(const char *periodName, uint8_t cellIdx) {
   if (gEJIT)
     gEJIT->invalidateByPeriod(periodName, cellIdx);
 }

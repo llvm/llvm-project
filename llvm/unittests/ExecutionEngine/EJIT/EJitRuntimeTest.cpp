@@ -256,14 +256,14 @@ TEST(EJitCache, BuildCacheKey) {
   EXPECT_EQ(key0, "myfunc");
 
   // Single dimension
-  std::pair<std::string, unsigned> dims1[] = {{"cell", 3}};
+  std::pair<std::string, uint8_t> dims1[] = {{"cell", 3}};
   std::string key1 = EJitCache::buildCacheKey("myfunc", dims1, 1);
   EXPECT_EQ(key1, "myfunc|cell=3");
 
   // Multiple dimensions, sorted by name
-  std::pair<std::string, unsigned> dims2[] = {{"trp", 1}, {"cell", 5}};
+  std::pair<std::string, uint8_t> dims2[] = {{"trp", 1}, {"cell", 5}};
   std::string key2 = EJitCache::buildCacheKey("myfunc", dims2, 2);
-  EXPECT_EQ(key2, "myfunc|cell=5|trp=1");
+  EXPECT_EQ(key2, "myfunc|cell=5,trp=1");
 }
 
 TEST(EJitCache, Clear) {

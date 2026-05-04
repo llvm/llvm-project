@@ -26,7 +26,7 @@ struct SpecializationContext {
   std::string fnName;
   struct DimInfo {
     std::string periodName;
-    unsigned cellIdx;
+    uint8_t cellIdx;
   };
   SmallVector<DimInfo, 4> dimensions;
   OptimizationLevel optLevel = OptimizationLevel::L2;

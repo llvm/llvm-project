@@ -71,7 +71,7 @@ bool EJitCache::put(const std::string &cacheKey, void *funcPtr,
 }
 
 void EJitCache::invalidateByPeriod(const std::string &periodName,
-                                   unsigned cellIdx) {
+                                   uint8_t cellIdx) {
   std::unique_lock<std::shared_mutex> lock(mutex_);
   std::string dep = periodName + "=" + std::to_string(cellIdx);
 
@@ -117,17 +117,17 @@ EJitCache::Stats EJitCache::getStats() const {
 
 std::string EJitCache::buildCacheKey(
     const std::string &fnName,
-    const std::pair<std::string, unsigned> *dims, unsigned count) {
+    const std::pair<std::string, uint8_t> *dims, unsigned count) {
   if (count == 0)
     return fnName;
 
   // Sort by periodName for deterministic keys
-  llvm::SmallVector<std::pair<std::string, unsigned>, 4> sorted(dims, dims + count);
+  llvm::SmallVector<std::pair<std::string, uint8_t>, 4> sorted(dims, dims + count);
   std::sort(sorted.begin(), sorted.end());
 
   std::string key = fnName;
   for (unsigned i = 0; i < count; ++i) {
-    key += "|";
+    key += (i == 0 ? "|" : ",");
     key += sorted[i].first;
     key += "=";
     key += std::to_string(sorted[i].second);

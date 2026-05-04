@@ -30,20 +30,20 @@ public:
   ~EJit();
 
   // Lifecycle
-  void activate(const std::string &periodName, unsigned cellIdx);
-  void deactivate(const std::string &periodName, unsigned cellIdx);
+  void activate(const std::string &periodName, uint8_t cellIdx);
+  void deactivate(const std::string &periodName, uint8_t cellIdx);
   void activateAll(const std::string &periodName);
   void deactivateAll(const std::string &periodName);
-  bool isActive(const std::string &periodName, unsigned cellIdx) const;
+  bool isActive(const std::string &periodName, uint8_t cellIdx) const;
 
   // Compilation
   void *getOrCompile(const std::string &funcName,
-                     const std::pair<std::string, unsigned> *dims,
+                     const std::pair<std::string, uint8_t> *dims,
                      unsigned count);
 
   // Cache management
   void clearCache();
-  void invalidateByPeriod(const std::string &periodName, unsigned cellIdx);
+  void invalidateByPeriod(const std::string &periodName, uint8_t cellIdx);
 
   // Configuration
   void setCompileMode(CompileMode mode);

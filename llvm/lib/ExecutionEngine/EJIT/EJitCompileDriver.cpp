@@ -25,7 +25,7 @@ void EJitCompileDriver::setSyncEngine(std::unique_ptr<EJitOrcEngine> engine) {
 
 void *EJitCompileDriver::getOrCompile(
     const std::string &funcName,
-    const std::pair<std::string, unsigned> *dims,
+    const std::pair<std::string, uint8_t> *dims,
     unsigned count) {
 
   // Build cache key

@@ -54,11 +54,11 @@ enum class PeriodState { Inactive, Active };
 /// Manages activate/deactivate state of time-window period instances.
 class EJitRuntimeState {
 public:
-  void activate(const std::string &periodName, unsigned cellIdx);
-  void deactivate(const std::string &periodName, unsigned cellIdx);
+  void activate(const std::string &periodName, uint8_t cellIdx);
+  void deactivate(const std::string &periodName, uint8_t cellIdx);
   void activateAll(const std::string &periodName);
   void deactivateAll(const std::string &periodName);
-  bool isActive(const std::string &periodName, unsigned cellIdx) const;
+  bool isActive(const std::string &periodName, uint8_t cellIdx) const;
 
   PeriodArrayRegistry &getRegistry() { return registry_; }
   const PeriodArrayRegistry &getRegistry() const { return registry_; }
@@ -66,7 +66,7 @@ public:
 private:
   PeriodArrayRegistry registry_;
   mutable std::mutex mutex_;
-  std::unordered_map<std::string, std::unordered_map<unsigned, PeriodState>> states_;
+  std::unordered_map<std::string, std::unordered_map<uint8_t, PeriodState>> states_;
 };
 
 } // namespace ejit

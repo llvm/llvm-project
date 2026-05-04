@@ -34,13 +34,13 @@ PeriodArrayRegistry::getArrayInfo(const std::string &varName) const {
 }
 
 void EJitRuntimeState::activate(const std::string &periodName,
-                                unsigned cellIdx) {
+                                uint8_t cellIdx) {
   std::lock_guard<std::mutex> lock(mutex_);
   states_[periodName][cellIdx] = PeriodState::Active;
 }
 
 void EJitRuntimeState::deactivate(const std::string &periodName,
-                                  unsigned cellIdx) {
+                                  uint8_t cellIdx) {
   std::lock_guard<std::mutex> lock(mutex_);
   states_[periodName][cellIdx] = PeriodState::Inactive;
 }
@@ -60,7 +60,7 @@ void EJitRuntimeState::deactivateAll(const std::string &periodName) {
 }
 
 bool EJitRuntimeState::isActive(const std::string &periodName,
-                                unsigned cellIdx) const {
+                                uint8_t cellIdx) const {
   std::lock_guard<std::mutex> lock(mutex_);
   auto pit = states_.find(periodName);
   if (pit == states_.end())
