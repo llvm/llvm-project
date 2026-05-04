@@ -19,16 +19,16 @@
 // DARWIN-GEN2: "--cs-profile-generate"
 // DARWIN-GEN2-SAME: "--cs-profile-path=directory{{(/|\\\\)}}default_%m.profraw"
 
-// RUN: %clang --target=arm64-apple-macos -### %t.o -flto=thin -fcs-profile-generate 2>&1 | FileCheck %s --check-prefix=DARWIN-LD-GEN1
-// RUN: %clang --target=arm64-apple-macos -### %t.o -flto=thin -fcs-profile-generate=directory 2>&1 | FileCheck %s --check-prefix=DARWIN-LD-GEN2
+// RUN: %clang --target=arm64-apple-macos -### %t.o -flto=thin -fuse-ld=ld -fcs-profile-generate 2>&1 | FileCheck %s --check-prefix=DARWIN-LD-GEN1
+// RUN: %clang --target=arm64-apple-macos -### %t.o -flto=thin -fuse-ld=ld -fcs-profile-generate=directory 2>&1 | FileCheck %s --check-prefix=DARWIN-LD-GEN2
 
 // DARWIN-LD-GEN1: "-mllvm" "-cs-profile-generate"
 // DARWIN-LD-GEN1-SAME: "-mllvm" "-cs-profile-path=default_%m.profraw"
 // DARWIN-LD-GEN2: "-mllvm" "-cs-profile-generate"
 // DARWIN-LD-GEN2-SAME: "-mllvm" "-cs-profile-path=directory{{(/|\\\\)}}default_%m.profraw"
 
-// RUN: %clang --target=arm64-apple-macos -### %t.o -flto=thin -fprofile-use 2>&1 | FileCheck %s --check-prefix=DARWIN-LD-USE1
-// RUN: %clang --target=arm64-apple-macos -### %t.o -flto=thin -fprofile-use=a.profdata 2>&1 | FileCheck %s --check-prefix=DARWIN-LD-USE2
+// RUN: %clang --target=arm64-apple-macos -### %t.o -flto=thin -fuse-ld=ld -fprofile-use 2>&1 | FileCheck %s --check-prefix=DARWIN-LD-USE1
+// RUN: %clang --target=arm64-apple-macos -### %t.o -flto=thin -fuse-ld=ld -fprofile-use=a.profdata 2>&1 | FileCheck %s --check-prefix=DARWIN-LD-USE2
 
 // DARWIN-LD-USE1-NOT: "-cs-profile-generate"
 // DARWIN-LD-USE1: "-mllvm" "-cs-profile-path=default.profdata"
