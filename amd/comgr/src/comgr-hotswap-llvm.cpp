@@ -245,7 +245,7 @@ LLVMState initLLVM(const TargetIdentifier &TI) {
     return S;
   }
 
-  S.Ctx = std::make_unique<MCContext>(TT, *S.MAI, S.MRI.get(), S.STI.get());
+  S.Ctx = std::make_unique<MCContext>(TT, *S.MAI, *S.MRI, *S.STI);
   S.MOFI = std::make_unique<MCObjectFileInfo>();
   S.MOFI->initMCObjectFileInfo(*S.Ctx, false);
   S.Ctx->setObjectFileInfo(S.MOFI.get());

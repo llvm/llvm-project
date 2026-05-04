@@ -31,6 +31,26 @@ TEST(TimeIntrinsics, CpuTime) {
   }
 }
 
+TEST(TimeIntrinsics, Timef) {
+  // We can't really test that we get the "right" result for Timef, but we
+  // can have a smoke test to see that we get something reasonable on the
+  // platforms where we expect to support it.
+  double start{RTNAME(Timef)()}, end{0.0};
+  ASSERT_GE(start, 0.0);
+
+  // Loop until we get a different value from Timef. If we don't get one
+  // before we time out, then we should probably look into an implementation
+  // for Timef with a better timer resolution.
+  // By default, this loop should burn for 1 second.
+  for (end = start; end == start; end = RTNAME(Timef)()) {
+    ASSERT_GE(end, 0.0);
+    ASSERT_GE(end, start);
+  }
+
+  ASSERT_GE(end, 0.0);
+  ASSERT_GE(end, start);
+}
+
 using count_t = std::int64_t;
 
 TEST(TimeIntrinsics, SystemClock) {

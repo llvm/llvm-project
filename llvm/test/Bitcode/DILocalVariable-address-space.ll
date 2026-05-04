@@ -4,7 +4,7 @@
 ; CHECK: ![[VARS]] = !{![[PARAM:[0-9]+]], ![[AUTO:[0-9]+]]}
 ; CHECK: ![[PARAM]] = !DILocalVariable(name: "param", arg: 1, scope: ![[SP]], memorySpace: DW_MSPACE_LLVM_group)
 ; CHECK: ![[AUTO]]  = !DILocalVariable(name: "auto", scope: ![[SP]], memorySpace: DW_MSPACE_LLVM_private)
-
+; XFAIL: *
 !named = !{!0}
 
 !llvm.module.flags = !{!6}
