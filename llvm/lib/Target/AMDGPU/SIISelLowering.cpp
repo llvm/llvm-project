@@ -6161,22 +6161,29 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
         if (is16BitOpc) {
           Register LaneValVgpr = MRI.createVirtualRegister(SrcRegClass);
           Register VgprResultReg = MRI.createVirtualRegister(SrcRegClass);
-          bool isGFX10 = ST.getGeneration() == AMDGPUSubtarget::GFX10;
+          bool hasSrc0Modifier = AMDGPU::getNamedOperandIdx(
+                                     Opc, AMDGPU::OpName::src0_modifiers) != -1;
+          bool hasSrc1Modifier = AMDGPU::getNamedOperandIdx(
+                                     Opc, AMDGPU::OpName::src1_modifiers) != -1;
+          bool hasClamp =
+              AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::clamp) != -1;
+          bool hasOpSel =
+              AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel) != -1;
           // Get the Lane Value in VGPR to avoid the Constant Bus Restriction
           BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::COPY), LaneValVgpr)
               .addReg(LaneValueReg);
           auto OpInstr =
               BuildMI(*ComputeLoop, I, DL, TII->get(Opc), VgprResultReg);
-          if (isGFX10)
+          if (hasSrc0Modifier)
             OpInstr.addImm(SISrcMods::NONE); // src0 modifier
           OpInstr.addReg(AccumulatorReg);    // src0
-          if (isGFX10)
+          if (hasSrc1Modifier)
             OpInstr.addImm(SISrcMods::NONE); // src1 modifier
           OpInstr.addReg(LaneValVgpr);       // src1
-          if (isGFX10) {
-            OpInstr.addImm(0); // omod
+          if (hasClamp)
+            OpInstr.addImm(0); // clamp
+          if (hasOpSel)
             OpInstr.addImm(0); // opsel
-          }
           NewAccumulator =
               BuildMI(*ComputeLoop, I, DL,
                       TII->get(AMDGPU::V_READFIRSTLANE_B32), DstReg)
