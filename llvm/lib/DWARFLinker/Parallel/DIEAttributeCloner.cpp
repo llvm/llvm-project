@@ -533,15 +533,12 @@ size_t DIEAttributeCloner::cloneScalarAttr(
   // that the final-section offset of .debug_line gets added when the
   // section is placed in the combined output.
   if (AttrSpec.Attr == dwarf::DW_AT_LLVM_stmt_sequence) {
-    // Resolve the attribute's stmt-sequence offset to the index of the
-    // referenced sequence's first row in the input .debug_line rows
-    // vector, so that after line-table emission the attribute can be
-    // matched to the output sequence by input row index (immune to the
-    // address collisions that ICF would otherwise cause).
-    std::optional<uint64_t> InputFirstRowIndex =
-        InUnit.getStmtSeqFirstRowIndex(Value);
-    OutUnit.getAsCompileUnit()->noteStmtSeqListAttribute(&Result.first,
-                                                         InputFirstRowIndex);
+    // Record the attribute's raw input stmt-sequence offset. Resolution
+    // to a first-row index — including the boundary-walk fallback for
+    // sequences the DWARF parser may not have registered — happens in
+    // a post-cloning pass (buildStmtSeqOffsetToFirstRowIndex), so that
+    // matches the classic linker's behaviour.
+    OutUnit.getAsCompileUnit()->noteStmtSeqListAttribute(&Result.first, Value);
     DebugInfoOutputSection.notePatchWithOffsetUpdate(
         DebugOffsetPatch{
             AttrOutOffset,

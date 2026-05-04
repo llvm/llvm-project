@@ -408,25 +408,16 @@ public:
   const RangesTy &getFunctionRanges() const { return Ranges; }
 
   /// Record that a DW_AT_LLVM_stmt_sequence attribute on this unit
-  /// references the input line-table sequence whose first row sits at
-  /// \p InputFirstRowIndex in the input .debug_line Rows vector
-  /// (std::nullopt if the input offset couldn't be resolved). After the
-  /// line table for this unit has been emitted, \p V is rewritten to the
-  /// byte offset of the output sequence that contains the corresponding
-  /// output row (or to an invalid sentinel if the sequence wasn't kept).
-  /// Keying on row index rather than address avoids collisions when two
-  /// input sequences would relocate to the same output address (e.g. ICF).
-  void noteStmtSeqListAttribute(DIEValue *V,
-                                std::optional<uint64_t> InputFirstRowIndex) {
-    StmtSeqListAttributes.push_back({V, InputFirstRowIndex});
+  /// references the input line-table sequence whose header sits at
+  /// \p InputStmtSeqOffset. Resolution of that offset to an input
+  /// first-row index (via parser results plus a manual boundary-based
+  /// fallback) happens in a post-cloning pass, before \p V is rewritten
+  /// to the byte offset of the matching output sequence. Keying on row
+  /// index rather than address avoids collisions when two input
+  /// sequences would relocate to the same output address (e.g. ICF).
+  void noteStmtSeqListAttribute(DIEValue *V, uint64_t InputStmtSeqOffset) {
+    StmtSeqListAttributes.push_back({V, InputStmtSeqOffset});
   }
-
-  /// Return the input-side first-row index of the line-table sequence
-  /// whose header sits at \p StmtSeqOffset in this unit's input
-  /// .debug_line contribution, or std::nullopt if no such sequence was
-  /// recognised by the DWARF parser. Builds and caches a lookup table on
-  /// first call to keep stmt_sequence attribute resolution O(1).
-  std::optional<uint64_t> getStmtSeqFirstRowIndex(uint64_t StmtSeqOffset);
 
   /// Clone and emit this compilation unit.
   Error
@@ -689,10 +680,26 @@ private:
 
   /// Rewrite every DW_AT_LLVM_stmt_sequence DIEValue recorded on this
   /// unit with the local .debug_line offset of the output sequence
-  /// containing the corresponding input first row. The map is built
-  /// during line-table emission and is keyed by input row index.
+  /// containing the corresponding input first row.
+  /// \p SeqOffsetToFirstRowIndex maps an input stmt-sequence offset to
+  /// its first-row index (built by buildStmtSeqOffsetToFirstRowIndex so
+  /// that sequences missed by the DWARF parser are recovered from row
+  /// boundaries). \p RowIndexToSeqStartOffset maps an input first-row
+  /// index to the byte offset of the output DW_LNE_set_address that
+  /// opens the matching output sequence.
   void patchStmtSeqAttributes(
+      const DenseMap<uint64_t, uint64_t> &SeqOffsetToFirstRowIndex,
       const DenseMap<uint64_t, uint64_t> &RowIndexToSeqStartOffset);
+
+  /// Build a map from input stmt-sequence offset to the first-row index
+  /// of the corresponding sequence in \p InputLineTable. Seeds the map
+  /// from \p InputLineTable.Sequences (the DWARF parser's results), then
+  /// augments it by manually walking row boundaries and realigning them
+  /// against the recorded DW_AT_LLVM_stmt_sequence values so that
+  /// sequences missed by the parser still resolve. Mirrors the
+  /// classic DWARFLinker's constructSeqOffsettoOrigRowMapping.
+  DenseMap<uint64_t, uint64_t> buildStmtSeqOffsetToFirstRowIndex(
+      const DWARFDebugLine::LineTable &InputLineTable) const;
 
   /// Emits body for both macro sections.
   void emitMacroTableImpl(const DWARFDebugMacro *MacroTable,
@@ -767,21 +774,15 @@ private:
 
   /// Recorded DW_AT_LLVM_stmt_sequence attributes for this unit. Each
   /// entry pairs the DIEValue holding the attribute with the input-side
-  /// first-row index of the referenced line-table sequence (empty if
-  /// the parser couldn't resolve the input offset); the value is
+  /// byte offset of the referenced line-table sequence. The value is
   /// rewritten with the matching output offset after the line table has
-  /// been emitted.
+  /// been emitted; resolution from input offset to input first-row
+  /// index (including the parser-miss fallback) happens at patch time.
   struct StmtSeqPatch {
     DIEValue *Value = nullptr;
-    std::optional<uint64_t> InputFirstRowIndex;
+    uint64_t InputStmtSeqOffset = 0;
   };
   SmallVector<StmtSeqPatch, 4> StmtSeqListAttributes;
-
-  /// Lazily-built lookup table from an input DW_AT_LLVM_stmt_sequence
-  /// byte offset to the index (within the input LineTable::Rows vector)
-  /// of the corresponding sequence's first row. Populated on the first
-  /// call to getStmtSeqFirstRowIndex().
-  std::optional<DenseMap<uint64_t, uint64_t>> StmtSeqOffsetToFirstRowIndex;
   std::mutex LabelsMutex;
 
   /// This field keeps current stage of overall compile unit processing.

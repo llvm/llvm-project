@@ -1583,7 +1583,9 @@ Error CompileUnit::cloneAndEmitLineTable(const Triple &TargetTriple) {
                                 &RowIndexToSeqStartOffset))
     return Err;
 
-  patchStmtSeqAttributes(RowIndexToSeqStartOffset);
+  DenseMap<uint64_t, uint64_t> SeqOffsetToFirstRowIndex =
+      buildStmtSeqOffsetToFirstRowIndex(*InputLineTable);
+  patchStmtSeqAttributes(SeqOffsetToFirstRowIndex, RowIndexToSeqStartOffset);
   return Error::success();
 }
 
@@ -1664,15 +1666,17 @@ void CompileUnit::filterLineTableRows(
 }
 
 void CompileUnit::patchStmtSeqAttributes(
+    const DenseMap<uint64_t, uint64_t> &SeqOffsetToFirstRowIndex,
     const DenseMap<uint64_t, uint64_t> &RowIndexToSeqStartOffset) {
   const uint64_t InvalidOffset = getFormParams().getDwarfMaxOffset();
 
   for (const CompileUnit::StmtSeqPatch &Patch : StmtSeqListAttributes) {
     uint64_t NewStmtSeq = InvalidOffset;
-    if (Patch.InputFirstRowIndex) {
-      auto It = RowIndexToSeqStartOffset.find(*Patch.InputFirstRowIndex);
-      if (It != RowIndexToSeqStartOffset.end())
-        NewStmtSeq = It->second;
+    auto RowIt = SeqOffsetToFirstRowIndex.find(Patch.InputStmtSeqOffset);
+    if (RowIt != SeqOffsetToFirstRowIndex.end()) {
+      auto OffIt = RowIndexToSeqStartOffset.find(RowIt->second);
+      if (OffIt != RowIndexToSeqStartOffset.end())
+        NewStmtSeq = OffIt->second;
     }
     // When resolution fails, the InvalidOffset sentinel must survive the
     // combination-time section-offset fixup. The patch applier preserves
@@ -1683,23 +1687,21 @@ void CompileUnit::patchStmtSeqAttributes(
   }
 }
 
-std::optional<uint64_t>
-CompileUnit::getStmtSeqFirstRowIndex(uint64_t StmtSeqOffset) {
-  if (!StmtSeqOffsetToFirstRowIndex) {
-    StmtSeqOffsetToFirstRowIndex.emplace();
-    if (const DWARFDebugLine::LineTable *InputLT =
-            getContaingFile().Dwarf->getLineTableForUnit(&getOrigUnit())) {
-      for (const DWARFDebugLine::Sequence &Seq : InputLT->Sequences) {
-        assert(Seq.FirstRowIndex < InputLT->Rows.size() &&
-               "sequence's first-row index out of range");
-        (*StmtSeqOffsetToFirstRowIndex)[Seq.StmtSeqOffset] = Seq.FirstRowIndex;
-      }
-    }
-  }
-  auto It = StmtSeqOffsetToFirstRowIndex->find(StmtSeqOffset);
-  if (It == StmtSeqOffsetToFirstRowIndex->end())
-    return std::nullopt;
-  return It->second;
+DenseMap<uint64_t, uint64_t> CompileUnit::buildStmtSeqOffsetToFirstRowIndex(
+    const DWARFDebugLine::LineTable &InputLineTable) const {
+  // Collect this CU's stmt-sequence attribute values (input offsets),
+  // sorted ascending and deduplicated.
+  SmallVector<uint64_t> StmtAttrs;
+  StmtAttrs.reserve(StmtSeqListAttributes.size());
+  for (const StmtSeqPatch &Patch : StmtSeqListAttributes)
+    StmtAttrs.push_back(Patch.InputStmtSeqOffset);
+  llvm::sort(StmtAttrs);
+  StmtAttrs.erase(llvm::unique(StmtAttrs), StmtAttrs.end());
+
+  DenseMap<uint64_t, uint64_t> Result;
+  dwarf_linker::buildStmtSeqOffsetToFirstRowIndex(InputLineTable, StmtAttrs,
+                                                  Result);
+  return Result;
 }
 
 void CompileUnit::insertLineSequence(std::vector<DWARFDebugLine::Row> &Seq,
