@@ -65,6 +65,7 @@ add_clang_library(clangCodeGen
   CGCUDARuntime.cpp
   CGCXX.cpp
   CGCXXABI.cpp
+  CGEJIT.cpp
   CGCall.cpp
   CGClass.cpp
   CGCleanup.cpp

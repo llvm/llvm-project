@@ -2020,6 +2020,12 @@ private:
                                                StringRef Suffix);
 };
 
+// EmbeddedJIT metadata generation (defined in CGEJIT.cpp)
+void emitEjitFunctionMetadata(CodeGenModule &CGM, const FunctionDecl *FD,
+                               llvm::Function *F);
+void emitEjitGlobalMetadata(CodeGenModule &CGM, const VarDecl *VD,
+                             llvm::GlobalVariable *GV);
+
 }  // end namespace CodeGen
 }  // end namespace clang
 

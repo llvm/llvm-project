@@ -2071,6 +2071,12 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
 
   maybeAttachRangeForLoad(Load, Ty, Loc);
 
+  // EmbeddedJIT: attach !ejit.may_const metadata for may_const field loads
+  if (BaseInfo.isEjitMayConst()) {
+    llvm::MDNode *MayConstMD = llvm::MDNode::get(Load->getContext(), {});
+    Load->setMetadata("ejit.may_const", MayConstMD);
+  }
+
   return EmitFromMemory(Load, Ty);
 }
 
@@ -5298,6 +5304,10 @@ LValue CodeGenFunction::EmitLValueForField(LValue base, const FieldDecl *field,
 
   if (field->hasAttr<AnnotateAttr>())
     addr = EmitFieldAnnotations(field, addr);
+
+  // EmbeddedJIT: propagate ejit_may_const flag for non-volatile fields
+  if (field->hasAttr<EjitMayConstAttr>() && !FieldType.isVolatileQualified())
+    FieldBaseInfo.setEjitMayConst(true);
 
   LValue LV = MakeAddrLValue(addr, FieldType, FieldBaseInfo, FieldTBAAInfo);
   LV.getQuals().addCVRQualifiers(RecordCVR);

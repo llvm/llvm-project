@@ -29,6 +29,7 @@
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTLambda.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
@@ -5978,6 +5979,10 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
   if (CGDebugInfo *DI = getModuleDebugInfo())
     if (getCodeGenOpts().hasReducedDebugInfo())
       DI->EmitGlobalVariable(GV, D);
+
+  // EmbeddedJIT: emit !ejit.metadata for ejit_period/ejit_period_arr globals
+  if (D->hasAttr<EjitPeriodAttr>() || D->hasAttr<EjitPeriodArrAttr>())
+    emitEjitGlobalMetadata(*this, D, GV);
 }
 
 static bool isVarDeclStrongDefinition(const ASTContext &Context,
@@ -6331,6 +6336,10 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
     AddGlobalDtor(Fn, DA->getPriority(), true);
   if (getLangOpts().OpenMP && D->hasAttr<OMPDeclareTargetDeclAttr>())
     getOpenMPRuntime().emitDeclareTargetFunction(D, GV);
+
+  // EmbeddedJIT: emit !ejit.metadata for ejit_entry / ejit_period_lc functions
+  if (D->hasAttr<EjitEntryAttr>() || D->hasAttr<EjitPeriodLcAttr>())
+    emitEjitFunctionMetadata(*this, D, Fn);
 }
 
 void CodeGenModule::EmitAliasDefinition(GlobalDecl GD) {

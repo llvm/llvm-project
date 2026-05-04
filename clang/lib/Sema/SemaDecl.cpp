@@ -72,6 +72,10 @@
 using namespace clang;
 using namespace sema;
 
+// Forward declaration for EmbeddedJIT deferred parameter check.
+// Defined in SemaEJIT.cpp.
+void checkEjitPeriodArrIndLimit(Sema &S, const FunctionDecl *FD);
+
 Sema::DeclGroupPtrTy Sema::ConvertDeclToDeclGroup(Decl *Ptr, Decl *OwnedType) {
   if (OwnedType) {
     Decl *Group[2] = { OwnedType, Ptr };
@@ -10502,6 +10506,10 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
 
   // Handle attributes.
   ProcessDeclAttributes(S, NewFD, D);
+
+  // Enforce at most 4 ejit_period_arr_ind parameters per function.
+  checkEjitPeriodArrIndLimit(*this, NewFD);
+
   const auto *NewTVA = NewFD->getAttr<TargetVersionAttr>();
   if (Context.getTargetInfo().getTriple().isAArch64() && NewTVA &&
       !NewTVA->isDefaultVersion() &&

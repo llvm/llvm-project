@@ -9427,3 +9427,123 @@ silence diagnostics with code like:
   __attribute__((nonstring)) char NotAStr[3] = "foo"; // Not diagnosed
   }];
 }
+
+//===----------------------------------------------------------------------===//
+// EmbeddedJIT attribute documentation
+//===----------------------------------------------------------------------===//
+
+def EjitMayConstDocs : Documentation {
+  let Category = DocCatField;
+  let Content = [{
+EmbeddedJIT: marks a struct member as potentially constant within a time window.
+
+When a global variable belongs to a time window and the window is active, members
+marked with ``ejit_may_const`` can be treated as compile-time constants. The JIT
+compiler will substitute them with runtime values and perform constant propagation,
+dead code elimination, and branch folding optimizations.
+
+Supported field types: integers, booleans, floating-point, nested structs.
+``volatile`` fields are not treated as constants.
+
+.. code-block:: c
+
+  struct Sample {
+      __attribute__((ejit_may_const)) uint32_t a;
+      uint32_t xx;
+  };
+  }];
+}
+
+def EjitPeriodDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+EmbeddedJIT: defines the time window to which a global variable belongs.
+
+The built-in time window ``"static"`` indicates a global variable that does not
+change during JIT runtime, and is always in effect without needing to call
+``ejit_activate``.
+
+Custom time window names (other than ``"static"``) are reserved for future
+extension, indicating variables that may change at runtime but are guaranteed
+to remain constant during specific business-logic time windows.
+
+Only used for non-array global variables.
+
+.. code-block:: c
+
+  __attribute__((ejit_period("static"))) struct BoardConfig g_boardCfg;
+  }];
+}
+
+def EjitPeriodArrDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+EmbeddedJIT: defines the time window array to which a global array belongs.
+
+A time window array manages multiple instances of the same business concept
+with independent state, where each instance can independently control its
+time window state. Multiple different arrays can use the same name.
+
+Constraint: the array must have a fixed size less than 100.
+
+.. code-block:: c
+
+  __attribute__((ejit_period_arr("cell"))) struct CellConfig g_cellCfg[16];
+  }];
+}
+
+def EjitPeriodArrIndDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+EmbeddedJIT: marks a function parameter as a specialization dimension parameter.
+
+Parameters marked with this attribute are recognized as indices into the
+specified time window array. During JIT compilation, the actual value of this
+parameter determines which time window instance to specialize for.
+
+The parameter type must be an integer type. At most 4 parameters per function
+may be marked with this attribute.
+
+.. code-block:: c
+
+  __attribute__((ejit_entry))
+  void process_task(__attribute__((ejit_period_arr_ind("cell"))) uint8_t cellIdx);
+  }];
+}
+
+def EjitEntryDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+EmbeddedJIT: marks a function for JIT optimization.
+
+The compiler will insert JIT compilation trigger code at the function entry,
+generate IR containing necessary symbols, and embed the IR in the binary.
+On JIT success, the specialized version is called; on failure, the original
+AOT code is executed.
+
+Recursive functions are not supported.
+
+.. code-block:: c
+
+  __attribute__((ejit_entry))
+  void my_jit_function(int param);
+  }];
+}
+
+def EjitPeriodLcDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+EmbeddedJIT: marks a function as a time window lifecycle management function.
+
+Functions marked with this attribute indicate that they modify data within the
+specified time window. The compiler will insert ``ejit_deactivate`` at function
+entry and ``ejit_activate`` at function exit to ensure data consistency.
+
+Must be used together with ``ejit_period_arr_ind``.
+
+.. code-block:: c
+
+  __attribute__((ejit_period_lc("cell")))
+  void update_config(__attribute__((ejit_period_arr_ind("cell"))) uint8_t idx);
+  }];
+}

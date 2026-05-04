@@ -73,6 +73,14 @@
 using namespace clang;
 using namespace sema;
 
+// EmbeddedJIT attribute handlers (defined in SemaEJIT.cpp)
+void handleEjitMayConstAttr(Sema &S, Decl *D, const ParsedAttr &AL);
+void handleEjitPeriodAttr(Sema &S, Decl *D, const ParsedAttr &AL);
+void handleEjitPeriodArrAttr(Sema &S, Decl *D, const ParsedAttr &AL);
+void handleEjitPeriodArrIndAttr(Sema &S, Decl *D, const ParsedAttr &AL);
+void handleEjitEntryAttr(Sema &S, Decl *D, const ParsedAttr &AL);
+void handleEjitPeriodLcAttr(Sema &S, Decl *D, const ParsedAttr &AL);
+
 namespace AttributeLangSupport {
   enum LANG {
     C,
@@ -7881,6 +7889,26 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
 
   case ParsedAttr::AT_VTablePointerAuthentication:
     handleVTablePointerAuthentication(S, D, AL);
+    break;
+
+  // EmbeddedJIT attributes
+  case ParsedAttr::AT_EjitMayConst:
+    handleEjitMayConstAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_EjitPeriod:
+    handleEjitPeriodAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_EjitPeriodArr:
+    handleEjitPeriodArrAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_EjitPeriodArrInd:
+    handleEjitPeriodArrIndAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_EjitEntry:
+    handleEjitEntryAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_EjitPeriodLc:
+    handleEjitPeriodLcAttr(S, D, AL);
     break;
   }
 }

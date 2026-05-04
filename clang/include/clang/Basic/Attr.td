@@ -5218,6 +5218,57 @@ def OpenACCRoutineDecl :InheritableAttr {
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// EmbeddedJIT Attributes
+//===----------------------------------------------------------------------===//
+
+// Marks a struct member as potentially constant within a time window
+def EjitMayConst : InheritableAttr {
+  let Spellings = [Clang<"ejit_may_const">];
+  let Subjects = SubjectList<[Field]>;
+  let Documentation = [EjitMayConstDocs];
+  let SimpleHandler = 1;
+}
+
+// Marks the time window a global variable belongs to
+def EjitPeriod : InheritableAttr {
+  let Spellings = [Clang<"ejit_period">];
+  let Args = [StringArgument<"PeriodName", 1>];
+  let Subjects = SubjectList<[Var]>;
+  let Documentation = [EjitPeriodDocs];
+}
+
+// Marks the time window array a global array belongs to
+def EjitPeriodArr : InheritableAttr {
+  let Spellings = [Clang<"ejit_period_arr">];
+  let Args = [StringArgument<"PeriodName", 1>];
+  let Subjects = SubjectList<[Var]>;
+  let Documentation = [EjitPeriodArrDocs];
+}
+
+// Marks a function parameter as a specialization dimension index
+def EjitPeriodArrInd : InheritableParamAttr {
+  let Spellings = [Clang<"ejit_period_arr_ind">];
+  let Args = [StringArgument<"PeriodName", 1>];
+  let Subjects = SubjectList<[ParmVar]>;
+  let Documentation = [EjitPeriodArrIndDocs];
+}
+
+// Marks a function for JIT optimization
+def EjitEntry : InheritableAttr {
+  let Spellings = [Clang<"ejit_entry">];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [EjitEntryDocs];
+}
+
+// Marks a time window lifecycle management function
+def EjitPeriodLc : InheritableAttr {
+  let Spellings = [Clang<"ejit_period_lc">];
+  let Args = [StringArgument<"PeriodName", 1>];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [EjitPeriodLcDocs];
+}
+
 def NonString : InheritableAttr {
   let Spellings = [GCC<"nonstring">];
   let Subjects = SubjectList<[Var, Field]>;

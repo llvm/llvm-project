@@ -164,6 +164,7 @@ static inline AlignmentSource getFieldAlignmentSource(AlignmentSource Source) {
 
 class LValueBaseInfo {
   AlignmentSource AlignSource;
+  bool EjitMayConst = false;
 
 public:
   explicit LValueBaseInfo(AlignmentSource Source = AlignmentSource::Type)
@@ -171,8 +172,12 @@ public:
   AlignmentSource getAlignmentSource() const { return AlignSource; }
   void setAlignmentSource(AlignmentSource Source) { AlignSource = Source; }
 
+  void setEjitMayConst(bool V) { EjitMayConst = V; }
+  bool isEjitMayConst() const { return EjitMayConst; }
+
   void mergeForCast(const LValueBaseInfo &Info) {
     setAlignmentSource(Info.getAlignmentSource());
+    EjitMayConst = EjitMayConst || Info.EjitMayConst;
   }
 };
 

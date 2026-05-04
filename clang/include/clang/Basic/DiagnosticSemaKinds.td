@@ -13482,4 +13482,36 @@ def err_acc_device_type_multiple_archs
 // AMDGCN builtins diagnostics
 def err_amdgcn_load_lds_size_invalid_value : Error<"invalid size value">;
 def note_amdgcn_load_lds_size_valid_value : Note<"size must be %select{1, 2, or 4|1, 2, 4, 12 or 16}0">;
+
+// EmbeddedJIT diagnostics
+def err_ejit_period_conflict : Error<
+  "variable %0 cannot have multiple ejit_period or ejit_period_arr attributes">;
+def err_ejit_period_not_array : Error<
+  "ejit_period attribute cannot be used on array variable %0; "
+  "use ejit_period_arr for arrays">;
+def err_ejit_period_arr_not_scalar : Error<
+  "ejit_period_arr attribute requires an array type; "
+  "%0 is not an array">;
+def err_ejit_period_arr_too_large : Error<
+  "ejit_period_arr array %0 has size %1, which exceeds the maximum of 100">;
+def err_ejit_period_arr_ind_invalid_type : Error<
+  "ejit_period_arr_ind parameter %0 must have integer type">;
+def err_ejit_period_arr_ind_too_many : Error<
+  "function %0 has %1 ejit_period_arr_ind parameters, "
+  "which exceeds the maximum of 4">;
+def err_ejit_entry_recursive : Error<
+  "ejit_entry function %0 cannot be recursive">;
+def err_ejit_period_lc_no_index : Error<
+  "ejit_period_lc(%0) requires a corresponding ejit_period_arr_ind(%0) parameter">;
+def warn_ejit_may_const_modified_without_lc : Warning<
+  "modifying ejit_may_const field %0 of %1 without ejit_period_lc attribute">,
+  InGroup<EmbeddedJIT>;
+def warn_ejit_undeclared_period_dep : Warning<
+  "function %0 references ejit_period_arr '%1' but does not declare "
+  "a dependency on it via ejit_period_arr_ind">,
+  InGroup<EmbeddedJIT>;
+def note_ejit_period_arr_defined_here : Note<
+  "ejit_period_arr '%0' defined here">;
+def note_ejit_entry_defined_here : Note<
+  "ejit_entry function %0 defined here">;
 } // end of sema component.
