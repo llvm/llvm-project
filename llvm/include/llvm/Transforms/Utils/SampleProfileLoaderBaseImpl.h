@@ -87,6 +87,7 @@ template <> struct IRTraits<BasicBlock> {
 // SampleProfileProber.
 class PseudoProbeManager {
   DenseMap<uint64_t, PseudoProbeDescriptor> GUIDToProbeDescMap;
+  DenseSet<uint64_t> GUIDIsWeakSymbol;
 
 public:
   PseudoProbeManager(const Module &M) {
@@ -100,6 +101,14 @@ public:
                         ->getZExtValue();
         GUIDToProbeDescMap.try_emplace(GUID, PseudoProbeDescriptor(GUID, Hash));
       }
+      for (const auto &Func : M) {
+        if (Func.hasWeakLinkage() || Func.hasExternalWeakLinkage()) {
+          auto GUID = Function::getGUIDAssumingExternalLinkage(
+              FunctionSamples::getCanonicalFnName(Func));
+          if (GUIDToProbeDescMap.contains(GUID))
+            GUIDIsWeakSymbol.insert(GUID);
+        }
+      }
     }
   }
 
@@ -109,11 +118,17 @@ public:
   }
 
   const PseudoProbeDescriptor *getDesc(StringRef FProfileName) const {
-    return getDesc(Function::getGUID(FProfileName));
+    return getDesc(Function::getGUIDAssumingExternalLinkage(
+        FunctionSamples::getCanonicalFnName(FProfileName)));
   }
 
   const PseudoProbeDescriptor *getDesc(const Function &F) const {
-    return getDesc(Function::getGUID(FunctionSamples::getCanonicalFnName(F)));
+    return getDesc(Function::getGUIDAssumingExternalLinkage(
+        FunctionSamples::getCanonicalFnName(F)));
+  }
+
+  bool probeFromWeakSymbol(uint64_t GUID) const {
+    return GUIDIsWeakSymbol.count(GUID);
   }
 
   bool profileIsHashMismatched(const PseudoProbeDescriptor &FuncDesc,
@@ -646,13 +661,12 @@ void SampleProfileLoaderBaseImpl<BT>::findEquivalenceClasses(FunctionT &F) {
     BasicBlockT *BB1 = &BB;
 
     // Compute BB1's equivalence class once.
-    if (EquivalenceClass.count(BB1)) {
+    // By default, blocks are in their own equivalence class.
+    auto [It, Inserted] = EquivalenceClass.try_emplace(BB1, BB1);
+    if (!Inserted) {
       LLVM_DEBUG(printBlockEquivalence(dbgs(), BB1));
       continue;
     }
-
-    // By default, blocks are in their own equivalence class.
-    EquivalenceClass[BB1] = BB1;
 
     // Traverse all the blocks dominated by BB1. We are looking for
     // every basic block BB2 such that:
@@ -1088,7 +1102,6 @@ void SampleProfileLoaderBaseImpl<BT>::finalizeWeightPropagation(
   // Samples->getHeadSamples() + 1 to avoid functions with zero count.
   if (SampleProfileUseProfi) {
     const BasicBlockT *EntryBB = getEntryBB(&F);
-    ErrorOr<uint64_t> EntryWeight = getBlockWeight(EntryBB);
     if (BlockWeights[EntryBB] > 0) {
       getFunction(F).setEntryCount(
           ProfileCount(BlockWeights[EntryBB], Function::PCT_Real),

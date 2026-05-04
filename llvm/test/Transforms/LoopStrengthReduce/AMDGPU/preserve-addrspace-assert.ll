@@ -4,8 +4,6 @@
 ; Test for assert resulting from inconsistent isLegalAddressingMode
 ; answers when the address space was dropped from the query.
 
-target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5"
-
 %0 = type { i32, double, i32, float }
 
 
@@ -16,7 +14,7 @@ define amdgpu_kernel void @lsr_crash_preserve_addrspace_unknown_type() #0 {
 ; CHECK-NEXT:    br label %[[BB1:.*]]
 ; CHECK:       [[BB1]]:
 ; CHECK-NEXT:    [[TMP:%.*]] = phi ptr addrspace(3) [ undef, %[[BB]] ], [ [[TMP18:%.*]], %[[BB17:.*]] ]
-; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP]], i32 8
+; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr inbounds [[TMP0:%.*]], ptr addrspace(3) [[TMP]], i64 0, i32 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = load double, ptr addrspace(3) [[SCEVGEP1]], align 8
 ; CHECK-NEXT:    br label %[[BB4:.*]]
 ; CHECK:       [[BB4]]:
@@ -28,14 +26,14 @@ define amdgpu_kernel void @lsr_crash_preserve_addrspace_unknown_type() #0 {
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i32 0, [[TMP10]]
 ; CHECK-NEXT:    br i1 [[TMP11]], label %[[BB12:.*]], label %[[BB17]]
 ; CHECK:       [[BB12]]:
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP]], i32 16
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr inbounds [[TMP0]], ptr addrspace(3) [[TMP]], i64 0, i32 2
 ; CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr addrspace(3) [[SCEVGEP]], align 4
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i32 0, [[TMP14]]
 ; CHECK-NEXT:    br i1 [[TMP15]], label %[[BB16:.*]], label %[[BB17]]
 ; CHECK:       [[BB16]]:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB17]]:
-; CHECK-NEXT:    [[TMP18]] = getelementptr inbounds [[TMP0:%.*]], ptr addrspace(3) [[TMP]], i64 2
+; CHECK-NEXT:    [[TMP18]] = getelementptr inbounds [[TMP0]], ptr addrspace(3) [[TMP]], i64 2
 ; CHECK-NEXT:    br label %[[BB1]]
 ;
 bb:

@@ -3,7 +3,7 @@
 
 
 
-struct foo; // c-note 5 {{forward declaration of 'struct foo'}} \
+struct foo; // c-note 4 {{forward declaration of 'struct foo'}} \
                cxx-note 3 {{forward declaration of 'foo'}}
 
 void b;  // expected-error {{variable has incomplete type 'void'}}
@@ -11,8 +11,7 @@ struct foo f; // c-error {{tentative definition has type 'struct foo' that is ne
                  cxx-error {{variable has incomplete type 'struct foo'}}
 
 static void c; // expected-error {{variable has incomplete type 'void'}}
-static struct foo g;  // c-warning {{tentative definition of variable with internal linkage has incomplete non-array type 'struct foo'}} \
-                         c-error {{tentative definition has type 'struct foo' that is never completed}} \
+static struct foo g;  // c-error {{tentative definition has type 'struct foo' that is never completed}} \
                          cxx-error {{variable has incomplete type 'struct foo'}}
 
 extern void d; // cxx-error {{variable has incomplete type 'void'}}

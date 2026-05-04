@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Investigate why we get an assertion failure with LLVM libc.
+// XFAIL: LLVM-LIBC-FIXME
+
 // <system_error>
 
 // class error_category
@@ -59,7 +62,7 @@ int main(int, char**) {
     // responds with an empty message, which we probably want to
     // treat as a failure code otherwise, but we can detect that
     // with the preprocessor.
-#if defined(_NEWLIB_VERSION)
+#if _LIBCPP_LIBC_NEWLIB
     const bool is_newlib = true;
 #else
     const bool is_newlib = false;

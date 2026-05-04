@@ -86,7 +86,7 @@
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-MISSING %s
 // RUN: not %clang -target x86_64-apple-darwin -mmacos-version-min= -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-MISSING %s
-// CHECK-VERSION-MISSING: invalid version number
+// CHECK-VERSION-MISSING: missing version number
 // RUN: %clang -target armv7k-apple-darwin -mwatchos-version-min=2.0 -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-WATCHOS20 %s
 // RUN: %clang -target armv7-apple-darwin -mtvos-version-min=8.3 -c %s -### 2>&1 | \
@@ -330,8 +330,12 @@
 // RUN:   FileCheck --check-prefix=CHECK-MACOS11 %s
 // RUN: %clang -target x86_64-apple-darwin -mmacos-version-min=11 -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-MACOS11 %s
-
 // CHECK-MACOS11: "x86_64-apple-macosx11.0.0"
+
+// RUN: %clang -target arm64-apple-macosx10.16 -c %s -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-IMPLICIT-MACOS11 %s
+// CHECK-IMPLICIT-MACOS11: warning: overriding deployment version
+// CHECK-IMPLICIT-MACOS11: "arm64-apple-macosx11.0.0"
 
 // RUN: %clang -target arm64-apple-macos999 -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-MACOS999 %s

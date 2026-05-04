@@ -6,6 +6,10 @@ lldb_tablegen(PlatformMacOSXPropertiesEnum.inc -gen-lldb-property-enum-defs
   SOURCE PlatformMacOSXProperties.td
   TARGET LLDBPluginPlatformMacOSXPropertiesEnumGen)
 
+lldb_tablegen(PlatformMacOSXProperties.json -dump-json
+  SOURCE PlatformMacOSXProperties.td
+  TARGET LLDBPluginPlatformMacOSXPropertiesJsonGen)
+
 list(APPEND PLUGIN_PLATFORM_MACOSX_SOURCES
   PlatformDarwin.cpp
   PlatformDarwinDevice.cpp
@@ -37,6 +41,9 @@ endif()
 add_lldb_library(lldbPluginPlatformMacOSX PLUGIN
   ${PLUGIN_PLATFORM_MACOSX_SOURCES}
 
+  LINK_COMPONENTS
+    Support
+    TargetParser
   LINK_LIBS
     lldbBreakpoint
     lldbCore
@@ -51,9 +58,6 @@ add_lldb_library(lldbPluginPlatformMacOSX PLUGIN
     ${OBJC_LIBS}
   CLANG_LIBS
     clangBasic
-  LINK_COMPONENTS
-    Support
-    TargetParser
     )
 
 add_dependencies(lldbPluginPlatformMacOSX

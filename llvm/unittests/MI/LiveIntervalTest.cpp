@@ -50,7 +50,7 @@ std::unique_ptr<TargetMachine> createTargetMachine() {
 
   TargetOptions Options;
   return std::unique_ptr<TargetMachine>(
-      T->createTargetMachine("AMDGPU", "gfx900", "", Options, std::nullopt,
+      T->createTargetMachine(TargetTriple, "gfx900", "", Options, std::nullopt,
                              std::nullopt, CodeGenOptLevel::Aggressive));
 }
 
@@ -160,7 +160,7 @@ static void testHandleMoveIntoNewBundle(MachineFunction &MF, LiveIntervals &LIS,
 
   // Build bundle
   finalizeBundle(MBB, I, std::next(ToInstr.getIterator()));
-  MF.getProperties().reset(MachineFunctionProperties::Property::IsSSA);
+  MF.getProperties().resetIsSSA();
 
   // Update LiveIntervals
   MachineBasicBlock::instr_iterator BundleStart = std::prev(I);

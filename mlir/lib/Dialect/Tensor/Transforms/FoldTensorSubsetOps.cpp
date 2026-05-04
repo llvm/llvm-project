@@ -16,19 +16,16 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tensor/Transforms/Passes.h"
 #include "mlir/Dialect/Tensor/Transforms/Transforms.h"
-#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinAttributes.h"
-#include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "llvm/ADT/TypeSwitch.h"
 #include <type_traits>
 
 namespace mlir {
 namespace tensor {
-#define GEN_PASS_DEF_FOLDTENSORSUBSETOPS
+#define GEN_PASS_DEF_FOLDTENSORSUBSETOPSPASS
 #include "mlir/Dialect/Tensor/Transforms/Passes.h.inc"
 } // namespace tensor
 } // namespace mlir
@@ -36,7 +33,7 @@ namespace tensor {
 using namespace mlir;
 
 static Value getTensorOperand(vector::TransferReadOp op) {
-  return op.getSource();
+  return op.getBase();
 }
 
 static Value getTensorOperand(tensor::InsertSliceOp op) {
@@ -115,9 +112,9 @@ TransferReadOfExtractSliceOpFolder::matchAndRewriteMaskableOp(
       extractSliceOp.getMixedStrides(), extractSliceOp.getDroppedDims(),
       indices, sourceIndices);
 
-  Operation *newOp = rewriter.create<vector::TransferReadOp>(
-      readOp.getLoc(), readOp.getVectorType(), extractSliceOp.getSource(),
-      sourceIndices,
+  Operation *newOp = vector::TransferReadOp::create(
+      rewriter, readOp.getLoc(), readOp.getVectorType(),
+      extractSliceOp.getSource(), sourceIndices,
       AffineMapAttr::get(expandDimsToRank(
           readOp.getPermutationMap(), extractSliceOp.getSourceType().getRank(),
           extractSliceOp.getDroppedDims())),
@@ -186,16 +183,6 @@ struct InsertSliceOfInsertSliceFolder : public OpRewritePattern<OpTy> {
     if (!sourceInsertSliceOp)
       return failure();
 
-    // TODO: relax unit stride assumption where possible.
-    if (!insertSliceOp.hasUnitStride()) {
-      return rewriter.notifyMatchFailure(insertSliceOp,
-                                         "requires unit strides");
-    }
-    if (!sourceInsertSliceOp.hasUnitStride()) {
-      return rewriter.notifyMatchFailure(sourceInsertSliceOp,
-                                         "requires unit strides");
-    }
-
     int64_t srcDim = 0;
     llvm::SmallBitVector droppedDims = insertSliceOp.getDroppedDims();
     for (int64_t d = 0, e = insertSliceOp.getDestType().getRank(); d < e; ++d) {
@@ -209,56 +196,70 @@ struct InsertSliceOfInsertSliceFolder : public OpRewritePattern<OpTy> {
       }
     }
 
-    // Resolve sizes according to dropped dims.
-    SmallVector<OpFoldResult> resolvedSizes;
-    // Note: the "insertSlice" case is symmetrical to the extract/subview case:
-    // `insertSliceOp` is passed as the "source" and `sourceInsertSliceOp` is
-    // passed as the destination to the helper function.
-    affine::resolveSizesIntoOpWithSizes(insertSliceOp.getMixedSizes(),
-                                        sourceInsertSliceOp.getMixedSizes(),
-                                        droppedDims, resolvedSizes);
-
-    // If we are inside an InParallel region, temporarily set the insertion
-    // point outside: only tensor.parallel_insert_slice ops are allowed in
-    // there.
-    if (std::is_same_v<OpTy, tensor::ParallelInsertSliceOp>) {
-      rewriter.setInsertionPoint(
-          insertSliceOp->template getParentOfType<scf::InParallelOp>());
+    // If we are inside a ParallelCombining region, temporarily set the
+    // insertion point outside: only ops of ParallelCombiningOpInterface are
+    // allowed in there.
+    if (isa<mlir::ParallelCombiningOpInterface>(insertSliceOp.getOperation())) {
+      rewriter.setInsertionPoint(insertSliceOp->getParentOp());
     }
 
-    // Resolve offsets according to source offsets and strides.
-    SmallVector<Value> resolvedOffsets;
-    // Note: the "insertSlice" case is symmetrical to the extract/subview case:
-    // `insertSliceOp` is passed as the "source" and `sourceInsertSliceOp` is
-    // passed as the destination to the helper function.
-    affine::resolveIndicesIntoOpWithOffsetsAndStrides(
-        rewriter, insertSliceOp.getLoc(), insertSliceOp.getMixedOffsets(),
-        insertSliceOp.getMixedStrides(), droppedDims,
-        sourceInsertSliceOp.getMixedOffsets(), resolvedOffsets);
+    SmallVector<OpFoldResult> newOffsets, newSizes, newStrides;
+    if (failed(affine::mergeOffsetsSizesAndStrides(
+            rewriter, insertSliceOp.getLoc(), insertSliceOp,
+            sourceInsertSliceOp, droppedDims, newOffsets, newSizes,
+            newStrides)))
+      return failure();
 
     // Reset the insertion point.
     rewriter.setInsertionPoint(insertSliceOp);
     // Replace original op.
     rewriter.replaceOpWithNewOp<OpTy>(
         insertSliceOp, sourceInsertSliceOp.getSource(), insertSliceOp.getDest(),
-        getAsOpFoldResult(resolvedOffsets), resolvedSizes,
-        insertSliceOp.getMixedStrides());
-
+        newOffsets, newSizes, newStrides);
     return success();
   }
 };
 
-void tensor::populateFoldTensorSubsetOpPatterns(RewritePatternSet &patterns) {
-  populateFoldTensorSubsetIntoVectorTransferPatterns(patterns);
-  patterns.add<InsertSliceOfInsertSliceFolder<tensor::InsertSliceOp>,
-               InsertSliceOfInsertSliceFolder<tensor::ParallelInsertSliceOp>>(
-      patterns.getContext());
-}
+struct MergeConsecutiveExtractSlice
+    : public OpRewritePattern<tensor::ExtractSliceOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tensor::ExtractSliceOp nextOp,
+                                PatternRewriter &rewriter) const override {
+    auto prevOp = nextOp.getSource().getDefiningOp<tensor::ExtractSliceOp>();
+    if (!prevOp)
+      return failure();
+
+    SmallVector<OpFoldResult> newOffsets, newSizes, newStrides;
+    if (failed(affine::mergeOffsetsSizesAndStrides(
+            rewriter, nextOp.getLoc(), prevOp, nextOp, prevOp.getDroppedDims(),
+            newOffsets, newSizes, newStrides)))
+      return failure();
+
+    rewriter.replaceOpWithNewOp<tensor::ExtractSliceOp>(
+        nextOp, nextOp.getType(), prevOp.getSource(), newOffsets, newSizes,
+        newStrides);
+    return success();
+  }
+};
 
 void tensor::populateFoldTensorSubsetIntoVectorTransferPatterns(
     RewritePatternSet &patterns) {
   patterns.add<TransferReadOfExtractSliceOpFolder,
                InsertSliceOfTransferWriteOpFolder>(patterns.getContext());
+}
+
+void tensor::populateMergeConsecutiveInsertExtractSlicePatterns(
+    RewritePatternSet &patterns) {
+  patterns.add<MergeConsecutiveExtractSlice,
+               InsertSliceOfInsertSliceFolder<tensor::InsertSliceOp>,
+               InsertSliceOfInsertSliceFolder<tensor::ParallelInsertSliceOp>>(
+      patterns.getContext());
+}
+
+void tensor::populateFoldTensorSubsetOpPatterns(RewritePatternSet &patterns) {
+  populateFoldTensorSubsetIntoVectorTransferPatterns(patterns);
+  populateMergeConsecutiveInsertExtractSlicePatterns(patterns);
 }
 
 //===----------------------------------------------------------------------===//
@@ -268,7 +269,8 @@ void tensor::populateFoldTensorSubsetIntoVectorTransferPatterns(
 namespace {
 
 struct FoldTensorSubsetOpsPass final
-    : public tensor::impl::FoldTensorSubsetOpsBase<FoldTensorSubsetOpsPass> {
+    : public tensor::impl::FoldTensorSubsetOpsPassBase<
+          FoldTensorSubsetOpsPass> {
   void runOnOperation() override;
 };
 
@@ -278,8 +280,4 @@ void FoldTensorSubsetOpsPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   tensor::populateFoldTensorSubsetOpPatterns(patterns);
   (void)applyPatternsGreedily(getOperation(), std::move(patterns));
-}
-
-std::unique_ptr<Pass> tensor::createFoldTensorSubsetOpsPass() {
-  return std::make_unique<FoldTensorSubsetOpsPass>();
 }

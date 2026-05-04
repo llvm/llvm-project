@@ -11,10 +11,11 @@
 
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-types.h"
+#include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallVector.h"
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
-
 #include <string>
 #include <vector>
 
@@ -80,6 +81,8 @@ struct Entry {
     FrameRegisterFlags,
     FrameRegisterByName,
     FrameIsArtificial,
+    FrameKind,
+    FrameBorrowedInfo,
     ScriptFrame,
     FunctionID,
     FunctionDidChange,
@@ -88,6 +91,16 @@ struct Entry {
     FunctionNameWithArgs,
     FunctionNameNoArgs,
     FunctionMangledName,
+    FunctionPrefix,
+    FunctionScope,
+    FunctionBasename,
+    FunctionNameQualifiers,
+    FunctionTemplateArguments,
+    FunctionFormattedArguments,
+    FunctionReturnLeft,
+    FunctionReturnRight,
+    FunctionQualifiers,
+    FunctionSuffix,
     FunctionAddrOffset,
     FunctionAddrOffsetConcrete,
     FunctionLineOffset,
@@ -95,12 +108,16 @@ struct Entry {
     FunctionInitial,
     FunctionChanged,
     FunctionIsOptimized,
+    FunctionIsInlined,
     LineEntryFile,
     LineEntryLineNumber,
     LineEntryColumn,
     LineEntryStartAddress,
     LineEntryEndAddress,
-    CurrentPCArrow
+    CurrentPCArrow,
+    ProgressCount,
+    ProgressMessage,
+    Separator,
   };
 
   struct Definition {
@@ -147,9 +164,7 @@ struct Entry {
   }
 
   Entry(Type t = Type::Invalid, const char *s = nullptr,
-        const char *f = nullptr)
-      : string(s ? s : ""), printf_format(f ? f : ""), type(t) {}
-
+        const char *f = nullptr);
   Entry(llvm::StringRef s);
   Entry(char ch);
 
@@ -159,15 +174,19 @@ struct Entry {
 
   void AppendText(const char *cstr);
 
-  void AppendEntry(const Entry &&entry) { children.push_back(entry); }
+  void AppendEntry(const Entry &&entry);
+
+  void StartAlternative();
 
   void Clear() {
     string.clear();
     printf_format.clear();
-    children.clear();
+    children_stack.clear();
+    children_stack.emplace_back();
     type = Type::Invalid;
     fmt = lldb::eFormatDefault;
     number = 0;
+    level = 0;
     deref = false;
   }
 
@@ -180,13 +199,7 @@ struct Entry {
       return false;
     if (printf_format != rhs.printf_format)
       return false;
-    const size_t n = children.size();
-    const size_t m = rhs.children.size();
-    for (size_t i = 0; i < std::min<size_t>(n, m); ++i) {
-      if (!(children[i] == rhs.children[i]))
-        return false;
-    }
-    if (children != rhs.children)
+    if (children_stack != rhs.children_stack)
       return false;
     if (type != rhs.type)
       return false;
@@ -197,28 +210,70 @@ struct Entry {
     return true;
   }
 
+  operator bool() const { return type != Type::Invalid; }
+
+  std::vector<Entry> &GetChildren();
+
   std::string string;
   std::string printf_format;
-  std::vector<Entry> children;
-  Type type;
+
+  /// A stack of children entries, used by Scope entries to provide alterantive
+  /// children. All other entries have a stack of size 1.
+  /// @{
+  llvm::SmallVector<std::vector<Entry>, 1> children_stack;
+  size_t level = 0;
+  /// @}
+
+  Type type = Type::Invalid;
   lldb::Format fmt = lldb::eFormatDefault;
   lldb::addr_t number = 0;
   bool deref = false;
 };
 
-bool Format(const Entry &entry, Stream &s, const SymbolContext *sc,
-            const ExecutionContext *exe_ctx, const Address *addr,
-            ValueObject *valobj, bool function_changed, bool initial_function);
+class Formatter {
+public:
+  Formatter(const SymbolContext *sc, const ExecutionContext *exe_ctx,
+            const Address *addr, bool function_changed, bool initial_function)
+      : m_sc(sc), m_exe_ctx(exe_ctx), m_addr(addr),
+        m_function_changed(function_changed),
+        m_initial_function(initial_function) {}
 
-bool FormatStringRef(const llvm::StringRef &format, Stream &s,
-                     const SymbolContext *sc, const ExecutionContext *exe_ctx,
-                     const Address *addr, ValueObject *valobj,
-                     bool function_changed, bool initial_function);
+  bool Format(const Entry &entry, Stream &s, ValueObject *valobj = nullptr);
 
-bool FormatCString(const char *format, Stream &s, const SymbolContext *sc,
-                   const ExecutionContext *exe_ctx, const Address *addr,
-                   ValueObject *valobj, bool function_changed,
-                   bool initial_function);
+  bool FormatStringRef(const llvm::StringRef &format, Stream &s,
+                       ValueObject *valobj);
+
+private:
+  bool DumpValue(Stream &s, const FormatEntity::Entry &entry,
+                 ValueObject *valobj);
+
+  bool FormatFunctionNameForLanguage(Stream &s);
+
+  /// Returns \c true if \a Format has been called for an \a Entry
+  /// with the specified \c type recusrively. Some types are permitted
+  /// to be formatted recursively, in which case this function returns
+  /// \c false.
+  bool IsInvalidRecursiveFormat(Entry::Type type);
+
+  /// While the returned \a llvm::scope_exit is alive, the specified \c type
+  /// is tracked by this \c Formatter object for recursion. Once the returned
+  /// scope guard is destructed, the entry stops being tracked.
+  auto PushEntryType(Entry::Type type) {
+    m_entry_type_stack.push_back(type);
+    return llvm::scope_exit([this] {
+      assert(!m_entry_type_stack.empty());
+      m_entry_type_stack.pop_back();
+    });
+  }
+
+  const SymbolContext *const m_sc = nullptr;
+  const ExecutionContext *const m_exe_ctx = nullptr;
+  const Address *const m_addr = nullptr;
+  const bool m_function_changed = false;
+  const bool m_initial_function = false;
+
+  llvm::SmallVector<Entry::Type, 1> m_entry_type_stack;
+};
 
 Status Parse(const llvm::StringRef &format, Entry &entry);
 

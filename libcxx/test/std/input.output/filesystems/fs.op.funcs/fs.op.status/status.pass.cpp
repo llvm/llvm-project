@@ -9,7 +9,6 @@
 // REQUIRES: can-create-symlinks
 // UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: no-filesystem
-// UNSUPPORTED: availability-filesystem-missing
 
 // Starting in Android N (API 24), SELinux policy prevents the shell user from
 // creating a FIFO file.
@@ -97,7 +96,7 @@ static void test_status_cannot_resolve()
 #ifndef TEST_HAS_NO_EXCEPTIONS
         { // test throwing case
             try {
-                status(TC.p);
+              (void)status(TC.p);
             } catch (filesystem_error const& err) {
                 assert(err.path1() == TC.p);
                 assert(err.path2() == "");

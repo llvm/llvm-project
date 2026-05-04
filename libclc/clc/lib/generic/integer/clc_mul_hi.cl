@@ -1,7 +1,15 @@
-#include <clc/clc_convert.h>
-#include <clc/integer/clc_hadd.h>
-#include <clc/integer/definitions.h>
-#include <clc/internal/clc.h>
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "clc/clc_convert.h"
+#include "clc/integer/clc_hadd.h"
+#include "clc/integer/definitions.h"
+#include "clc/internal/clc.h"
 
 // For all types EXCEPT long, which is implemented separately
 #define __CLC_MUL_HI_IMPL(BGENTYPE, GENTYPE, GENSIZE)                          \

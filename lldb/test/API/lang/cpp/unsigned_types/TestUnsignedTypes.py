@@ -22,7 +22,7 @@ class UnsignedTypesTestCase(TestBase):
             "frame variable --show-types --no-args",
             VARIABLES_DISPLAYED_CORRECTLY,
             patterns=[
-                "\((short unsigned int|unsigned short)\) the_unsigned_short = 99"
+                r"\((short unsigned int|unsigned short)\) the_unsigned_short = 99"
             ],
             substrs=[
                 "(unsigned char) the_unsigned_char = 'c'",

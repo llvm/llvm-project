@@ -149,7 +149,8 @@ namespace PR12031 {
   void f(int i, X x);
   void g() {
     const int v = 10;
-    f(v, [](){});
+    f(v, [](){}); // cxx03-warning {{template argument uses local type}} \
+                         // cxx03-note {{while substituting}}
   }
 }
 
@@ -193,6 +194,11 @@ namespace ModifyingCapture {
     int n = 0;
     [=] {
       n = 1; // expected-error {{cannot assign to a variable captured by copy in a non-mutable lambda}}
+    };
+    const int cn = 0;
+    // cxx03-cxx11-warning@+1 {{initialized lambda captures are a C++14 extension}}
+    [&cnr = cn]{ // expected-note {{variable 'cnr' declared const here}}
+      cnr = 1; // expected-error {{cannot assign to variable 'cnr' with const-qualified type 'const int &'}}
     };
   }
 }
@@ -567,26 +573,37 @@ namespace PR27994 {
 struct A { template <class T> A(T); };
 
 template <class T>
-struct B {
+struct B { // #PR27994_B
   int x;
-  A a = [&] { int y = x; };
-  A b = [&] { [&] { [&] { int y = x; }; }; };
-  A d = [&](auto param) { int y = x; }; // cxx03-cxx11-error {{'auto' not allowed in lambda parameter}}
-  A e = [&](auto param) { [&] { [&](auto param2) { int y = x; }; }; }; // cxx03-cxx11-error 2 {{'auto' not allowed in lambda parameter}}
+  A a = [&] { int y = x; }; // cxx03-warning {{template argument uses unnamed type}} \
+                            //   cxx03-note {{while substituting}} cxx03-note {{unnamed type used}}
+  A b = [&] { [&] { [&] { int y = x; }; }; }; // cxx03-warning {{template argument uses unnamed type}} \
+                                              //   cxx03-note {{while substituting}} cxx03-note {{unnamed type used}}
+  A d = [&](auto param) { int y = x; }; // cxx03-cxx11-error {{'auto' not allowed in lambda parameter}} \
+                                        // cxx03-warning {{template argument uses unnamed type}} \
+                                        //  cxx03-note {{while substituting}} cxx03-note {{unnamed type used}}
+  A e = [&](auto param) { [&] { [&](auto param2) { int y = x; }; }; }; // cxx03-cxx11-error 2 {{'auto' not allowed in lambda parameter}} \
+                                                                       // cxx03-warning {{template argument uses unnamed type}} \
+                                                                       //  cxx03-note {{while substituting}} cxx03-note {{unnamed type used}}
 };
 
 B<int> b;
+// cxx03-note@#PR27994_B 4{{in instantiation of default member initializer}}
+// cxx03-note@-2 4{{in evaluation of exception}}
 
 template <class T> struct C {
   struct D {
+    // cxx03-note@-1 {{in instantiation of default member initializer}}
     int x;
-    A f = [&] { int y = x; };
+    A f = [&] { int y = x; }; // cxx03-warning {{template argument uses unnamed type}} \
+                              // cxx03-note {{while substituting}} cxx03-note {{unnamed type used}}
   };
 };
 
 int func() {
   C<int> a;
   decltype(a)::D b;
+  // cxx03-note@-1 {{in evaluation of exception}}
 }
 }
 
@@ -601,8 +618,12 @@ struct S1 {
 
 void foo1() {
   auto s0 = S1([name=]() {}); // expected-error {{expected expression}}
+                                     // cxx03-warning@-1 {{template argument uses local type}} \
+                                     // cxx03-note@-1 {{while substituting deduced template arguments}}
   auto s1 = S1([name=name]() {}); // expected-error {{use of undeclared identifier 'name'; did you mean 'name1'?}}
                                   // cxx03-cxx11-warning@-1 {{initialized lambda captures are a C++14 extension}}
+                                  // cxx03-warning@-2 {{template argument uses local type}} \
+                                  // cxx03-note@-2 {{while substituting deduced template arguments}}
 }
 }
 
@@ -636,26 +657,29 @@ namespace ConversionOperatorDoesNotHaveDeducedReturnType {
 
   struct X {
 #if __cplusplus > 201402L
-    friend constexpr auto T::operator()(int) const;
-    friend constexpr T::operator ExpectedTypeT() const noexcept;
+    friend constexpr auto T::operator()(int) const; // expected-error {{a member of a lambda should not be the target of a friend declaration}}
+    friend constexpr T::operator ExpectedTypeT() const noexcept; // expected-error {{a member of a lambda should not be the target of a friend declaration}}
 
     template<typename T>
-      friend constexpr void U::operator()(T&) const;
+      friend constexpr void U::operator()(T&) const; // expected-error {{a member of a lambda should not be the target of a friend declaration}}
     // FIXME: This should not match; the return type is specified as behaving
     // "as if it were a decltype-specifier denoting the return type of
     // [operator()]", which is not equivalent to this alias template.
     template<typename T>
-      friend constexpr U::operator ExpectedTypeU<T>() const noexcept;
+      friend constexpr U::operator ExpectedTypeU<T>() const noexcept; // expected-error {{a member of a lambda should not be the target of a friend declaration}}
 #else
     friend auto T::operator()(int) const; // cxx11-error {{'auto' return without trailing return type; deduced return types are a C++14 extension}} \
-                                             cxx03-error {{'auto' not allowed in function return type}}
-    friend T::operator ExpectedTypeT() const;
+                                             cxx03-error {{'auto' not allowed in function return type}} \
+                                             expected-error {{a member of a lambda should not be the target of a friend declaration}}
+    friend T::operator ExpectedTypeT() const; // expected-error {{a member of a lambda should not be the target of a friend declaration}}
 
     template<typename T>
-      friend void U::operator()(T&) const; // cxx03-cxx11-error {{friend declaration of 'operator()' does not match any declaration}}
+      friend void U::operator()(T&) const; // cxx03-cxx11-error {{friend declaration of 'operator()' does not match any declaration}} \
+                                              expected-error {{a member of a lambda should not be the target of a friend declaration}}
     // FIXME: This should not match, as above.
     template<typename T>
-      friend U::operator ExpectedTypeU<T>() const; // cxx03-cxx11-error {{friend declaration of 'operator void (*)(type-parameter-0-0 &)' does not match any declaration}}
+      friend U::operator ExpectedTypeU<T>() const; // cxx03-cxx11-error {{friend declaration of 'operator void (*)(type-parameter-0-0 &)' does not match any declaration}} \
+                                                      expected-error {{a member of a lambda should not be the target of a friend declaration}}
 #endif
 
   private:
@@ -778,3 +802,55 @@ template auto t::operator()<int>(int a) const; // expected-note {{in instantiati
 
 }
 #endif
+
+namespace GH180460 {
+// Trailing return type incorrectly treated 'x' as mutable.
+void test_lambda_return_type() {
+  float x = 0.0f;
+
+  [=]() -> decltype((x)) {
+    decltype(x) y1 = x;
+    decltype((x)) y2 = y1;       // expected-note{{binding reference variable 'y2' here}}
+    return y2;                   // expected-warning{{reference to stack memory associated with local variable 'y1' returned}}
+  };
+}
+}
+
+namespace GH26540 {
+#if __cplusplus >= 201703L
+#define CONSTEXPR17 constexpr
+#define NOEXCEPT17 noexcept
+#else
+#define CONSTEXPR17
+#define NOEXCEPT17
+#endif
+    auto l = []() -> int {
+        return 5;
+    };
+    using L = decltype(l);
+    using ConvertL = int(*)();
+
+    class NonGenericLambdaFriend {
+        friend CONSTEXPR17 int L::operator()() const; // expected-error{{a member of a lambda should not be the target of a friend declaration}}
+        friend CONSTEXPR17 L::operator ConvertL() const NOEXCEPT17; // expected-error{{a member of a lambda should not be the target of a friend declaration}}
+    };
+
+#if __cplusplus > 201103L
+    auto gl = [](auto t) -> int {
+        return t.x;
+    };
+    using GL = decltype(gl);
+    template <typename T>
+    using ConvertGL = int(*)(T);
+
+    class GenericLambdaFriend {
+        int x{2};
+        template <typename T>
+        friend CONSTEXPR17 auto GL::operator()(T t) const -> int; // expected-error{{a member of a lambda should not be the target of a friend declaration}}
+        template <typename T>
+        friend CONSTEXPR17 GL::operator ConvertGL<T>() const NOEXCEPT17; // expected-error{{a member of a lambda should not be the target of a friend declaration}}
+    };
+#endif
+#undef NOEXCEPT17
+#undef CONSTEXPR17
+}

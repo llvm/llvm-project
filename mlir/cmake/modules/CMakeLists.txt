@@ -112,6 +112,8 @@ set(MLIR_CONFIG_TABLEGEN_EXE mlir-tblgen)
 set(MLIR_CONFIG_PDLL_TABLEGEN_EXE mlir-pdll)
 set(MLIR_CONFIG_SRC_SHARDER_TABLEGEN_EXE mlir-src-sharder)
 
+set(MLIR_CONFIG_IRDL_TO_CPP_EXE mlir-irdl-to-cpp)
+
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/MLIRConfig.cmake.in
   ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/MLIRConfig.cmake
@@ -135,6 +137,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/MLIRConfigVersion.cmake
     ${CMAKE_CURRENT_SOURCE_DIR}/AddMLIR.cmake
     ${CMAKE_CURRENT_SOURCE_DIR}/AddMLIRPython.cmake
+    ${CMAKE_CURRENT_SOURCE_DIR}/IRDLToCpp.cmake
     ${CMAKE_CURRENT_SOURCE_DIR}/MLIRDetectPythonEnv.cmake
     DESTINATION ${MLIR_INSTALL_PACKAGE_DIR}
     COMPONENT mlir-cmake-exports)

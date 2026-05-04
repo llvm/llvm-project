@@ -18,10 +18,11 @@ del sys.argv[1:3]
 sys.path.append(UTILS)
 from generate_feature_test_macro_components import FeatureTestMacros, VersionHeader
 
+
 class Test(unittest.TestCase):
     def setUp(self):
-        self.ftm = FeatureTestMacros(TEST_DATA)
-        self.maxDiff = None # This causes the diff to be printed when the test fails
+        self.ftm = FeatureTestMacros(TEST_DATA, ["charconv"])
+        self.maxDiff = None  # This causes the diff to be printed when the test fails
 
     def test_implementation(self):
         expected = {
@@ -35,9 +36,25 @@ class Test(unittest.TestCase):
                     ),
                 },
                 {
+                    "__cpp_lib_clamp": VersionHeader(
+                        value="201603L",
+                        implemented=True,
+                        need_undef=False,
+                        condition=None,
+                    )
+                },
+                {
                     "__cpp_lib_parallel_algorithm": VersionHeader(
                         value="201603L",
                         implemented=True,
+                        need_undef=False,
+                        condition=None,
+                    ),
+                },
+                {
+                    "__cpp_lib_to_chars": VersionHeader(
+                        value="201611L",
+                        implemented=False,
                         need_undef=False,
                         condition=None,
                     ),
@@ -51,11 +68,11 @@ class Test(unittest.TestCase):
                     ),
                 },
                 {
-                    "__cpp_lib_missing_FTM_in_older_standard" : VersionHeader(
-                        value = "2017L",
-                        implemented = False,
-                        need_undef = False,
-                        condition = None,
+                    "__cpp_lib_zz_missing_FTM_in_older_standard": VersionHeader(
+                        value="2017L",
+                        implemented=False,
+                        need_undef=False,
+                        condition=None,
                     ),
                 },
             ],
@@ -85,11 +102,11 @@ class Test(unittest.TestCase):
                     ),
                 },
                 {
-                    "__cpp_lib_missing_FTM_in_older_standard" : VersionHeader(
-                        value = "2020L",
-                        implemented = False,
-                        need_undef = False,
-                        condition = None,
+                    "__cpp_lib_zz_missing_FTM_in_older_standard": VersionHeader(
+                        value="2020L",
+                        implemented=False,
+                        need_undef=False,
+                        condition=None,
                     ),
                 },
             ],
@@ -129,11 +146,11 @@ class Test(unittest.TestCase):
                     ),
                 },
                 {
-                    "__cpp_lib_missing_FTM_in_older_standard" : VersionHeader(
-                        value = "2026L",
-                        implemented = False,
-                        need_undef = False,
-                        condition = None,
+                    "__cpp_lib_zz_missing_FTM_in_older_standard": VersionHeader(
+                        value="2026L",
+                        implemented=False,
+                        need_undef=False,
+                        condition=None,
                     ),
                 },
             ],
@@ -141,5 +158,6 @@ class Test(unittest.TestCase):
 
         self.assertEqual(self.ftm.version_header_implementation, expected)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

@@ -1,6 +1,6 @@
 // RUN: transform-opt-ch3 %s \
 // RUN:   --pass-pipeline="builtin.module(transform-interpreter{ \
-// RUN:        debug-bind-trailing-args=linalg.matmul,linalg.elemwise_binary},\
+// RUN:        debug-bind-trailing-args=linalg.matmul,linalg.elementwise},\
 // RUN:        canonicalize,cse,symbol-dce)" |\
 // RUN: FileCheck %s
 
@@ -20,14 +20,14 @@ func.func @fc_relu(%lhs: tensor<512x512xf32>, %rhs: tensor<512x512xf32>,
                           outs(%output: tensor<512x512xf32>) -> tensor<512x512xf32>
 
   // Elementwise addition.
-  %biased = linalg.elemwise_binary { fun = #linalg.binary_fn<add> }
+  %biased = linalg.elementwise kind=#linalg.elementwise_kind<add>
     ins(%matmul, %bias : tensor<512x512xf32>, tensor<512x512xf32>)
     outs(%output : tensor<512x512xf32>) -> tensor<512x512xf32>
 
   // Elementwise max with 0 (ReLU).
-  %c0f = arith.constant 0.0 : f32
-  %relued = linalg.elemwise_binary { fun = #linalg.binary_fn<max_signed> }
-    ins(%biased, %c0f : tensor<512x512xf32>, f32)
+  %c0f = arith.constant dense<0.0> : tensor<512x512xf32>
+  %relued = linalg.elementwise kind=#linalg.elementwise_kind<max_signed>
+    ins(%biased, %c0f : tensor<512x512xf32>, tensor<512x512xf32>)
     outs(%output : tensor<512x512xf32>) -> tensor<512x512xf32>
   func.return %relued : tensor<512x512xf32>
 }
@@ -42,9 +42,9 @@ func.func @fc_relu(%lhs: tensor<512x512xf32>, %rhs: tensor<512x512xf32>,
 // CHECK:     %[[SLICE8:.+]] = tensor.extract_slice
 // CHECK:     func.call @microkernel(%[[SLICE4]], %[[SLICE5]], %[[SLICE6]], %[[SLICE7]], %[[SLICE8]])
 // CHECK-NOT: linalg.matmul
-// CHECK-NOT: linalg.elemwise_binary
+// CHECK-NOT: linalg.elementwise
 // CHECK:     scf.forall.in_parallel
-// CHECK:   linalg.elemwise_binary {fun = #linalg.binary_fn<max_signed>}
+// CHECK:   linalg.elementwise kind=#linalg.elementwise_kind<max_signed>
 // CHECK:   scf.forall.in_parallel
 
 // Declaration of the "microkernel" function that we will be targeting.
@@ -59,11 +59,11 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(
        %arg0: !transform.any_op,
        %arg1: !transform.op<"linalg.matmul">,
-       %arg2: !transform.op<"linalg.elemwise_binary">) {
+       %arg2: !transform.op<"linalg.elementwise">) {
     // Since the %arg2 handle is associated with both elementwise operations,
     // we need to split it into two handles so we can target only the second
     // elementwise operation.
-    %add, %max = transform.split_handle %arg2 : (!transform.op<"linalg.elemwise_binary">)
+    %add, %max = transform.split_handle %arg2 : (!transform.op<"linalg.elementwise">)
         -> (!transform.any_op, !transform.any_op)
   
     // The actual tiling transformation takes tile sizes as attributes. It produces a
@@ -101,11 +101,12 @@ module attributes {transform.with_named_sequence} {
     %_1, %outline_target = transform.structured.fuse_into_containing_op %matmul_fused_2 into %loop_third
         : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
     %func, %call = transform.loop.outline %outline_target {func_name = "outlined"}
-        : (!transform.any_op) -> (!transform.any_op, !transform.op<"func.call">)
-  
-    // Rewrite the call target.
-    transform.my.change_call_target %call, "microkernel" : !transform.op<"func.call">
-  
+        : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    // Cast to our new type.
+    %casted = transform.cast %call : !transform.any_op to !transform.my.call_op_interface
+    // Using our new operation.
+    transform.my.change_call_target %casted, "microkernel" : !transform.my.call_op_interface
+
     transform.yield
   }
 }

@@ -12,6 +12,7 @@
 #include "lldb/Host/HostNativeThreadForward.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-types.h"
+#include "llvm/ADT/DenseMapInfo.h"
 
 #include <memory>
 
@@ -42,10 +43,29 @@ public:
   lldb::thread_result_t GetResult() const;
 
   bool EqualsThread(lldb::thread_t thread) const;
+  bool EqualsThread(const HostThread &thread) const;
+
+  bool HasThread() const;
 
 private:
   std::shared_ptr<HostNativeThreadBase> m_native_thread;
 };
 }
+
+namespace llvm {
+template <> struct DenseMapInfo<lldb_private::HostThread> {
+  static inline lldb_private::HostThread getEmptyKey() {
+    return lldb_private::HostThread(
+        DenseMapInfo<lldb::thread_t>::getEmptyKey());
+  }
+  static inline lldb_private::HostThread getTombstoneKey() {
+    return lldb_private::HostThread(
+        DenseMapInfo<lldb::thread_t>::getTombstoneKey());
+  }
+  static unsigned getHashValue(const lldb_private::HostThread &val);
+  static bool isEqual(const lldb_private::HostThread &lhs,
+                      const lldb_private::HostThread &rhs);
+};
+} // namespace llvm
 
 #endif

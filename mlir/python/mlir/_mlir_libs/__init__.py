@@ -2,7 +2,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-from typing import Any, Sequence
+from typing import Any, Mapping, Sequence
 
 import os
 
@@ -31,6 +31,7 @@ def get_include_dirs() -> Sequence[str]:
 #   1. Attempting to load initializer modules, specific to the distribution.
 #   2. Defining the concrete mlir.ir.Context that does site specific
 #      initialization.
+#   3. Registering container classes with their respective protocols.
 #
 # Aside from just being far more convenient to do this at the Python level,
 # it is actually quite hard/impossible to have such __init__ hooks, given
@@ -147,14 +148,28 @@ def _site_initialize():
         if not process_initializer_module(module_name):
             break
 
-    class Context(ir._BaseContext):
-        def __init__(self, load_on_create_dialects=None, *args, **kwargs):
+    ir._Context = ir.Context
+
+    class Context(ir._Context):
+        def __init__(
+            self, load_on_create_dialects=None, thread_pool=None, *args, **kwargs
+        ):
             super().__init__(*args, **kwargs)
             self.append_dialect_registry(get_dialect_registry())
             for hook in post_init_hooks:
                 hook(self)
+            if disable_multithreading and thread_pool is not None:
+                raise ValueError(
+                    "Context constructor has given thread_pool argument, "
+                    "but disable_multithreading flag is True. "
+                    "Please, set thread_pool argument to None or "
+                    "set disable_multithreading flag to False."
+                )
             if not disable_multithreading:
-                self.enable_multithreading(True)
+                if thread_pool is None:
+                    self.enable_multithreading(True)
+                else:
+                    self.set_thread_pool(thread_pool)
             if load_on_create_dialects is not None:
                 logger.debug(
                     "Loading all dialects from load_on_create_dialects arg %r",
@@ -185,39 +200,19 @@ def _site_initialize():
 
     ir.Context = Context
 
-    class MLIRError(Exception):
-        """
-        An exception with diagnostic information. Has the following fields:
-          message: str
-          error_diagnostics: List[ir.DiagnosticInfo]
-        """
+    # Register containers as Sequences, so they can be used with `match`.
 
-        def __init__(self, message, error_diagnostics):
-            self.message = message
-            self.error_diagnostics = error_diagnostics
-            super().__init__(message, error_diagnostics)
-
-        def __str__(self):
-            s = self.message
-            if self.error_diagnostics:
-                s += ":"
-            for diag in self.error_diagnostics:
-                s += (
-                    "\nerror: "
-                    + str(diag.location)[4:-1]
-                    + ": "
-                    + diag.message.replace("\n", "\n  ")
-                )
-                for note in diag.notes:
-                    s += (
-                        "\n note: "
-                        + str(note.location)[4:-1]
-                        + ": "
-                        + note.message.replace("\n", "\n  ")
-                    )
-            return s
-
-    ir.MLIRError = MLIRError
+    Sequence.register(ir.BlockArgumentList)
+    Sequence.register(ir.BlockList)
+    Sequence.register(ir.BlockSuccessors)
+    Sequence.register(ir.BlockPredecessors)
+    Sequence.register(ir.OperationList)
+    Sequence.register(ir.OpOperandList)
+    Sequence.register(ir.OpOperands)
+    Sequence.register(ir.OpResultList)
+    Sequence.register(ir.OpSuccessors)
+    Sequence.register(ir.RegionSequence)
+    Mapping.register(ir.OpAttributeMap)
 
 
 _site_initialize()

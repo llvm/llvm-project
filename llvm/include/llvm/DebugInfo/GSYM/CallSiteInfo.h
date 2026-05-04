@@ -12,11 +12,12 @@
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/DebugInfo/GSYM/GsymTypes.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <vector>
 
 namespace llvm {
-class DataExtractor;
 class raw_ostream;
 
 namespace yaml {
@@ -26,6 +27,7 @@ struct FunctionsYAML;
 namespace gsym {
 class FileWriter;
 class GsymCreator;
+class GsymDataExtractor;
 struct FunctionInfo;
 struct CallSiteInfo {
   enum Flags : uint8_t {
@@ -44,7 +46,7 @@ struct CallSiteInfo {
   uint64_t ReturnOffset = 0;
 
   /// Offsets into the string table for function names regex patterns.
-  std::vector<uint32_t> MatchRegex;
+  std::vector<gsym_strp_t> MatchRegex;
 
   /// Bitwise OR of CallSiteInfo::Flags values
   uint8_t Flags = CallSiteInfo::Flags::None;
@@ -63,14 +65,14 @@ struct CallSiteInfo {
   /// \param Data The binary stream to read the data from.
   /// \param Offset The current offset within the data stream.
   /// \returns A CallSiteInfo or an error describing the issue.
-  static llvm::Expected<CallSiteInfo> decode(DataExtractor &Data,
-                                             uint64_t &Offset);
+  LLVM_ABI static llvm::Expected<CallSiteInfo> decode(GsymDataExtractor &Data,
+                                                      uint64_t &Offset);
 
   /// Encode this CallSiteInfo object into a FileWriter stream.
   ///
   /// \param O The binary stream to write the data to.
   /// \returns An error object that indicates success or failure.
-  llvm::Error encode(FileWriter &O) const;
+  LLVM_ABI llvm::Error encode(FileWriter &O) const;
 };
 
 struct CallSiteInfoCollection {
@@ -80,13 +82,14 @@ struct CallSiteInfoCollection {
   ///
   /// \param Data The binary stream to read the data from.
   /// \returns A CallSiteInfoCollection or an error describing the issue.
-  static llvm::Expected<CallSiteInfoCollection> decode(DataExtractor &Data);
+  LLVM_ABI static llvm::Expected<CallSiteInfoCollection>
+  decode(GsymDataExtractor &Data);
 
   /// Encode this CallSiteInfoCollection object into a FileWriter stream.
   ///
   /// \param O The binary stream to write the data to.
   /// \returns An error object that indicates success or failure.
-  llvm::Error encode(FileWriter &O) const;
+  LLVM_ABI llvm::Error encode(FileWriter &O) const;
 };
 
 class CallSiteInfoLoader {
@@ -107,7 +110,7 @@ public:
   /// file to be loaded.
   /// \returns An `llvm::Error` indicating success or describing any issues
   /// encountered during the loading process.
-  llvm::Error loadYAML(StringRef YAMLFile);
+  LLVM_ABI llvm::Error loadYAML(StringRef YAMLFile);
 
 private:
   /// Builds a map from function names to FunctionInfo pointers based on the
@@ -136,8 +139,9 @@ private:
   std::vector<FunctionInfo> &Funcs;
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const CallSiteInfo &CSI);
-raw_ostream &operator<<(raw_ostream &OS, const CallSiteInfoCollection &CSIC);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const CallSiteInfo &CSI);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const CallSiteInfoCollection &CSIC);
 
 } // namespace gsym
 } // namespace llvm

@@ -32,15 +32,16 @@
 #include <chrono>
 #include <concepts>
 #include <ratio>
+#include <type_traits>
 
 #include "test_macros.h"
 
 // class gps_clock
-using rep                = std::chrono::gps_clock::rep;
-using period             = std::chrono::gps_clock::period;
-using duration           = std::chrono::gps_clock::duration;
-using time_point         = std::chrono::gps_clock::time_point;
-constexpr bool is_steady = std::chrono::gps_clock::is_steady;
+using rep                                 = std::chrono::gps_clock::rep;
+using period                              = std::chrono::gps_clock::period;
+using duration                            = std::chrono::gps_clock::duration;
+using time_point                          = std::chrono::gps_clock::time_point;
+[[maybe_unused]] constexpr bool is_steady = std::chrono::gps_clock::is_steady;
 
 // Tests the values. part of them are implementation defined.
 LIBCPP_STATIC_ASSERT(std::same_as<rep, std::chrono::utc_clock::rep>);

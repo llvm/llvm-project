@@ -29,10 +29,10 @@ class Report(object):
             fd, _ = tempfile.mkstemp(
                 suffix=ext, prefix=f"{filename}.", dir=os.path.dirname(self.output_file)
             )
-            report_file = os.fdopen(fd, "w")
+            report_file = os.fdopen(fd, "w", encoding="utf-8")
         else:
             # Overwrite if the results already exist.
-            report_file = open(self.output_file, "w")
+            report_file = open(self.output_file, "w", encoding="utf-8")
 
         with report_file:
             self._write_results_to_file(tests, elapsed, report_file)
@@ -213,6 +213,7 @@ def gen_resultdb_test_entry(
         result_code == lit.Test.PASS
         or result_code == lit.Test.XPASS
         or result_code == lit.Test.FLAKYPASS
+        or result_code == lit.Test.FIXED
     ):
         test_data["status"] = "PASS"
     elif result_code == lit.Test.FAIL or result_code == lit.Test.XFAIL:
@@ -286,7 +287,7 @@ class TimeTraceReport(Report):
 
         json_data = {"traceEvents": events}
 
-        json.dump(json_data, time_trace_file, indent=2, sort_keys=True)
+        json.dump(json_data, file, indent=2, sort_keys=True)
 
     def _get_test_event(self, test, first_start_time):
         test_name = test.getFullName()

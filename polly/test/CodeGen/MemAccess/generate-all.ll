@@ -1,7 +1,5 @@
-; RUN: opt %loadNPMPolly -passes=polly-codegen -polly-codegen-generate-expressions=false \
-; RUN:     -S < %s | FileCheck %s -check-prefix=SCEV
-; RUN: opt %loadNPMPolly -passes=polly-codegen -polly-codegen-generate-expressions=true \
-; RUN:     -S < %s | FileCheck %s -check-prefix=ASTEXPR
+; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' -polly-codegen-generate-expressions=false -S < %s | FileCheck %s -check-prefix=SCEV
+; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' -polly-codegen-generate-expressions=true -S < %s | FileCheck %s -check-prefix=ASTEXPR
 ;
 ;    void foo(float A[]) {
 ;      for (long i = 0; i < 100; i++)

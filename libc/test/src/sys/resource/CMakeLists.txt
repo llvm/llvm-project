@@ -1,7 +1,5 @@
 add_custom_target(libc_sys_resource_unittests)
 
-add_subdirectory(testdata)
-
 add_libc_unittest(
   getrlimit_setrlimit_test
   SUITE
@@ -17,4 +15,6 @@ add_libc_unittest(
     libc.src.sys.resource.setrlimit
     libc.src.unistd.close
     libc.src.unistd.unlink
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
 )

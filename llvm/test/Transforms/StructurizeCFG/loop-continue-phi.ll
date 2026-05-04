@@ -4,22 +4,21 @@
 define void @test1(i1 %arg) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    %arg.inv = xor i1 %arg, true
-; CHECK-NEXT:    br label %loop
+; CHECK-NEXT:    [[ARG_INV:%.*]] = xor i1 [[ARG:%.*]], true
+; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       Flow:
-; CHECK-NEXT:    br label %Flow1
+; CHECK-NEXT:    br label [[FLOW1:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    %ctr = phi i32 [ 0, %entry ], [ %0, %Flow1 ]
-; CHECK-NEXT:    %ctr.next = add i32 %ctr, 1
-; CHECK-NEXT:    br i1 %arg.inv, label %loop.a, label %Flow1
+; CHECK-NEXT:    [[CTR:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[CTR_NEXT:%.*]], [[FLOW1]] ]
+; CHECK-NEXT:    [[CTR_NEXT]] = add i32 [[CTR]], 1
+; CHECK-NEXT:    br i1 [[ARG_INV]], label [[LOOP_A:%.*]], label [[FLOW1]]
 ; CHECK:       loop.a:
-; CHECK-NEXT:    br i1 %arg.inv, label %loop.b, label %Flow
+; CHECK-NEXT:    br i1 [[ARG_INV]], label [[LOOP_B:%.*]], label [[FLOW:%.*]]
 ; CHECK:       loop.b:
-; CHECK-NEXT:    br label %Flow
+; CHECK-NEXT:    br label [[FLOW]]
 ; CHECK:       Flow1:
-; CHECK-NEXT:    %0 = phi i32 [ %ctr.next, %Flow ], [ undef, %loop ]
-; CHECK-NEXT:    %1 = phi i1 [ false, %Flow ], [ true, %loop ]
-; CHECK-NEXT:    br i1 %1, label %exit, label %loop
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ false, [[FLOW]] ], [ true, [[LOOP]] ]
+; CHECK-NEXT:    br i1 [[TMP0]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;

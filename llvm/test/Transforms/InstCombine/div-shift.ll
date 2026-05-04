@@ -144,11 +144,9 @@ define i8 @udiv_umin_(i8 %x, i8 %y, i8 %z) {
 ; Negative test, extra use
 define i8 @udiv_umin_extra_use(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @udiv_umin_extra_use(
-; CHECK-NEXT:    [[Y2:%.*]] = shl nuw i8 1, [[Y:%.*]]
-; CHECK-NEXT:    [[Z2:%.*]] = shl nuw i8 1, [[Z:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[Y2]], i8 [[Z2]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umin.i8(i8 [[Y:%.*]], i8 [[Z:%.*]])
+; CHECK-NEXT:    [[M:%.*]] = shl nuw i8 1, [[TMP1]]
 ; CHECK-NEXT:    call void @use(i8 [[M]])
-; CHECK-NEXT:    [[TMP1:%.*]] = call range(i8 0, 9) i8 @llvm.cttz.i8(i8 [[M]], i1 true)
 ; CHECK-NEXT:    [[D:%.*]] = lshr i8 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[D]]
 ;

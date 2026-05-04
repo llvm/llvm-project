@@ -23,26 +23,8 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER >= 20
-// Let COND_RES(X, Y) be:
-template <class _Tp, class _Up>
-using __cond_type = decltype(false ? std::declval<_Tp>() : std::declval<_Up>());
-
-template <class _Tp, class _Up, class = void>
-struct __common_type3 {};
-
-// sub-bullet 4 - "if COND_RES(CREF(D1), CREF(D2)) denotes a type..."
-template <class _Tp, class _Up>
-struct __common_type3<_Tp, _Up, void_t<__cond_type<const _Tp&, const _Up&>>> {
-  using type = remove_cvref_t<__cond_type<const _Tp&, const _Up&>>;
-};
-
-template <class _Tp, class _Up, class = void>
-struct __common_type2_imp : __common_type3<_Tp, _Up> {};
-#else
 template <class _Tp, class _Up, class = void>
 struct __common_type2_imp {};
-#endif
 
 // sub-bullet 3 - "if decay_t<decltype(false ? declval<D1>() : declval<D2>())> ..."
 template <class _Tp, class _Up>
@@ -91,11 +73,6 @@ struct _LIBCPP_TEMPLATE_VIS common_type<_Tp, _Up>
 template <class _Tp, class _Up, class _Vp, class... _Rest>
 struct _LIBCPP_TEMPLATE_VIS common_type<_Tp, _Up, _Vp, _Rest...>
     : __common_type_impl<__common_types<_Tp, _Up, _Vp, _Rest...> > {};
-
-#if _LIBCPP_STD_VER >= 14
-template <class... _Tp>
-using common_type_t = typename common_type<_Tp...>::type;
-#endif
 
 _LIBCPP_END_NAMESPACE_STD
 

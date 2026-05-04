@@ -120,7 +120,9 @@ public:
   bool IsEquivalentInInterface(const ParamValue &that) const {
     return (category_ == that.category_ &&
         expr_.has_value() == that.expr_.has_value() &&
-        (!expr_ || evaluate::AreEquivalentInInterface(*expr_, *that.expr_)));
+        (!expr_ ||
+            evaluate::AreEquivalentInInterface(*expr_, *that.expr_)
+                .value_or(false)));
   }
   std::string AsFortran() const;
 
@@ -285,6 +287,9 @@ public:
   bool IsForwardReferenced() const;
   bool HasDefaultInitialization(
       bool ignoreAllocatable = false, bool ignorePointer = true) const;
+  std::optional<std::string> // component path suitable for error messages
+  ComponentWithDefaultInitialization(
+      bool ignoreAllocatable = false, bool ignorePointer = true) const;
   bool HasDestruction() const;
 
   // The "raw" type parameter list is a simple transcription from the
@@ -296,11 +301,15 @@ public:
   void CookParameters(evaluate::FoldingContext &);
   // Evaluates type parameter expressions.
   void EvaluateParameters(SemanticsContext &);
+  void ReevaluateParameters(SemanticsContext &);
   void AddParamValue(SourceName, ParamValue &&);
   // Creates a Scope for the type and populates it with component
   // instantiations that have been specialized with actual type parameter
   // values, which are cooked &/or evaluated if necessary.
   void Instantiate(Scope &containingScope);
+  // Reset instantiation state so a copy can receive a fresh component scope
+  // (e.g. OpenACC use_device with CUDA Fortran component paths).
+  void PrepareForScopeClone();
 
   ParamValue *FindParameter(SourceName);
   const ParamValue *FindParameter(SourceName target) const {

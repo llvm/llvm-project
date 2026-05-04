@@ -357,6 +357,4 @@ SimpleProgramPointTag::SimpleProgramPointTag(StringRef MsgProvider,
                                              StringRef Msg)
   : Desc((MsgProvider + " : " + Msg).str()) {}
 
-StringRef SimpleProgramPointTag::getTagDescription() const {
-  return Desc;
-}
+StringRef SimpleProgramPointTag::getDebugTag() const { return Desc; }

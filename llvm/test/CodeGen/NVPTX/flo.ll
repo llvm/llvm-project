@@ -10,7 +10,7 @@ define i32 @flo_1(i32 %a) {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [flo_1_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [flo_1_param_0];
 ; CHECK-NEXT:    bfind.s32 %r2, %r1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
@@ -25,7 +25,7 @@ define i32 @flo_2(i32 %a) {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [flo_2_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [flo_2_param_0];
 ; CHECK-NEXT:    bfind.shiftamt.s32 %r2, %r1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
@@ -39,7 +39,7 @@ define i32 @flo_3(i32 %a) {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [flo_3_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [flo_3_param_0];
 ; CHECK-NEXT:    bfind.u32 %r2, %r1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
@@ -54,7 +54,7 @@ define i32 @flo_4(i32 %a) {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u32 %r1, [flo_4_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [flo_4_param_0];
 ; CHECK-NEXT:    bfind.shiftamt.u32 %r2, %r1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
@@ -71,7 +71,7 @@ define i32 @flo_5(i64 %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [flo_5_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [flo_5_param_0];
 ; CHECK-NEXT:    bfind.s64 %r1, %rd1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
@@ -87,7 +87,7 @@ define i32 @flo_6(i64 %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [flo_6_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [flo_6_param_0];
 ; CHECK-NEXT:    bfind.shiftamt.s64 %r1, %rd1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
@@ -102,7 +102,7 @@ define i32 @flo_7(i64 %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [flo_7_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [flo_7_param_0];
 ; CHECK-NEXT:    bfind.u64 %r1, %rd1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
@@ -118,7 +118,7 @@ define i32 @flo_8(i64 %a) {
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [flo_8_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd1, [flo_8_param_0];
 ; CHECK-NEXT:    bfind.shiftamt.u64 %r1, %rd1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;

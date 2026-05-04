@@ -61,13 +61,13 @@ Sample Example
 --------------
 
 Let's say that we want to have a function
-``int getPredOpcode(uint16_t Opcode, enum PredSense inPredSense)`` which
+``int getPredOpcode(uint32_t Opcode, enum PredSense inPredSense)`` which
 takes a non-predicated instruction and returns its predicated true or false form
 depending on some input flag, ``inPredSense``. The first step in the process is
 to define a relationship model that relates predicated instructions to their
 non-predicated form by assigning appropriate values to the ``InstrMapping``
 fields. For this relationship, non-predicated instructions are treated as key
-instruction since they are the one used to query the interface function.
+instruction since they are the ones used to query the interface function.
 
 .. code-block:: text
 
@@ -107,7 +107,7 @@ instruction since they are the one used to query the interface function.
 TableGen uses the above relationship model to emit relation table that maps
 non-predicated instructions with their predicated forms. It also outputs the
 interface function
-``int getPredOpcode(uint16_t Opcode, enum PredSense inPredSense)`` to query
+``int getPredOpcode(uint32_t Opcode, enum PredSense inPredSense)`` to query
 the table. Here, Function ``getPredOpcode`` takes two arguments, opcode of the
 current instruction and PredSense of the desired instruction, and returns
 predicated form of the instruction, if found in the relation table.

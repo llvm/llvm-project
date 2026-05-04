@@ -15,6 +15,7 @@
 #include "JITLinkGeneric.h"
 #include "SEHFrameSupport.h"
 #include "llvm/BinaryFormat/COFF.h"
+#include "llvm/ExecutionEngine/JITLink/COFF.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/Endian.h"
@@ -235,12 +236,12 @@ public:
 
 private:
   orc::ExecutorAddr getSectionStart(Section &Sec) {
-    if (!SectionStartCache.count(&Sec)) {
+    auto [It, Inserted] = SectionStartCache.try_emplace(&Sec);
+    if (Inserted) {
       SectionRange Range(Sec);
-      SectionStartCache[&Sec] = Range.getStart();
-      return Range.getStart();
+      It->second = Range.getStart();
     }
-    return SectionStartCache[&Sec];
+    return It->second;
   }
 
   GetImageBaseSymbol GetImageBase;

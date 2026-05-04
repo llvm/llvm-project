@@ -35,6 +35,8 @@ getAttrKindToNameMapping() {
        LLVMDialect::getDereferenceableAttrName()},
       {llvm::Attribute::AttrKind::DereferenceableOrNull,
        LLVMDialect::getDereferenceableOrNullAttrName()},
+      {llvm::Attribute::AttrKind::ElementType,
+       LLVMDialect::getElementTypeAttrName()},
       {llvm::Attribute::AttrKind::InAlloca, LLVMDialect::getInAllocaAttrName()},
       {llvm::Attribute::AttrKind::InReg, LLVMDialect::getInRegAttrName()},
       {llvm::Attribute::AttrKind::Nest, LLVMDialect::getNestAttrName()},
@@ -54,8 +56,15 @@ getAttrKindToNameMapping() {
        LLVMDialect::getStackAlignmentAttrName()},
       {llvm::Attribute::AttrKind::StructRet,
        LLVMDialect::getStructRetAttrName()},
+      {llvm::Attribute::AttrKind::Writable, LLVMDialect::getWritableAttrName()},
       {llvm::Attribute::AttrKind::WriteOnly,
        LLVMDialect::getWriteOnlyAttrName()},
+      {llvm::Attribute::AttrKind::DeadOnUnwind,
+       LLVMDialect::getDeadOnUnwindAttrName()},
+      {llvm::Attribute::AttrKind::DeadOnReturn,
+       LLVMDialect::getDeadOnReturnAttrName()},
+      {llvm::Attribute::AttrKind::NoFPClass,
+       LLVMDialect::getNoFPClassAttrName()},
       {llvm::Attribute::AttrKind::ZExt, LLVMDialect::getZExtAttrName()}};
   return kindNamePairs;
 }

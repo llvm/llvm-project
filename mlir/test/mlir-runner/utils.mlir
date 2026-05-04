@@ -2,6 +2,7 @@
 // RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(convert-linalg-to-loops,convert-scf-to-cf,convert-arith-to-llvm),finalize-memref-to-llvm,convert-func-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)" | mlir-runner -e print_1d -entry-point-result=void -shared-libs=%mlir_runner_utils -shared-libs=%mlir_c_runner_utils | FileCheck %s --check-prefix=PRINT-1D
 // RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(convert-linalg-to-loops,convert-scf-to-cf,convert-arith-to-llvm),finalize-memref-to-llvm,convert-func-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)" | mlir-runner -e print_3d -entry-point-result=void -shared-libs=%mlir_runner_utils -shared-libs=%mlir_c_runner_utils | FileCheck %s --check-prefix=PRINT-3D
 // RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(convert-linalg-to-loops,convert-scf-to-cf,convert-arith-to-llvm),finalize-memref-to-llvm,convert-func-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)" | mlir-runner -e vector_splat_2d -entry-point-result=void -shared-libs=%mlir_runner_utils -shared-libs=%mlir_c_runner_utils | FileCheck %s --check-prefix=PRINT-VECTOR-SPLAT-2D
+// XFAIL: system-aix
 
 func.func @print_0d() {
   %f = arith.constant 2.00000e+00 : f32
@@ -56,7 +57,7 @@ func.func private @printMemrefF32(memref<*xf32>) attributes { llvm.emit_c_interf
 func.func @vector_splat_2d() {
   %c0 = arith.constant 0 : index
   %f10 = arith.constant 10.0 : f32
-  %vf10 = vector.splat %f10: !vector_type_C
+  %vf10 = vector.broadcast %f10: f32 to !vector_type_C
   %C = memref.alloc() : !matrix_type_CC
   memref.store %vf10, %C[%c0, %c0]: !matrix_type_CC
 

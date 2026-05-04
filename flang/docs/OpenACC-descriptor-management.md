@@ -53,7 +53,7 @@ program main
   real, pointer :: t1(:,:)
   nullify(d%p)
   allocate(t1(2,2))
-  
+
   ! 2.7.9:
   ! Allocates the memory for object 'd' on the device.
   ! The descriptor member of 'd' is a NULL descriptor,
@@ -62,9 +62,9 @@ program main
   ! The descriptor storage is created on the device
   ! just as part of the object 'd' storage.
   !$acc enter data create(d)
-  
+
   d%p => t1
-  
+
   ! 2.7.7:
   ! Pointer d%p is not present on the device, so copyin
   ! action is performed for the data pointed to by the pointer:
@@ -80,7 +80,7 @@ program main
   !     from the host values of the corresponding members.
   !   * The attachment counter of 'd%p' is set to 1.
   !$acc enter data copyin(d%p)
-  
+
   ! 2.7.7:
   ! Pointer d%p is already present on the device, so no copyin
   ! action is performed.
@@ -89,12 +89,12 @@ program main
   ! during the previous attachment, only its attachment counter
   ! is incremented to 2.
   !$acc enter data copyin(d%p)
-  
+
   ! 3.2.29:
   ! The detach action is performed. According to 2.7.2 the attachment
   ! counter of d%p is decremented to 1.
   call acc_detach(d%p)
-  
+
   ! 3.2.29:
   ! The detach action is performed. According to 2.7.2 the attachment
   ! counter of d%p is decremented to 0, which initiates an update
@@ -102,7 +102,7 @@ program main
   ! pointer in the local memory.
   ! We will discuss this in more detail below.
   call acc_detach(d%p)
-  
+
   ! The following construct will fail, because the 'd%p' descriptor's
   ! base_addr is now the host address not accessible on the device.
   ! Without the second 'acc_detach' it will work correctly.
@@ -111,7 +111,7 @@ program main
   !$acc end serial
 ```
 
-Let's discuss in more detail what happens during the second `acc_detach`. 
+Let's discuss in more detail what happens during the second `acc_detach`.
 
 OpenACC 2.6.4:
 
@@ -255,7 +255,7 @@ Due to `d%p` reference in the `present` clause of the `serial` region, the compi
 In the case of POINTER dummy argument, if the descriptor storage is not explicitly created in the user code, the pointer attachment may not happen due to 2.7.2:
 
 > 1693 If the pointer var is in shared memory or is not present in the current device memory, or if the
-> 1694 address to which var points is not present in the current device memory, no action is taken. 
+> 1694 address to which var points is not present in the current device memory, no action is taken.
 
 Example:
 
@@ -300,7 +300,7 @@ contains
 
 ### Other variables
 
-F18 compiler also uses descriptors for assumed-shape, assumed-rank, polymorphic, ... variables.  The OpenACC specification does not prescribe how an implementation should manage the descriptors for such variables.  In many (all?) cases the descriptors of these variables have a local scope of a single subprogram, and if a descriptor of such a variable is created on the device, then its live range must be limited on the device by the invocation of the subprogram (with any OpenACC constructs inside it).
+Flang also uses descriptors for assumed-shape, assumed-rank, polymorphic, ... variables.  The OpenACC specification does not prescribe how an implementation should manage the descriptors for such variables.  In many (all?) cases the descriptors of these variables have a local scope of a single subprogram, and if a descriptor of such a variable is created on the device, then its live range must be limited on the device by the invocation of the subprogram (with any OpenACC constructs inside it).
 
 For example:
 
@@ -330,15 +330,15 @@ Pointer attachment for POINTER and ALLOCATABLE variables is a "composite" runtim
 
 ## Representing pointer attachment in MLIR OpenACC dialect
 
-The Fortran pointer attachment logic specified by OpenACC is not trivial, and in order to be expressed in a language independent MLIR OpenACC dialect we propose to use recipes for delegating the complexity of the implementation to F18 runtime.
+The Fortran pointer attachment logic specified by OpenACC is not trivial, and in order to be expressed in a language independent MLIR OpenACC dialect we propose to use recipes for delegating the complexity of the implementation to Flang's runtime.
 
 ```Fortran
   !$acc enter data attach(d%p)
 ```
 
-The frontend generates an `acc.attach` data operation with `augPtr` being an address of the F18 descriptor representing a POINTER/ALLOCATABLE variable.  Note that `augPtr` refers to an abstract augmented pointer structure, which is handled in a language specific manner by the code provided by the `attachRecipe` reference.
+The frontend generates an `acc.attach` data operation with `augPtr` being an address of the Flang descriptor representing a POINTER/ALLOCATABLE variable.  Note that `augPtr` refers to an abstract augmented pointer structure, which is handled in a language specific manner by the code provided by the `attachRecipe` reference.
 
-The `attachRecipe` is a callback that takes `varPtr` and `augPtr` pointers, and the section's `offset` and `size` computed from the `bounds` operand of `acc.attach`.  Fortran FE passes these arguments directly to F18 runtime that is aware of the descriptor structure and does all the required checks and device memory updates for the device copy of the descriptor, including the attachment counters updates.
+The `attachRecipe` is a callback that takes `varPtr` and `augPtr` pointers, and the section's `offset` and `size` computed from the `bounds` operand of `acc.attach`.  Fortran FE passes these arguments directly to Flang's runtime that is aware of the descriptor structure and does all the required checks and device memory updates for the device copy of the descriptor, including the attachment counters updates.
 
 ```
 acc.attach.recipe @attach_ref :
@@ -387,7 +387,7 @@ For other data clauses there is an implied ordering that the data action happens
 
 Here, the `copyin` of the data is followed by the pointer attachment.
 
-### F18 runtime support
+### Flang runtime support
 
 The `OpenACCAttachDescriptor` API is defined like this:
 
@@ -427,7 +427,7 @@ The implementation's behavior may be described as (OpenACC 2.7.2):
 
 All the "is-present" checks and the data actions for the auxiliary pointers must be performed atomically with regards to the present counters bookkeeping.
 
-The API relies on the primitives provided by `liboffload`, so it is provided by a new F18 runtime library, e.g. `FortranOffloadRuntime`, that depends on `flang_rt.runtime` and `liboffload`.  The F18 driver adds `FortranOffloadRuntime` for linking under `-fopenacc`/`-fopenmp` (and maybe additional switches like `-fopenmp-targets`).
+The API relies on the primitives provided by `liboffload`, so it is provided by a new Flang runtime library, e.g. `FortranOffloadRuntime`, that depends on `flang_rt.runtime` and `liboffload`.  Flang's driver adds `FortranOffloadRuntime` for linking under `-fopenacc`/`-fopenmp` (and maybe additional switches like `-fopenmp-targets`).
 
 ## TODOs:
 

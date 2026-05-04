@@ -15,6 +15,7 @@
 #include "lldb/Host/HostNativeProcessBase.h"
 #include "lldb/Host/HostProcess.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
+#include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Host/windows/AutoHandle.h"
 #include "lldb/Host/windows/HostThreadWindows.h"
 #include "lldb/Host/windows/ProcessLauncherWindows.h"
@@ -47,9 +48,10 @@ namespace lldb_private {
 NativeProcessWindows::NativeProcessWindows(ProcessLaunchInfo &launch_info,
                                            NativeDelegate &delegate,
                                            llvm::Error &E)
-    : NativeProcessProtocol(LLDB_INVALID_PROCESS_ID,
-                            launch_info.GetPTY().ReleasePrimaryFileDescriptor(),
-                            delegate),
+    : NativeProcessProtocol(
+          LLDB_INVALID_PROCESS_ID,
+          PseudoTerminal::invalid_fd, // TODO: Implement on Windows
+          delegate),
       ProcessDebugger(), m_arch(launch_info.GetArchitecture()) {
   ErrorAsOutParameter EOut(&E);
   DebugDelegateSP delegate_sp(new NativeDebugDelegate(*this));
@@ -505,9 +507,9 @@ NativeProcessWindows::OnDebugException(bool first_chance,
       if (FindSoftwareBreakpoint(exception_addr)) {
         LLDB_LOG(log, "Hit non-loader breakpoint at address {0:x}.",
                  exception_addr);
+        StopThread(thread_id, StopReason::eStopReasonBreakpoint);
         // The current PC is AFTER the BP opcode, on all architectures.
         reg_ctx.SetPC(reg_ctx.GetPC() - GetSoftwareBreakpointPCOffset());
-        StopThread(thread_id, StopReason::eStopReasonBreakpoint);
         SetState(eStateStopped, true);
         return ExceptionResult::MaskException;
       } else {

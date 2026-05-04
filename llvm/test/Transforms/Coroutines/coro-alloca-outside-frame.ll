@@ -2,16 +2,6 @@
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S -o %t.ll
 ; RUN: FileCheck --input-file=%t.ll %s
 
-; %y and %alias_phi would all go to the frame, but not %x
-; CHECK:       %g.Frame = type { ptr, ptr, i64, ptr, i1 }
-
-; CHECK-LABEL: @g(
-; CHECK:         %x = alloca i64, align 8
-; CHECK-NOT:     %x.reload.addr = getelementptr inbounds %g.Frame, ptr %hdl, i32 0, i32 2
-; CHECK:         %y.reload.addr = getelementptr inbounds %g.Frame, ptr %hdl, i32 0, i32 2
-; CHECK:         %alias_phi = phi ptr [ %y.reload.addr, %merge.from.flag_false ], [ %x, %entry ]
-
-
 ; The deprecated !coro.outside.frame metadata is parsed but doesn't do anything.
 define ptr @f() {
 entry:
@@ -25,7 +15,7 @@ entry:
   %x = alloca i64
   %y = alloca i64
   call void @llvm.coro.outside.frame(ptr %x)
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr null)
   %size = call i32 @llvm.coro.size.i32()
   %alloc = call ptr @malloc(i32 %size)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr %alloc)
@@ -52,10 +42,17 @@ cleanup:
   br label %suspend
 
 suspend:
-  call i1 @llvm.coro.end(ptr %hdl, i1 0, token none)
+  call void @llvm.coro.end(ptr %hdl, i1 0, token none)
   ret ptr %hdl
 }
 
+
+; %y and %alias_phi would all go to the frame, but not %x
+; CHECK-LABEL: @g(
+; CHECK:         %x = alloca i64
+; CHECK-NOT:     %x.reload.addr = getelementptr inbounds i8, ptr %hdl, i64 16
+; CHECK:         %y.reload.addr = getelementptr inbounds i8, ptr %hdl, i64 16
+; CHECK:         %alias_phi = phi ptr [ %y.reload.addr, %merge.from.flag_false ], [ %x, %entry ]
 
 declare ptr @llvm.coro.free(token, ptr)
 declare i32 @llvm.coro.size.i32()
@@ -66,7 +63,7 @@ declare void @llvm.coro.destroy(ptr)
 declare token @llvm.coro.id(i32, ptr, ptr, ptr)
 declare i1 @llvm.coro.alloc(token)
 declare ptr @llvm.coro.begin(token, ptr)
-declare i1 @llvm.coro.end(ptr, i1, token)
+declare void @llvm.coro.end(ptr, i1, token)
 
 declare void @print(ptr)
 declare noalias ptr @malloc(i32)

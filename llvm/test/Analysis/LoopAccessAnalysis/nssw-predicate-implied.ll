@@ -11,15 +11,15 @@ define void @wrap_check_iv.3_implies_iv.2(i32 noundef %N, ptr %dst, ptr %src) {
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP1:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.iv.3 = getelementptr inbounds i32, ptr %dst, i64 %ext.iv.3
-; CHECK-NEXT:        Against group ([[GRP2:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %gep.iv.2 = getelementptr inbounds i32, ptr %src, i64 %ext.iv.2
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP1]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %dst High: (4 + (12 * (zext i32 (-1 + %N) to i64))<nuw><nsw> + %dst))
 ; CHECK-NEXT:            Member: {%dst,+,12}<%loop>
-; CHECK-NEXT:        Group [[GRP2]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %src High: (4 + (8 * (zext i32 (-1 + %N) to i64))<nuw><nsw> + %src))
 ; CHECK-NEXT:            Member: {%src,+,8}<%loop>
 ; CHECK-EMPTY:
@@ -66,15 +66,15 @@ define void @wrap_check_iv.3_implies_iv.2_different_start(i32 noundef %N, ptr %d
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP3:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.iv.3 = getelementptr inbounds i32, ptr %dst, i64 %ext.iv.3
-; CHECK-NEXT:        Against group ([[GRP4:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %gep.iv.2 = getelementptr inbounds i32, ptr %src, i64 %ext.iv.2
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP3]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: (12 + %dst) High: (16 + (8 * (zext i32 (-1 + %N) to i64))<nuw><nsw> + %dst))
 ; CHECK-NEXT:            Member: {(12 + %dst),+,8}<%loop>
-; CHECK-NEXT:        Group [[GRP4]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %src High: (4 + (8 * (zext i32 (-1 + %N) to i64))<nuw><nsw> + %src))
 ; CHECK-NEXT:            Member: {%src,+,8}<%loop>
 ; CHECK-EMPTY:
@@ -121,15 +121,15 @@ define void @wrap_check_iv.3_implies_iv.2_predicates_added_in_different_order(i3
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP5:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.iv.2 = getelementptr inbounds i32, ptr %dst, i64 %ext.iv.2
-; CHECK-NEXT:        Against group ([[GRP6:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %gep.iv.3 = getelementptr inbounds i32, ptr %src, i64 %ext.iv.3
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP5]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %dst High: (4 + (8 * (zext i32 (-1 + %N) to i64))<nuw><nsw> + %dst))
 ; CHECK-NEXT:            Member: {%dst,+,8}<%loop>
-; CHECK-NEXT:        Group [[GRP6]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %src High: (4 + (12 * (zext i32 (-1 + %N) to i64))<nuw><nsw> + %src))
 ; CHECK-NEXT:            Member: {%src,+,12}<%loop>
 ; CHECK-EMPTY:
@@ -175,15 +175,15 @@ define void @wrap_check_iv.3_does_not_implies_iv.2_due_to_start(i32 noundef %N, 
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP7:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.iv.3 = getelementptr inbounds i32, ptr %dst, i64 %ext.iv.3
-; CHECK-NEXT:        Against group ([[GRP8:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %gep.iv.2 = getelementptr inbounds i32, ptr %src, i64 %ext.iv.2
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP7]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %dst High: (4 + (12 * (zext i32 (-1 + %N) to i64))<nuw><nsw> + %dst))
 ; CHECK-NEXT:            Member: {%dst,+,12}<%loop>
-; CHECK-NEXT:        Group [[GRP8]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: (40 + %src) High: (44 + (8 * (zext i32 (-1 + %N) to i64))<nuw><nsw> + %src))
 ; CHECK-NEXT:            Member: {(40 + %src),+,8}<%loop>
 ; CHECK-EMPTY:
@@ -230,15 +230,15 @@ define void @wrap_check_iv.3_does_not_imply_iv.2_due_to_start_negative(i32 nound
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP9:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.iv.3 = getelementptr inbounds i32, ptr %dst, i64 %ext.iv.3
-; CHECK-NEXT:        Against group ([[GRP10:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %gep.iv.2 = getelementptr inbounds i32, ptr %src, i64 %ext.iv.2
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP9]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: (-4 + %dst) High: ((12 * (zext i32 (-1 + %N) to i64))<nuw><nsw> + %dst))
 ; CHECK-NEXT:            Member: {(-4 + %dst),+,12}<%loop>
-; CHECK-NEXT:        Group [[GRP10]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %src High: (4 + (8 * (zext i32 (-1 + %N) to i64))<nuw><nsw> + %src))
 ; CHECK-NEXT:            Member: {%src,+,8}<%loop>
 ; CHECK-EMPTY:
@@ -285,15 +285,15 @@ define void @wrap_check_iv.3_does_not_imply_iv.2_due_to_negative_step(i32 nounde
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP11:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.iv.3 = getelementptr inbounds i32, ptr %dst, i64 %ext.iv.3
-; CHECK-NEXT:        Against group ([[GRP12:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %gep.iv.2 = getelementptr inbounds i32, ptr %src, i64 %ext.iv.2
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP11]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: ((-4 * (zext i32 (-1 + %N) to i64))<nsw> + %dst) High: (4 + %dst))
 ; CHECK-NEXT:            Member: {%dst,+,-4}<%loop>
-; CHECK-NEXT:        Group [[GRP12]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %src High: (4 + (8 * (zext i32 (-1 + %N) to i64))<nuw><nsw> + %src))
 ; CHECK-NEXT:            Member: {%src,+,8}<%loop>
 ; CHECK-EMPTY:
@@ -326,6 +326,115 @@ loop:
   %iv.1.next = add nuw nsw i32 %iv.1, 1
   %iv.2.next = add i32 %iv.2, 2
   %iv.3.next = add i32 %iv.3, -1
+  %ec = icmp eq i32 %iv.1.next, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; NSSW on the wider i32 AddRec does not imply NSSW on a narrower i8 AddRec.
+; Test for https://github.com/llvm/llvm-project/issues/191382.
+define void @wider_i32_nssw_does_not_imply_narrower_i8_nssw(ptr %dst, ptr %src, i32 %N) {
+; CHECK-LABEL: 'wider_i32_nssw_does_not_imply_narrower_i8_nssw'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.dst = getelementptr inbounds i32, ptr %dst, i64 %ext.iv.1
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gep.src = getelementptr inbounds i32, ptr %src, i64 %ext.iv.2
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %dst High: (4 + (8 * ((zext i32 (-2 + %N) to i64) /u 2))<nuw><nsw> + %dst))
+; CHECK-NEXT:            Member: {%dst,+,8}<%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: %src High: (4 + (4 * ((zext i32 (-2 + %N) to i64) /u 2))<nuw><nsw> + %src))
+; CHECK-NEXT:            Member: {%src,+,4}<%loop>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-NEXT:      Equal predicate: (zext i1 (trunc i32 %N to i1) to i32) == 0
+; CHECK-NEXT:      {0,+,2}<%loop> Added Flags: <nssw>
+; CHECK-NEXT:      {0,+,1}<%loop> Added Flags: <nssw>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+; CHECK-NEXT:      [PSE] %gep.dst = getelementptr inbounds i32, ptr %dst, i64 %ext.iv.1:
+; CHECK-NEXT:        ((4 * (sext i32 {0,+,2}<%loop> to i64))<nsw> + %dst)
+; CHECK-NEXT:        --> {%dst,+,8}<%loop>
+; CHECK-NEXT:      [PSE] %gep.src = getelementptr inbounds i32, ptr %src, i64 %ext.iv.2:
+; CHECK-NEXT:        ((4 * (sext i8 {0,+,1}<%loop> to i64))<nsw> + %src)
+; CHECK-NEXT:        --> {%src,+,4}<%loop>
+;
+entry:
+  br label %loop
+
+loop:
+  %iv.1 = phi i32 [ 0, %entry ], [ %iv.1.next, %loop ]
+  %iv.2 = phi i8 [ 0, %entry ], [ %iv.2.next, %loop ]
+  %ext.iv.1 = sext i32 %iv.1 to i64
+  %gep.dst = getelementptr inbounds i32, ptr %dst, i64 %ext.iv.1
+  %ext.iv.2 = sext i8 %iv.2 to i64
+  %gep.src = getelementptr inbounds i32, ptr %src, i64 %ext.iv.2
+  %l = load i32, ptr %gep.src, align 4
+  store i32 %l, ptr %gep.dst, align 4
+  %iv.1.next = add i32 %iv.1, 2
+  %iv.2.next = add i8 %iv.2, 1
+  %ec = icmp eq i32 %iv.1.next, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; Narrower i8 {0,+,2} [nssw] implies wider i32 {0,+,1} [nssw].
+define void @narrower_i8_nssw_implies_wider_i32_nssw(ptr %dst, ptr %src, i32 %N) {
+; CHECK-LABEL: 'narrower_i8_nssw_implies_wider_i32_nssw'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.dst = getelementptr inbounds i32, ptr %dst, i64 %ext.iv.1
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gep.src = getelementptr inbounds i32, ptr %src, i64 %ext.iv.2
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %dst High: (4 + (4 * (zext i32 (-1 + %N) to i64))<nuw><nsw> + %dst))
+; CHECK-NEXT:            Member: {%dst,+,4}<nw><%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: %src High: (4 + (8 * (zext i32 (-1 + %N) to i64))<nuw><nsw> + %src))
+; CHECK-NEXT:            Member: {%src,+,8}<%loop>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-NEXT:      {0,+,2}<%loop> Added Flags: <nssw>
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+; CHECK-NEXT:      [PSE] %gep.dst = getelementptr inbounds i32, ptr %dst, i64 %ext.iv.1:
+; CHECK-NEXT:        ((4 * (sext i32 {0,+,1}<nuw><%loop> to i64))<nsw> + %dst)
+; CHECK-NEXT:        --> {%dst,+,4}<nw><%loop>
+; CHECK-NEXT:      [PSE] %gep.src = getelementptr inbounds i32, ptr %src, i64 %ext.iv.2:
+; CHECK-NEXT:        ((4 * (sext i8 {0,+,2}<%loop> to i64))<nsw> + %src)
+; CHECK-NEXT:        --> {%src,+,8}<%loop>
+;
+entry:
+  br label %loop
+
+loop:
+  %iv.1 = phi i32 [ 0, %entry ], [ %iv.1.next, %loop ]
+  %iv.2 = phi i8 [ 0, %entry ], [ %iv.2.next, %loop ]
+  %ext.iv.1 = sext i32 %iv.1 to i64
+  %gep.dst = getelementptr inbounds i32, ptr %dst, i64 %ext.iv.1
+  %ext.iv.2 = sext i8 %iv.2 to i64
+  %gep.src = getelementptr inbounds i32, ptr %src, i64 %ext.iv.2
+  %l = load i32, ptr %gep.src, align 4
+  store i32 %l, ptr %gep.dst, align 4
+  %iv.1.next = add i32 %iv.1, 1
+  %iv.2.next = add i8 %iv.2, 2
   %ec = icmp eq i32 %iv.1.next, %N
   br i1 %ec, label %exit, label %loop
 

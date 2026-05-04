@@ -424,7 +424,7 @@ bool ARMParallelDSP::RecordMemoryOps(BasicBlock *BB) {
 // Search recursively back through the operands to find a tree of values that
 // form a multiply-accumulate chain. The search records the Add and Mul
 // instructions that form the reduction and allows us to find a single value
-// to be used as the initial input to the accumlator.
+// to be used as the initial input to the accumulator.
 bool ARMParallelDSP::Search(Value *V, BasicBlock *BB, Reduction &R) {
   // If we find a non-instruction, try to use it as the initial accumulator
   // value. This may have already been found during the search in which case
@@ -534,7 +534,7 @@ bool ARMParallelDSP::MatchSMLAD(Function &F) {
 
       InsertParallelMACs(R);
       Changed = true;
-      AllAdds.insert(R.getAdds().begin(), R.getAdds().end());
+      AllAdds.insert_range(R.getAdds());
       LLVM_DEBUG(dbgs() << "BB after inserting parallel MACs:\n" << BB);
     }
   }
@@ -715,10 +715,14 @@ void ARMParallelDSP::InsertParallelMACs(Reduction &R) {
     MulCandidate *RHSMul = Pair.second;
     LoadInst *BaseLHS = LHSMul->getBaseLoad();
     LoadInst *BaseRHS = RHSMul->getBaseLoad();
-    LoadInst *WideLHS = WideLoads.count(BaseLHS) ?
-      WideLoads[BaseLHS]->getLoad() : CreateWideLoad(LHSMul->VecLd, Ty);
-    LoadInst *WideRHS = WideLoads.count(BaseRHS) ?
-      WideLoads[BaseRHS]->getLoad() : CreateWideLoad(RHSMul->VecLd, Ty);
+    auto LIt = WideLoads.find(BaseLHS);
+    LoadInst *WideLHS = LIt != WideLoads.end()
+                            ? LIt->second->getLoad()
+                            : CreateWideLoad(LHSMul->VecLd, Ty);
+    auto RIt = WideLoads.find(BaseRHS);
+    LoadInst *WideRHS = RIt != WideLoads.end()
+                            ? RIt->second->getLoad()
+                            : CreateWideLoad(RHSMul->VecLd, Ty);
 
     Instruction *InsertAfter = GetInsertPoint(WideLHS, WideRHS);
     InsertAfter = GetInsertPoint(InsertAfter, Acc);

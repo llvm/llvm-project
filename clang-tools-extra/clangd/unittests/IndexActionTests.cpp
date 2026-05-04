@@ -86,10 +86,7 @@ public:
         new FileManager(FileSystemOptions(), InMemoryFileSystem));
 
     auto Action = createStaticIndexingAction(
-        Opts, [&](SymbolSlab S) { IndexFile.Symbols = std::move(S); },
-        [&](RefSlab R) { IndexFile.Refs = std::move(R); },
-        [&](RelationSlab R) { IndexFile.Relations = std::move(R); },
-        [&](IncludeGraph IG) { IndexFile.Sources = std::move(IG); });
+        Opts, [&](IndexFileIn Result) { IndexFile = std::move(Result); });
 
     std::vector<std::string> Args = {"index_action", "-fsyntax-only",
                                      "-xc++",        "-std=c++11",

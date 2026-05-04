@@ -20,9 +20,11 @@
 #include "DirectXGenInstrInfo.inc"
 
 namespace llvm {
+class DirectXSubtarget;
+
 struct DirectXInstrInfo : public DirectXGenInstrInfo {
   const DirectXRegisterInfo RI;
-  explicit DirectXInstrInfo() : DirectXGenInstrInfo() {}
+  explicit DirectXInstrInfo(const DirectXSubtarget &STI);
   const DirectXRegisterInfo &getRegisterInfo() const { return RI; }
   ~DirectXInstrInfo() override;
 };

@@ -53,12 +53,17 @@
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/float_inf_nan_converter.h"
 #include "src/stdio/printf_core/writer.h"
+#include "src/string/memory_utils/inline_memcpy.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
 
 enum class ConversionType { E, F, G };
+#ifdef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+using StorageType = UInt128;
+#else
 using StorageType = fputil::FPBits<long double>::StorageType;
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
 
 constexpr unsigned MAX_DIGITS = 39;
 constexpr size_t DF_BITS = 320;
@@ -250,7 +255,7 @@ DigitsOutput decimal_digits(DigitsInput input, int precision, bool e_mode) {
   // there's space for it in the DigitsOutput buffer).
   DigitsOutput output;
   output.ndigits = view.size();
-  __builtin_memcpy(output.digits, view.data(), output.ndigits);
+  inline_memcpy(output.digits, view.data(), output.ndigits);
 
   // Set up the output exponent, which is done differently depending on mode.
   // Also, figure out whether we have one digit too many, and if so, set the
@@ -362,8 +367,8 @@ DigitsOutput decimal_digits(DigitsInput input, int precision, bool e_mode) {
       // we made it from and doing the decimal conversion all over again.)
       for (size_t i = output.ndigits; i-- > 0;) {
         if (output.digits[i] != '9') {
-          output.digits[i] = static_cast<char>(internal::int_to_b36_char(
-              internal::b36_char_to_int(output.digits[i]) + 1));
+          output.digits[i] = internal::int_to_b36_char(
+              internal::b36_char_to_int(output.digits[i]) + 1);
           break;
         } else {
           output.digits[i] = '0';
@@ -375,11 +380,11 @@ DigitsOutput decimal_digits(DigitsInput input, int precision, bool e_mode) {
   return output;
 }
 
-LIBC_INLINE int convert_float_inner(Writer *writer,
-                                    const FormatSection &to_conv,
-                                    int32_t fraction_len, int exponent,
-                                    StorageType mantissa, Sign sign,
-                                    ConversionType ctype) {
+template <WriteMode write_mode>
+LIBC_INLINE int
+convert_float_inner(Writer<write_mode> *writer, const FormatSection &to_conv,
+                    int32_t fraction_len, int exponent, StorageType mantissa,
+                    Sign sign, ConversionType ctype) {
   // If to_conv doesn't specify a precision, the precision defaults to 6.
   unsigned precision = to_conv.precision < 0 ? 6 : to_conv.precision;
 
@@ -551,7 +556,7 @@ LIBC_INLINE int convert_float_inner(Writer *writer,
     cpp::string_view expview = expcvt.view();
     expbuf[0] = internal::islower(to_conv.conv_name) ? 'e' : 'E';
     explen = expview.size() + 1;
-    __builtin_memcpy(expbuf + 1, expview.data(), expview.size());
+    inline_memcpy(expbuf + 1, expview.data(), expview.size());
   }
 
   // Now we know enough to work out the length of the unpadded output:
@@ -617,9 +622,10 @@ LIBC_INLINE int convert_float_inner(Writer *writer,
   return WRITE_OK;
 }
 
-template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
+template <typename T, WriteMode write_mode,
+          cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE int
-convert_float_typed(Writer *writer, const FormatSection &to_conv,
+convert_float_typed(Writer<write_mode> *writer, const FormatSection &to_conv,
                     fputil::FPBits<T> float_bits, ConversionType ctype) {
   return convert_float_inner(writer, to_conv, float_bits.FRACTION_LEN,
                              float_bits.get_explicit_exponent(),
@@ -627,17 +633,21 @@ convert_float_typed(Writer *writer, const FormatSection &to_conv,
                              float_bits.sign(), ctype);
 }
 
-LIBC_INLINE int convert_float_outer(Writer *writer,
+template <WriteMode write_mode>
+LIBC_INLINE int convert_float_outer(Writer<write_mode> *writer,
                                     const FormatSection &to_conv,
                                     ConversionType ctype) {
+#ifndef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
   if (to_conv.length_modifier == LengthModifier::L) {
-    fputil::FPBits<long double>::StorageType float_raw = to_conv.conv_val_raw;
+    StorageType float_raw = to_conv.conv_val_raw;
     fputil::FPBits<long double> float_bits(float_raw);
     if (!float_bits.is_inf_or_nan()) {
       return convert_float_typed<long double>(writer, to_conv, float_bits,
                                               ctype);
     }
-  } else {
+  } else
+#endif // !LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+  {
     fputil::FPBits<double>::StorageType float_raw =
         static_cast<fputil::FPBits<double>::StorageType>(to_conv.conv_val_raw);
     fputil::FPBits<double> float_bits(float_raw);
@@ -649,38 +659,44 @@ LIBC_INLINE int convert_float_outer(Writer *writer,
   return convert_inf_nan(writer, to_conv);
 }
 
-template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE int convert_float_decimal_typed(Writer *writer,
+template <typename T, WriteMode write_mode,
+          cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
+LIBC_INLINE int convert_float_decimal_typed(Writer<write_mode> *writer,
                                             const FormatSection &to_conv,
                                             fputil::FPBits<T> float_bits) {
   return convert_float_typed<T>(writer, to_conv, float_bits, ConversionType::F);
 }
 
-template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE int convert_float_dec_exp_typed(Writer *writer,
+template <typename T, WriteMode write_mode,
+          cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
+LIBC_INLINE int convert_float_dec_exp_typed(Writer<write_mode> *writer,
                                             const FormatSection &to_conv,
                                             fputil::FPBits<T> float_bits) {
   return convert_float_typed<T>(writer, to_conv, float_bits, ConversionType::E);
 }
 
-template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE int convert_float_dec_auto_typed(Writer *writer,
+template <typename T, WriteMode write_mode,
+          cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
+LIBC_INLINE int convert_float_dec_auto_typed(Writer<write_mode> *writer,
                                              const FormatSection &to_conv,
                                              fputil::FPBits<T> float_bits) {
   return convert_float_typed<T>(writer, to_conv, float_bits, ConversionType::G);
 }
 
-LIBC_INLINE int convert_float_decimal(Writer *writer,
+template <WriteMode write_mode>
+LIBC_INLINE int convert_float_decimal(Writer<write_mode> *writer,
                                       const FormatSection &to_conv) {
   return convert_float_outer(writer, to_conv, ConversionType::F);
 }
 
-LIBC_INLINE int convert_float_dec_exp(Writer *writer,
+template <WriteMode write_mode>
+LIBC_INLINE int convert_float_dec_exp(Writer<write_mode> *writer,
                                       const FormatSection &to_conv) {
   return convert_float_outer(writer, to_conv, ConversionType::E);
 }
 
-LIBC_INLINE int convert_float_dec_auto(Writer *writer,
+template <WriteMode write_mode>
+LIBC_INLINE int convert_float_dec_auto(Writer<write_mode> *writer,
                                        const FormatSection &to_conv) {
   return convert_float_outer(writer, to_conv, ConversionType::G);
 }

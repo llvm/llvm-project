@@ -28,25 +28,41 @@ class BuiltinNTTP<string type_name> : TemplateArg<""> {
 }
 
 def SizeT : BuiltinNTTP<"size_t"> {}
+def Uint32T: BuiltinNTTP<"uint32_t"> {}
 
 class BuiltinTemplate<list<TemplateArg> template_head> {
   list<TemplateArg> TemplateHead = template_head;
 }
 
+class CPlusPlusBuiltinTemplate<list<TemplateArg> template_head> : BuiltinTemplate<template_head>;
+
+class HLSLBuiltinTemplate<list<TemplateArg> template_head> : BuiltinTemplate<template_head>;
+
 // template <template <class T, T... Ints> IntSeq, class T, T N>
-def __make_integer_seq : BuiltinTemplate<
+def __make_integer_seq : CPlusPlusBuiltinTemplate<
   [Template<[Class<"T">, NTTP<"T", "Ints", /*is_variadic=*/1>], "IntSeq">, Class<"T">, NTTP<"T", "N">]>;
 
 // template <size_t, class... T>
-def __type_pack_element : BuiltinTemplate<
+def __type_pack_element : CPlusPlusBuiltinTemplate<
   [SizeT, Class<"T", /*is_variadic=*/1>]>;
 
 // template <template <class... Args> BaseTemplate,
 //           template <class TypeMember> HasTypeMember,
 //           class HasNoTypeMember
 //           class... Ts>
-def __builtin_common_type : BuiltinTemplate<
+def __builtin_common_type : CPlusPlusBuiltinTemplate<
   [Template<[Class<"Args", /*is_variadic=*/1>], "BaseTemplate">,
    Template<[Class<"TypeMember">], "HasTypeMember">,
    Class<"HasNoTypeMember">,
    Class<"Ts", /*is_variadic=*/1>]>;
+
+// template <uint32_t Opcode,
+//           uint32_t Size,
+//           uint32_t Alignment,
+//           typename ...Operands>
+def __hlsl_spirv_type : HLSLBuiltinTemplate<
+[Uint32T, Uint32T, Uint32T, Class<"Operands", /*is_variadic=*/1>]>;
+
+// template <class ...Args>
+def __builtin_dedup_pack
+    : CPlusPlusBuiltinTemplate<[Class<"Args", /*is_variadic=*/1>]>;

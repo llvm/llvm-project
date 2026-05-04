@@ -1,4 +1,4 @@
-REQUIRES: shell, msan
+REQUIRES: msan
 UNSUPPORTED: target=arm{{.*}}
 
 # Check that libFuzzer exits gracefully under SIGINT with MSan.

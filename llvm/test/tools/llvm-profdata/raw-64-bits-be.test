@@ -30,8 +30,8 @@ RUN: printf '\0\0\0\3' >> %t
 
 RUN: printf '\344\023\165\112\031\035\265\067' >> %t
 RUN: printf '\0\0\0\0\0\0\0\02' >> %t
-RUN: printf '\0\0\0\1\0\3\xff\xc8' >> %t
-RUN: printf '\0\0\0\3\0\3\xff\xc3' >> %t
+RUN: printf '\0\0\0\1\0\3\377\310' >> %t
+RUN: printf '\0\0\0\3\0\3\377\303' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 RUN: printf '\0\0\0\02' >> %t

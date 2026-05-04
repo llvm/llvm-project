@@ -40,6 +40,17 @@ struct ThisAdjustment;
 struct ThunkInfo;
 class VarDecl;
 
+/// Extract mangling function name from MangleContext such that swift can call
+/// it to prepare for ObjCDirect in swift.
+/// Produces the mangling:
+///   \01-[ClassName(Category) method:arg1:arg2:]
+/// Or, if useDirectABI is true (for Direct ABI):
+///   -[ClassName(Category) method:arg1:arg2:]D
+void mangleObjCMethodName(raw_ostream &OS, bool includePrefixByte,
+                          bool isInstanceMethod, StringRef ClassName,
+                          std::optional<StringRef> CategoryName,
+                          StringRef MethodName, bool useDirectABI);
+
 /// MangleContext - Context for tracking state which persists across multiple
 /// calls to the C++ name mangler.
 class MangleContext {
@@ -140,7 +151,7 @@ public:
   virtual void mangleCXXRTTIName(QualType T, raw_ostream &,
                                  bool NormalizeIntegers = false) = 0;
   virtual void mangleStringLiteral(const StringLiteral *SL, raw_ostream &) = 0;
-  virtual void mangleMSGuidDecl(const MSGuidDecl *GD, raw_ostream &);
+  virtual void mangleMSGuidDecl(const MSGuidDecl *GD, raw_ostream &) const;
 
   void mangleGlobalBlock(const BlockDecl *BD, const NamedDecl *ID,
                          raw_ostream &Out);
@@ -153,9 +164,10 @@ public:
 
   void mangleObjCMethodName(const ObjCMethodDecl *MD, raw_ostream &OS,
                             bool includePrefixByte = true,
-                            bool includeCategoryNamespace = true);
+                            bool includeCategoryNamespace = true,
+                            bool useDirectABI = false) const;
   void mangleObjCMethodNameAsSourceName(const ObjCMethodDecl *MD,
-                                        raw_ostream &);
+                                        raw_ostream &) const;
 
   virtual void mangleStaticGuardVariable(const VarDecl *D, raw_ostream &) = 0;
 
@@ -182,8 +194,8 @@ public:
 
 class ItaniumMangleContext : public MangleContext {
 public:
-  using DiscriminatorOverrideTy =
-      std::optional<unsigned> (*)(ASTContext &, const NamedDecl *);
+  using DiscriminatorOverrideTy = UnsignedOrNone (*)(ASTContext &,
+                                                     const NamedDecl *);
   explicit ItaniumMangleContext(ASTContext &C, DiagnosticsEngine &D,
                                 bool IsAux = false)
       : MangleContext(C, D, MK_Itanium, IsAux) {}
@@ -309,6 +321,11 @@ public:
 private:
   class Implementation;
   std::unique_ptr<Implementation> Impl;
+};
+
+/// Constants used by LLDB for mangling.
+struct LLDBManglingABI {
+  static constexpr llvm::StringLiteral FunctionLabelPrefix = "$__lldb_func:";
 };
 } // namespace clang
 

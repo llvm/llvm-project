@@ -42,21 +42,17 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/SMTConv.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SValBuilder.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
-#include <deque>
 #include <memory>
 #include <optional>
 #include <stack>
@@ -309,7 +305,7 @@ static bool isFunctionMacroExpansion(SourceLocation Loc,
     return false;
   while (SM.isMacroArgExpansion(Loc))
     Loc = SM.getImmediateExpansionRange(Loc).getBegin();
-  std::pair<FileID, unsigned> TLInfo = SM.getDecomposedLoc(Loc);
+  FileIDAndOffset TLInfo = SM.getDecomposedLoc(Loc);
   SrcMgr::SLocEntry SE = SM.getSLocEntry(TLInfo.first);
   const SrcMgr::ExpansionInfo &EInfo = SE.getExpansion();
   return EInfo.isFunctionMacroExpansion();
@@ -953,7 +949,10 @@ public:
     // Okay, we're at the right return statement, but do we have the return
     // value available?
     ProgramStateRef State = N->getState();
-    SVal V = State->getSVal(Ret, CalleeSFC);
+    const Expr *RV = Ret->getRetValue();
+    if (!RV)
+      return nullptr;
+    SVal V = State->getSVal(RV, CalleeSFC);
     if (V.isUnknownOrUndef())
       return nullptr;
 
@@ -1223,6 +1222,27 @@ static bool isObjCPointer(const ValueDecl *D) {
   return D->getType()->isObjCObjectPointerType();
 }
 
+namespace {
+using DestTypeValue = std::pair<const StoreInfo &, loc::ConcreteInt>;
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const DestTypeValue &Val) {
+  if (auto *TyR = Val.first.Dest->getAs<TypedRegion>()) {
+    QualType LocTy = TyR->getLocationType();
+    if (!LocTy.isNull()) {
+      if (auto *PtrTy = LocTy->getAs<PointerType>()) {
+        std::string PStr = PtrTy->getPointeeType().getAsString();
+        if (!PStr.empty())
+          OS << "(" << PStr << ")";
+      }
+    }
+  }
+  SmallString<16> ValStr;
+  Val.second.getValue()->toString(ValStr, 10, true);
+  OS << ValStr;
+  return OS;
+}
+} // namespace
+
 /// Show diagnostics for initializing or declaring a region \p R with a bad value.
 static void showBRDiagnostics(llvm::raw_svector_ostream &OS, StoreInfo SI) {
   const bool HasPrefix = SI.Dest->canPrintPretty();
@@ -1245,8 +1265,11 @@ static void showBRDiagnostics(llvm::raw_svector_ostream &OS, StoreInfo SI) {
     llvm_unreachable("Unexpected store kind");
   }
 
-  if (isa<loc::ConcreteInt>(SI.Value)) {
-    OS << Action << (isObjCPointer(SI.Dest) ? "nil" : "a null pointer value");
+  if (auto CVal = SI.Value.getAs<loc::ConcreteInt>()) {
+    if (!*CVal->getValue())
+      OS << Action << (isObjCPointer(SI.Dest) ? "nil" : "a null pointer value");
+    else
+      OS << Action << DestTypeValue(SI, *CVal);
 
   } else if (auto CVal = SI.Value.getAs<nonloc::ConcreteInt>()) {
     OS << Action << CVal->getValue();
@@ -1288,8 +1311,12 @@ static void showBRParamDiagnostics(llvm::raw_svector_ostream &OS,
 
   OS << "Passing ";
 
-  if (isa<loc::ConcreteInt>(SI.Value)) {
-    OS << (isObjCPointer(D) ? "nil object reference" : "null pointer value");
+  if (auto CI = SI.Value.getAs<loc::ConcreteInt>()) {
+    if (!*CI->getValue())
+      OS << (isObjCPointer(D) ? "nil object reference" : "null pointer value");
+    else
+      OS << (isObjCPointer(D) ? "object reference of value " : "pointer value ")
+         << DestTypeValue(SI, *CI);
 
   } else if (SI.Value.isUndef()) {
     OS << "uninitialized value";
@@ -1324,11 +1351,24 @@ static void showBRDefaultDiagnostics(llvm::raw_svector_ostream &OS,
                                      StoreInfo SI) {
   const bool HasSuffix = SI.Dest->canPrintPretty();
 
-  if (isa<loc::ConcreteInt>(SI.Value)) {
-    OS << (isObjCPointer(SI.Dest) ? "nil object reference stored"
-                                  : (HasSuffix ? "Null pointer value stored"
-                                               : "Storing null pointer value"));
-
+  if (auto CV = SI.Value.getAs<loc::ConcreteInt>()) {
+    APSIntPtr V = CV->getValue();
+    if (!*V)
+      OS << (isObjCPointer(SI.Dest)
+                 ? "nil object reference stored"
+                 : (HasSuffix ? "Null pointer value stored"
+                              : "Storing null pointer value"));
+    else {
+      if (isObjCPointer(SI.Dest)) {
+        OS << "object reference of value " << DestTypeValue(SI, *CV)
+           << " stored";
+      } else {
+        if (HasSuffix)
+          OS << "Pointer value of " << DestTypeValue(SI, *CV) << " stored";
+        else
+          OS << "Storing pointer value of " << DestTypeValue(SI, *CV);
+      }
+    }
   } else if (SI.Value.isUndef()) {
     OS << (HasSuffix ? "Uninitialized value stored"
                      : "Storing uninitialized value");
@@ -1700,12 +1740,12 @@ PathDiagnosticPieceRef StoreSiteFinder::VisitNode(const ExplodedNode *Succ,
 
     if (DS) {
       SI.StoreKind = StoreInfo::Initialization;
-    } else if (isa<BlockExpr>(S)) {
+    } else if (const auto *BExpr = dyn_cast<BlockExpr>(S)) {
       SI.StoreKind = StoreInfo::BlockCapture;
       if (VR) {
         // See if we can get the BlockVarRegion.
         ProgramStateRef State = StoreSite->getState();
-        SVal V = StoreSite->getSVal(S);
+        SVal V = StoreSite->getSVal(BExpr);
         if (const auto *BDR =
                 dyn_cast_or_null<BlockDataRegion>(V.getAsRegion())) {
           if (const VarRegion *OriginalR = BDR->getOriginalRegion(VR)) {
@@ -1869,7 +1909,7 @@ SuppressInlineDefensiveChecksVisitor::VisitNode(const ExplodedNode *Succ,
       if (!CurStmt->getBeginLoc().isMacroID())
         return nullptr;
 
-      CFGStmtMap *Map = CurLC->getAnalysisDeclContext()->getCFGStmtMap();
+      const CFGStmtMap *Map = CurLC->getAnalysisDeclContext()->getCFGStmtMap();
       CurTerminatorStmt = Map->getBlock(CurStmt)->getTerminatorStmt();
     } else {
       return nullptr;
@@ -1913,7 +1953,7 @@ class TrackControlDependencyCondBRVisitor final
     : public TrackingBugReporterVisitor {
   const ExplodedNode *Origin;
   ControlDependencyCalculator ControlDeps;
-  llvm::SmallSet<const CFGBlock *, 32> VisitedBlocks;
+  llvm::SmallPtrSet<const CFGBlock *, 32> VisitedBlocks;
 
 public:
   TrackControlDependencyCondBRVisitor(TrackerRef ParentTracker,
@@ -2756,9 +2796,14 @@ PathDiagnosticPieceRef ConditionBRVisitor::VisitTerminator(
   // more tricky because there are more than two branches to account for.
   default:
     return nullptr;
-  case Stmt::IfStmtClass:
-    Cond = cast<IfStmt>(Term)->getCond();
+  case Stmt::IfStmtClass: {
+    const auto *IfStatement = cast<IfStmt>(Term);
+    // Handle if consteval which doesn't have a traditional condition.
+    if (IfStatement->isConsteval())
+      return nullptr;
+    Cond = IfStatement->getCond();
     break;
+  }
   case Stmt::ConditionalOperatorClass:
     Cond = cast<ConditionalOperator>(Term)->getCond();
     break;
@@ -3211,9 +3256,6 @@ bool ConditionBRVisitor::printValue(const Expr *CondVarExpr, raw_ostream &Out,
 
   return true;
 }
-
-constexpr llvm::StringLiteral ConditionBRVisitor::GenericTrueMessage;
-constexpr llvm::StringLiteral ConditionBRVisitor::GenericFalseMessage;
 
 bool ConditionBRVisitor::isPieceMessageGeneric(
     const PathDiagnosticPiece *Piece) {

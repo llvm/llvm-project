@@ -19,6 +19,7 @@
 //   enumeration value
 //===----------------------------------------------------------------------===//
 
+#include "clang/AST/Attr.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
@@ -138,16 +139,14 @@ void EnumCastOutOfRangeChecker::checkPreStmt(const CastExpr *CE,
   if (!ValueToCast)
     return;
 
-  const QualType T = CE->getType();
   // Check whether the cast type is an enum.
-  if (!T->isEnumeralType())
+  const auto *ED = CE->getType()->getAsEnumDecl();
+  if (!ED)
     return;
 
-  // If the cast is an enum, get its declaration.
-  // If the isEnumeralType() returned true, then the declaration must exist
-  // even if it is a stub declaration. It is up to the getDeclValuesForEnum()
-  // function to handle this.
-  const EnumDecl *ED = T->castAs<EnumType>()->getDecl();
+  // [[clang::flag_enum]] annotated enums are by definition should be ignored.
+  if (ED->hasAttr<FlagEnumAttr>())
+    return;
 
   EnumValueVector DeclValues = getDeclValuesForEnum(ED);
 

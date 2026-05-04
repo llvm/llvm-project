@@ -5,10 +5,6 @@
 ; RUN: opt < %s -passes='sroa<preserve-cfg>' -S | FileCheck %s --check-prefixes=CHECK,CHECK-PRESERVE-CFG
 ; RUN: opt < %s -passes='sroa<modify-cfg>' -S | FileCheck %s --check-prefixes=CHECK,CHECK-MODIFY-CFG
 
-;; Duplicate copies for RemoveDIs, eliminating debug intrinsics.
-; RUN: opt < %s -passes='sroa<preserve-cfg>' -S --try-experimental-debuginfo-iterators | FileCheck %s --check-prefixes=CHECK,CHECK-PRESERVE-CFG
-; RUN: opt < %s -passes='sroa<modify-cfg>' -S --try-experimental-debuginfo-iterators | FileCheck %s --check-prefixes=CHECK,CHECK-MODIFY-CFG
-
 source_filename = "/tmp/inlinesplit.cpp"
 target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.15.0"
@@ -77,10 +73,10 @@ attributes #2 = { argmemonly nounwind willreturn }
 !26 = !DILocation(line: 10, column: 3, scope: !8)
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { noinline ssp uwtable }
-; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ;.
 ; CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: [[META1:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: [[META2:![0-9]+]], nameTableKind: None, sysroot: "/")
-; CHECK: [[META1]] = !DIFile(filename: "/tmp/inlinesplit.cpp", directory: {{.*}})
+; CHECK: [[META1]] = !DIFile(filename: "{{.*}}inlinesplit.cpp", directory: {{.*}})
 ; CHECK: [[META2]] = !{}
 ; CHECK: [[META3:![0-9]+]] = !{i32 7, !"Dwarf Version", i32 4}
 ; CHECK: [[META4:![0-9]+]] = !{i32 2, !"Debug Info Version", i32 3}

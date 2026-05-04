@@ -22,6 +22,10 @@
 // RUN:           ctor2-arm64.obj ctor1-arm64ec.obj ctor2-amd64.obj ctor1-arm64.obj
 // RUN: llvm-readobj --hex-dump=.rdata --hex-dump=.test out3.dll | FileCheck %s
 
+// RUN: lld-link -out:out4.dll -machine:arm64ec -lldmingw -dll -noentry test-arm64.obj test-arm64ec.obj \
+// RUN:           ctor2-arm64.obj ctor1-arm64ec.obj ctor2-amd64.obj ctor1-arm64.obj
+// RUN: llvm-readobj --hex-dump=.rdata --hex-dump=.test out4.dll | FileCheck %s
+
 // CHECK:      Hex dump of section '.rdata':
 // CHECK-NEXT: 0x180001000 ffffffff ffffffff 01000000 00000000
 // CHECK-NEXT: 0x180001010 02000000 00000000 03000000 00000000

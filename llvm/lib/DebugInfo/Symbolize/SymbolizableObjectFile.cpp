@@ -47,8 +47,7 @@ SymbolizableObjectFile::create(const object::ObjectFile *Obj,
         Expected<StringRef> E = Section->getContents();
         if (!E)
           return E.takeError();
-        OpdExtractor.reset(new DataExtractor(*E, Obj->isLittleEndian(),
-                                             Obj->getBytesInAddress()));
+        OpdExtractor.reset(new DataExtractor(*E, Obj->isLittleEndian()));
         OpdAddress = Section->getAddress();
         break;
       }
@@ -205,8 +204,9 @@ Error SymbolizableObjectFile::addSymbol(const SymbolRef &Symbol,
     // For the purposes of symbolization, pretend the symbol's address is that
     // of the function's code, not the descriptor.
     uint64_t OpdOffset = SymbolAddress - OpdAddress;
-    if (OpdExtractor->isValidOffsetForAddress(OpdOffset))
-      SymbolAddress = OpdExtractor->getAddress(&OpdOffset);
+    unsigned AddressSize = Obj.getBytesInAddress();
+    if (OpdExtractor->isValidOffsetForDataOfSize(OpdOffset, AddressSize))
+      SymbolAddress = OpdExtractor->getUnsigned(&OpdOffset, AddressSize);
   }
   // Mach-O symbol table names have leading underscore, skip it.
   if (Module->isMachO())
@@ -269,6 +269,33 @@ bool SymbolizableObjectFile::shouldOverrideWithSymbolTable(
          isa<DWARFContext>(DebugInfoContext.get());
 }
 
+object::SectionedAddress SymbolizableObjectFile::convertDwarfOffsetForWasm(
+    object::SectionedAddress ModuleOffset) const {
+  if (!Module->isWasm())
+    return ModuleOffset;
+
+  // For Wasm object files, addresses are already section-relative.
+  if (Module->isRelocatableObject())
+    return ModuleOffset;
+
+  // We are dealing with a linked Wasm file, which uses file offsets.
+  for (const SectionRef &Sec : Module->sections()) {
+    if (Sec.getIndex() == ModuleOffset.SectionIndex) {
+      if (Sec.isText()) {
+        ModuleOffset.Address -= Sec.getAddress();
+        return ModuleOffset;
+      }
+      break;
+    }
+  }
+
+  // If the address is not in a text section, or we couldn't find a
+  // matching section, invalidate it. This prevents it from incorrectly
+  // being interpreted as as section-relative DWARF offset.
+  ModuleOffset.Address = UINT64_MAX;
+  return ModuleOffset;
+}
+
 DILineInfo
 SymbolizableObjectFile::symbolizeCode(object::SectionedAddress ModuleOffset,
                                       DILineInfoSpecifier LineInfoSpecifier,
@@ -276,8 +303,13 @@ SymbolizableObjectFile::symbolizeCode(object::SectionedAddress ModuleOffset,
   if (ModuleOffset.SectionIndex == object::SectionedAddress::UndefSection)
     ModuleOffset.SectionIndex =
         getModuleSectionIndexForAddress(ModuleOffset.Address);
-  DILineInfo LineInfo =
-      DebugInfoContext->getLineInfoForAddress(ModuleOffset, LineInfoSpecifier);
+  DILineInfo LineInfo;
+  object::SectionedAddress DWARFOffset =
+      convertDwarfOffsetForWasm(ModuleOffset);
+  std::optional<DILineInfo> DBGLineInfo =
+      DebugInfoContext->getLineInfoForAddress(DWARFOffset, LineInfoSpecifier);
+  if (DBGLineInfo)
+    LineInfo = *DBGLineInfo;
 
   // Override function name from symbol table if necessary.
   if (shouldOverrideWithSymbolTable(LineInfoSpecifier.FNKind, UseSymbolTable)) {
@@ -287,7 +319,9 @@ SymbolizableObjectFile::symbolizeCode(object::SectionedAddress ModuleOffset,
                                FileName)) {
       LineInfo.FunctionName = FunctionName;
       LineInfo.StartAddress = Start;
-      if (LineInfo.FileName == DILineInfo::BadString && !FileName.empty())
+      // Only use the filename from symbol table if the debug info for the
+      // address is missing.
+      if (!DBGLineInfo && !FileName.empty())
         LineInfo.FileName = FileName;
     }
   }
@@ -300,12 +334,17 @@ DIInliningInfo SymbolizableObjectFile::symbolizeInlinedCode(
   if (ModuleOffset.SectionIndex == object::SectionedAddress::UndefSection)
     ModuleOffset.SectionIndex =
         getModuleSectionIndexForAddress(ModuleOffset.Address);
+  object::SectionedAddress DWARFOffset =
+      convertDwarfOffsetForWasm(ModuleOffset);
   DIInliningInfo InlinedContext = DebugInfoContext->getInliningInfoForAddress(
-      ModuleOffset, LineInfoSpecifier);
+      DWARFOffset, LineInfoSpecifier);
 
   // Make sure there is at least one frame in context.
-  if (InlinedContext.getNumberOfFrames() == 0)
+  bool EmptyFrameAdded = false;
+  if (InlinedContext.getNumberOfFrames() == 0) {
+    EmptyFrameAdded = true;
     InlinedContext.addFrame(DILineInfo());
+  }
 
   // Override the function name in lower frame with name from symbol table.
   if (shouldOverrideWithSymbolTable(LineInfoSpecifier.FNKind, UseSymbolTable)) {
@@ -317,7 +356,9 @@ DIInliningInfo SymbolizableObjectFile::symbolizeInlinedCode(
           InlinedContext.getNumberOfFrames() - 1);
       LI->FunctionName = FunctionName;
       LI->StartAddress = Start;
-      if (LI->FileName == DILineInfo::BadString && !FileName.empty())
+      // Only use the filename from symbol table if the debug info for the
+      // address is missing.
+      if (EmptyFrameAdded && !FileName.empty())
         LI->FileName = FileName;
     }
   }
@@ -334,10 +375,11 @@ DIGlobal SymbolizableObjectFile::symbolizeData(
   Res.DeclFile = FileName;
 
   // Try and get a better filename:lineno pair from the debuginfo, if present.
-  DILineInfo DL = DebugInfoContext->getLineInfoForDataAddress(ModuleOffset);
-  if (DL.Line != 0) {
-    Res.DeclFile = DL.FileName;
-    Res.DeclLine = DL.Line;
+  std::optional<DILineInfo> DL =
+      DebugInfoContext->getLineInfoForDataAddress(ModuleOffset);
+  if (DL && DL->Line != 0) {
+    Res.DeclFile = DL->FileName;
+    Res.DeclLine = DL->Line;
   }
   return Res;
 }
@@ -347,7 +389,9 @@ std::vector<DILocal> SymbolizableObjectFile::symbolizeFrame(
   if (ModuleOffset.SectionIndex == object::SectionedAddress::UndefSection)
     ModuleOffset.SectionIndex =
         getModuleSectionIndexForAddress(ModuleOffset.Address);
-  return DebugInfoContext->getLocalsForAddress(ModuleOffset);
+  object::SectionedAddress DWARFOffset =
+      convertDwarfOffsetForWasm(ModuleOffset);
+  return DebugInfoContext->getLocalsForAddress(DWARFOffset);
 }
 
 std::vector<object::SectionedAddress>

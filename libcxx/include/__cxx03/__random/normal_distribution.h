@@ -60,14 +60,8 @@ private:
 
 public:
   // constructors and reset functions
-#ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI normal_distribution() : normal_distribution(0) {}
-  _LIBCPP_HIDE_FROM_ABI explicit normal_distribution(result_type __mean, result_type __stddev = 1)
-      : __p_(param_type(__mean, __stddev)), __v_hot_(false) {}
-#else
   _LIBCPP_HIDE_FROM_ABI explicit normal_distribution(result_type __mean = 0, result_type __stddev = 1)
       : __p_(param_type(__mean, __stddev)), __v_hot_(false) {}
-#endif
   _LIBCPP_HIDE_FROM_ABI explicit normal_distribution(const param_type& __p) : __p_(__p), __v_hot_(false) {}
   _LIBCPP_HIDE_FROM_ABI void reset() { __v_hot_ = false; }
 

@@ -28,7 +28,7 @@ struct __builtin_new_allocator {
   struct __builtin_new_deleter {
     typedef void* pointer_type;
 
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR explicit __builtin_new_deleter(size_t __size, size_t __align)
+    _LIBCPP_HIDE_FROM_ABI explicit __builtin_new_deleter(size_t __size, size_t __align)
         : __size_(__size), __align_(__align) {}
 
     _LIBCPP_HIDE_FROM_ABI void operator()(void* __p) const _NOEXCEPT {

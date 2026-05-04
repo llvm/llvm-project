@@ -141,17 +141,9 @@
 # INTEL: vminmaxpd ymm22, ymm23, ymm24, 123
 0x62,0x83,0xc5,0x20,0x52,0xf0,0x7b
 
-# ATT:   vminmaxpd $123, {sae}, %ymm24, %ymm23, %ymm22
-# INTEL: vminmaxpd ymm22, ymm23, ymm24, {sae}, 123
-0x62,0x83,0xc1,0x10,0x52,0xf0,0x7b
-
 # ATT:   vminmaxpd $123, %ymm24, %ymm23, %ymm22 {%k7}
 # INTEL: vminmaxpd ymm22 {k7}, ymm23, ymm24, 123
 0x62,0x83,0xc5,0x27,0x52,0xf0,0x7b
-
-# ATT:   vminmaxpd $123, {sae}, %ymm24, %ymm23, %ymm22 {%k7} {z}
-# INTEL: vminmaxpd ymm22 {k7} {z}, ymm23, ymm24, {sae}, 123
-0x62,0x83,0xc1,0x97,0x52,0xf0,0x7b
 
 # ATT:   vminmaxpd  $123, 268435456(%rbp,%r14,8), %ymm23, %ymm22
 # INTEL: vminmaxpd ymm22, ymm23, ymmword ptr [rbp + 8*r14 + 268435456], 123
@@ -257,17 +249,9 @@
 # INTEL: vminmaxph ymm22, ymm23, ymm24, 123
 0x62,0x83,0x44,0x20,0x52,0xf0,0x7b
 
-# ATT:   vminmaxph $123, {sae}, %ymm24, %ymm23, %ymm22
-# INTEL: vminmaxph ymm22, ymm23, ymm24, {sae}, 123
-0x62,0x83,0x40,0x10,0x52,0xf0,0x7b
-
 # ATT:   vminmaxph $123, %ymm24, %ymm23, %ymm22 {%k7}
 # INTEL: vminmaxph ymm22 {k7}, ymm23, ymm24, 123
 0x62,0x83,0x44,0x27,0x52,0xf0,0x7b
-
-# ATT:   vminmaxph $123, {sae}, %ymm24, %ymm23, %ymm22 {%k7} {z}
-# INTEL: vminmaxph ymm22 {k7} {z}, ymm23, ymm24, {sae}, 123
-0x62,0x83,0x40,0x97,0x52,0xf0,0x7b
 
 # ATT:   vminmaxph  $123, 268435456(%rbp,%r14,8), %ymm23, %ymm22
 # INTEL: vminmaxph ymm22, ymm23, ymmword ptr [rbp + 8*r14 + 268435456], 123
@@ -373,17 +357,9 @@
 # INTEL: vminmaxps ymm22, ymm23, ymm24, 123
 0x62,0x83,0x45,0x20,0x52,0xf0,0x7b
 
-# ATT:   vminmaxps $123, {sae}, %ymm24, %ymm23, %ymm22
-# INTEL: vminmaxps ymm22, ymm23, ymm24, {sae}, 123
-0x62,0x83,0x41,0x10,0x52,0xf0,0x7b
-
 # ATT:   vminmaxps $123, %ymm24, %ymm23, %ymm22 {%k7}
 # INTEL: vminmaxps ymm22 {k7}, ymm23, ymm24, 123
 0x62,0x83,0x45,0x27,0x52,0xf0,0x7b
-
-# ATT:   vminmaxps $123, {sae}, %ymm24, %ymm23, %ymm22 {%k7} {z}
-# INTEL: vminmaxps ymm22 {k7} {z}, ymm23, ymm24, {sae}, 123
-0x62,0x83,0x41,0x97,0x52,0xf0,0x7b
 
 # ATT:   vminmaxps  $123, 268435456(%rbp,%r14,8), %ymm23, %ymm22
 # INTEL: vminmaxps ymm22, ymm23, ymmword ptr [rbp + 8*r14 + 268435456], 123

@@ -1,6 +1,6 @@
 if(NOT(LLVM_LIBC_FULL_BUILD))
   # in overlay mode, use the system's file to test the reader.
-  set(use_system_file "-DLIBC_COPT_STDIO_USE_SYSTEM_FILE")
+  libc_set_definition(use_system_file "LIBC_COPT_STDIO_USE_SYSTEM_FILE")
 endif()
 
 add_libc_unittest(
@@ -32,7 +32,7 @@ add_libc_unittest(
   SRCS
     reader_test.cpp
   DEPENDS
-    libc.src.stdio.scanf_core.reader
+    libc.src.stdio.scanf_core.string_reader
     libc.src.__support.CPP.string_view
   COMPILE_OPTIONS
     ${use_system_file}
@@ -45,8 +45,8 @@ add_libc_unittest(
   SRCS
     converter_test.cpp
   DEPENDS
-    libc.src.stdio.scanf_core.reader
     libc.src.stdio.scanf_core.converter
+    libc.src.stdio.scanf_core.string_reader
     libc.src.__support.CPP.string_view
   COMPILE_OPTIONS
     ${use_system_file}

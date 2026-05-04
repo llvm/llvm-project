@@ -16,6 +16,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -23,17 +24,20 @@ namespace llvm::sandboxir {
 
 class Context;
 // Forward declare friend classes for MSVC.
-class PointerType;
-class VectorType;
-class FixedVectorType;
-class ScalableVectorType;
-class IntegerType;
-class FunctionType;
 class ArrayType;
+class CallBase;
+class CmpInst;
+class ConstantDataSequential;
+class FixedVectorType;
+class FPMathOperator;
+class FunctionType;
+class IntegerType;
+class Module;
+class PointerType;
+class ScalableVectorType;
 class StructType;
 class TargetExtType;
-class Module;
-class FPMathOperator;
+class VectorType;
 #define DEF_INSTR(ID, OPCODE, CLASS) class CLASS;
 #define DEF_CONST(ID, CLASS) class CLASS;
 #include "llvm/SandboxIR/Values.def"
@@ -63,6 +67,7 @@ protected:
   friend class TargetExtType;      // For LLVMTy.
   friend class Module;             // For LLVMTy.
   friend class FPMathOperator;     // For LLVMTy.
+  friend class ConstantDataSequential; // For LLVMTy.
 
   // Friend all instruction classes because `create()` functions use LLVMTy.
 #define DEF_INSTR(ID, OPCODE, CLASS) friend class CLASS;
@@ -116,8 +121,8 @@ public:
   bool isPPC_FP128Ty() const { return LLVMTy->isPPC_FP128Ty(); }
 
   /// Return true if this is a well-behaved IEEE-like type, which has a IEEE
-  /// compatible layout as defined by APFloat::isIEEE(), and does not have
-  /// non-IEEE values, such as x86_fp80's unnormal values.
+  /// compatible layout, and does not have non-IEEE values, such as x86_fp80's
+  /// unnormal values.
   bool isIEEELikeFPTy() const { return LLVMTy->isIEEELikeFPTy(); }
 
   /// Return true if this is one of the floating-point types
@@ -258,23 +263,20 @@ public:
   /// ppc long double), this method returns -1.
   int getFPMantissaWidth() const { return LLVMTy->getFPMantissaWidth(); }
 
-  /// Return whether the type is IEEE compatible, as defined by the eponymous
-  /// method in APFloat.
-  bool isIEEE() const { return LLVMTy->isIEEE(); }
-
   /// If this is a vector type, return the element type, otherwise return
   /// 'this'.
-  Type *getScalarType() const;
+  LLVM_ABI Type *getScalarType() const;
 
   // TODO: ADD MISSING
 
-  static Type *getInt64Ty(Context &Ctx);
-  static Type *getInt32Ty(Context &Ctx);
-  static Type *getInt16Ty(Context &Ctx);
-  static Type *getInt8Ty(Context &Ctx);
-  static Type *getInt1Ty(Context &Ctx);
-  static Type *getDoubleTy(Context &Ctx);
-  static Type *getFloatTy(Context &Ctx);
+  LLVM_ABI static IntegerType *getInt64Ty(Context &Ctx);
+  LLVM_ABI static IntegerType *getInt32Ty(Context &Ctx);
+  LLVM_ABI static IntegerType *getInt16Ty(Context &Ctx);
+  LLVM_ABI static IntegerType *getInt8Ty(Context &Ctx);
+  LLVM_ABI static IntegerType *getInt1Ty(Context &Ctx);
+  LLVM_ABI static Type *getDoubleTy(Context &Ctx);
+  LLVM_ABI static Type *getFloatTy(Context &Ctx);
+  LLVM_ABI static Type *getHalfTy(Context &Ctx);
   // TODO: missing get*
 
   /// Get the address space of this pointer or pointer vector type.
@@ -292,7 +294,7 @@ class PointerType : public Type {
 public:
   // TODO: add missing functions
 
-  static PointerType *get(Context &Ctx, unsigned AddressSpace);
+  LLVM_ABI static PointerType *get(Context &Ctx, unsigned AddressSpace);
 
   static bool classof(const Type *From) {
     return isa<llvm::PointerType>(From->LLVMTy);
@@ -301,7 +303,7 @@ public:
 
 class ArrayType : public Type {
 public:
-  static ArrayType *get(Type *ElementType, uint64_t NumElements);
+  LLVM_ABI static ArrayType *get(Type *ElementType, uint64_t NumElements);
   // TODO: add missing functions
   static bool classof(const Type *From) {
     return isa<llvm::ArrayType>(From->LLVMTy);
@@ -311,8 +313,8 @@ public:
 class StructType : public Type {
 public:
   /// This static method is the primary way to create a literal StructType.
-  static StructType *get(Context &Ctx, ArrayRef<Type *> Elements,
-                         bool IsPacked = false);
+  LLVM_ABI static StructType *get(Context &Ctx, ArrayRef<Type *> Elements,
+                                  bool IsPacked = false);
 
   bool isPacked() const { return cast<llvm::StructType>(LLVMTy)->isPacked(); }
 
@@ -324,13 +326,13 @@ public:
 
 class VectorType : public Type {
 public:
-  static VectorType *get(Type *ElementType, ElementCount EC);
+  LLVM_ABI static VectorType *get(Type *ElementType, ElementCount EC);
   static VectorType *get(Type *ElementType, unsigned NumElements,
                          bool Scalable) {
     return VectorType::get(ElementType,
                            ElementCount::get(NumElements, Scalable));
   }
-  Type *getElementType() const;
+  LLVM_ABI Type *getElementType() const;
 
   static VectorType *get(Type *ElementType, const VectorType *Other) {
     return VectorType::get(ElementType, Other->getElementCount());
@@ -339,13 +341,14 @@ public:
   inline ElementCount getElementCount() const {
     return cast<llvm::VectorType>(LLVMTy)->getElementCount();
   }
-  static VectorType *getInteger(VectorType *VTy);
-  static VectorType *getExtendedElementVectorType(VectorType *VTy);
-  static VectorType *getTruncatedElementVectorType(VectorType *VTy);
-  static VectorType *getSubdividedVectorType(VectorType *VTy, int NumSubdivs);
-  static VectorType *getHalfElementsVectorType(VectorType *VTy);
-  static VectorType *getDoubleElementsVectorType(VectorType *VTy);
-  static bool isValidElementType(Type *ElemTy);
+  LLVM_ABI static VectorType *getInteger(VectorType *VTy);
+  LLVM_ABI static VectorType *getExtendedElementVectorType(VectorType *VTy);
+  LLVM_ABI static VectorType *getTruncatedElementVectorType(VectorType *VTy);
+  LLVM_ABI static VectorType *getSubdividedVectorType(VectorType *VTy,
+                                                      int NumSubdivs);
+  LLVM_ABI static VectorType *getHalfElementsVectorType(VectorType *VTy);
+  LLVM_ABI static VectorType *getDoubleElementsVectorType(VectorType *VTy);
+  LLVM_ABI static bool isValidElementType(Type *ElemTy);
 
   static bool classof(const Type *From) {
     return isa<llvm::VectorType>(From->LLVMTy);
@@ -354,7 +357,7 @@ public:
 
 class FixedVectorType : public VectorType {
 public:
-  static FixedVectorType *get(Type *ElementType, unsigned NumElts);
+  LLVM_ABI static FixedVectorType *get(Type *ElementType, unsigned NumElts);
 
   static FixedVectorType *get(Type *ElementType, const FixedVectorType *FVTy) {
     return get(ElementType, FVTy->getNumElements());
@@ -398,7 +401,8 @@ public:
 
 class ScalableVectorType : public VectorType {
 public:
-  static ScalableVectorType *get(Type *ElementType, unsigned MinNumElts);
+  LLVM_ABI static ScalableVectorType *get(Type *ElementType,
+                                          unsigned MinNumElts);
 
   static ScalableVectorType *get(Type *ElementType,
                                  const ScalableVectorType *SVTy) {
@@ -461,7 +465,7 @@ public:
 /// Integer representation type
 class IntegerType : public Type {
 public:
-  static IntegerType *get(Context &C, unsigned NumBits);
+  LLVM_ABI static IntegerType *get(Context &C, unsigned NumBits);
   // TODO: add missing functions
   static bool classof(const Type *From) {
     return isa<llvm::IntegerType>(From->LLVMTy);

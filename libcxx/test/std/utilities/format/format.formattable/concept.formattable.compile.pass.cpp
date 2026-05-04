@@ -8,9 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
-// This test uses std::filesystem::path, which is not always available
-// XFAIL: availability-filesystem-missing
-
 // <format>
 
 // template<class T, class charT>
@@ -154,8 +151,8 @@ void test_P1361() {
 #  if !defined(TEST_HAS_NO_EXPERIMENTAL_TZDB) && !defined(TEST_HAS_NO_TIME_ZONE_DATABASE) &&                           \
       !defined(TEST_HAS_NO_FILESYSTEM)
   assert_is_formattable<std::chrono::utc_time<std::chrono::microseconds>, CharT>();
-  //assert_is_formattable<std::chrono::tai_time<std::chrono::microseconds>, CharT>();
-  //assert_is_formattable<std::chrono::gps_time<std::chrono::microseconds>, CharT>();
+  assert_is_formattable<std::chrono::tai_time<std::chrono::microseconds>, CharT>();
+  assert_is_formattable<std::chrono::gps_time<std::chrono::microseconds>, CharT>();
 
 #  endif // !defined(TEST_HAS_NO_EXPERIMENTAL_TZDB) && !defined(TEST_HAS_NO_TIME_ZONE_DATABASE) &&
          // !defined(TEST_HAS_NO_FILESYSTEM)
@@ -188,8 +185,10 @@ void test_P1361() {
   assert_is_formattable<std::chrono::sys_info, CharT>();
   assert_is_formattable<std::chrono::local_info, CharT>();
 
-  //assert_is_formattable<std::chrono::zoned_time, CharT>();
-#  endif // !defined(TEST_HAS_NO_EXPERIMENTAL_TZDB)
+#    if !defined(TEST_HAS_NO_TIME_ZONE_DATABASE) && !defined(TEST_HAS_NO_FILESYSTEM)
+  assert_is_formattable<std::chrono::zoned_time<std::chrono::microseconds>, CharT>();
+#    endif // !defined(TEST_HAS_NO_TIME_ZONE_DATABASE) && !defined(TEST_HAS_NO_FILESYSTEM)
+#  endif   // !defined(TEST_HAS_NO_EXPERIMENTAL_TZDB)
 
 #endif // TEST_HAS_NO_LOCALIZATION
 }

@@ -9,12 +9,12 @@ fld ft0, 0(a0)
 
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      4
-# CHECK-NEXT: Total Cycles:      12
+# CHECK-NEXT: Total Cycles:      11
 # CHECK-NEXT: Total uOps:        4
 
 # CHECK:      Dispatch Width:    3
-# CHECK-NEXT: uOps Per Cycle:    0.33
-# CHECK-NEXT: IPC:               0.33
+# CHECK-NEXT: uOps Per Cycle:    0.36
+# CHECK-NEXT: IPC:               0.36
 # CHECK-NEXT: Block RThroughput: 4.0
 
 # CHECK:      Instruction Info:
@@ -28,8 +28,8 @@ fld ft0, 0(a0)
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      4     1.00    *                   lw	t0, 0(a0)
 # CHECK-NEXT:  1      4     1.00    *                   ld	t0, 0(a0)
-# CHECK-NEXT:  1      6     1.00    *                   flw	ft0, 0(a0)
-# CHECK-NEXT:  1      6     1.00    *                   fld	ft0, 0(a0)
+# CHECK-NEXT:  1      5     1.00    *                   flw	ft0, 0(a0)
+# CHECK-NEXT:  1      5     1.00    *                   fld	ft0, 0(a0)
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - SiFiveP500Div

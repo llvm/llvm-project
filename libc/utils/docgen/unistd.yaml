@@ -577,6 +577,8 @@ functions:
     in-latest-posix: ""
   gethostname:
     in-latest-posix: ""
+  getpagesize:
+    in-latest-posix: ""
   getlogin:
     in-latest-posix: ""
   getlogin_r:

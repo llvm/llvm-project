@@ -14,11 +14,13 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/FirAliasTagOpInterface.h"
 #include "flang/Optimizer/Dialect/FortranVariableInterface.h"
+#include "flang/Optimizer/Dialect/SafeTempArrayCopyAttrInterface.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Interfaces/ViewLikeInterface.h"
 
 namespace fir {
 
@@ -39,6 +41,7 @@ mlir::ParseResult parseSelector(mlir::OpAsmParser &parser,
                                 mlir::OperationState &result,
                                 mlir::OpAsmParser::UnresolvedOperand &selector,
                                 mlir::Type &type);
+bool useStrictVolatileVerification();
 
 static constexpr llvm::StringRef getNormalizedLowerBoundAttrName() {
   return "normalized.lb";
@@ -47,7 +50,15 @@ static constexpr llvm::StringRef getNormalizedLowerBoundAttrName() {
 /// Model operations which affect global debugging information
 struct DebuggingResource
     : public mlir::SideEffects::Resource::Base<DebuggingResource> {
-  mlir::StringRef getName() final { return "DebuggingResource"; }
+  mlir::StringRef getName() const final { return "DebuggingResource"; }
+  bool isAddressable() const override { return false; }
+};
+
+/// Model operations which read from/write to volatile memory
+struct VolatileMemoryResource
+    : public mlir::SideEffects::Resource::Base<VolatileMemoryResource> {
+  mlir::StringRef getName() const final { return "VolatileMemoryResource"; }
+  bool isAddressable() const override { return false; }
 };
 
 class CoordinateIndicesAdaptor;
@@ -138,6 +149,15 @@ private:
   mlir::DenseI32ArrayAttr fieldIndices;
   mlir::ValueRange values;
 };
+
+struct LocalitySpecifierOperands {
+  llvm::SmallVector<::mlir::Value> privateVars;
+  llvm::SmallVector<::mlir::Attribute> privateSyms;
+};
+
+/// Returns true if the given box value may be absent.
+/// The given value must have BaseBoxType.
+bool mayBeAbsentBox(mlir::Value val);
 
 } // namespace fir
 

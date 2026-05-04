@@ -38,14 +38,14 @@ public:
                  neg_min_denormal);
     EXPECT_FP_EQ(func(CFPT(1241.112 + max_denormal * 1.0i)), max_denormal);
     EXPECT_FP_EQ(func(CFPT(121.121 + zero * 1.0i)), zero);
-    EXPECT_FP_EQ(func(CFPT(0.0 + 0.0i)), 0.0);
-    EXPECT_FP_EQ(func(CFPT(-0.0 + 0.0i)), 0.0);
-    EXPECT_FP_EQ(func(CFPT(0.0 - 0.0i)), -0.0);
-    EXPECT_FP_EQ(func(CFPT(-0.0 - 0.0i)), -0.0);
-    EXPECT_FP_EQ(func(CFPT(0.0)), 0.0);
-    EXPECT_FP_EQ(func(CFPT(-0.0)), 0.0);
-    EXPECT_FP_EQ(func(CFPT(0.0i)), 0.0);
-    EXPECT_FP_EQ(func(CFPT(-0.0i)), -0.0);
+    EXPECT_FP_EQ(func(CFPT(0.0 + 0.0i)), zero);
+    EXPECT_FP_EQ(func(CFPT(-0.0 + 0.0i)), zero);
+    EXPECT_FP_EQ(func(CFPT(0.0 - 0.0i)), neg_zero);
+    EXPECT_FP_EQ(func(CFPT(-0.0 - 0.0i)), neg_zero);
+    EXPECT_FP_EQ(func(CFPT(0.0)), zero);
+    EXPECT_FP_EQ(func(CFPT(-0.0)), zero);
+    EXPECT_FP_EQ(func(CFPT(0.0i)), zero);
+    EXPECT_FP_EQ(func(CFPT(-0.0i)), neg_zero);
   }
 
   void testRoundedNumbers(CImagFunc func) {

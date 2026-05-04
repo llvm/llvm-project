@@ -31,8 +31,8 @@ class DebugTranslation {
 public:
   DebugTranslation(Operation *module, llvm::Module &llvmModule);
 
-  /// Finalize the translation of debug information.
-  void finalize();
+  /// Adds the necessary module flags to the module, if not yet present.
+  void addModuleFlagsIfNotPresent();
 
   /// Translate the given location to an llvm debug location.
   llvm::DILocation *translateLoc(Location loc, llvm::DILocalScope *scope);
@@ -104,6 +104,7 @@ private:
   /// corresponding type.
   llvm::TempDICompositeType translateTemporaryImpl(DICompositeTypeAttr attr);
   llvm::TempDISubprogram translateTemporaryImpl(DISubprogramAttr attr);
+  llvm::TempDICompileUnit translateTemporaryImpl(DICompileUnitAttr attr);
 
   /// Constructs a string metadata node from the string attribute. Returns
   /// nullptr if `stringAttr` is null or contains and empty string.

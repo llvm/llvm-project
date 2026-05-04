@@ -15,9 +15,9 @@ target triple = "nvptx-nvidia-cuda"
 define ptx_kernel void @foo(ptr %a, ptr %b) {
 ; Expect one load -- @myconst isn't loaded from, because we know its value
 ; statically.
-; CHECK: ld.global.u32
-; CHECK: st.global.u32
-; CHECK: st.global.u32
+; CHECK: ld.global.b32
+; CHECK: st.global.b32
+; CHECK: st.global.b32
   %ld1 = load i32, ptr @myglobal
   %ld2 = load i32, ptr @myconst
   store i32 %ld1, ptr %a

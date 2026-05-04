@@ -32,6 +32,8 @@ posix_defines = [
     "BACKTRACE_HEADER=<execinfo.h>",
     r'LTDL_SHLIB_EXT=\".so\"',
     r'LLVM_PLUGIN_EXT=\".so\"',
+    "LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS=1",
+    "LLVM_ENABLE_PLUGINS=1",
     "LLVM_ENABLE_THREADS=1",
     "HAVE_DEREGISTER_FRAME=1",
     "HAVE_LIBPTHREAD=1",
@@ -42,6 +44,7 @@ posix_defines = [
     "HAVE_SETENV_R=1",
     "HAVE_STRERROR_R=1",
     "HAVE_SYSEXITS_H=1",
+    "HAVE_SYS_IOCTL_H=1",
     "HAVE_UNISTD_H=1",
 ]
 
@@ -102,6 +105,7 @@ llvm_config_defines = os_defines + builtin_thread_pointer + select({
     "@bazel_tools//src/conditions:darwin_x86_64": native_arch_defines("X86", "x86_64-unknown-darwin"),
     "@bazel_tools//src/conditions:linux_aarch64": native_arch_defines("AArch64", "aarch64-unknown-linux-gnu"),
     "@bazel_tools//src/conditions:linux_ppc64le": native_arch_defines("PowerPC", "powerpc64le-unknown-linux-gnu"),
+    "@bazel_tools//src/conditions:linux_riscv64": native_arch_defines("RISCV", "riscv64-unknown-linux-gnu"),
     "@bazel_tools//src/conditions:linux_s390x": native_arch_defines("SystemZ", "systemz-unknown-linux_gnu"),
     "//conditions:default": native_arch_defines("X86", "x86_64-unknown-linux-gnu"),
 }) + [
@@ -109,6 +113,7 @@ llvm_config_defines = os_defines + builtin_thread_pointer + select({
     "LLVM_VERSION_MINOR={}".format(LLVM_VERSION_MINOR),
     "LLVM_VERSION_PATCH={}".format(LLVM_VERSION_PATCH),
     r'LLVM_VERSION_STRING=\"{}\"'.format(PACKAGE_VERSION),
+    # Set globally in HandleLLVMOptions.cmake
     # These shouldn't be needed by the C++11 standard, but are for some
     # platforms (e.g. glibc < 2.18. See
     # https://sourceware.org/bugzilla/show_bug.cgi?id=15366). These are also

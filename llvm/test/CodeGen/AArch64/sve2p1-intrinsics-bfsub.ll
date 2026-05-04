@@ -46,7 +46,7 @@ define <vscale x 8 x bfloat> @bfsub_u(<vscale x 8 x bfloat> %a, <vscale x 8 x bf
 define <vscale x 8 x bfloat> @bfsub_u_zeroing(<vscale x 8 x i1> %pg, <vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
 ; CHECK-LABEL: bfsub_u_zeroing:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.h, #0 // =0x0
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    sel z0.h, p0, z0.h, z2.h
 ; CHECK-NEXT:    bfsub z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    ret

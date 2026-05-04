@@ -14,7 +14,9 @@
 #define LLVM_EXECUTIONENGINE_ORC_SYMBOLSTRINGPOOL_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/Support/Compiler.h"
 #include <atomic>
 #include <mutex>
 
@@ -35,7 +37,8 @@ class SymbolStringPool {
   friend class SymbolStringPoolEntryUnsafe;
 
   // Implemented in DebugUtils.h.
-  friend raw_ostream &operator<<(raw_ostream &OS, const SymbolStringPool &SSP);
+  LLVM_ABI friend raw_ostream &operator<<(raw_ostream &OS,
+                                          const SymbolStringPool &SSP);
 
 public:
   /// Destroy a SymbolStringPool.
@@ -69,6 +72,7 @@ private:
 /// from nullptr to enable comparison with these values.
 class SymbolStringPtrBase {
   friend class SymbolStringPool;
+  friend class SymbolStringPoolEntryUnsafe;
   friend struct DenseMapInfo<SymbolStringPtr>;
   friend struct DenseMapInfo<NonOwningSymbolStringPtr>;
 
@@ -92,8 +96,8 @@ public:
     return LHS.S < RHS.S;
   }
 
-  friend raw_ostream &operator<<(raw_ostream &OS,
-                                 const SymbolStringPtrBase &Sym);
+  LLVM_ABI friend raw_ostream &operator<<(raw_ostream &OS,
+                                          const SymbolStringPtrBase &Sym);
 
 #ifndef NDEBUG
   // Returns true if the pool entry's ref count is above zero (or if the entry
@@ -202,7 +206,7 @@ public:
   SymbolStringPoolEntryUnsafe(PoolEntry *E) : E(E) {}
 
   /// Create an unsafe pool entry ref without changing the ref-count.
-  static SymbolStringPoolEntryUnsafe from(const SymbolStringPtr &S) {
+  static SymbolStringPoolEntryUnsafe from(const SymbolStringPtrBase &S) {
     return S.S;
   }
 
@@ -311,6 +315,13 @@ inline bool SymbolStringPool::empty() const {
 inline size_t
 SymbolStringPool::getRefCount(const SymbolStringPtrBase &S) const {
   return S.getRefCount();
+}
+
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const SymbolStringPtrBase &Sym);
+
+inline hash_code hash_value(const orc::SymbolStringPtrBase &S) {
+  return hash_value(orc::SymbolStringPoolEntryUnsafe::from(S).rawPtr());
 }
 
 } // end namespace orc

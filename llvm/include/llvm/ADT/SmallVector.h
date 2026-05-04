@@ -14,6 +14,8 @@
 #ifndef LLVM_ADT_SMALLVECTOR_H
 #define LLVM_ADT_SMALLVECTOR_H
 
+#include "llvm/ADT/ADL.h"
+#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/Support/Compiler.h"
 #include <algorithm>
 #include <cassert>
@@ -36,10 +38,13 @@ template <typename T> class ArrayRef;
 
 template <typename IteratorT> class iterator_range;
 
+template <class Iterator, class Tag>
+using HasIteratorTag = std::is_convertible<
+    typename std::iterator_traits<Iterator>::iterator_category, Tag>;
+
 template <class Iterator>
-using EnableIfConvertibleToInputIterator = std::enable_if_t<std::is_convertible<
-    typename std::iterator_traits<Iterator>::iterator_category,
-    std::input_iterator_tag>::value>;
+using EnableIfConvertibleToInputIterator =
+    std::enable_if_t<HasIteratorTag<Iterator, std::input_iterator_tag>::value>;
 
 /// This is all the stuff common to all SmallVectors.
 ///
@@ -66,13 +71,13 @@ protected:
   /// This is a helper for \a grow() that's out of line to reduce code
   /// duplication.  This function will report a fatal error if it can't grow at
   /// least to \p MinSize.
-  void *mallocForGrow(void *FirstEl, size_t MinSize, size_t TSize,
-                      size_t &NewCapacity);
+  LLVM_ABI void *mallocForGrow(void *FirstEl, size_t MinSize, size_t TSize,
+                               size_t &NewCapacity);
 
   /// This is an implementation of the grow() method which only works
   /// on POD-like data types and is out of line to reduce code duplication.
   /// This function will report a fatal error if it cannot increase capacity.
-  void grow_pod(void *FirstEl, size_t MinSize, size_t TSize);
+  LLVM_ABI void grow_pod(void *FirstEl, size_t MinSize, size_t TSize);
 
 public:
   size_t size() const { return Size; }
@@ -198,30 +203,34 @@ protected:
   }
 
   /// Check whether any part of the range will be invalidated by clearing.
-  void assertSafeToReferenceAfterClear(const T *From, const T *To) {
-    if (From == To)
-      return;
-    this->assertSafeToReferenceAfterResize(From, 0);
-    this->assertSafeToReferenceAfterResize(To - 1, 0);
+  template <class ItTy>
+  void assertSafeToReferenceAfterClear(ItTy From, ItTy To) {
+    if constexpr (std::is_pointer_v<ItTy> &&
+                  std::is_same_v<
+                      std::remove_const_t<std::remove_pointer_t<ItTy>>,
+                      std::remove_const_t<T>>) {
+      if (From == To)
+        return;
+      this->assertSafeToReferenceAfterResize(From, 0);
+      this->assertSafeToReferenceAfterResize(To - 1, 0);
+    }
+    (void)From;
+    (void)To;
   }
-  template <
-      class ItTy,
-      std::enable_if_t<!std::is_same<std::remove_const_t<ItTy>, T *>::value,
-                       bool> = false>
-  void assertSafeToReferenceAfterClear(ItTy, ItTy) {}
 
   /// Check whether any part of the range will be invalidated by growing.
-  void assertSafeToAddRange(const T *From, const T *To) {
-    if (From == To)
-      return;
-    this->assertSafeToAdd(From, To - From);
-    this->assertSafeToAdd(To - 1, To - From);
+  template <class ItTy> void assertSafeToAddRange(ItTy From, ItTy To) {
+    if constexpr (std::is_pointer_v<ItTy> &&
+                  std::is_same_v<std::remove_cv_t<std::remove_pointer_t<ItTy>>,
+                                 T>) {
+      if (From == To)
+        return;
+      this->assertSafeToAdd(From, To - From);
+      this->assertSafeToAdd(To - 1, To - From);
+    }
+    (void)From;
+    (void)To;
   }
-  template <
-      class ItTy,
-      std::enable_if_t<!std::is_same<std::remove_const_t<ItTy>, T *>::value,
-                       bool> = false>
-  void assertSafeToAddRange(ItTy, ItTy) {}
 
   /// Reserve enough space to add one element, and return the updated element
   /// pointer in case it was a reference to the storage.
@@ -499,25 +508,22 @@ protected:
 
   /// Copy the range [I, E) onto the uninitialized memory
   /// starting with "Dest", constructing elements into it as needed.
-  template<typename It1, typename It2>
+  template <typename It1, typename It2>
   static void uninitialized_copy(It1 I, It1 E, It2 Dest) {
-    // Arbitrary iterator types; just use the basic implementation.
-    std::uninitialized_copy(I, E, Dest);
-  }
-
-  /// Copy the range [I, E) onto the uninitialized memory
-  /// starting with "Dest", constructing elements into it as needed.
-  template <typename T1, typename T2>
-  static void uninitialized_copy(
-      T1 *I, T1 *E, T2 *Dest,
-      std::enable_if_t<std::is_same<std::remove_const_t<T1>, T2>::value> * =
-          nullptr) {
-    // Use memcpy for PODs iterated by pointers (which includes SmallVector
-    // iterators): std::uninitialized_copy optimizes to memmove, but we can
-    // use memcpy here. Note that I and E are iterators and thus might be
-    // invalid for memcpy if they are equal.
-    if (I != E)
-      memcpy(reinterpret_cast<void *>(Dest), I, (E - I) * sizeof(T));
+    if constexpr (std::is_pointer_v<It1> && std::is_pointer_v<It2> &&
+                  std::is_same_v<
+                      std::remove_const_t<std::remove_pointer_t<It1>>,
+                      std::remove_pointer_t<It2>>) {
+      // Use memcpy for PODs iterated by pointers (which includes SmallVector
+      // iterators): std::uninitialized_copy optimizes to memmove, but we can
+      // use memcpy here. Note that I and E are iterators and thus might be
+      // invalid for memcpy if they are equal.
+      if (I != E)
+        std::memcpy(reinterpret_cast<void *>(Dest), I, (E - I) * sizeof(T));
+    } else {
+      // Arbitrary iterator types; just use the basic implementation.
+      std::uninitialized_copy(I, E, Dest);
+    }
   }
 
   /// Double the size of the allocated memory, guaranteeing space for at
@@ -560,7 +566,7 @@ protected:
 public:
   void push_back(ValueParamT Elt) {
     const T *EltPtr = reserveForParamAndGetAddress(Elt);
-    memcpy(reinterpret_cast<void *>(this->end()), EltPtr, sizeof(T));
+    std::memcpy(reinterpret_cast<void *>(this->end()), EltPtr, sizeof(T));
     this->set_size(this->size() + 1);
   }
 
@@ -681,11 +687,17 @@ public:
   /// Add the specified range to the end of the SmallVector.
   template <typename ItTy, typename = EnableIfConvertibleToInputIterator<ItTy>>
   void append(ItTy in_start, ItTy in_end) {
-    this->assertSafeToAddRange(in_start, in_end);
-    size_type NumInputs = std::distance(in_start, in_end);
-    this->reserve(this->size() + NumInputs);
-    this->uninitialized_copy(in_start, in_end, this->end());
-    this->set_size(this->size() + NumInputs);
+    if constexpr (HasIteratorTag<ItTy, std::forward_iterator_tag>::value) {
+      this->assertSafeToAddRange(in_start, in_end);
+      size_type NumInputs = std::distance(in_start, in_end);
+      this->reserve(this->size() + NumInputs);
+      this->uninitialized_copy(in_start, in_end, this->end());
+      this->set_size(this->size() + NumInputs);
+    } else {
+      // Input iterator, we can't know ahead how many elements we'll add.
+      for (; in_start != in_end; ++in_start)
+        this->emplace_back(*in_start);
+    }
   }
 
   /// Append \p NumInputs copies of \p Elt to the end.
@@ -733,6 +745,12 @@ public:
   }
 
   void assign(const SmallVectorImpl &RHS) { assign(RHS.begin(), RHS.end()); }
+
+  template <typename U,
+            typename = std::enable_if_t<std::is_convertible_v<U, T>>>
+  void assign(ArrayRef<U> AR) {
+    assign(AR.begin(), AR.end());
+  }
 
   iterator erase(const_iterator CI) {
     // Just cast away constness because this is a non-const member function.
@@ -879,6 +897,15 @@ public:
     if (I == this->end()) {  // Important special case for empty vector.
       append(From, To);
       return this->begin()+InsertElt;
+    }
+
+    if constexpr (!HasIteratorTag<ItTy, std::forward_iterator_tag>::value) {
+      // For input iterators, we don't know the number of elements to insert.
+      size_t OldSize = this->size();
+      append(From, To);
+      I = this->begin() + InsertElt; // Uninvalidate the iterator.
+      std::rotate(I, this->begin() + OldSize, this->end());
+      return I;
     }
 
     assert(this->isReferenceToStorage(I) && "Insertion iterator is out of bounds.");
@@ -1228,7 +1255,7 @@ public:
   }
 
   template <typename U,
-            typename = std::enable_if_t<std::is_convertible<U, T>::value>>
+            typename = std::enable_if_t<std::is_convertible_v<U, T>>>
   explicit SmallVector(ArrayRef<U> A) : SmallVectorImpl<T>(N) {
     this->append(A.begin(), A.end());
   }
@@ -1289,28 +1316,27 @@ inline size_t capacity_in_bytes(const SmallVector<T, N> &X) {
 
 template <typename RangeType>
 using ValueTypeFromRangeType =
-    std::remove_const_t<std::remove_reference_t<decltype(*std::begin(
-        std::declval<RangeType &>()))>>;
+    std::remove_const_t<detail::ValueOfRange<RangeType>>;
 
 /// Given a range of type R, iterate the entire range and return a
 /// SmallVector with elements of the vector.  This is useful, for example,
 /// when you want to iterate a range and then sort the results.
 template <unsigned Size, typename R>
 SmallVector<ValueTypeFromRangeType<R>, Size> to_vector(R &&Range) {
-  return {std::begin(Range), std::end(Range)};
+  return {adl_begin(Range), adl_end(Range)};
 }
 template <typename R>
 SmallVector<ValueTypeFromRangeType<R>> to_vector(R &&Range) {
-  return {std::begin(Range), std::end(Range)};
+  return {adl_begin(Range), adl_end(Range)};
 }
 
 template <typename Out, unsigned Size, typename R>
 SmallVector<Out, Size> to_vector_of(R &&Range) {
-  return {std::begin(Range), std::end(Range)};
+  return {adl_begin(Range), adl_end(Range)};
 }
 
 template <typename Out, typename R> SmallVector<Out> to_vector_of(R &&Range) {
-  return {std::begin(Range), std::end(Range)};
+  return {adl_begin(Range), adl_end(Range)};
 }
 
 // Explicit instantiations
@@ -1318,6 +1344,26 @@ extern template class llvm::SmallVectorBase<uint32_t>;
 #if SIZE_MAX > UINT32_MAX
 extern template class llvm::SmallVectorBase<uint64_t>;
 #endif
+
+// Provide DenseMapInfo for SmallVector of a type which has info.
+template <typename T, unsigned N> struct DenseMapInfo<llvm::SmallVector<T, N>> {
+  static SmallVector<T, N> getEmptyKey() {
+    return {DenseMapInfo<T>::getEmptyKey()};
+  }
+
+  static SmallVector<T, N> getTombstoneKey() {
+    return {DenseMapInfo<T>::getTombstoneKey()};
+  }
+
+  static unsigned getHashValue(const SmallVector<T, N> &V) {
+    return static_cast<unsigned>(hash_combine_range(V));
+  }
+
+  static bool isEqual(const SmallVector<T, N> &LHS,
+                      const SmallVector<T, N> &RHS) {
+    return LHS == RHS;
+  }
+};
 
 } // end namespace llvm
 

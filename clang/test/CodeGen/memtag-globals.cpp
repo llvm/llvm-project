@@ -25,8 +25,9 @@ void func() {
 // CHECK: @{{.*}}extra_global{{.*}} ={{.*}} sanitize_memtag
 // CHECK: @{{.*}}global{{.*}} ={{.*}} sanitize_memtag
 
-// CHECK:     @{{.*}}section_global{{.*}} =
-// CHECK-NOT: sanitize_memtag
+// This DOES NOT mean we are instrumenting the section global,
+// but we are ignoring it in AsmPrinter rather than in clang.
+// CHECK:     @{{.*}}section_global{{.*}} ={{.*}} sanitize_memtag
 // CHECK:     @{{.*}}attributed_global{{.*}} =
 // CHECK-NOT: sanitize_memtag
 // CHECK:     @{{.*}}disable_instrumentation_global{{.*}} =
@@ -35,7 +36,7 @@ void func() {
 // CHECK-NOT: sanitize_memtag
 
 // CHECK: @{{.*}}static_var{{.*}} ={{.*}} sanitize_memtag
-// CHECK: @{{.*}} = {{.*}} c"Hello, world!\00"{{.*}}
+// CHECK: @{{.*}} = {{.*}} c"Hello, world!\00"{{.*}} sanitize_memtag
 // CHECK: @{{.*}}external_global{{.*}} ={{.*}} sanitize_memtag
 
 // IGNORELIST: @{{.*}}extra_global{{.*}} ={{.*}} sanitize_memtag

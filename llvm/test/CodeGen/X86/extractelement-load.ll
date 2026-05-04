@@ -528,3 +528,73 @@ define i32 @main() nounwind {
   %r = add i32 %e1, %e2
   ret i32 %r
 }
+
+; A test for incorrect combine for single value extraction from VBROADCAST_LOAD.
+; Wrong combine makes the second call (%t8) use the stored result in the
+; previous instructions instead of %t4.
+declare <2 x float> @ccosf(<2 x float>)
+define dso_local <2 x float> @multiuse_of_single_value_from_vbroadcast_load(ptr %p, ptr %arr) nounwind {
+; X86-SSE2-LABEL: multiuse_of_single_value_from_vbroadcast_load:
+; X86-SSE2:       # %bb.0:
+; X86-SSE2-NEXT:    pushl %esi
+; X86-SSE2-NEXT:    subl $16, %esp
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-SSE2-NEXT:    movups 24(%esi), %xmm0
+; X86-SSE2-NEXT:    movups %xmm0, (%esp) # 16-byte Spill
+; X86-SSE2-NEXT:    movhps %xmm0, (%eax)
+; X86-SSE2-NEXT:    movaps 32(%esi), %xmm0
+; X86-SSE2-NEXT:    calll ccosf@PLT
+; X86-SSE2-NEXT:    movlps %xmm0, 32(%esi)
+; X86-SSE2-NEXT:    movups (%esp), %xmm0 # 16-byte Reload
+; X86-SSE2-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; X86-SSE2-NEXT:    calll ccosf@PLT
+; X86-SSE2-NEXT:    addl $16, %esp
+; X86-SSE2-NEXT:    popl %esi
+; X86-SSE2-NEXT:    retl
+;
+; X64-SSSE3-LABEL: multiuse_of_single_value_from_vbroadcast_load:
+; X64-SSSE3:       # %bb.0:
+; X64-SSSE3-NEXT:    pushq %rbx
+; X64-SSSE3-NEXT:    subq $16, %rsp
+; X64-SSSE3-NEXT:    movq %rsi, %rbx
+; X64-SSSE3-NEXT:    movddup {{.*#+}} xmm0 = mem[0,0]
+; X64-SSSE3-NEXT:    movapd %xmm0, (%rsp) # 16-byte Spill
+; X64-SSSE3-NEXT:    movlpd %xmm0, (%rdi)
+; X64-SSSE3-NEXT:    movaps 32(%rsi), %xmm0
+; X64-SSSE3-NEXT:    callq ccosf@PLT
+; X64-SSSE3-NEXT:    movlps %xmm0, 32(%rbx)
+; X64-SSSE3-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
+; X64-SSSE3-NEXT:    callq ccosf@PLT
+; X64-SSSE3-NEXT:    addq $16, %rsp
+; X64-SSSE3-NEXT:    popq %rbx
+; X64-SSSE3-NEXT:    retq
+;
+; X64-AVX-LABEL: multiuse_of_single_value_from_vbroadcast_load:
+; X64-AVX:       # %bb.0:
+; X64-AVX-NEXT:    pushq %rbx
+; X64-AVX-NEXT:    subq $16, %rsp
+; X64-AVX-NEXT:    movq %rsi, %rbx
+; X64-AVX-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
+; X64-AVX-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; X64-AVX-NEXT:    vmovlps %xmm0, (%rdi)
+; X64-AVX-NEXT:    vmovaps 32(%rsi), %xmm0
+; X64-AVX-NEXT:    callq ccosf@PLT
+; X64-AVX-NEXT:    vmovlps %xmm0, 32(%rbx)
+; X64-AVX-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
+; X64-AVX-NEXT:    callq ccosf@PLT
+; X64-AVX-NEXT:    addq $16, %rsp
+; X64-AVX-NEXT:    popq %rbx
+; X64-AVX-NEXT:    retq
+  %p1 = getelementptr [5 x <2 x float>], ptr %arr, i64 0, i64 3
+  %p2 = getelementptr inbounds [5 x <2 x float>], ptr %arr, i64 0, i64 4, i32 0
+  %t3 = load <4 x float>, ptr %p1, align 8
+  %t4 = shufflevector <4 x float> %t3, <4 x float> poison, <2 x i32> <i32 2, i32 3>
+  store <2 x float> %t4, ptr %p, align 16
+  %t5 = load <4 x float>, ptr %p2, align 32
+  %t6 = shufflevector <4 x float> %t5, <4 x float> poison, <2 x i32> <i32 0, i32 1>
+  %t7 = call <2 x float> @ccosf(<2 x float> %t6)
+  store <2 x float> %t7, ptr %p2, align 32
+  %t8 = call <2 x float> @ccosf(<2 x float> %t4)
+  ret <2 x float> %t8
+}

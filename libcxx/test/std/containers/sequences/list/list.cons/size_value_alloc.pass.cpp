@@ -8,7 +8,7 @@
 
 // <list>
 
-// list(size_type n, const T& value, const Allocator& = Allocator());
+// list(size_type n, const T& value, const Allocator& = Allocator()); // constexpr since C++26
 
 #include <list>
 #include <cassert>
@@ -17,7 +17,7 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     std::list<int> l(3, 2);
     assert(l.size() == 3);
@@ -75,6 +75,15 @@ int main(int, char**) {
     ++i;
     assert(*i == 2);
   }
+#endif
+
+  return true;
+}
+
+int main(int, char**) {
+  assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
 #endif
 
   return 0;

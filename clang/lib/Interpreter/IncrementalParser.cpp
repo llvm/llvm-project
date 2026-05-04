@@ -11,27 +11,38 @@
 //===----------------------------------------------------------------------===//
 
 #include "IncrementalParser.h"
+#include "IncrementalAction.h"
 
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclContextInternals.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Interpreter/PartialTranslationUnit.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Sema/Sema.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/Error.h"
 
 #include <sstream>
+
+#define DEBUG_TYPE "clang-repl"
 
 namespace clang {
 
 // IncrementalParser::IncrementalParser() {}
 
 IncrementalParser::IncrementalParser(CompilerInstance &Instance,
-                                     llvm::Error &Err)
-    : S(Instance.getSema()) {
+                                     IncrementalAction *Act, llvm::Error &Err,
+                                     std::list<PartialTranslationUnit> &PTUs)
+    : S(Instance.getSema()), Act(Act), PTUs(PTUs) {
   llvm::ErrorAsOutParameter EAO(&Err);
   Consumer = &S.getASTConsumer();
   P.reset(new Parser(S.getPreprocessor(), S, /*SkipBodies=*/false));
+
+  if (ExternalASTSource *External = S.getASTContext().getExternalSource())
+    External->StartTranslationUnit(Consumer);
+
   P->Initialize();
 }
 
@@ -41,8 +52,9 @@ llvm::Expected<TranslationUnitDecl *>
 IncrementalParser::ParseOrWrapTopLevelDecl() {
   // Recover resources if we crash before exiting this method.
   llvm::CrashRecoveryContextCleanupRegistrar<Sema> CleanupSema(&S);
-  Sema::GlobalEagerInstantiationScope GlobalInstantiations(S, /*Enabled=*/true);
-  Sema::LocalEagerInstantiationScope LocalInstantiations(S);
+  Sema::GlobalEagerInstantiationScope GlobalInstantiations(S, /*Enabled=*/true,
+                                                           /*AtEndOfTU=*/true);
+  Sema::LocalEagerInstantiationScope LocalInstantiations(S, /*AtEndOfTU=*/true);
 
   // Add a new PTU.
   ASTContext &C = S.getASTContext();
@@ -119,8 +131,17 @@ IncrementalParser::Parse(llvm::StringRef input) {
   SourceLocation NewLoc = SM.getLocForStartOfFile(SM.getMainFileID());
 
   // Create FileID for the current buffer.
-  FileID FID = SM.createFileID(std::move(MB), SrcMgr::C_User, /*LoadedID=*/0,
-                               /*LoadedOffset=*/0, NewLoc);
+  FileID FID;
+  // Create FileEntry and FileID for the current buffer.
+  FileEntryRef FE = SM.getFileManager().getVirtualFileRef(
+      SourceName.str(), InputSize, 0 /* mod time*/);
+  SM.overrideFileContents(FE, std::move(MB));
+
+  // Ensure HeaderFileInfo exists before lookup to prevent assertion
+  HeaderSearch &HS = PP.getHeaderSearchInfo();
+  HS.getFileInfo(FE);
+
+  FID = SM.createFileID(FE, NewLoc, SrcMgr::C_User);
 
   // NewLoc only used for diags.
   if (PP.EnterSourceFile(FID, /*DirLookup=*/nullptr, NewLoc))
@@ -172,10 +193,33 @@ void IncrementalParser::CleanUpPTU(TranslationUnitDecl *MostRecentTU) {
     }
   }
 
+  ExternCContextDecl *ECCD = S.getASTContext().getExternCContextDecl();
+  if (StoredDeclsMap *Map = ECCD->getPrimaryContext()->getLookupPtr()) {
+    for (auto &&[Key, List] : *Map) {
+      DeclContextLookupResult R = List.getLookupResult();
+      llvm::SmallVector<NamedDecl *, 4> NamedDeclsToRemove;
+      for (NamedDecl *D : R) {
+        // Implicitly generated C decl is not attached to the current TU but
+        // lexically attached to the recent TU, so we need to check the lexical
+        // context.
+        DeclContext *LDC = D->getLexicalDeclContext();
+        while (LDC && !isa<TranslationUnitDecl>(LDC))
+          LDC = LDC->getLexicalParent();
+        TranslationUnitDecl *TopTU = cast_or_null<TranslationUnitDecl>(LDC);
+        if (TopTU == MostRecentTU)
+          NamedDeclsToRemove.push_back(D);
+      }
+      for (NamedDecl *D : NamedDeclsToRemove) {
+        List.remove(D);
+        S.IdResolver.RemoveDecl(D);
+      }
+    }
+  }
+
   // FIXME: We should de-allocate MostRecentTU
   for (Decl *D : MostRecentTU->decls()) {
     auto *ND = dyn_cast<NamedDecl>(D);
-    if (!ND)
+    if (!ND || ND->getDeclName().isEmpty())
       continue;
     // Check if we need to clean up the IdResolver chain.
     if (ND->getDeclName().getFETokenInfo() && !D->getLangOpts().ObjC &&
@@ -184,4 +228,25 @@ void IncrementalParser::CleanUpPTU(TranslationUnitDecl *MostRecentTU) {
   }
 }
 
+PartialTranslationUnit &
+IncrementalParser::RegisterPTU(TranslationUnitDecl *TU,
+                               std::unique_ptr<llvm::Module> M /*={}*/) {
+  PTUs.emplace_back(PartialTranslationUnit());
+  PartialTranslationUnit &LastPTU = PTUs.back();
+  LastPTU.TUPart = TU;
+
+  if (!M)
+    M = Act->GenModule();
+
+  assert((!Act->getCodeGen() || M) && "Must have a llvm::Module at this point");
+
+  LastPTU.TheModule = std::move(M);
+  LLVM_DEBUG(llvm::dbgs() << "compile-ptu " << PTUs.size() - 1
+                          << ": [TU=" << LastPTU.TUPart);
+  if (LastPTU.TheModule)
+    LLVM_DEBUG(llvm::dbgs() << ", M=" << LastPTU.TheModule.get() << " ("
+                            << LastPTU.TheModule->getName() << ")");
+  LLVM_DEBUG(llvm::dbgs() << "]\n");
+  return LastPTU;
+}
 } // end namespace clang

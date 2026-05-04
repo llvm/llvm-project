@@ -25,6 +25,7 @@
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassTimingInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -155,6 +156,10 @@ void RegAllocBase::allocatePhysRegs() {
 
 void RegAllocBase::postOptimization() {
   spiller().postOptimization();
+
+  // Verify LiveRegMatrix after spilling (no dangling pointers).
+  assert(Matrix->isValid() && "LiveRegMatrix validation failed");
+
   for (auto *DeadInst : DeadRemats) {
     LIS->RemoveMachineInstrFromMaps(*DeadInst);
     DeadInst->eraseFromParent();
@@ -178,10 +183,8 @@ void RegAllocBase::cleanupFailedVReg(Register FailedReg, MCRegister PhysReg,
     for (MCRegAliasIterator Aliases(PhysReg, TRI, true); Aliases.isValid();
          ++Aliases) {
       for (MachineOperand &MO : MRI->reg_operands(*Aliases)) {
-        if (MO.readsReg()) {
+        if (MO.readsReg())
           MO.setIsUndef(true);
-          LIS->removeAllRegUnitsForPhysReg(MO.getReg());
-        }
       }
     }
   }
@@ -216,10 +219,9 @@ MCPhysReg RegAllocBase::getErrorAssignment(const TargetRegisterClass &RC,
 
   // Avoid printing the error for every single instance of the register. It
   // would be better if this were per register class.
-  bool EmitError = !MF.getProperties().hasProperty(
-      MachineFunctionProperties::Property::FailedRegAlloc);
+  bool EmitError = !MF.getProperties().hasFailedRegAlloc();
   if (EmitError)
-    MF.getProperties().set(MachineFunctionProperties::Property::FailedRegAlloc);
+    MF.getProperties().setFailedRegAlloc();
 
   const Function &Fn = MF.getFunction();
   LLVMContext &Context = Fn.getContext();

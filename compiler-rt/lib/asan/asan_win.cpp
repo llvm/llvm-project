@@ -279,6 +279,9 @@ uptr FindDynamicShadowStart() {
                           GetMmapGranularity());
 }
 
+// Not used
+void TryReExecWithoutASLR() {}
+
 void AsanCheckDynamicRTPrereqs() {}
 
 void AsanCheckIncompatibleRT() {}

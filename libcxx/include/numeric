@@ -142,15 +142,15 @@ template<class T>
 
 // [numeric.sat], saturation arithmetic
 template<class T>
-constexpr T add_sat(T x, T y) noexcept;                     // freestanding, Since C++26
+constexpr T saturating_add(T x, T y) noexcept;                // freestanding, Since C++26
 template<class T>
-constexpr T sub_sat(T x, T y) noexcept;                     // freestanding, Since C++26
+constexpr T saturating_sub(T x, T y) noexcept;                // freestanding, Since C++26
 template<class T>
-constexpr T mul_sat(T x, T y) noexcept;                     // freestanding, Since C++26
+constexpr T saturating_mul(T x, T y) noexcept;                // freestanding, Since C++26
 template<class T>
-constexpr T div_sat(T x, T y) noexcept;                     // freestanding, Since C++26
+constexpr T saturating_div(T x, T y) noexcept;                // freestanding, Since C++26
 template<class T, class U>
-constexpr T saturate_cast(U x) noexcept;                    // freestanding, Since C++26
+constexpr T saturating_cast(U x) noexcept;                    // freestanding, Since C++26
 
 }  // std
 
@@ -172,6 +172,7 @@ constexpr T saturate_cast(U x) noexcept;                    // freestanding, Sin
 #    include <__numeric/gcd_lcm.h>
 #    include <__numeric/inclusive_scan.h>
 #    include <__numeric/pstl.h>
+#    include <__numeric/ranges_iota.h>
 #    include <__numeric/reduce.h>
 #    include <__numeric/transform_exclusive_scan.h>
 #    include <__numeric/transform_inclusive_scan.h>

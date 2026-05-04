@@ -22,6 +22,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/SandboxIR/Instruction.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <iterator>
 #include <type_traits>
@@ -234,6 +235,9 @@ public:
   LLVM_DUMP_METHOD void dump() const;
 #endif
 };
+
+// Defined in Transforms/Vectorize/SandboxVectorizer/Interval.cpp
+extern template class LLVM_TEMPLATE_ABI Interval<Instruction>;
 
 } // namespace llvm::sandboxir
 

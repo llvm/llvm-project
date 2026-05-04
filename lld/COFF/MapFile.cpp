@@ -32,7 +32,6 @@
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "Writer.h"
-#include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Timer.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
@@ -75,10 +74,9 @@ static void sortUniqueSymbols(std::vector<Defined *> &syms,
 
   // Remove duplicate symbol pointers
   parallelSort(v, std::less<SortEntry>());
-  auto end = std::unique(v.begin(), v.end(),
-                         [](const SortEntry &a, const SortEntry &b) {
-                           return a.first == b.first;
-                         });
+  auto end = llvm::unique(v, [](const SortEntry &a, const SortEntry &b) {
+    return a.first == b.first;
+  });
   v.erase(end, v.end());
 
   // Sort by RVA then original order

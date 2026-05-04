@@ -26,7 +26,7 @@ _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
 // TODO: Find out how altivec changes things and allow vectorizations there too.
-#if _LIBCPP_STD_VER >= 14 && defined(_LIBCPP_CLANG_VER) && !defined(__ALTIVEC__)
+#if _LIBCPP_STD_VER >= 14 && defined(_LIBCPP_COMPILER_CLANG_BASED) && !defined(__ALTIVEC__)
 #  define _LIBCPP_HAS_ALGORITHM_VECTOR_UTILS 1
 #else
 #  define _LIBCPP_HAS_ALGORITHM_VECTOR_UTILS 0
@@ -51,20 +51,20 @@ struct __get_as_integer_type_impl;
 
 template <>
 struct __get_as_integer_type_impl<1> {
-  using type = uint8_t;
+  using type _LIBCPP_NODEBUG = uint8_t;
 };
 
 template <>
 struct __get_as_integer_type_impl<2> {
-  using type = uint16_t;
+  using type _LIBCPP_NODEBUG = uint16_t;
 };
 template <>
 struct __get_as_integer_type_impl<4> {
-  using type = uint32_t;
+  using type _LIBCPP_NODEBUG = uint32_t;
 };
 template <>
 struct __get_as_integer_type_impl<8> {
-  using type = uint64_t;
+  using type _LIBCPP_NODEBUG = uint64_t;
 };
 
 template <class _Tp>
@@ -114,16 +114,47 @@ template <class _VecT, class _Iter>
   }(make_index_sequence<__simd_vector_size_v<_VecT>>{});
 }
 
+// Load the first _Np elements, zero the rest
+_LIBCPP_DIAGNOSTIC_PUSH
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wpsabi")
+template <class _VecT, size_t _Np, class _Iter>
+[[__nodiscard__]] _LIBCPP_ALWAYS_INLINE _LIBCPP_HIDE_FROM_ABI _VecT __partial_load(_Iter __iter) noexcept {
+  return [=]<size_t... _LoadIndices, size_t... _ZeroIndices>(
+             index_sequence<_LoadIndices...>, index_sequence<_ZeroIndices...>) _LIBCPP_ALWAYS_INLINE noexcept {
+    return _VecT{__iter[_LoadIndices]..., ((void)_ZeroIndices, 0)...};
+  }(make_index_sequence<_Np>{}, make_index_sequence<__simd_vector_size_v<_VecT> - _Np>{});
+}
+
+// Create a vector where every elements is __val
+template <class _VecT>
+[[__nodiscard__]] _LIBCPP_ALWAYS_INLINE _LIBCPP_HIDE_FROM_ABI _VecT
+__broadcast(__simd_vector_underlying_type_t<_VecT> __val) {
+  return [&]<std::size_t... _Indices>(index_sequence<_Indices...>) {
+    return _VecT{((void)_Indices, __val)...};
+  }(make_index_sequence<__simd_vector_size_v<_VecT>>());
+}
+_LIBCPP_DIAGNOSTIC_POP
+
+template <class _Tp, size_t _Np>
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool __any_of(__simd_vector<_Tp, _Np> __vec) noexcept {
+  return __builtin_reduce_or(__builtin_convertvector(__vec, __simd_vector<bool, _Np>));
+}
+
 template <class _Tp, size_t _Np>
 [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool __all_of(__simd_vector<_Tp, _Np> __vec) noexcept {
   return __builtin_reduce_and(__builtin_convertvector(__vec, __simd_vector<bool, _Np>));
 }
 
 template <class _Tp, size_t _Np>
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool __none_of(__simd_vector<_Tp, _Np> __vec) noexcept {
+  return !__builtin_reduce_or(__builtin_convertvector(__vec, __simd_vector<bool, _Np>));
+}
+
+template <class _Tp, size_t _Np>
 [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI size_t __find_first_set(__simd_vector<_Tp, _Np> __vec) noexcept {
   using __mask_vec = __simd_vector<bool, _Np>;
 
-  // This has MSan disabled du to https://github.com/llvm/llvm-project/issues/85876
+  // This has MSan disabled du to https://llvm.org/PR85876
   auto __impl = [&]<class _MaskT>(_MaskT) _LIBCPP_NO_SANITIZE("memory") noexcept {
 #  if defined(_LIBCPP_BIG_ENDIAN)
     return std::min<size_t>(

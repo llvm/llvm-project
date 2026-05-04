@@ -336,7 +336,7 @@ template < unsigned > struct X {
   static const unsigned dimension = 3;
   template<unsigned dim=dimension>
   struct Y: Y<dim> { }; // expected-error{{base class has incomplete type}}
-                        // expected-note@-1{{definition of 'Y<dim>' is not complete until the closing '}'}}
+                        // expected-note@-1{{definition of 'PR11421::X::Y<dim>' is not complete until the closing '}'}}
 };
 typedef X<3> X3;
 X3::Y<>::iterator it; // expected-error {{no type named 'iterator' in 'PR11421::X<3>::Y<>'}}
@@ -458,3 +458,26 @@ namespace PR37680 {
   };
   int f(b<a> ba) { return ba.add<0>(); }
 }
+
+namespace TransformDependentTemplates {
+  template <class T> struct Test1 {
+    template <class T2>
+      using Arg = typename T::template Arg<T2>;
+    void f(Arg<void>);
+    void f(Arg<int>);
+  };
+} // namespace TransformDependentTemplates
+
+namespace TransformNestedName {
+  enum class S { kA };
+
+  template <class T> struct N {
+    using State = S;
+    template <typename T::template X<State::kA> = 0>
+    void F();
+  };
+
+  template <class T>
+  template <typename T::template X<N<T>::State::kA>>
+  inline void N<T>::F() {}
+} // namespace TransformNestedName

@@ -1,4 +1,4 @@
-//===--- StringConstructorCheck.cpp - clang-tidy---------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,23 +20,22 @@ namespace {
 AST_MATCHER_P(IntegerLiteral, isBiggerThan, unsigned, N) {
   return Node.getValue().getZExtValue() > N;
 }
+} // namespace
 
-const char DefaultStringNames[] =
+static const char DefaultStringNames[] =
     "::std::basic_string;::std::basic_string_view";
 
 static std::vector<StringRef>
 removeNamespaces(const std::vector<StringRef> &Names) {
   std::vector<StringRef> Result;
   Result.reserve(Names.size());
-  for (StringRef Name : Names) {
-    std::string::size_type ColonPos = Name.rfind(':');
+  for (const StringRef Name : Names) {
+    const std::string::size_type ColonPos = Name.rfind(':');
     Result.push_back(
         Name.substr(ColonPos == std::string::npos ? 0 : ColonPos + 1));
   }
   return Result;
 }
-
-} // namespace
 
 StringConstructorCheck::StringConstructorCheck(StringRef Name,
                                                ClangTidyContext *Context)
@@ -82,7 +81,8 @@ void StringConstructorCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       cxxConstructExpr(
           hasDeclaration(cxxMethodDecl(hasName("basic_string"))),
-          argumentCountIs(2), hasArgument(0, hasType(qualType(isInteger()))),
+          anyOf(argumentCountIs(2), argumentCountIs(3)),
+          hasArgument(0, hasType(qualType(isInteger()))),
           hasArgument(1, hasType(qualType(isInteger()))),
           anyOf(
               // Detect the expression: string('x', 40);
@@ -102,7 +102,10 @@ void StringConstructorCheck::registerMatchers(MatchFinder *Finder) {
       cxxConstructExpr(
           hasDeclaration(cxxConstructorDecl(ofClass(
               cxxRecordDecl(hasAnyName(removeNamespaces(StringNames)))))),
-          argumentCountIs(2), hasArgument(0, hasType(CharPtrType)),
+          anyOf(argumentCountIs(2),
+                allOf(argumentCountIs(3),
+                      hasArgument(2, unless(hasType(qualType(isInteger())))))),
+          hasArgument(0, hasType(CharPtrType)),
           hasArgument(1, hasType(isInteger())),
           anyOf(
               // Detect the expression: string("...", 0);
@@ -124,7 +127,8 @@ void StringConstructorCheck::registerMatchers(MatchFinder *Finder) {
       cxxConstructExpr(
           hasDeclaration(cxxConstructorDecl(ofClass(
               cxxRecordDecl(hasAnyName(removeNamespaces(StringNames)))))),
-          argumentCountIs(3), hasArgument(0, hasType(CharPtrType)),
+          anyOf(argumentCountIs(3), argumentCountIs(4)),
+          hasArgument(0, hasType(CharPtrType)),
           hasArgument(1, hasType(qualType(isInteger()))),
           hasArgument(2, hasType(qualType(isInteger()))),
           anyOf(
@@ -169,7 +173,7 @@ void StringConstructorCheck::check(const MatchFinder::MatchResult &Result) {
   const ASTContext &Ctx = *Result.Context;
   const auto *E = Result.Nodes.getNodeAs<CXXConstructExpr>("constructor");
   assert(E && "missing constructor expression");
-  SourceLocation Loc = E->getBeginLoc();
+  const SourceLocation Loc = E->getBeginLoc();
 
   if (Result.Nodes.getNodeAs<Expr>("swapped-parameter")) {
     const Expr *P0 = E->getArg(0);

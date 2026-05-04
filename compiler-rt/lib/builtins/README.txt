@@ -272,11 +272,6 @@ switch32
 switch8
 switchu8
 
-// This function generates a custom trampoline function with the specific
-// realFunc and localsPtr values.
-void __trampoline_setup(uint32_t* trampOnStack, int trampSizeAllocated,
-                        const void* realFunc, void* localsPtr);
-
 // There is no C interface to the *_vfp_d8_d15_regs functions.  There are
 // called in the prolog and epilog of Thumb1 functions.  When the C++ ABI use
 // SJLJ for exceptions, each function with a catch clause or destructors needs

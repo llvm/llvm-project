@@ -20,13 +20,22 @@
 namespace llvm {
 class FunctionPass;
 class InstructionSelector;
+class ModulePass;
 class PassRegistry;
 class RISCVRegisterBankInfo;
 class RISCVSubtarget;
 class RISCVTargetMachine;
 
-FunctionPass *createRISCVCodeGenPreparePass();
-void initializeRISCVCodeGenPreparePass(PassRegistry &);
+class RISCVCodeGenPreparePass : public PassInfoMixin<RISCVCodeGenPreparePass> {
+private:
+  const RISCVTargetMachine *TM;
+
+public:
+  RISCVCodeGenPreparePass(const RISCVTargetMachine *TM) : TM(TM) {}
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+};
+FunctionPass *createRISCVCodeGenPrepareLegacyPass();
+void initializeRISCVCodeGenPrepareLegacyPassPass(PassRegistry &);
 
 FunctionPass *createRISCVDeadRegisterDefinitionsPass();
 void initializeRISCVDeadRegisterDefinitionsPass(PassRegistry &);
@@ -39,6 +48,9 @@ void initializeRISCVLandingPadSetupPass(PassRegistry &);
 
 FunctionPass *createRISCVISelDag(RISCVTargetMachine &TM,
                                  CodeGenOptLevel OptLevel);
+
+FunctionPass *createRISCVLateBranchOptPass();
+void initializeRISCVLateBranchOptPass(PassRegistry &);
 
 FunctionPass *createRISCVMakeCompressibleOptPass();
 void initializeRISCVMakeCompressibleOptPass(PassRegistry &);
@@ -90,6 +102,9 @@ void initializeRISCVPushPopOptPass(PassRegistry &);
 FunctionPass *createRISCVLoadStoreOptPass();
 void initializeRISCVLoadStoreOptPass(PassRegistry &);
 
+FunctionPass *createRISCVPreAllocZilsdOptPass();
+void initializeRISCVPreAllocZilsdOptPass(PassRegistry &);
+
 FunctionPass *createRISCVZacasABIFixPass();
 void initializeRISCVZacasABIFixPass(PassRegistry &);
 
@@ -108,11 +123,16 @@ void initializeRISCVO0PreLegalizerCombinerPass(PassRegistry &);
 FunctionPass *createRISCVPreLegalizerCombiner();
 void initializeRISCVPreLegalizerCombinerPass(PassRegistry &);
 
+ModulePass *createRISCVPromoteConstantPass();
+void initializeRISCVPromoteConstantPass(PassRegistry &);
+
 FunctionPass *createRISCVVLOptimizerPass();
 void initializeRISCVVLOptimizerPass(PassRegistry &);
 
 FunctionPass *createRISCVVMV0EliminationPass();
 void initializeRISCVVMV0EliminationPass(PassRegistry &);
+
+void initializeRISCVAsmPrinterPass(PassRegistry &);
 } // namespace llvm
 
 #endif

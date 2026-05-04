@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i386-apple-darwin10 -analyze -analyzer-config eagerly-assume=false  -analyzer-checker=core.uninitialized.Assign,debug.ExprInspection -verify %s
+// RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 -analyzer-config eagerly-assume=false  -analyzer-checker=core.uninitialized.Assign,debug.ExprInspection -verify %s
 
 void clang_analyzer_eval(int);
 

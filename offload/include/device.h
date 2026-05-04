@@ -33,8 +33,12 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 
+#include "GlobalHandler.h"
 #include "PluginInterface.h"
+
 using GenericPluginTy = llvm::omp::target::plugin::GenericPluginTy;
+using DeviceInfo = llvm::omp::target::plugin::DeviceInfo;
+using InfoTreeNode = llvm::omp::target::plugin::InfoTreeNode;
 
 // Forward declarations.
 struct __tgt_bin_desc;
@@ -98,6 +102,10 @@ struct DeviceTy {
   int32_t dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
                        int64_t Size, AsyncInfoTy &AsyncInfo);
 
+  // Insert a data fence between previous data operations and the following
+  // operations if necessary for the device.
+  int32_t dataFence(AsyncInfoTy &AsyncInfo);
+
   /// Notify the plugin about a new mapping starting at the host address
   /// \p HstPtr and \p Size bytes.
   int32_t notifyDataMapped(void *HstPtr, int64_t Size);
@@ -109,6 +117,7 @@ struct DeviceTy {
   // Launch the kernel identified by \p TgtEntryPtr with the given arguments.
   int32_t launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
                        ptrdiff_t *TgtOffsets, KernelArgsTy &KernelArgs,
+                       KernelExtraArgsTy *KernelExtraArgs,
                        AsyncInfoTy &AsyncInfo);
 
   /// Synchronize device/queue/event based on \p AsyncInfo and return
@@ -152,11 +161,28 @@ struct DeviceTy {
   /// Ask the device whether the runtime should use auto zero-copy.
   bool useAutoZeroCopy();
 
+  /// Ask the device whether the storage is accessible.
+  bool isAccessiblePtr(const void *Ptr, size_t Size);
+
   /// Check if there are pending images for this device.
   bool hasPendingImages() const { return HasPendingImages; }
 
   /// Indicate that there are pending images for this device or not.
   void setHasPendingImages(bool V) { HasPendingImages = V; }
+
+  /// Get information from the device.
+  template <typename T> T getInfo(DeviceInfo Info) const {
+    InfoTreeNode DevInfo = RTL->obtain_device_info(RTLDeviceID);
+
+    auto EntryOpt = DevInfo.get(Info);
+    if (!EntryOpt)
+      return 0;
+
+    auto Entry = *EntryOpt;
+    if (!std::holds_alternative<T>(Entry->Value))
+      return T{};
+    return std::get<T>(Entry->Value);
+  }
 
 private:
   /// Deinitialize the device (and plugin).

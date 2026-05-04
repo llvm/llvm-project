@@ -1,0 +1,23 @@
+// RUN: cir-opt %s -cir-to-llvm -o %t.cir
+
+!u32i = !cir.int<u, 32>
+!u8i = !cir.int<u, 8>
+!void = !cir.void
+
+module {
+
+cir.global "private" constant external @_ZTIi : !cir.ptr<!u8i>
+
+cir.func private @exception_handling_type_id() {
+  %type_id = cir.eh.typeid @_ZTIi
+  cir.return
+}
+
+// CHECK: llvm.func @exception_handling_type_id() attributes {sym_visibility = "private"} {
+// CHECK:   %[[GV_ADDR_OF:.*]] = llvm.mlir.addressof @_ZTIi : !llvm.ptr
+// CHECK:   %[[TYPE_ID:.*]] = llvm.intr.eh.typeid.for %[[GV_ADDR_OF]] : (!llvm.ptr) -> i32
+// CHECK:   llvm.return
+// CHECK: }
+
+}
+

@@ -366,6 +366,9 @@ subs x20, x30, sym@PAGEOFF
 ; CHECK-ERRORS: subs x20, x30, sym@PAGEOFF
 ; CHECK-ERRORS:                ^
 
+add w3, w5, sym@PAGEOFF - 3-2
+; CHECK-ERRORS: [[#@LINE-1]]:28: error: unexpected token in argument list
+
 tbl v0.8b, { v1 }, v0.8b
 tbl v0.16b, { v1.8b, v2.8b, v3.8b }, v0.16b
 tbx v3.16b, { v12.8b, v13.8b, v14.8b }, v6.8b

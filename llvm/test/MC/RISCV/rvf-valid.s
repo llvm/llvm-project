@@ -18,8 +18,8 @@ flw f1, +4(ra)
 # CHECK-ASM-AND-OBJ: flw ft2, -2048(a3)
 # CHECK-ASM: encoding: [0x07,0xa1,0x06,0x80]
 flw f2, -2048(x13)
-# CHECK-ASM-AND-OBJ: flw ft3, -2048(s1)
-# CHECK-ASM: encoding: [0x87,0xa1,0x04,0x80]
+# CHECK-ASM: flw ft3, %lo(2048)(s1)  # encoding: [0x87,0xa1,0bAAAA0100,A]
+# CHECK-OBJ: flw ft3, -2048(s1)
 flw f3, %lo(2048)(s1)
 # CHECK-ASM-AND-OBJ: flw ft4, 2047(s2)
 # CHECK-ASM: encoding: [0x07,0x22,0xf9,0x7f]
@@ -34,8 +34,8 @@ fsw f6, 2047(s4)
 # CHECK-ASM-AND-OBJ: fsw ft7, -2048(s5)
 # CHECK-ASM: encoding: [0x27,0xa0,0x7a,0x80]
 fsw f7, -2048(s5)
-# CHECK-ASM-AND-OBJ: fsw fs0, -2048(s6)
-# CHECK-ASM: encoding: [0x27,0x20,0x8b,0x80]
+# CHECK-ASM: fsw fs0, %lo(2048)(s6)  # encoding: [0x27'A',0x20'A',0x8b'A',A]
+# CHECK-OBJ: fsw fs0, -2048(s6)
 fsw f8, %lo(2048)(s6)
 # CHECK-ASM-AND-OBJ: fsw fs1, 999(s7)
 # CHECK-ASM: encoding: [0xa7,0xa3,0x9b,0x3e]

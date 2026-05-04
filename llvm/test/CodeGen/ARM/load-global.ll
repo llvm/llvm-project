@@ -43,7 +43,7 @@ define i32 @test1() {
 ; LINUX: ldr r0, .LCPI0_0
 ; LINUX: ldr r0, [pc, r0]
 ; LINUX: ldr r0, [r0]
-; LINUX: .long G(GOT_PREL)-((.LPC0_0+8)-.Ltmp0)
+; LINUX: .long G(GOT_PREL)-(.LPC0_0+8-.Ltmp0)
 
 ; LINUX_T: ldr r0, .LCPI0_0
 ; LINUX_T: add r0, pc

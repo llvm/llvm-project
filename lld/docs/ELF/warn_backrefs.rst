@@ -11,8 +11,8 @@ so far. When encountering an archive or an object file surrounded by
 symbol definitions; this may result in input files being loaded, updating the
 set of undefined symbol references. When all resolving definitions have been
 loaded from the archive, the linker moves on the next file and will not return
-to it.  This means that if an input file to the right of a archive cannot have
-an undefined symbol resolved by a archive to the left of it. For example:
+to it.  This means that if an input file to the right of an archive cannot have
+an undefined symbol resolved by an archive to the left of it. For example:
 
     ld def.a ref.o
 

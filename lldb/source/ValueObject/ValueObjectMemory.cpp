@@ -32,8 +32,11 @@ using namespace lldb_private;
 ValueObjectSP ValueObjectMemory::Create(ExecutionContextScope *exe_scope,
                                         llvm::StringRef name,
                                         const Address &address,
-                                        lldb::TypeSP &type_sp) {
-  auto manager_sp = ValueObjectManager::Create();
+                                        lldb::TypeSP &type_sp,
+                                        ValueObject *parent) {
+
+  std::shared_ptr<ValueObjectManager> manager_sp =
+      ValueObject::ReuseManagerIfParent(parent);
   return (new ValueObjectMemory(exe_scope, *manager_sp, name, address, type_sp))
       ->GetSP();
 }
@@ -41,8 +44,10 @@ ValueObjectSP ValueObjectMemory::Create(ExecutionContextScope *exe_scope,
 ValueObjectSP ValueObjectMemory::Create(ExecutionContextScope *exe_scope,
                                         llvm::StringRef name,
                                         const Address &address,
-                                        const CompilerType &ast_type) {
-  auto manager_sp = ValueObjectManager::Create();
+                                        const CompilerType &ast_type,
+                                        ValueObject *parent) {
+  std::shared_ptr<ValueObjectManager> manager_sp =
+      ValueObject::ReuseManagerIfParent(parent);
   return (new ValueObjectMemory(exe_scope, *manager_sp, name, address,
                                 ast_type))
       ->GetSP();
@@ -143,10 +148,14 @@ llvm::Expected<uint32_t> ValueObjectMemory::CalculateNumChildren(uint32_t max) {
   return *child_count <= max ? *child_count : max;
 }
 
-std::optional<uint64_t> ValueObjectMemory::GetByteSize() {
+llvm::Expected<uint64_t> ValueObjectMemory::GetByteSize() {
   ExecutionContext exe_ctx(GetExecutionContextRef());
-  if (m_type_sp)
-    return m_type_sp->GetByteSize(exe_ctx.GetBestExecutionContextScope());
+  if (m_type_sp) {
+    if (auto size =
+            m_type_sp->GetByteSize(exe_ctx.GetBestExecutionContextScope()))
+      return *size;
+    return llvm::createStringError("could not get byte size of memory object");
+  }
   return m_compiler_type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
 }
 

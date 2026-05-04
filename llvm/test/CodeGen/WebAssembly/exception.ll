@@ -207,7 +207,7 @@ invoke.cont2:                                     ; preds = %ehcleanup
 
 terminate:                                        ; preds = %ehcleanup
   %6 = cleanuppad within %5 []
-  call void @_ZSt9terminatev() [ "funclet"(token %6) ]
+  call void @_ZSt9terminatev() #2 [ "funclet"(token %6) ]
   unreachable
 }
 
@@ -469,9 +469,9 @@ unreachable:                                      ; preds = %rethrow
 ; }
 ;
 ; ~Temp() generates cleanupret, which is lowered to a 'throw_ref' later. That
-; throw_ref's argument should correctly target the top-level cleanuppad
-; (catch_all_ref). This is a regression test for the bug where we did not
-; compute throw_ref's argument correctly.
+; throw_ref's argument should correctly rethrow the exception caught by the
+; top-level cleanuppad (catch_all_ref). This is a regression test for the bug
+; where we did not compute throw_ref's argument correctly.
 
 ; CHECK-LABEL: inlined_cleanupret:
 ; CHECK: block     exnref
@@ -484,6 +484,7 @@ unreachable:                                      ; preds = %rethrow
 ; try_table (catch_all_ref 0)'s caught exception is stored in local 2
 ; CHECK:     local.set  2
 ; CHECK:     block
+; catch_all 0 dispatches to %terminate.i (the 'call _ZSt9terminatev' instruction).
 ; CHECK:       try_table    (catch_all 0)
 ; CHECK:         block
 ; CHECK:           block     i32
@@ -495,7 +496,8 @@ unreachable:                                      ; preds = %rethrow
 ; CHECK:           block     i32
 ; CHECK:             try_table    (catch_all_ref 5)
 ; CHECK:               try_table    (catch __cpp_exception 1)
-; Note that the throw_ref below targets the top-level catch_all_ref (local 2)
+; Note that the throw_ref below rethrows the exception caught by the top-level
+; catch_all_ref (local 2)
 ; CHECK:                 local.get  2
 ; CHECK:                 throw_ref
 ; CHECK:               end_try_table
@@ -542,7 +544,7 @@ invoke.cont.i:                                    ; preds = %catch.start.i
 
 terminate.i:                                      ; preds = %catch.start.i, %catch.dispatch.i
   %6 = cleanuppad within %0 []
-  call void @_ZSt9terminatev() [ "funclet"(token %6) ]
+  call void @_ZSt9terminatev() #2 [ "funclet"(token %6) ]
   unreachable
 
 _ZN4TempD2Ev.exit:                                ; preds = %invoke.cont.i
@@ -593,6 +595,56 @@ try.cont:                                         ; preds = %catch, %entry
   ret void
 }
 
+; Regression test for a bug where, when an invoke unwinds to a catchswitch, the
+; catchswitch's unwind destination was not included in the invoke's unwind
+; destination when there was no direct link from catch.start to there.
+
+; CHECK-LABEL: unwind_destinations:
+; CHECK: block
+; CHECK:   block
+; CHECK:     try_table    (catch_all 0)
+; CHECK:       block     i32
+; CHECK:         try_table    (catch __cpp_exception 0)
+; CHECK:           call  foo
+; CHECK:         end_try_table
+; CHECK:         unreachable
+; CHECK:       end_block
+; CHECK:       call  _ZSt9terminatev
+; CHECK:       unreachable
+; CHECK:     end_try_table
+; CHECK:     unreachable
+; CHECK:   end_block
+; Note the below is "terminate" BB and should not be DCE'd
+; CHECK:   call  _ZSt9terminatev
+; CHECK:   unreachable
+; CHECK: end_block
+define void @unwind_destinations() personality ptr @__gxx_wasm_personality_v0 {
+entry:
+  invoke void @foo()
+          to label %try.cont unwind label %catch.dispatch
+
+catch.dispatch:                                   ; preds = %entry
+  %0 = catchswitch within none [label %catch.start] unwind label %terminate
+
+catch.start:                                      ; preds = %catch.dispatch
+  %1 = catchpad within %0 [ptr null]
+  %2 = call ptr @llvm.wasm.get.exception(token %1)
+  %3 = call ptr @__cxa_begin_catch(ptr %2) #5 [ "funclet"(token %1) ]
+  call void @_ZSt9terminatev() #2 [ "funclet"(token %1) ]
+  unreachable
+
+; Even if there is no link from catch.start to this terminate BB, when there is
+; an exception that catch.start does not catch (e.g. a foreign exception), it
+; should end up here, so this BB should NOT be DCE'ed
+terminate:                                        ; preds = %catch.dispatch
+  %4 = cleanuppad within none []
+  call void @_ZSt9terminatev() #2 [ "funclet"(token %4) ]
+  unreachable
+
+try.cont:                                         ; preds = %entry
+  ret void
+}
+
 declare void @foo()
 declare void @bar(ptr)
 declare void @take_i32(i32)
@@ -618,5 +670,7 @@ declare ptr @_ZN4TempD2Ev(ptr returned)
 
 attributes #0 = { nounwind }
 attributes #1 = { noreturn }
+attributes #2 = { noreturn nounwind }
 
-; CHECK: __cpp_exception:
+;; The exception tag should not be defined locally
+; CHECK-NOT: __cpp_exception:

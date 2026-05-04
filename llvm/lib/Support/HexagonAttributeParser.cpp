@@ -14,31 +14,31 @@ const HexagonAttributeParser::DisplayHandler
     HexagonAttributeParser::DisplayRoutines[] = {
         {
             HexagonAttrs::ARCH,
-            &ELFAttributeParser::integerAttribute,
+            &ELFCompactAttrParser::integerAttribute,
         },
         {
             HexagonAttrs::HVXARCH,
-            &ELFAttributeParser::integerAttribute,
+            &ELFCompactAttrParser::integerAttribute,
         },
         {
             HexagonAttrs::HVXIEEEFP,
-            &ELFAttributeParser::integerAttribute,
+            &ELFCompactAttrParser::integerAttribute,
         },
         {
             HexagonAttrs::HVXQFLOAT,
-            &ELFAttributeParser::integerAttribute,
+            &ELFCompactAttrParser::integerAttribute,
         },
         {
             HexagonAttrs::ZREG,
-            &ELFAttributeParser::integerAttribute,
+            &ELFCompactAttrParser::integerAttribute,
         },
         {
             HexagonAttrs::AUDIO,
-            &ELFAttributeParser::integerAttribute,
+            &ELFCompactAttrParser::integerAttribute,
         },
         {
             HexagonAttrs::CABAC,
-            &ELFAttributeParser::integerAttribute,
+            &ELFCompactAttrParser::integerAttribute,
         }};
 
 Error HexagonAttributeParser::handler(uint64_t Tag, bool &Handled) {

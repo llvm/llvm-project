@@ -15,6 +15,7 @@ import tempfile
 import time
 from lldbsuite.test import configuration
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test.decorators import skipIfWasm
 from lldbsuite.support import seven
 from lldbgdbserverutils import *
 import logging
@@ -55,6 +56,7 @@ class GdbRemoteTestCaseFactory(type):
         return super(GdbRemoteTestCaseFactory, cls).__new__(cls, name, bases, newattrs)
 
 
+@skipIfWasm  # wasm uses runtime's GDB stub, not lldb-server
 class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
     # Default time out in seconds. The timeout is increased tenfold under Asan.
     DEFAULT_TIMEOUT = 20 * (10 if ("ASAN_OPTIONS" in os.environ) else 1)
@@ -185,6 +187,8 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
             ]
 
     def get_next_port(self):
+        if available_ports := self.getPlatformAvailablePorts():
+            return random.choice(available_ports)
         return 12000 + random.randint(0, 7999)
 
     def reset_test_sequence(self):
@@ -442,13 +446,20 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         if not exe_path:
             exe_path = self.getBuildArtifact("a.out")
 
-        args = []
+        # This file will be created once the inferior has enabled attaching.
+        sync_file_path = lldbutil.append_to_process_working_directory(
+            self, "process_ready"
+        )
+        args = [f"syncfile:{sync_file_path}"]
         if inferior_args:
             args.extend(inferior_args)
         if sleep_seconds:
             args.append("sleep:%d" % sleep_seconds)
 
-        return self.spawnSubprocess(exe_path, args)
+        inferior = self.spawnSubprocess(exe_path, args)
+        lldbutil.wait_for_file_on_target(self, sync_file_path)
+
+        return inferior
 
     def prep_debug_monitor_and_inferior(
         self,
@@ -682,7 +693,7 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         self.assertTrue("name" in reg_info)
         self.assertTrue("bitsize" in reg_info)
 
-        if not self.getArchitecture() == "aarch64":
+        if not (self.getArchitecture() == "aarch64" or self.isRISCV()):
             self.assertTrue("offset" in reg_info)
 
         self.assertTrue("encoding" in reg_info)
@@ -766,6 +777,7 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
                     "error",
                     "dirty-pages",
                     "type",
+                    "protection-key",
                 ],
             )
             self.assertIsNotNone(val)
@@ -922,6 +934,8 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         "QNonStop",
         "SupportedWatchpointTypes",
         "SupportedCompressions",
+        "MultiMemRead",
+        "jMultiBreakpoint",
     ]
 
     def parse_qSupported_response(self, context):

@@ -11,9 +11,9 @@
 ; CHECK: %[[#TStruct:]] = OpTypeStruct %[[#TInt8]] %[[#TInt32]] %[[#TInt8]] %[[#TInt8]]
 ; CHECK-NEXT: OpTypeStructContinuedINTEL %[[#TInt8]] %[[#TInt8]] %[[#TInt8]] %[[#TInt8]] %[[#TInt8]] %[[#TInt8]] %[[#TInt8]]{{$}}
 
-; CHECK-DAG: %[[#Const0:]] = OpConstant %[[#TInt8]] 0
-; CHECK-DAG: %[[#Const1:]] = OpConstant %[[#TInt8]] 1
-; CHECK-DAG: %[[#Const2:]] = OpConstant %[[#TInt32]] 2
+; CHECK-DAG: %[[#Const0:]] = OpConstantNull %[[#TInt8]]
+; CHECK-DAG: %[[#Const1:]] = OpConstant %[[#TInt8]] 1{{$}}
+; CHECK-DAG: %[[#Const2:]] = OpConstant %[[#TInt32]] 2{{$}}
 
 ; CHECK: OpCompositeConstruct %[[#TStruct]] %[[#Const1]] %[[#Const2]] %[[#Const0]] %[[#Const0]]
 ; CHECK-NEXT: OpCompositeConstructContinuedINTEL %[[#Const0]] %[[#Const0]] %[[#Const0]] %[[#Const0]] %[[#Const0]] %[[#Const0]] %[[#Const0]] %[[#Const0]]{{$}}

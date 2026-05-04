@@ -1,6 +1,7 @@
-// CHECK-FIXES: #include <QtCore/q20utility.h>
 // RUN: %check_clang_tidy -std=c++17 %s modernize-use-integer-sign-comparison %t -- \
 // RUN: -config="{CheckOptions: {modernize-use-integer-sign-comparison.EnableQtSupport: true}}"
+
+// CHECK-FIXES: #include <QtCore/q20utility.h>
 
 // The code that triggers the check
 #define MAX_MACRO(a, b) (a < b) ? b : a
@@ -113,6 +114,11 @@ int AllComparisons() {
         return 0;
 // CHECK-MESSAGES: :[[@LINE-2]]:9: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
 // CHECK-FIXES: if (q20::cmp_greater(uArray[6] , VALUE))
+
+    if (unsigned(uArray[7]) >= int(sArray[7]))
+        return 0;
+// CHECK-MESSAGES: :[[@LINE-2]]:9: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
+// CHECK-FIXES: if (q20::cmp_greater_equal(uArray[7],sArray[7]))
 
 
     FuncParameters(uVar);

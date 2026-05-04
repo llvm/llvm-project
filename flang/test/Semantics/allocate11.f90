@@ -163,6 +163,7 @@ subroutine C938_C947(var2, ptr, ptr2, fptr, my_team, srca)
   allocate(var2(2)[5:*], MOLD=my_team)
   !ERROR: SOURCE or MOLD expression type must not be C_PTR or C_FUNPTR from ISO_C_BINDING when an allocatable object is a coarray
   allocate(var2(2)[5:*], MOLD=ptr)
+  !ERROR: Allocation has extent 2 on dimension 1, but SOURCE= has extent 9
   !ERROR: SOURCE or MOLD expression type must not be C_PTR or C_FUNPTR from ISO_C_BINDING when an allocatable object is a coarray
   allocate(var2(2)[5:*], SOURCE=ptr2)
   !ERROR: SOURCE or MOLD expression type must not be C_PTR or C_FUNPTR from ISO_C_BINDING when an allocatable object is a coarray

@@ -10,11 +10,11 @@
 // CHECK: @"OBJC_IVAR_$_I5._iv5" = global i64 14, section "__DATA, __objc_ivar", align 8
 // CHECK: _OBJC_CLASS_RO_$_I5" = internal global {{.*}} { i32 0, i32 14, i32 24, {{.*}}
 // CHECK: @"OBJC_IVAR_$_I6.iv0" = global i64 0, section "__DATA, __objc_ivar", align 8
-// CHECK: _OBJC_CLASS_RO_$_I6" = internal global {{.*}} { i32 2, i32 0, i32 1, {{.*}}
+// CHECK: _OBJC_CLASS_RO_$_I6" = internal global {{.*}} { i32 0, i32 0, i32 1, {{.*}}
 // CHECK: @"OBJC_IVAR_$_I8.b" = global i64 8, section "__DATA, __objc_ivar", align 8
 // CHECK: _OBJC_CLASS_RO_$_I8" = internal global {{.*}} { i32 0, i32 8, i32 16, {{.*}}
 // CHECK: @"OBJC_IVAR_$_I9.iv0" = global i64 0, section "__DATA, __objc_ivar", align 8
-// CHECK: _OBJC_CLASS_RO_$_I9" = internal global {{.*}} { i32 2, i32 0, i32 4, {{.*}}
+// CHECK: _OBJC_CLASS_RO_$_I9" = internal global {{.*}} { i32 0, i32 0, i32 4, {{.*}}
 // CHECK: @"OBJC_IVAR_$_I10.iv1" = global i64 4, section "__DATA, __objc_ivar", align 8
 // CHECK: _OBJC_CLASS_RO_$_I10" = internal global {{.*}} { i32 0, i32 4, i32 5, {{.*}}
 // CHECK: _OBJC_CLASS_RO_$_I11" = internal global {{.*}} { i32 0, i32 5, i32 5, {{.*}}
@@ -28,11 +28,15 @@
     gcc -m64 -S -o - interface-layout-64.m | grep '^l{{.*}}_CLASS_RO_$_I[0-9]*' -A 3
  */
 
+@interface SuperClass
+@end
+
 struct s0 {
   double x;
 };
 
-@interface I2 {
+
+@interface I2 : SuperClass {
   struct s0 _iv1;
 }
 @end
@@ -74,7 +78,7 @@ struct s0 {
 @end
 
 // The size rounds up to the next available byte.
-@interface I6 {
+@interface I6 : SuperClass {
   unsigned iv0 : 2;
 }
 @end
@@ -82,7 +86,7 @@ struct s0 {
 @end
 
 // The start of the subclass includes padding for its own alignment.
-@interface I7 {
+@interface I7 : SuperClass {
   char a;
 }
 @end
@@ -94,7 +98,7 @@ struct s0 {
 @end
 
 // Padding bit-fields
-@interface I9 {
+@interface I9 : SuperClass {
   unsigned iv0 : 2;
   unsigned : 0;
 }

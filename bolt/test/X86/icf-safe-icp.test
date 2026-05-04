@@ -15,7 +15,6 @@
 # SAFEICFCHECK: skipping function with reference taken Derived3Func
 # SAFEICFCHECK-NEXT: ICF iteration 1
 # SAFEICFCHECK-NEXT: folding Derived3Destructor into Derived2Destructor
-# SAFEICFCHECK-NEXT: ===---------
 
 
 ## generate profile

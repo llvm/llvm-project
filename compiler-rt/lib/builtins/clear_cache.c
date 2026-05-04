@@ -59,11 +59,14 @@ uintptr_t GetCurrentProcess(void);
 // specified range.
 
 void __clear_cache(void *start, void *end) {
-#if __i386__ || __x86_64__ || defined(_M_IX86) || defined(_M_X64)
+#if defined(_WIN32) &&                                                         \
+    (defined(__arm__) || defined(__aarch64__) || defined(__arm64ec__))
+  FlushInstructionCache(GetCurrentProcess(), start, end - start);
+#elif __i386__ || __x86_64__ || defined(_M_IX86) || defined(_M_X64)
 // Intel processors have a unified instruction and data cache
 // so there is nothing to do
-#elif defined(_WIN32) && (defined(__arm__) || defined(__aarch64__))
-  FlushInstructionCache(GetCurrentProcess(), start, end - start);
+#elif defined(__s390__)
+// no-op
 #elif defined(__arm__) && !defined(__APPLE__)
 #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
   struct arm_sync_icache_args arg;
@@ -201,6 +204,24 @@ void __clear_cache(void *start, void *end) {
   sysarch(RISCV_SYNC_ICACHE, &arg);
 #elif defined(__ve__)
   __asm__ volatile("fencec 2");
+#elif defined(__hexagon__)
+  // Hexagon has separate instruction and data caches.
+  const size_t line_size = __GCC_DESTRUCTIVE_SIZE;
+  const uintptr_t mask = ~(line_size - 1);
+  const uintptr_t start_line = (uintptr_t)start & mask;
+  const uintptr_t end_addr = (uintptr_t)end;
+
+  // Clean and invalidate data cache to push new code to memory and
+  // invalidate stale lines in the L2 cache.
+  for (uintptr_t addr = start_line; addr < end_addr; addr += line_size)
+    __builtin_HEXAGON_Y2_dccleaninva((void *)addr);
+
+  // Invalidate instruction cache so it re-fetches from memory.
+  for (uintptr_t addr = start_line; addr < end_addr; addr += line_size)
+    __asm__ volatile("icinva(%[a])" : : [a] "r"((void *)addr));
+
+  // Instruction sync barrier ensures subsequent fetches see the new code.
+  __asm__ volatile("isync");
 #else
 #if __APPLE__
   // On Darwin, sys_icache_invalidate() provides this functionality

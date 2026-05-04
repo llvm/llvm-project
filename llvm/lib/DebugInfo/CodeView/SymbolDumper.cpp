@@ -335,6 +335,22 @@ Error CVSymbolDumperImpl::visitKnownRecord(
 }
 
 Error CVSymbolDumperImpl::visitKnownRecord(
+    CVSymbol &CVR, DefRangeRegisterRelIndirSym &DefRangeRegisterRelIndir) {
+  W.printEnum("BaseRegister", uint16_t(DefRangeRegisterRelIndir.Hdr.Register),
+              getRegisterNames(CompilationCPUType));
+  W.printBoolean("HasSpilledUDTMember",
+                 DefRangeRegisterRelIndir.hasSpilledUDTMember());
+  W.printNumber("OffsetInParent", DefRangeRegisterRelIndir.offsetInParent());
+  W.printNumber("BasePointerOffset",
+                DefRangeRegisterRelIndir.Hdr.BasePointerOffset);
+  W.printNumber("OffsetInUDT", DefRangeRegisterRelIndir.Hdr.OffsetInUdt);
+  printLocalVariableAddrRange(DefRangeRegisterRelIndir.Range,
+                              DefRangeRegisterRelIndir.getRelocationOffset());
+  printLocalVariableAddrGap(DefRangeRegisterRelIndir.Gaps);
+  return Error::success();
+}
+
+Error CVSymbolDumperImpl::visitKnownRecord(
     CVSymbol &CVR, DefRangeRegisterSym &DefRangeRegister) {
   W.printEnum("Register", uint16_t(DefRangeRegister.Hdr.Register),
               getRegisterNames(CompilationCPUType));
@@ -621,6 +637,17 @@ Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR,
 }
 
 Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR,
+                                           RegRelativeIndirSym &RegRelIndir) {
+  W.printHex("Offset", RegRelIndir.Offset);
+  printTypeIndex("Type", RegRelIndir.Type);
+  W.printEnum("Register", uint16_t(RegRelIndir.Register),
+              getRegisterNames(CompilationCPUType));
+  W.printHex("OffsetInUdt", RegRelIndir.OffsetInUdt);
+  W.printString("VarName", RegRelIndir.Name);
+  return Error::success();
+}
+
+Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR,
                                            ThreadLocalDataSym &Data) {
   StringRef LinkageName;
   if (ObjDelegate) {
@@ -669,6 +696,13 @@ Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR,
   W.printNumber("BranchSegment", JumpTable.BranchSegment);
   W.printNumber("TableSegment", JumpTable.TableSegment);
   W.printNumber("EntriesCount", JumpTable.EntriesCount);
+  return Error::success();
+}
+
+Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR,
+                                           HotPatchFuncSym &HotPatchFunc) {
+  printTypeIndex("Function", HotPatchFunc.Function);
+  W.printString("Name", HotPatchFunc.Name);
   return Error::success();
 }
 

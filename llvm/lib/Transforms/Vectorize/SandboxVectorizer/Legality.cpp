@@ -17,8 +17,6 @@
 
 namespace llvm::sandboxir {
 
-#define DEBUG_TYPE "SBVec:Legality"
-
 #ifndef NDEBUG
 void ShuffleMask::dump() const {
   print(dbgs());
@@ -83,6 +81,7 @@ LegalityAnalysis::notVectorizableBasedOnOpcodesAndTypes(
   case Instruction::Opcode::FPToUI:
   case Instruction::Opcode::FPToSI:
   case Instruction::Opcode::FPExt:
+  case Instruction::Opcode::PtrToAddr:
   case Instruction::Opcode::PtrToInt:
   case Instruction::Opcode::IntToPtr:
   case Instruction::Opcode::SIToFP:
@@ -107,10 +106,13 @@ LegalityAnalysis::notVectorizableBasedOnOpcodesAndTypes(
   }
   case Instruction::Opcode::FCmp:
   case Instruction::Opcode::ICmp: {
-    // We need the same predicate..
+    // We need the same predicate and the same operand type.
     auto Pred0 = cast<CmpInst>(I0)->getPredicate();
-    bool Same = all_of(Bndl, [Pred0](Value *V) {
-      return cast<CmpInst>(V)->getPredicate() == Pred0;
+    Type *Ty0 = cast<CmpInst>(I0)->getOperand(0)->getType();
+    bool Same = all_of(Bndl, [Pred0, Ty0](Value *V) {
+      auto *CmpI = cast<CmpInst>(V);
+      return CmpI->getPredicate() == Pred0 &&
+             CmpI->getOperand(0)->getType() == Ty0;
     });
     if (Same)
       return std::nullopt;
@@ -157,7 +159,8 @@ LegalityAnalysis::notVectorizableBasedOnOpcodesAndTypes(
     return ResultReason::Unimplemented;
   case Instruction::Opcode::Opaque:
     return ResultReason::Unimplemented;
-  case Instruction::Opcode::Br:
+  case Instruction::Opcode::UncondBr:
+  case Instruction::Opcode::CondBr:
   case Instruction::Opcode::Ret:
   case Instruction::Opcode::AddrSpaceCast:
   case Instruction::Opcode::InsertElement:
@@ -191,13 +194,6 @@ LegalityAnalysis::notVectorizableBasedOnOpcodesAndTypes(
   return std::nullopt;
 }
 
-#ifndef NDEBUG
-static void dumpBndl(ArrayRef<Value *> Bndl) {
-  for (auto *V : Bndl)
-    dbgs() << *V << "\n";
-}
-#endif // NDEBUG
-
 CollectDescr
 LegalityAnalysis::getHowToCollectValues(ArrayRef<Value *> Bndl) const {
   SmallVector<CollectDescr::ExtractElementDescr, 4> Vec;
@@ -220,19 +216,13 @@ LegalityAnalysis::getHowToCollectValues(ArrayRef<Value *> Bndl) const {
 const LegalityResult &LegalityAnalysis::canVectorize(ArrayRef<Value *> Bndl,
                                                      bool SkipScheduling) {
   // If Bndl contains values other than instructions, we need to Pack.
-  if (any_of(Bndl, [](auto *V) { return !isa<Instruction>(V); })) {
-    LLVM_DEBUG(dbgs() << "Not vectorizing: Not Instructions:\n";
-               dumpBndl(Bndl););
+  if (any_of(Bndl, [](auto *V) { return !isa<Instruction>(V); }))
     return createLegalityResult<Pack>(ResultReason::NotInstructions);
-  }
   // Pack if not in the same BB.
-  auto *BB = cast<Instruction>(Bndl[0])->getParent();
-  if (any_of(drop_begin(Bndl),
-             [BB](auto *V) { return cast<Instruction>(V)->getParent() != BB; }))
+  if (LegalityAnalysis::differentBlock(Bndl))
     return createLegalityResult<Pack>(ResultReason::DiffBBs);
   // Pack if instructions repeat, i.e., require some sort of broadcast.
-  SmallPtrSet<Value *, 8> Unique(Bndl.begin(), Bndl.end());
-  if (Unique.size() != Bndl.size())
+  if (!LegalityAnalysis::areUnique(Bndl))
     return createLegalityResult<Pack>(ResultReason::RepeatedInstrs);
 
   auto CollectDescrs = getHowToCollectValues(Bndl);

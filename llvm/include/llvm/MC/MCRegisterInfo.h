@@ -16,10 +16,12 @@
 #define LLVM_MC_MCREGISTERINFO_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCRegister.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstdint>
 #include <iterator>
@@ -44,7 +46,7 @@ public:
   const uint16_t RegSetSize;
   const uint16_t ID;
   const uint16_t RegSizeInBits;
-  const int8_t CopyCost;
+  const uint8_t CopyCost;
   const bool Allocatable;
   const bool BaseClass;
 
@@ -63,7 +65,7 @@ public:
 
   /// getRegister - Return the specified register in the class.
   ///
-  unsigned getRegister(unsigned i) const {
+  MCRegister getRegister(unsigned i) const {
     assert(i < getNumRegs() && "Register number out of range!");
     return RegsBegin[i];
   }
@@ -93,7 +95,7 @@ public:
   /// getCopyCost - Return the cost of copying a value between two registers in
   /// this class. A negative number means the register class is very expensive
   /// to copy e.g. status flag register classes.
-  int getCopyCost() const { return CopyCost; }
+  uint8_t getCopyCost() const { return CopyCost; }
 
   /// isAllocatable - Return true if this register class may be used to create
   /// virtual registers.
@@ -146,7 +148,7 @@ struct MCRegisterDesc {
 /// TableGen generated physical register data. It must not be extended with
 /// virtual methods.
 ///
-class MCRegisterInfo {
+class LLVM_ABI MCRegisterInfo {
 public:
   using regclass_iterator = const MCRegisterClass *;
 
@@ -178,6 +180,7 @@ private:
   unsigned NumSubRegIndices;                  // Number of subreg indices.
   const uint16_t *RegEncodingTable;           // Pointer to array of register
                                               // encodings.
+  const unsigned (*RegUnitIntervals)[2]; // Pointer to regunit interval table.
 
   unsigned L2DwarfRegsSize;
   unsigned EHL2DwarfRegsSize;
@@ -258,6 +261,9 @@ public:
                        iterator_range<MCSuperRegIterator>>
   sub_and_superregs_inclusive(MCRegister Reg) const;
 
+  /// Returns an iterator range over all regunits.
+  iota_range<MCRegUnit> regunits() const;
+
   /// Returns an iterator range over all regunits for \p Reg.
   iterator_range<MCRegUnitIterator> regunits(MCRegister Reg) const;
 
@@ -271,7 +277,7 @@ public:
   friend class MCRegUnitRootIterator;
   friend class MCRegAliasIterator;
 
-  virtual ~MCRegisterInfo() {}
+  virtual ~MCRegisterInfo() = default;
 
   /// Initialize MCRegisterInfo, called by TableGen
   /// auto-generated routines. *DO NOT USE*.
@@ -281,7 +287,8 @@ public:
                           const int16_t *DL, const LaneBitmask *RUMS,
                           const char *Strings, const char *ClassStrings,
                           const uint16_t *SubIndices, unsigned NumIndices,
-                          const uint16_t *RET) {
+                          const uint16_t *RET,
+                          const unsigned (*RUI)[2] = nullptr) {
     Desc = D;
     NumRegs = NR;
     RAReg = RA;
@@ -297,6 +304,7 @@ public:
     SubRegIndices = SubIndices;
     NumSubRegIndices = NumIndices;
     RegEncodingTable = RET;
+    RegUnitIntervals = RUI;
 
     // Initialize DWARF register mapping variables
     EHL2DwarfRegs = nullptr;
@@ -433,7 +441,7 @@ public:
   /// number.  Returns -1 if there is no equivalent value.  The second
   /// parameter allows targets to use different numberings for EH info and
   /// debugging info.
-  virtual int64_t getDwarfRegNum(MCRegister RegNum, bool isEH) const;
+  virtual int64_t getDwarfRegNum(MCRegister Reg, bool isEH) const;
 
   /// Map a dwarf register back to a target register. Returns std::nullopt if
   /// there is no mapping.
@@ -445,11 +453,11 @@ public:
 
   /// Map a target register to an equivalent SEH register
   /// number.  Returns LLVM register number if there is no equivalent value.
-  int getSEHRegNum(MCRegister RegNum) const;
+  int getSEHRegNum(MCRegister Reg) const;
 
   /// Map a target register to an equivalent CodeView register
   /// number.
-  int getCodeViewRegNum(MCRegister RegNum) const;
+  int getCodeViewRegNum(MCRegister Reg) const;
 
   regclass_iterator regclass_begin() const { return Classes; }
   regclass_iterator regclass_end() const { return Classes+NumClasses; }
@@ -506,6 +514,19 @@ public:
 
   /// Returns true if the two registers are equal or alias each other.
   bool regsOverlap(MCRegister RegA, MCRegister RegB) const;
+
+  /// Returns true if this target uses regunit intervals.
+  bool hasRegUnitIntervals() const { return RegUnitIntervals != nullptr; }
+
+  /// Returns an iterator range over all native regunits in the RegUnitInterval
+  /// table for \p Reg.
+  iota_range<unsigned> regunits_interval(MCRegister Reg) const {
+    assert(hasRegUnitIntervals() &&
+           "Target does not support regunit intervals");
+    assert(Reg.id() < NumRegs && "Invalid register number");
+    return seq<unsigned>(RegUnitIntervals[Reg.id()][0],
+                         RegUnitIntervals[Reg.id()][1]);
+  }
 };
 
 //===----------------------------------------------------------------------===//
@@ -686,7 +707,7 @@ public:
   }
 
   /// Returns a (RegUnit, LaneMask) pair.
-  std::pair<unsigned,LaneBitmask> operator*() const {
+  std::pair<MCRegUnit, LaneBitmask> operator*() const {
     return std::make_pair(*RUIter, *MaskListIter);
   }
 
@@ -718,10 +739,11 @@ class MCRegUnitRootIterator {
 public:
   MCRegUnitRootIterator() = default;
 
-  MCRegUnitRootIterator(unsigned RegUnit, const MCRegisterInfo *MCRI) {
-    assert(RegUnit < MCRI->getNumRegUnits() && "Invalid register unit");
-    Reg0 = MCRI->RegUnitRoots[RegUnit][0];
-    Reg1 = MCRI->RegUnitRoots[RegUnit][1];
+  MCRegUnitRootIterator(MCRegUnit RegUnit, const MCRegisterInfo *MCRI) {
+    assert(static_cast<unsigned>(RegUnit) < MCRI->getNumRegUnits() &&
+           "Invalid register unit");
+    Reg0 = MCRI->RegUnitRoots[static_cast<unsigned>(RegUnit)][0];
+    Reg1 = MCRI->RegUnitRoots[static_cast<unsigned>(RegUnit)][1];
   }
 
   /// Dereference to get the current root register.
@@ -795,6 +817,12 @@ inline detail::concat_range<const MCPhysReg, iterator_range<MCSubRegIterator>,
                             iterator_range<MCSuperRegIterator>>
 MCRegisterInfo::sub_and_superregs_inclusive(MCRegister Reg) const {
   return concat<const MCPhysReg>(subregs_inclusive(Reg), superregs(Reg));
+}
+
+inline iota_range<MCRegUnit> MCRegisterInfo::regunits() const {
+  return enum_seq(static_cast<MCRegUnit>(0),
+                  static_cast<MCRegUnit>(getNumRegUnits()),
+                  force_iteration_on_noniterable_enum);
 }
 
 inline iterator_range<MCRegUnitIterator>

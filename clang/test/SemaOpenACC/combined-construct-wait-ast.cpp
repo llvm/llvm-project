@@ -20,7 +20,7 @@ void NormalUses() {
   // CHECK-NEXT: wait clause
   // CHECK-NEXT: <<<NULL>>>
   // CHECK-NEXT: ForStmt
-#pragma acc serial loop wait()
+#pragma acc serial loop wait
   for (int i = 0; i < 5; ++i) {}
   // CHECK: OpenACCCombinedConstruct{{.*}}serial loop
   // CHECK-NEXT: wait clause
@@ -105,7 +105,7 @@ void TemplUses(U u) {
   // CHECK-NEXT: <<<NULL>>>
   // CHECK-NEXT: ForStmt
 
-#pragma acc serial loop wait()
+#pragma acc serial loop wait
   for (int i = 0; i < 5; ++i) {}
   // CHECK: OpenACCCombinedConstruct{{.*}}serial loop
   // CHECK-NEXT: wait clause

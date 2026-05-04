@@ -1,6 +1,7 @@
 # Build for the AddressSanitizer runtime support library.
 
 set(ASAN_SOURCES
+  asan_aix.cpp
   asan_allocator.cpp
   asan_activation.cpp
   asan_debugging.cpp
@@ -106,6 +107,12 @@ if(MSVC)
 endif()
 set(ASAN_CFLAGS ${SANITIZER_COMMON_CFLAGS})
 
+# Win/ASan relies on the runtime functions being hotpatchable. See
+# https://github.com/llvm/llvm-project/pull/149444
+if(MSVC)
+  list(APPEND ASAN_CFLAGS /hotpatch)
+endif()
+
 append_list_if(MSVC /Zl ASAN_CFLAGS)
 
 set(ASAN_COMMON_DEFINITIONS "")
@@ -113,9 +120,7 @@ set(ASAN_COMMON_DEFINITIONS "")
 append_rtti_flag(OFF ASAN_CFLAGS)
 
 # Silence warnings in system headers with MSVC.
-if(NOT CLANG_CL)
-  append_list_if(COMPILER_RT_HAS_EXTERNAL_FLAG "/experimental:external;/external:W0;/external:anglebrackets" ASAN_CFLAGS)
-endif()
+append_list_if(COMPILER_RT_HAS_EXTERNAL_FLAG "/experimental:external;/external:W0;/external:anglebrackets" ASAN_CFLAGS)
 
 # Too many existing bugs, needs cleanup.
 append_list_if(COMPILER_RT_HAS_WNO_FORMAT -Wno-format ASAN_CFLAGS)
@@ -281,6 +286,8 @@ else()
       PARENT_TARGET asan)
   endif()
 
+  # On AIX, we only need the static libraries.
+  if (NOT "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   foreach(arch ${ASAN_SUPPORTED_ARCH})
     if (COMPILER_RT_HAS_VERSION_SCRIPT)
       if(WIN32)
@@ -382,9 +389,20 @@ else()
       endif()
     endif()
   endforeach()
+  endif()
 endif()
 
 add_compiler_rt_resource_file(asan_ignorelist asan_ignorelist.txt asan)
+
+# On AIX, static sanitizer libraries are not added to the DSO, so we need to put 
+# asan.link_with_main_exec.txt and asan_cxx.link_with_main_exec.txt to the build
+# and install dir for use in resolving undefined sanitizer symbols at runtime.
+if ("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
+  foreach(arch ${ASAN_SUPPORTED_ARCH})
+    add_compiler_rt_cfg(asan_symbols_${arch} asan.link_with_main_exec.txt asan ${arch})
+    add_compiler_rt_cfg(asan_cxx_symbols_${arch} asan_cxx.link_with_main_exec.txt asan ${arch})
+  endforeach()
+endif()
 
 add_subdirectory(scripts)
 

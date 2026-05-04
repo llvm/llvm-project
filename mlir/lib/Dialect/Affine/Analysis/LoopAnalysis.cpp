@@ -20,13 +20,10 @@
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "llvm/Support/MathExtras.h"
 
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include <numeric>
 #include <optional>
-#include <type_traits>
 
 #define DEBUG_TYPE "affine-loop-analysis"
 
@@ -233,8 +230,9 @@ std::optional<uint64_t> mlir::affine::getConstantTripCount(AffineForOp forOp) {
             std::min(*tripCount, static_cast<uint64_t>(constExpr.getValue()));
       else
         tripCount = constExpr.getValue();
-    } else
+    } else {
       return std::nullopt;
+    }
   }
   return tripCount;
 }
@@ -401,9 +399,7 @@ isVectorizableLoopBodyWithOpCond(AffineForOp loop,
           return !VectorType::isValidElementType(type);
         }))
       return true;
-    return llvm::any_of(op.getResultTypes(), [](Type type) {
-      return !VectorType::isValidElementType(type);
-    });
+    return !llvm::all_of(op.getResultTypes(), VectorType::isValidElementType);
   });
   SmallVector<NestedMatch, 8> opsMatched;
   types.match(forOp, &opsMatched);
@@ -553,19 +549,19 @@ bool mlir::affine::isTilingValid(ArrayRef<AffineForOp> loops) {
         // Check whether there is any negative direction vector in the
         // dependence components found above, which means that dependence is
         // violated by the default hyper-rect tiling method.
-        LLVM_DEBUG(llvm::dbgs() << "Checking whether tiling legality violated "
-                                   "for dependence at depth: "
-                                << Twine(d) << " between:\n";);
-        LLVM_DEBUG(srcAccess.opInst->dump());
-        LLVM_DEBUG(dstAccess.opInst->dump());
+        LDBG() << "Checking whether tiling legality violated "
+               << "for dependence at depth: " << Twine(d) << " between:"
+               << OpWithFlags(srcAccess.opInst, OpPrintingFlags().skipRegions())
+               << "\nand:\n"
+               << OpWithFlags(dstAccess.opInst,
+                              OpPrintingFlags().skipRegions());
         for (const DependenceComponent &depComp : depComps) {
           if (depComp.lb.has_value() && depComp.ub.has_value() &&
               *depComp.lb < *depComp.ub && *depComp.ub < 0) {
-            LLVM_DEBUG(llvm::dbgs()
-                       << "Dependence component lb = " << Twine(*depComp.lb)
-                       << " ub = " << Twine(*depComp.ub)
-                       << " is negative  at depth: " << Twine(d)
-                       << " and thus violates the legality rule.\n");
+            LDBG() << "Dependence component lb = " << Twine(*depComp.lb)
+                   << " ub = " << Twine(*depComp.ub)
+                   << " is negative  at depth: " << Twine(d)
+                   << " and thus violates the legality rule.";
             return false;
           }
         }

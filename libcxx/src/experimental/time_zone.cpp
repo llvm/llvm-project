@@ -29,6 +29,15 @@
 // These quirks often use a 12h interval; this is the scan interval of zdump,
 // which implies there are no sys_info objects with a duration of less than 12h.
 
+// Work around https://gcc.gnu.org/bugzilla/show_bug.cgi?id=120502
+
+#include <__config>
+
+// TODO(LLVM 23): When upgrading to GCC 16 this can be removed
+#ifdef _LIBCPP_COMPILER_GCC
+#  pragma GCC optimize("-O0")
+#endif
+
 #include <algorithm>
 #include <cctype>
 #include <chrono>
@@ -200,8 +209,6 @@ __format(const __tz::__continuation& __continuation, const string& __letters, se
                    return chrono::seconds{0};
                  else
                    static_assert(false);
-
-                 std::__libcpp_unreachable();
                },
                __continuation.__rules);
 
@@ -226,8 +233,6 @@ __format(const __tz::__continuation& __continuation, const string& __letters, se
           return __value(__year, __month);
         else
           static_assert(false);
-
-        std::__libcpp_unreachable();
       },
       __on);
 }
@@ -689,8 +694,6 @@ __get_sys_info(sys_seconds __time,
           return chrono::__get_sys_info_basic(__time, __continuation_begin, __continuation, __value.__time);
         else
           static_assert(false);
-
-        std::__libcpp_unreachable();
       },
       __continuation.__rules);
 }
@@ -711,7 +714,7 @@ __get_sys_info(sys_seconds __time,
 // Iff the "offsets" are the same '__current.__end' is replaced with
 // '__next.__end', which effectively merges the two objects in one object. The
 // function returns true if a merge occurred.
-[[nodiscard]] bool __merge_continuation(sys_info& __current, const sys_info& __next) {
+[[nodiscard]] static bool __merge_continuation(sys_info& __current, const sys_info& __next) {
   if (__current.end != __next.begin)
     return false;
 

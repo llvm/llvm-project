@@ -7,14 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/llogbf128.h"
-#include "src/__support/FPUtil/ManipulationFunctions.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/math/llogbf128.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(long, llogbf128, (float128 x)) {
-  return fputil::intlogb<long>(x);
-}
+LLVM_LIBC_FUNCTION(long, llogbf128, (float128 x)) { return math::llogbf128(x); }
 
 } // namespace LIBC_NAMESPACE_DECL

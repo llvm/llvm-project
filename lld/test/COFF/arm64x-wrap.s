@@ -15,6 +15,10 @@
 // CHECK: 0x180004000 02000000 02000000 01000000 02000000
 // CHECK: 0x180004010 02000000 01000000
 
+// RUN: lld-link -machine:arm64ec -dll -noentry test-arm64.obj test-arm64ec.obj other-arm64.obj other-arm64ec.obj \
+// RUN:          loadconfig-arm64.obj loadconfig-arm64ec.obj -out:out-ec.dll -wrap:sym -wrap:nosuchsym
+// RUN: llvm-readobj --hex-dump=.test out-ec.dll | FileCheck %s
+
 #--- test.s
         .section .test,"dr"
         .word sym

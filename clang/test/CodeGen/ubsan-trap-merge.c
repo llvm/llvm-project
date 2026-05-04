@@ -64,7 +64,7 @@
 // TRAP-NOMERGE-NEXT:  [[ENTRY:.*:]]
 // TRAP-NOMERGE-NEXT:    [[TMP0:%.*]] = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[X]], i32 125), !nosanitize [[META2:![0-9]+]]
 // TRAP-NOMERGE-NEXT:    [[TMP1:%.*]] = extractvalue { i32, i1 } [[TMP0]], 1, !nosanitize [[META2]]
-// TRAP-NOMERGE-NEXT:    br i1 [[TMP1]], label %[[TRAP:.*]], label %[[CONT:.*]], !nosanitize [[META2]]
+// TRAP-NOMERGE-NEXT:    br i1 [[TMP1]], label %[[TRAP:.*]], label %[[CONT:.*]], !prof [[PROF3:![0-9]+]], !nosanitize [[META2]]
 // TRAP-NOMERGE:       [[TRAP]]:
 // TRAP-NOMERGE-NEXT:    tail call void @llvm.ubsantrap(i8 0) #[[ATTR4:[0-9]+]], !nosanitize [[META2]]
 // TRAP-NOMERGE-NEXT:    unreachable, !nosanitize [[META2]]
@@ -104,7 +104,7 @@
 // TRAP-MERGE-NEXT:  [[ENTRY:.*:]]
 // TRAP-MERGE-NEXT:    [[TMP0:%.*]] = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[X]], i32 125), !nosanitize [[META2:![0-9]+]]
 // TRAP-MERGE-NEXT:    [[TMP1:%.*]] = extractvalue { i32, i1 } [[TMP0]], 1, !nosanitize [[META2]]
-// TRAP-MERGE-NEXT:    br i1 [[TMP1]], label %[[TRAP:.*]], label %[[CONT:.*]], !nosanitize [[META2]]
+// TRAP-MERGE-NEXT:    br i1 [[TMP1]], label %[[TRAP:.*]], label %[[CONT:.*]], !prof [[PROF3:![0-9]+]], !nosanitize [[META2]]
 // TRAP-MERGE:       [[TRAP]]:
 // TRAP-MERGE-NEXT:    tail call void @llvm.ubsantrap(i8 0) #[[ATTR4:[0-9]+]], !nosanitize [[META2]]
 // TRAP-MERGE-NEXT:    unreachable, !nosanitize [[META2]]
@@ -187,7 +187,7 @@ int f(int x) {
 // TRAP-NOMERGE-NEXT:  [[ENTRY:.*:]]
 // TRAP-NOMERGE-NEXT:    [[TMP0:%.*]] = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[X]], i32 127), !nosanitize [[META2]]
 // TRAP-NOMERGE-NEXT:    [[TMP1:%.*]] = extractvalue { i32, i1 } [[TMP0]], 1, !nosanitize [[META2]]
-// TRAP-NOMERGE-NEXT:    br i1 [[TMP1]], label %[[TRAP:.*]], label %[[CONT:.*]], !nosanitize [[META2]]
+// TRAP-NOMERGE-NEXT:    br i1 [[TMP1]], label %[[TRAP:.*]], label %[[CONT:.*]], !prof [[PROF3]], !nosanitize [[META2]]
 // TRAP-NOMERGE:       [[TRAP]]:
 // TRAP-NOMERGE-NEXT:    tail call void @llvm.ubsantrap(i8 0) #[[ATTR4]], !nosanitize [[META2]]
 // TRAP-NOMERGE-NEXT:    unreachable, !nosanitize [[META2]]
@@ -227,7 +227,7 @@ int f(int x) {
 // TRAP-MERGE-NEXT:  [[ENTRY:.*:]]
 // TRAP-MERGE-NEXT:    [[TMP0:%.*]] = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[X]], i32 127), !nosanitize [[META2]]
 // TRAP-MERGE-NEXT:    [[TMP1:%.*]] = extractvalue { i32, i1 } [[TMP0]], 1, !nosanitize [[META2]]
-// TRAP-MERGE-NEXT:    br i1 [[TMP1]], label %[[TRAP:.*]], label %[[CONT:.*]], !nosanitize [[META2]]
+// TRAP-MERGE-NEXT:    br i1 [[TMP1]], label %[[TRAP:.*]], label %[[CONT:.*]], !prof [[PROF3]], !nosanitize [[META2]]
 // TRAP-MERGE:       [[TRAP]]:
 // TRAP-MERGE-NEXT:    tail call void @llvm.ubsantrap(i8 0) #[[ATTR4]], !nosanitize [[META2]]
 // TRAP-MERGE-NEXT:    unreachable, !nosanitize [[META2]]
@@ -317,14 +317,14 @@ int g(int x) {
 // TRAP-NOMERGE-NEXT:  [[ENTRY:.*:]]
 // TRAP-NOMERGE-NEXT:    [[TMP0:%.*]] = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[X]], i32 127), !nosanitize [[META2]]
 // TRAP-NOMERGE-NEXT:    [[TMP1:%.*]] = extractvalue { i32, i1 } [[TMP0]], 1, !nosanitize [[META2]]
-// TRAP-NOMERGE-NEXT:    br i1 [[TMP1]], label %[[TRAP:.*]], label %[[CONT:.*]], !nosanitize [[META2]]
+// TRAP-NOMERGE-NEXT:    br i1 [[TMP1]], label %[[TRAP:.*]], label %[[CONT:.*]], !prof [[PROF3]], !nosanitize [[META2]]
 // TRAP-NOMERGE:       [[TRAP]]:
 // TRAP-NOMERGE-NEXT:    tail call void @llvm.ubsantrap(i8 0) #[[ATTR4]], !nosanitize [[META2]]
 // TRAP-NOMERGE-NEXT:    unreachable, !nosanitize [[META2]]
 // TRAP-NOMERGE:       [[CONT]]:
 // TRAP-NOMERGE-NEXT:    [[TMP2:%.*]] = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[Y]], i32 129), !nosanitize [[META2]]
 // TRAP-NOMERGE-NEXT:    [[TMP3:%.*]] = extractvalue { i32, i1 } [[TMP2]], 1, !nosanitize [[META2]]
-// TRAP-NOMERGE-NEXT:    br i1 [[TMP3]], label %[[TRAP1:.*]], label %[[CONT2:.*]], !nosanitize [[META2]]
+// TRAP-NOMERGE-NEXT:    br i1 [[TMP3]], label %[[TRAP1:.*]], label %[[CONT2:.*]], !prof [[PROF3]], !nosanitize [[META2]]
 // TRAP-NOMERGE:       [[TRAP1]]:
 // TRAP-NOMERGE-NEXT:    tail call void @llvm.ubsantrap(i8 0) #[[ATTR4]], !nosanitize [[META2]]
 // TRAP-NOMERGE-NEXT:    unreachable, !nosanitize [[META2]]
@@ -385,14 +385,14 @@ int g(int x) {
 // TRAP-MERGE-NEXT:  [[ENTRY:.*:]]
 // TRAP-MERGE-NEXT:    [[TMP0:%.*]] = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[X]], i32 127), !nosanitize [[META2]]
 // TRAP-MERGE-NEXT:    [[TMP1:%.*]] = extractvalue { i32, i1 } [[TMP0]], 1, !nosanitize [[META2]]
-// TRAP-MERGE-NEXT:    br i1 [[TMP1]], label %[[TRAP:.*]], label %[[CONT:.*]], !nosanitize [[META2]]
+// TRAP-MERGE-NEXT:    br i1 [[TMP1]], label %[[TRAP:.*]], label %[[CONT:.*]], !prof [[PROF3]], !nosanitize [[META2]]
 // TRAP-MERGE:       [[TRAP]]:
 // TRAP-MERGE-NEXT:    tail call void @llvm.ubsantrap(i8 0) #[[ATTR4]], !nosanitize [[META2]]
 // TRAP-MERGE-NEXT:    unreachable, !nosanitize [[META2]]
 // TRAP-MERGE:       [[CONT]]:
 // TRAP-MERGE-NEXT:    [[TMP2:%.*]] = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[Y]], i32 129), !nosanitize [[META2]]
 // TRAP-MERGE-NEXT:    [[TMP3:%.*]] = extractvalue { i32, i1 } [[TMP2]], 1, !nosanitize [[META2]]
-// TRAP-MERGE-NEXT:    br i1 [[TMP3]], label %[[TRAP]], label %[[CONT1:.*]], !nosanitize [[META2]]
+// TRAP-MERGE-NEXT:    br i1 [[TMP3]], label %[[TRAP]], label %[[CONT1:.*]], !prof [[PROF3]], !nosanitize [[META2]]
 // TRAP-MERGE:       [[CONT1]]:
 // TRAP-MERGE-NEXT:    [[TMP4:%.*]] = extractvalue { i32, i1 } [[TMP2]], 0, !nosanitize [[META2]]
 // TRAP-MERGE-NEXT:    [[TMP5:%.*]] = extractvalue { i32, i1 } [[TMP0]], 0, !nosanitize [[META2]]
@@ -546,14 +546,14 @@ int h(int x, int y) {
 // TRAP-NOMERGE-NEXT:  [[ENTRY:.*:]]
 // TRAP-NOMERGE-NEXT:    [[TMP0:%.*]] = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[X]], i32 125), !nosanitize [[META2]]
 // TRAP-NOMERGE-NEXT:    [[TMP1:%.*]] = extractvalue { i32, i1 } [[TMP0]], 1, !nosanitize [[META2]]
-// TRAP-NOMERGE-NEXT:    br i1 [[TMP1]], label %[[TRAP_I:.*]], label %[[F_EXIT:.*]], !nosanitize [[META2]]
+// TRAP-NOMERGE-NEXT:    br i1 [[TMP1]], label %[[TRAP_I:.*]], label %[[F_EXIT:.*]], !prof [[PROF3]], !nosanitize [[META2]]
 // TRAP-NOMERGE:       [[TRAP_I]]:
 // TRAP-NOMERGE-NEXT:    tail call void @llvm.ubsantrap(i8 0) #[[ATTR4]], !nosanitize [[META2]]
 // TRAP-NOMERGE-NEXT:    unreachable, !nosanitize [[META2]]
 // TRAP-NOMERGE:       [[F_EXIT]]:
 // TRAP-NOMERGE-NEXT:    [[TMP2:%.*]] = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[Y]], i32 127), !nosanitize [[META2]]
 // TRAP-NOMERGE-NEXT:    [[TMP3:%.*]] = extractvalue { i32, i1 } [[TMP2]], 1, !nosanitize [[META2]]
-// TRAP-NOMERGE-NEXT:    br i1 [[TMP3]], label %[[TRAP_I2:.*]], label %[[G_EXIT:.*]], !nosanitize [[META2]]
+// TRAP-NOMERGE-NEXT:    br i1 [[TMP3]], label %[[TRAP_I2:.*]], label %[[G_EXIT:.*]], !prof [[PROF3]], !nosanitize [[META2]]
 // TRAP-NOMERGE:       [[TRAP_I2]]:
 // TRAP-NOMERGE-NEXT:    tail call void @llvm.ubsantrap(i8 0) #[[ATTR4]], !nosanitize [[META2]]
 // TRAP-NOMERGE-NEXT:    unreachable, !nosanitize [[META2]]
@@ -562,7 +562,7 @@ int h(int x, int y) {
 // TRAP-NOMERGE-NEXT:    [[TMP5:%.*]] = extractvalue { i32, i1 } [[TMP2]], 0, !nosanitize [[META2]]
 // TRAP-NOMERGE-NEXT:    [[TMP6:%.*]] = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[TMP4]], i32 [[TMP5]]), !nosanitize [[META2]]
 // TRAP-NOMERGE-NEXT:    [[TMP7:%.*]] = extractvalue { i32, i1 } [[TMP6]], 1, !nosanitize [[META2]]
-// TRAP-NOMERGE-NEXT:    br i1 [[TMP7]], label %[[TRAP:.*]], label %[[CONT:.*]], !nosanitize [[META2]]
+// TRAP-NOMERGE-NEXT:    br i1 [[TMP7]], label %[[TRAP:.*]], label %[[CONT:.*]], !prof [[PROF3]], !nosanitize [[META2]]
 // TRAP-NOMERGE:       [[TRAP]]:
 // TRAP-NOMERGE-NEXT:    tail call void @llvm.ubsantrap(i8 0) #[[ATTR4]], !nosanitize [[META2]]
 // TRAP-NOMERGE-NEXT:    unreachable, !nosanitize [[META2]]
@@ -637,14 +637,14 @@ int h(int x, int y) {
 // TRAP-MERGE-NEXT:  [[ENTRY:.*:]]
 // TRAP-MERGE-NEXT:    [[TMP0:%.*]] = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[X]], i32 125), !nosanitize [[META2]]
 // TRAP-MERGE-NEXT:    [[TMP1:%.*]] = extractvalue { i32, i1 } [[TMP0]], 1, !nosanitize [[META2]]
-// TRAP-MERGE-NEXT:    br i1 [[TMP1]], label %[[TRAP_I:.*]], label %[[F_EXIT:.*]], !nosanitize [[META2]]
+// TRAP-MERGE-NEXT:    br i1 [[TMP1]], label %[[TRAP_I:.*]], label %[[F_EXIT:.*]], !prof [[PROF3]], !nosanitize [[META2]]
 // TRAP-MERGE:       [[TRAP_I]]:
 // TRAP-MERGE-NEXT:    tail call void @llvm.ubsantrap(i8 0) #[[ATTR4]], !nosanitize [[META2]]
 // TRAP-MERGE-NEXT:    unreachable, !nosanitize [[META2]]
 // TRAP-MERGE:       [[F_EXIT]]:
 // TRAP-MERGE-NEXT:    [[TMP2:%.*]] = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[Y]], i32 127), !nosanitize [[META2]]
 // TRAP-MERGE-NEXT:    [[TMP3:%.*]] = extractvalue { i32, i1 } [[TMP2]], 1, !nosanitize [[META2]]
-// TRAP-MERGE-NEXT:    br i1 [[TMP3]], label %[[TRAP_I2:.*]], label %[[G_EXIT:.*]], !nosanitize [[META2]]
+// TRAP-MERGE-NEXT:    br i1 [[TMP3]], label %[[TRAP_I2:.*]], label %[[G_EXIT:.*]], !prof [[PROF3]], !nosanitize [[META2]]
 // TRAP-MERGE:       [[TRAP_I2]]:
 // TRAP-MERGE-NEXT:    tail call void @llvm.ubsantrap(i8 0) #[[ATTR4]], !nosanitize [[META2]]
 // TRAP-MERGE-NEXT:    unreachable, !nosanitize [[META2]]
@@ -653,7 +653,7 @@ int h(int x, int y) {
 // TRAP-MERGE-NEXT:    [[TMP5:%.*]] = extractvalue { i32, i1 } [[TMP2]], 0, !nosanitize [[META2]]
 // TRAP-MERGE-NEXT:    [[TMP6:%.*]] = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[TMP4]], i32 [[TMP5]]), !nosanitize [[META2]]
 // TRAP-MERGE-NEXT:    [[TMP7:%.*]] = extractvalue { i32, i1 } [[TMP6]], 1, !nosanitize [[META2]]
-// TRAP-MERGE-NEXT:    br i1 [[TMP7]], label %[[TRAP:.*]], label %[[CONT:.*]], !nosanitize [[META2]]
+// TRAP-MERGE-NEXT:    br i1 [[TMP7]], label %[[TRAP:.*]], label %[[CONT:.*]], !prof [[PROF3]], !nosanitize [[META2]]
 // TRAP-MERGE:       [[TRAP]]:
 // TRAP-MERGE-NEXT:    tail call void @llvm.ubsantrap(i8 0) #[[ATTR4]], !nosanitize [[META2]]
 // TRAP-MERGE-NEXT:    unreachable, !nosanitize [[META2]]
@@ -734,3 +734,11 @@ int m(int x, int y) {
 // TRAP-NOMERGE: attributes #[[ATTR4]] = { nomerge noreturn nounwind }
 // HANDLER-NOMERGE: attributes #[[ATTR4]] = { nomerge noreturn nounwind }
 // MINRT-NOMERGE: attributes #[[ATTR4]] = { nomerge noreturn nounwind }
+
+// TRAP-MERGE: [[PROF3]] = !{!"branch_weights", i32 1, i32 1048575}
+// HANDLER-MERGE: [[PROF3]] = !{!"branch_weights", i32 1, i32 1048575}
+// MINRT-MERGE: [[PROF3]] = !{!"branch_weights", i32 1, i32 1048575}
+
+// TRAP-NOMERGE: [[PROF3]] = !{!"branch_weights", i32 1, i32 1048575}
+// HANDLER-NOMERGE: [[PROF3]] = !{!"branch_weights", i32 1, i32 1048575}
+// MINRT-NOMERGE: [[PROF3]] = !{!"branch_weights", i32 1, i32 1048575}

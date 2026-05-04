@@ -1,5 +1,13 @@
-#include <clc/clc_convert.h>
-#include <clc/internal/clc.h>
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "clc/clc_convert.h"
+#include "clc/internal/clc.h"
 
 #define __CLC_UPSAMPLE_IMPL(BGENTYPE, GENTYPE, UGENTYPE, GENSIZE)              \
   _CLC_OVERLOAD _CLC_DEF BGENTYPE __clc_upsample(GENTYPE hi, UGENTYPE lo) {    \

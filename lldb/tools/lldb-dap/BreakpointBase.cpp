@@ -7,38 +7,22 @@
 //===----------------------------------------------------------------------===//
 
 #include "BreakpointBase.h"
-#include "JSONUtils.h"
-#include "llvm/ADT/StringRef.h"
 
 using namespace lldb_dap;
 
-BreakpointBase::BreakpointBase(DAP &d, const llvm::json::Object &obj)
-    : dap(d), condition(std::string(GetString(obj, "condition"))),
-      hitCondition(std::string(GetString(obj, "hitCondition"))) {}
+BreakpointBase::BreakpointBase(DAP &d,
+                               const std::optional<std::string> &condition,
+                               const std::optional<std::string> &hit_condition)
+    : m_dap(d), m_condition(condition.value_or("")),
+      m_hit_condition(hit_condition.value_or("")) {}
 
 void BreakpointBase::UpdateBreakpoint(const BreakpointBase &request_bp) {
-  if (condition != request_bp.condition) {
-    condition = request_bp.condition;
+  if (m_condition != request_bp.m_condition) {
+    m_condition = request_bp.m_condition;
     SetCondition();
   }
-  if (hitCondition != request_bp.hitCondition) {
-    hitCondition = request_bp.hitCondition;
+  if (m_hit_condition != request_bp.m_hit_condition) {
+    m_hit_condition = request_bp.m_hit_condition;
     SetHitCondition();
   }
-}
-
-const char *BreakpointBase::GetBreakpointLabel() {
-  // Breakpoints in LLDB can have names added to them which are kind of like
-  // labels or categories. All breakpoints that are set through the IDE UI get
-  // sent through the various DAP set*Breakpoint packets, and these
-  // breakpoints will be labeled with this name so if breakpoint update events
-  // come in for breakpoints that the IDE doesn't know about, like if a
-  // breakpoint is set manually using the debugger console, we won't report any
-  // updates on them and confused the IDE. This function gets called by all of
-  // the breakpoint classes after they set breakpoints to mark a breakpoint as
-  // a UI breakpoint. We can later check a lldb::SBBreakpoint object that comes
-  // in via LLDB breakpoint changed events and check the breakpoint by calling
-  // "bool lldb::SBBreakpoint::MatchesName(const char *)" to check if a
-  // breakpoint in one of the UI breakpoints that we should report changes for.
-  return "dap";
 }

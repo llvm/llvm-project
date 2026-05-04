@@ -10,6 +10,7 @@
 
 @struct_array = global [1024 x %struct.S] zeroinitializer, align 16
 @float_2d_array = global [32 x [32 x float]] zeroinitializer, align 4
+@float_array = global [128 x float] zeroinitializer, align 4
 
 ; We should not extract any struct field indices, because fields in a struct
 ; may have different types.
@@ -19,7 +20,7 @@ define ptr @struct(i32 %i) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[I]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [1024 x %struct.S], ptr @struct_array, i64 0, i64 [[TMP0]], i32 1
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 80
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[TMP1]], i64 80
 ; CHECK-NEXT:    ret ptr [[P2]]
 ;
 entry:
@@ -30,17 +31,16 @@ entry:
 }
 
 ; We should be able to trace into sext(a + b) if a + b is non-negative
-; (e.g., used as an index of an inbounds GEP) and one of a and b is
-; non-negative.
+; (e.g., used as an index of an inbounds GEP on a global base ptr) and one of a
+; or b is non-negative.
 define ptr @sext_add(i32 %i, i32 %j) {
 ; CHECK-LABEL: define ptr @sext_add(
 ; CHECK-SAME: i32 [[I:%.*]], i32 [[J:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[J]], -2
-; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[TMP0]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[I]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr [32 x [32 x float]], ptr @float_2d_array, i64 0, i64 [[TMP2]], i64 [[TMP1]]
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[TMP3]], i64 128
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[I]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[J]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr [32 x [32 x float]], ptr @float_2d_array, i64 0, i64 [[TMP0]], i64 [[TMP1]]
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[TMP2]], i64 120
 ; CHECK-NEXT:    ret ptr [[P1]]
 ;
 entry:
@@ -48,8 +48,175 @@ entry:
   %1 = sext i32 %0 to i64  ; inbound sext(i + 1) = sext(i) + 1
   %2 = add i32 %j, -2
   ; However, inbound sext(j + -2) != sext(j) + -2, e.g., j = INT_MIN
+  ; But j = INT_MIN would result in a very large positive result which would be
+  ; OOB (and produce poison), so there is no counter example in this case
   %3 = sext i32 %2 to i64
   %p = getelementptr inbounds [32 x [32 x float]], ptr @float_2d_array, i64 0, i64 %1, i64 %3
+  ret ptr %p
+}
+
+; We should trace into sext(a + b) if a + b is an inbounds GEP on a known
+; base ptr (alloca) if one of a or b is non-negative.
+define ptr @sext_add_alloca(i32 %i) {
+; CHECK-LABEL: define ptr @sext_add_alloca(
+; CHECK-SAME: i32 [[I:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ARR:%.*]] = alloca [32 x [32 x float]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[I]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [32 x [32 x float]], ptr [[ARR]], i64 0, i64 [[TMP0]], i64 0
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[TMP1]], i64 128
+; CHECK-NEXT:    ret ptr [[P1]]
+;
+entry:
+  %arr = alloca [32 x [32 x float]], align 4
+  %0 = add i32 %i, 1
+  %1 = sext i32 %0 to i64
+  ; inbound sext(i + 1) = sext(i) + 1 because inbounds on base ptr -> non-negative
+  %p = getelementptr inbounds [32 x [32 x float]], ptr %arr, i64 0, i64 %1, i64 0
+  ret ptr %p
+}
+
+; We cannot trace into sext(a + b) if a + b is an inbounds GEP but not on a
+; known base ptr even if one of a or b is non-negative.
+define ptr @sext_add_nonbase(i32 %i, ptr %unknown_arr) {
+; CHECK-LABEL: define ptr @sext_add_nonbase(
+; CHECK-SAME: i32 [[I:%.*]], ptr [[ARR:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[I]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[TMP0]] to i64
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds [32 x [32 x float]], ptr [[ARR]], i64 0, i64 [[TMP1]], i64 0
+; CHECK-NEXT:    ret ptr [[P1]]
+;
+entry:
+  %0 = add i32 %i, 1
+  %1 = sext i32 %0 to i64
+  ; inbound sext(i + 1) != sext(i) + 1 because a wrapped result can still be inbounds if not at start of arr
+  %p = getelementptr inbounds [32 x [32 x float]], ptr %unknown_arr, i64 0, i64 %1, i64 0
+  ret ptr %p
+}
+
+; We can trace into sext(a + b) if a + b is an inbounds GEP and the known
+; offset from a known base ptr is within a certain threshold relative to the
+; bitwidth of the index (offset < (2^(n-1) - C + 1) * bitwidth).
+define ptr @sext_add_nonzerooffset_inrange(i8 %i, i64 %size) {
+; CHECK-LABEL: define ptr @sext_add_nonzerooffset_inrange(
+; CHECK-SAME: i8 [[I:%.*]], i64 [[SIZE:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ARR:%.*]] = alloca float, i64 %size, align 4
+; CHECK-NEXT:    [[OFFSETARR:%.*]] = getelementptr float, ptr [[ARR]], i64 127
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i8 [[I]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr float, ptr [[OFFSETARR]], i64 [[TMP0]]
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[TMP1]], i64 4
+; CHECK-NEXT:    ret ptr [[P2]]
+;
+entry:
+  %arr = alloca float, i64 %size, align 4
+  %offsetarr = getelementptr float, ptr %arr, i64 127
+  %add = add i8 %i, 1
+  %sext = sext i8 %add to i64
+  %p = getelementptr inbounds float, ptr %offsetarr, i64 %sext
+  ret ptr %p
+}
+
+define ptr @sext_add_nonzerooffset_outofrange(i8 %i, i64 %size) {
+; CHECK-LABEL: define ptr @sext_add_nonzerooffset_outofrange(
+; CHECK-SAME: i8 [[I:%.*]], i64 [[SIZE:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ARR:%.*]] = alloca float, i64 [[SIZE]], align 4
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[I]], 1
+; CHECK-NEXT:    [[SEXT:%.*]] = sext i8 [[ADD]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr float, ptr [[ARR]], i64 [[SEXT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr float, ptr [[TMP0]], i64 128
+; CHECK-NEXT:    ret ptr [[TMP1]]
+;
+entry:
+  %arr = alloca float, i64 %size, align 4
+  %offsetarr = getelementptr float, ptr %arr, i64 128
+  %add = add i8 %i, 1
+  %sext = sext i8 %add to i64
+  %p = getelementptr inbounds float, ptr %offsetarr, i64 %sext
+  ret ptr %p
+}
+
+; We can trace into sext(a + b) if a + b is an inbounds GEP and the size of the
+; known base ptr is within a certain threshold relative to the bitwidth of the
+; index (offset < (2^(n-1) - C + 1) * bitwidth).
+define ptr @sext_add_unknownoffset_inrange(i8 %i, i64 %off) {
+; CHECK-LABEL: define ptr @sext_add_unknownoffset_inrange(
+; CHECK-SAME: i8 [[I:%.*]], i64 [[OFF:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ARR:%.*]] = alloca float, i64 126, align 4
+; CHECK-NEXT:    [[OFFSETARR:%.*]] = getelementptr float, ptr [[ARR]], i64 [[OFF]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i8 [[I]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr float, ptr [[OFFSETARR]], i64 [[TMP0]]
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[TMP1]], i64 8
+; CHECK-NEXT:    ret ptr [[P2]]
+;
+entry:
+  %arr = alloca float, i64 126, align 4
+  %offsetarr = getelementptr float, ptr %arr, i64 %off
+  %add = add i8 %i, 2
+  %sext = sext i8 %add to i64
+  %p = getelementptr inbounds float, ptr %offsetarr, i64 %sext
+  ret ptr %p
+}
+
+define ptr @sext_add_unknownoffset_inrange_neg(i8 %i, i64 %off) {
+; CHECK-LABEL: define ptr @sext_add_unknownoffset_inrange_neg(
+; CHECK-SAME: i8 [[I:%.*]], i64 [[OFF:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ARR:%.*]] = alloca float, i64 125, align 4
+; CHECK-NEXT:    [[OFFSETARR:%.*]] = getelementptr float, ptr [[ARR]], i64 [[OFF]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i8 [[I]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr float, ptr [[OFFSETARR]], i64 [[TMP0]]
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[TMP1]], i64 -8
+; CHECK-NEXT:    ret ptr [[P2]]
+;
+entry:
+  %arr = alloca float, i64 125, align 4
+  %offsetarr = getelementptr float, ptr %arr, i64 %off
+  %add = add i8 %i, -2
+  %sext = sext i8 %add to i64
+  %p = getelementptr inbounds float, ptr %offsetarr, i64 %sext
+  ret ptr %p
+}
+
+define ptr @sext_add_unknownoffset_outofrange(i8 %i, i64 %off) {
+; CHECK-LABEL: define ptr @sext_add_unknownoffset_outofrange(
+; CHECK-SAME: i8 [[I:%.*]], i64 [[OFF:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ARR:%.*]] = alloca float, i64 127, align 4
+; CHECK-NEXT:    [[OFFSETARR:%.*]] = getelementptr float, ptr [[ARR]], i64 [[OFF]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[I]], 2
+; CHECK-NEXT:    [[SEXT:%.*]] = sext i8 [[ADD]] to i64
+; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds float, ptr [[OFFSETARR]], i64 [[SEXT]]
+; CHECK-NEXT:    ret ptr [[P]]
+;
+entry:
+  %arr = alloca float, i64 127, align 4
+  %offsetarr = getelementptr float, ptr %arr, i64 %off
+  %add = add i8 %i, 2
+  %sext = sext i8 %add to i64
+  %p = getelementptr inbounds float, ptr %offsetarr, i64 %sext
+  ret ptr %p
+}
+
+; We can trace into sext(a + b) if a + b is non-negative (nsw flag) and one of
+; a or b is non-negative, even if the gep is not inbounds
+define ptr @sext_add_nsw(i32 %i, ptr %unknown_arr) {
+; CHECK-LABEL: define ptr @sext_add_nsw(
+; CHECK-SAME: i32 [[I:%.*]], ptr [[ARR:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[I]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [32 x [32 x float]], ptr [[ARR]], i64 0, i64 [[TMP0]], i64 0
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[TMP1]], i64 128
+; CHECK-NEXT:    ret ptr [[P1]]
+;
+entry:
+  %0 = add nsw i32 %i, 1
+  %1 = sext i32 %0 to i64
+  ; sext(nsw i + 1) = sext(i) + 1
+  %p = getelementptr [32 x [32 x float]], ptr %unknown_arr, i64 0, i64 %1, i64 0
   ret ptr %p
 }
 
@@ -68,7 +235,7 @@ define ptr @ext_add_no_overflow(i64 %a, i32 %b, i64 %c, i32 %d) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[D]] to i64
 ; CHECK-NEXT:    [[J4:%.*]] = add i64 [[C]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr [32 x [32 x float]], ptr @float_2d_array, i64 0, i64 [[I2]], i64 [[J4]]
-; CHECK-NEXT:    [[P5:%.*]] = getelementptr inbounds i8, ptr [[TMP3]], i64 132
+; CHECK-NEXT:    [[P5:%.*]] = getelementptr i8, ptr [[TMP3]], i64 132
 ; CHECK-NEXT:    ret ptr [[P5]]
 ;
   %b1 = add nsw i32 %b, 1
@@ -137,7 +304,7 @@ define ptr @sext_or(i64 %a, i32 %b) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[B1]] to i64
 ; CHECK-NEXT:    [[I2:%.*]] = add i64 [[A]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [32 x [32 x float]], ptr @float_2d_array, i64 0, i64 [[I2]], i64 [[J]]
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 128
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr i8, ptr [[TMP1]], i64 128
 ; CHECK-NEXT:    ret ptr [[P3]]
 ;
 entry:
@@ -162,7 +329,7 @@ define ptr @expr(i64 %a, i64 %b, ptr %out) {
 ; CHECK-NEXT:    [[B5:%.*]] = add i64 [[B]], 5
 ; CHECK-NEXT:    [[I2:%.*]] = add i64 [[B]], [[A]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [32 x [32 x float]], ptr @float_2d_array, i64 0, i64 [[I2]], i64 0
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 640
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr i8, ptr [[TMP0]], i64 640
 ; CHECK-NEXT:    store i64 [[B5]], ptr [[OUT]], align 8
 ; CHECK-NEXT:    ret ptr [[P3]]
 ;
@@ -186,7 +353,7 @@ define ptr @sext_expr(i32 %a, i32 %b, i32 %c, i64 %d) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP0]], [[TMP3]]
 ; CHECK-NEXT:    [[I1:%.*]] = add i64 [[D]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr [32 x [32 x float]], ptr @float_2d_array, i64 0, i64 0, i64 [[I1]]
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[TMP5]], i64 32
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[TMP5]], i64 32
 ; CHECK-NEXT:    ret ptr [[P2]]
 ;
 entry:
@@ -205,7 +372,7 @@ define ptr @sub(i64 %i, i64 %j) {
 ; CHECK-SAME: i64 [[I:%.*]], i64 [[J:%.*]]) {
 ; CHECK-NEXT:    [[J22:%.*]] = sub i64 0, [[J]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [32 x [32 x float]], ptr @float_2d_array, i64 0, i64 [[I]], i64 [[J22]]
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 -620
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr i8, ptr [[TMP1]], i64 -620
 ; CHECK-NEXT:    ret ptr [[P3]]
 ;
   %i2 = sub i64 %i, 5 ; i - 5
@@ -225,7 +392,7 @@ define ptr @packed_struct(i32 %i, i32 %j) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[I]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[J]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr [1024 x %struct.Packed], ptr [[S]], i64 0, i64 [[TMP0]], i32 1, i64 [[TMP1]]
-; CHECK-NEXT:    [[ARRAYIDX33:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 100
+; CHECK-NEXT:    [[ARRAYIDX33:%.*]] = getelementptr i8, ptr [[TMP2]], i64 100
 ; CHECK-NEXT:    ret ptr [[ARRAYIDX33]]
 ;
 entry:
@@ -358,7 +525,7 @@ define ptr @sign_mod_unsign(ptr %ptr, i64 %idx) {
 ; CHECK-SAME: ptr [[PTR:%.*]], i64 [[IDX:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [[STRUCT0:%.*]], ptr [[PTR]], i64 0, i32 3, i64 [[IDX]], i32 1
-; CHECK-NEXT:    [[PTR22:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 -64
+; CHECK-NEXT:    [[PTR22:%.*]] = getelementptr i8, ptr [[TMP0]], i64 -64
 ; CHECK-NEXT:    ret ptr [[PTR22]]
 ;
 entry:
@@ -373,7 +540,7 @@ define ptr @trunk_explicit(ptr %ptr, i64 %idx) {
 ; CHECK-SAME: ptr [[PTR:%.*]], i64 [[IDX:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [[STRUCT0:%.*]], ptr [[PTR]], i64 0, i32 3, i64 [[IDX]], i32 1
-; CHECK-NEXT:    [[PTR21:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 3216
+; CHECK-NEXT:    [[PTR21:%.*]] = getelementptr i8, ptr [[TMP0]], i64 3216
 ; CHECK-NEXT:    ret ptr [[PTR21]]
 ;
 entry:
@@ -390,7 +557,7 @@ define ptr @trunk_long_idx(ptr %ptr, i64 %idx) {
 ; CHECK-SAME: ptr [[PTR:%.*]], i64 [[IDX:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [[STRUCT0:%.*]], ptr [[PTR]], i64 0, i32 3, i64 [[IDX]], i32 1
-; CHECK-NEXT:    [[PTR21:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 3216
+; CHECK-NEXT:    [[PTR21:%.*]] = getelementptr i8, ptr [[TMP0]], i64 3216
 ; CHECK-NEXT:    ret ptr [[PTR21]]
 ;
 entry:

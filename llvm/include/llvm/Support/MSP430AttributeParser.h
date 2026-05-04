@@ -14,11 +14,12 @@
 #ifndef LLVM_SUPPORT_MSP430ATTRIBUTEPARSER_H
 #define LLVM_SUPPORT_MSP430ATTRIBUTEPARSER_H
 
-#include "llvm/Support/ELFAttributeParser.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/ELFAttrParserCompact.h"
 #include "llvm/Support/MSP430Attributes.h"
 
 namespace llvm {
-class MSP430AttributeParser : public ELFAttributeParser {
+class LLVM_ABI MSP430AttributeParser : public ELFCompactAttrParser {
   struct DisplayHandler {
     MSP430Attrs::AttrType Attribute;
     Error (MSP430AttributeParser::*Routine)(MSP430Attrs::AttrType);
@@ -34,10 +35,10 @@ class MSP430AttributeParser : public ELFAttributeParser {
 
 public:
   MSP430AttributeParser(ScopedPrinter *SW)
-      : ELFAttributeParser(SW, MSP430Attrs::getMSP430AttributeTags(),
-                           "mspabi") {}
+      : ELFCompactAttrParser(SW, MSP430Attrs::getMSP430AttributeTags(),
+                             "mspabi") {}
   MSP430AttributeParser()
-      : ELFAttributeParser(MSP430Attrs::getMSP430AttributeTags(), "mspabi") {}
+      : ELFCompactAttrParser(MSP430Attrs::getMSP430AttributeTags(), "mspabi") {}
 };
 } // namespace llvm
 

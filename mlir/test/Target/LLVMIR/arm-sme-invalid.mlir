@@ -36,6 +36,6 @@ llvm.func @arm_sme_tile_slice_to_vector_invalid_element_types(
 
 llvm.func @arm_sme_streaming_vl_invalid_return_type() -> i32 {
   // expected-error @+1 {{failed to verify that `res` is i64}}
-  %res = "arm_sme.intr.cntsb"() : () -> i32
+  %res = "arm_sme.intr.cntsd"() : () -> i32
   llvm.return %res : i32
 }

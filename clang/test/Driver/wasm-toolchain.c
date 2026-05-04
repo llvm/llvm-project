@@ -110,6 +110,12 @@
 // RUN:   | FileCheck -check-prefix=PTHREAD_NO_SIGN_EXT %s
 // PTHREAD_NO_SIGN_EXT: invalid argument '-pthread' not allowed with '-mno-sign-ext'
 
+// 'wasm32-wasi-threads' does the same thing as '-pthread'
+// RUN: %clang -### --target=wasm32-wasi-threads --sysroot=/foo %s 2>&1 \
+// RUN:  | FileCheck -check-prefix=WASI_THREADS %s
+// WASI_THREADS: "-cc1" {{.*}} "-target-feature" "+atomics" "-target-feature" "+bulk-memory" "-target-feature" "+mutable-globals" "-target-feature" "+sign-ext"
+// WASI_THREADS: wasm-ld{{.*}}" "--shared-memory" "-lpthread"
+
 // '-mllvm -emscripten-cxx-exceptions-allowed=foo,bar' sets
 // '-mllvm --force-attribute=foo:noinline -mllvm --force-attribute=bar:noinline'
 // RUN: %clang -### --target=wasm32-unknown-unknown \
@@ -290,3 +296,10 @@
 // RUN:   | FileCheck -check-prefix=LINK_WASIP2_USE_WASMLD %s
 // LINK_WASIP2_USE_WASMLD: "-cc1" {{.*}} "-o" "[[temp:[^"]*]]"
 // LINK_WASIP2_USE_WASMLD: wasm-ld{{.*}}" "-m" "wasm32" {{.*}} "[[temp]]" {{.*}}
+
+// Basic `wasm32-linux-muslwali` compile-link test.
+
+// RUN: %clang -### --target=wasm32-linux-muslwali --sysroot=/foo %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=LINK_WALI_BASIC %s
+// LINK_WALI_BASIC: "-cc1" {{.*}} "-o" "[[temp:[^"]*]]"
+// LINK_WALI_BASIC: wasm-ld{{.*}}" "-L/foo/lib/wasm32-linux-muslwali" "crt1.o" "[[temp]]" "-lc" "{{.*[/\\]}}libclang_rt.builtins.a" "-o" "a.out"

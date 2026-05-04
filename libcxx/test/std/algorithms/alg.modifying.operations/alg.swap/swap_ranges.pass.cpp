@@ -19,6 +19,7 @@
 #include <memory>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 #include "test_macros.h"
 #include "test_iterators.h"
@@ -34,12 +35,31 @@ struct TestPtr {
   struct TestImpl {
     template <class Iter2>
     TEST_CONSTEXPR_CXX20 void operator()() {
-      int a[] = {1, 2, 3};
-      int b[] = {4, 5, 6};
-      Iter2 r = std::swap_ranges(Iter1(a), Iter1(a + 3), Iter2(b));
-      assert(base(r) == b + 3);
-      assert(a[0] == 4 && a[1] == 5 && a[2] == 6);
-      assert(b[0] == 1 && b[1] == 2 && b[2] == 3);
+      { // Basic test case: swapping three elements between two arrays
+        int a[] = {1, 2, 3};
+        int b[] = {4, 5, 6};
+        Iter2 r = std::swap_ranges(Iter1(a), Iter1(a + 3), Iter2(b));
+        assert(base(r) == b + 3);
+        assert(a[0] == 4 && a[1] == 5 && a[2] == 6);
+        assert(b[0] == 1 && b[1] == 2 && b[2] == 3);
+      }
+      { // Large-scale test: swapping 100 elements between two different containers
+        const int N = 100;
+        std::array<int, N> a;
+        std::vector<int> b(N + 2, 42);
+        b.front() = 1;
+        b.back()  = -1;
+        for (int i = 0; i < N; ++i)
+          a[i] = i * i + 1;
+        Iter2 r = std::swap_ranges(Iter1(a.data()), Iter1(a.data() + N), Iter2(b.data() + 1));
+        assert(base(r) == b.data() + N + 1);
+        assert(b.front() == 1); // Ensure that the unswapped portion remains unchanged
+        assert(b.back() == -1);
+        for (int i = 0; i < N; ++i) {
+          assert(a[i] == 42);
+          assert(b[i + 1] == i * i + 1);
+        }
+      }
     }
   };
 };
@@ -110,6 +130,23 @@ TEST_CONSTEXPR_CXX20 bool test_simple_cases() {
   return true;
 }
 
+template <std::size_t N>
+TEST_CONSTEXPR_CXX20 void test_vector_bool() {
+  std::vector<bool> f(N, false), t(N, true);
+  { // Test swap_ranges() with aligned bytes
+    std::vector<bool> f1 = f, t1 = t;
+    std::swap_ranges(f1.begin(), f1.end(), t1.begin());
+    assert(f1 == t);
+    assert(t1 == f);
+  }
+  { // Test swap_ranges() with unaligned bytes
+    std::vector<bool> f1(N, false), t1(N + 8, true);
+    std::swap_ranges(f1.begin(), f1.end(), t1.begin() + 4);
+    assert(std::equal(f1.begin(), f1.end(), t.begin()));
+    assert(std::equal(t1.begin() + 4, t1.end() - 4, f.begin()));
+  }
+}
+
 TEST_CONSTEXPR_CXX20 bool test() {
   test_simple_cases<forward_iterator, forward_iterator>();
   test_simple_cases<forward_iterator, bidirectional_iterator>();
@@ -126,9 +163,19 @@ TEST_CONSTEXPR_CXX20 bool test() {
 
 #if TEST_STD_VER >= 11
   // We can't test unique_ptr in constant evaluation before C++23 as it's constexpr only since C++23.
-  if (TEST_STD_VER >= 23 || !TEST_IS_CONSTANT_EVALUATED)
+  if (TEST_STD_AT_LEAST_23_OR_RUNTIME_EVALUATED)
     types::for_each(types::forward_iterator_list<std::unique_ptr<int>*>(), TestUniquePtr());
 #endif
+
+  { // Test vector<bool>::iterator optimization
+    test_vector_bool<8>();
+    test_vector_bool<19>();
+    test_vector_bool<32>();
+    test_vector_bool<49>();
+    test_vector_bool<64>();
+    test_vector_bool<199>();
+    test_vector_bool<256>();
+  }
 
   return true;
 }

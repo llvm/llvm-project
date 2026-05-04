@@ -2,10 +2,6 @@
 ; RUN: opt -passes='sroa<preserve-cfg>' %s -S | FileCheck %s --check-prefixes=CHECK,CHECK-PRESERVE-CFG
 ; RUN: opt -passes='sroa<modify-cfg>' %s -S | FileCheck %s --check-prefixes=CHECK,CHECK-MODIFY-CFG
 
-;; Duplicate copies for RemoveDIs project, eliminating debug intrinsics
-; RUN: opt -passes='sroa<preserve-cfg>' %s -S --try-experimental-debuginfo-iterators | FileCheck %s --check-prefixes=CHECK,CHECK-PRESERVE-CFG
-; RUN: opt -passes='sroa<modify-cfg>' %s -S --try-experimental-debuginfo-iterators | FileCheck %s --check-prefixes=CHECK,CHECK-MODIFY-CFG
-
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 %foo = type { [8 x i8], [8 x i8] }
@@ -30,11 +26,13 @@ entry:
 attributes #0 = { nounwind readnone }
 
 !llvm.dbg.cu = !{!9}
+!10 = !{null}
+!11 = !DISubroutineType(types: !10)
 !llvm.module.flags = !{!0}
 
 !0 = !{i32 2, !"Debug Info Version", i32 3}
 !1 = !DILocalVariable(name: "I", scope: !2, file: !3, line: 947, type: !4)
-!2 = distinct !DISubprogram(name: "findInsertLocation", linkageName: "_ZL18findInsertLocationPN4llvm17MachineBasicBlockENS_9SlotIndexERNS_13LiveIntervalsE", scope: !3, file: !3, line: 937, isLocal: true, isDefinition: true, scopeLine: 938, flags: DIFlagPrototyped, isOptimized: true, unit: !9)
+!2 = distinct !DISubprogram(name: "findInsertLocation", linkageName: "_ZL18findInsertLocationPN4llvm17MachineBasicBlockENS_9SlotIndexERNS_13LiveIntervalsE", scope: !3, file: !3, line: 937, isLocal: true, isDefinition: true, scopeLine: 938, flags: DIFlagPrototyped, isOptimized: true, type: !11, unit: !9)
 !3 = !DIFile(filename: "none", directory: ".")
 !4 = !DICompositeType(tag: DW_TAG_class_type, name: "bundle_iterator<llvm::MachineInstr, llvm::ilist_iterator<llvm::MachineInstr> >", scope: !5, file: !3, line: 163, size: 128, align: 64, elements: !6, templateParams: !6, identifier: "_ZTSN4llvm17MachineBasicBlock15bundle_iteratorINS_12MachineInstrENS_14ilist_iteratorIS2_EEEE")
 !5 = distinct !DICompositeType(tag: DW_TAG_class_type, name: "MachineBasicBlock", file: !3, line: 68, size: 1408, align: 64, identifier: "_ZTSN4llvm17MachineBasicBlockE")

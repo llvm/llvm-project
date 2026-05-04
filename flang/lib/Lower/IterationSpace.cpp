@@ -165,10 +165,6 @@ private:
   RT find(const Fortran::evaluate::Designator<T> &x) {
     return find(x.u);
   }
-  template <typename T>
-  RT find(const Fortran::evaluate::Variable<T> &x) {
-    return find(x.u);
-  }
   RT find(const Fortran::evaluate::DescriptorInquiry &) { return {}; }
   RT find(const Fortran::evaluate::SpecificIntrinsic &) { return {}; }
   RT find(const Fortran::evaluate::ProcedureDesignator &x) { return {}; }
@@ -215,6 +211,14 @@ private:
     (void)find(op.left());
     (void)find(op.right());
     return false;
+  }
+  template <typename T>
+  RT find(const Fortran::evaluate::ConditionalExpr<T> &x) {
+    // Find array bases in condition and values
+    (void)find(x.condition());
+    (void)find(x.thenValue());
+    (void)find(x.elseValue());
+    return {};
   }
   RT find(const Fortran::evaluate::Relational<Fortran::evaluate::SomeType> &x) {
     (void)find(x.u);

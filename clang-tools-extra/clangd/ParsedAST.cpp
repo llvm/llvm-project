@@ -10,7 +10,6 @@
 #include "../clang-tidy/ClangTidyCheck.h"
 #include "../clang-tidy/ClangTidyDiagnosticConsumer.h"
 #include "../clang-tidy/ClangTidyModule.h"
-#include "../clang-tidy/ClangTidyModuleRegistry.h"
 #include "../clang-tidy/ClangTidyOptions.h"
 #include "AST.h"
 #include "CollectMacros.h"
@@ -381,8 +380,9 @@ std::vector<Diag> getIncludeCleanerDiags(ParsedAST &AST, llvm::StringRef Code,
     Findings.MissingIncludes.clear();
   if (SuppressUnused)
     Findings.UnusedIncludes.clear();
-  return issueIncludeCleanerDiagnostics(AST, Code, Findings, TFS,
-                                        Cfg.Diagnostics.Includes.IgnoreHeader);
+  return issueIncludeCleanerDiagnostics(
+      AST, Code, Findings, TFS, Cfg.Diagnostics.Includes.IgnoreHeader,
+      Cfg.Style.AngledHeaders, Cfg.Style.QuotedHeaders);
 }
 
 tidy::ClangTidyCheckFactories
@@ -464,7 +464,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
     Patch->apply(*CI);
   }
   auto Clang = prepareCompilerInstance(
-      std::move(CI), PreamblePCH,
+      std::move(CI), Inputs.Opts.SkipPreambleBuild ? nullptr : PreamblePCH,
       llvm::MemoryBuffer::getMemBufferCopy(Inputs.Contents, Filename), VFS,
       *DiagConsumer);
 
@@ -556,7 +556,8 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
         *AllCTFactories, Cfg.Diagnostics.ClangTidy.FastCheckFilter);
     CTContext.emplace(std::make_unique<tidy::DefaultOptionsProvider>(
         tidy::ClangTidyGlobalOptions(), ClangTidyOpts));
-    CTContext->setDiagnosticsEngine(&Clang->getDiagnostics());
+    // The lifetime of DiagnosticOptions is managed by \c Clang.
+    CTContext->setDiagnosticsEngine(nullptr, &Clang->getDiagnostics());
     CTContext->setASTContext(&Clang->getASTContext());
     CTContext->setCurrentFile(Filename);
     CTContext->setSelfContainedDiags(true);
@@ -584,11 +585,6 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
 
     ASTDiags.setLevelAdjuster([&](DiagnosticsEngine::Level DiagLevel,
                                   const clang::Diagnostic &Info) {
-      if (Cfg.Diagnostics.SuppressAll ||
-          isDiagnosticSuppressed(Info, Cfg.Diagnostics.Suppress,
-                                 Clang->getLangOpts()))
-        return DiagnosticsEngine::Ignored;
-
       auto It = OverriddenSeverity.find(Info.getID());
       if (It != OverriddenSeverity.end())
         DiagLevel = It->second;

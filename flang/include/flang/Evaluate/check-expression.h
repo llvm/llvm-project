@@ -28,20 +28,34 @@ namespace Fortran::evaluate {
 // Predicate: true when an expression is a constant expression (in the
 // strict sense of the Fortran standard); it may not (yet) be a hard
 // constant value.
-template <typename A> bool IsConstantExpr(const A &);
-extern template bool IsConstantExpr(const Expr<SomeType> &);
-extern template bool IsConstantExpr(const Expr<SomeInteger> &);
-extern template bool IsConstantExpr(const Expr<SubscriptInteger> &);
-extern template bool IsConstantExpr(const StructureConstructor &);
+// The FoldingContext pointer, if not null, prevents a "free" implied
+// DO index from being allowed in a constant expression or initial data
+// target if it is not registered in the FoldingContext.  (Array constructor
+// implied DO indices are always allowed when the implied DO is within
+// the expression.)
+template <typename A>
+bool IsConstantExpr(const A &, const FoldingContext * = nullptr);
+extern template bool IsConstantExpr(
+    const Expr<SomeType> &, const FoldingContext *);
+extern template bool IsConstantExpr(
+    const Expr<SomeInteger> &, const FoldingContext *);
+extern template bool IsConstantExpr(
+    const Expr<SubscriptInteger> &, const FoldingContext *);
+extern template bool IsConstantExpr(
+    const StructureConstructor &, const FoldingContext *);
 
 // Predicate: true when an expression is a constant expression (in the
 // strict sense of the Fortran standard) or a dummy argument with
 // INTENT(IN) and no VALUE.  This is useful for representing explicit
 // shapes of other dummy arguments.
-template <typename A> bool IsScopeInvariantExpr(const A &);
-extern template bool IsScopeInvariantExpr(const Expr<SomeType> &);
-extern template bool IsScopeInvariantExpr(const Expr<SomeInteger> &);
-extern template bool IsScopeInvariantExpr(const Expr<SubscriptInteger> &);
+template <typename A>
+bool IsScopeInvariantExpr(const A &, const FoldingContext * = nullptr);
+extern template bool IsScopeInvariantExpr(
+    const Expr<SomeType> &, const FoldingContext *);
+extern template bool IsScopeInvariantExpr(
+    const Expr<SomeInteger> &, const FoldingContext *);
+extern template bool IsScopeInvariantExpr(
+    const Expr<SubscriptInteger> &, const FoldingContext *);
 
 // Predicate: true when an expression actually is a typed Constant<T>,
 // perhaps with parentheses and wrapping around it.  False for all typeless
@@ -57,12 +71,19 @@ extern template bool IsActuallyConstant(
 // constant addressing and no vector-valued subscript.
 // If a non-null ContextualMessages pointer is passed, an error message
 // will be generated if and only if the result of the function is false.
-bool IsInitialDataTarget(
-    const Expr<SomeType> &, parser::ContextualMessages * = nullptr);
+bool IsInitialDataTarget(const Expr<SomeType> &,
+    parser::ContextualMessages * = nullptr, const FoldingContext * = nullptr);
 
 bool IsInitialProcedureTarget(const Symbol &);
 bool IsInitialProcedureTarget(const ProcedureDesignator &);
 bool IsInitialProcedureTarget(const Expr<SomeType> &);
+
+// Emit warnings about default REAL literal constants in contexts that
+// will be converted to a higher precision REAL kind than the default.
+void CheckRealWidening(
+    const Expr<SomeType> &, const DynamicType &toType, FoldingContext &);
+void CheckRealWidening(const Expr<SomeType> &,
+    const std::optional<DynamicType> &, FoldingContext &);
 
 // Validate the value of a named constant, the static initial
 // value of a non-pointer non-allocatable non-dummy variable, or the
@@ -113,21 +134,32 @@ extern template void CheckSpecificationExpr(
 // read-only data.
 template <typename A>
 std::optional<bool> IsContiguous(const A &, FoldingContext &,
-    bool namedConstantSectionsAreContiguous = true);
+    bool namedConstantSectionsAreContiguous = true,
+    bool firstDimensionStride1 = false);
 extern template std::optional<bool> IsContiguous(const Expr<SomeType> &,
-    FoldingContext &, bool namedConstantSectionsAreContiguous);
+    FoldingContext &, bool namedConstantSectionsAreContiguous,
+    bool firstDimensionStride1);
+extern template std::optional<bool> IsContiguous(const ActualArgument &,
+    FoldingContext &, bool namedConstantSectionsAreContiguous,
+    bool firstDimensionStride1);
 extern template std::optional<bool> IsContiguous(const ArrayRef &,
-    FoldingContext &, bool namedConstantSectionsAreContiguous);
+    FoldingContext &, bool namedConstantSectionsAreContiguous,
+    bool firstDimensionStride1);
 extern template std::optional<bool> IsContiguous(const Substring &,
-    FoldingContext &, bool namedConstantSectionsAreContiguous);
+    FoldingContext &, bool namedConstantSectionsAreContiguous,
+    bool firstDimensionStride1);
 extern template std::optional<bool> IsContiguous(const Component &,
-    FoldingContext &, bool namedConstantSectionsAreContiguous);
+    FoldingContext &, bool namedConstantSectionsAreContiguous,
+    bool firstDimensionStride1);
 extern template std::optional<bool> IsContiguous(const ComplexPart &,
-    FoldingContext &, bool namedConstantSectionsAreContiguous);
+    FoldingContext &, bool namedConstantSectionsAreContiguous,
+    bool firstDimensionStride1);
 extern template std::optional<bool> IsContiguous(const CoarrayRef &,
-    FoldingContext &, bool namedConstantSectionsAreContiguous);
-extern template std::optional<bool> IsContiguous(
-    const Symbol &, FoldingContext &, bool namedConstantSectionsAreContiguous);
+    FoldingContext &, bool namedConstantSectionsAreContiguous,
+    bool firstDimensionStride1);
+extern template std::optional<bool> IsContiguous(const Symbol &,
+    FoldingContext &, bool namedConstantSectionsAreContiguous,
+    bool firstDimensionStride1);
 static inline std::optional<bool> IsContiguous(const SymbolRef &s,
     FoldingContext &c, bool namedConstantSectionsAreContiguous = true) {
   return IsContiguous(s.get(), c, namedConstantSectionsAreContiguous);
@@ -144,6 +176,18 @@ extern template bool IsErrorExpr(const Expr<SomeType> &);
 
 std::optional<parser::Message> CheckStatementFunction(
     const Symbol &, const Expr<SomeType> &, FoldingContext &);
+
+std::optional<bool> ActualArgNeedsCopy(const ActualArgument *,
+    const characteristics::DummyArgument *, FoldingContext &, bool forCopyOut);
+
+// Scan expressions and note uses of values of symbols.
+semantics::UnorderedSymbolSet CollectUsedSymbolValues(
+    semantics::SemanticsContext &, const Expr<SomeType> &,
+    bool isDefinition = false);
+semantics::UnorderedSymbolSet CollectUsedSymbolValues(
+    semantics::SemanticsContext &, const ProcedureRef &);
+semantics::UnorderedSymbolSet CollectUsedSymbolValues(
+    semantics::SemanticsContext &, const Assignment &);
 
 } // namespace Fortran::evaluate
 #endif

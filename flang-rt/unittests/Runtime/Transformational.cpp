@@ -550,3 +550,67 @@ TEST(Transformational, TransposeReal10) {
   result.Destroy();
 }
 #endif
+
+TEST(Transformational, ShallowCopy) {
+  auto charArray{MakeArray<TypeCategory::Character, 1>(std::vector<int>{2, 3},
+      std::vector<std::string>{"ab", "cd", "ef", "gh", "ij", "kl"}, 2)};
+  charArray->GetDimension(0).SetBounds(-1, 0);
+  charArray->GetDimension(1).SetBounds(3, 5);
+  StaticDescriptor<2> staticCharResult;
+  Descriptor &charResult{staticCharResult.descriptor()};
+
+  // Test allocating ShallowCopy.
+  RTNAME(ShallowCopy)(charResult, *charArray);
+  ASSERT_TRUE(charResult.IsAllocated());
+  ASSERT_TRUE(charResult.IsContiguous());
+  ASSERT_EQ(charResult.type(), charArray->type());
+  ASSERT_EQ(charResult.ElementBytes(), 2u);
+  EXPECT_EQ(charResult.GetDimension(0).LowerBound(), 1);
+  EXPECT_EQ(charResult.GetDimension(0).Extent(), 2);
+  EXPECT_EQ(charResult.GetDimension(1).LowerBound(), 1);
+  EXPECT_EQ(charResult.GetDimension(1).Extent(), 3);
+  std::string expectedCharResult{"abcdefghijkl"};
+  EXPECT_EQ(std::memcmp(charResult.OffsetElement<char>(0),
+                expectedCharResult.data(), expectedCharResult.length()),
+      0);
+
+  // Test ShallowCopyDirect with pre-allocated result.
+  char *allocatedPtr = charResult.OffsetElement<char>(0);
+  std::memset(
+      charResult.OffsetElement<char>(0), 'x', expectedCharResult.length());
+  // Set new lower bounds for charResult.
+  charResult.GetDimension(0).SetBounds(-2, -1);
+  charResult.GetDimension(1).SetBounds(2, 4);
+  RTNAME(ShallowCopyDirect)(charResult, *charArray);
+  ASSERT_TRUE(charResult.IsAllocated());
+  ASSERT_TRUE(charResult.IsContiguous());
+  ASSERT_EQ(charResult.type(), charArray->type());
+  ASSERT_EQ(charResult.ElementBytes(), 2u);
+  EXPECT_EQ(charResult.GetDimension(0).LowerBound(), -2);
+  EXPECT_EQ(charResult.GetDimension(0).Extent(), 2);
+  EXPECT_EQ(charResult.GetDimension(1).LowerBound(), 2);
+  EXPECT_EQ(charResult.GetDimension(1).Extent(), 3);
+  // Test that the result was not re-allocated.
+  EXPECT_EQ(allocatedPtr, charResult.OffsetElement<char>(0));
+  EXPECT_EQ(std::memcmp(charResult.OffsetElement<char>(0),
+                expectedCharResult.data(), expectedCharResult.length()),
+      0);
+  charResult.Destroy();
+
+  auto intScalar{MakeArray<TypeCategory::Integer, 4>(
+      std::vector<int>{}, std::vector<std::int32_t>{-1})};
+  StaticDescriptor<0> staticIntResult;
+  Descriptor &intResult{staticIntResult.descriptor()};
+  RTNAME(ShallowCopy)(intResult, *intScalar);
+  ASSERT_TRUE(intResult.IsAllocated());
+  ASSERT_EQ(intResult.rank(), 0);
+  ASSERT_EQ(*intResult.ZeroBasedIndexedElement<std::int32_t>(0), -1);
+  *intResult.ZeroBasedIndexedElement<std::int32_t>(0) = 0;
+  allocatedPtr = intResult.OffsetElement<char>(0);
+  RTNAME(ShallowCopyDirect)(intResult, *intScalar);
+  ASSERT_TRUE(intResult.IsAllocated());
+  ASSERT_EQ(intResult.rank(), 0);
+  ASSERT_EQ(*intResult.ZeroBasedIndexedElement<std::int32_t>(0), -1);
+  EXPECT_EQ(allocatedPtr, intResult.OffsetElement<char>(0));
+  intResult.Destroy();
+}

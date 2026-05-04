@@ -10,6 +10,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "OSTargets.h"
+#include "AArch64.h"
 #include "clang/Basic/MacroBuilder.h"
 #include "llvm/ADT/StringRef.h"
 
@@ -220,6 +221,8 @@ static void addVisualCDefines(const LangOptions &Opts, MacroBuilder &Builder) {
     Builder.defineMacro("_MSC_FULL_VER", Twine(Opts.MSCompatibilityVersion));
     // FIXME We cannot encode the revision information into 32-bits
     Builder.defineMacro("_MSC_BUILD", Twine(1));
+    // Exposed by MSVC, used in their stddef.h.
+    Builder.defineMacro("_CRT_USE_BUILTIN_OFFSETOF", Twine(1));
 
     if (Opts.CPlusPlus11 && Opts.isCompatibleWithMSVC(LangOptions::MSVC2015))
       Builder.defineMacro("_HAS_CHAR16_T_LANGUAGE_SUPPORT", Twine(1));
@@ -270,6 +273,13 @@ static void addVisualCDefines(const LangOptions &Opts, MacroBuilder &Builder) {
   //
   // Clang currently only supports UTF-8, so we'll use 65001
   Builder.defineMacro("_MSVC_EXECUTION_CHARACTER_SET", "65001");
+
+  // As of version 19.15 (VS 2017 15.8), MSVC predefines this macro to indicate
+  // whether the traditional or standards-conforming preprocessor is in use.
+  // Currently, MSVC compatibility mode only attempts to be compatible with the
+  // traditional preprocessor.
+  if (Opts.isCompatibleWithMSVC(LangOptions::MSVC2017_8))
+    Builder.defineMacro("_MSVC_TRADITIONAL", "1");
 }
 
 void addWindowsDefines(const llvm::Triple &Triple, const LangOptions &Opts,
@@ -282,6 +292,17 @@ void addWindowsDefines(const llvm::Triple &Triple, const LangOptions &Opts,
   else if (Triple.isKnownWindowsMSVCEnvironment() ||
            (Triple.isWindowsItaniumEnvironment() && Opts.MSVCCompat))
     addVisualCDefines(Opts, Builder);
+}
+
+void getFuchsiaDefines(MacroBuilder &Builder, const LangOptions &Opts,
+                       const llvm::Triple &Triple) {
+  Builder.defineMacro("__Fuchsia__");
+  if (Opts.POSIXThreads)
+    Builder.defineMacro("_REENTRANT");
+  // Required by the libc++ locale support.
+  if (Opts.CPlusPlus)
+    Builder.defineMacro("_GNU_SOURCE");
+  Builder.defineMacro("__Fuchsia_API_level__", Twine(Opts.FuchsiaAPILevel));
 }
 
 } // namespace targets

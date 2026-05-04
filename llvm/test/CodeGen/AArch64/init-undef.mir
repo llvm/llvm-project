@@ -2,6 +2,9 @@
 # RUN: llc -mtriple=aarch64-- -aarch64-enable-subreg-liveness-tracking=false -run-pass=init-undef -o - %s | FileCheck %s
 # RUN: llc -mtriple=aarch64-- -aarch64-enable-subreg-liveness-tracking=true -run-pass=init-undef -o - %s | FileCheck %s
 
+# RUN: llc -mtriple=aarch64-- -aarch64-enable-subreg-liveness-tracking=false -passes=init-undef -o - %s | FileCheck %s
+# RUN: llc -mtriple=aarch64-- -aarch64-enable-subreg-liveness-tracking=true -passes=init-undef -o - %s | FileCheck %s
+
 ---
 name:            test_stxp_undef
 body:             |

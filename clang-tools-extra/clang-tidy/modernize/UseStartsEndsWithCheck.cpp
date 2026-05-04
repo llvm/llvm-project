@@ -1,4 +1,4 @@
-//===--- UseStartsEndsWithCheck.cpp - clang-tidy --------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,18 +20,19 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::modernize {
 
 static bool isNegativeComparison(const Expr *ComparisonExpr) {
-  if (const auto *Op = llvm::dyn_cast<BinaryOperator>(ComparisonExpr))
+  if (const auto *Op = dyn_cast<BinaryOperator>(ComparisonExpr))
     return Op->getOpcode() == BO_NE;
 
-  if (const auto *Op = llvm::dyn_cast<CXXOperatorCallExpr>(ComparisonExpr))
+  if (const auto *Op = dyn_cast<CXXOperatorCallExpr>(ComparisonExpr))
     return Op->getOperator() == OO_ExclaimEqual;
 
-  if (const auto *Op =
-          llvm::dyn_cast<CXXRewrittenBinaryOperator>(ComparisonExpr))
+  if (const auto *Op = dyn_cast<CXXRewrittenBinaryOperator>(ComparisonExpr))
     return Op->getOperator() == BO_NE;
 
   return false;
 }
+
+namespace {
 
 struct NotLengthExprForStringNode {
   NotLengthExprForStringNode(std::string ID, DynTypedNode Node,
@@ -91,6 +92,8 @@ AST_MATCHER_P(Expr, lengthExprForStringNode, std::string, ID) {
       ID, DynTypedNode::create(Node), &(Finder->getASTContext())));
 }
 
+} // namespace
+
 UseStartsEndsWithCheck::UseStartsEndsWithCheck(StringRef Name,
                                                ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context) {}
@@ -113,21 +116,33 @@ void UseStartsEndsWithCheck::registerMatchers(MatchFinder *Finder) {
   const auto OnClassWithEndsWithFunction = ClassTypeWithMethod(
       "ends_with_fun", "ends_with", "endsWith", "endswith", "EndsWith");
 
-  // Case 1: X.find(Y) [!=]= 0 -> starts_with.
+  // Case 1: X.find(Y, [0], [LEN(Y)]) [!=]= 0 -> starts_with.
   const auto FindExpr = cxxMemberCallExpr(
-      anyOf(argumentCountIs(1), hasArgument(1, ZeroLiteral)),
       callee(
           cxxMethodDecl(hasName("find"), ofClass(OnClassWithStartsWithFunction))
               .bind("find_fun")),
-      hasArgument(0, expr().bind("needle")));
+      hasArgument(0, expr().bind("needle")),
+      anyOf(
+          // Detect the expression: X.find(Y);
+          argumentCountIs(1),
+          // Detect the expression: X.find(Y, 0);
+          allOf(argumentCountIs(2), hasArgument(1, ZeroLiteral)),
+          // Detect the expression: X.find(Y, 0, LEN(Y));
+          allOf(argumentCountIs(3), hasArgument(1, ZeroLiteral),
+                hasArgument(2, lengthExprForStringNode("needle")))));
 
-  // Case 2: X.rfind(Y, 0) [!=]= 0 -> starts_with.
+  // Case 2: X.rfind(Y, 0, [LEN(Y)]) [!=]= 0 -> starts_with.
   const auto RFindExpr = cxxMemberCallExpr(
-      hasArgument(1, ZeroLiteral),
       callee(cxxMethodDecl(hasName("rfind"),
                            ofClass(OnClassWithStartsWithFunction))
                  .bind("find_fun")),
-      hasArgument(0, expr().bind("needle")));
+      hasArgument(0, expr().bind("needle")),
+      anyOf(
+          // Detect the expression: X.rfind(Y, 0);
+          allOf(argumentCountIs(2), hasArgument(1, ZeroLiteral)),
+          // Detect the expression: X.rfind(Y, 0, LEN(Y));
+          allOf(argumentCountIs(3), hasArgument(1, ZeroLiteral),
+                hasArgument(2, lengthExprForStringNode("needle")))));
 
   // Case 3: X.compare(0, LEN(Y), Y) [!=]= 0 -> starts_with.
   const auto CompareExpr = cxxMemberCallExpr(

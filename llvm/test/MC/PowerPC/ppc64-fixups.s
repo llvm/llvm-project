@@ -1,4 +1,3 @@
-
 # RUN: llvm-mc -triple powerpc64-unknown-unknown --show-encoding %s | FileCheck -check-prefix=CHECK-BE %s
 # RUN: llvm-mc -triple powerpc64le-unknown-unknown --show-encoding %s | FileCheck -check-prefix=CHECK-LE %s
 
@@ -6,6 +5,8 @@
 # RUN: llvm-readobj -r - | FileCheck %s -check-prefix=CHECK-BE-REL
 # RUN: llvm-mc -triple powerpc64le-unknown-unknown -filetype=obj %s | \
 # RUN: llvm-readobj -r - | FileCheck %s -check-prefix=CHECK-LE-REL
+
+# RUN: not llvm-mc -filetype=obj -triple powerpc64 --defsym ERR=1 %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR --implicit-check-not=error:
 
 # CHECK-BE: b target                        # encoding: [0b010010AA,A,A,0bAAAAAA00]
 # CHECK-LE: b target                        # encoding: [0bAAAAAA00,A,A,0b010010AA]
@@ -771,3 +772,16 @@ base:
 # CHECK-LE-REL: 0x{{[0-9A-F]*[08]}} R_PPC64_DTPREL64 target 0x0
 	.quad target@dtprel
 
+.ifdef ERR
+# ERR: [[#@LINE+1]]:15: error: cannot contain more than one relocation specifier
+ori 1, 2, x@l+x@l
+
+# ERR: [[#@LINE+1]]:17: error: cannot contain more than one relocation specifier
+ori 1, 2, -(x@l+x@l)
+
+# ERR: [[#@LINE+1]]:11: error: cannot contain more than one relocation specifier
+ori 1, 2, x@l+3@l
+
+# ERR: [[#@LINE+1]]:12: error: cannot contain more than one relocation specifier
+ori 1, 2, (x@l+3)@l
+.endif

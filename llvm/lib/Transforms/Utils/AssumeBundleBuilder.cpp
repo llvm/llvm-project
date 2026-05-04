@@ -20,13 +20,14 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Transforms/Utils/Local.h"
 
 using namespace llvm;
 
 namespace llvm {
-cl::opt<bool> ShouldPreserveAllAttributes(
+LLVM_ABI cl::opt<bool> ShouldPreserveAllAttributes(
     "assume-preserve-all", cl::init(false), cl::Hidden,
     cl::desc("enable preservation of all attributes. even those that are "
              "unlikely to be useful"));
@@ -114,12 +115,12 @@ struct AssumeBuilderState {
       : M(M), InstBeingModified(I), AC(AC), DT(DT) {}
 
   bool tryToPreserveWithoutAddingAssume(RetainedKnowledge RK) {
-    if (!InstBeingModified || !RK.WasOn)
+    if (!InstBeingModified || !RK.WasOn || !AC)
       return false;
     bool HasBeenPreserved = false;
     Use* ToUpdate = nullptr;
     getKnowledgeForValue(
-        RK.WasOn, {RK.AttrKind}, AC,
+        RK.WasOn, {RK.AttrKind}, *AC,
         [&](RetainedKnowledge RKOther, Instruction *Assume,
             const CallInst::BundleOpInfo *Bundle) {
           if (!isValidAssumeForContext(Assume, InstBeingModified, DT))
@@ -273,7 +274,13 @@ struct AssumeBuilderState {
       return addAccessedPtr(I, Store->getPointerOperand(),
                             Store->getValueOperand()->getType(),
                             Store->getAlign());
-    // TODO: Add support for the other Instructions.
+    if (auto *RMW = dyn_cast<AtomicRMWInst>(I))
+      return addAccessedPtr(I, RMW->getPointerOperand(),
+                            RMW->getValOperand()->getType(), RMW->getAlign());
+    if (auto *CmpXchg = dyn_cast<AtomicCmpXchgInst>(I))
+      return addAccessedPtr(I, CmpXchg->getPointerOperand(),
+                            CmpXchg->getCompareOperand()->getType(),
+                            CmpXchg->getAlign());
     // TODO: Maybe we should look around and merge with other llvm.assume.
   }
 };

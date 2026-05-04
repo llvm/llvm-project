@@ -128,8 +128,8 @@ using ConditionsTy = SmallVector<ConditionTy, 2>;
 /// if it is relevant to any argument at CB.
 static void recordCondition(CallBase &CB, BasicBlock *From, BasicBlock *To,
                             ConditionsTy &Conditions) {
-  auto *BI = dyn_cast<BranchInst>(From->getTerminator());
-  if (!BI || !BI->isConditional())
+  auto *BI = dyn_cast<CondBrInst>(From->getTerminator());
+  if (!BI)
     return;
 
   CmpPredicate Pred;
@@ -397,9 +397,10 @@ static void splitCallSite(CallBase &CB,
         continue;
       PHINode *NewPN = PHINode::Create(CurrentI->getType(), Preds.size());
       NewPN->setDebugLoc(CurrentI->getDebugLoc());
-      for (auto &Mapping : ValueToValueMaps)
-        NewPN->addIncoming(Mapping[CurrentI],
-                           cast<Instruction>(Mapping[CurrentI])->getParent());
+      for (auto &Mapping : ValueToValueMaps) {
+        Value *V = Mapping[CurrentI];
+        NewPN->addIncoming(V, cast<Instruction>(V)->getParent());
+      }
       NewPN->insertBefore(*TailBB, TailBB->begin());
       CurrentI->replaceAllUsesWith(NewPN);
     }

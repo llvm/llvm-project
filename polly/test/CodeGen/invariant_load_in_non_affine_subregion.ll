@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -passes=polly-codegen -polly-invariant-load-hoisting=true -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' -polly-invariant-load-hoisting=true -S < %s | FileCheck %s
 ;
 ; This crashed at some point as the invariant load is in a non-affine
 ; subregion. Just check it does not anymore.
@@ -66,8 +66,8 @@ if.then52:                                        ; preds = %land.lhs.true49
   br label %cleanup
 
 cleanup:                                          ; preds = %if.then52, %land.lhs.true49, %entry.split
-  call void @llvm.lifetime.end(i64 24, i8* %0)
+  call void @dummy(ptr %0)
   ret void
 }
 
-declare void @llvm.lifetime.end(i64, i8* nocapture)
+declare void @dummy(ptr)

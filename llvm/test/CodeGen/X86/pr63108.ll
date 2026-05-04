@@ -7,7 +7,6 @@
 define i32 @PR63108() {
 ; SSE-LABEL: PR63108:
 ; SSE:       # %bb.0: # %entry
-; SSE-NEXT:    xorl %eax, %eax
 ; SSE-NEXT:    testb %al, %al
 ; SSE-NEXT:    je .LBB0_2
 ; SSE-NEXT:  # %bb.1:
@@ -43,7 +42,6 @@ define i32 @PR63108() {
 ;
 ; AVX1-LABEL: PR63108:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    xorl %eax, %eax
 ; AVX1-NEXT:    testb %al, %al
 ; AVX1-NEXT:    je .LBB0_2
 ; AVX1-NEXT:  # %bb.1:
@@ -80,7 +78,6 @@ define i32 @PR63108() {
 ;
 ; AVX2-LABEL: PR63108:
 ; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    xorl %eax, %eax
 ; AVX2-NEXT:    testb %al, %al
 ; AVX2-NEXT:    je .LBB0_2
 ; AVX2-NEXT:  # %bb.1:
@@ -117,11 +114,10 @@ define i32 @PR63108() {
 ;
 ; AVX512-LABEL: PR63108:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    xorl %eax, %eax
 ; AVX512-NEXT:    testb %al, %al
 ; AVX512-NEXT:    je .LBB0_2
 ; AVX512-NEXT:  # %bb.1:
-; AVX512-NEXT:    vpbroadcastw {{.*#+}} xmm0 = [251,223,251,223,251,223,251,223,251,223,251,223,251,223,251,223]
+; AVX512-NEXT:    vmovd {{.*#+}} xmm0 = [57339,0,0,0]
 ; AVX512-NEXT:    jmp .LBB0_5
 ; AVX512-NEXT:  .LBB0_2: # %vector.body.preheader
 ; AVX512-NEXT:    vmovd {{.*#+}} xmm0 = [57339,0,0,0]

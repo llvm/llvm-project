@@ -26,7 +26,7 @@ namespace llvm {
 namespace mca {
 
 // This virtual dtor serves as the anchor for the CodeRegionGenerator class.
-CodeRegionGenerator::~CodeRegionGenerator() {}
+CodeRegionGenerator::~CodeRegionGenerator() = default;
 
 Expected<const CodeRegions &> AsmCodeRegionGenerator::parseCodeRegions(
     const std::unique_ptr<MCInstPrinter> &IP, bool SkipFailures) {
@@ -47,14 +47,14 @@ Expected<const CodeRegions &> AsmCodeRegionGenerator::parseCodeRegions(
   // comments.
   std::unique_ptr<MCAsmParser> Parser(
       createMCAsmParser(Regions.getSourceMgr(), Ctx, *Str, MAI));
-  MCAsmLexer &Lexer = Parser->getLexer();
+  AsmLexer &Lexer = Parser->getLexer();
   MCACommentConsumer *CCP = getCommentConsumer();
   Lexer.setCommentConsumer(CCP);
   // Enable support for MASM literal numbers (example: 05h, 101b).
   Lexer.setLexMasmIntegers(true);
 
   std::unique_ptr<MCTargetAsmParser> TAP(
-      TheTarget.createMCAsmParser(STI, *Parser, MCII, Opts));
+      TheTarget.createMCAsmParser(STI, *Parser, MCII));
   if (!TAP)
     return make_error<StringError>(
         "This target does not support assembly parsing.",

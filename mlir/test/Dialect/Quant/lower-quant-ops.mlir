@@ -509,3 +509,67 @@ func.func @qcast_per_channel_unranked(%arg0: tensor<*xf32>) -> tensor<*x!qalias>
   return %0 : tensor<*x!qalias>
 }
 
+// -----
+
+// CHECK: #[[$ATTR_0:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
+// CHECK: #[[$ATTR_1:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, 0, 0, d3 floordiv 2)>
+
+// CHECK-LABEL: @qcast_sub_channel_ranked
+// CHECK-SAME: %[[ARG_0:.*]]: tensor<2x?x?x4xf32>
+
+// CHECK: %[[SCALES:.*]] = arith.constant dense<{{.*}}2.000000e+00, 3.000000e+00{{.*}}, {{.*}}4.000000e+00, 5.000000e+00{{.*}}> : tensor<2x1x1x2xf32>
+// CHECK: %[[ZERO_POINTS:.*]] = arith.constant dense<{{.*}}10, 20{{.*}}, {{.*}}30, 40{{.*}}> : tensor<2x1x1x2xi8>
+
+// CHECK-DAG: %[[C_1:.*]] = arith.constant 1 : index
+// CHECK-DAG: %[[DIM_1:.*]] = tensor.dim %[[ARG_0]], %[[C_1]] : tensor<2x?x?x4xf32>
+// CHECK-DAG: %[[C_2:.*]] = arith.constant 2 : index
+// CHECK-DAG: %[[DIM_2:.*]] = tensor.dim %[[ARG_0]], %[[C_2]] : tensor<2x?x?x4xf32>
+// CHECK: %[[INIT:.*]] = tensor.empty(%[[DIM_1]], %[[DIM_2]]) : tensor<2x?x?x4xi8>
+
+// CHECK: %[[GENERIC:.*]] = linalg.generic {indexing_maps = [#[[$ATTR_0]], #[[$ATTR_1]], #[[$ATTR_1]], #[[$ATTR_0]]], iterator_types = ["parallel", "parallel", "parallel", "parallel"]} ins(%[[ARG_0]], %[[SCALES]], %[[ZERO_POINTS]] : tensor<2x?x?x4xf32>, tensor<2x1x1x2xf32>, tensor<2x1x1x2xi8>) outs(%[[INIT]] : tensor<2x?x?x4xi8>) {
+// CHECK: ^bb0(%[[IN:.*]]: f32, %[[SCALE:.*]]: f32, %[[ZERO_POINT:.*]]: i8, %[[OUT:.*]]: i8):
+// CHECK:   %[[SCALED:.*]] = arith.divf %[[IN]], %[[SCALE]] : f32
+// CHECK:   %[[ZERO_POINT_FLOAT:.*]] = arith.sitofp %[[ZERO_POINT]] : i8 to f32
+// CHECK:   %[[STORED_FLOAT:.*]] = arith.addf %[[SCALED]], %[[ZERO_POINT_FLOAT]] : f32
+// CHECK:   %[[STORED_INT:.*]] = arith.fptosi %[[STORED_FLOAT]] : f32 to i8
+// CHECK:   linalg.yield %[[STORED_INT]] : i8
+// CHECK: } -> tensor<2x?x?x4xi8>
+
+// CHECK: %[[STORED_QUANT:.*]] = quant.scast %[[GENERIC]] : tensor<2x?x?x4xi8> to tensor<2x?x?x4x!quant.uniform<i8:f32:{0:1, 3:2}, {{.*}}2.000000e+00:10, 3.000000e+00:20{{.*}}, {{.*}}4.000000e+00:30, 5.000000e+00:40{{.*}}>>
+// CHECK: return %[[STORED_QUANT]]
+
+!qalias = !quant.uniform<i8:f32:{0:1, 3:2}, {{{{2.0:10, 3.0:20}}}, {{{4.0:30, 5.0:40}}}}>
+func.func @qcast_sub_channel_ranked(%arg0: tensor<2x?x?x4xf32>) -> tensor<2x?x?x4x!qalias> {
+  %0 = quant.qcast %arg0 : tensor<2x?x?x4xf32> to tensor<2x?x?x4x!qalias>
+  return %0 : tensor<2x?x?x4x!qalias>
+}
+
+// -----
+
+// CHECK: #[[$ATTR_0:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
+// CHECK: #[[$ATTR_1:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, 0, 0, d3 floordiv 2)>
+
+// CHECK-LABEL: @qcast_sub_channel_ranked_bounds
+// CHECK-SAME: %[[ARG_0:.*]]: tensor<2x3x5x4xf32>
+
+// CHECK: %[[SCALES:.*]] = arith.constant dense<{{.*}}2.000000e+00, 3.000000e+00{{.*}}, {{.*}}4.000000e+00, 5.000000e+00{{.*}}> : tensor<2x1x1x2xf32>
+// CHECK: %[[ZERO_POINTS:.*]] = arith.constant dense<{{.*}}10, 20{{.*}}, {{.*}}30, 40{{.*}}> : tensor<2x1x1x2xi8>
+
+// CHECK: %[[INIT:.*]] = tensor.empty() : tensor<2x3x5x4xi8>
+// CHECK: %[[GENERIC:.*]] = linalg.generic {indexing_maps = [#[[$ATTR_0]], #[[$ATTR_1]], #[[$ATTR_1]], #[[$ATTR_0]]], iterator_types = ["parallel", "parallel", "parallel", "parallel"]} ins(%[[ARG_0]], %[[SCALES]], %[[ZERO_POINTS]] : tensor<2x3x5x4xf32>, tensor<2x1x1x2xf32>, tensor<2x1x1x2xi8>) outs(%[[INIT]] : tensor<2x3x5x4xi8>) {
+// CHECK: ^bb0(%[[IN:.*]]: f32, %[[SCALE:.*]]: f32, %[[ZERO_POINT:.*]]: i8, %[[OUT:.*]]: i8):
+// CHECK:   %[[SCALED:.*]] = arith.divf %[[IN]], %[[SCALE]] : f32
+// CHECK:   %[[ZERO_POINT_FLOAT:.*]] = arith.sitofp %[[ZERO_POINT]] : i8 to f32
+// CHECK:   %[[STORED_FLOAT:.*]] = arith.addf %[[SCALED]], %[[ZERO_POINT_FLOAT]] : f32
+// CHECK:   %[[STORED_INT:.*]] = arith.fptosi %[[STORED_FLOAT]] : f32 to i8
+// CHECK:   linalg.yield %[[STORED_INT]] : i8
+// CHECK: } -> tensor<2x3x5x4xi8>
+
+// CHECK: %[[STORED_QUANT:.*]] = quant.scast %[[GENERIC]] : tensor<2x3x5x4xi8> to tensor<2x3x5x4x!quant.uniform<i8:f32:{0:1, 3:2}, {{.*}}2.000000e+00:10, 3.000000e+00:20{{.*}}, {{.*}}4.000000e+00:30, 5.000000e+00:40{{.*}}>>
+// CHECK: return %[[STORED_QUANT]]
+
+!qalias = !quant.uniform<i8:f32:{0:1, 3:2}, {{{{2.0:10, 3.0:20}}}, {{{4.0:30, 5.0:40}}}}>
+func.func @qcast_sub_channel_ranked_bounds(%arg0: tensor<2x3x5x4xf32>) -> tensor<2x3x5x4x!qalias> {
+  %0 = quant.qcast %arg0 : tensor<2x3x5x4xf32> to tensor<2x3x5x4x!qalias>
+  return %0 : tensor<2x3x5x4x!qalias>
+}

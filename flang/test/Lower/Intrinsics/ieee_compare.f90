@@ -42,7 +42,7 @@ program p
       ! CHECK:     %[[V_185:[0-9]+]] = arith.cmpf oeq, %[[V_180]], %[[V_181]] {{.*}} : f32
       ! CHECK:     fir.if %[[V_184]] {
       ! CHECK:       %[[V_526:[0-9]+]] = fir.call @_FortranAMapException(%c1{{.*}}) fastmath<contract> : (i32) -> i32
-      ! CHECK:       %[[V_527:[0-9]+]] = fir.call @feraiseexcept(%[[V_526]]) fastmath<contract> : (i32) -> i32
+      ! CHECK:                           fir.call {{.*}}feraiseexcept(%[[V_526]]) fastmath<contract> : (i32)
       ! CHECK:     }
       ! CHECK:     %[[V_186:[0-9]+]] = fir.call @_FortranAioOutputLogical(%[[V_153]], %[[V_185]]) fastmath<contract> : (!fir.ref<i8>, i1) -> i1
       print*, ' [Q]', x(i), 'eq', x(j), ieee_quiet_eq(x(i), x(j))
@@ -63,7 +63,7 @@ program p
       ! CHECK:     %[[V_217:[0-9]+]] = arith.cmpf oge, %[[V_212]], %[[V_213]] {{.*}} : f32
       ! CHECK:     fir.if %[[V_216]] {
       ! CHECK:       %[[V_526:[0-9]+]] = fir.call @_FortranAMapException(%c1{{.*}}) fastmath<contract> : (i32) -> i32
-      ! CHECK:       %[[V_527:[0-9]+]] = fir.call @feraiseexcept(%[[V_526]]) fastmath<contract> : (i32) -> i32
+      ! CHECK:                           fir.call {{.*}}feraiseexcept(%[[V_526]]) fastmath<contract> : (i32)
       ! CHECK:     }
       ! CHECK:     %[[V_218:[0-9]+]] = fir.call @_FortranAioOutputLogical(%[[V_188]], %[[V_217]]) fastmath<contract> : (!fir.ref<i8>, i1) -> i1
       print*, ' [Q]', x(i), 'ge', x(j), ieee_quiet_ge(x(i), x(j))
@@ -84,7 +84,7 @@ program p
       ! CHECK:     %[[V_249:[0-9]+]] = arith.cmpf ogt, %[[V_244]], %[[V_245]] {{.*}} : f32
       ! CHECK:     fir.if %[[V_248]] {
       ! CHECK:       %[[V_526:[0-9]+]] = fir.call @_FortranAMapException(%c1{{.*}}) fastmath<contract> : (i32) -> i32
-      ! CHECK:       %[[V_527:[0-9]+]] = fir.call @feraiseexcept(%[[V_526]]) fastmath<contract> : (i32) -> i32
+      ! CHECK:                           fir.call {{.*}}feraiseexcept(%[[V_526]]) fastmath<contract> : (i32)
       ! CHECK:     }
       ! CHECK:     %[[V_250:[0-9]+]] = fir.call @_FortranAioOutputLogical(%[[V_220]], %[[V_249]]) fastmath<contract> : (!fir.ref<i8>, i1) -> i1
       print*, ' [Q]', x(i), 'gt', x(j), ieee_quiet_gt(x(i), x(j))
@@ -105,7 +105,7 @@ program p
       ! CHECK:     %[[V_281:[0-9]+]] = arith.cmpf ole, %[[V_276]], %[[V_277]] {{.*}} : f32
       ! CHECK:     fir.if %[[V_280]] {
       ! CHECK:       %[[V_526:[0-9]+]] = fir.call @_FortranAMapException(%c1{{.*}}) fastmath<contract> : (i32) -> i32
-      ! CHECK:       %[[V_527:[0-9]+]] = fir.call @feraiseexcept(%[[V_526]]) fastmath<contract> : (i32) -> i32
+      ! CHECK:                           fir.call {{.*}}feraiseexcept(%[[V_526]]) fastmath<contract> : (i32)
       ! CHECK:     }
       ! CHECK:     %[[V_282:[0-9]+]] = fir.call @_FortranAioOutputLogical(%[[V_252]], %[[V_281]]) fastmath<contract> : (!fir.ref<i8>, i1) -> i1
       print*, ' [Q]', x(i), 'le', x(j), ieee_quiet_le(x(i), x(j))
@@ -126,7 +126,7 @@ program p
       ! CHECK:     %[[V_313:[0-9]+]] = arith.cmpf olt, %[[V_308]], %[[V_309]] {{.*}} : f32
       ! CHECK:     fir.if %[[V_312]] {
       ! CHECK:       %[[V_526:[0-9]+]] = fir.call @_FortranAMapException(%c1{{.*}}) fastmath<contract> : (i32) -> i32
-      ! CHECK:       %[[V_527:[0-9]+]] = fir.call @feraiseexcept(%[[V_526]]) fastmath<contract> : (i32) -> i32
+      ! CHECK:                           fir.call {{.*}}feraiseexcept(%[[V_526]]) fastmath<contract> : (i32)
       ! CHECK:     }
       ! CHECK:     %[[V_314:[0-9]+]] = fir.call @_FortranAioOutputLogical(%[[V_284]], %[[V_313]]) fastmath<contract> : (!fir.ref<i8>, i1) -> i1
       print*, ' [Q]', x(i), 'lt', x(j), ieee_quiet_lt(x(i), x(j))
@@ -147,7 +147,7 @@ program p
       ! CHECK:     %[[V_345:[0-9]+]] = arith.cmpf une, %[[V_340]], %[[V_341]] {{.*}} : f32
       ! CHECK:     fir.if %[[V_344]] {
       ! CHECK:       %[[V_526:[0-9]+]] = fir.call @_FortranAMapException(%c1{{.*}}) fastmath<contract> : (i32) -> i32
-      ! CHECK:       %[[V_527:[0-9]+]] = fir.call @feraiseexcept(%[[V_526]]) fastmath<contract> : (i32) -> i32
+      ! CHECK:                           fir.call {{.*}}feraiseexcept(%[[V_526]]) fastmath<contract> : (i32)
       ! CHECK:     }
       ! CHECK:     %[[V_346:[0-9]+]] = fir.call @_FortranAioOutputLogical(%[[V_316]], %[[V_345]]) fastmath<contract> : (!fir.ref<i8>, i1) -> i1
       print*, ' [Q]', x(i), 'ne', x(j), ieee_quiet_ne(x(i), x(j))
@@ -166,7 +166,7 @@ program p
       ! CHECK:     %[[V_375:[0-9]+]] = arith.cmpf oeq, %[[V_372]], %[[V_373]] {{.*}} : f32
       ! CHECK:     fir.if %[[V_374]] {
       ! CHECK:       %[[V_526:[0-9]+]] = fir.call @_FortranAMapException(%c1{{.*}}) fastmath<contract> : (i32) -> i32
-      ! CHECK:       %[[V_527:[0-9]+]] = fir.call @feraiseexcept(%[[V_526]]) fastmath<contract> : (i32) -> i32
+      ! CHECK:                           fir.call {{.*}}feraiseexcept(%[[V_526]]) fastmath<contract> : (i32)
       ! CHECK:     }
       ! CHECK:     %[[V_376:[0-9]+]] = fir.call @_FortranAioOutputLogical(%[[V_348]], %[[V_375]]) fastmath<contract> : (!fir.ref<i8>, i1) -> i1
       print*, ' [S]', x(i), 'eq', x(j), ieee_signaling_eq(x(i), x(j))
@@ -185,7 +185,7 @@ program p
       ! CHECK:     %[[V_404:[0-9]+]] = arith.cmpf oge, %[[V_401]], %[[V_402]] {{.*}} : f32
       ! CHECK:     fir.if %[[V_403]] {
       ! CHECK:       %[[V_526:[0-9]+]] = fir.call @_FortranAMapException(%c1{{.*}}) fastmath<contract> : (i32) -> i32
-      ! CHECK:       %[[V_527:[0-9]+]] = fir.call @feraiseexcept(%[[V_526]]) fastmath<contract> : (i32) -> i32
+      ! CHECK:                           fir.call {{.*}}feraiseexcept(%[[V_526]]) fastmath<contract> : (i32)
       ! CHECK:     }
       ! CHECK:     %[[V_405:[0-9]+]] = fir.call @_FortranAioOutputLogical(%[[V_378]], %[[V_404]]) fastmath<contract> : (!fir.ref<i8>, i1) -> i1
       print*, ' [S]', x(i), 'ge', x(j), ieee_signaling_ge(x(i), x(j))
@@ -204,7 +204,7 @@ program p
       ! CHECK:     %[[V_433:[0-9]+]] = arith.cmpf ogt, %[[V_430]], %[[V_431]] {{.*}} : f32
       ! CHECK:     fir.if %[[V_432]] {
       ! CHECK:       %[[V_526:[0-9]+]] = fir.call @_FortranAMapException(%c1{{.*}}) fastmath<contract> : (i32) -> i32
-      ! CHECK:       %[[V_527:[0-9]+]] = fir.call @feraiseexcept(%[[V_526]]) fastmath<contract> : (i32) -> i32
+      ! CHECK:                           fir.call {{.*}}feraiseexcept(%[[V_526]]) fastmath<contract> : (i32)
       ! CHECK:     }
       ! CHECK:     %[[V_434:[0-9]+]] = fir.call @_FortranAioOutputLogical(%[[V_407]], %[[V_433]]) fastmath<contract> : (!fir.ref<i8>, i1) -> i1
       print*, ' [S]', x(i), 'gt', x(j), ieee_signaling_gt(x(i), x(j))
@@ -223,7 +223,7 @@ program p
       ! CHECK:     %[[V_462:[0-9]+]] = arith.cmpf ole, %[[V_459]], %[[V_460]] {{.*}} : f32
       ! CHECK:     fir.if %[[V_461]] {
       ! CHECK:       %[[V_526:[0-9]+]] = fir.call @_FortranAMapException(%c1{{.*}}) fastmath<contract> : (i32) -> i32
-      ! CHECK:       %[[V_527:[0-9]+]] = fir.call @feraiseexcept(%[[V_526]]) fastmath<contract> : (i32) -> i32
+      ! CHECK:                           fir.call {{.*}}feraiseexcept(%[[V_526]]) fastmath<contract> : (i32)
       ! CHECK:     }
       ! CHECK:     %[[V_463:[0-9]+]] = fir.call @_FortranAioOutputLogical(%[[V_436]], %[[V_462]]) fastmath<contract> : (!fir.ref<i8>, i1) -> i1
       print*, ' [S]', x(i), 'le', x(j), ieee_signaling_le(x(i), x(j))
@@ -242,7 +242,7 @@ program p
       ! CHECK:     %[[V_491:[0-9]+]] = arith.cmpf olt, %[[V_488]], %[[V_489]] {{.*}} : f32
       ! CHECK:     fir.if %[[V_490]] {
       ! CHECK:       %[[V_526:[0-9]+]] = fir.call @_FortranAMapException(%c1{{.*}}) fastmath<contract> : (i32) -> i32
-      ! CHECK:       %[[V_527:[0-9]+]] = fir.call @feraiseexcept(%[[V_526]]) fastmath<contract> : (i32) -> i32
+      ! CHECK:                           fir.call {{.*}}feraiseexcept(%[[V_526]]) fastmath<contract> : (i32)
       ! CHECK:     }
       ! CHECK:     %[[V_492:[0-9]+]] = fir.call @_FortranAioOutputLogical(%[[V_465]], %[[V_491]]) fastmath<contract> : (!fir.ref<i8>, i1) -> i1
       print*, ' [S]', x(i), 'lt', x(j), ieee_signaling_lt(x(i), x(j))
@@ -261,7 +261,7 @@ program p
       ! CHECK:     %[[V_520:[0-9]+]] = arith.cmpf une, %[[V_517]], %[[V_518]] {{.*}} : f32
       ! CHECK:     fir.if %[[V_519]] {
       ! CHECK:       %[[V_526:[0-9]+]] = fir.call @_FortranAMapException(%c1{{.*}}) fastmath<contract> : (i32) -> i32
-      ! CHECK:       %[[V_527:[0-9]+]] = fir.call @feraiseexcept(%[[V_526]]) fastmath<contract> : (i32) -> i32
+      ! CHECK:                           fir.call {{.*}}feraiseexcept(%[[V_526]]) fastmath<contract> : (i32)
       ! CHECK:     }
       ! CHECK:     %[[V_521:[0-9]+]] = fir.call @_FortranAioOutputLogical(%[[V_494]], %[[V_520]]) fastmath<contract> : (!fir.ref<i8>, i1) -> i1
       print*, ' [S]', x(i), 'ne', x(j), ieee_signaling_ne(x(i), x(j))

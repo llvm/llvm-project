@@ -28,10 +28,6 @@ public:
 
   GenericBitsetFrontEnd(ValueObject &valobj, StdLib stdlib);
 
-  size_t GetIndexOfChildWithName(ConstString name) override {
-    return formatters::ExtractIndexFromString(name.GetCString());
-  }
-
   lldb::ChildCacheState Update() override;
   llvm::Expected<uint32_t> CalculateNumChildren() override {
     return m_elements.size();
@@ -110,8 +106,8 @@ ValueObjectSP GenericBitsetFrontEnd::GetChildAtIndex(uint32_t idx) {
   ValueObjectSP chunk;
   // For small bitsets __first_ is not an array, but a plain size_t.
   if (m_first->GetCompilerType().IsArrayType(&type)) {
-    std::optional<uint64_t> bit_size =
-        type.GetBitSize(ctx.GetBestExecutionContextScope());
+    std::optional<uint64_t> bit_size = llvm::expectedToOptional(
+        type.GetBitSize(ctx.GetBestExecutionContextScope()));
     if (!bit_size || *bit_size == 0)
       return {};
     chunk = m_first->GetChildAtIndex(idx / *bit_size);
@@ -122,16 +118,16 @@ ValueObjectSP GenericBitsetFrontEnd::GetChildAtIndex(uint32_t idx) {
   if (!type || !chunk)
     return {};
 
-  std::optional<uint64_t> bit_size =
-      type.GetBitSize(ctx.GetBestExecutionContextScope());
+  std::optional<uint64_t> bit_size = llvm::expectedToOptional(
+      type.GetBitSize(ctx.GetBestExecutionContextScope()));
   if (!bit_size || *bit_size == 0)
     return {};
   size_t chunk_idx = idx % *bit_size;
   uint8_t value = !!(chunk->GetValueAsUnsigned(0) & (uint64_t(1) << chunk_idx));
   DataExtractor data(&value, sizeof(value), m_byte_order, m_byte_size);
 
-  m_elements[idx] = CreateValueObjectFromData(llvm::formatv("[{0}]", idx).str(),
-                                              data, ctx, m_bool_type);
+  m_elements[idx] = CreateChildValueObjectFromData(
+      llvm::formatv("[{0}]", idx).str(), data, ctx, m_bool_type);
 
   return m_elements[idx];
 }

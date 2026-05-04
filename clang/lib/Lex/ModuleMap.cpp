@@ -37,9 +37,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
-#include <cstdint>
 #include <cstring>
 #include <optional>
 #include <string>
@@ -47,6 +45,8 @@
 #include <utility>
 
 using namespace clang;
+
+static constexpr llvm::StringRef kPrivateModuleSuffix = "_Private";
 
 void ModuleMapCallbacks::anchor() {}
 
@@ -260,6 +260,8 @@ static bool isBuiltinHeaderName(StringRef FileName) {
            .Case("stdarg.h", true)
            .Case("stdatomic.h", true)
            .Case("stdbool.h", true)
+           .Case("stdckdint.h", true)
+           .Case("stdcountof.h", true)
            .Case("stddef.h", true)
            .Case("stdint.h", true)
            .Case("tgmath.h", true)
@@ -301,11 +303,12 @@ void ModuleMap::resolveHeader(Module *Mod,
       else
         // Record this umbrella header.
         setUmbrellaHeaderAsWritten(Mod, *File, Header.FileName,
-                                   RelativePathName.str());
+                                   RelativePathName.str(), Header.FileNameLoc);
     } else {
       Module::Header H = {Header.FileName, std::string(RelativePathName),
                           *File};
-      addHeader(Mod, H, headerKindToRole(Header.Kind));
+      addHeader(Mod, H, headerKindToRole(Header.Kind), /*Imported=*/false,
+                Header.FileNameLoc);
     }
   } else if (Header.HasBuiltinHeader && !Header.Size && !Header.ModTime) {
     // There's a builtin header but no corresponding on-disk header. Assume
@@ -354,7 +357,6 @@ ModuleMap::ModuleMap(SourceManager &SourceMgr, DiagnosticsEngine &Diags,
                      HeaderSearch &HeaderInfo)
     : SourceMgr(SourceMgr), Diags(Diags), LangOpts(LangOpts), Target(Target),
       HeaderInfo(HeaderInfo) {
-  MMapLangOpts.LineComment = true;
 }
 
 ModuleMap::~ModuleMap() = default;
@@ -487,21 +489,45 @@ void ModuleMap::diagnoseHeaderInclusion(Module *RequestingModule,
                                         bool RequestingModuleIsModuleInterface,
                                         SourceLocation FilenameLoc,
                                         StringRef Filename, FileEntryRef File) {
-  // No errors for indirect modules. This may be a bit of a problem for modules
-  // with no source files.
-  if (getTopLevelOrNull(RequestingModule) != getTopLevelOrNull(SourceModule))
-    return;
-
   if (RequestingModule) {
     resolveUses(RequestingModule, /*Complain=*/false);
     resolveHeaderDirectives(RequestingModule, /*File=*/std::nullopt);
   }
 
+  HeadersMap::iterator Known = findKnownHeader(File);
+
+  diagnoseDuplicateHeaderOwnership(FilenameLoc, Filename, File, Known);
+
+  // No errors for indirect modules. This may be a bit of a problem for modules
+  // with no source files.
+  Module *TopLevelRequestingModule = getTopLevelOrNull(RequestingModule);
+  Module *TopLevelSourceModule = getTopLevelOrNull(SourceModule);
+  bool IsPublicForMainPrivateModule = false;
+  if (TopLevelRequestingModule != TopLevelSourceModule) {
+    // Suppose we have a pair of files foo.cpp / foo.h.
+    // Our build system may want to verify that foo.cpp only uses things
+    // declared in the implementation_deps of foo, while foo.h only uses things
+    // declared in interface_deps. This requires them to be two seperate
+    // modules, foo_Private and foo. This check is required to ensure that foo.h
+    // is still checked. Otherwise, foo.h would never be checked, since it will
+    // never be the top-level module.
+    if (TopLevelRequestingModule && TopLevelSourceModule &&
+        llvm::StringRef(TopLevelSourceModule->Name)
+            .ends_with(kPrivateModuleSuffix) &&
+        llvm::StringRef(TopLevelSourceModule->Name)
+                .drop_back(kPrivateModuleSuffix.size()) ==
+            TopLevelRequestingModule->Name) {
+      IsPublicForMainPrivateModule = true;
+    } else {
+      return;
+    }
+  }
+
   bool Excluded = false;
+  bool UsedByPrivateModule = false;
   Module *Private = nullptr;
   Module *NotUsed = nullptr;
 
-  HeadersMap::iterator Known = findKnownHeader(File);
   if (Known != Headers.end()) {
     for (const KnownHeader &Header : Known->second) {
       // Excluded headers don't really belong to a module.
@@ -521,6 +547,9 @@ void ModuleMap::diagnoseHeaderInclusion(Module *RequestingModule,
       if (RequestingModule && LangOpts.ModulesDeclUse &&
           !RequestingModule->directlyUses(Header.getModule())) {
         NotUsed = Header.getModule();
+        if (IsPublicForMainPrivateModule) {
+          UsedByPrivateModule = SourceModule->directlyUses(Header.getModule());
+        }
         continue;
       }
 
@@ -540,9 +569,15 @@ void ModuleMap::diagnoseHeaderInclusion(Module *RequestingModule,
 
   // We have found a module, but we don't use it.
   if (NotUsed) {
-    Diags.Report(FilenameLoc, diag::err_undeclared_use_of_module_indirect)
-        << RequestingModule->getTopLevelModule()->Name << Filename
-        << NotUsed->Name;
+    if (UsedByPrivateModule) {
+      Diags.Report(FilenameLoc, diag::err_undeclared_use_of_module_private)
+          << RequestingModule->getTopLevelModule()->Name << Filename
+          << NotUsed->Name;
+    } else {
+      Diags.Report(FilenameLoc, diag::err_undeclared_use_of_module_indirect)
+          << RequestingModule->getTopLevelModule()->Name << Filename
+          << NotUsed->Name;
+    }
     return;
   }
 
@@ -562,6 +597,86 @@ void ModuleMap::diagnoseHeaderInclusion(Module *RequestingModule,
         diag::warn_non_modular_include_in_module;
     Diags.Report(FilenameLoc, DiagID) << RequestingModule->getFullModuleName()
         << File.getName();
+  }
+}
+
+void ModuleMap::diagnoseDuplicateHeaderOwnership(SourceLocation FilenameLoc,
+                                                 StringRef Filename,
+                                                 FileEntryRef File,
+                                                 HeadersMap::iterator Known) {
+  if (Known == Headers.end())
+    return;
+
+  if (Diags.isIgnored(diag::warn_mmap_duplicate_header_ownership, FilenameLoc))
+    return;
+
+  // Only diagnose each header once.
+  if (!DiagnosedDuplicateHeaders.insert(&File.getFileEntry()).second)
+    return;
+
+  struct OwnerInfo {
+    Module *Mod;
+    SourceLocation Loc;
+    bool IsUmbrella;
+  };
+
+  // Collect distinct top-level modules that explicitly own this header with
+  // a modular (non-textual, non-excluded) role.
+  SmallVector<OwnerInfo, 2> OwningModules;
+  llvm::SmallPtrSet<Module *, 2> SeenTopLevel;
+  for (const KnownHeader &H : Known->second) {
+    if (!isModular(H.getRole()))
+      continue;
+    Module *TopLevel = H.getModule()->getTopLevelModule();
+    if (!SeenTopLevel.insert(TopLevel).second)
+      continue;
+    auto It = HeaderOwnerLocs.find({&File.getFileEntry(), H.getModule()});
+    SourceLocation OwnerLoc =
+        It != HeaderOwnerLocs.end() ? It->second : SourceLocation();
+    OwningModules.push_back({TopLevel, OwnerLoc, /*IsUmbrella=*/false});
+  }
+
+  // Need at least one explicit owner for there to be a conflict, since
+  // umbrella coverage can only add one more.
+  if (OwningModules.empty())
+    return;
+
+  // Also check umbrella directory coverage for additional owners from different
+  // top-level modules — but only if the header isn't excluded from the umbrella
+  // module. Explicit headers take precedence over umbrella dirs in module
+  // resolution, but a header owned by one module that another module's umbrella
+  // covers can still create problems.
+  SmallVector<DirectoryEntryRef, 2> IntermediateDirs;
+  if (KnownHeader UmbrellaOwner =
+          findHeaderInUmbrellaDirs(File, IntermediateDirs)) {
+    Module *TopLevel = UmbrellaOwner.getModule()->getTopLevelModule();
+    // Only add if it's a different top-level module and the header isn't
+    // excluded from the umbrella module.
+    if (SeenTopLevel.insert(TopLevel).second) {
+      // Check that the header isn't excluded in the umbrella module.
+      bool IsExcluded =
+          llvm::any_of(Known->second, [TopLevel](const KnownHeader &H) {
+            return H.getModule()->getTopLevelModule() == TopLevel &&
+                   H.getRole() == ExcludedHeader;
+          });
+      if (!IsExcluded) {
+        OwningModules.push_back({TopLevel,
+                                 UmbrellaOwner.getModule()->UmbrellaDeclLoc,
+                                 /*IsUmbrella=*/true});
+      }
+    }
+  }
+
+  if (OwningModules.size() < 2)
+    return;
+
+  Diags.Report(FilenameLoc, diag::warn_mmap_duplicate_header_ownership)
+      << Filename;
+  for (const auto &Owner : OwningModules) {
+    unsigned NoteID = Owner.IsUmbrella
+                          ? diag::note_mmap_header_covered_by_umbrella
+                          : diag::note_mmap_header_owned_by;
+    Diags.Report(Owner.Loc, NoteID) << Owner.Mod->getFullModuleName();
   }
 }
 
@@ -620,6 +735,16 @@ ModuleMap::KnownHeader ModuleMap::findModuleForHeader(FileEntryRef File,
   }
 
   return MakeResult(findOrCreateModuleForHeaderInUmbrellaDir(File));
+}
+
+OptionalFileEntryRef ModuleMap::findUmbrellaHeaderForModule(
+    Module *M, std::string NameAsWritten,
+    SmallVectorImpl<char> &RelativePathName) {
+  Module::UnresolvedHeaderDirective Header;
+  Header.FileName = std::move(NameAsWritten);
+  Header.IsUmbrella = true;
+  bool NeedsFramework;
+  return findHeader(M, Header, RelativePathName, NeedsFramework);
 }
 
 ModuleMap::KnownHeader
@@ -1052,7 +1177,11 @@ Module *ModuleMap::inferFrameworkModule(DirectoryEntryRef FrameworkDir,
           bool IsFrameworkDir = Parent.ends_with(".framework");
           if (OptionalFileEntryRef ModMapFile =
                   HeaderInfo.lookupModuleMapFile(*ParentDir, IsFrameworkDir)) {
-            parseModuleMapFile(*ModMapFile, Attrs.IsSystem, *ParentDir);
+            // TODO: Parsing a module map should populate `InferredDirectories`
+            //       so we don't need to do a full load here.
+            parseAndLoadModuleMapFile(*ModMapFile, Attrs.IsSystem,
+                                      /*ImplicitlyDiscovered=*/true,
+                                      *ParentDir);
             inferred = InferredDirectories.find(*ParentDir);
           }
 
@@ -1199,9 +1328,12 @@ Module *ModuleMap::createShadowedModule(StringRef Name, bool IsFramework,
 
 void ModuleMap::setUmbrellaHeaderAsWritten(
     Module *Mod, FileEntryRef UmbrellaHeader, const Twine &NameAsWritten,
-    const Twine &PathRelativeToRootModuleDirectory) {
+    const Twine &PathRelativeToRootModuleDirectory, SourceLocation Loc) {
   Headers[UmbrellaHeader].push_back(KnownHeader(Mod, NormalHeader));
+  if (Loc.isValid())
+    HeaderOwnerLocs[{&UmbrellaHeader.getFileEntry(), Mod}] = Loc;
   Mod->Umbrella = UmbrellaHeader;
+  Mod->UmbrellaDeclLoc = Loc;
   Mod->UmbrellaAsWritten = NameAsWritten.str();
   Mod->UmbrellaRelativeToRootModuleDirectory =
       PathRelativeToRootModuleDirectory.str();
@@ -1214,8 +1346,9 @@ void ModuleMap::setUmbrellaHeaderAsWritten(
 
 void ModuleMap::setUmbrellaDirAsWritten(
     Module *Mod, DirectoryEntryRef UmbrellaDir, const Twine &NameAsWritten,
-    const Twine &PathRelativeToRootModuleDirectory) {
+    const Twine &PathRelativeToRootModuleDirectory, SourceLocation Loc) {
   Mod->Umbrella = UmbrellaDir;
+  Mod->UmbrellaDeclLoc = Loc;
   Mod->UmbrellaAsWritten = NameAsWritten.str();
   Mod->UmbrellaRelativeToRootModuleDirectory =
       PathRelativeToRootModuleDirectory.str();
@@ -1294,7 +1427,8 @@ void ModuleMap::resolveHeaderDirectives(
 }
 
 void ModuleMap::addHeader(Module *Mod, Module::Header Header,
-                          ModuleHeaderRole Role, bool Imported) {
+                          ModuleHeaderRole Role, bool Imported,
+                          SourceLocation Loc) {
   KnownHeader KH(Mod, Role);
 
   FileEntryRef HeaderEntry = Header.Entry;
@@ -1305,6 +1439,9 @@ void ModuleMap::addHeader(Module *Mod, Module::Header Header,
   auto &HeaderList = Headers[HeaderEntry];
   if (llvm::is_contained(HeaderList, KH))
     return;
+
+  if (Loc.isValid())
+    HeaderOwnerLocs[{&HeaderEntry.getFileEntry(), Mod}] = Loc;
 
   HeaderList.push_back(KH);
   Mod->addHeader(headerRoleToKind(Role), std::move(Header));
@@ -1319,6 +1456,111 @@ void ModuleMap::addHeader(Module *Mod, Module::Header Header,
   // Notify callbacks that we just added a new header.
   for (const auto &Cb : Callbacks)
     Cb->moduleMapAddHeader(HeaderEntry.getName());
+}
+
+bool ModuleMap::parseModuleMapFile(FileEntryRef File, bool IsSystem,
+                                   bool ImplicitlyDiscovered,
+                                   DirectoryEntryRef Dir, FileID ID,
+                                   SourceLocation ExternModuleLoc) {
+  llvm::DenseMap<const FileEntry *, const modulemap::ModuleMapFile *>::iterator
+      Known = ParsedModuleMap.find(File);
+  if (Known != ParsedModuleMap.end())
+    return Known->second == nullptr;
+
+  // If the module map file wasn't already entered, do so now.
+  if (ID.isInvalid()) {
+    FileID &LocalFID = ModuleMapLocalFileID[File];
+    if (LocalFID.isInvalid()) {
+      auto FileCharacter =
+          IsSystem ? SrcMgr::C_System_ModuleMap : SrcMgr::C_User_ModuleMap;
+      LocalFID = SourceMgr.createFileID(File, ExternModuleLoc, FileCharacter);
+    }
+    ID = LocalFID;
+  }
+
+  std::optional<llvm::MemoryBufferRef> Buffer = SourceMgr.getBufferOrNone(ID);
+  if (!Buffer) {
+    ParsedModuleMap[File] = nullptr;
+    return true;
+  }
+
+  Diags.Report(diag::remark_mmap_parse) << File.getName();
+  std::optional<modulemap::ModuleMapFile> MaybeMMF = modulemap::parseModuleMap(
+      ID, Dir, SourceMgr, Diags, IsSystem, ImplicitlyDiscovered, nullptr);
+
+  if (!MaybeMMF) {
+    ParsedModuleMap[File] = nullptr;
+    return true;
+  }
+
+  ParsedModuleMaps.push_back(
+      std::make_unique<modulemap::ModuleMapFile>(std::move(*MaybeMMF)));
+  const modulemap::ModuleMapFile &MMF = *ParsedModuleMaps.back();
+  std::vector<const modulemap::ExternModuleDecl *> PendingExternalModuleMaps;
+  std::function<void(const modulemap::ModuleDecl &)> CollectExternDecls =
+      [&](const modulemap::ModuleDecl &MD) {
+        for (const auto &Decl : MD.Decls) {
+          std::visit(llvm::makeVisitor(
+                         [&](const modulemap::ModuleDecl &SubMD) {
+                           // Skip inferred submodules (module *)
+                           if (SubMD.Id.front().first == "*")
+                             return;
+                           CollectExternDecls(SubMD);
+                         },
+                         [&](const modulemap::ExternModuleDecl &EMD) {
+                           PendingExternalModuleMaps.push_back(&EMD);
+                         },
+                         [&](const auto &) {
+                           // Ignore other decls
+                         }),
+                     Decl);
+        }
+      };
+
+  for (const auto &Decl : MMF.Decls) {
+    std::visit(llvm::makeVisitor(
+                   [&](const modulemap::ModuleDecl &MD) {
+                     // Only use the first part of the name even for submodules.
+                     // This will correctly load the submodule declarations when
+                     // the module is loaded.
+                     auto &ModuleDecls =
+                         ParsedModules[StringRef(MD.Id.front().first)];
+                     ModuleDecls.push_back(std::pair(&MMF, &MD));
+                     CollectExternDecls(MD);
+                   },
+                   [&](const modulemap::ExternModuleDecl &EMD) {
+                     PendingExternalModuleMaps.push_back(&EMD);
+                   }),
+               Decl);
+  }
+
+  for (const modulemap::ExternModuleDecl *EMD : PendingExternalModuleMaps) {
+    StringRef FileNameRef = EMD->Path;
+    SmallString<128> ModuleMapFileName;
+    if (llvm::sys::path::is_relative(FileNameRef)) {
+      ModuleMapFileName += Dir.getName();
+      llvm::sys::path::append(ModuleMapFileName, EMD->Path);
+      FileNameRef = ModuleMapFileName;
+    }
+
+    if (auto EFile =
+            SourceMgr.getFileManager().getOptionalFileRef(FileNameRef)) {
+      parseModuleMapFile(*EFile, IsSystem, ImplicitlyDiscovered,
+                         EFile->getDir(), FileID(), ExternModuleLoc);
+    }
+  }
+
+  ParsedModuleMap[File] = &MMF;
+
+  for (const auto &Cb : Callbacks)
+    Cb->moduleMapFileRead(SourceLocation(), File, IsSystem);
+
+  return false;
+}
+
+void ModuleMap::loadAllParsedModules() {
+  for (const auto &Entry : ParsedModules)
+    findOrLoadModule(Entry.first());
 }
 
 FileID ModuleMap::getContainingModuleMapFileID(const Module *Module) const {
@@ -1355,7 +1597,7 @@ std::error_code
 ModuleMap::canonicalizeModuleMapPath(SmallVectorImpl<char> &Path) {
   StringRef Dir = llvm::sys::path::parent_path({Path.data(), Path.size()});
 
-  // Do not canonicalize within the framework; the module map parser expects
+  // Do not canonicalize within the framework; the module map loader expects
   // Modules/ not Versions/A/Modules.
   if (llvm::sys::path::filename(Dir) == "Modules") {
     StringRef Parent = llvm::sys::path::parent_path(Dir);
@@ -1416,7 +1658,7 @@ bool ModuleMap::resolveExports(Module *Mod, bool Complain) {
   Mod->UnresolvedExports.clear();
   for (auto &UE : Unresolved) {
     Module::ExportDecl Export = resolveExport(Mod, UE, Complain);
-    if (Export.getPointer() || Export.getInt())
+    if (Export.first || Export.second)
       Mod->Exports.push_back(Export);
     else
       Mod->UnresolvedExports.push_back(UE);
@@ -1454,12 +1696,11 @@ bool ModuleMap::resolveConflicts(Module *Mod, bool Complain) {
 }
 
 //----------------------------------------------------------------------------//
-// Module map file parser
+// Module map file loader
 //----------------------------------------------------------------------------//
 
 namespace clang {
-class ModuleMapParser {
-  modulemap::ModuleMapFile &MMF;
+class ModuleMapLoader {
   SourceManager &SourceMgr;
 
   DiagnosticsEngine &Diags;
@@ -1468,7 +1709,7 @@ class ModuleMapParser {
   /// The current module map file.
   FileID ModuleMapFID;
 
-  /// Source location of most recent parsed module declaration
+  /// Source location of most recent loaded module declaration
   SourceLocation CurrModuleDeclLoc;
 
   /// The directory that file names in this module map file should
@@ -1477,6 +1718,8 @@ class ModuleMapParser {
 
   /// Whether this module map is in a system header directory.
   bool IsSystem;
+
+  bool ImplicitlyDiscovered;
 
   /// Whether an error occurred.
   bool HadError = false;
@@ -1516,13 +1759,17 @@ class ModuleMapParser {
   using Attributes = ModuleMap::Attributes;
 
 public:
-  ModuleMapParser(modulemap::ModuleMapFile &MMF, SourceManager &SourceMgr,
-                  DiagnosticsEngine &Diags, ModuleMap &Map, FileID ModuleMapFID,
-                  DirectoryEntryRef Directory, bool IsSystem)
-      : MMF(MMF), SourceMgr(SourceMgr), Diags(Diags), Map(Map),
-        ModuleMapFID(ModuleMapFID), Directory(Directory), IsSystem(IsSystem) {}
+  ModuleMapLoader(SourceManager &SourceMgr, DiagnosticsEngine &Diags,
+                  ModuleMap &Map, FileID ModuleMapFID,
+                  DirectoryEntryRef Directory, bool IsSystem,
+                  bool ImplicitlyDiscovered)
+      : SourceMgr(SourceMgr), Diags(Diags), Map(Map),
+        ModuleMapFID(ModuleMapFID), Directory(Directory), IsSystem(IsSystem),
+        ImplicitlyDiscovered(ImplicitlyDiscovered) {}
 
-  bool parseModuleMapFile();
+  bool loadModuleDecl(const modulemap::ModuleDecl &MD);
+  bool loadExternModuleDecl(const modulemap::ExternModuleDecl &EMD);
+  bool parseAndLoadModuleMapFile(const modulemap::ModuleMapFile &MMF);
 };
 
 } // namespace clang
@@ -1531,7 +1778,7 @@ public:
 /// module map search logic to find the appropriate private module when PCH
 /// is used with implicit module maps. Warn when private modules are written
 /// in other ways (FooPrivate and Foo.Private), providing notes and fixits.
-void ModuleMapParser::diagnosePrivateModules(SourceLocation StartLoc) {
+void ModuleMapLoader::diagnosePrivateModules(SourceLocation StartLoc) {
   auto GenNoteAndFixIt = [&](StringRef BadName, StringRef Canonical,
                              const Module *M, SourceRange ReplLoc) {
     auto D = Diags.Report(ActiveModule->DefinitionLoc,
@@ -1585,7 +1832,7 @@ void ModuleMapParser::diagnosePrivateModules(SourceLocation StartLoc) {
   }
 }
 
-void ModuleMapParser::handleModuleDecl(const modulemap::ModuleDecl &MD) {
+void ModuleMapLoader::handleModuleDecl(const modulemap::ModuleDecl &MD) {
   if (MD.Id.front().first == "*")
     return handleInferredModuleDecl(MD);
 
@@ -1633,9 +1880,25 @@ void ModuleMapParser::handleModuleDecl(const modulemap::ModuleDecl &MD) {
   if (Module *Existing = Map.lookupModuleQualified(ModuleName, ActiveModule)) {
     // We might see a (re)definition of a module that we already have a
     // definition for in four cases:
-    //  - If we loaded one definition from an AST file and we've just found a
-    //    corresponding definition in a module map file, or
+    //  - If the Existing module was loaded from an AST file and we've found its
+    //    original source module map, or we cannot determine Existing's
+    //    definition location.
     bool LoadedFromASTFile = Existing->IsFromModuleFile;
+    if (LoadedFromASTFile) {
+      OptionalFileEntryRef ExistingModMapFile =
+          Map.getContainingModuleMapFile(Existing);
+      OptionalFileEntryRef CurrentModMapFile =
+          SourceMgr.getFileEntryRefForID(ModuleMapFID);
+      if ((ExistingModMapFile && CurrentModMapFile &&
+           *ExistingModMapFile == *CurrentModMapFile) ||
+          Existing->DefinitionLoc.isInvalid()) {
+        // If we do not know Existing's definition location, we have
+        // no way of checking against it, and hence we stay conservative and do
+        // not check for duplicating module definitions.
+        LoadedFromASTFile = true;
+      } else
+        LoadedFromASTFile = false;
+    }
     //  - If we previously inferred this module from different module map file.
     bool Inferred = Existing->IsInferred;
     //  - If we're building a framework that vends a module map, we might've
@@ -1661,7 +1924,11 @@ void ModuleMapParser::handleModuleDecl(const modulemap::ModuleDecl &MD) {
         Map.LangOpts.CurrentModule == ModuleName &&
         SourceMgr.getDecomposedLoc(ModuleNameLoc).first !=
             SourceMgr.getDecomposedLoc(Existing->DefinitionLoc).first;
-    if (LoadedFromASTFile || Inferred || PartOfFramework || ParsedAsMainInput) {
+    // TODO: Remove this check when we can avoid loading module maps multiple
+    //       times.
+    bool SameModuleDecl = ModuleNameLoc == Existing->DefinitionLoc;
+    if (LoadedFromASTFile || Inferred || PartOfFramework || ParsedAsMainInput ||
+        SameModuleDecl) {
       ActiveModule = PreviousActiveModule;
       // Skip the module definition.
       return;
@@ -1764,18 +2031,25 @@ void ModuleMapParser::handleModuleDecl(const modulemap::ModuleDecl &MD) {
   ActiveModule = PreviousActiveModule;
 }
 
-void ModuleMapParser::handleExternModuleDecl(
+void ModuleMapLoader::handleExternModuleDecl(
     const modulemap::ExternModuleDecl &EMD) {
   StringRef FileNameRef = EMD.Path;
   SmallString<128> ModuleMapFileName;
   if (llvm::sys::path::is_relative(FileNameRef)) {
     ModuleMapFileName += Directory.getName();
     llvm::sys::path::append(ModuleMapFileName, EMD.Path);
+    // As extern module declarations are parsed recursively, relative paths
+    // to those modules can become arbitrarily long.
+    // If the OS name length limit is exceeded when trying to get the file ref
+    // we can silently fail to find an extern module that exists.
+    // To mitigate this, collapse relative paths containing '../' for when
+    // constructing the name of each module file referenced as an extern module.
+    llvm::sys::path::remove_dots(ModuleMapFileName, /*remove_dot_dot=*/true);
     FileNameRef = ModuleMapFileName;
   }
   if (auto File = SourceMgr.getFileManager().getOptionalFileRef(FileNameRef))
-    Map.parseModuleMapFile(
-        *File, IsSystem,
+    Map.parseAndLoadModuleMapFile(
+        *File, IsSystem, ImplicitlyDiscovered,
         Map.HeaderInfo.getHeaderSearchOpts().ModuleMapFileHomeIsCwd
             ? Directory
             : File->getDir(),
@@ -1811,7 +2085,7 @@ static bool shouldAddRequirement(Module *M, StringRef Feature,
   return true;
 }
 
-void ModuleMapParser::handleRequiresDecl(const modulemap::RequiresDecl &RD) {
+void ModuleMapLoader::handleRequiresDecl(const modulemap::RequiresDecl &RD) {
 
   for (const modulemap::RequiresFeature &RF : RD.Features) {
     bool IsRequiresExcludedHack = false;
@@ -1829,7 +2103,7 @@ void ModuleMapParser::handleRequiresDecl(const modulemap::RequiresDecl &RD) {
   }
 }
 
-void ModuleMapParser::handleHeaderDecl(const modulemap::HeaderDecl &HD) {
+void ModuleMapLoader::handleHeaderDecl(const modulemap::HeaderDecl &HD) {
   // We've already consumed the first token.
   ModuleMap::ModuleHeaderRole Role = ModuleMap::NormalHeader;
 
@@ -1863,6 +2137,13 @@ void ModuleMapParser::handleHeaderDecl(const modulemap::HeaderDecl &HD) {
     return;
   }
 
+  if (ImplicitlyDiscovered) {
+    SmallString<128> NormalizedPath(HD.Path);
+    llvm::sys::path::remove_dots(NormalizedPath, /*remove_dot_dot=*/true);
+    if (NormalizedPath.starts_with(".."))
+      Diags.Report(HD.PathLoc, diag::warn_mmap_path_outside_directory);
+  }
+
   if (HD.Size)
     Header.Size = HD.Size;
   if (HD.MTime)
@@ -1888,7 +2169,7 @@ static bool compareModuleHeaders(const Module::Header &A,
   return A.NameAsWritten < B.NameAsWritten;
 }
 
-void ModuleMapParser::handleUmbrellaDirDecl(
+void ModuleMapLoader::handleUmbrellaDirDecl(
     const modulemap::UmbrellaDirDecl &UDD) {
   std::string DirName = std::string(UDD.Path);
   std::string DirNameAsWritten = DirName;
@@ -1899,6 +2180,13 @@ void ModuleMapParser::handleUmbrellaDirDecl(
         << ActiveModule->getFullModuleName();
     HadError = true;
     return;
+  }
+
+  if (ImplicitlyDiscovered) {
+    SmallString<128> NormalizedPath(UDD.Path);
+    llvm::sys::path::remove_dots(NormalizedPath, /*remove_dot_dot=*/true);
+    if (NormalizedPath.starts_with(".."))
+      Diags.Report(UDD.Location, diag::warn_mmap_path_outside_directory);
   }
 
   // Look for this file.
@@ -1920,7 +2208,7 @@ void ModuleMapParser::handleUmbrellaDirDecl(
 
   if (UsesRequiresExcludedHack.count(ActiveModule)) {
     // Mark this header 'textual' (see doc comment for
-    // ModuleMapParser::UsesRequiresExcludedHack). Although iterating over the
+    // ModuleMapLoader::UsesRequiresExcludedHack). Although iterating over the
     // directory is relatively expensive, in practice this only applies to the
     // uncommonly used Tcl module on Darwin platforms.
     std::error_code EC;
@@ -1936,7 +2224,7 @@ void ModuleMapParser::handleUmbrellaDirDecl(
     }
 
     // Sort header paths so that the pcm doesn't depend on iteration order.
-    std::stable_sort(Headers.begin(), Headers.end(), compareModuleHeaders);
+    llvm::stable_sort(Headers, compareModuleHeaders);
 
     for (auto &Header : Headers)
       Map.addHeader(ActiveModule, std::move(Header), ModuleMap::TextualHeader);
@@ -1951,16 +2239,17 @@ void ModuleMapParser::handleUmbrellaDirDecl(
   }
 
   // Record this umbrella directory.
-  Map.setUmbrellaDirAsWritten(ActiveModule, *Dir, DirNameAsWritten, DirName);
+  Map.setUmbrellaDirAsWritten(ActiveModule, *Dir, DirNameAsWritten, DirName,
+                              UDD.Location);
 }
 
-void ModuleMapParser::handleExportDecl(const modulemap::ExportDecl &ED) {
+void ModuleMapLoader::handleExportDecl(const modulemap::ExportDecl &ED) {
   Module::UnresolvedExportDecl Unresolved = {ED.Location, ED.Id, ED.Wildcard};
   ActiveModule->UnresolvedExports.push_back(Unresolved);
 }
 
-void ModuleMapParser::handleExportAsDecl(const modulemap::ExportAsDecl &EAD) {
-  auto ModName = EAD.Id.front();
+void ModuleMapLoader::handleExportAsDecl(const modulemap::ExportAsDecl &EAD) {
+  const auto &ModName = EAD.Id.front();
 
   if (!ActiveModule->ExportAsModule.empty()) {
     if (ActiveModule->ExportAsModule == ModName.first) {
@@ -1977,19 +2266,19 @@ void ModuleMapParser::handleExportAsDecl(const modulemap::ExportAsDecl &EAD) {
   Map.addLinkAsDependency(ActiveModule);
 }
 
-void ModuleMapParser::handleUseDecl(const modulemap::UseDecl &UD) {
+void ModuleMapLoader::handleUseDecl(const modulemap::UseDecl &UD) {
   if (ActiveModule->Parent)
     Diags.Report(UD.Location, diag::err_mmap_use_decl_submodule);
   else
     ActiveModule->UnresolvedDirectUses.push_back(UD.Id);
 }
 
-void ModuleMapParser::handleLinkDecl(const modulemap::LinkDecl &LD) {
+void ModuleMapLoader::handleLinkDecl(const modulemap::LinkDecl &LD) {
   ActiveModule->LinkLibraries.push_back(
       Module::LinkLibrary(std::string{LD.Library}, LD.Framework));
 }
 
-void ModuleMapParser::handleConfigMacros(
+void ModuleMapLoader::handleConfigMacros(
     const modulemap::ConfigMacrosDecl &CMD) {
   if (ActiveModule->Parent) {
     Diags.Report(CMD.Location, diag::err_mmap_config_macro_submodule);
@@ -2005,16 +2294,17 @@ void ModuleMapParser::handleConfigMacros(
                                     CMD.Macros.begin(), CMD.Macros.end());
 }
 
-void ModuleMapParser::handleConflict(const modulemap::ConflictDecl &CD) {
+void ModuleMapLoader::handleConflict(const modulemap::ConflictDecl &CD) {
   Module::UnresolvedConflict Conflict;
 
   Conflict.Id = CD.Id;
   Conflict.Message = CD.Message;
 
-  ActiveModule->UnresolvedConflicts.push_back(Conflict);
+  // FIXME: when we move to C++20 we should consider using emplace_back
+  ActiveModule->UnresolvedConflicts.push_back(std::move(Conflict));
 }
 
-void ModuleMapParser::handleInferredModuleDecl(
+void ModuleMapLoader::handleInferredModuleDecl(
     const modulemap::ModuleDecl &MD) {
   SourceLocation StarLoc = MD.Id.front().second;
 
@@ -2104,7 +2394,19 @@ void ModuleMapParser::handleInferredModuleDecl(
   }
 }
 
-bool ModuleMapParser::parseModuleMapFile() {
+bool ModuleMapLoader::loadModuleDecl(const modulemap::ModuleDecl &MD) {
+  handleModuleDecl(MD);
+  return HadError;
+}
+
+bool ModuleMapLoader::loadExternModuleDecl(
+    const modulemap::ExternModuleDecl &EMD) {
+  handleExternModuleDecl(EMD);
+  return HadError;
+}
+
+bool ModuleMapLoader::parseAndLoadModuleMapFile(
+    const modulemap::ModuleMapFile &MMF) {
   for (const auto &Decl : MMF.Decls) {
     std::visit(
         llvm::makeVisitor(
@@ -2117,40 +2419,86 @@ bool ModuleMapParser::parseModuleMapFile() {
   return HadError;
 }
 
-bool ModuleMap::parseModuleMapFile(FileEntryRef File, bool IsSystem,
-                                   DirectoryEntryRef Dir, FileID ID,
-                                   unsigned *Offset,
-                                   SourceLocation ExternModuleLoc) {
+Module *ModuleMap::findOrLoadModule(StringRef Name) {
+  llvm::StringMap<Module *>::const_iterator Known = Modules.find(Name);
+  if (Known != Modules.end())
+    return Known->getValue();
+
+  auto ParsedMod = ParsedModules.find(Name);
+  if (ParsedMod == ParsedModules.end())
+    return nullptr;
+
+  Diags.Report(diag::remark_mmap_load_module) << Name;
+
+  for (const auto &ModuleDecl : ParsedMod->second) {
+    const modulemap::ModuleMapFile &MMF = *ModuleDecl.first;
+    ModuleMapLoader Loader(SourceMgr, Diags, const_cast<ModuleMap &>(*this),
+                           MMF.ID, *MMF.Dir, MMF.IsSystem,
+                           MMF.ImplicitlyDiscovered);
+    if (Loader.loadModuleDecl(*ModuleDecl.second))
+      return nullptr;
+  }
+
+  return findModule(Name);
+}
+
+bool ModuleMap::parseAndLoadModuleMapFile(FileEntryRef File, bool IsSystem,
+                                          bool ImplicitlyDiscovered,
+                                          DirectoryEntryRef Dir, FileID ID,
+                                          unsigned *Offset,
+                                          SourceLocation ExternModuleLoc) {
   assert(Target && "Missing target information");
-  llvm::DenseMap<const FileEntry *, bool>::iterator Known
-    = ParsedModuleMap.find(File);
-  if (Known != ParsedModuleMap.end())
+  llvm::DenseMap<const FileEntry *, bool>::iterator Known =
+      LoadedModuleMap.find(File);
+  if (Known != LoadedModuleMap.end())
     return Known->second;
 
   // If the module map file wasn't already entered, do so now.
   if (ID.isInvalid()) {
-    auto FileCharacter =
-        IsSystem ? SrcMgr::C_System_ModuleMap : SrcMgr::C_User_ModuleMap;
-    ID = SourceMgr.createFileID(File, ExternModuleLoc, FileCharacter);
+    // TODO: The way we compute affecting module maps requires this to be a
+    //       local FileID. This should be changed to reuse loaded FileIDs when
+    //       available, and change the way that affecting module maps are
+    //       computed to not require this.
+    FileID &LocalFID = ModuleMapLocalFileID[File];
+    if (LocalFID.isInvalid()) {
+      auto FileCharacter =
+          IsSystem ? SrcMgr::C_System_ModuleMap : SrcMgr::C_User_ModuleMap;
+      LocalFID = SourceMgr.createFileID(File, ExternModuleLoc, FileCharacter);
+    }
+    ID = LocalFID;
   }
 
   assert(Target && "Missing target information");
   std::optional<llvm::MemoryBufferRef> Buffer = SourceMgr.getBufferOrNone(ID);
   if (!Buffer)
-    return ParsedModuleMap[File] = true;
+    return LoadedModuleMap[File] = true;
   assert((!Offset || *Offset <= Buffer->getBufferSize()) &&
          "invalid buffer offset");
 
-  std::optional<modulemap::ModuleMapFile> MMF =
-      modulemap::parseModuleMap(ID, Dir, SourceMgr, Diags, IsSystem, Offset);
+  std::optional<modulemap::ModuleMapFile> MMF = modulemap::parseModuleMap(
+      ID, Dir, SourceMgr, Diags, IsSystem, ImplicitlyDiscovered, Offset);
   bool Result = false;
   if (MMF) {
-    ModuleMapParser Parser(*MMF, SourceMgr, Diags, *this, ID, Dir, IsSystem);
-    Result = Parser.parseModuleMapFile();
-  }
-  ParsedModuleMap[File] = Result;
+    Diags.Report(diag::remark_mmap_load) << File.getName();
+    ModuleMapLoader Loader(SourceMgr, Diags, *this, ID, Dir, IsSystem,
+                           ImplicitlyDiscovered);
+    Result = Loader.parseAndLoadModuleMapFile(*MMF);
 
-  // Notify callbacks that we parsed it.
+    // Also record that this was parsed if it wasn't previously. This is used
+    // for diagnostics.
+    llvm::DenseMap<const FileEntry *,
+                   const modulemap::ModuleMapFile *>::iterator PKnown =
+        ParsedModuleMap.find(File);
+    if (PKnown == ParsedModuleMap.end()) {
+      ParsedModuleMaps.push_back(
+          std::make_unique<modulemap::ModuleMapFile>(std::move(*MMF)));
+      ParsedModuleMap[File] = &*ParsedModuleMaps.back();
+    }
+  }
+  LoadedModuleMap[File] = Result;
+
+  // Notify callbacks that we observed it.
+  // FIXME: We should only report module maps that were actually used.
   for (const auto &Cb : Callbacks)
     Cb->moduleMapFileRead(MMF ? MMF->Start : SourceLocation(), File, IsSystem);
 

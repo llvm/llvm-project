@@ -8,11 +8,14 @@
 
 #include "lldb/Host/windows/ProcessLauncherWindows.h"
 #include "lldb/Host/HostProcess.h"
-#include "lldb/Host/ProcessLaunchInfo.h"
+#include "lldb/Host/windows/PseudoConsole.h"
+#include "lldb/Host/windows/WindowsFileAction.h"
+#include "lldb/Host/windows/windows.h"
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Program.h"
+#include "llvm/Support/WindowsError.h"
 
 #include <string>
 #include <vector>
@@ -20,42 +23,101 @@
 using namespace lldb;
 using namespace lldb_private;
 
-static void CreateEnvironmentBuffer(const Environment &env,
-                                    std::vector<char> &buffer) {
-  // The buffer is a list of null-terminated UTF-16 strings, followed by an
-  // extra L'\0' (two bytes of 0).  An empty environment must have one
-  // empty string, followed by an extra L'\0'.
+/// Create a UTF-16 environment block to use with CreateProcessW.
+///
+/// The buffer is a sequence of null-terminated UTF-16 strings, followed by an
+/// extra L'\0' (two bytes of 0). An empty environment must have one
+/// empty string, followed by an extra L'\0'.
+///
+/// The keys are sorted to comply with the CreateProcess API calling convention.
+///
+/// Ensure that the resulting buffer is used in conjunction with
+/// CreateProcessW and be sure that dwCreationFlags includes
+/// CREATE_UNICODE_ENVIRONMENT.
+///
+/// \param env The Environment object to convert.
+/// \returns The sorted sequence of environment variables and their values,
+/// separated by null terminators. The vector is guaranteed to never be empty.
+static std::vector<wchar_t> CreateEnvironmentBufferW(const Environment &env) {
+  std::vector<std::wstring> env_entries;
   for (const auto &KV : env) {
-    std::wstring warg;
-    if (llvm::ConvertUTF8toWide(Environment::compose(KV), warg)) {
-      buffer.insert(
-          buffer.end(), reinterpret_cast<const char *>(warg.c_str()),
-          reinterpret_cast<const char *>(warg.c_str() + warg.size() + 1));
-    }
+    std::wstring wentry;
+    if (llvm::ConvertUTF8toWide(Environment::compose(KV), wentry))
+      env_entries.push_back(std::move(wentry));
   }
-  // One null wchar_t (to end the block) is two null bytes
-  buffer.push_back(0);
-  buffer.push_back(0);
-  // Insert extra two bytes, just in case the environment was empty.
-  buffer.push_back(0);
-  buffer.push_back(0);
+  std::sort(env_entries.begin(), env_entries.end(),
+            [](const std::wstring &a, const std::wstring &b) {
+              return _wcsicmp(a.c_str(), b.c_str()) < 0;
+            });
+
+  std::vector<wchar_t> buffer;
+  for (const auto &env_entry : env_entries) {
+    buffer.insert(buffer.end(), env_entry.begin(), env_entry.end());
+    buffer.push_back(L'\0');
+  }
+
+  if (buffer.empty())
+    buffer.push_back(L'\0'); // If there are no environment variables, we have
+                             // to ensure there are 4 zero bytes in the buffer.
+  buffer.push_back(L'\0');
+
+  return buffer;
 }
 
-static bool GetFlattenedWindowsCommandString(Args args, std::wstring &command) {
+namespace lldb_private {
+llvm::ErrorOr<std::wstring>
+GetFlattenedWindowsCommandStringW(const Args &args) {
   if (args.empty())
-    return false;
+    return L"";
 
   std::vector<llvm::StringRef> args_ref;
   for (auto &entry : args.entries())
     args_ref.push_back(entry.ref());
 
-  llvm::ErrorOr<std::wstring> result =
-      llvm::sys::flattenWindowsCommandLine(args_ref);
-  if (result.getError())
-    return false;
+  return llvm::sys::flattenWindowsCommandLine(args_ref);
+}
 
-  command = *result;
-  return true;
+llvm::ErrorOr<std::wstring>
+GetFlattenedWindowsCommandStringW(llvm::ArrayRef<const char *> args) {
+  if (args.empty())
+    return L"";
+
+  std::vector<llvm::StringRef> args_ref(args.begin(), args.end());
+
+  return llvm::sys::flattenWindowsCommandLine(args_ref);
+}
+} // namespace lldb_private
+
+llvm::ErrorOr<ProcThreadAttributeList>
+ProcThreadAttributeList::Create(STARTUPINFOEXW &startupinfoex) {
+  SIZE_T attributelist_size = 0;
+  InitializeProcThreadAttributeList(/*lpAttributeList=*/nullptr,
+                                    /*dwAttributeCount=*/1, /*dwFlags=*/0,
+                                    &attributelist_size);
+
+  startupinfoex.lpAttributeList =
+      static_cast<LPPROC_THREAD_ATTRIBUTE_LIST>(malloc(attributelist_size));
+
+  if (!startupinfoex.lpAttributeList)
+    return llvm::mapWindowsError(ERROR_OUTOFMEMORY);
+
+  if (!InitializeProcThreadAttributeList(startupinfoex.lpAttributeList,
+                                         /*dwAttributeCount=*/1,
+                                         /*dwFlags=*/0, &attributelist_size)) {
+    free(startupinfoex.lpAttributeList);
+    return llvm::mapWindowsError(GetLastError());
+  }
+
+  return ProcThreadAttributeList(startupinfoex.lpAttributeList);
+}
+
+llvm::Error ProcThreadAttributeList::SetupPseudoConsole(HPCON hPC) {
+  BOOL ok = UpdateProcThreadAttribute(lpAttributeList, 0,
+                                      PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE, hPC,
+                                      sizeof(hPC), NULL, NULL);
+  if (!ok)
+    return llvm::errorCodeToError(llvm::mapWindowsError(GetLastError()));
+  return llvm::Error::success();
 }
 
 HostProcess
@@ -63,60 +125,118 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
                                       Status &error) {
   error.Clear();
 
-  std::string executable;
-  std::vector<char> environment;
-  STARTUPINFO startupinfo = {};
-  PROCESS_INFORMATION pi = {};
+  STARTUPINFOEXW startupinfoex = {};
+  startupinfoex.StartupInfo.cb = sizeof(STARTUPINFOEXW);
+  startupinfoex.StartupInfo.dwFlags |= STARTF_USESTDHANDLES;
+
+  PseudoConsole::Mode pty_mode = launch_info.ShouldUsePTY()
+                                     ? launch_info.GetPTY().GetMode()
+                                     : PseudoConsole::Mode::None;
 
   HANDLE stdin_handle = GetStdioHandle(launch_info, STDIN_FILENO);
   HANDLE stdout_handle = GetStdioHandle(launch_info, STDOUT_FILENO);
   HANDLE stderr_handle = GetStdioHandle(launch_info, STDERR_FILENO);
+  llvm::scope_exit close_handles([&] {
+    if (stdin_handle)
+      ::CloseHandle(stdin_handle);
+    if (stdout_handle)
+      ::CloseHandle(stdout_handle);
+    if (stderr_handle)
+      ::CloseHandle(stderr_handle);
+  });
 
-  startupinfo.cb = sizeof(startupinfo);
-  startupinfo.dwFlags |= STARTF_USESTDHANDLES;
-  startupinfo.hStdError =
-      stderr_handle ? stderr_handle : ::GetStdHandle(STD_ERROR_HANDLE);
-  startupinfo.hStdInput =
-      stdin_handle ? stdin_handle : ::GetStdHandle(STD_INPUT_HANDLE);
-  startupinfo.hStdOutput =
-      stdout_handle ? stdout_handle : ::GetStdHandle(STD_OUTPUT_HANDLE);
+  auto attributelist_or_err = ProcThreadAttributeList::Create(startupinfoex);
+  if (!attributelist_or_err) {
+    error = attributelist_or_err.getError();
+    return HostProcess();
+  }
+  ProcThreadAttributeList attributelist = std::move(*attributelist_or_err);
+
+  std::vector<HANDLE> inherited_handles;
+  switch (pty_mode) {
+  case PseudoConsole::Mode::ConPTY: {
+    HPCON hPC = launch_info.GetPTY().GetPseudoTerminalHandle();
+    if (auto err = attributelist.SetupPseudoConsole(hPC)) {
+      error = Status::FromError(std::move(err));
+      return HostProcess();
+    }
+    break;
+  }
+  case PseudoConsole::Mode::Pipe: {
+    PseudoConsole &pty = launch_info.GetPTY();
+    startupinfoex.StartupInfo.hStdInput = pty.GetChildStdinHandle();
+    startupinfoex.StartupInfo.hStdOutput = pty.GetChildStdoutHandle();
+    startupinfoex.StartupInfo.hStdError = pty.GetChildStdoutHandle();
+    inherited_handles = {pty.GetChildStdinHandle(), pty.GetChildStdoutHandle()};
+    if (!UpdateProcThreadAttribute(
+            startupinfoex.lpAttributeList, 0, PROC_THREAD_ATTRIBUTE_HANDLE_LIST,
+            inherited_handles.data(), inherited_handles.size() * sizeof(HANDLE),
+            nullptr, nullptr)) {
+      error = Status(::GetLastError(), eErrorTypeWin32);
+      return HostProcess();
+    }
+    break;
+  }
+  case PseudoConsole::Mode::None: {
+    auto inherited_handles_or_err =
+        GetInheritedHandles(startupinfoex, &launch_info, stdout_handle,
+                            stderr_handle, stdin_handle);
+    if (!inherited_handles_or_err) {
+      error = Status(inherited_handles_or_err.getError());
+      return HostProcess();
+    }
+    inherited_handles = std::move(*inherited_handles_or_err);
+    break;
+  }
+  }
 
   const char *hide_console_var =
       getenv("LLDB_LAUNCH_INFERIORS_WITHOUT_CONSOLE");
   if (hide_console_var &&
       llvm::StringRef(hide_console_var).equals_insensitive("true")) {
-    startupinfo.dwFlags |= STARTF_USESHOWWINDOW;
-    startupinfo.wShowWindow = SW_HIDE;
+    startupinfoex.StartupInfo.dwFlags |= STARTF_USESHOWWINDOW;
+    startupinfoex.StartupInfo.wShowWindow = SW_HIDE;
   }
 
-  DWORD flags = CREATE_NEW_CONSOLE | CREATE_UNICODE_ENVIRONMENT;
+  DWORD flags = CREATE_NEW_CONSOLE | CREATE_UNICODE_ENVIRONMENT |
+                EXTENDED_STARTUPINFO_PRESENT;
   if (launch_info.GetFlags().Test(eLaunchFlagDebug))
     flags |= DEBUG_ONLY_THIS_PROCESS;
 
-  if (launch_info.GetFlags().Test(eLaunchFlagDisableSTDIO))
+  if (launch_info.GetFlags().Test(eLaunchFlagDisableSTDIO) ||
+      pty_mode != PseudoConsole::Mode::None)
     flags &= ~CREATE_NEW_CONSOLE;
 
-  LPVOID env_block = nullptr;
-  ::CreateEnvironmentBuffer(launch_info.GetEnvironment(), environment);
-  env_block = environment.data();
+  std::vector<wchar_t> environment =
+      CreateEnvironmentBufferW(launch_info.GetEnvironment());
 
-  executable = launch_info.GetExecutableFile().GetPath();
-  std::wstring wcommandLine;
-  GetFlattenedWindowsCommandString(launch_info.GetArguments(), wcommandLine);
-
-  std::wstring wexecutable, wworkingDirectory;
-  llvm::ConvertUTF8toWide(executable, wexecutable);
-  llvm::ConvertUTF8toWide(launch_info.GetWorkingDirectory().GetPath(),
-                          wworkingDirectory);
+  auto wcommandLineOrErr =
+      GetFlattenedWindowsCommandStringW(launch_info.GetArguments());
+  if (!wcommandLineOrErr) {
+    error = Status(wcommandLineOrErr.getError());
+    return HostProcess();
+  }
+  std::wstring wcommandLine = *wcommandLineOrErr;
   // If the command line is empty, it's best to pass a null pointer to tell
   // CreateProcessW to use the executable name as the command line.  If the
   // command line is not empty, its contents may be modified by CreateProcessW.
   WCHAR *pwcommandLine = wcommandLine.empty() ? nullptr : &wcommandLine[0];
 
+  std::wstring wexecutable, wworkingDirectory;
+  llvm::ConvertUTF8toWide(launch_info.GetExecutableFile().GetPath(),
+                          wexecutable);
+  llvm::ConvertUTF8toWide(launch_info.GetWorkingDirectory().GetPath(),
+                          wworkingDirectory);
+
+  PROCESS_INFORMATION pi = {};
+
   BOOL result = ::CreateProcessW(
-      wexecutable.c_str(), pwcommandLine, NULL, NULL, TRUE, flags, env_block,
+      wexecutable.c_str(), pwcommandLine, NULL, NULL,
+      /*bInheritHandles=*/!inherited_handles.empty() ||
+          pty_mode != PseudoConsole::Mode::None,
+      flags, environment.data(),
       wworkingDirectory.size() == 0 ? NULL : wworkingDirectory.c_str(),
-      &startupinfo, &pi);
+      reinterpret_cast<STARTUPINFOW *>(&startupinfoex), &pi);
 
   if (!result) {
     // Call GetLastError before we make any other system calls.
@@ -129,19 +249,64 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
     // Do not call CloseHandle on pi.hProcess, since we want to pass that back
     // through the HostProcess.
     ::CloseHandle(pi.hThread);
+    if (pty_mode == PseudoConsole::Mode::Pipe)
+      launch_info.GetPTY().CloseAnonymousPipes();
   }
-
-  if (stdin_handle)
-    ::CloseHandle(stdin_handle);
-  if (stdout_handle)
-    ::CloseHandle(stdout_handle);
-  if (stderr_handle)
-    ::CloseHandle(stderr_handle);
 
   if (!result)
     return HostProcess();
 
   return HostProcess(pi.hProcess);
+}
+
+llvm::ErrorOr<std::vector<HANDLE>> ProcessLauncherWindows::GetInheritedHandles(
+    STARTUPINFOEXW &startupinfoex, const ProcessLaunchInfo *launch_info,
+    HANDLE stdout_handle, HANDLE stderr_handle, HANDLE stdin_handle) {
+  std::vector<HANDLE> inherited_handles;
+
+  startupinfoex.StartupInfo.hStdError =
+      stderr_handle ? stderr_handle : GetStdHandle(STD_ERROR_HANDLE);
+  startupinfoex.StartupInfo.hStdInput =
+      stdin_handle ? stdin_handle : GetStdHandle(STD_INPUT_HANDLE);
+  startupinfoex.StartupInfo.hStdOutput =
+      stdout_handle ? stdout_handle : GetStdHandle(STD_OUTPUT_HANDLE);
+
+  if (startupinfoex.StartupInfo.hStdError)
+    inherited_handles.push_back(startupinfoex.StartupInfo.hStdError);
+  if (startupinfoex.StartupInfo.hStdInput)
+    inherited_handles.push_back(startupinfoex.StartupInfo.hStdInput);
+  if (startupinfoex.StartupInfo.hStdOutput)
+    inherited_handles.push_back(startupinfoex.StartupInfo.hStdOutput);
+
+  if (launch_info) {
+    for (size_t i = 0; i < launch_info->GetNumFileActions(); ++i) {
+      const WindowsFileAction *act = static_cast<const WindowsFileAction *>(
+          launch_info->GetFileActionAtIndex(i));
+      if (std::find(inherited_handles.begin(), inherited_handles.end(),
+                    act->GetHandle()) != inherited_handles.end())
+        continue;
+      if (act->GetAction() != FileAction::eFileActionDuplicate)
+        continue;
+      if (act->GetActionArgument() != -1 &&
+          act->GetFD() == act->GetActionArgument())
+        inherited_handles.push_back(act->GetHandle());
+      else if (act->GetActionArgumentHandle() != INVALID_HANDLE_VALUE &&
+               act->GetHandle() == act->GetActionArgumentHandle())
+        inherited_handles.push_back(act->GetHandle());
+    }
+  }
+
+  if (inherited_handles.empty())
+    return inherited_handles;
+
+  if (!UpdateProcThreadAttribute(
+          startupinfoex.lpAttributeList, /*dwFlags=*/0,
+          PROC_THREAD_ATTRIBUTE_HANDLE_LIST, inherited_handles.data(),
+          inherited_handles.size() * sizeof(HANDLE),
+          /*lpPreviousValue=*/nullptr, /*lpReturnSize=*/nullptr))
+    return llvm::mapWindowsError(::GetLastError());
+
+  return inherited_handles;
 }
 
 HANDLE
@@ -150,25 +315,38 @@ ProcessLauncherWindows::GetStdioHandle(const ProcessLaunchInfo &launch_info,
   const FileAction *action = launch_info.GetFileActionForFD(fd);
   if (action == nullptr)
     return NULL;
+  const std::string path = action->GetFileSpec().GetPath();
+
+  return GetStdioHandle(path, fd);
+}
+
+HANDLE ProcessLauncherWindows::GetStdioHandle(const llvm::StringRef path,
+                                              int fd) {
+  if (path.empty())
+    return NULL;
   SECURITY_ATTRIBUTES secattr = {};
   secattr.nLength = sizeof(SECURITY_ATTRIBUTES);
   secattr.bInheritHandle = TRUE;
 
-  llvm::StringRef path = action->GetPath();
   DWORD access = 0;
   DWORD share = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
   DWORD create = 0;
   DWORD flags = 0;
-  if (fd == STDIN_FILENO) {
+  switch (fd) {
+  case STDIN_FILENO:
     access = GENERIC_READ;
     create = OPEN_EXISTING;
     flags = FILE_ATTRIBUTE_READONLY;
-  }
-  if (fd == STDOUT_FILENO || fd == STDERR_FILENO) {
+    break;
+  case STDERR_FILENO:
+    flags = FILE_FLAG_WRITE_THROUGH;
+    [[fallthrough]];
+  case STDOUT_FILENO:
     access = GENERIC_WRITE;
     create = CREATE_ALWAYS;
-    if (fd == STDERR_FILENO)
-      flags = FILE_FLAG_WRITE_THROUGH;
+    break;
+  default:
+    break;
   }
 
   std::wstring wpath;

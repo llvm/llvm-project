@@ -276,7 +276,7 @@ define i1 @test_any_v8i8(<8 x i8> %x) {
 ; CHECK-LABEL: test_any_v8i8:
 ; CHECK:         .functype test_any_v8i8 (v128) -> (i32)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i8x16.shuffle $push0=, $0, $0, 0, 0, 1, 0, 2, 0, 3, 0, 4, 0, 5, 0, 6, 0, 7, 0
+; CHECK-NEXT:    i16x8.extend_low_i8x16_u $push0=, $0
 ; CHECK-NEXT:    i32.const $push1=, 15
 ; CHECK-NEXT:    i16x8.shl $push2=, $pop0, $pop1
 ; CHECK-NEXT:    i32.const $push5=, 15
@@ -292,7 +292,7 @@ define i1 @test_all_v8i8(<8 x i8> %x) {
 ; CHECK-LABEL: test_all_v8i8:
 ; CHECK:         .functype test_all_v8i8 (v128) -> (i32)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i8x16.shuffle $push0=, $0, $0, 0, 0, 1, 0, 2, 0, 3, 0, 4, 0, 5, 0, 6, 0, 7, 0
+; CHECK-NEXT:    i16x8.extend_low_i8x16_u $push0=, $0
 ; CHECK-NEXT:    i32.const $push1=, 15
 ; CHECK-NEXT:    i16x8.shl $push2=, $pop0, $pop1
 ; CHECK-NEXT:    i32.const $push5=, 15
@@ -1086,9 +1086,9 @@ define i1 @test_cmp_v16i8(<16 x i8> %x) {
 ; CHECK-LABEL: test_cmp_v16i8:
 ; CHECK:         .functype test_cmp_v16i8 (v128) -> (i32)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    v128.const $push0=, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK-NEXT:    i8x16.eq $push1=, $0, $pop0
-; CHECK-NEXT:    v128.any_true $push2=, $pop1
+; CHECK-NEXT:    i8x16.all_true $push0=, $0
+; CHECK-NEXT:    i32.const $push1=, 1
+; CHECK-NEXT:    i32.xor $push2=, $pop0, $pop1
 ; CHECK-NEXT:    return $pop2
   %zero = icmp eq <16 x i8> %x, zeroinitializer
   %ret = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> %zero)

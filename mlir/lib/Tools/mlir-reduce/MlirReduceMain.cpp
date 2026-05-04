@@ -14,36 +14,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Tools/mlir-reduce/MlirReduceMain.h"
-#include "mlir/IR/PatternMatch.h"
 #include "mlir/Parser/Parser.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Reducer/Passes.h"
-#include "mlir/Rewrite/FrozenRewritePatternSet.h"
 #include "mlir/Support/FileUtilities.h"
+#include "mlir/Support/ToolUtilities.h"
 #include "mlir/Tools/ParseUtilities.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ToolOutputFile.h"
 
 using namespace mlir;
-
-// Parse and verify the input MLIR file. Returns null on error.
-OwningOpRef<Operation *> loadModule(MLIRContext &context,
-                                    StringRef inputFilename,
-                                    bool insertImplictModule) {
-  // Set up the input file.
-  std::string errorMessage;
-  auto file = openInputFile(inputFilename, &errorMessage);
-  if (!file) {
-    llvm::errs() << errorMessage << "\n";
-    return nullptr;
-  }
-
-  auto sourceMgr = std::make_shared<llvm::SourceMgr>();
-  sourceMgr->AddNewSourceBuffer(std::move(file), SMLoc());
-  return parseSourceFileForTool(sourceMgr, &context, insertImplictModule);
-}
 
 LogicalResult mlir::mlirReduceMain(int argc, char **argv,
                                    MLIRContext &context) {
@@ -68,6 +49,23 @@ LogicalResult mlir::mlirReduceMain(int argc, char **argv,
           "Disable implicit addition of a top-level module op during parsing"),
       llvm::cl::init(false)};
 
+  static llvm::cl::opt<bool> allowUnregisteredDialects(
+      "allow-unregistered-dialect",
+      llvm::cl::desc("Allow operation with no registered dialects"),
+      llvm::cl::init(false));
+
+  static llvm::cl::opt<std::string> splitInputFile(
+      "split-input-file", llvm::cl::ValueOptional,
+      llvm::cl::callback([&](const std::string &str) {
+        // Implicit value: use default marker if flag was used without
+        // value.
+        if (str.empty())
+          splitInputFile.setValue(kDefaultSplitMarker);
+      }),
+      llvm::cl::desc("Split the input file into chunks using the given or "
+                     "default marker and process each chunk independently"),
+      llvm::cl::init(""));
+
   llvm::cl::HideUnrelatedOptions(mlirReduceCategory);
 
   llvm::InitLLVM y(argc, argv);
@@ -82,6 +80,8 @@ LogicalResult mlir::mlirReduceMain(int argc, char **argv,
     llvm::cl::PrintHelpMessage();
     return success();
   }
+  if (allowUnregisteredDialects)
+    context.allowUnregisteredDialects();
 
   std::string errorMessage;
 
@@ -89,27 +89,44 @@ LogicalResult mlir::mlirReduceMain(int argc, char **argv,
   if (!output)
     return failure();
 
-  OwningOpRef<Operation *> opRef =
-      loadModule(context, inputFilename, !noImplicitModule);
-  if (!opRef)
+  std::unique_ptr<llvm::MemoryBuffer> input =
+      openInputFile(inputFilename, &errorMessage);
+  if (!input) {
+    llvm::errs() << errorMessage << "\n";
     return failure();
+  }
 
   auto errorHandler = [&](const Twine &msg) {
     return emitError(UnknownLoc::get(&context)) << msg;
   };
 
-  // Reduction pass pipeline.
-  PassManager pm(&context, opRef.get()->getName().getStringRef());
-  if (failed(parser.addToPipeline(pm, errorHandler)))
-    return failure();
+  auto chunkFn = [&](std::unique_ptr<llvm::MemoryBuffer> chunkBuffer,
+                     raw_ostream &os) {
+    auto sourceMgr = std::make_shared<llvm::SourceMgr>();
+    sourceMgr->AddNewSourceBuffer(std::move(chunkBuffer), SMLoc());
+    OwningOpRef<Operation *> opRef =
+        parseSourceFileForTool(sourceMgr, &context, !noImplicitModule);
+    if (!opRef)
+      return failure();
+    // Reduction pass pipeline.
+    PassManager pm(&context, opRef.get()->getName().getStringRef());
+    if (failed(parser.addToPipeline(pm, errorHandler)))
+      return failure();
 
-  OwningOpRef<Operation *> op = opRef.get()->clone();
+    OwningOpRef<Operation *> op = opRef.get()->clone();
 
-  if (failed(pm.run(op.get())))
-    return failure();
+    if (failed(pm.run(op.get())))
+      return failure();
+    op.get()->print(output->os());
+    output->keep();
+    return success();
+  };
 
-  op.get()->print(output->os());
-  output->keep();
+  auto &splitInputFileDelimiter = splitInputFile.getValue();
+  if (!splitInputFileDelimiter.empty())
+    return splitAndProcessBuffer(std::move(input), chunkFn, output->os(),
+                                 splitInputFileDelimiter,
+                                 splitInputFileDelimiter);
 
-  return success();
+  return chunkFn(std::move(input), output->os());
 }

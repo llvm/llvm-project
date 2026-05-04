@@ -1,4 +1,4 @@
-//===--- NarrowingConversionsCheck.h - clang-tidy----------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_NARROWING_CONVERSIONS_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_NARROWING_CONVERSIONS_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_NARROWINGCONVERSIONSCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_NARROWINGCONVERSIONSCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -18,7 +18,7 @@ namespace clang::tidy::bugprone {
 ///   i += 0.1;
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/narrowing-conversions.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/narrowing-conversions.html
 class NarrowingConversionsCheck : public ClangTidyCheck {
 public:
   NarrowingConversionsCheck(StringRef Name, ClangTidyContext *Context);
@@ -41,7 +41,7 @@ private:
   void diagNarrowIntegerConstantToSignedInt(SourceLocation SourceLoc,
                                             const Expr &Lhs, const Expr &Rhs,
                                             const llvm::APSInt &Value,
-                                            const uint64_t HexBits);
+                                            uint64_t HexBits);
 
   void diagNarrowConstant(SourceLocation SourceLoc, const Expr &Lhs,
                           const Expr &Rhs);
@@ -85,6 +85,8 @@ private:
   bool handleConditionalOperator(const ASTContext &Context, const Expr &Lhs,
                                  const Expr &Rhs);
 
+  void handleConditionalOperatorArgument(const ASTContext &Context,
+                                         const Expr &Lhs, const Expr *Arg);
   void handleImplicitCast(const ASTContext &Context,
                           const ImplicitCastExpr &Cast);
 
@@ -106,4 +108,4 @@ private:
 
 } // namespace clang::tidy::bugprone
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_NARROWING_CONVERSIONS_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_NARROWINGCONVERSIONSCHECK_H

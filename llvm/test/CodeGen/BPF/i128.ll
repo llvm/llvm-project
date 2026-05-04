@@ -19,14 +19,14 @@
 %struct.ipv6_key_t = type { i32, i128, i16 }
 
 ; Function Attrs: nounwind
-define dso_local i32 @test(i32 %pid) local_unnamed_addr #0 {
+define dso_local i32 @test(i32 %pid) local_unnamed_addr {
 entry:
   %ipv6_key = alloca %struct.ipv6_key_t, align 16
-  call void @llvm.lifetime.start.p0(i64 48, ptr nonnull %ipv6_key) #4
+  call void @llvm.lifetime.start.p0(i64 48, ptr nonnull %ipv6_key)
   call void @llvm.memset.p0.i64(ptr nonnull align 16 dereferenceable(48) %ipv6_key, i8 0, i64 48, i1 false)
   store i32 %pid, ptr %ipv6_key, align 16, !tbaa !2
-  call void @test1(ptr nonnull %ipv6_key) #4
-  call void @llvm.lifetime.end.p0(i64 48, ptr nonnull %ipv6_key) #4
+  call void @test1(ptr nonnull %ipv6_key)
+  call void @llvm.lifetime.end.p0(i64 48, ptr nonnull %ipv6_key)
   ret i32 0
 }
 
@@ -35,21 +35,15 @@ entry:
 ; CHECK:       *(u32 *)(r10 - 48) = r{{[0-9]+}}
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 
 ; Function Attrs: argmemonly nounwind willreturn writeonly
-declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg) #2
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg)
 
-declare dso_local void @test1(ptr) local_unnamed_addr #3
+declare dso_local void @test1(ptr) local_unnamed_addr
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
-
-attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { argmemonly nounwind willreturn }
-attributes #2 = { argmemonly nounwind willreturn writeonly }
-attributes #3 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #4 = { nounwind }
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 
 !llvm.module.flags = !{!0}
 !llvm.ident = !{!1}

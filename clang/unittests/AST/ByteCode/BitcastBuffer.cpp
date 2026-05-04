@@ -49,8 +49,8 @@ TEST(BitcastBuffer, PushData) {
 
   BitcastBuffer Buff2(Bytes(sizeof(int)).toBits());
   {
-    short s1 = 0xCAFE;
-    short s2 = 0xBABE;
+    short s1 = (short)0xCAFE;
+    short s2 = (short)0xBABE;
     std::byte sdata[2];
 
     std::memcpy(sdata, &s1, sizeof(s1));

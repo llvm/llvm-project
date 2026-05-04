@@ -140,7 +140,7 @@ pointer goes out of scope, dead blocks are also deallocated.
 The lifetime of blocks is managed through 3 methods stored in the
 descriptor of the block:
 
-* **CtorFn**: initializes the metadata which is store in the block,
+* **CtorFn**: initializes the metadata which is stored in the block,
   alongside actual data. Invokes the default constructors of objects
   which are not trivial (``Pointer``, ``RealFP``, etc.)
 
@@ -293,4 +293,4 @@ TypeInfoPointer
 
 ``TypeInfoPointer`` tracks two types: the type assigned to
 ``std::type_info`` and the type which was passed to ``typeinfo``.
-It is part of the taged union in ``Pointer``.
+It is part of the tagged union in ``Pointer``.

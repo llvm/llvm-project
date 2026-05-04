@@ -43,7 +43,7 @@ public:
   }
 
   void abandon(OnAbandonedFunction OnFinalize) override {
-    Parent.Mapper->release({AllocAddr}, std::move(OnFinalize));
+    Parent.Mapper->deinitialize({AllocAddr}, std::move(OnFinalize));
   }
 
 private:
@@ -90,7 +90,7 @@ void MapperJITLinkMemoryManager::allocate(const JITLinkDylib *JD, LinkGraph &G,
       auto TotalSize = Seg.ContentSize + Seg.ZeroFillSize;
 
       Seg.Addr = NextSegAddr;
-      Seg.WorkingMem = Mapper->prepare(NextSegAddr, TotalSize);
+      Seg.WorkingMem = Mapper->prepare(G, NextSegAddr, TotalSize);
 
       NextSegAddr += alignTo(TotalSize, Mapper->getPageSize());
 

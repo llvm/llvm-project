@@ -9,9 +9,11 @@
 #ifndef _LIBCPP___RANDOM_PIECEWISE_LINEAR_DISTRIBUTION_H
 #define _LIBCPP___RANDOM_PIECEWISE_LINEAR_DISTRIBUTION_H
 
+#include <__algorithm/copy_n.h>
 #include <__algorithm/upper_bound.h>
 #include <__config>
 #include <__cstddef/ptrdiff_t.h>
+#include <__iterator/back_insert_iterator.h>
 #include <__random/is_valid.h>
 #include <__random/uniform_real_distribution.h>
 #include <__vector/comparison.h>
@@ -30,7 +32,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _RealType = double>
-class _LIBCPP_TEMPLATE_VIS piecewise_linear_distribution {
+class piecewise_linear_distribution {
   static_assert(__libcpp_random_is_valid_realtype<_RealType>::value,
                 "RealType must be a supported floating-point type");
 
@@ -38,7 +40,7 @@ public:
   // types
   typedef _RealType result_type;
 
-  class _LIBCPP_TEMPLATE_VIS param_type {
+  class param_type {
     vector<result_type> __b_;
     vector<result_type> __densities_;
     vector<result_type> __areas_;
@@ -194,8 +196,7 @@ piecewise_linear_distribution<_RealType>::param_type::param_type(
     __areas_.assign(1, 0.0);
   } else {
     __densities_.reserve(__b_.size());
-    for (size_t __i = 0; __i < __b_.size(); ++__i, ++__f_w)
-      __densities_.push_back(*__f_w);
+    std::copy_n(__f_w, __b_.size(), std::back_inserter(__densities_));
     __init();
   }
 }

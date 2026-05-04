@@ -12,8 +12,12 @@
 #include "flang/Common/enum-class.h"
 #include "flang/Common/enum-set.h"
 #include "mlir/Analysis/AliasAnalysis.h"
+#include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Value.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/SmallVector.h"
 
 namespace fir {
 
@@ -45,7 +49,7 @@ struct AliasAnalysis {
              Unknown);
 
   /// Attributes of the memory source object.
-  ENUM_CLASS(Attribute, Target, Pointer, IntentIn);
+  ENUM_CLASS(Attribute, Target, Pointer, IntentIn, CrayPointer, CrayPointee);
 
   // See
   // https://discourse.llvm.org/t/rfc-distinguish-between-data-and-non-data-in-fir-alias-analysis/78759/1
@@ -135,6 +139,60 @@ struct AliasAnalysis {
       bool isData{false};
     };
 
+    /// Represents a step in the access path from a root variable to the
+    /// memory location being queried. Built during the backward walk in
+    /// getSource() and stored in forward (root-to-leaf) order.
+    struct PathStep {
+      enum class Kind {
+        /// Named component access, e.g. x%field.
+        Component,
+        /// Loading a POINTER box (fir.load of !fir.box<!fir.ptr<...>>).
+        /// The resulting address depends on pointer association at runtime.
+        PointerDeref,
+        /// Loading an ALLOCATABLE box (fir.load of !fir.box<!fir.heap<...>>).
+        AllocDeref,
+      };
+      Kind kind;
+      /// For Component steps: the field name from hlfir.designate's component
+      /// attribute or fir.coordinate_of's field_indices (mapped through the
+      /// record type). Null for non-Component steps.
+      mlir::StringAttr component;
+
+      bool operator==(const PathStep &o) const {
+        return kind == o.kind && component == o.component;
+      }
+      bool operator!=(const PathStep &o) const { return !(*this == o); }
+    };
+
+    /// The access path from the root variable to the queried memory location.
+    /// For example, given:
+    ///   type(outer) :: x   ! outer has component "in" of type inner
+    ///                      ! inner has pointer component "p"
+    /// the target address of x%in%p (i.e. the data x%in%p points to) is:
+    ///   [{Component,"in"}, {Component,"p"}, {PointerDeref}]
+    /// where PointerDeref represents loading the pointer descriptor and
+    /// extracting the target address (fir.load + fir.box_addr in the IR).
+    /// This enables disambiguation of accesses to different components of
+    /// the same derived-type variable and tracks pointer dereferences for
+    /// pointer/target aliasing (Fortran 2018 8.5.7, 15.5.2.13).
+    struct AccessPath {
+      llvm::SmallVector<PathStep, 4> steps;
+
+      /// Whether the path is approximate (e.g. contains array indexing or
+      /// went through PackArrayOp). An approximate path cannot yield
+      /// MustAlias.
+      bool isApproximate{false};
+
+      /// Return true if any step is a PointerDeref.
+      bool hasPointerDeref() const {
+        return llvm::any_of(steps, [](const PathStep &s) {
+          return s.kind == PathStep::Kind::PointerDeref;
+        });
+      }
+
+      void print(llvm::raw_ostream &os) const;
+    };
+
     SourceOrigin origin;
 
     /// Kind of the memory source.
@@ -146,6 +204,8 @@ struct AliasAnalysis {
     /// Have we lost precision following the source such that
     /// even an exact match cannot be MustAlias?
     bool approximateSource;
+    /// The structured access path from the root variable.
+    AccessPath accessPath;
     /// Source object is used in an internal procedure via host association.
     bool isCapturedInInternalProcedure{false};
 
@@ -154,6 +214,21 @@ struct AliasAnalysis {
 
     /// Return true, if Target or Pointer attribute is set.
     bool isTargetOrPointer() const;
+
+    /// Return true, if Target attribute is set.
+    bool isTarget() const;
+
+    /// Return true, if Pointer attribute is set.
+    bool isPointer() const;
+
+    /// Return true, if CrayPointer attribute is set.
+    bool isCrayPointer() const;
+
+    /// Return true, if CrayPointee attribute is set.
+    bool isCrayPointee() const;
+
+    /// Return true, if CrayPointer or CrayPointee attribute is set.
+    bool isCrayPointerOrPointee() const;
 
     bool isDummyArgument() const;
     bool isData() const;
@@ -219,6 +294,41 @@ private:
   /// Return true, if `ty` is a reference type to an object of derived type
   /// that contains a component with POINTER attribute.
   static bool isRecordWithPointerComponent(mlir::Type ty);
+
+  /// Return the symbol table nearest to the given operation.
+  /// If a SymbolTable has not been cached in symTabMap,
+  /// it will be created, which may be expensive.
+  const mlir::SymbolTable *getNearestSymbolTable(mlir::Operation *from);
+
+  /// Return true if the given symbol may correspond to a Fortran variable
+  /// with a TARGET attribute. 'from' is used to find the nearest
+  /// SymbolTable (by calling getNearestSymbolTable()).
+  bool symbolMayHaveTargetAttr(mlir::SymbolRefAttr symbol,
+                               mlir::Operation *from);
+
+  /// Return true if the given operation is a call to a Fortran user
+  /// procedure.
+  bool isCallToFortranUserProcedure(mlir::Operation *op);
+
+  /// Returns the modify-reference behavior of the given call
+  /// operation `op` on `var`. If `op` is not a fir.call, then
+  /// it returns the conservative ModAndRef result.
+  mlir::ModRefResult getCallModRef(mlir::Operation *op, mlir::Value var);
+
+  /// A map between operations with OpTrait::SymbolTable
+  /// and the SymbolTable objects associated with them.
+  /// TODO: it might be better to initialize just a single SymbolTable
+  /// during fir::AliasAnalysis construction, e.g. by giving
+  /// the constructor the operation from which the nearest SymbolTable
+  /// should be looked up. This implies that the users will have to
+  /// specify proper operation (e.g. 'module') so that the discovered
+  /// SymbolTable contains all the symbols that may appear during
+  /// the aliasing queries through the constructed AliasAnalysis
+  /// entity. On ther other hand, this approach may be too expensive
+  /// for the clients that create AliasAnalysis on the fly for just
+  /// a few values that are likely not globals.
+  /// We can have both modes for different clients.
+  llvm::DenseMap<mlir::Operation *, mlir::SymbolTable> symTabMap;
 };
 
 inline bool operator==(const AliasAnalysis::Source::SourceOrigin &lhs,

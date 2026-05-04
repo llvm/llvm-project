@@ -38,6 +38,7 @@ __attribute__((noinline)) void foo(char c) {
 __attribute__((noinline)) void bar(int M) { g += M; }
 
 int main(int argc, const char *argv[]) {
+  __llvm_profile_test_initialize();
   int i;
   if (argc < 4)
     return 1;

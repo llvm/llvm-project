@@ -20,7 +20,6 @@
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
@@ -60,11 +59,16 @@ static unsigned adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   case Mips::fixup_MIPS_PCLO16:
     Value &= 0xffff;
     break;
-  case FK_DTPRel_4:
-  case FK_DTPRel_8:
-  case FK_TPRel_4:
-  case FK_TPRel_8:
-  case FK_GPRel_4:
+  case Mips::fixup_Mips_AnyImm16:
+    if (!isInt<16>(Value) && !isUInt<16>(Value))
+      Ctx.reportError(Fixup.getLoc(),
+                      "fixup value out of range [-32768, 65535]");
+    break;
+  case Mips::fixup_Mips_GPREL32:
+  case Mips::fixup_Mips_DTPREL32:
+  case Mips::fixup_Mips_DTPREL64:
+  case Mips::fixup_Mips_TPREL32:
+  case Mips::fixup_Mips_TPREL64:
   case FK_Data_4:
   case FK_Data_8:
   case Mips::fixup_Mips_SUB:
@@ -234,318 +238,7 @@ static unsigned calculateMMLEIndex(unsigned i) {
   return (1 - i / 2) * 2 + i % 2;
 }
 
-/// ApplyFixup - Apply the \p Value for given \p Fixup into the provided
-/// data fragment, at the offset specified by the fixup and following the
-/// fixup kind as appropriate.
-void MipsAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
-                                const MCValue &Target,
-                                MutableArrayRef<char> Data, uint64_t Value,
-                                bool IsResolved,
-                                const MCSubtargetInfo *STI) const {
-  MCFixupKind Kind = Fixup.getKind();
-  MCContext &Ctx = Asm.getContext();
-  Value = adjustFixupValue(Fixup, Value, Ctx);
-
-  if (!Value)
-    return; // Doesn't change encoding.
-
-  // Where do we start in the object
-  unsigned Offset = Fixup.getOffset();
-  // Number of bytes we need to fixup
-  unsigned NumBytes = (getFixupKindInfo(Kind).TargetSize + 7) / 8;
-  // Used to point to big endian bytes
-  unsigned FullSize;
-
-  switch ((unsigned)Kind) {
-  case FK_Data_2:
-  case Mips::fixup_Mips_16:
-  case Mips::fixup_MICROMIPS_PC10_S1:
-    FullSize = 2;
-    break;
-  case FK_Data_8:
-  case Mips::fixup_Mips_64:
-    FullSize = 8;
-    break;
-  case FK_Data_4:
-  default:
-    FullSize = 4;
-    break;
-  }
-
-  // Grab current value, if any, from bits.
-  uint64_t CurVal = 0;
-
-  bool microMipsLEByteOrder = needsMMLEByteOrder((unsigned) Kind);
-
-  for (unsigned i = 0; i != NumBytes; ++i) {
-    unsigned Idx = Endian == llvm::endianness::little
-                       ? (microMipsLEByteOrder ? calculateMMLEIndex(i) : i)
-                       : (FullSize - 1 - i);
-    CurVal |= (uint64_t)((uint8_t)Data[Offset + Idx]) << (i*8);
-  }
-
-  uint64_t Mask = ((uint64_t)(-1) >>
-                    (64 - getFixupKindInfo(Kind).TargetSize));
-  CurVal |= Value & Mask;
-
-  // Write out the fixed up bytes back to the code/data bits.
-  for (unsigned i = 0; i != NumBytes; ++i) {
-    unsigned Idx = Endian == llvm::endianness::little
-                       ? (microMipsLEByteOrder ? calculateMMLEIndex(i) : i)
-                       : (FullSize - 1 - i);
-    Data[Offset + Idx] = (uint8_t)((CurVal >> (i*8)) & 0xff);
-  }
-}
-
-std::optional<MCFixupKind> MipsAsmBackend::getFixupKind(StringRef Name) const {
-  unsigned Type = llvm::StringSwitch<unsigned>(Name)
-                      .Case("BFD_RELOC_NONE", ELF::R_MIPS_NONE)
-                      .Case("BFD_RELOC_16", ELF::R_MIPS_16)
-                      .Case("BFD_RELOC_32", ELF::R_MIPS_32)
-                      .Case("BFD_RELOC_64", ELF::R_MIPS_64)
-                      .Default(-1u);
-  if (Type != -1u)
-    return static_cast<MCFixupKind>(FirstLiteralRelocationKind + Type);
-
-  return StringSwitch<std::optional<MCFixupKind>>(Name)
-      .Case("R_MIPS_NONE", FK_NONE)
-      .Case("R_MIPS_32", FK_Data_4)
-      .Case("R_MIPS_CALL_HI16", (MCFixupKind)Mips::fixup_Mips_CALL_HI16)
-      .Case("R_MIPS_CALL_LO16", (MCFixupKind)Mips::fixup_Mips_CALL_LO16)
-      .Case("R_MIPS_CALL16", (MCFixupKind)Mips::fixup_Mips_CALL16)
-      .Case("R_MIPS_GOT16", (MCFixupKind)Mips::fixup_Mips_GOT)
-      .Case("R_MIPS_GOT_PAGE", (MCFixupKind)Mips::fixup_Mips_GOT_PAGE)
-      .Case("R_MIPS_GOT_OFST", (MCFixupKind)Mips::fixup_Mips_GOT_OFST)
-      .Case("R_MIPS_GOT_DISP", (MCFixupKind)Mips::fixup_Mips_GOT_DISP)
-      .Case("R_MIPS_GOT_HI16", (MCFixupKind)Mips::fixup_Mips_GOT_HI16)
-      .Case("R_MIPS_GOT_LO16", (MCFixupKind)Mips::fixup_Mips_GOT_LO16)
-      .Case("R_MIPS_TLS_GOTTPREL", (MCFixupKind)Mips::fixup_Mips_GOTTPREL)
-      .Case("R_MIPS_TLS_DTPREL_HI16", (MCFixupKind)Mips::fixup_Mips_DTPREL_HI)
-      .Case("R_MIPS_TLS_DTPREL_LO16", (MCFixupKind)Mips::fixup_Mips_DTPREL_LO)
-      .Case("R_MIPS_TLS_GD", (MCFixupKind)Mips::fixup_Mips_TLSGD)
-      .Case("R_MIPS_TLS_LDM", (MCFixupKind)Mips::fixup_Mips_TLSLDM)
-      .Case("R_MIPS_TLS_TPREL_HI16", (MCFixupKind)Mips::fixup_Mips_TPREL_HI)
-      .Case("R_MIPS_TLS_TPREL_LO16", (MCFixupKind)Mips::fixup_Mips_TPREL_LO)
-      .Case("R_MICROMIPS_CALL16", (MCFixupKind)Mips::fixup_MICROMIPS_CALL16)
-      .Case("R_MICROMIPS_GOT_DISP", (MCFixupKind)Mips::fixup_MICROMIPS_GOT_DISP)
-      .Case("R_MICROMIPS_GOT_PAGE", (MCFixupKind)Mips::fixup_MICROMIPS_GOT_PAGE)
-      .Case("R_MICROMIPS_GOT_OFST", (MCFixupKind)Mips::fixup_MICROMIPS_GOT_OFST)
-      .Case("R_MICROMIPS_GOT16", (MCFixupKind)Mips::fixup_MICROMIPS_GOT16)
-      .Case("R_MICROMIPS_TLS_GOTTPREL",
-            (MCFixupKind)Mips::fixup_MICROMIPS_GOTTPREL)
-      .Case("R_MICROMIPS_TLS_DTPREL_HI16",
-            (MCFixupKind)Mips::fixup_MICROMIPS_TLS_DTPREL_HI16)
-      .Case("R_MICROMIPS_TLS_DTPREL_LO16",
-            (MCFixupKind)Mips::fixup_MICROMIPS_TLS_DTPREL_LO16)
-      .Case("R_MICROMIPS_TLS_GD", (MCFixupKind)Mips::fixup_MICROMIPS_TLS_GD)
-      .Case("R_MICROMIPS_TLS_LDM", (MCFixupKind)Mips::fixup_MICROMIPS_TLS_LDM)
-      .Case("R_MICROMIPS_TLS_TPREL_HI16",
-            (MCFixupKind)Mips::fixup_MICROMIPS_TLS_TPREL_HI16)
-      .Case("R_MICROMIPS_TLS_TPREL_LO16",
-            (MCFixupKind)Mips::fixup_MICROMIPS_TLS_TPREL_LO16)
-      .Case("R_MIPS_JALR", (MCFixupKind)Mips::fixup_Mips_JALR)
-      .Case("R_MICROMIPS_JALR", (MCFixupKind)Mips::fixup_MICROMIPS_JALR)
-      .Default(MCAsmBackend::getFixupKind(Name));
-}
-
-const MCFixupKindInfo &MipsAsmBackend::
-getFixupKindInfo(MCFixupKind Kind) const {
-  const static MCFixupKindInfo LittleEndianInfos[] = {
-    // This table *must* be in same the order of fixup_* kinds in
-    // MipsFixupKinds.h.
-    //
-    // name                    offset  bits  flags
-    { "fixup_Mips_16",           0,     16,   0 },
-    { "fixup_Mips_32",           0,     32,   0 },
-    { "fixup_Mips_REL32",        0,     32,   0 },
-    { "fixup_Mips_26",           0,     26,   0 },
-    { "fixup_Mips_HI16",         0,     16,   0 },
-    { "fixup_Mips_LO16",         0,     16,   0 },
-    { "fixup_Mips_GPREL16",      0,     16,   0 },
-    { "fixup_Mips_LITERAL",      0,     16,   0 },
-    { "fixup_Mips_GOT",          0,     16,   0 },
-    { "fixup_Mips_PC16",         0,     16,  MCFixupKindInfo::FKF_IsPCRel },
-    { "fixup_Mips_CALL16",       0,     16,   0 },
-    { "fixup_Mips_GPREL32",      0,     32,   0 },
-    { "fixup_Mips_SHIFT5",       6,      5,   0 },
-    { "fixup_Mips_SHIFT6",       6,      5,   0 },
-    { "fixup_Mips_64",           0,     64,   0 },
-    { "fixup_Mips_TLSGD",        0,     16,   0 },
-    { "fixup_Mips_GOTTPREL",     0,     16,   0 },
-    { "fixup_Mips_TPREL_HI",     0,     16,   0 },
-    { "fixup_Mips_TPREL_LO",     0,     16,   0 },
-    { "fixup_Mips_TLSLDM",       0,     16,   0 },
-    { "fixup_Mips_DTPREL_HI",    0,     16,   0 },
-    { "fixup_Mips_DTPREL_LO",    0,     16,   0 },
-    { "fixup_Mips_Branch_PCRel", 0,     16,  MCFixupKindInfo::FKF_IsPCRel },
-    { "fixup_Mips_GPOFF_HI",     0,     16,   0 },
-    { "fixup_MICROMIPS_GPOFF_HI",0,     16,   0 },
-    { "fixup_Mips_GPOFF_LO",     0,     16,   0 },
-    { "fixup_MICROMIPS_GPOFF_LO",0,     16,   0 },
-    { "fixup_Mips_GOT_PAGE",     0,     16,   0 },
-    { "fixup_Mips_GOT_OFST",     0,     16,   0 },
-    { "fixup_Mips_GOT_DISP",     0,     16,   0 },
-    { "fixup_Mips_HIGHER",       0,     16,   0 },
-    { "fixup_MICROMIPS_HIGHER",  0,     16,   0 },
-    { "fixup_Mips_HIGHEST",      0,     16,   0 },
-    { "fixup_MICROMIPS_HIGHEST", 0,     16,   0 },
-    { "fixup_Mips_GOT_HI16",     0,     16,   0 },
-    { "fixup_Mips_GOT_LO16",     0,     16,   0 },
-    { "fixup_Mips_CALL_HI16",    0,     16,   0 },
-    { "fixup_Mips_CALL_LO16",    0,     16,   0 },
-    { "fixup_Mips_PC18_S3",      0,     18,  MCFixupKindInfo::FKF_IsPCRel },
-    { "fixup_MIPS_PC19_S2",      0,     19,  MCFixupKindInfo::FKF_IsPCRel },
-    { "fixup_MIPS_PC21_S2",      0,     21,  MCFixupKindInfo::FKF_IsPCRel },
-    { "fixup_MIPS_PC26_S2",      0,     26,  MCFixupKindInfo::FKF_IsPCRel },
-    { "fixup_MIPS_PCHI16",       0,     16,  MCFixupKindInfo::FKF_IsPCRel },
-    { "fixup_MIPS_PCLO16",       0,     16,  MCFixupKindInfo::FKF_IsPCRel },
-    { "fixup_MICROMIPS_26_S1",   0,     26,   0 },
-    { "fixup_MICROMIPS_HI16",    0,     16,   0 },
-    { "fixup_MICROMIPS_LO16",    0,     16,   0 },
-    { "fixup_MICROMIPS_GOT16",   0,     16,   0 },
-    { "fixup_MICROMIPS_PC7_S1",  0,      7,   MCFixupKindInfo::FKF_IsPCRel },
-    { "fixup_MICROMIPS_PC10_S1", 0,     10,   MCFixupKindInfo::FKF_IsPCRel },
-    { "fixup_MICROMIPS_PC16_S1", 0,     16,   MCFixupKindInfo::FKF_IsPCRel },
-    { "fixup_MICROMIPS_PC26_S1", 0,     26,   MCFixupKindInfo::FKF_IsPCRel },
-    { "fixup_MICROMIPS_PC19_S2", 0,     19,   MCFixupKindInfo::FKF_IsPCRel },
-    { "fixup_MICROMIPS_PC18_S3", 0,     18,   MCFixupKindInfo::FKF_IsPCRel },
-    { "fixup_MICROMIPS_PC21_S1", 0,     21,   MCFixupKindInfo::FKF_IsPCRel },
-    { "fixup_MICROMIPS_CALL16",  0,     16,   0 },
-    { "fixup_MICROMIPS_GOT_DISP",        0,     16,   0 },
-    { "fixup_MICROMIPS_GOT_PAGE",        0,     16,   0 },
-    { "fixup_MICROMIPS_GOT_OFST",        0,     16,   0 },
-    { "fixup_MICROMIPS_TLS_GD",          0,     16,   0 },
-    { "fixup_MICROMIPS_TLS_LDM",         0,     16,   0 },
-    { "fixup_MICROMIPS_TLS_DTPREL_HI16", 0,     16,   0 },
-    { "fixup_MICROMIPS_TLS_DTPREL_LO16", 0,     16,   0 },
-    { "fixup_MICROMIPS_GOTTPREL",        0,     16,   0 },
-    { "fixup_MICROMIPS_TLS_TPREL_HI16",  0,     16,   0 },
-    { "fixup_MICROMIPS_TLS_TPREL_LO16",  0,     16,   0 },
-    { "fixup_Mips_SUB",                  0,     64,   0 },
-    { "fixup_MICROMIPS_SUB",             0,     64,   0 },
-    { "fixup_Mips_JALR",                 0,     32,   0 },
-    { "fixup_MICROMIPS_JALR",            0,     32,   0 }
-  };
-  static_assert(std::size(LittleEndianInfos) == Mips::NumTargetFixupKinds,
-                "Not all MIPS little endian fixup kinds added!");
-
-  const static MCFixupKindInfo BigEndianInfos[] = {
-    // This table *must* be in same the order of fixup_* kinds in
-    // MipsFixupKinds.h.
-    //
-    // name                    offset  bits  flags
-    { "fixup_Mips_16",          16,     16,   0 },
-    { "fixup_Mips_32",           0,     32,   0 },
-    { "fixup_Mips_REL32",        0,     32,   0 },
-    { "fixup_Mips_26",           6,     26,   0 },
-    { "fixup_Mips_HI16",        16,     16,   0 },
-    { "fixup_Mips_LO16",        16,     16,   0 },
-    { "fixup_Mips_GPREL16",     16,     16,   0 },
-    { "fixup_Mips_LITERAL",     16,     16,   0 },
-    { "fixup_Mips_GOT",         16,     16,   0 },
-    { "fixup_Mips_PC16",        16,     16,  MCFixupKindInfo::FKF_IsPCRel },
-    { "fixup_Mips_CALL16",      16,     16,   0 },
-    { "fixup_Mips_GPREL32",      0,     32,   0 },
-    { "fixup_Mips_SHIFT5",      21,      5,   0 },
-    { "fixup_Mips_SHIFT6",      21,      5,   0 },
-    { "fixup_Mips_64",           0,     64,   0 },
-    { "fixup_Mips_TLSGD",       16,     16,   0 },
-    { "fixup_Mips_GOTTPREL",    16,     16,   0 },
-    { "fixup_Mips_TPREL_HI",    16,     16,   0 },
-    { "fixup_Mips_TPREL_LO",    16,     16,   0 },
-    { "fixup_Mips_TLSLDM",      16,     16,   0 },
-    { "fixup_Mips_DTPREL_HI",   16,     16,   0 },
-    { "fixup_Mips_DTPREL_LO",   16,     16,   0 },
-    { "fixup_Mips_Branch_PCRel",16,     16,  MCFixupKindInfo::FKF_IsPCRel },
-    { "fixup_Mips_GPOFF_HI",    16,     16,   0 },
-    { "fixup_MICROMIPS_GPOFF_HI", 16,     16,   0 },
-    { "fixup_Mips_GPOFF_LO",    16,     16,   0 },
-    { "fixup_MICROMIPS_GPOFF_LO", 16,     16,   0 },
-    { "fixup_Mips_GOT_PAGE",    16,     16,   0 },
-    { "fixup_Mips_GOT_OFST",    16,     16,   0 },
-    { "fixup_Mips_GOT_DISP",    16,     16,   0 },
-    { "fixup_Mips_HIGHER",      16,     16,   0 },
-    { "fixup_MICROMIPS_HIGHER", 16,     16,   0 },
-    { "fixup_Mips_HIGHEST",     16,     16,   0 },
-    { "fixup_MICROMIPS_HIGHEST",16,     16,   0 },
-    { "fixup_Mips_GOT_HI16",    16,     16,   0 },
-    { "fixup_Mips_GOT_LO16",    16,     16,   0 },
-    { "fixup_Mips_CALL_HI16",   16,     16,   0 },
-    { "fixup_Mips_CALL_LO16",   16,     16,   0 },
-    { "fixup_Mips_PC18_S3",     14,     18,  MCFixupKindInfo::FKF_IsPCRel },
-    { "fixup_MIPS_PC19_S2",     13,     19,  MCFixupKindInfo::FKF_IsPCRel },
-    { "fixup_MIPS_PC21_S2",     11,     21,  MCFixupKindInfo::FKF_IsPCRel },
-    { "fixup_MIPS_PC26_S2",      6,     26,  MCFixupKindInfo::FKF_IsPCRel },
-    { "fixup_MIPS_PCHI16",      16,     16,  MCFixupKindInfo::FKF_IsPCRel },
-    { "fixup_MIPS_PCLO16",      16,     16,  MCFixupKindInfo::FKF_IsPCRel },
-    { "fixup_MICROMIPS_26_S1",   6,     26,   0 },
-    { "fixup_MICROMIPS_HI16",   16,     16,   0 },
-    { "fixup_MICROMIPS_LO16",   16,     16,   0 },
-    { "fixup_MICROMIPS_GOT16",  16,     16,   0 },
-    { "fixup_MICROMIPS_PC7_S1",  9,      7,   MCFixupKindInfo::FKF_IsPCRel },
-    { "fixup_MICROMIPS_PC10_S1", 6,     10,   MCFixupKindInfo::FKF_IsPCRel },
-    { "fixup_MICROMIPS_PC16_S1",16,     16,   MCFixupKindInfo::FKF_IsPCRel },
-    { "fixup_MICROMIPS_PC26_S1", 6,     26,   MCFixupKindInfo::FKF_IsPCRel },
-    { "fixup_MICROMIPS_PC19_S2",13,     19,   MCFixupKindInfo::FKF_IsPCRel },
-    { "fixup_MICROMIPS_PC18_S3",14,     18,   MCFixupKindInfo::FKF_IsPCRel },
-    { "fixup_MICROMIPS_PC21_S1",11,     21,   MCFixupKindInfo::FKF_IsPCRel },
-    { "fixup_MICROMIPS_CALL16", 16,     16,   0 },
-    { "fixup_MICROMIPS_GOT_DISP",        16,     16,   0 },
-    { "fixup_MICROMIPS_GOT_PAGE",        16,     16,   0 },
-    { "fixup_MICROMIPS_GOT_OFST",        16,     16,   0 },
-    { "fixup_MICROMIPS_TLS_GD",          16,     16,   0 },
-    { "fixup_MICROMIPS_TLS_LDM",         16,     16,   0 },
-    { "fixup_MICROMIPS_TLS_DTPREL_HI16", 16,     16,   0 },
-    { "fixup_MICROMIPS_TLS_DTPREL_LO16", 16,     16,   0 },
-    { "fixup_MICROMIPS_GOTTPREL",        16,     16,   0 },
-    { "fixup_MICROMIPS_TLS_TPREL_HI16",  16,     16,   0 },
-    { "fixup_MICROMIPS_TLS_TPREL_LO16",  16,     16,   0 },
-    { "fixup_Mips_SUB",                   0,     64,   0 },
-    { "fixup_MICROMIPS_SUB",              0,     64,   0 },
-    { "fixup_Mips_JALR",                  0,     32,   0 },
-    { "fixup_MICROMIPS_JALR",             0,     32,   0 }
-  };
-  static_assert(std::size(BigEndianInfos) == Mips::NumTargetFixupKinds,
-                "Not all MIPS big endian fixup kinds added!");
-
-  if (Kind >= FirstLiteralRelocationKind)
-    return MCAsmBackend::getFixupKindInfo(FK_NONE);
-  if (Kind < FirstTargetFixupKind)
-    return MCAsmBackend::getFixupKindInfo(Kind);
-
-  assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
-          "Invalid kind!");
-
-  if (Endian == llvm::endianness::little)
-    return LittleEndianInfos[Kind - FirstTargetFixupKind];
-  return BigEndianInfos[Kind - FirstTargetFixupKind];
-}
-
-/// WriteNopData - Write an (optimal) nop sequence of Count bytes
-/// to the given output. If the target cannot generate such a sequence,
-/// it should return an error.
-///
-/// \return - True on success.
-bool MipsAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
-                                  const MCSubtargetInfo *STI) const {
-  // Check for a less than instruction size number of bytes
-  // FIXME: 16 bit instructions are not handled yet here.
-  // We shouldn't be using a hard coded number for instruction size.
-
-  // If the count is not 4-byte aligned, we must be writing data into the text
-  // section (otherwise we have unaligned instructions, and thus have far
-  // bigger problems), so just write zeros instead.
-  OS.write_zeros(Count);
-  return true;
-}
-
-bool MipsAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
-                                           const MCFixup &Fixup,
-                                           const MCValue &Target,
-                                           const uint64_t,
-                                           const MCSubtargetInfo *STI) {
-  if (Fixup.getKind() >= FirstLiteralRelocationKind)
-    return true;
+static bool shouldForceRelocation(const MCFixup &Fixup) {
   const unsigned FixupKind = Fixup.getKind();
   switch (FixupKind) {
   default:
@@ -586,12 +279,319 @@ bool MipsAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
   }
 }
 
-bool MipsAsmBackend::isMicroMips(const MCSymbol *Sym) const {
-  if (const auto *ElfSym = dyn_cast<const MCSymbolELF>(Sym)) {
-    if (ElfSym->getOther() & ELF::STO_MIPS_MICROMIPS)
-      return true;
+/// ApplyFixup - Apply the \p Value for given \p Fixup into the provided
+/// data fragment, at the offset specified by the fixup and following the
+/// fixup kind as appropriate.
+void MipsAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
+                                const MCValue &Target, uint8_t *Data,
+                                uint64_t Value, bool IsResolved) {
+  if (shouldForceRelocation(Fixup))
+    IsResolved = false;
+  maybeAddReloc(F, Fixup, Target, Value, IsResolved);
+  MCFixupKind Kind = Fixup.getKind();
+  MCContext &Ctx = getContext();
+  Value = adjustFixupValue(Fixup, Value, Ctx);
+
+  if (!Value)
+    return; // Doesn't change encoding.
+
+  // Where do we start in the object
+  // Number of bytes we need to fixup
+  unsigned NumBytes = (getFixupKindInfo(Kind).TargetSize + 7) / 8;
+  // Used to point to big endian bytes
+  unsigned FullSize;
+
+  switch ((unsigned)Kind) {
+  case FK_Data_2:
+  case Mips::fixup_Mips_16:
+  case Mips::fixup_MICROMIPS_PC10_S1:
+    FullSize = 2;
+    break;
+  case FK_Data_8:
+  case Mips::fixup_Mips_64:
+    FullSize = 8;
+    break;
+  case FK_Data_4:
+  default:
+    FullSize = 4;
+    break;
   }
-  return false;
+
+  // Grab current value, if any, from bits.
+  uint64_t CurVal = 0;
+
+  bool microMipsLEByteOrder = needsMMLEByteOrder((unsigned) Kind);
+
+  for (unsigned i = 0; i != NumBytes; ++i) {
+    unsigned Idx = Endian == llvm::endianness::little
+                       ? (microMipsLEByteOrder ? calculateMMLEIndex(i) : i)
+                       : (FullSize - 1 - i);
+    CurVal |= (uint64_t)((uint8_t)Data[Idx]) << (i * 8);
+  }
+
+  uint64_t Mask = ((uint64_t)(-1) >>
+                    (64 - getFixupKindInfo(Kind).TargetSize));
+  CurVal |= Value & Mask;
+
+  // Write out the fixed up bytes back to the code/data bits.
+  for (unsigned i = 0; i != NumBytes; ++i) {
+    unsigned Idx = Endian == llvm::endianness::little
+                       ? (microMipsLEByteOrder ? calculateMMLEIndex(i) : i)
+                       : (FullSize - 1 - i);
+    Data[Idx] = (uint8_t)((CurVal >> (i * 8)) & 0xff);
+  }
+}
+
+std::optional<MCFixupKind> MipsAsmBackend::getFixupKind(StringRef Name) const {
+  unsigned Type = llvm::StringSwitch<unsigned>(Name)
+                      .Case("BFD_RELOC_NONE", ELF::R_MIPS_NONE)
+                      .Case("BFD_RELOC_16", ELF::R_MIPS_16)
+                      .Case("BFD_RELOC_32", ELF::R_MIPS_32)
+                      .Case("BFD_RELOC_64", ELF::R_MIPS_64)
+                      .Default(-1u);
+  if (Type != -1u)
+    return static_cast<MCFixupKind>(FirstLiteralRelocationKind + Type);
+
+  return StringSwitch<std::optional<MCFixupKind>>(Name)
+      .Case("R_MIPS_NONE", FK_NONE)
+      .Case("R_MIPS_32", FK_Data_4)
+      .Case("R_MIPS_CALL_HI16", Mips::fixup_Mips_CALL_HI16)
+      .Case("R_MIPS_CALL_LO16", Mips::fixup_Mips_CALL_LO16)
+      .Case("R_MIPS_CALL16", Mips::fixup_Mips_CALL16)
+      .Case("R_MIPS_GOT16", Mips::fixup_Mips_GOT)
+      .Case("R_MIPS_GOT_PAGE", Mips::fixup_Mips_GOT_PAGE)
+      .Case("R_MIPS_GOT_OFST", Mips::fixup_Mips_GOT_OFST)
+      .Case("R_MIPS_GOT_DISP", Mips::fixup_Mips_GOT_DISP)
+      .Case("R_MIPS_GOT_HI16", Mips::fixup_Mips_GOT_HI16)
+      .Case("R_MIPS_GOT_LO16", Mips::fixup_Mips_GOT_LO16)
+      .Case("R_MIPS_TLS_GOTTPREL", Mips::fixup_Mips_GOTTPREL)
+      .Case("R_MIPS_TLS_DTPREL_HI16", Mips::fixup_Mips_DTPREL_HI)
+      .Case("R_MIPS_TLS_DTPREL_LO16", Mips::fixup_Mips_DTPREL_LO)
+      .Case("R_MIPS_TLS_GD", Mips::fixup_Mips_TLSGD)
+      .Case("R_MIPS_TLS_LDM", Mips::fixup_Mips_TLSLDM)
+      .Case("R_MIPS_TLS_TPREL_HI16", Mips::fixup_Mips_TPREL_HI)
+      .Case("R_MIPS_TLS_TPREL_LO16", Mips::fixup_Mips_TPREL_LO)
+      .Case("R_MICROMIPS_CALL16", Mips::fixup_MICROMIPS_CALL16)
+      .Case("R_MICROMIPS_GOT_DISP", Mips::fixup_MICROMIPS_GOT_DISP)
+      .Case("R_MICROMIPS_GOT_PAGE", Mips::fixup_MICROMIPS_GOT_PAGE)
+      .Case("R_MICROMIPS_GOT_OFST", Mips::fixup_MICROMIPS_GOT_OFST)
+      .Case("R_MICROMIPS_GOT16", Mips::fixup_MICROMIPS_GOT16)
+      .Case("R_MICROMIPS_TLS_GOTTPREL", Mips::fixup_MICROMIPS_GOTTPREL)
+      .Case("R_MICROMIPS_TLS_DTPREL_HI16",
+            Mips::fixup_MICROMIPS_TLS_DTPREL_HI16)
+      .Case("R_MICROMIPS_TLS_DTPREL_LO16",
+            Mips::fixup_MICROMIPS_TLS_DTPREL_LO16)
+      .Case("R_MICROMIPS_TLS_GD", Mips::fixup_MICROMIPS_TLS_GD)
+      .Case("R_MICROMIPS_TLS_LDM", Mips::fixup_MICROMIPS_TLS_LDM)
+      .Case("R_MICROMIPS_TLS_TPREL_HI16", Mips::fixup_MICROMIPS_TLS_TPREL_HI16)
+      .Case("R_MICROMIPS_TLS_TPREL_LO16", Mips::fixup_MICROMIPS_TLS_TPREL_LO16)
+      .Case("R_MIPS_JALR", Mips::fixup_Mips_JALR)
+      .Case("R_MICROMIPS_JALR", Mips::fixup_MICROMIPS_JALR)
+      .Default(MCAsmBackend::getFixupKind(Name));
+}
+
+MCFixupKindInfo MipsAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
+  const static MCFixupKindInfo LittleEndianInfos[] = {
+      // This table *must* be in same the order of fixup_* kinds in
+      // MipsFixupKinds.h.
+      //
+      // name                    offset  bits  flags
+      // clang-format off
+    { "fixup_Mips_16",           0,     16,   0 },
+    { "fixup_Mips_32",           0,     32,   0 },
+    { "fixup_Mips_REL32",        0,     32,   0 },
+    { "fixup_Mips_GPREL32",      0,     32,   0 },
+    { "fixup_Mips_DTPREL32",     0,     32,   0 },
+    { "fixup_Mips_DTPREL64",     0,     64,   0 },
+    { "fixup_Mips_TPREL32",      0,     32,   0 },
+    { "fixup_Mips_TPREL64",      0,     64,   0 },
+    { "fixup_Mips_26",           0,     26,   0 },
+    { "fixup_Mips_HI16",         0,     16,   0 },
+    { "fixup_Mips_LO16",         0,     16,   0 },
+    { "fixup_Mips_AnyImm16",     0,     16,   0 },
+    { "fixup_Mips_GPREL16",      0,     16,   0 },
+    { "fixup_Mips_LITERAL",      0,     16,   0 },
+    { "fixup_Mips_GOT",          0,     16,   0 },
+    { "fixup_Mips_PC16",         0,     16,   0 },
+    { "fixup_Mips_CALL16",       0,     16,   0 },
+    { "fixup_Mips_SHIFT5",       6,      5,   0 },
+    { "fixup_Mips_SHIFT6",       6,      5,   0 },
+    { "fixup_Mips_64",           0,     64,   0 },
+    { "fixup_Mips_TLSGD",        0,     16,   0 },
+    { "fixup_Mips_GOTTPREL",     0,     16,   0 },
+    { "fixup_Mips_TPREL_HI",     0,     16,   0 },
+    { "fixup_Mips_TPREL_LO",     0,     16,   0 },
+    { "fixup_Mips_TLSLDM",       0,     16,   0 },
+    { "fixup_Mips_DTPREL_HI",    0,     16,   0 },
+    { "fixup_Mips_DTPREL_LO",    0,     16,   0 },
+    { "fixup_Mips_Branch_PCRel", 0,     16,   0 },
+    { "fixup_Mips_GPOFF_HI",     0,     16,   0 },
+    { "fixup_MICROMIPS_GPOFF_HI",0,     16,   0 },
+    { "fixup_Mips_GPOFF_LO",     0,     16,   0 },
+    { "fixup_MICROMIPS_GPOFF_LO",0,     16,   0 },
+    { "fixup_Mips_GOT_PAGE",     0,     16,   0 },
+    { "fixup_Mips_GOT_OFST",     0,     16,   0 },
+    { "fixup_Mips_GOT_DISP",     0,     16,   0 },
+    { "fixup_Mips_HIGHER",       0,     16,   0 },
+    { "fixup_MICROMIPS_HIGHER",  0,     16,   0 },
+    { "fixup_Mips_HIGHEST",      0,     16,   0 },
+    { "fixup_MICROMIPS_HIGHEST", 0,     16,   0 },
+    { "fixup_Mips_GOT_HI16",     0,     16,   0 },
+    { "fixup_Mips_GOT_LO16",     0,     16,   0 },
+    { "fixup_Mips_CALL_HI16",    0,     16,   0 },
+    { "fixup_Mips_CALL_LO16",    0,     16,   0 },
+    { "fixup_Mips_PC18_S3",      0,     18,   0 },
+    { "fixup_MIPS_PC19_S2",      0,     19,   0 },
+    { "fixup_MIPS_PC21_S2",      0,     21,   0 },
+    { "fixup_MIPS_PC26_S2",      0,     26,   0 },
+    { "fixup_MIPS_PCHI16",       0,     16,   0 },
+    { "fixup_MIPS_PCLO16",       0,     16,   0 },
+    { "fixup_MICROMIPS_26_S1",   0,     26,   0 },
+    { "fixup_MICROMIPS_HI16",    0,     16,   0 },
+    { "fixup_MICROMIPS_LO16",    0,     16,   0 },
+    { "fixup_MICROMIPS_GOT16",   0,     16,   0 },
+    { "fixup_MICROMIPS_PC7_S1",  0,      7,   0 },
+    { "fixup_MICROMIPS_PC10_S1", 0,     10,   0 },
+    { "fixup_MICROMIPS_PC16_S1", 0,     16,   0 },
+    { "fixup_MICROMIPS_PC26_S1", 0,     26,   0 },
+    { "fixup_MICROMIPS_PC19_S2", 0,     19,   0 },
+    { "fixup_MICROMIPS_PC18_S3", 0,     18,   0 },
+    { "fixup_MICROMIPS_PC21_S1", 0,     21,   0 },
+    { "fixup_MICROMIPS_CALL16",  0,     16,   0 },
+    { "fixup_MICROMIPS_GOT_DISP",        0,     16,   0 },
+    { "fixup_MICROMIPS_GOT_PAGE",        0,     16,   0 },
+    { "fixup_MICROMIPS_GOT_OFST",        0,     16,   0 },
+    { "fixup_MICROMIPS_TLS_GD",          0,     16,   0 },
+    { "fixup_MICROMIPS_TLS_LDM",         0,     16,   0 },
+    { "fixup_MICROMIPS_TLS_DTPREL_HI16", 0,     16,   0 },
+    { "fixup_MICROMIPS_TLS_DTPREL_LO16", 0,     16,   0 },
+    { "fixup_MICROMIPS_GOTTPREL",        0,     16,   0 },
+    { "fixup_MICROMIPS_TLS_TPREL_HI16",  0,     16,   0 },
+    { "fixup_MICROMIPS_TLS_TPREL_LO16",  0,     16,   0 },
+    { "fixup_Mips_SUB",                  0,     64,   0 },
+    { "fixup_MICROMIPS_SUB",             0,     64,   0 },
+    { "fixup_Mips_JALR",                 0,     32,   0 },
+    { "fixup_MICROMIPS_JALR",            0,     32,   0 },
+      // clang-format on
+  };
+  static_assert(std::size(LittleEndianInfos) == Mips::NumTargetFixupKinds,
+                "Not all MIPS little endian fixup kinds added!");
+
+  const static MCFixupKindInfo BigEndianInfos[] = {
+      // This table *must* be in same the order of fixup_* kinds in
+      // MipsFixupKinds.h.
+      //
+      // name                    offset  bits  flags
+      // clang-format off
+    { "fixup_Mips_16",          16,     16,   0 },
+    { "fixup_Mips_32",           0,     32,   0 },
+    { "fixup_Mips_REL32",        0,     32,   0 },
+    { "fixup_Mips_GPREL32",      0,     32,   0 },
+    { "fixup_Mips_DTPREL32",     0,     32,   0 },
+    { "fixup_Mips_DTPREL64",     0,     64,   0 },
+    { "fixup_Mips_TPREL32",      0,     32,   0 },
+    { "fixup_Mips_TPREL64",      0,     64,   0 },
+    { "fixup_Mips_26",           6,     26,   0 },
+    { "fixup_Mips_HI16",        16,     16,   0 },
+    { "fixup_Mips_LO16",        16,     16,   0 },
+    { "fixup_Mips_AnyImm16",    16,     16,   0 },
+    { "fixup_Mips_GPREL16",     16,     16,   0 },
+    { "fixup_Mips_LITERAL",     16,     16,   0 },
+    { "fixup_Mips_GOT",         16,     16,   0 },
+    { "fixup_Mips_PC16",        16,     16,   0 },
+    { "fixup_Mips_CALL16",      16,     16,   0 },
+    { "fixup_Mips_SHIFT5",      21,      5,   0 },
+    { "fixup_Mips_SHIFT6",      21,      5,   0 },
+    { "fixup_Mips_64",           0,     64,   0 },
+    { "fixup_Mips_TLSGD",       16,     16,   0 },
+    { "fixup_Mips_GOTTPREL",    16,     16,   0 },
+    { "fixup_Mips_TPREL_HI",    16,     16,   0 },
+    { "fixup_Mips_TPREL_LO",    16,     16,   0 },
+    { "fixup_Mips_TLSLDM",      16,     16,   0 },
+    { "fixup_Mips_DTPREL_HI",   16,     16,   0 },
+    { "fixup_Mips_DTPREL_LO",   16,     16,   0 },
+    { "fixup_Mips_Branch_PCRel",16,     16,   0 },
+    { "fixup_Mips_GPOFF_HI",    16,     16,   0 },
+    { "fixup_MICROMIPS_GPOFF_HI", 16,   16,   0 },
+    { "fixup_Mips_GPOFF_LO",    16,     16,   0 },
+    { "fixup_MICROMIPS_GPOFF_LO", 16,   16,   0 },
+    { "fixup_Mips_GOT_PAGE",    16,     16,   0 },
+    { "fixup_Mips_GOT_OFST",    16,     16,   0 },
+    { "fixup_Mips_GOT_DISP",    16,     16,   0 },
+    { "fixup_Mips_HIGHER",      16,     16,   0 },
+    { "fixup_MICROMIPS_HIGHER", 16,     16,   0 },
+    { "fixup_Mips_HIGHEST",     16,     16,   0 },
+    { "fixup_MICROMIPS_HIGHEST",16,     16,   0 },
+    { "fixup_Mips_GOT_HI16",    16,     16,   0 },
+    { "fixup_Mips_GOT_LO16",    16,     16,   0 },
+    { "fixup_Mips_CALL_HI16",   16,     16,   0 },
+    { "fixup_Mips_CALL_LO16",   16,     16,   0 },
+    { "fixup_Mips_PC18_S3",     14,     18,   0 },
+    { "fixup_MIPS_PC19_S2",     13,     19,   0 },
+    { "fixup_MIPS_PC21_S2",     11,     21,   0 },
+    { "fixup_MIPS_PC26_S2",      6,     26,   0 },
+    { "fixup_MIPS_PCHI16",      16,     16,   0 },
+    { "fixup_MIPS_PCLO16",      16,     16,   0 },
+    { "fixup_MICROMIPS_26_S1",   6,     26,   0 },
+    { "fixup_MICROMIPS_HI16",   16,     16,   0 },
+    { "fixup_MICROMIPS_LO16",   16,     16,   0 },
+    { "fixup_MICROMIPS_GOT16",  16,     16,   0 },
+    { "fixup_MICROMIPS_PC7_S1",  9,      7,   0 },
+    { "fixup_MICROMIPS_PC10_S1", 6,     10,   0 },
+    { "fixup_MICROMIPS_PC16_S1",16,     16,   0 },
+    { "fixup_MICROMIPS_PC26_S1", 6,     26,   0 },
+    { "fixup_MICROMIPS_PC19_S2",13,     19,   0 },
+    { "fixup_MICROMIPS_PC18_S3",14,     18,   0 },
+    { "fixup_MICROMIPS_PC21_S1",11,     21,   0 },
+    { "fixup_MICROMIPS_CALL16", 16,     16,   0 },
+    { "fixup_MICROMIPS_GOT_DISP",        16,     16,   0 },
+    { "fixup_MICROMIPS_GOT_PAGE",        16,     16,   0 },
+    { "fixup_MICROMIPS_GOT_OFST",        16,     16,   0 },
+    { "fixup_MICROMIPS_TLS_GD",          16,     16,   0 },
+    { "fixup_MICROMIPS_TLS_LDM",         16,     16,   0 },
+    { "fixup_MICROMIPS_TLS_DTPREL_HI16", 16,     16,   0 },
+    { "fixup_MICROMIPS_TLS_DTPREL_LO16", 16,     16,   0 },
+    { "fixup_MICROMIPS_GOTTPREL",        16,     16,   0 },
+    { "fixup_MICROMIPS_TLS_TPREL_HI16",  16,     16,   0 },
+    { "fixup_MICROMIPS_TLS_TPREL_LO16",  16,     16,   0 },
+    { "fixup_Mips_SUB",                   0,     64,   0 },
+    { "fixup_MICROMIPS_SUB",              0,     64,   0 },
+    { "fixup_Mips_JALR",                  0,     32,   0 },
+    { "fixup_MICROMIPS_JALR",             0,     32,   0 },
+      // clang-format on
+  };
+  static_assert(std::size(BigEndianInfos) == Mips::NumTargetFixupKinds,
+                "Not all MIPS big endian fixup kinds added!");
+
+  if (mc::isRelocation(Kind))
+    return {};
+  if (Kind < FirstTargetFixupKind)
+    return MCAsmBackend::getFixupKindInfo(Kind);
+
+  assert(unsigned(Kind - FirstTargetFixupKind) < Mips::NumTargetFixupKinds &&
+         "Invalid kind!");
+
+  if (Endian == llvm::endianness::little)
+    return LittleEndianInfos[Kind - FirstTargetFixupKind];
+  return BigEndianInfos[Kind - FirstTargetFixupKind];
+}
+
+/// WriteNopData - Write an (optimal) nop sequence of Count bytes
+/// to the given output. If the target cannot generate such a sequence,
+/// it should return an error.
+///
+/// \return - True on success.
+bool MipsAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
+                                  const MCSubtargetInfo *STI) const {
+  // Check for a less than instruction size number of bytes
+  // FIXME: 16 bit instructions are not handled yet here.
+  // We shouldn't be using a hard coded number for instruction size.
+
+  // If the count is not 4-byte aligned, we must be writing data into the text
+  // section (otherwise we have unaligned instructions, and thus have far
+  // bigger problems), so just write zeros instead.
+  OS.write_zeros(Count);
+  return true;
 }
 
 namespace {
@@ -619,7 +619,7 @@ MCAsmBackend *llvm::createMipsAsmBackend(const Target &T,
     return new WindowsMipsAsmBackend(T, MRI, STI);
 
   MipsABIInfo ABI = MipsABIInfo::computeTargetABI(STI.getTargetTriple(),
-                                                  STI.getCPU(), Options);
+                                                  Options.getABIName());
   return new MipsAsmBackend(T, MRI, STI.getTargetTriple(), STI.getCPU(),
                             ABI.IsN32());
 }

@@ -10,15 +10,11 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
-#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/Dialect/Tensor/Utils/Utils.h"
-#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/TilingInterface.h"
-#include "mlir/Interfaces/ValueBoundsOpInterface.h"
 
 using namespace mlir;
 using namespace mlir::tensor;
@@ -122,7 +118,7 @@ FailureOr<TilingResult> tensor::bubbleUpPadSlice(OpBuilder &b,
   OpFoldResult zero = b.getIndexAttr(0);
 
   // Compute new offsets, lengths, low padding, high padding.
-  SmallVector<OpFoldResult> newOffsets, newLengths, newStrides;
+  SmallVector<OpFoldResult> newOffsets, newLengths;
   SmallVector<OpFoldResult> newLows, newHighs;
   // Set to true if the original data source is not read at all.
   bool hasZeroLen = false;
@@ -131,13 +127,25 @@ FailureOr<TilingResult> tensor::bubbleUpPadSlice(OpBuilder &b,
   Value dynHasZeroLenCond;
 
   int64_t rank = padOp.getSourceType().getRank();
+  // Only unit stride supported.
+  SmallVector<OpFoldResult> newStrides(rank, b.getIndexAttr(1));
   for (unsigned dim = 0; dim < rank; ++dim) {
     auto low = padOp.getMixedLowPad()[dim];
-    bool hasLowPad = !isConstantIntValue(low, 0);
+    bool hasLowPad = !isZeroInteger(low);
     auto high = padOp.getMixedHighPad()[dim];
-    bool hasHighPad = !isConstantIntValue(high, 0);
+    bool hasHighPad = !isZeroInteger(high);
     auto offset = offsets[dim];
     auto length = sizes[dim];
+    // If the dim has no padding, we dont need to calculate new values for that
+    // dim as the exisiting ones are correct even after the pattern.
+    if (!hasLowPad && !hasHighPad) {
+      newOffsets.push_back(offset);
+      newLengths.push_back(length);
+      newLows.push_back(low);
+      newHighs.push_back(high);
+      continue;
+    }
+
     auto srcSize = tensor::getMixedSize(b, loc, padOp.getSource(), dim);
 
     // The new amount of low padding is `low - offset`. Except for the case
@@ -196,16 +204,16 @@ FailureOr<TilingResult> tensor::bubbleUpPadSlice(OpBuilder &b,
 
     // Check if newLength is zero. In that case, no SubTensorOp should be
     // executed.
-    if (isConstantIntValue(newLength, 0)) {
+    if (isZeroInteger(newLength)) {
       hasZeroLen = true;
     } else if (!hasZeroLen) {
-      Value check = b.create<arith::CmpIOp>(
-          loc, arith::CmpIPredicate::eq,
+      Value check = arith::CmpIOp::create(
+          b, loc, arith::CmpIPredicate::eq,
           getValueOrCreateConstantIndexOp(b, loc, newLength),
           getValueOrCreateConstantIndexOp(b, loc, zero));
       dynHasZeroLenCond =
           dynHasZeroLenCond
-              ? b.create<arith::OrIOp>(loc, check, dynHasZeroLenCond)
+              ? arith::OrIOp::create(b, loc, check, dynHasZeroLenCond)
               : check;
     }
 
@@ -216,9 +224,6 @@ FailureOr<TilingResult> tensor::bubbleUpPadSlice(OpBuilder &b,
     OpFoldResult newHigh =
         hasHighPad ? sub(sub(length, newLength), newLow) : zero;
     newHighs.push_back(newHigh);
-
-    // Only unit stride supported.
-    newStrides.push_back(b.getIndexAttr(1));
   }
 
   // The shape of the result can be obtained from the sizes passed in.
@@ -232,7 +237,7 @@ FailureOr<TilingResult> tensor::bubbleUpPadSlice(OpBuilder &b,
   auto castResult = [&](Value val) -> Value {
     if (resultType == val.getType())
       return val;
-    return b.create<tensor::CastOp>(loc, resultType, val);
+    return tensor::CastOp::create(b, loc, resultType, val);
   };
 
   // In cases where the original data source is unused: Emit a GenerateOp and
@@ -240,10 +245,10 @@ FailureOr<TilingResult> tensor::bubbleUpPadSlice(OpBuilder &b,
   // have a dimension of size 0, the semantics of which is unclear.)
   auto createGenerateOp = [&]() {
     // Create GenerateOp.
-    auto generateOp = b.create<tensor::GenerateOp>(
-        loc, resultType, dynDims,
+    auto generateOp = tensor::GenerateOp::create(
+        b, loc, resultType, dynDims,
         [&](OpBuilder &builder, Location gLoc, ValueRange indices) {
-          builder.create<tensor::YieldOp>(gLoc, padValue);
+          tensor::YieldOp::create(builder, gLoc, padValue);
         });
     return generateOp;
   };
@@ -252,10 +257,10 @@ FailureOr<TilingResult> tensor::bubbleUpPadSlice(OpBuilder &b,
   // the result shape of the new SliceOp has a zero dimension.
   auto createPadOfExtractSlice = [&]() {
     // Create pad(extract_slice(x)).
-    auto newSliceOp = b.create<tensor::ExtractSliceOp>(
-        loc, padOp.getSource(), newOffsets, newLengths, newStrides);
-    auto newPadOp = b.create<PadOp>(
-        loc, Type(), newSliceOp, newLows, newHighs,
+    auto newSliceOp = tensor::ExtractSliceOp::create(
+        b, loc, padOp.getSource(), newOffsets, newLengths, newStrides);
+    auto newPadOp = PadOp::create(
+        b, loc, Type(), newSliceOp, newLows, newHighs,
         /*nofold=*/padOp.getNofold(),
         getPrunedAttributeList(padOp, PadOp::getAttributeNames()));
 
@@ -282,17 +287,17 @@ FailureOr<TilingResult> tensor::bubbleUpPadSlice(OpBuilder &b,
     Operation *thenOp;
     Operation *elseOp;
     Operation *sliceOp;
-    auto result = b.create<scf::IfOp>(
-        loc, dynHasZeroLenCond,
+    auto result = scf::IfOp::create(
+        b, loc, dynHasZeroLenCond,
         /*thenBuilder=*/
         [&](OpBuilder &b, Location loc) {
           thenOp = createGenerateOp();
-          b.create<scf::YieldOp>(loc, castResult(thenOp->getResult(0)));
+          scf::YieldOp::create(b, loc, castResult(thenOp->getResult(0)));
         },
         /*elseBuilder=*/
         [&](OpBuilder &b, Location loc) {
           std::tie(elseOp, sliceOp) = createPadOfExtractSlice();
-          b.create<scf::YieldOp>(loc, castResult(elseOp->getResult(0)));
+          scf::YieldOp::create(b, loc, castResult(elseOp->getResult(0)));
         });
     return TilingResult{
         {elseOp}, SmallVector<Value>(result->getResults()), {sliceOp}};

@@ -11,13 +11,11 @@
 #include "llvm/IR/Module.h"
 #include "llvm/SandboxIR/Constant.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Regex.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/Debug.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/SandboxVectorizerPassBuilder.h"
-#include <regex>
 
 using namespace llvm;
-
-#define SV_NAME "sandbox-vectorizer"
-#define DEBUG_TYPE SV_NAME
 
 static cl::opt<bool>
     PrintPassPipeline("sbvec-print-pass-pipeline", cl::init(false), cl::Hidden,
@@ -45,16 +43,18 @@ cl::opt<std::string> AllowFiles(
     "sbvec-allow-files", cl::init(".*"), cl::Hidden,
     cl::desc("Run the vectorizer only on file paths that match any in the "
              "list of comma-separated regex's."));
-static constexpr const char AllowFilesDelim = ',';
+static constexpr char AllowFilesDelim = ',';
 
 SandboxVectorizerPass::SandboxVectorizerPass() : FPM("fpm") {
   if (UserDefinedPassPipeline == DefaultPipelineMagicStr) {
     // TODO: Add passes to the default pipeline. It currently contains:
     //       - Seed collection, which creates seed regions and runs the pipeline
     //         - Bottom-up Vectorizer pass that starts from a seed
+    //         - Load-Store Vectorizer pass for load-store chains
     //         - Accept or revert IR state pass
     FPM.setPassPipeline(
-        "seed-collection<tr-save,bottom-up-vec,tr-accept-or-revert>",
+        "seed-collection<tr-save,bottom-up-vec,load-store-vec,tr-accept-or-"
+        "revert>",
         sandboxir::SandboxVectorizerPassBuilder::createFunctionPass);
   } else {
     // Create the user-defined pipeline.
@@ -94,8 +94,9 @@ bool SandboxVectorizerPass::allowFile(const std::string &SrcFilePath) {
     if (FileNameToMatch.empty())
       return false;
     // Note: This only runs when debugging so its OK not to reuse the regex.
-    std::regex FileNameRegex(std::string(".*") + FileNameToMatch);
-    if (std::regex_match(SrcFilePath, FileNameRegex))
+    Regex FileNameRegex(".*" + FileNameToMatch + "$");
+    assert(FileNameRegex.isValid() && "Bad regex!");
+    if (FileNameRegex.match(SrcFilePath))
       return true;
   } while (DelimPos != std::string::npos);
   return false;
@@ -119,13 +120,16 @@ bool SandboxVectorizerPass::runImpl(Function &LLVMF) {
 
   // If the target claims to have no vector registers early return.
   if (!TTI->getNumberOfRegisters(TTI->getRegisterClassForType(true))) {
-    LLVM_DEBUG(dbgs() << "SBVec: Target has no vector registers, return.\n");
+    LLVM_DEBUG(dbgs() << DEBUG_PREFIX
+                      << "Target has no vector registers, return.\n");
     return false;
   }
-  LLVM_DEBUG(dbgs() << "SBVec: Analyzing " << LLVMF.getName() << ".\n");
+  LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "Analyzing " << LLVMF.getName()
+                    << ".\n");
   // Early return if the attribute NoImplicitFloat is used.
   if (LLVMF.hasFnAttribute(Attribute::NoImplicitFloat)) {
-    LLVM_DEBUG(dbgs() << "SBVec: NoImplicitFloat attribute, return.\n");
+    LLVM_DEBUG(dbgs() << DEBUG_PREFIX
+                      << "NoImplicitFloat attribute, return.\n");
     return false;
   }
 

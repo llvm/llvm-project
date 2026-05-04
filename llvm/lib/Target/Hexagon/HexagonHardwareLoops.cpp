@@ -24,6 +24,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Hexagon.h"
 #include "HexagonInstrInfo.h"
 #include "HexagonSubtarget.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -85,13 +86,6 @@ static cl::opt<bool> SpecPreheader("hwloop-spec-preheader", cl::Hidden,
                                             "instructions"));
 
 STATISTIC(NumHWLoops, "Number of loops converted to hardware loops");
-
-namespace llvm {
-
-  FunctionPass *createHexagonHardwareLoops();
-  void initializeHexagonHardwareLoopsPass(PassRegistry&);
-
-} // end namespace llvm
 
 namespace {
 
@@ -461,7 +455,8 @@ bool HexagonHardwareLoops::findInductionRegister(MachineLoop *L,
     return false;
 
   Register PredR;
-  unsigned PredPos, PredRegFlags;
+  unsigned PredPos;
+  RegState PredRegFlags;
   if (!TII->getPredReg(Cond, PredR, PredPos, PredRegFlags))
     return false;
 
@@ -648,7 +643,8 @@ CountValue *HexagonHardwareLoops::getLoopTripCount(MachineLoop *L,
   // to the header.
   bool Negated = TII->predOpcodeHasNot(Cond) ^ (TB != Header);
   Register PredReg;
-  unsigned PredPos, PredRegFlags;
+  unsigned PredPos;
+  RegState PredRegFlags;
   if (!TII->getPredReg(Cond, PredReg, PredPos, PredRegFlags))
     return nullptr;
   MachineInstr *CondI = MRI->getVRegDef(PredReg);
@@ -731,6 +727,11 @@ CountValue *HexagonHardwareLoops::computeCount(MachineLoop *Loop,
                                                Register IVReg,
                                                int64_t IVBump,
                                                Comparison::Kind Cmp) const {
+  LLVM_DEBUG(llvm::dbgs() << "Loop: " << *Loop << "\n");
+  LLVM_DEBUG(llvm::dbgs() << "Initial Value: " << *Start << "\n");
+  LLVM_DEBUG(llvm::dbgs() << "End Value: " << *End << "\n");
+  LLVM_DEBUG(llvm::dbgs() << "Inc/Dec Value: " << IVBump << "\n");
+  LLVM_DEBUG(llvm::dbgs() << "Comparison: " << Cmp << "\n");
   // Cannot handle comparison EQ, i.e. while (A == B).
   if (Cmp == Comparison::EQ)
     return nullptr;
@@ -846,6 +847,7 @@ CountValue *HexagonHardwareLoops::computeCount(MachineLoop *Loop,
   if (IVBump < 0) {
     std::swap(Start, End);
     IVBump = -IVBump;
+    std::swap(CmpLess, CmpGreater);
   }
   // Cmp may now have a wrong direction, e.g.  LEs may now be GEs.
   // Signedness, and "including equality" are preserved.
@@ -921,11 +923,10 @@ CountValue *HexagonHardwareLoops::computeCount(MachineLoop *Loop,
         BuildMI(*PH, InsertPos, DL, SubD, SubR);
 
       if (RegToReg)
-        SubIB.addReg(End->getReg(), 0, End->getSubReg())
-          .addReg(Start->getReg(), 0, Start->getSubReg());
+        SubIB.addReg(End->getReg(), {}, End->getSubReg())
+            .addReg(Start->getReg(), {}, Start->getSubReg());
       else
-        SubIB.addImm(EndV)
-          .addReg(Start->getReg(), 0, Start->getSubReg());
+        SubIB.addImm(EndV).addReg(Start->getReg(), {}, Start->getSubReg());
       DistR = SubR;
     } else {
       // If the loop has been unrolled, we should use the original loop count
@@ -940,8 +941,7 @@ CountValue *HexagonHardwareLoops::computeCount(MachineLoop *Loop,
         Register SubR = MRI->createVirtualRegister(IntRC);
         MachineInstrBuilder SubIB =
           BuildMI(*PH, InsertPos, DL, SubD, SubR);
-        SubIB.addReg(End->getReg(), 0, End->getSubReg())
-             .addImm(-StartV);
+        SubIB.addReg(End->getReg(), {}, End->getSubReg()).addImm(-StartV);
         DistR = SubR;
       }
     }
@@ -960,8 +960,8 @@ CountValue *HexagonHardwareLoops::computeCount(MachineLoop *Loop,
     Register AddR = MRI->createVirtualRegister(IntRC);
     MCInstrDesc const &AddD = TII->get(Hexagon::A2_addi);
     BuildMI(*PH, InsertPos, DL, AddD, AddR)
-      .addReg(DistR, 0, DistSR)
-      .addImm(AdjV);
+        .addReg(DistR, {}, DistSR)
+        .addImm(AdjV);
 
     AdjR = AddR;
     AdjSR = 0;
@@ -982,14 +982,52 @@ CountValue *HexagonHardwareLoops::computeCount(MachineLoop *Loop,
     Register LsrR = MRI->createVirtualRegister(IntRC);
     const MCInstrDesc &LsrD = TII->get(Hexagon::S2_lsr_i_r);
     BuildMI(*PH, InsertPos, DL, LsrD, LsrR)
-      .addReg(AdjR, 0, AdjSR)
-      .addImm(Shift);
+        .addReg(AdjR, {}, AdjSR)
+        .addImm(Shift);
 
     CountR = LsrR;
     CountSR = 0;
   }
 
-  return new CountValue(CountValue::CV_Register, CountR, CountSR);
+  const TargetRegisterClass *PredRC = &Hexagon::PredRegsRegClass;
+  Register MuxR = CountR;
+  unsigned MuxSR = CountSR;
+  // For the loop count to be valid unsigned number, CmpLess should imply
+  // Dist >= 0. Similarly, CmpGreater should imply Dist < 0. We can skip the
+  // check if the initial distance is zero and the comparison is LTu || LTEu.
+  if (!(Start->isImm() && StartV == 0 && Comparison::isUnsigned(Cmp) &&
+        CmpLess) &&
+      (CmpLess || CmpGreater)) {
+    // Generate:
+    //   DistCheck = CMP_GT DistR,  0   --> CmpLess
+    //   DistCheck = CMP_GT DistR, -1   --> CmpGreater
+    Register DistCheckR = MRI->createVirtualRegister(PredRC);
+    const MCInstrDesc &DistCheckD = TII->get(Hexagon::C2_cmpgti);
+    BuildMI(*PH, InsertPos, DL, DistCheckD, DistCheckR)
+        .addReg(DistR, {}, DistSR)
+        .addImm((CmpLess) ? 0 : -1);
+
+    // Generate:
+    //   MUXR = MUX DistCheck, CountR, 1   --> CmpLess
+    //   MUXR = MUX DistCheck, 1, CountR   --> CmpGreater
+    MuxR = MRI->createVirtualRegister(IntRC);
+    if (CmpLess) {
+      const MCInstrDesc &MuxD = TII->get(Hexagon::C2_muxir);
+      BuildMI(*PH, InsertPos, DL, MuxD, MuxR)
+          .addReg(DistCheckR)
+          .addReg(CountR, {}, CountSR)
+          .addImm(1);
+    } else {
+      const MCInstrDesc &MuxD = TII->get(Hexagon::C2_muxri);
+      BuildMI(*PH, InsertPos, DL, MuxD, MuxR)
+          .addReg(DistCheckR)
+          .addImm(1)
+          .addReg(CountR, {}, CountSR);
+    }
+    MuxSR = 0;
+  }
+
+  return new CountValue(CountValue::CV_Register, MuxR, MuxSR);
 }
 
 /// Return true if the operation is invalid within hardware loop.
@@ -1247,7 +1285,7 @@ bool HexagonHardwareLoops::convertToHardwareLoop(MachineLoop *L,
     // Create a copy of the loop count register.
     Register CountReg = MRI->createVirtualRegister(&Hexagon::IntRegsRegClass);
     BuildMI(*Preheader, InsertPos, DL, TII->get(TargetOpcode::COPY), CountReg)
-      .addReg(TripCount->getReg(), 0, TripCount->getSubReg());
+        .addReg(TripCount->getReg(), {}, TripCount->getSubReg());
     // Add the Loop instruction to the beginning of the loop.
     BuildMI(*Preheader, InsertPos, DL, TII->get(LOOP_r)).addMBB(LoopStart)
       .addReg(CountReg);

@@ -83,9 +83,7 @@ TEST(FunctionTest, stealArgumentListFrom) {
 
   // Save arguments from F1 for later assertions.  F1 won't have lazy arguments
   // anymore.
-  SmallVector<Argument *, 4> Args;
-  for (Argument &A : F1->args())
-    Args.push_back(&A);
+  SmallVector<Argument *, 4> Args(llvm::make_pointer_range(F1->args()));
   EXPECT_EQ(2u, Args.size());
   EXPECT_FALSE(F1->hasLazyArguments());
 
@@ -625,6 +623,25 @@ TEST(FunctionTest, Personality) {
   EXPECT_EQ(LLVMGetPersonalityFn(wrap(F)), wrap(PersonalityFn));
   LLVMSetPersonalityFn(wrap(F), nullptr);
   EXPECT_FALSE(LLVMHasPersonalityFn(wrap(F)));
+}
+
+TEST(FunctionTest, LLVMGetOrInsertFunction) {
+  LLVMContext Ctx;
+  Module M("test", Ctx);
+  Type *Int8Ty = Type::getInt8Ty(Ctx);
+  FunctionType *FTy = FunctionType::get(Int8Ty, false);
+
+  // Create the function using the C API
+  LLVMValueRef FuncRef = LLVMGetOrInsertFunction(wrap(&M), "F", 1, wrap(FTy));
+
+  // Verify that the returned value is a function and has the correct type
+  Function *Func = unwrap<Function>(FuncRef);
+  EXPECT_EQ(Func->getName(), "F");
+  EXPECT_EQ(Func->getFunctionType(), FTy);
+
+  // Call LLVMGetOrInsertFunction again to ensure it returns the same function
+  LLVMValueRef FuncRef2 = LLVMGetOrInsertFunction(wrap(&M), "F", 1, wrap(FTy));
+  EXPECT_EQ(FuncRef, FuncRef2);
 }
 
 } // end namespace

@@ -15,7 +15,7 @@
 # RUN: %clang_host -fmodules -Xclang -fmodules-cache-path=%t/cache -I%t -g -gmodules %t/b.m -o %t/b.o -c
 # RUN: %clang_host %t/a.o %t/b.o -o %t/a.out
 # RUN: rm -rf %t/cache
-# RUN: %lldb %t/a.out -o "b main" -o run -o "p a" -o "p b" -o q 2>&1 | FileCheck %s
+# RUN: %lldb %t/a.out -o "b main" -o run -o "expr a" -o "expr b" -o q 2>&1 | FileCheck %s
 # CHECK: {{[ab]}}.o{{.*}}/cache/{{.*}}/C-{{.*}}.pcm' does not exist
 # CHECK-NOT: /cache/{{.*}}/C-{.*}.pcm' does not exist
 # CHECK: {{[ab]}}.o{{.*}}/cache/{{.*}}/C-{{.*}}.pcm' does not exist

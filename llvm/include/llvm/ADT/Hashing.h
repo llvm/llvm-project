@@ -44,6 +44,7 @@
 #ifndef LLVM_ADT_HASHING_H
 #define LLVM_ADT_HASHING_H
 
+#include "llvm/ADT/ADL.h"
 #include "llvm/Config/abi-breaking.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -81,20 +82,22 @@ public:
   hash_code() = default;
 
   /// Form a hash code directly from a numerical value.
-  hash_code(size_t value) : value(value) {}
+  constexpr hash_code(size_t value) : value(value) {}
 
   /// Convert the hash code to its numerical value for use.
-  /*explicit*/ operator size_t() const { return value; }
+  /*explicit*/ constexpr operator size_t() const { return value; }
 
-  friend bool operator==(const hash_code &lhs, const hash_code &rhs) {
+  friend constexpr bool operator==(const hash_code &lhs, const hash_code &rhs) {
     return lhs.value == rhs.value;
   }
-  friend bool operator!=(const hash_code &lhs, const hash_code &rhs) {
+  friend constexpr bool operator!=(const hash_code &lhs, const hash_code &rhs) {
     return lhs.value != rhs.value;
   }
 
   /// Allow a hash_code to be directly run through hash_value.
-  friend size_t hash_value(const hash_code &code) { return code.value; }
+  friend constexpr size_t hash_value(const hash_code &code) {
+    return code.value;
+  }
 };
 
 /// Compute a hash_code for any integer value.
@@ -135,7 +138,7 @@ namespace detail {
 
 inline uint64_t fetch64(const char *p) {
   uint64_t result;
-  memcpy(&result, p, sizeof(result));
+  std::memcpy(&result, p, sizeof(result));
   if (sys::IsBigEndianHost)
     sys::swapByteOrder(result);
   return result;
@@ -143,7 +146,7 @@ inline uint64_t fetch64(const char *p) {
 
 inline uint32_t fetch32(const char *p) {
   uint32_t result;
-  memcpy(&result, p, sizeof(result));
+  std::memcpy(&result, p, sizeof(result));
   if (sys::IsBigEndianHost)
     sys::swapByteOrder(result);
   return result;
@@ -158,16 +161,14 @@ static constexpr uint64_t k3 = 0xc949d7c7509e6557ULL;
 /// Bitwise right rotate.
 /// Normally this will compile to a single instruction, especially if the
 /// shift is a manifest constant.
-inline uint64_t rotate(uint64_t val, size_t shift) {
+constexpr uint64_t rotate(uint64_t val, size_t shift) {
   // Avoid shifting by 64: doing so yields an undefined result.
   return shift == 0 ? val : ((val >> shift) | (val << (64 - shift)));
 }
 
-inline uint64_t shift_mix(uint64_t val) {
-  return val ^ (val >> 47);
-}
+constexpr uint64_t shift_mix(uint64_t val) { return val ^ (val >> 47); }
 
-inline uint64_t hash_16_bytes(uint64_t low, uint64_t high) {
+constexpr uint64_t hash_16_bytes(uint64_t low, uint64_t high) {
   // Murmur-inspired hashing.
   const uint64_t kMul = 0x9ddfea08eb382d69ULL;
   uint64_t a = (low ^ high) * kMul;
@@ -178,7 +179,7 @@ inline uint64_t hash_16_bytes(uint64_t low, uint64_t high) {
   return b;
 }
 
-inline uint64_t hash_1to3_bytes(const char *s, size_t len, uint64_t seed) {
+constexpr uint64_t hash_1to3_bytes(const char *s, size_t len, uint64_t seed) {
   uint8_t a = s[0];
   uint8_t b = s[len >> 1];
   uint8_t c = s[len - 1];
@@ -300,7 +301,7 @@ struct hash_state {
 
   /// Compute the final 64-bit hash code value based on the current
   /// state and the length of bytes hashed.
-  uint64_t finalize(size_t length) {
+  constexpr uint64_t finalize(size_t length) {
     return hash_16_bytes(hash_16_bytes(h3, h5) + shift_mix(h1) * k1 + h2,
                          hash_16_bytes(h4, h6) + shift_mix(length) * k1 + h0);
   }
@@ -332,36 +333,33 @@ inline uint64_t get_execution_seed() {
 // for equality. For all the platforms we care about, this holds for integers
 // and pointers, but there are platforms where it doesn't and we would like to
 // support user-defined types which happen to satisfy this property.
-template <typename T> struct is_hashable_data
-  : std::integral_constant<bool, ((is_integral_or_enum<T>::value ||
-                                   std::is_pointer<T>::value) &&
-                                  64 % sizeof(T) == 0)> {};
+template <typename T>
+struct is_hashable_data : std::bool_constant<((is_integral_or_enum<T>::value ||
+                                               std::is_pointer<T>::value) &&
+                                              64 % sizeof(T) == 0)> {};
 
 // Special case std::pair to detect when both types are viable and when there
 // is no alignment-derived padding in the pair. This is a bit of a lie because
 // std::pair isn't truly POD, but it's close enough in all reasonable
 // implementations for our use case of hashing the underlying data.
-template <typename T, typename U> struct is_hashable_data<std::pair<T, U> >
-  : std::integral_constant<bool, (is_hashable_data<T>::value &&
-                                  is_hashable_data<U>::value &&
-                                  (sizeof(T) + sizeof(U)) ==
-                                   sizeof(std::pair<T, U>))> {};
+template <typename T, typename U>
+struct is_hashable_data<std::pair<T, U>>
+    : std::bool_constant<(is_hashable_data<T>::value &&
+                          is_hashable_data<U>::value &&
+                          (sizeof(T) + sizeof(U)) == sizeof(std::pair<T, U>))> {
+};
 
 /// Helper to get the hashable data representation for a type.
-/// This variant is enabled when the type itself can be used.
-template <typename T>
-std::enable_if_t<is_hashable_data<T>::value, T>
-get_hashable_data(const T &value) {
-  return value;
-}
-/// Helper to get the hashable data representation for a type.
-/// This variant is enabled when we must first call hash_value and use the
-/// result as our data.
-template <typename T>
-std::enable_if_t<!is_hashable_data<T>::value, size_t>
-get_hashable_data(const T &value) {
-  using ::llvm::hash_value;
-  return hash_value(value);
+template <typename T> auto get_hashable_data(const T &value) {
+  if constexpr (is_hashable_data<T>::value) {
+    // This variant is enabled when the type itself can be used.
+    return value;
+  } else {
+    // This variant is enabled when we must first call hash_value and use the
+    // result as our data.
+    using ::llvm::hash_value;
+    return static_cast<size_t>(hash_value(value));
+  }
 }
 
 /// Helper to store data from a value into a buffer and advance the
@@ -378,7 +376,7 @@ bool store_and_advance(char *&buffer_ptr, char *buffer_end, const T& value,
   if (buffer_ptr + store_size > buffer_end)
     return false;
   const char *value_data = reinterpret_cast<const char *>(&value);
-  memcpy(buffer_ptr, value_data + offset, store_size);
+  std::memcpy(buffer_ptr, value_data + offset, store_size);
   buffer_ptr += store_size;
   return true;
 }
@@ -469,6 +467,10 @@ hash_code hash_combine_range(InputIteratorT first, InputIteratorT last) {
   return ::llvm::hashing::detail::hash_combine_range_impl(first, last);
 }
 
+// A wrapper for hash_combine_range above.
+template <typename RangeT> hash_code hash_combine_range(RangeT &&R) {
+  return hash_combine_range(adl_begin(R), adl_end(R));
+}
 
 // Implementation details for hash_combine.
 namespace hashing {
@@ -508,7 +510,7 @@ public:
       // with the variadic combine because that formation can have varying
       // argument types.
       size_t partial_store_size = buffer_end - buffer_ptr;
-      memcpy(buffer_ptr, &data, partial_store_size);
+      std::memcpy(buffer_ptr, &data, partial_store_size);
 
       // If the store fails, our buffer is full and ready to hash. We have to
       // either initialize the hash state (on the first full buffer) or mix
@@ -644,7 +646,7 @@ template <typename... Ts> hash_code hash_value(const std::tuple<Ts...> &arg) {
 // infrastructure is available.
 template <typename T>
 hash_code hash_value(const std::basic_string<T> &arg) {
-  return hash_combine_range(arg.begin(), arg.end());
+  return hash_combine_range(arg);
 }
 
 template <typename T> hash_code hash_value(const std::optional<T> &arg) {
@@ -652,12 +654,14 @@ template <typename T> hash_code hash_value(const std::optional<T> &arg) {
 }
 
 template <> struct DenseMapInfo<hash_code, void> {
-  static inline hash_code getEmptyKey() { return hash_code(-1); }
-  static inline hash_code getTombstoneKey() { return hash_code(-2); }
-  static unsigned getHashValue(hash_code val) {
+  static constexpr hash_code getEmptyKey() { return hash_code(-1); }
+  static constexpr hash_code getTombstoneKey() { return hash_code(-2); }
+  static constexpr unsigned getHashValue(hash_code val) {
     return static_cast<unsigned>(size_t(val));
   }
-  static bool isEqual(hash_code LHS, hash_code RHS) { return LHS == RHS; }
+  static constexpr bool isEqual(hash_code LHS, hash_code RHS) {
+    return LHS == RHS;
+  }
 };
 
 } // namespace llvm
@@ -667,9 +671,7 @@ namespace std {
 
 template<>
 struct hash<llvm::hash_code> {
-  size_t operator()(llvm::hash_code const& Val) const {
-    return Val;
-  }
+  constexpr size_t operator()(llvm::hash_code const &Val) const { return Val; }
 };
 
 } // namespace std;

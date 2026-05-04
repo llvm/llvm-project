@@ -148,6 +148,33 @@ G_EXTRACT for scalar types, but acts elementwise on vectors.
 
   %1:_(s16) = G_TRUNC %0:_(s32)
 
+G_TRUNC_SSAT_S
+^^^^^^^^^^^^^^
+
+Truncate a signed input to a signed result with saturation.
+
+.. code-block:: none
+
+  %1:_(s16) = G_TRUNC_SSAT_S %0:_(s32)
+
+G_TRUNC_SSAT_U
+^^^^^^^^^^^^^^
+
+Truncate a signed input to an unsigned result with saturation.
+
+.. code-block:: none
+
+  %1:_(s16) = G_TRUNC_SSAT_U %0:_(s32)
+
+G_TRUNC_USAT_U
+^^^^^^^^^^^^^^
+
+Truncate a unsigned input to an unsigned result with saturation.
+
+.. code-block:: none
+
+  %1:_(s16) = G_TRUNC_USAT_U %0:_(s32)
+
 Type Conversions
 ----------------
 
@@ -474,15 +501,39 @@ undefined.
   %2:_(s33) = G_CTLZ_ZERO_UNDEF %1
   %2:_(s33) = G_CTTZ_ZERO_UNDEF %1
 
+G_CTLS
+^^^^^^
+
+Count leading redundant sign bits. If the value is positive then the result is
+the number of extra leading zeros. If the value is negative then the result is
+the number of extra leading ones.
+
+.. code-block:: none
+
+  %2:_(s32) = G_CTLS %1
+
 G_ABDS, G_ABDU
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Compute the absolute difference (signed and unsigned), e.g. abs(x-y).
+Compute the absolute difference (signed and unsigned), e.g. trunc(abs(ext(x)-ext(y)).
 
 .. code-block:: none
 
   %0:_(s33) = G_ABDS %2, %3
   %1:_(s33) = G_ABDU %4, %5
+
+G_UAVGFLOOR, G_UAVGCEIL, G_SAVGFLOOR, G_SAVGCEIL
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Computes the average of corresponding elements in two vectors (signed and unsigned).
+Resulting vector contains values that are either rounded or truncated. e.g. trunc(shr(add(ext(a),ext(b)),1)).
+
+.. code-block:: none
+
+  %0:_(<4 x i16>) = G_UAVGFLOOR %4:_(<4 x i16>), %5:_(<4 x i16>)
+  %1:_(<4 x i16>) = G_UAVGCEIL %6:_(<4 x i16>), %7:_(<4 x i16>)
+  %2:_(<4 x i16>) = G_SAVGFLOOR %8:_(<4 x i16>), %9:_(<4 x i16>)
+  %3:_(<4 x i16>) = G_SAVGCEIL %10:_(<4 x i16>), %11:_(<4 x i16>)
 
 Floating Point Operations
 -------------------------
@@ -608,6 +659,16 @@ NaN-propagating maximum that also treat -0.0 as less than 0.0. While
 FMAXNUM_IEEE follow IEEE 754-2008 semantics, FMAXIMUM follows IEEE
 754-2019 semantics.
 
+G_FMINIMUMNUM
+^^^^^^^^^^^^^
+
+IEEE-754 2019 minimumNumber
+
+G_FMAXIMUMNUM
+^^^^^^^^^^^^^
+
+IEEE-754 2019 maximumNumber
+
 G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FREM
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -725,7 +786,13 @@ Mixing scalable vectors and fixed vectors are not allowed.
 G_CONCAT_VECTORS
 ^^^^^^^^^^^^^^^^
 
-Concatenate two vectors to form a longer vector.
+Concatenate vectors to form a longer vector.
+
+.. code-block:: none
+
+  %4:_(<16 x i32>) = G_CONCAT_VECTORS %0:_(<4 x i32>), %1:_(<4 x i32>),
+                                      %2:_(<4 x i32>), %3:_(<4 x i32>)
+
 
 G_BUILD_VECTOR, G_BUILD_VECTOR_TRUNC
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -737,15 +804,33 @@ same as all source operands)
 The _TRUNC version truncates the larger operand types to fit the
 destination vector elt type.
 
+.. code-block:: none
+
+  %4:_(<4 x i32>) = G_BUILD_VECTOR %0:_(i32), %1:_(i32), %2:_(i32), %3:_(i32)
+
+  %4:_(<4 x i32>) = G_BUILD_VECTOR_TRUNC %0:_(i64), %1:_(i64), %2:_(i64), %3:_(i64)
+
+
 G_INSERT_VECTOR_ELT
 ^^^^^^^^^^^^^^^^^^^
 
 Insert an element into a vector
 
+.. code-block:: none
+
+  %4:_(<16 x i32>) = G_INSERT_VECTOR_ELT %vec:_(<16 x i32>), %elt:_(i32), %idx:_(s64)
+
+
+
 G_EXTRACT_VECTOR_ELT
 ^^^^^^^^^^^^^^^^^^^^
 
 Extract an element from a vector
+
+.. code-block:: none
+
+  %elt:_(i32) = G_EXTRACT_VECTOR_ELT %vec:_(<16 x i32>), %idx:_(s64)
+
 
 G_SHUFFLE_VECTOR
 ^^^^^^^^^^^^^^^^
@@ -845,6 +930,21 @@ Unlike in SelectionDAG, atomic loads are expressed with the same
 opcodes as regular loads. G_LOAD, G_SEXTLOAD and G_ZEXTLOAD may all
 have atomic memory operands.
 
+G_FPEXTLOAD
+^^^^^^^^^^^
+
+Generic floating-point extending load. Expects a MachineMemOperand in addition
+to explicit operands. Loads a floating-point value from memory and extends it
+to a larger floating-point type.
+
+The memory size must be smaller than the result type. For example, loading an
+f32 value from memory and extending it to f64, or loading an f16 value and
+extending it to f32.
+
+.. code-block:: none
+
+  %1:_(s64) = G_FPEXTLOAD %0:_(p0) :: (load (s32))
+
 G_INDEXED_LOAD
 ^^^^^^^^^^^^^^
 
@@ -870,6 +970,21 @@ operands. If the stored value size is greater than the memory size,
 the high bits are implicitly truncated. If this is a vector store, the
 high elements are discarded (i.e. this does not function as a per-lane
 vector, truncating store)
+
+G_FPTRUNCSTORE
+^^^^^^^^^^^^^^
+
+Generic floating-point truncating store. Expects a MachineMemOperand in
+addition to explicit operands. Truncates a floating-point value to a smaller
+floating-point type and stores it to memory.
+
+The memory size must be smaller than the source value type. For example,
+truncating an f64 value to f32 and storing it, or truncating an f32 value
+to f16 and storing it.
+
+.. code-block:: none
+
+  G_FPTRUNCSTORE %0:_(s64), %1:_(p0) :: (store (s32))
 
 G_INDEXED_STORE
 ^^^^^^^^^^^^^^^
@@ -898,7 +1013,8 @@ operands.
                                G_ATOMICRMW_MIN, G_ATOMICRMW_UMAX,
                                G_ATOMICRMW_UMIN, G_ATOMICRMW_FADD,
                                G_ATOMICRMW_FSUB, G_ATOMICRMW_FMAX,
-                               G_ATOMICRMW_FMIN, G_ATOMICRMW_UINC_WRAP,
+                               G_ATOMICRMW_FMIN, G_ATOMICRMW_FMAXIMUM,
+                               G_ATOMICRMW_FMINIMUM, G_ATOMICRMW_UINC_WRAP,
 			       G_ATOMICRMW_UDEC_WRAP, G_ATOMICRMW_USUB_COND,
 			       G_ATOMICRMW_USUB_SAT
 
@@ -1043,7 +1159,7 @@ G_TRAP, G_DEBUGTRAP, G_UBSANTRAP
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Represents :ref:`llvm.trap <llvm.trap>`, :ref:`llvm.debugtrap <llvm.debugtrap>`
-and :ref:`llvm.ubsantrap <llvm.ubsantrap>` that generate a target dependent
+and :ref:`llvm.ubsantrap <llvm.ubsantrap>` that generate a target-dependent
 trap instructions.
 
 .. code-block:: none
@@ -1087,6 +1203,15 @@ An alignment value of `0` or `1` means no specific alignment.
 .. code-block:: none
 
   %8:_(p0) = G_DYN_STACKALLOC %7(s64), 32
+
+G_FREEZE
+^^^^^^^^
+
+G_FREEZE is used to stop propagation of undef and poison values.
+
+.. code-block:: none
+
+  %1:_(s32) = G_FREEZE %0(s32)
 
 Optimization Hints
 ------------------
