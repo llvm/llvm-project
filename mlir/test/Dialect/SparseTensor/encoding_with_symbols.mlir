@@ -45,7 +45,7 @@ func.func @tensor_convert() -> memref<?xindex> {
     tensor.yield %val : f32
   } : tensor<32x32xf32>
 
-  // expected-error@+1 {{'bufferization.alloc_tensor' op operand count (1) does not match with the total size (0) specified in attribute 'operandSegmentSizes'}}
+  // expected-error@+1 {{Level size mismatch between source/dest tensors}}
   %J = sparse_tensor.convert %I : tensor<32x32xf32> to tensor<32x32xf32, #Sparse>
 
   %result = sparse_tensor.positions %J { level = 0 : index }
