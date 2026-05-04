@@ -3231,23 +3231,32 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
 
   // FIXME: Find a test case where Adjustments matters.
 
-  // When we're initializing a global variable *or* the storage duration of
+  // When we're extending a global variable *or* the storage duration of
   // the temporary is explicitly static, create a global variable.
   OptPrimType InnerT = classify(Inner);
-  if (E->getStorageDuration() == SD_Static) {
+  const ValueDecl *ExtendingDecl = E->getExtendingDecl();
+  bool IsStatic = E->getStorageDuration() == SD_Static;
+  if (IsStatic ||
+      (ExtendingDecl && Context::shouldBeGloballyIndexed(ExtendingDecl))) {
     UnsignedOrNone GlobalIndex = P.createGlobal(E, Inner->getType());
     if (!GlobalIndex)
       return false;
 
     const LifetimeExtendedTemporaryDecl *TempDecl =
         E->getLifetimeExtendedTemporaryDecl();
-    assert(TempDecl);
 
     if (InnerT) {
       if (!this->visit(Inner))
         return false;
-      if (!this->emitInitGlobalTemp(*InnerT, *GlobalIndex, TempDecl, E))
-        return false;
+
+      if (IsStatic) {
+        assert(TempDecl);
+        if (!this->emitInitGlobalTemp(*InnerT, *GlobalIndex, TempDecl, E))
+          return false;
+      } else {
+        if (!this->emitInitGlobal(*InnerT, *GlobalIndex, E))
+          return false;
+      }
       return this->emitGetPtrGlobal(*GlobalIndex, E);
     }
 
@@ -3258,7 +3267,11 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
       return false;
     if (!this->visitInitializer(Inner))
       return false;
-    return this->emitInitGlobalTempComp(TempDecl, E);
+    if (IsStatic) {
+      assert(TempDecl);
+      return this->emitInitGlobalTempComp(TempDecl, E);
+    }
+    return true;
   }
 
   ScopeKind VarScope = E->getStorageDuration() == SD_FullExpression
@@ -5225,8 +5238,9 @@ template <class Emitter>
 VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD,
                                                  const Expr *Init,
                                                  bool Toplevel) {
+  QualType VarTy = VD->getType();
   // We don't know what to do with these, so just return false.
-  if (VD->getType().isNull())
+  if (VarTy.isNull())
     return false;
 
   // This case is EvalEmitter-only. If we won't create any instructions for the
@@ -5286,8 +5300,8 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD,
 
   if (VarT) {
     unsigned Offset = this->allocateLocalPrimitive(
-        VD, *VarT, VD->getType().isConstQualified(),
-        VD->getType().isVolatileQualified(), ScopeKind::Block);
+        VD, *VarT, VarTy.isConstQualified(), VarTy.isVolatileQualified(),
+        ScopeKind::Block);
 
     if (!Init || Init->getType()->isVoidType())
       return true;
@@ -5302,11 +5316,23 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD,
     }
     if (!this->visit(Init))
       return false;
+
+    if (VarTy->isReferenceType()) {
+      // [C++26][decl.ref]
+      // The object designated by such a glvalue can be outside its lifetime
+      // Because a null pointer value or a pointer past the end of an object
+      // does not point to an object, a reference in a well-defined program
+      // cannot refer to such things;
+      assert(classifyPrim(VarTy) == PT_Ptr);
+      if (!this->emitCheckRefInit(Init))
+        return false;
+    }
+
     return this->emitSetLocal(*VarT, Offset, VD);
   }
   // Local composite variables.
   if (UnsignedOrNone Offset =
-          this->allocateLocal(VD, VD->getType(), ScopeKind::Block)) {
+          this->allocateLocal(VD, VarTy, ScopeKind::Block)) {
     if (!Init)
       return true;
 
@@ -6796,12 +6822,13 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
     return false;
   bool IsUnion = R->isUnion();
 
+  // Union copy and move ctors are special.
   if (IsUnion && Ctor->isCopyOrMoveConstructor()) {
     LocOverrideScope<Emitter> LOS(this, SourceInfo{});
 
-    if (R->getNumFields() == 0)
-      return this->emitRetVoid(Ctor);
-    // union copy and move ctors are special.
+    // No special case for NumFields == 0 here, so the Memcpy op
+    // below also does its checks in those cases.
+
     assert(cast<CompoundStmt>(Ctor->getBody())->body_empty());
     if (!this->emitThis(Ctor))
       return false;

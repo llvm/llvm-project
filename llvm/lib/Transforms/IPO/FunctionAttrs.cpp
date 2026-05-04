@@ -1957,10 +1957,6 @@ static bool isOrderedAtomic(Instruction *I) {
 }
 
 static bool InstrBreaksNoSync(Instruction &I, const SCCNodeSet &SCCNodes) {
-  // Volatile may synchronize
-  if (I.isVolatile())
-    return true;
-
   // An ordered atomic may synchronize.  (See comment about on monotonic.)
   if (isOrderedAtomic(&I))
     return true;
@@ -1972,13 +1968,6 @@ static bool InstrBreaksNoSync(Instruction &I, const SCCNodeSet &SCCNodes) {
 
   if (CB->hasFnAttr(Attribute::NoSync))
     return false;
-
-  // Non volatile memset/memcpy/memmoves are nosync
-  // NOTE: Only intrinsics with volatile flags should be handled here.  All
-  // others should be marked in Intrinsics.td.
-  if (auto *MI = dyn_cast<MemIntrinsic>(&I))
-    if (!MI->isVolatile())
-      return false;
 
   // Speculatively assume in SCC.
   if (Function *Callee = CB->getCalledFunction())
