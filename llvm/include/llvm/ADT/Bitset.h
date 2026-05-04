@@ -198,14 +198,15 @@ public:
   constexpr Bitset &operator<<=(unsigned N) {
     if (N == 0)
       return *this;
-    if (N >= NumBits) {
+    if (N >= NumBits)
       return *this = Bitset();
-    }
     const unsigned WordShift = N / BitwordBits;
     const unsigned BitShift = N % BitwordBits;
     if (BitShift == 0) {
-      for (unsigned I = NumWords; I-- > WordShift;)
+      for (unsigned I = NumWords; I > WordShift;) {
+        --I;
         Bits[I] = Bits[I - WordShift];
+      }
     } else {
       const unsigned CarryShift = BitwordBits - BitShift;
       for (unsigned I = NumWords - 1; I > WordShift; --I) {
@@ -229,9 +230,8 @@ public:
   constexpr Bitset &operator>>=(unsigned N) {
     if (N == 0)
       return *this;
-    if (N >= NumBits) {
+    if (N >= NumBits)
       return *this = Bitset();
-    }
     const unsigned WordShift = N / BitwordBits;
     const unsigned BitShift = N % BitwordBits;
     if (BitShift == 0) {
@@ -258,6 +258,11 @@ public:
   }
 
   /// Return the I-th 64-bit word of the bitset, from least significant to most.
+  ///
+  /// All words other than the last contain exactly 64 stored bits. The last
+  /// word (\p I == \c getNumWords64() - 1) may cover fewer than 64 stored bits
+  /// when \c NumBits is not a multiple of 64; in that case the unused high bits
+  /// are reported as 0.
   constexpr uint64_t getWord64(unsigned I) const {
     assert(I < getNumWords64() && "Word index out of range");
     if constexpr (BitwordBits == 64) {
@@ -274,10 +279,12 @@ public:
 
   /// Return the index of the highest set bit, or -1 if no bits are set.
   constexpr int findLastSet() const {
-    for (unsigned I = NumWords; I-- > 0;)
+    for (unsigned I = NumWords; I > 0;) {
+      --I;
       if (Bits[I] != 0)
         return I * BitwordBits +
                (BitwordBits - 1 - countl_zero_constexpr(Bits[I]));
+    }
     return -1;
   }
 
