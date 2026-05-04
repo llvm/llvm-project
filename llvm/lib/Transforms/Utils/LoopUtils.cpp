@@ -942,7 +942,7 @@ llvm::getLoopEstimatedTripCount(Loop *L,
     LLVM_DEBUG(dbgs() << "getLoopEstimatedTripCount: "
                       << LLVMLoopEstimatedTripCount << " metadata has trip "
                       << "count of " << *TC
-                      << (*TC == 0 ? " (returning std::nullopt)" : "")
+                      << (*TC <= 0 ? " (returning std::nullopt)" : "")
                       << " for " << DbgLoop(L) << "\n");
     return *TC <= 0 ? std::nullopt : std::optional(*TC);
   }
