@@ -138,6 +138,22 @@ void AsanPoisonOrUnpoisonIntraObjectRedzone(uptr ptr, uptr size, bool poison) {
 // ---------------------- Interface ---------------- {{{1
 using namespace __asan;
 
+static void RecordPoison(uptr beg_addr, uptr end_addr) {
+  if (LIKELY(beg_addr >= end_addr || flags()->poison_history_size == 0))
+    return;
+  GET_STACK_TRACE(/*max_size=*/16, /*fast=*/false);
+  u32 current_tid = GetCurrentTidOrInvalid();
+
+  u32 stack_id = StackDepotPut(stack);
+
+  PoisonRecord record;
+  record.stack_id = stack_id;
+  record.thread_id = current_tid;
+  record.begin = beg_addr;
+  record.end = end_addr;
+  AddPoisonRecord(record);
+}
+
 // Current implementation of __asan_(un)poison_memory_region doesn't check
 // that user program (un)poisons the memory it owns. It poisons memory
 // conservatively, and unpoisons progressively to make sure asan shadow
@@ -155,19 +171,7 @@ void __asan_poison_memory_region(void const volatile *addr, uptr size) {
   VPrintf(3, "Trying to poison memory region [%p, %p)\n", (void *)beg_addr,
           (void *)end_addr);
 
-  if (flags()->poison_history_size > 0) {
-    GET_STACK_TRACE(/*max_size=*/16, /*fast=*/false);
-    u32 current_tid = GetCurrentTidOrInvalid();
-
-    u32 stack_id = StackDepotPut(stack);
-
-    PoisonRecord record;
-    record.stack_id = stack_id;
-    record.thread_id = current_tid;
-    record.begin = beg_addr;
-    record.end = end_addr;
-    AddPoisonRecord(record);
-  }
+  RecordPoison(beg_addr, end_addr);
 
   ShadowSegmentEndpoint beg(beg_addr);
   ShadowSegmentEndpoint end(end_addr);
