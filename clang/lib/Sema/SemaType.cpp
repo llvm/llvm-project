@@ -166,6 +166,11 @@ static void diagnoseBadTypeAttribute(Sema &S, const ParsedAttr &attr,
   case ParsedAttr::AT_ArmAgnostic:                                             \
   case ParsedAttr::AT_AnyX86NoCallerSavedRegisters:                            \
   case ParsedAttr::AT_AnyX86NoCfCheck:                                         \
+  case ParsedAttr::AT_RISCVIn:                                                 \
+  case ParsedAttr::AT_RISCVOut:                                                \
+  case ParsedAttr::AT_RISCVInOut:                                              \
+  case ParsedAttr::AT_RISCVPreserves:                                          \
+  case ParsedAttr::AT_RISCVNew:                                                \
     CALLING_CONV_ATTRS_CASELIST
 
 // Microsoft-specific type qualifiers.
@@ -8041,6 +8046,51 @@ static bool handleArmStateAttribute(Sema &S,
   return false;
 }
 
+static bool handleRISCVStateAttribute(Sema &S,
+                                      FunctionProtoType::ExtProtoInfo &EPI,
+                                      ParsedAttr &Attr,
+                                      FunctionType::RISCVStateValue State) {
+  if (!Attr.getNumArgs()) {
+    S.Diag(Attr.getLoc(), diag::err_missing_riscv_state) << Attr;
+    Attr.setInvalid();
+    return true;
+  }
+
+  for (unsigned I = 0; I < Attr.getNumArgs(); ++I) {
+    StringRef StateName;
+    SourceLocation LiteralLoc;
+    if (!S.checkStringLiteralArgumentAttr(Attr, I, StateName, &LiteralLoc))
+      return true;
+
+    unsigned Shift;
+    FunctionType::RISCVStateValue ExistingState;
+
+    // Determine which tile state this is and get its shift/mask
+    if (StateName == "xsfmm") {
+      Shift = FunctionType::RISCVXsfmmShift;
+      ExistingState = FunctionType::getRISCVXsfmmState(EPI.RISCVAttributes);
+    } else {
+      S.Diag(LiteralLoc, diag::err_unknown_riscv_state) << StateName;
+      Attr.setInvalid();
+      return true;
+    }
+
+    // __riscv_in, __riscv_out, __riscv_inout, __riscv_preserves, and
+    // __riscv_new are all mutually exclusive for the same state,
+    // so check if there are conflicting attributes.
+    if (ExistingState != FunctionType::RISCVNone && ExistingState != State) {
+      S.Diag(LiteralLoc, diag::err_mutually_exclusive_attributes_riscv_state)
+          << StateName;
+      Attr.setInvalid();
+      return true;
+    }
+
+    EPI.setRISCVAttribute(
+        (FunctionType::RISCVTypeAttributes)((State << Shift)));
+  }
+  return false;
+}
+
 /// Process an individual function attribute.  Returns true to
 /// indicate that the attribute was handled, false if it wasn't.
 static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
@@ -8281,6 +8331,58 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
       break;
     case ParsedAttr::AT_ArmAgnostic:
       if (handleArmAgnosticAttribute(S, EPI, attr))
+        return true;
+      break;
+    default:
+      llvm_unreachable("Unsupported attribute");
+    }
+
+    QualType newtype = S.Context.getFunctionType(FnTy->getReturnType(),
+                                                 FnTy->getParamTypes(), EPI);
+    type = unwrapped.wrap(S, newtype->getAs<FunctionType>());
+    return true;
+  }
+
+  if (attr.getKind() == ParsedAttr::AT_RISCVIn ||
+      attr.getKind() == ParsedAttr::AT_RISCVOut ||
+      attr.getKind() == ParsedAttr::AT_RISCVInOut ||
+      attr.getKind() == ParsedAttr::AT_RISCVPreserves ||
+      attr.getKind() == ParsedAttr::AT_RISCVNew) {
+    if (S.CheckAttrTarget(attr))
+      return true;
+
+    if (!unwrapped.isFunctionType())
+      return false;
+
+    const auto *FnTy = unwrapped.get()->getAs<FunctionProtoType>();
+    if (!FnTy) {
+      S.Diag(attr.getLoc(), diag::warn_attribute_wrong_decl_type)
+          << attr << attr.isRegularKeywordAttribute()
+          << ExpectedFunctionWithProtoType;
+      attr.setInvalid();
+      return false;
+    }
+
+    FunctionProtoType::ExtProtoInfo EPI = FnTy->getExtProtoInfo();
+    switch (attr.getKind()) {
+    case ParsedAttr::AT_RISCVIn:
+      if (handleRISCVStateAttribute(S, EPI, attr, FunctionType::RISCVIn))
+        return true;
+      break;
+    case ParsedAttr::AT_RISCVOut:
+      if (handleRISCVStateAttribute(S, EPI, attr, FunctionType::RISCVOut))
+        return true;
+      break;
+    case ParsedAttr::AT_RISCVInOut:
+      if (handleRISCVStateAttribute(S, EPI, attr, FunctionType::RISCVInOut))
+        return true;
+      break;
+    case ParsedAttr::AT_RISCVPreserves:
+      if (handleRISCVStateAttribute(S, EPI, attr, FunctionType::RISCVPreserves))
+        return true;
+      break;
+    case ParsedAttr::AT_RISCVNew:
+      if (handleRISCVStateAttribute(S, EPI, attr, FunctionType::RISCVNew))
         return true;
       break;
     default:
