@@ -12178,8 +12178,9 @@ SDValue DAGCombiner::visitABS_MIN_POISON(SDNode *N) {
     return ABD;
 
   // fold (abs_min_poison (sign_extend_inreg x)) ->
-  //   (zero_extend (abs_min_poison (truncate x)))
-  // iff zero_extend/truncate are free.
+  //   (zero_extend (abs (truncate x)))
+  // iff zero_extend/truncate are free. The sign_extend_inreg keeps the value
+  // in the narrow type's range, so the wide abs_min_poison is never actually poison
   if (N0.getOpcode() == ISD::SIGN_EXTEND_INREG) {
     EVT ExtVT = cast<VTSDNode>(N0.getOperand(1))->getVT();
     if (TLI.isTruncateFree(VT, ExtVT) && TLI.isZExtFree(ExtVT, VT) &&
@@ -12187,7 +12188,7 @@ SDValue DAGCombiner::visitABS_MIN_POISON(SDNode *N) {
         hasOperation(ISD::ABS, ExtVT)) {
       return DAG.getNode(
           ISD::ZERO_EXTEND, DL, VT,
-          DAG.getNode(ISD::ABS_MIN_POISON, DL, ExtVT,
+          DAG.getNode(ISD::ABS, DL, ExtVT,
                       DAG.getNode(ISD::TRUNCATE, DL, ExtVT,
                                   N0.getOperand(0))));
     }
