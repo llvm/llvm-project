@@ -2876,7 +2876,8 @@ private:
     uint64_t SizeBit = [&]() -> uint64_t {
       if (VT->isPackedVectorBoolType(Ctx))
         return VT->getNumElements();
-      return Ctx.getTypeInfo(VT->getElementType()).Width * VT->getNumElements();
+      return getScalarOccupiedSizeInBits(VT->getElementType()) *
+             VT->getNumElements();
     }();
     OccuppiedIntervals.push_back(
         BitInterval{StartBitOffset, StartBitOffset + SizeBit});

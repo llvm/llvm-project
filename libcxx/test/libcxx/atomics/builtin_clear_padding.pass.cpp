@@ -224,6 +224,9 @@ struct Foo {
 };
 
 typedef float Float4Vec __attribute__((ext_vector_type(4)));
+typedef bool Bool9Vec __attribute__((ext_vector_type(9)));
+typedef float Float3Vec __attribute__((ext_vector_type(3)));
+typedef long double LongDouble3Vec __attribute__((ext_vector_type(3)));
 
 void primitiveTests() {
   // no padding
@@ -797,11 +800,87 @@ void arrayTests() {
   }
 }
 
+void vectorTests() {
+  // bool vector (packed bits with potential tail padding to storage size)
+  {
+    Bool9Vec v1, v2;
+    memset(&v1, 42, sizeof(Bool9Vec));
+    memset(&v2, 0, sizeof(Bool9Vec));
+
+    v1[0] = true;
+    v1[1] = false;
+    v1[2] = true;
+    v1[3] = false;
+    v1[4] = true;
+    v1[5] = true;
+    v1[6] = false;
+    v1[7] = true;
+    v1[8] = false;
+    v2[0] = true;
+    v2[1] = false;
+    v2[2] = true;
+    v2[3] = false;
+    v2[4] = true;
+    v2[5] = true;
+    v2[6] = false;
+    v2[7] = true;
+    v2[8] = false;
+
+    __builtin_clear_padding(&v1);
+    assert(v1[0] == true);
+    assert(v1[1] == false);
+    assert(v1[7] == true);
+    assert(v1[8] == false);
+    assert(memcmp(&v1, &v2, sizeof(Bool9Vec)) == 0);
+  }
+
+  // long double vector
+  {
+    LongDouble3Vec v1, v2;
+    memset(&v1, 42, sizeof(LongDouble3Vec));
+    memset(&v2, 0, sizeof(LongDouble3Vec));
+
+    v1[0] = 1.0L;
+    v1[1] = 2.0L;
+    v1[2] = 3.0L;
+    v2[0] = 1.0L;
+    v2[1] = 2.0L;
+    v2[2] = 3.0L;
+
+    __builtin_clear_padding(&v1);
+    assert(v1[0] == 1.0L);
+    assert(v1[1] == 2.0L);
+    assert(v1[2] == 3.0L);
+    assert(memcmp(&v1, &v2, sizeof(LongDouble3Vec)) == 0);
+  }
+
+  // float vector
+  {
+    Float3Vec v1, v2;
+    memset(&v1, 42, sizeof(Float3Vec));
+    memset(&v2, 0, sizeof(Float3Vec));
+
+    v1[0] = 1.0f;
+    v1[1] = 2.0f;
+    v1[2] = 3.0f;
+    v2[0] = 1.0f;
+    v2[1] = 2.0f;
+    v2[2] = 3.0f;
+
+    __builtin_clear_padding(&v1);
+    assert(v1[0] == 1.0f);
+    assert(v1[1] == 2.0f);
+    assert(v1[2] == 3.0f);
+    assert(memcmp(&v1, &v2, sizeof(Float3Vec)) == 0);
+  }
+}
+
 int main(int, const char**) {
   primitiveTests();
   unionTests();
   structTests();
   arrayTests();
+  vectorTests();
 
   return 0;
 }
