@@ -246,8 +246,7 @@ llvm::DIDerivedType *DebugTranslation::translateImpl(DIDerivedTypeAttr attr) {
                   llvm::ConstantInt::get(llvmCtx, intAttr.getValue()));
             })
             .Default([](Attribute) -> llvm::Metadata * {
-              llvm_unreachable(
-                  "verifier guarantees DINodeAttr or IntegerAttr");
+              llvm_unreachable("verifier guarantees DINodeAttr or IntegerAttr");
             });
   }
 
@@ -257,8 +256,7 @@ llvm::DIDerivedType *DebugTranslation::translateImpl(DIDerivedTypeAttr attr) {
       translate(attr.getBaseType()), attr.getSizeInBits(),
       attr.getAlignInBits(), attr.getOffsetInBits(),
       attr.getDwarfAddressSpace(), /*PtrAuthData=*/std::nullopt,
-      /*Flags=*/static_cast<llvm::DINode::DIFlags>(attr.getFlags()),
-      extraData);
+      /*Flags=*/static_cast<llvm::DINode::DIFlags>(attr.getFlags()), extraData);
 }
 
 llvm::DIStringType *DebugTranslation::translateImpl(DIStringTypeAttr attr) {

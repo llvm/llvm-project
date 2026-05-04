@@ -120,9 +120,8 @@ DIDerivedTypeAttr DebugImporter::translateImpl(llvm::DIDerivedType *node) {
     if (auto *constantInt =
             dyn_cast<llvm::ConstantInt>(constantAsMetadata->getValue())) {
       const APInt &value = constantInt->getValue();
-      extraData =
-          IntegerAttr::get(IntegerType::get(context, value.getBitWidth()),
-                           value);
+      extraData = IntegerAttr::get(
+          IntegerType::get(context, value.getBitWidth()), value);
     }
   }
   return DIDerivedTypeAttr::get(

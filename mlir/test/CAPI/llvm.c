@@ -379,8 +379,8 @@ static void testDebugInfoAttributes(MlirContext ctx) {
   mlirAttributeDump(mlirLLVMDICompositeTypeAttrGetRecSelf(recId1));
 
   MlirAttribute discriminator = mlirLLVMDIDerivedTypeAttrGet(
-      ctx, /*DW_TAG_member=*/0x0d, bar, file, 1, compile_unit, di_type, 8, 0,
-      0, MLIR_CAPI_DWARF_ADDRESS_SPACE_NULL, 0, mlirAttributeGetNull());
+      ctx, /*DW_TAG_member=*/0x0d, bar, file, 1, compile_unit, di_type, 8, 0, 0,
+      MLIR_CAPI_DWARF_ADDRESS_SPACE_NULL, 0, mlirAttributeGetNull());
 
   // CHECK: #llvm.di_composite_type<{{.*}}>
   mlirAttributeDump(mlirLLVMDICompositeTypeAttrGet(
