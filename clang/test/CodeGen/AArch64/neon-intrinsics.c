@@ -20072,36 +20072,6 @@ int64x1_t test_vneg_s64(int64x1_t a) {
   return vneg_s64(a);
 }
 
-// CHECK-LABEL: define dso_local float @test_vaddv_f32(
-// CHECK-SAME: <2 x float> noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VADDV_F32_I:%.*]] = call float @llvm.aarch64.neon.faddv.f32.v2f32(<2 x float> [[A]])
-// CHECK-NEXT:    ret float [[VADDV_F32_I]]
-//
-float32_t test_vaddv_f32(float32x2_t a) {
-  return vaddv_f32(a);
-}
-
-// CHECK-LABEL: define dso_local float @test_vaddvq_f32(
-// CHECK-SAME: <4 x float> noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VADDVQ_F32_I:%.*]] = call float @llvm.aarch64.neon.faddv.f32.v4f32(<4 x float> [[A]])
-// CHECK-NEXT:    ret float [[VADDVQ_F32_I]]
-//
-float32_t test_vaddvq_f32(float32x4_t a) {
-  return vaddvq_f32(a);
-}
-
-// CHECK-LABEL: define dso_local double @test_vaddvq_f64(
-// CHECK-SAME: <2 x double> noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VADDVQ_F64_I:%.*]] = call double @llvm.aarch64.neon.faddv.f64.v2f64(<2 x double> [[A]])
-// CHECK-NEXT:    ret double [[VADDVQ_F64_I]]
-//
-float64_t test_vaddvq_f64(float64x2_t a) {
-  return vaddvq_f64(a);
-}
-
 // CHECK-LABEL: define dso_local float @test_vmaxv_f32(
 // CHECK-SAME: <2 x float> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -20182,26 +20152,6 @@ uint64x2_t test_vpaddq_u64(uint64x2_t a, uint64x2_t b) {
 //
 uint64_t test_vpaddd_u64(uint64x2_t a) {
   return vpaddd_u64(a);
-}
-
-// CHECK-LABEL: define dso_local i64 @test_vaddvq_s64(
-// CHECK-SAME: <2 x i64> noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VADDVQ_S64_I:%.*]] = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> [[A]])
-// CHECK-NEXT:    ret i64 [[VADDVQ_S64_I]]
-//
-int64_t test_vaddvq_s64(int64x2_t a) {
-  return vaddvq_s64(a);
-}
-
-// CHECK-LABEL: define dso_local i64 @test_vaddvq_u64(
-// CHECK-SAME: <2 x i64> noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VADDVQ_U64_I:%.*]] = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> [[A]])
-// CHECK-NEXT:    ret i64 [[VADDVQ_U64_I]]
-//
-uint64_t test_vaddvq_u64(uint64x2_t a) {
-  return vaddvq_u64(a);
 }
 
 // CHECK-LABEL: define dso_local <1 x double> @test_vadd_f64(
@@ -20708,44 +20658,4 @@ int32_t test_vmaxv_s32(int32x2_t a) {
 //
 uint32_t test_vmaxv_u32(uint32x2_t a) {
   return vmaxv_u32(a);
-}
-
-// CHECK-LABEL: define dso_local i32 @test_vaddv_s32(
-// CHECK-SAME: <2 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VADDV_S32_I:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[A]])
-// CHECK-NEXT:    ret i32 [[VADDV_S32_I]]
-//
-int32_t test_vaddv_s32(int32x2_t a) {
-  return vaddv_s32(a);
-}
-
-// CHECK-LABEL: define dso_local i32 @test_vaddv_u32(
-// CHECK-SAME: <2 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VADDV_U32_I:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[A]])
-// CHECK-NEXT:    ret i32 [[VADDV_U32_I]]
-//
-uint32_t test_vaddv_u32(uint32x2_t a) {
-  return vaddv_u32(a);
-}
-
-// CHECK-LABEL: define dso_local i64 @test_vaddlv_s32(
-// CHECK-SAME: <2 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VADDLV_S32_I:%.*]] = call i64 @llvm.aarch64.neon.saddlv.i64.v2i32(<2 x i32> [[A]])
-// CHECK-NEXT:    ret i64 [[VADDLV_S32_I]]
-//
-int64_t test_vaddlv_s32(int32x2_t a) {
-  return vaddlv_s32(a);
-}
-
-// CHECK-LABEL: define dso_local i64 @test_vaddlv_u32(
-// CHECK-SAME: <2 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VADDLV_U32_I:%.*]] = call i64 @llvm.aarch64.neon.uaddlv.i64.v2i32(<2 x i32> [[A]])
-// CHECK-NEXT:    ret i64 [[VADDLV_U32_I]]
-//
-uint64_t test_vaddlv_u32(uint32x2_t a) {
-  return vaddlv_u32(a);
 }

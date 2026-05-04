@@ -25,8 +25,8 @@
 // Test that AMDGPU-specific attributes are generated for HIP kernels
 
 // Test: Default attributes for simple kernel
-// CIR: cir.func{{.*}} @_Z13kernel_simplev(){{.*}}"cir.amdgpu-flat-work-group-size" = "1,1024"
-// LLVM: define{{.*}} void @_Z13kernel_simplev(){{.*}} #[[SIMPLE_ATTR:[0-9]+]]
+// CIR: cir.func{{.*}} @_Z13kernel_simplev() cc(amdgpu_kernel){{.*}}"cir.amdgpu-flat-work-group-size" = "1,1024"
+// LLVM: define{{.*}} amdgpu_kernel void @_Z13kernel_simplev(){{.*}} #[[SIMPLE_ATTR:[0-9]+]]
 __global__ void kernel_simple() {}
 
 // Test: Explicit flat work group size attribute
