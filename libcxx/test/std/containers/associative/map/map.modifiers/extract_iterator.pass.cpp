@@ -30,7 +30,6 @@ TEST_CONSTEXPR_CXX26 bool test(Container& c) {
     typename Container::node_type t = c.extract(first++);
     --sz;
     if (!TEST_IS_CONSTANT_EVALUATED) {
-      // FIXME: CWG1514: key() is not `constexpr`
       assert(t.key() == key_value);
       t.key() = some_key;
       assert(t.key() == some_key);
