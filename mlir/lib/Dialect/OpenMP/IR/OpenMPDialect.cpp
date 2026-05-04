@@ -5033,6 +5033,24 @@ LogicalResult IteratorOp::verify() {
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// GroupprivateOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+GroupprivateOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  auto *symbol = symbolTable.lookupNearestSymbolFrom(*this, getSymNameAttr());
+  if (!symbol)
+    return emitOpError() << "expected symbol reference '" << getSymName()
+                         << "' to point to a global variable";
+
+  if (isa<FunctionOpInterface>(symbol))
+    return emitOpError() << "expected symbol reference '" << getSymName()
+                         << "' to point to a global variable, not a function";
+
+  return success();
+}
+
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/OpenMP/OpenMPOpsAttributes.cpp.inc"
 

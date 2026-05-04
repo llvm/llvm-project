@@ -2531,4 +2531,33 @@ def IteratorOp : OpenMP_Op<"iterator",
   let hasVerifier = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// [6.0] groupprivate Directive
+//===----------------------------------------------------------------------===//
+
+def GroupprivateOp : OpenMP_Op<"groupprivate",
+    [Pure, DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
+  let summary = "groupprivate directive";
+  let description = [{
+    The groupprivate directive specifies that variables are replicated, with
+    each group having its own copy.
+
+    This operation takes a symbol reference to a global variable and returns
+    the address of its groupprivate copy. The referenced symbol must exist and
+    must not be a function.
+
+    The optional `device_type` attribute specifies where the groupprivate
+    storage should be allocated (host, nohost, or any).
+  }];
+
+  let arguments = (ins
+    FlatSymbolRefAttr:$sym_name,
+    OptionalAttr<DeclareTargetDeviceTypeAttr>:$device_type
+  );
+  let results = (outs OpenMP_PointerLikeType:$gp_addr);
+  let assemblyFormat = [{
+    $sym_name (`device_type` $device_type^)? `:` type($gp_addr) attr-dict
+  }];
+}
+
 #endif // OPENMP_OPS
