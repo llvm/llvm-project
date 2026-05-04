@@ -1556,15 +1556,20 @@ Error CompileUnit::cloneAndEmitLineTable(const Triple &TargetTriple) {
     return emitDebugLine(TargetTriple, OutLineTable);
   }
 
-  filterLineTableRows(*InputLineTable, OutLineTable.Rows);
+  SmallVector<uint64_t> OrigRowIndices;
+  filterLineTableRows(*InputLineTable, OutLineTable.Rows, OrigRowIndices);
 
   if (StmtSeqListAttributes.empty())
     return emitDebugLine(TargetTriple, OutLineTable);
 
   // When DW_AT_LLVM_stmt_sequence attributes on this CU need their values
   // rewritten to point at the correct output sequence, have the emitter
-  // record, for every row, the byte offset of the DW_LNE_set_address that
-  // opens the sequence containing that row.
+  // record, for every row that originated from an input row, the byte
+  // offset of the DW_LNE_set_address that opens the sequence containing
+  // that row. Keying the map on the input row index (rather than on an
+  // output address) avoids collisions when two input sequences would
+  // relocate to the same output address — e.g. ICF folding two functions
+  // from the same CU to a single output range.
   //
   // The patching below MUST run before emitDebugInfo() serializes the
   // DIE bytes and before OutputSections::applyPatches() runs for this
@@ -1572,23 +1577,29 @@ Error CompileUnit::cloneAndEmitLineTable(const Triple &TargetTriple) {
   // the serializer then emits, and a DebugOffsetPatch (registered at DIE
   // cloning time) later adds the CU's .debug_line start offset to reach
   // the final absolute value.
-  DenseMap<uint64_t, uint64_t> AddrToSeqStartOffset;
-  if (Error Err =
-          emitDebugLine(TargetTriple, OutLineTable, &AddrToSeqStartOffset))
+  DenseMap<uint64_t, uint64_t> RowIndexToSeqStartOffset;
+  if (Error Err = emitDebugLine(TargetTriple, OutLineTable, OrigRowIndices,
+                                &RowIndexToSeqStartOffset))
     return Err;
 
-  patchStmtSeqAttributes(AddrToSeqStartOffset);
+  patchStmtSeqAttributes(RowIndexToSeqStartOffset);
   return Error::success();
 }
 
 void CompileUnit::filterLineTableRows(
     const DWARFDebugLine::LineTable &InputLineTable,
-    std::vector<DWARFDebugLine::Row> &NewRows) {
+    std::vector<DWARFDebugLine::Row> &NewRows,
+    SmallVectorImpl<uint64_t> &NewRowIndices) {
   NewRows.reserve(InputLineTable.Rows.size());
+  NewRowIndices.reserve(InputLineTable.Rows.size());
 
   // Current sequence of rows being extracted, before being inserted
-  // in NewRows.
+  // in NewRows. Kept in lockstep with SeqIndices, which stores the
+  // originating input row index (or InvalidRowIndex for manufactured
+  // end-of-range rows).
   std::vector<DWARFDebugLine::Row> Seq;
+  SmallVector<uint64_t> SeqIndices;
+  constexpr uint64_t InvalidRowIndex = std::numeric_limits<uint64_t>::max();
 
   const auto &FunctionRanges = getFunctionRanges();
   std::optional<AddressRangeValuePair> CurrRange;
@@ -1604,7 +1615,8 @@ void CompileUnit::filterLineTableRows(
 
   // Iterate over the object file line info and extract the sequences
   // that correspond to linked functions.
-  for (DWARFDebugLine::Row Row : InputLineTable.Rows) {
+  for (auto [InputRowIdx, InputRow] : llvm::enumerate(InputLineTable.Rows)) {
+    DWARFDebugLine::Row Row = InputRow;
     // Check whether we stepped out of the range. The range is
     // half-open, but consider accept the end address of the range if
     // it is marked as end_sequence in the input (because in that
@@ -1618,7 +1630,9 @@ void CompileUnit::filterLineTableRows(
       CurrRange = FunctionRanges.getRangeThatContains(Row.Address.Address);
       if (StopAddress != -1ULL && !Seq.empty()) {
         // Insert end sequence row with the computed end address, but
-        // the same line as the previous one.
+        // the same line as the previous one. This row is synthesised
+        // and has no input counterpart, so tag it with
+        // InvalidRowIndex.
         auto NextLine = Seq.back();
         NextLine.Address.Address = StopAddress;
         NextLine.EndSequence = 1;
@@ -1626,7 +1640,8 @@ void CompileUnit::filterLineTableRows(
         NextLine.BasicBlock = 0;
         NextLine.EpilogueBegin = 0;
         Seq.push_back(NextLine);
-        insertLineSequence(Seq, NewRows);
+        SeqIndices.push_back(InvalidRowIndex);
+        insertLineSequence(Seq, SeqIndices, NewRows, NewRowIndices);
       }
 
       if (!CurrRange)
@@ -1640,27 +1655,23 @@ void CompileUnit::filterLineTableRows(
     // Relocate row address and add it to the current sequence.
     Row.Address.Address += CurrRange->Value;
     Seq.emplace_back(Row);
+    SeqIndices.push_back(InputRowIdx);
 
     if (Row.EndSequence)
-      insertLineSequence(Seq, NewRows);
+      insertLineSequence(Seq, SeqIndices, NewRows, NewRowIndices);
   }
 }
 
 void CompileUnit::patchStmtSeqAttributes(
-    const DenseMap<uint64_t, uint64_t> &AddrToSeqStartOffset) {
+    const DenseMap<uint64_t, uint64_t> &RowIndexToSeqStartOffset) {
   const uint64_t InvalidOffset = getFormParams().getDwarfMaxOffset();
-  const auto &FunctionRanges = getFunctionRanges();
 
   for (const CompileUnit::StmtSeqPatch &Patch : StmtSeqListAttributes) {
     uint64_t NewStmtSeq = InvalidOffset;
-    if (Patch.InputFirstAddr) {
-      if (auto Range =
-              FunctionRanges.getRangeThatContains(*Patch.InputFirstAddr)) {
-        uint64_t OutAddr = *Patch.InputFirstAddr + Range->Value;
-        auto It = AddrToSeqStartOffset.find(OutAddr);
-        if (It != AddrToSeqStartOffset.end())
-          NewStmtSeq = It->second;
-      }
+    if (Patch.InputFirstRowIndex) {
+      auto It = RowIndexToSeqStartOffset.find(*Patch.InputFirstRowIndex);
+      if (It != RowIndexToSeqStartOffset.end())
+        NewStmtSeq = It->second;
     }
     // When resolution fails, the InvalidOffset sentinel must survive the
     // combination-time section-offset fixup. The patch applier preserves
@@ -1672,39 +1683,51 @@ void CompileUnit::patchStmtSeqAttributes(
 }
 
 std::optional<uint64_t>
-CompileUnit::getStmtSeqFirstAddress(uint64_t StmtSeqOffset) {
-  if (!StmtSeqOffsetToFirstAddr) {
-    StmtSeqOffsetToFirstAddr.emplace();
+CompileUnit::getStmtSeqFirstRowIndex(uint64_t StmtSeqOffset) {
+  if (!StmtSeqOffsetToFirstRowIndex) {
+    StmtSeqOffsetToFirstRowIndex.emplace();
     if (const DWARFDebugLine::LineTable *InputLT =
             getContaingFile().Dwarf->getLineTableForUnit(&getOrigUnit())) {
       for (const DWARFDebugLine::Sequence &Seq : InputLT->Sequences) {
         assert(Seq.FirstRowIndex < InputLT->Rows.size() &&
                "sequence's first-row index out of range");
-        (*StmtSeqOffsetToFirstAddr)[Seq.StmtSeqOffset] =
-            InputLT->Rows[Seq.FirstRowIndex].Address.Address;
+        (*StmtSeqOffsetToFirstRowIndex)[Seq.StmtSeqOffset] = Seq.FirstRowIndex;
       }
     }
   }
-  auto It = StmtSeqOffsetToFirstAddr->find(StmtSeqOffset);
-  if (It == StmtSeqOffsetToFirstAddr->end())
+  auto It = StmtSeqOffsetToFirstRowIndex->find(StmtSeqOffset);
+  if (It == StmtSeqOffsetToFirstRowIndex->end())
     return std::nullopt;
   return It->second;
 }
 
 void CompileUnit::insertLineSequence(std::vector<DWARFDebugLine::Row> &Seq,
-                                     std::vector<DWARFDebugLine::Row> &Rows) {
+                                     SmallVectorImpl<uint64_t> &SeqIndices,
+                                     std::vector<DWARFDebugLine::Row> &Rows,
+                                     SmallVectorImpl<uint64_t> &RowIndices) {
+  assert(Seq.size() == SeqIndices.size() &&
+         "Seq and SeqIndices must be kept in lockstep");
+  assert(Rows.size() == RowIndices.size() &&
+         "Rows and RowIndices must be kept in lockstep");
   if (Seq.empty())
     return;
 
+  auto ClearSeq = [&] {
+    Seq.clear();
+    SeqIndices.clear();
+  };
+
   if (!Rows.empty() && Rows.back().Address < Seq.front().Address) {
     llvm::append_range(Rows, Seq);
-    Seq.clear();
+    llvm::append_range(RowIndices, SeqIndices);
+    ClearSeq();
     return;
   }
 
   object::SectionedAddress Front = Seq.front().Address;
   auto InsertPoint = partition_point(
       Rows, [=](const DWARFDebugLine::Row &O) { return O.Address < Front; });
+  size_t InsertIdx = std::distance(Rows.begin(), InsertPoint);
 
   // FIXME: this only removes the unneeded end_sequence if the
   // sequences have been inserted in order. Using a global sort like
@@ -1713,12 +1736,17 @@ void CompileUnit::insertLineSequence(std::vector<DWARFDebugLine::Row> &Seq,
   if (InsertPoint != Rows.end() && InsertPoint->Address == Front &&
       InsertPoint->EndSequence) {
     *InsertPoint = Seq.front();
+    RowIndices[InsertIdx] = SeqIndices.front();
     Rows.insert(InsertPoint + 1, Seq.begin() + 1, Seq.end());
+    RowIndices.insert(RowIndices.begin() + InsertIdx + 1,
+                      SeqIndices.begin() + 1, SeqIndices.end());
   } else {
     Rows.insert(InsertPoint, Seq.begin(), Seq.end());
+    RowIndices.insert(RowIndices.begin() + InsertIdx, SeqIndices.begin(),
+                      SeqIndices.end());
   }
 
-  Seq.clear();
+  ClearSeq();
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

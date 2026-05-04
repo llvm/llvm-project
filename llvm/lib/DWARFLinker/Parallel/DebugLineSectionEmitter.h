@@ -27,7 +27,8 @@ public:
       : TheTriple(TheTriple), U(U) {}
 
   Error emit(const DWARFDebugLine::LineTable &LineTable,
-             DenseMap<uint64_t, uint64_t> *AddrToSeqStartOffset = nullptr) {
+             ArrayRef<uint64_t> OrigRowIndices = {},
+             DenseMap<uint64_t, uint64_t> *RowIndexToSeqStartOffset = nullptr) {
     // FIXME: remove dependence on MCDwarfLineAddr::encode.
     // As we reuse MCDwarfLineAddr::encode, we need to create/initialize
     // some MC* classes.
@@ -46,7 +47,8 @@ public:
     emitLineTablePrologue(LineTable.Prologue, OutSection);
 
     // Emit rows.
-    emitLineTableRows(LineTable, OutSection, AddrToSeqStartOffset);
+    emitLineTableRows(LineTable, OutSection, OrigRowIndices,
+                      RowIndexToSeqStartOffset);
     uint64_t OffsetAfterEnd = OutSection.OS.tell();
 
     // Update unit length field with actual length value.
@@ -295,7 +297,8 @@ private:
 
   void emitLineTableRows(
       const DWARFDebugLine::LineTable &LineTable, SectionDescriptor &Section,
-      DenseMap<uint64_t, uint64_t> *AddrToSeqStartOffset = nullptr) {
+      ArrayRef<uint64_t> OrigRowIndices = {},
+      DenseMap<uint64_t, uint64_t> *RowIndexToSeqStartOffset = nullptr) {
 
     MCDwarfLineTableParams Params;
     Params.DWARF2LineOpcodeBase = LineTable.Prologue.OpcodeBase;
@@ -324,11 +327,17 @@ private:
 
     unsigned RowsSinceLastSequence = 0;
     // Offset of the DW_LNE_set_address opcode that opens the sequence
-    // currently being emitted. Recorded for each row's address so that
-    // DW_AT_LLVM_stmt_sequence attributes can be resolved by address.
+    // currently being emitted. Recorded per input row index so that
+    // DW_AT_LLVM_stmt_sequence attributes can be resolved by row — which
+    // is collision-free under ICF, unlike keying by output address.
     uint64_t CurrentSeqStartOffset = 0;
+    constexpr uint64_t InvalidRowIndex = std::numeric_limits<uint64_t>::max();
+    assert(
+        (!RowIndexToSeqStartOffset ||
+         OrigRowIndices.size() == LineTable.Rows.size()) &&
+        "OrigRowIndices must be supplied alongside RowIndexToSeqStartOffset");
 
-    for (const DWARFDebugLine::Row &Row : LineTable.Rows) {
+    for (auto [Idx, Row] : llvm::enumerate(LineTable.Rows)) {
       int64_t AddressDelta;
       if (Address == -1ULL) {
         CurrentSeqStartOffset = Section.OS.tell();
@@ -342,8 +351,11 @@ private:
         AddressDelta =
             (Row.Address.Address - Address) / LineTable.Prologue.MinInstLength;
       }
-      if (AddrToSeqStartOffset)
-        (*AddrToSeqStartOffset)[Row.Address.Address] = CurrentSeqStartOffset;
+      if (RowIndexToSeqStartOffset) {
+        uint64_t InputRowIdx = OrigRowIndices[Idx];
+        if (InputRowIdx != InvalidRowIndex)
+          (*RowIndexToSeqStartOffset)[InputRowIdx] = CurrentSeqStartOffset;
+      }
 
       // FIXME: code copied and transformed from
       // MCDwarf.cpp::EmitDwarfLineTable. We should find a way to share this

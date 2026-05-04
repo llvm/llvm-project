@@ -527,13 +527,15 @@ size_t DIEAttributeCloner::cloneScalarAttr(
   if (AttrSpec.Attr == dwarf::DW_AT_LLVM_stmt_sequence) {
     assert(OutUnit.isCompileUnit() &&
            "DW_AT_LLVM_stmt_sequence on a non-compile-unit DIE");
-    // Resolve the attribute's stmt-sequence offset to the address of the
-    // referenced sequence's first row, so that after line-table emission
-    // the attribute can be matched to the output sequence by address.
-    std::optional<uint64_t> InputFirstAddr =
-        InUnit.getStmtSeqFirstAddress(Value);
+    // Resolve the attribute's stmt-sequence offset to the index of the
+    // referenced sequence's first row in the input .debug_line rows
+    // vector, so that after line-table emission the attribute can be
+    // matched to the output sequence by input row index (immune to the
+    // address collisions that ICF would otherwise cause).
+    std::optional<uint64_t> InputFirstRowIndex =
+        InUnit.getStmtSeqFirstRowIndex(Value);
     OutUnit.getAsCompileUnit()->noteStmtSeqListAttribute(&Result.first,
-                                                         InputFirstAddr);
+                                                         InputFirstRowIndex);
     DebugInfoOutputSection.notePatchWithOffsetUpdate(
         DebugOffsetPatch{
             AttrOutOffset,
