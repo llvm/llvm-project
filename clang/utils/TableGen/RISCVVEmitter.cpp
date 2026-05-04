@@ -496,6 +496,15 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
     }
   }
 
+  // TODO: Support tuple types for ofp8?
+  for (BasicType BT : {BasicType::F8E4M3, BasicType::F8E5M2}) {
+    for (int Log2LMUL : Log2LMULs) {
+      auto T = TypeCache.computeType(BT, Log2LMUL, PrototypeDescriptor::Vector);
+      if (T)
+        printType(*T);
+    }
+  }
+
   OS << "\n#ifdef __cplusplus\n";
   OS << "}\n";
   OS << "#endif // __cplusplus\n";
