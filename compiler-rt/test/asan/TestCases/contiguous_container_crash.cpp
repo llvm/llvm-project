@@ -69,8 +69,8 @@ int DoubleEndedTestCrashBeg() {
   t[15] = 0;
   __sanitizer_annotate_double_ended_contiguous_container(
       &t[0], &t[0] + 100, &t[0], &t[0] + 100, &t[0] + 25, &t[0] + 75);
-// DOUBLE-CRASH-BEG: AddressSanitizer: container-overflow
-// DOUBLE-CRASH-BEG: if you don't care about these errors you may set ASAN_OPTIONS=detect_container_overflow=0
+  // DOUBLE-CRASH-BEG: AddressSanitizer: container-overflow
+  // DOUBLE-CRASH-BEG: if you don't care about these errors you may set ASAN_OPTIONS=detect_container_overflow=0
   return (int)t[15 * one];
 }
 
@@ -79,21 +79,21 @@ int DoubleEndedTestCrashEnd() {
   t[85] = 0;
   __sanitizer_annotate_double_ended_contiguous_container(
       &t[0], &t[0] + 100, &t[0], &t[0] + 100, &t[0] + 25, &t[0] + 75);
-// DOUBLE-CRASH-END: AddressSanitizer: container-overflow
-// DOUBLE-CRASH-END: if you don't care about these errors you may set ASAN_OPTIONS=detect_container_overflow=0
+  // DOUBLE-CRASH-END: AddressSanitizer: container-overflow
+  // DOUBLE-CRASH-END: if you don't care about these errors you may set ASAN_OPTIONS=detect_container_overflow=0
   return (int)t[85 * one];
 }
 
 void DoubleEndedBadBounds() {
   long t[100];
-// DOUBLE-BAD-BOUNDS: ERROR: AddressSanitizer: bad parameters to __sanitizer_annotate_double_ended_contiguous_container
+  // DOUBLE-BAD-BOUNDS: ERROR: AddressSanitizer: bad parameters to __sanitizer_annotate_double_ended_contiguous_container
   __sanitizer_annotate_double_ended_contiguous_container(
       &t[0], &t[0] + 100, &t[0], &t[0] + 100, &t[0] + 75, &t[0] + 25);
 }
 
 void DoubleEndedUnalignedBadBounds() {
   char t[100];
-// DOUBLE-UNALIGNED-BAD-BOUNDS: ERROR: AddressSanitizer: bad parameters to __sanitizer_annotate_double_ended_contiguous_container
+  // DOUBLE-UNALIGNED-BAD-BOUNDS: ERROR: AddressSanitizer: bad parameters to __sanitizer_annotate_double_ended_contiguous_container
   __sanitizer_annotate_double_ended_contiguous_container(
       &t[1], &t[0] + 100, &t[0], &t[0] + 100, &t[0] + 25, &t[0] + 75);
 }
@@ -103,7 +103,7 @@ int DoubleEndedOddAlignment() {
   t[5] = 0;
   __sanitizer_annotate_double_ended_contiguous_container(
       &t[1], &t[0] + 100, &t[1], &t[0] + 100, &t[1] + 10, &t[1] + 60);
-// DOUBLE-CRASH-BEG: AddressSanitizer: container-overflow
+  // DOUBLE-CRASH-BEG: AddressSanitizer: container-overflow
   return (int)t[5 * one];
 }
 
@@ -112,7 +112,7 @@ int DoubleEndedOddAlignmentEnd() {
   t[95] = 0;
   __sanitizer_annotate_double_ended_contiguous_container(
       &t[0], &t[0] + 99, &t[0], &t[0] + 99, &t[0] + 10, &t[0] + 90);
-// DOUBLE-CRASH-END: AddressSanitizer: container-overflow
+  // DOUBLE-CRASH-END: AddressSanitizer: container-overflow
   return (int)t[95 * one];
 }
 
