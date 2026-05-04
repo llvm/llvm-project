@@ -247,3 +247,83 @@ add_header_library(
     libc.hdr.errno_macros
     libc.include.sys_syscall
 )
+
+add_header_library(
+  statx
+  HDRS
+    statx.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  mkdir
+  HDRS
+    mkdir.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.hdr.fcntl_macros
+    libc.hdr.types.mode_t
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  mkdirat
+  HDRS
+    mkdirat.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.hdr.types.mode_t
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  chmod
+  HDRS
+    chmod.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.hdr.fcntl_macros
+    libc.hdr.types.mode_t
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  fchmod
+  HDRS
+    fchmod.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.hdr.types.mode_t
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  fchmodat
+  HDRS
+    fchmodat.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.hdr.types.mode_t
+    libc.include.sys_syscall
+)
+
