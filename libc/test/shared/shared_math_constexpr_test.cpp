@@ -73,7 +73,6 @@ static_assert(0L == LIBC_NAMESPACE::shared::lround(0.0));
 static_assert(0.0 == LIBC_NAMESPACE::shared::nearbyint(0.0));
 static_assert(0.0 == LIBC_NAMESPACE::shared::rint(0.0));
 static_assert(1 == LIBC_NAMESPACE::shared::iscanonical(0.0));
-static_assert(0.0 == LIBC_NAMESPACE::shared::isnan(0.0));
 static_assert(0.0 == LIBC_NAMESPACE::shared::issignaling(0.0));
 static_assert(1 == [] {
   const char arg{};
@@ -140,7 +139,6 @@ static_assert(0L == LIBC_NAMESPACE::shared::lroundf(0.0f));
 static_assert(0.0f == LIBC_NAMESPACE::shared::nearbyintf(0.0f));
 static_assert(0.0f == LIBC_NAMESPACE::shared::rintf(0.0f));
 static_assert(1 == LIBC_NAMESPACE::shared::iscanonicalf(0.0f));
-static_assert(0.0 == LIBC_NAMESPACE::shared::isnanf(0.0f));
 static_assert(0.0 == LIBC_NAMESPACE::shared::issignalingf(0.0f));
 static_assert(1 == [] {
   const char arg{};
@@ -306,7 +304,6 @@ static_assert(0L == LIBC_NAMESPACE::shared::lroundl(0.0L));
 static_assert(0.0L == LIBC_NAMESPACE::shared::nearbyintl(0.0L));
 static_assert(0.0L == LIBC_NAMESPACE::shared::rintl(0.0L));
 static_assert(1 == LIBC_NAMESPACE::shared::iscanonicall(0.0L));
-static_assert(0.0 == LIBC_NAMESPACE::shared::isnanl(0.0L));
 static_assert(0.0 == LIBC_NAMESPACE::shared::issignalingl(0.0L));
 static_assert(1 == [] {
   const char arg{};

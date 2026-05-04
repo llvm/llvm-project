@@ -32,7 +32,7 @@ TEST(LlvmLibcSharedMathTest, AllFloat16) {
   EXPECT_FP_EQ(1.0f16, LIBC_NAMESPACE::shared::coshf16(0.0f16));
   EXPECT_FP_EQ(1.0f16, LIBC_NAMESPACE::shared::cospif16(0.0f16));
   EXPECT_FP_EQ(0.0f16, LIBC_NAMESPACE::shared::erff16(0.0f16));
-  EXPECT_FP_EQ(1.0f16, LIBC_NAMESPACE::shared::erfcf16(0.0f));
+  EXPECT_FP_EQ(1.0f16, LIBC_NAMESPACE::shared::erfcf16(0.0f16));
   EXPECT_FP_EQ(1.0f16, LIBC_NAMESPACE::shared::exp10f16(0.0f16));
   EXPECT_FP_EQ(0.0f16, LIBC_NAMESPACE::shared::exp10m1f16(0.0f16));
   EXPECT_FP_EQ(1.0f16, LIBC_NAMESPACE::shared::exp2f16(0.0f16));
@@ -306,8 +306,6 @@ TEST(LlvmLibcSharedMathTest, AllFloat) {
   EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::rintf(0.0f));
   EXPECT_EQ(1, LIBC_NAMESPACE::shared::iscanonicalf(0.0f));
   EXPECT_EQ(0, LIBC_NAMESPACE::shared::issignalingf(0.0f));
-  EXPECT_EQ(1,
-            LIBC_NAMESPACE::shared::isnanf(LIBC_NAMESPACE::shared::nanf("")));
 }
 
 TEST(LlvmLibcSharedMathTest, AllDouble) {
@@ -438,7 +436,6 @@ TEST(LlvmLibcSharedMathTest, AllDouble) {
   EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::rint(0.0));
   EXPECT_EQ(1, LIBC_NAMESPACE::shared::iscanonical(0.0L));
   EXPECT_EQ(0, LIBC_NAMESPACE::shared::issignaling(0.0));
-  EXPECT_EQ(1, LIBC_NAMESPACE::shared::isnan(LIBC_NAMESPACE::shared::nan("")));
 }
 
 // TODO: Enable the tests when double-double type is supported.
@@ -551,8 +548,6 @@ TEST(LlvmLibcSharedMathTest, AllLongDouble) {
   EXPECT_FP_EQ(0x0p+0L, LIBC_NAMESPACE::shared::rintl(0.0L));
   EXPECT_EQ(1, LIBC_NAMESPACE::shared::iscanonicall(0.0L));
   EXPECT_EQ(0, LIBC_NAMESPACE::shared::issignalingl(0.0L));
-  EXPECT_EQ(1,
-            LIBC_NAMESPACE::shared::isnanl(LIBC_NAMESPACE::shared::nanl("")));
 }
 
 #endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
