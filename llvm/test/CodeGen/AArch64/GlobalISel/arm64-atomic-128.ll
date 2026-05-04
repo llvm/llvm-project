@@ -27,9 +27,7 @@ define void @val_compare_and_swap(ptr %p, i128 %oldval, i128 %newval) {
 ; CHECK-LLSC-O1-NEXT:    stxp w10, x4, x5, [x0]
 ; CHECK-LLSC-O1-NEXT:    cbnz w10, .LBB0_1
 ; CHECK-LLSC-O1-NEXT:  .LBB0_4:
-; CHECK-LLSC-O1-NEXT:    mov v0.d[0], x8
-; CHECK-LLSC-O1-NEXT:    mov v0.d[1], x9
-; CHECK-LLSC-O1-NEXT:    str q0, [x0]
+; CHECK-LLSC-O1-NEXT:    stp x8, x9, [x0]
 ; CHECK-LLSC-O1-NEXT:    ret
 ;
 ; CHECK-OUTLINE-LLSC-O1-LABEL: val_compare_and_swap:
@@ -45,9 +43,7 @@ define void @val_compare_and_swap(ptr %p, i128 %oldval, i128 %newval) {
 ; CHECK-OUTLINE-LLSC-O1-NEXT:    mov x3, x5
 ; CHECK-OUTLINE-LLSC-O1-NEXT:    mov x4, x19
 ; CHECK-OUTLINE-LLSC-O1-NEXT:    bl __aarch64_cas16_acq
-; CHECK-OUTLINE-LLSC-O1-NEXT:    mov v0.d[0], x0
-; CHECK-OUTLINE-LLSC-O1-NEXT:    mov v0.d[1], x1
-; CHECK-OUTLINE-LLSC-O1-NEXT:    str q0, [x19]
+; CHECK-OUTLINE-LLSC-O1-NEXT:    stp x0, x1, [x19]
 ; CHECK-OUTLINE-LLSC-O1-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
 ; CHECK-OUTLINE-LLSC-O1-NEXT:    ret
 ;
@@ -58,9 +54,7 @@ define void @val_compare_and_swap(ptr %p, i128 %oldval, i128 %newval) {
 ; CHECK-CAS-O1-NEXT:    // kill: def $x3 killed $x3 killed $x2_x3 def $x2_x3
 ; CHECK-CAS-O1-NEXT:    // kill: def $x5 killed $x5 killed $x4_x5 def $x4_x5
 ; CHECK-CAS-O1-NEXT:    caspa x2, x3, x4, x5, [x0]
-; CHECK-CAS-O1-NEXT:    mov v0.d[0], x2
-; CHECK-CAS-O1-NEXT:    mov v0.d[1], x3
-; CHECK-CAS-O1-NEXT:    str q0, [x0]
+; CHECK-CAS-O1-NEXT:    stp x2, x3, [x0]
 ; CHECK-CAS-O1-NEXT:    ret
 ;
 ; CHECK-LLSC-O0-LABEL: val_compare_and_swap:
@@ -154,9 +148,7 @@ define void @val_compare_and_swap_monotonic_seqcst(ptr %p, i128 %oldval, i128 %n
 ; CHECK-LLSC-O1-NEXT:    stlxp w10, x4, x5, [x0]
 ; CHECK-LLSC-O1-NEXT:    cbnz w10, .LBB1_1
 ; CHECK-LLSC-O1-NEXT:  .LBB1_4:
-; CHECK-LLSC-O1-NEXT:    mov v0.d[0], x8
-; CHECK-LLSC-O1-NEXT:    mov v0.d[1], x9
-; CHECK-LLSC-O1-NEXT:    str q0, [x0]
+; CHECK-LLSC-O1-NEXT:    stp x8, x9, [x0]
 ; CHECK-LLSC-O1-NEXT:    ret
 ;
 ; CHECK-OUTLINE-LLSC-O1-LABEL: val_compare_and_swap_monotonic_seqcst:
@@ -172,9 +164,7 @@ define void @val_compare_and_swap_monotonic_seqcst(ptr %p, i128 %oldval, i128 %n
 ; CHECK-OUTLINE-LLSC-O1-NEXT:    mov x3, x5
 ; CHECK-OUTLINE-LLSC-O1-NEXT:    mov x4, x19
 ; CHECK-OUTLINE-LLSC-O1-NEXT:    bl __aarch64_cas16_acq_rel
-; CHECK-OUTLINE-LLSC-O1-NEXT:    mov v0.d[0], x0
-; CHECK-OUTLINE-LLSC-O1-NEXT:    mov v0.d[1], x1
-; CHECK-OUTLINE-LLSC-O1-NEXT:    str q0, [x19]
+; CHECK-OUTLINE-LLSC-O1-NEXT:    stp x0, x1, [x19]
 ; CHECK-OUTLINE-LLSC-O1-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
 ; CHECK-OUTLINE-LLSC-O1-NEXT:    ret
 ;
@@ -185,9 +175,7 @@ define void @val_compare_and_swap_monotonic_seqcst(ptr %p, i128 %oldval, i128 %n
 ; CHECK-CAS-O1-NEXT:    // kill: def $x3 killed $x3 killed $x2_x3 def $x2_x3
 ; CHECK-CAS-O1-NEXT:    // kill: def $x5 killed $x5 killed $x4_x5 def $x4_x5
 ; CHECK-CAS-O1-NEXT:    caspal x2, x3, x4, x5, [x0]
-; CHECK-CAS-O1-NEXT:    mov v0.d[0], x2
-; CHECK-CAS-O1-NEXT:    mov v0.d[1], x3
-; CHECK-CAS-O1-NEXT:    str q0, [x0]
+; CHECK-CAS-O1-NEXT:    stp x2, x3, [x0]
 ; CHECK-CAS-O1-NEXT:    ret
 ;
 ; CHECK-LLSC-O0-LABEL: val_compare_and_swap_monotonic_seqcst:
@@ -281,9 +269,7 @@ define void @val_compare_and_swap_release_acquire(ptr %p, i128 %oldval, i128 %ne
 ; CHECK-LLSC-O1-NEXT:    stlxp w10, x4, x5, [x0]
 ; CHECK-LLSC-O1-NEXT:    cbnz w10, .LBB2_1
 ; CHECK-LLSC-O1-NEXT:  .LBB2_4:
-; CHECK-LLSC-O1-NEXT:    mov v0.d[0], x8
-; CHECK-LLSC-O1-NEXT:    mov v0.d[1], x9
-; CHECK-LLSC-O1-NEXT:    str q0, [x0]
+; CHECK-LLSC-O1-NEXT:    stp x8, x9, [x0]
 ; CHECK-LLSC-O1-NEXT:    ret
 ;
 ; CHECK-OUTLINE-LLSC-O1-LABEL: val_compare_and_swap_release_acquire:
@@ -299,9 +285,7 @@ define void @val_compare_and_swap_release_acquire(ptr %p, i128 %oldval, i128 %ne
 ; CHECK-OUTLINE-LLSC-O1-NEXT:    mov x3, x5
 ; CHECK-OUTLINE-LLSC-O1-NEXT:    mov x4, x19
 ; CHECK-OUTLINE-LLSC-O1-NEXT:    bl __aarch64_cas16_acq_rel
-; CHECK-OUTLINE-LLSC-O1-NEXT:    mov v0.d[0], x0
-; CHECK-OUTLINE-LLSC-O1-NEXT:    mov v0.d[1], x1
-; CHECK-OUTLINE-LLSC-O1-NEXT:    str q0, [x19]
+; CHECK-OUTLINE-LLSC-O1-NEXT:    stp x0, x1, [x19]
 ; CHECK-OUTLINE-LLSC-O1-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
 ; CHECK-OUTLINE-LLSC-O1-NEXT:    ret
 ;
@@ -312,9 +296,7 @@ define void @val_compare_and_swap_release_acquire(ptr %p, i128 %oldval, i128 %ne
 ; CHECK-CAS-O1-NEXT:    // kill: def $x3 killed $x3 killed $x2_x3 def $x2_x3
 ; CHECK-CAS-O1-NEXT:    // kill: def $x5 killed $x5 killed $x4_x5 def $x4_x5
 ; CHECK-CAS-O1-NEXT:    caspal x2, x3, x4, x5, [x0]
-; CHECK-CAS-O1-NEXT:    mov v0.d[0], x2
-; CHECK-CAS-O1-NEXT:    mov v0.d[1], x3
-; CHECK-CAS-O1-NEXT:    str q0, [x0]
+; CHECK-CAS-O1-NEXT:    stp x2, x3, [x0]
 ; CHECK-CAS-O1-NEXT:    ret
 ;
 ; CHECK-LLSC-O0-LABEL: val_compare_and_swap_release_acquire:
@@ -408,9 +390,7 @@ define void @val_compare_and_swap_monotonic(ptr %p, i128 %oldval, i128 %newval) 
 ; CHECK-LLSC-O1-NEXT:    stlxp w10, x4, x5, [x0]
 ; CHECK-LLSC-O1-NEXT:    cbnz w10, .LBB3_1
 ; CHECK-LLSC-O1-NEXT:  .LBB3_4:
-; CHECK-LLSC-O1-NEXT:    mov v0.d[0], x8
-; CHECK-LLSC-O1-NEXT:    mov v0.d[1], x9
-; CHECK-LLSC-O1-NEXT:    str q0, [x0]
+; CHECK-LLSC-O1-NEXT:    stp x8, x9, [x0]
 ; CHECK-LLSC-O1-NEXT:    ret
 ;
 ; CHECK-OUTLINE-LLSC-O1-LABEL: val_compare_and_swap_monotonic:
@@ -426,9 +406,7 @@ define void @val_compare_and_swap_monotonic(ptr %p, i128 %oldval, i128 %newval) 
 ; CHECK-OUTLINE-LLSC-O1-NEXT:    mov x3, x5
 ; CHECK-OUTLINE-LLSC-O1-NEXT:    mov x4, x19
 ; CHECK-OUTLINE-LLSC-O1-NEXT:    bl __aarch64_cas16_acq_rel
-; CHECK-OUTLINE-LLSC-O1-NEXT:    mov v0.d[0], x0
-; CHECK-OUTLINE-LLSC-O1-NEXT:    mov v0.d[1], x1
-; CHECK-OUTLINE-LLSC-O1-NEXT:    str q0, [x19]
+; CHECK-OUTLINE-LLSC-O1-NEXT:    stp x0, x1, [x19]
 ; CHECK-OUTLINE-LLSC-O1-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
 ; CHECK-OUTLINE-LLSC-O1-NEXT:    ret
 ;
@@ -439,9 +417,7 @@ define void @val_compare_and_swap_monotonic(ptr %p, i128 %oldval, i128 %newval) 
 ; CHECK-CAS-O1-NEXT:    // kill: def $x3 killed $x3 killed $x2_x3 def $x2_x3
 ; CHECK-CAS-O1-NEXT:    // kill: def $x5 killed $x5 killed $x4_x5 def $x4_x5
 ; CHECK-CAS-O1-NEXT:    caspal x2, x3, x4, x5, [x0]
-; CHECK-CAS-O1-NEXT:    mov v0.d[0], x2
-; CHECK-CAS-O1-NEXT:    mov v0.d[1], x3
-; CHECK-CAS-O1-NEXT:    str q0, [x0]
+; CHECK-CAS-O1-NEXT:    stp x2, x3, [x0]
 ; CHECK-CAS-O1-NEXT:    ret
 ;
 ; CHECK-LLSC-O0-LABEL: val_compare_and_swap_monotonic:
@@ -525,9 +501,7 @@ define void @atomic_load_relaxed(i64, i64, ptr %p, ptr %p2) {
 ; CHECK-LLSC-O1-NEXT:    stxp w10, x9, x8, [x2]
 ; CHECK-LLSC-O1-NEXT:    cbnz w10, .LBB4_1
 ; CHECK-LLSC-O1-NEXT:  // %bb.2: // %atomicrmw.end
-; CHECK-LLSC-O1-NEXT:    mov v0.d[0], x9
-; CHECK-LLSC-O1-NEXT:    mov v0.d[1], x8
-; CHECK-LLSC-O1-NEXT:    str q0, [x3]
+; CHECK-LLSC-O1-NEXT:    stp x9, x8, [x3]
 ; CHECK-LLSC-O1-NEXT:    ret
 ;
 ; CHECK-OUTLINE-LLSC-O1-LABEL: atomic_load_relaxed:
@@ -538,9 +512,7 @@ define void @atomic_load_relaxed(i64, i64, ptr %p, ptr %p2) {
 ; CHECK-OUTLINE-LLSC-O1-NEXT:    stxp w10, x9, x8, [x2]
 ; CHECK-OUTLINE-LLSC-O1-NEXT:    cbnz w10, .LBB4_1
 ; CHECK-OUTLINE-LLSC-O1-NEXT:  // %bb.2: // %atomicrmw.end
-; CHECK-OUTLINE-LLSC-O1-NEXT:    mov v0.d[0], x9
-; CHECK-OUTLINE-LLSC-O1-NEXT:    mov v0.d[1], x8
-; CHECK-OUTLINE-LLSC-O1-NEXT:    str q0, [x3]
+; CHECK-OUTLINE-LLSC-O1-NEXT:    stp x9, x8, [x3]
 ; CHECK-OUTLINE-LLSC-O1-NEXT:    ret
 ;
 ; CHECK-CAS-O1-LABEL: atomic_load_relaxed:
@@ -548,9 +520,7 @@ define void @atomic_load_relaxed(i64, i64, ptr %p, ptr %p2) {
 ; CHECK-CAS-O1-NEXT:    mov x0, xzr
 ; CHECK-CAS-O1-NEXT:    mov x1, xzr
 ; CHECK-CAS-O1-NEXT:    casp x0, x1, x0, x1, [x2]
-; CHECK-CAS-O1-NEXT:    mov v0.d[0], x0
-; CHECK-CAS-O1-NEXT:    mov v0.d[1], x1
-; CHECK-CAS-O1-NEXT:    str q0, [x3]
+; CHECK-CAS-O1-NEXT:    stp x0, x1, [x3]
 ; CHECK-CAS-O1-NEXT:    ret
 ;
 ; CHECK-LLSC-O0-LABEL: atomic_load_relaxed:

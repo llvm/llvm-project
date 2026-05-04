@@ -383,13 +383,11 @@ define i128 @gep4(ptr %p, i128 %a, i64 %b) {
 ; CHECK0-GISEL-LABEL: gep4:
 ; CHECK0-GISEL:       // %bb.0:
 ; CHECK0-GISEL-NEXT:    add x8, x0, x4, lsl #4
-; CHECK0-GISEL-NEXT:    mov v0.d[0], x2
-; CHECK0-GISEL-NEXT:    ldr q1, [x8]
-; CHECK0-GISEL-NEXT:    mov d2, v1.d[1]
-; CHECK0-GISEL-NEXT:    mov v0.d[1], x3
-; CHECK0-GISEL-NEXT:    fmov x0, d1
-; CHECK0-GISEL-NEXT:    fmov x1, d2
-; CHECK0-GISEL-NEXT:    str q0, [x8]
+; CHECK0-GISEL-NEXT:    ldr q0, [x8]
+; CHECK0-GISEL-NEXT:    stp x2, x3, [x8]
+; CHECK0-GISEL-NEXT:    mov d1, v0.d[1]
+; CHECK0-GISEL-NEXT:    fmov x0, d0
+; CHECK0-GISEL-NEXT:    fmov x1, d1
 ; CHECK0-GISEL-NEXT:    ret
 ;
 ; CHECK3-SDAG-LABEL: gep4:
@@ -401,14 +399,12 @@ define i128 @gep4(ptr %p, i128 %a, i64 %b) {
 ;
 ; CHECK3-GISEL-LABEL: gep4:
 ; CHECK3-GISEL:       // %bb.0:
-; CHECK3-GISEL-NEXT:    ldr q1, [x0, x4, lsl #4]
-; CHECK3-GISEL-NEXT:    mov v0.d[0], x2
-; CHECK3-GISEL-NEXT:    mov x8, x0
-; CHECK3-GISEL-NEXT:    mov d2, v1.d[1]
-; CHECK3-GISEL-NEXT:    fmov x0, d1
-; CHECK3-GISEL-NEXT:    mov v0.d[1], x3
-; CHECK3-GISEL-NEXT:    fmov x1, d2
-; CHECK3-GISEL-NEXT:    str q0, [x8, x4, lsl #4]
+; CHECK3-GISEL-NEXT:    ldr q0, [x0, x4, lsl #4]
+; CHECK3-GISEL-NEXT:    add x8, x0, x4, lsl #4
+; CHECK3-GISEL-NEXT:    mov d1, v0.d[1]
+; CHECK3-GISEL-NEXT:    fmov x0, d0
+; CHECK3-GISEL-NEXT:    stp x2, x3, [x8]
+; CHECK3-GISEL-NEXT:    fmov x1, d1
 ; CHECK3-GISEL-NEXT:    ret
   %g = getelementptr inbounds i128, ptr %p, i64 %b
   %l = load i128, ptr %g

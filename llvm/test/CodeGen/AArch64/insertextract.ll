@@ -1390,20 +1390,18 @@ define <2 x i128> @insert_v2i128_c(<2 x i128> %a, i128 %b, i32 %c) {
 ; CHECK-GI-NEXT:    .cfi_offset w30, -8
 ; CHECK-GI-NEXT:    .cfi_offset w29, -16
 ; CHECK-GI-NEXT:    adds x8, x0, x0
-; CHECK-GI-NEXT:    mov v2.d[0], x4
+; CHECK-GI-NEXT:    mov w11, w6
+; CHECK-GI-NEXT:    mov x12, sp
 ; CHECK-GI-NEXT:    adc x9, x1, x1
-; CHECK-GI-NEXT:    mov v0.d[0], x8
-; CHECK-GI-NEXT:    adds x8, x2, x2
-; CHECK-GI-NEXT:    mov v1.d[0], x8
-; CHECK-GI-NEXT:    adc x8, x3, x3
-; CHECK-GI-NEXT:    mov v2.d[1], x5
-; CHECK-GI-NEXT:    mov v0.d[1], x9
-; CHECK-GI-NEXT:    mov x9, sp
-; CHECK-GI-NEXT:    mov v1.d[1], x8
-; CHECK-GI-NEXT:    mov w8, w6
-; CHECK-GI-NEXT:    and x8, x8, #0x1
-; CHECK-GI-NEXT:    stp q0, q1, [sp]
-; CHECK-GI-NEXT:    str q2, [x9, x8, lsl #4]
+; CHECK-GI-NEXT:    and x11, x11, #0x1
+; CHECK-GI-NEXT:    adds x10, x2, x2
+; CHECK-GI-NEXT:    stp x8, x9, [sp]
+; CHECK-GI-NEXT:    mov w8, #16 // =0x10
+; CHECK-GI-NEXT:    adc x9, x3, x3
+; CHECK-GI-NEXT:    umaddl x8, w11, w8, x12
+; CHECK-GI-NEXT:    str x10, [sp, #16]
+; CHECK-GI-NEXT:    stur x9, [x12, #24]
+; CHECK-GI-NEXT:    stp x4, x5, [x8]
 ; CHECK-GI-NEXT:    ldp q0, q1, [sp]
 ; CHECK-GI-NEXT:    mov d2, v0.d[1]
 ; CHECK-GI-NEXT:    mov d3, v1.d[1]
@@ -2887,18 +2885,16 @@ define i128 @extract_v2i128_c(<2 x i128> %a, i32 %c) {
 ; CHECK-GI-NEXT:    .cfi_offset w30, -8
 ; CHECK-GI-NEXT:    .cfi_offset w29, -16
 ; CHECK-GI-NEXT:    adds x8, x0, x0
+; CHECK-GI-NEXT:    mov x11, sp
 ; CHECK-GI-NEXT:    adc x9, x1, x1
-; CHECK-GI-NEXT:    mov v0.d[0], x8
-; CHECK-GI-NEXT:    adds x8, x2, x2
-; CHECK-GI-NEXT:    mov v1.d[0], x8
+; CHECK-GI-NEXT:    adds x10, x2, x2
+; CHECK-GI-NEXT:    stp x8, x9, [sp]
 ; CHECK-GI-NEXT:    adc x8, x3, x3
-; CHECK-GI-NEXT:    mov v0.d[1], x9
-; CHECK-GI-NEXT:    mov x9, sp
-; CHECK-GI-NEXT:    mov v1.d[1], x8
-; CHECK-GI-NEXT:    mov w8, w4
-; CHECK-GI-NEXT:    and x8, x8, #0x1
-; CHECK-GI-NEXT:    stp q0, q1, [sp]
-; CHECK-GI-NEXT:    ldr q0, [x9, x8, lsl #4]
+; CHECK-GI-NEXT:    mov w9, w4
+; CHECK-GI-NEXT:    str x10, [sp, #16]
+; CHECK-GI-NEXT:    stur x8, [x11, #24]
+; CHECK-GI-NEXT:    and x8, x9, #0x1
+; CHECK-GI-NEXT:    ldr q0, [x11, x8, lsl #4]
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NEXT:    fmov x0, d0
 ; CHECK-GI-NEXT:    fmov x1, d1
