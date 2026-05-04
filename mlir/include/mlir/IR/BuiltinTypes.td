@@ -1238,6 +1238,26 @@ def Builtin_RankedTensor : Builtin_Type<"RankedTensor", "tensor", [
 }
 
 //===----------------------------------------------------------------------===//
+// TokenType
+//===----------------------------------------------------------------------===//
+
+def Builtin_Token : Builtin_Type<"Token", "token"> {
+  let summary = "Token type";
+  let description = [{
+    Syntax:
+
+    ```
+    token-type ::= `token`
+    ```
+
+    A use of a token SSA value is a pointer to an operation (in case of an
+    OpResult) or a pointer to a region (in case of an entry block argument).
+    A token carries no runtime data and cannot be forwarded. Tokens are
+    excluded from the `AnyType` type constraint.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // TupleType
 //===----------------------------------------------------------------------===//
 
