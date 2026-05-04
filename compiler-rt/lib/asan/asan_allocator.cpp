@@ -788,7 +788,7 @@ struct Allocator {
     QuarantineChunk(m, ptr, stack);
   }
 
-  void *Reallocate(void *old_ptr, uptr new_size, BufferedStackTrace *stack,
+  void* Reallocate(void* old_ptr, uptr new_size, BufferedStackTrace* stack,
                    uptr alignment = 8) {
     CHECK(old_ptr && new_size);
     uptr p = reinterpret_cast<uptr>(old_ptr);
@@ -799,7 +799,7 @@ struct Allocator {
     thread_stats.reallocs++;
     thread_stats.realloced += new_size;
 
-    void *new_ptr = Allocate(new_size, alignment, stack, FROM_MALLOC, true);
+    void* new_ptr = Allocate(new_size, alignment, stack, FROM_MALLOC, true);
     if (new_ptr) {
       u8 chunk_state = atomic_load(&m->chunk_state, memory_order_acquire);
       if (chunk_state != CHUNK_ALLOCATED)
