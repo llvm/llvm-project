@@ -36,10 +36,9 @@
 // TWO-IGNORE-LISTS-DAG: x.h
 // TWO-IGNORE-LISTS-DAG: dependency-gen.c
 
-// RUN: %clang -MD -MF - %s -fsyntax-only -resource-dir=%S/Inputs/resource_dir_with_sanitizer_ignorelist -fsanitize=undefined -flto -fvisibility=hidden -I ./ | FileCheck %if sanitizer-ignorelists %{ -check-prefix=USER-AND-SYS-DEPS-IGNORELIST %} %else %{ -check-prefix USER-AND-SYS-DEPS-NO-IGNORELIST %} %s
-// USER-AND-SYS-DEPS-IGNORELIST: dependency-gen.o:
-// USER-AND-SYS-DEPS-IGNORELIST-DAG: ubsan_ignorelist.txt
-// USER-AND-SYS-DEPS-NO-IGNORELIST: dependency-gen.o:
+// RUN: %clang -MD -MF - %s -fsyntax-only -resource-dir=%S/Inputs/resource_dir_with_sanitizer_ignorelist -fsanitize=undefined -flto -fvisibility=hidden -I ./ | FileCheck -check-prefix=USER-AND-SYS-DEPS %s
+// USER-AND-SYS-DEPS: dependency-gen.o:
+// USER-AND-SYS-DEPS-DAG: ubsan_ignorelist.txt
 
 // RUN: %clang -MMD -MF - %s -fsyntax-only -resource-dir=%S/Inputs/resource_dir_with_sanitizer_ignorelist -fsanitize=undefined -flto -fvisibility=hidden -I ./ | FileCheck -check-prefix=ONLY-USER-DEPS %s
 // ONLY-USER-DEPS: dependency-gen.o:

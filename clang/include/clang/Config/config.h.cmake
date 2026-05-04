@@ -91,7 +91,4 @@
 /* Policy to use for xcselect */
 #cmakedefine CLANG_XCSELECT_HOST_SDK_POLICY ${CLANG_XCSELECT_HOST_SDK_POLICY}
 
-/* Whether to use the default sanitizer ignorelists in the clang resource directory */
-#cmakedefine01 CLANG_ENABLE_SANITIZER_SYSTEM_IGNORELISTS
-
 #endif
