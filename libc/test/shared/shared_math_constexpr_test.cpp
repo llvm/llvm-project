@@ -35,11 +35,9 @@ static_assert(0.0 == LIBC_NAMESPACE::shared::ufromfp(0.0, 0, 32));
 static_assert(0.0 == LIBC_NAMESPACE::shared::ufromfpx(0.0, 0, 32));
 static_assert(0.0 == LIBC_NAMESPACE::shared::fmaximum_mag(0.0, 0.0));
 static_assert(0.0 == LIBC_NAMESPACE::shared::fminimum_mag(0.0, 0.0));
-static_assert(42.0 == [] {
-  double nan = LIBC_NAMESPACE::fputil::FPBits<double>::quiet_nan(
-                   LIBC_NAMESPACE::Sign::POS, 42)
-                   .get_val();
-  return LIBC_NAMESPACE::shared::getpayload(&nan);
+static_assert(-1.0 == [] {
+  double getpayload_x = 0.0;
+  return LIBC_NAMESPACE::shared::getpayload(&getpayload_x);
 }());
 
 constexpr double TOTALORDER_X = 0.0;
