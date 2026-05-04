@@ -79,17 +79,6 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace std::chrono;
 
-void Process::DelayedBreakpointCache::Enqueue(lldb::BreakpointSiteSP site,
-                                              BreakpointAction action) {
-  auto [previous, inserted] = m_site_to_action.insert({site, action});
-  // New site or already enqueued for the same action.
-  if (inserted || previous->second == action)
-    return;
-  // Previously enqueued for the opposite action, don't update the site.
-  m_site_to_action.erase(previous);
-  assert(site->m_enabled == (action == BreakpointAction::Enable));
-}
-
 class ProcessOptionValueProperties
     : public Cloneable<ProcessOptionValueProperties, OptionValueProperties> {
 public:
@@ -329,12 +318,6 @@ bool ProcessProperties::GetWarningsUnsupportedLanguage() const {
 
 bool ProcessProperties::GetStopOnExec() const {
   const uint32_t idx = ePropertyStopOnExec;
-  return GetPropertyAtIndexAs<bool>(
-      idx, g_process_properties[idx].default_uint_value != 0);
-}
-
-bool ProcessProperties::GetUseDelayedBreakpoints() const {
-  const uint32_t idx = ePropertyUseDelayedBreakpoints;
   return GetPropertyAtIndexAs<bool>(
       idx, g_process_properties[idx].default_uint_value != 0);
 }
@@ -1563,8 +1546,7 @@ Process::GetBreakpointSiteList() const {
 
 void Process::DisableAllBreakpointSites() {
   m_breakpoint_site_list.ForEach([this](BreakpointSite *bp_site) -> void {
-    llvm::consumeError(
-        ExecuteBreakpointSiteAction(*bp_site, BreakpointAction::Disable));
+    DisableBreakpointSite(bp_site);
   });
 }
 
@@ -1582,8 +1564,7 @@ Status Process::DisableBreakpointSiteByID(lldb::user_id_t break_id) {
   BreakpointSiteSP bp_site_sp = m_breakpoint_site_list.FindByID(break_id);
   if (bp_site_sp) {
     if (IsBreakpointSiteEnabled(*bp_site_sp))
-      error = Status::FromError(
-          ExecuteBreakpointSiteAction(*bp_site_sp, BreakpointAction::Disable));
+      error = DisableBreakpointSite(bp_site_sp.get());
   } else {
     error = Status::FromErrorStringWithFormat(
         "invalid breakpoint site ID: %" PRIu64, break_id);
@@ -1592,40 +1573,12 @@ Status Process::DisableBreakpointSiteByID(lldb::user_id_t break_id) {
   return error;
 }
 
-llvm::Error Process::ExecuteBreakpointSiteAction(BreakpointSite &site,
-                                                 BreakpointAction action) {
-  auto site_sp = site.shared_from_this();
-  std::unique_lock<std::recursive_mutex> guard(m_delayed_breakpoints_mutex);
-
-  // Ignore requests that won't change the Site status.
-  if (IsBreakpointSiteEnabled(*site_sp) == (action == BreakpointAction::Enable))
-    return llvm::Error::success();
-
-  if (ShouldUseDelayedBreakpoints()) {
-    m_delayed_breakpoints.Enqueue(site_sp, action);
-    return llvm::Error::success();
-  }
-
-  m_delayed_breakpoints.RemoveSite(site_sp);
-  guard.unlock();
-
-  switch (action) {
-  case BreakpointAction::Enable:
-    return EnableBreakpointSite(site_sp.get()).takeError();
-  case BreakpointAction::Disable:
-    return DisableBreakpointSite(site_sp.get()).takeError();
-  }
-
-  llvm_unreachable("Unhandled BreakpointAction");
-}
-
 Status Process::EnableBreakpointSiteByID(lldb::user_id_t break_id) {
   Status error;
   BreakpointSiteSP bp_site_sp = m_breakpoint_site_list.FindByID(break_id);
   if (bp_site_sp) {
     if (!IsBreakpointSiteEnabled(*bp_site_sp))
-      error = Status::FromError(
-          ExecuteBreakpointSiteAction(*bp_site_sp, BreakpointAction::Enable));
+      error = EnableBreakpointSite(bp_site_sp.get());
   } else {
     error = Status::FromErrorStringWithFormat(
         "invalid breakpoint site ID: %" PRIu64, break_id);
@@ -1634,20 +1587,6 @@ Status Process::EnableBreakpointSiteByID(lldb::user_id_t break_id) {
 }
 
 bool Process::IsBreakpointSiteEnabled(const BreakpointSite &site) {
-  std::lock_guard<std::recursive_mutex> guard(m_delayed_breakpoints_mutex);
-
-  // `site` won't be mutated, but the cache stores mutable pointers.
-  auto it = m_delayed_breakpoints.m_site_to_action.find(
-      const_cast<BreakpointSite &>(site).shared_from_this());
-
-  // If no actions are delayed, use the current state of the site.
-  if (it == m_delayed_breakpoints.m_site_to_action.end())
-    return site.m_enabled;
-
-  return it->second == BreakpointAction::Enable;
-}
-
-bool Process::IsBreakpointSitePhysicallyEnabled(const BreakpointSite &site) {
   return site.m_enabled;
 }
 
@@ -1709,35 +1648,6 @@ static addr_t ComputeConstituentLoadAddress(BreakpointLocation &constituent,
   return resolved_address.GetOpcodeLoadAddress(&target);
 }
 
-llvm::Error Process::FlushDelayedBreakpoints() {
-  std::unique_lock<std::recursive_mutex> guard(m_delayed_breakpoints_mutex);
-
-  // Clear the cache in m_delayed_breakpoints so it can't affect the actual
-  // enabling of breakpoints. For example, if `EnableSoftwareBreakpoint` is
-  // called outside of FlushDelayedBreakpoints, it needs to check the delayed
-  // breakpoints and possibly early return. However, when called from
-  // FlushDelayedBreakpoints, the queue better be empty so that no early returns
-  // take place.
-  auto site_to_action = std::move(m_delayed_breakpoints.m_site_to_action);
-  m_delayed_breakpoints.m_site_to_action.clear();
-
-  guard.unlock();
-  // Use a copy of the cache so that iteration is safe.
-  return UpdateBreakpointSites(site_to_action);
-}
-
-llvm::Error Process::UpdateBreakpointSites(
-    const BreakpointSiteToActionMap &site_to_action) {
-  llvm::Error error = llvm::Error::success();
-  for (auto [site, action] : site_to_action) {
-    Status new_error = action == BreakpointAction::Enable
-                           ? EnableBreakpointSite(site.get())
-                           : DisableBreakpointSite(site.get());
-    error = llvm::joinErrors(std::move(error), new_error.takeError());
-  }
-  return error;
-}
-
 lldb::break_id_t
 Process::CreateBreakpointSite(const BreakpointLocationSP &constituent,
                               bool use_hardware) {
@@ -1757,15 +1667,7 @@ Process::CreateBreakpointSite(const BreakpointLocationSP &constituent,
 
   BreakpointSiteSP bp_site_sp(
       new BreakpointSite(constituent, load_addr, use_hardware));
-
-  bool bp_from_address =
-      constituent->GetBreakpoint().GetResolver()->GetResolverTy() ==
-      BreakpointResolver::ResolverTy::AddressResolver;
-  bool should_be_eager = use_hardware || bp_from_address;
-
-  auto error = should_be_eager ? EnableBreakpointSite(bp_site_sp.get())
-                               : Status::FromError(ExecuteBreakpointSiteAction(
-                                     *bp_site_sp, BreakpointAction::Enable));
+  Status error = EnableBreakpointSite(bp_site_sp.get());
   if (error.Success()) {
     constituent->SetBreakpointSite(bp_site_sp);
     return m_breakpoint_site_list.Add(bp_site_sp);
@@ -1790,8 +1692,7 @@ void Process::RemoveConstituentFromBreakpointSite(
   if (num_constituents == 0) {
     // Don't try to disable the site if we don't have a live process anymore.
     if (IsAlive())
-      llvm::consumeError(
-          ExecuteBreakpointSiteAction(*bp_site_sp, BreakpointAction::Disable));
+      DisableBreakpointSite(bp_site_sp.get());
     m_breakpoint_site_list.RemoveByAddress(bp_site_sp->GetLoadAddress());
   }
 }
@@ -3534,9 +3435,6 @@ Status Process::PrivateResume() {
             "Process::PrivateResume PreResumeActions failed, not resuming.");
       } else {
         m_mod_id.BumpResumeID();
-        if (auto E = FlushDelayedBreakpoints())
-          LLDB_LOG_ERROR(log, std::move(E),
-                         "Failed to update some delayed breakpoints: {0}");
         error = DoResume(direction);
         if (error.Success()) {
           DidResume();
@@ -3743,10 +3641,6 @@ Status Process::Detach(bool keep_stopped) {
 
     m_thread_list.DiscardThreadPlans();
     DisableAllBreakpointSites();
-    if (auto error = FlushDelayedBreakpoints())
-      LLDB_LOG_ERROR(
-          GetLog(LLDBLog::Process), std::move(error),
-          "Failed to update some delayed breakpoints during detach: {0}");
 
     error = DoDetach(keep_stopped);
     if (error.Success()) {
@@ -3816,10 +3710,6 @@ Status Process::DestroyImpl(bool force_kill) {
       // doing this now.
       m_thread_list.DiscardThreadPlans();
       DisableAllBreakpointSites();
-      if (auto error = FlushDelayedBreakpoints())
-        LLDB_LOG_ERROR(
-            GetLog(LLDBLog::Process), std::move(error),
-            "Failed to update some delayed breakpoints during destroy: {0}");
     }
 
     error = DoDestroy();
