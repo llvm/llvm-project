@@ -33,7 +33,7 @@ define dso_local void @func(ptr nocapture %a, ptr %b, i32 %N) local_unnamed_addr
 ;
 ; CGSCC: Function Attrs: nounwind uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@func
-; CGSCC-SAME: (ptr nofree captures(none) [[A:%.*]], ptr nofree [[B:%.*]], i32 [[N:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CGSCC-SAME: (ptr captures(none) [[A:%.*]], ptr [[B:%.*]], i32 [[N:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 8
 ; CGSCC-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 8
