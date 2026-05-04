@@ -702,11 +702,11 @@ define i8 @load_before_store_with_out_of_loop_def(i1 %c) {
 ; CHECK-LABEL: define i8 @load_before_store_with_out_of_loop_def(
 ; CHECK-SAME: i1 [[C:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    store i8 1, ptr @g1, align 1
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ @g1, %[[ENTRY]] ], [ @g2, %[[LOOP]] ]
 ; CHECK-NEXT:    [[V:%.*]] = load i8, ptr [[PHI]], align 1
+; CHECK-NEXT:    store i8 1, ptr @g1, align 1
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[V_LCSSA:%.*]] = phi i8 [ [[V]], %[[LOOP]] ]
