@@ -149,6 +149,9 @@ TEST(LlvmLibcSharedMathTest, AllFloat16) {
   EXPECT_EQ(0L, LIBC_NAMESPACE::shared::lroundf16(0.0f16));
   EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::nearbyintf16(0.0f16));
   EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::rintf16(0.0f16));
+  EXPECT_EQ(1, LIBC_NAMESPACE::shared::iscanonicalf16(0.0f16));
+  EXPECT_EQ(0, LIBC_NAMESPACE::shared::issignalingf16(0.0f16));
+  EXPECT_TRUE(FPBits(LIBC_NAMESPACE::shared::nanf16("")).is_nan());
 }
 
 #endif // LIBC_TYPES_HAS_FLOAT16
@@ -301,6 +304,10 @@ TEST(LlvmLibcSharedMathTest, AllFloat) {
   EXPECT_EQ(0LL, LIBC_NAMESPACE::shared::llroundf(0.0f));
   EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::nearbyintf(0.0f));
   EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::rintf(0.0f));
+  EXPECT_EQ(1, LIBC_NAMESPACE::shared::iscanonicalf(0.0f));
+  EXPECT_EQ(0, LIBC_NAMESPACE::shared::issignalingf(0.0f));
+  EXPECT_EQ(1,
+            LIBC_NAMESPACE::shared::isnanf(LIBC_NAMESPACE::shared::nanf("")));
 }
 
 TEST(LlvmLibcSharedMathTest, AllDouble) {
@@ -429,6 +436,9 @@ TEST(LlvmLibcSharedMathTest, AllDouble) {
   EXPECT_EQ(0LL, LIBC_NAMESPACE::shared::llround(0.0));
   EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::nearbyint(0.0));
   EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::rint(0.0));
+  EXPECT_EQ(1, LIBC_NAMESPACE::shared::iscanonical(0.0L));
+  EXPECT_EQ(0, LIBC_NAMESPACE::shared::issignaling(0.0));
+  EXPECT_EQ(1, LIBC_NAMESPACE::shared::isnan(LIBC_NAMESPACE::shared::nan("")));
 }
 
 // TODO: Enable the tests when double-double type is supported.
@@ -539,6 +549,10 @@ TEST(LlvmLibcSharedMathTest, AllLongDouble) {
   EXPECT_EQ(0L, LIBC_NAMESPACE::shared::lroundl(0.0L));
   EXPECT_FP_EQ(0x0p+0L, LIBC_NAMESPACE::shared::nearbyintl(0.0L));
   EXPECT_FP_EQ(0x0p+0L, LIBC_NAMESPACE::shared::rintl(0.0L));
+  EXPECT_EQ(1, LIBC_NAMESPACE::shared::iscanonicall(0.0L));
+  EXPECT_EQ(0, LIBC_NAMESPACE::shared::issignalingl(0.0L));
+  EXPECT_EQ(1,
+            LIBC_NAMESPACE::shared::isnanl(LIBC_NAMESPACE::shared::nanl("")));
 }
 
 #endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
@@ -708,6 +722,9 @@ TEST(LlvmLibcSharedMathTest, AllFloat128) {
   EXPECT_FP_EQ(float128(0.0),
                LIBC_NAMESPACE::shared::nearbyintf128(float128(0.0)));
   EXPECT_FP_EQ(float128(0.0), LIBC_NAMESPACE::shared::rintf128(float128(0.0)));
+  EXPECT_EQ(1, LIBC_NAMESPACE::shared::iscanonicalf128(float128(0.0)));
+  EXPECT_EQ(0, LIBC_NAMESPACE::shared::issignalingf128(float128(0.0)));
+  EXPECT_TRUE(FPBits(LIBC_NAMESPACE::shared::nanf128("")).is_nan());
 }
 
 #endif // LIBC_TYPES_HAS_FLOAT128
@@ -840,4 +857,7 @@ TEST(LlvmLibcSharedMathTest, AllBFloat16) {
   EXPECT_FP_EQ(bfloat16(0.0),
                LIBC_NAMESPACE::shared::nearbyintbf16(bfloat16(0.0)));
   EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::rintbf16(bfloat16(0.0)));
+  EXPECT_EQ(1, LIBC_NAMESPACE::shared::iscanonicalbf16(bfloat16(0.0)));
+  EXPECT_EQ(0, LIBC_NAMESPACE::shared::issignalingbf16(bfloat16(0.0)));
+  EXPECT_TRUE(FPBits(LIBC_NAMESPACE::shared::nanbf16("")).is_nan());
 }
