@@ -435,7 +435,8 @@ static void collectFrameAlloca(
     return;
 
   // The alloca has been marked as belonging outside the frame.
-  if (OutsideFrameSet.contains(AI))
+  if (OutsideFrameSet.contains(AI) ||
+      AI->hasMetadata(LLVMContext::MD_coro_outside_frame_DEPRECATED))
     return;
 
   // The code that uses lifetime.start intrinsic does not work for functions
