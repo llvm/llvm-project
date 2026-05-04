@@ -75,13 +75,8 @@ getPeriodArrIndInfo(const Function &F) {
 
 PreservedAnalyses
 EJitWrapperGenPass::run(Module &M, ModuleAnalysisManager &AM) {
-  bool Changed = false;
   LLVMContext &Ctx = M.getContext();
-
-  // Declare ejit_compile_or_get
   auto *PtrTy = PointerType::getUnqual(Ctx);
-  M.getOrInsertFunction("ejit_compile_or_get",
-      FunctionType::get(PtrTy, {PtrTy, PtrTy, Type::getInt32Ty(Ctx), PtrTy}, false));
 
   SmallVector<Function *, 4> EntryFuncs;
   for (Function &F : M.functions()) {
@@ -90,6 +85,14 @@ EJitWrapperGenPass::run(Module &M, ModuleAnalysisManager &AM) {
       EntryFuncs.push_back(&F);
   }
 
+  if (EntryFuncs.empty())
+    return PreservedAnalyses::all();
+
+  // Declare ejit_compile_or_get (only if we have entry functions)
+  M.getOrInsertFunction("ejit_compile_or_get",
+      FunctionType::get(PtrTy, {PtrTy, PtrTy, Type::getInt32Ty(Ctx), PtrTy}, false));
+
+  bool Changed = false;
   for (Function *F : EntryFuncs) {
     auto PeriodInds = getPeriodArrIndInfo(*F);
     unsigned DimCount = PeriodInds.size();

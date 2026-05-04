@@ -95,6 +95,7 @@ static std::string extractAndSerialize(Module &M,
     if (!FuncNames.count(F.getName()))
       FuncsToDelete.push_back(&F);
   for (Function *F : FuncsToDelete) {
+    F->replaceAllUsesWith(UndefValue::get(F->getType()));
     if (!F->isDeclaration())
       F->deleteBody();
     F->eraseFromParent();
@@ -104,8 +105,10 @@ static std::string extractAndSerialize(Module &M,
   for (GlobalVariable &GV : Extracted->globals())
     if (!GlobalNames.count(GV.getName()))
       GVToDelete.push_back(&GV);
-  for (GlobalVariable *GV : GVToDelete)
+  for (GlobalVariable *GV : GVToDelete) {
+    GV->replaceAllUsesWith(UndefValue::get(GV->getType()));
     GV->eraseFromParent();
+  }
 
   std::string Bitcode;
   raw_string_ostream OS(Bitcode);

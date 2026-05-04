@@ -114,23 +114,26 @@ collectLifecycleInfo(Module &M, Function &F) {
 PreservedAnalyses
 EJitPeriodHandlerPass::run(Module &M, ModuleAnalysisManager &AM) {
   bool Changed = false;
-  LLVMContext &Ctx = M.getContext();
-  auto *PtrTy = PointerType::getUnqual(Ctx);
-  auto *I32Ty = Type::getInt32Ty(Ctx);
-  auto *VoidTy = Type::getVoidTy(Ctx);
-
-  // Declare runtime functions
-  M.getOrInsertFunction("ejit_deactivate_array",
-      FunctionType::get(VoidTy, {PtrTy, PtrTy, I32Ty}, false));
-  M.getOrInsertFunction("ejit_activate_array",
-      FunctionType::get(VoidTy, {PtrTy, PtrTy, I32Ty}, false));
-
   SmallVector<Function *, 4> LcFuncs;
   for (Function &F : M.functions()) {
     MDNode *MD = F.getMetadata("ejit.metadata");
     if (hasMDStringEntry(MD, "ejit_period_lc") && !F.isDeclaration())
       LcFuncs.push_back(&F);
   }
+
+  if (LcFuncs.empty())
+    return PreservedAnalyses::all();
+
+  LLVMContext &Ctx = M.getContext();
+  auto *PtrTy = PointerType::getUnqual(Ctx);
+  auto *I32Ty = Type::getInt32Ty(Ctx);
+  auto *VoidTy = Type::getVoidTy(Ctx);
+
+  // Declare runtime functions (only if we have lc functions)
+  M.getOrInsertFunction("ejit_deactivate_array",
+      FunctionType::get(VoidTy, {PtrTy, PtrTy, I32Ty}, false));
+  M.getOrInsertFunction("ejit_activate_array",
+      FunctionType::get(VoidTy, {PtrTy, PtrTy, I32Ty}, false));
 
   for (Function *F : LcFuncs) {
     auto LcInfos = collectLifecycleInfo(M, *F);
