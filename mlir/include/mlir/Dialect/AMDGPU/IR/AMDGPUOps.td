@@ -1454,7 +1454,8 @@ def AMDGPU_GlobalTransposeLoadOp :
     Arguments<(ins Arg<AnyMemRef, "buffer to transpose load from", [MemRead]>:$src,
                       Variadic<Index>:$srcIndices)>,
     Results<(outs AnyTypeOf<[
-      FixedVectorOfLengthAndType<[8], [I8, F16, BF16, I16]>,
+      FixedVectorOfLengthAndType<[8], [I8, F8E5M2FNUZ, F8E4M3FNUZ, F8E5M2,
+                                       F8E4M3FN, F16, BF16, I16]>,
       FixedVectorOfLengthAndType<[16], [I<4>, F4E2M1FN, I<6>, F6E2M3FN, F6E3M2FN]>
     ]>:$result)> {
   let summary = "MLIR wrapper for global memory transpose load instructions";
