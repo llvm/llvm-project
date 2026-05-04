@@ -39029,13 +39029,7 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
   case X86ISD::GF2P8AFFINEQB: {
     SDValue Input = Op.getOperand(0);
     SDValue Matrix = Op.getOperand(1);
-    SDValue Imm = Op.getOperand(2);
 
-    auto *ImmN = dyn_cast<ConstantSDNode>(Imm);
-    if (!ImmN)
-      break;
-
-    uint8_t Imm8 = ImmN->getZExtValue();
     APInt UndefElts;
     SmallVector<APInt, 64> MatEltBits;
     if (!getTargetConstantBitsFromNode(Matrix, 8, UndefElts, MatEltBits,
@@ -39043,30 +39037,33 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
                                        /*AllowPartialUndefs=*/false))
       break;
 
-    KnownBits InputKnown = DAG.computeKnownBits(Input, DemandedElts, Depth + 1);
+    bool IsSplat = true;
+    for (unsigned I = 8, E = MatEltBits.size(); I < E && IsSplat; ++I)
+      if (MatEltBits[I] != MatEltBits[I % 8])
+        IsSplat = false;
+    if (!IsSplat)
+      break;
 
-    APInt KnownMask = InputKnown.Zero | InputKnown.One;
-    KnownBits Res(BitWidth);
-    Res.resetAll();
+    KnownBits InputKnown = DAG.computeKnownBits(Input, DemandedElts, Depth + 1);
+    KnownBits Res(8);
 
     for (unsigned OutBit = 0; OutBit != 8; ++OutBit) {
       unsigned RowIdx = 7 - OutBit;
 
-      uint8_t Row = MatEltBits[RowIdx].getZExtValue();
-      APInt RowMask(8, Row);
+      KnownBits KnownRow = KnownBits::makeConstant(MatEltBits[RowIdx]);
+      KnownRow &= InputKnown;
 
-      if (!(RowMask & ~KnownMask).isZero())
+      if (!KnownRow.isConstant())
         continue;
 
-      uint8_t Bits = (InputKnown.One & RowMask).getZExtValue();
-      bool Parity = llvm::popcount(Bits) & 1;
-      bool FinalBit = Parity ^ ((Imm8 >> OutBit) & 1);
-
-      if (FinalBit)
+      if (KnownRow.One.popcount() & 1)
         Res.One.setBit(OutBit);
       else
         Res.Zero.setBit(OutBit);
     }
+
+    uint8_t Imm8 = (uint8_t)Op.getConstantOperandVal(2);
+    Res ^= KnownBits::makeConstant(APInt(8, Imm8));
 
     Known = Res;
     break;
