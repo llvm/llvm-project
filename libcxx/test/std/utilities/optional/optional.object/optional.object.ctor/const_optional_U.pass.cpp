@@ -182,6 +182,18 @@ constexpr bool test_ref() {
 
   static_assert(!std::is_constructible_v<std::optional<int>, const std::optional<ConstRValueOnly<int>>&&>);
 
+  // optional(const optional<U>&) !is_constructible_v<T&, const U&>.
+  static_assert(std::is_constructible_v<std::optional<int&>, const std::optional<ConstLValueOnly<int>>&>);
+  static_assert(!std::is_constructible_v<std::optional<int&>, const std::optional<LValueOnly<int>>&>);
+  static_assert(!std::is_constructible_v<std::optional<int&>, const std::optional<RValueOnly<int>>&>);
+  static_assert(!std::is_constructible_v<std::optional<int&>, const std::optional<ConstRValueOnly<int>>&>);
+
+  // optional(const optional<U>&&) !is_constructible_v<T&, const U>.
+  static_assert(std::is_constructible_v<std::optional<int&>, const std::optional<ConstLValueOnly<int>>&&>);
+  static_assert(std::is_constructible_v<std::optional<int&>, const std::optional<ConstRValueOnly<int>>&&>);
+  static_assert(!std::is_constructible_v<std::optional<int&>, const std::optional<LValueOnly<int>>&&>);
+  static_assert(!std::is_constructible_v<std::optional<int&>, const std::optional<RValueOnly<int>>&&>);
+
   return true;
 }
 #endif

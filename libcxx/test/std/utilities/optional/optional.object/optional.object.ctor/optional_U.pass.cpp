@@ -174,6 +174,15 @@ constexpr bool test_ref() {
     ASSERT_NOT_NOEXCEPT(std::optional<const int&>(std::move(o1)));
   }
 
+  // optional(optional<U>&) !is_constructible_v<T&, U&>.
+  static_assert(std::is_constructible_v<std::optional<int&>, std::optional<LValueOnly<int>>&>);
+  static_assert(!std::is_constructible_v<std::optional<int&>, std::optional<RValueOnly<int>>&>);
+  static_assert(!std::is_constructible_v<std::optional<int&>, std::optional<ConstRValueOnly<int>>&>);
+
+  // optional(optional<U>&&) !is_constructible_v<T&, U>.
+  static_assert(std::is_constructible_v<std::optional<int&>, std::optional<RValueOnly<int>>&&>);
+  static_assert(!std::is_constructible_v<std::optional<int&>, std::optional<LValueOnly<int>>&&>);
+
   return true;
 }
 #endif

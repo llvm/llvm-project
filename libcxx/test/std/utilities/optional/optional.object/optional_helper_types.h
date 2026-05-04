@@ -79,6 +79,22 @@ struct LValueOnly {
 };
 
 template <typename T>
+struct ConstLValueOnly {
+  operator T&() & = delete;
+  operator T&() const&;
+  operator T&() &&      = delete;
+  operator T&() const&& = delete;
+};
+
+template <typename T>
+struct RValueOnly {
+  operator T&() &      = delete;
+  operator T&() const& = delete;
+  operator T&() &&;
+  operator T&() const&& = delete;
+};
+
+template <typename T>
 struct ConstRValueOnly {
   mutable T val{};
 
