@@ -1,0 +1,66 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+!u32i = !cir.int<u, 32>
+
+module {
+  // Round-trip every BitEnum state on cir.add: none (default, elided),
+  // nsw alone, nuw alone, both flags combined, plus saturated.
+  cir.func @test_add_flags(%a: !s32i, %b: !s32i, %c: !u32i, %d: !u32i) {
+    %0 = cir.add %a, %b : !s32i
+    %1 = cir.add nsw %a, %b : !s32i
+    %2 = cir.add nuw %c, %d : !u32i
+    %3 = cir.add nsw|nuw %a, %b : !s32i
+    %4 = cir.add sat %a, %b : !s32i
+    cir.return
+  }
+  // CHECK-LABEL: cir.func{{.*}} @test_add_flags
+  // CHECK:         cir.add %{{.+}}, %{{.+}} : !s32i
+  // CHECK:         cir.add nsw %{{.+}}, %{{.+}} : !s32i
+  // CHECK:         cir.add nuw %{{.+}}, %{{.+}} : !u32i
+  // CHECK:         cir.add nsw|nuw %{{.+}}, %{{.+}} : !s32i
+  // CHECK:         cir.add sat %{{.+}}, %{{.+}} : !s32i
+
+  cir.func @test_sub_flags(%a: !s32i, %b: !s32i) {
+    %0 = cir.sub %a, %b : !s32i
+    %1 = cir.sub nsw %a, %b : !s32i
+    %2 = cir.sub nsw|nuw %a, %b : !s32i
+    %3 = cir.sub sat %a, %b : !s32i
+    cir.return
+  }
+  // CHECK-LABEL: cir.func{{.*}} @test_sub_flags
+  // CHECK:         cir.sub %{{.+}}, %{{.+}} : !s32i
+  // CHECK:         cir.sub nsw %{{.+}}, %{{.+}} : !s32i
+  // CHECK:         cir.sub nsw|nuw %{{.+}}, %{{.+}} : !s32i
+  // CHECK:         cir.sub sat %{{.+}}, %{{.+}} : !s32i
+
+  cir.func @test_mul_flags(%a: !s32i, %b: !s32i) {
+    %0 = cir.mul %a, %b : !s32i
+    %1 = cir.mul nsw %a, %b : !s32i
+    %2 = cir.mul nuw %a, %b : !s32i
+    %3 = cir.mul nsw|nuw %a, %b : !s32i
+    cir.return
+  }
+  // CHECK-LABEL: cir.func{{.*}} @test_mul_flags
+  // CHECK:         cir.mul %{{.+}}, %{{.+}} : !s32i
+  // CHECK:         cir.mul nsw %{{.+}}, %{{.+}} : !s32i
+  // CHECK:         cir.mul nuw %{{.+}}, %{{.+}} : !s32i
+  // CHECK:         cir.mul nsw|nuw %{{.+}}, %{{.+}} : !s32i
+
+  cir.func @test_unary_flags(%a: !s32i) {
+    %0 = cir.minus %a : !s32i
+    %1 = cir.minus nsw %a : !s32i
+    %2 = cir.inc %a : !s32i
+    %3 = cir.inc nsw %a : !s32i
+    %4 = cir.dec %a : !s32i
+    %5 = cir.dec nsw %a : !s32i
+    cir.return
+  }
+  // CHECK-LABEL: cir.func{{.*}} @test_unary_flags
+  // CHECK:         cir.minus %{{.+}} : !s32i
+  // CHECK:         cir.minus nsw %{{.+}} : !s32i
+  // CHECK:         cir.inc %{{.+}} : !s32i
+  // CHECK:         cir.inc nsw %{{.+}} : !s32i
+  // CHECK:         cir.dec %{{.+}} : !s32i
+  // CHECK:         cir.dec nsw %{{.+}} : !s32i
+}

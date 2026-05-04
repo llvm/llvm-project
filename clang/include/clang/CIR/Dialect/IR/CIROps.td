@@ -130,9 +130,21 @@ class FlagRequiresIntType<string flag> : PredOpTrait<
       CPred<"::mlir::isa<::cir::IntType>(this->getResult().getType())">]>
 >;
 
-def NSWFlagIntOnly : FlagRequiresIntType<"no_signed_wrap">;
-def NUWFlagIntOnly : FlagRequiresIntType<"no_unsigned_wrap">;
 def SatFlagIntOnly : FlagRequiresIntType<"saturated">;
+
+// Requires that overflow flags imply an integer result type.
+def OverflowFlagsRequireIntType : PredOpTrait<
+  "overflow flags require an integer result type",
+  Or<[CPred<"this->getFlags() == ::cir::OverflowFlags::none">,
+      CPred<"::mlir::isa<::cir::IntType>(this->getResult().getType())">]>
+>;
+
+// Requires that the saturated flag is mutually exclusive with overflow flags.
+def SatExclusiveWithOverflowFlags : PredOpTrait<
+  "sat is mutually exclusive with nsw/nuw overflow flags",
+  CPred<"!this->getSaturated() || "
+        "this->getFlags() == ::cir::OverflowFlags::none">
+>;
 
 //===----------------------------------------------------------------------===//
 // CastOp
@@ -1831,12 +1843,12 @@ class CIR_UnaryOpWithOverflowFlag<string mnemonic, Type type,
                                    list<Trait> traits = []>
     : CIR_UnaryOp<mnemonic, type, traits>
 {
-  let append traits = [NSWFlagIntOnly];
+  let append traits = [OverflowFlagsRequireIntType];
 
-  let append arguments = (ins UnitProp:$no_signed_wrap);
+  let append arguments = (ins CIR_OverflowFlagsProp:$flags);
 
   let prepend assemblyFormat = [{
-    (`nsw` $no_signed_wrap^)?
+    ($flags^)?
   }];
 }
 
@@ -2383,16 +2395,12 @@ class CIR_BinaryOp<string mnemonic, Type type, list<Trait> traits = []>
 class CIR_BinaryOpWithOverflowFlags<string mnemonic, Type type>
     : CIR_BinaryOp<mnemonic, type>
 {
-  let append traits = [Pure, NSWFlagIntOnly, NUWFlagIntOnly];
+  let append traits = [Pure, OverflowFlagsRequireIntType];
 
-  let append arguments = (ins
-    UnitProp:$no_signed_wrap,
-    UnitProp:$no_unsigned_wrap
-  );
+  let append arguments = (ins CIR_OverflowFlagsProp:$flags);
 
   let prepend assemblyFormat = [{
-    (`nsw` $no_signed_wrap^)?
-    (`nuw` $no_unsigned_wrap^)?
+    ($flags^)?
   }];
 }
 
@@ -2400,11 +2408,7 @@ class CIR_BinaryOpWithOverflowFlags<string mnemonic, Type type>
 class CIR_SaturatableBinaryOp<string mnemonic, Type type>
     : CIR_BinaryOpWithOverflowFlags<mnemonic, type>
 {
-  let append traits = [
-    SatFlagIntOnly,
-    HasAtMostOneOfAttrs<["saturated", "no_signed_wrap"]>,
-    HasAtMostOneOfAttrs<["saturated", "no_unsigned_wrap"]>
-  ];
+  let append traits = [SatFlagIntOnly, SatExclusiveWithOverflowFlags];
 
   let append arguments = (ins UnitProp:$saturated);
 
@@ -2426,19 +2430,21 @@ def CIR_AddOp : CIR_SaturatableBinaryOp<"add", CIR_AnyArithType> {
     operands. Both operands and the result must have the same type.
 
     For integer types, the optional `nsw` (no signed wrap) and `nuw` (no
-    unsigned wrap) unit attributes indicate that the result is poison if signed
-    or unsigned overflow occurs, respectively. The optional `sat` (saturated)
-    attribute clamps the result to the type's representable range instead of
-    wrapping. The `nsw`/`nuw` flags and `sat` are mutually exclusive.
-    
+    unsigned wrap) overflow flags indicate that the result is poison if signed
+    or unsigned overflow occurs, respectively. Combined flags are written as
+    `nsw|nuw`. The optional `sat` (saturated) attribute clamps the result to
+    the type's representable range instead of wrapping. The `nsw`/`nuw` flags
+    and `sat` are mutually exclusive.
+
     Example:
 
     ```
     %0 = cir.add %a, %b : !s32i
     %1 = cir.add nsw %a, %b : !s32i
     %2 = cir.add nuw %a, %b : !u32i
-    %3 = cir.add sat %a, %b : !s32i
-    %4 = cir.add %a, %b : !cir.float
+    %3 = cir.add nsw|nuw %a, %b : !s32i
+    %4 = cir.add sat %a, %b : !s32i
+    %5 = cir.add %a, %b : !cir.float
     ```
   }];
 }
@@ -2454,11 +2460,12 @@ def CIR_SubOp : CIR_SaturatableBinaryOp<"sub", CIR_AnyArithType> {
     operands. Both operands and the result must have the same type.
 
     For integer types, the optional `nsw` (no signed wrap) and `nuw` (no
-    unsigned wrap) unit attributes indicate that the result is poison if signed
-    or unsigned overflow occurs, respectively. The optional `sat` (saturated)
-    attribute clamps the result to the type's representable range. The
-    `nsw`/`nuw` flags and `sat` are mutually exclusive.
-    
+    unsigned wrap) overflow flags indicate that the result is poison if signed
+    or unsigned overflow occurs, respectively. Combined flags are written as
+    `nsw|nuw`. The optional `sat` (saturated) attribute clamps the result to
+    the type's representable range. The `nsw`/`nuw` flags and `sat` are
+    mutually exclusive.
+
     Example:
 
     ```
@@ -2483,8 +2490,9 @@ def CIR_MulOp : CIR_BinaryOpWithOverflowFlags<"mul", CIR_AnyArithType> {
     operands. Both operands and the result must have the same type.
 
     For integer types, the optional `nsw` (no signed wrap) and `nuw` (no
-    unsigned wrap) unit attributes indicate that the result is poison if signed
-    or unsigned overflow occurs, respectively.
+    unsigned wrap) overflow flags indicate that the result is poison if signed
+    or unsigned overflow occurs, respectively. Combined flags are written as
+    `nsw|nuw`.
 
     Example:
 
@@ -2492,7 +2500,8 @@ def CIR_MulOp : CIR_BinaryOpWithOverflowFlags<"mul", CIR_AnyArithType> {
     %0 = cir.mul %a, %b : !s32i
     %1 = cir.mul nsw %a, %b : !s32i
     %2 = cir.mul nuw %a, %b : !u32i
-    %3 = cir.mul %a, %b : !cir.float
+    %3 = cir.mul nsw|nuw %a, %b : !s32i
+    %4 = cir.mul %a, %b : !cir.float
     ```
   }];
 }

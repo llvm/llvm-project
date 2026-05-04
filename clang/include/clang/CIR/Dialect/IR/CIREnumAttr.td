@@ -31,6 +31,21 @@ class CIR_EnumAttr<EnumAttrInfo info, string name = "", list<Trait> traits = []>
   let assemblyFormat = "`<` $value `>`";
 }
 
+class CIR_I32BitEnum<string name, string summary,
+                    list<BitEnumCaseBase> cases>
+    : I32BitEnum<name, summary, cases> {
+  let cppNamespace = "::cir";
+  let separator = "|";
+  let printBitEnumPrimaryGroups = 1;
+}
+
+// CIR property wrapping a BitEnum. Storage is inline (Property, not Attribute);
+// the auto-generated FieldParser parses bare `flag1|flag2` syntax.
+class CIR_BitEnumProp<BitEnum info, string defaultVal = info.cppType # "::none">
+    : EnumProp<info> {
+  let defaultValue = defaultVal;
+}
+
 class CIR_DefaultValuedEnumParameter<EnumAttrInfo info, string value = "">
     : EnumParameter<info> {
   let defaultValue = value;

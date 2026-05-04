@@ -61,6 +61,15 @@ constexpr bool testFlag(OverflowBehavior ob, OverflowBehavior flag) {
   return (ob & flag) != OverflowBehavior::None;
 }
 
+inline OverflowFlags toOverflowFlags(OverflowBehavior ob) {
+  auto flags = OverflowFlags::none;
+  if (testFlag(ob, OverflowBehavior::NoSignedWrap))
+    flags = flags | OverflowFlags::nsw;
+  if (testFlag(ob, OverflowBehavior::NoUnsignedWrap))
+    flags = flags | OverflowFlags::nuw;
+  return flags;
+}
+
 class CIRBaseBuilderTy : public mlir::OpBuilder {
 
 public:
@@ -279,18 +288,18 @@ public:
   }
 
   mlir::Value createInc(mlir::Location loc, mlir::Value input,
-                        bool nsw = false) {
-    return cir::IncOp::create(*this, loc, input, nsw);
+                        cir::OverflowFlags flags = cir::OverflowFlags::none) {
+    return cir::IncOp::create(*this, loc, input, flags);
   }
 
   mlir::Value createDec(mlir::Location loc, mlir::Value input,
-                        bool nsw = false) {
-    return cir::DecOp::create(*this, loc, input, nsw);
+                        cir::OverflowFlags flags = cir::OverflowFlags::none) {
+    return cir::DecOp::create(*this, loc, input, flags);
   }
 
   mlir::Value createMinus(mlir::Location loc, mlir::Value input,
-                          bool nsw = false) {
-    return cir::MinusOp::create(*this, loc, input, nsw);
+                          cir::OverflowFlags flags = cir::OverflowFlags::none) {
+    return cir::MinusOp::create(*this, loc, input, flags);
   }
 
   mlir::TypedAttr getConstPtrAttr(mlir::Type type, int64_t value) {
@@ -629,8 +638,7 @@ public:
   mlir::Value createMul(mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
                         OverflowBehavior ob = OverflowBehavior::None) {
     auto op = cir::MulOp::create(*this, loc, lhs, rhs);
-    op.setNoUnsignedWrap(testFlag(ob, OverflowBehavior::NoUnsignedWrap));
-    op.setNoSignedWrap(testFlag(ob, OverflowBehavior::NoSignedWrap));
+    op.setFlags(toOverflowFlags(ob));
     return op;
   }
   mlir::Value createNSWMul(mlir::Location loc, mlir::Value lhs,
@@ -645,8 +653,7 @@ public:
   mlir::Value createSub(mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
                         OverflowBehavior ob = OverflowBehavior::None) {
     auto op = cir::SubOp::create(*this, loc, lhs, rhs);
-    op.setNoUnsignedWrap(testFlag(ob, OverflowBehavior::NoUnsignedWrap));
-    op.setNoSignedWrap(testFlag(ob, OverflowBehavior::NoSignedWrap));
+    op.setFlags(toOverflowFlags(ob));
     op.setSaturated(testFlag(ob, OverflowBehavior::Saturated));
     return op;
   }
@@ -664,8 +671,7 @@ public:
   mlir::Value createAdd(mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
                         OverflowBehavior ob = OverflowBehavior::None) {
     auto op = cir::AddOp::create(*this, loc, lhs, rhs);
-    op.setNoUnsignedWrap(testFlag(ob, OverflowBehavior::NoUnsignedWrap));
-    op.setNoSignedWrap(testFlag(ob, OverflowBehavior::NoSignedWrap));
+    op.setFlags(toOverflowFlags(ob));
     op.setSaturated(testFlag(ob, OverflowBehavior::Saturated));
     return op;
   }

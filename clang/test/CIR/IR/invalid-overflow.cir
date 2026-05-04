@@ -1,0 +1,39 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+!s32i = !cir.int<s, 32>
+
+cir.func @nsw_on_float(%a: !cir.float, %b: !cir.float) {
+  // expected-error @below {{overflow flags require an integer result type}}
+  %0 = cir.add nsw %a, %b : !cir.float
+  cir.return
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+cir.func @nuw_on_float(%a: !cir.float, %b: !cir.float) {
+  // expected-error @below {{overflow flags require an integer result type}}
+  %0 = cir.mul nuw %a, %b : !cir.float
+  cir.return
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+cir.func @sat_with_nsw(%a: !s32i, %b: !s32i) {
+  // expected-error @below {{sat is mutually exclusive with nsw/nuw overflow flags}}
+  %0 = cir.add sat nsw %a, %b : !s32i
+  cir.return
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+cir.func @sat_with_nuw(%a: !s32i, %b: !s32i) {
+  // expected-error @below {{sat is mutually exclusive with nsw/nuw overflow flags}}
+  %0 = cir.sub sat nuw %a, %b : !s32i
+  cir.return
+}
