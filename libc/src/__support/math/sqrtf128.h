@@ -282,7 +282,7 @@ LIBC_INLINE constexpr uint64_t rsqrt_approx(uint64_t m) {
 
 } // namespace sqrtf128_internal
 
-LIBC_INLINE float128 sqrtf128(float128 x) {
+LIBC_INLINE LIBC_CONSTEXPR float128 sqrtf128(float128 x) {
   using namespace sqrtf128_internal;
   using FPBits = fputil::FPBits<float128>;
   // Get rounding mode.
