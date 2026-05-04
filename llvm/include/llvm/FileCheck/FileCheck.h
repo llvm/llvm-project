@@ -19,6 +19,7 @@
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/SMLoc.h"
 #include <bitset>
+#include <iterator>
 #include <memory>
 #include <string>
 #include <vector>
@@ -408,7 +409,8 @@ public:
 class FileCheckDiagList {
 private:
   MatchResultDiag *CurMatchResultDiag = nullptr;
-  std::vector<std::unique_ptr<FileCheckDiag>> DiagList;
+  using vector_type = std::vector<std::unique_ptr<FileCheckDiag>>;
+  vector_type DiagList;
 
 public:
   /// Emplace a new \c FileCheckDiag of type \c DiagTy.  If it's a
@@ -436,10 +438,45 @@ public:
   void adjustPrevMatchFoundDiag(MatchFoundDiag::StatusTy Status) {
     cast<MatchFoundDiag>(CurMatchResultDiag)->markUnsuccessful(Status);
   }
-  /// The \c FileCheckDiag list.
-  const std::vector<std::unique_ptr<FileCheckDiag>> &getList() const {
-    return DiagList;
-  }
+  class const_iterator {
+    friend FileCheckDiagList;
+
+  public:
+    using difference_type = std::ptrdiff_t;
+    using value_type = FileCheckDiag;
+    using pointer = const FileCheckDiag *;
+    using reference = const FileCheckDiag &;
+    using iterator_category = std::forward_iterator_tag;
+
+  private:
+    vector_type::const_iterator Itr;
+    const_iterator(vector_type::const_iterator Itr) : Itr(Itr) {}
+
+  public:
+    reference operator*() const { return **Itr; }
+    pointer operator->() const { return &operator*(); }
+    const_iterator &operator++() {
+      ++Itr;
+      return *this;
+    }
+    const_iterator operator++(int) {
+      const_iterator Old = *this;
+      ++Itr;
+      return Old;
+    }
+    bool operator==(const const_iterator &Other) const {
+      return Itr == Other.Itr;
+    }
+    bool operator!=(const const_iterator &Other) const {
+      return Itr != Other.Itr;
+    }
+  };
+
+  using size_type = vector_type::size_type;
+  const_iterator begin() const { return const_iterator(DiagList.begin()); }
+  const_iterator end() const { return const_iterator(DiagList.end()); }
+  const FileCheckDiag &operator[](size_type I) const { return *DiagList[I]; }
+  size_type size() const { return DiagList.size(); }
 };
 
 class FileCheckPatternContext;

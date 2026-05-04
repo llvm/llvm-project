@@ -1658,12 +1658,12 @@ TEST_F(FileCheckTest, CapturedVarDiags) {
   EXPECT_THAT_EXPECTED(Tester.match("foobar 2"), Succeeded());
   FileCheckDiagList Diags;
   Tester.printVariableDefs(Diags);
-  EXPECT_EQ(Diags.getList().size(), 2ul);
+  EXPECT_EQ(Diags.size(), 2ul);
   SmallVector<MatchCustomNoteDiag, 2> Notes;
-  for (const std::unique_ptr<FileCheckDiag> &Diag : Diags.getList()) {
-    EXPECT_EQ(Diag->getKind(), FileCheckDiag::FCDK_MatchCustomNoteDiag);
-    EXPECT_FALSE(Diag->isError());
-    Notes.push_back(cast<MatchCustomNoteDiag>(*Diag));
+  for (const FileCheckDiag &Diag : Diags) {
+    EXPECT_EQ(Diag.getKind(), FileCheckDiag::FCDK_MatchCustomNoteDiag);
+    EXPECT_FALSE(Diag.isError());
+    Notes.push_back(cast<MatchCustomNoteDiag>(Diag));
   }
   EXPECT_SM_RANGE(SM, Notes[0].getMatchRange(), 1u, 1u, 1u, 7u);
   EXPECT_SM_RANGE(SM, Notes[1].getMatchRange(), 1u, 8u, 1u, 9u);

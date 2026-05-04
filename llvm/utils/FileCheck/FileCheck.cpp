@@ -194,7 +194,7 @@ struct MarkerStyle {
   bool FiltersAsError;
 };
 
-static MarkerStyle getMarker(const FileCheckDiag *Diag) {
+static MarkerStyle getMarker(const FileCheckDiag &Diag) {
   // By default, the marker is based on whether the diagnostic is an error or is
   // a MatchNoteDiag on a MatchResultDiag that is an error.
   //
@@ -206,15 +206,15 @@ static MarkerStyle getMarker(const FileCheckDiag *Diag) {
   // overriden below for the case of MatchNoneDiag because the search range is
   // used instead.
   MarkerStyle Res;
-  bool IsError = Diag->isError() || Diag->getMatchResultDiag().isError();
-  Res.Lead = !Diag->getMatchRange() ? ' ' : IsError ? '!' : '^';
+  bool IsError = Diag.isError() || Diag.getMatchResultDiag().isError();
+  Res.Lead = !Diag.getMatchRange() ? ' ' : IsError ? '!' : '^';
   Res.Color = IsError ? raw_ostream::RED : raw_ostream::GREEN;
   Res.FiltersAsError = IsError;
 
   // Add Note.  Override the default Lead and Color for some diagnostic kinds.
-  switch (Diag->getKind()) {
+  switch (Diag.getKind()) {
   case FileCheckDiag::FCDK_MatchFoundDiag:
-    switch (cast<MatchFoundDiag>(Diag)->getStatus()) {
+    switch (cast<MatchFoundDiag>(Diag).getStatus()) {
     case MatchFoundDiag::Success:
       break;
     case MatchFoundDiag::Excluded:
@@ -232,7 +232,7 @@ static MarkerStyle getMarker(const FileCheckDiag *Diag) {
     break;
   case FileCheckDiag::FCDK_MatchNoneDiag:
     Res.Lead = 'X';
-    switch (cast<MatchNoneDiag>(Diag)->getStatus()) {
+    switch (cast<MatchNoneDiag>(Diag).getStatus()) {
     case MatchNoneDiag::Success:
       break;
     case MatchNoneDiag::InvalidPattern:
@@ -249,10 +249,10 @@ static MarkerStyle getMarker(const FileCheckDiag *Diag) {
     Res.Note = "possible intended match";
     break;
   case FileCheckDiag::FCDK_MatchCustomNoteDiag:
-    Res.Note = cast<MatchCustomNoteDiag>(Diag)->getNote();
+    Res.Note = cast<MatchCustomNoteDiag>(Diag).getNote();
     break;
   }
-  if (Diag->isError()) {
+  if (Diag.isError()) {
     assert(!Res.Note.empty() && "expected error diagnostic to have note");
     Res.Note = "error: " + Res.Note;
   }
@@ -403,7 +403,7 @@ static std::string GetCheckTypeAbbreviation(Check::FileCheckType Ty) {
 static void
 buildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
                       const std::pair<unsigned, unsigned> &ImpPatBufferIDRange,
-                      const std::vector<std::unique_ptr<FileCheckDiag>> &Diags,
+                      const FileCheckDiagList &Diags,
                       std::vector<InputAnnotation> &Annotations,
                       unsigned &LabelWidth) {
   struct CompareSMLoc {
@@ -413,8 +413,8 @@ buildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
   };
   // How many diagnostics does each pattern have?
   std::map<SMLoc, unsigned, CompareSMLoc> DiagCountPerPattern;
-  for (const std::unique_ptr<FileCheckDiag> &Diag : Diags)
-    ++DiagCountPerPattern[Diag->getMatchResultDiag().getCheckLoc()];
+  for (const FileCheckDiag &Diag : Diags)
+    ++DiagCountPerPattern[Diag.getMatchResultDiag().getCheckLoc()];
   // How many diagnostics have we seen so far per pattern?
   std::map<SMLoc, unsigned, CompareSMLoc> DiagIndexPerPattern;
   // How many total diagnostics have we seen so far?
@@ -424,10 +424,10 @@ buildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
   // The label prefix that uniquely identifies the current MatchResultDiag and
   // its MatchNoteDiag series.
   std::string CurLabelPrefix;
-  for (const std::unique_ptr<FileCheckDiag> &Diag : Diags) {
+  for (const FileCheckDiag &Diag : Diags) {
     InputAnnotation A;
     A.DiagIndex = DiagIndex++;
-    if (MatchResultDiag *MRD = dyn_cast<MatchResultDiag>(Diag.get())) {
+    if (const MatchResultDiag *MRD = dyn_cast<MatchResultDiag>(&Diag)) {
       CurLabelPrefix.clear();
       llvm::raw_string_ostream LabelStrm(CurLabelPrefix);
       LabelStrm << GetCheckTypeAbbreviation(MRD->getCheckTy()) << ":";
@@ -446,18 +446,18 @@ buildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
     // Build label that uniquely identifies this FileCheckDiag.
     llvm::raw_string_ostream LabelStrm(A.Label);
     LabelStrm << CurLabelPrefix;
-    if (DiagCountPerPattern[Diag->getMatchResultDiag().getCheckLoc()] > 1)
+    if (DiagCountPerPattern[Diag.getMatchResultDiag().getCheckLoc()] > 1)
       LabelStrm
           << "'"
-          << DiagIndexPerPattern[Diag->getMatchResultDiag().getCheckLoc()]++;
+          << DiagIndexPerPattern[Diag.getMatchResultDiag().getCheckLoc()]++;
     LabelWidth = std::max((std::string::size_type)LabelWidth, A.Label.size());
 
     // Build the input marker.
-    A.Marker = getMarker(Diag.get());
+    A.Marker = getMarker(Diag);
 
     // Does this diagnostic mark text that has been successfully matched?
     A.FoundAndExpectedMatch = false;
-    if (const MatchFoundDiag *Found = dyn_cast<MatchFoundDiag>(Diag.get())) {
+    if (const MatchFoundDiag *Found = dyn_cast<MatchFoundDiag>(&Diag)) {
       if (Found->getStatus() == MatchFoundDiag::Success)
         A.FoundAndExpectedMatch = true;
     }
@@ -467,14 +467,14 @@ buildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
     // position the marker at the start of the most recent MatchResultDiag with
     // which it is associated.
     SMRange InputRange;
-    if (Diag->getMatchRange()) {
-      InputRange = *Diag->getMatchRange();
-    } else if (MatchNoneDiag *MND = dyn_cast<MatchNoneDiag>(Diag.get())) {
+    if (Diag.getMatchRange()) {
+      InputRange = *Diag.getMatchRange();
+    } else if (const MatchNoneDiag *MND = dyn_cast<MatchNoneDiag>(&Diag)) {
       InputRange = MND->getSearchRange();
     } else {
-      assert(isa<MatchNoteDiag>(Diag.get()) &&
+      assert(isa<MatchNoteDiag>(Diag) &&
              "expected only MatchNoteDiag to have no input range");
-      const MatchResultDiag &MRD = Diag->getMatchResultDiag();
+      const MatchResultDiag &MRD = Diag.getMatchResultDiag();
       InputRange =
           MRD.getMatchRange() ? *MRD.getMatchRange() : MRD.getSearchRange();
       InputRange.End = InputRange.Start;
@@ -908,8 +908,8 @@ int main(int argc, char **argv) {
            << "\n";
     std::vector<InputAnnotation> Annotations;
     unsigned LabelWidth;
-    buildInputAnnotations(SM, CheckFileBufferID, ImpPatBufferIDRange,
-                          Diags.getList(), Annotations, LabelWidth);
+    buildInputAnnotations(SM, CheckFileBufferID, ImpPatBufferIDRange, Diags,
+                          Annotations, LabelWidth);
     DumpAnnotatedInput(errs(), Req, DumpInputFilter, DumpInputContext,
                        InputFileText, Annotations, LabelWidth);
   }
