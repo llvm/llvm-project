@@ -1095,7 +1095,7 @@ LogicalResult GlobalTransposeLoadOp::verify() {
 
   // ElementSize -> NumElements. Chipset gating (gfx1200 vs gfx1250) is
   // enforced in the lowering.
-  const llvm::SmallDenseMap<size_t, size_t> kValidLoadSizeMap = {
+  static const llvm::SmallDenseMap<size_t, size_t> kValidLoadSizeMap = {
       {4, 16}, // global_load_tr4_b64  (gfx1250+)
       {6, 16}, // global_load_tr6_b96  (gfx1250+)
       {8, 8},  // global_load_tr_b64   (gfx1200+)

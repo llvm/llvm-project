@@ -1457,23 +1457,24 @@ def AMDGPU_GlobalTransposeLoadOp :
       FixedVectorOfLengthAndType<[8], [I8, F16, BF16, I16]>,
       FixedVectorOfLengthAndType<[16], [I<4>, F4E2M1FN, I<6>, F6E2M3FN, F6E3M2FN]>
     ]>:$result)> {
-  let summary = "MLIR wrapper for RDNA4 global memory transpose load instructions";
+  let summary = "MLIR wrapper for global memory transpose load instructions";
   let description = [{
     The `amdgpu.global_transpose_load` op is a wrapper around the
-    `global_load_tr` family of instructions introduced in RDNA4 (gfx1200+).
+    `global_load_tr` family of instructions introduced in gfx1200.
 
     Each thread reads a column of a matrix stored in global memory and receives
     the corresponding row of the transposed matrix in its result register.
     The subgroup collectively performs a transpose of the tile.
 
     This op is a direct wrapper around the ROCDL `global.load.tr` family
-    intrinsics. Refer to the RDNA4 ISA documentation for exact semantics.
+    intrinsics. Refer to the ISA manual for exact semantics.
 
     Format example:
-    ```
+    ```mlir
     %0 = amdgpu.global_transpose_load %src[%i, %j]
            : memref<128x256xf16, #gpu.address_space<global>> -> vector<8xf16>
     ```
+
     Operands:
     * `$src`: Global address space memref to read from.
     * `$srcIndices`: indices into `$src` for this thread. Indices must be
