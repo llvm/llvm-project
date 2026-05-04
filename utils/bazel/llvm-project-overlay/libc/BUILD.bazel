@@ -5614,6 +5614,7 @@ libc_support_library(
         ":__support_fputil_cast",
         ":__support_fputil_nearest_integer_operations",
         ":__support_macros_config",
+        ":__support_macros_properties_cpu_features",
         ":llvm_libc_macros_float16_macros",
     ],
 )
@@ -5653,6 +5654,7 @@ libc_support_library(
         ":__support_fputil_cast",
         ":__support_fputil_nearest_integer_operations",
         ":__support_macros_config",
+        ":__support_macros_properties_cpu_features",
         ":llvm_libc_macros_float16_macros",
     ],
 )
@@ -8614,6 +8616,7 @@ libc_support_library(
         ":__support_fputil_cast",
         ":__support_fputil_nearest_integer_operations",
         ":__support_macros_config",
+        ":__support_macros_properties_cpu_features",
         ":llvm_libc_macros_float16_macros",
     ],
 )
