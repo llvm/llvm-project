@@ -678,6 +678,12 @@ add_fp_unittest(
     libc.src.__support.math.scalbnf128
     libc.src.__support.math.scalbnf16
     libc.src.__support.math.scalbnl
+    libc.src.__support.math.setpayload
+    libc.src.__support.math.setpayloadbf16
+    libc.src.__support.math.setpayloadf
+    libc.src.__support.math.setpayloadf128
+    libc.src.__support.math.setpayloadf16
+    libc.src.__support.math.setpayloadl
     libc.src.__support.math.sqrtl
     libc.src.__support.math.ufromfp
     libc.src.__support.math.ufromfpbf16

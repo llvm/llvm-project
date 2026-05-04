@@ -386,7 +386,7 @@ getpayload(T x) {
 }
 
 template <bool IsSignaling, typename T>
-LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, bool>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_floating_point_v<T>, bool>
 setpayload(T &res, T pl) {
   using FPBits = FPBits<T>;
   FPBits pl_bits(pl);
