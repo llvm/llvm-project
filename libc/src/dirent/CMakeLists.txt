@@ -24,6 +24,23 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fdopendir
+  SRCS
+    fdopendir.cpp
+  HDRS
+    fdopendir.h
+  DEPENDS
+    libc.hdr.sys_stat_macros
+    libc.hdr.types.DIR
+    libc.hdr.types.struct_stat
+    libc.include.dirent
+    libc.src.__support.File.dir
+    libc.src.__support.File.platform_dir
+    libc.src.errno.errno
+    libc.src.sys.stat.fstat
+)
+
+add_entrypoint_object(
   closedir
   SRCS
     closedir.cpp

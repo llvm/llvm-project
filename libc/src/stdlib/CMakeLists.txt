@@ -607,6 +607,15 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
 endif()
 
+if(TARGET libc.src.stdlib.${LIBC_TARGET_OS}.realpath)
+  add_entrypoint_object(
+    realpath
+    ALIAS
+    DEPENDS
+      .${LIBC_TARGET_OS}.realpath
+  )
+endif()
+
 if(LIBC_TARGET_OS_IS_BAREMETAL OR LIBC_TARGET_OS_IS_GPU)
   add_entrypoint_object(
     malloc

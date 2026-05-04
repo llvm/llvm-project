@@ -116,6 +116,13 @@ functions:
     return_type: char *
     arguments:
       - type: const char *
+  - name: realpath
+    standards:
+      - posix
+    return_type: char *
+    arguments:
+      - type: const char *
+      - type: char *
   - name: labs
     standards:
       - stdc

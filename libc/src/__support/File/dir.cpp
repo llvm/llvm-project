@@ -22,8 +22,12 @@ ErrorOr<Dir *> Dir::open(const char *path) {
   if (!fd)
     return LIBC_NAMESPACE::Error(fd.error());
 
+  return open(fd.value());
+}
+
+ErrorOr<Dir *> Dir::open(int fd) {
   LIBC_NAMESPACE::AllocChecker ac;
-  Dir *dir = new (ac) Dir(fd.value());
+  Dir *dir = new (ac) Dir(fd);
   if (!ac)
     return LIBC_NAMESPACE::Error(ENOMEM);
   return dir;

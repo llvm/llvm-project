@@ -63,6 +63,7 @@ class Dir {
 
 public:
   static ErrorOr<Dir *> open(const char *path);
+  static ErrorOr<Dir *> open(int fd);
 
   ErrorOr<struct ::dirent *> read();
 

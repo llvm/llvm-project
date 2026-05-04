@@ -201,6 +201,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.llabs
     libc.src.stdlib.lldiv
     libc.src.stdlib.memalignment
+    libc.src.stdlib.realpath
     libc.src.stdlib.qsort
     libc.src.stdlib.qsort_r
     libc.src.stdlib.rand
@@ -1169,6 +1170,7 @@ if(LLVM_LIBC_FULL_BUILD)
     # dirent.h entrypoints
     libc.src.dirent.closedir
     libc.src.dirent.dirfd
+    libc.src.dirent.fdopendir
     libc.src.dirent.opendir
     libc.src.dirent.readdir
 

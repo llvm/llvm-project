@@ -128,6 +128,22 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  DIR
+  HDRS
+    DIR.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.DIR
+)
+
+add_proxy_header_library(
+  struct_stat
+  HDRS
+    struct_stat.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_stat
+)
+
+add_proxy_header_library(
   struct_timespec
   HDRS
     struct_timespec.h

@@ -270,6 +270,13 @@ functions:
       - type: int
       - type: const char *
       - type: int
+  - name: pathconf
+    standards:
+      - POSIX
+    return_type: long
+    arguments:
+      - type: const char *
+      - type: int
   - name: lseek
     standards:
       - POSIX

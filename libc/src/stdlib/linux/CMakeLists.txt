@@ -8,3 +8,23 @@ add_header_library(
     libc.src.signal.linux.__restore
     libc.src.signal.linux.signal_utils
 )
+
+add_entrypoint_object(
+  realpath
+  SRCS
+    realpath.cpp
+  HDRS
+    ../realpath.h
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.hdr.limits_macros
+    libc.hdr.types.struct_stat
+    libc.src.errno.errno
+    libc.src.fcntl.open
+    libc.src.string.strcpy
+    libc.src.string.strdup
+    libc.src.sys.stat.fstat
+    libc.src.sys.stat.stat
+    libc.src.unistd.close
+    libc.src.unistd.readlink
+)
