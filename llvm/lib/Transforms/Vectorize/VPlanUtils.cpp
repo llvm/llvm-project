@@ -138,6 +138,25 @@ static bool poisonGuaranteesUB(const VPValue *V) {
   return false;
 }
 
+GEPNoWrapFlags vputils::getGEPFlagsForPtr(VPValue *Ptr) {
+  // Like IR stripPointerCasts, look through GEPs with all-zero indices and
+  // casts to find a root GEP VPInstruction.
+  while (auto *PtrVPI = dyn_cast<VPInstruction>(Ptr)) {
+    unsigned Opcode = PtrVPI->getOpcode();
+    if (Opcode == Instruction::GetElementPtr) {
+      if (any_of(drop_begin(PtrVPI->operands()),
+                 [](VPValue *Op) { return !match(Op, m_ZeroInt()); }))
+        return PtrVPI->getGEPNoWrapFlags();
+      Ptr = PtrVPI->getOperand(0);
+      continue;
+    }
+    if (Opcode != Instruction::BitCast && Opcode != Instruction::AddrSpaceCast)
+      break;
+    Ptr = PtrVPI->getOperand(0);
+  }
+  return GEPNoWrapFlags::none();
+}
+
 const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
                                            PredicatedScalarEvolution &PSE,
                                            const Loop *L) {
