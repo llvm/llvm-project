@@ -139,6 +139,8 @@ PreservedAnalyses ModuleInlinerPass::run(Module &M,
   // Populate the initial list of calls in this module.
   SetVector<std::pair<CallBase *, Function *>> ICPCandidates;
   for (Function &F : M) {
+    if (F.isDeclaration())
+      continue;
     auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
     for (Instruction &I : instructions(F)) {
       if (auto *CB = dyn_cast<CallBase>(&I)) {
