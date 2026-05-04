@@ -75,7 +75,7 @@ define void @_Z3fooPiS_S_(ptr %A, ptr %B, ptr %LoopBound) {
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_LVER]] = add nuw nsw i64 [[INDVARS_IV_LVER]], 1
 ; CHECK-NEXT:    [[TMP22:%.*]] = sext i32 [[DOTRTCBLOCK_LOAD]] to i64
 ; CHECK-NEXT:    [[CMP_LVER:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT_LVER]], [[TMP22]]
-; CHECK-NEXT:    br i1 [[CMP_LVER]], label %[[FOR_BODY_LVER]], label %[[FOR_COND_CLEANUP_LOOPEXIT_LOOPEXIT1]], !llvm.loop [[LOOP15:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP_LVER]], label %[[FOR_BODY_LVER]], label %[[FOR_COND_CLEANUP_LOOPEXIT_LOOPEXIT1]], !llvm.loop [[LOOP16:![0-9]+]]
 ; CHECK:       [[FOR_BODY_PREHEADER_LVER]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_COND_CLEANUP_LOOPEXIT_LOOPEXIT:.*]]:
@@ -98,7 +98,7 @@ define void @_Z3fooPiS_S_(ptr %A, ptr %B, ptr %LoopBound) {
 ; CHECK-NEXT:    [[TMP25:%.*]] = load i32, ptr [[LOOPBOUND]], align 4, !tbaa [[INT_TBAA3]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = sext i32 [[TMP25]] to i64
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT]], [[TMP26]]
-; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_COND_CLEANUP_LOOPEXIT_LOOPEXIT]], !llvm.loop [[LOOP16:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_COND_CLEANUP_LOOPEXIT_LOOPEXIT]], !llvm.loop [[LOOP17:![0-9]+]]
 ;
 entry:
   %0 = load i32, ptr %LoopBound, align 4, !tbaa !4
@@ -151,10 +151,11 @@ for.body:                                         ; preds = %for.body.preheader,
 ; CHECK: [[META9]] = distinct !{[[META9]], !"LVerDomain"}
 ; CHECK: [[META10]] = !{[[META11:![0-9]+]]}
 ; CHECK: [[META11]] = distinct !{[[META11]], [[META9]]}
-; CHECK: [[LOOP12]] = distinct !{[[LOOP12]], [[META13:![0-9]+]], [[META14:![0-9]+]]}
-; CHECK: [[META13]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META14]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP15]] = distinct !{[[LOOP15]], [[META13]]}
-; CHECK: [[LOOP16]] = distinct !{[[LOOP16]], [[META17:![0-9]+]]}
-; CHECK: [[META17]] = !{!"llvm.loop.mustprogress"}
+; CHECK: [[LOOP12]] = distinct !{[[LOOP12]], [[META13:![0-9]+]], [[META14:![0-9]+]], [[META15:![0-9]+]]}
+; CHECK: [[META13]] = !{!"llvm.loop.speculative.bound.hoist.versioned"}
+; CHECK: [[META14]] = !{!"llvm.loop.isvectorized", i32 1}
+; CHECK: [[META15]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[LOOP16]] = distinct !{[[LOOP16]], [[META13]], [[META14]]}
+; CHECK: [[LOOP17]] = distinct !{[[LOOP17]], [[META18:![0-9]+]]}
+; CHECK: [[META18]] = !{!"llvm.loop.mustprogress"}
 ;.

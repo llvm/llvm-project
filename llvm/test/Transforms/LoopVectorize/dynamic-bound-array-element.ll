@@ -97,7 +97,7 @@ define dso_local void @foo(ptr noundef captures(none) %A, ptr noundef readonly c
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_LVER]] = add nuw nsw i64 [[INDVARS_IV_LVER]], 1
 ; CHECK-NEXT:    [[TMP17:%.*]] = sext i32 [[DOTSPECULATIVELY_HOISTED]] to i64
 ; CHECK-NEXT:    [[CMP_LVER:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT_LVER]], [[TMP17]]
-; CHECK-NEXT:    br i1 [[CMP_LVER]], label %[[FOR_BODY_LVER]], label %[[FOR_COND_CLEANUP_LOOPEXIT_LOOPEXIT1]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP_LVER]], label %[[FOR_BODY_LVER]], label %[[FOR_COND_CLEANUP_LOOPEXIT_LOOPEXIT1]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       [[FOR_BODY_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_COND_CLEANUP_LOOPEXIT_LOOPEXIT:.*]]:
@@ -121,7 +121,7 @@ define dso_local void @foo(ptr noundef captures(none) %A, ptr noundef readonly c
 ; CHECK-NEXT:    [[TMP20:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = sext i32 [[TMP20]] to i64
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT]], [[TMP21]]
-; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_COND_CLEANUP_LOOPEXIT_LOOPEXIT]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_COND_CLEANUP_LOOPEXIT_LOOPEXIT]], !llvm.loop [[LOOP9:![0-9]+]]
 ;
 entry:
   %arrayidx = getelementptr inbounds nuw i8, ptr %A, i64 8
@@ -167,11 +167,12 @@ attributes #0 = { mustprogress nofree norecurse nosync nounwind memory(argmem: r
 ; CHECK: [[META1]] = !{[[META2:![0-9]+]], i64 4, !"int"}
 ; CHECK: [[META2]] = !{[[META3:![0-9]+]], i64 1, !"omnipotent char"}
 ; CHECK: [[META3]] = !{!"Simple C++ TBAA"}
-; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META5:![0-9]+]], [[META6:![0-9]+]]}
-; CHECK: [[META5]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META6]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META5]]}
-; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META9:![0-9]+]], [[META10:![0-9]+]]}
-; CHECK: [[META9]] = !{!"llvm.loop.mustprogress"}
-; CHECK: [[META10]] = !{!"llvm.loop.unroll.disable"}
+; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META5:![0-9]+]], [[META6:![0-9]+]], [[META7:![0-9]+]]}
+; CHECK: [[META5]] = !{!"llvm.loop.speculative.bound.hoist.versioned"}
+; CHECK: [[META6]] = !{!"llvm.loop.isvectorized", i32 1}
+; CHECK: [[META7]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META5]], [[META6]]}
+; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META10:![0-9]+]], [[META11:![0-9]+]]}
+; CHECK: [[META10]] = !{!"llvm.loop.mustprogress"}
+; CHECK: [[META11]] = !{!"llvm.loop.unroll.disable"}
 ;.
