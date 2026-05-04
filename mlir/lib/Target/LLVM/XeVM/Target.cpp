@@ -466,6 +466,7 @@ static const std::vector<std::string> getDefaultSPIRVExtensions() {
       "SPV_EXT_relaxed_printf_string_address_space",
       "SPV_INTEL_cache_controls",
       "SPV_INTEL_variable_length_array",
+      "SPV_INTEL_bfloat16_arithmetic",
   };
 }
 
