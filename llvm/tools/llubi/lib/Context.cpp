@@ -61,8 +61,7 @@ AnyValue Context::getConstantValueImpl(Constant *C) {
     return AnyValue::getNullValue(*this, C->getType());
 
   if (isa<ConstantPointerNull>(C))
-    return Pointer::null(
-        DL.getPointerSizeInBits(C->getType()->getPointerAddressSpace()));
+    return Pointer::null(C->getType()->getPointerAddressSpace(), DL);
 
   if (auto *CI = dyn_cast<ConstantInt>(C)) {
     if (auto *VecTy = dyn_cast<VectorType>(CI->getType()))
@@ -112,7 +111,8 @@ const AnyValue &Context::getConstantValue(Constant *C) {
 }
 
 AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
-                            uint32_t OffsetInBits, bool CheckPaddingBits) {
+                            uint32_t OffsetInBits, bool CheckPaddingBits,
+                            bool *ContainsUndefinedBits) {
   uint32_t NumBits = DL.getTypeSizeInBits(Ty).getFixedValue();
   uint32_t NewOffsetInBits = OffsetInBits + NumBits;
   if (CheckPaddingBits)
@@ -137,17 +137,23 @@ AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
     uint32_t Mask = (1U << NumBitsInByte) - 1;
     // If any of the bits in the byte is poison, the whole value is poison.
     if (~LogicalByte.ConcreteMask & ~LogicalByte.Value & Mask) {
+      if (ContainsUndefinedBits)
+        *ContainsUndefinedBits = true;
       OffsetInBits = NewOffsetInBits;
       return AnyValue::poison();
     }
     uint8_t RandomBits = 0;
-    if (UndefBehavior == UndefValueBehavior::NonDeterministic &&
-        (~LogicalByte.ConcreteMask & Mask)) {
+    if (~LogicalByte.ConcreteMask & Mask) {
       // This byte contains undef bits.
-      // We don't use std::uniform_int_distribution here because it produces
-      // different results across different library implementations. Instead,
-      // we directly use the low bits from Rng.
-      RandomBits = static_cast<uint8_t>(Rng());
+      if (ContainsUndefinedBits)
+        *ContainsUndefinedBits = true;
+
+      if (UndefBehavior == UndefValueBehavior::NonDeterministic) {
+        // We don't use std::uniform_int_distribution here because it produces
+        // different results across different library implementations. Instead,
+        // we directly use the low bits from Rng.
+        RandomBits = static_cast<uint8_t>(Rng());
+      }
     }
     uint8_t ActualBits = ((LogicalByte.Value & LogicalByte.ConcreteMask) |
                           (RandomBits & ~LogicalByte.ConcreteMask)) &
@@ -160,8 +166,11 @@ AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
 
   // Padding bits for non-byte-sized scalar types must be zero.
   if (NeedsPadding) {
-    if (!Bits.isIntN(NumBits))
+    if (!Bits.isIntN(NumBits)) {
+      if (ContainsUndefinedBits)
+        *ContainsUndefinedBits = true;
       return AnyValue::poison();
+    }
     Bits = Bits.trunc(NumBits);
   }
 
@@ -174,12 +183,13 @@ AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
   return Pointer(Bits);
 }
 
-AnyValue Context::fromBytes(ArrayRef<Byte> Bytes, Type *Ty) {
+AnyValue Context::fromBytes(ArrayRef<Byte> Bytes, Type *Ty,
+                            bool *ContainsUndefinedBits) {
   assert(Bytes.size() == getEffectiveTypeStoreSize(Ty) &&
          "Invalid byte array size for the type");
   if (Ty->isIntegerTy() || Ty->isFloatingPointTy() || Ty->isPointerTy())
     return fromBytes(ConstBytesView(Bytes, DL), Ty, /*OffsetInBits=*/0,
-                     /*CheckPaddingBits=*/true);
+                     /*CheckPaddingBits=*/true, ContainsUndefinedBits);
 
   if (auto *VecTy = dyn_cast<VectorType>(Ty)) {
     Type *ElemTy = VecTy->getElementType();
@@ -193,8 +203,11 @@ AnyValue Context::fromBytes(ArrayRef<Byte> Bytes, Type *Ty) {
       const Byte &PaddingByte = View[Bytes.size() - 1];
       uint32_t Mask = (~0U << (VecBits % 8)) & 255U;
       // Make sure all high padding bits are zero.
-      if ((PaddingByte.ConcreteMask & ~PaddingByte.Value & Mask) != Mask)
+      if ((PaddingByte.ConcreteMask & ~PaddingByte.Value & Mask) != Mask) {
+        if (ContainsUndefinedBits)
+          *ContainsUndefinedBits = true;
         return AnyValue::getPoisonValue(*this, Ty);
+      }
     }
 
     std::vector<AnyValue> ValVec;
@@ -203,11 +216,11 @@ AnyValue Context::fromBytes(ArrayRef<Byte> Bytes, Type *Ty) {
     // the integer, and for big endian element zero is put in the most
     // significant bits.
     for (uint32_t I = 0; I != NumElements; ++I)
-      ValVec.push_back(fromBytes(View, ElemTy,
-                                 DL.isLittleEndian()
-                                     ? I * ElemBits
-                                     : VecBits - ElemBits - I * ElemBits,
-                                 /*CheckPaddingBits=*/false));
+      ValVec.push_back(
+          fromBytes(View, ElemTy,
+                    DL.isLittleEndian() ? I * ElemBits
+                                        : VecBits - ElemBits - I * ElemBits,
+                    /*CheckPaddingBits=*/false, ContainsUndefinedBits));
     return AnyValue(std::move(ValVec));
   }
   if (auto *ArrTy = dyn_cast<ArrayType>(Ty)) {
@@ -218,7 +231,8 @@ AnyValue Context::fromBytes(ArrayRef<Byte> Bytes, Type *Ty) {
     std::vector<AnyValue> ValVec;
     ValVec.reserve(NumElements);
     for (uint32_t I = 0; I != NumElements; ++I)
-      ValVec.push_back(fromBytes(Bytes.slice(I * Stride, StoreSize), ElemTy));
+      ValVec.push_back(fromBytes(Bytes.slice(I * Stride, StoreSize), ElemTy,
+                                 ContainsUndefinedBits));
     return AnyValue(std::move(ValVec));
   }
   if (auto *StructTy = dyn_cast<StructType>(Ty)) {
@@ -231,7 +245,7 @@ AnyValue Context::fromBytes(ArrayRef<Byte> Bytes, Type *Ty) {
       ValVec.push_back(fromBytes(
           Bytes.slice(getEffectiveTypeSize(Layout->getElementOffset(I)),
                       getEffectiveTypeStoreSize(ElemTy)),
-          ElemTy));
+          ElemTy, ContainsUndefinedBits));
     }
     return AnyValue(std::move(ValVec));
   }
@@ -359,9 +373,11 @@ void Context::toBytes(const AnyValue &Val, Type *Ty,
   llvm_unreachable("Unsupported first class type.");
 }
 
-AnyValue Context::load(MemoryObject &MO, uint64_t Offset, Type *ValTy) {
+AnyValue Context::load(MemoryObject &MO, uint64_t Offset, Type *ValTy,
+                       bool *ContainsUndefinedBits) {
   return fromBytes(
-      MO.getBytes().slice(Offset, getEffectiveTypeStoreSize(ValTy)), ValTy);
+      MO.getBytes().slice(Offset, getEffectiveTypeStoreSize(ValTy)), ValTy,
+      ContainsUndefinedBits);
 }
 
 void Context::store(MemoryObject &MO, uint64_t Offset, const AnyValue &Val,

@@ -3750,7 +3750,8 @@ define amdgpu_kernel void @fneg_v2f32_vec(ptr addrspace(1) %a) {
 ; PACKED-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; PACKED-SDAG-NEXT:    global_load_dwordx2 v[0:1], v2, s[0:1]
 ; PACKED-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; PACKED-SDAG-NEXT:    v_pk_add_f32 v[0:1], v[0:1], 0 neg_lo:[1,1] neg_hi:[1,1]
+; PACKED-SDAG-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
+; PACKED-SDAG-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
 ; PACKED-SDAG-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; PACKED-SDAG-NEXT:    s_endpgm
 ;
@@ -3774,7 +3775,8 @@ define amdgpu_kernel void @fneg_v2f32_vec(ptr addrspace(1) %a) {
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-SDAG-NEXT:    global_load_b64 v[0:1], v2, s[0:1] scale_offset
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-SDAG-NEXT:    v_pk_add_f32 v[0:1], v[0:1], 0 neg_lo:[1,1] neg_hi:[1,1]
+; GFX1250-SDAG-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
+; GFX1250-SDAG-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
 ; GFX1250-SDAG-NEXT:    global_store_b64 v2, v[0:1], s[0:1] scale_offset
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;

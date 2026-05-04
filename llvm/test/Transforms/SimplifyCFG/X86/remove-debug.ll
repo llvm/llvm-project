@@ -69,7 +69,7 @@ declare void @_Z3bazv() #1
 !3 = !{i32 2, !"Dwarf Version", i32 4}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 !5 = !{}
-!6 = distinct !DISubprogram(unit: !0)
+!6 = distinct !DISubprogram(type: !7, unit: !0)
 !7 = !DISubroutineType(types: !2)
 !8 = !{!9, !9, i64 0}
 !9 = !{!"int", !10, i64 0}
