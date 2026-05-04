@@ -1682,6 +1682,7 @@ add_header_library(
   HDRS
     isnan.h
   DEPENDS
+    libc.src.__support.macros.attributes
     libc.src.__support.macros.config
 )
 
@@ -1690,6 +1691,7 @@ add_header_library(
   HDRS
     isnanf.h
   DEPENDS
+    libc.src.__support.macros.attributes
     libc.src.__support.macros.config
 )
 
@@ -1698,6 +1700,7 @@ add_header_library(
   HDRS
     isnanl.h
   DEPENDS
+    libc.src.__support.macros.attributes
     libc.src.__support.macros.config
 )
 
@@ -5533,4 +5536,3 @@ add_header_library(
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.config
 )
-
