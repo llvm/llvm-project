@@ -274,7 +274,7 @@ public:
 
   virtual unsigned getEpilogueVectorizationMinVF() const { return 16; }
 
-  virtual bool preferPredicateOverEpilogue(TailFoldingInfo *TFI) const {
+  virtual bool preferTailFoldingOverEpilogue(TailFoldingInfo *TFI) const {
     return false;
   }
 
@@ -480,10 +480,6 @@ public:
   virtual bool useColdCCForColdCall(Function &F) const { return false; }
 
   virtual bool useFastCCForInternalCall(Function &F) const { return true; }
-
-  virtual bool isTargetIntrinsicTriviallyScalarizable(Intrinsic::ID ID) const {
-    return false;
-  }
 
   virtual bool isTargetIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
                                                   unsigned ScalarOpdIdx) const {

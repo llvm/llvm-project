@@ -920,11 +920,13 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       if (LT.second.isVector())
         LegalTy = VectorType::get(LegalTy, LT.second.getVectorElementCount());
       InstructionCost Cost = 1;
-      IntrinsicCostAttributes Attrs1(IsSigned ? Intrinsic::smin : Intrinsic::umin,
-                                    LegalTy, {LegalTy, LegalTy});
+      IntrinsicCostAttributes Attrs1(IsSigned ? Intrinsic::smin
+                                              : Intrinsic::umin,
+                                     LegalTy, {LegalTy, LegalTy});
       Cost += getIntrinsicInstrCost(Attrs1, CostKind);
-      IntrinsicCostAttributes Attrs2(IsSigned ? Intrinsic::smax : Intrinsic::umax,
-                                    LegalTy, {LegalTy, LegalTy});
+      IntrinsicCostAttributes Attrs2(IsSigned ? Intrinsic::smax
+                                              : Intrinsic::umax,
+                                     LegalTy, {LegalTy, LegalTy});
       Cost += getIntrinsicInstrCost(Attrs2, CostKind);
       return LT.first * Cost +
              ((LT.second.getScalarType() != MVT::f16 || ST->hasFullFP16()) ? 0
@@ -1459,6 +1461,10 @@ static SVEIntrinsicInfo constructSVEIntrinsicInfo(IntrinsicInst &II) {
   case Intrinsic::aarch64_sve_fcvtzu_i32f64:
   case Intrinsic::aarch64_sve_fcvtzu_i64f16:
   case Intrinsic::aarch64_sve_fcvtzu_i64f32:
+  case Intrinsic::aarch64_sve_revb:
+  case Intrinsic::aarch64_sve_revh:
+  case Intrinsic::aarch64_sve_revw:
+  case Intrinsic::aarch64_sve_revd:
   case Intrinsic::aarch64_sve_scvtf:
   case Intrinsic::aarch64_sve_scvtf_f16i32:
   case Intrinsic::aarch64_sve_scvtf_f16i64:
@@ -3437,6 +3443,25 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
             BF16Tbl, ISD, DstTy.getSimpleVT(), SrcTy.getSimpleVT()))
       return Entry->Cost;
 
+  // We have to estimate a cost of fixed length operation upon
+  // SVE registers(operations) with the number of registers required
+  // for a fixed type to be represented upon SVE registers.
+  EVT WiderTy = SrcTy.bitsGT(DstTy) ? SrcTy : DstTy;
+  if (SrcTy.isFixedLengthVector() && DstTy.isFixedLengthVector() &&
+      SrcTy.getVectorNumElements() == DstTy.getVectorNumElements() &&
+      ST->useSVEForFixedLengthVectors(WiderTy)) {
+    std::pair<InstructionCost, MVT> LT =
+        getTypeLegalizationCost(WiderTy.getTypeForEVT(Dst->getContext()));
+    unsigned NumElements =
+        AArch64::SVEBitsPerBlock / LT.second.getScalarSizeInBits();
+    return LT.first *
+           getCastInstrCost(
+               Opcode,
+               ScalableVectorType::get(Dst->getScalarType(), NumElements),
+               ScalableVectorType::get(Src->getScalarType(), NumElements), CCH,
+               CostKind, I);
+  }
+
   // Symbolic constants for the SVE sitofp/uitofp entries in the table below
   // The cost of unpacking twice is artificially increased for now in order
   // to avoid regressions against NEON, which will use tbl instructions directly
@@ -3739,6 +3764,14 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       {ISD::FP_TO_UINT, MVT::v4i16, MVT::v4f32, 2},
       {ISD::FP_TO_UINT, MVT::v4i8, MVT::v4f32, 2},
 
+      // Complex, from v2f64: legal type is v2i32, 1 narrowing => ~2.
+      {ISD::FP_TO_SINT, MVT::v2i32, MVT::v2f64, 2},
+      {ISD::FP_TO_SINT, MVT::v2i16, MVT::v2f64, 2},
+      {ISD::FP_TO_SINT, MVT::v2i8, MVT::v2f64, 2},
+      {ISD::FP_TO_UINT, MVT::v2i32, MVT::v2f64, 2},
+      {ISD::FP_TO_UINT, MVT::v2i16, MVT::v2f64, 2},
+      {ISD::FP_TO_UINT, MVT::v2i8, MVT::v2f64, 2},
+
       // Complex, from nxv2f32.
       {ISD::FP_TO_SINT, MVT::nxv2i64, MVT::nxv2f32, 1},
       {ISD::FP_TO_SINT, MVT::nxv2i32, MVT::nxv2f32, 1},
@@ -3748,14 +3781,6 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       {ISD::FP_TO_UINT, MVT::nxv2i32, MVT::nxv2f32, 1},
       {ISD::FP_TO_UINT, MVT::nxv2i16, MVT::nxv2f32, 1},
       {ISD::FP_TO_UINT, MVT::nxv2i8, MVT::nxv2f32, 1},
-
-      // Complex, from v2f64: legal type is v2i32, 1 narrowing => ~2.
-      {ISD::FP_TO_SINT, MVT::v2i32, MVT::v2f64, 2},
-      {ISD::FP_TO_SINT, MVT::v2i16, MVT::v2f64, 2},
-      {ISD::FP_TO_SINT, MVT::v2i8, MVT::v2f64, 2},
-      {ISD::FP_TO_UINT, MVT::v2i32, MVT::v2f64, 2},
-      {ISD::FP_TO_UINT, MVT::v2i16, MVT::v2f64, 2},
-      {ISD::FP_TO_UINT, MVT::v2i8, MVT::v2f64, 2},
 
       // Complex, from nxv2f64.
       {ISD::FP_TO_SINT, MVT::nxv2i64, MVT::nxv2f64, 1},
@@ -3910,25 +3935,6 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       {ISD::SIGN_EXTEND, MVT::nxv8i64, MVT::nxv8i16, 6},
       {ISD::SIGN_EXTEND, MVT::nxv4i64, MVT::nxv4i32, 2},
   };
-
-  // We have to estimate a cost of fixed length operation upon
-  // SVE registers(operations) with the number of registers required
-  // for a fixed type to be represented upon SVE registers.
-  EVT WiderTy = SrcTy.bitsGT(DstTy) ? SrcTy : DstTy;
-  if (SrcTy.isFixedLengthVector() && DstTy.isFixedLengthVector() &&
-      SrcTy.getVectorNumElements() == DstTy.getVectorNumElements() &&
-      ST->useSVEForFixedLengthVectors(WiderTy)) {
-    std::pair<InstructionCost, MVT> LT =
-        getTypeLegalizationCost(WiderTy.getTypeForEVT(Dst->getContext()));
-    unsigned NumElements =
-        AArch64::SVEBitsPerBlock / LT.second.getScalarSizeInBits();
-    return LT.first *
-           getCastInstrCost(
-               Opcode,
-               ScalableVectorType::get(Dst->getScalarType(), NumElements),
-               ScalableVectorType::get(Src->getScalarType(), NumElements), CCH,
-               CostKind, I);
-  }
 
   if (const auto *Entry = ConvertCostTableLookup(
           ConversionTbl, ISD, DstTy.getSimpleVT(), SrcTy.getSimpleVT()))
@@ -4884,6 +4890,7 @@ AArch64TTIImpl::getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
   case Intrinsic::masked_gather:
     return getGatherScatterOpCost(MICA, CostKind);
   case Intrinsic::masked_load:
+  case Intrinsic::masked_expandload:
   case Intrinsic::masked_store:
     return getMaskedMemoryOpCost(MICA, CostKind);
   }
@@ -4913,6 +4920,15 @@ AArch64TTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
   if (VT->getElementCount() == ElementCount::getScalable(1))
     return InstructionCost::getInvalid();
 
+  InstructionCost MemOpCost = LT.first;
+  if (MICA.getID() == Intrinsic::masked_expandload) {
+    if (!isLegalMaskedExpandLoad(Src, MICA.getAlignment()))
+      return InstructionCost::getInvalid();
+
+    // Operation will be split into expand of masked.load
+    MemOpCost *= 2;
+  }
+
   // If we need to split the memory operation, we will also need to split the
   // mask. This will likely lead to overestimating the cost in some cases if
   // multiple memory operations use the same mask, but we often don't have
@@ -4922,9 +4938,9 @@ AArch64TTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
   // since the number of bits in a P register matches the number of bytes in a
   // Z register.
   if (LT.first > 1 && LT.second.getScalarSizeInBits() > 8)
-    return LT.first * 2;
+    return MemOpCost * 2;
 
-  return LT.first;
+  return MemOpCost;
 }
 
 // This function returns gather/scatter overhead either from
@@ -5146,6 +5162,18 @@ AArch64TTIImpl::getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) const {
               getMemoryOpCost(Instruction::Load, I, Align(128), 0, CostKind);
   }
   return Cost;
+}
+
+bool AArch64TTIImpl::isLegalMaskedExpandLoad(Type *DataTy,
+                                             Align Alignment) const {
+  // Neon types should be scalarised when we are not choosing to use SVE.
+  if (useNeonVector(DataTy))
+    return false;
+
+  // Return true only if we are able to lower using the SVE2p2/SME2p2
+  // expand instruction.
+  return (ST->isSVEAvailable() && ST->hasSVE2p2()) ||
+         (ST->isSVEorStreamingSVEAvailable() && ST->hasSME2p2());
 }
 
 unsigned AArch64TTIImpl::getMaxInterleaveFactor(ElementCount VF) const {
@@ -6495,7 +6523,7 @@ unsigned AArch64TTIImpl::getEpilogueVectorizationMinVF() const {
   return ST->getEpilogueVectorizationMinVF();
 }
 
-bool AArch64TTIImpl::preferPredicateOverEpilogue(TailFoldingInfo *TFI) const {
+bool AArch64TTIImpl::preferTailFoldingOverEpilogue(TailFoldingInfo *TFI) const {
   if (!ST->hasSVE())
     return false;
 

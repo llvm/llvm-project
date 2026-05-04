@@ -19,12 +19,9 @@ namespace llvm {
 
 class Function;
 
-class InstCountPass : public OptionalPassInfoMixin<InstCountPass> {
-  bool IsPreOptimization;
-
+class InstCountPass : public MandatoryPassInfoMixin<InstCountPass> {
 public:
-  explicit InstCountPass(bool IsPreOptimization = false)
-      : IsPreOptimization(IsPreOptimization) {}
+  explicit InstCountPass() {}
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };

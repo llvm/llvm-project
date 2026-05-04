@@ -184,12 +184,9 @@ public:
 
 /// Statistics pass for the FunctionPropertiesAnalysis results.
 class FunctionPropertiesStatisticsPass
-    : public OptionalPassInfoMixin<FunctionPropertiesStatisticsPass> {
-  bool IsPreOptimization;
-
+    : public MandatoryPassInfoMixin<FunctionPropertiesStatisticsPass> {
 public:
-  explicit FunctionPropertiesStatisticsPass(bool IsPreOptimization = false)
-      : IsPreOptimization(IsPreOptimization) {}
+  explicit FunctionPropertiesStatisticsPass() {}
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };

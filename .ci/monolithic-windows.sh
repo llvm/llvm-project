@@ -21,7 +21,7 @@ runtimes="${3}"
 runtimes_targets="${4}"
 
 runtime_cmake_args=()
-if [[ " ${runtimes_targets} " == *" check-libclc-amdgcn-amd-amdhsa-llvm "* ]]; then
+if [[ " ${runtimes_targets} " == *" check-libclc "* ]]; then
   runtime_cmake_args+=(
     -D RUNTIMES_amdgcn-amd-amdhsa-llvm_LLVM_ENABLE_RUNTIMES=libclc
     -D LLVM_RUNTIME_TARGETS="default;amdgcn-amd-amdhsa-llvm"

@@ -4,6 +4,7 @@
 
 ; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - \
 ; RUN:   | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-NOT: OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
 ; CHECK-NOT: OpExtension "SPV_KHR_non_semantic_info"

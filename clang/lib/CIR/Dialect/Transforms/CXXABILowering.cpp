@@ -55,7 +55,8 @@ bool isCXXABIAttributeLegal(const mlir::TypeConverter &tc,
   // These attributes either don't contain a type, or don't contain a type that
   // can have a data member/method.
   if (isa<mlir::DenseArrayAttr, mlir::FloatAttr, mlir::UnitAttr,
-          mlir::StringAttr, mlir::IntegerAttr, mlir::SymbolRefAttr>(attr))
+          mlir::StringAttr, mlir::IntegerAttr, mlir::SymbolRefAttr,
+          cir::AnnotationAttr>(attr))
     return true;
 
   // Tablegen'ed always-legal attributes:
@@ -415,6 +416,17 @@ static mlir::TypedAttr lowerInitialValue(const LowerModule *lowerModule,
       return cir::ZeroAttr::get(loweredArrTy);
 
     auto arrayVal = mlir::cast<cir::ConstArrayAttr>(initVal);
+
+    // String-literal arrays store their bytes as a StringAttr in `elts`. The
+    // backing i8 element type is never rewritten by the CXX ABI type
+    // converter, so the attribute is already legal and can be passed through
+    // unchanged.
+    if (mlir::isa<mlir::StringAttr>(arrayVal.getElts())) {
+      assert(loweredArrTy == arrTy &&
+             "string-literal array type should not change under CXX ABI");
+      return arrayVal;
+    }
+
     auto arrayElts = mlir::cast<ArrayAttr>(arrayVal.getElts());
     SmallVector<mlir::Attribute> loweredElements;
     loweredElements.reserve(arrTy.getSize());
@@ -609,9 +621,7 @@ mlir::LogicalResult CIRDeleteArrayOpABILowering::matchAndRewrite(
   mlir::Value loweredAddress = adaptor.getAddress();
 
   cir::UsualDeleteParamsAttr deleteParams = op.getDeleteParams();
-  bool cookieRequired = deleteParams.getSize();
-  assert((deleteParams.getSize() || !op.getElementDtorAttr()) &&
-         "Expected size parameter when dtor fn is provided!");
+  bool cookieRequired = deleteParams.getSize() || op.getElementDtorAttr();
 
   if (deleteParams.getTypeAwareDelete() || deleteParams.getDestroyingDelete() ||
       deleteParams.getAlignment())
@@ -647,22 +657,23 @@ mlir::LogicalResult CIRDeleteArrayOpABILowering::matchAndRewrite(
           });
     }
 
-    // Compute the total allocation size and add it to the call arguments.
     callArgs.push_back(deletePtr);
-    uint64_t eltSizeBytes = dl.getTypeSizeInBits(ptrTy.getPointee()) / 8;
-    unsigned ptrWidth =
-        lowerModule->getTarget().getPointerWidth(clang::LangAS::Default);
-    cir::IntType sizeTy = cirBuilder.getUIntNTy(ptrWidth);
+    if (deleteParams.getSize()) {
+      uint64_t eltSizeBytes = dl.getTypeSizeInBits(ptrTy.getPointee()) / 8;
+      unsigned ptrWidth =
+          lowerModule->getTarget().getPointerWidth(clang::LangAS::Default);
+      cir::IntType sizeTy = cirBuilder.getUIntNTy(ptrWidth);
 
-    mlir::Value eltSizeVal = cir::ConstantOp::create(
-        rewriter, loc, cir::IntAttr::get(sizeTy, eltSizeBytes));
-    mlir::Value allocSize =
-        cir::MulOp::create(rewriter, loc, sizeTy, eltSizeVal, numElements);
-    mlir::Value cookieSizeVal = cir::ConstantOp::create(
-        rewriter, loc, cir::IntAttr::get(sizeTy, cookieSize.getQuantity()));
-    allocSize =
-        cir::AddOp::create(rewriter, loc, sizeTy, allocSize, cookieSizeVal);
-    callArgs.push_back(allocSize);
+      mlir::Value eltSizeVal = cir::ConstantOp::create(
+          rewriter, loc, cir::IntAttr::get(sizeTy, eltSizeBytes));
+      mlir::Value allocSize =
+          cir::MulOp::create(rewriter, loc, sizeTy, eltSizeVal, numElements);
+      mlir::Value cookieSizeVal = cir::ConstantOp::create(
+          rewriter, loc, cir::IntAttr::get(sizeTy, cookieSize.getQuantity()));
+      allocSize =
+          cir::AddOp::create(rewriter, loc, sizeTy, allocSize, cookieSizeVal);
+      callArgs.push_back(allocSize);
+    }
   } else {
     deletePtr = cir::CastOp::create(rewriter, loc, cirBuilder.getVoidPtrTy(),
                                     cir::CastKind::bitcast, loweredAddress);

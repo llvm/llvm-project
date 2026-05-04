@@ -106,6 +106,12 @@ void registerOpenACCExtensions(mlir::DialectRegistry &registry) {
                             mlir::acc::OpenACCDialect *dialect) {
     mlir::acc::LoopOp::attachInterface<OperationMoveModel<mlir::acc::LoopOp>>(
         *ctx);
+    mlir::acc::KernelsOp::attachInterface<
+        OperationMoveModel<mlir::acc::KernelsOp>>(*ctx);
+    mlir::acc::ParallelOp::attachInterface<
+        OperationMoveModel<mlir::acc::ParallelOp>>(*ctx);
+    mlir::acc::SerialOp::attachInterface<
+        OperationMoveModel<mlir::acc::SerialOp>>(*ctx);
     mlir::acc::ReductionInitOp::attachInterface<
         fir::acc::ReductionInitOpFortranObjectViewModel>(*ctx);
   });

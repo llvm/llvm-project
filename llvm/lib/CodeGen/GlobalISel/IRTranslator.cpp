@@ -174,8 +174,8 @@ void IRTranslator::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<StackProtector>();
   AU.addRequired<TargetPassConfig>();
   AU.addRequired<GISelCSEAnalysisWrapperPass>();
-  AU.addRequired<AssumptionCacheTracker>();
   if (OptLevel != CodeGenOptLevel::None) {
+    AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<BranchProbabilityInfoWrapperPass>();
     AU.addRequired<AAResultsWrapperPass>();
   }
@@ -887,7 +887,7 @@ bool IRTranslator::emitJumpTableHeader(SwitchCG::JumpTable &JT,
   // This value may be smaller or larger than the target's pointer type, and
   // therefore require extension or truncating.
   auto *PtrIRTy = PointerType::getUnqual(SValue.getContext());
-  const LLT PtrScalarTy = LLT::scalar(DL->getTypeSizeInBits(PtrIRTy));
+  const LLT PtrScalarTy = LLT::integer(DL->getTypeSizeInBits(PtrIRTy));
   Sub = MIB.buildZExtOrTrunc(PtrScalarTy, Sub);
 
   JT.Reg = Sub.getReg(0);
@@ -1117,14 +1117,14 @@ void IRTranslator::emitBitTestHeader(SwitchCG::BitTestBlock &B,
   LLT MaskTy = SwitchOpTy;
   if (MaskTy.getSizeInBits() > PtrTy.getSizeInBits() ||
       !llvm::has_single_bit<uint32_t>(MaskTy.getSizeInBits()))
-    MaskTy = LLT::scalar(PtrTy.getSizeInBits());
+    MaskTy = LLT::integer(PtrTy.getSizeInBits());
   else {
     // Ensure that the type will fit the mask value.
     for (const SwitchCG::BitTestCase &Case : B.Cases) {
       if (!isUIntN(SwitchOpTy.getSizeInBits(), Case.Mask)) {
         // Switch table case range are encoded into series of masks.
         // Just use pointer type, it's guaranteed to fit.
-        MaskTy = LLT::scalar(PtrTy.getSizeInBits());
+        MaskTy = LLT::integer(PtrTy.getSizeInBits());
         break;
       }
     }
@@ -1404,7 +1404,7 @@ bool IRTranslator::translateLoad(const User &U, MachineIRBuilder &MIRBuilder) {
   }
 
   MachineMemOperand::Flags Flags =
-      TLI->getLoadMemOperandFlags(LI, *DL, AC, LibInfo);
+      TLI->getLoadMemOperandFlags(LI, *DL, AC, LibInfo, OptLevel);
   if (AA && !(Flags & MachineMemOperand::MOInvariant)) {
     if (AA->pointsToConstantMemory(
             MemoryLocation(Ptr, LocationSize::precise(StoreSize), AAInfo))) {
@@ -4221,13 +4221,13 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   if (EnableOpts) {
     AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
     FuncInfo.BPI = &getAnalysis<BranchProbabilityInfoWrapperPass>().getBPI();
+    AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(
+        MF->getFunction());
   } else {
     AA = nullptr;
     FuncInfo.BPI = nullptr;
+    AC = nullptr;
   }
-
-  AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(
-      MF->getFunction());
   LibInfo = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
   Libcalls = &getAnalysis<LibcallLoweringInfoWrapper>().getLibcallLowering(
       *F.getParent(), Subtarget);

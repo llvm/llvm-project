@@ -170,8 +170,13 @@ bool LiveRangeEdit::foldAsLoad(LiveInterval *LI,
     LiveInterval &LI = LIS.getInterval(CopyMI->getOperand(0).getReg());
     VNInfo *VNI = LI.getNextValue(CopyIdx, LIS.getVNInfoAllocator());
     LI.addSegment(LiveRange::Segment(CopyIdx, FoldIdx.getRegSlot(), VNI));
-    LiveInterval &SrcLI = LIS.getInterval(CopyMI->getOperand(1).getReg());
-    LIS.shrinkToUses(&SrcLI);
+    Register R = CopyMI->getOperand(1).getReg();
+    if (R.isVirtual()) {
+      LiveInterval &SrcLI = LIS.getInterval(R);
+      LIS.shrinkToUses(&SrcLI);
+    } else {
+      assert(MRI.isReserved(R) && "Unexpected PhysReg in source operand!");
+    }
   }
   return true;
 }
