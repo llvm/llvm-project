@@ -117,11 +117,12 @@ public:
     if (IC.isVariable()) {
       Cost = IC.getCost();
       StaticBonusApplied = IC.getStaticBonusApplied();
+      CostBenefit = IC.getCostBenefit();
     } else {
       Cost = IC.isNever() ? INT_MAX : INT_MIN;
       StaticBonusApplied = 0;
+      CostBenefit = std::nullopt;
     }
-    CostBenefit = IC.getCostBenefit();
   }
 
   static bool isMoreDesirable(const CostBenefitPriority &P1,
