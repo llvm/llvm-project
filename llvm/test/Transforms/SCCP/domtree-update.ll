@@ -4,7 +4,7 @@
 
 ; DTU should not crash.
 
-define i32 @test() {
+define i32 @test(i1 %arg) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -25,10 +25,10 @@ if.then2:                                         ; preds = %for.body
   br label %for.inc
 
 if.else:                                          ; preds = %for.body
-  br i1 undef, label %lor.rhs, label %if.then19.critedge
+  br i1 %arg, label %lor.rhs, label %if.then19.critedge
 
 lor.rhs:                                          ; preds = %if.else
-  br i1 undef, label %if.then19, label %for.inc
+  br i1 %arg, label %if.then19, label %for.inc
 
 if.then19.critedge:                               ; preds = %if.else
   br label %if.then19

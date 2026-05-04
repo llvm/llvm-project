@@ -15,6 +15,7 @@ define zeroext i1 @f1(i256 %a, i256 %b, ptr %res) {
 ; CHECK-NEXT:    vlgvg %r2, %v5, 1
 ; CHECK-NEXT:    vsbiq %v0, %v1, %v0, %v4
 ; CHECK-NEXT:    vsq %v1, %v3, %v2
+; CHECK-NEXT:    xilf %r2, 1
 ; CHECK-NEXT:    vst %v1, 16(%r4), 3
 ; CHECK-NEXT:    vst %v0, 0(%r4), 3
 ; CHECK-NEXT:    br %r14
@@ -35,6 +36,7 @@ define zeroext i1 @f2(i256 %a, i256 %b) {
 ; CHECK-NEXT:    vscbiq %v2, %v3, %v2
 ; CHECK-NEXT:    vsbcbiq %v0, %v1, %v0, %v2
 ; CHECK-NEXT:    vlgvg %r2, %v0, 1
+; CHECK-NEXT:    xilf %r2, 1
 ; CHECK-NEXT:    br %r14
   %t = call {i256, i1} @llvm.usub.with.overflow.i256(i256 %a, i256 %b)
   %obit = extractvalue {i256, i1} %t, 1

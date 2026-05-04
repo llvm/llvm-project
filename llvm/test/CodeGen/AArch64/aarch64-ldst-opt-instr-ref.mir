@@ -1,0 +1,91 @@
+# RUN: llc -mtriple=aarch64-unknown-linux-gnu -o - %s -run-pass=aarch64-ldst-opt | FileCheck %s
+
+# This testcase was obtained by looking at FileCheck.cpp and reducing it down via llvm-reduce
+
+# The aarch64-ldst-opt pass tries to merge load instructions from LDR* to a load pair or LDP* instruction, in such a case, we must ensure that the debug-instr-number is properly preserved for instruction referencing.
+
+# Check that in the case of a sign extend, the debug instruction number is transferred to the sign extend instruction (SBFMXri in this case), whereas the LDP instruction gets the other debug instruction number for the load that doesn't get sign extended.
+
+# CHECK-LABEL: name:            _ZNK4llvm7Pattern5matchENS_9StringRefERKNS_9SourceMgrE
+# CHECK: debugValueSubstitutions:
+# CHECK-NEXT: - { srcinst: [[DBG_INSTR_NUM1:[0-9+]]], srcop: [[DBG_INSTR_OP1:[0-9+]]], dstinst: [[DBG_INSTR_NUM2:[0-9+]]], dstop: 1, subreg: 0 }
+# CHECK-NEXT: - { srcinst: [[DBG_INSTR_NUM3:[0-9+]]], srcop: [[DBG_INSTR_OP2:[0-9+]]], dstinst: [[DBG_INSTR_NUM4:[0-9+]]], dstop: 0, subreg: 0 }
+
+# CHECK: $w[[REG1:[0-9+]]], renamable $w[[REG2:[0-9+]]] = LDPWi renamable $x[[REG1]], 0, debug-instr-number [[DBG_INSTR_NUM2]]
+# CHECK-NEXT: $w[[REG1]] = KILL $w[[REG1]], implicit-def $x[[REG1]]
+# CHECK-NEXT: $x[[REG1]] = SBFMXri $x[[REG1]], 0, 31, debug-instr-number [[DBG_INSTR_NUM4]]
+# CHECK-NEXT: DBG_INSTR_REF !{{[0-9+]}}, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_fragment, 64, 64), dbg-instr-ref([[DBG_INSTR_NUM1]], [[DBG_INSTR_OP1]]), debug-location !{{[0-9+]}}
+# CHECK-NEXT: DBG_INSTR_REF !7, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_fragment, 64, 32), dbg-instr-ref([[DBG_INSTR_NUM3]], [[DBG_INSTR_OP2]]), debug-location !{{[0-9+]}}
+
+# Check that in the case there is no sign extend, the LDP instruction gets a new debug instruction number and both the DBG_INSTR_REFs use the new instruction number.
+
+# CHECK-LABEL: name:            _ZNK4llvm7Pattern5matchENS_9StringRefERKNS_9SourceMgrE2
+# CHECK: debugValueSubstitutions:
+# CHECK-NEXT: - { srcinst: [[DBG_INSTR_NUM5:[0-9+]]], srcop: [[DBG_INSTR_OP3:[0-9+]]], dstinst: [[DBG_INSTR_NUM6:[0-9+]]], dstop: 1, subreg: 0 }
+# CHECK-NEXT: - { srcinst: [[DBG_INSTR_NUM7:[0-9+]]], srcop: [[DBG_INSTR_OP4:[0-9+]]], dstinst: [[DBG_INSTR_NUM6]], dstop: 0, subreg: 0 }
+
+# CHECK: renamable $x[[REG3:[0-9+]]], renamable $x[[REG4:[0-9+]]] = LDPXi renamable $x[[REG3]], 0, debug-instr-number [[DBG_INSTR_NUM6]]
+# CHECK-NEXT: DBG_INSTR_REF !12, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_fragment, 64, 64), dbg-instr-ref([[DBG_INSTR_NUM5]], [[DBG_INSTR_OP3]]), debug-location !14
+# CHECK-NEXT: DBG_INSTR_REF !12, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_fragment, 64, 32), dbg-instr-ref([[DBG_INSTR_NUM7]], [[DBG_INSTR_OP4]]), debug-location !14
+
+--- |
+  define i64 @_ZNK4llvm9StringRef4sizeEv(ptr readonly captures(none) %this) local_unnamed_addr #0 {
+  entry:
+    %Length = getelementptr i8, ptr %this, i64 8
+    %0 = load i64, ptr %Length, align 4
+    ret i64 %0
+  }
+  define ptr @_ZNK4llvm9StringRef4dataEv(ptr readonly captures(none) %this) local_unnamed_addr #0 {
+  entry:
+    %0 = load ptr, ptr %this, align 8
+    ret ptr %0
+  }
+  define void @_ZNK4llvm7Pattern5matchENS_9StringRefERKNS_9SourceMgrE(ptr readonly captures(none) %agg.result) local_unnamed_addr !dbg !3 {
+    %call1541 = load volatile ptr, ptr null, align 4294967296, !dbg !9
+    %FullMatch.sroa.1.0.agg.result.sroa_idx = getelementptr inbounds nuw i8, ptr %agg.result, i64 8
+    ret void
+  }
+  define void @_ZNK4llvm7Pattern5matchENS_9StringRefERKNS_9SourceMgrE2(ptr readonly captures(none) %agg.result) local_unnamed_addr !dbg !10 {
+    %call1541 = load volatile ptr, ptr null, align 4294967296, !dbg !11
+    %FullMatch.sroa.1.0.agg.result.sroa_idx = getelementptr inbounds nuw i8, ptr %agg.result, i64 8
+    ret void
+  }
+  !llvm.module.flags = !{!0}
+  !llvm.dbg.cu = !{!1}
+  !0 = !{i32 2, !"Debug Info Version", i32 3}
+  !1 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !2, isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, sdk: "MacOSX15.3.sdk")
+  !2 = !DIFile(filename: "/Users/shubhamrastogi/Development/llvm-project-instr-ref/llvm-project/llvm/lib/FileCheck/FileCheck.cpp", directory: "/Users/shubhamrastogi/Development/llvm-project-instr-ref/llvm-project/build-baseline-stage2", checksumkind: CSK_MD5, checksum: "ac1d2352ab68b965fe7993c780cf92d7")
+  !3 = distinct !DISubprogram(scope: null, type: !4, spFlags: DISPFlagDefinition, unit: !1, retainedNodes: !6)
+  !4 = distinct !DISubroutineType(types: !5)
+  !5 = !{}
+  !6 = !{!7}
+  !7 = !DILocalVariable(name: "FullMatch", scope: !3, line: 1152, type: !8)
+  !8 = distinct !DICompositeType(tag: DW_TAG_class_type, size: 128, identifier: "_ZTSN4llvm9StringRefE")
+  !9 = !DILocation(line: 0, scope: !3)
+  !10 = distinct !DISubprogram(scope: null, type: !4, spFlags: DISPFlagDefinition, unit: !1, retainedNodes: !12)
+  !11 = !DILocation(line: 0, scope: !10)
+  !12 = !{!13}
+  !13 = !DILocalVariable(name: "FullMatch", scope: !10, line: 1152, type: !14)
+  !14 = distinct !DICompositeType(tag: DW_TAG_class_type, size: 128, identifier: "_ZTSN4llvm9StringRefE")
+  
+name:            _ZNK4llvm9StringRef4sizeEv
+---
+name:            _ZNK4llvm9StringRef4dataEv
+...
+name:            _ZNK4llvm7Pattern5matchENS_9StringRefERKNS_9SourceMgrE
+debugValueSubstitutions: []
+body:             |
+  bb.0 (%ir-block.0):
+    renamable $w1 = LDRWui renamable $x0, 1, debug-instr-number 1 :: (load (s64) from %ir.FullMatch.sroa.1.0.agg.result.sroa_idx, align 1)
+    DBG_INSTR_REF !7, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_fragment, 64, 64), dbg-instr-ref(1, 0), debug-location !9
+    renamable $x0 = LDRSWui killed renamable $x0, 0, debug-instr-number 2 :: (load (s64) from %ir.agg.result)
+    DBG_INSTR_REF !7, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_fragment, 64, 32), dbg-instr-ref(2, 0), debug-location !9
+...
+name:            _ZNK4llvm7Pattern5matchENS_9StringRefERKNS_9SourceMgrE2
+debugValueSubstitutions: []
+body:             |
+  bb.0 (%ir-block.0):
+    renamable $x1 = LDRXui renamable $x0, 1, debug-instr-number 1 :: (load (s64) from %ir.FullMatch.sroa.1.0.agg.result.sroa_idx, align 1)
+    DBG_INSTR_REF !13, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_fragment, 64, 64), dbg-instr-ref(1, 0), debug-location !11
+    renamable $x0 = LDRXui killed renamable $x0, 0, debug-instr-number 2 :: (load (s64) from %ir.agg.result)
+    DBG_INSTR_REF !13, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_fragment, 64, 32), dbg-instr-ref(2, 0), debug-location !11

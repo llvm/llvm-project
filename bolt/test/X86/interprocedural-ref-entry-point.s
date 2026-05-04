@@ -1,7 +1,7 @@
-# This reproduces a bug where not registering cold fragment entry points 
-# leads to removing blocks and an inconsistent CFG after UCE.
-# Test assembly was obtained using C-Reduce from this C++ code:
-# (compiled with `g++ -O2 -Wl,-q`)
+## This reproduces a bug where not registering cold fragment entry points
+## leads to removing blocks and an inconsistent CFG after UCE.
+## Test assembly was obtained using C-Reduce from this C++ code:
+## (compiled with `g++ -O2 -Wl,-q`)
 #
 # #include <stdexcept>
 # int a;

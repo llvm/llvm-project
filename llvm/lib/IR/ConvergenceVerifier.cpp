@@ -34,9 +34,7 @@ auto GenericConvergenceVerifier<SSAContext>::getConvOp(const Instruction &I)
 
 template <>
 void GenericConvergenceVerifier<SSAContext>::checkConvergenceTokenProduced(
-    const Instruction &I) {
-  return;
-}
+    const Instruction &I) {}
 
 template <>
 const Instruction *
@@ -75,14 +73,14 @@ GenericConvergenceVerifier<SSAContext>::findAndCheckConvergenceTokenUsed(
 
 template <>
 bool GenericConvergenceVerifier<SSAContext>::isInsideConvergentFunction(
-    const InstructionT &I) {
+    const Instruction &I) {
   auto *F = I.getFunction();
   return F->isConvergent();
 }
 
 template <>
 bool GenericConvergenceVerifier<SSAContext>::isConvergent(
-    const InstructionT &I) {
+    const Instruction &I) {
   if (auto *CB = dyn_cast<CallBase>(&I)) {
     return CB->isConvergent();
   }

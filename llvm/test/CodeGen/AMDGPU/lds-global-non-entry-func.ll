@@ -2,23 +2,23 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -o - -amdgpu-enable-lower-module-lds=false %s 2> %t | FileCheck -check-prefixes=GFX8,GFX8-SDAG %s
 ; RUN: FileCheck -check-prefix=ERR %s < %t
 
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -o - -amdgpu-enable-lower-module-lds=false %s 2> %t | FileCheck -check-prefixes=GFX8,GFX8-GISEL %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -o - -amdgpu-enable-lower-module-lds=false %s 2> %t | FileCheck -check-prefixes=GFX8,GFX8-GISEL %s
 ; RUN: FileCheck -check-prefix=ERR %s < %t
 
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -o - -amdgpu-enable-lower-module-lds=false %s 2> %t | FileCheck -check-prefixes=GFX9,GFX9-SDAG %s
 ; RUN: FileCheck -check-prefix=ERR %s < %t
 
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -o - -amdgpu-enable-lower-module-lds=false %s 2> %t | FileCheck -check-prefixes=GFX9,GFX9-GISEL %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -o - -amdgpu-enable-lower-module-lds=false %s 2> %t | FileCheck -check-prefixes=GFX9,GFX9-GISEL %s
 ; RUN: FileCheck -check-prefix=ERR %s < %t
 
 ; Test there's no verifier error if a function directly uses LDS and
 ; we emit a trap. The s_endpgm needs to be emitted in a terminator
 ; position.
 
-; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 -verify-machineinstrs < %s 2> %t | FileCheck -check-prefixes=CHECK,SDAG %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 < %s 2> %t | FileCheck -check-prefixes=CHECK,SDAG %s
 ; RUN: FileCheck -check-prefix=ERR %s < %t
 
-; RUN: llc -global-isel=1 -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 -verify-machineinstrs < %s 2> %t | FileCheck -check-prefixes=CHECK,GISEL %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 < %s 2> %t | FileCheck -check-prefixes=CHECK,GISEL %s
 ; RUN: FileCheck -check-prefix=ERR %s < %t
 
 
@@ -33,7 +33,7 @@ define void @func_use_lds_global() {
 ; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX8-SDAG-NEXT:    s_mov_b32 m0, -1
-; GFX8-SDAG-NEXT:    s_mov_b64 s[4:5], 0
+; GFX8-SDAG-NEXT:    s_mov_b64 s[4:5], 0xc8
 ; GFX8-SDAG-NEXT:    ds_write_b32 v0, v0
 ; GFX8-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; GFX8-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
@@ -98,62 +98,32 @@ define void @func_use_lds_global() {
   ret void
 }
 
-; ERR: warning: <unknown>:0:0: in function func_use_lds_global_constexpr_cast void (): local memory global used by non-kernel function
-define void @func_use_lds_global_constexpr_cast() {
-; GFX8-SDAG-LABEL: func_use_lds_global_constexpr_cast:
-; GFX8-SDAG:       ; %bb.0:
-; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-SDAG-NEXT:    s_mov_b64 s[4:5], 0
-; GFX8-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
-; GFX8-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8-SDAG-NEXT:    s_trap 2
-; GFX8-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; ERR: warning: <unknown>:0:0: in function func_use_lds_global_constexpr_cast void (ptr addrspace(1)): local memory global used by non-kernel function
+define void @func_use_lds_global_constexpr_cast(ptr addrspace(1) %out) {
+; GFX8-LABEL: func_use_lds_global_constexpr_cast:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    s_mov_b64 s[4:5], 0xc8
+; GFX8-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX8-NEXT:    s_trap 2
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX8-GISEL-LABEL: func_use_lds_global_constexpr_cast:
-; GFX8-GISEL:       ; %bb.0:
-; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-GISEL-NEXT:    s_mov_b64 s[4:5], 0xc8
-; GFX8-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
-; GFX8-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8-GISEL-NEXT:    s_trap 2
-; GFX8-GISEL-NEXT:    flat_store_dword v[0:1], v0
-; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-LABEL: func_use_lds_global_constexpr_cast:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_trap 2
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-SDAG-LABEL: func_use_lds_global_constexpr_cast:
-; GFX9-SDAG:       ; %bb.0:
-; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-SDAG-NEXT:    s_trap 2
-; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX9-GISEL-LABEL: func_use_lds_global_constexpr_cast:
-; GFX9-GISEL:       ; %bb.0:
-; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-GISEL-NEXT:    s_trap 2
-; GFX9-GISEL-NEXT:    global_store_dword v[0:1], v0, off
-; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; SDAG-LABEL: func_use_lds_global_constexpr_cast:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-NEXT:    s_cbranch_execnz .LBB1_2
-; SDAG-NEXT:  ; %bb.1:
-; SDAG-NEXT:    s_setpc_b64 s[30:31]
-; SDAG-NEXT:  .LBB1_2:
-; SDAG-NEXT:    s_endpgm
-;
-; GISEL-LABEL: func_use_lds_global_constexpr_cast:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    s_cbranch_execnz .LBB1_2
-; GISEL-NEXT:  ; %bb.1:
-; GISEL-NEXT:    global_store_dword v[0:1], v0, off
-; GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GISEL-NEXT:    s_setpc_b64 s[30:31]
-; GISEL-NEXT:  .LBB1_2:
-; GISEL-NEXT:    s_endpgm
-  store volatile i32 ptrtoint (ptr addrspace(3) @lds to i32), ptr addrspace(1) poison, align 4
+; CHECK-LABEL: func_use_lds_global_constexpr_cast:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    s_cbranch_execnz .LBB1_2
+; CHECK-NEXT:  ; %bb.1:
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+; CHECK-NEXT:  .LBB1_2:
+; CHECK-NEXT:    s_endpgm
+  store i32 ptrtoint (ptr addrspace(3) @lds to i32), ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -163,15 +133,14 @@ define void @func_uses_lds_multi(i1 %cond) {
 ; GFX8-SDAG:       ; %bb.0: ; %entry
 ; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-SDAG-NEXT:    v_and_b32_e32 v0, 1, v0
-; GFX8-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; GFX8-SDAG-NEXT:    s_xor_b64 s[4:5], vcc, -1
+; GFX8-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v0
 ; GFX8-SDAG-NEXT:    s_mov_b32 m0, -1
-; GFX8-SDAG-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
-; GFX8-SDAG-NEXT:    s_xor_b64 s[4:5], exec, s[6:7]
+; GFX8-SDAG-NEXT:    s_and_saveexec_b64 s[4:5], vcc
+; GFX8-SDAG-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX8-SDAG-NEXT:    s_cbranch_execz .LBB2_2
 ; GFX8-SDAG-NEXT:  ; %bb.1: ; %bb1
 ; GFX8-SDAG-NEXT:    v_mov_b32_e32 v0, 1
-; GFX8-SDAG-NEXT:    s_mov_b64 s[6:7], 0
+; GFX8-SDAG-NEXT:    s_mov_b64 s[6:7], 0xc8
 ; GFX8-SDAG-NEXT:    ds_write_b32 v0, v0
 ; GFX8-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
 ; GFX8-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
@@ -181,7 +150,7 @@ define void @func_uses_lds_multi(i1 %cond) {
 ; GFX8-SDAG-NEXT:    s_cbranch_execz .LBB2_4
 ; GFX8-SDAG-NEXT:  ; %bb.3: ; %bb0
 ; GFX8-SDAG-NEXT:    v_mov_b32_e32 v0, 0
-; GFX8-SDAG-NEXT:    s_mov_b64 s[6:7], 0
+; GFX8-SDAG-NEXT:    s_mov_b64 s[6:7], 0xc8
 ; GFX8-SDAG-NEXT:    ds_write_b32 v0, v0
 ; GFX8-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
 ; GFX8-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
@@ -189,7 +158,7 @@ define void @func_uses_lds_multi(i1 %cond) {
 ; GFX8-SDAG-NEXT:  .LBB2_4: ; %ret
 ; GFX8-SDAG-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GFX8-SDAG-NEXT:    v_mov_b32_e32 v0, 2
-; GFX8-SDAG-NEXT:    s_mov_b64 s[4:5], 0
+; GFX8-SDAG-NEXT:    s_mov_b64 s[4:5], 0xc8
 ; GFX8-SDAG-NEXT:    ds_write_b32 v0, v0
 ; GFX8-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; GFX8-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
@@ -200,8 +169,9 @@ define void @func_uses_lds_multi(i1 %cond) {
 ; GFX8-GISEL:       ; %bb.0: ; %entry
 ; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-GISEL-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX8-GISEL-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX8-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; GFX8-GISEL-NEXT:    s_xor_b64 s[4:5], vcc, -1
+; GFX8-GISEL-NEXT:    s_xor_b64 s[4:5], vcc, s[4:5]
 ; GFX8-GISEL-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
 ; GFX8-GISEL-NEXT:    s_xor_b64 s[4:5], exec, s[6:7]
 ; GFX8-GISEL-NEXT:    s_cbranch_execz .LBB2_2
@@ -240,10 +210,9 @@ define void @func_uses_lds_multi(i1 %cond) {
 ; GFX9-SDAG:       ; %bb.0: ; %entry
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-SDAG-NEXT:    v_and_b32_e32 v0, 1, v0
-; GFX9-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; GFX9-SDAG-NEXT:    s_xor_b64 s[4:5], vcc, -1
-; GFX9-SDAG-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
-; GFX9-SDAG-NEXT:    s_xor_b64 s[4:5], exec, s[6:7]
+; GFX9-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v0
+; GFX9-SDAG-NEXT:    s_and_saveexec_b64 s[4:5], vcc
+; GFX9-SDAG-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX9-SDAG-NEXT:    s_cbranch_execz .LBB2_2
 ; GFX9-SDAG-NEXT:  ; %bb.1: ; %bb1
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v0, 1
@@ -268,8 +237,9 @@ define void @func_uses_lds_multi(i1 %cond) {
 ; GFX9-GISEL:       ; %bb.0: ; %entry
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX9-GISEL-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX9-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; GFX9-GISEL-NEXT:    s_xor_b64 s[4:5], vcc, -1
+; GFX9-GISEL-NEXT:    s_xor_b64 s[4:5], vcc, s[4:5]
 ; GFX9-GISEL-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
 ; GFX9-GISEL-NEXT:    s_xor_b64 s[4:5], exec, s[6:7]
 ; GFX9-GISEL-NEXT:    s_cbranch_execz .LBB2_2
@@ -296,10 +266,9 @@ define void @func_uses_lds_multi(i1 %cond) {
 ; SDAG:       ; %bb.0: ; %entry
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    v_and_b32_e32 v0, 1, v0
-; SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; SDAG-NEXT:    s_xor_b64 s[4:5], vcc, -1
-; SDAG-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
-; SDAG-NEXT:    s_xor_b64 s[4:5], exec, s[6:7]
+; SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v0
+; SDAG-NEXT:    s_and_saveexec_b64 s[4:5], vcc
+; SDAG-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; SDAG-NEXT:    s_cbranch_execz .LBB2_2
 ; SDAG-NEXT:  ; %bb.1: ; %bb1
 ; SDAG-NEXT:    v_mov_b32_e32 v0, 1
@@ -327,8 +296,9 @@ define void @func_uses_lds_multi(i1 %cond) {
 ; GISEL:       ; %bb.0: ; %entry
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    v_and_b32_e32 v0, 1, v0
+; GISEL-NEXT:    s_mov_b64 s[4:5], exec
 ; GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; GISEL-NEXT:    s_xor_b64 s[4:5], vcc, -1
+; GISEL-NEXT:    s_xor_b64 s[4:5], vcc, s[4:5]
 ; GISEL-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
 ; GISEL-NEXT:    s_xor_b64 s[4:5], exec, s[6:7]
 ; GISEL-NEXT:    s_cbranch_execz .LBB2_3
@@ -379,7 +349,7 @@ define void @func_uses_lds_code_after(ptr addrspace(1) %ptr) {
 ; GFX8-SDAG-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX8-SDAG-NEXT:    s_mov_b32 m0, -1
 ; GFX8-SDAG-NEXT:    ds_write_b32 v0, v2
-; GFX8-SDAG-NEXT:    s_mov_b64 s[4:5], 0
+; GFX8-SDAG-NEXT:    s_mov_b64 s[4:5], 0xc8
 ; GFX8-SDAG-NEXT:    v_mov_b32_e32 v2, 1
 ; GFX8-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; GFX8-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
@@ -472,7 +442,7 @@ define i32 @func_uses_lds_phi_after(i1 %cond, ptr addrspace(1) %ptr) {
 ; GFX8-SDAG-NEXT:  ; %bb.1: ; %use.bb
 ; GFX8-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX8-SDAG-NEXT:    s_mov_b32 m0, -1
-; GFX8-SDAG-NEXT:    s_mov_b64 s[6:7], 0
+; GFX8-SDAG-NEXT:    s_mov_b64 s[6:7], 0xc8
 ; GFX8-SDAG-NEXT:    ds_write_b32 v0, v0
 ; GFX8-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
 ; GFX8-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
@@ -481,7 +451,6 @@ define i32 @func_uses_lds_phi_after(i1 %cond, ptr addrspace(1) %ptr) {
 ; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-SDAG-NEXT:  .LBB4_2: ; %ret
 ; GFX8-SDAG-NEXT:    s_or_b64 exec, exec, s[4:5]
-; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-GISEL-LABEL: func_uses_lds_phi_after:
@@ -506,7 +475,7 @@ define i32 @func_uses_lds_phi_after(i1 %cond, ptr addrspace(1) %ptr) {
 ; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-GISEL-NEXT:  .LBB4_2: ; %ret
 ; GFX8-GISEL-NEXT:    s_or_b64 exec, exec, s[4:5]
-; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX8-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-SDAG-LABEL: func_uses_lds_phi_after:
@@ -527,7 +496,7 @@ define i32 @func_uses_lds_phi_after(i1 %cond, ptr addrspace(1) %ptr) {
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-SDAG-NEXT:  .LBB4_2: ; %ret
 ; GFX9-SDAG-NEXT:    s_or_b64 exec, exec, s[4:5]
-; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX9-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-GISEL-LABEL: func_uses_lds_phi_after:
@@ -548,7 +517,7 @@ define i32 @func_uses_lds_phi_after(i1 %cond, ptr addrspace(1) %ptr) {
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-GISEL-NEXT:  .LBB4_2: ; %ret
 ; GFX9-GISEL-NEXT:    s_or_b64 exec, exec, s[4:5]
-; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-LABEL: func_uses_lds_phi_after:
@@ -570,7 +539,7 @@ define i32 @func_uses_lds_phi_after(i1 %cond, ptr addrspace(1) %ptr) {
 ; SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; SDAG-NEXT:  .LBB4_3: ; %ret
 ; SDAG-NEXT:    s_or_b64 exec, exec, s[4:5]
-; SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ; SDAG-NEXT:  .LBB4_4:
 ; SDAG-NEXT:    s_endpgm
@@ -594,7 +563,7 @@ define i32 @func_uses_lds_phi_after(i1 %cond, ptr addrspace(1) %ptr) {
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:  .LBB4_3: ; %ret
 ; GISEL-NEXT:    s_or_b64 exec, exec, s[4:5]
-; GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
 ; GISEL-NEXT:  .LBB4_4:
 ; GISEL-NEXT:    s_endpgm
@@ -612,10 +581,3 @@ ret:
   ret i32 %phi
 }
 
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; CHECK: {{.*}}
-; GFX8: {{.*}}
-; GFX9: {{.*}}
-
-!llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

@@ -35,18 +35,18 @@ namespace lldb_private {
 
 template <typename ValueType>
 int AddNamesMatchingPartialString(
-    const std::map<std::string, ValueType> &in_map, llvm::StringRef cmd_str,
-    StringList &matches, StringList *descriptions = nullptr) {
+    const std::map<std::string, ValueType, std::less<>> &in_map,
+    llvm::StringRef cmd_str, StringList &matches,
+    StringList *descriptions = nullptr) {
   int number_added = 0;
 
-  const bool add_all = cmd_str.empty();
-
-  for (auto iter = in_map.begin(), end = in_map.end(); iter != end; iter++) {
-    if (add_all || (iter->first.find(std::string(cmd_str), 0) == 0)) {
+  for (const auto &[name, cmd] : in_map) {
+    llvm::StringRef cmd_name = name;
+    if (cmd_name.starts_with(cmd_str)) {
       ++number_added;
-      matches.AppendString(iter->first.c_str());
+      matches.AppendString(name);
       if (descriptions)
-        descriptions->AppendString(iter->second->GetHelp());
+        descriptions->AppendString(cmd->GetHelp());
     }
   }
 
@@ -54,7 +54,8 @@ int AddNamesMatchingPartialString(
 }
 
 template <typename ValueType>
-size_t FindLongestCommandWord(std::map<std::string, ValueType> &dict) {
+size_t
+FindLongestCommandWord(std::map<std::string, ValueType, std::less<>> &dict) {
   auto end = dict.end();
   size_t max_len = 0;
 
@@ -107,7 +108,7 @@ public:
   typedef std::vector<CommandArgumentData>
       CommandArgumentEntry; // Used to build individual command argument lists
 
-  typedef std::map<std::string, lldb::CommandObjectSP> CommandMap;
+  typedef std::map<std::string, lldb::CommandObjectSP, std::less<>> CommandMap;
 
   CommandObject(CommandInterpreter &interpreter, llvm::StringRef name,
     llvm::StringRef help = "", llvm::StringRef syntax = "",
@@ -297,6 +298,10 @@ public:
   /// \param[in] current_command_args
   ///    The command arguments.
   ///
+  /// \param[in] index
+  ///    This is for internal use - it is how the completion request is tracked
+  ///    in CommandObjectMultiword, and should otherwise be ignored.
+  ///
   /// \return
   ///     std::nullopt if there is no special repeat command - it will use the
   ///     current command line.
@@ -336,6 +341,13 @@ public:
       return false;
   }
 
+  /// Set the command input as it appeared in the terminal. This
+  /// is used to have errors refer directly to the original command.
+  void SetOriginalCommandString(std::string s) { m_original_command = s; }
+
+  /// \param offset_in_command is on what column \c args_string
+  /// appears, if applicable. This enables diagnostics that refer back
+  /// to the user input.
   virtual void Execute(const char *args_string,
                        CommandReturnObject &result) = 0;
 
@@ -365,12 +377,13 @@ protected:
            "currently stopped.";
   }
 
-  // This is for use in the command interpreter, when you either want the
-  // selected target, or if no target is present you want to prime the dummy
-  // target with entities that will be copied over to new targets.
-  Target &GetSelectedOrDummyTarget(bool prefer_dummy = false);
-  Target &GetSelectedTarget();
   Target &GetDummyTarget();
+
+  // This is for use in the command interpreter, and returns the most relevant
+  // target. In order of priority, that's the target from the command object's
+  // execution context, the target from the interpreter's execution context, the
+  // selected target or the dummy target.
+  Target &GetTarget();
 
   // If a command needs to use the "current" thread, use this call. Command
   // objects will have an ExecutionContext to use, and that may or may not have
@@ -399,6 +412,7 @@ protected:
   std::string m_cmd_help_short;
   std::string m_cmd_help_long;
   std::string m_cmd_syntax;
+  std::string m_original_command;
   Flags m_flags;
   std::vector<CommandArgumentEntry> m_arguments;
   lldb::CommandOverrideCallback m_deprecated_command_override_callback;

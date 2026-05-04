@@ -10,7 +10,7 @@ class DeleteCommandTestCase(TestBase):
             "command delete settings",
             error=True,
             substrs=[
-                "'settings' is a permanent debugger command and cannot be removed."
+                "'settings' is a permanent debugger command and cannot be removed"
             ],
         )
 

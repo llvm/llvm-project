@@ -11,12 +11,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Dialect/FIRDialect.h"
+#include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "mlir/Transforms/InliningUtils.h"
+
+#include "flang/Optimizer/Dialect/FIRDialect.cpp.inc"
 
 using namespace fir;
 
@@ -53,14 +57,12 @@ struct FIRInlinerInterface : public mlir::DialectInlinerInterface {
                                              mlir::Value input,
                                              mlir::Type resultType,
                                              mlir::Location loc) const final {
-    return builder.create<fir::ConvertOp>(loc, resultType, input);
+    return fir::ConvertOp::create(builder, loc, resultType, input);
   }
 };
 } // namespace
 
-fir::FIROpsDialect::FIROpsDialect(mlir::MLIRContext *ctx)
-    : mlir::Dialect("fir", ctx, mlir::TypeID::get<FIROpsDialect>()) {
-  getContext()->loadDialect<mlir::LLVM::LLVMDialect>();
+void fir::FIROpsDialect::initialize() {
   registerTypes();
   registerAttributes();
   addOperations<
@@ -68,6 +70,15 @@ fir::FIROpsDialect::FIROpsDialect(mlir::MLIRContext *ctx)
 #include "flang/Optimizer/Dialect/FIROps.cpp.inc"
       >();
   registerOpExternalInterfaces();
+}
+
+mlir::Operation *
+fir::FIROpsDialect::materializeConstant(mlir::OpBuilder &builder,
+                                        mlir::Attribute value, mlir::Type type,
+                                        mlir::Location loc) {
+  if (mlir::isa<mlir::IntegerAttr>(value) && mlir::isa<mlir::IntegerType>(type))
+    return mlir::arith::ConstantOp::materialize(builder, value, type, loc);
+  return nullptr;
 }
 
 // Register the FIRInlinerInterface to FIROpsDialect
@@ -92,11 +103,6 @@ void fir::addFIRToLLVMIRExtension(mlir::DialectRegistry &registry) {
       +[](mlir::MLIRContext *ctx, fir::FIROpsDialect *dialect) {
         dialect->addInterface<mlir::LLVMTranslationDialectInterface>();
       });
-}
-
-// anchor the class vtable to this compilation unit
-fir::FIROpsDialect::~FIROpsDialect() {
-  // do nothing
 }
 
 mlir::Type fir::FIROpsDialect::parseType(mlir::DialectAsmParser &parser) const {

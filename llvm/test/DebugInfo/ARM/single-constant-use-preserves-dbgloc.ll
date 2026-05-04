@@ -1,4 +1,4 @@
-; RUN: llc -filetype=asm -asm-verbose=0 < %s | FileCheck %s
+; RUN: llc -filetype=asm -asm-verbose=0 -arm-atomic-cfg-tidy=0 < %s | FileCheck %s
 
 ; int main()
 ; {
@@ -31,7 +31,7 @@ if.then:                                          ; preds = %entry
 
 if.end:                                           ; preds = %entry
 ; Materialize the constant.
-; CHECK:      .loc    1 0
+; CHECK:      .loc    1 6 7
 ; CHECK-NEXT: mvn     r0, #0
 
 ; The backend performs the store to %retval first, for some reason.

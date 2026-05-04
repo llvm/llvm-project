@@ -10,7 +10,7 @@
 #define MEMREF_TRANSFORM_OPS
 
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
-include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
+include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.td"
 include "mlir/Dialect/Transform/IR/TransformTypes.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpBase.td"
@@ -245,7 +245,7 @@ def MemRefEraseDeadAllocAndStoresOp
     ]> {
   let description = [{
     This applies memory optimization on memref. In particular it does store to
-    load forwarding, dead store elimination and dead alloc elimination.
+    load forwarding, dead store elimination and dead alloc/alloca elimination.
 
     #### Return modes
 

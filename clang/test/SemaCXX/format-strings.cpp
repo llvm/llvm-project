@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -Wformat-nonliteral -Wformat-non-iso -fblocks %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wformat-nonliteral -Wformat-non-iso -Wformat-pedantic -fblocks %s
 // RUN: %clang_cc1 -fsyntax-only -verify -Wformat-nonliteral -Wformat-non-iso -fblocks -std=c++98 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -Wformat-nonliteral -Wformat-non-iso -fblocks -std=c++11 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wformat-nonliteral -Wformat-non-iso -Wformat-pedantic -fblocks -std=c++11 %s
 
 #include <stdarg.h>
 
@@ -33,7 +33,7 @@ public:
 
   int scanf(const char *, ...) __attribute__((format(scanf, 2, 3)));
   int printf(const char *, ...) __attribute__((format(printf, 2, 3)));
-  int printf2(const char *, ...);
+  int printf2(const char *, ...); // #Foo_printf2
 
   static const char *gettext_static(const char *fmt) __attribute__((format_arg(1)));
   static int printf_static(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
@@ -86,8 +86,8 @@ int Foo::printf(const char *fmt, ...) {
 int Foo::printf2(const char *fmt, ...) {
   va_list ap;
   va_start(ap,fmt);
-  vprintf(fmt, ap); // expected-warning{{format string is not a string literal}}
-
+  vprintf(fmt, ap); // expected-warning{{diagnostic behavior may be improved by adding the 'format(printf, 2, 3)' attribute to the declaration of 'printf2'}}
+  // expected-note@#Foo_printf2 {{'printf2' declared here}}
   return 0;
 }
 

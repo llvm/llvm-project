@@ -7,14 +7,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "memory_check_utils.h"
+#include "src/__support/macros/config.h"
+#include "src/__support/macros/properties/os.h"
+#include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT64
 #include "src/string/memory_utils/op_aarch64.h"
 #include "src/string/memory_utils/op_builtin.h"
-#include "src/string/memory_utils/op_generic.h" // LLVM_LIBC_HAS_UINT64
+#include "src/string/memory_utils/op_generic.h"
 #include "src/string/memory_utils/op_riscv.h"
 #include "src/string/memory_utils/op_x86.h"
 #include "test/UnitTest/Test.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 template <typename T> struct has_head_tail {
   template <typename C> static char sfinae(decltype(&C::head_tail));
@@ -69,7 +72,8 @@ void CopyAdaptor(cpp::span<char> dst, cpp::span<char> src, size_t size) {
   FnImpl(as_byte(dst), as_byte(src), size);
 }
 template <size_t Size, auto FnImpl>
-void CopyBlockAdaptor(cpp::span<char> dst, cpp::span<char> src, size_t size) {
+void CopyBlockAdaptor(cpp::span<char> dst, cpp::span<char> src,
+                      [[maybe_unused]] size_t size) {
   FnImpl(as_byte(dst), as_byte(src));
 }
 
@@ -124,9 +128,9 @@ using MemsetImplementations = testing::TypeList<
     builtin::Memset<32>, //
     builtin::Memset<64>,
 #endif
-#ifdef LLVM_LIBC_HAS_UINT64
+#ifdef LIBC_TYPES_HAS_INT64
     generic::Memset<uint64_t>, generic::Memset<cpp::array<uint64_t, 2>>,
-#endif
+#endif // LIBC_TYPES_HAS_INT64
 #ifdef __AVX512F__
     generic::Memset<generic_v512>, generic::Memset<cpp::array<generic_v512, 2>>,
 #endif
@@ -150,7 +154,8 @@ void SetAdaptor(cpp::span<char> dst, uint8_t value, size_t size) {
   FnImpl(as_byte(dst), value, size);
 }
 template <size_t Size, auto FnImpl>
-void SetBlockAdaptor(cpp::span<char> dst, uint8_t value, size_t size) {
+void SetBlockAdaptor(cpp::span<char> dst, uint8_t value,
+                     [[maybe_unused]] size_t size) {
   FnImpl(as_byte(dst), value);
 }
 
@@ -171,7 +176,7 @@ TYPED_TEST(LlvmLibcOpTest, Memset, MemsetImplementations) {
     static constexpr auto HeadTailImpl = SetAdaptor<Impl::head_tail>;
     Buffer DstBuffer(2 * kSize);
     for (size_t size = kSize; size < 2 * kSize; ++size) {
-      const char value = size % 10;
+      const uint8_t value = size % 10;
       auto dst = DstBuffer.span().subspan(0, size);
       ASSERT_TRUE(CheckMemset<HeadTailImpl>(dst, value, size));
     }
@@ -182,13 +187,20 @@ TYPED_TEST(LlvmLibcOpTest, Memset, MemsetImplementations) {
       static constexpr auto LoopImpl = SetAdaptor<Impl::loop_and_tail>;
       Buffer DstBuffer(3 * kSize);
       for (size_t size = kSize; size < 3 * kSize; ++size) {
-        const char value = size % 10;
+        const uint8_t value = size % 10;
         auto dst = DstBuffer.span().subspan(0, size);
         ASSERT_TRUE((CheckMemset<LoopImpl>(dst, value, size)));
       }
     }
   }
 }
+
+#ifdef LIBC_TARGET_ARCH_IS_X86_64
+// Prevent GCC warning due to ignored __aligned__ attributes when passing x86
+// SIMD types as template arguments.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wignored-attributes"
+#endif // LIBC_TARGET_ARCH_IS_X86_64
 
 using BcmpImplementations = testing::TypeList<
 #ifdef LIBC_TARGET_ARCH_IS_X86_64
@@ -210,9 +222,9 @@ using BcmpImplementations = testing::TypeList<
 #ifndef LIBC_TARGET_ARCH_IS_ARM // Removing non uint8_t types for ARM
     generic::Bcmp<uint16_t>,
     generic::Bcmp<uint32_t>, //
-#ifdef LLVM_LIBC_HAS_UINT64
+#ifdef LIBC_TYPES_HAS_INT64
     generic::Bcmp<uint64_t>,
-#endif // LLVM_LIBC_HAS_UINT64
+#endif // LIBC_TYPES_HAS_INT64
     generic::BcmpSequence<uint16_t, uint8_t>,
     generic::BcmpSequence<uint32_t, uint8_t>,  //
     generic::BcmpSequence<uint32_t, uint16_t>, //
@@ -222,13 +234,18 @@ using BcmpImplementations = testing::TypeList<
     generic::BcmpSequence<uint8_t, uint8_t, uint8_t>, //
     generic::Bcmp<uint8_t>>;
 
+#ifdef LIBC_TARGET_ARCH_IS_X86_64
+#pragma GCC diagnostic pop
+#endif // LIBC_TARGET_ARCH_IS_X86_64
+
 // Adapt CheckBcmp signature to op implementation signatures.
 template <auto FnImpl>
 int CmpAdaptor(cpp::span<char> p1, cpp::span<char> p2, size_t size) {
   return (int)FnImpl(as_byte(p1), as_byte(p2), size);
 }
 template <size_t Size, auto FnImpl>
-int CmpBlockAdaptor(cpp::span<char> p1, cpp::span<char> p2, size_t size) {
+int CmpBlockAdaptor(cpp::span<char> p1, cpp::span<char> p2,
+                    [[maybe_unused]] size_t size) {
   return (int)FnImpl(as_byte(p1), as_byte(p2));
 }
 
@@ -273,8 +290,15 @@ TYPED_TEST(LlvmLibcOpTest, Bcmp, BcmpImplementations) {
   }
 }
 
-using MemcmpImplementations = testing::TypeList<
 #ifdef LIBC_TARGET_ARCH_IS_X86_64
+// Prevent GCC warning due to ignored __aligned__ attributes when passing x86
+// SIMD types as template arguments.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wignored-attributes"
+#endif // LIBC_TARGET_ARCH_IS_X86_64
+
+using MemcmpImplementations = testing::TypeList<
+#if defined(LIBC_TARGET_ARCH_IS_X86_64) && !defined(LIBC_TARGET_OS_IS_WINDOWS)
 #ifdef __SSE2__
     generic::Memcmp<__m128i>, //
 #endif
@@ -292,15 +316,19 @@ using MemcmpImplementations = testing::TypeList<
 #ifndef LIBC_TARGET_ARCH_IS_ARM // Removing non uint8_t types for ARM
     generic::Memcmp<uint16_t>,
     generic::Memcmp<uint32_t>, //
-#ifdef LLVM_LIBC_HAS_UINT64
+#ifdef LIBC_TYPES_HAS_INT64
     generic::Memcmp<uint64_t>,
-#endif // LLVM_LIBC_HAS_UINT64
+#endif // LIBC_TYPES_HAS_INT64
     generic::MemcmpSequence<uint16_t, uint8_t>,
     generic::MemcmpSequence<uint32_t, uint16_t, uint8_t>, //
 #endif // LIBC_TARGET_ARCH_IS_ARM
     generic::MemcmpSequence<uint8_t, uint8_t>,
     generic::MemcmpSequence<uint8_t, uint8_t, uint8_t>,
     generic::Memcmp<uint8_t>>;
+
+#ifdef LIBC_TARGET_ARCH_IS_X86_64
+#pragma GCC diagnostic pop
+#endif // LIBC_TARGET_ARCH_IS_X86_64
 
 TYPED_TEST(LlvmLibcOpTest, Memcmp, MemcmpImplementations) {
   using Impl = ParamType;
@@ -343,4 +371,4 @@ TYPED_TEST(LlvmLibcOpTest, Memcmp, MemcmpImplementations) {
   }
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

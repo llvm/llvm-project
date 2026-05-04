@@ -1,16 +1,16 @@
-# Check cases when the first PIC jump table entries of one function can be
-# interpreted as valid last entries of the previous function.
+## Check cases when the first PIC jump table entries of one function can be
+## interpreted as valid last entries of the previous function.
 
-# Conditions to trigger the bug:  Function A and B have jump tables that
-# are adjacent in memory. We run in lite relocation mode. Function B
-# is not disassembled because it does not have profile. Function A
-# triggers a special conditional that forced BOLT to rewrite its jump
-# table in-place (instead of moving it) because it is marked as
-# non-simple (in this case, containing unknown control flow). The
-# first entry of B's jump table (a PIC offset) happens to be a valid
-# address inside A when added to A's jump table base address. In this
-# case, BOLT could overwrite B's jump table, corrupting it, thinking
-# the first entry of it is actually part of A's jump table.
+## Conditions to trigger the bug:  Function A and B have jump tables that
+## are adjacent in memory. We run in lite relocation mode. Function B
+## is not disassembled because it does not have profile. Function A
+## triggers a special conditional that forced BOLT to rewrite its jump
+## table in-place (instead of moving it) because it is marked as
+## non-simple (in this case, containing unknown control flow). The
+## first entry of B's jump table (a PIC offset) happens to be a valid
+## address inside A when added to A's jump table base address. In this
+## case, BOLT could overwrite B's jump table, corrupting it, thinking
+## the first entry of it is actually part of A's jump table.
 
 # REQUIRES: system-linux
 
@@ -26,8 +26,8 @@
 # readelf. This is another way to check this bug:
 # COM: %t.out
 
-# BOLT needs to create a new rodata section, indicating that it
-# successfully moved the jump table in _start.
+## BOLT needs to create a new rodata section, indicating that it
+## successfully moved the jump table in _start.
 # CHECK: [{{.*}}] .bolt.org.rodata
 
   .globl _start
@@ -41,8 +41,8 @@ _start:
   cmpq    $3, %rdi
   ja      .L5
   jmp     .L6
-# Unreachable code, here to mark this function as non-simple
-# (containing unknown control flow) with a stray indirect jmp
+## Unreachable code, here to mark this function as non-simple
+## (containing unknown control flow) with a stray indirect jmp
   jmp     *%rax
 .L6:
   decq    %rdi
@@ -115,8 +115,8 @@ str1: .asciz "Message 1\n"
 str2: .asciz "Message 2\n"
 str3: .asciz "Message 3\n"
 str4: .asciz "Highrange\n"
-# Special case where the first .LJT2 entry is a valid offset of
-# _start when interpreted with .LJT1 as a base address.
+## Special case where the first .LJT2 entry is a valid offset of
+## _start when interpreted with .LJT1 as a base address.
 .LJT1:
   .long .L1-.LJT1
   .long .L2-.LJT1

@@ -3,9 +3,9 @@
 
 define <4 x i16> @trunc_add_nsw(<4 x i32> %0) {
 ; CHECK-LABEL: @trunc_add_nsw(
-; CHECK-NEXT:    [[TMP2:%.*]] = ashr <4 x i32> [[TMP0:%.*]], <i32 17, i32 17, i32 17, i32 17>
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc <4 x i32> [[TMP2]] to <4 x i16>
-; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <4 x i16> [[TMP3]], <i16 1, i16 1, i16 1, i16 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = ashr <4 x i32> [[TMP0:%.*]], splat (i32 17)
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc nsw <4 x i32> [[TMP2]] to <4 x i16>
+; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <4 x i16> [[TMP3]], splat (i16 1)
 ; CHECK-NEXT:    ret <4 x i16> [[TMP4]]
 ;
   %2 = ashr <4 x i32> %0, <i32 17, i32 17, i32 17, i32 17>
@@ -16,9 +16,9 @@ define <4 x i16> @trunc_add_nsw(<4 x i32> %0) {
 
 define <4 x i16> @trunc_add_no_nsw(<4 x i32> %0) {
 ; CHECK-LABEL: @trunc_add_no_nsw(
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr <4 x i32> [[TMP0:%.*]], <i32 16, i32 16, i32 16, i32 16>
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc <4 x i32> [[TMP2]] to <4 x i16>
-; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i16> [[TMP3]], <i16 1, i16 1, i16 1, i16 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr <4 x i32> [[TMP0:%.*]], splat (i32 16)
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc nuw <4 x i32> [[TMP2]] to <4 x i16>
+; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i16> [[TMP3]], splat (i16 1)
 ; CHECK-NEXT:    ret <4 x i16> [[TMP4]]
 ;
   %2 = ashr <4 x i32> %0, <i32 16, i32 16, i32 16, i32 16>
@@ -31,7 +31,7 @@ define <4 x i16> @trunc_add_mixed(<4 x i32> %0) {
 ; CHECK-LABEL: @trunc_add_mixed(
 ; CHECK-NEXT:    [[TMP2:%.*]] = ashr <4 x i32> [[TMP0:%.*]], <i32 17, i32 16, i32 17, i32 16>
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc <4 x i32> [[TMP2]] to <4 x i16>
-; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i16> [[TMP3]], <i16 1, i16 1, i16 1, i16 1>
+; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i16> [[TMP3]], splat (i16 1)
 ; CHECK-NEXT:    ret <4 x i16> [[TMP4]]
 ;
   %2 = ashr <4 x i32> %0, <i32 17, i32 16, i32 17, i32 16>

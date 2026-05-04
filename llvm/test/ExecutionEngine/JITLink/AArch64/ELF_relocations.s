@@ -51,6 +51,17 @@ test_adr_prel_lo21:
 ## to test this bit better
 adr_data = test_adr_prel_lo21 + 0xe46f2
 
+# Check R_AARCH64_LD_PREL_LO19 relocation of a local symbol
+#
+# jitlink-check: decode_operand(test_ldr_prel_lo19 + 0, 1)[19:0] = \
+# jitlink-check:     (ldr_data - test_ldr_prel_lo19 + 0x4)[21:2]
+        .globl  test_ldr_prel_lo19, ldr_data
+        .p2align  2
+test_ldr_prel_lo19:
+        ldr	x0, ldr_data + 0x4
+        .size test_ldr_prel_lo19, .-test_ldr_prel_lo19
+ldr_data = test_ldr_prel_lo19 + 4
+
 # Check R_AARCH64_ADR_PREL_PG_HI21 / R_AARCH64_ADD_ABS_LO12_NC relocation of a local symbol
 #
 # For the ADR_PREL_PG_HI21/ADRP instruction we have the 21-bit delta to the 4k page
@@ -252,6 +263,20 @@ test_adr_gotpage_external:
 test_ld64_gotlo12_external:
         ldr   x0, [x0, :got_lo12:external_data]
         .size test_ld64_gotlo12_external, .-test_ld64_gotlo12_external
+
+# Check R_AARCH64_LD64_GOTPAGE_LO15 handling with a reference to an external
+# symbol. Validate the reference to the GOT entry.
+# For the LDR :gotpage_lo15: instruction we have the 15-bit offset of the GOT
+# entry from the page containing the GOT.
+# jitlink-check: decode_operand(test_ld64_gotpagelo15_external, 2) = \
+# jitlink-check:     (got_addr(elf_reloc.o, external_data) - \
+# jitlink-check:     (section_addr(elf_reloc.o, $__GOT) & 0xfffffffffffff000)) \
+# jitlink-check:     [15:3]
+        .globl  test_ld64_gotpagelo15_external
+        .p2align  2
+test_ld64_gotpagelo15_external:
+        ldr   x0, [x0, :gotpage_lo15:external_data]
+        .size test_ld64_gotpagelo15_external, .-test_ld64_gotpagelo15_external
 
 # Check R_AARCH64_TSTBR14 for tbz
 #

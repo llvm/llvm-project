@@ -14,7 +14,7 @@
 #ifndef MLIR_TEST_LIB_DIALECT_TRANSFORM_TESTTRANSFORMSTATEEXTENSION_H
 #define MLIR_TEST_LIB_DIALECT_TRANSFORM_TESTTRANSFORMSTATEEXTENSION_H
 
-#include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 
 using namespace mlir;
 
@@ -34,6 +34,34 @@ public:
 private:
   StringAttr message;
 };
+
+class TransformStateInitializerExtension
+    : public transform::TransformState::Extension {
+public:
+  TransformStateInitializerExtension(transform::TransformState &state,
+                                     int numOp,
+                                     SmallVector<std::string> &registeredOps)
+      : Extension(state), numOp(numOp), registeredOps(registeredOps) {}
+
+  int getNumOp() { return numOp; }
+  void setNumOp(int num) { numOp = num; }
+  SmallVector<std::string> getRegisteredOps() { return registeredOps; }
+  void pushRegisteredOps(const std::string &newOp) {
+    registeredOps.push_back(newOp);
+  }
+  std::string printMessage() const {
+    std::string message = "Registered transformOps are: ";
+    for (const auto &op : registeredOps) {
+      message += op + " | ";
+    }
+    return message;
+  }
+
+private:
+  int numOp;
+  SmallVector<std::string> registeredOps;
+};
+
 } // namespace test
 } // namespace mlir
 

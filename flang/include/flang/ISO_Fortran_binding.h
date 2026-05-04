@@ -14,7 +14,7 @@
  * it does so by means of a wrapper header that establishes namespaces and
  * a macro for extra function attributes (RT_API_ATTRS).
  */
-#ifndef FORTRAN_ISO_FORTRAN_BINDING_WRAPPER_H_
+#ifndef FORTRAN_COMMON_ISO_FORTRAN_BINDING_WRAPPER_H_
 #include <stddef.h>
 #define FORTRAN_ISO_NAMESPACE_
 #endif
@@ -30,9 +30,11 @@
 #endif
 
 /* 18.5.4 */
-#define CFI_VERSION 20180515
+#define CFI_VERSION 20240719
 
+#if !defined CFI_MAX_RANK || !defined __OVERRIDE_CFI_MAX_RANK
 #define CFI_MAX_RANK 15
+#endif
 typedef unsigned char CFI_rank_t;
 
 /* This type is probably larger than a default Fortran INTEGER
@@ -94,7 +96,12 @@ typedef signed char CFI_type_t;
 #define CFI_type_struct 42
 #define CFI_type_char16_t 43 /* extension kind=2 */
 #define CFI_type_char32_t 44 /* extension kind=4 */
-#define CFI_TYPE_LAST CFI_type_char32_t
+#define CFI_type_uint8_t 45 /* extension: unsigned */
+#define CFI_type_uint16_t 46
+#define CFI_type_uint32_t 47
+#define CFI_type_uint64_t 48
+#define CFI_type_uint128_t 49
+#define CFI_TYPE_LAST CFI_type_uint128_t
 #define CFI_type_other (-1) // must be negative
 
 /* Error code macros - skip some of the small values to avoid conflicts with
@@ -127,7 +134,7 @@ namespace cfi_internal {
 // because a struct cannot be empty.
 extern "C++" template <typename T> struct FlexibleArray : T {
   RT_API_ATTRS T &operator[](int index) { return *(this + index); }
-  const RT_API_ATTRS T &operator[](int index) const { return *(this + index); }
+  RT_API_ATTRS const T &operator[](int index) const { return *(this + index); }
   RT_API_ATTRS operator T *() { return this; }
   RT_API_ATTRS operator const T *() const { return this; }
 };
@@ -146,7 +153,9 @@ extern "C++" template <typename T> struct FlexibleArray : T {
   CFI_rank_t rank; /* [0 .. CFI_MAX_RANK] */ \
   CFI_type_t type; \
   CFI_attribute_t attribute; \
-  unsigned char f18Addendum;
+  /* This encodes both the presence of the f18Addendum and the index of the \
+   * allocator used to managed memory of the data hold by the descriptor. */ \
+  unsigned char extra;
 
 typedef struct CFI_cdesc_t {
   _CFI_CDESC_T_HEADER_MEMBERS

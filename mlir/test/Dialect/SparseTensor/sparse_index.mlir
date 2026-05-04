@@ -95,7 +95,7 @@ func.func @dense_index(%arga: tensor<?x?xi64, #DenseMatrix>)
 // CHECK:               %[[VAL_22:.*]] = memref.load %[[VAL_10]]{{\[}}%[[VAL_18]]] : memref<?xi64>
 // CHECK:               %[[VAL_23:.*]] = arith.muli %[[VAL_21]], %[[VAL_22]] : i64
 // CHECK:               %[[VAL_24:.*]] = arith.muli %[[VAL_20]], %[[VAL_23]] : i64
-// CHECK:               %[[Y:.*]] = sparse_tensor.insert %[[VAL_24]] into %{{.*}}[%[[VAL_14]], %[[VAL_19]]] : tensor<?x?xi64, #sparse{{[0-9]*}}>
+// CHECK:               %[[Y:.*]] = tensor.insert %[[VAL_24]] into %{{.*}}[%[[VAL_14]], %[[VAL_19]]] : tensor<?x?xi64, #sparse{{[0-9]*}}>
 // CHECK:               scf.yield %[[Y]]
 // CHECK:             }
 // CHECK:             scf.yield %[[L]]

@@ -10,6 +10,8 @@
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
 // RUN: %clang --target=riscv32-unknown-elf -march=rv32imafd -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
+// RUN: %clang --target=riscv32-unknown-elf -march=rv32imafdq -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck %s
 
 // RUN: %clang --target=riscv32-unknown-elf -march=rv32ic -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
@@ -21,6 +23,8 @@
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
 // RUN: %clang --target=riscv32-unknown-elf -march=rv32imafdc -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
+// RUN: %clang --target=riscv32-unknown-elf -march=rv32imafdqc -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck %s
 
 // RUN: %clang --target=riscv32-unknown-elf -march=rv32ia -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
@@ -28,12 +32,16 @@
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
 // RUN: %clang --target=riscv32-unknown-elf -march=rv32iafd -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
+// RUN: %clang --target=riscv32-unknown-elf -march=rv32iafdq -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck %s
 
 // RUN: %clang --target=riscv32-unknown-elf -march=rv32iac -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
 // RUN: %clang --target=riscv32-unknown-elf -march=rv32iafc -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
 // RUN: %clang --target=riscv32-unknown-elf -march=rv32iafdc -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck %s
+// RUN: %clang --target=riscv32-unknown-elf -march=rv32iafdqc -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
 
 // RUN: %clang --target=riscv32-unknown-elf -march=rv32g -### %s \
@@ -80,6 +88,8 @@
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
 // RUN: %clang --target=riscv64-unknown-elf -march=rv64imafd -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
+// RUN: %clang --target=riscv64-unknown-elf -march=rv64imafdq -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck %s
 
 // RUN: %clang --target=riscv64-unknown-elf -march=rv64ic -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
@@ -91,6 +101,8 @@
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
 // RUN: %clang --target=riscv64-unknown-elf -march=rv64imafdc -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
+// RUN: %clang --target=riscv64-unknown-elf -march=rv64imafdqc -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck %s
 
 // RUN: %clang --target=riscv64-unknown-elf -march=rv64ia -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
@@ -98,12 +110,16 @@
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
 // RUN: %clang --target=riscv64-unknown-elf -march=rv64iafd -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
+// RUN: %clang --target=riscv64-unknown-elf -march=rv64iafdq -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck %s
 
 // RUN: %clang --target=riscv64-unknown-elf -march=rv64iac -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
 // RUN: %clang --target=riscv64-unknown-elf -march=rv64iafc -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
 // RUN: %clang --target=riscv64-unknown-elf -march=rv64iafdc -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck %s
+// RUN: %clang --target=riscv64-unknown-elf -march=rv64iafdqc -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
 
 // RUN: %clang --target=riscv64-unknown-elf -march=rv64g -### %s \
@@ -199,22 +215,17 @@
 // RUN: not %clang --target=riscv32-unknown-elf -march=rv32imC -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-LOWER %s
 // RV32-LOWER: error: invalid arch name 'rv32imC',
-// RV32-LOWER: string must be lowercase
+// RV32-LOWER: string may only contain [a-z0-9_]
 
 // RUN: not %clang --target=riscv32-unknown-elf -march=unknown -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-STR %s
 // RV32-STR: error: invalid arch name 'unknown',
-// RV32-STR: string must begin with rv32{i,e,g} or rv64{i,e,g}
+// RV32-STR: string must begin with rv32{i,e,g}, rv64{i,e,g}, or a supported profile name
 
 // RUN: not %clang --target=riscv32-unknown-elf -march=rv32q -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-LETTER %s
 // RV32-LETTER: error: invalid arch name 'rv32q',
-// RV32-LETTER: first letter should be 'e', 'i' or 'g'
-
-// RUN: not %clang --target=riscv32-unknown-elf -march=rv32imcq -### %s \
-// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ORDER %s
-// RV32-ORDER: error: invalid arch name 'rv32imcq',
-// RV32-ORDER: unsupported standard user-level extension 'q'
+// RV32-LETTER: first letter after 'rv32' should be 'e', 'i' or 'g'
 
 // RUN: not %clang --target=riscv32-unknown-elf -march=rv32izvl64b -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ZVL64B-ER %s
@@ -226,25 +237,15 @@
 // RV32-STD-INVAL: error: invalid arch name 'rv32imw',
 // RV32-STD-INVAL: invalid standard user-level extension 'w'
 
-// RUN: not %clang --target=riscv32-unknown-elf -march=rv32imqc -### %s \
-// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-STD %s
-// RV32-STD: error: invalid arch name 'rv32imqc',
-// RV32-STD: unsupported standard user-level extension 'q'
-
-// RUN: not %clang --target=riscv32-unknown-elf -march=rv32ib -### %s \
-// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-B %s
-// RV32-B: error: invalid arch name 'rv32ib',
-// RV32-B: unsupported standard user-level extension 'b'
-
 // RUN: not %clang --target=riscv32-unknown-elf -march=rv32xabc -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32X %s
 // RV32X: error: invalid arch name 'rv32xabc',
-// RV32X: first letter should be 'e', 'i' or 'g'
+// RV32X: first letter after 'rv32' should be 'e', 'i' or 'g'
 
 // RUN: not %clang --target=riscv32-unknown-elf -march=rv32sabc -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32S %s
 // RV32S: error: invalid arch name 'rv32sabc',
-// RV32S: first letter should be 'e', 'i' or 'g'
+// RV32S: first letter after 'rv32' should be 'e', 'i' or 'g'
 
 // RUN: not %clang --target=riscv32-unknown-elf -march=rv32ix -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32X-NAME %s
@@ -311,7 +312,7 @@
 // RUN: not %clang --target=riscv32-unknown-elf -march=rv32ixabc_ -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-XSEP %s
 // RV32-XSEP: error: invalid arch name 'rv32ixabc_',
-// RV32-XSEP: extension name missing after separator '_'
+// RV32-XSEP: unsupported non-standard user-level extension 'xabc'
 
 // RUN: not %clang --target=riscv32-unknown-elf -march=rv32ixabc_a -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-PREFIX %s
@@ -323,10 +324,10 @@
 // RV32-X-ORDER: error: invalid arch name 'rv32ixdef_sabc',
 // RV32-X-ORDER  unsupported non-standard user-level extension 'xdef'
 
-// RUN: not %clang --target=riscv32-unknown-elf -march=rv32ixabc_xabc -### %s \
+// RUN: not %clang --target=riscv32-unknown-elf -march=rv32im_m -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-XDUP %s
-// RV32-XDUP: error: invalid arch name 'rv32ixabc_xabc',
-// RV32-XDUP: duplicated non-standard user-level extension 'xabc'
+// RV32-XDUP: error: invalid arch name 'rv32im_m',
+// RV32-XDUP: duplicated standard user-level extension 'm'
 
 // RUN: not %clang --target=riscv32-unknown-elf -march=rv32ixabc_xdef -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-X-X-INVAL %s
@@ -370,24 +371,36 @@
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ZFHMIN %s
 // RV32-ZFHMIN: "-target-feature" "+zfhmin"
 
-// RUN: not %clang --target=riscv32-unknown-elf -march=rv32iztso -### %s \
+// RUN: not %clang --target=riscv32-unknown-elf -march=rv32izibi -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-EXPERIMENTAL-NOFLAG %s
-// RV32-EXPERIMENTAL-NOFLAG: error: invalid arch name 'rv32iztso'
+// RV32-EXPERIMENTAL-NOFLAG: error: invalid arch name 'rv32izibi'
 // RV32-EXPERIMENTAL-NOFLAG: requires '-menable-experimental-extensions'
 
-// RUN: not %clang --target=riscv32-unknown-elf -march=rv32iztso -menable-experimental-extensions -### %s \
+// RUN: not %clang --target=riscv32-unknown-elf -march=rv32izibi -menable-experimental-extensions -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-EXPERIMENTAL-NOVERS %s
-// RV32-EXPERIMENTAL-NOVERS: error: invalid arch name 'rv32iztso'
+// RV32-EXPERIMENTAL-NOVERS: error: invalid arch name 'rv32izibi'
 // RV32-EXPERIMENTAL-NOVERS: experimental extension requires explicit version number
 
-// RUN: not %clang --target=riscv32-unknown-elf -march=rv32iztso0p7 -menable-experimental-extensions -### %s \
+// RUN: not %clang --target=riscv32-unknown-elf -march=rv32izibi0p7 -menable-experimental-extensions -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-EXPERIMENTAL-BADVERS %s
-// RV32-EXPERIMENTAL-BADVERS: error: invalid arch name 'rv32iztso0p7'
-// RV32-EXPERIMENTAL-BADVERS: unsupported version number 0.7 for experimental extension 'ztso' (this compiler supports 0.1)
+// RV32-EXPERIMENTAL-BADVERS: error: invalid arch name 'rv32izibi0p7'
+// RV32-EXPERIMENTAL-BADVERS: unsupported version number 0.7 for experimental extension 'zibi' (this compiler supports 0.1)
 
-// RUN: %clang --target=riscv32-unknown-elf -march=rv32iztso0p1 -menable-experimental-extensions -### %s \
+// RUN: %clang --target=riscv32-unknown-elf -march=rv32izibi0p1 -menable-experimental-extensions -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-EXPERIMENTAL-GOODVERS %s
-// RV32-EXPERIMENTAL-GOODVERS: "-target-feature" "+experimental-ztso"
+// RV32-EXPERIMENTAL-GOODVERS: "-target-feature" "+experimental-zibi"
+
+// RUN: %clang --target=riscv32-unknown-elf -march=rv32izalasr1p0 -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ZALASR %s
+// RUN: %clang --target=riscv32-unknown-elf -march=rv32izalasr -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ZALASR %s
+// RV32-ZALASR: "-target-feature" "+zalasr"
+
+// RUN: %clang --target=riscv32-unknown-elf -march=rv32iztso1p0 -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ZTSO %s
+// RUN: %clang --target=riscv32-unknown-elf -march=rv32iztso -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ZTSO %s
+// RV32-ZTSO: "-target-feature" "+ztso"
 
 // RUN: %clang --target=riscv32-unknown-elf -march=rv32izbb1p0 -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ZBB %s

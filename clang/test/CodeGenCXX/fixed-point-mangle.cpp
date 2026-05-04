@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -ffixed-point -S -emit-llvm %s -o - -triple=x86_64-unknown-linux-gnu | FileCheck %s
+// RUN: %clang_cc1 -ffixed-point -emit-llvm %s -o - -triple=x86_64-unknown-linux-gnu | FileCheck %s
 
 // Primary fixed point types
 void func(signed short _Accum){}    // CHECK: @_Z4funcDAs

@@ -10,88 +10,93 @@
 #include "tests/scudo_unit_test.h"
 
 #include "allocator_config.h"
+#include "allocator_config_wrapper.h"
 #include "secondary.h"
+
+#include <string.h>
 
 #include <algorithm>
 #include <condition_variable>
 #include <memory>
 #include <mutex>
 #include <random>
-#include <stdio.h>
 #include <thread>
 #include <vector>
 
+// Get this once to use through-out the tests.
+const scudo::uptr PageSize = scudo::getPageSizeCached();
+
 template <typename Config> static scudo::Options getOptionsForConfig() {
-  if (!Config::MaySupportMemoryTagging || !scudo::archSupportsMemoryTagging() ||
-      !scudo::systemSupportsMemoryTagging())
+  if (!scudo::systemSupportsMemoryTagging())
     return {};
   scudo::AtomicOptions AO;
   AO.set(scudo::OptionBit::UseMemoryTagging);
   return AO.load();
 }
 
-template <typename Config> static void testSecondaryBasic(void) {
-  using SecondaryT = scudo::MapAllocator<Config>;
-  scudo::Options Options = getOptionsForConfig<Config>();
+template <class Config> struct AllocatorInfoType {
+  std::unique_ptr<scudo::MapAllocator<scudo::SecondaryConfig<Config>>>
+      Allocator;
+  scudo::GlobalStats GlobalStats;
+  scudo::Options Options;
 
-  scudo::GlobalStats S;
-  S.init();
-  std::unique_ptr<SecondaryT> L(new SecondaryT);
-  L->init(&S);
-  const scudo::uptr Size = 1U << 16;
-  void *P = L->allocate(Options, Size);
-  EXPECT_NE(P, nullptr);
-  memset(P, 'A', Size);
-  EXPECT_GE(SecondaryT::getBlockSize(P), Size);
-  L->deallocate(Options, P);
-
-  // If the Secondary can't cache that pointer, it will be unmapped.
-  if (!L->canCache(Size)) {
-    EXPECT_DEATH(
-        {
-          // Repeat few time to avoid missing crash if it's mmaped by unrelated
-          // code.
-          for (int i = 0; i < 10; ++i) {
-            P = L->allocate(Options, Size);
-            L->deallocate(Options, P);
-            memset(P, 'A', Size);
-          }
-        },
-        "");
+  AllocatorInfoType(scudo::s32 ReleaseToOsInterval) {
+    using SecondaryT = scudo::MapAllocator<scudo::SecondaryConfig<Config>>;
+    Options = getOptionsForConfig<scudo::SecondaryConfig<Config>>();
+    GlobalStats.init();
+    Allocator.reset(new SecondaryT);
+    Allocator->init(&GlobalStats, ReleaseToOsInterval);
   }
 
-  const scudo::uptr Align = 1U << 16;
-  P = L->allocate(Options, Size + Align, Align);
-  EXPECT_NE(P, nullptr);
-  void *AlignedP = reinterpret_cast<void *>(
-      scudo::roundUp(reinterpret_cast<scudo::uptr>(P), Align));
-  memset(AlignedP, 'A', Size);
-  L->deallocate(Options, P);
+  AllocatorInfoType() : AllocatorInfoType(-1) {}
 
-  std::vector<void *> V;
-  for (scudo::uptr I = 0; I < 32U; I++)
-    V.push_back(L->allocate(Options, Size));
-  std::shuffle(V.begin(), V.end(), std::mt19937(std::random_device()()));
-  while (!V.empty()) {
-    L->deallocate(Options, V.back());
-    V.pop_back();
+  ~AllocatorInfoType() {
+    if (Allocator == nullptr) {
+      return;
+    }
+
+    if (TEST_HAS_FAILURE) {
+      // Print all of the stats if the test fails.
+      scudo::ScopedString Str;
+      Allocator->getStats(&Str);
+      Str.output();
+    }
+
+    Allocator->unmapTestOnly();
   }
-  scudo::ScopedString Str;
-  L->getStats(&Str);
-  Str.output();
-  L->unmapTestOnly();
-}
+};
 
-struct NoCacheConfig {
+struct TestNoCacheConfig {
   static const bool MaySupportMemoryTagging = false;
+  template <typename> using TSDRegistryT = void;
+  template <typename> using PrimaryT = void;
+  template <typename Config> using SecondaryT = scudo::MapAllocator<Config>;
+
   struct Secondary {
     template <typename Config>
     using CacheT = scudo::MapAllocatorNoCache<Config>;
   };
 };
 
-struct TestConfig {
+struct TestNoCacheNoGuardPageConfig {
   static const bool MaySupportMemoryTagging = false;
+  template <typename> using TSDRegistryT = void;
+  template <typename> using PrimaryT = void;
+  template <typename Config> using SecondaryT = scudo::MapAllocator<Config>;
+
+  struct Secondary {
+    template <typename Config>
+    using CacheT = scudo::MapAllocatorNoCache<Config>;
+    static const bool EnableGuardPages = false;
+  };
+};
+
+struct TestCacheConfig {
+  static const bool MaySupportMemoryTagging = false;
+  template <typename> using TSDRegistryT = void;
+  template <typename> using PrimaryT = void;
+  template <typename> using SecondaryT = void;
+
   struct Secondary {
     struct Cache {
       static const scudo::u32 EntriesArraySize = 128U;
@@ -106,29 +111,85 @@ struct TestConfig {
   };
 };
 
-TEST(ScudoSecondaryTest, SecondaryBasic) {
-  testSecondaryBasic<NoCacheConfig>();
-  testSecondaryBasic<scudo::DefaultConfig>();
-  testSecondaryBasic<TestConfig>();
+struct TestCacheNoGuardPageConfig {
+  static const bool MaySupportMemoryTagging = false;
+  template <typename> using TSDRegistryT = void;
+  template <typename> using PrimaryT = void;
+  template <typename> using SecondaryT = void;
+
+  struct Secondary {
+    struct Cache {
+      static const scudo::u32 EntriesArraySize = 128U;
+      static const scudo::u32 QuarantineSize = 0U;
+      static const scudo::u32 DefaultMaxEntriesCount = 64U;
+      static const scudo::uptr DefaultMaxEntrySize = 1UL << 20;
+      static const scudo::s32 MinReleaseToOsIntervalMs = INT32_MIN;
+      static const scudo::s32 MaxReleaseToOsIntervalMs = INT32_MAX;
+    };
+
+    template <typename Config> using CacheT = scudo::MapAllocatorCache<Config>;
+    static const bool EnableGuardPages = false;
+  };
+};
+
+template <typename Config> static void testBasic() {
+  using SecondaryT = scudo::MapAllocator<scudo::SecondaryConfig<Config>>;
+  AllocatorInfoType<Config> Info;
+
+  const scudo::uptr Size = 1U << 16;
+  void *P = Info.Allocator->allocate(Info.Options, Size);
+  EXPECT_NE(P, nullptr);
+  memset(P, 'A', Size);
+  EXPECT_GE(SecondaryT::getBlockSize(P), Size);
+  Info.Allocator->deallocate(Info.Options, P);
+
+  // If the Secondary can't cache that pointer, it will be unmapped.
+  if (!Info.Allocator->canCache(Size)) {
+    EXPECT_DEATH(
+        {
+          // Repeat few time to avoid missing crash if it's mmaped by unrelated
+          // code.
+          for (int i = 0; i < 10; ++i) {
+            P = Info.Allocator->allocate(Info.Options, Size);
+            Info.Allocator->deallocate(Info.Options, P);
+            memset(P, 'A', Size);
+          }
+        },
+        "");
+  }
+
+  const scudo::uptr Align = 1U << 16;
+  P = Info.Allocator->allocate(Info.Options, Size + Align, Align);
+  EXPECT_NE(P, nullptr);
+  void *AlignedP = reinterpret_cast<void *>(
+      scudo::roundUp(reinterpret_cast<scudo::uptr>(P), Align));
+  memset(AlignedP, 'A', Size);
+  Info.Allocator->deallocate(Info.Options, P);
+
+  std::vector<void *> V;
+  for (scudo::uptr I = 0; I < 32U; I++)
+    V.push_back(Info.Allocator->allocate(Info.Options, Size));
+  std::shuffle(V.begin(), V.end(), std::mt19937(std::random_device()()));
+  while (!V.empty()) {
+    Info.Allocator->deallocate(Info.Options, V.back());
+    V.pop_back();
+  }
 }
 
-struct MapAllocatorTest : public Test {
-  using Config = scudo::DefaultConfig;
-  using LargeAllocator = scudo::MapAllocator<Config>;
-
-  void SetUp() override { Allocator->init(nullptr); }
-
-  void TearDown() override { Allocator->unmapTestOnly(); }
-
-  std::unique_ptr<LargeAllocator> Allocator =
-      std::make_unique<LargeAllocator>();
-  scudo::Options Options = getOptionsForConfig<Config>();
-};
+TEST(ScudoSecondaryTest, Basic) {
+  testBasic<TestNoCacheConfig>();
+  testBasic<TestNoCacheNoGuardPageConfig>();
+  testBasic<TestCacheConfig>();
+  testBasic<TestCacheNoGuardPageConfig>();
+  testBasic<scudo::DefaultConfig>();
+}
 
 // This exercises a variety of combinations of size and alignment for the
 // MapAllocator. The size computation done here mimic the ones done by the
 // combined allocator.
-TEST_F(MapAllocatorTest, SecondaryCombinations) {
+template <typename Config> void testAllocatorCombinations() {
+  AllocatorInfoType<Config> Info;
+
   constexpr scudo::uptr MinAlign = FIRST_32_SECOND_64(8, 16);
   constexpr scudo::uptr HeaderSize = scudo::roundUp(8, MinAlign);
   for (scudo::uptr SizeLog = 0; SizeLog <= 20; SizeLog++) {
@@ -142,104 +203,81 @@ TEST_F(MapAllocatorTest, SecondaryCombinations) {
             static_cast<scudo::uptr>((1LL << SizeLog) + Delta), MinAlign);
         const scudo::uptr Size =
             HeaderSize + UserSize + (Align > MinAlign ? Align - HeaderSize : 0);
-        void *P = Allocator->allocate(Options, Size, Align);
+        void *P = Info.Allocator->allocate(Info.Options, Size, Align);
         EXPECT_NE(P, nullptr);
         void *AlignedP = reinterpret_cast<void *>(
             scudo::roundUp(reinterpret_cast<scudo::uptr>(P), Align));
         memset(AlignedP, 0xff, UserSize);
-        Allocator->deallocate(Options, P);
+        Info.Allocator->deallocate(Info.Options, P);
       }
     }
   }
-  scudo::ScopedString Str;
-  Allocator->getStats(&Str);
-  Str.output();
 }
 
-TEST_F(MapAllocatorTest, SecondaryIterate) {
+TEST(ScudoSecondaryTest, AllocatorCombinations) {
+  testAllocatorCombinations<TestNoCacheConfig>();
+  testAllocatorCombinations<TestNoCacheNoGuardPageConfig>();
+}
+
+template <typename Config> void testAllocatorIterate() {
+  AllocatorInfoType<Config> Info;
+
   std::vector<void *> V;
-  const scudo::uptr PageSize = scudo::getPageSizeCached();
   for (scudo::uptr I = 0; I < 32U; I++)
-    V.push_back(Allocator->allocate(
-        Options, (static_cast<scudo::uptr>(std::rand()) % 16U) * PageSize));
+    V.push_back(Info.Allocator->allocate(
+        Info.Options,
+        (static_cast<scudo::uptr>(std::rand()) % 16U) * PageSize));
   auto Lambda = [&V](scudo::uptr Block) {
     EXPECT_NE(std::find(V.begin(), V.end(), reinterpret_cast<void *>(Block)),
               V.end());
   };
-  Allocator->disable();
-  Allocator->iterateOverBlocks(Lambda);
-  Allocator->enable();
+  Info.Allocator->disable();
+  Info.Allocator->iterateOverBlocks(Lambda);
+  Info.Allocator->enable();
   while (!V.empty()) {
-    Allocator->deallocate(Options, V.back());
+    Info.Allocator->deallocate(Info.Options, V.back());
     V.pop_back();
   }
-  scudo::ScopedString Str;
-  Allocator->getStats(&Str);
-  Str.output();
 }
 
-TEST_F(MapAllocatorTest, SecondaryOptions) {
-  // Attempt to set a maximum number of entries higher than the array size.
-  EXPECT_FALSE(
-      Allocator->setOption(scudo::Option::MaxCacheEntriesCount, 4096U));
-  // A negative number will be cast to a scudo::u32, and fail.
-  EXPECT_FALSE(Allocator->setOption(scudo::Option::MaxCacheEntriesCount, -1));
-  if (Allocator->canCache(0U)) {
-    // Various valid combinations.
-    EXPECT_TRUE(Allocator->setOption(scudo::Option::MaxCacheEntriesCount, 4U));
-    EXPECT_TRUE(
-        Allocator->setOption(scudo::Option::MaxCacheEntrySize, 1UL << 20));
-    EXPECT_TRUE(Allocator->canCache(1UL << 18));
-    EXPECT_TRUE(
-        Allocator->setOption(scudo::Option::MaxCacheEntrySize, 1UL << 17));
-    EXPECT_FALSE(Allocator->canCache(1UL << 18));
-    EXPECT_TRUE(Allocator->canCache(1UL << 16));
-    EXPECT_TRUE(Allocator->setOption(scudo::Option::MaxCacheEntriesCount, 0U));
-    EXPECT_FALSE(Allocator->canCache(1UL << 16));
-    EXPECT_TRUE(Allocator->setOption(scudo::Option::MaxCacheEntriesCount, 4U));
-    EXPECT_TRUE(
-        Allocator->setOption(scudo::Option::MaxCacheEntrySize, 1UL << 20));
-    EXPECT_TRUE(Allocator->canCache(1UL << 16));
-  }
+TEST(ScudoSecondaryTest, AllocatorIterate) {
+  testAllocatorIterate<TestNoCacheConfig>();
+  testAllocatorIterate<TestNoCacheNoGuardPageConfig>();
 }
 
-struct MapAllocatorWithReleaseTest : public MapAllocatorTest {
-  void SetUp() override { Allocator->init(nullptr, /*ReleaseToOsInterval=*/0); }
-
-  void performAllocations() {
-    std::vector<void *> V;
-    const scudo::uptr PageSize = scudo::getPageSizeCached();
-    {
-      std::unique_lock<std::mutex> Lock(Mutex);
-      while (!Ready)
-        Cv.wait(Lock);
-    }
-    for (scudo::uptr I = 0; I < 128U; I++) {
-      // Deallocate 75% of the blocks.
-      const bool Deallocate = (std::rand() & 3) != 0;
-      void *P = Allocator->allocate(
-          Options, (static_cast<scudo::uptr>(std::rand()) % 16U) * PageSize);
-      if (Deallocate)
-        Allocator->deallocate(Options, P);
-      else
-        V.push_back(P);
-    }
-    while (!V.empty()) {
-      Allocator->deallocate(Options, V.back());
-      V.pop_back();
-    }
-  }
+template <typename Config> void testAllocatorWithReleaseThreadsRace() {
+  AllocatorInfoType<Config> Info(/*ReleaseToOsInterval=*/0);
 
   std::mutex Mutex;
   std::condition_variable Cv;
   bool Ready = false;
-};
 
-TEST_F(MapAllocatorWithReleaseTest, SecondaryThreadsRace) {
   std::thread Threads[16];
   for (scudo::uptr I = 0; I < ARRAY_SIZE(Threads); I++)
-    Threads[I] =
-        std::thread(&MapAllocatorWithReleaseTest::performAllocations, this);
+    Threads[I] = std::thread([&Mutex, &Cv, &Ready, &Info]() {
+      std::vector<void *> V;
+      {
+        std::unique_lock<std::mutex> Lock(Mutex);
+        while (!Ready)
+          Cv.wait(Lock);
+      }
+      for (scudo::uptr I = 0; I < 128U; I++) {
+        // Deallocate 75% of the blocks.
+        const bool Deallocate = (std::rand() & 3) != 0;
+        void *P = Info.Allocator->allocate(
+            Info.Options,
+            (static_cast<scudo::uptr>(std::rand()) % 16U) * PageSize);
+        if (Deallocate)
+          Info.Allocator->deallocate(Info.Options, P);
+        else
+          V.push_back(P);
+      }
+      while (!V.empty()) {
+        Info.Allocator->deallocate(Info.Options, V.back());
+        V.pop_back();
+      }
+    });
+
   {
     std::unique_lock<std::mutex> Lock(Mutex);
     Ready = true;
@@ -247,7 +285,304 @@ TEST_F(MapAllocatorWithReleaseTest, SecondaryThreadsRace) {
   }
   for (auto &T : Threads)
     T.join();
-  scudo::ScopedString Str;
-  Allocator->getStats(&Str);
-  Str.output();
+}
+
+TEST(ScudoSecondaryTest, AllocatorWithReleaseThreadsRace) {
+  testAllocatorWithReleaseThreadsRace<TestNoCacheConfig>();
+  testAllocatorWithReleaseThreadsRace<TestNoCacheNoGuardPageConfig>();
+}
+
+template <typename Config>
+void testGetMappedSize(scudo::uptr Size, scudo::uptr *mapped,
+                       scudo::uptr *guard_page_size) {
+  AllocatorInfoType<Config> Info;
+
+  scudo::uptr Stats[scudo::StatCount] = {};
+  Info.GlobalStats.get(Stats);
+  *mapped = Stats[scudo::StatMapped];
+  Stats[scudo::StatMapped] = 0;
+
+  // Make sure the allocation is aligned to a page boundary so that the checks
+  // in the tests can avoid problems due to allocations having different
+  // alignments.
+  void *Ptr = Info.Allocator->allocate(Info.Options, Size, PageSize);
+  EXPECT_NE(Ptr, nullptr);
+
+  Info.GlobalStats.get(Stats);
+  EXPECT_GE(Stats[scudo::StatMapped], *mapped);
+  *mapped = Stats[scudo::StatMapped] - *mapped;
+
+  Info.Allocator->deallocate(Info.Options, Ptr);
+
+  *guard_page_size = Info.Allocator->getGuardPageSize();
+}
+
+TEST(ScudoSecondaryTest, VerifyGuardPageOption) {
+  static scudo::uptr AllocSize = 1000 * PageSize;
+
+  // Verify that a config with guard pages enabled:
+  //  - Non-zero sized guard page
+  //  - Mapped in at least the size of the allocation plus 2 * guard page size
+  scudo::uptr guard_mapped = 0;
+  scudo::uptr guard_page_size = 0;
+  testGetMappedSize<TestNoCacheConfig>(AllocSize, &guard_mapped,
+                                       &guard_page_size);
+  EXPECT_GT(guard_page_size, 0U);
+  EXPECT_GE(guard_mapped, AllocSize + 2 * guard_page_size);
+
+  // Verify that a config with guard pages disabled:
+  //  - Zero sized guard page
+  //  - The total mapped in is greater than the allocation size
+  scudo::uptr no_guard_mapped = 0;
+  scudo::uptr no_guard_page_size = 0;
+  testGetMappedSize<TestNoCacheNoGuardPageConfig>(AllocSize, &no_guard_mapped,
+                                                  &no_guard_page_size);
+  EXPECT_EQ(no_guard_page_size, 0U);
+  EXPECT_GE(no_guard_mapped, AllocSize);
+
+  // Verify that a guard page config mapped in at least twice the size of
+  // their guard page when compared to a no guard page config.
+  EXPECT_GE(guard_mapped, no_guard_mapped + guard_page_size * 2);
+}
+
+// Value written to cache entries that are unmapped.
+static scudo::u32 UnmappedMarker = 0xDEADBEEF;
+
+template <class Config> struct CacheInfoType {
+  static void addMarkerToMapCallback(scudo::MemMapT &MemMap) {
+    // When a cache entry is unmaped, don't unmap it write a special marker
+    // to indicate the cache entry was released. The real unmap will happen
+    // in the destructor. It is assumed that all of these maps will be in
+    // the MemMaps vector.
+    scudo::u32 *Ptr = reinterpret_cast<scudo::u32 *>(MemMap.getBase());
+    *Ptr = UnmappedMarker;
+  }
+
+  using SecondaryConfig = scudo::SecondaryConfig<TestCacheConfig>;
+  using CacheConfig = SecondaryConfig::CacheConfig;
+  using CacheT = scudo::MapAllocatorCache<CacheConfig, addMarkerToMapCallback>;
+  scudo::Options Options = getOptionsForConfig<SecondaryConfig>();
+  std::unique_ptr<CacheT> Cache = std::make_unique<CacheT>();
+  std::vector<scudo::MemMapT> MemMaps;
+  // The current test allocation size is set to the maximum
+  // cache entry size
+  static constexpr scudo::uptr TestAllocSize =
+      CacheConfig::getDefaultMaxEntrySize();
+
+  CacheInfoType() { Cache->init(/*ReleaseToOsInterval=*/-1); }
+
+  ~CacheInfoType() {
+    if (Cache == nullptr) {
+      return;
+    }
+
+    // Clean up MemMaps
+    for (auto &MemMap : MemMaps)
+      MemMap.unmap();
+  }
+
+  scudo::MemMapT allocate(scudo::uptr Size) {
+    scudo::uptr MapSize = scudo::roundUp(Size, PageSize);
+    scudo::ReservedMemoryT ReservedMemory;
+    CHECK(ReservedMemory.create(0U, MapSize, nullptr, MAP_ALLOWNOMEM));
+
+    scudo::MemMapT MemMap = ReservedMemory.dispatch(
+        ReservedMemory.getBase(), ReservedMemory.getCapacity());
+    MemMap.remap(MemMap.getBase(), MemMap.getCapacity(), "scudo:test",
+                 MAP_RESIZABLE | MAP_ALLOWNOMEM);
+    return MemMap;
+  }
+
+  void fillCacheWithSameSizeBlocks(scudo::uptr NumEntries, scudo::uptr Size) {
+    for (scudo::uptr I = 0; I < NumEntries; I++) {
+      MemMaps.emplace_back(allocate(Size));
+      auto &MemMap = MemMaps[I];
+      Cache->store(Options, MemMap.getBase(), MemMap.getCapacity(),
+                   MemMap.getBase(), MemMap);
+    }
+  }
+
+  void storeMemMap(scudo::MemMapT &MemMap) {
+    Cache->store(Options, MemMap.getBase(), MemMap.getCapacity(),
+                 MemMap.getBase(), MemMap);
+  }
+};
+
+TEST(ScudoSecondaryTest, AllocatorCacheEntryOrder) {
+  CacheInfoType<TestCacheConfig> Info;
+  using CacheConfig = CacheInfoType<TestCacheConfig>::CacheConfig;
+
+  Info.Cache->setOption(scudo::Option::MaxCacheEntriesCount,
+                        CacheConfig::getEntriesArraySize());
+
+  Info.fillCacheWithSameSizeBlocks(CacheConfig::getEntriesArraySize(),
+                                   Info.TestAllocSize);
+
+  // Retrieval order should be the inverse of insertion order
+  for (scudo::uptr I = CacheConfig::getEntriesArraySize(); I > 0; I--) {
+    scudo::uptr EntryHeaderPos;
+    scudo::CachedBlock Entry = Info.Cache->retrieve(
+        0, Info.TestAllocSize, PageSize, 0, EntryHeaderPos);
+    EXPECT_EQ(Entry.MemMap.getBase(), Info.MemMaps[I - 1].getBase());
+  }
+}
+
+TEST(ScudoSecondaryTest, AllocatorCachePartialChunkHeuristicRetrievalTest) {
+  CacheInfoType<TestCacheConfig> Info;
+
+  const scudo::uptr FragmentedPages =
+      1 + scudo::CachedBlock::MaxReleasedCachePages;
+  scudo::uptr EntryHeaderPos;
+  scudo::CachedBlock Entry;
+  scudo::MemMapT MemMap = Info.allocate(PageSize + FragmentedPages * PageSize);
+  Info.Cache->store(Info.Options, MemMap.getBase(), MemMap.getCapacity(),
+                    MemMap.getBase(), MemMap);
+
+  // FragmentedPages > MaxAllowedFragmentedPages so PageSize
+  // cannot be retrieved from the cache
+  Entry = Info.Cache->retrieve(/*MaxAllowedFragmentedPages=*/0, PageSize,
+                               PageSize, 0, EntryHeaderPos);
+  EXPECT_FALSE(Entry.isValid());
+
+  // FragmentedPages == MaxAllowedFragmentedPages so PageSize
+  // can be retrieved from the cache
+  Entry = Info.Cache->retrieve(FragmentedPages, PageSize, PageSize, 0,
+                               EntryHeaderPos);
+  EXPECT_TRUE(Entry.isValid());
+
+  MemMap.unmap();
+}
+
+TEST(ScudoSecondaryTest, AllocatorCacheMemoryLeakTest) {
+  CacheInfoType<TestCacheConfig> Info;
+  using CacheConfig = CacheInfoType<TestCacheConfig>::CacheConfig;
+
+  // Fill the cache above MaxEntriesCount to force an eviction
+  // The first cache entry should be evicted (because it is the oldest)
+  // due to the maximum number of entries being reached
+  Info.fillCacheWithSameSizeBlocks(CacheConfig::getDefaultMaxEntriesCount() + 1,
+                                   Info.TestAllocSize);
+
+  std::vector<scudo::CachedBlock> RetrievedEntries;
+
+  // First MemMap should be evicted from cache because it was the first
+  // inserted into the cache
+  for (scudo::uptr I = CacheConfig::getDefaultMaxEntriesCount(); I > 0; I--) {
+    scudo::uptr EntryHeaderPos;
+    RetrievedEntries.push_back(Info.Cache->retrieve(
+        0, Info.TestAllocSize, PageSize, 0, EntryHeaderPos));
+    EXPECT_EQ(Info.MemMaps[I].getBase(),
+              RetrievedEntries.back().MemMap.getBase());
+  }
+
+  // Evicted entry should be marked due to unmap callback
+  EXPECT_EQ(*reinterpret_cast<scudo::u32 *>(Info.MemMaps[0].getBase()),
+            UnmappedMarker);
+}
+
+TEST(ScudoSecondaryTest, AllocatorCacheOptions) {
+  CacheInfoType<TestCacheConfig> Info;
+
+  // Attempt to set a maximum number of entries higher than the array size.
+  EXPECT_TRUE(
+      Info.Cache->setOption(scudo::Option::MaxCacheEntriesCount, 4096U));
+
+  // Attempt to set an invalid (negative) number of entries
+  EXPECT_FALSE(Info.Cache->setOption(scudo::Option::MaxCacheEntriesCount, -1));
+
+  // Various valid combinations.
+  EXPECT_TRUE(Info.Cache->setOption(scudo::Option::MaxCacheEntriesCount, 4U));
+  EXPECT_TRUE(
+      Info.Cache->setOption(scudo::Option::MaxCacheEntrySize, 1UL << 20));
+  EXPECT_TRUE(Info.Cache->canCache(1UL << 18));
+  EXPECT_TRUE(
+      Info.Cache->setOption(scudo::Option::MaxCacheEntrySize, 1UL << 17));
+  EXPECT_FALSE(Info.Cache->canCache(1UL << 18));
+  EXPECT_TRUE(Info.Cache->canCache(1UL << 16));
+  EXPECT_TRUE(Info.Cache->setOption(scudo::Option::MaxCacheEntriesCount, 0U));
+  EXPECT_FALSE(Info.Cache->canCache(1UL << 16));
+  EXPECT_TRUE(Info.Cache->setOption(scudo::Option::MaxCacheEntriesCount, 4U));
+  EXPECT_TRUE(
+      Info.Cache->setOption(scudo::Option::MaxCacheEntrySize, 1UL << 20));
+  EXPECT_TRUE(Info.Cache->canCache(1UL << 16));
+}
+
+TEST(ScudoSecondaryTest, ReleaseOlderThanAllEntries) {
+  CacheInfoType<TestCacheConfig> Info;
+  using CacheConfig = CacheInfoType<TestCacheConfig>::CacheConfig;
+
+  Info.Cache->releaseOlderThanTestOnly(UINT64_MAX);
+
+  Info.fillCacheWithSameSizeBlocks(CacheConfig::getDefaultMaxEntriesCount(),
+                                   1024);
+  for (size_t I = 0; I < Info.MemMaps.size(); I++) {
+    // Set the first u32 value to a non-zero value.
+    *reinterpret_cast<scudo::u32 *>(Info.MemMaps[I].getBase()) = 10;
+  }
+
+  Info.Cache->releaseOlderThanTestOnly(UINT64_MAX);
+
+  EXPECT_EQ(Info.MemMaps.size(), CacheConfig::getDefaultMaxEntriesCount());
+  for (size_t I = 0; I < Info.MemMaps.size(); I++) {
+    // All released maps will now be zero.
+    EXPECT_EQ(*reinterpret_cast<scudo::u32 *>(Info.MemMaps[I].getBase()), 0U);
+  }
+}
+
+// This test assumes that the timestamp comes from getMonotonicFast.
+TEST(ScudoSecondaryTest, ReleaseOlderThanGroups) {
+  CacheInfoType<TestCacheConfig> Info;
+
+  // Disable the release interval so we can do tests the releaseOlderThan
+  // function.
+  Info.Cache->setOption(scudo::Option::ReleaseInterval, -1);
+
+  // Create all of the maps we are going to use.
+  for (size_t I = 0; I < 6; I++) {
+    Info.MemMaps.emplace_back(Info.allocate(1024));
+    // Set the first u32 value to a non-zero value.
+    *reinterpret_cast<scudo::u32 *>(Info.MemMaps[I].getBase()) = 10;
+  }
+
+  // Create three groups of entries at three different intervals.
+  Info.storeMemMap(Info.MemMaps[0]);
+  Info.storeMemMap(Info.MemMaps[1]);
+  scudo::u64 FirstTime = scudo::getMonotonicTimeFast();
+
+  // Need to make sure the next set of entries are stamped with a newer time.
+  while (scudo::getMonotonicTimeFast() <= FirstTime)
+    ;
+
+  Info.storeMemMap(Info.MemMaps[2]);
+  Info.storeMemMap(Info.MemMaps[3]);
+  scudo::u64 SecondTime = scudo::getMonotonicTimeFast();
+
+  // Need to make sure the next set of entries are stamped with a newer time.
+  while (scudo::getMonotonicTimeFast() <= SecondTime)
+    ;
+
+  Info.storeMemMap(Info.MemMaps[4]);
+  Info.storeMemMap(Info.MemMaps[5]);
+  scudo::u64 ThirdTime = scudo::getMonotonicTimeFast();
+
+  Info.Cache->releaseOlderThanTestOnly(FirstTime);
+  for (size_t I = 0; I < 2; I++) {
+    EXPECT_EQ(*reinterpret_cast<scudo::u32 *>(Info.MemMaps[I].getBase()), 0U);
+  }
+  for (size_t I = 2; I < 6; I++) {
+    EXPECT_EQ(*reinterpret_cast<scudo::u32 *>(Info.MemMaps[I].getBase()), 10U);
+  }
+
+  Info.Cache->releaseOlderThanTestOnly(SecondTime);
+  for (size_t I = 0; I < 4; I++) {
+    EXPECT_EQ(*reinterpret_cast<scudo::u32 *>(Info.MemMaps[I].getBase()), 0U);
+  }
+  for (size_t I = 4; I < 6; I++) {
+    EXPECT_EQ(*reinterpret_cast<scudo::u32 *>(Info.MemMaps[I].getBase()), 10U);
+  }
+
+  Info.Cache->releaseOlderThanTestOnly(ThirdTime);
+  for (size_t I = 0; I < 6; I++) {
+    EXPECT_EQ(*reinterpret_cast<scudo::u32 *>(Info.MemMaps[I].getBase()), 0U);
+  }
 }

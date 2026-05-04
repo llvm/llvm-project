@@ -11,12 +11,12 @@ define i32 @foo1() nounwind uwtable {
 ; CHECK-NEXT:    suba.l #4, %sp
 ; CHECK-NEXT:    .cfi_def_cfa_offset -8
 ; CHECK-NEXT:    move.l #5, (%sp)
-; CHECK-NEXT:    move.l #1, %d0
-; CHECK-NEXT:    move.l #2, %d1
-; CHECK-NEXT:    move.l #3, %a0
-; CHECK-NEXT:    move.l #4, %a1
+; CHECK-NEXT:    moveq #1, %d0
+; CHECK-NEXT:    moveq #2, %d1
+; CHECK-NEXT:    move.w #3, %a0
+; CHECK-NEXT:    move.w #4, %a1
 ; CHECK-NEXT:    jsr (bar1@PLT,%pc)
-; CHECK-NEXT:    move.l #0, %d0
+; CHECK-NEXT:    moveq #0, %d0
 ; CHECK-NEXT:    adda.l #4, %sp
 ; CHECK-NEXT:    rts
 entry:
@@ -34,11 +34,11 @@ define i32 @foo2() nounwind uwtable {
 ; CHECK-NEXT:    suba.l #12, %sp
 ; CHECK-NEXT:    .cfi_def_cfa_offset -16
 ; CHECK-NEXT:    lea (8,%sp), %a0
-; CHECK-NEXT:    move.l #2, %d0
+; CHECK-NEXT:    moveq #2, %d0
 ; CHECK-NEXT:    lea (4,%sp), %a1
-; CHECK-NEXT:    move.l #4, %d1
+; CHECK-NEXT:    moveq #4, %d1
 ; CHECK-NEXT:    jsr (bar2@PLT,%pc)
-; CHECK-NEXT:    move.l #0, %d0
+; CHECK-NEXT:    moveq #0, %d0
 ; CHECK-NEXT:    adda.l #12, %sp
 ; CHECK-NEXT:    rts
 entry:

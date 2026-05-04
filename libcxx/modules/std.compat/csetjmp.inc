@@ -8,6 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 export {
-  using ::jmp_buf;
-  using ::longjmp;
+  using ::jmp_buf _LIBCPP_USING_IF_EXISTS;
+  using ::longjmp _LIBCPP_USING_IF_EXISTS;
 } // export

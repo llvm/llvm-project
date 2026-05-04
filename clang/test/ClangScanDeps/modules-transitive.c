@@ -48,10 +48,11 @@ module third { header "third.h" }
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/first/first.h"
-// CHECK-NEXT:         "[[PREFIX]]/first/module.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]/first/module.modulemap",
+// CHECK-NEXT:         "[[PREFIX]]/first/first.h",
 // CHECK-NEXT:         "[[PREFIX]]/second/module.modulemap"
 // CHECK-NEXT:       ],
+// CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "first"
 // CHECK-NEXT:     }
 // CHECK:        ]

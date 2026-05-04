@@ -33,14 +33,13 @@
 // RUN: llvm-readobj -r %t.o | FileCheck --check-prefixes=RELOCS,PIC64 %s
 // RUN: llvm-dwarfdump -eh-frame %t.o | FileCheck --check-prefixes=DWARF64,DWARF64_PIC %s
 
-/// However using the large code model forces R_MIPS_64 since there is no R_MIPS_PC64 relocation:
 // RUN: llvm-mc -filetype=obj %s -o %t.o -triple mips64-unknown-linux-gnu --position-independent --large-code-model
-// RUN: llvm-readobj -r %t.o | FileCheck --check-prefixes=RELOCS,ABS64 %s
-// RUN: llvm-dwarfdump -eh-frame %t.o | FileCheck --check-prefixes=DWARF64,DWARF64_ABS %s
+// RUN: llvm-readobj -r %t.o | FileCheck --check-prefixes=RELOCS,PIC64 %s
+// RUN: llvm-dwarfdump -eh-frame %t.o | FileCheck --check-prefixes=DWARF64,DWARF64_PIC %s
 
 // RUN: llvm-mc -filetype=obj %s -o %t.o -triple mips64el-unknown-linux-gnu --position-independent  --large-code-model
-// RUN: llvm-readobj -r %t.o | FileCheck --check-prefixes=RELOCS,ABS64 %s
-// RUN: llvm-dwarfdump -eh-frame %t.o | FileCheck --check-prefixes=DWARF64,DWARF64_ABS %s
+// RUN: llvm-readobj -r %t.o | FileCheck --check-prefixes=RELOCS,PIC64 %s
+// RUN: llvm-dwarfdump -eh-frame %t.o | FileCheck --check-prefixes=DWARF64,DWARF64_PIC %s
 
 func:
 	.cfi_startproc

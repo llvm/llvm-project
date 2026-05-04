@@ -1,4 +1,4 @@
-; RUN: llc -march=mips64el -mcpu=mips64r2 < %s
+; RUN: llc -mtriple=mips64el -mcpu=mips64r2 < %s
 
 @.str = private unnamed_addr constant [7 x i8] c"hello\0A\00", align 1
 

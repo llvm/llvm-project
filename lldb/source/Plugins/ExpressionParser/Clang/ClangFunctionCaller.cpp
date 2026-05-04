@@ -23,8 +23,6 @@
 
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/ValueObject.h"
-#include "lldb/Core/ValueObjectList.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Symbol/Function.h"
@@ -40,6 +38,8 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
+#include "lldb/ValueObject/ValueObject.h"
+#include "lldb/ValueObject/ValueObjectList.h"
 
 using namespace lldb_private;
 
@@ -138,7 +138,7 @@ ClangFunctionCaller::CompileFunction(lldb::ThreadSP thread_to_use_sp,
         type_name = clang_qual_type.GetTypeName().AsCString("");
       } else {
         diagnostic_manager.Printf(
-            eDiagnosticSeverityError,
+            lldb::eSeverityError,
             "Could not determine type of input value %" PRIu64 ".",
             (uint64_t)i);
         return 1;
@@ -188,13 +188,19 @@ ClangFunctionCaller::CompileFunction(lldb::ThreadSP thread_to_use_sp,
 
   lldb::ProcessSP jit_process_sp(m_jit_process_wp.lock());
   if (jit_process_sp) {
+    // We will be passing in unauthenticated function addresses to the
+    // FunctionCaller code, so we need to force disable pointer auth
+    // codegen for this one code snippet.
+    const bool force_disable_ptrauth_codegen = true;
     const bool generate_debug_info = true;
-    auto *clang_parser = new ClangExpressionParser(jit_process_sp.get(), *this,
-                                                   generate_debug_info);
+    auto *clang_parser = new ClangExpressionParser(
+        jit_process_sp.get(), *this, generate_debug_info, diagnostic_manager,
+        std::vector<std::string>(), "<clang expression>",
+        force_disable_ptrauth_codegen);
     num_errors = clang_parser->Parse(diagnostic_manager);
     m_parser.reset(clang_parser);
   } else {
-    diagnostic_manager.PutString(eDiagnosticSeverityError,
+    diagnostic_manager.PutString(lldb::eSeverityError,
                                  "no process - unable to inject function");
     num_errors = 1;
   }

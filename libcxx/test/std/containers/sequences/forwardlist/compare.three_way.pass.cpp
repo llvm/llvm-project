@@ -11,7 +11,7 @@
 
 // template<class T, class Allocator>
 //   synth-three-way-result<T> operator<=>(const forward_list<T, Allocator>& x,
-//                                         const forward_list<T, Allocator>& y);
+//                                         const forward_list<T, Allocator>& y); // constexpr since C++26
 
 #include <cassert>
 #include <forward_list>
@@ -20,6 +20,9 @@
 
 int main(int, char**) {
   assert(test_sequence_container_spaceship<std::forward_list>());
-  // `std::forward_list` is not constexpr, so no `static_assert` test here.
+#if TEST_STD_VER >= 26
+  static_assert(test_sequence_container_spaceship<std::forward_list>());
+#endif
+
   return 0;
 }

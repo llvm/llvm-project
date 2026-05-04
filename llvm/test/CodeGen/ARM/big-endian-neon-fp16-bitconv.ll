@@ -101,9 +101,8 @@ define void @conv_v4i16_to_v4f16( <4 x i16> %a, ptr %store ) {
 ; CHECK-NEXT:    vmov.i64 d16, #0xffff00000000ffff
 ; CHECK-NEXT:    vldr d17, [r0]
 ; CHECK-NEXT:    vrev64.16 d18, d0
-; CHECK-NEXT:    vrev64.16 d17, d17
-; CHECK-NEXT:    vrev64.16 d16, d16
 ; CHECK-NEXT:    vadd.i16 d16, d18, d16
+; CHECK-NEXT:    vrev64.16 d17, d17
 ; CHECK-NEXT:    vadd.f16 d16, d16, d17
 ; CHECK-NEXT:    vrev64.16 d16, d16
 ; CHECK-NEXT:    vstr d16, [r0]

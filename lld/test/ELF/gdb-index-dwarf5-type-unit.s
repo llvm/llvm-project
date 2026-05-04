@@ -5,13 +5,13 @@
 ## consider every .debug_info a compile unit).
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t.o
-# RUN: ld.lld --gdb-index -Ttext=0x1000 %t.o -o %t
+# RUN: ld.lld --gdb-index --image-base=0x1000 -Ttext=0x1000 %t.o -o %t
 # RUN: llvm-dwarfdump --gdb-index %t | FileCheck %s
 
 ## Test we don't uncompress a section while another thread is concurrently
 ## accessing it. This would be detected by tsan as a data race.
 # RUN: llvm-objcopy --compress-debug-sections %t.o
-# RUN: ld.lld --gdb-index -Ttext=0x1000 %t.o -o %t1
+# RUN: ld.lld --gdb-index --image-base=0x1000 -Ttext=0x1000 %t.o -o %t1
 # RUN: llvm-dwarfdump --gdb-index %t1 | FileCheck %s
 
 ## In this test, there are actually two compile unit .debug_info (very uncommon;

@@ -82,7 +82,7 @@ func.func @func_with_ops(i1, i32, i64) {
 
 func.func @func_with_ops(vector<12xi1>, vector<42xi32>, vector<42xi32>) {
 ^bb0(%cond : vector<12xi1>, %t : vector<42xi32>, %f : vector<42xi32>):
-  // expected-error@+1 {{'arith.select' op failed to verify that condition is scalar or has matching shape}}
+  // expected-error@+1 {{'arith.select' op failed to verify that condition is signless i1 or has matching shape}}
   %r = "arith.select"(%cond, %t, %f) : (vector<12xi1>, vector<42xi32>, vector<42xi32>) -> vector<42xi32>
 }
 
@@ -90,7 +90,7 @@ func.func @func_with_ops(vector<12xi1>, vector<42xi32>, vector<42xi32>) {
 
 func.func @func_with_ops(tensor<12xi1>, tensor<42xi32>, tensor<42xi32>) {
 ^bb0(%cond : tensor<12xi1>, %t : tensor<42xi32>, %f : tensor<42xi32>):
-  // expected-error@+1 {{'arith.select' op failed to verify that condition is scalar or has matching shape}}
+  // expected-error@+1 {{'arith.select' op failed to verify that condition is signless i1 or has matching shape}}
   %r = "arith.select"(%cond, %t, %f) : (tensor<12xi1>, tensor<42xi32>, tensor<42xi32>) -> tensor<42xi32>
 }
 
@@ -107,7 +107,7 @@ func.func @return_not_in_function() {
 // -----
 
 func.func @invalid_splat(%v : f32) { // expected-note {{prior use here}}
-  vector.splat %v : vector<8xf64>
+  vector.broadcast %v : f64 to vector<8xf64>
   // expected-error@-1 {{expects different type than prior uses}}
   return
 }
@@ -118,3 +118,38 @@ func.func @invalid_splat(%v : f32) { // expected-note {{prior use here}}
 
 // expected-error@+1 {{expected ':' after block name}}
 "g"()({^a:^b })
+
+// -----
+
+// expected-error@+1 {{number of operands and types do not match: got 0 operands and 1 types}}
+test.variadic_args_types_split "hello_world" : i32
+
+// -----
+
+// Test multiple verifier errors in the same split to ensure all are reported.
+
+func.func @verify_fail_1() {
+  // expected-error@+1 {{'arith.constant' op integer return type must be signless}}
+  %r = "arith.constant"() {value = -1 : si32} : () -> si32
+  return
+}
+
+func.func @verify_fail_2() {
+  // expected-error@+1 {{'arith.constant' op value must be an integer, float, or elements attribute}}
+  %r = "arith.constant"() {value = "hi" : i32} : () -> i32
+  return
+}
+
+func.func @verify_fail_3() {
+  // expected-error@+1 {{'arith.constant' op integer return type must be signless}}
+  %r = "arith.constant"() {value = -3 : si32} : () -> si32
+  return
+}
+
+// -----
+
+// Verify that symbols with results are rejected
+module {
+  // expected-error@+1 {{'test.symbol_with_result' op symbols must not have results}}
+  %0 = "test.symbol_with_result"() <{sym_name = "test_symbol"}> : () -> i32
+}

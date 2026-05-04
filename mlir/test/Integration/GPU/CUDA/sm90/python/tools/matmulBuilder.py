@@ -27,6 +27,47 @@ MLIR_DYNAMIC = -9223372036854775808
 
 DEBUG = False
 
+class TmaDescriptorBuilder:
+    """A class that builds a TMA descriptor."""
+
+    def __init__(self, swizzle, l2promo, oob, interleave, tma_box_shape, memref_ty):
+        self.swizzle = swizzle  # mlir.nvgpu.TensorMapSwizzleKind
+        self.l2promo = l2promo  # mlir.nvgpu.TensorMapL2PromoKind
+        self.oob = oob  # mlir.nvgpu.TensorMapOOBKind
+        self.interleave = interleave  # mlir.nvgpu.TensorMapInterleaveKind
+        self.tma_box_shape = tma_box_shape
+        self.memref_ty = memref_ty  # MemRefType
+
+    @property
+    def tensormap_descriptor_ty(self):
+        """Returns a tensormap descriptor type."""
+        tensorMemrefType = ir.MemRefType.get(
+            self.tma_box_shape,
+            self.memref_ty.element_type,
+            memory_space=ir.Attribute.parse("3"),
+        )
+        return nvgpu.TensorMapDescriptorType.get(
+            tensorMemrefType,
+            self.swizzle,
+            self.l2promo,
+            self.oob,
+            self.interleave,
+        )
+
+    def tma_descriptor_op(self, device_ptr):
+        """Returns a tensormap descriptor op."""
+        tma_descriptor_ty = self.tensormap_descriptor_ty
+        device_unranked_memref = memref.CastOp(
+            ir.UnrankedMemRefType.get(
+                self.memref_ty.element_type, self.memref_ty.memory_space
+            ),
+            device_ptr,
+        )
+        tma_descriptor_op = nvgpu.TmaCreateDescriptorOp(
+            tma_descriptor_ty, device_unranked_memref, map(c, self.tma_box_shape)
+        )
+        return tma_descriptor_op.result
+
 
 def debug_print(fmt, *args, predicate=None, threadNumber=-1, forcePrint=False):
     if not DEBUG and not forcePrint:
@@ -34,9 +75,9 @@ def debug_print(fmt, *args, predicate=None, threadNumber=-1, forcePrint=False):
     type_formats = []
     for arg in args:
         ty_format = None
-        if ir.IndexType.isinstance(arg.type):
+        if isinstance(arg.type, ir.IndexType):
             ty_format = "%llu"
-        if ir.IntegerType.isinstance(arg.type):
+        if isinstance(arg.type, ir.IntegerType):
             width = ir.IntegerType(arg.type).width
             if width == 64:
                 ty_format = "%llu"
@@ -44,7 +85,7 @@ def debug_print(fmt, *args, predicate=None, threadNumber=-1, forcePrint=False):
                 ty_format = "%d"
             elif width == 1:
                 ty_format = "%i"
-        if ir.F32Type.isinstance(arg.type):
+        if isinstance(arg.type, ir.F32Type):
             ty_format = "%f"
         if ty_format is None:
             raise NotImplementedError(arg.type)
@@ -55,14 +96,15 @@ def debug_print(fmt, *args, predicate=None, threadNumber=-1, forcePrint=False):
         scf.yield_([])
     if_op = scf.IfOp(predicate)
     with ir.InsertionPoint(if_op.then_block):
-        gpu.printf(fmt.format(*type_formats) + "\n", args)
+        format_str = ir.StringAttr.get(fmt.format(*type_formats) + "\n")
+        gpu.printf(format_str, *args)
         scf.yield_([])
 
 
 def get_type_size(ty):
-    if ir.FloatType.isinstance(ty):
+    if isinstance(ty, ir.FloatType):
         return ir.FloatType(ty).width // 8
-    if ir.IntegerType.isinstance(ty):
+    if isinstance(ty, ir.IntegerType):
         return ir.IntegerType(ty).width // 8
     raise NotImplementedError(ty)
 
@@ -140,7 +182,7 @@ def generate_matmul_ws(
     assert K % BLOCK_K == 0
 
     module = ir.Module.create()
-    token_ty = ir.Type.parse("!gpu.async.token")
+    token_ty = gpu.AsyncTokenType.get()
     a_elem_ty = get_mlir_ty(input_type)
     b_elem_ty = get_mlir_ty(input_type)
     c_elem_ty = get_mlir_ty(output_type)
@@ -161,28 +203,6 @@ def generate_matmul_ws(
         + ", num_barriers = "
         + str(num_stages)
         + ">"
-    )
-    a_tma_desc_ty = ir.Type.parse(
-        "!nvgpu.tensormap.descriptor<tensor = memref<"
-        + str(BLOCK_M)
-        + "x"
-        + str(TMA_LAST_DIM_F16)
-        + "x"
-        + str(a_elem_ty)
-        + ", "
-        + str(smem_space)
-        + ">, swizzle = swizzle_128b, l2promo=none, oob=zero, interleave=none>"
-    )
-    b_tma_desc_ty = ir.Type.parse(
-        "!nvgpu.tensormap.descriptor<tensor = memref<"
-        + str(BLOCK_K)
-        + "x"
-        + str(TMA_LAST_DIM_F16)
-        + "x"
-        + str(b_elem_ty)
-        + ", "
-        + str(smem_space)
-        + ">, swizzle = swizzle_128b, l2promo=none, oob=zero, interleave=none>"
     )
     acc_ty = ir.Type.parse(
         "!nvgpu.warpgroup.accumulator<fragmented=vector<"
@@ -231,30 +251,35 @@ def generate_matmul_ws(
             smem_size = max(smem_size_input, smem_size_output)
 
             # Step 1. Allocate device memory and memcpy
-            t1 = gpu.wait(token_ty, [])
+            t1 = gpu.wait([])
             a_device, t2 = gpu.alloc(a_ty, token_ty, [t1], [], [])
             b_device, t3 = gpu.alloc(b_ty, token_ty, [t2], [], [])
             c_device, t4 = gpu.alloc(c_ty, token_ty, [t3], [], [])
             t5 = gpu.memcpy(token_ty, [t4], a_device, a_host)
             t6 = gpu.memcpy(token_ty, [t5], b_device, b_host)
-            t7 = gpu.wait(token_ty, [t6])
+            t7 = gpu.wait([t6])
 
             # Step 2. Create TMA Descriptors
-            tma_specs = [
-                (a_device, a_tma_desc_ty, a_tma_shape),
-                (b_device, b_tma_desc_ty, b_tma_shape),
-            ]
-            tma_descs = []
-            for x_device, tensor_map_ty, tile_shape in tma_specs:
-                x_unranked = memref.cast(
-                    ir.UnrankedMemRefType.get(a_elem_ty, a_ty.memory_space), x_device
-                )
-                tma_descs.append(
-                    nvgpu.TmaCreateDescriptorOp(
-                        tensor_map_ty, x_unranked, map(c, tile_shape)
-                    ).result
-                )
-            a_tma_desc, b_tma_desc = tma_descs
+            a_tma_desc = TmaDescriptorBuilder(
+                nvgpu.TensorMapSwizzleKind.SWIZZLE_128B,
+                nvgpu.TensorMapL2PromoKind.L2PROMO_NONE,
+                nvgpu.TensorMapOOBKind.OOB_ZERO,
+                nvgpu.TensorMapInterleaveKind.INTERLEAVE_NONE,
+                a_tma_shape,
+                a_ty,
+            )
+
+            b_tma_desc = TmaDescriptorBuilder(
+                nvgpu.TensorMapSwizzleKind.SWIZZLE_128B,
+                nvgpu.TensorMapL2PromoKind.L2PROMO_NONE,
+                nvgpu.TensorMapOOBKind.OOB_ZERO,
+                nvgpu.TensorMapInterleaveKind.INTERLEAVE_NONE,
+                b_tma_shape,
+                b_ty,
+            )
+
+            a_tma_desc_op = a_tma_desc.tma_descriptor_op(a_device)
+            b_tma_desc_op = b_tma_desc.tma_descriptor_op(b_device)
 
             # Step 3. Launch Kernel with 2 Warpgroups : 1 Producer, 1 Consumer
             cta_m = M // BLOCK_M
@@ -263,13 +288,11 @@ def generate_matmul_ws(
             grid = (cta_m, cta_n, 1)
             block = (WARP_GROUP_SIZE * 2, 1, 1)
             launch_op = gpu.LaunchOp(
-                token_ty,
-                [t7],
-                *map(c, grid),
-                *map(c, block),
-                dynamicSharedMemorySize=c(smem_size, ty=T.i32())
+                tuple(map(c, grid)),
+                tuple(map(c, block)),
+                async_dependencies=[t7],
+                dynamic_shared_memory_size=c(smem_size, ty=T.i32()),
             )
-            launch_op.body.blocks.append(*([T.index()] * 12))
             with ir.InsertionPoint(launch_op.body.blocks[0]):
                 # GPU Step 0. This is need for vectorized ld/st
                 memref.assume_alignment(c_device, 16)
@@ -315,8 +338,8 @@ def generate_matmul_ws(
                 gpu.barrier()
 
                 # GPU Step 3. Prefetch TMA descriptors
-                nvgpu.tma_prefetch_descriptor(a_tma_desc, predicate=wgPrimaryThread)
-                nvgpu.tma_prefetch_descriptor(b_tma_desc, predicate=wgPrimaryThread)
+                nvgpu.tma_prefetch_descriptor(a_tma_desc_op, predicate=wgPrimaryThread)
+                nvgpu.tma_prefetch_descriptor(b_tma_desc_op, predicate=wgPrimaryThread)
 
                 ns = num_stages if num_stages == 1 else num_stages - 1
                 # GPU Step 5. Producer Warpgroup (TMA Warpgroup)
@@ -405,7 +428,7 @@ def generate_matmul_ws(
                         nvgpu.TmaAsyncLoadOp(
                             a_tma_slice,
                             mbarTMA,
-                            a_tma_desc,
+                            a_tma_desc_op,
                             coordinates=[coord, dimX],
                             mbarId=stage,
                             predicate=producerPrimaryThread,
@@ -413,7 +436,7 @@ def generate_matmul_ws(
                         nvgpu.TmaAsyncLoadOp(
                             b_tma_slice_1,
                             mbarTMA,
-                            b_tma_desc,
+                            b_tma_desc_op,
                             coordinates=[dimY, coord],
                             mbarId=stage,
                             predicate=producerPrimaryThread,
@@ -422,7 +445,7 @@ def generate_matmul_ws(
                         nvgpu.TmaAsyncLoadOp(
                             b_tma_slice_2,
                             mbarTMA,
-                            b_tma_desc,
+                            b_tma_desc_op,
                             coordinates=[dimY2, coord],
                             mbarId=stage,
                             predicate=producerPrimaryThread,
@@ -514,10 +537,10 @@ def generate_matmul_ws(
                             predicate=consumerPrimaryThread,
                         )
                         da = nvgpu.WarpgroupGenerateDescriptorOp(
-                            a_wgmma_ty, a_tile_slice, a_tma_desc
+                            a_wgmma_ty, a_tile_slice, a_tma_desc_op
                         )
                         db = nvgpu.WarpgroupGenerateDescriptorOp(
-                            b_wgmma_ty, b_tile_slice, b_tma_desc
+                            b_wgmma_ty, b_tile_slice, b_tma_desc_op
                         )
 
                         # Step 6.3.3. MMA
@@ -543,9 +566,7 @@ def generate_matmul_ws(
                                 barId,
                                 predicate=consumerPrimaryThread,
                             )
-                            nvgpu.mbarrier_arrive(
-                                ir.Type.parse("!nvgpu.mbarrier.token"), mbarDONE, barId
-                            )
+                            nvgpu.mbarrier_arrive(mbarDONE, barId)
                             debug_print(
                                 "[cons] iv={}  | mbarDONE[{}] arrive [done]",
                                 iv,
@@ -569,9 +590,7 @@ def generate_matmul_ws(
 
                     with ir.InsertionPoint(scf.IfOp(consumerPrimaryThread).then_block):
                         barId = c((K // BLOCK_K) % num_stages)
-                        nvgpu.mbarrier_arrive(
-                            ir.Type.parse("!nvgpu.mbarrier.token"), mbarDONE, barId
-                        )
+                        nvgpu.mbarrier_arrive(mbarDONE, barId)
                         scf.yield_([])
 
                     # Step 6.4. Epilogue (registers --> shared memory)
@@ -622,11 +641,11 @@ def generate_matmul_ws(
                 gpu.terminator()
 
             # Step 4. Copy back to host
-            t8 = gpu.wait(token_ty, [launch_op])
+            t8 = gpu.wait([launch_op])
             t9 = gpu.memcpy(token_ty, [t8], c_host, c_device)
             gpu.dealloc(token_ty, [t8], a_device)
             gpu.dealloc(token_ty, [t8], b_device)
-            gpu.wait(token_ty, [t9])
+            gpu.wait([t9])
             gpu.dealloc(token_ty, [t8], c_device)
             func.ReturnOp([])
 
@@ -657,7 +676,7 @@ def generate_matmul_multistage(
     assert K % BLOCK_K == 0
 
     module = ir.Module.create()
-    token_ty = ir.Type.parse("!gpu.async.token")
+    token_ty = gpu.AsyncTokenType.get()
     a_elem_ty = get_mlir_ty(input_type)
     b_elem_ty = get_mlir_ty(input_type)
     c_elem_ty = get_mlir_ty(output_type)
@@ -678,28 +697,6 @@ def generate_matmul_multistage(
         + ", num_barriers = "
         + str(num_stages)
         + ">"
-    )
-    a_tma_desc_ty = ir.Type.parse(
-        "!nvgpu.tensormap.descriptor<tensor = memref<"
-        + str(BLOCK_M)
-        + "x"
-        + str(TMA_LAST_DIM_F16)
-        + "x"
-        + str(a_elem_ty)
-        + ", "
-        + str(smem_space)
-        + ">, swizzle = swizzle_128b, l2promo=none, oob=zero, interleave=none>"
-    )
-    b_tma_desc_ty = ir.Type.parse(
-        "!nvgpu.tensormap.descriptor<tensor = memref<"
-        + str(BLOCK_K)
-        + "x"
-        + str(TMA_LAST_DIM_F16)
-        + "x"
-        + str(b_elem_ty)
-        + ", "
-        + str(smem_space)
-        + ">, swizzle = swizzle_128b, l2promo=none, oob=zero, interleave=none>"
     )
     acc_ty = ir.Type.parse(
         "!nvgpu.warpgroup.accumulator<fragmented=vector<"
@@ -758,30 +755,35 @@ def generate_matmul_multistage(
             smem_size = max(smem_size_input, smem_size_output)
 
             # Step 1. Allocate device memory and memcpy
-            t1 = gpu.wait(token_ty, [])
+            t1 = gpu.wait([])
             a_device, t2 = gpu.alloc(a_ty, token_ty, [t1], [], [])
             b_device, t3 = gpu.alloc(b_ty, token_ty, [t2], [], [])
             c_device, t4 = gpu.alloc(c_ty, token_ty, [t3], [], [])
             t5 = gpu.memcpy(token_ty, [t4], a_device, a_host)
             t6 = gpu.memcpy(token_ty, [t5], b_device, b_host)
-            t7 = gpu.wait(token_ty, [t6])
+            t7 = gpu.wait([t6])
 
             # Step 2. Create TMA Descriptors
-            tma_specs = [
-                (a_device, a_tma_desc_ty, a_tma_shape),
-                (b_device, b_tma_desc_ty, b_tma_shape),
-            ]
-            tma_descs = []
-            for x_device, tensor_map_ty, tile_shape in tma_specs:
-                x_unranked = memref.cast(
-                    ir.UnrankedMemRefType.get(a_elem_ty, a_ty.memory_space), x_device
-                )
-                tma_descs.append(
-                    nvgpu.TmaCreateDescriptorOp(
-                        tensor_map_ty, x_unranked, map(c, tile_shape)
-                    ).result
-                )
-            a_tma_desc, b_tma_desc = tma_descs
+            a_tma_desc = TmaDescriptorBuilder(
+                nvgpu.TensorMapSwizzleKind.SWIZZLE_128B,
+                nvgpu.TensorMapL2PromoKind.L2PROMO_NONE,
+                nvgpu.TensorMapOOBKind.OOB_ZERO,
+                nvgpu.TensorMapInterleaveKind.INTERLEAVE_NONE,
+                a_tma_shape,
+                a_ty,
+            )
+
+            b_tma_desc = TmaDescriptorBuilder(
+                nvgpu.TensorMapSwizzleKind.SWIZZLE_128B,
+                nvgpu.TensorMapL2PromoKind.L2PROMO_NONE,
+                nvgpu.TensorMapOOBKind.OOB_ZERO,
+                nvgpu.TensorMapInterleaveKind.INTERLEAVE_NONE,
+                b_tma_shape,
+                b_ty,
+            )
+
+            a_tma_desc_op = a_tma_desc.tma_descriptor_op(a_device)
+            b_tma_desc_op = b_tma_desc.tma_descriptor_op(b_device)
 
             # Step 3. Launch Kernel with 1 Warpgroup
             cta_m = M // BLOCK_M
@@ -790,13 +792,11 @@ def generate_matmul_multistage(
             grid = (cta_m, cta_n, 1)
             block = (WARP_GROUP_SIZE, 1, 1)
             launch_op = gpu.LaunchOp(
-                token_ty,
-                [t7],
-                *map(c, grid),
-                *map(c, block),
-                dynamicSharedMemorySize=c(smem_size, ty=T.i32())
+                tuple(map(c, grid)),
+                tuple(map(c, block)),
+                async_dependencies=[t7],
+                dynamic_shared_memory_size=c(smem_size, ty=T.i32()),
             )
-            launch_op.body.blocks.append(*([T.index()] * 12))
             with ir.InsertionPoint(launch_op.body.blocks[0]):
                 # GPU Step 0. Bootstrapping
                 memref.assume_alignment(c_device, 16)
@@ -819,8 +819,8 @@ def generate_matmul_multistage(
                 gpu.barrier()
 
                 # GPU Step 2. Prefetch TMA descriptors
-                nvgpu.tma_prefetch_descriptor(a_tma_desc, predicate=primaryThread)
-                nvgpu.tma_prefetch_descriptor(b_tma_desc, predicate=primaryThread)
+                nvgpu.tma_prefetch_descriptor(a_tma_desc_op, predicate=primaryThread)
+                nvgpu.tma_prefetch_descriptor(b_tma_desc_op, predicate=primaryThread)
 
                 # GPU Step 3. Prologue (global memory --> shared memory)
                 ns = num_stages if num_stages == 1 else num_stages - 1
@@ -880,7 +880,7 @@ def generate_matmul_multistage(
                     nvgpu.TmaAsyncLoadOp(
                         a_tma_slice,
                         mbarTMA,
-                        a_tma_desc,
+                        a_tma_desc_op,
                         coordinates=[coord, dimX],
                         mbarId=iv,
                         predicate=primaryThread,
@@ -888,7 +888,7 @@ def generate_matmul_multistage(
                     nvgpu.TmaAsyncLoadOp(
                         b_tma_slice_1,
                         mbarTMA,
-                        b_tma_desc,
+                        b_tma_desc_op,
                         coordinates=[dimY, coord],
                         mbarId=iv,
                         predicate=primaryThread,
@@ -896,7 +896,7 @@ def generate_matmul_multistage(
                     nvgpu.TmaAsyncLoadOp(
                         b_tma_slice_2,
                         mbarTMA,
-                        b_tma_desc,
+                        b_tma_desc_op,
                         coordinates=[dimY2, coord],
                         mbarId=iv,
                         predicate=primaryThread,
@@ -972,10 +972,10 @@ def generate_matmul_multistage(
                         predicate=primaryThread,
                     )
                     da = nvgpu.WarpgroupGenerateDescriptorOp(
-                        a_wgmma_ty, a_tile_slice, a_tma_desc
+                        a_wgmma_ty, a_tile_slice, a_tma_desc_op
                     )
                     db = nvgpu.WarpgroupGenerateDescriptorOp(
-                        b_wgmma_ty, b_tile_slice, b_tma_desc
+                        b_wgmma_ty, b_tile_slice, b_tma_desc_op
                     )
 
                     # Step 4.3. MMA
@@ -1060,7 +1060,7 @@ def generate_matmul_multistage(
                     nvgpu.TmaAsyncLoadOp(
                         a_tma_slice,
                         mbarTMA,
-                        a_tma_desc,
+                        a_tma_desc_op,
                         coordinates=[coord, dimX],
                         mbarId=nextSlot,
                         predicate=p,
@@ -1068,7 +1068,7 @@ def generate_matmul_multistage(
                     nvgpu.TmaAsyncLoadOp(
                         b_tma_slice_1,
                         mbarTMA,
-                        b_tma_desc,
+                        b_tma_desc_op,
                         coordinates=[dimY, coord],
                         mbarId=nextSlot,
                         predicate=p,
@@ -1077,7 +1077,7 @@ def generate_matmul_multistage(
                     nvgpu.TmaAsyncLoadOp(
                         b_tma_slice_2,
                         mbarTMA,
-                        b_tma_desc,
+                        b_tma_desc_op,
                         coordinates=[dimY2, coord],
                         mbarId=nextSlot,
                         predicate=p,
@@ -1143,11 +1143,11 @@ def generate_matmul_multistage(
                 gpu.terminator()
 
             # Step 4. Copy back to host
-            t8 = gpu.wait(token_ty, [launch_op])
+            t8 = gpu.wait([launch_op])
             t9 = gpu.memcpy(token_ty, [t8], c_host, c_device)
             gpu.dealloc(token_ty, [t8], a_device)
             gpu.dealloc(token_ty, [t8], b_device)
-            gpu.wait(token_ty, [t9])
+            gpu.wait([t9])
             gpu.dealloc(token_ty, [t8], c_device)
             func.ReturnOp([])
 

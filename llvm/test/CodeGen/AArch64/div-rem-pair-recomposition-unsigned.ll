@@ -228,13 +228,13 @@ define <2 x i64> @vector_i128_i64(<2 x i64> %x, <2 x i64> %y, ptr %divdst) nounw
 ; ALL-NEXT:    udiv x9, x9, x8
 ; ALL-NEXT:    udiv x11, x11, x10
 ; ALL-NEXT:    mul x8, x9, x8
+; ALL-NEXT:    fmov d2, x9
 ; ALL-NEXT:    fmov d1, x8
 ; ALL-NEXT:    mul x10, x11, x10
+; ALL-NEXT:    mov v2.d[1], x11
+; ALL-NEXT:    str q2, [x0]
 ; ALL-NEXT:    mov v1.d[1], x10
 ; ALL-NEXT:    sub v0.2d, v0.2d, v1.2d
-; ALL-NEXT:    fmov d1, x9
-; ALL-NEXT:    mov v1.d[1], x11
-; ALL-NEXT:    str q1, [x0]
 ; ALL-NEXT:    ret
   %div = udiv <2 x i64> %x, %y
   store <2 x i64> %div, ptr %divdst, align 16

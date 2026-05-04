@@ -28,10 +28,8 @@ class CSKYDAGToDAGISel : public SelectionDAGISel {
   const CSKYSubtarget *Subtarget;
 
 public:
-  static char ID;
-
   explicit CSKYDAGToDAGISel(CSKYTargetMachine &TM, CodeGenOptLevel OptLevel)
-      : SelectionDAGISel(ID, TM, OptLevel) {}
+      : SelectionDAGISel(TM, OptLevel) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     // Reset the subtarget each time through.
@@ -54,11 +52,20 @@ public:
 
 #include "CSKYGenDAGISel.inc"
 };
+
+class CSKYDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
+public:
+  static char ID;
+  explicit CSKYDAGToDAGISelLegacy(CSKYTargetMachine &TM,
+                                  CodeGenOptLevel OptLevel)
+      : SelectionDAGISelLegacy(
+            ID, std::make_unique<CSKYDAGToDAGISel>(TM, OptLevel)) {}
+};
 } // namespace
 
-char CSKYDAGToDAGISel::ID = 0;
+char CSKYDAGToDAGISelLegacy::ID = 0;
 
-INITIALIZE_PASS(CSKYDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
+INITIALIZE_PASS(CSKYDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 
 void CSKYDAGToDAGISel::Select(SDNode *N) {
   // If we have a custom node, we have already selected
@@ -401,5 +408,5 @@ bool CSKYDAGToDAGISel::SelectInlineAsmMemoryOperand(
 
 FunctionPass *llvm::createCSKYISelDag(CSKYTargetMachine &TM,
                                       CodeGenOptLevel OptLevel) {
-  return new CSKYDAGToDAGISel(TM, OptLevel);
+  return new CSKYDAGToDAGISelLegacy(TM, OptLevel);
 }

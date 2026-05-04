@@ -1,22 +1,46 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+
+; CHECK-DAG: OpName [[BOOL_ADD:%.+]] "bool_add"
+; CHECK-DAG: OpName [[BOOL_SUB:%.+]] "bool_sub"
 ; CHECK-DAG: OpName [[SCALAR_ADD:%.+]] "scalar_add"
 ; CHECK-DAG: OpName [[SCALAR_SUB:%.+]] "scalar_sub"
 ; CHECK-DAG: OpName [[SCALAR_MUL:%.+]] "scalar_mul"
 ; CHECK-DAG: OpName [[SCALAR_UDIV:%.+]] "scalar_udiv"
 ; CHECK-DAG: OpName [[SCALAR_SDIV:%.+]] "scalar_sdiv"
-;; TODO: add tests for urem + srem
-;; TODO: add test for OpSNegate
+; CHECK-DAG: OpName [[SCALAR_UREM:%.+]] "scalar_urem"
+; CHECK-DAG: OpName [[SCALAR_SREM:%.+]] "scalar_srem"
+; CHECK-DAG: OpName [[SCALAR_SNEGATE:%.+]] "scalar_snegate"
 
 ; CHECK-NOT: DAG-FENCE
 
+; CHECK-DAG: [[BOOL:%.+]] = OpTypeBool
 ; CHECK-DAG: [[SCALAR:%.+]] = OpTypeInt 32
 ; CHECK-DAG: [[SCALAR_FN:%.+]] = OpTypeFunction [[SCALAR]] [[SCALAR]] [[SCALAR]]
+; CHECK-DAG: [[SCALAR_FN1:%.+]] = OpTypeFunction [[SCALAR]] [[SCALAR]]
+; CHECK-DAG: [[BOOL_FN:%.+]] = OpTypeFunction [[BOOL]] [[BOOL]] [[BOOL]]
+; CHECK-DAG: [[ZERO:%.+]] = OpConstantNull [[SCALAR]]
 
 ; CHECK-NOT: DAG-FENCE
 
 
 ;; Test add on scalar:
+define i1 @bool_add(i1 %a, i1 %b) {
+    %c = add i1 %a, %b
+    ret i1 %c
+}
+
+; CHECK:      [[BOOL_ADD]] = OpFunction [[BOOL]] None [[BOOL_FN]]
+; CHECK-NEXT: [[A:%.+]] = OpFunctionParameter [[BOOL]]
+; CHECK-NEXT: [[B:%.+]] = OpFunctionParameter [[BOOL]]
+; CHECK:      OpLabel
+; CHECK:      [[C:%.+]] = OpLogicalNotEqual [[BOOL]] [[A]] [[B]]
+; CHECK:      OpReturnValue [[C]]
+; CHECK-NEXT: OpFunctionEnd
+
 define i32 @scalar_add(i32 %a, i32 %b) {
     %c = add i32 %a, %b
     ret i32 %c
@@ -32,6 +56,19 @@ define i32 @scalar_add(i32 %a, i32 %b) {
 
 
 ;; Test sub on scalar:
+define i1 @bool_sub(i1 %a, i1 %b) {
+    %c = sub i1 %a, %b
+    ret i1 %c
+}
+
+; CHECK:      [[BOOL_SUB]] = OpFunction [[BOOL]] None [[BOOL_FN]]
+; CHECK-NEXT: [[A:%.+]] = OpFunctionParameter [[BOOL]]
+; CHECK-NEXT: [[B:%.+]] = OpFunctionParameter [[BOOL]]
+; CHECK:      OpLabel
+; CHECK:      [[C:%.+]] = OpLogicalNotEqual [[BOOL]] [[A]] [[B]]
+; CHECK:      OpReturnValue [[C]]
+; CHECK-NEXT: OpFunctionEnd
+
 define i32 @scalar_sub(i32 %a, i32 %b) {
     %c = sub i32 %a, %b
     ret i32 %c
@@ -87,5 +124,49 @@ define i32 @scalar_sdiv(i32 %a, i32 %b) {
 ; CHECK-NEXT: [[B:%.+]] = OpFunctionParameter [[SCALAR]]
 ; CHECK:      OpLabel
 ; CHECK:      [[C:%.+]] = OpSDiv [[SCALAR]] [[A]] [[B]]
+; CHECK:      OpReturnValue [[C]]
+; CHECK-NEXT: OpFunctionEnd
+
+
+;; Test urem on scalar:
+define i32 @scalar_urem(i32 %a, i32 %b) {
+    %c = urem i32 %a, %b
+    ret i32 %c
+}
+
+; CHECK:      [[SCALAR_UREM]] = OpFunction [[SCALAR]] None [[SCALAR_FN]]
+; CHECK-NEXT: [[A:%.+]] = OpFunctionParameter [[SCALAR]]
+; CHECK-NEXT: [[B:%.+]] = OpFunctionParameter [[SCALAR]]
+; CHECK:      OpLabel
+; CHECK:      [[C:%.+]] = OpUMod [[SCALAR]] [[A]] [[B]]
+; CHECK:      OpReturnValue [[C]]
+; CHECK-NEXT: OpFunctionEnd
+
+
+;; Test srem on scalar:
+define i32 @scalar_srem(i32 %a, i32 %b) {
+    %c = srem i32 %a, %b
+    ret i32 %c
+}
+
+; CHECK:      [[SCALAR_SREM]] = OpFunction [[SCALAR]] None [[SCALAR_FN]]
+; CHECK-NEXT: [[A:%.+]] = OpFunctionParameter [[SCALAR]]
+; CHECK-NEXT: [[B:%.+]] = OpFunctionParameter [[SCALAR]]
+; CHECK:      OpLabel
+; CHECK:      [[C:%.+]] = OpSRem [[SCALAR]] [[A]] [[B]]
+; CHECK:      OpReturnValue [[C]]
+; CHECK-NEXT: OpFunctionEnd
+
+
+;; Test snegate on scalar:
+define i32 @scalar_snegate(i32 %a) {
+    %c = sub i32 0, %a
+    ret i32 %c
+}
+
+; CHECK:      [[SCALAR_SNEGATE]] = OpFunction [[SCALAR]] None [[SCALAR_FN1]]
+; CHECK-NEXT: [[A:%.+]] = OpFunctionParameter [[SCALAR]]
+; CHECK:      OpLabel
+; CHECK:      [[C:%.+]] = OpISub [[SCALAR]] [[ZERO]] [[A]]
 ; CHECK:      OpReturnValue [[C]]
 ; CHECK-NEXT: OpFunctionEnd

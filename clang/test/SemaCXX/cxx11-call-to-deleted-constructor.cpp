@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify %s
 
 namespace std {
-template<class _Ep> class initializer_list { };
+template<class _Ep> class initializer_list { const _Ep *a, *b; };
 }
 
 namespace cva {

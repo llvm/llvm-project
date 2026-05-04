@@ -643,13 +643,13 @@ define i32 @stackpointer_dependency(ptr readnone) {
 ; CHECK-NEXT: local.tee $push[[L3:.+]]=, $0=, $pop[[L4]]
 ; CHECK-NEXT: i32.load  $push[[L0:.+]]=, 0($0)
 ; CHECK-NEXT: i32.load  $push[[L1:.+]]=, 0($pop[[L0]])
-; CHECK-NEXT: call_indirect $push{{.+}}=, $pop[[L3]], $1, $pop[[L1]]
+; CHECK-NEXT: call_indirect __indirect_function_table, (i32, i32) -> (i32), $push{{.+}}=, $pop[[L3]], $1, $pop[[L1]]
 ; NOREGS-LABEL: call_indirect_stackify:
 ; NOREGS: i32.load  0
 ; NOREGS-NEXT: local.tee 0
 ; NOREGS:      i32.load  0
 ; NOREGS-NEXT: i32.load  0
-; NOREGS-NEXT: call_indirect (i32, i32) -> (i32)
+; NOREGS-NEXT: call_indirect __indirect_function_table, (i32, i32) -> (i32)
 %class.call_indirect = type { ptr }
 define i32 @call_indirect_stackify(ptr %objptr, i32 %arg) {
   %obj = load ptr, ptr %objptr

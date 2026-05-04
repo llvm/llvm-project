@@ -21,7 +21,7 @@
 #               SHDR-NEXT: AddressAlignment: [[ADDRALIGN]]
 #               SHDR-NEXT: EntrySize: 0
 # DWARF32-LE-CONTENT-NEXT: SectionData (
-# DWARF32-LE-CONTENT-NEXT:   0000: 34120000 05000204 34120000 01785634
+# DWARF32-LE-CONTENT-NEXT:   0000: 34120000 05000304 34120000 01785634
 ##                                 ^-------                            unit_length (4-byte)
 ##                                          ^---                       version (2-byte)
 ##                                              ^-                     unit_type (1-byte) DW_UT_type
@@ -208,7 +208,7 @@ DWARF:
   debug_info:
     - Length:     0x1234
       Version:    5
-      UnitType:   DW_UT_type
+      UnitType:   DW_UT_partial
       AbbrOffset: 0x1234
       AddrSize:   4
       Entries:
@@ -297,7 +297,7 @@ DWARF:
 # RUN:   FileCheck -DINDEX=2 -DNAME=15 -DOFFSET=0x9B -DSIZE=179 -DADDRALIGN=1 %s --check-prefixes=SHDR,DWARF32-BE-CONTENT
 
 # DWARF32-BE-CONTENT-NEXT: SectionData (
-# DWARF32-BE-CONTENT-NEXT:   0000: 00001234 00050204 00001234 01123456
+# DWARF32-BE-CONTENT-NEXT:   0000: 00001234 00050304 00001234 01123456
 ##                                 ^-------                            unit_length (4-byte)
 ##                                          ^---                       version (2-byte)
 ##                                              ^-                     unit_type (1-byte) DW_UT_type
@@ -449,7 +449,7 @@ DWARF:
   debug_info:
     - Length:     0x1234
       Version:    5
-      UnitType:   DW_UT_type
+      UnitType:   DW_UT_compile
       AbbrOffset: 0x1234
       Entries:    []
 
@@ -476,7 +476,7 @@ DWARF:
   debug_info:
     - Length:     0x1234
       Version:    5
-      UnitType:   DW_UT_type
+      UnitType:   DW_UT_compile
       AbbrOffset: 0x1234
       Entries:    []
 
@@ -541,7 +541,7 @@ DWARF:
   debug_info:
     - Length:     0x1234
       Version:    5
-      UnitType:   DW_UT_type
+      UnitType:   DW_UT_compile
       AbbrOffset: 0x1234
       Entries:
         - AbbrCode: 0
@@ -554,7 +554,7 @@ DWARF:
 # RUN:   FileCheck %s --check-prefix=EMPTY-ENTRIES --match-full-lines
 
 #       EMPTY-ENTRIES: Hex dump of section '.debug_info':
-#  EMPTY-ENTRIES-NEXT: 0x00000000 34120000 05000204 34120000 4.......4...
+#  EMPTY-ENTRIES-NEXT: 0x00000000 34120000 05000104 34120000 4.......4...
 # EMPTY-ENTRIES-EMPTY:
 ##                                ^- 'Entries' is empty
 
@@ -567,7 +567,7 @@ DWARF:
   debug_info:
     - Length:     0x1234
       Version:    5
-      UnitType:   DW_UT_type
+      UnitType:   DW_UT_compile
       AbbrOffset: 0x1234
       Entries:    []
 
@@ -579,7 +579,7 @@ DWARF:
 # RUN:   FileCheck %s --check-prefix=FORM --match-full-lines
 
 #       FORM: Hex dump of section '.debug_info':
-#  FORM-NEXT: 0x00000000 34120000 05000204 34120000 02341221 4.......4....4.!
+#  FORM-NEXT: 0x00000000 34120000 05000104 34120000 02341221 4.......4....4.!
 ##                       ^-------                            unit_length (4-byte)
 ##                                                  ^-       abbreviation code (ULEB128)
 ##                                                    ^---   Form: DW_FORM_data2 (2-byte)
@@ -617,7 +617,7 @@ DWARF:
   debug_info:
     - Length:     0x1234
       Version:    5
-      UnitType:   DW_UT_type
+      UnitType:   DW_UT_compile
       AbbrOffset: 0x1234
       Entries:
         ## Test that yaml2obj emits values when the abbrev code is specified.
@@ -655,29 +655,58 @@ DWARF:
   debug_info:
     - Length:     0x1234
       Version:    5
-      UnitType:   DW_UT_type
+      UnitType:   DW_UT_compile
       AbbrOffset: 0x1234
       Entries:
         - AbbrCode: 1
           Values:
             - Value: 0x1234
 
-## j) Test that yaml2obj emits the correct DWARF64 unit headers.
-
-## DWARFv5 unit header.
+## j) Test that yaml2obj emits the correct DWARFv5 unit headers.
 
 # RUN: yaml2obj --docnum=11 %s -o %t11.o
 # RUN: llvm-readelf --hex-dump=.debug_info %t11.o | \
 # RUN:   FileCheck %s --check-prefix=DWARFV5-HEADER
 
 #      DWARFV5-HEADER: Hex dump of section '.debug_info':
-# DWARFV5-HEADER-NEXT: 0x00000000 ffffffff 0c000000 00000000 05000208 ................
+# DWARFV5-HEADER-NEXT: 0x00000000 ffffffff 0d000000 00000000 05000108 ................
 ##                                ^-------------------------          unit_length (12-byte)
 ##                                                           ^---     version (2-byte)
 ##                                                               ^-   unit_type (1-byte)
 ##                                                                 ^- address_size (1-byte)
-# DWARFV5-HEADER-NEXT: 0x00000010 34120000 00000000                   4.......
+# DWARFV5-HEADER-NEXT: 0x00000010 34120000 00000000 00150000 00050002 4...............
 ##                                ^----------------                   debug_abbrev_offset (8-byte)
+##                                                  ^-                End of children (1-byte)
+##                                                    ^--------       unit_length (4-byte)
+##                                                             ^---   version (2-byte)
+##                                                                 ^- unit_type (1-byte)
+# DWARFV5-HEADER-NEXT: 0x00000020 08341200 000df0ad baefbead de180000 .4..............
+##                                ^-                                  address_size (1-byte)
+##                                  ^--------                         debug_abbrev_offset (4-byte)
+##                                           ^-----------------       type_signature (8-byte)
+##                                \/                           ^----- type_offset (4-byte)
+# DWARFV5-HEADER-NEXT: 0x00000030 0000ffff ffff1d00 00000000 00000500 ................
+##                                  ^-                                End of children (1-byte)
+##                                    ^--------------------------     unit_length (12-byte)
+##                                                               ^--- version (2-byte)
+# DWARFV5-HEADER-NEXT: 0x00000040 02083412 00000000 00000df0 adbaefbe ..4.............
+##                                ^-                                  unit_type (1-byte)
+##                                  ^-                                address_size (1-byte)
+##                                    ^-----------------              debug_abbrev_offset (8-byte)
+##                                \/--                  ^------------ type_signature (8-byte)
+# DWARFV5-HEADER-NEXT: 0x00000050 adde2800 00000000 00000011 00000005 ..(.............
+##                                    ^-----------------              type_offset (8-byte)
+##                                                      ^-            End of children (1-byte)
+##                                                        ^--------   unit_length (4-byte)
+##                                \/                               ^- version (2-byte)
+# DWARFV5-HEADER-NEXT: 0x00000060 00040834 1200000d f0adbaef beadde00 ...4............
+##                                  ^-                                  unit_type (1-byte)
+##                                    ^-                                address_size (1-byte)
+##                                      ^--------                       debug_abbrev_offset (4-byte)
+##                                               ^-----------------     type_signature (8-byte)
+##                                                                 ^-   End of children (1-byte)
+
+
 
 --- !ELF
 FileHeader:
@@ -686,12 +715,33 @@ FileHeader:
   Type:  ET_EXEC
 DWARF:
   debug_info:
+    - Format:        DWARF64
+      Version:       5
+      UnitType:      DW_UT_compile
+      AbbrOffset:    0x1234
+      Entries:
+        - AbbrCode: 0
+    - Version:       5
+      UnitType:      DW_UT_type
+      AbbrOffset:    0x1234
+      TypeSignature: 0xdeadbeefbaadf00d
+      TypeOffset:    24
+      Entries:
+        - AbbrCode: 0
     - Format:     DWARF64
-      Length:     0x0c
-      Version:    5
-      UnitType:   DW_UT_type
-      AbbrOffset: 0x1234
-      Entries:    []
+      Version:       5
+      UnitType:      DW_UT_type
+      AbbrOffset:    0x1234
+      TypeSignature: 0xdeadbeefbaadf00d
+      TypeOffset:    40
+      Entries:
+        - AbbrCode: 0
+    - Version:       5
+      UnitType:      DW_UT_skeleton
+      AbbrOffset:    0x1234
+      DwoID:         0xdeadbeefbaadf00d
+      Entries:
+        - AbbrCode: 0
 
 ## DWARFv4 unit header.
 

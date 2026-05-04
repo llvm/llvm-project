@@ -1,21 +1,38 @@
-// RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(test-print-topological-sort))" 2>&1 | FileCheck %s
+// RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(test-print-topological-sort))" --split-input-file | FileCheck %s
 
-// CHECK-LABEL: Testing : region
-//       CHECK: arith.addi {{.*}} : index
-//  CHECK-NEXT: scf.for
-//       CHECK: } {__test_sort_original_idx__ = 2 : i64}
-//  CHECK-NEXT: arith.addi {{.*}} : i32
-//  CHECK-NEXT: arith.subi {{.*}} : i32
-func.func @region(
-  %arg0 : index, %arg1 : index, %arg2 : index, %arg3 : index,
-  %arg4 : i32, %arg5 : i32, %arg6 : i32,
-  %buffer : memref<i32>) {
-  %0 = arith.addi %arg4, %arg5 {__test_sort_original_idx__ = 0} : i32
-  %idx = arith.addi %arg0, %arg1 {__test_sort_original_idx__ = 3} : index
-  scf.for %arg7 = %idx to %arg2 step %arg3  {
-    %2 = arith.addi %0, %arg5 : i32
-    %3 = arith.subi %2, %arg6 {__test_sort_original_idx__ = 1} : i32
-    memref.store %3, %buffer[] : memref<i32>
-  } {__test_sort_original_idx__ = 2}
+// CHECK-LABEL: single_element
+func.func @single_element() {
+  // CHECK: test_sort_index = 0
+  return {test_to_sort}
+}
+
+// -----
+
+// CHECK-LABEL: @simple_region
+func.func @simple_region(%cond: i1) {
+  // CHECK: test_sort_index = 0
+  %0 = arith.constant {test_to_sort} 42 : i32
+  scf.if %cond {
+    %1 = arith.addi %0, %0 : i32
+    // CHECK: test_sort_index = 2
+    %2 = arith.subi %0, %1 {test_to_sort} : i32
+  // CHECK: test_sort_index = 1
+  } {test_to_sort}
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @multi_region
+func.func @multi_region(%cond: i1) {
+  scf.if %cond {
+    // CHECK: test_sort_index = 0
+    %0 = arith.constant {test_to_sort} 42 : i32
+  }
+
+  scf.if %cond {
+    // CHECK: test_sort_index = 1
+    %0 = arith.constant {test_to_sort} 24 : i32
+  }
   return
 }

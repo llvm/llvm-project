@@ -5,10 +5,9 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
+
 // UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11
-// ALLOW_RETRIES: 2
 
 // <shared_mutex>
 
@@ -16,10 +15,9 @@
 
 // void lock();
 
+#include <atomic>
 #include <cassert>
-#include <chrono>
-#include <cstdlib>
-#include <mutex>
+#include <mutex> // std::defer_lock
 #include <shared_mutex>
 #include <system_error>
 #include <thread>
@@ -28,71 +26,99 @@
 #include "make_test_thread.h"
 #include "test_macros.h"
 
-std::shared_timed_mutex m;
+struct Monitor {
+  bool lock_shared_called   = false;
+  bool unlock_shared_called = false;
+};
 
-typedef std::chrono::system_clock Clock;
-typedef Clock::time_point time_point;
-typedef Clock::duration duration;
-typedef std::chrono::milliseconds ms;
-typedef std::chrono::nanoseconds ns;
+struct TrackedMutex {
+  Monitor* monitor = nullptr;
 
-ms WaitTime = ms(250);
+  void lock_shared() {
+    if (monitor != nullptr)
+      monitor->lock_shared_called = true;
+  }
+  void unlock_shared() {
+    if (monitor != nullptr)
+      monitor->unlock_shared_called = true;
+  }
+};
 
-// Thread sanitizer causes more overhead and will sometimes cause this test
-// to fail. To prevent this we give Thread sanitizer more time to complete the
-// test.
-#if !defined(TEST_IS_EXECUTED_IN_A_SLOW_ENVIRONMENT)
-ms Tolerance = ms(25);
-#else
-ms Tolerance = ms(25 * 5);
-#endif
+template <class Mutex>
+void test() {
+  // Basic sanity test
+  {
+    Mutex mutex;
+    std::vector<std::thread> threads;
+    std::atomic<bool> ready(false);
+    for (int i = 0; i != 5; ++i) {
+      threads.push_back(support::make_test_thread([&] {
+        while (!ready) {
+          // spin
+        }
 
+        std::shared_lock<Mutex> lock(mutex, std::defer_lock);
+        lock.lock();
+        assert(lock.owns_lock());
+      }));
+    }
 
-void f()
-{
-    std::shared_lock<std::shared_timed_mutex> lk(m, std::defer_lock);
-    time_point t0 = Clock::now();
-    lk.lock();
-    time_point t1 = Clock::now();
-    assert(lk.owns_lock() == true);
-    ns d = t1 - t0 - WaitTime;
-    assert(d < Tolerance);  // within tolerance
+    ready = true;
+    for (auto& t : threads)
+      t.join();
+  }
+
+  // Try locking the same shared_lock again in the same thread. This should throw an exception.
+  {
+    Mutex mutex;
+    std::shared_lock<Mutex> lock(mutex, std::defer_lock);
+    lock.lock();
+    assert(lock.owns_lock());
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    try
-    {
-        lk.lock();
-        assert(false);
-    }
-    catch (std::system_error& e)
-    {
-        assert(e.code().value() == EDEADLK);
+    try {
+      lock.lock();
+      assert(false);
+    } catch (std::system_error const& e) {
+      assert(e.code() == std::errc::resource_deadlock_would_occur);
     }
 #endif
-    lk.unlock();
-    lk.release();
+  }
+
+  // Try locking a shared_lock that isn't associated to any mutex. This should throw an exception.
+  {
+    std::shared_lock<Mutex> lock; // no associated mutex
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    try
-    {
-        lk.lock();
-        assert(false);
-    }
-    catch (std::system_error& e)
-    {
-        assert(e.code().value() == EPERM);
+    try {
+      lock.lock();
+      assert(false);
+    } catch (std::system_error const& e) {
+      assert(e.code() == std::errc::operation_not_permitted);
     }
 #endif
+  }
 }
 
-int main(int, char**)
-{
-    m.lock();
-    std::vector<std::thread> v;
-    for (int i = 0; i < 5; ++i)
-        v.push_back(support::make_test_thread(f));
-    std::this_thread::sleep_for(WaitTime);
-    m.unlock();
-    for (auto& t : v)
-        t.join();
+int main(int, char**) {
+#if TEST_STD_VER >= 17
+  test<std::shared_mutex>();
+#endif
+  test<std::shared_timed_mutex>();
+  test<TrackedMutex>();
+
+  // Use shared_lock with a dummy mutex class that tracks whether each
+  // operation has been called or not.
+  {
+    Monitor monitor;
+    TrackedMutex mutex{&monitor};
+
+    std::shared_lock<TrackedMutex> lock(mutex, std::defer_lock);
+    lock.lock();
+    assert(monitor.lock_shared_called);
+    assert(lock.owns_lock());
+
+    lock.unlock();
+    assert(monitor.unlock_shared_called);
+  }
 
   return 0;
 }

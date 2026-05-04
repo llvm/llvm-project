@@ -11,12 +11,13 @@
 
 #include "PDBSymbol.h"
 #include "PDBTypes.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
 namespace pdb {
 
-class PDBSymbolTypeVTableShape : public PDBSymbol {
+class LLVM_ABI PDBSymbolTypeVTableShape : public PDBSymbol {
   DECLARE_PDB_SYMBOL_CONCRETE_TYPE(PDB_SymType::VTableShape)
 public:
   void dump(PDBSymDumper &Dumper) const override;

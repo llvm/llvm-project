@@ -66,6 +66,46 @@ TEST(ScudoStringsTest, Precision) {
   Str.append("%-6s", "12345");
   EXPECT_EQ(Str.length(), strlen(Str.data()));
   EXPECT_STREQ("12345 ", Str.data());
+  Str.clear();
+  Str.append("%-8s", "12345");
+  EXPECT_EQ(Str.length(), strlen(Str.data()));
+  EXPECT_STREQ("12345   ", Str.data());
+}
+
+TEST(ScudoStringTest, AppendSigned32Int) {
+  scudo::ScopedString Str;
+  Str.append(-12345);
+  EXPECT_STREQ("-12345", Str.data());
+}
+
+TEST(ScudoStringTest, AppendSigned64Int) {
+  scudo::ScopedString Str;
+  Str.append(static_cast<scudo::s64>(-3000000000LL));
+  EXPECT_STREQ("-3000000000", Str.data());
+}
+
+TEST(ScudoStringTest, AppendUnsigned32Int) {
+  scudo::ScopedString Str;
+  Str.append(12345u);
+  EXPECT_STREQ("12345", Str.data());
+}
+
+TEST(ScudoStringTest, AppendUnsigned64Int) {
+  scudo::ScopedString Str;
+  Str.append(static_cast<scudo::u64>(5000000000ULL));
+  EXPECT_STREQ("5000000000", Str.data());
+}
+
+TEST(ScudoStringTest, AppendBoolTrue) {
+  scudo::ScopedString Str;
+  Str.append(true);
+  EXPECT_STREQ("true", Str.data());
+}
+
+TEST(ScudoStringTest, AppendBoolFalse) {
+  scudo::ScopedString Str;
+  Str.append(false);
+  EXPECT_STREQ("false", Str.data());
 }
 
 static void fillString(scudo::ScopedString &Str, scudo::uptr Size) {
@@ -123,3 +163,42 @@ TEST(ScudoStringsTest, Padding) {
   testAgainstLibc<int>("%03d - %03d", 12, 1234);
   testAgainstLibc<int>("%03d - %03d", -12, -1234);
 }
+
+#if defined(__linux__)
+
+#include <sys/resource.h>
+
+TEST(ScudoStringsTest, CapacityIncreaseFails) {
+  scudo::ScopedString Str;
+
+  rlimit Limit = {};
+  EXPECT_EQ(0, getrlimit(RLIMIT_AS, &Limit));
+
+  rlimit EmptyLimit = {.rlim_cur = 0, .rlim_max = Limit.rlim_max};
+  EXPECT_EQ(0, setrlimit(RLIMIT_AS, &EmptyLimit));
+
+  // qemu does not honor the setrlimit, so verify before proceeding.
+  scudo::MemMapT MemMap;
+  if (MemMap.map(/*Addr=*/0U, scudo::getPageSizeCached(), "scudo:test",
+                 MAP_ALLOWNOMEM)) {
+    MemMap.unmap();
+    setrlimit(RLIMIT_AS, &Limit);
+    TEST_SKIP("Limiting address space does not prevent mmap.");
+  }
+
+  // Test requires that the default length is at least 6 characters.
+  scudo::uptr MaxSize = Str.capacity();
+  EXPECT_LE(6u, MaxSize);
+
+  for (size_t i = 0; i < MaxSize - 5; i++) {
+    Str.append("B");
+  }
+
+  // Attempt to append past the end of the current capacity.
+  Str.append("%d", 12345678);
+  EXPECT_EQ(MaxSize, Str.capacity());
+  EXPECT_STREQ("B12345", &Str.data()[MaxSize - 6]);
+
+  EXPECT_EQ(0, setrlimit(RLIMIT_AS, &Limit));
+}
+#endif

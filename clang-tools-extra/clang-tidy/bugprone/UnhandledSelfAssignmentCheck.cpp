@@ -1,4 +1,4 @@
-//===--- UnhandledSelfAssignmentCheck.cpp - clang-tidy --------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -69,14 +69,38 @@ void UnhandledSelfAssignmentCheck::registerMatchers(MatchFinder *Finder) {
       cxxMethodDecl(unless(hasDescendant(cxxMemberCallExpr(callee(cxxMethodDecl(
           hasName("operator="), ofClass(equalsBoundNode("class"))))))));
 
+  // Checking that some kind of constructor is called and followed by a `swap`:
+  // T& operator=(const T& other) {
+  //    T tmp{this->internal_data(), some, other, args};
+  //    swap(tmp);
+  //    return *this;
+  // }
+  const auto HasCopyAndSwap = cxxMethodDecl(
+      ofClass(cxxRecordDecl()),
+      hasBody(compoundStmt(
+          hasDescendant(
+              varDecl(hasType(cxxRecordDecl(equalsBoundNode("class"))))
+                  .bind("tmp_var")),
+          hasDescendant(stmt(anyOf(
+              cxxMemberCallExpr(hasArgument(
+                  0, declRefExpr(to(varDecl(equalsBoundNode("tmp_var")))))),
+              callExpr(
+                  callee(functionDecl(hasName("swap"))), argumentCountIs(2),
+                  hasAnyArgument(
+                      declRefExpr(to(varDecl(equalsBoundNode("tmp_var"))))),
+                  hasAnyArgument(unaryOperator(has(cxxThisExpr()),
+                                               hasOperatorName("*"))))))))));
+
   DeclarationMatcher AdditionalMatcher = cxxMethodDecl();
   if (WarnOnlyIfThisHasSuspiciousField) {
     // Matcher for standard smart pointers.
     const auto SmartPointerType = qualType(hasUnqualifiedDesugaredType(
         recordType(hasDeclaration(classTemplateSpecializationDecl(
-            hasAnyName("::std::shared_ptr", "::std::unique_ptr",
-                       "::std::weak_ptr", "::std::auto_ptr"),
-            templateArgumentCountIs(1))))));
+            anyOf(allOf(hasAnyName("::std::shared_ptr", "::std::weak_ptr",
+                                   "::std::auto_ptr"),
+                        templateArgumentCountIs(1)),
+                  allOf(hasName("::std::unique_ptr"),
+                        templateArgumentCountIs(2))))))));
 
     // We will warn only if the class has a pointer or a C array field which
     // probably causes a problem during self-assignment (e.g. first resetting
@@ -87,14 +111,14 @@ void UnhandledSelfAssignmentCheck::registerMatchers(MatchFinder *Finder) {
                             hasType(arrayType())))))));
   }
 
-  Finder->addMatcher(cxxMethodDecl(ofClass(cxxRecordDecl().bind("class")),
-                                   isCopyAssignmentOperator(), IsUserDefined,
-                                   HasReferenceParam, HasNoSelfCheck,
-                                   unless(HasNonTemplateSelfCopy),
-                                   unless(HasTemplateSelfCopy),
-                                   HasNoNestedSelfAssign, AdditionalMatcher)
-                         .bind("copyAssignmentOperator"),
-                     this);
+  Finder->addMatcher(
+      cxxMethodDecl(
+          ofClass(cxxRecordDecl().bind("class")), isCopyAssignmentOperator(),
+          IsUserDefined, HasReferenceParam, HasNoSelfCheck,
+          unless(HasNonTemplateSelfCopy), unless(HasTemplateSelfCopy),
+          unless(HasCopyAndSwap), HasNoNestedSelfAssign, AdditionalMatcher)
+          .bind("copyAssignmentOperator"),
+      this);
 }
 
 void UnhandledSelfAssignmentCheck::check(

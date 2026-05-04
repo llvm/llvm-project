@@ -88,6 +88,7 @@ TEST(ConstStringTest, NullAndEmptyStates) {
   EXPECT_TRUE(!null);
   EXPECT_TRUE(null.IsEmpty());
   EXPECT_TRUE(null.IsNull());
+  EXPECT_TRUE(null.GetString().empty());
 }
 
 TEST(ConstStringTest, CompareConstString) {
@@ -144,7 +145,7 @@ TEST(ConstStringTest, StringConversions) {
   // Member functions.
   EXPECT_EQ(llvm::StringRef("foo"), foo.GetStringRef());
   EXPECT_EQ(std::string("foo"), foo.GetString());
-  EXPECT_STREQ("foo", foo.AsCString());
+  EXPECT_STREQ("foo", foo.AsCString(nullptr));
 
   // Conversion operators.
   EXPECT_EQ(llvm::StringRef("foo"), llvm::StringRef(foo));

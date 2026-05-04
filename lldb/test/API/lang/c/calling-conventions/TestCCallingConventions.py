@@ -7,6 +7,7 @@ from lldbsuite.test_event.build_exception import BuildError
 
 class TestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
+    SHARED_BUILD_TESTCASE = False
 
     def build_and_run(self, test_file):
         """
@@ -50,6 +51,7 @@ class TestCase(TestBase):
             return
         self.expect_expr("func(1, 2, 3, 4)", result_type="int", result_value="10")
 
+    @skipIf(compiler="clang", compiler_version=["<", "17.0"], archs=["arm64"])
     @skipIf(compiler="clang", compiler_version=["<", "9.0"])
     def test_ms_abi(self):
         if not self.build_and_run("ms_abi.c"):
@@ -62,7 +64,10 @@ class TestCase(TestBase):
             return
         self.expect_expr("func(1, 2, 3, 4)", result_type="int", result_value="10")
 
+    # Fails on x86, passes elsewhere because clang doesn't support vectorcall on
+    # any other architectures.
     @expectedFailureAll(
+        triple=re.compile("^(x86|i386)"),
         oslist=["freebsd"], bugnumber="github.com/llvm/llvm-project/issues/56084"
     )
     def test_vectorcall(self):

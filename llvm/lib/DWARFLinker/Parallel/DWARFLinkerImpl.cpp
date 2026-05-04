@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "DWARFLinkerImpl.h"
-#include "DIEGenerator.h"
 #include "DependencyTracker.h"
 #include "llvm/DWARFLinker/Utils.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
@@ -20,21 +19,20 @@ using namespace dwarf_linker;
 using namespace dwarf_linker::parallel;
 
 DWARFLinkerImpl::DWARFLinkerImpl(MessageHandlerTy ErrorHandler,
-                                 MessageHandlerTy WarningHandler,
-                                 TranslatorFuncTy StringsTranslator)
+                                 MessageHandlerTy WarningHandler)
     : UniqueUnitID(0), DebugStrStrings(GlobalData),
       DebugLineStrStrings(GlobalData), CommonSections(GlobalData) {
-  GlobalData.setTranslator(StringsTranslator);
   GlobalData.setErrorHandler(ErrorHandler);
   GlobalData.setWarningHandler(WarningHandler);
 }
 
 DWARFLinkerImpl::LinkContext::LinkContext(LinkingGlobalData &GlobalData,
-                                          DWARFFile &File,
+                                          DWARFFile &File, uint64_t ObjFileIdx,
                                           StringMap<uint64_t> &ClangModules,
                                           std::atomic<size_t> &UniqueUnitID)
     : OutputSections(GlobalData), InputDWARFFile(File),
-      ClangModules(ClangModules), UniqueUnitID(UniqueUnitID) {
+      ObjectFileIdx(ObjFileIdx), ClangModules(ClangModules),
+      UniqueUnitID(UniqueUnitID) {
 
   if (File.Dwarf) {
     if (!File.Dwarf->compile_units().empty())
@@ -64,7 +62,7 @@ void DWARFLinkerImpl::LinkContext::addModulesCompileUnit(
 void DWARFLinkerImpl::addObjectFile(DWARFFile &File, ObjFileLoaderTy Loader,
                                     CompileUnitHandlerTy OnCUDieLoaded) {
   ObjectContexts.emplace_back(std::make_unique<LinkContext>(
-      GlobalData, File, ClangModules, UniqueUnitID));
+      GlobalData, File, ObjectContexts.size(), ClangModules, UniqueUnitID));
 
   if (ObjectContexts.back()->InputDWARFFile.Dwarf) {
     for (const std::unique_ptr<DWARFUnit> &CU :
@@ -109,7 +107,7 @@ Error DWARFLinkerImpl::link() {
   std::optional<uint16_t> Language;
 
   for (std::unique_ptr<LinkContext> &Context : ObjectContexts) {
-    if (Context->InputDWARFFile.Dwarf.get() == nullptr) {
+    if (Context->InputDWARFFile.Dwarf == nullptr) {
       Context->setOutputFormat(Context->getFormParams(), GlobalEndianness);
       continue;
     }
@@ -144,7 +142,7 @@ Error DWARFLinkerImpl::link() {
     // twice. And then following handling might be removed.
     for (const std::unique_ptr<DWARFUnit> &OrigCU :
          Context->InputDWARFFile.Dwarf->compile_units()) {
-      DWARFDie UnitDie = OrigCU.get()->getUnitDIE();
+      DWARFDie UnitDie = OrigCU->getUnitDIE();
 
       if (!Language) {
         if (std::optional<DWARFFormValue> Val =
@@ -205,13 +203,13 @@ Error DWARFLinkerImpl::link() {
     Pool.wait();
   }
 
-  if (ArtificialTypeUnit.get() != nullptr && !ArtificialTypeUnit->getTypePool()
-                                                  .getRoot()
-                                                  ->getValue()
-                                                  .load()
-                                                  ->Children.empty()) {
+  if (ArtificialTypeUnit != nullptr && !ArtificialTypeUnit->getTypePool()
+                                            .getRoot()
+                                            ->getValue()
+                                            .load()
+                                            ->Children.empty()) {
     if (GlobalData.getTargetTriple().has_value())
-      if (Error Err = ArtificialTypeUnit.get()->finishCloningAndEmit(
+      if (Error Err = ArtificialTypeUnit->finishCloningAndEmit(
               (*GlobalData.getTargetTriple()).get()))
         return Err;
   }
@@ -455,6 +453,13 @@ Error DWARFLinkerImpl::LinkContext::link(TypeUnit *ArtificialTypeUnit) {
   InputDWARFFile.Dwarf->getDebugMacinfo();
   InputDWARFFile.Dwarf->getDebugMacro();
 
+  // Assign deterministic priorities to module CUs for type DIE allocation.
+  uint64_t LocalCUIdx = 0;
+  for (auto &Mod : ModulesCompileUnits) {
+    if (Error E = Mod.Unit->setPriority(ObjectFileIdx, LocalCUIdx++))
+      return E;
+  }
+
   // Link modules compile units first.
   parallelForEach(ModulesCompileUnits, [&](RefModuleUnit &RefModule) {
     linkSingleCompileUnit(*RefModule.Unit, ArtificialTypeUnit);
@@ -486,6 +491,9 @@ Error DWARFLinkerImpl::LinkContext::link(TypeUnit *ArtificialTypeUnit) {
       CompileUnits.emplace_back(std::make_unique<CompileUnit>(
           GlobalData, *OrigCU, UniqueUnitID.fetch_add(1), "", InputDWARFFile,
           getUnitForOffset, OrigCU->getFormParams(), getEndianness()));
+      if (llvm::Error E =
+              CompileUnits.back()->setPriority(ObjectFileIdx, LocalCUIdx++))
+        return E;
 
       // Preload line table, as it can't be loaded asynchronously.
       CompileUnits.back()->loadLineTable();
@@ -734,7 +742,7 @@ Error DWARFLinkerImpl::LinkContext::cloneAndEmitDebugFrame() {
   if (!GlobalData.getTargetTriple().has_value())
     return Error::success();
 
-  if (InputDWARFFile.Dwarf.get() == nullptr)
+  if (InputDWARFFile.Dwarf == nullptr)
     return Error::success();
 
   const DWARFObject &InputDWARFObj = InputDWARFFile.Dwarf->getDWARFObj();
@@ -867,7 +875,7 @@ void DWARFLinkerImpl::glueCompileUnitsAndWriteToTheOutput() {
   // units into the resulting file.
   emitCommonSectionsAndWriteCompileUnitsToTheOutput();
 
-  if (ArtificialTypeUnit.get() != nullptr)
+  if (ArtificialTypeUnit != nullptr)
     ArtificialTypeUnit.reset();
 
   // Write common debug sections into the resulting file.
@@ -893,10 +901,9 @@ void DWARFLinkerImpl::printStatistic() {
               CU->tryGetSectionDescriptor(DebugSectionKind::DebugInfo))
         AllDebugInfoSectionsSize += (*DebugInfo)->getContents().size();
 
-    SizeByObject[Context->InputDWARFFile.FileName].Input =
-        Context->OriginalDebugInfoSize;
-    SizeByObject[Context->InputDWARFFile.FileName].Output =
-        AllDebugInfoSectionsSize;
+    auto &Size = SizeByObject[Context->InputDWARFFile.FileName];
+    Size.Input = Context->OriginalDebugInfoSize;
+    Size.Output = AllDebugInfoSectionsSize;
   }
 
   // Create a vector sorted in descending order by output size.
@@ -1020,7 +1027,7 @@ void DWARFLinkerImpl::forEachOutputString(
     });
   });
 
-  if (ArtificialTypeUnit.get() != nullptr) {
+  if (ArtificialTypeUnit != nullptr) {
     ArtificialTypeUnit->forEach([&](SectionDescriptor &OutSection) {
       OutSection.ListDebugStrPatch.forEach([&](DebugStrPatch &Patch) {
         StringHandler(StringDestinationKind::DebugStr, Patch.String);
@@ -1034,12 +1041,20 @@ void DWARFLinkerImpl::forEachOutputString(
         if (Patch.Die == nullptr)
           return;
 
+        TypeEntryBody *TypeEntry = Patch.TypeName->getValue().load();
+        if (&TypeEntry->getFinalDie() != Patch.Die)
+          return;
+
         StringHandler(StringDestinationKind::DebugStr, Patch.String);
       });
 
       OutSection.ListDebugTypeLineStrPatch.forEach(
           [&](DebugTypeLineStrPatch &Patch) {
             if (Patch.Die == nullptr)
+              return;
+
+            TypeEntryBody *TypeEntry = Patch.TypeName->getValue().load();
+            if (&TypeEntry->getFinalDie() != Patch.Die)
               return;
 
             StringHandler(StringDestinationKind::DebugStr, Patch.String);
@@ -1051,7 +1066,7 @@ void DWARFLinkerImpl::forEachOutputString(
 void DWARFLinkerImpl::forEachObjectSectionsSet(
     function_ref<void(OutputSections &)> SectionsSetHandler) {
   // Handle artificial type unit first.
-  if (ArtificialTypeUnit.get() != nullptr)
+  if (ArtificialTypeUnit != nullptr)
     SectionsSetHandler(*ArtificialTypeUnit);
 
   // Then all modules(before regular compilation units).
@@ -1074,7 +1089,7 @@ void DWARFLinkerImpl::forEachObjectSectionsSet(
 
 void DWARFLinkerImpl::forEachCompileAndTypeUnit(
     function_ref<void(DwarfUnit *CU)> UnitHandler) {
-  if (ArtificialTypeUnit.get() != nullptr)
+  if (ArtificialTypeUnit != nullptr)
     UnitHandler(ArtificialTypeUnit.get());
 
   // Enumerate module units.
@@ -1350,7 +1365,7 @@ void DWARFLinkerImpl::emitDWARFv5DebugNamesSection(const Triple &TargetTriple) {
   forEachCompileAndTypeUnit([&](DwarfUnit *CU) {
     bool HasRecords = false;
     CU->forEachAcceleratorRecord([&](const DwarfUnit::AccelInfo &Info) {
-      if (DebugNames.get() == nullptr)
+      if (DebugNames == nullptr)
         DebugNames = std::make_unique<DWARF5AccelTable>();
 
       HasRecords = true;
@@ -1360,7 +1375,8 @@ void DWARFLinkerImpl::emitDWARFv5DebugNamesSection(const Triple &TargetTriple) {
       case DwarfUnit::AccelType::Type: {
         DebugNames->addName(*DebugStrStrings.getExistingEntry(Info.String),
                             Info.OutOffset, std::nullopt /*ParentDIEOffset*/,
-                            Info.Tag, CU->getUniqueID());
+                            Info.Tag, CU->getUniqueID(),
+                            CU->getTag() == dwarf::DW_TAG_type_unit);
       } break;
 
       default:
@@ -1376,7 +1392,7 @@ void DWARFLinkerImpl::emitDWARFv5DebugNamesSection(const Triple &TargetTriple) {
     }
   });
 
-  if (DebugNames.get() != nullptr) {
+  if (DebugNames != nullptr) {
     // FIXME: we use AsmPrinter to emit accelerator sections.
     // It might be beneficial to directly emit accelerator data
     // to the raw_svector_ostream.

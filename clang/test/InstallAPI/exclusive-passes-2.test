@@ -1,0 +1,67 @@
+; RUN: rm -rf %t
+; RUN: split-file %s %t
+
+// All passes should include Foo macro definition.
+; RUN: clang-installapi -target arm64-apple-macos12 \
+; RUN: -install_name @rpath/libfoo.dylib -current_version 1 \
+; RUN: -compatibility_version 1 \
+; RUN: -I%S/Inputs/LibFoo/usr/include -dynamiclib \
+; RUN: -extra-public-header %S/Inputs/LibFoo/usr/include/foo.h \
+; RUN: -o %t/output.tbd \
+; RUN: -DFoo -XApple -DDarwin=1 -XElf -DNONDarwin=1 2>&1 | FileCheck -allow-empty %s 
+; RUN: llvm-readtapi --compare %t/output.tbd %t/expected.tbd 2>&1 | FileCheck -allow-empty %s
+
+; RUN: clang-installapi -target arm64-apple-macos12 \
+; RUN: -install_name @rpath/libfoo.dylib \
+; RUN: -current_version 1 -compatibility_version 1 \
+; RUN: -I%S/Inputs/LibFoo/usr/include -dynamiclib \
+; RUN: -extra-public-header %S/Inputs/LibFoo/usr/include/foo.h \
+; RUN: -o %t/output2.tbd \
+; RUN: -DFoo -optionlist %t/options.json 2>&1 | FileCheck -allow-empty %s 
+; RUN: llvm-readtapi --compare %t/output.tbd %t/expected.tbd 2>&1 | FileCheck -allow-empty %s
+
+; CHECK-NOT: error
+; CHECK-NOT: warning
+
+
+//--- expected.tbd
+{
+  "main_library": {
+    "exported_symbols": [
+      {
+        "text": {
+          "global": [
+            "_FooLib$foo$darwin",
+            "_FooLib$foo$linux",
+            "_FooLib$foo"
+          ]
+        }
+      }
+    ],
+    "flags": [
+      {
+        "attributes": [
+          "not_app_extension_safe"
+        ]
+      }
+    ],
+    "install_names": [
+      {
+        "name": "@rpath/libfoo.dylib"
+      }
+    ],
+    "target_info": [
+      {
+        "min_deployment": "12",
+        "target": "arm64-macos"
+      }
+    ]
+  },
+  "tapi_tbd_version": 5
+}
+
+//--- options.json
+{
+  "Apple" : ["-DDarwin=1"],
+  "Elf" : ["-DNONDarwin"]
+}

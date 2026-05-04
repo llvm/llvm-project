@@ -43,6 +43,10 @@ Sections:
     Type:            SHT_PROGBITS
     Flags:           [ SHF_GROUP ]
     Content:         '00'
+  - Name:            .debug_alloc
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Content:         000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f
 Symbols:
   - Type:    STT_SECTION
     Section: .debug_foo

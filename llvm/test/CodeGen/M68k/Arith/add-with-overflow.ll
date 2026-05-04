@@ -35,7 +35,7 @@ define fastcc i1 @test6(i32 %v1, i32 %v2, ptr %X) nounwind {
 ; CHECK-NEXT:  ; %bb.1: ; %normal
 ; CHECK-NEXT:    move.l #0, (%a0)
 ; CHECK-NEXT:  .LBB1_2: ; %carry
-; CHECK-NEXT:    move.b #0, %d0
+; CHECK-NEXT:    moveq #0, %d0
 ; CHECK-NEXT:    rts
 entry:
   %t = call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %v1, i32 %v2)

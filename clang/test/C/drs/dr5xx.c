@@ -29,7 +29,7 @@ void dr502(void) {
    */
   struct t {
     int i;
-    struct { int a[]; }; /* expected-error {{flexible array member 'a' not allowed in otherwise empty struct}}
+    struct { int a[]; }; /* expected-warning {{flexible array member 'a' in otherwise empty struct is a GNU extension}}
                             c89only-warning {{flexible array members are a C99 feature}}
                             expected-warning {{'' may not be nested in a struct due to flexible array member}}
                           */

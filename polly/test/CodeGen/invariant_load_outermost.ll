@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -polly-invariant-load-hoisting=true -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' -polly-invariant-load-hoisting=true -S < %s | FileCheck %s
 
 ; CHECK: polly.start
 

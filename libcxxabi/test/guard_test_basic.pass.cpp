@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// UNSUPPORTED: c++03
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
 // Necessary because we include a private header of libc++abi, which
 // only understands _LIBCXXABI_HAS_NO_THREADS.

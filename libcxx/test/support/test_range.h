@@ -10,10 +10,13 @@
 #define LIBCXX_TEST_SUPPORT_TEST_RANGE_H
 
 #include <concepts>
+#include <functional>
 #include <iterator>
 #include <ranges>
+#include <type_traits>
 
 #include "test_iterators.h"
+#include "test_macros.h"
 
 #if TEST_STD_VER < 17
 #  error "test/support/test_range.h" can only be included in builds supporting ranges
@@ -30,6 +33,16 @@ struct test_range {
   I<T const*> begin() const;
   sentinel end();
   sentinel end() const;
+};
+
+template <template <class...> class I, class T = int>
+  requires std::input_or_output_iterator<I<T*> >
+struct test_sized_range {
+  I<T*> begin();
+  I<T const*> begin() const;
+  sentinel end();
+  sentinel end() const;
+  std::size_t size() const;
 };
 
 template <template <class...> class I, class T = int>
@@ -93,5 +106,15 @@ template <class View, class T>
 concept CanBePiped = requires(View&& view, T&& t) {
   { std::forward<View>(view) | std::forward<T>(t) };
 };
+
+// See [concept.equalitycomparable]
+template <class T, class U>
+concept weakly_equality_comparable_with =
+    requires(const std::remove_reference_t<T>& t, const std::remove_reference_t<U>& u) {
+      { t == u } -> std::same_as<bool>;
+      { t != u } -> std::same_as<bool>;
+      { u == t } -> std::same_as<bool>;
+      { u != t } -> std::same_as<bool>;
+    };
 
 #endif // LIBCXX_TEST_SUPPORT_TEST_RANGE_H

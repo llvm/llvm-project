@@ -12,8 +12,8 @@ declare void @DEAD()
 define void @test1(i32 %V) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    switch i32 [[V:%.*]], label [[A:%.*]] [
-; CHECK-NEXT:    i32 4, label [[T:%.*]]
-; CHECK-NEXT:    i32 17, label [[COMMON_RET:%.*]]
+; CHECK-NEXT:      i32 4, label [[T:%.*]]
+; CHECK-NEXT:      i32 17, label [[COMMON_RET:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       T:
 ; CHECK-NEXT:    call void @foo1()
@@ -66,9 +66,9 @@ C:              ; preds = %B, %A, %A2, %T, %T
 define void @test2(i32 %V) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    switch i32 [[V:%.*]], label [[A:%.*]] [
-; CHECK-NEXT:    i32 4, label [[T:%.*]]
-; CHECK-NEXT:    i32 17, label [[D:%.*]]
-; CHECK-NEXT:    i32 1234, label [[COMMON_RET:%.*]]
+; CHECK-NEXT:      i32 4, label [[T:%.*]]
+; CHECK-NEXT:      i32 17, label [[D:%.*]]
+; CHECK-NEXT:      i32 1234, label [[COMMON_RET:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       A:
 ; CHECK-NEXT:    call void @foo1()

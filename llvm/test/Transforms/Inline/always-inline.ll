@@ -172,7 +172,7 @@ entry:
   ret void
 }
 
-define internal void @inner9b(i1 %b) alwaysinline {
+define internal void @inner9b(i64 %b) alwaysinline {
 ; CHECK-NOT: @inner9b(
 entry:
   ret void
@@ -188,7 +188,8 @@ entry:
   ; this the function can't be deleted because of the constant expression
   ; usage.
   %sink = alloca i1
-  store volatile i1 icmp eq (i64 ptrtoint (ptr @inner9a to i64), i64 ptrtoint(ptr @dummy9 to i64)), ptr %sink
+  %cmp = icmp eq i64 ptrtoint (ptr @inner9a to i64), ptrtoint(ptr @dummy9 to i64)
+  store volatile i1 %cmp, ptr %sink
 ; CHECK: store volatile
   call void @inner9a(i1 false)
 ; CHECK-NOT: call void @inner9a
@@ -196,7 +197,7 @@ entry:
   ; Next we call @inner9b passing in a constant expression. This constant
   ; expression will in fact be removed by inlining, so we should also be able
   ; to delete the function.
-  call void @inner9b(i1 icmp eq (i64 ptrtoint (ptr @inner9b to i64), i64 ptrtoint(ptr @dummy9 to i64)))
+  call void @inner9b(i64 ptrtoint (ptr @inner9b to i64))
 ; CHECK-NOT: @inner9b
 
   ret void

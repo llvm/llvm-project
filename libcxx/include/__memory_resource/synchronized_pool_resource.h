@@ -9,13 +9,13 @@
 #ifndef _LIBCPP___MEMORY_RESOURCE_SYNCHRONIZED_POOL_RESOURCE_H
 #define _LIBCPP___MEMORY_RESOURCE_SYNCHRONIZED_POOL_RESOURCE_H
 
-#include <__availability>
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__memory_resource/memory_resource.h>
 #include <__memory_resource/pool_options.h>
 #include <__memory_resource/unsynchronized_pool_resource.h>
-#include <cstddef>
-#include <mutex>
+#include <__mutex/mutex.h>
+#include <__mutex/unique_lock.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -50,26 +50,28 @@ public:
   synchronized_pool_resource& operator=(const synchronized_pool_resource&) = delete;
 
   _LIBCPP_HIDE_FROM_ABI void release() {
-#  if !defined(_LIBCPP_HAS_NO_THREADS)
+#  if _LIBCPP_HAS_THREADS
     unique_lock<mutex> __lk(__mut_);
 #  endif
     __unsync_.release();
   }
 
-  _LIBCPP_HIDE_FROM_ABI memory_resource* upstream_resource() const { return __unsync_.upstream_resource(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI memory_resource* upstream_resource() const {
+    return __unsync_.upstream_resource();
+  }
 
-  _LIBCPP_HIDE_FROM_ABI pool_options options() const { return __unsync_.options(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI pool_options options() const { return __unsync_.options(); }
 
 protected:
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL void* do_allocate(size_t __bytes, size_t __align) override {
-#  if !defined(_LIBCPP_HAS_NO_THREADS)
+#  if _LIBCPP_HAS_THREADS
     unique_lock<mutex> __lk(__mut_);
 #  endif
     return __unsync_.allocate(__bytes, __align);
   }
 
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL void do_deallocate(void* __p, size_t __bytes, size_t __align) override {
-#  if !defined(_LIBCPP_HAS_NO_THREADS)
+#  if _LIBCPP_HAS_THREADS
     unique_lock<mutex> __lk(__mut_);
 #  endif
     return __unsync_.deallocate(__p, __bytes, __align);
@@ -78,7 +80,7 @@ protected:
   bool do_is_equal(const memory_resource& __other) const noexcept override; // key function
 
 private:
-#  if !defined(_LIBCPP_HAS_NO_THREADS)
+#  if _LIBCPP_HAS_THREADS
   mutex __mut_;
 #  endif
   unsynchronized_pool_resource __unsync_;

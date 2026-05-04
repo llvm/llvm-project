@@ -18,6 +18,9 @@ main:
     movl variable2(%rip), %ecx
     addl %ecx, %eax
     ret
+    .global _pei386_runtime_relocator
+_pei386_runtime_relocator:
+    ret
 
     .section .rdata$.refptr.variable1,"dr",discard,.refptr.variable1
     .global .refptr.variable1

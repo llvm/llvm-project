@@ -25,6 +25,8 @@ RegisterContextThreadMemory::RegisterContextThreadMemory(
 RegisterContextThreadMemory::~RegisterContextThreadMemory() = default;
 
 void RegisterContextThreadMemory::UpdateRegisterContext() {
+  std::lock_guard<std::mutex> lock(m_update_register_ctx_lock);
+
   ThreadSP thread_sp(m_thread_wp.lock());
   if (thread_sp) {
     ProcessSP process_sp(thread_sp->GetProcess());
@@ -114,11 +116,27 @@ bool RegisterContextThreadMemory::ReadAllRegisterValues(
   return false;
 }
 
+bool RegisterContextThreadMemory::ReadAllRegisterValues(
+    lldb_private::RegisterCheckpoint &reg_checkpoint) {
+  UpdateRegisterContext();
+  if (m_reg_ctx_sp)
+    return m_reg_ctx_sp->ReadAllRegisterValues(reg_checkpoint);
+  return false;
+}
+
 bool RegisterContextThreadMemory::WriteAllRegisterValues(
     const lldb::DataBufferSP &data_sp) {
   UpdateRegisterContext();
   if (m_reg_ctx_sp)
     return m_reg_ctx_sp->WriteAllRegisterValues(data_sp);
+  return false;
+}
+
+bool RegisterContextThreadMemory::WriteAllRegisterValues(
+    const lldb_private::RegisterCheckpoint &reg_checkpoint) {
+  UpdateRegisterContext();
+  if (m_reg_ctx_sp)
+    return m_reg_ctx_sp->WriteAllRegisterValues(reg_checkpoint);
   return false;
 }
 
@@ -135,14 +153,14 @@ uint32_t RegisterContextThreadMemory::ConvertRegisterKindToRegisterNumber(
   UpdateRegisterContext();
   if (m_reg_ctx_sp)
     return m_reg_ctx_sp->ConvertRegisterKindToRegisterNumber(kind, num);
-  return false;
+  return LLDB_INVALID_REGNUM;
 }
 
 uint32_t RegisterContextThreadMemory::NumSupportedHardwareBreakpoints() {
   UpdateRegisterContext();
   if (m_reg_ctx_sp)
     return m_reg_ctx_sp->NumSupportedHardwareBreakpoints();
-  return false;
+  return 0;
 }
 
 uint32_t RegisterContextThreadMemory::SetHardwareBreakpoint(lldb::addr_t addr,
@@ -198,9 +216,7 @@ Status RegisterContextThreadMemory::ReadRegisterValueFromMemory(
   if (m_reg_ctx_sp)
     return m_reg_ctx_sp->ReadRegisterValueFromMemory(reg_info, src_addr,
                                                      src_len, reg_value);
-  Status error;
-  error.SetErrorString("invalid register context");
-  return error;
+  return Status::FromErrorString("invalid register context");
 }
 
 Status RegisterContextThreadMemory::WriteRegisterValueToMemory(
@@ -210,7 +226,5 @@ Status RegisterContextThreadMemory::WriteRegisterValueToMemory(
   if (m_reg_ctx_sp)
     return m_reg_ctx_sp->WriteRegisterValueToMemory(reg_info, dst_addr, dst_len,
                                                     reg_value);
-  Status error;
-  error.SetErrorString("invalid register context");
-  return error;
+  return Status::FromErrorString("invalid register context");
 }

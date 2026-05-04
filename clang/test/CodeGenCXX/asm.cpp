@@ -37,7 +37,7 @@ void test0(A &a) { foo0<void>(a); }
 
 // CHECK: define {{.*}}void @_ZN12TestTemplate4foo1IvEEv1A(
 // CHECK: %[[BLOCK:.*]] = alloca <{ ptr, i32, i32, ptr, ptr, %[[STRUCT_A]] }>, align 4
-// CHECK: %[[BLOCK_CAPTURED:.*]] = getelementptr inbounds <{ ptr, i32, i32, ptr, ptr, %[[STRUCT_A]] }>, ptr %[[BLOCK]], i32 0, i32 5
+// CHECK: %[[BLOCK_CAPTURED:.*]] = getelementptr inbounds nuw <{ ptr, i32, i32, ptr, ptr, %[[STRUCT_A]] }>, ptr %[[BLOCK]], i32 0, i32 5
 // CHECK: call void asm sideeffect "", "r,~{dirflag},~{fpsr},~{flags}"(i32 %{{.*}})
 // CHECK: call void asm sideeffect "", "~{dirflag},~{fpsr},~{flags}"()
 // CHECK: call void @_ZN1AD1Ev({{.*}} %[[BLOCK_CAPTURED]])

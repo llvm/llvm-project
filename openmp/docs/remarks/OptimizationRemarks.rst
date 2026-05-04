@@ -81,7 +81,7 @@ OpenMP Remarks
    * - :ref:`OMP121 <omp121>`
      - Analysis
      - Value has potential side effects preventing SPMD-mode execution. Add
-       `__attribute__((assume(\"ompx_spmd_amenable\")))` to the called function
+       `[[omp::assume(\"ompx_spmd_amenable\")]]` to the called function
        to override.
    * - :ref:`OMP130 <omp130>`
      - Optimization
@@ -96,7 +96,7 @@ OpenMP Remarks
    * - :ref:`OMP133 <omp133>`
      - Analysis
      - Call may contain unknown parallel regions. Use
-       `__attribute__((assume("omp_no_parallelism")))` to override.
+       `[[omp::assume("omp_no_parallelism")]]` to override.
    * - :ref:`OMP140 <omp140>`
      - Analysis
      - Could not internalize function. Some optimizations may not be possible.

@@ -36,6 +36,7 @@ set(LSAN_HEADERS
 
 set(LSAN_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
+# Used by asan/hwasan even without COMPILER_RT_HAS_LSAN.
 add_compiler_rt_object_libraries(RTLSanCommon
     OS ${SANITIZER_COMMON_SUPPORTED_OS}
     ARCHS ${LSAN_COMMON_SUPPORTED_ARCH}

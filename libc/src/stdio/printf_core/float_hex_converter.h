@@ -12,6 +12,8 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/rounding_mode.h"
+#include "src/__support/ctype_utils.h"
+#include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/converter_utils.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/float_inf_nan_converter.h"
@@ -20,23 +22,27 @@
 #include <inttypes.h>
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
 
-LIBC_INLINE int convert_float_hex_exp(Writer *writer,
+template <WriteMode write_mode>
+LIBC_INLINE int convert_float_hex_exp(Writer<write_mode> *writer,
                                       const FormatSection &to_conv) {
+#ifdef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+  using LDBits = fputil::FPBits<double>;
+  using StorageType = LDBits::StorageType;
+#else
   using LDBits = fputil::FPBits<long double>;
   using StorageType = LDBits::StorageType;
-  // All of the letters will be defined relative to variable a, which will be
-  // the appropriate case based on the name of the conversion. This converts any
-  // conversion name into the letter 'a' with the appropriate case.
-  const char a = (to_conv.conv_name & 32) | 'A';
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
 
   bool is_negative;
   int exponent;
   StorageType mantissa;
   bool is_inf_or_nan;
   uint32_t fraction_bits;
+
+#ifndef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
   if (to_conv.length_modifier == LengthModifier::L) {
     fraction_bits = LDBits::FRACTION_LEN;
     LDBits::StorageType float_raw = to_conv.conv_val_raw;
@@ -45,7 +51,9 @@ LIBC_INLINE int convert_float_hex_exp(Writer *writer,
     exponent = float_bits.get_explicit_exponent();
     mantissa = float_bits.get_explicit_mantissa();
     is_inf_or_nan = float_bits.is_inf_or_nan();
-  } else {
+  } else
+#endif // !LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+  {
     using LBits = fputil::FPBits<double>;
     fraction_bits = LBits::FRACTION_LEN;
     LBits::StorageType float_raw =
@@ -137,9 +145,10 @@ LIBC_INLINE int convert_float_hex_exp(Writer *writer,
   size_t mant_cur = mant_len;
   size_t first_non_zero = 1;
   for (; mant_cur > 0; --mant_cur, mantissa >>= 4) {
-    char mant_mod_16 = static_cast<char>(mantissa) & 15;
-    char new_digit = static_cast<char>(
-        (mant_mod_16 > 9) ? (mant_mod_16 - 10 + a) : (mant_mod_16 + '0'));
+    char mant_mod_16 = static_cast<char>(mantissa % 16);
+    char new_digit = internal::int_to_b36_char(mant_mod_16);
+    if (internal::isupper(to_conv.conv_name))
+      new_digit = internal::toupper(new_digit);
     mant_buffer[mant_cur - 1] = new_digit;
     if (new_digit != '0' && first_non_zero < mant_cur)
       first_non_zero = mant_cur;
@@ -167,7 +176,7 @@ LIBC_INLINE int convert_float_hex_exp(Writer *writer,
 
   size_t exp_cur = EXP_LEN;
   for (; exponent > 0; --exp_cur, exponent /= 10) {
-    exp_buffer[exp_cur - 1] = static_cast<char>((exponent % 10) + '0');
+    exp_buffer[exp_cur - 1] = internal::int_to_b36_char(exponent % 10);
   }
   if (exp_cur == EXP_LEN) { // if nothing else was written, write a 0.
     exp_buffer[EXP_LEN - 1] = '0';
@@ -186,7 +195,7 @@ LIBC_INLINE int convert_float_hex_exp(Writer *writer,
   constexpr size_t PREFIX_LEN = 2;
   char prefix[PREFIX_LEN];
   prefix[0] = '0';
-  prefix[1] = a + ('x' - 'a');
+  prefix[1] = internal::islower(to_conv.conv_name) ? 'x' : 'X';
   const cpp::string_view prefix_str(prefix, PREFIX_LEN);
 
   // If the precision is greater than the actual result, pad with 0s
@@ -199,13 +208,13 @@ LIBC_INLINE int convert_float_hex_exp(Writer *writer,
   constexpr cpp::string_view HEXADECIMAL_POINT(".");
 
   // This is for the letter 'p' before the exponent.
-  const char exp_seperator = a + ('p' - 'a');
-  constexpr int EXP_SEPERATOR_LEN = 1;
+  const char exp_separator = internal::islower(to_conv.conv_name) ? 'p' : 'P';
+  constexpr int EXP_SEPARATOR_LEN = 1;
 
   padding = static_cast<int>(to_conv.min_width - (sign_char > 0 ? 1 : 0) -
                              PREFIX_LEN - mant_digits - trailing_zeroes -
                              static_cast<int>(has_hexadecimal_point) -
-                             EXP_SEPERATOR_LEN - (EXP_LEN - exp_cur));
+                             EXP_SEPARATOR_LEN - (EXP_LEN - exp_cur));
   if (padding < 0)
     padding = 0;
 
@@ -223,7 +232,7 @@ LIBC_INLINE int convert_float_hex_exp(Writer *writer,
       RET_IF_RESULT_NEGATIVE(writer->write({mant_buffer + 1, mant_digits - 1}));
     if (trailing_zeroes > 0)
       RET_IF_RESULT_NEGATIVE(writer->write('0', trailing_zeroes));
-    RET_IF_RESULT_NEGATIVE(writer->write(exp_seperator));
+    RET_IF_RESULT_NEGATIVE(writer->write(exp_separator));
     RET_IF_RESULT_NEGATIVE(
         writer->write({exp_buffer + exp_cur, EXP_LEN - exp_cur}));
     if (padding > 0)
@@ -247,7 +256,7 @@ LIBC_INLINE int convert_float_hex_exp(Writer *writer,
       RET_IF_RESULT_NEGATIVE(writer->write({mant_buffer + 1, mant_digits - 1}));
     if (trailing_zeroes > 0)
       RET_IF_RESULT_NEGATIVE(writer->write('0', trailing_zeroes));
-    RET_IF_RESULT_NEGATIVE(writer->write(exp_seperator));
+    RET_IF_RESULT_NEGATIVE(writer->write(exp_separator));
     RET_IF_RESULT_NEGATIVE(
         writer->write({exp_buffer + exp_cur, EXP_LEN - exp_cur}));
   }
@@ -255,6 +264,6 @@ LIBC_INLINE int convert_float_hex_exp(Writer *writer,
 }
 
 } // namespace printf_core
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_FLOAT_HEX_CONVERTER_H

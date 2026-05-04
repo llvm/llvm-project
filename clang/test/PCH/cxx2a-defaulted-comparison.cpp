@@ -22,7 +22,7 @@ namespace std {
   constexpr strong_ordering strong_ordering::less = {-1};
 }
 
-// Ensure that we can round-trip DefaultedFunctionInfo through an AST file.
+// Ensure that we can round-trip DefaultedOrDeletedInfo through an AST file.
 namespace LookupContext {
   struct A {};
 

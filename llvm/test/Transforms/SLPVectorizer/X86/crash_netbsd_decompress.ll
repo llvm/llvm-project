@@ -25,8 +25,8 @@ define i32 @fn1() {
 ; CHECK-NEXT:    store i32 [[AND]], ptr @a, align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> <i32 poison, i32 0>, <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    switch i32 [[AND]], label [[IF_END:%.*]] [
-; CHECK-NEXT:    i32 7, label [[SAVE_STATE_AND_RETURN]]
-; CHECK-NEXT:    i32 0, label [[SAVE_STATE_AND_RETURN]]
+; CHECK-NEXT:      i32 7, label [[SAVE_STATE_AND_RETURN]]
+; CHECK-NEXT:      i32 0, label [[SAVE_STATE_AND_RETURN]]
 ; CHECK-NEXT:    ]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    br label [[SAVE_STATE_AND_RETURN]]

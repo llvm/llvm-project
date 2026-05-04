@@ -17,7 +17,7 @@
 #include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Pass/AnalysisManager.h"
 #include "mlir/Pass/PassManager.h"
-#include "mlir/Support/LogicalResult.h"
+#include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/StringMap.h"
 
 namespace mlir {
@@ -40,6 +40,11 @@ public:
   }
   const OpPipelinesTy &getOpPipelines() const { return opPipelines; }
   unsigned getMaxInliningIterations() const { return maxInliningIterations; }
+  const InlinerInterface::CloneCallbackTy &getCloneCallback() const {
+    return cloneCallback;
+  }
+  bool getCanHandleMultipleBlocks() const { return canHandleMultipleBlocks; }
+
   void setDefaultPipeline(DefaultPipelineTy pipeline) {
     defaultPipeline = std::move(pipeline);
   }
@@ -47,6 +52,12 @@ public:
     opPipelines = std::move(pipelines);
   }
   void setMaxInliningIterations(unsigned max) { maxInliningIterations = max; }
+  void setCloneCallback(InlinerInterface::CloneCallbackTy callback) {
+    cloneCallback = std::move(callback);
+  }
+  void setCanHandleMultipleBlocks(bool value = true) {
+    canHandleMultipleBlocks = value;
+  }
 
 private:
   /// An optional function that constructs an optimization pipeline for
@@ -61,6 +72,28 @@ private:
   /// For SCC-based inlining algorithms, specifies maximum number of iterations
   /// when inlining within an SCC.
   unsigned maxInliningIterations{0};
+  /// Callback for cloning operations during inlining
+  InlinerInterface::CloneCallbackTy cloneCallback =
+      [](OpBuilder &builder, Region *src, Block *inlineBlock,
+         Block *postInsertBlock, IRMapping &mapper,
+         bool shouldCloneInlinedRegion) {
+        // Check to see if the region is being cloned, or moved inline. In
+        // either case, move the new blocks after the 'insertBlock' to improve
+        // IR readability.
+        Region *insertRegion = inlineBlock->getParent();
+        if (shouldCloneInlinedRegion)
+          src->cloneInto(insertRegion, postInsertBlock->getIterator(), mapper);
+        else
+          insertRegion->getBlocks().splice(postInsertBlock->getIterator(),
+                                           src->getBlocks(), src->begin(),
+                                           src->end());
+      };
+  /// Determine if the inliner can inline a function containing multiple
+  /// blocks into a region that requires a single block. By default, it is
+  /// not allowed. If it is true, cloneCallback should perform the extra
+  /// transformation. see the example in
+  /// mlir/test/lib/Transforms/TestInliningCallback.cpp
+  bool canHandleMultipleBlocks{false};
 };
 
 /// This is an implementation of the inliner
@@ -69,19 +102,6 @@ private:
 /// of inlining decisions from the leafs to the roots of the callgraph.
 class Inliner {
 public:
-  using RunPipelineHelperTy = std::function<LogicalResult(
-      Pass &pass, OpPassManager &pipeline, Operation *op)>;
-
-  Inliner(Operation *op, CallGraph &cg, Pass &pass, AnalysisManager am,
-          RunPipelineHelperTy runPipelineHelper, const InlinerConfig &config)
-      : op(op), cg(cg), pass(pass), am(am),
-        runPipelineHelper(std::move(runPipelineHelper)), config(config) {}
-  Inliner(Inliner &) = delete;
-  void operator=(const Inliner &) = delete;
-
-  /// Perform inlining on a OpTrait::SymbolTable operation.
-  LogicalResult doInlining();
-
   /// This struct represents a resolved call to a given callgraph node. Given
   /// that the call does not actually contain a direct reference to the
   /// Region(CallGraphNode) that it is dispatching to, we need to resolve them
@@ -94,7 +114,29 @@ public:
     CallGraphNode *sourceNode, *targetNode;
   };
 
-protected:
+  using RunPipelineHelperTy = std::function<LogicalResult(
+      Pass &pass, OpPassManager &pipeline, Operation *op)>;
+
+  /// Type of the callback answering if it is profitable
+  /// to inline a callable operation at a call site.
+  /// It might be the case that the ResolvedCall does not provide
+  /// enough context to make the profitability decision, so
+  /// this hook's interface might need to be extended in future.
+  using ProfitabilityCallbackTy = std::function<bool(const ResolvedCall &)>;
+
+  Inliner(Operation *op, CallGraph &cg, Pass &pass, AnalysisManager am,
+          RunPipelineHelperTy runPipelineHelper, const InlinerConfig &config,
+          ProfitabilityCallbackTy isProfitableToInline)
+      : op(op), cg(cg), pass(pass), am(am),
+        runPipelineHelper(std::move(runPipelineHelper)), config(config),
+        isProfitableToInline(std::move(isProfitableToInline)) {}
+  Inliner(Inliner &) = delete;
+  void operator=(const Inliner &) = delete;
+
+  /// Perform inlining on a OpTrait::SymbolTable operation.
+  LogicalResult doInlining();
+
+private:
   /// An OpTrait::SymbolTable operation to run the inlining on.
   Operation *op;
   /// A CallGraph analysis for the given operation.
@@ -108,12 +150,12 @@ protected:
   const RunPipelineHelperTy runPipelineHelper;
   /// The inliner configuration parameters.
   const InlinerConfig &config;
+  /// Returns true, if it is profitable to inline the callable operation
+  /// at the call site.
+  ProfitabilityCallbackTy isProfitableToInline;
 
-private:
   /// Forward declaration of the class providing the actual implementation.
   class Impl;
-
-public:
 };
 } // namespace mlir
 

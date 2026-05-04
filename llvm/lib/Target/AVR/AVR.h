@@ -31,7 +31,8 @@ FunctionPass *createAVRExpandPseudoPass();
 FunctionPass *createAVRFrameAnalyzerPass();
 FunctionPass *createAVRBranchSelectionPass();
 
-void initializeAVRDAGToDAGISelPass(PassRegistry &);
+void initializeAVRAsmPrinterPass(PassRegistry &);
+void initializeAVRDAGToDAGISelLegacyPass(PassRegistry &);
 void initializeAVRExpandPseudoPass(PassRegistry &);
 void initializeAVRShiftExpandPass(PassRegistry &);
 

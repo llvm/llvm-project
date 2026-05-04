@@ -14,11 +14,10 @@
 //===----------------------------------------------------------------------===//
 #include "clang/APINotes/APINotesReader.h"
 #include "APINotesFormat.h"
+#include "clang/APINotes/Types.h"
 #include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/Bitstream/BitstreamReader.h"
 #include "llvm/Support/DJB.h"
-#include "llvm/Support/EndianStream.h"
 #include "llvm/Support/OnDiskHashTable.h"
 
 namespace clang {
@@ -30,23 +29,20 @@ namespace {
 llvm::VersionTuple ReadVersionTuple(const uint8_t *&Data) {
   uint8_t NumVersions = (*Data++) & 0x03;
 
-  unsigned Major =
-      endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Data);
+  unsigned Major = endian::readNext<uint32_t, llvm::endianness::little>(Data);
   if (NumVersions == 0)
     return llvm::VersionTuple(Major);
 
-  unsigned Minor =
-      endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Data);
+  unsigned Minor = endian::readNext<uint32_t, llvm::endianness::little>(Data);
   if (NumVersions == 1)
     return llvm::VersionTuple(Major, Minor);
 
   unsigned Subminor =
-      endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Data);
+      endian::readNext<uint32_t, llvm::endianness::little>(Data);
   if (NumVersions == 2)
     return llvm::VersionTuple(Major, Minor, Subminor);
 
-  unsigned Build =
-      endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Data);
+  unsigned Build = endian::readNext<uint32_t, llvm::endianness::little>(Data);
   return llvm::VersionTuple(Major, Minor, Subminor, Build);
 }
 
@@ -71,16 +67,16 @@ public:
 
   static std::pair<unsigned, unsigned> ReadKeyDataLength(const uint8_t *&Data) {
     unsigned KeyLength =
-        endian::readNext<uint16_t, llvm::endianness::little, unaligned>(Data);
+        endian::readNext<uint16_t, llvm::endianness::little>(Data);
     unsigned DataLength =
-        endian::readNext<uint16_t, llvm::endianness::little, unaligned>(Data);
+        endian::readNext<uint16_t, llvm::endianness::little>(Data);
     return {KeyLength, DataLength};
   }
 
   static data_type ReadData(internal_key_type Key, const uint8_t *Data,
                             unsigned Length) {
     unsigned NumElements =
-        endian::readNext<uint16_t, llvm::endianness::little, unaligned>(Data);
+        endian::readNext<uint16_t, llvm::endianness::little>(Data);
     data_type Result;
     Result.reserve(NumElements);
     for (unsigned i = 0; i != NumElements; ++i) {
@@ -98,21 +94,24 @@ public:
 
 /// Read serialized CommonEntityInfo.
 void ReadCommonEntityInfo(const uint8_t *&Data, CommonEntityInfo &Info) {
-  uint8_t UnavailableBits = *Data++;
-  Info.Unavailable = (UnavailableBits >> 1) & 0x01;
-  Info.UnavailableInSwift = UnavailableBits & 0x01;
-  if ((UnavailableBits >> 2) & 0x01)
-    Info.setSwiftPrivate(static_cast<bool>((UnavailableBits >> 3) & 0x01));
+  uint8_t EncodedBits = *Data++;
+  Info.Unavailable = (EncodedBits >> 1) & 0x01;
+  Info.UnavailableInSwift = EncodedBits & 0x01;
+  if ((EncodedBits >> 2) & 0x01)
+    Info.setSwiftPrivate(static_cast<bool>((EncodedBits >> 3) & 0x01));
+  if ((EncodedBits >> 4) & 0x01)
+    Info.setSwiftSafety(
+        static_cast<SwiftSafetyKind>((EncodedBits >> 5) & 0x03));
 
   unsigned MsgLength =
-      endian::readNext<uint16_t, llvm::endianness::little, unaligned>(Data);
+      endian::readNext<uint16_t, llvm::endianness::little>(Data);
   Info.UnavailableMsg =
       std::string(reinterpret_cast<const char *>(Data),
                   reinterpret_cast<const char *>(Data) + MsgLength);
   Data += MsgLength;
 
   unsigned SwiftNameLength =
-      endian::readNext<uint16_t, llvm::endianness::little, unaligned>(Data);
+      endian::readNext<uint16_t, llvm::endianness::little>(Data);
   Info.SwiftName =
       std::string(reinterpret_cast<const char *>(Data),
                   reinterpret_cast<const char *>(Data) + SwiftNameLength);
@@ -124,7 +123,7 @@ void ReadCommonTypeInfo(const uint8_t *&Data, CommonTypeInfo &Info) {
   ReadCommonEntityInfo(Data, Info);
 
   unsigned SwiftBridgeLength =
-      endian::readNext<uint16_t, llvm::endianness::little, unaligned>(Data);
+      endian::readNext<uint16_t, llvm::endianness::little>(Data);
   if (SwiftBridgeLength > 0) {
     Info.setSwiftBridge(std::string(reinterpret_cast<const char *>(Data),
                                     SwiftBridgeLength - 1));
@@ -132,11 +131,18 @@ void ReadCommonTypeInfo(const uint8_t *&Data, CommonTypeInfo &Info) {
   }
 
   unsigned ErrorDomainLength =
-      endian::readNext<uint16_t, llvm::endianness::little, unaligned>(Data);
+      endian::readNext<uint16_t, llvm::endianness::little>(Data);
   if (ErrorDomainLength > 0) {
     Info.setNSErrorDomain(std::optional<std::string>(std::string(
         reinterpret_cast<const char *>(Data), ErrorDomainLength - 1)));
     Data += ErrorDomainLength - 1;
+  }
+
+  if (unsigned ConformanceLength =
+          endian::readNext<uint16_t, llvm::endianness::little>(Data)) {
+    Info.setSwiftConformance(std::string(reinterpret_cast<const char *>(Data),
+                                         ConformanceLength - 1));
+    Data += ConformanceLength - 1;
   }
 }
 
@@ -163,9 +169,9 @@ public:
 
   static std::pair<unsigned, unsigned> ReadKeyDataLength(const uint8_t *&Data) {
     unsigned KeyLength =
-        endian::readNext<uint16_t, llvm::endianness::little, unaligned>(Data);
+        endian::readNext<uint16_t, llvm::endianness::little>(Data);
     unsigned DataLength =
-        endian::readNext<uint16_t, llvm::endianness::little, unaligned>(Data);
+        endian::readNext<uint16_t, llvm::endianness::little>(Data);
     return {KeyLength, DataLength};
   }
 
@@ -175,13 +181,13 @@ public:
 
   static data_type ReadData(internal_key_type key, const uint8_t *Data,
                             unsigned Length) {
-    return endian::readNext<uint32_t, llvm::endianness::little, unaligned>(
-        Data);
+    return endian::readNext<uint32_t, llvm::endianness::little>(Data);
   }
 };
 
-/// Used to deserialize the on-disk Objective-C class table.
-class ObjCContextIDTableInfo {
+/// Used to deserialize the on-disk table of Objective-C classes and C++
+/// namespaces.
+class ContextIDTableInfo {
 public:
   using internal_key_type = ContextTableKey;
   using external_key_type = internal_key_type;
@@ -203,46 +209,42 @@ public:
 
   static std::pair<unsigned, unsigned> ReadKeyDataLength(const uint8_t *&Data) {
     unsigned KeyLength =
-        endian::readNext<uint16_t, llvm::endianness::little, unaligned>(Data);
+        endian::readNext<uint16_t, llvm::endianness::little>(Data);
     unsigned DataLength =
-        endian::readNext<uint16_t, llvm::endianness::little, unaligned>(Data);
+        endian::readNext<uint16_t, llvm::endianness::little>(Data);
     return {KeyLength, DataLength};
   }
 
   static internal_key_type ReadKey(const uint8_t *Data, unsigned Length) {
     auto ParentCtxID =
-        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Data);
+        endian::readNext<uint32_t, llvm::endianness::little>(Data);
     auto ContextKind =
-        endian::readNext<uint8_t, llvm::endianness::little, unaligned>(Data);
-    auto NameID =
-        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Data);
+        endian::readNext<uint8_t, llvm::endianness::little>(Data);
+    auto NameID = endian::readNext<uint32_t, llvm::endianness::little>(Data);
     return {ParentCtxID, ContextKind, NameID};
   }
 
   static data_type ReadData(internal_key_type Key, const uint8_t *Data,
                             unsigned Length) {
-    return endian::readNext<uint32_t, llvm::endianness::little, unaligned>(
-        Data);
+    return endian::readNext<uint32_t, llvm::endianness::little>(Data);
   }
 };
 
 /// Used to deserialize the on-disk Objective-C property table.
-class ObjCContextInfoTableInfo
-    : public VersionedTableInfo<ObjCContextInfoTableInfo, unsigned,
-                                ObjCContextInfo> {
+class ContextInfoTableInfo
+    : public VersionedTableInfo<ContextInfoTableInfo, unsigned, ContextInfo> {
 public:
   static internal_key_type ReadKey(const uint8_t *Data, unsigned Length) {
-    return endian::readNext<uint32_t, llvm::endianness::little, unaligned>(
-        Data);
+    return endian::readNext<uint32_t, llvm::endianness::little>(Data);
   }
 
   hash_value_type ComputeHash(internal_key_type Key) {
     return static_cast<size_t>(llvm::hash_value(Key));
   }
 
-  static ObjCContextInfo readUnversioned(internal_key_type Key,
-                                         const uint8_t *&Data) {
-    ObjCContextInfo Info;
+  static ContextInfo readUnversioned(internal_key_type Key,
+                                     const uint8_t *&Data) {
+    ContextInfo Info;
     ReadCommonTypeInfo(Data, Info);
     uint8_t Payload = *Data++;
 
@@ -273,8 +275,7 @@ void ReadVariableInfo(const uint8_t *&Data, VariableInfo &Info) {
   }
   ++Data;
 
-  auto TypeLen =
-      endian::readNext<uint16_t, llvm::endianness::little, unaligned>(Data);
+  auto TypeLen = endian::readNext<uint16_t, llvm::endianness::little>(Data);
   Info.setType(std::string(Data, Data + TypeLen));
   Data += TypeLen;
 }
@@ -286,12 +287,9 @@ class ObjCPropertyTableInfo
                                 ObjCPropertyInfo> {
 public:
   static internal_key_type ReadKey(const uint8_t *Data, unsigned Length) {
-    auto ClassID =
-        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Data);
-    auto NameID =
-        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Data);
-    char IsInstance =
-        endian::readNext<uint8_t, llvm::endianness::little, unaligned>(Data);
+    auto ClassID = endian::readNext<uint32_t, llvm::endianness::little>(Data);
+    auto NameID = endian::readNext<uint32_t, llvm::endianness::little>(Data);
+    char IsInstance = endian::readNext<uint8_t, llvm::endianness::little>(Data);
     return {ClassID, NameID, IsInstance};
   }
 
@@ -310,29 +308,79 @@ public:
   }
 };
 
+/// Used to deserialize the on-disk C record field table.
+class FieldTableInfo
+    : public VersionedTableInfo<FieldTableInfo, SingleDeclTableKey, FieldInfo> {
+public:
+  static internal_key_type ReadKey(const uint8_t *Data, unsigned Length) {
+    auto CtxID = endian::readNext<uint32_t, llvm::endianness::little>(Data);
+    auto NameID = endian::readNext<uint32_t, llvm::endianness::little>(Data);
+    return {CtxID, NameID};
+  }
+
+  hash_value_type ComputeHash(internal_key_type Key) {
+    return static_cast<size_t>(Key.hashValue());
+  }
+
+  static FieldInfo readUnversioned(internal_key_type Key,
+                                   const uint8_t *&Data) {
+    FieldInfo Info;
+    ReadVariableInfo(Data, Info);
+    return Info;
+  }
+};
+
+/// Read serialized BoundsSafetyInfo.
+void ReadBoundsSafetyInfo(const uint8_t *&Data, BoundsSafetyInfo &Info) {
+  uint8_t Payload = endian::readNext<uint8_t, llvm::endianness::little>(Data);
+
+  if (Payload & 0x01) {
+    uint8_t Level = (Payload >> 1) & 0x7;
+    Info.setLevelAudited(Level);
+  }
+  Payload >>= 4;
+
+  if (Payload & 0x01) {
+    uint8_t Kind = (Payload >> 1) & 0x7;
+    assert(Kind <=
+           static_cast<uint8_t>(BoundsSafetyInfo::BoundsSafetyKind::EndedBy));
+    Info.setKindAudited(static_cast<BoundsSafetyInfo::BoundsSafetyKind>(Kind));
+  }
+
+  uint16_t ExternalBoundsLen =
+      endian::readNext<uint16_t, llvm::endianness::little>(Data);
+  Info.ExternalBounds = std::string(Data, Data + ExternalBoundsLen);
+  Data += ExternalBoundsLen;
+}
+
 /// Read serialized ParamInfo.
 void ReadParamInfo(const uint8_t *&Data, ParamInfo &Info) {
   ReadVariableInfo(Data, Info);
 
-  uint8_t Payload =
-      endian::readNext<uint8_t, llvm::endianness::little, unaligned>(Data);
+  uint8_t Payload = endian::readNext<uint8_t, llvm::endianness::little>(Data);
   if (auto RawConvention = Payload & 0x7) {
     auto Convention = static_cast<RetainCountConventionKind>(RawConvention - 1);
     Info.setRetainCountConvention(Convention);
   }
   Payload >>= 3;
   if (Payload & 0x01)
+    Info.setLifetimebound(Payload & 0x02);
+  Payload >>= 2;
+  if (Payload & 0x01)
     Info.setNoEscape(Payload & 0x02);
   Payload >>= 2;
-  assert(Payload == 0 && "Bad API notes");
+  if (Payload & 0x01)
+    ReadBoundsSafetyInfo(Data, Info.BoundsSafety.emplace());
 }
 
 /// Read serialized FunctionInfo.
 void ReadFunctionInfo(const uint8_t *&Data, FunctionInfo &Info) {
   ReadCommonEntityInfo(Data, Info);
 
-  uint8_t Payload =
-      endian::readNext<uint8_t, llvm::endianness::little, unaligned>(Data);
+  uint8_t Payload = endian::readNext<uint8_t, llvm::endianness::little>(Data);
+  if (Payload & 0x1)
+    Info.UnsafeBufferUsage = 1;
+  Payload >>= 0x1;
   if (auto RawConvention = Payload & 0x7) {
     auto Convention = static_cast<RetainCountConventionKind>(RawConvention - 1);
     Info.setRetainCountConvention(Convention);
@@ -343,12 +391,12 @@ void ReadFunctionInfo(const uint8_t *&Data, FunctionInfo &Info) {
   assert(Payload == 0 && "Bad API notes");
 
   Info.NumAdjustedNullable =
-      endian::readNext<uint8_t, llvm::endianness::little, unaligned>(Data);
+      endian::readNext<uint8_t, llvm::endianness::little>(Data);
   Info.NullabilityPayload =
-      endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Data);
+      endian::readNext<uint64_t, llvm::endianness::little>(Data);
 
   unsigned NumParams =
-      endian::readNext<uint16_t, llvm::endianness::little, unaligned>(Data);
+      endian::readNext<uint16_t, llvm::endianness::little>(Data);
   while (NumParams > 0) {
     ParamInfo pi;
     ReadParamInfo(Data, pi);
@@ -357,9 +405,16 @@ void ReadFunctionInfo(const uint8_t *&Data, FunctionInfo &Info) {
   }
 
   unsigned ResultTypeLen =
-      endian::readNext<uint16_t, llvm::endianness::little, unaligned>(Data);
+      endian::readNext<uint16_t, llvm::endianness::little>(Data);
   Info.ResultType = std::string(Data, Data + ResultTypeLen);
   Data += ResultTypeLen;
+
+  unsigned SwiftReturnOwnershipLength =
+      endian::readNext<uint16_t, llvm::endianness::little>(Data);
+  Info.SwiftReturnOwnership = std::string(reinterpret_cast<const char *>(Data),
+                                          reinterpret_cast<const char *>(Data) +
+                                              SwiftReturnOwnershipLength);
+  Data += SwiftReturnOwnershipLength;
 }
 
 /// Used to deserialize the on-disk Objective-C method table.
@@ -369,12 +424,10 @@ class ObjCMethodTableInfo
                                 ObjCMethodInfo> {
 public:
   static internal_key_type ReadKey(const uint8_t *Data, unsigned Length) {
-    auto ClassID =
-        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Data);
+    auto ClassID = endian::readNext<uint32_t, llvm::endianness::little>(Data);
     auto SelectorID =
-        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Data);
-    auto IsInstance =
-        endian::readNext<uint8_t, llvm::endianness::little, unaligned>(Data);
+        endian::readNext<uint32_t, llvm::endianness::little>(Data);
+    auto IsInstance = endian::readNext<uint8_t, llvm::endianness::little>(Data);
     return {ClassID, SelectorID, IsInstance};
   }
 
@@ -386,12 +439,19 @@ public:
                                         const uint8_t *&Data) {
     ObjCMethodInfo Info;
     uint8_t Payload = *Data++;
+    bool HasSelf = Payload & 0x01;
+    Payload >>= 1;
     Info.RequiredInit = Payload & 0x01;
     Payload >>= 1;
     Info.DesignatedInit = Payload & 0x01;
     Payload >>= 1;
+    assert(Payload == 0 && "Unable to fully decode 'Payload'.");
 
     ReadFunctionInfo(Data, Info);
+    if (HasSelf) {
+      Info.Self = ParamInfo{};
+      ReadParamInfo(Data, *Info.Self);
+    }
     return Info;
   }
 };
@@ -419,45 +479,38 @@ public:
 
   static std::pair<unsigned, unsigned> ReadKeyDataLength(const uint8_t *&Data) {
     unsigned KeyLength =
-        endian::readNext<uint16_t, llvm::endianness::little, unaligned>(Data);
+        endian::readNext<uint16_t, llvm::endianness::little>(Data);
     unsigned DataLength =
-        endian::readNext<uint16_t, llvm::endianness::little, unaligned>(Data);
+        endian::readNext<uint16_t, llvm::endianness::little>(Data);
     return {KeyLength, DataLength};
   }
 
   static internal_key_type ReadKey(const uint8_t *Data, unsigned Length) {
     internal_key_type Key;
-    Key.NumArgs =
-        endian::readNext<uint16_t, llvm::endianness::little, unaligned>(Data);
+    Key.NumArgs = endian::readNext<uint16_t, llvm::endianness::little>(Data);
     unsigned NumIdents = (Length - sizeof(uint16_t)) / sizeof(uint32_t);
     for (unsigned i = 0; i != NumIdents; ++i) {
       Key.Identifiers.push_back(
-          endian::readNext<uint32_t, llvm::endianness::little, unaligned>(
-              Data));
+          endian::readNext<uint32_t, llvm::endianness::little>(Data));
     }
     return Key;
   }
 
   static data_type ReadData(internal_key_type Key, const uint8_t *Data,
                             unsigned Length) {
-    return endian::readNext<uint32_t, llvm::endianness::little, unaligned>(
-        Data);
+    return endian::readNext<uint32_t, llvm::endianness::little>(Data);
   }
 };
 
 /// Used to deserialize the on-disk global variable table.
 class GlobalVariableTableInfo
-    : public VersionedTableInfo<GlobalVariableTableInfo, ContextTableKey,
+    : public VersionedTableInfo<GlobalVariableTableInfo, SingleDeclTableKey,
                                 GlobalVariableInfo> {
 public:
   static internal_key_type ReadKey(const uint8_t *Data, unsigned Length) {
-    auto CtxID =
-        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Data);
-    auto ContextKind =
-        endian::readNext<uint8_t, llvm::endianness::little, unaligned>(Data);
-    auto NameID =
-        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Data);
-    return {CtxID, ContextKind, NameID};
+    auto CtxID = endian::readNext<uint32_t, llvm::endianness::little>(Data);
+    auto NameID = endian::readNext<uint32_t, llvm::endianness::little>(Data);
+    return {CtxID, NameID};
   }
 
   hash_value_type ComputeHash(internal_key_type Key) {
@@ -474,17 +527,13 @@ public:
 
 /// Used to deserialize the on-disk global function table.
 class GlobalFunctionTableInfo
-    : public VersionedTableInfo<GlobalFunctionTableInfo, ContextTableKey,
+    : public VersionedTableInfo<GlobalFunctionTableInfo, SingleDeclTableKey,
                                 GlobalFunctionInfo> {
 public:
   static internal_key_type ReadKey(const uint8_t *Data, unsigned Length) {
-    auto CtxID =
-        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Data);
-    auto ContextKind =
-        endian::readNext<uint8_t, llvm::endianness::little, unaligned>(Data);
-    auto NameID =
-        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Data);
-    return {CtxID, ContextKind, NameID};
+    auto CtxID = endian::readNext<uint32_t, llvm::endianness::little>(Data);
+    auto NameID = endian::readNext<uint32_t, llvm::endianness::little>(Data);
+    return {CtxID, NameID};
   }
 
   hash_value_type ComputeHash(internal_key_type Key) {
@@ -499,14 +548,46 @@ public:
   }
 };
 
+/// Used to deserialize the on-disk C++ method table.
+class CXXMethodTableInfo
+    : public VersionedTableInfo<CXXMethodTableInfo, SingleDeclTableKey,
+                                CXXMethodInfo> {
+public:
+  static internal_key_type ReadKey(const uint8_t *Data, unsigned Length) {
+    auto CtxID = endian::readNext<uint32_t, llvm::endianness::little>(Data);
+    auto NameID = endian::readNext<uint32_t, llvm::endianness::little>(Data);
+    return {CtxID, NameID};
+  }
+
+  hash_value_type ComputeHash(internal_key_type Key) {
+    return static_cast<size_t>(Key.hashValue());
+  }
+
+  static CXXMethodInfo readUnversioned(internal_key_type Key,
+                                       const uint8_t *&Data) {
+    CXXMethodInfo Info;
+
+    uint8_t Payload = *Data++;
+    bool HasThis = Payload & 0x01;
+    Payload >>= 1;
+    assert(Payload == 0 && "Unable to fully decode 'Payload'.");
+
+    ReadFunctionInfo(Data, Info);
+    if (HasThis) {
+      Info.This = ParamInfo{};
+      ReadParamInfo(Data, *Info.This);
+    }
+    return Info;
+  }
+};
+
 /// Used to deserialize the on-disk enumerator table.
 class EnumConstantTableInfo
     : public VersionedTableInfo<EnumConstantTableInfo, uint32_t,
                                 EnumConstantInfo> {
 public:
   static internal_key_type ReadKey(const uint8_t *Data, unsigned Length) {
-    auto NameID =
-        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Data);
+    auto NameID = endian::readNext<uint32_t, llvm::endianness::little>(Data);
     return NameID;
   }
 
@@ -524,17 +605,13 @@ public:
 
 /// Used to deserialize the on-disk tag table.
 class TagTableInfo
-    : public VersionedTableInfo<TagTableInfo, ContextTableKey, TagInfo> {
+    : public VersionedTableInfo<TagTableInfo, SingleDeclTableKey, TagInfo> {
 public:
   static internal_key_type ReadKey(const uint8_t *Data, unsigned Length) {
-    auto CtxID =
-        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Data);
-    auto ContextKind =
-        endian::readNext<uint8_t, llvm::endianness::little, unaligned>(Data);
+    auto CtxID = endian::readNext<uint32_t, llvm::endianness::little>(Data);
     auto NameID =
-        endian::readNext<IdentifierID, llvm::endianness::little, unaligned>(
-            Data);
-    return {CtxID, ContextKind, NameID};
+        endian::readNext<IdentifierID, llvm::endianness::little>(Data);
+    return {CtxID, NameID};
   }
 
   hash_value_type ComputeHash(internal_key_type Key) {
@@ -552,26 +629,49 @@ public:
       Info.EnumExtensibility =
           static_cast<EnumExtensibilityKind>((Payload & 0x3) - 1);
 
+    uint8_t Copyable =
+        endian::readNext<uint8_t, llvm::endianness::little>(Data);
+    if (Copyable == kSwiftConforms || Copyable == kSwiftDoesNotConform)
+      Info.setSwiftCopyable(std::optional(Copyable == kSwiftConforms));
+    uint8_t Escapable =
+        endian::readNext<uint8_t, llvm::endianness::little>(Data);
+    if (Escapable == kSwiftConforms || Escapable == kSwiftDoesNotConform)
+      Info.setSwiftEscapable(std::optional(Escapable == kSwiftConforms));
+
     unsigned ImportAsLength =
-        endian::readNext<uint16_t, llvm::endianness::little, unaligned>(Data);
+        endian::readNext<uint16_t, llvm::endianness::little>(Data);
     if (ImportAsLength > 0) {
       Info.SwiftImportAs =
           std::string(reinterpret_cast<const char *>(Data), ImportAsLength - 1);
       Data += ImportAsLength - 1;
     }
     unsigned RetainOpLength =
-        endian::readNext<uint16_t, llvm::endianness::little, unaligned>(Data);
+        endian::readNext<uint16_t, llvm::endianness::little>(Data);
     if (RetainOpLength > 0) {
       Info.SwiftRetainOp =
           std::string(reinterpret_cast<const char *>(Data), RetainOpLength - 1);
       Data += RetainOpLength - 1;
     }
     unsigned ReleaseOpLength =
-        endian::readNext<uint16_t, llvm::endianness::little, unaligned>(Data);
+        endian::readNext<uint16_t, llvm::endianness::little>(Data);
     if (ReleaseOpLength > 0) {
       Info.SwiftReleaseOp = std::string(reinterpret_cast<const char *>(Data),
                                         ReleaseOpLength - 1);
       Data += ReleaseOpLength - 1;
+    }
+    unsigned DefaultOwnershipLength =
+        endian::readNext<uint16_t, llvm::endianness::little>(Data);
+    if (DefaultOwnershipLength > 0) {
+      Info.SwiftDefaultOwnership = std::string(
+          reinterpret_cast<const char *>(Data), DefaultOwnershipLength - 1);
+      Data += DefaultOwnershipLength - 1;
+    }
+    unsigned DestroyOpLength =
+        endian::readNext<uint16_t, llvm::endianness::little>(Data);
+    if (DestroyOpLength > 0) {
+      Info.SwiftDestroyOp = std::string(reinterpret_cast<const char *>(Data),
+                                        DestroyOpLength - 1);
+      Data += DestroyOpLength - 1;
     }
 
     ReadCommonTypeInfo(Data, Info);
@@ -581,18 +681,14 @@ public:
 
 /// Used to deserialize the on-disk typedef table.
 class TypedefTableInfo
-    : public VersionedTableInfo<TypedefTableInfo, ContextTableKey,
+    : public VersionedTableInfo<TypedefTableInfo, SingleDeclTableKey,
                                 TypedefInfo> {
 public:
   static internal_key_type ReadKey(const uint8_t *Data, unsigned Length) {
-    auto CtxID =
-        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Data);
-    auto ContextKind =
-        endian::readNext<uint8_t, llvm::endianness::little, unaligned>(Data);
+    auto CtxID = endian::readNext<uint32_t, llvm::endianness::little>(Data);
     auto nameID =
-        endian::readNext<IdentifierID, llvm::endianness::little, unaligned>(
-            Data);
-    return {CtxID, ContextKind, nameID};
+        endian::readNext<IdentifierID, llvm::endianness::little>(Data);
+    return {CtxID, nameID};
   }
 
   hash_value_type ComputeHash(internal_key_type Key) {
@@ -634,17 +730,17 @@ public:
   /// The identifier table.
   std::unique_ptr<SerializedIdentifierTable> IdentifierTable;
 
-  using SerializedObjCContextIDTable =
-      llvm::OnDiskIterableChainedHashTable<ObjCContextIDTableInfo>;
+  using SerializedContextIDTable =
+      llvm::OnDiskIterableChainedHashTable<ContextIDTableInfo>;
 
-  /// The Objective-C context ID table.
-  std::unique_ptr<SerializedObjCContextIDTable> ObjCContextIDTable;
+  /// The Objective-C / C++ context ID table.
+  std::unique_ptr<SerializedContextIDTable> ContextIDTable;
 
-  using SerializedObjCContextInfoTable =
-      llvm::OnDiskIterableChainedHashTable<ObjCContextInfoTableInfo>;
+  using SerializedContextInfoTable =
+      llvm::OnDiskIterableChainedHashTable<ContextInfoTableInfo>;
 
   /// The Objective-C context info table.
-  std::unique_ptr<SerializedObjCContextInfoTable> ObjCContextInfoTable;
+  std::unique_ptr<SerializedContextInfoTable> ContextInfoTable;
 
   using SerializedObjCPropertyTable =
       llvm::OnDiskIterableChainedHashTable<ObjCPropertyTableInfo>;
@@ -652,11 +748,23 @@ public:
   /// The Objective-C property table.
   std::unique_ptr<SerializedObjCPropertyTable> ObjCPropertyTable;
 
+  using SerializedFieldTable =
+      llvm::OnDiskIterableChainedHashTable<FieldTableInfo>;
+
+  /// The C record field table.
+  std::unique_ptr<SerializedFieldTable> FieldTable;
+
   using SerializedObjCMethodTable =
       llvm::OnDiskIterableChainedHashTable<ObjCMethodTableInfo>;
 
   /// The Objective-C method table.
   std::unique_ptr<SerializedObjCMethodTable> ObjCMethodTable;
+
+  using SerializedCXXMethodTable =
+      llvm::OnDiskIterableChainedHashTable<CXXMethodTableInfo>;
+
+  /// The C++ method table.
+  std::unique_ptr<SerializedCXXMethodTable> CXXMethodTable;
 
   using SerializedObjCSelectorTable =
       llvm::OnDiskIterableChainedHashTable<ObjCSelectorTableInfo>;
@@ -701,28 +809,32 @@ public:
   /// optional if the string is unknown.
   std::optional<SelectorID> getSelector(ObjCSelectorRef Selector);
 
-  bool readControlBlock(llvm::BitstreamCursor &Cursor,
-                        llvm::SmallVectorImpl<uint64_t> &Scratch);
-  bool readIdentifierBlock(llvm::BitstreamCursor &Cursor,
-                           llvm::SmallVectorImpl<uint64_t> &Scratch);
-  bool readObjCContextBlock(llvm::BitstreamCursor &Cursor,
-                            llvm::SmallVectorImpl<uint64_t> &Scratch);
-  bool readObjCPropertyBlock(llvm::BitstreamCursor &Cursor,
-                             llvm::SmallVectorImpl<uint64_t> &Scratch);
-  bool readObjCMethodBlock(llvm::BitstreamCursor &Cursor,
-                           llvm::SmallVectorImpl<uint64_t> &Scratch);
-  bool readObjCSelectorBlock(llvm::BitstreamCursor &Cursor,
-                             llvm::SmallVectorImpl<uint64_t> &Scratch);
-  bool readGlobalVariableBlock(llvm::BitstreamCursor &Cursor,
+  llvm::Error readControlBlock(llvm::BitstreamCursor &Cursor,
                                llvm::SmallVectorImpl<uint64_t> &Scratch);
-  bool readGlobalFunctionBlock(llvm::BitstreamCursor &Cursor,
+  llvm::Error readIdentifierBlock(llvm::BitstreamCursor &Cursor,
+                                  llvm::SmallVectorImpl<uint64_t> &Scratch);
+  llvm::Error readContextBlock(llvm::BitstreamCursor &Cursor,
                                llvm::SmallVectorImpl<uint64_t> &Scratch);
-  bool readEnumConstantBlock(llvm::BitstreamCursor &Cursor,
+  llvm::Error readObjCPropertyBlock(llvm::BitstreamCursor &Cursor,
+                                    llvm::SmallVectorImpl<uint64_t> &Scratch);
+  llvm::Error readObjCMethodBlock(llvm::BitstreamCursor &Cursor,
+                                  llvm::SmallVectorImpl<uint64_t> &Scratch);
+  llvm::Error readCXXMethodBlock(llvm::BitstreamCursor &Cursor,
+                                 llvm::SmallVectorImpl<uint64_t> &Scratch);
+  llvm::Error readFieldBlock(llvm::BitstreamCursor &Cursor,
                              llvm::SmallVectorImpl<uint64_t> &Scratch);
-  bool readTagBlock(llvm::BitstreamCursor &Cursor,
-                    llvm::SmallVectorImpl<uint64_t> &Scratch);
-  bool readTypedefBlock(llvm::BitstreamCursor &Cursor,
-                        llvm::SmallVectorImpl<uint64_t> &Scratch);
+  llvm::Error readObjCSelectorBlock(llvm::BitstreamCursor &Cursor,
+                                    llvm::SmallVectorImpl<uint64_t> &Scratch);
+  llvm::Error readGlobalVariableBlock(llvm::BitstreamCursor &Cursor,
+                                      llvm::SmallVectorImpl<uint64_t> &Scratch);
+  llvm::Error readGlobalFunctionBlock(llvm::BitstreamCursor &Cursor,
+                                      llvm::SmallVectorImpl<uint64_t> &Scratch);
+  llvm::Error readEnumConstantBlock(llvm::BitstreamCursor &Cursor,
+                                    llvm::SmallVectorImpl<uint64_t> &Scratch);
+  llvm::Error readTagBlock(llvm::BitstreamCursor &Cursor,
+                           llvm::SmallVectorImpl<uint64_t> &Scratch);
+  llvm::Error readTypedefBlock(llvm::BitstreamCursor &Cursor,
+                               llvm::SmallVectorImpl<uint64_t> &Scratch);
 };
 
 std::optional<IdentifierID>
@@ -763,37 +875,36 @@ APINotesReader::Implementation::getSelector(ObjCSelectorRef Selector) {
   return *Known;
 }
 
-bool APINotesReader::Implementation::readControlBlock(
+llvm::Error APINotesReader::Implementation::readControlBlock(
     llvm::BitstreamCursor &Cursor, llvm::SmallVectorImpl<uint64_t> &Scratch) {
   if (Cursor.EnterSubBlock(CONTROL_BLOCK_ID))
-    return true;
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Failed to enter control block");
 
   bool SawMetadata = false;
 
   llvm::Expected<llvm::BitstreamEntry> MaybeNext = Cursor.advance();
-  if (!MaybeNext) {
-    // FIXME this drops the error on the floor.
-    consumeError(MaybeNext.takeError());
-    return false;
-  }
+  if (!MaybeNext)
+    return MaybeNext.takeError();
+
   llvm::BitstreamEntry Next = MaybeNext.get();
 
   while (Next.Kind != llvm::BitstreamEntry::EndBlock) {
     if (Next.Kind == llvm::BitstreamEntry::Error)
-      return true;
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "Malformed bitstream entry");
 
     if (Next.Kind == llvm::BitstreamEntry::SubBlock) {
       // Unknown metadata sub-block, possibly for use by a future version of the
       // API notes format.
       if (Cursor.SkipBlock())
-        return true;
+        return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                       "Failed to skip sub-block");
 
       MaybeNext = Cursor.advance();
-      if (!MaybeNext) {
-        // FIXME this drops the error on the floor.
-        consumeError(MaybeNext.takeError());
-        return false;
-      }
+      if (!MaybeNext)
+        return MaybeNext.takeError();
+
       Next = MaybeNext.get();
       continue;
     }
@@ -803,9 +914,7 @@ bool APINotesReader::Implementation::readControlBlock(
     llvm::Expected<unsigned> MaybeKind =
         Cursor.readRecord(Next.ID, Scratch, &BlobData);
     if (!MaybeKind) {
-      // FIXME this drops the error on the floor.
-      consumeError(MaybeKind.takeError());
-      return false;
+      return MaybeKind.takeError();
     }
     unsigned Kind = MaybeKind.get();
 
@@ -813,10 +922,12 @@ bool APINotesReader::Implementation::readControlBlock(
     case control_block::METADATA:
       // Already saw metadata.
       if (SawMetadata)
-        return true;
+        return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                       "Multiple metadata records found");
 
       if (Scratch[0] != VERSION_MAJOR || Scratch[1] != VERSION_MINOR)
-        return true;
+        return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                       "Version mismatch in API Notes");
 
       SawMetadata = true;
       break;
@@ -839,46 +950,47 @@ bool APINotesReader::Implementation::readControlBlock(
     }
 
     MaybeNext = Cursor.advance();
-    if (!MaybeNext) {
-      // FIXME this drops the error on the floor.
-      consumeError(MaybeNext.takeError());
-      return false;
-    }
+    if (!MaybeNext)
+      return MaybeNext.takeError();
+
     Next = MaybeNext.get();
   }
 
-  return !SawMetadata;
+  if (!SawMetadata)
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Missing metadata record");
+
+  return llvm::Error::success();
 }
 
-bool APINotesReader::Implementation::readIdentifierBlock(
+llvm::Error APINotesReader::Implementation::readIdentifierBlock(
     llvm::BitstreamCursor &Cursor, llvm::SmallVectorImpl<uint64_t> &Scratch) {
   if (Cursor.EnterSubBlock(IDENTIFIER_BLOCK_ID))
-    return true;
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Failed to enter identifier block");
 
   llvm::Expected<llvm::BitstreamEntry> MaybeNext = Cursor.advance();
-  if (!MaybeNext) {
-    // FIXME this drops the error on the floor.
-    consumeError(MaybeNext.takeError());
-    return false;
-  }
+  if (!MaybeNext)
+    return MaybeNext.takeError();
+
   llvm::BitstreamEntry Next = MaybeNext.get();
 
   while (Next.Kind != llvm::BitstreamEntry::EndBlock) {
     if (Next.Kind == llvm::BitstreamEntry::Error)
-      return true;
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "Malformed bitstream entry");
 
     if (Next.Kind == llvm::BitstreamEntry::SubBlock) {
       // Unknown sub-block, possibly for use by a future version of the
       // API notes format.
       if (Cursor.SkipBlock())
-        return true;
+        return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                       "Failed to skip sub-block");
 
       MaybeNext = Cursor.advance();
-      if (!MaybeNext) {
-        // FIXME this drops the error on the floor.
-        consumeError(MaybeNext.takeError());
-        return false;
-      }
+      if (!MaybeNext)
+        return MaybeNext.takeError();
+
       Next = MaybeNext.get();
       continue;
     }
@@ -888,16 +1000,15 @@ bool APINotesReader::Implementation::readIdentifierBlock(
     llvm::Expected<unsigned> MaybeKind =
         Cursor.readRecord(Next.ID, Scratch, &BlobData);
     if (!MaybeKind) {
-      // FIXME this drops the error on the floor.
-      consumeError(MaybeKind.takeError());
-      return false;
+      return MaybeKind.takeError();
     }
     unsigned Kind = MaybeKind.get();
     switch (Kind) {
     case identifier_block::IDENTIFIER_DATA: {
       // Already saw identifier table.
       if (IdentifierTable)
-        return true;
+        return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                       "Multiple identifier records found");
 
       uint32_t tableOffset;
       identifier_block::IdentifierDataLayout::readRecord(Scratch, tableOffset);
@@ -915,46 +1026,43 @@ bool APINotesReader::Implementation::readIdentifierBlock(
     }
 
     MaybeNext = Cursor.advance();
-    if (!MaybeNext) {
-      // FIXME this drops the error on the floor.
-      consumeError(MaybeNext.takeError());
-      return false;
-    }
+    if (!MaybeNext)
+      return MaybeNext.takeError();
+
     Next = MaybeNext.get();
   }
 
-  return false;
+  return llvm::Error::success();
 }
 
-bool APINotesReader::Implementation::readObjCContextBlock(
+llvm::Error APINotesReader::Implementation::readContextBlock(
     llvm::BitstreamCursor &Cursor, llvm::SmallVectorImpl<uint64_t> &Scratch) {
   if (Cursor.EnterSubBlock(OBJC_CONTEXT_BLOCK_ID))
-    return true;
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Failed to enter Objective-C context block");
 
   llvm::Expected<llvm::BitstreamEntry> MaybeNext = Cursor.advance();
-  if (!MaybeNext) {
-    // FIXME this drops the error on the floor.
-    consumeError(MaybeNext.takeError());
-    return false;
-  }
+  if (!MaybeNext)
+    return MaybeNext.takeError();
+
   llvm::BitstreamEntry Next = MaybeNext.get();
 
   while (Next.Kind != llvm::BitstreamEntry::EndBlock) {
     if (Next.Kind == llvm::BitstreamEntry::Error)
-      return true;
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "Malformed bitstream entry");
 
     if (Next.Kind == llvm::BitstreamEntry::SubBlock) {
       // Unknown sub-block, possibly for use by a future version of the
       // API notes format.
       if (Cursor.SkipBlock())
-        return true;
+        return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                       "Failed to skip sub-block");
 
       MaybeNext = Cursor.advance();
-      if (!MaybeNext) {
-        // FIXME this drops the error on the floor.
-        consumeError(MaybeNext.takeError());
-        return false;
-      }
+      if (!MaybeNext)
+        return MaybeNext.takeError();
+
       Next = MaybeNext.get();
       continue;
     }
@@ -964,37 +1072,36 @@ bool APINotesReader::Implementation::readObjCContextBlock(
     llvm::Expected<unsigned> MaybeKind =
         Cursor.readRecord(Next.ID, Scratch, &BlobData);
     if (!MaybeKind) {
-      // FIXME this drops the error on the floor.
-      consumeError(MaybeKind.takeError());
-      return false;
+      return MaybeKind.takeError();
     }
     unsigned Kind = MaybeKind.get();
     switch (Kind) {
-    case objc_context_block::OBJC_CONTEXT_ID_DATA: {
-      // Already saw Objective-C context ID table.
-      if (ObjCContextIDTable)
-        return true;
+    case context_block::CONTEXT_ID_DATA: {
+      // Already saw Objective-C / C++ context ID table.
+      if (ContextIDTable)
+        return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                       "Multiple context ID records found");
 
       uint32_t tableOffset;
-      objc_context_block::ObjCContextIDLayout::readRecord(Scratch, tableOffset);
+      context_block::ContextIDLayout::readRecord(Scratch, tableOffset);
       auto base = reinterpret_cast<const uint8_t *>(BlobData.data());
 
-      ObjCContextIDTable.reset(SerializedObjCContextIDTable::Create(
+      ContextIDTable.reset(SerializedContextIDTable::Create(
           base + tableOffset, base + sizeof(uint32_t), base));
       break;
     }
 
-    case objc_context_block::OBJC_CONTEXT_INFO_DATA: {
-      // Already saw Objective-C context info table.
-      if (ObjCContextInfoTable)
-        return true;
+    case context_block::CONTEXT_INFO_DATA: {
+      // Already saw Objective-C / C++ context info table.
+      if (ContextInfoTable)
+        return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                       "Multiple context info records found");
 
       uint32_t tableOffset;
-      objc_context_block::ObjCContextInfoLayout::readRecord(Scratch,
-                                                            tableOffset);
+      context_block::ContextInfoLayout::readRecord(Scratch, tableOffset);
       auto base = reinterpret_cast<const uint8_t *>(BlobData.data());
 
-      ObjCContextInfoTable.reset(SerializedObjCContextInfoTable::Create(
+      ContextInfoTable.reset(SerializedContextInfoTable::Create(
           base + tableOffset, base + sizeof(uint32_t), base));
       break;
     }
@@ -1006,46 +1113,44 @@ bool APINotesReader::Implementation::readObjCContextBlock(
     }
 
     MaybeNext = Cursor.advance();
-    if (!MaybeNext) {
-      // FIXME this drops the error on the floor.
-      consumeError(MaybeNext.takeError());
-      return false;
-    }
+    if (!MaybeNext)
+      return MaybeNext.takeError();
+
     Next = MaybeNext.get();
   }
 
-  return false;
+  return llvm::Error::success();
 }
 
-bool APINotesReader::Implementation::readObjCPropertyBlock(
+llvm::Error APINotesReader::Implementation::readObjCPropertyBlock(
     llvm::BitstreamCursor &Cursor, llvm::SmallVectorImpl<uint64_t> &Scratch) {
   if (Cursor.EnterSubBlock(OBJC_PROPERTY_BLOCK_ID))
-    return true;
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        "Failed to enter Objective-C property block");
 
   llvm::Expected<llvm::BitstreamEntry> MaybeNext = Cursor.advance();
-  if (!MaybeNext) {
-    // FIXME this drops the error on the floor.
-    consumeError(MaybeNext.takeError());
-    return false;
-  }
+  if (!MaybeNext)
+    return MaybeNext.takeError();
+
   llvm::BitstreamEntry Next = MaybeNext.get();
 
   while (Next.Kind != llvm::BitstreamEntry::EndBlock) {
     if (Next.Kind == llvm::BitstreamEntry::Error)
-      return true;
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "Malformed bitstream entry");
 
     if (Next.Kind == llvm::BitstreamEntry::SubBlock) {
       // Unknown sub-block, possibly for use by a future version of the
       // API notes format.
       if (Cursor.SkipBlock())
-        return true;
+        return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                       "Failed to skip sub-block");
 
       MaybeNext = Cursor.advance();
-      if (!MaybeNext) {
-        // FIXME this drops the error on the floor.
-        consumeError(MaybeNext.takeError());
-        return false;
-      }
+      if (!MaybeNext)
+        return MaybeNext.takeError();
+
       Next = MaybeNext.get();
       continue;
     }
@@ -1055,16 +1160,16 @@ bool APINotesReader::Implementation::readObjCPropertyBlock(
     llvm::Expected<unsigned> MaybeKind =
         Cursor.readRecord(Next.ID, Scratch, &BlobData);
     if (!MaybeKind) {
-      // FIXME this drops the error on the floor.
-      consumeError(MaybeKind.takeError());
-      return false;
+      return MaybeKind.takeError();
     }
     unsigned Kind = MaybeKind.get();
     switch (Kind) {
     case objc_property_block::OBJC_PROPERTY_DATA: {
       // Already saw Objective-C property table.
       if (ObjCPropertyTable)
-        return true;
+        return llvm::createStringError(
+            llvm::inconvertibleErrorCode(),
+            "Multiple Objective-C property records found");
 
       uint32_t tableOffset;
       objc_property_block::ObjCPropertyDataLayout::readRecord(Scratch,
@@ -1083,45 +1188,42 @@ bool APINotesReader::Implementation::readObjCPropertyBlock(
     }
 
     MaybeNext = Cursor.advance();
-    if (!MaybeNext) {
-      // FIXME this drops the error on the floor.
-      consumeError(MaybeNext.takeError());
-      return false;
-    }
+    if (!MaybeNext)
+      return MaybeNext.takeError();
+
     Next = MaybeNext.get();
   }
 
-  return false;
+  return llvm::Error::success();
 }
 
-bool APINotesReader::Implementation::readObjCMethodBlock(
+llvm::Error APINotesReader::Implementation::readObjCMethodBlock(
     llvm::BitstreamCursor &Cursor, llvm::SmallVectorImpl<uint64_t> &Scratch) {
   if (Cursor.EnterSubBlock(OBJC_METHOD_BLOCK_ID))
-    return true;
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Failed to enter Objective-C method block");
 
   llvm::Expected<llvm::BitstreamEntry> MaybeNext = Cursor.advance();
-  if (!MaybeNext) {
-    // FIXME this drops the error on the floor.
-    consumeError(MaybeNext.takeError());
-    return false;
-  }
+  if (!MaybeNext)
+    return MaybeNext.takeError();
+
   llvm::BitstreamEntry Next = MaybeNext.get();
   while (Next.Kind != llvm::BitstreamEntry::EndBlock) {
     if (Next.Kind == llvm::BitstreamEntry::Error)
-      return true;
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "Malformed bitstream entry");
 
     if (Next.Kind == llvm::BitstreamEntry::SubBlock) {
       // Unknown sub-block, possibly for use by a future version of the
       // API notes format.
       if (Cursor.SkipBlock())
-        return true;
+        return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                       "Failed to skip sub-block");
 
       MaybeNext = Cursor.advance();
-      if (!MaybeNext) {
-        // FIXME this drops the error on the floor.
-        consumeError(MaybeNext.takeError());
-        return false;
-      }
+      if (!MaybeNext)
+        return MaybeNext.takeError();
+
       Next = MaybeNext.get();
       continue;
     }
@@ -1131,16 +1233,16 @@ bool APINotesReader::Implementation::readObjCMethodBlock(
     llvm::Expected<unsigned> MaybeKind =
         Cursor.readRecord(Next.ID, Scratch, &BlobData);
     if (!MaybeKind) {
-      // FIXME this drops the error on the floor.
-      consumeError(MaybeKind.takeError());
-      return false;
+      return MaybeKind.takeError();
     }
     unsigned Kind = MaybeKind.get();
     switch (Kind) {
     case objc_method_block::OBJC_METHOD_DATA: {
       // Already saw Objective-C method table.
       if (ObjCMethodTable)
-        return true;
+        return llvm::createStringError(
+            llvm::inconvertibleErrorCode(),
+            "Multiple Objective-C method records found");
 
       uint32_t tableOffset;
       objc_method_block::ObjCMethodDataLayout::readRecord(Scratch, tableOffset);
@@ -1158,45 +1260,42 @@ bool APINotesReader::Implementation::readObjCMethodBlock(
     }
 
     MaybeNext = Cursor.advance();
-    if (!MaybeNext) {
-      // FIXME this drops the error on the floor.
-      consumeError(MaybeNext.takeError());
-      return false;
-    }
+    if (!MaybeNext)
+      return MaybeNext.takeError();
+
     Next = MaybeNext.get();
   }
 
-  return false;
+  return llvm::Error::success();
 }
 
-bool APINotesReader::Implementation::readObjCSelectorBlock(
+llvm::Error APINotesReader::Implementation::readCXXMethodBlock(
     llvm::BitstreamCursor &Cursor, llvm::SmallVectorImpl<uint64_t> &Scratch) {
-  if (Cursor.EnterSubBlock(OBJC_SELECTOR_BLOCK_ID))
-    return true;
+  if (Cursor.EnterSubBlock(CXX_METHOD_BLOCK_ID))
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Failed to enter C++ method block");
 
   llvm::Expected<llvm::BitstreamEntry> MaybeNext = Cursor.advance();
-  if (!MaybeNext) {
-    // FIXME this drops the error on the floor.
-    consumeError(MaybeNext.takeError());
-    return false;
-  }
+  if (!MaybeNext)
+    return MaybeNext.takeError();
+
   llvm::BitstreamEntry Next = MaybeNext.get();
   while (Next.Kind != llvm::BitstreamEntry::EndBlock) {
     if (Next.Kind == llvm::BitstreamEntry::Error)
-      return true;
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "Malformed bitstream entry");
 
     if (Next.Kind == llvm::BitstreamEntry::SubBlock) {
       // Unknown sub-block, possibly for use by a future version of the
       // API notes format.
       if (Cursor.SkipBlock())
-        return true;
+        return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                       "Failed to skip sub-block");
 
       MaybeNext = Cursor.advance();
-      if (!MaybeNext) {
-        // FIXME this drops the error on the floor.
-        consumeError(MaybeNext.takeError());
-        return false;
-      }
+      if (!MaybeNext)
+        return MaybeNext.takeError();
+
       Next = MaybeNext.get();
       continue;
     }
@@ -1206,16 +1305,159 @@ bool APINotesReader::Implementation::readObjCSelectorBlock(
     llvm::Expected<unsigned> MaybeKind =
         Cursor.readRecord(Next.ID, Scratch, &BlobData);
     if (!MaybeKind) {
-      // FIXME this drops the error on the floor.
-      consumeError(MaybeKind.takeError());
-      return false;
+      return MaybeKind.takeError();
+    }
+    unsigned Kind = MaybeKind.get();
+    switch (Kind) {
+    case cxx_method_block::CXX_METHOD_DATA: {
+      // Already saw C++ method table.
+      if (CXXMethodTable)
+        return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                       "Multiple C++ method records found");
+
+      uint32_t tableOffset;
+      cxx_method_block::CXXMethodDataLayout::readRecord(Scratch, tableOffset);
+      auto base = reinterpret_cast<const uint8_t *>(BlobData.data());
+
+      CXXMethodTable.reset(SerializedCXXMethodTable::Create(
+          base + tableOffset, base + sizeof(uint32_t), base));
+      break;
+    }
+
+    default:
+      // Unknown record, possibly for use by a future version of the
+      // module format.
+      break;
+    }
+
+    MaybeNext = Cursor.advance();
+    if (!MaybeNext)
+      return MaybeNext.takeError();
+
+    Next = MaybeNext.get();
+  }
+
+  return llvm::Error::success();
+}
+
+llvm::Error APINotesReader::Implementation::readFieldBlock(
+    llvm::BitstreamCursor &Cursor, llvm::SmallVectorImpl<uint64_t> &Scratch) {
+  if (Cursor.EnterSubBlock(FIELD_BLOCK_ID))
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Failed to enter field block");
+
+  llvm::Expected<llvm::BitstreamEntry> MaybeNext = Cursor.advance();
+  if (!MaybeNext)
+    return MaybeNext.takeError();
+
+  llvm::BitstreamEntry Next = MaybeNext.get();
+  while (Next.Kind != llvm::BitstreamEntry::EndBlock) {
+    if (Next.Kind == llvm::BitstreamEntry::Error)
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "Malformed bitstream entry");
+
+    if (Next.Kind == llvm::BitstreamEntry::SubBlock) {
+      // Unknown sub-block, possibly for use by a future version of the
+      // API notes format.
+      if (Cursor.SkipBlock())
+        return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                       "Failed to skip sub-block");
+
+      MaybeNext = Cursor.advance();
+      if (!MaybeNext)
+        return MaybeNext.takeError();
+
+      Next = MaybeNext.get();
+      continue;
+    }
+
+    Scratch.clear();
+    llvm::StringRef BlobData;
+    llvm::Expected<unsigned> MaybeKind =
+        Cursor.readRecord(Next.ID, Scratch, &BlobData);
+    if (!MaybeKind) {
+      return MaybeKind.takeError();
+    }
+    unsigned Kind = MaybeKind.get();
+    switch (Kind) {
+    case field_block::FIELD_DATA: {
+      // Already saw field table.
+      if (FieldTable)
+        return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                       "Multiple field records found");
+
+      uint32_t tableOffset;
+      field_block::FieldDataLayout::readRecord(Scratch, tableOffset);
+      auto base = reinterpret_cast<const uint8_t *>(BlobData.data());
+
+      FieldTable.reset(SerializedFieldTable::Create(
+          base + tableOffset, base + sizeof(uint32_t), base));
+      break;
+    }
+
+    default:
+      // Unknown record, possibly for use by a future version of the
+      // module format.
+      break;
+    }
+
+    MaybeNext = Cursor.advance();
+    if (!MaybeNext)
+      return MaybeNext.takeError();
+
+    Next = MaybeNext.get();
+  }
+
+  return llvm::Error::success();
+}
+
+llvm::Error APINotesReader::Implementation::readObjCSelectorBlock(
+    llvm::BitstreamCursor &Cursor, llvm::SmallVectorImpl<uint64_t> &Scratch) {
+  if (Cursor.EnterSubBlock(OBJC_SELECTOR_BLOCK_ID))
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        "Failed to enter Objective-C selector block");
+
+  llvm::Expected<llvm::BitstreamEntry> MaybeNext = Cursor.advance();
+  if (!MaybeNext)
+    return MaybeNext.takeError();
+
+  llvm::BitstreamEntry Next = MaybeNext.get();
+  while (Next.Kind != llvm::BitstreamEntry::EndBlock) {
+    if (Next.Kind == llvm::BitstreamEntry::Error)
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "Malformed bitstream entry");
+
+    if (Next.Kind == llvm::BitstreamEntry::SubBlock) {
+      // Unknown sub-block, possibly for use by a future version of the
+      // API notes format.
+      if (Cursor.SkipBlock())
+        return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                       "Failed to skip sub-block");
+
+      MaybeNext = Cursor.advance();
+      if (!MaybeNext)
+        return MaybeNext.takeError();
+
+      Next = MaybeNext.get();
+      continue;
+    }
+
+    Scratch.clear();
+    llvm::StringRef BlobData;
+    llvm::Expected<unsigned> MaybeKind =
+        Cursor.readRecord(Next.ID, Scratch, &BlobData);
+    if (!MaybeKind) {
+      return MaybeKind.takeError();
     }
     unsigned Kind = MaybeKind.get();
     switch (Kind) {
     case objc_selector_block::OBJC_SELECTOR_DATA: {
       // Already saw Objective-C selector table.
       if (ObjCSelectorTable)
-        return true;
+        return llvm::createStringError(
+            llvm::inconvertibleErrorCode(),
+            "Multiple Objective-C selector records found");
 
       uint32_t tableOffset;
       objc_selector_block::ObjCSelectorDataLayout::readRecord(Scratch,
@@ -1234,45 +1476,42 @@ bool APINotesReader::Implementation::readObjCSelectorBlock(
     }
 
     MaybeNext = Cursor.advance();
-    if (!MaybeNext) {
-      // FIXME this drops the error on the floor.
-      consumeError(MaybeNext.takeError());
-      return false;
-    }
+    if (!MaybeNext)
+      return MaybeNext.takeError();
+
     Next = MaybeNext.get();
   }
 
-  return false;
+  return llvm::Error::success();
 }
 
-bool APINotesReader::Implementation::readGlobalVariableBlock(
+llvm::Error APINotesReader::Implementation::readGlobalVariableBlock(
     llvm::BitstreamCursor &Cursor, llvm::SmallVectorImpl<uint64_t> &Scratch) {
   if (Cursor.EnterSubBlock(GLOBAL_VARIABLE_BLOCK_ID))
-    return true;
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Failed to enter global variable block");
 
   llvm::Expected<llvm::BitstreamEntry> MaybeNext = Cursor.advance();
-  if (!MaybeNext) {
-    // FIXME this drops the error on the floor.
-    consumeError(MaybeNext.takeError());
-    return false;
-  }
+  if (!MaybeNext)
+    return MaybeNext.takeError();
+
   llvm::BitstreamEntry Next = MaybeNext.get();
   while (Next.Kind != llvm::BitstreamEntry::EndBlock) {
     if (Next.Kind == llvm::BitstreamEntry::Error)
-      return true;
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "Malformed bitstream entry");
 
     if (Next.Kind == llvm::BitstreamEntry::SubBlock) {
       // Unknown sub-block, possibly for use by a future version of the
       // API notes format.
       if (Cursor.SkipBlock())
-        return true;
+        return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                       "Failed to skip sub-block");
 
       MaybeNext = Cursor.advance();
-      if (!MaybeNext) {
-        // FIXME this drops the error on the floor.
-        consumeError(MaybeNext.takeError());
-        return false;
-      }
+      if (!MaybeNext)
+        return MaybeNext.takeError();
+
       Next = MaybeNext.get();
       continue;
     }
@@ -1282,16 +1521,16 @@ bool APINotesReader::Implementation::readGlobalVariableBlock(
     llvm::Expected<unsigned> MaybeKind =
         Cursor.readRecord(Next.ID, Scratch, &BlobData);
     if (!MaybeKind) {
-      // FIXME this drops the error on the floor.
-      consumeError(MaybeKind.takeError());
-      return false;
+      return MaybeKind.takeError();
     }
     unsigned Kind = MaybeKind.get();
     switch (Kind) {
     case global_variable_block::GLOBAL_VARIABLE_DATA: {
       // Already saw global variable table.
       if (GlobalVariableTable)
-        return true;
+        return llvm::createStringError(
+            llvm::inconvertibleErrorCode(),
+            "Multiple global variable records found");
 
       uint32_t tableOffset;
       global_variable_block::GlobalVariableDataLayout::readRecord(Scratch,
@@ -1310,45 +1549,42 @@ bool APINotesReader::Implementation::readGlobalVariableBlock(
     }
 
     MaybeNext = Cursor.advance();
-    if (!MaybeNext) {
-      // FIXME this drops the error on the floor.
-      consumeError(MaybeNext.takeError());
-      return false;
-    }
+    if (!MaybeNext)
+      return MaybeNext.takeError();
+
     Next = MaybeNext.get();
   }
 
-  return false;
+  return llvm::Error::success();
 }
 
-bool APINotesReader::Implementation::readGlobalFunctionBlock(
+llvm::Error APINotesReader::Implementation::readGlobalFunctionBlock(
     llvm::BitstreamCursor &Cursor, llvm::SmallVectorImpl<uint64_t> &Scratch) {
   if (Cursor.EnterSubBlock(GLOBAL_FUNCTION_BLOCK_ID))
-    return true;
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Failed to enter global function block");
 
   llvm::Expected<llvm::BitstreamEntry> MaybeNext = Cursor.advance();
-  if (!MaybeNext) {
-    // FIXME this drops the error on the floor.
-    consumeError(MaybeNext.takeError());
-    return false;
-  }
+  if (!MaybeNext)
+    return MaybeNext.takeError();
+
   llvm::BitstreamEntry Next = MaybeNext.get();
   while (Next.Kind != llvm::BitstreamEntry::EndBlock) {
     if (Next.Kind == llvm::BitstreamEntry::Error)
-      return true;
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "Malformed bitstream entry");
 
     if (Next.Kind == llvm::BitstreamEntry::SubBlock) {
       // Unknown sub-block, possibly for use by a future version of the
       // API notes format.
       if (Cursor.SkipBlock())
-        return true;
+        return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                       "Failed to skip sub-block");
 
       MaybeNext = Cursor.advance();
-      if (!MaybeNext) {
-        // FIXME this drops the error on the floor.
-        consumeError(MaybeNext.takeError());
-        return false;
-      }
+      if (!MaybeNext)
+        return MaybeNext.takeError();
+
       Next = MaybeNext.get();
       continue;
     }
@@ -1358,16 +1594,16 @@ bool APINotesReader::Implementation::readGlobalFunctionBlock(
     llvm::Expected<unsigned> MaybeKind =
         Cursor.readRecord(Next.ID, Scratch, &BlobData);
     if (!MaybeKind) {
-      // FIXME this drops the error on the floor.
-      consumeError(MaybeKind.takeError());
-      return false;
+      return MaybeKind.takeError();
     }
     unsigned Kind = MaybeKind.get();
     switch (Kind) {
     case global_function_block::GLOBAL_FUNCTION_DATA: {
       // Already saw global function table.
       if (GlobalFunctionTable)
-        return true;
+        return llvm::createStringError(
+            llvm::inconvertibleErrorCode(),
+            "Multiple global function records found");
 
       uint32_t tableOffset;
       global_function_block::GlobalFunctionDataLayout::readRecord(Scratch,
@@ -1386,45 +1622,42 @@ bool APINotesReader::Implementation::readGlobalFunctionBlock(
     }
 
     MaybeNext = Cursor.advance();
-    if (!MaybeNext) {
-      // FIXME this drops the error on the floor.
-      consumeError(MaybeNext.takeError());
-      return false;
-    }
+    if (!MaybeNext)
+      return MaybeNext.takeError();
+
     Next = MaybeNext.get();
   }
 
-  return false;
+  return llvm::Error::success();
 }
 
-bool APINotesReader::Implementation::readEnumConstantBlock(
+llvm::Error APINotesReader::Implementation::readEnumConstantBlock(
     llvm::BitstreamCursor &Cursor, llvm::SmallVectorImpl<uint64_t> &Scratch) {
   if (Cursor.EnterSubBlock(ENUM_CONSTANT_BLOCK_ID))
-    return true;
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Failed to enter enum constant block");
 
   llvm::Expected<llvm::BitstreamEntry> MaybeNext = Cursor.advance();
-  if (!MaybeNext) {
-    // FIXME this drops the error on the floor.
-    consumeError(MaybeNext.takeError());
-    return false;
-  }
+  if (!MaybeNext)
+    return MaybeNext.takeError();
+
   llvm::BitstreamEntry Next = MaybeNext.get();
   while (Next.Kind != llvm::BitstreamEntry::EndBlock) {
     if (Next.Kind == llvm::BitstreamEntry::Error)
-      return true;
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "Malformed bitstream entry");
 
     if (Next.Kind == llvm::BitstreamEntry::SubBlock) {
       // Unknown sub-block, possibly for use by a future version of the
       // API notes format.
       if (Cursor.SkipBlock())
-        return true;
+        return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                       "Failed to skip sub-block");
 
       MaybeNext = Cursor.advance();
-      if (!MaybeNext) {
-        // FIXME this drops the error on the floor.
-        consumeError(MaybeNext.takeError());
-        return false;
-      }
+      if (!MaybeNext)
+        return MaybeNext.takeError();
+
       Next = MaybeNext.get();
       continue;
     }
@@ -1434,16 +1667,15 @@ bool APINotesReader::Implementation::readEnumConstantBlock(
     llvm::Expected<unsigned> MaybeKind =
         Cursor.readRecord(Next.ID, Scratch, &BlobData);
     if (!MaybeKind) {
-      // FIXME this drops the error on the floor.
-      consumeError(MaybeKind.takeError());
-      return false;
+      return MaybeKind.takeError();
     }
     unsigned Kind = MaybeKind.get();
     switch (Kind) {
     case enum_constant_block::ENUM_CONSTANT_DATA: {
       // Already saw enumerator table.
       if (EnumConstantTable)
-        return true;
+        return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                       "Multiple enum constant records found");
 
       uint32_t tableOffset;
       enum_constant_block::EnumConstantDataLayout::readRecord(Scratch,
@@ -1462,45 +1694,42 @@ bool APINotesReader::Implementation::readEnumConstantBlock(
     }
 
     MaybeNext = Cursor.advance();
-    if (!MaybeNext) {
-      // FIXME this drops the error on the floor.
-      consumeError(MaybeNext.takeError());
-      return false;
-    }
+    if (!MaybeNext)
+      return MaybeNext.takeError();
+
     Next = MaybeNext.get();
   }
 
-  return false;
+  return llvm::Error::success();
 }
 
-bool APINotesReader::Implementation::readTagBlock(
+llvm::Error APINotesReader::Implementation::readTagBlock(
     llvm::BitstreamCursor &Cursor, llvm::SmallVectorImpl<uint64_t> &Scratch) {
   if (Cursor.EnterSubBlock(TAG_BLOCK_ID))
-    return true;
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Failed to enter tag block");
 
   llvm::Expected<llvm::BitstreamEntry> MaybeNext = Cursor.advance();
-  if (!MaybeNext) {
-    // FIXME this drops the error on the floor.
-    consumeError(MaybeNext.takeError());
-    return false;
-  }
+  if (!MaybeNext)
+    return MaybeNext.takeError();
+
   llvm::BitstreamEntry Next = MaybeNext.get();
   while (Next.Kind != llvm::BitstreamEntry::EndBlock) {
     if (Next.Kind == llvm::BitstreamEntry::Error)
-      return true;
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "Malformed bitstream entry");
 
     if (Next.Kind == llvm::BitstreamEntry::SubBlock) {
       // Unknown sub-block, possibly for use by a future version of the
       // API notes format.
       if (Cursor.SkipBlock())
-        return true;
+        return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                       "Failed to skip sub-block");
 
       MaybeNext = Cursor.advance();
-      if (!MaybeNext) {
-        // FIXME this drops the error on the floor.
-        consumeError(MaybeNext.takeError());
-        return false;
-      }
+      if (!MaybeNext)
+        return MaybeNext.takeError();
+
       Next = MaybeNext.get();
       continue;
     }
@@ -1510,16 +1739,15 @@ bool APINotesReader::Implementation::readTagBlock(
     llvm::Expected<unsigned> MaybeKind =
         Cursor.readRecord(Next.ID, Scratch, &BlobData);
     if (!MaybeKind) {
-      // FIXME this drops the error on the floor.
-      consumeError(MaybeKind.takeError());
-      return false;
+      return MaybeKind.takeError();
     }
     unsigned Kind = MaybeKind.get();
     switch (Kind) {
     case tag_block::TAG_DATA: {
       // Already saw tag table.
       if (TagTable)
-        return true;
+        return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                       "Multiple tag records found");
 
       uint32_t tableOffset;
       tag_block::TagDataLayout::readRecord(Scratch, tableOffset);
@@ -1537,45 +1765,42 @@ bool APINotesReader::Implementation::readTagBlock(
     }
 
     MaybeNext = Cursor.advance();
-    if (!MaybeNext) {
-      // FIXME this drops the error on the floor.
-      consumeError(MaybeNext.takeError());
-      return false;
-    }
+    if (!MaybeNext)
+      return MaybeNext.takeError();
+
     Next = MaybeNext.get();
   }
 
-  return false;
+  return llvm::Error::success();
 }
 
-bool APINotesReader::Implementation::readTypedefBlock(
+llvm::Error APINotesReader::Implementation::readTypedefBlock(
     llvm::BitstreamCursor &Cursor, llvm::SmallVectorImpl<uint64_t> &Scratch) {
   if (Cursor.EnterSubBlock(TYPEDEF_BLOCK_ID))
-    return true;
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Failed to enter typedef block");
 
   llvm::Expected<llvm::BitstreamEntry> MaybeNext = Cursor.advance();
-  if (!MaybeNext) {
-    // FIXME this drops the error on the floor.
-    consumeError(MaybeNext.takeError());
-    return false;
-  }
+  if (!MaybeNext)
+    return MaybeNext.takeError();
+
   llvm::BitstreamEntry Next = MaybeNext.get();
   while (Next.Kind != llvm::BitstreamEntry::EndBlock) {
     if (Next.Kind == llvm::BitstreamEntry::Error)
-      return true;
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "Malformed bitstream entry");
 
     if (Next.Kind == llvm::BitstreamEntry::SubBlock) {
       // Unknown sub-block, possibly for use by a future version of the
       // API notes format.
       if (Cursor.SkipBlock())
-        return true;
+        return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                       "Failed to skip sub-block");
 
       MaybeNext = Cursor.advance();
-      if (!MaybeNext) {
-        // FIXME this drops the error on the floor.
-        consumeError(MaybeNext.takeError());
-        return false;
-      }
+      if (!MaybeNext)
+        return MaybeNext.takeError();
+
       Next = MaybeNext.get();
       continue;
     }
@@ -1585,16 +1810,15 @@ bool APINotesReader::Implementation::readTypedefBlock(
     llvm::Expected<unsigned> MaybeKind =
         Cursor.readRecord(Next.ID, Scratch, &BlobData);
     if (!MaybeKind) {
-      // FIXME this drops the error on the floor.
-      consumeError(MaybeKind.takeError());
-      return false;
+      return MaybeKind.takeError();
     }
     unsigned Kind = MaybeKind.get();
     switch (Kind) {
     case typedef_block::TYPEDEF_DATA: {
       // Already saw typedef table.
       if (TypedefTable)
-        return true;
+        return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                       "Multiple typedef records found");
 
       uint32_t tableOffset;
       typedef_block::TypedefDataLayout::readRecord(Scratch, tableOffset);
@@ -1612,21 +1836,19 @@ bool APINotesReader::Implementation::readTypedefBlock(
     }
 
     MaybeNext = Cursor.advance();
-    if (!MaybeNext) {
-      // FIXME this drops the error on the floor.
-      consumeError(MaybeNext.takeError());
-      return false;
-    }
+    if (!MaybeNext)
+      return MaybeNext.takeError();
+
     Next = MaybeNext.get();
   }
 
-  return false;
+  return llvm::Error::success();
 }
 
 APINotesReader::APINotesReader(llvm::MemoryBuffer *InputBuffer,
-                               llvm::VersionTuple SwiftVersion, bool &Failed)
+                               llvm::VersionTuple SwiftVersion,
+                               llvm::Error &Err)
     : Implementation(new class Implementation) {
-  Failed = false;
 
   // Initialize the input buffer.
   Implementation->InputBuffer = InputBuffer;
@@ -1636,19 +1858,20 @@ APINotesReader::APINotesReader(llvm::MemoryBuffer *InputBuffer,
   // Validate signature.
   for (auto byte : API_NOTES_SIGNATURE) {
     if (Cursor.AtEndOfStream()) {
-      Failed = true;
+      Err = llvm::createStringError(
+          llvm::inconvertibleErrorCode(),
+          "Unexpected end of stream while reading signature");
       return;
     }
-    if (llvm::Expected<llvm::SimpleBitstreamCursor::word_t> maybeRead =
-            Cursor.Read(8)) {
-      if (maybeRead.get() != byte) {
-        Failed = true;
-        return;
-      }
-    } else {
-      // FIXME this drops the error on the floor.
-      consumeError(maybeRead.takeError());
-      Failed = true;
+    llvm::Expected<llvm::SimpleBitstreamCursor::word_t> maybeRead =
+        Cursor.Read(8);
+    if (!maybeRead) {
+      Err = maybeRead.takeError();
+      return;
+    }
+    if (maybeRead.get() != byte) {
+      Err = llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                    "Invalid signature in API notes file");
       return;
     }
   }
@@ -1659,9 +1882,7 @@ APINotesReader::APINotesReader(llvm::MemoryBuffer *InputBuffer,
   while (!Cursor.AtEndOfStream()) {
     llvm::Expected<llvm::BitstreamEntry> MaybeTopLevelEntry = Cursor.advance();
     if (!MaybeTopLevelEntry) {
-      // FIXME this drops the error on the floor.
-      consumeError(MaybeTopLevelEntry.takeError());
-      Failed = true;
+      Err = MaybeTopLevelEntry.takeError();
       return;
     }
     llvm::BitstreamEntry TopLevelEntry = MaybeTopLevelEntry.get();
@@ -1672,99 +1893,179 @@ APINotesReader::APINotesReader(llvm::MemoryBuffer *InputBuffer,
     switch (TopLevelEntry.ID) {
     case llvm::bitc::BLOCKINFO_BLOCK_ID:
       if (!Cursor.ReadBlockInfoBlock()) {
-        Failed = true;
-        break;
+        Err = llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                      "Failed to read block info");
+        return;
       }
       break;
 
     case CONTROL_BLOCK_ID:
       // Only allow a single control block.
-      if (HasValidControlBlock ||
-          Implementation->readControlBlock(Cursor, Scratch)) {
-        Failed = true;
+      if (HasValidControlBlock) {
+        Err = llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                      "Multiple control blocks found");
         return;
       }
-
+      if (llvm::Error BlockErr =
+              Implementation->readControlBlock(Cursor, Scratch)) {
+        Err = std::move(BlockErr);
+        return;
+      }
       HasValidControlBlock = true;
       break;
 
     case IDENTIFIER_BLOCK_ID:
-      if (!HasValidControlBlock ||
-          Implementation->readIdentifierBlock(Cursor, Scratch)) {
-        Failed = true;
+      if (!HasValidControlBlock) {
+        Err = llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                      "Missing control block");
+        return;
+      }
+      if (llvm::Error BlockErr =
+              Implementation->readIdentifierBlock(Cursor, Scratch)) {
+        Err = std::move(BlockErr);
         return;
       }
       break;
 
     case OBJC_CONTEXT_BLOCK_ID:
-      if (!HasValidControlBlock ||
-          Implementation->readObjCContextBlock(Cursor, Scratch)) {
-        Failed = true;
+      if (!HasValidControlBlock) {
+        Err = llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                      "Missing control block");
         return;
       }
-
+      if (llvm::Error BlockErr =
+              Implementation->readContextBlock(Cursor, Scratch)) {
+        Err = std::move(BlockErr);
+        return;
+      }
       break;
 
     case OBJC_PROPERTY_BLOCK_ID:
-      if (!HasValidControlBlock ||
-          Implementation->readObjCPropertyBlock(Cursor, Scratch)) {
-        Failed = true;
+      if (!HasValidControlBlock) {
+        Err = llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                      "Missing control block");
+        return;
+      }
+      if (llvm::Error BlockErr =
+              Implementation->readObjCPropertyBlock(Cursor, Scratch)) {
+        Err = std::move(BlockErr);
         return;
       }
       break;
 
     case OBJC_METHOD_BLOCK_ID:
-      if (!HasValidControlBlock ||
-          Implementation->readObjCMethodBlock(Cursor, Scratch)) {
-        Failed = true;
+      if (!HasValidControlBlock) {
+        Err = llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                      "Missing control block");
+        return;
+      }
+      if (llvm::Error BlockErr =
+              Implementation->readObjCMethodBlock(Cursor, Scratch)) {
+        Err = std::move(BlockErr);
+        return;
+      }
+      break;
+
+    case CXX_METHOD_BLOCK_ID:
+      if (!HasValidControlBlock) {
+        Err = llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                      "Missing control block");
+        return;
+      }
+      if (llvm::Error BlockErr =
+              Implementation->readCXXMethodBlock(Cursor, Scratch)) {
+        Err = std::move(BlockErr);
+        return;
+      }
+      break;
+
+    case FIELD_BLOCK_ID:
+      if (!HasValidControlBlock) {
+        Err = llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                      "Missing control block");
+        return;
+      }
+      if (llvm::Error BlockErr =
+              Implementation->readFieldBlock(Cursor, Scratch)) {
+        Err = std::move(BlockErr);
         return;
       }
       break;
 
     case OBJC_SELECTOR_BLOCK_ID:
-      if (!HasValidControlBlock ||
-          Implementation->readObjCSelectorBlock(Cursor, Scratch)) {
-        Failed = true;
+      if (!HasValidControlBlock) {
+        Err = llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                      "Missing control block");
+        return;
+      }
+      if (llvm::Error BlockErr =
+              Implementation->readObjCSelectorBlock(Cursor, Scratch)) {
+        Err = std::move(BlockErr);
         return;
       }
       break;
 
     case GLOBAL_VARIABLE_BLOCK_ID:
-      if (!HasValidControlBlock ||
-          Implementation->readGlobalVariableBlock(Cursor, Scratch)) {
-        Failed = true;
+      if (!HasValidControlBlock) {
+        Err = llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                      "Missing control block");
+        return;
+      }
+      if (llvm::Error BlockErr =
+              Implementation->readGlobalVariableBlock(Cursor, Scratch)) {
+        Err = std::move(BlockErr);
         return;
       }
       break;
 
     case GLOBAL_FUNCTION_BLOCK_ID:
-      if (!HasValidControlBlock ||
-          Implementation->readGlobalFunctionBlock(Cursor, Scratch)) {
-        Failed = true;
+      if (!HasValidControlBlock) {
+        Err = llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                      "Missing control block");
+        return;
+      }
+      if (llvm::Error BlockErr =
+              Implementation->readGlobalFunctionBlock(Cursor, Scratch)) {
+        Err = std::move(BlockErr);
         return;
       }
       break;
 
     case ENUM_CONSTANT_BLOCK_ID:
-      if (!HasValidControlBlock ||
-          Implementation->readEnumConstantBlock(Cursor, Scratch)) {
-        Failed = true;
+      if (!HasValidControlBlock) {
+        Err = llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                      "Missing control block");
+        return;
+      }
+      if (llvm::Error BlockErr =
+              Implementation->readEnumConstantBlock(Cursor, Scratch)) {
+        Err = std::move(BlockErr);
         return;
       }
       break;
 
     case TAG_BLOCK_ID:
-      if (!HasValidControlBlock ||
-          Implementation->readTagBlock(Cursor, Scratch)) {
-        Failed = true;
+      if (!HasValidControlBlock) {
+        Err = llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                      "Missing control block");
+        return;
+      }
+      if (llvm::Error BlockErr =
+              Implementation->readTagBlock(Cursor, Scratch)) {
+        Err = std::move(BlockErr);
         return;
       }
       break;
 
     case TYPEDEF_BLOCK_ID:
-      if (!HasValidControlBlock ||
-          Implementation->readTypedefBlock(Cursor, Scratch)) {
-        Failed = true;
+      if (!HasValidControlBlock) {
+        Err = llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                      "Missing control block");
+        return;
+      }
+      if (llvm::Error BlockErr =
+              Implementation->readTypedefBlock(Cursor, Scratch)) {
+        Err = std::move(BlockErr);
         return;
       }
       break;
@@ -1773,7 +2074,8 @@ APINotesReader::APINotesReader(llvm::MemoryBuffer *InputBuffer,
       // Unknown top-level block, possibly for use by a future version of the
       // module format.
       if (Cursor.SkipBlock()) {
-        Failed = true;
+        Err = llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                      "Failed to skip unknown top-level block");
         return;
       }
       break;
@@ -1781,23 +2083,25 @@ APINotesReader::APINotesReader(llvm::MemoryBuffer *InputBuffer,
   }
 
   if (!Cursor.AtEndOfStream()) {
-    Failed = true;
+    Err = llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                  "Bitstream has unread data after all blocks");
     return;
   }
 }
 
 APINotesReader::~APINotesReader() { delete Implementation->InputBuffer; }
 
-std::unique_ptr<APINotesReader>
+llvm::Expected<std::unique_ptr<APINotesReader>>
 APINotesReader::Create(std::unique_ptr<llvm::MemoryBuffer> InputBuffer,
                        llvm::VersionTuple SwiftVersion) {
-  bool Failed = false;
+  llvm::Error Err = llvm::Error::success();
   std::unique_ptr<APINotesReader> Reader(
-      new APINotesReader(InputBuffer.release(), SwiftVersion, Failed));
-  if (Failed)
-    return nullptr;
+      new APINotesReader(InputBuffer.release(), SwiftVersion, Err));
 
-  return Reader;
+  if (Err)
+    return Err;
+
+  return std::move(Reader);
 }
 
 template <typename T>
@@ -1807,11 +2111,16 @@ APINotesReader::VersionedInfo<T>::VersionedInfo(
     : Results(std::move(R)) {
 
   assert(!Results.empty());
-  assert(std::is_sorted(
-      Results.begin(), Results.end(),
+  assert(llvm::is_sorted(
+      Results,
       [](const std::pair<llvm::VersionTuple, T> &left,
          const std::pair<llvm::VersionTuple, T> &right) -> bool {
-        assert(left.first != right.first && "two entries for the same version");
+        // The comparison function should be reflective, and with expensive
+        // checks we can get callbacks basically checking that lambda(a,a) is
+        // false. We could still check that we do not find equal elements when
+        // left!=right.
+        assert((&left == &right || left.first != right.first) &&
+               "two entries for the same version");
         return left.first < right.first;
       }));
 
@@ -1835,7 +2144,7 @@ APINotesReader::VersionedInfo<T>::VersionedInfo(
 
 auto APINotesReader::lookupObjCClassID(llvm::StringRef Name)
     -> std::optional<ContextID> {
-  if (!Implementation->ObjCContextIDTable)
+  if (!Implementation->ContextIDTable)
     return std::nullopt;
 
   std::optional<IdentifierID> ClassID = Implementation->getIdentifier(Name);
@@ -1844,25 +2153,25 @@ auto APINotesReader::lookupObjCClassID(llvm::StringRef Name)
 
   // ObjC classes can't be declared in C++ namespaces, so use -1 as the global
   // context.
-  auto KnownID = Implementation->ObjCContextIDTable->find(
+  auto KnownID = Implementation->ContextIDTable->find(
       ContextTableKey(-1, (uint8_t)ContextKind::ObjCClass, *ClassID));
-  if (KnownID == Implementation->ObjCContextIDTable->end())
+  if (KnownID == Implementation->ContextIDTable->end())
     return std::nullopt;
 
   return ContextID(*KnownID);
 }
 
 auto APINotesReader::lookupObjCClassInfo(llvm::StringRef Name)
-    -> VersionedInfo<ObjCContextInfo> {
-  if (!Implementation->ObjCContextInfoTable)
+    -> VersionedInfo<ContextInfo> {
+  if (!Implementation->ContextInfoTable)
     return std::nullopt;
 
   std::optional<ContextID> CtxID = lookupObjCClassID(Name);
   if (!CtxID)
     return std::nullopt;
 
-  auto KnownInfo = Implementation->ObjCContextInfoTable->find(CtxID->Value);
-  if (KnownInfo == Implementation->ObjCContextInfoTable->end())
+  auto KnownInfo = Implementation->ContextInfoTable->find(CtxID->Value);
+  if (KnownInfo == Implementation->ContextInfoTable->end())
     return std::nullopt;
 
   return {Implementation->SwiftVersion, *KnownInfo};
@@ -1870,7 +2179,7 @@ auto APINotesReader::lookupObjCClassInfo(llvm::StringRef Name)
 
 auto APINotesReader::lookupObjCProtocolID(llvm::StringRef Name)
     -> std::optional<ContextID> {
-  if (!Implementation->ObjCContextIDTable)
+  if (!Implementation->ContextIDTable)
     return std::nullopt;
 
   std::optional<IdentifierID> classID = Implementation->getIdentifier(Name);
@@ -1879,25 +2188,25 @@ auto APINotesReader::lookupObjCProtocolID(llvm::StringRef Name)
 
   // ObjC classes can't be declared in C++ namespaces, so use -1 as the global
   // context.
-  auto KnownID = Implementation->ObjCContextIDTable->find(
+  auto KnownID = Implementation->ContextIDTable->find(
       ContextTableKey(-1, (uint8_t)ContextKind::ObjCProtocol, *classID));
-  if (KnownID == Implementation->ObjCContextIDTable->end())
+  if (KnownID == Implementation->ContextIDTable->end())
     return std::nullopt;
 
   return ContextID(*KnownID);
 }
 
 auto APINotesReader::lookupObjCProtocolInfo(llvm::StringRef Name)
-    -> VersionedInfo<ObjCContextInfo> {
-  if (!Implementation->ObjCContextInfoTable)
+    -> VersionedInfo<ContextInfo> {
+  if (!Implementation->ContextInfoTable)
     return std::nullopt;
 
   std::optional<ContextID> CtxID = lookupObjCProtocolID(Name);
   if (!CtxID)
     return std::nullopt;
 
-  auto KnownInfo = Implementation->ObjCContextInfoTable->find(CtxID->Value);
-  if (KnownInfo == Implementation->ObjCContextInfoTable->end())
+  auto KnownInfo = Implementation->ContextInfoTable->find(CtxID->Value);
+  if (KnownInfo == Implementation->ContextInfoTable->end())
     return std::nullopt;
 
   return {Implementation->SwiftVersion, *KnownInfo};
@@ -1940,6 +2249,40 @@ auto APINotesReader::lookupObjCMethod(ContextID CtxID, ObjCSelectorRef Selector,
   return {Implementation->SwiftVersion, *Known};
 }
 
+auto APINotesReader::lookupField(ContextID CtxID, llvm::StringRef Name)
+    -> VersionedInfo<FieldInfo> {
+  if (!Implementation->FieldTable)
+    return std::nullopt;
+
+  std::optional<IdentifierID> NameID = Implementation->getIdentifier(Name);
+  if (!NameID)
+    return std::nullopt;
+
+  auto Known = Implementation->FieldTable->find(
+      SingleDeclTableKey(CtxID.Value, *NameID));
+  if (Known == Implementation->FieldTable->end())
+    return std::nullopt;
+
+  return {Implementation->SwiftVersion, *Known};
+}
+
+auto APINotesReader::lookupCXXMethod(ContextID CtxID, llvm::StringRef Name)
+    -> VersionedInfo<CXXMethodInfo> {
+  if (!Implementation->CXXMethodTable)
+    return std::nullopt;
+
+  std::optional<IdentifierID> NameID = Implementation->getIdentifier(Name);
+  if (!NameID)
+    return std::nullopt;
+
+  auto Known = Implementation->CXXMethodTable->find(
+      SingleDeclTableKey(CtxID.Value, *NameID));
+  if (Known == Implementation->CXXMethodTable->end())
+    return std::nullopt;
+
+  return {Implementation->SwiftVersion, *Known};
+}
+
 auto APINotesReader::lookupGlobalVariable(llvm::StringRef Name,
                                           std::optional<Context> Ctx)
     -> VersionedInfo<GlobalVariableInfo> {
@@ -1950,7 +2293,7 @@ auto APINotesReader::lookupGlobalVariable(llvm::StringRef Name,
   if (!NameID)
     return std::nullopt;
 
-  ContextTableKey Key(Ctx, *NameID);
+  SingleDeclTableKey Key(Ctx, *NameID);
 
   auto Known = Implementation->GlobalVariableTable->find(Key);
   if (Known == Implementation->GlobalVariableTable->end())
@@ -1969,7 +2312,7 @@ auto APINotesReader::lookupGlobalFunction(llvm::StringRef Name,
   if (!NameID)
     return std::nullopt;
 
-  ContextTableKey Key(Ctx, *NameID);
+  SingleDeclTableKey Key(Ctx, *NameID);
 
   auto Known = Implementation->GlobalFunctionTable->find(Key);
   if (Known == Implementation->GlobalFunctionTable->end())
@@ -1994,6 +2337,24 @@ auto APINotesReader::lookupEnumConstant(llvm::StringRef Name)
   return {Implementation->SwiftVersion, *Known};
 }
 
+auto APINotesReader::lookupTagID(llvm::StringRef Name,
+                                 std::optional<Context> ParentCtx)
+    -> std::optional<ContextID> {
+  if (!Implementation->ContextIDTable)
+    return std::nullopt;
+
+  std::optional<IdentifierID> TagID = Implementation->getIdentifier(Name);
+  if (!TagID)
+    return std::nullopt;
+
+  auto KnownID = Implementation->ContextIDTable->find(
+      ContextTableKey(ParentCtx, ContextKind::Tag, *TagID));
+  if (KnownID == Implementation->ContextIDTable->end())
+    return std::nullopt;
+
+  return ContextID(*KnownID);
+}
+
 auto APINotesReader::lookupTag(llvm::StringRef Name, std::optional<Context> Ctx)
     -> VersionedInfo<TagInfo> {
   if (!Implementation->TagTable)
@@ -2003,7 +2364,7 @@ auto APINotesReader::lookupTag(llvm::StringRef Name, std::optional<Context> Ctx)
   if (!NameID)
     return std::nullopt;
 
-  ContextTableKey Key(Ctx, *NameID);
+  SingleDeclTableKey Key(Ctx, *NameID);
 
   auto Known = Implementation->TagTable->find(Key);
   if (Known == Implementation->TagTable->end())
@@ -2022,7 +2383,7 @@ auto APINotesReader::lookupTypedef(llvm::StringRef Name,
   if (!NameID)
     return std::nullopt;
 
-  ContextTableKey Key(Ctx, *NameID);
+  SingleDeclTableKey Key(Ctx, *NameID);
 
   auto Known = Implementation->TypedefTable->find(Key);
   if (Known == Implementation->TypedefTable->end())
@@ -2034,7 +2395,7 @@ auto APINotesReader::lookupTypedef(llvm::StringRef Name,
 auto APINotesReader::lookupNamespaceID(
     llvm::StringRef Name, std::optional<ContextID> ParentNamespaceID)
     -> std::optional<ContextID> {
-  if (!Implementation->ObjCContextIDTable)
+  if (!Implementation->ContextIDTable)
     return std::nullopt;
 
   std::optional<IdentifierID> NamespaceID = Implementation->getIdentifier(Name);
@@ -2043,9 +2404,9 @@ auto APINotesReader::lookupNamespaceID(
 
   uint32_t RawParentNamespaceID =
       ParentNamespaceID ? ParentNamespaceID->Value : -1;
-  auto KnownID = Implementation->ObjCContextIDTable->find(
+  auto KnownID = Implementation->ContextIDTable->find(
       {RawParentNamespaceID, (uint8_t)ContextKind::Namespace, *NamespaceID});
-  if (KnownID == Implementation->ObjCContextIDTable->end())
+  if (KnownID == Implementation->ContextIDTable->end())
     return std::nullopt;
 
   return ContextID(*KnownID);

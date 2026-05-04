@@ -34,10 +34,11 @@
 # RUN: cp dyn dyn2
 # RUN: echo > file
 # RUN: echo > file2
+# RUN: echo > file3
 # RUN: echo "_start" > order
 # RUN: mkdir "sysroot with spaces"
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o 'foo bar'
-# RUN: ld.lld --reproduce repro3.tar 'foo bar' -L"foo bar" -Lfile -Tfile2 \
+# RUN: ld.lld --reproduce repro3.tar 'foo bar' -L"foo bar" -Lfile -Tfile2 -dT file3 \
 # RUN:   --dynamic-list dyn --export-dynamic-symbol-list dyn2 -rpath file --script=file --symbol-ordering-file order \
 # RUN:   --sysroot "sysroot with spaces" --sysroot="sysroot with spaces" \
 # RUN:   --version-script ver --dynamic-linker "some unusual/path" -soname 'foo bar' \
@@ -48,6 +49,7 @@
 # RSP3-NEXT: -L "[[BASEDIR:.+]]/foo bar"
 # RSP3-NEXT: -L [[BASEDIR]]/file
 # RSP3-NEXT: --script [[BASEDIR]]/file2
+# RSP3-NEXT: --default-script [[BASEDIR]]/file3
 # RSP3-NEXT: --dynamic-list [[BASEDIR]]/dyn
 # RSP3-NEXT: --export-dynamic-symbol-list [[BASEDIR]]/dyn2
 # RSP3-NEXT: -rpath [[BASEDIR]]/file
@@ -74,11 +76,12 @@
 ## Check that directory path is stripped from -o <file-path>
 # RUN: mkdir -p %t.dir/build4/a/b/c
 # RUN: cd %t.dir
-# RUN: ld.lld build1/foo.o -o build4/a/b/c/bar -Map build4/map --print-archive-stats=build4/stats \
+# RUN: ld.lld build1/foo.o -o build4/a/b/c/bar -Map build4/map --dependency-file=build4/bar.d --print-archive-stats=build4/stats \
 # RUN:   --why-extract=build4/why -shared --as-needed --reproduce=repro4.tar
 # RUN: tar xOf repro4.tar repro4/response.txt | FileCheck %s --check-prefix=RSP4
 # RSP4: -o bar
 # RSP4-NEXT: -Map map
+# RSP4-NEXT: --dependency-file bar.d
 # RSP4-NEXT: --print-archive-stats=stats
 # RSP4-NEXT: --why-extract=why
 

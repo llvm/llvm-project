@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -ast-print %s | FileCheck %s
+// RUN: %clang_cc1 -ast-print %s | FileCheck %s
 namespace N {
   template<typename T, typename U> void f(U);
   template<int> void f();
@@ -99,8 +99,6 @@ template <typename T>
 void test() {
   // CHECK: S<T>::foo;
   S<T>::foo;
-  // CHECK: S<T>::template foo;
-  S<T>::template foo;
   // CHECK: S<T>::template foo<>;
   S<T>::template foo<>;
   // CHECK: S<T>::template foo<T>;
@@ -121,8 +119,6 @@ void test() {
   S<T> s;
   // CHECK: s.foo;
   s.foo;
-  // CHECK: s.template foo;
-  s.template foo;
   // CHECK: s.template foo<>;
   s.template foo<>;
   // CHECK: s.template foo<T>;
@@ -130,12 +126,3 @@ void test() {
 }
 
 } // namespace DSME
-
-namespace DSDRE_withImplicitTemplateArgs {
-
-template <typename T> void foo() {
-  // CHECK: T::template bar();
-  T::template bar();
-}
-
-} // namespace DSDRE_withImplicitTemplateArgs

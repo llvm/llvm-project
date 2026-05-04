@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: %[[#TYLONG:]] = OpTypeInt 32 0
@@ -13,7 +13,7 @@
 ; CHECK: %[[#OBJ:]] = OpFunctionParameter %[[#TYSTRUCT]]
 ; CHECK: %[[#ARGPTR2:]] = OpFunctionParameter %[[#TYLONGPTR]]
 ; CHECK: %[[#PTRTOSTRUCT:]] = OpBitcast %[[#TYSTRUCTPTR]] %[[#ARGPTR2]]
-; CHECK: OpStore %[[#PTRTOSTRUCT]] %[[#OBJ]]
+; CHECK-NEXT: OpStore %[[#PTRTOSTRUCT]] %[[#OBJ]]
 
 %struct.S = type { i32 }
 %struct.__wrapper_class = type { [7 x %struct.S] }

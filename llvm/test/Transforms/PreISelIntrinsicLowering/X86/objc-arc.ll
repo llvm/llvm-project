@@ -1,4 +1,5 @@
 ; RUN: opt -mtriple=x86_64-pc-linux-gnu -pre-isel-intrinsic-lowering -S -o - %s | FileCheck %s
+; RUN: opt -mtriple=x86_64-pc-linux-gnu -passes=pre-isel-intrinsic-lowering -S -o - %s | FileCheck %s
 
 ; Make sure calls to the objc intrinsics are translated to calls in to the
 ; runtime
@@ -148,7 +149,7 @@ entry:
 
 ; Note: we don't want this intrinsic to have its argument marked 'returned',
 ; since that breaks the autorelease elision marker optimization when
-; save/restores of the reciever are introduced between the msg send and the
+; save/restores of the receiver are introduced between the msg send and the
 ; retain. See issue#69658.
 define ptr @test_objc_retainAutoreleasedReturnValue(ptr %arg0) {
 ; CHECK-LABEL: test_objc_retainAutoreleasedReturnValue
@@ -216,7 +217,7 @@ entry:
 
 ; Note: we don't want this intrinsic to have its argument marked 'returned',
 ; since that breaks the autorelease elision marker optimization when
-; save/restores of the reciever are introduced between the msg send and the
+; save/restores of the receiver are introduced between the msg send and the
 ; claim. See issue#69658.
 define ptr @test_objc_unsafeClaimAutoreleasedReturnValue(ptr %arg0) {
 ; CHECK-LABEL: test_objc_unsafeClaimAutoreleasedReturnValue

@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn--amdpal -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -enable-var-scope %s
+; RUN: llc -mtriple=amdgcn--amdpal < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=tonga < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx900 < %s | FileCheck -check-prefix=GCN -enable-var-scope %s
 
 ; This pixel shader does not use the result of its interpolation, so it would
 ; end up with an interpolation mode set in PSAddr but not PSEnable. This test tests
@@ -11,13 +11,14 @@
 ; GCN-NEXT: amdpal.pipelines:
 ; GCN-NEXT:   - .hardware_stages:
 ; GCN-NEXT:       .ps:
-; GCN-NEXT:         .entry_point:    amdpal_psenable
+; GCN-NEXT:         .entry_point:    _amdgpu_ps_main
+; GCN-NEXT:         .entry_point_symbol:    amdpal_psenable
 ; GCN-NEXT:         .scratch_memory_size: 0
 ; GCN:     .registers:
-; GCN-NEXT:       0x2c0a (SPI_SHADER_PGM_RSRC1_PS):
-; GCN-NEXT:       0x2c0b (SPI_SHADER_PGM_RSRC2_PS):
-; GCN-NEXT:       0xa1b3 (SPI_PS_INPUT_ENA): 0x2
-; GCN-NEXT:       0xa1b4 (SPI_PS_INPUT_ADDR): 0x2
+; GCN-NEXT:       '0x2c0a (SPI_SHADER_PGM_RSRC1_PS)':
+; GCN-NEXT:       '0x2c0b (SPI_SHADER_PGM_RSRC2_PS)':
+; GCN-NEXT:       '0xa1b3 (SPI_PS_INPUT_ENA)': 0x2
+; GCN-NEXT:       '0xa1b4 (SPI_PS_INPUT_ADDR)': 0x2
 ; GCN-NEXT: ...
 ; GCN-NEXT:         .end_amdgpu_pal_metadata
 define amdgpu_ps void @amdpal_psenable(i32 inreg, i32 inreg, i32 inreg, i32 inreg %m0, <2 x float> %pos) #6 {

@@ -1,4 +1,4 @@
-//RUN: %clang_analyze_cc1 -std=c++17 -analyze -analyzer-checker=core -verify %s
+//RUN: %clang_analyze_cc1 -std=c++17 -analyzer-checker=core -verify %s
 
 // expected-no-diagnostics
 

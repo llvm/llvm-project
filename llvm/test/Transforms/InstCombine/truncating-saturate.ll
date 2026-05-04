@@ -10,7 +10,7 @@ define i8 @testi16i8(i16 %add) {
 ; CHECK-LABEL: @testi16i8(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.smax.i16(i16 [[ADD:%.*]], i16 -128)
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.smin.i16(i16 [[TMP1]], i16 127)
-; CHECK-NEXT:    [[COND_I:%.*]] = trunc i16 [[TMP2]] to i8
+; CHECK-NEXT:    [[COND_I:%.*]] = trunc nsw i16 [[TMP2]] to i8
 ; CHECK-NEXT:    ret i8 [[COND_I]]
 ;
   %sh = lshr i16 %add, 8
@@ -29,7 +29,7 @@ define i32 @testi64i32(i64 %add) {
 ; CHECK-LABEL: @testi64i32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.smax.i64(i64 [[ADD:%.*]], i64 -2147483648)
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.smin.i64(i64 [[TMP1]], i64 2147483647)
-; CHECK-NEXT:    [[COND_I:%.*]] = trunc i64 [[TMP2]] to i32
+; CHECK-NEXT:    [[COND_I:%.*]] = trunc nsw i64 [[TMP2]] to i32
 ; CHECK-NEXT:    ret i32 [[COND_I]]
 ;
   %sh = lshr i64 %add, 32
@@ -48,7 +48,7 @@ define i16 @testi32i16i8(i32 %add) {
 ; CHECK-LABEL: @testi32i16i8(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smax.i32(i32 [[ADD:%.*]], i32 -128)
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.smin.i32(i32 [[TMP1]], i32 127)
-; CHECK-NEXT:    [[R:%.*]] = trunc i32 [[TMP2]] to i16
+; CHECK-NEXT:    [[R:%.*]] = trunc nsw i32 [[TMP2]] to i16
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %a = add i32 %add, 128
@@ -62,9 +62,9 @@ define i16 @testi32i16i8(i32 %add) {
 
 define <4 x i16> @testv4i32i16i8(<4 x i32> %add) {
 ; CHECK-LABEL: @testv4i32i16i8(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.smax.v4i32(<4 x i32> [[ADD:%.*]], <4 x i32> <i32 -128, i32 -128, i32 -128, i32 -128>)
-; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> [[TMP1]], <4 x i32> <i32 127, i32 127, i32 127, i32 127>)
-; CHECK-NEXT:    [[R:%.*]] = trunc <4 x i32> [[TMP2]] to <4 x i16>
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.smax.v4i32(<4 x i32> [[ADD:%.*]], <4 x i32> splat (i32 -128))
+; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> [[TMP1]], <4 x i32> splat (i32 127))
+; CHECK-NEXT:    [[R:%.*]] = trunc nsw <4 x i32> [[TMP2]] to <4 x i16>
 ; CHECK-NEXT:    ret <4 x i16> [[R]]
 ;
   %a = add <4 x i32> %add, <i32 128, i32 128, i32 128, i32 128>
@@ -147,9 +147,9 @@ define i32 @testi64i32addsat(i32 %a, i32 %b) {
 
 define <4 x i8> @testv4i16i8(<4 x i16> %add) {
 ; CHECK-LABEL: @testv4i16i8(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i16> @llvm.smax.v4i16(<4 x i16> [[ADD:%.*]], <4 x i16> <i16 -128, i16 -128, i16 -128, i16 -128>)
-; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i16> @llvm.smin.v4i16(<4 x i16> [[TMP1]], <4 x i16> <i16 127, i16 127, i16 127, i16 127>)
-; CHECK-NEXT:    [[COND_I:%.*]] = trunc <4 x i16> [[TMP2]] to <4 x i8>
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i16> @llvm.smax.v4i16(<4 x i16> [[ADD:%.*]], <4 x i16> splat (i16 -128))
+; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i16> @llvm.smin.v4i16(<4 x i16> [[TMP1]], <4 x i16> splat (i16 127))
+; CHECK-NEXT:    [[COND_I:%.*]] = trunc nsw <4 x i16> [[TMP2]] to <4 x i8>
 ; CHECK-NEXT:    ret <4 x i8> [[COND_I]]
 ;
   %sh = lshr <4 x i16> %add, <i16 8, i16 8, i16 8, i16 8>
@@ -188,7 +188,7 @@ define i8 @testi16i8_revcmp(i16 %add) {
 ; CHECK-LABEL: @testi16i8_revcmp(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.smax.i16(i16 [[ADD:%.*]], i16 -128)
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.smin.i16(i16 [[TMP1]], i16 127)
-; CHECK-NEXT:    [[COND_I:%.*]] = trunc i16 [[TMP2]] to i8
+; CHECK-NEXT:    [[COND_I:%.*]] = trunc nsw i16 [[TMP2]] to i8
 ; CHECK-NEXT:    ret i8 [[COND_I]]
 ;
   %sh = lshr i16 %add, 8
@@ -207,7 +207,7 @@ define i8 @testi16i8_revselect(i16 %add) {
 ; CHECK-LABEL: @testi16i8_revselect(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.smax.i16(i16 [[ADD:%.*]], i16 -128)
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.smin.i16(i16 [[TMP1]], i16 127)
-; CHECK-NEXT:    [[COND_I:%.*]] = trunc i16 [[TMP2]] to i8
+; CHECK-NEXT:    [[COND_I:%.*]] = trunc nsw i16 [[TMP2]] to i8
 ; CHECK-NEXT:    ret i8 [[COND_I]]
 ;
   %sh = lshr i16 %add, 8
@@ -268,7 +268,7 @@ define i16 @differentconsts(i32 %x, i16 %replacement_low, i16 %replacement_high)
 define i8 @badimm1(i16 %add) {
 ; CHECK-LABEL: @badimm1(
 ; CHECK-NEXT:    [[SH:%.*]] = lshr i16 [[ADD:%.*]], 9
-; CHECK-NEXT:    [[CONV_I:%.*]] = trunc i16 [[SH]] to i8
+; CHECK-NEXT:    [[CONV_I:%.*]] = trunc nuw nsw i16 [[SH]] to i8
 ; CHECK-NEXT:    [[CONV1_I:%.*]] = trunc i16 [[ADD]] to i8
 ; CHECK-NEXT:    [[SHR2_I:%.*]] = ashr i8 [[CONV1_I]], 7
 ; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp eq i8 [[SHR2_I]], [[CONV_I]]
@@ -292,7 +292,7 @@ define i8 @badimm1(i16 %add) {
 define i8 @badimm2(i16 %add) {
 ; CHECK-LABEL: @badimm2(
 ; CHECK-NEXT:    [[SH:%.*]] = lshr i16 [[ADD:%.*]], 8
-; CHECK-NEXT:    [[CONV_I:%.*]] = trunc i16 [[SH]] to i8
+; CHECK-NEXT:    [[CONV_I:%.*]] = trunc nuw i16 [[SH]] to i8
 ; CHECK-NEXT:    [[CONV1_I:%.*]] = trunc i16 [[ADD]] to i8
 ; CHECK-NEXT:    [[SHR2_I:%.*]] = ashr i8 [[CONV1_I]], 6
 ; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp eq i8 [[SHR2_I]], [[CONV_I]]
@@ -319,7 +319,7 @@ define i8 @badimm3(i16 %add) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i16 [[ADD]], 128
 ; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp ult i16 [[TMP1]], 256
 ; CHECK-NEXT:    [[SHR4_I:%.*]] = ashr i16 [[ADD]], 14
-; CHECK-NEXT:    [[CONV5_I:%.*]] = trunc i16 [[SHR4_I]] to i8
+; CHECK-NEXT:    [[CONV5_I:%.*]] = trunc nsw i16 [[SHR4_I]] to i8
 ; CHECK-NEXT:    [[XOR_I:%.*]] = xor i8 [[CONV5_I]], 127
 ; CHECK-NEXT:    [[COND_I:%.*]] = select i1 [[CMP_NOT_I]], i8 [[CONV1_I]], i8 [[XOR_I]]
 ; CHECK-NEXT:    ret i8 [[COND_I]]
@@ -567,7 +567,7 @@ define i8 @C0zero(i8 %X, i8 %y, i8 %z) {
 
 define <2 x i8> @C0zeroV(<2 x i8> %X, <2 x i8> %y, <2 x i8> %z) {
 ; CHECK-LABEL: @C0zeroV(
-; CHECK-NEXT:    [[C:%.*]] = icmp slt <2 x i8> [[X:%.*]], <i8 -10, i8 -10>
+; CHECK-NEXT:    [[C:%.*]] = icmp slt <2 x i8> [[X:%.*]], splat (i8 -10)
 ; CHECK-NEXT:    [[F:%.*]] = select <2 x i1> [[C]], <2 x i8> [[Y:%.*]], <2 x i8> [[Z:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[F]]
 ;
@@ -581,9 +581,9 @@ define <2 x i8> @C0zeroV(<2 x i8> %X, <2 x i8> %y, <2 x i8> %z) {
 
 define <2 x i8> @C0zeroVu(<2 x i8> %X, <2 x i8> %y, <2 x i8> %z) {
 ; CHECK-LABEL: @C0zeroVu(
-; CHECK-NEXT:    [[A:%.*]] = add <2 x i8> [[X:%.*]], <i8 10, i8 10>
+; CHECK-NEXT:    [[A:%.*]] = add <2 x i8> [[X:%.*]], splat (i8 10)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i8> [[A]], <i8 0, i8 10>
-; CHECK-NEXT:    [[C:%.*]] = icmp slt <2 x i8> [[X]], <i8 -10, i8 -10>
+; CHECK-NEXT:    [[C:%.*]] = icmp slt <2 x i8> [[X]], splat (i8 -10)
 ; CHECK-NEXT:    [[F:%.*]] = select <2 x i1> [[C]], <2 x i8> [[Y:%.*]], <2 x i8> [[Z:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[CMP]], <2 x i8> [[X]], <2 x i8> [[F]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
@@ -613,4 +613,171 @@ entry:
   %conv4 = trunc i32 %value to i8
   %cond = select i1 %cmp.i.i, i8 %conv4, i8 %cond.i
   ret i8 %cond
+}
+
+define i8 @clamp_i16_to_i8(i16 %x) {
+; CHECK-LABEL: @clamp_i16_to_i8(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i16 @llvm.smax.i16(i16 [[X:%.*]], i16 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.smin.i16(i16 [[TMP0]], i16 255)
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i16 [[TMP1]] to i8
+; CHECK-NEXT:    ret i8 [[TRUNC]]
+;
+entry:
+  %tobool.not = icmp ult i16 %x, 256
+  %0 = icmp sgt i16 %x, 0
+  %shr = sext i1 %0 to i16
+  %cond = select i1 %tobool.not, i16 %x, i16 %shr
+  %trunc = trunc i16 %cond to i8
+  ret i8 %trunc
+}
+
+define i8 @clamp_i32_to_i8(i32 %x) {
+; CHECK-LABEL: @clamp_i32_to_i8(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.smax.i32(i32 [[X:%.*]], i32 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smin.i32(i32 [[TMP0]], i32 255)
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i32 [[TMP1]] to i8
+; CHECK-NEXT:    ret i8 [[TRUNC]]
+;
+entry:
+  %tobool.not = icmp ult i32 %x, 256
+  %0 = icmp sgt i32 %x, 0
+  %shr = sext i1 %0 to i32
+  %cond = select i1 %tobool.not, i32 %x, i32 %shr
+  %trunc = trunc i32 %cond to i8
+  ret i8 %trunc
+}
+
+define i8 @clamp_i64_to_i8(i64 %x) {
+; CHECK-LABEL: @clamp_i64_to_i8(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.smax.i64(i64 [[X:%.*]], i64 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.smin.i64(i64 [[TMP0]], i64 255)
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i64 [[TMP1]] to i8
+; CHECK-NEXT:    ret i8 [[TRUNC]]
+;
+entry:
+  %tobool.not = icmp ult i64 %x, 256
+  %0 = icmp sgt i64 %x, 0
+  %shr = sext i1 %0 to i64
+  %cond = select i1 %tobool.not, i64 %x, i64 %shr
+  %trunc = trunc i64 %cond to i8
+  ret i8 %trunc
+}
+
+define i16 @clamp_i32_to_i16(i32 %x) {
+; CHECK-LABEL: @clamp_i32_to_i16(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.smax.i32(i32 [[X:%.*]], i32 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smin.i32(i32 [[TMP0]], i32 65535)
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i32 [[TMP1]] to i16
+; CHECK-NEXT:    ret i16 [[TRUNC]]
+;
+entry:
+  %tobool.not = icmp ult i32 %x, 65536
+  %0 = icmp sgt i32 %x, 0
+  %shr = sext i1 %0 to i32
+  %cond = select i1 %tobool.not, i32 %x, i32 %shr
+  %trunc = trunc i32 %cond to i16
+  ret i16 %trunc
+}
+
+define i16 @clamp_i64_to_i16(i64 %x) {
+; CHECK-LABEL: @clamp_i64_to_i16(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.smax.i64(i64 [[X:%.*]], i64 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.smin.i64(i64 [[TMP0]], i64 65535)
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i64 [[TMP1]] to i16
+; CHECK-NEXT:    ret i16 [[TRUNC]]
+;
+entry:
+  %tobool.not = icmp ult i64 %x, 65536
+  %0 = icmp sgt i64 %x, 0
+  %shr = sext i1 %0 to i64
+  %cond = select i1 %tobool.not, i64 %x, i64 %shr
+  %trunc = trunc i64 %cond to i16
+  ret i16 %trunc
+}
+
+define i32 @clamp_i64_to_i32(i64 %x) {
+; CHECK-LABEL: @clamp_i64_to_i32(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.smax.i64(i64 [[X:%.*]], i64 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.smin.i64(i64 [[TMP0]], i64 4294967295)
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i64 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[TRUNC]]
+;
+entry:
+  %tobool.not = icmp ult i64 %x, 4294967296
+  %0 = icmp sgt i64 %x, 0
+  %shr = sext i1 %0 to i64
+  %cond = select i1 %tobool.not, i64 %x, i64 %shr
+  %trunc = trunc i64 %cond to i32
+  ret i32 %trunc
+}
+
+define i8 @no_clamp_i32_to_i8_multiple_use_icmp(i32 %x, ptr %p) {
+; CHECK-LABEL: @no_clamp_i32_to_i8_multiple_use_icmp(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp ult i32 [[X:%.*]], 256
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[X]], 0
+; CHECK-NEXT:    [[SHR:%.*]] = sext i1 [[TMP0]] to i32
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL_NOT]], i32 [[X]], i32 [[SHR]]
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[COND]] to i8
+; CHECK-NEXT:    [[EXTRA_USE:%.*]] = sext i1 [[TOBOOL_NOT]] to i64
+; CHECK-NEXT:    store i64 [[EXTRA_USE]], ptr [[P:%.*]], align 8
+; CHECK-NEXT:    ret i8 [[TRUNC]]
+;
+entry:
+  %tobool.not = icmp ult i32 %x, 256
+  %0 = icmp sgt i32 %x, 0
+  %shr = sext i1 %0 to i32
+  %cond = select i1 %tobool.not, i32 %x, i32 %shr
+  %trunc = trunc i32 %cond to i8
+  %extra_use = sext i1 %tobool.not to i64
+  store i64 %extra_use, ptr %p, align 8
+  ret i8 %trunc
+}
+
+define i8 @no_clamp_i32_to_i8_multiple_use_select(i32 %x, ptr %p) {
+; CHECK-LABEL: @no_clamp_i32_to_i8_multiple_use_select(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp ult i32 [[X:%.*]], 256
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[X]], 0
+; CHECK-NEXT:    [[SHR:%.*]] = sext i1 [[TMP0]] to i32
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL_NOT]], i32 [[X]], i32 [[SHR]]
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[COND]] to i8
+; CHECK-NEXT:    [[EXTRA_USE:%.*]] = sext i32 [[COND]] to i64
+; CHECK-NEXT:    store i64 [[EXTRA_USE]], ptr [[P:%.*]], align 8
+; CHECK-NEXT:    ret i8 [[TRUNC]]
+;
+entry:
+  %tobool.not = icmp ult i32 %x, 256
+  %0 = icmp sgt i32 %x, 0
+  %shr = sext i1 %0 to i32
+  %cond = select i1 %tobool.not, i32 %x, i32 %shr
+  %trunc = trunc i32 %cond to i8
+  %extra_use = sext i32 %cond to i64
+  store i64 %extra_use, ptr %p, align 8
+  ret i8 %trunc
+}
+
+define <4 x i8> @no_clamp_i32_to_i8_vector(<4 x i32> %x) {
+; CHECK-LABEL: @no_clamp_i32_to_i8_vector(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp ult <4 x i32> [[X:%.*]], splat (i32 256)
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt <4 x i32> [[X]], zeroinitializer
+; CHECK-NEXT:    [[SHR:%.*]] = sext <4 x i1> [[TMP0]] to <4 x i32>
+; CHECK-NEXT:    [[COND:%.*]] = select <4 x i1> [[TOBOOL_NOT]], <4 x i32> [[X]], <4 x i32> [[SHR]]
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc <4 x i32> [[COND]] to <4 x i8>
+; CHECK-NEXT:    ret <4 x i8> [[TRUNC]]
+;
+entry:
+  %tobool.not = icmp ult <4 x i32> %x, splat(i32 256)
+  %0 = icmp sgt <4 x i32> %x, zeroinitializer
+  %shr = sext <4 x i1> %0 to <4 x i32>
+  %cond = select <4 x i1> %tobool.not, <4 x i32> %x, <4 x i32> %shr
+  %trunc = trunc <4 x i32> %cond to <4 x i8>
+  ret <4 x i8> %trunc
 }

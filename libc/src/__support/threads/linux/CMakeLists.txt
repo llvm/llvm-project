@@ -2,6 +2,8 @@ add_header_library(
   futex_word_type
   HDRS
     futex_word.h
+  DEPENDS
+    libc.hdr.stdint_proxy
 )
 
 if(NOT TARGET libc.src.__support.OSUtil.osutil)
@@ -9,15 +11,17 @@ if(NOT TARGET libc.src.__support.OSUtil.osutil)
 endif()
 
 add_header_library(
-  mutex
+  futex_utils
   HDRS
-    mutex.h
+    futex_utils.h
   DEPENDS
     .futex_word_type
     libc.include.sys_syscall
-    libc.src.__support.CPP.atomic
     libc.src.__support.OSUtil.osutil
-    libc.src.__support.threads.mutex_common
+    libc.src.__support.CPP.atomic
+    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.optional
+    libc.src.__support.time.abs_timeout
 )
 
 add_object_library(
@@ -25,9 +29,11 @@ add_object_library(
   SRCS
     thread.cpp
   DEPENDS
-    .futex_word_type
-    libc.config.linux.app_h
+    .futex_utils
+    libc.config.app_h
     libc.include.sys_syscall
+    libc.hdr.fcntl_macros
+    libc.hdr.errno_macros
     libc.src.errno.errno
     libc.src.__support.CPP.atomic
     libc.src.__support.CPP.stringstream
@@ -36,22 +42,30 @@ add_object_library(
     libc.src.__support.error_or
     libc.src.__support.threads.thread_common
   COMPILE_OPTIONS
-    -O3
+    ${libc_opt_high_flag}
     -fno-omit-frame-pointer # This allows us to sniff out the thread args from
                             # the new thread's stack reliably.
     -Wno-frame-address      # Yes, calling __builtin_return_address with a
                             # value other than 0 is dangerous. We know.
 )
 
-add_object_library(
+add_header_library(
   callonce
-  SRCS
-    callonce.cpp
   HDRS
     ../callonce.h
+    callonce.h
   DEPENDS
-    libc.include.sys_syscall
-    libc.src.__support.CPP.atomic
-    libc.src.__support.CPP.limits
-    libc.src.__support.OSUtil.osutil
+    .futex_utils
+    libc.src.__support.macros.optimization
+)
+
+add_object_library(
+  barrier
+  HDRS
+    barrier.h
+  SRCS
+    barrier.cpp
+  DEPENDS
+    libc.src.__support.threads.CndVar
+    libc.src.__support.threads.mutex
 )

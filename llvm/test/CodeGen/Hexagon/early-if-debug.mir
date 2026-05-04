@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -eif-limit=4 -run-pass hexagon-early-if -o - %s | FileCheck %s
+# RUN: llc -mtriple=hexagon -eif-limit=4 -run-pass hexagon-early-if -o - %s | FileCheck %s
 # Check that even with the limit of 4 instructions, the block bb.1 is
 # if-converted.
 

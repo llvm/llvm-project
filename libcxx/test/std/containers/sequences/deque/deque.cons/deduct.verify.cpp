@@ -22,19 +22,18 @@
 
 struct A {};
 
-int main(int, char**)
-{
-//  Test the explicit deduction guides
+int main(int, char**) {
+  //  Test the explicit deduction guides
 
-//  Test the implicit deduction guides
-    {
-//  deque (allocator &)
-    std::deque deq((std::allocator<int>()));  // expected-error {{no viable constructor or deduction guide for deduction of template arguments of 'deque'}}
-//  Note: The extra parens are necessary, since otherwise clang decides it is a function declaration.
-//  Also, we can't use {} instead of parens, because that constructs a
-//      deque<allocator<int>, allocator<allocator<int>>>
-    }
-
+  //  Test the implicit deduction guides
+  {
+    //  deque (allocator &)
+    std::deque deq((std::allocator< int>()));
+    // expected-error-re@-1 {{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}deque'}}
+    //  Note: The extra parens are necessary, since otherwise clang decides it is a function declaration.
+    //  Also, we can't use {} instead of parens, because that constructs a
+    //      deque<allocator<int>, allocator<allocator<int>>>
+  }
 
   return 0;
 }

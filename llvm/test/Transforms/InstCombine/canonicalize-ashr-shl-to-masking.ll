@@ -371,7 +371,7 @@ define i8 @positive_biggershl_shlnuwnsw_ashrexact(i8 %x) {
 
 define <2 x i8> @positive_samevar_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @positive_samevar_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nsw <2 x i8> <i8 -1, i8 -1>, [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nsw <2 x i8> splat (i8 -1), [[Y:%.*]]
 ; CHECK-NEXT:    [[RET:%.*]] = and <2 x i8> [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[RET]]
 ;
@@ -386,7 +386,7 @@ define <2 x i8> @positive_samevar_vec(<2 x i8> %x, <2 x i8> %y) {
 
 define <2 x i8> @positive_sameconst_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @positive_sameconst_vec(
-; CHECK-NEXT:    [[RET:%.*]] = and <2 x i8> [[X:%.*]], <i8 -8, i8 -8>
+; CHECK-NEXT:    [[RET:%.*]] = and <2 x i8> [[X:%.*]], splat (i8 -8)
 ; CHECK-NEXT:    ret <2 x i8> [[RET]]
 ;
   %tmp0 = ashr <2 x i8> %x, <i8 3, i8 3>
@@ -397,7 +397,7 @@ define <2 x i8> @positive_sameconst_vec(<2 x i8> %x) {
 define <3 x i8> @positive_sameconst_vec_undef0(<3 x i8> %x) {
 ; CHECK-LABEL: @positive_sameconst_vec_undef0(
 ; CHECK-NEXT:    [[TMP0:%.*]] = ashr <3 x i8> [[X:%.*]], <i8 3, i8 undef, i8 3>
-; CHECK-NEXT:    [[RET:%.*]] = shl <3 x i8> [[TMP0]], <i8 3, i8 3, i8 3>
+; CHECK-NEXT:    [[RET:%.*]] = shl <3 x i8> [[TMP0]], splat (i8 3)
 ; CHECK-NEXT:    ret <3 x i8> [[RET]]
 ;
   %tmp0 = ashr <3 x i8> %x, <i8 3, i8 undef, i8 3>
@@ -407,7 +407,7 @@ define <3 x i8> @positive_sameconst_vec_undef0(<3 x i8> %x) {
 
 define <3 x i8> @positive_sameconst_vec_undef1(<3 x i8> %x) {
 ; CHECK-LABEL: @positive_sameconst_vec_undef1(
-; CHECK-NEXT:    [[TMP0:%.*]] = ashr <3 x i8> [[X:%.*]], <i8 3, i8 3, i8 3>
+; CHECK-NEXT:    [[TMP0:%.*]] = ashr <3 x i8> [[X:%.*]], splat (i8 3)
 ; CHECK-NEXT:    [[RET:%.*]] = shl <3 x i8> [[TMP0]], <i8 3, i8 undef, i8 3>
 ; CHECK-NEXT:    ret <3 x i8> [[RET]]
 ;
@@ -428,8 +428,8 @@ define <3 x i8> @positive_sameconst_vec_undef2(<3 x i8> %x) {
 
 define <2 x i8> @positive_biggerashr_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @positive_biggerashr_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr <2 x i8> [[X:%.*]], <i8 3, i8 3>
-; CHECK-NEXT:    [[RET:%.*]] = and <2 x i8> [[TMP1]], <i8 -8, i8 -8>
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <2 x i8> [[X:%.*]], splat (i8 3)
+; CHECK-NEXT:    [[RET:%.*]] = and <2 x i8> [[TMP1]], splat (i8 -8)
 ; CHECK-NEXT:    ret <2 x i8> [[RET]]
 ;
   %tmp0 = ashr <2 x i8> %x, <i8 6, i8 6>
@@ -440,7 +440,7 @@ define <2 x i8> @positive_biggerashr_vec(<2 x i8> %x) {
 define <3 x i8> @positive_biggerashr_vec_undef0(<3 x i8> %x) {
 ; CHECK-LABEL: @positive_biggerashr_vec_undef0(
 ; CHECK-NEXT:    [[TMP0:%.*]] = ashr <3 x i8> [[X:%.*]], <i8 6, i8 undef, i8 6>
-; CHECK-NEXT:    [[RET:%.*]] = shl <3 x i8> [[TMP0]], <i8 3, i8 3, i8 3>
+; CHECK-NEXT:    [[RET:%.*]] = shl <3 x i8> [[TMP0]], splat (i8 3)
 ; CHECK-NEXT:    ret <3 x i8> [[RET]]
 ;
   %tmp0 = ashr <3 x i8> %x, <i8 6, i8 undef, i8 6>
@@ -450,7 +450,7 @@ define <3 x i8> @positive_biggerashr_vec_undef0(<3 x i8> %x) {
 
 define <3 x i8> @positive_biggerashr_vec_undef1(<3 x i8> %x) {
 ; CHECK-LABEL: @positive_biggerashr_vec_undef1(
-; CHECK-NEXT:    [[TMP0:%.*]] = ashr <3 x i8> [[X:%.*]], <i8 6, i8 6, i8 6>
+; CHECK-NEXT:    [[TMP0:%.*]] = ashr <3 x i8> [[X:%.*]], splat (i8 6)
 ; CHECK-NEXT:    [[RET:%.*]] = shl <3 x i8> [[TMP0]], <i8 3, i8 undef, i8 3>
 ; CHECK-NEXT:    ret <3 x i8> [[RET]]
 ;
@@ -472,8 +472,8 @@ define <3 x i8> @positive_biggerashr_vec_undef2(<3 x i8> %x) {
 
 define <2 x i8> @positive_biggershl_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @positive_biggershl_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i8> [[X:%.*]], <i8 3, i8 3>
-; CHECK-NEXT:    [[RET:%.*]] = and <2 x i8> [[TMP1]], <i8 -64, i8 -64>
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i8> [[X:%.*]], splat (i8 3)
+; CHECK-NEXT:    [[RET:%.*]] = and <2 x i8> [[TMP1]], splat (i8 -64)
 ; CHECK-NEXT:    ret <2 x i8> [[RET]]
 ;
   %tmp0 = ashr <2 x i8> %x, <i8 3, i8 3>
@@ -484,7 +484,7 @@ define <2 x i8> @positive_biggershl_vec(<2 x i8> %x) {
 define <3 x i8> @positive_biggershl_vec_undef0(<3 x i8> %x) {
 ; CHECK-LABEL: @positive_biggershl_vec_undef0(
 ; CHECK-NEXT:    [[TMP0:%.*]] = ashr <3 x i8> [[X:%.*]], <i8 3, i8 undef, i8 3>
-; CHECK-NEXT:    [[RET:%.*]] = shl <3 x i8> [[TMP0]], <i8 6, i8 6, i8 6>
+; CHECK-NEXT:    [[RET:%.*]] = shl <3 x i8> [[TMP0]], splat (i8 6)
 ; CHECK-NEXT:    ret <3 x i8> [[RET]]
 ;
   %tmp0 = ashr <3 x i8> %x, <i8 3, i8 undef, i8 3>
@@ -494,7 +494,7 @@ define <3 x i8> @positive_biggershl_vec_undef0(<3 x i8> %x) {
 
 define <3 x i8> @positive_biggershl_vec_undef1(<3 x i8> %x) {
 ; CHECK-LABEL: @positive_biggershl_vec_undef1(
-; CHECK-NEXT:    [[TMP0:%.*]] = ashr <3 x i8> [[X:%.*]], <i8 3, i8 3, i8 3>
+; CHECK-NEXT:    [[TMP0:%.*]] = ashr <3 x i8> [[X:%.*]], splat (i8 3)
 ; CHECK-NEXT:    [[RET:%.*]] = shl <3 x i8> [[TMP0]], <i8 6, i8 undef, i8 6>
 ; CHECK-NEXT:    ret <3 x i8> [[RET]]
 ;
@@ -563,7 +563,7 @@ define i8 @positive_biggershl_multiuse(i8 %x) {
 
 define <2 x i8> @positive_biggerashr_vec_nonsplat(<2 x i8> %x) {
 ; CHECK-LABEL: @positive_biggerashr_vec_nonsplat(
-; CHECK-NEXT:    [[TMP0:%.*]] = ashr <2 x i8> [[X:%.*]], <i8 3, i8 3>
+; CHECK-NEXT:    [[TMP0:%.*]] = ashr <2 x i8> [[X:%.*]], splat (i8 3)
 ; CHECK-NEXT:    [[RET:%.*]] = shl <2 x i8> [[TMP0]], <i8 3, i8 6>
 ; CHECK-NEXT:    ret <2 x i8> [[RET]]
 ;
@@ -575,7 +575,7 @@ define <2 x i8> @positive_biggerashr_vec_nonsplat(<2 x i8> %x) {
 define <2 x i8> @positive_biggerLashr_vec_nonsplat(<2 x i8> %x) {
 ; CHECK-LABEL: @positive_biggerLashr_vec_nonsplat(
 ; CHECK-NEXT:    [[TMP0:%.*]] = ashr <2 x i8> [[X:%.*]], <i8 3, i8 6>
-; CHECK-NEXT:    [[RET:%.*]] = shl <2 x i8> [[TMP0]], <i8 3, i8 3>
+; CHECK-NEXT:    [[RET:%.*]] = shl <2 x i8> [[TMP0]], splat (i8 3)
 ; CHECK-NEXT:    ret <2 x i8> [[RET]]
 ;
   %tmp0 = ashr <2 x i8> %x, <i8 3, i8 6>

@@ -1,10 +1,6 @@
 ; Test for the conservative assembly handling mode used by KMSAN.
-; RUN: opt < %s -msan-kernel=1 -msan-check-access-address=0                    \
-; RUN: -msan-handle-asm-conservative=0 -S -passes=msan 2>&1 | FileCheck        \
-; RUN: "-check-prefix=CHECK" %s
-; RUN: opt < %s -msan-kernel=1 -msan-check-access-address=0                    \
-; RUN: -msan-handle-asm-conservative=1 -S -passes=msan 2>&1 | FileCheck        \
-; RUN: "-check-prefixes=CHECK,CHECK-CONS" %s
+; RUN: opt < %s -msan-kernel=1 -msan-check-access-address=0 -msan-handle-asm-conservative=0 -S -passes=msan 2>&1 | FileCheck "-check-prefix=CHECK" %s
+; RUN: opt < %s -msan-kernel=1 -msan-check-access-address=0 -msan-handle-asm-conservative=1 -S -passes=msan 2>&1 | FileCheck "-check-prefixes=CHECK,CHECK-CONS" %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -72,11 +68,6 @@ if.else:                                          ; preds = %entry
 ; CHECK-CONS: call void @__msan_warning
 
 ; CHECK: call void asm "btsq $2, $1; setc $0"
-
-; Calculating the shadow offset of %bit.
-; CHECKz: [[PTR:%.*]] = ptrtoint {{.*}} %bit to i64
-; CHECKz: [[SH_NUM:%.*]] = xor i64 [[PTR]]
-; CHECKz: [[SHADOW:%.*]] = inttoptr i64 [[SH_NUM]] {{.*}}
 
 ; CHECK: [[META:%.*]] = call {{.*}} @__msan_metadata_ptr_for_load_1(ptr %bit)
 ; CHECK: [[SHADOW:%.*]] = extractvalue { ptr, ptr } [[META]], 0

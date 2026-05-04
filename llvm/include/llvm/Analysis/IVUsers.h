@@ -17,6 +17,7 @@
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/ScalarEvolutionNormalization.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/ValueHandle.h"
 
 namespace llvm {
@@ -148,6 +149,8 @@ public:
   bool isIVUserOrOperand(Instruction *Inst) const {
     return Processed.count(Inst);
   }
+
+  bool isEphemeral(const Value *V) const { return EphValues.count(V); }
 
   void releaseMemory();
 

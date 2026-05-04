@@ -67,8 +67,14 @@ public:
 
   /// Get the C++ type.
   StringRef getType() const { return type; }
+  /// Get the C++ parameter name.
+  StringRef getName() const { return name; }
   /// Returns true if the parameter has a default value.
   bool hasDefaultValue() const { return !defaultValue.empty(); }
+  /// Get the default value.
+  StringRef getDefaultValue() const { return defaultValue; }
+  /// Returns true if the parameter is optional.
+  bool isOptional() const { return optional; }
 
 private:
   /// The C++ type.
@@ -129,8 +135,7 @@ public:
                   ArrayRef<MethodParameter> parameters)
       : MethodSignature(std::forward<RetTypeT>(retType),
                         std::forward<NameT>(name),
-                        SmallVector<MethodParameter>(parameters.begin(),
-                                                     parameters.end())) {}
+                        SmallVector<MethodParameter>(parameters)) {}
   /// Create a method signature with a return type, a method name, and a
   /// variadic list of parameters.
   template <typename RetTypeT, typename NameT, typename... Parameters>
@@ -331,13 +336,23 @@ public:
       : properties(properties),
         methodSignature(std::forward<RetTypeT>(retType),
                         std::forward<NameT>(name), std::forward<Args>(args)...),
-        methodBody(properties & Declaration) {}
+        methodBody(properties & Declaration) {
+    if (!methodPropertiesAreCompatible(properties)) {
+      llvm::report_fatal_error(
+          "Invalid combination of method properties specified");
+    }
+  }
   /// Create a method with a return type, a name, method properties, and a list
   /// of parameters.
   Method(StringRef retType, StringRef name, Properties properties,
          std::initializer_list<MethodParameter> params)
       : properties(properties), methodSignature(retType, name, params),
-        methodBody(properties & Declaration) {}
+        methodBody(properties & Declaration) {
+    if (!methodPropertiesAreCompatible(properties)) {
+      llvm::report_fatal_error(
+          "Invalid combination of method properties specified");
+    }
+  }
 
   // Define move constructor and assignment operator to prevent copying.
   Method(Method &&) = default;
@@ -401,6 +416,10 @@ protected:
   MethodBody methodBody;
   /// Deprecation message if the method is deprecated.
   std::optional<std::string> deprecationMessage;
+
+  /// Utility method to verify method properties correctness.
+  [[maybe_unused]] static bool
+  methodPropertiesAreCompatible(Properties properties);
 };
 
 /// This enum describes C++ inheritance visibility.
@@ -681,7 +700,7 @@ public:
   Method *addMethod(RetTypeT &&retType, NameT &&name,
                     Method::Properties properties,
                     ArrayRef<MethodParameter> parameters) {
-    // If the class has template parameters, the has to defined inline.
+    // If the class has template parameters, then it has to be defined inline.
     if (!templateParams.empty())
       properties |= Method::Inline;
     return addMethodAndPrune(Method(std::forward<RetTypeT>(retType),
@@ -768,6 +787,10 @@ public:
     return addMethod<Properties | Method::StaticDeclaration>(
         std::forward<RetTypeT>(retType), std::forward<NameT>(name),
         std::forward<Args>(args)...);
+  }
+
+  const std::vector<std::unique_ptr<Method>> &getMethods() const {
+    return methods;
   }
 
   /// Add a new field to the class. Class fields added this way are always

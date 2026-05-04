@@ -22,10 +22,6 @@ namespace func {
 class FuncOp;
 } // namespace func
 
-namespace bufferization {
-struct OneShotBufferizationOptions;
-} // namespace bufferization
-
 #define GEN_PASS_DECL
 #include "mlir/Dialect/Linalg/Passes.h.inc" // IWYU pragma: keep
 

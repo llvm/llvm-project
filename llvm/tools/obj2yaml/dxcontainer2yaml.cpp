@@ -58,8 +58,8 @@ dumpDXContainer(MemoryBufferRef Source) {
       assert(DXIL && "Since we are iterating and found a DXIL part, "
                      "this should never not have a value");
       NewPart.Program = DXContainerYAML::DXILProgram{
-          DXIL->first.MajorVersion,
-          DXIL->first.MinorVersion,
+          DXIL->first.getMajorVersion(),
+          DXIL->first.getMinorVersion(),
           DXIL->first.ShaderKind,
           DXIL->first.Size,
           DXIL->first.Bitcode.MajorVersion,
@@ -99,7 +99,24 @@ dumpDXContainer(MemoryBufferRef Source) {
       else if (const auto *P =
                    std::get_if<dxbc::PSV::v2::RuntimeInfo>(&PSVInfo->getInfo()))
         NewPart.Info = DXContainerYAML::PSVInfo(P);
+      else if (const auto *P =
+                   std::get_if<dxbc::PSV::v3::RuntimeInfo>(&PSVInfo->getInfo()))
+        NewPart.Info = DXContainerYAML::PSVInfo(P, PSVInfo->getStringTable());
       NewPart.Info->ResourceStride = PSVInfo->getResourceStride();
+      NewPart.Info->RuntimeInfoSize = PSVInfo->getSize();
+      if (PSVInfo->getVersion() > 0) {
+        StringRef ST = PSVInfo->getStringTable();
+        size_t Pos = 0;
+        while (Pos < ST.size()) {
+          size_t End = ST.find('\0', Pos);
+          if (End == StringRef::npos)
+            End = ST.size();
+          if (End > Pos)
+            NewPart.Info->StringTable.push_back(
+                {ST.slice(Pos, End), static_cast<uint32_t>(Pos)});
+          Pos = End + 1;
+        }
+      }
       for (auto Res : PSVInfo->getResources())
         NewPart.Info->Resources.push_back(Res);
 
@@ -149,6 +166,16 @@ dumpDXContainer(MemoryBufferRef Source) {
       NewPart.Signature = dumpSignature(Container.getPatchConstantSignature());
       break;
     case dxbc::PartType::Unknown:
+      break;
+    case dxbc::PartType::RTS0:
+      std::optional<DirectX::RootSignature> RS = Container.getRootSignature();
+      if (RS.has_value()) {
+        auto RootSigDescOrErr =
+            DXContainerYAML::RootSignatureYamlDesc::create(*RS);
+        if (Error E = RootSigDescOrErr.takeError())
+          return std::move(E);
+        NewPart.RootSignature = RootSigDescOrErr.get();
+      }
       break;
     }
   }

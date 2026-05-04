@@ -6,6 +6,8 @@ from lldbgdbserverutils import *
 
 
 class GdbRemoteCompletionTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
+    SHARED_BUILD_TESTCASE = False
+
     def init_lldb_server(self):
         self.debug_monitor_exe = get_lldb_server_exe()
         if not self.debug_monitor_exe:
@@ -26,6 +28,7 @@ class GdbRemoteCompletionTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
     def generate_hex_path(self, target):
         return str(os.path.join(self.getBuildDir(), target)).encode().hex()
 
+    @skipIfRemote
     @add_test_categories(["llgs"])
     def test_autocomplete_path(self):
         self.build()

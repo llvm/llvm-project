@@ -1,9 +1,9 @@
 // RUN: not %clang_cc1 -target-feature +altivec -target-feature +vsx \
-// RUN:   -faltivec-src-compat=mixed -triple powerpc-unknown-unknown -S -emit-llvm %s -o - 2>&1 | FileCheck %s --check-prefix=ERROR
+// RUN:   -faltivec-src-compat=mixed -triple powerpc-unknown-unknown -emit-llvm %s -o - 2>&1 | FileCheck %s --check-prefix=ERROR
 // RUN: not %clang_cc1 -target-feature +altivec -target-feature +vsx \
-// RUN:   -faltivec-src-compat=gcc -triple powerpc-unknown-unknown -S -emit-llvm %s -o - 2>&1| FileCheck %s --check-prefix=ERROR
+// RUN:   -faltivec-src-compat=gcc -triple powerpc-unknown-unknown -emit-llvm %s -o - 2>&1| FileCheck %s --check-prefix=ERROR
 // RUN: %clang_cc1 -target-feature +altivec -target-feature +vsx \
-// RUN:   -faltivec-src-compat=xl -triple powerpc-unknown-unknown -S -emit-llvm %s -o - | FileCheck %s
+// RUN:   -faltivec-src-compat=xl -triple powerpc-unknown-unknown -emit-llvm %s -o - | FileCheck %s
 // RUN: %clang -mcpu=pwr8 -faltivec-src-compat=xl --target=powerpc-unknown-unknown -S -emit-llvm %s -o - | FileCheck %s
 // RUN: %clang -mcpu=pwr9 -faltivec-src-compat=xl --target=powerpc-unknown-unknown -S -emit-llvm %s -o - | FileCheck %s
 

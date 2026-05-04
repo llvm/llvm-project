@@ -13,7 +13,7 @@
 define i16 @t0(i32 %x, i16 %y) {
 ; CHECK-LABEL: @t0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = ashr i32 [[X:%.*]], 31
-; CHECK-NEXT:    [[T5:%.*]] = trunc i32 [[TMP1]] to i16
+; CHECK-NEXT:    [[T5:%.*]] = trunc nsw i32 [[TMP1]] to i16
 ; CHECK-NEXT:    ret i16 [[T5]]
 ;
   %t0 = sub i16 32, %y
@@ -29,8 +29,8 @@ define i16 @t0(i32 %x, i16 %y) {
 
 define <2 x i16> @t1_vec_splat(<2 x i32> %x, <2 x i16> %y) {
 ; CHECK-LABEL: @t1_vec_splat(
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr <2 x i32> [[X:%.*]], <i32 31, i32 31>
-; CHECK-NEXT:    [[T5:%.*]] = trunc <2 x i32> [[TMP1]] to <2 x i16>
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <2 x i32> [[X:%.*]], splat (i32 31)
+; CHECK-NEXT:    [[T5:%.*]] = trunc nsw <2 x i32> [[TMP1]] to <2 x i16>
 ; CHECK-NEXT:    ret <2 x i16> [[T5]]
 ;
   %t0 = sub <2 x i16> <i16 32, i16 32>, %y
@@ -42,13 +42,13 @@ define <2 x i16> @t1_vec_splat(<2 x i32> %x, <2 x i16> %y) {
   ret <2 x i16> %t5
 }
 
-define <3 x i16> @t3_vec_nonsplat_undef0(<3 x i32> %x, <3 x i16> %y) {
-; CHECK-LABEL: @t3_vec_nonsplat_undef0(
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr <3 x i32> [[X:%.*]], <i32 31, i32 0, i32 31>
+define <3 x i16> @t3_vec_nonsplat_poison0(<3 x i32> %x, <3 x i16> %y) {
+; CHECK-LABEL: @t3_vec_nonsplat_poison0(
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <3 x i32> [[X:%.*]], <i32 31, i32 poison, i32 31>
 ; CHECK-NEXT:    [[T5:%.*]] = trunc <3 x i32> [[TMP1]] to <3 x i16>
 ; CHECK-NEXT:    ret <3 x i16> [[T5]]
 ;
-  %t0 = sub <3 x i16> <i16 32, i16 undef, i16 32>, %y
+  %t0 = sub <3 x i16> <i16 32, i16 poison, i16 32>, %y
   %t1 = zext <3 x i16> %t0 to <3 x i32>
   %t2 = ashr <3 x i32> %x, %t1
   %t3 = trunc <3 x i32> %t2 to <3 x i16>
@@ -57,9 +57,9 @@ define <3 x i16> @t3_vec_nonsplat_undef0(<3 x i32> %x, <3 x i16> %y) {
   ret <3 x i16> %t5
 }
 
-define <3 x i16> @t4_vec_nonsplat_undef1(<3 x i32> %x, <3 x i16> %y) {
-; CHECK-LABEL: @t4_vec_nonsplat_undef1(
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr <3 x i32> [[X:%.*]], <i32 31, i32 0, i32 31>
+define <3 x i16> @t4_vec_nonsplat_poison1(<3 x i32> %x, <3 x i16> %y) {
+; CHECK-LABEL: @t4_vec_nonsplat_poison1(
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <3 x i32> [[X:%.*]], <i32 31, i32 poison, i32 31>
 ; CHECK-NEXT:    [[T5:%.*]] = trunc <3 x i32> [[TMP1]] to <3 x i16>
 ; CHECK-NEXT:    ret <3 x i16> [[T5]]
 ;
@@ -67,22 +67,22 @@ define <3 x i16> @t4_vec_nonsplat_undef1(<3 x i32> %x, <3 x i16> %y) {
   %t1 = zext <3 x i16> %t0 to <3 x i32>
   %t2 = ashr <3 x i32> %x, %t1
   %t3 = trunc <3 x i32> %t2 to <3 x i16>
-  %t4 = add <3 x i16> %y, <i16 -1, i16 undef, i16 -1>
+  %t4 = add <3 x i16> %y, <i16 -1, i16 poison, i16 -1>
   %t5 = ashr <3 x i16> %t3, %t4
   ret <3 x i16> %t5
 }
 
-define <3 x i16> @t5_vec_nonsplat_undef1(<3 x i32> %x, <3 x i16> %y) {
-; CHECK-LABEL: @t5_vec_nonsplat_undef1(
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr <3 x i32> [[X:%.*]], <i32 31, i32 0, i32 31>
+define <3 x i16> @t5_vec_nonsplat_poison1(<3 x i32> %x, <3 x i16> %y) {
+; CHECK-LABEL: @t5_vec_nonsplat_poison1(
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <3 x i32> [[X:%.*]], <i32 31, i32 poison, i32 31>
 ; CHECK-NEXT:    [[T5:%.*]] = trunc <3 x i32> [[TMP1]] to <3 x i16>
 ; CHECK-NEXT:    ret <3 x i16> [[T5]]
 ;
-  %t0 = sub <3 x i16> <i16 32, i16 undef, i16 32>, %y
+  %t0 = sub <3 x i16> <i16 32, i16 poison, i16 32>, %y
   %t1 = zext <3 x i16> %t0 to <3 x i32>
   %t2 = ashr <3 x i32> %x, %t1
   %t3 = trunc <3 x i32> %t2 to <3 x i16>
-  %t4 = add <3 x i16> %y, <i16 -1, i16 undef, i16 -1>
+  %t4 = add <3 x i16> %y, <i16 -1, i16 poison, i16 -1>
   %t5 = ashr <3 x i16> %t3, %t4
   ret <3 x i16> %t5
 }
@@ -100,7 +100,7 @@ define i16 @t6_extrause0(i32 %x, i16 %y) {
 ; CHECK-NEXT:    [[T3:%.*]] = trunc i32 [[T2]] to i16
 ; CHECK-NEXT:    call void @use16(i16 [[T3]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = ashr i32 [[X]], 31
-; CHECK-NEXT:    [[T5:%.*]] = trunc i32 [[TMP1]] to i16
+; CHECK-NEXT:    [[T5:%.*]] = trunc nsw i32 [[TMP1]] to i16
 ; CHECK-NEXT:    ret i16 [[T5]]
 ;
   %t0 = sub i16 32, %y
@@ -118,7 +118,7 @@ define i16 @t7_extrause1(i32 %x, i16 %y) {
 ; CHECK-NEXT:    [[T4:%.*]] = add i16 [[Y:%.*]], -1
 ; CHECK-NEXT:    call void @use16(i16 [[T4]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = ashr i32 [[X:%.*]], 31
-; CHECK-NEXT:    [[T5:%.*]] = trunc i32 [[TMP1]] to i16
+; CHECK-NEXT:    [[T5:%.*]] = trunc nsw i32 [[TMP1]] to i16
 ; CHECK-NEXT:    ret i16 [[T5]]
 ;
   %t0 = sub i16 32, %y

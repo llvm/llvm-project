@@ -3,6 +3,8 @@
 ## Show that yaml2obj is able to produce relocations for an unknown e_machine kind properly.
 # RUN: yaml2obj %s -o %t1 -DMACHINE=0x1234
 # RUN: llvm-readelf %t1 --relocations | FileCheck %s -DFIRST=Unknown -DSECOND=Unknown
+# RUN: yaml2obj %s -o %t1 -DMACHINE=0x1234 -DTYPE=SHT_CREL
+# RUN: llvm-readelf %t1 --relocations | FileCheck %s -DFIRST=Unknown -DSECOND=Unknown
 
 # CHECK: Relocation section '.rela.text' at offset 0x40 contains 4 entries:
 # CHECK:      Offset            Info             Type
@@ -23,7 +25,7 @@ FileHeader:
   Machine: [[MACHINE]]
 Sections:
   - Name: .rela.text
-    Type: SHT_RELA
+    Type: [[TYPE=SHT_RELA]]
     Relocations:
 ## Test a few noticeable possible values: 0, 1, max(int8_t)=127, max(uint8_t)=0xFF=-1
       - Offset: 0x9

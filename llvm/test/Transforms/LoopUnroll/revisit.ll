@@ -33,7 +33,7 @@ l0.0.0.ph:
 l0.0.0:
   %cond.0.0.0 = load volatile i1, ptr %ptr
   br i1 %cond.0.0.0, label %l0.0.0, label %l0.0.1.ph
-; CHECK: LoopFullUnrollPass on l0.0.0
+; CHECK: LoopFullUnrollPass on loop %l0.0.0
 ; CHECK-NOT: LoopFullUnrollPass
 
 l0.0.1.ph:
@@ -42,29 +42,29 @@ l0.0.1.ph:
 l0.0.1:
   %cond.0.0.1 = load volatile i1, ptr %ptr
   br i1 %cond.0.0.1, label %l0.0.1, label %l0.0.latch
-; CHECK: LoopFullUnrollPass on l0.0.1
+; CHECK: LoopFullUnrollPass on loop %l0.0.1 in function full_unroll
 ; CHECK-NOT: LoopFullUnrollPass
 
 l0.0.latch:
   %cmp = icmp slt i32 %iv.next, 2
   br i1 %cmp, label %l0.0, label %l0.latch
-; CHECK: LoopFullUnrollPass on l0.0
+; CHECK: LoopFullUnrollPass on loop %l0.0 in function full_unroll
 ; CHECK-NOT: LoopFullUnrollPass
 ;
 ; Unrolling occurs, so we visit what were the inner loops twice over. First we
 ; visit their clones, and then we visit the original loops re-parented.
-; CHECK: LoopFullUnrollPass on l0.0.1.1
+; CHECK: LoopFullUnrollPass on loop %l0.0.1.1 in function full_unroll 
 ; CHECK-NOT: LoopFullUnrollPass
-; CHECK: LoopFullUnrollPass on l0.0.0.1
+; CHECK: LoopFullUnrollPass on loop %l0.0.0.1 in function full_unroll
 ; CHECK-NOT: LoopFullUnrollPass
-; CHECK: LoopFullUnrollPass on l0.0.1
+; CHECK: LoopFullUnrollPass on loop %l0.0.1 in function full_unroll
 ; CHECK-NOT: LoopFullUnrollPass
-; CHECK: LoopFullUnrollPass on l0.0.0
+; CHECK: LoopFullUnrollPass on loop %l0.0.0 in function full_unroll
 ; CHECK-NOT: LoopFullUnrollPass
 
 l0.latch:
   br label %l0
-; CHECK: LoopFullUnrollPass on l0
+; CHECK: LoopFullUnrollPass on loop %l0 in function full_unroll
 ; CHECK-NOT: LoopFullUnrollPass
 
 exit:

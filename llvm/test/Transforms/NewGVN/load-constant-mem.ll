@@ -7,14 +7,14 @@ define i32 @test(ptr %p, i32 %i) nounwind {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[P:%.*]] = getelementptr [4 x i32], ptr @G, i32 0, i32 [[I:%.*]]
-; CHECK-NEXT:    store i8 4, ptr [[P:%.*]]
+; CHECK-NEXT:    store i8 4, ptr [[P1:%.*]], align 1
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
-  %P = getelementptr [4 x i32], ptr @G, i32 0, i32 %i
-  %A = load i32, ptr %P
+  %p.i = getelementptr [4 x i32], ptr @G, i32 0, i32 %i
+  %A = load i32, ptr %p.i
   store i8 4, ptr %p
-  %B = load i32, ptr %P
+  %B = load i32, ptr %p.i
   %C = sub i32 %A, %B
   ret i32 %C
 }

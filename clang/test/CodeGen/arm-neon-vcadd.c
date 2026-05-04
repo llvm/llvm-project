@@ -1,6 +1,6 @@
 // REQUIRES: arm-registered-target
 // RUN: %clang_cc1 -triple armv8.3a-arm-none-eabi -target-cpu generic \
-// RUN: -target-feature +fullfp16 -mfloat-abi soft -S -emit-llvm -o - %s | \
+// RUN: -target-feature +fullfp16 -mfloat-abi soft -emit-llvm -o - %s | \
 // RUN: opt -S -passes=sroa -o - | FileCheck %s
 
 #include <arm_neon.h>

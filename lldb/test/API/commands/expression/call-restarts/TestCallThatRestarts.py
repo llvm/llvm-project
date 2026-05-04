@@ -1,4 +1,4 @@
-﻿"""
+"""
 Test calling a function that hits a signal set to auto-restart, make sure the call completes.
 """
 
@@ -9,6 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfNoSignals
 class ExprCommandThatRestartsTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -x c -S -emit-llvm -o - -triple x86_64-apple-darwin10 %s \
+// RUN: %clang_cc1 -x c -emit-llvm -o - -triple x86_64-apple-darwin10 %s \
 // RUN:   -w -fsanitize=signed-integer-overflow,unsigned-integer-overflow,integer-divide-by-zero,float-divide-by-zero \
 // RUN:   | FileCheck %s
 

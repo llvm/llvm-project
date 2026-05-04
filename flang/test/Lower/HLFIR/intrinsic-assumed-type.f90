@@ -2,7 +2,7 @@
 ! arguments. These are a bit special because semantics do not represent
 ! assumed types actual arguments with an evaluate::Expr like for usual
 ! arguments.
-! RUN: bbc -emit-hlfir --polymorphic-type -o - %s | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 
 subroutine assumed_type_to_intrinsic(a)
   type(*) :: a(:)

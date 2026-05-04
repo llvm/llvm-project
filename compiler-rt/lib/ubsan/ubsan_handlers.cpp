@@ -405,6 +405,28 @@ void __ubsan::__ubsan_handle_out_of_bounds_abort(OutOfBoundsData *Data,
   Die();
 }
 
+static void handleLocalOutOfBoundsImpl(ReportOptions Opts) {
+  // FIXME: Pass more diagnostic info.
+  SymbolizedStackHolder CallerLoc;
+  CallerLoc.reset(getCallerLocation(Opts.pc));
+  Location Loc;
+  Loc = CallerLoc;
+  ErrorType ET = ErrorType::LocalOutOfBounds;
+  ScopedReport R(Opts, Loc, ET);
+  Diag(Loc, DL_Error, ET, "access out of bounds");
+}
+
+void __ubsan::__ubsan_handle_local_out_of_bounds() {
+  GET_REPORT_OPTIONS(false);
+  handleLocalOutOfBoundsImpl(Opts);
+}
+
+void __ubsan::__ubsan_handle_local_out_of_bounds_abort() {
+  GET_REPORT_OPTIONS(true);
+  handleLocalOutOfBoundsImpl(Opts);
+  Die();
+}
+
 static void handleBuiltinUnreachableImpl(UnreachableData *Data,
                                          ReportOptions Opts) {
   ErrorType ET = ErrorType::UnreachableCall;
@@ -555,13 +577,11 @@ static void handleImplicitConversion(ImplicitConversionData *Data,
                                      ReportOptions Opts, ValueHandle Src,
                                      ValueHandle Dst) {
   SourceLocation Loc = Data->Loc.acquire();
-  ErrorType ET = ErrorType::GenericUB;
-
   const TypeDescriptor &SrcTy = Data->FromType;
   const TypeDescriptor &DstTy = Data->ToType;
-
   bool SrcSigned = SrcTy.isSignedIntegerTy();
   bool DstSigned = DstTy.isSignedIntegerTy();
+  ErrorType ET = ErrorType::GenericUB;
 
   switch (Data->Kind) {
   case ICCK_IntegerTruncation: { // Legacy, no longer used.
@@ -594,14 +614,23 @@ static void handleImplicitConversion(ImplicitConversionData *Data,
 
   ScopedReport R(Opts, Loc, ET);
 
+  // In the case we have a bitfield, we want to explicitly say so in the
+  // error message.
   // FIXME: is it possible to dump the values as hex with fixed width?
-
-  Diag(Loc, DL_Error, ET,
-       "implicit conversion from type %0 of value %1 (%2-bit, %3signed) to "
-       "type %4 changed the value to %5 (%6-bit, %7signed)")
-      << SrcTy << Value(SrcTy, Src) << SrcTy.getIntegerBitWidth()
-      << (SrcSigned ? "" : "un") << DstTy << Value(DstTy, Dst)
-      << DstTy.getIntegerBitWidth() << (DstSigned ? "" : "un");
+  if (Data->BitfieldBits)
+    Diag(Loc, DL_Error, ET,
+         "implicit conversion from type %0 of value %1 (%2-bit, %3signed) to "
+         "type %4 changed the value to %5 (%6-bit bitfield, %7signed)")
+        << SrcTy << Value(SrcTy, Src) << SrcTy.getIntegerBitWidth()
+        << (SrcSigned ? "" : "un") << DstTy << Value(DstTy, Dst)
+        << Data->BitfieldBits << (DstSigned ? "" : "un");
+  else
+    Diag(Loc, DL_Error, ET,
+         "implicit conversion from type %0 of value %1 (%2-bit, %3signed) to "
+         "type %4 changed the value to %5 (%6-bit, %7signed)")
+        << SrcTy << Value(SrcTy, Src) << SrcTy.getIntegerBitWidth()
+        << (SrcSigned ? "" : "un") << DstTy << Value(DstTy, Dst)
+        << DstTy.getIntegerBitWidth() << (DstSigned ? "" : "un");
 }
 
 void __ubsan::__ubsan_handle_implicit_conversion(ImplicitConversionData *Data,
@@ -626,13 +655,16 @@ static void handleInvalidBuiltin(InvalidBuiltinData *Data, ReportOptions Opts) {
 
   ScopedReport R(Opts, Loc, ET);
 
-  Diag(Loc, DL_Error, ET,
-       "passing zero to %0, which is not a valid argument")
-    << ((Data->Kind == BCK_CTZPassedZero) ? "ctz()" : "clz()");
+  if (Data->Kind == BCK_AssumePassedFalse)
+    Diag(Loc, DL_Error, ET, "assumption is violated during execution");
+  else
+    Diag(Loc, DL_Error, ET,
+         "passing zero to __builtin_%0(), which is not a valid argument")
+        << ((Data->Kind == BCK_CTZPassedZero) ? "ctz" : "clz");
 }
 
 void __ubsan::__ubsan_handle_invalid_builtin(InvalidBuiltinData *Data) {
-  GET_REPORT_OPTIONS(true);
+  GET_REPORT_OPTIONS(false);
   handleInvalidBuiltin(Data, Opts);
 }
 void __ubsan::__ubsan_handle_invalid_builtin_abort(InvalidBuiltinData *Data) {
@@ -823,6 +855,32 @@ void __ubsan::__ubsan_handle_pointer_overflow_abort(PointerOverflowData *Data,
   Die();
 }
 
+// Returns true if this is an artificial debug location created by the
+// LowerTypeTests pass (see createJumpTableDebugInfo in LLVM).
+static bool isArtificialStack(const SymbolizedStack *S) {
+  static constexpr char kSuffix[] = "ubsan_interface.h";
+  if (!S || !S->info.function || !S->info.file)
+    return false;
+  const char *File = S->info.file;
+  uptr FileLen = internal_strlen(File);
+  uptr SuffixLen = internal_strlen(kSuffix);
+  if (FileLen < SuffixLen)
+    return false;
+  return internal_strcmp(File + FileLen - SuffixLen, kSuffix) == 0;
+}
+
+// Stripping the file name from artificial frames forces the UBSan Diag
+// to fall back to module names. This preserves the original behavior
+// of showing the module, while still allowing the symbolizer
+// to include the helpful (.cfi_jt) function suffix.
+static SymbolizedStack *removeArtificialFiles(SymbolizedStack *FS) {
+  for (SymbolizedStack *S = FS; S; S = S->next) {
+    if (isArtificialStack(S))
+      S->info.file = nullptr;
+  }
+  return FS;
+}
+
 static void handleCFIBadIcall(CFICheckFailData *Data, ValueHandle Function,
                               ReportOptions Opts) {
   if (Data->CheckKind != CFITCK_ICall && Data->CheckKind != CFITCK_NVMFCall)
@@ -843,7 +901,9 @@ static void handleCFIBadIcall(CFICheckFailData *Data, ValueHandle Function,
        "control flow integrity check for type %0 failed during %1")
       << Data->Type << CheckKindStr;
 
-  SymbolizedStackHolder FLoc(getSymbolizedLocation(Function));
+  SymbolizedStackHolder FLoc(
+      removeArtificialFiles(getSymbolizedLocation(Function)));
+
   const char *FName = FLoc.get()->info.function;
   if (!FName)
     FName = "(unknown)";
@@ -867,10 +927,7 @@ static void handleCFIBadIcall(CFICheckFailData *Data, ValueHandle Function,
 
 namespace __ubsan {
 
-#ifdef UBSAN_CAN_USE_CXXABI
-
 #ifdef _WIN32
-
 extern "C" void __ubsan_handle_cfi_bad_type_default(CFICheckFailData *Data,
                                                     ValueHandle Vtable,
                                                     bool ValidVtable,
@@ -879,20 +936,17 @@ extern "C" void __ubsan_handle_cfi_bad_type_default(CFICheckFailData *Data,
 }
 
 WIN_WEAK_ALIAS(__ubsan_handle_cfi_bad_type, __ubsan_handle_cfi_bad_type_default)
-#else
-SANITIZER_WEAK_ATTRIBUTE
-#endif
 void __ubsan_handle_cfi_bad_type(CFICheckFailData *Data, ValueHandle Vtable,
                                  bool ValidVtable, ReportOptions Opts);
-
 #else
+SANITIZER_WEAK_ATTRIBUTE
 void __ubsan_handle_cfi_bad_type(CFICheckFailData *Data, ValueHandle Vtable,
                                  bool ValidVtable, ReportOptions Opts) {
   Die();
 }
 #endif
 
-}  // namespace __ubsan
+} // namespace __ubsan
 
 void __ubsan::__ubsan_handle_cfi_check_fail(CFICheckFailData *Data,
                                             ValueHandle Value,

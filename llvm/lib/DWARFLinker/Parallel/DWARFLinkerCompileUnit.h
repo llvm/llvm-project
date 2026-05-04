@@ -11,6 +11,7 @@
 
 #include "DWARFLinkerUnit.h"
 #include "llvm/DWARFLinker/DWARFFile.h"
+#include <limits>
 #include <optional>
 
 namespace llvm {
@@ -110,6 +111,12 @@ public:
   /// Returns DWARFFile containing this compile unit.
   const DWARFFile &getContaingFile() const { return File; }
 
+  /// Set deterministic priority for type DIE allocation ordering.
+  /// Lower priority values win when multiple CUs race to define the same type.
+  llvm::Error setPriority(uint64_t ObjFileIdx, uint64_t LocalIdx);
+
+  uint64_t getPriority() const { return Priority; }
+
   /// Load DIEs of input compilation unit. \returns true if input DIEs
   /// successfully loaded.
   bool loadInputDIEs();
@@ -201,7 +208,7 @@ public:
     bool setPlacementIfUnset(DieOutputPlacement Placement) {
       auto InputData = Flags.load();
       if ((InputData & 0x7) == NotSet)
-        if (Flags.compare_exchange_weak(InputData, (InputData | Placement)))
+        if (Flags.compare_exchange_strong(InputData, (InputData | Placement)))
           return true;
 
       return false;
@@ -691,7 +698,7 @@ private:
 
   std::unique_ptr<DependencyTracker> Dependencies;
 
-  /// \defgroup Data Members accessed asinchronously.
+  /// \defgroup Data Members accessed asynchronously.
   ///
   /// @{
   OffsetToUnitTy getUnitFromOffset;
@@ -701,6 +708,9 @@ private:
 
   /// Flag indicating whether type de-duplication is forbidden.
   bool NoODR = true;
+
+  /// Deterministic priority for type DIE allocation (lower wins).
+  uint64_t Priority = std::numeric_limits<uint64_t>::max();
 
   /// The ranges in that map are the PC ranges for functions in this unit,
   /// associated with the PC offset to apply to the addresses to get

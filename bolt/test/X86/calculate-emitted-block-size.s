@@ -1,6 +1,6 @@
-# Test BinaryContext::calculateEmittedSize's functionality to update
-# BinaryBasicBlock::OutputAddressRange in place so that the emitted size
-# of each basic block is given by BinaryBasicBlock::getOutputSize()
+## Test BinaryContext::calculateEmittedSize's functionality to update
+## BinaryBasicBlock::OutputAddressRange in place so that the emitted size
+## of each basic block is given by BinaryBasicBlock::getOutputSize()
 
 # RUN: llvm-mc --filetype=obj --triple x86_64-unknown-unknown %s -o %t.o
 # RUN: link_fdata %s %t.o %t.fdata

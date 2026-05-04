@@ -210,4 +210,6 @@ void correct(std::optional<int> param)
   std::optional<long>* p2 = &p;
   takeOptionalValue(p2->value_or(5U));
   takeOptionalRef(p2->value_or(5U));
+
+  using Type = decltype(takeOptionalValue(*param));
 }

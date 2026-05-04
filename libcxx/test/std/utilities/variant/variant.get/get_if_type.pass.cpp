@@ -42,30 +42,6 @@ void test_const_get_if() {
     static_assert(*std::get_if<const long>(&v) == 42, "");
     static_assert(std::get_if<int>(&v) == nullptr, "");
   }
-// FIXME: Remove these once reference support is reinstated
-#if !defined(TEST_VARIANT_HAS_NO_REFERENCES)
-  {
-    using V = std::variant<int &>;
-    int x = 42;
-    const V v(x);
-    ASSERT_SAME_TYPE(decltype(std::get_if<int &>(&v)), int *);
-    assert(std::get_if<int &>(&v) == &x);
-  }
-  {
-    using V = std::variant<int &&>;
-    int x = 42;
-    const V v(std::move(x));
-    ASSERT_SAME_TYPE(decltype(std::get_if<int &&>(&v)), int *);
-    assert(std::get_if<int &&>(&v) == &x);
-  }
-  {
-    using V = std::variant<const int &&>;
-    int x = 42;
-    const V v(std::move(x));
-    ASSERT_SAME_TYPE(decltype(std::get_if<const int &&>(&v)), const int *);
-    assert(std::get_if<const int &&>(&v) == &x);
-  }
-#endif
 }
 
 void test_get_if() {
@@ -89,37 +65,6 @@ void test_get_if() {
     assert(*std::get_if<const long>(&v) == 42);
     assert(std::get_if<int>(&v) == nullptr);
   }
-// FIXME: Remove these once reference support is reinstated
-#if !defined(TEST_VARIANT_HAS_NO_REFERENCES)
-  {
-    using V = std::variant<int &>;
-    int x = 42;
-    V v(x);
-    ASSERT_SAME_TYPE(decltype(std::get_if<int &>(&v)), int *);
-    assert(std::get_if<int &>(&v) == &x);
-  }
-  {
-    using V = std::variant<const int &>;
-    int x = 42;
-    V v(x);
-    ASSERT_SAME_TYPE(decltype(std::get_if<const int &>(&v)), const int *);
-    assert(std::get_if<const int &>(&v) == &x);
-  }
-  {
-    using V = std::variant<int &&>;
-    int x = 42;
-    V v(std::move(x));
-    ASSERT_SAME_TYPE(decltype(std::get_if<int &&>(&v)), int *);
-    assert(std::get_if<int &&>(&v) == &x);
-  }
-  {
-    using V = std::variant<const int &&>;
-    int x = 42;
-    V v(std::move(x));
-    ASSERT_SAME_TYPE(decltype(std::get_if<const int &&>(&v)), const int *);
-    assert(std::get_if<const int &&>(&v) == &x);
-  }
-#endif
 }
 
 int main(int, char**) {

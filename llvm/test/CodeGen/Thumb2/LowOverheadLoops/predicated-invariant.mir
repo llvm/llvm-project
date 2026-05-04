@@ -74,34 +74,43 @@ machineFunctionInfo: {}
 body:             |
   ; CHECK-LABEL: name: invariant_predicated_add_use
   ; CHECK: bb.0.entry:
-  ; CHECK:   successors: %bb.3(0x30000000), %bb.1(0x50000000)
-  ; CHECK:   liveins: $lr, $r0, $r2, $r7
-  ; CHECK:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r7, killed $lr, implicit-def $sp, implicit $sp
-  ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
-  ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -4
-  ; CHECK:   frame-setup CFI_INSTRUCTION offset $r7, -8
-  ; CHECK:   tCBZ $r2, %bb.3
-  ; CHECK: bb.1.vector.ph:
-  ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   liveins: $r0, $r2
-  ; CHECK:   renamable $r1 = tADDrSPi $sp, 2, 14 /* CC::al */, $noreg
-  ; CHECK:   renamable $q0 = MVE_VLDRWU32 killed renamable $r1, 0, 0, $noreg, $noreg :: (load (s128) from %fixed-stack.0, align 8)
-  ; CHECK:   $lr = MVE_DLSTP_32 killed renamable $r2
-  ; CHECK: bb.2.vector.body:
-  ; CHECK:   successors: %bb.2(0x7c000000), %bb.4(0x04000000)
-  ; CHECK:   liveins: $lr, $q0, $r0
-  ; CHECK:   renamable $r0, renamable $q1 = MVE_VLDRHS32_post killed renamable $r0, 8, 0, $noreg, $noreg :: (load (s64) from %ir.lsr.iv17, align 2)
-  ; CHECK:   renamable $q1 = MVE_VADDi32 renamable $q0, killed renamable $q1, 0, killed $noreg, $noreg, undef renamable $q1
-  ; CHECK:   $lr = MVE_LETP killed renamable $lr, %bb.2
-  ; CHECK:   tB %bb.4, 14 /* CC::al */, $noreg
-  ; CHECK: bb.3:
-  ; CHECK:   successors: %bb.4(0x80000000)
-  ; CHECK:   renamable $q1 = MVE_VMOVimmi32 0, 0, $noreg, $noreg, undef renamable $q1
-  ; CHECK: bb.4.exit:
-  ; CHECK:   liveins: $q1
-  ; CHECK:   renamable $r0, renamable $r1 = VMOVRRD renamable $d2, 14 /* CC::al */, $noreg
-  ; CHECK:   renamable $r2, renamable $r3 = VMOVRRD killed renamable $d3, 14 /* CC::al */, $noreg, implicit killed $q1
-  ; CHECK:   tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc, implicit killed $r0, implicit killed $r1, implicit killed $r2, implicit killed $r3
+  ; CHECK-NEXT:   successors: %bb.3(0x30000000), %bb.1(0x50000000)
+  ; CHECK-NEXT:   liveins: $lr, $r0, $r2, $r7
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   frame-setup tPUSH 14 /* CC::al */, $noreg, killed $r7, killed $lr, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $lr, -4
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $r7, -8
+  ; CHECK-NEXT:   tCBZ $r2, %bb.3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1.vector.ph:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT:   liveins: $r0, $r2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $r1 = tADDrSPi $sp, 2, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   renamable $q0 = MVE_VLDRWU32 killed renamable $r1, 0, 0, $noreg, $noreg :: (load (s128) from %fixed-stack.0, align 8)
+  ; CHECK-NEXT:   $lr = MVE_DLSTP_32 killed renamable $r2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2.vector.body:
+  ; CHECK-NEXT:   successors: %bb.2(0x7c000000), %bb.4(0x04000000)
+  ; CHECK-NEXT:   liveins: $lr, $q0, $r0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $r0, renamable $q1 = MVE_VLDRHS32_post killed renamable $r0, 8, 0, $noreg, $noreg :: (load (s64) from %ir.lsr.iv17, align 2)
+  ; CHECK-NEXT:   renamable $q1 = MVE_VADDi32 renamable $q0, killed renamable $q1, 0, killed $noreg, $noreg, undef renamable $q1
+  ; CHECK-NEXT:   $lr = MVE_LETP killed renamable $lr, %bb.2
+  ; CHECK-NEXT:   tB %bb.4, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3:
+  ; CHECK-NEXT:   successors: %bb.4(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $q1 = MVE_VMOVimmi32 0, 0, $noreg, $noreg, undef renamable $q1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.4.exit:
+  ; CHECK-NEXT:   liveins: $q1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $r0, renamable $r1 = VMOVRRD renamable $d2, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   renamable $r2, renamable $r3 = VMOVRRD killed renamable $d3, 14 /* CC::al */, $noreg, implicit killed $q1
+  ; CHECK-NEXT:   tPOP_RET 14 /* CC::al */, $noreg, def $r7, def $pc, implicit killed $r0, implicit killed $r1, implicit killed $r2, implicit killed $r3
   bb.0.entry:
     successors: %bb.3(0x30000000), %bb.1(0x50000000)
     liveins: $r0, $r2, $r7, $lr

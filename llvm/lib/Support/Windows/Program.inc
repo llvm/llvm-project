@@ -23,7 +23,6 @@
 #include <fcntl.h>
 #include <io.h>
 #include <malloc.h>
-#include <numeric>
 #include <psapi.h>
 
 //===----------------------------------------------------------------------===//
@@ -220,6 +219,9 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
       llvm::append_range(EnvBlock, EnvString);
       EnvBlock.push_back(0);
     }
+    // Empty environments need to be terminated with two nulls.
+    if (Env->size() == 0)
+      EnvBlock.push_back(0);
     EnvBlock.push_back(0);
   }
 
@@ -506,14 +508,14 @@ std::error_code llvm::sys::ChangeStdoutMode(sys::fs::OpenFlags Flags) {
 std::error_code sys::ChangeStdinToBinary() {
   int result = _setmode(_fileno(stdin), _O_BINARY);
   if (result == -1)
-    return std::error_code(errno, std::generic_category());
+    return errnoAsErrorCode();
   return std::error_code();
 }
 
 std::error_code sys::ChangeStdoutToBinary() {
   int result = _setmode(_fileno(stdout), _O_BINARY);
   if (result == -1)
-    return std::error_code(errno, std::generic_category());
+    return errnoAsErrorCode();
   return std::error_code();
 }
 

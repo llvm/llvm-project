@@ -42,9 +42,8 @@ define i64 @loopif(ptr nocapture readonly %x, i32 %y, i32 %n) {
 ; CHECK-NEXT:    cmp r2, #1
 ; CHECK-NEXT:    blt .LBB1_4
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.lr.ph
-; CHECK-NEXT:    mov lr, r2
-; CHECK-NEXT:    mov r12, r0
 ; CHECK-NEXT:    dls lr, r2
+; CHECK-NEXT:    mov r12, r0
 ; CHECK-NEXT:    movs r0, #0
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    .p2align 2

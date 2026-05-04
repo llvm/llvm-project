@@ -17,7 +17,7 @@
 #include <__config>
 #include <__iterator/iterator_traits.h>
 #include <__type_traits/common_type.h>
-#include <__type_traits/is_copy_constructible.h>
+#include <__type_traits/is_constructible.h>
 #include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -37,13 +37,13 @@ template <class _InputIterator1, class _InputIterator2, class _Cmp>
 _LIBCPP_HIDE_FROM_ABI constexpr auto __lexicographical_compare_three_way_fast_path(
     _InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2 __first2, _InputIterator2 __last2, _Cmp& __comp)
     -> decltype(__comp(*__first1, *__first2)) {
-  static_assert(
-      signed_integral<__iter_diff_t<_InputIterator1>>, "Using a non-integral difference_type is undefined behavior.");
-  static_assert(
-      signed_integral<__iter_diff_t<_InputIterator2>>, "Using a non-integral difference_type is undefined behavior.");
+  static_assert(signed_integral<__iterator_difference_type<_InputIterator1>>,
+                "Using a non-integral difference_type is undefined behavior.");
+  static_assert(signed_integral<__iterator_difference_type<_InputIterator2>>,
+                "Using a non-integral difference_type is undefined behavior.");
 
-  using _Len1   = __iter_diff_t<_InputIterator1>;
-  using _Len2   = __iter_diff_t<_InputIterator2>;
+  using _Len1   = __iterator_difference_type<_InputIterator1>;
+  using _Len2   = __iterator_difference_type<_InputIterator2>;
   using _Common = common_type_t<_Len1, _Len2>;
 
   _Len1 __len1      = __last1 - __first1;
@@ -90,7 +90,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr auto __lexicographical_compare_three_way_slow_pa
 }
 
 template <class _InputIterator1, class _InputIterator2, class _Cmp>
-_LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr auto lexicographical_compare_three_way(
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto lexicographical_compare_three_way(
     _InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2 __first2, _InputIterator2 __last2, _Cmp __comp)
     -> decltype(__comp(*__first1, *__first2)) {
   static_assert(__comparison_category<decltype(__comp(*__first1, *__first2))>,
@@ -110,7 +110,7 @@ _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr auto lexicographical_compa
 }
 
 template <class _InputIterator1, class _InputIterator2>
-_LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr auto lexicographical_compare_three_way(
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto lexicographical_compare_three_way(
     _InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2 __first2, _InputIterator2 __last2) {
   return std::lexicographical_compare_three_way(
       std::move(__first1), std::move(__last1), std::move(__first2), std::move(__last2), std::compare_three_way());

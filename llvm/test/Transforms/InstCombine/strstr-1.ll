@@ -9,6 +9,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 @.str1 = private constant [2 x i8] c"a\00"
 @.str2 = private constant [6 x i8] c"abcde\00"
 @.str3 = private constant [4 x i8] c"bcd\00"
+@.str.hi = private constant [2 x i8] c"\a0\00"
 
 declare ptr @strstr(ptr, ptr)
 
@@ -33,11 +34,20 @@ define ptr @test_simplify2(ptr %str) {
   ret ptr %ret
 }
 
+define ptr @test_simplify2_hi(ptr %str) {
+; CHECK-LABEL: @test_simplify2_hi(
+; CHECK-NEXT:    [[STRCHR:%.*]] = call ptr @strchr(ptr noundef nonnull dereferenceable(1) [[STR:%.*]], i32 160)
+; CHECK-NEXT:    ret ptr [[STRCHR]]
+;
+  %ret = call ptr @strstr(ptr %str, ptr @.str.hi)
+  ret ptr %ret
+}
+
 ; Check strstr("abcde", "bcd") -> "abcde" + 1.
 
 define ptr @test_simplify3() {
 ; CHECK-LABEL: @test_simplify3(
-; CHECK-NEXT:    ret ptr getelementptr inbounds ([6 x i8], ptr @.str2, i64 0, i64 1)
+; CHECK-NEXT:    ret ptr getelementptr inbounds nuw (i8, ptr @.str2, i64 1)
 ;
   %ret = call ptr @strstr(ptr @.str2, ptr @.str3)
   ret ptr %ret
@@ -58,7 +68,7 @@ define ptr @test_simplify4(ptr %str) {
 define i1 @test_simplify5(ptr %str, ptr %pat) {
 ; CHECK-LABEL: @test_simplify5(
 ; CHECK-NEXT:    [[STRLEN:%.*]] = call i64 @strlen(ptr noundef nonnull dereferenceable(1) [[PAT:%.*]])
-; CHECK-NEXT:    [[STRNCMP:%.*]] = call i32 @strncmp(ptr [[STR:%.*]], ptr [[PAT]], i64 [[STRLEN]])
+; CHECK-NEXT:    [[STRNCMP:%.*]] = call i32 @strncmp(ptr [[STR:%.*]], ptr nonnull [[PAT]], i64 [[STRLEN]])
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[STRNCMP]], 0
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ;

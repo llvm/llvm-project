@@ -8,25 +8,25 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 ;; one set of indexing calculations and a load
 
 ; Function Attrs: nounwind ssp uwtable
-define i32 @bar(i32 %arg, i32 %arg1, i32 %arg2) #0 {
+define i32 @bar(i32 %arg, i32 %arg1, i32 %arg2) {
 ; CHECK-LABEL: @bar(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    br label %bb3
+; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[TMP:%.*]] = phi i32 [ %arg, %bb ], [ [[TMP:%.*]]15, %bb17 ]
-; CHECK-NEXT:    [[TMP4:%.*]] = phi i32 [ %arg2, %bb ], [ [[TMP18:%.*]], %bb17 ]
-; CHECK-NEXT:    [[TMP6:%.*]] = phi i32 [ 0, %bb ], [ [[TMP14:%.*]], %bb17 ]
+; CHECK-NEXT:    [[TMP:%.*]] = phi i32 [ [[ARG:%.*]], [[BB:%.*]] ], [ [[TMP15:%.*]], [[BB17:%.*]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi i32 [ [[ARG2:%.*]], [[BB]] ], [ [[TMP18:%.*]], [[BB17]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = phi i32 [ 0, [[BB]] ], [ [[TMP14:%.*]], [[BB17]] ]
 ; CHECK-NEXT:    [[TMP7:%.*]] = sext i32 [[TMP]] to i64
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1024 x i32], ptr @global, i64 0, i64 [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP8]], align 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = add nsw i32 [[TMP6]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP14]] = add nsw i32 [[TMP10]], [[TMP9]]
-; CHECK-NEXT:    [[TMP15:%.*]] = add nsw i32 [[TMP]], %arg1
-; CHECK-NEXT:    br label %bb17
+; CHECK-NEXT:    [[TMP15]] = add nsw i32 [[TMP]], [[ARG1:%.*]]
+; CHECK-NEXT:    br label [[BB17]]
 ; CHECK:       bb17:
 ; CHECK-NEXT:    [[TMP18]] = add i32 [[TMP4]], -1
 ; CHECK-NEXT:    [[TMP19:%.*]] = icmp ne i32 [[TMP4]], 0
-; CHECK-NEXT:    br i1 [[TMP19]], label %bb3, label %bb20
+; CHECK-NEXT:    br i1 [[TMP19]], label [[BB3]], label [[BB20:%.*]]
 ; CHECK:       bb20:
 ; CHECK-NEXT:    ret i32 [[TMP14]]
 ;
@@ -58,8 +58,6 @@ bb17:                                             ; preds = %bb3
 bb20:                                             ; preds = %bb17
   ret i32 %tmp14
 }
-
-attributes #0 = { nounwind ssp uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="penryn" "target-features"="+cx16,+fxsr,+mmx,+sse,+sse2,+sse3,+sse4.1,+ssse3" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.module.flags = !{!0}
 !llvm.ident = !{!1}

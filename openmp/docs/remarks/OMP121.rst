@@ -1,6 +1,6 @@
 .. _omp121:
 
-Value has potential side effects preventing SPMD-mode execution. Add `__attribute__((assume(\"ompx_spmd_amenable\")))` to the called function to override. [OMP121]
+Value has potential side effects preventing SPMD-mode execution. Add `[[omp::assume(\"ompx_spmd_amenable\")]]` to the called function to override. [OMP121]
 ===================================================================================================================================================================
 
 This analysis remarks indicates that a potential side-effect that cannot be
@@ -42,7 +42,7 @@ or operations that cannot be executed in SPMD-mode.
 
    $ clang++ -fopenmp -fopenmp-targets=nvptx64 -O2 -Rpass-analysis=openmp-opt omp121.cpp
    omp121.cpp:8:13: remark: Value has potential side effects preventing SPMD-mode
-   execution.  Add `__attribute__((assume("ompx_spmd_amenable")))` to the called function
+   execution.  Add `[[omp::assume("ompx_spmd_amenable")]]` to the called function
    to override. [OMP121]
    int x = work();
             ^
@@ -53,7 +53,7 @@ contain any code that prevents SPMD-mode execution.
 
 .. code-block:: c++
 
-  __attribute__((assume("ompx_spmd_amenable"))) extern int work();
+  [[omp::assume("ompx_spmd_amenable")]] extern int work();
 
   void use(int x);
 

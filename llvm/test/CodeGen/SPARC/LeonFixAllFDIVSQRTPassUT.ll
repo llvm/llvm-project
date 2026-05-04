@@ -1,5 +1,5 @@
-; RUN: llc %s -O0 -march=sparc -mcpu=leon3 -mattr=+fixallfdivsqrt -o - | FileCheck %s
-; RUN: llc %s -O0 -march=sparc -mcpu=ut699 -o - | FileCheck %s
+; RUN: llc %s -O0 -mtriple=sparc -mcpu=leon3 -mattr=+fixallfdivsqrt -o - | FileCheck %s
+; RUN: llc %s -O0 -mtriple=sparc -mcpu=ut699 -o - | FileCheck %s
 
 ; CHECK-LABEL: test_1
 ; CHECK:  nop

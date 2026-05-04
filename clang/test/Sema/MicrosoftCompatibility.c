@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -fsyntax-only -Wno-unused-value -Wmicrosoft -verify -fms-compatibility -DMSVCCOMPAT -triple i686-pc-win32
-// RUN: %clang_cc1 %s -fsyntax-only -Wno-unused-value -Wmicrosoft -verify -fms-extensions -triple i686-pc-win32
+// RUN: %clang_cc1 %s -fsyntax-only -Wno-unused-value -Wmicrosoft -verify=expected,compat -fms-compatibility -DMSVCCOMPAT -triple i686-pc-win32
+// RUN: %clang_cc1 %s -fsyntax-only -Wno-unused-value -Wmicrosoft -verify=expected,ext -fms-extensions -triple i686-pc-win32
 
 #ifdef MSVCCOMPAT
 enum ENUM1; // expected-warning {{forward references to 'enum' types are a Microsoft extension}}
@@ -35,3 +35,15 @@ size_t x;
 #else
 size_t x; // expected-error {{unknown type name 'size_t'}}
 #endif
+
+/* Microsoft allows inline, __inline, and __forceinline to appear on a typedef
+   of a function type; this is used in their system headers such as ufxclient.h
+   See GitHub #124869 for more details.
+ */
+typedef int inline Foo1(int);       // compat-warning {{'inline' can only appear on functions}} \
+                                       ext-error {{'inline' can only appear on functions}}
+typedef int __inline Foo2(int);     // compat-warning {{'inline' can only appear on functions}} \
+                                       ext-error {{'inline' can only appear on functions}}
+typedef int __forceinline Foo(int); // compat-warning {{'inline' can only appear on functions}} \
+                                       ext-error {{'inline' can only appear on functions}} \
+                                       expected-warning {{'__forceinline' attribute only applies to functions and statements}}

@@ -24,6 +24,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <tuple>
 #include <utility>
@@ -69,14 +70,14 @@ public:
 
   ///@{
   /// Add the specified ID to the required set of the usage info for a pass.
-  AnalysisUsage &addRequiredID(const void *ID);
-  AnalysisUsage &addRequiredID(char &ID);
+  LLVM_ABI AnalysisUsage &addRequiredID(const void *ID);
+  LLVM_ABI AnalysisUsage &addRequiredID(char &ID);
   template<class PassClass>
   AnalysisUsage &addRequired() {
     return addRequiredID(PassClass::ID);
   }
 
-  AnalysisUsage &addRequiredTransitiveID(char &ID);
+  LLVM_ABI AnalysisUsage &addRequiredTransitiveID(char &ID);
   template<class PassClass>
   AnalysisUsage &addRequiredTransitive() {
     return addRequiredTransitiveID(PassClass::ID);
@@ -124,7 +125,7 @@ public:
   /// preserved by this pass. If no such Pass exists, do nothing. This can be
   /// useful when a pass is trivially preserved, but may not be linked in. Be
   /// careful about spelling!
-  AnalysisUsage &addPreserved(StringRef Arg);
+  LLVM_ABI AnalysisUsage &addPreserved(StringRef Arg);
 
   /// Set by analyses that do not transform their input at all
   void setPreservesAll() { PreservesAll = true; }
@@ -139,7 +140,7 @@ public:
   ///
   /// This function annotates the AnalysisUsage info object to say that analyses
   /// that only depend on the CFG are preserved by this pass.
-  void setPreservesCFG();
+  LLVM_ABI void setPreservesCFG();
 
   const VectorType &getRequiredSet() const { return Required; }
   const VectorType &getRequiredTransitiveSet() const {
@@ -174,7 +175,8 @@ public:
   }
 
   /// Find pass that is implementing PI. Initialize pass for Function F.
-  std::tuple<Pass *, bool> findImplPass(Pass *P, AnalysisID PI, Function &F);
+  LLVM_ABI std::tuple<Pass *, bool> findImplPass(Pass *P, AnalysisID PI,
+                                                 Function &F);
 
   void addAnalysisImplsPair(AnalysisID PI, Pass *P) {
     if (findImplPass(PI) == P)
@@ -189,7 +191,7 @@ public:
   }
 
   /// Return analysis result or null if it doesn't exist.
-  Pass *getAnalysisIfAvailable(AnalysisID ID) const;
+  LLVM_ABI Pass *getAnalysisIfAvailable(AnalysisID ID) const;
 
 private:
   /// This keeps track of which passes implements the interfaces that are
@@ -212,15 +214,7 @@ AnalysisType *Pass::getAnalysisIfAvailable() const {
   assert(Resolver && "Pass not resident in a PassManager object!");
 
   const void *PI = &AnalysisType::ID;
-
-  Pass *ResultPass = Resolver->getAnalysisIfAvailable(PI);
-  if (!ResultPass) return nullptr;
-
-  // Because the AnalysisType may not be a subclass of pass (for
-  // AnalysisGroups), we use getAdjustedAnalysisPointer here to potentially
-  // adjust the return pointer (because the class may multiply inherit, once
-  // from pass, once from AnalysisType).
-  return (AnalysisType*)ResultPass->getAdjustedAnalysisPointer(PI);
+  return (AnalysisType *)Resolver->getAnalysisIfAvailable(PI);
 }
 
 /// getAnalysis<AnalysisType>() - This function is used by subclasses to get
@@ -243,12 +237,7 @@ AnalysisType &Pass::getAnalysisID(AnalysisID PI) const {
   assert(ResultPass &&
          "getAnalysis*() called on an analysis that was not "
          "'required' by pass!");
-
-  // Because the AnalysisType may not be a subclass of pass (for
-  // AnalysisGroups), we use getAdjustedAnalysisPointer here to potentially
-  // adjust the return pointer (because the class may multiply inherit, once
-  // from pass, once from AnalysisType).
-  return *(AnalysisType*)ResultPass->getAdjustedAnalysisPointer(PI);
+  return *(AnalysisType *)ResultPass;
 }
 
 /// getAnalysis<AnalysisType>() - This function is used by subclasses to get
@@ -280,12 +269,7 @@ AnalysisType &Pass::getAnalysisID(AnalysisID PI, Function &F, bool *Changed) {
   else
     assert(!LocalChanged &&
            "A pass trigged a code update but the update status is lost");
-
-  // Because the AnalysisType may not be a subclass of pass (for
-  // AnalysisGroups), we use getAdjustedAnalysisPointer here to potentially
-  // adjust the return pointer (because the class may multiply inherit, once
-  // from pass, once from AnalysisType).
-  return *(AnalysisType*)ResultPass->getAdjustedAnalysisPointer(PI);
+  return *(AnalysisType *)ResultPass;
 }
 
 } // end namespace llvm

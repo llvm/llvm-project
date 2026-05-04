@@ -1,0 +1,11 @@
+// RUN: cir-opt %s -cir-to-llvm -o %t.cir
+// RUN: FileCheck %s --input-file=%t.cir
+
+// RUN: cir-translate -cir-to-llvmir --disable-cc-lowering -o %t.ll %s
+// RUN: FileCheck -check-prefix=LLVM --input-file=%t.ll %s
+
+// CHECK: llvm.module_asm =  [".globl bar", ".globl foo"]
+// LLVM: module asm ".globl bar"
+// LLVM: module asm ".globl foo"
+module attributes {cir.module_asm = [".globl bar", ".globl foo"]} {
+}

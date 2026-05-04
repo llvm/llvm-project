@@ -46,9 +46,7 @@ static bool runImpl(Module &M);
 namespace {
 struct JMCInstrumenter : public ModulePass {
   static char ID;
-  JMCInstrumenter() : ModulePass(ID) {
-    initializeJMCInstrumenterPass(*PassRegistry::getPassRegistry());
-  }
+  JMCInstrumenter() : ModulePass(ID) {}
   bool runOnModule(Module &M) override { return runImpl(M); }
 };
 char JMCInstrumenter::ID = 0;
@@ -227,7 +225,7 @@ bool runImpl(Module &M) {
     // FIXME: it would be nice to make CI scheduling boundary, although in
     //        practice it does not matter much.
     auto *CI = CallInst::Create(getCheckFunctionType(Ctx), CheckFunction,
-                                {Flag}, "", &*F.begin()->getFirstInsertionPt());
+                                {Flag}, "", F.begin()->getFirstInsertionPt());
     CI->addParamAttr(0, Attribute::NoUndef);
     if (UseX86FastCall) {
       CI->setCallingConv(CallingConv::X86_FastCall);

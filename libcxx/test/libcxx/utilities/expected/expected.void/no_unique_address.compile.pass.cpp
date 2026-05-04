@@ -1,4 +1,5 @@
 //===----------------------------------------------------------------------===//
+//
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
@@ -45,23 +46,23 @@ static_assert(sizeof(std::expected<void, B>) == sizeof(B));
 
 // Check that `expected`'s datasize is large enough for the parameter type(s).
 static_assert(sizeof(std::expected<void, BoolWithPadding>) ==
-              std::__libcpp_datasizeof<std::expected<void, BoolWithPadding>>::value);
+              std::__datasizeof_v<std::expected<void, BoolWithPadding>>);
 
 // In this case, there should be tail padding in the `expected` because `A`
 // itself does _not_ have tail padding.
-static_assert(sizeof(std::expected<void, A>) > std::__libcpp_datasizeof<std::expected<void, A>>::value);
+static_assert(sizeof(std::expected<void, A>) > std::__datasizeof_v<std::expected<void, A>>);
 
 // Test with some real types.
 static_assert(sizeof(std::expected<void, std::optional<int>>) == 8);
-static_assert(std::__libcpp_datasizeof<std::expected<void, std::optional<int>>>::value == 8);
+static_assert(std::__datasizeof_v<std::expected<void, std::optional<int>>> == 8);
 
 static_assert(sizeof(std::expected<void, int>) == 8);
-static_assert(std::__libcpp_datasizeof<std::expected<void, int>>::value == 5);
+static_assert(std::__datasizeof_v<std::expected<void, int>> == 5);
 
 // clang-format off
-static_assert(std::__libcpp_datasizeof<int>::value == 4);
-static_assert(std::__libcpp_datasizeof<std::expected<void, int>>::value == 5);
-static_assert(std::__libcpp_datasizeof<std::expected<void, std::expected<void, int>>>::value == 8);
-static_assert(std::__libcpp_datasizeof<std::expected<void, std::expected<void, std::expected<void, int>>>>::value == 9);
-static_assert(std::__libcpp_datasizeof<std::expected<void, std::expected<void, std::expected<void, std::expected<void, int>>>>>::value == 12);
+static_assert(std::__datasizeof_v<int> == 4);
+static_assert(std::__datasizeof_v<std::expected<void, int>> == 5);
+static_assert(std::__datasizeof_v<std::expected<void, std::expected<void, int>>> == 8);
+static_assert(std::__datasizeof_v<std::expected<void, std::expected<void, std::expected<void, int>>>> == 9);
+static_assert(std::__datasizeof_v<std::expected<void, std::expected<void, std::expected<void, std::expected<void, int>>>>> == 12);
 // clang-format on

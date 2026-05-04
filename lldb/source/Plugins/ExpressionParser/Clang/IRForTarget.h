@@ -85,6 +85,7 @@ public:
   IRForTarget(lldb_private::ClangExpressionDeclMap *decl_map, bool resolve_vars,
               lldb_private::IRExecutionUnit &execution_unit,
               lldb_private::Stream &error_stream,
+              lldb_private::ExecutionPolicy execution_policy,
               const char *func_name = "$__lldb_expr");
 
   /// Run this IR transformer on a single module
@@ -331,9 +332,9 @@ private:
   lldb_private::TypeFromParser m_result_type;
   /// The module being processed, or NULL if that has not been determined yet.
   llvm::Module *m_module = nullptr;
-  /// The target data for the module being processed, or NULL if there is no
+  /// The target data for the module being processed, or nullptr if there is no
   /// module.
-  std::unique_ptr<llvm::DataLayout> m_target_data;
+  const llvm::DataLayout *m_target_data = nullptr;
   /// The DeclMap containing the Decls
   lldb_private::ClangExpressionDeclMap *m_decl_map;
   /// The address of the function CFStringCreateWithBytes, cast to the
@@ -351,6 +352,8 @@ private:
   /// True if the function's result in the AST is a pointer (see comments in
   /// ASTResultSynthesizer::SynthesizeBodyResult)
   bool m_result_is_pointer = false;
+
+  lldb_private::ExecutionPolicy m_policy;
 
   class FunctionValueCache {
   public:

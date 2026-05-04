@@ -1,4 +1,5 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.unix.Stream,unix.Errno,unix.StdCLibraryFunctions,debug.ExprInspection \
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Stream,unix.Errno,unix.StdCLibraryFunctions,debug.ExprInspection \
+// RUN:   -analyzer-config unix.Stream:Pedantic=true \
 // RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=true -verify %s
 
 #include "Inputs/system-header-simulator.h"

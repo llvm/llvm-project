@@ -4,7 +4,7 @@
 define float @sitofp_and(i8 %x) {
 ; CHECK-LABEL: @sitofp_and(
 ; CHECK-NEXT:    [[PX:%.*]] = and i8 [[X:%.*]], 127
-; CHECK-NEXT:    [[R:%.*]] = sitofp i8 [[PX]] to float
+; CHECK-NEXT:    [[R:%.*]] = uitofp nneg i8 [[PX]] to float
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %px = and i8 %x, 127
@@ -23,7 +23,7 @@ define half @sitofp_const(i8 %x) {
 define double @sitofp_zext(i7 %x) {
 ; CHECK-LABEL: @sitofp_zext(
 ; CHECK-NEXT:    [[PX:%.*]] = zext i7 [[X:%.*]] to i8
-; CHECK-NEXT:    [[R:%.*]] = sitofp i8 [[PX]] to double
+; CHECK-NEXT:    [[R:%.*]] = uitofp nneg i8 [[PX]] to double
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %px = zext i7 %x to i8
@@ -52,7 +52,7 @@ define float @dominating_condition(i32 %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i32 [[X:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
-; CHECK-NEXT:    [[A:%.*]] = sitofp i32 [[X]] to float
+; CHECK-NEXT:    [[A:%.*]] = uitofp nneg i32 [[X]] to float
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       f:
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -86,7 +86,7 @@ define float @dominating_condition_alt(i32 %x) {
 ; CHECK:       t:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       f:
-; CHECK-NEXT:    [[A:%.*]] = sitofp i32 [[X]] to float
+; CHECK-NEXT:    [[A:%.*]] = uitofp nneg i32 [[X]] to float
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[COND:%.*]] = phi float [ -4.200000e+01, [[T]] ], [ [[A]], [[F]] ]

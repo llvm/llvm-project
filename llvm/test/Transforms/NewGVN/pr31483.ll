@@ -6,24 +6,24 @@ target datalayout = "E-m:e-i64:64-n32:64"
 ;; Ensure we do not believe the indexing increments are unreachable due to incorrect memory
 ;; equivalence detection.  In PR31483, we were deleting those blocks as unreachable
 ; Function Attrs: nounwind
-define signext i32 @ham(ptr %arg, ptr %arg1) #0 {
+define signext i32 @ham(ptr %arg, ptr %arg1) {
 ; CHECK-LABEL: @ham(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca ptr, align 8
-; CHECK-NEXT:    store ptr %arg1, ptr [[TMP]], align 8
-; CHECK-NEXT:    br label %bb2
+; CHECK-NEXT:    store ptr [[ARG1:%.*]], ptr [[TMP]], align 8
+; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[TMP3:%.*]] = phi ptr [ %arg, %bb ], [ %tmp7, %bb22 ]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi ptr [ [[ARG:%.*]], [[BB:%.*]] ], [ [[TMP7:%.*]], [[BB22:%.*]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[TMP3]], align 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne i8 [[TMP4]], 0
-; CHECK-NEXT:    br i1 [[TMP5]], label %bb6, label %bb23
+; CHECK-NEXT:    br i1 [[TMP5]], label [[BB6:%.*]], label [[BB23:%.*]]
 ; CHECK:       bb6:
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[TMP3]], i32 1
+; CHECK-NEXT:    [[TMP7]] = getelementptr inbounds i8, ptr [[TMP3]], i32 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = zext i8 [[TMP4]] to i32
-; CHECK-NEXT:    switch i32 [[TMP9]], label %bb22 [
-; CHECK-NEXT:    i32 115, label %bb10
-; CHECK-NEXT:    i32 105, label %bb16
-; CHECK-NEXT:    i32 99, label %bb16
+; CHECK-NEXT:    switch i32 [[TMP9]], label [[BB22]] [
+; CHECK-NEXT:      i32 115, label [[BB10:%.*]]
+; CHECK-NEXT:      i32 105, label [[BB16:%.*]]
+; CHECK-NEXT:      i32 99, label [[BB16]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb10:
 ; CHECK-NEXT:    [[TMP11:%.*]] = load ptr, ptr [[TMP]], align 8
@@ -31,17 +31,17 @@ define signext i32 @ham(ptr %arg, ptr %arg1) #0 {
 ; CHECK-NEXT:    store ptr [[TMP12]], ptr [[TMP]], align 8
 ; CHECK-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[TMP11]], align 8
 ; CHECK-NEXT:    [[TMP15:%.*]] = call signext i32 (ptr, ...) @zot(ptr @global, ptr [[TMP14]])
-; CHECK-NEXT:    br label %bb22
+; CHECK-NEXT:    br label [[BB22]]
 ; CHECK:       bb16:
 ; CHECK-NEXT:    [[TMP17:%.*]] = load ptr, ptr [[TMP]], align 8
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr [[TMP17]], i64 8
 ; CHECK-NEXT:    store ptr [[TMP18]], ptr [[TMP]], align 8
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i8, ptr [[TMP17]], i64 4
-; CHECK-NEXT:    br label %bb22
+; CHECK-NEXT:    br label [[BB22]]
 ; CHECK:       bb22:
-; CHECK-NEXT:    br label %bb2
+; CHECK-NEXT:    br label [[BB2]]
 ; CHECK:       bb23:
-; CHECK-NEXT:    call void @llvm.va_end(ptr [[TMP]])
+; CHECK-NEXT:    call void @llvm.va_end.p0(ptr [[TMP]])
 ; CHECK-NEXT:    ret i32 undef
 ;
 bb:
@@ -89,12 +89,7 @@ bb23:                                             ; preds = %bb2
   ret i32 undef
 }
 
-declare signext i32 @zot(ptr, ...) #1
+declare signext i32 @zot(ptr, ...)
 
 ; Function Attrs: nounwind
-declare void @llvm.va_end(ptr) #2
-
-attributes #0 = { nounwind "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="ppc64" "target-features"="+altivec,-bpermd,-crypto,-direct-move,-extdiv,-power8-vector,-vsx" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="ppc64" "target-features"="+altivec,-bpermd,-crypto,-direct-move,-extdiv,-power8-vector,-vsx" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #2 = { nounwind }
-
+declare void @llvm.va_end(ptr)

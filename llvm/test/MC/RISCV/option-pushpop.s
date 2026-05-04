@@ -1,4 +1,4 @@
-# RUN: llvm-mc -triple riscv32 -mattr=-relax -riscv-no-aliases < %s \
+# RUN: llvm-mc -triple riscv32 -mattr=-relax -M no-aliases < %s \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 < %s \
 # RUN:     | llvm-readobj -r - | FileCheck -check-prefix=CHECK-RELOC %s
@@ -6,7 +6,7 @@
 # RUN:     | llvm-objdump --no-print-imm-hex --triple=riscv32 --mattr=+c -d - \
 # RUN:     | FileCheck -check-prefixes=CHECK-BYTES,CHECK-ALIAS %s
 
-# RUN: llvm-mc -triple riscv64 -mattr=-relax -riscv-no-aliases < %s \
+# RUN: llvm-mc -triple riscv64 -mattr=-relax -M no-aliases < %s \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 < %s \
 # RUN:     | llvm-readobj -r - | FileCheck -check-prefix=CHECK-RELOC %s
@@ -25,7 +25,7 @@
 call foo
 
 # CHECK-INST: addi s0, sp, 1020
-# CHECK-BYTES: 13 04 c1 3f
+# CHECK-BYTES: 3fc10413
 # CHECK-ALIAS: addi s0, sp, 1020
 addi s0, sp, 1020
 
@@ -45,14 +45,14 @@ call bar
 .option rvc
 # CHECK-INST: .option rvc
 # CHECK-INST: c.addi4spn s0, sp, 1020
-# CHECK-BYTES: e0 1f
+# CHECK-BYTES: 1fe0
 # CHECK-ALIAS: addi s0, sp, 1020
 addi s0, sp, 1020
 
 .option pop     # Pop relax=true, rvc=false
 # CHECK-INST: .option pop
 # CHECK-INST: addi s0, sp, 1020
-# CHECK-BYTES: 13 04 c1 3f
+# CHECK-BYTES: 3fc10413
 # CHECK-ALIAS: addi s0, sp, 1020
 addi s0, sp, 1020
 
@@ -69,7 +69,7 @@ call bar
 call baz
 
 # CHECK-INST: addi s0, sp, 1020
-# CHECK-BYTES: 13 04 c1 3f
+# CHECK-BYTES: 3fc10413
 # CHECK-ALIAS: addi s0, sp, 1020
 addi s0, sp, 1020
 

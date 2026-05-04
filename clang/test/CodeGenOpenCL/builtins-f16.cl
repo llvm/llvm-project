@@ -6,6 +6,18 @@
 void test_half_builtins(half h0, half h1, half h2, int i0) {
   volatile half res;
 
+  // CHECK: call half @llvm.acos.f16(half %h0)
+  res = __builtin_acosf16(h0);
+
+  // CHECK: call half @llvm.asin.f16(half %h0)
+  res = __builtin_asinf16(h0);
+
+  // CHECK: call half @llvm.atan.f16(half %h0)
+  res = __builtin_atanf16(h0);
+
+  // CHECK: call half @llvm.atan2.f16(half %h0, half %h1)
+  res = __builtin_atan2f16(h0, h1);
+
   // CHECK: call half @llvm.copysign.f16(half %h0, half %h1)
   res = __builtin_copysignf16(h0, h1);
 
@@ -17,6 +29,9 @@ void test_half_builtins(half h0, half h1, half h2, int i0) {
 
   // CHECK: call half @llvm.cos.f16(half %h0)
   res = __builtin_cosf16(h0);
+
+  // CHECK: call half @llvm.cosh.f16(half %h0)
+  res = __builtin_coshf16(h0);
 
   // CHECK: call half @llvm.exp.f16(half %h0)
   res = __builtin_expf16(h0);
@@ -33,10 +48,10 @@ void test_half_builtins(half h0, half h1, half h2, int i0) {
   // CHECK: call half @llvm.fma.f16(half %h0, half %h1, half %h2)
   res = __builtin_fmaf16(h0, h1 ,h2);
 
-  // CHECK: call half @llvm.maxnum.f16(half %h0, half %h1)
+  // CHECK: call nsz half @llvm.maxnum.f16(half %h0, half %h1)
   res = __builtin_fmaxf16(h0, h1);
 
-  // CHECK: call half @llvm.minnum.f16(half %h0, half %h1)
+  // CHECK: call nsz half @llvm.minnum.f16(half %h0, half %h1)
   res = __builtin_fminf16(h0, h1);
 
   // CHECK: frem half %h0, %h1
@@ -63,8 +78,17 @@ void test_half_builtins(half h0, half h1, half h2, int i0) {
   // CHECK: call half @llvm.sin.f16(half %h0)
   res = __builtin_sinf16(h0);
 
+  // CHECK: call half @llvm.sinh.f16(half %h0)
+  res = __builtin_sinhf16(h0);
+
   // CHECK: call half @llvm.sqrt.f16(half %h0)
   res = __builtin_sqrtf16(h0);
+
+  // CHECK: call half @llvm.tan.f16(half %h0)
+  res = __builtin_tanf16(h0);
+
+  // CHECK: call half @llvm.tanh.f16(half %h0)
+  res = __builtin_tanhf16(h0);
 
   // CHECK: call half @llvm.trunc.f16(half %h0)
   res = __builtin_truncf16(h0);

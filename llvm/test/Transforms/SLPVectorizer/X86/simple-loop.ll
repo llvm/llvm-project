@@ -14,7 +14,7 @@ define i32 @rollable(ptr noalias nocapture %in, ptr noalias nocapture %out, i64 
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[IN:%.*]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[OUT:%.*]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = load <4 x i32>, ptr [[TMP3]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = mul <4 x i32> [[TMP5]], <i32 7, i32 7, i32 7, i32 7>
+; CHECK-NEXT:    [[TMP6:%.*]] = mul <4 x i32> [[TMP5]], splat (i32 7)
 ; CHECK-NEXT:    [[TMP7:%.*]] = add <4 x i32> [[TMP6]], <i32 7, i32 14, i32 21, i32 28>
 ; CHECK-NEXT:    store <4 x i32> [[TMP7]], ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[TMP8]] = add i64 [[I_019]], 1
@@ -76,11 +76,11 @@ define i32 @unrollable(ptr %in, ptr %out, i64 %n) nounwind ssp uwtable {
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[IN]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[OUT:%.*]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x i32>, ptr [[TMP3]], align 4
-; CHECK-NEXT:    [[TMP8:%.*]] = mul <2 x i32> [[TMP7]], <i32 7, i32 7>
+; CHECK-NEXT:    [[TMP8:%.*]] = mul <2 x i32> [[TMP7]], splat (i32 7)
 ; CHECK-NEXT:    [[TMP9:%.*]] = add <2 x i32> [[TMP8]], <i32 7, i32 14>
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[OUT]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = load <2 x i32>, ptr [[TMP5]], align 4
-; CHECK-NEXT:    [[TMP12:%.*]] = mul <2 x i32> [[TMP11]], <i32 7, i32 7>
+; CHECK-NEXT:    [[TMP12:%.*]] = mul <2 x i32> [[TMP11]], splat (i32 7)
 ; CHECK-NEXT:    [[TMP13:%.*]] = add <2 x i32> [[TMP12]], <i32 21, i32 28>
 ; CHECK-NEXT:    store <2 x i32> [[TMP9]], ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[BARRIER:%.*]] = call i32 @goo(i32 0)

@@ -19,7 +19,6 @@
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <limits>
 #include <vector>
@@ -175,7 +174,14 @@ void CoverageMappingWriter::write(raw_ostream &OS) {
                   : 2 * Kind);
     };
 
-    return getKindKey(LHS.Kind) < getKindKey(RHS.Kind);
+    auto LHSKindKey = getKindKey(LHS.Kind);
+    auto RHSKindKey = getKindKey(RHS.Kind);
+    if (LHSKindKey != RHSKindKey)
+      return LHSKindKey < RHSKindKey;
+
+    // Compares endLoc in descending order,
+    // to prioritize wider Regions with the same startLoc.
+    return LHS.endLoc() > RHS.endLoc();
   });
 
   // Write out the fileid -> filename mapping.
@@ -256,7 +262,6 @@ void CoverageMappingWriter::write(raw_ostream &OS) {
         // They are written as internal values plus 1.
         const auto &BranchParams = I->getBranchParams();
         ParamsShouldBeNull = false;
-        assert(BranchParams.ID >= 0);
         unsigned ID1 = BranchParams.ID + 1;
         unsigned TID1 = BranchParams.Conds[true] + 1;
         unsigned FID1 = BranchParams.Conds[false] + 1;
@@ -294,7 +299,7 @@ void CoverageMappingWriter::write(raw_ostream &OS) {
 
 void TestingFormatWriter::write(raw_ostream &OS, TestingFormatVersion Version) {
   auto ByteSwap = [](uint64_t N) {
-    return support::endian::byte_swap<uint64_t, llvm::endianness::little>(N);
+    return support::endian::byte_swap<uint64_t>(N, llvm::endianness::little);
   };
 
   // Output a 64bit magic number.

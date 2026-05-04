@@ -25,10 +25,10 @@ body:             |
     ; CHECK-DAG: baz
     $lr = ORRXri $xzr, 1
     BL @foo, implicit-def dead $lr, implicit $sp
-    $x20, $x19 = LDPXi $sp, 255
-    $x20, $x19 = LDPXi $sp, 255
-    $x20, $x19 = LDPXi $sp, 255
-    $x20, $x19 = LDPXi $sp, 255
+    $x20, $x19 = LDPXi $sp, 63
+    $x20, $x19 = LDPXi $sp, 63
+    $x20, $x19 = LDPXi $sp, 63
+    $x20, $x19 = LDPXi $sp, 63
   bb.1:
     BL @bar, implicit-def dead $lr, implicit $sp
     $x11 = ADDXri $sp, 48, 0;
@@ -55,10 +55,10 @@ body:             |
     ; CHECK-DAG: baz
     $lr = ORRXri $xzr, 1
     BL @foo, implicit-def dead $lr, implicit $sp
-    $x20, $x19 = LDPXi $sp, 255
-    $x20, $x19 = LDPXi $sp, 255
-    $x20, $x19 = LDPXi $sp, 255
-    $x20, $x19 = LDPXi $sp, 255
+    $x20, $x19 = LDPXi $sp, 63
+    $x20, $x19 = LDPXi $sp, 63
+    $x20, $x19 = LDPXi $sp, 63
+    $x20, $x19 = LDPXi $sp, 63
   bb.1:
     BL @bar, implicit-def dead $lr, implicit $sp
     $x11 = ADDXri $sp, 48, 0;

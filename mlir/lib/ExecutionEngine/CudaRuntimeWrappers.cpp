@@ -14,7 +14,7 @@
 
 #include "mlir/ExecutionEngine/CRunnerUtils.h"
 
-#include <stdio.h>
+#include <cstdio>
 
 #include "cuda.h"
 #include "cuda_bf16.h"
@@ -28,6 +28,7 @@
 #endif // MLIR_ENABLE_CUDA_CUSPARSE
 
 #ifdef _WIN32
+#include <malloc.h>
 #define MLIR_CUDA_WRAPPERS_EXPORT __declspec(dllexport)
 #else
 #define MLIR_CUDA_WRAPPERS_EXPORT __attribute__((visibility("default")))
@@ -36,6 +37,29 @@
 #define CUDA_REPORT_IF_ERROR(expr)                                             \
   [](CUresult result) {                                                        \
     if (!result)                                                               \
+      return;                                                                  \
+    const char *name = nullptr;                                                \
+    cuGetErrorName(result, &name);                                             \
+    if (!name)                                                                 \
+      name = "<unknown>";                                                      \
+    fprintf(stderr, "'%s' failed with '%s'\n", #expr, name);                   \
+  }(expr)
+
+/// Helper to check if a CUDA error is due to the context being destroyed
+/// during program shutdown. Both CUDA_ERROR_DEINITIALIZED and
+/// CUDA_ERROR_CONTEXT_IS_DESTROYED indicate that the CUDA context has been
+/// torn down and any associated resources are already freed.
+static bool isCudaContextShutdownError(CUresult result) {
+  return result == CUDA_ERROR_DEINITIALIZED ||
+         result == CUDA_ERROR_CONTEXT_IS_DESTROYED;
+}
+
+/// Like CUDA_REPORT_IF_ERROR, but silences errors caused by CUDA context
+/// shutdown. These errors are benign when they occur during program exit,
+/// as all resources are freed with the context.
+#define CUDA_REPORT_IF_ERROR_IGNORE_SHUTDOWN(expr)                             \
+  [](CUresult result) {                                                        \
+    if (!result || isCudaContextShutdownError(result))                         \
       return;                                                                  \
     const char *name = nullptr;                                                \
     cuGetErrorName(result, &name);                                             \
@@ -55,14 +79,10 @@
 
 thread_local static int32_t defaultDevice = 0;
 
-const char *kDebugEnvironmentVariable = "MLIR_CUDA_DEBUG";
-
 /// Helper method that checks environment value for debugging.
-bool isDebugEnabled() {
-  static bool isInitialized = false;
-  static bool isEnabled = false;
-  if (!isInitialized)
-    isEnabled = getenv(kDebugEnvironmentVariable) != nullptr;
+static bool isDebugEnabled() {
+  const char *kDebugEnvironmentVariable = "MLIR_CUDA_DEBUG";
+  static bool isEnabled = getenv(kDebugEnvironmentVariable) != nullptr;
   return isEnabled;
 }
 
@@ -74,7 +94,7 @@ bool isDebugEnabled() {
   } while (0)
 
 // Returns default CUdevice
-CUdevice getDefaultCuDevice() {
+static CUdevice getDefaultCuDevice() {
   CUdevice device;
   CUDA_REPORT_IF_ERROR(cuDeviceGet(&device, /*ordinal=*/defaultDevice));
   return device;
@@ -127,8 +147,8 @@ mgpuModuleLoad(void *data, size_t /*gpuBlobSize*/) {
   return module;
 }
 
-extern "C" MLIR_CUDA_WRAPPERS_EXPORT CUmodule mgpuModuleLoadJIT(void *data,
-                                                                int optLevel) {
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT CUmodule
+mgpuModuleLoadJIT(void *data, int optLevel, size_t /*assmeblySize*/) {
   ScopedContext scopedContext;
   CUmodule module = nullptr;
   char jitErrorBuffer[4096] = {0};
@@ -149,7 +169,7 @@ extern "C" MLIR_CUDA_WRAPPERS_EXPORT CUmodule mgpuModuleLoadJIT(void *data,
 }
 
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuModuleUnload(CUmodule module) {
-  CUDA_REPORT_IF_ERROR(cuModuleUnload(module));
+  CUDA_REPORT_IF_ERROR_IGNORE_SHUTDOWN(cuModuleUnload(module));
 }
 
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT CUfunction
@@ -202,7 +222,7 @@ extern "C" MLIR_CUDA_WRAPPERS_EXPORT CUstream mgpuStreamCreate() {
 }
 
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuStreamDestroy(CUstream stream) {
-  CUDA_REPORT_IF_ERROR(cuStreamDestroy(stream));
+  CUDA_REPORT_IF_ERROR_IGNORE_SHUTDOWN(cuStreamDestroy(stream));
 }
 
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void
@@ -212,7 +232,8 @@ mgpuStreamSynchronize(CUstream stream) {
 
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuStreamWaitEvent(CUstream stream,
                                                               CUevent event) {
-  CUDA_REPORT_IF_ERROR(cuStreamWaitEvent(stream, event, /*flags=*/0));
+  CUDA_REPORT_IF_ERROR_IGNORE_SHUTDOWN(
+      cuStreamWaitEvent(stream, event, /*flags=*/0));
 }
 
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT CUevent mgpuEventCreate() {
@@ -223,11 +244,11 @@ extern "C" MLIR_CUDA_WRAPPERS_EXPORT CUevent mgpuEventCreate() {
 }
 
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuEventDestroy(CUevent event) {
-  CUDA_REPORT_IF_ERROR(cuEventDestroy(event));
+  CUDA_REPORT_IF_ERROR_IGNORE_SHUTDOWN(cuEventDestroy(event));
 }
 
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuEventSynchronize(CUevent event) {
-  CUDA_REPORT_IF_ERROR(cuEventSynchronize(event));
+  CUDA_REPORT_IF_ERROR_IGNORE_SHUTDOWN(cuEventSynchronize(event));
 }
 
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuEventRecord(CUevent event,
@@ -236,11 +257,18 @@ extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuEventRecord(CUevent event,
 }
 
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void *
-mgpuMemAlloc(uint64_t sizeBytes, CUstream /*stream*/, bool /*isHostShared*/) {
+mgpuMemAlloc(uint64_t sizeBytes, CUstream stream, bool isHostShared) {
   ScopedContext scopedContext;
   CUdeviceptr ptr = 0;
-  if (sizeBytes != 0)
-    CUDA_REPORT_IF_ERROR(cuMemAlloc(&ptr, sizeBytes));
+  if (sizeBytes == 0)
+    return reinterpret_cast<void *>(ptr);
+
+  if (isHostShared) {
+    CUDA_REPORT_IF_ERROR(
+        cuMemAllocManaged(&ptr, sizeBytes, CU_MEM_ATTACH_GLOBAL));
+    return reinterpret_cast<void *>(ptr);
+  }
+  CUDA_REPORT_IF_ERROR(cuMemAlloc(&ptr, sizeBytes));
   return reinterpret_cast<void *>(ptr);
 }
 
@@ -287,7 +315,11 @@ extern "C" MLIR_CUDA_WRAPPERS_EXPORT void
 mgpuMemHostRegisterMemRef(int64_t rank, StridedMemRefType<char, 1> *descriptor,
                           int64_t elementSizeBytes) {
   // Only densely packed tensors are currently supported.
+#ifdef _WIN32
+  int64_t *denseStrides = (int64_t *)_alloca(rank * sizeof(int64_t));
+#else
   int64_t *denseStrides = (int64_t *)alloca(rank * sizeof(int64_t));
+#endif // _WIN32
   int64_t *sizes = descriptor->sizes;
   for (int64_t i = rank - 1, runningStride = 1; i >= 0; i--) {
     denseStrides[i] = runningStride;
@@ -329,6 +361,73 @@ extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuSetDefaultDevice(int32_t device) {
 ///
 
 #if (CUDA_VERSION >= 12000)
+
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuLaunchKernelCooperative(
+    CUfunction function, intptr_t gridX, intptr_t gridY, intptr_t gridZ,
+    intptr_t clusterX, intptr_t clusterY, intptr_t clusterZ, intptr_t blockX,
+    intptr_t blockY, intptr_t blockZ, int32_t smem, CUstream stream,
+    void **params, void **extra) {
+  ScopedContext scopedContext;
+  if (smem > 0) {
+    int32_t maxShmem = 0;
+    CUdevice device = getDefaultCuDevice();
+    CUDA_REPORT_IF_ERROR(cuDeviceGet(&device, /*ordinal=*/defaultDevice));
+    CUDA_REPORT_IF_ERROR(cuDeviceGetAttribute(
+        &maxShmem, CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK_OPTIN,
+        device));
+    if (maxShmem < smem) {
+      fprintf(stderr,
+              "Requested shared memory (%dkb) is larger than maximum allowed "
+              "shared memory (%dkb) for this device\n",
+              smem, maxShmem);
+    }
+    CUDA_REPORT_IF_ERROR(cuFuncSetAttribute(
+        function, CU_FUNC_ATTRIBUTE_MAX_DYNAMIC_SHARED_SIZE_BYTES, smem));
+  }
+
+  CUlaunchConfig config;
+  config.gridDimX = gridX;
+  config.gridDimY = gridY;
+  config.gridDimZ = gridZ;
+  config.blockDimX = blockX;
+  config.blockDimY = blockY;
+  config.blockDimZ = blockZ;
+  config.sharedMemBytes = smem;
+  config.hStream = stream;
+
+  CUlaunchAttribute launchAttrs[3];
+  int numAttrs = 0;
+
+  bool hasCluster = clusterX > 0 && clusterY > 0 && clusterZ > 0;
+  if (hasCluster) {
+    launchAttrs[numAttrs].id = CU_LAUNCH_ATTRIBUTE_CLUSTER_DIMENSION;
+    launchAttrs[numAttrs].value.clusterDim.x = clusterX;
+    launchAttrs[numAttrs].value.clusterDim.y = clusterY;
+    launchAttrs[numAttrs].value.clusterDim.z = clusterZ;
+    numAttrs++;
+
+    launchAttrs[numAttrs].id =
+        CU_LAUNCH_ATTRIBUTE_CLUSTER_SCHEDULING_POLICY_PREFERENCE;
+    launchAttrs[numAttrs].value.clusterSchedulingPolicyPreference =
+        CU_CLUSTER_SCHEDULING_POLICY_SPREAD;
+    numAttrs++;
+  }
+
+  launchAttrs[numAttrs].id = CU_LAUNCH_ATTRIBUTE_COOPERATIVE;
+  launchAttrs[numAttrs].value.cooperative = 1;
+  numAttrs++;
+
+  config.numAttrs = numAttrs;
+  config.attrs = launchAttrs;
+
+  debug_print("Launching cooperative kernel (cluster=%d), "
+              "grid=%ld,%ld,%ld, "
+              "threads: %ld, %ld, %ld, "
+              "smem: %dkb\n",
+              hasCluster, gridX, gridY, gridZ, blockX, blockY, blockZ, smem);
+
+  CUDA_REPORT_IF_ERROR(cuLaunchKernelEx(&config, function, params, extra));
+}
 
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuLaunchClusterKernel(
     CUfunction function, intptr_t clusterX, intptr_t clusterY,
@@ -423,24 +522,27 @@ extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuTensorMapEncodeTiled(
               elementStrides[4], interleave, swizzle, l2Promotion, oobFill);
 }
 
-namespace {
-
-template <int rank>
-void mgpuGetMemRefDataAndShape(void *raw_descriptor, char **addr,
-                               uint64_t *globalDim) {
+template <int Rank>
+void mgpuGetMemRefDataAndShape(void *rawDescriptor, char **addr,
+                               uint64_t *globalDim, uint64_t *globalStrides,
+                               const CUtensorMapDataType tensorDataType) {
   auto descriptor =
-      reinterpret_cast<StridedMemRefType<char, rank> *>(raw_descriptor);
+      reinterpret_cast<StridedMemRefType<char, Rank> *>(rawDescriptor);
   *addr = descriptor->data;
-  for (int i = 0; i < rank; ++i) {
-    globalDim[i] = static_cast<uint64_t>(descriptor->sizes[rank - i - 1]);
+  for (int i = 0; i < Rank; ++i) {
+    globalDim[i] = static_cast<uint64_t>(descriptor->sizes[Rank - i - 1]);
+  }
+  static constexpr int elementSizeInBytes[] = {1, 2, 4, 4, 8, 8, 2,
+                                               4, 8, 2, 4, 4, 4};
+  for (int i = 0; i < Rank - 1; ++i) {
+    globalStrides[i] = static_cast<uint64_t>(
+        descriptor->strides[Rank - i - 2] * elementSizeInBytes[tensorDataType]);
   }
 }
 
-} // namespace
-
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void *mgpuTensorMapEncodeTiledMemref(
     int64_t tensorRank,                       // Dimensionality of tensor
-    void *ranked_descriptor,                  // Ranked MemRef descriptor
+    void *rankedDescriptor,                   // Ranked MemRef descriptor
     const CUtensorMapDataType tensorDataType, // Stride size (in bytes)
     CUtensorMapInterleave interleave,         // Type of interleaved layout
     CUtensorMapSwizzle swizzle,               // Bank swizzling pattern
@@ -457,37 +559,35 @@ extern "C" MLIR_CUDA_WRAPPERS_EXPORT void *mgpuTensorMapEncodeTiledMemref(
   char *globalAddress = nullptr;
   switch (tensorRank) {
   case 1:
-    mgpuGetMemRefDataAndShape<1>(ranked_descriptor, &globalAddress, globalDim);
+    mgpuGetMemRefDataAndShape<1>(rankedDescriptor, &globalAddress, globalDim,
+                                 globalStrides, tensorDataType);
     break;
   case 2:
-    mgpuGetMemRefDataAndShape<2>(ranked_descriptor, &globalAddress, globalDim);
+    mgpuGetMemRefDataAndShape<2>(rankedDescriptor, &globalAddress, globalDim,
+                                 globalStrides, tensorDataType);
     break;
   case 3:
-    mgpuGetMemRefDataAndShape<3>(ranked_descriptor, &globalAddress, globalDim);
+    mgpuGetMemRefDataAndShape<3>(rankedDescriptor, &globalAddress, globalDim,
+                                 globalStrides, tensorDataType);
     break;
   case 4:
-    mgpuGetMemRefDataAndShape<4>(ranked_descriptor, &globalAddress, globalDim);
+    mgpuGetMemRefDataAndShape<4>(rankedDescriptor, &globalAddress, globalDim,
+                                 globalStrides, tensorDataType);
     break;
   case 5:
-    mgpuGetMemRefDataAndShape<5>(ranked_descriptor, &globalAddress, globalDim);
+    mgpuGetMemRefDataAndShape<5>(rankedDescriptor, &globalAddress, globalDim,
+                                 globalStrides, tensorDataType);
     break;
   default:
     fprintf(
         stderr,
         "'mgpuTensorMapEncodeTiledMemref' failed with 'rank is too high'\n");
-    return NULL;
+    return nullptr;
   }
 
-  static const int elementSizeInBytes[] = {1, 2, 4, 4, 8, 8, 2,
-                                           4, 8, 2, 4, 4, 4};
   for (int64_t r = 0; r < tensorRank; ++r) {
-    elementStrides[r] = uint32_t(1);
     boxDim[r] = static_cast<uint32_t>(inputBoxDims[tensorRank - r - 1]);
   }
-
-  globalStrides[0] = globalDim[0] * elementSizeInBytes[tensorDataType];
-  for (int r = 1; r < tensorRank - 1; r++)
-    globalStrides[r] = globalStrides[r - 1] * globalDim[r];
 
   ScopedContext scopedContext;
   mgpuTensorMapEncodeTiled(&tensorMap, tensorDataType, tensorRank32,

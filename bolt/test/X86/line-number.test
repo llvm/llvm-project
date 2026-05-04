@@ -1,17 +1,17 @@
-# Verifies that the extraction of DWARF line number information is correct.
+## Verifies that the extraction of DWARF line number information is correct.
 
 RUN: %clangxx %cxxflags %S/Inputs/linenumber.cpp -g -o %t
 RUN: llvm-bolt %t -o %t.null --print-reordered --update-debug-sections \
 RUN:   --print-debug-info --reorder-blocks=reverse --sequential-disassembly \
 RUN:   2>&1 | FileCheck %s
 
-# Local variable in f()
+## Local variable in f()
 CHECK: movl    $0xbeef, -0x4(%rbp) # debug line {{.*}}linenumber.cpp:9
-# Checks that a branch instruction that is inserted by BOLT does not have
-# debug line info associated with it.
+## Checks that a branch instruction that is inserted by BOLT does not have
+## debug line info associated with it.
 CHECK-NOT: jmp   .LFT0 # debug line {{.*}}linenumber.cpp:1
-# Call to f() in g()
+## Call to f() in g()
 CHECK: callq   _Z1fv{{.*}} # debug line {{.*}}linenumber.cpp:19
-# Calls to g() and f() in main
+## Calls to g() and f() in main
 CHECK: callq   _Z1gv{{.*}} # debug line {{.*}}linenumber.cpp:23
 CHECK: callq   _Z1fv{{.*}} # debug line {{.*}}linenumber.cpp:23

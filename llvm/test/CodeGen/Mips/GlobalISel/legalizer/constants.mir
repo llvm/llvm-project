@@ -54,8 +54,7 @@ body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: signed_i16
     ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -32768
-    ; MIPS32-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY [[C]](s32)
-    ; MIPS32-NEXT: $v0 = COPY [[COPY]](s32)
+    ; MIPS32-NEXT: $v0 = COPY [[C]](s32)
     ; MIPS32-NEXT: RetRA implicit $v0
     %0:_(s16) = G_CONSTANT i16 -32768
     %1:_(s32) = G_SEXT %0(s16)
@@ -71,8 +70,7 @@ body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: signed_i8
     ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -128
-    ; MIPS32-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY [[C]](s32)
-    ; MIPS32-NEXT: $v0 = COPY [[COPY]](s32)
+    ; MIPS32-NEXT: $v0 = COPY [[C]](s32)
     ; MIPS32-NEXT: RetRA implicit $v0
     %0:_(s8) = G_CONSTANT i8 -128
     %1:_(s32) = G_SEXT %0(s8)

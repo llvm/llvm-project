@@ -69,8 +69,13 @@ CMP_INSTRUCTION(FCmp,         2, 0, experimental_constrained_fcmps,      FSETCCS
 // Theses are definitions for intrinsic functions, that are converted into
 // constrained intrinsics.
 //
+DAG_FUNCTION(acos,            1, 1, experimental_constrained_acos,       FACOS)
+DAG_FUNCTION(asin,            1, 1, experimental_constrained_asin,       FASIN)
+DAG_FUNCTION(atan,            1, 1, experimental_constrained_atan,       FATAN)
+DAG_FUNCTION(atan2,           2, 1, experimental_constrained_atan2,      FATAN2)
 DAG_FUNCTION(ceil,            1, 0, experimental_constrained_ceil,       FCEIL)
 DAG_FUNCTION(cos,             1, 1, experimental_constrained_cos,        FCOS)
+DAG_FUNCTION(cosh,            1, 1, experimental_constrained_cosh,       FCOSH)
 DAG_FUNCTION(exp,             1, 1, experimental_constrained_exp,        FEXP)
 DAG_FUNCTION(exp2,            1, 1, experimental_constrained_exp2,       FEXP2)
 DAG_FUNCTION(floor,           1, 0, experimental_constrained_floor,      FFLOOR)
@@ -94,7 +99,10 @@ DAG_FUNCTION(rint,            1, 1, experimental_constrained_rint,       FRINT)
 DAG_FUNCTION(round,           1, 0, experimental_constrained_round,      FROUND)
 DAG_FUNCTION(roundeven,       1, 0, experimental_constrained_roundeven,  FROUNDEVEN)
 DAG_FUNCTION(sin,             1, 1, experimental_constrained_sin,        FSIN)
+DAG_FUNCTION(sinh,            1, 1, experimental_constrained_sinh,       FSINH)
 DAG_FUNCTION(sqrt,            1, 1, experimental_constrained_sqrt,       FSQRT)
+DAG_FUNCTION(tan,             1, 1, experimental_constrained_tan,        FTAN)
+DAG_FUNCTION(tanh,            1, 1, experimental_constrained_tanh,       FTANH)
 DAG_FUNCTION(trunc,           1, 0, experimental_constrained_trunc,      FTRUNC)
 
 // This is definition for fmuladd intrinsic function, that is converted into

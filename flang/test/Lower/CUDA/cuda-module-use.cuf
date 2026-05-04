@@ -5,21 +5,21 @@
 
 subroutine sub1()
   use cuf_mod
-  md = 1.0
+!  md = 1.0 ! currently a TODO
 end
 
 ! CHECK-LABEL: func.func @_QPsub1()
 ! CHECK: %[[ADDR:.*]] = fir.address_of(@_QMcuf_modEmd) : !fir.ref<f32>
-! CHECK: %{{.*}}:2 = hlfir.declare %[[ADDR]] {cuda_attr = #fir.cuda<device>, uniq_name = "_QMcuf_modEmd"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK: %{{.*}}:2 = hlfir.declare %[[ADDR]] {data_attr = #cuf.cuda<device>, uniq_name = "_QMcuf_modEmd"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 
 attributes(device) subroutine sub2()
   use cuf_mod
   call devsub()
 end
 
-! CHECK-LABEL: func.func @_QPsub2() attributes {fir.cuda_attr = #fir.cuda_proc<device>}
+! CHECK-LABEL: func.func @_QPsub2() attributes {cuf.proc_attr = #cuf.cuda_proc<device>}
 ! CHECK: fir.call @_QMcuf_modPdevsub()
 
-! CHECK-LABEL: fir.global @_QMcuf_modEmd {cuda_attr = #fir.cuda<device>} : f32
+! CHECK-LABEL: fir.global @_QMcuf_modEmd {data_attr = #cuf.cuda<device>} : f32
 
-! CHECK-LABEL: func.func private @_QMcuf_modPdevsub() attributes {fir.cuda_attr = #fir.cuda_proc<device>}
+! CHECK-LABEL: func.func private @_QMcuf_modPdevsub() attributes {cuf.proc_attr = #cuf.cuda_proc<device>}

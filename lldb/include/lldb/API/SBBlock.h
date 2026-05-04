@@ -9,10 +9,13 @@
 #ifndef LLDB_API_SBBLOCK_H
 #define LLDB_API_SBBLOCK_H
 
+#include "lldb/API/SBAddressRange.h"
+#include "lldb/API/SBAddressRangeList.h"
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBFrame.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBValueList.h"
+#include "lldb/lldb-types.h"
 
 namespace lldb {
 
@@ -29,6 +32,10 @@ public:
   bool IsInlined() const;
 
   explicit operator bool() const;
+
+  bool operator==(const lldb::SBBlock &rhs) const;
+
+  bool operator!=(const lldb::SBBlock &rhs) const;
 
   bool IsValid() const;
 
@@ -51,6 +58,8 @@ public:
   lldb::SBAddress GetRangeStartAddress(uint32_t idx);
 
   lldb::SBAddress GetRangeEndAddress(uint32_t idx);
+
+  lldb::SBAddressRangeList GetRanges();
 
   uint32_t GetRangeIndexForBlockAddress(lldb::SBAddress block_addr);
 

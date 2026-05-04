@@ -189,7 +189,8 @@ def : InstRW<[P9_ALU_2C, IP_EXEC_1C, DISP_3SLOTS_1C],
     (instregex "F(N)?ABS(D|S)$"),
     (instregex "FNEG(D|S)$"),
     (instregex "FCPSGN(D|S)$"),
-    (instregex "SRAW(I)?$"),
+    (instregex "SRAW(8)?$"),
+    (instregex "SRAWI(8)?$"),
     (instregex "ISEL(8)?$"),
     RLDIMI,
     XSIEXPDP,
@@ -904,7 +905,7 @@ def : InstRW<[P9_LS_1C, IP_EXEC_1C, IP_AGEN_1C, DISP_3SLOTS_1C],
     SLBIEG,
     STMW,
     STSWI,
-    TLBIE
+    TLBIE, TLBIEP9, TLBIE8P9
 )>;
 
 // Vector Store Instruction
@@ -937,7 +938,8 @@ def : InstRW<[P9_DIV_12C, IP_EXECE_1C, IP_EXECO_1C, DISP_EVEN_1C],
     (instregex "MF(SPR|CTR|LR)(8)?$"),
     (instregex "M(T|F)MSR(D)?$"),
     (instregex "M(T|F)(U)?DSCR$"),
-    (instregex "MTSPR(8)?$")
+    (instregex "MTSPR(8)?$"),
+    (instregex "MSGSNDP(8)?$")
 )>;
 
 // 16 Cycle DIV operation. Only one DIV unit per superslice so we use the whole
@@ -1091,7 +1093,8 @@ def : InstRW<[P9_ALUOpAndALUOp_4C, IP_EXEC_1C, IP_EXEC_1C,
     (instregex "RLD(I)?C(R|L)_rec$"),
     (instregex "RLW(IMI|INM|NM)(8)?_rec$"),
     (instregex "SLW(8)?_rec$"),
-    (instregex "SRAW(I)?_rec$"),
+    (instregex "SRAW(8)?_rec$"),
+    (instregex "SRAWI(8)?_rec$"),
     (instregex "SRW(8)?_rec$"),
     RLDICL_32_rec,
     RLDIMI_rec

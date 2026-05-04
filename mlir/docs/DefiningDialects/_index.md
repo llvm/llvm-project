@@ -10,8 +10,8 @@ Before diving into how to define these constructs, below is a quick refresher
 from the [MLIR LangRef](../LangRef.md).
 
 Dialects are the mechanism by which to engage with and extend the MLIR
-ecosystem. They allow for defining new [attributes](../LangRef.md#attributes),
-[operations](../LangRef.md#operations), and [types](../LangRef.md#type-system).
+ecosystem. They allow for defining new [attributes](../LangRef.md/#attributes),
+[operations](../LangRef.md/#operations), and [types](../LangRef.md/#type-system).
 Dialects are used to model a variety of different abstractions; from traditional
 [arithmetic](../Dialects/ArithOps.md) to
 [pattern rewrites](../Dialects/PDLOps.md); and is one of the most fundamental
@@ -43,7 +43,7 @@ extends to all of the MLIR constructs, including [Interfaces](../Interfaces.md) 
 
 ```tablegen
 // Include the definition of the necessary tablegen constructs for defining
-// our dialect. 
+// our dialect.
 include "mlir/IR/DialectBase.td"
 
 // Here is a simple definition of a dialect.
@@ -133,7 +133,7 @@ void MyOp::setOtherValue(StringAttr newValue);
 
 ### Dependent Dialects
 
-MLIR has a very large ecosystem, and contains dialects that server many different purposes. It
+MLIR has a very large ecosystem, and contains dialects that serve many different purposes. It
 is quite common, given the above, that dialects may want to reuse certain components from other
 dialects. This may mean generating operations from those dialects during canonicalization, reusing
 attributes or types, etc. When a dialect has a dependency on another, i.e. when it constructs and/or
@@ -196,7 +196,7 @@ only the declaration of the destructor is generated for the Dialect class.
 
 ### Discardable Attribute Verification
 
-As described by the [MLIR Language Reference](../LangRef.md#attributes),
+As described by the [MLIR Language Reference](../LangRef.md/#attributes),
 *discardable attribute* are a type of attribute that has its semantics defined
 by the dialect whose name prefixes that of the attribute. For example, if an
 operation has an attribute named `gpu.contained_module`, the `gpu` dialect
@@ -270,7 +270,7 @@ void *MyDialect::getRegisteredInterfaceForOp(TypeID typeID, StringAttr opName);
 ```
 
 For a more detail description of the expected usages of this hook, view the detailed 
-[interface documentation](../Interfaces.md#dialect-fallback-for-opinterface).
+[interface documentation](../Interfaces.md/#dialect-fallback-for-opinterface).
 
 ### Default Attribute/Type Parsers and Printers 
 
@@ -649,7 +649,7 @@ Type MyDialect::parseType(DialectAsmParser &parser) const {
             return dynType;
          return Type();
     }
-    
+
     ...
 }
 ```
@@ -669,7 +669,7 @@ It is also possible to cast a `Type` known to be defined at runtime to a
 `DynamicType`.
 
 ```c++
-auto dynType = type.cast<DynamicType>();
+auto dynType = cast<DynamicType>(type);
 auto typeDef = dynType.getTypeDef();
 auto args = dynType.getParams();
 ```
@@ -679,7 +679,7 @@ auto args = dynType.getParams();
 Similar to types defined at runtime, attributes defined at runtime can only have
 as argument a list of `Attribute`.
 
-Similarily to types, an attribute is defined at runtime using the class
+Similarly to types, an attribute is defined at runtime using the class
 `DynamicAttrDefinition`, which is created using the `DynamicAttrDefinition::get`
 functions. An attribute definition requires a name, the dialect that will
 register the attribute, and a parameter verifier. It can also define optionally
@@ -767,7 +767,7 @@ It is also possible to cast an `Attribute` known to be defined at runtime to a
 `DynamicAttr`.
 
 ```c++
-auto dynAttr = attr.cast<DynamicAttr>();
+auto dynAttr = cast<DynamicAttr>(attr);
 auto attrDef = dynAttr.getAttrDef();
 auto args = dynAttr.getParams();
 ```

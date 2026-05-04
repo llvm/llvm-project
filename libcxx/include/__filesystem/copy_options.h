@@ -10,7 +10,6 @@
 #ifndef _LIBCPP___FILESYSTEM_COPY_OPTIONS_H
 #define _LIBCPP___FILESYSTEM_COPY_OPTIONS_H
 
-#include <__availability>
 #include <__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -35,19 +34,19 @@ enum class copy_options : unsigned short {
   __in_recursive_copy = 512,
 };
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr copy_options operator&(copy_options __lhs, copy_options __rhs) {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr copy_options operator&(copy_options __lhs, copy_options __rhs) {
   return static_cast<copy_options>(static_cast<unsigned short>(__lhs) & static_cast<unsigned short>(__rhs));
 }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr copy_options operator|(copy_options __lhs, copy_options __rhs) {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr copy_options operator|(copy_options __lhs, copy_options __rhs) {
   return static_cast<copy_options>(static_cast<unsigned short>(__lhs) | static_cast<unsigned short>(__rhs));
 }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr copy_options operator^(copy_options __lhs, copy_options __rhs) {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr copy_options operator^(copy_options __lhs, copy_options __rhs) {
   return static_cast<copy_options>(static_cast<unsigned short>(__lhs) ^ static_cast<unsigned short>(__rhs));
 }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr copy_options operator~(copy_options __lhs) {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr copy_options operator~(copy_options __lhs) {
   return static_cast<copy_options>(~static_cast<unsigned short>(__lhs));
 }
 

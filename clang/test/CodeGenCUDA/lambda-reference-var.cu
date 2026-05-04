@@ -82,7 +82,7 @@ void host_capture_host_ref_by_copy(int *out) {
 }
 
 // HOST-LABEL: @_ZZ28host_capture_host_ref_by_refPiENKUlvE_clEv(
-// HOST: %[[CAP:.*]] = getelementptr inbounds %[[T2]], ptr %this1, i32 0, i32 0
+// HOST: %[[CAP:.*]] = getelementptr inbounds nuw %[[T2]], ptr %this1, i32 0, i32 0
 // HOST: %[[REF:.*]] = load ptr, ptr %[[CAP]]
 // HOST: %[[VAL:.*]] = load i32, ptr %[[REF]]
 // HOST: %[[VAL2:.*]] = add nsw i32 %[[VAL]], 1
@@ -121,11 +121,11 @@ void host_lambda_ref(int *out) {
 }
 
 // HOST-LABEL: define{{.*}} void @_Z28dev_capture_host_ref_by_copyPi(
-// HOST: %[[CAP:.*]] = getelementptr inbounds %[[T3]], ptr %{{.*}}, i32 0, i32 1
+// HOST: %[[CAP:.*]] = getelementptr inbounds nuw %[[T3]], ptr %{{.*}}, i32 0, i32 1
 // HOST: %[[VAL:.*]] = load i32, ptr @global_host_var
 // HOST: store i32 %[[VAL]], ptr %[[CAP]]
 // DEV-LABEL: define internal void @_ZZ28dev_capture_host_ref_by_copyPiENKUlvE_clEv(
-// DEV: %[[CAP:.*]] = getelementptr inbounds %[[T3]], ptr %this1, i32 0, i32 1
+// DEV: %[[CAP:.*]] = getelementptr inbounds nuw %[[T3]], ptr %this1, i32 0, i32 1
 // DEV: %[[VAL:.*]] = load i32, ptr %[[CAP]]
 // DEV: store i32 %[[VAL]]
 void dev_capture_host_ref_by_copy(int *out) {

@@ -20,7 +20,7 @@ define void @f_noalias(ptr noalias nocapture %dst, ptr noalias nocapture readonl
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> poison, i32 [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[TMP7]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP9:%.*]] = add nsw <4 x i32> [[TMP6]], [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp ult <4 x i32> [[TMP9]], <i32 256, i32 256, i32 256, i32 256>
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp ult <4 x i32> [[TMP9]], splat (i32 256)
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp sgt <4 x i32> [[TMP9]], zeroinitializer
 ; CHECK-NEXT:    [[TMP12:%.*]] = sext <4 x i1> [[TMP11]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP13:%.*]] = select <4 x i1> [[TMP10]], <4 x i32> [[TMP9]], <4 x i32> [[TMP12]]

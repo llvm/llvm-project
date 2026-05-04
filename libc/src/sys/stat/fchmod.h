@@ -9,12 +9,13 @@
 #ifndef LLVM_LIBC_SRC_SYS_STAT_FCHMOD_H
 #define LLVM_LIBC_SRC_SYS_STAT_FCHMOD_H
 
+#include "src/__support/macros/config.h"
 #include <sys/stat.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int fchmod(int fd, mode_t mode);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_SYS_STAT_FCHMOD_H

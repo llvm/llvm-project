@@ -65,7 +65,13 @@
 @ CHECK-THUMB: wfe                             @ encoding: [0x20,0xbf]
 @ CHECK-THUMB: wfi                             @ encoding: [0x30,0xbf]
 @ CHECK-THUMB: sev                             @ encoding: [0x40,0xbf]
-@ CHECK-ERROR-THUMB: error: instruction requires: v7 clrex
+@ CHECK-ERROR-THUMB: error: invalid instruction, any one of the following would fix this:
+@ CHECK-ERROR-THUMB: clrex
+@ CHECK-ERROR-THUMB: ^
+@ CHECK-ERROR-THUMB: note: instruction requires: v7 clrex
+@ CHECK-ERROR-THUMB: clrex
+@ CHECK-ERROR-THUMB: ^
+@ CHECK-ERROR-THUMB: note: instruction requires: arm-mode
 @ CHECK-ERROR-THUMB: clrex
 @ CHECK-ERROR-THUMB: ^
 

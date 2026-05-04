@@ -1,12 +1,12 @@
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-zimop -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+zimop -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
-# RUN: llvm-mc %s -triple=riscv64 -mattr=+experimental-zimop -show-encoding \
+# RUN: llvm-mc %s -triple=riscv64 -mattr=+zimop -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
-# RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+experimental-zimop < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-zimop -d -r - \
+# RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+zimop < %s \
+# RUN:     | llvm-objdump --mattr=+zimop -d -r - \
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
-# RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+experimental-zimop < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-zimop -d -r - \
+# RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+zimop < %s \
+# RUN:     | llvm-objdump --mattr=+zimop -d -r - \
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
 
 # CHECK-ASM-AND-OBJ: mop.r.0 a2, a1

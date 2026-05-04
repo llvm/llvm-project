@@ -130,8 +130,8 @@ exit:
 }
 
 
-; Verify that we do *not* thread any edge.  We used to evaluate
-; constant expressions like:
+; Verify that we thread the edge correctly.  We used to evaluate constant
+; expressions like:
 ;
 ;   icmp ugt ptr null, inttoptr (i64 4 to ptr)
 ;
@@ -141,16 +141,17 @@ define void @icmp_ult_null_constexpr(ptr %arg1, ptr %arg2) {
 ; CHECK-LABEL: @icmp_ult_null_constexpr(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq ptr [[ARG1:%.*]], null
-; CHECK-NEXT:    br i1 [[CMP1]], label [[BB_BAR1:%.*]], label [[BB_END:%.*]]
-; CHECK:       bb_bar1:
-; CHECK-NEXT:    call void @bar(i32 1)
-; CHECK-NEXT:    br label [[BB_END]]
+; CHECK-NEXT:    br i1 [[CMP1]], label [[BB_END_THREAD:%.*]], label [[BB_END:%.*]]
 ; CHECK:       bb_end:
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne ptr [[ARG2:%.*]], null
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[BB_CONT:%.*]], label [[BB_BAR2:%.*]]
+; CHECK:       bb_end.thread:
+; CHECK-NEXT:    call void @bar(i32 1)
+; CHECK-NEXT:    [[CMP21:%.*]] = icmp ne ptr [[ARG2]], null
+; CHECK-NEXT:    br i1 [[CMP21]], label [[BB_EXIT:%.*]], label [[BB_BAR2]]
 ; CHECK:       bb_bar2:
 ; CHECK-NEXT:    call void @bar(i32 2)
-; CHECK-NEXT:    br label [[BB_EXIT:%.*]]
+; CHECK-NEXT:    br label [[BB_EXIT]]
 ; CHECK:       bb_cont:
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp ult ptr [[ARG1]], inttoptr (i64 4 to ptr)
 ; CHECK-NEXT:    br i1 [[CMP3]], label [[BB_EXIT]], label [[BB_BAR3:%.*]]

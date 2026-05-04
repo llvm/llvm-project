@@ -180,10 +180,10 @@ struct VecTypeInfo {
 // Returns a VecTypeInfo with element type and length of given fir vector type.
 // Preserves signness of fir vector type if element type of integer.
 static inline VecTypeInfo getVecTypeFromFirType(mlir::Type firTy) {
-  assert(firTy.isa<fir::VectorType>());
+  assert(mlir::isa<fir::VectorType>(firTy));
   VecTypeInfo vecTyInfo;
-  vecTyInfo.eleTy = firTy.dyn_cast<fir::VectorType>().getEleTy();
-  vecTyInfo.len = firTy.dyn_cast<fir::VectorType>().getLen();
+  vecTyInfo.eleTy = mlir::dyn_cast<fir::VectorType>(firTy).getElementType();
+  vecTyInfo.len = mlir::dyn_cast<fir::VectorType>(firTy).getLen();
   return vecTyInfo;
 }
 

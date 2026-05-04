@@ -1,32 +1,32 @@
 ; RUN: llc -verify-machineinstrs < %s | FileCheck %s
 
 ; CHECK-LABEL: "$cppxdata$?crash@@YAXH@Z":
-; CHECK:	.long	("$stateUnwindMap$?crash@@YAXH@Z")
-; CHECK:	.long	("$ip2state$?crash@@YAXH@Z")
+; CHECK:	.long	"$stateUnwindMap$?crash@@YAXH@Z"
+; CHECK:	.long	"$ip2state$?crash@@YAXH@Z"
 
 ; CHECK-LABEL: "$stateUnwindMap$?crash@@YAXH@Z":
-; CHECK:	.long	-1 
+; CHECK:	.long	-1
 ; CHECK:	.long	"?dtor$
-; CHECK:	.long	0 
+; CHECK:	.long	0
 ; CHECK:	.long	"?dtor$
 ; CHECK:	.long	1
 ; CHECK:	.long	"?dtor$
 
 ; CHECK-LABEL: "$ip2state$?crash@@YAXH@Z":
 ; CHECK-NEXT:	.long	.Lfunc_begin0@IMGREL
-; CHECK-NEXT:	.long	-1                  
-; CHECK-NEXT:	.long	.Ltmp     
-; CHECK-NEXT:	.long	0                   
-; CHECK-NEXT:	.long	.Ltmp     
-; CHECK-NEXT:	.long	1                   
+; CHECK-NEXT:	.long	-1
 ; CHECK-NEXT:	.long	.Ltmp
-; CHECK-NEXT:	.long	2                   
+; CHECK-NEXT:	.long	0
 ; CHECK-NEXT:	.long	.Ltmp
-; CHECK-NEXT:	.long	1                   
+; CHECK-NEXT:	.long	1
 ; CHECK-NEXT:	.long	.Ltmp
-; CHECK-NEXT:	.long	0                   
+; CHECK-NEXT:	.long	2
 ; CHECK-NEXT:	.long	.Ltmp
-; CHECK-NEXT:	.long	-1                  
+; CHECK-NEXT:	.long	1
+; CHECK-NEXT:	.long	.Ltmp
+; CHECK-NEXT:	.long	0
+; CHECK-NEXT:	.long	.Ltmp
+; CHECK-NEXT:	.long	-1
 
 ; ModuleID = 'windows-seh-EHa-CppDtors01.cpp'
 source_filename = "windows-seh-EHa-CppDtors01.cpp"
@@ -240,12 +240,12 @@ declare i32 @llvm.eh.exceptioncode(token) #1
 
 declare dso_local void @"?printf@@YAXZZ"(...) #5
 
-attributes #0 = { noinline optnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { noinline optnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }
-attributes #2 = { noinline nounwind optnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #3 = { noinline norecurse optnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #2 = { noinline nounwind optnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" "use-soft-float"="false" }
+attributes #3 = { noinline norecurse optnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" "use-soft-float"="false" }
 attributes #4 = { nounwind willreturn }
-attributes #5 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #5 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" "use-soft-float"="false" }
 attributes #6 = { nounwind }
 attributes #7 = { noinline }
 

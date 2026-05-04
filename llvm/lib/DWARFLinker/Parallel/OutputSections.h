@@ -181,6 +181,11 @@ struct SectionDescriptor : SectionDescriptorBase {
   /// to the debug section, corresponding to this object.
   uint64_t StartOffset = 0;
 
+protected:
+  /// Section data bits.
+  OutSectionDataTy Contents;
+
+public:
   /// Stream which stores data to the Contents.
   raw_svector_ostream OS;
 
@@ -220,7 +225,7 @@ struct SectionDescriptor : SectionDescriptorBase {
   /// Returns section content.
   StringRef getContents() override {
     if (SectionOffsetInsideAsmPrinterOutputStart == 0)
-      return StringRef(Contents.data(), Contents.size());
+      return Contents;
 
     return Contents.slice(SectionOffsetInsideAsmPrinterOutputStart,
                           SectionOffsetInsideAsmPrinterOutputEnd);
@@ -253,7 +258,7 @@ struct SectionDescriptor : SectionDescriptorBase {
 
   /// Emit specified inplace string value into the current section contents.
   void emitInplaceString(StringRef String) {
-    OS << GlobalData.translateString(String);
+    OS << String;
     emitIntVal(0, 1);
   }
 
@@ -286,9 +291,6 @@ protected:
   }
 
   LinkingGlobalData &GlobalData;
-
-  /// Section data bits.
-  OutSectionDataTy Contents;
 
   /// Some sections are generated using AsmPrinter. The real section data
   /// located inside elf file in that case. Following fields points to the
@@ -371,16 +373,11 @@ public:
   /// If descriptor does not exist then creates it.
   SectionDescriptor &
   getOrCreateSectionDescriptor(DebugSectionKind SectionKind) {
-    SectionsSetTy::iterator It = SectionDescriptors.find(SectionKind);
+    auto [It, Inserted] = SectionDescriptors.try_emplace(SectionKind);
 
-    if (It == SectionDescriptors.end()) {
-      SectionDescriptor *Section =
-          new SectionDescriptor(SectionKind, GlobalData, Format, Endianness);
-      auto Result = SectionDescriptors.try_emplace(SectionKind, Section);
-      assert(Result.second);
-
-      It = Result.first;
-    }
+    if (Inserted)
+      It->second = std::make_shared<SectionDescriptor>(SectionKind, GlobalData,
+                                                       Format, Endianness);
 
     return *It->second;
   }

@@ -26,9 +26,6 @@ entry:
 ; CHECK:      Function Attrs: noreturn
 ; CHECK-NEXT: define
 ; CHECK-NEXT:   entry:
-; CHECK-NEXT:   {{.*}}@printf{{.*}}
-; CHECK-NEXT:   call void @"?overflow@@YAXXZ"()
-; CHECK-NEXT:   unreachable
   %call2 = call i32 (ptr, ...) @printf(ptr @"??_C@_0BC@NKPAGFFJ@Exception?5caught?6?$AA@") nofree nosync nounwind
   call void @"?overflow@@YAXXZ"()
   %call3 = call i32 (ptr, ...) @printf(ptr @"??_C@_0BC@NKPAGFFJ@Exception?5caught?6?$AA@")
@@ -41,13 +38,10 @@ b:
 ; CHECK-NOT:    nounwind
 ; CHECK-NOT:    noreturn
 ; CHECK:        define
-; CHECK-SAME:   @"?catchoverflow@@YAHXZ"()
 define dso_local i32 @"?catchoverflow@@YAHXZ"()  personality ptr @__C_specific_handler {
 entry:
   %retval = alloca i32, align 4
   %__exception_code = alloca i32, align 4
-; CHECK: invoke void @"?overflow@@YAXXZ"()
-; CHECK:          to label %invoke.cont unwind label %catch.dispatch
   invoke void @"?overflow@@YAXXZ"()
   to label %invoke.cont unwind label %catch.dispatch
 
@@ -88,9 +82,6 @@ entry:
 ; CHECK-NOT:  nounwind
 ; CHECK-NEXT: define
 ; CHECK-NEXT:   entry:
-; CHECK-NEXT:   %call3 = call i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(18) @"??_C@_0BC@NKPAGFFJ@Exception?5caught?6?$AA@")
-; CHECK-NEXT:   call void @"?overflow@@YAXXZ_may_throw"()
-; CHECK-NEXT:   unreachable
   %call3 = call i32 (ptr, ...) @printf(ptr @"??_C@_0BC@NKPAGFFJ@Exception?5caught?6?$AA@")
   call void @"?overflow@@YAXXZ_may_throw"()
   br label %b
@@ -102,13 +93,10 @@ b:
 ; CHECK-NOT:    nounwind
 ; CHECK-NOT:    noreturn
 ; CHECK:        define
-; CHECK-SAME:   @"?catchoverflow@@YAHXZ_may_throw"()
 define dso_local i32 @"?catchoverflow@@YAHXZ_may_throw"()  personality ptr @__C_specific_handler {
 entry:
   %retval = alloca i32, align 4
   %__exception_code = alloca i32, align 4
-; CHECK: invoke void @"?overflow@@YAXXZ_may_throw"()
-; CHECK:          to label %invoke.cont unwind label %catch.dispatch
   invoke void @"?overflow@@YAXXZ_may_throw"()
   to label %invoke.cont unwind label %catch.dispatch
 

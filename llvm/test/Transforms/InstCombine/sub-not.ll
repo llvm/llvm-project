@@ -6,7 +6,7 @@ declare void @use(i8)
 define i8 @sub_not(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sub_not(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[R:%.*]] = add i8 [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[Y:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %s = sub i8 %x, %y
@@ -29,19 +29,19 @@ define i8 @sub_not_extra_use(i8 %x, i8 %y) {
 
 define <2 x i8> @sub_not_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @sub_not_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i8> [[X:%.*]], <i8 -1, i8 -1>
-; CHECK-NEXT:    [[R:%.*]] = add <2 x i8> [[TMP1]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i8> [[X:%.*]], splat (i8 -1)
+; CHECK-NEXT:    [[R:%.*]] = add <2 x i8> [[Y:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %s = sub <2 x i8> %x, %y
-  %r = xor <2 x i8> %s, <i8 -1, i8 undef>
+  %r = xor <2 x i8> %s, <i8 -1, i8 poison>
   ret <2 x i8> %r
 }
 
 define i8 @dec_sub(i8 %x, i8 %y) {
 ; CHECK-LABEL: @dec_sub(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y:%.*]], -1
-; CHECK-NEXT:    [[R:%.*]] = add i8 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %s = sub i8 %x, %y
@@ -64,19 +64,19 @@ define i8 @dec_sub_extra_use(i8 %x, i8 %y) {
 
 define <2 x i8> @dec_sub_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @dec_sub_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i8> [[Y:%.*]], <i8 -1, i8 -1>
-; CHECK-NEXT:    [[R:%.*]] = add <2 x i8> [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i8> [[Y:%.*]], splat (i8 -1)
+; CHECK-NEXT:    [[R:%.*]] = add <2 x i8> [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %s = sub <2 x i8> %x, %y
-  %r = add <2 x i8> %s, <i8 -1, i8 undef>
+  %r = add <2 x i8> %s, <i8 -1, i8 poison>
   ret <2 x i8> %r
 }
 
 define i8 @sub_inc(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sub_inc(
 ; CHECK-NEXT:    [[S_NEG:%.*]] = xor i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[R:%.*]] = add i8 [[S_NEG]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[Y:%.*]], [[S_NEG]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %s = add i8 %x, 1
@@ -99,11 +99,11 @@ define i8 @sub_inc_extra_use(i8 %x, i8 %y) {
 
 define <2 x i8> @sub_inc_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @sub_inc_vec(
-; CHECK-NEXT:    [[S_NEG:%.*]] = xor <2 x i8> [[X:%.*]], <i8 -1, i8 -1>
-; CHECK-NEXT:    [[R:%.*]] = add <2 x i8> [[S_NEG]], [[Y:%.*]]
+; CHECK-NEXT:    [[S_NEG:%.*]] = xor <2 x i8> [[X:%.*]], splat (i8 -1)
+; CHECK-NEXT:    [[R:%.*]] = add <2 x i8> [[Y:%.*]], [[S_NEG]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
-  %s = add <2 x i8> %x, <i8 undef, i8 1>
+  %s = add <2 x i8> %x, <i8 poison, i8 1>
   %r = sub <2 x i8> %y, %s
   ret <2 x i8> %r
 }
@@ -111,7 +111,7 @@ define <2 x i8> @sub_inc_vec(<2 x i8> %x, <2 x i8> %y) {
 define i8 @sub_dec(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sub_dec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y:%.*]], -1
-; CHECK-NEXT:    [[R:%.*]] = add i8 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %s = add i8 %x, -1
@@ -134,11 +134,11 @@ define i8 @sub_dec_extra_use(i8 %x, i8 %y) {
 
 define <2 x i8> @sub_dec_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @sub_dec_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i8> [[Y:%.*]], <i8 -1, i8 -1>
-; CHECK-NEXT:    [[R:%.*]] = add <2 x i8> [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i8> [[Y:%.*]], splat (i8 -1)
+; CHECK-NEXT:    [[R:%.*]] = add <2 x i8> [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
-  %s = add <2 x i8> %x, <i8 undef, i8 -1>
+  %s = add <2 x i8> %x, <i8 poison, i8 -1>
   %r = sub <2 x i8> %s, %y
   ret <2 x i8> %r
 }

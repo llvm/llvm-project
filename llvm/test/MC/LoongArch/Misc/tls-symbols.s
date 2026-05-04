@@ -77,3 +77,25 @@ lu12i.w $a1, %le_hi20(le)
 # CHECK-NEXT:   Other: 0
 # CHECK-NEXT:   Section: Undefined
 # CHECK-NEXT: }
+
+pcalau12i $a1, %desc_pc_hi20(desc_pc)
+# CHECK-NEXT: Symbol {
+# CHECK-NEXT:   Name: desc_pc
+# CHECK-NEXT:   Value: 0x0
+# CHECK-NEXT:   Size: 0
+# CHECK-NEXT:   Binding: Global
+# CHECK-NEXT:   Type: TLS
+# CHECK-NEXT:   Other: 0
+# CHECK-NEXT:   Section: Undefined
+# CHECK-NEXT: }
+
+lu12i.w $a1, %desc_hi20(desc_abs)
+# CHECK-NEXT: Symbol {
+# CHECK-NEXT:   Name: desc_abs
+# CHECK-NEXT:   Value: 0x0
+# CHECK-NEXT:   Size: 0
+# CHECK-NEXT:   Binding: Global
+# CHECK-NEXT:   Type: TLS
+# CHECK-NEXT:   Other: 0
+# CHECK-NEXT:   Section: Undefined
+# CHECK-NEXT: }

@@ -125,6 +125,15 @@ struct TestMachineModulePass : public PassInfoMixin<TestMachineModulePass> {
   std::vector<int> &Counts;
 };
 
+struct ReportWarningPass : public PassInfoMixin<ReportWarningPass> {
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM) {
+    auto &Ctx = MF.getContext();
+    Ctx.reportWarning(SMLoc(), "Test warning message.");
+    return PreservedAnalyses::all();
+  }
+};
+
 std::unique_ptr<Module> parseIR(LLVMContext &Context, const char *IR) {
   SMDiagnostic Err;
   return parseAssemblyString(IR, Err, Context);
@@ -153,16 +162,14 @@ public:
     // MachineModuleAnalysis needs a TargetMachine instance.
     llvm::InitializeAllTargets();
 
-    std::string TripleName = Triple::normalize(sys::getDefaultTargetTriple());
+    Triple TT(sys::getDefaultTargetTriple());
     std::string Error;
-    const Target *TheTarget =
-        TargetRegistry::lookupTarget(TripleName, Error);
+    const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
     if (!TheTarget)
       return;
 
     TargetOptions Options;
-    TM.reset(TheTarget->createTargetMachine(TripleName, "", "", Options,
-                                            std::nullopt));
+    TM.reset(TheTarget->createTargetMachine(TT, "", "", Options, std::nullopt));
   }
 };
 
@@ -170,16 +177,15 @@ TEST_F(PassManagerTest, Basic) {
   if (!TM)
     GTEST_SKIP();
 
-  LLVMTargetMachine *LLVMTM = static_cast<LLVMTargetMachine *>(TM.get());
   M->setDataLayout(TM->createDataLayout());
 
-  MachineModuleInfo MMI(LLVMTM);
+  MachineModuleInfo MMI(TM.get());
 
+  MachineFunctionAnalysisManager MFAM;
   LoopAnalysisManager LAM;
   FunctionAnalysisManager FAM;
   CGSCCAnalysisManager CGAM;
   ModuleAnalysisManager MAM;
-  MachineFunctionAnalysisManager MFAM;
   PassBuilder PB(TM.get());
   PB.registerModuleAnalyses(MAM);
   PB.registerCGSCCAnalyses(CGAM);
@@ -196,18 +202,62 @@ TEST_F(PassManagerTest, Basic) {
   std::vector<int> Counts;
 
   ModulePassManager MPM;
+  FunctionPassManager FPM;
   MachineFunctionPassManager MFPM;
   MPM.addPass(TestMachineModulePass(Count, Counts));
-  MPM.addPass(createModuleToMachineFunctionPassAdaptor(
+  FPM.addPass(createFunctionToMachineFunctionPassAdaptor(
       TestMachineFunctionPass(Count, Counts)));
+  MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
   MPM.addPass(TestMachineModulePass(Count, Counts));
   MFPM.addPass(TestMachineFunctionPass(Count, Counts));
-  MPM.addPass(createModuleToMachineFunctionPassAdaptor(std::move(MFPM)));
+  FPM = FunctionPassManager();
+  FPM.addPass(createFunctionToMachineFunctionPassAdaptor(std::move(MFPM)));
+  MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
 
+  testing::internal::CaptureStderr();
   MPM.run(*M, MAM);
+  std::string Output = testing::internal::GetCapturedStderr();
 
   EXPECT_EQ((std::vector<int>{10, 16, 18, 20, 30, 36, 38, 40}), Counts);
   EXPECT_EQ(40, Count);
+}
+
+TEST_F(PassManagerTest, DiagnosticHandler) {
+  if (!TM)
+    GTEST_SKIP();
+
+  M->setDataLayout(TM->createDataLayout());
+
+  MachineModuleInfo MMI(TM.get());
+
+  LoopAnalysisManager LAM;
+  MachineFunctionAnalysisManager MFAM;
+  FunctionAnalysisManager FAM;
+  CGSCCAnalysisManager CGAM;
+  ModuleAnalysisManager MAM;
+  PassBuilder PB(TM.get());
+  PB.registerModuleAnalyses(MAM);
+  PB.registerCGSCCAnalyses(CGAM);
+  PB.registerFunctionAnalyses(FAM);
+  PB.registerLoopAnalyses(LAM);
+  PB.registerMachineFunctionAnalyses(MFAM);
+  PB.crossRegisterProxies(LAM, FAM, CGAM, MAM, &MFAM);
+
+  MAM.registerPass([&] { return MachineModuleAnalysis(MMI); });
+
+  ModulePassManager MPM;
+  FunctionPassManager FPM;
+  MachineFunctionPassManager MFPM;
+  MPM.addPass(RequireAnalysisPass<MachineModuleAnalysis, Module>());
+  MFPM.addPass(ReportWarningPass());
+  FPM.addPass(createFunctionToMachineFunctionPassAdaptor(std::move(MFPM)));
+  MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+  testing::internal::CaptureStderr();
+  MPM.run(*M, MAM);
+  std::string Output = testing::internal::GetCapturedStderr();
+
+  EXPECT_TRUE(Output.find("warning: <unknown>:0: Test warning message.") !=
+              std::string::npos);
 }
 
 } // namespace

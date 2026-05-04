@@ -12,7 +12,7 @@ target triple = "wasm32-unknown-emscripten"
 ; CHECK-LABEL: @malloc_test
 define void @malloc_test() {
 entry:
-  ; CHECK: call ptr @malloc
+  ; CHECK: alloca i32
   %retval = alloca i32, align 4
   %jmp = alloca [1 x %struct.__jmp_buf_tag], align 16
   store i32 0, ptr %retval, align 4

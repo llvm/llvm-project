@@ -8,7 +8,7 @@
 # RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.bolt >> %t.txt
 # RUN: cat %t.txt | FileCheck --check-prefix=POSTCHECK %s
 
-# This tests checks that re-writing of .debug_loclists is handled correctly.
+## This tests checks that re-writing of .debug_loclists is handled correctly.
 
 # PRECHECK: version = 0x0005
 # PRECHECK: DW_AT_loclists_base [DW_FORM_sec_offset] (0x0000000c)

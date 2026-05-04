@@ -67,13 +67,13 @@ entry:
 
 define hidden void @_ZN1AC2Ev(ptr nocapture %this) {
 entry:
-  store ptr getelementptr inbounds ({ [4 x ptr] }, ptr @_ZTV1A, i64 0, inrange i32 0, i64 2), ptr %this, align 8
+  store ptr getelementptr inbounds inrange(-16, 16) ({ [4 x ptr] }, ptr @_ZTV1A, i64 0, i32 0, i64 2), ptr %this, align 8
   ret void
 }
 
 define hidden void @_ZN1BC2Ev(ptr nocapture %this) {
 entry:
-  store ptr getelementptr inbounds ({ [4 x ptr] }, ptr @_ZTV1B, i64 0, inrange i32 0, i64 2), ptr %this, align 8
+  store ptr getelementptr inbounds inrange(-16, 16) ({ [4 x ptr] }, ptr @_ZTV1B, i64 0, i32 0, i64 2), ptr %this, align 8
   ret void
 }
 

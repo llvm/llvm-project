@@ -17,6 +17,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/TextAPI/Symbol.h"
 #include <string>
 
@@ -26,6 +27,23 @@ namespace MachO {
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
 class RecordsSlice;
+
+// Defines lightweight source location for records.
+struct RecordLoc {
+  RecordLoc() = default;
+  RecordLoc(std::string File, unsigned Line)
+      : File(std::move(File)), Line(Line) {}
+
+  /// Whether there is source location tied to the RecordLoc object.
+  bool isValid() const { return !File.empty(); }
+
+  bool operator==(const RecordLoc &O) const {
+    return std::tie(File, Line) == std::tie(O.File, O.Line);
+  }
+
+  const std::string File;
+  const unsigned Line = 0;
+};
 
 // Defines a list of linkage types.
 enum class RecordLinkage : uint8_t {
@@ -51,7 +69,8 @@ class Record {
 public:
   Record() = default;
   Record(StringRef Name, RecordLinkage Linkage, SymbolFlags Flags)
-      : Name(Name), Linkage(Linkage), Flags(mergeFlags(Flags, Linkage)) {}
+      : Name(Name), Linkage(Linkage), Flags(mergeFlags(Flags, Linkage)),
+        Verified(false) {}
 
   bool isWeakDefined() const {
     return (Flags & SymbolFlags::WeakDefined) == SymbolFlags::WeakDefined;
@@ -79,16 +98,20 @@ public:
   bool isExported() const { return Linkage >= RecordLinkage::Rexported; }
   bool isRexported() const { return Linkage == RecordLinkage::Rexported; }
 
+  bool isVerified() const { return Verified; }
+  void setVerify(bool V = true) { Verified = V; }
+
   StringRef getName() const { return Name; }
   SymbolFlags getFlags() const { return Flags; }
 
 private:
-  SymbolFlags mergeFlags(SymbolFlags Flags, RecordLinkage Linkage);
+  LLVM_ABI SymbolFlags mergeFlags(SymbolFlags Flags, RecordLinkage Linkage);
 
 protected:
   StringRef Name;
   RecordLinkage Linkage;
   SymbolFlags Flags;
+  bool Verified;
 
   friend class RecordsSlice;
 };
@@ -142,9 +165,9 @@ public:
   ObjCContainerRecord(StringRef Name, RecordLinkage Linkage)
       : Record({Name, Linkage, SymbolFlags::Data}) {}
 
-  ObjCIVarRecord *addObjCIVar(StringRef IVar, RecordLinkage Linkage);
-  ObjCIVarRecord *findObjCIVar(StringRef IVar) const;
-  std::vector<ObjCIVarRecord *> getObjCIVars() const;
+  LLVM_ABI ObjCIVarRecord *addObjCIVar(StringRef IVar, RecordLinkage Linkage);
+  LLVM_ABI ObjCIVarRecord *findObjCIVar(StringRef IVar) const;
+  LLVM_ABI std::vector<ObjCIVarRecord *> getObjCIVars() const;
   RecordLinkage getLinkage() const { return Linkage; }
 
 private:
@@ -185,11 +208,12 @@ public:
     return getLinkageForSymbol(CurrType) >= RecordLinkage::Rexported;
   }
 
-  RecordLinkage getLinkageForSymbol(ObjCIFSymbolKind CurrType) const;
-  void updateLinkageForSymbols(ObjCIFSymbolKind SymType, RecordLinkage Link);
+  LLVM_ABI RecordLinkage getLinkageForSymbol(ObjCIFSymbolKind CurrType) const;
+  LLVM_ABI void updateLinkageForSymbols(ObjCIFSymbolKind SymType,
+                                        RecordLinkage Link);
 
-  bool addObjCCategory(ObjCCategoryRecord *Record);
-  std::vector<ObjCCategoryRecord *> getObjCCategories() const;
+  LLVM_ABI bool addObjCCategory(ObjCCategoryRecord *Record);
+  LLVM_ABI std::vector<ObjCCategoryRecord *> getObjCCategories() const;
 
 private:
   /// Linkage level for each symbol represented in ObjCInterfaceRecord.

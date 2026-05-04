@@ -6,10 +6,10 @@
 # RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections
 # RUN: llvm-dwarfdump --debug-types %t.bolt | FileCheck --check-prefix=POSTCHECK %s
 
-# LLD does not de-duplicate COMDAT sections for LTO.
-# Clang can generate type units with the same hash.
-# https://discourse.llvm.org/t/dwarf-different-tu-with-the-same-hash/70095
-# Modified helper.s to have the same TU hash with a different COMDAT signature to test this.
+## LLD does not de-duplicate COMDAT sections for LTO.
+## Clang can generate type units with the same hash.
+## https://discourse.llvm.org/t/dwarf-different-tu-with-the-same-hash/70095
+## Modified helper.s to have the same TU hash with a different COMDAT signature to test this.
 
 # POSTCHECK:          Type Unit: length = 0x00000055, format = DWARF32, version = 0x0004,
 # POSTCHECK-SAME:       abbr_offset = 0x0000, addr_size = 0x08, name = 'Foo', type_signature = 0x675d23e4f33235f2, type_offset = 0x001e (next unit at 0x00000059)

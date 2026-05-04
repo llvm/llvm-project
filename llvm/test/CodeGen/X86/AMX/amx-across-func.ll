@@ -139,12 +139,12 @@ define dso_local void @test_api(i16 signext %0, i16 signext %1) nounwind {
 ; O0-NEXT:    callq foo
 ; O0-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %cx # 2-byte Reload
 ; O0-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %ax # 2-byte Reload
+; O0-NEXT:    movl $32, %esi
+; O0-NEXT:    movl $buf+2048, %edx
 ; O0-NEXT:    # implicit-def: $al
 ; O0-NEXT:    movb %al, {{[0-9]+}}(%rsp)
 ; O0-NEXT:    movw %cx, {{[0-9]+}}(%rsp)
 ; O0-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
-; O0-NEXT:    movl $32, %esi
-; O0-NEXT:    movl $buf+2048, %edx
 ; O0-NEXT:    tileloadd (%rdx,%rsi), %tmm0
 ; O0-NEXT:    movl $64, %esi
 ; O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
@@ -230,12 +230,12 @@ define dso_local i32 @test_loop(i32 %0) nounwind {
 ; CHECK-NEXT:    testl %ebx, %ebx
 ; CHECK-NEXT:    jg .LBB2_4
 ; CHECK-NEXT:  # %bb.1: # %.preheader
-; CHECK-NEXT:    movl $7, %ebp
+; CHECK-NEXT:    xorl %ebp, %ebp
 ; CHECK-NEXT:    movl $buf, %r14d
 ; CHECK-NEXT:    movl $32, %r15d
 ; CHECK-NEXT:    movw $8, %r12w
 ; CHECK-NEXT:    movl $buf+2048, %r13d
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB2_2: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    tileloadd (%r14,%r15), %tmm0
 ; CHECK-NEXT:    movabsq $64, %rax
@@ -248,13 +248,12 @@ define dso_local i32 @test_loop(i32 %0) nounwind {
 ; CHECK-NEXT:    callq foo
 ; CHECK-NEXT:    ldtilecfg (%rsp)
 ; CHECK-NEXT:    decl %ebp
-; CHECK-NEXT:    cmpl $7, %ebp
 ; CHECK-NEXT:    jne .LBB2_2
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    cmpl $3, %ebx
 ; CHECK-NEXT:    jne .LBB2_4
 ; CHECK-NEXT:  # %bb.6:
-; CHECK-NEXT:    testl %ebp, %ebp
+; CHECK-NEXT:    cmpl $-7, %ebp
 ; CHECK-NEXT:    jne .LBB2_5
 ; CHECK-NEXT:  # %bb.7:
 ; CHECK-NEXT:    incl %ebx
@@ -295,25 +294,24 @@ define dso_local i32 @test_loop(i32 %0) nounwind {
 ; IPRA-NEXT:    testl %edi, %edi
 ; IPRA-NEXT:    jg .LBB2_4
 ; IPRA-NEXT:  # %bb.1: # %.preheader
-; IPRA-NEXT:    movl $7, %ecx
+; IPRA-NEXT:    xorl %ecx, %ecx
 ; IPRA-NEXT:    movl $buf, %edx
 ; IPRA-NEXT:    movl $32, %esi
 ; IPRA-NEXT:    movw $8, %di
 ; IPRA-NEXT:    movl $buf+2048, %r8d
-; IPRA-NEXT:    .p2align 4, 0x90
+; IPRA-NEXT:    .p2align 4
 ; IPRA-NEXT:  .LBB2_2: # =>This Inner Loop Header: Depth=1
 ; IPRA-NEXT:    tileloadd (%rdx,%rsi), %tmm0
 ; IPRA-NEXT:    callq foo
 ; IPRA-NEXT:    tilestored %tmm0, (%r8,%rsi)
 ; IPRA-NEXT:    callq foo
 ; IPRA-NEXT:    decl %ecx
-; IPRA-NEXT:    cmpl $7, %ecx
 ; IPRA-NEXT:    jne .LBB2_2
 ; IPRA-NEXT:  # %bb.3:
 ; IPRA-NEXT:    cmpl $3, %eax
 ; IPRA-NEXT:    jne .LBB2_4
 ; IPRA-NEXT:  # %bb.6:
-; IPRA-NEXT:    testl %ecx, %ecx
+; IPRA-NEXT:    cmpl $-7, %ecx
 ; IPRA-NEXT:    jne .LBB2_5
 ; IPRA-NEXT:  # %bb.7:
 ; IPRA-NEXT:    incl %eax
@@ -494,7 +492,7 @@ define dso_local void @test_loop2(i32 %0) nounwind {
 ; CHECK-NEXT:    movl $32, %r15d
 ; CHECK-NEXT:    movw $8, %bp
 ; CHECK-NEXT:    movl $buf+2048, %r12d
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB3_1: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq foo
@@ -535,7 +533,7 @@ define dso_local void @test_loop2(i32 %0) nounwind {
 ; IPRA-NEXT:    movl $32, %ecx
 ; IPRA-NEXT:    movw $8, %dx
 ; IPRA-NEXT:    movl $buf+2048, %esi
-; IPRA-NEXT:    .p2align 4, 0x90
+; IPRA-NEXT:    .p2align 4
 ; IPRA-NEXT:  .LBB3_1: # =>This Inner Loop Header: Depth=1
 ; IPRA-NEXT:    callq foo
 ; IPRA-NEXT:    testl %edi, %edi

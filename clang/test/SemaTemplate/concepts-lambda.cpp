@@ -225,3 +225,145 @@ void foo() {
   }(x);
 }
 } // namespace GH73418
+
+namespace GH93821 {
+
+template <class>
+concept C = true;
+
+template <class...>
+concept D = []<C T = int>() { return true; }();
+
+D auto x = 0;
+
+} // namespace GH93821
+
+namespace dependent_param_concept {
+template <typename... Ts> void sink(Ts...) {}
+void dependent_param() {
+  auto L = [](auto... x) {
+    return [](decltype(x)... y) {
+      return [](int z)
+        requires requires { sink(y..., z); }
+      {};
+    };
+  };
+  L(0, 1)(1, 2)(1);
+}
+} // namespace dependent_param_concept
+
+namespace init_captures {
+template <int N> struct V {};
+
+void sink(V<0>, V<1>, V<2>, V<3>, V<4>) {}
+
+void init_capture_pack() {
+  auto L = [](auto... z) {
+    return [=](auto... y) {
+      return [... w = z, y...](auto)
+        requires requires { sink(w..., y...); }
+      {};
+    };
+  };
+  L(V<0>{}, V<1>{}, V<2>{})(V<3>{}, V<4>{})(1);
+}
+
+void dependent_capture_packs() {
+  auto L = [](auto... z) {
+    return [... w = z](auto... y) {
+      return [... c = w](auto)
+        requires requires { sink(c..., y...); }
+      {};
+    };
+  };
+  L(V<0>{}, V<1>{}, V<2>{})(V<3>{}, V<4>{})(1);
+}
+} // namespace init_captures
+
+namespace GH110721 {
+
+template <int N> void connect() {
+  int x = N, y = N;
+  [x, y = y]()
+    requires requires { x; }
+  {}();
+}
+
+void foo() {
+  connect<42>();
+}
+
+} // namespace GH110721
+
+namespace GH123441 {
+
+void test() {
+  auto L = [](auto... x) {
+    return [](decltype(x)... y)
+      requires true
+    {};
+  };
+  L(0, 1)(1, 2);
+}
+
+}
+
+namespace GH128175 {
+
+template <class> void f() {
+  [i{0}] {
+    [&] {
+      [&] {
+        []()
+          requires true
+        {}();
+      }();
+    }();
+  }();
+}
+
+template void f<int>();
+
+}
+
+namespace GH133719 {
+
+template <class T>
+constexpr auto f{[] (auto arg) {
+  return [a{arg}] {
+      [] () requires true {}();
+  };
+}};
+
+void foo() {
+  f<int>(0);
+}
+
+}
+
+namespace GH147772 {
+
+template<int...>
+struct seq {};
+
+using arr = char[1];
+
+struct foo {
+	template<int... i>
+	constexpr foo(seq<i...>) requires requires {
+		arr { [](auto) requires(i, true) { return 0; }(i)... };
+	} {}
+};
+
+constexpr auto bar = foo(seq<0>());
+}
+
+namespace GH147650 {
+template <int> int b;
+template <int b>
+void f()
+    requires requires { [] { (void)b; static_assert(b == 42); }; } {}
+void test() {
+    f<42>();
+}
+}

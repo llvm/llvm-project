@@ -14,10 +14,8 @@
 #ifndef BOLT_CORE_MCPLUS_H
 #define BOLT_CORE_MCPLUS_H
 
-#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
-#include "llvm/Support/Casting.h"
 #include <vector>
 
 namespace llvm {
@@ -73,7 +71,13 @@ public:
     kOffset,              /// Offset in the function.
     kLabel,               /// MCSymbol pointing to this instruction.
     kSize,                /// Size of the instruction.
-    kGeneric              /// First generic annotation.
+    kDynamicBranch,       /// Jit instruction patched at runtime.
+    kRASigned,            /// Inst is in a range where RA is signed.
+    kRAUnsigned,          /// Inst is in a range where RA is unsigned.
+    kRememberState,       /// Inst has rememberState CFI.
+    kRestoreState,        /// Inst has restoreState CFI.
+    kNegateState,         /// Inst has OpNegateRAState CFI.
+    kGeneric,             /// First generic annotation.
   };
 
   virtual void print(raw_ostream &OS) const = 0;
@@ -109,13 +113,20 @@ private:
   ValueType Value;
 };
 
+/// Return true if \p Op is the annotation sentinel: a null MCInst operand
+/// that marks the start of BOLT annotations. Non-null MCInst operands
+/// (e.g. Hexagon duplex sub-instructions) are legitimate prime operands.
+inline bool isAnnotationSentinel(const MCOperand &Op) {
+  return Op.isInst() && Op.getInst() == nullptr;
+}
+
 /// Return a number of operands in \Inst excluding operands representing
 /// annotations.
 inline unsigned getNumPrimeOperands(const MCInst &Inst) {
   for (signed I = Inst.getNumOperands() - 1; I >= 0; --I) {
-    if (Inst.getOperand(I).isInst())
+    if (isAnnotationSentinel(Inst.getOperand(I)))
       return I;
-    if (!Inst.getOperand(I).isImm())
+    if (!Inst.getOperand(I).isInst() && !Inst.getOperand(I).isImm())
       return Inst.getNumOperands();
   }
   return Inst.getNumOperands();

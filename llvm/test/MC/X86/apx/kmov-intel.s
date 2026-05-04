@@ -12,6 +12,18 @@
 # CHECK: {evex}	kmovq	k2, k1
 # CHECK: encoding: [0x62,0xf1,0xfc,0x08,0x90,0xd1]
          {evex}	kmovq	k2, k1
+# CHECK: {evex} kmovb   k0, byte ptr [rax - 16]
+# CHECK: encoding: [0x62,0xf1,0x7d,0x08,0x90,0x40,0xf0]
+         {evex} kmovb   k0, byte ptr [rax - 0x10]
+# CHECK: {evex} kmovw   k0, word ptr [rax - 16]
+# CHECK: encoding: [0x62,0xf1,0x7c,0x08,0x90,0x40,0xf0]
+         {evex} kmovw   k0, word ptr [rax - 0x10]
+# CHECK: {evex} kmovd   k0, dword ptr [rax - 16]
+# CHECK: encoding: [0x62,0xf1,0xfd,0x08,0x90,0x40,0xf0]
+         {evex} kmovd   k0, dword ptr [rax - 0x10]
+# CHECK: {evex} kmovq   k0, qword ptr [rax - 16]
+# CHECK: encoding: [0x62,0xf1,0xfc,0x08,0x90,0x40,0xf0]
+         {evex} kmovq   k0, qword ptr [rax - 0x10]
 
 # CHECK-NOT: {evex}
 

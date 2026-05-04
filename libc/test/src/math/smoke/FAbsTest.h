@@ -9,12 +9,14 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_SMOKE_FABSTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_SMOKE_FABSTEST_H
 
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <math.h>
+#include "hdr/math_macros.h"
 
-template <typename T> class FAbsTest : public LIBC_NAMESPACE::testing::Test {
+template <typename T>
+class FAbsTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 

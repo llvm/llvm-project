@@ -81,7 +81,11 @@ namespace Hexagon_MC {
   unsigned GetELFFlags(const MCSubtargetInfo &STI);
 
   llvm::ArrayRef<MCPhysReg> GetVectRegRev();
-}
+
+  std::optional<unsigned> getHVXVersion(const FeatureBitset &Features);
+
+  unsigned getArchVersion(const FeatureBitset &Features);
+  } // namespace Hexagon_MC
 
 MCCodeEmitter *createHexagonMCCodeEmitter(const MCInstrInfo &MCII,
                                           MCContext &MCT);

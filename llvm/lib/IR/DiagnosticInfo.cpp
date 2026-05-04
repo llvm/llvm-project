@@ -25,6 +25,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
@@ -48,6 +49,20 @@ int llvm::getNextAvailablePluginDiagnosticKind() {
 
 const char *OptimizationRemarkAnalysis::AlwaysPrint = "";
 
+void DiagnosticInfoGeneric::print(DiagnosticPrinter &DP) const {
+  DP << getMsgStr();
+}
+
+void DiagnosticInfoGenericWithLoc::print(DiagnosticPrinter &DP) const {
+  DP << getLocationStr() << ": " << getMsgStr();
+}
+
+DiagnosticInfoInlineAsm::DiagnosticInfoInlineAsm(uint64_t LocCookie,
+                                                 const Twine &MsgStr,
+                                                 DiagnosticSeverity Severity)
+    : DiagnosticInfo(DK_InlineAsm, Severity), LocCookie(LocCookie),
+      MsgStr(MsgStr) {}
+
 DiagnosticInfoInlineAsm::DiagnosticInfoInlineAsm(const Instruction &I,
                                                  const Twine &MsgStr,
                                                  DiagnosticSeverity Severity)
@@ -66,8 +81,30 @@ void DiagnosticInfoInlineAsm::print(DiagnosticPrinter &DP) const {
     DP << " at line " << getLocCookie();
 }
 
+void DiagnosticInfoLegalizationFailure::print(DiagnosticPrinter &DP) const {
+  DP << getLocationStr() << ": " << getMsgStr();
+}
+
+DiagnosticInfoRegAllocFailure::DiagnosticInfoRegAllocFailure(
+    const Twine &MsgStr, const Function &Fn, const DiagnosticLocation &DL,
+    DiagnosticSeverity Severity)
+    : DiagnosticInfoWithLocationBase(DK_RegAllocFailure, Severity, Fn,
+                                     DL.isValid() ? DL : Fn.getSubprogram()),
+      MsgStr(MsgStr) {}
+
+DiagnosticInfoRegAllocFailure::DiagnosticInfoRegAllocFailure(
+    const Twine &MsgStr, const Function &Fn, DiagnosticSeverity Severity)
+    : DiagnosticInfoWithLocationBase(DK_RegAllocFailure, Severity, Fn,
+                                     Fn.getSubprogram()),
+      MsgStr(MsgStr) {}
+
+void DiagnosticInfoRegAllocFailure::print(DiagnosticPrinter &DP) const {
+  DP << getLocationStr() << ": " << MsgStr << " in function '" << getFunction()
+     << '\'';
+}
+
 DiagnosticInfoResourceLimit::DiagnosticInfoResourceLimit(
-    const Function &Fn, const char *ResourceName, uint64_t ResourceSize,
+    const Function &Fn, const Twine &ResourceName, uint64_t ResourceSize,
     uint64_t ResourceLimit, DiagnosticSeverity Severity, DiagnosticKind Kind)
     : DiagnosticInfoWithLocationBase(Kind, Severity, Fn, Fn.getSubprogram()),
       Fn(Fn), ResourceName(ResourceName), ResourceSize(ResourceSize),
@@ -179,14 +216,19 @@ DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key,
   else if (isa<Constant>(V)) {
     raw_string_ostream OS(Val);
     V->printAsOperand(OS, /*PrintType=*/false);
-  } else if (auto *I = dyn_cast<Instruction>(V))
+  } else if (auto *II = dyn_cast<IntrinsicInst>(V)) {
+    raw_string_ostream(Val) << "call " << II->getCalledFunction()->getName();
+  } else if (auto *I = dyn_cast<Instruction>(V)) {
     Val = I->getOpcodeName();
+  } else if (auto *MD = dyn_cast<MetadataAsValue>(V)) {
+    if (auto *S = dyn_cast<MDString>(MD->getMetadata()))
+      Val = S->getString();
+  }
 }
 
 DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, const Type *T)
     : Key(std::string(Key)) {
-  raw_string_ostream OS(Val);
-  OS << *T;
+  raw_string_ostream(Val) << *T;
 }
 
 DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, StringRef S)
@@ -229,6 +271,13 @@ DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key,
   C.print(OS);
 }
 
+DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key,
+                                                   BranchProbability P)
+    : Key(std::string(Key)) {
+  raw_string_ostream OS(Val);
+  P.print(OS);
+}
+
 DiagnosticInfoOptimizationBase::Argument::Argument(StringRef Key, DebugLoc Loc)
     : Key(std::string(Key)), Loc(Loc) {
   if (Loc) {
@@ -248,10 +297,10 @@ void DiagnosticInfoOptimizationBase::print(DiagnosticPrinter &DP) const {
 OptimizationRemark::OptimizationRemark(const char *PassName,
                                        StringRef RemarkName,
                                        const DiagnosticLocation &Loc,
-                                       const Value *CodeRegion)
-    : DiagnosticInfoIROptimization(
-          DK_OptimizationRemark, DS_Remark, PassName, RemarkName,
-          *cast<BasicBlock>(CodeRegion)->getParent(), Loc, CodeRegion) {}
+                                       const BasicBlock *CodeRegion)
+    : DiagnosticInfoIROptimization(DK_OptimizationRemark, DS_Remark, PassName,
+                                   RemarkName, *CodeRegion->getParent(), Loc,
+                                   CodeRegion) {}
 
 OptimizationRemark::OptimizationRemark(const char *PassName,
                                        StringRef RemarkName,
@@ -279,10 +328,10 @@ bool OptimizationRemark::isEnabled() const {
 
 OptimizationRemarkMissed::OptimizationRemarkMissed(
     const char *PassName, StringRef RemarkName, const DiagnosticLocation &Loc,
-    const Value *CodeRegion)
-    : DiagnosticInfoIROptimization(
-          DK_OptimizationRemarkMissed, DS_Remark, PassName, RemarkName,
-          *cast<BasicBlock>(CodeRegion)->getParent(), Loc, CodeRegion) {}
+    const BasicBlock *CodeRegion)
+    : DiagnosticInfoIROptimization(DK_OptimizationRemarkMissed, DS_Remark,
+                                   PassName, RemarkName,
+                                   *CodeRegion->getParent(), Loc, CodeRegion) {}
 
 OptimizationRemarkMissed::OptimizationRemarkMissed(const char *PassName,
                                                    StringRef RemarkName,
@@ -307,10 +356,10 @@ bool OptimizationRemarkMissed::isEnabled() const {
 
 OptimizationRemarkAnalysis::OptimizationRemarkAnalysis(
     const char *PassName, StringRef RemarkName, const DiagnosticLocation &Loc,
-    const Value *CodeRegion)
-    : DiagnosticInfoIROptimization(
-          DK_OptimizationRemarkAnalysis, DS_Remark, PassName, RemarkName,
-          *cast<BasicBlock>(CodeRegion)->getParent(), Loc, CodeRegion) {}
+    const BasicBlock *CodeRegion)
+    : DiagnosticInfoIROptimization(DK_OptimizationRemarkAnalysis, DS_Remark,
+                                   PassName, RemarkName,
+                                   *CodeRegion->getParent(), Loc, CodeRegion) {}
 
 OptimizationRemarkAnalysis::OptimizationRemarkAnalysis(const char *PassName,
                                                        StringRef RemarkName,
@@ -322,10 +371,9 @@ OptimizationRemarkAnalysis::OptimizationRemarkAnalysis(const char *PassName,
 
 OptimizationRemarkAnalysis::OptimizationRemarkAnalysis(
     enum DiagnosticKind Kind, const char *PassName, StringRef RemarkName,
-    const DiagnosticLocation &Loc, const Value *CodeRegion)
+    const DiagnosticLocation &Loc, const BasicBlock *CodeRegion)
     : DiagnosticInfoIROptimization(Kind, DS_Remark, PassName, RemarkName,
-                                   *cast<BasicBlock>(CodeRegion)->getParent(),
-                                   Loc, CodeRegion) {}
+                                   *CodeRegion->getParent(), Loc, CodeRegion) {}
 
 OptimizationRemarkAnalysis::OptimizationRemarkAnalysis(const char *PassName,
                                                        StringRef RemarkName,
@@ -351,10 +399,10 @@ void DiagnosticInfoSrcMgr::print(DiagnosticPrinter &DP) const {
 
 DiagnosticInfoOptimizationFailure::DiagnosticInfoOptimizationFailure(
     const char *PassName, StringRef RemarkName, const DiagnosticLocation &Loc,
-    const Value *CodeRegion)
-    : DiagnosticInfoIROptimization(
-          DK_OptimizationFailure, DS_Warning, PassName, RemarkName,
-          *cast<BasicBlock>(CodeRegion)->getParent(), Loc, CodeRegion) {}
+    const BasicBlock *CodeRegion)
+    : DiagnosticInfoIROptimization(DK_OptimizationFailure, DS_Warning, PassName,
+                                   RemarkName, *CodeRegion->getParent(), Loc,
+                                   CodeRegion) {}
 
 bool DiagnosticInfoOptimizationFailure::isEnabled() const {
   // Only print warnings.
@@ -363,12 +411,15 @@ bool DiagnosticInfoOptimizationFailure::isEnabled() const {
 
 void DiagnosticInfoUnsupported::print(DiagnosticPrinter &DP) const {
   std::string Str;
-  raw_string_ostream OS(Str);
-
-  OS << getLocationStr() << ": in function " << getFunction().getName() << ' '
-     << *getFunction().getFunctionType() << ": " << Msg << '\n';
-  OS.flush();
+  raw_string_ostream(Str) << getLocationStr() << ": in function "
+                          << getFunction().getName() << ' '
+                          << *getFunction().getFunctionType() << ": " << Msg
+                          << '\n';
   DP << Str;
+}
+
+void DiagnosticInfoInstrumentation::print(DiagnosticPrinter &DP) const {
+  DP << Msg;
 }
 
 void DiagnosticInfoISelFallback::print(DiagnosticPrinter &DP) const {
@@ -399,11 +450,11 @@ std::string DiagnosticInfoOptimizationBase::getMsg() const {
                                     ? Args.end()
                                     : Args.begin() + FirstExtraArgIndex))
     OS << Arg.Val;
-  return OS.str();
+  return Str;
 }
 
 DiagnosticInfoMisExpect::DiagnosticInfoMisExpect(const Instruction *Inst,
-                                                 Twine &Msg)
+                                                 const Twine &Msg)
     : DiagnosticInfoWithLocationBase(DK_MisExpect, DS_Warning,
                                      *Inst->getParent()->getParent(),
                                      Inst->getDebugLoc()),
@@ -428,13 +479,32 @@ void llvm::diagnoseDontCall(const CallInst &CI) {
     auto Sev = i == 0 ? DS_Error : DS_Warning;
 
     if (F->hasFnAttribute(AttrName)) {
-      unsigned LocCookie = 0;
+      uint64_t LocCookie = 0;
       auto A = F->getFnAttribute(AttrName);
       if (MDNode *MD = CI.getMetadata("srcloc"))
         LocCookie =
             mdconst::extract<ConstantInt>(MD->getOperand(0))->getZExtValue();
+      MDNode *InlinedFromMD = CI.getMetadata("inlined.from");
       DiagnosticInfoDontCall D(F->getName(), A.getValueAsString(), Sev,
-                               LocCookie);
+                               LocCookie, InlinedFromMD);
+
+      if (const DebugLoc &DL = CI.getDebugLoc()) {
+        SmallVector<DebugInlineInfo, 4> DebugChain;
+        auto AddLocation = [&](const DILocation *Loc) {
+          if (auto *Scope = Loc->getScope())
+            if (auto *SP = Scope->getSubprogram())
+              DebugChain.push_back({SP->getName(), Loc->getFilename(),
+                                    Loc->getLine(), Loc->getColumn()});
+        };
+        if (const DILocation *Loc = DL.get()) {
+          AddLocation(Loc);
+          for (const DILocation *InlinedAt = Loc->getInlinedAt(); InlinedAt;
+               InlinedAt = InlinedAt->getInlinedAt())
+            AddLocation(InlinedAt);
+        }
+        D.setDebugInlineChain(std::move(DebugChain));
+      }
+
       F->getContext().diagnose(D);
     }
   }
@@ -448,4 +518,21 @@ void DiagnosticInfoDontCall::print(DiagnosticPrinter &DP) const {
     DP << "warn\"";
   if (!getNote().empty())
     DP << ": " << getNote();
+}
+
+SmallVector<std::pair<StringRef, uint64_t>>
+DiagnosticInfoDontCall::getInliningDecisions() const {
+  SmallVector<std::pair<StringRef, uint64_t>> Chain;
+  if (!InlinedFromMD)
+    return Chain;
+
+  for (unsigned I = 0, E = InlinedFromMD->getNumOperands(); I + 1 < E; I += 2) {
+    auto *NameMD = dyn_cast<MDString>(InlinedFromMD->getOperand(I));
+    auto *LocMD =
+        mdconst::dyn_extract<ConstantInt>(InlinedFromMD->getOperand(I + 1));
+    if (NameMD && !NameMD->getString().empty())
+      Chain.emplace_back(NameMD->getString(),
+                         LocMD ? LocMD->getZExtValue() : 0);
+  }
+  return Chain;
 }

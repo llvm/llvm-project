@@ -11,7 +11,7 @@
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/partition3.cpp \
 // RUN:  -o %t/A-Part3.pcm
 
-// RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/moduleA.cpp \
+// RUN: %clang_cc1 -std=c++20 %t/moduleA.cpp -fsyntax-only -verify \
 // RUN:  -fprebuilt-module-path=%t
 
 // Test again with reduced BMI
@@ -28,9 +28,7 @@
 // RUN: %clang_cc1 -std=c++20 -emit-reduced-module-interface %t/partition3.cpp \
 // RUN:  -o %t/A-Part3.pcm
 
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only %t/moduleA.cpp -fprebuilt-module-path=%t 
-
-// expected-no-diagnostics
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify %t/moduleA.cpp -fprebuilt-module-path=%t 
 
 //--- partition1.cpp
 export module A:Part1;
@@ -50,7 +48,7 @@ export module A:Part3;
 int part3();
 
 //--- moduleA.cpp
-
+// expected-no-diagnostics
 export module A;
 
 import :Part1;

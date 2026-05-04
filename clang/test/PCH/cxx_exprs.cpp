@@ -1,9 +1,9 @@
 // Test this without pch.
-// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -include %S/cxx_exprs.h -std=c++11 -fsyntax-only -verify %s -ast-dump | FileCheck %s
+// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -include %S/cxx_exprs.h -std=c++11 -verify %s -ast-dump | FileCheck %s
 
 // Test with pch. Use '-ast-dump' to force deserialization of function bodies.
 // RUN: %clang_cc1 -fcxx-exceptions -fexceptions -x c++-header -std=c++11 -emit-pch -o %t %S/cxx_exprs.h
-// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -std=c++11 -include-pch %t -fsyntax-only -verify %s -ast-dump-all | FileCheck %s
+// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -std=c++11 -include-pch %t -verify %s -ast-dump-all | FileCheck %s
 
 // expected-no-diagnostics
 

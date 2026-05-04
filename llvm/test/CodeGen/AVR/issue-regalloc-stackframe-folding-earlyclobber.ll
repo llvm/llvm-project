@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=avr -mcpu=atmega328 | FileCheck %s
+; RUN: llc < %s -mtriple=avr -mcpu=atmega328 | FileCheck %s
 
 ; This test case is designed to trigger a bug caused by the register
 ; allocator not handling the case where a target generates a load/store with

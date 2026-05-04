@@ -1,4 +1,4 @@
-# RUN: llc -march=x86-64 -run-pass none -o - %s | FileCheck %s
+# RUN: llc -mtriple=x86_64 -run-pass none -o - %s | FileCheck %s
 # Test that the MIR parser parses types on generic instructions correctly.
 
 --- |
@@ -18,11 +18,11 @@
 ---
 name:            test_vregs
 # CHECK:      registers:
-# CHECK-NEXT:   - { id: 0, class: _, preferred-register: '' }
-# CHECK-NEXT:   - { id: 1, class: _, preferred-register: '' }
-# CHECK-NEXT:   - { id: 2, class: _, preferred-register: '' }
-# CHECK-NEXT:   - { id: 3, class: _, preferred-register: '' }
-# CHECK-NEXT:   - { id: 4, class: _, preferred-register: '' }
+# CHECK-NEXT:   - { id: 0, class: _, preferred-register: '', flags: [  ] }
+# CHECK-NEXT:   - { id: 1, class: _, preferred-register: '', flags: [  ] }
+# CHECK-NEXT:   - { id: 2, class: _, preferred-register: '', flags: [  ] }
+# CHECK-NEXT:   - { id: 3, class: _, preferred-register: '', flags: [  ] }
+# CHECK-NEXT:   - { id: 4, class: _, preferred-register: '', flags: [  ] }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }

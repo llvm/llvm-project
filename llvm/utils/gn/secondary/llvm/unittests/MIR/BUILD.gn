@@ -16,6 +16,6 @@ unittest("MIRTests") {
   ]
   sources = [
     "MachineMetadata.cpp",
-    "PassBuilderCallbacksTest.cpp",
+    "MachineStableHashTest.cpp",
   ]
 }

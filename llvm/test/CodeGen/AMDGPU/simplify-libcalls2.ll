@@ -1,15 +1,14 @@
 ; REQUIRES: asserts
 ; RUN: opt -S -passes=amdgpu-simplifylib -debug-only=amdgpu-simplifylib -mtriple=amdgcn-unknown-amdhsa -disable-output < %s 2>&1 | FileCheck %s
-; RUN: opt -S -passes=amdgpu-simplifylib -debug-only=amdgpu-simplifylib -mtriple=amdgcn-unknown-amdhsa -disable-output < %s 2>&1 | FileCheck %s
 
 ; CHECK-NOT: AMDIC: try folding   call void @llvm.lifetime.start.p0
 ; CHECK-NOT: AMDIC: try folding   call void @llvm.lifetime.end.p0
 ; CHECK-NOT: AMDIC: try folding   call void @llvm.dbg.value
 
 define void @foo(i32 %i) {
-  call void @llvm.lifetime.start.p0(i64 1, ptr undef)
-  call void @llvm.lifetime.end.p0(i64 1, ptr undef)
-  call void @llvm.dbg.value(metadata i32 undef, metadata !DILocalVariable(name: "1", scope: !2), metadata !DIExpression()), !dbg !3
+  call void @llvm.lifetime.start.p0(i64 1, ptr poison)
+  call void @llvm.lifetime.end.p0(i64 1, ptr poison)
+  call void @llvm.dbg.value(metadata i32 poison, metadata !DILocalVariable(name: "1", scope: !2), metadata !DIExpression()), !dbg !3
   ret void
 }
 

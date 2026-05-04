@@ -26,7 +26,14 @@
 #include "test_allocator.h"
 
 template <class CharT>
+std::basic_syncbuf<CharT> lwg3253_default_constructor_is_not_explicit() {
+  return {};
+}
+
+template <class CharT>
 void test() {
+  lwg3253_default_constructor_is_not_explicit<CharT>();
+
   {
     using Buf = std::basic_syncbuf<CharT>;
     static_assert(std::default_initializable<Buf>);

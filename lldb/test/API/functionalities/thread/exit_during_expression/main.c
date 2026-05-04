@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-static unsigned int g_timeout = 100000;
+static unsigned int g_timeout = 1000000;
 
 extern int usleep(unsigned int);
 
@@ -27,7 +27,7 @@ void *exiting_thread_func(void *unused) {
 }
 
 int main() {
-  char *exit_ptr;
+  void *exit_ptr;
   pthread_t exiting_thread;
 
   pthread_create(&exiting_thread, NULL, exiting_thread_func, NULL);

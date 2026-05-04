@@ -9,7 +9,8 @@ define i40 @func_24() {
 entry:
   %bf.load81 = load i40, ptr @g_49, align 2
   %bf.clear = and i40 %bf.load81, -274869518337
-  %zext1 = zext i1 icmp eq (ptr getelementptr inbounds ([6 x i8], ptr @g_461, i64 0, i64 2), ptr @g_40) to i32
+  %cmp2 = icmp eq ptr getelementptr inbounds ([6 x i8], ptr @g_461, i64 0, i64 2), @g_40
+  %zext1 = zext i1 %cmp2 to i32
   %cmp = icmp sgt i32 %zext1, 0
   %zext2 = zext i1 %cmp to i40
   %shl = shl i40 %zext2, 23

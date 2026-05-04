@@ -103,52 +103,60 @@ liveins:
 body:             |
   ; CHECK-LABEL: name: test
   ; CHECK: bb.0.entry:
-  ; CHECK:   successors: %bb.2(0x50000000), %bb.1(0x30000000)
-  ; CHECK:   liveins: $r0, $r1, $r2
-  ; CHECK:   [[COPY:%[0-9]+]]:gprnopc = COPY $r2
-  ; CHECK:   [[COPY1:%[0-9]+]]:gpr = COPY $r1
-  ; CHECK:   [[COPY2:%[0-9]+]]:gpr = COPY $r0
-  ; CHECK:   t2CMPri [[COPY]], 1, 14 /* CC::al */, $noreg, implicit-def $cpsr
-  ; CHECK:   t2Bcc %bb.2, 10 /* CC::ge */, $cpsr
-  ; CHECK: bb.1:
-  ; CHECK:   successors: %bb.4(0x80000000)
-  ; CHECK:   [[t2MOVi:%[0-9]+]]:rgpr = t2MOVi 0, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   [[COPY3:%[0-9]+]]:gpr = COPY [[t2MOVi]]
-  ; CHECK:   t2B %bb.4, 14 /* CC::al */, $noreg
-  ; CHECK: bb.2.vector.ph:
-  ; CHECK:   successors: %bb.3(0x80000000)
-  ; CHECK:   [[t2ADDri:%[0-9]+]]:rgpr = t2ADDri [[COPY]], 7, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   [[t2BICri:%[0-9]+]]:rgpr = t2BICri [[t2ADDri]], 7, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   [[t2SUBri:%[0-9]+]]:rgpr = t2SUBri [[t2BICri]], 8, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   [[t2MOVi1:%[0-9]+]]:rgpr = t2MOVi 1, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   [[t2ADDrs:%[0-9]+]]:gprnopc = nuw nsw t2ADDrs [[t2MOVi1]], [[t2SUBri]], 27, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   [[COPY4:%[0-9]+]]:rgpr = COPY [[t2ADDrs]]
-  ; CHECK:   [[t2MOVi2:%[0-9]+]]:rgpr = t2MOVi 0, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   [[COPY5:%[0-9]+]]:gpr = COPY [[t2MOVi2]]
-  ; CHECK:   [[COPY6:%[0-9]+]]:rgpr = COPY [[COPY]]
-  ; CHECK:   [[t2DoLoopStartTP:%[0-9]+]]:gprlr = t2DoLoopStartTP [[COPY4]], [[COPY6]]
-  ; CHECK: bb.3.vector.body:
-  ; CHECK:   successors: %bb.3(0x7c000000), %bb.4(0x04000000)
-  ; CHECK:   [[PHI:%[0-9]+]]:rgpr = PHI [[COPY2]], %bb.2, %10, %bb.3
-  ; CHECK:   [[PHI1:%[0-9]+]]:rgpr = PHI [[COPY1]], %bb.2, %9, %bb.3
-  ; CHECK:   [[PHI2:%[0-9]+]]:tgpreven = PHI [[COPY5]], %bb.2, %8, %bb.3
-  ; CHECK:   [[PHI3:%[0-9]+]]:gprlr = PHI [[t2DoLoopStartTP]], %bb.2, %33, %bb.3
-  ; CHECK:   [[PHI4:%[0-9]+]]:rgpr = PHI [[COPY6]], %bb.2, %7, %bb.3
-  ; CHECK:   [[MVE_VCTP16_:%[0-9]+]]:vccr = MVE_VCTP16 [[PHI4]], 0, $noreg, $noreg
-  ; CHECK:   [[t2SUBri1:%[0-9]+]]:rgpr = t2SUBri [[PHI4]], 8, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   [[COPY7:%[0-9]+]]:gpr = COPY [[t2SUBri1]]
-  ; CHECK:   [[MVE_VLDRHU16_post:%[0-9]+]]:rgpr, [[MVE_VLDRHU16_post1:%[0-9]+]]:mqpr = MVE_VLDRHU16_post [[PHI]], 16, 1, [[MVE_VCTP16_]], [[PHI3]] :: (load (s128) from %ir.lsr.iv35, align 2)
-  ; CHECK:   [[MVE_VLDRHU16_post2:%[0-9]+]]:rgpr, [[MVE_VLDRHU16_post3:%[0-9]+]]:mqpr = MVE_VLDRHU16_post [[PHI1]], 16, 1, [[MVE_VCTP16_]], [[PHI3]] :: (load (s128) from %ir.lsr.iv12, align 2)
-  ; CHECK:   [[MVE_VMLADAVas16_:%[0-9]+]]:tgpreven = MVE_VMLADAVas16 [[PHI2]], killed [[MVE_VLDRHU16_post3]], killed [[MVE_VLDRHU16_post1]], 1, [[MVE_VCTP16_]], [[PHI3]]
-  ; CHECK:   [[COPY8:%[0-9]+]]:gpr = COPY [[MVE_VMLADAVas16_]]
-  ; CHECK:   [[COPY9:%[0-9]+]]:gpr = COPY [[MVE_VLDRHU16_post2]]
-  ; CHECK:   [[COPY10:%[0-9]+]]:gpr = COPY [[MVE_VLDRHU16_post]]
-  ; CHECK:   [[t2LoopEndDec:%[0-9]+]]:gprlr = t2LoopEndDec [[PHI3]], %bb.3, implicit-def $cpsr
-  ; CHECK:   t2B %bb.4, 14 /* CC::al */, $noreg
-  ; CHECK: bb.4.for.cond.cleanup:
-  ; CHECK:   [[PHI5:%[0-9]+]]:gpr = PHI [[COPY3]], %bb.1, [[COPY8]], %bb.3
-  ; CHECK:   $r0 = COPY [[PHI5]]
-  ; CHECK:   tBX_RET 14 /* CC::al */, $noreg, implicit $r0
+  ; CHECK-NEXT:   successors: %bb.2(0x50000000), %bb.1(0x30000000)
+  ; CHECK-NEXT:   liveins: $r0, $r1, $r2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gprnopc = COPY $r2
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr = COPY $r1
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr = COPY $r0
+  ; CHECK-NEXT:   t2CMPri [[COPY]], 1, 14 /* CC::al */, $noreg, implicit-def $cpsr
+  ; CHECK-NEXT:   t2Bcc %bb.2, 10 /* CC::ge */, $cpsr
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.4(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[t2MOVi:%[0-9]+]]:rgpr = t2MOVi 0, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gpr = COPY [[t2MOVi]]
+  ; CHECK-NEXT:   t2B %bb.4, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2.vector.ph:
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[t2ADDri:%[0-9]+]]:rgpr = t2ADDri [[COPY]], 7, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK-NEXT:   [[t2BICri:%[0-9]+]]:rgpr = t2BICri [[t2ADDri]], 7, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK-NEXT:   [[t2SUBri:%[0-9]+]]:rgpr = t2SUBri [[t2BICri]], 8, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK-NEXT:   [[t2MOVi1:%[0-9]+]]:rgpr = t2MOVi 1, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK-NEXT:   [[t2ADDrs:%[0-9]+]]:gprnopc = nuw nsw t2ADDrs [[t2MOVi1]], [[t2SUBri]], 27, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:rgpr = COPY [[t2ADDrs]]
+  ; CHECK-NEXT:   [[t2MOVi2:%[0-9]+]]:rgpr = t2MOVi 0, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:gpr = COPY [[t2MOVi2]]
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:rgpr = COPY [[COPY]]
+  ; CHECK-NEXT:   [[t2DoLoopStartTP:%[0-9]+]]:gprlr = t2DoLoopStartTP [[COPY4]], [[COPY6]]
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3.vector.body:
+  ; CHECK-NEXT:   successors: %bb.3(0x7c000000), %bb.4(0x04000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:rgpr = PHI [[COPY2]], %bb.2, %10, %bb.3
+  ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:rgpr = PHI [[COPY1]], %bb.2, %9, %bb.3
+  ; CHECK-NEXT:   [[PHI2:%[0-9]+]]:tgpreven = PHI [[COPY5]], %bb.2, %8, %bb.3
+  ; CHECK-NEXT:   [[PHI3:%[0-9]+]]:gprlr = PHI [[t2DoLoopStartTP]], %bb.2, %33, %bb.3
+  ; CHECK-NEXT:   [[PHI4:%[0-9]+]]:rgpr = PHI [[COPY6]], %bb.2, %7, %bb.3
+  ; CHECK-NEXT:   [[MVE_VCTP16_:%[0-9]+]]:vccr = MVE_VCTP16 [[PHI4]], 0, $noreg, $noreg
+  ; CHECK-NEXT:   [[t2SUBri1:%[0-9]+]]:rgpr = t2SUBri [[PHI4]], 8, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:gpr = COPY [[t2SUBri1]]
+  ; CHECK-NEXT:   [[MVE_VLDRHU16_post:%[0-9]+]]:rgpr, [[MVE_VLDRHU16_post1:%[0-9]+]]:mqpr = MVE_VLDRHU16_post [[PHI]], 16, 1, [[MVE_VCTP16_]], [[PHI3]] :: (load (s128) from %ir.lsr.iv35, align 2)
+  ; CHECK-NEXT:   [[MVE_VLDRHU16_post2:%[0-9]+]]:rgpr, [[MVE_VLDRHU16_post3:%[0-9]+]]:mqpr = MVE_VLDRHU16_post [[PHI1]], 16, 1, [[MVE_VCTP16_]], [[PHI3]] :: (load (s128) from %ir.lsr.iv12, align 2)
+  ; CHECK-NEXT:   [[MVE_VMLADAVas16_:%[0-9]+]]:tgpreven = MVE_VMLADAVas16 [[PHI2]], killed [[MVE_VLDRHU16_post3]], killed [[MVE_VLDRHU16_post1]], 1, [[MVE_VCTP16_]], [[PHI3]]
+  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:gpr = COPY [[MVE_VMLADAVas16_]]
+  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:gpr = COPY [[MVE_VLDRHU16_post2]]
+  ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:gpr = COPY [[MVE_VLDRHU16_post]]
+  ; CHECK-NEXT:   [[t2LoopEndDec:%[0-9]+]]:gprlr = t2LoopEndDec [[PHI3]], %bb.3, implicit-def $cpsr
+  ; CHECK-NEXT:   t2B %bb.4, 14 /* CC::al */, $noreg
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.4.for.cond.cleanup:
+  ; CHECK-NEXT:   [[PHI5:%[0-9]+]]:gpr = PHI [[COPY3]], %bb.1, [[COPY8]], %bb.3
+  ; CHECK-NEXT:   $r0 = COPY [[PHI5]]
+  ; CHECK-NEXT:   tBX_RET 14 /* CC::al */, $noreg, implicit $r0
   bb.0.entry:
     successors: %bb.1(0x50000000), %bb.4(0x30000000)
     liveins: $r0, $r1, $r2

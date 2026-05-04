@@ -1,0 +1,95 @@
+# RUN: yaml2obj %s | llvm-dwarfdump --verify -
+
+## Check --verify doesn't fail when a DW_AT_type references a
+## DW_TAG_template_alias.
+##
+## $ cat test.cpp
+## template <typename T>
+## using A = T;
+## A<bool> a;
+##
+## $ clang++ test.cpp -g -gtemplate-alias -gsimple-template-names
+
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
+DWARF:
+  debug_str:
+    - "clang version 19.0.0"
+    - "a"
+    - "A"
+    - "T"
+    - "bool"
+  debug_abbrev:
+    - Table:
+        - Code:            0x0000000000000001
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+        - Code:            0x0000000000000002
+          Tag:             DW_TAG_base_type
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+        - Code:            0x0000000000000003
+          Tag:             DW_TAG_template_alias
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref_addr
+        - Code:            0x0000000000000004
+          Tag:             DW_TAG_template_type_parameter
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref_addr
+        - Code:            0x0000000000000005
+          Tag:             DW_TAG_variable
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref_addr
+
+  debug_info:
+    - Version:         4
+      AbbrOffset:      0x0000000000000000
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x00000001
+          Values:
+            - Value:           0x0000000000000000
+            - Value:           0x0000000000000021
+        - AbbrCode:        0x00000002
+          Values:
+            - Value:           0x000000000000001b
+        - AbbrCode:        0x00000003
+          Values:
+            - Value:           0x0000000000000017
+            - Value:           0x0000000000000012
+        - AbbrCode:        0x00000004
+          Values:
+            - Value:           0x0000000000000019
+            - Value:           0x0000000000000012
+        - AbbrCode:        0x00000000
+          Values:          []
+        - AbbrCode:        0x00000005
+          Values:
+            - Value:           0x0000000000000015
+            - Value:           0x0000000000000017
+        - AbbrCode:        0x00000000
+          Values:          []
+...

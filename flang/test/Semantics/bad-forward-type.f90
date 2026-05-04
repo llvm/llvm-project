@@ -76,7 +76,8 @@ subroutine s8
   !ERROR: Cannot construct value for derived type 't2' before it is defined
   parameter(y=t2(12.3))
   type t2
-    real :: c
+    !ERROR: Cannot construct value for derived type 't2' before it is defined
+    real :: c = transfer(t2(),0.)
   end type
 end subroutine
 
@@ -96,3 +97,18 @@ subroutine s10
     type(undef), pointer :: y
   end type
 end subroutine s10
+
+subroutine s11
+  !ERROR: Derived type 'undef1' not found
+  type(undef1), pointer :: p
+  type t1
+    !ERROR: The derived type 'undef2' has not been defined
+    type(undef2), pointer :: p
+  end type
+  !ERROR: Derived type 'undef1' not found
+  type, extends(undef1) :: t2
+  end type
+  !ERROR: Derived type 't3' cannot extend type 'undef2' that has not yet been defined
+  type, extends(undef2) :: t3
+  end type
+end subroutine s11

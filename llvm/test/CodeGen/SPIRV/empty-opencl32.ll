@@ -1,6 +1,5 @@
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
-
-;; FIXME: ensure Magic Number, version number, generator's magic number, "bound" and "schema" are at least present
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ;; Ensure the required Capabilities are listed.
 ; CHECK-DAG: OpCapability Kernel

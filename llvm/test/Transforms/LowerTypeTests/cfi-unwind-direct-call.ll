@@ -65,7 +65,7 @@ lpad:                                             ; preds = %cfi.cont
   %1 = landingpad { ptr, i32 }
   catch ptr @_ZTIi
   %2 = extractvalue { ptr, i32 } %1, 1
-  %3 = tail call i32 @llvm.eh.typeid.for(ptr nonnull @_ZTIi) #5
+  %3 = tail call i32 @llvm.eh.typeid.for.p0(ptr nonnull @_ZTIi) #5
   %matches = icmp eq i32 %2, %3
   br i1 %matches, label %catch, label %eh.resume
 
@@ -90,7 +90,7 @@ declare void @__cfi_slowpath(i64, ptr) local_unnamed_addr
 declare i32 @__gxx_personality_v0(...)
 
 ; Function Attrs: nofree nosync nounwind memory(none)
-declare i32 @llvm.eh.typeid.for(ptr) #2
+declare i32 @llvm.eh.typeid.for.p0(ptr) #2
 
 declare ptr @__cxa_begin_catch(ptr) local_unnamed_addr
 
@@ -181,7 +181,7 @@ attributes #8 = { noreturn nounwind }
 ; CHECK-NEXT:    [[TMP0:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:            catch ptr @_ZTIi
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { ptr, i32 } [[TMP0]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call i32 @llvm.eh.typeid.for(ptr nonnull @_ZTIi) #[[ATTR6]]
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call i32 @llvm.eh.typeid.for.p0(ptr nonnull @_ZTIi) #[[ATTR6]]
 ; CHECK-NEXT:    [[MATCHES:%.*]] = icmp eq i32 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    br i1 [[MATCHES]], label [[CATCH:%.*]], label [[EH_RESUME:%.*]]
 ; CHECK:       catch:

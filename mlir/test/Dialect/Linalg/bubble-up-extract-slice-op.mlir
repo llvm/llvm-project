@@ -165,7 +165,9 @@ func.func @rank_reducing_slice(%width : index) -> tensor<1x1x1x?xf32> {
   %init = tensor.empty(%width) : tensor<1x?xf32>
   %fill = linalg.fill ins(%cst : f32) outs(%init : tensor<1x?xf32>) -> tensor<1x?xf32>
   %slice = tensor.extract_slice %fill[0, 0] [1, %width] [1, 1] : tensor<1x?xf32> to tensor<?xf32>
-  %expand = tensor.expand_shape %slice [[0, 1, 2, 3]] : tensor<?xf32> into tensor<1x1x1x?xf32>
+  %c0 = arith.constant 0 : index
+  %sz0 = tensor.dim %slice, %c0 : tensor<?xf32>
+  %expand = tensor.expand_shape %slice [[0, 1, 2, 3]] output_shape [1, 1, 1, %sz0] : tensor<?xf32> into tensor<1x1x1x?xf32>
   return %expand : tensor<1x1x1x?xf32>
 }
 

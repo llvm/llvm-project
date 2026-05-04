@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; All of these should be no-ops. Check this with -O0, to make sure
 ; that no register copies are generated at any time.
 

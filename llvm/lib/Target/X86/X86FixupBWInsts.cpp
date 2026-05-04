@@ -51,9 +51,9 @@
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CodeGen/LazyMachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
+#include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineSizeOpts.h"
 #include "llvm/CodeGen/Passes.h"
@@ -74,7 +74,13 @@ static cl::opt<bool>
                  cl::init(true), cl::Hidden);
 
 namespace {
-class FixupBWInstPass : public MachineFunctionPass {
+class X86FixupBWInstImpl {
+public:
+  X86FixupBWInstImpl(ProfileSummaryInfo *PSI, MachineBlockFrequencyInfo *MBFI)
+      : PSI(PSI), MBFI(MBFI) {}
+  bool runOnMachineFunction(MachineFunction &MF);
+
+private:
   /// Loop over all of the instructions in the basic block replacing applicable
   /// byte or word instructions with better alternatives.
   void processBasicBlock(MachineFunction &MF, MachineBasicBlock &MBB);
@@ -105,16 +111,32 @@ class FixupBWInstPass : public MachineFunctionPass {
   // otherwise.
   MachineInstr *tryReplaceInstr(MachineInstr *MI, MachineBasicBlock &MBB) const;
 
+  MachineFunction *MF = nullptr;
+
+  /// Machine instruction info used throughout the class.
+  const X86InstrInfo *TII = nullptr;
+
+  const TargetRegisterInfo *TRI = nullptr;
+
+  /// Local member for function's OptForSize attribute.
+  bool OptForSize = false;
+
+  /// Register Liveness information after the current instruction.
+  LiveRegUnits LiveUnits;
+
+  ProfileSummaryInfo *PSI = nullptr;
+  MachineBlockFrequencyInfo *MBFI = nullptr;
+};
+
+class X86FixupBWInstLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
   StringRef getPassName() const override { return FIXUPBW_DESC; }
 
-  FixupBWInstPass() : MachineFunctionPass(ID) { }
+  X86FixupBWInstLegacy() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<MachineLoopInfo>(); // Machine loop info is used to
-                                       // guide some heuristics.
     AU.addRequired<ProfileSummaryInfoWrapperPass>();
     AU.addRequired<LazyMachineBlockFrequencyInfoPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
@@ -126,49 +148,27 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoVRegs();
   }
-
-private:
-  MachineFunction *MF = nullptr;
-
-  /// Machine instruction info used throughout the class.
-  const X86InstrInfo *TII = nullptr;
-
-  const TargetRegisterInfo *TRI = nullptr;
-
-  /// Local member for function's OptForSize attribute.
-  bool OptForSize = false;
-
-  /// Machine loop info used for guiding some heruistics.
-  MachineLoopInfo *MLI = nullptr;
-
-  /// Register Liveness information after the current instruction.
-  LiveRegUnits LiveUnits;
-
-  ProfileSummaryInfo *PSI = nullptr;
-  MachineBlockFrequencyInfo *MBFI = nullptr;
 };
-char FixupBWInstPass::ID = 0;
+
+char X86FixupBWInstLegacy::ID = 0;
+
+} // namespace
+
+INITIALIZE_PASS(X86FixupBWInstLegacy, FIXUPBW_NAME, FIXUPBW_DESC, false, false)
+
+FunctionPass *llvm::createX86FixupBWInstsLegacyPass() {
+  return new X86FixupBWInstLegacy();
 }
 
-INITIALIZE_PASS(FixupBWInstPass, FIXUPBW_NAME, FIXUPBW_DESC, false, false)
-
-FunctionPass *llvm::createX86FixupBWInsts() { return new FixupBWInstPass(); }
-
-bool FixupBWInstPass::runOnMachineFunction(MachineFunction &MF) {
-  if (!FixupBWInsts || skipFunction(MF.getFunction()))
+bool X86FixupBWInstImpl::runOnMachineFunction(MachineFunction &MF) {
+  if (!FixupBWInsts)
     return false;
 
   this->MF = &MF;
   TII = MF.getSubtarget<X86Subtarget>().getInstrInfo();
   TRI = MF.getRegInfo().getTargetRegisterInfo();
-  MLI = &getAnalysis<MachineLoopInfo>();
-  PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
-  MBFI = (PSI && PSI->hasProfileSummary()) ?
-         &getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI() :
-         nullptr;
   LiveUnits.init(TII->getRegisterInfo());
 
   LLVM_DEBUG(dbgs() << "Start X86FixupBWInsts\n";);
@@ -187,7 +187,7 @@ bool FixupBWInstPass::runOnMachineFunction(MachineFunction &MF) {
 /// destination register.
 ///
 /// If so, return that super register in \p SuperDestReg.
-Register FixupBWInstPass::getSuperRegDestIfDead(MachineInstr *OrigMI) const {
+Register X86FixupBWInstImpl::getSuperRegDestIfDead(MachineInstr *OrigMI) const {
   const X86RegisterInfo *TRI = &TII->getRegisterInfo();
   Register OrigDestReg = OrigMI->getOperand(0).getReg();
   Register SuperDestReg = getX86SubSuperRegister(OrigDestReg, 32);
@@ -210,7 +210,8 @@ Register FixupBWInstPass::getSuperRegDestIfDead(MachineInstr *OrigMI) const {
   MCRegUnitIterator I = Range.begin(), E = Range.end();
   for (MCRegUnit S : TRI->regunits(SuperDestReg)) {
     I = std::lower_bound(I, E, S);
-    if ((I == E || *I > S) && LiveUnits.getBitVector().test(S)) {
+    if ((I == E || *I > S) &&
+        LiveUnits.getBitVector().test(static_cast<unsigned>(S))) {
       SuperIsLive = true;
       break;
     }
@@ -248,7 +249,7 @@ Register FixupBWInstPass::getSuperRegDestIfDead(MachineInstr *OrigMI) const {
   //   Predecessors according to CFG: %bb.2 %bb.1
   //   %ax = KILL %ax, implicit killed %eax
   //   RET 0, %ax
-  unsigned Opc = OrigMI->getOpcode(); (void)Opc;
+  unsigned Opc = OrigMI->getOpcode();
   // These are the opcodes currently known to work with the code below, if
   // something // else will be added we need to ensure that new opcode has the
   // same properties.
@@ -260,8 +261,6 @@ Register FixupBWInstPass::getSuperRegDestIfDead(MachineInstr *OrigMI) const {
   for (auto &MO: OrigMI->implicit_operands()) {
     if (!MO.isReg())
       continue;
-
-    assert((MO.isDef() || MO.isUse()) && "Expected Def or Use only!");
 
     if (MO.isDef() && TRI->isSuperRegisterEq(OrigDestReg, MO.getReg()))
       IsDefined = true;
@@ -283,8 +282,8 @@ Register FixupBWInstPass::getSuperRegDestIfDead(MachineInstr *OrigMI) const {
   return SuperDestReg;
 }
 
-MachineInstr *FixupBWInstPass::tryReplaceLoad(unsigned New32BitOpcode,
-                                              MachineInstr *MI) const {
+MachineInstr *X86FixupBWInstImpl::tryReplaceLoad(unsigned New32BitOpcode,
+                                                 MachineInstr *MI) const {
   // We are going to try to rewrite this load to a larger zero-extending
   // load.  This is safe if all portions of the 32 bit super-register
   // of the original destination register, except for the original destination
@@ -314,7 +313,7 @@ MachineInstr *FixupBWInstPass::tryReplaceLoad(unsigned New32BitOpcode,
   return MIB;
 }
 
-MachineInstr *FixupBWInstPass::tryReplaceCopy(MachineInstr *MI) const {
+MachineInstr *X86FixupBWInstImpl::tryReplaceCopy(MachineInstr *MI) const {
   assert(MI->getNumExplicitOperands() == 2);
   auto &OldDest = MI->getOperand(0);
   auto &OldSrc = MI->getOperand(1);
@@ -351,8 +350,8 @@ MachineInstr *FixupBWInstPass::tryReplaceCopy(MachineInstr *MI) const {
   return MIB;
 }
 
-MachineInstr *FixupBWInstPass::tryReplaceExtend(unsigned New32BitOpcode,
-                                                MachineInstr *MI) const {
+MachineInstr *X86FixupBWInstImpl::tryReplaceExtend(unsigned New32BitOpcode,
+                                                   MachineInstr *MI) const {
   Register NewDestReg = getSuperRegDestIfDead(MI);
   if (!NewDestReg)
     return nullptr;
@@ -385,8 +384,9 @@ MachineInstr *FixupBWInstPass::tryReplaceExtend(unsigned New32BitOpcode,
   return MIB;
 }
 
-MachineInstr *FixupBWInstPass::tryReplaceInstr(MachineInstr *MI,
-                                               MachineBasicBlock &MBB) const {
+MachineInstr *
+X86FixupBWInstImpl::tryReplaceInstr(MachineInstr *MI,
+                                    MachineBasicBlock &MBB) const {
   // See if this is an instruction of the type we are currently looking for.
   switch (MI->getOpcode()) {
 
@@ -431,8 +431,8 @@ MachineInstr *FixupBWInstPass::tryReplaceInstr(MachineInstr *MI,
   return nullptr;
 }
 
-void FixupBWInstPass::processBasicBlock(MachineFunction &MF,
-                                        MachineBasicBlock &MBB) {
+void X86FixupBWInstImpl::processBasicBlock(MachineFunction &MF,
+                                           MachineBasicBlock &MBB) {
 
   // This algorithm doesn't delete the instructions it is replacing
   // right away.  By leaving the existing instructions in place, the
@@ -452,8 +452,7 @@ void FixupBWInstPass::processBasicBlock(MachineFunction &MF,
   // We run after PEI, so we need to AddPristinesAndCSRs.
   LiveUnits.addLiveOuts(MBB);
 
-  OptForSize = MF.getFunction().hasOptSize() ||
-               llvm::shouldOptimizeForSize(&MBB, PSI, MBFI);
+  OptForSize = llvm::shouldOptimizeForSize(&MBB, PSI, MBFI);
 
   for (MachineInstr &MI : llvm::reverse(MBB)) {
     if (MachineInstr *NewMI = tryReplaceInstr(&MI, MBB))
@@ -470,4 +469,34 @@ void FixupBWInstPass::processBasicBlock(MachineFunction &MF,
     MBB.insert(MI, NewMI);
     MBB.erase(MI);
   }
+}
+
+bool X86FixupBWInstLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+  ProfileSummaryInfo *PSI =
+      &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
+  MachineBlockFrequencyInfo *MBFI =
+      (PSI && PSI->hasProfileSummary())
+          ? &getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI()
+          : nullptr;
+  X86FixupBWInstImpl Impl(PSI, MBFI);
+  return Impl.runOnMachineFunction(MF);
+}
+
+PreservedAnalyses
+X86FixupBWInstsPass::run(MachineFunction &MF,
+                         MachineFunctionAnalysisManager &MFAM) {
+  ProfileSummaryInfo *PSI =
+      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+          .getCachedResult<ProfileSummaryAnalysis>(
+              *MF.getFunction().getParent());
+  MachineBlockFrequencyInfo *MBFI = nullptr;
+  if (PSI && PSI->hasProfileSummary())
+    MBFI = &MFAM.getResult<MachineBlockFrequencyAnalysis>(MF);
+  X86FixupBWInstImpl Impl(PSI, MBFI);
+  bool Changed = Impl.runOnMachineFunction(MF);
+  return Changed ? getMachineFunctionPassPreservedAnalyses()
+                       .preserveSet<CFGAnalyses>()
+                 : PreservedAnalyses::all();
 }

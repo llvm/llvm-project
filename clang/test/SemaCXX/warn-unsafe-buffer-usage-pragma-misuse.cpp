@@ -18,8 +18,8 @@ void endUnopened(int *x) {
 }
 
 void wrongOption() {
-#pragma clang unsafe_buffer_usage start // expected-error{{Expected 'begin' or 'end'}}
-#pragma clang unsafe_buffer_usage close // expected-error{{Expected 'begin' or 'end'}}
+#pragma clang unsafe_buffer_usage start // expected-error{{expected 'begin' or 'end'}}
+#pragma clang unsafe_buffer_usage close // expected-error{{expected 'begin' or 'end'}}
 }
 
 void unclosed(int * p1) {

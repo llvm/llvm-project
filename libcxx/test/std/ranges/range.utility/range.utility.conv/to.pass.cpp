@@ -392,72 +392,55 @@ constexpr void test_ctr_choice_order() {
   }
 
   { // Case 4 -- default-construct then insert elements.
-    {
-      using C = Container<int, CtrChoice::DefaultCtrAndInsert, InserterChoice::Insert, /*CanReserve=*/false>;
-      std::same_as<C> decltype(auto) result = std::ranges::to<C>(in);
+    auto case_4 = [in, arg1, arg2]<auto InserterChoice, bool CanReserve>() {
+      using C = Container<int, CtrChoice::DefaultCtrAndInsert, InserterChoice, CanReserve>;
+      {
+        [[maybe_unused]] std::same_as<C> decltype(auto) result = std::ranges::to<C>(in);
 
-      assert(result.ctr_choice == CtrChoice::DefaultCtrAndInsert);
-      assert(result.inserter_choice == InserterChoice::Insert);
-      assert(std::ranges::equal(result, in));
-      assert(!result.called_reserve);
-      assert((in | std::ranges::to<C>()) == result);
-      auto closure = std::ranges::to<C>();
-      assert((in | closure) == result);
-    }
+        assert(result.ctr_choice == CtrChoice::DefaultCtrAndInsert);
+        assert(result.inserter_choice == InserterChoice);
+        assert(std::ranges::equal(result, in));
 
-    {
-      using C = Container<int, CtrChoice::DefaultCtrAndInsert, InserterChoice::Insert, /*CanReserve=*/true>;
-      std::same_as<C> decltype(auto) result = std::ranges::to<C>(in);
+        if constexpr (CanReserve) {
+          assert(result.called_reserve);
+        } else {
+          assert(!result.called_reserve);
+        }
 
-      assert(result.ctr_choice == CtrChoice::DefaultCtrAndInsert);
-      assert(result.inserter_choice == InserterChoice::Insert);
-      assert(std::ranges::equal(result, in));
-      assert(result.called_reserve);
-      assert((in | std::ranges::to<C>()) == result);
-      auto closure = std::ranges::to<C>();
-      assert((in | closure) == result);
-    }
+        assert((in | std::ranges::to<C>()) == result);
+        [[maybe_unused]] auto closure = std::ranges::to<C>();
+        assert((in | closure) == result);
+      }
 
-    {
-      using C = Container<int, CtrChoice::DefaultCtrAndInsert, InserterChoice::PushBack, /*CanReserve=*/false>;
-      std::same_as<C> decltype(auto) result = std::ranges::to<C>(in);
+      { // Extra arguments
+        [[maybe_unused]] std::same_as<C> decltype(auto) result = std::ranges::to<C>(in, arg1, arg2);
 
-      assert(result.ctr_choice == CtrChoice::DefaultCtrAndInsert);
-      assert(result.inserter_choice == InserterChoice::PushBack);
-      assert(std::ranges::equal(result, in));
-      assert(!result.called_reserve);
-      assert((in | std::ranges::to<C>()) == result);
-      auto closure = std::ranges::to<C>();
-      assert((in | closure) == result);
-    }
+        assert(result.ctr_choice == CtrChoice::DefaultCtrAndInsert);
+        assert(result.inserter_choice == InserterChoice);
+        assert(std::ranges::equal(result, in));
+        assert(result.extra_arg1 == arg1);
+        assert(result.extra_arg2 == arg2);
 
-    {
-      using C = Container<int, CtrChoice::DefaultCtrAndInsert, InserterChoice::PushBack, /*CanReserve=*/true>;
-      std::same_as<C> decltype(auto) result = std::ranges::to<C>(in);
+        if constexpr (CanReserve) {
+          assert(result.called_reserve);
+        } else {
+          assert(!result.called_reserve);
+        }
 
-      assert(result.ctr_choice == CtrChoice::DefaultCtrAndInsert);
-      assert(result.inserter_choice == InserterChoice::PushBack);
-      assert(std::ranges::equal(result, in));
-      assert(result.called_reserve);
-      assert((in | std::ranges::to<C>()) == result);
-      auto closure = std::ranges::to<C>();
-      assert((in | closure) == result);
-    }
+        assert((in | std::ranges::to<C>(arg1, arg2)) == result);
+        [[maybe_unused]] auto closure = std::ranges::to<C>(arg1, arg2);
+        assert((in | closure) == result);
+      }
+    };
 
-    { // Extra arguments.
-      using C = Container<int, CtrChoice::DefaultCtrAndInsert, InserterChoice::Insert, /*CanReserve=*/false>;
-      std::same_as<C> decltype(auto) result = std::ranges::to<C>(in, arg1, arg2);
-
-      assert(result.ctr_choice == CtrChoice::DefaultCtrAndInsert);
-      assert(result.inserter_choice == InserterChoice::Insert);
-      assert(std::ranges::equal(result, in));
-      assert(!result.called_reserve);
-      assert(result.extra_arg1 == arg1);
-      assert(result.extra_arg2 == arg2);
-      assert((in | std::ranges::to<C>(arg1, arg2)) == result);
-      auto closure = std::ranges::to<C>(arg1, arg2);
-      assert((in | closure) == result);
-    }
+    case_4.operator()<InserterChoice::Insert, false>();
+    case_4.operator()<InserterChoice::Insert, true>();
+    case_4.operator()<InserterChoice::Emplace, false>();
+    case_4.operator()<InserterChoice::Emplace, true>();
+    case_4.operator()<InserterChoice::PushBack, false>();
+    case_4.operator()<InserterChoice::PushBack, true>();
+    case_4.operator()<InserterChoice::EmplaceBack, false>();
+    case_4.operator()<InserterChoice::EmplaceBack, true>();
   }
 }
 
@@ -560,6 +543,11 @@ constexpr void test_recursive() {
   }
 
   assert((in | std::ranges::to<C4>()) == result);
+
+  // LWG3984: ranges::to's recursion branch may be ill-formed
+  auto in_owning_view = std::views::all(std::move(in));
+  static_assert(!std::ranges::viewable_range<decltype((in_owning_view))>);
+  assert(std::ranges::to<C4>(in_owning_view) == result);
 }
 
 constexpr bool test() {

@@ -11,13 +11,9 @@
 #define _LIBCPP___FILESYSTEM_PATH_ITERATOR_H
 
 #include <__assert>
-#include <__availability>
 #include <__config>
 #include <__filesystem/path.h>
 #include <__iterator/iterator_traits.h>
-#include <cstddef>
-#include <string>
-#include <string_view>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -56,7 +52,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI iterator& operator=(const iterator&) = default;
 
-  _LIBCPP_HIDE_FROM_ABI reference operator*() const { return __stashed_elem_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI reference operator*() const { return __stashed_elem_; }
 
   _LIBCPP_HIDE_FROM_ABI pointer operator->() const { return &__stashed_elem_; }
 
@@ -99,12 +95,10 @@ private:
   _ParserState __state_;
 };
 
-_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY
 inline _LIBCPP_HIDE_FROM_ABI bool operator==(const path::iterator& __lhs, const path::iterator& __rhs) {
   return __lhs.__path_ptr_ == __rhs.__path_ptr_ && __lhs.__entry_.data() == __rhs.__entry_.data();
 }
 
-_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY
 inline _LIBCPP_HIDE_FROM_ABI bool operator!=(const path::iterator& __lhs, const path::iterator& __rhs) {
   return !(__lhs == __rhs);
 }

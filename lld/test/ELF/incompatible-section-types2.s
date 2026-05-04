@@ -6,5 +6,5 @@
 // CHECK-NEXT: >>> <internal>:(.shstrtab): SHT_STRTAB
 // CHECK-NEXT: >>> output section .shstrtab: Unknown
 
-.section .shstrtab,"",@12345
+.section .shstrtab,"",@0x60000000
 .short 20

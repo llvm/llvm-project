@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=x86_64-darwin-unknown    < %s | FileCheck %s
 
 define i32 @foo() nounwind noinline uwtable "function-instrument"="xray-always" "xray-skip-exit" {
-; CHECK:       .p2align 1, 0x90
+; CHECK:       .p2align 1
 ; CHECK-LABEL: Lxray_sled_0:
 ; CHECK:       .ascii "\353\t"
 ; CHECK-NEXT:  nopw 512(%rax,%rax)
@@ -35,7 +35,7 @@ define i32 @foo() nounwind noinline uwtable "function-instrument"="xray-always" 
 ; We test multiple returns in a single function to make sure we're skipping all
 ; of them with XRay instrumentation.
 define i32 @bar(i32 %i) nounwind noinline uwtable "function-instrument"="xray-always" "xray-skip-exit" {
-; CHECK:       .p2align 1, 0x90
+; CHECK:       .p2align 1
 ; CHECK-LABEL: Lxray_sled_1:
 ; CHECK:       .ascii "\353\t"
 ; CHECK-NEXT:  nopw 512(%rax,%rax)

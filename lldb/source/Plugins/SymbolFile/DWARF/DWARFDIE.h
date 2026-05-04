@@ -12,6 +12,7 @@
 #include "DWARFBaseDIE.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
 
 namespace lldb_private::plugin {
 namespace dwarf {
@@ -28,7 +29,7 @@ public:
   // Accessors
 
   // Accessing information about a DIE
-  const char *GetMangledName() const;
+  const char *GetMangledName(bool substitute_name_allowed = true) const;
 
   const char *GetPubname() const;
 
@@ -69,13 +70,18 @@ public:
   DWARFDIE
   GetParentDeclContextDIE() const;
 
-  // DeclContext related functions
-  std::vector<DWARFDIE> GetDeclContextDIEs() const;
-
   /// Return this DIE's decl context as it is needed to look up types
   /// in Clang modules. This context will include any modules or functions that
   /// the type is declared in so an exact module match can be efficiently made.
-  std::vector<CompilerContext> GetDeclContext() const;
+  ///
+  /// \param[in] derive_template_names
+  ///   If true, augments the returned names with template arguments derived
+  ///   from the child DIEs, if the names don't contained template arguments
+  ///   already. If false, the returned context will contain the names exactly
+  ///   as they are spelled in the debug info, regardless of whether that
+  ///   includes template arguments or not.
+  std::vector<CompilerContext>
+  GetDeclContext(bool derive_template_names = false) const;
 
   /// Get a context to a type so it can be looked up.
   ///
@@ -87,7 +93,17 @@ public:
   /// appropriate time, like either the translation unit or at a function
   /// context. This is designed to allow users to efficiently look for types
   /// using a full or partial CompilerContext array.
-  std::vector<CompilerContext> GetTypeLookupContext() const;
+  ///
+  /// \param[in] derive_template_names
+  ///   If true, augments the returned names with template arguments derived
+  ///   from the child DIEs, if the names don't contained template arguments
+  ///   already. If false, the returned context will contain the names exactly
+  ///   as they are spelled in the debug info, regardless of whether that
+  ///   includes template arguments or not.
+  std::vector<CompilerContext>
+  GetTypeLookupContext(bool derive_template_names = false) const;
+
+  DWARFDeclContext GetDWARFDeclContext() const;
 
   // Getting attribute values from the DIE.
   //
@@ -98,14 +114,31 @@ public:
   GetAttributeValueAsReferenceDIE(const dw_attr_t attr) const;
 
   bool GetDIENamesAndRanges(
-      const char *&name, const char *&mangled, DWARFRangeList &ranges,
-      std::optional<int> &decl_file, std::optional<int> &decl_line,
-      std::optional<int> &decl_column, std::optional<int> &call_file,
-      std::optional<int> &call_line, std::optional<int> &call_column,
-      DWARFExpressionList *frame_base) const;
+      const char *&name, const char *&mangled,
+      llvm::DWARFAddressRangesVector &ranges, std::optional<int> &decl_file,
+      std::optional<int> &decl_line, std::optional<int> &decl_column,
+      std::optional<int> &call_file, std::optional<int> &call_line,
+      std::optional<int> &call_column, DWARFExpressionList *frame_base) const;
+
+  // The following methods use LLVM naming convension in order to be are used by
+  // LLVM libraries.
+  std::optional<uint64_t> getLanguage() const;
+
+  DWARFDIE getParent() const { return GetParent(); }
+
+  DWARFDIE resolveReferencedType(dw_attr_t attr) const;
+
+  DWARFDIE resolveReferencedType(DWARFFormValue v) const;
+
+  DWARFDIE resolveTypeUnitReference() const;
+
+  std::optional<DWARFFormValue> find(const dw_attr_t attr) const;
 
   /// The range of all the children of this DIE.
   llvm::iterator_range<child_iterator> children() const;
+
+  child_iterator begin() const;
+  child_iterator end() const;
 };
 
 class DWARFDIE::child_iterator

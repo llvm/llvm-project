@@ -1,42 +1,51 @@
-; RUN: llc -O0 -mtriple=spirv-unknown-linux %s -o - | FileCheck %s
+; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv-unknown-vulkan %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK: %[[#extinst:]] = OpExtInstImport "GLSL.std.450"
 
-; CHECK: %[[#float:]] = OpTypeFloat 32
-; CHECK: %[[#v4float:]] = OpTypeVector %[[#float]] 4
-; CHECK: %[[#float_0_30103001:]] = OpConstant %[[#float]] 0.30103000998497009
-; CHECK: %[[#_ptr_Function_v4float:]] = OpTypePointer Function %[[#v4float]]
-; CHECK: %[[#_ptr_Function_float:]] = OpTypePointer Function %[[#float]]
+; CHECK-DAG: %[[#half:]] = OpTypeFloat 16
+; CHECK-DAG: %[[#v4half:]] = OpTypeVector %[[#half]] 4
+; CHECK-DAG: %[[#float:]] = OpTypeFloat 32
+; CHECK-DAG: %[[#v4float:]] = OpTypeVector %[[#float]] 4
+; CHECK-DAG: %[[#float_0_30103001:]] = OpConstant %[[#float]] 0.30103000998497009
+; CHECK-DAG: %[[#half_0_30103001:]] = OpConstant %[[#half]] 13521
 
-define void @main() {
+@logf = global float 0.0, align 4
+@logf4 = global <4 x float> zeroinitializer, align 16
+@logh = global half 0.0, align 2
+@logh4 = global <4 x half> zeroinitializer, align 8
+
+define void @main(float %f, <4 x float> %f4, half %h, <4 x half> %h4) {
 entry:
-; CHECK: %[[#f:]] = OpVariable %[[#_ptr_Function_float]] Function
-; CHECK: %[[#logf:]] = OpVariable %[[#_ptr_Function_float]] Function
-; CHECK: %[[#f4:]] = OpVariable %[[#_ptr_Function_v4float]] Function
-; CHECK: %[[#logf4:]] = OpVariable %[[#_ptr_Function_v4float]] Function
-  %f = alloca float, align 4
-  %logf = alloca float, align 4
-  %f4 = alloca <4 x float>, align 16
-  %logf4 = alloca <4 x float>, align 16
+; CHECK-DAG: %[[#f:]] = OpFunctionParameter %[[#float]]
+; CHECK-DAG: %[[#f4:]] = OpFunctionParameter %[[#v4float]]
+; CHECK-DAG: %[[#h:]] = OpFunctionParameter %[[#half]]
+; CHECK-DAG: %[[#h4:]] = OpFunctionParameter %[[#v4half]]
 
-; CHECK: %[[#load:]] = OpLoad %[[#float]] %[[#f]] Aligned 4
-; CHECK: %[[#log2:]] = OpExtInst %[[#float]] %[[#extinst]] Log2 %[[#load]]
+; CHECK: %[[#log2:]] = OpExtInst %[[#float]] %[[#extinst]] Log2 %[[#f]]
 ; CHECK: %[[#res:]] = OpFMul %[[#float]] %[[#log2]] %[[#float_0_30103001]]
-; CHECK: OpStore %[[#logf]] %[[#res]] Aligned 4
-  %0 = load float, ptr %f, align 4
-  %elt.log10 = call float @llvm.log10.f32(float %0)
-  store float %elt.log10, ptr %logf, align 4
+  %elt.log10 = call float @llvm.log10.f32(float %f)
+  store float %elt.log10, ptr @logf, align 4
 
-; CHECK: %[[#load:]] = OpLoad %[[#v4float]] %[[#f4]] Aligned 16
-; CHECK: %[[#log2:]] = OpExtInst %[[#v4float]] %[[#extinst]] Log2 %[[#load]]
+; CHECK: %[[#log2:]] = OpExtInst %[[#v4float]] %[[#extinst]] Log2 %[[#f4]]
 ; CHECK: %[[#res:]] = OpVectorTimesScalar %[[#v4float]] %[[#log2]] %[[#float_0_30103001]]
-; CHECK: OpStore %[[#logf4]] %[[#res]] Aligned 16
-  %1 = load <4 x float>, ptr %f4, align 16
-  %elt.log101 = call <4 x float> @llvm.log10.v4f32(<4 x float> %1)
-  store <4 x float> %elt.log101, ptr %logf4, align 16
+  %elt.log101 = call <4 x float> @llvm.log10.v4f32(<4 x float> %f4)
+  store <4 x float> %elt.log101, ptr @logf4, align 16
+
+; CHECK: %[[#log2:]] = OpExtInst %[[#half]] %[[#extinst]] Log2 %[[#h]]
+; CHECK: %[[#res:]] = OpFMul %[[#half]] %[[#log2]] %[[#half_0_30103001]]
+  %elt.log10h = call half @llvm.log10.f16(half %h)
+  store half %elt.log10h, ptr @logh, align 2
+
+; CHECK: %[[#log2:]] = OpExtInst %[[#v4half]] %[[#extinst]] Log2 %[[#h4]]
+; CHECK: %[[#res:]] = OpVectorTimesScalar %[[#v4half]] %[[#log2]] %[[#half_0_30103001]]
+  %elt.log10h4 = call <4 x half> @llvm.log10.v4f16(<4 x half> %h4)
+  store <4 x half> %elt.log10h4, ptr @logh4, align 8
 
   ret void
 }
 
 declare float @llvm.log10.f32(float)
 declare <4 x float> @llvm.log10.v4f32(<4 x float>)
+declare half @llvm.log10.f16(half)
+declare <4 x half> @llvm.log10.v4f16(<4 x half>)

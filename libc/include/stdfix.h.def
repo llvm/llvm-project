@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_STDFIX_H
 #define LLVM_LIBC_STDFIX_H
 
-#include <__llvm-libc-common.h>
-#include <llvm-libc-macros/stdfix-macros.h>
+#include "__llvm-libc-common.h"
+#include "llvm-libc-macros/stdfix-macros.h"
 
 // From ISO/IEC TR 18037:2008 standard:
 // https://www.iso.org/standard/51126.html

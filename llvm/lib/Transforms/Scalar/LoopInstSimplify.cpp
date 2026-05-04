@@ -27,10 +27,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IR/PassManager.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include <optional>
@@ -45,7 +42,7 @@ STATISTIC(NumSimplified, "Number of redundant instructions simplified");
 static bool simplifyLoopInst(Loop &L, DominatorTree &DT, LoopInfo &LI,
                              AssumptionCache &AC, const TargetLibraryInfo &TLI,
                              MemorySSAUpdater *MSSAU) {
-  const DataLayout &DL = L.getHeader()->getModule()->getDataLayout();
+  const DataLayout &DL = L.getHeader()->getDataLayout();
   SimplifyQuery SQ(DL, &TLI, &DT, &AC);
 
   // On the first pass over the loop body we try to simplify every instruction.

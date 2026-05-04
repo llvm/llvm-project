@@ -8,7 +8,7 @@
 
 ; PR27708
 
-define <7 x i64> @load7_aligned(ptr %x) {
+define <7 x i64> @load7_aligned(ptr %x) nounwind {
 ; X86-SSE-LABEL: load7_aligned:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -67,7 +67,7 @@ define <7 x i64> @load7_aligned(ptr %x) {
   ret <7 x i64> %x1
 }
 
-define <7 x i64> @load7_unaligned(ptr %x) {
+define <7 x i64> @load7_unaligned(ptr %x) nounwind {
 ; X86-SSE-LABEL: load7_unaligned:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax

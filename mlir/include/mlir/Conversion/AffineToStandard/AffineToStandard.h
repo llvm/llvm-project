@@ -13,7 +13,6 @@
 
 namespace mlir {
 class Location;
-struct LogicalResult;
 class OpBuilder;
 class Pass;
 class RewritePattern;
@@ -25,7 +24,7 @@ namespace affine {
 class AffineForOp;
 } // namespace affine
 
-#define GEN_PASS_DECL_CONVERTAFFINETOSTANDARD
+#define GEN_PASS_DECL_LOWERAFFINEPASS
 #include "mlir/Conversion/Passes.h.inc"
 
 /// Collect a set of patterns to convert from the Affine dialect to the Standard
@@ -44,11 +43,6 @@ Value lowerAffineLowerBound(affine::AffineForOp op, OpBuilder &builder);
 /// Emit code that computes the upper bound of the given affine loop using
 /// standard arithmetic operations.
 Value lowerAffineUpperBound(affine::AffineForOp op, OpBuilder &builder);
-
-/// Lowers affine control flow operations (ForStmt, IfStmt and AffineApplyOp)
-/// to equivalent lower-level constructs (flow of basic blocks and arithmetic
-/// primitives).
-std::unique_ptr<Pass> createLowerAffinePass();
 
 } // namespace mlir
 

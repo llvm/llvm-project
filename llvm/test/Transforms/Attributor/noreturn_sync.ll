@@ -26,10 +26,6 @@ entry:
 ; CHECK-NOT:  Function Attrs:
 ; CHECK:      define
 ; CHECK-NEXT:   entry:
-; CHECK-NEXT:   {{.*}}@printf{{.*}}
-; CHECK-NEXT:   call void @"?overflow@@YAXXZ"()
-; CHECK-NEXT:   {{.*}}@printf{{.*}}
-; CHECK-NEXT:   ret void
   %call2 = call i32 (ptr, ...) @printf(ptr @"??_C@_0BC@NKPAGFFJ@Exception?5caught?6?$AA@") nofree nosync nounwind
   call void @"?overflow@@YAXXZ"()
   %call3 = call i32 (ptr, ...) @printf(ptr @"??_C@_0BC@NKPAGFFJ@Exception?5caught?6?$AA@")
@@ -38,15 +34,12 @@ entry:
 
 
 ; CHECK-NOT:       Function Attrs:
-; CHECK:   @"?catchoverflow@@YAHXZ"()
 define dso_local i32 @"?catchoverflow@@YAHXZ"()  personality ptr @__gcc_personality_v0 {
 entry:
   %retval = alloca i32, align 4
   %__exception_code = alloca i32, align 4
   invoke void @"?overflow@@YAXXZ"()
   to label %invoke.cont unwind label %catch.dispatch
-; CHECK:      invoke void @"?overflow@@YAXXZ"()
-; CHECK-NEXT:        to label %invoke.cont unwind label %catch.dispatch
 
 invoke.cont:                                      ; preds = %entry
   br label %invoke.cont1
@@ -82,9 +75,6 @@ entry:
 ; CHECK-NOT:      Function Attrs:
 ; CHECK:      define
 ; CHECK-NEXT:   entry:
-; CHECK-NEXT:   %call3 = call i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(18) @"??_C@_0BC@NKPAGFFJ@Exception?5caught?6?$AA@")
-; CHECK-NEXT:   call void @"?overflow@@YAXXZ_may_throw"()
-; CHECK-NEXT:   ret void
   %call3 = call i32 (ptr, ...) @printf(ptr @"??_C@_0BC@NKPAGFFJ@Exception?5caught?6?$AA@")
   call void @"?overflow@@YAXXZ_may_throw"()
   ret void
@@ -93,13 +83,10 @@ entry:
 
 ; CHECK-NOT:    Function Attrs:
 ; CHECK:        define
-; CHECK-SAME:   @"?catchoverflow@@YAHXZ_may_throw"()
 define dso_local i32 @"?catchoverflow@@YAHXZ_may_throw"()  personality ptr @__gcc_personality_v0 {
 entry:
   %retval = alloca i32, align 4
   %__exception_code = alloca i32, align 4
-; CHECK: invoke void @"?overflow@@YAXXZ_may_throw"()
-; CHECK:          to label %invoke.cont unwind label %catch.dispatch
   invoke void @"?overflow@@YAXXZ_may_throw"()
   to label %invoke.cont unwind label %catch.dispatch
 

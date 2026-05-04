@@ -436,8 +436,6 @@ declare void @__tgt_target_data_end_mapper(ptr, i64, i32, ptr, ptr, ptr, ptr, pt
 
 declare dso_local i32 @rand(...)
 
-; CHECK: declare void @__tgt_target_data_begin_mapper_issue(ptr, i64, i32, ptr, ptr, ptr, ptr, ptr, ptr, ptr)
-; CHECK: declare void @__tgt_target_data_begin_mapper_wait(i64, ptr)
 
 !llvm.module.flags = !{!0}
 

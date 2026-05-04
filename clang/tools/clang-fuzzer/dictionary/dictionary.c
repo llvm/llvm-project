@@ -21,6 +21,8 @@
 
 static void emit(const char *Name, const char *Spelling) {
   static char Hex[] = "0123456789abcdef";
+  // Skip EmptySpellingName for IsDeducible.
+  if (!Name[0]) return;
 
   printf("%s=\"", Name);
   unsigned char C;

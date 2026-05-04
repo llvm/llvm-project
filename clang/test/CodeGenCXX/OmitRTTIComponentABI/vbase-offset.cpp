@@ -1,8 +1,8 @@
 /// Check that the offset to top calculation is adjusted to account for the
 /// omitted RTTI entry.
 
-// RUN: %clang_cc1 %s -triple=aarch64-unknown-linux-gnu -fexperimental-omit-vtable-rtti -fno-rtti -S -o - -emit-llvm | FileCheck -check-prefixes=POINTER %s
-// RUN: %clang_cc1 %s -triple=aarch64-unknown-linux-gnu -fexperimental-relative-c++-abi-vtables -fexperimental-omit-vtable-rtti -fno-rtti -S -o - -emit-llvm | FileCheck -check-prefixes=RELATIVE %s
+// RUN: %clang_cc1 %s -triple=aarch64-unknown-linux-gnu -fexperimental-omit-vtable-rtti -fno-rtti -o - -emit-llvm | FileCheck -check-prefixes=POINTER %s
+// RUN: %clang_cc1 %s -triple=aarch64-unknown-linux-gnu -fexperimental-relative-c++-abi-vtables -fexperimental-omit-vtable-rtti -fno-rtti -o - -emit-llvm | FileCheck -check-prefixes=RELATIVE %s
 
 /// Some important things to check:
 /// - The n16 here represents the virtual thunk size. Normally this would be 24

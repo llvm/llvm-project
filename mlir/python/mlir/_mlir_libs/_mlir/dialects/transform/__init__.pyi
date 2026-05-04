@@ -2,7 +2,6 @@
 #  See https://llvm.org/LICENSE.txt for license information.
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-from typing import Optional
 
 from mlir.ir import Type, Context
 
@@ -12,7 +11,7 @@ class AnyOpType(Type):
   def isinstance(type: Type) -> bool: ...
 
   @staticmethod
-  def get(context: Optional[Context] = None) -> AnyOpType: ...
+  def get(context: Context | None = None) -> AnyOpType: ...
 
 
 class OperationType(Type):
@@ -20,7 +19,7 @@ class OperationType(Type):
   def isinstance(type: Type) -> bool: ...
 
   @staticmethod
-  def get(operation_name: str, context: Optional[Context] = None) -> OperationType: ...
+  def get(operation_name: str, context: Context | None = None) -> OperationType: ...
 
   @property
   def operation_name(self) -> str: ...

@@ -10,7 +10,7 @@
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-#include <fenv.h>
+#include "hdr/fenv_macros.h"
 
 using LIBC_NAMESPACE::testing::mpfr::ForceRoundingMode;
 using LIBC_NAMESPACE::testing::mpfr::RoundingMode;

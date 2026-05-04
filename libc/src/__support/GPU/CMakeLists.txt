@@ -1,14 +1,33 @@
-if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_ARCHITECTURE})
+# These utilities are GPU only.
+if(NOT LIBC_TARGET_OS_IS_GPU)
   return()
 endif()
-
-add_subdirectory(${LIBC_TARGET_ARCHITECTURE})
-set(target_gpu_utils libc.src.__support.GPU.${LIBC_TARGET_ARCHITECTURE}.${LIBC_TARGET_ARCHITECTURE}_utils)
 
 add_header_library(
   utils
   HDRS
     utils.h
+)
+
+add_header_library(
+  fixedbuffer
+  HDRS
+    fixedbuffer.h
+)
+
+add_object_library(
+  allocator
+  SRCS
+    allocator.cpp
+  HDRS
+    allocator.h
   DEPENDS
-    ${target_gpu_utils}
+    libc.hdr.stdint_proxy
+    libc.src.__support.common
+    libc.src.__support.RPC.rpc_client
+    libc.src.__support.CPP.atomic
+    libc.src.__support.CPP.bit
+    libc.src.__support.CPP.new
+    .utils
+    .fixedbuffer
 )

@@ -51,6 +51,12 @@ type lookup EC
 # CHECK-NEXT:   e3
 # CHECK-NEXT: }
 
+type lookup Outer::Inner
+# CHECK-LABEL: type lookup Outer::Inner
+# CHECK:      struct Inner {
+# CHECK-NEXT:   long l;
+# CHECK-NEXT: }
+
 expression (E) 1
 # CHECK-LABEL: expression (E) 1
 # CHECK: (E) $0 = e2
@@ -59,8 +65,9 @@ expression (EC) 1
 # CHECK-LABEL: expression (EC) 1
 # CHECK: (EC) $1 = e2
 
-target variable a e ec
+target variable a e ec outer_inner
 # CHECK-LABEL: target variable a e ec
 # CHECK: (const A) a = (i = 42, l = 47, f = 4.{{[12].*}}, d = 4.{{[67].*}}, e = e1, ec = e3)
 # CHECK: (const E) e = e2
 # CHECK: (const EC) ec = e2
+# CHECK: (const Outer::Inner) outer_inner = (l = 42)

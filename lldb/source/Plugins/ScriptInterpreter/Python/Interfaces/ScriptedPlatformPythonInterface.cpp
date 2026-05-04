@@ -6,15 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Host/Config.h"
+#include "lldb/Core/PluginManager.h"
+#include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-enumerations.h"
 
-#if LLDB_ENABLE_PYTHON
-
+// clang-format off
 // LLDB Python header must be included first
 #include "../lldb-python.h"
+//clang-format on
 
 #include "../SWIGPythonBridge.h"
 #include "../ScriptInterpreterPythonImpl.h"
@@ -91,4 +92,12 @@ Status ScriptedPlatformPythonInterface::KillProcess(lldb::pid_t pid) {
   return GetStatusFromMethod("kill_process", pid);
 }
 
-#endif // LLDB_ENABLE_PYTHON
+void ScriptedPlatformPythonInterface::Initialize() {
+  PluginManager::RegisterPlugin(
+      GetPluginNameStatic(), "Mock platform and interact with its processes.",
+      CreateInstance, eScriptLanguagePython, {});
+}
+
+void ScriptedPlatformPythonInterface::Terminate() {
+  PluginManager::UnregisterPlugin(CreateInstance);
+}

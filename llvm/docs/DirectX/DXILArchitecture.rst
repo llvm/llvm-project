@@ -61,6 +61,19 @@ on the utilities described in "Common Code" above in order to share
 logic with both the DirectX backend and with Clang's codegen of HLSL
 support as much as possible.
 
+The DirectX Intrinsic Expansion Pass
+====================================
+There are intrinsics that don't map directly to DXIL Ops. In some cases
+an intrinsic needs to be expanded to a set of LLVM IR instructions. In
+other cases an intrinsic needs modifications to the arguments or return
+values of a DXIL Op. The `DXILIntrinsicExpansion` pass handles all 
+the cases where our intrinsics don't have a one to one mapping. This 
+pass may also be used when the expansion is specific to DXIL to keep 
+implementation details out of CodeGen. Finally, there is an expectation 
+that we maintain vector types through this pass. Therefore, best 
+practice would be to avoid scalarization in this pass.
+
+
 The DirectX Backend
 ===================
 
@@ -105,9 +118,10 @@ The passes to generate DXIL IR follow the flow:
 Each of these passes has a defined responsibility:
 
 #. DXILOpLowering translates LLVM intrinsic calls to dx.op calls.
-#. DXILPrepare transforms the DXIL IR to be compatible with LLVM 3.7, and
-   inserts bitcasts to allow typed pointers to be inserted.
-#. DXILTranslateMetadata emits the DXIL Metadata structures.
+#. DXILPrepare updates functions in the DXIL IR to be compatible with LLVM 3.7,
+   namely removing attributes, and inserting bitcasts to allow typed pointers
+   to be inserted.
+#. DXILTranslateMetadata transforms and emits all recognized DXIL Metadata.
 
 The passes to encode DXIL to binary in the DX Container follow the flow:
 

@@ -34,7 +34,7 @@ struct coroutine_traits {
 // CHECK-LABEL: @_Z3foov
 // CHECK-LABEL: entry:
 // CHECK: %ref.tmp.reload.addr = getelementptr
-// CHECK: %ref.tmp4.reload.addr = getelementptr
+// CHECK: %ref.tmp3.reload.addr = getelementptr
 void foo() { co_return; }
 
 // Check that bar is not inlined even it's marked as always_inline.

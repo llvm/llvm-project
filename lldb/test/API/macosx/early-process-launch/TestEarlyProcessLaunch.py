@@ -1,6 +1,5 @@
 """Test that we don't read objc class tables early in process startup."""
 
-
 import time
 import lldb
 from lldbsuite.test.decorators import *
@@ -13,7 +12,6 @@ class TestEarlyProcessLaunch(TestBase):
 
     @skipUnlessDarwin
     @skipIfAsan  # rdar://103359354
-    @skipIfOutOfTreeDebugserver  # 2022-12-13 FIXME: skipping system debugserver
     # until this feature is included in the system
     # debugserver.
     @add_test_categories(["pyapi"])
@@ -30,7 +28,14 @@ class TestEarlyProcessLaunch(TestBase):
         ###
         ### Use the types logging to detect the difference.
 
-        target, process, _, bkpt = lldbutil.run_to_name_breakpoint(self, "malloc")
+        exe = self.getBuildArtifact("a.out")
+        target = self.dbg.CreateTarget(exe)
+        self.assertTrue(target.IsValid())
+        bkpt = target.BreakpointCreateByRegex("alloc", None)
+        self.assertTrue(bkpt.IsValid())
+        (target, process, thread, bkpt) = lldbutil.run_to_breakpoint_do_run(
+            self, target, bkpt
+        )
 
         target.DisableAllBreakpoints()
         target.BreakpointCreateByName("main")
@@ -38,14 +43,14 @@ class TestEarlyProcessLaunch(TestBase):
         logfile_early = os.path.join(self.getBuildDir(), "types-log-early.txt")
         self.addTearDownHook(lambda: self.runCmd("log disable lldb types"))
         self.runCmd("log enable -f %s lldb types" % logfile_early)
-        self.runCmd("expression global = 15")
+        self.runCmd("expression --language objc -- global = 15")
 
         err = process.Continue()
         self.assertTrue(err.Success())
 
         logfile_later = os.path.join(self.getBuildDir(), "types-log-later.txt")
         self.runCmd("log enable -f %s lldb types" % logfile_later)
-        self.runCmd("expression global = 25")
+        self.runCmd("expression --language objc -- global = 25")
 
         self.assertTrue(os.path.exists(logfile_early))
         self.assertTrue(os.path.exists(logfile_later))

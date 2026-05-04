@@ -8,8 +8,8 @@ define ptr @test1(ptr %x, ptr %y) nounwind {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[X:%.*]], null
 ; CHECK-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr [[ST:%.*]], ptr [[X]], i32 0, i32 1
-; CHECK-NEXT:    [[INCDEC_PTR_Y:%.*]] = select i1 [[CMP]], ptr [[INCDEC_PTR]], ptr [[Y:%.*]]
-; CHECK-NEXT:    ret ptr [[INCDEC_PTR_Y]]
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP]], ptr [[INCDEC_PTR]], ptr [[Y:%.*]]
+; CHECK-NEXT:    ret ptr [[SPEC_SELECT]]
 ;
 entry:
   %cmp = icmp eq ptr %x, null

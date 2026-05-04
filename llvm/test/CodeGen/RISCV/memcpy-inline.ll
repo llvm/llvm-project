@@ -3,9 +3,9 @@
 ; RUN:   | FileCheck %s --check-prefixes=RV32-BOTH,RV32
 ; RUN: llc < %s -mtriple=riscv64 \
 ; RUN:   | FileCheck %s --check-prefixes=RV64-BOTH,RV64
-; RUN: llc < %s -mtriple=riscv32 -mattr=+fast-unaligned-access \
+; RUN: llc < %s -mtriple=riscv32 -mattr=+unaligned-scalar-mem \
 ; RUN:   | FileCheck %s --check-prefixes=RV32-BOTH,RV32-FAST
-; RUN: llc < %s -mtriple=riscv64 -mattr=+fast-unaligned-access \
+; RUN: llc < %s -mtriple=riscv64 -mattr=+unaligned-scalar-mem \
 ; RUN:   | FileCheck %s --check-prefixes=RV64-BOTH,RV64-FAST
 
 ; ----------------------------------------------------------------------
@@ -933,7 +933,6 @@ entry:
 ; ------------------------------------------------------------------------
 ; A few partially aligned cases
 
-
 define void @memcpy16_align4(ptr nocapture %dest, ptr nocapture %src) nounwind {
 ; RV32-BOTH-LABEL: memcpy16_align4:
 ; RV32-BOTH:       # %bb.0: # %entry
@@ -1020,6 +1019,3 @@ entry:
   ret i32 0
 }
 
-
-declare void @llvm.memcpy.inline.p0.p0.i32(ptr nocapture, ptr nocapture, i32, i1) nounwind
-declare void @llvm.memcpy.inline.p0.p0.i64(ptr nocapture, ptr nocapture, i64, i1) nounwind

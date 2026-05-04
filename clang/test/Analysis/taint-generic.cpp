@@ -1,10 +1,15 @@
-// RUN: %clang_analyze_cc1  -analyzer-checker=alpha.security.taint,core,alpha.security.ArrayBoundV2 -analyzer-config alpha.security.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config.yaml -Wno-format-security -verify -std=c++11 %s
+// RUN: %clang_analyze_cc1 -std=c++11 -Wno-format-security \
+// RUN:   -analyzer-checker=core,optin.taint,security.ArrayBound,debug.ExprInspection \
+// RUN:   -analyzer-config optin.taint.TaintPropagation:Config=%S/Inputs/taint-generic-config.yaml \
+// RUN:   -verify %s
+
+template <typename T> void clang_analyzer_isTainted(T);
 
 #define BUFSIZE 10
 int Buffer[BUFSIZE];
 
 int scanf(const char*, ...);
-int mySource1();
+template <typename T = int> T mySource1();
 int mySource3();
 
 typedef struct _FILE FILE;
@@ -136,3 +141,70 @@ void testReadingFromStdin(char **p) {
   fscanf(stdin, "%d", &n);
   Buffer[n] = 1; // expected-warning {{Potential out of bound access }}
 }
+
+namespace gh114270 {
+class Empty {};
+class Aggr {
+public:
+  int data;
+};
+
+void top() {
+  int Int = mySource1<int>();
+  clang_analyzer_isTainted(Int); // expected-warning {{YES}}
+
+  // It's fine to not propagate taint to empty classes, since they don't have any data members.
+  Empty E = mySource1<Empty>();
+  clang_analyzer_isTainted(E); // expected-warning {{NO}}
+
+  Aggr A = mySource1<Aggr>();
+  // FIXME Ideally, both A and A.data should be tainted. However, the
+  //       implementation used by e5ac9145ba29 ([analyzer][taint] Recognize
+  //       tainted LazyCompoundVals (4/4) (#115919), 2024-11-15) led to FPs and
+  //       FNs in various scenarios and had to be reverted to fix #153782.
+  clang_analyzer_isTainted(A);      // expected-warning {{NO}}
+  clang_analyzer_isTainted(A.data); // expected-warning {{YES}}
+}
+} // namespace gh114270
+
+
+namespace format_attribute {
+__attribute__((__format__ (__printf__, 1, 2)))
+void log_freefunc(const char *fmt, ...);
+
+void test_format_attribute_freefunc() {
+  int n;
+  fscanf(stdin, "%d", &n); // Get a tainted value.
+                           
+  log_freefunc("This number is suspicious: %d\n", n); // no-warning
+}
+
+struct Foo {
+  // When the format attribute is applied to a method, argumet '1' is the
+  // implicit `this`, so e.g. in this case argument '2' specifies `fmt`.
+  // Specifying '1' instead of '2' would produce a compilation error:
+  // "format attribute cannot specify the implicit this argument as the format string"
+  __attribute__((__format__ (__printf__, 2, 3)))
+  void log_method(const char *fmt, ...);
+
+  void test_format_attribute_method() {
+    int n;
+    fscanf(stdin, "%d", &n); // Get a tainted value.
+                             
+    // The analyzer used to misinterpret the parameter indices in the format
+    // attribute when the format attribute is applied to a method.
+    log_method("This number is suspicious: %d\n", n); // no-warning
+  }
+
+  __attribute__((__format__ (__printf__, 1, 2)))
+  static void log_static_method(const char *fmt, ...);
+
+  void test_format_attribute_static_method() {
+    int n;
+    fscanf(stdin, "%d", &n); // Get a tainted value.
+                             
+    log_static_method("This number is suspicious: %d\n", n); // no-warning
+  }
+};
+
+} // namespace format_attribute

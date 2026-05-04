@@ -23,14 +23,14 @@ class AssertMessagesTestCase(TestBase):
         else:
             self.fail("Initial expect should have raised AssertionError!")
 
-    @expectedFailureAll(remote=True)
+    @expectedFailureAll(oslist=no_match(["linux"]), remote=True)
     def test_createTestTarget(self):
         try:
             self.createTestTarget("doesnt_exist")
         except AssertionError as e:
             self.assertIn(
                 "Couldn't create target for path 'doesnt_exist': "
-                "error: unable to find executable for 'doesnt_exist'",
+                "error: 'doesnt_exist' does not exist",
                 str(e),
             )
 

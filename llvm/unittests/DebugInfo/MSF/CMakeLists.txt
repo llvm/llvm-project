@@ -9,5 +9,3 @@ add_llvm_unittest(DebugInfoMSFTests
   )
 
 target_link_libraries(DebugInfoMSFTests PRIVATE LLVMTestingSupport)
-
-set_property(TARGET DebugInfoMSFTests PROPERTY FOLDER "Tests/UnitTests/DebugInfoTests")

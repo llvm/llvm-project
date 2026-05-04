@@ -174,8 +174,20 @@ void ThreadPlanCallFunction::ReportRegisterState(const char *message) {
 
 void ThreadPlanCallFunction::DoTakedown(bool success) {
   Log *log = GetLog(LLDBLog::Step);
+  Thread &thread = GetThread();
 
   if (!m_valid) {
+    // If ConstructorSetup was succesfull but PrepareTrivialCall was not,
+    // we will have a saved register state and potentially modified registers.
+    // Restore those.
+    if (m_stored_thread_state.register_backup_sp)
+      if (!thread.RestoreRegisterStateFromCheckpoint(m_stored_thread_state))
+        LLDB_LOGF(
+            log,
+            "ThreadPlanCallFunction(%p): Failed to restore register state from "
+            "invalid plan that contained a saved register state.",
+            static_cast<void *>(this));
+
     // Don't call DoTakedown if we were never valid to begin with.
     LLDB_LOGF(log,
               "ThreadPlanCallFunction(%p): Log called on "
@@ -185,7 +197,6 @@ void ThreadPlanCallFunction::DoTakedown(bool success) {
   }
 
   if (!m_takedown_done) {
-    Thread &thread = GetThread();
     if (success) {
       SetReturnValue();
     }
@@ -338,6 +349,16 @@ bool ThreadPlanCallFunction::DoPlanExplainsStop(Event *event_ptr) {
     // it is a signal that is set not to stop.  Check that here first.  We just
     // say we explain the stop but aren't done and everything will continue on
     // from there.
+
+    // Fork events are not handled by this plan — let them fall through
+    // to ThreadPlanBase. DidFork is called via PerformAction when the
+    // event is delivered.
+    if (m_real_stop_info_sp) {
+      StopReason reason = m_real_stop_info_sp->GetStopReason();
+      if (reason == eStopReasonFork || reason == eStopReasonVFork ||
+          reason == eStopReasonVForkDone)
+        return false;
+    }
 
     if (m_real_stop_info_sp &&
         m_real_stop_info_sp->ShouldStopSynchronous(event_ptr)) {

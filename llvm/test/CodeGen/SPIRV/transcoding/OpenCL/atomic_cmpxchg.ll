@@ -1,4 +1,5 @@
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ;; This test checks that the backend is capable to correctly translate
 ;; atomic_cmpxchg OpenCL C 1.2 built-in function [1] into corresponding SPIR-V
@@ -23,11 +24,11 @@
 ;; below include a bit more information than original source
 
 ;; 0x2 Workgroup
-; CHECK-SPIRV-DAG: %[[#WORKGROUP_SCOPE:]] = OpConstant %[[#UINT]] 2
+; CHECK-SPIRV-DAG: %[[#WORKGROUP_SCOPE:]] = OpConstant %[[#UINT]] 2{{$}}
 
 ;; 0x0 Relaxed
 ;; TODO: do we need CrossWorkgroupMemory here as well?
-; CHECK-SPIRV-DAG: %[[#RELAXED:]] = OpConstant %[[#UINT]] 0
+; CHECK-SPIRV-DAG: %[[#RELAXED:]] = OpConstantNull %[[#UINT]]
 
 ; CHECK-SPIRV:     %[[#TEST]] = OpFunction %[[#]]
 ; CHECK-SPIRV:     %[[#PTR:]] = OpFunctionParameter %[[#UINT_PTR]]
@@ -36,16 +37,16 @@
 ; CHECK-SPIRV:     %[[#]] = OpAtomicCompareExchange %[[#UINT]] %[[#PTR]] %[[#WORKGROUP_SCOPE]] %[[#RELAXED]] %[[#RELAXED]] %[[#VAL]] %[[#CMP]]
 ; CHECK-SPIRV:     %[[#]] = OpAtomicCompareExchange %[[#UINT]] %[[#PTR]] %[[#WORKGROUP_SCOPE]] %[[#RELAXED]] %[[#RELAXED]] %[[#VAL]] %[[#CMP]]
 
-define dso_local spir_kernel void @test_atomic_cmpxchg(i32 addrspace(1)* noundef %p, i32 noundef %cmp, i32 noundef %val) local_unnamed_addr {
+define dso_local spir_kernel void @test_atomic_cmpxchg(ptr addrspace(1) noundef %p, i32 noundef %cmp, i32 noundef %val) local_unnamed_addr {
 entry:
-  %call = tail call spir_func i32 @_Z14atomic_cmpxchgPU3AS1Viii(i32 addrspace(1)* noundef %p, i32 noundef %cmp, i32 noundef %val)
-  %call1 = tail call spir_func i32 @_Z14atomic_cmpxchgPU3AS1Vjjj(i32 addrspace(1)* noundef %p, i32 noundef %cmp, i32 noundef %val)
+  %call = tail call spir_func i32 @_Z14atomic_cmpxchgPU3AS1Viii(ptr addrspace(1) noundef %p, i32 noundef %cmp, i32 noundef %val)
+  %call1 = tail call spir_func i32 @_Z14atomic_cmpxchgPU3AS1Vjjj(ptr addrspace(1) noundef %p, i32 noundef %cmp, i32 noundef %val)
   ret void
 }
 
-declare spir_func i32 @_Z14atomic_cmpxchgPU3AS1Viii(i32 addrspace(1)* noundef, i32 noundef, i32 noundef) local_unnamed_addr
+declare spir_func i32 @_Z14atomic_cmpxchgPU3AS1Viii(ptr addrspace(1) noundef, i32 noundef, i32 noundef) local_unnamed_addr
 
-declare spir_func i32 @_Z14atomic_cmpxchgPU3AS1Vjjj(i32 addrspace(1)* noundef, i32 noundef, i32 noundef) local_unnamed_addr
+declare spir_func i32 @_Z14atomic_cmpxchgPU3AS1Vjjj(ptr addrspace(1) noundef, i32 noundef, i32 noundef) local_unnamed_addr
 
 ;; References:
 ;; [1]: https://www.khronos.org/registry/OpenCL/sdk/2.0/docs/man/xhtml/atomic_cmpxchg.html

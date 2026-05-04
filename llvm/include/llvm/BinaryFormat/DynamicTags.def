@@ -36,6 +36,11 @@
 #define RISCV_DYNAMIC_TAG_DEFINED
 #endif
 
+#ifndef SPARC_DYNAMIC_TAG
+#define SPARC_DYNAMIC_TAG(name, value) DYNAMIC_TAG(name, value)
+#define SPARC_DYNAMIC_TAG_DEFINED
+#endif
+
 #ifndef DYNAMIC_TAG_MARKER
 #define DYNAMIC_TAG_MARKER(name, value) DYNAMIC_TAG(name, value)
 #define DYNAMIC_TAG_MARKER_DEFINED
@@ -85,6 +90,10 @@ DYNAMIC_TAG(SYMTAB_SHNDX, 34) // Address of the SHT_SYMTAB_SHNDX section.
 DYNAMIC_TAG(RELRSZ, 35)  // Size of Relr relocation table.
 DYNAMIC_TAG(RELR, 36)    // Address of relocation table (Relr entries).
 DYNAMIC_TAG(RELRENT, 37) // Size of a Relr relocation entry.
+
+// TODO: Experimental CREL relocations. LLVM will change the value and
+// break compatibility in the future.
+DYNAMIC_TAG(CREL,  0x40000026)   // CREL relocation table
 
 DYNAMIC_TAG_MARKER(LOOS, 0x60000000)   // Start of environment specific tags.
 DYNAMIC_TAG_MARKER(HIOS, 0x6FFFFFFF)   // End of environment specific tags.
@@ -234,6 +243,10 @@ PPC64_DYNAMIC_TAG(PPC64_OPT, 0x70000003) // Flags to control optimizations
 
 // RISC-V specific dynamic array tags.
 RISCV_DYNAMIC_TAG(RISCV_VARIANT_CC, 0x70000001)
+
+// SPARC specific dynamic table entry tags.
+
+SPARC_DYNAMIC_TAG(SPARC_REGISTER, 0x70000001)
 
 // Sun machine-independent extensions.
 DYNAMIC_TAG(AUXILIARY, 0x7FFFFFFD) // Shared object to load before self

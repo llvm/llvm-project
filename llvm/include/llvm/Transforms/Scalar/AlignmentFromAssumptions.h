@@ -22,9 +22,11 @@
 namespace llvm {
 
 class AssumptionCache;
+class CallInst;
 class DominatorTree;
 class ScalarEvolution;
 class SCEV;
+class Value;
 
 struct AlignmentFromAssumptionsPass
     : public PassInfoMixin<AlignmentFromAssumptionsPass> {

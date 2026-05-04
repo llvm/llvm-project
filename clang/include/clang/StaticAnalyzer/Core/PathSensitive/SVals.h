@@ -17,6 +17,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/APSIntPtr.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/FoldingSet.h"
@@ -88,6 +89,8 @@ public:
   }
 
   SValKind getKind() const { return Kind; }
+
+  StringRef getKindStr() const;
 
   // This method is required for using SVal in a FoldingSetNode.  It
   // extracts a unique signature for this SVal object.
@@ -232,14 +235,6 @@ protected:
       : DefinedOrUnknownSVal(Kind, Data) {}
 };
 
-/// Represents an SVal that is guaranteed to not be UnknownVal.
-class KnownSVal : public SVal {
-public:
-  /*implicit*/ KnownSVal(DefinedSVal V) : SVal(V) {}
-  /*implicit*/ KnownSVal(UndefinedVal V) : SVal(V) {}
-  static bool classof(SVal V) { return !V.isUnknown(); }
-};
-
 class NonLoc : public DefinedSVal {
 protected:
   NonLoc(SValKind Kind, const void *Data) : DefinedSVal(Kind, Data) {}
@@ -304,9 +299,12 @@ public:
 /// Value representing integer constant.
 class ConcreteInt : public NonLoc {
 public:
-  explicit ConcreteInt(const llvm::APSInt &V) : NonLoc(ConcreteIntKind, &V) {}
+  explicit ConcreteInt(APSIntPtr V) : NonLoc(ConcreteIntKind, V.get()) {}
 
-  const llvm::APSInt &getValue() const { return *castDataAs<llvm::APSInt>(); }
+  APSIntPtr getValue() const {
+    // This is safe because in the ctor we take a safe APSIntPtr.
+    return APSIntPtr::unsafeConstructor(castDataAs<llvm::APSInt>());
+  }
 
   static bool classof(SVal V) { return V.getKind() == ConcreteIntKind; }
 };
@@ -334,6 +332,10 @@ public:
   static bool classof(SVal V) { return V.getKind() == LocAsIntegerKind; }
 };
 
+/// The simplest example of a concrete compound value is nonloc::CompoundVal,
+/// which represents a concrete r-value of an initializer-list or a string.
+/// Internally, it contains an llvm::ImmutableList of SVal's stored inside the
+/// literal.
 class CompoundVal : public NonLoc {
   friend class ento::SValBuilder;
 
@@ -354,6 +356,36 @@ public:
   static bool classof(SVal V) { return V.getKind() == CompoundValKind; }
 };
 
+/// While nonloc::CompoundVal covers a few simple use cases,
+/// nonloc::LazyCompoundVal is a more performant and flexible way to represent
+/// an rvalue of record type, so it shows up much more frequently during
+/// analysis. This value is an r-value that represents a snapshot of any
+/// structure "as a whole" at a given moment during the analysis. Such value is
+/// already quite far from being referred to as "concrete", as many fields
+/// inside it would be unknown or symbolic. nonloc::LazyCompoundVal operates by
+/// storing two things:
+///   * a reference to the TypedValueRegion being snapshotted (yes, it is always
+///     typed), and also
+///   * a reference to the whole Store object, obtained from the ProgramState in
+///     which the nonloc::LazyCompoundVal was created.
+///
+/// Note that the old ProgramState and its Store is kept alive during the
+/// analysis because these are immutable functional data structures and each new
+/// Store value is represented as "earlier Store" + "additional binding".
+///
+/// Essentially, nonloc::LazyCompoundVal is a performance optimization for the
+/// analyzer. Because Store is immutable, creating a nonloc::LazyCompoundVal is
+/// a very cheap operation. Note that the Store contains all region bindings in
+/// the program state, not only related to the region. Later, if necessary, such
+/// value can be unpacked -- eg. when it is assigned to another variable.
+///
+/// If you ever need to inspect the contents of the LazyCompoundVal, you can use
+/// StoreManager::iterBindings(). It'll iterate through all values in the Store,
+/// but you're only interested in the ones that belong to
+/// LazyCompoundVal::getRegion(); other bindings are immaterial.
+///
+/// NOTE: LazyCompoundVal::getRegion() itself is also immaterial (see the actual
+/// method docs for details).
 class LazyCompoundVal : public NonLoc {
   friend class ento::SValBuilder;
 
@@ -371,6 +403,18 @@ public:
   /// It might return null.
   const void *getStore() const;
 
+  /// This function itself is immaterial. It is only an implementation detail.
+  /// LazyCompoundVal represents only the rvalue, the data (known or unknown)
+  /// that *was* stored in that region *at some point in the past*. The region
+  /// should not be used for any purpose other than figuring out what part of
+  /// the frozen Store you're interested in. The value does not represent the
+  /// *current* value of that region. Sometimes it may, but this should not be
+  /// relied upon. Instead, if you want to figure out what region it represents,
+  /// you typically need to see where you got it from in the first place. The
+  /// region is absolutely not analogous to the C++ "this" pointer. It is also
+  /// not a valid way to "materialize" the prvalue into a glvalue in C++,
+  /// because the region represents the *old* storage (sometimes very old), not
+  /// the *future* storage.
   LLVM_ATTRIBUTE_RETURNS_NONNULL
   const TypedValueRegion *getRegion() const;
 
@@ -470,9 +514,12 @@ public:
 
 class ConcreteInt : public Loc {
 public:
-  explicit ConcreteInt(const llvm::APSInt &V) : Loc(ConcreteIntKind, &V) {}
+  explicit ConcreteInt(APSIntPtr V) : Loc(ConcreteIntKind, V.get()) {}
 
-  const llvm::APSInt &getValue() const { return *castDataAs<llvm::APSInt>(); }
+  APSIntPtr getValue() const {
+    // This is safe because in the ctor we take a safe APSIntPtr.
+    return APSIntPtr::unsafeConstructor(castDataAs<llvm::APSInt>());
+  }
 
   static bool classof(SVal V) { return V.getKind() == ConcreteIntKind; }
 };

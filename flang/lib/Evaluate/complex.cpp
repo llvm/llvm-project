@@ -100,6 +100,17 @@ ValueWithRealFlags<Complex<R>> Complex<R>::Divide(
   return {Complex{re, im}, flags};
 }
 
+template <typename R>
+ValueWithRealFlags<Complex<R>> Complex<R>::KahanSummation(
+    const Complex &that, Complex &correction, Rounding rounding) const {
+  RealFlags flags;
+  Part reSum{re_.KahanSummation(that.re_, correction.re_, rounding)
+          .AccumulateFlags(flags)};
+  Part imSum{im_.KahanSummation(that.im_, correction.im_, rounding)
+          .AccumulateFlags(flags)};
+  return {Complex{reSum, imSum}, flags};
+}
+
 template <typename R> std::string Complex<R>::DumpHexadecimal() const {
   std::string result{'('};
   result += re_.DumpHexadecimal();
@@ -120,6 +131,6 @@ template class Complex<Real<Integer<16>, 11>>;
 template class Complex<Real<Integer<16>, 8>>;
 template class Complex<Real<Integer<32>, 24>>;
 template class Complex<Real<Integer<64>, 53>>;
-template class Complex<Real<Integer<80>, 64>>;
+template class Complex<Real<X87IntegerContainer, 64>>;
 template class Complex<Real<Integer<128>, 113>>;
 } // namespace Fortran::evaluate::value

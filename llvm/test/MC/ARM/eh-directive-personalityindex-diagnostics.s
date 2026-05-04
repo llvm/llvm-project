@@ -65,10 +65,10 @@ multiple_personality:
 @ CHECK: 	.personalityindex 0
 @ CHECK:       ^
 
-	.global multiple_personality_indicies
-	.type multiple_personality_indicies,%function
+	.global multiple_personality_indices
+	.type multiple_personality_indices,%function
 	.thumb_func
-multiple_personality_indicies:
+multiple_personality_indices:
 	.fnstart
 	.personalityindex 0
 	.personalityindex 1

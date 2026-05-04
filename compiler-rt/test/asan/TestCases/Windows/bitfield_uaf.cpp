@@ -21,13 +21,13 @@ void make_access(S *s) {
 int main(void) {
   S *s = (S*)malloc(sizeof(S));
   free(s);
-// CHECK: [[ADDR]] is located 0 bytes inside of 4-byte region
-// CHECK-LABEL: freed by thread T0 here:
-// CHECK:   {{#0 .* free }}
-// CHECK:   {{#1 .* main .*bitfield_uaf.cpp}}:[[@LINE-4]]
-// CHECK-LABEL: previously allocated by thread T0 here:
-// CHECK:   {{#0 .* malloc }}
-// CHECK:   {{#1 .* main .*bitfield_uaf.cpp}}:[[@LINE-8]]
+  // CHECK: [[ADDR]] is located 0 bytes inside of 4-byte region
+  // CHECK-LABEL: freed by thread T0 here:
+  // CHECK:   {{#0 .* free }}
+  // CHECK:   {{ #[1-3] .* main .*bitfield_uaf.cpp}}:[[@LINE-4]]
+  // CHECK-LABEL: previously allocated by thread T0 here:
+  // CHECK:   {{#0 .* malloc }}
+  // CHECK:   {{ #[1-3] .* main .*bitfield_uaf.cpp}}:[[@LINE-8]]
   make_access(s);
   return 0;
 }

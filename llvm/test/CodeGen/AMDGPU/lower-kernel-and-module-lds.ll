@@ -84,7 +84,7 @@ define amdgpu_kernel void @calls_f0() {
 define void @f0() {
 ; CHECK-LABEL: define void @f0()
 ; CHECK-NEXT: store i8 1, ptr addrspace(3) getelementptr inbounds (%llvm.amdgcn.module.lds.t, ptr addrspace(3) @llvm.amdgcn.module.lds, i32 0, i32 1), align 8, !noalias !24
-; CHECK-NEXT: store i8 8, ptr addrspace(3) @llvm.amdgcn.module.lds, align 8, !noalias !24
+; CHECK-NEXT: store i8 8, ptr addrspace(3) @llvm.amdgcn.module.lds, align 8, !noalias !29
 ; CHECK-NEXT: ret void
   store i8 1, ptr addrspace(3) @lds.size.1.align.1, align 1
 

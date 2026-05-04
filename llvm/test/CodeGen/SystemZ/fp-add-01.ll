@@ -7,6 +7,18 @@
 declare float @foo()
 
 ; Check register addition.
+define half @f0(half %f1, half %f2) {
+; CHECK-LABEL: f0:
+; CHECK: brasl %r14, __extendhfsf2@PLT
+; CHECK: brasl %r14, __extendhfsf2@PLT
+; CHECK: aebr %f0, %f9
+; CHECK: brasl %r14, __truncsfhf2@PLT
+; CHECK: br %r14
+  %res = fadd half %f1, %f2
+  ret half %res
+}
+
+; Check register addition.
 define float @f1(float %f1, float %f2) {
 ; CHECK-LABEL: f1:
 ; CHECK: aebr %f0, %f2
@@ -118,4 +130,16 @@ define float @f7(ptr %ptr0) {
   %add10 = fadd float %add9, %val10
 
   ret float %add10
+}
+
+; Check that reassociation flags do not get in the way of AEB.
+define float @f8(ptr %x) {
+; CHECK-LABEL: f8:
+; CHECK: aeb %f0
+entry:
+  %0 = load float, ptr %x, align 8
+  %arrayidx1 = getelementptr inbounds float, ptr %x, i64 1
+  %1 = load float, ptr %arrayidx1, align 8
+  %add = fadd reassoc nsz arcp contract afn float %1, %0
+  ret float %add
 }

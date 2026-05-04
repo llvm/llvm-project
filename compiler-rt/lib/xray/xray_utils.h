@@ -61,7 +61,7 @@ constexpr size_t gcd(size_t a, size_t b) {
 constexpr size_t lcm(size_t a, size_t b) { return a * b / gcd(a, b); }
 
 constexpr size_t nearest_boundary(size_t number, size_t multiple) {
-  return multiple * ((number / multiple) + (number % multiple ? 1 : 0));
+  return multiple * ((number / multiple) + ((number % multiple) ? 1 : 0));
 }
 
 constexpr size_t next_pow2_helper(size_t num, size_t acc) {

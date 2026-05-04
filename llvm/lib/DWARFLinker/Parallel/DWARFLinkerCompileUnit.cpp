@@ -15,7 +15,6 @@
 #include "llvm/DWARFLinker/Utils.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugMacro.h"
-#include "llvm/Support/DJB.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
@@ -102,10 +101,8 @@ void CompileUnit::maybeResetToLoadedStage() {
   OutUnitDIE = nullptr;
   DebugAddrIndexMap.clear();
 
-  for (uint64_t &Offset : OutDieOffsetArray)
-    Offset = 0;
-  for (TypeEntry *&Name : TypeEntries)
-    Name = nullptr;
+  llvm::fill(OutDieOffsetArray, 0);
+  llvm::fill(TypeEntries, nullptr);
   eraseSections();
 
   setStage(Stage::CreatedNotLoaded);
@@ -236,6 +233,18 @@ StringEntry *CompileUnit::getFileName(unsigned FileIdx,
   return nullptr;
 }
 
+llvm::Error CompileUnit::setPriority(uint64_t ObjFileIdx, uint64_t LocalIdx) {
+  if (ObjFileIdx > std::numeric_limits<uint32_t>::max())
+    return llvm::createStringError("cannot compute priority when number of "
+                                   "object files exceeds UINT32_MAX");
+  if (LocalIdx > std::numeric_limits<uint32_t>::max())
+    return llvm::createStringError("cannot compute priority when number of "
+                                   "local index exceeds UINT32_MAX");
+
+  Priority = (ObjFileIdx << 32) | LocalIdx;
+  return llvm::Error::success();
+}
+
 void CompileUnit::cleanupDataAfterClonning() {
   AbbreviationsSet.clear();
   ResolvedFullPaths.shrink_and_clear();
@@ -270,8 +279,10 @@ void CompileUnit::analyzeImportedModule(const DWARFDebugInfoEntry *DieEntry) {
     return;
   // Don't track interfaces that are part of the toolchain.
   // For example: Swift, _Concurrency, ...
-  SmallString<128> Toolchain = guessToolchainBaseDir(SysRoot);
-  if (!Toolchain.empty() && Path.starts_with(Toolchain))
+  StringRef DeveloperDir = guessDeveloperDir(SysRoot);
+  if (!DeveloperDir.empty() && Path.starts_with(DeveloperDir))
+    return;
+  if (isInToolchainDir(Path))
     return;
   if (std::optional<DWARFFormValue> Val = find(DieEntry, dwarf::DW_AT_name)) {
     Expected<const char *> Name = Val->getAsCString();
@@ -379,38 +390,46 @@ void CompileUnit::updateDieRefPatchesWithClonedOffsets() {
 std::optional<UnitEntryPairTy> CompileUnit::resolveDIEReference(
     const DWARFFormValue &RefValue,
     ResolveInterCUReferencesMode CanResolveInterCUReferences) {
-  if (std::optional<DWARFFormValue::UnitOffset> Ref =
-          *RefValue.getAsRelativeReference()) {
-    if (Ref->Unit == OrigUnit) {
-      // Referenced DIE is in current compile unit.
-      if (std::optional<uint32_t> RefDieIdx =
-              getDIEIndexForOffset(OrigUnit->getOffset() + Ref->Offset))
-        return UnitEntryPairTy{this, OrigUnit->getDebugInfoEntry(*RefDieIdx)};
-    }
-    uint64_t RefDIEOffset =
-        Ref->Unit ? Ref->Unit->getOffset() + Ref->Offset : Ref->Offset;
-    if (CompileUnit *RefCU = getUnitFromOffset(RefDIEOffset)) {
-      if (RefCU == this) {
-        // Referenced DIE is in current compile unit.
-        if (std::optional<uint32_t> RefDieIdx =
-                getDIEIndexForOffset(RefDIEOffset))
-          return UnitEntryPairTy{this, getDebugInfoEntry(*RefDieIdx)};
-      } else if (CanResolveInterCUReferences) {
-        // Referenced DIE is in other compile unit.
-
-        // Check whether DIEs are loaded for that compile unit.
-        enum Stage ReferredCUStage = RefCU->getStage();
-        if (ReferredCUStage < Stage::Loaded || ReferredCUStage > Stage::Cloned)
-          return UnitEntryPairTy{RefCU, nullptr};
-
-        if (std::optional<uint32_t> RefDieIdx =
-                RefCU->getDIEIndexForOffset(RefDIEOffset))
-          return UnitEntryPairTy{RefCU, RefCU->getDebugInfoEntry(*RefDieIdx)};
-      } else
-        return UnitEntryPairTy{RefCU, nullptr};
-    }
+  CompileUnit *RefCU;
+  uint64_t RefDIEOffset;
+  if (std::optional<uint64_t> Offset = RefValue.getAsRelativeReference()) {
+    RefCU = this;
+    RefDIEOffset = RefValue.getUnit()->getOffset() + *Offset;
+  } else if (Offset = RefValue.getAsDebugInfoReference(); Offset) {
+    RefCU = getUnitFromOffset(*Offset);
+    RefDIEOffset = *Offset;
+  } else {
+    return std::nullopt;
   }
 
+  if (RefCU == this) {
+    // Referenced DIE is in current compile unit.
+    if (std::optional<uint32_t> RefDieIdx =
+            getDIEIndexForOffset(RefDIEOffset)) {
+      const DWARFDebugInfoEntry *RefEntry = getDebugInfoEntry(*RefDieIdx);
+      // In a file with broken references, an attribute might point to a
+      // NULL DIE. Treat that as a resolution failure so callers can warn.
+      if (RefEntry && RefEntry->getAbbreviationDeclarationPtr())
+        return UnitEntryPairTy{this, RefEntry};
+    }
+  } else if (RefCU && CanResolveInterCUReferences) {
+    // Referenced DIE is in other compile unit.
+
+    // Check whether DIEs are loaded for that compile unit.
+    enum Stage ReferredCUStage = RefCU->getStage();
+    if (ReferredCUStage < Stage::Loaded || ReferredCUStage > Stage::Cloned)
+      return UnitEntryPairTy{RefCU, nullptr};
+
+    if (std::optional<uint32_t> RefDieIdx =
+            RefCU->getDIEIndexForOffset(RefDIEOffset)) {
+      const DWARFDebugInfoEntry *RefEntry =
+          RefCU->getDebugInfoEntry(*RefDieIdx);
+      if (RefEntry && RefEntry->getAbbreviationDeclarationPtr())
+        return UnitEntryPairTy{RefCU, RefEntry};
+    }
+  } else {
+    return UnitEntryPairTy{RefCU, nullptr};
+  }
   return std::nullopt;
 }
 
@@ -1171,8 +1190,7 @@ void CompileUnit::cloneDieAttrExpression(
         // Argument of DW_OP_addrx should be relocated here as it is not
         // processed by applyValidRelocs.
         OutputExpression.push_back(dwarf::DW_OP_addr);
-        uint64_t LinkedAddress =
-            SA->Address + (VarAddressAdjustment ? *VarAddressAdjustment : 0);
+        uint64_t LinkedAddress = SA->Address + VarAddressAdjustment.value_or(0);
         if (getEndianness() != llvm::endianness::native)
           sys::swapByteOrder(LinkedAddress);
         ArrayRef<uint8_t> AddressBytes(
@@ -1209,7 +1227,7 @@ void CompileUnit::cloneDieAttrExpression(
         if (OutOperandKind) {
           OutputExpression.push_back(*OutOperandKind);
           uint64_t LinkedAddress =
-              SA->Address + (VarAddressAdjustment ? *VarAddressAdjustment : 0);
+              SA->Address + VarAddressAdjustment.value_or(0);
           if (getEndianness() != llvm::endianness::native)
             sys::swapByteOrder(LinkedAddress);
           ArrayRef<uint8_t> AddressBytes(
@@ -1423,46 +1441,53 @@ DIE *CompileUnit::allocateTypeDie(TypeEntryBody *TypeDescriptor,
                                   DIEGenerator &TypeDIEGenerator,
                                   dwarf::Tag DieTag, bool IsDeclaration,
                                   bool IsParentDeclaration) {
-  DIE *DefinitionDie = TypeDescriptor->Die;
-  // Do not allocate any new DIE if definition DIE is already met.
-  if (DefinitionDie)
-    return nullptr;
+  uint64_t Priority = getPriority();
 
-  DIE *DeclarationDie = TypeDescriptor->DeclarationDie;
-  bool OldParentIsDeclaration = TypeDescriptor->ParentIsDeclaration;
+  // Lock-free pre-checks: skip the lock (and downstream cloning) when this CU
+  // has no chance of winning the type slot.
+  if (!IsDeclaration && !IsParentDeclaration) {
+    // DiePriority only ever decreases, so a relaxed read that is <= our
+    // priority means we definitely cannot win.
+    if (Priority >= TypeDescriptor->DiePriority.load(std::memory_order_relaxed))
+      return nullptr;
+  } else {
+    // Once a definition exists the declaration slot is dead.
+    if (TypeDescriptor->Die.load(std::memory_order_relaxed))
+      return nullptr;
+  }
 
-  if (IsDeclaration && !DeclarationDie) {
-    // Alocate declaration DIE.
-    DIE *NewDie = TypeDIEGenerator.createDIE(DieTag, 0);
-    if (TypeDescriptor->DeclarationDie.compare_exchange_weak(DeclarationDie,
-                                                             NewDie))
-      return NewDie;
-  } else if (IsDeclaration && !IsParentDeclaration && OldParentIsDeclaration) {
-    // Overwrite existing declaration DIE if it's parent is also an declaration
-    // while parent of current declaration DIE is a definition.
-    if (TypeDescriptor->ParentIsDeclaration.compare_exchange_weak(
-            OldParentIsDeclaration, false)) {
-      DIE *NewDie = TypeDIEGenerator.createDIE(DieTag, 0);
-      TypeDescriptor->DeclarationDie = NewDie;
-      return NewDie;
+  while (TypeDescriptor->Lock.test_and_set(std::memory_order_acquire))
+    ; // spin
+
+  DIE *Result = nullptr;
+
+  if (!IsDeclaration && !IsParentDeclaration) {
+    // Definition: lowest priority wins.
+    if (Priority <
+        TypeDescriptor->DiePriority.load(std::memory_order_relaxed)) {
+      TypeDescriptor->DiePriority.store(Priority, std::memory_order_relaxed);
+      Result = TypeDIEGenerator.createDIE(DieTag, 0);
+      TypeDescriptor->Die.store(Result, std::memory_order_relaxed);
     }
-  } else if (!IsDeclaration && IsParentDeclaration && !DeclarationDie) {
-    // Alocate declaration DIE since parent of current DIE is marked as
-    // declaration.
-    DIE *NewDie = TypeDIEGenerator.createDIE(DieTag, 0);
-    if (TypeDescriptor->DeclarationDie.compare_exchange_weak(DeclarationDie,
-                                                             NewDie))
-      return NewDie;
-  } else if (!IsDeclaration && !IsParentDeclaration) {
-    // Allocate definition DIE.
-    DIE *NewDie = TypeDIEGenerator.createDIE(DieTag, 0);
-    if (TypeDescriptor->Die.compare_exchange_weak(DefinitionDie, NewDie)) {
-      TypeDescriptor->ParentIsDeclaration = false;
-      return NewDie;
+  } else if (!TypeDescriptor->Die.load(std::memory_order_relaxed)) {
+    // Declaration (no definition exists yet).
+    // Prefer declarations whose parent is a definition (better context);
+    // break ties by CU priority (lower wins).
+    bool WorseParent =
+        IsParentDeclaration && !TypeDescriptor->DeclarationParentIsDeclaration;
+    bool BetterParent =
+        !IsParentDeclaration && TypeDescriptor->DeclarationParentIsDeclaration;
+    if (!WorseParent &&
+        (BetterParent || Priority < TypeDescriptor->DeclarationDiePriority)) {
+      TypeDescriptor->DeclarationDiePriority = Priority;
+      TypeDescriptor->DeclarationParentIsDeclaration = IsParentDeclaration;
+      Result = TypeDIEGenerator.createDIE(DieTag, 0);
+      TypeDescriptor->DeclarationDie.store(Result, std::memory_order_relaxed);
     }
   }
 
-  return nullptr;
+  TypeDescriptor->Lock.clear(std::memory_order_release);
+  return Result;
 }
 
 TypeEntry *CompileUnit::createTypeDIEandCloneAttributes(
@@ -1814,24 +1839,24 @@ DwarfUnit *CompileUnit::OutputUnitVariantPtr::operator->() {
 }
 
 bool CompileUnit::OutputUnitVariantPtr::isCompileUnit() {
-  return Ptr.is<CompileUnit *>();
+  return isa<CompileUnit *>(Ptr);
 }
 
 bool CompileUnit::OutputUnitVariantPtr::isTypeUnit() {
-  return Ptr.is<TypeUnit *>();
+  return isa<TypeUnit *>(Ptr);
 }
 
 CompileUnit *CompileUnit::OutputUnitVariantPtr::getAsCompileUnit() {
-  return Ptr.get<CompileUnit *>();
+  return cast<CompileUnit *>(Ptr);
 }
 
 TypeUnit *CompileUnit::OutputUnitVariantPtr::getAsTypeUnit() {
-  return Ptr.get<TypeUnit *>();
+  return cast<TypeUnit *>(Ptr);
 }
 
 bool CompileUnit::resolveDependenciesAndMarkLiveness(
     bool InterCUProcessingStarted, std::atomic<bool> &HasNewInterconnectedCUs) {
-  if (!Dependencies.get())
+  if (!Dependencies)
     Dependencies.reset(new DependencyTracker(*this));
 
   return Dependencies->resolveDependenciesAndMarkLiveness(
@@ -1841,13 +1866,13 @@ bool CompileUnit::resolveDependenciesAndMarkLiveness(
 bool CompileUnit::updateDependenciesCompleteness() {
   assert(Dependencies.get());
 
-  return Dependencies.get()->updateDependenciesCompleteness();
+  return Dependencies->updateDependenciesCompleteness();
 }
 
 void CompileUnit::verifyDependencies() {
   assert(Dependencies.get());
 
-  Dependencies.get()->verifyKeepChain();
+  Dependencies->verifyKeepChain();
 }
 
 ArrayRef<dwarf::Attribute> dwarf_linker::parallel::getODRAttributes() {

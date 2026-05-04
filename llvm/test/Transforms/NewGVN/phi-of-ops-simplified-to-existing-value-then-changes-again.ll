@@ -88,8 +88,8 @@ define void @pr42422(i1 %c.1, i1 %c.2) {
 ; CHECK:       bb16:
 ; CHECK-NEXT:    [[TMP17:%.*]] = phi i32 [ poison, [[BB15]] ], [ 1, [[BB14]] ], [ 9, [[BB7]] ]
 ; CHECK-NEXT:    switch i32 [[TMP17]], label [[BB19]] [
-; CHECK-NEXT:    i32 0, label [[BB6]]
-; CHECK-NEXT:    i32 9, label [[BB18:%.*]]
+; CHECK-NEXT:      i32 0, label [[BB6]]
+; CHECK-NEXT:      i32 9, label [[BB18:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb18:
 ; CHECK-NEXT:    br label [[BB19]]

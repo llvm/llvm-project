@@ -33,6 +33,10 @@ inline size_t RoundUpTo(size_t size, size_t boundary) {
   return (size + boundary - 1) & ~(boundary - 1);
 }
 
+inline constexpr bool IsAligned(size_t a, size_t alignment) {
+  return (a & (alignment - 1)) == 0;
+}
+
 class MutexLock {
  public:
   explicit MutexLock(pthread_mutex_t &mutex) : mutex_(&mutex) {

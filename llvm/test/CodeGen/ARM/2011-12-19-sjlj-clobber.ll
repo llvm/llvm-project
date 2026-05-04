@@ -3,7 +3,7 @@
 ; Radar 10567930: Make sure that all the caller-saved registers are saved and
 ; restored in a function with setjmp/longjmp EH.  In particular, r6 was not
 ; being saved here.
-; CHECK: push {r4, r5, r6, r7, lr}
+; CHECK: push.w {r4, r5, r6, r7, r8, r10, r11, lr}
 
 %0 = type opaque
 %struct.NSConstantString = type { ptr, i32, ptr, i32 }

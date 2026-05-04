@@ -9,5 +9,3 @@ add_llvm_unittest(LLVMProfgenTests
 target_link_libraries(LLVMProfgenTests PRIVATE LLVMTestingSupport)
 
 add_dependencies(LLVMProfgenTests intrinsics_gen)
-
-set_property(TARGET LLVMProfgenTests PROPERTY FOLDER "Tests/UnitTests/ToolTests")

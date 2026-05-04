@@ -3,6 +3,7 @@ add_custom_command(
   DEPENDS ${SWIG_SOURCES}
   DEPENDS ${SWIG_INTERFACES}
   DEPENDS ${SWIG_HEADERS}
+  DEPENDS lldb-sbapi-dwarf-enums
   COMMAND ${SWIG_EXECUTABLE}
       ${SWIG_COMMON_FLAGS}
       -I${CMAKE_CURRENT_SOURCE_DIR}
@@ -64,4 +65,12 @@ function(finish_swig_lua swig_target lldb_lua_bindings_dir lldb_lua_target_dir)
                             COMPONENT ${lldb_lua_library_target}
                             DEPENDS ${lldb_lua_library_target})
   endif()
+endfunction()
+
+function(add_lua_wrapper target)
+  get_target_property(lua_bindings_dir swig_wrapper_lua BINARY_DIR)
+  set(lldb_lua_wrapper ${lua_bindings_dir}/LLDBWrapLua.cpp)
+
+  add_dependencies(${target} swig_wrapper_lua)
+  add_swig_wrapper(${target} ${lldb_lua_wrapper})
 endfunction()

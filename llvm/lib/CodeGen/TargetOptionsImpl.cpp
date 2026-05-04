@@ -21,28 +21,39 @@ using namespace llvm;
 /// DisableFramePointerElim - This returns true if frame pointer elimination
 /// optimization should be disabled for the given machine function.
 bool TargetOptions::DisableFramePointerElim(const MachineFunction &MF) const {
-  // Check to see if the target want to forcably keep frame pointer.
-  if (MF.getSubtarget().getFrameLowering()->keepFramePointer(MF))
+  FramePointerKind FP = MF.getFrameInfo().getFramePointerPolicy();
+  switch (FP) {
+  case FramePointerKind::All:
     return true;
-
-  const Function &F = MF.getFunction();
-
-  if (!F.hasFnAttribute("frame-pointer"))
-    return false;
-  StringRef FP = F.getFnAttribute("frame-pointer").getValueAsString();
-  if (FP == "all")
-    return true;
-  if (FP == "non-leaf")
+  case FramePointerKind::NonLeaf:
+  case FramePointerKind::NonLeafNoReserve:
     return MF.getFrameInfo().hasCalls();
-  if (FP == "none")
+  case FramePointerKind::None:
+  case FramePointerKind::Reserved:
     return false;
+  }
+  llvm_unreachable("unknown frame pointer flag");
+}
+
+bool TargetOptions::FramePointerIsReserved(const MachineFunction &MF) const {
+  FramePointerKind FP = MF.getFrameInfo().getFramePointerPolicy();
+  switch (FP) {
+  case FramePointerKind::All:
+  case FramePointerKind::NonLeaf:
+  case FramePointerKind::Reserved:
+    return true;
+  case FramePointerKind::NonLeafNoReserve:
+    return MF.getFrameInfo().hasCalls();
+  case FramePointerKind::None:
+    return false;
+  }
   llvm_unreachable("unknown frame pointer flag");
 }
 
 /// HonorSignDependentRoundingFPMath - Return true if the codegen must assume
 /// that the rounding mode of the FPU can change from its default.
 bool TargetOptions::HonorSignDependentRoundingFPMath() const {
-  return !UnsafeFPMath && HonorSignDependentRoundingFPMathOption;
+  return HonorSignDependentRoundingFPMathOption;
 }
 
 /// NOTE: There are targets that still do not support the debug entry values

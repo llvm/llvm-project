@@ -8,8 +8,10 @@
 
 # RUN: llvm-dwarfdump --show-form --verbose --debug-addr %t.bolt > %t.txt
 # RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.bolt >> %t.txt
+# RUN: llvm-objdump -d %t.bolt >> %t.txt
+# RUN: cat %t.txt | FileCheck --check-prefix=POSTCHECK %s
 
-# This test checks that we correctly handle DW_AT_low_pc [DW_FORM_addrx] that is part of DW_TAG_label.
+## This test checks that we correctly handle DW_AT_low_pc [DW_FORM_addrx] that is part of DW_TAG_label.
 
 # PRECHECK: version = 0x0005
 # PRECHECK: DW_TAG_label
@@ -27,36 +29,37 @@
 # POSTCHECK: Addrs: [
 # POSTCHECK-NEXT: 0x
 # POSTCHECK-NEXT: 0x
-# POSTCHECK-NEXT: 0x[[#%.16x,ADDR:]]
-# POSTCHECK-NEXT: 0x[[#%.16x,ADDR2:]]
+# POSTCHECK-NEXT: 0x[[ADDR:[1-9a-f]*]]
+# POSTCHECK-NEXT: 0x[[ADDR2:[1-9a-f]*]]
 
 # POSTCHECK: version = 0x0005
 # POSTCHECK: DW_TAG_label
 # POSTCHECK-NEXT: DW_AT_name
 # POSTCHECK-NEXT: DW_AT_decl_file
 # POSTCHECK-NEXT: DW_AT_decl_line
-# POSTCHECK-NEXT:
 # POSTCHECK-NEXT:DW_AT_low_pc [DW_FORM_addrx]  (indexed (00000002)
-# POSTCHECK-SAME: [0x[[#ADDR]]
+# POSTCHECK-SAME: 0x[[ADDR]]
 # POSTCHECK: DW_TAG_label
 # POSTCHECK-NEXT: DW_AT_name
 # POSTCHECK-NEXT: DW_AT_decl_file
 # POSTCHECK-NEXT: DW_AT_decl_line
-# POSTCHECK-NEXT:
 # POSTCHECK-NEXT:DW_AT_low_pc [DW_FORM_addrx]  (indexed (00000003)
-# POSTCHECK-SAME: [0x[[#ADDR2]]
+# POSTCHECK-SAME: 0x[[ADDR2]]
 
-# clang++ main.cpp -g -S
-# int main() {
-#   int a = 4;
-#   if (a == 5)
-#     goto LABEL1;
-#   else
-#     goto LABEL2;
-#   LABEL1:a++;
-#   LABEL2:a--;
-#   return 0;
-# }
+# POSTCHECK: [[ADDR]]: 8b 45 f8
+# POSTCHECK: [[ADDR2]]: 8b 45 f8
+
+## clang++ main.cpp -g -S
+## int main() {
+##   int a = 4;
+##   if (a == 5)
+##     goto LABEL1;
+##   else
+##     goto LABEL2;
+##   LABEL1:a++;
+##   LABEL2:a--;
+##   return 0;
+## }
 
 	.text
 	.file	"main.cpp"

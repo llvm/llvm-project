@@ -16,12 +16,21 @@ namespace llvm {
 class raw_ostream;
 }
 
+namespace Fortran::common {
+class LangOptions;
+}
+
 namespace Fortran::parser {
 struct Program;
 }
 
 namespace Fortran::semantics {
+class SemanticsContext;
 void UnparseWithSymbols(llvm::raw_ostream &, const parser::Program &,
+    const common::LangOptions &,
+    parser::Encoding encoding = parser::Encoding::UTF_8);
+void UnparseWithModules(llvm::raw_ostream &, SemanticsContext &,
+    const parser::Program &,
     parser::Encoding encoding = parser::Encoding::UTF_8);
 }
 

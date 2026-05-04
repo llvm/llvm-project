@@ -69,7 +69,6 @@ public:
 
   bool runOnMachineFunction(MachineFunction &F) override;
   void releaseMemory() override;
-  void print(raw_ostream &OS, const Module *M) const override;
 };
 }
 #endif

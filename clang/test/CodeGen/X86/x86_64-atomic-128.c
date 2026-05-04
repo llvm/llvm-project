@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -target-cpu core2 %s -S -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -target-cpu core2 %s -emit-llvm -o - | FileCheck %s
 
 // All atomics up to 16 bytes should be emitted inline on x86_64. The
 // backend can reform __sync_whatever calls if necessary (e.g. the CPU
@@ -26,4 +26,5 @@ __int128 test_expression(_Atomic __int128 *addr) {
   // CHECK-LABEL: @test_expression
   // CHECK: atomicrmw and ptr {{.*}} seq_cst, align 16
   *addr &= 1;
+  return 0;
 }

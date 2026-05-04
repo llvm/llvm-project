@@ -1,47 +1,94 @@
 add_flang_library(FIRTransforms
   AbstractResult.cpp
   AddAliasTags.cpp
-  AffinePromotion.cpp
+  AddDebugInfo.cpp
   AffineDemotion.cpp
+  AffinePromotion.cpp
+  AlgebraicSimplification.cpp
   AnnotateConstant.cpp
-  CharacterConversion.cpp
-  ControlFlowConverter.cpp
   ArrayValueCopy.cpp
+  ArrayValueCopy.cpp
+  AssumedRankOpConversion.cpp
+  CUDA/CUFAddConstructor.cpp
+  CUDA/CUFAllocationConversion.cpp
+  CUDA/CUFAllocationConversion.cpp
+  CUDA/CUFComputeSharedMemoryOffsetsAndSize.cpp
+  CUDA/CUFDeviceFuncTransform.cpp
+  CUDA/CUFDeviceGlobal.cpp
+  CUDA/CUFFunctionRewrite.cpp
+  CUDA/CUFGPUToLLVMConversion.cpp
+  CUDA/CUFLaunchAttachAttr.cpp
+  CUDA/CUFOpConversion.cpp
+  CUDA/CUFOpConversionLate.cpp
+  CUDA/CUFPredefinedVarToGPU.cpp
+  CharacterConversion.cpp
+  CompilerGeneratedNames.cpp
+  ConstantArgumentGlobalisation.cpp
+  ControlFlowConverter.cpp
+  ConvertComplexPow.cpp
+  DebugTypeGenerator.cpp
   ExternalNameConversion.cpp
+  FIRToSCF.cpp
+  FIRToMemRef.cpp
+  MemoryUtils.cpp
   MemoryAllocation.cpp
   StackArrays.cpp
   MemRefDataFlowOpt.cpp
   SimplifyRegionLite.cpp
   AlgebraicSimplification.cpp
   SimplifyIntrinsics.cpp
-  AddDebugFoundation.cpp
+  AddDebugInfo.cpp
   PolymorphicOpConversion.cpp
-  LoopVersioning.cpp
-  OMPDescriptorMapInfoGen.cpp
-  OMPFunctionFiltering.cpp
-  OMPMarkDeclareTarget.cpp
-  VScaleAttr.cpp
   FunctionAttr.cpp
+  GenRuntimeCallsForTest.cpp
+  LoopInvariantCodeMotion.cpp
+  LoopVersioning.cpp
+  MIFOpConversion.cpp
+  MemRefDataFlowOpt.cpp
+  MemoryAllocation.cpp
+  MemoryUtils.cpp
+  OptimizeArrayRepacking.cpp
+  PolymorphicOpConversion.cpp
+  SetRuntimeCallAttributes.cpp
+  SimplifyFIROperations.cpp
+  SimplifyIntrinsics.cpp
+  SimplifyRegionLite.cpp
+  StackArrays.cpp
+  StackReclaim.cpp
+  VScaleAttr.cpp
 
   DEPENDS
+  CUFAttrs
+  CUFDialect
   FIRDialect
   FIROptTransformsPassIncGen
   HLFIROpsIncGen
+  MIFDialect
 
   LINK_LIBS
+  CUFAttrs
+  CUFDialect
   FIRAnalysis
   FIRBuilder
   FIRCodeGen
+  FIRCodeGenDialect
   FIRDialect
   FIRDialectSupport
   FIRSupport
+  FortranSupport
   HLFIRDialect
+  MIFDialect
+
+  MLIR_LIBS
   MLIRAffineUtils
+  MLIRAnalysis
   MLIRFuncDialect
-  MLIRLLVMDialect
+  MLIRGPUDialect
   MLIRLLVMCommonConversion
+  MLIRLLVMDialect
   MLIRMathTransforms
   MLIROpenACCDialect
   MLIROpenACCToLLVMIRTranslation
   MLIROpenMPDialect
+  MLIRTransformUtils
 )

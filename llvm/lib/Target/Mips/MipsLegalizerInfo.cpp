@@ -344,7 +344,7 @@ bool MipsLegalizerInfo::legalizeCustom(
   switch (MI.getOpcode()) {
   case G_LOAD:
   case G_STORE: {
-    unsigned MemSize = (**MI.memoperands_begin()).getSize();
+    unsigned MemSize = (**MI.memoperands_begin()).getSize().getValue();
     Register Val = MI.getOperand(0).getReg();
     unsigned Size = MRI.getType(Val).getSizeInBits();
 
@@ -470,13 +470,12 @@ static bool SelectMSA3OpIntrinsic(MachineInstr &MI, unsigned Opcode,
                                   MachineIRBuilder &MIRBuilder,
                                   const MipsSubtarget &ST) {
   assert(ST.hasMSA() && "MSA intrinsic not supported on target without MSA.");
-  if (!MIRBuilder.buildInstr(Opcode)
-           .add(MI.getOperand(0))
-           .add(MI.getOperand(2))
-           .add(MI.getOperand(3))
-           .constrainAllUses(MIRBuilder.getTII(), *ST.getRegisterInfo(),
-                             *ST.getRegBankInfo()))
-    return false;
+  MIRBuilder.buildInstr(Opcode)
+      .add(MI.getOperand(0))
+      .add(MI.getOperand(2))
+      .add(MI.getOperand(3))
+      .constrainAllUses(MIRBuilder.getTII(), *ST.getRegisterInfo(),
+                        *ST.getRegBankInfo());
   MI.eraseFromParent();
   return true;
 }
@@ -508,16 +507,8 @@ bool MipsLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                                           MachineInstr &MI) const {
   MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
   const MipsSubtarget &ST = MI.getMF()->getSubtarget<MipsSubtarget>();
-  const MipsInstrInfo &TII = *ST.getInstrInfo();
-  const MipsRegisterInfo &TRI = *ST.getRegisterInfo();
-  const RegisterBankInfo &RBI = *ST.getRegBankInfo();
 
   switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
-  case Intrinsic::trap: {
-    MachineInstr *Trap = MIRBuilder.buildInstr(Mips::TRAP);
-    MI.eraseFromParent();
-    return constrainSelectedInstRegOperands(*Trap, TII, TRI, RBI);
-  }
   case Intrinsic::vacopy: {
     MachinePointerInfo MPO;
     LLT PtrTy = LLT::pointer(0, 32);

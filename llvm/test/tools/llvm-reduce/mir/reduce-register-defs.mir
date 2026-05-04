@@ -170,7 +170,7 @@ body:             |
 
 # RESULT0: %exec_copy0:sreg_64_xexec = S_MOV_B64_term $exec
 # RESULT0-NEXT: %exec_copy1:sreg_64_xexec = S_MOV_B64_term $exec
-# RESULT-NEXT: S_CBRANCH_EXECZ
+# RESULT0-NEXT: S_CBRANCH_EXECZ %bb.2, implicit $exec
 ---
 name: terminator_def
 tracksRegLiveness: true

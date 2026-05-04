@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Passes/JTFootprintReduction.h"
-#include "bolt/Passes/BinaryFunctionCallGraph.h"
+#include "bolt/Core/BinaryFunctionCallGraph.h"
 #include "bolt/Passes/DataflowInfoManager.h"
 #include "llvm/Support/CommandLine.h"
 
@@ -247,6 +247,11 @@ void JTFootprintReduction::optimizeFunction(BinaryFunction &Function,
 }
 
 Error JTFootprintReduction::runOnFunctions(BinaryContext &BC) {
+  if (!BC.isX86()) {
+    BC.errs() << "BOLT-ERROR: " << getName() << " is supported only on X86\n";
+    exit(1);
+  }
+
   if (opts::JumpTables == JTS_BASIC && BC.HasRelocations)
     return Error::success();
 

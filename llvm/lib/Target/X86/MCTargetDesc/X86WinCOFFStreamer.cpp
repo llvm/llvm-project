@@ -26,6 +26,7 @@ public:
                      std::unique_ptr<MCObjectWriter> OW)
       : MCWinCOFFStreamer(C, std::move(AB), std::move(CE), std::move(OW)) {}
 
+  void emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
   void emitWinEHHandlerData(SMLoc Loc) override;
   void emitWindowsUnwindTables(WinEH::FrameInfo *Frame) override;
   void emitWindowsUnwindTables() override;
@@ -33,13 +34,21 @@ public:
   void finishImpl() override;
 };
 
+void X86WinCOFFStreamer::emitInstruction(const MCInst &Inst,
+                                         const MCSubtargetInfo &STI) {
+  X86_MC::emitInstruction(*this, Inst, STI);
+}
+
 void X86WinCOFFStreamer::emitWinEHHandlerData(SMLoc Loc) {
   MCStreamer::emitWinEHHandlerData(Loc);
 
   // We have to emit the unwind info now, because this directive
   // actually switches to the .xdata section.
-  if (WinEH::FrameInfo *CurFrame = getCurrentWinFrameInfo())
+  if (WinEH::FrameInfo *CurFrame = getCurrentWinFrameInfo()) {
+    // Handlers are always associated with the parent frame.
+    CurFrame = CurFrame->ChainedParent ? CurFrame->ChainedParent : CurFrame;
     EHStreamer.EmitUnwindInfo(*this, CurFrame, /* HandlerData = */ true);
+  }
 }
 
 void X86WinCOFFStreamer::emitWindowsUnwindTables(WinEH::FrameInfo *Frame) {
@@ -59,23 +68,16 @@ void X86WinCOFFStreamer::emitCVFPOData(const MCSymbol *ProcSym, SMLoc Loc) {
 }
 
 void X86WinCOFFStreamer::finishImpl() {
-  emitFrames(nullptr);
+  emitFrames();
   emitWindowsUnwindTables();
 
   MCWinCOFFStreamer::finishImpl();
 }
 } // namespace
 
-MCStreamer *llvm::createX86WinCOFFStreamer(MCContext &C,
-                                           std::unique_ptr<MCAsmBackend> &&AB,
-                                           std::unique_ptr<MCObjectWriter> &&OW,
-                                           std::unique_ptr<MCCodeEmitter> &&CE,
-                                           bool RelaxAll,
-                                           bool IncrementalLinkerCompatible) {
-  X86WinCOFFStreamer *S =
-      new X86WinCOFFStreamer(C, std::move(AB), std::move(CE), std::move(OW));
-  S->getAssembler().setRelaxAll(RelaxAll);
-  S->getAssembler().setIncrementalLinkerCompatible(IncrementalLinkerCompatible);
-  return S;
+MCStreamer *
+llvm::createX86WinCOFFStreamer(MCContext &C, std::unique_ptr<MCAsmBackend> &&AB,
+                               std::unique_ptr<MCObjectWriter> &&OW,
+                               std::unique_ptr<MCCodeEmitter> &&CE) {
+  return new X86WinCOFFStreamer(C, std::move(AB), std::move(CE), std::move(OW));
 }
-

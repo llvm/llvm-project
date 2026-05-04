@@ -21,7 +21,7 @@ StrucTy GS = {1, 2};
 // CHECK: @GV1 ={{.*}} addrspace(1) global <4 x i32> <i32 1, i32 2, i32 3, i32 4>, align 16
 int4 GV1 = (int4)((int2)(1,2),3,4);
 
-// CHECK: @GV2 ={{.*}} addrspace(1) global <4 x i32> <i32 1, i32 1, i32 1, i32 1>, align 16
+// CHECK: @GV2 ={{.*}} addrspace(1) global <4 x i32> splat (i32 1), align 16
 int4 GV2 = (int4)(1);
 
 // CHECK: @__const.f.S = private unnamed_addr addrspace(2) constant %struct.StrucTy { i32 1, i32 2, i32 0 }, align 4
@@ -57,7 +57,7 @@ void f(void) {
   // CHECK: store <4 x i32> %[[v7]], ptr %[[V1]], align 16
   int4 V1 = (int4)((int2)(1,2),3,4);
 
-  // CHECK: store <4 x i32> <i32 1, i32 1, i32 1, i32 1>, ptr %[[V2]], align 16
+  // CHECK: store <4 x i32> splat (i32 1), ptr %[[V2]], align 16
   int4 V2 = (int4)(1);
 }
 

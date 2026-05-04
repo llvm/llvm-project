@@ -11,10 +11,10 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Comment.h"
 #include "clang/AST/CommentVisitor.h"
-#include "clang/Basic/FileManager.h"
+#include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Format/Format.h"
-#include "clang/Index/USRGeneration.h"
+#include "clang/UnifiedSymbolResolution/USRGeneration.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Support/raw_ostream.h"
@@ -545,7 +545,8 @@ public:
   void visitParagraphComment(const ParagraphComment *C);
 
   void appendParagraphCommentWithKind(const ParagraphComment *C,
-                                      StringRef Kind);
+                                      StringRef ParagraphKind,
+                                      StringRef PrependBodyText);
 
   void visitBlockCommandComment(const BlockCommandComment *C);
   void visitParamCommandComment(const ParamCommandComment *C);
@@ -679,15 +680,15 @@ CommentASTToXMLConverter::visitHTMLEndTagComment(const HTMLEndTagComment *C) {
   Result << ">&lt;/" << C->getTagName() << "&gt;</rawHTML>";
 }
 
-void
-CommentASTToXMLConverter::visitParagraphComment(const ParagraphComment *C) {
-  appendParagraphCommentWithKind(C, StringRef());
+void CommentASTToXMLConverter::visitParagraphComment(
+    const ParagraphComment *C) {
+  appendParagraphCommentWithKind(C, StringRef(), StringRef());
 }
 
 void CommentASTToXMLConverter::appendParagraphCommentWithKind(
-                                  const ParagraphComment *C,
-                                  StringRef ParagraphKind) {
-  if (C->isWhitespace())
+    const ParagraphComment *C, StringRef ParagraphKind,
+    StringRef PrependBodyText) {
+  if (C->isWhitespace() && PrependBodyText.empty())
     return;
 
   if (ParagraphKind.empty())
@@ -695,8 +696,11 @@ void CommentASTToXMLConverter::appendParagraphCommentWithKind(
   else
     Result << "<Para kind=\"" << ParagraphKind << "\">";
 
-  for (Comment::child_iterator I = C->child_begin(), E = C->child_end();
-       I != E; ++I) {
+  if (!PrependBodyText.empty())
+    Result << PrependBodyText << " ";
+
+  for (Comment::child_iterator I = C->child_begin(), E = C->child_end(); I != E;
+       ++I) {
     visit(*I);
   }
   Result << "</Para>";
@@ -705,8 +709,15 @@ void CommentASTToXMLConverter::appendParagraphCommentWithKind(
 void CommentASTToXMLConverter::visitBlockCommandComment(
     const BlockCommandComment *C) {
   StringRef ParagraphKind;
+  StringRef ExceptionType;
 
-  switch (C->getCommandID()) {
+  const unsigned CommandID = C->getCommandID();
+  const CommandInfo *Info = Traits.getCommandInfo(CommandID);
+  if (Info->IsThrowsCommand && C->getNumArgs() > 0) {
+    ExceptionType = C->getArgText(0);
+  }
+
+  switch (CommandID) {
   case CommandTraits::KCI_attention:
   case CommandTraits::KCI_author:
   case CommandTraits::KCI_authors:
@@ -731,7 +742,8 @@ void CommentASTToXMLConverter::visitBlockCommandComment(
     break;
   }
 
-  appendParagraphCommentWithKind(C->getParagraph(), ParagraphKind);
+  appendParagraphCommentWithKind(C->getParagraph(), ParagraphKind,
+                                 ExceptionType);
 }
 
 void CommentASTToXMLConverter::visitParamCommandComment(
@@ -886,7 +898,7 @@ void CommentASTToXMLConverter::visitFullComment(const FullComment *C) {
     {
       // Print line and column number.
       SourceLocation Loc = DI->CurrentDecl->getLocation();
-      std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(Loc);
+      FileIDAndOffset LocInfo = SM.getDecomposedLoc(Loc);
       FileID FID = LocInfo.first;
       unsigned FileOffset = LocInfo.second;
 
@@ -1017,42 +1029,50 @@ void CommentASTToXMLConverter::visitFullComment(const FullComment *C) {
       }
 
       // 'availability' attribute.
-      Result << "<Availability";
-      StringRef Distribution;
-      if (AA->getPlatform()) {
-        Distribution = AvailabilityAttr::getPrettyPlatformName(
-                                        AA->getPlatform()->getName());
-        if (Distribution.empty())
-          Distribution = AA->getPlatform()->getName();
-      }
-      Result << " distribution=\"" << Distribution << "\">";
-      VersionTuple IntroducedInVersion = AA->getIntroduced();
-      if (!IntroducedInVersion.empty()) {
-        Result << "<IntroducedInVersion>"
-               << IntroducedInVersion.getAsString()
-               << "</IntroducedInVersion>";
-      }
-      VersionTuple DeprecatedInVersion = AA->getDeprecated();
-      if (!DeprecatedInVersion.empty()) {
-        Result << "<DeprecatedInVersion>"
-               << DeprecatedInVersion.getAsString()
-               << "</DeprecatedInVersion>";
-      }
-      VersionTuple RemovedAfterVersion = AA->getObsoleted();
-      if (!RemovedAfterVersion.empty()) {
-        Result << "<RemovedAfterVersion>"
-               << RemovedAfterVersion.getAsString()
-               << "</RemovedAfterVersion>";
-      }
-      StringRef DeprecationSummary = AA->getMessage();
-      if (!DeprecationSummary.empty()) {
-        Result << "<DeprecationSummary>";
-        appendToResultWithXMLEscaping(DeprecationSummary);
-        Result << "</DeprecationSummary>";
-      }
-      if (AA->getUnavailable())
-        Result << "<Unavailable/>";
-      Result << "</Availability>";
+      auto EmitAvailability = [&](const AvailabilityAttr *AA) {
+        Result << "<Availability";
+        StringRef Distribution;
+        if (AA->getPlatform()) {
+          Distribution = AvailabilityAttr::getPrettyPlatformName(
+              AA->getPlatform()->getName());
+          if (Distribution.empty())
+            Distribution = AA->getPlatform()->getName();
+        }
+        Result << " distribution=\"" << Distribution << "\">";
+        VersionTuple IntroducedInVersion = AA->getIntroduced();
+        if (!IntroducedInVersion.empty()) {
+          Result << "<IntroducedInVersion>" << IntroducedInVersion.getAsString()
+                 << "</IntroducedInVersion>";
+        }
+        VersionTuple DeprecatedInVersion = AA->getDeprecated();
+        if (!DeprecatedInVersion.empty()) {
+          Result << "<DeprecatedInVersion>" << DeprecatedInVersion.getAsString()
+                 << "</DeprecatedInVersion>";
+        }
+        VersionTuple RemovedAfterVersion = AA->getObsoleted();
+        if (!RemovedAfterVersion.empty()) {
+          Result << "<RemovedAfterVersion>" << RemovedAfterVersion.getAsString()
+                 << "</RemovedAfterVersion>";
+        }
+        StringRef DeprecationSummary = AA->getMessage();
+        if (!DeprecationSummary.empty()) {
+          Result << "<DeprecationSummary>";
+          appendToResultWithXMLEscaping(DeprecationSummary);
+          Result << "</DeprecationSummary>";
+        }
+        if (AA->getUnavailable())
+          Result << "<Unavailable/>";
+        const IdentifierInfo *Environment = AA->getEnvironment();
+        if (Environment) {
+          Result << "<Environment>" << Environment->getName()
+                 << "</Environment>";
+        }
+        Result << "</Availability>";
+      };
+
+      EmitAvailability(AA);
+      if (const AvailabilityAttr *Inf = AA->getInferredAttrAs())
+        EmitAvailability(Inf);
     }
   }
 

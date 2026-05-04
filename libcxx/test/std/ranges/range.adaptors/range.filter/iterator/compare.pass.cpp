@@ -17,12 +17,12 @@
 #include <cassert>
 #include <concepts>
 #include <utility>
+
 #include "test_iterators.h"
 #include "test_macros.h"
-#include "../types.h"
+#include "test_range.h"
 
-template <class T>
-concept has_equal = requires (T const& x, T const& y) { { x == y }; };
+#include "../types.h"
 
 template <class Iterator>
 constexpr void test() {
@@ -76,7 +76,7 @@ constexpr bool tests() {
     using Sentinel = sentinel_wrapper<Iterator>;
     using FilterView = std::ranges::filter_view<minimal_view<Iterator, Sentinel>, AlwaysTrue>;
     using FilterIterator = std::ranges::iterator_t<FilterView>;
-    static_assert(!has_equal<FilterIterator>);
+    static_assert(!weakly_equality_comparable_with<FilterIterator, FilterIterator>);
   }
 
   return true;

@@ -13,7 +13,6 @@
 #include "polly/PruneUnprofitable.h"
 #include "polly/ScopDetection.h"
 #include "polly/ScopInfo.h"
-#include "polly/ScopPass.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/Support/Debug.h"
@@ -22,6 +21,7 @@
 using namespace llvm;
 using namespace polly;
 
+#include "polly/Support/PollyDebug.h"
 #define DEBUG_TYPE "polly-prune-unprofitable"
 
 namespace {
@@ -54,10 +54,11 @@ static void updateStatistics(Scop &S, bool Pruned) {
     NumAffineLoops += ScopStats.NumAffineLoops;
   }
 }
+} // namespace
 
-static bool runPruneUnprofitable(Scop &S) {
+bool polly::runPruneUnprofitable(Scop &S) {
   if (PollyProcessUnprofitable) {
-    LLVM_DEBUG(
+    POLLY_DEBUG(
         dbgs() << "NOTE: -polly-process-unprofitable active, won't prune "
                   "anything\n");
     return false;
@@ -66,7 +67,7 @@ static bool runPruneUnprofitable(Scop &S) {
   ScopsProcessed++;
 
   if (!S.isProfitable(true)) {
-    LLVM_DEBUG(
+    POLLY_DEBUG(
         dbgs() << "SCoP pruned because it probably cannot be optimized in "
                   "a significant way\n");
     S.invalidate(PROFITABLE, DebugLoc());
@@ -76,48 +77,4 @@ static bool runPruneUnprofitable(Scop &S) {
   }
 
   return false;
-}
-
-class PruneUnprofitableWrapperPass final : public ScopPass {
-public:
-  static char ID;
-
-  explicit PruneUnprofitableWrapperPass() : ScopPass(ID) {}
-  PruneUnprofitableWrapperPass(const PruneUnprofitableWrapperPass &) = delete;
-  PruneUnprofitableWrapperPass &
-  operator=(const PruneUnprofitableWrapperPass &) = delete;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<ScopInfoRegionPass>();
-    AU.setPreservesAll();
-  }
-
-  bool runOnScop(Scop &S) override { return runPruneUnprofitable(S); }
-};
-} // namespace
-
-char PruneUnprofitableWrapperPass::ID;
-
-Pass *polly::createPruneUnprofitableWrapperPass() {
-  return new PruneUnprofitableWrapperPass();
-}
-
-INITIALIZE_PASS_BEGIN(PruneUnprofitableWrapperPass, "polly-prune-unprofitable",
-                      "Polly - Prune unprofitable SCoPs", false, false)
-INITIALIZE_PASS_END(PruneUnprofitableWrapperPass, "polly-prune-unprofitable",
-                    "Polly - Prune unprofitable SCoPs", false, false)
-
-llvm::PreservedAnalyses
-PruneUnprofitablePass::run(Scop &S, ScopAnalysisManager &SAM,
-                           ScopStandardAnalysisResults &SAR, SPMUpdater &U) {
-  bool Changed = runPruneUnprofitable(S);
-
-  if (!Changed)
-    return PreservedAnalyses::all();
-
-  PreservedAnalyses PA;
-  PA.preserveSet<AllAnalysesOn<Module>>();
-  PA.preserveSet<AllAnalysesOn<Function>>();
-  PA.preserveSet<AllAnalysesOn<Loop>>();
-  return PA;
 }

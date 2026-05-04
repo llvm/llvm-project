@@ -32,6 +32,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_CONFIGFRAGMENT_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_CONFIGFRAGMENT_H
 
+#include "Config.h"
 #include "ConfigProvider.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
@@ -169,6 +170,14 @@ struct Fragment {
     /// - Ancestors: search all parent directories (the default)
     /// - std::nullopt: do not use a compilation database, just default flags.
     std::optional<Located<std::string>> CompilationDatabase;
+
+    /// Controls whether Clangd should use its own built-in system headers (like
+    /// stddef.h), or use the system headers from the query driver. Use the
+    /// option value 'Clangd' (default) to indicate Clangd's headers, and use
+    /// 'QueryDriver' to indicate QueryDriver's headers. `Clangd` is the
+    /// fallback if no query driver is supplied or if the query driver regex
+    /// string fails to match the compiler used in the CDB.
+    std::optional<Located<std::string>> BuiltinHeaders;
   };
   CompileFlagsBlock CompileFlags;
 
@@ -254,6 +263,10 @@ struct Fragment {
       /// unused or missing. These can match any suffix of the header file in
       /// question.
       std::vector<Located<std::string>> IgnoreHeader;
+
+      /// If false (default), unused system headers will be ignored.
+      /// Standard library headers are analyzed regardless of this option.
+      std::optional<Located<bool>> AnalyzeAngledIncludes;
     };
     IncludesBlock Includes;
 
@@ -296,6 +309,23 @@ struct Fragment {
     // ::). All nested namespaces are affected as well.
     // Affects availability of the AddUsing tweak.
     std::vector<Located<std::string>> FullyQualifiedNamespaces;
+
+    /// List of regexes for headers that should always be included with a
+    /// ""-style include. By default, and in case of a conflict with
+    /// AngledHeaders (i.e. a header matches a regex in both QuotedHeaders and
+    /// AngledHeaders), system headers use <> and non-system headers use "".
+    /// These can match any suffix of the header file in question.
+    /// Matching is performed against the absolute path of the header
+    /// within the project.
+    std::vector<Located<std::string>> QuotedHeaders;
+    /// List of regexes for headers that should always be included with a
+    /// <>-style include. By default, and in case of a conflict with
+    /// AngledHeaders (i.e. a header matches a regex in both QuotedHeaders and
+    /// AngledHeaders), system headers use <> and non-system headers use "".
+    /// These can match any suffix of the header file in question.
+    /// Matching is performed against the absolute path of the header
+    /// within the project.
+    std::vector<Located<std::string>> AngledHeaders;
   };
   StyleBlock Style;
 
@@ -304,6 +334,32 @@ struct Fragment {
     /// Whether code completion should include suggestions from scopes that are
     /// not visible. The required scope prefix will be inserted.
     std::optional<Located<bool>> AllScopes;
+    /// How to present the argument list between '()' and '<>':
+    /// valid values are enum Config::ArgumentListsPolicy values:
+    ///   None: Nothing at all
+    ///   OpenDelimiter: only opening delimiter "(" or "<"
+    ///   Delimiters: empty pair of delimiters "()" or "<>"
+    ///   FullPlaceholders: full name of both type and parameter
+    std::optional<Located<std::string>> ArgumentLists;
+    /// Add #include directives when accepting code completions. Config
+    /// equivalent of the CLI option '--header-insertion'
+    /// Valid values are enum Config::HeaderInsertionPolicy values:
+    ///   "IWYU": Include what you use. Insert the owning header for top-level
+    ///     symbols, unless the header is already directly included or the
+    ///     symbol is forward-declared
+    ///   "Never": Never insert headers
+    std::optional<Located<std::string>> HeaderInsertion;
+    /// Will suggest code patterns & snippets.
+    /// Values are Config::CodePatternsPolicy:
+    ///   All  => enable all code patterns and snippets suggestion
+    ///   None => disable all code patterns and snippets suggestion
+    std::optional<Located<std::string>> CodePatterns;
+    /// How to filter macros before offering them as suggestions
+    /// Values are Config::MacroFilterPolicy:
+    ///   ExactPrefix:  Suggest macros if the prefix matches exactly
+    ///   FuzzyMatch:   Fuzzy-match macros if they do not have "_" as prefix or
+    ///   suffix
+    std::optional<Located<std::string>> MacroFilter;
   };
   CompletionBlock Completion;
 
@@ -311,6 +367,8 @@ struct Fragment {
   struct HoverBlock {
     /// Whether hover show a.k.a type.
     std::optional<Located<bool>> ShowAKA;
+    /// Limit the number of characters returned when hovering a macro.
+    std::optional<Located<uint32_t>> MacroContentsLimit;
   };
   HoverBlock Hover;
 
@@ -327,6 +385,9 @@ struct Fragment {
     std::optional<Located<bool>> Designators;
     /// Show defined symbol names at the end of a definition block.
     std::optional<Located<bool>> BlockEnd;
+    /// Show parameter names and default values of default arguments after all
+    /// of the explicit arguments.
+    std::optional<Located<bool>> DefaultArguments;
     /// Limit the length of type name hints. (0 means no limit)
     std::optional<Located<uint32_t>> TypeNameLimit;
   };
@@ -340,6 +401,17 @@ struct Fragment {
     std::vector<Located<std::string>> DisabledModifiers;
   };
   SemanticTokensBlock SemanticTokens;
+
+  /// Configures documentation style and behaviour.
+  struct DocumentationBlock {
+    /// Specifies the format of comments in the code.
+    /// Valid values are enum Config::CommentFormatPolicy values:
+    /// - Plaintext: Treat comments as plain text.
+    /// - Markdown: Treat comments as Markdown.
+    /// - Doxygen: Treat comments as doxygen.
+    std::optional<Located<std::string>> CommentFormat;
+  };
+  DocumentationBlock Documentation;
 };
 
 } // namespace config

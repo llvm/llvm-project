@@ -9,8 +9,8 @@
 // UNSUPPORTED: no-exceptions
 
 // ___cxa_throw_bad_array_new_length is re-exported from libc++ only starting
-// in macosx 10.15
-// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14}}
+// in LLVM 9.
+// XFAIL: using-built-library-before-llvm-9
 
 #include <cxxabi.h>
 #include <new>

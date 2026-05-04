@@ -13,7 +13,7 @@ namespace clang {
 namespace format {
 namespace {
 
-class MatchFilePathTest : public ::testing::Test {
+class MatchFilePathTest : public testing::Test {
 protected:
   bool match(llvm::StringRef FilePath, llvm::StringRef Pattern) {
     return matchFilePath(Pattern, FilePath);
@@ -53,7 +53,7 @@ TEST_F(MatchFilePathTest, Newline) {
 
 TEST_F(MatchFilePathTest, Star) {
   EXPECT_TRUE(match(std::string(50, 'a'), "*a*a*a*a*a*a*a*a*a*a"));
-  EXPECT_FALSE(match((std::string(50, 'a') + 'b'), "*a*a*a*a*a*a*a*a*a*a"));
+  EXPECT_FALSE(match(std::string(50, 'a') + 'b', "*a*a*a*a*a*a*a*a*a*a"));
 }
 
 TEST_F(MatchFilePathTest, CaseSensitive) {
@@ -162,6 +162,41 @@ TEST_F(MatchFilePathTest, Path) {
   EXPECT_FALSE(match("foo/bar", "foo*bar"));
   EXPECT_FALSE(match("foobar", "foo*/*"));
   EXPECT_FALSE(match("foo\\", R"(foo*\)"));
+}
+
+TEST_F(MatchFilePathTest, Globstar) {
+  EXPECT_TRUE(match("/", "**"));
+  EXPECT_TRUE(match("foo", "**"));
+  EXPECT_TRUE(match("/foo", "**"));
+  EXPECT_TRUE(match("foo/", "**"));
+  EXPECT_TRUE(match("foo/bar", "**"));
+
+  EXPECT_TRUE(match("/", "**/"));
+  EXPECT_TRUE(match("foo/", "**/"));
+  EXPECT_TRUE(match("/foo/", "**/"));
+  EXPECT_TRUE(match("foo/bar/", "**/"));
+
+  EXPECT_TRUE(match("/", "/**"));
+  EXPECT_TRUE(match("/foo", "/**"));
+  EXPECT_TRUE(match("/foo/", "/**"));
+  EXPECT_TRUE(match("/foo/bar", "/**"));
+
+  EXPECT_TRUE(match("foo", "**/foo"));
+  EXPECT_TRUE(match("/foo", "**/foo"));
+  EXPECT_TRUE(match("foo/bar", "**/bar"));
+  EXPECT_TRUE(match("/foo/bar", "**/foo/bar"));
+  EXPECT_TRUE(match("foo/bar/baz", "**/bar/baz"));
+
+  EXPECT_TRUE(match("abc/foo", "abc/**"));
+  EXPECT_TRUE(match("abc/foo/", "abc/**"));
+  EXPECT_TRUE(match("abc/foo/bar", "abc/**"));
+
+  EXPECT_TRUE(match("a/b", "a/**/b"));
+  EXPECT_TRUE(match("a/x/b", "a/**/b"));
+  EXPECT_TRUE(match("a/x/y/b", "a/**/b"));
+
+  EXPECT_FALSE(match("a/x/b", "a**/b"));
+  EXPECT_FALSE(match("a/x/b", "a/**b"));
 }
 
 } // namespace

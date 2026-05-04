@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=mips -o %t
+; RUN: llc < %s -mtriple=mips -o %t
 ; RUN: grep "c\..*\.s" %t | count 3
 ; RUN: grep "bc1[tf]" %t | count 3
 

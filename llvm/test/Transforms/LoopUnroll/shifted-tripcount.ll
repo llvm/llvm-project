@@ -20,8 +20,7 @@ define void @latch_exit(ptr nocapture %p, i64 %n) nounwind {
 ; CHECK-NEXT:    [[TMP16_1]] = add i64 [[I_013]], 2
 ; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr double, ptr [[P]], i64 [[TMP16_1]]
 ; CHECK-NEXT:    [[TMP4_1:%.*]] = load double, ptr [[ARRAYIDX_1]], align 8
-; CHECK-NEXT:    [[TMP8_1:%.*]] = load double, ptr [[ARRAYIDX7_1]], align 8
-; CHECK-NEXT:    [[MUL9_1:%.*]] = fmul double [[TMP8_1]], [[TMP4_1]]
+; CHECK-NEXT:    [[MUL9_1:%.*]] = fmul double [[TMP4]], [[TMP4_1]]
 ; CHECK-NEXT:    store double [[MUL9_1]], ptr [[ARRAYIDX7_1]], align 8
 ; CHECK-NEXT:    [[EXITCOND_1:%.*]] = icmp eq i64 [[TMP16_1]], [[MUL10]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_1]], label [[FOR_END:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -70,8 +69,7 @@ define void @non_latch_exit(ptr nocapture %p, i64 %n) nounwind {
 ; CHECK-NEXT:    [[TMP16_1]] = add i64 [[I_013]], 2
 ; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr double, ptr [[P]], i64 [[TMP16_1]]
 ; CHECK-NEXT:    [[TMP4_1:%.*]] = load double, ptr [[ARRAYIDX_1]], align 8
-; CHECK-NEXT:    [[TMP8_1:%.*]] = load double, ptr [[ARRAYIDX7_1]], align 8
-; CHECK-NEXT:    [[MUL9_1:%.*]] = fmul double [[TMP8_1]], [[TMP4_1]]
+; CHECK-NEXT:    [[MUL9_1:%.*]] = fmul double [[TMP4]], [[TMP4_1]]
 ; CHECK-NEXT:    store double [[MUL9_1]], ptr [[ARRAYIDX7_1]], align 8
 ; CHECK-NEXT:    [[EXITCOND_1:%.*]] = icmp eq i64 [[TMP16_1]], [[MUL10]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_1]], label [[FOR_END:%.*]], label [[LATCH_1]]

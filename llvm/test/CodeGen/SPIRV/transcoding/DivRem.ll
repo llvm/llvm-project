@@ -1,4 +1,5 @@
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-SPIRV-DAG: %[[#int:]] = OpTypeInt 32 0
 ; CHECK-SPIRV-DAG: %[[#int2:]] = OpTypeVector %[[#int]] 2
@@ -15,10 +16,10 @@
 ;;   res[0] = a / b;
 ;; }
 
-define dso_local spir_kernel void @testSDiv(<2 x i32> noundef %a, <2 x i32> noundef %b, <2 x i32> addrspace(1)* nocapture noundef writeonly %res) local_unnamed_addr {
+define dso_local spir_kernel void @testSDiv(<2 x i32> noundef %a, <2 x i32> noundef %b, ptr addrspace(1) nocapture noundef writeonly %res) local_unnamed_addr {
 entry:
   %div = sdiv <2 x i32> %a, %b
-  store <2 x i32> %div, <2 x i32> addrspace(1)* %res, align 8
+  store <2 x i32> %div, ptr addrspace(1) %res, align 8
   ret void
 }
 
@@ -32,10 +33,10 @@ entry:
 ;;   res[0] = a / b;
 ;; }
 
-define dso_local spir_kernel void @testUDiv(<2 x i32> noundef %a, <2 x i32> noundef %b, <2 x i32> addrspace(1)* nocapture noundef writeonly %res) local_unnamed_addr {
+define dso_local spir_kernel void @testUDiv(<2 x i32> noundef %a, <2 x i32> noundef %b, ptr addrspace(1) nocapture noundef writeonly %res) local_unnamed_addr {
 entry:
   %div = udiv <2 x i32> %a, %b
-  store <2 x i32> %div, <2 x i32> addrspace(1)* %res, align 8
+  store <2 x i32> %div, ptr addrspace(1) %res, align 8
   ret void
 }
 
@@ -49,10 +50,10 @@ entry:
 ;;   res[0] = a / b;
 ;; }
 
-define dso_local spir_kernel void @testFDiv(<2 x float> noundef %a, <2 x float> noundef %b, <2 x float> addrspace(1)* nocapture noundef writeonly %res) local_unnamed_addr {
+define dso_local spir_kernel void @testFDiv(<2 x float> noundef %a, <2 x float> noundef %b, ptr addrspace(1) nocapture noundef writeonly %res) local_unnamed_addr {
 entry:
   %div = fdiv <2 x float> %a, %b
-  store <2 x float> %div, <2 x float> addrspace(1)* %res, align 8
+  store <2 x float> %div, ptr addrspace(1) %res, align 8
   ret void
 }
 
@@ -66,10 +67,10 @@ entry:
 ;;   res[0] = a % b;
 ;; }
 
-define dso_local spir_kernel void @testSRem(<2 x i32> noundef %a, <2 x i32> noundef %b, <2 x i32> addrspace(1)* nocapture noundef writeonly %res) local_unnamed_addr {
+define dso_local spir_kernel void @testSRem(<2 x i32> noundef %a, <2 x i32> noundef %b, ptr addrspace(1) nocapture noundef writeonly %res) local_unnamed_addr {
 entry:
   %rem = srem <2 x i32> %a, %b
-  store <2 x i32> %rem, <2 x i32> addrspace(1)* %res, align 8
+  store <2 x i32> %rem, ptr addrspace(1) %res, align 8
   ret void
 }
 
@@ -83,9 +84,9 @@ entry:
 ;;   res[0] = a % b;
 ;; }
 
-define dso_local spir_kernel void @testUMod(<2 x i32> noundef %a, <2 x i32> noundef %b, <2 x i32> addrspace(1)* nocapture noundef writeonly %res) local_unnamed_addr {
+define dso_local spir_kernel void @testUMod(<2 x i32> noundef %a, <2 x i32> noundef %b, ptr addrspace(1) nocapture noundef writeonly %res) local_unnamed_addr {
 entry:
   %rem = urem <2 x i32> %a, %b
-  store <2 x i32> %rem, <2 x i32> addrspace(1)* %res, align 8
+  store <2 x i32> %rem, ptr addrspace(1) %res, align 8
   ret void
 }

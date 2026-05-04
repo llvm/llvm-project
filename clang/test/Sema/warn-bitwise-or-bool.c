@@ -19,6 +19,8 @@ boolean baz(void) __attribute__((const));
 void sink(boolean);
 
 #define FOO foo()
+#define MY_OR |
+#define My_BITOR bitor
 
 void test(boolean a, boolean b, int *p, volatile int *q, int i) {
   b = a | b;
@@ -44,9 +46,11 @@ void test(boolean a, boolean b, int *p, volatile int *q, int i) {
   b = b | foo();
   b = bar() | (i > 4);
   b = (i == 7) | foo();
+  b = b MY_OR foo();     // OK, no warning expected
 #ifdef __cplusplus
-  b = foo() bitor bar();  // expected-warning {{use of bitwise '|' with boolean operands}}
-                          // expected-note@-1 {{cast one or both operands to int to silence this warning}}
+  b = foo() bitor bar();  //Ok, no warning expected
+  b = foo() My_BITOR bar(); // Ok, no warning expected
+                          
 #endif
 
   if (foo() | bar())      // expected-warning {{use of bitwise '|' with boolean operands}}

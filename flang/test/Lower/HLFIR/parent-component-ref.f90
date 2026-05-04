@@ -1,5 +1,5 @@
 ! Test lowering of parent component references to HLFIR.
-! RUN: bbc -emit-hlfir -polymorphic-type -o - %s -I nw | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s -I nw | FileCheck %s
 
 module pc_types
   type t

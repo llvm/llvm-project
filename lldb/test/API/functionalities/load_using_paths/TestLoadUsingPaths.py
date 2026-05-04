@@ -1,4 +1,4 @@
-﻿"""
+"""
 Test that SBProcess.LoadImageUsingPaths works correctly.
 """
 
@@ -10,6 +10,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfTargetDoesNotSupportSharedLibraries()
 @skipIfWindows  # The Windows platform doesn't implement DoLoadImage.
 class LoadUsingPathsTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
@@ -35,7 +36,7 @@ class LoadUsingPathsTestCase(TestBase):
     @skipIfRemote
     @skipIfWindows  # Windows doesn't have dlopen and friends, dynamic libraries work differently
     @expectedFlakeyNetBSD
-    @expectedFailureAll(oslist=["linux"], archs=["arm"], bugnumber="llvm.org/pr45894")
+    @expectedFailureAll(oslist=["linux"], archs=["arm$"], bugnumber="llvm.org/pr45894")
     def test_load_using_paths(self):
         """Test that we can load a module by providing a set of search paths."""
         if self.platformIsDarwin():

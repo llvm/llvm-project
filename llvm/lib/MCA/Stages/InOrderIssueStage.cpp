@@ -45,7 +45,7 @@ void StallInfo::cycleEnd() {
 
 InOrderIssueStage::InOrderIssueStage(const MCSubtargetInfo &STI,
                                      RegisterFile &PRF, CustomBehaviour &CB,
-                                     LSUnit &LSU)
+                                     LSUnitBase &LSU)
     : STI(STI), PRF(PRF), RM(STI.getSchedModel()), CB(CB), LSU(LSU),
       NumIssued(), CarryOver(), Bandwidth(), LastWriteBackCycle() {}
 
@@ -294,10 +294,10 @@ void InOrderIssueStage::updateIssuedInst() {
       continue;
     }
 
-    // If the instruction takes multiple cycles to issue, defer these calls
+    // If an instruction takes multiple cycles to issue, defer these calls
     // to updateCarriedOver. We still remove from IssuedInst even if there is
     // carry over to avoid an extra call to cycleEvent in the next cycle.
-    if (!CarriedOver) {
+    if (CarriedOver.getInstruction() != IR.getInstruction()) {
       PRF.onInstructionExecuted(&IS);
       LSU.onInstructionExecuted(IR);
       notifyInstructionExecuted(IR);

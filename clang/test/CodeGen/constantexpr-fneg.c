@@ -8,7 +8,8 @@
 // CHECK:      entry:
 // CHECK-NEXT:   %retval = alloca i32
 // CHECK-NEXT:   store i32 0, ptr %retval
-// CHECK-NEXT:   [[ZEXT:%.*]] = zext i1 true to i32
+// CHECK-NEXT:   [[CMP:%.*]] = icmp ne ptr @b, @a
+// CHECK-NEXT:   [[ZEXT:%.*]] = zext i1 [[CMP]] to i32
 // CHECK-NEXT:   [[SITOFP:%.*]] = sitofp i32 [[ZEXT]] to float
 // CHECK-NEXT:   [[LV:%.*]] = load ptr, ptr @c
 // CHECK-NEXT:   store float [[SITOFP]], ptr [[LV]], align 4

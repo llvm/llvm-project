@@ -19,7 +19,7 @@
 using namespace llvm;
 
 bool MCAsmInfoDarwin::isSectionAtomizableBySymbols(
-    const MCSection &Section) const {
+    const MCSection &Section) {
   const MCSectionMachO &SMO = static_cast<const MCSectionMachO &>(Section);
 
   // Sections holding 1 byte strings are atomized based on the data they
@@ -55,7 +55,8 @@ bool MCAsmInfoDarwin::isSectionAtomizableBySymbols(
   }
 }
 
-MCAsmInfoDarwin::MCAsmInfoDarwin() {
+MCAsmInfoDarwin::MCAsmInfoDarwin(const MCTargetOptions &Options)
+    : MCAsmInfo(Options) {
   // Common settings for all Darwin targets.
   // Syntax:
   LinkerPrivateGlobalPrefix = "l";
@@ -69,15 +70,9 @@ MCAsmInfoDarwin::MCAsmInfoDarwin() {
   InlineAsmEnd = " InlineAsm End";
 
   // Directives:
-  HasWeakDefDirective = true;
   HasWeakDefCanBeHiddenDirective = true;
   WeakRefDirective = "\t.weak_reference ";
   ZeroDirective = "\t.space\t";  // ".space N" emits N zeros.
-  HasMachoZeroFillDirective = true;  // Uses .zerofill
-  HasMachoTBSSDirective = true; // Uses .tbss
-
-  // FIXME: Change this once MC is the system assembler.
-  HasAggressiveSymbolFolding = false;
 
   HiddenVisibilityAttr = MCSA_PrivateExtern;
   HiddenDeclarationVisibilityAttr = MCSA_Invalid;
@@ -87,8 +82,12 @@ MCAsmInfoDarwin::MCAsmInfoDarwin() {
 
   HasDotTypeDotSizeDirective = false;
   HasNoDeadStrip = true;
-  HasAltEntry = true;
 
   DwarfUsesRelocationsAcrossSections = false;
   SetDirectiveSuppressesReloc = true;
+}
+
+bool MCAsmInfoDarwin::useCodeAlign(const MCSection &Sec) const {
+  return static_cast<const MCSectionMachO &>(Sec).hasAttribute(
+      MachO::S_ATTR_PURE_INSTRUCTIONS);
 }

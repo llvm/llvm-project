@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 %s -ffreestanding -triple=x86_64-unknown-unknown \
-// RUN: -target-feature +avx -emit-llvm -fsyntax-only -verify
+// RUN: -target-feature +avx -fsyntax-only -verify
 // RUN: %clang_cc1 %s -ffreestanding -triple=i386-unknown-unknown \
-// RUN: -target-feature +avx -emit-llvm -fsyntax-only -verify
+// RUN: -target-feature +avx -fsyntax-only -verify
 
 #include <immintrin.h>
 

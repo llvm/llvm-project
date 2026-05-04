@@ -9,8 +9,6 @@
 #include "mlir/Debug/Observers/ActionProfiler.h"
 #include "mlir/Debug/BreakpointManager.h"
 #include "mlir/IR/Action.h"
-#include "mlir/Rewrite/PatternApplicator.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 #include <chrono>
@@ -58,6 +56,6 @@ void ActionProfiler::print(const ActionActiveStack *action,
   if (printComma)
     os << ",\n";
   printComma = true;
-  os << event.str();
+  os << str;
   os.flush();
 }

@@ -68,78 +68,82 @@ ProgramHeaders:
 # GNU-NEXT:     description data: aa bb cc dd ee ff
 # GNU-EMPTY:
 
-# LLVM:      Notes [
+# LLVM:      NoteSections [
 # LLVM-NEXT:   NoteSection {
 # LLVM-NEXT:     Name: <?>
 # LLVM-NEXT:     Offset: 0xB0
 # LLVM-NEXT:     Size: 0xDC
-# LLVM-NEXT:     Note {
-# LLVM-NEXT:       Owner: FreeBSD
-# LLVM-NEXT:       Data size: 0x0
-# LLVM-NEXT:       Type: NT_THRMISC (thrmisc structure)
-# LLVM-NEXT:     }
-# LLVM-NEXT:     Note {
-# LLVM-NEXT:       Owner: FreeBSD
-# LLVM-NEXT:       Data size: 0x0
-# LLVM-NEXT:       Type: NT_PROCSTAT_PROC (proc data)
-# LLVM-NEXT:     }
-# LLVM-NEXT:     Note {
-# LLVM-NEXT:       Owner: FreeBSD
-# LLVM-NEXT:       Data size: 0x0
-# LLVM-NEXT:       Type: NT_PROCSTAT_FILES (files data)
-# LLVM-NEXT:     }
-# LLVM-NEXT:     Note {
-# LLVM-NEXT:       Owner: FreeBSD
-# LLVM-NEXT:       Data size: 0x0
-# LLVM-NEXT:       Type: NT_PROCSTAT_VMMAP (vmmap data)
-# LLVM-NEXT:     }
-# LLVM-NEXT:     Note {
-# LLVM-NEXT:       Owner: FreeBSD
-# LLVM-NEXT:       Data size: 0x0
-# LLVM-NEXT:       Type: NT_PROCSTAT_GROUPS (groups data)
-# LLVM-NEXT:     }
-# LLVM-NEXT:     Note {
-# LLVM-NEXT:       Owner: FreeBSD
-# LLVM-NEXT:       Data size: 0x0
-# LLVM-NEXT:       Type: NT_PROCSTAT_UMASK (umask data)
-# LLVM-NEXT:     }
-# LLVM-NEXT:     Note {
-# LLVM-NEXT:       Owner: FreeBSD
-# LLVM-NEXT:       Data size: 0x0
-# LLVM-NEXT:       Type: NT_PROCSTAT_RLIMIT (rlimit data)
-# LLVM-NEXT:     }
-# LLVM-NEXT:     Note {
-# LLVM-NEXT:       Owner: FreeBSD
-# LLVM-NEXT:       Data size: 0x0
-# LLVM-NEXT:       Type: NT_PROCSTAT_OSREL (osreldate data)
-# LLVM-NEXT:     }
-# LLVM-NEXT:     Note {
-# LLVM-NEXT:       Owner: FreeBSD
-# LLVM-NEXT:       Data size: 0x0
-# LLVM-NEXT:       Type: NT_PROCSTAT_PSSTRINGS (ps_strings data)
-# LLVM-NEXT:     }
-# LLVM-NEXT:     Note {
-# LLVM-NEXT:       Owner: FreeBSD
-# LLVM-NEXT:       Data size: 0x0
-# LLVM-NEXT:       Type: NT_PROCSTAT_AUXV (auxv data)
-# LLVM-NEXT:     }
-# LLVM-NEXT:     Note {
-# LLVM-NEXT:       Owner: FreeBSD
-# LLVM-NEXT:       Data size: 0x0
-# LLVM-NEXT:       Type: Unknown (0x00012345)
-# LLVM-NEXT:     }
+# LLVM-NEXT:     Notes [
+# LLVM-NEXT:        {
+# LLVM-NEXT:            Owner: FreeBSD
+# LLVM-NEXT:            Data size: 0x0
+# LLVM-NEXT:            Type: NT_THRMISC (thrmisc structure)
+# LLVM-NEXT:        }
+# LLVM-NEXT:        {
+# LLVM-NEXT:            Owner: FreeBSD
+# LLVM-NEXT:            Data size: 0x0
+# LLVM-NEXT:            Type: NT_PROCSTAT_PROC (proc data)
+# LLVM-NEXT:        }
+# LLVM-NEXT:        {
+# LLVM-NEXT:            Owner: FreeBSD
+# LLVM-NEXT:            Data size: 0x0
+# LLVM-NEXT:            Type: NT_PROCSTAT_FILES (files data)
+# LLVM-NEXT:        }
+# LLVM-NEXT:        {
+# LLVM-NEXT:            Owner: FreeBSD
+# LLVM-NEXT:            Data size: 0x0
+# LLVM-NEXT:            Type: NT_PROCSTAT_VMMAP (vmmap data)
+# LLVM-NEXT:        }
+# LLVM-NEXT:        {
+# LLVM-NEXT:            Owner: FreeBSD
+# LLVM-NEXT:            Data size: 0x0
+# LLVM-NEXT:            Type: NT_PROCSTAT_GROUPS (groups data)
+# LLVM-NEXT:        }
+# LLVM-NEXT:        {
+# LLVM-NEXT:            Owner: FreeBSD
+# LLVM-NEXT:            Data size: 0x0
+# LLVM-NEXT:            Type: NT_PROCSTAT_UMASK (umask data)
+# LLVM-NEXT:        }
+# LLVM-NEXT:        {
+# LLVM-NEXT:            Owner: FreeBSD
+# LLVM-NEXT:            Data size: 0x0
+# LLVM-NEXT:            Type: NT_PROCSTAT_RLIMIT (rlimit data)
+# LLVM-NEXT:        }
+# LLVM-NEXT:        {
+# LLVM-NEXT:            Owner: FreeBSD
+# LLVM-NEXT:            Data size: 0x0
+# LLVM-NEXT:            Type: NT_PROCSTAT_OSREL (osreldate data)
+# LLVM-NEXT:        }
+# LLVM-NEXT:        {
+# LLVM-NEXT:            Owner: FreeBSD
+# LLVM-NEXT:            Data size: 0x0
+# LLVM-NEXT:            Type: NT_PROCSTAT_PSSTRINGS (ps_strings data)
+# LLVM-NEXT:        }
+# LLVM-NEXT:        {
+# LLVM-NEXT:            Owner: FreeBSD
+# LLVM-NEXT:            Data size: 0x0
+# LLVM-NEXT:            Type: NT_PROCSTAT_AUXV (auxv data)
+# LLVM-NEXT:        }
+# LLVM-NEXT:        {
+# LLVM-NEXT:            Owner: FreeBSD
+# LLVM-NEXT:            Data size: 0x0
+# LLVM-NEXT:            Type: Unknown (0x00012345)
+# LLVM-NEXT:        }
+# LLVM-NEXT:     ]
 # LLVM-NEXT:   }
 # LLVM-NEXT:   NoteSection {
 # LLVM-NEXT:     Name: <?>
 # LLVM-NEXT:     Offset: 0x18C
 # LLVM-NEXT:     Size: 0x1C
-# LLVM-NEXT:     Note {
-# LLVM-NEXT:       Owner: FreeBSD
-# LLVM-NEXT:       Data size: 0x6
-# LLVM-NEXT:       Type: NT_PRPSINFO (prpsinfo structure)
-# LLVM-NEXT:       Description data (
-# LLVM-NEXT:         0000: AABBCCDD EEFF                        |......|
-# LLVM-NEXT:       )
-# LLVM-NEXT:     }
+# LLVM-NEXT:     Notes [
+# LLVM-NEXT:        {
+# LLVM-NEXT:            Owner: FreeBSD
+# LLVM-NEXT:            Data size: 0x6
+# LLVM-NEXT:            Type: NT_PRPSINFO (prpsinfo structure)
+# LLVM-NEXT:            Description data (
+# LLVM-NEXT:                0000: AABBCCDD EEFF                        |......|
+# LLVM-NEXT:            )
+# LLVM-NEXT:        }
+# LLVM-NEXT:    ]
 # LLVM-NEXT:   }
 # LLVM-NEXT: ]

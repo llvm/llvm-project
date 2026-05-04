@@ -1,6 +1,6 @@
-// RUN: mlir-opt %s -affine-super-vectorizer-test -vector-shape-ratio 4 -vector-shape-ratio 8 2>&1 | FileCheck %s
-// RUN: mlir-opt %s -affine-super-vectorizer-test -vector-shape-ratio 2 -vector-shape-ratio 5 -vector-shape-ratio 2 2>&1 | FileCheck %s -check-prefix=TEST-3x4x5x8
-// RUN: mlir-opt %s -affine-super-vectorizer-test -vectorize-affine-loop-nest 2>&1 | FileCheck %s -check-prefix=VECNEST
+// RUN: mlir-opt %s -affine-super-vectorizer-test="vector-shape-ratio=4,8" 2>&1 | FileCheck %s
+// RUN: mlir-opt %s -affine-super-vectorizer-test="vector-shape-ratio=2,5,2" 2>&1 | FileCheck %s -check-prefix=TEST-3x4x5x8
+// RUN: mlir-opt %s -affine-super-vectorizer-test=vectorize-affine-loop-nest 2>&1 | FileCheck %s -check-prefix=VECNEST
 
 func.func @vector_add_2d(%arg0: index, %arg1: index) -> f32 {
   // Nothing should be matched in this first block.
@@ -49,6 +49,23 @@ func.func @double_loop_nest(%a: memref<20x30xf32>, %b: memref<20xf32>) {
     affine.store %b_ld, %b[%i] : memref<20xf32>
   }
 
+  return
+}
+
+// Regression test for https://github.com/llvm/llvm-project/issues/149327
+// Verifies no crash when a vector.transfer_read has a 1D vector type but the
+// shape ratio is 2D, causing a rank mismatch in operatesOnSuperVectorsOf.
+// The transfer op should simply not be matched (not crash).
+// CHECK-LABEL: func @transfer_rank_mismatch_no_crash
+func.func @transfer_rank_mismatch_no_crash(%arg0: memref<82x97xf32>) {
+  %0 = ub.poison : f32
+  affine.for %arg1 = 0 to 82 {
+    affine.for %arg2 = 0 to 97 step 128 {
+      // The vector type is 1D but the shape ratio is 2D — no crash.
+      // CHECK-NOT: matched: {{.*}} = vector.transfer_read
+      %1 = vector.transfer_read %arg0[%arg1, %arg2], %0 : memref<82x97xf32>, vector<128xf32>
+    }
+  }
   return
 }
 

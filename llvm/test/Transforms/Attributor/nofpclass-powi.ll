@@ -49,7 +49,7 @@ define float @ret_powi_f32_odd_constant(float %arg0) #0 {
 
 define float @ret_powi_f32_even_constant(float %arg0) #0 {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_powi_f32_even_constant
-; CHECK-SAME: (float nofpclass(ninf nzero nsub nnorm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (float [[ARG0:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.powi.f32.i32(float [[ARG0]], i32 noundef 4) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
@@ -57,9 +57,221 @@ define float @ret_powi_f32_even_constant(float %arg0) #0 {
   ret float %call
 }
 
+define float @ret_powi_f32_0(float %arg0) #0 {
+; CHECK-LABEL: define nofpclass(inf zero sub nnorm) float @ret_powi_f32_0
+; CHECK-SAME: (float [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf zero sub nnorm) float @llvm.powi.f32.i32(float [[ARG0]], i32 noundef 0) #[[ATTR6]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.powi.f32.i32(float %arg0, i32 0)
+  ret float %call
+}
+
+define float @ret_powi_f32_0_no_snan(float nofpclass(snan) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf zero sub nnorm) float @ret_powi_f32_0_no_snan
+; CHECK-SAME: (float nofpclass(snan) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf zero sub nnorm) float @llvm.powi.f32.i32(float nofpclass(snan) [[ARG0]], i32 noundef 0) #[[ATTR6]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.powi.f32.i32(float %arg0, i32 0)
+  ret float %call
+}
+
+define float @ret_powi_f32_0_no_qnan(float nofpclass(qnan) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(inf zero sub nnorm) float @ret_powi_f32_0_no_qnan
+; CHECK-SAME: (float nofpclass(qnan) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf zero sub nnorm) float @llvm.powi.f32.i32(float nofpclass(qnan) [[ARG0]], i32 noundef 0) #[[ATTR6]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.powi.f32.i32(float %arg0, i32 0)
+  ret float %call
+}
+
+define float @ret_powi_f32_0_no_nan(float nofpclass(nan) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan inf zero sub nnorm) float @ret_powi_f32_0_no_nan
+; CHECK-SAME: (float nofpclass(nan) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan inf zero sub nnorm) float @llvm.powi.f32.i32(float nofpclass(nan) [[ARG0]], i32 noundef 0) #[[ATTR6]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.powi.f32.i32(float %arg0, i32 0)
+  ret float %call
+}
+
+define float @ret_powi_f32_1(float nofpclass(snan) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(snan) float @ret_powi_f32_1
+; CHECK-SAME: (float nofpclass(snan) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan) float @llvm.powi.f32.i32(float nofpclass(snan) [[ARG0]], i32 noundef 1) #[[ATTR6]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.powi.f32.i32(float %arg0, i32 1)
+  ret float %call
+}
+
+define float @ret_powi_f32_neg1(float nofpclass(snan) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(snan) float @ret_powi_f32_neg1
+; CHECK-SAME: (float nofpclass(snan) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan) float @llvm.powi.f32.i32(float nofpclass(snan) [[ARG0]], i32 noundef -1) #[[ATTR6]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.powi.f32.i32(float %arg0, i32 -1)
+  ret float %call
+}
+
+define float @ret_powi_f32_no_snan(float nofpclass(snan) %arg0, i32 %arg1) #0 {
+; CHECK-LABEL: define nofpclass(snan) float @ret_powi_f32_no_snan
+; CHECK-SAME: (float nofpclass(snan) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan) float @llvm.powi.f32.i32(float nofpclass(snan) [[ARG0]], i32 [[ARG1]]) #[[ATTR6]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.powi.f32.i32(float %arg0, i32 %arg1)
+  ret float %call
+}
+
+define float @ret_powi_f32_no_qnan(float nofpclass(qnan) %arg0, i32 %arg1) #0 {
+; CHECK-LABEL: define float @ret_powi_f32_no_qnan
+; CHECK-SAME: (float nofpclass(qnan) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.powi.f32.i32(float nofpclass(qnan) [[ARG0]], i32 [[ARG1]]) #[[ATTR6]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.powi.f32.i32(float %arg0, i32 %arg1)
+  ret float %call
+}
+
+define float @ret_powi_f32_no_nan(float nofpclass(nan) %arg0, i32 %arg1) #0 {
+; CHECK-LABEL: define nofpclass(nan) float @ret_powi_f32_no_nan
+; CHECK-SAME: (float nofpclass(nan) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) float @llvm.powi.f32.i32(float nofpclass(nan) [[ARG0]], i32 [[ARG1]]) #[[ATTR6]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.powi.f32.i32(float %arg0, i32 %arg1)
+  ret float %call
+}
+
+define float @ret_powi_f32_no_inf(float nofpclass(inf) %arg0, i32 %arg1) #0 {
+; CHECK-LABEL: define float @ret_powi_f32_no_inf
+; CHECK-SAME: (float nofpclass(inf) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.powi.f32.i32(float nofpclass(inf) [[ARG0]], i32 [[ARG1]]) #[[ATTR6]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.powi.f32.i32(float %arg0, i32 %arg1)
+  ret float %call
+}
+
+define float @ret_powi_f32_finite_exp_one(float nofpclass(inf) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(inf) float @ret_powi_f32_finite_exp_one
+; CHECK-SAME: (float nofpclass(inf) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.powi.f32.i32(float nofpclass(inf) [[ARG0]], i32 noundef 1) #[[ATTR6]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.powi.f32.i32(float %arg0, i32 1)
+  ret float %call
+}
+
+define float @ret_powi_f32_finite_exp_two(float nofpclass(nan inf) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(nan ninf nzero nsub nnorm) float @ret_powi_f32_finite_exp_two
+; CHECK-SAME: (float nofpclass(nan inf) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan ninf nzero nsub nnorm) float @llvm.powi.f32.i32(float nofpclass(nan inf) [[ARG0]], i32 noundef 2) #[[ATTR6]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.powi.f32.i32(float %arg0, i32 2)
+  ret float %call
+}
+
+define float @ret_powi_f32_normal_exp_neg_one(float nofpclass(inf zero sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(inf) float @ret_powi_f32_normal_exp_neg_one
+; CHECK-SAME: (float nofpclass(inf zero sub) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.powi.f32.i32(float nofpclass(inf zero sub) [[ARG0]], i32 noundef -1) #[[ATTR6]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.powi.f32.i32(float %arg0, i32 -1)
+  ret float %call
+}
+
+define float @ret_powi_f32_inf_or_nan_exp_neg_one(float nofpclass(zero norm sub) %arg0) #0 {
+; CHECK-LABEL: define nofpclass(inf) float @ret_powi_f32_inf_or_nan_exp_neg_one
+; CHECK-SAME: (float nofpclass(zero sub norm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.powi.f32.i32(float nofpclass(zero sub norm) [[ARG0]], i32 noundef -1) #[[ATTR6]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.powi.f32.i32(float %arg0, i32 -1)
+  ret float %call
+}
+
+define float @ret_powi_f32_zero_or_nan_exp_nonnegative(float nofpclass(inf norm sub) %arg0, i32 %arg1) #0 {
+; CHECK-LABEL: define nofpclass(inf) float @ret_powi_f32_zero_or_nan_exp_nonnegative
+; CHECK-SAME: (float nofpclass(inf sub norm) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[NONNEG:%.*]] = and i32 [[ARG1]], 2147483647
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.powi.f32.i32(float nofpclass(inf sub norm) [[ARG0]], i32 [[NONNEG]]) #[[ATTR6]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %nonneg = and i32 %arg1, 2147483647
+  %call = call float @llvm.powi.f32.i32(float %arg0, i32 %nonneg)
+  ret float %call
+}
+
+define float @ret_powi_f32_no_nan_inf(float nofpclass(nan inf) %arg0, i32 %arg1) #0 {
+; CHECK-LABEL: define nofpclass(nan) float @ret_powi_f32_no_nan_inf
+; CHECK-SAME: (float nofpclass(nan inf) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) float @llvm.powi.f32.i32(float nofpclass(nan inf) [[ARG0]], i32 [[ARG1]]) #[[ATTR6]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.powi.f32.i32(float %arg0, i32 %arg1)
+  ret float %call
+}
+
+define float @ret_powi_f32_no_nan__arg1_non0(float nofpclass(nan) %arg0, i32 range(i32 1, 256) %arg1) #0 {
+; CHECK-LABEL: define nofpclass(nan) float @ret_powi_f32_no_nan__arg1_non0
+; CHECK-SAME: (float nofpclass(nan) [[ARG0:%.*]], i32 range(i32 1, 256) [[ARG1:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) float @llvm.powi.f32.i32(float nofpclass(nan) [[ARG0]], i32 [[ARG1]]) #[[ATTR6]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.powi.f32.i32(float %arg0, i32 %arg1)
+  ret float %call
+}
+
+define float @ret_powi_f32_no_nan_no_zero__arg1_non0(float nofpclass(nan zero) %arg0, i32 range(i32 1, 256) %arg1) #0 {
+; CHECK-LABEL: define nofpclass(nan) float @ret_powi_f32_no_nan_no_zero__arg1_non0
+; CHECK-SAME: (float nofpclass(nan zero) [[ARG0:%.*]], i32 range(i32 1, 256) [[ARG1:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) float @llvm.powi.f32.i32(float nofpclass(nan zero) [[ARG0]], i32 [[ARG1]]) #[[ATTR6]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.powi.f32.i32(float %arg0, i32 %arg1)
+  ret float %call
+}
+
+define float @ret_powi_f32_no_nan_no_zero__arg1__ieee(float nofpclass(nan zero) %arg0, i32 %arg1) #0 {
+; CHECK-LABEL: define nofpclass(nan) float @ret_powi_f32_no_nan_no_zero__arg1__ieee
+; CHECK-SAME: (float nofpclass(nan zero) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) float @llvm.powi.f32.i32(float nofpclass(nan zero) [[ARG0]], i32 [[ARG1]]) #[[ATTR6]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.powi.f32.i32(float %arg0, i32 %arg1)
+  ret float %call
+}
+
+define float @ret_powi_f32_no_nan_no_zero__arg1__daz(float nofpclass(nan zero) %arg0, i32 %arg1) #1 {
+; CHECK-LABEL: define nofpclass(nan) float @ret_powi_f32_no_nan_no_zero__arg1__daz
+; CHECK-SAME: (float nofpclass(nan zero) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) float @llvm.powi.f32.i32(float nofpclass(nan zero) [[ARG0]], i32 [[ARG1]]) #[[ATTR6]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.powi.f32.i32(float %arg0, i32 %arg1)
+  ret float %call
+}
+
+define float @ret_powi_f32_no_nan_no_zero_nosub__arg1__daz(float nofpclass(nan zero sub) %arg0, i32 %arg1) #1 {
+; CHECK-LABEL: define nofpclass(nan) float @ret_powi_f32_no_nan_no_zero_nosub__arg1__daz
+; CHECK-SAME: (float nofpclass(nan zero sub) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) float @llvm.powi.f32.i32(float nofpclass(nan zero sub) [[ARG0]], i32 [[ARG1]]) #[[ATTR6]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.powi.f32.i32(float %arg0, i32 %arg1)
+  ret float %call
+}
+
 define <2 x float> @ret_powi_v2f32_even_nonsplat(<2 x float> %arg0) #0 {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) <2 x float> @ret_powi_v2f32_even_nonsplat
-; CHECK-SAME: (<2 x float> nofpclass(ninf nzero nsub nnorm) [[ARG0:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (<2 x float> [[ARG0:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) <2 x float> @llvm.powi.v2f32.v2i32(<2 x float> [[ARG0]], <2 x i32> noundef <i32 2, i32 4>) #[[ATTR6]]
 ; CHECK-NEXT:    ret <2 x float> [[CALL]]
 ;
@@ -79,7 +291,7 @@ define <2 x float> @ret_powi_v2f32_odd_nonsplat(<2 x float> %arg0) #0 {
 
 define float @ret_powi_f32_masked_to_even(float %arg0, i32 %arg1) #0 {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_powi_f32_masked_to_even
-; CHECK-SAME: (float nofpclass(ninf nzero nsub nnorm) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (float [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[KNOWN_EVEN:%.*]] = and i32 [[ARG1]], -2
 ; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.powi.f32.i32(float [[ARG0]], i32 [[KNOWN_EVEN]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
@@ -91,7 +303,7 @@ define float @ret_powi_f32_masked_to_even(float %arg0, i32 %arg1) #0 {
 
 define float @ret_powi_f32_masked_to_even_extrabits(float %arg0, i32 %arg1) #0 {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_powi_f32_masked_to_even_extrabits
-; CHECK-SAME: (float nofpclass(ninf nzero nsub nnorm) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (float [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[KNOWN_EVEN:%.*]] = and i32 [[ARG1]], -4
 ; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.powi.f32.i32(float [[ARG0]], i32 [[KNOWN_EVEN]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
@@ -103,8 +315,8 @@ define float @ret_powi_f32_masked_to_even_extrabits(float %arg0, i32 %arg1) #0 {
 
 define <2 x float> @ret_powi_v2f32_masked_to_even(<2 x float> %arg0, <2 x i32> %arg1) #0 {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) <2 x float> @ret_powi_v2f32_masked_to_even
-; CHECK-SAME: (<2 x float> nofpclass(ninf nzero nsub nnorm) [[ARG0:%.*]], <2 x i32> [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[KNOWN_EVEN:%.*]] = and <2 x i32> [[ARG1]], <i32 -2, i32 -2>
+; CHECK-SAME: (<2 x float> [[ARG0:%.*]], <2 x i32> [[ARG1:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[KNOWN_EVEN:%.*]] = and <2 x i32> [[ARG1]], splat (i32 -2)
 ; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) <2 x float> @llvm.powi.v2f32.v2i32(<2 x float> [[ARG0]], <2 x i32> [[KNOWN_EVEN]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret <2 x float> [[CALL]]
 ;
@@ -116,7 +328,7 @@ define <2 x float> @ret_powi_v2f32_masked_to_even(<2 x float> %arg0, <2 x i32> %
 define float @ret_powi_f32_noneg(float nofpclass(ninf nsub nnorm) %arg0, i32 %arg1) #0 {
 ; CHECK-LABEL: define float @ret_powi_f32_noneg
 ; CHECK-SAME: (float nofpclass(ninf nsub nnorm) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.powi.f32.i32(float [[ARG0]], i32 [[ARG1]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.powi.f32.i32(float nofpclass(ninf nsub nnorm) [[ARG0]], i32 [[ARG1]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.powi.f32.i32(float %arg0, i32 %arg1)
@@ -126,7 +338,7 @@ define float @ret_powi_f32_noneg(float nofpclass(ninf nsub nnorm) %arg0, i32 %ar
 define float @ret_powi_f32_noneg_nonzero(float nofpclass(ninf nsub nnorm nzero) %arg0, i32 %arg1) #0 {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_powi_f32_noneg_nonzero
 ; CHECK-SAME: (float nofpclass(ninf nzero nsub nnorm) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.powi.f32.i32(float [[ARG0]], i32 [[ARG1]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.powi.f32.i32(float nofpclass(ninf nzero nsub nnorm) [[ARG0]], i32 [[ARG1]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.powi.f32.i32(float %arg0, i32 %arg1)
@@ -136,7 +348,7 @@ define float @ret_powi_f32_noneg_nonzero(float nofpclass(ninf nsub nnorm nzero) 
 define float @ret_powi_f32_noneg_nozero(float nofpclass(ninf nsub nnorm) %arg0, i32 %arg1) #0 {
 ; CHECK-LABEL: define float @ret_powi_f32_noneg_nozero
 ; CHECK-SAME: (float nofpclass(ninf nsub nnorm) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.powi.f32.i32(float [[ARG0]], i32 [[ARG1]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.powi.f32.i32(float nofpclass(ninf nsub nnorm) [[ARG0]], i32 [[ARG1]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.powi.f32.i32(float %arg0, i32 %arg1)
@@ -146,7 +358,7 @@ define float @ret_powi_f32_noneg_nozero(float nofpclass(ninf nsub nnorm) %arg0, 
 define float @ret_powi_f32_nonzero(float nofpclass(nzero) %arg0, i32 %arg1) #0 {
 ; CHECK-LABEL: define float @ret_powi_f32_nonzero
 ; CHECK-SAME: (float nofpclass(nzero) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.powi.f32.i32(float [[ARG0]], i32 [[ARG1]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.powi.f32.i32(float nofpclass(nzero) [[ARG0]], i32 [[ARG1]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.powi.f32.i32(float %arg0, i32 %arg1)
@@ -156,7 +368,7 @@ define float @ret_powi_f32_nonzero(float nofpclass(nzero) %arg0, i32 %arg1) #0 {
 define float @ret_powi_f32_nopzero(float nofpclass(pzero) %arg0, i32 %arg1) #0 {
 ; CHECK-LABEL: define float @ret_powi_f32_nopzero
 ; CHECK-SAME: (float nofpclass(pzero) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.powi.f32.i32(float [[ARG0]], i32 [[ARG1]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.powi.f32.i32(float nofpclass(pzero) [[ARG0]], i32 [[ARG1]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.powi.f32.i32(float %arg0, i32 %arg1)
@@ -165,8 +377,8 @@ define float @ret_powi_f32_nopzero(float nofpclass(pzero) %arg0, i32 %arg1) #0 {
 
 define float @ret_powi_f32_noneg_ftz_daz(float nofpclass(ninf nsub nnorm) %arg0, i32 %arg1) #1 {
 ; CHECK-LABEL: define float @ret_powi_f32_noneg_ftz_daz
-; CHECK-SAME: (float nofpclass(ninf nsub nnorm) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR2:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.powi.f32.i32(float [[ARG0]], i32 [[ARG1]]) #[[ATTR6]]
+; CHECK-SAME: (float nofpclass(ninf nsub nnorm) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.powi.f32.i32(float nofpclass(ninf nsub nnorm) [[ARG0]], i32 [[ARG1]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.powi.f32.i32(float %arg0, i32 %arg1)
@@ -176,7 +388,7 @@ define float @ret_powi_f32_noneg_ftz_daz(float nofpclass(ninf nsub nnorm) %arg0,
 define float @ret_powi_f32_noneg_nonzero_ftz_daz(float nofpclass(ninf nsub nnorm nzero) %arg0, i32 %arg1) #1 {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_powi_f32_noneg_nonzero_ftz_daz
 ; CHECK-SAME: (float nofpclass(ninf nzero nsub nnorm) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.powi.f32.i32(float [[ARG0]], i32 [[ARG1]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.powi.f32.i32(float nofpclass(ninf nzero nsub nnorm) [[ARG0]], i32 [[ARG1]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.powi.f32.i32(float %arg0, i32 %arg1)
@@ -186,7 +398,7 @@ define float @ret_powi_f32_noneg_nonzero_ftz_daz(float nofpclass(ninf nsub nnorm
 define float @ret_powi_f32_noneg_nonzero_ftpz_dapz(float nofpclass(ninf nsub nnorm nzero) %arg0, i32 %arg1) #2 {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_powi_f32_noneg_nonzero_ftpz_dapz
 ; CHECK-SAME: (float nofpclass(ninf nzero nsub nnorm) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR3:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.powi.f32.i32(float [[ARG0]], i32 [[ARG1]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.powi.f32.i32(float nofpclass(ninf nzero nsub nnorm) [[ARG0]], i32 [[ARG1]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.powi.f32.i32(float %arg0, i32 %arg1)
@@ -196,7 +408,7 @@ define float @ret_powi_f32_noneg_nonzero_ftpz_dapz(float nofpclass(ninf nsub nno
 define float @ret_powi_f32_noninf_nonnorm(float nofpclass(ninf nnorm) %arg0, i32 %arg1) #0 {
 ; CHECK-LABEL: define float @ret_powi_f32_noninf_nonnorm
 ; CHECK-SAME: (float nofpclass(ninf nnorm) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.powi.f32.i32(float [[ARG0]], i32 [[ARG1]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.powi.f32.i32(float nofpclass(ninf nnorm) [[ARG0]], i32 [[ARG1]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.powi.f32.i32(float %arg0, i32 %arg1)
@@ -206,7 +418,7 @@ define float @ret_powi_f32_noninf_nonnorm(float nofpclass(ninf nnorm) %arg0, i32
 define float @ret_powi_f32_noninf_nonnorm_ftz_daz(float nofpclass(ninf nnorm) %arg0, i32 %arg1) #1 {
 ; CHECK-LABEL: define float @ret_powi_f32_noninf_nonnorm_ftz_daz
 ; CHECK-SAME: (float nofpclass(ninf nnorm) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.powi.f32.i32(float [[ARG0]], i32 [[ARG1]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.powi.f32.i32(float nofpclass(ninf nnorm) [[ARG0]], i32 [[ARG1]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.powi.f32.i32(float %arg0, i32 %arg1)
@@ -216,7 +428,7 @@ define float @ret_powi_f32_noninf_nonnorm_ftz_daz(float nofpclass(ninf nnorm) %a
 define float @ret_powi_f32_noneg_ftz_ieee(float nofpclass(ninf nsub nnorm) %arg0, i32 %arg1) #3 {
 ; CHECK-LABEL: define float @ret_powi_f32_noneg_ftz_ieee
 ; CHECK-SAME: (float nofpclass(ninf nsub nnorm) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR4:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.powi.f32.i32(float [[ARG0]], i32 [[ARG1]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.powi.f32.i32(float nofpclass(ninf nsub nnorm) [[ARG0]], i32 [[ARG1]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.powi.f32.i32(float %arg0, i32 %arg1)
@@ -226,7 +438,7 @@ define float @ret_powi_f32_noneg_ftz_ieee(float nofpclass(ninf nsub nnorm) %arg0
 define float @ret_powi_f32_noneg_nonzero_ftz_ieee(float nofpclass(ninf nsub nnorm nzero) %arg0, i32 %arg1) #3 {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_powi_f32_noneg_nonzero_ftz_ieee
 ; CHECK-SAME: (float nofpclass(ninf nzero nsub nnorm) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR4]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.powi.f32.i32(float [[ARG0]], i32 [[ARG1]]) #[[ATTR6]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.powi.f32.i32(float nofpclass(ninf nzero nsub nnorm) [[ARG0]], i32 [[ARG1]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.powi.f32.i32(float %arg0, i32 %arg1)
@@ -246,7 +458,7 @@ define <4 x float> @powi_v4f32_i32(<4 x float> %arg0, i32 %arg1) {
 define <4 x float> @powi_v4f32_i32_nozero(<4 x float> nofpclass(zero) %arg0, i32 %arg1) {
 ; CHECK-LABEL: define <4 x float> @powi_v4f32_i32_nozero
 ; CHECK-SAME: (<4 x float> nofpclass(zero) [[ARG0:%.*]], i32 [[ARG1:%.*]]) #[[ATTR5]] {
-; CHECK-NEXT:    [[POWI:%.*]] = call <4 x float> @llvm.powi.v4f32.i32(<4 x float> [[ARG0]], i32 [[ARG1]]) #[[ATTR6]]
+; CHECK-NEXT:    [[POWI:%.*]] = call <4 x float> @llvm.powi.v4f32.i32(<4 x float> nofpclass(zero) [[ARG0]], i32 [[ARG1]]) #[[ATTR6]]
 ; CHECK-NEXT:    ret <4 x float> [[POWI]]
 ;
   %powi = call <4 x float> @llvm.powi.v4f32.i32(<4 x float> %arg0, i32 %arg1)
@@ -255,7 +467,7 @@ define <4 x float> @powi_v4f32_i32_nozero(<4 x float> nofpclass(zero) %arg0, i32
 
 define <4 x float> @powi_v4f32_i32_constint_even(<4 x float> %arg) {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) <4 x float> @powi_v4f32_i32_constint_even
-; CHECK-SAME: (<4 x float> nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR5]] {
+; CHECK-SAME: (<4 x float> [[ARG:%.*]]) #[[ATTR5]] {
 ; CHECK-NEXT:    [[POWI:%.*]] = call nofpclass(ninf nzero nsub nnorm) <4 x float> @llvm.powi.v4f32.i32(<4 x float> [[ARG]], i32 noundef 4) #[[ATTR6]]
 ; CHECK-NEXT:    ret <4 x float> [[POWI]]
 ;
@@ -275,9 +487,9 @@ define <4 x float> @powi_v4f32_i32_constint_odd(<4 x float> %arg) {
 
 define <4 x float> @powi_v4f32_i32_regression(<4 x float> %arg) {
 ; CHECK-LABEL: define nofpclass(nzero) <4 x float> @powi_v4f32_i32_regression
-; CHECK-SAME: (<4 x float> nofpclass(ninf nzero nsub nnorm) [[ARG:%.*]]) #[[ATTR5]] {
+; CHECK-SAME: (<4 x float> [[ARG:%.*]]) #[[ATTR5]] {
 ; CHECK-NEXT:    [[POWI:%.*]] = call <4 x float> @llvm.powi.v4f32.i32(<4 x float> [[ARG]], i32 noundef 4) #[[ATTR6]]
-; CHECK-NEXT:    [[USER:%.*]] = fsub <4 x float> [[POWI]], <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    [[USER:%.*]] = fsub <4 x float> [[POWI]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    ret <4 x float> [[USER]]
 ;
   %powi = call <4 x float> @llvm.powi.v4f32.i32(<4 x float> %arg, i32 4)
@@ -285,10 +497,10 @@ define <4 x float> @powi_v4f32_i32_regression(<4 x float> %arg) {
   ret <4 x float> %user
 }
 
-attributes #0 = { "denormal-fp-math"="ieee,ieee" }
-attributes #1 = { "denormal-fp-math"="preserve-sign,preserve-sign" }
-attributes #2 = { "denormal-fp-math"="positive-zero,positive-zero" }
-attributes #3 = { "denormal-fp-math"="preserve-sign,ieee" }
+attributes #0 = { denormal_fpenv(ieee|ieee) }
+attributes #1 = { denormal_fpenv(preservesign) }
+attributes #2 = { denormal_fpenv(positivezero|positivezero) }
+attributes #3 = { denormal_fpenv(preservesign|ieee) }
 
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; TUNIT: {{.*}}

@@ -7,30 +7,24 @@ name: copy_zvlsseg_N2
 body:             |
   bb.0:
     ; CHECK-LABEL: name: copy_zvlsseg_N2
-    ; CHECK: $v2 = VMV1R_V $v4
-    ; CHECK-NEXT: $v3 = VMV1R_V $v5
+    ; CHECK: $v2m2 = VMV2R_V $v4m2
     ; CHECK-NEXT: $v3 = VMV1R_V $v4
     ; CHECK-NEXT: $v4 = VMV1R_V $v5
     ; CHECK-NEXT: $v6 = VMV1R_V $v5
     ; CHECK-NEXT: $v5 = VMV1R_V $v4
-    ; CHECK-NEXT: $v6 = VMV1R_V $v4
-    ; CHECK-NEXT: $v7 = VMV1R_V $v5
-    ; CHECK-NEXT: $v0m2 = VMV2R_V $v4m2
-    ; CHECK-NEXT: $v2m2 = VMV2R_V $v6m2
+    ; CHECK-NEXT: $v6m2 = VMV2R_V $v4m2
+    ; CHECK-NEXT: $v0m4 = VMV4R_V $v4m4
     ; CHECK-NEXT: $v2m2 = VMV2R_V $v4m2
     ; CHECK-NEXT: $v4m2 = VMV2R_V $v6m2
     ; CHECK-NEXT: $v8m2 = VMV2R_V $v6m2
     ; CHECK-NEXT: $v6m2 = VMV2R_V $v4m2
-    ; CHECK-NEXT: $v8m2 = VMV2R_V $v4m2
-    ; CHECK-NEXT: $v10m2 = VMV2R_V $v6m2
-    ; CHECK-NEXT: $v0m4 = VMV4R_V $v8m4
-    ; CHECK-NEXT: $v4m4 = VMV4R_V $v12m4
+    ; CHECK-NEXT: $v8m4 = VMV4R_V $v4m4
+    ; CHECK-NEXT: $v0m8 = VMV8R_V $v8m8
     ; CHECK-NEXT: $v4m4 = VMV4R_V $v8m4
     ; CHECK-NEXT: $v8m4 = VMV4R_V $v12m4
     ; CHECK-NEXT: $v16m4 = VMV4R_V $v12m4
     ; CHECK-NEXT: $v12m4 = VMV4R_V $v8m4
-    ; CHECK-NEXT: $v16m4 = VMV4R_V $v8m4
-    ; CHECK-NEXT: $v20m4 = VMV4R_V $v12m4
+    ; CHECK-NEXT: $v16m8 = VMV8R_V $v8m8
     $v2_v3 = COPY $v4_v5
     $v3_v4 = COPY $v4_v5
     $v5_v6 = COPY $v4_v5
@@ -55,25 +49,20 @@ body:             |
     ; CHECK-NEXT: $v3 = VMV1R_V $v6
     ; CHECK-NEXT: $v4 = VMV1R_V $v7
     ; CHECK-NEXT: $v3 = VMV1R_V $v5
-    ; CHECK-NEXT: $v4 = VMV1R_V $v6
-    ; CHECK-NEXT: $v5 = VMV1R_V $v7
+    ; CHECK-NEXT: $v4m2 = VMV2R_V $v6m2
     ; CHECK-NEXT: $v4 = VMV1R_V $v5
     ; CHECK-NEXT: $v5 = VMV1R_V $v6
     ; CHECK-NEXT: $v6 = VMV1R_V $v7
-    ; CHECK-NEXT: $v9 = VMV1R_V $v7
-    ; CHECK-NEXT: $v8 = VMV1R_V $v6
+    ; CHECK-NEXT: $v8m2 = VMV2R_V $v6m2
     ; CHECK-NEXT: $v7 = VMV1R_V $v5
     ; CHECK-NEXT: $v9 = VMV1R_V $v5
-    ; CHECK-NEXT: $v10 = VMV1R_V $v6
-    ; CHECK-NEXT: $v11 = VMV1R_V $v7
+    ; CHECK-NEXT: $v10m2 = VMV2R_V $v6m2
     ; CHECK-NEXT: $v0m2 = VMV2R_V $v6m2
     ; CHECK-NEXT: $v2m2 = VMV2R_V $v8m2
     ; CHECK-NEXT: $v4m2 = VMV2R_V $v10m2
     ; CHECK-NEXT: $v2m2 = VMV2R_V $v6m2
-    ; CHECK-NEXT: $v4m2 = VMV2R_V $v8m2
-    ; CHECK-NEXT: $v6m2 = VMV2R_V $v10m2
-    ; CHECK-NEXT: $v14m2 = VMV2R_V $v10m2
-    ; CHECK-NEXT: $v12m2 = VMV2R_V $v8m2
+    ; CHECK-NEXT: $v4m4 = VMV4R_V $v8m4
+    ; CHECK-NEXT: $v12m4 = VMV4R_V $v8m4
     ; CHECK-NEXT: $v10m2 = VMV2R_V $v6m2
     ; CHECK-NEXT: $v12m2 = VMV2R_V $v6m2
     ; CHECK-NEXT: $v14m2 = VMV2R_V $v8m2
@@ -94,10 +83,8 @@ name: copy_zvlsseg_N4
 body:             |
   bb.0:
     ; CHECK-LABEL: name: copy_zvlsseg_N4
-    ; CHECK: $v6 = VMV1R_V $v10
-    ; CHECK-NEXT: $v7 = VMV1R_V $v11
-    ; CHECK-NEXT: $v8 = VMV1R_V $v12
-    ; CHECK-NEXT: $v9 = VMV1R_V $v13
+    ; CHECK: $v6m2 = VMV2R_V $v10m2
+    ; CHECK-NEXT: $v8m2 = VMV2R_V $v12m2
     ; CHECK-NEXT: $v7 = VMV1R_V $v10
     ; CHECK-NEXT: $v8 = VMV1R_V $v11
     ; CHECK-NEXT: $v9 = VMV1R_V $v12
@@ -106,13 +93,10 @@ body:             |
     ; CHECK-NEXT: $v15 = VMV1R_V $v12
     ; CHECK-NEXT: $v14 = VMV1R_V $v11
     ; CHECK-NEXT: $v13 = VMV1R_V $v10
-    ; CHECK-NEXT: $v14 = VMV1R_V $v10
-    ; CHECK-NEXT: $v15 = VMV1R_V $v11
-    ; CHECK-NEXT: $v16 = VMV1R_V $v12
-    ; CHECK-NEXT: $v17 = VMV1R_V $v13
+    ; CHECK-NEXT: $v14m2 = VMV2R_V $v10m2
+    ; CHECK-NEXT: $v16m2 = VMV2R_V $v12m2
     ; CHECK-NEXT: $v2m2 = VMV2R_V $v10m2
-    ; CHECK-NEXT: $v4m2 = VMV2R_V $v12m2
-    ; CHECK-NEXT: $v6m2 = VMV2R_V $v14m2
+    ; CHECK-NEXT: $v4m4 = VMV4R_V $v12m4
     ; CHECK-NEXT: $v8m2 = VMV2R_V $v16m2
     ; CHECK-NEXT: $v4m2 = VMV2R_V $v10m2
     ; CHECK-NEXT: $v6m2 = VMV2R_V $v12m2
@@ -123,8 +107,7 @@ body:             |
     ; CHECK-NEXT: $v18m2 = VMV2R_V $v12m2
     ; CHECK-NEXT: $v16m2 = VMV2R_V $v10m2
     ; CHECK-NEXT: $v18m2 = VMV2R_V $v10m2
-    ; CHECK-NEXT: $v20m2 = VMV2R_V $v12m2
-    ; CHECK-NEXT: $v22m2 = VMV2R_V $v14m2
+    ; CHECK-NEXT: $v20m4 = VMV4R_V $v12m4
     ; CHECK-NEXT: $v24m2 = VMV2R_V $v16m2
     $v6_v7_v8_v9 = COPY $v10_v11_v12_v13
     $v7_v8_v9_v10 = COPY $v10_v11_v12_v13
@@ -146,57 +129,59 @@ body:             |
     ; CHECK-NEXT: $v7 = VMV1R_V $v12
     ; CHECK-NEXT: $v8 = VMV1R_V $v13
     ; CHECK-NEXT: $v9 = VMV1R_V $v14
-    ; CHECK-NEXT: $v6 = VMV1R_V $v10
-    ; CHECK-NEXT: $v7 = VMV1R_V $v11
-    ; CHECK-NEXT: $v8 = VMV1R_V $v12
-    ; CHECK-NEXT: $v9 = VMV1R_V $v13
+    ; CHECK-NEXT: $v6m2 = VMV2R_V $v10m2
+    ; CHECK-NEXT: $v8m2 = VMV2R_V $v12m2
     ; CHECK-NEXT: $v10 = VMV1R_V $v14
     ; CHECK-NEXT: $v18 = VMV1R_V $v14
-    ; CHECK-NEXT: $v17 = VMV1R_V $v13
-    ; CHECK-NEXT: $v16 = VMV1R_V $v12
-    ; CHECK-NEXT: $v15 = VMV1R_V $v11
-    ; CHECK-NEXT: $v14 = VMV1R_V $v10
+    ; CHECK-NEXT: $v16m2 = VMV2R_V $v12m2
+    ; CHECK-NEXT: $v14m2 = VMV2R_V $v10m2
     ; CHECK-NEXT: $v15 = VMV1R_V $v10
     ; CHECK-NEXT: $v16 = VMV1R_V $v11
     ; CHECK-NEXT: $v17 = VMV1R_V $v12
     ; CHECK-NEXT: $v18 = VMV1R_V $v13
     ; CHECK-NEXT: $v19 = VMV1R_V $v14
+    ; CHECK-NEXT: $v7 = VMV1R_V $v11
+    ; CHECK-NEXT: $v8m4 = VMV4R_V $v12m4
+    ; CHECK-NEXT: $v16m4 = VMV4R_V $v12m4
+    ; CHECK-NEXT: $v15 = VMV1R_V $v11
     $v5_v6_v7_v8_v9 = COPY $v10_v11_v12_v13_v14
     $v6_v7_v8_v9_v10 = COPY $v10_v11_v12_v13_v14
     $v14_v15_v16_v17_v18 = COPY $v10_v11_v12_v13_v14
     $v15_v16_v17_v18_v19 = COPY $v10_v11_v12_v13_v14
+    $v7_v8_v9_v10_v11 = COPY $v11_v12_v13_v14_v15
+    $v15_v16_v17_v18_v19 = COPY $v11_v12_v13_v14_v15
 ...
 ---
 name: copy_zvlsseg_N6
 body:             |
   bb.0:
     ; CHECK-LABEL: name: copy_zvlsseg_N6
-    ; CHECK: $v4 = VMV1R_V $v10
-    ; CHECK-NEXT: $v5 = VMV1R_V $v11
-    ; CHECK-NEXT: $v6 = VMV1R_V $v12
-    ; CHECK-NEXT: $v7 = VMV1R_V $v13
-    ; CHECK-NEXT: $v8 = VMV1R_V $v14
-    ; CHECK-NEXT: $v9 = VMV1R_V $v15
+    ; CHECK: $v4m2 = VMV2R_V $v10m2
+    ; CHECK-NEXT: $v6m2 = VMV2R_V $v12m2
+    ; CHECK-NEXT: $v8m2 = VMV2R_V $v14m2
     ; CHECK-NEXT: $v5 = VMV1R_V $v10
     ; CHECK-NEXT: $v6 = VMV1R_V $v11
     ; CHECK-NEXT: $v7 = VMV1R_V $v12
     ; CHECK-NEXT: $v8 = VMV1R_V $v13
     ; CHECK-NEXT: $v9 = VMV1R_V $v14
     ; CHECK-NEXT: $v10 = VMV1R_V $v15
+    ; CHECK-NEXT: $v6m2 = VMV2R_V $v10m2
+    ; CHECK-NEXT: $v8m4 = VMV4R_V $v12m4
+    ; CHECK-NEXT: $v16m4 = VMV4R_V $v12m4
+    ; CHECK-NEXT: $v14m2 = VMV2R_V $v10m2
     ; CHECK-NEXT: $v20 = VMV1R_V $v15
     ; CHECK-NEXT: $v19 = VMV1R_V $v14
     ; CHECK-NEXT: $v18 = VMV1R_V $v13
     ; CHECK-NEXT: $v17 = VMV1R_V $v12
     ; CHECK-NEXT: $v16 = VMV1R_V $v11
     ; CHECK-NEXT: $v15 = VMV1R_V $v10
-    ; CHECK-NEXT: $v16 = VMV1R_V $v10
-    ; CHECK-NEXT: $v17 = VMV1R_V $v11
-    ; CHECK-NEXT: $v18 = VMV1R_V $v12
-    ; CHECK-NEXT: $v19 = VMV1R_V $v13
-    ; CHECK-NEXT: $v20 = VMV1R_V $v14
-    ; CHECK-NEXT: $v21 = VMV1R_V $v15
+    ; CHECK-NEXT: $v16m2 = VMV2R_V $v10m2
+    ; CHECK-NEXT: $v18m2 = VMV2R_V $v12m2
+    ; CHECK-NEXT: $v20m2 = VMV2R_V $v14m2
     $v4_v5_v6_v7_v8_v9 = COPY $v10_v11_v12_v13_v14_v15
     $v5_v6_v7_v8_v9_v10 = COPY $v10_v11_v12_v13_v14_v15
+    $v6_v7_v8_v9_v10_v11 = COPY $v10_v11_v12_v13_v14_v15
+    $v14_v15_v16_v17_v18_v19 = COPY $v10_v11_v12_v13_v14_v15
     $v15_v16_v17_v18_v19_v20 = COPY $v10_v11_v12_v13_v14_v15
     $v16_v17_v18_v19_v20_v21 = COPY $v10_v11_v12_v13_v14_v15
 ...
@@ -212,20 +197,17 @@ body:             |
     ; CHECK-NEXT: $v7 = VMV1R_V $v14
     ; CHECK-NEXT: $v8 = VMV1R_V $v15
     ; CHECK-NEXT: $v9 = VMV1R_V $v16
-    ; CHECK-NEXT: $v4 = VMV1R_V $v10
-    ; CHECK-NEXT: $v5 = VMV1R_V $v11
-    ; CHECK-NEXT: $v6 = VMV1R_V $v12
-    ; CHECK-NEXT: $v7 = VMV1R_V $v13
-    ; CHECK-NEXT: $v8 = VMV1R_V $v14
-    ; CHECK-NEXT: $v9 = VMV1R_V $v15
+    ; CHECK-NEXT: $v4m2 = VMV2R_V $v10m2
+    ; CHECK-NEXT: $v6m2 = VMV2R_V $v12m2
+    ; CHECK-NEXT: $v8m2 = VMV2R_V $v14m2
     ; CHECK-NEXT: $v10 = VMV1R_V $v16
+    ; CHECK-NEXT: $v20 = VMV1R_V $v16
+    ; CHECK-NEXT: $v16m4 = VMV4R_V $v12m4
+    ; CHECK-NEXT: $v14m2 = VMV2R_V $v10m2
     ; CHECK-NEXT: $v22 = VMV1R_V $v16
-    ; CHECK-NEXT: $v21 = VMV1R_V $v15
-    ; CHECK-NEXT: $v20 = VMV1R_V $v14
-    ; CHECK-NEXT: $v19 = VMV1R_V $v13
-    ; CHECK-NEXT: $v18 = VMV1R_V $v12
-    ; CHECK-NEXT: $v17 = VMV1R_V $v11
-    ; CHECK-NEXT: $v16 = VMV1R_V $v10
+    ; CHECK-NEXT: $v20m2 = VMV2R_V $v14m2
+    ; CHECK-NEXT: $v18m2 = VMV2R_V $v12m2
+    ; CHECK-NEXT: $v16m2 = VMV2R_V $v10m2
     ; CHECK-NEXT: $v17 = VMV1R_V $v10
     ; CHECK-NEXT: $v18 = VMV1R_V $v11
     ; CHECK-NEXT: $v19 = VMV1R_V $v12
@@ -233,24 +215,28 @@ body:             |
     ; CHECK-NEXT: $v21 = VMV1R_V $v14
     ; CHECK-NEXT: $v22 = VMV1R_V $v15
     ; CHECK-NEXT: $v23 = VMV1R_V $v16
+    ; CHECK-NEXT: $v22 = VMV1R_V $v21
+    ; CHECK-NEXT: $v21 = VMV1R_V $v20
+    ; CHECK-NEXT: $v20 = VMV1R_V $v19
+    ; CHECK-NEXT: $v19 = VMV1R_V $v18
+    ; CHECK-NEXT: $v18 = VMV1R_V $v17
+    ; CHECK-NEXT: $v17 = VMV1R_V $v16
+    ; CHECK-NEXT: $v16 = VMV1R_V $v15
     $v3_v4_v5_v6_v7_v8_v9 = COPY $v10_v11_v12_v13_v14_v15_v16
     $v4_v5_v6_v7_v8_v9_v10 = COPY $v10_v11_v12_v13_v14_v15_v16
+    $v14_v15_v16_v17_v18_v19_v20 = COPY $v10_v11_v12_v13_v14_v15_v16
     $v16_v17_v18_v19_v20_v21_v22 = COPY $v10_v11_v12_v13_v14_v15_v16
     $v17_v18_v19_v20_v21_v22_v23 = COPY $v10_v11_v12_v13_v14_v15_v16
+    $v16_v17_v18_v19_v20_v21_v22 = COPY $v15_v16_v17_v18_v19_v20_v21
 ...
 ---
 name: copy_zvlsseg_N8
 body:             |
   bb.0:
     ; CHECK-LABEL: name: copy_zvlsseg_N8
-    ; CHECK: $v2 = VMV1R_V $v10
-    ; CHECK-NEXT: $v3 = VMV1R_V $v11
-    ; CHECK-NEXT: $v4 = VMV1R_V $v12
-    ; CHECK-NEXT: $v5 = VMV1R_V $v13
-    ; CHECK-NEXT: $v6 = VMV1R_V $v14
-    ; CHECK-NEXT: $v7 = VMV1R_V $v15
-    ; CHECK-NEXT: $v8 = VMV1R_V $v16
-    ; CHECK-NEXT: $v9 = VMV1R_V $v17
+    ; CHECK: $v2m2 = VMV2R_V $v10m2
+    ; CHECK-NEXT: $v4m4 = VMV4R_V $v12m4
+    ; CHECK-NEXT: $v8m2 = VMV2R_V $v16m2
     ; CHECK-NEXT: $v3 = VMV1R_V $v10
     ; CHECK-NEXT: $v4 = VMV1R_V $v11
     ; CHECK-NEXT: $v5 = VMV1R_V $v12
@@ -267,16 +253,15 @@ body:             |
     ; CHECK-NEXT: $v19 = VMV1R_V $v12
     ; CHECK-NEXT: $v18 = VMV1R_V $v11
     ; CHECK-NEXT: $v17 = VMV1R_V $v10
-    ; CHECK-NEXT: $v18 = VMV1R_V $v10
-    ; CHECK-NEXT: $v19 = VMV1R_V $v11
-    ; CHECK-NEXT: $v20 = VMV1R_V $v12
-    ; CHECK-NEXT: $v21 = VMV1R_V $v13
-    ; CHECK-NEXT: $v22 = VMV1R_V $v14
-    ; CHECK-NEXT: $v23 = VMV1R_V $v15
-    ; CHECK-NEXT: $v24 = VMV1R_V $v16
-    ; CHECK-NEXT: $v25 = VMV1R_V $v17
+    ; CHECK-NEXT: $v18m2 = VMV2R_V $v10m2
+    ; CHECK-NEXT: $v20m4 = VMV4R_V $v12m4
+    ; CHECK-NEXT: $v24m2 = VMV2R_V $v16m2
+    ; CHECK-NEXT: $v8m8 = VMV8R_V $v0m8
+    ; CHECK-NEXT: $v0m8 = VMV8R_V $v8m8
     $v2_v3_v4_v5_v6_v7_v8_v9 = COPY $v10_v11_v12_v13_v14_v15_v16_v17
     $v3_v4_v5_v6_v7_v8_v9_v10 = COPY $v10_v11_v12_v13_v14_v15_v16_v17
     $v17_v18_v19_v20_v21_v22_v23_v24 = COPY $v10_v11_v12_v13_v14_v15_v16_v17
     $v18_v19_v20_v21_v22_v23_v24_v25 = COPY $v10_v11_v12_v13_v14_v15_v16_v17
+    $v8_v9_v10_v11_v12_v13_v14_v15 = COPY $v0_v1_v2_v3_v4_v5_v6_v7
+    $v0_v1_v2_v3_v4_v5_v6_v7 = COPY $v8_v9_v10_v11_v12_v13_v14_v15
 ...

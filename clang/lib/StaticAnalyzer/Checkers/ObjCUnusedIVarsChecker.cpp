@@ -17,7 +17,6 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/Analysis/PathDiagnostic.h"
-#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
@@ -118,8 +117,7 @@ static void checkObjCUnusedIvar(const ObjCImplementationDecl *D,
     // (d) are unnamed bitfields
     if (Ivar->getAccessControl() != ObjCIvarDecl::Private ||
         Ivar->hasAttr<UnusedAttr>() || Ivar->hasAttr<IBOutletAttr>() ||
-        Ivar->hasAttr<IBOutletCollectionAttr>() ||
-        Ivar->isUnnamedBitfield())
+        Ivar->hasAttr<IBOutletCollectionAttr>() || Ivar->isUnnamedBitField())
       continue;
 
     M[Ivar] = Unused;

@@ -10,7 +10,6 @@
 #define MLIR_ANALYSIS_SLICEANALYSIS_H_
 
 #include <functional>
-#include <vector>
 
 #include "mlir/Support/LLVM.h"
 
@@ -47,6 +46,11 @@ struct BackwardSliceOptions : public SliceOptions {
   /// backward slice computation traverses block arguments and asserts that the
   /// parent op has a single region with a single block.
   bool omitBlockArguments = false;
+
+  /// When omitUsesFromAbove is true, the backward slice computation omits
+  /// traversing values that are captured from above.
+  /// TODO: this should default to `false` after users have been updated.
+  bool omitUsesFromAbove = true;
 };
 
 using ForwardSliceOptions = SliceOptions;
@@ -61,8 +65,9 @@ using ForwardSliceOptions = SliceOptions;
 ///
 /// The implementation traverses the use chains in postorder traversal for
 /// efficiency reasons: if an operation is already in `forwardSlice`, no
-/// need to traverse its uses again. Since use-def chains form a DAG, this
-/// terminates.
+/// need to traverse its uses again. In the presence of use-def cycles in a
+/// graph region, the traversal stops at the first operation that was already
+/// visited (which is not added to the slice anymore).
 ///
 /// Upon return to the root call, `forwardSlice` is filled with a
 /// postorder list of uses (i.e. a reverse topological order). To get a proper
@@ -110,8 +115,9 @@ void getForwardSlice(Value root, SetVector<Operation *> *forwardSlice,
 ///
 /// The implementation traverses the def chains in postorder traversal for
 /// efficiency reasons: if an operation is already in `backwardSlice`, no
-/// need to traverse its definitions again. Since useuse-def chains form a DAG,
-/// this terminates.
+/// need to traverse its definitions again. In the presence of use-def cycles
+/// in a graph region, the traversal stops at the first operation that was
+/// already visited (which is not added to the slice anymore).
 ///
 /// Upon return to the root call, `backwardSlice` is filled with a
 /// postorder list of defs. This happens to be a topological order, from the
@@ -134,13 +140,17 @@ void getForwardSlice(Value root, SetVector<Operation *> *forwardSlice,
 /// Assuming all local orders match the numbering order:
 ///    {1, 2, 5, 3, 4, 6}
 ///
-void getBackwardSlice(Operation *op, SetVector<Operation *> *backwardSlice,
-                      const BackwardSliceOptions &options = {});
+/// This function returns whether the backwards slice was able to be
+/// successfully computed, and failure if it was unable to determine the slice.
+LogicalResult getBackwardSlice(Operation *op,
+                               SetVector<Operation *> *backwardSlice,
+                               const BackwardSliceOptions &options = {});
 
 /// Value-rooted version of `getBackwardSlice`. Return the union of all backward
 /// slices for the op defining or owning the value `root`.
-void getBackwardSlice(Value root, SetVector<Operation *> *backwardSlice,
-                      const BackwardSliceOptions &options = {});
+LogicalResult getBackwardSlice(Value root,
+                               SetVector<Operation *> *backwardSlice,
+                               const BackwardSliceOptions &options = {});
 
 /// Iteratively computes backward slices and forward slices until
 /// a fixed point is reached. Returns an `SetVector<Operation *>` which
@@ -222,11 +232,6 @@ void getBackwardSlice(Value root, SetVector<Operation *> *backwardSlice,
 SetVector<Operation *>
 getSlice(Operation *op, const BackwardSliceOptions &backwardSliceOptions = {},
          const ForwardSliceOptions &forwardSliceOptions = {});
-
-/// Multi-root DAG topological sort.
-/// Performs a topological sort of the Operation in the `toSort` SetVector.
-/// Returns a topologically sorted SetVector.
-SetVector<Operation *> topologicalSort(const SetVector<Operation *> &toSort);
 
 /// Utility to match a generic reduction given a list of iteration-carried
 /// arguments, `iterCarriedArgs` and the position of the potential reduction

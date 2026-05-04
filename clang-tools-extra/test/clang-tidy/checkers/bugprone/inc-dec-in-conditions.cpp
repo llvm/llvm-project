@@ -68,3 +68,57 @@ bool doubleCheck(Container<int> x) {
   // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: decrementing and referencing a variable in a complex condition can cause unintended side-effects due to C++'s order of evaluation, consider moving the modification outside of the condition to avoid misunderstandings [bugprone-inc-dec-in-conditions]
   // CHECK-MESSAGES: :[[@LINE-2]]:31: warning: incrementing and referencing a variable in a complex condition can cause unintended side-effects due to C++'s order of evaluation, consider moving the modification outside of the condition to avoid misunderstandings [bugprone-inc-dec-in-conditions]
 }
+
+namespace PR85838 {
+  void test()
+  {
+    auto foo = 0;
+    auto bar = 0;
+    if (++foo < static_cast<decltype(foo)>(bar)) {}
+    if (static_cast<decltype(++foo)>(bar) < foo) {}
+  }
+}
+
+namespace GH163913 {
+  void lambdaWithIncrement(int size) {
+    if ([](int n) {
+        ++n;
+        return n;
+    }(size) < 42) {}
+  }
+
+  void lambdaWithDecrement(int size) {
+    if ([](int n) {
+        --n;
+        return n;
+    }(size) < 42) {}
+  }
+
+  template <typename Func>
+  auto eval(Func&& fn) -> decltype(fn()) {
+    return fn();
+  }
+
+  void lambdaWithForLoop(int size) {
+    if (eval([&] {
+        int result = 0;
+        for (int i = 0; i < size; i++) {
+            result += i;
+        }
+        return result;
+    }) < 42) {}
+  }
+
+  void outsideLambda(int size) {
+    if ([](int n) {
+        --n;
+        return n;
+    }(size) < ++size) {}
+    // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: incrementing and referencing a variable in a complex condition
+    if (++size > [](int n) {
+        --n;
+        return n;
+    }(size)) {}
+    // CHECK-MESSAGES: :[[@LINE-4]]:9: warning: incrementing and referencing a variable in a complex condition
+  }
+}

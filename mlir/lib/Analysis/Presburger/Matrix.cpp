@@ -8,9 +8,7 @@
 
 #include "mlir/Analysis/Presburger/Matrix.h"
 #include "mlir/Analysis/Presburger/Fraction.h"
-#include "mlir/Analysis/Presburger/MPInt.h"
 #include "mlir/Analysis/Presburger/Utils.h"
-#include "mlir/Support/LLVM.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -257,20 +255,13 @@ void Matrix<T>::fillRow(unsigned row, const T &value) {
 }
 
 // moveColumns is implemented by moving the columns adjacent to the source range
-// to their final position. When moving right (i.e. dstPos > srcPos), the range
-// of the adjacent columns is [srcPos + num, dstPos + num). When moving left
-// (i.e. dstPos < srcPos) the range of the adjacent columns is [dstPos, srcPos).
-// First, zeroed out columns are inserted in the final positions of the adjacent
-// columns. Then, the adjacent columns are moved to their final positions by
-// swapping them with the zeroed columns. Finally, the now zeroed adjacent
-// columns are deleted.
+// to their final position.
 template <typename T>
 void Matrix<T>::moveColumns(unsigned srcPos, unsigned num, unsigned dstPos) {
   if (num == 0)
     return;
 
-  int offset = dstPos - srcPos;
-  if (offset == 0)
+  if (dstPos == srcPos)
     return;
 
   assert(srcPos + num <= getNumColumns() &&
@@ -278,23 +269,37 @@ void Matrix<T>::moveColumns(unsigned srcPos, unsigned num, unsigned dstPos) {
   assert(dstPos + num <= getNumColumns() &&
          "move destination range exceeds matrix columns");
 
-  unsigned insertCount = offset > 0 ? offset : -offset;
-  unsigned finalAdjStart = offset > 0 ? srcPos : srcPos + num;
-  unsigned curAdjStart = offset > 0 ? srcPos + num : dstPos;
-  // TODO: This can be done using std::rotate.
-  // Insert new zero columns in the positions where the adjacent columns are to
-  // be moved.
-  insertColumns(finalAdjStart, insertCount);
-  // Update curAdjStart if insertion of new columns invalidates it.
-  if (finalAdjStart < curAdjStart)
-    curAdjStart += insertCount;
+  unsigned numRows = getNumRows();
+  // std::rotate(start, middle, end) permutes the elements of [start, end] to
+  // [middle, end) + [start, middle). NOTE: &at(i, srcPos + num) will trigger an
+  // assert.
+  if (dstPos > srcPos) {
+    for (unsigned i = 0; i < numRows; ++i) {
+      std::rotate(&at(i, srcPos), &at(i, srcPos) + num, &at(i, dstPos) + num);
+    }
+    return;
+  }
+  for (unsigned i = 0; i < numRows; ++i) {
+    std::rotate(&at(i, dstPos), &at(i, srcPos), &at(i, srcPos) + num);
+  }
+}
 
-  // Swap the adjacent columns with inserted zero columns.
-  for (unsigned i = 0; i < insertCount; ++i)
-    swapColumns(finalAdjStart + i, curAdjStart + i);
+template <typename T>
+Matrix<T> Matrix<T>::postMultiply(const Matrix<T> &other) const {
+  assert(getNumColumns() == other.getNumRows());
+  unsigned n = getNumRows();
+  unsigned m = other.getNumRows();
+  unsigned p = other.getNumColumns();
+  Matrix<T> result(n, p);
 
-  // Delete the now redundant zero columns.
-  removeColumns(curAdjStart, insertCount);
+  for (unsigned i = 0; i < n; i++) {
+    for (unsigned j = 0; j < m; j++) {
+      for (unsigned k = 0; k < p; k++) {
+        result.at(i, k) += at(i, j) * other.at(j, k);
+      }
+    }
+  }
+  return result;
 }
 
 template <typename T>
@@ -372,12 +377,12 @@ SmallVector<T, 8> Matrix<T>::postMultiplyWithColumn(ArrayRef<T> colVec) const {
 /// sourceCol. This brings M(row, targetCol) to the range [0, M(row,
 /// sourceCol)). Apply the same column operation to otherMatrix, with the same
 /// integer multiple.
-static void modEntryColumnOperation(Matrix<MPInt> &m, unsigned row,
+static void modEntryColumnOperation(Matrix<DynamicAPInt> &m, unsigned row,
                                     unsigned sourceCol, unsigned targetCol,
-                                    Matrix<MPInt> &otherMatrix) {
+                                    Matrix<DynamicAPInt> &otherMatrix) {
   assert(m(row, sourceCol) != 0 && "Cannot divide by zero!");
   assert(m(row, sourceCol) > 0 && "Source must be positive!");
-  MPInt ratio = -floorDiv(m(row, targetCol), m(row, sourceCol));
+  DynamicAPInt ratio = -floorDiv(m(row, targetCol), m(row, sourceCol));
   m.addToColumn(sourceCol, targetCol, ratio);
   otherMatrix.addToColumn(sourceCol, targetCol, ratio);
 }
@@ -400,10 +405,16 @@ Matrix<T> Matrix<T>::getSubMatrix(unsigned fromRow, unsigned toRow,
 
 template <typename T>
 void Matrix<T>::print(raw_ostream &os) const {
-  for (unsigned row = 0; row < nRows; ++row) {
+  PrintTableMetrics ptm = {0, 0, "-"};
+  for (unsigned row = 0; row < nRows; ++row)
     for (unsigned column = 0; column < nColumns; ++column)
-      os << at(row, column) << ' ';
-    os << '\n';
+      updatePrintMetrics<T>(at(row, column), ptm);
+  unsigned minSpacing = 1;
+  for (unsigned row = 0; row < nRows; ++row) {
+    for (unsigned column = 0; column < nColumns; ++column) {
+      printWithPrintMetrics<T>(os, at(row, column), minSpacing, ptm);
+    }
+    os << "\n";
   }
 }
 
@@ -444,7 +455,7 @@ bool Matrix<T>::hasConsistentState() const {
 
 namespace mlir {
 namespace presburger {
-template class Matrix<MPInt>;
+template class Matrix<DynamicAPInt>;
 template class Matrix<Fraction>;
 } // namespace presburger
 } // namespace mlir
@@ -454,6 +465,15 @@ IntMatrix IntMatrix::identity(unsigned dimension) {
   for (unsigned i = 0; i < dimension; ++i)
     matrix(i, i) = 1;
   return matrix;
+}
+
+FracMatrix IntMatrix::asFracMatrix() const {
+  FracMatrix mat(nRows, nColumns);
+  for (unsigned i = 0; i < nRows; i++)
+    for (unsigned j = 0; j < nColumns; j++)
+      mat(i, j) = at(i, j);
+
+  return mat;
 }
 
 std::pair<IntMatrix, IntMatrix> IntMatrix::computeHermiteNormalForm() const {
@@ -542,25 +562,168 @@ std::pair<IntMatrix, IntMatrix> IntMatrix::computeHermiteNormalForm() const {
   return {h, u};
 }
 
-MPInt IntMatrix::normalizeRow(unsigned row, unsigned cols) {
+// In the submatrix `mat(from:, from:)`, the function finds the position (row,
+// col) of the element with smallest non-zero absolute value. When all elements
+// in the submatrix are zero, returns std::nullopt.
+static std::optional<std::pair<unsigned, unsigned>>
+findNonZeroMinInSubmatrix(const IntMatrix &mat, unsigned from) {
+  unsigned numRows = mat.getNumRows();
+  unsigned numCols = mat.getNumColumns();
+  unsigned minRow = from, minCol = from;
+
+  std::optional<DynamicAPInt> minVal;
+  for (unsigned r = from; r < numRows; r++) {
+    for (unsigned c = from; c < numCols; c++) {
+      DynamicAPInt val = llvm::abs(mat(r, c));
+      if (val == 0 || (minVal && val >= *minVal))
+        continue;
+
+      minVal = val;
+      minRow = r;
+      minCol = c;
+    }
+  }
+
+  if (!minVal)
+    return std::nullopt;
+
+  return std::make_pair(minRow, minCol);
+}
+
+// Finds the first row in submatrix `mat(from:, from:)` that contains an element
+// `d` such that `d` is not a multiple of `divisor`. When there is no such row,
+// returns std::nullopt.
+static std::optional<unsigned> findNonMultipleRow(const IntMatrix &mat,
+                                                  unsigned from,
+                                                  const DynamicAPInt &divisor) {
+  unsigned numRows = mat.getNumRows();
+  unsigned numCols = mat.getNumColumns();
+  for (unsigned row = from; row < numRows; ++row) {
+    for (unsigned col = from; col < numCols; ++col) {
+      if (mat(row, col) % divisor != 0)
+        return row;
+    }
+  }
+  return std::nullopt;
+}
+
+std::tuple<IntMatrix, IntMatrix, IntMatrix>
+IntMatrix::computeSmithNormalForm() const {
+  IntMatrix d = *this;
+  // We put D into diagonal form by applying row and columns operations to it.
+  // The matrix U records row operations applied in the process, and V records
+  // column operations.
+  IntMatrix u = IntMatrix::identity(d.getNumRows());
+  IntMatrix v = IntMatrix::identity(d.getNumColumns());
+
+  unsigned numRows = d.getNumRows();
+  unsigned numCols = d.getNumColumns();
+  for (unsigned i = 0, e = std::min(numRows, numCols); i < e; i++) {
+    // We first put D into diagonal form, and then ensure the divisibility
+    // condition. The latter step is better illustrated with an example:
+    //
+    // [6 0 ] ---(1)--> [6 10] ---(2)--> [2 0 ]
+    // [0 10]           [0 10]           [0 10]
+    //
+    // (1) adds the element violating the divisibility constraint to the same
+    // column in row i;
+    // (2) does an elimination of the column.
+    //
+    // There can be many elements that violate the constraint, hence the loop.
+    bool changed;
+    do {
+      changed = false;
+
+      // Find the entry in the submatrix d(i:, i:) with the smallest non-zero
+      // absolute value.
+      // The element is the pivot, and we record its current row and column.
+      auto pivotPos = findNonZeroMinInSubmatrix(d, i);
+      if (!pivotPos)
+        break;
+      auto [pvtRow, pvtCol] = *pivotPos;
+
+      // The remaining submatrix is zero.
+      if (d(pvtRow, pvtCol) == 0)
+        break;
+
+      // Bring pivot to d(i, i). Record the operation in u, v respectively.
+      if (pvtRow != i) {
+        d.swapRows(pvtRow, i);
+        u.swapRows(pvtRow, i);
+      }
+      if (pvtCol != i) {
+        d.swapColumns(pvtCol, i);
+        v.swapColumns(pvtCol, i);
+      }
+
+      // Ensure the pivot is positive.
+      if (d(i, i) < 0) {
+        d.negateRow(i);
+        u.negateRow(i);
+      }
+
+      // Clear other entries in row i and column i with Euclid's algorithm.
+      for (unsigned r = i + 1; r < numRows; ++r) {
+        while (d(r, i) != 0) {
+          DynamicAPInt quotient = d(r, i) / d(i, i);
+          d.addToRow(i, r, -quotient);
+          u.addToRow(i, r, -quotient);
+
+          if (d(r, i) != 0) {
+            d.swapRows(r, i);
+            u.swapRows(r, i);
+            changed = true;
+          }
+        }
+      }
+      // Similar to the rows operations, this time it works on columns.
+      for (unsigned c = i + 1; c < numCols; ++c) {
+        while (d(i, c) != 0) {
+          DynamicAPInt quotient = d(i, c) / d(i, i);
+          d.addToColumn(i, c, -quotient);
+          v.addToColumn(i, c, -quotient);
+
+          if (d(i, c) != 0) {
+            d.swapColumns(c, i);
+            v.swapColumns(c, i);
+            changed = true;
+          }
+        }
+      }
+
+      if (auto row = findNonMultipleRow(d, i + 1, d(i, i))) {
+        // Add the row (r) to row i. This brings d(r, c) into the i-th row,
+        // creating a new value at d(i, c) that will be used to reduce the
+        // pivot size.
+        d.addToRow(*row, i, 1);
+        u.addToRow(*row, i, 1);
+        changed = true;
+      }
+    } while (changed);
+  }
+
+  return {u, d, v};
+}
+
+DynamicAPInt IntMatrix::normalizeRow(unsigned row, unsigned cols) {
   return normalizeRange(getRow(row).slice(0, cols));
 }
 
-MPInt IntMatrix::normalizeRow(unsigned row) {
+DynamicAPInt IntMatrix::normalizeRow(unsigned row) {
   return normalizeRow(row, getNumColumns());
 }
 
-MPInt IntMatrix::determinant(IntMatrix *inverse) const {
+DynamicAPInt IntMatrix::determinant(IntMatrix *inverse) const {
   assert(nRows == nColumns &&
          "determinant can only be calculated for square matrices!");
 
   FracMatrix m(*this);
 
   FracMatrix fracInverse(nRows, nColumns);
-  MPInt detM = m.determinant(&fracInverse).getAsInteger();
+  DynamicAPInt detM = m.determinant(&fracInverse).getAsInteger();
 
   if (detM == 0)
-    return MPInt(0);
+    return DynamicAPInt(0);
 
   if (!inverse)
     return detM;
@@ -575,6 +738,15 @@ MPInt IntMatrix::determinant(IntMatrix *inverse) const {
 
 FracMatrix FracMatrix::identity(unsigned dimension) {
   return Matrix::identity(dimension);
+}
+
+IntMatrix FracMatrix::asIntMatrix() const {
+  IntMatrix mat(nRows, nColumns);
+  for (unsigned i = 0; i < nRows; i++)
+    for (unsigned j = 0; j < nColumns; j++)
+      mat(i, j) = at(i, j).getAsInteger();
+
+  return mat;
 }
 
 FracMatrix::FracMatrix(IntMatrix m)
@@ -717,8 +889,8 @@ FracMatrix FracMatrix::gramSchmidt() const {
 // Otherwise, we swap b_k and b_{k-1} and decrement k.
 //
 // We repeat this until k = n and return.
-void FracMatrix::LLL(Fraction delta) {
-  MPInt nearest;
+void FracMatrix::LLL(const Fraction &delta) {
+  DynamicAPInt nearest;
   Fraction mu;
 
   // `gsOrth` holds the Gram-Schmidt orthogonalisation
@@ -762,7 +934,7 @@ IntMatrix FracMatrix::normalizeRows() const {
   unsigned numColumns = getNumColumns();
   IntMatrix normalized(numRows, numColumns);
 
-  MPInt lcmDenoms = MPInt(1);
+  DynamicAPInt lcmDenoms = DynamicAPInt(1);
   for (unsigned i = 0; i < numRows; i++) {
     // For a row, first compute the LCM of the denominators.
     for (unsigned j = 0; j < numColumns; j++)

@@ -42,6 +42,7 @@ module Mod { header "Mod.h" }
 // CHECK-NEXT:       "context-hash": "{{.*}}",
 // CHECK-NEXT:       "file-deps": [
 // CHECK:            ],
+// CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "Mod"
 // CHECK-NEXT:     }
 // CHECK-NEXT:   ]

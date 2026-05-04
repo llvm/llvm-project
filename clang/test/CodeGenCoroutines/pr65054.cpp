@@ -1,7 +1,3 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 \
-// RUN:      -O0 -disable-llvm-passes -emit-llvm %s -o - \
-// RUN:      | FileCheck %s --check-prefix=FRONTEND
-
 // The output of O0 is highly redundant and hard to test. Also it is not good
 // limit the output of O0. So we test the optimized output from O0. The idea
 // is the optimizations shouldn't change the semantics of the program.
@@ -51,10 +47,7 @@ MyTask FooBar() {
   }
 }
 
-// FRONTEND: define{{.*}}@_ZNKSt16coroutine_handleIvE7addressEv{{.*}}#[[address_attr:[0-9]+]]
-// FRONTEND: attributes #[[address_attr]] = {{.*}}alwaysinline
-
 // CHECK-O0: define{{.*}}@_Z6FooBarv.resume
-// CHECK-O0: call{{.*}}@_ZN7Awaiter13await_suspendESt16coroutine_handleIvE
+// CHECK-O0: call{{.*}}@_Z6FooBarv.__await_suspend_wrapper__await(
 // CHECK-O0-NOT: store
 // CHECK-O0: ret void

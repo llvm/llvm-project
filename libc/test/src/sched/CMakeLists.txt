@@ -7,12 +7,14 @@ add_libc_unittest(
   SRCS
     affinity_test.cpp
   DEPENDS
-    libc.include.sched
+    libc.hdr.types.cpu_set_t
+    libc.hdr.types.pid_t
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
     libc.src.sched.sched_getaffinity
     libc.src.sched.sched_setaffinity
+    libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
@@ -25,6 +27,7 @@ add_libc_unittest(
   DEPENDS
     libc.src.errno.errno
     libc.src.sched.sched_yield
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
 add_libc_unittest(
@@ -34,10 +37,35 @@ add_libc_unittest(
   SRCS
     get_priority_test.cpp
   DEPENDS
-    libc.include.sched
+    libc.hdr.sched_macros
     libc.src.errno.errno
     libc.src.sched.sched_get_priority_min
     libc.src.sched.sched_get_priority_max
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_unittest(
+  getcpu_test
+  SUITE
+    libc_sched_unittests
+  SRCS
+    getcpu_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.sched.getcpu
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_unittest(
+  sched_getcpu_test
+  SUITE
+    libc_sched_unittests
+  SRCS
+    sched_getcpu_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.sched.sched_getcpu
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
 add_libc_unittest(
@@ -47,7 +75,8 @@ add_libc_unittest(
   SRCS
     param_and_scheduler_test.cpp
   DEPENDS
-    libc.include.sched
+    libc.hdr.sched_macros
+    libc.hdr.types.struct_sched_param
     libc.src.errno.errno
     libc.src.sched.sched_getscheduler
     libc.src.sched.sched_setscheduler
@@ -56,6 +85,7 @@ add_libc_unittest(
     libc.src.sched.sched_get_priority_min
     libc.src.sched.sched_get_priority_max
     libc.src.unistd.getuid
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
 add_libc_unittest(
@@ -65,13 +95,15 @@ add_libc_unittest(
   SRCS
     sched_rr_get_interval_test.cpp
   DEPENDS
-    libc.include.sched
+    libc.hdr.sched_macros
+    libc.hdr.types.struct_timespec
     libc.src.errno.errno
     libc.src.sched.sched_getscheduler
     libc.src.sched.sched_setscheduler
     libc.src.sched.sched_get_priority_min
     libc.src.sched.sched_rr_get_interval
     libc.src.unistd.getuid
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
 add_libc_unittest(
@@ -81,11 +113,17 @@ add_libc_unittest(
   SRCS
     cpu_count_test.cpp
   DEPENDS
-    libc.include.sched
+    libc.hdr.sched_macros
+    libc.hdr.types.cpu_set_t
+    libc.hdr.types.pid_t
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
     libc.src.sched.sched_getaffinity
     libc.src.sched.__sched_getcpucount
+    libc.src.sched.__sched_getcpuisset
+    libc.src.sched.__sched_setcpuset
+    libc.src.sched.__sched_setcpuzero
+    libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )

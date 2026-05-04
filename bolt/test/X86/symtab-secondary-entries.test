@@ -1,4 +1,4 @@
-# Check that secondary entry points are updated correctly in the ELF symtab
+## Check that secondary entry points are updated correctly in the ELF symtab
 
 RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown \
 RUN:   %p/Inputs/user-order.S -o %t.o
@@ -13,7 +13,7 @@ CHECK: [[#]] FUNC    GLOBAL DEFAULT   [[#NDX]] main
 CHECK: [[#]] FUNC    LOCAL  DEFAULT   [[#NDX]] _a
 CHECK: [[#]] FUNC    GLOBAL DEFAULT   [[#NDX]] _b
 CHECK: [[#]] FUNC    GLOBAL DEFAULT   [[#NDX]] _f
-# The following are all secondary entries of _f
+## The following are all secondary entries of _f
 CHECK:     0 FUNC    GLOBAL DEFAULT   [[#NDX]] _c
 CHECK:     0 FUNC    GLOBAL DEFAULT   [[#NDX]] _d
 CHECK:     0 FUNC    GLOBAL DEFAULT   [[#NDX]] _e

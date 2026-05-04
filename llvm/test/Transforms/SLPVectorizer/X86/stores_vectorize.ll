@@ -26,7 +26,7 @@ define void @_Z8DistanceIlLi5EEvPfiPmS0_(ptr %p1, i32 %p2, ptr %p3, ptr %p4) {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    store float [[ADD]], ptr [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i64>, ptr [[P3]], align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = lshr <4 x i64> [[TMP3]], <i64 5, i64 5, i64 5, i64 5>
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr <4 x i64> [[TMP3]], splat (i64 5)
 ; CHECK-NEXT:    store <4 x i64> [[TMP4]], ptr [[P3]], align 8
 ; CHECK-NEXT:    [[ADD_PTR11:%.*]] = getelementptr inbounds float, ptr [[ADD_PTR]], i64 [[IDX_EXT]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i64> [[TMP4]], i32 0
@@ -145,7 +145,7 @@ define void @store15(ptr %p1, i32 %p2, ptr %p3, ptr %p4) {
 ; CHECK-NEXT:    store i64 5, ptr [[ARRAYIDX9]], align 8
 ; CHECK-NEXT:    store i64 5, ptr [[ARRAYIDX9]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i64>, ptr [[P3]], align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = lshr <4 x i64> [[TMP3]], <i64 5, i64 5, i64 5, i64 5>
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr <4 x i64> [[TMP3]], splat (i64 5)
 ; CHECK-NEXT:    store <4 x i64> [[TMP4]], ptr [[P3]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -223,7 +223,7 @@ define void @store16(ptr %p1, i32 %p2, ptr %p3, ptr %p4) {
 ; CHECK-NEXT:    store i64 5, ptr [[ARRAYIDX9]], align 8
 ; CHECK-NEXT:    store i64 5, ptr [[ARRAYIDX9]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i64>, ptr [[P3]], align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = lshr <4 x i64> [[TMP3]], <i64 5, i64 5, i64 5, i64 5>
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr <4 x i64> [[TMP3]], splat (i64 5)
 ; CHECK-NEXT:    store <4 x i64> [[TMP4]], ptr [[P3]], align 8
 ; CHECK-NEXT:    ret void
 ;

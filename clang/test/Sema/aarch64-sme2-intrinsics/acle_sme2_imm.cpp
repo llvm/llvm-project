@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu \
-// RUN:    -target-feature +sve2 -target-feature +sme2 -target-feature +sme-i16i64 -target-feature +sme-f64f64 -fsyntax-only -verify %s
+// RUN:    -target-feature +bf16 -target-feature +sve -target-feature +sme -target-feature +sve2 -target-feature +sme2 -target-feature +sme-i16i64 -target-feature +sme-f64f64 -target-feature +sme-lutv2 -fsyntax-only -verify %s
 
 // REQUIRES: aarch64-registered-target
 
@@ -349,4 +349,18 @@ void test_svdot_multi_za32_bad_lane(uint32_t slice_base, svuint16_t z_u16,
   // Multi, indexed (unsigned by signed)
   svsudot_lane_za32_s8_vg1x2(slice_base, z_s8x2, z_u8, 4); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
   svsudot_lane_za32_s8_vg1x4(slice_base, z_s8x4, z_u8, 4); // expected-error {{argument value 4 is outside the valid range [0, 3]}}
+}
+
+void test_write_zt() __arm_streaming __arm_inout("zt0") {
+  // Check Zt tile 0
+  svwrite_lane_zt(1, svundef_s8(), 1);  // expected-error {{argument value 1 is outside the valid range [0, 0]}}
+  svwrite_zt(1, svundef_s8());          // expected-error {{argument value 1 is outside the valid range [0, 0]}}
+  // Check index
+  svwrite_lane_zt(0, svundef_s8(), 0);  // expected-error {{argument value 0 is outside the valid range [1, 3]}}
+  svwrite_lane_zt(0, svundef_s8(), 4);  // expected-error {{argument value 4 is outside the valid range [1, 3]}}
+}
+
+void test_luti4_zt_x4(svuint8x2_t op) __arm_streaming __arm_in("zt0") {
+  // Check Zt tile 0
+  svluti4_zt_u8_x4(1, op);  // expected-error {{argument value 1 is outside the valid range [0, 0]}}
 }

@@ -9,8 +9,7 @@
 #include "RemoteJITUtils.h"
 
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/ExecutionEngine/Orc/DebugObjectManagerPlugin.h"
-#include "llvm/ExecutionEngine/Orc/EPCDebugObjectRegistrar.h"
+#include "llvm/ExecutionEngine/Orc/Debugging/ELFDebugObjectPlugin.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
@@ -28,9 +27,10 @@ using namespace llvm;
 using namespace llvm::orc;
 
 Expected<std::unique_ptr<DefinitionGenerator>>
-loadDylib(ExecutionSession &ES, StringRef RemotePath) {
-  if (auto Handle = ES.getExecutorProcessControl().loadDylib(RemotePath.data()))
-    return std::make_unique<EPCDynamicLibrarySearchGenerator>(ES, *Handle);
+loadDylib(ExecutionSession &ES, DylibManager &DylibMgr, StringRef RemotePath) {
+  if (auto Handle = DylibMgr.loadDylib(RemotePath.data()))
+    return std::make_unique<EPCDynamicLibrarySearchGenerator>(ES, DylibMgr,
+                                                              *Handle);
   else
     return Handle.takeError();
 }
@@ -129,8 +129,7 @@ launchLocalExecutor(StringRef ExecutablePath) {
   close(FromExecutor[WriteEnd]);
 
   auto EPC = SimpleRemoteEPC::Create<FDSimpleRemoteEPCTransport>(
-      std::make_unique<DynamicThreadPoolTaskDispatcher>(),
-      SimpleRemoteEPC::Setup(),
+      std::make_unique<DynamicThreadPoolTaskDispatcher>(std::nullopt),
       FromExecutor[ReadEnd], ToExecutor[WriteEnd]);
   if (!EPC)
     return EPC.takeError();
@@ -201,8 +200,7 @@ connectTCPSocket(StringRef NetworkAddress) {
     return CreateErr(toString(SockFD.takeError()));
 
   return SimpleRemoteEPC::Create<FDSimpleRemoteEPCTransport>(
-      std::make_unique<DynamicThreadPoolTaskDispatcher>(),
-      SimpleRemoteEPC::Setup(), *SockFD);
+      std::make_unique<DynamicThreadPoolTaskDispatcher>(std::nullopt), *SockFD);
 }
 
 #endif

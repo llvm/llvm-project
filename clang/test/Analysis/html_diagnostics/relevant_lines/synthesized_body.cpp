@@ -20,6 +20,6 @@ void call_deref_once() {
 
 
 // RUN: rm -rf %t.output
-// RUN: %clang_analyze_cc1 -std=c++11 -analyze -analyzer-checker=core -analyzer-output html -o %t.output %s
+// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core -analyzer-output html -o %t.output %s
 // RUN: cat %t.output/* | FileCheck %s --match-full-lines
 // CHECK: var relevant_lines = {"1": {"3": 1,  "8": 1, "11": 1, "12": 1, "15": 1, "16": 1, "17": 1, "18": 1}};

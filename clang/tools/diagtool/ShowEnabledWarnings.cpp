@@ -10,10 +10,12 @@
 #include "DiagnosticNames.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Frontend/CompilerInstance.h"
+#include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Frontend/Utils.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/VirtualFileSystem.h"
 
 DEF_DIAGTOOL("show-enabled",
              "Show which warnings are enabled for a given command line",
@@ -54,35 +56,27 @@ static char getCharForLevel(DiagnosticsEngine::Level Level) {
 
 static IntrusiveRefCntPtr<DiagnosticsEngine>
 createDiagnostics(unsigned int argc, char **argv) {
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagIDs(new DiagnosticIDs());
-
   // Buffer diagnostics from argument parsing so that we can output them using a
   // well formed diagnostic object.
-  TextDiagnosticBuffer *DiagsBuffer = new TextDiagnosticBuffer;
+  std::unique_ptr<TextDiagnosticBuffer> DiagsBuffer =
+      std::make_unique<TextDiagnosticBuffer>();
 
-  // Try to build a CompilerInvocation.
+  // Try to build the diagnostics parser
   SmallVector<const char *, 4> Args;
   Args.push_back("diagtool");
   Args.append(argv, argv + argc);
-  CreateInvocationOptions CIOpts;
-  CIOpts.Diags =
-      new DiagnosticsEngine(DiagIDs, new DiagnosticOptions(), DiagsBuffer);
-  std::unique_ptr<CompilerInvocation> Invocation =
-      createInvocation(Args, CIOpts);
-  if (!Invocation)
-    return nullptr;
-
-  // Build the diagnostics parser
-  IntrusiveRefCntPtr<DiagnosticsEngine> FinalDiags =
-    CompilerInstance::createDiagnostics(&Invocation->getDiagnosticOpts());
-  if (!FinalDiags)
+  auto DiagOpts = CreateAndPopulateDiagOpts(Args);
+  IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
+      CompilerInstance::createDiagnostics(*llvm::vfs::getRealFileSystem(),
+                                          *DiagOpts);
+  if (!Diags)
     return nullptr;
 
   // Flush any errors created when initializing everything. This could happen
   // for invalid command lines, which will probably give non-sensical results.
-  DiagsBuffer->FlushDiagnostics(*FinalDiags);
+  DiagsBuffer->FlushDiagnostics(*Diags);
 
-  return FinalDiags;
+  return Diags;
 }
 
 int ShowEnabledWarnings::run(unsigned int argc, char **argv, raw_ostream &Out) {
@@ -90,11 +84,11 @@ int ShowEnabledWarnings::run(unsigned int argc, char **argv, raw_ostream &Out) {
   bool ShouldShowLevels = true;
   if (argc > 0) {
     StringRef FirstArg(*argv);
-    if (FirstArg.equals("--no-levels")) {
+    if (FirstArg == "--no-levels") {
       ShouldShowLevels = false;
       --argc;
       ++argv;
-    } else if (FirstArg.equals("--levels")) {
+    } else if (FirstArg == "--levels") {
       ShouldShowLevels = true;
       --argc;
       ++argv;
@@ -117,10 +111,10 @@ int ShowEnabledWarnings::run(unsigned int argc, char **argv, raw_ostream &Out) {
   for (const DiagnosticRecord &DR : getBuiltinDiagnosticsByName()) {
     unsigned DiagID = DR.DiagID;
 
-    if (DiagnosticIDs::isBuiltinNote(DiagID))
+    if (DiagnosticIDs{}.isNote(DiagID))
       continue;
 
-    if (!DiagnosticIDs::isBuiltinWarningOrExtension(DiagID))
+    if (!DiagnosticIDs{}.isWarningOrExtension(DiagID))
       continue;
 
     DiagnosticsEngine::Level DiagLevel =
@@ -128,7 +122,7 @@ int ShowEnabledWarnings::run(unsigned int argc, char **argv, raw_ostream &Out) {
     if (DiagLevel == DiagnosticsEngine::Ignored)
       continue;
 
-    StringRef WarningOpt = DiagnosticIDs::getWarningOptionForDiag(DiagID);
+    StringRef WarningOpt = DiagnosticIDs{}.getWarningOptionForDiag(DiagID);
     Active.push_back(PrettyDiag(DR.getName(), WarningOpt, DiagLevel));
   }
 

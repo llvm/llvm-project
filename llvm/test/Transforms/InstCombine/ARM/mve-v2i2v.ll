@@ -66,7 +66,7 @@ entry:
 define <16 x i1> @v2i2v_2_16(<2 x i1> %vin) {
 ; CHECK-LABEL: @v2i2v_2_16(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INT:%.*]] = call i32 @llvm.arm.mve.pred.v2i.v2i1(<2 x i1> [[VIN:%.*]]), !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    [[INT:%.*]] = call noundef range(i32 0, 65536) i32 @llvm.arm.mve.pred.v2i.v2i1(<2 x i1> [[VIN:%.*]])
 ; CHECK-NEXT:    [[VOUT:%.*]] = call <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32 [[INT]])
 ; CHECK-NEXT:    ret <16 x i1> [[VOUT]]
 ;
@@ -79,7 +79,7 @@ entry:
 define <16 x i1> @v2i2v_4_16(<4 x i1> %vin) {
 ; CHECK-LABEL: @v2i2v_4_16(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INT:%.*]] = call i32 @llvm.arm.mve.pred.v2i.v4i1(<4 x i1> [[VIN:%.*]]), !range [[RNG0]]
+; CHECK-NEXT:    [[INT:%.*]] = call noundef range(i32 0, 65536) i32 @llvm.arm.mve.pred.v2i.v4i1(<4 x i1> [[VIN:%.*]])
 ; CHECK-NEXT:    [[VOUT:%.*]] = call <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32 [[INT]])
 ; CHECK-NEXT:    ret <16 x i1> [[VOUT]]
 ;
@@ -92,7 +92,7 @@ entry:
 define <4 x i1> @v2i2v_8_4(<8 x i1> %vin) {
 ; CHECK-LABEL: @v2i2v_8_4(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INT:%.*]] = call i32 @llvm.arm.mve.pred.v2i.v8i1(<8 x i1> [[VIN:%.*]]), !range [[RNG0]]
+; CHECK-NEXT:    [[INT:%.*]] = call noundef range(i32 0, 65536) i32 @llvm.arm.mve.pred.v2i.v8i1(<8 x i1> [[VIN:%.*]])
 ; CHECK-NEXT:    [[VOUT:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[INT]])
 ; CHECK-NEXT:    ret <4 x i1> [[VOUT]]
 ;
@@ -105,7 +105,7 @@ entry:
 define <8 x i1> @v2i2v_16_8(<16 x i1> %vin) {
 ; CHECK-LABEL: @v2i2v_16_8(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INT:%.*]] = call i32 @llvm.arm.mve.pred.v2i.v16i1(<16 x i1> [[VIN:%.*]]), !range [[RNG0]]
+; CHECK-NEXT:    [[INT:%.*]] = call noundef range(i32 0, 65536) i32 @llvm.arm.mve.pred.v2i.v16i1(<16 x i1> [[VIN:%.*]])
 ; CHECK-NEXT:    [[VOUT:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[INT]])
 ; CHECK-NEXT:    ret <8 x i1> [[VOUT]]
 ;
@@ -170,7 +170,7 @@ entry:
 define i32 @v2i_truncext_i16(<4 x i1> %vin) {
 ; CHECK-LABEL: @v2i_truncext_i16(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[WIDE1:%.*]] = call i32 @llvm.arm.mve.pred.v2i.v4i1(<4 x i1> [[VIN:%.*]]), !range [[RNG0]]
+; CHECK-NEXT:    [[WIDE1:%.*]] = call noundef range(i32 0, 65536) i32 @llvm.arm.mve.pred.v2i.v4i1(<4 x i1> [[VIN:%.*]])
 ; CHECK-NEXT:    ret i32 [[WIDE1]]
 ;
 entry:
@@ -183,7 +183,7 @@ entry:
 define i32 @v2i_truncext_i8(<4 x i1> %vin) {
 ; CHECK-LABEL: @v2i_truncext_i8(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[WIDE1:%.*]] = call i32 @llvm.arm.mve.pred.v2i.v4i1(<4 x i1> [[VIN:%.*]]), !range [[RNG0]]
+; CHECK-NEXT:    [[WIDE1:%.*]] = call noundef range(i32 0, 65536) i32 @llvm.arm.mve.pred.v2i.v4i1(<4 x i1> [[VIN:%.*]])
 ; CHECK-NEXT:    [[WIDE2:%.*]] = and i32 [[WIDE1]], 255
 ; CHECK-NEXT:    ret i32 [[WIDE2]]
 ;
@@ -197,7 +197,7 @@ entry:
 define i32 @v2i_and_16(<4 x i1> %vin) {
 ; CHECK-LABEL: @v2i_and_16(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[WIDE1:%.*]] = call i32 @llvm.arm.mve.pred.v2i.v4i1(<4 x i1> [[VIN:%.*]]), !range [[RNG0]]
+; CHECK-NEXT:    [[WIDE1:%.*]] = call noundef range(i32 0, 65536) i32 @llvm.arm.mve.pred.v2i.v4i1(<4 x i1> [[VIN:%.*]])
 ; CHECK-NEXT:    ret i32 [[WIDE1]]
 ;
 entry:
@@ -209,7 +209,7 @@ entry:
 define i32 @v2i_and_15(<4 x i1> %vin) {
 ; CHECK-LABEL: @v2i_and_15(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[WIDE1:%.*]] = call i32 @llvm.arm.mve.pred.v2i.v4i1(<4 x i1> [[VIN:%.*]]), !range [[RNG0]]
+; CHECK-NEXT:    [[WIDE1:%.*]] = call noundef range(i32 0, 65536) i32 @llvm.arm.mve.pred.v2i.v4i1(<4 x i1> [[VIN:%.*]])
 ; CHECK-NEXT:    [[WIDE2:%.*]] = and i32 [[WIDE1]], 32767
 ; CHECK-NEXT:    ret i32 [[WIDE2]]
 ;
@@ -282,7 +282,7 @@ entry:
 define <2 x i1> @vpnot_2(<2 x i1> %vin) {
 ; CHECK-LABEL: @vpnot_2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[VOUT:%.*]] = xor <2 x i1> [[VIN:%.*]], <i1 true, i1 true>
+; CHECK-NEXT:    [[VOUT:%.*]] = xor <2 x i1> [[VIN:%.*]], splat (i1 true)
 ; CHECK-NEXT:    ret <2 x i1> [[VOUT]]
 ;
 entry:
@@ -295,7 +295,7 @@ entry:
 define <4 x i1> @vpnot_4(<4 x i1> %vin) {
 ; CHECK-LABEL: @vpnot_4(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[VOUT:%.*]] = xor <4 x i1> [[VIN:%.*]], <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[VOUT:%.*]] = xor <4 x i1> [[VIN:%.*]], splat (i1 true)
 ; CHECK-NEXT:    ret <4 x i1> [[VOUT]]
 ;
 entry:
@@ -308,7 +308,7 @@ entry:
 define <8 x i1> @vpnot_8(<8 x i1> %vin) {
 ; CHECK-LABEL: @vpnot_8(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[VOUT:%.*]] = xor <8 x i1> [[VIN:%.*]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[VOUT:%.*]] = xor <8 x i1> [[VIN:%.*]], splat (i1 true)
 ; CHECK-NEXT:    ret <8 x i1> [[VOUT]]
 ;
 entry:
@@ -321,7 +321,7 @@ entry:
 define <16 x i1> @vpnot_16(<16 x i1> %vin) {
 ; CHECK-LABEL: @vpnot_16(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[VOUT:%.*]] = xor <16 x i1> [[VIN:%.*]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[VOUT:%.*]] = xor <16 x i1> [[VIN:%.*]], splat (i1 true)
 ; CHECK-NEXT:    ret <16 x i1> [[VOUT]]
 ;
 entry:
@@ -337,7 +337,7 @@ entry:
 define <2 x i1> @vpnot_narrow_2(<2 x i1> %vin) {
 ; CHECK-LABEL: @vpnot_narrow_2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[VOUT:%.*]] = xor <2 x i1> [[VIN:%.*]], <i1 true, i1 true>
+; CHECK-NEXT:    [[VOUT:%.*]] = xor <2 x i1> [[VIN:%.*]], splat (i1 true)
 ; CHECK-NEXT:    ret <2 x i1> [[VOUT]]
 ;
 entry:
@@ -352,7 +352,7 @@ entry:
 define <4 x i1> @vpnot_narrow_4(<4 x i1> %vin) {
 ; CHECK-LABEL: @vpnot_narrow_4(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[VOUT:%.*]] = xor <4 x i1> [[VIN:%.*]], <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[VOUT:%.*]] = xor <4 x i1> [[VIN:%.*]], splat (i1 true)
 ; CHECK-NEXT:    ret <4 x i1> [[VOUT]]
 ;
 entry:
@@ -367,7 +367,7 @@ entry:
 define <8 x i1> @vpnot_narrow_8(<8 x i1> %vin) {
 ; CHECK-LABEL: @vpnot_narrow_8(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[VOUT:%.*]] = xor <8 x i1> [[VIN:%.*]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[VOUT:%.*]] = xor <8 x i1> [[VIN:%.*]], splat (i1 true)
 ; CHECK-NEXT:    ret <8 x i1> [[VOUT]]
 ;
 entry:
@@ -382,7 +382,7 @@ entry:
 define <16 x i1> @vpnot_narrow_16(<16 x i1> %vin) {
 ; CHECK-LABEL: @vpnot_narrow_16(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[VOUT:%.*]] = xor <16 x i1> [[VIN:%.*]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[VOUT:%.*]] = xor <16 x i1> [[VIN:%.*]], splat (i1 true)
 ; CHECK-NEXT:    ret <16 x i1> [[VOUT]]
 ;
 entry:
@@ -397,7 +397,7 @@ entry:
 define i32 @range_upper_limit(<16 x i1> %vin) {
 ; CHECK-LABEL: @range_upper_limit(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INT:%.*]] = call i32 @llvm.arm.mve.pred.v2i.v16i1(<16 x i1> [[VIN:%.*]]), !range [[RNG0]]
+; CHECK-NEXT:    [[INT:%.*]] = call noundef range(i32 0, 65536) i32 @llvm.arm.mve.pred.v2i.v16i1(<16 x i1> [[VIN:%.*]])
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[INT]], 65535
 ; CHECK-NEXT:    [[S:%.*]] = zext i1 [[C]] to i32
 ; CHECK-NEXT:    ret i32 [[S]]
@@ -407,4 +407,37 @@ entry:
   %c = icmp eq i32 %int, 65535
   %s = select i1 %c, i32 1, i32 0
   ret i32 %s
+}
+
+define i32 @range_already_added_larger_range(<16 x i1> %vin) {
+; CHECK-LABEL: @range_already_added_larger_range(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INT:%.*]] = call noundef range(i32 0, 65536) i32 @llvm.arm.mve.pred.v2i.v16i1(<16 x i1> [[VIN:%.*]])
+; CHECK-NEXT:    ret i32 [[INT]]
+;
+entry:
+  %int = call noundef range(i32 0, 65540) i32 @llvm.arm.mve.pred.v2i.v16i1(<16 x i1> %vin)
+  ret i32 %int
+}
+
+define i32 @range_already_added_smaller_range(<16 x i1> %vin) {
+; CHECK-LABEL: @range_already_added_smaller_range(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INT:%.*]] = call noundef range(i32 0, 655) i32 @llvm.arm.mve.pred.v2i.v16i1(<16 x i1> [[VIN:%.*]])
+; CHECK-NEXT:    ret i32 [[INT]]
+;
+entry:
+  %int = call noundef range(i32 0, 655) i32 @llvm.arm.mve.pred.v2i.v16i1(<16 x i1> %vin)
+  ret i32 %int
+}
+
+define i32 @range_already_added_same_range(<16 x i1> %vin) {
+; CHECK-LABEL: @range_already_added_same_range(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INT:%.*]] = call noundef range(i32 0, 65536) i32 @llvm.arm.mve.pred.v2i.v16i1(<16 x i1> [[VIN:%.*]])
+; CHECK-NEXT:    ret i32 [[INT]]
+;
+entry:
+  %int = call noundef range(i32 0, 65536) i32 @llvm.arm.mve.pred.v2i.v16i1(<16 x i1> %vin)
+  ret i32 %int
 }

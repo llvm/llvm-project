@@ -1,0 +1,28 @@
+// RUN: rm -rf %t
+// RUN: split-file %s %t
+// RUN: sed -e "s|DIR|%/t|g" %t/cdb.json.in > %t/cdb.json
+
+// RUN: clang-scan-deps -compilation-database %t/cdb.json -v -o %t/result.json 2>&1 | FileCheck %s
+// CHECK:      *** Virtual File System Stats:
+// CHECK-NEXT: {{[[:digit:]]+}} status() calls
+// CHECK-NEXT: {{[[:digit:]]+}} openFileForRead() calls
+// CHECK-NEXT: {{[[:digit:]]+}} dir_begin() calls
+// CHECK-NEXT: {{[[:digit:]]+}} getRealPath() calls
+// CHECK-NEXT: {{[[:digit:]]+}} exists() calls
+// CHECK-NEXT: {{[[:digit:]]+}} isLocal() calls
+
+//--- tu.c
+
+//--- cdb.json.in
+[
+  {
+    "file": "DIR/tu.c"
+    "directory": "DIR",
+    "command": "clang -c DIR/tu.c -o DIR/tu.o"
+  },
+  {
+    "file": "DIR/tu.c"
+    "directory": "DIR",
+    "command": "clang -c DIR/tu.c -o DIR/tu.o"
+  }
+]

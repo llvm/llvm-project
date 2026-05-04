@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass=postrapseudos -o - %s | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass=postrapseudos -o - %s | FileCheck %s
 
 # CHECK: $v2 = V6_vcmov $p0, killed $v0
 # CHECK: $v2 = V6_vncmov killed $p0, killed $v1, implicit $v2

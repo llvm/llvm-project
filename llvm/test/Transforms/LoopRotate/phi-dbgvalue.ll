@@ -2,11 +2,11 @@
 
 ;CHECK-LABEL: func
 ;CHECK-LABEL: entry
-;CHECK-NEXT: tail call void @llvm.dbg.value(metadata i32 %a
-;CHECK-NEXT: tail call void @llvm.dbg.value(metadata i32 1, metadata ![[I_VAR:[0-9]+]], metadata !DIExpression())
+;CHECK-NEXT: #dbg_value(i32 %a
+;CHECK-NEXT: #dbg_value(i32 1, ![[I_VAR:[0-9]+]], !DIExpression(),
 ;CHECK-LABEL: for.body:
 ;CHECK-NEXT: [[I:%.*]] = phi i32 [ 1, %entry ], [ %inc, %for.body ]
-;CHECK-NEXT: tail call void @llvm.dbg.value(metadata i32 [[I]], metadata ![[I_VAR]], metadata !DIExpression())
+;CHECK-NEXT: #dbg_value(i32 [[I]], ![[I_VAR]], !DIExpression(),
 
 ; CHECK: ![[I_VAR]] = !DILocalVariable(name: "i",{{.*}})
 

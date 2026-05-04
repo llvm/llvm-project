@@ -5,7 +5,7 @@
 // RUN:  -emit-pch -o %t %s
 
 // RUN: %clang_cc1 -fopenmp -std=c++11 \
-// RUN:  -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s
+// RUN:  -include-pch %t -verify %s -ast-print | FileCheck %s
 
 // RUN: %clang_cc1 -verify -fopenmp-simd \
 // RUN:  -std=c++11 -ast-print %s | FileCheck %s
@@ -14,7 +14,7 @@
 // RUN:  -emit-pch -o %t %s
 
 // RUN: %clang_cc1 -fopenmp-simd -std=c++11 \
-// RUN:  -include-pch %t -fsyntax-only -verify %s -ast-print | FileCheck %s
+// RUN:  -include-pch %t -verify %s -ast-print | FileCheck %s
 
 // expected-no-diagnostics
 

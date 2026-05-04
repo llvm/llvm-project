@@ -103,8 +103,11 @@ protected:
   }
 };
 
-INSTANTIATE_TEST_SUITE_P(TreeTests, TreeTest,
-                        ::testing::ValuesIn(allTestClangConfigs()) );
+INSTANTIATE_TEST_SUITE_P(
+    TreeTests, TreeTest, ::testing::ValuesIn(allTestClangConfigs()),
+    [](const testing::TestParamInfo<TestClangConfig> &Info) {
+      return Info.param.toShortString();
+    });
 
 TEST_P(TreeTest, FirstLeaf) {
   buildTree("", GetParam());
@@ -221,8 +224,11 @@ protected:
   }
 };
 
-INSTANTIATE_TEST_SUITE_P(TreeTests, ListTest,
-                        ::testing::ValuesIn(allTestClangConfigs()) );
+INSTANTIATE_TEST_SUITE_P(
+    TreeTests, ListTest, ::testing::ValuesIn(allTestClangConfigs()),
+    [](const testing::TestParamInfo<TestClangConfig> &Info) {
+      return Info.param.toShortString();
+    });
 
 /// "a, b, c"  <=> [("a", ","), ("b", ","), ("c", null)]
 TEST_P(ListTest, List_Separated_WellFormed) {

@@ -21,7 +21,7 @@ void llvm::parseFuzzerCLOpts(int ArgC, char *ArgV[]) {
 
   int I = 1;
   while (I < ArgC)
-    if (StringRef(ArgV[I++]).equals("-ignore_remaining_args=1"))
+    if (StringRef(ArgV[I++]) == "-ignore_remaining_args=1")
       break;
   while (I < ArgC)
     CLArgs.push_back(ArgV[I++]);
@@ -39,7 +39,7 @@ void llvm::handleExecNameEncodedBEOpts(StringRef ExecName) {
   SmallVector<StringRef, 4> Opts;
   NameAndArgs.second.split(Opts, '-');
   for (StringRef Opt : Opts) {
-    if (Opt.equals("gisel")) {
+    if (Opt == "gisel") {
       Args.push_back("-global-isel");
       // For now we default GlobalISel to -O0
       Args.push_back("-O0");
@@ -151,7 +151,7 @@ int llvm::runFuzzerOnInputs(int ArgC, char *ArgV[], FuzzerTestFun TestOne,
   for (int I = 1; I < ArgC; ++I) {
     StringRef Arg(ArgV[I]);
     if (Arg.starts_with("-")) {
-      if (Arg.equals("-ignore_remaining_args=1"))
+      if (Arg == "-ignore_remaining_args=1")
         break;
       continue;
     }

@@ -160,7 +160,6 @@ TEST(LogTest, Unregister) {
   llvm::llvm_shutdown_obj obj;
   Log::Register("chan", test_channel);
   EXPECT_EQ(nullptr, GetLog(TestChannel::FOO));
-  std::string message;
   auto log_handler_sp = std::make_shared<TestLogHandler>();
   EXPECT_TRUE(
       Log::EnableLogChannel(log_handler_sp, 0, "chan", {"foo"}, llvm::nulls()));
@@ -200,9 +199,20 @@ TEST(LogHandlerTest, RotatingLogHandler) {
   EXPECT_EQ(GetDumpAsString(handler), "bazquxquux");
 }
 
+TEST(LogHandlerTest, TeeLogHandler) {
+  auto handler1 = std::make_shared<RotatingLogHandler>(2);
+  auto handler2 = std::make_shared<RotatingLogHandler>(2);
+  TeeLogHandler handler(handler1, handler2);
+
+  handler.Emit("foo");
+  handler.Emit("bar");
+
+  EXPECT_EQ(GetDumpAsString(*handler1), "foobar");
+  EXPECT_EQ(GetDumpAsString(*handler2), "foobar");
+}
+
 TEST_F(LogChannelTest, Enable) {
   EXPECT_EQ(nullptr, GetLog(TestChannel::FOO));
-  std::string message;
   auto log_handler_sp = std::make_shared<TestLogHandler>();
   std::string error;
   ASSERT_FALSE(EnableChannel(log_handler_sp, 0, "chanchan", {}, error));
@@ -224,7 +234,6 @@ TEST_F(LogChannelTest, Enable) {
 
 TEST_F(LogChannelTest, EnableOptions) {
   EXPECT_EQ(nullptr, GetLog(TestChannel::FOO));
-  std::string message;
   auto log_handler_sp = std::make_shared<TestLogHandler>();
   std::string error;
   EXPECT_TRUE(EnableChannel(log_handler_sp, LLDB_LOG_OPTION_VERBOSE, "chan", {},
@@ -237,7 +246,6 @@ TEST_F(LogChannelTest, EnableOptions) {
 
 TEST_F(LogChannelTest, Disable) {
   EXPECT_EQ(nullptr, GetLog(TestChannel::FOO));
-  std::string message;
   auto log_handler_sp = std::make_shared<TestLogHandler>();
   std::string error;
   EXPECT_TRUE(EnableChannel(log_handler_sp, 0, "chan", {"foo", "bar"}, error));
@@ -331,16 +339,12 @@ TEST_F(LogChannelEnabledTest, LLDB_LOG_ERROR) {
   LLDB_LOG_ERROR(getLog(), llvm::Error::success(), "Foo failed: {0}");
   ASSERT_EQ("", takeOutput());
 
-  LLDB_LOG_ERROR(getLog(),
-                 llvm::make_error<llvm::StringError>(
-                     "My Error", llvm::inconvertibleErrorCode()),
+  LLDB_LOG_ERROR(getLog(), llvm::createStringError("My Error"),
                  "Foo failed: {0}");
   ASSERT_EQ("Foo failed: My Error\n", takeOutput());
 
   // Doesn't log, but doesn't assert either
-  LLDB_LOG_ERROR(nullptr,
-                 llvm::make_error<llvm::StringError>(
-                     "My Error", llvm::inconvertibleErrorCode()),
+  LLDB_LOG_ERROR(nullptr, llvm::createStringError("My Error"),
                  "Foo failed: {0}");
 }
 
@@ -367,7 +371,7 @@ TEST_F(LogChannelEnabledTest, LogVerboseThread) {
 
   // Start logging on one thread. Concurrently, try enabling the log channel
   // (with different log options).
-  std::thread log_thread([this] { LLDB_LOGV(getLog(), "Hello World"); });
+  std::thread log_thread([this] { LLDB_LOG_VERBOSE(getLog(), "Hello World"); });
   EXPECT_TRUE(
       EnableChannel(getLogHandler(), LLDB_LOG_OPTION_VERBOSE, "chan", {}, err));
   log_thread.join();

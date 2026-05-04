@@ -4,14 +4,11 @@
 define void @foo() {
 ; CHECK-LABEL: define void @foo() {
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> <i32 poison, i32 0>, i32 0, i32 0
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x i32> [ zeroinitializer, [[BB:%.*]] ], [ [[TMP6:%.*]], [[BB4:%.*]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = shl <2 x i32> [[TMP1]], [[TMP0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = or <2 x i32> [[TMP1]], [[TMP0]]
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> [[TMP3]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> [[TMP1]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP2:%.*]] = shl <2 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> [[TMP1]], <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    [[TMP6]] = or <2 x i32> [[TMP5]], zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i32> [[TMP6]], i32 0
 ; CHECK-NEXT:    [[CALL:%.*]] = call i64 null(i32 [[TMP7]])
@@ -19,7 +16,7 @@ define void @foo() {
 ; CHECK:       bb4:
 ; CHECK-NEXT:    br i1 false, label [[BB5:%.*]], label [[BB1]]
 ; CHECK:       bb5:
-; CHECK-NEXT:    [[TMP8:%.*]] = phi <2 x i32> [ [[TMP4]], [[BB4]] ]
+; CHECK-NEXT:    [[TMP8:%.*]] = phi <2 x i32> [ [[TMP2]], [[BB4]] ]
 ; CHECK-NEXT:    ret void
 ;
 bb:

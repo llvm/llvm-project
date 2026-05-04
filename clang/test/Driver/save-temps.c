@@ -1,6 +1,3 @@
-// REQUIRES: x86-registered-target
-// REQUIRES: arm-registered-target
-
 // RUN: %clang -target x86_64-apple-darwin -save-temps -arch x86_64 %s -### 2>&1 \
 // RUN:   | FileCheck %s
 // CHECK: "-o" "save-temps.i"

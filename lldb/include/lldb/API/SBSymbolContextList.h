@@ -44,6 +44,7 @@ public:
 protected:
   friend class SBModule;
   friend class SBTarget;
+  friend class SBCompileUnit;
 
   lldb_private::SymbolContextList *operator->() const;
 

@@ -1,4 +1,4 @@
-// REQUIRES: zlib, amdgpu-registered-target
+// REQUIRES: zlib
 
 // RUN: %clang -### -target amdgcn-amd-amdhsa -gz=none -x assembler %s 2>&1 | FileCheck -check-prefix CHECK-OPT_GZ_EQ_NONE %s
 // RUN: %clang -### -target amdgcn-amd-amdhsa -gz=none -nogpulib %s 2>&1 | FileCheck -check-prefix CHECK-OPT_GZ_EQ_NONE %s

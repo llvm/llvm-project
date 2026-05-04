@@ -15,14 +15,11 @@
 #include "PPCCallLowering.h"
 #include "PPCCallingConv.h"
 #include "PPCISelLowering.h"
-#include "PPCSubtarget.h"
-#include "PPCTargetMachine.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/TargetCallingConv.h"
-#include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "ppc-call-lowering"
 
@@ -36,7 +33,8 @@ struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
       : OutgoingValueHandler(MIRBuilder, MRI), MIB(MIB) {}
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
-                        const CCValAssign &VA) override;
+                        const CCValAssign &VA,
+                        ISD::ArgFlagsTy Flags = {}) override;
   void assignValueToAddress(Register ValVReg, Register Addr, LLT MemTy,
                             const MachinePointerInfo &MPO,
                             const CCValAssign &VA) override;
@@ -49,7 +47,8 @@ struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
 } // namespace
 
 void OutgoingArgHandler::assignValueToReg(Register ValVReg, Register PhysReg,
-                                          const CCValAssign &VA) {
+                                          const CCValAssign &VA,
+                                          ISD::ArgFlagsTy Flags) {
   MIB.addUse(PhysReg, RegState::Implicit);
   Register ExtReg = extendRegister(ValVReg, VA);
   MIRBuilder.buildCopy(PhysReg, ExtReg);
@@ -80,7 +79,7 @@ bool PPCCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
   MachineFunction &MF = MIRBuilder.getMF();
   const Function &F = MF.getFunction();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  auto &DL = F.getParent()->getDataLayout();
+  auto &DL = F.getDataLayout();
   if (!VRegs.empty()) {
     // Setup the information about the return value.
     ArgInfo OrigArg{VRegs, Val->getType(), 0};
@@ -117,7 +116,7 @@ bool PPCCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                                            FunctionLoweringInfo &FLI) const {
   MachineFunction &MF = MIRBuilder.getMF();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  const auto &DL = F.getParent()->getDataLayout();
+  const auto &DL = F.getDataLayout();
   auto &TLI = *getTLI<PPCTargetLowering>();
 
   // Loop over each arg, set flags and split to single value types
@@ -144,7 +143,8 @@ bool PPCCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
 
 void PPCIncomingValueHandler::assignValueToReg(Register ValVReg,
                                                Register PhysReg,
-                                               const CCValAssign &VA) {
+                                               const CCValAssign &VA,
+                                               ISD::ArgFlagsTy Flags) {
   markPhysRegUsed(PhysReg);
   IncomingValueHandler::assignValueToReg(ValVReg, PhysReg, VA);
 }

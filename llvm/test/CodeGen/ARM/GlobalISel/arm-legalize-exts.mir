@@ -211,10 +211,7 @@ body:             |
     ; CHECK: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[V8]](s8)
     ; CHECK: [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[V8]](s8)
     ; CHECK: [[OR:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SEXT]]
-    ; CHECK: [[BITS:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; CHECK: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[OR]], [[BITS]](s32)
-    ; CHECK: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[BITS]](s32)
-    ; CHECK: $r0 = COPY [[ASHR]]
+    ; CHECK: $r0 = COPY [[OR]]
 
     %5(s32) = G_SEXT %4(s16)
     $r0 = COPY %5

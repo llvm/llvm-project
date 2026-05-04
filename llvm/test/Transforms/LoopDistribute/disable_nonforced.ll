@@ -1,16 +1,11 @@
-; RUN: opt -passes=loop-distribute -enable-loop-distribute=1 -S < %s | FileCheck %s
+; RUN: opt -passes=loop-distribute -enable-loop-distribute -verify-loop-info -verify-dom-info -S < %s | FileCheck %s
 ;
 ; Check that the disable_nonforced is honored by loop distribution.
 ;
-target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
+define void @disable_nonforced(ptr noalias %a, ptr noalias %b, ptr noalias %c, ptr noalias %d, ptr noalias %e) {
 ; CHECK-LABEL: @disable_nonforced(
 ; CHECK-NOT: for.body.ldist1:
-define void @disable_nonforced(ptr noalias %a,
-                         ptr noalias %b,
-                         ptr noalias %c,
-                         ptr noalias %d,
-                         ptr noalias %e) {
 entry:
   br label %for.body
 

@@ -8,12 +8,13 @@
 
 // UNSUPPORTED: no-exceptions
 
-// PR41395 isn't fixed until the dylib shipped with macOS 10.15
-// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14}}
+// This test requires the fix in http://llvm.org/PR41395 (c4225e124f9e).
+// XFAIL: using-built-library-before-llvm-9
 
 #include "cxxabi.h"
-#include <new>
 #include <cassert>
+#include <cstddef>
+#include <new>
 
 void dummy_ctor(void*) { assert(false && "should not be called"); }
 void dummy_dtor(void*) { assert(false && "should not be called"); }

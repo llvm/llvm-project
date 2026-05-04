@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx900 -verify-machineinstrs <%s | FileCheck -check-prefixes=GCN %s
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx900 <%s | FileCheck -check-prefixes=GCN %s
 ;
 ; This test checks that we have the correct fold for zext(cc1) - zext(cc2).
 ;
@@ -21,7 +21,7 @@
 define amdgpu_cs float @sub_zext_zext() {
 .entry:
 
-  %t519 = load float, ptr addrspace(3) null
+  %t519 = load float, ptr addrspace(3) zeroinitializer
 
   %t524 = fcmp ogt float %t519, 0.000000e+00
   %t525 = fcmp olt float %t519, 0.000000e+00

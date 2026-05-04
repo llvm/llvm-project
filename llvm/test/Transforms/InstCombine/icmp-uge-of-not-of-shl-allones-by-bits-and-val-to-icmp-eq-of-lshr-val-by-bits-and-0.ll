@@ -40,38 +40,38 @@ define <2 x i1> @p1_vec(<2 x i8> %val, <2 x i8> %bits) {
   ret <2 x i1> %r
 }
 
-define <3 x i1> @p2_vec_undef0(<3 x i8> %val, <3 x i8> %bits) {
-; CHECK-LABEL: @p2_vec_undef0(
+define <3 x i1> @p2_vec_poison0(<3 x i8> %val, <3 x i8> %bits) {
+; CHECK-LABEL: @p2_vec_poison0(
 ; CHECK-NEXT:    [[VAL_HIGHBITS:%.*]] = lshr <3 x i8> [[VAL:%.*]], [[BITS:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq <3 x i8> [[VAL_HIGHBITS]], zeroinitializer
 ; CHECK-NEXT:    ret <3 x i1> [[R]]
 ;
-  %t0 = shl <3 x i8> <i8 -1, i8 undef, i8 -1>, %bits
+  %t0 = shl <3 x i8> <i8 -1, i8 poison, i8 -1>, %bits
   %t1 = xor <3 x i8> %t0, <i8 -1, i8 -1, i8 -1>
   %r = icmp uge <3 x i8> %t1, %val
   ret <3 x i1> %r
 }
 
-define <3 x i1> @p2_vec_undef1(<3 x i8> %val, <3 x i8> %bits) {
-; CHECK-LABEL: @p2_vec_undef1(
+define <3 x i1> @p2_vec_poison1(<3 x i8> %val, <3 x i8> %bits) {
+; CHECK-LABEL: @p2_vec_poison1(
 ; CHECK-NEXT:    [[VAL_HIGHBITS:%.*]] = lshr <3 x i8> [[VAL:%.*]], [[BITS:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq <3 x i8> [[VAL_HIGHBITS]], zeroinitializer
 ; CHECK-NEXT:    ret <3 x i1> [[R]]
 ;
   %t0 = shl <3 x i8> <i8 -1, i8 -1, i8 -1>, %bits
-  %t1 = xor <3 x i8> %t0, <i8 -1, i8 undef, i8 -1>
+  %t1 = xor <3 x i8> %t0, <i8 -1, i8 poison, i8 -1>
   %r = icmp uge <3 x i8> %t1, %val
   ret <3 x i1> %r
 }
 
-define <3 x i1> @p2_vec_undef2(<3 x i8> %val, <3 x i8> %bits) {
-; CHECK-LABEL: @p2_vec_undef2(
+define <3 x i1> @p2_vec_poison2(<3 x i8> %val, <3 x i8> %bits) {
+; CHECK-LABEL: @p2_vec_poison2(
 ; CHECK-NEXT:    [[VAL_HIGHBITS:%.*]] = lshr <3 x i8> [[VAL:%.*]], [[BITS:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq <3 x i8> [[VAL_HIGHBITS]], zeroinitializer
 ; CHECK-NEXT:    ret <3 x i1> [[R]]
 ;
-  %t0 = shl <3 x i8> <i8 -1, i8 undef, i8 -1>, %bits
-  %t1 = xor <3 x i8> %t0, <i8 -1, i8 undef, i8 -1>
+  %t0 = shl <3 x i8> <i8 -1, i8 poison, i8 -1>, %bits
+  %t1 = xor <3 x i8> %t0, <i8 -1, i8 poison, i8 -1>
   %r = icmp uge <3 x i8> %t1, %val
   ret <3 x i1> %r
 }
@@ -101,7 +101,7 @@ define i1 @both(i8 %bits0, i8 %bits1) {
 ; CHECK-LABEL: @both(
 ; CHECK-NEXT:    [[T0:%.*]] = shl nsw i8 -1, [[BITS0:%.*]]
 ; CHECK-NEXT:    [[T2:%.*]] = shl nsw i8 -1, [[BITS1:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[T0]], [[T2]]
+; CHECK-NEXT:    [[R:%.*]] = icmp samesign ule i8 [[T0]], [[T2]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = shl i8 -1, %bits0
@@ -138,7 +138,7 @@ define i1 @oneuse1(i8 %val, i8 %bits) {
 ; CHECK-NEXT:    [[T0:%.*]] = shl nsw i8 -1, [[BITS:%.*]]
 ; CHECK-NEXT:    [[T1:%.*]] = xor i8 [[T0]], -1
 ; CHECK-NEXT:    call void @use8(i8 [[T1]])
-; CHECK-NEXT:    [[R:%.*]] = icmp uge i8 [[T1]], [[VAL:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[VAL:%.*]], [[T1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = shl i8 -1, %bits
@@ -154,7 +154,7 @@ define i1 @oneuse2(i8 %val, i8 %bits) {
 ; CHECK-NEXT:    call void @use8(i8 [[T0]])
 ; CHECK-NEXT:    [[T1:%.*]] = xor i8 [[T0]], -1
 ; CHECK-NEXT:    call void @use8(i8 [[T1]])
-; CHECK-NEXT:    [[R:%.*]] = icmp uge i8 [[T1]], [[VAL:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[VAL:%.*]], [[T1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = shl i8 -1, %bits
@@ -173,7 +173,7 @@ define i1 @n0(i8 %val, i8 %bits) {
 ; CHECK-LABEL: @n0(
 ; CHECK-NEXT:    [[T0:%.*]] = shl nuw i8 1, [[BITS:%.*]]
 ; CHECK-NEXT:    [[T1:%.*]] = xor i8 [[T0]], -1
-; CHECK-NEXT:    [[R:%.*]] = icmp uge i8 [[T1]], [[VAL:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[VAL:%.*]], [[T1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = shl i8 1, %bits ; constant is not -1
@@ -198,8 +198,8 @@ define i1 @n1(i8 %val, i8 %bits) {
 define <2 x i1> @n2_vec_nonsplat(<2 x i8> %val, <2 x i8> %bits) {
 ; CHECK-LABEL: @n2_vec_nonsplat(
 ; CHECK-NEXT:    [[T0:%.*]] = shl <2 x i8> <i8 -1, i8 1>, [[BITS:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = xor <2 x i8> [[T0]], <i8 -1, i8 -1>
-; CHECK-NEXT:    [[R:%.*]] = icmp uge <2 x i8> [[T1]], [[VAL:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = xor <2 x i8> [[T0]], splat (i8 -1)
+; CHECK-NEXT:    [[R:%.*]] = icmp ule <2 x i8> [[VAL:%.*]], [[T1]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %t0 = shl <2 x i8> <i8 -1, i8 1>, %bits ; again, wrong constant
@@ -210,7 +210,7 @@ define <2 x i1> @n2_vec_nonsplat(<2 x i8> %val, <2 x i8> %bits) {
 
 define <2 x i1> @n3_vec_nonsplat(<2 x i8> %val, <2 x i8> %bits) {
 ; CHECK-LABEL: @n3_vec_nonsplat(
-; CHECK-NEXT:    [[T0:%.*]] = shl nsw <2 x i8> <i8 -1, i8 -1>, [[BITS:%.*]]
+; CHECK-NEXT:    [[T0:%.*]] = shl nsw <2 x i8> splat (i8 -1), [[BITS:%.*]]
 ; CHECK-NEXT:    [[T1:%.*]] = xor <2 x i8> [[T0]], <i8 -1, i8 1>
 ; CHECK-NEXT:    [[R:%.*]] = icmp uge <2 x i8> [[T1]], [[VAL:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
@@ -225,7 +225,7 @@ define i1 @n3(i8 %val, i8 %bits) {
 ; CHECK-LABEL: @n3(
 ; CHECK-NEXT:    [[T0:%.*]] = shl nsw i8 -1, [[BITS:%.*]]
 ; CHECK-NEXT:    [[T1:%.*]] = xor i8 [[T0]], -1
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[T1]], [[VAL:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[VAL:%.*]], [[T1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = shl i8 -1, %bits

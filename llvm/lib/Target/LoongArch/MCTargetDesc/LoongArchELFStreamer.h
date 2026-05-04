@@ -19,13 +19,17 @@ public:
   MCELFStreamer &getStreamer();
   LoongArchTargetELFStreamer(MCStreamer &S, const MCSubtargetInfo &STI);
 
+  void emitDirectiveOptionPush() override;
+  void emitDirectiveOptionPop() override;
+  void emitDirectiveOptionRelax() override;
+  void emitDirectiveOptionNoRelax() override;
+
   void finish() override;
 };
 
 MCELFStreamer *createLoongArchELFStreamer(MCContext &C,
                                           std::unique_ptr<MCAsmBackend> MAB,
                                           std::unique_ptr<MCObjectWriter> MOW,
-                                          std::unique_ptr<MCCodeEmitter> MCE,
-                                          bool RelaxAll);
+                                          std::unique_ptr<MCCodeEmitter> MCE);
 } // end namespace llvm
 #endif

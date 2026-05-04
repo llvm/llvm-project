@@ -1,6 +1,6 @@
 ! Test interface that lowering handles small interface mismatch with
 ! type bound procedures.
-! RUN: bbc -emit-hlfir --polymorphic-type %s -o - -I nw | FileCheck %s
+! RUN: bbc -emit-hlfir %s -o - -I nw | FileCheck %s
 
 module dispatch_mismatch
 type t

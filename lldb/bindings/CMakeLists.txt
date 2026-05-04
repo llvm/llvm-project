@@ -3,6 +3,7 @@ file(GLOB_RECURSE SWIG_SOURCES *.swig)
 file(GLOB SWIG_HEADERS
   ${LLDB_SOURCE_DIR}/include/lldb/API/*.h
   ${LLDB_SOURCE_DIR}/include/lldb/*.h
+  ${LLDB_BINARY_DIR}/include/lldb/API/SBLanguages.h
 )
 file(GLOB SWIG_PRIVATE_HEADERS
   ${LLDB_SOURCE_DIR}/include/lldb/lldb-private*.h
@@ -30,6 +31,7 @@ set(SWIG_COMMON_FLAGS
   -w361,362,509
   -features autodoc
   -I${LLDB_SOURCE_DIR}/include
+  -I${LLDB_BINARY_DIR}/include
   -I${CMAKE_CURRENT_SOURCE_DIR}
   ${DARWIN_EXTRAS}
 )
@@ -46,6 +48,16 @@ function(create_relative_symlink swig_target dest_file output_dir output_name)
   add_custom_command(TARGET ${swig_target} POST_BUILD VERBATIM
     COMMAND ${CMAKE_COMMAND} -E ${LLVM_LINK_OR_COPY} ${rel_dest_file} ${output_name}
     WORKING_DIRECTORY ${output_dir})
+endfunction()
+
+function(add_swig_wrapper target wrapper)
+  if (MSVC)
+    set_property(SOURCE ${wrapper} APPEND_STRING PROPERTY COMPILE_FLAGS " /W0")
+  else()
+    set_property(SOURCE ${wrapper} APPEND_STRING PROPERTY COMPILE_FLAGS " -w")
+  endif()
+  set_source_files_properties(${wrapper} PROPERTIES GENERATED ON)
+  target_sources(${target} PRIVATE ${wrapper})
 endfunction()
 
 if (LLDB_ENABLE_PYTHON)

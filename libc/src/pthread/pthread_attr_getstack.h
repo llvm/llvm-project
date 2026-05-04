@@ -9,14 +9,15 @@
 #ifndef LLVM_LIBC_SRC_PTHREAD_PTHREAD_ATTR_GETSTACK_H
 #define LLVM_LIBC_SRC_PTHREAD_PTHREAD_ATTR_GETSTACK_H
 
+#include "src/__support/macros/config.h"
 #include <pthread.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int pthread_attr_getstack(const pthread_attr_t *__restrict attr,
                           void **__restrict stack,
                           size_t *__restrict stacksize);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_PTHREAD_PTHREAD_ATTR_GETSTACK_H

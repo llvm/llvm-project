@@ -4,6 +4,7 @@
 // RUN: ld.lld -shared %t.o %t2.o -o %t
 // RUN: llvm-objdump -d %t | FileCheck %s
 // RUN: llvm-readelf -S -s %t | FileCheck --check-prefix=READ %s
+// RUN: ld.lld -shared --force-group-allocation %t.o %t2.o -o - | cmp - %t
 
 // Check that we don't crash with --gc-section and that we print a list of
 // reclaimed sections on stderr.

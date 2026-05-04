@@ -14,7 +14,21 @@ declare void @unknown()
 define void @test(ptr %a, ptr %b, ptr %c, ptr %d) {
 ; VECTOR_DBG-LABEL: @test(
 ; VECTOR_DBG-NEXT:  entry:
-; VECTOR_DBG-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A:%.*]], align 4
+; VECTOR_DBG-NEXT:    [[L0:%.*]] = load float, ptr [[A:%.*]], align 4
+; VECTOR_DBG-NEXT:    [[A1:%.*]] = getelementptr inbounds float, ptr [[A]], i64 1
+; VECTOR_DBG-NEXT:    [[L1:%.*]] = load float, ptr [[A1]], align 4
+; VECTOR_DBG-NEXT:    [[A2:%.*]] = getelementptr inbounds float, ptr [[A]], i64 2
+; VECTOR_DBG-NEXT:      #dbg_value(i16 1, [[META3:![0-9]+]], !DIExpression(), [[META5:![0-9]+]])
+; VECTOR_DBG-NEXT:      #dbg_value(i16 1, [[META3]], !DIExpression(), [[META5]])
+; VECTOR_DBG-NEXT:      #dbg_value(i16 1, [[META3]], !DIExpression(), [[META5]])
+; VECTOR_DBG-NEXT:      #dbg_value(i16 1, [[META3]], !DIExpression(), [[META5]])
+; VECTOR_DBG-NEXT:      #dbg_value(i16 1, [[META3]], !DIExpression(), [[META5]])
+; VECTOR_DBG-NEXT:      #dbg_value(i16 1, [[META3]], !DIExpression(), [[META5]])
+; VECTOR_DBG-NEXT:      #dbg_value(i16 1, [[META3]], !DIExpression(), [[META5]])
+; VECTOR_DBG-NEXT:      #dbg_value(i16 1, [[META3]], !DIExpression(), [[META5]])
+; VECTOR_DBG-NEXT:    [[B1:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i64 1
+; VECTOR_DBG-NEXT:    [[B2:%.*]] = getelementptr inbounds float, ptr [[B]], i64 2
+; VECTOR_DBG-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[A2]], align 4
 ; VECTOR_DBG-NEXT:    call void @unknown()
 ; VECTOR_DBG-NEXT:    call void @unknown()
 ; VECTOR_DBG-NEXT:    call void @unknown()
@@ -43,22 +57,22 @@ define void @test(ptr %a, ptr %b, ptr %c, ptr %d) {
 ; VECTOR_DBG-NEXT:    call void @unknown()
 ; VECTOR_DBG-NEXT:    call void @unknown()
 ; VECTOR_DBG-NEXT:    call void @unknown()
-; VECTOR_DBG-NEXT:    call void @llvm.dbg.value(metadata i16 1, metadata [[META3:![0-9]+]], metadata !DIExpression()), !dbg [[DBG5:![0-9]+]]
-; VECTOR_DBG-NEXT:    call void @llvm.dbg.value(metadata i16 1, metadata [[META3]], metadata !DIExpression()), !dbg [[DBG5]]
-; VECTOR_DBG-NEXT:    call void @llvm.dbg.value(metadata i16 1, metadata [[META3]], metadata !DIExpression()), !dbg [[DBG5]]
-; VECTOR_DBG-NEXT:    call void @llvm.dbg.value(metadata i16 1, metadata [[META3]], metadata !DIExpression()), !dbg [[DBG5]]
-; VECTOR_DBG-NEXT:    call void @llvm.dbg.value(metadata i16 1, metadata [[META3]], metadata !DIExpression()), !dbg [[DBG5]]
-; VECTOR_DBG-NEXT:    call void @llvm.dbg.value(metadata i16 1, metadata [[META3]], metadata !DIExpression()), !dbg [[DBG5]]
-; VECTOR_DBG-NEXT:    call void @llvm.dbg.value(metadata i16 1, metadata [[META3]], metadata !DIExpression()), !dbg [[DBG5]]
-; VECTOR_DBG-NEXT:    call void @llvm.dbg.value(metadata i16 1, metadata [[META3]], metadata !DIExpression()), !dbg [[DBG5]]
-; VECTOR_DBG-NEXT:    store <4 x float> [[TMP0]], ptr [[B:%.*]], align 4
+; VECTOR_DBG-NEXT:    store float [[L0]], ptr [[B]], align 4
+; VECTOR_DBG-NEXT:    store float [[L1]], ptr [[B1]], align 4
+; VECTOR_DBG-NEXT:    store <2 x float> [[TMP0]], ptr [[B2]], align 4
 ; VECTOR_DBG-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[C:%.*]], align 4
 ; VECTOR_DBG-NEXT:    store <4 x float> [[TMP1]], ptr [[D:%.*]], align 4
 ; VECTOR_DBG-NEXT:    ret void
 ;
 ; VECTOR_NODBG-LABEL: @test(
 ; VECTOR_NODBG-NEXT:  entry:
-; VECTOR_NODBG-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A:%.*]], align 4
+; VECTOR_NODBG-NEXT:    [[L0:%.*]] = load float, ptr [[A:%.*]], align 4
+; VECTOR_NODBG-NEXT:    [[A1:%.*]] = getelementptr inbounds float, ptr [[A]], i64 1
+; VECTOR_NODBG-NEXT:    [[L1:%.*]] = load float, ptr [[A1]], align 4
+; VECTOR_NODBG-NEXT:    [[A2:%.*]] = getelementptr inbounds float, ptr [[A]], i64 2
+; VECTOR_NODBG-NEXT:    [[B1:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i64 1
+; VECTOR_NODBG-NEXT:    [[B2:%.*]] = getelementptr inbounds float, ptr [[B]], i64 2
+; VECTOR_NODBG-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[A2]], align 4
 ; VECTOR_NODBG-NEXT:    call void @unknown()
 ; VECTOR_NODBG-NEXT:    call void @unknown()
 ; VECTOR_NODBG-NEXT:    call void @unknown()
@@ -87,7 +101,9 @@ define void @test(ptr %a, ptr %b, ptr %c, ptr %d) {
 ; VECTOR_NODBG-NEXT:    call void @unknown()
 ; VECTOR_NODBG-NEXT:    call void @unknown()
 ; VECTOR_NODBG-NEXT:    call void @unknown()
-; VECTOR_NODBG-NEXT:    store <4 x float> [[TMP0]], ptr [[B:%.*]], align 4
+; VECTOR_NODBG-NEXT:    store float [[L0]], ptr [[B]], align 4
+; VECTOR_NODBG-NEXT:    store float [[L1]], ptr [[B1]], align 4
+; VECTOR_NODBG-NEXT:    store <2 x float> [[TMP0]], ptr [[B2]], align 4
 ; VECTOR_NODBG-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[C:%.*]], align 4
 ; VECTOR_NODBG-NEXT:    store <4 x float> [[TMP1]], ptr [[D:%.*]], align 4
 ; VECTOR_NODBG-NEXT:    ret void
@@ -173,11 +189,13 @@ entry:
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
+!6 = !{null}
+!7 = !DISubroutineType(types: !6)
 !llvm.module.flags = !{!2}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C11, file: !1)
 !1 = !DIFile(filename: "foo.c", directory: "/")
 !2 = !{i32 2, !"Debug Info Version", i32 3}
 !3 = !DILocalVariable(scope: !4)
-!4 = distinct !DISubprogram(unit: !0)
+!4 = distinct !DISubprogram(type: !7, unit: !0)
 !5 = !DILocation(scope: !4)

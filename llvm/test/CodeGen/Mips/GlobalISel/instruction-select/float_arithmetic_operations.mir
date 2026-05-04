@@ -25,18 +25,21 @@ body:             |
 
     ; FP32-LABEL: name: float_add
     ; FP32: liveins: $f12, $f14
-    ; FP32: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
-    ; FP32: [[COPY1:%[0-9]+]]:fgr32 = COPY $f14
-    ; FP32: [[FADD_S:%[0-9]+]]:fgr32 = FADD_S [[COPY]], [[COPY1]]
-    ; FP32: $f0 = COPY [[FADD_S]]
-    ; FP32: RetRA implicit $f0
+    ; FP32-NEXT: {{  $}}
+    ; FP32-NEXT: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
+    ; FP32-NEXT: [[COPY1:%[0-9]+]]:fgr32 = COPY $f14
+    ; FP32-NEXT: [[FADD_S:%[0-9]+]]:fgr32 = nofpexcept FADD_S [[COPY]], [[COPY1]], implicit $fcr31
+    ; FP32-NEXT: $f0 = COPY [[FADD_S]]
+    ; FP32-NEXT: RetRA implicit $f0
+    ;
     ; FP64-LABEL: name: float_add
     ; FP64: liveins: $f12, $f14
-    ; FP64: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
-    ; FP64: [[COPY1:%[0-9]+]]:fgr32 = COPY $f14
-    ; FP64: [[FADD_S:%[0-9]+]]:fgr32 = FADD_S [[COPY]], [[COPY1]]
-    ; FP64: $f0 = COPY [[FADD_S]]
-    ; FP64: RetRA implicit $f0
+    ; FP64-NEXT: {{  $}}
+    ; FP64-NEXT: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
+    ; FP64-NEXT: [[COPY1:%[0-9]+]]:fgr32 = COPY $f14
+    ; FP64-NEXT: [[FADD_S:%[0-9]+]]:fgr32 = nofpexcept FADD_S [[COPY]], [[COPY1]], implicit $fcr31
+    ; FP64-NEXT: $f0 = COPY [[FADD_S]]
+    ; FP64-NEXT: RetRA implicit $f0
     %0:fprb(s32) = COPY $f12
     %1:fprb(s32) = COPY $f14
     %2:fprb(s32) = G_FADD %0, %1
@@ -56,18 +59,21 @@ body:             |
 
     ; FP32-LABEL: name: float_sub
     ; FP32: liveins: $f12, $f14
-    ; FP32: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
-    ; FP32: [[COPY1:%[0-9]+]]:fgr32 = COPY $f14
-    ; FP32: [[FSUB_S:%[0-9]+]]:fgr32 = FSUB_S [[COPY]], [[COPY1]]
-    ; FP32: $f0 = COPY [[FSUB_S]]
-    ; FP32: RetRA implicit $f0
+    ; FP32-NEXT: {{  $}}
+    ; FP32-NEXT: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
+    ; FP32-NEXT: [[COPY1:%[0-9]+]]:fgr32 = COPY $f14
+    ; FP32-NEXT: [[FSUB_S:%[0-9]+]]:fgr32 = nofpexcept FSUB_S [[COPY]], [[COPY1]], implicit $fcr31
+    ; FP32-NEXT: $f0 = COPY [[FSUB_S]]
+    ; FP32-NEXT: RetRA implicit $f0
+    ;
     ; FP64-LABEL: name: float_sub
     ; FP64: liveins: $f12, $f14
-    ; FP64: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
-    ; FP64: [[COPY1:%[0-9]+]]:fgr32 = COPY $f14
-    ; FP64: [[FSUB_S:%[0-9]+]]:fgr32 = FSUB_S [[COPY]], [[COPY1]]
-    ; FP64: $f0 = COPY [[FSUB_S]]
-    ; FP64: RetRA implicit $f0
+    ; FP64-NEXT: {{  $}}
+    ; FP64-NEXT: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
+    ; FP64-NEXT: [[COPY1:%[0-9]+]]:fgr32 = COPY $f14
+    ; FP64-NEXT: [[FSUB_S:%[0-9]+]]:fgr32 = nofpexcept FSUB_S [[COPY]], [[COPY1]], implicit $fcr31
+    ; FP64-NEXT: $f0 = COPY [[FSUB_S]]
+    ; FP64-NEXT: RetRA implicit $f0
     %0:fprb(s32) = COPY $f12
     %1:fprb(s32) = COPY $f14
     %2:fprb(s32) = G_FSUB %0, %1
@@ -87,18 +93,21 @@ body:             |
 
     ; FP32-LABEL: name: float_mul
     ; FP32: liveins: $f12, $f14
-    ; FP32: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
-    ; FP32: [[COPY1:%[0-9]+]]:fgr32 = COPY $f14
-    ; FP32: [[FMUL_S:%[0-9]+]]:fgr32 = FMUL_S [[COPY]], [[COPY1]]
-    ; FP32: $f0 = COPY [[FMUL_S]]
-    ; FP32: RetRA implicit $f0
+    ; FP32-NEXT: {{  $}}
+    ; FP32-NEXT: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
+    ; FP32-NEXT: [[COPY1:%[0-9]+]]:fgr32 = COPY $f14
+    ; FP32-NEXT: [[FMUL_S:%[0-9]+]]:fgr32 = nofpexcept FMUL_S [[COPY]], [[COPY1]], implicit $fcr31
+    ; FP32-NEXT: $f0 = COPY [[FMUL_S]]
+    ; FP32-NEXT: RetRA implicit $f0
+    ;
     ; FP64-LABEL: name: float_mul
     ; FP64: liveins: $f12, $f14
-    ; FP64: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
-    ; FP64: [[COPY1:%[0-9]+]]:fgr32 = COPY $f14
-    ; FP64: [[FMUL_S:%[0-9]+]]:fgr32 = FMUL_S [[COPY]], [[COPY1]]
-    ; FP64: $f0 = COPY [[FMUL_S]]
-    ; FP64: RetRA implicit $f0
+    ; FP64-NEXT: {{  $}}
+    ; FP64-NEXT: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
+    ; FP64-NEXT: [[COPY1:%[0-9]+]]:fgr32 = COPY $f14
+    ; FP64-NEXT: [[FMUL_S:%[0-9]+]]:fgr32 = nofpexcept FMUL_S [[COPY]], [[COPY1]], implicit $fcr31
+    ; FP64-NEXT: $f0 = COPY [[FMUL_S]]
+    ; FP64-NEXT: RetRA implicit $f0
     %0:fprb(s32) = COPY $f12
     %1:fprb(s32) = COPY $f14
     %2:fprb(s32) = G_FMUL %0, %1
@@ -118,18 +127,21 @@ body:             |
 
     ; FP32-LABEL: name: float_div
     ; FP32: liveins: $f12, $f14
-    ; FP32: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
-    ; FP32: [[COPY1:%[0-9]+]]:fgr32 = COPY $f14
-    ; FP32: [[FDIV_S:%[0-9]+]]:fgr32 = FDIV_S [[COPY]], [[COPY1]]
-    ; FP32: $f0 = COPY [[FDIV_S]]
-    ; FP32: RetRA implicit $f0
+    ; FP32-NEXT: {{  $}}
+    ; FP32-NEXT: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
+    ; FP32-NEXT: [[COPY1:%[0-9]+]]:fgr32 = COPY $f14
+    ; FP32-NEXT: [[FDIV_S:%[0-9]+]]:fgr32 = nofpexcept FDIV_S [[COPY]], [[COPY1]], implicit $fcr31
+    ; FP32-NEXT: $f0 = COPY [[FDIV_S]]
+    ; FP32-NEXT: RetRA implicit $f0
+    ;
     ; FP64-LABEL: name: float_div
     ; FP64: liveins: $f12, $f14
-    ; FP64: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
-    ; FP64: [[COPY1:%[0-9]+]]:fgr32 = COPY $f14
-    ; FP64: [[FDIV_S:%[0-9]+]]:fgr32 = FDIV_S [[COPY]], [[COPY1]]
-    ; FP64: $f0 = COPY [[FDIV_S]]
-    ; FP64: RetRA implicit $f0
+    ; FP64-NEXT: {{  $}}
+    ; FP64-NEXT: [[COPY:%[0-9]+]]:fgr32 = COPY $f12
+    ; FP64-NEXT: [[COPY1:%[0-9]+]]:fgr32 = COPY $f14
+    ; FP64-NEXT: [[FDIV_S:%[0-9]+]]:fgr32 = nofpexcept FDIV_S [[COPY]], [[COPY1]], implicit $fcr31
+    ; FP64-NEXT: $f0 = COPY [[FDIV_S]]
+    ; FP64-NEXT: RetRA implicit $f0
     %0:fprb(s32) = COPY $f12
     %1:fprb(s32) = COPY $f14
     %2:fprb(s32) = G_FDIV %0, %1
@@ -149,18 +161,21 @@ body:             |
 
     ; FP32-LABEL: name: double_add
     ; FP32: liveins: $d6, $d7
-    ; FP32: [[COPY:%[0-9]+]]:afgr64 = COPY $d6
-    ; FP32: [[COPY1:%[0-9]+]]:afgr64 = COPY $d7
-    ; FP32: [[FADD_D32_:%[0-9]+]]:afgr64 = FADD_D32 [[COPY]], [[COPY1]]
-    ; FP32: $d0 = COPY [[FADD_D32_]]
-    ; FP32: RetRA implicit $d0
+    ; FP32-NEXT: {{  $}}
+    ; FP32-NEXT: [[COPY:%[0-9]+]]:afgr64 = COPY $d6
+    ; FP32-NEXT: [[COPY1:%[0-9]+]]:afgr64 = COPY $d7
+    ; FP32-NEXT: [[FADD_D32_:%[0-9]+]]:afgr64 = nofpexcept FADD_D32 [[COPY]], [[COPY1]], implicit $fcr31
+    ; FP32-NEXT: $d0 = COPY [[FADD_D32_]]
+    ; FP32-NEXT: RetRA implicit $d0
+    ;
     ; FP64-LABEL: name: double_add
     ; FP64: liveins: $d6, $d7
-    ; FP64: [[COPY:%[0-9]+]]:fgr64 = COPY $d6
-    ; FP64: [[COPY1:%[0-9]+]]:fgr64 = COPY $d7
-    ; FP64: [[FADD_D64_:%[0-9]+]]:fgr64 = FADD_D64 [[COPY]], [[COPY1]]
-    ; FP64: $d0 = COPY [[FADD_D64_]]
-    ; FP64: RetRA implicit $d0
+    ; FP64-NEXT: {{  $}}
+    ; FP64-NEXT: [[COPY:%[0-9]+]]:fgr64 = COPY $d6
+    ; FP64-NEXT: [[COPY1:%[0-9]+]]:fgr64 = COPY $d7
+    ; FP64-NEXT: [[FADD_D64_:%[0-9]+]]:fgr64 = nofpexcept FADD_D64 [[COPY]], [[COPY1]], implicit $fcr31
+    ; FP64-NEXT: $d0 = COPY [[FADD_D64_]]
+    ; FP64-NEXT: RetRA implicit $d0
     %0:fprb(s64) = COPY $d6
     %1:fprb(s64) = COPY $d7
     %2:fprb(s64) = G_FADD %0, %1
@@ -180,18 +195,21 @@ body:             |
 
     ; FP32-LABEL: name: double_sub
     ; FP32: liveins: $d6, $d7
-    ; FP32: [[COPY:%[0-9]+]]:afgr64 = COPY $d6
-    ; FP32: [[COPY1:%[0-9]+]]:afgr64 = COPY $d7
-    ; FP32: [[FSUB_D32_:%[0-9]+]]:afgr64 = FSUB_D32 [[COPY]], [[COPY1]]
-    ; FP32: $d0 = COPY [[FSUB_D32_]]
-    ; FP32: RetRA implicit $d0
+    ; FP32-NEXT: {{  $}}
+    ; FP32-NEXT: [[COPY:%[0-9]+]]:afgr64 = COPY $d6
+    ; FP32-NEXT: [[COPY1:%[0-9]+]]:afgr64 = COPY $d7
+    ; FP32-NEXT: [[FSUB_D32_:%[0-9]+]]:afgr64 = nofpexcept FSUB_D32 [[COPY]], [[COPY1]], implicit $fcr31
+    ; FP32-NEXT: $d0 = COPY [[FSUB_D32_]]
+    ; FP32-NEXT: RetRA implicit $d0
+    ;
     ; FP64-LABEL: name: double_sub
     ; FP64: liveins: $d6, $d7
-    ; FP64: [[COPY:%[0-9]+]]:fgr64 = COPY $d6
-    ; FP64: [[COPY1:%[0-9]+]]:fgr64 = COPY $d7
-    ; FP64: [[FSUB_D64_:%[0-9]+]]:fgr64 = FSUB_D64 [[COPY]], [[COPY1]]
-    ; FP64: $d0 = COPY [[FSUB_D64_]]
-    ; FP64: RetRA implicit $d0
+    ; FP64-NEXT: {{  $}}
+    ; FP64-NEXT: [[COPY:%[0-9]+]]:fgr64 = COPY $d6
+    ; FP64-NEXT: [[COPY1:%[0-9]+]]:fgr64 = COPY $d7
+    ; FP64-NEXT: [[FSUB_D64_:%[0-9]+]]:fgr64 = nofpexcept FSUB_D64 [[COPY]], [[COPY1]], implicit $fcr31
+    ; FP64-NEXT: $d0 = COPY [[FSUB_D64_]]
+    ; FP64-NEXT: RetRA implicit $d0
     %0:fprb(s64) = COPY $d6
     %1:fprb(s64) = COPY $d7
     %2:fprb(s64) = G_FSUB %0, %1
@@ -211,18 +229,21 @@ body:             |
 
     ; FP32-LABEL: name: double_mul
     ; FP32: liveins: $d6, $d7
-    ; FP32: [[COPY:%[0-9]+]]:afgr64 = COPY $d6
-    ; FP32: [[COPY1:%[0-9]+]]:afgr64 = COPY $d7
-    ; FP32: [[FMUL_D32_:%[0-9]+]]:afgr64 = FMUL_D32 [[COPY]], [[COPY1]]
-    ; FP32: $d0 = COPY [[FMUL_D32_]]
-    ; FP32: RetRA implicit $d0
+    ; FP32-NEXT: {{  $}}
+    ; FP32-NEXT: [[COPY:%[0-9]+]]:afgr64 = COPY $d6
+    ; FP32-NEXT: [[COPY1:%[0-9]+]]:afgr64 = COPY $d7
+    ; FP32-NEXT: [[FMUL_D32_:%[0-9]+]]:afgr64 = nofpexcept FMUL_D32 [[COPY]], [[COPY1]], implicit $fcr31
+    ; FP32-NEXT: $d0 = COPY [[FMUL_D32_]]
+    ; FP32-NEXT: RetRA implicit $d0
+    ;
     ; FP64-LABEL: name: double_mul
     ; FP64: liveins: $d6, $d7
-    ; FP64: [[COPY:%[0-9]+]]:fgr64 = COPY $d6
-    ; FP64: [[COPY1:%[0-9]+]]:fgr64 = COPY $d7
-    ; FP64: [[FMUL_D64_:%[0-9]+]]:fgr64 = FMUL_D64 [[COPY]], [[COPY1]]
-    ; FP64: $d0 = COPY [[FMUL_D64_]]
-    ; FP64: RetRA implicit $d0
+    ; FP64-NEXT: {{  $}}
+    ; FP64-NEXT: [[COPY:%[0-9]+]]:fgr64 = COPY $d6
+    ; FP64-NEXT: [[COPY1:%[0-9]+]]:fgr64 = COPY $d7
+    ; FP64-NEXT: [[FMUL_D64_:%[0-9]+]]:fgr64 = nofpexcept FMUL_D64 [[COPY]], [[COPY1]], implicit $fcr31
+    ; FP64-NEXT: $d0 = COPY [[FMUL_D64_]]
+    ; FP64-NEXT: RetRA implicit $d0
     %0:fprb(s64) = COPY $d6
     %1:fprb(s64) = COPY $d7
     %2:fprb(s64) = G_FMUL %0, %1
@@ -242,18 +263,21 @@ body:             |
 
     ; FP32-LABEL: name: double_div
     ; FP32: liveins: $d6, $d7
-    ; FP32: [[COPY:%[0-9]+]]:afgr64 = COPY $d6
-    ; FP32: [[COPY1:%[0-9]+]]:afgr64 = COPY $d7
-    ; FP32: [[FDIV_D32_:%[0-9]+]]:afgr64 = FDIV_D32 [[COPY]], [[COPY1]]
-    ; FP32: $d0 = COPY [[FDIV_D32_]]
-    ; FP32: RetRA implicit $d0
+    ; FP32-NEXT: {{  $}}
+    ; FP32-NEXT: [[COPY:%[0-9]+]]:afgr64 = COPY $d6
+    ; FP32-NEXT: [[COPY1:%[0-9]+]]:afgr64 = COPY $d7
+    ; FP32-NEXT: [[FDIV_D32_:%[0-9]+]]:afgr64 = nofpexcept FDIV_D32 [[COPY]], [[COPY1]], implicit $fcr31
+    ; FP32-NEXT: $d0 = COPY [[FDIV_D32_]]
+    ; FP32-NEXT: RetRA implicit $d0
+    ;
     ; FP64-LABEL: name: double_div
     ; FP64: liveins: $d6, $d7
-    ; FP64: [[COPY:%[0-9]+]]:fgr64 = COPY $d6
-    ; FP64: [[COPY1:%[0-9]+]]:fgr64 = COPY $d7
-    ; FP64: [[FDIV_D64_:%[0-9]+]]:fgr64 = FDIV_D64 [[COPY]], [[COPY1]]
-    ; FP64: $d0 = COPY [[FDIV_D64_]]
-    ; FP64: RetRA implicit $d0
+    ; FP64-NEXT: {{  $}}
+    ; FP64-NEXT: [[COPY:%[0-9]+]]:fgr64 = COPY $d6
+    ; FP64-NEXT: [[COPY1:%[0-9]+]]:fgr64 = COPY $d7
+    ; FP64-NEXT: [[FDIV_D64_:%[0-9]+]]:fgr64 = nofpexcept FDIV_D64 [[COPY]], [[COPY1]], implicit $fcr31
+    ; FP64-NEXT: $d0 = COPY [[FDIV_D64_]]
+    ; FP64-NEXT: RetRA implicit $d0
     %0:fprb(s64) = COPY $d6
     %1:fprb(s64) = COPY $d7
     %2:fprb(s64) = G_FDIV %0, %1

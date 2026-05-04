@@ -13,7 +13,6 @@
 #ifndef LLVM_LIB_TARGET_RISCV_MCTARGETDESC_RISCVMCTARGETDESC_H
 #define LLVM_LIB_TARGET_RISCV_MCTARGETDESC_RISCVMCTARGETDESC_H
 
-#include "llvm/Config/config.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/DataTypes.h"
 #include <memory>
@@ -25,6 +24,7 @@ class MCContext;
 class MCInstrInfo;
 class MCObjectTargetWriter;
 class MCRegisterInfo;
+class MCRelocationInfo;
 class MCSubtargetInfo;
 class Target;
 
@@ -37,7 +37,14 @@ MCAsmBackend *createRISCVAsmBackend(const Target &T, const MCSubtargetInfo &STI,
 
 std::unique_ptr<MCObjectTargetWriter> createRISCVELFObjectWriter(uint8_t OSABI,
                                                                  bool Is64Bit);
+std::unique_ptr<MCObjectTargetWriter>
+createRISCVMachObjectWriter(uint32_t CPUType, uint32_t CPUSubtype);
+
+namespace RISCV {
+void updateCZceFeatureImplications(MCSubtargetInfo &STI);
 }
+
+} // namespace llvm
 
 // Defines symbolic names for RISC-V registers.
 #define GET_REGINFO_ENUM
@@ -46,6 +53,7 @@ std::unique_ptr<MCObjectTargetWriter> createRISCVELFObjectWriter(uint8_t OSABI,
 // Defines symbolic names for RISC-V instructions.
 #define GET_INSTRINFO_ENUM
 #define GET_INSTRINFO_MC_HELPER_DECLS
+#define GET_INSTRINFO_OPERAND_ENUM
 #include "RISCVGenInstrInfo.inc"
 
 #define GET_SUBTARGETINFO_ENUM

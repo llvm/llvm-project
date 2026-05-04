@@ -51,6 +51,20 @@ struct SparsifierOptions : public PassPipelineOptions<SparsifierOptions> {
               mlir::SparseParallelizationStrategy::kAnyStorageAnyLoop,
               "any-storage-any-loop",
               "Enable sparse parallelization for any storage and loop."))};
+  PassOptions::Option<mlir::SparseEmitStrategy> emitStrategy{
+      *this, "sparse-emit-strategy",
+      ::llvm::cl::desc(
+          "Emit functional code or interfaces (to debug) for sparse loops"),
+      ::llvm::cl::init(mlir::SparseEmitStrategy::kFunctional),
+      llvm::cl::values(
+          clEnumValN(mlir::SparseEmitStrategy::kFunctional, "functional",
+                     "Emit functional code (with scf.for/while)."),
+          clEnumValN(mlir::SparseEmitStrategy::kSparseIterator,
+                     "sparse-iterator",
+                     "Emit (experimental) loops (with sparse.iterate)."),
+          clEnumValN(
+              mlir::SparseEmitStrategy::kDebugInterface, "debug-interface",
+              "Emit non-functional but easy-to-read interfaces to debug."))};
 
   PassOptions::Option<bool> enableRuntimeLibrary{
       *this, "enable-runtime-library",
@@ -90,10 +104,6 @@ struct SparsifierOptions : public PassPipelineOptions<SparsifierOptions> {
       desc("Allows compiler to assume indices fit in 32-bit if that yields "
            "faster code"),
       init(true)};
-  PassOptions::Option<bool> amx{
-      *this, "enable-amx",
-      desc("Enables the use of AMX dialect while lowering the vector dialect"),
-      init(false)};
   PassOptions::Option<bool> armNeon{
       *this, "enable-arm-neon",
       desc("Enables the use of ArmNeon dialect while lowering the vector "
@@ -104,9 +114,9 @@ struct SparsifierOptions : public PassPipelineOptions<SparsifierOptions> {
       desc("Enables the use of ArmSVE dialect while lowering the vector "
            "dialect"),
       init(false)};
-  PassOptions::Option<bool> x86Vector{
-      *this, "enable-x86vector",
-      desc("Enables the use of X86Vector dialect while lowering the vector "
+  PassOptions::Option<bool> x86{
+      *this, "enable-x86",
+      desc("Enables the use of X86 dialect while lowering the vector "
            "dialect"),
       init(false)};
 
@@ -141,20 +151,27 @@ struct SparsifierOptions : public PassPipelineOptions<SparsifierOptions> {
       desc("Enables GPU acceleration by means of direct library calls (like "
            "cuSPARSE)")};
 
+  /// This option is used to specify the number of threads of GPU codegen.
+  PassOptions::Option<unsigned> gpuNumThreads{
+      *this, "gpu-num-threads",
+      desc("Number of threads for GPU codegen. Setting this to 0 enables "
+           "direct library calls instead."),
+      init(1024)};
+
   /// Projects out the options for `createSparsificationPass`.
   SparsificationOptions sparsificationOptions() const {
-    return SparsificationOptions(parallelization, enableRuntimeLibrary);
+    return SparsificationOptions(parallelization, emitStrategy,
+                                 enableRuntimeLibrary);
   }
 
   /// Projects out the options for `createConvertVectorToLLVMPass`.
-  ConvertVectorToLLVMPassOptions lowerVectorToLLVMOptions() const {
+  ConvertVectorToLLVMPassOptions convertVectorToLLVMOptions() const {
     ConvertVectorToLLVMPassOptions opts{};
     opts.reassociateFPReductions = reassociateFPReductions;
     opts.force32BitVectorIndices = force32BitVectorIndices;
     opts.armNeon = armNeon;
     opts.armSVE = armSVE;
-    opts.amx = amx;
-    opts.x86Vector = x86Vector;
+    opts.x86 = x86;
     return opts;
   }
 };

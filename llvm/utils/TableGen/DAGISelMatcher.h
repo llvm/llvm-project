@@ -6,9 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_UTILS_TABLEGEN_DAGISELMATCHER_H
-#define LLVM_UTILS_TABLEGEN_DAGISELMATCHER_H
+#ifndef LLVM_UTILS_TABLEGEN_COMMON_DAGISELMATCHER_H
+#define LLVM_UTILS_TABLEGEN_COMMON_DAGISELMATCHER_H
 
+#include "Common/InfoByHwMode.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -25,6 +26,7 @@ class CodeGenRegister;
 class CodeGenDAGPatterns;
 class CodeGenInstruction;
 class Matcher;
+class MatcherList;
 class PatternToMatch;
 class raw_ostream;
 class ComplexPattern;
@@ -33,21 +35,25 @@ class SDNodeInfo;
 class TreePredicateFn;
 class TreePattern;
 
-Matcher *ConvertPatternToMatcher(const PatternToMatch &Pattern,
-                                 unsigned Variant,
-                                 const CodeGenDAGPatterns &CGP);
-void OptimizeMatcher(std::unique_ptr<Matcher> &Matcher,
-                     const CodeGenDAGPatterns &CGP);
-void EmitMatcherTable(Matcher *Matcher, const CodeGenDAGPatterns &CGP,
+MatcherList ConvertPatternToMatcherList(const PatternToMatch &Pattern,
+                                        unsigned Variant,
+                                        const CodeGenDAGPatterns &CGP);
+void OptimizeMatcher(MatcherList &ML, const CodeGenDAGPatterns &CGP);
+void EmitMatcherTable(MatcherList &ML, const CodeGenDAGPatterns &CGP,
                       raw_ostream &OS);
+
+/// Base class that holds a pointer to the next entry in the MatcherList.
+/// Separated from Matcher so that we can have an instance of it in
+/// MatcherList.
+class MatcherBase {
+  friend class MatcherList;
+
+  Matcher *Next = nullptr;
+};
 
 /// Matcher - Base class for all the DAG ISel Matcher representation
 /// nodes.
-class Matcher {
-  // The next matcher node that is executed after this one.  Null if this is
-  // the last stage of a match.
-  std::unique_ptr<Matcher> Next;
-  size_t Size = 0; // Size in bytes of matcher and all its children (if any).
+class Matcher : public MatcherBase {
   virtual void anchor();
 
 public:
@@ -86,7 +92,6 @@ public:
 
     // Node creation/emisssion.
     EmitInteger,          // Create a TargetConstant
-    EmitStringInteger,    // Create a TargetConstant from a string.
     EmitRegister,         // Create a register.
     EmitConvertToTarget,  // Convert a imm/fpimm to target imm/fpimm
     EmitMergeInputChains, // Merge together a chains for an input.
@@ -105,18 +110,9 @@ protected:
   Matcher(KindTy K) : Kind(K) {}
 
 public:
-  virtual ~Matcher() {}
+  virtual ~Matcher() = default;
 
-  unsigned getSize() const { return Size; }
-  void setSize(unsigned sz) { Size = sz; }
   KindTy getKind() const { return Kind; }
-
-  Matcher *getNext() { return Next.get(); }
-  const Matcher *getNext() const { return Next.get(); }
-  void setNext(Matcher *C) { Next.reset(C); }
-  Matcher *takeNext() { return Next.release(); }
-
-  std::unique_ptr<Matcher> &getNextPtr() { return Next; }
 
   bool isEqual(const Matcher *M) const {
     if (getKind() != M->getKind())
@@ -159,16 +155,6 @@ public:
            getKind() == RecordChild;
   }
 
-  /// unlinkNode - Unlink the specified node from this chain.  If Other ==
-  /// this, we unlink the next pointer and return it.  Otherwise we unlink
-  /// Other from the list and return this.
-  Matcher *unlinkNode(Matcher *Other);
-
-  /// canMoveBefore - Return true if this matcher is the same as Other, or if
-  /// we can move this matcher past all of the nodes in-between Other and this
-  /// node.  Other must be equal to or before this.
-  bool canMoveBefore(const Matcher *Other) const;
-
   /// canMoveBeforeNode - Return true if it is safe to move the current
   /// matcher across the specified one.
   bool canMoveBeforeNode(const Matcher *Other) const;
@@ -185,56 +171,253 @@ public:
     return Other->isContradictoryImpl(this);
   }
 
-  void print(raw_ostream &OS, unsigned indent = 0) const;
-  void printOne(raw_ostream &OS) const;
+  void printOne(raw_ostream &OS, indent Indent = indent(0)) const;
   void dump() const;
 
 protected:
-  virtual void printImpl(raw_ostream &OS, unsigned indent) const = 0;
+  virtual void printImpl(raw_ostream &OS, indent Indent) const = 0;
   virtual bool isEqualImpl(const Matcher *M) const = 0;
   virtual bool isContradictoryImpl(const Matcher *M) const { return false; }
+};
+
+/// Manages a singly linked list of Matcher objects. Interface based on
+/// std::forward_list. Once a Matcher is added to a list, it cannot be removed.
+/// It can only be erased or spliced to another position in this list or another
+/// list.
+class MatcherList {
+  MatcherBase BeforeBegin;
+
+  // Emitted size of all of the nodes in this list.
+  unsigned Size = 0;
+
+public:
+  MatcherList() = default;
+  MatcherList(const MatcherList &RHS) = delete;
+  MatcherList(MatcherList &&RHS) {
+    splice_after(before_begin(), RHS);
+    Size = RHS.Size;
+    RHS.Size = 0;
+  }
+  ~MatcherList() { clear(); }
+
+  MatcherList &operator=(const MatcherList &) = delete;
+  MatcherList &operator=(MatcherList &&RHS) {
+    clear();
+    splice_after(before_begin(), RHS);
+    Size = RHS.Size;
+    RHS.Size = 0;
+    return *this;
+  }
+
+  void clear() {
+    for (Matcher *P = BeforeBegin.Next; P != nullptr;) {
+      Matcher *Next = P->Next;
+      delete P;
+      P = Next;
+    }
+    BeforeBegin.Next = nullptr;
+    Size = 0;
+  }
+
+  template <bool IsConst> class iterator_impl {
+    friend class MatcherList;
+    using Base = std::conditional_t<IsConst, const MatcherBase, MatcherBase>;
+
+    Base *Pointer;
+
+    explicit iterator_impl(Base *P) { Pointer = P; }
+
+  public:
+    using iterator_category = std::forward_iterator_tag;
+    using value_type = std::conditional_t<IsConst, const Matcher *, Matcher *>;
+    using difference_type = std::ptrdiff_t;
+    using pointer = value_type *;
+    using reference = value_type &;
+
+    iterator_impl &operator++() {
+      Pointer = Pointer->Next;
+      return *this;
+    }
+
+    iterator_impl operator++(int) {
+      iterator Tmp(*this);
+      Pointer = Pointer->Next;
+      return Tmp;
+    }
+
+    value_type operator*() const { return static_cast<value_type>(Pointer); }
+
+    value_type operator->() const { return operator*(); }
+
+    bool operator==(const iterator_impl &X) const {
+      return Pointer == X.Pointer;
+    }
+    bool operator!=(const iterator_impl &X) const { return !operator==(X); }
+
+    // Allow conversion to a const iterator.
+    operator iterator_impl<true>() const {
+      return iterator_impl<true>(Pointer);
+    }
+  };
+
+  using iterator = iterator_impl<false>;
+  using const_iterator = iterator_impl<true>;
+
+  /// Return an iterator before the first Matcher in the list. This iterator
+  /// cannot be dereferenced. Incrementing returns the iterator to begin().
+  iterator before_begin() { return iterator(&BeforeBegin); }
+  const_iterator before_begin() const { return const_iterator(&BeforeBegin); }
+
+  iterator begin() { return iterator(BeforeBegin.Next); }
+  const_iterator begin() const { return const_iterator(BeforeBegin.Next); }
+
+  iterator end() { return iterator(nullptr); }
+  const_iterator end() const { return const_iterator(nullptr); }
+
+  Matcher *front() { return *begin(); }
+  const Matcher *front() const { return *begin(); }
+
+  bool empty() const { return BeforeBegin.Next == nullptr; }
+
+  void push_front(Matcher *M) { insert_after(before_begin(), M); }
+
+  /// Delete the first Matcher from the list.
+  void pop_front() {
+    assert(Size == 0 && "Should not modify list once size is set");
+    assert(!empty());
+    Matcher *N = BeforeBegin.Next;
+    BeforeBegin.Next = N->Next;
+    delete N;
+  }
+
+  /// Insert the matcher \p N into this list after \p Pos.
+  iterator insert_after(iterator Pos, Matcher *N) {
+    assert(Size == 0 && "Should not modify list once size is set");
+    N->Next = Pos.Pointer->Next;
+    Pos.Pointer->Next = N;
+    return iterator(N);
+  }
+
+  /// Insert Matchers in the range [F, L) into this list.
+  template <class InIt> iterator insert_after(iterator Pos, InIt F, InIt L) {
+    MatcherBase *R = Pos.Pointer;
+    if (F != L) {
+      Matcher *First = *F;
+      Matcher *Last = First;
+
+      // Link the Matchers together.
+      for (++F; F != L; ++F, Last = Last->Next)
+        Last->Next = *F;
+
+      // Insert them into the list.
+      Last->Next = R->Next;
+      R->Next = First;
+      R = Last;
+    }
+
+    return iterator(R);
+  }
+
+  /// Insert multiple matchers into this list.
+  iterator insert_after(iterator Pos, std::initializer_list<Matcher *> IL) {
+    return insert_after(Pos, IL.begin(), IL.end());
+  }
+
+  /// Erase the Matcher after \p Pos.
+  iterator erase_after(iterator Pos) {
+    assert(Size == 0 && "Should not modify list once size is set");
+    MatcherBase *P = Pos.Pointer;
+    Matcher *N = P->Next;
+    P->Next = N->Next;
+    delete N;
+    return iterator(P->Next);
+  }
+
+  iterator erase_after(iterator F, iterator L) {
+    Matcher *E = static_cast<Matcher *>(L.Pointer);
+    if (F != L) {
+      Matcher *N = F.Pointer->Next;
+      if (N != E) {
+        F.Pointer->Next = E;
+        do {
+          Matcher *Tmp = N->Next;
+          delete N;
+          N = Tmp;
+        } while (N != E);
+      }
+    }
+    return iterator(E);
+  }
+
+  /// Splice the contents of list \p X after \p Pos in this list.
+  void splice_after(iterator Pos, MatcherList &X) {
+    assert(Size == 0 && "Should not modify list once size is set");
+    if (!X.empty()) {
+      if (Pos.Pointer->Next != nullptr) {
+        auto LM1 = X.before_begin();
+        while (LM1.Pointer->Next != nullptr)
+          ++LM1;
+        LM1.Pointer->Next = Pos.Pointer->Next;
+      }
+      Pos.Pointer->Next = X.BeforeBegin.Next;
+      X.BeforeBegin.Next = nullptr;
+    }
+  }
+
+  /// Splice the Matcher after \p I into this list after \p Pos.
+  void splice_after(iterator Pos, MatcherList &, iterator I) {
+    assert(Size == 0 && "Should not modify list once size is set");
+    auto LM1 = std::next(I);
+    if (Pos != I && Pos != LM1) {
+      I.Pointer->Next = LM1.Pointer->Next;
+      LM1.Pointer->Next = Pos.Pointer->Next;
+      Pos.Pointer->Next = static_cast<Matcher *>(LM1.Pointer);
+    }
+  }
+
+  /// Splice the Matchers in the range (\p F, \p L) into this list after \p Pos.
+  void splice_after(iterator Pos, MatcherList &, iterator F, iterator L) {
+    assert(Size == 0 && "Should not modify list once size is set");
+    if (F != L && Pos != F) {
+      auto LM1 = F;
+      while (LM1.Pointer->Next != L.Pointer)
+        ++LM1;
+      if (F != LM1) {
+        LM1.Pointer->Next = Pos.Pointer->Next;
+        Pos.Pointer->Next = F.Pointer->Next;
+        F.Pointer->Next = static_cast<Matcher *>(L.Pointer);
+      }
+    }
+  }
+
+  void setSize(unsigned Sz) { Size = Sz; }
+  unsigned getSize() const { return Size; }
+
+  void print(raw_ostream &OS, indent Indent = indent(0)) const;
+  void dump() const;
 };
 
 /// ScopeMatcher - This attempts to match each of its children to find the first
 /// one that successfully matches.  If one child fails, it tries the next child.
 /// If none of the children match then this check fails.  It never has a 'next'.
 class ScopeMatcher : public Matcher {
-  SmallVector<Matcher *, 4> Children;
+  SmallVector<MatcherList, 4> Children;
 
 public:
-  ScopeMatcher(SmallVectorImpl<Matcher *> &&children)
+  ScopeMatcher(SmallVectorImpl<MatcherList> &&children)
       : Matcher(Scope), Children(std::move(children)) {}
-  ~ScopeMatcher() override;
 
   unsigned getNumChildren() const { return Children.size(); }
 
-  Matcher *getChild(unsigned i) { return Children[i]; }
-  const Matcher *getChild(unsigned i) const { return Children[i]; }
+  MatcherList &getChild(unsigned i) { return Children[i]; }
+  const MatcherList &getChild(unsigned i) const { return Children[i]; }
 
-  void resetChild(unsigned i, Matcher *N) {
-    delete Children[i];
-    Children[i] = N;
-  }
-
-  Matcher *takeChild(unsigned i) {
-    Matcher *Res = Children[i];
-    Children[i] = nullptr;
-    return Res;
-  }
-
-  void setNumChildren(unsigned NC) {
-    if (NC < Children.size()) {
-      // delete any children we're about to lose pointers to.
-      for (unsigned i = NC, e = Children.size(); i != e; ++i)
-        delete Children[i];
-    }
-    Children.resize(NC);
-  }
+  SmallVectorImpl<MatcherList> &getChildren() { return Children; }
 
   static bool classof(const Matcher *N) { return N->getKind() == Scope; }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override { return false; }
 };
 
@@ -258,7 +441,7 @@ public:
   static bool classof(const Matcher *N) { return N->getKind() == RecordNode; }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override { return true; }
 };
 
@@ -289,7 +472,7 @@ public:
   static bool classof(const Matcher *N) { return N->getKind() == RecordChild; }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<RecordChildMatcher>(M)->getChildNo() == getChildNo();
   }
@@ -303,7 +486,7 @@ public:
   static bool classof(const Matcher *N) { return N->getKind() == RecordMemRef; }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override { return true; }
 };
 
@@ -318,7 +501,7 @@ public:
   }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override { return true; }
 };
 
@@ -335,7 +518,7 @@ public:
   static bool classof(const Matcher *N) { return N->getKind() == MoveChild; }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<MoveChildMatcher>(M)->getChildNo() == getChildNo();
   }
@@ -355,7 +538,7 @@ public:
   static bool classof(const Matcher *N) { return N->getKind() == MoveSibling; }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned Indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<MoveSiblingMatcher>(M)->getSiblingNo() == getSiblingNo();
   }
@@ -370,7 +553,7 @@ public:
   static bool classof(const Matcher *N) { return N->getKind() == MoveParent; }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override { return true; }
 };
 
@@ -389,7 +572,7 @@ public:
   static bool classof(const Matcher *N) { return N->getKind() == CheckSame; }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<CheckSameMatcher>(M)->getMatchNumber() == getMatchNumber();
   }
@@ -414,7 +597,7 @@ public:
   }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<CheckChildSameMatcher>(M)->ChildNo == ChildNo &&
            cast<CheckChildSameMatcher>(M)->MatchNumber == MatchNumber;
@@ -438,7 +621,7 @@ public:
   }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<CheckPatternPredicateMatcher>(M)->getPredicate() == Predicate;
   }
@@ -452,7 +635,7 @@ class CheckPredicateMatcher : public Matcher {
 
 public:
   CheckPredicateMatcher(const TreePredicateFn &pred,
-                        const SmallVectorImpl<unsigned> &Operands);
+                        ArrayRef<unsigned> Operands);
 
   TreePredicateFn getPredicate() const;
   unsigned getNumOperands() const;
@@ -463,7 +646,7 @@ public:
   }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<CheckPredicateMatcher>(M)->Pred == Pred;
   }
@@ -483,7 +666,7 @@ public:
   static bool classof(const Matcher *N) { return N->getKind() == CheckOpcode; }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override;
   bool isContradictoryImpl(const Matcher *M) const override;
 };
@@ -493,44 +676,45 @@ private:
 /// then the match fails.  This is semantically equivalent to a Scope node where
 /// every child does a CheckOpcode, but is much faster.
 class SwitchOpcodeMatcher : public Matcher {
-  SmallVector<std::pair<const SDNodeInfo *, Matcher *>, 8> Cases;
+  SmallVector<std::pair<const SDNodeInfo *, MatcherList>, 8> Cases;
 
 public:
   SwitchOpcodeMatcher(
-      SmallVectorImpl<std::pair<const SDNodeInfo *, Matcher *>> &&cases)
+      SmallVectorImpl<std::pair<const SDNodeInfo *, MatcherList>> &&cases)
       : Matcher(SwitchOpcode), Cases(std::move(cases)) {}
-  ~SwitchOpcodeMatcher() override;
 
   static bool classof(const Matcher *N) { return N->getKind() == SwitchOpcode; }
 
   unsigned getNumCases() const { return Cases.size(); }
 
   const SDNodeInfo &getCaseOpcode(unsigned i) const { return *Cases[i].first; }
-  Matcher *getCaseMatcher(unsigned i) { return Cases[i].second; }
-  const Matcher *getCaseMatcher(unsigned i) const { return Cases[i].second; }
+  MatcherList &getCaseMatcher(unsigned i) { return Cases[i].second; }
+  const MatcherList &getCaseMatcher(unsigned i) const {
+    return Cases[i].second;
+  }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override { return false; }
 };
 
 /// CheckTypeMatcher - This checks to see if the current node has the
 /// specified type at the specified result, if not it fails to match.
 class CheckTypeMatcher : public Matcher {
-  MVT::SimpleValueType Type;
+  ValueTypeByHwMode Type;
   unsigned ResNo;
 
 public:
-  CheckTypeMatcher(MVT::SimpleValueType type, unsigned resno)
-      : Matcher(CheckType), Type(type), ResNo(resno) {}
+  CheckTypeMatcher(ValueTypeByHwMode type, unsigned resno)
+      : Matcher(CheckType), Type(std::move(type)), ResNo(resno) {}
 
-  MVT::SimpleValueType getType() const { return Type; }
+  const ValueTypeByHwMode &getType() const { return Type; }
   unsigned getResNo() const { return ResNo; }
 
   static bool classof(const Matcher *N) { return N->getKind() == CheckType; }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<CheckTypeMatcher>(M)->Type == Type;
   }
@@ -542,24 +726,24 @@ private:
 /// then the match fails.  This is semantically equivalent to a Scope node where
 /// every child does a CheckType, but is much faster.
 class SwitchTypeMatcher : public Matcher {
-  SmallVector<std::pair<MVT::SimpleValueType, Matcher *>, 8> Cases;
+  SmallVector<std::pair<MVT, MatcherList>, 8> Cases;
 
 public:
-  SwitchTypeMatcher(
-      SmallVectorImpl<std::pair<MVT::SimpleValueType, Matcher *>> &&cases)
+  SwitchTypeMatcher(SmallVectorImpl<std::pair<MVT, MatcherList>> &&cases)
       : Matcher(SwitchType), Cases(std::move(cases)) {}
-  ~SwitchTypeMatcher() override;
 
   static bool classof(const Matcher *N) { return N->getKind() == SwitchType; }
 
   unsigned getNumCases() const { return Cases.size(); }
 
-  MVT::SimpleValueType getCaseType(unsigned i) const { return Cases[i].first; }
-  Matcher *getCaseMatcher(unsigned i) { return Cases[i].second; }
-  const Matcher *getCaseMatcher(unsigned i) const { return Cases[i].second; }
+  MVT getCaseType(unsigned i) const { return Cases[i].first; }
+  MatcherList &getCaseMatcher(unsigned i) { return Cases[i].second; }
+  const MatcherList &getCaseMatcher(unsigned i) const {
+    return Cases[i].second;
+  }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override { return false; }
 };
 
@@ -567,21 +751,21 @@ private:
 /// specified type, if not it fails to match.
 class CheckChildTypeMatcher : public Matcher {
   unsigned ChildNo;
-  MVT::SimpleValueType Type;
+  ValueTypeByHwMode Type;
 
 public:
-  CheckChildTypeMatcher(unsigned childno, MVT::SimpleValueType type)
-      : Matcher(CheckChildType), ChildNo(childno), Type(type) {}
+  CheckChildTypeMatcher(unsigned childno, ValueTypeByHwMode type)
+      : Matcher(CheckChildType), ChildNo(childno), Type(std::move(type)) {}
 
   unsigned getChildNo() const { return ChildNo; }
-  MVT::SimpleValueType getType() const { return Type; }
+  const ValueTypeByHwMode &getType() const { return Type; }
 
   static bool classof(const Matcher *N) {
     return N->getKind() == CheckChildType;
   }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<CheckChildTypeMatcher>(M)->ChildNo == ChildNo &&
            cast<CheckChildTypeMatcher>(M)->Type == Type;
@@ -602,7 +786,7 @@ public:
   static bool classof(const Matcher *N) { return N->getKind() == CheckInteger; }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<CheckIntegerMatcher>(M)->Value == Value;
   }
@@ -627,7 +811,7 @@ public:
   }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<CheckChildIntegerMatcher>(M)->ChildNo == ChildNo &&
            cast<CheckChildIntegerMatcher>(M)->Value == Value;
@@ -651,7 +835,7 @@ public:
   }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<CheckCondCodeMatcher>(M)->CondCodeName == CondCodeName;
   }
@@ -674,7 +858,7 @@ public:
   }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<CheckChild2CondCodeMatcher>(M)->CondCodeName == CondCodeName;
   }
@@ -684,22 +868,21 @@ private:
 /// CheckValueTypeMatcher - This checks to see if the current node is a
 /// VTSDNode with the specified type, if not it fails to match.
 class CheckValueTypeMatcher : public Matcher {
-  StringRef TypeName;
+  MVT VT;
 
 public:
-  CheckValueTypeMatcher(StringRef type_name)
-      : Matcher(CheckValueType), TypeName(type_name) {}
+  CheckValueTypeMatcher(MVT SimpleVT) : Matcher(CheckValueType), VT(SimpleVT) {}
 
-  StringRef getTypeName() const { return TypeName; }
+  MVT getVT() const { return VT; }
 
   static bool classof(const Matcher *N) {
     return N->getKind() == CheckValueType;
   }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
-    return cast<CheckValueTypeMatcher>(M)->TypeName == TypeName;
+    return cast<CheckValueTypeMatcher>(M)->VT == VT;
   }
   bool isContradictoryImpl(const Matcher *M) const override;
 };
@@ -714,7 +897,7 @@ class CheckComplexPatMatcher : public Matcher {
   unsigned MatchNumber;
 
   /// Name - The name of the node we're matching, for comment emission.
-  std::string Name;
+  StringRef Name;
 
   /// FirstResult - This is the first slot in the RecordedNodes list that the
   /// result of the match populates.
@@ -722,14 +905,14 @@ class CheckComplexPatMatcher : public Matcher {
 
 public:
   CheckComplexPatMatcher(const ComplexPattern &pattern, unsigned matchnumber,
-                         const std::string &name, unsigned firstresult)
+                         StringRef name, unsigned firstresult)
       : Matcher(CheckComplexPat), Pattern(pattern), MatchNumber(matchnumber),
         Name(name), FirstResult(firstresult) {}
 
   const ComplexPattern &getPattern() const { return Pattern; }
   unsigned getMatchNumber() const { return MatchNumber; }
 
-  std::string getName() const { return Name; }
+  StringRef getName() const { return Name; }
   unsigned getFirstResult() const { return FirstResult; }
 
   static bool classof(const Matcher *N) {
@@ -737,7 +920,7 @@ public:
   }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return &cast<CheckComplexPatMatcher>(M)->Pattern == &Pattern &&
            cast<CheckComplexPatMatcher>(M)->MatchNumber == MatchNumber;
@@ -757,7 +940,7 @@ public:
   static bool classof(const Matcher *N) { return N->getKind() == CheckAndImm; }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<CheckAndImmMatcher>(M)->Value == Value;
   }
@@ -776,7 +959,7 @@ public:
   static bool classof(const Matcher *N) { return N->getKind() == CheckOrImm; }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<CheckOrImmMatcher>(M)->Value == Value;
   }
@@ -793,7 +976,7 @@ public:
   }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override { return true; }
   bool isContradictoryImpl(const Matcher *M) const override;
 };
@@ -809,7 +992,7 @@ public:
   }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override { return true; }
   bool isContradictoryImpl(const Matcher *M) const override;
 };
@@ -825,54 +1008,39 @@ public:
   }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override { return true; }
 };
 
 /// EmitIntegerMatcher - This creates a new TargetConstant.
 class EmitIntegerMatcher : public Matcher {
+  // Optional string to give the value a symbolic name for readability.
+  std::string Str;
   int64_t Val;
-  MVT::SimpleValueType VT;
+  ValueTypeByHwMode VT;
+
+  unsigned ResultNo;
 
 public:
-  EmitIntegerMatcher(int64_t val, MVT::SimpleValueType vt)
-      : Matcher(EmitInteger), Val(val), VT(vt) {}
+  EmitIntegerMatcher(int64_t val, ValueTypeByHwMode vt, unsigned resultNo)
+      : Matcher(EmitInteger), Val(val), VT(std::move(vt)), ResultNo(resultNo) {}
+  EmitIntegerMatcher(const std::string &str, int64_t val, MVT vt,
+                     unsigned resultNo)
+      : Matcher(EmitInteger), Str(str), Val(val), VT(vt), ResultNo(resultNo) {}
 
+  const std::string &getString() const { return Str; }
   int64_t getValue() const { return Val; }
-  MVT::SimpleValueType getVT() const { return VT; }
+  const ValueTypeByHwMode &getVT() const { return VT; }
+  unsigned getResultNo() const { return ResultNo; }
 
   static bool classof(const Matcher *N) { return N->getKind() == EmitInteger; }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<EmitIntegerMatcher>(M)->Val == Val &&
-           cast<EmitIntegerMatcher>(M)->VT == VT;
-  }
-};
-
-/// EmitStringIntegerMatcher - A target constant whose value is represented
-/// by a string.
-class EmitStringIntegerMatcher : public Matcher {
-  std::string Val;
-  MVT::SimpleValueType VT;
-
-public:
-  EmitStringIntegerMatcher(const std::string &val, MVT::SimpleValueType vt)
-      : Matcher(EmitStringInteger), Val(val), VT(vt) {}
-
-  const std::string &getValue() const { return Val; }
-  MVT::SimpleValueType getVT() const { return VT; }
-
-  static bool classof(const Matcher *N) {
-    return N->getKind() == EmitStringInteger;
-  }
-
-private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
-  bool isEqualImpl(const Matcher *M) const override {
-    return cast<EmitStringIntegerMatcher>(M)->Val == Val &&
-           cast<EmitStringIntegerMatcher>(M)->VT == VT;
+           cast<EmitIntegerMatcher>(M)->VT == VT &&
+           cast<EmitIntegerMatcher>(M)->Str == Str;
   }
 };
 
@@ -881,19 +1049,24 @@ class EmitRegisterMatcher : public Matcher {
   /// Reg - The def for the register that we're emitting.  If this is null, then
   /// this is a reference to zero_reg.
   const CodeGenRegister *Reg;
-  MVT::SimpleValueType VT;
+  ValueTypeByHwMode VT;
+
+  unsigned ResultNo;
 
 public:
-  EmitRegisterMatcher(const CodeGenRegister *reg, MVT::SimpleValueType vt)
-      : Matcher(EmitRegister), Reg(reg), VT(vt) {}
+  EmitRegisterMatcher(const CodeGenRegister *reg, ValueTypeByHwMode vt,
+                      unsigned resultNo)
+      : Matcher(EmitRegister), Reg(reg), VT(std::move(vt)), ResultNo(resultNo) {
+  }
 
   const CodeGenRegister *getReg() const { return Reg; }
-  MVT::SimpleValueType getVT() const { return VT; }
+  const ValueTypeByHwMode &getVT() const { return VT; }
+  unsigned getResultNo() const { return ResultNo; }
 
   static bool classof(const Matcher *N) { return N->getKind() == EmitRegister; }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<EmitRegisterMatcher>(M)->Reg == Reg &&
            cast<EmitRegisterMatcher>(M)->VT == VT;
@@ -904,20 +1077,25 @@ private:
 /// recorded node and converts it from being a ISD::Constant to
 /// ISD::TargetConstant, likewise for ConstantFP.
 class EmitConvertToTargetMatcher : public Matcher {
+  // Recorded Node
   unsigned Slot;
 
+  // Result
+  unsigned ResultNo;
+
 public:
-  EmitConvertToTargetMatcher(unsigned slot)
-      : Matcher(EmitConvertToTarget), Slot(slot) {}
+  EmitConvertToTargetMatcher(unsigned slot, unsigned resultNo)
+      : Matcher(EmitConvertToTarget), Slot(slot), ResultNo(resultNo) {}
 
   unsigned getSlot() const { return Slot; }
+  unsigned getResultNo() const { return ResultNo; }
 
   static bool classof(const Matcher *N) {
     return N->getKind() == EmitConvertToTarget;
   }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<EmitConvertToTargetMatcher>(M)->Slot == Slot;
   }
@@ -932,7 +1110,7 @@ class EmitMergeInputChainsMatcher : public Matcher {
 
 public:
   EmitMergeInputChainsMatcher(ArrayRef<unsigned> nodes)
-      : Matcher(EmitMergeInputChains), ChainNodes(nodes.begin(), nodes.end()) {}
+      : Matcher(EmitMergeInputChains), ChainNodes(nodes) {}
 
   unsigned getNumNodes() const { return ChainNodes.size(); }
 
@@ -946,7 +1124,7 @@ public:
   }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<EmitMergeInputChainsMatcher>(M)->ChainNodes == ChainNodes;
   }
@@ -956,7 +1134,9 @@ private:
 /// pushing the chain and glue results.
 ///
 class EmitCopyToRegMatcher : public Matcher {
-  unsigned SrcSlot; // Value to copy into the physreg.
+  // Value to copy into the physreg.
+  unsigned SrcSlot;
+  // Register Destination
   const CodeGenRegister *DestPhysReg;
 
 public:
@@ -971,7 +1151,7 @@ public:
   }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<EmitCopyToRegMatcher>(M)->SrcSlot == SrcSlot &&
            cast<EmitCopyToRegMatcher>(M)->DestPhysReg == DestPhysReg;
@@ -981,22 +1161,30 @@ private:
 /// EmitNodeXFormMatcher - Emit an operation that runs an SDNodeXForm on a
 /// recorded node and records the result.
 class EmitNodeXFormMatcher : public Matcher {
+  // Recorded Node
   unsigned Slot;
-  Record *NodeXForm;
+  // Transform
+  const Record *NodeXForm;
+
+  // Result
+  unsigned ResultNo;
 
 public:
-  EmitNodeXFormMatcher(unsigned slot, Record *nodeXForm)
-      : Matcher(EmitNodeXForm), Slot(slot), NodeXForm(nodeXForm) {}
+  EmitNodeXFormMatcher(unsigned slot, const Record *nodeXForm,
+                       unsigned resultNo)
+      : Matcher(EmitNodeXForm), Slot(slot), NodeXForm(nodeXForm),
+        ResultNo(resultNo) {}
 
   unsigned getSlot() const { return Slot; }
-  Record *getNodeXForm() const { return NodeXForm; }
+  const Record *getNodeXForm() const { return NodeXForm; }
+  unsigned getResultNo() const { return ResultNo; }
 
   static bool classof(const Matcher *N) {
     return N->getKind() == EmitNodeXForm;
   }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<EmitNodeXFormMatcher>(M)->Slot == Slot &&
            cast<EmitNodeXFormMatcher>(M)->NodeXForm == NodeXForm;
@@ -1007,7 +1195,7 @@ private:
 /// MorphNodeTo.
 class EmitNodeMatcherCommon : public Matcher {
   const CodeGenInstruction &CGI;
-  const SmallVector<MVT::SimpleValueType, 3> VTs;
+  const SmallVector<ValueTypeByHwMode, 3> VTs;
   const SmallVector<unsigned, 6> Operands;
   bool HasChain, HasInGlue, HasOutGlue, HasMemRefs;
 
@@ -1018,19 +1206,19 @@ class EmitNodeMatcherCommon : public Matcher {
 
 public:
   EmitNodeMatcherCommon(const CodeGenInstruction &cgi,
-                        ArrayRef<MVT::SimpleValueType> vts,
+                        ArrayRef<ValueTypeByHwMode> vts,
                         ArrayRef<unsigned> operands, bool hasChain,
                         bool hasInGlue, bool hasOutGlue, bool hasmemrefs,
                         int numfixedarityoperands, bool isMorphNodeTo)
-      : Matcher(isMorphNodeTo ? MorphNodeTo : EmitNode), CGI(cgi),
-        VTs(vts.begin(), vts.end()), Operands(operands.begin(), operands.end()),
-        HasChain(hasChain), HasInGlue(hasInGlue), HasOutGlue(hasOutGlue),
-        HasMemRefs(hasmemrefs), NumFixedArityOperands(numfixedarityoperands) {}
+      : Matcher(isMorphNodeTo ? MorphNodeTo : EmitNode), CGI(cgi), VTs(vts),
+        Operands(operands), HasChain(hasChain), HasInGlue(hasInGlue),
+        HasOutGlue(hasOutGlue), HasMemRefs(hasmemrefs),
+        NumFixedArityOperands(numfixedarityoperands) {}
 
   const CodeGenInstruction &getInstruction() const { return CGI; }
 
   unsigned getNumVTs() const { return VTs.size(); }
-  MVT::SimpleValueType getVT(unsigned i) const {
+  const ValueTypeByHwMode &getVT(unsigned i) const {
     assert(i < VTs.size());
     return VTs[i];
   }
@@ -1041,8 +1229,8 @@ public:
     return Operands[i];
   }
 
-  const SmallVectorImpl<MVT::SimpleValueType> &getVTList() const { return VTs; }
-  const SmallVectorImpl<unsigned> &getOperandList() const { return Operands; }
+  ArrayRef<ValueTypeByHwMode> getVTList() const { return VTs; }
+  ArrayRef<unsigned> getOperandList() const { return Operands; }
 
   bool hasChain() const { return HasChain; }
   bool hasInGlue() const { return HasInGlue; }
@@ -1055,7 +1243,7 @@ public:
   }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override;
 };
 
@@ -1066,9 +1254,9 @@ class EmitNodeMatcher : public EmitNodeMatcherCommon {
 
 public:
   EmitNodeMatcher(const CodeGenInstruction &cgi,
-                  ArrayRef<MVT::SimpleValueType> vts,
-                  ArrayRef<unsigned> operands, bool hasChain, bool hasInGlue,
-                  bool hasOutGlue, bool hasmemrefs, int numfixedarityoperands,
+                  ArrayRef<ValueTypeByHwMode> vts, ArrayRef<unsigned> operands,
+                  bool hasChain, bool hasInGlue, bool hasOutGlue,
+                  bool hasmemrefs, int numfixedarityoperands,
                   unsigned firstresultslot)
       : EmitNodeMatcherCommon(cgi, vts, operands, hasChain, hasInGlue,
                               hasOutGlue, hasmemrefs, numfixedarityoperands,
@@ -1086,7 +1274,7 @@ class MorphNodeToMatcher : public EmitNodeMatcherCommon {
 
 public:
   MorphNodeToMatcher(const CodeGenInstruction &cgi,
-                     ArrayRef<MVT::SimpleValueType> vts,
+                     ArrayRef<ValueTypeByHwMode> vts,
                      ArrayRef<unsigned> operands, bool hasChain, bool hasInGlue,
                      bool hasOutGlue, bool hasmemrefs,
                      int numfixedarityoperands, const PatternToMatch &pattern)
@@ -1110,8 +1298,7 @@ class CompleteMatchMatcher : public Matcher {
 public:
   CompleteMatchMatcher(ArrayRef<unsigned> results,
                        const PatternToMatch &pattern)
-      : Matcher(CompleteMatch), Results(results.begin(), results.end()),
-        Pattern(pattern) {}
+      : Matcher(CompleteMatch), Results(results), Pattern(pattern) {}
 
   unsigned getNumResults() const { return Results.size(); }
   unsigned getResult(unsigned R) const { return Results[R]; }
@@ -1122,7 +1309,7 @@ public:
   }
 
 private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
+  void printImpl(raw_ostream &OS, indent Indent) const override;
   bool isEqualImpl(const Matcher *M) const override {
     return cast<CompleteMatchMatcher>(M)->Results == Results &&
            &cast<CompleteMatchMatcher>(M)->Pattern == &Pattern;
@@ -1131,4 +1318,4 @@ private:
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_UTILS_TABLEGEN_COMMON_DAGISELMATCHER_H

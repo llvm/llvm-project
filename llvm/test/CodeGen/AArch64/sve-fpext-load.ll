@@ -37,8 +37,7 @@ define <vscale x 4 x double> @ext4_f16_f64(ptr %ptr, i64 %index) {
 define <vscale x 8 x double> @ext8_f16_f64(ptr %ptr, i64 %index) {
 ; CHECK-LABEL: ext8_f16_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    ldr z0, [x0]
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    uunpklo z1.s, z0.h
 ; CHECK-NEXT:    uunpkhi z0.s, z0.h
@@ -46,13 +45,13 @@ define <vscale x 8 x double> @ext8_f16_f64(ptr %ptr, i64 %index) {
 ; CHECK-NEXT:    uunpkhi z1.d, z1.s
 ; CHECK-NEXT:    uunpklo z3.d, z0.s
 ; CHECK-NEXT:    uunpkhi z4.d, z0.s
+; CHECK-NEXT:    fcvt z1.d, p0/m, z1.h
 ; CHECK-NEXT:    movprfx z0, z2
 ; CHECK-NEXT:    fcvt z0.d, p0/m, z2.h
 ; CHECK-NEXT:    movprfx z2, z3
 ; CHECK-NEXT:    fcvt z2.d, p0/m, z3.h
 ; CHECK-NEXT:    movprfx z3, z4
 ; CHECK-NEXT:    fcvt z3.d, p0/m, z4.h
-; CHECK-NEXT:    fcvt z1.d, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %load = load <vscale x 8 x half>, ptr %ptr, align 4
   %load.ext = fpext <vscale x 8 x half> %load to <vscale x 8 x double>
@@ -76,8 +75,7 @@ define <vscale x 2 x double> @ext2_f32_f64(ptr %ptr, i64 %index) {
 define <vscale x 4 x double> @ext4_f32_f64(ptr %ptr, i64 %index) {
 ; CHECK-LABEL: ext4_f32_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ldr z0, [x0]
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    uunpklo z1.d, z0.s
 ; CHECK-NEXT:    uunpkhi z2.d, z0.s

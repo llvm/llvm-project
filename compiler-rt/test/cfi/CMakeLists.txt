@@ -1,6 +1,6 @@
 set(CFI_TESTSUITES)
 
-macro (add_cfi_test_suites lld thinlto)
+macro (add_cfi_test_suites lld thinlto traploop)
   set(suffix)
   if (${lld})
     set(suffix ${suffix}-lld)
@@ -8,10 +8,14 @@ macro (add_cfi_test_suites lld thinlto)
   if (${thinlto})
     set(suffix ${suffix}-thinlto)
   endif()
+  if (${traploop})
+    set(suffix ${suffix}-traploop)
+  endif()
   set(suffix ${suffix}-${CFI_TEST_TARGET_ARCH})
 
   set(CFI_TEST_USE_LLD ${lld})
   set(CFI_TEST_USE_THINLTO ${thinlto})
+  set(CFI_TEST_USE_TRAP_LOOP ${traploop})
 
   set(CFI_LIT_TEST_MODE Standalone)
   set(CFI_TEST_CONFIG_SUFFIX -standalone${suffix})
@@ -42,14 +46,18 @@ foreach(arch ${CFI_TEST_ARCH})
     # FIXME: enable ThinLTO tests after fixing http://llvm.org/pr32741
     add_cfi_test_suites(False False False)
   elseif(WIN32)
-    add_cfi_test_suites(True False)
-    add_cfi_test_suites(True True)
+    add_cfi_test_suites(True False False)
+    add_cfi_test_suites(True True False)
   else()
-    add_cfi_test_suites(False False)
-    add_cfi_test_suites(False True)
-    if (COMPILER_RT_HAS_LLD AND NOT arch STREQUAL "i386")
-	    add_cfi_test_suites(True False)
-	    add_cfi_test_suites(True True)
+    add_cfi_test_suites(False False False)
+    add_cfi_test_suites(False True False)
+    if (COMPILER_RT_HAS_LLD)
+      add_cfi_test_suites(True False False)
+      add_cfi_test_suites(True True False)
+      if (LINUX AND ${arch} MATCHES "x86_64|i386")
+        add_cfi_test_suites(True False True)
+        add_cfi_test_suites(True True True)
+      endif()
     endif()
   endif()
 endforeach()
@@ -59,9 +67,7 @@ list(APPEND CFI_TEST_DEPS
   ubsan
   stats
 )
-if(COMPILER_RT_HAS_CFI)
-  list(APPEND CFI_TEST_DEPS cfi)
-endif()
+list(APPEND CFI_TEST_DEPS cfi)
 
 if(NOT COMPILER_RT_STANDALONE_BUILD)
   list(APPEND CFI_TEST_DEPS
@@ -95,6 +101,3 @@ add_lit_target(check-cfi-and-supported "Running the cfi regression tests"
   ${CFI_TESTSUITES}
   PARAMS check_supported=1
   DEPENDS ${CFI_TEST_DEPS})
-
-set_target_properties(check-cfi PROPERTIES FOLDER "Compiler-RT Misc")
-set_target_properties(check-cfi-and-supported PROPERTIES FOLDER "Compiler-RT Misc")

@@ -21,18 +21,18 @@ define void @test_fcmp_storei1(i1 %cond, ptr %fptr, ptr %iptr, float %f1, float 
   ; CHECK-NEXT: bb.1.if:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[VCMPSSZrr:%[0-9]+]]:vk1 = nofpexcept VCMPSSZrr [[COPY3]], [[COPY2]], 0, implicit $mxcsr
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vk16 = COPY [[VCMPSSZrr]]
-  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:vk32 = COPY [[COPY7]]
+  ; CHECK-NEXT:   [[VCMPSSZrri:%[0-9]+]]:vk1 = nofpexcept VCMPSSZrri [[COPY3]], [[COPY2]], 0, implicit $mxcsr
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vk16 = COPY killed [[VCMPSSZrri]]
+  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:vk32 = COPY killed [[COPY7]]
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:vk8 = COPY [[COPY8]]
   ; CHECK-NEXT:   JMP_1 %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.else:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[VCMPSSZrr1:%[0-9]+]]:vk1 = nofpexcept VCMPSSZrr [[COPY1]], [[COPY]], 0, implicit $mxcsr
-  ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:vk16 = COPY [[VCMPSSZrr1]]
-  ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:vk32 = COPY [[COPY10]]
+  ; CHECK-NEXT:   [[VCMPSSZrri1:%[0-9]+]]:vk1 = nofpexcept VCMPSSZrri [[COPY1]], [[COPY]], 0, implicit $mxcsr
+  ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:vk16 = COPY killed [[VCMPSSZrri1]]
+  ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:vk32 = COPY killed [[COPY10]]
   ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:vk8 = COPY [[COPY11]]
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.exit:

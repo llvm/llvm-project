@@ -10,6 +10,7 @@
 
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCSymbolTableEntry.h"
 
 namespace llvm {
 
@@ -33,10 +34,11 @@ class MCSymbolWasm : public MCSymbol {
   const MCExpr *SymbolSize = nullptr;
 
 public:
-  MCSymbolWasm(const StringMapEntry<bool> *Name, bool isTemporary)
-      : MCSymbol(SymbolKindWasm, Name, isTemporary) {}
-  static bool classof(const MCSymbol *S) { return S->isWasm(); }
+  MCSymbolWasm(const MCSymbolTableEntry *Name, bool isTemporary)
+      : MCSymbol(Name, isTemporary) {}
 
+  bool isExternal() const { return IsExternal; }
+  void setExternal(bool Value) const { IsExternal = Value; }
   const MCExpr *getSize() const { return SymbolSize; }
   void setSize(const MCExpr *SS) { SymbolSize = SS; }
 
@@ -114,9 +116,11 @@ public:
     return isTable() && hasTableType() &&
            getTableType().ElemType == wasm::ValType::FUNCREF;
   }
-  void setFunctionTable() {
+  void setFunctionTable(bool is64) {
     setType(wasm::WASM_SYMBOL_TYPE_TABLE);
-    setTableType(wasm::ValType::FUNCREF);
+    uint8_t flags =
+        is64 ? wasm::WASM_LIMITS_FLAG_IS_64 : wasm::WASM_LIMITS_FLAG_NONE;
+    setTableType(wasm::ValType::FUNCREF, flags);
   }
 
   void setUsedInGOT() const { IsUsedInGOT = true; }
@@ -140,10 +144,11 @@ public:
     return *TableType;
   }
   void setTableType(wasm::WasmTableType TT) { TableType = TT; }
-  void setTableType(wasm::ValType VT) {
+  void setTableType(wasm::ValType VT,
+                    uint8_t flags = wasm::WASM_LIMITS_FLAG_NONE) {
     // Declare a table with element type VT and no limits (min size 0, no max
     // size).
-    wasm::WasmLimits Limits = {wasm::WASM_LIMITS_FLAG_NONE, 0, 0};
+    wasm::WasmLimits Limits = {flags, 0, 0, 0};
     setTableType({VT, Limits});
   }
 };

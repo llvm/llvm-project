@@ -12,10 +12,17 @@ tablegen("LoongArchGenMCPseudoLowering") {
   td_file = "LoongArch.td"
 }
 
+tablegen("LoongArchGenSDNodeInfo") {
+  visibility = [ ":LLVMLoongArchCodeGen" ]
+  args = [ "-gen-sd-node-info" ]
+  td_file = "LoongArch.td"
+}
+
 static_library("LLVMLoongArchCodeGen") {
   deps = [
     ":LoongArchGenDAGISel",
     ":LoongArchGenMCPseudoLowering",
+    ":LoongArchGenSDNodeInfo",
 
     # See https://reviews.llvm.org/D137532
     "AsmParser:LoongArchGenAsmMatcher",
@@ -34,6 +41,7 @@ static_library("LLVMLoongArchCodeGen") {
   include_dirs = [ "." ]
   sources = [
     "LoongArchAsmPrinter.cpp",
+    "LoongArchDeadRegisterDefinitions.cpp",
     "LoongArchExpandAtomicPseudoInsts.cpp",
     "LoongArchExpandPseudoInsts.cpp",
     "LoongArchFrameLowering.cpp",
@@ -41,7 +49,10 @@ static_library("LLVMLoongArchCodeGen") {
     "LoongArchISelLowering.cpp",
     "LoongArchInstrInfo.cpp",
     "LoongArchMCInstLower.cpp",
+    "LoongArchMergeBaseOffset.cpp",
+    "LoongArchOptWInstrs.cpp",
     "LoongArchRegisterInfo.cpp",
+    "LoongArchSelectionDAGInfo.cpp",
     "LoongArchSubtarget.cpp",
     "LoongArchTargetMachine.cpp",
     "LoongArchTargetTransformInfo.cpp",

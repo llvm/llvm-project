@@ -98,14 +98,14 @@ int bar(int n){
 
 #endif
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l24
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[E:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-64-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[E:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-64-NEXT:  entry:
-// CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[E_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [1 x ptr], align 8
-// CHECK-64-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK-64-NEXT:    store ptr [[E]], ptr [[E_ADDR]], align 8
-// CHECK-64-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[E_ADDR]], align 8
+// CHECK-64-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
+// CHECK-64-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[E_ADDR]], align 8, !nonnull [[META6:![0-9]+]], !align [[META7:![0-9]+]]
 // CHECK-64-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l24_kernel_environment, ptr [[DYN_PTR]])
 // CHECK-64-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // CHECK-64-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
@@ -113,7 +113,7 @@ int bar(int n){
 // CHECK-64-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1:[0-9]+]])
 // CHECK-64-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i64 0, i64 0
 // CHECK-64-NEXT:    store ptr [[TMP0]], ptr [[TMP3]], align 8
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP2]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l24_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i64 1)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP2]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l24_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i64 1, i32 0)
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit()
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
@@ -131,7 +131,7 @@ int bar(int n){
 // CHECK-64-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK-64-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 8
 // CHECK-64-NEXT:    store ptr [[E]], ptr [[E_ADDR]], align 8
-// CHECK-64-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[E_ADDR]], align 8
+// CHECK-64-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[E_ADDR]], align 8, !nonnull [[META6]], !align [[META7]]
 // CHECK-64-NEXT:    store double 0.000000e+00, ptr [[E1]], align 8
 // CHECK-64-NEXT:    [[TMP1:%.*]] = load double, ptr [[E1]], align 8
 // CHECK-64-NEXT:    [[ADD:%.*]] = fadd double [[TMP1]], 5.000000e+00
@@ -223,70 +223,71 @@ int bar(int n){
 // CHECK-64-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 // CHECK-64-NEXT:    [[DOTCNT_ADDR:%.*]] = alloca i32, align 4
-// CHECK-64-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
 // CHECK-64-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 8
 // CHECK-64-NEXT:    store i32 [[TMP1]], ptr [[DOTADDR1]], align 4
+// CHECK-64-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
 // CHECK-64-NEXT:    [[TMP3:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
+// CHECK-64-NEXT:    [[NVPTX_LANE_ID:%.*]] = and i32 [[TMP3]], 31
 // CHECK-64-NEXT:    [[TMP4:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
-// CHECK-64-NEXT:    [[NVPTX_LANE_ID:%.*]] = and i32 [[TMP4]], 31
-// CHECK-64-NEXT:    [[TMP5:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
-// CHECK-64-NEXT:    [[NVPTX_WARP_ID:%.*]] = ashr i32 [[TMP5]], 5
-// CHECK-64-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[DOTADDR]], align 8
+// CHECK-64-NEXT:    [[NVPTX_WARP_ID:%.*]] = ashr i32 [[TMP4]], 5
+// CHECK-64-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[DOTADDR]], align 8
 // CHECK-64-NEXT:    store i32 0, ptr [[DOTCNT_ADDR]], align 4
 // CHECK-64-NEXT:    br label [[PRECOND:%.*]]
 // CHECK-64:       precond:
-// CHECK-64-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTCNT_ADDR]], align 4
-// CHECK-64-NEXT:    [[TMP8:%.*]] = icmp ult i32 [[TMP7]], 2
-// CHECK-64-NEXT:    br i1 [[TMP8]], label [[BODY:%.*]], label [[EXIT:%.*]]
+// CHECK-64-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTCNT_ADDR]], align 4
+// CHECK-64-NEXT:    [[TMP7:%.*]] = icmp ult i32 [[TMP6]], 2
+// CHECK-64-NEXT:    br i1 [[TMP7]], label [[BODY:%.*]], label [[EXIT:%.*]]
 // CHECK-64:       body:
-// CHECK-64-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2:[0-9]+]], i32 [[TMP2]])
+// CHECK-64-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK-64-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2:[0-9]+]], i32 [[OMP_GLOBAL_THREAD_NUM]])
 // CHECK-64-NEXT:    [[WARP_MASTER:%.*]] = icmp eq i32 [[NVPTX_LANE_ID]], 0
 // CHECK-64-NEXT:    br i1 [[WARP_MASTER]], label [[THEN:%.*]], label [[ELSE:%.*]]
 // CHECK-64:       then:
-// CHECK-64-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP6]], i64 0, i64 0
-// CHECK-64-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[TMP9]], align 8
-// CHECK-64-NEXT:    [[TMP11:%.*]] = getelementptr i32, ptr [[TMP10]], i32 [[TMP7]]
-// CHECK-64-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[NVPTX_WARP_ID]]
-// CHECK-64-NEXT:    [[TMP13:%.*]] = load i32, ptr [[TMP11]], align 4
-// CHECK-64-NEXT:    store volatile i32 [[TMP13]], ptr addrspace(3) [[TMP12]], align 4
+// CHECK-64-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP5]], i64 0, i64 0
+// CHECK-64-NEXT:    [[TMP9:%.*]] = load ptr, ptr [[TMP8]], align 8
+// CHECK-64-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[TMP9]], i32 [[TMP6]]
+// CHECK-64-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[NVPTX_WARP_ID]]
+// CHECK-64-NEXT:    [[TMP12:%.*]] = load i32, ptr [[TMP10]], align 4
+// CHECK-64-NEXT:    store volatile i32 [[TMP12]], ptr addrspace(3) [[TMP11]], align 4
 // CHECK-64-NEXT:    br label [[IFCONT:%.*]]
 // CHECK-64:       else:
 // CHECK-64-NEXT:    br label [[IFCONT]]
 // CHECK-64:       ifcont:
-// CHECK-64-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP2]])
-// CHECK-64-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTADDR1]], align 4
-// CHECK-64-NEXT:    [[IS_ACTIVE_THREAD:%.*]] = icmp ult i32 [[TMP3]], [[TMP14]]
-// CHECK-64-NEXT:    br i1 [[IS_ACTIVE_THREAD]], label [[THEN2:%.*]], label [[ELSE3:%.*]]
-// CHECK-64:       then2:
-// CHECK-64-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[TMP3]]
-// CHECK-64-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP6]], i64 0, i64 0
-// CHECK-64-NEXT:    [[TMP17:%.*]] = load ptr, ptr [[TMP16]], align 8
-// CHECK-64-NEXT:    [[TMP18:%.*]] = getelementptr i32, ptr [[TMP17]], i32 [[TMP7]]
-// CHECK-64-NEXT:    [[TMP19:%.*]] = load volatile i32, ptr addrspace(3) [[TMP15]], align 4
-// CHECK-64-NEXT:    store i32 [[TMP19]], ptr [[TMP18]], align 4
-// CHECK-64-NEXT:    br label [[IFCONT4:%.*]]
-// CHECK-64:       else3:
-// CHECK-64-NEXT:    br label [[IFCONT4]]
-// CHECK-64:       ifcont4:
-// CHECK-64-NEXT:    [[TMP20:%.*]] = add nsw i32 [[TMP7]], 1
-// CHECK-64-NEXT:    store i32 [[TMP20]], ptr [[DOTCNT_ADDR]], align 4
+// CHECK-64-NEXT:    [[OMP_GLOBAL_THREAD_NUM2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK-64-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM2]])
+// CHECK-64-NEXT:    [[TMP13:%.*]] = load i32, ptr [[DOTADDR1]], align 4
+// CHECK-64-NEXT:    [[IS_ACTIVE_THREAD:%.*]] = icmp ult i32 [[TMP2]], [[TMP13]]
+// CHECK-64-NEXT:    br i1 [[IS_ACTIVE_THREAD]], label [[THEN3:%.*]], label [[ELSE4:%.*]]
+// CHECK-64:       then3:
+// CHECK-64-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[TMP2]]
+// CHECK-64-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP5]], i64 0, i64 0
+// CHECK-64-NEXT:    [[TMP16:%.*]] = load ptr, ptr [[TMP15]], align 8
+// CHECK-64-NEXT:    [[TMP17:%.*]] = getelementptr i32, ptr [[TMP16]], i32 [[TMP6]]
+// CHECK-64-NEXT:    [[TMP18:%.*]] = load volatile i32, ptr addrspace(3) [[TMP14]], align 4
+// CHECK-64-NEXT:    store i32 [[TMP18]], ptr [[TMP17]], align 4
+// CHECK-64-NEXT:    br label [[IFCONT5:%.*]]
+// CHECK-64:       else4:
+// CHECK-64-NEXT:    br label [[IFCONT5]]
+// CHECK-64:       ifcont5:
+// CHECK-64-NEXT:    [[TMP19:%.*]] = add nsw i32 [[TMP6]], 1
+// CHECK-64-NEXT:    store i32 [[TMP19]], ptr [[DOTCNT_ADDR]], align 4
 // CHECK-64-NEXT:    br label [[PRECOND]]
 // CHECK-64:       exit:
 // CHECK-64-NEXT:    ret void
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l29
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef nonnull align 1 dereferenceable(1) [[C:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR0]] {
+// CHECK-64-SAME: (ptr noundef nonnull align 1 dereferenceable(1) [[C:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[D:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR0]] {
 // CHECK-64-NEXT:  entry:
-// CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[C_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[D_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [2 x ptr], align 8
-// CHECK-64-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK-64-NEXT:    store ptr [[C]], ptr [[C_ADDR]], align 8
 // CHECK-64-NEXT:    store ptr [[D]], ptr [[D_ADDR]], align 8
-// CHECK-64-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[C_ADDR]], align 8
-// CHECK-64-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[D_ADDR]], align 8
+// CHECK-64-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
+// CHECK-64-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[C_ADDR]], align 8, !nonnull [[META6]]
+// CHECK-64-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[D_ADDR]], align 8, !nonnull [[META6]], !align [[META8:![0-9]+]]
 // CHECK-64-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l29_kernel_environment, ptr [[DYN_PTR]])
 // CHECK-64-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP2]], -1
 // CHECK-64-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
@@ -296,7 +297,7 @@ int bar(int n){
 // CHECK-64-NEXT:    store ptr [[TMP0]], ptr [[TMP4]], align 8
 // CHECK-64-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [2 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i64 0, i64 1
 // CHECK-64-NEXT:    store ptr [[TMP1]], ptr [[TMP5]], align 8
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP3]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l29_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i64 2)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP3]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l29_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i64 2, i32 0)
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit()
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
@@ -317,8 +318,8 @@ int bar(int n){
 // CHECK-64-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 8
 // CHECK-64-NEXT:    store ptr [[C]], ptr [[C_ADDR]], align 8
 // CHECK-64-NEXT:    store ptr [[D]], ptr [[D_ADDR]], align 8
-// CHECK-64-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[C_ADDR]], align 8
-// CHECK-64-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[D_ADDR]], align 8
+// CHECK-64-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[C_ADDR]], align 8, !nonnull [[META6]]
+// CHECK-64-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[D_ADDR]], align 8, !nonnull [[META6]], !align [[META8]]
 // CHECK-64-NEXT:    store i8 0, ptr [[C1]], align 1
 // CHECK-64-NEXT:    store float 1.000000e+00, ptr [[D2]], align 4
 // CHECK-64-NEXT:    [[TMP2:%.*]] = load i8, ptr [[C1]], align 1
@@ -445,84 +446,87 @@ int bar(int n){
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
-// CHECK-64-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
 // CHECK-64-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 8
 // CHECK-64-NEXT:    store i32 [[TMP1]], ptr [[DOTADDR1]], align 4
+// CHECK-64-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
 // CHECK-64-NEXT:    [[TMP3:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
+// CHECK-64-NEXT:    [[NVPTX_LANE_ID:%.*]] = and i32 [[TMP3]], 31
 // CHECK-64-NEXT:    [[TMP4:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
-// CHECK-64-NEXT:    [[NVPTX_LANE_ID:%.*]] = and i32 [[TMP4]], 31
-// CHECK-64-NEXT:    [[TMP5:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
-// CHECK-64-NEXT:    [[NVPTX_WARP_ID:%.*]] = ashr i32 [[TMP5]], 5
-// CHECK-64-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[DOTADDR]], align 8
-// CHECK-64-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP2]])
+// CHECK-64-NEXT:    [[NVPTX_WARP_ID:%.*]] = ashr i32 [[TMP4]], 5
+// CHECK-64-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[DOTADDR]], align 8
+// CHECK-64-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK-64-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM]])
 // CHECK-64-NEXT:    [[WARP_MASTER:%.*]] = icmp eq i32 [[NVPTX_LANE_ID]], 0
 // CHECK-64-NEXT:    br i1 [[WARP_MASTER]], label [[THEN:%.*]], label [[ELSE:%.*]]
 // CHECK-64:       then:
-// CHECK-64-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP6]], i64 0, i64 0
-// CHECK-64-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[TMP7]], align 8
-// CHECK-64-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[NVPTX_WARP_ID]]
-// CHECK-64-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP8]], align 1
-// CHECK-64-NEXT:    store volatile i8 [[TMP10]], ptr addrspace(3) [[TMP9]], align 1
+// CHECK-64-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP5]], i64 0, i64 0
+// CHECK-64-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
+// CHECK-64-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[NVPTX_WARP_ID]]
+// CHECK-64-NEXT:    [[TMP9:%.*]] = load i8, ptr [[TMP7]], align 1
+// CHECK-64-NEXT:    store volatile i8 [[TMP9]], ptr addrspace(3) [[TMP8]], align 1
 // CHECK-64-NEXT:    br label [[IFCONT:%.*]]
 // CHECK-64:       else:
 // CHECK-64-NEXT:    br label [[IFCONT]]
 // CHECK-64:       ifcont:
-// CHECK-64-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP2]])
-// CHECK-64-NEXT:    [[TMP11:%.*]] = load i32, ptr [[DOTADDR1]], align 4
-// CHECK-64-NEXT:    [[IS_ACTIVE_THREAD:%.*]] = icmp ult i32 [[TMP3]], [[TMP11]]
-// CHECK-64-NEXT:    br i1 [[IS_ACTIVE_THREAD]], label [[THEN2:%.*]], label [[ELSE3:%.*]]
-// CHECK-64:       then2:
-// CHECK-64-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[TMP3]]
-// CHECK-64-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP6]], i64 0, i64 0
-// CHECK-64-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[TMP13]], align 8
-// CHECK-64-NEXT:    [[TMP15:%.*]] = load volatile i8, ptr addrspace(3) [[TMP12]], align 1
-// CHECK-64-NEXT:    store i8 [[TMP15]], ptr [[TMP14]], align 1
-// CHECK-64-NEXT:    br label [[IFCONT4:%.*]]
-// CHECK-64:       else3:
-// CHECK-64-NEXT:    br label [[IFCONT4]]
-// CHECK-64:       ifcont4:
-// CHECK-64-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP2]])
-// CHECK-64-NEXT:    [[WARP_MASTER5:%.*]] = icmp eq i32 [[NVPTX_LANE_ID]], 0
-// CHECK-64-NEXT:    br i1 [[WARP_MASTER5]], label [[THEN6:%.*]], label [[ELSE7:%.*]]
-// CHECK-64:       then6:
-// CHECK-64-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP6]], i64 0, i64 1
-// CHECK-64-NEXT:    [[TMP17:%.*]] = load ptr, ptr [[TMP16]], align 8
-// CHECK-64-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[NVPTX_WARP_ID]]
-// CHECK-64-NEXT:    [[TMP19:%.*]] = load i32, ptr [[TMP17]], align 4
-// CHECK-64-NEXT:    store volatile i32 [[TMP19]], ptr addrspace(3) [[TMP18]], align 4
-// CHECK-64-NEXT:    br label [[IFCONT8:%.*]]
-// CHECK-64:       else7:
-// CHECK-64-NEXT:    br label [[IFCONT8]]
-// CHECK-64:       ifcont8:
-// CHECK-64-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP2]])
-// CHECK-64-NEXT:    [[TMP20:%.*]] = load i32, ptr [[DOTADDR1]], align 4
-// CHECK-64-NEXT:    [[IS_ACTIVE_THREAD9:%.*]] = icmp ult i32 [[TMP3]], [[TMP20]]
-// CHECK-64-NEXT:    br i1 [[IS_ACTIVE_THREAD9]], label [[THEN10:%.*]], label [[ELSE11:%.*]]
-// CHECK-64:       then10:
-// CHECK-64-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[TMP3]]
-// CHECK-64-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP6]], i64 0, i64 1
-// CHECK-64-NEXT:    [[TMP23:%.*]] = load ptr, ptr [[TMP22]], align 8
-// CHECK-64-NEXT:    [[TMP24:%.*]] = load volatile i32, ptr addrspace(3) [[TMP21]], align 4
-// CHECK-64-NEXT:    store i32 [[TMP24]], ptr [[TMP23]], align 4
-// CHECK-64-NEXT:    br label [[IFCONT12:%.*]]
-// CHECK-64:       else11:
-// CHECK-64-NEXT:    br label [[IFCONT12]]
-// CHECK-64:       ifcont12:
+// CHECK-64-NEXT:    [[OMP_GLOBAL_THREAD_NUM2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK-64-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM2]])
+// CHECK-64-NEXT:    [[TMP10:%.*]] = load i32, ptr [[DOTADDR1]], align 4
+// CHECK-64-NEXT:    [[IS_ACTIVE_THREAD:%.*]] = icmp ult i32 [[TMP2]], [[TMP10]]
+// CHECK-64-NEXT:    br i1 [[IS_ACTIVE_THREAD]], label [[THEN3:%.*]], label [[ELSE4:%.*]]
+// CHECK-64:       then3:
+// CHECK-64-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[TMP2]]
+// CHECK-64-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP5]], i64 0, i64 0
+// CHECK-64-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[TMP12]], align 8
+// CHECK-64-NEXT:    [[TMP14:%.*]] = load volatile i8, ptr addrspace(3) [[TMP11]], align 1
+// CHECK-64-NEXT:    store i8 [[TMP14]], ptr [[TMP13]], align 1
+// CHECK-64-NEXT:    br label [[IFCONT5:%.*]]
+// CHECK-64:       else4:
+// CHECK-64-NEXT:    br label [[IFCONT5]]
+// CHECK-64:       ifcont5:
+// CHECK-64-NEXT:    [[OMP_GLOBAL_THREAD_NUM6:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK-64-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM6]])
+// CHECK-64-NEXT:    [[WARP_MASTER7:%.*]] = icmp eq i32 [[NVPTX_LANE_ID]], 0
+// CHECK-64-NEXT:    br i1 [[WARP_MASTER7]], label [[THEN8:%.*]], label [[ELSE9:%.*]]
+// CHECK-64:       then8:
+// CHECK-64-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP5]], i64 0, i64 1
+// CHECK-64-NEXT:    [[TMP16:%.*]] = load ptr, ptr [[TMP15]], align 8
+// CHECK-64-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[NVPTX_WARP_ID]]
+// CHECK-64-NEXT:    [[TMP18:%.*]] = load i32, ptr [[TMP16]], align 4
+// CHECK-64-NEXT:    store volatile i32 [[TMP18]], ptr addrspace(3) [[TMP17]], align 4
+// CHECK-64-NEXT:    br label [[IFCONT10:%.*]]
+// CHECK-64:       else9:
+// CHECK-64-NEXT:    br label [[IFCONT10]]
+// CHECK-64:       ifcont10:
+// CHECK-64-NEXT:    [[OMP_GLOBAL_THREAD_NUM11:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK-64-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM11]])
+// CHECK-64-NEXT:    [[TMP19:%.*]] = load i32, ptr [[DOTADDR1]], align 4
+// CHECK-64-NEXT:    [[IS_ACTIVE_THREAD12:%.*]] = icmp ult i32 [[TMP2]], [[TMP19]]
+// CHECK-64-NEXT:    br i1 [[IS_ACTIVE_THREAD12]], label [[THEN13:%.*]], label [[ELSE14:%.*]]
+// CHECK-64:       then13:
+// CHECK-64-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[TMP2]]
+// CHECK-64-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP5]], i64 0, i64 1
+// CHECK-64-NEXT:    [[TMP22:%.*]] = load ptr, ptr [[TMP21]], align 8
+// CHECK-64-NEXT:    [[TMP23:%.*]] = load volatile i32, ptr addrspace(3) [[TMP20]], align 4
+// CHECK-64-NEXT:    store i32 [[TMP23]], ptr [[TMP22]], align 4
+// CHECK-64-NEXT:    br label [[IFCONT15:%.*]]
+// CHECK-64:       else14:
+// CHECK-64-NEXT:    br label [[IFCONT15]]
+// CHECK-64:       ifcont15:
 // CHECK-64-NEXT:    ret void
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l35
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], ptr noundef nonnull align 2 dereferenceable(2) [[B:%.*]]) #[[ATTR0]] {
+// CHECK-64-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], ptr noundef nonnull align 2 dereferenceable(2) [[B:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR0]] {
 // CHECK-64-NEXT:  entry:
-// CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [2 x ptr], align 8
-// CHECK-64-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
 // CHECK-64-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 8
 // CHECK-64-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8
-// CHECK-64-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 8
-// CHECK-64-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[B_ADDR]], align 8
+// CHECK-64-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
+// CHECK-64-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !nonnull [[META6]], !align [[META8]]
+// CHECK-64-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !nonnull [[META6]], !align [[META9:![0-9]+]]
 // CHECK-64-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l35_kernel_environment, ptr [[DYN_PTR]])
 // CHECK-64-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP2]], -1
 // CHECK-64-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
@@ -532,7 +536,7 @@ int bar(int n){
 // CHECK-64-NEXT:    store ptr [[TMP0]], ptr [[TMP4]], align 8
 // CHECK-64-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [2 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i64 0, i64 1
 // CHECK-64-NEXT:    store ptr [[TMP1]], ptr [[TMP5]], align 8
-// CHECK-64-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP3]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l35_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i64 2)
+// CHECK-64-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP3]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l35_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i64 2, i32 0)
 // CHECK-64-NEXT:    call void @__kmpc_target_deinit()
 // CHECK-64-NEXT:    ret void
 // CHECK-64:       worker.exit:
@@ -553,8 +557,8 @@ int bar(int n){
 // CHECK-64-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 8
 // CHECK-64-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 8
 // CHECK-64-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8
-// CHECK-64-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 8
-// CHECK-64-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[B_ADDR]], align 8
+// CHECK-64-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !nonnull [[META6]], !align [[META8]]
+// CHECK-64-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !nonnull [[META6]], !align [[META9]]
 // CHECK-64-NEXT:    store i32 0, ptr [[A1]], align 4
 // CHECK-64-NEXT:    store i16 -32768, ptr [[B2]], align 2
 // CHECK-64-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A1]], align 4
@@ -698,81 +702,84 @@ int bar(int n){
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
-// CHECK-64-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
 // CHECK-64-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 8
 // CHECK-64-NEXT:    store i32 [[TMP1]], ptr [[DOTADDR1]], align 4
+// CHECK-64-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
 // CHECK-64-NEXT:    [[TMP3:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
+// CHECK-64-NEXT:    [[NVPTX_LANE_ID:%.*]] = and i32 [[TMP3]], 31
 // CHECK-64-NEXT:    [[TMP4:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
-// CHECK-64-NEXT:    [[NVPTX_LANE_ID:%.*]] = and i32 [[TMP4]], 31
-// CHECK-64-NEXT:    [[TMP5:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
-// CHECK-64-NEXT:    [[NVPTX_WARP_ID:%.*]] = ashr i32 [[TMP5]], 5
-// CHECK-64-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[DOTADDR]], align 8
-// CHECK-64-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP2]])
+// CHECK-64-NEXT:    [[NVPTX_WARP_ID:%.*]] = ashr i32 [[TMP4]], 5
+// CHECK-64-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[DOTADDR]], align 8
+// CHECK-64-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK-64-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM]])
 // CHECK-64-NEXT:    [[WARP_MASTER:%.*]] = icmp eq i32 [[NVPTX_LANE_ID]], 0
 // CHECK-64-NEXT:    br i1 [[WARP_MASTER]], label [[THEN:%.*]], label [[ELSE:%.*]]
 // CHECK-64:       then:
-// CHECK-64-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP6]], i64 0, i64 0
-// CHECK-64-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[TMP7]], align 8
-// CHECK-64-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[NVPTX_WARP_ID]]
-// CHECK-64-NEXT:    [[TMP10:%.*]] = load i32, ptr [[TMP8]], align 4
-// CHECK-64-NEXT:    store volatile i32 [[TMP10]], ptr addrspace(3) [[TMP9]], align 4
+// CHECK-64-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP5]], i64 0, i64 0
+// CHECK-64-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
+// CHECK-64-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[NVPTX_WARP_ID]]
+// CHECK-64-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP7]], align 4
+// CHECK-64-NEXT:    store volatile i32 [[TMP9]], ptr addrspace(3) [[TMP8]], align 4
 // CHECK-64-NEXT:    br label [[IFCONT:%.*]]
 // CHECK-64:       else:
 // CHECK-64-NEXT:    br label [[IFCONT]]
 // CHECK-64:       ifcont:
-// CHECK-64-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP2]])
-// CHECK-64-NEXT:    [[TMP11:%.*]] = load i32, ptr [[DOTADDR1]], align 4
-// CHECK-64-NEXT:    [[IS_ACTIVE_THREAD:%.*]] = icmp ult i32 [[TMP3]], [[TMP11]]
-// CHECK-64-NEXT:    br i1 [[IS_ACTIVE_THREAD]], label [[THEN2:%.*]], label [[ELSE3:%.*]]
-// CHECK-64:       then2:
-// CHECK-64-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[TMP3]]
-// CHECK-64-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP6]], i64 0, i64 0
-// CHECK-64-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[TMP13]], align 8
-// CHECK-64-NEXT:    [[TMP15:%.*]] = load volatile i32, ptr addrspace(3) [[TMP12]], align 4
-// CHECK-64-NEXT:    store i32 [[TMP15]], ptr [[TMP14]], align 4
-// CHECK-64-NEXT:    br label [[IFCONT4:%.*]]
-// CHECK-64:       else3:
-// CHECK-64-NEXT:    br label [[IFCONT4]]
-// CHECK-64:       ifcont4:
-// CHECK-64-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP2]])
-// CHECK-64-NEXT:    [[WARP_MASTER5:%.*]] = icmp eq i32 [[NVPTX_LANE_ID]], 0
-// CHECK-64-NEXT:    br i1 [[WARP_MASTER5]], label [[THEN6:%.*]], label [[ELSE7:%.*]]
-// CHECK-64:       then6:
-// CHECK-64-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP6]], i64 0, i64 1
-// CHECK-64-NEXT:    [[TMP17:%.*]] = load ptr, ptr [[TMP16]], align 8
-// CHECK-64-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[NVPTX_WARP_ID]]
-// CHECK-64-NEXT:    [[TMP19:%.*]] = load i16, ptr [[TMP17]], align 2
-// CHECK-64-NEXT:    store volatile i16 [[TMP19]], ptr addrspace(3) [[TMP18]], align 2
-// CHECK-64-NEXT:    br label [[IFCONT8:%.*]]
-// CHECK-64:       else7:
-// CHECK-64-NEXT:    br label [[IFCONT8]]
-// CHECK-64:       ifcont8:
-// CHECK-64-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP2]])
-// CHECK-64-NEXT:    [[TMP20:%.*]] = load i32, ptr [[DOTADDR1]], align 4
-// CHECK-64-NEXT:    [[IS_ACTIVE_THREAD9:%.*]] = icmp ult i32 [[TMP3]], [[TMP20]]
-// CHECK-64-NEXT:    br i1 [[IS_ACTIVE_THREAD9]], label [[THEN10:%.*]], label [[ELSE11:%.*]]
-// CHECK-64:       then10:
-// CHECK-64-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[TMP3]]
-// CHECK-64-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP6]], i64 0, i64 1
-// CHECK-64-NEXT:    [[TMP23:%.*]] = load ptr, ptr [[TMP22]], align 8
-// CHECK-64-NEXT:    [[TMP24:%.*]] = load volatile i16, ptr addrspace(3) [[TMP21]], align 2
-// CHECK-64-NEXT:    store i16 [[TMP24]], ptr [[TMP23]], align 2
-// CHECK-64-NEXT:    br label [[IFCONT12:%.*]]
-// CHECK-64:       else11:
-// CHECK-64-NEXT:    br label [[IFCONT12]]
-// CHECK-64:       ifcont12:
+// CHECK-64-NEXT:    [[OMP_GLOBAL_THREAD_NUM2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK-64-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM2]])
+// CHECK-64-NEXT:    [[TMP10:%.*]] = load i32, ptr [[DOTADDR1]], align 4
+// CHECK-64-NEXT:    [[IS_ACTIVE_THREAD:%.*]] = icmp ult i32 [[TMP2]], [[TMP10]]
+// CHECK-64-NEXT:    br i1 [[IS_ACTIVE_THREAD]], label [[THEN3:%.*]], label [[ELSE4:%.*]]
+// CHECK-64:       then3:
+// CHECK-64-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[TMP2]]
+// CHECK-64-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP5]], i64 0, i64 0
+// CHECK-64-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[TMP12]], align 8
+// CHECK-64-NEXT:    [[TMP14:%.*]] = load volatile i32, ptr addrspace(3) [[TMP11]], align 4
+// CHECK-64-NEXT:    store i32 [[TMP14]], ptr [[TMP13]], align 4
+// CHECK-64-NEXT:    br label [[IFCONT5:%.*]]
+// CHECK-64:       else4:
+// CHECK-64-NEXT:    br label [[IFCONT5]]
+// CHECK-64:       ifcont5:
+// CHECK-64-NEXT:    [[OMP_GLOBAL_THREAD_NUM6:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK-64-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM6]])
+// CHECK-64-NEXT:    [[WARP_MASTER7:%.*]] = icmp eq i32 [[NVPTX_LANE_ID]], 0
+// CHECK-64-NEXT:    br i1 [[WARP_MASTER7]], label [[THEN8:%.*]], label [[ELSE9:%.*]]
+// CHECK-64:       then8:
+// CHECK-64-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP5]], i64 0, i64 1
+// CHECK-64-NEXT:    [[TMP16:%.*]] = load ptr, ptr [[TMP15]], align 8
+// CHECK-64-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[NVPTX_WARP_ID]]
+// CHECK-64-NEXT:    [[TMP18:%.*]] = load i16, ptr [[TMP16]], align 2
+// CHECK-64-NEXT:    store volatile i16 [[TMP18]], ptr addrspace(3) [[TMP17]], align 2
+// CHECK-64-NEXT:    br label [[IFCONT10:%.*]]
+// CHECK-64:       else9:
+// CHECK-64-NEXT:    br label [[IFCONT10]]
+// CHECK-64:       ifcont10:
+// CHECK-64-NEXT:    [[OMP_GLOBAL_THREAD_NUM11:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK-64-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM11]])
+// CHECK-64-NEXT:    [[TMP19:%.*]] = load i32, ptr [[DOTADDR1]], align 4
+// CHECK-64-NEXT:    [[IS_ACTIVE_THREAD12:%.*]] = icmp ult i32 [[TMP2]], [[TMP19]]
+// CHECK-64-NEXT:    br i1 [[IS_ACTIVE_THREAD12]], label [[THEN13:%.*]], label [[ELSE14:%.*]]
+// CHECK-64:       then13:
+// CHECK-64-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[TMP2]]
+// CHECK-64-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP5]], i64 0, i64 1
+// CHECK-64-NEXT:    [[TMP22:%.*]] = load ptr, ptr [[TMP21]], align 8
+// CHECK-64-NEXT:    [[TMP23:%.*]] = load volatile i16, ptr addrspace(3) [[TMP20]], align 2
+// CHECK-64-NEXT:    store i16 [[TMP23]], ptr [[TMP22]], align 2
+// CHECK-64-NEXT:    br label [[IFCONT15:%.*]]
+// CHECK-64:       else14:
+// CHECK-64-NEXT:    br label [[IFCONT15]]
+// CHECK-64:       ifcont15:
 // CHECK-64-NEXT:    ret void
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l24
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[E:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-32-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[E:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-32-NEXT:  entry:
-// CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[E_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [1 x ptr], align 4
-// CHECK-32-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // CHECK-32-NEXT:    store ptr [[E]], ptr [[E_ADDR]], align 4
-// CHECK-32-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[E_ADDR]], align 4
+// CHECK-32-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
+// CHECK-32-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[E_ADDR]], align 4, !nonnull [[META6:![0-9]+]], !align [[META7:![0-9]+]]
 // CHECK-32-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l24_kernel_environment, ptr [[DYN_PTR]])
 // CHECK-32-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // CHECK-32-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
@@ -780,7 +787,7 @@ int bar(int n){
 // CHECK-32-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1:[0-9]+]])
 // CHECK-32-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i32 0, i32 0
 // CHECK-32-NEXT:    store ptr [[TMP0]], ptr [[TMP3]], align 4
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP2]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l24_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 1)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP2]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l24_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 1, i32 0)
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit()
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
@@ -798,7 +805,7 @@ int bar(int n){
 // CHECK-32-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK-32-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 4
 // CHECK-32-NEXT:    store ptr [[E]], ptr [[E_ADDR]], align 4
-// CHECK-32-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[E_ADDR]], align 4
+// CHECK-32-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[E_ADDR]], align 4, !nonnull [[META6]], !align [[META7]]
 // CHECK-32-NEXT:    store double 0.000000e+00, ptr [[E1]], align 8
 // CHECK-32-NEXT:    [[TMP1:%.*]] = load double, ptr [[E1]], align 8
 // CHECK-32-NEXT:    [[ADD:%.*]] = fadd double [[TMP1]], 5.000000e+00
@@ -890,70 +897,71 @@ int bar(int n){
 // CHECK-32-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 // CHECK-32-NEXT:    [[DOTCNT_ADDR:%.*]] = alloca i32, align 4
-// CHECK-32-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
 // CHECK-32-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 4
 // CHECK-32-NEXT:    store i32 [[TMP1]], ptr [[DOTADDR1]], align 4
+// CHECK-32-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
 // CHECK-32-NEXT:    [[TMP3:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
+// CHECK-32-NEXT:    [[NVPTX_LANE_ID:%.*]] = and i32 [[TMP3]], 31
 // CHECK-32-NEXT:    [[TMP4:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
-// CHECK-32-NEXT:    [[NVPTX_LANE_ID:%.*]] = and i32 [[TMP4]], 31
-// CHECK-32-NEXT:    [[TMP5:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
-// CHECK-32-NEXT:    [[NVPTX_WARP_ID:%.*]] = ashr i32 [[TMP5]], 5
-// CHECK-32-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[DOTADDR]], align 4
+// CHECK-32-NEXT:    [[NVPTX_WARP_ID:%.*]] = ashr i32 [[TMP4]], 5
+// CHECK-32-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[DOTADDR]], align 4
 // CHECK-32-NEXT:    store i32 0, ptr [[DOTCNT_ADDR]], align 4
 // CHECK-32-NEXT:    br label [[PRECOND:%.*]]
 // CHECK-32:       precond:
-// CHECK-32-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTCNT_ADDR]], align 4
-// CHECK-32-NEXT:    [[TMP8:%.*]] = icmp ult i32 [[TMP7]], 2
-// CHECK-32-NEXT:    br i1 [[TMP8]], label [[BODY:%.*]], label [[EXIT:%.*]]
+// CHECK-32-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTCNT_ADDR]], align 4
+// CHECK-32-NEXT:    [[TMP7:%.*]] = icmp ult i32 [[TMP6]], 2
+// CHECK-32-NEXT:    br i1 [[TMP7]], label [[BODY:%.*]], label [[EXIT:%.*]]
 // CHECK-32:       body:
-// CHECK-32-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2:[0-9]+]], i32 [[TMP2]])
+// CHECK-32-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK-32-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2:[0-9]+]], i32 [[OMP_GLOBAL_THREAD_NUM]])
 // CHECK-32-NEXT:    [[WARP_MASTER:%.*]] = icmp eq i32 [[NVPTX_LANE_ID]], 0
 // CHECK-32-NEXT:    br i1 [[WARP_MASTER]], label [[THEN:%.*]], label [[ELSE:%.*]]
 // CHECK-32:       then:
-// CHECK-32-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP6]], i32 0, i32 0
-// CHECK-32-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[TMP9]], align 4
-// CHECK-32-NEXT:    [[TMP11:%.*]] = getelementptr i32, ptr [[TMP10]], i32 [[TMP7]]
-// CHECK-32-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[NVPTX_WARP_ID]]
-// CHECK-32-NEXT:    [[TMP13:%.*]] = load i32, ptr [[TMP11]], align 4
-// CHECK-32-NEXT:    store volatile i32 [[TMP13]], ptr addrspace(3) [[TMP12]], align 4
+// CHECK-32-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP5]], i32 0, i32 0
+// CHECK-32-NEXT:    [[TMP9:%.*]] = load ptr, ptr [[TMP8]], align 4
+// CHECK-32-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[TMP9]], i32 [[TMP6]]
+// CHECK-32-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[NVPTX_WARP_ID]]
+// CHECK-32-NEXT:    [[TMP12:%.*]] = load i32, ptr [[TMP10]], align 4
+// CHECK-32-NEXT:    store volatile i32 [[TMP12]], ptr addrspace(3) [[TMP11]], align 4
 // CHECK-32-NEXT:    br label [[IFCONT:%.*]]
 // CHECK-32:       else:
 // CHECK-32-NEXT:    br label [[IFCONT]]
 // CHECK-32:       ifcont:
-// CHECK-32-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP2]])
-// CHECK-32-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTADDR1]], align 4
-// CHECK-32-NEXT:    [[IS_ACTIVE_THREAD:%.*]] = icmp ult i32 [[TMP3]], [[TMP14]]
-// CHECK-32-NEXT:    br i1 [[IS_ACTIVE_THREAD]], label [[THEN2:%.*]], label [[ELSE3:%.*]]
-// CHECK-32:       then2:
-// CHECK-32-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[TMP3]]
-// CHECK-32-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP6]], i32 0, i32 0
-// CHECK-32-NEXT:    [[TMP17:%.*]] = load ptr, ptr [[TMP16]], align 4
-// CHECK-32-NEXT:    [[TMP18:%.*]] = getelementptr i32, ptr [[TMP17]], i32 [[TMP7]]
-// CHECK-32-NEXT:    [[TMP19:%.*]] = load volatile i32, ptr addrspace(3) [[TMP15]], align 4
-// CHECK-32-NEXT:    store i32 [[TMP19]], ptr [[TMP18]], align 4
-// CHECK-32-NEXT:    br label [[IFCONT4:%.*]]
-// CHECK-32:       else3:
-// CHECK-32-NEXT:    br label [[IFCONT4]]
-// CHECK-32:       ifcont4:
-// CHECK-32-NEXT:    [[TMP20:%.*]] = add nsw i32 [[TMP7]], 1
-// CHECK-32-NEXT:    store i32 [[TMP20]], ptr [[DOTCNT_ADDR]], align 4
+// CHECK-32-NEXT:    [[OMP_GLOBAL_THREAD_NUM2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK-32-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM2]])
+// CHECK-32-NEXT:    [[TMP13:%.*]] = load i32, ptr [[DOTADDR1]], align 4
+// CHECK-32-NEXT:    [[IS_ACTIVE_THREAD:%.*]] = icmp ult i32 [[TMP2]], [[TMP13]]
+// CHECK-32-NEXT:    br i1 [[IS_ACTIVE_THREAD]], label [[THEN3:%.*]], label [[ELSE4:%.*]]
+// CHECK-32:       then3:
+// CHECK-32-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[TMP2]]
+// CHECK-32-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP5]], i32 0, i32 0
+// CHECK-32-NEXT:    [[TMP16:%.*]] = load ptr, ptr [[TMP15]], align 4
+// CHECK-32-NEXT:    [[TMP17:%.*]] = getelementptr i32, ptr [[TMP16]], i32 [[TMP6]]
+// CHECK-32-NEXT:    [[TMP18:%.*]] = load volatile i32, ptr addrspace(3) [[TMP14]], align 4
+// CHECK-32-NEXT:    store i32 [[TMP18]], ptr [[TMP17]], align 4
+// CHECK-32-NEXT:    br label [[IFCONT5:%.*]]
+// CHECK-32:       else4:
+// CHECK-32-NEXT:    br label [[IFCONT5]]
+// CHECK-32:       ifcont5:
+// CHECK-32-NEXT:    [[TMP19:%.*]] = add nsw i32 [[TMP6]], 1
+// CHECK-32-NEXT:    store i32 [[TMP19]], ptr [[DOTCNT_ADDR]], align 4
 // CHECK-32-NEXT:    br label [[PRECOND]]
 // CHECK-32:       exit:
 // CHECK-32-NEXT:    ret void
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l29
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef nonnull align 1 dereferenceable(1) [[C:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR0]] {
+// CHECK-32-SAME: (ptr noundef nonnull align 1 dereferenceable(1) [[C:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[D:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR0]] {
 // CHECK-32-NEXT:  entry:
-// CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[C_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[D_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [2 x ptr], align 4
-// CHECK-32-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // CHECK-32-NEXT:    store ptr [[C]], ptr [[C_ADDR]], align 4
 // CHECK-32-NEXT:    store ptr [[D]], ptr [[D_ADDR]], align 4
-// CHECK-32-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[C_ADDR]], align 4
-// CHECK-32-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[D_ADDR]], align 4
+// CHECK-32-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
+// CHECK-32-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[C_ADDR]], align 4, !nonnull [[META6]]
+// CHECK-32-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[D_ADDR]], align 4, !nonnull [[META6]], !align [[META8:![0-9]+]]
 // CHECK-32-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l29_kernel_environment, ptr [[DYN_PTR]])
 // CHECK-32-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP2]], -1
 // CHECK-32-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
@@ -963,7 +971,7 @@ int bar(int n){
 // CHECK-32-NEXT:    store ptr [[TMP0]], ptr [[TMP4]], align 4
 // CHECK-32-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [2 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i32 0, i32 1
 // CHECK-32-NEXT:    store ptr [[TMP1]], ptr [[TMP5]], align 4
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP3]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l29_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 2)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP3]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l29_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 2, i32 0)
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit()
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
@@ -984,8 +992,8 @@ int bar(int n){
 // CHECK-32-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 4
 // CHECK-32-NEXT:    store ptr [[C]], ptr [[C_ADDR]], align 4
 // CHECK-32-NEXT:    store ptr [[D]], ptr [[D_ADDR]], align 4
-// CHECK-32-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[C_ADDR]], align 4
-// CHECK-32-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[D_ADDR]], align 4
+// CHECK-32-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[C_ADDR]], align 4, !nonnull [[META6]]
+// CHECK-32-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[D_ADDR]], align 4, !nonnull [[META6]], !align [[META8]]
 // CHECK-32-NEXT:    store i8 0, ptr [[C1]], align 1
 // CHECK-32-NEXT:    store float 1.000000e+00, ptr [[D2]], align 4
 // CHECK-32-NEXT:    [[TMP2:%.*]] = load i8, ptr [[C1]], align 1
@@ -1112,84 +1120,87 @@ int bar(int n){
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
-// CHECK-32-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
 // CHECK-32-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 4
 // CHECK-32-NEXT:    store i32 [[TMP1]], ptr [[DOTADDR1]], align 4
+// CHECK-32-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
 // CHECK-32-NEXT:    [[TMP3:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
+// CHECK-32-NEXT:    [[NVPTX_LANE_ID:%.*]] = and i32 [[TMP3]], 31
 // CHECK-32-NEXT:    [[TMP4:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
-// CHECK-32-NEXT:    [[NVPTX_LANE_ID:%.*]] = and i32 [[TMP4]], 31
-// CHECK-32-NEXT:    [[TMP5:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
-// CHECK-32-NEXT:    [[NVPTX_WARP_ID:%.*]] = ashr i32 [[TMP5]], 5
-// CHECK-32-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[DOTADDR]], align 4
-// CHECK-32-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP2]])
+// CHECK-32-NEXT:    [[NVPTX_WARP_ID:%.*]] = ashr i32 [[TMP4]], 5
+// CHECK-32-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[DOTADDR]], align 4
+// CHECK-32-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK-32-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM]])
 // CHECK-32-NEXT:    [[WARP_MASTER:%.*]] = icmp eq i32 [[NVPTX_LANE_ID]], 0
 // CHECK-32-NEXT:    br i1 [[WARP_MASTER]], label [[THEN:%.*]], label [[ELSE:%.*]]
 // CHECK-32:       then:
-// CHECK-32-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP6]], i32 0, i32 0
-// CHECK-32-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[TMP7]], align 4
-// CHECK-32-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[NVPTX_WARP_ID]]
-// CHECK-32-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP8]], align 1
-// CHECK-32-NEXT:    store volatile i8 [[TMP10]], ptr addrspace(3) [[TMP9]], align 1
+// CHECK-32-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP5]], i32 0, i32 0
+// CHECK-32-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 4
+// CHECK-32-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[NVPTX_WARP_ID]]
+// CHECK-32-NEXT:    [[TMP9:%.*]] = load i8, ptr [[TMP7]], align 1
+// CHECK-32-NEXT:    store volatile i8 [[TMP9]], ptr addrspace(3) [[TMP8]], align 1
 // CHECK-32-NEXT:    br label [[IFCONT:%.*]]
 // CHECK-32:       else:
 // CHECK-32-NEXT:    br label [[IFCONT]]
 // CHECK-32:       ifcont:
-// CHECK-32-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP2]])
-// CHECK-32-NEXT:    [[TMP11:%.*]] = load i32, ptr [[DOTADDR1]], align 4
-// CHECK-32-NEXT:    [[IS_ACTIVE_THREAD:%.*]] = icmp ult i32 [[TMP3]], [[TMP11]]
-// CHECK-32-NEXT:    br i1 [[IS_ACTIVE_THREAD]], label [[THEN2:%.*]], label [[ELSE3:%.*]]
-// CHECK-32:       then2:
-// CHECK-32-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[TMP3]]
-// CHECK-32-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP6]], i32 0, i32 0
-// CHECK-32-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[TMP13]], align 4
-// CHECK-32-NEXT:    [[TMP15:%.*]] = load volatile i8, ptr addrspace(3) [[TMP12]], align 1
-// CHECK-32-NEXT:    store i8 [[TMP15]], ptr [[TMP14]], align 1
-// CHECK-32-NEXT:    br label [[IFCONT4:%.*]]
-// CHECK-32:       else3:
-// CHECK-32-NEXT:    br label [[IFCONT4]]
-// CHECK-32:       ifcont4:
-// CHECK-32-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP2]])
-// CHECK-32-NEXT:    [[WARP_MASTER5:%.*]] = icmp eq i32 [[NVPTX_LANE_ID]], 0
-// CHECK-32-NEXT:    br i1 [[WARP_MASTER5]], label [[THEN6:%.*]], label [[ELSE7:%.*]]
-// CHECK-32:       then6:
-// CHECK-32-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP6]], i32 0, i32 1
-// CHECK-32-NEXT:    [[TMP17:%.*]] = load ptr, ptr [[TMP16]], align 4
-// CHECK-32-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[NVPTX_WARP_ID]]
-// CHECK-32-NEXT:    [[TMP19:%.*]] = load i32, ptr [[TMP17]], align 4
-// CHECK-32-NEXT:    store volatile i32 [[TMP19]], ptr addrspace(3) [[TMP18]], align 4
-// CHECK-32-NEXT:    br label [[IFCONT8:%.*]]
-// CHECK-32:       else7:
-// CHECK-32-NEXT:    br label [[IFCONT8]]
-// CHECK-32:       ifcont8:
-// CHECK-32-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP2]])
-// CHECK-32-NEXT:    [[TMP20:%.*]] = load i32, ptr [[DOTADDR1]], align 4
-// CHECK-32-NEXT:    [[IS_ACTIVE_THREAD9:%.*]] = icmp ult i32 [[TMP3]], [[TMP20]]
-// CHECK-32-NEXT:    br i1 [[IS_ACTIVE_THREAD9]], label [[THEN10:%.*]], label [[ELSE11:%.*]]
-// CHECK-32:       then10:
-// CHECK-32-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[TMP3]]
-// CHECK-32-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP6]], i32 0, i32 1
-// CHECK-32-NEXT:    [[TMP23:%.*]] = load ptr, ptr [[TMP22]], align 4
-// CHECK-32-NEXT:    [[TMP24:%.*]] = load volatile i32, ptr addrspace(3) [[TMP21]], align 4
-// CHECK-32-NEXT:    store i32 [[TMP24]], ptr [[TMP23]], align 4
-// CHECK-32-NEXT:    br label [[IFCONT12:%.*]]
-// CHECK-32:       else11:
-// CHECK-32-NEXT:    br label [[IFCONT12]]
-// CHECK-32:       ifcont12:
+// CHECK-32-NEXT:    [[OMP_GLOBAL_THREAD_NUM2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK-32-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM2]])
+// CHECK-32-NEXT:    [[TMP10:%.*]] = load i32, ptr [[DOTADDR1]], align 4
+// CHECK-32-NEXT:    [[IS_ACTIVE_THREAD:%.*]] = icmp ult i32 [[TMP2]], [[TMP10]]
+// CHECK-32-NEXT:    br i1 [[IS_ACTIVE_THREAD]], label [[THEN3:%.*]], label [[ELSE4:%.*]]
+// CHECK-32:       then3:
+// CHECK-32-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[TMP2]]
+// CHECK-32-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP5]], i32 0, i32 0
+// CHECK-32-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[TMP12]], align 4
+// CHECK-32-NEXT:    [[TMP14:%.*]] = load volatile i8, ptr addrspace(3) [[TMP11]], align 1
+// CHECK-32-NEXT:    store i8 [[TMP14]], ptr [[TMP13]], align 1
+// CHECK-32-NEXT:    br label [[IFCONT5:%.*]]
+// CHECK-32:       else4:
+// CHECK-32-NEXT:    br label [[IFCONT5]]
+// CHECK-32:       ifcont5:
+// CHECK-32-NEXT:    [[OMP_GLOBAL_THREAD_NUM6:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK-32-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM6]])
+// CHECK-32-NEXT:    [[WARP_MASTER7:%.*]] = icmp eq i32 [[NVPTX_LANE_ID]], 0
+// CHECK-32-NEXT:    br i1 [[WARP_MASTER7]], label [[THEN8:%.*]], label [[ELSE9:%.*]]
+// CHECK-32:       then8:
+// CHECK-32-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP5]], i32 0, i32 1
+// CHECK-32-NEXT:    [[TMP16:%.*]] = load ptr, ptr [[TMP15]], align 4
+// CHECK-32-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[NVPTX_WARP_ID]]
+// CHECK-32-NEXT:    [[TMP18:%.*]] = load i32, ptr [[TMP16]], align 4
+// CHECK-32-NEXT:    store volatile i32 [[TMP18]], ptr addrspace(3) [[TMP17]], align 4
+// CHECK-32-NEXT:    br label [[IFCONT10:%.*]]
+// CHECK-32:       else9:
+// CHECK-32-NEXT:    br label [[IFCONT10]]
+// CHECK-32:       ifcont10:
+// CHECK-32-NEXT:    [[OMP_GLOBAL_THREAD_NUM11:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK-32-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM11]])
+// CHECK-32-NEXT:    [[TMP19:%.*]] = load i32, ptr [[DOTADDR1]], align 4
+// CHECK-32-NEXT:    [[IS_ACTIVE_THREAD12:%.*]] = icmp ult i32 [[TMP2]], [[TMP19]]
+// CHECK-32-NEXT:    br i1 [[IS_ACTIVE_THREAD12]], label [[THEN13:%.*]], label [[ELSE14:%.*]]
+// CHECK-32:       then13:
+// CHECK-32-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[TMP2]]
+// CHECK-32-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP5]], i32 0, i32 1
+// CHECK-32-NEXT:    [[TMP22:%.*]] = load ptr, ptr [[TMP21]], align 4
+// CHECK-32-NEXT:    [[TMP23:%.*]] = load volatile i32, ptr addrspace(3) [[TMP20]], align 4
+// CHECK-32-NEXT:    store i32 [[TMP23]], ptr [[TMP22]], align 4
+// CHECK-32-NEXT:    br label [[IFCONT15:%.*]]
+// CHECK-32:       else14:
+// CHECK-32-NEXT:    br label [[IFCONT15]]
+// CHECK-32:       ifcont15:
 // CHECK-32-NEXT:    ret void
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l35
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], ptr noundef nonnull align 2 dereferenceable(2) [[B:%.*]]) #[[ATTR0]] {
+// CHECK-32-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], ptr noundef nonnull align 2 dereferenceable(2) [[B:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR0]] {
 // CHECK-32-NEXT:  entry:
-// CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [2 x ptr], align 4
-// CHECK-32-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // CHECK-32-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
 // CHECK-32-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 4
-// CHECK-32-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 4
-// CHECK-32-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[B_ADDR]], align 4
+// CHECK-32-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
+// CHECK-32-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META6]], !align [[META8]]
+// CHECK-32-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[B_ADDR]], align 4, !nonnull [[META6]], !align [[META9:![0-9]+]]
 // CHECK-32-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l35_kernel_environment, ptr [[DYN_PTR]])
 // CHECK-32-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP2]], -1
 // CHECK-32-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
@@ -1199,7 +1210,7 @@ int bar(int n){
 // CHECK-32-NEXT:    store ptr [[TMP0]], ptr [[TMP4]], align 4
 // CHECK-32-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [2 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i32 0, i32 1
 // CHECK-32-NEXT:    store ptr [[TMP1]], ptr [[TMP5]], align 4
-// CHECK-32-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP3]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l35_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 2)
+// CHECK-32-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP3]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l35_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 2, i32 0)
 // CHECK-32-NEXT:    call void @__kmpc_target_deinit()
 // CHECK-32-NEXT:    ret void
 // CHECK-32:       worker.exit:
@@ -1220,8 +1231,8 @@ int bar(int n){
 // CHECK-32-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 4
 // CHECK-32-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
 // CHECK-32-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 4
-// CHECK-32-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 4
-// CHECK-32-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[B_ADDR]], align 4
+// CHECK-32-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META6]], !align [[META8]]
+// CHECK-32-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[B_ADDR]], align 4, !nonnull [[META6]], !align [[META9]]
 // CHECK-32-NEXT:    store i32 0, ptr [[A1]], align 4
 // CHECK-32-NEXT:    store i16 -32768, ptr [[B2]], align 2
 // CHECK-32-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A1]], align 4
@@ -1365,81 +1376,84 @@ int bar(int n){
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
-// CHECK-32-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
 // CHECK-32-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 4
 // CHECK-32-NEXT:    store i32 [[TMP1]], ptr [[DOTADDR1]], align 4
+// CHECK-32-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
 // CHECK-32-NEXT:    [[TMP3:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
+// CHECK-32-NEXT:    [[NVPTX_LANE_ID:%.*]] = and i32 [[TMP3]], 31
 // CHECK-32-NEXT:    [[TMP4:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
-// CHECK-32-NEXT:    [[NVPTX_LANE_ID:%.*]] = and i32 [[TMP4]], 31
-// CHECK-32-NEXT:    [[TMP5:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
-// CHECK-32-NEXT:    [[NVPTX_WARP_ID:%.*]] = ashr i32 [[TMP5]], 5
-// CHECK-32-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[DOTADDR]], align 4
-// CHECK-32-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP2]])
+// CHECK-32-NEXT:    [[NVPTX_WARP_ID:%.*]] = ashr i32 [[TMP4]], 5
+// CHECK-32-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[DOTADDR]], align 4
+// CHECK-32-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK-32-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM]])
 // CHECK-32-NEXT:    [[WARP_MASTER:%.*]] = icmp eq i32 [[NVPTX_LANE_ID]], 0
 // CHECK-32-NEXT:    br i1 [[WARP_MASTER]], label [[THEN:%.*]], label [[ELSE:%.*]]
 // CHECK-32:       then:
-// CHECK-32-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP6]], i32 0, i32 0
-// CHECK-32-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[TMP7]], align 4
-// CHECK-32-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[NVPTX_WARP_ID]]
-// CHECK-32-NEXT:    [[TMP10:%.*]] = load i32, ptr [[TMP8]], align 4
-// CHECK-32-NEXT:    store volatile i32 [[TMP10]], ptr addrspace(3) [[TMP9]], align 4
+// CHECK-32-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP5]], i32 0, i32 0
+// CHECK-32-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 4
+// CHECK-32-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[NVPTX_WARP_ID]]
+// CHECK-32-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP7]], align 4
+// CHECK-32-NEXT:    store volatile i32 [[TMP9]], ptr addrspace(3) [[TMP8]], align 4
 // CHECK-32-NEXT:    br label [[IFCONT:%.*]]
 // CHECK-32:       else:
 // CHECK-32-NEXT:    br label [[IFCONT]]
 // CHECK-32:       ifcont:
-// CHECK-32-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP2]])
-// CHECK-32-NEXT:    [[TMP11:%.*]] = load i32, ptr [[DOTADDR1]], align 4
-// CHECK-32-NEXT:    [[IS_ACTIVE_THREAD:%.*]] = icmp ult i32 [[TMP3]], [[TMP11]]
-// CHECK-32-NEXT:    br i1 [[IS_ACTIVE_THREAD]], label [[THEN2:%.*]], label [[ELSE3:%.*]]
-// CHECK-32:       then2:
-// CHECK-32-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[TMP3]]
-// CHECK-32-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP6]], i32 0, i32 0
-// CHECK-32-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[TMP13]], align 4
-// CHECK-32-NEXT:    [[TMP15:%.*]] = load volatile i32, ptr addrspace(3) [[TMP12]], align 4
-// CHECK-32-NEXT:    store i32 [[TMP15]], ptr [[TMP14]], align 4
-// CHECK-32-NEXT:    br label [[IFCONT4:%.*]]
-// CHECK-32:       else3:
-// CHECK-32-NEXT:    br label [[IFCONT4]]
-// CHECK-32:       ifcont4:
-// CHECK-32-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP2]])
-// CHECK-32-NEXT:    [[WARP_MASTER5:%.*]] = icmp eq i32 [[NVPTX_LANE_ID]], 0
-// CHECK-32-NEXT:    br i1 [[WARP_MASTER5]], label [[THEN6:%.*]], label [[ELSE7:%.*]]
-// CHECK-32:       then6:
-// CHECK-32-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP6]], i32 0, i32 1
-// CHECK-32-NEXT:    [[TMP17:%.*]] = load ptr, ptr [[TMP16]], align 4
-// CHECK-32-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[NVPTX_WARP_ID]]
-// CHECK-32-NEXT:    [[TMP19:%.*]] = load i16, ptr [[TMP17]], align 2
-// CHECK-32-NEXT:    store volatile i16 [[TMP19]], ptr addrspace(3) [[TMP18]], align 2
-// CHECK-32-NEXT:    br label [[IFCONT8:%.*]]
-// CHECK-32:       else7:
-// CHECK-32-NEXT:    br label [[IFCONT8]]
-// CHECK-32:       ifcont8:
-// CHECK-32-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP2]])
-// CHECK-32-NEXT:    [[TMP20:%.*]] = load i32, ptr [[DOTADDR1]], align 4
-// CHECK-32-NEXT:    [[IS_ACTIVE_THREAD9:%.*]] = icmp ult i32 [[TMP3]], [[TMP20]]
-// CHECK-32-NEXT:    br i1 [[IS_ACTIVE_THREAD9]], label [[THEN10:%.*]], label [[ELSE11:%.*]]
-// CHECK-32:       then10:
-// CHECK-32-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[TMP3]]
-// CHECK-32-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP6]], i32 0, i32 1
-// CHECK-32-NEXT:    [[TMP23:%.*]] = load ptr, ptr [[TMP22]], align 4
-// CHECK-32-NEXT:    [[TMP24:%.*]] = load volatile i16, ptr addrspace(3) [[TMP21]], align 2
-// CHECK-32-NEXT:    store i16 [[TMP24]], ptr [[TMP23]], align 2
-// CHECK-32-NEXT:    br label [[IFCONT12:%.*]]
-// CHECK-32:       else11:
-// CHECK-32-NEXT:    br label [[IFCONT12]]
-// CHECK-32:       ifcont12:
+// CHECK-32-NEXT:    [[OMP_GLOBAL_THREAD_NUM2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK-32-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM2]])
+// CHECK-32-NEXT:    [[TMP10:%.*]] = load i32, ptr [[DOTADDR1]], align 4
+// CHECK-32-NEXT:    [[IS_ACTIVE_THREAD:%.*]] = icmp ult i32 [[TMP2]], [[TMP10]]
+// CHECK-32-NEXT:    br i1 [[IS_ACTIVE_THREAD]], label [[THEN3:%.*]], label [[ELSE4:%.*]]
+// CHECK-32:       then3:
+// CHECK-32-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[TMP2]]
+// CHECK-32-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP5]], i32 0, i32 0
+// CHECK-32-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[TMP12]], align 4
+// CHECK-32-NEXT:    [[TMP14:%.*]] = load volatile i32, ptr addrspace(3) [[TMP11]], align 4
+// CHECK-32-NEXT:    store i32 [[TMP14]], ptr [[TMP13]], align 4
+// CHECK-32-NEXT:    br label [[IFCONT5:%.*]]
+// CHECK-32:       else4:
+// CHECK-32-NEXT:    br label [[IFCONT5]]
+// CHECK-32:       ifcont5:
+// CHECK-32-NEXT:    [[OMP_GLOBAL_THREAD_NUM6:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK-32-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM6]])
+// CHECK-32-NEXT:    [[WARP_MASTER7:%.*]] = icmp eq i32 [[NVPTX_LANE_ID]], 0
+// CHECK-32-NEXT:    br i1 [[WARP_MASTER7]], label [[THEN8:%.*]], label [[ELSE9:%.*]]
+// CHECK-32:       then8:
+// CHECK-32-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP5]], i32 0, i32 1
+// CHECK-32-NEXT:    [[TMP16:%.*]] = load ptr, ptr [[TMP15]], align 4
+// CHECK-32-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[NVPTX_WARP_ID]]
+// CHECK-32-NEXT:    [[TMP18:%.*]] = load i16, ptr [[TMP16]], align 2
+// CHECK-32-NEXT:    store volatile i16 [[TMP18]], ptr addrspace(3) [[TMP17]], align 2
+// CHECK-32-NEXT:    br label [[IFCONT10:%.*]]
+// CHECK-32:       else9:
+// CHECK-32-NEXT:    br label [[IFCONT10]]
+// CHECK-32:       ifcont10:
+// CHECK-32-NEXT:    [[OMP_GLOBAL_THREAD_NUM11:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK-32-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM11]])
+// CHECK-32-NEXT:    [[TMP19:%.*]] = load i32, ptr [[DOTADDR1]], align 4
+// CHECK-32-NEXT:    [[IS_ACTIVE_THREAD12:%.*]] = icmp ult i32 [[TMP2]], [[TMP19]]
+// CHECK-32-NEXT:    br i1 [[IS_ACTIVE_THREAD12]], label [[THEN13:%.*]], label [[ELSE14:%.*]]
+// CHECK-32:       then13:
+// CHECK-32-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[TMP2]]
+// CHECK-32-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP5]], i32 0, i32 1
+// CHECK-32-NEXT:    [[TMP22:%.*]] = load ptr, ptr [[TMP21]], align 4
+// CHECK-32-NEXT:    [[TMP23:%.*]] = load volatile i16, ptr addrspace(3) [[TMP20]], align 2
+// CHECK-32-NEXT:    store i16 [[TMP23]], ptr [[TMP22]], align 2
+// CHECK-32-NEXT:    br label [[IFCONT15:%.*]]
+// CHECK-32:       else14:
+// CHECK-32-NEXT:    br label [[IFCONT15]]
+// CHECK-32:       ifcont15:
 // CHECK-32-NEXT:    ret void
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l24
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[E:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-32-EX-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[E:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-32-EX-NEXT:  entry:
-// CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[E_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [1 x ptr], align 4
-// CHECK-32-EX-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // CHECK-32-EX-NEXT:    store ptr [[E]], ptr [[E_ADDR]], align 4
-// CHECK-32-EX-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[E_ADDR]], align 4
+// CHECK-32-EX-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
+// CHECK-32-EX-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[E_ADDR]], align 4, !nonnull [[META6:![0-9]+]], !align [[META7:![0-9]+]]
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l24_kernel_environment, ptr [[DYN_PTR]])
 // CHECK-32-EX-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // CHECK-32-EX-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
@@ -1447,7 +1461,7 @@ int bar(int n){
 // CHECK-32-EX-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1:[0-9]+]])
 // CHECK-32-EX-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i32 0, i32 0
 // CHECK-32-EX-NEXT:    store ptr [[TMP0]], ptr [[TMP3]], align 4
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP2]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l24_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 1)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP2]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l24_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 1, i32 0)
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit()
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
@@ -1465,7 +1479,7 @@ int bar(int n){
 // CHECK-32-EX-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // CHECK-32-EX-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 4
 // CHECK-32-EX-NEXT:    store ptr [[E]], ptr [[E_ADDR]], align 4
-// CHECK-32-EX-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[E_ADDR]], align 4
+// CHECK-32-EX-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[E_ADDR]], align 4, !nonnull [[META6]], !align [[META7]]
 // CHECK-32-EX-NEXT:    store double 0.000000e+00, ptr [[E1]], align 8
 // CHECK-32-EX-NEXT:    [[TMP1:%.*]] = load double, ptr [[E1]], align 8
 // CHECK-32-EX-NEXT:    [[ADD:%.*]] = fadd double [[TMP1]], 5.000000e+00
@@ -1557,70 +1571,71 @@ int bar(int n){
 // CHECK-32-EX-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
 // CHECK-32-EX-NEXT:    [[DOTCNT_ADDR:%.*]] = alloca i32, align 4
-// CHECK-32-EX-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
 // CHECK-32-EX-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 4
 // CHECK-32-EX-NEXT:    store i32 [[TMP1]], ptr [[DOTADDR1]], align 4
+// CHECK-32-EX-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
 // CHECK-32-EX-NEXT:    [[TMP3:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
+// CHECK-32-EX-NEXT:    [[NVPTX_LANE_ID:%.*]] = and i32 [[TMP3]], 31
 // CHECK-32-EX-NEXT:    [[TMP4:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
-// CHECK-32-EX-NEXT:    [[NVPTX_LANE_ID:%.*]] = and i32 [[TMP4]], 31
-// CHECK-32-EX-NEXT:    [[TMP5:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
-// CHECK-32-EX-NEXT:    [[NVPTX_WARP_ID:%.*]] = ashr i32 [[TMP5]], 5
-// CHECK-32-EX-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[DOTADDR]], align 4
+// CHECK-32-EX-NEXT:    [[NVPTX_WARP_ID:%.*]] = ashr i32 [[TMP4]], 5
+// CHECK-32-EX-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[DOTADDR]], align 4
 // CHECK-32-EX-NEXT:    store i32 0, ptr [[DOTCNT_ADDR]], align 4
 // CHECK-32-EX-NEXT:    br label [[PRECOND:%.*]]
 // CHECK-32-EX:       precond:
-// CHECK-32-EX-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTCNT_ADDR]], align 4
-// CHECK-32-EX-NEXT:    [[TMP8:%.*]] = icmp ult i32 [[TMP7]], 2
-// CHECK-32-EX-NEXT:    br i1 [[TMP8]], label [[BODY:%.*]], label [[EXIT:%.*]]
+// CHECK-32-EX-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTCNT_ADDR]], align 4
+// CHECK-32-EX-NEXT:    [[TMP7:%.*]] = icmp ult i32 [[TMP6]], 2
+// CHECK-32-EX-NEXT:    br i1 [[TMP7]], label [[BODY:%.*]], label [[EXIT:%.*]]
 // CHECK-32-EX:       body:
-// CHECK-32-EX-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2:[0-9]+]], i32 [[TMP2]])
+// CHECK-32-EX-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK-32-EX-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2:[0-9]+]], i32 [[OMP_GLOBAL_THREAD_NUM]])
 // CHECK-32-EX-NEXT:    [[WARP_MASTER:%.*]] = icmp eq i32 [[NVPTX_LANE_ID]], 0
 // CHECK-32-EX-NEXT:    br i1 [[WARP_MASTER]], label [[THEN:%.*]], label [[ELSE:%.*]]
 // CHECK-32-EX:       then:
-// CHECK-32-EX-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP6]], i32 0, i32 0
-// CHECK-32-EX-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[TMP9]], align 4
-// CHECK-32-EX-NEXT:    [[TMP11:%.*]] = getelementptr i32, ptr [[TMP10]], i32 [[TMP7]]
-// CHECK-32-EX-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[NVPTX_WARP_ID]]
-// CHECK-32-EX-NEXT:    [[TMP13:%.*]] = load i32, ptr [[TMP11]], align 4
-// CHECK-32-EX-NEXT:    store volatile i32 [[TMP13]], ptr addrspace(3) [[TMP12]], align 4
+// CHECK-32-EX-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP5]], i32 0, i32 0
+// CHECK-32-EX-NEXT:    [[TMP9:%.*]] = load ptr, ptr [[TMP8]], align 4
+// CHECK-32-EX-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[TMP9]], i32 [[TMP6]]
+// CHECK-32-EX-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[NVPTX_WARP_ID]]
+// CHECK-32-EX-NEXT:    [[TMP12:%.*]] = load i32, ptr [[TMP10]], align 4
+// CHECK-32-EX-NEXT:    store volatile i32 [[TMP12]], ptr addrspace(3) [[TMP11]], align 4
 // CHECK-32-EX-NEXT:    br label [[IFCONT:%.*]]
 // CHECK-32-EX:       else:
 // CHECK-32-EX-NEXT:    br label [[IFCONT]]
 // CHECK-32-EX:       ifcont:
-// CHECK-32-EX-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP2]])
-// CHECK-32-EX-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTADDR1]], align 4
-// CHECK-32-EX-NEXT:    [[IS_ACTIVE_THREAD:%.*]] = icmp ult i32 [[TMP3]], [[TMP14]]
-// CHECK-32-EX-NEXT:    br i1 [[IS_ACTIVE_THREAD]], label [[THEN2:%.*]], label [[ELSE3:%.*]]
-// CHECK-32-EX:       then2:
-// CHECK-32-EX-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[TMP3]]
-// CHECK-32-EX-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP6]], i32 0, i32 0
-// CHECK-32-EX-NEXT:    [[TMP17:%.*]] = load ptr, ptr [[TMP16]], align 4
-// CHECK-32-EX-NEXT:    [[TMP18:%.*]] = getelementptr i32, ptr [[TMP17]], i32 [[TMP7]]
-// CHECK-32-EX-NEXT:    [[TMP19:%.*]] = load volatile i32, ptr addrspace(3) [[TMP15]], align 4
-// CHECK-32-EX-NEXT:    store i32 [[TMP19]], ptr [[TMP18]], align 4
-// CHECK-32-EX-NEXT:    br label [[IFCONT4:%.*]]
-// CHECK-32-EX:       else3:
-// CHECK-32-EX-NEXT:    br label [[IFCONT4]]
-// CHECK-32-EX:       ifcont4:
-// CHECK-32-EX-NEXT:    [[TMP20:%.*]] = add nsw i32 [[TMP7]], 1
-// CHECK-32-EX-NEXT:    store i32 [[TMP20]], ptr [[DOTCNT_ADDR]], align 4
+// CHECK-32-EX-NEXT:    [[OMP_GLOBAL_THREAD_NUM2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK-32-EX-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM2]])
+// CHECK-32-EX-NEXT:    [[TMP13:%.*]] = load i32, ptr [[DOTADDR1]], align 4
+// CHECK-32-EX-NEXT:    [[IS_ACTIVE_THREAD:%.*]] = icmp ult i32 [[TMP2]], [[TMP13]]
+// CHECK-32-EX-NEXT:    br i1 [[IS_ACTIVE_THREAD]], label [[THEN3:%.*]], label [[ELSE4:%.*]]
+// CHECK-32-EX:       then3:
+// CHECK-32-EX-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[TMP2]]
+// CHECK-32-EX-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP5]], i32 0, i32 0
+// CHECK-32-EX-NEXT:    [[TMP16:%.*]] = load ptr, ptr [[TMP15]], align 4
+// CHECK-32-EX-NEXT:    [[TMP17:%.*]] = getelementptr i32, ptr [[TMP16]], i32 [[TMP6]]
+// CHECK-32-EX-NEXT:    [[TMP18:%.*]] = load volatile i32, ptr addrspace(3) [[TMP14]], align 4
+// CHECK-32-EX-NEXT:    store i32 [[TMP18]], ptr [[TMP17]], align 4
+// CHECK-32-EX-NEXT:    br label [[IFCONT5:%.*]]
+// CHECK-32-EX:       else4:
+// CHECK-32-EX-NEXT:    br label [[IFCONT5]]
+// CHECK-32-EX:       ifcont5:
+// CHECK-32-EX-NEXT:    [[TMP19:%.*]] = add nsw i32 [[TMP6]], 1
+// CHECK-32-EX-NEXT:    store i32 [[TMP19]], ptr [[DOTCNT_ADDR]], align 4
 // CHECK-32-EX-NEXT:    br label [[PRECOND]]
 // CHECK-32-EX:       exit:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l29
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef nonnull align 1 dereferenceable(1) [[C:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[D:%.*]]) #[[ATTR0]] {
+// CHECK-32-EX-SAME: (ptr noundef nonnull align 1 dereferenceable(1) [[C:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[D:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR0]] {
 // CHECK-32-EX-NEXT:  entry:
-// CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[C_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[D_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [2 x ptr], align 4
-// CHECK-32-EX-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // CHECK-32-EX-NEXT:    store ptr [[C]], ptr [[C_ADDR]], align 4
 // CHECK-32-EX-NEXT:    store ptr [[D]], ptr [[D_ADDR]], align 4
-// CHECK-32-EX-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[C_ADDR]], align 4
-// CHECK-32-EX-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[D_ADDR]], align 4
+// CHECK-32-EX-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
+// CHECK-32-EX-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[C_ADDR]], align 4, !nonnull [[META6]]
+// CHECK-32-EX-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[D_ADDR]], align 4, !nonnull [[META6]], !align [[META8:![0-9]+]]
 // CHECK-32-EX-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l29_kernel_environment, ptr [[DYN_PTR]])
 // CHECK-32-EX-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP2]], -1
 // CHECK-32-EX-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
@@ -1630,7 +1645,7 @@ int bar(int n){
 // CHECK-32-EX-NEXT:    store ptr [[TMP0]], ptr [[TMP4]], align 4
 // CHECK-32-EX-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [2 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i32 0, i32 1
 // CHECK-32-EX-NEXT:    store ptr [[TMP1]], ptr [[TMP5]], align 4
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP3]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l29_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 2)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP3]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l29_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 2, i32 0)
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit()
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
@@ -1651,8 +1666,8 @@ int bar(int n){
 // CHECK-32-EX-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 4
 // CHECK-32-EX-NEXT:    store ptr [[C]], ptr [[C_ADDR]], align 4
 // CHECK-32-EX-NEXT:    store ptr [[D]], ptr [[D_ADDR]], align 4
-// CHECK-32-EX-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[C_ADDR]], align 4
-// CHECK-32-EX-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[D_ADDR]], align 4
+// CHECK-32-EX-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[C_ADDR]], align 4, !nonnull [[META6]]
+// CHECK-32-EX-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[D_ADDR]], align 4, !nonnull [[META6]], !align [[META8]]
 // CHECK-32-EX-NEXT:    store i8 0, ptr [[C1]], align 1
 // CHECK-32-EX-NEXT:    store float 1.000000e+00, ptr [[D2]], align 4
 // CHECK-32-EX-NEXT:    [[TMP2:%.*]] = load i8, ptr [[C1]], align 1
@@ -1779,84 +1794,87 @@ int bar(int n){
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
-// CHECK-32-EX-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
 // CHECK-32-EX-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 4
 // CHECK-32-EX-NEXT:    store i32 [[TMP1]], ptr [[DOTADDR1]], align 4
+// CHECK-32-EX-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
 // CHECK-32-EX-NEXT:    [[TMP3:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
+// CHECK-32-EX-NEXT:    [[NVPTX_LANE_ID:%.*]] = and i32 [[TMP3]], 31
 // CHECK-32-EX-NEXT:    [[TMP4:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
-// CHECK-32-EX-NEXT:    [[NVPTX_LANE_ID:%.*]] = and i32 [[TMP4]], 31
-// CHECK-32-EX-NEXT:    [[TMP5:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
-// CHECK-32-EX-NEXT:    [[NVPTX_WARP_ID:%.*]] = ashr i32 [[TMP5]], 5
-// CHECK-32-EX-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[DOTADDR]], align 4
-// CHECK-32-EX-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP2]])
+// CHECK-32-EX-NEXT:    [[NVPTX_WARP_ID:%.*]] = ashr i32 [[TMP4]], 5
+// CHECK-32-EX-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[DOTADDR]], align 4
+// CHECK-32-EX-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK-32-EX-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM]])
 // CHECK-32-EX-NEXT:    [[WARP_MASTER:%.*]] = icmp eq i32 [[NVPTX_LANE_ID]], 0
 // CHECK-32-EX-NEXT:    br i1 [[WARP_MASTER]], label [[THEN:%.*]], label [[ELSE:%.*]]
 // CHECK-32-EX:       then:
-// CHECK-32-EX-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP6]], i32 0, i32 0
-// CHECK-32-EX-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[TMP7]], align 4
-// CHECK-32-EX-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[NVPTX_WARP_ID]]
-// CHECK-32-EX-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP8]], align 1
-// CHECK-32-EX-NEXT:    store volatile i8 [[TMP10]], ptr addrspace(3) [[TMP9]], align 1
+// CHECK-32-EX-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP5]], i32 0, i32 0
+// CHECK-32-EX-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 4
+// CHECK-32-EX-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[NVPTX_WARP_ID]]
+// CHECK-32-EX-NEXT:    [[TMP9:%.*]] = load i8, ptr [[TMP7]], align 1
+// CHECK-32-EX-NEXT:    store volatile i8 [[TMP9]], ptr addrspace(3) [[TMP8]], align 1
 // CHECK-32-EX-NEXT:    br label [[IFCONT:%.*]]
 // CHECK-32-EX:       else:
 // CHECK-32-EX-NEXT:    br label [[IFCONT]]
 // CHECK-32-EX:       ifcont:
-// CHECK-32-EX-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP2]])
-// CHECK-32-EX-NEXT:    [[TMP11:%.*]] = load i32, ptr [[DOTADDR1]], align 4
-// CHECK-32-EX-NEXT:    [[IS_ACTIVE_THREAD:%.*]] = icmp ult i32 [[TMP3]], [[TMP11]]
-// CHECK-32-EX-NEXT:    br i1 [[IS_ACTIVE_THREAD]], label [[THEN2:%.*]], label [[ELSE3:%.*]]
-// CHECK-32-EX:       then2:
-// CHECK-32-EX-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[TMP3]]
-// CHECK-32-EX-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP6]], i32 0, i32 0
-// CHECK-32-EX-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[TMP13]], align 4
-// CHECK-32-EX-NEXT:    [[TMP15:%.*]] = load volatile i8, ptr addrspace(3) [[TMP12]], align 1
-// CHECK-32-EX-NEXT:    store i8 [[TMP15]], ptr [[TMP14]], align 1
-// CHECK-32-EX-NEXT:    br label [[IFCONT4:%.*]]
-// CHECK-32-EX:       else3:
-// CHECK-32-EX-NEXT:    br label [[IFCONT4]]
-// CHECK-32-EX:       ifcont4:
-// CHECK-32-EX-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP2]])
-// CHECK-32-EX-NEXT:    [[WARP_MASTER5:%.*]] = icmp eq i32 [[NVPTX_LANE_ID]], 0
-// CHECK-32-EX-NEXT:    br i1 [[WARP_MASTER5]], label [[THEN6:%.*]], label [[ELSE7:%.*]]
-// CHECK-32-EX:       then6:
-// CHECK-32-EX-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP6]], i32 0, i32 1
-// CHECK-32-EX-NEXT:    [[TMP17:%.*]] = load ptr, ptr [[TMP16]], align 4
-// CHECK-32-EX-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[NVPTX_WARP_ID]]
-// CHECK-32-EX-NEXT:    [[TMP19:%.*]] = load i32, ptr [[TMP17]], align 4
-// CHECK-32-EX-NEXT:    store volatile i32 [[TMP19]], ptr addrspace(3) [[TMP18]], align 4
-// CHECK-32-EX-NEXT:    br label [[IFCONT8:%.*]]
-// CHECK-32-EX:       else7:
-// CHECK-32-EX-NEXT:    br label [[IFCONT8]]
-// CHECK-32-EX:       ifcont8:
-// CHECK-32-EX-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP2]])
-// CHECK-32-EX-NEXT:    [[TMP20:%.*]] = load i32, ptr [[DOTADDR1]], align 4
-// CHECK-32-EX-NEXT:    [[IS_ACTIVE_THREAD9:%.*]] = icmp ult i32 [[TMP3]], [[TMP20]]
-// CHECK-32-EX-NEXT:    br i1 [[IS_ACTIVE_THREAD9]], label [[THEN10:%.*]], label [[ELSE11:%.*]]
-// CHECK-32-EX:       then10:
-// CHECK-32-EX-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[TMP3]]
-// CHECK-32-EX-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP6]], i32 0, i32 1
-// CHECK-32-EX-NEXT:    [[TMP23:%.*]] = load ptr, ptr [[TMP22]], align 4
-// CHECK-32-EX-NEXT:    [[TMP24:%.*]] = load volatile i32, ptr addrspace(3) [[TMP21]], align 4
-// CHECK-32-EX-NEXT:    store i32 [[TMP24]], ptr [[TMP23]], align 4
-// CHECK-32-EX-NEXT:    br label [[IFCONT12:%.*]]
-// CHECK-32-EX:       else11:
-// CHECK-32-EX-NEXT:    br label [[IFCONT12]]
-// CHECK-32-EX:       ifcont12:
+// CHECK-32-EX-NEXT:    [[OMP_GLOBAL_THREAD_NUM2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK-32-EX-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM2]])
+// CHECK-32-EX-NEXT:    [[TMP10:%.*]] = load i32, ptr [[DOTADDR1]], align 4
+// CHECK-32-EX-NEXT:    [[IS_ACTIVE_THREAD:%.*]] = icmp ult i32 [[TMP2]], [[TMP10]]
+// CHECK-32-EX-NEXT:    br i1 [[IS_ACTIVE_THREAD]], label [[THEN3:%.*]], label [[ELSE4:%.*]]
+// CHECK-32-EX:       then3:
+// CHECK-32-EX-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[TMP2]]
+// CHECK-32-EX-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP5]], i32 0, i32 0
+// CHECK-32-EX-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[TMP12]], align 4
+// CHECK-32-EX-NEXT:    [[TMP14:%.*]] = load volatile i8, ptr addrspace(3) [[TMP11]], align 1
+// CHECK-32-EX-NEXT:    store i8 [[TMP14]], ptr [[TMP13]], align 1
+// CHECK-32-EX-NEXT:    br label [[IFCONT5:%.*]]
+// CHECK-32-EX:       else4:
+// CHECK-32-EX-NEXT:    br label [[IFCONT5]]
+// CHECK-32-EX:       ifcont5:
+// CHECK-32-EX-NEXT:    [[OMP_GLOBAL_THREAD_NUM6:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK-32-EX-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM6]])
+// CHECK-32-EX-NEXT:    [[WARP_MASTER7:%.*]] = icmp eq i32 [[NVPTX_LANE_ID]], 0
+// CHECK-32-EX-NEXT:    br i1 [[WARP_MASTER7]], label [[THEN8:%.*]], label [[ELSE9:%.*]]
+// CHECK-32-EX:       then8:
+// CHECK-32-EX-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP5]], i32 0, i32 1
+// CHECK-32-EX-NEXT:    [[TMP16:%.*]] = load ptr, ptr [[TMP15]], align 4
+// CHECK-32-EX-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[NVPTX_WARP_ID]]
+// CHECK-32-EX-NEXT:    [[TMP18:%.*]] = load i32, ptr [[TMP16]], align 4
+// CHECK-32-EX-NEXT:    store volatile i32 [[TMP18]], ptr addrspace(3) [[TMP17]], align 4
+// CHECK-32-EX-NEXT:    br label [[IFCONT10:%.*]]
+// CHECK-32-EX:       else9:
+// CHECK-32-EX-NEXT:    br label [[IFCONT10]]
+// CHECK-32-EX:       ifcont10:
+// CHECK-32-EX-NEXT:    [[OMP_GLOBAL_THREAD_NUM11:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK-32-EX-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM11]])
+// CHECK-32-EX-NEXT:    [[TMP19:%.*]] = load i32, ptr [[DOTADDR1]], align 4
+// CHECK-32-EX-NEXT:    [[IS_ACTIVE_THREAD12:%.*]] = icmp ult i32 [[TMP2]], [[TMP19]]
+// CHECK-32-EX-NEXT:    br i1 [[IS_ACTIVE_THREAD12]], label [[THEN13:%.*]], label [[ELSE14:%.*]]
+// CHECK-32-EX:       then13:
+// CHECK-32-EX-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[TMP2]]
+// CHECK-32-EX-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP5]], i32 0, i32 1
+// CHECK-32-EX-NEXT:    [[TMP22:%.*]] = load ptr, ptr [[TMP21]], align 4
+// CHECK-32-EX-NEXT:    [[TMP23:%.*]] = load volatile i32, ptr addrspace(3) [[TMP20]], align 4
+// CHECK-32-EX-NEXT:    store i32 [[TMP23]], ptr [[TMP22]], align 4
+// CHECK-32-EX-NEXT:    br label [[IFCONT15:%.*]]
+// CHECK-32-EX:       else14:
+// CHECK-32-EX-NEXT:    br label [[IFCONT15]]
+// CHECK-32-EX:       ifcont15:
 // CHECK-32-EX-NEXT:    ret void
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l35
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], ptr noundef nonnull align 2 dereferenceable(2) [[B:%.*]]) #[[ATTR0]] {
+// CHECK-32-EX-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[A:%.*]], ptr noundef nonnull align 2 dereferenceable(2) [[B:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR0]] {
 // CHECK-32-EX-NEXT:  entry:
-// CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[A_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[B_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [2 x ptr], align 4
-// CHECK-32-EX-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
 // CHECK-32-EX-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
 // CHECK-32-EX-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 4
-// CHECK-32-EX-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 4
-// CHECK-32-EX-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[B_ADDR]], align 4
+// CHECK-32-EX-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 4
+// CHECK-32-EX-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META6]], !align [[META8]]
+// CHECK-32-EX-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[B_ADDR]], align 4, !nonnull [[META6]], !align [[META9:![0-9]+]]
 // CHECK-32-EX-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l35_kernel_environment, ptr [[DYN_PTR]])
 // CHECK-32-EX-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP2]], -1
 // CHECK-32-EX-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
@@ -1866,7 +1884,7 @@ int bar(int n){
 // CHECK-32-EX-NEXT:    store ptr [[TMP0]], ptr [[TMP4]], align 4
 // CHECK-32-EX-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [2 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i32 0, i32 1
 // CHECK-32-EX-NEXT:    store ptr [[TMP1]], ptr [[TMP5]], align 4
-// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP3]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l35_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 2)
+// CHECK-32-EX-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP3]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l35_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i32 2, i32 0)
 // CHECK-32-EX-NEXT:    call void @__kmpc_target_deinit()
 // CHECK-32-EX-NEXT:    ret void
 // CHECK-32-EX:       worker.exit:
@@ -1887,8 +1905,8 @@ int bar(int n){
 // CHECK-32-EX-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 4
 // CHECK-32-EX-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 4
 // CHECK-32-EX-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 4
-// CHECK-32-EX-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 4
-// CHECK-32-EX-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[B_ADDR]], align 4
+// CHECK-32-EX-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nonnull [[META6]], !align [[META8]]
+// CHECK-32-EX-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[B_ADDR]], align 4, !nonnull [[META6]], !align [[META9]]
 // CHECK-32-EX-NEXT:    store i32 0, ptr [[A1]], align 4
 // CHECK-32-EX-NEXT:    store i16 -32768, ptr [[B2]], align 2
 // CHECK-32-EX-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A1]], align 4
@@ -2032,68 +2050,71 @@ int bar(int n){
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
-// CHECK-32-EX-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
 // CHECK-32-EX-NEXT:    store ptr [[TMP0]], ptr [[DOTADDR]], align 4
 // CHECK-32-EX-NEXT:    store i32 [[TMP1]], ptr [[DOTADDR1]], align 4
+// CHECK-32-EX-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
 // CHECK-32-EX-NEXT:    [[TMP3:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
+// CHECK-32-EX-NEXT:    [[NVPTX_LANE_ID:%.*]] = and i32 [[TMP3]], 31
 // CHECK-32-EX-NEXT:    [[TMP4:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
-// CHECK-32-EX-NEXT:    [[NVPTX_LANE_ID:%.*]] = and i32 [[TMP4]], 31
-// CHECK-32-EX-NEXT:    [[TMP5:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
-// CHECK-32-EX-NEXT:    [[NVPTX_WARP_ID:%.*]] = ashr i32 [[TMP5]], 5
-// CHECK-32-EX-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[DOTADDR]], align 4
-// CHECK-32-EX-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP2]])
+// CHECK-32-EX-NEXT:    [[NVPTX_WARP_ID:%.*]] = ashr i32 [[TMP4]], 5
+// CHECK-32-EX-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[DOTADDR]], align 4
+// CHECK-32-EX-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK-32-EX-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM]])
 // CHECK-32-EX-NEXT:    [[WARP_MASTER:%.*]] = icmp eq i32 [[NVPTX_LANE_ID]], 0
 // CHECK-32-EX-NEXT:    br i1 [[WARP_MASTER]], label [[THEN:%.*]], label [[ELSE:%.*]]
 // CHECK-32-EX:       then:
-// CHECK-32-EX-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP6]], i32 0, i32 0
-// CHECK-32-EX-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[TMP7]], align 4
-// CHECK-32-EX-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[NVPTX_WARP_ID]]
-// CHECK-32-EX-NEXT:    [[TMP10:%.*]] = load i32, ptr [[TMP8]], align 4
-// CHECK-32-EX-NEXT:    store volatile i32 [[TMP10]], ptr addrspace(3) [[TMP9]], align 4
+// CHECK-32-EX-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP5]], i32 0, i32 0
+// CHECK-32-EX-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 4
+// CHECK-32-EX-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[NVPTX_WARP_ID]]
+// CHECK-32-EX-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP7]], align 4
+// CHECK-32-EX-NEXT:    store volatile i32 [[TMP9]], ptr addrspace(3) [[TMP8]], align 4
 // CHECK-32-EX-NEXT:    br label [[IFCONT:%.*]]
 // CHECK-32-EX:       else:
 // CHECK-32-EX-NEXT:    br label [[IFCONT]]
 // CHECK-32-EX:       ifcont:
-// CHECK-32-EX-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP2]])
-// CHECK-32-EX-NEXT:    [[TMP11:%.*]] = load i32, ptr [[DOTADDR1]], align 4
-// CHECK-32-EX-NEXT:    [[IS_ACTIVE_THREAD:%.*]] = icmp ult i32 [[TMP3]], [[TMP11]]
-// CHECK-32-EX-NEXT:    br i1 [[IS_ACTIVE_THREAD]], label [[THEN2:%.*]], label [[ELSE3:%.*]]
-// CHECK-32-EX:       then2:
-// CHECK-32-EX-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[TMP3]]
-// CHECK-32-EX-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP6]], i32 0, i32 0
-// CHECK-32-EX-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[TMP13]], align 4
-// CHECK-32-EX-NEXT:    [[TMP15:%.*]] = load volatile i32, ptr addrspace(3) [[TMP12]], align 4
-// CHECK-32-EX-NEXT:    store i32 [[TMP15]], ptr [[TMP14]], align 4
-// CHECK-32-EX-NEXT:    br label [[IFCONT4:%.*]]
-// CHECK-32-EX:       else3:
-// CHECK-32-EX-NEXT:    br label [[IFCONT4]]
-// CHECK-32-EX:       ifcont4:
-// CHECK-32-EX-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP2]])
-// CHECK-32-EX-NEXT:    [[WARP_MASTER5:%.*]] = icmp eq i32 [[NVPTX_LANE_ID]], 0
-// CHECK-32-EX-NEXT:    br i1 [[WARP_MASTER5]], label [[THEN6:%.*]], label [[ELSE7:%.*]]
-// CHECK-32-EX:       then6:
-// CHECK-32-EX-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP6]], i32 0, i32 1
-// CHECK-32-EX-NEXT:    [[TMP17:%.*]] = load ptr, ptr [[TMP16]], align 4
-// CHECK-32-EX-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[NVPTX_WARP_ID]]
-// CHECK-32-EX-NEXT:    [[TMP19:%.*]] = load i16, ptr [[TMP17]], align 2
-// CHECK-32-EX-NEXT:    store volatile i16 [[TMP19]], ptr addrspace(3) [[TMP18]], align 2
-// CHECK-32-EX-NEXT:    br label [[IFCONT8:%.*]]
-// CHECK-32-EX:       else7:
-// CHECK-32-EX-NEXT:    br label [[IFCONT8]]
-// CHECK-32-EX:       ifcont8:
-// CHECK-32-EX-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP2]])
-// CHECK-32-EX-NEXT:    [[TMP20:%.*]] = load i32, ptr [[DOTADDR1]], align 4
-// CHECK-32-EX-NEXT:    [[IS_ACTIVE_THREAD9:%.*]] = icmp ult i32 [[TMP3]], [[TMP20]]
-// CHECK-32-EX-NEXT:    br i1 [[IS_ACTIVE_THREAD9]], label [[THEN10:%.*]], label [[ELSE11:%.*]]
-// CHECK-32-EX:       then10:
-// CHECK-32-EX-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[TMP3]]
-// CHECK-32-EX-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP6]], i32 0, i32 1
-// CHECK-32-EX-NEXT:    [[TMP23:%.*]] = load ptr, ptr [[TMP22]], align 4
-// CHECK-32-EX-NEXT:    [[TMP24:%.*]] = load volatile i16, ptr addrspace(3) [[TMP21]], align 2
-// CHECK-32-EX-NEXT:    store i16 [[TMP24]], ptr [[TMP23]], align 2
-// CHECK-32-EX-NEXT:    br label [[IFCONT12:%.*]]
-// CHECK-32-EX:       else11:
-// CHECK-32-EX-NEXT:    br label [[IFCONT12]]
-// CHECK-32-EX:       ifcont12:
+// CHECK-32-EX-NEXT:    [[OMP_GLOBAL_THREAD_NUM2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK-32-EX-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM2]])
+// CHECK-32-EX-NEXT:    [[TMP10:%.*]] = load i32, ptr [[DOTADDR1]], align 4
+// CHECK-32-EX-NEXT:    [[IS_ACTIVE_THREAD:%.*]] = icmp ult i32 [[TMP2]], [[TMP10]]
+// CHECK-32-EX-NEXT:    br i1 [[IS_ACTIVE_THREAD]], label [[THEN3:%.*]], label [[ELSE4:%.*]]
+// CHECK-32-EX:       then3:
+// CHECK-32-EX-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[TMP2]]
+// CHECK-32-EX-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP5]], i32 0, i32 0
+// CHECK-32-EX-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[TMP12]], align 4
+// CHECK-32-EX-NEXT:    [[TMP14:%.*]] = load volatile i32, ptr addrspace(3) [[TMP11]], align 4
+// CHECK-32-EX-NEXT:    store i32 [[TMP14]], ptr [[TMP13]], align 4
+// CHECK-32-EX-NEXT:    br label [[IFCONT5:%.*]]
+// CHECK-32-EX:       else4:
+// CHECK-32-EX-NEXT:    br label [[IFCONT5]]
+// CHECK-32-EX:       ifcont5:
+// CHECK-32-EX-NEXT:    [[OMP_GLOBAL_THREAD_NUM6:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK-32-EX-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM6]])
+// CHECK-32-EX-NEXT:    [[WARP_MASTER7:%.*]] = icmp eq i32 [[NVPTX_LANE_ID]], 0
+// CHECK-32-EX-NEXT:    br i1 [[WARP_MASTER7]], label [[THEN8:%.*]], label [[ELSE9:%.*]]
+// CHECK-32-EX:       then8:
+// CHECK-32-EX-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP5]], i32 0, i32 1
+// CHECK-32-EX-NEXT:    [[TMP16:%.*]] = load ptr, ptr [[TMP15]], align 4
+// CHECK-32-EX-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[NVPTX_WARP_ID]]
+// CHECK-32-EX-NEXT:    [[TMP18:%.*]] = load i16, ptr [[TMP16]], align 2
+// CHECK-32-EX-NEXT:    store volatile i16 [[TMP18]], ptr addrspace(3) [[TMP17]], align 2
+// CHECK-32-EX-NEXT:    br label [[IFCONT10:%.*]]
+// CHECK-32-EX:       else9:
+// CHECK-32-EX-NEXT:    br label [[IFCONT10]]
+// CHECK-32-EX:       ifcont10:
+// CHECK-32-EX-NEXT:    [[OMP_GLOBAL_THREAD_NUM11:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK-32-EX-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[OMP_GLOBAL_THREAD_NUM11]])
+// CHECK-32-EX-NEXT:    [[TMP19:%.*]] = load i32, ptr [[DOTADDR1]], align 4
+// CHECK-32-EX-NEXT:    [[IS_ACTIVE_THREAD12:%.*]] = icmp ult i32 [[TMP2]], [[TMP19]]
+// CHECK-32-EX-NEXT:    br i1 [[IS_ACTIVE_THREAD12]], label [[THEN13:%.*]], label [[ELSE14:%.*]]
+// CHECK-32-EX:       then13:
+// CHECK-32-EX-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [32 x i32], ptr addrspace(3) @__openmp_nvptx_data_transfer_temporary_storage, i64 0, i32 [[TMP2]]
+// CHECK-32-EX-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [2 x ptr], ptr [[TMP5]], i32 0, i32 1
+// CHECK-32-EX-NEXT:    [[TMP22:%.*]] = load ptr, ptr [[TMP21]], align 4
+// CHECK-32-EX-NEXT:    [[TMP23:%.*]] = load volatile i16, ptr addrspace(3) [[TMP20]], align 2
+// CHECK-32-EX-NEXT:    store i16 [[TMP23]], ptr [[TMP22]], align 2
+// CHECK-32-EX-NEXT:    br label [[IFCONT15:%.*]]
+// CHECK-32-EX:       else14:
+// CHECK-32-EX-NEXT:    br label [[IFCONT15]]
+// CHECK-32-EX:       ifcont15:
 // CHECK-32-EX-NEXT:    ret void
 //

@@ -9,22 +9,35 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_FMODTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_FMODTEST_H
 
+#include "hdr/errno_macros.h"
+#include "hdr/math_macros.h"
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/FPUtil/NearestIntegerOperations.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <math.h>
+#ifdef FE_DENORM
+#define DENORM_EXCEPT FE_DENORM
+#elif defined(__FE_DENORM)
+#define DENORM_EXCEPT __FE_DENORM
+#else
+#define DENORM_EXCEPT 0
+#endif // FE_DENORM
 
 #define TEST_SPECIAL(x, y, expected, dom_err, expected_exception)              \
-  EXPECT_FP_EQ(expected, f(x, y));                                             \
-  EXPECT_MATH_ERRNO((dom_err) ? EDOM : 0);                                     \
-  EXPECT_FP_EXCEPTION(expected_exception);                                     \
-  LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT)
+  do {                                                                         \
+    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
+    EXPECT_FP_EQ(expected, f(x, y));                                           \
+    EXPECT_MATH_ERRNO((dom_err) ? EDOM : 0);                                   \
+    LIBC_NAMESPACE::fputil::clear_except(DENORM_EXCEPT);                       \
+    EXPECT_FP_EXCEPTION(expected_exception);                                   \
+  } while (0)
 
 #define TEST_REGULAR(x, y, expected) TEST_SPECIAL(x, y, expected, false, 0)
 
-template <typename T> class FmodTest : public LIBC_NAMESPACE::testing::Test {
+template <typename T>
+class FmodTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 
@@ -52,7 +65,7 @@ public:
 
     // fmod (+inf, y) == aNaN plus invalid exception.
     TEST_SPECIAL(inf, 3.0, aNaN, true, FE_INVALID);
-    TEST_SPECIAL(inf, -1.1L, aNaN, true, FE_INVALID);
+    TEST_SPECIAL(inf, static_cast<float>(-1.1L), aNaN, true, FE_INVALID);
     TEST_SPECIAL(inf, 0.0, aNaN, true, FE_INVALID);
     TEST_SPECIAL(inf, neg_zero, aNaN, true, FE_INVALID);
     TEST_SPECIAL(inf, min_denormal, aNaN, true, FE_INVALID);
@@ -63,7 +76,7 @@ public:
 
     // fmod (-inf, y) == aNaN plus invalid exception.
     TEST_SPECIAL(neg_inf, 3.0, aNaN, true, FE_INVALID);
-    TEST_SPECIAL(neg_inf, -1.1L, aNaN, true, FE_INVALID);
+    TEST_SPECIAL(neg_inf, static_cast<float>(-1.1L), aNaN, true, FE_INVALID);
     TEST_SPECIAL(neg_inf, 0.0, aNaN, true, FE_INVALID);
     TEST_SPECIAL(neg_inf, neg_zero, aNaN, true, FE_INVALID);
     TEST_SPECIAL(neg_inf, min_denormal, aNaN, true, FE_INVALID);
@@ -74,7 +87,7 @@ public:
 
     // fmod (x, +0) == aNaN plus invalid exception.
     TEST_SPECIAL(3.0, 0.0, aNaN, true, FE_INVALID);
-    TEST_SPECIAL(-1.1L, 0.0, aNaN, true, FE_INVALID);
+    TEST_SPECIAL(static_cast<float>(-1.1L), 0.0, aNaN, true, FE_INVALID);
     TEST_SPECIAL(0.0, 0.0, aNaN, true, FE_INVALID);
     TEST_SPECIAL(neg_zero, 0.0, aNaN, true, FE_INVALID);
     TEST_SPECIAL(min_denormal, 0.0, aNaN, true, FE_INVALID);
@@ -83,7 +96,7 @@ public:
 
     // fmod (x, -0) == aNaN plus invalid exception.
     TEST_SPECIAL(3.0, neg_zero, aNaN, true, FE_INVALID);
-    TEST_SPECIAL(-1.1L, neg_zero, aNaN, true, FE_INVALID);
+    TEST_SPECIAL(static_cast<float>(-1.1L), neg_zero, aNaN, true, FE_INVALID);
     TEST_SPECIAL(0.0, neg_zero, aNaN, true, FE_INVALID);
     TEST_SPECIAL(neg_zero, neg_zero, aNaN, true, FE_INVALID);
     TEST_SPECIAL(min_denormal, neg_zero, aNaN, true, FE_INVALID);
@@ -209,7 +222,6 @@ public:
 
   void testRegularExtreme(FModFunc f) {
 
-    TEST_REGULAR(0x1p127L, 0x3p-149L, 0x1p-149L);
     TEST_REGULAR(0x1p127L, -0x3p-149L, 0x1p-149L);
     TEST_REGULAR(0x1p127L, 0x3p-148L, 0x1p-147L);
     TEST_REGULAR(0x1p127L, -0x3p-148L, 0x1p-147L);

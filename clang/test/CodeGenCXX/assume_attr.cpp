@@ -8,77 +8,77 @@
 
 /// foo: declarations only
 
-__attribute__((assume("foo:before1"))) void foo();
+[[omp::assume("foo:before1")]] void foo();
 
-__attribute__((assume("foo:before2")))
-__attribute__((assume("foo:before3"))) void
+[[omp::assume("foo:before2")]]
+[[omp::assume("foo:before3")]] void
 foo();
 
 /// baz: static function declarations and a definition
 
-__attribute__((assume("baz:before1"))) static void baz();
+[[omp::assume("baz:before1")]] static void baz();
 
-__attribute__((assume("baz:before2")))
-__attribute__((assume("baz:before3"))) static void
+[[omp::assume("baz:before2")]]
+[[omp::assume("baz:before3")]] static void
 baz();
 
 // Definition
-__attribute__((assume("baz:def1,baz:def2"))) static void baz() { foo(); }
+[[omp::assume("baz:def1,baz:def2")]] static void baz() { foo(); }
 
-__attribute__((assume("baz:after"))) static void baz();
+[[omp::assume("baz:after")]] static void baz();
 
 /// bar: external function declarations and a definition
 
-__attribute__((assume("bar:before1"))) void bar();
+[[omp::assume("bar:before1")]] void bar();
 
-__attribute__((assume("bar:before2")))
-__attribute__((assume("bar:before3"))) void
+[[omp::assume("bar:before2")]]
+[[omp::assume("bar:before3")]] void
 bar();
 
 // Definition
-__attribute__((assume("bar:def1,bar:def2"))) void bar() { baz(); }
+[[omp::assume("bar:def1,bar:def2")]] void bar() { baz(); }
 
-__attribute__((assume("bar:after"))) void bar();
+[[omp::assume("bar:after")]] void bar();
 
 /// back to foo
 
-__attribute__((assume("foo:after"))) void foo();
+[[omp::assume("foo:after")]] void foo();
 
 /// class tests
 class C {
-  __attribute__((assume("C:private_method"))) void private_method();
-  __attribute__((assume("C:private_static"))) static void private_static();
+  [[omp::assume("C:private_method")]] void private_method();
+  [[omp::assume("C:private_static")]] static void private_static();
 
 public:
-  __attribute__((assume("C:public_method1"))) void public_method();
-  __attribute__((assume("C:public_static1"))) static void public_static();
+  [[omp::assume("C:public_method1")]] void public_method();
+  [[omp::assume("C:public_static1")]] static void public_static();
 };
 
-__attribute__((assume("C:public_method2"))) void C::public_method() {
+[[omp::assume("C:public_method2")]] void C::public_method() {
   private_method();
 }
 
-__attribute__((assume("C:public_static2"))) void C::public_static() {
+[[omp::assume("C:public_static2")]] void C::public_static() {
   private_static();
 }
 
 /// template tests
 template <typename T>
-__attribute__((assume("template_func<T>"))) void template_func() {}
+[[omp::assume("template_func<T>")]] void template_func() {}
 
 template <>
-__attribute__((assume("template_func<float>"))) void template_func<float>() {}
+[[omp::assume("template_func<float>")]] void template_func<float>() {}
 
 template <>
 void template_func<int>() {}
 
 template <typename T>
 struct S {
-  __attribute__((assume("S<T>::method"))) void method();
+  [[omp::assume("S<T>::method")]] void method();
 };
 
 template <>
-__attribute__((assume("S<float>::method"))) void S<float>::method() {}
+[[omp::assume("S<float>::method")]] void S<float>::method() {}
 
 template <>
 void S<int>::method() {}

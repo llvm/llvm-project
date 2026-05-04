@@ -8,7 +8,7 @@
 ; Should generate flat load
 
 ; CHECK-LABEL: @generic_address_bitcast_const(
-; CHECK: %vecload1 = load <2 x double>, ptr addrspace(1) getelementptr inbounds ([100 x double], ptr addrspace(1) @data, i64 0, i64 4), align 8
+; CHECK: %vecload1 = load <2 x double>, ptr addrspace(1) getelementptr ([100 x double], ptr addrspace(1) @data, i64 0, i64 4), align 8
 define amdgpu_kernel void @generic_address_bitcast_const(i64 %arg0, ptr addrspace(1) nocapture %results) #0 {
 entry:
   %tmp1 = call i32 @llvm.amdgcn.workitem.id.x()
@@ -125,7 +125,7 @@ entry:
   %tmp12 = icmp eq i32 %tmp9, 0
   %tmp13 = select i1 %tmp12, i32 32, i32 %tmp9
   %tmp14 = getelementptr inbounds i32, ptr %tmp4, i64 %tmp6
-  %tmp15 = insertelement <2 x i32> undef, i32 %tmp11, i32 0
+  %tmp15 = insertelement <2 x i32> poison, i32 %tmp11, i32 0
   %tmp16 = insertelement <2 x i32> %tmp15, i32 %tmp13, i32 1
   store <2 x i32> %tmp16, ptr %tmp14, align 4
   ret void

@@ -1,6 +1,11 @@
 // RUN: mlir-translate -no-implicit-module -test-spirv-roundtrip %s | FileCheck %s
 
-spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses], []> {
+// RUN: %if spirv-tools %{ rm -rf %t %}
+// RUN: %if spirv-tools %{ mkdir %t %}
+// RUN: %if spirv-tools %{ mlir-translate --no-implicit-module --serialize-spirv --split-input-file --spirv-save-validation-files-with-prefix=%t/module %s %}
+// RUN: %if spirv-tools %{ spirv-val %t %}
+
+spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, Vector16, Linkage], []> {
   spirv.func @float_insts(%arg0 : f32) "None" {
     // CHECK: {{%.*}} = spirv.CL.exp {{%.*}} : f32
     %0 = spirv.CL.exp %arg0 : f32
@@ -42,6 +47,26 @@ spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses], []
   spirv.func @fma(%arg0 : f32, %arg1 : f32, %arg2 : f32) "None" {
     // CHECK: spirv.CL.fma {{%[^,]*}}, {{%[^,]*}}, {{%[^,]*}} : f32
     %13 = spirv.CL.fma %arg0, %arg1, %arg2 : f32
+    spirv.Return
+  }
+
+  spirv.func @float_int_insts(%arg0 : f32, %arg1 : i32) "None" {
+    // CHECK: {{%.*}} = spirv.CL.ldexp {{%.*}}, {{%.*}} : f32, i32 -> f32
+    %0 = spirv.CL.ldexp %arg0, %arg1 : f32, i32 -> f32
+    // CHECK: {{%.*}} = spirv.CL.pown {{%.*}}, {{%.*}} : f32, i32 -> f32
+    %1 = spirv.CL.pown %arg0, %arg1 : f32, i32 -> f32
+    // CHECK: {{%.*}} = spirv.CL.rootn {{%.*}}, {{%.*}} : f32, i32 -> f32
+    %2 = spirv.CL.rootn %arg0, %arg1 : f32, i32 -> f32
+    spirv.Return
+  }
+
+  spirv.func @float_int_vec_insts(%arg0 : vector<3xf32>, %arg1 : vector<3xi32>) "None" {
+    // CHECK: {{%.*}} = spirv.CL.ldexp {{%.*}}, {{%.*}} : vector<3xf32>, vector<3xi32> -> vector<3xf32>
+    %0 = spirv.CL.ldexp %arg0, %arg1 : vector<3xf32>, vector<3xi32> -> vector<3xf32>
+    // CHECK: {{%.*}} = spirv.CL.pown {{%.*}}, {{%.*}} : vector<3xf32>, vector<3xi32> -> vector<3xf32>
+    %1 = spirv.CL.pown %arg0, %arg1 : vector<3xf32>, vector<3xi32> -> vector<3xf32>
+    // CHECK: {{%.*}} = spirv.CL.rootn {{%.*}}, {{%.*}} : vector<3xf32>, vector<3xi32> -> vector<3xf32>
+    %2 = spirv.CL.rootn %arg0, %arg1 : vector<3xf32>, vector<3xi32> -> vector<3xf32>
     spirv.Return
   }
 

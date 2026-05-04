@@ -1,19 +1,18 @@
-; RUN: llc < %s | FileCheck %s 
+; RUN: llc < %s | FileCheck %s
 
 ; ModuleID = 'aarch64_tree_tests.bc'
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 target triple = "arm64--linux-gnu"
 
-; FIXME: Misspelled CHECK-LABEL
-; CHECK-LABLE: @aarch64_tree_tests_and
-; CHECK: .hword	32768                   
-; CHECK: .hword	32767                   
-; CHECK: .hword	4664                    
-; CHECK: .hword	32767                   
-; CHECK: .hword	32768                   
-; CHECK: .hword	32768                   
-; CHECK: .hword	0                       
-; CHECK: .hword	0                      
+; CHECK-LABEL: .LCPI0_0:
+; CHECK-NEXT:    .hword 32768
+; CHECK-NEXT:    .hword 32767
+; CHECK-NEXT:    .hword 4664
+; CHECK-NEXT:    .hword 32767
+; CHECK-NEXT:    .hword 32768
+; CHECK-NEXT:    .hword 32768
+; CHECK-NEXT:    .hword 0
+; CHECK-NEXT:    .hword 0
 
 ; Function Attrs: nounwind readnone
 define <8 x i16> @aarch64_tree_tests_and(<8 x i16> %a) {
@@ -23,16 +22,15 @@ entry:
   ret <8 x i16> %ret
 }
 
-; FIXME: Misspelled CHECK-LABEL
-; CHECK-LABLE: @aarch64_tree_tests_or
-; CHECK: .hword	32768                 
-; CHECK: .hword	32766
-; CHECK: .hword	4664     
-; CHECK: .hword	32766                
-; CHECK: .hword	32768 
-; CHECK: .hword	32768
-; CHECK: .hword	65535            
-; CHECK: .hword	65535
+; CHECK-LABEL: .LCPI1_0:
+; CHECK-NEXT:    .hword 32768
+; CHECK-NEXT:    .hword 32766
+; CHECK-NEXT:    .hword 4664
+; CHECK-NEXT:    .hword 32766
+; CHECK-NEXT:    .hword 32768
+; CHECK-NEXT:    .hword 32768
+; CHECK-NEXT:    .hword 65535
+; CHECK-NEXT:    .hword 65535
 
 ; Function Attrs: nounwind readnone
 define <8 x i16> @aarch64_tree_tests_or(<8 x i16> %a) {

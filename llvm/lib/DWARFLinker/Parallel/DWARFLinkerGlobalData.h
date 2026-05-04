@@ -21,7 +21,6 @@ class DWARFDie;
 namespace dwarf_linker {
 namespace parallel {
 
-using TranslatorFuncTy = std::function<StringRef(StringRef)>;
 using MessageHandlerTy = std::function<void(
     const Twine &Warning, StringRef Context, const DWARFDie *DIE)>;
 
@@ -48,9 +47,6 @@ struct DWARFLinkerOptions {
   /// Whether we want a static variable to force us to keep its enclosing
   /// function.
   bool KeepFunctionForStatic = false;
-
-  /// Allow to generate valid, but non deterministic output.
-  bool AllowNonDeterministicOutput = false;
 
   /// Number of threads.
   unsigned Threads = 1;
@@ -94,19 +90,6 @@ public:
 
   /// Returns global string pool.
   StringPool &getStringPool() { return Strings; }
-
-  /// Set translation function.
-  void setTranslator(TranslatorFuncTy Translator) {
-    this->Translator = Translator;
-  }
-
-  /// Translate specified string.
-  StringRef translateString(StringRef String) {
-    if (Translator)
-      return Translator(String);
-
-    return String;
-  }
 
   /// Returns linking options.
   const DWARFLinkerOptions &getOptions() const { return Options; }
@@ -161,7 +144,6 @@ public:
 protected:
   llvm::parallel::PerThreadBumpPtrAllocator Allocator;
   StringPool Strings;
-  TranslatorFuncTy Translator;
   DWARFLinkerOptions Options;
   MessageHandlerTy WarningHandler;
   MessageHandlerTy ErrorHandler;

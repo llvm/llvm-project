@@ -281,3 +281,100 @@ func.func @double_reverse_bitcast(%arg0 : complex<f32>) -> f64 {
   // CHECK: return %[[R0]] : f64
   func.return %1 : f64
 }
+
+// CHECK-LABEL: func @div_one_f16
+func.func @div_one_f16() -> complex<f16> {
+  %one = complex.constant [1.0 : f16, 2.0 : f16] : complex<f16>
+  %two = complex.constant [1.0 : f16, 0.0 : f16] : complex<f16>
+  %div = complex.div %one, %two : complex<f16>
+  // CHECK: %[[DIV:.*]] = complex.constant [1.000000e+00 : f16, 2.000000e+00 : f16] : complex<f16>
+  return %div : complex<f16>
+}
+
+// CHECK-LABEL: func @div_one_f32
+func.func @div_one_f32() -> complex<f32> {
+  %one = complex.constant [1.0 : f32, 2.0 : f32] : complex<f32>
+  %two = complex.constant [1.0 : f32, 0.0 : f32] : complex<f32>
+  %div = complex.div %one, %two : complex<f32>
+  // CHECK: %[[DIV:.*]] = complex.constant [1.000000e+00 : f32, 2.000000e+00 : f32] : complex<f32>
+  return %div : complex<f32>
+}
+
+// CHECK-LABEL: func @div_one_f64
+func.func @div_one_f64() -> complex<f64> {
+  %one = complex.constant [1.0 : f64, 2.0 : f64] : complex<f64>
+  %two = complex.constant [1.0 : f64, 0.0 : f64] : complex<f64>
+  %div = complex.div %one, %two : complex<f64>
+  // CHECK: %[[DIV:.*]] = complex.constant [1.000000e+00, 2.000000e+00] : complex<f64>
+  return %div : complex<f64>
+}
+
+// CHECK-LABEL: func @div_one_f80
+func.func @div_one_f80() -> complex<f80> {
+  %one = complex.constant [1.0 : f80, 2.0 : f80] : complex<f80>
+  %two = complex.constant [1.0 : f80, 0.0 : f80] : complex<f80>
+  %div = complex.div %one, %two : complex<f80>
+  // CHECK: %[[DIV:.*]] = complex.constant [1.000000e+00 : f80, 2.000000e+00 : f80] : complex<f80>
+  return %div : complex<f80>
+}
+
+// CHECK-LABEL: func @div_one_f128
+func.func @div_one_f128() -> complex<f128> {
+  %one = complex.constant [1.0 : f128, 2.0 : f128] : complex<f128>
+  %two = complex.constant [1.0 : f128, 0.0 : f128] : complex<f128>
+  %div = complex.div %one, %two : complex<f128>
+  // CHECK: %[[DIV:.*]] = complex.constant [1.000000e+00 : f128, 2.000000e+00 : f128] : complex<f128>
+  return %div : complex<f128>
+}
+
+// CHECK-LABEL: div_op_with_rhs_has_nan_real
+func.func @div_op_with_rhs_has_nan_real() -> complex<f32> {
+  %a = complex.constant [0x7fffffff : f32, 1.0 : f32]: complex<f32>
+  %b = complex.constant [1.0: f32, 0.0 : f32]: complex<f32>
+  %div = complex.div %a, %b : complex<f32>
+  // CHECK: %[[DIV:.*]] = complex.constant [0x7FFFFFFF : f32, 0x7FFFFFFF : f32] : complex<f32>
+  // CHECK: return %[[DIV]] : complex<f32>
+  return %div : complex<f32>
+}
+
+// CHECK-LABEL: div_op_with_rhs_has_nan_imag
+func.func @div_op_with_rhs_has_nan_imag() -> complex<f32> {
+  %a = complex.constant [1.0 : f32, 0x7fffffff : f32]: complex<f32>
+  %b = complex.constant [1.0: f32, 0.0 : f32]: complex<f32>
+  %div = complex.div %a, %b : complex<f32>
+  // CHECK: %[[DIV:.*]] = complex.constant [0x7FFFFFFF : f32, 0x7FFFFFFF : f32] : complex<f32>
+  // CHECK: return %[[DIV]] : complex<f32>
+  return %div : complex<f32>
+}
+
+// CHECK-LABEL: div_op_with_rhs_has_nan_real_imag
+func.func @div_op_with_rhs_has_nan_real_imag() -> complex<f32> {
+  %a = complex.constant [0x7fffffff : f32, 0x7fffffff : f32]: complex<f32>
+  %b = complex.constant [1.0: f32, 0.0 : f32]: complex<f32>
+  %div = complex.div %a, %b : complex<f32>
+  // CHECK: %[[DIV:.*]] = complex.constant [0x7FFFFFFF : f32, 0x7FFFFFFF : f32] : complex<f32>
+  // CHECK: return %[[DIV]] : complex<f32>
+  return %div : complex<f32>
+}
+
+// CHECK-LABEL: div_op_non_constant_lhs_with_fast_math
+func.func @div_op_non_constant_lhs_with_fast_math(%arg0: f32, %arg1: f32) -> complex<f32> {
+  %a = complex.create %arg0, %arg1 : complex<f32>
+  %b = complex.constant [1.0 : f32, 0.0 : f32] : complex<f32>
+  %div = complex.div %a, %b fastmath<nnan> : complex<f32>
+  // CHECK: %[[COMPLEX:.*]] = complex.create %arg0, %arg1 : complex<f32>
+  // CHECK: return %[[COMPLEX]] : complex<f32>
+  return %div: complex<f32>
+}
+
+// CHECK-LABEL: div_op_non_constant_lhs_without_fast_math
+func.func @div_op_non_constant_lhs_without_fast_math(%arg0: f32, %arg1: f32) -> complex<f32> {
+  %a = complex.create %arg0, %arg1 : complex<f32>
+  %b = complex.constant [1.0 : f32, 0.0 : f32] : complex<f32>
+  %div = complex.div %a, %b : complex<f32>
+  // CHECK: %[[B:.*]] = complex.constant [1.000000e+00 : f32, 0.000000e+00 : f32] : complex<f32>
+  // CHECK: %[[A:.*]] = complex.create %arg0, %arg1 : complex<f32>
+  // CHECK: %[[DIV:.*]] = complex.div %[[A]], %[[B]] : complex<f32>
+  // CHECK: return %[[DIV]] : complex<f32>
+  return %div: complex<f32>
+}

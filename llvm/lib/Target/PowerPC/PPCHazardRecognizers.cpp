@@ -78,12 +78,16 @@ bool PPCDispatchGroupSBHazardRecognizer::isBCTRAfterSet(SUnit *SU) {
 }
 
 // FIXME: Remove this when we don't need this:
-namespace llvm { namespace PPC { extern int getNonRecordFormOpcode(uint16_t); } }
+namespace llvm {
+namespace PPC {
+extern int32_t getNonRecordFormOpcode(uint32_t);
+}
+} // namespace llvm
 
 // FIXME: A lot of code in PPCDispatchGroupSBHazardRecognizer is P7 specific.
 
 bool PPCDispatchGroupSBHazardRecognizer::mustComeFirst(const MCInstrDesc *MCID,
-                                                       unsigned &NSlots) {
+                                                       unsigned &NSlots) const {
   // FIXME: Indirectly, this information is contained in the itinerary, and
   // we should derive it from there instead of separately specifying it
   // here.
@@ -143,7 +147,7 @@ PPCDispatchGroupSBHazardRecognizer::getHazardType(SUnit *SU, int Stalls) {
   return ScoreboardHazardRecognizer::getHazardType(SU, Stalls);
 }
 
-bool PPCDispatchGroupSBHazardRecognizer::ShouldPreferAnother(SUnit *SU) {
+bool PPCDispatchGroupSBHazardRecognizer::ShouldPreferAnother(SUnit *SU) const {
   const MCInstrDesc *MCID = DAG->getInstrDesc(SU);
   unsigned NSlots;
   if (MCID && mustComeFirst(MCID, NSlots) && CurSlots)
@@ -374,8 +378,9 @@ getHazardType(SUnit *SU, int Stalls) {
   // overlapping address.
   if (isLoad && NumStores && !MI->memoperands_empty()) {
     MachineMemOperand *MO = *MI->memoperands_begin();
-    if (isLoadOfStoredAddress(MO->getSize(),
-                              MO->getOffset(), MO->getValue()))
+    if (MO->getSize().hasValue() &&
+        isLoadOfStoredAddress(MO->getSize().getValue(), MO->getOffset(),
+                              MO->getValue()))
       return NoopHazard;
   }
 
@@ -399,9 +404,10 @@ void PPCHazardRecognizer970::EmitInstruction(SUnit *SU) {
   if (Opcode == PPC::MTCTR || Opcode == PPC::MTCTR8) HasCTRSet = true;
 
   // Track the address stored to.
-  if (isStore && NumStores < 4 && !MI->memoperands_empty()) {
+  if (isStore && NumStores < 4 && !MI->memoperands_empty() &&
+      (*MI->memoperands_begin())->getSize().hasValue()) {
     MachineMemOperand *MO = *MI->memoperands_begin();
-    StoreSize[NumStores] = MO->getSize();
+    StoreSize[NumStores] = MO->getSize().getValue();
     StoreOffset[NumStores] = MO->getOffset();
     StoreValue[NumStores] = MO->getValue();
     ++NumStores;

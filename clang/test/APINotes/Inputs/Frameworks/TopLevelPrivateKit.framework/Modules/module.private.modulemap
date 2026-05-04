@@ -1,0 +1,5 @@
+framework module TopLevelPrivateKit_Private {
+  umbrella header "TopLevelPrivateKit_Private.h"
+  export *
+  module * { export * }
+}

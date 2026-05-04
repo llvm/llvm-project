@@ -60,6 +60,7 @@ class PDLInterp_Op<string mnemonic, list<Trait> traits = []> :
 
 //===----------------------------------------------------------------------===//
 // PDLInterp_PredicateOp
+//===----------------------------------------------------------------------===//
 
 // Check operations evaluate a predicate on a positional value and then
 // conditionally branch on the result.
@@ -70,6 +71,7 @@ class PDLInterp_PredicateOp<string mnemonic, list<Trait> traits = []> :
 
 //===----------------------------------------------------------------------===//
 // PDLInterp_SwitchOp
+//===----------------------------------------------------------------------===//
 
 // Switch operations evaluate a predicate on a positional value and then
 // conditionally branch on the result.

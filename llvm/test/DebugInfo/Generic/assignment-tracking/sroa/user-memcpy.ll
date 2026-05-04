@@ -1,7 +1,5 @@
 ; RUN: opt -passes=sroa -S %s -o - \
-; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
-; RUN: opt --try-experimental-debuginfo-iterators -passes=sroa -S %s -o - \
-; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
+; RUN: | FileCheck %s --implicit-check-not="#dbg_"
 
 ;; Check that the fragments generated in SROA for a split alloca that has a
 ;; dbg.assign with non-zero-offset fragment are correct.
@@ -23,11 +21,11 @@
 ;; Allocas have been promoted - the linked dbg.assigns have been removed.
 
 ;; | V3i point = {0, 0, 0};
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i64 0, metadata ![[point:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64))
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i64 0, metadata ![[point]], metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64))
+; CHECK-NEXT: #dbg_value(i64 0, ![[point:[0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 0, 64),
+; CHECK-NEXT: #dbg_value(i64 0, ![[point]], !DIExpression(DW_OP_LLVM_fragment, 64, 64),
 
 ;; point.z = 5000;
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i64 5000, metadata ![[point]], metadata !DIExpression(DW_OP_LLVM_fragment, 128, 64))
+; CHECK-NEXT: #dbg_value(i64 5000, ![[point]], !DIExpression(DW_OP_LLVM_fragment, 128, 64),
 
 ;; | V3i other = {10, 9, 8};
 ;;   other is global const:
@@ -37,17 +35,17 @@
 ; CHECK-NEXT: %other.sroa.0.0.copyload = load i64, ptr @__const._Z3funv.other
 ; CHECK-NEXT: %other.sroa.2.0.copyload = load i64, ptr getelementptr inbounds (i8, ptr @__const._Z3funv.other, i64 8)
 ; CHECK-NEXT: %other.sroa.3.0.copyload = load i64, ptr getelementptr inbounds (i8, ptr @__const._Z3funv.other, i64 16)
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i64 %other.sroa.0.0.copyload, metadata ![[other:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64))
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i64 %other.sroa.2.0.copyload, metadata ![[other]], metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64))
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i64 %other.sroa.3.0.copyload, metadata ![[other]], metadata !DIExpression(DW_OP_LLVM_fragment, 128, 64))
+; CHECK-NEXT: #dbg_value(i64 %other.sroa.0.0.copyload, ![[other:[0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 0, 64),
+; CHECK-NEXT: #dbg_value(i64 %other.sroa.2.0.copyload, ![[other]], !DIExpression(DW_OP_LLVM_fragment, 64, 64),
+; CHECK-NEXT: #dbg_value(i64 %other.sroa.3.0.copyload, ![[other]], !DIExpression(DW_OP_LLVM_fragment, 128, 64),
 
 ;; | std::memcpy(&point.y, &other.x, sizeof(long) * 2);
 ;;   other is now 3 scalars:
 ;;     point.y = other.x
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i64 %other.sroa.0.0.copyload, metadata ![[point]], metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64))
+; CHECK-NEXT: #dbg_value(i64 %other.sroa.0.0.copyload, ![[point]], !DIExpression(DW_OP_LLVM_fragment, 64, 64),
 ;;
 ;;     point.z = other.y
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i64 %other.sroa.2.0.copyload, metadata ![[point]], metadata !DIExpression(DW_OP_LLVM_fragment, 128, 64))
+; CHECK-NEXT: #dbg_value(i64 %other.sroa.2.0.copyload, ![[point]], !DIExpression(DW_OP_LLVM_fragment, 128, 64),
 
 ; CHECK: ![[point]] = !DILocalVariable(name: "point",
 ; CHECK: ![[other]] = !DILocalVariable(name: "other",

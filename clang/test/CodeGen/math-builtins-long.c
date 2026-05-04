@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -w -S -o - -emit-llvm %s \
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -w -o - -emit-llvm %s \
 // RUN:   -fmath-errno | FileCheck %s -check-prefix=F80
-// RUN: %clang_cc1 -triple ppc64le-unknown-unknown -w -S -o - -emit-llvm %s \
+// RUN: %clang_cc1 -triple ppc64le-unknown-unknown -w -o - -emit-llvm %s \
 // RUN:   -fmath-errno | FileCheck %s -check-prefix=PPC
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -mlong-double-128 -w -S \
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -mlong-double-128 -w \
 // RUN:   -o - -emit-llvm %s -fmath-errno | FileCheck %s -check-prefix=X86F128
-// RUN: %clang_cc1 -triple ppc64le-unknown-unknown -mabi=ieeelongdouble -w -S \
+// RUN: %clang_cc1 -triple ppc64le-unknown-unknown -mabi=ieeelongdouble -w \
 // RUN:   -o - -emit-llvm %s -fmath-errno | FileCheck %s -check-prefix=PPCF128
 
 void bar(long double);
@@ -58,9 +58,9 @@ void foo(long double f, long double *l, int *i, const char *c) {
   // PPCF128: call fp128 @ldexpf128(fp128 noundef %{{.+}}, {{(signext)?.+}})
   __builtin_ldexpl(f,f);
 
-  // F80: call x86_fp80 @modfl(x86_fp80 noundef %{{.+}}, ptr noundef %{{.+}})
-  // PPC: call ppc_fp128 @modfl(ppc_fp128 noundef %{{.+}}, ptr noundef %{{.+}})
-  // X86F128: call fp128 @modfl(fp128 noundef %{{.+}}, ptr noundef %{{.+}})
+  // F80: call { x86_fp80, x86_fp80 } @llvm.modf.f80(x86_fp80 %{{.+}})
+  // PPC: call { ppc_fp128, ppc_fp128 } @llvm.modf.ppcf128(ppc_fp128 %{{.+}})
+  // X86F128: call { fp128, fp128 } @llvm.modf.f128(fp128 %{{.+}})
   // PPCF128: call fp128 @modff128(fp128 noundef %{{.+}}, ptr noundef %{{.+}})
   __builtin_modfl(f,l);
 
@@ -148,16 +148,16 @@ void foo(long double f, long double *l, int *i, const char *c) {
   // PPCF128: call fp128 @llvm.floor.f128(fp128 %{{.+}})
   __builtin_floorl(f);
 
-  // F80: call x86_fp80 @llvm.maxnum.f80(x86_fp80 %{{.+}}, x86_fp80 %{{.+}})
-  // PPC: call ppc_fp128 @llvm.maxnum.ppcf128(ppc_fp128 %{{.+}}, ppc_fp128 %{{.+}})
-  // X86F128: call fp128 @llvm.maxnum.f128(fp128 %{{.+}}, fp128 %{{.+}})
-  // PPCF128: call fp128 @llvm.maxnum.f128(fp128 %{{.+}}, fp128 %{{.+}})
+  // F80: call nsz x86_fp80 @llvm.maxnum.f80(x86_fp80 %{{.+}}, x86_fp80 %{{.+}})
+  // PPC: call nsz ppc_fp128 @llvm.maxnum.ppcf128(ppc_fp128 %{{.+}}, ppc_fp128 %{{.+}})
+  // X86F128: call nsz fp128 @llvm.maxnum.f128(fp128 %{{.+}}, fp128 %{{.+}})
+  // PPCF128: call nsz fp128 @llvm.maxnum.f128(fp128 %{{.+}}, fp128 %{{.+}})
   __builtin_fmaxl(f,f);
 
-  // F80: call x86_fp80 @llvm.minnum.f80(x86_fp80 %{{.+}}, x86_fp80 %{{.+}})
-  // PPC: call ppc_fp128 @llvm.minnum.ppcf128(ppc_fp128 %{{.+}}, ppc_fp128 %{{.+}})
-  // X86F128: call fp128 @llvm.minnum.f128(fp128 %{{.+}}, fp128 %{{.+}})
-  // PPCF128: call fp128 @llvm.minnum.f128(fp128 %{{.+}}, fp128 %{{.+}})
+  // F80: call nsz x86_fp80 @llvm.minnum.f80(x86_fp80 %{{.+}}, x86_fp80 %{{.+}})
+  // PPC: call nsz ppc_fp128 @llvm.minnum.ppcf128(ppc_fp128 %{{.+}}, ppc_fp128 %{{.+}})
+  // X86F128: call nsz fp128 @llvm.minnum.f128(fp128 %{{.+}}, fp128 %{{.+}})
+  // PPCF128: call nsz fp128 @llvm.minnum.f128(fp128 %{{.+}}, fp128 %{{.+}})
   __builtin_fminl(f,f);
 
   // F80: call x86_fp80 @llvm.nearbyint.f80(x86_fp80 %{{.+}})

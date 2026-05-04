@@ -6,12 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// See https://llvm.org/PR20183
-// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11}}
-
 // The behavior of std::random_device changed on Apple platforms with
-// https://llvm.org/D116045.
-// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx{{10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0|12.0}}
+// https://llvm.org/D116045 (d202c76441e1).
+// XFAIL: target={{.+}}-apple-{{.+}} && using-built-library-before-llvm-14
 
 // UNSUPPORTED: no-random-device
 

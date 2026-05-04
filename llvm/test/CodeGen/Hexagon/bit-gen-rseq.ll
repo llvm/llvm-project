@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -disable-hsdr -hexagon-subreg-liveness < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -disable-hsdr -enable-subreg-liveness < %s | FileCheck %s
 ; Check that we don't generate any bitwise operations.
 
 ; CHECK-NOT: = or(

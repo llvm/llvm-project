@@ -51,7 +51,7 @@
 #
 #   DW_AT_location	(DW_OP_constu 0x64a40101, DW_OP_stack_value)
 #
-# to work-around a seperate bug.
+# to work-around a separate bug.
 
 .zerofill __DATA,__bss,__type_anchor,4,2 ## @_type_anchor
 .zerofill __DATA,__bss,_ug.0,1,2        ## @ug.0

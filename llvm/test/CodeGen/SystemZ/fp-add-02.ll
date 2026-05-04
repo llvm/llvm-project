@@ -118,3 +118,17 @@ define double @f7(ptr %ptr0) {
 
   ret double %add10
 }
+
+; Check that reassociation flags do not get in the way of ADB.
+define double @f8(ptr %x) {
+; CHECK-LABEL: f8:
+; CHECK: ld %f0
+; CHECK: adb %f0
+; CHECK: br %r14
+entry:
+  %0 = load double, ptr %x, align 8
+  %arrayidx1 = getelementptr inbounds double, ptr %x, i64 1
+  %1 = load double, ptr %arrayidx1, align 8
+  %add = fadd reassoc nsz arcp contract afn double %1, %0
+  ret double %add
+}

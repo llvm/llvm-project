@@ -3,7 +3,7 @@
 
 # Test fails on Windows where internal shell is used due to path separator
 # mismatches.
-REQUIRES: shell
+UNSUPPORTED: system-windows
 
 RUN: rm -rf %t
 RUN: mkdir %t

@@ -1,4 +1,4 @@
-# RUN: llvm-mc %s -triple=riscv64 -mattr=+zba -riscv-no-aliases \
+# RUN: llvm-mc %s -triple=riscv64 -mattr=+zba -M no-aliases \
 # RUN:     | FileCheck -check-prefixes=CHECK-S-OBJ-NOALIAS %s
 # RUN: llvm-mc %s  -triple=riscv64 -mattr=+zba \
 # RUN:     | FileCheck -check-prefixes=CHECK-S-OBJ %s
@@ -40,71 +40,71 @@ li x5, 0xbbbbb0007bb
 li x5, 0xbbbbb0000
 
 # CHECK-S-OBJ-NOALIAS: lui t1, 611378
-# CHECK-S-OBJ-NOALIAS-NEXT: addiw t1, t1, 265
+# CHECK-S-OBJ-NOALIAS-NEXT: addi t1, t1, 265
 # CHECK-S-OBJ-NOALIAS-NEXT: sh1add t1, t1, t1
 # CHECK-S-OBJ: lui t1, 611378
-# CHECK-S-OBJ-NEXT: addiw t1, t1, 265
+# CHECK-S-OBJ-NEXT: addi t1, t1, 265
 # CHECK-S-OBJ-NEXT: sh1add t1, t1, t1
 li x6, -5372288229
 
 # CHECK-S-OBJ-NOALIAS: lui t1, 437198
-# CHECK-S-OBJ-NOALIAS-NEXT: addiw t1, t1, -265
+# CHECK-S-OBJ-NOALIAS-NEXT: addi t1, t1, -265
 # CHECK-S-OBJ-NOALIAS-NEXT: sh2add t1, t1, t1
 # CHECK-S-OBJ: lui t1, 437198
-# CHECK-S-OBJ-NEXT: addiw t1, t1, -265
+# CHECK-S-OBJ-NEXT: addi t1, t1, -265
 # CHECK-S-OBJ-NEXT: sh2add t1, t1, t1
 li x6, 8953813715
 
 # CHECK-S-OBJ-NOALIAS: lui t1, 611378
-# CHECK-S-OBJ-NOALIAS-NEXT: addiw t1, t1, 265
+# CHECK-S-OBJ-NOALIAS-NEXT: addi t1, t1, 265
 # CHECK-S-OBJ-NOALIAS-NEXT: sh2add t1, t1, t1
 # CHECK-S-OBJ: lui t1, 611378
-# CHECK-S-OBJ-NEXT: addiw t1, t1, 265
+# CHECK-S-OBJ-NEXT: addi t1, t1, 265
 # CHECK-S-OBJ-NEXT: sh2add t1, t1, t1
 li x6, -8953813715
 
 # CHECK-S-OBJ-NOALIAS: lui t1, 437198
-# CHECK-S-OBJ-NOALIAS-NEXT: addiw t1, t1, -265
+# CHECK-S-OBJ-NOALIAS-NEXT: addi t1, t1, -265
 # CHECK-S-OBJ-NOALIAS-NEXT: sh3add t1, t1, t1
 # CHECK-S-OBJ: lui t1, 437198
-# CHECK-S-OBJ-NEXT: addiw t1, t1, -265
+# CHECK-S-OBJ-NEXT: addi t1, t1, -265
 # CHECK-S-OBJ-NEXT: sh3add t1, t1, t1
 li x6, 16116864687
 
 # CHECK-S-OBJ-NOALIAS: lui t1, 611378
-# CHECK-S-OBJ-NOALIAS-NEXT: addiw t1, t1, 265
+# CHECK-S-OBJ-NOALIAS-NEXT: addi t1, t1, 265
 # CHECK-S-OBJ-NOALIAS-NEXT: sh3add t1, t1, t1
 # CHECK-S-OBJ: lui t1, 611378
-# CHECK-S-OBJ-NEXT: addiw t1, t1, 265
+# CHECK-S-OBJ-NEXT: addi t1, t1, 265
 # CHECK-S-OBJ-NEXT: sh3add t1, t1, t1
 li x6, -16116864687
 
 # CHECK-S-OBJ-NOALIAS: lui t2, 768956
-# CHECK-S-OBJ-NOALIAS-NEXT: addiw t2, t2, -1093
+# CHECK-S-OBJ-NOALIAS-NEXT: addi t2, t2, -1093
 # CHECK-S-OBJ-NOALIAS-NEXT: slli.uw t2, t2, 12
 # CHECK-S-OBJ-NOALIAS-NEXT: addi t2, t2, 1911
 # CHECK-S-OBJ: lui t2, 768956
-# CHECK-S-OBJ-NEXT: addiw t2, t2, -1093
+# CHECK-S-OBJ-NEXT: addi t2, t2, -1093
 # CHECK-S-OBJ-NEXT: slli.uw t2, t2, 12
 # CHECK-S-OBJ-NEXT: addi t2, t2, 1911
 li x7, 12900936431479
 
 # CHECK-S-OBJ-NOALIAS: lui t1, 768955
-# CHECK-S-OBJ-NOALIAS-NEXT: addiw t1, t1, 273
+# CHECK-S-OBJ-NOALIAS-NEXT: addi t1, t1, 273
 # CHECK-S-OBJ-NOALIAS-NEXT: slli.uw t1, t1, 12
 # CHECK-S-OBJ-NOALIAS-NEXT: addi t1, t1, 273
 # CHECK-S-OBJ: lui t1, 768955
-# CHECK-S-OBJ-NEXT: addiw t1, t1, 273
+# CHECK-S-OBJ-NEXT: addi t1, t1, 273
 # CHECK-S-OBJ-NEXT: slli.uw t1, t1, 12
 # CHECK-S-OBJ-NEXT: addi t1, t1, 273
 li x6, 12900925247761
 
 # CHECK-S-OBJ-NOALIAS: lui t1, 768955
-# CHECK-S-OBJ-NOALIAS-NEXT: addiw t1, t1, -1365
+# CHECK-S-OBJ-NOALIAS-NEXT: addi t1, t1, -1365
 # CHECK-S-OBJ-NOALIAS-NEXT: slli.uw t1, t1, 12
 # CHECK-S-OBJ-NOALIAS-NEXT: addi t1, t1, -1366
 # CHECK-S-OBJ: lui t1, 768955
-# CHECK-S-OBJ-NEXT: addiw t1, t1, -1365
+# CHECK-S-OBJ-NEXT: addi t1, t1, -1365
 # CHECK-S-OBJ-NEXT: slli.uw t1, t1, 12
 # CHECK-S-OBJ-NEXT: addi t1, t1, -1366
 li x6, 12900918536874

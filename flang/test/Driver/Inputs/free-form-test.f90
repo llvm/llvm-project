@@ -1,2 +1,2 @@
-program FreeForm
-end
+     xy z=1
+      end

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wgnu-flexible-array-union-member %s
 typedef union {
   int *ip;
   float *fp;
@@ -131,7 +131,7 @@ union pr15134v2 {
 
 union pr30520v { void b; } __attribute__((transparent_union)); // expected-error {{field has incomplete type 'void'}}
 
-union pr30520a { int b[]; } __attribute__((transparent_union)); // expected-error {{flexible array member 'b' in a union is not allowed}}
+union pr30520a { int b[]; } __attribute__((transparent_union)); // expected-warning {{flexible array member 'b' in a union is a GNU extension}}
 
 // expected-note@+1 2 {{forward declaration of 'struct stb'}}
 union pr30520s { struct stb b; } __attribute__((transparent_union)); // expected-error {{field has incomplete type 'struct stb'}}

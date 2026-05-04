@@ -5,12 +5,8 @@
 define signext i8 @sdiv_i8(i8 signext %a, i8 signext %b) {
 ; MIPS32-LABEL: sdiv_i8:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    sll $1, $5, 24
-; MIPS32-NEXT:    sra $2, $1, 24
-; MIPS32-NEXT:    sll $1, $4, 24
-; MIPS32-NEXT:    sra $1, $1, 24
-; MIPS32-NEXT:    div $zero, $2, $1
-; MIPS32-NEXT:    teq $1, $zero, 7
+; MIPS32-NEXT:    div $zero, $5, $4
+; MIPS32-NEXT:    teq $4, $zero, 7
 ; MIPS32-NEXT:    mflo $1
 ; MIPS32-NEXT:    sll $1, $1, 24
 ; MIPS32-NEXT:    sra $2, $1, 24
@@ -24,12 +20,8 @@ entry:
 define signext i16 @sdiv_i16(i16 signext %a, i16 signext %b) {
 ; MIPS32-LABEL: sdiv_i16:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    sll $1, $5, 16
-; MIPS32-NEXT:    sra $2, $1, 16
-; MIPS32-NEXT:    sll $1, $4, 16
-; MIPS32-NEXT:    sra $1, $1, 16
-; MIPS32-NEXT:    div $zero, $2, $1
-; MIPS32-NEXT:    teq $1, $zero, 7
+; MIPS32-NEXT:    div $zero, $5, $4
+; MIPS32-NEXT:    teq $4, $zero, 7
 ; MIPS32-NEXT:    mflo $1
 ; MIPS32-NEXT:    sll $1, $1, 16
 ; MIPS32-NEXT:    sra $2, $1, 16
@@ -81,12 +73,8 @@ entry:
 define signext i8 @srem_i8(i8 signext %a, i8 signext %b) {
 ; MIPS32-LABEL: srem_i8:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    sll $1, $5, 24
-; MIPS32-NEXT:    sra $2, $1, 24
-; MIPS32-NEXT:    sll $1, $4, 24
-; MIPS32-NEXT:    sra $1, $1, 24
-; MIPS32-NEXT:    div $zero, $2, $1
-; MIPS32-NEXT:    teq $1, $zero, 7
+; MIPS32-NEXT:    div $zero, $5, $4
+; MIPS32-NEXT:    teq $4, $zero, 7
 ; MIPS32-NEXT:    mflo $1
 ; MIPS32-NEXT:    sll $1, $1, 24
 ; MIPS32-NEXT:    sra $2, $1, 24
@@ -100,12 +88,8 @@ entry:
 define signext i16 @srem_i16(i16 signext %a, i16 signext %b) {
 ; MIPS32-LABEL: srem_i16:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    sll $1, $5, 16
-; MIPS32-NEXT:    sra $2, $1, 16
-; MIPS32-NEXT:    sll $1, $4, 16
-; MIPS32-NEXT:    sra $1, $1, 16
-; MIPS32-NEXT:    div $zero, $2, $1
-; MIPS32-NEXT:    teq $1, $zero, 7
+; MIPS32-NEXT:    div $zero, $5, $4
+; MIPS32-NEXT:    teq $4, $zero, 7
 ; MIPS32-NEXT:    mfhi $1
 ; MIPS32-NEXT:    sll $1, $1, 16
 ; MIPS32-NEXT:    sra $2, $1, 16

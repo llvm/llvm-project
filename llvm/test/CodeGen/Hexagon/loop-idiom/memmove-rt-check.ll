@@ -1,4 +1,5 @@
 ; RUN: opt -hexagon-loop-idiom -S < %s | FileCheck %s
+; RUN: opt -p hexagon-loop-idiom -S < %s | FileCheck %s
 
 ; Make sure that we generate correct runtime checks.
 

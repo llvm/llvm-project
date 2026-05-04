@@ -75,6 +75,13 @@ void formatted_raw_ostream::UpdatePosition(const char *Ptr, size_t Size) {
   // Now scan the rest of the buffer.
   unsigned NumBytes;
   for (const char *End = Ptr + Size; Ptr < End; Ptr += NumBytes) {
+    // Fast path for printable ASCII characters without special handling.
+    if (*Ptr >= 0x20 && *Ptr <= 0x7e) {
+      NumBytes = 1;
+      ++Column;
+      continue;
+    }
+
     NumBytes = getNumBytesForUTF8(*Ptr);
 
     // The buffer might end part way through a UTF-8 code unit sequence for a
@@ -94,6 +101,9 @@ void formatted_raw_ostream::UpdatePosition(const char *Ptr, size_t Size) {
 /// ComputePosition - Examine the current output and update line and column
 /// counts.
 void formatted_raw_ostream::ComputePosition(const char *Ptr, size_t Size) {
+  if (DisableScan)
+    return;
+
   // If our previous scan pointer is inside the buffer, assume we already
   // scanned those bytes. This depends on raw_ostream to not change our buffer
   // in unexpected ways.

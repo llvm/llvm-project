@@ -5,11 +5,11 @@
 // RUN: %clang_cc1 -emit-llvm -triple ppc64le-unknown-linux-gnu %s -o - | \
 // RUN: FileCheck -check-prefix CHECK-NOEXTRAALIGN %s
 // RUN: %clang_cc1 -emit-llvm -triple arm64-unknown-linux-gnu %s -o - | \
-// RUN: FileCheck -check-prefix CHECK-EXTRAALIGN %s
+// RUN: FileCheck -check-prefix CHECK-NOEXTRAALIGN %s
 // RUN: %clang_cc1 -emit-llvm -triple arm64-apple-ios %s -o - | \
-// RUN: FileCheck -check-prefix CHECK-EXTRAALIGN %s
+// RUN: FileCheck -check-prefix CHECK-NOEXTRAALIGN %s
 // RUN: %clang_cc1 -emit-llvm -triple aarch64-unknown-linux-gnu %s -o - | \
-// RUN: FileCheck -check-prefix CHECK-EXTRAALIGN %s
+// RUN: FileCheck -check-prefix CHECK-NOEXTRAALIGN %s
 // RUN: %clang_cc1 -emit-llvm -triple mips-unknown-linux-gnu %s -o - | \
 // RUN: FileCheck -check-prefix CHECK-EXTRAALIGN %s
 // RUN: %clang_cc1 -emit-llvm -triple x86_64-unknown-fuchsia %s -o - | \
@@ -31,9 +31,9 @@ public:
 [[gnu::aligned(16)]]
 void
 t::baz(void) {
-// CHECK-NOEXTRAALIGN: @_ZN1t3bazEv({{.*}}) #0 align 16 {
-// CHECK-EXTRAALIGN: @_ZN1t3bazEv({{.*}}) #0 align 16 {
-// CHECK-MSVC: @"?baz@t@@QEAAXXZ"({{.*}}) #0 align 16 {
+// CHECK-NOEXTRAALIGN: @_ZN1t3bazEv({{.*}}) #0 align 16 prefalign(16) {
+// CHECK-EXTRAALIGN: @_ZN1t3bazEv({{.*}}) #0 align 16 prefalign(16) {
+// CHECK-MSVC: @"?baz@t@@QEAAXXZ"({{.*}}) #0 align 16 prefalign(16) {
 }
 
 void

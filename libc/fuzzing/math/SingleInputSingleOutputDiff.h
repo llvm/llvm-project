@@ -10,9 +10,7 @@
 #define LLVM_LIBC_FUZZING_MATH_SINGLE_INPUT_SINGLE_OUTPUT_DIFF_H
 
 #include "fuzzing/math/Compare.h"
-#include "src/__support/FPUtil/FPBits.h"
 
-#include <math.h>
 #include <stddef.h>
 #include <stdint.h>
 

@@ -52,9 +52,9 @@ entry:
   %tmp542 = bitcast <2 x i32> %tmp529 to <4 x i16>
   %tmp543 = add <4 x i16> %tmp542, < i16 0, i16 16448, i16 24672, i16 28784 >
   %tmp555 = bitcast <4 x i16> %tmp543 to <8 x i8>
-  %tmp556 = bitcast <8 x i8> %tmp555 to x86_mmx
-  %tmp557 = bitcast <8 x i8> zeroinitializer to x86_mmx
-  tail call void @llvm.x86.mmx.maskmovq( x86_mmx %tmp557, x86_mmx %tmp556, ptr null)
+  %tmp556 = bitcast <8 x i8> %tmp555 to <1 x i64>
+  %tmp557 = bitcast <8 x i8> zeroinitializer to <1 x i64>
+  tail call void @llvm.x86.mmx.maskmovq( <1 x i64> %tmp557, <1 x i64> %tmp556, ptr null)
   ret void
 }
 
@@ -115,19 +115,19 @@ define <4 x float> @pr35869() nounwind {
 ; X64-NEXT:    punpcklwd %mm1, %mm0 ## mm0 = mm0[0],mm1[0],mm0[1],mm1[1]
 ; X64-NEXT:    cvtpi2ps %mm0, %xmm0
 ; X64-NEXT:    retq
-  %1 = tail call x86_mmx @llvm.x86.mmx.punpcklbw(x86_mmx bitcast (<8 x i8> <i8 64, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0> to x86_mmx), x86_mmx bitcast (<8 x i8> zeroinitializer to x86_mmx))
-  %2 = tail call x86_mmx @llvm.x86.mmx.pcmpgt.w(x86_mmx bitcast (<4 x i16> zeroinitializer to x86_mmx), x86_mmx %1)
-  %3 = tail call x86_mmx @llvm.x86.mmx.punpckhwd(x86_mmx %1, x86_mmx %2)
-  %4 = tail call <4 x float> @llvm.x86.sse.cvtpi2ps(<4 x float> zeroinitializer, x86_mmx %3)
+  %1 = tail call <1 x i64> @llvm.x86.mmx.punpcklbw(<1 x i64> bitcast (<8 x i8> <i8 64, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0> to <1 x i64>), <1 x i64> bitcast (<8 x i8> zeroinitializer to <1 x i64>))
+  %2 = tail call <1 x i64> @llvm.x86.mmx.pcmpgt.w(<1 x i64> bitcast (<4 x i16> zeroinitializer to <1 x i64>), <1 x i64> %1)
+  %3 = tail call <1 x i64> @llvm.x86.mmx.punpckhwd(<1 x i64> %1, <1 x i64> %2)
+  %4 = tail call <4 x float> @llvm.x86.sse.cvtpi2ps(<4 x float> zeroinitializer, <1 x i64> %3)
   %5 = shufflevector <4 x float> %4, <4 x float> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
-  %6 = tail call x86_mmx @llvm.x86.mmx.punpcklwd(x86_mmx %1, x86_mmx %2)
-  %7 = tail call <4 x float> @llvm.x86.sse.cvtpi2ps(<4 x float> %5, x86_mmx %6)
+  %6 = tail call <1 x i64> @llvm.x86.mmx.punpcklwd(<1 x i64> %1, <1 x i64> %2)
+  %7 = tail call <4 x float> @llvm.x86.sse.cvtpi2ps(<4 x float> %5, <1 x i64> %6)
   ret <4 x float> %7
 }
 
-declare void @llvm.x86.mmx.maskmovq(x86_mmx, x86_mmx, ptr)
-declare x86_mmx @llvm.x86.mmx.pcmpgt.w(x86_mmx, x86_mmx)
-declare x86_mmx @llvm.x86.mmx.punpcklbw(x86_mmx, x86_mmx)
-declare x86_mmx @llvm.x86.mmx.punpcklwd(x86_mmx, x86_mmx)
-declare x86_mmx @llvm.x86.mmx.punpckhwd(x86_mmx, x86_mmx)
-declare <4 x float> @llvm.x86.sse.cvtpi2ps(<4 x float>, x86_mmx)
+declare void @llvm.x86.mmx.maskmovq(<1 x i64>, <1 x i64>, ptr)
+declare <1 x i64> @llvm.x86.mmx.pcmpgt.w(<1 x i64>, <1 x i64>)
+declare <1 x i64> @llvm.x86.mmx.punpcklbw(<1 x i64>, <1 x i64>)
+declare <1 x i64> @llvm.x86.mmx.punpcklwd(<1 x i64>, <1 x i64>)
+declare <1 x i64> @llvm.x86.mmx.punpckhwd(<1 x i64>, <1 x i64>)
+declare <4 x float> @llvm.x86.sse.cvtpi2ps(<4 x float>, <1 x i64>)

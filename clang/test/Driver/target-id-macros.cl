@@ -1,6 +1,3 @@
-// REQUIRES: x86-registered-target
-// REQUIRES: amdgpu-registered-target
-
 // RUN: %clang -E -dM -target amdgcn-amd-amdhsa \
 // RUN:   -mcpu=gfx908:xnack+:sramecc- -nogpulib -o - %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=PROC,ID1 %s

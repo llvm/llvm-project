@@ -9,8 +9,8 @@ define void @PR62969(ptr dereferenceable(16) %out, ptr dereferenceable(16) %in) 
 ; CHECK-NEXT:    [[IN0:%.*]] = getelementptr inbounds [2 x i64], ptr [[IN:%.*]], i64 0, i64 0
 ; CHECK-NEXT:    [[OUT0:%.*]] = getelementptr inbounds [2 x i64], ptr [[OUT:%.*]], i64 0, i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[IN0]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i64> [[TMP1]], <i64 4294967295, i64 4294967295>
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr <2 x i64> [[TMP1]], <i64 32, i64 32>
+; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i64> [[TMP1]], splat (i64 4294967295)
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr <2 x i64> [[TMP1]], splat (i64 32)
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul <2 x i64> [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    store <2 x i64> [[TMP4]], ptr [[OUT0]], align 8
 ; CHECK-NEXT:    ret void

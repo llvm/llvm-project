@@ -1,0 +1,91 @@
+Verify that llvm-ar uses COFF archive format by ensuring that archive map is sorted.
+
+RUN: rm -rf %t.dir && split-file %s %t.dir && cd %t.dir
+
+RUN: yaml2obj coff-symtab.yaml -o coff-symtab.obj
+RUN: llvm-ar crs out.a coff-symtab.obj
+RUN: llvm-nm --print-armap out.a | FileCheck %s
+
+RUN: llvm-as coff-symtab.ll -o coff-symtab.bc
+RUN: llvm-ar crs out2.a coff-symtab.bc
+RUN: llvm-nm --print-armap out2.a | FileCheck %s
+
+RUN: yaml2obj elf.yaml -o coff-symtab.o
+RUN: llvm-ar crs --format coff out3.a coff-symtab.o
+RUN: llvm-nm --print-armap out3.a | FileCheck %s
+
+Create an empty archive with no symbol map, add a COFF file to it and check that the output archive is a COFF archive.
+
+RUN: llvm-ar --format coff rcS out4.a
+RUN: llvm-ar rs out4.a coff-symtab.obj
+RUN: llvm-nm --print-armap out4.a | FileCheck %s
+
+CHECK: Archive map
+CHECK-NEXT: a in coff-symtab
+CHECK-NEXT: b in coff-symtab
+CHECK-NEXT: c in coff-symtab
+CHECK-EMPTY:
+
+#--- coff-symtab.yaml
+--- !COFF
+header:
+  Machine:           IMAGE_FILE_MACHINE_UNKNOWN
+  Characteristics:   [  ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     ''
+symbols:
+  - Name:            b
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            c
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            a
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+...
+
+
+#--- coff-symtab.ll
+target triple = "x86_64-unknown-windows-msvc"
+
+define void @b() { ret void }
+define void @c() { ret void }
+define void @a() { ret void }
+
+#--- elf.yaml
+--- !ELF
+FileHeader:
+  Class:             ELFCLASS64
+  Data  :            ELFDATA2LSB
+  Type:              ET_REL
+  Machine:           EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x0000000000000004
+    Content:         ''
+Symbols:
+  - Name:            b
+    Binding:         STB_GLOBAL
+    Section:         .text
+  - Name:            c
+    Binding:         STB_GLOBAL
+    Section:         .text
+  - Name:            a
+    Binding:         STB_GLOBAL
+    Section:         .text
+...

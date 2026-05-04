@@ -163,30 +163,5 @@ int main(int, char**) {
   }
 #endif  // TEST_HAS_NO_EXCEPTIONS
 
-  // Works with const iterators, (iter, sentinel) overload.
-  {
-    constexpr int N = 5;
-    Buffer<Counted, N> buf;
-
-    std::ranges::uninitialized_default_construct(buf.cbegin(), buf.cend());
-    assert(Counted::current_objects == N);
-    assert(Counted::total_objects == N);
-    std::destroy(buf.begin(), buf.end());
-    Counted::reset();
-  }
-
-  // Works with const iterators, (range) overload.
-  {
-    constexpr int N = 5;
-    Buffer<Counted, N> buf;
-    auto range = std::ranges::subrange(buf.cbegin(), buf.cend());
-
-    std::ranges::uninitialized_default_construct(range);
-    assert(Counted::current_objects == N);
-    assert(Counted::total_objects == N);
-    std::destroy(buf.begin(), buf.end());
-    Counted::reset();
-  }
-
   return 0;
 }

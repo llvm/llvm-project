@@ -36,11 +36,9 @@
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -71,8 +69,8 @@ AnalysisDeclContextManager::AnalysisDeclContextManager(
     bool addLoopExit, bool addScopes, bool synthesizeBodies,
     bool addStaticInitBranch, bool addCXXNewAllocator,
     bool addRichCXXConstructors, bool markElidedCXXConstructors,
-    bool addVirtualBaseBranches, CodeInjector *injector)
-    : Injector(injector), FunctionBodyFarm(ASTCtx, injector),
+    bool addVirtualBaseBranches, std::unique_ptr<CodeInjector> injector)
+    : Injector(std::move(injector)), FunctionBodyFarm(ASTCtx, Injector.get()),
       SynthesizeBodies(synthesizeBodies) {
   cfgBuildOptions.PruneTriviallyFalseEdges = !useUnoptimizedCFG;
   cfgBuildOptions.AddImplicitDtors = addImplicitDtors;
@@ -119,6 +117,11 @@ Stmt *AnalysisDeclContext::getBody(bool &IsAutosynthesized) const {
     return BD->getBody();
   else if (const auto *FunTmpl = dyn_cast_or_null<FunctionTemplateDecl>(D))
     return FunTmpl->getTemplatedDecl()->getBody();
+  else if (const auto *VD = dyn_cast_or_null<VarDecl>(D)) {
+    if (VD->isFileVarDecl()) {
+      return const_cast<Stmt *>(dyn_cast_or_null<Stmt>(VD->getInit()));
+    }
+  }
 
   llvm_unreachable("unknown code decl");
 }
@@ -247,13 +250,13 @@ CFG *AnalysisDeclContext::getUnoptimizedCFG() {
   return completeCFG.get();
 }
 
-CFGStmtMap *AnalysisDeclContext::getCFGStmtMap() {
+const CFGStmtMap *AnalysisDeclContext::getCFGStmtMap() {
   if (cfgStmtMap)
-    return cfgStmtMap.get();
+    return &*cfgStmtMap;
 
-  if (CFG *c = getCFG()) {
-    cfgStmtMap.reset(CFGStmtMap::Build(c, &getParentMap()));
-    return cfgStmtMap.get();
+  if (const CFG *c = getCFG()) {
+    cfgStmtMap.emplace(*c, getParentMap());
+    return &*cfgStmtMap;
   }
 
   return nullptr;
@@ -307,18 +310,11 @@ AnalysisDeclContext *AnalysisDeclContextManager::getContext(const Decl *D) {
 
 BodyFarm &AnalysisDeclContextManager::getBodyFarm() { return FunctionBodyFarm; }
 
-const StackFrameContext *
-AnalysisDeclContext::getStackFrame(const LocationContext *ParentLC,
-                                   const Stmt *S, const CFGBlock *Blk,
-                                   unsigned BlockCount, unsigned Index) {
-  return getLocationContextManager().getStackFrame(this, ParentLC, S, Blk,
+const StackFrameContext *AnalysisDeclContext::getStackFrame(
+    const LocationContext *ParentLC, const void *Data, const Expr *E,
+    const CFGBlock *Blk, unsigned BlockCount, unsigned Index) {
+  return getLocationContextManager().getStackFrame(this, ParentLC, Data, E, Blk,
                                                    BlockCount, Index);
-}
-
-const BlockInvocationContext *AnalysisDeclContext::getBlockInvocationContext(
-    const LocationContext *ParentLC, const BlockDecl *BD, const void *Data) {
-  return getLocationContextManager().getBlockInvocationContext(this, ParentLC,
-                                                               BD, Data);
 }
 
 bool AnalysisDeclContext::isInStdNamespace(const Decl *D) {
@@ -412,12 +408,8 @@ void LocationContext::ProfileCommon(llvm::FoldingSetNodeID &ID,
 }
 
 void StackFrameContext::Profile(llvm::FoldingSetNodeID &ID) {
-  Profile(ID, getAnalysisDeclContext(), getParent(), CallSite, Block,
+  Profile(ID, getAnalysisDeclContext(), getParent(), Data, CallSite, Block,
           BlockCount, Index);
-}
-
-void BlockInvocationContext::Profile(llvm::FoldingSetNodeID &ID) {
-  Profile(ID, getAnalysisDeclContext(), getParent(), BD, Data);
 }
 
 //===----------------------------------------------------------------------===//
@@ -425,31 +417,17 @@ void BlockInvocationContext::Profile(llvm::FoldingSetNodeID &ID) {
 //===----------------------------------------------------------------------===//
 
 const StackFrameContext *LocationContextManager::getStackFrame(
-    AnalysisDeclContext *ctx, const LocationContext *parent, const Stmt *s,
-    const CFGBlock *blk, unsigned blockCount, unsigned idx) {
+    AnalysisDeclContext *Ctx, const LocationContext *Parent, const void *Data,
+    const Expr *E, const CFGBlock *Blk, unsigned BlockCount, unsigned StmtIdx) {
   llvm::FoldingSetNodeID ID;
-  StackFrameContext::Profile(ID, ctx, parent, s, blk, blockCount, idx);
+  StackFrameContext::Profile(ID, Ctx, Parent, Data, E, Blk, BlockCount,
+                             StmtIdx);
   void *InsertPos;
   auto *L =
    cast_or_null<StackFrameContext>(Contexts.FindNodeOrInsertPos(ID, InsertPos));
   if (!L) {
-    L = new StackFrameContext(ctx, parent, s, blk, blockCount, idx, ++NewID);
-    Contexts.InsertNode(L, InsertPos);
-  }
-  return L;
-}
-
-const BlockInvocationContext *LocationContextManager::getBlockInvocationContext(
-    AnalysisDeclContext *ADC, const LocationContext *ParentLC,
-    const BlockDecl *BD, const void *Data) {
-  llvm::FoldingSetNodeID ID;
-  BlockInvocationContext::Profile(ID, ADC, ParentLC, BD, Data);
-  void *InsertPos;
-  auto *L =
-    cast_or_null<BlockInvocationContext>(Contexts.FindNodeOrInsertPos(ID,
-                                                                    InsertPos));
-  if (!L) {
-    L = new BlockInvocationContext(ADC, ParentLC, BD, Data, ++NewID);
+    L = new StackFrameContext(Ctx, Parent, Data, E, Blk, BlockCount, StmtIdx,
+                              ++NewID);
     Contexts.InsertNode(L, InsertPos);
   }
   return L;
@@ -511,16 +489,9 @@ void LocationContext::dumpStack(raw_ostream &Out) const {
         Out << "Calling " << AnalysisDeclContext::getFunctionName(D);
       else
         Out << "Calling anonymous code";
-      if (const Stmt *S = cast<StackFrameContext>(LCtx)->getCallSite()) {
+      if (const Expr *E = cast<StackFrameContext>(LCtx)->getCallSite()) {
         Out << " at line ";
-        printLocation(Out, SM, S->getBeginLoc());
-      }
-      break;
-    case Block:
-      Out << "Invoking block";
-      if (const Decl *D = cast<BlockInvocationContext>(LCtx)->getDecl()) {
-        Out << " defined at line ";
-        printLocation(Out, SM, D->getBeginLoc());
+        printLocation(Out, SM, E->getBeginLoc());
       }
       break;
     }
@@ -553,21 +524,13 @@ void LocationContext::printJson(raw_ostream &Out, const char *NL,
         Out << "anonymous code";
 
       Out << "\", \"location\": ";
-      if (const Stmt *S = cast<StackFrameContext>(LCtx)->getCallSite()) {
-        printSourceLocationAsJson(Out, S->getBeginLoc(), SM);
+      if (const Expr *E = cast<StackFrameContext>(LCtx)->getCallSite()) {
+        printSourceLocationAsJson(Out, E->getBeginLoc(), SM);
       } else {
         Out << "null";
       }
 
       Out << ", \"items\": ";
-      break;
-    case Block:
-      Out << "Invoking block\" ";
-      if (const Decl *D = cast<BlockInvocationContext>(LCtx)->getDecl()) {
-        Out << ", \"location\": ";
-        printSourceLocationAsJson(Out, D->getBeginLoc(), SM);
-        Out << ' ';
-      }
       break;
     }
 

@@ -12,7 +12,7 @@ define <16 x i8> @splice_v16i8_idx(<16 x i8> %a, <16 x i8> %b) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext v0.16b, v0.16b, v1.16b, #1
 ; CHECK-NEXT:    ret
-  %res = call <16 x i8> @llvm.experimental.vector.splice.v16i8(<16 x i8> %a, <16 x i8> %b, i32 1)
+  %res = call <16 x i8> @llvm.vector.splice.v16i8(<16 x i8> %a, <16 x i8> %b, i32 1)
   ret <16 x i8> %res
 }
 
@@ -21,7 +21,7 @@ define <2 x double> @splice_v2f64_idx(<2 x double> %a, <2 x double> %b) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext v0.16b, v0.16b, v1.16b, #8
 ; CHECK-NEXT:    ret
-  %res = call <2 x double> @llvm.experimental.vector.splice.v2f64(<2 x double> %a, <2 x double> %b, i32 1)
+  %res = call <2 x double> @llvm.vector.splice.v2f64(<2 x double> %a, <2 x double> %b, i32 1)
   ret <2 x double> %res
 }
 
@@ -31,7 +31,7 @@ define <2 x i8> @splice_v2i8_idx(<2 x i8> %a, <2 x i8> %b) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext v0.8b, v0.8b, v1.8b, #4
 ; CHECK-NEXT:    ret
-  %res = call <2 x i8> @llvm.experimental.vector.splice.v2i8(<2 x i8> %a, <2 x i8> %b, i32 1)
+  %res = call <2 x i8> @llvm.vector.splice.v2i8(<2 x i8> %a, <2 x i8> %b, i32 1)
   ret <2 x i8> %res
 }
 
@@ -42,7 +42,7 @@ define <8 x i32> @splice_v8i32_idx(<8 x i32> %a, <8 x i32> %b) #0 {
 ; CHECK-NEXT:    ext v0.16b, v1.16b, v2.16b, #4
 ; CHECK-NEXT:    ext v1.16b, v2.16b, v3.16b, #4
 ; CHECK-NEXT:    ret
-  %res = call <8 x i32> @llvm.experimental.vector.splice.v8i32(<8 x i32> %a, <8 x i32> %b, i32 5)
+  %res = call <8 x i32> @llvm.vector.splice.v8i32(<8 x i32> %a, <8 x i32> %b, i32 5)
   ret <8 x i32> %res
 }
 
@@ -56,7 +56,7 @@ define <16 x float> @splice_v16f32_idx(<16 x float> %a, <16 x float> %b) #0 {
 ; CHECK-NEXT:    ext v3.16b, v4.16b, v5.16b, #12
 ; CHECK-NEXT:    mov v2.16b, v6.16b
 ; CHECK-NEXT:    ret
-  %res = call <16 x float> @llvm.experimental.vector.splice.v16f32(<16 x float> %a, <16 x float> %b, i32 7)
+  %res = call <16 x float> @llvm.vector.splice.v16f32(<16 x float> %a, <16 x float> %b, i32 7)
   ret <16 x float> %res
 }
 
@@ -69,7 +69,7 @@ define <16 x i8> @splice_v16i8(<16 x i8> %a, <16 x i8> %b) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext v0.16b, v0.16b, v1.16b, #1
 ; CHECK-NEXT:    ret
-  %res = call <16 x i8> @llvm.experimental.vector.splice.v16i8(<16 x i8> %a, <16 x i8> %b, i32 -15)
+  %res = call <16 x i8> @llvm.vector.splice.v16i8(<16 x i8> %a, <16 x i8> %b, i32 -15)
   ret <16 x i8> %res
 }
 
@@ -78,7 +78,7 @@ define <2 x double> @splice_v2f64(<2 x double> %a, <2 x double> %b) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext v0.16b, v0.16b, v1.16b, #8
 ; CHECK-NEXT:    ret
-  %res = call <2 x double> @llvm.experimental.vector.splice.v2f64(<2 x double> %a, <2 x double> %b, i32 -1)
+  %res = call <2 x double> @llvm.vector.splice.v2f64(<2 x double> %a, <2 x double> %b, i32 -1)
   ret <2 x double> %res
 }
 
@@ -88,7 +88,7 @@ define <2 x i8> @splice_v2i8(<2 x i8> %a, <2 x i8> %b) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext v0.8b, v0.8b, v1.8b, #4
 ; CHECK-NEXT:    ret
-  %res = call <2 x i8> @llvm.experimental.vector.splice.v2i8(<2 x i8> %a, <2 x i8> %b, i32 -1)
+  %res = call <2 x i8> @llvm.vector.splice.v2i8(<2 x i8> %a, <2 x i8> %b, i32 -1)
   ret <2 x i8> %res
 }
 
@@ -99,7 +99,7 @@ define <8 x i32> @splice_v8i32(<8 x i32> %a, <8 x i32> %b) #0 {
 ; CHECK-NEXT:    ext v0.16b, v1.16b, v2.16b, #4
 ; CHECK-NEXT:    ext v1.16b, v2.16b, v3.16b, #4
 ; CHECK-NEXT:    ret
-  %res = call <8 x i32> @llvm.experimental.vector.splice.v8i32(<8 x i32> %a, <8 x i32> %b, i32 -3)
+  %res = call <8 x i32> @llvm.vector.splice.v8i32(<8 x i32> %a, <8 x i32> %b, i32 -3)
   ret <8 x i32> %res
 }
 
@@ -113,14 +113,61 @@ define <16 x float> @splice_v16f32(<16 x float> %a, <16 x float> %b) #0 {
 ; CHECK-NEXT:    ext v3.16b, v4.16b, v5.16b, #12
 ; CHECK-NEXT:    mov v2.16b, v6.16b
 ; CHECK-NEXT:    ret
-  %res = call <16 x float> @llvm.experimental.vector.splice.v16f32(<16 x float> %a, <16 x float> %b, i32 -9)
+  %res = call <16 x float> @llvm.vector.splice.v16f32(<16 x float> %a, <16 x float> %b, i32 -9)
   ret <16 x float> %res
 }
 
-declare <2 x i8> @llvm.experimental.vector.splice.v2i8(<2 x i8>, <2 x i8>, i32)
-declare <16 x i8> @llvm.experimental.vector.splice.v16i8(<16 x i8>, <16 x i8>, i32)
-declare <8 x i32> @llvm.experimental.vector.splice.v8i32(<8 x i32>, <8 x i32>, i32)
-declare <16 x float> @llvm.experimental.vector.splice.v16f32(<16 x float>, <16 x float>, i32)
-declare <2 x double> @llvm.experimental.vector.splice.v2f64(<2 x double>, <2 x double>, i32)
+; Check splice.right with 0 offset returns second operand.
+define <16 x i8> @splice_right_0(<16 x i8> %a, <16 x i8> %b) #0 {
+; CHECK-LABEL: splice_right_0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    ret
+  %res = call <16 x i8> @llvm.vector.splice.right(<16 x i8> %a, <16 x i8> %b, i32 0)
+  ret <16 x i8> %res
+}
+
+define <4 x i32> @splice_left_v4i32_variable_offset(<4 x i32> %a, <4 x i32> %b, i32 zeroext %offset) #0 {
+; CHECK-LABEL: splice_left_v4i32_variable_offset:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    ubfiz x8, x0, #2, #32
+; CHECK-NEXT:    mov w9, #16 // =0x10
+; CHECK-NEXT:    cmp x8, #16
+; CHECK-NEXT:    stp q0, q1, [sp, #-32]!
+; CHECK-NEXT:    csel x8, x8, x9, lo
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    ldr q0, [x9, x8]
+; CHECK-NEXT:    add sp, sp, #32
+; CHECK-NEXT:    ret
+  %res = call <4 x i32> @llvm.vector.splice.left(<4 x i32> %a, <4 x i32> %b, i32 %offset)
+  ret <4 x i32> %res
+}
+
+define <4 x i32> @splice_right_v4i32_variable_offset(<4 x i32> %a, <4 x i32> %b, i32 zeroext %offset) #0 {
+; CHECK-LABEL: splice_right_v4i32_variable_offset:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub sp, sp, #32
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    ubfiz x8, x0, #2, #32
+; CHECK-NEXT:    mov w9, #16 // =0x10
+; CHECK-NEXT:    mov x10, sp
+; CHECK-NEXT:    stp q0, q1, [sp]
+; CHECK-NEXT:    cmp x8, #16
+; CHECK-NEXT:    csel x8, x8, x9, lo
+; CHECK-NEXT:    add x9, x10, #16
+; CHECK-NEXT:    sub x8, x9, x8
+; CHECK-NEXT:    ldr q0, [x8]
+; CHECK-NEXT:    add sp, sp, #32
+; CHECK-NEXT:    ret
+  %res = call <4 x i32> @llvm.vector.splice.right(<4 x i32> %a, <4 x i32> %b, i32 %offset)
+  ret <4 x i32> %res
+}
+
+declare <2 x i8> @llvm.vector.splice.v2i8(<2 x i8>, <2 x i8>, i32)
+declare <16 x i8> @llvm.vector.splice.v16i8(<16 x i8>, <16 x i8>, i32)
+declare <8 x i32> @llvm.vector.splice.v8i32(<8 x i32>, <8 x i32>, i32)
+declare <16 x float> @llvm.vector.splice.v16f32(<16 x float>, <16 x float>, i32)
+declare <2 x double> @llvm.vector.splice.v2f64(<2 x double>, <2 x double>, i32)
 
 attributes #0 = { nounwind "target-features"="+neon" }

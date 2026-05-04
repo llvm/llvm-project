@@ -1,5 +1,5 @@
-# RUN: llc -run-pass=livedebugvalues -march=x86-64 -o - %s | FileCheck %s
-# RUN: llc -force-instr-ref-livedebugvalues=1 -run-pass=livedebugvalues -march=x86-64 -o - %s | FileCheck %s
+# RUN: llc -run-pass=livedebugvalues -o - %s | FileCheck %s
+# RUN: llc -force-instr-ref-livedebugvalues=1 -run-pass=livedebugvalues -o - %s | FileCheck %s
 #
 #extern void fn1 (int, int, int);
 #__attribute__((noinline))

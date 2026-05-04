@@ -1,6 +1,3 @@
-// REQUIRES: x86-registered-target
-// REQUIRES: amdgpu-registered-target
-
 // RUN: touch %t.o
 // RUN: %clang --hip-link -ccc-print-bindings --target=x86_64-linux-gnu \
 // RUN:   --no-offload-new-driver --emit-static-lib \

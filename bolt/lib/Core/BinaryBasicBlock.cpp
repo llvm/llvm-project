@@ -22,8 +22,6 @@
 namespace llvm {
 namespace bolt {
 
-constexpr uint32_t BinaryBasicBlock::INVALID_OFFSET;
-
 bool operator<(const BinaryBasicBlock &LHS, const BinaryBasicBlock &RHS) {
   return LHS.Index < RHS.Index;
 }
@@ -103,9 +101,18 @@ bool BinaryBasicBlock::validateSuccessorInvariants() {
         Valid &= (Sym == Function->getFunctionEndLabel() ||
                   Sym == Function->getFunctionEndLabel(getFragmentNum()));
         if (!Valid) {
-          BC.errs() << "BOLT-WARNING: Jump table contains illegal entry: "
-                    << Sym->getName() << "\n";
+          const BinaryFunction *TargetBF = BC.getFunctionForSymbol(Sym);
+          if (TargetBF) {
+            // It's possible for another function to be in the jump table entry
+            // as a result of built-in unreachable.
+            Valid = true;
+          } else {
+            BC.errs() << "BOLT-WARNING: Jump table contains illegal entry: "
+                      << Sym->getName() << "\n";
+          }
         }
+        if (!Valid)
+          break;
       }
     }
   } else {
@@ -131,11 +138,10 @@ bool BinaryBasicBlock::validateSuccessorInvariants() {
         break;
       }
       case 2:
-        Valid = (CondBranch &&
-                 (TBB == getConditionalSuccessor(true)->getLabel() &&
-                  ((!UncondBranch && !FBB) ||
-                   (UncondBranch &&
-                    FBB == getConditionalSuccessor(false)->getLabel()))));
+        Valid =
+            CondBranch && TBB == getConditionalSuccessor(true)->getLabel() &&
+            (UncondBranch ? FBB == getConditionalSuccessor(false)->getLabel()
+                          : !FBB);
         break;
       }
     }
@@ -202,7 +208,11 @@ int32_t BinaryBasicBlock::getCFIStateAtInstr(const MCInst *Instr) const {
       InstrSeen = (&Inst == Instr);
       continue;
     }
-    if (Function->getBinaryContext().MIB->isCFI(Inst)) {
+    // Ignoring OpNegateRAState CFIs here, as they dont have a "State"
+    // number associated with them.
+    if (Function->getBinaryContext().MIB->isCFI(Inst) &&
+        (Function->getCFIFor(Inst)->getOperation() !=
+         MCCFIInstruction::OpNegateRAState)) {
       LastCFI = &Inst;
       break;
     }
@@ -373,8 +383,7 @@ void BinaryBasicBlock::updateJumpTableSuccessors() {
              [](const BinaryBasicBlock *BB1, const BinaryBasicBlock *BB2) {
                return BB1->getInputOffset() < BB2->getInputOffset();
              });
-  SuccessorBBs.erase(std::unique(SuccessorBBs.begin(), SuccessorBBs.end()),
-                     SuccessorBBs.end());
+  SuccessorBBs.erase(llvm::unique(SuccessorBBs), SuccessorBBs.end());
 
   for (BinaryBasicBlock *BB : SuccessorBBs)
     addSuccessor(BB);
@@ -403,45 +412,6 @@ bool BinaryBasicBlock::analyzeBranch(const MCSymbol *&TBB, const MCSymbol *&FBB,
   auto &MIB = Function->getBinaryContext().MIB;
   return MIB->analyzeBranch(Instructions.begin(), Instructions.end(), TBB, FBB,
                             CondBranch, UncondBranch);
-}
-
-bool BinaryBasicBlock::isMacroOpFusionPair(const_iterator I) const {
-  auto &MIB = Function->getBinaryContext().MIB;
-  ArrayRef<MCInst> Insts = Instructions;
-  return MIB->isMacroOpFusionPair(Insts.slice(I - begin()));
-}
-
-BinaryBasicBlock::const_iterator
-BinaryBasicBlock::getMacroOpFusionPair() const {
-  if (!Function->getBinaryContext().isX86())
-    return end();
-
-  if (getNumNonPseudos() < 2 || succ_size() != 2)
-    return end();
-
-  auto RI = getLastNonPseudo();
-  assert(RI != rend() && "cannot have an empty block with 2 successors");
-
-  BinaryContext &BC = Function->getBinaryContext();
-
-  // Skip instruction if it's an unconditional branch following
-  // a conditional one.
-  if (BC.MIB->isUnconditionalBranch(*RI))
-    ++RI;
-
-  if (!BC.MIB->isConditionalBranch(*RI))
-    return end();
-
-  // Start checking with instruction preceding the conditional branch.
-  ++RI;
-  if (RI == rend())
-    return end();
-
-  auto II = std::prev(RI.base()); // convert to a forward iterator
-  if (isMacroOpFusionPair(II))
-    return II;
-
-  return end();
 }
 
 MCInst *BinaryBasicBlock::getTerminatorBefore(MCInst *Pos) {

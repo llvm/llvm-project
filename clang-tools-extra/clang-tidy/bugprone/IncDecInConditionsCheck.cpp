@@ -1,4 +1,4 @@
-//===--- IncDecInConditionsCheck.cpp - clang-tidy -------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,6 +15,8 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
+namespace {
+
 AST_MATCHER(BinaryOperator, isLogicalOperator) { return Node.isLogicalOp(); }
 
 AST_MATCHER(UnaryOperator, isUnaryPrePostOperator) {
@@ -26,15 +28,24 @@ AST_MATCHER(CXXOperatorCallExpr, isPrePostOperator) {
          Node.getOperator() == OO_MinusMinus;
 }
 
+} // namespace
+
 void IncDecInConditionsCheck::registerMatchers(MatchFinder *Finder) {
   auto OperatorMatcher = expr(
       anyOf(binaryOperator(anyOf(isComparisonOperator(), isLogicalOperator())),
             cxxOperatorCallExpr(isComparisonOperator())));
 
+  auto IsInUnevaluatedContext =
+      expr(anyOf(hasAncestor(expr(matchers::hasUnevaluatedContext())),
+                 hasAncestor(typeLoc())));
+
+  auto IsInLambda =
+      hasAncestor(lambdaExpr(hasAncestor(expr(equalsBoundNode("parent")))));
+
   Finder->addMatcher(
       expr(
-          OperatorMatcher, unless(isExpansionInSystemHeader()),
-          unless(hasAncestor(OperatorMatcher)), expr().bind("parent"),
+          OperatorMatcher, unless(hasAncestor(OperatorMatcher)),
+          expr().bind("parent"),
 
           forEachDescendant(
               expr(anyOf(unaryOperator(isUnaryPrePostOperator(),
@@ -42,19 +53,20 @@ void IncDecInConditionsCheck::registerMatchers(MatchFinder *Finder) {
                          cxxOperatorCallExpr(
                              isPrePostOperator(),
                              hasUnaryOperand(expr().bind("operand")))),
+                   unless(IsInUnevaluatedContext), unless(IsInLambda),
                    hasAncestor(
                        expr(equalsBoundNode("parent"),
                             hasDescendant(
                                 expr(unless(equalsBoundNode("operand")),
                                      matchers::isStatementIdenticalToBoundNode(
-                                         "operand"))
+                                         "operand"),
+                                     unless(IsInUnevaluatedContext))
                                     .bind("second")))))
                   .bind("operator"))),
       this);
 }
 
 void IncDecInConditionsCheck::check(const MatchFinder::MatchResult &Result) {
-
   SourceLocation ExprLoc;
   bool IsIncrementOp = false;
 
@@ -66,8 +78,9 @@ void IncDecInConditionsCheck::check(const MatchFinder::MatchResult &Result) {
                  Result.Nodes.getNodeAs<UnaryOperator>("operator")) {
     ExprLoc = MatchedDecl->getExprLoc();
     IsIncrementOp = MatchedDecl->isIncrementOp();
-  } else
+  } else {
     return;
+  }
 
   diag(ExprLoc,
        "%select{decrementing|incrementing}0 and referencing a variable in a "

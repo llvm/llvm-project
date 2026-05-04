@@ -1,5 +1,7 @@
 ; RUN: opt -mtriple=x86_64-pc-windows-msvc -S -win-eh-prepare -disable-demotion -disable-cleanups < %s | FileCheck %s
 ; RUN: opt -mtriple=x86_64-pc-windows-msvc -S -passes=win-eh-prepare -disable-demotion -disable-cleanups < %s | FileCheck %s
+; RUN: %if aarch64-registered-target %{ opt -mtriple=aarch64-pc-windows-msvc -S -win-eh-prepare -disable-demotion -disable-cleanups < %s | FileCheck %s %}
+; RUN: %if aarch64-registered-target %{ opt -mtriple=aarch64-pc-windows-msvc -S -passes=win-eh-prepare -disable-demotion -disable-cleanups < %s | FileCheck %s %}
 
 declare i32 @__CxxFrameHandler3(...)
 
@@ -118,7 +120,7 @@ shared:
   call void @h(i32 %phi)
   unreachable
 
-; CHECK: %phi = phi i32 [ 0, %right ], [ -1, %right.other ]
+; CHECK: %phi = phi i32 [ -1, %right.other ], [ 0, %right ]
 ; CHECK: call void @h(i32 %phi)
 
 ; CHECK: %phi.for.left = phi i32 [ 1, %left ]

@@ -1,4 +1,5 @@
 //===----------------------------------------------------------------------===//
+//
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
@@ -289,18 +290,6 @@ static void test_valid_md_values() {
             std::chrono::year{1970}, std::chrono::December, std::chrono::weekday_indexed{std::chrono::weekday{7}, 3}});
 
   // Use the global locale (fr_FR)
-#if defined(__APPLE__)
-  check(SV("%b='jan'\t%B='janvier'\t%h='jan'\t%m='01'\t%Om='01'\t%d='01'\t%e=' 1'\t%Od='01'\t%Oe=' 1'\n"),
-        lfmt,
-        std::chrono::year_month_weekday{
-            std::chrono::year{1970}, std::chrono::January, std::chrono::weekday_indexed{std::chrono::weekday{4}, 1}});
-
-  check(SV("%b='déc'\t%B='décembre'\t%h='déc'\t%m='12'\t%Om='12'\t%d='20'\t%e='20'\t%Od='20'\t%Oe='20'\n"),
-        lfmt,
-        std::chrono::year_month_weekday{
-            std::chrono::year{1970}, std::chrono::December, std::chrono::weekday_indexed{std::chrono::weekday{7}, 3}});
-
-#else  // defined(__APPLE__)
   check(SV("%b='janv.'\t%B='janvier'\t%h='janv.'\t%m='01'\t%Om='01'\t%d='01'\t%e=' 1'\t%Od='01'\t%Oe=' 1'\n"),
         lfmt,
         std::chrono::year_month_weekday{
@@ -309,8 +298,6 @@ static void test_valid_md_values() {
         lfmt,
         std::chrono::year_month_weekday{
             std::chrono::year{1970}, std::chrono::December, std::chrono::weekday_indexed{std::chrono::weekday{7}, 3}});
-
-#endif // defined(__APPLE__)
 
   // Use supplied locale (ja_JP)
 #if defined(_WIN32)
@@ -339,20 +326,7 @@ static void test_valid_md_values() {
         std::chrono::year_month_weekday{
             std::chrono::year{1970}, std::chrono::December, std::chrono::weekday_indexed{std::chrono::weekday{7}, 3}});
 
-#elif defined(__APPLE__) // defined(_WIN32)
-  check(loc,
-        SV("%b=' 1'\t%B='1月'\t%h=' 1'\t%m='01'\t%Om='01'\t%d='01'\t%e=' 1'\t%Od='01'\t%Oe=' 1'\n"),
-        lfmt,
-        std::chrono::year_month_weekday{
-            std::chrono::year{1970}, std::chrono::January, std::chrono::weekday_indexed{std::chrono::weekday{4}, 1}});
-
-  check(loc,
-        SV("%b='12'\t%B='12月'\t%h='12'\t%m='12'\t%Om='12'\t%d='20'\t%e='20'\t%Od='20'\t%Oe='20'\n"),
-        lfmt,
-        std::chrono::year_month_weekday{
-            std::chrono::year{1970}, std::chrono::December, std::chrono::weekday_indexed{std::chrono::weekday{7}, 3}});
-
-#elif defined(__FreeBSD__) // defined(_WIN32)
+#elif defined(__FreeBSD__) || defined(__APPLE__) // defined(_WIN32)
   check(loc,
         SV("%b=' 1月'\t%B='1月'\t%h=' 1月'\t%m='01'\t%Om='01'\t%d='01'\t%e=' 1'\t%Od='01'\t%Oe=' 1'\n"),
         lfmt,

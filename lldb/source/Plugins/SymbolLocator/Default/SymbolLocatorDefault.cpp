@@ -36,6 +36,10 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ThreadPool.h"
 
+#if defined(__FreeBSD__)
+#include <sys/sysctl.h>
+#endif
+
 // From MacOSX system header "mach/machine.h"
 typedef int cpu_type_t;
 typedef int cpu_subtype_t;
@@ -76,11 +80,12 @@ std::optional<ModuleSpec> SymbolLocatorDefault::LocateExecutableObjectFile(
       exec_fspec ? exec_fspec.GetFilename().AsCString("<NULL>") : "<NULL>",
       arch ? arch->GetArchitectureName() : "<NULL>", (const void *)uuid);
 
-  ModuleSpecList module_specs;
   ModuleSpec matched_module_spec;
-  if (exec_fspec &&
-      ObjectFile::GetModuleSpecifications(exec_fspec, 0, 0, module_specs) &&
-      module_specs.FindMatchingModuleSpec(module_spec, matched_module_spec)) {
+  if (!exec_fspec)
+    return {};
+  ModuleSpecList module_specs =
+      ObjectFile::GetModuleSpecifications(exec_fspec, 0, 0);
+  if (module_specs.FindMatchingModuleSpec(module_spec, matched_module_spec)) {
     ModuleSpec result;
     result.GetFileSpec() = exec_fspec;
     return result;
@@ -141,6 +146,24 @@ std::optional<FileSpec> SymbolLocatorDefault::LocateExecutableSymbolFile(
       FileSystem::Instance().Resolve(file_spec);
       debug_file_search_paths.AppendIfUnique(file_spec);
     }
+#if defined(__FreeBSD__)
+    // Add $LOCALBASE/lib/debug directory, where LOCALBASE is
+    // usually /usr/local, but may be adjusted by the end user.
+    {
+      int mib[2];
+      char buf[PATH_MAX];
+      size_t len = PATH_MAX;
+
+      mib[0] = CTL_USER;
+      mib[1] = USER_LOCALBASE;
+      if (::sysctl(mib, 2, buf, &len, NULL, 0) == 0) {
+        FileSpec file_spec("/lib/debug");
+        file_spec.PrependPathComponent(llvm::StringRef(buf));
+        FileSystem::Instance().Resolve(file_spec);
+        debug_file_search_paths.AppendIfUnique(file_spec);
+      }
+    }
+#endif // __FreeBSD__
 #endif
 #endif // _WIN32
   }
@@ -178,7 +201,7 @@ std::optional<FileSpec> SymbolLocatorDefault::LocateExecutableSymbolFile(
       // Some debug files may stored in the module directory like this:
       //   /usr/lib/debug/usr/lib/library.so.debug
       if (!file_dir.IsEmpty())
-        files.push_back(dirname + file_dir.AsCString() + "/" +
+        files.push_back(dirname + file_dir.GetString() + "/" +
                         symbol_file_spec.GetFilename().GetCString());
     }
 
@@ -193,12 +216,11 @@ std::optional<FileSpec> SymbolLocatorDefault::LocateExecutableSymbolFile(
         continue;
 
       if (FileSystem::Instance().Exists(file_spec)) {
-        lldb_private::ModuleSpecList specs;
-        const size_t num_specs =
-            ObjectFile::GetModuleSpecifications(file_spec, 0, 0, specs);
+        lldb_private::ModuleSpecList specs =
+            ObjectFile::GetModuleSpecifications(file_spec, 0, 0);
         ModuleSpec mspec;
         bool valid_mspec = false;
-        if (num_specs == 2) {
+        if (specs.GetSize() == 2) {
           // Special case to handle both i386 and i686 from ObjectFilePECOFF
           ModuleSpec mspec2;
           if (specs.GetModuleSpecAtIndex(0, mspec) &&
@@ -209,9 +231,9 @@ std::optional<FileSpec> SymbolLocatorDefault::LocateExecutableSymbolFile(
           }
         }
         if (!valid_mspec) {
-          assert(num_specs <= 1 &&
+          assert(specs.GetSize() <= 1 &&
                  "Symbol Vendor supports only a single architecture");
-          if (num_specs == 1) {
+          if (specs.GetSize() == 1) {
             if (specs.GetModuleSpecAtIndex(0, mspec)) {
               valid_mspec = true;
             }

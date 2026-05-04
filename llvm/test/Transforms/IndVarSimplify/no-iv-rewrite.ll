@@ -213,7 +213,7 @@ define void @maxvisitor(i32 %limit, ptr %base) nounwind {
 ; CHECK-NEXT:    [[CMP19:%.*]] = icmp sgt i32 [[VAL]], [[MAX]]
 ; CHECK-NEXT:    br i1 [[CMP19]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[INDVARS_IV]] to i32
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc nuw nsw i64 [[INDVARS_IV]] to i32
 ; CHECK-NEXT:    br label [[LOOP_INC]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    br label [[LOOP_INC]]
@@ -255,16 +255,18 @@ exit:
 
 ; Test an edge case of removing an identity phi that directly feeds
 ; back to the loop iv.
-define void @identityphi(i32 %limit) nounwind {
+define void @identityphi(i32 %limit, i1 %arg) nounwind {
 ; CHECK-LABEL: @identityphi(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    br i1 undef, label [[IF_THEN:%.*]], label [[CONTROL:%.*]]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[CONTROL:%.*]] ]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[IF_THEN:%.*]], label [[CONTROL]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    br label [[CONTROL]]
 ; CHECK:       control:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 0, [[LIMIT:%.*]]
+; CHECK-NEXT:    [[IV_NEXT]] = phi i32 [ [[IV]], [[LOOP]] ], [ undef, [[IF_THEN]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[IV_NEXT]], [[LIMIT:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -274,7 +276,7 @@ entry:
 
 loop:
   %iv = phi i32 [ 0, %entry], [ %iv.next, %control ]
-  br i1 undef, label %if.then, label %control
+  br i1 %arg, label %if.then, label %control
 
 if.then:
   br label %control
@@ -427,13 +429,13 @@ return:
 ; lowers the type without changing the expression.
 %structIF = type { i32, float }
 
-define void @congruentgepiv(ptr %base) nounwind uwtable ssp {
+define void @congruentgepiv(ptr %base, i1 %arg) nounwind uwtable ssp {
 ; CHECK-LABEL: @congruentgepiv(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    store i32 4, ptr [[BASE:%.*]], align 4
-; CHECK-NEXT:    br i1 false, label [[LATCH:%.*]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[LATCH:%.*]], label [[EXIT:%.*]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    br label [[LOOP]]
 ; CHECK:       exit:
@@ -446,7 +448,7 @@ loop:
   %ptr.iv = phi ptr [ %ptr.inc, %latch ], [ %base, %entry ]
   %next = phi ptr [ %next, %latch ], [ %base, %entry ]
   store i32 4, ptr %next
-  br i1 undef, label %latch, label %exit
+  br i1 %arg, label %latch, label %exit
 
 latch:                         ; preds = %for.inc50.i
   %ptr.inc = getelementptr inbounds %structIF, ptr %ptr.iv, i64 1
@@ -460,47 +462,50 @@ declare void @use32(i32 %x)
 declare void @use64(i64 %x)
 
 ; Test a widened IV that is used by a phi on different paths within the loop.
-define void @phiUsesTrunc() nounwind {
+define void @phiUsesTrunc(i1 %arg) nounwind {
 ; CHECK-LABEL: @phiUsesTrunc(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 undef, label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    br i1 undef, label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 1, [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc nuw nsw i64 [[INDVARS_IV]] to i32
+; CHECK-NEXT:    br i1 [[ARG]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    br i1 undef, label [[IF_THEN33:%.*]], label [[FOR_INC:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[IF_THEN33:%.*]], label [[FOR_INC]]
 ; CHECK:       if.then33:
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    br i1 undef, label [[IF_THEN97:%.*]], label [[FOR_INC]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[IF_THEN97:%.*]], label [[FOR_INC]]
 ; CHECK:       if.then97:
-; CHECK-NEXT:    call void @use64(i64 1)
+; CHECK-NEXT:    call void @use64(i64 [[INDVARS_IV]])
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
-; CHECK-NEXT:    [[KMIN_1:%.*]] = phi i32 [ 1, [[IF_THEN33]] ], [ 0, [[IF_THEN]] ], [ 1, [[IF_THEN97]] ], [ 0, [[IF_ELSE]] ]
+; CHECK-NEXT:    [[KMIN_1:%.*]] = phi i32 [ [[TMP0]], [[IF_THEN33]] ], [ 0, [[IF_THEN]] ], [ [[TMP0]], [[IF_THEN97]] ], [ 0, [[IF_ELSE]] ]
 ; CHECK-NEXT:    call void @use32(i32 [[KMIN_1]])
-; CHECK-NEXT:    br i1 false, label [[FOR_BODY]], label [[FOR_END_LOOPEXIT:%.*]]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    br i1 [[ARG]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT:%.*]]
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    br label [[FOR_END]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  br i1 undef, label %for.body, label %for.end
+  br i1 %arg, label %for.body, label %for.end
 
 for.body:
   %iv = phi i32 [ %inc, %for.inc ], [ 1, %entry ]
-  br i1 undef, label %if.then, label %if.else
+  br i1 %arg, label %if.then, label %if.else
 
 if.then:
-  br i1 undef, label %if.then33, label %for.inc
+  br i1 %arg, label %if.then33, label %for.inc
 
 if.then33:
   br label %for.inc
 
 if.else:
-  br i1 undef, label %if.then97, label %for.inc
+  br i1 %arg, label %if.then97, label %for.inc
 
 if.then97:
   %idxprom100 = sext i32 %iv to i64
@@ -511,7 +516,7 @@ for.inc:
   %kmin.1 = phi i32 [ %iv, %if.then33 ], [ 0, %if.then ], [ %iv, %if.then97 ], [ 0, %if.else ]
   call void @use32(i32 %kmin.1)
   %inc = add nsw i32 %iv, 1
-  br i1 undef, label %for.body, label %for.end
+  br i1 %arg, label %for.body, label %for.end
 
 for.end:
   ret void

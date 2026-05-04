@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsycl-is-device -emit-llvm -triple spir64 -verify -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -fsycl-is-device -triple spir64 -verify -emit-llvm %s -o - | FileCheck %s
 
 // expected-no-diagnostics
 
@@ -8,7 +8,7 @@ __attribute__((sycl_kernel)) void kernel_single_task(const Func &kernelFunc) {
 }
 
 // CHECK: define dso_local spir_func{{.*}}invoke_function{{.*}}(ptr noundef %fptr, ptr addrspace(4) noundef %ptr)
-void invoke_function(int (*fptr)(), int *ptr) {}
+[[clang::sycl_external]] void invoke_function(int (*fptr)(), int *ptr) {}
 
 int f() { return 0; }
 

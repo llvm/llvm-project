@@ -1,0 +1,100 @@
+# REQUIRES: asserts
+# RUN: llc --mtriple=hexagon %s -run-pass=pipeliner -debug-only=pipeliner \
+# RUN: -window-sched=force -filetype=null -verify-machineinstrs 2>&1 \
+# RUN: -window-search-ratio=100 -window-search-num=100 -window-diff-limit=1 \
+# RUN: | FileCheck %s
+
+# We want to verify that all three V6_vaddw instructions are emitted in the same cycle.
+# CHECK-LABEL: Current window Offset is 2
+# CHECK: Cycle [[CycleNum:[0-9]+]] [{{S.[0-9]+}}]: {{%[0-9]+}}:hvxvr = V6_vaddw {{%[0-9]+}}:hvxvr, {{%[0-9]+}}:hvxvr
+# CHECK: Cycle [[CycleNum]] [{{S.[0-9]+}}]: {{%[0-9]+}}:hvxvr = V6_vaddw {{%[0-9]+}}:hvxvr, {{%[0-9]+}}:hvxvr
+# CHECK: Cycle [[CycleNum]] [{{S.[0-9]+}}]: {{%[0-9]+}}:hvxvr = V6_vaddw {{%[0-9]+}}:hvxvr, {{%[0-9]+}}:hvxvr
+# CHECK-LABEL: Current window Offset is 3
+
+--- |
+  define void @add_parallel(i32 %N, ptr noalias %x, ptr noalias %y) {
+  entry:
+    %isZeroLength = icmp eq i32 %N, 0
+    br i1 %isZeroLength, label %loop.exit, label %loop.preheader
+
+  loop.preheader:                                   ; preds = %entry
+    %half_splat = tail call <32 x i32> @llvm.hexagon.V6.lvsplatw.128B(i32 1056964608)
+    %one_splat = tail call <32 x i32> @llvm.hexagon.V6.lvsplatw.128B(i32 1065353216)
+    %two_splat = tail call <32 x i32> @llvm.hexagon.V6.lvsplatw.128B(i32 1073741824)
+    br label %loop.body
+
+  loop.exit:                                        ; preds = %loop.body, %entry
+    ret void
+
+  loop.body:                                        ; preds = %loop.body, %loop.preheader
+    %lsr.iv1 = phi ptr [ %cgep2, %loop.body ], [ %x, %loop.preheader ]
+    %lsr.iv = phi ptr [ %cgep1, %loop.body ], [ %y, %loop.preheader ]
+    %index = phi i32 [ 0, %loop.preheader ], [ %index.next, %loop.body ]
+    %vec_x1 = load <32 x i32>, ptr %lsr.iv1, align 128
+    %vec_add_1 = tail call <32 x i32> @llvm.hexagon.V6.vaddw.128B(<32 x i32> %one_splat, <32 x i32> %vec_x1)
+    %vec_add_2 = tail call <32 x i32> @llvm.hexagon.V6.vaddw.128B(<32 x i32> %half_splat, <32 x i32> %vec_x1)
+    %vec_add_3 = tail call <32 x i32> @llvm.hexagon.V6.vaddw.128B(<32 x i32> %two_splat, <32 x i32> %vec_x1)
+    %vec_add_4 = tail call <32 x i32> @llvm.hexagon.V6.vaddw.128B(<32 x i32> %vec_add_1, <32 x i32> %vec_add_2)
+    %vec_add_5 = tail call <32 x i32> @llvm.hexagon.V6.vaddw.128B(<32 x i32> %vec_add_1, <32 x i32> %vec_add_3)
+    %vec_add_6 = tail call <32 x i32> @llvm.hexagon.V6.vaddw.128B(<32 x i32> %vec_add_5, <32 x i32> %vec_add_4)
+    store <32 x i32> %vec_add_6, ptr %lsr.iv, align 128
+    %index.next = add nuw i32 %index, 32
+    %continue = icmp ult i32 %index.next, %N
+    %cgep1 = getelementptr i8, ptr %lsr.iv, i32 128
+    %cgep2 = getelementptr i8, ptr %lsr.iv1, i32 128
+    br i1 %continue, label %loop.body, label %loop.exit
+  }
+
+  declare <32 x i32> @llvm.hexagon.V6.lvsplatw.128B(i32)
+  declare <32 x i32> @llvm.hexagon.V6.vaddw.128B(<32 x i32>, <32 x i32>)
+...
+---
+name:            add_parallel
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    successors: %bb.2(0x30000000), %bb.1(0x50000000)
+    liveins: $r0, $r1, $r2
+
+    %0:intregs = COPY $r2
+    %1:intregs = COPY $r1
+    %2:intregs = COPY $r0
+    %3:predregs = C2_cmpeqi %2, 0
+    J2_jumpt killed %3, %bb.2, implicit-def dead $pc
+    J2_jump %bb.1, implicit-def dead $pc
+
+  bb.1.loop.preheader:
+    successors: %bb.3(0x80000000)
+
+    %4:intregs = A2_tfrsi 1056964608
+    %5:hvxvr = V6_lvsplatw killed %4
+    %6:intregs = A2_tfrsi 1065353216
+    %7:hvxvr = V6_lvsplatw killed %6
+    %8:intregs = A2_tfrsi 1073741824
+    %9:hvxvr = V6_lvsplatw killed %8
+    %10:intregs = A2_addi %2, 31
+    %11:intregs = S2_lsr_i_r %10, 5
+    %12:intregs = COPY %11
+    J2_loop0r %bb.3, %12, implicit-def $lc0, implicit-def $sa0, implicit-def $usr
+    J2_jump %bb.3, implicit-def dead $pc
+
+  bb.2.loop.exit:
+    PS_jmpret $r31, implicit-def dead $pc
+
+  bb.3.loop.body (machine-block-address-taken):
+    successors: %bb.3(0x7c000000), %bb.2(0x04000000)
+
+    %13:intregs = PHI %1, %bb.1, %14, %bb.3
+    %15:intregs = PHI %0, %bb.1, %16, %bb.3
+    %17:hvxvr, %14:intregs = V6_vL32b_pi %13, 128 :: (load (s1024) from %ir.lsr.iv1)
+    %18:hvxvr = V6_vaddw %7, %17
+    %19:hvxvr = V6_vaddw %5, %17
+    %20:hvxvr = V6_vaddw %9, %17
+    %21:hvxvr = V6_vaddw %18, killed %19
+    %22:hvxvr = V6_vaddw %18, killed %20
+    %23:hvxvr = V6_vaddw killed %22, killed %21
+    %16:intregs = V6_vS32b_pi %15, 128, killed %23 :: (store (s1024) into %ir.lsr.iv)
+    ENDLOOP0 %bb.3, implicit-def $pc, implicit-def $lc0, implicit $sa0, implicit $lc0
+    J2_jump %bb.2, implicit-def dead $pc
+
+...

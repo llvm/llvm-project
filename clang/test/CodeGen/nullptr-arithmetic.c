@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -S %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -S %s -emit-llvm -triple i686-unknown-unknown -o - | FileCheck %s
-// RUN: %clang_cc1 -S %s -emit-llvm -triple x86_64-unknown-unknown -o - | FileCheck %s
+// RUN: %clang_cc1 %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -emit-llvm -triple i686-unknown-unknown -o - | FileCheck %s
+// RUN: %clang_cc1 %s -emit-llvm -triple x86_64-unknown-unknown -o - | FileCheck %s
 
 #include <stdint.h>
 

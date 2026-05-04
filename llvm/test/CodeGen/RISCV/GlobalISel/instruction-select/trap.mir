@@ -14,7 +14,7 @@ body:             |
     ; CHECK-LABEL: name: test_trap
     ; CHECK: UNIMP
     ; CHECK-NEXT: PseudoRET
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.trap)
+    G_TRAP
     PseudoRET
 
 ...
@@ -28,7 +28,7 @@ body:             |
     ; CHECK-LABEL: name: test_debugtrap
     ; CHECK: EBREAK
     ; CHECK-NEXT: PseudoRET
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.debugtrap)
+    G_DEBUGTRAP
     PseudoRET
 
 ...

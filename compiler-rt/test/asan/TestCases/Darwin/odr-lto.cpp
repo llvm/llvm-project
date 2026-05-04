@@ -5,7 +5,7 @@
 
 // RUN: %clangxx_asan -DPART=0 -c %s -o %t-1.o -flto -mllvm -asan-use-private-alias
 // RUN: %clangxx_asan -DPART=1 -c %s -o %t-2.o -flto -mllvm -asan-use-private-alias
-// RUN: %clangxx_asan_lto %t-1.o %t-2.o -o %t -flto -mlinker-version=133
+// RUN: %clangxx_asan_lto %t-1.o %t-2.o -o %t -flto
 // RUN: %run %t 2>&1 | FileCheck %s
 
 #include <stdio.h>

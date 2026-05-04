@@ -5,7 +5,7 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 ;; Both of these tests are tests of phi nodes that end up all equivalent to each other
 ;; Without proper leader ordering, we will end up cycling the leader between all of them and never converge.
 
-define void @foo() {
+define void @foo(i1 %arg, i1 %arg2) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[BB1:%.*]]
@@ -15,13 +15,13 @@ define void @foo() {
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br label [[BB4:%.*]]
 ; CHECK:       bb4:
-; CHECK-NEXT:    br i1 undef, label [[BB18]], label [[BB7:%.*]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[BB18]], label [[BB7:%.*]]
 ; CHECK:       bb7:
 ; CHECK-NEXT:    br label [[BB9:%.*]]
 ; CHECK:       bb9:
-; CHECK-NEXT:    br i1 undef, label [[BB2]], label [[BB11:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[BB2]], label [[BB11:%.*]]
 ; CHECK:       bb11:
-; CHECK-NEXT:    br i1 undef, label [[BB16:%.*]], label [[BB14:%.*]]
+; CHECK-NEXT:    br i1 [[ARG2:%.*]], label [[BB16:%.*]], label [[BB14:%.*]]
 ; CHECK:       bb14:
 ; CHECK-NEXT:    br label [[BB4]]
 ; CHECK:       bb16:
@@ -42,17 +42,17 @@ bb2:                                              ; preds = %bb9, %bb1
 
 bb4:                                              ; preds = %bb14, %bb2
   %tmp5 = phi i32 [ %tmp3, %bb2 ], [ %tmp15, %bb14 ]
-  br i1 undef, label %bb18, label %bb7
+  br i1 %arg, label %bb18, label %bb7
 
 bb7:                                              ; preds = %bb16, %bb4
   %tmp8 = phi i32 [ %tmp17, %bb16 ], [ %tmp5, %bb4 ]
   br label %bb9
 
 bb9:                                              ; preds = %bb7
-  br i1 undef, label %bb2, label %bb11
+  br i1 %arg, label %bb2, label %bb11
 
 bb11:                                             ; preds = %bb9
-  br i1 undef, label %bb16, label %bb14
+  br i1 %arg2, label %bb16, label %bb14
 
 bb14:                                             ; preds = %bb11
   %tmp15 = phi i32 [ %tmp8, %bb11 ]
@@ -74,7 +74,7 @@ declare void @c.d.p(i64, ptr)
 define void @e(i32 %a0, i32 %a1, ptr %p2) {
 ; CHECK-LABEL: @e(
 ; CHECK-NEXT:    [[F:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    store i32 [[A0:%.*]], ptr [[F]], align 4, !g !0
+; CHECK-NEXT:    store i32 [[A0:%.*]], ptr [[F]], align 4, !g [[META0:![0-9]+]]
 ; CHECK-NEXT:    br label [[H:%.*]]
 ; CHECK:       h:
 ; CHECK-NEXT:    call void @c.d.p(i64 8, ptr undef)
@@ -88,10 +88,10 @@ define void @e(i32 %a0, i32 %a1, ptr %p2) {
 ; CHECK-NEXT:    br label [[R]]
 ; CHECK:       r:
 ; CHECK-NEXT:    switch i32 undef, label [[N:%.*]] [
-; CHECK-NEXT:    i32 0, label [[S:%.*]]
+; CHECK-NEXT:      i32 0, label [[S:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       s:
-; CHECK-NEXT:    store i32 [[A1:%.*]], ptr [[F]], align 4, !g !0
+; CHECK-NEXT:    store i32 [[A1:%.*]], ptr [[F]], align 4, !g [[META0]]
 ; CHECK-NEXT:    br label [[H]]
 ; CHECK:       n:
 ; CHECK-NEXT:    ret void

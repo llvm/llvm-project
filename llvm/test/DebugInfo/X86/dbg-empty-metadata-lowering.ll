@@ -1,9 +1,5 @@
 ; RUN: llc %s -stop-after=finalize-isel -o - \
 ; RUN: | FileCheck %s --implicit-check-not=DBG --check-prefixes=AT-DISABLED,BOTH
-; RUN: llc %s -stop-after=finalize-isel -o - --try-experimental-debuginfo-iterators \
-; RUN: | FileCheck %s --implicit-check-not=DBG --check-prefixes=AT-DISABLED,BOTH
-; RUN: llc --try-experimental-debuginfo-iterators %s -stop-after=finalize-isel -o - \
-; RUN: | FileCheck %s --implicit-check-not=DBG --check-prefixes=AT-DISABLED,BOTH
 
 ;; Check that dbg.values with empty metadata are treated as kills (i.e. become
 ;; DBG_VALUE $noreg, ...). dbg.declares with empty metadata location operands
@@ -11,9 +7,6 @@
 
 ; RUN: sed 's/;Uncomment-with-sed//g' < %s \
 ; RUN: | llc -stop-after=finalize-isel -o - \
-; RUN: | FileCheck %s --implicit-check-not=DBG --check-prefixes=AT-ENABLED,BOTH
-; RUN: sed 's/;Uncomment-with-sed//g' < %s \
-; RUN: | llc --try-experimental-debuginfo-iterators -stop-after=finalize-isel -o - \
 ; RUN: | FileCheck %s --implicit-check-not=DBG --check-prefixes=AT-ENABLED,BOTH
 ;; Check the same behaviour occurs with assignment tracking enabled.
 

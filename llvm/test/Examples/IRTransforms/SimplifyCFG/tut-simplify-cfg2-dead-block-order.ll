@@ -18,7 +18,7 @@ bb.2:
   ret i32 3
 }
 
-define i32 @simp1() {
+define i32 @simp1(i1 %arg) {
 ; CHECK-LABEL: @simp1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret i32 1
@@ -32,7 +32,7 @@ bb.1:
   ret i32 2
 
 bb.2:
-  br i1 undef, label %bb.1, label %bb.3
+  br i1 %arg, label %bb.1, label %bb.3
 
 bb.3:
   ret i32 3

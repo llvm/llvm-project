@@ -28,7 +28,7 @@
 namespace clang {
 namespace format {
 
-typedef llvm::SmallVector<FormatToken *, 8> TokenList;
+typedef SmallVector<FormatToken *, 8> TokenList;
 
 inline std::ostream &operator<<(std::ostream &Stream, const FormatToken &Tok) {
   Stream << "(" << Tok.Tok.getName() << ", \"" << Tok.TokenText.str() << "\" , "
@@ -48,7 +48,7 @@ inline TokenList uneof(const TokenList &Tokens) {
   return TokenList(Tokens.begin(), std::prev(Tokens.end()));
 }
 
-inline std::string text(llvm::ArrayRef<FormatToken *> Tokens) {
+inline std::string text(ArrayRef<FormatToken *> Tokens) {
   return std::accumulate(Tokens.begin(), Tokens.end(), std::string(),
                          [](const std::string &R, FormatToken *Tok) {
                            return (R + Tok->TokenText).str();
@@ -63,13 +63,13 @@ public:
       : Allocator(Allocator), Buffers(Buffers), Style(Style),
         SourceMgr("test.cpp", ""), IdentTable(getFormattingLangOpts(Style)) {}
 
-  TokenList lex(llvm::StringRef Code) {
+  TokenList lex(StringRef Code) {
     FormatTokenLexer Lex = getNewLexer(Code);
     ArrayRef<FormatToken *> Result = Lex.lex();
     return TokenList(Result.begin(), Result.end());
   }
 
-  TokenList annotate(llvm::StringRef Code) {
+  TokenList annotate(StringRef Code) {
     FormatTokenLexer Lex = getNewLexer(Code);
     auto Tokens = Lex.lex();
     UnwrappedLineParser Parser(SourceMgr.get(), Style, Lex.getKeywords(), 0,
@@ -85,7 +85,7 @@ public:
     return TokenList(Tokens.begin(), Tokens.end());
   }
 
-  FormatToken *id(llvm::StringRef Code) {
+  FormatToken *id(StringRef Code) {
     auto Result = uneof(lex(Code));
     assert(Result.size() == 1U && "Code must expand to 1 token.");
     return Result[0];
@@ -100,7 +100,7 @@ protected:
   FormatTokenLexer getNewLexer(StringRef Code) {
     Buffers.push_back(
         llvm::MemoryBuffer::getMemBufferCopy(Code, "<scratch space>"));
-    clang::FileID FID =
+    FileID FID =
         SourceMgr.get().createFileID(Buffers.back()->getMemBufferRef());
     return FormatTokenLexer(SourceMgr.get(), FID, 0, Style, Encoding, Allocator,
                             IdentTable);
@@ -111,7 +111,7 @@ public:
   std::vector<std::unique_ptr<llvm::MemoryBuffer>> &Buffers;
   FormatStyle Style;
   encoding::Encoding Encoding = encoding::Encoding_UTF8;
-  clang::SourceManagerForFile SourceMgr;
+  SourceManagerForFile SourceMgr;
   IdentifierTable IdentTable;
   SmallVector<UnwrappedLine, 16> UnwrappedLines;
 };

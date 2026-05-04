@@ -8,19 +8,25 @@
 
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCObjectStreamer.h"
+#include "llvm/MC/MCRegister.h"
 
 using namespace llvm;
 
-MCTargetAsmParser::MCTargetAsmParser(MCTargetOptions const &MCOptions,
-                                     const MCSubtargetInfo &STI,
+MCTargetAsmParser::MCTargetAsmParser(const MCSubtargetInfo &STI,
                                      const MCInstrInfo &MII)
-    : MCOptions(MCOptions), STI(&STI), MII(MII) {}
+    : STI(&STI), MII(MII) {}
 
 MCTargetAsmParser::~MCTargetAsmParser() = default;
 
 MCSubtargetInfo &MCTargetAsmParser::copySTI() {
   MCSubtargetInfo &STICopy = getContext().getSubtargetCopy(getSTI());
   STI = &STICopy;
+  // The returned STI will likely be modified. Create a new fragment to prevent
+  // mixing STI values within a fragment.
+  auto &S = getStreamer();
+  if (S.isObj() && S.getCurrentFragment())
+    static_cast<MCObjectStreamer &>(S).newFragment();
   return STICopy;
 }
 
@@ -47,4 +53,9 @@ ParseStatus MCTargetAsmParser::parseDirective(AsmToken DirectiveID) {
   if (getTok().getLoc() != StartTokLoc)
     return ParseStatus::Failure;
   return ParseStatus::NoMatch;
+}
+
+bool MCTargetAsmParser::areEqualRegs(const MCParsedAsmOperand &Op1,
+                                     const MCParsedAsmOperand &Op2) const {
+  return Op1.isReg() && Op2.isReg() && Op1.getReg() == Op2.getReg();
 }

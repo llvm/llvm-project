@@ -168,8 +168,8 @@ public:
   // Implicitly convert \class ConstString instances to \class StringRef.
   operator llvm::StringRef() const { return GetStringRef(); }
 
-  // Implicitly convert \class ConstString instances to \class std::string_view.
-  operator std::string_view() const {
+  // Explicitly convert \class ConstString instances to \class std::string_view.
+  explicit operator std::string_view() const {
     return std::string_view(m_string, GetLength());
   }
 
@@ -178,14 +178,9 @@ public:
 
   /// Get the string value as a C string.
   ///
-  /// Get the value of the contained string as a NULL terminated C string
-  /// value.
-  ///
-  /// If \a value_if_empty is nullptr, then nullptr will be returned.
-  ///
   /// \return Returns \a value_if_empty if the string is empty, otherwise
   ///     the C string value contained in this object.
-  const char *AsCString(const char *value_if_empty = nullptr) const {
+  const char *AsCString(const char *value_if_empty) const {
     return (IsEmpty() ? value_if_empty : m_string);
   }
 
@@ -199,7 +194,9 @@ public:
   }
 
   /// Get the string value as a std::string
-  std::string GetString() const { return std::string(m_string, GetLength()); }
+  std::string GetString() const {
+    return std::string(AsCString(""), GetLength());
+  }
 
   /// Get the string value as a C string.
   ///

@@ -14,7 +14,6 @@
 #include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Passes/DataflowInfoManager.h"
 #include "bolt/Passes/FrameAnalysis.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCInstPrinter.h"
 #include <optional>
 #include <queue>
@@ -303,9 +302,6 @@ bool ValidateInternalCalls::analyzeFunction(BinaryFunction &Function) const {
 }
 
 Error ValidateInternalCalls::runOnFunctions(BinaryContext &BC) {
-  if (!BC.isX86())
-    return Error::success();
-
   // Look for functions that need validation. This should be pretty rare.
   std::set<BinaryFunction *> NeedsValidation;
   for (auto &BFI : BC.getBinaryFunctions()) {
@@ -313,13 +309,19 @@ Error ValidateInternalCalls::runOnFunctions(BinaryContext &BC) {
     for (BinaryBasicBlock &BB : Function) {
       for (MCInst &Inst : BB) {
         if (getInternalCallTarget(Function, Inst)) {
+          BC.errs() << "BOLT-WARNING: internal call detected in function "
+                    << Function << '\n';
           NeedsValidation.insert(&Function);
           Function.setSimple(false);
+          Function.setPreserveNops(true);
           break;
         }
       }
     }
   }
+
+  if (!BC.isX86())
+    return Error::success();
 
   // Skip validation for non-relocation mode
   if (!BC.HasRelocations)

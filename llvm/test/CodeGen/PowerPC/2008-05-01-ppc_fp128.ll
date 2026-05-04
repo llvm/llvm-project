@@ -17,7 +17,8 @@ entry:
 
 bb36:		; preds = %entry
 	%tmp124 = fcmp ord ppc_fp128 %b, 0xM00000000000000000000000000000000		; <i1> [#uses=1]
-	%tmp140 = and i1 %tmp124, fcmp une (ppc_fp128 0xM00000000000000000000000000000000, ppc_fp128 0xM00000000000000000000000000000000)		; <i1> [#uses=0]
+	%cmp = fcmp une ppc_fp128 0xM00000000000000000000000000000000, 0xM00000000000000000000000000000000
+	%tmp140 = and i1 %tmp124, %cmp
 	unreachable
 
 bb484:		; preds = %entry

@@ -10,6 +10,7 @@
 # CHECK-NEXT: [    18] x.c.
 # CHECK-NEXT: [    1e] .
 # CHECK-NEXT: [    20] .
+# CHECK-EMPTY:
 # CHECK-NEXT: Hex dump of section '.b':
 # CHECK-NEXT: warning: '[[FILE]]': LLVM was not built with LLVM_ENABLE_ZLIB or did not find zlib at build time
 # CHECK-NEXT: 0x00000000 01000000 00000000 01000000 00000000 ................

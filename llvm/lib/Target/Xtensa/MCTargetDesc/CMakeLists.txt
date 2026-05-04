@@ -4,8 +4,8 @@ add_llvm_component_library(LLVMXtensaDesc
   XtensaInstPrinter.cpp
   XtensaMCAsmInfo.cpp
   XtensaMCCodeEmitter.cpp
-  XtensaMCExpr.cpp
   XtensaMCTargetDesc.cpp
+  XtensaTargetStreamer.cpp
 
   LINK_COMPONENTS
   MC

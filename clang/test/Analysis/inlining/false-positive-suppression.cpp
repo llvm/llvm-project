@@ -210,3 +210,20 @@ namespace Cleanups {
     testArgumentHelper(NonTrivial().getNull());
   }
 }
+
+class Bear *getNullBear() { return nullptr; }
+class Bear {
+public:
+  void brum() const;
+};
+class Door {
+public:
+  Door() : ptr(getNullBear()) {
+    ptr->brum();
+#ifndef SUPPRESSED
+    // expected-warning@-2 {{Called C++ object pointer is null}}
+#endif
+  }
+private:
+  Bear* ptr;
+};

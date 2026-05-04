@@ -56,8 +56,8 @@ def testAttrEq():
         print("a1 == a2:", a1 == a2)
         # CHECK: a1 == a3: True
         print("a1 == a3:", a1 == a3)
-        # CHECK: a1 == None: False
-        print("a1 == None:", a1 == None)
+        # CHECK: a1 is None: False
+        print("a1 is None:", a1 is None)
 
 
 # CHECK-LABEL: TEST: testAttrHash
@@ -94,10 +94,10 @@ def testAttrIsInstance():
     with Context():
         a1 = Attribute.parse("42")
         a2 = Attribute.parse("[42]")
-        assert IntegerAttr.isinstance(a1)
-        assert not IntegerAttr.isinstance(a2)
-        assert not ArrayAttr.isinstance(a1)
-        assert ArrayAttr.isinstance(a2)
+        assert isinstance(a1, IntegerAttr)
+        assert not isinstance(a2, IntegerAttr)
+        assert not isinstance(a1, ArrayAttr)
+        assert isinstance(a2, ArrayAttr)
 
 
 # CHECK-LABEL: TEST: testAttrEqDoesNotRaise
@@ -109,9 +109,9 @@ def testAttrEqDoesNotRaise():
         # CHECK: False
         print(a1 == not_an_attr)
         # CHECK: False
-        print(a1 == None)
+        print(a1 is None)
         # CHECK: True
-        print(a1 != None)
+        print(a1 is not None)
 
 
 # CHECK-LABEL: TEST: testAttrCapsule
@@ -156,6 +156,24 @@ def testAffineMapAttr():
 
         # CHECK: affine_map<(d0, d1)[s0, s1, s2] -> ()>
         attr_built = AffineMapAttr.get(map0)
+        print(str(attr_built))
+        assert attr_built.value == map0
+        attr_parsed = Attribute.parse(str(attr_built))
+        assert attr_built == attr_parsed
+
+
+# CHECK-LABEL: TEST: testIntegerSetAttr
+@run
+def testIntegerSetAttr():
+    with Context() as ctx:
+        d0 = AffineDimExpr.get(0)
+        d1 = AffineDimExpr.get(1)
+        s0 = AffineSymbolExpr.get(0)
+        c42 = AffineConstantExpr.get(42)
+        set0 = IntegerSet.get(2, 1, [d0 - d1, s0 - c42], [True, False])
+
+        # CHECK: affine_set<(d0, d1)[s0] : (d0 - d1 == 0, s0 - 42 >= 0)>
+        attr_built = IntegerSetAttr.get(set0)
         print(str(attr_built))
 
         attr_parsed = Attribute.parse(str(attr_built))
@@ -348,6 +366,10 @@ def testDenseIntAttr():
         # CHECK: i1
         print(ShapedType(a.type).element_type)
 
+        shape = Attribute.parse("dense<[0, 1, 2, 3]> : vector<4xindex>")
+        # CHECK: attr: dense<[0, 1, 2, 3]>
+        print("attr:", shape)
+
 
 @run
 def testDenseArrayGetItem():
@@ -514,7 +536,7 @@ def testDictAttr():
 
         a = DictAttr.get(dict_attr)
 
-        # CHECK attr: {integerattr = 42 : i32, stringattr = "string"}
+        # CHECK: attr: {integerattr = 42 : i32, stringattr = "string"}
         print("attr:", a)
 
         assert len(a) == 2
@@ -546,7 +568,7 @@ def testDictAttr():
         else:
             assert False, "expected IndexError on accessing an out-of-bounds attribute"
 
-        # CHECK "empty: {}"
+        # CHECK: empty: {}
         print("empty: ", DictAttr.get())
 
 
@@ -695,3 +717,92 @@ def testConcreteAttributesRoundTrip():
         print(repr(Attribute.parse("42.0 : f32")))
 
         assert IntegerAttr.static_typeid is not None
+
+
+# CHECK-LABEL: TEST: testAttrNames
+@run
+def testAttrNames():
+    with Context():
+        # CHECK: builtin.affine_map
+        print(AffineMapAttr.attr_name)
+        # CHECK: builtin.integer_set
+        print(IntegerSetAttr.attr_name)
+        # CHECK: builtin.array
+        print(ArrayAttr.attr_name)
+        # CHECK: builtin.integer
+        print(IntegerAttr.attr_name)
+        # CHECK: builtin.symbol_ref
+        print(SymbolRefAttr.attr_name)
+        # CHECK: builtin.opaque
+        print(OpaqueAttr.attr_name)
+        # CHECK: builtin.dictionary
+        print(DictAttr.attr_name)
+        # CHECK: builtin.type
+        print(TypeAttr.attr_name)
+        # CHECK: builtin.unit
+        print(UnitAttr.attr_name)
+        # CHECK: builtin.strided_layout
+        print(StridedLayoutAttr.attr_name)
+        # CHECK: builtin.dense_resource_elements
+        print(DenseResourceElementsAttr.attr_name)
+        # CHECK: builtin.string
+        print(StringAttr.attr_name)
+        # CHECK: builtin.float
+        print(FloatAttr.attr_name)
+
+
+# CHECK-LABEL: TEST: testLargeIntegerAttr
+@run
+def testLargeIntegerAttr():
+    with Context():
+        # Test 128-bit unsigned integer
+        i128_type = IntegerType.get_unsigned(128)
+        large_value_128 = (1 << 127) + 12345
+        attr_128 = IntegerAttr.get(i128_type, large_value_128)
+        # CHECK: 128-bit value matches: True
+        print("128-bit value matches:", int(attr_128) == large_value_128)
+
+        # Test 256-bit unsigned integer (BN254 field modulus example)
+        i256_type = IntegerType.get_unsigned(256)
+        bn254_modulus = 21888242871839275222246405745257275088548364400416034343698204186575808495617
+        attr_256 = IntegerAttr.get(i256_type, bn254_modulus)
+        # CHECK: 256-bit value matches: True
+        print("256-bit value matches:", int(attr_256) == bn254_modulus)
+
+        # Test 256-bit signed integer (positive value)
+        si256_type = IntegerType.get_signed(256)
+        positive_signed = (1 << 200) + 999
+        attr_si256_pos = IntegerAttr.get(si256_type, positive_signed)
+        # CHECK: 256-bit signed positive matches: True
+        print(
+            "256-bit signed positive matches:", int(attr_si256_pos) == positive_signed
+        )
+
+        # Test 256-bit signed integer (negative value)
+        negative_signed = -((1 << 200) + 12345)
+        attr_si256_neg = IntegerAttr.get(si256_type, negative_signed)
+        # CHECK: 256-bit signed negative matches: True
+        print(
+            "256-bit signed negative matches:", int(attr_si256_neg) == negative_signed
+        )
+
+        # Test 64-bit boundary (should still work with fast path)
+        i64_type = IntegerType.get_signless(64)
+        value_64 = (1 << 63) - 1  # max signed 64-bit
+        attr_64 = IntegerAttr.get(i64_type, value_64)
+        # CHECK: 64-bit value matches: True
+        print("64-bit value matches:", int(attr_64) == value_64)
+
+        # Test edge case: 65-bit integer (just over 64-bit boundary)
+        i65_type = IntegerType.get_unsigned(65)
+        value_65 = (1 << 64) + 1
+        attr_65 = IntegerAttr.get(i65_type, value_65)
+        # CHECK: 65-bit value matches: True
+        print("65-bit value matches:", int(attr_65) == value_65)
+
+        # Test very large integer (512-bit)
+        i512_type = IntegerType.get_unsigned(512)
+        value_512 = (1 << 500) + (1 << 300) + (1 << 100) + 42
+        attr_512 = IntegerAttr.get(i512_type, value_512)
+        # CHECK: 512-bit value matches: True
+        print("512-bit value matches:", int(attr_512) == value_512)

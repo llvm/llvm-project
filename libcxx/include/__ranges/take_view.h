@@ -42,7 +42,6 @@
 #include <__utility/auto_cast.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -76,15 +75,15 @@ public:
     _LIBCPP_ASSERT_UNCATEGORIZED(__count >= 0, "count has to be greater than or equal to zero");
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _View base() const&
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _View base() const&
     requires copy_constructible<_View>
   {
     return __base_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return std::move(__base_); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return std::move(__base_); }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto begin()
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto begin()
     requires(!__simple_view<_View>)
   {
     if constexpr (sized_range<_View>) {
@@ -100,7 +99,7 @@ public:
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto begin() const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto begin() const
     requires range<const _View>
   {
     if constexpr (sized_range<const _View>) {
@@ -116,7 +115,7 @@ public:
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto end()
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto end()
     requires(!__simple_view<_View>)
   {
     if constexpr (sized_range<_View>) {
@@ -130,7 +129,7 @@ public:
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto end() const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto end() const
     requires range<const _View>
   {
     if constexpr (sized_range<const _View>) {
@@ -144,14 +143,14 @@ public:
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto size()
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size()
     requires sized_range<_View>
   {
     auto __n = ranges::size(__base_);
     return ranges::min(__n, static_cast<decltype(__n)>(__count_));
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
     requires sized_range<const _View>
   {
     auto __n = ranges::size(__base_);
@@ -162,9 +161,9 @@ public:
 template <view _View>
 template <bool _Const>
 class take_view<_View>::__sentinel {
-  using _Base = __maybe_const<_Const, _View>;
+  using _Base _LIBCPP_NODEBUG = __maybe_const<_Const, _View>;
   template <bool _OtherConst>
-  using _Iter                                        = counted_iterator<iterator_t<__maybe_const<_OtherConst, _View>>>;
+  using _Iter _LIBCPP_NODEBUG                        = counted_iterator<iterator_t<__maybe_const<_OtherConst, _View>>>;
   _LIBCPP_NO_UNIQUE_ADDRESS sentinel_t<_Base> __end_ = sentinel_t<_Base>();
 
   template <bool>
@@ -179,7 +178,7 @@ public:
     requires _Const && convertible_to<sentinel_t<_View>, sentinel_t<_Base>>
       : __end_(std::move(__s.__end_)) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr sentinel_t<_Base> base() const { return __end_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr sentinel_t<_Base> base() const { return __end_; }
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const _Iter<_Const>& __lhs, const __sentinel& __rhs) {
     return __lhs.count() == 0 || __lhs.base() == __rhs.__end_;
@@ -230,22 +229,22 @@ struct __passthrough_type;
 
 template <class _Tp, size_t _Extent>
 struct __passthrough_type<span<_Tp, _Extent>> {
-  using type = span<_Tp>;
+  using type _LIBCPP_NODEBUG = span<_Tp>;
 };
 
 template <class _CharT, class _Traits>
 struct __passthrough_type<basic_string_view<_CharT, _Traits>> {
-  using type = basic_string_view<_CharT, _Traits>;
+  using type _LIBCPP_NODEBUG = basic_string_view<_CharT, _Traits>;
 };
 
 template <class _Iter, class _Sent, subrange_kind _Kind>
   requires requires { typename subrange<_Iter>; }
 struct __passthrough_type<subrange<_Iter, _Sent, _Kind>> {
-  using type = subrange<_Iter>;
+  using type _LIBCPP_NODEBUG = subrange<_Iter>;
 };
 
 template <class _Tp>
-using __passthrough_type_t = typename __passthrough_type<_Tp>::type;
+using __passthrough_type_t _LIBCPP_NODEBUG = typename __passthrough_type<_Tp>::type;
 
 struct __fn {
   // [range.take.overview]: the `empty_view` case.
@@ -308,7 +307,7 @@ struct __fn {
             class _RawRange = remove_cvref_t<_Range>,
             class _Dist     = range_difference_t<_Range>>
     requires(__is_repeat_specialization<_RawRange> && sized_range<_RawRange>)
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __range, _Np&& __n) const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __range, _Np&& __n) const
     noexcept(noexcept(views::repeat(*__range.__value_, std::min<_Dist>(ranges::distance(__range), std::forward<_Np>(__n)))))
     -> decltype(      views::repeat(*__range.__value_, std::min<_Dist>(ranges::distance(__range), std::forward<_Np>(__n))))
     { return          views::repeat(*__range.__value_, std::min<_Dist>(ranges::distance(__range), std::forward<_Np>(__n))); }
@@ -319,7 +318,7 @@ struct __fn {
             class _RawRange = remove_cvref_t<_Range>,
             class _Dist     = range_difference_t<_Range>>
     requires(__is_repeat_specialization<_RawRange> && !sized_range<_RawRange>)
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __range, _Np&& __n) const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __range, _Np&& __n) const
     noexcept(noexcept(views::repeat(*__range.__value_, static_cast<_Dist>(__n))))
     -> decltype(      views::repeat(*__range.__value_, static_cast<_Dist>(__n)))
     { return          views::repeat(*__range.__value_, static_cast<_Dist>(__n)); }
@@ -347,7 +346,7 @@ struct __fn {
     requires constructible_from<decay_t<_Np>, _Np>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Np&& __n) const
       noexcept(is_nothrow_constructible_v<decay_t<_Np>, _Np>) {
-    return __range_adaptor_closure_t(std::__bind_back(*this, std::forward<_Np>(__n)));
+    return __pipeable(std::__bind_back(*this, std::forward<_Np>(__n)));
   }
 };
 

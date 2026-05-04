@@ -65,7 +65,7 @@ public:
   /// Return true if the function \p BF may have a profile available.
   /// The result is based on the name(s) of the function alone and the profile
   /// match is not guaranteed.
-  virtual bool mayHaveProfileData(const BinaryFunction &BF);
+  virtual bool mayHaveProfileData(const BinaryFunction &BF) { return true; }
 
   /// Return true if the profile contains an entry for a local object
   /// that has an associated file name.

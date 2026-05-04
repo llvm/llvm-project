@@ -23,8 +23,6 @@
 namespace llvm {
 class WebAssemblyTargetLowering;
 
-struct WasmEHFuncInfo;
-
 namespace yaml {
 struct WebAssemblyFunctionInfo;
 }
@@ -119,34 +117,34 @@ public:
   }
   void setBasePointerVreg(unsigned Reg) { BasePtrVreg = Reg; }
 
-  void stackifyVReg(MachineRegisterInfo &MRI, unsigned VReg) {
+  void stackifyVReg(MachineRegisterInfo &MRI, Register VReg) {
     assert(MRI.getUniqueVRegDef(VReg));
-    auto I = Register::virtReg2Index(VReg);
+    auto I = VReg.virtRegIndex();
     if (I >= VRegStackified.size())
       VRegStackified.resize(I + 1);
     VRegStackified.set(I);
   }
-  void unstackifyVReg(unsigned VReg) {
-    auto I = Register::virtReg2Index(VReg);
+  void unstackifyVReg(Register VReg) {
+    auto I = VReg.virtRegIndex();
     if (I < VRegStackified.size())
       VRegStackified.reset(I);
   }
-  bool isVRegStackified(unsigned VReg) const {
-    auto I = Register::virtReg2Index(VReg);
+  bool isVRegStackified(Register VReg) const {
+    auto I = VReg.virtRegIndex();
     if (I >= VRegStackified.size())
       return false;
     return VRegStackified.test(I);
   }
 
   void initWARegs(MachineRegisterInfo &MRI);
-  void setWAReg(unsigned VReg, unsigned WAReg) {
+  void setWAReg(Register VReg, unsigned WAReg) {
     assert(WAReg != WebAssembly::UnusedReg);
-    auto I = Register::virtReg2Index(VReg);
+    auto I = VReg.virtRegIndex();
     assert(I < WARegs.size());
     WARegs[I] = WAReg;
   }
-  unsigned getWAReg(unsigned VReg) const {
-    auto I = Register::virtReg2Index(VReg);
+  unsigned getWAReg(Register VReg) const {
+    auto I = VReg.virtRegIndex();
     assert(I < WARegs.size());
     return WARegs[I];
   }
@@ -169,12 +167,11 @@ void computeSignatureVTs(const FunctionType *Ty, const Function *TargetFunc,
                          SmallVectorImpl<MVT> &Params,
                          SmallVectorImpl<MVT> &Results);
 
-void valTypesFromMVTs(const ArrayRef<MVT> &In,
-                      SmallVectorImpl<wasm::ValType> &Out);
+void valTypesFromMVTs(ArrayRef<MVT> In, SmallVectorImpl<wasm::ValType> &Out);
 
-std::unique_ptr<wasm::WasmSignature>
-signatureFromMVTs(const SmallVectorImpl<MVT> &Results,
-                  const SmallVectorImpl<MVT> &Params);
+wasm::WasmSignature *signatureFromMVTs(MCContext &Ctx,
+                                       const SmallVectorImpl<MVT> &Results,
+                                       const SmallVectorImpl<MVT> &Params);
 
 namespace yaml {
 
@@ -184,16 +181,13 @@ struct WebAssemblyFunctionInfo final : public yaml::MachineFunctionInfo {
   std::vector<FlowStringValue> Params;
   std::vector<FlowStringValue> Results;
   bool CFGStackified = false;
-  // The same as WasmEHFuncInfo's SrcToUnwindDest, but stored in the mapping of
-  // BB numbers
-  BBNumberMap SrcToUnwindDest;
 
   WebAssemblyFunctionInfo() = default;
   WebAssemblyFunctionInfo(const llvm::MachineFunction &MF,
                           const llvm::WebAssemblyFunctionInfo &MFI);
 
   void mappingImpl(yaml::IO &YamlIO) override;
-  ~WebAssemblyFunctionInfo() = default;
+  ~WebAssemblyFunctionInfo() override = default;
 };
 
 template <> struct MappingTraits<WebAssemblyFunctionInfo> {
@@ -201,20 +195,6 @@ template <> struct MappingTraits<WebAssemblyFunctionInfo> {
     YamlIO.mapOptional("params", MFI.Params, std::vector<FlowStringValue>());
     YamlIO.mapOptional("results", MFI.Results, std::vector<FlowStringValue>());
     YamlIO.mapOptional("isCFGStackified", MFI.CFGStackified, false);
-    YamlIO.mapOptional("wasmEHFuncInfo", MFI.SrcToUnwindDest);
-  }
-};
-
-template <> struct CustomMappingTraits<BBNumberMap> {
-  static void inputOne(IO &YamlIO, StringRef Key,
-                       BBNumberMap &SrcToUnwindDest) {
-    YamlIO.mapRequired(Key.str().c_str(),
-                       SrcToUnwindDest[std::atoi(Key.str().c_str())]);
-  }
-
-  static void output(IO &YamlIO, BBNumberMap &SrcToUnwindDest) {
-    for (auto KV : SrcToUnwindDest)
-      YamlIO.mapRequired(std::to_string(KV.first).c_str(), KV.second);
   }
 };
 

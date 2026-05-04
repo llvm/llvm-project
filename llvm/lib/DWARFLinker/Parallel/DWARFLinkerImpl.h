@@ -26,8 +26,7 @@ namespace parallel {
 class DWARFLinkerImpl : public DWARFLinker {
 public:
   DWARFLinkerImpl(MessageHandlerTy ErrorHandler,
-                  MessageHandlerTy WarningHandler,
-                  TranslatorFuncTy StringsTranslator);
+                  MessageHandlerTy WarningHandler);
 
   /// Add object file to be linked. Pre-load compile unit die. Call
   /// \p OnCUDieLoaded for each compile unit die. If specified \p File
@@ -77,13 +76,6 @@ public:
   /// Update index tables only(do not modify rest of DWARF).
   void setUpdateIndexTablesOnly(bool UpdateIndexTablesOnly) override {
     GlobalData.Options.UpdateIndexTablesOnly = UpdateIndexTablesOnly;
-  }
-
-  /// Allow generating valid, but non-deterministic output.
-  void
-  setAllowNonDeterministicOutput(bool AllowNonDeterministicOutput) override {
-    GlobalData.Options.AllowNonDeterministicOutput =
-        AllowNonDeterministicOutput;
   }
 
   /// Set to keep the enclosing function for a static variable.
@@ -183,6 +175,10 @@ protected:
     /// Set of Compile Units for modules.
     ModuleUnitListTy ModulesCompileUnits;
 
+    /// Index of this object file in the link order (used for deterministic
+    /// type DIE allocation).
+    uint64_t ObjectFileIdx = 0;
+
     /// Size of Debug info before optimizing.
     uint64_t OriginalDebugInfoSize = 0;
 
@@ -203,7 +199,7 @@ protected:
     std::atomic<size_t> &UniqueUnitID;
 
     LinkContext(LinkingGlobalData &GlobalData, DWARFFile &File,
-                StringMap<uint64_t> &ClangModules,
+                uint64_t ObjFileIdx, StringMap<uint64_t> &ClangModules,
                 std::atomic<size_t> &UniqueUnitID);
 
     /// Check whether specified \p CUDie is a Clang module reference.

@@ -4,12 +4,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-// FIXME: Doesn't work with DLLs
-// XFAIL: win32-dynamic-asan
-
-// If we use %p with MSVC, it comes out all upper case. Use %08x to get
+// If we use %p with MS CRTs, it comes out all upper case. Use %08x to get
 // lowercase hex.
-#ifdef _MSC_VER
+#ifdef _WIN32
 # ifdef _WIN64
 #  define PTR_FMT "0x%08llx"
 # else
@@ -53,6 +50,15 @@ __asan_on_error() {
   // CHECK: addr: {{0x0*}}[[ADDR]]
   fprintf(stderr, "description: %s\n", description);
   // CHECK: description: double-free
+
+  const void *addr_dealloc = NULL;
+  size_t size_dealloc = 0xbad;
+  int is_dealloc =
+      __asan_get_report_dealloc_address(&addr_dealloc, &size_dealloc);
+  fprintf(stderr,
+          "is_dealloc: %d, addr_dealloc: " PTR_FMT ", size_dealloc: %zu\n",
+          is_dealloc, addr_dealloc, size_dealloc);
+  // CHECK: is_dealloc: 1, addr_dealloc: 0x[[ADDR]], size_dealloc: 0
 }
 
 // CHECK: AddressSanitizer: attempting double-free on {{0x0*}}[[ADDR]] in thread T0

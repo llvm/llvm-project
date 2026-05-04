@@ -2,7 +2,7 @@
 //
 // RUN: %clangxx_xray -g -std=c++11 %s -o %t
 // RUN: rm -f log-args-this-*
-// RUN: XRAY_OPTIONS="patch_premain=true verbosity=1 xray_logfile_base=log-args-this-" %run %t
+// RUN: env XRAY_OPTIONS="patch_premain=true verbosity=1 xray_logfile_base=log-args-this-" %run %t
 
 // REQUIRES: target={{(aarch64|x86_64)-.*}}
 

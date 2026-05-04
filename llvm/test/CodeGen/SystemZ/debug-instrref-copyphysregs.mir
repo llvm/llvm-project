@@ -1,0 +1,22 @@
+# Check that the backend properly tracks debug-instr-references across the
+# copy-physregs pass.
+#
+# RUN: llc %s -mtriple=s390x-linux-gnu -run-pass=systemz-copy-physregs \
+# RUN:   -o - 2>&1 | FileCheck %s
+
+# COPY 1: Copy VirtReg to AR
+# COPY 2: Copy AR to VirtReg
+# COPY 3: Copy CC to VirtReg
+# CHECK: name:            foo
+# CHECK: debugValueSubstitutions:
+# these are the correct substitutions
+# CHECK-NEXT:  - { srcinst: 1, srcop: 0, dstinst: 4, dstop: 0, subreg: 0 }
+# we also need to make sure that these are the only substitutions
+# CHECK-NEXT: constants:       []
+name: foo
+body:               |
+  bb.0:
+    liveins: $a1
+    COPY def $a1, %1:gr32bit, debug-instr-number 1
+    COPY def %2:gr32bit, $a1, debug-instr-number 2
+    COPY def %3:gr32bit, $cc, debug-instr-number 3

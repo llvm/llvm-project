@@ -19,5 +19,5 @@ task f() try {
 }
 
 // CHECK-LABEL: define{{.*}} void @_Z1fv(
-// CHECK: call void @_ZNSt13suspend_never13await_suspendESt16coroutine_handleIvE(
+// CHECK: call void @llvm.coro.await.suspend.void(
 // CHECK: call void @_ZN4task12promise_type11return_voidEv(

@@ -162,10 +162,10 @@ certain parts of the pipeline. For example,
 .. code-block:: c++
 
   PassBuilder PB;
-  PB.registerPipelineStartEPCallback([&](ModulePassManager &MPM,
-                                         PassBuilder::OptimizationLevel Level) {
-      MPM.addPass(FooPass());
-  };
+  PB.registerPipelineStartEPCallback(
+      [&](ModulePassManager &MPM, PassBuilder::OptimizationLevel Level) {
+        MPM.addPass(FooPass());
+      });
 
 will add ``FooPass`` near the very beginning of the pipeline for pass
 managers created by that ``PassBuilder``. See the documentation for

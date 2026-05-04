@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple powerpc64le-unknown-linux -S -emit-llvm %s -o - -std=c++11 2>&1 | FileCheck %s
-// RUN: %clang_cc1 -verify -fopenmp -x c++  -fopenmp-targets=x86_64-pc-linux-gnu -triple powerpc64le-unknown-linux -S -emit-llvm %s -o - -std=c++11 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple powerpc64le-unknown-linux -emit-llvm %s -o - -std=c++11 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -x c++  -fopenmp-targets=x86_64-pc-linux-gnu -triple powerpc64le-unknown-linux -emit-llvm %s -o - -std=c++11 2>&1 | FileCheck %s
 // expected-no-diagnostics
 
 template <int __v> struct integral_constant {
@@ -25,7 +25,7 @@ void test(double *d_value)
   *d_value = h_chebyshev_coefs[1];  return;
 }
 
-// CHECK: void @__omp_offloading_{{.+}}test{{.+}}(ptr %0)
+// CHECK: void @__omp_offloading_{{.+}}test{{.+}}(ptr %0, ptr null)
 
 int main() {
 #pragma omp target
@@ -33,4 +33,4 @@ int main() {
   return 0;
 }
 
-// CHECK: call void @__omp_offloading_{{.+}}_main_{{.+}}()
+// CHECK: call void @__omp_offloading_{{.+}}_main_{{.+}}(ptr null)

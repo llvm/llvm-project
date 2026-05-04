@@ -373,16 +373,19 @@ vpmovswb          %zmm16, %ymm19
 vpmovswb          %zmm16, (%rax)
 vpmovswb          %zmm16, %ymm19 {k1}
 vpmovswb          %zmm16, (%rax) {k1}
+vpmovswb          %zmm16, %ymm19 {z}{k1}
 
 vpmovuswb         %zmm16, %ymm19
 vpmovuswb         %zmm16, (%rax)
 vpmovuswb         %zmm16, %ymm19 {k1}
 vpmovuswb         %zmm16, (%rax) {k1}
+vpmovuswb         %zmm16, %ymm19 {z}{k1}
 
 vpmovwb           %zmm16, %ymm19
 vpmovwb           %zmm16, (%rax)
 vpmovwb           %zmm16, %ymm19 {k1}
 vpmovwb           %zmm16, (%rax) {k1}
+vpmovwb           %zmm16, %ymm19 {z}{k1}
 
 vpmovzxbw         %ymm16, %zmm19
 vpmovzxbw         (%rax), %zmm19
@@ -820,13 +823,13 @@ vpunpcklwd        (%rax), %zmm17, %zmm19 {z}{k1}
 # CHECK-NEXT:  1      4     1.00                        vpcmpeqw	%zmm0, %zmm1, %k2 {%k3}
 # CHECK-NEXT:  2      11    1.00    *                   vpcmpeqw	(%rax), %zmm1, %k2 {%k3}
 # CHECK-NEXT:  2      3     1.00                        vpextrb	$0, %xmm16, %eax
-# CHECK-NEXT:  3      2     1.00           *            vpextrb	$0, %xmm16, (%rax)
+# CHECK-NEXT:  3      2     0.50           *            vpextrb	$0, %xmm16, (%rax)
 # CHECK-NEXT:  2      3     1.00                        vpextrw	$0, %xmm16, %eax
-# CHECK-NEXT:  3      2     1.00           *            vpextrw	$0, %xmm16, (%rax)
-# CHECK-NEXT:  2      2     2.00                        vpinsrb	$0, %eax, %xmm16, %xmm19
-# CHECK-NEXT:  2      6     1.00    *                   vpinsrb	$0, (%rax), %xmm16, %xmm19
-# CHECK-NEXT:  2      2     2.00                        vpinsrw	$0, %eax, %xmm16, %xmm19
-# CHECK-NEXT:  2      6     1.00    *                   vpinsrw	$0, (%rax), %xmm16, %xmm19
+# CHECK-NEXT:  3      2     0.50           *            vpextrw	$0, %xmm16, (%rax)
+# CHECK-NEXT:  2      2     1.00                        vpinsrb	$0, %eax, %xmm16, %xmm19
+# CHECK-NEXT:  2      6     0.50    *                   vpinsrb	$0, (%rax), %xmm16, %xmm19
+# CHECK-NEXT:  2      2     1.00                        vpinsrw	$0, %eax, %xmm16, %xmm19
+# CHECK-NEXT:  2      6     0.50    *                   vpinsrw	$0, (%rax), %xmm16, %xmm19
 # CHECK-NEXT:  2      6     2.00                        vpermw	%zmm16, %zmm17, %zmm19
 # CHECK-NEXT:  3      13    2.00    *                   vpermw	(%rax), %zmm17, %zmm19
 # CHECK-NEXT:  2      6     2.00                        vpermw	%zmm16, %zmm17, %zmm19 {%k1}
@@ -919,14 +922,17 @@ vpunpcklwd        (%rax), %zmm17, %zmm19 {z}{k1}
 # CHECK-NEXT:  4      5     2.00           *            vpmovswb	%zmm16, (%rax)
 # CHECK-NEXT:  2      4     2.00                        vpmovswb	%zmm16, %ymm19 {%k1}
 # CHECK-NEXT:  4      5     2.00           *            vpmovswb	%zmm16, (%rax) {%k1}
+# CHECK-NEXT:  2      4     2.00                        vpmovswb	%zmm16, %ymm19 {%k1} {z}
 # CHECK-NEXT:  2      4     2.00                        vpmovuswb	%zmm16, %ymm19
 # CHECK-NEXT:  4      5     2.00           *            vpmovuswb	%zmm16, (%rax)
 # CHECK-NEXT:  2      4     2.00                        vpmovuswb	%zmm16, %ymm19 {%k1}
 # CHECK-NEXT:  4      5     2.00           *            vpmovuswb	%zmm16, (%rax) {%k1}
+# CHECK-NEXT:  2      4     2.00                        vpmovuswb	%zmm16, %ymm19 {%k1} {z}
 # CHECK-NEXT:  2      4     2.00                        vpmovwb	%zmm16, %ymm19
 # CHECK-NEXT:  4      5     2.00           *            vpmovwb	%zmm16, (%rax)
 # CHECK-NEXT:  2      4     2.00                        vpmovwb	%zmm16, %ymm19 {%k1}
 # CHECK-NEXT:  4      5     2.00           *            vpmovwb	%zmm16, (%rax) {%k1}
+# CHECK-NEXT:  2      4     2.00                        vpmovwb	%zmm16, %ymm19 {%k1} {z}
 # CHECK-NEXT:  1      3     1.00                        vpmovzxbw	%ymm16, %zmm19
 # CHECK-NEXT:  2      10    1.00    *                   vpmovzxbw	(%rax), %zmm19
 # CHECK-NEXT:  1      3     1.00                        vpmovzxbw	%ymm16, %zmm19 {%k1}
@@ -1128,7 +1134,7 @@ vpunpcklwd        (%rax), %zmm17, %zmm19 {z}{k1}
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]
-# CHECK-NEXT:  -      -     239.50 17.50  110.00 110.00 8.00   295.50 0.50   8.00   8.00   8.00
+# CHECK-NEXT:  -      -     239.50 21.50  110.00 110.00 8.00   297.50 0.50   8.00   8.00   8.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   Instructions:
@@ -1340,14 +1346,14 @@ vpunpcklwd        (%rax), %zmm17, %zmm19 {z}{k1}
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -      -      -     vpcmpeqw	(%rax), %zmm1, %k2
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     vpcmpeqw	%zmm0, %zmm1, %k2 {%k3}
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -      -      -     vpcmpeqw	(%rax), %zmm1, %k2 {%k3}
-# CHECK-NEXT:  -      -     1.00    -      -      -      -     1.00    -      -      -      -     vpextrb	$0, %xmm16, %eax
-# CHECK-NEXT:  -      -      -      -      -      -     0.50   1.00    -     0.50   0.50   0.50   vpextrb	$0, %xmm16, (%rax)
-# CHECK-NEXT:  -      -     1.00    -      -      -      -     1.00    -      -      -      -     vpextrw	$0, %xmm16, %eax
-# CHECK-NEXT:  -      -      -      -      -      -     0.50   1.00    -     0.50   0.50   0.50   vpextrw	$0, %xmm16, (%rax)
-# CHECK-NEXT:  -      -      -      -      -      -      -     2.00    -      -      -      -     vpinsrb	$0, %eax, %xmm16, %xmm19
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -      -      -     vpinsrb	$0, (%rax), %xmm16, %xmm19
-# CHECK-NEXT:  -      -      -      -      -      -      -     2.00    -      -      -      -     vpinsrw	$0, %eax, %xmm16, %xmm19
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -      -      -     vpinsrw	$0, (%rax), %xmm16, %xmm19
+# CHECK-NEXT:  -      -     1.00   0.50    -      -      -     0.50    -      -      -      -     vpextrb	$0, %xmm16, %eax
+# CHECK-NEXT:  -      -      -     0.50    -      -     0.50   0.50    -     0.50   0.50   0.50   vpextrb	$0, %xmm16, (%rax)
+# CHECK-NEXT:  -      -     1.00   0.50    -      -      -     0.50    -      -      -      -     vpextrw	$0, %xmm16, %eax
+# CHECK-NEXT:  -      -      -     0.50    -      -     0.50   0.50    -     0.50   0.50   0.50   vpextrw	$0, %xmm16, (%rax)
+# CHECK-NEXT:  -      -      -     0.50    -      -      -     1.50    -      -      -      -     vpinsrb	$0, %eax, %xmm16, %xmm19
+# CHECK-NEXT:  -      -      -     0.50   0.50   0.50    -     0.50    -      -      -      -     vpinsrb	$0, (%rax), %xmm16, %xmm19
+# CHECK-NEXT:  -      -      -     0.50    -      -      -     1.50    -      -      -      -     vpinsrw	$0, %eax, %xmm16, %xmm19
+# CHECK-NEXT:  -      -      -     0.50   0.50   0.50    -     0.50    -      -      -      -     vpinsrw	$0, (%rax), %xmm16, %xmm19
 # CHECK-NEXT:  -      -      -      -      -      -      -     2.00    -      -      -      -     vpermw	%zmm16, %zmm17, %zmm19
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -     2.00    -      -      -      -     vpermw	(%rax), %zmm17, %zmm19
 # CHECK-NEXT:  -      -      -      -      -      -      -     2.00    -      -      -      -     vpermw	%zmm16, %zmm17, %zmm19 {%k1}
@@ -1440,14 +1446,17 @@ vpunpcklwd        (%rax), %zmm17, %zmm19 {z}{k1}
 # CHECK-NEXT:  -      -      -      -      -      -     0.50   2.00    -     0.50   0.50   0.50   vpmovswb	%zmm16, (%rax)
 # CHECK-NEXT:  -      -      -      -      -      -      -     2.00    -      -      -      -     vpmovswb	%zmm16, %ymm19 {%k1}
 # CHECK-NEXT:  -      -      -      -      -      -     0.50   2.00    -     0.50   0.50   0.50   vpmovswb	%zmm16, (%rax) {%k1}
+# CHECK-NEXT:  -      -      -      -      -      -      -     2.00    -      -      -      -     vpmovswb	%zmm16, %ymm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -      -      -     2.00    -      -      -      -     vpmovuswb	%zmm16, %ymm19
 # CHECK-NEXT:  -      -      -      -      -      -     0.50   2.00    -     0.50   0.50   0.50   vpmovuswb	%zmm16, (%rax)
 # CHECK-NEXT:  -      -      -      -      -      -      -     2.00    -      -      -      -     vpmovuswb	%zmm16, %ymm19 {%k1}
 # CHECK-NEXT:  -      -      -      -      -      -     0.50   2.00    -     0.50   0.50   0.50   vpmovuswb	%zmm16, (%rax) {%k1}
+# CHECK-NEXT:  -      -      -      -      -      -      -     2.00    -      -      -      -     vpmovuswb	%zmm16, %ymm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -      -      -     2.00    -      -      -      -     vpmovwb	%zmm16, %ymm19
 # CHECK-NEXT:  -      -      -      -      -      -     0.50   2.00    -     0.50   0.50   0.50   vpmovwb	%zmm16, (%rax)
 # CHECK-NEXT:  -      -      -      -      -      -      -     2.00    -      -      -      -     vpmovwb	%zmm16, %ymm19 {%k1}
 # CHECK-NEXT:  -      -      -      -      -      -     0.50   2.00    -     0.50   0.50   0.50   vpmovwb	%zmm16, (%rax) {%k1}
+# CHECK-NEXT:  -      -      -      -      -      -      -     2.00    -      -      -      -     vpmovwb	%zmm16, %ymm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     vpmovzxbw	%ymm16, %zmm19
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -      -      -     vpmovzxbw	(%rax), %zmm19
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     vpmovzxbw	%ymm16, %zmm19 {%k1}

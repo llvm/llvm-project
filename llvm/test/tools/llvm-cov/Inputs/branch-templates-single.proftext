@@ -1,0 +1,46 @@
+# Instrument block coverage
+:single_byte_coverage
+_Z4funcIbEiT_
+# Func Hash:
+11045778961
+# Num Counters:
+3
+# Counter Values:
+1
+1
+0
+
+_Z4funcIfEiT_
+# Func Hash:
+11045778961
+# Num Counters:
+3
+# Counter Values:
+1
+0
+1
+
+_Z4funcIiEiT_
+# Func Hash:
+11045778961
+# Num Counters:
+3
+# Counter Values:
+1
+0
+1
+
+main
+# Func Hash:
+185286008276329560
+# Num Counters:
+7
+# Counter Values:
+1
+1
+0
+1
+0
+1
+0
+

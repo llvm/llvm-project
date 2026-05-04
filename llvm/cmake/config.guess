@@ -4,7 +4,7 @@
 #   2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
 #   2011 Free Software Foundation, Inc.
 
-timestamp='2011-08-20'
+timestamp='2024-06-07'
 
 # This file is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by
@@ -908,6 +908,9 @@ EOF
     crisv32:Linux:*:*)
 	echo crisv32-axis-linux-gnu
 	exit ;;
+    e2k:Linux:*:*)
+	echo ${UNAME_MACHINE}-unknown-linux-gnu
+	exit ;;
     frv:Linux:*:*)
 	echo frv-unknown-linux-gnu
 	exit ;;
@@ -1003,7 +1006,7 @@ EOF
     ppcle:Linux:*:*)
 	echo powerpcle-unknown-linux-gnu
 	exit ;;
-    riscv32:Linux:*:* | riscv64:Linux:*:*)
+    riscv32:Linux:*:* | riscv64:Linux:*:* | riscv32be:Linux:*:* | riscv64be:Linux:*:*)
 	LIBC=gnu
 	eval $set_cc_for_build
 	# Do not check for __GLIBC__ because uclibc defines it too
@@ -1028,7 +1031,7 @@ EOF
 	echo ${UNAME_MACHINE}-unknown-linux-${LIBC}
 	exit ;;
     s390:Linux:*:* | s390x:Linux:*:*)
-	echo ${UNAME_MACHINE}-ibm-linux
+	echo ${UNAME_MACHINE}-unknown-linux-gnu
 	exit ;;
     sh64*:Linux:*:*)
 	echo ${UNAME_MACHINE}-unknown-linux-gnu

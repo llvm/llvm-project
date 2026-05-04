@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -fsyntax-only -triple x86_64-linux-pc %s -verify -DBAD_CONVERSION
 // RUN: %clang_cc1 -fsyntax-only -triple i386-windows-pc %s -verify -DBAD_CONVERSION -DWIN32
-// RUN: %clang_cc1 -fsyntax-only -triple x86_64-linux-pc %s -ast-dump | FileCheck %s --check-prefixes=CHECK,LIN64,NODEF
-// RUN: %clang_cc1 -fsyntax-only -triple i386-windows-pc %s -ast-dump -DWIN32 | FileCheck %s --check-prefixes=CHECK,WIN32,NODEF
+// RUN: %clang_cc1 -triple x86_64-linux-pc %s -ast-dump | FileCheck %s --check-prefixes=CHECK,LIN64,NODEF
+// RUN: %clang_cc1 -triple i386-windows-pc %s -ast-dump -DWIN32 | FileCheck %s --check-prefixes=CHECK,WIN32,NODEF
 
 // RUN: %clang_cc1 -fsyntax-only -triple x86_64-linux-pc -fdefault-calling-conv=vectorcall %s -verify -DBAD_VEC_CONVERS
-// RUN: %clang_cc1 -fsyntax-only -triple x86_64-linux-pc -fdefault-calling-conv=vectorcall %s -ast-dump | FileCheck %s --check-prefixes=CHECK,VECTDEF
+// RUN: %clang_cc1 -triple x86_64-linux-pc -fdefault-calling-conv=vectorcall %s -ast-dump | FileCheck %s --check-prefixes=CHECK,VECTDEF
 
 void useage() {
   auto normal = [](int, float, double) {};                                // #1
@@ -44,19 +44,19 @@ void useage() {
 
   // CHECK: VarDecl {{.*}} vectorcall '
   // CHECK: LambdaExpr
-  // CHECK: CXXMethodDecl {{.*}} operator() 'void (int, float, double) __attribute__((vectorcall)) const'
+  // CHECK: CXXMethodDecl {{.*}} operator() 'void (int, float, double) const __attribute__((vectorcall))':'void (int, float, double) __attribute__((vectorcall)) const'
   // CHECK: CXXConversionDecl {{.*}} operator void (*)(int, float, double) __attribute__((vectorcall)) 'void
   // CHECK: CXXMethodDecl {{.*}} __invoke 'void (int, float, double) __attribute__((vectorcall))' static inline
 
   // WIN32: VarDecl {{.*}} thiscall '
   // WIN32: LambdaExpr
-  // WIN32: CXXMethodDecl {{.*}} operator() 'void (int, float, double) __attribute__((thiscall)) const'
+  // WIN32: CXXMethodDecl {{.*}} operator() 'void (int, float, double) const __attribute__((thiscall))':'void (int, float, double) __attribute__((thiscall)) const'
   // WIN32: CXXConversionDecl {{.*}} operator void (*)(int, float, double) 'void
   // WIN32: CXXMethodDecl {{.*}} __invoke 'void (int, float, double)' static inline
 
   // CHECK: VarDecl {{.*}} cdecl '
   // CHECK: LambdaExpr
-  // CHECK: CXXMethodDecl {{.*}} operator() 'void (int, float, double) const'
+  // CHECK: CXXMethodDecl {{.*}} operator() 'void (int, float, double) const __attribute__((cdecl))':'void (int, float, double) const'
   // NODEF: CXXConversionDecl {{.*}} operator void (*)(int, float, double) 'void
   // NODEF: CXXMethodDecl {{.*}} __invoke 'void (int, float, double)' static inline
   // VECTDEF: CXXConversionDecl {{.*}} operator void (*)(int, float, double) __attribute__((vectorcall)) 'void
@@ -108,8 +108,8 @@ void useage() {
   // CHECK: LambdaExpr
   // CHECK: FunctionTemplateDecl {{.*}} operator()
   // CHECK: CXXMethodDecl {{.*}} operator() 'auto (auto) __attribute__((vectorcall)) const' inline
-  // CHECK: CXXMethodDecl {{.*}} operator() 'void (char) __attribute__((vectorcall)) const' implicit_instantiation inline
-  // CHECK: CXXMethodDecl {{.*}} operator() 'void (int) __attribute__((vectorcall)) const' implicit_instantiation inline
+  // CHECK: CXXMethodDecl {{.*}} operator() 'void (char) const __attribute__((vectorcall))':'void (char) __attribute__((vectorcall)) const' implicit_instantiation inline
+  // CHECK: CXXMethodDecl {{.*}} operator() 'void (int) const __attribute__((vectorcall))':'void (int) __attribute__((vectorcall)) const' implicit_instantiation inline
   // CHECK: FunctionTemplateDecl {{.*}} operator auto (*)(type-parameter-0-0) __attribute__((vectorcall))
   // LIN64: CXXConversionDecl {{.*}} operator auto (*)(type-parameter-0-0) __attribute__((vectorcall)) 'auto (*() const noexcept)(auto) __attribute__((vectorcall))'
   // LIN64: CXXConversionDecl {{.*}} operator auto (*)(char) __attribute__((vectorcall)) 'void (*() const noexcept)(char) __attribute__((vectorcall))'

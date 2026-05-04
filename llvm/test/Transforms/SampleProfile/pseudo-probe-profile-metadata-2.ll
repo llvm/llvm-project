@@ -29,7 +29,7 @@ if.else:
   br label %return
 
 return:
-  call void @llvm.pseudoprobe(i64 6699318081062747564, i64 4, i32 0, i64 -1)
+  call void @llvm.pseudoprobe(i64 6699318081062747564, i64 6, i32 0, i64 -1)
   %1 = load i32, ptr %retval, align 4
   ret i32 %1
 }
@@ -55,13 +55,12 @@ attributes #0 = {"use-sample-profile"}
 !9 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !5, isOptimized: false, runtimeVersion: 0, emissionKind: NoDebug)
 !10 = !{!"function_entry_count", i64 14}
 !11 = !{!"branch_weights", i32 100, i32 0}
-;; A discriminator of 186646575 which is 0x6f80057 in hexdecimal, stands for an indirect call probe
-;; with an index of 5 and probe factor of 1.0.
-!12 = !DILexicalBlockFile(scope: !4, file: !5, discriminator: 186646575)
+;; A discriminator of 186646559 which is 0xB20001F in hexdecimal, stands for an indirect call probe
+;; with an index of 3 and probe factor of 1.0.
+!12 = !DILexicalBlockFile(scope: !4, file: !5, discriminator: 186646559)
 !13 = distinct !DILocation(line: 10, column: 11, scope: !12)
-;; A discriminator of 134217775 which is 0x6f80057 in hexdecimal, stands for an indirect call probe
-;; with an index of 5 and probe factor of 0.
-!14 = !DILexicalBlockFile(scope: !4, file: !5, discriminator: 134217775)
+;; A discriminator of 134217759 which is 0x800001F in hexdecimal, stands for an indirect call probe
+;; with an index of 3 and probe factor of 0.
+!14 = !DILexicalBlockFile(scope: !4, file: !5, discriminator: 134217759)
 !15 = distinct !DILocation(line: 10, column: 11, scope: !14)
 !16 = !{!"VP", i32 0, i64 7, i64 9191153033785521275, i64 5, i64 -1069303473483922844, i64 2}
-

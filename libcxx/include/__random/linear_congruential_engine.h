@@ -26,32 +26,60 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <unsigned long long __a,
-          unsigned long long __c,
-          unsigned long long __m,
-          unsigned long long _Mp,
-          bool _MightOverflow = (__a != 0 && __m != 0 && __m - 1 > (_Mp - __c) / __a),
-          bool _OverflowOK    = ((__m & (__m - 1)) == 0ull),                  // m = 2^n
-          bool _SchrageOK     = (__a != 0 && __m != 0 && __m % __a <= __m / __a)> // r <= q
-struct __lce_alg_picker {
-  static_assert(!_MightOverflow || _OverflowOK || _SchrageOK,
-                "The current values of a, c, and m cannot generate a number "
-                "within bounds of linear_congruential_engine.");
-
-  static _LIBCPP_CONSTEXPR const bool __use_schrage = _MightOverflow && !_OverflowOK && _SchrageOK;
+enum __lce_alg_type {
+  _LCE_Full,
+  _LCE_Part,
+  _LCE_Schrage,
+  _LCE_Promote,
 };
 
 template <unsigned long long __a,
           unsigned long long __c,
           unsigned long long __m,
           unsigned long long _Mp,
-          bool _UseSchrage = __lce_alg_picker<__a, __c, __m, _Mp>::__use_schrage>
+          bool _HasOverflow = (__a != 0ull && (__m & (__m - 1ull)) != 0ull),      // a != 0, m != 0, m != 2^n
+          bool _Full        = (!_HasOverflow || __m - 1ull <= (_Mp - __c) / __a), // (a * x + c) % m works
+          bool _Part        = (!_HasOverflow || __m - 1ull <= _Mp / __a),         // (a * x) % m works
+          bool _Schrage     = (_HasOverflow && __m % __a <= __m / __a)>               // r <= q
+struct __lce_alg_picker {
+  static _LIBCPP_CONSTEXPR const __lce_alg_type __mode =
+      _Full      ? _LCE_Full
+      : _Part    ? _LCE_Part
+      : _Schrage ? _LCE_Schrage
+                 : _LCE_Promote;
+
+#if !_LIBCPP_HAS_INT128
+  static_assert(_Mp != (unsigned long long)(-1) || _Full || _Part || _Schrage,
+                "The current values for a, c, and m are not currently supported on platforms without __int128");
+#endif
+};
+
+template <unsigned long long __a,
+          unsigned long long __c,
+          unsigned long long __m,
+          unsigned long long _Mp,
+          __lce_alg_type _Mode = __lce_alg_picker<__a, __c, __m, _Mp>::__mode>
 struct __lce_ta;
 
 // 64
 
+#if _LIBCPP_HAS_INT128
+template <unsigned long long _Ap, unsigned long long _Cp, unsigned long long _Mp>
+struct __lce_ta<_Ap, _Cp, _Mp, (unsigned long long)(-1), _LCE_Promote> {
+  typedef unsigned long long result_type;
+  _LIBCPP_HIDE_FROM_ABI static result_type next(result_type __xp) {
+    __extension__ using __calc_type = unsigned __int128;
+    const __calc_type __a           = static_cast<__calc_type>(_Ap);
+    const __calc_type __c           = static_cast<__calc_type>(_Cp);
+    const __calc_type __m           = static_cast<__calc_type>(_Mp);
+    const __calc_type __x           = static_cast<__calc_type>(__xp);
+    return static_cast<result_type>((__a * __x + __c) % __m);
+  }
+};
+#endif
+
 template <unsigned long long __a, unsigned long long __c, unsigned long long __m>
-struct __lce_ta<__a, __c, __m, (unsigned long long)(~0), true> {
+struct __lce_ta<__a, __c, __m, (unsigned long long)(-1), _LCE_Schrage> {
   typedef unsigned long long result_type;
   _LIBCPP_HIDE_FROM_ABI static result_type next(result_type __x) {
     // Schrage's algorithm
@@ -66,7 +94,7 @@ struct __lce_ta<__a, __c, __m, (unsigned long long)(~0), true> {
 };
 
 template <unsigned long long __a, unsigned long long __m>
-struct __lce_ta<__a, 0, __m, (unsigned long long)(~0), true> {
+struct __lce_ta<__a, 0ull, __m, (unsigned long long)(-1), _LCE_Schrage> {
   typedef unsigned long long result_type;
   _LIBCPP_HIDE_FROM_ABI static result_type next(result_type __x) {
     // Schrage's algorithm
@@ -80,21 +108,40 @@ struct __lce_ta<__a, 0, __m, (unsigned long long)(~0), true> {
 };
 
 template <unsigned long long __a, unsigned long long __c, unsigned long long __m>
-struct __lce_ta<__a, __c, __m, (unsigned long long)(~0), false> {
+struct __lce_ta<__a, __c, __m, (unsigned long long)(-1), _LCE_Part> {
+  typedef unsigned long long result_type;
+  _LIBCPP_HIDE_FROM_ABI static result_type next(result_type __x) {
+    // Use (((a*x) % m) + c) % m
+    __x = (__a * __x) % __m;
+    __x += __c - (__x >= __m - __c) * __m;
+    return __x;
+  }
+};
+
+template <unsigned long long __a, unsigned long long __c, unsigned long long __m>
+struct __lce_ta<__a, __c, __m, (unsigned long long)(-1), _LCE_Full> {
   typedef unsigned long long result_type;
   _LIBCPP_HIDE_FROM_ABI static result_type next(result_type __x) { return (__a * __x + __c) % __m; }
 };
 
 template <unsigned long long __a, unsigned long long __c>
-struct __lce_ta<__a, __c, 0, (unsigned long long)(~0), false> {
+struct __lce_ta<__a, __c, 0ull, (unsigned long long)(-1), _LCE_Full> {
   typedef unsigned long long result_type;
   _LIBCPP_HIDE_FROM_ABI static result_type next(result_type __x) { return __a * __x + __c; }
 };
 
 // 32
 
+template <unsigned long long __a, unsigned long long __c, unsigned long long __m>
+struct __lce_ta<__a, __c, __m, unsigned(-1), _LCE_Promote> {
+  typedef unsigned result_type;
+  _LIBCPP_HIDE_FROM_ABI static result_type next(result_type __x) {
+    return static_cast<result_type>(__lce_ta<__a, __c, __m, (unsigned long long)(-1)>::next(__x));
+  }
+};
+
 template <unsigned long long _Ap, unsigned long long _Cp, unsigned long long _Mp>
-struct __lce_ta<_Ap, _Cp, _Mp, unsigned(~0), true> {
+struct __lce_ta<_Ap, _Cp, _Mp, unsigned(-1), _LCE_Schrage> {
   typedef unsigned result_type;
   _LIBCPP_HIDE_FROM_ABI static result_type next(result_type __x) {
     const result_type __a = static_cast<result_type>(_Ap);
@@ -112,7 +159,7 @@ struct __lce_ta<_Ap, _Cp, _Mp, unsigned(~0), true> {
 };
 
 template <unsigned long long _Ap, unsigned long long _Mp>
-struct __lce_ta<_Ap, 0, _Mp, unsigned(~0), true> {
+struct __lce_ta<_Ap, 0ull, _Mp, unsigned(-1), _LCE_Schrage> {
   typedef unsigned result_type;
   _LIBCPP_HIDE_FROM_ABI static result_type next(result_type __x) {
     const result_type __a = static_cast<result_type>(_Ap);
@@ -128,7 +175,21 @@ struct __lce_ta<_Ap, 0, _Mp, unsigned(~0), true> {
 };
 
 template <unsigned long long _Ap, unsigned long long _Cp, unsigned long long _Mp>
-struct __lce_ta<_Ap, _Cp, _Mp, unsigned(~0), false> {
+struct __lce_ta<_Ap, _Cp, _Mp, unsigned(-1), _LCE_Part> {
+  typedef unsigned result_type;
+  _LIBCPP_HIDE_FROM_ABI static result_type next(result_type __x) {
+    const result_type __a = static_cast<result_type>(_Ap);
+    const result_type __c = static_cast<result_type>(_Cp);
+    const result_type __m = static_cast<result_type>(_Mp);
+    // Use (((a*x) % m) + c) % m
+    __x = (__a * __x) % __m;
+    __x += __c - (__x >= __m - __c) * __m;
+    return __x;
+  }
+};
+
+template <unsigned long long _Ap, unsigned long long _Cp, unsigned long long _Mp>
+struct __lce_ta<_Ap, _Cp, _Mp, unsigned(-1), _LCE_Full> {
   typedef unsigned result_type;
   _LIBCPP_HIDE_FROM_ABI static result_type next(result_type __x) {
     const result_type __a = static_cast<result_type>(_Ap);
@@ -139,7 +200,7 @@ struct __lce_ta<_Ap, _Cp, _Mp, unsigned(~0), false> {
 };
 
 template <unsigned long long _Ap, unsigned long long _Cp>
-struct __lce_ta<_Ap, _Cp, 0, unsigned(~0), false> {
+struct __lce_ta<_Ap, _Cp, 0ull, unsigned(-1), _LCE_Full> {
   typedef unsigned result_type;
   _LIBCPP_HIDE_FROM_ABI static result_type next(result_type __x) {
     const result_type __a = static_cast<result_type>(_Ap);
@@ -150,16 +211,16 @@ struct __lce_ta<_Ap, _Cp, 0, unsigned(~0), false> {
 
 // 16
 
-template <unsigned long long __a, unsigned long long __c, unsigned long long __m, bool __b>
-struct __lce_ta<__a, __c, __m, (unsigned short)(~0), __b> {
+template <unsigned long long __a, unsigned long long __c, unsigned long long __m, __lce_alg_type __mode>
+struct __lce_ta<__a, __c, __m, (unsigned short)(-1), __mode> {
   typedef unsigned short result_type;
   _LIBCPP_HIDE_FROM_ABI static result_type next(result_type __x) {
-    return static_cast<result_type>(__lce_ta<__a, __c, __m, unsigned(~0)>::next(__x));
+    return static_cast<result_type>(__lce_ta<__a, __c, __m, unsigned(-1)>::next(__x));
   }
 };
 
 template <class _UIntType, _UIntType __a, _UIntType __c, _UIntType __m>
-class _LIBCPP_TEMPLATE_VIS linear_congruential_engine;
+class linear_congruential_engine;
 
 template <class _CharT, class _Traits, class _Up, _Up _Ap, _Up _Cp, _Up _Np>
 _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
@@ -170,7 +231,7 @@ _LIBCPP_HIDE_FROM_ABI basic_istream<_CharT, _Traits>&
 operator>>(basic_istream<_CharT, _Traits>& __is, linear_congruential_engine<_Up, _Ap, _Cp, _Np>& __x);
 
 template <class _UIntType, _UIntType __a, _UIntType __c, _UIntType __m>
-class _LIBCPP_TEMPLATE_VIS linear_congruential_engine {
+class linear_congruential_engine {
 public:
   // types
   typedef _UIntType result_type;
@@ -178,7 +239,7 @@ public:
 private:
   result_type __x_;
 
-  static _LIBCPP_CONSTEXPR const result_type _Mp = result_type(~0);
+  static _LIBCPP_CONSTEXPR const result_type _Mp = result_type(-1);
 
   static_assert(__m == 0 || __a < __m, "linear_congruential_engine invalid parameters");
   static_assert(__m == 0 || __c < __m, "linear_congruential_engine invalid parameters");
@@ -190,12 +251,12 @@ public:
   static_assert(_Min < _Max, "linear_congruential_engine invalid parameters");
 
   // engine characteristics
-  static _LIBCPP_CONSTEXPR const result_type multiplier = __a;
-  static _LIBCPP_CONSTEXPR const result_type increment  = __c;
-  static _LIBCPP_CONSTEXPR const result_type modulus    = __m;
+  static inline _LIBCPP_CONSTEXPR const result_type multiplier = __a;
+  static inline _LIBCPP_CONSTEXPR const result_type increment  = __c;
+  static inline _LIBCPP_CONSTEXPR const result_type modulus    = __m;
   _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type min() { return _Min; }
   _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type max() { return _Max; }
-  static _LIBCPP_CONSTEXPR const result_type default_seed = 1u;
+  static inline _LIBCPP_CONSTEXPR const result_type default_seed = 1u;
 
   // constructors and seeding functions
 #ifndef _LIBCPP_CXX03_LANG
@@ -204,19 +265,34 @@ public:
 #else
   _LIBCPP_HIDE_FROM_ABI explicit linear_congruential_engine(result_type __s = default_seed) { seed(__s); }
 #endif
-  template <class _Sseq, __enable_if_t<__is_seed_sequence<_Sseq, linear_congruential_engine>::value, int> = 0>
+  template <class _Sseq, __enable_if_t<__is_seed_sequence_v<_Sseq, linear_congruential_engine>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI explicit linear_congruential_engine(_Sseq& __q) {
     seed(__q);
   }
+
   _LIBCPP_HIDE_FROM_ABI void seed(result_type __s = default_seed) {
-    seed(integral_constant<bool, __m == 0>(), integral_constant<bool, __c == 0>(), __s);
+    if _LIBCPP_CONSTEXPR (__m == 0) {
+      if _LIBCPP_CONSTEXPR (__c == 0)
+        __x_ = __s == 0 ? 1 : __s;
+      else
+        __x_ = __s;
+    } else {
+      if _LIBCPP_CONSTEXPR (__c == 0)
+        __x_ = __s % __m == 0 ? 1 : __s % __m;
+      else
+        __x_ = __s % __m;
+    }
   }
-  template <class _Sseq, __enable_if_t<__is_seed_sequence<_Sseq, linear_congruential_engine>::value, int> = 0>
+
+  template <class _Sseq, __enable_if_t<__is_seed_sequence_v<_Sseq, linear_congruential_engine>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI void seed(_Sseq& __q) {
-    __seed(
-        __q,
-        integral_constant<unsigned,
-                          1 + (__m == 0 ? (sizeof(result_type) * __CHAR_BIT__ - 1) / 32 : (__m > 0x100000000ull))>());
+    const _LIBCPP_CONSTEXPR unsigned __k =
+        1 + (__m == 0 ? (sizeof(result_type) * __CHAR_BIT__ - 1) / 32 : (__m > 0x100000000ull));
+    static_assert(__k <= 2);
+    uint32_t __ar[__k + 3];
+    __q.generate(__ar, __ar + __k + 3);
+    result_type __s = static_cast<result_type>((__ar[3] + (__k == 1 ? 0 : (uint64_t)__ar[4] << 32)) % __m);
+    __x_            = __c == 0 && __s == 0 ? result_type(1) : __s;
   }
 
   // generating functions
@@ -238,16 +314,6 @@ public:
   }
 
 private:
-  _LIBCPP_HIDE_FROM_ABI void seed(true_type, true_type, result_type __s) { __x_ = __s == 0 ? 1 : __s; }
-  _LIBCPP_HIDE_FROM_ABI void seed(true_type, false_type, result_type __s) { __x_ = __s; }
-  _LIBCPP_HIDE_FROM_ABI void seed(false_type, true_type, result_type __s) { __x_ = __s % __m == 0 ? 1 : __s % __m; }
-  _LIBCPP_HIDE_FROM_ABI void seed(false_type, false_type, result_type __s) { __x_ = __s % __m; }
-
-  template <class _Sseq>
-  _LIBCPP_HIDE_FROM_ABI void __seed(_Sseq& __q, integral_constant<unsigned, 1>);
-  template <class _Sseq>
-  _LIBCPP_HIDE_FROM_ABI void __seed(_Sseq& __q, integral_constant<unsigned, 2>);
-
   template <class _CharT, class _Traits, class _Up, _Up _Ap, _Up _Cp, _Up _Np>
   friend basic_ostream<_CharT, _Traits>&
   operator<<(basic_ostream<_CharT, _Traits>& __os, const linear_congruential_engine<_Up, _Ap, _Cp, _Np>&);
@@ -256,42 +322,6 @@ private:
   friend basic_istream<_CharT, _Traits>&
   operator>>(basic_istream<_CharT, _Traits>& __is, linear_congruential_engine<_Up, _Ap, _Cp, _Np>& __x);
 };
-
-template <class _UIntType, _UIntType __a, _UIntType __c, _UIntType __m>
-_LIBCPP_CONSTEXPR const typename linear_congruential_engine<_UIntType, __a, __c, __m>::result_type
-    linear_congruential_engine<_UIntType, __a, __c, __m>::multiplier;
-
-template <class _UIntType, _UIntType __a, _UIntType __c, _UIntType __m>
-_LIBCPP_CONSTEXPR const typename linear_congruential_engine<_UIntType, __a, __c, __m>::result_type
-    linear_congruential_engine<_UIntType, __a, __c, __m>::increment;
-
-template <class _UIntType, _UIntType __a, _UIntType __c, _UIntType __m>
-_LIBCPP_CONSTEXPR const typename linear_congruential_engine<_UIntType, __a, __c, __m>::result_type
-    linear_congruential_engine<_UIntType, __a, __c, __m>::modulus;
-
-template <class _UIntType, _UIntType __a, _UIntType __c, _UIntType __m>
-_LIBCPP_CONSTEXPR const typename linear_congruential_engine<_UIntType, __a, __c, __m>::result_type
-    linear_congruential_engine<_UIntType, __a, __c, __m>::default_seed;
-
-template <class _UIntType, _UIntType __a, _UIntType __c, _UIntType __m>
-template <class _Sseq>
-void linear_congruential_engine<_UIntType, __a, __c, __m>::__seed(_Sseq& __q, integral_constant<unsigned, 1>) {
-  const unsigned __k = 1;
-  uint32_t __ar[__k + 3];
-  __q.generate(__ar, __ar + __k + 3);
-  result_type __s = static_cast<result_type>(__ar[3] % __m);
-  __x_            = __c == 0 && __s == 0 ? result_type(1) : __s;
-}
-
-template <class _UIntType, _UIntType __a, _UIntType __c, _UIntType __m>
-template <class _Sseq>
-void linear_congruential_engine<_UIntType, __a, __c, __m>::__seed(_Sseq& __q, integral_constant<unsigned, 2>) {
-  const unsigned __k = 2;
-  uint32_t __ar[__k + 3];
-  __q.generate(__ar, __ar + __k + 3);
-  result_type __s = static_cast<result_type>((__ar[3] + ((uint64_t)__ar[4] << 32)) % __m);
-  __x_            = __c == 0 && __s == 0 ? result_type(1) : __s;
-}
 
 template <class _CharT, class _Traits, class _UIntType, _UIntType __a, _UIntType __c, _UIntType __m>
 inline _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&

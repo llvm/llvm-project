@@ -7,4 +7,4 @@
 //
 //===----------------------------------------------------------------------===//
 
-export { using ::va_list; } // export
+export { using ::va_list _LIBCPP_USING_IF_EXISTS; } // export

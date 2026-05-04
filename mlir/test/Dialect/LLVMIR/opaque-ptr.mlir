@@ -68,10 +68,10 @@ llvm.func @opaque_ptr_masked_load(%arg0: !llvm.ptr, %arg1: vector<7xi1>) -> vect
 }
 
 // CHECK-LABEL: @opaque_ptr_gather
-llvm.func @opaque_ptr_gather(%M: !llvm.vec<7 x ptr>, %mask: vector<7xi1>) -> vector<7xf32> {
+llvm.func @opaque_ptr_gather(%M: vector<7x!llvm.ptr>, %mask: vector<7xi1>) -> vector<7xf32> {
   // CHECK: = llvm.intr.masked.gather
-  // CHECK: (!llvm.vec<7 x ptr>, vector<7xi1>) -> vector<7xf32>
+  // CHECK: (vector<7x!llvm.ptr>, vector<7xi1>) -> vector<7xf32>
   %a = llvm.intr.masked.gather %M, %mask { alignment = 1: i32} :
-      (!llvm.vec<7 x ptr>, vector<7xi1>) -> vector<7xf32>
+      (vector<7x!llvm.ptr>, vector<7xi1>) -> vector<7xf32>
   llvm.return %a : vector<7xf32>
 }

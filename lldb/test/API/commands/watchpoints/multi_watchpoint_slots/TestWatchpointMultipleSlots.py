@@ -12,6 +12,7 @@ from lldbsuite.test import lldbutil
 
 
 class WatchpointSlotsTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
     NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):
@@ -26,7 +27,7 @@ class WatchpointSlotsTestCase(TestBase):
         self.d = {"C_SOURCES": self.source, "EXE": self.exe_name}
 
     # This is a arm and aarch64 specific test case. No other architectures tested.
-    @skipIf(archs=no_match(["arm", "aarch64"]))
+    @skipIf(archs=no_match(["arm$", "aarch64"]))
     def test_multiple_watchpoints_on_same_word(self):
         self.build(dictionary=self.d)
         self.setTearDownCleanup(dictionary=self.d)

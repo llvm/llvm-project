@@ -13,6 +13,8 @@
 #include <ranges>
 
 #include <cassert>
+#include <utility>
+
 #include "test_macros.h"
 #include "test_iterators.h"
 
@@ -219,7 +221,8 @@ inline constexpr bool std::ranges::disable_sized_range<const ImproperlyDisabledF
 
 static_assert( std::is_invocable_v<RangeSizeT, ImproperlyDisabledMember&>);
 static_assert( std::is_invocable_v<RangeSizeT, const ImproperlyDisabledMember&>);
-static_assert(!std::is_invocable_v<RangeSizeT, ImproperlyDisabledFunction&>);
+static_assert(std::is_invocable_v<RangeSizeT,
+                                  ImproperlyDisabledFunction&>); // Ill-formed before P2602R2 Poison Pills are Too Toxic
 static_assert( std::is_invocable_v<RangeSizeT, const ImproperlyDisabledFunction&>);
 
 // No begin end.

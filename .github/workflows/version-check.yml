@@ -14,18 +14,19 @@ permissions:
 jobs:
   version_check:
     if: github.repository_owner == 'llvm'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Fetch LLVM sources
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
+          persist-credentials: false
           fetch-depth: 0
 
       - name: Install dependencies
         run: |
-          pip install -r ./llvm/utils/git/requirements.txt
+          pip install --require-hashes -r ./llvm/utils/git/requirements.txt
 
       - name: Version Check
         run: |
-          version=$(grep -o 'LLVM_VERSION_\(MAJOR\|MINOR\|PATCH\) [0-9]\+' llvm/CMakeLists.txt  | cut -d ' ' -f 2 | tr "\n" "." | sed 's/.$//g')
+          version=$(grep -o 'LLVM_VERSION_\(MAJOR\|MINOR\|PATCH\) [0-9]\+' cmake/Modules/LLVMVersion.cmake  | cut -d ' ' -f 2 | tr "\n" "." | sed 's/.$//g')
           .github/workflows/version-check.py "$version"

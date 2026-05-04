@@ -74,12 +74,12 @@ define i32 @unions() nounwind {
 ; TUNIT-SAME: () #[[ATTR2:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[TMP0:%.*]] = load i8, ptr @mystr, align 8
-; TUNIT-NEXT:    [[MYSTR_B4:%.*]] = getelementptr i8, ptr @mystr, i64 4
-; TUNIT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[MYSTR_B4]], align 8
+; TUNIT-NEXT:    [[MYSTR_B41:%.*]] = getelementptr i8, ptr @mystr, i64 4
+; TUNIT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[MYSTR_B41]], align 8
 ; TUNIT-NEXT:    call void @vfu1(i8 [[TMP0]], i32 [[TMP1]]) #[[ATTR2]]
 ; TUNIT-NEXT:    [[TMP2:%.*]] = load i8, ptr @mystr, align 8
-; TUNIT-NEXT:    [[MYSTR_B41:%.*]] = getelementptr i8, ptr @mystr, i64 4
-; TUNIT-NEXT:    [[TMP3:%.*]] = load i32, ptr [[MYSTR_B41]], align 8
+; TUNIT-NEXT:    [[MYSTR_B4:%.*]] = getelementptr i8, ptr @mystr, i64 4
+; TUNIT-NEXT:    [[TMP3:%.*]] = load i32, ptr [[MYSTR_B4]], align 8
 ; TUNIT-NEXT:    [[RESULT:%.*]] = call i32 @vfu2(i8 [[TMP2]], i32 [[TMP3]]) #[[ATTR3:[0-9]+]]
 ; TUNIT-NEXT:    ret i32 [[RESULT]]
 ;

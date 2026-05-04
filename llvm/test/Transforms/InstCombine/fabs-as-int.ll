@@ -19,7 +19,7 @@ define <2 x i32> @fabs_as_int_v2f32_noimplicitfloat(<2 x float> %x) noimplicitfl
 ; CHECK-LABEL: define <2 x i32> @fabs_as_int_v2f32_noimplicitfloat
 ; CHECK-SAME: (<2 x float> [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[BC:%.*]] = bitcast <2 x float> [[X]] to <2 x i32>
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[BC]], <i32 2147483647, i32 2147483647>
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[BC]], splat (i32 2147483647)
 ; CHECK-NEXT:    ret <2 x i32> [[AND]]
 ;
   %bc = bitcast <2 x float> %x to <2 x i32>
@@ -137,15 +137,15 @@ define <2 x i32> @not_fabs_as_int_v2f32_nonsplat(<2 x float> %x) {
   ret <2 x i32> %and
 }
 
-define <3 x i32> @fabs_as_int_v3f32_undef(<3 x float> %x) {
-; CHECK-LABEL: define <3 x i32> @fabs_as_int_v3f32_undef
+define <3 x i32> @fabs_as_int_v3f32_poison(<3 x float> %x) {
+; CHECK-LABEL: define <3 x i32> @fabs_as_int_v3f32_poison
 ; CHECK-SAME: (<3 x float> [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <3 x float> @llvm.fabs.v3f32(<3 x float> [[X]])
 ; CHECK-NEXT:    [[AND:%.*]] = bitcast <3 x float> [[TMP1]] to <3 x i32>
 ; CHECK-NEXT:    ret <3 x i32> [[AND]]
 ;
   %bc = bitcast <3 x float> %x to <3 x i32>
-  %and = and <3 x i32> %bc, <i32 2147483647, i32 undef, i32 2147483647>
+  %and = and <3 x i32> %bc, <i32 2147483647, i32 poison, i32 2147483647>
   ret <3 x i32> %and
 }
 
@@ -289,8 +289,8 @@ define i128 @fabs_as_int_ppc_fp128_f64_mask(ppc_fp128 %x) {
 define i128 @fabs_as_int_ppc_fp128_f128_mask(ppc_fp128 %x) {
 ; CHECK-LABEL: define i128 @fabs_as_int_ppc_fp128_f128_mask
 ; CHECK-SAME: (ppc_fp128 [[X:%.*]]) {
-; CHECK-NEXT:    [[BC:%.*]] = bitcast ppc_fp128 [[X]] to i128
-; CHECK-NEXT:    [[AND:%.*]] = and i128 [[BC]], 170141183460469231731687303715884105727
+; CHECK-NEXT:    [[TMP1:%.*]] = call ppc_fp128 @llvm.fabs.ppcf128(ppc_fp128 [[X]])
+; CHECK-NEXT:    [[AND:%.*]] = bitcast ppc_fp128 [[TMP1]] to i128
 ; CHECK-NEXT:    ret i128 [[AND]]
 ;
   %bc = bitcast ppc_fp128 %x to i128

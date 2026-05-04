@@ -285,8 +285,6 @@ define i32 @xunp(ptr %p) nounwind readnone {
 ; BMI264-NEXT:    rorxl $7, (%rdi), %eax
 ; BMI264-NEXT:    retq
 entry:
-; shld-label: xunp:
-; shld: shldl $25
 	%x = load i32, ptr %p
 	%a = lshr i32 %x, 7
 	%b = shl i32 %x, 25

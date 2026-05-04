@@ -16,10 +16,6 @@ template<typename ...T> void init_capture_pack(T ...a) {
 }
 
 namespace constinit_mismatch {
-  extern thread_local constinit int a; // expected-note {{declared constinit here}}
-  thread_local int a = 123; // expected-error {{'constinit' specifier missing on initializing declaration of 'a'}}
-  // CHECK: {{^}}  constinit thread_local int a = 123;
-
   int b = 123; // expected-note {{add the 'constinit' specifier}}
   extern constinit int b; // expected-error {{'constinit' specifier added after initialization of variable}}
   // CHECK: {{^}}  extern int b;

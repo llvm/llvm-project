@@ -1,13 +1,13 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -fsyntax-only -verify=c,expected -DNO_JMP_BUF %s -ast-dump | FileCheck %s --check-prefixes=CHECK1,CHECK2
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -fsyntax-only -verify=c,expected -DWRONG_JMP_BUF %s -ast-dump | FileCheck %s --check-prefixes=CHECK1,CHECK2
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -fsyntax-only -verify=c,expected -DRIGHT_JMP_BUF %s -ast-dump | FileCheck %s --check-prefixes=CHECK1,CHECK2
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -fsyntax-only -verify=c,expected -DONLY_JMP_BUF %s -ast-dump | FileCheck %s --check-prefixes=CHECK1,CHECK2
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -fsyntax-only -verify=c,expected -DNO_SETJMP %s -ast-dump 2>&1 | FileCheck %s --check-prefixes=CHECK1,CHECK2
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -fsyntax-only -verify=cxx,expected -x c++ -DNO_JMP_BUF %s -ast-dump | FileCheck %s --check-prefixes=CHECK1,CHECK2
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -fsyntax-only -verify=cxx,expected -x c++ -DWRONG_JMP_BUF %s -ast-dump | FileCheck %s --check-prefixes=CHECK1,CHECK2
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -fsyntax-only -verify=cxx,expected -x c++ -DRIGHT_JMP_BUF %s -ast-dump | FileCheck %s --check-prefixes=CHECK1,CHECK2
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -fsyntax-only -verify=cxx,expected -x c++ -DONLY_JMP_BUF %s -ast-dump | FileCheck %s --check-prefixes=CHECK2
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -fsyntax-only -verify=cxx,expected -x c++ -DNO_SETJMP %s -ast-dump | FileCheck %s --check-prefixes=CHECK2
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -verify=c,expected -DNO_JMP_BUF %s -ast-dump | FileCheck %s --check-prefixes=CHECK1,CHECK2
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -verify=c,expected -DWRONG_JMP_BUF %s -ast-dump | FileCheck %s --check-prefixes=CHECK1,CHECK2
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -verify=c,expected -DRIGHT_JMP_BUF %s -ast-dump | FileCheck %s --check-prefixes=CHECK1,CHECK2
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -verify=c,expected -DONLY_JMP_BUF %s -ast-dump | FileCheck %s --check-prefixes=CHECK1,CHECK2
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -verify=c,expected -DNO_SETJMP %s -ast-dump 2>&1 | FileCheck %s --check-prefixes=CHECK1,CHECK2
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -verify=cxx,expected -x c++ -DNO_JMP_BUF %s -ast-dump | FileCheck %s --check-prefixes=CHECK1,CHECK2
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -verify=cxx,expected -x c++ -DWRONG_JMP_BUF %s -ast-dump | FileCheck %s --check-prefixes=CHECK1,CHECK2
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -verify=cxx,expected -x c++ -DRIGHT_JMP_BUF %s -ast-dump | FileCheck %s --check-prefixes=CHECK1,CHECK2
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -verify=cxx,expected -x c++ -DONLY_JMP_BUF %s -ast-dump | FileCheck %s --check-prefixes=CHECK2
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -verify=cxx,expected -x c++ -DNO_SETJMP %s -ast-dump | FileCheck %s --check-prefixes=CHECK2
 
 #ifdef __cplusplus
 extern "C" {

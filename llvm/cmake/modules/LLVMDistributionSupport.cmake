@@ -210,6 +210,8 @@ function(install_distribution_exports project)
                 COMPONENT ${target})
         if(NOT LLVM_ENABLE_IDE)
           add_custom_target(${target})
+          get_subproject_title(subproject_title)
+          set_target_properties(${target} PROPERTIES FOLDER "${subproject_title}/Distribution")
           add_llvm_install_targets(install-${target} COMPONENT ${target})
         endif()
       endif()
@@ -260,6 +262,14 @@ function(llvm_distribution_add_targets)
     add_custom_target(${distribution_target})
     add_custom_target(install-${distribution_target})
     add_custom_target(install-${distribution_target}-stripped)
+    get_subproject_title(subproject_title)
+    set_target_properties(
+        ${distribution_target} 
+        install-${distribution_target}
+        install-${distribution_target}-stripped
+      PROPERTIES 
+        FOLDER "${subproject_title}/Distribution"
+    )
 
     foreach(target ${distribution_components})
       # Note that some distribution components may not have an actual target, but only an install-FOO target.

@@ -5,8 +5,8 @@
 @var2 = internal global i32 0
 
 ;.
-; CHECK: @[[VAR1:[a-zA-Z0-9_$"\\.-]+]] = internal global [1 x i32] undef
-; CHECK: @[[VAR2:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 0
+; CHECK: @var1 = internal global [1 x i32] undef
+; CHECK: @var2 = internal global i32 0
 ;.
 define ptr addrspace(1) @foo(ptr addrspace(4) %arg) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
@@ -38,7 +38,7 @@ define internal ptr @func1a(ptr %arg) {
 define internal void @func2a(ptr %0) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write)
 ; CHECK-LABEL: define {{[^@]+}}@func2a
-; CHECK-SAME: (ptr nocapture nofree nonnull writeonly align 4 dereferenceable(4) [[TMP0:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: (ptr nofree nonnull writeonly align 4 captures(none) dereferenceable(4) [[TMP0:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    ret void
 ;
   store i32 0, ptr %0
@@ -49,7 +49,7 @@ define i32 @func2() {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write)
 ; CHECK-LABEL: define {{[^@]+}}@func2
 ; CHECK-SAME: () #[[ATTR1]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 (ptr, ...) @func2a(ptr nocapture nofree nonnull writeonly align 4 dereferenceable(4) undef) #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 (ptr, ...) @func2a(ptr nofree nonnull writeonly align 4 captures(none) dereferenceable(4) undef) #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    ret i32 0
 ;
   %1 = tail call i32 (ptr, ...) @func2a(ptr @var2)
@@ -61,7 +61,7 @@ define i32 @func3(i1 %false) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write)
 ; CHECK-LABEL: define {{[^@]+}}@func3
 ; CHECK-SAME: (i1 [[FALSE:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 (ptr, ...) @func2a(ptr nocapture nofree nonnull writeonly align 4 dereferenceable(4) undef) #[[ATTR3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 (ptr, ...) @func2a(ptr nofree nonnull writeonly align 4 captures(none) dereferenceable(4) undef) #[[ATTR3]]
 ; CHECK-NEXT:    br i1 [[FALSE]], label [[USE_BB:%.*]], label [[RET_BB:%.*]]
 ; CHECK:       use_bb:
 ; CHECK-NEXT:    ret i32 [[TMP1]]
@@ -118,14 +118,12 @@ define i16 @foo3() {
 define internal i16 @bar3(ptr %p1, i16 %p2) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@bar3
-; CHECK-SAME: (ptr nocapture nofree readnone [[P1:%.*]], i16 returned [[P2:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (ptr nofree readnone captures(none) [[P1:%.*]], i16 returned [[P2:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    ret i16 [[P2]]
 ;
   ret i16 %p2
 }
 
-; CHECK-LABEL: declare {{[^@]+}}@func6
-; CHECK-SAME: (ptr)
 declare void @func6(ptr)
 ;.
 ; CHECK: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }

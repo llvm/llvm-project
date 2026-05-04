@@ -86,6 +86,9 @@ bool WebAssemblyRefTypeMem2Local::runOnFunction(Function &F) {
                        "********** Function: "
                     << F.getName() << '\n');
 
-  visit(F);
+  if (F.getFnAttribute("target-features")
+          .getValueAsString()
+          .contains("+reference-types"))
+    visit(F);
   return Changed;
 }

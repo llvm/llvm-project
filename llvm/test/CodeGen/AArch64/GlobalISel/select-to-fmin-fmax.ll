@@ -4,7 +4,7 @@ define half @test_s16(half %a) #0 {
 ; CHECK-LABEL: test_s16:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi d1, #0000000000000000
-; CHECK-NEXT:    fmax h0, h1, h0
+; CHECK-NEXT:    fmax h0, h0, h1
 ; CHECK-NEXT:    ret
 entry:
   %fcmp = fcmp olt half %a, 0.0
@@ -16,7 +16,7 @@ define float @test_s32(float %a) #0 {
 ; CHECK-LABEL: test_s32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi d1, #0000000000000000
-; CHECK-NEXT:    fmax s0, s1, s0
+; CHECK-NEXT:    fmax s0, s0, s1
 ; CHECK-NEXT:    ret
 entry:
   %fcmp = fcmp olt float %a, 0.0
@@ -28,7 +28,7 @@ define double @test_s64(double %a) #0 {
 ; CHECK-LABEL: test_s64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi d1, #0000000000000000
-; CHECK-NEXT:    fmax d0, d1, d0
+; CHECK-NEXT:    fmax d0, d0, d1
 ; CHECK-NEXT:    ret
 entry:
   %fcmp = fcmp olt double %a, 0.0
@@ -40,7 +40,7 @@ define <4 x half> @test_v4s16(<4 x half> %a) #0 {
 ; CHECK-LABEL: test_v4s16:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    fmax v0.4h, v1.4h, v0.4h
+; CHECK-NEXT:    fmax v0.4h, v0.4h, v1.4h
 ; CHECK-NEXT:    ret
 entry:
   %fcmp = fcmp olt <4 x half> %a, zeroinitializer
@@ -52,7 +52,7 @@ define <8 x half> @test_v8s16(<8 x half> %a) #0 {
 ; CHECK-LABEL: test_v8s16:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    fmax v0.8h, v1.8h, v0.8h
+; CHECK-NEXT:    fmax v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
 entry:
   %fcmp = fcmp olt <8 x half> %a, zeroinitializer
@@ -64,7 +64,7 @@ define <2 x float> @test_v2s32(<2 x float> %a) #0 {
 ; CHECK-LABEL: test_v2s32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    fmax v0.2s, v1.2s, v0.2s
+; CHECK-NEXT:    fmax v0.2s, v0.2s, v1.2s
 ; CHECK-NEXT:    ret
 entry:
   %fcmp = fcmp olt <2 x float> %a, zeroinitializer
@@ -76,7 +76,7 @@ define <4 x float> @test_v4s32(<4 x float> %a) #0 {
 ; CHECK-LABEL: test_v4s32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    fmax v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    fmax v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
 entry:
   %fcmp = fcmp olt <4 x float> %a, zeroinitializer
@@ -88,7 +88,7 @@ define <2 x double> @test_v2s64(<2 x double> %a) #0 {
 ; CHECK-LABEL: test_v2s64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    fmax v0.2d, v1.2d, v0.2d
+; CHECK-NEXT:    fmax v0.2d, v0.2d, v1.2d
 ; CHECK-NEXT:    ret
 entry:
   %fcmp = fcmp olt <2 x double> %a, zeroinitializer

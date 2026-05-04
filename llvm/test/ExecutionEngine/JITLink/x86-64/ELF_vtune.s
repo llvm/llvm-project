@@ -20,12 +20,14 @@ main:
         .cfi_def_cfa_offset 16
         .cfi_offset 6, -16
         movq    %rsp, %rbp
+        pushq   %rbx
         .cfi_def_cfa_register 6
-        movl    %edi, -4(%rbp)
-        movq    %rsi, -16(%rbp)
-        movl    -4(%rbp), %ebx
+        movl    %edi, -16(%rbp)
+        movq    %rsi, -24(%rbp)
+        movl    -16(%rbp), %ebx
         addl    $1, %ebx
-	movl   $0, %eax
+        movl    $0, %eax
+        popq    %rbx
         popq    %rbp
         .cfi_def_cfa 7, 8
         ret

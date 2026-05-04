@@ -18,11 +18,14 @@
 #include "mlir/Analysis/CallGraph.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/Inliner.h"
+#include "llvm/Support/DebugLog.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_INLINER
+#define GEN_PASS_DEF_INLINERPASS
 #include "mlir/Transforms/Passes.h.inc"
 } // namespace mlir
+
+#define DEBUG_TYPE "inliner-pass"
 
 using namespace mlir;
 
@@ -36,8 +39,9 @@ static void defaultInlinerOptPipeline(OpPassManager &pm) {
 //===----------------------------------------------------------------------===//
 
 namespace {
-class InlinerPass : public impl::InlinerBase<InlinerPass> {
+class InlinerPass : public impl::InlinerPassBase<InlinerPass> {
 public:
+  using impl::InlinerPassBase<InlinerPass>::InlinerPassBase;
   InlinerPass();
   InlinerPass(const InlinerPass &) = default;
   InlinerPass(std::function<void(OpPassManager &)> defaultPipeline);
@@ -62,7 +66,9 @@ private:
   /// Derived classes may override this method to hook into the point at which
   /// options are initialized, but should generally always invoke this base
   /// class variant.
-  LogicalResult initializeOptions(StringRef options) override;
+  LogicalResult initializeOptions(
+      StringRef options,
+      function_ref<LogicalResult(const Twine &)> errorHandler) override;
 
   /// Inliner configuration parameters created from the pass options.
   InlinerConfig config;
@@ -88,6 +94,39 @@ InlinerPass::InlinerPass(std::function<void(OpPassManager &)> defaultPipeline,
   config.setOpPipelines(std::move(opPipelines));
 }
 
+// Return true if the inlining ratio does not exceed the threshold.
+static bool isProfitableToInline(const Inliner::ResolvedCall &resolvedCall,
+                                 unsigned inliningThreshold) {
+  // Return early, ratio <= 0U will always be false.
+  if (inliningThreshold == 0U)
+    return false;
+  // Return early, ratio <= -1U will always be true.
+  if (inliningThreshold == -1U)
+    return true;
+
+  Region *callerRegion = resolvedCall.sourceNode->getCallableRegion();
+  Region *calleeRegion = resolvedCall.targetNode->getCallableRegion();
+
+  assert(calleeRegion && callerRegion && "unexpected external node");
+
+  auto countOps = [](Region *region) {
+    unsigned count = 0;
+    region->walk([&](Operation *) { ++count; });
+    return count;
+  };
+
+  unsigned callerOps = countOps(callerRegion);
+
+  // Always inline empty callees (if it is possible at all).
+  if (callerOps == 0)
+    return true;
+
+  unsigned ratio = countOps(calleeRegion) * 100 / callerOps;
+  LDBG() << "Callee / caller operation ratio (max: " << inliningThreshold
+         << "%): " << ratio << "%";
+  return ratio <= inliningThreshold;
+}
+
 void InlinerPass::runOnOperation() {
   CallGraph &cg = getAnalysis<CallGraph>();
 
@@ -100,18 +139,24 @@ void InlinerPass::runOnOperation() {
     return signalPassFailure();
   }
 
+  // By default, assume that any inlining is profitable.
+  auto profitabilityCb = [this](const Inliner::ResolvedCall &call) {
+    return isProfitableToInline(call, inliningThreshold);
+  };
+
   // Get an instance of the inliner.
   Inliner inliner(op, cg, *this, getAnalysisManager(), runPipelineHelper,
-                  config);
+                  config, profitabilityCb);
 
   // Run the inlining.
   if (failed(inliner.doInlining()))
     signalPassFailure();
-  return;
 }
 
-LogicalResult InlinerPass::initializeOptions(StringRef options) {
-  if (failed(Pass::initializeOptions(options)))
+LogicalResult InlinerPass::initializeOptions(
+    StringRef options,
+    function_ref<LogicalResult(const Twine &)> errorHandler) {
+  if (failed(Pass::initializeOptions(options, errorHandler)))
     return failure();
 
   // Initialize the pipeline builder for operations without the dedicated
@@ -139,9 +184,6 @@ LogicalResult InlinerPass::initializeOptions(StringRef options) {
   return success();
 }
 
-std::unique_ptr<Pass> mlir::createInlinerPass() {
-  return std::make_unique<InlinerPass>();
-}
 std::unique_ptr<Pass>
 mlir::createInlinerPass(llvm::StringMap<OpPassManager> opPipelines) {
   return std::make_unique<InlinerPass>(defaultInlinerOptPipeline,

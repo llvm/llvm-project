@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -ffp-contract=on -DDEFAULT=1 -emit-llvm -o - %s | FileCheck --check-prefix=CHECK-DDEFAULT %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -ffp-contract=on -DEBSTRICT=1 -ffp-exception-behavior=strict -emit-llvm -o - %s | FileCheck --check-prefix=CHECK-DEBSTRICT %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -DFAST=1 -ffast-math -ffp-contract=fast -emit-llvm -o - %s | FileCheck --check-prefix=CHECK-FAST %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -ffp-contract=on -DNOHONOR=1 -menable-no-infs -menable-no-nans -emit-llvm -o - %s | FileCheck --check-prefix=CHECK-NOHONOR %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -ffp-contract=on -DNOHONOR=1 -ffinite-math-only -menable-no-infs -menable-no-nans -emit-llvm -o - %s | FileCheck --check-prefix=CHECK-NOHONOR %s
 
 #define FUN(n) \
   (float z) { return n * z + n; }

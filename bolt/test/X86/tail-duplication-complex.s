@@ -17,12 +17,12 @@
 # CHECK: tail duplication modified 1 ({{.*}}%) functions; duplicated 1 blocks ({{.*}} bytes) responsible for {{.*}} dynamic executions ({{.*}} of all block executions)
 # CHECK: BB Layout   : .LBB00, .Ltmp0, .Ltail-dup0, .Ltmp1, .Ltmp2
 
-# This is the C++ code fed to Clang
-# int fib(int term) {
-#   if (term <= 1)
-#     return term;
-#   return fib(term-1) + fib(term-2);
-# }
+## This is the C++ code fed to Clang
+## int fib(int term) {
+##   if (term <= 1)
+##     return term;
+##   return fib(term-1) + fib(term-2);
+## }
 
     .text
     .globl main

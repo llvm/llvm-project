@@ -1470,6 +1470,10 @@
 #CHECK: vgef	%v0, 0(%r1), 0
 #CHECK: error: vector index required
 #CHECK: vgef	%v0, 0(%r2,%r1), 0
+#CHECK: error: invalid use of vector addressing
+#CHECK: vgef	%v0, 0(%v1), 0
+#CHECK: error: vector index required
+#CHECK: vgef	%v0, 0(,%v1), 0
 #CHECK: error: invalid operand
 #CHECK: vgef	%v0, 0(%v0,%r1), -1
 #CHECK: error: invalid operand
@@ -1481,6 +1485,8 @@
 
 	vgef	%v0, 0(%r1), 0
 	vgef	%v0, 0(%r2,%r1), 0
+	vgef	%v0, 0(%v1), 0
+	vgef	%v0, 0(,%v1), 0
 	vgef	%v0, 0(%v0,%r1), -1
 	vgef	%v0, 0(%v0,%r1), 4
 	vgef	%v0, -1(%v0,%r1), 0
@@ -1490,6 +1496,10 @@
 #CHECK: vgeg	%v0, 0(%r1), 0
 #CHECK: error: vector index required
 #CHECK: vgeg	%v0, 0(%r2,%r1), 0
+#CHECK: error: invalid use of vector addressing
+#CHECK: vgeg	%v0, 0(%v1), 0
+#CHECK: error: vector index required
+#CHECK: vgeg	%v0, 0(,%v1), 0
 #CHECK: error: invalid operand
 #CHECK: vgeg	%v0, 0(%v0,%r1), -1
 #CHECK: error: invalid operand
@@ -1501,6 +1511,8 @@
 
 	vgeg	%v0, 0(%r1), 0
 	vgeg	%v0, 0(%r2,%r1), 0
+	vgeg	%v0, 0(%v1), 0
+	vgeg	%v0, 0(,%v1), 0
 	vgeg	%v0, 0(%v0,%r1), -1
 	vgeg	%v0, 0(%v0,%r1), 2
 	vgeg	%v0, -1(%v0,%r1), 0
@@ -2282,6 +2294,10 @@
 #CHECK: vscef	%v0, 0(%r1), 0
 #CHECK: error: vector index required
 #CHECK: vscef	%v0, 0(%r2,%r1), 0
+#CHECK: error: invalid use of vector addressing
+#CHECK: vscef	%v0, 0(%v1), 0
+#CHECK: error: vector index required
+#CHECK: vscef	%v0, 0(,%v1), 0
 #CHECK: error: invalid operand
 #CHECK: vscef	%v0, 0(%v0,%r1), -1
 #CHECK: error: invalid operand
@@ -2293,6 +2309,8 @@
 
 	vscef	%v0, 0(%r1), 0
 	vscef	%v0, 0(%r2,%r1), 0
+	vscef	%v0, 0(%v1), 0
+	vscef	%v0, 0(,%v1), 0
 	vscef	%v0, 0(%v0,%r1), -1
 	vscef	%v0, 0(%v0,%r1), 4
 	vscef	%v0, -1(%v0,%r1), 0
@@ -2302,6 +2320,10 @@
 #CHECK: vsceg	%v0, 0(%r1), 0
 #CHECK: error: vector index required
 #CHECK: vsceg	%v0, 0(%r2,%r1), 0
+#CHECK: error: invalid use of vector addressing
+#CHECK: vsceg	%v0, 0(%v1), 0
+#CHECK: error: vector index required
+#CHECK: vsceg	%v0, 0(,%v1), 0
 #CHECK: error: invalid operand
 #CHECK: vsceg	%v0, 0(%v0,%r1), -1
 #CHECK: error: invalid operand
@@ -2313,6 +2335,8 @@
 
 	vsceg	%v0, 0(%r1), 0
 	vsceg	%v0, 0(%r2,%r1), 0
+	vsceg	%v0, 0(%v1), 0
+	vsceg	%v0, 0(,%v1), 0
 	vsceg	%v0, 0(%v0,%r1), -1
 	vsceg	%v0, 0(%v0,%r1), 2
 	vsceg	%v0, -1(%v0,%r1), 0
@@ -3024,3 +3048,6 @@
 	wledb	%v0, %v0, -1, 0
 	wledb	%v0, %v0, 16, 0
 
+ #CHECK: error: instruction requires: test-pending-external-interrupt
+ #CHECK: tpei %r0, %r1
+	tpei	%r0, %r1

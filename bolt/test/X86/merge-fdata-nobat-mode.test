@@ -1,4 +1,4 @@
-# Check that merge-fdata tool doesn't spuriously print boltedcollection
+## Check that merge-fdata tool doesn't spuriously print boltedcollection
 
 RUN: merge-fdata %S/Inputs/blarge.fdata %S/Inputs/blarge.fdata \
 RUN:   | FileCheck %s --check-prefix=CHECK-FDATA

@@ -12,7 +12,7 @@ func.func @dot(%x: memref<?xf32, strided<[1], offset: ?>>,
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
       %0 = transform.structured.match ops{["linalg.dot"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-      %1, %loop = transform.structured.tile_using_for %0 [8000] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+      %1, %loop = transform.structured.tile_using_for %0 tile_sizes [8000] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
       transform.yield
   }
 }
@@ -38,7 +38,7 @@ func.func @matvec(%A: memref<?x?xf32, strided<[?, 1], offset: ?>>,
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
       %0 = transform.structured.match ops{["linalg.matvec"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-      %1, %loops:2 = transform.structured.tile_using_for %0 [5, 6] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+      %1, %loops:2 = transform.structured.tile_using_for %0 tile_sizes [5, 6] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
       transform.yield
   }
 }
@@ -67,10 +67,10 @@ func.func @matmul(%A: memref<?x?xf32, strided<[?, 1], offset: ?>>,
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
       %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-      %1, %loops:3 = transform.structured.tile_using_for %0 [2000, 3000, 4000] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
-      %2, %loops_2:3 = transform.structured.tile_using_for %1 [200, 300, 400] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
-      %3, %loops_3:3 = transform.structured.tile_using_for %2 [20, 30, 40] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
-      %4, %loops_4:3 = transform.structured.tile_using_for %3 [2, 3, 4] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+      %1, %loops:3 = transform.structured.tile_using_for %0 tile_sizes [2000, 3000, 4000] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+      %2, %loops_2:3 = transform.structured.tile_using_for %1 tile_sizes [200, 300, 400] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+      %3, %loops_3:3 = transform.structured.tile_using_for %2 tile_sizes [20, 30, 40] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+      %4, %loops_4:3 = transform.structured.tile_using_for %3 tile_sizes [2, 3, 4] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
       transform.yield
   }
 }
@@ -118,8 +118,6 @@ module attributes {transform.with_named_sequence} {
   affine_map<(m, n, k) -> (m, n)>
 ]
 #generic_matmul_trait = {
-  args_in = 2,
-  args_out = 1,
   indexing_maps = #matmul_accesses,
   library_call = "linalg_matmul",
   iterator_types = ["parallel", "parallel", "reduction"]
@@ -170,7 +168,7 @@ func.func @matvec_perm(%A: memref<?x?xf32, strided<[?, 1], offset: ?>>,
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
       %0 = transform.structured.match ops{["linalg.matvec"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-      %1, %loops:2 = transform.structured.tile_using_for %0 [5, 6] interchange = [1, 0] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+      %1, %loops:2 = transform.structured.tile_using_for %0 tile_sizes [5, 6] interchange = [1, 0] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
       transform.yield
   }
 }
@@ -199,9 +197,9 @@ func.func @matmul_perm(%A: memref<?x?xf32, strided<[?, 1], offset: ?>>,
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
       %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-      %1, %loops:3 = transform.structured.tile_using_for %0 [2000, 3000, 4000] interchange = [1, 2, 0] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
-      %2, %loops_2:3 = transform.structured.tile_using_for %1 [200, 300, 400] interchange = [1, 0, 2] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
-      %3, %loops_3:3 = transform.structured.tile_using_for %2 [20, 30, 40] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+      %1, %loops:3 = transform.structured.tile_using_for %0 tile_sizes [2000, 3000, 4000] interchange = [1, 2, 0] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+      %2, %loops_2:3 = transform.structured.tile_using_for %1 tile_sizes [200, 300, 400] interchange = [1, 0, 2] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+      %3, %loops_3:3 = transform.structured.tile_using_for %2 tile_sizes [20, 30, 40] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
       transform.yield
   }
 }

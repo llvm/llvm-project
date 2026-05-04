@@ -148,9 +148,11 @@ class LLDBTestResult(unittest.TextTestResult):
         Gets all the categories for the currently running test method in test case
         """
         test_categories = []
+        test_categories.extend(getattr(test, "categories", []))
+
         test_method = getattr(test, test._testMethodName)
-        if test_method is not None and hasattr(test_method, "categories"):
-            test_categories.extend(test_method.categories)
+        if test_method is not None:
+            test_categories.extend(getattr(test_method, "categories", []))
 
         test_categories.extend(self._getFileBasedCategories(test))
 
@@ -294,3 +296,10 @@ class LLDBTestResult(unittest.TextTestResult):
         self.stream.write(
             "XPASS: LLDB (%s) :: %s\n" % (self._config_string(test), str(test))
         )
+
+    def stopTest(self, test):
+        """Dump the session info for debugging."""
+        dumpSessionInfo = getattr(test, "dumpSessionInfo", None)
+        if dumpSessionInfo:
+            dumpSessionInfo()
+        super().stopTest(test)

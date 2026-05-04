@@ -15,7 +15,7 @@ target triple = "x86_64-unknown-linux-gnu"
 define ptr @test(i32 %cond) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:    [[RELTABLE_SHIFT:%.*]] = shl i32 [[COND:%.*]], 2
-; CHECK-NEXT:    [[RELTABLE_INTRINSIC:%.*]] = call ptr @llvm.load.relative.i32(ptr @reltable.test, i32 [[RELTABLE_SHIFT]])
+; CHECK-NEXT:    [[RELTABLE_INTRINSIC:%.*]] = call ptr @llvm.load.relative.i32(ptr @table1.rel, i32 [[RELTABLE_SHIFT]])
 ; CHECK-NEXT:    ret ptr [[RELTABLE_INTRINSIC]]
 ;
   %switch.gep = getelementptr inbounds [3 x ptr], ptr @table1, i32 0, i32 %cond

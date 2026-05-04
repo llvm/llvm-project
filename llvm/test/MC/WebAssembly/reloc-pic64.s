@@ -1,4 +1,4 @@
-# RUN: llvm-mc -triple=wasm64-unknown-unknown -filetype=obj < %s | obj2yaml | FileCheck %s
+# RUN: llvm-mc -triple=wasm64-unknown-unknown -mcpu=mvp -filetype=obj < %s | obj2yaml | FileCheck %s
 # RUN: llvm-mc -triple=wasm64-unknown-unknown -mattr=+reference-types -filetype=obj < %s | obj2yaml | FileCheck --check-prefix=REF %s
 
 # Verify that @GOT relocation entries result in R_WASM_GLOBAL_INDEX_LEB against
@@ -93,6 +93,7 @@ hidden_func:
 # CHECK-NEXT:           Index:           0
 # CHECK-NEXT:           ElemType:        FUNCREF
 # CHECK-NEXT:           Limits:
+# CHECK-NEXT:             Flags:           [ IS_64 ]
 # CHECK-NEXT:             Minimum:         0x1
 # CHECK-NEXT:       - Module:          GOT.mem
 # CHECK-NEXT:         Field:           default_data
@@ -109,7 +110,7 @@ hidden_func:
 # CHECK-NEXT:   - Type:            ELEM
 # CHECK-NEXT:     Segments:
 # CHECK-NEXT:        Offset:
-# CHECK-NEXT:          Opcode:          I32_CONST
+# CHECK-NEXT:          Opcode:          I64_CONST
 # CHECK-NEXT:          Value:           1
 # CHECK-NEXT:        Functions:       [ 5 ]
 # CHECK-NEXT:   - Type:            DATACOUNT

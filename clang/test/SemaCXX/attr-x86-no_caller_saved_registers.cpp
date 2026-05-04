@@ -21,10 +21,10 @@ typedef void (*foo5)(int *);
 
 void foo6(){} // expected-note {{previous declaration is here}}
 
-void __attribute__((no_caller_saved_registers)) foo6(); // expected-error {{function declared with 'no_caller_saved_registers' attribute was previously declared without the 'no_caller_saved_registers' attribute}} 
+void __attribute__((no_caller_saved_registers)) foo6(); // expected-error {{function declared with 'no_caller_saved_registers' attribute was previously declared without the 'no_caller_saved_registers' attribute}}
 
 int main(int argc, char **argv) {
-  void (*fp)(int *) = foo; // expected-error {{cannot initialize a variable of type 'void (*)(int *)' with an lvalue of type 'void (int *) __attribute__((no_caller_saved_registers))'}} 
+  void (*fp)(int *) = foo; // expected-error {{cannot initialize a variable of type 'void (*)(int *)' with an lvalue of type 'void (int *) __attribute__((no_caller_saved_registers))'}}
   a::foo(&argc);
   foo3 func = foo2;
   func(&argc);

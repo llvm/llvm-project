@@ -15,7 +15,7 @@ func.func @matmul_tensors(
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.consumed}) {
     %0 = transform.structured.match ops{["linalg.matmul"]} in %module_op : (!transform.any_op) -> !transform.any_op
-    %1, %loops:3 = transform.structured.tile_using_for %0 [2, 2, 2] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+    %1, %loops:3 = transform.structured.tile_using_for %0 tile_sizes [2, 2, 2] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
     %2 = transform.get_parent_op %1 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
     transform.structured.vectorize_children_and_apply_patterns %2 : (!transform.any_op) -> !transform.any_op
     %b = transform.bufferization.one_shot_bufferize layout{IdentityLayoutMap}
@@ -30,7 +30,9 @@ module attributes {transform.with_named_sequence} {
     transform.apply_patterns to %f {
       transform.apply_patterns.vector.lower_contraction lowering_strategy = "outerproduct"
       transform.apply_patterns.vector.transfer_permutation_patterns
-      transform.apply_patterns.vector.lower_multi_reduction lowering_strategy = "innerparallel"
+      transform.apply_patterns.vector.reorder_multi_reduction_dims lowering_strategy = "innerparallel"
+      transform.apply_patterns.vector.multi_reduction_flattening lowering_strategy = "innerparallel"
+      transform.apply_patterns.vector.multi_reduction_unrolling lowering_strategy = "innerparallel"
       transform.apply_patterns.vector.split_transfer_full_partial split_transfer_strategy = "linalg-copy"
       transform.apply_patterns.vector.transfer_to_scf max_transfer_rank = 1 full_unroll = true
       transform.apply_patterns.vector.lower_transfer max_transfer_rank = 1

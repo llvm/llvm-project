@@ -11,3 +11,6 @@ la.abs $a0, $a1, sym
 
 la.pcrel $a0, $a0, sym
 # CHECK: :[[#@LINE-1]]:11: error: $rd must be different from $rj
+
+la.tls.desc $a1, sym
+# CHECK: :[[#@LINE-1]]:14: error: $rd must be $r4

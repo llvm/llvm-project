@@ -9,6 +9,7 @@
 #include "clang-include-cleaner/IncludeSpeller.h"
 #include "clang-include-cleaner/Types.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Registry.h"
 #include <memory>
@@ -30,8 +31,14 @@ public:
       return Input.H.verbatim().str();
     case Header::Physical:
       bool IsAngled = false;
+      std::string WorkingDir;
+      if (auto WD = Input.HS.getFileMgr()
+                        .getVirtualFileSystem()
+                        .getCurrentWorkingDirectory())
+        WorkingDir = *WD;
       std::string FinalSpelling = Input.HS.suggestPathToFileForDiagnostics(
-          Input.H.physical(), Input.Main->tryGetRealPathName(), &IsAngled);
+          Input.H.physical().getName(), WorkingDir,
+          Input.Main->tryGetRealPathName(), &IsAngled);
       return IsAngled ? "<" + FinalSpelling + ">" : "\"" + FinalSpelling + "\"";
     }
     llvm_unreachable("Unknown clang::include_cleaner::Header::Kind enum");

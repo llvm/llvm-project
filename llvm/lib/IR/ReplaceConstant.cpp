@@ -16,17 +16,19 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
 
-namespace llvm {
+using namespace llvm;
 
 static bool isExpandableUser(User *U) {
   return isa<ConstantExpr>(U) || isa<ConstantAggregate>(U);
 }
 
-static SmallVector<Instruction *, 4> expandUser(Instruction *InsertPt,
-                                                Constant *C) {
-  SmallVector<Instruction *, 4> NewInsts;
+static void expandUser(BasicBlock::iterator InsertPt, Constant *C,
+                       SmallVector<Instruction *, 4> &NewInsts) {
+  NewInsts.clear();
   if (auto *CE = dyn_cast<ConstantExpr>(C)) {
-    NewInsts.push_back(CE->getAsInstruction(InsertPt));
+    Instruction *ConstInst = CE->getAsInstruction();
+    ConstInst->insertBefore(*InsertPt->getParent(), InsertPt);
+    NewInsts.push_back(ConstInst);
   } else if (isa<ConstantStruct>(C) || isa<ConstantArray>(C)) {
     Value *V = PoisonValue::get(C->getType());
     for (auto [Idx, Op] : enumerate(C->operands())) {
@@ -44,16 +46,27 @@ static SmallVector<Instruction *, 4> expandUser(Instruction *InsertPt,
   } else {
     llvm_unreachable("Not an expandable user");
   }
-  return NewInsts;
 }
 
-bool convertUsersOfConstantsToInstructions(ArrayRef<Constant *> Consts) {
+bool llvm::convertUsersOfConstantsToInstructions(ArrayRef<Constant *> Consts,
+                                                 Function *RestrictToFunc,
+                                                 bool RemoveDeadConstants,
+                                                 bool IncludeSelf) {
   // Find all expandable direct users of Consts.
   SmallVector<Constant *> Stack;
-  for (Constant *C : Consts)
-    for (User *U : C->users())
-      if (isExpandableUser(U))
-        Stack.push_back(cast<Constant>(U));
+  for (Constant *C : Consts) {
+    assert(!isa<ConstantData>(C) &&
+           "should not be expanding trivial constant users");
+
+    if (IncludeSelf) {
+      assert(isExpandableUser(C) && "One of the constants is not expandable");
+      Stack.push_back(C);
+    } else {
+      for (User *U : C->users())
+        if (isExpandableUser(U))
+          Stack.push_back(cast<Constant>(U));
+    }
+  }
 
   // Include transitive users.
   SetVector<Constant *> ExpandableUsers;
@@ -72,39 +85,50 @@ bool convertUsersOfConstantsToInstructions(ArrayRef<Constant *> Consts) {
   for (Constant *C : ExpandableUsers)
     for (User *U : C->users())
       if (auto *I = dyn_cast<Instruction>(U))
-        InstructionWorklist.insert(I);
+        if (!RestrictToFunc || I->getFunction() == RestrictToFunc)
+          InstructionWorklist.insert(I);
 
   // Replace those expandable operands with instructions
   bool Changed = false;
+  // We need to cache the instructions we've already expanded to avoid expanding
+  // the same constant multiple times in the same basic block, which is
+  // problematic when the same constant is used in a phi node multiple times.
+  DenseMap<std::pair<Constant *, BasicBlock *>, SmallVector<Instruction *, 4>>
+      ConstantToInstructionMap;
   while (!InstructionWorklist.empty()) {
     Instruction *I = InstructionWorklist.pop_back_val();
     DebugLoc Loc = I->getDebugLoc();
     for (Use &U : I->operands()) {
-      auto *BI = I;
+      BasicBlock::iterator BI = I->getIterator();
       if (auto *Phi = dyn_cast<PHINode>(I)) {
         BasicBlock *BB = Phi->getIncomingBlock(U);
-        BasicBlock::iterator It = BB->getFirstInsertionPt();
-        assert(It != BB->end() && "Unexpected empty basic block");
-        BI = &*It;
+        BI = BB->getFirstInsertionPt();
+        assert(BI != BB->end() && "Unexpected empty basic block");
       }
 
       if (auto *C = dyn_cast<Constant>(U.get())) {
         if (ExpandableUsers.contains(C)) {
           Changed = true;
-          auto NewInsts = expandUser(BI, C);
+          SmallVector<Instruction *, 4> &NewInsts =
+              ConstantToInstructionMap[std::make_pair(C, BI->getParent())];
+          // If the cached instruction is after the insertion point, we need to
+          // create a new one. We can't simply move the cached instruction
+          // because its operands (also expanded instructions) might not
+          // dominate the new position.
+          if (NewInsts.empty() || BI->comesBefore(NewInsts.front()))
+            expandUser(BI, C, NewInsts);
           for (auto *NI : NewInsts)
             NI->setDebugLoc(Loc);
-          InstructionWorklist.insert(NewInsts.begin(), NewInsts.end());
+          InstructionWorklist.insert_range(NewInsts);
           U.set(NewInsts.back());
         }
       }
     }
   }
 
-  for (Constant *C : Consts)
-    C->removeDeadConstantUsers();
+  if (RemoveDeadConstants)
+    for (Constant *C : Consts)
+      C->removeDeadConstantUsers();
 
   return Changed;
 }
-
-} // namespace llvm

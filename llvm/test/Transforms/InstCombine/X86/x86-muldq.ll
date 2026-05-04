@@ -182,8 +182,8 @@ define <4 x i64> @test_demanded_elts_pmuludq_256(<8 x i32> %a0, <8 x i32> %a1) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[A1:%.*]], <8 x i32> poison, <8 x i32> <i32 1, i32 1, i32 3, i32 3, i32 5, i32 5, i32 7, i32 7>
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i32> [[TMP1]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i32> [[TMP2]] to <4 x i64>
-; CHECK-NEXT:    [[TMP5:%.*]] = and <4 x i64> [[TMP3]], <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>
-; CHECK-NEXT:    [[TMP6:%.*]] = and <4 x i64> [[TMP4]], <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>
+; CHECK-NEXT:    [[TMP5:%.*]] = and <4 x i64> [[TMP3]], splat (i64 4294967295)
+; CHECK-NEXT:    [[TMP6:%.*]] = and <4 x i64> [[TMP4]], splat (i64 4294967295)
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul nuw <4 x i64> [[TMP5]], [[TMP6]]
 ; CHECK-NEXT:    ret <4 x i64> [[TMP7]]
 ;
@@ -199,8 +199,8 @@ define <8 x i64> @test_demanded_elts_pmuludq_512(<16 x i32> %a0, <16 x i32> %a1)
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i32> [[A1:%.*]], <16 x i32> poison, <16 x i32> <i32 1, i32 1, i32 3, i32 3, i32 5, i32 5, i32 7, i32 7, i32 9, i32 9, i32 11, i32 11, i32 13, i32 13, i32 15, i32 15>
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <16 x i32> [[TMP1]] to <8 x i64>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <16 x i32> [[TMP2]] to <8 x i64>
-; CHECK-NEXT:    [[TMP5:%.*]] = and <8 x i64> [[TMP3]], <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>
-; CHECK-NEXT:    [[TMP6:%.*]] = and <8 x i64> [[TMP4]], <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>
+; CHECK-NEXT:    [[TMP5:%.*]] = and <8 x i64> [[TMP3]], splat (i64 4294967295)
+; CHECK-NEXT:    [[TMP6:%.*]] = and <8 x i64> [[TMP4]], splat (i64 4294967295)
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul nuw <8 x i64> [[TMP5]], [[TMP6]]
 ; CHECK-NEXT:    ret <8 x i64> [[TMP7]]
 ;
@@ -216,10 +216,10 @@ define <2 x i64> @test_demanded_elts_pmuldq_128(<4 x i32> %a0, <4 x i32> %a1) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[A1:%.*]], <4 x i32> poison, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i32> [[TMP1]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[TMP2]] to <2 x i64>
-; CHECK-NEXT:    [[TMP5:%.*]] = shl <2 x i64> [[TMP3]], <i64 32, i64 32>
-; CHECK-NEXT:    [[TMP6:%.*]] = ashr exact <2 x i64> [[TMP5]], <i64 32, i64 32>
-; CHECK-NEXT:    [[TMP7:%.*]] = shl <2 x i64> [[TMP4]], <i64 32, i64 32>
-; CHECK-NEXT:    [[TMP8:%.*]] = ashr exact <2 x i64> [[TMP7]], <i64 32, i64 32>
+; CHECK-NEXT:    [[TMP5:%.*]] = shl <2 x i64> [[TMP3]], splat (i64 32)
+; CHECK-NEXT:    [[TMP6:%.*]] = ashr exact <2 x i64> [[TMP5]], splat (i64 32)
+; CHECK-NEXT:    [[TMP7:%.*]] = shl <2 x i64> [[TMP4]], splat (i64 32)
+; CHECK-NEXT:    [[TMP8:%.*]] = ashr exact <2 x i64> [[TMP7]], splat (i64 32)
 ; CHECK-NEXT:    [[TMP9:%.*]] = mul nsw <2 x i64> [[TMP6]], [[TMP8]]
 ; CHECK-NEXT:    ret <2 x i64> [[TMP9]]
 ;
@@ -235,10 +235,10 @@ define <4 x i64> @test_demanded_elts_pmuldq_256(<8 x i32> %a0, <8 x i32> %a1) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[A1:%.*]], <8 x i32> poison, <8 x i32> <i32 1, i32 1, i32 3, i32 3, i32 5, i32 5, i32 7, i32 7>
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i32> [[TMP1]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i32> [[TMP2]] to <4 x i64>
-; CHECK-NEXT:    [[TMP5:%.*]] = shl <4 x i64> [[TMP3]], <i64 32, i64 32, i64 32, i64 32>
-; CHECK-NEXT:    [[TMP6:%.*]] = ashr exact <4 x i64> [[TMP5]], <i64 32, i64 32, i64 32, i64 32>
-; CHECK-NEXT:    [[TMP7:%.*]] = shl <4 x i64> [[TMP4]], <i64 32, i64 32, i64 32, i64 32>
-; CHECK-NEXT:    [[TMP8:%.*]] = ashr exact <4 x i64> [[TMP7]], <i64 32, i64 32, i64 32, i64 32>
+; CHECK-NEXT:    [[TMP5:%.*]] = shl <4 x i64> [[TMP3]], splat (i64 32)
+; CHECK-NEXT:    [[TMP6:%.*]] = ashr exact <4 x i64> [[TMP5]], splat (i64 32)
+; CHECK-NEXT:    [[TMP7:%.*]] = shl <4 x i64> [[TMP4]], splat (i64 32)
+; CHECK-NEXT:    [[TMP8:%.*]] = ashr exact <4 x i64> [[TMP7]], splat (i64 32)
 ; CHECK-NEXT:    [[TMP9:%.*]] = mul nsw <4 x i64> [[TMP6]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x i64> [[TMP9]], <4 x i64> poison, <4 x i32> <i32 0, i32 0, i32 3, i32 3>
 ; CHECK-NEXT:    ret <4 x i64> [[TMP10]]
@@ -256,10 +256,10 @@ define <8 x i64> @test_demanded_elts_pmuldq_512(<16 x i32> %a0, <16 x i32> %a1) 
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i32> [[A1:%.*]], <16 x i32> poison, <16 x i32> <i32 1, i32 1, i32 3, i32 3, i32 5, i32 5, i32 7, i32 7, i32 9, i32 9, i32 11, i32 11, i32 13, i32 13, i32 15, i32 15>
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <16 x i32> [[TMP1]] to <8 x i64>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <16 x i32> [[TMP2]] to <8 x i64>
-; CHECK-NEXT:    [[TMP5:%.*]] = shl <8 x i64> [[TMP3]], <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
-; CHECK-NEXT:    [[TMP6:%.*]] = ashr exact <8 x i64> [[TMP5]], <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
-; CHECK-NEXT:    [[TMP7:%.*]] = shl <8 x i64> [[TMP4]], <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
-; CHECK-NEXT:    [[TMP8:%.*]] = ashr exact <8 x i64> [[TMP7]], <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
+; CHECK-NEXT:    [[TMP5:%.*]] = shl <8 x i64> [[TMP3]], splat (i64 32)
+; CHECK-NEXT:    [[TMP6:%.*]] = ashr exact <8 x i64> [[TMP5]], splat (i64 32)
+; CHECK-NEXT:    [[TMP7:%.*]] = shl <8 x i64> [[TMP4]], splat (i64 32)
+; CHECK-NEXT:    [[TMP8:%.*]] = ashr exact <8 x i64> [[TMP7]], splat (i64 32)
 ; CHECK-NEXT:    [[TMP9:%.*]] = mul nsw <8 x i64> [[TMP6]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <8 x i64> [[TMP9]], <8 x i64> poison, <8 x i32> <i32 0, i32 0, i32 3, i32 3, i32 4, i32 4, i32 7, i32 7>
 ; CHECK-NEXT:    ret <8 x i64> [[TMP10]]

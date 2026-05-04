@@ -15,8 +15,8 @@
 
 #include "M68kMachineFunction.h"
 #include "M68kRegisterInfo.h"
+#include "M68kSelectionDAGInfo.h"
 #include "M68kTargetMachine.h"
-
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -172,14 +172,98 @@ struct M68kISelAddressMode {
 
 namespace {
 
+// Helper type used by isSafeStoreLoad. Used to determine if
+// it is safe to fold a load and store into a single operation.
+struct CallSeqChainInfo {
+  // The nearest callseq_{start/end} (or lowered equivalent)
+  // in the chain of the load or store currently being analyzed.
+  SDNode *Node = nullptr;
+  // True when a TokenFactor introduces a dependency on more than one
+  // chain with a callseq_{start/end} (or lowered equivalent) to the load
+  // or store currently being analyzed
+  bool Multiple = false;
+};
+
+static bool isCallSeqNode(const SDNode *N) {
+  if (N->getOpcode() == ISD::CALLSEQ_START ||
+      N->getOpcode() == ISD::CALLSEQ_END)
+    return true;
+  if (N->isMachineOpcode()) {
+    unsigned Opc = N->getMachineOpcode();
+    return Opc == M68k::ADJCALLSTACKDOWN || Opc == M68k::ADJCALLSTACKUP;
+  }
+  return false;
+}
+
+static CallSeqChainInfo getCallSeqChainInfo(SDValue Chain) {
+  SmallVector<SDValue, 8> Worklist = {Chain};
+  SmallPtrSet<SDNode *, 16> Visited;
+  SDNode *Found = nullptr;
+
+  while (!Worklist.empty()) {
+    SDNode *CN = Worklist.pop_back_val().getNode();
+    if (!CN || !Visited.insert(CN).second)
+      continue;
+
+    if (isCallSeqNode(CN)) {
+      if (!Found)
+        Found = CN;
+      else if (Found != CN)
+        return CallSeqChainInfo{nullptr, true};
+    }
+
+    if (CN->getOpcode() == ISD::TokenFactor) {
+      for (const SDValue &Op : CN->op_values())
+        if (Op.getValueType() == MVT::Other)
+          Worklist.push_back(Op);
+      continue;
+    }
+
+    for (const SDValue &Op : CN->op_values()) {
+      if (Op.getValueType() == MVT::Other) {
+        if (Worklist.size() == 8) {
+          // We can't actually evaluate all branches,
+          // be pessimistic and fail out.
+          return CallSeqChainInfo{nullptr, true};
+        }
+        Worklist.push_back(Op);
+        break;
+      }
+    }
+  }
+
+  return CallSeqChainInfo{Found, false};
+}
+
+// Helper for use in TableGen. We can't safely use a combined load/store in the
+// case where a token factor can cause a chain dep on a different call sequence.
+// Look for that case and return false if we can't confirm it's safe. This is
+// necessary due to the nesting level tracking in
+// ScheduleDAGRRList::FindCallSeqStart.
+static bool isSafeStoreLoad(SDNode *N) {
+  auto *ST = dyn_cast<StoreSDNode>(N);
+  if (!ST)
+    return false;
+  auto *LD = dyn_cast<LoadSDNode>(ST->getValue());
+  if (!LD)
+    return false;
+  // Load and store chains can be unrelated; guard against either side
+  // depending on a different call sequence boundary.
+  CallSeqChainInfo LoadInfo = getCallSeqChainInfo(LD->getChain());
+  CallSeqChainInfo StoreInfo = getCallSeqChainInfo(ST->getChain());
+  if (LoadInfo.Multiple || StoreInfo.Multiple)
+    return false;
+  if (!LoadInfo.Node && !StoreInfo.Node)
+    return true;
+  return LoadInfo.Node && StoreInfo.Node && LoadInfo.Node == StoreInfo.Node;
+}
+
 class M68kDAGToDAGISel : public SelectionDAGISel {
 public:
-  static char ID;
-
   M68kDAGToDAGISel() = delete;
 
   explicit M68kDAGToDAGISel(M68kTargetMachine &TM)
-      : SelectionDAGISel(ID, TM), Subtarget(nullptr) {}
+      : SelectionDAGISel(TM), Subtarget(nullptr) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
   bool IsProfitableToFold(SDValue N, SDNode *U, SDNode *Root) const override;
@@ -291,17 +375,17 @@ private:
 
   /// Return a target constant with the specified value of type i8.
   inline SDValue getI8Imm(int64_t Imm, const SDLoc &DL) {
-    return CurDAG->getTargetConstant(Imm, DL, MVT::i8);
+    return CurDAG->getSignedTargetConstant(Imm, DL, MVT::i8);
   }
 
   /// Return a target constant with the specified value of type i8.
   inline SDValue getI16Imm(int64_t Imm, const SDLoc &DL) {
-    return CurDAG->getTargetConstant(Imm, DL, MVT::i16);
+    return CurDAG->getSignedTargetConstant(Imm, DL, MVT::i16);
   }
 
   /// Return a target constant with the specified value, of type i32.
   inline SDValue getI32Imm(int64_t Imm, const SDLoc &DL) {
-    return CurDAG->getTargetConstant(Imm, DL, MVT::i32);
+    return CurDAG->getSignedTargetConstant(Imm, DL, MVT::i32);
   }
 
   /// Return a reference to the TargetInstrInfo, casted to the target-specific
@@ -316,11 +400,18 @@ private:
   SDNode *getGlobalBaseReg();
 };
 
-char M68kDAGToDAGISel::ID;
+class M68kDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
+public:
+  static char ID;
+  explicit M68kDAGToDAGISelLegacy(M68kTargetMachine &TM)
+      : SelectionDAGISelLegacy(ID, std::make_unique<M68kDAGToDAGISel>(TM)) {}
+};
+
+char M68kDAGToDAGISelLegacy::ID;
 
 } // namespace
 
-INITIALIZE_PASS(M68kDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
+INITIALIZE_PASS(M68kDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 
 bool M68kDAGToDAGISel::IsProfitableToFold(SDValue N, SDNode *U,
                                           SDNode *Root) const {
@@ -357,7 +448,7 @@ bool M68kDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
 /// This pass converts a legalized DAG into a M68k-specific DAG,
 /// ready for instruction scheduling.
 FunctionPass *llvm::createM68kISelDag(M68kTargetMachine &TM) {
-  return new M68kDAGToDAGISel(TM);
+  return new M68kDAGToDAGISelLegacy(TM);
 }
 
 static bool doesDispFitFI(M68kISelAddressMode &AM) {
@@ -703,6 +794,20 @@ bool M68kDAGToDAGISel::SelectARIPD(SDNode *Parent, SDValue N, SDValue &Base) {
   return false;
 }
 
+[[maybe_unused]] static bool allowARIDWithDisp(SDNode *Parent) {
+  if (!Parent)
+    return false;
+  switch (Parent->getOpcode()) {
+  case ISD::LOAD:
+  case ISD::STORE:
+  case ISD::ATOMIC_LOAD:
+  case ISD::ATOMIC_STORE:
+    return true;
+  default:
+    return false;
+  }
+}
+
 bool M68kDAGToDAGISel::SelectARID(SDNode *Parent, SDValue N, SDValue &Disp,
                                   SDValue &Base) {
   LLVM_DEBUG(dbgs() << "Selecting AddrType::ARID: ");
@@ -735,7 +840,8 @@ bool M68kDAGToDAGISel::SelectARID(SDNode *Parent, SDValue N, SDValue &Disp,
   Base = AM.BaseReg;
 
   if (getSymbolicDisplacement(AM, SDLoc(N), Disp)) {
-    assert(!AM.Disp && "Should not be any displacement");
+    assert((!AM.Disp || allowARIDWithDisp(Parent)) &&
+           "Should not be any displacement");
     LLVM_DEBUG(dbgs() << "SUCCESS, matched Symbol\n");
     return true;
   }
@@ -761,6 +867,21 @@ static bool isAddressBase(const SDValue &N) {
   case M68kISD::Wrapper:
   case M68kISD::WrapperPC:
   case M68kISD::GLOBAL_BASE_REG:
+    return true;
+  default:
+    return false;
+  }
+}
+
+static bool AllowARIIWithZeroDisp(SDNode *Parent) {
+  if (!Parent)
+    return false;
+  switch (Parent->getOpcode()) {
+  case ISD::LOAD:
+  case ISD::STORE:
+  case ISD::ATOMIC_LOAD:
+  case ISD::ATOMIC_STORE:
+  case ISD::ATOMIC_CMP_SWAP:
     return true;
   default:
     return false;
@@ -806,8 +927,7 @@ bool M68kDAGToDAGISel::SelectARII(SDNode *Parent, SDValue N, SDValue &Disp,
   // The idea here is that we want to use AddrType::ARII without displacement
   // only if necessary like memory operations, otherwise this must be lowered
   // into addition
-  if (AM.Disp == 0 && (!Parent || (Parent->getOpcode() != ISD::LOAD &&
-                                   Parent->getOpcode() != ISD::STORE))) {
+  if (AM.Disp == 0 && !AllowARIIWithZeroDisp(Parent)) {
     LLVM_DEBUG(dbgs() << "REJECT: Displacement is Zero\n");
     return false;
   }

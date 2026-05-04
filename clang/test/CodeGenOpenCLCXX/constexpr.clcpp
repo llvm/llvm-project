@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -triple spir-unknown-unknown -O0 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple spir-unknown-unknown -O0 -emit-llvm -o - -fexperimental-new-constant-interpreter | FileCheck %s
 
 typedef int int2 __attribute__((ext_vector_type(2)));
 typedef int int4 __attribute__((ext_vector_type(4)));

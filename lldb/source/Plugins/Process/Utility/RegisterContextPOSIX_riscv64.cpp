@@ -58,7 +58,7 @@ RegisterContextPOSIX_riscv64::GetRegisterInfoAtIndex(size_t reg) {
 }
 
 size_t RegisterContextPOSIX_riscv64::GetRegisterSetCount() {
-  return m_register_info_up->GetRegisterCount();
+  return m_register_info_up->GetRegisterSetCount();
 }
 
 const lldb_private::RegisterSet *
@@ -77,6 +77,5 @@ bool RegisterContextPOSIX_riscv64::IsGPR(unsigned int reg) {
 }
 
 bool RegisterContextPOSIX_riscv64::IsFPR(unsigned int reg) {
-  return m_register_info_up->GetRegisterSetFromRegisterIndex(reg) ==
-         RegisterInfoPOSIX_riscv64::FPRegSet;
+  return m_register_info_up->IsFPReg(reg);
 }

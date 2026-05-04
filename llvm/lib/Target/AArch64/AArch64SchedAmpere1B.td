@@ -18,7 +18,7 @@
 
 def Ampere1BModel : SchedMachineModel {
   let IssueWidth            =  12;  // Maximum micro-ops dispatch rate.
-  let MicroOpBufferSize     = 192;  // micro-op re-order buffer size
+  let MicroOpBufferSize     = 208;  // micro-op re-order buffer size
   let LoadLatency           =   3;  // Optimistic load latency
   let MispredictPenalty     =  10;  // Branch mispredict penalty
   let LoopMicroOpBufferSize =  32;  // Instruction queue size

@@ -79,7 +79,7 @@ int test() {
 // CHECK-NEXT: | |   `-ReturnStmt [[ADDR_22:0x[a-z0-9]*]] <line:10:3, col:10>
 // CHECK-NEXT: | |     `-IntegerLiteral [[ADDR_23:0x[a-z0-9]*]] <col:10> 'int' 0
 // CHECK-NEXT: | `-FunctionDecl [[ADDR_24:0x[a-z0-9]*]] <line:9:1, line:11:1> line:9:5 used also_before_mismatch 'int ({{.*}})'
-// CHECK-NEXT: |   |-TemplateArgument integral 0
+// CHECK-NEXT: |   |-TemplateArgument integral '0'
 // CHECK-NEXT: |   `-CompoundStmt [[ADDR_25:0x[a-z0-9]*]] <col:32, line:11:1>
 // CHECK-NEXT: |     `-ReturnStmt [[ADDR_26:0x[a-z0-9]*]] <line:10:3, col:10>
 // CHECK-NEXT: |       `-IntegerLiteral [[ADDR_23]] <col:10> 'int' 0
@@ -179,7 +179,7 @@ int test() {
 // CHECK-NEXT: | | `-OMPDeclareVariantAttr [[ADDR_101:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={extension(allow_templates)}
 // CHECK-NEXT: | |   `-DeclRefExpr [[ADDR_102:0x[a-z0-9]*]] <col:1> 'int ({{.*}})' {{.*}}Function [[ADDR_103:0x[a-z0-9]*]] 'only_def[implementation={extension(allow_templates)}]' 'int ({{.*}})'
 // CHECK-NEXT: | `-FunctionDecl [[ADDR_104:0x[a-z0-9]*]] <col:1, col:18> col:5 used only_def 'int ({{.*}})'
-// CHECK-NEXT: |   |-TemplateArgument integral 0
+// CHECK-NEXT: |   |-TemplateArgument integral '0'
 // CHECK-NEXT: |   `-OMPDeclareVariantAttr [[ADDR_105:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={extension(allow_templates)}
 // CHECK-NEXT: |     `-DeclRefExpr [[ADDR_106:0x[a-z0-9]*]] <col:1> 'int ({{.*}})' {{.*}}Function [[ADDR_107:0x[a-z0-9]*]] 'only_def[implementation={extension(allow_templates)}]' 'int ({{.*}})'
 // CHECK-NEXT: |-FunctionTemplateDecl [[ADDR_108:0x[a-z0-9]*]] <line:37:1, line:40:1> line:38:1 only_def[implementation={extension(allow_templates)}]
@@ -189,7 +189,7 @@ int test() {
 // CHECK-NEXT: | |   `-ReturnStmt [[ADDR_110:0x[a-z0-9]*]] <line:39:3, col:10>
 // CHECK-NEXT: | |     `-IntegerLiteral [[ADDR_111:0x[a-z0-9]*]] <col:10> 'int' 0
 // CHECK-NEXT: | `-FunctionDecl [[ADDR_107]] <line:38:1, line:40:1> line:38:1 only_def[implementation={extension(allow_templates)}] 'int ({{.*}})'
-// CHECK-NEXT: |   |-TemplateArgument integral 0
+// CHECK-NEXT: |   |-TemplateArgument integral '0'
 // CHECK-NEXT: |   `-CompoundStmt [[ADDR_112:0x[a-z0-9]*]] <col:20, line:40:1>
 // CHECK-NEXT: |     `-ReturnStmt [[ADDR_113:0x[a-z0-9]*]] <line:39:3, col:10>
 // CHECK-NEXT: |       `-IntegerLiteral [[ADDR_111]] <col:10> 'int' 0

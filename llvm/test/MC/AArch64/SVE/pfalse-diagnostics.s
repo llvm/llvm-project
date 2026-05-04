@@ -17,6 +17,6 @@ pfalse pn16.b
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 pfalse pn5.d
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: Expected predicate-as-counter register name with .B suffix
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid predicate register
 // CHECK-NEXT: pfalse pn5.d
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

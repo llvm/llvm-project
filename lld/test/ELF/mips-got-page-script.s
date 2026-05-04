@@ -19,32 +19,32 @@
 # CHECK-NEXT: Value: 0x40000
 
 # CHECK:      Local entries [
-# CHECK-BEXT:    Entry {
-# CHECK-BEXT:      Address:
-# CHECK-BEXT:      Access:
-# CHECK-BEXT:      Initial: 0x10000
-# CHECK-BEXT:    }
-# CHECK-BEXT:    Entry {
-# CHECK-BEXT:      Address:
-# CHECK-BEXT:      Access:
-# CHECK-BEXT:      Initial: 0x20000
-# CHECK-BEXT:    }
-# CHECK-BEXT:    Entry {
-# CHECK-BEXT:      Address:
-# CHECK-BEXT:      Access:
-# CHECK-BEXT:      Initial: 0x30000
-# CHECK-BEXT:    }
-# CHECK-BEXT:    Entry {
-# CHECK-BEXT:      Address:
-# CHECK-BEXT:      Access:
-# CHECK-BEXT:      Initial: 0x40000
-# CHECK-BEXT:    }
-# CHECK-BEXT:    Entry {
-# CHECK-BEXT:      Address:
-# CHECK-BEXT:      Access:
-# CHECK-BEXT:      Initial: 0x50000
-# CHECK-BEXT:    }
-# CHECK-BEXT:  ]
+# CHECK-NEXT:    Entry {
+# CHECK-NEXT:      Address:
+# CHECK-NEXT:      Access:
+# CHECK-NEXT:      Initial: 0x10000
+# CHECK-NEXT:    }
+# CHECK-NEXT:    Entry {
+# CHECK-NEXT:      Address:
+# CHECK-NEXT:      Access:
+# CHECK-NEXT:      Initial: 0x20000
+# CHECK-NEXT:    }
+# CHECK-NEXT:    Entry {
+# CHECK-NEXT:      Address:
+# CHECK-NEXT:      Access:
+# CHECK-NEXT:      Initial: 0x30000
+# CHECK-NEXT:    }
+# CHECK-NEXT:    Entry {
+# CHECK-NEXT:      Address:
+# CHECK-NEXT:      Access:
+# CHECK-NEXT:      Initial: 0x40000
+# CHECK-NEXT:    }
+# CHECK-NEXT:    Entry {
+# CHECK-NEXT:      Address:
+# CHECK-NEXT:      Access:
+# CHECK-NEXT:      Initial: 0x50000
+# CHECK-NEXT:    }
+# CHECK-NEXT:  ]
 
   .option pic2
   .text

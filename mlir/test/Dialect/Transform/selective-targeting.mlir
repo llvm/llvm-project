@@ -79,7 +79,7 @@ module attributes {transform.with_named_sequence} {
       transform.sequence %arg0 : !transform.any_op failures(propagate) {
       ^bb1(%arg1: !transform.any_op):
         %0 = pdl_match @pdl_target_attrA in %arg1 : (!transform.any_op) -> !transform.any_op
-        transform.structured.tile_using_for %0 [4, 4, 4] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+        transform.structured.tile_using_for %0 tile_sizes [4, 4, 4] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
         %1 = pdl_match @pdl_target_attrC in %arg1 : (!transform.any_op) -> !transform.any_op
         %2 = get_parent_op %1 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
         transform.structured.vectorize_children_and_apply_patterns %2 : (!transform.any_op) -> !transform.any_op

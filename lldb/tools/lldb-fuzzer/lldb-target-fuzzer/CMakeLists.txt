@@ -25,4 +25,5 @@ if(TARGET lldb-target-fuzzer)
     COMMAND $<TARGET_FILE:lldb-target-fuzzer> -artifact_prefix=target-
     USES_TERMINAL
     )
+  set_target_properties(fuzz-lldb-target PROPERTIES FOLDER "LLDB/Fuzzer")  
 endif()

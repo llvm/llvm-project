@@ -22,7 +22,6 @@ define dso_local double @insert_exp(double %d, i64 %ull) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mffprd 3, 1
 ; CHECK-NEXT:    xsiexpdp 1, 3, 4
-; CHECK-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-NEXT:    blr
 entry:
   %0 = tail call double @llvm.ppc.insert.exp(double %d, i64 %ull)

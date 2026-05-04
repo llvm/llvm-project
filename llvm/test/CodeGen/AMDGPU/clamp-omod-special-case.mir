@@ -43,8 +43,8 @@ body:             |
 
     %3 = COPY $vgpr0
     %0 = COPY $sgpr0_sgpr1
-    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) undef`)
-    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) undef`)
+    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) poison`)
+    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) poison`)
     %24 = V_ASHRREV_I32_e32 31, %3, implicit $exec
     %25 = REG_SEQUENCE %3, 1, %24, 2
     %10 = S_MOV_B32 61440
@@ -105,8 +105,8 @@ body:             |
 
     %3 = COPY $vgpr0
     %0 = COPY $sgpr0_sgpr1
-    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) undef`)
-    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) undef`)
+    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) poison`)
+    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) poison`)
     %24 = V_ASHRREV_I32_e32 31, %3, implicit $exec
     %25 = REG_SEQUENCE %3, 1, %24, 2
     %10 = S_MOV_B32 61440
@@ -168,8 +168,8 @@ body:             |
 
     %3 = COPY $vgpr0
     %0 = COPY $sgpr0_sgpr1
-    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) undef`)
-    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) undef`)
+    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) poison`)
+    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) poison`)
     %24 = V_ASHRREV_I32_e32 31, %3, implicit $exec
     %25 = REG_SEQUENCE %3, 1, %24, 2
     %10 = S_MOV_B32 61440
@@ -233,8 +233,8 @@ body:             |
 
     %3 = COPY $vgpr0
     %0 = COPY $sgpr0_sgpr1
-    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) undef`)
-    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) undef`)
+    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) poison`)
+    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) poison`)
     %24 = V_ASHRREV_I32_e32 31, %3, implicit $exec
     %25 = REG_SEQUENCE %3, 1, %24, 2
     %10 = S_MOV_B32 61440
@@ -310,8 +310,8 @@ body:             |
 
     %3 = COPY $vgpr0
     %0 = COPY $sgpr0_sgpr1
-    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) undef`)
-    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) undef`)
+    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) poison`)
+    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) poison`)
     %24 = V_ASHRREV_I32_e32 31, %3, implicit $exec
     %25 = REG_SEQUENCE %3, 1, %24, 2
     %10 = S_MOV_B32 61440
@@ -375,8 +375,8 @@ body:             |
 
     %3 = COPY $vgpr0
     %0 = COPY $sgpr0_sgpr1
-    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) undef`)
-    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) undef`)
+    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) poison`)
+    %5 = S_LOAD_DWORDX2_IMM %0, 11, 0 :: (non-temporal dereferenceable invariant load (s64) from `ptr addrspace(4) poison`)
     %24 = V_ASHRREV_I32_e32 31, %3, implicit $exec
     %25 = REG_SEQUENCE %3, 1, %24, 2
     %10 = S_MOV_B32 61440
@@ -408,5 +408,93 @@ body:             |
 
     %0 = COPY $vgpr0
     %1 = V_MAX_F32_e64 0, killed %0, 0, 1056964608, 1, 0, implicit $mode, implicit $exec
+
+...
+
+---
+# GCN-LABEL: name: clamp_missing_nofpexcept_0
+# GCN: %2:vgpr_32 = nofpexcept V_ADD_F32_e64 0, %0, 0, %1, 0, 0, implicit $mode, implicit $exec
+# GCN-NEXT: %3:vgpr_32 = V_MAX_F32_e64 0, killed %2, 0, killed %2, 1, 0, implicit $mode, implicit $exec
+name:            clamp_missing_nofpexcept_0
+tracksRegLiveness: true
+machineFunctionInfo:
+  mode:
+   ieee: false
+   fp32-input-denormals: false
+   fp32-output-denormals: false
+
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    %0:vgpr_32 = COPY $vgpr0
+    %1:vgpr_32 = COPY $vgpr1
+    %2:vgpr_32 = nofpexcept V_ADD_F32_e64 0, %0, 0, %1, 0, 0, implicit $mode, implicit $exec
+    %3:vgpr_32 = V_MAX_F32_e64 0, killed %2, 0, killed %2, 1, 0, implicit $mode, implicit $exec
+...
+
+---
+# GCN-LABEL: name: clamp_missing_nofpexcept_1
+# GCN: %2:vgpr_32 = V_ADD_F32_e64 0, %0, 0, %1, 0, 0, implicit $mode, implicit $exec
+# GCN-NEXT: %3:vgpr_32 = nofpexcept V_MAX_F32_e64 0, killed %2, 0, killed %2, 1, 0, implicit $mode, implicit $exec
+name:            clamp_missing_nofpexcept_1
+tracksRegLiveness: true
+machineFunctionInfo:
+  mode:
+   ieee: false
+   fp32-input-denormals: false
+   fp32-output-denormals: false
+
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    %0:vgpr_32 = COPY $vgpr0
+    %1:vgpr_32 = COPY $vgpr1
+    %2:vgpr_32 = V_ADD_F32_e64 0, %0, 0, %1, 0, 0, implicit $mode, implicit $exec
+    %3:vgpr_32 = nofpexcept V_MAX_F32_e64 0, killed %2, 0, killed %2, 1, 0, implicit $mode, implicit $exec
+...
+
+---
+# GCN-LABEL: name: omod_missing_nofpexcept_0
+# GCN: %2:vgpr_32 = nofpexcept V_ADD_F32_e64 0, %0, 0, %1, 0, 0, implicit $mode, implicit $exec
+# GCN-NEXT: %3:vgpr_32 = nsz V_MUL_F32_e64 0, killed %2, 0, 1056964608, 0, 0, implicit $mode, implicit $exec
+name:            omod_missing_nofpexcept_0
+tracksRegLiveness: true
+machineFunctionInfo:
+  mode:
+   ieee: false
+   fp32-input-denormals: false
+   fp32-output-denormals: false
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    %0:vgpr_32 = COPY $vgpr0
+    %1:vgpr_32 = COPY $vgpr1
+    %2:vgpr_32 = nofpexcept V_ADD_F32_e64 0, %0, 0, %1, 0, 0, implicit $mode, implicit $exec
+    %3:vgpr_32 = nsz V_MUL_F32_e64 0, killed %2, 0, 1056964608, 0, 0, implicit $mode, implicit $exec
+
+...
+
+---
+# GCN-LABEL: name: omod_missing_nofpexcept_1
+# GCN: %2:vgpr_32 = V_ADD_F32_e64 0, %0, 0, %1, 0, 0, implicit $mode, implicit $exec
+# GCN-NEXT: %3:vgpr_32 = nsz nofpexcept V_MUL_F32_e64 0, killed %2, 0, 1056964608, 0, 0, implicit $mode, implicit $exec
+name:            omod_missing_nofpexcept_1
+tracksRegLiveness: true
+machineFunctionInfo:
+  mode:
+   ieee: false
+   fp32-input-denormals: false
+   fp32-output-denormals: false
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    %0:vgpr_32 = COPY $vgpr0
+    %1:vgpr_32 = COPY $vgpr1
+    %2:vgpr_32 = V_ADD_F32_e64 0, %0, 0, %1, 0, 0, implicit $mode, implicit $exec
+    %3:vgpr_32 = nsz nofpexcept V_MUL_F32_e64 0, killed %2, 0, 1056964608, 0, 0, implicit $mode, implicit $exec
 
 ...
