@@ -26628,7 +26628,7 @@ bool SLPVectorizerPass::vectorizeStores(
     }
   };
 
-  auto TryToVectorize = [&]() {
+  auto ActuallyVectorizeContexts = [&]() {
     unsigned GlobalMaxVF = 0;
     for (auto &CtxPtr : AllContexts)
       if (CtxPtr->initializeContext(R, *DL, *TTI, Visited))
@@ -26746,7 +26746,7 @@ bool SLPVectorizerPass::vectorizeStores(
   for (RelatedStoreInsts &StoreSeq : SortedStores)
     ExtendContexts(StoreSeq.getStores());
 
-  TryToVectorize();
+  ActuallyVectorizeContexts();
   return Changed;
 }
 
