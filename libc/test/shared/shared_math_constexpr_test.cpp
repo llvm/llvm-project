@@ -84,6 +84,9 @@ static_assert(1 == [] {
              LIBC_NAMESPACE::shared::nan(&arg))
       .is_nan();
 }());
+static_assert(0.0 == LIBC_NAMESPACE::shared::round(0.0));
+static_assert(0.0 == LIBC_NAMESPACE::shared::roundeven(0.0));
+static_assert(0.0 == LIBC_NAMESPACE::shared::trunc(0.0));
 
 //===----------------------------------------------------------------------===//
 //                       Float Tests
@@ -154,6 +157,9 @@ static_assert(1 == [] {
              LIBC_NAMESPACE::shared::nanf(&arg))
       .is_nan();
 }());
+static_assert(0.0f == LIBC_NAMESPACE::shared::roundf(0.0f));
+static_assert(0.0f == LIBC_NAMESPACE::shared::roundevenf(0.0f));
+static_assert(0.0f == LIBC_NAMESPACE::shared::truncf(0.0f));
 
 //===----------------------------------------------------------------------===//
 //                       Float16 Tests
@@ -242,6 +248,9 @@ static_assert(1 == [] {
              LIBC_NAMESPACE::shared::nanf16(&arg))
       .is_nan();
 }());
+static_assert(0.0f16 == LIBC_NAMESPACE::shared::roundf16(0.0f16));
+static_assert(0.0f16 == LIBC_NAMESPACE::shared::roundevenf16(0.0f16));
+static_assert(0.0f16 == LIBC_NAMESPACE::shared::truncf16(0.0f16));
 #endif // LIBC_TYPES_HAS_FLOAT16
 
 //===----------------------------------------------------------------------===//
@@ -325,6 +334,9 @@ static_assert(1 == [] {
   const char arg{};
   return LIBC_NAMESPACE::fputil::FPBits<long double>(LIBC_NAMESPACE::shared::nanl(&arg)).is_nan();
 }());
+static_assert(0.0L == LIBC_NAMESPACE::shared::roundl(0.0L));
+static_assert(0.0L == LIBC_NAMESPACE::shared::roundevenl(0.0L));
+static_assert(0.0L == LIBC_NAMESPACE::shared::truncl(0.0L));
 
 #endif
 
@@ -445,6 +457,12 @@ static_assert(1 == [] {
              LIBC_NAMESPACE::shared::nanf128(&arg))
       .is_nan();
 }());
+static_assert(float128(0.0) ==
+              LIBC_NAMESPACE::shared::roundf128(float128(0.0)));
+static_assert(float128(0.0) ==
+              LIBC_NAMESPACE::shared::roundevenf128(float128(0.0)));
+static_assert(float128(0.0) ==
+              LIBC_NAMESPACE::shared::truncf128(float128(0.0)));
 
 #endif // LIBC_TYPES_HAS_FLOAT128
 
@@ -561,5 +579,11 @@ static_assert(bfloat16(1) == [] {
              LIBC_NAMESPACE::shared::nanbf16(&arg))
       .is_nan();
 }());
+static_assert(bfloat16(0.0) ==
+              LIBC_NAMESPACE::shared::roundbf16(bfloat16(0.0)));
+static_assert(bfloat16(0.0) ==
+              LIBC_NAMESPACE::shared::roundevenbf16(bfloat16(0.0)));
+static_assert(bfloat16(0.0) ==
+              LIBC_NAMESPACE::shared::truncbf16(bfloat16(0.0)));
 
 TEST(LlvmLibcSharedMathTest, ConstantEvaluation) {}
