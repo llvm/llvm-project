@@ -1376,6 +1376,34 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     if (Subtarget.hasP10Vector()) {
       setOperationAction(ISD::SELECT_CC, MVT::f128, Custom);
     }
+
+    // RF debug
+    // dbgs() << "&&& Set!!!\n";
+    // setOperationAction(ISD::PARTIAL_REDUCE_UMLA, MVT::v8i32, Custom);
+    setOperationAction(ISD::PARTIAL_REDUCE_UMLA, MVT::v16i32, Custom);
+/*
+    setOperationAction(ISD::PARTIAL_REDUCE_UMLA, MVT::v8i32, Custom);
+    setOperationAction(ISD::PARTIAL_REDUCE_SMLA, MVT::v8i32, Custom);
+    setOperationAction(ISD::PARTIAL_REDUCE_SUMLA, MVT::v8i32, Custom);
+    setOperationAction(ISD::PARTIAL_REDUCE_UMLA, MVT::v4i32, Custom);
+    setOperationAction(ISD::PARTIAL_REDUCE_SMLA, MVT::v4i32, Custom);
+    setOperationAction(ISD::PARTIAL_REDUCE_SUMLA, MVT::v4i32, Custom);
+*/
+    // *** setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_UMLA, MVT::v4i32, MVT::v16i32, Custom);
+    setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_UMLA, MVT::v4i32, MVT::v8i16, Legal);
+    setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SMLA, MVT::v4i32, MVT::v8i16, Legal);
+    setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_UMLA, MVT::v4i32, MVT::v16i8, Legal);
+    setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, MVT::v4i32, MVT::v16i8, Legal);
+/*
+    setOperationAction(ISD::PARTIAL_REDUCE_UMLA, MVT::v8i16, Custom);
+    setOperationAction(ISD::PARTIAL_REDUCE_SMLA, MVT::v8i16, Custom);
+    setOperationAction(ISD::PARTIAL_REDUCE_SUMLA, MVT::v8i16, Custom);
+*/
+/*
+    setOperationAction(ISD::PARTIAL_REDUCE_UMLA, MVT::v4i16, Custom);
+    setOperationAction(ISD::PARTIAL_REDUCE_SMLA, MVT::v4i16, Custom);
+    setOperationAction(ISD::PARTIAL_REDUCE_SUMLA, MVT::v4i16, Custom);
+*/
   }
 
   if (Subtarget.pairedVectorMemops()) {
@@ -11894,6 +11922,30 @@ SDValue PPCTargetLowering::LowerVP_STORE(SDValue Op, SelectionDAG &DAG) const {
   return VPS;
 }
 
+// RF debug
+SDValue PPCTargetLowering::LowerPartialReduce(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  // dbgs() << "&&& Custom!!!\n";
+  // Op.dump();
+  SDLoc dl(Op);
+  SDValue Acc = Op.getOperand(0);
+  SDValue Op1 = Op.getOperand(1);
+  SDValue Op2 = Op.getOperand(2);
+  assert(Op1.getValueType() == Op2.getValueType() && "Partial reduction type mismatch");
+  // Op1.dump();
+  if (Acc.getValueType() != MVT::v4i32)
+    return SDValue();
+  if (Op1.getValueType() != MVT::v16i32 || Op1.getOpcode() != ISD::SIGN_EXTEND)
+    return SDValue();
+  SDValue Op1Input = Op1.getOperand(0);
+  if (Op1Input.getValueType() != MVT::v16i8 || !llvm::isOneOrOneSplat(Op2))
+    return SDValue();
+  SDValue Ones = DAG.getConstant(1, dl, MVT::v16i8);
+  // SDValue Red = BuildIntrinsicOp(Intrinsic::ppc_altivec_vmsummbm, Op1Input, Ones, Acc, DAG, dl, MVT::v4i32);
+  SDValue Red = DAG.getNode(PPCISD::VMSUMMBM, dl, MVT::v4i32, Op1Input, Ones, Acc);
+  return Red;
+}
+
 SDValue PPCTargetLowering::LowerSCALAR_TO_VECTOR(SDValue Op,
                                                  SelectionDAG &DAG) const {
   SDLoc dl(Op);
@@ -12786,6 +12838,9 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerVP_LOAD(Op, DAG);
   case ISD::VP_STORE:
     return LowerVP_STORE(Op, DAG);
+  // RF debug
+  case ISD::PARTIAL_REDUCE_UMLA:
+    return LowerPartialReduce(Op, DAG);
   }
 }
 
