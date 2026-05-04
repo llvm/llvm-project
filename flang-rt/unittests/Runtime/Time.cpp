@@ -41,10 +41,9 @@ TEST(TimeIntrinsics, Timef) {
   // Loop until we get a different value from Timef. If we don't get one
   // before we time out, then we should probably look into an implementation
   // for Timef with a better timer resolution.
-  // By default, this loop should burn for 1 second or until the end of
-  // the iteration count.
-  int max_iterations{10000000};
-  for (int iter = 0, end = start; end == start && iter < max_iterations;
+  constexpr int max_iterations{10000000};
+  int iter{0};
+  for (end = start; end == start && iter < max_iterations;
       end = RTNAME(Timef)(), iter++) {
     ASSERT_GE(end, 0.0);
     ASSERT_GE(end, start);
