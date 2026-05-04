@@ -1,5 +1,4 @@
 // RUN: mlir-opt -split-input-file -verify-diagnostics %s
-// XFAIL: *
 func.func @unknown_clause() {
   // expected-error@+1 {{expected '{' to begin a region}}
   omp.parallel invalid {

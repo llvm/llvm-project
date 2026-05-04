@@ -3018,7 +3018,7 @@ LogicalResult TeamsOp::verify() {
         "expected equal sizes for allocate and allocator variables");
 
   if (failed(verifyDynGroupprivateClause(
-          targetOp, getDynGroupprivateAccessGroupAttr(),
+          getOperation(), getDynGroupprivateAccessGroupAttr(),
           getDynGroupprivateFallbackAttr(), getDynGroupprivateSize())))
     return failure();
 
