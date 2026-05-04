@@ -5594,7 +5594,6 @@ add_header_library(
     libc.src.__support.macros.config
 )
 
-
 add_header_library(
   ufromfp
   HDRS
