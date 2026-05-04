@@ -19,6 +19,7 @@ add_llvm_component_library(LLVMPasses
   Analysis
   CFGuard
   CodeGen
+  EmbeddedJIT
   GlobalISel
   Core
   Coroutines
