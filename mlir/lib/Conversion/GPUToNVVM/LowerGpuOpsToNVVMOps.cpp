@@ -385,9 +385,9 @@ struct GPUBarrierOpToNVVMLowering final
       return success();
     case gpu::Scope::Subgroup: {
       // Emit __syncwarp(0xFFFFFFFF) for full-warp sync.
-      Value mask = LLVM::ConstantOp::create(
-          rewriter, op.getLoc(), rewriter.getI32Type(),
-          rewriter.getI32IntegerAttr(0xFFFFFFFF));
+      Value mask =
+          LLVM::ConstantOp::create(rewriter, op.getLoc(), rewriter.getI32Type(),
+                                   rewriter.getI32IntegerAttr(0xFFFFFFFF));
       rewriter.replaceOpWithNewOp<NVVM::SyncWarpOp>(op, mask);
       return success();
     }

@@ -980,9 +980,9 @@ void mlir::populateGPUToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
                                       RewritePatternSet &patterns) {
   patterns.add<
       GPUBarrierConversion, GPUInitializeNamedBarrierConversion,
-      GPUBallotConversion, GPUFuncOpConversion,
-      GPUModuleConversion, GPUReturnOpConversion, GPUShuffleConversion,
-      GPURotateConversion, GPUSubgroupBroadcastConversion,
+      GPUBallotConversion, GPUFuncOpConversion, GPUModuleConversion,
+      GPUReturnOpConversion, GPUShuffleConversion, GPURotateConversion,
+      GPUSubgroupBroadcastConversion,
       LaunchConfigConversion<gpu::BlockIdOp, spirv::BuiltIn::WorkgroupId>,
       LaunchConfigConversion<gpu::GridDimOp, spirv::BuiltIn::NumWorkgroups>,
       LaunchConfigConversion<gpu::BlockDimOp, spirv::BuiltIn::WorkgroupSize>,

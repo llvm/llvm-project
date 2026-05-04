@@ -553,11 +553,11 @@ static void emitFences(std::optional<ArrayAttr> addrSpaces,
     mmra =
         rewriter.getAttr<LLVM::MMRATagAttr>("amdgpu-synchronize-as", "local");
   else if (fenceGlobal && !fenceLDS)
-    mmra = rewriter.getAttr<LLVM::MMRATagAttr>("amdgpu-synchronize-as",
-                                               "global");
+    mmra =
+        rewriter.getAttr<LLVM::MMRATagAttr>("amdgpu-synchronize-as", "global");
 
-  auto ordering = before ? LLVM::AtomicOrdering::release
-                         : LLVM::AtomicOrdering::acquire;
+  auto ordering =
+      before ? LLVM::AtomicOrdering::release : LLVM::AtomicOrdering::acquire;
   auto fence = LLVM::FenceOp::create(rewriter, loc, ordering, scope);
   if (mmra)
     fence->setDiscardableAttr(LLVM::LLVMDialect::getMmraAttrName(), mmra);
@@ -599,8 +599,7 @@ struct GPUBarrierOpLowering final : ConvertOpToLLVMPattern<gpu::BarrierOp> {
       emitFences(op.getAddressSpaces(), rewriter, loc, "cluster",
                  /*before=*/true);
       ROCDL::BarrierSignalOp::create(rewriter, loc, -3);
-      ROCDL::BarrierWaitOp::create(rewriter, loc,
-                                   static_cast<int16_t>(-3));
+      ROCDL::BarrierWaitOp::create(rewriter, loc, static_cast<int16_t>(-3));
       emitFences(op.getAddressSpaces(), rewriter, loc, "cluster",
                  /*before=*/false);
       rewriter.eraseOp(op);
@@ -708,8 +707,7 @@ struct GPUInitializeNamedBarrierOpLowering final
 
     // Get address of the global.
     rewriter.setInsertionPoint(op);
-    auto addrOf =
-        LLVM::AddressOfOp::create(rewriter, loc, ptrTy, globalName);
+    auto addrOf = LLVM::AddressOfOp::create(rewriter, loc, ptrTy, globalName);
 
     // Initialize the barrier.
     ROCDL::BarrierInitOp::create(rewriter, loc, addrOf, count);
@@ -915,8 +913,8 @@ void mlir::populateGpuToROCDLConversionPatterns(
   patterns.add<GPUShuffleOpLowering, GPULaneIdOpToROCDL,
                GPUSubgroupBroadcastOpToROCDL, GPUBallotOpToROCDL>(converter);
   patterns.add<GPUSubgroupIdOpToROCDL, GPUSubgroupSizeOpToROCDL,
-               GPUBarrierOpLowering,
-               GPUInitializeNamedBarrierOpLowering>(converter, chipset);
+               GPUBarrierOpLowering, GPUInitializeNamedBarrierOpLowering>(
+      converter, chipset);
 
   populateMathToROCDLConversionPatterns(converter, patterns, chipset);
 }
