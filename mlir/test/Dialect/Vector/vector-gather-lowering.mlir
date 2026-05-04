@@ -363,31 +363,34 @@ func.func @gather_memref_2d_delinearize_nonzero_offsets(
 
 // -----
 
-// CHECK-LABEL:   func.func @strided_gather_with_offset(
-// CHECK-SAME:        %[[BASE:.+]]: memref<4x3xf32>,
+// CHECK-LABEL:   func.func @strided_gather_with_non_zero_offset(
+// CHECK-SAME:        %[[BASE:.+]]: memref<6x5xf32>,
 // CHECK-SAME:        %[[IDXS:.+]]: vector<2xindex>
-// CHECK-DAG:       %[[C1:.+]] = arith.constant 1 : index
-// CHECK-DAG:       %[[CST_3:.+]] = arith.constant dense<3> : vector<2xindex>
-// CHECK:           %[[COLLAPSED:.+]] = memref.collapse_shape %[[BASE]] {{\[\[}}0, 1]] : memref<4x3xf32> into memref<12xf32>
-// CHECK:           %[[NEW_IDXS:.+]] = arith.muli %[[IDXS]], %[[CST_3]]
+// CHECK-DAG:       %[[OFFSET:.+]] = arith.constant 3 : index
+// CHECK-DAG:       %[[STRIDE:.+]] = arith.constant dense<5> : vector<2xindex>
+// CHECK:           %[[COLLAPSED:.+]] = memref.collapse_shape %[[BASE]] {{\[\[}}0, 1]] : memref<6x5xf32> into memref<30xf32>
+// Scale each gather lane by the source's trailing dim (stride 5).
+// CHECK:           %[[NEW_IDXS:.+]] = arith.muli %[[IDXS]], %[[STRIDE]]
 // CHECK:           %[[IDX_0:.+]] = vector.extract %[[NEW_IDXS]][0]
-// CHECK:           %[[ADDR_0:.+]] = arith.addi %[[IDX_0]], %[[C1]]
+// Shift by the subview's static offset (3) so the flat load address matches
+// the original strided access.
+// CHECK:           %[[ADDR_0:.+]] = arith.addi %[[IDX_0]], %[[OFFSET]]
 // CHECK:           scf.if
-// CHECK:             vector.load %[[COLLAPSED]][%[[ADDR_0]]] : memref<12xf32>
+// CHECK:             vector.load %[[COLLAPSED]][%[[ADDR_0]]] : memref<30xf32>
 // CHECK:           %[[IDX_1:.+]] = vector.extract %[[NEW_IDXS]][1]
-// CHECK:           %[[ADDR_1:.+]] = arith.addi %[[IDX_1]], %[[C1]]
+// CHECK:           %[[ADDR_1:.+]] = arith.addi %[[IDX_1]], %[[OFFSET]]
 // CHECK:           scf.if
-// CHECK:             vector.load %[[COLLAPSED]][%[[ADDR_1]]] : memref<12xf32>
-func.func @strided_gather_with_offset(%base: memref<4x3xf32>,
-                                      %idxs: vector<2xindex>,
-                                      %mask: vector<2xi1>,
-                                      %pass_thru: vector<2xf32>)
+// CHECK:             vector.load %[[COLLAPSED]][%[[ADDR_1]]] : memref<30xf32>
+func.func @strided_gather_with_non_zero_offset(%base: memref<6x5xf32>,
+                                               %idxs: vector<2xindex>,
+                                               %mask: vector<2xi1>,
+                                               %pass_thru: vector<2xf32>)
     -> vector<2xf32> {
   %c0 = arith.constant 0 : index
-  %sub = memref.subview %base[0, 1] [4, 1] [1, 1]
-    : memref<4x3xf32> to memref<4xf32, strided<[3], offset: 1>>
+  %sub = memref.subview %base[0, 3] [6, 1] [1, 1]
+    : memref<6x5xf32> to memref<6xf32, strided<[5], offset: 3>>
   %0 = vector.gather %sub[%c0] [%idxs], %mask, %pass_thru
-    : memref<4xf32, strided<[3], offset: 1>>, vector<2xindex>,
+    : memref<6xf32, strided<[5], offset: 3>>, vector<2xindex>,
       vector<2xi1>, vector<2xf32> into vector<2xf32>
   return %0 : vector<2xf32>
 }
