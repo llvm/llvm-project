@@ -19,11 +19,11 @@ namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
 template <typename OutType, typename InType>
-LIBC_INLINE OutType fma(InType x, InType y, InType z) {
+LIBC_INLINE constexpr OutType fma(InType x, InType y, InType z) {
   return generic::fma<OutType>(x, y, z);
 }
 
-#ifdef LIBC_TARGET_CPU_HAS_FMA
+#if defined(LIBC_TARGET_CPU_HAS_FMA) && !defined(LIBC_HAS_CONSTANT_EVALUATION)
 
 #ifdef LIBC_TARGET_CPU_HAS_FMA_FLOAT
 template <> LIBC_INLINE float fma(float x, float y, float z) {
@@ -44,7 +44,8 @@ template <> LIBC_INLINE double fma(double x, double y, double z) {
 #endif
 }
 #endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
-#endif // LIBC_TARGET_CPU_HAS_FMA
+#endif // defined(LIBC_TARGET_CPU_HAS_FMA) &&
+       // !defined(LIBC_HAS_CONSTANT_EVALUATION)
 
 } // namespace fputil
 } // namespace LIBC_NAMESPACE_DECL

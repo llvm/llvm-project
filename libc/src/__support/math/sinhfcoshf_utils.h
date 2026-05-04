@@ -55,14 +55,14 @@ namespace sinhfcoshf_internal {
 // The main point of these formulas is that the expensive part of calculating
 // the polynomials approximating lower parts of e^(x) and e^(-x) are shared
 // and only done once.
-template <bool is_sinh> LIBC_INLINE double exp_pm_eval(float x) {
+template <bool is_sinh> LIBC_INLINE LIBC_CONSTEXPR double exp_pm_eval(float x) {
   double xd = static_cast<double>(x);
 
   // kd = round(x * log2(e) * 2^5)
   // k_p = round(x * log2(e) * 2^5)
   // k_m = round(-x * log2(e) * 2^5)
-  double kd;
-  int k_p, k_m;
+  double kd{};
+  int k_p{}, k_m{};
 
 #ifdef LIBC_TARGET_CPU_HAS_NEAREST_INT
   kd = fputil::nearest_integer(ExpBase::LOG2_B * xd);
@@ -109,7 +109,7 @@ template <bool is_sinh> LIBC_INLINE double exp_pm_eval(float x) {
   double p_odd = fputil::polyeval(dx2, 0.5, ExpBase::COEFFS[1] * 0.5,
                                   ExpBase::COEFFS[3] * 0.5);
 
-  double r;
+  double r{};
   if constexpr (is_sinh)
     r = fputil::multiply_add(dx * mh_sum, p_odd, p_even * mh_diff);
   else

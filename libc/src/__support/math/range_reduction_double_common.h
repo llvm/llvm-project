@@ -253,7 +253,7 @@ struct LargeRangeReduction {
 
   // To be implemented in range_reduction_double_fma.h and
   // range_reduction_double_nofma.h.
-  unsigned fast(double x, DoubleDouble &u);
+  LIBC_CONSTEXPR unsigned fast(double x, DoubleDouble &u);
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   LIBC_INLINE Float128 accurate() const {

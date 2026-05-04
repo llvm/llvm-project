@@ -46,7 +46,7 @@ using math::trigonometric_func_utils_internal::small_range_reduction;
 // Table is generated with Sollya as follow:
 // > display = hexadecimal;
 // > for k from 0 to 63 do { D(sin(k * pi/32)); };
-LIBC_INLINE_VAR const double SIN_K_PI_OVER_32[64] = {
+LIBC_INLINE_VAR constexpr double SIN_K_PI_OVER_32[64] = {
     0x0.0000000000000p+0,  0x1.917a6bc29b42cp-4,  0x1.8f8b83c69a60bp-3,
     0x1.294062ed59f06p-2,  0x1.87de2a6aea963p-2,  0x1.e2b5d3806f63bp-2,
     0x1.1c73b39ae68c8p-1,  0x1.44cf325091dd6p-1,  0x1.6a09e667f3bcdp-1,
@@ -71,9 +71,10 @@ LIBC_INLINE_VAR const double SIN_K_PI_OVER_32[64] = {
     -0x1.917a6bc29b42cp-4,
 };
 
-LIBC_INLINE void sincosf_poly_eval(int64_t k, double y, double &sin_k,
-                                   double &cos_k, double &sin_y,
-                                   double &cosm1_y) {
+LIBC_INLINE LIBC_CONSTEXPR void sincosf_poly_eval(int64_t k, double y,
+                                                  double &sin_k, double &cos_k,
+                                                  double &sin_y,
+                                                  double &cosm1_y) {
   // After range reduction, k = round(x * 32 / pi) and y = (x * 32 / pi) - k.
   // So k is an integer and -0.5 <= y <= 0.5.
   // Then sin(x) = sin((k + y)*pi/32)
@@ -99,10 +100,11 @@ LIBC_INLINE void sincosf_poly_eval(int64_t k, double y, double &sin_k,
                                    0x1.03c1f070c2e27p-18, -0x1.55cc84bd942p-30);
 }
 
-LIBC_INLINE void sincosf_eval(double xd, uint32_t x_abs, double &sin_k,
-                              double &cos_k, double &sin_y, double &cosm1_y) {
-  int64_t k;
-  double y;
+LIBC_INLINE LIBC_CONSTEXPR void sincosf_eval(double xd, uint32_t x_abs,
+                                             double &sin_k, double &cos_k,
+                                             double &sin_y, double &cosm1_y) {
+  int64_t k{};
+  double y{};
 
   if (LIBC_LIKELY(x_abs < FAST_PASS_BOUND)) {
     k = small_range_reduction(xd, y);

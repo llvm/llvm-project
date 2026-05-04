@@ -32,12 +32,12 @@ LIBC_INLINE void normalize(int &exponent,
 
 // if constexpr statement in sqrt.h still requires x86::sqrt to be declared
 // even when it's not used.
-LIBC_INLINE long double sqrt(long double x);
+LIBC_INLINE constexpr long double sqrt(long double x);
 
 // Correctly rounded SQRT for all rounding modes.
 // Shift-and-add algorithm.
 #if defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
-LIBC_INLINE long double sqrt(long double x) {
+LIBC_INLINE constexpr long double sqrt(long double x) {
   using LDBits = FPBits<long double>;
   using StorageType = typename LDBits::StorageType;
   constexpr StorageType ONE = StorageType(1) << int(LDBits::FRACTION_LEN);

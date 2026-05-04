@@ -24,7 +24,7 @@ namespace math {
 
 // For targets where conversion from float to float16 has to be
 // emulated, fputil::hypot<float16> is faster
-LIBC_INLINE float16 hypotf16(float16 x, float16 y) {
+LIBC_INLINE LIBC_CONSTEXPR float16 hypotf16(float16 x, float16 y) {
   using FloatBits = fputil::FPBits<float>;
   using FPBits = fputil::FPBits<float16>;
 

@@ -29,7 +29,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE float sinf(float x) {
+LIBC_INLINE LIBC_CONSTEXPR float sinf(float x) {
   return math::sincosf_float_eval::sincosf_eval</*IS_SIN*/ true>(x);
 }
 

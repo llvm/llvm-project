@@ -105,7 +105,7 @@ template <> struct DoubleLength<uint64_t> {
 //   - HYPOT(x, y) is NaN if x or y is NaN.
 //
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE T hypot(T x, T y) {
+LIBC_INLINE constexpr T hypot(T x, T y) {
   using FPBits_t = FPBits<T>;
   using StorageType = typename FPBits<T>::StorageType;
   using DStorageType = typename DoubleLength<StorageType>::Type;
@@ -151,7 +151,7 @@ LIBC_INLINE T hypot(T x, T y) {
   StorageType a_mant = a_bits.get_mantissa();
   StorageType b_mant = b_bits.get_mantissa();
   DStorageType a_mant_sq, b_mant_sq;
-  bool sticky_bits;
+  bool sticky_bits{};
 
   // Add an extra bit to simplify the final rounding bit computation.
   constexpr StorageType ONE = StorageType(1) << (FPBits_t::FRACTION_LEN + 1);
@@ -159,8 +159,8 @@ LIBC_INLINE T hypot(T x, T y) {
   a_mant <<= 1;
   b_mant <<= 1;
 
-  StorageType leading_one;
-  int y_mant_width;
+  StorageType leading_one{};
+  int y_mant_width{};
   if (a_exp != 0) {
     leading_one = ONE;
     a_mant |= ONE;

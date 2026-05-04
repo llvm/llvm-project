@@ -25,7 +25,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE float16 atan2f16(float16 y, float16 x) {
+LIBC_INLINE LIBC_CONSTEXPR float16 atan2f16(float16 y, float16 x) {
   using namespace inv_trigf_utils_internal;
   using FPBits = fputil::FPBits<float16>;
 

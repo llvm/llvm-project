@@ -16,7 +16,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE double nexttoward(double x, long double y) {
+LIBC_INLINE LIBC_CONSTEXPR double nexttoward(double x, long double y) {
   // We can reuse the nextafter implementation because the internal nextafter is
   // templated on the types of the arguments.
   return fputil::nextafter(x, y);

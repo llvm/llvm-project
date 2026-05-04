@@ -37,7 +37,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE float log1pf(float x) {
+LIBC_INLINE LIBC_CONSTEXPR float log1pf(float x) {
   using FPBits = typename fputil::FPBits<float>;
   FPBits xbits(x);
   uint32_t x_u = xbits.uintval();
