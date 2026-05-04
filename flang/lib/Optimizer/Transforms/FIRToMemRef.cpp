@@ -1019,8 +1019,7 @@ MemRefInfo FIRToMemRef::getMemRefInfo(Value firMemref,
 
   if (auto coordinateOp = dyn_cast<fir::CoordinateOp>(memrefOp)) {
     // Fast path: coordinate_of used as a plain array indexer on a static-extent
-    // scalar array (e.g. a struct component `A%v(i)`).  Convert the base to a
-    // proper indexed memref so saffine can analyse loop-independence.
+    // scalar array (e.g. a struct component `A%v(i)`).
     if (isArrayIndexingCoordinateOp(coordinateOp, typeConverter)) {
       MemRefInfo memrefInfo = convertCoordinateArrayOp(memOp, coordinateOp,
                                                        rewriter, typeConverter);
