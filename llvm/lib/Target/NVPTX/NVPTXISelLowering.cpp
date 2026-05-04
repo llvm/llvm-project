@@ -1220,7 +1220,7 @@ std::string NVPTXTargetLowering::getPrototype(
     O << "(";
     if (shouldPassAsArray(RetTy)) {
       const Align RetAlign =
-          getParamAlign(&CB, RetTy, AttributeList::ReturnIndex, DL);
+          getPTXParamAlign(&CB, RetTy, AttributeList::ReturnIndex, DL);
       O << ".param .align " << RetAlign.value() << " .b8 _["
         << DL.getTypeAllocSize(RetTy) << "]";
     } else if (RetTy->isFloatingPointTy() || RetTy->isIntegerTy()) {
@@ -1275,7 +1275,7 @@ std::string NVPTXTargetLowering::getPrototype(
     } else {
       if (shouldPassAsArray(Ty)) {
         Align ParamAlign =
-            getParamAlign(&CB, Ty, I + AttributeList::FirstArgIndex, DL);
+            getPTXParamAlign(&CB, Ty, I + AttributeList::FirstArgIndex, DL);
         O << ".param .align " << ParamAlign.value() << " .b8 _["
           << DL.getTypeAllocSize(Ty) << "]";
         continue;
@@ -1307,7 +1307,6 @@ std::string NVPTXTargetLowering::getPrototype(
 
   return Prototype;
 }
-
 
 static MachinePointerInfo refinePtrAS(SDValue &Ptr, SelectionDAG &DAG,
                                       const DataLayout &DL,
@@ -1478,7 +1477,8 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         return getDeviceByValParamAlign(CB->getCalledFunction(), ETy,
                                         InitialAlign, DL);
       }
-      return getParamAlign(CB, Arg.Ty, ArgI + AttributeList::FirstArgIndex, DL);
+      return getPTXParamAlign(CB, Arg.Ty, ArgI + AttributeList::FirstArgIndex,
+                              DL);
     }();
 
     const unsigned TySize = DL.getTypeAllocSize(ETy);
@@ -1613,7 +1613,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     const unsigned ResultSize = DL.getTypeAllocSize(RetTy);
     if (shouldPassAsArray(RetTy)) {
       const Align RetAlign =
-          getParamAlign(CB, RetTy, AttributeList::ReturnIndex, DL);
+          getPTXParamAlign(CB, RetTy, AttributeList::ReturnIndex, DL);
       MakeDeclareArrayParam(RetSymbol, RetAlign, ResultSize);
     } else {
       MakeDeclareScalarParam(RetSymbol, ResultSize);
@@ -1707,7 +1707,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     assert(VTs.size() == Ins.size() && "Bad value decomposition");
 
     const Align RetAlign =
-        getParamAlign(CB, RetTy, AttributeList::ReturnIndex, DL);
+        getPTXParamAlign(CB, RetTy, AttributeList::ReturnIndex, DL);
     const SDValue RetSymbol = DAG.getExternalSymbol("retval0", MVT::i32);
 
     // PTX Interoperability Guide 3.3(A): [Integer] Values shorter than
@@ -4138,7 +4138,7 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
       assert(VTs.size() == ArgIns.size() && "Size mismatch");
       assert(VTs.size() == Offsets.size() && "Size mismatch");
 
-      const Align ArgAlign = getParamAlign(
+      const Align ArgAlign = getPTXParamAlign(
           &F, Ty, Arg.getArgNo() + AttributeList::FirstArgIndex, DL);
 
       unsigned I = 0;
@@ -4196,7 +4196,7 @@ NVPTXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 
   const SDValue RetSymbol = DAG.getExternalSymbol("func_retval0", MVT::i32);
   const auto RetAlign =
-      getParamAlign(&F, RetTy, AttributeList::ReturnIndex, DL);
+      getPTXParamAlign(&F, RetTy, AttributeList::ReturnIndex, DL);
 
   // PTX Interoperability Guide 3.3(A): [Integer] Values shorter than
   // 32-bits are sign extended or zero extended, depending on whether

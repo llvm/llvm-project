@@ -33,8 +33,8 @@ Function *getMaybeBitcastedCallee(const CallBase *CB) {
   return dyn_cast<Function>(CB->getCalledOperand()->stripPointerCasts());
 }
 
-Align getPromotedParamTypeAlign(const Function *F, Type *ArgTy,
-                                const DataLayout &DL) {
+Align getPTXPromotedParamTypeAlign(const Function *F, Type *ArgTy,
+                                   const DataLayout &DL) {
   // Capping the alignment to 128 bytes as that is the maximum alignment
   // supported by PTX.
   const Align ABITypeAlign = std::min(Align(128), DL.getABITypeAlign(ArgTy));
@@ -56,7 +56,7 @@ Align getPromotedParamTypeAlign(const Function *F, Type *ArgTy,
 
 Align getDeviceByValParamAlign(const Function *F, Type *ArgTy,
                                Align InitialAlign, const DataLayout &DL) {
-  const Align OptimizedAlign = getPromotedParamTypeAlign(F, ArgTy, DL);
+  const Align OptimizedAlign = getPTXPromotedParamTypeAlign(F, ArgTy, DL);
 
   // Old ptx versions have a bug. When PTX code takes address of
   // byval parameter with alignment < 4, ptxas generates code to
@@ -74,13 +74,13 @@ Align getDeviceByValParamAlign(const Function *F, Type *ArgTy,
   return std::max({InitialAlign, OptimizedAlign, AlignFloor});
 }
 
-Align getParamAlign(const Function *F, Type *Ty, unsigned AttrIdx,
-                    const DataLayout &DL) {
+Align getPTXParamAlign(const Function *F, Type *Ty, unsigned AttrIdx,
+                       const DataLayout &DL) {
   if (F)
     if (MaybeAlign StackAlign = getStackAlign(*F, AttrIdx))
       return StackAlign.value();
 
-  Align TypeAlign = getPromotedParamTypeAlign(F, Ty, DL);
+  Align TypeAlign = getPTXPromotedParamTypeAlign(F, Ty, DL);
   if (F && AttrIdx >= AttributeList::FirstArgIndex) {
     unsigned ArgNo = AttrIdx - AttributeList::FirstArgIndex;
     if (F->getAttributes().hasParamAttr(ArgNo, Attribute::ByVal))
@@ -89,8 +89,8 @@ Align getParamAlign(const Function *F, Type *Ty, unsigned AttrIdx,
   return TypeAlign;
 }
 
-Align getParamAlign(const CallBase *CB, Type *Ty, unsigned Idx,
-                    const DataLayout &DL) {
+Align getPTXParamAlign(const CallBase *CB, Type *Ty, unsigned Idx,
+                       const DataLayout &DL) {
   const Function *DirectCallee = CB ? CB->getCalledFunction() : nullptr;
 
   if (!DirectCallee && CB) {
@@ -100,7 +100,7 @@ Align getParamAlign(const CallBase *CB, Type *Ty, unsigned Idx,
     DirectCallee = getMaybeBitcastedCallee(CB);
   }
 
-  return getParamAlign(DirectCallee, Ty, Idx, DL);
+  return getPTXParamAlign(DirectCallee, Ty, Idx, DL);
 }
 
 bool shouldEmitPTXNoReturn(const Value *V, const TargetMachine &TM) {
