@@ -1856,37 +1856,34 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
-      if (auto *RepR = dyn_cast<VPReplicateRecipe>(&R)) {
-        if (RepR->isPredicated())
-          continue;
-        if (RepR->getOpcode() == Instruction::Store &&
-            vputils::isSingleScalar(RepR->getOperand(1))) {
-          auto *Clone = new VPReplicateRecipe(
-              RepR->getUnderlyingInstr(), RepR->operands(),
-              true /*IsSingleScalar*/, nullptr /*Mask*/, *RepR /*Flags*/,
-              *RepR /*Metadata*/, RepR->getDebugLoc());
-          Clone->insertBefore(RepR);
-          VPBuilder Builder(Clone);
-          VPValue *ExtractOp = Clone->getOperand(0);
-          if (vputils::isUniformAcrossVFsAndUFs(RepR->getOperand(1)))
-            ExtractOp =
-                Builder.createNaryOp(VPInstruction::ExtractLastPart, ExtractOp);
+      if (!isa<VPWidenRecipe, VPWidenGEPRecipe, VPReplicateRecipe>(&R))
+        continue;
+      auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
+      if (RepR && (RepR->producesNarrowResult() || RepR->isPredicated()))
+        continue;
+
+      auto *RepOrWidenR = cast<VPRecipeWithIRFlags>(&R);
+      if (RepR && RepR->getOpcode() == Instruction::Store &&
+          vputils::isSingleScalar(RepR->getOperand(1))) {
+        auto *Clone = new VPReplicateRecipe(
+            RepOrWidenR->getUnderlyingInstr(), RepOrWidenR->operands(),
+            true /*IsSingleScalar*/, nullptr /*Mask*/, *RepR /*Flags*/,
+            *RepR /*Metadata*/, RepR->getDebugLoc());
+        Clone->insertBefore(RepOrWidenR);
+        VPBuilder Builder(Clone);
+        VPValue *ExtractOp = Clone->getOperand(0);
+        if (vputils::isUniformAcrossVFsAndUFs(RepR->getOperand(1)))
           ExtractOp =
-              Builder.createNaryOp(VPInstruction::ExtractLastLane, ExtractOp);
-          Clone->setOperand(0, ExtractOp);
-          RepR->eraseFromParent();
-        } else if (vputils::isSingleScalar(RepR))
-          RepR->markNarrow();
+              Builder.createNaryOp(VPInstruction::ExtractLastPart, ExtractOp);
+        ExtractOp =
+            Builder.createNaryOp(VPInstruction::ExtractLastLane, ExtractOp);
+        Clone->setOperand(0, ExtractOp);
+        RepR->eraseFromParent();
         continue;
       }
 
-      // To narrow Widens, we need to check profitability beyond isSingleScalar.
-      if (!isa<VPWidenRecipe, VPWidenGEPRecipe>(&R))
-        continue;
-      auto *WidenR = cast<VPRecipeWithIRFlags>(&R);
-
       // Skip recipes that aren't single scalars.
-      if (!vputils::isSingleScalar(WidenR))
+      if (!vputils::isSingleScalar(RepOrWidenR))
         continue;
 
       // Predicate to check if a user of Op introduces extra broadcasts.
@@ -1903,10 +1900,11 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
         };
       };
 
-      if (any_of(WidenR->users(), IntroducesBCastOf(WidenR)) &&
-          none_of(WidenR->operands(), [&](VPValue *Op) {
-            if (any_of(make_filter_range(Op->users(), not_equal_to(WidenR)),
-                       IntroducesBCastOf(Op)))
+      if (any_of(RepOrWidenR->users(), IntroducesBCastOf(RepOrWidenR)) &&
+          none_of(RepOrWidenR->operands(), [&](VPValue *Op) {
+            if (any_of(
+                    make_filter_range(Op->users(), not_equal_to(RepOrWidenR)),
+                    IntroducesBCastOf(Op)))
               return false;
             // Non-constant live-ins require broadcasts, while constants do not
             // need explicit broadcasts.
@@ -1918,12 +1916,12 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
         continue;
 
       auto *Clone = new VPReplicateRecipe(
-          WidenR->getUnderlyingInstr(), WidenR->operands(),
-          true /*IsSingleScalar*/, nullptr, *WidenR);
-      Clone->insertBefore(WidenR);
-      WidenR->replaceAllUsesWith(Clone);
-      if (isDeadRecipe(*WidenR))
-        WidenR->eraseFromParent();
+          RepOrWidenR->getUnderlyingInstr(), RepOrWidenR->operands(),
+          true /*IsSingleScalar*/, nullptr, *RepOrWidenR);
+      Clone->insertBefore(RepOrWidenR);
+      RepOrWidenR->replaceAllUsesWith(Clone);
+      if (isDeadRecipe(*RepOrWidenR))
+        RepOrWidenR->eraseFromParent();
     }
   }
 }

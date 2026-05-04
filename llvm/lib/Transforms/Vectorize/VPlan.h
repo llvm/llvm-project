@@ -576,7 +576,7 @@ public:
   /// Returns the debug location of the recipe.
   DebugLoc getDebugLoc() const { return DL; }
 
-  /// Methods for querying and setting WideningInfo.
+  /// Methods to query WideningInfo.
   bool isAgnostic() const { return WideningInfo & Agnostic; }
   bool producesNarrowResult() const {
     return !(WideningInfo & (Wide | ReplicatePart));
@@ -584,11 +584,6 @@ public:
   bool couldProduceNarrowResult() const { return WideningInfo & Narrow; }
   bool couldProducWideResult() const { return WideningInfo & Wide; }
   bool couldReplicatePerPart() const { return WideningInfo & ReplicatePart; }
-  void markNarrow() { WideningInfo = Narrow; }
-  void markPossiblyNarrow() { WideningInfo |= Narrow; }
-  void markVectorToScalar() { WideningInfo = (Narrow | Agnostic); }
-  void markScalarToVector() { WideningInfo = (Wide | Agnostic); }
-  void markReplicatePart() { WideningInfo = ReplicatePart; }
 
   /// Set the recipe's debug location to \p NewDL.
   void setDebugLoc(DebugLoc NewDL) { DL = NewDL; }
@@ -603,6 +598,13 @@ public:
 #endif
 
 protected:
+  /// Methods to set WideningInfo.
+  void markNarrow() { WideningInfo = Narrow; }
+  void markPossiblyNarrow() { WideningInfo |= Narrow; }
+  void markVectorToScalar() { WideningInfo = (Narrow | Agnostic); }
+  void markScalarToVector() { WideningInfo = (Wide | Agnostic); }
+  void markReplicatePart() { WideningInfo = ReplicatePart; }
+
   /// Compute the cost of this recipe either using a recipe's specialized
   /// implementation or using the legacy cost model and the underlying
   /// instructions.
