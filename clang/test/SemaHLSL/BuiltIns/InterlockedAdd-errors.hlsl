@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -std=hlsl202x -finclude-default-header \
-// RUN:   -triple dxil-pc-shadermodel6.6-compute %s -fsyntax-only -verify
+// RUN:   -triple dxil-pc-shadermodel6.6-library %s -emit-llvm-only \
+// RUN:   -disable-llvm-passes -verify
 
 void too_few(int v) {
   int dest;

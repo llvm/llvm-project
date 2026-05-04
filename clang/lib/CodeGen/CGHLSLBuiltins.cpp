@@ -1387,9 +1387,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     //   void InterlockedAdd(inout T dest, T value);
     //   void InterlockedAdd(inout T dest, T value, out T original_value);
     // The `inout` / `out` parameters are wrapped in HLSLOutArgExpr by Sema, so
-    // we can unconditionally cast and use the underlying lvalue directly. This
-    // ensures the atomic targets the original storage rather than the
-    // writeback temporary.
+    // we can unconditionally cast and use the underlying lvalue directly.
     assert(isa<HLSLOutArgExpr>(E->getArg(0)) &&
            "InterlockedAdd dest argument must be an HLSLOutArgExpr (inout)");
     const auto *DestOut = cast<HLSLOutArgExpr>(E->getArg(0));
