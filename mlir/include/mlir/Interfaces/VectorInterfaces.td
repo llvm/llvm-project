@@ -183,7 +183,7 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
         Returns whether replacing the base operand with a shaped value of
         `newBaseType` and updating the permutation map according to
         `newPermutationMap`, where the replacement would adhere to the
-        conditinos specified by `updateStartingPosition`, passes any addihtional
+        conditions specified by `updateStartingPosition`, passes any additional
         op-specific constraints.
       }],
       /*retTy=*/"::mlir::LogicalResult",
