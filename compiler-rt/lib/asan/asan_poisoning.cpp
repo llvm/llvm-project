@@ -507,6 +507,8 @@ void __sanitizer_annotate_contiguous_container(const void *beg_p,
   if (old_end == new_end)
     return;  // Nothing to do here.
 
+  RecordPoison(new_end, old_end);
+
   FixUnalignedStorage(storage_beg, storage_end, old_beg, old_end, new_beg,
                       new_end);
 
@@ -581,6 +583,9 @@ void __sanitizer_annotate_double_ended_contiguous_container(
   if ((old_beg == old_end && new_beg == new_end) ||
       (old_beg == new_beg && old_end == new_end))
     return;  // Nothing to do here.
+
+  RecordPoison(old_beg, new_beg);
+  RecordPoison(new_end, old_end);
 
   FixUnalignedStorage(storage_beg, storage_end, old_beg, old_end, new_beg,
                       new_end);
@@ -789,6 +794,9 @@ void __sanitizer_copy_contiguous_container_annotations(const void *src_beg_p,
 
   if (src_beg == src_end || src_beg == dst_beg)
     return;
+
+  // FIXME: Consider RecordPoison.
+
   // Due to support for overlapping buffers, we may have to copy elements
   // in reversed order, when destination buffer starts in the middle of
   // the source buffer (or shares first granule with it).
