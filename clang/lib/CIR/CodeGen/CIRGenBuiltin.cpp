@@ -33,6 +33,30 @@ using namespace clang;
 using namespace clang::CIRGen;
 using namespace llvm;
 
+static bool shouldEmitBuiltinAsIR(unsigned builtinID,
+                                  const Builtin::Context &bi,
+                                  const CIRGenFunction &cgf) {
+  if (!cgf.cgm.getLangOpts().MathErrno &&
+      cgf.curFPFeatures.getExceptionMode() ==
+          LangOptions::FPExceptionModeKind::FPE_Ignore &&
+      !cgf.cgm.getTargetCIRGenInfo().supportsLibCall()) {
+    switch (builtinID) {
+    default:
+      return false;
+    case Builtin::BIlogbf:
+    case Builtin::BI__builtin_logbf:
+    case Builtin::BIlogb:
+    case Builtin::BI__builtin_logb:
+    case Builtin::BIscalbnf:
+    case Builtin::BI__builtin_scalbnf:
+    case Builtin::BIscalbn:
+    case Builtin::BI__builtin_scalbn:
+      return true;
+    }
+  }
+  return false;
+}
+
 static RValue emitLibraryCall(CIRGenFunction &cgf, const FunctionDecl *fd,
                               const CallExpr *e, mlir::Operation *calleeValue) {
   CIRGenCallee callee = CIRGenCallee::forDirect(calleeValue, GlobalDecl(fd));
@@ -2386,7 +2410,8 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   // If this is an alias for a lib function (e.g. __builtin_sin), emit
   // the call using the normal call path, but using the unmangled
   // version of the function name.
-  if (getContext().BuiltinInfo.isLibFunction(builtinID))
+  if (!shouldEmitBuiltinAsIR(builtinID, getContext().BuiltinInfo, *this) &&
+      getContext().BuiltinInfo.isLibFunction(builtinID))
     return emitLibraryCall(*this, fd, e,
                            cgm.getBuiltinLibFunction(fd, builtinID));
 
@@ -2582,8 +2607,10 @@ emitTargetArchBuiltinExpr(CIRGenFunction *cgf, unsigned builtinID,
   case llvm::Triple::amdgcn:
     return cgf->emitAMDGPUBuiltinExpr(builtinID, e);
   case llvm::Triple::systemz:
+    return std::nullopt;
   case llvm::Triple::nvptx:
   case llvm::Triple::nvptx64:
+    return cgf->emitNVPTXBuiltinExpr(builtinID, e);
   case llvm::Triple::wasm32:
   case llvm::Triple::wasm64:
   case llvm::Triple::hexagon:

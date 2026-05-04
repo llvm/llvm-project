@@ -76,6 +76,7 @@
 #include "clang/Sema/SemaPPC.h"
 #include "clang/Sema/SemaRISCV.h"
 #include "clang/Sema/SemaSPIRV.h"
+#include "clang/Sema/SemaSYCL.h"
 #include "clang/Sema/SemaSystemZ.h"
 #include "clang/Sema/SemaWasm.h"
 #include "clang/Sema/SemaX86.h"
@@ -3263,10 +3264,17 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BI##ID:                                                        \
     return AtomicOpsOverloaded(TheCallResult, AtomicExpr::AO##ID);
 #include "clang/Basic/Builtins.inc"
-  case Builtin::BI__annotation:
+  case Builtin::BI__annotation: {
+    const llvm::Triple &TT = Context.getTargetInfo().getTriple();
+    if (!TT.isOSWindows() && !TT.isUEFI()) {
+      Diag(TheCall->getBeginLoc(), diag::err_builtin_target_unsupported)
+          << TheCall->getSourceRange();
+      return ExprError();
+    }
     if (BuiltinMSVCAnnotation(*this, TheCall))
       return ExprError();
     break;
+  }
   case Builtin::BI__builtin_annotation:
     if (BuiltinAnnotation(*this, TheCall))
       return ExprError();
@@ -4458,6 +4466,11 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
       }
     }
   }
+
+  if (FD && FD->isVariadic() && getLangOpts().SYCLIsDevice &&
+      !isUnevaluatedContext())
+    SYCL().DiagIfDeviceCode(Loc, diag::err_variadic_device_fn)
+        << diag::OffloadLang::SYCL;
 
   if (FD)
     diagnoseArgDependentDiagnoseIfAttrs(FD, ThisArg, Args, Loc);

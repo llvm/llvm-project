@@ -5646,8 +5646,13 @@ void fir::DeclareOp::visitReplacedValues(
     llvm::ArrayRef<std::pair<mlir::Operation *, mlir::Value>> definitions,
     mlir::OpBuilder &builder) {
   for (auto [op, value] : definitions) {
+    // Do not emit DeclareValue when we have a dummy scope as this can
+    // potentially result in us generating it where the DummyScope does not
+    // dominate it. This can happen after inlining.
+    if (getDummyScope())
+      continue;
     builder.setInsertionPointAfter(op);
-    fir::DeclareValueOp::create(builder, getLoc(), value, getDummyScope(),
+    fir::DeclareValueOp::create(builder, getLoc(), value, nullptr,
                                 getUniqNameAttr(), getFortranAttrsAttr(),
                                 getDataAttrAttr(), getDummyArgNoAttr());
   }

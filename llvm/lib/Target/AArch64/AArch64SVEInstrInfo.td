@@ -2619,7 +2619,7 @@ let Predicates = [HasBF16, HasSVE_or_SME] in {
 } // End HasBF16, HasSVE_or_SME
 
 let Predicates = [HasBF16, HasSVE] in {
-  defm BFMMLA_ZZZ_HtoS : sve_fp_matrix_mla<0b011, "bfmmla", ZPR32, ZPR16, int_aarch64_sve_bfmmla, nxv4f32, nxv8bf16>;
+  defm BFMMLA_ZZZ_HtoS : sve_fp_matrix_mla<0b011, "bfmmla", ZPR32, ZPR16, int_aarch64_sve_fmmla, nxv4f32, nxv8bf16>;
 } // End HasBF16, HasSVE
 
 let Predicates = [HasBF16, HasSVE_or_SME] in {

@@ -10,5 +10,7 @@ define void @main() {
 ; CHECK: Entering function: main
 ; CHECK-NEXT: %alloc = alloca [2 x i32], align 8 => ptr 0x8 [alloc]
 ; CHECK-NEXT: %gep = getelementptr inbounds [2 x i32], ptr %alloc, i64 0, i64 1 => ptr 0xC [alloc + 4]
+; CHECK-NEXT: Stacktrace:
+; CHECK-NEXT: #0 {{store i32 0|%res = load i32}}, ptr %gep, align 8 at @main
 ; CHECK-NEXT: Immediate UB detected: Misaligned memory access.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

@@ -1908,11 +1908,11 @@ public:
               Word("!DIR$ NOINLINE");
             },
             [&](const CompilerDirective::IVDep &) { Word("!DIR$ IVDEP"); },
-            [&](const CompilerDirective::InlineAlways &InlineAlways) {
+            [&](const CompilerDirective::InlineAlways &inlineAlways) {
               Word("!DIR$ INLINEALWAYS");
-              if (InlineAlways.v.has_value()) {
+              if (inlineAlways.v.has_value()) {
                 Word(" ");
-                Word(InlineAlways.v->ToString());
+                Word(inlineAlways.v->ToString());
               }
             },
             [&](const CompilerDirective::Simd &) { Word("!DIR$ SIMD"); },
