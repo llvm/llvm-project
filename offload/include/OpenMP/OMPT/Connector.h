@@ -28,6 +28,7 @@
 #include "Shared/Debug.h"
 
 using namespace llvm::offload::debug;
+using namespace llvm::omp::target::debug;
 
 #pragma push_macro("DEBUG_PREFIX")
 #undef DEBUG_PREFIX

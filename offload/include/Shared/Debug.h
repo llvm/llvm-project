@@ -576,6 +576,11 @@ constexpr const char *OLDT_Alloc = "Alloc";
 constexpr const char *OLDT_Tool = "Tool";
 constexpr const char *OLDT_Module = "Module";
 
+} // namespace llvm::offload::debug
+
+namespace llvm::omp::target::debug {
+using namespace llvm::offload::debug;
+
 enum OmpDebugLevel : uint32_t {
   ODL_Default = 1,
   ODL_Error = ODL_Default,
@@ -605,11 +610,6 @@ constexpr const char *ODT_Alloc = OLDT_Alloc;
 constexpr const char *ODT_Tool = OLDT_Tool;
 constexpr const char *ODT_Module = OLDT_Module;
 constexpr const char *ODT_Interop = "Interop";
-
-} // namespace llvm::offload::debug
-
-namespace llvm::omp::target::debug {
-using namespace llvm::offload::debug;
 
 static inline odbg_ostream reportErrorStream() {
 #ifdef OMPTARGET_DEBUG
