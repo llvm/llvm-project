@@ -13,6 +13,9 @@
 #include "flang/Optimizer/Dialect/MIF/MIFOps.h"
 
 static constexpr llvm::StringRef coarrayHandleSuffix = "_coarray_handle";
+static constexpr llvm::StringRef mifInitializationName = "__mif_initialization";
+static constexpr llvm::StringRef mifSaveCoarraysAllocName =
+    "__mif_save_coarrays_allocate";
 
 namespace mif {
 
@@ -21,6 +24,12 @@ std::string getFullUniqName(mlir::Value addr);
 mlir::Value genImageIndex(fir::FirOpBuilder &, mlir::Location loc,
                           mlir::Value coarray, mlir::Value sub,
                           mlir::Value team);
+
+mlir::func::FuncOp getOrCreateInitFunc(mlir::OpBuilder &builder,
+                                       mlir::ModuleOp mod,
+                                       llvm::StringRef name);
+
+void genMIFInit(fir::FirOpBuilder &, mlir::Location loc);
 
 } // namespace mif
 

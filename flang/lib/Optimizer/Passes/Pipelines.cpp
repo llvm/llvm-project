@@ -11,6 +11,7 @@
 
 #include "flang/Optimizer/Passes/Pipelines.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
+#include "flang/Optimizer/Builder/MIFCommon.h"
 #include "flang/Optimizer/OpenACC/Passes.h"
 #include "mlir/Conversion/Passes.h"
 #include "mlir/Dialect/LLVMIR/Transforms/Passes.h"
@@ -460,6 +461,7 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
   }
 
   fir::addFIRToLLVMPass(pm, config);
+  pm.addPass(fir::createEmitMIFGlobalCtors());
 
   if (config.EnableOpenMP && !config.EnableOpenMPSimd) {
     // Remove all non target-related operations from host functions still
