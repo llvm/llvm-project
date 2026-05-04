@@ -434,8 +434,8 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     DenormalMode DenormMode = getCurrentDenormalMode(I);
 
     if (!Ctx.isDefaultFPEnv())
-      reportImmediateUB("Non-constrained floating-point operation assumes "
-                        "default floating-point environment");
+      reportImmediateUB() << "Non-constrained floating-point operation assumes "
+                             "default floating-point environment";
 
     visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
       if (LHS.isPoison() || RHS.isPoison())
@@ -1760,8 +1760,8 @@ public:
 
   void visitFPConvInst(Instruction &I) {
     if (!Ctx.isDefaultFPEnv())
-      reportImmediateUB("Non-constrained floating-point operation assumes "
-                        "default floating-point environment");
+      reportImmediateUB() << "Non-constrained floating-point operation assumes "
+                             "default floating-point environment";
 
     const fltSemantics &DstSem =
         I.getType()->getScalarType()->getFltSemantics();
