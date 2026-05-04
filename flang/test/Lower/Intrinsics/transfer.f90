@@ -1,26 +1,14 @@
-! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir %s -o - | FileCheck %s
 
 subroutine trans_test(store, word)
     ! CHECK-LABEL: func @_QPtrans_test(
     ! CHECK-SAME:                      %[[VAL_0:.*]]: !fir.ref<i32>{{.*}}, %[[VAL_1:.*]]: !fir.ref<f32>{{.*}}) {
-    ! CHECK:         %[[VAL_2:.*]] = fir.alloca !fir.box<!fir.heap<i32>>
-    ! CHECK:         %[[VAL_3:.*]] = fir.embox %[[VAL_1]] : (!fir.ref<f32>) -> !fir.box<f32>
-    ! CHECK:         %[[VAL_4:.*]] = fir.embox %[[VAL_0]] : (!fir.ref<i32>) -> !fir.box<i32>
-    ! CHECK:         %[[VAL_5:.*]] = fir.zero_bits !fir.heap<i32>
-    ! CHECK:         %[[VAL_6:.*]] = fir.embox %[[VAL_5]] : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
-    ! CHECK:         fir.store %[[VAL_6]] to %[[VAL_2]] : !fir.ref<!fir.box<!fir.heap<i32>>>
-    ! CHECK:         %[[VAL_7:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
-    ! CHECK:         %[[VAL_8:.*]] = arith.constant {{.*}} : i32
-    ! CHECK:         %[[VAL_9:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> !fir.ref<!fir.box<none>>
-    ! CHECK:         %[[VAL_10:.*]] = fir.convert %[[VAL_3]] : (!fir.box<f32>) -> !fir.box<none>
-    ! CHECK:         %[[VAL_11:.*]] = fir.convert %[[VAL_4]] : (!fir.box<i32>) -> !fir.box<none>
-    ! CHECK:         %[[VAL_12:.*]] = fir.convert %[[VAL_7]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
-    ! CHECK:         fir.call @_FortranATransfer(%[[VAL_9]], %[[VAL_10]], %[[VAL_11]], %[[VAL_12]], %[[VAL_8]]) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
-    ! CHECK:         %[[VAL_14:.*]] = fir.load %[[VAL_2]] : !fir.ref<!fir.box<!fir.heap<i32>>>
-    ! CHECK:         %[[VAL_15:.*]] = fir.box_addr %[[VAL_14]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
-    ! CHECK:         %[[VAL_16:.*]] = fir.load %[[VAL_15]] : !fir.heap<i32>
-    ! CHECK:         fir.freemem %[[VAL_15]]
-    ! CHECK:         fir.store %[[VAL_16]] to %[[VAL_0]] : !fir.ref<i32>
+    ! CHECK-DAG:     %[[store:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}{uniq_name = "_QFtrans_testEstore"}
+    ! CHECK-DAG:     %[[word:.*]]:2 = hlfir.declare %[[VAL_1]] {{.*}}{uniq_name = "_QFtrans_testEword"}
+    ! CHECK:         %[[LOADED:.*]] = fir.load %[[word]]#0 : !fir.ref<f32>
+    ! CHECK:         %[[VAL:.*]] = arith.bitcast %[[LOADED]] : f32 to i32
+    ! CHECK:         hlfir.assign %[[VAL]] to %[[store]]#0 : i32, !fir.ref<i32>
+    ! CHECK-NOT:     fir.call @_FortranATransfer
     ! CHECK:         return
     ! CHECK:       }
     integer :: store
@@ -29,48 +17,14 @@ subroutine trans_test(store, word)
   end subroutine
 
   ! CHECK-LABEL: func @_QPtrans_test2(
-  ! CHECK-SAME:        %[[VAL_0:.*]]: !fir.ref<!fir.array<3xi32>>{{.*}}, %[[VAL_1:.*]]: !fir.ref<f32>{{.*}}) {
-  ! CHECK:         %[[VAL_2:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>>
-  ! CHECK:         %[[VAL_3:.*]] = arith.constant 3 : index
-  ! CHECK:         %[[VAL_4:.*]] = fir.shape %[[VAL_3]] : (index) -> !fir.shape<1>
-  ! CHECK:         %[[VAL_5:.*]] = fir.array_load %[[VAL_0]](%[[VAL_4]]) : (!fir.ref<!fir.array<3xi32>>, !fir.shape<1>) -> !fir.array<3xi32>
-  ! CHECK:         %[[VAL_6:.*]] = arith.constant 3 : i32
-  ! CHECK:         %[[VAL_7:.*]] = fir.embox %[[VAL_1]] : (!fir.ref<f32>) -> !fir.box<f32>
-  ! CHECK:         %[[VAL_8:.*]] = fir.shape %[[VAL_3]] : (index) -> !fir.shape<1>
-  ! CHECK:         %[[VAL_9:.*]] = fir.embox %[[VAL_0]](%[[VAL_8]]) : (!fir.ref<!fir.array<3xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<3xi32>>
-  ! CHECK:         %[[VAL_10:.*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
-  ! CHECK:         %[[VAL_11:.*]] = arith.constant 0 : index
-  ! CHECK:         %[[VAL_12:.*]] = fir.shape %[[VAL_11]] : (index) -> !fir.shape<1>
-  ! CHECK:         %[[VAL_13:.*]] = fir.embox %[[VAL_10]](%[[VAL_12]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
-  ! CHECK:         fir.store %[[VAL_13]] to %[[VAL_2]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-  ! CHECK:         %[[VAL_14:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,
-  ! CHECK:         %[[VAL_15:.*]] = arith.constant {{.*}} : i32
-  ! CHECK:         %[[VAL_16:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
-  ! CHECK:         %[[VAL_17:.*]] = fir.convert %[[VAL_7]] : (!fir.box<f32>) -> !fir.box<none>
-  ! CHECK:         %[[VAL_18:.*]] = fir.convert %[[VAL_9]] : (!fir.box<!fir.array<3xi32>>) -> !fir.box<none>
-  ! CHECK:         %[[VAL_19:.*]] = fir.convert %[[VAL_14]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
-  ! CHECK:         %[[VAL_20:.*]] = fir.convert %[[VAL_6]] : (i32) -> i64
-  ! CHECK:         fir.call @_FortranATransferSize(%[[VAL_16]], %[[VAL_17]], %[[VAL_18]], %[[VAL_19]], %[[VAL_15]], %[[VAL_20]]) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32, i64) -> ()
-  ! CHECK:         %[[VAL_22:.*]] = fir.load %[[VAL_2]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-  ! CHECK:         %[[VAL_23:.*]] = arith.constant 0 : index
-  ! CHECK:         %[[VAL_24:.*]]:3 = fir.box_dims %[[VAL_22]], %[[VAL_23]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
-  ! CHECK:         %[[VAL_25:.*]] = fir.box_addr %[[VAL_22]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
-  ! CHECK:         %[[VAL_26:.*]] = fir.shape_shift %[[VAL_24]]#0, %[[VAL_24]]#1 : (index, index) -> !fir.shapeshift<1>
-  ! CHECK:         %[[VAL_27:.*]] = fir.array_load %[[VAL_25]](%[[VAL_26]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shapeshift<1>) -> !fir.array<?xi32>
-  ! CHECK:         %[[VAL_28:.*]] = arith.constant 1 : index
-  ! CHECK:         %[[VAL_29:.*]] = arith.constant 0 : index
-  ! CHECK:         %[[VAL_30:.*]] = arith.subi %[[VAL_3]], %[[VAL_28]] : index
-  ! CHECK:         %[[VAL_31:.*]] = fir.do_loop %[[VAL_32:.*]] = %[[VAL_29]] to %[[VAL_30]] step %[[VAL_28]] unordered iter_args(%[[VAL_33:.*]] = %[[VAL_5]]) -> (!fir.array<3xi32>) {
-  ! CHECK:           %[[VAL_34:.*]] = fir.array_fetch %[[VAL_27]], %[[VAL_32]] : (!fir.array<?xi32>, index) -> i32
-  ! CHECK:           %[[VAL_35:.*]] = fir.array_update %[[VAL_33]], %[[VAL_34]], %[[VAL_32]] : (!fir.array<3xi32>, i32, index) -> !fir.array<3xi32>
-  ! CHECK:           fir.result %[[VAL_35]] : !fir.array<3xi32>
-  ! CHECK:         }
-  ! CHECK:         fir.array_merge_store %[[VAL_5]], %[[VAL_36:.*]] to %[[VAL_0]] : !fir.array<3xi32>, !fir.array<3xi32>, !fir.ref<!fir.array<3xi32>>
-  ! CHECK:         fir.freemem %[[VAL_25]]
-  ! CHECK:         return
-  ! CHECK:       }
-
   subroutine trans_test2(store, word)
+    ! CHECK-DAG:     %[[RESULT_BOX:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>>
+    ! CHECK-DAG:     %[[storeDecl:.*]]:2 = hlfir.declare {{.*}}{uniq_name = "_QFtrans_test2Estore"}
+    ! CHECK-DAG:     %[[wordDecl:.*]]:2 = hlfir.declare {{.*}}{uniq_name = "_QFtrans_test2Eword"}
+    ! CHECK:         fir.call @_FortranATransferSize({{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32, i64) -> ()
+    ! CHECK:         hlfir.assign {{.*}} to %[[storeDecl]]#0
+    ! CHECK:         hlfir.destroy {{.*}}
+    ! CHECK:         return
     integer :: store(3)
     real :: word
     store = transfer(word, store, 3)
@@ -79,38 +33,13 @@ subroutine trans_test(store, word)
   integer function trans_test3(p)
     ! CHECK-LABEL: func @_QPtrans_test3(
     ! CHECK-SAME:                       %[[VAL_0:.*]]: !fir.ref<i32>{{.*}}) -> i32 {
-    ! CHECK:         %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.type<_QFtrans_test3Tobj{x:i32}>>
-    ! CHECK:         %[[VAL_2:.*]] = fir.alloca !fir.box<!fir.heap<!fir.type<_QFtrans_test3Tobj{x:i32}>>>
-    ! CHECK:         %[[VAL_3:.*]] = fir.alloca !fir.type<_QFtrans_test3Tobj{x:i32}> {bindc_name = "t", uniq_name = "_QFtrans_test3Et"}
-    ! CHECK:         %[[VAL_4:.*]] = fir.alloca i32 {bindc_name = "trans_test3", uniq_name = "_QFtrans_test3Etrans_test3"}
-    ! CHECK:         %[[VAL_5:.*]] = fir.embox %[[VAL_0]] : (!fir.ref<i32>) -> !fir.box<i32>
-    ! CHECK:         %[[VAL_6:.*]] = fir.embox %[[VAL_3]] : (!fir.ref<!fir.type<_QFtrans_test3Tobj{x:i32}>>) -> !fir.box<!fir.type<_QFtrans_test3Tobj{x:i32}>>
-    ! CHECK:         %[[VAL_7:.*]] = fir.zero_bits !fir.heap<!fir.type<_QFtrans_test3Tobj{x:i32}>>
-    ! CHECK:         %[[VAL_8:.*]] = fir.embox %[[VAL_7]] : (!fir.heap<!fir.type<_QFtrans_test3Tobj{x:i32}>>) -> !fir.box<!fir.heap<!fir.type<_QFtrans_test3Tobj{x:i32}>>>
-    ! CHECK:         fir.store %[[VAL_8]] to %[[VAL_2]] : !fir.ref<!fir.box<!fir.heap<!fir.type<_QFtrans_test3Tobj{x:i32}>>>>
-    ! CHECK:         %[[VAL_9:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
-    ! CHECK:         %[[VAL_10:.*]] = arith.constant {{.*}} : i32
-    ! CHECK:         %[[VAL_11:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QFtrans_test3Tobj{x:i32}>>>>) -> !fir.ref<!fir.box<none>>
-    ! CHECK:         %[[VAL_12:.*]] = fir.convert %[[VAL_5]] : (!fir.box<i32>) -> !fir.box<none>
-    ! CHECK:         %[[VAL_13:.*]] = fir.convert %[[VAL_6]] : (!fir.box<!fir.type<_QFtrans_test3Tobj{x:i32}>>) -> !fir.box<none>
-    ! CHECK:         %[[VAL_14:.*]] = fir.convert %[[VAL_9]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
-    ! CHECK:         fir.call @_FortranATransfer(%[[VAL_11]], %[[VAL_12]], %[[VAL_13]], %[[VAL_14]], %[[VAL_10]]) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
-    ! CHECK:         %[[VAL_16:.*]] = fir.load %[[VAL_2]] : !fir.ref<!fir.box<!fir.heap<!fir.type<_QFtrans_test3Tobj{x:i32}>>>>
-    ! CHECK:         %[[VAL_17:.*]] = fir.box_addr %[[VAL_16]] : (!fir.box<!fir.heap<!fir.type<_QFtrans_test3Tobj{x:i32}>>>) -> !fir.heap<!fir.type<_QFtrans_test3Tobj{x:i32}>>
-    ! CHECK:         %[[VAL_18:.*]] = fir.embox %[[VAL_3]] : (!fir.ref<!fir.type<_QFtrans_test3Tobj{x:i32}>>) -> !fir.box<!fir.type<_QFtrans_test3Tobj{x:i32}>>
-    ! CHECK:         fir.store %[[VAL_18]] to %[[VAL_1]] : !fir.ref<!fir.box<!fir.type<_QFtrans_test3Tobj{x:i32}>>>
-    ! CHECK:         %[[VAL_19:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
-    ! CHECK:         %[[VAL_20:.*]] = arith.constant {{.*}} : i32
-    ! CHECK:         %[[VAL_21:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.box<!fir.type<_QFtrans_test3Tobj{x:i32}>>>) -> !fir.ref<!fir.box<none>>
-    ! CHECK:         %[[VAL_22:.*]] = fir.convert %[[VAL_16]] : (!fir.box<!fir.heap<!fir.type<_QFtrans_test3Tobj{x:i32}>>>) -> !fir.box<none>
-    ! CHECK:         %[[VAL_23:.*]] = fir.convert %[[VAL_19]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
-    ! CHECK:         fir.call @_FortranAAssign(%[[VAL_21]], %[[VAL_22]], %[[VAL_23]], %[[VAL_20]]) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
-    ! CHECK:         fir.freemem %[[VAL_17]]
-    ! CHECK:         %[[VAL_26:.*]] = fir.coordinate_of %[[VAL_3]], x : (!fir.ref<!fir.type<_QFtrans_test3Tobj{x:i32}>>) -> !fir.ref<i32>
-    ! CHECK:         %[[VAL_27:.*]] = fir.load %[[VAL_26]] : !fir.ref<i32>
-    ! CHECK:         fir.store %[[VAL_27]] to %[[VAL_4]] : !fir.ref<i32>
-    ! CHECK:         %[[VAL_28:.*]] = fir.load %[[VAL_4]] : !fir.ref<i32>
-    ! CHECK:         return %[[VAL_28]] : i32
+    ! CHECK-DAG:     %[[pDecl:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}{uniq_name = "_QFtrans_test3Ep"}
+    ! CHECK-DAG:     %[[tDecl:.*]]:2 = hlfir.declare {{.*}}{uniq_name = "_QFtrans_test3Et"}
+    ! CHECK:         fir.call @_FortranATransfer({{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
+    ! CHECK:         hlfir.assign {{.*}} to %[[tDecl]]#0
+    ! CHECK:         %[[x_field:.*]] = hlfir.designate %[[tDecl]]#0{"x"}
+    ! CHECK:         %[[x_val:.*]] = fir.load %[[x_field]] : !fir.ref<i32>
+    ! CHECK:         return %{{.*}} : i32
     ! CHECK:       }
     type obj
       integer :: x
@@ -120,3 +49,105 @@ subroutine trans_test(store, word)
     t = transfer(p, t)
     trans_test3 = t%x
   end function
+
+  ! Scalar same-size transfer (f64 -> i64) is inlined as fir.load + arith.bitcast.
+  subroutine trans_test_r8_to_i8(store, word)
+    ! CHECK-LABEL: func @_QPtrans_test_r8_to_i8(
+    ! CHECK-SAME:    %[[RES:.*]]: !fir.ref<i64>{{.*}}, %[[SRC:.*]]: !fir.ref<f64>{{.*}}) {
+    ! CHECK-DAG:     %[[store:.*]]:2 = hlfir.declare %[[RES]] {{.*}}{uniq_name = "_QFtrans_test_r8_to_i8Estore"}
+    ! CHECK-DAG:     %[[word:.*]]:2 = hlfir.declare %[[SRC]] {{.*}}{uniq_name = "_QFtrans_test_r8_to_i8Eword"}
+    ! CHECK:         %[[LOADED:.*]] = fir.load %[[word]]#0 : !fir.ref<f64>
+    ! CHECK:         %[[VAL:.*]] = arith.bitcast %[[LOADED]] : f64 to i64
+    ! CHECK:         hlfir.assign %[[VAL]] to %[[store]]#0 : i64, !fir.ref<i64>
+    ! CHECK-NOT:     fir.call @_FortranATransfer
+    ! CHECK:         return
+    ! CHECK:       }
+    integer(8) :: store
+    real(8) :: word
+    store = transfer(word, store)
+  end subroutine
+
+  ! BIND(C) struct (c_ptr) to integer(8): same byte size, inlined via
+  ! address-level reinterpret. Covers the c_devptr pattern on CUDA device code.
+  subroutine trans_test_cptr_to_i8(store, src)
+    ! CHECK-LABEL: func @_QPtrans_test_cptr_to_i8(
+    ! CHECK:         %[[srcDecl:.*]]:2 = hlfir.declare {{.*}}{uniq_name = "_QFtrans_test_cptr_to_i8Esrc"}
+    ! CHECK:         %[[storeDecl:.*]]:2 = hlfir.declare {{.*}}{uniq_name = "_QFtrans_test_cptr_to_i8Estore"}
+    ! CHECK:         %[[CAST:.*]] = fir.convert %[[srcDecl]]#0 : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> !fir.ref<i64>
+    ! CHECK:         %[[VAL:.*]] = fir.load %[[CAST]] : !fir.ref<i64>
+    ! CHECK:         hlfir.assign %[[VAL]] to %[[storeDecl]]#0 : i64, !fir.ref<i64>
+    ! CHECK-NOT:     fir.call @_FortranATransfer
+    ! CHECK:         return
+    ! CHECK:       }
+    use iso_c_binding
+    integer(8) :: store
+    type(c_ptr) :: src
+    store = transfer(src, store)
+  end subroutine
+
+  ! Different-size scalar transfer (i32 -> i64) falls back to runtime.
+  subroutine trans_test_diff_size(store, src)
+    ! CHECK-LABEL: func @_QPtrans_test_diff_size(
+    ! CHECK:         fir.call @_FortranATransfer(
+    ! CHECK:         return
+    ! CHECK:       }
+    integer(8) :: store
+    integer(4) :: src
+    store = transfer(src, store)
+  end subroutine
+
+  ! Array mold without SIZE: result is rank-1 array, must use runtime.
+  subroutine trans_test_array_mold(src, result)
+    ! CHECK-LABEL: func @_QPtrans_test_array_mold(
+    ! CHECK:         fir.call @_FortranATransfer(
+    ! CHECK:         return
+    ! CHECK:       }
+    real :: src
+    integer, allocatable :: result(:)
+    integer :: mold(4)
+    result = transfer(src, mold)
+  end subroutine
+
+  ! Allocatable mold: must use runtime.
+  subroutine trans_test_alloc_mold(src, result)
+    ! CHECK-LABEL: func @_QPtrans_test_alloc_mold(
+    ! CHECK:         fir.call @_FortranATransfer(
+    ! CHECK:         return
+    ! CHECK:       }
+    real :: src
+    integer, allocatable :: mold(:)
+    integer, allocatable :: result(:)
+    result = transfer(src, mold)
+  end subroutine
+
+  ! POINTER source: descriptor is unpacked before reaching genTransfer,
+  ! so the inline optimization applies.
+  subroutine trans_test_pointer_source(store, src)
+    ! CHECK-LABEL: func @_QPtrans_test_pointer_source(
+    ! CHECK:         fir.load {{.*}} : !fir.ref<!fir.box<!fir.ptr<f32>>>
+    ! CHECK:         fir.box_addr
+    ! CHECK:         %[[VAL:.*]] = fir.load {{.*}} : !fir.ptr<f32>
+    ! CHECK:         arith.bitcast %[[VAL]] : f32 to i32
+    ! CHECK-NOT:     fir.call @_FortranATransfer
+    ! CHECK:         return
+    ! CHECK:       }
+    integer :: store
+    real, pointer :: src
+    store = transfer(src, store)
+  end subroutine
+
+  ! ALLOCATABLE source: descriptor is unpacked before reaching genTransfer,
+  ! so the inline optimization applies.
+  subroutine trans_test_alloc_source(store, src)
+    ! CHECK-LABEL: func @_QPtrans_test_alloc_source(
+    ! CHECK:         fir.load {{.*}} : !fir.ref<!fir.box<!fir.heap<f32>>>
+    ! CHECK:         fir.box_addr
+    ! CHECK:         %[[VAL:.*]] = fir.load {{.*}} : !fir.heap<f32>
+    ! CHECK:         arith.bitcast %[[VAL]] : f32 to i32
+    ! CHECK-NOT:     fir.call @_FortranATransfer
+    ! CHECK:         return
+    ! CHECK:       }
+    integer :: store
+    real, allocatable :: src
+    store = transfer(src, store)
+  end subroutine

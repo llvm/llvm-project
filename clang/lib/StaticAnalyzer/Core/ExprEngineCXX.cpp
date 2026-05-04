@@ -93,7 +93,7 @@ void ExprEngine::performTrivialCopy(NodeBuilder &Bldr, ExplodedNode *Pred,
     // In that case, copying the empty base class subobject would overwrite the
     // object that it overlaps with - so let's not do that.
     // See issue-157467.cpp for an example.
-    Dst.Add(Pred);
+    Dst.insert(Pred);
   }
 
   PostStmt PS(CallExpr, LCtx);
@@ -222,16 +222,10 @@ SVal ExprEngine::computeObjectUnderConstruction(
           // able to find construction context at all.
           break;
         }
-        if (isa<BlockInvocationContext>(CallerLCtx)) {
-          // Unwrap block invocation contexts. They're mostly part of
-          // the current stack frame.
-          CallerLCtx = CallerLCtx->getParent();
-          assert(!isa<BlockInvocationContext>(CallerLCtx));
-        }
 
         unsigned NVCaller = getNumVisited(CallerLCtx, SFC->getCallSiteBlock());
         return computeObjectUnderConstruction(
-            cast<Expr>(SFC->getCallSite()), State, NVCaller, CallerLCtx,
+            SFC->getCallSite(), State, NVCaller, CallerLCtx,
             RTC->getConstructionContext(), CallOpts);
       } else {
         // We are on the top frame of the analysis. We do not know where is the
@@ -447,15 +441,9 @@ ProgramStateRef ExprEngine::updateObjectsUnderConstruction(
       auto RTC = (*SFC->getCallSiteBlock())[SFC->getIndex()]
                      .getAs<CFGCXXRecordTypedCall>();
       assert(RTC && "Could not have had a target region without it");
-      if (isa<BlockInvocationContext>(CallerLCtx)) {
-        // Unwrap block invocation contexts. They're mostly part of
-        // the current stack frame.
-        CallerLCtx = CallerLCtx->getParent();
-        assert(!isa<BlockInvocationContext>(CallerLCtx));
-      }
 
-      return updateObjectsUnderConstruction(V,
-          cast<Expr>(SFC->getCallSite()), State, CallerLCtx,
+      return updateObjectsUnderConstruction(
+          V, SFC->getCallSite(), State, CallerLCtx,
           RTC->getConstructionContext(), CallOpts);
     }
     case ConstructionContext::ElidedTemporaryObjectKind: {
@@ -1130,7 +1118,7 @@ void ExprEngine::VisitCXXCatchStmt(const CXXCatchStmt *CS, ExplodedNode *Pred,
                                    ExplodedNodeSet &Dst) {
   const VarDecl *VD = CS->getExceptionDecl();
   if (!VD) {
-    Dst.Add(Pred);
+    Dst.insert(Pred);
     return;
   }
 

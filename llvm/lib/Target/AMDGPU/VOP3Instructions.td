@@ -356,11 +356,11 @@ def : GCNPat <
 >;
 
 let mayRaiseFPException = 0 in { // Seems suspicious but manual doesn't say it does.
-  let SchedRW = [WriteFloatFMA, WriteSALU] in
+  let SchedRW = [WriteFloatFMA, WriteSALUDummy] in
   defm V_DIV_SCALE_F32 : VOP3Inst_Pseudo_Wrapper <"v_div_scale_f32", VOP3b_F32_I1_F32_F32_F32> ;
 
   // Double precision division pre-scale.
-  let SchedRW = [WriteDouble, WriteSALU], FPDPRounding = 1, IsDPMACCInstruction = 1 in
+  let SchedRW = [WriteDouble, WriteSALUDummy], FPDPRounding = 1, IsDPMACCInstruction = 1 in
   defm V_DIV_SCALE_F64 : VOP3Inst <"v_div_scale_f64", VOP3b_F64_I1_F64_F64_F64>;
 } // End mayRaiseFPException = 0
 
@@ -433,7 +433,7 @@ defm V_MQSAD_U32_U8 : VOP3Inst <"v_mqsad_u32_u8", VOPProfileMQSAD>;
 } // End Constraints = "@earlyclobber $vdst", SchedRW = [WriteQuarterRate32]
 } // End SubtargetPredicate = isGFX7Plus
 
-let isCommutable = 1, SchedRW = [WriteIntMul, WriteSALU] in {
+let isCommutable = 1, SchedRW = [WriteIntMul, WriteSALUDummy] in {
   let SubtargetPredicate = isGFX7Plus in {
     defm V_MAD_U64_U32 : VOP3Inst <"v_mad_u64_u32", VOP3b_I64_I1_I32_I32_I64_DPP, null_frag, [NotHasMADIntraFwdBug]>;
     defm V_MAD_I64_I32 : VOP3Inst <"v_mad_i64_i32", VOP3b_I64_I1_I32_I32_I64_DPP, null_frag, [NotHasMADIntraFwdBug]>;
@@ -955,6 +955,26 @@ def : ThreeOp_i32_Pats<and, or, V_AND_OR_B32_e64>;
 def : ThreeOp_i32_Pats<or, or, V_OR3_B32_e64>;
 def : ThreeOp_i32_Pats<xor, add, V_XAD_U32_e64>;
 
+class ThreeOp_v2i32_Pats <SDPatternOperator op1, SDPatternOperator op2, Instruction inst> : GCNPat <
+  // This matches (op2 (op1 v2i32:$src0, v2i32:$src1), v2i32:$src2) with conditions.
+  (ThreeOpFrag<op1, op2> v2i32:$src0, v2i32:$src1, v2i32:$src2),
+  (REG_SEQUENCE VReg_64,
+    (inst
+      (i32 (EXTRACT_SUBREG $src0, sub0)),
+      (i32 (EXTRACT_SUBREG $src1, sub0)),
+      (i32 (EXTRACT_SUBREG $src2, sub0))
+    ), sub0,
+    (inst
+      (i32 (EXTRACT_SUBREG $src0, sub1)),
+      (i32 (EXTRACT_SUBREG $src1, sub1)),
+      (i32 (EXTRACT_SUBREG $src2, sub1))
+    ), sub1
+  )
+>;
+
+def : ThreeOp_v2i32_Pats<and, or, V_AND_OR_B32_e64>;
+def : ThreeOp_v2i32_Pats<or, or, V_OR3_B32_e64>;
+
 let SubtargetPredicate = HasMadU32Inst, AddedComplexity = 10 in
   def : ThreeOp_i32_Pats<mul, add, V_MAD_U32_e64>;
 
@@ -1426,7 +1446,7 @@ let SubtargetPredicate = HasF16BF16ToFP6BF6ConversionScaleInsts, mayRaiseFPExcep
   defm V_CVT_SCALEF32_SR_PK32_FP6_F32  : VOP3Inst<"v_cvt_scalef32_sr_pk32_fp6_f32",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V6I32_V32F32_I32_F32>,  int_amdgcn_cvt_scalef32_sr_pk32_fp6_f32>;
 }
 
-let SubtargetPredicate = HasGFX950Insts, mayRaiseFPException = 0 in {
+let SubtargetPredicate = HasGFX950Insts, mayRaiseFPException = 0, Constraints = "@earlyclobber $vdst" in {
   defm V_CVT_SCALEF32_2XPK16_FP6_F32 : VOP3Inst<"v_cvt_scalef32_2xpk16_fp6_f32",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V6I32_V16F32_V16F32_F32>,  int_amdgcn_cvt_scalef32_2xpk16_fp6_f32>;
   defm V_CVT_SCALEF32_2XPK16_BF6_F32 : VOP3Inst<"v_cvt_scalef32_2xpk16_bf6_f32",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V6I32_V16F32_V16F32_F32>,  int_amdgcn_cvt_scalef32_2xpk16_bf6_f32>;
 }

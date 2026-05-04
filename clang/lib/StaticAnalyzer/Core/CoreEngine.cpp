@@ -436,12 +436,9 @@ void CoreEngine::HandleBlockExit(const CFGBlock * B, ExplodedNode *Pred) {
         // Only 1 successor: the indirect goto dispatch block.
         assert(B->succ_size() == 1);
         ExplodedNodeSet Dst;
-        IndirectGotoNodeBuilder Builder(
-            Dst, ExprEng.getBuilderContext(),
-            cast<IndirectGotoStmt>(Term)->getTarget(), *(B->succ_begin()));
-
-        ExprEng.processIndirectGoto(Builder, Pred);
-        // Enqueue the new frontier onto the worklist.
+        ExprEng.processIndirectGoto(Dst,
+                                    cast<IndirectGotoStmt>(Term)->getTarget(),
+                                    *(B->succ_begin()), Pred);
         enqueue(Dst);
         return;
       }
@@ -692,51 +689,7 @@ ExplodedNode *NodeBuilder::generateNode(const ProgramPoint &Loc,
   Frontier.erase(FromN);
   ExplodedNode *N = C.getEngine().makeNode(Loc, State, FromN, MarkAsSink);
 
-  Frontier.Add(N);
+  Frontier.insert(N);
 
   return N;
-}
-
-ExplodedNode *BranchNodeBuilder::generateNode(ProgramStateRef State,
-                                              bool Branch,
-                                              ExplodedNode *NodePred) {
-  const CFGBlock *Dst = Branch ? DstT : DstF;
-
-  if (!Dst)
-    return nullptr;
-
-  ProgramPoint Loc =
-      BlockEdge(C.getBlock(), Dst, NodePred->getLocationContext());
-  ExplodedNode *Succ = NodeBuilder::generateNode(Loc, State, NodePred);
-  return Succ;
-}
-
-ExplodedNode *IndirectGotoNodeBuilder::generateNode(const CFGBlock *Block,
-                                                    ProgramStateRef St,
-                                                    ExplodedNode *Pred) {
-  BlockEdge BE(C.getBlock(), Block, Pred->getLocationContext());
-  return generateNode(BE, St, Pred);
-}
-
-ExplodedNode *SwitchNodeBuilder::generateCaseStmtNode(const CFGBlock *Block,
-                                                      ProgramStateRef St,
-                                                      ExplodedNode *Pred) {
-  BlockEdge BE(C.getBlock(), Block, Pred->getLocationContext());
-  return generateNode(BE, St, Pred);
-}
-
-ExplodedNode *SwitchNodeBuilder::generateDefaultCaseNode(ProgramStateRef St,
-                                                         ExplodedNode *Pred) {
-  // Get the block for the default case.
-  const CFGBlock *Src = C.getBlock();
-  assert(Src->succ_rbegin() != Src->succ_rend());
-  CFGBlock *DefaultBlock = *Src->succ_rbegin();
-
-  // Basic correctness check for default blocks that are unreachable and not
-  // caught by earlier stages.
-  if (!DefaultBlock)
-    return nullptr;
-
-  BlockEdge BE(Src, DefaultBlock, Pred->getLocationContext());
-  return generateNode(BE, St, Pred);
 }

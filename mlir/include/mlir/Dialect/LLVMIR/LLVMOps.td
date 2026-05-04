@@ -588,6 +588,26 @@ class LLVM_CastOpWithOverflowFlag<string mnemonic, string instName, Type type,
   }];
 }
 
+class LLVM_CastOpWithFastMathFlag<string mnemonic, string instName, Type type,
+                  Type resultType, list<Trait> traits = []> :
+    LLVM_Op<mnemonic, !listconcat([Pure], [DeclareOpInterfaceMethods<FastmathFlagsInterface>], traits)>,
+    LLVM_Builder<"$res = builder.Create" # instName # "($arg, $_resultType);"> {
+  let arguments = (
+    ins type:$arg,
+    DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags);
+  let results = (outs resultType:$res);
+  let builders = [LLVM_OneResultOpBuilder];
+  let assemblyFormat = "$arg (`fastmath` `` $fastmathFlags^)? "
+                       "attr-dict `:` type($arg) `to` type($res)";
+  string llvmInstName = instName;
+  string mlirBuilder = [{
+    auto op = $_qualCppClassName::create($_builder,
+      $_location, $_resultType, $arg);
+    moduleImport.setFastmathFlagsAttr(inst, op);
+    $res = op;
+  }];
+}
+
 class LLVM_DereferenceableCastOp<string mnemonic, string instName, Type type,
                   Type resultType, list<Trait> traits = []> :
     LLVM_Op<mnemonic, !listconcat([Pure], [DeclareOpInterfaceMethods<DereferenceableOpInterface>], traits)> {
@@ -699,10 +719,10 @@ def LLVM_FPToSIOp : LLVM_CastOp<"fptosi", "FPToSI",
 def LLVM_FPToUIOp : LLVM_CastOp<"fptoui", "FPToUI",
                                 LLVM_ScalarOrVectorOf<LLVM_AnyFloat>,
                                 LLVM_ScalarOrVectorOf<AnySignlessInteger>>;
-def LLVM_FPExtOp : LLVM_CastOp<"fpext", "FPExt",
+def LLVM_FPExtOp : LLVM_CastOpWithFastMathFlag<"fpext", "FPExt",
                                 LLVM_ScalarOrVectorOf<LLVM_AnyFloat>,
                                 LLVM_ScalarOrVectorOf<LLVM_AnyFloat>>;
-def LLVM_FPTruncOp : LLVM_CastOp<"fptrunc", "FPTrunc",
+def LLVM_FPTruncOp : LLVM_CastOpWithFastMathFlag<"fptrunc", "FPTrunc",
                                  LLVM_ScalarOrVectorOf<LLVM_AnyFloat>,
                                  LLVM_ScalarOrVectorOf<LLVM_AnyFloat>>;
 
@@ -2051,7 +2071,8 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     OptionalAttr<DenseI32ArrayAttr>:$work_group_size_hint,
     OptionalAttr<DenseI32ArrayAttr>:$reqd_work_group_size,
     OptionalAttr<I32Attr>:$intel_reqd_sub_group_size,
-    OptionalAttr<UWTableKindAttr>:$uwtable_kind
+    OptionalAttr<UWTableKindAttr>:$uwtable_kind,
+    OptionalAttr<BoolAttr>:$use_sample_profile
   );
 
   let regions = (region AnyRegion:$body);
@@ -2066,7 +2087,12 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
       CArg<"SymbolRefAttr", "{}">:$comdat,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs,
       CArg<"ArrayRef<DictionaryAttr>", "{}">:$argAttrs,
-      CArg<"std::optional<uint64_t>", "{}">:$functionEntryCount)>
+      CArg<"std::optional<uint64_t>", "{}">:$functionEntryCount)>,
+    OpBuilder<(ins "const Properties &":$properties,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$discardableAttributes), [{
+      $_state.addRegion();
+      $_state.getOrAddProperties<Properties>() = properties;
+      $_state.addAttributes(discardableAttributes);}]>
   ];
 
   let extraClassDeclaration = [{

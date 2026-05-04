@@ -22,20 +22,22 @@
 using namespace llvm;
 using namespace dwarf;
 
+static cl::opt<bool> EmitAArch64DebugTLSLocation(
+    "aarch64-emit-debug-tls-location",
+    cl::desc("Emit the TLS DWARF location with DTPREL relocation for AArch64"),
+    cl::Hidden);
+
 void AArch64_ELFTargetObjectFile::Initialize(MCContext &Ctx,
                                              const TargetMachine &TM) {
   TargetLoweringObjectFileELF::Initialize(Ctx, TM);
   PLTPCRelativeSpecifier = AArch64::S_PLT;
   SupportIndirectSymViaGOTPCRel = true;
-
-  // AARCH64 ELF ABI does not define static relocation type for TLS offset
-  // within a module.  Do not generate AT_location for TLS variables.
-  SupportDebugThreadLocalLocation = false;
+  SupportDebugThreadLocalLocation = EmitAArch64DebugTLSLocation;
 
   // Make sure the implicitly created empty .text section has the
   // SHF_AARCH64_PURECODE flag set if the "+execute-only" target feature is
   // present.
-  if (TM.getMCSubtargetInfo()->hasFeature(AArch64::FeatureExecuteOnly)) {
+  if (TM.getMCSubtargetInfo().hasFeature(AArch64::FeatureExecuteOnly)) {
     auto *Text = static_cast<MCSectionELF *>(TextSection);
     Text->setFlags(Text->getFlags() | ELF::SHF_AARCH64_PURECODE);
   }
@@ -186,4 +188,9 @@ MCSection *AArch64_ELFTargetObjectFile::SelectSectionForGlobal(
     Kind = SectionKind::getExecuteOnly();
 
   return TargetLoweringObjectFileELF::SelectSectionForGlobal(GO, Kind, TM);
+}
+
+const MCExpr *AArch64_ELFTargetObjectFile::getDebugThreadLocalSymbol(
+    const MCSymbol *Sym) const {
+  return MCSpecifierExpr::create(Sym, AArch64::S_DTPREL, getContext());
 }

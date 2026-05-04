@@ -259,12 +259,17 @@ namespace ElementReferences {
 
 void ReferenceToVectorElement() {
   std::vector<int> v = {1, 2, 3};
-  int& ref = v[0];
-  v.push_back(4);
-  // FIXME: Detect this as a use of 'ref'.
-  // https://github.com/llvm/llvm-project/issues/180187
-  ref = 10;
+  int& ref = v[0]; // expected-warning {{object whose reference is captured is later invalidated}}
+  v.push_back(4);  // expected-note {{invalidated here}}
+  ref = 10;        // expected-note {{later used here}}
   (void)ref;
+}
+
+void PointerRefToVectorElement() {
+  std::vector<int*> v = {nullptr, nullptr};
+  int*& ref = v[0];     // expected-warning {{object whose reference is captured is later invalidated}}
+  v.push_back(nullptr); // expected-note {{invalidated here}}
+  ref = nullptr;        // expected-note {{later used here}}
 }
 
 void PointerToVectorElement() {
@@ -507,3 +512,138 @@ void ref_capture_reassigned_to_safe() {
   lambda();  // should not warn
 }
 } // namespace lambda_capture_invalidation
+
+namespace method_call_uses_field_invalidation {
+
+struct S {
+  std::string_view v;
+  void bar();
+  void baz(){
+    std::vector<std::string> vec = {"42"};
+    v = vec[0];         // expected-warning {{object whose reference is captured is later invalidated}}
+    vec.push_back("1"); // expected-note {{invalidated here}}
+    bar();              // expected-note {{later used here}}
+    v = nullptr;
+  }
+};
+} // namespace method_call_uses_field_invalidation
+
+namespace callable_wrappers {
+
+void function_captured_ref_invalidated() {
+  std::vector<int> v;
+  v.push_back(1);
+  std::function<void()> f = [&r = v[0]]() { (void)r; }; // expected-warning {{object whose reference is captured is later invalidated}}
+  v.push_back(2); // expected-note {{invalidated here}}
+  (void)f; // expected-note {{later used here}}
+}
+
+} // namespace callable_wrappers
+
+// FIXME: does not report a double free
+namespace explicit_destructor {
+
+void explicit_destructor_invalidates_pointer() {
+  std::string s = "42";
+  const char *p = s.data(); // expected-warning {{object whose reference is captured is later invalidated}}
+  s.~basic_string();        // expected-note {{invalidated here}}
+  (void)*p;                 // expected-note {{later used here}}
+}
+
+void pointer_destructor_invalidates_pointer() {
+  char storage[sizeof(std::string)];
+  std::string *obj = new (storage) std::string("42"); // expected-warning {{object whose reference is captured is later invalidated}}
+  const char *p = obj->data();
+  obj->~basic_string();                               // expected-note {{invalidated here}}
+  (void)*p;                                           // expected-note {{later used here}}
+}
+
+void destroy_at_invalidates_pointer() {
+  char storage[sizeof(std::string)];
+  std::string *obj = new (storage) std::string("42"); // expected-warning {{object whose reference is captured is later invalidated}}
+  const char *p = obj->data();
+  std::destroy_at(obj);                               // expected-note {{invalidated here}}
+  (void)*p;                                           // expected-note {{later used here}}
+}
+
+void destroy_at_then_placement_new_rescues_pointer() {
+  char storage[sizeof(std::string)];
+  std::string *obj = new (storage) std::string("42");
+  const char *p = obj->data();
+  std::destroy_at(obj);
+  obj = new (storage) std::string("23");
+  p = obj->data();
+  (void)*p;
+}
+
+void destroy_at_invalidates_array_pointer() {
+  std::string arr[1] = {"42"};
+  std::string (&arr_ref)[1] = arr;
+  const char *p = arr[0].data(); // expected-warning {{object whose reference is captured is later invalidated}}
+  std::destroy_at(&arr_ref);     // expected-note {{invalidated here}}
+  (void)*p;                      // expected-note {{later used here}}
+}
+
+void reference_destructor_invalidates_pointer() {
+  std::string s = "42";
+  std::string &ref = s;       // expected-warning {{object whose reference is captured is later invalidated}}
+  const char *p = ref.data();
+  std::destroy_at(&ref);      // expected-note {{invalidated here}}
+  (void)*p;                   // expected-note {{later used here}}
+}
+
+void destroy_at_ternary_operator(bool flag) {
+  std::string* str1 = new std::string; // expected-warning {{object whose reference is captured is later invalidated}}
+  std::string* str2 = new std::string;
+  const char *p = str1->data();
+  std::destroy_at(flag ? str1 : str2); // expected-note {{invalidated here}}
+  (void)*p;                            // expected-note {{later used here}}
+}
+
+struct StringOwner {
+  std::string s, t;
+};
+
+// FIXME: False-positive
+void member_destructor_invalidates_pointer() {
+  StringOwner owner = {"42", "43"};
+  const char *p = owner.s.data(); // expected-warning {{object whose reference is captured is later invalidated}}
+  owner.t.~basic_string();        // expected-note {{invalidated here}}
+  (void)*p;                       // expected-note {{later used here}}
+}
+
+} // namespace explicit_destructor
+
+namespace unique_ptr_invalidation {
+
+void invalid_after_reset() {
+  std::unique_ptr<int> up(new int);
+  int *p = up.get(); // expected-warning {{object whose reference is captured is later invalidated}}
+  up.reset();        // expected-note {{invalidated here}}
+  (void)*p;          // expected-note {{later used here}}
+}
+
+void invalid_after_move_assign() {
+  std::unique_ptr<int> up(new int);
+  std::unique_ptr<int> other(new int);
+  int *p = up.get();     // expected-warning {{object whose reference is captured is later invalidated}}
+  up = std::move(other); // expected-note {{invalidated here}}
+  (void)*p;              // expected-note {{later used here}}
+}
+
+void invalid_after_null_assign() {
+  std::unique_ptr<int> up(new int);
+  int *p = up.get(); // expected-warning {{object whose reference is captured is later invalidated}}
+  up = nullptr;      // expected-note {{invalidated here}}
+  (void)*p;          // expected-note {{later used here}}
+}
+
+void invalid_after_ternary_reset(bool flag) {
+  std::unique_ptr<int> up(new int);
+  std::unique_ptr<int> other(new int);
+  int *p = flag ? up.get() : other.get(); // expected-warning {{object whose reference is captured is later invalidated}}
+  up.reset();                             // expected-note {{invalidated here}}
+  (void)*p;                               // expected-note {{later used here}}
+}
+
+} // namespace unique_ptr_invalidation

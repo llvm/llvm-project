@@ -147,7 +147,12 @@ bool CommandObject::CheckRequirements(CommandReturnObject &result) {
   // we don't want any CommandObject instances to keep any of these objects
   // around longer than for a single command. Every command should call
   // CommandObject::Cleanup() after it has completed.
-  assert(!m_exe_ctx.GetTargetPtr());
+  //
+  // The dummy target is allowed here because it is always alive, never causes
+  // resource leaks, and can appear when a command (e.g. "command source") is
+  // invoked re-entrantly before the outer Cleanup() has run.
+  assert(!m_exe_ctx.GetTargetPtr() ||
+         m_exe_ctx.GetTargetPtr()->IsDummyTarget());
   assert(!m_exe_ctx.GetProcessPtr());
   assert(!m_exe_ctx.GetThreadPtr());
   assert(!m_exe_ctx.GetFramePtr());
@@ -162,13 +167,15 @@ bool CommandObject::CheckRequirements(CommandReturnObject &result) {
                eCommandRequiresThread | eCommandRequiresFrame |
                eCommandTryTargetAPILock)) {
 
-    if ((flags & eCommandRequiresTarget) && !m_exe_ctx.HasTargetScope()) {
+    Target *target = m_exe_ctx.GetTargetPtr();
+    if ((flags & eCommandRequiresTarget) &&
+        (!target || target->IsDummyTarget())) {
       result.AppendError(GetInvalidTargetDescription());
       return false;
     }
 
     if ((flags & eCommandRequiresProcess) && !m_exe_ctx.HasProcessScope()) {
-      if (!m_exe_ctx.HasTargetScope())
+      if (!target || target->IsDummyTarget())
         result.AppendError(GetInvalidTargetDescription());
       else
         result.AppendError(GetInvalidProcessDescription());
@@ -176,7 +183,7 @@ bool CommandObject::CheckRequirements(CommandReturnObject &result) {
     }
 
     if ((flags & eCommandRequiresThread) && !m_exe_ctx.HasThreadScope()) {
-      if (!m_exe_ctx.HasTargetScope())
+      if (!target || target->IsDummyTarget())
         result.AppendError(GetInvalidTargetDescription());
       else if (!m_exe_ctx.HasProcessScope())
         result.AppendError(GetInvalidProcessDescription());
@@ -186,7 +193,7 @@ bool CommandObject::CheckRequirements(CommandReturnObject &result) {
     }
 
     if ((flags & eCommandRequiresFrame) && !m_exe_ctx.HasFrameScope()) {
-      if (!m_exe_ctx.HasTargetScope())
+      if (!target || target->IsDummyTarget())
         result.AppendError(GetInvalidTargetDescription());
       else if (!m_exe_ctx.HasProcessScope())
         result.AppendError(GetInvalidProcessDescription());
@@ -204,8 +211,7 @@ bool CommandObject::CheckRequirements(CommandReturnObject &result) {
     }
 
     if (flags & eCommandTryTargetAPILock) {
-      Target *target = m_exe_ctx.GetTargetPtr();
-      if (target)
+      if (target && !target->IsDummyTarget())
         m_api_locker =
             std::unique_lock<std::recursive_mutex>(target->GetAPIMutex());
     }
@@ -761,15 +767,7 @@ Target &CommandObject::GetTarget() {
   // Fallback to the command interpreter's execution context in case we get
   // called after DoExecute has finished. For example, when doing multi-line
   // expression that uses an input reader or breakpoint callbacks.
-  if (Target *target = m_interpreter.GetExecutionContext().GetTargetPtr())
-    return *target;
-
-  // Finally, if we have no other target, get the selected target.
-  if (TargetSP target_sp = m_interpreter.GetDebugger().GetSelectedTarget())
-    return *target_sp;
-
-  // We only have the dummy target.
-  return GetDummyTarget();
+  return m_interpreter.GetExecutionContext().GetTargetRef();
 }
 
 Thread *CommandObject::GetDefaultThread() {

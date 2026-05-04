@@ -78,7 +78,8 @@ public:
                 const DataLayout *DL, TTI::TargetCostKind CostKind,
                 bool TryEarlyFoldsOnly)
       : F(F), Builder(F.getContext(), InstSimplifyFolder(*DL)), TTI(TTI),
-        DT(DT), AA(AA), AC(AC), DL(DL), CostKind(CostKind), SQ(*DL),
+        DT(DT), AA(AA), DL(DL), CostKind(CostKind),
+        SQ(*DL, /*TLI=*/nullptr, &DT, &AC),
         TryEarlyFoldsOnly(TryEarlyFoldsOnly) {}
 
   bool run();
@@ -89,7 +90,6 @@ private:
   const TargetTransformInfo &TTI;
   const DominatorTree &DT;
   AAResults &AA;
-  AssumptionCache &AC;
   const DataLayout *DL;
   TTI::TargetCostKind CostKind;
   const SimplifyQuery SQ;
@@ -267,8 +267,8 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   auto *MinVecTy = VectorType::get(ScalarTy, MinVecNumElts, false);
   unsigned OffsetEltIndex = 0;
   Align Alignment = Load->getAlign();
-  if (!isSafeToLoadUnconditionally(SrcPtr, MinVecTy, Align(1), *DL, Load, &AC,
-                                   &DT)) {
+  if (!isSafeToLoadUnconditionally(SrcPtr, MinVecTy, Align(1), *DL, Load, SQ.AC,
+                                   SQ.DT)) {
     // It is not safe to load directly from the pointer, but we can still peek
     // through gep offsets and check if it safe to load from a base address with
     // updated alignment. If it is, we can shuffle the element(s) into place
@@ -293,8 +293,8 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
     if (OffsetEltIndex >= MinVecNumElts)
       return false;
 
-    if (!isSafeToLoadUnconditionally(SrcPtr, MinVecTy, Align(1), *DL, Load, &AC,
-                                     &DT))
+    if (!isSafeToLoadUnconditionally(SrcPtr, MinVecTy, Align(1), *DL, Load,
+                                     SQ.AC, SQ.DT))
       return false;
 
     // Update alignment with offset value. Note that the offset could be negated
@@ -379,7 +379,8 @@ bool VectorCombine::widenSubvectorLoad(Instruction &I) {
   Value *SrcPtr = Load->getPointerOperand()->stripPointerCasts();
   assert(isa<PointerType>(SrcPtr->getType()) && "Expected a pointer type");
   Align Alignment = Load->getAlign();
-  if (!isSafeToLoadUnconditionally(SrcPtr, Ty, Align(1), *DL, Load, &AC, &DT))
+  if (!isSafeToLoadUnconditionally(SrcPtr, Ty, Align(1), *DL, Load, SQ.AC,
+                                   SQ.DT))
     return false;
 
   Alignment = std::max(SrcPtr->getPointerAlignment(*DL), Alignment);
@@ -658,6 +659,13 @@ bool VectorCombine::foldExtractExtract(Instruction &I) {
       !match(I1, m_ExtractElt(m_Value(V1), m_ConstantInt(C1))) ||
       V0->getType() != V1->getType())
     return false;
+
+  // For fixed-width vectors, reject out-of-bounds extract indexes
+  if (auto *FixedVecTy = dyn_cast<FixedVectorType>(V0->getType())) {
+    unsigned NumElts = FixedVecTy->getNumElements();
+    if (C0 >= NumElts || C1 >= NumElts)
+      return false;
+  }
 
   // If the scalar value 'I' is going to be re-inserted into a vector, then try
   // to create an extract to that same element. The extract/insert can be
@@ -1265,9 +1273,9 @@ bool VectorCombine::scalarizeVPIntrinsic(Instruction &I) {
                           .hasAttribute(Attribute::AttrKind::Speculatable);
   else
     SafeToSpeculate = isSafeToSpeculativelyExecuteWithOpcode(
-        *FunctionalOpcode, &VPI, nullptr, &AC, &DT);
+        *FunctionalOpcode, &VPI, nullptr, SQ.AC, SQ.DT);
   if (!SafeToSpeculate &&
-      !isKnownNonZero(EVL, SimplifyQuery(*DL, &DT, &AC, &VPI)))
+      !isKnownNonZero(EVL, SimplifyQuery(*DL, SQ.DT, SQ.AC, &VPI)))
     return false;
 
   Value *ScalarVal =
@@ -1873,9 +1881,7 @@ public:
 /// Check if it is legal to scalarize a memory access to \p VecTy at index \p
 /// Idx. \p Idx must access a valid vector element.
 static ScalarizationResult canScalarizeAccess(VectorType *VecTy, Value *Idx,
-                                              Instruction *CtxI,
-                                              AssumptionCache &AC,
-                                              const DominatorTree &DT) {
+                                              const SimplifyQuery &SQ) {
   // We do checks for both fixed vector types and scalable vector types.
   // This is the number of elements of fixed vector types,
   // or the minimum number of elements of scalable vector types.
@@ -1897,9 +1903,9 @@ static ScalarizationResult canScalarizeAccess(VectorType *VecTy, Value *Idx,
   ConstantRange ValidIndices(Zero, MaxElts);
   ConstantRange IdxRange(IntWidth, true);
 
-  if (isGuaranteedNotToBePoison(Idx, &AC)) {
-    if (ValidIndices.contains(computeConstantRange(Idx, /* ForSigned */ false,
-                                                   true, &AC, CtxI, &DT)))
+  if (isGuaranteedNotToBePoison(Idx, SQ.AC, SQ.CxtI, SQ.DT)) {
+    if (ValidIndices.contains(
+            computeConstantRange(Idx, /*ForSigned=*/false, SQ)))
       return ScalarizationResult::safe();
     return ScalarizationResult::unsafe();
   }
@@ -1967,7 +1973,8 @@ bool VectorCombine::foldSingleElementStore(Instruction &I) {
         SrcAddr != SI->getPointerOperand()->stripPointerCasts())
       return false;
 
-    auto ScalarizableIdx = canScalarizeAccess(VecTy, Idx, Load, AC, DT);
+    auto ScalarizableIdx =
+        canScalarizeAccess(VecTy, Idx, SQ.getWithInstruction(Load));
     if (ScalarizableIdx.isUnsafe() ||
         isMemModifiedBetween(Load->getIterator(), SI->getIterator(),
                              MemoryLocation::get(SI), AA))
@@ -2073,8 +2080,8 @@ bool VectorCombine::scalarizeLoadExtract(LoadInst *LI, VectorType *VecTy,
   for (User *U : LI->users()) {
     auto *UI = cast<ExtractElementInst>(U);
 
-    auto ScalarIdx =
-        canScalarizeAccess(VecTy, UI->getIndexOperand(), LI, AC, DT);
+    auto ScalarIdx = canScalarizeAccess(VecTy, UI->getIndexOperand(),
+                                        SQ.getWithInstruction(LI));
     if (ScalarIdx.isUnsafe())
       return false;
     if (ScalarIdx.isSafeWithFreeze()) {
@@ -2255,8 +2262,8 @@ bool VectorCombine::scalarizeExtExtract(Instruction &I) {
     return false;
 
   Value *ScalarV = Ext->getOperand(0);
-  if (!isGuaranteedNotToBePoison(ScalarV, &AC, dyn_cast<Instruction>(ScalarV),
-                                 &DT)) {
+  if (!isGuaranteedNotToBePoison(ScalarV, SQ.AC, dyn_cast<Instruction>(ScalarV),
+                                 SQ.DT)) {
     // Check wether all lanes are extracted, all extracts trigger UB
     // on poison, and the last extract (and hence all previous ones)
     // are guaranteed to execute if Ext executes.  If so, we do not
@@ -3440,24 +3447,24 @@ bool VectorCombine::foldPermuteOfIntrinsic(Instruction &I) {
   return true;
 }
 
-using InstLane = std::pair<Use *, int>;
+using InstLane = std::pair<Value *, int>;
 
-static InstLane lookThroughShuffles(Use *U, int Lane) {
-  while (auto *SV = dyn_cast<ShuffleVectorInst>(U->get())) {
+static InstLane lookThroughShuffles(Value *V, int Lane) {
+  while (auto *SV = dyn_cast<ShuffleVectorInst>(V)) {
     unsigned NumElts =
         cast<FixedVectorType>(SV->getOperand(0)->getType())->getNumElements();
     int M = SV->getMaskValue(Lane);
     if (M < 0)
       return {nullptr, PoisonMaskElem};
     if (static_cast<unsigned>(M) < NumElts) {
-      U = &SV->getOperandUse(0);
+      V = SV->getOperand(0);
       Lane = M;
     } else {
-      U = &SV->getOperandUse(1);
+      V = SV->getOperand(1);
       Lane = M - NumElts;
     }
   }
-  return InstLane{U, Lane};
+  return InstLane{V, Lane};
 }
 
 static SmallVector<InstLane>
@@ -3466,8 +3473,7 @@ generateInstLaneVectorFromOperand(ArrayRef<InstLane> Item, int Op) {
   for (InstLane IL : Item) {
     auto [U, Lane] = IL;
     InstLane OpLane =
-        U ? lookThroughShuffles(&cast<Instruction>(U->get())->getOperandUse(Op),
-                                Lane)
+        U ? lookThroughShuffles(cast<Instruction>(U)->getOperand(Op), Lane)
           : InstLane{nullptr, PoisonMaskElem};
     NItem.emplace_back(OpLane);
   }
@@ -3477,7 +3483,7 @@ generateInstLaneVectorFromOperand(ArrayRef<InstLane> Item, int Op) {
 /// Detect concat of multiple values into a vector
 static bool isFreeConcat(ArrayRef<InstLane> Item, TTI::TargetCostKind CostKind,
                          const TargetTransformInfo &TTI) {
-  auto *Ty = cast<FixedVectorType>(Item.front().first->get()->getType());
+  auto *Ty = cast<FixedVectorType>(Item.front().first->getType());
   unsigned NumElts = Ty->getNumElements();
   if (Item.size() == NumElts || NumElts == 1 || Item.size() % NumElts != 0)
     return false;
@@ -3497,39 +3503,39 @@ static bool isFreeConcat(ArrayRef<InstLane> Item, TTI::TargetCostKind CostKind,
   if (!isPowerOf2_32(NumSlices))
     return false;
   for (unsigned Slice = 0; Slice < NumSlices; ++Slice) {
-    Use *SliceV = Item[Slice * NumElts].first;
-    if (!SliceV || SliceV->get()->getType() != Ty)
+    Value *SliceV = Item[Slice * NumElts].first;
+    if (!SliceV || SliceV->getType() != Ty)
       return false;
     for (unsigned Elt = 0; Elt < NumElts; ++Elt) {
       auto [V, Lane] = Item[Slice * NumElts + Elt];
-      if (Lane != static_cast<int>(Elt) || SliceV->get() != V->get())
+      if (Lane != static_cast<int>(Elt) || SliceV != V)
         return false;
     }
   }
   return true;
 }
 
-static Value *generateNewInstTree(ArrayRef<InstLane> Item, FixedVectorType *Ty,
-                                  const SmallPtrSet<Use *, 4> &IdentityLeafs,
-                                  const SmallPtrSet<Use *, 4> &SplatLeafs,
-                                  const SmallPtrSet<Use *, 4> &ConcatLeafs,
-                                  IRBuilderBase &Builder,
-                                  const TargetTransformInfo *TTI) {
-  auto [FrontU, FrontLane] = Item.front();
+static Value *
+generateNewInstTree(ArrayRef<InstLane> Item, Use *From, FixedVectorType *Ty,
+                    const DenseSet<std::pair<Value *, Use *>> &IdentityLeafs,
+                    const DenseSet<std::pair<Value *, Use *>> &SplatLeafs,
+                    const DenseSet<std::pair<Value *, Use *>> &ConcatLeafs,
+                    IRBuilderBase &Builder, const TargetTransformInfo *TTI) {
+  auto [FrontV, FrontLane] = Item.front();
 
-  if (IdentityLeafs.contains(FrontU)) {
-    return FrontU->get();
+  if (IdentityLeafs.contains(std::make_pair(FrontV, From))) {
+    return FrontV;
   }
-  if (SplatLeafs.contains(FrontU)) {
+  if (SplatLeafs.contains(std::make_pair(FrontV, From))) {
     SmallVector<int, 16> Mask(Ty->getNumElements(), FrontLane);
-    return Builder.CreateShuffleVector(FrontU->get(), Mask);
+    return Builder.CreateShuffleVector(FrontV, Mask);
   }
-  if (ConcatLeafs.contains(FrontU)) {
+  if (ConcatLeafs.contains(std::make_pair(FrontV, From))) {
     unsigned NumElts =
-        cast<FixedVectorType>(FrontU->get()->getType())->getNumElements();
+        cast<FixedVectorType>(FrontV->getType())->getNumElements();
     SmallVector<Value *> Values(Item.size() / NumElts, nullptr);
     for (unsigned S = 0; S < Values.size(); ++S)
-      Values[S] = Item[S * NumElts].first->get();
+      Values[S] = Item[S * NumElts].first;
 
     while (Values.size() > 1) {
       NumElts *= 2;
@@ -3544,7 +3550,7 @@ static Value *generateNewInstTree(ArrayRef<InstLane> Item, FixedVectorType *Ty,
     return Values[0];
   }
 
-  auto *I = cast<Instruction>(FrontU->get());
+  auto *I = cast<Instruction>(FrontV);
   auto *II = dyn_cast<IntrinsicInst>(I);
   unsigned NumOps = I->getNumOperands() - (II ? 1 : 0);
   SmallVector<Value *> Ops(NumOps);
@@ -3555,14 +3561,14 @@ static Value *generateNewInstTree(ArrayRef<InstLane> Item, FixedVectorType *Ty,
       continue;
     }
     Ops[Idx] = generateNewInstTree(generateInstLaneVectorFromOperand(Item, Idx),
-                                   Ty, IdentityLeafs, SplatLeafs, ConcatLeafs,
-                                   Builder, TTI);
+                                   &I->getOperandUse(Idx), Ty, IdentityLeafs,
+                                   SplatLeafs, ConcatLeafs, Builder, TTI);
   }
 
   SmallVector<Value *, 8> ValueList;
   for (const auto &Lane : Item)
     if (Lane.first)
-      ValueList.push_back(Lane.first->get());
+      ValueList.push_back(Lane.first);
 
   Type *DstTy =
       FixedVectorType::get(I->getType()->getScalarType(), Ty->getNumElements());
@@ -3609,22 +3615,24 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
 
   SmallVector<InstLane> Start(Ty->getNumElements());
   for (unsigned M = 0, E = Ty->getNumElements(); M < E; ++M)
-    Start[M] = lookThroughShuffles(&*I.use_begin(), M);
+    Start[M] = lookThroughShuffles(&I, M);
 
-  SmallVector<SmallVector<InstLane>> Worklist;
-  Worklist.push_back(Start);
-  SmallPtrSet<Use *, 4> IdentityLeafs, SplatLeafs, ConcatLeafs;
+  SmallVector<std::pair<SmallVector<InstLane>, Use *>> Worklist;
+  Worklist.push_back(std::make_pair(Start, &*I.use_begin()));
+  DenseSet<std::pair<Value *, Use *>> IdentityLeafs, SplatLeafs, ConcatLeafs;
   unsigned NumVisited = 0;
 
   while (!Worklist.empty()) {
     if (++NumVisited > MaxInstrsToScan)
       return false;
 
-    SmallVector<InstLane> Item = Worklist.pop_back_val();
-    auto [FrontU, FrontLane] = Item.front();
+    auto ItemFrom = Worklist.pop_back_val();
+    auto Item = ItemFrom.first;
+    auto From = ItemFrom.second;
+    auto [FrontV, FrontLane] = Item.front();
 
     // If we found an undef first lane then bail out to keep things simple.
-    if (!FrontU)
+    if (!FrontV)
       return false;
 
     // Helper to peek through bitcasts to the same value.
@@ -3635,46 +3643,46 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
 
     // Look for an identity value.
     if (FrontLane == 0 &&
-        cast<FixedVectorType>(FrontU->get()->getType())->getNumElements() ==
+        cast<FixedVectorType>(FrontV->getType())->getNumElements() ==
             Ty->getNumElements() &&
         all_of(drop_begin(enumerate(Item)), [IsEquiv, Item](const auto &E) {
-          Value *FrontV = Item.front().first->get();
-          return !E.value().first || (IsEquiv(E.value().first->get(), FrontV) &&
+          Value *FrontV = Item.front().first;
+          return !E.value().first || (IsEquiv(E.value().first, FrontV) &&
                                       E.value().second == (int)E.index());
         })) {
-      IdentityLeafs.insert(FrontU);
+      IdentityLeafs.insert(std::make_pair(FrontV, From));
       continue;
     }
     // Look for constants, for the moment only supporting constant splats.
-    if (auto *C = dyn_cast<Constant>(FrontU);
+    if (auto *C = dyn_cast<Constant>(FrontV);
         C && C->getSplatValue() &&
         all_of(drop_begin(Item), [Item](InstLane &IL) {
-          Value *FrontV = Item.front().first->get();
-          Use *U = IL.first;
-          return !U || (isa<Constant>(U->get()) &&
-                        cast<Constant>(U->get())->getSplatValue() ==
+          Value *FrontV = Item.front().first;
+          Value *V = IL.first;
+          return !V || (isa<Constant>(V) &&
+                        cast<Constant>(V)->getSplatValue() ==
                             cast<Constant>(FrontV)->getSplatValue());
         })) {
-      SplatLeafs.insert(FrontU);
+      SplatLeafs.insert(std::make_pair(FrontV, From));
       continue;
     }
     // Look for a splat value.
     if (all_of(drop_begin(Item), [Item](InstLane &IL) {
-          auto [FrontU, FrontLane] = Item.front();
-          auto [U, Lane] = IL;
-          return !U || (U->get() == FrontU->get() && Lane == FrontLane);
+          auto [FrontV, FrontLane] = Item.front();
+          auto [V, Lane] = IL;
+          return !V || (V == FrontV && Lane == FrontLane);
         })) {
-      SplatLeafs.insert(FrontU);
+      SplatLeafs.insert(std::make_pair(FrontV, From));
       continue;
     }
 
     // We need each element to be the same type of value, and check that each
     // element has a single use.
     auto CheckLaneIsEquivalentToFirst = [Item](InstLane IL) {
-      Value *FrontV = Item.front().first->get();
+      Value *FrontV = Item.front().first;
       if (!IL.first)
         return true;
-      Value *V = IL.first->get();
+      Value *V = IL.first;
       if (auto *I = dyn_cast<Instruction>(V); I && !I->hasOneUser())
         return false;
       if (V->getValueID() != FrontV->getValueID())
@@ -3701,55 +3709,63 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
     };
     if (all_of(drop_begin(Item), CheckLaneIsEquivalentToFirst)) {
       // Check the operator is one that we support.
-      if (isa<BinaryOperator, CmpInst>(FrontU)) {
+      if (isa<BinaryOperator, CmpInst>(FrontV)) {
         //  We exclude div/rem in case they hit UB from poison lanes.
-        if (auto *BO = dyn_cast<BinaryOperator>(FrontU);
+        if (auto *BO = dyn_cast<BinaryOperator>(FrontV);
             BO && BO->isIntDivRem())
           return false;
-        Worklist.push_back(generateInstLaneVectorFromOperand(Item, 0));
-        Worklist.push_back(generateInstLaneVectorFromOperand(Item, 1));
+        Worklist.emplace_back(generateInstLaneVectorFromOperand(Item, 0),
+                              &cast<Instruction>(FrontV)->getOperandUse(0));
+        Worklist.emplace_back(generateInstLaneVectorFromOperand(Item, 1),
+                              &cast<Instruction>(FrontV)->getOperandUse(1));
         continue;
       } else if (isa<UnaryOperator, TruncInst, ZExtInst, SExtInst, FPToSIInst,
-                     FPToUIInst, SIToFPInst, UIToFPInst>(FrontU)) {
-        Worklist.push_back(generateInstLaneVectorFromOperand(Item, 0));
+                     FPToUIInst, SIToFPInst, UIToFPInst>(FrontV)) {
+        Worklist.emplace_back(generateInstLaneVectorFromOperand(Item, 0),
+                              &cast<Instruction>(FrontV)->getOperandUse(0));
         continue;
-      } else if (auto *BitCast = dyn_cast<BitCastInst>(FrontU)) {
+      } else if (auto *BitCast = dyn_cast<BitCastInst>(FrontV)) {
         // TODO: Handle vector widening/narrowing bitcasts.
         auto *DstTy = dyn_cast<FixedVectorType>(BitCast->getDestTy());
         auto *SrcTy = dyn_cast<FixedVectorType>(BitCast->getSrcTy());
         if (DstTy && SrcTy &&
             SrcTy->getNumElements() == DstTy->getNumElements()) {
-          Worklist.push_back(generateInstLaneVectorFromOperand(Item, 0));
+          Worklist.emplace_back(generateInstLaneVectorFromOperand(Item, 0),
+                                &BitCast->getOperandUse(0));
           continue;
         }
-      } else if (isa<SelectInst>(FrontU)) {
-        Worklist.push_back(generateInstLaneVectorFromOperand(Item, 0));
-        Worklist.push_back(generateInstLaneVectorFromOperand(Item, 1));
-        Worklist.push_back(generateInstLaneVectorFromOperand(Item, 2));
+      } else if (auto *Sel = dyn_cast<SelectInst>(FrontV)) {
+        Worklist.emplace_back(generateInstLaneVectorFromOperand(Item, 0),
+                              &Sel->getOperandUse(0));
+        Worklist.emplace_back(generateInstLaneVectorFromOperand(Item, 1),
+                              &Sel->getOperandUse(1));
+        Worklist.emplace_back(generateInstLaneVectorFromOperand(Item, 2),
+                              &Sel->getOperandUse(2));
         continue;
-      } else if (auto *II = dyn_cast<IntrinsicInst>(FrontU);
+      } else if (auto *II = dyn_cast<IntrinsicInst>(FrontV);
                  II && isTriviallyVectorizable(II->getIntrinsicID()) &&
                  !II->hasOperandBundles()) {
         for (unsigned Op = 0, E = II->getNumOperands() - 1; Op < E; Op++) {
           if (isVectorIntrinsicWithScalarOpAtArg(II->getIntrinsicID(), Op,
                                                  &TTI)) {
             if (!all_of(drop_begin(Item), [Item, Op](InstLane &IL) {
-                  Value *FrontV = Item.front().first->get();
-                  Use *U = IL.first;
-                  return !U || (cast<Instruction>(U->get())->getOperand(Op) ==
+                  Value *FrontV = Item.front().first;
+                  Value *V = IL.first;
+                  return !V || (cast<Instruction>(V)->getOperand(Op) ==
                                 cast<Instruction>(FrontV)->getOperand(Op));
                 }))
               return false;
             continue;
           }
-          Worklist.push_back(generateInstLaneVectorFromOperand(Item, Op));
+          Worklist.emplace_back(generateInstLaneVectorFromOperand(Item, Op),
+                                &cast<Instruction>(FrontV)->getOperandUse(Op));
         }
         continue;
       }
     }
 
     if (isFreeConcat(Item, CostKind, TTI)) {
-      ConcatLeafs.insert(FrontU);
+      ConcatLeafs.insert(std::make_pair(FrontV, From));
       continue;
     }
 
@@ -3764,8 +3780,8 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
   // If we got this far, we know the shuffles are superfluous and can be
   // removed. Scan through again and generate the new tree of instructions.
   Builder.SetInsertPoint(&I);
-  Value *V = generateNewInstTree(Start, Ty, IdentityLeafs, SplatLeafs,
-                                 ConcatLeafs, Builder, &TTI);
+  Value *V = generateNewInstTree(Start, &*I.use_begin(), Ty, IdentityLeafs,
+                                 SplatLeafs, ConcatLeafs, Builder, &TTI);
   replaceValue(I, *V);
   return true;
 }

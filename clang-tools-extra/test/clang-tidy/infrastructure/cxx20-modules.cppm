@@ -7,7 +7,7 @@
 // RUN:   cppcoreguidelines-narrowing-conversions %t/a.cpp -- \
 // RUN:   -config='{}'
 
-// RUN: clang -std=c++20 -x c++-module %t/a.cpp --precompile -o %t/a.pcm
+// RUN: %clang -std=c++20 -x c++-module %t/a.cpp --precompile -o %t/a.pcm
 
 // RUN: %check_clang_tidy -std=c++20 -check-suffix=DEFAULT %t/use.cpp \
 // RUN:   cppcoreguidelines-narrowing-conversions %t/a.cpp -- \

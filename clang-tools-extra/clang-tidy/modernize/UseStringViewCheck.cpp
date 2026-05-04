@@ -21,6 +21,40 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::modernize {
 
+namespace {
+AST_MATCHER_P(FunctionDecl, isOverloaded, bool, CheckOverloadedFunctions) {
+  if (CheckOverloadedFunctions)
+    return false;
+  const DeclarationName Name = Node.getDeclName();
+  // Sanity check
+  if (Name.isEmpty())
+    return false;
+  const DeclContext *DC = Node.getDeclContext();
+  auto LookupResult = DC->lookup(Name);
+  size_t UniqueSignatures = 0;
+  llvm::SmallPtrSet<const FunctionDecl *, 2> SeenFunctions;
+  for (NamedDecl *ND : LookupResult) {
+    const FunctionDecl *FD = nullptr;
+    if (const auto *Func = dyn_cast<FunctionDecl>(ND)) {
+      // Regular functions
+      FD = Func;
+    } else if (const auto *USD = dyn_cast<UsingShadowDecl>(ND)) {
+      // Overloads via "using ns::func_name"
+      FD = dyn_cast<FunctionDecl>(USD->getTargetDecl());
+    } else if (const auto *FTD = dyn_cast<FunctionTemplateDecl>(ND)) {
+      // Templated functions
+      FD = FTD->getTemplatedDecl();
+    }
+    if (FD && SeenFunctions.insert(FD->getCanonicalDecl()).second) {
+      UniqueSignatures++;
+      if (UniqueSignatures > 1)
+        return true;
+    }
+  }
+  return false;
+}
+} // namespace
+
 static constexpr StringRef StringViewClassKey = "string";
 static constexpr StringRef WStringViewClassKey = "wstring";
 static constexpr StringRef U8StringViewClassKey = "u8string";
@@ -49,7 +83,8 @@ UseStringViewCheck::UseStringViewCheck(StringRef Name,
                                        ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       IgnoredFunctions(utils::options::parseStringList(
-          Options.get("IgnoredFunctions", "toString$;ToString$;to_string$"))) {
+          Options.get("IgnoredFunctions", "toString$;ToString$;to_string$"))),
+      CheckOverloadedFunctions(Options.get("CheckOverloadedFunctions", false)) {
   parseReplacementStringViewClass(
       Options.get("ReplacementStringViewClass", ""));
 }
@@ -57,6 +92,7 @@ UseStringViewCheck::UseStringViewCheck(StringRef Name,
 void UseStringViewCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoredFunctions",
                 utils::options::serializeStringList(IgnoredFunctions));
+  Options.store(Opts, "CheckOverloadedFunctions", CheckOverloadedFunctions);
   Options.store(Opts, "ReplacementStringViewClass",
                 (Twine("") + StringViewClassKey + "=" + StringViewClass + ";" +
                  WStringViewClassKey + "=" + WStringViewClass + ";" +
@@ -81,6 +117,7 @@ void UseStringViewCheck::registerMatchers(MatchFinder *Finder) {
       functionDecl(
           isDefinition(),
           unless(anyOf(VirtualOrOperator, IgnoredFunctionsMatcher,
+                       isOverloaded(CheckOverloadedFunctions),
                        ast_matchers::isExplicitTemplateSpecialization())),
           returns(IsStdString), hasDescendant(returnStmt()),
           unless(hasDescendant(returnStmt(hasReturnValue(unless(

@@ -6,9 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clc/clc_convert.h"
 #include "clc/float/definitions.h"
 #include "clc/internal/clc.h"
+#include "clc/math/clc_ep.h"
+#include "clc/math/clc_fabs.h"
+#include "clc/math/clc_fma.h"
+#include "clc/math/clc_frexp.h"
+#include "clc/math/clc_ldexp.h"
 #include "clc/math/clc_log2.h"
+#include "clc/math/clc_mad.h"
+#include "clc/math/math.h"
+#include "clc/relational/clc_isinf.h"
+#include "clc/relational/clc_isnan.h"
 
 /*
  *log(x) = log2(x) * (1/log2(e))

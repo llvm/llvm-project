@@ -32,6 +32,7 @@
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constant.h"
@@ -687,7 +688,8 @@ static std::optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
 
 UnrollCostEstimator::UnrollCostEstimator(
     const Loop *L, const TargetTransformInfo &TTI,
-    const SmallPtrSetImpl<const Value *> &EphValues, unsigned BEInsns) {
+    const SmallPtrSetImpl<const Value *> &EphValues, unsigned BEInsns,
+    bool TripCountIsUniform) {
   CodeMetrics Metrics;
   for (BasicBlock *BB : L->blocks())
     Metrics.analyzeBasicBlock(BB, TTI, EphValues, /* PrepareForLTO= */ false,
@@ -696,9 +698,13 @@ UnrollCostEstimator::UnrollCostEstimator(
   NotDuplicatable = Metrics.notDuplicatable;
   Convergence = Metrics.Convergence;
   LoopSize = Metrics.NumInsts;
+  // Convergent operations make the remainder prelude unsafe by adding a
+  // control-flow dependency, unless the trip count is uniform per
+  // UniformityInfo, in which case all paths agree and the remainder is safe.
   ConvergenceAllowsRuntime =
-      Metrics.Convergence != ConvergenceKind::Uncontrolled &&
-      !getLoopConvergenceHeart(L);
+      (Metrics.Convergence != ConvergenceKind::Uncontrolled &&
+       !getLoopConvergenceHeart(L)) ||
+      TripCountIsUniform;
 
   // Don't allow an estimate of size zero.  This would allows unrolling of loops
   // with huge iteration counts, which is a compile time problem even if it's
@@ -711,20 +717,28 @@ UnrollCostEstimator::UnrollCostEstimator(
     LoopSize = BEInsns + 1;
 }
 
-bool UnrollCostEstimator::canUnroll() const {
+bool UnrollCostEstimator::canUnroll(OptimizationRemarkEmitter *ORE,
+                                    const Loop *L) const {
+  auto ReportCannotUnroll = [&](StringRef Reason) {
+    LLVM_DEBUG(dbgs().indent(1) << "Not unrolling: " << Reason << ".\n");
+    if (ORE && L)
+      ORE->emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "CannotUnrollLoop",
+                                        L->getStartLoc(), L->getHeader())
+               << "unable to unroll loop: " << Reason;
+      });
+  };
+
   if (Convergence == ConvergenceKind::ExtendedLoop) {
-    LLVM_DEBUG(dbgs().indent(1)
-               << "Not unrolling: contains convergent operations.\n");
+    ReportCannotUnroll("contains convergent operations");
     return false;
   }
   if (!LoopSize.isValid()) {
-    LLVM_DEBUG(dbgs().indent(1)
-               << "Not unrolling: loop size could not be computed.\n");
+    ReportCannotUnroll("loop size could not be computed");
     return false;
   }
   if (NotDuplicatable) {
-    LLVM_DEBUG(dbgs().indent(1)
-               << "Not unrolling: contains non-duplicatable instructions.\n");
+    ReportCannotUnroll("contains non-duplicatable instructions");
     return false;
   }
   return true;
@@ -755,6 +769,23 @@ static bool hasUnrollEnablePragma(const Loop *L) {
 // Returns true if the loop has a runtime unroll(disable) pragma.
 static bool hasRuntimeUnrollDisablePragma(const Loop *L) {
   return getUnrollMetadataForLoop(L, "llvm.loop.unroll.runtime.disable");
+}
+
+/// Returns true if the SCEV expression is uniform, i.e., all threads in a
+/// convergent execution agree on its value. Recursively checks operands.
+/// Returns false if the SCEV could not be computed.
+static bool isSCEVUniform(const SCEV *S, UniformityInfo &UI) {
+  if (isa<SCEVCouldNotCompute>(S))
+    return false;
+  if (isa<SCEVConstant>(S))
+    return true;
+  if (auto *U = dyn_cast<SCEVUnknown>(S))
+    return UI.isUniform(U->getValue());
+  for (const SCEV *Op : S->operands()) {
+    if (!isSCEVUniform(Op, UI))
+      return false;
+  }
+  return true;
 }
 
 // If loop has an unroll_count pragma return the (necessarily
@@ -802,7 +833,8 @@ static std::optional<unsigned>
 shouldPragmaUnroll(Loop *L, const UnrollPragmaInfo &PInfo,
                    const unsigned TripMultiple, const unsigned TripCount,
                    unsigned MaxTripCount, const UnrollCostEstimator UCE,
-                   const TargetTransformInfo::UnrollingPreferences &UP) {
+                   const TargetTransformInfo::UnrollingPreferences &UP,
+                   OptimizationRemarkEmitter *ORE) {
 
   // Using unroll pragma
   // 1st priority is unroll count set by "unroll-count" option.
@@ -832,6 +864,15 @@ shouldPragmaUnroll(Loop *L, const UnrollPragmaInfo &PInfo,
                << "Not unrolling with pragma count " << PInfo.PragmaCount
                << ": remainder not allowed, count does not divide trip "
                << "multiple " << TripMultiple << ".\n");
+    ORE->emit([&]() {
+      return OptimizationRemarkAnalysis(DEBUG_TYPE, "PragmaUnrollCountRejected",
+                                        L->getStartLoc(), L->getHeader())
+             << "may be unable to unroll loop with count "
+             << ore::NV("PragmaCount", PInfo.PragmaCount)
+             << ": remainder loop is not allowed and count does not divide "
+                "trip multiple "
+             << ore::NV("TripMultiple", TripMultiple);
+    });
   }
 
   if (PInfo.PragmaFullUnroll) {
@@ -842,6 +883,14 @@ shouldPragmaUnroll(Loop *L, const UnrollPragmaInfo &PInfo,
       if (TripCount > PragmaUnrollFullMaxIterations) {
         LLVM_DEBUG(dbgs().indent(2)
                    << "Won't unroll; trip count is too large.\n");
+        ORE->emit([&]() {
+          return OptimizationRemarkAnalysis(DEBUG_TYPE,
+                                            "PragmaFullUnrollTripCountTooLarge",
+                                            L->getStartLoc(), L->getHeader())
+                 << "may be unable to fully unroll loop: trip count "
+                 << ore::NV("TripCount", TripCount) << " exceeds limit "
+                 << ore::NV("Limit", PragmaUnrollFullMaxIterations);
+        });
         return std::nullopt;
       }
 
@@ -851,6 +900,12 @@ shouldPragmaUnroll(Loop *L, const UnrollPragmaInfo &PInfo,
     }
     LLVM_DEBUG(dbgs().indent(2)
                << "Not fully unrolling: unknown trip count.\n");
+    ORE->emit([&]() {
+      return OptimizationRemarkAnalysis(DEBUG_TYPE,
+                                        "PragmaFullUnrollUnknownTripCount",
+                                        L->getStartLoc(), L->getHeader())
+             << "may be unable to fully unroll loop: trip count is unknown";
+    });
   }
 
   if (PInfo.PragmaEnableUnroll && !TripCount && MaxTripCount &&
@@ -879,7 +934,7 @@ static std::optional<unsigned> shouldFullUnroll(
 
   // When computing the unrolled size, note that BEInsns are not replicated
   // like the rest of the loop body.
-  uint64_t UnrolledSize = UCE.getUnrolledLoopSize(UP);
+  uint64_t UnrolledSize = UCE.getUnrolledLoopSize(UP, FullUnrollTripCount);
   if (UnrolledSize < UP.Threshold) {
     LLVM_DEBUG(dbgs().indent(2) << "Unrolling: size " << UnrolledSize
                                 << " < threshold " << UP.Threshold << ".\n");
@@ -1026,19 +1081,26 @@ void llvm::computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
     UP.Runtime = false;
     return;
   }
+
+  // If a user provided an explicit unroll pragma (with or without count),
+  // enable runtime unrolling and override expensive trip count checks.
+  if (PInfo.PragmaEnableUnroll || PInfo.PragmaCount > 0) {
+    UP.AllowExpensiveTripCount = true;
+    UP.Runtime = true;
+  }
+
   // Check for explicit Count.
   // 1st priority is unroll count set by "unroll-count" option.
   // 2nd priority is unroll count set by pragma.
   LLVM_DEBUG(dbgs().indent(1) << "Trying pragma unroll...\n");
   if (auto UnrollFactor = shouldPragmaUnroll(L, PInfo, TripMultiple, TripCount,
-                                             MaxTripCount, UCE, UP)) {
+                                             MaxTripCount, UCE, UP, ORE)) {
     UP.Count = *UnrollFactor;
 
     if (PInfo.UserUnrollCount || (PInfo.PragmaCount > 0)) {
       UP.AllowExpensiveTripCount = true;
       UP.Force = true;
     }
-    UP.Runtime |= (PInfo.PragmaCount > 0);
     return;
   } else {
     if (PInfo.ExplicitUnroll && TripCount != 0) {
@@ -1054,9 +1116,8 @@ void llvm::computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
   // 3rd priority is exact full unrolling.  This will eliminate all copies
   // of some exit test.
   LLVM_DEBUG(dbgs().indent(1) << "Trying full unroll...\n");
-  UP.Count = 0;
+  assert(UP.Count == 0);
   if (TripCount) {
-    UP.Count = TripCount;
     if (auto UnrollFactor = shouldFullUnroll(L, TTI, DT, SE, EphValues,
                                              TripCount, UCE, UP)) {
       UP.Count = *UnrollFactor;
@@ -1079,7 +1140,6 @@ void llvm::computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
   LLVM_DEBUG(dbgs().indent(1) << "Trying upper-bound unroll...\n");
   if (!TripCount && MaxTripCount && (UP.UpperBound || MaxOrZero) &&
       MaxTripCount <= UP.MaxUpperBound) {
-    UP.Count = MaxTripCount;
     if (auto UnrollFactor = shouldFullUnroll(L, TTI, DT, SE, EphValues,
                                              MaxTripCount, UCE, UP)) {
       UP.Count = *UnrollFactor;
@@ -1108,43 +1168,10 @@ void llvm::computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
   LLVM_DEBUG(dbgs().indent(1) << "Trying partial unroll...\n");
   if (auto UnrollFactor = shouldPartialUnroll(LoopSize, TripCount, UCE, UP)) {
     UP.Count = *UnrollFactor;
-
-    if ((PInfo.PragmaFullUnroll || PInfo.PragmaEnableUnroll) && TripCount &&
-        UP.Count != TripCount)
-      ORE->emit([&]() {
-        return OptimizationRemarkMissed(DEBUG_TYPE,
-                                        "FullUnrollAsDirectedTooLarge",
-                                        L->getStartLoc(), L->getHeader())
-               << "unable to fully unroll loop as directed by unroll metadata "
-                  "because unrolled size is too large";
-      });
-
-    if (UP.PartialThreshold != NoThreshold) {
-      if (UP.Count == 0) {
-        if (PInfo.PragmaEnableUnroll)
-          ORE->emit([&]() {
-            return OptimizationRemarkMissed(DEBUG_TYPE,
-                                            "UnrollAsDirectedTooLarge",
-                                            L->getStartLoc(), L->getHeader())
-                   << "unable to unroll loop as directed by "
-                      "llvm.loop.unroll.enable metadata because unrolled size "
-                      "is too large";
-          });
-      }
-    }
     return;
   }
   assert(TripCount == 0 &&
          "All cases when TripCount is constant should be covered here.");
-  if (PInfo.PragmaFullUnroll)
-    ORE->emit([&]() {
-      return OptimizationRemarkMissed(
-                 DEBUG_TYPE, "CantFullUnrollAsDirectedRuntimeTripCount",
-                 L->getStartLoc(), L->getHeader())
-             << "unable to fully unroll loop as directed by "
-                "llvm.loop.unroll.full metadata because loop has a runtime "
-                "trip count";
-    });
 
   // 7th priority is runtime unrolling.
   LLVM_DEBUG(dbgs().indent(1) << "Trying runtime unroll...\n");
@@ -1152,16 +1179,14 @@ void llvm::computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
   if (PInfo.PragmaRuntimeUnrollDisable) {
     LLVM_DEBUG(dbgs().indent(2)
                << "Not runtime unrolling: disabled by pragma.\n");
-    UP.Count = 0;
     return;
   }
 
   // Don't unroll a small upper bound loop unless user or TTI asked to do so.
-  if (MaxTripCount && !UP.Force && MaxTripCount < UP.MaxUpperBound) {
-    LLVM_DEBUG(dbgs().indent(2)
-               << "Not runtime unrolling: max trip count " << MaxTripCount
-               << " is small (< " << UP.MaxUpperBound << ") and not forced.\n");
-    UP.Count = 0;
+  if (MaxTripCount && !UP.Force && MaxTripCount <= UP.MaxUpperBound) {
+    LLVM_DEBUG(dbgs().indent(2) << "Not runtime unrolling: max trip count "
+                                << MaxTripCount << " is small (<= "
+                                << UP.MaxUpperBound << ") and not forced.\n");
     return;
   }
 
@@ -1174,17 +1199,15 @@ void llvm::computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
         UP.AllowExpensiveTripCount = true;
     }
   }
-  UP.Runtime |= PInfo.PragmaEnableUnroll || PInfo.PragmaCount > 0 ||
-                PInfo.UserUnrollCount;
   if (!UP.Runtime) {
     LLVM_DEBUG(dbgs().indent(2)
                << "Will not try to unroll loop with runtime trip count "
                << "because -unroll-runtime not given\n");
-    UP.Count = 0;
     return;
   }
-  if (UP.Count == 0)
-    UP.Count = UP.DefaultUnrollRuntimeCount;
+
+  assert(UP.Count == 0);
+  UP.Count = UP.DefaultUnrollRuntimeCount;
 
   // Reduce unroll count to be the largest power-of-two factor of
   // the original count which satisfies the threshold limit.
@@ -1206,22 +1229,6 @@ void llvm::computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
                   "multiple, "
                << TripMultiple << ".  Reducing unroll count from " << OrigCount
                << " to " << UP.Count << ".\n");
-
-    using namespace ore;
-
-    if (PInfo.PragmaCount > 0 && !UP.AllowRemainder)
-      ORE->emit([&]() {
-        return OptimizationRemarkMissed(DEBUG_TYPE,
-                                        "DifferentUnrollCountFromDirected",
-                                        L->getStartLoc(), L->getHeader())
-               << "Unable to unroll loop the number of times directed by "
-                  "llvm.loop.unroll.count metadata because remainder loop is "
-                  "restricted (that could be architecture specific or because "
-                  "the loop contains a convergent instruction) and so must "
-                  "have an unroll count that divides the loop trip multiple of "
-               << NV("TripMultiple", TripMultiple) << ".  Unrolling instead "
-               << NV("UnrollCount", UP.Count) << " time(s).";
-      });
   }
 
   if (UP.Count > UP.MaxCount)
@@ -1230,10 +1237,11 @@ void llvm::computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
   if (MaxTripCount && UP.Count > MaxTripCount)
     UP.Count = MaxTripCount;
 
-  LLVM_DEBUG(dbgs().indent(2)
-             << "Runtime unrolling with count: " << UP.Count << "\n");
   if (UP.Count < 2)
     UP.Count = 0;
+  else
+    LLVM_DEBUG(dbgs().indent(2)
+               << "Runtime unrolling with count: " << UP.Count << "\n");
   return;
 }
 
@@ -1251,7 +1259,7 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
                 std::optional<bool> ProvidedAllowPeeling,
                 std::optional<bool> ProvidedAllowProfileBasedPeeling,
                 std::optional<unsigned> ProvidedFullUnrollMaxCount,
-                AAResults *AA = nullptr) {
+                UniformityInfo *UI = nullptr, AAResults *AA = nullptr) {
 
   LLVM_DEBUG(dbgs() << "Loop Unroll: F["
                     << L->getHeader()->getParent()->getName() << "] Loop %"
@@ -1291,6 +1299,13 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
   if (!L->isLoopSimplifyForm()) {
     LLVM_DEBUG(dbgs().indent(1)
                << "Not unrolling loop which is not in loop-simplify form.\n");
+    if (TM & TM_ForcedByUser) {
+      ORE.emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "NotInLoopSimplifyForm",
+                                        L->getStartLoc(), L->getHeader())
+               << "unable to unroll loop: not in loop-simplify form";
+      });
+    }
     return LoopUnrollResult::Unmodified;
   }
 
@@ -1316,14 +1331,26 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
   if (UP.Threshold == 0 && (!UP.Partial || UP.PartialThreshold == 0) &&
       !OptForSize) {
     LLVM_DEBUG(dbgs().indent(1) << "Not unrolling: all thresholds are zero.\n");
+    if (TM & TM_ForcedByUser) {
+      ORE.emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "UnrollThresholdsZero",
+                                        L->getStartLoc(), L->getHeader())
+               << "unable to unroll loop: unroll threshold is zero";
+      });
+    }
     return LoopUnrollResult::Unmodified;
   }
 
   SmallPtrSet<const Value *, 32> EphValues;
   CodeMetrics::collectEphemeralValues(L, &AC, EphValues);
 
-  UnrollCostEstimator UCE(L, TTI, EphValues, UP.BEInsns);
-  if (!UCE.canUnroll())
+  // Check if the backedge-taken count is uniform before constructing UCE.
+  // This is used to allow runtime unrolling with a remainder for convergent
+  // loops when all threads agree on the trip count.
+  const SCEV *BTC = SE.getBackedgeTakenCount(L);
+  bool TripCountIsUniform = UI && isSCEVUniform(BTC, *UI);
+  UnrollCostEstimator UCE(L, TTI, EphValues, UP.BEInsns, TripCountIsUniform);
+  if (!UCE.canUnroll((TM & TM_ForcedByUser) ? &ORE : nullptr, L))
     return LoopUnrollResult::Unmodified;
 
   unsigned LoopSize = UCE.getRolledLoopSize();
@@ -1337,6 +1364,14 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
   if (UCE.NumInlineCandidates != 0) {
     LLVM_DEBUG(dbgs().indent(1)
                << "Not unrolling loop with inlinable calls.\n");
+    if (TM & TM_ForcedByUser) {
+      ORE.emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE,
+                                        "InlineCandidatesPreventUnroll",
+                                        L->getStartLoc(), L->getHeader())
+               << "unable to unroll loop: contains inlinable calls";
+      });
+    }
     return LoopUnrollResult::Unmodified;
   }
 
@@ -1368,10 +1403,7 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
   // If the loop contains a convergent operation, the prelude we'd add
   // to do the first few instructions before we hit the unrolled loop
   // is unsafe -- it adds a control-flow dependency to the convergent
-  // operation.  Therefore restrict remainder loop (try unrolling without).
-  //
-  // TODO: This is somewhat conservative; we could allow the remainder if the
-  // trip count is uniform.
+  // operation. Therefore restrict remainder loop (try unrolling without).
   UP.AllowRemainder &= UCE.ConvergenceAllowsRuntime;
 
   // Try to find the trip count upper bound if we cannot find the exact trip
@@ -1390,6 +1422,13 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
   if (!UP.Count) {
     LLVM_DEBUG(dbgs().indent(1)
                << "Not unrolling: no viable strategy found.\n");
+    if (TM & TM_ForcedByUser) {
+      ORE.emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "NoUnrollStrategy",
+                                        L->getStartLoc(), L->getHeader())
+               << "unable to unroll loop: no viable unroll count found";
+      });
+    }
     return LoopUnrollResult::Unmodified;
   }
 
@@ -1409,7 +1448,8 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
     ValueToValueMapTy VMap;
     peelLoop(L, PP.PeelCount, PP.PeelLast, LI, &SE, DT, &AC, PreserveLCSSA,
              VMap);
-    simplifyLoopAfterUnroll(L, true, LI, &SE, &DT, &AC, &TTI, nullptr);
+    simplifyLoopAfterUnroll(L, true, LI, &SE, &DT, &AC, &TTI, L->getBlocks(),
+                            nullptr);
     // If the loop was peeled, we already "used up" the profile information
     // we had, so we don't want to unroll or peel again.
     if (PP.PeelProfiledIterations)
@@ -1435,6 +1475,8 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
   // Save loop properties before it is transformed.
   MDNode *OrigLoopID = L->getLoopID();
   UnrollPragmaInfo PInfo(L);
+  DebugLoc LoopStartLoc = L->getStartLoc();
+  BasicBlock *LoopHeader = L->getHeader();
 
   // Unroll the loop.
   Loop *RemainderLoop = nullptr;
@@ -1451,8 +1493,36 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
   ULO.AddAdditionalAccumulators = UP.AddAdditionalAccumulators;
   LoopUnrollResult UnrollResult = UnrollLoop(
       L, ULO, LI, &SE, &DT, &AC, &TTI, &ORE, PreserveLCSSA, &RemainderLoop, AA);
-  if (UnrollResult == LoopUnrollResult::Unmodified)
+  if (UnrollResult == LoopUnrollResult::Unmodified) {
+    if (PInfo.ExplicitUnroll) {
+      LLVM_DEBUG(dbgs().indent(1)
+                 << "Failed to unroll loop as explicitly requested.\n");
+      ORE.emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "FailedToUnrollAsRequested",
+                                        LoopStartLoc, LoopHeader)
+               << "failed to unroll loop as explicitly requested";
+      });
+    }
     return LoopUnrollResult::Unmodified;
+  }
+
+  if (PInfo.PragmaFullUnroll && ULO.Count != TripCount) {
+    ORE.emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "FullUnrollAsDirectedFailed",
+                                      LoopStartLoc, LoopHeader)
+             << "unable to fully unroll loop as directed; "
+             << "unrolled by factor " << ore::NV("UnrollCount", ULO.Count);
+    });
+  }
+  if (PInfo.PragmaCount > 0 && ULO.Count != PInfo.PragmaCount) {
+    ORE.emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "UnrollCountDiffers",
+                                      LoopStartLoc, LoopHeader)
+             << "unable to unroll loop with requested count "
+             << ore::NV("RequestedCount", PInfo.PragmaCount)
+             << "; unrolled by factor " << ore::NV("UnrollCount", ULO.Count);
+    });
+  }
 
   if (RemainderLoop) {
     std::optional<MDNode *> RemainderLoopID =
@@ -1542,6 +1612,10 @@ public:
     const TargetTransformInfo &TTI =
         getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
     auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
+    UniformityInfo *UI =
+        TTI.hasBranchDivergence(&F)
+            ? &getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo()
+            : nullptr;
     // For the old PM, we can't use OptimizationRemarkEmitter as an analysis
     // pass.  Function analyses need to be preserved across loop transformations
     // but ORE cannot be preserved (see comment before the pass definition).
@@ -1553,7 +1627,7 @@ public:
         /*OnlyFullUnroll*/ false, OnlyWhenForced, ForgetAllSCEV, ProvidedCount,
         ProvidedThreshold, ProvidedAllowPartial, ProvidedRuntime,
         ProvidedUpperBound, ProvidedAllowPeeling,
-        ProvidedAllowProfileBasedPeeling, ProvidedFullUnrollMaxCount);
+        ProvidedAllowProfileBasedPeeling, ProvidedFullUnrollMaxCount, UI);
 
     if (Result == LoopUnrollResult::FullyUnrolled)
       LPM.markLoopAsDeleted(*L);
@@ -1566,6 +1640,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
+    AU.addRequired<UniformityInfoWrapperPass>();
     // FIXME: Loop passes are required to preserve domtree, and for now we just
     // recreate dom info if anything gets unrolled.
     getLoopAnalysisUsage(AU);
@@ -1580,6 +1655,7 @@ INITIALIZE_PASS_BEGIN(LoopUnroll, "loop-unroll", "Unroll loops", false, false)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(LoopPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
 INITIALIZE_PASS_END(LoopUnroll, "loop-unroll", "Unroll loops", false, false)
 
 Pass *llvm::createLoopUnrollPass(int OptLevel, bool OnlyWhenForced,
@@ -1699,6 +1775,10 @@ PreservedAnalyses LoopUnrollPass::run(Function &F,
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   AAResults &AA = AM.getResult<AAManager>(F);
 
+  UniformityInfo *UI = TTI.hasBranchDivergence(&F)
+                           ? &AM.getResult<UniformityInfoAnalysis>(F)
+                           : nullptr;
+
   LoopAnalysisManager *LAM = nullptr;
   if (auto *LAMProxy = AM.getCachedResult<LoopAnalysisManagerFunctionProxy>(F))
     LAM = &LAMProxy->getManager();
@@ -1753,7 +1833,7 @@ PreservedAnalyses LoopUnrollPass::run(Function &F,
         /*Count*/ std::nullopt,
         /*Threshold*/ std::nullopt, UnrollOpts.AllowPartial,
         UnrollOpts.AllowRuntime, UnrollOpts.AllowUpperBound, LocalAllowPeeling,
-        UnrollOpts.AllowProfileBasedPeeling, UnrollOpts.FullUnrollMaxCount,
+        UnrollOpts.AllowProfileBasedPeeling, UnrollOpts.FullUnrollMaxCount, UI,
         &AA);
     Changed |= Result != LoopUnrollResult::Unmodified;
 

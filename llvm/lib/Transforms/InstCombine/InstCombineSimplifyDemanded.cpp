@@ -357,9 +357,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
         SimplifyDemandedBits(I, 0, DemandedMask, LHSKnown, Q, Depth + 1))
       return I;
     Value *LHS, *RHS;
-    if (DemandedMask == 1 &&
-        match(I->getOperand(0), m_Intrinsic<Intrinsic::ctpop>(m_Value(LHS))) &&
-        match(I->getOperand(1), m_Intrinsic<Intrinsic::ctpop>(m_Value(RHS)))) {
+    if (DemandedMask == 1 && match(I->getOperand(0), m_Ctpop(m_Value(LHS))) &&
+        match(I->getOperand(1), m_Ctpop(m_Value(RHS)))) {
       // (ctpop(X) ^ ctpop(Y)) & 1 --> ctpop(X^Y) & 1
       IRBuilderBase::InsertPointGuard Guard(Builder);
       Builder.SetInsertPoint(I);
@@ -732,8 +731,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
 
       // Do not simplify if shl is part of funnel-shift pattern
       if (I->hasOneUse()) {
-        auto *Inst = dyn_cast<Instruction>(I->user_back());
-        if (Inst && Inst->getOpcode() == BinaryOperator::Or) {
+        Instruction *Inst = I->user_back();
+        if (Inst->getOpcode() == BinaryOperator::Or) {
           if (auto Opt = convertOrOfShiftsToFunnelShift(*Inst)) {
             auto [IID, FShiftArgs] = *Opt;
             if ((IID == Intrinsic::fshl || IID == Intrinsic::fshr) &&
@@ -814,8 +813,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
 
       // Do not simplify if lshr is part of funnel-shift pattern
       if (I->hasOneUse()) {
-        auto *Inst = dyn_cast<Instruction>(I->user_back());
-        if (Inst && Inst->getOpcode() == BinaryOperator::Or) {
+        Instruction *Inst = I->user_back();
+        if (Inst->getOpcode() == BinaryOperator::Or) {
           if (auto Opt = convertOrOfShiftsToFunnelShift(*Inst)) {
             auto [IID, FShiftArgs] = *Opt;
             if ((IID == Intrinsic::fshl || IID == Intrinsic::fshr) &&
@@ -2536,7 +2535,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
         // Note: Dropping canonicalize.
         IRBuilderBase::InsertPointGuard Guard(Builder);
         Builder.SetInsertPoint(I);
-        Value *Fabs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X, FMF);
+        Value *Fabs = Builder.CreateFAbs(X, FMF);
         Fabs->takeName(I);
         return Fabs;
       }
@@ -2665,8 +2664,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       Value *IsZeroOrNan = Builder.CreateFCmpFMF(
           FCmpInst::FCMP_UEQ, I->getOperand(0), ConstantFP::getZero(VTy), FMF);
 
-      Value *Fabs =
-          Builder.CreateUnaryIntrinsic(Intrinsic::fabs, I->getOperand(0), FMF);
+      Value *Fabs = Builder.CreateFAbs(I->getOperand(0), FMF);
       Value *IsInfOrNan = Builder.CreateFCmpFMF(
           FCmpInst::FCMP_UEQ, Fabs, ConstantFP::getInfinity(VTy), FMF);
 

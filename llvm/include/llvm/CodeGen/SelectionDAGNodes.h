@@ -689,10 +689,14 @@ private:
   /// Return a pointer to the specified value type.
   LLVM_ABI static const EVT *getValueTypeList(MVT VT);
 
-  /// Index in worklist of DAGCombiner, or negative if the node is not in the
-  /// worklist. -1 = not in worklist; -2 = not in worklist, but has already been
-  /// combined at least once.
-  int CombinerWorklistIndex = -1;
+  union {
+    /// Index in worklist of DAGCombiner, or negative if the node is not in the
+    /// worklist. -1 = not in worklist; -2 = not in worklist, but has already
+    /// been combined at least once.
+    int CombinerWorklistIndex = -1;
+    /// Visited state in ScheduleDAGSDNodes::BuildSchedUnits.
+    bool SchedulerWorklistVisited;
+  };
 
   uint32_t CFIType = 0;
 
@@ -794,6 +798,14 @@ public:
 
   /// Set worklist index for DAGCombiner
   void setCombinerWorklistIndex(int Index) { CombinerWorklistIndex = Index; }
+
+  /// Get visited state for ScheduleDAGSDNodes::BuildSchedUnits.
+  bool getSchedulerWorklistVisited() const { return SchedulerWorklistVisited; }
+
+  /// Set visited state for ScheduleDAGSDNodes::BuildSchedUnits.
+  void setSchedulerWorklistVisited(bool Visited) {
+    SchedulerWorklistVisited = Visited;
+  }
 
   /// Return the node ordering.
   unsigned getIROrder() const { return IROrder; }
@@ -1964,6 +1976,22 @@ LLVM_ABI SDValue peekThroughInsertVectorElt(SDValue V,
 /// Return the non-truncated source operand of \p V if it exists.
 /// If \p V is not a truncation, it is returned as-is.
 LLVM_ABI SDValue peekThroughTruncates(SDValue V);
+
+/// Return the non-frozen source operand of \p V if it exists.
+/// If \p V is not a freeze, it is returned as-is.
+inline SDValue peekThroughFreeze(SDValue V) {
+  if (V.getOpcode() == ISD::FREEZE)
+    return V.getOperand(0);
+  return V;
+}
+
+/// Return the non-frozen source operand of \p V if it exists and \p V has
+/// a single use. If \p V is not a single-use freeze, it is returned as-is.
+inline SDValue peekThroughOneUseFreeze(SDValue V) {
+  if (V.getOpcode() == ISD::FREEZE && V.hasOneUse())
+    return V.getOperand(0);
+  return V;
+}
 
 /// Returns true if \p V is a bitwise not operation. Assumes that an all ones
 /// constant is canonicalized to be operand 1.

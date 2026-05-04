@@ -254,6 +254,7 @@ extern template class Matrix<Fraction>;
 // An inherited class for integer matrices, with no new data attributes.
 // This is only used for the matrix-related methods which apply only
 // to integers (hermite normal form computation and row normalisation).
+class FracMatrix;
 class IntMatrix : public Matrix<DynamicAPInt> {
 public:
   IntMatrix(unsigned rows, unsigned columns, unsigned reservedRows = 0,
@@ -301,6 +302,9 @@ public:
   // M x M' = M'  M = det(M) x I.
   // Assert-fails if the matrix is not square.
   DynamicAPInt determinant(IntMatrix *inverse = nullptr) const;
+
+  // Converts the matrix into a FracMatrix as-is.
+  FracMatrix asFracMatrix() const;
 };
 
 // An inherited class for rational matrices, with no new data attributes.
@@ -339,6 +343,10 @@ public:
   // Multiply each row of the matrix by the LCM of the denominators, thereby
   // converting it to an integer matrix.
   IntMatrix normalizeRows() const;
+
+  // Converts the matrix to an IntMatrix as-is. If any value in the matrix
+  // is not an integer, the function triggers an assertion failure.
+  IntMatrix asIntMatrix() const;
 };
 
 } // namespace presburger

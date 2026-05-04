@@ -74,6 +74,17 @@ llvm.func @sections_allocate(%x : !llvm.ptr) {
 
 // -----
 
+llvm.func @scope_allocate(%x : !llvm.ptr) {
+  // expected-error@below {{not yet implemented: Unhandled clause allocate in omp.scope operation}}
+  // expected-error@below {{LLVM Translation failed for operation: omp.scope}}
+  omp.scope allocate(%x : !llvm.ptr -> %x : !llvm.ptr) {
+    omp.terminator
+  }
+  llvm.return
+}
+
+// -----
+
 omp.private {type = private} @x.privatizer : i32 init {
 ^bb0(%mold: !llvm.ptr, %private: !llvm.ptr):
   %c0 = llvm.mlir.constant(0 : i32) : i32
@@ -301,12 +312,15 @@ llvm.func @taskgroup_task_reduction(%x : !llvm.ptr) {
 // -----
 
 llvm.func @taskloop_allocate(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause allocate in omp.taskloop operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.taskloop}}
-  omp.taskloop allocate(%x : !llvm.ptr -> %x : !llvm.ptr) {
-    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
-      omp.yield
+  // expected-error@below {{LLVM Translation failed for operation: omp.taskloop.context}}
+  // expected-error@below {{not yet implemented: Unhandled clause allocate in omp.taskloop.context operation}}
+  omp.taskloop.context allocate(%x : !llvm.ptr -> %x : !llvm.ptr) {
+    omp.taskloop.wrapper {
+      omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+        omp.yield
+      }
     }
+    omp.terminator
   }
   llvm.return
 }
@@ -323,12 +337,15 @@ llvm.func @taskloop_allocate(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) 
   }
 
 llvm.func @taskloop_inreduction(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause in_reduction in omp.taskloop operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.taskloop}}
-  omp.taskloop in_reduction(@add_reduction_i32 %x -> %arg0 : !llvm.ptr) {
-    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
-      omp.yield
+  // expected-error@below {{LLVM Translation failed for operation: omp.taskloop.context}}
+  // expected-error@below {{not yet implemented: Unhandled clause in_reduction in omp.taskloop.context operation}}
+  omp.taskloop.context in_reduction(@add_reduction_i32 %x -> %arg0 : !llvm.ptr) {
+    omp.taskloop.wrapper {
+      omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+        omp.yield
+      }
     }
+    omp.terminator
   }
   llvm.return
 }
@@ -345,12 +362,15 @@ llvm.func @taskloop_inreduction(%lb : i32, %ub : i32, %step : i32, %x : !llvm.pt
   }
 
 llvm.func @taskloop_reduction(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause reduction in omp.taskloop operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.taskloop}}
-  omp.taskloop reduction(@add_reduction_i32 %x -> %arg0 : !llvm.ptr) {
-    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
-      omp.yield
+  // expected-error@below {{LLVM Translation failed for operation: omp.taskloop.context}}
+  // expected-error@below {{not yet implemented: Unhandled clause reduction in omp.taskloop.context operation}}
+  omp.taskloop.context reduction(@add_reduction_i32 %x -> %arg0 : !llvm.ptr) {
+    omp.taskloop.wrapper {
+      omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+        omp.yield
+      }
     }
+    omp.terminator
   }
   llvm.return
 }
@@ -433,6 +453,17 @@ llvm.func @teams_thread_limit_multi_dim(%lb : i32, %ub : i32) {
   // expected-error@below {{not yet implemented: Unhandled clause thread_limit with multi-dimensional values in omp.teams operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.teams}}
   omp.teams thread_limit(%lb, %ub : i32, i32) {
+    omp.terminator
+  }
+  llvm.return
+}
+
+// -----
+
+llvm.func @teams_dyn_groupprivate(%dyn_size : i32) {
+  // expected-error@below {{not yet implemented: Unhandled clause dyn_groupprivate in omp.teams operation}}
+  // expected-error@below {{LLVM Translation failed for operation: omp.teams}}
+  omp.teams dyn_groupprivate(%dyn_size : i32) {
     omp.terminator
   }
   llvm.return

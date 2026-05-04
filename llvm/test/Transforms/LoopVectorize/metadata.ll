@@ -403,7 +403,7 @@ define void @unknown_metadata(ptr nocapture %a, ptr noalias %b, i64 %size) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT2:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds ptr, ptr [[A]], i64 [[INDEX]], !custom_md [[META2:![0-9]+]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[B]], <2 x i64> [[VEC_IND]]
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x ptr> [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x ptr> [[TMP2]], i64 0
 ; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    store <2 x ptr> [[TMP2]], ptr [[TMP6]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
@@ -447,7 +447,7 @@ define void @unknown_metadata(ptr nocapture %a, ptr noalias %b, i64 %size) {
 ; INTERLEAVE-NEXT:    [[STEP_ADD3:%.*]] = add <2 x i32> [[VEC_IND1]], splat (i32 2)
 ; INTERLEAVE-NEXT:    [[TMP0:%.*]] = getelementptr inbounds ptr, ptr [[A]], i64 [[INDEX]], !custom_md [[META2:![0-9]+]]
 ; INTERLEAVE-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[B]], <2 x i64> [[VEC_IND]]
-; INTERLEAVE-NEXT:    [[TMP3:%.*]] = extractelement <2 x ptr> [[TMP1]], i32 0
+; INTERLEAVE-NEXT:    [[TMP3:%.*]] = extractelement <2 x ptr> [[TMP1]], i64 0
 ; INTERLEAVE-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[B]], <2 x i64> [[STEP_ADD]]
 ; INTERLEAVE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[TMP3]], i64 2
 ; INTERLEAVE-NEXT:    store <2 x i32> [[VEC_IND1]], ptr [[TMP3]], align 4
@@ -522,15 +522,15 @@ define void @noalias_metadata(ptr align 8 %dst, ptr align 8 %src) {
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP4]], 2
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP4]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP23:%.*]] = mul i64 [[N_VEC]], 8
+; CHECK-NEXT:    [[TMP23:%.*]] = shl i64 [[N_VEC]], 3
 ; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP23]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP26:%.*]] = mul i64 [[INDEX]], 8
+; CHECK-NEXT:    [[TMP26:%.*]] = shl i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP26]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x ptr>, ptr [[NEXT_GEP]], align 8, !alias.scope [[META14:![0-9]+]]
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x ptr> [[WIDE_LOAD]], i32 1
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x ptr> [[WIDE_LOAD]], i64 1
 ; CHECK-NEXT:    store ptr [[TMP7]], ptr [[DST]], align 8, !alias.scope [[META17:![0-9]+]], !noalias [[META19:![0-9]+]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP28:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -575,16 +575,16 @@ define void @noalias_metadata(ptr align 8 %dst, ptr align 8 %src) {
 ; INTERLEAVE:       [[VECTOR_PH]]:
 ; INTERLEAVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP4]], 4
 ; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP4]], [[N_MOD_VF]]
-; INTERLEAVE-NEXT:    [[TMP23:%.*]] = mul i64 [[N_VEC]], 8
+; INTERLEAVE-NEXT:    [[TMP23:%.*]] = shl i64 [[N_VEC]], 3
 ; INTERLEAVE-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP23]]
 ; INTERLEAVE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; INTERLEAVE:       [[VECTOR_BODY]]:
 ; INTERLEAVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; INTERLEAVE-NEXT:    [[TMP26:%.*]] = mul i64 [[INDEX]], 8
+; INTERLEAVE-NEXT:    [[TMP26:%.*]] = shl i64 [[INDEX]], 3
 ; INTERLEAVE-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP26]]
 ; INTERLEAVE-NEXT:    [[TMP7:%.*]] = getelementptr ptr, ptr [[NEXT_GEP]], i64 2
 ; INTERLEAVE-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x ptr>, ptr [[TMP7]], align 8, !alias.scope [[META14:![0-9]+]]
-; INTERLEAVE-NEXT:    [[TMP8:%.*]] = extractelement <2 x ptr> [[WIDE_LOAD]], i32 1
+; INTERLEAVE-NEXT:    [[TMP8:%.*]] = extractelement <2 x ptr> [[WIDE_LOAD]], i64 1
 ; INTERLEAVE-NEXT:    store ptr [[TMP8]], ptr [[DST]], align 8, !alias.scope [[META17:![0-9]+]], !noalias [[META19:![0-9]+]]
 ; INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; INTERLEAVE-NEXT:    [[TMP28:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]

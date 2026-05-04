@@ -100,6 +100,47 @@ void ErrorNewDeleteTypeMismatch::Print() {
       "ASAN_OPTIONS=new_delete_type_mismatch=0\n");
 }
 
+void ErrorFreeSizeMismatch::Print() {
+  Decorator d;
+  Printf("%s", d.Error());
+  Report("ERROR: AddressSanitizer: %s on %p in thread %s:\n",
+         scariness.GetDescription(), (void*)addr_description.addr,
+         AsanThreadIdAndName(tid).c_str());
+  Printf("%s  object passed to %s has wrong size or alignment:\n", d.Default(),
+         (isFreeAlignedSized() ? "free_aligned_sized" : "free_sized"));
+  if (delete_size != 0) {
+    Printf(
+        "  size of the allocation:   %zd bytes;\n"
+        "  size of the deallocation: %zd bytes.\n",
+        addr_description.chunk_access.chunk_size, delete_size);
+  }
+  const uptr user_alignment =
+      addr_description.chunk_access.user_requested_alignment;
+  if (isFreeAlignedSized() && delete_alignment != user_alignment) {
+    char user_alignment_str[32];
+    char delete_alignment_str[32];
+    internal_snprintf(user_alignment_str, sizeof(user_alignment_str),
+                      "%zd bytes", user_alignment);
+    internal_snprintf(delete_alignment_str, sizeof(delete_alignment_str),
+                      "%zd bytes", delete_alignment);
+    static const char* kDefaultAlignment = "default-aligned";
+    Printf(
+        "  alignment of the allocation:   %s;\n"
+        "  alignment of the deallocation: %s.\n",
+        user_alignment > 0 ? user_alignment_str : kDefaultAlignment,
+        delete_alignment > 0 ? delete_alignment_str : kDefaultAlignment);
+  }
+  CHECK_GT(free_stack->size, 0);
+  scariness.Print();
+  GET_STACK_TRACE_FATAL(free_stack->trace[0], free_stack->top_frame_bp);
+  stack.Print();
+  addr_description.Print();
+  ReportErrorSummary(scariness.GetDescription(), &stack);
+  Report(
+      "HINT: if you don't care about these errors you may set "
+      "ASAN_OPTIONS=free_size_mismatch=0\n");
+}
+
 void ErrorFreeNotMalloced::Print() {
   Decorator d;
   Printf("%s", d.Error());
@@ -616,8 +657,10 @@ static void CheckPoisonRecords(uptr addr) {
     shadow_addr++;
   u8 shadow_val = *shadow_addr;
 
-  if (shadow_val != kAsanUserPoisonedMemoryMagic)
+  if (shadow_val != kAsanUserPoisonedMemoryMagic &&
+      shadow_val >= ASAN_SHADOW_GRANULARITY) {
     return;
+  }
 
   Printf("\n");
 
@@ -633,13 +676,12 @@ static void CheckPoisonRecords(uptr addr) {
 
   PoisonRecord record;
   if (FindPoisonRecord(addr, record)) {
+    Printf("Memory was manually poisoned by thread T%u:\n", record.thread_id);
     StackTrace poison_stack = StackDepotGet(record.stack_id);
-    if (poison_stack.size > 0) {
-      Printf("Memory was manually poisoned by thread T%u:\n", record.thread_id);
+    if (poison_stack.size > 0)
       poison_stack.Print();
-    }
   } else {
-    Printf("ERROR: no matching poison tracking record found.\n");
+    Printf("NOTE: no matching poison tracking record found.\n");
     Printf("Try a larger value for ASAN_OPTIONS=poison_history_size=<size>.\n");
   }
 }

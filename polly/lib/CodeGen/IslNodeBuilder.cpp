@@ -234,7 +234,8 @@ static void findReferencesInStmt(ScopStmt *Stmt, SetVector<Value *> &Values,
   LoopInfo *LI = Stmt->getParent()->getLI();
 
   BasicBlock *BB = Stmt->getBasicBlock();
-  Loop *Scope = LI->getLoopFor(BB);
+  // TODO: Should BB ever be null?
+  Loop *Scope = BB ? LI->getLoopFor(BB) : nullptr;
   for (Instruction *Inst : Stmt->getInstructions())
     findReferencesInInst(Inst, Stmt, Scope, GlobalMap, Values, SCEVs);
 
@@ -586,6 +587,8 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
   ScalarEvolution *CallerSE = GenSE;
   ValueMapT CallerGlobals = ValueMap;
   IslExprBuilder::IDToValueTy IDToValueCopy = IDToValue;
+  MapVector<const Loop *, const SCEV *> OutsideLoopIterationsCopy =
+      OutsideLoopIterations;
 
   // Get the analyses for the subfunction. ParallelLoopGenerator already create
   // DominatorTree and LoopInfo for us.
@@ -647,6 +650,19 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
   }
   IDToValue[IteratorID] = IV;
 
+  // Also update OutsideLoopIterations to use values from the subfunction.
+  // SCEVExpander may fold identity operations (e.g. x+0 -> x), returning the
+  // original loop PHI instead of a new instruction. We need to remap these
+  // values through NewValues so GenSE (now SubSE) doesn't operate on values
+  // from the caller function.
+  for (auto &[L, S] : OutsideLoopIterations) {
+    if (auto *U = dyn_cast<SCEVUnknown>(S)) {
+      Value *NewVal = NewValues.lookup(U->getValue());
+      assert(NewVal && "must have a new value");
+      OutsideLoopIterations[L] = GenSE->getUnknown(NewVal);
+    }
+  }
+
 #ifndef NDEBUG
   // Check whether the maps now exclusively refer to SubFn values.
   for (auto &[OldVal, SubVal] : ValueMap) {
@@ -679,13 +695,11 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
   GenSE = CallerSE;
   IDToValue = std::move(IDToValueCopy);
   ValueMap = std::move(CallerGlobals);
+  OutsideLoopIterations = std::move(OutsideLoopIterationsCopy);
   ExprBuilder.switchGeneratedFunc(CallerFn, CallerDT, CallerLI, CallerSE);
   RegionGen.switchGeneratedFunc(CallerFn, CallerDT, CallerLI, CallerSE);
   BlockGen.switchGeneratedFunc(CallerFn, CallerDT, CallerLI, CallerSE);
   Builder.SetInsertPoint(AfterLoop);
-
-  for (const Loop *L : Loops)
-    OutsideLoopIterations.erase(L);
 
   isl_ast_node_free(For);
   isl_ast_expr_free(Iterator);
@@ -924,6 +938,30 @@ void IslNodeBuilder::createBlock(__isl_take isl_ast_node *Block) {
   isl_ast_node_list_free(List);
 }
 
+void IslNodeBuilder::generateBeginScopTrace() {
+  if (!TraceStmts)
+    return;
+
+  // Sequence of strings to print.
+  SmallVector<llvm::Value *, 8> Values;
+  Values.push_back(RuntimeDebugBuilder::getPrintableString(Builder, "Scop: "));
+
+  auto Params = S.getParamSpace();
+  for (int i : rangeIslSize(0, Params.dim(isl::dim::param))) {
+    if (i != 0)
+      Values.push_back(RuntimeDebugBuilder::getPrintableString(Builder, " "));
+
+    isl::id PId = Params.get_dim_id(isl::dim::param, i);
+    Values.push_back(
+        RuntimeDebugBuilder::getPrintableString(Builder, PId.get_name()));
+    Values.push_back(RuntimeDebugBuilder::getPrintableString(Builder, "="));
+    Values.push_back(IDToValue.lookup(PId.get()));
+  }
+
+  Values.push_back(RuntimeDebugBuilder::getPrintableString(Builder, "\n"));
+  RuntimeDebugBuilder::createCPUPrinter(Builder, ArrayRef<Value *>(Values));
+}
+
 void IslNodeBuilder::create(__isl_take isl_ast_node *Node) {
   switch (isl_ast_node_get_type(Node)) {
   case isl_ast_node_error:
@@ -1012,7 +1050,7 @@ bool IslNodeBuilder::materializeValue(__isl_take isl_id *Id) {
   return true;
 }
 
-bool IslNodeBuilder::materializeParameters(__isl_take isl_set *Set) {
+bool IslNodeBuilder::materializeParameters(__isl_keep isl_set *Set) {
   for (unsigned i = 0, e = isl_set_dim(Set, isl_dim_param); i < e; ++i) {
     if (!isl_set_involves_dims(Set, isl_dim_param, i, 1))
       continue;
@@ -1032,14 +1070,14 @@ bool IslNodeBuilder::materializeParameters() {
   return true;
 }
 
-Value *IslNodeBuilder::preloadUnconditionally(__isl_take isl_set *AccessRange,
-                                              isl_ast_build *Build,
+Value *IslNodeBuilder::preloadUnconditionally(isl::set AccessRange,
+                                              isl::ast_build Build,
                                               Instruction *AccInst) {
-  isl_pw_multi_aff *PWAccRel = isl_pw_multi_aff_from_set(AccessRange);
-  isl_ast_expr *Access =
-      isl_ast_build_access_from_pw_multi_aff(Build, PWAccRel);
-  auto *Address = isl_ast_expr_address_of(Access);
-  auto *AddressValue = ExprBuilder.create(Address);
+  isl::pw_multi_aff PWAccRel = isl::pw_multi_aff::from_set(AccessRange);
+  PWAccRel = PWAccRel.gist_params(S.getContext());
+  isl::ast_expr Access = Build.access_from(PWAccRel);
+  isl::ast_expr Address = Access.address_of();
+  Value *AddressValue = ExprBuilder.create(Address.release());
   Value *PreloadVal;
 
   // Correct the type as the SAI might have a different type than the user
@@ -1061,45 +1099,30 @@ Value *IslNodeBuilder::preloadUnconditionally(__isl_take isl_set *AccessRange,
 }
 
 Value *IslNodeBuilder::preloadInvariantLoad(const MemoryAccess &MA,
-                                            __isl_take isl_set *Domain) {
-  isl_set *AccessRange = isl_map_range(MA.getAddressFunction().release());
-  AccessRange = isl_set_gist_params(AccessRange, S.getContext().release());
+                                            isl::set Domain) {
+  isl::set AccessRange = MA.getAddressFunction().range();
 
-  if (!materializeParameters(AccessRange)) {
-    isl_set_free(AccessRange);
-    isl_set_free(Domain);
+  if (!materializeParameters(AccessRange.get()))
     return nullptr;
-  }
 
-  auto *Build =
-      isl_ast_build_from_context(isl_set_universe(S.getParamSpace().release()));
-  isl_set *Universe = isl_set_universe(isl_set_get_space(Domain));
-  bool AlwaysExecuted = isl_set_is_equal(Domain, Universe);
-  isl_set_free(Universe);
+  isl::ast_build Build =
+      isl::ast_build::from_context(isl::set::universe(S.getParamSpace()));
+  isl::set Universe = isl::set::universe(Domain.get_space());
+  bool AlwaysExecuted = Domain.is_equal(Universe);
 
   Instruction *AccInst = MA.getAccessInstruction();
   Type *AccInstTy = AccInst->getType();
 
-  Value *PreloadVal = nullptr;
-  if (AlwaysExecuted) {
-    PreloadVal = preloadUnconditionally(AccessRange, Build, AccInst);
-    isl_ast_build_free(Build);
-    isl_set_free(Domain);
-    return PreloadVal;
-  }
+  if (AlwaysExecuted)
+    return preloadUnconditionally(AccessRange, Build, AccInst);
 
-  if (!materializeParameters(Domain)) {
-    isl_ast_build_free(Build);
-    isl_set_free(AccessRange);
-    isl_set_free(Domain);
+  if (!materializeParameters(Domain.get()))
     return nullptr;
-  }
 
-  isl_ast_expr *DomainCond = isl_ast_build_expr_from_set(Build, Domain);
-  Domain = nullptr;
+  isl::ast_expr DomainCond = Build.expr_from(Domain);
 
   ExprBuilder.setTrackOverflow(true);
-  Value *Cond = ExprBuilder.createBool(DomainCond);
+  Value *Cond = ExprBuilder.createBool(DomainCond.release());
   Value *OverflowHappened = Builder.CreateNot(ExprBuilder.getOverflowState(),
                                               "polly.preload.cond.overflown");
   Cond = Builder.CreateAnd(Cond, OverflowHappened, "polly.preload.cond.result");
@@ -1136,7 +1159,7 @@ Value *IslNodeBuilder::preloadInvariantLoad(const MemoryAccess &MA,
   Builder.SetInsertPoint(MergeBB, MergeBB->getTerminator()->getIterator());
   auto *MergePHI = Builder.CreatePHI(
       AccInstTy, 2, "polly.preload." + AccInst->getName() + ".merge");
-  PreloadVal = MergePHI;
+  Value *PreloadVal = MergePHI;
 
   if (!PreAccInst) {
     PreloadVal = nullptr;
@@ -1146,7 +1169,6 @@ Value *IslNodeBuilder::preloadInvariantLoad(const MemoryAccess &MA,
   MergePHI->addIncoming(PreAccInst, ExecBB);
   MergePHI->addIncoming(Constant::getNullValue(AccInstTy), CondBB);
 
-  isl_ast_build_free(Build);
   return PreloadVal;
 }
 
@@ -1213,7 +1235,7 @@ bool IslNodeBuilder::preloadInvariantEquivClass(
   Instruction *AccInst = MA->getAccessInstruction();
   Type *AccInstTy = AccInst->getType();
 
-  Value *PreloadVal = preloadInvariantLoad(*MA, ExecutionCtx.copy());
+  Value *PreloadVal = preloadInvariantLoad(*MA, ExecutionCtx);
   if (!PreloadVal)
     return false;
 

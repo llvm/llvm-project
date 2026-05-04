@@ -56,7 +56,7 @@ define void @test_array_load2_store2(i32 %C, i32 %D) #1 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx0 = getelementptr inbounds [1024 x i32], ptr @AB, i64 0, i64 %indvars.iv
   %load1 = load i32, ptr %arrayidx0, align 4
@@ -73,7 +73,7 @@ for.body:                                         ; preds = %for.body, %entry
   %cmp = icmp slt i64 %indvars.iv.next, 1024
   br i1 %cmp, label %for.body, label %for.end
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 
@@ -138,7 +138,7 @@ define void @test_array_load2_i16_store2(i32 %C, i32 %D) #1 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds [1024 x i16], ptr @AB_i16, i64 0, i64 %indvars.iv
   %0 = load i16, ptr %arrayidx, align 2
@@ -157,7 +157,7 @@ for.body:                                         ; preds = %entry, %for.body
   %cmp = icmp ult i64 %indvars.iv, 1022
   br i1 %cmp, label %for.body, label %for.end
 
-for.end:                                 ; preds = %for.body
+for.end:
   ret void
 }
 
@@ -176,7 +176,7 @@ for.end:                                 ; preds = %for.body
 ; }
 
 
-@CD_i16 = dso_local local_unnamed_addr global [1024 x i16] zeroinitializer, align 2
+@CD_i16 = global [1024 x i16] zeroinitializer, align 2
 
 define void @test_array_load2_store2_i16(i32 noundef %C, i32 noundef %D) #1 {
 ; CHECK-LABEL: @test_array_load2_store2_i16(
@@ -224,7 +224,7 @@ define void @test_array_load2_store2_i16(i32 noundef %C, i32 noundef %D) #1 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds [1024 x i32], ptr @AB, i64 0, i64 %indvars.iv
   %0 = load i32, ptr %arrayidx, align 4
@@ -243,7 +243,7 @@ for.body:                                         ; preds = %entry, %for.body
   %cmp = icmp ult i64 %indvars.iv, 1022
   br i1 %cmp, label %for.body, label %for.end
 
-for.end:                                 ; preds = %for.body
+for.end:
   ret void
 }
 
@@ -301,7 +301,7 @@ define i32 @test_struct_load6(ptr %S) #1 {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %r.041 = phi i32 [ 0, %entry ], [ %sub14, %for.body ]
   %x = getelementptr inbounds %struct.ST6, ptr %S, i64 %indvars.iv, i32 0
@@ -326,7 +326,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %indvars.iv.next, 1024
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   %sub14.lcssa = phi i32 [ %sub14, %for.body ]
   ret i32 %sub14.lcssa
 }
@@ -399,10 +399,10 @@ define void @test_reversed_load2_store2(ptr noalias nocapture readonly %A, ptr n
 entry:
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 1023, %entry ], [ %indvars.iv.next, %for.body ]
   %x = getelementptr inbounds %struct.ST2, ptr %A, i64 %indvars.iv, i32 0
   %load1 = load i32, ptr %x, align 4
@@ -462,10 +462,10 @@ define void @even_load_static_tc(ptr noalias nocapture readonly %A, ptr noalias 
 entry:
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
   %load = load i32, ptr %arrayidx, align 4
@@ -531,10 +531,10 @@ define void @even_load_dynamic_tc(ptr noalias nocapture readonly %A, ptr noalias
 entry:
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
   %load = load i32, ptr %arrayidx, align 4
@@ -576,7 +576,7 @@ define void @load_gap_reverse(ptr noalias nocapture readonly %P1, ptr noalias no
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT1:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT1]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
-; CHECK-NEXT:    [[INDUCTION:%.*]] = sub <vscale x 4 x i64> splat (i64 1023), [[TMP2]]
+; CHECK-NEXT:    [[INDUCTION:%.*]] = sub nsw <vscale x 4 x i64> splat (i64 1023), [[TMP2]]
 ; CHECK-NEXT:    [[DOTNEG:%.*]] = sub nsw i64 0, [[TMP1]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[DOTNEG]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
@@ -664,10 +664,10 @@ define void @mixed_load2_store2(ptr noalias nocapture readonly %A, ptr noalias n
 entry:
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
   %load1 = load i32, ptr %arrayidx, align 4
@@ -746,12 +746,12 @@ define void @int_float_struct(ptr nocapture readonly %p) #0 {
 entry:
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   store i32 %add, ptr @SA, align 4
   store float %add3, ptr @SB, align 4
   ret void
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %SumB.014 = phi float [ 0.0e+00, %entry ], [ %add3, %for.body ]
   %SumA.013 = phi i32 [ 0, %entry ], [ %add, %for.body ]
@@ -1595,9 +1595,9 @@ define void @interleave_deinterleave_reverse(ptr noalias nocapture readonly %A, 
 ;
 entry:
   br label %for.body
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   ret void
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 1023, %entry ], [ %indvars.iv.next, %for.body ]
   %x = getelementptr inbounds %struct.xyzt, ptr %A, i64 %indvars.iv, i32 0
   %load1 = load i32, ptr %x, align 4

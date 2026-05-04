@@ -624,8 +624,7 @@ Instruction *InstCombinerImpl::foldFPSignBitOps(BinaryOperator &I) {
   if (match(Op0, m_FAbs(m_Value(X))) && match(Op1, m_FAbs(m_Value(Y))) &&
       (Op0->hasOneUse() || Op1->hasOneUse())) {
     Value *XY = Builder.CreateBinOpFMF(Opcode, X, Y, &I);
-    Value *Fabs =
-        Builder.CreateUnaryIntrinsic(Intrinsic::fabs, XY, &I, I.getName());
+    Value *Fabs = Builder.CreateFAbs(XY, &I, I.getName());
     return replaceInstUsesWith(I, Fabs);
   }
 
@@ -1089,6 +1088,15 @@ Instruction *InstCombinerImpl::visitFMul(BinaryOperator &I) {
     }
     return replaceInstUsesWith(I, Sin);
   }
+
+  // X * ldexp(1.0, Y) -> ldexp(X, Y)
+  if (match(&I, m_AllowReassoc(m_c_FMul(
+                    m_Value(X),
+                    m_AllowReassoc(m_OneUse(m_Intrinsic<Intrinsic::ldexp>(
+                        m_FPOne(), m_Value(Y))))))))
+    return replaceInstUsesWith(
+        I, Builder.CreateIntrinsic(Intrinsic::ldexp,
+                                   {X->getType(), Y->getType()}, {X, Y}, &I));
 
   if (SimplifyDemandedInstructionFPClass(I))
     return &I;

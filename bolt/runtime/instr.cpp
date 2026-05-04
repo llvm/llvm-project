@@ -255,10 +255,10 @@ void *operator new[](size_t Sz, BumpPtrAllocator &A, char C) {
 // C++ language weirdness
 void operator delete(void *Ptr, BumpPtrAllocator &A) { A.deallocate(Ptr); }
 
-namespace {
-
 // Disable instrumentation optimizations that sacrifice profile accuracy
 extern "C" bool __bolt_instr_conservative;
+
+namespace {
 
 /// Basic key-val atom stored in our hash
 struct SimpleHashTableEntryBase {
@@ -724,8 +724,9 @@ static char *getBinaryPath() {
       char *C = strCopy(FindBuf, DirPath, NameMax);
       C = strCopy(C, d->d_name, NameMax - (C - FindBuf));
       *C = '\0';
-      uint32_t Ret = __readlink(FindBuf, TargetPath, sizeof(TargetPath));
-      assert(Ret != -1 && Ret != BufSize, "readlink error");
+      uint64_t Ret = __readlink(FindBuf, TargetPath, sizeof(TargetPath));
+      assert(static_cast<int64_t>(Ret) >= 0 && Ret < sizeof(TargetPath),
+             "readlink error");
       TargetPath[Ret] = '\0';
       __close(FDdir);
       return TargetPath;
@@ -1500,8 +1501,8 @@ int openProfile() {
     Ptr = strCopy(Ptr, ".fdata", BufSize - (Ptr - Buf + 1));
   }
   *Ptr++ = '\0';
-  uint64_t FD = __open(Buf, O_WRONLY | O_TRUNC | O_CREAT,
-                       /*mode=*/0666);
+  uint64_t FD = __open(Buf, O_WRONLY | O_TRUNC | O_CREAT | O_CLOEXEC,
+                       /*mode=*/0600);
   if (static_cast<int64_t>(FD) < 0) {
     report("Error while trying to open profile file for writing: ");
     report(Buf);
@@ -1727,10 +1728,8 @@ extern "C" __attribute((naked)) void __bolt_instr_indirect_call()
   // clang-format off
   __asm__ __volatile__(
                       SAVE_ALL
-                      "addi sp, sp, 288\n"
-                      "ld x10, 0(sp)\n"
-                      "ld x11, 8(sp)\n"
-                      "addi sp, sp, -288\n"
+                      "ld x10, 288(sp)\n"
+                      "ld x11, 296(sp)\n"
                       "jal x1, instrumentIndirectCall\n"
                       RESTORE_ALL
                       "ret\n"
@@ -1763,10 +1762,8 @@ extern "C" __attribute((naked)) void __bolt_instr_indirect_tailcall()
 #elif defined(__riscv)
   // clang-format off
   __asm__ __volatile__(SAVE_ALL
-                      "addi sp, sp, 288\n"
-                      "ld x10, 0(sp)\n"
-                      "ld x11, 8(sp)\n"
-                      "addi sp, sp, -288\n"
+                      "ld x10, 288(sp)\n"
+                      "ld x11, 296(sp)\n"
                       "jal x1, instrumentIndirectCall\n"
                       RESTORE_ALL
                       "ret\n"
@@ -1806,8 +1803,7 @@ extern "C" __attribute((naked)) void __bolt_instr_start()
                       RESTORE_ALL
                       "setup_symbol:\n"
                       "auipc x5, %%pcrel_hi(__bolt_start_trampoline)\n"
-                      "addi x5, x5, %%pcrel_lo(setup_symbol)\n"
-                      "jr x5\n"
+                      "jalr x0, %%pcrel_lo(setup_symbol)(x5)\n"
                       :::);
   // clang-format on
 #else
@@ -1838,8 +1834,7 @@ extern "C" void __bolt_instr_fini() {
                       SAVE_ALL
                       "fini_symbol:\n"
                       "auipc x5, %%pcrel_hi(__bolt_fini_trampoline)\n"
-                      "addi x5, x5, %%pcrel_lo(fini_symbol)\n"
-                      "jalr x1, 0(x5)\n"
+                      "jalr x1, %%pcrel_lo(fini_symbol)(x5)\n"
                       RESTORE_ALL
                       :::);
   // clang-format on

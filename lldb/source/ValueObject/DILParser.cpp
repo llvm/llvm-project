@@ -36,27 +36,31 @@ DILDiagnosticError::DILDiagnosticError(llvm::StringRef expr,
   DiagnosticDetail::SourceLocation sloc = {
       FileSpec{}, /*line=*/1, static_cast<uint16_t>(loc + 1),
       err_len,    false,      /*in_user_input=*/true};
-  std::string rendered_msg =
-      llvm::formatv("<user expression 0>:1:{0}: {1}\n   1 | {2}\n     | ^",
-                    loc + 1, message, expr);
+  // If the error is not handled by `RenderDiagnosticDetails`, this creates an
+  // error message that can be displayed instead.
+  // Example:
+  // (lldb) script lldb.frame.GetValueForVariablePath("1 + foo")
+  // error: <user expression>:1:5: use of undeclared identifier 'foo'
+  //   1 | 1 + foo
+  //     |     ^~~
+  auto msg = llvm::formatv("<user expression>:1:{0}: {1}\n    1 | {2}\n      |",
+                           loc + 1, message, expr);
+  std::string rendered_str;
+  llvm::raw_string_ostream rendered_os(rendered_str);
+  rendered_os << msg.str();
+  rendered_os << llvm::indent(loc + 1) << "^";
+  if (err_len > 1) {
+    // Underline the rest of the erroneous token after the cursor '^'.
+    rendered_os << std::string(err_len - 1, '~');
+  }
   m_detail.source_location = sloc;
   m_detail.severity = lldb::eSeverityError;
   m_detail.message = message;
-  m_detail.rendered = std::move(rendered_msg);
+  m_detail.rendered = std::move(rendered_str);
 }
 
-llvm::Expected<lldb::TypeSystemSP>
-GetTypeSystemFromCU(std::shared_ptr<StackFrame> ctx) {
-  SymbolContext symbol_context =
-      ctx->GetSymbolContext(lldb::eSymbolContextCompUnit);
-  lldb::LanguageType language = symbol_context.comp_unit->GetLanguage();
-
-  symbol_context = ctx->GetSymbolContext(lldb::eSymbolContextModule);
-  return symbol_context.module_sp->GetTypeSystemForLanguage(language);
-}
-
-CompilerType ResolveTypeByName(const std::string &name,
-                               ExecutionContextScope &ctx_scope) {
+static CompilerType ResolveTypeByName(const std::string &name,
+                                      ExecutionContextScope &ctx_scope) {
   // Internally types don't have global scope qualifier in their names and
   // LLDB doesn't support queries with it too.
   llvm::StringRef name_ref(name);
@@ -86,14 +90,13 @@ CompilerType ResolveTypeByName(const std::string &name,
   return {};
 }
 
-llvm::Expected<ASTNodeUP>
-DILParser::Parse(llvm::StringRef dil_input_expr, DILLexer lexer,
-                 std::shared_ptr<StackFrame> frame_sp,
-                 lldb::DynamicValueType use_dynamic, bool use_synthetic,
-                 bool fragile_ivar, bool check_ptr_vs_member) {
+llvm::Expected<ASTNodeUP> DILParser::Parse(llvm::StringRef dil_input_expr,
+                                           DILLexer lexer,
+                                           std::shared_ptr<StackFrame> frame_sp,
+                                           lldb::DynamicValueType use_dynamic,
+                                           lldb::DILMode mode) {
   llvm::Error error = llvm::Error::success();
-  DILParser parser(dil_input_expr, lexer, frame_sp, use_dynamic, use_synthetic,
-                   fragile_ivar, check_ptr_vs_member, error);
+  DILParser parser(dil_input_expr, lexer, frame_sp, use_dynamic, error, mode);
 
   ASTNodeUP node_up = parser.Run();
   assert(node_up && "ASTNodeUP must not contain a nullptr");
@@ -106,13 +109,11 @@ DILParser::Parse(llvm::StringRef dil_input_expr, DILLexer lexer,
 
 DILParser::DILParser(llvm::StringRef dil_input_expr, DILLexer lexer,
                      std::shared_ptr<StackFrame> frame_sp,
-                     lldb::DynamicValueType use_dynamic, bool use_synthetic,
-                     bool fragile_ivar, bool check_ptr_vs_member,
-                     llvm::Error &error)
+                     lldb::DynamicValueType use_dynamic, llvm::Error &error,
+                     lldb::DILMode mode)
     : m_ctx_scope(frame_sp), m_input_expr(dil_input_expr),
       m_dil_lexer(std::move(lexer)), m_error(error), m_use_dynamic(use_dynamic),
-      m_use_synthetic(use_synthetic), m_fragile_ivar(fragile_ivar),
-      m_check_ptr_vs_member(check_ptr_vs_member) {}
+      m_mode(mode) {}
 
 ASTNodeUP DILParser::Run() {
   ASTNodeUP expr = ParseExpression();
@@ -132,14 +133,42 @@ ASTNodeUP DILParser::ParseExpression() { return ParseAdditiveExpression(); }
 // Parse an additive_expression.
 //
 //  additive_expression:
-//    cast_expression {"+" cast_expression}
+//    multiplicative_expression {"+" multiplicative_expression}
 //
 ASTNodeUP DILParser::ParseAdditiveExpression() {
-  auto lhs = ParseCastExpression();
+  auto lhs = ParseMultiplicativeExpression();
   assert(lhs && "ASTNodeUP must not contain a nullptr");
 
   while (CurToken().IsOneOf({Token::plus, Token::minus})) {
     Token token = CurToken();
+    m_dil_lexer.Advance();
+    auto rhs = ParseMultiplicativeExpression();
+    assert(rhs && "ASTNodeUP must not contain a nullptr");
+    lhs = std::make_unique<BinaryOpNode>(
+        token.GetLocation(), GetBinaryOpKindFromToken(token.GetKind()),
+        std::move(lhs), std::move(rhs));
+  }
+
+  return lhs;
+}
+
+// Parse a multiplicative_expression.
+//
+//  multiplicative_expression:
+//    cast_expression {"*" cast_expression}
+//    cast_expression {"/" cast_expression}
+//    cast_expression {"%" cast_expression}
+//
+ASTNodeUP DILParser::ParseMultiplicativeExpression() {
+  auto lhs = ParseCastExpression();
+
+  while (CurToken().IsOneOf({Token::star, Token::slash, Token::percent})) {
+    Token token = CurToken();
+    if (token.Is(Token::star) && m_mode != lldb::eDILModeFull) {
+      BailOut("binary multiplication (*) is allowed only in DIL full mode",
+              token.GetLocation(), token.GetSpelling().length());
+      return std::make_unique<ErrorNode>();
+    }
     m_dil_lexer.Advance();
     auto rhs = ParseCastExpression();
     assert(rhs && "ASTNodeUP must not contain a nullptr");

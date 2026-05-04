@@ -175,8 +175,8 @@ struct ol_event_impl_t {
                   ol_queue_handle_t Queue)
       : EventInfo(EventInfo), Device(Device), QueueId(Queue->Id), Queue(Queue) {
   }
-  // EventInfo may be null, in which case the event should be considered always
-  // complete
+  // Opaque backend-specific event state. This is expected to be non-null for
+  // backends that materialize real events.
   void *EventInfo;
   ol_device_handle_t Device;
   size_t QueueId;
@@ -429,22 +429,6 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
     else
       return Info.write<ol_device_type_t>(OL_DEVICE_TYPE_GPU);
 
-  case OL_DEVICE_INFO_SINGLE_FP_CONFIG:
-  case OL_DEVICE_INFO_DOUBLE_FP_CONFIG: {
-    ol_device_fp_capability_flags_t flags{0};
-    flags |= OL_DEVICE_FP_CAPABILITY_FLAG_CORRECTLY_ROUNDED_DIVIDE_SQRT |
-             OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_NEAREST |
-             OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_ZERO |
-             OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_INF |
-             OL_DEVICE_FP_CAPABILITY_FLAG_INF_NAN |
-             OL_DEVICE_FP_CAPABILITY_FLAG_DENORM |
-             OL_DEVICE_FP_CAPABILITY_FLAG_FMA;
-    return Info.write(flags);
-  }
-
-  case OL_DEVICE_INFO_HALF_FP_CONFIG:
-    return Info.write<ol_device_fp_capability_flags_t>(0);
-
   case OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_CHAR:
   case OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_SHORT:
   case OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_INT:
@@ -503,6 +487,9 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
   case OL_DEVICE_INFO_NUM_COMPUTE_UNITS:
   case OL_DEVICE_INFO_ADDRESS_BITS:
   case OL_DEVICE_INFO_MAX_CLOCK_FREQUENCY:
+  case OL_DEVICE_INFO_SINGLE_FP_CONFIG:
+  case OL_DEVICE_INFO_DOUBLE_FP_CONFIG:
+  case OL_DEVICE_INFO_HALF_FP_CONFIG:
   case OL_DEVICE_INFO_MEMORY_CLOCK_RATE: {
     // Uint32 values
     if (!std::holds_alternative<uint64_t>(Entry->Value))
@@ -520,6 +507,16 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
       return makeError(ErrorCode::BACKEND_FAILURE,
                        "plugin returned incorrect type");
     return Info.write(std::get<uint64_t>(Entry->Value));
+  }
+
+  case OL_DEVICE_INFO_SINGLE_FP_SUPPORT:
+  case OL_DEVICE_INFO_DOUBLE_FP_SUPPORT:
+  case OL_DEVICE_INFO_HALF_FP_SUPPORT: {
+    // Boolean values
+    if (!std::holds_alternative<bool>(Entry->Value))
+      return makeError(ErrorCode::BACKEND_FAILURE,
+                       "plugin returned incorrect type");
+    return Info.write<bool>(std::get<bool>(Entry->Value));
   }
 
   case OL_DEVICE_INFO_MAX_WORK_SIZE_PER_DIMENSION:
@@ -794,7 +791,8 @@ Error olWaitEvents_impl(ol_queue_handle_t Queue, ol_event_handle_t *Events,
       return Plugin::error(ErrorCode::INVALID_NULL_HANDLE,
                            "olWaitEvents asked to wait on a NULL event");
 
-    // Do nothing if the event is for this queue or the event is always complete
+    // Do nothing if the event is for this queue or the backend does not
+    // materialize event state for it.
     if (Event->QueueId == Queue->Id || !Event->EventInfo)
       continue;
 
@@ -839,13 +837,31 @@ Error olGetQueueInfoSize_impl(ol_queue_handle_t Queue, ol_queue_info_t PropName,
 }
 
 Error olSyncEvent_impl(ol_event_handle_t Event) {
-  // No event info means that this event was complete on creation
+  // Some backends do not materialize backend event state. Treat such events as
+  // trivially complete.
   if (!Event->EventInfo)
     return Plugin::success();
 
   if (auto Res = Event->Device->Device->syncEvent(Event->EventInfo))
     return Res;
 
+  return Error::success();
+}
+
+Error olGetEventElapsedTime_impl(ol_event_handle_t StartEvent,
+                                 ol_event_handle_t EndEvent,
+                                 float *ElapsedTime) {
+  if (StartEvent->Device != EndEvent->Device)
+    return createOffloadError(
+        ErrorCode::INVALID_DEVICE,
+        "StartEvent and EndEvent must belong to the same device");
+
+  auto ElapsedTimeOrErr = StartEvent->Device->Device->getEventElapsedTime(
+      StartEvent->EventInfo, EndEvent->EventInfo);
+  if (!ElapsedTimeOrErr)
+    return ElapsedTimeOrErr.takeError();
+
+  *ElapsedTime = *ElapsedTimeOrErr;
   return Error::success();
 }
 
@@ -867,7 +883,8 @@ Error olGetEventInfoImplDetail(ol_event_handle_t Event,
   case OL_EVENT_INFO_QUEUE:
     return Info.write<ol_queue_handle_t>(Queue);
   case OL_EVENT_INFO_IS_COMPLETE: {
-    // No event info means that this event was complete on creation
+    // Some backends do not materialize backend event state. Treat such events
+    // as trivially complete.
     if (!Event->EventInfo)
       return Info.write<bool>(true);
 
@@ -898,24 +915,24 @@ Error olGetEventInfoSize_impl(ol_event_handle_t Event, ol_event_info_t PropName,
 }
 
 Error olCreateEvent_impl(ol_queue_handle_t Queue, ol_event_handle_t *EventOut) {
-  auto Pending = Queue->Device->Device->hasPendingWork(Queue->AsyncInfo);
-  if (auto Err = Pending.takeError())
+  auto Event = std::make_unique<ol_event_impl_t>(nullptr, Queue->Device, Queue);
+
+  if (auto Err = Queue->Device->Device->createEvent(&Event->EventInfo))
     return Err;
 
-  *EventOut = new ol_event_impl_t(nullptr, Queue->Device, Queue);
-  if (!*Pending)
-    // Queue is empty, don't record an event and consider the event always
-    // complete
-    return Plugin::success();
+  if (auto Err = Queue->Device->Device->recordEvent(Event->EventInfo,
+                                                    Queue->AsyncInfo)) {
+    if (Event->EventInfo) {
+      if (auto DestroyErr =
+              Queue->Device->Device->destroyEvent(Event->EventInfo))
+        return joinErrors(std::move(Err), std::move(DestroyErr));
+    }
 
-  if (auto Res = Queue->Device->Device->createEvent(&(*EventOut)->EventInfo))
-    return Res;
+    return Err;
+  }
 
-  if (auto Res = Queue->Device->Device->recordEvent((*EventOut)->EventInfo,
-                                                    Queue->AsyncInfo))
-    return Res;
-
-  return Plugin::success();
+  *EventOut = Event.release();
+  return Error::success();
 }
 
 Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
@@ -1067,7 +1084,7 @@ Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
 
   auto *KernelImpl = std::get<GenericKernelTy *>(Kernel->PluginImpl);
   auto Err = KernelImpl->launch(*DeviceImpl, LaunchArgs.ArgPtrs, nullptr,
-                                LaunchArgs, AsyncInfoWrapper);
+                                LaunchArgs, nullptr, AsyncInfoWrapper);
 
   AsyncInfoWrapper.finalize(Err);
   if (Err)

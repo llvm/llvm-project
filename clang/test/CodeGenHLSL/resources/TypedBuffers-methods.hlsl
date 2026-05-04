@@ -17,24 +17,24 @@ export float TestLoad() {
 }
 
 // CHECK: define noundef nofpclass(nan inf) float @TestLoad()()
-// CHECK: call {{.*}} float @hlsl::Buffer<float>::Load(unsigned int)(ptr {{.*}} @Buf, i32 noundef 1)
-// CHECK: call {{.*}} <4 x i32> @hlsl::RWBuffer<unsigned int vector[4]>::Load(unsigned int)(ptr {{.*}} @RWBuf, i32 noundef 2)
+// CHECK: call {{.*}} float @hlsl::Buffer<float>::Load(unsigned int) const(ptr {{.*}} @Buf, i32 noundef 1)
+// CHECK: call {{.*}} <4 x i32> @hlsl::RWBuffer<unsigned int vector[4]>::Load(unsigned int) const(ptr {{.*}} @RWBuf, i32 noundef 2)
 // CHECK: add
 // CHECK: ret float
 
-// CHECK: define {{.*}} float @hlsl::Buffer<float>::Load(unsigned int)(ptr {{.*}} %this, i32 noundef %Index)
+// CHECK: define {{.*}} float @hlsl::Buffer<float>::Load(unsigned int) const(ptr {{.*}} %this, i32 noundef %Index)
 // CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::Buffer", ptr %{{.*}}, i32 0, i32 0
 // DXIL-NEXT: %[[HANDLE:.*]] = load target("dx.TypedBuffer", float, 0, 0, 0), ptr %__handle
 // CHECK-NEXT: %[[INDEX:.*]] = load i32, ptr %Index.addr
-// DXIL-NEXT: %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.TypedBuffer_f32_0_0_0t(target("dx.TypedBuffer", float, 0, 0, 0) %[[HANDLE]], i32 %[[INDEX]])
+// DXIL-NEXT: %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.TypedBuffer_f32_0_0_0t.i32(target("dx.TypedBuffer", float, 0, 0, 0) %[[HANDLE]], i32 %[[INDEX]])
 // CHECK-NEXT: %[[VAL:.*]] = load float, ptr %[[PTR]]
 // CHECK-NEXT: ret float %[[VAL]]
 
-// CHECK: define {{.*}} <4 x i32> @hlsl::RWBuffer<unsigned int vector[4]>::Load(unsigned int)(ptr {{.*}} %this, i32 noundef %Index)
+// CHECK: define {{.*}} <4 x i32> @hlsl::RWBuffer<unsigned int vector[4]>::Load(unsigned int) const(ptr {{.*}} %this, i32 noundef %Index)
 // CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::RWBuffer", ptr %{{.*}}, i32 0, i32 0
 // DXIL-NEXT: %[[HANDLE:.*]] = load target("dx.TypedBuffer", <4 x i32>, 1, 0, 0), ptr %__handle
 // CHECK-NEXT: %[[INDEX:.*]] = load i32, ptr %Index.addr
-// DXIL-NEXT: %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.TypedBuffer_v4i32_1_0_0t(target("dx.TypedBuffer", <4 x i32>, 1, 0, 0) %[[HANDLE]], i32 %[[INDEX]])
+// DXIL-NEXT: %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.TypedBuffer_v4i32_1_0_0t.i32(target("dx.TypedBuffer", <4 x i32>, 1, 0, 0) %[[HANDLE]], i32 %[[INDEX]])
 // CHECK-NEXT: %[[VEC:.*]] = load <4 x i32>, ptr %[[PTR]]
 // CHECK-NEXT: ret <4 x i32> %[[VEC]]
 
@@ -47,12 +47,12 @@ export float TestLoadWithStatus() {
 }
 
 // CHECK: define noundef nofpclass(nan inf) float @TestLoadWithStatus()()
-// CHECK: call {{.*}} float @hlsl::Buffer<float>::Load(unsigned int, unsigned int&)(ptr {{.*}} @Buf, i32 noundef 1, ptr {{.*}} %tmp)
-// CHECK: call {{.*}} <4 x i32> @hlsl::RWBuffer<unsigned int vector[4]>::Load(unsigned int, unsigned int&)(ptr {{.*}} @RWBuf, i32 noundef 2, ptr {{.*}} %tmp1)
+// CHECK: call {{.*}} float @hlsl::Buffer<float>::Load(unsigned int, unsigned int&) const(ptr {{.*}} @Buf, i32 noundef 1, ptr {{.*}} %tmp)
+// CHECK: call {{.*}} <4 x i32> @hlsl::RWBuffer<unsigned int vector[4]>::Load(unsigned int, unsigned int&) const(ptr {{.*}} @RWBuf, i32 noundef 2, ptr {{.*}} %tmp1)
 // CHECK: add
 // CHECK: ret float
 
-// CHECK: define {{.*}} float @hlsl::Buffer<float>::Load(unsigned int, unsigned int&)(ptr {{.*}} %this, i32 noundef %Index, ptr {{.*}} %Status)
+// CHECK: define {{.*}} float @hlsl::Buffer<float>::Load(unsigned int, unsigned int&) const(ptr {{.*}} %this, i32 noundef %Index, ptr {{.*}} %Status)
 // CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::Buffer", ptr %{{.*}}, i32 0, i32 0
 // DXIL-NEXT: %[[HANDLE:.*]] = load target("dx.TypedBuffer", float, 0, 0, 0), ptr %__handle
 // CHECK-NEXT: %[[INDEX:.*]] = load i32, ptr %Index.addr
@@ -64,7 +64,7 @@ export float TestLoadWithStatus() {
 // CHECK-NEXT: store i32 %[[STATUS_EXT]], ptr %[[LOADED_STATUS_ADDR]], align 4
 // CHECK-NEXT: ret float %[[VALUE]]
 
-// CHECK: define {{.*}}  <4 x i32> @hlsl::RWBuffer<unsigned int vector[4]>::Load(unsigned int, unsigned int&)(ptr {{.*}} %this, i32 noundef %Index, ptr {{.*}} %Status)
+// CHECK: define {{.*}}  <4 x i32> @hlsl::RWBuffer<unsigned int vector[4]>::Load(unsigned int, unsigned int&) const(ptr {{.*}} %this, i32 noundef %Index, ptr {{.*}} %Status)
 // CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::RWBuffer", ptr %{{.*}}, i32 0, i32 0
 // DXIL-NEXT: %[[HANDLE:.*]] = load target("dx.TypedBuffer", <4 x i32>, 1, 0, 0), ptr %__handle
 // CHECK-NEXT: %[[INDEX:.*]] = load i32, ptr %Index.addr
@@ -92,21 +92,21 @@ export uint TestGetDimensions() {
 // CHECK: define {{.*}} void @hlsl::Buffer<float>::GetDimensions(unsigned int&)(ptr {{.*}} %this, ptr noalias {{.*}} %dim)
 // CHECK: %[[HANDLE_PTR:.*]] = getelementptr inbounds nuw %"class.hlsl::Buffer", ptr %this1, i32 0, i32 0
 // CHECK-NEXT: %[[HANDLE:.*]] = load target("dx.TypedBuffer", float, 0, 0, 0), ptr %[[HANDLE_PTR]]
-// CHECK-NEXT: %[[DIMPTR:.*]] = load ptr, ptr %dim.addr
 // DXIL-NEXT: %[[DIM:.*]] = call i32 @llvm.dx.resource.getdimensions.x.tdx.TypedBuffer_f32_0_0_0t(target("dx.TypedBuffer", float, 0, 0, 0) %[[HANDLE]])
+// CHECK-NEXT: %[[DIMPTR:.*]] = load ptr, ptr %dim.addr
 // CHECK-NEXT: store i32 %[[DIM]], ptr %[[DIMPTR]]
 // CHECK-NEXT: ret void
 
 // CHECK: define {{.*}} void @hlsl::RWBuffer<unsigned int vector[4]>::GetDimensions(unsigned int&)(ptr {{.*}} %this, {{.*}} %dim)
 // CHECK: %[[HANDLE_PTR:.*]] = getelementptr inbounds nuw %"class.hlsl::RWBuffer", ptr %{{.*}}, i32 0, i32 0
 // CHECK-NEXT: %[[HANDLE:.*]] = load target("dx.TypedBuffer", <4 x i32>, 1, 0, 0), ptr %[[HANDLE_PTR]]
-// CHECK-NEXT: %[[DIMPTR:.*]] = load ptr, ptr %dim.addr
 // DXIL-NEXT: %[[DIM:.*]] = call i32 @llvm.dx.resource.getdimensions.x.tdx.TypedBuffer_v4i32_1_0_0t(target("dx.TypedBuffer", <4 x i32>, 1, 0, 0) %[[HANDLE]])
+// CHECK-NEXT: %[[DIMPTR:.*]] = load ptr, ptr %dim.addr
 // CHECK-NEXT: store i32 %[[DIM]], ptr %[[DIMPTR]]
 // CHECK-NEXT: ret void
 
-// DXIL: declare ptr @llvm.dx.resource.getpointer.p0.tdx.TypedBuffer_f32_0_0_0t(target("dx.TypedBuffer", float, 0, 0, 0), i32)
-// DXIL: declare ptr @llvm.dx.resource.getpointer.p0.tdx.TypedBuffer_v4i32_1_0_0t(target("dx.TypedBuffer", <4 x i32>, 1, 0, 0), i32)
+// DXIL: declare ptr @llvm.dx.resource.getpointer.p0.tdx.TypedBuffer_f32_0_0_0t.i32(target("dx.TypedBuffer", float, 0, 0, 0), i32)
+// DXIL: declare ptr @llvm.dx.resource.getpointer.p0.tdx.TypedBuffer_v4i32_1_0_0t.i32(target("dx.TypedBuffer", <4 x i32>, 1, 0, 0), i32)
 
 // DXIL: declare i32 @llvm.dx.resource.getdimensions.x.tdx.TypedBuffer_f32_0_0_0t(target("dx.TypedBuffer", float, 0, 0, 0))
 // DXIL: declare i32 @llvm.dx.resource.getdimensions.x.tdx.TypedBuffer_v4i32_1_0_0t(target("dx.TypedBuffer", <4 x i32>, 1, 0, 0))

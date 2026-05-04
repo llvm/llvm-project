@@ -138,6 +138,22 @@ void AsanPoisonOrUnpoisonIntraObjectRedzone(uptr ptr, uptr size, bool poison) {
 // ---------------------- Interface ---------------- {{{1
 using namespace __asan;
 
+static void RecordPoison(uptr beg_addr, uptr end_addr) {
+  if (LIKELY(beg_addr >= end_addr || flags()->poison_history_size == 0))
+    return;
+  GET_STACK_TRACE(/*max_size=*/16, /*fast=*/false);
+  u32 current_tid = GetCurrentTidOrInvalid();
+
+  u32 stack_id = StackDepotPut(stack);
+
+  PoisonRecord record;
+  record.stack_id = stack_id;
+  record.thread_id = current_tid;
+  record.begin = beg_addr;
+  record.end = end_addr;
+  AddPoisonRecord(record);
+}
+
 // Current implementation of __asan_(un)poison_memory_region doesn't check
 // that user program (un)poisons the memory it owns. It poisons memory
 // conservatively, and unpoisons progressively to make sure asan shadow
@@ -155,19 +171,7 @@ void __asan_poison_memory_region(void const volatile *addr, uptr size) {
   VPrintf(3, "Trying to poison memory region [%p, %p)\n", (void *)beg_addr,
           (void *)end_addr);
 
-  if (flags()->poison_history_size > 0) {
-    GET_STACK_TRACE(/*max_size=*/16, /*fast=*/false);
-    u32 current_tid = GetCurrentTidOrInvalid();
-
-    u32 stack_id = StackDepotPut(stack);
-
-    PoisonRecord record;
-    record.stack_id = stack_id;
-    record.thread_id = current_tid;
-    record.begin = beg_addr;
-    record.end = end_addr;
-    AddPoisonRecord(record);
-  }
+  RecordPoison(beg_addr, end_addr);
 
   ShadowSegmentEndpoint beg(beg_addr);
   ShadowSegmentEndpoint end(end_addr);
@@ -247,16 +251,15 @@ uptr __asan_region_is_poisoned(uptr beg, uptr size) {
   if (!AddrIsInMem(last))
     return last;
   CHECK_LE(beg, last);
-  // First check the first and the last application bytes,
-  // then check the ASAN_SHADOW_GRANULARITY-aligned inner region by calling
-  // mem_is_zero on the corresponding shadow.
-  if (!__asan::AddressIsPoisoned(beg) && !__asan::AddressIsPoisoned(last)) {
-    uptr aligned_b = RoundUpTo(beg, ASAN_SHADOW_GRANULARITY);
+  // First check the last application byte, i.e. last granule, then check
+  // the ASAN_SHADOW_GRANULARITY-aligned region by calling mem_is_zero
+  // on the corresponding shadow (first granule is fully checked).
+  if (!__asan::AddressIsPoisoned(last)) {
+    uptr aligned_b = RoundDownTo(beg, ASAN_SHADOW_GRANULARITY);
     uptr aligned_e = RoundDownTo(last, ASAN_SHADOW_GRANULARITY);
-    if (aligned_e <= aligned_b)
+    if (aligned_b == aligned_e)  // one granule case => last check is enough.
       return 0;
-    if (UNLIKELY(aligned_b < beg))  // address space overflow.
-      return 0;
+    CHECK_LT(aligned_b, aligned_e);
     uptr shadow_beg = MemToShadow(aligned_b);
     uptr shadow_end = MemToShadow(aligned_e);
     CHECK_LT(shadow_beg, shadow_end);

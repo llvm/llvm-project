@@ -1526,6 +1526,16 @@ class Foo {
     f2(); // expected-warning {{cannot call function 'f2' while mutex 'mu1' is held}} \
       // expected-warning {{cannot call function 'f2' while mutex 'mu2' is held}}
   }
+
+  // Holding only mu1 (but not mu2) is insufficient to access x.
+  void f3() EXCLUSIVE_LOCKS_REQUIRED(mu1) {
+    x = 5; // expected-warning {{writing variable 'x' requires holding mutex 'mu2' exclusively}}
+  }
+
+  // Holding only mu2 (but not mu1) is insufficient to access x.
+  void f4() EXCLUSIVE_LOCKS_REQUIRED(mu2) {
+    x = 5; // expected-warning {{writing variable 'x' requires holding mutex 'mu1' exclusively}}
+  }
 };
 
 Foo *foo;
@@ -1536,6 +1546,50 @@ void func()
              // expected-warning {{calling function 'f1' requires holding mutex 'foo->mu1' exclusively}}
 }
 } // end namespace thread_annot_lock_42
+
+namespace guarded_by_multi {
+// Test multi-arg GUARDED_BY: any one capability suffices for read; all are
+// required for write.
+class Foo {
+  Mutex mu1, mu2;
+  int x GUARDED_BY(mu1, mu2);
+  int *p PT_GUARDED_BY(mu1, mu2);
+
+  // All locks held exclusively: read and write both OK.
+  void f1() EXCLUSIVE_LOCKS_REQUIRED(mu1, mu2) {
+    x = 1;
+    *p = 1;
+  }
+
+  // Only mu1 held exclusively: read OK, write warns about mu2.
+  void f2() EXCLUSIVE_LOCKS_REQUIRED(mu1) {
+    int y = x;
+    int z = *p;
+    x = 1;  // expected-warning {{writing variable 'x' requires holding mutex 'mu2' exclusively}}
+    *p = 1; // expected-warning {{writing the value pointed to by 'p' requires holding mutex 'mu2' exclusively}}
+  }
+
+  // One lock held shared: read OK, write warns about both.
+  void f3() SHARED_LOCKS_REQUIRED(mu1) {
+    int y = x;
+    int z = *p;
+    x = 1;  // expected-warning {{writing variable 'x' requires holding mutex 'mu1' exclusively}} \
+            // expected-warning {{writing variable 'x' requires holding mutex 'mu2' exclusively}}
+    *p = 1; // expected-warning {{writing the value pointed to by 'p' requires holding mutex 'mu1' exclusively}} \
+            // expected-warning {{writing the value pointed to by 'p' requires holding mutex 'mu2' exclusively}}
+  }
+
+  // No locks held: read and write both warn.
+  void f4() {
+    int y = x;  // expected-warning {{reading variable 'x' requires holding at least one of 'mu1', 'mu2'}}
+    int z = *p; // expected-warning {{reading the value pointed to by 'p' requires holding at least one of 'mu1', 'mu2'}}
+    x = 1;      // expected-warning {{writing variable 'x' requires holding mutex 'mu1' exclusively}} \
+                // expected-warning {{writing variable 'x' requires holding mutex 'mu2' exclusively}}
+    *p = 1;     // expected-warning {{writing the value pointed to by 'p' requires holding mutex 'mu1' exclusively}} \
+                // expected-warning {{writing the value pointed to by 'p' requires holding mutex 'mu2' exclusively}}
+  }
+};
+} // end namespace guarded_by_multi
 
 namespace thread_annot_lock_46 {
 // Test the support for annotations on virtual functions.
@@ -7831,3 +7885,143 @@ void test3() {
 }
 
 } // namespace WideStringLiteral
+
+namespace FunctionPointers {
+
+Mutex mu;
+int x GUARDED_BY(mu);
+
+void (*lock_fn)(void) EXCLUSIVE_LOCK_FUNCTION(mu);
+void (*shared_lock_fn)(void) SHARED_LOCK_FUNCTION(mu);
+void (*unlock_fn)(void) UNLOCK_FUNCTION(mu);
+void (*shared_unlock_fn)(void) SHARED_UNLOCK_FUNCTION(mu);
+void (*requires_fn)(void) EXCLUSIVE_LOCKS_REQUIRED(mu);
+void (*shared_requires_fn)(void) SHARED_LOCKS_REQUIRED(mu);
+void (*excludes_fn)(void) LOCKS_EXCLUDED(mu);
+bool (*try_lock_fn)(void) EXCLUSIVE_TRYLOCK_FUNCTION(true, mu);
+bool (*shared_try_lock_fn)(void) SHARED_TRYLOCK_FUNCTION(true, mu);
+void (*assert_fn)(void) ASSERT_EXCLUSIVE_LOCK(mu);
+void (*shared_assert_fn)(void) ASSERT_SHARED_LOCK(mu);
+
+void testAcquireRelease() {
+  lock_fn();
+  x = 1;
+  unlock_fn();
+}
+
+void testSharedAcquireRelease() {
+  shared_lock_fn();
+  (void)x;
+  shared_unlock_fn();
+}
+
+void testSharedAcquireWriteFail() {
+  shared_lock_fn();
+  x = 1; // expected-warning {{writing variable 'x' requires holding mutex 'mu' exclusively}}
+  shared_unlock_fn();
+}
+
+void testAcquireNoRelease() {
+  lock_fn(); // expected-note {{mutex acquired here}}
+  x = 1;
+} // expected-warning {{mutex 'mu' is still held at the end of function}}
+
+void testNoAcquire() {
+  x = 1; // expected-warning {{writing variable 'x' requires holding mutex 'mu' exclusively}}
+}
+
+void testRequires() {
+  mu.Lock();
+  requires_fn();
+  mu.Unlock();
+}
+
+void testRequiresFail() {
+  requires_fn(); // expected-warning {{calling function 'requires_fn' requires holding mutex 'mu' exclusively}}
+}
+
+void testSharedRequires() {
+  mu.ReaderLock();
+  shared_requires_fn();
+  mu.ReaderUnlock();
+}
+
+void testSharedRequiresFail() {
+  shared_requires_fn(); // expected-warning {{calling function 'shared_requires_fn' requires holding mutex 'mu'}}
+}
+
+void testExcludes() {
+  excludes_fn();
+}
+
+void testExcludesFail() {
+  mu.Lock();
+  excludes_fn(); // expected-warning {{cannot call function 'excludes_fn' while mutex 'mu' is held}}
+  mu.Unlock();
+}
+
+void testTryLock() {
+  if (try_lock_fn()) {
+    x = 1;
+    mu.Unlock();
+  }
+}
+
+void testSharedTryLock() {
+  if (shared_try_lock_fn()) {
+    (void)x;
+    mu.Unlock();
+  }
+}
+
+void testAssert() {
+  assert_fn();
+  x = 1;
+}
+
+void testSharedAssert() {
+  shared_assert_fn();
+  (void)x;
+}
+
+struct Ops {
+  void (*lock)(void) EXCLUSIVE_LOCK_FUNCTION(mu);
+  void (*unlock)(void) UNLOCK_FUNCTION(mu);
+  void (*do_thing)(void) EXCLUSIVE_LOCKS_REQUIRED(mu);
+  void (*read_thing)(void) SHARED_LOCKS_REQUIRED(mu);
+};
+
+void testStructOps(Ops *ops) {
+  ops->lock();
+  x = 1;
+  ops->do_thing();
+  ops->read_thing();
+  ops->unlock();
+}
+
+void testStructFail(Ops *ops) {
+  ops->do_thing(); // expected-warning {{calling function 'do_thing' requires holding mutex 'mu' exclusively}}
+  ops->read_thing(); // expected-warning {{calling function 'read_thing' requires holding mutex 'mu'}}
+}
+
+// Incompatible reassignment not an error.
+void otherLock();
+void testReassignIncompatible() {
+  lock_fn = otherLock;
+  lock_fn();
+  x = 1;
+  mu.Unlock();
+}
+
+// A function pointer attribute may reference the pointer's own parameter.
+void (*lock_param_fn)(Mutex *m) EXCLUSIVE_LOCK_FUNCTION(m);
+void (*req_param_fn)(Mutex *m) EXCLUSIVE_LOCKS_REQUIRED(m);
+
+void test_attr_refers_to_param(Mutex *m) {
+  req_param_fn(m); // expected-warning {{calling function 'req_param_fn' requires holding mutex 'm' exclusively}}
+  lock_param_fn(m);
+  req_param_fn(m);
+  m->Unlock();
+}
+
+} // namespace FunctionPointers

@@ -26,9 +26,8 @@ define i8 @si8_7(i8 %a, i8 %b) {
 ; CHECK-GI-NEXT:    sbfx w8, w8, #2, #6
 ; CHECK-GI-NEXT:    ubfx w9, w8, #7, #1
 ; CHECK-GI-NEXT:    add w8, w8, w9
-; CHECK-GI-NEXT:    lsl w9, w8, #3
-; CHECK-GI-NEXT:    sub w8, w9, w8
-; CHECK-GI-NEXT:    sub w0, w0, w8
+; CHECK-GI-NEXT:    sub w8, w8, w8, lsl #3
+; CHECK-GI-NEXT:    add w0, w0, w8
 ; CHECK-GI-NEXT:    ret
 entry:
   %s = srem i8 %a, 7
@@ -56,8 +55,8 @@ define i8 @si8_100(i8 %a, i8 %b) {
 ; CHECK-GI-NEXT:    asr w8, w8, #4
 ; CHECK-GI-NEXT:    ubfx w9, w8, #7, #1
 ; CHECK-GI-NEXT:    add w8, w8, w9
-; CHECK-GI-NEXT:    mov w9, #100 // =0x64
-; CHECK-GI-NEXT:    msub w0, w8, w9, w0
+; CHECK-GI-NEXT:    mov w9, #-100 // =0xffffff9c
+; CHECK-GI-NEXT:    madd w0, w8, w9, w0
 ; CHECK-GI-NEXT:    ret
 entry:
   %s = srem i8 %a, 100
@@ -89,9 +88,8 @@ define i8 @ui8_7(i8 %a, i8 %b) {
 ; CHECK-GI-NEXT:    ubfx w9, w9, #1, #7
 ; CHECK-GI-NEXT:    add w8, w9, w8
 ; CHECK-GI-NEXT:    lsr w8, w8, #2
-; CHECK-GI-NEXT:    lsl w9, w8, #3
-; CHECK-GI-NEXT:    sub w8, w9, w8
-; CHECK-GI-NEXT:    sub w0, w0, w8
+; CHECK-GI-NEXT:    sub w8, w8, w8, lsl #3
+; CHECK-GI-NEXT:    add w0, w0, w8
 ; CHECK-GI-NEXT:    ret
 entry:
   %s = urem i8 %a, 7
@@ -114,10 +112,10 @@ define i8 @ui8_100(i8 %a, i8 %b) {
 ; CHECK-GI-NEXT:    mov w8, #41 // =0x29
 ; CHECK-GI-NEXT:    and w9, w0, #0xff
 ; CHECK-GI-NEXT:    mul w8, w9, w8
-; CHECK-GI-NEXT:    mov w9, #100 // =0x64
+; CHECK-GI-NEXT:    mov w9, #-100 // =0xffffff9c
 ; CHECK-GI-NEXT:    lsr w8, w8, #8
 ; CHECK-GI-NEXT:    lsr w8, w8, #4
-; CHECK-GI-NEXT:    msub w0, w8, w9, w0
+; CHECK-GI-NEXT:    madd w0, w8, w9, w0
 ; CHECK-GI-NEXT:    ret
 entry:
   %s = urem i8 %a, 100
@@ -145,9 +143,8 @@ define i16 @si16_7(i16 %a, i16 %b) {
 ; CHECK-GI-NEXT:    asr w8, w8, #1
 ; CHECK-GI-NEXT:    ubfx w9, w8, #15, #1
 ; CHECK-GI-NEXT:    add w8, w8, w9
-; CHECK-GI-NEXT:    lsl w9, w8, #3
-; CHECK-GI-NEXT:    sub w8, w9, w8
-; CHECK-GI-NEXT:    sub w0, w0, w8
+; CHECK-GI-NEXT:    sub w8, w8, w8, lsl #3
+; CHECK-GI-NEXT:    add w0, w0, w8
 ; CHECK-GI-NEXT:    ret
 entry:
   %s = srem i16 %a, 7
@@ -175,8 +172,8 @@ define i16 @si16_100(i16 %a, i16 %b) {
 ; CHECK-GI-NEXT:    asr w8, w8, #3
 ; CHECK-GI-NEXT:    ubfx w9, w8, #15, #1
 ; CHECK-GI-NEXT:    add w8, w8, w9
-; CHECK-GI-NEXT:    mov w9, #100 // =0x64
-; CHECK-GI-NEXT:    msub w0, w8, w9, w0
+; CHECK-GI-NEXT:    mov w9, #-100 // =0xffffff9c
+; CHECK-GI-NEXT:    madd w0, w8, w9, w0
 ; CHECK-GI-NEXT:    ret
 entry:
   %s = srem i16 %a, 100
@@ -208,9 +205,8 @@ define i16 @ui16_7(i16 %a, i16 %b) {
 ; CHECK-GI-NEXT:    ubfx w9, w9, #1, #15
 ; CHECK-GI-NEXT:    add w8, w9, w8
 ; CHECK-GI-NEXT:    lsr w8, w8, #2
-; CHECK-GI-NEXT:    lsl w9, w8, #3
-; CHECK-GI-NEXT:    sub w8, w9, w8
-; CHECK-GI-NEXT:    sub w0, w0, w8
+; CHECK-GI-NEXT:    sub w8, w8, w8, lsl #3
+; CHECK-GI-NEXT:    add w0, w0, w8
 ; CHECK-GI-NEXT:    ret
 entry:
   %s = urem i16 %a, 7
@@ -233,10 +229,10 @@ define i16 @ui16_100(i16 %a, i16 %b) {
 ; CHECK-GI-NEXT:    ubfx w8, w0, #2, #14
 ; CHECK-GI-NEXT:    mov w9, #5243 // =0x147b
 ; CHECK-GI-NEXT:    mul w8, w8, w9
-; CHECK-GI-NEXT:    mov w9, #100 // =0x64
+; CHECK-GI-NEXT:    mov w9, #-100 // =0xffffff9c
 ; CHECK-GI-NEXT:    lsr w8, w8, #16
 ; CHECK-GI-NEXT:    lsr w8, w8, #1
-; CHECK-GI-NEXT:    msub w0, w8, w9, w0
+; CHECK-GI-NEXT:    madd w0, w8, w9, w0
 ; CHECK-GI-NEXT:    ret
 entry:
   %s = urem i16 %a, 100
@@ -266,9 +262,8 @@ define i32 @si32_7(i32 %a, i32 %b) {
 ; CHECK-GI-NEXT:    add x8, x0, x8, asr #32
 ; CHECK-GI-NEXT:    asr w8, w8, #2
 ; CHECK-GI-NEXT:    add w8, w8, w8, lsr #31
-; CHECK-GI-NEXT:    lsl w9, w8, #3
-; CHECK-GI-NEXT:    sub w8, w9, w8
-; CHECK-GI-NEXT:    sub w0, w0, w8
+; CHECK-GI-NEXT:    sub w8, w8, w8, lsl #3
+; CHECK-GI-NEXT:    add w0, w0, w8
 ; CHECK-GI-NEXT:    ret
 entry:
   %s = srem i32 %a, 7
@@ -290,13 +285,13 @@ define i32 @si32_100(i32 %a, i32 %b) {
 ; CHECK-GI-LABEL: si32_100:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov w8, #34079 // =0x851f
-; CHECK-GI-NEXT:    mov w9, #100 // =0x64
+; CHECK-GI-NEXT:    mov w9, #-100 // =0xffffff9c
 ; CHECK-GI-NEXT:    movk w8, #20971, lsl #16
 ; CHECK-GI-NEXT:    smull x8, w0, w8
 ; CHECK-GI-NEXT:    asr x8, x8, #32
 ; CHECK-GI-NEXT:    asr w8, w8, #5
 ; CHECK-GI-NEXT:    add w8, w8, w8, lsr #31
-; CHECK-GI-NEXT:    msub w0, w8, w9, w0
+; CHECK-GI-NEXT:    madd w0, w8, w9, w0
 ; CHECK-GI-NEXT:    ret
 entry:
   %s = srem i32 %a, 100
@@ -324,9 +319,8 @@ define i32 @ui32_7(i32 %a, i32 %b) {
 ; CHECK-GI-NEXT:    sub w9, w0, w8
 ; CHECK-GI-NEXT:    add w8, w8, w9, lsr #1
 ; CHECK-GI-NEXT:    lsr w8, w8, #2
-; CHECK-GI-NEXT:    lsl w9, w8, #3
-; CHECK-GI-NEXT:    sub w8, w9, w8
-; CHECK-GI-NEXT:    sub w0, w0, w8
+; CHECK-GI-NEXT:    sub w8, w8, w8, lsl #3
+; CHECK-GI-NEXT:    add w0, w0, w8
 ; CHECK-GI-NEXT:    ret
 entry:
   %s = urem i32 %a, 7
@@ -334,15 +328,25 @@ entry:
 }
 
 define i32 @ui32_100(i32 %a, i32 %b) {
-; CHECK-LABEL: ui32_100:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #34079 // =0x851f
-; CHECK-NEXT:    mov w9, #100 // =0x64
-; CHECK-NEXT:    movk w8, #20971, lsl #16
-; CHECK-NEXT:    umull x8, w0, w8
-; CHECK-NEXT:    lsr x8, x8, #37
-; CHECK-NEXT:    msub w0, w8, w9, w0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: ui32_100:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    mov w8, #34079 // =0x851f
+; CHECK-SD-NEXT:    mov w9, #100 // =0x64
+; CHECK-SD-NEXT:    movk w8, #20971, lsl #16
+; CHECK-SD-NEXT:    umull x8, w0, w8
+; CHECK-SD-NEXT:    lsr x8, x8, #37
+; CHECK-SD-NEXT:    msub w0, w8, w9, w0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: ui32_100:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov w8, #34079 // =0x851f
+; CHECK-GI-NEXT:    mov w9, #-100 // =0xffffff9c
+; CHECK-GI-NEXT:    movk w8, #20971, lsl #16
+; CHECK-GI-NEXT:    umull x8, w0, w8
+; CHECK-GI-NEXT:    lsr x8, x8, #37
+; CHECK-GI-NEXT:    madd w0, w8, w9, w0
+; CHECK-GI-NEXT:    ret
 entry:
   %s = urem i32 %a, 100
   ret i32 %s
@@ -371,9 +375,8 @@ define i64 @si64_7(i64 %a, i64 %b) {
 ; CHECK-GI-NEXT:    smulh x8, x0, x8
 ; CHECK-GI-NEXT:    asr x8, x8, #1
 ; CHECK-GI-NEXT:    add x8, x8, x8, lsr #63
-; CHECK-GI-NEXT:    lsl x9, x8, #3
-; CHECK-GI-NEXT:    sub x8, x9, x8
-; CHECK-GI-NEXT:    sub x0, x0, x8
+; CHECK-GI-NEXT:    sub x8, x8, x8, lsl #3
+; CHECK-GI-NEXT:    add x0, x0, x8
 ; CHECK-GI-NEXT:    ret
 entry:
   %s = srem i64 %a, 7
@@ -398,7 +401,7 @@ define i64 @si64_100(i64 %a, i64 %b) {
 ; CHECK-GI-LABEL: si64_100:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov x8, #55051 // =0xd70b
-; CHECK-GI-NEXT:    mov w9, #100 // =0x64
+; CHECK-GI-NEXT:    mov x9, #-100 // =0xffffffffffffff9c
 ; CHECK-GI-NEXT:    movk x8, #28835, lsl #16
 ; CHECK-GI-NEXT:    movk x8, #2621, lsl #32
 ; CHECK-GI-NEXT:    movk x8, #41943, lsl #48
@@ -406,7 +409,7 @@ define i64 @si64_100(i64 %a, i64 %b) {
 ; CHECK-GI-NEXT:    add x8, x8, x0
 ; CHECK-GI-NEXT:    asr x8, x8, #6
 ; CHECK-GI-NEXT:    add x8, x8, x8, lsr #63
-; CHECK-GI-NEXT:    msub x0, x8, x9, x0
+; CHECK-GI-NEXT:    madd x0, x8, x9, x0
 ; CHECK-GI-NEXT:    ret
 entry:
   %s = srem i64 %a, 100
@@ -414,52 +417,50 @@ entry:
 }
 
 define i64 @ui64_7(i64 %a, i64 %b) {
-; CHECK-SD-LABEL: ui64_7:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mov x8, #9363 // =0x2493
-; CHECK-SD-NEXT:    movk x8, #37449, lsl #16
-; CHECK-SD-NEXT:    movk x8, #18724, lsl #32
-; CHECK-SD-NEXT:    movk x8, #9362, lsl #48
-; CHECK-SD-NEXT:    umulh x8, x0, x8
-; CHECK-SD-NEXT:    sub x9, x0, x8
-; CHECK-SD-NEXT:    add x8, x8, x9, lsr #1
-; CHECK-SD-NEXT:    lsr x8, x8, #2
-; CHECK-SD-NEXT:    sub x8, x8, x8, lsl #3
-; CHECK-SD-NEXT:    add x0, x0, x8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: ui64_7:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov x8, #9363 // =0x2493
-; CHECK-GI-NEXT:    movk x8, #37449, lsl #16
-; CHECK-GI-NEXT:    movk x8, #18724, lsl #32
-; CHECK-GI-NEXT:    movk x8, #9362, lsl #48
-; CHECK-GI-NEXT:    umulh x8, x0, x8
-; CHECK-GI-NEXT:    sub x9, x0, x8
-; CHECK-GI-NEXT:    add x8, x8, x9, lsr #1
-; CHECK-GI-NEXT:    lsr x8, x8, #2
-; CHECK-GI-NEXT:    lsl x9, x8, #3
-; CHECK-GI-NEXT:    sub x8, x9, x8
-; CHECK-GI-NEXT:    sub x0, x0, x8
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: ui64_7:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, #9363 // =0x2493
+; CHECK-NEXT:    movk x8, #37449, lsl #16
+; CHECK-NEXT:    movk x8, #18724, lsl #32
+; CHECK-NEXT:    movk x8, #9362, lsl #48
+; CHECK-NEXT:    umulh x8, x0, x8
+; CHECK-NEXT:    sub x9, x0, x8
+; CHECK-NEXT:    add x8, x8, x9, lsr #1
+; CHECK-NEXT:    lsr x8, x8, #2
+; CHECK-NEXT:    sub x8, x8, x8, lsl #3
+; CHECK-NEXT:    add x0, x0, x8
+; CHECK-NEXT:    ret
 entry:
   %s = urem i64 %a, 7
   ret i64 %s
 }
 
 define i64 @ui64_100(i64 %a, i64 %b) {
-; CHECK-LABEL: ui64_100:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov x9, #62915 // =0xf5c3
-; CHECK-NEXT:    lsr x8, x0, #2
-; CHECK-NEXT:    movk x9, #23592, lsl #16
-; CHECK-NEXT:    movk x9, #49807, lsl #32
-; CHECK-NEXT:    movk x9, #10485, lsl #48
-; CHECK-NEXT:    umulh x8, x8, x9
-; CHECK-NEXT:    mov w9, #100 // =0x64
-; CHECK-NEXT:    lsr x8, x8, #2
-; CHECK-NEXT:    msub x0, x8, x9, x0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: ui64_100:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    mov x9, #62915 // =0xf5c3
+; CHECK-SD-NEXT:    lsr x8, x0, #2
+; CHECK-SD-NEXT:    movk x9, #23592, lsl #16
+; CHECK-SD-NEXT:    movk x9, #49807, lsl #32
+; CHECK-SD-NEXT:    movk x9, #10485, lsl #48
+; CHECK-SD-NEXT:    umulh x8, x8, x9
+; CHECK-SD-NEXT:    mov w9, #100 // =0x64
+; CHECK-SD-NEXT:    lsr x8, x8, #2
+; CHECK-SD-NEXT:    msub x0, x8, x9, x0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: ui64_100:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov x9, #62915 // =0xf5c3
+; CHECK-GI-NEXT:    lsr x8, x0, #2
+; CHECK-GI-NEXT:    movk x9, #23592, lsl #16
+; CHECK-GI-NEXT:    movk x9, #49807, lsl #32
+; CHECK-GI-NEXT:    movk x9, #10485, lsl #48
+; CHECK-GI-NEXT:    umulh x8, x8, x9
+; CHECK-GI-NEXT:    mov x9, #-100 // =0xffffffffffffff9c
+; CHECK-GI-NEXT:    lsr x8, x8, #2
+; CHECK-GI-NEXT:    madd x0, x8, x9, x0
+; CHECK-GI-NEXT:    ret
 entry:
   %s = urem i64 %a, 100
   ret i64 %s
@@ -500,13 +501,20 @@ entry:
 define i128 @ui128_7(i128 %a, i128 %b) {
 ; CHECK-SD-LABEL: ui128_7:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-SD-NEXT:    .cfi_offset w30, -16
-; CHECK-SD-NEXT:    mov w2, #7 // =0x7
-; CHECK-SD-NEXT:    mov x3, xzr
-; CHECK-SD-NEXT:    bl __umodti3
-; CHECK-SD-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-SD-NEXT:    extr x8, x1, x0, #60
+; CHECK-SD-NEXT:    and x9, x0, #0xfffffffffffffff
+; CHECK-SD-NEXT:    and x8, x8, #0xfffffffffffffff
+; CHECK-SD-NEXT:    add x8, x9, x8
+; CHECK-SD-NEXT:    mov x9, #18725 // =0x4925
+; CHECK-SD-NEXT:    movk x9, #9362, lsl #16
+; CHECK-SD-NEXT:    add x8, x8, x1, lsr #56
+; CHECK-SD-NEXT:    mov x1, xzr
+; CHECK-SD-NEXT:    movk x9, #37449, lsl #32
+; CHECK-SD-NEXT:    movk x9, #18724, lsl #48
+; CHECK-SD-NEXT:    umulh x9, x8, x9
+; CHECK-SD-NEXT:    lsr x9, x9, #1
+; CHECK-SD-NEXT:    sub x9, x9, x9, lsl #3
+; CHECK-SD-NEXT:    add x0, x8, x9
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: ui128_7:
@@ -558,18 +566,18 @@ define i128 @ui128_7(i128 %a, i128 %b) {
 ; CHECK-GI-NEXT:    extr x10, x11, x10, #1
 ; CHECK-GI-NEXT:    lsr x11, x11, #1
 ; CHECK-GI-NEXT:    adds x9, x10, x9
-; CHECK-GI-NEXT:    mov w10, #7 // =0x7
+; CHECK-GI-NEXT:    mov x10, #-7 // =0xfffffffffffffff9
 ; CHECK-GI-NEXT:    adc x8, x11, x8
 ; CHECK-GI-NEXT:    extr x9, x8, x9, #2
 ; CHECK-GI-NEXT:    lsr x8, x8, #2
 ; CHECK-GI-NEXT:    umulh x10, x9, x10
-; CHECK-GI-NEXT:    lsl x11, x9, #3
-; CHECK-GI-NEXT:    lsl x12, x8, #3
-; CHECK-GI-NEXT:    sub x9, x11, x9
-; CHECK-GI-NEXT:    sub x8, x12, x8
-; CHECK-GI-NEXT:    subs x0, x0, x9
+; CHECK-GI-NEXT:    sub x8, x8, x8, lsl #3
+; CHECK-GI-NEXT:    sub x11, x9, x9, lsl #1
+; CHECK-GI-NEXT:    sub x9, x9, x9, lsl #3
+; CHECK-GI-NEXT:    add x8, x8, x11
+; CHECK-GI-NEXT:    adds x0, x0, x9
 ; CHECK-GI-NEXT:    add x8, x8, x10
-; CHECK-GI-NEXT:    sbc x1, x1, x8
+; CHECK-GI-NEXT:    adc x1, x1, x8
 ; CHECK-GI-NEXT:    ret
 entry:
   %s = urem i128 %a, 7
@@ -579,13 +587,21 @@ entry:
 define i128 @ui128_100(i128 %a, i128 %b) {
 ; CHECK-SD-LABEL: ui128_100:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-SD-NEXT:    .cfi_offset w30, -16
-; CHECK-SD-NEXT:    mov w2, #100 // =0x64
-; CHECK-SD-NEXT:    mov x3, xzr
-; CHECK-SD-NEXT:    bl __umodti3
-; CHECK-SD-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-SD-NEXT:    extr x8, x1, x0, #62
+; CHECK-SD-NEXT:    ubfx x9, x0, #2, #60
+; CHECK-SD-NEXT:    mov w10, #25 // =0x19
+; CHECK-SD-NEXT:    and x8, x8, #0xfffffffffffffff
+; CHECK-SD-NEXT:    add x8, x9, x8
+; CHECK-SD-NEXT:    mov x9, #62915 // =0xf5c3
+; CHECK-SD-NEXT:    movk x9, #23592, lsl #16
+; CHECK-SD-NEXT:    add x8, x8, x1, lsr #58
+; CHECK-SD-NEXT:    mov x1, xzr
+; CHECK-SD-NEXT:    movk x9, #49807, lsl #32
+; CHECK-SD-NEXT:    movk x9, #10485, lsl #48
+; CHECK-SD-NEXT:    umulh x9, x8, x9
+; CHECK-SD-NEXT:    lsr x9, x9, #2
+; CHECK-SD-NEXT:    msub x8, x9, x10, x8
+; CHECK-SD-NEXT:    bfi x0, x8, #2, #62
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: ui128_100:
@@ -632,14 +648,16 @@ define i128 @ui128_100(i128 %a, i128 %b) {
 ; CHECK-GI-NEXT:    add x10, x11, x12
 ; CHECK-GI-NEXT:    add x8, x8, x14
 ; CHECK-GI-NEXT:    add x8, x8, x10
-; CHECK-GI-NEXT:    mov w10, #100 // =0x64
+; CHECK-GI-NEXT:    mov x10, #-100 // =0xffffffffffffff9c
 ; CHECK-GI-NEXT:    extr x9, x8, x9, #4
 ; CHECK-GI-NEXT:    lsr x8, x8, #4
-; CHECK-GI-NEXT:    umulh x11, x9, x10
-; CHECK-GI-NEXT:    mul x9, x9, x10
-; CHECK-GI-NEXT:    madd x8, x8, x10, x11
-; CHECK-GI-NEXT:    subs x0, x0, x9
-; CHECK-GI-NEXT:    sbc x1, x1, x8
+; CHECK-GI-NEXT:    mul x11, x9, x10
+; CHECK-GI-NEXT:    umulh x12, x9, x10
+; CHECK-GI-NEXT:    sub x9, x9, x9, lsl #1
+; CHECK-GI-NEXT:    madd x8, x8, x10, x9
+; CHECK-GI-NEXT:    adds x0, x0, x11
+; CHECK-GI-NEXT:    add x8, x8, x12
+; CHECK-GI-NEXT:    adc x1, x1, x8
 ; CHECK-GI-NEXT:    ret
 entry:
   %s = urem i128 %a, 100
@@ -892,8 +910,8 @@ define <4 x i8> @sv4i8_7(<4 x i8> %d, <4 x i8> %e) {
 ; CHECK-SD-NEXT:    dup v1.4h, w8
 ; CHECK-SD-NEXT:    sshr v0.4h, v0.4h, #8
 ; CHECK-SD-NEXT:    smull v1.4s, v0.4h, v1.4h
-; CHECK-SD-NEXT:    sshr v1.4s, v1.4s, #17
-; CHECK-SD-NEXT:    xtn v1.4h, v1.4s
+; CHECK-SD-NEXT:    shrn v1.4h, v1.4s, #16
+; CHECK-SD-NEXT:    sshr v1.4h, v1.4h, #1
 ; CHECK-SD-NEXT:    usra v1.4h, v1.4h, #15
 ; CHECK-SD-NEXT:    mls v0.4h, v1.4h, v2.4h
 ; CHECK-SD-NEXT:    ret
@@ -946,8 +964,8 @@ define <4 x i8> @sv4i8_100(<4 x i8> %d, <4 x i8> %e) {
 ; CHECK-SD-NEXT:    dup v1.4h, w8
 ; CHECK-SD-NEXT:    sshr v0.4h, v0.4h, #8
 ; CHECK-SD-NEXT:    smull v1.4s, v0.4h, v1.4h
-; CHECK-SD-NEXT:    sshr v1.4s, v1.4s, #19
-; CHECK-SD-NEXT:    xtn v1.4h, v1.4s
+; CHECK-SD-NEXT:    shrn v1.4h, v1.4s, #16
+; CHECK-SD-NEXT:    sshr v1.4h, v1.4h, #3
 ; CHECK-SD-NEXT:    usra v1.4h, v1.4h, #15
 ; CHECK-SD-NEXT:    mls v0.4h, v1.4h, v2.4h
 ; CHECK-SD-NEXT:    ret
@@ -2319,23 +2337,16 @@ define <3 x i32> @sv3i32_7(<3 x i32> %d, <3 x i32> %e) {
 ; CHECK-SD-LABEL: sv3i32_7:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    mov w8, #9363 // =0x2493
-; CHECK-SD-NEXT:    mov w9, v0.s[2]
-; CHECK-SD-NEXT:    movi v3.2s, #7
+; CHECK-SD-NEXT:    movi v3.4s, #7
 ; CHECK-SD-NEXT:    movk w8, #37449, lsl #16
-; CHECK-SD-NEXT:    dup v1.2s, w8
-; CHECK-SD-NEXT:    smull x8, w9, w8
+; CHECK-SD-NEXT:    dup v1.4s, w8
+; CHECK-SD-NEXT:    smull2 v2.2d, v0.4s, v1.4s
 ; CHECK-SD-NEXT:    smull v1.2d, v0.2s, v1.2s
-; CHECK-SD-NEXT:    add x8, x9, x8, lsr #32
-; CHECK-SD-NEXT:    asr w10, w8, #2
-; CHECK-SD-NEXT:    shrn v1.2s, v1.2d, #32
-; CHECK-SD-NEXT:    add w8, w10, w8, lsr #31
-; CHECK-SD-NEXT:    add v1.2s, v1.2s, v0.2s
-; CHECK-SD-NEXT:    sub w8, w8, w8, lsl #3
-; CHECK-SD-NEXT:    add w8, w9, w8
-; CHECK-SD-NEXT:    sshr v2.2s, v1.2s, #2
-; CHECK-SD-NEXT:    usra v2.2s, v1.2s, #31
-; CHECK-SD-NEXT:    mls v0.2s, v2.2s, v3.2s
-; CHECK-SD-NEXT:    mov v0.s[2], w8
+; CHECK-SD-NEXT:    uzp2 v1.4s, v1.4s, v2.4s
+; CHECK-SD-NEXT:    add v1.4s, v1.4s, v0.4s
+; CHECK-SD-NEXT:    sshr v2.4s, v1.4s, #2
+; CHECK-SD-NEXT:    usra v2.4s, v1.4s, #31
+; CHECK-SD-NEXT:    mls v0.4s, v2.4s, v3.4s
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: sv3i32_7:
@@ -2371,21 +2382,15 @@ define <3 x i32> @sv3i32_100(<3 x i32> %d, <3 x i32> %e) {
 ; CHECK-SD-LABEL: sv3i32_100:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    mov w8, #34079 // =0x851f
-; CHECK-SD-NEXT:    mov w9, v0.s[2]
-; CHECK-SD-NEXT:    movi v2.2s, #100
+; CHECK-SD-NEXT:    movi v3.4s, #100
 ; CHECK-SD-NEXT:    movk w8, #20971, lsl #16
-; CHECK-SD-NEXT:    dup v1.2s, w8
-; CHECK-SD-NEXT:    smull x8, w9, w8
+; CHECK-SD-NEXT:    dup v1.4s, w8
+; CHECK-SD-NEXT:    smull2 v2.2d, v0.4s, v1.4s
 ; CHECK-SD-NEXT:    smull v1.2d, v0.2s, v1.2s
-; CHECK-SD-NEXT:    asr x10, x8, #37
-; CHECK-SD-NEXT:    add x8, x10, x8, lsr #63
-; CHECK-SD-NEXT:    mov w10, #100 // =0x64
-; CHECK-SD-NEXT:    sshr v1.2d, v1.2d, #37
-; CHECK-SD-NEXT:    msub w8, w8, w10, w9
-; CHECK-SD-NEXT:    xtn v1.2s, v1.2d
-; CHECK-SD-NEXT:    usra v1.2s, v1.2s, #31
-; CHECK-SD-NEXT:    mls v0.2s, v1.2s, v2.2s
-; CHECK-SD-NEXT:    mov v0.s[2], w8
+; CHECK-SD-NEXT:    uzp2 v1.4s, v1.4s, v2.4s
+; CHECK-SD-NEXT:    sshr v2.4s, v1.4s, #5
+; CHECK-SD-NEXT:    usra v2.4s, v1.4s, #31
+; CHECK-SD-NEXT:    mls v0.4s, v2.4s, v3.4s
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: sv3i32_100:
@@ -2545,25 +2550,16 @@ define <3 x i32> @uv3i32_7(<3 x i32> %d, <3 x i32> %e) {
 ; CHECK-SD-LABEL: uv3i32_7:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    mov w8, #18725 // =0x4925
-; CHECK-SD-NEXT:    mov x9, #2684354560 // =0xa0000000
 ; CHECK-SD-NEXT:    movk w8, #9362, lsl #16
-; CHECK-SD-NEXT:    movk x9, #18724, lsl #32
-; CHECK-SD-NEXT:    dup v1.2s, w8
-; CHECK-SD-NEXT:    mov w8, v0.s[2]
-; CHECK-SD-NEXT:    movk x9, #9362, lsl #48
+; CHECK-SD-NEXT:    dup v1.4s, w8
+; CHECK-SD-NEXT:    umull2 v2.2d, v0.4s, v1.4s
 ; CHECK-SD-NEXT:    umull v1.2d, v0.2s, v1.2s
-; CHECK-SD-NEXT:    umulh x9, x8, x9
-; CHECK-SD-NEXT:    shrn v1.2s, v1.2d, #32
-; CHECK-SD-NEXT:    sub w9, w9, w9, lsl #3
-; CHECK-SD-NEXT:    sub v2.2s, v0.2s, v1.2s
-; CHECK-SD:         add w8, w8, w9
-; CHECK-SD-NEXT:    ushll v2.2d, v2.2s, #0
-; CHECK-SD-NEXT:    shrn v2.2s, v2.2d, #1
-; CHECK-SD-NEXT:    add v1.2s, v2.2s, v1.2s
-; CHECK-SD-NEXT:    movi v2.2s, #7
-; CHECK-SD-NEXT:    ushr v1.2s, v1.2s, #2
-; CHECK-SD-NEXT:    mls v0.2s, v1.2s, v2.2s
-; CHECK-SD-NEXT:    mov v0.s[2], w8
+; CHECK-SD-NEXT:    uzp2 v1.4s, v1.4s, v2.4s
+; CHECK-SD-NEXT:    sub v2.4s, v0.4s, v1.4s
+; CHECK-SD-NEXT:    usra v1.4s, v2.4s, #1
+; CHECK-SD-NEXT:    movi v2.4s, #7
+; CHECK-SD-NEXT:    ushr v1.4s, v1.4s, #2
+; CHECK-SD-NEXT:    mls v0.4s, v1.4s, v2.4s
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: uv3i32_7:
@@ -2614,19 +2610,14 @@ define <3 x i32> @uv3i32_100(<3 x i32> %d, <3 x i32> %e) {
 ; CHECK-SD-LABEL: uv3i32_100:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    mov w8, #34079 // =0x851f
-; CHECK-SD-NEXT:    mov w9, v0.s[2]
-; CHECK-SD-NEXT:    movi v2.2s, #100
 ; CHECK-SD-NEXT:    movk w8, #20971, lsl #16
-; CHECK-SD-NEXT:    mov w10, #100 // =0x64
-; CHECK-SD-NEXT:    dup v1.2s, w8
-; CHECK-SD-NEXT:    umull x8, w9, w8
+; CHECK-SD-NEXT:    dup v1.4s, w8
+; CHECK-SD-NEXT:    umull2 v2.2d, v0.4s, v1.4s
 ; CHECK-SD-NEXT:    umull v1.2d, v0.2s, v1.2s
-; CHECK-SD-NEXT:    lsr x8, x8, #37
-; CHECK-SD-NEXT:    msub w8, w8, w10, w9
-; CHECK-SD-NEXT:    ushr v1.2d, v1.2d, #37
-; CHECK-SD-NEXT:    xtn v1.2s, v1.2d
-; CHECK-SD-NEXT:    mls v0.2s, v1.2s, v2.2s
-; CHECK-SD-NEXT:    mov v0.s[2], w8
+; CHECK-SD-NEXT:    uzp2 v1.4s, v1.4s, v2.4s
+; CHECK-SD-NEXT:    movi v2.4s, #100
+; CHECK-SD-NEXT:    ushr v1.4s, v1.4s, #5
+; CHECK-SD-NEXT:    mls v0.4s, v1.4s, v2.4s
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: uv3i32_100:
@@ -3079,34 +3070,30 @@ entry:
 define <2 x i128> @uv2i128_7(<2 x i128> %d, <2 x i128> %e) {
 ; CHECK-SD-LABEL: uv2i128_7:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    str x30, [sp, #-48]! // 8-byte Folded Spill
-; CHECK-SD-NEXT:    stp x22, x21, [sp, #16] // 16-byte Folded Spill
-; CHECK-SD-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-SD-NEXT:    .cfi_offset w19, -8
-; CHECK-SD-NEXT:    .cfi_offset w20, -16
-; CHECK-SD-NEXT:    .cfi_offset w21, -24
-; CHECK-SD-NEXT:    .cfi_offset w22, -32
-; CHECK-SD-NEXT:    .cfi_offset w30, -48
-; CHECK-SD-NEXT:    mov x19, x3
-; CHECK-SD-NEXT:    mov x20, x2
-; CHECK-SD-NEXT:    mov w2, #7 // =0x7
+; CHECK-SD-NEXT:    extr x9, x1, x0, #60
+; CHECK-SD-NEXT:    extr x8, x3, x2, #60
+; CHECK-SD-NEXT:    and x10, x0, #0xfffffffffffffff
+; CHECK-SD-NEXT:    mov x11, #18725 // =0x4925
+; CHECK-SD-NEXT:    and x9, x9, #0xfffffffffffffff
+; CHECK-SD-NEXT:    and x8, x8, #0xfffffffffffffff
+; CHECK-SD-NEXT:    movk x11, #9362, lsl #16
+; CHECK-SD-NEXT:    add x9, x10, x9
+; CHECK-SD-NEXT:    and x10, x2, #0xfffffffffffffff
+; CHECK-SD-NEXT:    movk x11, #37449, lsl #32
+; CHECK-SD-NEXT:    add x8, x10, x8
+; CHECK-SD-NEXT:    add x9, x9, x1, lsr #56
+; CHECK-SD-NEXT:    movk x11, #18724, lsl #48
+; CHECK-SD-NEXT:    add x8, x8, x3, lsr #56
+; CHECK-SD-NEXT:    mov x1, xzr
 ; CHECK-SD-NEXT:    mov x3, xzr
-; CHECK-SD-NEXT:    bl __umodti3
-; CHECK-SD-NEXT:    mov x21, x0
-; CHECK-SD-NEXT:    mov x22, x1
-; CHECK-SD-NEXT:    mov x0, x20
-; CHECK-SD-NEXT:    mov x1, x19
-; CHECK-SD-NEXT:    mov w2, #7 // =0x7
-; CHECK-SD-NEXT:    mov x3, xzr
-; CHECK-SD-NEXT:    bl __umodti3
-; CHECK-SD-NEXT:    mov x2, x0
-; CHECK-SD-NEXT:    mov x3, x1
-; CHECK-SD-NEXT:    mov x0, x21
-; CHECK-SD-NEXT:    mov x1, x22
-; CHECK-SD-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
-; CHECK-SD-NEXT:    ldp x22, x21, [sp, #16] // 16-byte Folded Reload
-; CHECK-SD-NEXT:    ldr x30, [sp], #48 // 8-byte Folded Reload
+; CHECK-SD-NEXT:    umulh x10, x9, x11
+; CHECK-SD-NEXT:    umulh x11, x8, x11
+; CHECK-SD-NEXT:    lsr x10, x10, #1
+; CHECK-SD-NEXT:    lsr x11, x11, #1
+; CHECK-SD-NEXT:    sub x10, x10, x10, lsl #3
+; CHECK-SD-NEXT:    sub x11, x11, x11, lsl #3
+; CHECK-SD-NEXT:    add x0, x9, x10
+; CHECK-SD-NEXT:    add x2, x8, x11
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: uv2i128_7:
@@ -3228,34 +3215,31 @@ entry:
 define <2 x i128> @uv2i128_100(<2 x i128> %d, <2 x i128> %e) {
 ; CHECK-SD-LABEL: uv2i128_100:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    str x30, [sp, #-48]! // 8-byte Folded Spill
-; CHECK-SD-NEXT:    stp x22, x21, [sp, #16] // 16-byte Folded Spill
-; CHECK-SD-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-SD-NEXT:    .cfi_offset w19, -8
-; CHECK-SD-NEXT:    .cfi_offset w20, -16
-; CHECK-SD-NEXT:    .cfi_offset w21, -24
-; CHECK-SD-NEXT:    .cfi_offset w22, -32
-; CHECK-SD-NEXT:    .cfi_offset w30, -48
-; CHECK-SD-NEXT:    mov x19, x3
-; CHECK-SD-NEXT:    mov x20, x2
-; CHECK-SD-NEXT:    mov w2, #100 // =0x64
+; CHECK-SD-NEXT:    extr x9, x1, x0, #62
+; CHECK-SD-NEXT:    ubfx x10, x0, #2, #60
+; CHECK-SD-NEXT:    extr x8, x3, x2, #62
+; CHECK-SD-NEXT:    mov x11, #62915 // =0xf5c3
+; CHECK-SD-NEXT:    mov w12, #25 // =0x19
+; CHECK-SD-NEXT:    and x9, x9, #0xfffffffffffffff
+; CHECK-SD-NEXT:    and x8, x8, #0xfffffffffffffff
+; CHECK-SD-NEXT:    movk x11, #23592, lsl #16
+; CHECK-SD-NEXT:    add x9, x10, x9
+; CHECK-SD-NEXT:    ubfx x10, x2, #2, #60
+; CHECK-SD-NEXT:    movk x11, #49807, lsl #32
+; CHECK-SD-NEXT:    add x9, x9, x1, lsr #58
+; CHECK-SD-NEXT:    movk x11, #10485, lsl #48
+; CHECK-SD-NEXT:    mov x1, xzr
+; CHECK-SD-NEXT:    add x8, x10, x8
+; CHECK-SD-NEXT:    add x8, x8, x3, lsr #58
+; CHECK-SD-NEXT:    umulh x10, x9, x11
 ; CHECK-SD-NEXT:    mov x3, xzr
-; CHECK-SD-NEXT:    bl __umodti3
-; CHECK-SD-NEXT:    mov x21, x0
-; CHECK-SD-NEXT:    mov x22, x1
-; CHECK-SD-NEXT:    mov x0, x20
-; CHECK-SD-NEXT:    mov x1, x19
-; CHECK-SD-NEXT:    mov w2, #100 // =0x64
-; CHECK-SD-NEXT:    mov x3, xzr
-; CHECK-SD-NEXT:    bl __umodti3
-; CHECK-SD-NEXT:    mov x2, x0
-; CHECK-SD-NEXT:    mov x3, x1
-; CHECK-SD-NEXT:    mov x0, x21
-; CHECK-SD-NEXT:    mov x1, x22
-; CHECK-SD-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
-; CHECK-SD-NEXT:    ldp x22, x21, [sp, #16] // 16-byte Folded Reload
-; CHECK-SD-NEXT:    ldr x30, [sp], #48 // 8-byte Folded Reload
+; CHECK-SD-NEXT:    umulh x11, x8, x11
+; CHECK-SD-NEXT:    lsr x10, x10, #2
+; CHECK-SD-NEXT:    lsr x11, x11, #2
+; CHECK-SD-NEXT:    msub x9, x10, x12, x9
+; CHECK-SD-NEXT:    msub x8, x11, x12, x8
+; CHECK-SD-NEXT:    bfi x0, x9, #2, #62
+; CHECK-SD-NEXT:    bfi x2, x8, #2, #62
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: uv2i128_100:

@@ -159,7 +159,8 @@ LegalityAnalysis::notVectorizableBasedOnOpcodesAndTypes(
     return ResultReason::Unimplemented;
   case Instruction::Opcode::Opaque:
     return ResultReason::Unimplemented;
-  case Instruction::Opcode::Br:
+  case Instruction::Opcode::UncondBr:
+  case Instruction::Opcode::CondBr:
   case Instruction::Opcode::Ret:
   case Instruction::Opcode::AddrSpaceCast:
   case Instruction::Opcode::InsertElement:
@@ -218,13 +219,10 @@ const LegalityResult &LegalityAnalysis::canVectorize(ArrayRef<Value *> Bndl,
   if (any_of(Bndl, [](auto *V) { return !isa<Instruction>(V); }))
     return createLegalityResult<Pack>(ResultReason::NotInstructions);
   // Pack if not in the same BB.
-  auto *BB = cast<Instruction>(Bndl[0])->getParent();
-  if (any_of(drop_begin(Bndl),
-             [BB](auto *V) { return cast<Instruction>(V)->getParent() != BB; }))
+  if (LegalityAnalysis::differentBlock(Bndl))
     return createLegalityResult<Pack>(ResultReason::DiffBBs);
   // Pack if instructions repeat, i.e., require some sort of broadcast.
-  SmallPtrSet<Value *, 8> Unique(llvm::from_range, Bndl);
-  if (Unique.size() != Bndl.size())
+  if (!LegalityAnalysis::areUnique(Bndl))
     return createLegalityResult<Pack>(ResultReason::RepeatedInstrs);
 
   auto CollectDescrs = getHowToCollectValues(Bndl);

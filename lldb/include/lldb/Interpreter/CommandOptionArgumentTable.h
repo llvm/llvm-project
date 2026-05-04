@@ -175,6 +175,14 @@ static constexpr OptionEnumValueElement g_name_match_style[] = {
      "Match the identifier using a regular expression."},
 };
 
+static constexpr OptionEnumValueElement g_plugin_domain_values[] = {
+    {lldb::ePluginDomainKindGlobal, "global",
+     "Apply to all debugger instances."},
+    {lldb::ePluginDomainKindDebugger, "debugger",
+     "Apply to the current debugger instance."},
+    {lldb::ePluginDomainKindTarget, "target", "Apply to the current target."},
+};
+
 static constexpr OptionEnumValueElement g_completion_type[] = {
     {lldb::eNoCompletion, "none", "No completion."},
     {lldb::eSourceFileCompletion, "source-file", "Completes to a source file."},
@@ -258,6 +266,7 @@ static constexpr CommandObject::ArgumentTableEntry g_argument_table[] = {
     { lldb::eArgTypeFilename, "filename", lldb::eDiskFileCompletion, {}, { nullptr, false }, "The name of a file (can include path)." },
     { lldb::eArgTypeFormat, "format", lldb::CompletionType::eNoCompletion, {}, { FormatHelpTextCallback, true }, nullptr },
     { lldb::eArgTypeFrameIndex, "frame-index", lldb::eFrameIndexCompletion, {}, { nullptr, false }, "Index into a thread's list of frames." },
+    { lldb::eArgTypeFrameProviderIDRange, "frame-provider-id-range", lldb::CompletionType::eNoCompletion, {}, { nullptr, false }, "A single frame provider ID, a range of IDs (e.g., '0', '0-2', '0 to 2'), or '*'/'all' to show every provider. ID 0 is the base unwinder, 1+ are synthetic providers." },
     { lldb::eArgTypeFullName, "fullname", lldb::CompletionType::eNoCompletion, {}, { nullptr, false }, "Help text goes here." },
     { lldb::eArgTypeFunctionName, "function-name", lldb::CompletionType::eNoCompletion, {}, { nullptr, false }, "The name of a function." },
     { lldb::eArgTypeFunctionOrSymbol, "function-or-symbol", lldb::CompletionType::eNoCompletion, {}, { nullptr, false }, "The name of a function or symbol." },
@@ -339,6 +348,7 @@ static constexpr CommandObject::ArgumentTableEntry g_argument_table[] = {
     { lldb::eArgTypeProtocol, "protocol", lldb::CompletionType::eNoCompletion, {}, { nullptr, false }, "The name of the protocol." },
     { lldb::eArgTypeExceptionStage, "exception-stage", lldb::CompletionType::eNoCompletion, g_exception_stage, { nullptr, false }, "Specify at which stage of the exception raise to stop." },
     { lldb::eArgTypeNameMatchStyle, "match-style", lldb::CompletionType::eNoCompletion, g_name_match_style, { nullptr, false }, "Specify the kind of match to use when looking up names." },
+    { lldb::eArgTypePluginDomain, "plugin-domain", lldb::CompletionType::eNoCompletion, g_plugin_domain_values, { nullptr, false }, "The domain to apply the plugin operation to." },
     // clang-format on
 };
 
