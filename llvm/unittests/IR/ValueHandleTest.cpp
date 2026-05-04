@@ -324,7 +324,7 @@ TEST_F(ValueHandle, CallbackVH_DeletionCanRAUW) {
   private:
     void deleted() override {
       getValPtr()->replaceAllUsesWith(
-          Constant::getNullValue(Type::getInt32Ty(*Context)));
+          Constant::getZeroValue(Type::getInt32Ty(*Context)));
       setValPtr(nullptr);
     }
     void allUsesReplacedWith(Value *new_value) override {
@@ -340,12 +340,12 @@ TEST_F(ValueHandle, CallbackVH_DeletionCanRAUW) {
   RecoveringVH RVH(Context);
   RVH = RecoveringVH(Context, BitcastV.get());
   std::unique_ptr<BinaryOperator> BitcastUser(BinaryOperator::CreateAdd(
-      RVH, Constant::getNullValue(Type::getInt32Ty(Context))));
+      RVH, Constant::getZeroValue(Type::getInt32Ty(Context))));
   EXPECT_EQ(BitcastV.get(), BitcastUser->getOperand(0));
   BitcastV.reset();  // Would crash without the ValueHandler.
-  EXPECT_EQ(Constant::getNullValue(Type::getInt32Ty(Context)),
+  EXPECT_EQ(Constant::getZeroValue(Type::getInt32Ty(Context)),
             RVH.AURWArgument);
-  EXPECT_EQ(Constant::getNullValue(Type::getInt32Ty(Context)),
+  EXPECT_EQ(Constant::getZeroValue(Type::getInt32Ty(Context)),
             BitcastUser->getOperand(0));
 }
 

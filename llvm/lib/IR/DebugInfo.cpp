@@ -2375,7 +2375,7 @@ static void setAssignmentTrackingModuleFlag(Module &M) {
 
 static bool getAssignmentTrackingModuleFlag(const Module &M) {
   Metadata *Value = M.getModuleFlag(AssignmentTrackingModuleFlag);
-  return Value && !cast<ConstantAsMetadata>(Value)->getValue()->isNullValue();
+  return Value && !cast<ConstantAsMetadata>(Value)->getValue()->isZeroValue();
 }
 
 bool llvm::isAssignmentTrackingEnabled(const Module &M) {

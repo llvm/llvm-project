@@ -490,7 +490,7 @@ static void addAssumeNonNull(AssumptionCache *AC, LoadInst *LI) {
   Function *AssumeIntrinsic =
       Intrinsic::getOrInsertDeclaration(LI->getModule(), Intrinsic::assume);
   ICmpInst *LoadNotNull = new ICmpInst(ICmpInst::ICMP_NE, LI,
-                                       Constant::getNullValue(LI->getType()));
+                                       Constant::getZeroValue(LI->getType()));
   LoadNotNull->insertAfter(LI->getIterator());
   CallInst *CI = CallInst::Create(AssumeIntrinsic, {LoadNotNull});
   CI->insertAfter(LoadNotNull->getIterator());

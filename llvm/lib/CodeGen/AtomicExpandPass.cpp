@@ -671,7 +671,7 @@ bool AtomicExpandImpl::expandAtomicLoadToCmpXchg(LoadInst *LI) {
 
   Value *Addr = LI->getPointerOperand();
   Type *Ty = LI->getType();
-  Constant *DummyVal = Constant::getNullValue(Ty);
+  Constant *DummyVal = Constant::getZeroValue(Ty);
 
   Value *Pair = Builder.CreateAtomicCmpXchg(
       Addr, DummyVal, DummyVal, LI->getAlign(), Order,
@@ -945,7 +945,7 @@ static PartwordMaskValues createMaskInstrs(IRBuilderBase &Builder,
   } else {
     // If the alignment is high enough, the LSB are known 0.
     PMV.AlignedAddr = Addr;
-    PtrLSB = ConstantInt::getNullValue(IntTy);
+    PtrLSB = ConstantInt::getZeroValue(IntTy);
   }
 
   if (DL.isLittleEndian()) {

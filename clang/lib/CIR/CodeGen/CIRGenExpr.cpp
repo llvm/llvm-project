@@ -3006,7 +3006,7 @@ CIRGenFunction::emitConditionalBlocks(const AbstractConditionalOperator *e,
     if (!yieldTy) {
       cir::YieldOp::create(builder, loc);
     } else { // Block returns: set null yield value.
-      mlir::Value op0 = builder.getNullValue(yieldTy, loc);
+      mlir::Value op0 = builder.getZeroValue(yieldTy, loc);
       cir::YieldOp::create(builder, loc, op0);
     }
   }

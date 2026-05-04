@@ -492,7 +492,7 @@ Function *createRegisterGlobalsFunction(Module &M, bool IsHIP,
   Builder.CreateCondBr(KindCond, IfKindBB, IfEndBB);
   Builder.SetInsertPoint(IfKindBB);
   auto *FnCond = Builder.CreateICmpEQ(
-      Size, ConstantInt::getNullValue(Type::getInt64Ty(C)));
+      Size, ConstantInt::getZeroValue(Type::getInt64Ty(C)));
   Builder.CreateCondBr(FnCond, IfThenBB, IfElseBB);
 
   // Create kernel registration code.

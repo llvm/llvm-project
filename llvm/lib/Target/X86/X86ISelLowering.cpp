@@ -20142,7 +20142,7 @@ static SDValue GetTLSADDR(SelectionDAG &DAG, GlobalAddressSDNode *GA,
   const X86Subtarget &Subtarget = DAG.getSubtarget<X86Subtarget>();
   unsigned Seg = Subtarget.is64Bit() ? X86AS::FS : X86AS::GS;
 
-  Value *Ptr = Constant::getNullValue(PointerType::get(*DAG.getContext(), Seg));
+  Value *Ptr = Constant::getZeroValue(PointerType::get(*DAG.getContext(), Seg));
   SDValue Offset =
       DAG.getLoad(PtrVT, dl, DAG.getEntryNode(), DAG.getIntPtrConstant(0, dl),
                   MachinePointerInfo(Ptr));
@@ -20215,7 +20215,7 @@ static SDValue LowerToTLSExecModel(GlobalAddressSDNode *GA, SelectionDAG &DAG,
   SDLoc dl(GA);
 
   // Get the Thread Pointer, which is %gs:0 (32-bit) or %fs:0 (64-bit).
-  Value *Ptr = Constant::getNullValue(
+  Value *Ptr = Constant::getZeroValue(
       PointerType::get(*DAG.getContext(), is64Bit ? X86AS::FS : X86AS::GS));
 
   SDValue ThreadPointer =
@@ -20360,7 +20360,7 @@ X86TargetLowering::LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const {
     // Get the Thread Pointer, which is %fs:__tls_array (32-bit) or
     // %gs:0x58 (64-bit). On MinGW, __tls_array is not available, so directly
     // use its literal value of 0x2C.
-    Value *Ptr = Constant::getNullValue(
+    Value *Ptr = Constant::getZeroValue(
         Subtarget.is64Bit() ? PointerType::get(*DAG.getContext(), X86AS::GS)
                             : PointerType::get(*DAG.getContext(), X86AS::FS));
 
@@ -27958,7 +27958,7 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       SDLoc dl(Op);
       EVT PtrVT = Op.getValueType();
       // Get the Thread Pointer, which is %gs:0 (32-bit) or %fs:0 (64-bit).
-      Value *Ptr = Constant::getNullValue(PointerType::get(
+      Value *Ptr = Constant::getZeroValue(PointerType::get(
           *DAG.getContext(), Subtarget.is64Bit() ? X86AS::FS : X86AS::GS));
       return DAG.getLoad(PtrVT, dl, DAG.getEntryNode(),
                          DAG.getIntPtrConstant(0, dl), MachinePointerInfo(Ptr));
@@ -43280,7 +43280,7 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
         // Create a vector constant - scalar constant followed by zeros.
         EVT ScalarVT = N0.getOperand(0).getValueType();
         Type *ScalarTy = ScalarVT.getTypeForEVT(*DAG.getContext());
-        Constant *Zero = ConstantInt::getNullValue(ScalarTy);
+        Constant *Zero = ConstantInt::getZeroValue(ScalarTy);
         SmallVector<Constant *, 32> ConstantVec(NumElts, Zero);
         ConstantVec[0] = const_cast<ConstantInt *>(C->getConstantIntValue());
 

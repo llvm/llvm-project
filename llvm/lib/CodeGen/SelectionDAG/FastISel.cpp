@@ -288,9 +288,9 @@ Register FastISel::materializeConstant(const Value *V, MVT VT) {
     // Translate this as an integer zero so that it can be
     // local-CSE'd with actual integer zeros.
     Reg =
-        getRegForValue(Constant::getNullValue(DL.getIntPtrType(V->getType())));
+        getRegForValue(Constant::getZeroValue(DL.getIntPtrType(V->getType())));
   else if (const auto *CF = dyn_cast<ConstantFP>(V)) {
-    if (CF->isNullValue())
+    if (CF->isZeroValue())
       Reg = fastMaterializeFloatZero(CF);
     else
       // Try to emit the constant directly.

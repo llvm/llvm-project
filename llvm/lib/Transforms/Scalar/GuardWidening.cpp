@@ -819,7 +819,7 @@ bool GuardWideningImpl::parseRangeChecks(
   auto &DL = IC->getDataLayout();
 
   GuardWideningImpl::RangeCheck Check(
-      CmpLHS, cast<ConstantInt>(ConstantInt::getNullValue(CmpRHS->getType())),
+      CmpLHS, cast<ConstantInt>(ConstantInt::getZeroValue(CmpRHS->getType())),
       CmpRHS, IC);
 
   if (!isKnownNonNegative(Check.getLength(), DL))

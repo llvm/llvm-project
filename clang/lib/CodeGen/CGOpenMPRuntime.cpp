@@ -1719,12 +1719,12 @@ llvm::Function *CGOpenMPRuntime::emitThreadPrivateVarDefinition(
     // Copying constructor for the threadprivate variable.
     // Must be NULL - reserved by runtime, but currently it requires that this
     // parameter is always NULL. Otherwise it fires assertion.
-    CopyCtor = llvm::Constant::getNullValue(CGM.DefaultPtrTy);
+    CopyCtor = llvm::Constant::getZeroValue(CGM.DefaultPtrTy);
     if (Ctor == nullptr) {
-      Ctor = llvm::Constant::getNullValue(CGM.DefaultPtrTy);
+      Ctor = llvm::Constant::getZeroValue(CGM.DefaultPtrTy);
     }
     if (Dtor == nullptr) {
-      Dtor = llvm::Constant::getNullValue(CGM.DefaultPtrTy);
+      Dtor = llvm::Constant::getZeroValue(CGM.DefaultPtrTy);
     }
     if (!CGF) {
       auto *InitFunctionTy =
@@ -8970,7 +8970,7 @@ private:
           //   &p[0], &p[3], /*size=*/0, RETURN_PARAM
           UseDeviceDataCombinedInfo.Pointers.push_back(Ptr);
           UseDeviceDataCombinedInfo.Sizes.push_back(
-              llvm::Constant::getNullValue(CGF.Int64Ty));
+              llvm::Constant::getZeroValue(CGF.Int64Ty));
           OpenMPOffloadMappingFlags Flags =
               OpenMPOffloadMappingFlags::OMP_MAP_RETURN_PARAM;
           if (HasUdpFbNullify)
@@ -10252,12 +10252,12 @@ public:
         CombinedInfo.Types.push_back(
             OpenMPOffloadMappingFlags::OMP_MAP_LITERAL);
         // Use zero size for pointer literals (just passing the pointer value)
-        CombinedInfo.Sizes.push_back(llvm::Constant::getNullValue(CGF.Int64Ty));
+        CombinedInfo.Sizes.push_back(llvm::Constant::getZeroValue(CGF.Int64Ty));
       } else {
         // Pointers are implicitly mapped with a zero size and no flags
         // (other than first map that is added for all implicit maps).
         CombinedInfo.Types.push_back(OpenMPOffloadMappingFlags::OMP_MAP_NONE);
-        CombinedInfo.Sizes.push_back(llvm::Constant::getNullValue(CGF.Int64Ty));
+        CombinedInfo.Sizes.push_back(llvm::Constant::getZeroValue(CGF.Int64Ty));
       }
       auto I = FirstPrivateDecls.find(VD);
       if (I != FirstPrivateDecls.end())
@@ -10278,7 +10278,7 @@ public:
         // Treat as a literal value (pass the pointer value itself)
         CombinedInfo.Pointers.push_back(CV);
         // Use zero size for pointer literals
-        CombinedInfo.Sizes.push_back(llvm::Constant::getNullValue(CGF.Int64Ty));
+        CombinedInfo.Sizes.push_back(llvm::Constant::getZeroValue(CGF.Int64Ty));
         CombinedInfo.Types.push_back(
             OpenMPOffloadMappingFlags::OMP_MAP_LITERAL);
       } else {
@@ -10649,7 +10649,7 @@ emitTargetCallFallback(CGOpenMPRuntime *OMPRuntime, llvm::Function *OutlinedFn,
     }
     llvm::SmallVector<llvm::Value *, 16> Args(CapturedVars.begin(),
                                               CapturedVars.end());
-    Args.push_back(llvm::Constant::getNullValue(CGF.Builder.getPtrTy()));
+    Args.push_back(llvm::Constant::getZeroValue(CGF.Builder.getPtrTy()));
     OMPRuntime->emitOutlinedFunctionCall(CGF, D.getBeginLoc(), OutlinedFn,
                                          Args);
   }
@@ -10890,7 +10890,7 @@ static void emitTargetCallKernelLaunch(
 
   // Append a null entry for the implicit dyn_ptr argument.
   using OpenMPOffloadMappingFlags = llvm::omp::OpenMPOffloadMappingFlags;
-  auto *NullPtr = llvm::Constant::getNullValue(CGF.Builder.getPtrTy());
+  auto *NullPtr = llvm::Constant::getZeroValue(CGF.Builder.getPtrTy());
   CombinedInfo.BasePointers.push_back(NullPtr);
   CombinedInfo.Pointers.push_back(NullPtr);
   CombinedInfo.DevicePointers.push_back(
@@ -11814,10 +11814,10 @@ void CGOpenMPRuntime::emitTargetDataStandAloneCall(
       break;
     }
     if (HasNowait) {
-      OffloadingArgs.push_back(llvm::Constant::getNullValue(CGF.Int32Ty));
-      OffloadingArgs.push_back(llvm::Constant::getNullValue(CGF.VoidPtrTy));
-      OffloadingArgs.push_back(llvm::Constant::getNullValue(CGF.Int32Ty));
-      OffloadingArgs.push_back(llvm::Constant::getNullValue(CGF.VoidPtrTy));
+      OffloadingArgs.push_back(llvm::Constant::getZeroValue(CGF.Int32Ty));
+      OffloadingArgs.push_back(llvm::Constant::getZeroValue(CGF.VoidPtrTy));
+      OffloadingArgs.push_back(llvm::Constant::getZeroValue(CGF.Int32Ty));
+      OffloadingArgs.push_back(llvm::Constant::getZeroValue(CGF.VoidPtrTy));
     }
     CGF.EmitRuntimeCall(
         OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(), RTLFn),
@@ -12427,7 +12427,7 @@ static llvm::Value *getAllocatorVal(CodeGenFunction &CGF,
                                         Allocator->getExprLoc());
   } else {
     // If no allocator specified, it defaults to the null allocator.
-    AllocVal = llvm::Constant::getNullValue(
+    AllocVal = llvm::Constant::getZeroValue(
         CGF.CGM.getTypes().ConvertType(CGF.getContext().VoidPtrTy));
   }
   return AllocVal;
@@ -12789,7 +12789,7 @@ Address CGOpenMPRuntime::emitLastprivateConditionalInit(CodeGenFunction &CGF,
   LValue FiredLVal =
       CGF.EmitLValueForField(BaseLVal, FiredField);
   CGF.EmitStoreOfScalar(
-      llvm::ConstantInt::getNullValue(CGF.ConvertTypeForMem(C.CharTy)),
+      llvm::ConstantInt::getZeroValue(CGF.ConvertTypeForMem(C.CharTy)),
       FiredLVal);
   return CGF.EmitLValueForField(BaseLVal, VDField).getAddress();
 }

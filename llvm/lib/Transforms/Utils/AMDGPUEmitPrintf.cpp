@@ -118,7 +118,7 @@ static Value *getStrlenWithNull(IRBuilder<> &Builder, Value *Str) {
   // Emit an early return for when the pointer is null.
   Builder.SetInsertPoint(Prev);
   auto CmpNull =
-      Builder.CreateICmpEQ(Str, Constant::getNullValue(Str->getType()));
+      Builder.CreateICmpEQ(Str, Constant::getZeroValue(Str->getType()));
   Builder.CreateCondBr(CmpNull, Join, While);
 
   // Entry to the while loop.

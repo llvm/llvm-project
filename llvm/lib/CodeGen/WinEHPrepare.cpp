@@ -163,7 +163,7 @@ static void addTryBlockMapEntry(WinEHFuncInfo &FuncInfo, int TryLow,
   for (const CatchPadInst *CPI : Handlers) {
     WinEHHandlerType HT;
     Constant *TypeInfo = cast<Constant>(CPI->getArgOperand(0));
-    if (TypeInfo->isNullValue())
+    if (TypeInfo->isZeroValue())
       HT.TypeDescriptor = nullptr;
     else
       HT.TypeDescriptor = cast<GlobalVariable>(TypeInfo->stripPointerCasts());
@@ -517,7 +517,7 @@ static void calculateSEHStateNumbers(WinEHFuncInfo &FuncInfo,
     const Constant *FilterOrNull =
         cast<Constant>(CatchPad->getArgOperand(0)->stripPointerCasts());
     const Function *Filter = dyn_cast<Function>(FilterOrNull);
-    assert((Filter || FilterOrNull->isNullValue()) &&
+    assert((Filter || FilterOrNull->isZeroValue()) &&
            "unexpected filter value");
     int TryState = addSEHExcept(FuncInfo, ParentState, Filter, CatchPadBB);
 

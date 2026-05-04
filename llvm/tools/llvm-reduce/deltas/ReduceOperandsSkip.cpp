@@ -62,7 +62,7 @@ static int classifyReductivePower(Value *V) {
   if (auto *C = dyn_cast<ConstantData>(V)) {
     if (isa<UndefValue>(V))
       return -2;
-    if (C->isNullValue())
+    if (C->isZeroValue())
       return 7;
     if (C->isOneValue())
       return 6;

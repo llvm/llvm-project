@@ -891,7 +891,7 @@ static Value *foldSelectICmpAndBinOp(Value *CondVal, Value *TrueVal,
   auto *IdentityC =
       ConstantExpr::getBinOpIdentity(BinOp->getOpcode(), BinOp->getType(),
                                      /*AllowRHSConstant*/ true);
-  if (IdentityC == nullptr || !IdentityC->isNullValue())
+  if (IdentityC == nullptr || !IdentityC->isZeroValue())
     return nullptr;
 
   unsigned C2Log = C2->logBase2();
@@ -942,7 +942,7 @@ static Instruction *foldSetClearBits(SelectInst &Sel,
   // Cond ? (X & ~C) : (X | C) --> (X & ~C) | (Cond ? 0 : C)
   if (match(T, m_And(m_Value(X), m_APInt(NotC))) &&
       match(F, m_OneUse(m_Or(m_Specific(X), m_APInt(C)))) && *NotC == ~(*C)) {
-    Constant *Zero = ConstantInt::getNullValue(Ty);
+    Constant *Zero = ConstantInt::getZeroValue(Ty);
     Constant *OrC = ConstantInt::get(Ty, *C);
     Value *NewSel = Builder.CreateSelect(Cond, Zero, OrC, "masksel", &Sel);
     return BinaryOperator::CreateOr(T, NewSel);
@@ -951,7 +951,7 @@ static Instruction *foldSetClearBits(SelectInst &Sel,
   // Cond ? (X | C) : (X & ~C) --> (X & ~C) | (Cond ? C : 0)
   if (match(F, m_And(m_Value(X), m_APInt(NotC))) &&
       match(T, m_OneUse(m_Or(m_Specific(X), m_APInt(C)))) && *NotC == ~(*C)) {
-    Constant *Zero = ConstantInt::getNullValue(Ty);
+    Constant *Zero = ConstantInt::getZeroValue(Ty);
     Constant *OrC = ConstantInt::get(Ty, *C);
     Value *NewSel = Builder.CreateSelect(Cond, OrC, Zero, "masksel", &Sel);
     return BinaryOperator::CreateOr(F, NewSel);
@@ -1124,7 +1124,7 @@ canonicalizeSaturatedSubtractSigned(const ICmpInst *ICI, const Value *TrueVal,
       match(TrueVal, m_MaxSignedValue()) &&
       match(FalseVal, m_Neg(m_Specific(CmpLHS)))) {
     return Builder.CreateBinaryIntrinsic(
-        Intrinsic::ssub_sat, ConstantInt::getNullValue(CmpLHS->getType()),
+        Intrinsic::ssub_sat, ConstantInt::getZeroValue(CmpLHS->getType()),
         CmpLHS);
   }
 
@@ -1872,7 +1872,7 @@ static Value *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
   // it should either be the X itself, or an addition of some constant to X.
   Constant *C1;
   if (Cmp00 == X)
-    C1 = ConstantInt::getNullValue(X->getType());
+    C1 = ConstantInt::getZeroValue(X->getType());
   else if (!match(Cmp00,
                   m_Add(m_Specific(X),
                         m_CombineAnd(m_AnyIntegralConstant(), m_Constant(C1)))))
@@ -2713,7 +2713,7 @@ static Instruction *canonicalizeSelectToShuffle(SelectInst &SI) {
     if (Elt->isOneValue()) {
       // If the select condition element is true, choose from the 1st vector.
       Mask.push_back(i);
-    } else if (Elt->isNullValue()) {
+    } else if (Elt->isZeroValue()) {
       // If the select condition element is false, choose from the 2nd vector.
       Mask.push_back(i + NumElts);
     } else if (isa<UndefValue>(Elt)) {
@@ -4778,7 +4778,7 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       return nullptr;
     Type *ElementType = Gep->getSourceElementType();
     Value *NewT = Idx;
-    Value *NewF = Constant::getNullValue(Idx->getType());
+    Value *NewF = Constant::getZeroValue(Idx->getType());
     if (Swap)
       std::swap(NewT, NewF);
     Value *NewSI =

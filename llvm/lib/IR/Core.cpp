@@ -1269,7 +1269,7 @@ int LLVMGetNumOperands(LLVMValueRef Val) {
 /*--.. Operations on constants of any type .................................--*/
 
 LLVMValueRef LLVMConstNull(LLVMTypeRef Ty) {
-  return wrap(Constant::getNullValue(unwrap(Ty)));
+  return wrap(Constant::getZeroValue(unwrap(Ty)));
 }
 
 LLVMValueRef LLVMConstAllOnes(LLVMTypeRef Ty) {
@@ -1290,7 +1290,7 @@ LLVMBool LLVMIsConstant(LLVMValueRef Ty) {
 
 LLVMBool LLVMIsNull(LLVMValueRef Val) {
   if (Constant *C = dyn_cast<Constant>(unwrap(Val)))
-    return C->isNullValue();
+    return C->isZeroValue();
   return false;
 }
 
@@ -3627,7 +3627,7 @@ LLVMValueRef LLVMBuildCleanupPad(LLVMBuilderRef B, LLVMValueRef ParentPad,
                                  const char *Name) {
   if (ParentPad == nullptr) {
     Type *Ty = Type::getTokenTy(unwrap(B)->getContext());
-    ParentPad = wrap(Constant::getNullValue(Ty));
+    ParentPad = wrap(Constant::getZeroValue(Ty));
   }
   return wrap(unwrap(B)->CreateCleanupPad(
       unwrap(ParentPad), ArrayRef(unwrap(Args), NumArgs), Name));
@@ -3642,7 +3642,7 @@ LLVMValueRef LLVMBuildCatchSwitch(LLVMBuilderRef B, LLVMValueRef ParentPad,
                                   unsigned NumHandlers, const char *Name) {
   if (ParentPad == nullptr) {
     Type *Ty = Type::getTokenTy(unwrap(B)->getContext());
-    ParentPad = wrap(Constant::getNullValue(Ty));
+    ParentPad = wrap(Constant::getZeroValue(Ty));
   }
   return wrap(unwrap(B)->CreateCatchSwitch(unwrap(ParentPad), unwrap(UnwindBB),
                                            NumHandlers, Name));

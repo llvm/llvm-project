@@ -1716,11 +1716,11 @@ static void writeConstantInternal(raw_ostream &Out, const Constant *CV,
 
     // ptrauth (ptr CST, i32 KEY[, i64 DISC[, ptr ADDRDISC[, ptr DS]?]?]?)
     unsigned NumOpsToWrite = 2;
-    if (!CPA->getOperand(2)->isNullValue())
+    if (!CPA->getOperand(2)->isZeroValue())
       NumOpsToWrite = 3;
-    if (!CPA->getOperand(3)->isNullValue())
+    if (!CPA->getOperand(3)->isZeroValue())
       NumOpsToWrite = 4;
-    if (!CPA->getOperand(4)->isNullValue())
+    if (!CPA->getOperand(4)->isZeroValue())
       NumOpsToWrite = 5;
 
     ListSeparator LS;

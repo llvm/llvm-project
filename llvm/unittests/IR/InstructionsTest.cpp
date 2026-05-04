@@ -247,10 +247,10 @@ TEST(InstructionsTest, CastInst) {
   Type *VScaleV2PtrTy = ScalableVectorType::get(PtrTy, 2);
   Type *VScaleV4PtrTy = ScalableVectorType::get(PtrTy, 4);
 
-  const Constant* c8 = Constant::getNullValue(V8x8Ty);
-  const Constant* c64 = Constant::getNullValue(V8x64Ty);
+  const Constant *c8 = Constant::getZeroValue(V8x8Ty);
+  const Constant *c64 = Constant::getZeroValue(V8x64Ty);
 
-  const Constant *v2ptr32 = Constant::getNullValue(V2PtrTy);
+  const Constant *v2ptr32 = Constant::getZeroValue(V2PtrTy);
 
   EXPECT_EQ(CastInst::Trunc, CastInst::getCastOpcode(c64, true, V8x8Ty, true));
   EXPECT_EQ(CastInst::SExt, CastInst::getCastOpcode(c8, true, V8x64Ty, true));
@@ -293,93 +293,93 @@ TEST(InstructionsTest, CastInst) {
   EXPECT_FALSE(CastInst::isBitCastable(V2Int64Ty, V2Int32Ty));
 
   EXPECT_FALSE(CastInst::castIsValid(Instruction::BitCast,
-                                     Constant::getNullValue(V4PtrTy), V2PtrTy));
+                                     Constant::getZeroValue(V4PtrTy), V2PtrTy));
   EXPECT_FALSE(CastInst::castIsValid(Instruction::BitCast,
-                                     Constant::getNullValue(V2PtrTy), V4PtrTy));
+                                     Constant::getZeroValue(V2PtrTy), V4PtrTy));
 
   EXPECT_FALSE(CastInst::castIsValid(
-      Instruction::AddrSpaceCast, Constant::getNullValue(V4PtrAS1Ty), V2PtrTy));
+      Instruction::AddrSpaceCast, Constant::getZeroValue(V4PtrAS1Ty), V2PtrTy));
   EXPECT_FALSE(CastInst::castIsValid(
-      Instruction::AddrSpaceCast, Constant::getNullValue(V2PtrTy), V4PtrAS1Ty));
+      Instruction::AddrSpaceCast, Constant::getZeroValue(V2PtrTy), V4PtrAS1Ty));
 
   // Address space cast of fixed/scalable vectors of pointers to scalable/fixed
   // vector of pointers.
   EXPECT_FALSE(CastInst::castIsValid(Instruction::AddrSpaceCast,
-                                     Constant::getNullValue(VScaleV4PtrAS1Ty),
+                                     Constant::getZeroValue(VScaleV4PtrAS1Ty),
                                      V4PtrTy));
   EXPECT_FALSE(CastInst::castIsValid(Instruction::AddrSpaceCast,
-                                     Constant::getNullValue(V4PtrTy),
+                                     Constant::getZeroValue(V4PtrTy),
                                      VScaleV4PtrAS1Ty));
   // Address space cast of scalable vectors of pointers to scalable vector of
   // pointers.
   EXPECT_FALSE(CastInst::castIsValid(Instruction::AddrSpaceCast,
-                                     Constant::getNullValue(VScaleV4PtrAS1Ty),
+                                     Constant::getZeroValue(VScaleV4PtrAS1Ty),
                                      VScaleV2PtrTy));
   EXPECT_FALSE(CastInst::castIsValid(Instruction::AddrSpaceCast,
-                                     Constant::getNullValue(VScaleV2PtrTy),
+                                     Constant::getZeroValue(VScaleV2PtrTy),
                                      VScaleV4PtrAS1Ty));
   EXPECT_TRUE(CastInst::castIsValid(Instruction::AddrSpaceCast,
-                                    Constant::getNullValue(VScaleV4PtrTy),
+                                    Constant::getZeroValue(VScaleV4PtrTy),
                                     VScaleV4PtrAS1Ty));
   // Same number of lanes, different address space.
   EXPECT_TRUE(CastInst::castIsValid(Instruction::AddrSpaceCast,
-                                    Constant::getNullValue(VScaleV4PtrAS1Ty),
+                                    Constant::getZeroValue(VScaleV4PtrAS1Ty),
                                     VScaleV4PtrTy));
   // Same number of lanes, same address space.
   EXPECT_FALSE(CastInst::castIsValid(Instruction::AddrSpaceCast,
-                                     Constant::getNullValue(VScaleV4PtrTy),
+                                     Constant::getZeroValue(VScaleV4PtrTy),
                                      VScaleV4PtrTy));
 
   // Bit casting fixed/scalable vector to scalable/fixed vectors.
   EXPECT_FALSE(CastInst::castIsValid(Instruction::BitCast,
-                                     Constant::getNullValue(V2Int32Ty),
+                                     Constant::getZeroValue(V2Int32Ty),
                                      VScaleV2Int32Ty));
   EXPECT_FALSE(CastInst::castIsValid(Instruction::BitCast,
-                                     Constant::getNullValue(V2Int64Ty),
+                                     Constant::getZeroValue(V2Int64Ty),
                                      VScaleV2Int64Ty));
   EXPECT_FALSE(CastInst::castIsValid(Instruction::BitCast,
-                                     Constant::getNullValue(V4Int16Ty),
+                                     Constant::getZeroValue(V4Int16Ty),
                                      VScaleV4Int16Ty));
   EXPECT_FALSE(CastInst::castIsValid(Instruction::BitCast,
-                                     Constant::getNullValue(VScaleV2Int32Ty),
+                                     Constant::getZeroValue(VScaleV2Int32Ty),
                                      V2Int32Ty));
   EXPECT_FALSE(CastInst::castIsValid(Instruction::BitCast,
-                                     Constant::getNullValue(VScaleV2Int64Ty),
+                                     Constant::getZeroValue(VScaleV2Int64Ty),
                                      V2Int64Ty));
   EXPECT_FALSE(CastInst::castIsValid(Instruction::BitCast,
-                                     Constant::getNullValue(VScaleV4Int16Ty),
+                                     Constant::getZeroValue(VScaleV4Int16Ty),
                                      V4Int16Ty));
 
   // Bit casting scalable vectors to scalable vectors.
   EXPECT_TRUE(CastInst::castIsValid(Instruction::BitCast,
-                                    Constant::getNullValue(VScaleV4Int16Ty),
+                                    Constant::getZeroValue(VScaleV4Int16Ty),
                                     VScaleV2Int32Ty));
   EXPECT_TRUE(CastInst::castIsValid(Instruction::BitCast,
-                                    Constant::getNullValue(VScaleV2Int32Ty),
+                                    Constant::getZeroValue(VScaleV2Int32Ty),
                                     VScaleV4Int16Ty));
   EXPECT_FALSE(CastInst::castIsValid(Instruction::BitCast,
-                                     Constant::getNullValue(VScaleV2Int64Ty),
+                                     Constant::getZeroValue(VScaleV2Int64Ty),
                                      VScaleV2Int32Ty));
   EXPECT_FALSE(CastInst::castIsValid(Instruction::BitCast,
-                                     Constant::getNullValue(VScaleV2Int32Ty),
+                                     Constant::getZeroValue(VScaleV2Int32Ty),
                                      VScaleV2Int64Ty));
 
   // Bitcasting to/from <vscale x 1 x Ty>
   EXPECT_FALSE(CastInst::castIsValid(Instruction::BitCast,
-                                     Constant::getNullValue(VScaleV1Int16Ty),
+                                     Constant::getZeroValue(VScaleV1Int16Ty),
                                      V1Int16Ty));
   EXPECT_FALSE(CastInst::castIsValid(Instruction::BitCast,
-                                     Constant::getNullValue(V1Int16Ty),
+                                     Constant::getZeroValue(V1Int16Ty),
                                      VScaleV1Int16Ty));
 
   // Check that assertion is not hit when creating a cast with a vector of
   // pointers
   // First form
   BasicBlock *BB = BasicBlock::Create(C);
-  Constant *NullV2I32Ptr = Constant::getNullValue(V2PtrTy);
+  Constant *NullV2I32Ptr = Constant::getZeroValue(V2PtrTy);
   auto Inst1 = CastInst::CreatePointerCast(NullV2I32Ptr, V2Int32Ty, "foo", BB);
 
-  Constant *NullVScaleV2I32Ptr = Constant::getNullValue(VScaleV2PtrTy);
+  Constant *NullVScaleV2I32Ptr = Constant::getZeroValue(VScaleV2PtrTy);
   auto Inst1VScale = CastInst::CreatePointerCast(
       NullVScaleV2I32Ptr, VScaleV2Int32Ty, "foo.vscale", BB);
 
@@ -406,8 +406,8 @@ TEST(InstructionsTest, CastCAPI) {
 
   Type *PtrTy = PointerType::get(C, 0);
 
-  const Constant *C8 = Constant::getNullValue(Int8Ty);
-  const Constant *C64 = Constant::getNullValue(Int64Ty);
+  const Constant *C8 = Constant::getZeroValue(Int8Ty);
+  const Constant *C64 = Constant::getZeroValue(Int64Ty);
 
   EXPECT_EQ(LLVMBitCast,
             LLVMGetCastOpcode(wrap(C64), true, wrap(Int64Ty), true));
@@ -415,8 +415,8 @@ TEST(InstructionsTest, CastCAPI) {
   EXPECT_EQ(LLVMSExt, LLVMGetCastOpcode(wrap(C8), true, wrap(Int64Ty), true));
   EXPECT_EQ(LLVMZExt, LLVMGetCastOpcode(wrap(C8), false, wrap(Int64Ty), true));
 
-  const Constant *CF32 = Constant::getNullValue(FloatTy);
-  const Constant *CF64 = Constant::getNullValue(DoubleTy);
+  const Constant *CF32 = Constant::getZeroValue(FloatTy);
+  const Constant *CF64 = Constant::getZeroValue(DoubleTy);
 
   EXPECT_EQ(LLVMFPToUI,
             LLVMGetCastOpcode(wrap(CF32), true, wrap(Int8Ty), false));
@@ -430,7 +430,7 @@ TEST(InstructionsTest, CastCAPI) {
   EXPECT_EQ(LLVMFPExt,
             LLVMGetCastOpcode(wrap(CF32), true, wrap(DoubleTy), true));
 
-  const Constant *CPtr8 = Constant::getNullValue(PtrTy);
+  const Constant *CPtr8 = Constant::getZeroValue(PtrTy);
 
   EXPECT_EQ(LLVMPtrToInt,
             LLVMGetCastOpcode(wrap(CPtr8), true, wrap(Int8Ty), true));
@@ -438,8 +438,8 @@ TEST(InstructionsTest, CastCAPI) {
 
   Type *V8x8Ty = FixedVectorType::get(Int8Ty, 8);
   Type *V8x64Ty = FixedVectorType::get(Int64Ty, 8);
-  const Constant *CV8 = Constant::getNullValue(V8x8Ty);
-  const Constant *CV64 = Constant::getNullValue(V8x64Ty);
+  const Constant *CV8 = Constant::getZeroValue(V8x8Ty);
+  const Constant *CV64 = Constant::getZeroValue(V8x64Ty);
 
   EXPECT_EQ(LLVMTrunc, LLVMGetCastOpcode(wrap(CV64), true, wrap(V8x8Ty), true));
   EXPECT_EQ(LLVMSExt, LLVMGetCastOpcode(wrap(CV8), true, wrap(V8x64Ty), true));
@@ -447,7 +447,7 @@ TEST(InstructionsTest, CastCAPI) {
   Type *PtrAS1Ty = PointerType::get(C, 1);
   Type *V2PtrAS1Ty = FixedVectorType::get(PtrAS1Ty, 2);
   Type *V2PtrTy = FixedVectorType::get(PtrTy, 2);
-  const Constant *CV2Ptr = Constant::getNullValue(V2PtrTy);
+  const Constant *CV2Ptr = Constant::getZeroValue(V2PtrTy);
 
   EXPECT_EQ(LLVMAddrSpaceCast,
             LLVMGetCastOpcode(wrap(CV2Ptr), true, wrap(V2PtrAS1Ty), true));
@@ -724,7 +724,7 @@ TEST(InstructionsTest, CloneCall) {
   Type *Int32Ty = Type::getInt32Ty(C);
   Type *ArgTys[] = {Int32Ty, Int32Ty, Int32Ty};
   FunctionType *FnTy = FunctionType::get(Int32Ty, ArgTys, /*isVarArg=*/false);
-  Value *Callee = Constant::getNullValue(PointerType::getUnqual(C));
+  Value *Callee = Constant::getZeroValue(PointerType::getUnqual(C));
   Value *Args[] = {
     ConstantInt::get(Int32Ty, 1),
     ConstantInt::get(Int32Ty, 2),
@@ -758,7 +758,7 @@ TEST(InstructionsTest, AlterCallBundles) {
   LLVMContext C;
   Type *Int32Ty = Type::getInt32Ty(C);
   FunctionType *FnTy = FunctionType::get(Int32Ty, Int32Ty, /*isVarArg=*/false);
-  Value *Callee = Constant::getNullValue(PointerType::getUnqual(C));
+  Value *Callee = Constant::getZeroValue(PointerType::getUnqual(C));
   Value *Args[] = {ConstantInt::get(Int32Ty, 42)};
   OperandBundleDef OldBundle("before", UndefValue::get(Int32Ty));
   std::unique_ptr<CallInst> Call(
@@ -785,7 +785,7 @@ TEST(InstructionsTest, AlterInvokeBundles) {
   LLVMContext C;
   Type *Int32Ty = Type::getInt32Ty(C);
   FunctionType *FnTy = FunctionType::get(Int32Ty, Int32Ty, /*isVarArg=*/false);
-  Value *Callee = Constant::getNullValue(PointerType::getUnqual(C));
+  Value *Callee = Constant::getZeroValue(PointerType::getUnqual(C));
   Value *Args[] = {ConstantInt::get(Int32Ty, 42)};
   std::unique_ptr<BasicBlock> NormalDest(BasicBlock::Create(C));
   std::unique_ptr<BasicBlock> UnwindDest(BasicBlock::Create(C));
@@ -865,7 +865,7 @@ TEST_F(ModuleWithFunctionTest, DropPoisonGeneratingFlags) {
   }
 
   {
-    Value *GEPBase = Constant::getNullValue(B.getPtrTy());
+    Value *GEPBase = Constant::getZeroValue(B.getPtrTy());
     auto *GI = cast<GetElementPtrInst>(
         B.CreateInBoundsGEP(B.getInt8Ty(), GEPBase, Arg0));
     ASSERT_TRUE(GI->isInBounds());
@@ -1327,7 +1327,7 @@ TEST(InstructionsTest, ShuffleMaskQueries) {
   ShuffleVectorInst *Id13 =
       new ShuffleVectorInst(Constant::getAllOnesValue(VScaleV4Int32Ty),
                             UndefValue::get(VScaleV4Int32Ty),
-                            Constant::getNullValue(VScaleV4Int32Ty));
+                            Constant::getZeroValue(VScaleV4Int32Ty));
   int Index = 0;
   EXPECT_FALSE(Id13->isExtractSubvectorMask(Index));
   EXPECT_FALSE(Id13->changesLength());
@@ -1339,7 +1339,7 @@ TEST(InstructionsTest, ShuffleMaskQueries) {
   ShuffleVectorInst *Id14 =
       new ShuffleVectorInst(Constant::getAllOnesValue(VScaleV2Int32Ty),
                             UndefValue::get(VScaleV2Int32Ty),
-                            Constant::getNullValue(VScaleV4Int32Ty));
+                            Constant::getZeroValue(VScaleV4Int32Ty));
   EXPECT_TRUE(Id14->changesLength());
   EXPECT_TRUE(Id14->increasesLength());
   delete Id14;
@@ -1348,8 +1348,8 @@ TEST(InstructionsTest, ShuffleMaskQueries) {
   // don't crash.
   ShuffleVectorInst *Id15 =
       new ShuffleVectorInst(Constant::getAllOnesValue(VScaleV2Int32Ty),
-                            Constant::getNullValue(VScaleV2Int32Ty),
-                            Constant::getNullValue(VScaleV2Int32Ty));
+                            Constant::getZeroValue(VScaleV2Int32Ty),
+                            Constant::getZeroValue(VScaleV2Int32Ty));
   EXPECT_FALSE(Id15->isIdentityWithPadding());
   EXPECT_FALSE(Id15->isIdentityWithExtract());
   EXPECT_FALSE(Id15->isConcat());
@@ -1369,7 +1369,7 @@ TEST(InstructionsTest, ShuffleMaskIsReplicationMask) {
       for (int OpVF : seq_inclusive(VF, 2 * VF + 1)) {
         LLVMContext Ctx;
         Type *OpVFTy = FixedVectorType::get(IntegerType::getInt1Ty(Ctx), OpVF);
-        Value *Op = ConstantVector::getNullValue(OpVFTy);
+        Value *Op = ConstantVector::getZeroValue(OpVFTy);
         ShuffleVectorInst *SVI = new ShuffleVectorInst(Op, Op, ReplicatedMask);
         EXPECT_EQ(SVI->isReplicationMask(GuessedReplicationFactor, GuessedVF),
                   OpVF == VF);
@@ -1565,99 +1565,99 @@ TEST(InstructionsTest, FPCallIsFPMathOperator) {
   Type *ITy = Type::getInt32Ty(C);
   FunctionType *IFnTy = FunctionType::get(ITy, {});
   PointerType *PtrTy = PointerType::getUnqual(C);
-  Value *ICallee = Constant::getNullValue(PtrTy);
+  Value *ICallee = Constant::getZeroValue(PtrTy);
   std::unique_ptr<CallInst> ICall(CallInst::Create(IFnTy, ICallee, {}, ""));
   EXPECT_FALSE(isa<FPMathOperator>(ICall));
 
   Type *VITy = FixedVectorType::get(ITy, 2);
   FunctionType *VIFnTy = FunctionType::get(VITy, {});
-  Value *VICallee = Constant::getNullValue(PtrTy);
+  Value *VICallee = Constant::getZeroValue(PtrTy);
   std::unique_ptr<CallInst> VICall(CallInst::Create(VIFnTy, VICallee, {}, ""));
   EXPECT_FALSE(isa<FPMathOperator>(VICall));
 
   Type *AITy = ArrayType::get(ITy, 2);
   FunctionType *AIFnTy = FunctionType::get(AITy, {});
-  Value *AICallee = Constant::getNullValue(PtrTy);
+  Value *AICallee = Constant::getZeroValue(PtrTy);
   std::unique_ptr<CallInst> AICall(CallInst::Create(AIFnTy, AICallee, {}, ""));
   EXPECT_FALSE(isa<FPMathOperator>(AICall));
 
   Type *FTy = Type::getFloatTy(C);
   FunctionType *FFnTy = FunctionType::get(FTy, {});
-  Value *FCallee = Constant::getNullValue(PtrTy);
+  Value *FCallee = Constant::getZeroValue(PtrTy);
   std::unique_ptr<CallInst> FCall(CallInst::Create(FFnTy, FCallee, {}, ""));
   EXPECT_TRUE(isa<FPMathOperator>(FCall));
 
   Type *VFTy = FixedVectorType::get(FTy, 2);
   FunctionType *VFFnTy = FunctionType::get(VFTy, {});
-  Value *VFCallee = Constant::getNullValue(PtrTy);
+  Value *VFCallee = Constant::getZeroValue(PtrTy);
   std::unique_ptr<CallInst> VFCall(CallInst::Create(VFFnTy, VFCallee, {}, ""));
   EXPECT_TRUE(isa<FPMathOperator>(VFCall));
 
   Type *AFTy = ArrayType::get(FTy, 2);
   FunctionType *AFFnTy = FunctionType::get(AFTy, {});
-  Value *AFCallee = Constant::getNullValue(PtrTy);
+  Value *AFCallee = Constant::getZeroValue(PtrTy);
   std::unique_ptr<CallInst> AFCall(CallInst::Create(AFFnTy, AFCallee, {}, ""));
   EXPECT_TRUE(isa<FPMathOperator>(AFCall));
 
   Type *AVFTy = ArrayType::get(VFTy, 2);
   FunctionType *AVFFnTy = FunctionType::get(AVFTy, {});
-  Value *AVFCallee = Constant::getNullValue(PtrTy);
+  Value *AVFCallee = Constant::getZeroValue(PtrTy);
   std::unique_ptr<CallInst> AVFCall(
       CallInst::Create(AVFFnTy, AVFCallee, {}, ""));
   EXPECT_TRUE(isa<FPMathOperator>(AVFCall));
 
   Type *StructITy = StructType::get(ITy, ITy);
   FunctionType *StructIFnTy = FunctionType::get(StructITy, {});
-  Value *StructICallee = Constant::getNullValue(PtrTy);
+  Value *StructICallee = Constant::getZeroValue(PtrTy);
   std::unique_ptr<CallInst> StructICall(
       CallInst::Create(StructIFnTy, StructICallee, {}, ""));
   EXPECT_FALSE(isa<FPMathOperator>(StructICall));
 
   Type *EmptyStructTy = StructType::get(C);
   FunctionType *EmptyStructFnTy = FunctionType::get(EmptyStructTy, {});
-  Value *EmptyStructCallee = Constant::getNullValue(PtrTy);
+  Value *EmptyStructCallee = Constant::getZeroValue(PtrTy);
   std::unique_ptr<CallInst> EmptyStructCall(
       CallInst::Create(EmptyStructFnTy, EmptyStructCallee, {}, ""));
   EXPECT_FALSE(isa<FPMathOperator>(EmptyStructCall));
 
   Type *NamedStructFTy = StructType::create({FTy, FTy}, "AStruct");
   FunctionType *NamedStructFFnTy = FunctionType::get(NamedStructFTy, {});
-  Value *NamedStructFCallee = Constant::getNullValue(PtrTy);
+  Value *NamedStructFCallee = Constant::getZeroValue(PtrTy);
   std::unique_ptr<CallInst> NamedStructFCall(
       CallInst::Create(NamedStructFFnTy, NamedStructFCallee, {}, ""));
   EXPECT_FALSE(isa<FPMathOperator>(NamedStructFCall));
 
   Type *MixedStructTy = StructType::get(FTy, ITy);
   FunctionType *MixedStructFnTy = FunctionType::get(MixedStructTy, {});
-  Value *MixedStructCallee = Constant::getNullValue(PtrTy);
+  Value *MixedStructCallee = Constant::getZeroValue(PtrTy);
   std::unique_ptr<CallInst> MixedStructCall(
       CallInst::Create(MixedStructFnTy, MixedStructCallee, {}, ""));
   EXPECT_FALSE(isa<FPMathOperator>(MixedStructCall));
 
   Type *StructFTy = StructType::get(FTy, FTy, FTy);
   FunctionType *StructFFnTy = FunctionType::get(StructFTy, {});
-  Value *StructFCallee = Constant::getNullValue(PtrTy);
+  Value *StructFCallee = Constant::getZeroValue(PtrTy);
   std::unique_ptr<CallInst> StructFCall(
       CallInst::Create(StructFFnTy, StructFCallee, {}, ""));
   EXPECT_TRUE(isa<FPMathOperator>(StructFCall));
 
   Type *StructVFTy = StructType::get(VFTy, VFTy, VFTy, VFTy);
   FunctionType *StructVFFnTy = FunctionType::get(StructVFTy, {});
-  Value *StructVFCallee = Constant::getNullValue(PtrTy);
+  Value *StructVFCallee = Constant::getZeroValue(PtrTy);
   std::unique_ptr<CallInst> StructVFCall(
       CallInst::Create(StructVFFnTy, StructVFCallee, {}, ""));
   EXPECT_TRUE(isa<FPMathOperator>(StructVFCall));
 
   Type *NestedStructFTy = StructType::get(StructFTy, StructFTy, StructFTy);
   FunctionType *NestedStructFFnTy = FunctionType::get(NestedStructFTy, {});
-  Value *NestedStructFCallee = Constant::getNullValue(PtrTy);
+  Value *NestedStructFCallee = Constant::getZeroValue(PtrTy);
   std::unique_ptr<CallInst> NestedStructFCall(
       CallInst::Create(NestedStructFFnTy, NestedStructFCallee, {}, ""));
   EXPECT_FALSE(isa<FPMathOperator>(NestedStructFCall));
 
   Type *AStructFTy = ArrayType::get(StructFTy, 5);
   FunctionType *AStructFFnTy = FunctionType::get(AStructFTy, {});
-  Value *AStructFCallee = Constant::getNullValue(PtrTy);
+  Value *AStructFCallee = Constant::getZeroValue(PtrTy);
   std::unique_ptr<CallInst> AStructFCall(
       CallInst::Create(AStructFFnTy, AStructFCallee, {}, ""));
   EXPECT_FALSE(isa<FPMathOperator>(AStructFCall));

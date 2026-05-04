@@ -35,7 +35,7 @@ void CGCXXABI::ErrorUnsupportedABI(CodeGenFunction &CGF, StringRef S) {
 }
 
 llvm::Constant *CGCXXABI::GetBogusMemberPointer(QualType T) {
-  return llvm::Constant::getNullValue(CGM.getTypes().ConvertType(T));
+  return llvm::Constant::getZeroValue(CGM.getTypes().ConvertType(T));
 }
 
 llvm::Type *
@@ -54,7 +54,7 @@ CGCallee CGCXXABI::EmitLoadOfMemberFunctionPointer(
       CGF.getAsNaturalPointerTo(This, CGF.getContext().getCanonicalTagType(RD));
   const FunctionProtoType *FPT =
       MPT->getPointeeType()->getAs<FunctionProtoType>();
-  llvm::Constant *FnPtr = llvm::Constant::getNullValue(
+  llvm::Constant *FnPtr = llvm::Constant::getZeroValue(
       llvm::PointerType::getUnqual(CGM.getLLVMContext()));
   return CGCallee::forDirect(FnPtr, FPT);
 }
@@ -65,7 +65,7 @@ llvm::Value *CGCXXABI::EmitMemberDataPointerAddress(
   ErrorUnsupportedABI(CGF, "loads of member pointers");
   llvm::Type *Ty =
       llvm::PointerType::get(CGF.getLLVMContext(), Base.getAddressSpace());
-  return llvm::Constant::getNullValue(Ty);
+  return llvm::Constant::getZeroValue(Ty);
 }
 
 llvm::Value *CGCXXABI::EmitMemberPointerConversion(CodeGenFunction &CGF,

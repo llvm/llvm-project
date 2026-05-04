@@ -1167,7 +1167,7 @@ Value *IslNodeBuilder::preloadInvariantLoad(const MemoryAccess &MA,
   }
 
   MergePHI->addIncoming(PreAccInst, ExecBB);
-  MergePHI->addIncoming(Constant::getNullValue(AccInstTy), CondBB);
+  MergePHI->addIncoming(Constant::getZeroValue(AccInstTy), CondBB);
 
   return PreloadVal;
 }

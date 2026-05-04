@@ -1376,7 +1376,7 @@ void CGOpenMPRuntimeGPU::emitCriticalRegion(
       CGF.getContext().getIntTypeForBitwidth(/*DestWidth=*/32, /*Signed=*/0);
   Address Counter = CGF.CreateMemTemp(Int32Ty, "critical_counter");
   LValue CounterLVal = CGF.MakeAddrLValue(Counter, Int32Ty);
-  CGF.EmitStoreOfScalar(llvm::Constant::getNullValue(CGM.Int32Ty), CounterLVal,
+  CGF.EmitStoreOfScalar(llvm::Constant::getZeroValue(CGM.Int32Ty), CounterLVal,
                         /*isInit=*/true);
 
   // Block checks if loop counter exceeds upper bound.

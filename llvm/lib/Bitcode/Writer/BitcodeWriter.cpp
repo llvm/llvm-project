@@ -2874,7 +2874,7 @@ void ModuleBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
     const Constant *C = cast<Constant>(V);
     unsigned Code = -1U;
     unsigned AbbrevToUse = 0;
-    if (C->isNullValue()) {
+    if (C->isZeroValue()) {
       Code = bitc::CST_CODE_NULL;
     } else if (isa<PoisonValue>(C)) {
       Code = bitc::CST_CODE_POISON;

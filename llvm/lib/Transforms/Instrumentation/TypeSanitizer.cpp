@@ -625,7 +625,7 @@ bool TypeSanitizer::instrumentWithShadowUpdate(
   if (TBAAMD)
     TDGV = TypeDescriptors[TBAAMD];
   else
-    TDGV = Constant::getNullValue(IRB.getPtrTy());
+    TDGV = Constant::getZeroValue(IRB.getPtrTy());
 
   Value *TD = IRB.CreateBitCast(TDGV, IRB.getPtrTy());
 

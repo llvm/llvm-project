@@ -1684,7 +1684,7 @@ TEST(SymtabTest, instr_prof_symtab_module_test) {
       PointerType::get(Ctx, M->getDataLayout().getDefaultGlobalsAddressSpace()),
       3);
   Constant *Int32TyNull =
-      llvm::ConstantExpr::getNullValue(PointerType::getUnqual(Ctx));
+      llvm::ConstantExpr::getZeroValue(PointerType::getUnqual(Ctx));
   SmallVector<llvm::Type *, 1> tys = {VTableArrayType};
   StructType *VTableType = llvm::StructType::get(Ctx, tys);
 

@@ -1224,8 +1224,8 @@ public:
 Constant *FatPtrConstMaterializer::materializeBufferFatPtrConst(Constant *C) {
   Type *SrcTy = C->getType();
   auto *NewTy = dyn_cast<StructType>(TypeMap->remapType(SrcTy));
-  if (C->isNullValue())
-    return ConstantAggregateZero::getNullValue(NewTy);
+  if (C->isZeroValue())
+    return ConstantAggregateZero::getZeroValue(NewTy);
   if (isa<PoisonValue>(C)) {
     return ConstantStruct::get(NewTy,
                                {PoisonValue::get(NewTy->getElementType(0)),
@@ -2037,13 +2037,13 @@ PtrParts SplitPtrStructs::visitAddrSpaceCastInst(AddrSpaceCastInst &I) {
   auto *ResTy = cast<StructType>(I.getType());
   Type *RsrcTy = ResTy->getElementType(0);
   Type *OffTy = ResTy->getElementType(1);
-  Value *ZeroOff = Constant::getNullValue(OffTy);
+  Value *ZeroOff = Constant::getZeroValue(OffTy);
 
   // Special case for null pointers, undef, and poison, which can be created by
   // address space propagation.
   auto *InConst = dyn_cast<Constant>(In);
-  if (InConst && InConst->isNullValue()) {
-    Value *NullRsrc = Constant::getNullValue(RsrcTy);
+  if (InConst && InConst->isZeroValue()) {
+    Value *NullRsrc = Constant::getZeroValue(RsrcTy);
     SplitUsers.insert(&I);
     return {NullRsrc, ZeroOff};
   }
@@ -2246,7 +2246,7 @@ PtrParts SplitPtrStructs::visitIntrinsicInst(IntrinsicInst &I) {
                                       {Base, Stride, NumRecords, Flags});
     copyMetadata(Rsrc, &I);
     Rsrc->takeName(&I);
-    Value *Zero = Constant::getNullValue(OffType);
+    Value *Zero = Constant::getZeroValue(OffType);
     SplitUsers.insert(&I);
     return {Rsrc, Zero};
   }

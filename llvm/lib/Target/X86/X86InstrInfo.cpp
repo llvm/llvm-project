@@ -8420,7 +8420,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
     }
 
     const Constant *C =
-        IsAllOnes ? Constant::getAllOnesValue(Ty) : Constant::getNullValue(Ty);
+        IsAllOnes ? Constant::getAllOnesValue(Ty) : Constant::getZeroValue(Ty);
     unsigned CPI = MCP.getConstantPoolIndex(C, Alignment);
 
     // Create operands to load from the constant pool entry.

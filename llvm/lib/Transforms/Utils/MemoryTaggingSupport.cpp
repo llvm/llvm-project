@@ -253,7 +253,7 @@ Value *getFP(IRBuilder<> &IRB) {
   return IRB.CreatePtrToInt(
       IRB.CreateIntrinsic(Intrinsic::frameaddress,
                           IRB.getPtrTy(M->getDataLayout().getAllocaAddrSpace()),
-                          {Constant::getNullValue(IRB.getInt32Ty())}),
+                          {Constant::getZeroValue(IRB.getInt32Ty())}),
       IRB.getIntPtrTy(M->getDataLayout()));
 }
 

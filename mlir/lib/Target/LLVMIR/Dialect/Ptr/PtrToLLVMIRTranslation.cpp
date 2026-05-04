@@ -196,7 +196,7 @@ translateTypeOffsetOp(TypeOffsetOp typeOffsetOp, llvm::IRBuilderBase &builder,
     return typeOffsetOp.emitError("Failed to translate the result type");
 
   // Use GEP with null pointer to compute type size/offset.
-  llvm::Value *nullPtr = llvm::Constant::getNullValue(builder.getPtrTy(0));
+  llvm::Value *nullPtr = llvm::Constant::getZeroValue(builder.getPtrTy(0));
   llvm::Value *offsetPtr =
       builder.CreateGEP(elementType, nullPtr, {builder.getInt32(1)});
   llvm::Value *offset = builder.CreatePtrToInt(offsetPtr, resultType);

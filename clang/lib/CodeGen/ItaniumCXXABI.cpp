@@ -916,7 +916,7 @@ static llvm::Constant *pointerAuthResignConstant(
     return nullptr;
 
   assert(CPA->getKey()->getZExtValue() == CurAuthInfo.getKey() &&
-         CPA->getAddrDiscriminator()->isNullValue() &&
+         CPA->getAddrDiscriminator()->isZeroValue() &&
          CPA->getDiscriminator() == CurAuthInfo.getDiscriminator() &&
          "unexpected key or discriminators");
 
@@ -1313,7 +1313,7 @@ ItaniumCXXABI::EmitMemberPointerComparison(CodeGenFunction &CGF,
   // This condition, together with the assumption that L.ptr == R.ptr,
   // tests whether the pointers are both null.  ARM imposes an extra
   // condition.
-  llvm::Value *Zero = llvm::Constant::getNullValue(LPtr->getType());
+  llvm::Value *Zero = llvm::Constant::getZeroValue(LPtr->getType());
   llvm::Value *EqZero = Builder.CreateICmp(Eq, LPtr, Zero, "cmp.ptr.null");
 
   // This condition tests whether L.adj == R.adj.  If this isn't
@@ -1511,7 +1511,8 @@ void ItaniumCXXABI::emitThrow(CodeGenFunction &CGF, const CXXThrowExpr *E) {
     Dtor = CGM.getAddrOfCXXStructor(GlobalDecl(DtorD, Dtor_Complete));
     Dtor = CGM.getFunctionPointer(Dtor, DtorTy);
   }
-  if (!Dtor) Dtor = llvm::Constant::getNullValue(CGM.Int8PtrTy);
+  if (!Dtor)
+    Dtor = llvm::Constant::getZeroValue(CGM.Int8PtrTy);
 
   llvm::Value *args[] = { ExceptionPtr, TypeInfo, Dtor };
   CGF.EmitNoreturnRuntimeCallOrInvoke(getThrowFn(CGM), args);
@@ -1823,7 +1824,7 @@ llvm::Value *ItaniumCXXABI::emitExactDynamicCast(
     llvm::PHINode *PHI = CGF.Builder.CreatePHI(AdjustedThisPtr->getType(), 2);
     PHI->addIncoming(AdjustedThisPtr, PostCastAuthSuccess);
     llvm::Value *NullValue =
-        llvm::Constant::getNullValue(AdjustedThisPtr->getType());
+        llvm::Constant::getZeroValue(AdjustedThisPtr->getType());
     PHI->addIncoming(NullValue, NonNullBlock);
     AdjustedThisPtr = PHI;
   }
@@ -2993,7 +2994,7 @@ static void emitGlobalDtorWithCXAAtExit(CodeGenFunction &CGF,
     // __attribute__((destructor)) in a constructor function. Using null here is
     // okay because this argument is just passed back to the destructor
     // function.
-    addr = llvm::Constant::getNullValue(CGF.Int8PtrTy);
+    addr = llvm::Constant::getZeroValue(CGF.Int8PtrTy);
 
   llvm::Value *args[] = {dtorCallee, addr, handle};
   CGF.EmitNounwindRuntimeCall(atexit, args);
@@ -5311,7 +5312,7 @@ void XLCXXABI::registerGlobalDtor(CodeGenFunction &CGF, const VarDecl &D,
 
     // Register above __dtor with atexit().
     // First param is flags and must be 0, second param is function ptr
-    llvm::Value *NV = llvm::Constant::getNullValue(CGM.IntTy);
+    llvm::Value *NV = llvm::Constant::getZeroValue(CGM.IntTy);
     CGF.EmitNounwindRuntimeCall(AtExit, {NV, DtorStub});
 
     // Cannot unregister TLS __dtor so done

@@ -622,7 +622,7 @@ uint64_t ReducerWorkItem::computeMIRComplexityScore() const {
 // for more reduced.
 static unsigned classifyReductivePower(const Value *V) {
   if (auto *C = dyn_cast<ConstantData>(V)) {
-    if (C->isNullValue())
+    if (C->isZeroValue())
       return 0;
     if (C->isOneValue())
       return 1;

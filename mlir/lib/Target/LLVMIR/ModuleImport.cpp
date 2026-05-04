@@ -1616,7 +1616,7 @@ ModuleImport::convertGlobalCtorsAndDtors(llvm::GlobalVariable *globalVar) {
     Attribute dataAttr;
     if (gv)
       dataAttr = FlatSymbolRefAttr::get(context, gv->getName());
-    else if (data->isNullValue())
+    else if (data->isZeroValue())
       dataAttr = ZeroAttr::get(context);
     else
       return failure();

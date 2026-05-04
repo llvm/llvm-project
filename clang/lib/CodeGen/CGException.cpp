@@ -989,14 +989,14 @@ static void emitCatchPadBlock(CodeGenFunction &CGF, EHCatchScope &CatchScope) {
 
     CatchTypeInfo TypeInfo = Handler.Type;
     if (!TypeInfo.RTTI)
-      TypeInfo.RTTI = llvm::Constant::getNullValue(CGF.VoidPtrTy);
+      TypeInfo.RTTI = llvm::Constant::getZeroValue(CGF.VoidPtrTy);
 
     CGF.Builder.SetInsertPoint(Handler.Block);
 
     if (EHPersonality::get(CGF).isMSVCXXPersonality()) {
       CGF.Builder.CreateCatchPad(
           CatchSwitch, {TypeInfo.RTTI, CGF.Builder.getInt32(TypeInfo.Flags),
-                        llvm::Constant::getNullValue(CGF.VoidPtrTy)});
+                        llvm::Constant::getZeroValue(CGF.VoidPtrTy)});
     } else {
       CGF.Builder.CreateCatchPad(CatchSwitch, {TypeInfo.RTTI});
     }
@@ -1039,7 +1039,7 @@ static void emitWasmCatchPadBlock(CodeGenFunction &CGF,
     const EHCatchScope::Handler &Handler = CatchScope.getHandler(I);
     CatchTypeInfo TypeInfo = Handler.Type;
     if (!TypeInfo.RTTI)
-      TypeInfo.RTTI = llvm::Constant::getNullValue(CGF.VoidPtrTy);
+      TypeInfo.RTTI = llvm::Constant::getZeroValue(CGF.VoidPtrTy);
     CatchTypes.push_back(TypeInfo.RTTI);
   }
   auto *CPI = CGF.Builder.CreateCatchPad(CatchSwitch, CatchTypes);
@@ -1072,7 +1072,7 @@ static void emitWasmCatchPadBlock(CodeGenFunction &CGF,
     const EHCatchScope::Handler &Handler = CatchScope.getHandler(I);
     CatchTypeInfo TypeInfo = Handler.Type;
     if (!TypeInfo.RTTI)
-      TypeInfo.RTTI = llvm::Constant::getNullValue(CGF.VoidPtrTy);
+      TypeInfo.RTTI = llvm::Constant::getZeroValue(CGF.VoidPtrTy);
 
     // Figure out the next block.
     llvm::BasicBlock *NextBlock;
@@ -1753,7 +1753,7 @@ struct PerformSEHFinally final : EHScopeStack::Cleanup {
     if (!F.isForEHCleanup() && F.hasExitSwitch()) {
       Address Addr = CGF.getNormalCleanupDestSlot();
       llvm::Value *Load = CGF.Builder.CreateLoad(Addr, "cleanup.dest");
-      llvm::Value *Zero = llvm::Constant::getNullValue(CGM.Int32Ty);
+      llvm::Value *Zero = llvm::Constant::getZeroValue(CGM.Int32Ty);
       IsForEH = CGF.Builder.CreateICmpNE(Load, Zero);
     }
 

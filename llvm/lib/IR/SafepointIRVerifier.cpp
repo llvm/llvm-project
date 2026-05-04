@@ -368,7 +368,7 @@ static enum BaseType getBaseType(const Value *Val) {
     if (isa<Constant>(V)) {
       // We found at least one base pointer which is non-null, so this derived
       // pointer is not exclusively derived from null.
-      if (V != Constant::getNullValue(V->getType()))
+      if (V != Constant::getZeroValue(V->getType()))
         isExclusivelyDerivedFromNull = false;
       // Continue processing the remaining values to make sure it's exclusively
       // constant.

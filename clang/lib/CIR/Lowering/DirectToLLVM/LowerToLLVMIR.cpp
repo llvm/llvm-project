@@ -40,7 +40,7 @@ public:
 
     if (auto cirOp = llvm::dyn_cast<mlir::LLVM::ZeroOp>(op))
       moduleTranslation.mapValue(cirOp.getResult()) =
-          llvm::Constant::getNullValue(
+          llvm::Constant::getZeroValue(
               moduleTranslation.convertType(cirOp.getType()));
 
     return mlir::success();

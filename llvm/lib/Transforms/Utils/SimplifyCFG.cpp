@@ -343,7 +343,7 @@ isSelectInRoleOfConjunctionOrDisjunction(const SelectInst *SI) {
   return ((isa<ConstantInt>(SI->getTrueValue()) &&
            (dyn_cast<ConstantInt>(SI->getTrueValue())->isOne())) ||
           (isa<ConstantInt>(SI->getFalseValue()) &&
-           (dyn_cast<ConstantInt>(SI->getFalseValue())->isNullValue())));
+           (dyn_cast<ConstantInt>(SI->getFalseValue())->isZeroValue())));
 }
 
 } // end anonymous namespace
@@ -5983,11 +5983,11 @@ bool SimplifyCFGOpt::turnSwitchRangeIntoICmp(SwitchInst *SI,
     NewBI = Builder.CreateCondBr(Cmp, Dest, OtherDest);
   }
   // If NumCases overflowed, then all possible values jump to the successor.
-  else if (NumCases->isNullValue() && !Cases->empty()) {
+  else if (NumCases->isZeroValue() && !Cases->empty()) {
     NewBI = Builder.CreateBr(Dest);
   } else {
     Value *Sub = SI->getCondition();
-    if (!Offset->isNullValue())
+    if (!Offset->isZeroValue())
       Sub = Builder.CreateAdd(Sub, Offset, Sub->getName() + ".off");
     Value *Cmp = Builder.CreateICmpULT(Sub, NumCases, "switch");
     NewBI = Builder.CreateCondBr(Cmp, Dest, OtherDest);
@@ -6308,7 +6308,7 @@ constantFold(Instruction *I, const DataLayout &DL,
       return nullptr;
     if (A->isAllOnesValue())
       return lookupConstant(Select->getTrueValue(), ConstantPool);
-    if (A->isNullValue())
+    if (A->isZeroValue())
       return lookupConstant(Select->getFalseValue(), ConstantPool);
     return nullptr;
   }
@@ -6587,11 +6587,11 @@ static Value *foldSwitchToSelect(const SwitchCaseResultVectorTy &ResultVector,
       // Check if cases with the same result can cover all number
       // in touched bits.
       if (BitMask.popcount() == Log2_32(CaseCount)) {
-        if (!MinCaseVal->isNullValue())
+        if (!MinCaseVal->isZeroValue())
           Condition = Builder.CreateSub(Condition, MinCaseVal);
         Value *And = Builder.CreateAnd(Condition, ~BitMask, "switch.and");
         Value *Cmp = Builder.CreateICmpEQ(
-            And, Constant::getNullValue(And->getType()), "switch.selectcmp");
+            And, Constant::getZeroValue(And->getType()), "switch.selectcmp");
         Value *Ret =
             Builder.CreateSelect(Cmp, ResultVector[0].first, DefaultResult);
         if (auto *SI = dyn_cast<SelectInst>(Ret); SI && HasBranchWeights) {
@@ -7091,7 +7091,7 @@ static bool shouldUseSwitchConditionAsTableIndex(
     ConstantInt &MinCaseVal, const ConstantInt &MaxCaseVal,
     bool HasDefaultResults, const SmallVector<Type *> &ResultTypes,
     const DataLayout &DL, const TargetTransformInfo &TTI) {
-  if (MinCaseVal.isNullValue())
+  if (MinCaseVal.isZeroValue())
     return true;
   if (MinCaseVal.isNegative() ||
       MaxCaseVal.getLimitedValue() == std::numeric_limits<uint64_t>::max() ||
@@ -8688,7 +8688,7 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
   if (I->use_empty())
     return false;
 
-  if (C->isNullValue() || isa<UndefValue>(C)) {
+  if (C->isZeroValue() || isa<UndefValue>(C)) {
     // Only look at the first use we can handle, avoid hurting compile time with
     // long uselists
     auto FindUse = llvm::find_if(I->uses(), [](auto &U) {
@@ -8764,7 +8764,7 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
       if (isa<UndefValue>(C) && HasNoUndefAttr)
         return true;
       // Return null to a nonnull+noundef return value is undefined.
-      if (C->isNullValue() && HasNoUndefAttr &&
+      if (C->isZeroValue() && HasNoUndefAttr &&
           Ret->getFunction()->hasRetAttribute(Attribute::NonNull)) {
         return !PtrValueMayBeModified;
       }
@@ -8791,7 +8791,7 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
     }
 
     if (auto *CB = dyn_cast<CallBase>(User)) {
-      if (C->isNullValue() && NullPointerIsDefined(CB->getFunction()))
+      if (C->isZeroValue() && NullPointerIsDefined(CB->getFunction()))
         return false;
       // A call to null is undefined.
       if (CB->getCalledOperand() == I)

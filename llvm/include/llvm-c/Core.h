@@ -2357,7 +2357,7 @@ LLVM_C_ABI int LLVMGetNumOperands(LLVMValueRef Val);
 /**
  * Obtain a constant value referring to the null instance of a type.
  *
- * @see llvm::Constant::getNullValue()
+ * @see llvm::Constant::getZeroValue()
  */
 LLVM_C_ABI LLVMValueRef LLVMConstNull(LLVMTypeRef Ty); /* all zeroes */
 
@@ -2388,7 +2388,7 @@ LLVM_C_ABI LLVMValueRef LLVMGetPoison(LLVMTypeRef Ty);
 /**
  * Determine whether a value instance is null.
  *
- * @see llvm::Constant::isNullValue()
+ * @see llvm::Constant::isZeroValue()
  */
 LLVM_C_ABI LLVMBool LLVMIsNull(LLVMValueRef Val);
 

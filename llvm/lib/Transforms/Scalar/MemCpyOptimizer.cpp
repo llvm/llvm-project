@@ -1361,7 +1361,7 @@ bool MemCpyOptPass::processMemSetMemCpyDependence(MemCpyInst *MemCpy,
   Value *Ule = Builder.CreateICmpULE(DestSize, SrcSize);
   Value *SizeDiff = Builder.CreateSub(DestSize, SrcSize);
   Value *MemsetLen = Builder.CreateSelect(
-      Ule, ConstantInt::getNullValue(DestSize->getType()), SizeDiff);
+      Ule, ConstantInt::getZeroValue(DestSize->getType()), SizeDiff);
   // FIXME (#167968): we could explore estimating the branch_weights based on
   // value profiling data about the 2 sizes.
   if (auto *SI = dyn_cast<SelectInst>(MemsetLen))
@@ -1782,7 +1782,7 @@ static bool isZeroSize(Value *Size) {
       Size = Res;
   // Treat undef/poison size like zero.
   if (auto *C = dyn_cast<Constant>(Size))
-    return isa<UndefValue>(C) || C->isNullValue();
+    return isa<UndefValue>(C) || C->isZeroValue();
   return false;
 }
 

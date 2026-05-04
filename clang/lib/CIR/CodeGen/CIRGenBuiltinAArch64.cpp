@@ -341,7 +341,7 @@ emitAArch64CompareBuiltinExpr(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
     src = builder.createBitcast(src, retTy);
   }
 
-  mlir::Value zero = builder.getNullValue(src.getType(), loc);
+  mlir::Value zero = builder.getZeroValue(src.getType(), loc);
 
   if (!scalarCmp)
     return builder.createVecCompare(loc, kind, src, zero);
@@ -1038,7 +1038,7 @@ CIRGenFunction::emitAArch64SVEBuiltinExpr(unsigned builtinID,
 
     // Zero-ing predication
     if (typeFlags.getMergeType() == SVETypeFlags::MergeZeroExp) {
-      auto null = builder.getNullValue(convertType(expr->getType()),
+      auto null = builder.getZeroValue(convertType(expr->getType()),
                                        getLoc(expr->getExprLoc()));
       ops.insert(ops.begin(), null);
     }

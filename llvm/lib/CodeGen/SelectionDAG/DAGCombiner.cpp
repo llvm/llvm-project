@@ -23069,7 +23069,7 @@ bool DAGCombiner::tryStoreMergeOfConstants(
       if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(StoredVal))
         IsElementZero = C->isZero();
       else if (ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(StoredVal))
-        IsElementZero = C->getConstantFPValue()->isNullValue();
+        IsElementZero = C->getConstantFPValue()->isZeroValue();
       else if (ISD::isBuildVectorAllZeros(StoredVal.getNode()))
         IsElementZero = true;
       if (IsElementZero) {

@@ -1317,7 +1317,7 @@ static VPIRValue *tryToFoldLiveIns(VPSingleDefRecipe &R,
     switch (Opcode) {
     case VPInstruction::LogicalAnd:
       return Folder.FoldSelect(Ops[0], Ops[1],
-                               ConstantInt::getNullValue(Ops[1]->getType()));
+                               ConstantInt::getZeroValue(Ops[1]->getType()));
     case VPInstruction::Not:
       return Folder.FoldBinOp(Instruction::BinaryOps::Xor, Ops[0],
                               Constant::getAllOnesValue(Ops[0]->getType()));

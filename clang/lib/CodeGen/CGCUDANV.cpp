@@ -355,7 +355,7 @@ Address CGNVCUDARuntime::prepareKernelArgsLLVMOffload(CodeGenFunction &CGF,
                           CGF.Builder.CreateStructGEP(KernelLaunchParams, 0));
   CGF.Builder.CreateStore(KernelArgs.emitRawPointer(CGF),
                           CGF.Builder.CreateStructGEP(KernelLaunchParams, 1));
-  CGF.Builder.CreateStore(llvm::Constant::getNullValue(PtrTy),
+  CGF.Builder.CreateStore(llvm::Constant::getZeroValue(PtrTy),
                           CGF.Builder.CreateStructGEP(KernelLaunchParams, 2));
 
   for (unsigned i = 0; i < Args.size(); ++i) {
@@ -924,7 +924,7 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
     {
       auto *HandleValue = CtorBuilder.CreateLoad(GpuBinaryAddr);
       llvm::Constant *Zero =
-          llvm::Constant::getNullValue(HandleValue->getType());
+          llvm::Constant::getZeroValue(HandleValue->getType());
       llvm::Value *EQZero = CtorBuilder.CreateICmpEQ(HandleValue, Zero);
       CtorBuilder.CreateCondBr(EQZero, IfBlock, ExitBlock);
     }
@@ -1063,7 +1063,7 @@ llvm::Function *CGNVCUDARuntime::makeModuleDtorFunction() {
         llvm::BasicBlock::Create(Context, "if", ModuleDtorFunc);
     llvm::BasicBlock *ExitBlock =
         llvm::BasicBlock::Create(Context, "exit", ModuleDtorFunc);
-    llvm::Constant *Zero = llvm::Constant::getNullValue(HandleValue->getType());
+    llvm::Constant *Zero = llvm::Constant::getZeroValue(HandleValue->getType());
     llvm::Value *NEZero = DtorBuilder.CreateICmpNE(HandleValue, Zero);
     DtorBuilder.CreateCondBr(NEZero, IfBlock, ExitBlock);
 

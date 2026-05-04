@@ -98,7 +98,7 @@ def vreinterpret: CGFHelperFn<"ARMMVEVectorReinterpret">;
 def extend: CGHelperFn<"SignOrZeroExtend"> {
   let special_params = [IRBuilderIntParam<2, "bool">];
 }
-def zeroinit: IRFunction<"llvm::Constant::getNullValue">;
+def zeroinit: IRFunction<"llvm::Constant::getZeroValue">;
 def int_min: CGHelperFn<"ARMMVEConstantSplat<1,0>">;
 def int_max: CGHelperFn<"ARMMVEConstantSplat<0,1>">;
 def uint_max: CGHelperFn<"ARMMVEConstantSplat<1,1>">;

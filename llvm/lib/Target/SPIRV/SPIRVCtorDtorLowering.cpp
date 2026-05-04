@@ -109,7 +109,7 @@ void createInitOrFiniCalls(Function &F, bool IsCtor) {
     auto *GV = new GlobalVariable(
         M, PointerType::getUnqual(C),
         /*isConstant=*/false, GlobalValue::WeakAnyLinkage,
-        Constant::getNullValue(PointerType::getUnqual(C)), Name,
+        Constant::getZeroValue(PointerType::getUnqual(C)), Name,
         /*InsertBefore=*/nullptr, GlobalVariable::NotThreadLocal,
         /*AddressSpace=*/SPIRV_GLOBAL_AS);
     GV->setVisibility(GlobalVariable::ProtectedVisibility);

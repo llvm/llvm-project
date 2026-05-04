@@ -863,14 +863,14 @@ void LazyValueInfoImpl::intersectAssumeOrGuardBlockValueConstantRange(
         switch (RK.AttrKind) {
         case Attribute::NonNull:
           BBLV = BBLV.intersect(ValueLatticeElement::getNot(
-              Constant::getNullValue(RK.WasOn->getType())));
+              Constant::getZeroValue(RK.WasOn->getType())));
           break;
 
         case Attribute::Dereferenceable:
           if (auto *CI = dyn_cast<ConstantInt>(RK.IRArgValue);
               CI && !CI->isZero())
             BBLV = BBLV.intersect(ValueLatticeElement::getNot(
-                Constant::getNullValue(RK.WasOn->getType())));
+                Constant::getZeroValue(RK.WasOn->getType())));
           break;
 
         default:
@@ -1465,7 +1465,7 @@ std::optional<ValueLatticeElement> LazyValueInfoImpl::getValueFromICmpCondition(
     match(X, m_PtrToIntSameSize(DL, m_Value(X)));
     match(Y, m_PtrToIntSameSize(DL, m_Value(Y)));
     if ((X == LHS && Y == RHS) || (X == RHS && Y == LHS)) {
-      Constant *NullVal = Constant::getNullValue(Val->getType());
+      Constant *NullVal = Constant::getZeroValue(Val->getType());
       if (EdgePred == ICmpInst::ICMP_EQ)
         return ValueLatticeElement::get(NullVal);
       return ValueLatticeElement::getNot(NullVal);
@@ -1488,11 +1488,11 @@ ValueLatticeElement LazyValueInfoImpl::getValueFromTrunc(Value *Val,
   if (Trunc->hasNoUnsignedWrap()) {
     if (IsTrueDest)
       return ValueLatticeElement::get(ConstantInt::get(Ty, 1));
-    return ValueLatticeElement::get(Constant::getNullValue(Ty));
+    return ValueLatticeElement::get(Constant::getZeroValue(Ty));
   }
 
   if (IsTrueDest)
-    return ValueLatticeElement::getNot(Constant::getNullValue(Ty));
+    return ValueLatticeElement::getNot(Constant::getZeroValue(Ty));
   return ValueLatticeElement::getNot(Constant::getAllOnesValue(Ty));
 }
 
@@ -2080,13 +2080,13 @@ static Constant *getPredicateResult(CmpInst::Predicate Pred, Constant *C,
       // !C1 == C -> false iff C1 == C.
       Constant *Res = ConstantFoldCompareInstOperands(
           ICmpInst::ICMP_NE, Val.getNotConstant(), C, DL);
-      if (Res && Res->isNullValue())
+      if (Res && Res->isZeroValue())
         return ConstantInt::getFalse(ResTy);
     } else if (Pred == ICmpInst::ICMP_NE) {
       // !C1 != C -> true iff C1 == C.
       Constant *Res = ConstantFoldCompareInstOperands(
           ICmpInst::ICMP_NE, Val.getNotConstant(), C, DL);
-      if (Res && Res->isNullValue())
+      if (Res && Res->isZeroValue())
         return ConstantInt::getTrue(ResTy);
     }
     return nullptr;
@@ -2115,7 +2115,7 @@ Constant *LazyValueInfo::getPredicateAt(CmpInst::Predicate Pred, Value *V,
   // return it quickly. But this is only a fastpath, and falling
   // through would still be correct.
   const DataLayout &DL = CxtI->getDataLayout();
-  if (V->getType()->isPointerTy() && C->isNullValue() &&
+  if (V->getType()->isPointerTy() && C->isZeroValue() &&
       isKnownNonZero(V->stripPointerCastsSameRepresentation(), DL)) {
     Type *ResTy = CmpInst::makeCmpResultType(C->getType());
     if (Pred == ICmpInst::ICMP_EQ)

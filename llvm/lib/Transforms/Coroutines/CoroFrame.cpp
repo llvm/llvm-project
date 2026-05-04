@@ -1674,7 +1674,7 @@ static void eliminateSwiftErrorArgument(Function &F, Argument &Arg,
   Arg.replaceAllUsesWith(Alloca);
 
   // Set an initial value in the alloca.  swifterror is always null on entry.
-  auto InitialValue = Constant::getNullValue(ValueTy);
+  auto InitialValue = Constant::getZeroValue(ValueTy);
   Builder.CreateStore(InitialValue, Alloca);
 
   // Find all the suspends in the function and save and restore around them.

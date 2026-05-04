@@ -291,7 +291,7 @@ bool WasmEHPrepareImpl::prepareEHPads(Function &F) {
     // In case of a single catch (...), we don't need to emit a personalify
     // function call
     if (CPI->arg_size() == 1 &&
-        cast<Constant>(CPI->getArgOperand(0))->isNullValue())
+        cast<Constant>(CPI->getArgOperand(0))->isZeroValue())
       prepareEHPad(BB, false);
     else
       prepareEHPad(BB, true, Index++);

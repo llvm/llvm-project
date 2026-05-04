@@ -31,7 +31,7 @@ static Constant *getNegativeIsTrueBoolVec(Constant *V, const DataLayout &DL) {
   VectorType *IntTy = VectorType::getInteger(cast<VectorType>(V->getType()));
   V = ConstantExpr::getBitCast(V, IntTy);
   V = ConstantFoldCompareInstOperands(CmpInst::ICMP_SGT,
-                                      Constant::getNullValue(IntTy), V, DL);
+                                      Constant::getZeroValue(IntTy), V, DL);
   assert(V && "Vector must be foldable");
   return V;
 }
@@ -58,7 +58,7 @@ static Value *getBoolVecFromMask(Value *Mask, const DataLayout &DL) {
 static Instruction *simplifyX86MaskedLoad(IntrinsicInst &II, InstCombiner &IC) {
   Value *Ptr = II.getOperand(0);
   Value *Mask = II.getOperand(1);
-  Constant *ZeroVec = Constant::getNullValue(II.getType());
+  Constant *ZeroVec = Constant::getZeroValue(II.getType());
 
   // Zero Mask - masked load instruction creates a zero vector.
   if (isa<ConstantAggregateZero>(Mask))
@@ -401,7 +401,7 @@ static Value *simplifyX86varShift(const IntrinsicInst &II,
         ConstantVec.push_back(UndefValue::get(SVT));
       } else {
         assert(LogicalShift && "Logical shift expected");
-        ConstantVec.push_back(ConstantInt::getNullValue(SVT));
+        ConstantVec.push_back(ConstantInt::getZeroValue(SVT));
       }
     }
     return ConstantVector::get(ConstantVec);
@@ -615,7 +615,7 @@ static Value *simplifyX86movmsk(const IntrinsicInst &II,
 
   // movmsk(undef) -> zero as we must ensure the upper bits are zero.
   if (isa<UndefValue>(Arg))
-    return Constant::getNullValue(ResTy);
+    return Constant::getZeroValue(ResTy);
 
   // Preserve previous behavior and give up.
   // TODO: treat as <8 x i8>.
@@ -721,7 +721,7 @@ static Value *simplifyTernarylogic(const IntrinsicInst &II,
   uint8_t Imm = ArgImm->getValue().getZExtValue();
   switch (Imm) {
   case 0x0:
-    Res = {Constant::getNullValue(Ty), 0};
+    Res = {Constant::getZeroValue(Ty), 0};
     break;
   case 0x1:
     if (ABCIsConst)
@@ -2061,7 +2061,7 @@ static Value *simplifyX86pshufb(const IntrinsicInst &II,
   }
 
   auto V1 = II.getArgOperand(0);
-  auto V2 = Constant::getNullValue(VecTy);
+  auto V2 = Constant::getZeroValue(VecTy);
   return Builder.CreateShuffleVector(V1, V2, ArrayRef(Indexes, NumElts));
 }
 
@@ -2262,7 +2262,7 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   case Intrinsic::x86_bmi_pext_32:
   case Intrinsic::x86_bmi_pext_64:
     if (auto *MaskC = dyn_cast<ConstantInt>(II.getArgOperand(1))) {
-      if (MaskC->isNullValue()) {
+      if (MaskC->isZeroValue()) {
         return IC.replaceInstUsesWith(II, ConstantInt::get(II.getType(), 0));
       }
       if (MaskC->isAllOnesValue()) {
@@ -2306,7 +2306,7 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   case Intrinsic::x86_bmi_pdep_32:
   case Intrinsic::x86_bmi_pdep_64:
     if (auto *MaskC = dyn_cast<ConstantInt>(II.getArgOperand(1))) {
-      if (MaskC->isNullValue()) {
+      if (MaskC->isZeroValue()) {
         return IC.replaceInstUsesWith(II, ConstantInt::get(II.getType(), 0));
       }
       if (MaskC->isAllOnesValue()) {
@@ -3238,7 +3238,7 @@ std::optional<Value *> X86TTIImpl::simplifyDemandedUseBitsIntrinsic(
     APInt DemandedElts = DemandedMask.zextOrTrunc(ArgWidth);
     Type *VTy = II.getType();
     if (DemandedElts.isZero()) {
-      return ConstantInt::getNullValue(VTy);
+      return ConstantInt::getZeroValue(VTy);
     }
 
     // We know that the upper bits are set to zero.

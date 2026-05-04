@@ -87,7 +87,7 @@ AnyValue Library::executeMalloc(StringRef Name, Type *Type,
       Executor.reportError() << "Insufficient heap space.";
       return AnyValue::poison();
     }
-    return AnyValue::getNullValue(Ctx, Type);
+    return AnyValue::getZeroValue(Ctx, Type);
   }
 
   return Ctx.deriveFromMemoryObject(Obj);
@@ -108,14 +108,14 @@ AnyValue Library::executeCalloc(StringRef Name, Type *Type,
   bool Overflow = false;
   const APInt AllocSize = Count.umul_ov(Size, Overflow);
   if (Overflow)
-    return AnyValue::getNullValue(Ctx, Type);
+    return AnyValue::getZeroValue(Ctx, Type);
 
   const IntrusiveRefCntPtr<MemoryObject> Obj =
       Ctx.allocate(AllocSize.getLimitedValue(), getMaxAlign(DL), Name, 0,
                    MemInitKind::Zeroed, AllocKind);
 
   if (!Obj)
-    return AnyValue::getNullValue(Ctx, Type);
+    return AnyValue::getZeroValue(Ctx, Type);
 
   return Ctx.deriveFromMemoryObject(Obj);
 }

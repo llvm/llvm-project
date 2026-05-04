@@ -1739,9 +1739,9 @@ bool SPIRVInstructionSelector::selectPopCount(Register ResVReg,
                                               SPIRVTypeInst ResType,
                                               MachineInstr &I,
                                               unsigned Opcode) const {
-  // Vulkan restricts OpBitCount to 32-bit integers or vectors of 32-bit 
-  // integers unless VK_KHR_maintenance9 is enabled. Until VK_KHR_maintaince9 
-  // is core we will not generate OpBitCount with any other types when 
+  // Vulkan restricts OpBitCount to 32-bit integers or vectors of 32-bit
+  // integers unless VK_KHR_maintenance9 is enabled. Until VK_KHR_maintaince9
+  // is core we will not generate OpBitCount with any other types when
   // targeting Vulkan.
   if (!STI.getTargetTriple().isVulkanOS())
     return selectUnOp(ResVReg, ResType, I, Opcode);
@@ -2176,7 +2176,7 @@ SPIRVInstructionSelector::getOrCreateMemSetGlobal(MachineInstr &I) const {
       ArrayType::get(IntegerType::get(CurFunction.getContext(), 8), Num);
   GlobalVariable *GV = new GlobalVariable(*CurFunction.getParent(), LLVMArrTy,
                                           true, GlobalValue::InternalLinkage,
-                                          Constant::getNullValue(LLVMArrTy));
+                                          Constant::getZeroValue(LLVMArrTy));
 
   Type *ValTy = Type::getInt8Ty(I.getMF()->getFunction().getContext());
   Type *ArrTy = ArrayType::get(ValTy, Num);

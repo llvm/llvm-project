@@ -279,7 +279,7 @@ static void createTextureLoad(IntrinsicInst *II, LoadInst *LI,
         FixedVectorType::get(Builder.getInt32Ty(), VecTy->getNumElements());
   else
     OffsetTy = Builder.getInt32Ty();
-  Value *Offsets = Constant::getNullValue(OffsetTy);
+  Value *Offsets = Constant::getZeroValue(OffsetTy);
 
   Value *V =
       Builder.CreateIntrinsic(ContainedType, Intrinsic::dx_resource_load_level,

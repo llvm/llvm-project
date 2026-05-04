@@ -344,7 +344,7 @@ TEST(GlobalTest, Initializer) {
   LLVMContext Ctx;
   Module M("test", Ctx);
   Type *Int8Ty = Type::getInt8Ty(Ctx);
-  Constant *Int8Null = Constant::getNullValue(Int8Ty);
+  Constant *Int8Null = Constant::getZeroValue(Int8Ty);
 
   GlobalVariable *GV = new GlobalVariable(
       M, Int8Ty, false, GlobalValue::ExternalLinkage, nullptr, "GV");

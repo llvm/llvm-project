@@ -208,7 +208,7 @@ bool X86PartialReduction::tryMAddReplacement(Instruction *Op,
   // Concatenate zeroes to extend back to the original type.
   SmallVector<int, 32> ConcatMask(NumElts);
   std::iota(ConcatMask.begin(), ConcatMask.end(), 0);
-  Value *Zero = Constant::getNullValue(MAdd->getType());
+  Value *Zero = Constant::getZeroValue(MAdd->getType());
   Value *Concat = Builder.CreateShuffleVector(MAdd, Zero, ConcatMask);
 
   Mul->replaceAllUsesWith(Concat);
@@ -292,7 +292,7 @@ bool X86PartialReduction::trySADReplacement(Instruction *Op) {
     for (unsigned i = NumElts; i != 16; ++i)
       ConcatMask[i] = (i % NumElts) + NumElts;
 
-    Value *Zero = Constant::getNullValue(Op0->getType());
+    Value *Zero = Constant::getZeroValue(Op0->getType());
     Op0 = Builder.CreateShuffleVector(Op0, Zero, ConcatMask);
     Op1 = Builder.CreateShuffleVector(Op1, Zero, ConcatMask);
     NumElts = 16;
@@ -343,7 +343,7 @@ bool X86PartialReduction::trySADReplacement(Instruction *Op) {
     for (unsigned i = SubElts; i != NumElts; ++i)
       ConcatMask[i] = (i % SubElts) + SubElts;
 
-    Value *Zero = Constant::getNullValue(Ops[0]->getType());
+    Value *Zero = Constant::getZeroValue(Ops[0]->getType());
     Ops[0] = Builder.CreateShuffleVector(Ops[0], Zero, ConcatMask);
   }
 
@@ -360,7 +360,7 @@ static Value *matchAddReduction(const ExtractElementInst &EE,
   ReduceInOneBB = true;
   // Make sure we're extracting index 0.
   auto *Index = dyn_cast<ConstantInt>(EE.getIndexOperand());
-  if (!Index || !Index->isNullValue())
+  if (!Index || !Index->isZeroValue())
     return nullptr;
 
   const auto *BO = dyn_cast<BinaryOperator>(EE.getVectorOperand());

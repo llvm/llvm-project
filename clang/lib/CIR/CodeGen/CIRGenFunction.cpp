@@ -525,7 +525,7 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
     if (fd && fd->hasImplicitReturnZero()) {
       mlir::Type cirRetTy = convertType(returnType.getUnqualifiedType());
       mlir::Location bodyBeginMLIRLoc = getLoc(bodyBeginLoc);
-      mlir::Value zero = builder.getNullValue(cirRetTy, bodyBeginMLIRLoc);
+      mlir::Value zero = builder.getZeroValue(cirRetTy, bodyBeginMLIRLoc);
       builder.CIRBaseBuilderTy::createStore(bodyBeginMLIRLoc, zero,
                                             returnValue.getPointer());
     }
@@ -1284,7 +1284,7 @@ void CIRGenFunction::emitNullInitialization(mlir::Location loc, Address destPtr,
   // Builder.CreateMemSet. In CIR just emit a store of #cir.zero to the
   // respective address.
   // Builder.CreateMemSet(DestPtr, Builder.getInt8(0), SizeVal, false);
-  const mlir::Value zeroValue = builder.getNullValue(convertType(ty), loc);
+  const mlir::Value zeroValue = builder.getZeroValue(convertType(ty), loc);
   builder.createStore(loc, zeroValue, destPtr);
 }
 

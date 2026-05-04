@@ -433,7 +433,7 @@ TEST(ValueMapperTest, mapValueConstantTargetNoneToLayoutTypeNullValue) {
 
   // Check that ConstantTargetNone is mapped to '0' constant of its layout type.
   auto *OldConstant = ConstantTargetNone::get(OldTy);
-  auto *NewConstant = Constant::getNullValue(NewTy);
+  auto *NewConstant = Constant::getZeroValue(NewTy);
   EXPECT_EQ(NewConstant, Mapper.mapValue(*OldConstant));
 }
 

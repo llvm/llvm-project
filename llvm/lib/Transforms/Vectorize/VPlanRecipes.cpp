@@ -657,7 +657,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
     Value *Sub = Builder.CreateSub(ScalarTC, VFxUF);
     Value *Cmp =
         Builder.CreateICmp(CmpInst::Predicate::ICMP_UGT, ScalarTC, VFxUF);
-    Value *Zero = ConstantInt::getNullValue(ScalarTC->getType());
+    Value *Zero = ConstantInt::getZeroValue(ScalarTC->getType());
     return Builder.CreateSelect(Cmp, Sub, Zero);
   }
   case VPInstruction::ExplicitVectorLength: {
@@ -2593,7 +2593,7 @@ void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
   unsigned EndLane = FirstLaneOnly ? 1 : State.VF.getKnownMinValue();
   assert(!State.Lane && "replicate regions must be dissolved before ::execute");
   Value *StartIdx0 = getStartIndex() ? State.get(getStartIndex(), true)
-                                     : Constant::getNullValue(BaseIVTy);
+                                     : Constant::getZeroValue(BaseIVTy);
 
   for (unsigned Lane = 0; Lane < EndLane; ++Lane) {
     // It is okay if the induction variable type cannot hold the lane number,

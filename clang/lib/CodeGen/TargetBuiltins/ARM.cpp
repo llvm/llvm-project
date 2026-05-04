@@ -1911,7 +1911,7 @@ CodeGenFunction::EmitAArch64CompareBuiltinExpr(Value *Op, llvm::Type *Ty,
     Op = Builder.CreateBitCast(Op, Ty);
   }
 
-  Constant *zero = Constant::getNullValue(Op->getType());
+  Constant *zero = Constant::getZeroValue(Op->getType());
 
   if (CmpInst::isFPPredicate(Pred)) {
     if (Pred == CmpInst::FCMP_OEQ)
@@ -2873,7 +2873,7 @@ static llvm::Value *MVEImmediateShr(CGBuilderTy &Builder, llvm::Value *V,
     // simply emit a zero vector. A signed shift of the full lane size does the
     // same thing as shifting by one bit fewer.
     if (Unsigned)
-      return llvm::Constant::getNullValue(V->getType());
+      return llvm::Constant::getZeroValue(V->getType());
     else
       --Shift;
   }
@@ -3914,7 +3914,7 @@ Value *CodeGenFunction::EmitSVEReinterpret(Value *Val, llvm::Type *Ty) {
 
 static void InsertExplicitZeroOperand(CGBuilderTy &Builder, llvm::Type *Ty,
                                       SmallVectorImpl<Value *> &Ops) {
-  auto *SplatZero = Constant::getNullValue(Ty);
+  auto *SplatZero = Constant::getZeroValue(Ty);
   Ops.insert(Ops.begin(), SplatZero);
 }
 
@@ -4102,7 +4102,7 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
     // Predicated intrinsics with _z suffix need a select w/ zeroinitializer.
     if (TypeFlags.getMergeType() == SVETypeFlags::MergeZero) {
       llvm::Type *OpndTy = Ops[1]->getType();
-      auto *SplatZero = Constant::getNullValue(OpndTy);
+      auto *SplatZero = Constant::getZeroValue(OpndTy);
       Ops[1] = Builder.CreateSelect(Ops[0], Ops[1], SplatZero);
     }
 
@@ -4221,7 +4221,7 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
   case SVE::BI__builtin_sve_svdup_n_b32:
   case SVE::BI__builtin_sve_svdup_n_b64: {
     Value *CmpNE =
-        Builder.CreateICmpNE(Ops[0], Constant::getNullValue(Ops[0]->getType()));
+        Builder.CreateICmpNE(Ops[0], Constant::getZeroValue(Ops[0]->getType()));
     llvm::ScalableVectorType *OverloadedTy = getSVEType(TypeFlags);
     Value *Dup = EmitSVEDupX(CmpNE, OverloadedTy);
     return EmitSVEPredicateCast(Dup, cast<llvm::ScalableVectorType>(Ty));
@@ -5689,7 +5689,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     Ops[1] = Builder.CreateBitCast(Ops[1], Int64Ty);
     Ops[0] = Builder.CreateAnd(Ops[0], Ops[1]);
     Ops[0] = Builder.CreateICmp(ICmpInst::ICMP_NE, Ops[0],
-                                llvm::Constant::getNullValue(Int64Ty));
+                                llvm::Constant::getZeroValue(Int64Ty));
     return Builder.CreateSExt(Ops[0], Int64Ty, "vtstd");
   }
   case NEON::BI__builtin_neon_vset_lane_i8:

@@ -244,7 +244,7 @@ def CIR_CastOp : CIR_Op<"cast", [
     ```
     %4 = cir.cast int_to_bool %3 : i32 -> !cir.bool
     ...
-    %x = cir.cast array_to_ptrdecay %0 
+    %x = cir.cast array_to_ptrdecay %0
        : !cir.ptr<!cir.array<i32 x 10>> -> !cir.ptr<i32>
     ```
   }];
@@ -429,7 +429,7 @@ def CIR_ConstantOp : CIR_Op<"const", [
   let extraClassDeclaration = [{
     bool isNullPtr() {
       if (const auto ptrAttr = mlir::dyn_cast<cir::ConstPtrAttr>(getValue()))
-        return ptrAttr.isNullValue();
+        return ptrAttr.isZeroValue();
       return false;
     }
 
@@ -741,7 +741,7 @@ def CIR_VecMaskedLoadOp : CIR_Op<"vec.masked_load", [
   let results = (outs CIR_AnyType:$result);
 
   let assemblyFormat = [{
-    (`align` `(` $alignment^ `)`)? 
+    (`align` `(` $alignment^ `)`)?
     $addr `,` $mask `,` $pass_thru
     `:` qualified(type($addr)) `,` type($mask) `,` type($pass_thru)
     `->` type($result)
@@ -1433,9 +1433,9 @@ def CIR_SwitchOp : CIR_Op<"switch", [
     is an integral condition value.
 
     Besides taking an integer condition and CIR regions, it also accepts an
-    `all_enum_cases_covered` attribute indicating whether all enum cases are 
-    handled by the operation. Note that the presence of a default CaseOp does 
-    not imply `all_enum_cases_covered`. The original AST switch must explicitly list 
+    `all_enum_cases_covered` attribute indicating whether all enum cases are
+    handled by the operation. Note that the presence of a default CaseOp does
+    not imply `all_enum_cases_covered`. The original AST switch must explicitly list
     every enum case.
 
     The set of `cir.case` operations and their enclosing `cir.switch`
@@ -1564,7 +1564,7 @@ def CIR_SwitchOp : CIR_Op<"switch", [
     ```
   }];
 
-  let arguments = (ins 
+  let arguments = (ins
     CIR_IntType:$condition,
     UnitAttr:$all_enum_cases_covered
   );
@@ -1578,7 +1578,7 @@ def CIR_SwitchOp : CIR_Op<"switch", [
   ];
 
   let assemblyFormat = [{
-    `(` $condition `:` qualified(type($condition)) `)` 
+    `(` $condition `:` qualified(type($condition)) `)`
      (`all_enum_cases_covered` $all_enum_cases_covered^)?
     $body
     attr-dict
@@ -2404,7 +2404,7 @@ def CIR_AddOp : CIR_BinaryOpWithOverflowFlags<"add", CIR_AnyArithType> {
     or unsigned overflow occurs, respectively. The optional `sat` (saturated)
     attribute clamps the result to the type's representable range instead of
     wrapping. The `nsw`/`nuw` flags and `sat` are mutually exclusive.
-    
+
     Example:
 
     ```
@@ -2432,7 +2432,7 @@ def CIR_SubOp : CIR_BinaryOpWithOverflowFlags<"sub", CIR_AnyArithType> {
     or unsigned overflow occurs, respectively. The optional `sat` (saturated)
     attribute clamps the result to the type's representable range. The
     `nsw`/`nuw` flags and `sat` are mutually exclusive.
-    
+
     Example:
 
     ```
@@ -2467,7 +2467,7 @@ def CIR_MulOp : CIR_BinaryOp<"mul", CIR_AnyArithType> {
     %3 = cir.mul %a, %b : !cir.float
     ```
   }];
-  
+
   let arguments = (ins
     CIR_AnyArithType:$lhs, CIR_AnyArithType:$rhs,
     UnitProp:$no_signed_wrap,
@@ -2513,7 +2513,7 @@ def CIR_RemOp : CIR_BinaryOp<"rem", CIR_AnyArithType> {
     The `cir.rem` operation computes the remainder of division on integer or
     floating-point operands. Both operands and the result must have the same
     type.
-    
+
     Example:
 
     ```
@@ -2535,7 +2535,7 @@ def CIR_AndOp : CIR_BinaryOp<"and", CIR_AnyBitwiseType, [
   let description = [{
     The `cir.and` operation performs a bitwise AND on integer operands.
     Both operands and the result must have the same integer type.
-    
+
     Example:
 
     ```
@@ -2556,7 +2556,7 @@ def CIR_OrOp : CIR_BinaryOp<"or", CIR_AnyBitwiseType, [
   let description = [{
     The `cir.or` operation performs a bitwise OR on integer operands.
     Both operands and the result must have the same integer type.
-    
+
     Example:
 
     ```
@@ -2684,13 +2684,13 @@ def CIR_SelectOp : CIR_Op<"select", [
     The `cir.select` operation takes three operands. The first operand
     `condition` is either a boolean value of type `!cir.bool` or a boolean
     vector of type `!cir.bool`.  The second and the third operand can be of
-    any CIR types, but their types must be the same. If the first operand 
+    any CIR types, but their types must be the same. If the first operand
     is `true`, the operation yields its second operand. Otherwise, the
     operation yields its third operand.
 
-    In the case where the first operand is a boolean vector, then the second 
+    In the case where the first operand is a boolean vector, then the second
     and third operand needs to also be of some vectors of the same type to
-    each other and that the number of elements of all three operands needs to 
+    each other and that the number of elements of all three operands needs to
     be the same as well.
 
     Example:
@@ -2703,7 +2703,7 @@ def CIR_SelectOp : CIR_Op<"select", [
     ```
   }];
 
-  let arguments = (ins 
+  let arguments = (ins
     CIR_ScalarOrVectorOf<CIR_BoolType>:$condition,
     CIR_AnyType:$true_value,
     CIR_AnyType:$false_value
@@ -3704,7 +3704,7 @@ def CIR_FuncOp : CIR_Op<"func", [
 
     // Inline information
     cir.func no_inline @some_method(...)
-    
+
     // Builtin function
     cir.func builtin @__builtin_coro_end(!cir.ptr<i8>, !cir.bool) -> !cir.bool
     // Coroutine
@@ -4077,7 +4077,7 @@ def CIR_TryCallOp : CIR_CallOpBase<"try_call",[
     Similar to `cir.call` but requires two destination blocks,
     one which is used if the call returns without throwing an
     exception (the "normal" destination) and another which is used
-    if an exception is thrown (the "unwind" destination). 
+    if an exception is thrown (the "unwind" destination).
 
     This operation is used only after the CFG flatterning pass.
 
@@ -4107,7 +4107,7 @@ def CIR_TryCallOp : CIR_CallOpBase<"try_call",[
 
   let arguments = commonArgs;
   let results = (outs Optional<CIR_AnyType>:$result);
-  let successors = (successor 
+  let successors = (successor
     AnySuccessor:$normalDest,
     AnySuccessor:$unwindDest
   );
@@ -5437,7 +5437,7 @@ def CIR_BaseDataMemberOp : CIR_Op<"base_data_member", [Pure]> {
 
   let hasVerifier = 1;
   let hasLLVMLowering = false;
-  let hasCXXABILowering = true;  
+  let hasCXXABILowering = true;
 }
 
 def CIR_DerivedDataMemberOp : CIR_Op<"derived_data_member", [Pure]> {
@@ -5462,7 +5462,7 @@ def CIR_DerivedDataMemberOp : CIR_Op<"derived_data_member", [Pure]> {
 
   let hasVerifier = 1;
   let hasLLVMLowering = false;
-  let hasCXXABILowering = true;  
+  let hasCXXABILowering = true;
 }
 
 //===----------------------------------------------------------------------===//
@@ -5500,7 +5500,7 @@ def CIR_BaseMethodOp : CIR_Op<"base_method", [Pure]> {
 
   let hasVerifier = 1;
   let hasLLVMLowering = false;
-  let hasCXXABILowering = true;  
+  let hasCXXABILowering = true;
 }
 
 def CIR_DerivedMethodOp : CIR_Op<"derived_method", [Pure]> {
@@ -5534,7 +5534,7 @@ def CIR_DerivedMethodOp : CIR_Op<"derived_method", [Pure]> {
 
   let hasVerifier = 1;
   let hasLLVMLowering = false;
-  let hasCXXABILowering = true;  
+  let hasCXXABILowering = true;
 }
 
 //===----------------------------------------------------------------------===//
@@ -5969,7 +5969,7 @@ def CIR_BitReverseOp : CIR_BitOpBase<"bitreverse",
     %1 = cir.bitreverse %0: !u32i
     ```
   }];
-  
+
   let append traits = [Involution];
 }
 
@@ -5994,7 +5994,7 @@ def CIR_ByteSwapOp : CIR_BitOpBase<"byte_swap",
     %1 = cir.byte_swap %0 : !u32i
     ```
   }];
-  
+
   let append traits = [Involution];
 }
 
@@ -6255,7 +6255,7 @@ def CIR_PrefetchOp : CIR_Op<"prefetch"> {
     $locality is a temporal locality specifier ranging from (0) - no locality,
     to (3) - extremely local, keep in cache. If $locality is not present, the
     default value is 3.
-    
+
     $isWrite specifies whether the prefetch is for a 'read' or 'write'. If
     $isWrite is not specified, it means that prefetch is prepared for 'read'.
   }];
@@ -6394,7 +6394,7 @@ def CIR_PtrDiffOp : CIR_Op<"ptr_diff", [Pure, SameTypeOperands]> {
   let results = (outs CIR_AnyFundamentalIntType:$result);
 
   let assemblyFormat = [{
-    $lhs `,` $rhs  `:` qualified(type($lhs)) `->` qualified(type($result)) 
+    $lhs `,` $rhs  `:` qualified(type($lhs)) `->` qualified(type($result))
     attr-dict
   }];
 }
@@ -6416,7 +6416,7 @@ class CIR_UnaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
 
 def CIR_SqrtOp : CIR_UnaryFPToFPBuiltinOp<"sqrt", "SqrtOp"> {
   let summary = "Floating-point square root operation";
-  
+
   let description = [{
     Computes the square root of a floating-point value or vector.
 
@@ -7279,10 +7279,10 @@ def CIR_EhTypeIdOp : CIR_Op<"eh.typeid",
 def CIR_EhSetjmpOp : CIR_Op<"eh.setjmp"> {
   let summary = "CIR setjmp operation";
   let description = [{
-    Saves call-site information (e.g., stack pointer, instruction pointer, 
-    signal mask, and other registers) in memory at `env` for use by longjmp(). 
+    Saves call-site information (e.g., stack pointer, instruction pointer,
+    signal mask, and other registers) in memory at `env` for use by longjmp().
     In this case, setjmp() returns 0. Following a successful longjmp(),
-    execution proceeds from cir.eh.setjmp with the operation yielding a 
+    execution proceeds from cir.eh.setjmp with the operation yielding a
     non-zero value.
 
     Examples:
@@ -7855,7 +7855,7 @@ def CIR_AtomicCmpXchgOp : CIR_Op<"atomic.cmpxchg", [
     allows "spurious failures", meaning that be treated as if the comparison
     failed and not exchange values even if `*ptr` and `expected` indeed compare
     equal.
-    
+
     The type of `expected` and `desired` must be the same. The pointee type of
     `ptr` must be the same as the type of `expected` and `desired`.
 

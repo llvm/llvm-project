@@ -1250,7 +1250,7 @@ Value *EarlyCSE::getMatchingValue(LoadValue &InVal, ParseMemoryInst &MemInst,
         !isSameMemGeneration(InVal.Generation, CurrentGeneration, InVal.DefInst,
                              MemInst.get()))
       return nullptr;
-    return Constant::getNullValue(MemInst.getValueType());
+    return Constant::getZeroValue(MemInst.getValueType());
   }
   if (InVal.MatchingId != MemInst.getMatchingId())
     return nullptr;

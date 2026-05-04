@@ -211,12 +211,12 @@ public:
   mlir::Value VisitCXXScalarValueInitExpr(CXXScalarValueInitExpr *e) {
     mlir::Location loc = cgf.getLoc(e->getExprLoc());
     mlir::Type complexTy = cgf.convertType(e->getType());
-    return builder.getNullValue(complexTy, loc);
+    return builder.getZeroValue(complexTy, loc);
   }
   mlir::Value VisitImplicitValueInitExpr(ImplicitValueInitExpr *e) {
     mlir::Location loc = cgf.getLoc(e->getExprLoc());
     mlir::Type complexTy = cgf.convertType(e->getType());
-    return builder.getNullValue(complexTy, loc);
+    return builder.getZeroValue(complexTy, loc);
   }
 
   struct BinOpInfo {
@@ -718,7 +718,7 @@ mlir::Value ComplexExprEmitter::emitBinDiv(const BinOpInfo &op) {
   }
 
   assert(mlir::isa<cir::ComplexType>(op.rhs.getType()));
-  cir::ConstantOp nullValue = builder.getNullValue(op.lhs.getType(), op.loc);
+  cir::ConstantOp nullValue = builder.getZeroValue(op.lhs.getType(), op.loc);
   mlir::Value lhs = builder.createComplexCreate(op.loc, op.lhs, nullValue);
   cir::ComplexRangeKind rangeKind =
       getComplexRangeAttr(op.fpFeatures.getComplexRange());
@@ -1008,7 +1008,7 @@ mlir::Value ComplexExprEmitter::VisitInitListExpr(InitListExpr *e) {
 
   assert(e->getNumInits() == 0 && "Unexpected number of inits");
   mlir::Type complexTy = cgf.convertType(e->getType());
-  return builder.getNullValue(complexTy, loc);
+  return builder.getZeroValue(complexTy, loc);
 }
 
 mlir::Value ComplexExprEmitter::VisitVAArgExpr(VAArgExpr *e) {

@@ -587,7 +587,7 @@ static Value *foldLogOpOfMaskedICmps(Value *LHS, Value *RHS, bool IsAnd,
     // We can't use C as zero because we might actually handle
     //   (icmp ne (A & B), B) & (icmp ne (A & D), D)
     // with B and D, having a single bit set.
-    Value *Zero = Constant::getNullValue(A->getType());
+    Value *Zero = Constant::getZeroValue(A->getType());
     return Builder.CreateICmp(NewCC, NewAnd, Zero);
   }
   if (Mask & BMask_AllOnes) {
@@ -1826,7 +1826,7 @@ Instruction *InstCombinerImpl::foldCastedBitwiseLogic(BinaryOperator &I) {
       return nullptr;
 
     auto *ICmpL =
-        Builder.CreateICmpSLT(A, Constant::getNullValue(A->getType()));
+        Builder.CreateICmpSLT(A, Constant::getZeroValue(A->getType()));
     auto *ICmpR = cast<ZExtInst>(Op1)->getOperand(0);
     auto *BitwiseOp = Builder.CreateBinOp(LogicOpc, ICmpL, ICmpR);
 
@@ -2468,7 +2468,7 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
                     m_Value(Y)))) {
     Value *Cmp = Builder.CreateIsNull(Neg);
     return createSelectInstWithUnknownProfile(Cmp,
-                                              ConstantInt::getNullValue(Ty), Y);
+                                              ConstantInt::getZeroValue(Ty), Y);
   }
 
   // Canonicalize:
@@ -2629,7 +2629,7 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
       assert(BitNum >= 0 && "Expected demanded bits to handle impossible mask");
       Value *Cmp = Builder.CreateICmpEQ(X, ConstantInt::get(Ty, BitNum));
       return createSelectInstWithUnknownProfile(Cmp, ConstantInt::get(Ty, *C),
-                                                ConstantInt::getNullValue(Ty));
+                                                ConstantInt::getZeroValue(Ty));
     }
 
     Constant *C1, *C2;
@@ -2649,7 +2649,7 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
           Constant *CmpC = ConstantExpr::getSub(LshrC, Log2C1);
           Value *Cmp = Builder.CreateICmpEQ(X, CmpC);
           return createSelectInstWithUnknownProfile(
-              Cmp, ConstantInt::get(Ty, *C3), ConstantInt::getNullValue(Ty));
+              Cmp, ConstantInt::get(Ty, *C3), ConstantInt::getZeroValue(Ty));
         }
       }
 
@@ -2659,14 +2659,14 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
         Constant *Log2C1 = ConstantExpr::getExactLogBase2(C1);
         Constant *Cmp =
             ConstantFoldCompareInstOperands(ICmpInst::ICMP_ULT, Log2C3, C2, DL);
-        if (Cmp && Cmp->isNullValue()) {
+        if (Cmp && Cmp->isZeroValue()) {
           // iff C1,C3 is pow2 and Log2(C3) >= C2:
           // ((C1 >> X) << C2) & C3 -> X == (cttz(C1)+C2-cttz(C3)) ? C3 : 0
           Constant *ShlC = ConstantExpr::getAdd(C2, Log2C1);
           Constant *CmpC = ConstantExpr::getSub(ShlC, Log2C3);
           Value *Cmp = Builder.CreateICmpEQ(X, CmpC);
           return createSelectInstWithUnknownProfile(
-              Cmp, ConstantInt::get(Ty, *C3), ConstantInt::getNullValue(Ty));
+              Cmp, ConstantInt::get(Ty, *C3), ConstantInt::getZeroValue(Ty));
         }
       }
     }
@@ -2824,31 +2824,31 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
   Value *A, *B;
   if (match(&I, m_c_And(m_SExt(m_Value(A)), m_Value(B))) &&
       A->getType()->isIntOrIntVectorTy(1))
-    return createSelectInstWithUnknownProfile(A, B, Constant::getNullValue(Ty));
+    return createSelectInstWithUnknownProfile(A, B, Constant::getZeroValue(Ty));
 
   // Similarly, a 'not' of the bool translates to a swap of the select arms:
   // ~sext(A) & B / B & ~sext(A) --> A ? 0 : B
   if (match(&I, m_c_And(m_Not(m_SExt(m_Value(A))), m_Value(B))) &&
       A->getType()->isIntOrIntVectorTy(1))
-    return createSelectInstWithUnknownProfile(A, Constant::getNullValue(Ty), B);
+    return createSelectInstWithUnknownProfile(A, Constant::getZeroValue(Ty), B);
 
   // and(zext(A), B) -> A ? (B & 1) : 0
   if (match(&I, m_c_And(m_OneUse(m_ZExt(m_Value(A))), m_Value(B))) &&
       A->getType()->isIntOrIntVectorTy(1))
     return createSelectInstWithUnknownProfile(
         A, Builder.CreateAnd(B, ConstantInt::get(Ty, 1)),
-        Constant::getNullValue(Ty));
+        Constant::getZeroValue(Ty));
 
   // (-1 + A) & B --> A ? 0 : B where A is 0/1.
   if (match(&I, m_c_And(m_OneUse(m_Add(m_ZExtOrSelf(m_Value(A)), m_AllOnes())),
                         m_Value(B)))) {
     if (A->getType()->isIntOrIntVectorTy(1))
-      return createSelectInstWithUnknownProfile(A, Constant::getNullValue(Ty),
+      return createSelectInstWithUnknownProfile(A, Constant::getZeroValue(Ty),
                                                 B);
     if (computeKnownBits(A, &I).countMaxActiveBits() <= 1) {
       return createSelectInstWithUnknownProfile(
-          Builder.CreateICmpEQ(A, Constant::getNullValue(A->getType())), B,
-          Constant::getNullValue(Ty));
+          Builder.CreateICmpEQ(A, Constant::getZeroValue(A->getType())), B,
+          Constant::getZeroValue(Ty));
     }
   }
 
@@ -2859,7 +2859,7 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
       *C == X->getType()->getScalarSizeInBits() - 1) {
     Value *IsNeg = Builder.CreateIsNeg(X, "isneg");
     return createSelectInstWithUnknownProfile(IsNeg, Y,
-                                              ConstantInt::getNullValue(Ty));
+                                              ConstantInt::getZeroValue(Ty));
   }
   // If there's a 'not' of the shifted value, swap the select operands:
   // ~(iN X s>> (N-1)) & Y --> (X s< 0) ? 0 : Y -- with optional sext
@@ -2869,7 +2869,7 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
       *C == X->getType()->getScalarSizeInBits() - 1) {
     Value *IsNeg = Builder.CreateIsNeg(X, "isneg");
     return createSelectInstWithUnknownProfile(IsNeg,
-                                              ConstantInt::getNullValue(Ty), Y);
+                                              ConstantInt::getZeroValue(Ty), Y);
   }
 
   // (~x) & y  -->  ~(x | (~y))  iff that gets rid of inversions
@@ -3471,7 +3471,7 @@ Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
       (!IsLogical || isGuaranteedNotToBePoison(RHS0))) {
     Value *NewOr = Builder.CreateOr(LHS0, RHS0);
     return Builder.CreateICmp(PredL, NewOr,
-                              Constant::getNullValue(NewOr->getType()));
+                              Constant::getZeroValue(NewOr->getType()));
   }
 
   // (icmp ne A, -1) | (icmp ne B, -1) --> (icmp ne (A&B), -1)
@@ -3707,7 +3707,7 @@ static bool matchSubIntegerPackFromVector(Value *V, Value *&Vec,
         const unsigned ConstIdx = ShuffleIdx - NumVecElts;
         auto *ConstElt =
             dyn_cast<ConstantInt>(ConstVec->getAggregateElement(ConstIdx));
-        if (!ConstElt || !ConstElt->isNullValue())
+        if (!ConstElt || !ConstElt->isZeroValue())
           return false;
         continue;
       }
@@ -3771,7 +3771,7 @@ static Instruction *foldIntegerPackFromVector(Instruction &I,
   }
 
   Value *MaskedVec = Builder.CreateShuffleVector(
-      LhsVec, Constant::getNullValue(LhsVec->getType()), ShuffleMask,
+      LhsVec, Constant::getZeroValue(LhsVec->getType()), ShuffleMask,
       I.getName() + ".v");
   return CastInst::Create(Instruction::BitCast, MaskedVec, I.getType());
 }
@@ -4652,11 +4652,11 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     return Res;
 
   if (Value *V =
-          simplifyAndOrWithOpReplaced(Op0, Op1, Constant::getNullValue(Ty),
+          simplifyAndOrWithOpReplaced(Op0, Op1, Constant::getZeroValue(Ty),
                                       /*SimplifyOnly*/ false, *this))
     return BinaryOperator::CreateOr(V, Op1);
   if (Value *V =
-          simplifyAndOrWithOpReplaced(Op1, Op0, Constant::getNullValue(Ty),
+          simplifyAndOrWithOpReplaced(Op1, Op0, Constant::getZeroValue(Ty),
                                       /*SimplifyOnly*/ false, *this))
     return BinaryOperator::CreateOr(Op0, V);
 
@@ -4805,7 +4805,7 @@ Value *InstCombinerImpl::foldXorOfICmps(ICmpInst *LHS, ICmpInst *RHS,
       Value *And = Builder.CreateAnd(Xor, Pow2);
       return Builder.CreateICmp(PredL == PredR ? ICmpInst::ICMP_NE
                                                : ICmpInst::ICMP_EQ,
-                                And, ConstantInt::getNullValue(Xor->getType()));
+                                And, ConstantInt::getZeroValue(Xor->getType()));
     }
   }
 
@@ -4963,7 +4963,7 @@ static Instruction *canonicalizeAbs(BinaryOperator &Xor,
     // Copy the nsw flags from the add to the negate.
     auto *Add = cast<BinaryOperator>(Op0);
     Value *NegA = Add->hasNoUnsignedWrap()
-                      ? Constant::getNullValue(A->getType())
+                      ? Constant::getZeroValue(A->getType())
                       : Builder.CreateNeg(A, "", Add->hasNoSignedWrap());
     return SelectInst::Create(IsNeg, NegA, A);
   }
@@ -5410,7 +5410,7 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
                        m_AShr(m_Value(X), m_APIntAllowPoison(CA))))) &&
         *CA == X->getType()->getScalarSizeInBits() - 1 &&
         !match(C1, m_AllOnes())) {
-      assert(!C1->isNullValue() && "Unexpected xor with 0");
+      assert(!C1->isZeroValue() && "Unexpected xor with 0");
       Value *IsNotNeg = Builder.CreateIsNotNeg(X);
       return createSelectInstWithUnknownProfile(IsNotNeg, Op1,
                                                 Builder.CreateNot(Op1));

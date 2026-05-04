@@ -1540,7 +1540,7 @@ TEST_F(PatternMatchTest, UndefPoisonMix) {
   StructType *StTy = StructType::get(ScalarTy, ScalarTy);
   StructType *StTy2 = StructType::get(ScalarTy, StTy);
   StructType *StTy3 = StructType::get(StTy, ScalarTy);
-  Constant *Zero = ConstantInt::getNullValue(ScalarTy);
+  Constant *Zero = ConstantInt::getZeroValue(ScalarTy);
   UndefValue *U = UndefValue::get(ScalarTy);
   UndefValue *P = PoisonValue::get(ScalarTy);
 
@@ -1572,8 +1572,8 @@ TEST_F(PatternMatchTest, VectorUndefInt) {
   Constant *VectorUndef = UndefValue::get(VectorTy);
   Constant *ScalarPoison = PoisonValue::get(ScalarTy);
   Constant *VectorPoison = PoisonValue::get(VectorTy);
-  Constant *ScalarZero = Constant::getNullValue(ScalarTy);
-  Constant *VectorZero = Constant::getNullValue(VectorTy);
+  Constant *ScalarZero = Constant::getZeroValue(ScalarTy);
+  Constant *VectorZero = Constant::getZeroValue(VectorTy);
 
   SmallVector<Constant *, 4> Elems;
   Elems.push_back(ScalarUndef);
@@ -1663,8 +1663,8 @@ TEST_F(PatternMatchTest, VectorUndefFloat) {
   Constant *VectorUndef = UndefValue::get(VectorTy);
   Constant *ScalarPoison = PoisonValue::get(ScalarTy);
   Constant *VectorPoison = PoisonValue::get(VectorTy);
-  Constant *ScalarZero = Constant::getNullValue(ScalarTy);
-  Constant *VectorZero = Constant::getNullValue(VectorTy);
+  Constant *ScalarZero = Constant::getZeroValue(ScalarTy);
+  Constant *VectorZero = Constant::getZeroValue(VectorTy);
   Constant *ScalarPosInf = ConstantFP::getInfinity(ScalarTy, false);
   Constant *ScalarNegInf = ConstantFP::getInfinity(ScalarTy, true);
   Constant *ScalarNaN = ConstantFP::getNaN(ScalarTy, true);
@@ -1865,10 +1865,10 @@ TEST_F(PatternMatchTest, VectorUndefFloat) {
 
   CC = nullptr;
   EXPECT_TRUE(match(VectorZero, m_CheckedFp(CC, CheckTrue)));
-  EXPECT_TRUE(CC->isNullValue());
+  EXPECT_TRUE(CC->isZeroValue());
   CC = nullptr;
   EXPECT_TRUE(match(VectorZero, m_CheckedFp(CC, CheckNonNaN)));
-  EXPECT_TRUE(CC->isNullValue());
+  EXPECT_TRUE(CC->isZeroValue());
 
   // Splats with undef are never allowed.
   // Whether splats with poison can be matched depends on the matcher.
@@ -2434,7 +2434,7 @@ TEST_F(PatternMatchTest, VectorLogicalSelects) {
   Value *AllocaVec = IRB.CreateAlloca(v3i1);
   Value *Scalar = IRB.CreateLoad(i1, Alloca);
   Value *Vector = IRB.CreateLoad(v3i1, AllocaVec);
-  Constant *F = Constant::getNullValue(v3i1);
+  Constant *F = Constant::getZeroValue(v3i1);
   Constant *T = Constant::getAllOnesValue(v3i1);
 
   // select <3 x i1> Vector, <3 x i1> Vector, <3 x i1> <i1 0, i1 0, i1 0>
@@ -2463,7 +2463,7 @@ TEST_F(PatternMatchTest, NotForbidPoison) {
   Constant *ScalarUndef = UndefValue::get(ScalarTy);
   Constant *ScalarPoison = PoisonValue::get(ScalarTy);
   Constant *ScalarOnes = Constant::getAllOnesValue(ScalarTy);
-  Constant *VectorZero = Constant::getNullValue(VectorTy);
+  Constant *VectorZero = Constant::getZeroValue(VectorTy);
   Constant *VectorOnes = Constant::getAllOnesValue(VectorTy);
 
   SmallVector<Constant *, 3> MixedElemsUndef;
@@ -2616,7 +2616,7 @@ TYPED_TEST(MutableConstTest, FCmp) {
   typedef std::tuple_element_t<0, TypeParam> ValueType;
   typedef std::tuple_element_t<1, TypeParam> InstructionType;
 
-  Value *L = Constant::getNullValue(IRB.getFloatTy());
+  Value *L = Constant::getZeroValue(IRB.getFloatTy());
   Value *R = ConstantFP::getInfinity(IRB.getFloatTy(), true);
   FCmpInst::Predicate Pred = FCmpInst::FCMP_OGT;
 
@@ -2704,7 +2704,7 @@ TEST_F(PatternMatchTest, ConstExpr) {
 TEST_F(PatternMatchTest, PtrAdd) {
   Type *PtrTy = PointerType::getUnqual(Ctx);
   Type *IdxTy = Type::getInt64Ty(Ctx);
-  Constant *Null = Constant::getNullValue(PtrTy);
+  Constant *Null = Constant::getZeroValue(PtrTy);
   Constant *Offset = ConstantInt::get(IdxTy, 42);
   Value *PtrAdd = IRB.CreatePtrAdd(Null, Offset);
   Value *OtherGEP = IRB.CreateGEP(IdxTy, Null, Offset);

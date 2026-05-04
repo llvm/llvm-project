@@ -226,7 +226,7 @@ static Value *getValueOnEdge(LazyValueInfo *LVI, Value *Incoming,
     if (Constant *C = LVI->getConstantOnEdge(Condition, From, To, CxtI)) {
       if (C->isOneValue())
         return SI->getTrueValue();
-      if (C->isNullValue())
+      if (C->isZeroValue())
         return SI->getFalseValue();
     }
   }
@@ -832,7 +832,7 @@ static bool expandUDivOrURem(BinaryOperator *Instr, const ConstantRange &XCR,
   // X u/ Y -> 0  iff X u< Y
   // X u% Y -> X  iff X u< Y
   if (XCR.icmp(ICmpInst::ICMP_ULT, YCR)) {
-    Instr->replaceAllUsesWith(IsRem ? X : Constant::getNullValue(Ty));
+    Instr->replaceAllUsesWith(IsRem ? X : Constant::getZeroValue(Ty));
     Instr->eraseFromParent();
     ++NumUDivURemsNarrowedExpanded;
     return true;

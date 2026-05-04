@@ -185,7 +185,7 @@ Error ReOptimizeLayer::reoptimizeIfCallFrequent(ReOptimizeLayer &Parent,
     Type *I64Ty = Type::getInt64Ty(M.getContext());
     GlobalVariable *Counter = new GlobalVariable(
         M, I64Ty, false, GlobalValue::InternalLinkage,
-        Constant::getNullValue(I64Ty), "__orc_reopt_counter");
+        Constant::getZeroValue(I64Ty), "__orc_reopt_counter");
     for (auto &F : M) {
       if (F.isDeclaration())
         continue;

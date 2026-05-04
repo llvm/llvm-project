@@ -473,8 +473,8 @@ bool IRForTarget::RewriteObjCConstString(llvm::GlobalVariable *ns_str,
   if (cstr)
     string_array = dyn_cast<ConstantDataSequential>(cstr->getInitializer());
 
-  Constant *alloc_arg = Constant::getNullValue(i8_ptr_ty);
-  Constant *bytes_arg = cstr ? cstr : Constant::getNullValue(i8_ptr_ty);
+  Constant *alloc_arg = Constant::getZeroValue(i8_ptr_ty);
+  Constant *bytes_arg = cstr ? cstr : Constant::getZeroValue(i8_ptr_ty);
   Constant *numBytes_arg = ConstantInt::get(
       m_intptr_ty, cstr ? (string_array->getNumElements() - 1) * string_array->getElementByteSize() : 0, false);
  int encoding_flags = 0;
@@ -1271,7 +1271,7 @@ static bool isGuardVariableRef(Value *V) {
 }
 
 void IRForTarget::TurnGuardLoadIntoZero(llvm::Instruction *guard_load) {
-  Constant *zero(Constant::getNullValue(guard_load->getType()));
+  Constant *zero(Constant::getZeroValue(guard_load->getType()));
   guard_load->replaceAllUsesWith(zero);
   guard_load->eraseFromParent();
 }

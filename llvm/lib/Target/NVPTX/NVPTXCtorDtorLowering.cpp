@@ -109,7 +109,7 @@ static void createInitOrFiniCalls(Function &F, bool IsCtor) {
         auto *GV = new GlobalVariable(
             M, PointerType::get(C, 0),
             /*isConstant=*/false, GlobalValue::WeakAnyLinkage,
-            Constant::getNullValue(PointerType::get(C, 0)),
+            Constant::getZeroValue(PointerType::get(C, 0)),
             IsCtor ? "__init_array_start" : "__fini_array_start",
             /*InsertBefore=*/nullptr, GlobalVariable::NotThreadLocal,
             /*AddressSpace=*/llvm::ADDRESS_SPACE_GLOBAL);
@@ -122,7 +122,7 @@ static void createInitOrFiniCalls(Function &F, bool IsCtor) {
         auto *GV = new GlobalVariable(
             M, PointerType::get(C, 0),
             /*isConstant=*/false, GlobalValue::WeakAnyLinkage,
-            Constant::getNullValue(PointerType::get(C, 0)),
+            Constant::getZeroValue(PointerType::get(C, 0)),
             IsCtor ? "__init_array_end" : "__fini_array_end",
             /*InsertBefore=*/nullptr, GlobalVariable::NotThreadLocal,
             /*AddressSpace=*/llvm::ADDRESS_SPACE_GLOBAL);

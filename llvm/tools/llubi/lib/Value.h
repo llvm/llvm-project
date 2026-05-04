@@ -143,7 +143,7 @@ public:
   static AnyValue poison() { return AnyValue(PoisonTag{}); }
   static AnyValue boolean(bool Val) { return AnyValue(APInt(1, Val)); }
   static AnyValue getPoisonValue(Context &Ctx, Type *Ty);
-  static AnyValue getNullValue(Context &Ctx, Type *Ty);
+  static AnyValue getZeroValue(Context &Ctx, Type *Ty);
   static AnyValue getVectorSplat(const AnyValue &Scalar, size_t NumElements);
 
   bool isNone() const { return Kind == StorageKind::None; }

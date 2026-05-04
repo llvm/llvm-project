@@ -1028,7 +1028,7 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
     return &Trunc;
 
   if (DestWidth == 1) {
-    Value *Zero = Constant::getNullValue(SrcTy);
+    Value *Zero = Constant::getZeroValue(SrcTy);
 
     Value *X;
     const APInt *C1;
@@ -1081,7 +1081,7 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
     if (match(Src,
               m_OneUse(m_Intrinsic<Intrinsic::usub_sat>(m_One(), m_Value(X)))))
       return new ICmpInst(ICmpInst::ICMP_EQ, X,
-                          ConstantInt::getNullValue(SrcTy));
+                          ConstantInt::getZeroValue(SrcTy));
   }
 
   Value *A, *B;
@@ -1516,7 +1516,7 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
 
   // zext nneg bool x -> 0
   if (SrcTy->isIntOrIntVectorTy(1) && Zext.hasNonNeg())
-    return replaceInstUsesWith(Zext, Constant::getNullValue(Zext.getType()));
+    return replaceInstUsesWith(Zext, Constant::getZeroValue(Zext.getType()));
 
   // Try to extend the entire expression tree to the wide destination type.
   unsigned BitsToClear;
@@ -1689,9 +1689,9 @@ Instruction *InstCombinerImpl::transformSExtICmp(ICmpInst *Cmp,
 
         // If the icmp tests for a known zero bit we can constant fold it.
         if (!Op1C->isZero() && Op1C->getValue() != KnownZeroMask) {
-          Value *V = Pred == ICmpInst::ICMP_NE ?
-                       ConstantInt::getAllOnesValue(Sext.getType()) :
-                       ConstantInt::getNullValue(Sext.getType());
+          Value *V = Pred == ICmpInst::ICMP_NE
+                         ? ConstantInt::getAllOnesValue(Sext.getType())
+                         : ConstantInt::getZeroValue(Sext.getType());
           return replaceInstUsesWith(Sext, V);
         }
 
@@ -2412,7 +2412,7 @@ static Instruction *foldFPtoI(Instruction &FI, InstCombiner &IC) {
   KnownFPClass FPClass = computeKnownFPClass(
       FI.getOperand(0), Mask, IC.getSimplifyQuery().getWithInstruction(&FI));
   if (FPClass.isKnownNever(Mask))
-    return IC.replaceInstUsesWith(FI, ConstantInt::getNullValue(FI.getType()));
+    return IC.replaceInstUsesWith(FI, ConstantInt::getZeroValue(FI.getType()));
 
   return nullptr;
 }
@@ -2522,7 +2522,7 @@ Value *InstCombinerImpl::foldPtrToIntOrAddrOfGEP(Type *IntTy, Value *Ptr) {
       Res->getType() == IntTy && IntTy == IdxTy) {
     // pass
   } else if (isa<ConstantPointerNull>(Ptr)) {
-    Res = Constant::getNullValue(IdxTy);
+    Res = Constant::getZeroValue(IdxTy);
   } else {
     return nullptr;
   }
@@ -2668,7 +2668,7 @@ optimizeVectorResizeWithIntegerBitCasts(Value *InVal, VectorType *DestTy,
     // If we're increasing the number of elements (rewriting an integer zext),
     // shuffle in all of the elements from InVal. Fill the rest of the result
     // elements with zeros from a constant zero.
-    V2 = Constant::getNullValue(SrcTy);
+    V2 = Constant::getZeroValue(SrcTy);
     // Use first elt from V2 when indicating zero in the shuffle mask.
     uint32_t NullElt = SrcElts;
     // Extend with null values in the "most significant bits" by adding elements
@@ -2717,7 +2717,7 @@ static bool collectInsertionElements(Value *V, unsigned Shift,
   if (V->getType() == VecEltTy) {
     // Inserting null doesn't actually insert any elements.
     if (Constant *C = dyn_cast<Constant>(V))
-      if (C->isNullValue())
+      if (C->isZeroValue())
         return true;
 
     unsigned ElementIndex = getTypeSizeIndex(Shift, VecEltTy);
@@ -2836,7 +2836,7 @@ static Value *optimizeIntegerToVectorInsertions(BitCastInst &CI,
   // If we succeeded, we know that all of the element are specified by Elements
   // or are zero if Elements has a null entry.  Recast this as a set of
   // insertions.
-  Value *Result = Constant::getNullValue(CI.getType());
+  Value *Result = Constant::getZeroValue(CI.getType());
   for (unsigned i = 0, e = Elements.size(); i != e; ++i) {
     if (!Elements[i]) continue;  // Unset element.
 
@@ -3252,9 +3252,8 @@ Instruction *InstCombinerImpl::visitBitCast(BitCastInst &CI) {
       // If our destination is not a vector, then make this a straight
       // scalar-scalar cast.
       if (!DestTy->isVectorTy()) {
-        Value *Elem =
-          Builder.CreateExtractElement(Src,
-                     Constant::getNullValue(Type::getInt32Ty(CI.getContext())));
+        Value *Elem = Builder.CreateExtractElement(
+            Src, Constant::getZeroValue(Type::getInt32Ty(CI.getContext())));
         return CastInst::Create(Instruction::BitCast, Elem, DestTy);
       }
 

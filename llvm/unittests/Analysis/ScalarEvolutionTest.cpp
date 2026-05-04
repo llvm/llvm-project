@@ -83,7 +83,7 @@ TEST_F(ScalarEvolutionsTest, SCEVUnknownRAUW) {
   ReturnInst::Create(Context, nullptr, BB);
 
   Type *Ty = Type::getInt1Ty(Context);
-  Constant *Init = Constant::getNullValue(Ty);
+  Constant *Init = Constant::getZeroValue(Ty);
   Value *V0 = new GlobalVariable(M, Ty, false, GlobalValue::ExternalLinkage, Init, "V0");
   Value *V1 = new GlobalVariable(M, Ty, false, GlobalValue::ExternalLinkage, Init, "V1");
   Value *V2 = new GlobalVariable(M, Ty, false, GlobalValue::ExternalLinkage, Init, "V2");
@@ -137,7 +137,7 @@ TEST_F(ScalarEvolutionsTest, SimplifiedPHI) {
   ReturnInst::Create(Context, nullptr, ExitBB);
   auto *Ty = Type::getInt32Ty(Context);
   auto *PN = PHINode::Create(Ty, 2, "", LoopBB->begin());
-  PN->addIncoming(Constant::getNullValue(Ty), EntryBB);
+  PN->addIncoming(Constant::getZeroValue(Ty), EntryBB);
   PN->addIncoming(PoisonValue::get(Ty), LoopBB);
   ScalarEvolution SE = buildSE(*F);
   const SCEV *S1 = SE.getSCEV(PN);
@@ -676,7 +676,7 @@ TEST_F(ScalarEvolutionsTest, SCEVZeroExtendExpr) {
   Type *I64Ty = Type::getInt64Ty(Context);
   Type *I8Ty = Type::getInt8Ty(Context);
   Type *I8PtrTy = PointerType::getUnqual(Context);
-  Value *Accum = Constant::getNullValue(I8PtrTy);
+  Value *Accum = Constant::getZeroValue(I8PtrTy);
   int Iters = 20;
   for (int i = 0; i < Iters; i++) {
     BasicBlock *IncBB = BasicBlock::Create(Context, "for.inc", F, EndBB);
@@ -1738,9 +1738,9 @@ TEST_F(ScalarEvolutionsTest, ComplexityComparatorIsStrictWeakOrdering2) {
 
 TEST_F(ScalarEvolutionsTest, ComplexityComparatorIsStrictWeakOrdering3) {
   Type *Int64Ty = Type::getInt64Ty(Context);
-  Constant *Init = Constant::getNullValue(Int64Ty);
+  Constant *Init = Constant::getZeroValue(Int64Ty);
   Type *PtrTy = PointerType::get(Context, 0);
-  Constant *Null = Constant::getNullValue(PtrTy);
+  Constant *Null = Constant::getZeroValue(PtrTy);
   FunctionType *FTy = FunctionType::get(Type::getVoidTy(Context), {}, false);
 
   Value *V0 = new GlobalVariable(M, Int64Ty, false,

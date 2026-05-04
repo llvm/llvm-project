@@ -152,7 +152,7 @@ Constant *ShadowStackGCLoweringImpl::GetFrameMap(Function &F) {
   SmallVector<Constant *, 16> Metadata;
   for (unsigned I = 0; I != Roots.size(); ++I) {
     Constant *C = cast<Constant>(Roots[I].first->getArgOperand(1));
-    if (!C->isNullValue())
+    if (!C->isZeroValue())
       NumMeta = I + 1;
     Metadata.push_back(C);
   }
@@ -248,9 +248,9 @@ bool ShadowStackGCLoweringImpl::doInitialization(Module &M) {
     // linkage!
     Head = new GlobalVariable(
         M, StackEntryPtrTy, false, GlobalValue::LinkOnceAnyLinkage,
-        Constant::getNullValue(StackEntryPtrTy), "llvm_gc_root_chain");
+        Constant::getZeroValue(StackEntryPtrTy), "llvm_gc_root_chain");
   } else if (Head->hasExternalLinkage() && Head->isDeclaration()) {
-    Head->setInitializer(Constant::getNullValue(StackEntryPtrTy));
+    Head->setInitializer(Constant::getZeroValue(StackEntryPtrTy));
     Head->setLinkage(GlobalValue::LinkOnceAnyLinkage);
   }
 
@@ -259,7 +259,7 @@ bool ShadowStackGCLoweringImpl::doInitialization(Module &M) {
 
 bool ShadowStackGCLoweringImpl::IsNullValue(Value *V) {
   if (Constant *C = dyn_cast<Constant>(V))
-    return C->isNullValue();
+    return C->isZeroValue();
   return false;
 }
 

@@ -71,7 +71,7 @@ RValue CGCUDARuntime::EmitCUDADeviceKernelCallExpr(
   llvm::Value *Config = emitGetParamBuf(CGF, E);
   CGF.Builder.CreateCondBr(
       CGF.Builder.CreateICmpNE(Config,
-                               llvm::Constant::getNullValue(Config->getType())),
+                               llvm::Constant::getZeroValue(Config->getType())),
       ConfigOKBlock, ContBlock);
 
   CodeGenFunction::ConditionalEvaluation eval(CGF);

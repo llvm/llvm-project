@@ -1102,7 +1102,7 @@ void CodeGenModule::Release() {
     // compilation unit can be associated.
     auto *GV = new llvm::GlobalVariable(
         getModule(), Int8Ty, false, llvm::GlobalValue::ExternalLinkage,
-        llvm::Constant::getNullValue(Int8Ty),
+        llvm::Constant::getZeroValue(Int8Ty),
         "__hip_cuid_" + getContext().getCUIDHash());
     getSanitizerMetadata()->disableSanitizerForGlobal(GV);
     addCompilerUsedGlobal(GV);
@@ -6435,7 +6435,7 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
     // non-zero null pointers. In this case they should have weak linkage
     // since common linkage must have zero initializer and must not have
     // explicit section therefore cannot have non-zero initial value.
-    if (!GV->getInitializer()->isNullValue())
+    if (!GV->getInitializer()->isZeroValue())
       GV->setLinkage(llvm::GlobalVariable::WeakAnyLinkage);
   }
 
@@ -8311,7 +8311,7 @@ llvm::Constant *CodeGenModule::GetAddrOfRTTIDescriptor(QualType Ty,
   // FIXME: should we even be calling this method if RTTI is disabled
   // and it's not for EH?
   if (!shouldEmitRTTI(ForEH))
-    return llvm::Constant::getNullValue(GlobalsInt8PtrTy);
+    return llvm::Constant::getZeroValue(GlobalsInt8PtrTy);
 
   if (ForEH && Ty->isObjCObjectPointerType() &&
       LangOpts.ObjCRuntime.isGNUFamily())

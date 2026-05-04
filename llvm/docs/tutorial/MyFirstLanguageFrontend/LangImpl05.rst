@@ -775,7 +775,7 @@ insertion position to it.
         NamedValues.erase(VarName);
 
       // for expr always returns 0.0.
-      return Constant::getNullValue(Type::getDoubleTy(*TheContext));
+      return Constant::getZeroValue(Type::getDoubleTy(*TheContext));
     }
 
 The final code handles various cleanups: now that we have the "NextVar"

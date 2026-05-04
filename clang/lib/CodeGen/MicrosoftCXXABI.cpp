@@ -588,8 +588,8 @@ public:
     if (!isImageRelative())
       return PtrVal;
 
-    if (PtrVal->isNullValue())
-      return llvm::Constant::getNullValue(CGM.IntTy);
+    if (PtrVal->isZeroValue())
+      return llvm::Constant::getZeroValue(CGM.IntTy);
 
     llvm::Constant *ImageBaseAsInt =
         llvm::ConstantExpr::getPtrToInt(getImageBase(), CGM.IntPtrTy);
@@ -1014,7 +1014,7 @@ static llvm::CallBase *emitRTtypeidCall(CodeGenFunction &CGF,
 
 void MicrosoftCXXABI::EmitBadTypeidCall(CodeGenFunction &CGF) {
   llvm::CallBase *Call =
-      emitRTtypeidCall(CGF, llvm::Constant::getNullValue(CGM.VoidPtrTy));
+      emitRTtypeidCall(CGF, llvm::Constant::getZeroValue(CGM.VoidPtrTy));
   Call->setDoesNotReturn();
   CGF.Builder.CreateUnreachable();
 }
@@ -2872,7 +2872,7 @@ GetNullMemberPointerFields(const MemberPointerType *MPT,
   MSInheritanceModel Inheritance = RD->getMSInheritanceModel();
   if (MPT->isMemberFunctionPointer()) {
     // FunctionPointerOrVirtualThunk
-    fields.push_back(llvm::Constant::getNullValue(CGM.VoidPtrTy));
+    fields.push_back(llvm::Constant::getZeroValue(CGM.VoidPtrTy));
   } else {
     if (RD->nullFieldOffsetIsZero())
       fields.push_back(getZeroInt());  // FieldOffset
@@ -3111,7 +3111,7 @@ MicrosoftCXXABI::EmitMemberPointerComparison(CodeGenFunction &CGF,
   // Check if the first field is 0 if this is a function pointer.
   if (MPT->isMemberFunctionPointer()) {
     // (l1 == r1 && ...) || l0 == 0
-    llvm::Value *Zero = llvm::Constant::getNullValue(L0->getType());
+    llvm::Value *Zero = llvm::Constant::getZeroValue(L0->getType());
     llvm::Value *IsZero = Builder.CreateICmp(Eq, L0, Zero, "memptr.cmp.iszero");
     Res = Builder.CreateBinOp(Or, Res, IsZero);
   }
@@ -3129,7 +3129,7 @@ MicrosoftCXXABI::EmitMemberPointerIsNotNull(CodeGenFunction &CGF,
   llvm::SmallVector<llvm::Constant *, 4> fields;
   // We only need one field for member functions.
   if (MPT->isMemberFunctionPointer())
-    fields.push_back(llvm::Constant::getNullValue(CGM.VoidPtrTy));
+    fields.push_back(llvm::Constant::getZeroValue(CGM.VoidPtrTy));
   else
     GetNullMemberPointerFields(MPT, fields);
   assert(!fields.empty());
@@ -3158,12 +3158,12 @@ bool MicrosoftCXXABI::MemberPointerConstantIsNull(const MemberPointerType *MPT,
   if (MPT->isMemberFunctionPointer()) {
     llvm::Constant *FirstField = Val->getType()->isStructTy() ?
       Val->getAggregateElement(0U) : Val;
-    return FirstField->isNullValue();
+    return FirstField->isZeroValue();
   }
 
   // If it's not a function pointer and it's zero initializable, we can easily
   // check zero.
-  if (isZeroInitializable(MPT) && Val->isNullValue())
+  if (isZeroInitializable(MPT) && Val->isZeroValue())
     return true;
 
   // Otherwise, break down all the fields for comparison.  Hopefully these
@@ -3872,7 +3872,7 @@ MSRTTIBuilder::getBaseClassArray(SmallVectorImpl<MSRTTIClass> &Classes) {
   for (MSRTTIClass &Class : Classes)
     BaseClassArrayData.push_back(
         ABI.getImageRelativeConstant(getBaseClassDescriptor(Class)));
-  BaseClassArrayData.push_back(llvm::Constant::getNullValue(PtrType));
+  BaseClassArrayData.push_back(llvm::Constant::getZeroValue(PtrType));
   BCA->setInitializer(llvm::ConstantArray::get(ArrType, BaseClassArrayData));
   return BCA;
 }
@@ -4278,7 +4278,7 @@ llvm::Constant *MicrosoftCXXABI::getCatchableType(QualType T,
     else
       CopyCtor = CGM.getAddrOfCXXStructor(GlobalDecl(CD, Ctor_Complete));
   } else {
-    CopyCtor = llvm::Constant::getNullValue(CGM.Int8PtrTy);
+    CopyCtor = llvm::Constant::getZeroValue(CGM.Int8PtrTy);
   }
   CopyCtor = getImageRelativeConstant(CopyCtor);
 
@@ -4481,14 +4481,14 @@ llvm::GlobalVariable *MicrosoftCXXABI::getThrowInfo(QualType T) {
 
   // The cleanup-function (a destructor) must be called when the exception
   // object's lifetime ends.
-  llvm::Constant *CleanupFn = llvm::Constant::getNullValue(CGM.Int8PtrTy);
+  llvm::Constant *CleanupFn = llvm::Constant::getZeroValue(CGM.Int8PtrTy);
   if (const CXXRecordDecl *RD = T->getAsCXXRecordDecl())
     if (CXXDestructorDecl *DtorD = RD->getDestructor())
       if (!DtorD->isTrivial())
         CleanupFn = CGM.getAddrOfCXXStructor(GlobalDecl(DtorD, Dtor_Complete));
   // This is unused as far as we can tell, initialize it to null.
   llvm::Constant *ForwardCompat =
-      getImageRelativeConstant(llvm::Constant::getNullValue(CGM.Int8PtrTy));
+      getImageRelativeConstant(llvm::Constant::getZeroValue(CGM.Int8PtrTy));
   llvm::Constant *PointerToCatchableTypes = getImageRelativeConstant(CTA);
   llvm::StructType *TIType = getThrowInfoType();
   llvm::Constant *Fields[] = {

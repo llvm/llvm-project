@@ -96,7 +96,7 @@ class PPCBoolRetToInt : public FunctionPass {
     if (auto *P = dyn_cast<PHINode>(V)) {
       // Temporarily set the operands to 0. We'll fix this later in
       // runOnUse.
-      Value *Zero = Constant::getNullValue(IntTy);
+      Value *Zero = Constant::getZeroValue(IntTy);
       PHINode *Q =
         PHINode::Create(IntTy, P->getNumIncomingValues(), P->getName(), P->getIterator());
       for (unsigned I = 0; I < P->getNumOperands(); ++I)

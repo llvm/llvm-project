@@ -981,7 +981,7 @@ public:
   void pushCleanupAndDeferDeactivation(CleanupKind Kind, As... A) {
     // Placeholder dominating IP for this cleanup.
     llvm::Instruction *DominatingIP =
-        Builder.CreateFlagLoad(llvm::Constant::getNullValue(Int8PtrTy));
+        Builder.CreateFlagLoad(llvm::Constant::getZeroValue(Int8PtrTy));
     EHStack.pushCleanup<T>(Kind, A...);
     DeferredDeactivationCleanupStack.push_back(
         {EHStack.stable_begin(), DominatingIP});

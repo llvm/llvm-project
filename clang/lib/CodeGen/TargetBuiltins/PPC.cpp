@@ -196,7 +196,7 @@ Value *CodeGenFunction::EmitPPCBuiltinCpu(unsigned BuiltinID,
   Value *TheCall = Builder.CreateCall(F, {Op0}, "cpu_supports");
   Value *Mask =
       Builder.CreateAnd(TheCall, llvm::ConstantInt::get(Int32Ty, BitMask));
-  return Builder.CreateICmpNE(Mask, llvm::Constant::getNullValue(Int32Ty));
+  return Builder.CreateICmpNE(Mask, llvm::Constant::getZeroValue(Int32Ty));
 #undef PPC_FAWORD_HWCAP
 #undef PPC_FAWORD_HWCAP2
 #undef PPC_FAWORD_CPUID
@@ -402,7 +402,8 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     Op0 = IsLE ? HiLd : LoLd;
     Op1 = IsLE ? LoLd : HiLd;
     Value *AllElts = Builder.CreateCall(Vperm, {Op0, Op1, Mask1}, "shuffle1");
-    Constant *Zero = llvm::Constant::getNullValue(IsLE ? ResTy : AllElts->getType());
+    Constant *Zero =
+        llvm::Constant::getZeroValue(IsLE ? ResTy : AllElts->getType());
 
     if (IsLE) {
       SmallVector<int, 16> Consts;

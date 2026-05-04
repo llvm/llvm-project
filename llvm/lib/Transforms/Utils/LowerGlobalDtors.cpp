@@ -109,7 +109,7 @@ static bool runImpl(Module &M) {
     uint16_t PriorityValue = Priority->getLimitedValue(UINT16_MAX);
 
     Constant *DtorFunc = CS->getOperand(1);
-    if (DtorFunc->isNullValue())
+    if (DtorFunc->isZeroValue())
       break; // Found a null terminator, skip the rest.
 
     Constant *Associated = CS->getOperand(2);
@@ -180,7 +180,7 @@ static bool runImpl(Module &M) {
                                       : Twine()) +
               (AtThisPriority.size() > 1 ? Twine("$") + Twine(ThisId)
                                          : Twine()) +
-              (!Associated->isNullValue() ? (Twine(".") + Associated->getName())
+              (!Associated->isZeroValue() ? (Twine(".") + Associated->getName())
                                           : Twine()),
           &M);
       BasicBlock *BB = BasicBlock::Create(C, "body", CallDtors);
@@ -198,7 +198,7 @@ static bool runImpl(Module &M) {
                                       : Twine()) +
               (AtThisPriority.size() > 1 ? Twine("$") + Twine(ThisId)
                                          : Twine()) +
-              (!Associated->isNullValue() ? (Twine(".") + Associated->getName())
+              (!Associated->isZeroValue() ? (Twine(".") + Associated->getName())
                                           : Twine()),
           &M);
       BasicBlock *EntryBB = BasicBlock::Create(C, "entry", RegisterCallDtors);
@@ -209,7 +209,7 @@ static bool runImpl(Module &M) {
       Value *Args[] = {CallDtors, Null, DsoHandle};
       Value *Res = CallInst::Create(AtExit, Args, "call", EntryBB);
       Value *Cmp = new ICmpInst(EntryBB, ICmpInst::ICMP_NE, Res,
-                                Constant::getNullValue(Res->getType()));
+                                Constant::getZeroValue(Res->getType()));
       CondBrInst::Create(Cmp, FailBB, RetBB, EntryBB);
 
       // If `__cxa_atexit` hits out-of-memory, trap, so that we don't misbehave.

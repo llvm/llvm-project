@@ -144,7 +144,7 @@ AbstractCallSite::AbstractCallSite(const Use *U)
   assert(VarArgFlagAsCM->getType()->isIntegerTy(1) &&
          "Malformed !callback metadata var-arg flag");
 
-  if (VarArgFlagAsCM->getValue()->isNullValue())
+  if (VarArgFlagAsCM->getValue()->isZeroValue())
     return;
 
   // Add all variadic arguments at the end.

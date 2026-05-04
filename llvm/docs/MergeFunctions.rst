@@ -561,7 +561,7 @@ Steps below are for the case when types are equal, or case when constants are
 bitcastable:
 
 3. One of constants is a "*null*" value. Return the result of
-``cmpFlags(L->isNullValue, R->isNullValue)`` comparison.
+``cmpFlags(L->isZeroValue, R->isZeroValue)`` comparison.
 
 4. Compare value IDs, and return result if it is not 0:
 

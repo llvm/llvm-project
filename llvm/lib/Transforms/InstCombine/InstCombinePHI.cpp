@@ -1386,7 +1386,7 @@ static Value *foldDependentIVs(PHINode &PN, IRBuilderBase &Builder) {
   auto *BO = dyn_cast<BinaryOperator>(IvNext);
   Constant *Identity =
       BO ? ConstantExpr::getBinOpIdentity(BO->getOpcode(), Iv2Start->getType())
-         : Constant::getNullValue(Iv2Start->getType());
+         : Constant::getZeroValue(Iv2Start->getType());
   if (Iv2Start != Identity)
     return nullptr;
 

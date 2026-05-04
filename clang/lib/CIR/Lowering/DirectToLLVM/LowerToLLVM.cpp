@@ -452,7 +452,7 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstComplexAttr complexAttr) {
 /// ConstPtrAttr visitor.
 mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstPtrAttr ptrAttr) {
   mlir::Location loc = parentOp->getLoc();
-  if (ptrAttr.isNullValue()) {
+  if (ptrAttr.isZeroValue()) {
     return mlir::LLVM::ZeroOp::create(
         rewriter, loc, converter->convertType(ptrAttr.getType()));
   }
@@ -2008,7 +2008,7 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
   } else if (mlir::isa<cir::PointerType>(op.getType())) {
     // Optimize with dedicated LLVM op for null pointers.
     if (mlir::isa<cir::ConstPtrAttr>(op.getValue())) {
-      if (mlir::cast<cir::ConstPtrAttr>(op.getValue()).isNullValue()) {
+      if (mlir::cast<cir::ConstPtrAttr>(op.getValue()).isZeroValue()) {
         rewriter.replaceOpWithNewOp<mlir::LLVM::ZeroOp>(
             op, typeConverter->convertType(op.getType()));
         return mlir::success();

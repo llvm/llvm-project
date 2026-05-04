@@ -896,7 +896,7 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
     // If the global has common linkage, it must have a zero initializer and
     // cannot be constant.
     if (GV.hasCommonLinkage()) {
-      Check(GV.getInitializer()->isNullValue(),
+      Check(GV.getInitializer()->isZeroValue(),
             "'common' global must have a zero initializer!", &GV);
       Check(!GV.isConstant(), "'common' global may not be marked constant!",
             &GV);
@@ -2850,7 +2850,7 @@ void Verifier::visitConstantPtrAuth(const ConstantPtrAuth *CPA) {
         "signed ptrauth constant deactivation symbol must be a pointer");
 
   Check(isa<GlobalValue>(CPA->getDeactivationSymbol()) ||
-            CPA->getDeactivationSymbol()->isNullValue(),
+            CPA->getDeactivationSymbol()->isZeroValue(),
         "signed ptrauth constant deactivation symbol must be a global value "
         "or null");
 }

@@ -210,7 +210,7 @@ Value *X86LowerAMXIntrinsics::createTileLoadStoreLoops(
     // %vec.phi.row = phi <256 x i32> [ zeroinitializer, %entry ], [ %ResVec,
     // %tileload.scalarize.rows.latch ]
     B.SetInsertPoint(RowLoopHeader->getTerminator());
-    Value *VecZero = Constant::getNullValue(V256I32Ty);
+    Value *VecZero = Constant::getZeroValue(V256I32Ty);
     PHINode *VecCPhiRowLoop = B.CreatePHI(V256I32Ty, 2, "vec.phi.row");
     VecCPhiRowLoop->addIncoming(VecZero, Start);
 
@@ -339,7 +339,7 @@ X86LowerAMXIntrinsics::createTileDPLoops(BasicBlock *Start, BasicBlock *End,
   B.SetInsertPoint(RowLoopHeader->getTerminator());
   PHINode *VecCPhiRowLoop = B.CreatePHI(V256I32Ty, 2, "vec.c.phi.row");
   VecCPhiRowLoop->addIncoming(VecC, Start);
-  Value *VecZero = Constant::getNullValue(V256I32Ty);
+  Value *VecZero = Constant::getZeroValue(V256I32Ty);
   PHINode *VecDPhiRowLoop = B.CreatePHI(V256I32Ty, 2, "vec.d.phi.row");
   VecDPhiRowLoop->addIncoming(VecZero, Start);
 
@@ -455,7 +455,7 @@ X86LowerAMXIntrinsics::createTileDPLoops(BasicBlock *Start, BasicBlock *End,
     Value *SubVecA = B.CreateBitCast(EltA, V2I16Ty);
     Value *EltB = B.CreateExtractElement(VecB, IdxB);
     Value *SubVecB = B.CreateBitCast(EltB, V2I16Ty);
-    Value *ZeroV2I16 = Constant::getNullValue(V2I16Ty);
+    Value *ZeroV2I16 = Constant::getZeroValue(V2I16Ty);
     int ShuffleMask[4] = {2, 0, 3, 1};
     auto ShuffleArray = ArrayRef(ShuffleMask);
     Value *AV2F32 = B.CreateBitCast(
@@ -576,7 +576,7 @@ bool X86LowerAMXIntrinsics::lowerTileLoadStore(Instruction *TileLoadStore) {
 bool X86LowerAMXIntrinsics::lowerTileZero(Instruction *TileZero) {
   IRBuilder<> Builder(TileZero);
   FixedVectorType *V256I32Ty = FixedVectorType::get(Builder.getInt32Ty(), 256);
-  Value *VecZero = Constant::getNullValue(V256I32Ty);
+  Value *VecZero = Constant::getZeroValue(V256I32Ty);
   for (Use &U : llvm::make_early_inc_range(TileZero->uses())) {
     Instruction *I = cast<Instruction>(U.getUser());
     Value *Vec;

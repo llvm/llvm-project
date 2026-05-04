@@ -2624,7 +2624,7 @@ void CodeGenFunction::EmitVariablyModifiedType(QualType type) {
             auto CheckOrdinal = SanitizerKind::SO_VLABound;
             auto CheckHandler = SanitizerHandler::VLABoundNotPositive;
             SanitizerDebugLocation SanScope(this, {CheckOrdinal}, CheckHandler);
-            llvm::Value *Zero = llvm::Constant::getNullValue(size->getType());
+            llvm::Value *Zero = llvm::Constant::getZeroValue(size->getType());
             clang::QualType SEType = sizeExpr->getType();
             llvm::Value *CheckCondition =
                 SEType->isSignedIntegerType()

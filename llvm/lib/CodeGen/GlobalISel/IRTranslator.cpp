@@ -362,8 +362,8 @@ bool IRTranslator::translateCompare(const User &U,
   if (CmpInst::isIntPredicate(Pred))
     MIRBuilder.buildICmp(Pred, Res, Op0, Op1, Flags);
   else if (Pred == CmpInst::FCMP_FALSE)
-    MIRBuilder.buildCopy(
-        Res, getOrCreateVReg(*Constant::getNullValue(U.getType())));
+    MIRBuilder.buildCopy(Res,
+                         getOrCreateVReg(*Constant::getZeroValue(U.getType())));
   else if (Pred == CmpInst::FCMP_TRUE)
     MIRBuilder.buildCopy(
         Res, getOrCreateVReg(*Constant::getAllOnesValue(U.getType())));
@@ -577,7 +577,7 @@ bool IRTranslator::shouldEmitAsBranches(
   if (Cases[0].CmpRHS == Cases[1].CmpRHS &&
       Cases[0].PredInfo.Pred == Cases[1].PredInfo.Pred &&
       isa<Constant>(Cases[0].CmpRHS) &&
-      cast<Constant>(Cases[0].CmpRHS)->isNullValue()) {
+      cast<Constant>(Cases[0].CmpRHS)->isZeroValue()) {
     if (Cases[0].PredInfo.Pred == CmpInst::ICMP_EQ &&
         Cases[0].TrueBB == Cases[1].ThisBB)
       return false;

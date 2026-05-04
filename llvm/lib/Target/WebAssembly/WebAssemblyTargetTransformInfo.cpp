@@ -604,7 +604,7 @@ static Value *simplifyWasmSwizzle(const IntrinsicInst &II,
 
   auto *V1 = II.getArgOperand(0);
   auto *V2 =
-      AnyOutOfBounds ? Constant::getNullValue(VecTy) : PoisonValue::get(VecTy);
+      AnyOutOfBounds ? Constant::getZeroValue(VecTy) : PoisonValue::get(VecTy);
 
   return Builder.CreateShuffleVector(V1, V2, ArrayRef(Indexes, NumElts));
 }

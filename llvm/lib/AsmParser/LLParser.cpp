@@ -6829,12 +6829,12 @@ bool LLParser::convertValIDToValue(Type *Ty, ValID &ID, Value *&V,
     if (auto *TETy = dyn_cast<TargetExtType>(Ty))
       if (!TETy->hasProperty(TargetExtType::HasZeroInit))
         return error(ID.Loc, "invalid type for null constant");
-    V = Constant::getNullValue(Ty);
+    V = Constant::getZeroValue(Ty);
     return false;
   case ValID::t_None:
     if (!Ty->isTokenTy())
       return error(ID.Loc, "invalid type for none constant");
-    V = Constant::getNullValue(Ty);
+    V = Constant::getZeroValue(Ty);
     return false;
   case ValID::t_Poison:
     // FIXME: LabelTy should not be a first-class type.
@@ -6910,7 +6910,7 @@ bool LLParser::parseConstantValue(Type *Ty, Constant *&C) {
     return false;
   }
   case ValID::t_Null:
-    C = Constant::getNullValue(Ty);
+    C = Constant::getZeroValue(Ty);
     return false;
   default:
     return error(Loc, "expected a constant value");

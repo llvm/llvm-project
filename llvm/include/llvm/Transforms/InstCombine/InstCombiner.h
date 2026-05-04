@@ -314,7 +314,7 @@ public:
         case Instruction::FSub: // 0.0 - X (doesn't simplify, but it is safe)
         case Instruction::FDiv: // 0.0 / X (doesn't simplify, but it is safe)
         case Instruction::FRem: // 0.0 % X = 0
-          SafeC = Constant::getNullValue(EltTy);
+          SafeC = Constant::getZeroValue(EltTy);
           break;
         default:
           llvm_unreachable("Expected to find identity constant for opcode");

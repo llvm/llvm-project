@@ -417,7 +417,7 @@ bool GlobalsAAResult::AnalyzeIndirectGlobalMemory(GlobalVariable *GV) {
 
   // If the initializer is a valid pointer, bail.
   if (Constant *C = GV->getInitializer())
-    if (!C->isNullValue())
+    if (!C->isZeroValue())
       return false;
 
   // Walk the user list of the global.  If we find anything other than a direct

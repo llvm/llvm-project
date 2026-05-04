@@ -527,7 +527,7 @@ addFunctionTypeMutation(NamedMDNode *NMD,
   transform(ChangedTys, std::back_inserter(MDArgs), [=, &Ctx](auto &&CTy) {
     return MDNode::get(
         Ctx, {ConstantAsMetadata::get(ConstantInt::get(I32Ty, CTy.first, true)),
-              ValueAsMetadata::get(Constant::getNullValue(CTy.second))});
+              ValueAsMetadata::get(Constant::getZeroValue(CTy.second))});
   });
   if (!AsmConstraints.empty())
     MDArgs.push_back(MDNode::get(Ctx, MDString::get(Ctx, AsmConstraints)));

@@ -141,7 +141,7 @@ static void EmitDeclDestroy(CodeGenFunction &CGF, const VarDecl &D,
     Func = CodeGenFunction(CGM)
            .generateDestroyHelper(Addr, Type, CGF.getDestroyer(DtorKind),
                                   CGF.needsEHCleanup(DtorKind), &D);
-    Argument = llvm::Constant::getNullValue(CGF.Int8PtrTy);
+    Argument = llvm::Constant::getZeroValue(CGF.Int8PtrTy);
   }
 
   CGM.getCXXABI().registerGlobalDtor(CGF, D, Func, Argument);
@@ -316,7 +316,7 @@ llvm::Function *CodeGenFunction::createTLSAtExitStub(
     call->setCallingConv(DtorFn->getCallingConv());
 
   // Return 0 from function
-  CGF.Builder.CreateStore(llvm::Constant::getNullValue(CGM.IntTy),
+  CGF.Builder.CreateStore(llvm::Constant::getZeroValue(CGM.IntTy),
                           CGF.ReturnValue);
 
   CGF.FinishFunction();

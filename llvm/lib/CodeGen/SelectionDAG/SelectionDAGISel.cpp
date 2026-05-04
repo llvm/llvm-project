@@ -1427,7 +1427,7 @@ static void mapWasmLandingPadIndex(MachineBasicBlock *MBB,
   // this information.
   bool IsSingleCatchAllClause =
       CPI->arg_size() == 1 &&
-      cast<Constant>(CPI->getArgOperand(0))->isNullValue();
+      cast<Constant>(CPI->getArgOperand(0))->isZeroValue();
   // cathchpads for longjmp use an empty type list, e.g. catchpad within %0 []
   // and they don't need LSDA info
   bool IsCatchLongjmp = CPI->arg_size() == 0;

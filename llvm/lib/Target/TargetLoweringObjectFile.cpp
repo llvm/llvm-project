@@ -68,7 +68,7 @@ unsigned TargetLoweringObjectFile::getCallSiteEncoding() const {
 
 static bool isNullOrUndef(const Constant *C) {
   // Check that the constant isn't all zeros or undefs.
-  if (C->isNullValue() || isa<UndefValue>(C))
+  if (C->isZeroValue() || isa<UndefValue>(C))
     return true;
   if (!isa<ConstantAggregate>(C))
     return false;

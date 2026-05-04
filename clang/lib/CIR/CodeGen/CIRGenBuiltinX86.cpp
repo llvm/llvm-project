@@ -359,7 +359,7 @@ static mlir::Value emitX86MaskedCompareResult(CIRGenBuilderTy &builder,
       indices.push_back(cir::IntAttr::get(i64Ty, i % numElts + numElts));
 
     // This should shuffle between cmp (first vector) and null (second vector)
-    mlir::Value nullVec = builder.getNullValue(cmp.getType(), loc);
+    mlir::Value nullVec = builder.getZeroValue(cmp.getType(), loc);
     cmp = builder.createVecShuffle(loc, cmp, nullVec, indices);
   }
   return builder.createBitcast(cmp, builder.getUIntNTy(std::max(numElts, 8U)));
@@ -375,7 +375,7 @@ emitX86MaskedCompare(CIRGenBuilderTy &builder, unsigned cc, bool isSigned,
   unsigned numElts = cast<cir::VectorType>(ops[0].getType()).getSize();
   mlir::Value cmp;
   if (cc == 3) {
-    cmp = builder.getNullValue(
+    cmp = builder.getZeroValue(
         cir::VectorType::get(builder.getSIntNTy(1), numElts), loc);
   } else if (cc == 7) {
     cir::VectorType resultTy =
@@ -426,7 +426,7 @@ static std::optional<mlir::Value> emitX86ConvertToMask(CIRGenFunction &cgf,
                                                        CIRGenBuilderTy &builder,
                                                        mlir::Value in,
                                                        mlir::Location loc) {
-  cir::ConstantOp zero = builder.getNullValue(in.getType(), loc);
+  cir::ConstantOp zero = builder.getZeroValue(in.getType(), loc);
   return emitX86MaskedCompare(builder, 1, true, {in, zero}, loc);
 }
 
@@ -596,7 +596,7 @@ static mlir::Value emitX86vpcom(CIRGenBuilderTy &builder, mlir::Location loc,
     pred = cir::CmpOpKind::ne;
     break;
   case 0x6:
-    return builder.getNullValue(ty, loc); // FALSE
+    return builder.getZeroValue(ty, loc); // FALSE
   case 0x7: {
     llvm::APInt allOnes = llvm::APInt::getAllOnes(elementTy.getWidth());
     return cir::VecSplatOp::create(
@@ -706,7 +706,7 @@ static mlir::Value emitX86Aes(CIRGenBuilderTy &builder, mlir::Location loc,
       },
       /*elseBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location) {
-        mlir::Value zero = builder.getNullValue(vecType, loc);
+        mlir::Value zero = builder.getZeroValue(vecType, loc);
         builder.createStore(loc, zero, outAddr);
         builder.createYield(loc);
       });
@@ -771,7 +771,7 @@ static mlir::Value emitX86Aeswide(CIRGenBuilderTy &builder, mlir::Location loc,
       },
       /*elseBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location) {
-        mlir::Value zero = builder.getNullValue(vecType, loc);
+        mlir::Value zero = builder.getZeroValue(vecType, loc);
         for (int i = 0; i < 8; i++) {
           cir::ConstantOp idx = builder.getUInt32(i, loc);
           mlir::Value nextOutEleAddr =
@@ -903,7 +903,7 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     // IR optimizer and backend.
     // TODO: If we had a "freeze" IR instruction to generate a fixed undef
     //  value, we should use that here instead of a zero.
-    return builder.getNullValue(convertType(expr->getType()),
+    return builder.getZeroValue(convertType(expr->getType()),
                                 getLoc(expr->getExprLoc()));
   case X86::BI__builtin_ia32_vec_ext_v4hi:
   case X86::BI__builtin_ia32_vec_ext_v16qi:
@@ -1700,7 +1700,7 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     // If palignr is shifting the pair of vectors more than the size of two
     // lanes, emit zero.
     if (shiftVal >= 32)
-      return builder.getNullValue(convertType(expr->getType()),
+      return builder.getZeroValue(convertType(expr->getType()),
                                   getLoc(expr->getExprLoc()));
 
     // If palignr is shifting the pair of input vectors more than one lane,
@@ -1709,7 +1709,7 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
       shiftVal -= 16;
       ops[1] = ops[0];
       ops[0] =
-          builder.getNullValue(ops[0].getType(), getLoc(expr->getExprLoc()));
+          builder.getZeroValue(ops[0].getType(), getLoc(expr->getExprLoc()));
     }
 
     int64_t indices[64];
@@ -1808,7 +1808,7 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     unsigned numElems = cast<cir::IntType>(ops[0].getType()).getWidth();
 
     if (shiftVal >= numElems)
-      return builder.getNullValue(ops[0].getType(), loc);
+      return builder.getZeroValue(ops[0].getType(), loc);
 
     mlir::Value in = getMaskVecValue(builder, loc, ops[0], numElems);
 
@@ -1817,7 +1817,7 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     for (auto i : llvm::seq<unsigned>(0, numElems))
       indices.push_back(cir::IntAttr::get(i32Ty, numElems + i - shiftVal));
 
-    mlir::Value zero = builder.getNullValue(in.getType(), loc);
+    mlir::Value zero = builder.getZeroValue(in.getType(), loc);
     mlir::Value sv = builder.createVecShuffle(loc, zero, in, indices);
     return builder.createBitcast(sv, ops[0].getType());
   }
@@ -1832,7 +1832,7 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     unsigned numElems = cast<cir::IntType>(ops[0].getType()).getWidth();
 
     if (shiftVal >= numElems)
-      return builder.getNullValue(ops[0].getType(), loc);
+      return builder.getZeroValue(ops[0].getType(), loc);
 
     mlir::Value in = getMaskVecValue(builder, loc, ops[0], numElems);
 
@@ -1841,7 +1841,7 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     for (auto i : llvm::seq<unsigned>(0, numElems))
       indices.push_back(cir::IntAttr::get(i32Ty, i + shiftVal));
 
-    mlir::Value zero = builder.getNullValue(in.getType(), loc);
+    mlir::Value zero = builder.getZeroValue(in.getType(), loc);
     mlir::Value sv = builder.createVecShuffle(loc, in, zero, indices);
     return builder.createBitcast(sv, ops[0].getType());
   }
@@ -1962,7 +1962,7 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_kortestzdi: {
     mlir::Location loc = getLoc(expr->getExprLoc());
     cir::IntType ty = cast<cir::IntType>(ops[0].getType());
-    mlir::Value allZerosOp = builder.getNullValue(ty, loc).getResult();
+    mlir::Value allZerosOp = builder.getZeroValue(ty, loc).getResult();
     mlir::Value orOp = emitX86MaskLogic<cir::OrOp>(builder, loc, ops);
     mlir::Value cmp =
         cir::CmpOp::create(builder, loc, cir::CmpOpKind::eq, orOp, allZerosOp);

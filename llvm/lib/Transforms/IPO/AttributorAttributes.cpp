@@ -4035,7 +4035,7 @@ struct AANoAliasReturned final : AANoAliasImpl {
 
     auto CheckReturnValue = [&](Value &RV) -> bool {
       if (Constant *C = dyn_cast<Constant>(&RV))
-        if (C->isNullValue() || isa<UndefValue>(C))
+        if (C->isZeroValue() || isa<UndefValue>(C))
           return true;
 
       /// For now, we can only deduce noalias if we have call sites.
@@ -10048,7 +10048,7 @@ struct AAPotentialConstantValuesFloating : AAPotentialConstantValuesImpl {
     bool OnlyLeft = false, OnlyRight = false;
     if (C && *C && (*C)->isOneValue())
       OnlyLeft = true;
-    else if (C && *C && (*C)->isNullValue())
+    else if (C && *C && (*C)->isZeroValue())
       OnlyRight = true;
 
     bool LHSContainsUndef = false, RHSContainsUndef = false;

@@ -108,7 +108,7 @@ static Value *simplifyShiftSelectingPackedElement(Instruction *I,
   IRBuilderBase::InsertPointGuard Guard(IC.Builder);
   IC.Builder.SetInsertPoint(I);
   Value *ShrAmtZ =
-      IC.Builder.CreateICmpEQ(ShrAmt, Constant::getNullValue(ShrAmt->getType()),
+      IC.Builder.CreateICmpEQ(ShrAmt, Constant::getZeroValue(ShrAmt->getType()),
                               ShrAmt->getName() + ".z");
   // There is no existing !prof metadata we can derive the !prof metadata for
   // this select.
@@ -1049,7 +1049,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
         if (DemandedMask.isSubsetOf(Known.Zero) &&
             !match(I->getOperand(1), m_Zero()))
           return replaceOperand(
-              *I, 1, Constant::getNullValue(I->getOperand(1)->getType()));
+              *I, 1, Constant::getZeroValue(I->getOperand(1)->getType()));
 
         // Mask in demanded space does nothing.
         // NOTE: We may have attributes associated with the return value of the
@@ -1820,8 +1820,8 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
       for (unsigned i = 0; i < VWidth; i++) {
         Constant *CElt = CV->getAggregateElement(i);
 
-        // isNullValue() always returns false when called on a ConstantExpr.
-        if (CElt->isNullValue())
+        // isZeroValue() always returns false when called on a ConstantExpr.
+        if (CElt->isZeroValue())
           DemandedLHS.clearBit(i);
         else if (CElt->isOneValue())
           DemandedRHS.clearBit(i);
@@ -1915,7 +1915,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
       if (auto *CMask = dyn_cast<Constant>(II->getOperand(1))) {
         for (unsigned i = 0; i < VWidth; i++) {
           if (Constant *CElt = CMask->getAggregateElement(i)) {
-            if (CElt->isNullValue())
+            if (CElt->isZeroValue())
               DemandedPtrs.clearBit(i);
             else if (CElt->isAllOnesValue())
               DemandedPassThrough.clearBit(i);
@@ -2029,7 +2029,7 @@ static Constant *getFPClassConstant(Type *Ty, FPClassTest Mask,
     return PoisonValue::get(Ty);
 
   if (Mask == fcPosZero)
-    return Constant::getNullValue(Ty);
+    return Constant::getZeroValue(Ty);
 
   // TODO: Support aggregate types that are allowed by FPMathOperator.
   if (Ty->isAggregateType())

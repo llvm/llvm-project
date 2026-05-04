@@ -61,7 +61,7 @@ bool VNCoercion::canCoerceMustAliasedValueToLoad(Value *StoredVal, Type *LoadTy,
     // an array w/null.  Despite non-integral pointers not generally having a
     // specific bit pattern, we do assume null is zero.
     if (auto *CI = dyn_cast<Constant>(StoredVal))
-      return CI->isNullValue();
+      return CI->isZeroValue();
     return false;
   } else if (StoredNI && LoadNI &&
              StoredTy->getPointerAddressSpace() !=

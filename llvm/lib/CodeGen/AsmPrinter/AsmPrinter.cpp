@@ -3653,7 +3653,7 @@ void AsmPrinter::preprocessXXStructorList(const DataLayout &DL,
   // Gather the structors in a form that's convenient for sorting by priority.
   for (Value *O : cast<ConstantArray>(List)->operands()) {
     auto *CS = cast<ConstantStruct>(O);
-    if (CS->getOperand(1)->isNullValue())
+    if (CS->getOperand(1)->isZeroValue())
       break; // Found a null terminator, skip the rest.
     ConstantInt *Priority = dyn_cast<ConstantInt>(CS->getOperand(0));
     if (!Priority)
@@ -3662,7 +3662,7 @@ void AsmPrinter::preprocessXXStructorList(const DataLayout &DL,
     Structor &S = Structors.back();
     S.Priority = Priority->getLimitedValue(65535);
     S.Func = CS->getOperand(1);
-    if (!CS->getOperand(2)->isNullValue()) {
+    if (!CS->getOperand(2)->isZeroValue()) {
       if (TM.getTargetTriple().isOSAIX()) {
         CS->getContext().emitError(
             "associated data of XXStructor list is not yet supported on AIX");
@@ -3861,7 +3861,7 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV,
                                         uint64_t Offset) {
   MCContext &Ctx = OutContext;
 
-  if (CV->isNullValue() || isa<UndefValue>(CV))
+  if (CV->isZeroValue() || isa<UndefValue>(CV))
     return MCConstantExpr::create(0, Ctx);
 
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(CV))

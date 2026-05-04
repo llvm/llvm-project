@@ -75,18 +75,16 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to LLVM infrastructure
 
-* Removed ``Constant::isZeroValue``. It was functionally identical to
-  ``Constant::isNullValue`` for all types except floating-point negative
-  zero. All callers should use ``isNullValue`` instead. ``isZeroValue``
-  will be reintroduced in the future with bitwise-all-zeros semantics
-  to support non-zero null pointers.
-
 * Added support for specifying the null pointer bit representation per
   address space in `DataLayout`. Pointer specifications (`p`) accept new
   flags: `z` (null is all-zeros) and `o` (null is all-ones). Address
   spaces without an explicit flag default to all-zeros. See the
   `DataLayout` section of the
   [LangRef](https://llvm.org/docs/LangRef.html#data-layout) for details.
+
+* Renamed `isNullValue` and `getNullValue` to `isZeroValue` and `getZeroValue`.
+  A variant of null value check will be introduced back after the semantics of
+  `ConstantPointerNull` is changed.
 
 * Removed TypePromoteFloat legalization from SelectionDAG
 

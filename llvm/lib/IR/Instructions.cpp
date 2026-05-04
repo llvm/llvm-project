@@ -1907,7 +1907,7 @@ Constant *ShuffleVectorInst::convertShuffleMaskForBitcode(ArrayRef<int> Mask,
     assert(all_equal(Mask) && "Unexpected shuffle");
     Type *VecTy = VectorType::get(Int32Ty, Mask.size(), true);
     if (Mask[0] == 0)
-      return Constant::getNullValue(VecTy);
+      return Constant::getZeroValue(VecTy);
     return PoisonValue::get(VecTy);
   }
   SmallVector<Constant *, 16> MaskConst;

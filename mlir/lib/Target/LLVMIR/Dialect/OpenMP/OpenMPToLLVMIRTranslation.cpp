@@ -7492,7 +7492,7 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
 
     // Append a null entry for the implicit dyn_ptr argument so the argument
     // count sent to the runtime already includes it.
-    auto *nullPtr = llvm::Constant::getNullValue(builder.getPtrTy());
+    auto *nullPtr = llvm::Constant::getZeroValue(builder.getPtrTy());
     combinedInfos.BasePointers.push_back(nullPtr);
     combinedInfos.Pointers.push_back(nullPtr);
     combinedInfos.DevicePointers.push_back(

@@ -20107,7 +20107,7 @@ SITargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
         // Atomic sub/or/xor do not work over PCI express, but atomic add
         // does. InstCombine transforms these with 0 to or, so undo that.
         if (const Constant *ConstVal = dyn_cast<Constant>(RMW->getValOperand());
-            ConstVal && ConstVal->isNullValue())
+            ConstVal && ConstVal->isZeroValue())
           return AtomicExpansionKind::CustomExpand;
       }
 
@@ -20678,7 +20678,7 @@ void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
   if (Op == AtomicRMWInst::Sub || Op == AtomicRMWInst::Or ||
       Op == AtomicRMWInst::Xor) {
     if (const auto *ConstVal = dyn_cast<Constant>(AI->getValOperand());
-        ConstVal && ConstVal->isNullValue()) {
+        ConstVal && ConstVal->isZeroValue()) {
       // atomicrmw or %ptr, 0 -> atomicrmw add %ptr, 0
       AI->setOperation(AtomicRMWInst::Add);
 

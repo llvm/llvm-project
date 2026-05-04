@@ -382,7 +382,7 @@ Register AArch64FastISel::materializeInt(const ConstantInt *CI, MVT VT) {
 Register AArch64FastISel::materializeFP(const ConstantFP *CFP, MVT VT) {
   // Positive zero (+0.0) has to be materialized with a fmov from the zero
   // register, because the immediate version of fmov cannot encode zero.
-  if (CFP->isNullValue())
+  if (CFP->isZeroValue())
     return fastMaterializeFloatZero(CFP);
 
   if (VT != MVT::f32 && VT != MVT::f64)
@@ -553,7 +553,7 @@ Register AArch64FastISel::fastMaterializeConstant(const Constant *C) {
 }
 
 Register AArch64FastISel::fastMaterializeFloatZero(const ConstantFP *CFP) {
-  assert(CFP->isNullValue() &&
+  assert(CFP->isZeroValue() &&
          "Floating-point constant is not a positive zero.");
   MVT VT;
   if (!isTypeLegal(CFP->getType(), VT))
@@ -1216,7 +1216,7 @@ Register AArch64FastISel::emitAddSub(bool UseAdd, MVT RetVT, const Value *LHS,
       ResultReg = emitAddSub_ri(UseAdd, RetVT, LHSReg, Imm, SetFlags,
                                 WantResult);
   } else if (const auto *C = dyn_cast<Constant>(RHS))
-    if (C->isNullValue())
+    if (C->isZeroValue())
       ResultReg = emitAddSub_ri(UseAdd, RetVT, LHSReg, 0, SetFlags, WantResult);
 
   if (ResultReg)
@@ -2290,10 +2290,10 @@ bool AArch64FastISel::emitCompareAndBranch(const CondBrInst *BI) {
     return false;
   case CmpInst::ICMP_EQ:
   case CmpInst::ICMP_NE:
-    if (isa<Constant>(LHS) && cast<Constant>(LHS)->isNullValue())
+    if (isa<Constant>(LHS) && cast<Constant>(LHS)->isZeroValue())
       std::swap(LHS, RHS);
 
-    if (!isa<Constant>(RHS) || !cast<Constant>(RHS)->isNullValue())
+    if (!isa<Constant>(RHS) || !cast<Constant>(RHS)->isZeroValue())
       return false;
 
     if (const auto *AI = dyn_cast<BinaryOperator>(LHS))
@@ -2319,7 +2319,7 @@ bool AArch64FastISel::emitCompareAndBranch(const CondBrInst *BI) {
     break;
   case CmpInst::ICMP_SLT:
   case CmpInst::ICMP_SGE:
-    if (!isa<Constant>(RHS) || !cast<Constant>(RHS)->isNullValue())
+    if (!isa<Constant>(RHS) || !cast<Constant>(RHS)->isZeroValue())
       return false;
 
     TestBit = BW - 1;

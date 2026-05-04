@@ -513,7 +513,7 @@ Value *LoopIdiomVectorize::createMaskedFindMismatch(
   VectorIndexPhi->addIncoming(ExtStart, VectorLoopPreheaderBlock);
   Type *VectorLoadType =
       ScalableVectorType::get(Builder.getInt8Ty(), ByteCompareVF);
-  Value *Passthru = ConstantInt::getNullValue(VectorLoadType);
+  Value *Passthru = ConstantInt::getZeroValue(VectorLoadType);
 
   Value *VectorLhsGep =
       Builder.CreateGEP(LoadType, PtrA, VectorIndexPhi, "", GEPA->isInBounds());
@@ -1210,7 +1210,7 @@ Value *LoopIdiomVectorize::expandFindFirstByte(
   // Other common arguments.
   BasicBlock *Preheader = CurLoop->getLoopPreheader();
   LLVMContext &Ctx = Preheader->getContext();
-  Value *Passthru = ConstantInt::getNullValue(CharVTy);
+  Value *Passthru = ConstantInt::getZeroValue(CharVTy);
 
   // Split block in the original loop preheader.
   // SPH is the new preheader to the old scalar loop.
@@ -1283,7 +1283,7 @@ Value *LoopIdiomVectorize::expandFindFirstByte(
       Builder.CreatePtrToInt(SearchStart, I64Ty, "search_start_int");
   Value *ISearchEnd =
       Builder.CreatePtrToInt(SearchEnd, I64Ty, "search_end_int");
-  Value *SearchIdxInit = Constant::getNullValue(I64Ty);
+  Value *SearchIdxInit = Constant::getZeroValue(I64Ty);
   Value *SearchTripCount =
       Builder.CreateZExt(Builder.CreatePtrDiff(CharTy, SearchEnd, SearchStart,
                                                "search_trip_count"),
@@ -1292,7 +1292,7 @@ Value *LoopIdiomVectorize::expandFindFirstByte(
       Builder.CreatePtrToInt(NeedleStart, I64Ty, "needle_start_int");
   Value *INeedleEnd =
       Builder.CreatePtrToInt(NeedleEnd, I64Ty, "needle_end_int");
-  Value *NeedleIdxInit = Constant::getNullValue(I64Ty);
+  Value *NeedleIdxInit = Constant::getZeroValue(I64Ty);
   Value *NeedleTripCount =
       Builder.CreateZExt(Builder.CreatePtrDiff(CharTy, NeedleEnd, NeedleStart,
                                                "needle_trip_count"),
@@ -1334,7 +1334,7 @@ Value *LoopIdiomVectorize::expandFindFirstByte(
   Value *Search = Builder.CreateGEP(CharTy, SearchStart, SearchIdx, "psearch");
   Value *LoadSearch = Builder.CreateMaskedLoad(
       CharVTy, Search, Align(1), PredSearch, Passthru, "search_load_vec");
-  Value *MatchInit = Constant::getNullValue(PredVTy);
+  Value *MatchInit = Constant::getZeroValue(PredVTy);
   Builder.CreateBr(BB2);
   DTU.applyUpdates({{DominatorTree::Insert, BB1, BB2}});
 

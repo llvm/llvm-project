@@ -463,7 +463,7 @@ static mlir::Value lowerScalarToComplexCast(mlir::MLIRContext &ctx,
   builder.setInsertionPoint(op);
 
   mlir::Value src = op.getSrc();
-  mlir::Value imag = builder.getNullValue(src.getType(), op.getLoc());
+  mlir::Value imag = builder.getZeroValue(src.getType(), op.getLoc());
   return builder.createComplexCreate(op.getLoc(), src, imag);
 }
 

@@ -555,13 +555,13 @@ static bool expandProtectedFieldPtr(Function &Intr) {
       // pointer.
       if (auto *CI = dyn_cast<ICmpInst>(U.getUser())) {
         if (auto *Op = dyn_cast<Constant>(CI->getOperand(0))) {
-          if (Op->isNullValue()) {
+          if (Op->isZeroValue()) {
             CI->setOperand(1, Pointer);
             continue;
           }
         }
         if (auto *Op = dyn_cast<Constant>(CI->getOperand(1))) {
-          if (Op->isNullValue()) {
+          if (Op->isZeroValue()) {
             CI->setOperand(0, Pointer);
             continue;
           }

@@ -1549,7 +1549,7 @@ bool llvm::isNullOrNullSplat(const MachineInstr &MI,
   case TargetOpcode::G_IMPLICIT_DEF:
     return AllowUndefs;
   case TargetOpcode::G_CONSTANT:
-    return MI.getOperand(1).getCImm()->isNullValue();
+    return MI.getOperand(1).getCImm()->isZeroValue();
   case TargetOpcode::G_FCONSTANT: {
     const ConstantFP *FPImm = MI.getOperand(1).getFPImm();
     return FPImm->isZero() && !FPImm->isNegative();

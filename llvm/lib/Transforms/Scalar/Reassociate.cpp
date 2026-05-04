@@ -297,7 +297,7 @@ static BinaryOperator *LowerNegateToMultiply(Instruction *Neg) {
 
   BinaryOperator *Res =
       CreateMul(Neg->getOperand(OpNo), NegOne, "", Neg->getIterator(), Neg);
-  Neg->setOperand(OpNo, Constant::getNullValue(Ty)); // Drop use of op.
+  Neg->setOperand(OpNo, Constant::getZeroValue(Ty)); // Drop use of op.
   Res->takeName(Neg);
   Neg->replaceAllUsesWith(Res);
   Res->setDebugLoc(Neg->getDebugLoc());
@@ -966,7 +966,7 @@ static BinaryOperator *convertOrWithNoCommonBitsToAdd(Instruction *Or) {
 /// Return true if we should break up this subtract of X-Y into (X + -Y).
 static bool ShouldBreakUpSubtract(Instruction *Sub) {
   // If this is a negation, we can't split it up!
-  if (match(Sub, m_Neg(m_Value())) || match(Sub, m_FNeg(m_Value()))) 
+  if (match(Sub, m_Neg(m_Value())) || match(Sub, m_FNeg(m_Value())))
     return false;
 
   // Don't breakup X - undef.
@@ -1004,8 +1004,8 @@ static BinaryOperator *BreakUpSubtract(Instruction *Sub,
   Value *NegVal = NegateValue(Sub->getOperand(1), Sub, ToRedo);
   BinaryOperator *New =
       CreateAdd(Sub->getOperand(0), NegVal, "", Sub->getIterator(), Sub);
-  Sub->setOperand(0, Constant::getNullValue(Sub->getType())); // Drop use of op.
-  Sub->setOperand(1, Constant::getNullValue(Sub->getType())); // Drop use of op.
+  Sub->setOperand(0, Constant::getZeroValue(Sub->getType())); // Drop use of op.
+  Sub->setOperand(1, Constant::getZeroValue(Sub->getType())); // Drop use of op.
   New->takeName(Sub);
 
   // Everyone now refers to the add instruction.
@@ -1194,7 +1194,7 @@ static Value *OptimizeAndOrXor(unsigned Opcode,
       unsigned FoundX = FindInOperandList(Ops, i, X);
       if (FoundX != i) {
         if (Opcode == Instruction::And)   // ...&X&~X = 0
-          return Constant::getNullValue(X->getType());
+          return Constant::getZeroValue(X->getType());
 
         if (Opcode == Instruction::Or)    // ...|X|~X = -1
           return Constant::getAllOnesValue(X->getType());
@@ -1216,7 +1216,7 @@ static Value *OptimizeAndOrXor(unsigned Opcode,
       // Drop pairs of values for Xor.
       assert(Opcode == Instruction::Xor);
       if (e == 2)
-        return Constant::getNullValue(Ops[0].Op->getType());
+        return Constant::getZeroValue(Ops[0].Op->getType());
 
       // Y ^ X^X -> Y
       Ops.erase(Ops.begin()+i, Ops.begin()+i+2);
@@ -1550,7 +1550,7 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
     // Remove X and -X from the operand list.
     if (Ops.size() == 2 &&
         (match(TheOp, m_Neg(m_Value())) || match(TheOp, m_FNeg(m_Value()))))
-      return Constant::getNullValue(X->getType());
+      return Constant::getZeroValue(X->getType());
 
     // Remove X and ~X from the operand list.
     if (Ops.size() == 2 && match(TheOp, m_Not(m_Value())))

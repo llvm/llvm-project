@@ -55,7 +55,7 @@ static void appendToGlobalArray(StringRef ArrayName, Module &M, Function *F,
   CSVals[0] = IRB.getInt32(Priority);
   CSVals[1] = F;
   CSVals[2] = Data ? ConstantExpr::getPointerCast(Data, IRB.getPtrTy())
-                   : Constant::getNullValue(IRB.getPtrTy());
+                   : Constant::getZeroValue(IRB.getPtrTy());
   Constant *RuntimeCtorInit =
       ConstantStruct::get(EltTy, ArrayRef(CSVals, EltTy->getNumElements()));
 

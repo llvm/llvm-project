@@ -784,7 +784,7 @@ static Value *EmitSignBit(CodeGenFunction &CGF, Value *V) {
     IntTy = llvm::IntegerType::get(C, Width);
     V = CGF.Builder.CreateTrunc(V, IntTy);
   }
-  Value *Zero = llvm::Constant::getNullValue(IntTy);
+  Value *Zero = llvm::Constant::getZeroValue(IntTy);
   return CGF.Builder.CreateICmpSLT(V, Zero);
 }
 
@@ -1852,8 +1852,8 @@ Value *CodeGenFunction::EmitMSVCBuiltinExpr(MSVCIntrin BuiltinID,
     llvm::Type *IndexType = IndexAddress.getElementType();
     llvm::Type *ResultType = ConvertType(E->getType());
 
-    Value *ArgZero = llvm::Constant::getNullValue(ArgType);
-    Value *ResZero = llvm::Constant::getNullValue(ResultType);
+    Value *ArgZero = llvm::Constant::getZeroValue(ArgType);
+    Value *ResZero = llvm::Constant::getZeroValue(ResultType);
     Value *ResOne = llvm::ConstantInt::get(ResultType, 1);
 
     BasicBlock *Begin = Builder.GetInsertBlock();
@@ -2044,7 +2044,7 @@ Value *CodeGenFunction::EmitCheckedArgForBuiltin(const Expr *E,
   auto CheckHandler = SanitizerHandler::InvalidBuiltin;
   SanitizerDebugLocation SanScope(this, {CheckOrdinal}, CheckHandler);
   Value *Cond = Builder.CreateICmpNE(
-      ArgValue, llvm::Constant::getNullValue(ArgValue->getType()));
+      ArgValue, llvm::Constant::getZeroValue(ArgValue->getType()));
   EmitCheck(std::make_pair(Cond, CheckOrdinal), CheckHandler,
             {EmitCheckSourceLocation(E->getExprLoc()),
              llvm::ConstantInt::get(Builder.getInt8Ty(), Kind)},
@@ -2094,7 +2094,7 @@ static Value *EmitOverflowCheckedAbs(CodeGenFunction &CGF, const CallExpr *E,
 
   SanitizerDebugLocation SanScope(&CGF, Ordinals, CheckHandler);
 
-  Constant *Zero = Constant::getNullValue(ArgValue->getType());
+  Constant *Zero = Constant::getZeroValue(ArgValue->getType());
   Value *ResultAndOverflow = CGF.Builder.CreateBinaryIntrinsic(
       Intrinsic::ssub_with_overflow, Zero, ArgValue);
   Value *Result = CGF.Builder.CreateExtractValue(ResultAndOverflow, 0);
@@ -2386,7 +2386,7 @@ EmitCheckedMixedSignMultiply(CodeGenFunction &CGF, const clang::Expr *Op1,
     Unsigned = CGF.Builder.CreateZExt(Unsigned, Signed->getType(), "op.zext");
 
   llvm::Type *OpTy = Signed->getType();
-  llvm::Value *Zero = llvm::Constant::getNullValue(OpTy);
+  llvm::Value *Zero = llvm::Constant::getZeroValue(OpTy);
   Address ResultPtr = CGF.EmitPointerWithAlignment(ResultArg);
   llvm::Type *ResTy = CGF.getTypes().ConvertType(ResultQTy);
   unsigned OpWidth = std::max(Op1Info.Width, Op2Info.Width);
@@ -3397,7 +3397,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Function *F = CGM.getIntrinsic(Intrinsic::ctlz, ArgType);
 
     llvm::Type *ResultType = ConvertType(E->getType());
-    Value *Zero = llvm::Constant::getNullValue(ArgType);
+    Value *Zero = llvm::Constant::getZeroValue(ArgType);
     Value *IsNeg = Builder.CreateICmpSLT(ArgValue, Zero, "isneg");
     Value *Inverse = Builder.CreateNot(ArgValue, "not");
     Value *Tmp = Builder.CreateSelect(IsNeg, Inverse, ArgValue);
@@ -3438,7 +3438,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     if (!HasFallback)
       return RValue::get(Result);
 
-    Value *Zero = Constant::getNullValue(ArgType);
+    Value *Zero = Constant::getZeroValue(ArgType);
     Value *IsZero = Builder.CreateICmpEQ(ArgValue, Zero, "iszero");
     Value *FallbackValue = EmitScalarExpr(E->getArg(1));
     Value *ResultOrFallback =
@@ -3475,7 +3475,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     if (!HasFallback)
       return RValue::get(Result);
 
-    Value *Zero = Constant::getNullValue(ArgType);
+    Value *Zero = Constant::getZeroValue(ArgType);
     Value *IsZero = Builder.CreateICmpEQ(ArgValue, Zero, "iszero");
     Value *FallbackValue = EmitScalarExpr(E->getArg(1));
     Value *ResultOrFallback =
@@ -3495,7 +3495,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Value *Tmp =
         Builder.CreateAdd(Builder.CreateCall(F, {ArgValue, Builder.getTrue()}),
                           llvm::ConstantInt::get(ArgType, 1));
-    Value *Zero = llvm::Constant::getNullValue(ArgType);
+    Value *Zero = llvm::Constant::getZeroValue(ArgType);
     Value *IsZero = Builder.CreateICmpEQ(ArgValue, Zero, "iszero");
     Value *Result = Builder.CreateSelect(IsZero, Zero, Tmp, "ffs");
     if (Result->getType() != ResultType)
@@ -4606,7 +4606,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Value *IsNeg = EmitSignBit(*this, Arg);
 
     llvm::Type *IntTy = ConvertType(E->getType());
-    Value *Zero = Constant::getNullValue(IntTy);
+    Value *Zero = Constant::getZeroValue(IntTy);
     Value *One = ConstantInt::get(IntTy, 1);
     Value *NegativeOne = ConstantInt::getAllOnesValue(IntTy);
     Value *SignResult = Builder.CreateSelect(IsNeg, NegativeOne, One);
@@ -4649,8 +4649,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     // if (V==0) return FP_ZERO
     Builder.SetInsertPoint(Begin);
-    Value *IsZero = Builder.CreateFCmpOEQ(V, Constant::getNullValue(Ty),
-                                          "iszero");
+    Value *IsZero =
+        Builder.CreateFCmpOEQ(V, Constant::getZeroValue(Ty), "iszero");
     Value *ZeroLiteral = EmitScalarExpr(E->getArg(4));
     BasicBlock *NotZero = createBasicBlock("fpclassify_not_zero", this->CurFn);
     Builder.CreateCondBr(IsZero, End, NotZero);
@@ -4964,8 +4964,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     EmitBlock(Exit);
     PHINode *Ret = Builder.CreatePHI(Str->getType(), 3);
-    Ret->addIncoming(llvm::Constant::getNullValue(Str->getType()), Entry);
-    Ret->addIncoming(llvm::Constant::getNullValue(Str->getType()), Next);
+    Ret->addIncoming(llvm::Constant::getZeroValue(Str->getType()), Entry);
+    Ret->addIncoming(llvm::Constant::getZeroValue(Str->getType()), Next);
     Ret->addIncoming(FoundChr, CmpEq);
     return RValue::get(Ret);
   }
@@ -5340,7 +5340,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm::Type *ITy = llvm::IntegerType::get(getLLVMContext(),
                                              getContext().getTypeSize(ElTy));
     llvm::StoreInst *Store =
-        Builder.CreateStore(llvm::Constant::getNullValue(ITy), Ptr);
+        Builder.CreateStore(llvm::Constant::getZeroValue(ITy), Ptr);
     Store->setAtomic(llvm::AtomicOrdering::Release);
     return RValue::get(nullptr);
   }
@@ -5374,7 +5374,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       Args.add(RValue::get(EmitScalarExpr(E->getArg(1))),
                getContext().VoidPtrTy);
     else
-      Args.add(RValue::get(llvm::Constant::getNullValue(VoidPtrTy)),
+      Args.add(RValue::get(llvm::Constant::getZeroValue(VoidPtrTy)),
                getContext().VoidPtrTy);
     const CGFunctionInfo &FuncInfo =
         CGM.getTypes().arrangeBuiltinFunctionCall(E->getType(), Args);
@@ -6915,7 +6915,7 @@ RValue CodeGenFunction::EmitBuiltinIsAligned(const CallExpr *E) {
         Builder.CreateBitOrPointerCast(Args.Src, Args.IntType, "src_addr");
   return RValue::get(Builder.CreateICmpEQ(
       Builder.CreateAnd(SrcAddress, Args.Mask, "set_bits"),
-      llvm::Constant::getNullValue(Args.IntType), "is_aligned"));
+      llvm::Constant::getZeroValue(Args.IntType), "is_aligned"));
 }
 
 /// Generate (x & ~(y-1)) to align down or ((x+(y-1)) & ~(y-1)) to align up.

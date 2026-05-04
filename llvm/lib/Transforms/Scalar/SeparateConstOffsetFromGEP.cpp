@@ -813,7 +813,7 @@ ConstantOffsetExtractor::distributeCastsAndCloneChain(unsigned ChainIndex) {
 Value *ConstantOffsetExtractor::removeConstOffset(unsigned ChainIndex) {
   if (ChainIndex == 0) {
     assert(isa<ConstantInt>(UserChain[ChainIndex]));
-    return ConstantInt::getNullValue(UserChain[ChainIndex]->getType());
+    return ConstantInt::getZeroValue(UserChain[ChainIndex]->getType());
   }
 
   BinaryOperator *BO = cast<BinaryOperator>(UserChain[ChainIndex]);

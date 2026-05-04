@@ -317,7 +317,7 @@ static void emitNullBaseClassInitialization(CIRGenFunction &cgf,
   // TODO: isZeroInitializable can be over-conservative in the case where a
   // virtual base contains a member pointer.
   mlir::TypedAttr nullConstantForBase = cgf.cgm.emitNullConstantForBase(base);
-  if (!cgf.getBuilder().isNullValue(nullConstantForBase)) {
+  if (!cgf.getBuilder().isZeroValue(nullConstantForBase)) {
     cgf.cgm.errorNYI(
         base->getSourceRange(),
         "emitNullBaseClassInitialization: base constant is not null");

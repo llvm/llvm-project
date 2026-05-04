@@ -3599,7 +3599,7 @@ SDValue NVPTXTargetLowering::LowerVAARG(SDValue Op, SelectionDAG &DAG) const {
   Tmp1 = DAG.getStore(VAListLoad.getValue(1), DL, Tmp1, Tmp2,
                       MachinePointerInfo(V));
 
-  const Value *SrcV = Constant::getNullValue(
+  const Value *SrcV = Constant::getZeroValue(
       PointerType::get(*DAG.getContext(), ADDRESS_SPACE_LOCAL));
 
   // Load the actual argument out of the pointer VAList

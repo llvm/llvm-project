@@ -444,7 +444,7 @@ pushTemporaryCleanup(CodeGenFunction &CGF, const MaterializeTemporaryExpr *M,
             ReferenceTemporary, E->getType(), CodeGenFunction::destroyCXXObject,
             CGF.getLangOpts().Exceptions,
             dyn_cast_or_null<VarDecl>(M->getExtendingDecl()));
-        CleanupArg = llvm::Constant::getNullValue(CGF.Int8PtrTy);
+        CleanupArg = llvm::Constant::getZeroValue(CGF.Int8PtrTy);
       } else {
         CleanupFn = CGF.CGM.getAddrAndTypeOfCXXStructor(
             GlobalDecl(ReferenceTemporaryDtor, Dtor_Complete));
@@ -830,7 +830,7 @@ void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
 
       // Degenerate case: new X[0] does not need an objectsize check.
       llvm::Constant *ConstantSize = dyn_cast<llvm::Constant>(Size);
-      if (!ConstantSize || !ConstantSize->isNullValue()) {
+      if (!ConstantSize || !ConstantSize->isZeroValue()) {
         // The glvalue must refer to a large enough storage region.
         // FIXME: If Address Sanitizer is enabled, insert dynamic
         // instrumentation
@@ -1607,7 +1607,7 @@ llvm::Value *CodeGenFunction::EmitNonNullRValueCheck(RValue RV, QualType T) {
   llvm::Value *V = RV.getScalarVal();
   if (auto MPT = T->getAs<MemberPointerType>())
     return CGM.getCXXABI().EmitMemberPointerIsNotNull(*this, V, MPT);
-  return Builder.CreateICmpNE(V, llvm::Constant::getNullValue(V->getType()));
+  return Builder.CreateICmpNE(V, llvm::Constant::getZeroValue(V->getType()));
 }
 
 RValue CodeGenFunction::GetUndefRValue(QualType Ty) {
@@ -2294,7 +2294,7 @@ llvm::Value *CodeGenFunction::EmitFromMemory(llvm::Value *Value, QualType Ty) {
   bool HasBoolRep = Ty->hasBooleanRepresentation() || Ty->isExtVectorBoolType();
   if (HasBoolRep && CGM.getCodeGenOpts().isConvertingBoolWithCmp0()) {
     return Builder.CreateICmpNE(
-        Value, llvm::Constant::getNullValue(Value->getType()), "loadedv");
+        Value, llvm::Constant::getZeroValue(Value->getType()), "loadedv");
   }
   if (HasBoolRep || Ty->isBitIntType())
     return Builder.CreateTrunc(Value, ResTy, "loadedv");
@@ -2677,7 +2677,7 @@ RValue CodeGenFunction::EmitLoadOfExtVectorElementLValue(LValue LV) {
   // IR value to a vector here allows the rest of codegen to behave as normal.
   if (getLangOpts().HLSL && !Vec->getType()->isVectorTy()) {
     llvm::Type *DstTy = llvm::FixedVectorType::get(Vec->getType(), 1);
-    llvm::Value *Zero = llvm::Constant::getNullValue(CGM.Int64Ty);
+    llvm::Value *Zero = llvm::Constant::getZeroValue(CGM.Int64Ty);
     Vec = Builder.CreateInsertElement(DstTy, Vec, Zero, "cast.splat");
   }
 
@@ -2698,7 +2698,7 @@ RValue CodeGenFunction::EmitLoadOfExtVectorElementLValue(LValue LV) {
       if (LV.getType()->hasBooleanRepresentation() &&
           CGM.getCodeGenOpts().isConvertingBoolWithCmp0())
         Element = Builder.CreateICmpNE(
-            Element, llvm::Constant::getNullValue(Element->getType()));
+            Element, llvm::Constant::getZeroValue(Element->getType()));
       else
         Element = Builder.CreateTrunc(Element, LVTy);
     }
@@ -2718,7 +2718,7 @@ RValue CodeGenFunction::EmitLoadOfExtVectorElementLValue(LValue LV) {
   if (LV.getType()->isExtVectorBoolType()) {
     if (CGM.getCodeGenOpts().isConvertingBoolWithCmp0())
       Vec = Builder.CreateICmpNE(Vec,
-                                 llvm::Constant::getNullValue(Vec->getType()));
+                                 llvm::Constant::getZeroValue(Vec->getType()));
     else
       Vec = Builder.CreateTrunc(Vec, ConvertType(LV.getType()), "truncv");
   }
@@ -4073,7 +4073,7 @@ llvm::Constant *CodeGenFunction::EmitCheckSourceLocation(SourceLocation Loc) {
     Line = PLoc.getLine();
     Column = PLoc.getColumn();
   } else {
-    Filename = llvm::Constant::getNullValue(Int8PtrTy);
+    Filename = llvm::Constant::getZeroValue(Int8PtrTy);
     Line = Column = 0;
   }
 
@@ -5290,7 +5290,7 @@ LValue CodeGenFunction::EmitArraySectionExpr(const ArraySectionExpr *E,
           EmitScalarExpr(LowerBound), IntPtrTy,
           LowerBound->getType()->hasSignedIntegerRepresentation());
     } else
-      Idx = llvm::ConstantInt::getNullValue(IntPtrTy);
+      Idx = llvm::ConstantInt::getZeroValue(IntPtrTy);
   } else {
     // Try to emit length or lower bound as constant. If this is possible, 1
     // is subtracted from constant length or lower bound. Otherwise, emit LLVM

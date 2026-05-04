@@ -1673,7 +1673,7 @@ bool VectorCombine::foldSelectsFromBitcast(Instruction &I) {
 
     Builder.SetInsertPoint(InsertPt);
     Value *VecSel =
-        Builder.CreateSelect(Cond, SrcVec, Constant::getNullValue(SrcVecTy));
+        Builder.CreateSelect(Cond, SrcVec, Constant::getZeroValue(SrcVecTy));
     Value *NewBC = Builder.CreateBitCast(VecSel, DstVecTy);
 
     // Replace each scalar select with an extract from the new bitcast.
@@ -4718,7 +4718,7 @@ bool VectorCombine::foldICmpEqZeroVectorReduce(Instruction &I) {
   Type *Ty = XTy->getScalarType();
   Value *NewReduce = Builder.CreateIntrinsic(Ty, II->getIntrinsicID(), {X});
   Value *NewCmp =
-      Builder.CreateICmp(Pred, NewReduce, ConstantInt::getNullValue(Ty));
+      Builder.CreateICmp(Pred, NewReduce, ConstantInt::getZeroValue(Ty));
   replaceValue(I, *NewCmp);
   return true;
 }

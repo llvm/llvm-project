@@ -90,7 +90,7 @@ public:
       // silly, e.g. storing the address of the alloca somewhere and using it
       // later.  Since this is undefined, we'll just make it be null.
       if (!Tmp->use_empty())
-        Tmp->replaceAllUsesWith(Constant::getNullValue(Tmp->getType()));
+        Tmp->replaceAllUsesWith(Constant::getZeroValue(Tmp->getType()));
   }
 
   /// Evaluate a call to function F, returning true if successful, false if we

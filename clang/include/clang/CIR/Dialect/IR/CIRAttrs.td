@@ -315,7 +315,7 @@ def CIR_IntAttr : CIR_ValueLikeAttr<"Int", "int"> {
   let extraClassDeclaration = [{
     int64_t getSInt() const;
     uint64_t getUInt() const;
-    bool isNullValue() const;
+    bool isZeroValue() const;
     bool isSigned() const;
     bool isUnsigned() const;
     uint64_t getBitWidth() const;
@@ -328,7 +328,7 @@ def CIR_IntAttr : CIR_ValueLikeAttr<"Int", "int"> {
     uint64_t $cppClass::getUInt() const {
       return getValue().getZExtValue();
     }
-    bool $cppClass::isNullValue() const {
+    bool $cppClass::isZeroValue() const {
       return getValue() == 0;
     }
     bool $cppClass::isSigned() const {
@@ -521,7 +521,7 @@ def CIR_ConstPtrAttr : CIR_ValueLikeAttr<"ConstPtr", "ptr"> {
     }]>
   ];
   let extraClassDeclaration = [{
-    bool isNullValue() const { return getValue().getInt() == 0; }
+    bool isZeroValue() const { return getValue().getInt() == 0; }
   }];
 
   let assemblyFormat = [{
@@ -1009,7 +1009,7 @@ def CIR_TargetAddressSpaceAttr : CIR_Attr< "TargetAddressSpace",
     The TargetAddressSpaceAttr represents a target-specific numeric address space,
     corresponding to the LLVM IR `addrspace` qualifier and the clang
      `address_space` attribute.
-    
+
     A value of zero represents the default address space. The semantics of non-zero
     address spaces are target-specific.
 

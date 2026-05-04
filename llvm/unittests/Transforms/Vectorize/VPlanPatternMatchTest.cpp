@@ -71,7 +71,7 @@ TEST_F(VPPatternMatchTest, GetElementPtr) {
   VPValue *One = Plan.getOrAddLiveIn(ConstantInt::get(I64Ty, 1));
   VPValue *Two = Plan.getOrAddLiveIn(ConstantInt::get(I64Ty, 2));
   VPValue *Ptr =
-      Plan.getOrAddLiveIn(Constant::getNullValue(PointerType::get(C, 0)));
+      Plan.getOrAddLiveIn(Constant::getZeroValue(PointerType::get(C, 0)));
 
   VPInstruction *PtrAdd = Builder.createPtrAdd(Ptr, One);
   VPInstruction *WidePtrAdd = Builder.createWidePtrAdd(Ptr, Two);

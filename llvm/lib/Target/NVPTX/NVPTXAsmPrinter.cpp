@@ -1022,7 +1022,7 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
           (GVar->getAddressSpace() == ADDRESS_SPACE_CONST)) {
         const Constant *Initializer = GVar->getInitializer();
         // 'undef' is treated as there is no value specified.
-        if (!Initializer->isNullValue() && !isa<UndefValue>(Initializer)) {
+        if (!Initializer->isZeroValue() && !isa<UndefValue>(Initializer)) {
           O << " = ";
           printScalarConstant(Initializer, O);
         }
@@ -1030,7 +1030,7 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
         // The frontend adds zero-initializer to device and constant variables
         // that don't have an initial value, and UndefValue to shared
         // variables, so skip warning for this case.
-        if (!GVar->getInitializer()->isNullValue() &&
+        if (!GVar->getInitializer()->isZeroValue() &&
             !isa<UndefValue>(GVar->getInitializer())) {
           report_fatal_error("initial value of '" + GVar->getName() +
                              "' is not allowed in addrspace(" +
@@ -1056,7 +1056,7 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
            (GVar->getAddressSpace() == ADDRESS_SPACE_CONST)) &&
           GVar->hasInitializer()) {
         const Constant *Initializer = GVar->getInitializer();
-        if (!isa<UndefValue>(Initializer) && !Initializer->isNullValue()) {
+        if (!isa<UndefValue>(Initializer) && !Initializer->isZeroValue()) {
           AggBuffer aggBuffer(ElementSize, *this);
           bufferAggregateConstant(Initializer, &aggBuffer);
           if (aggBuffer.numSymbols()) {
@@ -1626,7 +1626,7 @@ void NVPTXAsmPrinter::bufferLEByte(const Constant *CPV, int Bytes,
                                    AggBuffer *AggBuffer) {
   const DataLayout &DL = getDataLayout();
   int AllocSize = DL.getTypeAllocSize(CPV->getType());
-  if (isa<UndefValue>(CPV) || CPV->isNullValue()) {
+  if (isa<UndefValue>(CPV) || CPV->isZeroValue()) {
     // Non-zero Bytes indicates that we need to zero-fill everything. Otherwise,
     // only the space allocated by CPV.
     AggBuffer->addZeros(Bytes ? Bytes : AllocSize);
@@ -1819,7 +1819,7 @@ void NVPTXAsmPrinter::bufferAggregateConstVec(const ConstantVector *CV,
 
     // Optionally pad with zeros.
     if (NumPaddingZeros)
-      SubCVElems.append(NumPaddingZeros, ConstantInt::getNullValue(ElemTy));
+      SubCVElems.append(NumPaddingZeros, ConstantInt::getZeroValue(ElemTy));
 
     auto SubCV = ConstantVector::get(SubCVElems);
     Type *Int8Ty = IntegerType::get(SubCV->getContext(), 8);
@@ -1860,7 +1860,7 @@ NVPTXAsmPrinter::lowerConstantForGV(const Constant *CV,
                                     bool ProcessingGeneric) const {
   MCContext &Ctx = OutContext;
 
-  if (CV->isNullValue() || isa<UndefValue>(CV))
+  if (CV->isZeroValue() || isa<UndefValue>(CV))
     return MCConstantExpr::create(0, Ctx);
 
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(CV))

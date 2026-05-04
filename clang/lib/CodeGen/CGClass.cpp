@@ -378,7 +378,7 @@ Address CodeGenFunction::GetAddressOfBaseClass(
 
     llvm::PHINode *PHI = Builder.CreatePHI(PtrTy, 2, "cast.result");
     PHI->addIncoming(Value.emitRawPointer(*this), notNullBB);
-    PHI->addIncoming(llvm::Constant::getNullValue(PtrTy), origBB);
+    PHI->addIncoming(llvm::Constant::getZeroValue(PtrTy), origBB);
     Value = Value.withPointer(PHI, NotKnownNonNull);
   }
 
@@ -435,7 +435,7 @@ Address CodeGenFunction::GetAddressOfDerivedClass(
     llvm::Value *Value = Addr.emitRawPointer(*this);
     llvm::PHINode *PHI = Builder.CreatePHI(Value->getType(), 2);
     PHI->addIncoming(Value, CastNotNull);
-    PHI->addIncoming(llvm::Constant::getNullValue(Value->getType()), CastNull);
+    PHI->addIncoming(llvm::Constant::getZeroValue(Value->getType()), CastNull);
     return Address(PHI, Addr.getElementType(),
                    CGM.getClassPointerAlignment(Derived));
   }

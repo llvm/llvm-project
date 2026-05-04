@@ -132,7 +132,7 @@ emitRVVPseudoUnaryBuiltin(CodeGenFunction *CGF, const CallExpr *E,
       Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
   }
   auto ElemTy = cast<llvm::VectorType>(ResultType)->getElementType();
-  Ops.insert(Ops.begin() + 2, llvm::Constant::getNullValue(ElemTy));
+  Ops.insert(Ops.begin() + 2, llvm::Constant::getZeroValue(ElemTy));
   if (IsMasked) {
     Ops.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
     // maskedoff, op1, op2, mask, vl, policy
@@ -233,7 +233,7 @@ emitRVVPseudoVWCVTBuiltin(CodeGenFunction *CGF, const CallExpr *E,
       Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
   }
   auto ElemTy = cast<llvm::VectorType>(Ops[1]->getType())->getElementType();
-  Ops.insert(Ops.begin() + 2, llvm::Constant::getNullValue(ElemTy));
+  Ops.insert(Ops.begin() + 2, llvm::Constant::getZeroValue(ElemTy));
   if (IsMasked) {
     Ops.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
     // maskedoff, op1, op2, mask, vl, policy
@@ -263,7 +263,7 @@ emitRVVPseudoVNCVTBuiltin(CodeGenFunction *CGF, const CallExpr *E,
       Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
   }
   Ops.insert(Ops.begin() + 2,
-             llvm::Constant::getNullValue(Ops.back()->getType()));
+             llvm::Constant::getZeroValue(Ops.back()->getType()));
   if (IsMasked) {
     Ops.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
     // maskedoff, op1, xlen, mask, vl

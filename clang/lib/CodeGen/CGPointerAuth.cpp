@@ -444,7 +444,7 @@ CodeGenModule::getConstantSignedPointer(llvm::Constant *Pointer, unsigned Key,
     assert(StorageAddress->getType() == DefaultPtrTy);
     AddressDiscriminator = StorageAddress;
   } else {
-    AddressDiscriminator = llvm::Constant::getNullValue(DefaultPtrTy);
+    AddressDiscriminator = llvm::Constant::getZeroValue(DefaultPtrTy);
   }
 
   llvm::ConstantInt *IntegerDiscriminator;
@@ -458,7 +458,7 @@ CodeGenModule::getConstantSignedPointer(llvm::Constant *Pointer, unsigned Key,
   return llvm::ConstantPtrAuth::get(
       Pointer, llvm::ConstantInt::get(Int32Ty, Key), IntegerDiscriminator,
       AddressDiscriminator,
-      /*DeactivationSymbol=*/llvm::Constant::getNullValue(DefaultPtrTy));
+      /*DeactivationSymbol=*/llvm::Constant::getZeroValue(DefaultPtrTy));
 }
 
 /// Does a given PointerAuthScheme require us to sign a value

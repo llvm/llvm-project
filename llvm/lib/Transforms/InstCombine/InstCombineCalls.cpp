@@ -498,7 +498,7 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
     // If zero is poison, then the input can be assumed to be "true", so the
     // instruction simplifies to "false".
     assert(match(Op1, m_One()) && "Expected ctlz/cttz operand to be 0 or 1");
-    return IC.replaceInstUsesWith(II, ConstantInt::getNullValue(II.getType()));
+    return IC.replaceInstUsesWith(II, ConstantInt::getZeroValue(II.getType()));
   }
 
   // If ctlz/cttz is only used as a shift amount, set is_zero_poison to true.
@@ -711,7 +711,7 @@ static Instruction *foldCtpop(IntrinsicInst &II, InstCombinerImpl &IC) {
   if (IC.isKnownToBeAPowerOfTwo(Op0, /* OrZero */ true))
     return CastInst::Create(Instruction::ZExt,
                             IC.Builder.CreateICmp(ICmpInst::ICMP_NE, Op0,
-                                                  Constant::getNullValue(Ty)),
+                                                  Constant::getZeroValue(Ty)),
                             Ty);
 
   // Add range attribute since known bits can't completely reflect what we know.
@@ -815,7 +815,7 @@ static Instruction *simplifyNeonTbl(IntrinsicInst &II, InstCombiner &IC,
       } else {
         // Otherwise, choose some element from the dummy vector of zeroes (we'll
         // always choose the first).
-        SourceOperand = Constant::getNullValue(SourceTy);
+        SourceOperand = Constant::getZeroValue(SourceTy);
         SourceOperandElementIndex = 0;
       }
     } else {
@@ -2089,7 +2089,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (match(I1, m_One())) {
       assert(II->getType()->getScalarSizeInBits() != 1 &&
              "Expected simplify of umin with max constant");
-      Value *Zero = Constant::getNullValue(I0->getType());
+      Value *Zero = Constant::getZeroValue(I0->getType());
       Value *Cmp = Builder.CreateICmpNE(I0, Zero);
       return CastInst::Create(Instruction::ZExt, Cmp, II->getType());
     }
@@ -2391,7 +2391,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       Type *Ty = II->getType();
       APInt SignBit = APInt::getSignMask(Ty->getScalarSizeInBits());
       return SelectInst::Create(X, ConstantInt::get(Ty, SignBit),
-                                ConstantInt::getNullValue(Ty));
+                                ConstantInt::getZeroValue(Ty));
     }
 
     if (Instruction *crossLogicOpFold =
@@ -3939,7 +3939,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
           cast<VectorType>(ReturnType)->isScalableTy() ? VScaleMin : 1;
       if (ExtractIdx * ScaleFactor >= ALMUpperBound->getZExtValue())
         return replaceInstUsesWith(CI,
-                                   ConstantVector::getNullValue(ReturnType));
+                                   ConstantVector::getZeroValue(ReturnType));
     }
 
     auto *DstTy = dyn_cast<VectorType>(ReturnType);
@@ -4299,7 +4299,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (match(II->getArgOperand(0), m_ExtractValue<0>(m_Value(X)))) {
       if (match(X, m_Intrinsic<Intrinsic::frexp>(m_Value()))) {
         X = Builder.CreateInsertValue(
-            X, Constant::getNullValue(II->getType()->getStructElementType(1)),
+            X, Constant::getZeroValue(II->getType()->getStructElementType(1)),
             1);
         return replaceInstUsesWith(*II, X);
       }
@@ -4314,7 +4314,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return replaceInstUsesWith(
           *II, Builder.CreateIntrinsic(
                    II->getType(), Intrinsic::get_active_lane_mask,
-                   {Constant::getNullValue(OpTy),
+                   {Constant::getZeroValue(OpTy),
                     ConstantInt::get(OpTy, Op1->usub_sat(*Op0))}));
     }
     break;
@@ -4834,7 +4834,7 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
       // CFG, just change the callee to a null pointer.
       cast<CallBase>(OldCall)->setCalledFunction(
           CalleeF->getFunctionType(),
-          Constant::getNullValue(CalleeF->getType()));
+          Constant::getZeroValue(CalleeF->getType()));
       return nullptr;
     }
   }
@@ -5205,7 +5205,7 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
   // If the function takes more arguments than the call was taking, add them
   // now.
   for (unsigned i = NumCommonArgs; i != FT->getNumParams(); ++i) {
-    Args.push_back(Constant::getNullValue(FT->getParamType(i)));
+    Args.push_back(Constant::getZeroValue(FT->getParamType(i)));
     ArgAttrs.push_back(AttributeSet());
   }
 

@@ -52,7 +52,7 @@ public:
     SmallVector<Value *, 4> ProcessedArgs;
     auto *Decl = Intrinsic::getOrInsertDeclaration(M.get(), ID);
     for (auto *Ty : Decl->getFunctionType()->params()) {
-      auto *Val = Constant::getNullValue(Ty);
+      auto *Val = Constant::getZeroValue(Ty);
       ProcessedArgs.push_back(Val);
     }
     return Builder.CreateCall(Decl, ProcessedArgs);
@@ -342,8 +342,8 @@ TEST_F(IntrinsicsTest, IRBuilderCreateIntrinsicVector) {
 
   Type *RetTy = FixedVectorType::get(Type::getInt32Ty(Context), 4);
   SmallVector<Value *, 2> Args;
-  Args.push_back(Constant::getNullValue(RetTy));
-  Args.push_back(Constant::getNullValue(RetTy));
+  Args.push_back(Constant::getZeroValue(RetTy));
+  Args.push_back(Constant::getZeroValue(RetTy));
 
   CallInst *CI = Builder.CreateIntrinsic(RetTy, Intrinsic::umax, Args);
 
@@ -360,7 +360,7 @@ TEST_F(IntrinsicsTest, IRBuilderCreateIntrinsicAddressSpace) {
 
   Type *RetTy = Type::getVoidTy(Context);
   SmallVector<Value *, 4> Args;
-  Args.push_back(Constant::getNullValue(
+  Args.push_back(Constant::getZeroValue(
       PointerType::get(Context, 1))); // ptr addrspace(1) null
   Args.push_back(ConstantInt::get(Type::getInt32Ty(Context), 0)); // rw
   Args.push_back(ConstantInt::get(Type::getInt32Ty(Context), 3)); // locality

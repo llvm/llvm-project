@@ -6573,7 +6573,7 @@ convertToComplexValue(CodeGenFunction &CGF, RValue Val, QualType SrcType,
     llvm::Value *ScalarVal = CGF.EmitScalarConversion(
         Val.getScalarVal(), SrcType, DestElementType, Loc);
     ComplexVal = CodeGenFunction::ComplexPairTy(
-        ScalarVal, llvm::Constant::getNullValue(ScalarVal->getType()));
+        ScalarVal, llvm::Constant::getZeroValue(ScalarVal->getType()));
   } else {
     assert(Val.isComplex() && "Must be a scalar or complex.");
     QualType SrcElementType = SrcType->castAs<ComplexType>()->getElementType();

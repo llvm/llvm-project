@@ -99,7 +99,7 @@ addConstantsToTrack(MachineFunction &MF, SPIRVGlobalRegistry *GR,
             if (SrcMI && (SrcMI->getOpcode() == TargetOpcode::G_CONSTANT ||
                           SrcMI->getOpcode() == TargetOpcode::G_IMPLICIT_DEF))
               TargetExtConstTypes[SrcMI] = Const->getType();
-            if (Const->isNullValue()) {
+            if (Const->isZeroValue()) {
               MachineBasicBlock &DepMBB = MF.front();
               MachineIRBuilder MIB(DepMBB, DepMBB.getFirstNonPHI());
               SPIRVTypeInst ExtType = GR->getOrCreateSPIRVType(

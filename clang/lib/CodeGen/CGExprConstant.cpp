@@ -49,7 +49,7 @@ llvm::Constant *getPadding(const CodeGenModule &CGM, CharUnits PadSize) {
   if (PadSize > CharUnits::One())
     Ty = llvm::ArrayType::get(Ty, PadSize.getQuantity());
   if (CGM.shouldZeroInitPadding()) {
-    return llvm::Constant::getNullValue(Ty);
+    return llvm::Constant::getZeroValue(Ty);
   }
   return llvm::UndefValue::get(Ty);
 }
@@ -254,7 +254,7 @@ bool ConstantAggregateBuilder::addBits(llvm::APInt Bits, uint64_t OffsetInBits,
       BitsThisChar &= UpdateMask;
 
       if (*FirstElemToUpdate == *LastElemToUpdate ||
-          Elems[*FirstElemToUpdate]->isNullValue() ||
+          Elems[*FirstElemToUpdate]->isZeroValue() ||
           isa<llvm::UndefValue>(Elems[*FirstElemToUpdate])) {
         // All existing bits are either zero or undef.
         add(llvm::ConstantInt::get(CGM.getLLVMContext(), BitsThisChar),
@@ -425,12 +425,12 @@ llvm::Constant *ConstantAggregateBuilder::buildFrom(
 
     bool CanEmitArray = true;
     llvm::Type *CommonType = Elems[0]->getType();
-    llvm::Constant *Filler = llvm::Constant::getNullValue(CommonType);
+    llvm::Constant *Filler = llvm::Constant::getZeroValue(CommonType);
     CharUnits ElemSize = Utils.getSize(ATy->getElementType());
     SmallVector<llvm::Constant*, 32> ArrayElements;
     for (size_t I = 0; I != Elems.size(); ++I) {
       // Skip zeroes; we'll use a zero value as our array filler.
-      if (Elems[I]->isNullValue())
+      if (Elems[I]->isZeroValue())
         continue;
 
       // All remaining elements must be the same type.
@@ -1086,10 +1086,10 @@ EmitArrayConstant(CodeGenModule &CGM, llvm::ArrayType *DesiredType,
                   llvm::Constant *Filler) {
   // Figure out how long the initial prefix of non-zero elements is.
   uint64_t NonzeroLength = ArrayBound;
-  if (Elements.size() < NonzeroLength && Filler->isNullValue())
+  if (Elements.size() < NonzeroLength && Filler->isZeroValue())
     NonzeroLength = Elements.size();
   if (NonzeroLength == Elements.size()) {
-    while (NonzeroLength > 0 && Elements[NonzeroLength - 1]->isNullValue())
+    while (NonzeroLength > 0 && Elements[NonzeroLength - 1]->isZeroValue())
       --NonzeroLength;
   }
 
@@ -1432,7 +1432,7 @@ public:
 
     // Copy initializer elements.
     SmallVector<llvm::Constant *, 16> Elts;
-    if (fillC && fillC->isNullValue())
+    if (fillC && fillC->isZeroValue())
       Elts.reserve(NumInitableElts + 1);
     else
       Elts.reserve(NumElements);
@@ -2704,7 +2704,7 @@ ConstantEmitter::tryEmitPrivate(const APValue &Value, QualType DestType,
 
     // Emit initializer elements.
     SmallVector<llvm::Constant*, 16> Elts;
-    if (Filler && Filler->isNullValue())
+    if (Filler && Filler->isZeroValue())
       Elts.reserve(NumInitElts + 1);
     else
       Elts.reserve(NumElements);
@@ -2855,7 +2855,7 @@ static llvm::Constant *EmitNullConstant(CodeGenModule &CGM,
   // Now go through all other fields and zero them out.
   for (unsigned i = 0; i != numElements; ++i) {
     if (!elements[i])
-      elements[i] = llvm::Constant::getNullValue(structure->getElementType(i));
+      elements[i] = llvm::Constant::getZeroValue(structure->getElementType(i));
   }
 
   return llvm::ConstantStruct::get(structure, elements);
@@ -2869,7 +2869,7 @@ static llvm::Constant *EmitNullConstantForBase(CodeGenModule &CGM,
 
   // Just zero out bases that don't have any pointer to data members.
   if (baseLayout.isZeroInitializableAsBase())
-    return llvm::Constant::getNullValue(baseType);
+    return llvm::Constant::getZeroValue(baseType);
 
   // Otherwise, we can just use its null constant.
   return EmitNullConstant(CGM, base, /*asCompleteObject=*/false);
@@ -2886,7 +2886,7 @@ llvm::Constant *CodeGenModule::EmitNullConstant(QualType T) {
         cast<llvm::PointerType>(getTypes().ConvertTypeForMem(T)), T);
 
   if (getTypes().isZeroInitializable(T))
-    return llvm::Constant::getNullValue(getTypes().ConvertTypeForMem(T));
+    return llvm::Constant::getZeroValue(getTypes().ConvertTypeForMem(T));
 
   if (const ConstantArrayType *CAT = Context.getAsConstantArrayType(T)) {
     llvm::ArrayType *ATy =

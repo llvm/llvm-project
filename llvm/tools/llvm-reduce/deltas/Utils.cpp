@@ -35,7 +35,7 @@ Value *llvm::getDefaultValue(Type *T) {
     return PoisonValue::get(TET);
   }
 
-  return Constant::getNullValue(T);
+  return Constant::getZeroValue(T);
 }
 
 bool llvm::hasAliasUse(Function &F) {

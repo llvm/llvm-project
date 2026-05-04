@@ -280,7 +280,7 @@ static Value *expandVecReduceAdd(CallInst *Orig, Intrinsic::ID IntrinsicId) {
   // Handle the initial start value for floating-point addition.
   if (IsFAdd) {
     Constant *StartValue = dyn_cast<Constant>(Orig->getOperand(0));
-    if (StartValue && !StartValue->isNullValue())
+    if (StartValue && !StartValue->isZeroValue())
       Sum = Builder.CreateFAdd(Sum, StartValue);
   }
 
@@ -1025,7 +1025,7 @@ static Value *expandSignIntrinsic(CallInst *Orig) {
   Type *Ty = X->getType();
   Type *ScalarTy = Ty->getScalarType();
   Type *RetTy = Orig->getType();
-  Constant *Zero = Constant::getNullValue(Ty);
+  Constant *Zero = Constant::getZeroValue(Ty);
 
   IRBuilder<> Builder(Orig);
 

@@ -347,11 +347,11 @@ int FunctionComparator::cmpConstants(const Constant *L,
 
   // OK, types are bitcastable, now check constant contents.
 
-  if (L->isNullValue() && R->isNullValue())
+  if (L->isZeroValue() && R->isZeroValue())
     return TypesRes;
-  if (L->isNullValue() && !R->isNullValue())
+  if (L->isZeroValue() && !R->isZeroValue())
     return 1;
-  if (!L->isNullValue() && R->isNullValue())
+  if (!L->isZeroValue() && R->isZeroValue())
     return -1;
 
   auto GlobalValueL = const_cast<GlobalValue *>(dyn_cast<GlobalValue>(L));

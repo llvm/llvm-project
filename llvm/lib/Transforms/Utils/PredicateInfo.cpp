@@ -744,7 +744,7 @@ std::optional<PredicateConstraint> PredicateBase::getConstraint() const {
 
     if (match(Condition, m_NUWTrunc(m_Specific(RenamedOp)))) {
       return {{TrueEdge ? CmpInst::ICMP_NE : CmpInst::ICMP_EQ,
-               ConstantInt::getNullValue(RenamedOp->getType())}};
+               ConstantInt::getZeroValue(RenamedOp->getType())}};
     }
 
     CmpInst *Cmp = dyn_cast<CmpInst>(Condition);

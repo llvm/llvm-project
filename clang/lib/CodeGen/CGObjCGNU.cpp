@@ -1528,7 +1528,7 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
         emptyStruct = llvm::StructType::create(
             VMContext, {}, ".objc_section_sentinel", /*isPacked=*/true);
       }
-      auto ZeroInit = llvm::Constant::getNullValue(emptyStruct);
+      auto ZeroInit = llvm::Constant::getZeroValue(emptyStruct);
       auto Sym = [&](StringRef Prefix, StringRef SecSuffix) {
         auto *Sym = new llvm::GlobalVariable(TheModule, emptyStruct,
             /*isConstant*/false,
@@ -3025,8 +3025,8 @@ CGObjCGNU::GenerateMessageSend(CodeGenFunction &CGF,
       nilPathBB = Builder.GetInsertBlock();
     }
 
-    llvm::Value *isNil = Builder.CreateICmpEQ(Receiver,
-            llvm::Constant::getNullValue(Receiver->getType()));
+    llvm::Value *isNil = Builder.CreateICmpEQ(
+        Receiver, llvm::Constant::getZeroValue(Receiver->getType()));
     Builder.CreateCondBr(isNil, nilCleanupBB ? nilCleanupBB : continueBB,
                          messageBB);
     CGF.EmitBlock(messageBB);
@@ -3122,11 +3122,11 @@ CGObjCGNU::GenerateMessageSend(CodeGenFunction &CGF,
       std::pair<llvm::Value*,llvm::Value*> v = msgRet.getComplexVal();
       llvm::PHINode *phi = Builder.CreatePHI(v.first->getType(), 2);
       phi->addIncoming(v.first, nonNilPathBB);
-      phi->addIncoming(llvm::Constant::getNullValue(v.first->getType()),
+      phi->addIncoming(llvm::Constant::getZeroValue(v.first->getType()),
                        nilPathBB);
       llvm::PHINode *phi2 = Builder.CreatePHI(v.second->getType(), 2);
       phi2->addIncoming(v.second, nonNilPathBB);
-      phi2->addIncoming(llvm::Constant::getNullValue(v.second->getType()),
+      phi2->addIncoming(llvm::Constant::getZeroValue(v.second->getType()),
                         nilPathBB);
       msgRet = RValue::getComplex(phi, phi2);
     }
@@ -4167,8 +4167,8 @@ llvm::Function *CGObjCGNU::ModuleInitFunction() {
       llvm::BasicBlock::Create(VMContext, "no_alias", LoadFunction);
 
     // Branch based on whether the runtime provided class_registerAlias_np()
-    llvm::Value *HasRegisterAlias = Builder.CreateICmpNE(RegisterAlias,
-            llvm::Constant::getNullValue(RegisterAlias->getType()));
+    llvm::Value *HasRegisterAlias = Builder.CreateICmpNE(
+        RegisterAlias, llvm::Constant::getZeroValue(RegisterAlias->getType()));
     Builder.CreateCondBr(HasRegisterAlias, AliasBB, NoAliasBB);
 
     // The true branch (has alias registration function):
@@ -4472,9 +4472,9 @@ llvm::Value *CGObjCGNU::EmitIvarOffset(CodeGenFunction &CGF,
     CharUnits Align = CGM.getIntAlign();
     llvm::Value *Offset = TheModule.getGlobalVariable(name);
     if (!Offset) {
-      auto GV = new llvm::GlobalVariable(TheModule, IntTy,
-          false, llvm::GlobalValue::LinkOnceAnyLinkage,
-          llvm::Constant::getNullValue(IntTy), name);
+      auto GV = new llvm::GlobalVariable(
+          TheModule, IntTy, false, llvm::GlobalValue::LinkOnceAnyLinkage,
+          llvm::Constant::getZeroValue(IntTy), name);
       GV->setAlignment(Align.getAsAlign());
       Offset = GV;
     }

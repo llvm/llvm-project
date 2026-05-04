@@ -1388,7 +1388,7 @@ InductionDescriptor::InductionDescriptor(Value *Start, InductionKind K,
 
 InductionDescriptor
 InductionDescriptor::getCanonicalIntInduction(Type *Ty, ScalarEvolution &SE) {
-  return InductionDescriptor(Constant::getNullValue(Ty), IK_IntInduction,
+  return InductionDescriptor(Constant::getZeroValue(Ty), IK_IntInduction,
                              SE.getOne(Ty));
 }
 

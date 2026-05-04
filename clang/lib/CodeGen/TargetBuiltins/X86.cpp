@@ -251,7 +251,7 @@ static Value *EmitX86vpcom(CodeGenFunction &CGF, ArrayRef<Value *> Ops,
     Pred = ICmpInst::ICMP_NE;
     break;
   case 0x6:
-    return llvm::Constant::getNullValue(Ty); // FALSE
+    return llvm::Constant::getZeroValue(Ty); // FALSE
   case 0x7:
     return llvm::Constant::getAllOnesValue(Ty); // TRUE
   default:
@@ -306,7 +306,7 @@ static Value *EmitX86MaskedCompareResult(CodeGenFunction &CGF, Value *Cmp,
     for (unsigned i = NumElts; i != 8; ++i)
       Indices[i] = i % NumElts + NumElts;
     Cmp = CGF.Builder.CreateShuffleVector(
-        Cmp, llvm::Constant::getNullValue(Cmp->getType()), Indices);
+        Cmp, llvm::Constant::getZeroValue(Cmp->getType()), Indices);
   }
 
   return CGF.Builder.CreateBitCast(Cmp,
@@ -323,7 +323,7 @@ static Value *EmitX86MaskedCompare(CodeGenFunction &CGF, unsigned CC,
   Value *Cmp;
 
   if (CC == 3) {
-    Cmp = Constant::getNullValue(
+    Cmp = Constant::getZeroValue(
         llvm::FixedVectorType::get(CGF.Builder.getInt1Ty(), NumElts));
   } else if (CC == 7) {
     Cmp = Constant::getAllOnesValue(
@@ -350,7 +350,7 @@ static Value *EmitX86MaskedCompare(CodeGenFunction &CGF, unsigned CC,
 }
 
 static Value *EmitX86ConvertToMask(CodeGenFunction &CGF, Value *In) {
-  Value *Zero = Constant::getNullValue(In->getType());
+  Value *Zero = Constant::getZeroValue(In->getType());
   return EmitX86MaskedCompare(CGF, 1, true, { In, Zero });
 }
 
@@ -476,7 +476,7 @@ static Value *EmitX86FMAExpr(CodeGenFunction &CGF, const CallExpr *E,
   case clang::X86::BI__builtin_ia32_vfmaddsubph512_maskz:
   case clang::X86::BI__builtin_ia32_vfmaddsubps512_maskz:
   case clang::X86::BI__builtin_ia32_vfmaddsubpd512_maskz:
-    MaskFalseVal = Constant::getNullValue(Ops[0]->getType());
+    MaskFalseVal = Constant::getZeroValue(Ops[0]->getType());
     break;
   case clang::X86::BI__builtin_ia32_vfmsubph512_mask3:
   case clang::X86::BI__builtin_ia32_vfmaddph512_mask3:
@@ -544,8 +544,8 @@ static Value *EmitScalarFMAExpr(CodeGenFunction &CGF, const CallExpr *E,
   }
   // If we have more than 3 arguments, we need to do masking.
   if (Ops.size() > 3) {
-    Value *PassThru = ZeroMask ? Constant::getNullValue(Res->getType())
-                               : Ops[PTIdx];
+    Value *PassThru =
+        ZeroMask ? Constant::getZeroValue(Res->getType()) : Ops[PTIdx];
 
     // If we negated the accumulator and the its the PassThru value we need to
     // bypass the negate. Conveniently Upper should be the same thing in this
@@ -986,7 +986,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     // IR optimizer and backend.
     // TODO: If we had a "freeze" IR instruction to generate a fixed undef
     // value, we should use that here instead of a zero.
-    return llvm::Constant::getNullValue(ConvertType(E->getType()));
+    return llvm::Constant::getZeroValue(ConvertType(E->getType()));
   case X86::BI__builtin_ia32_vec_ext_v4hi:
   case X86::BI__builtin_ia32_vec_ext_v16qi:
   case X86::BI__builtin_ia32_vec_ext_v8hi:
@@ -1818,14 +1818,14 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     // If palignr is shifting the pair of vectors more than the size of two
     // lanes, emit zero.
     if (ShiftVal >= 32)
-      return llvm::Constant::getNullValue(ConvertType(E->getType()));
+      return llvm::Constant::getZeroValue(ConvertType(E->getType()));
 
     // If palignr is shifting the pair of input vectors more than one lane,
     // but less than two lanes, convert to shifting in zeroes.
     if (ShiftVal > 16) {
       ShiftVal -= 16;
       Ops[1] = Ops[0];
-      Ops[0] = llvm::Constant::getNullValue(Ops[0]->getType());
+      Ops[0] = llvm::Constant::getZeroValue(Ops[0]->getType());
     }
 
     int Indices[64];
@@ -1937,7 +1937,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     auto *VecTy = cast<llvm::FixedVectorType>(Ops[0]->getType());
     // Builtin type is vXi8.
     unsigned NumElts = VecTy->getNumElements();
-    Value *Zero = llvm::Constant::getNullValue(VecTy);
+    Value *Zero = llvm::Constant::getZeroValue(VecTy);
 
     // If pslldq is shifting the vector more than 15 bytes, emit zero.
     if (ShiftVal >= 16)
@@ -1963,7 +1963,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     auto *VecTy = cast<llvm::FixedVectorType>(Ops[0]->getType());
     // Builtin type is vXi8.
     unsigned NumElts = VecTy->getNumElements();
-    Value *Zero = llvm::Constant::getNullValue(VecTy);
+    Value *Zero = llvm::Constant::getZeroValue(VecTy);
 
     // If psrldq is shifting the vector more than 15 bytes, emit zero.
     if (ShiftVal >= 16)
@@ -1990,7 +1990,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     unsigned NumElts = Ops[0]->getType()->getIntegerBitWidth();
 
     if (ShiftVal >= NumElts)
-      return llvm::Constant::getNullValue(Ops[0]->getType());
+      return llvm::Constant::getZeroValue(Ops[0]->getType());
 
     Value *In = getMaskVecValue(*this, Ops[0], NumElts);
 
@@ -1998,7 +1998,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     for (unsigned i = 0; i != NumElts; ++i)
       Indices[i] = NumElts + i - ShiftVal;
 
-    Value *Zero = llvm::Constant::getNullValue(In->getType());
+    Value *Zero = llvm::Constant::getZeroValue(In->getType());
     Value *SV = Builder.CreateShuffleVector(
         Zero, In, ArrayRef(Indices, NumElts), "kshiftl");
     return Builder.CreateBitCast(SV, Ops[0]->getType());
@@ -2011,7 +2011,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     unsigned NumElts = Ops[0]->getType()->getIntegerBitWidth();
 
     if (ShiftVal >= NumElts)
-      return llvm::Constant::getNullValue(Ops[0]->getType());
+      return llvm::Constant::getZeroValue(Ops[0]->getType());
 
     Value *In = getMaskVecValue(*this, Ops[0], NumElts);
 
@@ -2019,7 +2019,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     for (unsigned i = 0; i != NumElts; ++i)
       Indices[i] = i + ShiftVal;
 
-    Value *Zero = llvm::Constant::getNullValue(In->getType());
+    Value *Zero = llvm::Constant::getZeroValue(In->getType());
     Value *SV = Builder.CreateShuffleVector(
         In, Zero, ArrayRef(Indices, NumElts), "kshiftr");
     return Builder.CreateBitCast(SV, Ops[0]->getType());
@@ -2153,7 +2153,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_kortestzsi:
   case X86::BI__builtin_ia32_kortestzdi: {
     Value *Or = EmitX86MaskLogic(*this, Instruction::Or, Ops);
-    Value *C = llvm::Constant::getNullValue(Ops[0]->getType());
+    Value *C = llvm::Constant::getZeroValue(Ops[0]->getType());
     Value *Cmp = Builder.CreateICmpEQ(Or, C);
     return Builder.CreateZExt(Cmp, ConvertType(E->getType()));
   }
@@ -3133,7 +3133,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     Builder.CreateBr(End);
 
     Builder.SetInsertPoint(Error);
-    Constant *Zero = llvm::Constant::getNullValue(Out->getType());
+    Constant *Zero = llvm::Constant::getZeroValue(Out->getType());
     Builder.CreateDefaultAlignedStore(Zero, Ops[0]);
     Builder.CreateBr(End);
 
@@ -3194,7 +3194,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
 
     Builder.SetInsertPoint(Error);
     for (int i = 0; i != 8; ++i) {
-      Constant *Zero = llvm::Constant::getNullValue(Ty);
+      Constant *Zero = llvm::Constant::getZeroValue(Ty);
       Value *Ptr = Builder.CreateConstGEP1_32(Ty, Ops[0], i);
       Builder.CreateAlignedStore(Zero, Ptr, Align(16));
     }

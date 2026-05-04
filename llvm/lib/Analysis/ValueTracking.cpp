@@ -1724,7 +1724,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
 
       // Handle case when index is zero.
       Constant *CIndex = dyn_cast<Constant>(Index);
-      if (CIndex && CIndex->isNullValue())
+      if (CIndex && CIndex->isZeroValue())
         continue;
 
       if (StructType *STy = GTI.getStructTypeOrNull()) {
@@ -3121,7 +3121,7 @@ static bool isNonZeroSub(const APInt &DemandedElts, const SimplifyQuery &Q,
 
   // TODO: Move this case into isKnownNonEqual().
   if (auto *C = dyn_cast<Constant>(X))
-    if (C->isNullValue() && isKnownNonZero(Y, DemandedElts, Q, Depth))
+    if (C->isZeroValue() && isKnownNonZero(Y, DemandedElts, Q, Depth))
       return true;
 
   return ::isKnownNonEqual(X, Y, DemandedElts, Q, Depth);
@@ -3697,7 +3697,7 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts,
 #endif
 
   if (auto *C = dyn_cast<Constant>(V)) {
-    if (C->isNullValue())
+    if (C->isZeroValue())
       return false;
     if (isa<ConstantInt>(C))
       // Must be non-zero due to null test above.
@@ -3710,7 +3710,7 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts,
         if (!DemandedElts[i])
           continue;
         Constant *Elt = C->getAggregateElement(i);
-        if (!Elt || Elt->isNullValue())
+        if (!Elt || Elt->isZeroValue())
           return false;
         if (!isa<PoisonValue>(Elt) && !isa<ConstantInt>(Elt))
           return false;
@@ -4464,7 +4464,7 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
 
       // Handle NEG.
       if (const auto *CLHS = dyn_cast<Constant>(U->getOperand(0)))
-        if (CLHS->isNullValue()) {
+        if (CLHS->isZeroValue()) {
           KnownBits Known(TyBits);
           computeKnownBits(U->getOperand(1), DemandedElts, Known, Q, Depth + 1);
           // If the input is known to be 0 or 1, the output is 0/-1, which is
@@ -6415,8 +6415,8 @@ Value *llvm::isBytewiseValue(Value *V, const DataLayout &DL) {
   }
 
   // Handle 'null' ConstantArrayZero etc.
-  if (C->isNullValue())
-    return Constant::getNullValue(Type::getInt8Ty(Ctx));
+  if (C->isZeroValue())
+    return Constant::getZeroValue(Type::getInt8Ty(Ctx));
 
   // Constant floating-point values can be handled as integer values if the
   // corresponding integer value is "byteable".  An important case is 0.0.
@@ -6692,7 +6692,7 @@ bool llvm::getConstantDataArrayInfo(const Value *V,
   ConstantDataArray *Array = nullptr;
   ArrayType *ArrayTy = nullptr;
 
-  if (GV->getInitializer()->isNullValue()) {
+  if (GV->getInitializer()->isZeroValue()) {
     Type *GVTy = GV->getValueType();
     uint64_t SizeInBytes = DL.getTypeStoreSize(GVTy).getFixedValue();
     uint64_t Length = SizeInBytes / ElementSizeInBytes;
@@ -8728,7 +8728,7 @@ bool llvm::isKnownNegation(const Value *X, const Value *Y, bool NeedNSW,
       return false;
 
     auto *Zero = cast<Constant>(BO->getOperand(0));
-    if (!AllowPoison && !Zero->isNullValue())
+    if (!AllowPoison && !Zero->isZeroValue())
       return false;
 
     return true;

@@ -277,7 +277,7 @@ static Value *handleElementwiseF32ToF16(CodeGenFunction &CGF,
     if (NumElements == 0) {
       // a scalar input - simply insert the scalar in the first element
       // of the 2 element float vector
-      Value *Float2 = Constant::getNullValue(PackType);
+      Value *Float2 = Constant::getZeroValue(PackType);
       Float2 = CGF.Builder.CreateInsertElement(Float2, Op0, (uint64_t)0);
       Value *Result = CGF.Builder.CreateIntrinsic(
           ResType, Intrinsic::spv_packhalf2x16, ArrayRef<Value *>{Float2});
@@ -288,7 +288,7 @@ static Value *handleElementwiseF32ToF16(CodeGenFunction &CGF,
     // the input vector calling packhalf2x16 for each element
     Value *Result = PoisonValue::get(ResType);
     for (uint64_t I = 0; I < NumElements; I++) {
-      Value *Float2 = Constant::getNullValue(PackType);
+      Value *Float2 = Constant::getZeroValue(PackType);
       Value *InVal = CGF.Builder.CreateExtractElement(Op0, I);
       Float2 = CGF.Builder.CreateInsertElement(Float2, InVal, (uint64_t)0);
       Value *Res = CGF.Builder.CreateIntrinsic(
@@ -461,7 +461,7 @@ static Value *emitHlslOffset(CodeGenFunction &CGF, const CallExpr *E,
   if (E->getNumArgs() > OffsetArgIndex)
     return CGF.EmitScalarExpr(E->getArg(OffsetArgIndex));
 
-  return llvm::Constant::getNullValue(OffsetTy);
+  return llvm::Constant::getZeroValue(OffsetTy);
 }
 
 static Value *emitHlslClamp(CodeGenFunction &CGF, const CallExpr *E,

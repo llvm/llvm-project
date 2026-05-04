@@ -111,7 +111,7 @@ static RValue PerformReturnAdjustment(CodeGenFunction &CGF,
 
     llvm::PHINode *PHI = CGF.Builder.CreatePHI(ReturnValue->getType(), 2);
     PHI->addIncoming(ReturnValue, AdjustNotNull);
-    PHI->addIncoming(llvm::Constant::getNullValue(ReturnValue->getType()),
+    PHI->addIncoming(llvm::Constant::getZeroValue(ReturnValue->getType()),
                      AdjustNull);
     ReturnValue = PHI;
   }
@@ -670,7 +670,7 @@ void CodeGenVTables::addRelativeComponent(ConstantArrayBuilder &builder,
                                           bool vtableHasLocalLinkage,
                                           bool isCompleteDtor) const {
   // No need to get the offset of a nullptr.
-  if (component->isNullValue())
+  if (component->isZeroValue())
     return builder.add(llvm::ConstantInt::get(CGM.Int32Ty, 0));
 
   auto *globalVal =
@@ -809,7 +809,7 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
         if (IsThunk)
           nextVTableThunkIndex++;
         return builder.add(
-            llvm::ConstantExpr::getNullValue(CGM.GlobalsInt8PtrTy));
+            llvm::ConstantExpr::getZeroValue(CGM.GlobalsInt8PtrTy));
       }
       // Method is acceptable, continue processing as usual.
     }
@@ -898,7 +898,7 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
 
   case VTableComponent::CK_UnusedFunctionPointer:
     if (RelativeCXXABIVTables)
-      return builder.add(llvm::ConstantExpr::getNullValue(CGM.Int32Ty));
+      return builder.add(llvm::ConstantExpr::getZeroValue(CGM.Int32Ty));
     else
       return builder.addNullPointer(CGM.GlobalsInt8PtrTy);
   }
@@ -1104,7 +1104,7 @@ llvm::GlobalVariable::LinkageTypes
 CodeGenModule::getVTableLinkage(const CXXRecordDecl *RD) {
   if (!RD->isExternallyVisible())
     return llvm::GlobalVariable::InternalLinkage;
-  
+
   // In windows, the linkage of vtable is not related to modules.
   bool IsInNamedModule = !getTarget().getCXXABI().isMicrosoft() &&
         RD->isInNamedModule();

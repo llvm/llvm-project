@@ -1655,7 +1655,7 @@ void CodeExtractor::emitFunctionBody(
     Value *RewriteVal;
     if (StructValues.contains(inputs[i])) {
       Value *Idx[2];
-      Idx[0] = Constant::getNullValue(Type::getInt32Ty(header->getContext()));
+      Idx[0] = Constant::getZeroValue(Type::getInt32Ty(header->getContext()));
       Idx[1] = ConstantInt::get(Type::getInt32Ty(header->getContext()), aggIdx);
       GetElementPtrInst *GEP = GetElementPtrInst::Create(
           StructArgTy, AggArg, Idx, "gep_" + inputs[i]->getName(), newFuncRoot);
@@ -1824,7 +1824,7 @@ void CodeExtractor::emitFunctionBody(
       assert(AggArg && "Number of aggregate output arguments should match "
                        "the number of defined values");
       Value *Idx[2];
-      Idx[0] = Constant::getNullValue(Type::getInt32Ty(Context));
+      Idx[0] = Constant::getZeroValue(Type::getInt32Ty(Context));
       Idx[1] = ConstantInt::get(Type::getInt32Ty(Context), AggIdx);
       GetElementPtrInst *GEP = GetElementPtrInst::Create(
           StructArgTy, AggArg, Idx, "gep_" + Output->getName(), InsertPt);
@@ -1914,7 +1914,7 @@ CallInst *CodeExtractor::emitReplacerCall(
         continue;
 
       Value *Idx[2];
-      Idx[0] = Constant::getNullValue(Type::getInt32Ty(Context));
+      Idx[0] = Constant::getZeroValue(Type::getInt32Ty(Context));
       Idx[1] = ConstantInt::get(Type::getInt32Ty(Context), AggIdx);
       GetElementPtrInst *GEP = GetElementPtrInst::Create(
           StructArgTy, Struct, Idx, "gep_" + input->getName());
@@ -1958,7 +1958,7 @@ CallInst *CodeExtractor::emitReplacerCall(
     Value *Output = nullptr;
     if (StructValues.contains(outputs[i])) {
       Value *Idx[2];
-      Idx[0] = Constant::getNullValue(Type::getInt32Ty(Context));
+      Idx[0] = Constant::getZeroValue(Type::getInt32Ty(Context));
       Idx[1] = ConstantInt::get(Type::getInt32Ty(Context), AggIdx);
       GetElementPtrInst *GEP = GetElementPtrInst::Create(
           StructArgTy, Struct, Idx, "gep_reload_" + outputs[i]->getName());
@@ -1977,7 +1977,7 @@ CallInst *CodeExtractor::emitReplacerCall(
 
   // Now we can emit a switch statement using the call as a value.
   SwitchInst *TheSwitch =
-      SwitchInst::Create(Constant::getNullValue(Type::getInt16Ty(Context)),
+      SwitchInst::Create(Constant::getZeroValue(Type::getInt16Ty(Context)),
                          codeReplacer, 0, codeReplacer);
   for (auto P : enumerate(ExtractedFuncRetVals)) {
     BasicBlock *OldTarget = P.value();
@@ -2008,7 +2008,7 @@ CallInst *CodeExtractor::emitReplacerCall(
     } else {
       // Otherwise we must have code extracted an unwind or something, just
       // return whatever we want.
-      ReturnInst::Create(Context, Constant::getNullValue(OldFnRetTy),
+      ReturnInst::Create(Context, Constant::getZeroValue(OldFnRetTy),
                          TheSwitch->getIterator());
     }
 

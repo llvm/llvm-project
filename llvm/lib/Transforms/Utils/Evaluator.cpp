@@ -386,9 +386,9 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
           Constant *Val = getVal(MSI->getValue());
           // Avoid the byte-per-byte scan if we're memseting a zeroinitializer
           // to zero.
-          if (!Val->isNullValue() || MutatedMemory.contains(GV) ||
+          if (!Val->isZeroValue() || MutatedMemory.contains(GV) ||
               !GV->hasDefinitiveInitializer() ||
-              !GV->getInitializer()->isNullValue()) {
+              !GV->getInitializer()->isZeroValue()) {
             APInt Len = LenC->getValue();
             if (Len.ugt(64 * 1024)) {
               LLVM_DEBUG(dbgs() << "Not evaluating large memset of size "

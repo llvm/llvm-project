@@ -9805,7 +9805,7 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeShiftCompareExitLimit(
   assert(Result->getType()->isIntegerTy(1) &&
          "Otherwise cannot be an operand to a branch instruction");
 
-  if (Result->isNullValue()) {
+  if (Result->isZeroValue()) {
     unsigned BitWidth = getTypeSizeInBits(RHS->getType());
     const SCEV *UpperBound =
         getConstant(getEffectiveSCEVType(RHS->getType()), BitWidth);

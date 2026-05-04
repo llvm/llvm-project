@@ -1778,7 +1778,7 @@ public:
                           Instruction *MDFrom = nullptr) {
     assert(Cond2->getType()->isIntOrIntVectorTy(1));
     return CreateSelect(Cond1, Cond2,
-                        ConstantInt::getNullValue(Cond2->getType()), Name,
+                        ConstantInt::getZeroValue(Cond2->getType()), Name,
                         MDFrom);
   }
 
@@ -1835,7 +1835,7 @@ public:
       std::optional<fp::ExceptionBehavior> Except = std::nullopt);
 
   Value *CreateNeg(Value *V, const Twine &Name = "", bool HasNSW = false) {
-    return CreateSub(Constant::getNullValue(V->getType()), V, Name,
+    return CreateSub(Constant::getZeroValue(V->getType()), V, Name,
                      /*HasNUW=*/0, HasNSW);
   }
 
@@ -2693,17 +2693,17 @@ public:
 
   /// Return a boolean value testing if \p Arg == 0.
   Value *CreateIsNull(Value *Arg, const Twine &Name = "") {
-    return CreateICmpEQ(Arg, Constant::getNullValue(Arg->getType()), Name);
+    return CreateICmpEQ(Arg, Constant::getZeroValue(Arg->getType()), Name);
   }
 
   /// Return a boolean value testing if \p Arg != 0.
   Value *CreateIsNotNull(Value *Arg, const Twine &Name = "") {
-    return CreateICmpNE(Arg, Constant::getNullValue(Arg->getType()), Name);
+    return CreateICmpNE(Arg, Constant::getZeroValue(Arg->getType()), Name);
   }
 
   /// Return a boolean value testing if \p Arg < 0.
   Value *CreateIsNeg(Value *Arg, const Twine &Name = "") {
-    return CreateICmpSLT(Arg, ConstantInt::getNullValue(Arg->getType()), Name);
+    return CreateICmpSLT(Arg, ConstantInt::getZeroValue(Arg->getType()), Name);
   }
 
   /// Return a boolean value testing if \p Arg > -1.

@@ -158,32 +158,32 @@ TEST(ConstantsTest, PointerCast) {
 
   // ptrtoint ptr to i64
   EXPECT_EQ(
-      Constant::getNullValue(Int64Ty),
-      ConstantExpr::getPointerCast(Constant::getNullValue(PtrTy), Int64Ty));
+      Constant::getZeroValue(Int64Ty),
+      ConstantExpr::getPointerCast(Constant::getZeroValue(PtrTy), Int64Ty));
 
   // bitcast ptr to ptr
-  EXPECT_EQ(Constant::getNullValue(PtrTy),
-            ConstantExpr::getPointerCast(Constant::getNullValue(PtrTy), PtrTy));
+  EXPECT_EQ(Constant::getZeroValue(PtrTy),
+            ConstantExpr::getPointerCast(Constant::getZeroValue(PtrTy), PtrTy));
 
   // ptrtoint <4 x ptr> to <4 x i64>
-  EXPECT_EQ(Constant::getNullValue(Int64VecTy),
-            ConstantExpr::getPointerCast(Constant::getNullValue(PtrVecTy),
+  EXPECT_EQ(Constant::getZeroValue(Int64VecTy),
+            ConstantExpr::getPointerCast(Constant::getZeroValue(PtrVecTy),
                                          Int64VecTy));
 
   // ptrtoint <vscale x 4 x ptr> to <vscale x 4 x i64>
-  EXPECT_EQ(Constant::getNullValue(Int64ScalableVecTy),
+  EXPECT_EQ(Constant::getZeroValue(Int64ScalableVecTy),
             ConstantExpr::getPointerCast(
-                Constant::getNullValue(PtrScalableVecTy), Int64ScalableVecTy));
+                Constant::getZeroValue(PtrScalableVecTy), Int64ScalableVecTy));
 
   // bitcast <4 x ptr> to <4 x ptr>
   EXPECT_EQ(
-      Constant::getNullValue(PtrVecTy),
-      ConstantExpr::getPointerCast(Constant::getNullValue(PtrVecTy), PtrVecTy));
+      Constant::getZeroValue(PtrVecTy),
+      ConstantExpr::getPointerCast(Constant::getZeroValue(PtrVecTy), PtrVecTy));
 
   // bitcast <vscale x 4 x ptr> to <vscale x 4 x ptr>
-  EXPECT_EQ(Constant::getNullValue(PtrScalableVecTy),
+  EXPECT_EQ(Constant::getZeroValue(PtrScalableVecTy),
             ConstantExpr::getPointerCast(
-                Constant::getNullValue(PtrScalableVecTy), PtrScalableVecTy));
+                Constant::getZeroValue(PtrScalableVecTy), PtrScalableVecTy));
 
   Type *Ptr1Ty = PointerType::get(C, 1);
   ConstantInt *K = ConstantInt::get(Type::getInt64Ty(C), 1234);
@@ -194,14 +194,14 @@ TEST(ConstantsTest, PointerCast) {
   EXPECT_NE(K, ConstantExpr::getAddrSpaceCast(
                    ConstantExpr::getIntToPtr(K, Ptr1Ty), PtrTy));
 
-  Constant *NullPtr0 = Constant::getNullValue(PtrTy);
-  Constant *NullPtr1 = Constant::getNullValue(Ptr1Ty);
+  Constant *NullPtr0 = Constant::getZeroValue(PtrTy);
+  Constant *NullPtr1 = Constant::getZeroValue(Ptr1Ty);
 
   // Make sure that addrspacecast of null is not folded away.
-  EXPECT_NE(Constant::getNullValue(PtrTy),
+  EXPECT_NE(Constant::getZeroValue(PtrTy),
             ConstantExpr::getAddrSpaceCast(NullPtr0, Ptr1Ty));
 
-  EXPECT_NE(Constant::getNullValue(Ptr1Ty),
+  EXPECT_NE(Constant::getZeroValue(Ptr1Ty),
             ConstantExpr::getAddrSpaceCast(NullPtr1, PtrTy));
 }
 
@@ -484,7 +484,7 @@ bool foldFuncPtrAndConstToNull(LLVMContext &Context, Module *TheModule,
 
   Constant *C = ConstantFoldBinaryInstruction(Instruction::And, TheConstantExpr,
                                               TheConstant);
-  bool Result = C && C->isNullValue();
+  bool Result = C && C->isZeroValue();
 
   if (!TheModule) {
     // If the Module exists then it will delete the Function.
@@ -571,12 +571,12 @@ TEST(ConstantsTest, FoldGlobalVariablePtr) {
   Constant *PtrToInt = ConstantExpr::getPtrToInt(Global.get(), IntType);
   ASSERT_TRUE(
       ConstantFoldBinaryInstruction(Instruction::And, PtrToInt, TheConstant)
-          ->isNullValue());
+          ->isZeroValue());
 
   Constant *PtrToAddr = ConstantExpr::getPtrToAddr(Global.get(), IntType);
   ASSERT_TRUE(
       ConstantFoldBinaryInstruction(Instruction::And, PtrToAddr, TheConstant)
-          ->isNullValue());
+          ->isZeroValue());
 }
 
 // Check that containsUndefOrPoisonElement and containsPoisonElement is working
@@ -755,7 +755,7 @@ TEST(ConstantsTest, GetSplatValueRoundTrip) {
 
     for (auto EC : {ScalableEC, FixedEC}) {
       for (auto *Ty : {FloatTy, Int32Ty, Int8Ty}) {
-        Constant *Zero = Constant::getNullValue(Ty);
+        Constant *Zero = Constant::getZeroValue(Ty);
         Constant *One = Constant::getAllOnesValue(Ty);
 
         for (auto *C : {Zero, One}) {

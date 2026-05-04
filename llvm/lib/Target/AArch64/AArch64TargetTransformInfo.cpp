@@ -1880,7 +1880,7 @@ simplifySVEIntrinsic(InstCombiner &IC, IntrinsicInst &II,
 
     if (IInfo.inactiveLanesAreUnused()) {
       if (IInfo.resultIsZeroInitialized())
-        IC.replaceInstUsesWith(II, Constant::getNullValue(II.getType()));
+        IC.replaceInstUsesWith(II, Constant::getZeroValue(II.getType()));
 
       return IC.eraseInstFromFunction(II);
     }
@@ -2124,7 +2124,7 @@ static std::optional<Instruction *> instCombineSVECmpNE(InstCombiner &IC,
 
   // If all bits are zero bail early with an empty predicate
   if (PredicateBits == 0) {
-    auto *PFalse = Constant::getNullValue(II.getType());
+    auto *PFalse = Constant::getZeroValue(II.getType());
     PFalse->takeName(&II);
     return IC.replaceInstUsesWith(II, PFalse);
   }
@@ -2187,7 +2187,7 @@ static std::optional<Instruction *> instCombineSVELast(InstCombiner &IC,
   }
 
   auto *C = dyn_cast<Constant>(Pg);
-  if (IsAfter && C && C->isNullValue()) {
+  if (IsAfter && C && C->isZeroValue()) {
     // The intrinsic is extracting lane 0 so use an extract instead.
     auto *IdxTy = Type::getInt64Ty(II.getContext());
     auto *Extract = ExtractElementInst::Create(Vec, ConstantInt::get(IdxTy, 0));

@@ -1085,7 +1085,7 @@ TEST(DominatorTree, ValueDomination) {
                  [&](Function &F, DominatorTree *DT, PostDominatorTree *PDT) {
     Argument *A = F.getArg(0);
     GlobalValue *G = M->getNamedValue("foo");
-    Constant *C = ConstantInt::getNullValue(Type::getInt8Ty(Context));
+    Constant *C = ConstantInt::getZeroValue(Type::getInt8Ty(Context));
 
     Instruction *I = F.getEntryBlock().getTerminator();
     EXPECT_TRUE(DT->dominates(A, I));

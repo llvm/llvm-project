@@ -1955,7 +1955,7 @@ struct NullReturnState {
 
     // Find the scalar type and its zero value.
     llvm::Type *scalarTy = callResult.first->getType();
-    llvm::Constant *scalarZero = llvm::Constant::getNullValue(scalarTy);
+    llvm::Constant *scalarZero = llvm::Constant::getZeroValue(scalarTy);
 
     // Build phis for both coordinates.
     llvm::PHINode *real = CGF.Builder.CreatePHI(scalarTy, 2);
@@ -2999,7 +2999,7 @@ llvm::Constant *
 CGObjCCommonMac::BuildGCBlockLayout(CodeGenModule &CGM,
                                     const CGBlockInfo &blockInfo) {
 
-  llvm::Constant *nullPtr = llvm::Constant::getNullValue(CGM.Int8PtrTy);
+  llvm::Constant *nullPtr = llvm::Constant::getZeroValue(CGM.Int8PtrTy);
   if (CGM.getLangOpts().getGC() == LangOptions::NonGC)
     return nullPtr;
 
@@ -3354,7 +3354,7 @@ uint64_t CGObjCCommonMac::InlineLayoutInstruction(
 }
 
 llvm::Constant *CGObjCCommonMac::getBitmapBlockLayout(bool ComputeByrefLayout) {
-  llvm::Constant *nullPtr = llvm::Constant::getNullValue(CGM.Int8PtrTy);
+  llvm::Constant *nullPtr = llvm::Constant::getZeroValue(CGM.Int8PtrTy);
   if (RunSkipBlockVars.empty())
     return nullPtr;
   unsigned WordSizeInBits = CGM.getTarget().getPointerWidth(LangAS::Default);
@@ -3617,7 +3617,7 @@ llvm::Constant *CGObjCCommonMac::BuildByrefLayout(CodeGen::CodeGenModule &CGM,
       Result = llvm::ConstantExpr::getIntToPtr(Result, CGM.Int8PtrTy);
     return Result;
   }
-  llvm::Constant *nullPtr = llvm::Constant::getNullValue(CGM.Int8PtrTy);
+  llvm::Constant *nullPtr = llvm::Constant::getZeroValue(CGM.Int8PtrTy);
   return nullPtr;
 }
 
@@ -3772,10 +3772,10 @@ CGObjCMac::EmitProtocolExtension(const ObjCProtocolDecl *PD,
                        PD, ObjCTypes, true);
 
   // Return null if no extension bits are used.
-  if (optInstanceMethods->isNullValue() && optClassMethods->isNullValue() &&
-      extendedMethodTypes->isNullValue() && instanceProperties->isNullValue() &&
-      classProperties->isNullValue()) {
-    return llvm::Constant::getNullValue(ObjCTypes.ProtocolExtensionPtrTy);
+  if (optInstanceMethods->isZeroValue() && optClassMethods->isZeroValue() &&
+      extendedMethodTypes->isZeroValue() && instanceProperties->isZeroValue() &&
+      classProperties->isZeroValue()) {
+    return llvm::Constant::getZeroValue(ObjCTypes.ProtocolExtensionPtrTy);
   }
 
   uint64_t size =
@@ -3809,7 +3809,7 @@ CGObjCMac::EmitProtocolList(Twine name,
   // Just return null for empty protocol lists
   auto PDs = GetRuntimeProtocolList(begin, end);
   if (PDs.empty())
-    return llvm::Constant::getNullValue(ObjCTypes.ProtocolListPtrTy);
+    return llvm::Constant::getZeroValue(ObjCTypes.ProtocolListPtrTy);
 
   ConstantInitBuilder builder(CGM);
   auto values = builder.beginStruct();
@@ -3878,7 +3878,7 @@ llvm::Constant *CGObjCCommonMac::EmitPropertyList(
     const llvm::Triple &Triple = CGM.getTarget().getTriple();
     if ((Triple.isMacOSX() && Triple.isMacOSXVersionLT(10, 11)) ||
         (Triple.isiOS() && Triple.isOSVersionLT(9)))
-      return llvm::Constant::getNullValue(ObjCTypes.PropertyListPtrTy);
+      return llvm::Constant::getZeroValue(ObjCTypes.PropertyListPtrTy);
   }
 
   SmallVector<const ObjCPropertyDecl *, 16> Properties;
@@ -3917,7 +3917,7 @@ llvm::Constant *CGObjCCommonMac::EmitPropertyList(
 
   // Return null for empty list.
   if (Properties.empty())
-    return llvm::Constant::getNullValue(ObjCTypes.PropertyListPtrTy);
+    return llvm::Constant::getZeroValue(ObjCTypes.PropertyListPtrTy);
 
   unsigned propertySize =
       CGM.getDataLayout().getTypeAllocSize(ObjCTypes.PropertyTy);
@@ -3950,7 +3950,7 @@ llvm::Constant *CGObjCCommonMac::EmitProtocolMethodTypes(
     const ObjCCommonTypesHelper &ObjCTypes) {
   // Return null for empty list.
   if (MethodTypes.empty())
-    return llvm::Constant::getNullValue(ObjCTypes.Int8PtrPtrTy);
+    return llvm::Constant::getZeroValue(ObjCTypes.Int8PtrPtrTy);
 
   llvm::ArrayType *AT =
       llvm::ArrayType::get(ObjCTypes.Int8PtrTy, MethodTypes.size());
@@ -4373,8 +4373,8 @@ llvm::Constant *CGObjCMac::EmitClassExtension(const ObjCImplementationDecl *ID,
                        ID, ID->getClassInterface(), ObjCTypes, isMetaclass);
 
   // Return null if no extension bits are used.
-  if (layout->isNullValue() && propertyList->isNullValue()) {
-    return llvm::Constant::getNullValue(ObjCTypes.ClassExtensionPtrTy);
+  if (layout->isZeroValue() && propertyList->isZeroValue()) {
+    return llvm::Constant::getZeroValue(ObjCTypes.ClassExtensionPtrTy);
   }
 
   uint64_t size =
@@ -4411,7 +4411,7 @@ llvm::Constant *CGObjCMac::EmitIvarList(const ObjCImplementationDecl *ID,
   // the cleanest solution would be to make up an ObjCInterfaceDecl
   // for the class.
   if (ForClass)
-    return llvm::Constant::getNullValue(ObjCTypes.IvarListPtrTy);
+    return llvm::Constant::getZeroValue(ObjCTypes.IvarListPtrTy);
 
   const ObjCInterfaceDecl *OID = ID->getClassInterface();
 
@@ -4438,7 +4438,7 @@ llvm::Constant *CGObjCMac::EmitIvarList(const ObjCImplementationDecl *ID,
   if (count == 0) {
     ivars.abandon();
     ivarList.abandon();
-    return llvm::Constant::getNullValue(ObjCTypes.IvarListPtrTy);
+    return llvm::Constant::getZeroValue(ObjCTypes.IvarListPtrTy);
   }
 
   ivars.finishAndAddTo(ivarList);
@@ -4548,7 +4548,7 @@ CGObjCMac::emitMethodList(Twine name, MethodListType MLT,
 
   // Return null for empty list.
   if (methods.empty())
-    return llvm::Constant::getNullValue(
+    return llvm::Constant::getZeroValue(
         forProtocol ? ObjCTypes.MethodDescriptionListPtrTy
                     : ObjCTypes.MethodListPtrTy);
 
@@ -6093,7 +6093,7 @@ llvm::Constant *CGObjCMac::EmitModuleSymbols() {
 
   // Return null if no symbols were defined.
   if (!NumClasses && !NumCategories)
-    return llvm::Constant::getNullValue(ObjCTypes.SymtabPtrTy);
+    return llvm::Constant::getZeroValue(ObjCTypes.SymtabPtrTy);
 
   ConstantInitBuilder builder(CGM);
   auto values = builder.beginStruct();
@@ -6194,7 +6194,7 @@ llvm::Function *CGObjCCommonMac::GetMethodDefinition(const ObjCMethodDecl *MD) {
 llvm::Constant *
 CGObjCCommonMac::GetIvarLayoutName(IdentifierInfo *Ident,
                                    const ObjCCommonTypesHelper &ObjCTypes) {
-  return llvm::Constant::getNullValue(ObjCTypes.Int8PtrTy);
+  return llvm::Constant::getZeroValue(ObjCTypes.Int8PtrTy);
 }
 
 void IvarLayoutBuilder::visitRecord(const RecordType *RT, CharUnits offset) {
@@ -6465,7 +6465,7 @@ CGObjCCommonMac::BuildIvarLayout(const ObjCImplementationDecl *OMD,
   if (CGM.getLangOpts().getGC() == LangOptions::NonGC &&
       !CGM.getLangOpts().ObjCAutoRefCount &&
       (ForStrongLayout || !HasMRCWeakIvars))
-    return llvm::Constant::getNullValue(PtrTy);
+    return llvm::Constant::getZeroValue(PtrTy);
 
   const ObjCInterfaceDecl *OI = OMD->getClassInterface();
   SmallVector<const ObjCIvarDecl *, 32> ivars;
@@ -6503,7 +6503,7 @@ CGObjCCommonMac::BuildIvarLayout(const ObjCImplementationDecl *OMD,
   }
 
   if (ivars.empty())
-    return llvm::Constant::getNullValue(PtrTy);
+    return llvm::Constant::getZeroValue(PtrTy);
 
   IvarLayoutBuilder builder(CGM, baseOffset, endOffset, ForStrongLayout);
 
@@ -6514,7 +6514,7 @@ CGObjCCommonMac::BuildIvarLayout(const ObjCImplementationDecl *OMD,
                          });
 
   if (!builder.hasBitmapData())
-    return llvm::Constant::getNullValue(PtrTy);
+    return llvm::Constant::getZeroValue(PtrTy);
 
   llvm::SmallVector<unsigned char, 4> buffer;
   llvm::Constant *C = builder.buildBitmap(*this, buffer);
@@ -7255,7 +7255,7 @@ llvm::GlobalVariable *CGObjCNonFragileABIMac::BuildClassRoTInitializer(
 
   const PointerAuthSchema &MethListSchema =
       CGM.getCodeGenOpts().PointerAuth.ObjCMethodListPointer;
-  if (!MethListPtr->isNullValue())
+  if (!MethListPtr->isZeroValue())
     values.addSignedPointer(MethListPtr, MethListSchema, GlobalDecl(),
                             QualType());
   else
@@ -7586,7 +7586,7 @@ void CGObjCNonFragileABIMac::GenerateCategory(const ObjCCategoryImplDecl *OCD) {
       listName, MethodListType::CategoryInstanceMethods, instanceMethods);
   const PointerAuthSchema &MethListSchema =
       CGM.getCodeGenOpts().PointerAuth.ObjCMethodListPointer;
-  if (!InstanceMethodList->isNullValue())
+  if (!InstanceMethodList->isZeroValue())
     values.addSignedPointer(InstanceMethodList, MethListSchema, GlobalDecl(),
                             QualType());
   else
@@ -7594,7 +7594,7 @@ void CGObjCNonFragileABIMac::GenerateCategory(const ObjCCategoryImplDecl *OCD) {
 
   llvm::Constant *ClassMethodList = emitMethodList(
       listName, MethodListType::CategoryClassMethods, classMethods);
-  if (!ClassMethodList->isNullValue())
+  if (!ClassMethodList->isZeroValue())
     values.addSignedPointer(ClassMethodList, MethListSchema, GlobalDecl(),
                             QualType());
   else
@@ -7602,7 +7602,7 @@ void CGObjCNonFragileABIMac::GenerateCategory(const ObjCCategoryImplDecl *OCD) {
 
   // Keep track of whether we have actual metadata to emit.
   bool isEmptyCategory =
-      InstanceMethodList->isNullValue() && ClassMethodList->isNullValue();
+      InstanceMethodList->isZeroValue() && ClassMethodList->isZeroValue();
 
   const ObjCCategoryDecl *Category =
       Interface->FindCategoryDeclaration(OCD->getIdentifier());
@@ -7623,9 +7623,9 @@ void CGObjCNonFragileABIMac::GenerateCategory(const ObjCCategoryImplDecl *OCD) {
     values.add(protocolList);
     values.add(propertyList);
     values.add(classPropertyList);
-    isEmptyCategory &= protocolList->isNullValue() &&
-                       propertyList->isNullValue() &&
-                       classPropertyList->isNullValue();
+    isEmptyCategory &= protocolList->isZeroValue() &&
+                       propertyList->isZeroValue() &&
+                       classPropertyList->isZeroValue();
   } else {
     values.addNullPointer(ObjCTypes.ProtocolListnfABIPtrTy);
     values.addNullPointer(ObjCTypes.PropertyListPtrTy);
@@ -7704,7 +7704,7 @@ llvm::Constant *CGObjCNonFragileABIMac::emitMethodList(
     Twine name, MethodListType kind, ArrayRef<const ObjCMethodDecl *> methods) {
   // Return null for empty list.
   if (methods.empty())
-    return llvm::Constant::getNullValue(ObjCTypes.MethodListnfABIPtrTy);
+    return llvm::Constant::getZeroValue(ObjCTypes.MethodListnfABIPtrTy);
 
   StringRef prefix;
   bool forProtocol;
@@ -7889,7 +7889,7 @@ CGObjCNonFragileABIMac::EmitIvarList(const ObjCImplementationDecl *ID) {
   if (ivars.empty()) {
     ivars.abandon();
     ivarList.abandon();
-    return llvm::Constant::getNullValue(ObjCTypes.IvarListnfABIPtrTy);
+    return llvm::Constant::getZeroValue(ObjCTypes.IvarListnfABIPtrTy);
   }
 
   auto ivarCount = ivars.size();
@@ -8051,7 +8051,7 @@ llvm::Constant *CGObjCNonFragileABIMac::EmitProtocolList(
   // Just return null for empty protocol lists
   auto Protocols = GetRuntimeProtocolList(begin, end);
   if (Protocols.empty())
-    return llvm::Constant::getNullValue(ObjCTypes.ProtocolListnfABIPtrTy);
+    return llvm::Constant::getZeroValue(ObjCTypes.ProtocolListnfABIPtrTy);
 
   SmallVector<llvm::Constant *, 16> ProtocolRefs;
   ProtocolRefs.reserve(Protocols.size());
@@ -8062,7 +8062,7 @@ llvm::Constant *CGObjCNonFragileABIMac::EmitProtocolList(
   // If all of the protocols in the protocol list are objc_non_runtime_protocol
   // just return null
   if (ProtocolRefs.size() == 0)
-    return llvm::Constant::getNullValue(ObjCTypes.ProtocolListnfABIPtrTy);
+    return llvm::Constant::getZeroValue(ObjCTypes.ProtocolListnfABIPtrTy);
 
   // FIXME: We shouldn't need to do this lookup here, should we?
   SmallString<256> TmpName;

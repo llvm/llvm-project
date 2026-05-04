@@ -1144,7 +1144,7 @@ optimizeOnceStoredGlobal(GlobalVariable *GV, Value *StoredOnceVal,
   // users of the loaded value (often calls and loads) that would trap if the
   // value was null.
   if (GV->getInitializer()->getType()->isPointerTy() &&
-      GV->getInitializer()->isNullValue() &&
+      GV->getInitializer()->isZeroValue() &&
       StoredOnceVal->getType()->isPointerTy() &&
       !NullPointerIsDefined(
           nullptr /* F */,
@@ -1217,7 +1217,7 @@ static bool TryToShrinkGlobalToBoolean(GlobalVariable *GV, Constant *OtherVal) {
   bool EmitOneOrZero = true;
   auto *CI = dyn_cast<ConstantInt>(OtherVal);
   if (CI && CI->getValue().getActiveBits() <= 64) {
-    IsOneZero = InitVal->isNullValue() && CI->isOne();
+    IsOneZero = InitVal->isZeroValue() && CI->isOne();
 
     auto *CIInit = dyn_cast<ConstantInt>(GV->getInitializer());
     if (CIInit && CIInit->getValue().getActiveBits() <= 64) {
@@ -2426,7 +2426,7 @@ static bool OptimizeEmptyGlobalAtExitDtors(Function *CXAAtExitFn, bool isCXX) {
       continue;
 
     // Just remove the call.
-    CI->replaceAllUsesWith(Constant::getNullValue(CI->getType()));
+    CI->replaceAllUsesWith(Constant::getZeroValue(CI->getType()));
     CI->eraseFromParent();
 
     if (isCXX)

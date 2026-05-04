@@ -427,7 +427,7 @@ public:
 
     auto *Divisor = SRem->getOperand(1);
     auto *CI = dyn_cast<ConstantInt>(Divisor);
-    if (!CI || CI->isNullValue())
+    if (!CI || CI->isZeroValue())
       return visitGenericInst(SRem, S);
 
     auto *Dividend = SRem->getOperand(0);

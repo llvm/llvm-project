@@ -11764,7 +11764,7 @@ class InstructionsCompatibilityAnalysis {
           // rather than trying to gather it.
           Operands[0][Idx] = I->getOperand(0);
           Operands[1][Idx] = ConstantInt::get(I->getType(), 1);
-          Operands[2][Idx] = ConstantInt::getNullValue(I->getType());
+          Operands[2][Idx] = ConstantInt::getZeroValue(I->getType());
           continue;
         }
         auto [Op, ConvertedOps] = convertTo(I, S);
@@ -11795,7 +11795,7 @@ class InstructionsCompatibilityAnalysis {
         auto *GEP = dyn_cast<GetElementPtrInst>(V);
         if (!GEP) {
           Operands[0][Idx] = V;
-          Operands[1][Idx] = ConstantInt::getNullValue(Ty);
+          Operands[1][Idx] = ConstantInt::getZeroValue(Ty);
           continue;
         }
         Operands[0][Idx] = GEP->getPointerOperand();
@@ -15596,7 +15596,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
         ExtraCost += GetNodeMinBWAffectedCost(*E, E->getVectorFactor()) +
                      GetNodeMinBWAffectedCost(*E2, E2->getVectorFactor());
       }
-      V1 = Constant::getNullValue(getWidenedType(ScalarTy, CommonVF));
+      V1 = Constant::getZeroValue(getWidenedType(ScalarTy, CommonVF));
       V2 = getAllOnesValue(*R.DL, getWidenedType(ScalarTy, CommonVF));
     } else if (!V1 && P2.isNull()) {
       // Shuffle single entry node.
@@ -15623,7 +15623,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
         std::iota(CommonMask.begin(), CommonMask.end(), 0);
       }
       ExtraCost += GetNodeMinBWAffectedCost(*E, CommonVF);
-      V1 = Constant::getNullValue(getWidenedType(ScalarTy, CommonVF));
+      V1 = Constant::getZeroValue(getWidenedType(ScalarTy, CommonVF));
       // Not identity/broadcast? Try to see if the original vector is better.
       if (!E->ReorderIndices.empty() && CommonVF == E->ReorderIndices.size() &&
           CommonVF == CommonMask.size() &&
@@ -15668,7 +15668,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
         CommonVF = VF;
       }
       ExtraCost += GetValueMinBWAffectedCost(V1);
-      V1 = Constant::getNullValue(getWidenedType(ScalarTy, CommonVF));
+      V1 = Constant::getZeroValue(getWidenedType(ScalarTy, CommonVF));
       ExtraCost += GetNodeMinBWAffectedCost(
           *E2, std::min(CommonVF, E2->getVectorFactor()));
       V2 = getAllOnesValue(*R.DL, getWidenedType(ScalarTy, CommonVF));
@@ -15697,7 +15697,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
       }
       ExtraCost += GetNodeMinBWAffectedCost(
           *E1, std::min(CommonVF, E1->getVectorFactor()));
-      V1 = Constant::getNullValue(getWidenedType(ScalarTy, CommonVF));
+      V1 = Constant::getZeroValue(getWidenedType(ScalarTy, CommonVF));
       ExtraCost += GetValueMinBWAffectedCost(V2);
       V2 = getAllOnesValue(*R.DL, getWidenedType(ScalarTy, CommonVF));
     } else {
@@ -15712,17 +15712,17 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
       ExtraCost +=
           GetValueMinBWAffectedCost(V1) + GetValueMinBWAffectedCost(V2);
       if (V1->getType() != V2->getType()) {
-        V1 = Constant::getNullValue(getWidenedType(ScalarTy, CommonVF));
+        V1 = Constant::getZeroValue(getWidenedType(ScalarTy, CommonVF));
         V2 = getAllOnesValue(*R.DL, getWidenedType(ScalarTy, CommonVF));
       } else {
         if (cast<VectorType>(V1->getType())->getElementType() != ScalarTy)
-          V1 = Constant::getNullValue(getWidenedType(ScalarTy, CommonVF));
+          V1 = Constant::getZeroValue(getWidenedType(ScalarTy, CommonVF));
         if (cast<VectorType>(V2->getType())->getElementType() != ScalarTy)
           V2 = getAllOnesValue(*R.DL, getWidenedType(ScalarTy, CommonVF));
       }
     }
     InVectors.front() =
-        Constant::getNullValue(getWidenedType(ScalarTy, CommonMask.size()));
+        Constant::getZeroValue(getWidenedType(ScalarTy, CommonMask.size()));
     if (InVectors.size() == 2)
       InVectors.pop_back();
     return ExtraCost + BaseShuffleAnalysis::createShuffle<InstructionCost>(
@@ -15854,7 +15854,7 @@ public:
     if (NumParts != 1 && UniqueBases.size() != 1) {
       UseVecBaseAsInput = true;
       VecBase =
-          Constant::getNullValue(getWidenedType(ScalarTy, CommonMask.size()));
+          Constant::getZeroValue(getWidenedType(ScalarTy, CommonMask.size()));
     }
     return VecBase;
   }
@@ -15985,7 +15985,7 @@ public:
                 Value *Root = nullptr) {
     Cost += getBuildVectorCost(VL, Root);
     if (!Root) {
-      // FIXME: Need to find a way to avoid use of getNullValue here.
+      // FIXME: Need to find a way to avoid use of getZeroValue here.
       SmallVector<Constant *> Vals;
       unsigned VF = VL.size();
       if (MaskVF != 0)
@@ -16001,7 +16001,7 @@ public:
           Vals.push_back(UndefValue::get(ScalarTy));
           continue;
         }
-        Vals.push_back(Constant::getNullValue(ScalarTy));
+        Vals.push_back(Constant::getZeroValue(ScalarTy));
       }
       if (auto *VecTy = dyn_cast<FixedVectorType>(VLScalarTy)) {
         assert(SLPReVec && "FixedVectorType is not expected.");
@@ -24270,7 +24270,7 @@ Value *BoUpSLP::vectorizeTree(
       // Replace conditions of the poisoning logical ops with the non-poison
       // constant value.
       for (SelectInst *SI : LogicalOpSelects)
-        SI->setCondition(Constant::getNullValue(SI->getCondition()->getType()));
+        SI->setCondition(Constant::getZeroValue(SI->getCondition()->getType()));
     }
   }
   // Retain to-be-deleted instructions for some debug-info bookkeeping and alias
@@ -27761,7 +27761,7 @@ class HorizontalReduction {
       if (UseSelect && OpTy == CmpInst::makeCmpResultType(OpTy))
         return Builder.CreateSelectWithUnknownProfile(
             LHS, RHS,
-            ConstantInt::getNullValue(CmpInst::makeCmpResultType(OpTy)),
+            ConstantInt::getZeroValue(CmpInst::makeCmpResultType(OpTy)),
             DEBUG_TYPE, Name);
       unsigned RdxOpcode = RecurrenceDescriptor::getOpcode(Kind);
       return Builder.CreateBinOp((Instruction::BinaryOps)RdxOpcode, LHS, RHS,
@@ -29419,7 +29419,7 @@ private:
           LLVM_DEBUG(dbgs()
                      << "SLP: Xor " << Cnt << "of " << Vec << ". (HorRdx)\n");
           if (Cnt % 2 == 0)
-            Vec = Constant::getNullValue(Vec->getType());
+            Vec = Constant::getZeroValue(Vec->getType());
           break;
         }
         case RecurKind::FAdd: {
@@ -29573,7 +29573,7 @@ private:
       LLVM_DEBUG(dbgs() << "SLP: Xor " << Cnt << "of " << VectorizedValue
                         << ". (HorRdx)\n");
       if (Cnt % 2 == 0)
-        return Constant::getNullValue(VectorizedValue->getType());
+        return Constant::getZeroValue(VectorizedValue->getType());
       return VectorizedValue;
     }
     case RecurKind::FAdd: {
@@ -29685,7 +29685,7 @@ private:
       if (NeedShuffle)
         VectorizedValue = Builder.CreateShuffleVector(
             VectorizedValue,
-            ConstantVector::getNullValue(VectorizedValue->getType()), Mask);
+            ConstantVector::getZeroValue(VectorizedValue->getType()), Mask);
       return VectorizedValue;
     }
     case RecurKind::FAdd: {

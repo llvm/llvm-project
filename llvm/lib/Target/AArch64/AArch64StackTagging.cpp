@@ -226,9 +226,9 @@ public:
       if (Offset > LastOffset)
         emitZeroes(IRB, LastOffset, Offset - LastOffset);
 
-      Value *Store1 = I1 == Out.end() ? Constant::getNullValue(IRB.getInt64Ty())
+      Value *Store1 = I1 == Out.end() ? Constant::getZeroValue(IRB.getInt64Ty())
                                       : I1->second;
-      Value *Store2 = I2 == Out.end() ? Constant::getNullValue(IRB.getInt64Ty())
+      Value *Store2 = I2 == Out.end() ? Constant::getZeroValue(IRB.getInt64Ty())
                                       : I2->second;
       emitPair(IRB, Offset, Store1, Store2);
       LastOffset = Offset + 16;
@@ -479,7 +479,7 @@ Instruction *AArch64StackTagging::insertBaseTaggedPointer(
   IRBuilder<> IRB(&PrologueBB->front());
   Instruction *Base =
       IRB.CreateIntrinsic(Intrinsic::aarch64_irg_sp, {},
-                          {Constant::getNullValue(IRB.getInt64Ty())});
+                          {Constant::getZeroValue(IRB.getInt64Ty())});
   Base->setName("basetag");
   const Triple &TargetTriple = M.getTargetTriple();
   // This ABI will make it into Android API level 35.
@@ -585,7 +585,7 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
     IRBuilder<> IRB(Info.AI->getNextNode());
     Instruction *TagPCall =
         IRB.CreateIntrinsic(Intrinsic::aarch64_tagp, {Info.AI->getType()},
-                            {Constant::getNullValue(Info.AI->getType()), Base,
+                            {Constant::getZeroValue(Info.AI->getType()), Base,
                              ConstantInt::get(IRB.getInt64Ty(), Tag)});
     if (Info.AI->hasName())
       TagPCall->setName(Info.AI->getName() + ".tag");

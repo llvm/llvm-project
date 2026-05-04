@@ -1094,7 +1094,7 @@ GlobalVariable *InstrLowerer::getOrCreateBiasVar(StringRef VarName) {
   // is being used. Runtime has a weak external reference that is used
   // to check whether that's the case or not.
   Bias = new GlobalVariable(M, Int64Ty, false, GlobalValue::LinkOnceODRLinkage,
-                            Constant::getNullValue(Int64Ty), VarName);
+                            Constant::getZeroValue(Int64Ty), VarName);
   Bias->setVisibility(GlobalVariable::HiddenVisibility);
   // A definition that's weak (linkonce_odr) without being in a COMDAT
   // section wouldn't lead to link errors, but it would lead to a dead
@@ -1175,7 +1175,7 @@ void InstrLowerer::lowerCover(InstrProfCoverInst *CoverInstruction) {
 
 void InstrLowerer::lowerTimestamp(
     InstrProfTimestampInst *TimestampInstruction) {
-  assert(TimestampInstruction->getIndex()->isNullValue() &&
+  assert(TimestampInstruction->getIndex()->isZeroValue() &&
          "timestamp probes are always the first probe for a function");
   auto &Ctx = M.getContext();
   auto *TimestampAddr = getCounterAddress(TimestampInstruction);
@@ -1204,7 +1204,7 @@ void InstrLowerer::lowerIncrement(InstrProfIncrementInst *Inc) {
         ConstantPointerNull::get(PointerType::getUnqual(M.getContext()));
     Builder.CreateCall(Callee, {CastAddr, Uniform, Inc->getStep()});
   } else if (Options.Atomic || AtomicCounterUpdateAll ||
-             (Inc->getIndex()->isNullValue() && AtomicFirstCounter)) {
+             (Inc->getIndex()->isZeroValue() && AtomicFirstCounter)) {
     Builder.CreateAtomicRMW(AtomicRMWInst::Add, Addr, Inc->getStep(),
                             MaybeAlign(), AtomicOrdering::Monotonic);
   } else {
@@ -1638,7 +1638,7 @@ InstrLowerer::createRegionBitmaps(InstrProfMCDCBitmapInstBase *Inc,
   uint64_t NumBytes = Inc->getNumBitmapBytes();
   auto *BitmapTy = ArrayType::get(Type::getInt8Ty(M.getContext()), NumBytes);
   auto GV = new GlobalVariable(M, BitmapTy, false, Linkage,
-                               Constant::getNullValue(BitmapTy), Name);
+                               Constant::getZeroValue(BitmapTy), Name);
   GV->setAlignment(Align(1));
   return GV;
 }
@@ -1677,7 +1677,7 @@ InstrLowerer::createRegionCounters(InstrProfCntrInstBase *Inc, StringRef Name,
   } else {
     auto *CounterTy = ArrayType::get(Type::getInt64Ty(Ctx), NumCounters);
     GV = new GlobalVariable(M, CounterTy, false, Linkage,
-                            Constant::getNullValue(CounterTy), Name);
+                            Constant::getZeroValue(CounterTy), Name);
     GV->setAlignment(Align(8));
   }
   return GV;
@@ -1786,7 +1786,7 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
       !needsRuntimeRegistrationOfSectionRange(TT)) {
     ArrayType *ValuesTy = ArrayType::get(Type::getInt64Ty(Ctx), NS);
     auto *ValuesVar = new GlobalVariable(
-        M, ValuesTy, false, Linkage, Constant::getNullValue(ValuesTy),
+        M, ValuesTy, false, Linkage, Constant::getZeroValue(ValuesTy),
         getVarName(Inc, getInstrProfValuesVarPrefix(), Renamed));
     ValuesVar->setVisibility(Visibility);
     setGlobalVariableLargeSection(TT, *ValuesVar);
@@ -1938,7 +1938,7 @@ void InstrLowerer::emitVNodes() {
   ArrayType *VNodesTy = ArrayType::get(VNodeTy, NumCounters);
   auto *VNodesVar = new GlobalVariable(
       M, VNodesTy, false, GlobalValue::PrivateLinkage,
-      Constant::getNullValue(VNodesTy), getInstrProfVNodesVarName());
+      Constant::getZeroValue(VNodesTy), getInstrProfVNodesVarName());
   setGlobalVariableLargeSection(TT, *VNodesVar);
   VNodesVar->setSection(
       getInstrProfSectionName(IPSK_vnodes, TT.getObjectFormat()));

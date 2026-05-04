@@ -326,7 +326,7 @@ void SparseSolver<LatticeKey, LatticeVal, KeyInfo>::getFeasibleSuccessors(
     }
 
     // Constant condition variables mean the branch can only go a single way
-    Succs[C->isNullValue()] = true;
+    Succs[C->isZeroValue()] = true;
     return;
   }
 

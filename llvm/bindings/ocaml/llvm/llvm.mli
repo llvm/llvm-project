@@ -568,7 +568,7 @@ val set_module_identifier : llmodule -> string -> unit
 val get_module_flag : llmodule -> string -> llmetadata option
 
 (** [add_module_flag m b k v] Add a module-level flag b, with key [k] and
-    value [v] to the flags metadata of module [m]. It will create the 
+    value [v] to the flags metadata of module [m]. It will create the
     module-level flags named metadata if it doesn't already exist. *)
 val add_module_flag : llmodule -> ModuleFlagBehavior.t ->
                         string -> llmetadata -> unit
@@ -885,7 +885,7 @@ val indices : llvalue -> int array
 val is_constant : llvalue -> bool
 
 (** [const_null ty] returns the constant null (zero) of the type [ty].
-    See the method [llvm::Constant::getNullValue]. *)
+    See the method [llvm::Constant::getZeroValue]. *)
 val const_null : lltype -> llvalue
 
 (** [const_all_ones ty] returns the constant '-1' of the integer or vector type
@@ -905,7 +905,7 @@ val undef : lltype -> llvalue
 val poison : lltype -> llvalue
 
 (** [is_null v] returns [true] if the value [v] is the null (zero) value.
-    See the method [llvm::Constant::isNullValue]. *)
+    See the method [llvm::Constant::isZeroValue]. *)
 val is_null : llvalue -> bool
 
 (** [is_undef v] returns [true] if the value [v] is an undefined value, [false]

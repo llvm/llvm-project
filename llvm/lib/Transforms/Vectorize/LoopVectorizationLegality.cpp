@@ -722,7 +722,7 @@ void LoopVectorizationLegality::addInductionPhi(
   if (ID.getKind() == InductionDescriptor::IK_IntInduction &&
       ID.getConstIntStepValue() && ID.getConstIntStepValue()->isOne() &&
       isa<Constant>(ID.getStartValue()) &&
-      cast<Constant>(ID.getStartValue())->isNullValue()) {
+      cast<Constant>(ID.getStartValue())->isZeroValue()) {
 
     // Use the phi node with the widest type as induction. Use the last
     // one if there are multiple (no good reason for doing this other

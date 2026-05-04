@@ -2077,7 +2077,7 @@ Value *DFSanFunction::combineOrigins(const std::vector<Value *> &Shadows,
   for (size_t I = 0; I != Size; ++I) {
     Value *OpOrigin = Origins[I];
     Constant *ConstOpOrigin = dyn_cast<Constant>(OpOrigin);
-    if (ConstOpOrigin && ConstOpOrigin->isNullValue())
+    if (ConstOpOrigin && ConstOpOrigin->isZeroValue())
       continue;
     if (!Origin) {
       Origin = OpOrigin;
@@ -2363,7 +2363,7 @@ DFSanFunction::loadShadowOrigin(Value *Addr, uint64_t Size, Align InstAlignment,
     if (ClTrackOrigins == 2) {
       IRBuilder<> IRB(Pos->getParent(), Pos);
       auto *ConstantShadow = dyn_cast<Constant>(PrimitiveShadow);
-      if (!ConstantShadow || !ConstantShadow->isNullValue())
+      if (!ConstantShadow || !ConstantShadow->isZeroValue())
         Origin = updateOriginIfTainted(PrimitiveShadow, Origin, IRB);
     }
   }
@@ -2552,7 +2552,7 @@ void DFSanFunction::storeOrigin(BasicBlock::iterator Pos, Value *Addr,
   Value *CollapsedShadow = collapseToPrimitiveShadow(Shadow, Pos);
   IRBuilder<> IRB(Pos->getParent(), Pos);
   if (auto *ConstantShadow = dyn_cast<Constant>(CollapsedShadow)) {
-    if (!ConstantShadow->isNullValue())
+    if (!ConstantShadow->isZeroValue())
       paintOrigin(IRB, updateOrigin(Origin, IRB), StoreOriginAddr, Size,
                   OriginAlignment);
     return;

@@ -248,7 +248,7 @@ AnyValue AnyValue::getPoisonValue(Context &Ctx, Type *Ty) {
   }
   llvm_unreachable("Unsupported type");
 }
-AnyValue AnyValue::getNullValue(Context &Ctx, Type *Ty) {
+AnyValue AnyValue::getZeroValue(Context &Ctx, Type *Ty) {
   if (Ty->isIntegerTy())
     return AnyValue(APInt::getZero(Ty->getIntegerBitWidth()));
   if (Ty->isFloatingPointTy())
@@ -258,18 +258,18 @@ AnyValue AnyValue::getNullValue(Context &Ctx, Type *Ty) {
   if (auto *VecTy = dyn_cast<VectorType>(Ty)) {
     uint32_t NumElements = Ctx.getEVL(VecTy->getElementCount());
     return AnyValue(std::vector<AnyValue>(
-        NumElements, getNullValue(Ctx, VecTy->getElementType())));
+        NumElements, getZeroValue(Ctx, VecTy->getElementType())));
   }
   if (auto *ArrTy = dyn_cast<ArrayType>(Ty)) {
     uint64_t NumElements = ArrTy->getNumElements();
     return AnyValue(std::vector<AnyValue>(
-        NumElements, getNullValue(Ctx, ArrTy->getElementType())));
+        NumElements, getZeroValue(Ctx, ArrTy->getElementType())));
   }
   if (auto *StructTy = dyn_cast<StructType>(Ty)) {
     std::vector<AnyValue> Elements;
     Elements.reserve(StructTy->getNumElements());
     for (uint32_t I = 0, E = StructTy->getNumElements(); I != E; ++I)
-      Elements.push_back(getNullValue(Ctx, StructTy->getElementType(I)));
+      Elements.push_back(getZeroValue(Ctx, StructTy->getElementType(I)));
     return AnyValue(std::move(Elements));
   }
   llvm_unreachable("Unsupported type");

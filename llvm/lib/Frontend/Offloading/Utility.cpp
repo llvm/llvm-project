@@ -70,7 +70,7 @@ offloading::getOffloadingEntryInitializer(Module &M, object::OffloadKind Kind,
 
   // Construct the offloading entry.
   Constant *EntryData[] = {
-      ConstantExpr::getNullValue(Int64Ty),
+      ConstantExpr::getZeroValue(Int64Ty),
       ConstantInt::get(Int16Ty, 1),
       ConstantInt::get(Int16Ty, Kind),
       ConstantInt::get(Int32Ty, Flags),
@@ -79,7 +79,7 @@ offloading::getOffloadingEntryInitializer(Module &M, object::OffloadKind Kind,
       ConstantInt::get(Int64Ty, Size),
       ConstantInt::get(Int64Ty, Data),
       AuxAddr ? ConstantExpr::getPointerBitCastOrAddrSpaceCast(AuxAddr, PtrTy)
-              : ConstantExpr::getNullValue(PtrTy)};
+              : ConstantExpr::getZeroValue(PtrTy)};
   Constant *EntryInitializer = ConstantStruct::get(getEntryTy(M), EntryData);
   return {EntryInitializer, Str};
 }

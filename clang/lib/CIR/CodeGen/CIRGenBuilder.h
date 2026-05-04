@@ -279,15 +279,15 @@ public:
 
   // Return true if the value is a null constant such as null pointer, (+0.0)
   // for floating-point or zero initializer
-  bool isNullValue(mlir::Attribute attr) const {
+  bool isZeroValue(mlir::Attribute attr) const {
     if (mlir::isa<cir::ZeroAttr>(attr))
       return true;
 
     if (const auto ptrVal = mlir::dyn_cast<cir::ConstPtrAttr>(attr))
-      return ptrVal.isNullValue();
+      return ptrVal.isZeroValue();
 
     if (const auto intVal = mlir::dyn_cast<cir::IntAttr>(attr))
-      return intVal.isNullValue();
+      return intVal.isZeroValue();
 
     if (const auto boolVal = mlir::dyn_cast<cir::BoolAttr>(attr))
       return !boolVal.getValue();
@@ -305,7 +305,7 @@ public:
         // FIXME(cir): the record's ID should not be considered a member.
         if (mlir::isa<mlir::StringAttr>(elt))
           continue;
-        if (!isNullValue(elt))
+        if (!isZeroValue(elt))
           return false;
       }
       return true;
@@ -317,7 +317,7 @@ public:
 
       return llvm::all_of(
           mlir::cast<mlir::ArrayAttr>(arrayVal.getElts()),
-          [&](const mlir::Attribute &elt) { return isNullValue(elt); });
+          [&](const mlir::Attribute &elt) { return isZeroValue(elt); });
     }
     return false;
   }

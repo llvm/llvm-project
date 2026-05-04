@@ -1210,7 +1210,7 @@ static Value *getSign32(Value *V, IRBuilder<> &Builder, const DataLayout DL) {
   if (Known.isNegative())
     return Constant::getAllOnesValue(V->getType());
   if (Known.isNonNegative())
-    return Constant::getNullValue(V->getType());
+    return Constant::getZeroValue(V->getType());
   return Builder.CreateAShr(V, Builder.getInt32(31));
 }
 
@@ -1565,7 +1565,7 @@ bool AMDGPUCodeGenPrepareImpl::visitLoadInst(LoadInst &I) {
       ConstantInt *Lower =
         mdconst::extract<ConstantInt>(Range->getOperand(0));
 
-      if (Lower->isNullValue()) {
+      if (Lower->isZeroValue()) {
         WidenLoad->setMetadata(LLVMContext::MD_range, nullptr);
       } else {
         Metadata *LowAndHigh[] = {

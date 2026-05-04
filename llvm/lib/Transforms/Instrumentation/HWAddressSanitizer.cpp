@@ -630,7 +630,7 @@ void HWAddressSanitizer::createHwasanNote() {
   // always create start and stop symbols.
   auto *Dummy = new GlobalVariable(
       M, Int8Arr0Ty, /*isConstantGlobal*/ true, GlobalVariable::PrivateLinkage,
-      Constant::getNullValue(Int8Arr0Ty), "hwasan.dummy.global");
+      Constant::getZeroValue(Int8Arr0Ty), "hwasan.dummy.global");
   Dummy->setSection("hwasan_globals");
   Dummy->setComdat(NoteComdat);
   Dummy->setMetadata(LLVMContext::MD_associated,
@@ -1908,7 +1908,7 @@ void HWAddressSanitizer::instrumentPersonalityFunctions() {
         HwasanPersonalityWrapper,
         {ThunkFn->getArg(0), ThunkFn->getArg(1), ThunkFn->getArg(2),
          ThunkFn->getArg(3), ThunkFn->getArg(4),
-         P.first ? P.first : Constant::getNullValue(PtrTy),
+         P.first ? P.first : Constant::getZeroValue(PtrTy),
          UnwindGetGR.getCallee(), UnwindGetCFA.getCallee()});
     WrapperCall->setTailCall();
     IRB.CreateRet(WrapperCall);

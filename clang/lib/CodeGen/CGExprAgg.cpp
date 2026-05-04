@@ -633,7 +633,7 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
     // would actually be quite complex.  Therefore we go through an
     // alloca.
     llvm::Instruction *dominatingIP =
-        Builder.CreateFlagLoad(llvm::ConstantInt::getNullValue(CGF.Int8PtrTy));
+        Builder.CreateFlagLoad(llvm::ConstantInt::getZeroValue(CGF.Int8PtrTy));
     endOfInit = CGF.CreateTempAlloca(begin->getType(), CGF.getPointerAlign(),
                                      "arrayinit.endOfInit");
     Builder.CreateStore(begin, endOfInit);

@@ -208,7 +208,7 @@ mlir::Attribute clang::CIRGen::CIRGenBuilderTy::getConstRecordOrZeroAttr(
 
   // Return zero or anonymous constant record.
   const bool isZero = llvm::all_of(
-      arrayAttr, [&](mlir::Attribute a) { return isNullValue(a); });
+      arrayAttr, [&](mlir::Attribute a) { return isZeroValue(a); });
   if (isZero)
     return cir::ZeroAttr::get(recordTy);
   return cir::ConstRecordAttr::get(recordTy, arrayAttr);

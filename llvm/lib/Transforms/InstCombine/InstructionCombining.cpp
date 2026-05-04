@@ -288,7 +288,7 @@ Value *InstCombinerImpl::EmitGEPOffsets(ArrayRef<GEPOperator *> GEPs,
   if (OneUseSum)
     Sum = Add(Sum, OneUseSum);
   if (!Sum)
-    return Constant::getNullValue(IdxTy);
+    return Constant::getZeroValue(IdxTy);
   return Sum;
 }
 
@@ -897,7 +897,7 @@ Instruction *InstCombinerImpl::tryFoldInstWithCtpopWithNot(Instruction *I) {
   if (Opc == Instruction::ICmp && !cast<ICmpInst>(I)->isEquality()) {
     Constant *Cmp =
         ConstantFoldCompareInstOperands(ICmpInst::ICMP_UGT, C, BitWidthC, DL);
-    if (!Cmp || !Cmp->isNullValue())
+    if (!Cmp || !Cmp->isZeroValue())
       return nullptr;
   }
 
@@ -1737,7 +1737,7 @@ Instruction *InstCombinerImpl::foldBinopOfSextBoolToSelect(BinaryOperator &BO) {
 
   // bo (sext i1 X), C --> select X, (bo -1, C), (bo 0, C)
   Constant *Ones = ConstantInt::getAllOnesValue(BO.getType());
-  Constant *Zero = ConstantInt::getNullValue(BO.getType());
+  Constant *Zero = ConstantInt::getZeroValue(BO.getType());
   Value *TVal = Builder.CreateBinOp(BO.getOpcode(), Ones, C);
   Value *FVal = Builder.CreateBinOp(BO.getOpcode(), Zero, C);
   return createSelectInstWithUnknownProfile(X, TVal, FVal);
@@ -1758,7 +1758,7 @@ static Value *simplifyOperationIntoSelectOperand(Instruction &I, SelectInst *SI,
       // Pass
     } else if (match(Op, m_ZExt(m_Specific(SI->getCondition())))) {
       V = IsTrueArm ? ConstantInt::get(Op->getType(), 1)
-                    : ConstantInt::getNullValue(Op->getType());
+                    : ConstantInt::getZeroValue(Op->getType());
     } else {
       V = Op;
     }
@@ -2975,7 +2975,7 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
   // Don't create GEPs with more than one non-zero index.
   unsigned NumNonZeroIndices = count_if(Indices, [](Value *Idx) {
     auto *C = dyn_cast<Constant>(Idx);
-    return !C || !C->isNullValue();
+    return !C || !C->isZeroValue();
   });
   if (NumNonZeroIndices > 1)
     return nullptr;
@@ -3370,7 +3370,7 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     Type *EltTy = GTI.getIndexedType();
     if (EltTy->isSized() && DL.getTypeAllocSize(EltTy).isZero())
       if (!isa<Constant>(*I) || !match(I->get(), m_Zero())) {
-        *I = Constant::getNullValue(NewIndexType);
+        *I = Constant::getZeroValue(NewIndexType);
         MadeChange = true;
       }
 
@@ -3412,7 +3412,7 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
 
   // Strip trailing zero indices.
   auto *LastIdx = dyn_cast<Constant>(Indices.back());
-  if (LastIdx && LastIdx->isNullValue() && !LastIdx->getType()->isVectorTy()) {
+  if (LastIdx && LastIdx->isZeroValue() && !LastIdx->getType()->isVectorTy()) {
     return replaceInstUsesWith(
         GEP, Builder.CreateGEP(GEP.getSourceElementType(), PtrOp,
                                drop_end(Indices), "", GEP.getNoWrapFlags()));
@@ -3420,7 +3420,7 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
 
   // Strip leading zero indices.
   auto *FirstIdx = dyn_cast<Constant>(Indices.front());
-  if (FirstIdx && FirstIdx->isNullValue() &&
+  if (FirstIdx && FirstIdx->isZeroValue() &&
       !FirstIdx->getType()->isVectorTy()) {
     gep_type_iterator GTI = gep_type_begin(GEP);
     ++GTI;
@@ -3462,7 +3462,7 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   for (auto [IdxNum, Idx] : enumerate(Indices)) {
     // Ignore one leading zero index.
     auto *C = dyn_cast<Constant>(Idx);
-    if (C && C->isNullValue() && IdxNum == 0)
+    if (C && C->isZeroValue() && IdxNum == 0)
       continue;
 
     if (!SeenNonZeroIndex) {
@@ -3477,7 +3477,7 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
                           GEP.getName() + ".split", GEP.getNoWrapFlags());
 
     SmallVector<Value *> BackIndices;
-    BackIndices.push_back(Constant::getNullValue(NewScalarIndexTy));
+    BackIndices.push_back(Constant::getZeroValue(NewScalarIndexTy));
     append_range(BackIndices, drop_begin(Indices, IdxNum));
     return GetElementPtrInst::Create(
         GetElementPtrInst::getIndexedType(GEPEltType, FrontIndices), FrontGEP,
@@ -3923,7 +3923,7 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
   if (Init) {
     if (isa<UndefValue>(Init))
       KnowInitUndef = true;
-    else if (Init->isNullValue())
+    else if (Init->isZeroValue())
       KnowInitZero = true;
   }
   // The various sanitizers don't actually return undef memory, but rather
@@ -3991,7 +3991,7 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
         if (isa<LoadInst>(I)) {
           assert(KnowInitZero || KnowInitUndef);
           Replace = KnowInitUndef ? UndefValue::get(I->getType())
-                                  : Constant::getNullValue(I->getType());
+                                  : Constant::getZeroValue(I->getType());
         } else
           Replace = PoisonValue::get(I->getType());
         replaceInstUsesWith(*I, Replace);
@@ -4890,7 +4890,7 @@ static bool isCatchAll(EHPersonality Personality, Constant *TypeInfo) {
   case EHPersonality::Wasm_CXX:
   case EHPersonality::XL_CXX:
   case EHPersonality::ZOS_CXX:
-    return TypeInfo->isNullValue();
+    return TypeInfo->isZeroValue();
   }
   llvm_unreachable("invalid enum");
 }
@@ -4971,7 +4971,7 @@ Instruction *InstCombinerImpl::visitLandingPadInst(LandingPadInst &LI) {
         // Not an empty filter - it contains at least one null typeinfo.
         assert(NumTypeInfos > 0 && "Should have handled empty filter already!");
         Constant *TypeInfo =
-          Constant::getNullValue(FilterType->getElementType());
+            Constant::getZeroValue(FilterType->getElementType());
         // If this typeinfo is a catch-all then the filter can never match.
         if (isCatchAll(Personality, TypeInfo)) {
           // Throw the filter away.
@@ -5147,7 +5147,7 @@ Instruction *InstCombinerImpl::visitLandingPadInst(LandingPadInst &LI) {
         // LFilter iff LFilter contains a zero.
         assert(FElts > 0 && "Should have eliminated the empty filter earlier!");
         for (unsigned l = 0; l != LElts; ++l)
-          if (LArray->getOperand(l)->isNullValue()) {
+          if (LArray->getOperand(l)->isZeroValue()) {
             // LFilter contains a zero - discard it.
             NewClauses.erase(J);
             MakeNewInstruction = true;
@@ -5458,7 +5458,7 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
       return BestValue;
     };
 
-    Value *NullValue = Constant::getNullValue(Ty);
+    Value *NullValue = Constant::getZeroValue(Ty);
     Value *BestValue = nullptr;
     for (auto *U : I.users()) {
       Value *V = NullValue;
@@ -5499,7 +5499,7 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
     if (!VTy)
       return nullptr;
     unsigned NumElts = VTy->getNumElements();
-    Constant *BestValue = Constant::getNullValue(VTy->getScalarType());
+    Constant *BestValue = Constant::getZeroValue(VTy->getScalarType());
     for (unsigned i = 0; i != NumElts; ++i) {
       Constant *EltC = C->getAggregateElement(i);
       if (EltC && !match(EltC, m_Undef())) {

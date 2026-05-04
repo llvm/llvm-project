@@ -158,7 +158,7 @@ Constant *SPIRVLegalizeZeroSizeArraysImpl::legalizeConstant(Constant *C) {
   if (isa<UndefValue>(C))
     return PoisonValue::get(NewTy);
   if (isa<ConstantAggregateZero>(C))
-    return Constant::getNullValue(NewTy);
+    return Constant::getZeroValue(NewTy);
   if (ConstantArray *CA = dyn_cast<ConstantArray>(C)) {
     SmallVector<Constant *, 8> Elems;
     for (Use &U : CA->operands())

@@ -1848,7 +1848,7 @@ bool CodeGenPrepare::unfoldPowerOf2Test(CmpInst *Cmp) {
         (Pred == CmpInst::ICMP_ULT || Pred == CmpInst::ICMP_EQ)
             ? CmpInst::ICMP_EQ
             : CmpInst::ICMP_NE;
-    NewCmp = Builder.CreateICmp(NewPred, And, ConstantInt::getNullValue(OpTy));
+    NewCmp = Builder.CreateICmp(NewPred, And, ConstantInt::getZeroValue(OpTy));
   } else {
     // ctpop(x) == 1 -> (x ^ (x - 1)) u> (x - 1)
     // ctpop(x) != 1 -> (x ^ (x - 1)) u<= (x - 1)
@@ -2243,7 +2243,7 @@ static bool foldURemOfLoopIncrement(Instruction *Rem, const DataLayout *DL,
   Value *RemAdd = Builder.CreateNUWAdd(NewRem, ConstantInt::get(Ty, 1));
   Value *RemCmp = Builder.CreateICmp(ICmpInst::ICMP_EQ, RemAdd, RemAmt);
   Value *RemSel =
-      Builder.CreateSelect(RemCmp, Constant::getNullValue(Ty), RemAdd);
+      Builder.CreateSelect(RemCmp, Constant::getZeroValue(Ty), RemAdd);
 
   NewRem->addIncoming(Start, L->getLoopPreheader());
   NewRem->addIncoming(RemSel, L->getLoopLatch());
@@ -2636,7 +2636,7 @@ static bool despeculateCountZeros(IntrinsicInst *CountZeros,
 
   // Replace the unconditional branch that was created by the first split with
   // a compare against zero and a conditional branch.
-  Value *Zero = Constant::getNullValue(Ty);
+  Value *Zero = Constant::getZeroValue(Ty);
   // Avoid introducing branch on poison. This also replaces the ctz operand.
   if (!isGuaranteedNotToBeUndefOrPoison(Op))
     Op = Builder.CreateFreeze(Op, Op->getName() + ".fr");
@@ -4291,7 +4291,7 @@ private:
     }
     assert(CommonType && "At least one non-null value must be!");
     for (auto *V : NullValue)
-      Map[V] = Constant::getNullValue(CommonType);
+      Map[V] = Constant::getZeroValue(CommonType);
     return true;
   }
 
@@ -6072,7 +6072,7 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
 
     if (!ResultPtr && !AddrMode.BaseReg && !AddrMode.Scale &&
         !AddrMode.BaseOffs) {
-      SunkAddr = Constant::getNullValue(Addr->getType());
+      SunkAddr = Constant::getZeroValue(Addr->getType());
     } else if (!ResultPtr) {
       return Modified;
     } else {
@@ -6249,7 +6249,7 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
     }
 
     if (!Result)
-      SunkAddr = Constant::getNullValue(Addr->getType());
+      SunkAddr = Constant::getZeroValue(Addr->getType());
     else
       SunkAddr = Builder.CreateIntToPtr(Result, Addr->getType(), "sunkaddr");
   }
@@ -6364,7 +6364,7 @@ bool CodeGenPrepare::optimizeGatherScatterInst(Instruction *MemoryInst,
       auto *SecondTy = GetElementPtrInst::getIndexedType(
           SourceTy, ArrayRef(Ops).drop_front());
       NewAddr =
-          Builder.CreateGEP(SecondTy, NewAddr, Constant::getNullValue(IndexTy));
+          Builder.CreateGEP(SecondTy, NewAddr, Constant::getZeroValue(IndexTy));
     } else {
       Value *Base = Ops[0];
       Value *Index = Ops[FinalIndex];
@@ -6373,7 +6373,7 @@ bool CodeGenPrepare::optimizeGatherScatterInst(Instruction *MemoryInst,
       if (Ops.size() != 2) {
         // Replace the last index with 0.
         Ops[FinalIndex] =
-            Constant::getNullValue(Ops[FinalIndex]->getType()->getScalarType());
+            Constant::getZeroValue(Ops[FinalIndex]->getType()->getScalarType());
         Base = Builder.CreateGEP(SourceTy, Base, ArrayRef(Ops).drop_front());
         SourceTy = GetElementPtrInst::getIndexedType(
             SourceTy, ArrayRef(Ops).drop_front());
@@ -6405,7 +6405,7 @@ bool CodeGenPrepare::optimizeGatherScatterInst(Instruction *MemoryInst,
              Intrinsic::masked_scatter);
       ScalarTy = MemoryInst->getOperand(0)->getType()->getScalarType();
     }
-    NewAddr = Builder.CreateGEP(ScalarTy, V, Constant::getNullValue(IndexTy));
+    NewAddr = Builder.CreateGEP(ScalarTy, V, Constant::getZeroValue(IndexTy));
   } else {
     // Constant, SelectionDAGBuilder knows to check if its a splat.
     return false;
@@ -6525,12 +6525,12 @@ bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
     Value *XorRHS = Builder.CreateXor(HiRHS, SignLoRHS);
     Value *Or = Builder.CreateOr(XorLHS, XorRHS, "or.lhs.rhs");
     IsAnyBitTrue = Builder.CreateCmp(ICmpInst::ICMP_NE, Or,
-                                     ConstantInt::getNullValue(Or->getType()));
+                                     ConstantInt::getZeroValue(Or->getType()));
   } else {
     Value *CmpLHS = Builder.CreateCmp(ICmpInst::ICMP_NE, HiLHS,
-                                      ConstantInt::getNullValue(LegalTy));
+                                      ConstantInt::getZeroValue(LegalTy));
     Value *CmpRHS = Builder.CreateCmp(ICmpInst::ICMP_NE, HiRHS,
-                                      ConstantInt::getNullValue(LegalTy));
+                                      ConstantInt::getZeroValue(LegalTy));
     IsAnyBitTrue = Builder.CreateOr(CmpLHS, CmpRHS, "or.lhs.rhs");
   }
   Builder.CreateCondBr(IsAnyBitTrue, OverflowBB, NoOverflowBB);

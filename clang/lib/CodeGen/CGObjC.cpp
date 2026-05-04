@@ -1239,7 +1239,7 @@ CodeGenFunction::generateObjCGetterBody(const ObjCImplementationDecl *classImpl,
       if (getterMethod->getReturnType()->hasBooleanRepresentation() &&
           CGM.getCodeGenOpts().isConvertingBoolWithCmp0())
         ivarVal = Builder.CreateICmpNE(
-            ivarVal, llvm::Constant::getNullValue(ivarVal->getType()));
+            ivarVal, llvm::Constant::getZeroValue(ivarVal->getType()));
       else
         ivarVal = Builder.CreateTrunc(ivarVal, bitcastType);
     }
@@ -1922,7 +1922,7 @@ void CodeGenFunction::EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S){
   llvm::BasicBlock *EmptyBB = createBasicBlock("forcoll.empty");
   llvm::BasicBlock *LoopInitBB = createBasicBlock("forcoll.loopinit");
 
-  llvm::Value *zero = llvm::Constant::getNullValue(NSUIntegerTy);
+  llvm::Value *zero = llvm::Constant::getZeroValue(NSUIntegerTy);
 
   // If the limit pointer was zero to begin with, the collection is
   // empty; skip all this. Set the branch weight assuming this has the same
@@ -2142,7 +2142,7 @@ void CodeGenFunction::EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S){
   if (!elementIsVariable) {
     // If the element was not a declaration, set it to be null.
 
-    llvm::Value *null = llvm::Constant::getNullValue(convertedElementType);
+    llvm::Value *null = llvm::Constant::getZeroValue(convertedElementType);
     elementLValue = EmitLValue(cast<Expr>(S.getElement()));
     EmitStoreThroughLValue(RValue::get(null), elementLValue);
   }
@@ -4058,7 +4058,7 @@ static llvm::Value *emitIsPlatformVersionAtLeast(CodeGenFunction &CGF,
   llvm::Value *Check =
       CGF.EmitNounwindRuntimeCall(CGM.IsPlatformVersionAtLeastFn, Args);
   return CGF.Builder.CreateICmpNE(Check,
-                                  llvm::Constant::getNullValue(CGM.Int32Ty));
+                                  llvm::Constant::getZeroValue(CGM.Int32Ty));
 }
 
 llvm::Value *
@@ -4084,7 +4084,7 @@ CodeGenFunction::EmitBuiltinAvailable(const VersionTuple &Version) {
   llvm::Value *CallRes =
       EmitNounwindRuntimeCall(CGM.IsOSVersionAtLeastFn, Args);
 
-  return Builder.CreateICmpNE(CallRes, llvm::Constant::getNullValue(Int32Ty));
+  return Builder.CreateICmpNE(CallRes, llvm::Constant::getZeroValue(Int32Ty));
 }
 
 static bool isFoundationNeededForDarwinAvailabilityCheck(
@@ -4152,7 +4152,7 @@ void CodeGenModule::emitAtAvailableLinkGuard() {
     CodeGenFunction CGF(*this);
     CGF.Builder.SetInsertPoint(CGF.createBasicBlock("", CFLinkCheckFunc));
     CGF.EmitNounwindRuntimeCall(CFFunc,
-                                llvm::Constant::getNullValue(VoidPtrTy));
+                                llvm::Constant::getZeroValue(VoidPtrTy));
     CGF.Builder.CreateUnreachable();
     addCompilerUsedGlobal(CFLinkCheckFunc);
   }

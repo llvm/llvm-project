@@ -455,13 +455,13 @@ Constant *InstCostVisitor::visitSelectInst(SelectInst &I) {
   assert(LastVisited != KnownConstants.end() && "Invalid iterator!");
 
   if (I.getCondition() == LastVisited->first) {
-    Value *V = LastVisited->second->isNullValue() ? I.getFalseValue()
+    Value *V = LastVisited->second->isZeroValue() ? I.getFalseValue()
                                                   : I.getTrueValue();
     return findConstantFor(V);
   }
   if (Constant *Condition = findConstantFor(I.getCondition()))
     if ((I.getTrueValue() == LastVisited->first && Condition->isOneValue()) ||
-        (I.getFalseValue() == LastVisited->first && Condition->isNullValue()))
+        (I.getFalseValue() == LastVisited->first && Condition->isZeroValue()))
       return LastVisited->second;
   return nullptr;
 }
@@ -1203,7 +1203,7 @@ Constant *FunctionSpecializer::getCandidateConstant(Value *V) {
 
   // Don't specialize on (anything derived from) the address of a non-constant
   // global variable, unless explicitly enabled.
-  if (C && C->getType()->isPointerTy() && !C->isNullValue())
+  if (C && C->getType()->isPointerTy() && !C->isZeroValue())
     if (auto *GV = dyn_cast<GlobalVariable>(getUnderlyingObject(C));
         GV && !(GV->isConstant() || SpecializeOnAddress))
       return nullptr;

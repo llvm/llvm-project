@@ -1101,7 +1101,7 @@ Value *ForExprAST::Codegen() {
 
 
   // for expr always returns 0.0.
-  return Constant::getNullValue(Type::getDoubleTy(TheContext));
+  return Constant::getZeroValue(Type::getDoubleTy(TheContext));
 }
 
 Value *VarExprAST::Codegen() {

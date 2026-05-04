@@ -243,13 +243,13 @@ public:
   ComplexPairTy VisitCXXScalarValueInitExpr(CXXScalarValueInitExpr *E) {
     assert(E->getType()->isAnyComplexType() && "Expected complex type!");
     QualType Elem = E->getType()->castAs<ComplexType>()->getElementType();
-    llvm::Constant *Null = llvm::Constant::getNullValue(CGF.ConvertType(Elem));
+    llvm::Constant *Null = llvm::Constant::getZeroValue(CGF.ConvertType(Elem));
     return ComplexPairTy(Null, Null);
   }
   ComplexPairTy VisitImplicitValueInitExpr(ImplicitValueInitExpr *E) {
     assert(E->getType()->isAnyComplexType() && "Expected complex type!");
     QualType Elem = E->getType()->castAs<ComplexType>()->getElementType();
-    llvm::Constant *Null = llvm::Constant::getNullValue(CGF.ConvertType(Elem));
+    llvm::Constant *Null = llvm::Constant::getZeroValue(CGF.ConvertType(Elem));
     return ComplexPairTy(Null, Null);
   }
 
@@ -483,7 +483,7 @@ ComplexPairTy ComplexExprEmitter::VisitExpr(Expr *E) {
 ComplexPairTy
 ComplexExprEmitter::VisitImaginaryLiteral(const ImaginaryLiteral *IL) {
   llvm::Value *Imag = CGF.EmitScalarExpr(IL->getSubExpr());
-  return ComplexPairTy(llvm::Constant::getNullValue(Imag->getType()), Imag);
+  return ComplexPairTy(llvm::Constant::getZeroValue(Imag->getType()), Imag);
 }
 
 ComplexPairTy ComplexExprEmitter::VisitCallExpr(const CallExpr *E) {
@@ -533,7 +533,7 @@ ComplexPairTy ComplexExprEmitter::EmitScalarToComplexCast(llvm::Value *Val,
   Val = CGF.EmitScalarConversion(Val, SrcType, DestType, Loc);
 
   // Return (realval, 0).
-  return ComplexPairTy(Val, llvm::Constant::getNullValue(Val->getType()));
+  return ComplexPairTy(Val, llvm::Constant::getZeroValue(Val->getType()));
 }
 
 ComplexPairTy ComplexExprEmitter::EmitCast(CastKind CK, Expr *Op,
@@ -1042,7 +1042,7 @@ ComplexPairTy ComplexExprEmitter::EmitBinDiv(const BinOpInfo &Op) {
     }
     llvm::Value *OrigLHSi = LHSi;
     if (!LHSi)
-      LHSi = llvm::Constant::getNullValue(RHSi->getType());
+      LHSi = llvm::Constant::getZeroValue(RHSi->getType());
     if (Op.FPFeatures.getComplexRange() == LangOptions::CX_Improved ||
         (Op.FPFeatures.getComplexRange() == LangOptions::CX_Promoted &&
          !FPHasBeenPromoted))
@@ -1061,7 +1061,7 @@ ComplexPairTy ComplexExprEmitter::EmitBinDiv(const BinOpInfo &Op) {
       BinOpInfo LibCallOp = Op;
       // If LHS was a real, supply a null imaginary part.
       if (!LHSi)
-        LibCallOp.LHS.second = llvm::Constant::getNullValue(LHSr->getType());
+        LibCallOp.LHS.second = llvm::Constant::getZeroValue(LHSr->getType());
 
       switch (LHSr->getType()->getTypeID()) {
       default:
@@ -1448,7 +1448,7 @@ ComplexPairTy ComplexExprEmitter::VisitInitListExpr(InitListExpr *E) {
   assert(E->getNumInits() == 0 && "Unexpected number of inits");
   QualType Ty = E->getType()->castAs<ComplexType>()->getElementType();
   llvm::Type *LTy = CGF.ConvertType(Ty);
-  llvm::Value *zeroConstant = llvm::Constant::getNullValue(LTy);
+  llvm::Value *zeroConstant = llvm::Constant::getZeroValue(LTy);
   return ComplexPairTy(zeroConstant, zeroConstant);
 }
 

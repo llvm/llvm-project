@@ -143,7 +143,7 @@ TEST_F(CloneInstruction, OverflowBits) {
 TEST_F(CloneInstruction, Inbounds) {
   V = new Argument(PointerType::get(context, 0));
 
-  Constant *Z = Constant::getNullValue(Type::getInt32Ty(context));
+  Constant *Z = Constant::getZeroValue(Type::getInt32Ty(context));
   std::vector<Value *> ops;
   ops.push_back(Z);
   GetElementPtrInst *GEP =

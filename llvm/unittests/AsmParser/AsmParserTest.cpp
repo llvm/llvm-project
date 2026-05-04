@@ -154,7 +154,7 @@ TEST(AsmParserTest, TypeAndConstantValueParsing) {
   ASSERT_TRUE(V);
   EXPECT_TRUE(V->getType()->isVectorTy());
   ASSERT_TRUE(isa<Constant>(V));
-  EXPECT_TRUE(cast<Constant>(V)->isNullValue());
+  EXPECT_TRUE(cast<Constant>(V)->isZeroValue());
 
   V = parseConstantValue("<4 x i32> poison", Error, M);
   ASSERT_TRUE(V);

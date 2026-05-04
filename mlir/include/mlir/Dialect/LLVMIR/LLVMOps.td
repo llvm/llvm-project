@@ -2206,7 +2206,7 @@ def LLVM_PoisonOp : LLVM_Op<"mlir.poison", [Pure, ConstantLike]>,
 
 def LLVM_ZeroOp
     : LLVM_Op<"mlir.zero", [Pure, ConstantLike]>,
-      LLVM_Builder<"$res = llvm::Constant::getNullValue($_resultType);">
+      LLVM_Builder<"$res = llvm::Constant::getZeroValue($_resultType);">
 {
   let summary = "Creates a zero-initialized value of LLVM dialect type.";
   let description = [{

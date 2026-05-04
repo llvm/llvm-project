@@ -558,7 +558,7 @@ static void EmitNullBaseClassInitialization(CodeGenFunction &CGF,
   // TODO: isZeroInitializable can be over-conservative in the case where a
   // virtual base contains a member pointer.
   llvm::Constant *NullConstantForBase = CGF.CGM.EmitNullConstantForBase(Base);
-  if (!NullConstantForBase->isNullValue()) {
+  if (!NullConstantForBase->isZeroValue()) {
     llvm::GlobalVariable *NullVariable = new llvm::GlobalVariable(
         CGF.CGM.getModule(), NullConstantForBase->getType(),
         /*isConstant=*/true, llvm::GlobalVariable::PrivateLinkage,
@@ -1110,7 +1110,7 @@ void CodeGenFunction::EmitNewArrayInitializer(
       // would actually be quite complex.  Therefore we go through an
       // alloca.
       llvm::Instruction *DominatingIP =
-          Builder.CreateFlagLoad(llvm::ConstantInt::getNullValue(Int8PtrTy));
+          Builder.CreateFlagLoad(llvm::ConstantInt::getZeroValue(Int8PtrTy));
       EndOfInit = CreateTempAlloca(BeginPtr.getType(), getPointerAlign(),
                                    "array.init.end");
       pushIrregularPartialArrayCleanup(BeginPtr.emitRawPointer(*this),
@@ -1291,7 +1291,7 @@ void CodeGenFunction::EmitNewArrayInitializer(
   // Enter a partial-destruction Cleanup if necessary.
   if (!pushedCleanup && needsEHCleanup(DtorKind)) {
     llvm::Instruction *DominatingIP =
-        Builder.CreateFlagLoad(llvm::ConstantInt::getNullValue(Int8PtrTy));
+        Builder.CreateFlagLoad(llvm::ConstantInt::getZeroValue(Int8PtrTy));
     pushRegularPartialArrayCleanup(BeginPtr.emitRawPointer(*this),
                                    CurPtr.emitRawPointer(*this), ElementType,
                                    ElementAlign, getDestroyer(DtorKind));
@@ -1788,7 +1788,7 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
 
     llvm::PHINode *PHI = Builder.CreatePHI(resultPtr->getType(), 2);
     PHI->addIncoming(resultPtr, notNullBB);
-    PHI->addIncoming(llvm::Constant::getNullValue(resultPtr->getType()),
+    PHI->addIncoming(llvm::Constant::getZeroValue(resultPtr->getType()),
                      nullCheckBB);
 
     resultPtr = PHI;
@@ -2237,7 +2237,7 @@ static llvm::Value *EmitDynamicCastToNull(CodeGenFunction &CGF,
                                           QualType DestTy) {
   llvm::Type *DestLTy = CGF.ConvertType(DestTy);
   if (DestTy->isPointerType())
-    return llvm::Constant::getNullValue(DestLTy);
+    return llvm::Constant::getZeroValue(DestLTy);
 
   /// C++ [expr.dynamic.cast]p9:
   ///   A failed cast to reference type throws std::bad_cast

@@ -266,7 +266,7 @@ bool ConstantAggregateBuilder::addBits(llvm::APInt bits, uint64_t offsetInBits,
       if (*firstElemToUpdate < elements.size()) {
         auto firstEltToUpdate =
             mlir::dyn_cast<cir::IntAttr>(elements[*firstElemToUpdate].element);
-        isNull = firstEltToUpdate && firstEltToUpdate.isNullValue();
+        isNull = firstEltToUpdate && firstEltToUpdate.isZeroValue();
       }
 
       if (*firstElemToUpdate == *lastElemToUpdate || isNull) {
@@ -1144,12 +1144,12 @@ emitArrayConstant(CIRGenModule &cgm, mlir::Type desiredType,
   CIRGenBuilderTy &builder = cgm.getBuilder();
 
   unsigned nonzeroLength = arrayBound;
-  if (elements.size() < nonzeroLength && builder.isNullValue(filler))
+  if (elements.size() < nonzeroLength && builder.isZeroValue(filler))
     nonzeroLength = elements.size();
 
   if (nonzeroLength == elements.size()) {
     while (nonzeroLength > 0 &&
-           builder.isNullValue(elements[nonzeroLength - 1]))
+           builder.isZeroValue(elements[nonzeroLength - 1]))
       --nonzeroLength;
   }
 
@@ -1846,7 +1846,7 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
     }
 
     SmallVector<mlir::TypedAttr, 16> elements;
-    if (filler && builder.isNullValue(filler))
+    if (filler && builder.isZeroValue(filler))
       elements.reserve(numInitElts + 1);
     else
       elements.reserve(numInitElts);

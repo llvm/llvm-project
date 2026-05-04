@@ -654,7 +654,7 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
     Type *AccessTy = Inst->getType();
     TypeSize AccessSize = DL.getTypeStoreSize(AccessTy);
     if (Constant *CI = dyn_cast<Constant>(Index)) {
-      if (CI->isNullValue() && AccessSize == VecStoreSize) {
+      if (CI->isZeroValue() && AccessSize == VecStoreSize) {
         Inst->replaceAllUsesWith(
             Builder.CreateBitPreservingCastChain(DL, CurVal, AccessTy));
         return nullptr;
@@ -732,7 +732,7 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
     Type *AccessTy = Val->getType();
     TypeSize AccessSize = DL.getTypeStoreSize(AccessTy);
     if (Constant *CI = dyn_cast<Constant>(Index))
-      if (CI->isNullValue() && AccessSize == VecStoreSize)
+      if (CI->isZeroValue() && AccessSize == VecStoreSize)
         return Builder.CreateBitPreservingCastChain(DL, Val, AA.Vector.Ty);
 
     // Storing a subvector.
@@ -1659,7 +1659,7 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(
   TID = Builder.CreateAdd(TID, TIdZ);
 
   LLVMContext &Context = Mod->getContext();
-  Value *Indices[] = {Constant::getNullValue(Type::getInt32Ty(Context)), TID};
+  Value *Indices[] = {Constant::getZeroValue(Type::getInt32Ty(Context)), TID};
 
   Value *Offset = Builder.CreateInBoundsGEP(GVTy, GV, Indices);
   AA.Alloca->mutateType(Offset->getType());
@@ -1677,10 +1677,10 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(
 
         Type *NewTy = LHS->getType()->getWithNewType(NewPtrTy);
         if (isa<ConstantPointerNull, ConstantAggregateZero>(LHS))
-          CI->setOperand(0, Constant::getNullValue(NewTy));
+          CI->setOperand(0, Constant::getZeroValue(NewTy));
 
         if (isa<ConstantPointerNull, ConstantAggregateZero>(RHS))
-          CI->setOperand(1, Constant::getNullValue(NewTy));
+          CI->setOperand(1, Constant::getZeroValue(NewTy));
 
         continue;
       }
@@ -1698,15 +1698,15 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(
       // Adjust the types of any constant operands.
       if (SelectInst *SI = dyn_cast<SelectInst>(V)) {
         if (isa<ConstantPointerNull, ConstantAggregateZero>(SI->getOperand(1)))
-          SI->setOperand(1, Constant::getNullValue(NewTy));
+          SI->setOperand(1, Constant::getZeroValue(NewTy));
 
         if (isa<ConstantPointerNull, ConstantAggregateZero>(SI->getOperand(2)))
-          SI->setOperand(2, Constant::getNullValue(NewTy));
+          SI->setOperand(2, Constant::getZeroValue(NewTy));
       } else if (PHINode *Phi = dyn_cast<PHINode>(V)) {
         for (unsigned I = 0, E = Phi->getNumIncomingValues(); I != E; ++I) {
           if (isa<ConstantPointerNull, ConstantAggregateZero>(
                   Phi->getIncomingValue(I)))
-            Phi->setIncomingValue(I, Constant::getNullValue(NewTy));
+            Phi->setIncomingValue(I, Constant::getZeroValue(NewTy));
         }
       }
 

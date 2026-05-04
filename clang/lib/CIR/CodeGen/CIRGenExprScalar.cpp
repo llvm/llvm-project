@@ -1201,7 +1201,7 @@ public:
         lhs = cgf.emitComplexExpr(e->getLHS());
       } else {
         mlir::Value lhsReal = Visit(e->getLHS());
-        mlir::Value lhsImag = builder.getNullValue(convertType(lhsTy), loc);
+        mlir::Value lhsImag = builder.getZeroValue(convertType(lhsTy), loc);
         lhs = builder.createComplexCreate(loc, lhsReal, lhsImag);
       }
 
@@ -1210,7 +1210,7 @@ public:
         rhs = cgf.emitComplexExpr(e->getRHS());
       } else {
         mlir::Value rhsReal = Visit(e->getRHS());
-        mlir::Value rhsImag = builder.getNullValue(convertType(rhsTy), loc);
+        mlir::Value rhsImag = builder.getZeroValue(convertType(rhsTy), loc);
         rhs = builder.createComplexCreate(loc, rhsReal, rhsImag);
       }
 
@@ -1297,7 +1297,7 @@ public:
     if (e->getType()->isVectorType()) {
       mlir::Location loc = cgf.getLoc(e->getExprLoc());
       mlir::Type lhsTy = cgf.convertType(e->getLHS()->getType());
-      mlir::Value zeroVec = builder.getNullValue(lhsTy, loc);
+      mlir::Value zeroVec = builder.getZeroValue(lhsTy, loc);
 
       mlir::Value lhs = Visit(e->getLHS());
       mlir::Value rhs = Visit(e->getRHS());
@@ -1342,7 +1342,7 @@ public:
     if (e->getType()->isVectorType()) {
       mlir::Location loc = cgf.getLoc(e->getExprLoc());
       mlir::Type lhsTy = cgf.convertType(e->getLHS()->getType());
-      mlir::Value zeroVec = builder.getNullValue(lhsTy, loc);
+      mlir::Value zeroVec = builder.getZeroValue(lhsTy, loc);
 
       mlir::Value lhs = Visit(e->getLHS());
       mlir::Value rhs = Visit(e->getRHS());
@@ -2484,7 +2484,7 @@ mlir::Value ScalarExprEmitter::VisitInitListExpr(InitListExpr *e) {
 
     // Zero-initialize any remaining values.
     if (numInitElements < vectorType.getSize()) {
-      const mlir::Value zeroValue = cgf.getBuilder().getNullValue(
+      const mlir::Value zeroValue = cgf.getBuilder().getZeroValue(
           vectorType.getElementType(), cgf.getLoc(e->getSourceRange()));
       std::fill_n(std::back_inserter(elements),
                   vectorType.getSize() - numInitElements, zeroValue);
@@ -2544,7 +2544,7 @@ mlir::Value ScalarExprEmitter::VisitUnaryLNot(const UnaryOperator *e) {
     mlir::Location loc = cgf.getLoc(e->getExprLoc());
     auto operVecTy = mlir::cast<cir::VectorType>(oper.getType());
     auto exprVecTy = mlir::cast<cir::VectorType>(cgf.convertType(e->getType()));
-    mlir::Value zeroVec = builder.getNullValue(operVecTy, loc);
+    mlir::Value zeroVec = builder.getZeroValue(operVecTy, loc);
     return cir::VecCmpOp::create(builder, loc, exprVecTy, cir::CmpOpKind::eq,
                                  oper, zeroVec);
   }
@@ -2807,14 +2807,14 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
 
     mlir::Value lhs = Visit(lhsExpr);
     if (!lhs) {
-      lhs = builder.getNullValue(cgf.voidTy, loc);
+      lhs = builder.getZeroValue(cgf.voidTy, loc);
       lhsIsVoid = true;
     }
 
     mlir::Value rhs = Visit(rhsExpr);
     if (lhsIsVoid) {
       assert(!rhs && "lhs and rhs types must match");
-      rhs = builder.getNullValue(cgf.voidTy, loc);
+      rhs = builder.getZeroValue(cgf.voidTy, loc);
     }
 
     return builder.createSelect(loc, condV, lhs, rhs);
@@ -2870,7 +2870,7 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
       if (mlir::isa<cir::VoidType>(yieldTy)) {
         cir::YieldOp::create(builder, loc);
       } else { // Block returns: set null yield value.
-        mlir::Value op0 = builder.getNullValue(yieldTy, loc);
+        mlir::Value op0 = builder.getZeroValue(yieldTy, loc);
         cir::YieldOp::create(builder, loc, op0);
       }
     }

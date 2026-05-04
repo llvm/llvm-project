@@ -342,7 +342,7 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
       if (!Remainder)
         continue;
       Remainder->replaceAllUsesWith(
-          Constant::getNullValue(Remainder->getType()));
+          Constant::getZeroValue(Remainder->getType()));
       MadeChange = true;
     }
   } else if (HasUniformWorkGroupSize) { // Pre-V5.

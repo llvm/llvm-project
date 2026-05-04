@@ -396,7 +396,7 @@ static void collectElements(Constant *Init,
   unsigned ArrSize = ArrayTy->getNumElements();
   if (isa<ConstantAggregateZero>(Init)) {
     for (unsigned I = 0; I < ArrSize; ++I)
-      Elements.push_back(Constant::getNullValue(ArrayTy->getElementType()));
+      Elements.push_back(Constant::getZeroValue(ArrayTy->getElementType()));
     return;
   }
 

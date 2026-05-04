@@ -1743,7 +1743,7 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   // zext(A) + sext(A) --> 0 if A is i1
   if (match(&I, m_c_BinOp(m_ZExt(m_Value(A)), m_SExt(m_Deferred(A)))) &&
       A->getType()->isIntOrIntVectorTy(1))
-    return replaceInstUsesWith(I, Constant::getNullValue(I.getType()));
+    return replaceInstUsesWith(I, Constant::getZeroValue(I.getType()));
 
   // sext(A < B) + zext(A > B) => ucmp/scmp(A, B)
   CmpPredicate LTPred, GTPred;
@@ -2782,7 +2782,7 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
       // because of worklist visitation order. So ugly it is.
       bool OtherHandOfSubIsTrueVal = OtherHandOfSub == TrueVal;
       Value *NewSub = SubBuilder(OtherHandOfSubIsTrueVal ? FalseVal : TrueVal);
-      Constant *Zero = Constant::getNullValue(Ty);
+      Constant *Zero = Constant::getZeroValue(Ty);
       SelectInst *NewSel =
           SelectInst::Create(Cond, OtherHandOfSubIsTrueVal ? Zero : NewSub,
                              OtherHandOfSubIsTrueVal ? NewSub : Zero);
@@ -2914,7 +2914,7 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     Value *IsNeg = Builder.CreateIsNeg(A);
     // Copy the nsw flags from the sub to the negate.
     Value *NegA = I.hasNoUnsignedWrap()
-                      ? Constant::getNullValue(A->getType())
+                      ? Constant::getZeroValue(A->getType())
                       : Builder.CreateNeg(A, "", I.hasNoSignedWrap());
     return SelectInst::Create(IsNeg, NegA, A);
   }

@@ -1961,7 +1961,7 @@ static Value *upgradeX86PSLLDQIntrinsics(IRBuilder<> &Builder, Value *Op,
   Op = Builder.CreateBitCast(Op, VecTy, "cast");
 
   // We'll be shuffling in zeroes.
-  Value *Res = Constant::getNullValue(VecTy);
+  Value *Res = Constant::getZeroValue(VecTy);
 
   // If shift is less than 16, emit a shuffle to move the bytes. Otherwise,
   // we'll just return the zero vector.
@@ -1995,7 +1995,7 @@ static Value *upgradeX86PSRLDQIntrinsics(IRBuilder<> &Builder, Value *Op,
   Op = Builder.CreateBitCast(Op, VecTy, "cast");
 
   // We'll be shuffling in zeroes.
-  Value *Res = Constant::getNullValue(VecTy);
+  Value *Res = Constant::getZeroValue(VecTy);
 
   // If shift is less than 16, emit a shuffle to move the bytes. Otherwise,
   // we'll just return the zero vector.
@@ -2084,14 +2084,14 @@ static Value *upgradeX86ALIGNIntrinsics(IRBuilder<> &Builder, Value *Op0,
   // If palignr is shifting the pair of vectors more than the size of two
   // lanes, emit zero.
   if (ShiftVal >= 32)
-    return llvm::Constant::getNullValue(Op0->getType());
+    return llvm::Constant::getZeroValue(Op0->getType());
 
   // If palignr is shifting the pair of input vectors more than one lane,
   // but less than two lanes, convert to shifting in zeroes.
   if (ShiftVal > 16) {
     ShiftVal -= 16;
     Op1 = Op0;
-    Op0 = llvm::Constant::getNullValue(Op0->getType());
+    Op0 = llvm::Constant::getZeroValue(Op0->getType());
   }
 
   int Indices[64];
@@ -2239,7 +2239,7 @@ static Value *upgradeX86vpcom(IRBuilder<> &Builder, CallBase &CI, unsigned Imm,
     Pred = ICmpInst::ICMP_NE;
     break;
   case 0x6:
-    return Constant::getNullValue(Ty); // FALSE
+    return Constant::getZeroValue(Ty); // FALSE
   case 0x7:
     return Constant::getAllOnesValue(Ty); // TRUE
   default:
@@ -2378,9 +2378,8 @@ static Value *applyX86MaskOn1BitsVec(IRBuilder<> &Builder, Value *Vec,
       Indices[i] = i;
     for (unsigned i = NumElts; i != 8; ++i)
       Indices[i] = NumElts + i % NumElts;
-    Vec = Builder.CreateShuffleVector(Vec,
-                                      Constant::getNullValue(Vec->getType()),
-                                      Indices);
+    Vec = Builder.CreateShuffleVector(
+        Vec, Constant::getZeroValue(Vec->getType()), Indices);
   }
   return Builder.CreateBitCast(Vec, Builder.getIntNTy(std::max(NumElts, 8U)));
 }
@@ -2392,7 +2391,7 @@ static Value *upgradeMaskedCompare(IRBuilder<> &Builder, CallBase &CI,
 
   Value *Cmp;
   if (CC == 3) {
-    Cmp = Constant::getNullValue(
+    Cmp = Constant::getZeroValue(
         FixedVectorType::get(Builder.getInt1Ty(), NumElts));
   } else if (CC == 7) {
     Cmp = Constant::getAllOnesValue(
@@ -2703,7 +2702,7 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
     Value *Arg = CI->getArgOperand(0);
     Value *Neg = Builder.CreateNeg(Arg, "neg");
     Value *Cmp = Builder.CreateICmpSGE(
-        Arg, llvm::Constant::getNullValue(Arg->getType()), "abs.cond");
+        Arg, llvm::Constant::getZeroValue(Arg->getType()), "abs.cond");
     Rep = Builder.CreateSelect(Cmp, Arg, Neg, "abs");
   } else if (Name == "abs.bf16" || Name == "abs.bf16x2") {
     Type *Ty = (Name == "abs.bf16")
@@ -2959,7 +2958,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     Value *Mask = CI->getArgOperand(2);
     Rep = Builder.CreateAnd(Op0, Op1);
     llvm::Type *Ty = Op0->getType();
-    Value *Zero = llvm::Constant::getNullValue(Ty);
+    Value *Zero = llvm::Constant::getZeroValue(Ty);
     ICmpInst::Predicate Pred = Name.starts_with("avx512.ptestm")
                                    ? ICmpInst::ICMP_NE
                                    : ICmpInst::ICMP_EQ;
@@ -3027,7 +3026,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     if (Name[14] == 'c')
       C = ConstantInt::getAllOnesValue(Builder.getInt16Ty());
     else
-      C = ConstantInt::getNullValue(Builder.getInt16Ty());
+      C = ConstantInt::getZeroValue(Builder.getInt16Ty());
     Rep = Builder.CreateICmpEQ(Rep, C);
     Rep = Builder.CreateZExt(Rep, Builder.getInt32Ty());
   } else if (Name == "sse.add.ss" || Name == "sse2.add.sd" ||
@@ -3138,7 +3137,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
              Name.starts_with("avx512.cvtd2mask.") ||
              Name.starts_with("avx512.cvtq2mask.")) {
     Value *Op = CI->getArgOperand(0);
-    Value *Zero = llvm::Constant::getNullValue(Op->getType());
+    Value *Zero = llvm::Constant::getZeroValue(Op->getType());
     Rep = Builder.CreateICmp(ICmpInst::ICMP_SLT, Op, Zero);
     Rep = applyX86MaskOn1BitsVec(Builder, Rep, nullptr);
   } else if (Name == "ssse3.pabs.b.128" || Name == "ssse3.pabs.w.128" ||
@@ -3444,7 +3443,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     ElementCount EC = cast<VectorType>(CI->getType())->getElementCount();
     Type *MaskTy = VectorType::get(Type::getInt32Ty(C), EC);
     SmallVector<int, 8> M;
-    ShuffleVectorInst::getShuffleMask(Constant::getNullValue(MaskTy), M);
+    ShuffleVectorInst::getShuffleMask(Constant::getZeroValue(MaskTy), M);
     Rep = Builder.CreateShuffleVector(Op, M);
 
     if (CI->arg_size() == 3)
@@ -4163,7 +4162,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
 
     Rep = Builder.CreateIntrinsic(Intrinsic::fma, Ops[0]->getType(), Ops);
 
-    Rep = Builder.CreateInsertElement(Constant::getNullValue(CI->getType()),
+    Rep = Builder.CreateInsertElement(Constant::getZeroValue(CI->getType()),
                                       Rep, (uint64_t)0);
   } else if (Name.starts_with("avx512.mask.vfmadd.s") ||
              Name.starts_with("avx512.maskz.vfmadd.s") ||
@@ -4206,7 +4205,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
       Rep = Builder.CreateFMA(A, B, C);
     }
 
-    Value *PassThru = IsMaskZ   ? Constant::getNullValue(Rep->getType())
+    Value *PassThru = IsMaskZ   ? Constant::getZeroValue(Rep->getType())
                       : IsMask3 ? C
                                 : A;
 
@@ -4259,7 +4258,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
       Rep = Builder.CreateFMA(A, B, C);
     }
 
-    Value *PassThru = IsMaskZ   ? llvm::Constant::getNullValue(CI->getType())
+    Value *PassThru = IsMaskZ   ? llvm::Constant::getZeroValue(CI->getType())
                       : IsMask3 ? CI->getArgOperand(2)
                                 : CI->getArgOperand(0);
 
@@ -4328,7 +4327,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
       Rep = Builder.CreateShuffleVector(Even, Odd, Idxs);
     }
 
-    Value *PassThru = IsMaskZ   ? llvm::Constant::getNullValue(CI->getType())
+    Value *PassThru = IsMaskZ   ? llvm::Constant::getZeroValue(CI->getType())
                       : IsMask3 ? CI->getArgOperand(2)
                                 : CI->getArgOperand(0);
 
@@ -4934,7 +4933,7 @@ static void upgradeDbgIntrinsicToDbgRecord(StringRef Name, CallBase *CI) {
     if (CI->arg_size() == 4) {
       auto *Offset = dyn_cast_or_null<Constant>(CI->getArgOperand(1));
       // Nonzero offset dbg.values get dropped without a replacement.
-      if (!Offset || !Offset->isNullValue())
+      if (!Offset || !Offset->isZeroValue())
         return;
       VarOp = 2;
       ExprOp = 3;
@@ -5264,7 +5263,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     assert(CI->arg_size() == 4);
     // Drop nonzero offsets instead of attempting to upgrade them.
     if (auto *Offset = dyn_cast_or_null<Constant>(CI->getArgOperand(1)))
-      if (Offset->isNullValue()) {
+      if (Offset->isZeroValue()) {
         NewCall = Builder.CreateCall(
             NewFn,
             {CI->getArgOperand(0), CI->getArgOperand(2), CI->getArgOperand(3)});
@@ -5785,13 +5784,14 @@ MDNode *llvm::UpgradeTBAANode(MDNode &MD) {
     // Create a MDNode <ScalarType, ScalarType, offset 0, const>
     Metadata *Elts2[] = {ScalarType, ScalarType,
                          ConstantAsMetadata::get(
-                             Constant::getNullValue(Type::getInt64Ty(Context))),
+                             Constant::getZeroValue(Type::getInt64Ty(Context))),
                          MD.getOperand(2)};
     return MDNode::get(Context, Elts2);
   }
   // Create a MDNode <MD, MD, offset 0>
-  Metadata *Elts[] = {&MD, &MD, ConstantAsMetadata::get(Constant::getNullValue(
-                                    Type::getInt64Ty(Context)))};
+  Metadata *Elts[] = {&MD, &MD,
+                      ConstantAsMetadata::get(
+                          Constant::getZeroValue(Type::getInt64Ty(Context)))};
   return MDNode::get(Context, Elts);
 }
 

@@ -51,8 +51,8 @@ public:
   void operator=(const Constant &) = delete;
   Constant(const Constant &) = delete;
 
-  /// Return true if this is the value that would be returned by getNullValue.
-  LLVM_ABI bool isNullValue() const;
+  /// Return true if this is a all-zero constant.
+  LLVM_ABI bool isZeroValue() const;
 
   /// Returns true if the value is one.
   LLVM_ABI bool isOneValue() const;
@@ -187,7 +187,8 @@ public:
   ///
   LLVM_ABI void handleOperandChange(Value *, Value *);
 
-  LLVM_ABI static Constant *getNullValue(Type *Ty);
+  /// Constructor to create a '0' constant of arbitrary type.
+  LLVM_ABI static Constant *getZeroValue(Type *Ty);
 
   /// @returns the value for an integer or vector of integer constant of the
   /// given type that has all its bits set to true.

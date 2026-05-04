@@ -1593,7 +1593,7 @@ CoerceScalableToFixed(CodeGenFunction &CGF, llvm::FixedVectorType *ToTy,
       FromTy = llvm::ScalableVectorType::get(
           FromTy->getElementType(),
           llvm::alignTo<8>(FromTy->getElementCount().getKnownMinValue()));
-      llvm::Value *ZeroVec = llvm::Constant::getNullValue(FromTy);
+      llvm::Value *ZeroVec = llvm::Constant::getZeroValue(FromTy);
       V = CGF.Builder.CreateInsertVector(FromTy, ZeroVec, V, uint64_t(0));
     }
     FromTy = llvm::ScalableVectorType::get(
@@ -3226,7 +3226,7 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
     if (FD->hasImplicitReturnZero()) {
       QualType RetTy = FD->getReturnType().getUnqualifiedType();
       llvm::Type *LLVMTy = CGM.getTypes().ConvertType(RetTy);
-      llvm::Constant *Zero = llvm::Constant::getNullValue(LLVMTy);
+      llvm::Constant *Zero = llvm::Constant::getZeroValue(LLVMTy);
       Builder.CreateStore(Zero, ReturnValue);
     }
   }
@@ -5056,7 +5056,7 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
                                               Slot.getAddress(), type);
       // This unreachable is a temporary marker which will be removed later.
       llvm::Instruction *IsActive =
-          Builder.CreateFlagLoad(llvm::Constant::getNullValue(Int8PtrTy));
+          Builder.CreateFlagLoad(llvm::Constant::getZeroValue(Int8PtrTy));
       args.addArgCleanupDeactivation(EHStack.stable_begin(), IsActive);
     }
     return;
@@ -5319,7 +5319,7 @@ public:
     Alignment = cast<llvm::ConstantInt>(CGF.EmitScalarExpr(AA->getAlignment()));
     if (Expr *Offset = AA->getOffset()) {
       OffsetCI = cast<llvm::ConstantInt>(CGF.EmitScalarExpr(Offset));
-      if (OffsetCI->isNullValue()) // Canonicalize zero offset to no offset.
+      if (OffsetCI->isZeroValue()) // Canonicalize zero offset to no offset.
         OffsetCI = nullptr;
     }
   }

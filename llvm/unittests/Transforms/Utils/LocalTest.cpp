@@ -153,7 +153,7 @@ TEST(Local, ReplaceDbgDeclare) {
   auto *AI = dyn_cast<AllocaInst>(Inst);
   ASSERT_TRUE(AI);
 
-  Value *NewBase = Constant::getNullValue(PointerType::getUnqual(C));
+  Value *NewBase = Constant::getZeroValue(PointerType::getUnqual(C));
   DIBuilder DIB(*M);
   replaceDbgDeclare(AI, NewBase, DIB, DIExpression::ApplyOffset, 0);
 
@@ -1115,7 +1115,7 @@ TEST(Local, CanReplaceOperandWithVariable) {
   Type *PtrPtr = B.getPtrTy(0);
   Value *Alloca = B.CreateAlloca(PtrPtr, (unsigned)0);
   CallInst *GCRoot = B.CreateIntrinsic(
-      Intrinsic::gcroot, {Alloca, Constant::getNullValue(PtrPtr)});
+      Intrinsic::gcroot, {Alloca, Constant::getZeroValue(PtrPtr)});
   EXPECT_TRUE(canReplaceOperandWithVariable(GCRoot, 0)); // Alloca
   EXPECT_FALSE(canReplaceOperandWithVariable(GCRoot, 1));
   EXPECT_FALSE(canReplaceOperandWithVariable(GCRoot, 2));

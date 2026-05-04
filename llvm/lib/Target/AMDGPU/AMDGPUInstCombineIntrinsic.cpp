@@ -441,7 +441,7 @@ static APInt trimTrailingZerosInVector(InstCombiner &IC, Value *UseV,
       break;
 
     if (auto *ConstElt = dyn_cast<Constant>(Elt)) {
-      if (!ConstElt->isNullValue() && !isa<UndefValue>(Elt))
+      if (!ConstElt->isZeroValue() && !isa<UndefValue>(Elt))
         break;
     } else {
       break;
@@ -936,7 +936,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     // llvm.amdgcn.class(undef, mask) -> mask != 0
     if (IC.getSimplifyQuery().isUndefValue(Src0)) {
       Value *CmpMask = IC.Builder.CreateICmpNE(
-          Src1, ConstantInt::getNullValue(Src1->getType()));
+          Src1, ConstantInt::getZeroValue(Src1->getType()));
       return IC.replaceInstUsesWith(II, CmpMask);
     }
     break;
@@ -1003,7 +1003,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       return IC.replaceInstUsesWith(II, PoisonValue::get(Ty));
 
     if(IC.getSimplifyQuery().isUndefValue(Arg))
-      return IC.replaceInstUsesWith(II, Constant::getNullValue(Ty));
+      return IC.replaceInstUsesWith(II, Constant::getZeroValue(Ty));
 
     ConstantInt *CArg = dyn_cast<ConstantInt>(II.getArgOperand(0));
     if (!CArg)
@@ -1034,7 +1034,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (CWidth) {
       Width = CWidth->getZExtValue();
       if ((Width & (IntSize - 1)) == 0) {
-        return IC.replaceInstUsesWith(II, ConstantInt::getNullValue(Ty));
+        return IC.replaceInstUsesWith(II, ConstantInt::getZeroValue(Ty));
       }
 
       // Hardware ignores high bits, so remove those.
@@ -1304,7 +1304,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       if (auto *CSrc1 = dyn_cast<Constant>(Src1)) {
         Constant *CCmp = ConstantFoldCompareInstOperands(
             (ICmpInst::Predicate)CCVal, CSrc0, CSrc1, DL);
-        if (CCmp && CCmp->isNullValue()) {
+        if (CCmp && CCmp->isZeroValue()) {
           return IC.replaceInstUsesWith(
               II, IC.Builder.CreateSExt(CCmp, II.getType()));
         }
@@ -1349,7 +1349,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
          (match(Src1, PatternMatch::m_AllOnes()) &&
           match(Src0, m_SExt(PatternMatch::m_Value(ExtSrc))))) &&
         ExtSrc->getType()->isIntegerTy(1)) {
-      IC.replaceOperand(II, 1, ConstantInt::getNullValue(Src1->getType()));
+      IC.replaceOperand(II, 1, ConstantInt::getZeroValue(Src1->getType()));
       IC.replaceOperand(II, 2,
                         ConstantInt::get(CC->getType(), CmpInst::ICMP_NE));
       return &II;
@@ -1457,7 +1457,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (auto *Src = dyn_cast<ConstantInt>(Arg)) {
       if (Src->isZero()) {
         // amdgcn.ballot(i1 0) is zero.
-        return IC.replaceInstUsesWith(II, Constant::getNullValue(II.getType()));
+        return IC.replaceInstUsesWith(II, Constant::getZeroValue(II.getType()));
       }
     }
     if (ST->isWave32() && II.getType()->getIntegerBitWidth() == 64) {
@@ -1525,7 +1525,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     auto *BC = cast<ConstantInt>(II.getArgOperand(5));
     auto *RM = cast<ConstantInt>(II.getArgOperand(3));
     auto *BM = cast<ConstantInt>(II.getArgOperand(4));
-    if (BC->isNullValue() || RM->getZExtValue() != 0xF ||
+    if (BC->isZeroValue() || RM->getZExtValue() != 0xF ||
         BM->getZExtValue() != 0xF || isa<PoisonValue>(Old))
       break;
 

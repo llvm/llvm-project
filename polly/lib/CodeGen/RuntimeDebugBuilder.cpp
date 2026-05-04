@@ -157,5 +157,5 @@ void RuntimeDebugBuilder::createFlush(PollyIRBuilder &Builder) {
   // pointer, the type we point to does conceptually not matter. However, if
   // fflush is already declared in this translation unit, we use the very same
   // type to ensure that LLVM does not complain about mismatching types.
-  Builder.CreateCall(F, Constant::getNullValue(F->arg_begin()->getType()));
+  Builder.CreateCall(F, Constant::getZeroValue(F->arg_begin()->getType()));
 }

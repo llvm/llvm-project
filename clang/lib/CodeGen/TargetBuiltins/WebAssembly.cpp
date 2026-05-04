@@ -282,7 +282,7 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
   case WebAssembly::BI__builtin_wasm_abs_i64x2: {
     Value *Vec = EmitScalarExpr(E->getArg(0));
     Value *Neg = Builder.CreateNeg(Vec, "neg");
-    Constant *Zero = llvm::Constant::getNullValue(Vec->getType());
+    Constant *Zero = llvm::Constant::getZeroValue(Vec->getType());
     Value *ICmp = Builder.CreateICmpSLT(Vec, Zero, "abscond");
     return Builder.CreateSelect(ICmp, Neg, Vec, "abs");
   }
@@ -422,7 +422,7 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     llvm::Type *TruncT = SrcT->getWithNewType(Builder.getInt32Ty());
     Function *Callee = CGM.getIntrinsic(IntNo, {TruncT, SrcT});
     Value *Trunc = Builder.CreateCall(Callee, Vec);
-    Value *Splat = Constant::getNullValue(TruncT);
+    Value *Splat = Constant::getZeroValue(TruncT);
     return Builder.CreateShuffleVector(Trunc, Splat, {0, 1, 2, 3});
   }
   case WebAssembly::BI__builtin_wasm_shuffle_i8x16: {

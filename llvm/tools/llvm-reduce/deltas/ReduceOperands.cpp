@@ -52,7 +52,7 @@ static bool isOne(Use &Op) {
 
 static bool isZero(Use &Op) {
   auto *C = dyn_cast<Constant>(Op);
-  return C && C->isNullValue();
+  return C && C->isZeroValue();
 }
 
 static bool isZeroOrOneFP(Value *Op) {
@@ -147,7 +147,7 @@ void llvm::reduceOperandsZeroDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
     }
 
     // Don't replace existing zeroes.
-    return isZero(Op) ? nullptr : Constant::getNullValue(Op->getType());
+    return isZero(Op) ? nullptr : Constant::getZeroValue(Op->getType());
   };
   extractOperandsFromModule(O, WorkItem, ReduceValue);
 }

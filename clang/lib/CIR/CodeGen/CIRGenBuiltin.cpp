@@ -103,7 +103,7 @@ static RValue emitBuiltinBitOpWithFallback(CIRGenFunction &cgf,
 
   CIRGenBuilderTy &builder = cgf.getBuilder();
   mlir::Location loc = cgf.getLoc(e->getSourceRange());
-  mlir::Value zero = builder.getNullValue(arg.getType(), loc);
+  mlir::Value zero = builder.getZeroValue(arg.getType(), loc);
   mlir::Value isZero =
       builder.createCompare(loc, cir::CmpOpKind::eq, arg, zero);
   mlir::Value fallbackValue = cgf.emitScalarExpr(e->getArg(1));
@@ -1692,7 +1692,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
         builder.createIsFPClass(loc, arg, cir::FPClassTest::Infinity);
     mlir::Value isNeg = emitSignBit(loc, *this, arg);
     mlir::Type intTy = convertType(e->getType());
-    cir::ConstantOp zero = builder.getNullValue(intTy, loc);
+    cir::ConstantOp zero = builder.getZeroValue(intTy, loc);
     cir::ConstantOp one = builder.getConstant(loc, cir::IntAttr::get(intTy, 1));
     cir::ConstantOp negativeOne =
         builder.getConstant(loc, cir::IntAttr::get(intTy, -1));
@@ -1811,7 +1811,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     Address destPtr = emitPointerWithAlignment(e->getArg(0));
     Address destPtrCast = destPtr.withElementType(builder, cgm.voidTy);
     mlir::Value size = emitScalarExpr(e->getArg(1));
-    mlir::Value zero = builder.getNullValue(builder.getUInt8Ty(), loc);
+    mlir::Value zero = builder.getZeroValue(builder.getUInt8Ty(), loc);
     assert(!cir::MissingFeatures::sanitizers());
     builder.createMemSet(loc, destPtrCast, zero, size);
     assert(!cir::MissingFeatures::generateDebugInfo());

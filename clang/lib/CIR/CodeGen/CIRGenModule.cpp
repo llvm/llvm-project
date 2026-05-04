@@ -1493,7 +1493,7 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
     // since common linkage must have zero initializer and must not have
     // explicit section therefore cannot have non-zero initial value.
     std::optional<mlir::Attribute> initializer = gv.getInitialValue();
-    if (initializer && !getBuilder().isNullValue(*initializer))
+    if (initializer && !getBuilder().isZeroValue(*initializer))
       gv.setLinkage(cir::GlobalLinkageKind::WeakAnyLinkage);
   }
 

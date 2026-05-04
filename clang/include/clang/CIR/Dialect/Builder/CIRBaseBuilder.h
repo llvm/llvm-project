@@ -95,7 +95,7 @@ public:
   }
 
   // Creates constant null value for integral type ty.
-  cir::ConstantOp getNullValue(mlir::Type ty, mlir::Location loc) {
+  cir::ConstantOp getZeroValue(mlir::Type ty, mlir::Location loc) {
     return getConstant(loc, getZeroInitAttr(ty));
   }
 

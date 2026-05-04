@@ -919,7 +919,7 @@ static bool canEmitInitWithFewStoresAfterBZero(llvm::Constant *Init,
   if (isa<llvm::ConstantInt>(Init) || isa<llvm::ConstantFP>(Init) ||
       isa<llvm::ConstantVector>(Init) || isa<llvm::BlockAddress>(Init) ||
       isa<llvm::ConstantExpr>(Init))
-    return Init->isNullValue() || NumStores--;
+    return Init->isZeroValue() || NumStores--;
 
   // See if we can emit each element.
   if (isa<llvm::ConstantArray>(Init) || isa<llvm::ConstantStruct>(Init)) {
@@ -950,7 +950,7 @@ static bool canEmitInitWithFewStoresAfterBZero(llvm::Constant *Init,
 void CodeGenFunction::emitStoresForInitAfterBZero(llvm::Constant *Init,
                                                   Address Loc, bool isVolatile,
                                                   bool IsAutoInit) {
-  assert(!Init->isNullValue() && !isa<llvm::UndefValue>(Init) &&
+  assert(!Init->isZeroValue() && !isa<llvm::UndefValue>(Init) &&
          "called emitStoresForInitAfterBZero for zero or undef value.");
 
   if (isa<llvm::ConstantInt>(Init) || isa<llvm::ConstantFP>(Init) ||
@@ -969,7 +969,7 @@ void CodeGenFunction::emitStoresForInitAfterBZero(llvm::Constant *Init,
       llvm::Constant *Elt = CDS->getElementAsConstant(i);
 
       // If necessary, get a pointer to the element and emit it.
-      if (!Elt->isNullValue() && !isa<llvm::UndefValue>(Elt))
+      if (!Elt->isZeroValue() && !isa<llvm::UndefValue>(Elt))
         emitStoresForInitAfterBZero(
             Elt, Builder.CreateConstInBoundsGEP2_32(Loc, 0, i), isVolatile,
             IsAutoInit);
@@ -984,7 +984,7 @@ void CodeGenFunction::emitStoresForInitAfterBZero(llvm::Constant *Init,
     llvm::Constant *Elt = cast<llvm::Constant>(Init->getOperand(i));
 
     // If necessary, get a pointer to the element and emit it.
-    if (!Elt->isNullValue() && !isa<llvm::UndefValue>(Elt))
+    if (!Elt->isZeroValue() && !isa<llvm::UndefValue>(Elt))
       emitStoresForInitAfterBZero(Elt,
                                   Builder.CreateConstInBoundsGEP2_32(Loc, 0, i),
                                   isVolatile, IsAutoInit);
@@ -1046,7 +1046,7 @@ static llvm::Constant *patternOrZeroFor(CodeGenModule &CGM, IsPattern isPattern,
   if (isPattern == IsPattern::Yes)
     return initializationPatternFor(CGM, Ty);
   else
-    return llvm::Constant::getNullValue(Ty);
+    return llvm::Constant::getZeroValue(Ty);
 }
 
 static llvm::Constant *constWithPadding(CodeGenModule &CGM, IsPattern isPattern,
@@ -1071,8 +1071,8 @@ static llvm::Constant *constStructWithPadding(CodeGenModule &CGM,
       Values.push_back(patternOrZeroFor(CGM, isPattern, PadTy));
     }
     llvm::Constant *CurOp;
-    if (constant->isNullValue())
-      CurOp = llvm::Constant::getNullValue(STy->getElementType(i));
+    if (constant->isZeroValue())
+      CurOp = llvm::Constant::getZeroValue(STy->getElementType(i));
     else
       CurOp = cast<llvm::Constant>(constant->getAggregateElement(i));
     auto *NewOp = constWithPadding(CGM, isPattern, CurOp);
@@ -1104,10 +1104,10 @@ static llvm::Constant *constWithPadding(CodeGenModule &CGM, IsPattern isPattern,
     if (!Size)
       return constant;
     llvm::Type *ElemTy = ArrayTy->getElementType();
-    bool ZeroInitializer = constant->isNullValue();
+    bool ZeroInitializer = constant->isZeroValue();
     llvm::Constant *OpValue, *PaddedOp;
     if (ZeroInitializer) {
-      OpValue = llvm::Constant::getNullValue(ElemTy);
+      OpValue = llvm::Constant::getZeroValue(ElemTy);
       PaddedOp = constWithPadding(CGM, isPattern, OpValue);
     }
     for (unsigned Op = 0; Op != Size; ++Op) {
@@ -1220,7 +1220,7 @@ void CodeGenFunction::emitStoresForConstant(const VarDecl &D, Address Loc,
       I->addAnnotationMetadata("auto-init");
 
     bool valueAlreadyCorrect =
-        constant->isNullValue() || isa<llvm::UndefValue>(constant);
+        constant->isZeroValue() || isa<llvm::UndefValue>(constant);
     if (!valueAlreadyCorrect) {
       Loc = Loc.withElementType(Ty);
       emitStoresForInitAfterBZero(constant, Loc, isVolatile, IsAutoInit);
@@ -1295,7 +1295,7 @@ void CodeGenFunction::emitStoresForZeroInit(const VarDecl &D, Address Loc,
                                             bool isVolatile) {
   llvm::Type *ElTy = Loc.getElementType();
   llvm::Constant *constant =
-      constWithPadding(CGM, IsPattern::No, llvm::Constant::getNullValue(ElTy));
+      constWithPadding(CGM, IsPattern::No, llvm::Constant::getZeroValue(ElTy));
   emitStoresForConstant(D, Loc, isVolatile, constant,
                         /*IsAutoInit=*/true);
 }
@@ -2024,7 +2024,7 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
       D.mightBeUsableInConstantExpressions(getContext())) {
     assert(!capturedByInit && "constant init contains a capturing block?");
     constant = ConstantEmitter(*this).tryEmitAbstractForInitializer(D);
-    if (constant && !constant->isNullValue() &&
+    if (constant && !constant->isZeroValue() &&
         (trivialAutoVarInit !=
          LangOptions::TrivialAutoVarInitKind::Uninitialized)) {
       IsPattern isPattern =
@@ -2334,7 +2334,7 @@ void CodeGenFunction::pushDestroyAndDeferDeactivation(
     CleanupKind cleanupKind, Address addr, QualType type, Destroyer *destroyer,
     bool useEHCleanupForArray) {
   llvm::Instruction *DominatingIP =
-      Builder.CreateFlagLoad(llvm::Constant::getNullValue(Int8PtrTy));
+      Builder.CreateFlagLoad(llvm::Constant::getZeroValue(Int8PtrTy));
   pushDestroy(cleanupKind, addr, type, destroyer, useEHCleanupForArray);
   DeferredDeactivationCleanupStack.push_back(
       {EHStack.stable_begin(), DominatingIP});

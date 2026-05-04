@@ -537,7 +537,7 @@ Value *Mapper::mapValue(const Value *V) {
   if (isa<ConstantAggregateZero>(C))
     return getVM()[V] = ConstantAggregateZero::get(NewTy);
   if (isa<ConstantTargetNone>(C))
-    return getVM()[V] = Constant::getNullValue(NewTy);
+    return getVM()[V] = Constant::getZeroValue(NewTy);
   assert(isa<ConstantPointerNull>(C));
   return getVM()[V] = ConstantPointerNull::get(cast<PointerType>(NewTy));
 }
@@ -1135,7 +1135,7 @@ void Mapper::mapAppendingVariable(GlobalVariable &GV, GlobalVariable *OldGV,
       auto *S = cast<ConstantStruct>(V);
       auto *E1 = cast<Constant>(mapValue(S->getOperand(0)));
       auto *E2 = cast<Constant>(mapValue(S->getOperand(1)));
-      Constant *Null = Constant::getNullValue(VoidPtrTy);
+      Constant *Null = Constant::getZeroValue(VoidPtrTy);
       NewV = ConstantStruct::get(cast<StructType>(EltTy), E1, E2, Null);
     } else {
       NewV = cast_or_null<Constant>(mapValue(V));

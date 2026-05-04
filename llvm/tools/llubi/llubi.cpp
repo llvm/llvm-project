@@ -266,7 +266,7 @@ int main(int argc, char **argv) {
            "all arguments.\n";
     Args.reserve(EntryFn->arg_size());
     for (Argument &Arg : EntryFn->args())
-      Args.push_back(ubi::AnyValue::getNullValue(Ctx, Arg.getType()));
+      Args.push_back(ubi::AnyValue::getZeroValue(Ctx, Arg.getType()));
   }
 
   ubi::EventHandler NoopHandler;

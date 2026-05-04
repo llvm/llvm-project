@@ -635,7 +635,7 @@ void OpenMPIRBuilder::getKernelArgsVector(TargetKernelArgs &KernelArgs,
   Value *PointerNum = Builder.getInt32(KernelArgs.NumTargetItems);
   auto Int32Ty = Type::getInt32Ty(Builder.getContext());
   constexpr size_t MaxDim = 3;
-  Value *ZeroArray = Constant::getNullValue(ArrayType::get(Int32Ty, MaxDim));
+  Value *ZeroArray = Constant::getZeroValue(ArrayType::get(Int32Ty, MaxDim));
 
   Value *HasNoWaitFlag = Builder.getInt64(KernelArgs.HasNoWait);
 
@@ -1098,7 +1098,7 @@ Constant *OpenMPIRBuilder::getOrCreateIdent(Constant *SrcLocStr,
   Constant *&Ident =
       IdentMap[{SrcLocStr, uint64_t(LocFlags) << 31 | Reserve2Flags}];
   if (!Ident) {
-    Constant *I32Null = ConstantInt::getNullValue(Int32);
+    Constant *I32Null = ConstantInt::getZeroValue(Int32);
     Constant *IdentData[] = {I32Null,
                              ConstantInt::get(Int32, uint32_t(LocFlags)),
                              ConstantInt::get(Int32, Reserve2Flags),
@@ -1631,7 +1631,7 @@ static void targetParallelCallback(
   if (isGenericKernel(*OuterFn))
     WrapperFn = createTargetParallelWrapper(OMPIRBuilder, OutlinedFn);
   else
-    WrapperFn = Constant::getNullValue(PtrTy);
+    WrapperFn = Constant::getZeroValue(PtrTy);
 
   // Build kmpc_parallel_60 call
   Value *Parallel60CallArgs[] = {
@@ -1730,7 +1730,7 @@ hostParallelCallback(OpenMPIRBuilder *OMPIRBuilder, Function &OutlinedFn,
   // If there are no arguments, pass a null pointer.
   auto PtrTy = OMPIRBuilder->VoidPtr;
   if (IfCondition && NumCapturedVars == 0) {
-    Value *NullPtrValue = Constant::getNullValue(PtrTy);
+    Value *NullPtrValue = Constant::getZeroValue(PtrTy);
     RealArgs.push_back(NullPtrValue);
   }
 
@@ -2150,7 +2150,7 @@ void OpenMPIRBuilder::emitTaskyieldImpl(const LocationDescription &Loc) {
   uint32_t SrcLocStrSize;
   Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);
   Value *Ident = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
-  Constant *I32Null = ConstantInt::getNullValue(Int32);
+  Constant *I32Null = ConstantInt::getZeroValue(Int32);
   Value *Args[] = {Ident, getOrCreateThreadID(Ident), I32Null};
 
   createRuntimeFunctionCall(
@@ -2240,7 +2240,7 @@ Expected<Value *> OpenMPIRBuilder::createTaskDuplicationFunction(
     Type *PrivatesTy, int32_t PrivatesIndex, TaskDupCallbackTy DupCB) {
   unsigned ProgramAddressSpace = M.getDataLayout().getProgramAddressSpace();
   if (!DupCB)
-    return Constant::getNullValue(
+    return Constant::getZeroValue(
         PointerType::get(Builder.getContext(), ProgramAddressSpace));
 
   // From OpenMP Runtime p_task_dup_t:
@@ -3520,7 +3520,7 @@ Expected<Function *> OpenMPIRBuilder::emitInterWarpCopyFunction(
         CntAddr = Builder.CreateAddrSpaceCast(CntAddr, Builder.getPtrTy(),
                                               CntAddr->getName() + ".ascast");
         Builder.restoreIP(CodeGenIP);
-        Builder.CreateStore(Constant::getNullValue(Builder.getInt32Ty()),
+        Builder.CreateStore(Constant::getZeroValue(Builder.getInt32Ty()),
                             CntAddr,
                             /*Volatile=*/false);
         PrecondBB = BasicBlock::Create(Ctx, "precond");
@@ -6167,7 +6167,7 @@ static void workshareLoopTargetCallback(
   if (OutlinedFnCallInstruction->arg_size() > 1)
     LoopBodyArg = OutlinedFnCallInstruction->getArgOperand(1);
   else
-    LoopBodyArg = Constant::getNullValue(Builder.getPtrTy());
+    LoopBodyArg = Constant::getZeroValue(Builder.getPtrTy());
   OutlinedFnCallInstruction->eraseFromParent();
 
   createTargetLoopWorkshareCall(OMPIRBuilder, LoopType, Preheader, Ident,
@@ -8383,7 +8383,7 @@ Constant *OpenMPIRBuilder::createOutlinedFunctionID(Function *OutlinedFn,
 
   return new GlobalVariable(
       M, Builder.getInt8Ty(), /*isConstant=*/true, GlobalValue::WeakAnyLinkage,
-      Constant::getNullValue(Builder.getInt8Ty()), EntryFnIDName);
+      Constant::getZeroValue(Builder.getInt8Ty()), EntryFnIDName);
 }
 
 Constant *OpenMPIRBuilder::createTargetRegionEntryAddr(Function *OutlinedFn,
@@ -8395,7 +8395,7 @@ Constant *OpenMPIRBuilder::createTargetRegionEntryAddr(Function *OutlinedFn,
          "Named kernel already exists?");
   return new GlobalVariable(
       M, Builder.getInt8Ty(), /*isConstant=*/true, GlobalValue::InternalLinkage,
-      Constant::getNullValue(Builder.getInt8Ty()), EntryFnName);
+      Constant::getZeroValue(Builder.getInt8Ty()), EntryFnName);
 }
 
 Error OpenMPIRBuilder::emitTargetRegionFunction(
@@ -8498,10 +8498,10 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTargetData(
       auto TaskBodyCB = [&](Value *, Value *,
                             IRBuilderBase::InsertPoint) -> Error {
         if (Info.HasNoWait) {
-          OffloadingArgs.append({llvm::Constant::getNullValue(Int32),
-                                 llvm::Constant::getNullValue(VoidPtr),
-                                 llvm::Constant::getNullValue(Int32),
-                                 llvm::Constant::getNullValue(VoidPtr)});
+          OffloadingArgs.append({llvm::Constant::getZeroValue(Int32),
+                                 llvm::Constant::getZeroValue(VoidPtr),
+                                 llvm::Constant::getZeroValue(Int32),
+                                 llvm::Constant::getZeroValue(VoidPtr)});
         }
 
         createRuntimeFunctionCall(getOrCreateRuntimeFunctionPtr(*MapperFunc),
@@ -9615,7 +9615,7 @@ static void emitTargetCall(
     // Ensure the host fallback has the same dyn_ptr ABI as the device.
     SmallVector<Value *> FallbackArgs(Args.begin(), Args.end());
     FallbackArgs.push_back(
-        Constant::getNullValue(PointerType::getUnqual(Builder.getContext())));
+        Constant::getZeroValue(PointerType::getUnqual(Builder.getContext())));
     OMPBuilder.createRuntimeFunctionCall(OutlinedFn, FallbackArgs);
     return Builder.saveIP();
   };
@@ -9874,7 +9874,7 @@ GlobalVariable *OpenMPIRBuilder::getOrCreateInternalVariable(
                        ? GlobalValue::InternalLinkage
                        : GlobalValue::CommonLinkage;
     auto *GV = new GlobalVariable(M, Ty, /*IsConstant=*/false, Linkage,
-                                  Constant::getNullValue(Ty), Elem.first(),
+                                  Constant::getZeroValue(Ty), Elem.first(),
                                   /*InsertBefore=*/nullptr,
                                   GlobalValue::NotThreadLocal, AddressSpaceVal);
     const llvm::Align TypeAlign = DL.getABITypeAlign(Ty);
@@ -9895,7 +9895,7 @@ Value *OpenMPIRBuilder::getOMPCriticalRegionLock(StringRef CriticalName) {
 Value *OpenMPIRBuilder::getSizeInBytes(Value *BasePtr) {
   LLVMContext &Ctx = Builder.getContext();
   Value *Null =
-      Constant::getNullValue(PointerType::getUnqual(BasePtr->getContext()));
+      Constant::getZeroValue(PointerType::getUnqual(BasePtr->getContext()));
   Value *SizeGep =
       Builder.CreateGEP(BasePtr->getType(), Null, Builder.getInt32(1));
   Value *SizePtrToInt = Builder.CreatePtrToInt(SizeGep, Type::getInt64Ty(Ctx));
@@ -9957,7 +9957,7 @@ void OpenMPIRBuilder::emitMapperCall(const LocationDescription &Loc,
       Builder.CreateInBoundsGEP(ArrI64Ty, MapperAllocas.ArgSizes,
                                 {Builder.getInt32(0), Builder.getInt32(0)});
   Value *NullPtr =
-      Constant::getNullValue(PointerType::getUnqual(Int8Ptr->getContext()));
+      Constant::getZeroValue(PointerType::getUnqual(Int8Ptr->getContext()));
   createRuntimeFunctionCall(MapperFunc, {SrcLocInfo, Builder.getInt64(DeviceID),
                                          Builder.getInt32(NumOperands),
                                          ArgsBaseGEP, ArgsGEP, ArgSizesGEP,
@@ -10245,7 +10245,7 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
     Value *CurSizeArg = Info->Sizes[I];
     Value *CurNameArg = Info->Names.size()
                             ? Info->Names[I]
-                            : Constant::getNullValue(Builder.getPtrTy());
+                            : Constant::getZeroValue(Builder.getPtrTy());
 
     // Extract the MEMBER_OF field from the map type.
     Value *OriMapType = Builder.getInt64(
@@ -10488,7 +10488,7 @@ Error OpenMPIRBuilder::emitOffloadingArrays(
     Info.EmitDebug = true;
   } else {
     Info.RTArgs.MapNamesArray =
-        Constant::getNullValue(PointerType::getUnqual(Builder.getContext()));
+        Constant::getZeroValue(PointerType::getUnqual(Builder.getContext()));
     Info.EmitDebug = false;
   }
 
@@ -11745,7 +11745,7 @@ void OpenMPIRBuilder::createOffloadEntriesAndInfoMetadata(
   if (Config.hasRequiresFlags() && !Config.isTargetDevice())
     offloading::emitOffloadingEntry(
         M, object::OffloadKind::OFK_OpenMP,
-        Constant::getNullValue(PointerType::getUnqual(M.getContext())),
+        Constant::getZeroValue(PointerType::getUnqual(M.getContext())),
         ".requires", /*Size=*/0,
         OffloadEntriesInfoManager::OMPTargetGlobalRegisterRequires,
         Config.getRequiresFlags());

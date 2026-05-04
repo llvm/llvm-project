@@ -384,7 +384,7 @@ void ExecutionEngine::runStaticConstructorsDestructors(Module &module,
     if (!CS) continue;
 
     Constant *FP = CS->getOperand(1);
-    if (FP->isNullValue())
+    if (FP->isZeroValue())
       continue;  // Found a sentinel value, ignore.
 
     // Strip off constant expression casts.
@@ -890,9 +890,9 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
   }
 
   if (auto *TETy = dyn_cast<TargetExtType>(C->getType())) {
-    assert(TETy->hasProperty(TargetExtType::HasZeroInit) && C->isNullValue() &&
+    assert(TETy->hasProperty(TargetExtType::HasZeroInit) && C->isZeroValue() &&
            "TargetExtType only supports null constant value");
-    C = Constant::getNullValue(TETy->getLayoutType());
+    C = Constant::getZeroValue(TETy->getLayoutType());
   }
 
   // Otherwise, we have a simple constant.

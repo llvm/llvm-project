@@ -553,7 +553,7 @@ static bool isZero(Value *V, const DataLayout &DL, DominatorTree *DT,
   if (!C)
     return false;
 
-  if (C->isNullValue())
+  if (C->isZeroValue())
     return true;
 
   // For a vector, KnownZero will only be true if all values are zero, so check

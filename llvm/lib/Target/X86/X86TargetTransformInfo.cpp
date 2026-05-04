@@ -5005,13 +5005,13 @@ InstructionCost X86TTIImpl::getScalarizationOverhead(
   if (Insert && !ForPoisonSrc) {
     // This is nearly identical to BaseT::getScalarizationOverhead(), except
     // it is passing nullptr to getVectorInstrCost() for Op0 (instead of
-    // Constant::getNullValue()), which makes the X86TTIImpl
+    // Constant::getZeroValue()), which makes the X86TTIImpl
     // getVectorInstrCost() return 0 instead of 1.
     for (unsigned I : seq(DemandedElts.getBitWidth())) {
       if (!DemandedElts[I])
         continue;
       Cost += getVectorInstrCost(Instruction::InsertElement, Ty, CostKind, I,
-                                 Constant::getNullValue(Ty),
+                                 Constant::getZeroValue(Ty),
                                  VL.empty() ? nullptr : VL[I],
                                  TTI::VectorInstrContext::None);
     }

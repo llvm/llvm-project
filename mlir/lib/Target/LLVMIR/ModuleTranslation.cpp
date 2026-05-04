@@ -567,7 +567,7 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
   if (!attr || isa<UndefAttr>(attr))
     return llvm::UndefValue::get(llvmType);
   if (isa<ZeroAttr>(attr))
-    return llvm::Constant::getNullValue(llvmType);
+    return llvm::Constant::getZeroValue(llvmType);
   if (auto *structType = dyn_cast<::llvm::StructType>(llvmType)) {
     auto arrayAttr = dyn_cast<ArrayAttr>(attr);
     if (!arrayAttr) {
@@ -654,7 +654,7 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
           llvm::ElementCount::get(numElements, /*Scalable=*/isScalable), child);
     if (llvmType->isArrayTy()) {
       auto *arrayType = llvm::ArrayType::get(elementType, numElements);
-      if (child->isNullValue() && !elementType->isFPOrFPVectorTy()) {
+      if (child->isZeroValue() && !elementType->isFPOrFPVectorTy()) {
         return llvm::ConstantAggregateZero::get(arrayType);
       }
       if (llvm::ConstantDataSequential::isElementTypeCompatible(elementType)) {
@@ -1433,7 +1433,7 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
       llvm::Type *eltTy = llvm::StructType::get(
           builder.getInt32Ty(), builder.getPtrTy(), builder.getPtrTy());
       llvm::ArrayType *at = llvm::ArrayType::get(eltTy, 0);
-      llvm::Constant *zeroInit = llvm::Constant::getNullValue(at);
+      llvm::Constant *zeroInit = llvm::Constant::getZeroValue(at);
       (void)new llvm::GlobalVariable(
           *llvmModule, zeroInit->getType(), false,
           llvm::GlobalValue::AppendingLinkage, zeroInit,

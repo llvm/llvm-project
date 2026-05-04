@@ -208,7 +208,7 @@ Error InjectPointerSigningFixupCode(llvm::Module &M,
       StructType::get(Ctx, {Int32Ty, FixupFn->getType(), UInt8PtrTy});
   Constant *PtrFixupCtor =
       ConstantStruct::get(CtorType, {ConstantInt::get(Int32Ty, 0), FixupFn,
-                                     Constant::getNullValue(UInt8PtrTy)});
+                                     Constant::getZeroValue(UInt8PtrTy)});
 
   const char *LLVMGlobalCtorsName = "llvm.global_ctors";
   GlobalVariable *OldCtorList = M.getNamedGlobal(LLVMGlobalCtorsName);

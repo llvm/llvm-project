@@ -2435,7 +2435,7 @@ TEST_F(OpenMPIRBuilderTest, StaticWorkshareLoopTarget) {
   EXPECT_EQ(ArgFunction->arg_size(), 1u);
   EXPECT_EQ(ArgFunction->getArg(0)->getType(), TripCount->getType());
   // Check that no variables except for loop counter are used in loop body
-  EXPECT_EQ(Constant::getNullValue(Builder.getPtrTy()),
+  EXPECT_EQ(Constant::getZeroValue(Builder.getPtrTy()),
             WorkshareLoopRuntimeCall->getArgOperand(2));
   // Check loop trip count argument
   EXPECT_EQ(TripCount, WorkshareLoopRuntimeCall->getArgOperand(3));
@@ -6613,8 +6613,8 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionDevice) {
   LoadInst *Value = nullptr;
   StoreInst *TargetStore = nullptr;
   llvm::SmallVector<llvm::Value *, 2> CapturedArgs = {
-      Constant::getNullValue(PointerType::get(Ctx, 0)),
-      Constant::getNullValue(PointerType::get(Ctx, 0))};
+      Constant::getZeroValue(PointerType::get(Ctx, 0)),
+      Constant::getZeroValue(PointerType::get(Ctx, 0))};
 
   auto SimpleArgAccessorCB =
       [&](llvm::Argument &Arg, llvm::Value *Input, llvm::Value *&RetVal,
@@ -7018,7 +7018,7 @@ TEST_F(OpenMPIRBuilderTest, ConstantAllocaRaise) {
   LoadInst *Value = nullptr;
   StoreInst *TargetStore = nullptr;
   llvm::SmallVector<llvm::Value *, 1> CapturedArgs = {
-      Constant::getNullValue(PointerType::get(Ctx, 0))};
+      Constant::getZeroValue(PointerType::get(Ctx, 0))};
 
   auto SimpleArgAccessorCB =
       [&](llvm::Argument &Arg, llvm::Value *Input, llvm::Value *&RetVal,
@@ -7202,7 +7202,7 @@ TEST_F(OpenMPIRBuilderTest, DebugRecordLoc) {
   auto *Alloca = Builder.CreateAlloca(Builder.getInt32Ty());
 
   llvm::SmallVector<llvm::Value *, 1> CapturedArgs = {
-      Alloca, Constant::getNullValue(PointerType::get(Ctx, 0))};
+      Alloca, Constant::getZeroValue(PointerType::get(Ctx, 0))};
 
   auto SimpleArgAccessorCB =
       [&](llvm::Argument &Arg, llvm::Value *Input, llvm::Value *&RetVal,

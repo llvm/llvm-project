@@ -243,7 +243,7 @@ Value *SCEVExpander::InsertNoopCastOfTo(Value *V, Type *Ty) {
   if (Op == Instruction::IntToPtr) {
     auto *PtrTy = cast<PointerType>(Ty);
     if (DL.isNonIntegralPointerType(PtrTy))
-      return Builder.CreatePtrAdd(Constant::getNullValue(PtrTy), V, "scevgep");
+      return Builder.CreatePtrAdd(Constant::getZeroValue(PtrTy), V, "scevgep");
   }
   // Short-circuit unnecessary bitcasts.
   if (Op == Instruction::BitCast) {
@@ -666,7 +666,7 @@ Value *SCEVExpander::visitMulExpr(SCEVUseT<const SCEVMulExpr *> S) {
       Prod = ExpandOpBinPowN();
     } else if (I->second->isAllOnesValue()) {
       // Instead of doing a multiply by negative one, just do a negate.
-      Prod = InsertBinop(Instruction::Sub, Constant::getNullValue(Ty), Prod,
+      Prod = InsertBinop(Instruction::Sub, Constant::getZeroValue(Ty), Prod,
                          SCEV::FlagAnyWrap, /*IsSafeToHoist*/ true);
       ++I;
     } else {
@@ -1416,7 +1416,7 @@ Value *SCEVExpander::visitAddRecExpr(SCEVUseT<const SCEVAddRecExpr *> S) {
         rememberInstruction(Add);
         CanonicalIV->addIncoming(Add, HP);
       } else {
-        CanonicalIV->addIncoming(Constant::getNullValue(Ty), HP);
+        CanonicalIV->addIncoming(Constant::getZeroValue(Ty), HP);
       }
     }
   }
@@ -1698,8 +1698,9 @@ Value *SCEVExpander::expand(SCEVUse S) {
       if (auto *NNI = dyn_cast<PossiblyNonNegInst>(I)) {
         auto *Src = NNI->getOperand(0);
         if (isImpliedByDomCondition(ICmpInst::ICMP_SGE, Src,
-                                    Constant::getNullValue(Src->getType()), I,
-                                    DL).value_or(false))
+                                    Constant::getZeroValue(Src->getType()), I,
+                                    DL)
+                .value_or(false))
           NNI->setNonNeg(true);
       }
     }

@@ -1242,7 +1242,7 @@ public:
 
   /// Whether there is any non-null address discriminator.
   bool hasAddressDiscriminator() const {
-    return !getAddrDiscriminator()->isNullValue();
+    return !getAddrDiscriminator()->isZeroValue();
   }
 
   Constant *getDeactivationSymbol() const {

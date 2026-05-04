@@ -52,7 +52,7 @@ template <class IRBuilderTy> class FixedPointBuilder {
       // numbers, right shifting rounds towards negative infinity. In this case,
       // we can just round up before shifting.
       if (DstIsInteger && SrcIsSigned) {
-        Value *Zero = Constant::getNullValue(Result->getType());
+        Value *Zero = Constant::getZeroValue(Result->getType());
         Value *IsNegative = B.CreateICmpSLT(Result, Zero);
         Value *LowBits = ConstantInt::get(
             B.getContext(), APInt::getLowBitsSet(ResultWidth, SrcScale));
@@ -212,7 +212,7 @@ public:
     // When saturating unsigned-with-padding using signed operations, we may
     // get negative values. Emit an extra clamp to zero.
     if (DstSema.isSaturated() && DstSema.hasUnsignedPadding()) {
-      Constant *Zero = Constant::getNullValue(Result->getType());
+      Constant *Zero = Constant::getZeroValue(Result->getType());
       Result =
           B.CreateSelect(B.CreateICmpSLT(Result, Zero), Zero, Result, "satmin");
     }
@@ -270,7 +270,7 @@ public:
     // Subtraction can end up below 0 for padded unsigned operations, so emit
     // an extra clamp in that case.
     if (CommonSema.isSaturated() && CommonSema.hasUnsignedPadding()) {
-      Constant *Zero = Constant::getNullValue(Result->getType());
+      Constant *Zero = Constant::getZeroValue(Result->getType());
       Result =
           B.CreateSelect(B.CreateICmpSLT(Result, Zero), Zero, Result, "satmin");
     }

@@ -751,7 +751,7 @@ static Value *foldShiftedShift(BinaryOperator *InnerShift, unsigned OuterShAmt,
   if (IsInnerShl == IsOuterShl) {
     // If this is an oversized composite shift, then unsigned shifts get 0.
     if (InnerShAmt + OuterShAmt >= TypeWidth)
-      return Constant::getNullValue(ShType);
+      return Constant::getZeroValue(ShType);
 
     return NewInnerShift(InnerShAmt + OuterShAmt);
   }
@@ -1364,7 +1364,7 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
     if (match(Op0, m_ZExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1)) {
       auto *NewC = Builder.CreateShl(ConstantInt::get(Ty, 1), C1);
       return createSelectInstWithUnknownProfile(X, NewC,
-                                                ConstantInt::getNullValue(Ty));
+                                                ConstantInt::getZeroValue(Ty));
     }
   }
 
@@ -1558,7 +1558,7 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
       if (SrcTyBitWidth == 1) {
         auto *NewC = ConstantInt::get(
             Ty, APInt::getLowBitsSet(BitWidth, BitWidth - ShAmtC));
-        return SelectInst::Create(X, NewC, ConstantInt::getNullValue(Ty));
+        return SelectInst::Create(X, NewC, ConstantInt::getZeroValue(Ty));
       }
 
       if ((!Ty->isIntegerTy() || shouldChangeType(Ty, X->getType())) &&

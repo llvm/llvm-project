@@ -58,7 +58,7 @@ AnyValue Context::getConstantValueImpl(Constant *C) {
     return AnyValue::getPoisonValue(*this, C->getType());
 
   if (isa<ConstantAggregateZero>(C))
-    return AnyValue::getNullValue(*this, C->getType());
+    return AnyValue::getZeroValue(*this, C->getType());
 
   if (isa<ConstantPointerNull>(C))
     return Pointer::null(C->getType()->getPointerAddressSpace(), DL);

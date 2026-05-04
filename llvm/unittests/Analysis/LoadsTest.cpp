@@ -123,7 +123,7 @@ define void @f(ptr %p1, ptr %p2, i64 %i, ptr addrspace(1) %p1as1) {
 
   Value *P1 = &*F->arg_begin();
   Value *P2 = F->getArg(1);
-  Value *NullPtr = Constant::getNullValue(P1->getType());
+  Value *NullPtr = Constant::getZeroValue(P1->getType());
   auto InstIter = F->front().begin();
   CallInst *UserOfY = cast<CallInst>(&*InstIter);
   Value *ConstDerefPtr = UserOfY->getArgOperand(0);
