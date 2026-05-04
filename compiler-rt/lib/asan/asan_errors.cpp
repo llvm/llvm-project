@@ -651,14 +651,11 @@ static void CheckPoisonRecords(uptr addr) {
   if (!AddrIsInMem(addr))
     return;
 
-  const u8* shadow_addr = (const u8*)MemToShadow(addr);
-  u8 shadow_val = shadow_addr[0];
+  u8 *shadow_addr = (u8 *)MemToShadow(addr);
   // If we are in the partial right redzone, look at the next shadow byte.
-  if (shadow_val > 0 && shadow_val < ASAN_SHADOW_GRANULARITY) {
-    u8 shadow_next = shadow_addr[1];
-    if (shadow_next >= ASAN_SHADOW_GRANULARITY)
-      shadow_val = shadow_next;
-  }
+  if (*shadow_addr > 0 && *shadow_addr < 128)
+    shadow_addr++;
+  u8 shadow_val = *shadow_addr;
 
   if (shadow_val != kAsanUserPoisonedMemoryMagic &&
       shadow_val != kAsanContiguousContainerOOBMagic &&

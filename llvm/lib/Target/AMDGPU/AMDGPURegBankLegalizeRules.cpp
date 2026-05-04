@@ -1686,6 +1686,16 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
                  {IntrId, Vgpr32, Vgpr32, SgprB32_ReadFirstLane,
                   SgprB32_ReadFirstLane, Imm, Imm}});
 
+  addRulesForIOpcs({amdgcn_permlane_bcast, amdgcn_permlane_up,
+                    amdgcn_permlane_down, amdgcn_permlane_xor},
+                   Standard)
+      .Div(S32,
+           {{Vgpr32},
+            {IntrId, Vgpr32, SgprB32_ReadFirstLane, SgprB32_ReadFirstLane}});
+
+  addRulesForIOpcs({amdgcn_permlane_idx_gen}, Standard)
+      .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, SgprB32_ReadFirstLane}});
+
   addRulesForIOpcs({amdgcn_perm}, Standard)
       .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}})
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}});
