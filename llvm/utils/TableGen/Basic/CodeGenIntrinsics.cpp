@@ -33,6 +33,10 @@ static constexpr unsigned MaxNumReturn = 257;
 // CodeGenIntrinsic Implementation
 //===----------------------------------------------------------------------===//
 
+// Forward declaration; full implementation appears alongside
+// `CheckOverloadSuffixConflicts` below.
+static void CheckKnownOverloadConflictExistence(const RecordKeeper &RC);
+
 CodeGenIntrinsicContext::CodeGenIntrinsicContext(const RecordKeeper &RC) {
   for (const Record *Rec : RC.getAllDerivedDefinitions("IntrinsicProperty"))
     if (Rec->getValueAsBit("IsDefault"))
@@ -75,6 +79,7 @@ CodeGenIntrinsicTable::CodeGenIntrinsicTable(const RecordKeeper &RC) {
 
   CheckDuplicateIntrinsics();
   CheckTargetIndependentIntrinsics();
+  CheckKnownOverloadConflictExistence(RC);
   CheckOverloadSuffixConflicts();
 }
 
@@ -167,6 +172,57 @@ static bool doesSuffixLookLikeMangledType(StringRef Suffix) {
   return is_contained(NamedTypes, Suffix);
 }
 
+// Validate every `KnownOverloadConflict` annotation:
+//   * The named record must exist.
+//   * The named record must be a subclass of `Intrinsic` (otherwise it
+//     has no `TypeInfo` field and `getValueAsDef("TypeInfo")` below
+//     would `PrintFatalError` with a generic "no such field" message
+//     that fails to connect the user back to their `KnownOverloadConflict`
+//     annotation -- guard with `isSubClassOf` to emit a contextual error
+//     instead).
+//   * The named record must be an overloaded intrinsic.
+// The annotation stores the TableGen *record name* of the dominator
+// (e.g. `"int_foo"`), not the mangled intrinsic name (`"llvm.foo"`),
+// so the lookup goes through `RecordKeeper::getDef`.
+static void
+CheckKnownOverloadConflictExistence(const RecordKeeper &RC) {
+  for (const Record *Def : RC.getAllDerivedDefinitions("Intrinsic")) {
+    const StringRef Allow = Def->getValueAsString("KnownOverloadConflict");
+    if (Allow.empty())
+      continue;
+
+    const Record *Target = RC.getDef(Allow);
+    if (!Target) {
+      PrintError(Def->getLoc(),
+                 "intrinsic `" + Def->getName() +
+                     "` has KnownOverloadConflict referencing unknown "
+                     "intrinsic `" + Allow + "`");
+      continue;
+    }
+
+    if (!Target->isSubClassOf("Intrinsic")) {
+      PrintError(Def->getLoc(),
+                 "intrinsic `" + Def->getName() +
+                     "` has KnownOverloadConflict referencing `" + Allow +
+                     "`, which is not an Intrinsic; "
+                     "KnownOverloadConflict must name an overloaded "
+                     "intrinsic record");
+      continue;
+    }
+
+    const bool TgtOverloaded =
+        Target->getValueAsDef("TypeInfo")->getValueAsBit("isOverloaded");
+    if (!TgtOverloaded) {
+      PrintError(Def->getLoc(),
+                 "intrinsic `" + Def->getName() +
+                     "` has KnownOverloadConflict referencing `" + Allow +
+                     "`, which is not an overloaded intrinsic; "
+                     "KnownOverloadConflict must point at the overloaded "
+                     "dominator");
+    }
+  }
+}
+
 // Check for conflicts with overloaded intrinsics. If there exists an overloaded
 // intrinsic with base name `llvm.target.foo`, LLVM will add a mangling suffix
 // to it to encode the overload types. This mangling suffix is 1 or more .
@@ -229,6 +285,16 @@ void CodeGenIntrinsicTable::CheckOverloadSuffixConflicts() const {
           continue;
 
         unsigned SuffixSize = OverloadName.size() + 1 + Suffix0.size();
+        // Read the subordinate's allowlist annotation. The annotation
+        // stores the *record name* of the dominator (e.g. "int_foo"),
+        // not the mangled name (`OverloadName == Overloaded->Name`,
+        // which is "llvm.foo"). The comparison must therefore use
+        // `Overloaded->TheDef->getName()`.
+        const StringRef Allow =
+            Int.TheDef->getValueAsString("KnownOverloadConflict");
+        if (!Allow.empty() && Allow == Overloaded->TheDef->getName())
+          continue;
+
         // If suffix looks like mangling suffix, flag it as an error.
         PrintError(Int.TheDef->getLoc(),
                    "intrinsic `" + Name + "` cannot share prefix `" +
@@ -237,6 +303,10 @@ void CodeGenIntrinsicTable::CheckOverloadSuffixConflicts() const {
                        "`");
         PrintNote(Overloaded->TheDef->getLoc(),
                   "Overloaded intrinsic `" + OverloadName + "` defined here");
+        PrintNote(Int.TheDef->getLoc(),
+                  "if intentional, add `let KnownOverloadConflict = \"" +
+                      Overloaded->TheDef->getName() +
+                      "\" in` to this intrinsic's definition");
         continue;
       }
 

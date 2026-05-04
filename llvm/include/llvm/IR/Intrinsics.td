@@ -730,6 +730,14 @@ class Intrinsic<list<LLVMType> ret_types,
   // IntrinsicProperty<1>
   bit DisableDefaultAttributes = disable_default_attributes;
 
+  // TableGen *record name* of an overloaded intrinsic this intrinsic is
+  // allowlisted to share a prefix with (e.g., `"int_foo"`, NOT
+  // `"llvm.foo"` -- this is the literal identifier after `def` in the
+  // .td source, not the mangled `LLVMName`). Set this only on the
+  // subordinate (concrete, non-overloaded) side of a known conflict
+  // detected by `CheckOverloadSuffixConflicts`.
+  string KnownOverloadConflict = "";
+
   TypeInfoGen TypeInfo = TypeInfoGen<RetTypes, ParamTypes>;
 }
 
