@@ -780,7 +780,6 @@ bool DependencyTracker::isLiveSubprogramEntry(const UnitEntryPairTy &Entry) {
   std::optional<uint64_t> LowPc;
   std::optional<uint64_t> HighPc;
   std::optional<int64_t> RelocAdjustment;
-  bool LabelHandledByAsmRange = false;
   if (Info.getTrackLiveness()) {
     LowPc = dwarf::toAddress(LowPCVal);
     if (!LowPc)
@@ -831,15 +830,12 @@ bool DependencyTracker::isLiveSubprogramEntry(const UnitEntryPairTy &Entry) {
       if (Language == dwarf::DW_LANG_Mips_Assembler ||
           Language == dwarf::DW_LANG_Assembly) {
         if (auto Range = Entry.CU->getContaingFile()
-                             .Addresses->getAssemblyRangeForAddress(*LowPc)) {
+                             .Addresses->getAssemblyRangeForAddress(*LowPc))
           Entry.CU->addFunctionRange(Range->LowPC, Range->HighPC,
                                      *RelocAdjustment);
-          LabelHandledByAsmRange = true;
-        }
       }
 
-      if (!LabelHandledByAsmRange)
-        Entry.CU->addLabelLowPc(*LowPc, *RelocAdjustment);
+      Entry.CU->addLabelLowPc(*LowPc, *RelocAdjustment);
     }
   } else
     Info.setHasAnAddress();
