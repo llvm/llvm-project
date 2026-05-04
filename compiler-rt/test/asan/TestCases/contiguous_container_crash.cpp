@@ -29,14 +29,14 @@ int TestCrash() {
   t[60] = 0;
   __sanitizer_annotate_contiguous_container(&t[0], &t[0] + 100, &t[0] + 100,
                                             &t[0] + 50);
-// CHECK-CRASH: AddressSanitizer: container-overflow
-// CHECK-CRASH: if you don't care about these errors you may set ASAN_OPTIONS=detect_container_overflow=0
-  return (int)t[60 * one];  // Touches the poisoned memory.
+  // CHECK-CRASH: AddressSanitizer: container-overflow
+  // CHECK-CRASH: if you don't care about these errors you may set ASAN_OPTIONS=detect_container_overflow=0
+  return (int)t[60 * one]; // Touches the poisoned memory.
 }
 
 void BadBounds() {
   long t[100];
-// CHECK-BAD-BOUNDS: ERROR: AddressSanitizer: bad parameters to __sanitizer_annotate_contiguous_container
+  // CHECK-BAD-BOUNDS: ERROR: AddressSanitizer: bad parameters to __sanitizer_annotate_contiguous_container
   __sanitizer_annotate_contiguous_container(&t[0], &t[0] + 100, &t[0] + 101,
                                             &t[0] + 50);
 }
