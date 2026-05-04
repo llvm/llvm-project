@@ -1455,7 +1455,7 @@ def AMDGPU_GlobalTransposeLoadOp :
                       Variadic<Index>:$srcIndices)>,
     Results<(outs AnyTypeOf<[
       FixedVectorOfLengthAndType<[8], [I8, F16, BF16, I16]>,
-      FixedVectorOfLengthAndType<[16], [I<4>, I<6>]>
+      FixedVectorOfLengthAndType<[16], [I<4>, F4E2M1FN, I<6>, F6E2M3FN, F6E3M2FN]>
     ]>:$result)> {
   let summary = "MLIR wrapper for RDNA4 global memory transpose load instructions";
   let description = [{
