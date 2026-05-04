@@ -95,6 +95,7 @@
 #include <limits>
 #include <optional>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -775,8 +776,12 @@ AST_MATCHER_P(ClassTemplateSpecializationDecl, hasSpecializedTemplate,
 /// implicit default/copy constructors).
 AST_POLYMORPHIC_MATCHER(isImplicit,
                         AST_POLYMORPHIC_SUPPORTED_TYPES(Decl, Attr,
-                                                        LambdaCapture)) {
-  return Node.isImplicit();
+                                                        LambdaCapture,
+                                                        InitListExpr)) {
+  if constexpr (std::is_same_v<NodeType, InitListExpr>)
+    return !Node.isExplicit();
+  else
+    return Node.isImplicit();
 }
 
 /// Matches templateSpecializationTypes, class template specializations,
@@ -8122,7 +8127,7 @@ AST_MATCHER(CXXConstructorDecl, isDelegatingConstructor) {
 
 /// Matches constructor, conversion function, and deduction guide declarations
 /// that have an explicit specifier if this explicit specifier is resolved to
-/// true. Also matches explicitly written initializer list expressions.
+/// true.
 ///
 /// Given
 /// \code
@@ -8144,7 +8149,7 @@ AST_MATCHER(CXXConstructorDecl, isDelegatingConstructor) {
 /// cxxDeductionGuideDecl(isExplicit()) will match #6, but not #5.
 AST_POLYMORPHIC_MATCHER(isExplicit, AST_POLYMORPHIC_SUPPORTED_TYPES(
                                         CXXConstructorDecl, CXXConversionDecl,
-                                        CXXDeductionGuideDecl, InitListExpr)) {
+                                        CXXDeductionGuideDecl)) {
   return Node.isExplicit();
 }
 

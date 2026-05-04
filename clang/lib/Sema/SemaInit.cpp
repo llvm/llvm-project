@@ -3565,9 +3565,9 @@ InitListExpr *InitListChecker::createInitListExpr(QualType CurrentObjectType,
                                                   SourceRange InitRange,
                                                   unsigned ExpectedNumInits,
                                                   bool IsExplicit) {
-  InitListExpr *Result = new (SemaRef.Context)
-      InitListExpr(SemaRef.Context, InitRange.getBegin(), {},
-                   InitRange.getEnd(), /*isExplicit=*/IsExplicit);
+  InitListExpr *Result =
+      new (SemaRef.Context) InitListExpr(SemaRef.Context, InitRange.getBegin(),
+                                         {}, InitRange.getEnd(), IsExplicit);
 
   QualType ResultType = CurrentObjectType;
   if (!ResultType->isArrayType())
@@ -8447,10 +8447,9 @@ ExprResult InitializationSequence::Perform(Sema &S,
     case SK_RewrapInitList: {
       Expr *E = CurInit.get();
       InitListExpr *Syntactic = Step->WrappingSyntacticList;
-      assert(Syntactic->isExplicit());
       InitListExpr *ILE = new (S.Context)
           InitListExpr(S.Context, Syntactic->getLBraceLoc(), E,
-                       Syntactic->getRBraceLoc(), /*isExplicit=*/true);
+                       Syntactic->getRBraceLoc(), Syntactic->isExplicit());
       ILE->setSyntacticForm(Syntactic);
       ILE->setType(E->getType());
       ILE->setValueKind(E->getValueKind());
