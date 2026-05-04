@@ -3042,7 +3042,7 @@ add_entrypoint_object(
   HDRS
     ../nan.h
   DEPENDS
-    libc.src.__support.math.nan
+    libc.src.__support.math.isnanl
 )
 
 add_entrypoint_object(
