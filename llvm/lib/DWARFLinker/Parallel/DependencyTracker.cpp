@@ -722,6 +722,16 @@ DependencyTracker::getRootForSpecifiedEntry(UnitEntryPairTy Entry) {
   return Result;
 }
 
+static void dumpKeptDIE(const DWARFDie &DIE, StringRef Kind, bool Verbose) {
+  if (!Verbose)
+    return;
+  outs() << "Keeping " << Kind << " DIE:";
+  DIDumpOptions DumpOpts;
+  DumpOpts.ChildRecurseDepth = 0;
+  DumpOpts.Verbose = Verbose;
+  DIE.dump(outs(), /*Indent=*/8, DumpOpts);
+}
+
 bool DependencyTracker::isLiveVariableEntry(const UnitEntryPairTy &Entry,
                                             bool IsLiveParent) {
   DWARFDie DIE = Entry.CU->getDIE(Entry.DieEntry);
@@ -756,13 +766,7 @@ bool DependencyTracker::isLiveVariableEntry(const UnitEntryPairTy &Entry,
   }
   Info.setHasAnAddress();
 
-  if (Entry.CU->getGlobalData().getOptions().Verbose) {
-    outs() << "Keeping variable DIE:";
-    DIDumpOptions DumpOpts;
-    DumpOpts.ChildRecurseDepth = 0;
-    DumpOpts.Verbose = Entry.CU->getGlobalData().getOptions().Verbose;
-    DIE.dump(outs(), 8 /* Indent */, DumpOpts);
-  }
+  dumpKeptDIE(DIE, "variable", Entry.CU->getGlobalData().getOptions().Verbose);
 
   return true;
 }
@@ -772,9 +776,11 @@ bool DependencyTracker::isLiveSubprogramEntry(const UnitEntryPairTy &Entry) {
   CompileUnit::DIEInfo &Info = Entry.CU->getDIEInfo(Entry.DieEntry);
   std::optional<DWARFFormValue> LowPCVal = DIE.find(dwarf::DW_AT_low_pc);
 
+  const bool Verbose = Entry.CU->getGlobalData().getOptions().Verbose;
   std::optional<uint64_t> LowPc;
   std::optional<uint64_t> HighPc;
   std::optional<int64_t> RelocAdjustment;
+  bool LabelHandledByAsmRange = false;
   if (Info.getTrackLiveness()) {
     LowPc = dwarf::toAddress(LowPCVal);
     if (!LowPc)
@@ -784,7 +790,7 @@ bool DependencyTracker::isLiveSubprogramEntry(const UnitEntryPairTy &Entry) {
 
     RelocAdjustment =
         Entry.CU->getContaingFile().Addresses->getSubprogramRelocAdjustment(
-            DIE, Entry.CU->getGlobalData().getOptions().Verbose);
+            DIE, Verbose);
     if (!RelocAdjustment)
       return false;
 
@@ -828,29 +834,17 @@ bool DependencyTracker::isLiveSubprogramEntry(const UnitEntryPairTy &Entry) {
                              .Addresses->getAssemblyRangeForAddress(*LowPc)) {
           Entry.CU->addFunctionRange(Range->LowPC, Range->HighPC,
                                      *RelocAdjustment);
-          if (Entry.CU->getGlobalData().getOptions().Verbose) {
-            outs() << "Keeping subprogram DIE:";
-            DIDumpOptions DumpOpts;
-            DumpOpts.ChildRecurseDepth = 0;
-            DumpOpts.Verbose = Entry.CU->getGlobalData().getOptions().Verbose;
-            DIE.dump(outs(), 8 /* Indent */, DumpOpts);
-          }
-          return true;
+          LabelHandledByAsmRange = true;
         }
       }
 
-      Entry.CU->addLabelLowPc(*LowPc, *RelocAdjustment);
+      if (!LabelHandledByAsmRange)
+        Entry.CU->addLabelLowPc(*LowPc, *RelocAdjustment);
     }
   } else
     Info.setHasAnAddress();
 
-  if (Entry.CU->getGlobalData().getOptions().Verbose) {
-    outs() << "Keeping subprogram DIE:";
-    DIDumpOptions DumpOpts;
-    DumpOpts.ChildRecurseDepth = 0;
-    DumpOpts.Verbose = Entry.CU->getGlobalData().getOptions().Verbose;
-    DIE.dump(outs(), 8 /* Indent */, DumpOpts);
-  }
+  dumpKeptDIE(DIE, "subprogram", Verbose);
 
   if (!Info.getTrackLiveness() || DIE.getTag() == dwarf::DW_TAG_label)
     return true;
