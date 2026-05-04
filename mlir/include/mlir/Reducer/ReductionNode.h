@@ -65,6 +65,8 @@ public:
   /// Return the size of the module.
   size_t getSize() const { return size; }
 
+  size_t getNumOperands();
+
   /// Returns true if the module exhibits the interesting behavior.
   Tester::Interestingness isInteresting() const { return interesting; }
 
@@ -156,6 +158,8 @@ private:
   /// The size of module after applying the reducer patterns with range
   /// constraints. This is only valid while the interestingness has been tested.
   size_t size = 0;
+
+  size_t numOperand = -1;
 
   /// This is true if the module has been evaluated and it exhibits the
   /// interesting behavior.

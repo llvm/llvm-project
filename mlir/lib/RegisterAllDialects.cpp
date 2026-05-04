@@ -99,6 +99,7 @@
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/Interfaces/CastInterfaces.h"
+#include "mlir/Reducer/IR/ReducerOps.h"
 #include "mlir/Target/LLVM/NVVM/Target.h"
 #include "mlir/Target/LLVM/ROCDL/Target.h"
 #include "mlir/Target/LLVM/XeVM/Target.h"
@@ -138,6 +139,7 @@ void mlir::registerAllDialects(DialectRegistry &registry) {
                   pdl_interp::PDLInterpDialect,
                   ptr::PtrDialect,
                   quant::QuantDialect,
+                  reducer::ReducerDialect,
                   ROCDL::ROCDLDialect,
                   scf::SCFDialect,
                   shape::ShapeDialect,

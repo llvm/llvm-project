@@ -162,3 +162,10 @@ ReductionNode::iterator<SinglePath>::getNeighbors(ReductionNode *node) {
 
   return node->generateNewVariants();
 }
+
+size_t ReductionNode::getNumOperands() {
+  size_t num = 0;
+  for (auto &op : region->getOps())
+    num += op.getNumOperands();
+  return num;
+}

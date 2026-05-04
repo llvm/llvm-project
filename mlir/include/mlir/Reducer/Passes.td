@@ -14,6 +14,7 @@
 #define MLIR_REDUCER_PASSES
 
 include "mlir/Pass/PassBase.td"
+include "mlir/Reducer/IR/ReducerOps.td"
 
 def CommonReductionPassOptions {
   list<Option> options = [
@@ -32,6 +33,8 @@ def ReductionTreePass : Pass<"reduction-tree"> {
            /* default */"0",
            "The graph traversal mode, the default is single-path mode">,
   ] # CommonReductionPassOptions.options;
+
+  let dependentDialects = ["reducer::ReducerDialect"];
 }
 
 def OptReductionPass : Pass<"opt-reduction-pass"> {

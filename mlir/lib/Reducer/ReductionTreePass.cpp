@@ -18,6 +18,7 @@
 #include "mlir/IR/DialectInterface.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include "mlir/Reducer/IR/ReducerOps.h"
 #include "mlir/Reducer/Passes.h"
 #include "mlir/Reducer/ReductionNode.h"
 #include "mlir/Reducer/ReductionPatternInterface.h"
@@ -112,10 +113,10 @@ static void applyPatterns(Region &region,
     if (!materializationTypes.empty()) {
       OpBuilder b(region.getContext());
       b.setInsertionPointToStart(&region.front());
-      auto castOp = UnrealizedConversionCastOp::create(
-          b, b.getUnknownLoc(), materializationTypes, {});
+      auto barrierOp = reducer::BarrierOp::create(b, b.getUnknownLoc(),
+                                                  materializationTypes, {});
       for (auto [src, res] :
-           llvm::zip_equal(valueNeedMaterialization, castOp.getResults())) {
+           llvm::zip_equal(valueNeedMaterialization, barrierOp.getResults())) {
         src.replaceAllUsesWith(res);
       }
     }
@@ -185,10 +186,15 @@ static LogicalResult findOptimal(ModuleOp module, Region &region,
 
     applyPatterns(curRegion, patterns, currentNode.getRanges(),
                   eraseOpNotInRange);
+    LDBG() << currentNode.getRegion() << "\n";
     currentNode.update(test.isInteresting(currentNode.getModule()));
 
+    LDBG() << currentNode.getNumOperands() << " "
+           << smallestNode->getNumOperands();
+    LDBG() << currentNode.getRegion() << "\n";
     if (currentNode.isInteresting() == Tester::Interestingness::True &&
-        currentNode.getSize() < smallestNode->getSize())
+        (currentNode.getSize() < smallestNode->getSize() ||
+         currentNode.getNumOperands() < smallestNode->getNumOperands()))
       smallestNode = &currentNode;
 
     ++iter;

@@ -1,3 +1,4 @@
+add_subdirectory(IR)
 add_mlir_library(MLIRReduce
    OptReductionPass.cpp
    ReductionNode.cpp

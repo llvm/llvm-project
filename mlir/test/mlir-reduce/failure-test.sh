@@ -6,7 +6,7 @@ stdout_file=$(mktemp /tmp/stdout.XXXXXX)
 stderr_file=$(mktemp /tmp/stderr.XXXXXX)
 
 # Tests for the keyword "failure" in the stderr of the optimization pass
-mlir-opt $1 -test-mlir-reducer > $stdout_file 2> $stderr_file
+mlir-opt $1 -test-mlir-reducer -allow-unregistered-dialect > $stdout_file 2> $stderr_file
 
 if [ $? -ne 0 ] && grep 'failure' $stderr_file; then
   exit 1
