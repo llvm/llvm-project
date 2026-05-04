@@ -148,7 +148,8 @@ AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
       if (ContainsUndefinedBits)
         *ContainsUndefinedBits = true;
 
-      if (getEffectiveUndefValueBehavior() == UndefValueBehavior::NonDeterministic) {
+      if (getEffectiveUndefValueBehavior() ==
+          UndefValueBehavior::NonDeterministic) {
         // We don't use std::uniform_int_distribution here because it produces
         // different results across different library implementations. Instead,
         // we directly use the low bits from Rng.
