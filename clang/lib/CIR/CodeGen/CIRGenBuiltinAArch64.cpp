@@ -857,12 +857,11 @@ static mlir::Value emitCommonNeonBuiltinExpr(
 
   llvm::StringRef llvmIntrName =
       getLLVMIntrNameNoPrefix(static_cast<llvm::Intrinsic::ID>(
-        usgn ? llvmIntrinsic : altLLVMIntrinsic));
+          usgn ? llvmIntrinsic : altLLVMIntrinsic));
             
-  mlir::Value result =
-      emitNeonCall(cgf.getCIRGenModule(), cgf.getBuilder(),
-                   /*argTypes=*/{vTy, vTy}, ops, llvmIntrName,
-                   /*funcResTy=*/vTy, loc);
+  mlir::Value result = emitNeonCall(cgf.getCIRGenModule(), cgf.getBuilder(),
+                                    /*argTypes=*/{vTy, vTy}, ops, llvmIntrName,
+                                    /*funcResTy=*/vTy, loc);
   mlir::Type resultType = cgf.convertType(expr->getType());
   return cgf.getBuilder().createBitcast(result, resultType);
 }
