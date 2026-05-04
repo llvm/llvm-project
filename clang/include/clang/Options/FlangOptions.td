@@ -291,6 +291,17 @@ defm unsafe_cray_pointers : BoolOptionWithoutMarshalling<"f", "unsafe-cray-point
   PosFlag<SetTrue, [], [FlangOption, FC1Option], "Optimizations allow for unsafe Cray pointer usages">,
   NegFlag<SetFalse, [], [FlangOption, FC1Option], "Optimizations don't allow for unsafe Cray pointer usages (default)">>;
 
+def relaxed_c_loc : Flag<["-"], "frelaxed-c-loc">, Group<f_Group>,
+  Visibility<[FlangOption, FC1Option]>,
+  HelpText<"Unsafe relaxation of C_LOC() argument restrictions for compatibility">,
+  DocBrief<[{
+    Unsafe relaxation of C_LOC() argument restrictions for compatibility.
+    All C_LOC values should be passed directly to C calls.
+
+    This is unsafe, because it can be used to create aliases the compiler
+    is unaware of, please fix your applications instead of using this flag.
+    This may be removed in the future.}]>;
+
 def fhermetic_module_files : Flag<["-"], "fhermetic-module-files">, Group<f_Group>,
   HelpText<"Emit hermetic module files (no nested USE association)">;
 

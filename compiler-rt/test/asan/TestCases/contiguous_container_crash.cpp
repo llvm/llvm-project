@@ -11,7 +11,11 @@
 #include <assert.h>
 #include <string.h>
 
-#include <sanitizer/asan_interface.h>
+extern "C" {
+void __sanitizer_annotate_contiguous_container(const void *beg, const void *end,
+                                               const void *old_mid,
+                                               const void *new_mid);
+}  // extern "C"
 
 static volatile int one = 1;
 
