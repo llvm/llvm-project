@@ -10696,7 +10696,7 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
   ConstraintDecisionInfo Info;
   while (determineConstraints(Info, TargetConstraints, Call, *this, TLI, TM,
                               DAG, EHPadBB)) {
-    if (Info.ErrorMsg.buffer().size() != 0)
+    if (!Info.ErrorMsg.buffer().empty())
       return emitInlineAsmError(Call, Info.ErrorMsg.str());
     Info.reset();
   }
