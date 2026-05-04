@@ -23,7 +23,6 @@
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Location.h"
-#include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 
@@ -145,6 +144,7 @@ struct RemoveStrideFromGatherSource : OpRewritePattern<vector::GatherOp> {
     // first element within the source memref. Bail out on dynamic offsets so
     // we don't have to materialize them; the conditional-load fallback will
     // still produce correct code.
+    // TODO: Support dynamic offsets.
     int64_t subviewOffset = stridedLayoutAttr.getOffset();
     if (ShapedType::isDynamic(subviewOffset))
       return failure();
@@ -173,26 +173,17 @@ struct RemoveStrideFromGatherSource : OpRewritePattern<vector::GatherOp> {
     // Pick new_idxs[k] = idxs[k] * 3 (that's step 2), and solve for new_off:
     //   new_off = 1 + base_off * 3
     //           = subview_offset + base_off * stride
+    // Note that createOrFold collapses the muli/addi when the trailing offset
+    // is a constant zero or the subview offset is zero.
     SmallVector<Value> newOffsets(op.getOffsets());
-    bool trailingOffsetIsZero = isZeroInteger(newOffsets.back());
-    if (!trailingOffsetIsZero) {
-      Value strideVal =
-          arith::ConstantIndexOp::create(rewriter, op.getLoc(), srcTrailingDim);
-      newOffsets.back() = arith::MulIOp::create(rewriter, op.getLoc(),
-                                                newOffsets.back(), strideVal);
-    }
-    if (subviewOffset != 0) {
-      Value subviewOffsetValue =
-          arith::ConstantIndexOp::create(rewriter, op.getLoc(), subviewOffset);
-      if (trailingOffsetIsZero) {
-        newOffsets.back() = subviewOffsetValue;
-      } else {
-        newOffsets.back() =
-            arith::AddIOp::create(rewriter, op.getLoc(), newOffsets.back(),
-                                  subviewOffsetValue)
-                .getResult();
-      }
-    }
+    Value strideVal =
+        arith::ConstantIndexOp::create(rewriter, op.getLoc(), srcTrailingDim);
+    newOffsets.back() = rewriter.createOrFold<arith::MulIOp>(
+        op.getLoc(), newOffsets.back(), strideVal);
+    Value subviewOffsetValue =
+        arith::ConstantIndexOp::create(rewriter, op.getLoc(), subviewOffset);
+    newOffsets.back() = rewriter.createOrFold<arith::AddIOp>(
+        op.getLoc(), newOffsets.back(), subviewOffsetValue);
 
     // 4. Create an updated gather op with the collapsed input memref and the
     // updated offsets/indices.
