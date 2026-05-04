@@ -32,6 +32,8 @@
 #include "lldb/Utility/ValueType.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/lldb-enumerations.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 
 #include <memory>
 #include <optional>
@@ -434,6 +436,77 @@ may even involve JITing and running code in the target program.)");
   ~CommandObjectFrameVariable() override = default;
 
   Options *GetOptions() override { return &m_option_group; }
+
+  // `frame variable` repeats by incrementing the printing depth. When the depth
+  // is too shallow, hitting enter a few times will quickly expand the data.
+  std::optional<std::string> GetRepeatCommand(Args &current_command_args,
+                                              uint32_t index) override {
+    llvm::StringRef depth_opt = "--depth";
+
+    Args repeat_args;
+    auto increment_option =
+        [&](llvm::StringRef option) -> std::optional<std::string> {
+      uint32_t num;
+      bool failed = option.getAsInteger(10, num);
+      if (failed)
+        return std::nullopt;
+      return llvm::utostr(num + 1);
+    };
+
+    bool has_depth_option = false;
+    bool increment_next_arg = false;
+    for (const auto &entry : current_command_args) {
+      llvm::StringRef arg = entry.ref();
+
+      if (arg == "-" || arg == "--") {
+        repeat_args.AppendArgument(arg);
+        continue;
+      }
+
+      if (increment_next_arg) {
+        increment_next_arg = false;
+        if (auto maybe_opt = increment_option(arg)) {
+          repeat_args.AppendArgument(*maybe_opt);
+          continue;
+        }
+      }
+
+      if (depth_opt.starts_with(arg) || arg == "-D") {
+        repeat_args.AppendArgument(arg);
+        increment_next_arg = true;
+        has_depth_option = true;
+        continue;
+      }
+      if (arg.consume_front("-D")) {
+        if (auto maybe_opt = increment_option(arg)) {
+          repeat_args.AppendArgument(llvm::formatv("-D{0}", *maybe_opt).str());
+          has_depth_option = true;
+          continue;
+        }
+      }
+
+      repeat_args.AppendArgument(arg);
+    }
+
+    if (!has_depth_option) {
+      // Access the default max-depth from the target. This is because
+      // GetRepeatCommand is called before ParseOptions, which is when
+      // m_varobj_options.max_depth becomes assigned.
+      if (auto target_sp = GetDebugger().GetSelectedTarget()) {
+        auto [default_depth, _] =
+            target_sp->GetMaximumDepthOfChildrenToDisplay();
+        // Insert the depth after `frame variable`, before positional args.
+        assert(repeat_args[0].ref() == "frame" && "expects resolved command");
+        repeat_args.InsertArgumentAtIndex(2, "--depth");
+        repeat_args.InsertArgumentAtIndex(3, llvm::utostr(default_depth + 1));
+      }
+    }
+
+    std::string repeat_command;
+    if (!repeat_args.GetQuotedCommandString(repeat_command))
+      return std::nullopt;
+    return repeat_command;
+  }
 
 protected:
   llvm::StringRef GetScopeString(VariableSP var_sp) {

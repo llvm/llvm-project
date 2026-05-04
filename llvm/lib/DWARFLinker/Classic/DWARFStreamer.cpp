@@ -75,8 +75,8 @@ Error DwarfStreamer::init(Triple TheTriple,
                              "no subtarget info for target %s",
                              TripleName.c_str());
 
-  MC.reset(new MCContext(TheTriple, MAI.get(), MRI.get(), MSTI.get(), nullptr,
-                         true, Swift5ReflectionSegmentName));
+  MC.reset(new MCContext(TheTriple, *MAI, *MRI, *MSTI, nullptr, true,
+                         Swift5ReflectionSegmentName));
   MOFI.reset(TheTarget->createMCObjectFileInfo(*MC, /*PIC=*/false, false));
   MC->setObjectFileInfo(MOFI.get());
 

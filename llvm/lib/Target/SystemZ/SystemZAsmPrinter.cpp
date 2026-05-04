@@ -938,13 +938,9 @@ void SystemZAsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(
 
   // If patchable-function-entry is set, emit in-function nops here.
   if (F.hasFnAttribute("patchable-function-entry")) {
-    unsigned Num;
     // get M-N from function attribute (CodeGenFunction subtracts N
     // from M to yield the correct patchable-function-entry).
-    if (F.getFnAttribute("patchable-function-entry")
-            .getValueAsString()
-            .getAsInteger(10, Num))
-      return;
+    unsigned Num = F.getFnAttributeAsParsedInteger("patchable-function-entry");
     // Emit M-N 2-byte nops. Use getNop() here instead of emitNops()
     // to keep it aligned with the common code implementation emitting
     // the prefix nops.
@@ -963,8 +959,8 @@ void SystemZAsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(
   // Update compiler-rt/lib/xray/xray_s390x.cpp accordingly when number
   // of instructions change.
   bool HasVectorFeature =
-      TM.getMCSubtargetInfo()->hasFeature(SystemZ::FeatureVector) &&
-      !TM.getMCSubtargetInfo()->hasFeature(SystemZ::FeatureSoftFloat);
+      TM.getMCSubtargetInfo().hasFeature(SystemZ::FeatureVector) &&
+      !TM.getMCSubtargetInfo().hasFeature(SystemZ::FeatureSoftFloat);
   MCSymbol *FuncEntry = OutContext.getOrCreateSymbol(
       HasVectorFeature ? "__xray_FunctionEntryVec" : "__xray_FunctionEntry");
   MCSymbol *BeginOfSled = OutContext.createTempSymbol("xray_sled_", true);
@@ -1008,8 +1004,8 @@ void SystemZAsmPrinter::LowerPATCHABLE_RET(const MachineInstr &MI,
   // Update compiler-rt/lib/xray/xray_s390x.cpp accordingly when number
   // of instructions change.
   bool HasVectorFeature =
-      TM.getMCSubtargetInfo()->hasFeature(SystemZ::FeatureVector) &&
-      !TM.getMCSubtargetInfo()->hasFeature(SystemZ::FeatureSoftFloat);
+      TM.getMCSubtargetInfo().hasFeature(SystemZ::FeatureVector) &&
+      !TM.getMCSubtargetInfo().hasFeature(SystemZ::FeatureSoftFloat);
   MCSymbol *FuncExit = OutContext.getOrCreateSymbol(
       HasVectorFeature ? "__xray_FunctionExitVec" : "__xray_FunctionExit");
   MCSymbol *BeginOfSled = OutContext.createTempSymbol("xray_sled_", true);
@@ -1033,7 +1029,7 @@ void SystemZAsmPrinter::LowerPATCHABLE_RET(const MachineInstr &MI,
 void SystemZAsmPrinter::emitAttributes(Module &M) {
   if (M.getModuleFlag("s390x-visible-vector-ABI")) {
     bool HasVectorFeature =
-      TM.getMCSubtargetInfo()->hasFeature(SystemZ::FeatureVector);
+        TM.getMCSubtargetInfo().hasFeature(SystemZ::FeatureVector);
     OutStreamer->emitGNUAttribute(8, HasVectorFeature ? 2 : 1);
   }
 }
@@ -1181,7 +1177,7 @@ static void printAddress(const MCAsmInfo *MAI, unsigned Base,
 bool SystemZAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                                         const char *ExtraCode,
                                         raw_ostream &OS) {
-  const MCRegisterInfo &MRI = *TM.getMCRegisterInfo();
+  const MCRegisterInfo &MRI = TM.getMCRegisterInfo();
   const MachineOperand &MO = MI->getOperand(OpNo);
   MCOperand MCOp;
   if (ExtraCode) {
@@ -1195,7 +1191,7 @@ bool SystemZAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     SystemZMCInstLower Lower(MF->getContext(), *this);
     MCOp = Lower.lowerOperand(MO);
   }
-  printOperand(MCOp, MAI, OS);
+  printOperand(MCOp, &MAI, OS);
   return false;
 }
 
@@ -1214,11 +1210,11 @@ bool SystemZAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
       OS << MI->getOperand(OpNo + 1).getImm();
       return false;
     case 'R':
-      ::printReg(MI->getOperand(OpNo).getReg(), MAI, OS);
+      ::printReg(MI->getOperand(OpNo).getReg(), &MAI, OS);
       return false;
     }
   }
-  printAddress(MAI, MI->getOperand(OpNo).getReg(),
+  printAddress(&MAI, MI->getOperand(OpNo).getReg(),
                MCOperand::createImm(MI->getOperand(OpNo + 1).getImm()),
                MI->getOperand(OpNo + 2).getReg(), OS);
   return false;

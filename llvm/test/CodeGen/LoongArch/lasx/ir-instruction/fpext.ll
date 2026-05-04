@@ -6,17 +6,8 @@ define void @fpext_v4f32_to_v4f64(ptr %res, ptr %a0) nounwind {
 ; CHECK-LABEL: fpext_v4f32_to_v4f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    vreplvei.w $vr1, $vr0, 3
-; CHECK-NEXT:    fcvt.d.s $fa1, $fa1
-; CHECK-NEXT:    vreplvei.w $vr2, $vr0, 2
-; CHECK-NEXT:    fcvt.d.s $fa2, $fa2
-; CHECK-NEXT:    vextrins.d $vr2, $vr1, 16
-; CHECK-NEXT:    vreplvei.w $vr1, $vr0, 1
-; CHECK-NEXT:    fcvt.d.s $fa1, $fa1
-; CHECK-NEXT:    vreplvei.w $vr0, $vr0, 0
-; CHECK-NEXT:    fcvt.d.s $fa0, $fa0
-; CHECK-NEXT:    vextrins.d $vr0, $vr1, 16
-; CHECK-NEXT:    xvpermi.q $xr0, $xr2, 2
+; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 216
+; CHECK-NEXT:    xvfcvtl.d.s $xr0, $xr0
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -30,31 +21,11 @@ define void @fpext_v8f32_to_v8f64(ptr %res, ptr %a0) nounwind {
 ; CHECK-LABEL: fpext_v8f32_to_v8f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
-; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
-; CHECK-NEXT:    vreplvei.w $vr2, $vr1, 3
-; CHECK-NEXT:    fcvt.d.s $fa2, $fa2
-; CHECK-NEXT:    vreplvei.w $vr3, $vr1, 2
-; CHECK-NEXT:    fcvt.d.s $fa3, $fa3
-; CHECK-NEXT:    vextrins.d $vr3, $vr2, 16
-; CHECK-NEXT:    vreplvei.w $vr2, $vr1, 1
-; CHECK-NEXT:    fcvt.d.s $fa2, $fa2
-; CHECK-NEXT:    vreplvei.w $vr1, $vr1, 0
-; CHECK-NEXT:    fcvt.d.s $fa1, $fa1
-; CHECK-NEXT:    vextrins.d $vr1, $vr2, 16
-; CHECK-NEXT:    xvpermi.q $xr1, $xr3, 2
-; CHECK-NEXT:    vreplvei.w $vr2, $vr0, 3
-; CHECK-NEXT:    fcvt.d.s $fa2, $fa2
-; CHECK-NEXT:    vreplvei.w $vr3, $vr0, 2
-; CHECK-NEXT:    fcvt.d.s $fa3, $fa3
-; CHECK-NEXT:    vextrins.d $vr3, $vr2, 16
-; CHECK-NEXT:    vreplvei.w $vr2, $vr0, 1
-; CHECK-NEXT:    fcvt.d.s $fa2, $fa2
-; CHECK-NEXT:    vreplvei.w $vr0, $vr0, 0
-; CHECK-NEXT:    fcvt.d.s $fa0, $fa0
-; CHECK-NEXT:    vextrins.d $vr0, $vr2, 16
-; CHECK-NEXT:    xvpermi.q $xr0, $xr3, 2
-; CHECK-NEXT:    xvst $xr0, $a0, 0
-; CHECK-NEXT:    xvst $xr1, $a0, 32
+; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 216
+; CHECK-NEXT:    xvfcvtl.d.s $xr1, $xr0
+; CHECK-NEXT:    xvfcvth.d.s $xr0, $xr0
+; CHECK-NEXT:    xvst $xr0, $a0, 32
+; CHECK-NEXT:    xvst $xr1, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
   %v0 = load <8 x float>, ptr %a0

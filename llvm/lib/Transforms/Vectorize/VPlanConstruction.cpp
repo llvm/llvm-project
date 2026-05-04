@@ -717,7 +717,201 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
   return WideIV;
 }
 
-void VPlanTransforms::createHeaderPhiRecipes(
+/// Try to sink users of \p FOR after \p Previous. \returns true if sinking
+/// succeeded or was not necessary, and false otherwise.
+static bool
+sinkRecurrenceUsersAfterPrevious(VPFirstOrderRecurrencePHIRecipe *FOR,
+                                 VPRecipeBase *Previous,
+                                 VPDominatorTree &VPDT) {
+  // Collect recipes that need sinking.
+  SmallVector<VPRecipeBase *> WorkList;
+  SmallPtrSet<VPRecipeBase *, 8> Seen;
+  Seen.insert(Previous);
+  auto TryToPushSinkCandidate = [&](VPRecipeBase *SinkCandidate) {
+    // The previous value must not depend on the users of the recurrence phi.
+    // In that case, FOR is not a fixed order recurrence.
+    if (SinkCandidate == Previous)
+      return false;
+
+    if (isa<VPHeaderPHIRecipe>(SinkCandidate) ||
+        !Seen.insert(SinkCandidate).second ||
+        VPDT.properlyDominates(Previous, SinkCandidate))
+      return true;
+
+    if (vputils::cannotHoistOrSinkRecipe(*SinkCandidate, /*Sinking=*/true))
+      return false;
+
+    WorkList.push_back(SinkCandidate);
+    return true;
+  };
+
+  // Recursively sink users of FOR after Previous.
+  WorkList.push_back(FOR);
+  for (unsigned I = 0; I != WorkList.size(); ++I) {
+    VPRecipeBase *Current = WorkList[I];
+    assert(Current->getNumDefinedValues() == 1 &&
+           "only recipes with a single defined value expected");
+
+    for (VPUser *User : Current->getVPSingleValue()->users()) {
+      if (!TryToPushSinkCandidate(cast<VPRecipeBase>(User)))
+        return false;
+    }
+  }
+
+  // Keep recipes to sink ordered by dominance so earlier instructions are
+  // processed first.
+  sort(WorkList, [&VPDT](const VPRecipeBase *A, const VPRecipeBase *B) {
+    return VPDT.properlyDominates(A, B);
+  });
+
+  for (VPRecipeBase *SinkCandidate : WorkList) {
+    if (SinkCandidate == FOR)
+      continue;
+
+    SinkCandidate->moveAfter(Previous);
+    Previous = SinkCandidate;
+  }
+  return true;
+}
+
+/// Try to hoist \p Previous and its operands before all users of \p FOR.
+/// \returns true if hoisting succeeded or was not necessary, and false
+/// otherwise.
+static bool hoistPreviousBeforeFORUsers(VPFirstOrderRecurrencePHIRecipe *FOR,
+                                        VPRecipeBase *Previous,
+                                        VPDominatorTree &VPDT) {
+  if (vputils::cannotHoistOrSinkRecipe(*Previous))
+    return false;
+
+  // Collect recipes that need hoisting.
+  SmallVector<VPRecipeBase *> HoistCandidates;
+  SmallPtrSet<VPRecipeBase *, 8> Visited;
+  // Find the closest hoist point by looking at all users of FOR and selecting
+  // the recipe dominating all other users.
+  VPRecipeBase *HoistPoint = nullptr;
+  for (VPUser *U : FOR->users()) {
+    auto *R = cast<VPRecipeBase>(U);
+    if (!HoistPoint || VPDT.properlyDominates(R, HoistPoint))
+      HoistPoint = R;
+  }
+  assert(all_of(FOR->users(),
+                [&VPDT, HoistPoint](VPUser *U) {
+                  auto *R = cast<VPRecipeBase>(U);
+                  return HoistPoint == R ||
+                         VPDT.properlyDominates(HoistPoint, R);
+                }) &&
+         "HoistPoint must dominate all users of FOR");
+
+  auto NeedsHoisting = [HoistPoint, &VPDT,
+                        &Visited](VPValue *HoistCandidateV) -> VPRecipeBase * {
+    VPRecipeBase *HoistCandidate = HoistCandidateV->getDefiningRecipe();
+    if (!HoistCandidate)
+      return nullptr;
+    // Hoist candidate was already visited, no need to hoist.
+    if (!Visited.insert(HoistCandidate).second)
+      return nullptr;
+    // If we reached a recipe that dominates HoistPoint, we don't need to
+    // hoist the recipe.
+    if (VPDT.properlyDominates(HoistCandidate, HoistPoint))
+      return nullptr;
+    return HoistCandidate;
+  };
+
+  if (!NeedsHoisting(Previous->getVPSingleValue()))
+    return true;
+
+  // Recursively try to hoist Previous and its operands before all users of
+  // FOR.
+  HoistCandidates.push_back(Previous);
+
+  for (unsigned I = 0; I != HoistCandidates.size(); ++I) {
+    VPRecipeBase *Current = HoistCandidates[I];
+    assert(Current->getNumDefinedValues() == 1 &&
+           "only recipes with a single defined value expected");
+    if (vputils::cannotHoistOrSinkRecipe(*Current))
+      return false;
+
+    for (VPValue *Op : Current->operands()) {
+      // If we reach FOR, it means the original Previous depends on some other
+      // recurrence that in turn depends on FOR. If that is the case, we would
+      // also need to hoist recipes involving the other FOR, which may break
+      // dependencies.
+      if (Op == FOR)
+        return false;
+
+      if (auto *R = NeedsHoisting(Op)) {
+        // Bail out if the recipe defines multiple values.
+        // TODO: Hoisting such recipes requires additional handling.
+        if (R->getNumDefinedValues() != 1)
+          return false;
+        HoistCandidates.push_back(R);
+      }
+    }
+  }
+
+  // Order recipes to hoist by dominance so earlier instructions are processed
+  // first.
+  sort(HoistCandidates, [&VPDT](const VPRecipeBase *A, const VPRecipeBase *B) {
+    return VPDT.properlyDominates(A, B);
+  });
+
+  for (VPRecipeBase *HoistCandidate : HoistCandidates) {
+    HoistCandidate->moveBefore(*HoistPoint->getParent(),
+                               HoistPoint->getIterator());
+  }
+
+  return true;
+}
+
+/// Sink users of fixed-order recurrences past or hoist before the recipe
+/// defining the previous value, introduce FirstOrderRecurrenceSplice
+/// VPInstructions, and replace FOR uses. Returns false if hoisting or sinking
+/// fails.
+static bool tryToSinkOrHoistRecurrenceUsers(VPBasicBlock *HeaderVPBB,
+                                            VPDominatorTree &VPDT) {
+  for (VPRecipeBase &R : HeaderVPBB->phis()) {
+    auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&R);
+    if (!FOR)
+      continue;
+
+    // Follow through FOR phi chains to find the actual Previous recipe.
+    // Fixed-order recurrences do not contain cycles, so this loop is
+    // guaranteed to terminate.
+    SmallPtrSet<VPFirstOrderRecurrencePHIRecipe *, 4> SeenPhis;
+    VPRecipeBase *Previous = FOR->getBackedgeValue()->getDefiningRecipe();
+    while (auto *PrevPhi =
+               dyn_cast_or_null<VPFirstOrderRecurrencePHIRecipe>(Previous)) {
+      assert(PrevPhi->getParent() == FOR->getParent() &&
+             "PrevPhi must be in same block as FOR");
+      assert(SeenPhis.insert(PrevPhi).second &&
+             "PrevPhi must not be visited multiple times");
+      Previous = PrevPhi->getBackedgeValue()->getDefiningRecipe();
+    }
+
+    assert(Previous && "Previous must be a recipe");
+    // Sink FOR users after Previous or hoist Previous before FOR users.
+    if (!sinkRecurrenceUsersAfterPrevious(FOR, Previous, VPDT) &&
+        !hoistPreviousBeforeFORUsers(FOR, Previous, VPDT))
+      return false;
+
+    // Create FirstOrderRecurrenceSplice and replace FOR uses.
+    VPBasicBlock *InsertBlock = Previous->getParent();
+    auto InsertPt = isa<VPHeaderPHIRecipe>(Previous)
+                        ? InsertBlock->getFirstNonPhi()
+                        : std::next(Previous->getIterator());
+    VPBuilder LoopBuilder(InsertBlock, InsertPt);
+    auto *RecurSplice =
+        LoopBuilder.createNaryOp(VPInstruction::FirstOrderRecurrenceSplice,
+                                 {FOR, FOR->getBackedgeValue()});
+    FOR->replaceUsesWithIf(RecurSplice, [RecurSplice](VPUser &U, unsigned) {
+      return &U != RecurSplice;
+    });
+  }
+
+  return true;
+}
+
+bool VPlanTransforms::createHeaderPhiRecipes(
     VPlan &Plan, PredicatedScalarEvolution &PSE, Loop &OrigLoop,
     const MapVector<PHINode *, InductionDescriptor> &Inductions,
     const MapVector<PHINode *, RecurrenceDescriptor> &Reductions,
@@ -726,8 +920,8 @@ void VPlanTransforms::createHeaderPhiRecipes(
   // Retrieve the header manually from the intial plain-CFG VPlan.
   VPBasicBlock *HeaderVPBB = cast<VPBasicBlock>(
       Plan.getEntry()->getSuccessors()[1]->getSingleSuccessor());
-  assert(VPDominatorTree(Plan).dominates(HeaderVPBB,
-                                         HeaderVPBB->getPredecessors()[1]) &&
+  VPDominatorTree VPDT(Plan);
+  assert(VPDT.dominates(HeaderVPBB, HeaderVPBB->getPredecessors()[1]) &&
          "header must dominate its latch");
 
   auto CreateHeaderPhiRecipe = [&](VPPhi *PhiR) -> VPHeaderPHIRecipe * {
@@ -780,6 +974,9 @@ void VPlanTransforms::createHeaderPhiRecipes(
     PhiR->eraseFromParent();
   }
 
+  if (!tryToSinkOrHoistRecurrenceUsers(HeaderVPBB, VPDT))
+    return false;
+
   for (const auto &[HeaderPhiR, ScalarPhiR] :
        getMatchingPhisForScalarLoop(HeaderVPBB, Plan.getScalarPreheader())) {
     auto *ResumePhiR = cast<VPPhi>(&ScalarPhiR);
@@ -793,11 +990,11 @@ void VPlanTransforms::createHeaderPhiRecipes(
                             ? "bc.resume.val"
                             : "bc.merge.rdx");
   }
+  return true;
 }
 
-void VPlanTransforms::createInLoopReductionRecipes(
-    VPlan &Plan, const DenseSet<BasicBlock *> &BlocksNeedingPredication,
-    ElementCount MinVF) {
+void VPlanTransforms::createInLoopReductionRecipes(VPlan &Plan,
+                                                   ElementCount MinVF) {
   VPTypeAnalysis TypeInfo(Plan);
   VPBasicBlock *Header = Plan.getVectorLoopRegion()->getEntryBasicBlock();
   SmallVector<VPRecipeBase *> ToDelete;
@@ -926,13 +1123,9 @@ void VPlanTransforms::createInLoopReductionRecipes(
             "PreviousLink must be the operand other than VecOp");
       }
 
-      // Get block mask from CurrentLink, if it needs predication.
-      VPValue *CondOp = nullptr;
-      if (BlocksNeedingPredication.contains(CurrentLinkI->getParent()))
-        CondOp = cast<VPInstruction>(CurrentLink)->getMask();
-
       assert(PhiR->getVFScaleFactor() == 1 &&
              "inloop reductions must be unscaled");
+      VPValue *CondOp = cast<VPInstruction>(CurrentLink)->getMask();
       auto *RedRecipe = new VPReductionRecipe(
           Kind, FMFs, CurrentLinkI, PreviousLink, VecOp, CondOp,
           getReductionStyle(/*IsInLoop=*/true, PhiR->isOrdered(), 1),
@@ -1191,8 +1384,7 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
       continue;
 
     // Compute the index of the last active lane.
-    VPValue *LastActiveLane =
-        Builder.createNaryOp(VPInstruction::LastActiveLane, HeaderMask);
+    VPValue *LastActiveLane = Builder.createLastActiveLane(HeaderMask);
     auto *Ext =
         Builder.createNaryOp(VPInstruction::ExtractLane, {LastActiveLane, Op});
     R.getVPSingleValue()->replaceAllUsesWith(Ext);
@@ -1798,11 +1990,10 @@ static bool handleFirstArgMinOrMax(
   // If we used a new wide canonical IV convert the reduction result back to the
   // original IV scale before the final select.
   if (!WideIV->isCanonical()) {
-    auto *DerivedIVRecipe =
-        new VPDerivedIVRecipe(InductionDescriptor::IK_IntInduction,
-                              nullptr, // No FPBinOp for integer induction
-                              WideIV->getStartValue(), FinalCanIV,
-                              WideIV->getStepValue(), "derived.iv.result");
+    auto *DerivedIVRecipe = new VPDerivedIVRecipe(
+        InductionDescriptor::IK_IntInduction,
+        nullptr, // No FPBinOp for integer induction
+        WideIV->getStartValue(), FinalCanIV, WideIV->getStepValue());
     DerivedIVRecipe->insertBefore(&*Builder.getInsertPoint());
     FinalCanIV = DerivedIVRecipe;
   }

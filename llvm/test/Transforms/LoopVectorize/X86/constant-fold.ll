@@ -17,9 +17,7 @@ define void @f1() {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[TMP0:%.*]] = sext i16 0 to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [2 x ptr], ptr @b, i16 0, i64 [[TMP0]]
-; CHECK-NEXT:    store <2 x ptr> <ptr @a, ptr @a>, ptr [[TMP1]], align 8
+; CHECK-NEXT:    store <2 x ptr> <ptr @a, ptr @a>, ptr @b, align 8
 ; CHECK-NEXT:    br label [[MIDDLE_BLOCK:%.*]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[BB2:%.*]]
@@ -263,11 +261,16 @@ then.2:
 loop.latch:
   %iv.next = add nuw nsw i32 %iv, 1
   %ec = icmp eq i32 %iv.next, 3
-  br i1 %ec, label %exit, label %loop.header
+  br i1 %ec, label %exit, label %loop.header, !llvm.loop !1
 
 exit:
   ret void
 }
+
+!1 = distinct !{!1, !2, !3, !4}
+!2 = !{!"llvm.loop.vectorize.width", i32 4}
+!3 = !{!"llvm.loop.vectorize.enable", i1 true}
+!4 = !{!"llvm.loop.vectorize.predicate.enable", i1 true}
 
 define void @redundant_and_2(ptr %dst, i1 %c.0, i1 %c.1) {
 ; CHECK-LABEL: @redundant_and_2(

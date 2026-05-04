@@ -4,8 +4,9 @@
 ; Repro for issue https://reviews.llvm.org/D149367#4619121
 ; Validates that `indirect ptr null` and a jump table can be used in the same function.
 
-; Verify branch labels match what's in the CodeView
-; CHECK:            .Ltmp2:
+; Verify branch label matches what's in the CodeView
+; CHECK:            addq    %rcx, %rax
+; CHECK-NEXT:       [[BRANCH:\.Ltmp[0-9]+]]:
 ; CHECK-NEXT:       jmpq    *%{{.*}}
 
 ; Verify jump table have the same entry size, base offset and shift as what's in the CodeView
@@ -17,9 +18,9 @@
 ; CHECK-NEXT:     .secrel32	.LJTI0_0    # Base offset
 ; CHECK-NEXT:     .secidx	.LJTI0_0      # Base section index
 ; CHECK-NEXT:     .short	4             # Switch type
-; CHECK-NEXT:     .secrel32	.Ltmp2      # Branch offset
+; CHECK-NEXT:     .secrel32	[[BRANCH]]  # Branch offset
 ; CHECK-NEXT:     .secrel32	.LJTI0_0    # Table offset
-; CHECK-NEXT:     .secidx	.Ltmp2        # Branch section index
+; CHECK-NEXT:     .secidx	[[BRANCH]]    # Branch section index
 ; CHECK-NEXT:     .secidx	.LJTI0_0      # Table section index
 ; CHECK-NEXT:     .long	4               # Entries count
 ; CHECK-NOT:      .short	4441          # Record kind: S_ARMSWITCHTABLE

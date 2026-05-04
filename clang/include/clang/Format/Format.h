@@ -268,6 +268,41 @@ struct FormatStyle {
     }
   };
 
+  /// Style of aligning consecutive assignments.
+  ///
+  /// ``Consecutive`` will result in formattings like:
+  /// \code
+  ///   int a            = 1;
+  ///   int somelongname = 2;
+  ///   double c         = 3;
+  /// \endcode
+  /// \version 3.8
+  AlignConsecutiveStyle AlignConsecutiveAssignments;
+
+  /// Style of aligning consecutive bit fields.
+  ///
+  /// ``Consecutive`` will align the bitfield separators of consecutive lines.
+  /// This will result in formattings like:
+  /// \code
+  ///   int aaaa : 1;
+  ///   int b    : 12;
+  ///   int ccc  : 8;
+  /// \endcode
+  /// \version 11
+  AlignConsecutiveStyle AlignConsecutiveBitFields;
+
+  /// Style of aligning consecutive declarations.
+  ///
+  /// ``Consecutive`` will align the declaration names of consecutive lines.
+  /// This will result in formattings like:
+  /// \code
+  ///   int         aaaa = 12;
+  ///   float       b = 23;
+  ///   std::string ccc;
+  /// \endcode
+  /// \version 3.8
+  AlignConsecutiveStyle AlignConsecutiveDeclarations;
+
   /// Style of aligning consecutive macro definitions.
   ///
   /// ``Consecutive`` will result in formattings like:
@@ -280,38 +315,6 @@ struct FormatStyle {
   /// \endcode
   /// \version 9
   AlignConsecutiveStyle AlignConsecutiveMacros;
-  /// Style of aligning consecutive assignments.
-  ///
-  /// ``Consecutive`` will result in formattings like:
-  /// \code
-  ///   int a            = 1;
-  ///   int somelongname = 2;
-  ///   double c         = 3;
-  /// \endcode
-  /// \version 3.8
-  AlignConsecutiveStyle AlignConsecutiveAssignments;
-  /// Style of aligning consecutive bit fields.
-  ///
-  /// ``Consecutive`` will align the bitfield separators of consecutive lines.
-  /// This will result in formattings like:
-  /// \code
-  ///   int aaaa : 1;
-  ///   int b    : 12;
-  ///   int ccc  : 8;
-  /// \endcode
-  /// \version 11
-  AlignConsecutiveStyle AlignConsecutiveBitFields;
-  /// Style of aligning consecutive declarations.
-  ///
-  /// ``Consecutive`` will align the declaration names of consecutive lines.
-  /// This will result in formattings like:
-  /// \code
-  ///   int         aaaa = 12;
-  ///   float       b = 23;
-  ///   std::string ccc;
-  /// \endcode
-  /// \version 3.8
-  AlignConsecutiveStyle AlignConsecutiveDeclarations;
 
   /// Alignment options.
   ///
@@ -832,8 +835,7 @@ struct FormatStyle {
   /// * ``InlineOnly``
   ///   Only merge functions defined inside a class. Same as ``inline``,
   ///   except it does not implies ``empty``: i.e. top level empty functions
-  ///   are not merged either. This option is **deprecated** and is retained
-  ///   for backwards compatibility. See ``Inline`` of ``ShortFunctionStyle``.
+  ///   are not merged either. See ``Inline`` of ``ShortFunctionStyle``.
   ///   \code
   ///     class Foo {
   ///       void f() { foo(); }
@@ -846,9 +848,7 @@ struct FormatStyle {
   ///   \endcode
   ///
   /// * ``Empty``
-  ///   Only merge empty functions. This option is **deprecated** and is
-  ///   retained for backwards compatibility. See ``Empty`` of
-  ///   ``ShortFunctionStyle``.
+  ///   Only merge empty functions. See ``Empty`` of ``ShortFunctionStyle``.
   ///   \code
   ///     void f() {}
   ///     void f2() {
@@ -857,9 +857,8 @@ struct FormatStyle {
   ///   \endcode
   ///
   /// * ``Inline``
-  ///   Only merge functions defined inside a class. Implies ``empty``. This
-  ///   option is **deprecated** and is retained for backwards compatibility.
-  ///   See ``Inline`` and ``Empty`` of ``ShortFunctionStyle``.
+  ///   Only merge functions defined inside a class. Implies ``empty``. See
+  ///   ``Inline`` and ``Empty`` of ``ShortFunctionStyle``.
   ///   \code
   ///     class Foo {
   ///       void f() { foo(); }
