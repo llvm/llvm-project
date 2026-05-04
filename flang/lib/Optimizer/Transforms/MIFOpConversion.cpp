@@ -1323,8 +1323,8 @@ struct MIFImageIndexOpConversion
       mlir::Value team = op.getTeam();
       std::string imageIndexName =
           fir::unwrapPassByRefType(team.getType()).isInteger()
-              ? getPRIFProcName("image_index_with_team")
-              : getPRIFProcName("image_index_with_team_number");
+              ? getPRIFProcName("image_index_with_team_number")
+              : getPRIFProcName("image_index_with_team");
       mlir::Type teamTy = fir::unwrapPassByRefType(team.getType()).isInteger()
                               ? builder.getRefType(i64Ty)
                               : boxTy;

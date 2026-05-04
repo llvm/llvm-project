@@ -135,9 +135,9 @@ def mif_ImageIndexOp : mif_Op<"image_index", [AttrSizedOperandSegments]> {
         of the current team.
 
     Usage:
-    - Case(1) : `call image_index(coarray, sub)`
-    - Case(2) : `call image_index(coarray, sub, team)`
-    - Case(3) : `call image_index(coarray, sub, team_number)`
+    - Case(1) : `image_index(coarray, sub)`
+    - Case(2) : `image_index(coarray, sub, team)`
+    - Case(3) : `image_index(coarray, sub, team_number)`
 
     Result: If the value of `sub` is a valid sequence of cosubscripts for `coarray` in the
       team specified by `team` or `team_number`, or the current team if neither `team` nor
