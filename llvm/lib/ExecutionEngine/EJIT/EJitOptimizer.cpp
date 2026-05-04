@@ -27,7 +27,7 @@ EJitOptimizer::EJitOptimizer(PeriodArrayRegistry &reg)
 void EJitOptimizer::preReplacePeriodIndices(
     Module &M, const SpecializationContext &ctx) {
   for (Function &F : M.functions()) {
-    MDNode *MD = F.getMetadata("ejit.metadata");
+    MDNode *MD = F.getMetadata(MD_EJIT_METADATA);
     if (!MD)
       continue;
 
@@ -38,7 +38,7 @@ void EJitOptimizer::preReplacePeriodIndices(
         continue;
 
       auto *Tag = dyn_cast<MDString>(Sub->getOperand(0));
-      if (!Tag || Tag->getString() != "ejit_period_arr_ind")
+      if (!Tag || Tag->getString() != TAG_EJIT_PERIOD_ARR_IND)
         continue;
 
       auto *PN = dyn_cast<MDString>(Sub->getOperand(1));

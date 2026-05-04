@@ -21,6 +21,7 @@
 #include "CGRecordLayout.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
+#include "llvm/ExecutionEngine/EJIT/EJitCommon.h"
 #include "CodeGenPGO.h"
 #include "ConstantEmitter.h"
 #include "TargetInfo.h"
@@ -55,6 +56,7 @@
 
 using namespace clang;
 using namespace CodeGen;
+using namespace llvm::ejit;
 
 namespace clang {
 // TODO: consider deprecating ClSanitizeGuardChecks; functionality is subsumed
@@ -2074,7 +2076,7 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
   // EmbeddedJIT: attach !ejit.may_const metadata for may_const field loads
   if (BaseInfo.isEjitMayConst()) {
     llvm::MDNode *MayConstMD = llvm::MDNode::get(Load->getContext(), {});
-    Load->setMetadata("ejit.may_const", MayConstMD);
+    Load->setMetadata(MD_EJIT_MAY_CONST, MayConstMD);
   }
 
   return EmitFromMemory(Load, Ty);

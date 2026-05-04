@@ -24,6 +24,7 @@
 #include "llvm/Support/Casting.h"
 
 using namespace llvm;
+using namespace llvm::ejit;
 
 namespace {
 
@@ -49,7 +50,7 @@ struct PeriodArrIndInfo {
 static SmallVector<PeriodArrIndInfo, 4>
 getPeriodArrIndInfo(const Function &F) {
   SmallVector<PeriodArrIndInfo, 4> Result;
-  MDNode *MD = F.getMetadata("ejit.metadata");
+  MDNode *MD = F.getMetadata(MD_EJIT_METADATA);
   if (!MD)
     return Result;
 
@@ -58,7 +59,7 @@ getPeriodArrIndInfo(const Function &F) {
     if (!Sub || Sub->getNumOperands() < 3)
       continue;
     if (auto *Tag = dyn_cast<MDString>(Sub->getOperand(0))) {
-      if (Tag->getString() == "ejit_period_arr_ind") {
+      if (Tag->getString() == TAG_EJIT_PERIOD_ARR_IND) {
         auto *PN = dyn_cast<MDString>(Sub->getOperand(1));
         auto *IdxC = dyn_cast<ConstantAsMetadata>(Sub->getOperand(2));
         if (PN && IdxC)
@@ -80,8 +81,8 @@ EJitWrapperGenPass::run(Module &M, ModuleAnalysisManager &AM) {
 
   SmallVector<Function *, 4> EntryFuncs;
   for (Function &F : M.functions()) {
-    MDNode *MD = F.getMetadata("ejit.metadata");
-    if (hasMDStringEntry(MD, "ejit_entry") && !F.isDeclaration())
+    MDNode *MD = F.getMetadata(MD_EJIT_METADATA);
+    if (hasMDStringEntry(MD, TAG_EJIT_ENTRY) && !F.isDeclaration())
       EntryFuncs.push_back(&F);
   }
 
@@ -89,7 +90,7 @@ EJitWrapperGenPass::run(Module &M, ModuleAnalysisManager &AM) {
     return PreservedAnalyses::all();
 
   // Declare ejit_compile_or_get (only if we have entry functions)
-  M.getOrInsertFunction("ejit_compile_or_get",
+  M.getOrInsertFunction(FN_COMPILE_OR_GET,
       FunctionType::get(PtrTy, {PtrTy, PtrTy, Type::getInt32Ty(Ctx), PtrTy}, false));
 
   bool Changed = false;
@@ -153,7 +154,7 @@ EJitWrapperGenPass::run(Module &M, ModuleAnalysisManager &AM) {
     Value *FuncNameStr = Builder.CreateGlobalString(F->getName());
 
     // Call ejit_compile_or_get(funcName, dims, count, null)
-    FunctionCallee CompileFn = M.getFunction("ejit_compile_or_get");
+    FunctionCallee CompileFn = M.getFunction(FN_COMPILE_OR_GET);
     Value *JitResult = Builder.CreateCall(
         CompileFn, {FuncNameStr, DimsPtr, CountVal,
                     ConstantPointerNull::get(PtrTy)});

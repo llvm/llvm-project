@@ -21,6 +21,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
+using namespace llvm::ejit;
 
 namespace {
 
@@ -40,10 +41,10 @@ static bool hasMDStringEntry(const MDNode *Node, StringRef Name) {
 
 static bool hasAnyEjitMetadata(Module &M) {
   for (Function &F : M.functions())
-    if (F.hasMetadata("ejit.metadata"))
+    if (F.hasMetadata(MD_EJIT_METADATA))
       return true;
   for (GlobalVariable &GV : M.globals())
-    if (GV.hasMetadata("ejit.metadata"))
+    if (GV.hasMetadata(MD_EJIT_METADATA))
       return true;
   return false;
 }
@@ -52,8 +53,8 @@ static void runDiagnosticCheck(Module &M) {
   // For each ejit_entry function, check that referenced period arrays
   // are declared in the metadata.
   for (Function &F : M.functions()) {
-    MDNode *MD = F.getMetadata("ejit.metadata");
-    if (!hasMDStringEntry(MD, "ejit_entry"))
+    MDNode *MD = F.getMetadata(MD_EJIT_METADATA);
+    if (!hasMDStringEntry(MD, TAG_EJIT_ENTRY))
       continue;
 
     // Collect declared period dependencies from metadata
@@ -63,7 +64,7 @@ static void runDiagnosticCheck(Module &M) {
       if (!Sub || Sub->getNumOperands() < 2)
         continue;
       if (auto *Tag = dyn_cast<MDString>(Sub->getOperand(0))) {
-        if (Tag->getString() == "ejit_period_arr_ind")
+        if (Tag->getString() == TAG_EJIT_PERIOD_ARR_IND)
           if (auto *PN = dyn_cast<MDString>(Sub->getOperand(1)))
             DeclaredPeriods.push_back(PN->getString().str());
       }
@@ -75,7 +76,7 @@ static void runDiagnosticCheck(Module &M) {
         for (Value *Op : I.operands()) {
           Value *V = Op->stripPointerCasts();
           if (auto *GV = dyn_cast<GlobalVariable>(V)) {
-            MDNode *GMD = GV->getMetadata("ejit.metadata");
+            MDNode *GMD = GV->getMetadata(MD_EJIT_METADATA);
             if (!GMD)
               continue;
             for (const MDOperand &GMOp : GMD->operands()) {
@@ -83,7 +84,7 @@ static void runDiagnosticCheck(Module &M) {
               if (!Sub || Sub->getNumOperands() < 2)
                 continue;
               if (auto *Tag = dyn_cast<MDString>(Sub->getOperand(0))) {
-                if (Tag->getString() == "ejit_period_arr") {
+                if (Tag->getString() == TAG_EJIT_PERIOD_ARR) {
                   auto *PN = dyn_cast<MDString>(Sub->getOperand(1));
                   if (PN && !is_contained(DeclaredPeriods, PN->getString())) {
                     errs() << "EJit warning: function '" << F.getName()

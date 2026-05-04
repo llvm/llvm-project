@@ -9,6 +9,7 @@
 #ifndef LLVM_EXECUTIONENGINE_EJIT_EJITSTRUCTFIELDPASS_H
 #define LLVM_EXECUTIONENGINE_EJIT_EJITSTRUCTFIELDPASS_H
 
+#include "llvm/ExecutionEngine/EJIT/EJitCommon.h"
 #include "llvm/ExecutionEngine/EJIT/EJitRuntimeState.h"
 #include "llvm/IR/PassManager.h"
 

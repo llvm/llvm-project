@@ -25,6 +25,7 @@
 #include "llvm/Support/Casting.h"
 
 using namespace llvm;
+using namespace llvm::ejit;
 
 namespace {
 
@@ -84,19 +85,19 @@ EJitRegisterPeriodPass::run(Module &M, ModuleAnalysisManager &AM) {
       StaticVars; // {GV, varName}
 
   for (GlobalVariable &GV : M.globals()) {
-    MDNode *MD = GV.getMetadata("ejit.metadata");
+    MDNode *MD = GV.getMetadata(MD_EJIT_METADATA);
     if (!MD)
       continue;
 
     std::string varName = GV.getName().str();
 
-    if (hasMDStringEntry(MD, "ejit_period_arr")) {
-      StringRef periodName = getMDStringValue(MD, "ejit_period_arr");
-      uint32_t size = getMDIntValue(MD, "ejit_period_arr");
+    if (hasMDStringEntry(MD, TAG_EJIT_PERIOD_ARR)) {
+      StringRef periodName = getMDStringValue(MD, TAG_EJIT_PERIOD_ARR);
+      uint32_t size = getMDIntValue(MD, TAG_EJIT_PERIOD_ARR);
       PeriodArrays.push_back({&GV, periodName.str(), varName, size});
     }
 
-    if (hasMDStringEntry(MD, "ejit_period")) {
+    if (hasMDStringEntry(MD, TAG_EJIT_PERIOD)) {
       StaticVars.push_back({&GV, varName});
     }
   }
@@ -108,18 +109,18 @@ EJitRegisterPeriodPass::run(Module &M, ModuleAnalysisManager &AM) {
   auto *PtrTy = PointerType::getUnqual(Ctx);
 
   // Declare runtime functions
-  M.getOrInsertFunction("ejit_register_period_array",
+  M.getOrInsertFunction(FN_REGISTER_PERIOD_ARRAY,
       FunctionType::get(Type::getVoidTy(Ctx),
                         {PtrTy, PtrTy, PtrTy, Type::getInt64Ty(Ctx)}, false));
-  M.getOrInsertFunction("ejit_register_static_var",
+  M.getOrInsertFunction(FN_REGISTER_STATIC_VAR,
       FunctionType::get(Type::getVoidTy(Ctx), {PtrTy, PtrTy}, false));
 
   // Find or create ejit_auto_register
-  Function *AutoReg = M.getFunction("ejit_auto_register");
+  Function *AutoReg = M.getFunction(FN_AUTO_REGISTER);
   if (!AutoReg) {
     auto *AutoRegTy = FunctionType::get(Type::getVoidTy(Ctx), false);
     AutoReg = Function::Create(AutoRegTy, GlobalValue::InternalLinkage,
-                               "ejit_auto_register", &M);
+                               FN_AUTO_REGISTER, &M);
     BasicBlock::Create(Ctx, "entry", AutoReg);
     ReturnInst::Create(Ctx, &AutoReg->getEntryBlock());
   }
@@ -127,8 +128,8 @@ EJitRegisterPeriodPass::run(Module &M, ModuleAnalysisManager &AM) {
   // Insert calls before return
   BasicBlock *EntryBB = &AutoReg->getEntryBlock();
   Instruction *Ret = EntryBB->getTerminator();
-  FunctionCallee FnRegArr = M.getFunction("ejit_register_period_array");
-  FunctionCallee FnRegSV = M.getFunction("ejit_register_static_var");
+  FunctionCallee FnRegArr = M.getFunction(FN_REGISTER_PERIOD_ARRAY);
+  FunctionCallee FnRegSV = M.getFunction(FN_REGISTER_STATIC_VAR);
 
   for (auto &[GV, PeriodName, VarName, Size] : PeriodArrays) {
     IRBuilder<> Builder(Ret);
@@ -147,7 +148,7 @@ EJitRegisterPeriodPass::run(Module &M, ModuleAnalysisManager &AM) {
 
   // Register in global_ctors
   bool HasEntry = false;
-  if (GlobalVariable *Ctors = M.getGlobalVariable("llvm.global_ctors")) {
+  if (GlobalVariable *Ctors = M.getGlobalVariable(CTORS_GLOBAL)) {
     if (auto *Arr = dyn_cast<ConstantArray>(Ctors->getInitializer()))
       for (auto &Op : Arr->operands())
         if (auto *CS = dyn_cast<ConstantStruct>(Op))
@@ -159,10 +160,10 @@ EJitRegisterPeriodPass::run(Module &M, ModuleAnalysisManager &AM) {
     auto *Ty = StructType::get(Ctx, {Type::getInt32Ty(Ctx),
                                       AutoReg->getType(), PtrTy});
     auto *Entry = ConstantStruct::get(Ty,
-        {ConstantInt::get(Type::getInt32Ty(Ctx), 65535),
+        {ConstantInt::get(Type::getInt32Ty(Ctx), EJIT_CTOR_PRIORITY),
          AutoReg, ConstantPointerNull::get(PtrTy)});
 
-    if (GlobalVariable *Ctors = M.getGlobalVariable("llvm.global_ctors")) {
+    if (GlobalVariable *Ctors = M.getGlobalVariable(CTORS_GLOBAL)) {
       if (auto *Arr = dyn_cast<ConstantArray>(Ctors->getInitializer())) {
         SmallVector<Constant *, 8> E;
         for (auto &Op : Arr->operands()) E.push_back(cast<Constant>(Op));
@@ -173,7 +174,7 @@ EJitRegisterPeriodPass::run(Module &M, ModuleAnalysisManager &AM) {
     } else {
       auto *ATy = ArrayType::get(Ty, 1);
       new GlobalVariable(M, ATy, false, GlobalValue::AppendingLinkage,
-                         ConstantArray::get(ATy, {Entry}), "llvm.global_ctors");
+                         ConstantArray::get(ATy, {Entry}), CTORS_GLOBAL);
     }
   }
 

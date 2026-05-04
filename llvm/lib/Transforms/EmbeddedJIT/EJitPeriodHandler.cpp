@@ -24,6 +24,7 @@
 #include "llvm/Support/Casting.h"
 
 using namespace llvm;
+using namespace llvm::ejit;
 
 namespace {
 
@@ -50,7 +51,7 @@ struct LifecycleInfo {
 static SmallVector<LifecycleInfo, 4>
 collectLifecycleInfo(Module &M, Function &F) {
   SmallVector<LifecycleInfo, 4> Result;
-  MDNode *MD = F.getMetadata("ejit.metadata");
+  MDNode *MD = F.getMetadata(MD_EJIT_METADATA);
   if (!MD)
     return Result;
 
@@ -60,7 +61,7 @@ collectLifecycleInfo(Module &M, Function &F) {
     if (!Sub || Sub->getNumOperands() < 2)
       continue;
     if (auto *Tag = dyn_cast<MDString>(Sub->getOperand(0))) {
-      if (Tag->getString() == "ejit_period_lc") {
+      if (Tag->getString() == TAG_EJIT_PERIOD_LC) {
         auto *PN = dyn_cast<MDString>(Sub->getOperand(1));
         if (PN)
           Result.push_back({PN->getString().str(), 0, nullptr});
@@ -74,7 +75,7 @@ collectLifecycleInfo(Module &M, Function &F) {
     if (!Sub || Sub->getNumOperands() < 3)
       continue;
     if (auto *Tag = dyn_cast<MDString>(Sub->getOperand(0))) {
-      if (Tag->getString() == "ejit_period_arr_ind") {
+      if (Tag->getString() == TAG_EJIT_PERIOD_ARR_IND) {
         auto *PN = dyn_cast<MDString>(Sub->getOperand(1));
         if (auto *IdxC = dyn_cast<ConstantAsMetadata>(Sub->getOperand(2)))
           if (auto *CI = dyn_cast<ConstantInt>(IdxC->getValue()))
@@ -87,7 +88,7 @@ collectLifecycleInfo(Module &M, Function &F) {
 
   // Find matching global array for each period
   for (GlobalVariable &GV : M.globals()) {
-    MDNode *GMD = GV.getMetadata("ejit.metadata");
+    MDNode *GMD = GV.getMetadata(MD_EJIT_METADATA);
     if (!GMD)
       continue;
     for (auto &LC : Result) {
@@ -96,7 +97,7 @@ collectLifecycleInfo(Module &M, Function &F) {
         if (!Sub || Sub->getNumOperands() < 2)
           continue;
         if (auto *Tag = dyn_cast<MDString>(Sub->getOperand(0))) {
-          if (Tag->getString() == "ejit_period_arr") {
+          if (Tag->getString() == TAG_EJIT_PERIOD_ARR) {
             auto *PN = dyn_cast<MDString>(Sub->getOperand(1));
             if (PN && PN->getString() == LC.PeriodName)
               LC.ArrayGV = &GV;
@@ -116,8 +117,8 @@ EJitPeriodHandlerPass::run(Module &M, ModuleAnalysisManager &AM) {
   bool Changed = false;
   SmallVector<Function *, 4> LcFuncs;
   for (Function &F : M.functions()) {
-    MDNode *MD = F.getMetadata("ejit.metadata");
-    if (hasMDStringEntry(MD, "ejit_period_lc") && !F.isDeclaration())
+    MDNode *MD = F.getMetadata(MD_EJIT_METADATA);
+    if (hasMDStringEntry(MD, TAG_EJIT_PERIOD_LC) && !F.isDeclaration())
       LcFuncs.push_back(&F);
   }
 
@@ -130,9 +131,9 @@ EJitPeriodHandlerPass::run(Module &M, ModuleAnalysisManager &AM) {
   auto *VoidTy = Type::getVoidTy(Ctx);
 
   // Declare runtime functions (only if we have lc functions)
-  M.getOrInsertFunction("ejit_deactivate_array",
+  M.getOrInsertFunction(FN_DEACTIVATE_ARRAY,
       FunctionType::get(VoidTy, {PtrTy, PtrTy, I32Ty}, false));
-  M.getOrInsertFunction("ejit_activate_array",
+  M.getOrInsertFunction(FN_ACTIVATE_ARRAY,
       FunctionType::get(VoidTy, {PtrTy, PtrTy, I32Ty}, false));
 
   for (Function *F : LcFuncs) {
@@ -140,8 +141,8 @@ EJitPeriodHandlerPass::run(Module &M, ModuleAnalysisManager &AM) {
     if (LcInfos.empty())
       continue;
 
-    FunctionCallee DeactivateFn = M.getFunction("ejit_deactivate_array");
-    FunctionCallee ActivateFn = M.getFunction("ejit_activate_array");
+    FunctionCallee DeactivateFn = M.getFunction(FN_DEACTIVATE_ARRAY);
+    FunctionCallee ActivateFn = M.getFunction(FN_ACTIVATE_ARRAY);
 
     // Insert deactivate at entry (after allocas, before first real instruction)
     BasicBlock &EntryBB = F->getEntryBlock();

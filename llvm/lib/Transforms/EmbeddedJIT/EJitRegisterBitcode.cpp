@@ -23,6 +23,7 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 
 using namespace llvm;
+using namespace llvm::ejit;
 
 static bool hasMDStringEntry(const MDNode *Node, StringRef Name) {
   if (!Node)
@@ -40,8 +41,8 @@ static bool hasMDStringEntry(const MDNode *Node, StringRef Name) {
 static void collectEntryFunctions(Module &M,
                                   SmallVectorImpl<Function *> &EntryFuncs) {
   for (Function &F : M.functions()) {
-    MDNode *MD = F.getMetadata("ejit.metadata");
-    if (hasMDStringEntry(MD, "ejit_entry"))
+    MDNode *MD = F.getMetadata(MD_EJIT_METADATA);
+    if (hasMDStringEntry(MD, TAG_EJIT_ENTRY))
       EntryFuncs.push_back(&F);
   }
 }
@@ -52,7 +53,7 @@ static void collectReferencedGlobals(Function &F,
     for (Instruction &I : BB)
       for (Value *Op : I.operands())
         if (auto *GV = dyn_cast<GlobalVariable>(Op->stripPointerCasts()))
-          if (!GV->isConstant() || GV->hasMetadata("ejit.metadata"))
+          if (!GV->isConstant() || GV->hasMetadata(MD_EJIT_METADATA))
             Globals.insert(GV);
 }
 
@@ -127,8 +128,8 @@ static GlobalVariable *embedBitcode(Module &M, const std::string &Bitcode) {
   auto *ArrTy = ArrayType::get(Type::getInt8Ty(Ctx), Bitcode.size());
   auto *Const = ConstantDataArray::get(Ctx, Bytes);
   auto *GV = new GlobalVariable(M, ArrTy, true, GlobalValue::InternalLinkage,
-                                Const, "__ejit_bitcode");
-  GV->setSection(".ejit.bitcode");
+                                Const, GV_EJIT_BITCODE);
+  GV->setSection(SECT_EJIT_BITCODE);
   GV->setAlignment(Align(1));
   return GV;
 }
@@ -140,21 +141,21 @@ static void generateRegisterCall(Module &M, GlobalVariable *BitcodeGV,
   auto *PtrTy = PointerType::getUnqual(Ctx);
   auto *I64Ty = Type::getInt64Ty(Ctx);
 
-  M.getOrInsertFunction("ejit_register_bitcode",
+  M.getOrInsertFunction(FN_REGISTER_BITCODE,
       FunctionType::get(VoidTy, {PtrTy, PtrTy, I64Ty}, false));
 
-  Function *AutoReg = M.getFunction("ejit_auto_register");
+  Function *AutoReg = M.getFunction(FN_AUTO_REGISTER);
   if (!AutoReg) {
     AutoReg = Function::Create(FunctionType::get(VoidTy, false),
                                GlobalValue::InternalLinkage,
-                               "ejit_auto_register", &M);
+                               FN_AUTO_REGISTER, &M);
     BasicBlock::Create(Ctx, "entry", AutoReg);
     ReturnInst::Create(Ctx, &AutoReg->getEntryBlock());
   }
 
   BasicBlock *EntryBB = &AutoReg->getEntryBlock();
   Instruction *Ret = EntryBB->getTerminator();
-  FunctionCallee Callee = M.getFunction("ejit_register_bitcode");
+  FunctionCallee Callee = M.getFunction(FN_REGISTER_BITCODE);
 
   for (Function *F : EntryFuncs) {
     IRBuilder<> Builder(Ret);
@@ -167,7 +168,7 @@ static void generateRegisterCall(Module &M, GlobalVariable *BitcodeGV,
 
   // Add to global_ctors
   bool HasEntry = false;
-  if (GlobalVariable *Ctors = M.getGlobalVariable("llvm.global_ctors"))
+  if (GlobalVariable *Ctors = M.getGlobalVariable(CTORS_GLOBAL))
     if (auto *Arr = dyn_cast<ConstantArray>(Ctors->getInitializer()))
       for (auto &Op : Arr->operands())
         if (auto *CS = dyn_cast<ConstantStruct>(Op))
@@ -178,9 +179,9 @@ static void generateRegisterCall(Module &M, GlobalVariable *BitcodeGV,
     auto *Ty = StructType::get(Ctx, {Type::getInt32Ty(Ctx),
                                       AutoReg->getType(), PtrTy});
     auto *Entry = ConstantStruct::get(Ty,
-        {ConstantInt::get(Type::getInt32Ty(Ctx), 65535), AutoReg,
+        {ConstantInt::get(Type::getInt32Ty(Ctx), EJIT_CTOR_PRIORITY), AutoReg,
          ConstantPointerNull::get(PtrTy)});
-    if (GlobalVariable *Ctors = M.getGlobalVariable("llvm.global_ctors")) {
+    if (GlobalVariable *Ctors = M.getGlobalVariable(CTORS_GLOBAL)) {
       if (auto *Arr = dyn_cast<ConstantArray>(Ctors->getInitializer())) {
         SmallVector<Constant *, 8> E;
         for (auto &Op : Arr->operands()) E.push_back(cast<Constant>(Op));
@@ -191,7 +192,7 @@ static void generateRegisterCall(Module &M, GlobalVariable *BitcodeGV,
     } else {
       auto *ATy = ArrayType::get(Ty, 1);
       new GlobalVariable(M, ATy, false, GlobalValue::AppendingLinkage,
-                         ConstantArray::get(ATy, {Entry}), "llvm.global_ctors");
+                         ConstantArray::get(ATy, {Entry}), CTORS_GLOBAL);
     }
   }
 }

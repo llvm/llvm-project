@@ -28,7 +28,7 @@ static void buildGVPeriodMap(
     Module &M,
     DenseMap<const GlobalVariable *, GVPeriodInfo> &gvMap) {
   for (GlobalVariable &GV : M.globals()) {
-    MDNode *MD = GV.getMetadata("ejit.metadata");
+    MDNode *MD = GV.getMetadata(MD_EJIT_METADATA);
     if (!MD)
       continue;
 
@@ -41,7 +41,7 @@ static void buildGVPeriodMap(
       if (!Tag)
         continue;
 
-      if (Tag->getString() == "ejit_period_arr") {
+      if (Tag->getString() == TAG_EJIT_PERIOD_ARR) {
         auto *PN = dyn_cast<MDString>(Sub->getOperand(1));
         size_t sz = 0;
         if (Sub->getNumOperands() >= 3)
@@ -49,7 +49,7 @@ static void buildGVPeriodMap(
             sz = CI->getZExtValue();
         if (PN)
           gvMap[&GV] = {PN->getString().str(), true, sz};
-      } else if (Tag->getString() == "ejit_period") {
+      } else if (Tag->getString() == TAG_EJIT_PERIOD) {
         gvMap[&GV] = {"", false, 0};
       }
     }
@@ -145,7 +145,7 @@ EJitStructFieldPass::run(Function &F, FunctionAnalysisManager &AM) {
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
       auto *LI = dyn_cast<LoadInst>(&I);
-      if (!LI || !LI->hasMetadata("ejit.may_const"))
+      if (!LI || !LI->hasMetadata(MD_EJIT_MAY_CONST))
         continue;
 
       Value *PtrOp = LI->getPointerOperand();

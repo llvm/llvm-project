@@ -9,6 +9,7 @@
 #ifndef LLVM_TRANSFORMS_EMBEDDEDJIT_EJITPASSES_H
 #define LLVM_TRANSFORMS_EMBEDDEDJIT_EJITPASSES_H
 
+#include "llvm/ExecutionEngine/EJIT/EJitCommon.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {

@@ -14,12 +14,14 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/Basic/AttrKinds.h"
+#include "llvm/ExecutionEngine/EJIT/EJitCommon.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 
 using namespace clang;
 using namespace CodeGen;
+using namespace llvm::ejit;
 
 /// Emit !ejit.metadata for an ejit_entry or ejit_period_lc function.
 void clang::CodeGen::emitEjitFunctionMetadata(CodeGenModule &CGM,
@@ -31,13 +33,13 @@ void clang::CodeGen::emitEjitFunctionMetadata(CodeGenModule &CGM,
   // ejit_entry
   if (FD->hasAttr<EjitEntryAttr>()) {
     Entries.push_back(llvm::MDNode::get(Ctx,
-        llvm::MDString::get(Ctx, "ejit_entry")));
+        llvm::MDString::get(Ctx, TAG_EJIT_ENTRY)));
   }
 
   // ejit_period_lc
   for (const auto *LCA : FD->specific_attrs<EjitPeriodLcAttr>()) {
     Entries.push_back(llvm::MDNode::get(Ctx, {
-        llvm::MDString::get(Ctx, "ejit_period_lc"),
+        llvm::MDString::get(Ctx, TAG_EJIT_PERIOD_LC),
         llvm::MDString::get(Ctx, LCA->getPeriodName())
     }));
   }
@@ -47,7 +49,7 @@ void clang::CodeGen::emitEjitFunctionMetadata(CodeGenModule &CGM,
     const ParmVarDecl *PD = FD->getParamDecl(I);
     if (const auto *IdxAttr = PD->getAttr<EjitPeriodArrIndAttr>()) {
       Entries.push_back(llvm::MDNode::get(Ctx, {
-          llvm::MDString::get(Ctx, "ejit_period_arr_ind"),
+          llvm::MDString::get(Ctx, TAG_EJIT_PERIOD_ARR_IND),
           llvm::MDString::get(Ctx, IdxAttr->getPeriodName()),
           llvm::ConstantAsMetadata::get(
               llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx), I))
@@ -57,7 +59,7 @@ void clang::CodeGen::emitEjitFunctionMetadata(CodeGenModule &CGM,
 
   if (!Entries.empty()) {
     llvm::MDNode *MD = llvm::MDNode::getDistinct(Ctx, Entries);
-    F->setMetadata("ejit.metadata", MD);
+    F->setMetadata(MD_EJIT_METADATA, MD);
   }
 }
 
@@ -84,7 +86,7 @@ void clang::CodeGen::emitEjitGlobalMetadata(CodeGenModule &CGM,
       Size = CAT->getSize().getZExtValue();
     }
     Entries.push_back(llvm::MDNode::get(Ctx, {
-        llvm::MDString::get(Ctx, "ejit_period_arr"),
+        llvm::MDString::get(Ctx, TAG_EJIT_PERIOD_ARR),
         llvm::MDString::get(Ctx, PAA->getPeriodName()),
         llvm::ConstantAsMetadata::get(
             llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx), Size))
@@ -93,6 +95,6 @@ void clang::CodeGen::emitEjitGlobalMetadata(CodeGenModule &CGM,
 
   if (!Entries.empty()) {
     llvm::MDNode *MD = llvm::MDNode::getDistinct(Ctx, Entries);
-    GV->setMetadata("ejit.metadata", MD);
+    GV->setMetadata(MD_EJIT_METADATA, MD);
   }
 }

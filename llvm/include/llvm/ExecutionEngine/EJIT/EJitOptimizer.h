@@ -9,6 +9,7 @@
 #ifndef LLVM_EXECUTIONENGINE_EJIT_EJITOPTIMIZER_H
 #define LLVM_EXECUTIONENGINE_EJIT_EJITOPTIMIZER_H
 
+#include "llvm/ExecutionEngine/EJIT/EJitCommon.h"
 #include "llvm/ExecutionEngine/EJIT/EJitOptions.h"
 #include "llvm/ExecutionEngine/EJIT/EJitOrcEngine.h"
 #include "llvm/ExecutionEngine/EJIT/EJitRuntimeState.h"
