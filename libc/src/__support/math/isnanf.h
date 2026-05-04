@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_ISNANF_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_ISNANF_H
 
-#include "src/__support/macros/attributes.h"
+#include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
