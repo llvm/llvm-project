@@ -688,8 +688,8 @@ static mlir::Value emitCommonNeonBuiltinExpr(
     mlir::Value op2 = cgf.getBuilder().createBitcast(ops[2], ty);
     llvm::SmallVector<mlir::Value> fmaOps = {op1, op2, op0};
     return cir::LLVMIntrinsicCallOp::create(
-               cgf.getBuilder(), loc, cgf.getBuilder().getStringAttr("fma"),
-               ty, fmaOps)
+               cgf.getBuilder(), loc, cgf.getBuilder().getStringAttr("fma"), ty,
+               fmaOps)
         .getResult();
   }
   case NEON::BI__builtin_neon_vld1_v:
