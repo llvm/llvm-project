@@ -3180,6 +3180,10 @@ bool Sema::checkProfileViolation(StringRef ProfileName, StringRef RuleName,
   return true;
 }
 
+// test::uninit_read is a built-in test profile that rides on Clang's existing
+// CFG-based uninitialized-variables analysis. See ProfilesFramework.rst for
+// the post-parse / CFG-based profile pattern these helpers implement.
+
 bool Sema::anyProfileRequestsCFGUninitAnalysis() const {
   return isProfileEnforced("test::uninit_read");
 }
