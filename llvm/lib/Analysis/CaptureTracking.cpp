@@ -379,9 +379,8 @@ UseCaptureInfo llvm::DetermineUseCaptureKind(const Use &U, const Value *Base) {
       // Don't count comparisons of a no-alias return value against null as
       // captures. This allows us to ignore comparisons of malloc results
       // with null, for example.
-      if (U->getType()->getPointerAddressSpace() == 0)
-        if (isNoAliasCall(U.get()->stripPointerCasts()))
-          return CaptureComponents::None;
+      if (isNoAliasCall(U.get()->stripPointerCasts()))
+        return CaptureComponents::None;
 
       // Check whether this is a comparison of the base pointer against
       // null.
