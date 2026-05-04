@@ -1403,9 +1403,6 @@ private:
 } // namespace
 
 LogicalResult ResolveLayoutConflicts::run() {
-  // dump the IR before resolving layout conflicts for debugging purposes.
-  DBGS() << "IR before resolving layout conflicts:\n";
-  parentOp->dump();
   // Scan all operations in the parent op and resolve layout conflicts at
   // tensor descriptor and vector use points.
   auto r = parentOp->walk([&](Operation *op) -> WalkResult {
@@ -1448,7 +1445,6 @@ LogicalResult ResolveLayoutConflicts::run() {
     return WalkResult::advance();
   });
 
-  // dump the IR after resolving layout conflicts for debugging purposes.
   DBGS() << "IR after resolving layout conflicts:\n";
   parentOp->dump();
 

@@ -123,6 +123,8 @@ DistributeLayoutAttr inferInsertSourceLayout(DistributeLayoutAttr resLayout,
                                              ArrayRef<int64_t> resShape,
                                              ArrayRef<int64_t> srcShape);
 
+/// Infers the source layout attribute for an extract operation. Adds
+/// leading dimensions to the source layout to match the source shape size.
 DistributeLayoutAttr inferExtractSourceLayout(DistributeLayoutAttr resLayout,
                                               ArrayRef<int64_t> resShape,
                                               ArrayRef<int64_t> srcShape);
