@@ -88,8 +88,8 @@ define void @narrow_deinterleave2_nxv4i64(ptr %p, ptr %out, i32 %evl) {
   ret void
 }
 
-define void @negative_narrow_deinterleave2(ptr %p, ptr %out, i32 %evl) {
-; CHECK-LABEL: define void @negative_narrow_deinterleave2(
+define void @negative_narrow_deinterleave2_incorrect_mask(ptr %p, ptr %out, i32 %evl) {
+; CHECK-LABEL: define void @negative_narrow_deinterleave2_incorrect_mask(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[OUT:%.*]], i32 [[EVL:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[WIDE_VP_LOAD:%.*]] = tail call <vscale x 16 x i32> @llvm.vp.load.nxv16i32.p0(ptr align 4 [[P]], <vscale x 16 x i1> splat (i1 true), i32 [[EVL]])
 ; CHECK-NEXT:    [[D:%.*]] = tail call { <vscale x 8 x i32>, <vscale x 8 x i32> } @llvm.vector.deinterleave2.nxv16i32(<vscale x 16 x i32> [[WIDE_VP_LOAD]])
@@ -118,5 +118,38 @@ define void @negative_narrow_deinterleave2(ptr %p, ptr %out, i32 %evl) {
   %merge0 = or disjoint <vscale x 8 x i32> %low1, %low0
   %interleaved.vec = tail call <vscale x 16 x i32> @llvm.vector.interleave2.nxv16i32(<vscale x 8 x i32> %merge0, <vscale x 8 x i32> %merge1)
   tail call void @llvm.vp.store.nxv16i32.p0(<vscale x 16 x i32> %interleaved.vec, ptr align 4 %out, <vscale x 16 x i1> splat (i1 true), i32 %evl)
+  ret void
+}
+
+; Should bail out on non-power-of-two element widths.
+define void @negative_narrow_deinterleave2_incorrect_element_width(ptr %p, ptr %out, i32 %evl) {
+; CHECK-LABEL: define void @negative_narrow_deinterleave2_incorrect_element_width(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[OUT:%.*]], i32 [[EVL:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[WIDE_VP_LOAD:%.*]] = tail call <vscale x 16 x i7> @llvm.vp.load.nxv16i7.p0(ptr align 4 [[P]], <vscale x 16 x i1> splat (i1 true), i32 [[EVL]])
+; CHECK-NEXT:    [[D:%.*]] = tail call { <vscale x 8 x i7>, <vscale x 8 x i7> } @llvm.vector.deinterleave2.nxv16i7(<vscale x 16 x i7> [[WIDE_VP_LOAD]])
+; CHECK-NEXT:    [[F0:%.*]] = extractvalue { <vscale x 8 x i7>, <vscale x 8 x i7> } [[D]], 0
+; CHECK-NEXT:    [[F1:%.*]] = extractvalue { <vscale x 8 x i7>, <vscale x 8 x i7> } [[D]], 1
+; CHECK-NEXT:    [[LOW0:%.*]] = and <vscale x 8 x i7> [[F0]], splat (i7 15)
+; CHECK-NEXT:    [[LOW1:%.*]] = shl <vscale x 8 x i7> [[F1]], splat (i7 4)
+; CHECK-NEXT:    [[MERGE0:%.*]] = or disjoint <vscale x 8 x i7> [[LOW0]], [[LOW1]]
+; CHECK-NEXT:    [[HIGH0:%.*]] = and <vscale x 8 x i7> [[F1]], splat (i7 -16)
+; CHECK-NEXT:    [[HIGH1:%.*]] = lshr <vscale x 8 x i7> [[F0]], splat (i7 3)
+; CHECK-NEXT:    [[MERGE1:%.*]] = or disjoint <vscale x 8 x i7> [[HIGH0]], [[HIGH1]]
+; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = tail call <vscale x 16 x i7> @llvm.vector.interleave2.nxv16i7(<vscale x 8 x i7> [[MERGE0]], <vscale x 8 x i7> [[MERGE1]])
+; CHECK-NEXT:    tail call void @llvm.vp.store.nxv16i7.p0(<vscale x 16 x i7> [[INTERLEAVED_VEC]], ptr align 4 [[OUT]], <vscale x 16 x i1> splat (i1 true), i32 [[EVL]])
+; CHECK-NEXT:    ret void
+;
+  %wide.vp.load = tail call <vscale x 16 x i7> @llvm.vp.load.nxv16i7.p0(ptr align 4 %p, <vscale x 16 x i1> splat (i1 true), i32 %evl)
+  %d = tail call { <vscale x 8 x i7>, <vscale x 8 x i7> } @llvm.vector.deinterleave2.nxv16i7(<vscale x 16 x i7> %wide.vp.load)
+  %f0 = extractvalue { <vscale x 8 x i7>, <vscale x 8 x i7> } %d, 0
+  %f1 = extractvalue { <vscale x 8 x i7>, <vscale x 8 x i7> } %d, 1
+  %low0 = and <vscale x 8 x i7> %f0, splat (i7 15)
+  %low1 = shl <vscale x 8 x i7> %f1, splat (i7 4)
+  %merge0 = or disjoint <vscale x 8 x i7> %low0, %low1
+  %high0 = and <vscale x 8 x i7> %f1, splat (i7 -16)
+  %high1 = lshr <vscale x 8 x i7> %f0, splat (i7 3)
+  %merge1 = or disjoint <vscale x 8 x i7> %high0, %high1
+  %interleaved.vec = tail call <vscale x 16 x i7> @llvm.vector.interleave2.nxv16i7(<vscale x 8 x i7> %merge0, <vscale x 8 x i7> %merge1)
+  tail call void @llvm.vp.store.nxv16i32.p0(<vscale x 16 x i7> %interleaved.vec, ptr align 4 %out, <vscale x 16 x i1> splat (i1 true), i32 %evl)
   ret void
 }

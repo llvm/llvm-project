@@ -5571,8 +5571,8 @@ bool VectorCombine::foldDeinterleaveIntrinsics(Instruction &I) {
   if (!ElementTy)
     return false;
   unsigned ElementWidth = ElementTy->getBitWidth();
-  assert(isPowerOf2_32(ElementWidth) &&
-         "expect element bitwidth to be power-of-two");
+  if (ElementWidth < 2 || !isPowerOf2_32(ElementWidth))
+    return false;
   unsigned HalfElementWidth = ElementWidth / 2;
   APInt LoMask = APInt::getLowBitsSet(ElementWidth, HalfElementWidth);
   APInt HiMask = APInt::getHighBitsSet(ElementWidth, HalfElementWidth);
