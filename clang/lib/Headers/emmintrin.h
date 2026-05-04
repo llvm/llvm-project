@@ -2481,8 +2481,8 @@ _mm_mul_epu32(__m128i __a, __m128i __b) {
 ///    A 128-bit integer vector containing one of the source operands.
 /// \returns A [2 x i64] vector containing the sums of the sets of absolute
 ///    differences between both operands.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_sad_epu8(__m128i __a,
-                                                          __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_sad_epu8(__m128i __a, __m128i __b) {
   return __builtin_ia32_psadbw128((__v16qi)__a, (__v16qi)__b);
 }
 

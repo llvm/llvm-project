@@ -486,6 +486,9 @@ __m64 test_mm_sad_pu8(__m64 a, __m64 b) {
   // CHECK: call <2 x i64> @llvm.x86.sse2.psad.bw(<16 x i8>
   return _mm_sad_pu8(a, b);
 }
+TEST_CONSTEXPR(match_m64(_mm_sad_pu8((__m64)(__v8qu){0, 1, 2, 3, 4, 5, 6, 7},
+                                      (__m64)(__v8qu){7, 6, 5, 4, 3, 2, 1, 0}),
+                         32ULL));
 
 __m64 test_mm_set_pi8(char a, char b, char c, char d, char e, char f, char g, char h) {
   // CHECK-LABEL: test_mm_set_pi8
