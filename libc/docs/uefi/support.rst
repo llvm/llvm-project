@@ -4,8 +4,6 @@
 Supported Functions
 ===================
 
-.. include:: ../check.rst
-
 The follow functions and headers are supported at least partially in
 UEFI. Some functions are implemented fully for UEFI.
 

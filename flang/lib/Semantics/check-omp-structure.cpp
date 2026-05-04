@@ -946,11 +946,6 @@ void OmpStructureChecker::Enter(const parser::OpenMPConstruct &x) {
 }
 
 void OmpStructureChecker::Leave(const parser::OpenMPConstruct &x) {
-  for (const auto &[sym, source] : deferredNonVariables_) {
-    context_.SayWithDecl(
-        *sym, source, "'%s' must be a variable"_err_en_US, sym->name());
-  }
-  deferredNonVariables_.clear();
   if (GetOmpDirectiveName(x).v != llvm::omp::Directive::OMPD_section) {
     dirStack_.pop_back();
   }
@@ -3692,7 +3687,8 @@ void OmpStructureChecker::Enter(const parser::OmpClause &x) {
     for (const auto &[symbol, source] : symbols) {
       if (!IsVariableListItem(*symbol) &&
           !(IsNamedConstant(*symbol) && SharedOrFirstprivate)) {
-        deferredNonVariables_.insert({symbol, source});
+        context_.SayWithDecl(*symbol, source,
+            "'%s' must be a variable"_err_en_US, symbol->name());
       }
     }
   }
@@ -4285,7 +4281,6 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Firstprivate &x) {
 
   CheckVarIsNotPartOfAnotherVar(GetContext().clauseSource, x.v, "FIRSTPRIVATE");
   CheckCrayPointee(x.v, "FIRSTPRIVATE");
-  CheckIsLoopIvPartOfClause(llvm::omp::Clause::OMPC_firstprivate, x.v);
 
   SymbolSourceMap currSymbols;
   GetSymbolsInObjectList(x.v, currSymbols);
@@ -4321,20 +4316,6 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Firstprivate &x) {
 
   CheckPrivateSymbolsInOuterCxt(
       currSymbols, dirClauseTriple, llvm::omp::Clause::OMPC_firstprivate);
-}
-
-void OmpStructureChecker::CheckIsLoopIvPartOfClause(
-    llvm::omp::Clause clause, const parser::OmpObjectList &ompObjectList) {
-  unsigned version{context_.langOptions().OpenMPVersion};
-  for (const auto &ompObject : ompObjectList.v) {
-    if (const parser::Name *name{parser::Unwrap<parser::Name>(ompObject)}) {
-      if (name->symbol == GetContext().loopIV) {
-        context_.Say(name->source,
-            "DO iteration variable %s is not allowed in %s clause."_err_en_US,
-            name->ToString(), parser::omp::GetUpperName(clause, version));
-      }
-    }
-  }
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Align &x) {

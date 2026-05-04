@@ -48,14 +48,6 @@ SeedCollection::SeedCollection(StringRef Pipeline, StringRef AuxArg)
   }
 }
 
-static unsigned getAddressSpace(const Instruction *I) {
-  if (auto *LI = dyn_cast<LoadInst>(I))
-    return LI->getPointerAddressSpace();
-  if (auto *SI = dyn_cast<StoreInst>(I))
-    return SI->getPointerAddressSpace();
-  return 0;
-}
-
 bool SeedCollection::runOnFunction(Function &F, const Analyses &A) {
   bool Change = false;
   const auto &DL = F.getParent()->getDataLayout();
@@ -71,7 +63,7 @@ bool SeedCollection::runOnFunction(Function &F, const Analyses &A) {
           Utils::getNumBits(VecUtils::getElementType(Utils::getExpectedType(
                                 Seeds[Seeds.getFirstUnusedElementIdx()])),
                             DL);
-      unsigned AS = getAddressSpace(Seeds[0]);
+      unsigned AS = getLoadStoreAddressSpace(Seeds[0]);
       unsigned VecRegBits = OverrideVecRegBits != 0
                                 ? OverrideVecRegBits
                                 : A.getTTI().getLoadStoreVecRegBitWidth(AS);
