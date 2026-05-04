@@ -114,12 +114,15 @@ public:
   CostBenefitPriority(const CallBase *CB, FunctionAnalysisManager &FAM,
                       const InlineParams &Params) {
     auto IC = getInlineCostWrapper(const_cast<CallBase &>(*CB), FAM, Params);
-    if (IC.isVariable())
+    if (IC.isVariable()) {
       Cost = IC.getCost();
-    else
+      StaticBonusApplied = IC.getStaticBonusApplied();
+      CostBenefit = IC.getCostBenefit();
+    } else {
       Cost = IC.isNever() ? INT_MAX : INT_MIN;
-    StaticBonusApplied = IC.getStaticBonusApplied();
-    CostBenefit = IC.getCostBenefit();
+      StaticBonusApplied = 0;
+      CostBenefit = std::nullopt;
+    }
   }
 
   static bool isMoreDesirable(const CostBenefitPriority &P1,

@@ -482,8 +482,7 @@ ErrorGeneric::ErrorGeneric(u32 tid, uptr pc_, uptr bp_, uptr sp_, uptr addr,
       if (*shadow_addr == 0 && access_size > ASAN_SHADOW_GRANULARITY)
         shadow_addr++;
       // If we are in the partial right redzone, look at the next shadow byte.
-      if (*shadow_addr > 0 && *shadow_addr < 128 && shadow_addr[1] >= 128)
-        shadow_addr++;
+      if (*shadow_addr > 0 && *shadow_addr < 128) shadow_addr++;
       bool far_from_bounds = false;
       shadow_val = *shadow_addr;
       int bug_type_score = 0;
@@ -649,6 +648,21 @@ static void PrintShadowMemoryForAddress(uptr addr) {
 }
 
 static void CheckPoisonRecords(uptr addr) {
+  if (!AddrIsInMem(addr))
+    return;
+
+  u8 *shadow_addr = (u8 *)MemToShadow(addr);
+  // If we are in the partial right redzone, look at the next shadow byte.
+  if (*shadow_addr > 0 && *shadow_addr < 128)
+    shadow_addr++;
+  u8 shadow_val = *shadow_addr;
+
+  if (shadow_val != kAsanUserPoisonedMemoryMagic &&
+      shadow_val != kAsanContiguousContainerOOBMagic &&
+      shadow_val >= ASAN_SHADOW_GRANULARITY) {
+    return;
+  }
+
   Printf("\n");
 
   if (flags()->poison_history_size <= 0) {
@@ -701,12 +715,8 @@ void ErrorGeneric::Print() {
   ReportErrorSummary(bug_descr, &stack);
   PrintShadowMemoryForAddress(addr);
 
-  // This is an experimental feature, hence we don't make a special handler.
-  if (shadow_val == kAsanUserPoisonedMemoryMagic ||
-      shadow_val == kAsanContiguousContainerOOBMagic ||
-      (shadow_val > 0 && shadow_val < ASAN_SHADOW_GRANULARITY)) {
-    CheckPoisonRecords(addr);
-  }
+  // This is an experimental flag, hence we don't make a special handler.
+  CheckPoisonRecords(addr);
 }
 
 }  // namespace __asan
