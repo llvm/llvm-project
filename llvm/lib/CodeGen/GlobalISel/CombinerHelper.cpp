@@ -3061,10 +3061,9 @@ bool CombinerHelper::matchOperandIsUndef(MachineInstr &MI,
          getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF, MO.getReg(), MRI);
 }
 
-bool CombinerHelper::matchOperandIsKnownToBeAPowerOfTwo(MachineInstr &MI,
-                                                        unsigned OpIdx) const {
-  MachineOperand &MO = MI.getOperand(OpIdx);
-  return isKnownToBeAPowerOfTwo(MO.getReg(), MRI, VT);
+bool CombinerHelper::matchOperandIsKnownToBeAPowerOfTwo(
+    const MachineOperand &MO, bool OrNegative) const {
+  return isKnownToBeAPowerOfTwo(MO.getReg(), MRI, VT, OrNegative);
 }
 
 void CombinerHelper::replaceInstWithFConstant(MachineInstr &MI,
@@ -6102,21 +6101,6 @@ void CombinerHelper::applyUDivByPow2(MachineInstr &MI) const {
   auto C1 = Builder.buildCTTZ(ShiftAmtTy, RHS);
   Builder.buildLShr(MI.getOperand(0).getReg(), LHS, C1);
   MI.eraseFromParent();
-}
-
-/// \p Reg is known to be +/- a power of 2.
-bool CombinerHelper::matchAbsPow2(Register Reg) const {
-  // Known bits only work for positive powers of 2.
-  if (isKnownToBeAPowerOfTwo(Reg, MRI, VT))
-    return true;
-
-  // Otherwise accept any constant whose absolute value is a power of 2.
-  auto MatchAbsPow2 = [](const Constant *C) {
-    auto *CI = dyn_cast<ConstantInt>(C);
-    return CI &&
-           (CI->getValue().isPowerOf2() || CI->getValue().isNegatedPowerOf2());
-  };
-  return matchUnaryPredicate(MRI, Reg, MatchAbsPow2, /*AllowUndefs=*/false);
 }
 
 void CombinerHelper::applySimplifySRemByPow2(MachineInstr &MI) const {

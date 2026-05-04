@@ -670,8 +670,8 @@ def binop_with_neg : GICombineRule<
 
 def urem_pow2_to_mask : GICombineRule<
   (defs root:$root),
-  (match (wip_match_opcode G_UREM):$root,
-    [{ return Helper.matchOperandIsKnownToBeAPowerOfTwo(*${root}, 2); }]),
+  (match (G_UREM $dst, $x, $y):$root,
+    [{ return Helper.matchOperandIsKnownToBeAPowerOfTwo(${y}); }]),
   (apply [{ Helper.applySimplifyURemByPow2(*${root}); }])
 >;
 
@@ -1352,7 +1352,8 @@ def srem_by_const : GICombineRule<
 def srem_pow2_to_mask : GICombineRule<
   (defs root:$root),
   (match (G_SREM $dst, $x, $y):$root,
-   [{ return Helper.matchAbsPow2(${y}.getReg()); }]),
+   [{ return Helper.matchOperandIsKnownToBeAPowerOfTwo(${y},
+                                                      /*OrNegative=*/true); }]),
   (apply [{ Helper.applySimplifySRemByPow2(*${root}); }])>;
 
 def intrem_combines : GICombineGroup<[srem_pow2_to_mask, urem_by_const,
