@@ -295,6 +295,13 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
       // We still want to print the address_space before the type if it is an
       // address_space attribute.
       const auto *AttrTy = cast<AttributedType>(UnderlyingType);
+      // HLSLRowMajor / HLSLColumnMajor are internal markers with no spelling;
+      // the printer skips them entirely, so look through them when deciding
+      // qualifier placement.
+      if (AttrTy->getAttrKind() == attr::HLSLRowMajor ||
+          AttrTy->getAttrKind() == attr::HLSLColumnMajor)
+        return canPrefixQualifiers(AttrTy->getModifiedType().getTypePtr(),
+                                   NeedARCStrongQualifier);
       CanPrefixQualifiers = AttrTy->getAttrKind() == attr::AddressSpace;
       break;
     }
@@ -1915,6 +1922,15 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   if (T->getAttrKind() == attr::ObjCInertUnsafeUnretained)
     return;
 
+  // HLSLRowMajor / HLSLColumnMajor are internal markers attached to matrix
+  // types by Sema to record an explicit `[[hlsl::row_major]]` /
+  // `[[hlsl::column_major]]` qualifier from the source decl. They have no
+  // user-visible spelling; the user-facing form is the original keyword on
+  // the decl, not on the type.
+  if (T->getAttrKind() == attr::HLSLRowMajor ||
+      T->getAttrKind() == attr::HLSLColumnMajor)
+    return;
+
   // Don't print ns_returns_retained unless it had an effect.
   if (T->getAttrKind() == attr::NSReturnsRetained &&
       !T->getEquivalentType()->castAs<FunctionType>()
@@ -1991,6 +2007,10 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::HLSLIsCounter:
   case attr::HLSLResourceDimension:
     llvm_unreachable("HLSL resource type attributes handled separately");
+
+  case attr::HLSLRowMajor:
+  case attr::HLSLColumnMajor:
+    llvm_unreachable("HLSL matrix layout type attributes handled separately");
 
   case attr::OpenCLPrivateAddressSpace:
   case attr::OpenCLGlobalAddressSpace:
