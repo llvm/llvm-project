@@ -46,7 +46,7 @@ public:
 #define OP(OPC) OPC,
 #define OPCODES(...) __VA_ARGS__
 #define DEF_INSTR(ID, OPC, CLASS) OPC
-#define DEF_DISABLE_AUTO_UNDEF // Since we are including more than one .def.
+#define DEF_DISABLE_AUTO_UNDEF // ValuesDefFilesList.def includes multiple .def
 #include "llvm/SandboxIR/ValuesDefFilesList.def"
 #undef OP
 #undef OPCODES
@@ -124,7 +124,7 @@ public:
     return #OPC;
 #define OPCODES(...) __VA_ARGS__
 #define DEF_INSTR(ID, OPC, CLASS) OPC
-#define DEF_DISABLE_AUTO_UNDEF // Since we are including more than one .def.
+#define DEF_DISABLE_AUTO_UNDEF // ValuesDefFilesList.def includes multiple .def
 #include "llvm/SandboxIR/ValuesDefFilesList.def"
 #undef OPCODES
 #undef DEF_INSTR

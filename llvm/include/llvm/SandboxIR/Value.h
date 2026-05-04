@@ -20,7 +20,7 @@ namespace llvm::sandboxir {
 #define DEF_INSTR(ID, OPC, CLASS) class CLASS;
 #define DEF_CONST(ID, CLASS) class CLASS;
 #define DEF_USER(ID, CLASS) class CLASS;
-#define DEF_DISABLE_AUTO_UNDEF // Since we are including more than one .def.
+#define DEF_DISABLE_AUTO_UNDEF // ValuesDefFilesList.def includes multiple .def
 #include "llvm/SandboxIR/ValuesDefFilesList.def"
 #undef DEF_INSTR
 #undef DEF_CONST
@@ -76,7 +76,7 @@ public:
 #define DEF_USER(ID, CLASS) ID,
 #define DEF_CONST(ID, CLASS) ID,
 #define DEF_INSTR(ID, OPC, CLASS) ID,
-#define DEF_DISABLE_AUTO_UNDEF // Since we are including more than one .def.
+#define DEF_DISABLE_AUTO_UNDEF // ValuesDefFilesList.def includes multiple .def
 #include "llvm/SandboxIR/ValuesDefFilesList.def"
 #undef DEF_VALUE
 #undef DEF_USER
@@ -99,7 +99,7 @@ protected:
 #define DEF_INSTR(ID, OPC, CLASS)                                              \
   case ClassID::ID:                                                            \
     return #ID;
-#define DEF_DISABLE_AUTO_UNDEF // Since we are including more than one .def.
+#define DEF_DISABLE_AUTO_UNDEF // ValuesDefFilesList.def includes multiple .def
 #include "llvm/SandboxIR/ValuesDefFilesList.def"
 #undef DEF_VALUE
 #undef DEF_USER
@@ -193,7 +193,7 @@ protected:
   friend class ConstantDataVector; // For `Val`
 
 #define DEF_INSTR(ID, OPC, CLASS) friend class CLASS;
-#define DEF_DISABLE_AUTO_UNDEF // Since we are including more than one .def.
+#define DEF_DISABLE_AUTO_UNDEF // ValuesDefFilesList.def includes multiple .def
 #include "llvm/SandboxIR/ValuesDefFilesList.def"
 #undef DEF_INSTR
 

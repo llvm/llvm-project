@@ -48,7 +48,7 @@ class Use {
   friend class PHINode;            // For LLVMUse
   // Friend instructions so that they can call the constructor if needed.
 #define DEF_INSTR(ID, OPC, CLASS) friend class CLASS;
-#define DEF_DISABLE_AUTO_UNDEF // Since we are including more than one .def.
+#define DEF_DISABLE_AUTO_UNDEF // ValuesDefFilesList.def includes multiple .def
 #include "llvm/SandboxIR/ValuesDefFilesList.def"
 #undef DEF_INSTR
 

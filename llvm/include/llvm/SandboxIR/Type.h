@@ -40,7 +40,7 @@ class TargetExtType;
 class VectorType;
 #define DEF_INSTR(ID, OPCODE, CLASS) class CLASS;
 #define DEF_CONST(ID, CLASS) class CLASS;
-#define DEF_DISABLE_AUTO_UNDEF // Since we are including more than one .def.
+#define DEF_DISABLE_AUTO_UNDEF // ValuesDefFilesList.def includes multiple .def
 #include "llvm/SandboxIR/ValuesDefFilesList.def"
 
 /// Just like llvm::Type these are immutable, unique, never get freed and
@@ -73,7 +73,7 @@ protected:
   // Friend all instruction classes because `create()` functions use LLVMTy.
 #define DEF_INSTR(ID, OPCODE, CLASS) friend class CLASS;
 #define DEF_CONST(ID, CLASS) friend class CLASS;
-#define DEF_DISABLE_AUTO_UNDEF // Since we are including more than one .def.
+#define DEF_DISABLE_AUTO_UNDEF // ValuesDefFilesList.def includes multiple .def
 #include "llvm/SandboxIR/ValuesDefFilesList.def"
 #undef DEF_INSTR
 #undef DEF_CONST

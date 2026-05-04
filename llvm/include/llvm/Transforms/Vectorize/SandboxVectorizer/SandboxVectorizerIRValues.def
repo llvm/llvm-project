@@ -29,24 +29,12 @@ DEF_INSTR(Pack,           OP(Pack),          PackInst)
 // Undefine all externally defined macros.
 #ifndef DEF_DISABLE_AUTO_UNDEF
 
-#ifdef DEF_VALUE
 #undef DEF_VALUE
-#endif
-#ifdef DEF_USER
 #undef DEF_USER
-#endif
-#ifdef DEF_CONST
 #undef DEF_CONST
-#endif
-#ifdef DEF_INSTR
 #undef DEF_INSTR
-#endif
-#ifdef OP
 #undef OP
-#endif
-#ifdef OPCODES
 #undef OPCODES
-#endif
 
 #endif // DEF_DISABLE_AUTO_UNDEF
 #undef DEF_DISABLE_AUTO_UNDEF
