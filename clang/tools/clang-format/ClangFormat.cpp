@@ -636,6 +636,7 @@ static bool isIgnored(StringRef FilePath) {
   if (IgnoreDir.empty())
     return false;
 
+  bool IsIgnored = false;
   const auto Pathname{convert_to_slash(AbsPath)};
   for (const auto &Pat : Patterns) {
     const bool IsNegated = Pat[0] == '!';
@@ -657,11 +658,11 @@ static bool isIgnored(StringRef FilePath) {
       Pattern = Path;
     }
 
-    if (clang::format::matchFilePath(Pattern, Pathname) == !IsNegated)
-      return true;
+    if (clang::format::matchFilePath(Pattern, Pathname))
+      IsIgnored = !IsNegated;
   }
 
-  return false;
+  return IsIgnored;
 }
 
 int main(int argc, const char **argv) {

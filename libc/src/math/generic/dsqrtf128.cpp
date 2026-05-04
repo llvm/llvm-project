@@ -7,14 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/dsqrtf128.h"
-#include "src/__support/FPUtil/generic/sqrt.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/math/dsqrtf128.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(double, dsqrtf128, (float128 x)) {
-  return fputil::sqrt<double>(x);
+  return math::dsqrtf128(x);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

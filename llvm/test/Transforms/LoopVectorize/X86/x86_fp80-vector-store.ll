@@ -32,8 +32,8 @@ define void @example() {
 ; FORCED-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; FORCED-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
 ; FORCED-NEXT:    [[TMP2:%.*]] = sitofp <2 x i64> [[VEC_IND]] to <2 x x86_fp80>
-; FORCED-NEXT:    [[TMP5:%.*]] = extractelement <2 x x86_fp80> [[TMP2]], i32 0
-; FORCED-NEXT:    [[TMP6:%.*]] = extractelement <2 x x86_fp80> [[TMP2]], i32 1
+; FORCED-NEXT:    [[TMP5:%.*]] = extractelement <2 x x86_fp80> [[TMP2]], i64 0
+; FORCED-NEXT:    [[TMP6:%.*]] = extractelement <2 x x86_fp80> [[TMP2]], i64 1
 ; FORCED-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1024 x x86_fp80], ptr @x, i64 0, i64 [[INDEX]]
 ; FORCED-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [1024 x x86_fp80], ptr @x, i64 0, i64 [[TMP1]]
 ; FORCED-NEXT:    store x86_fp80 [[TMP5]], ptr [[TMP3]], align 16
@@ -43,8 +43,9 @@ define void @example() {
 ; FORCED-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; FORCED-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; FORCED:       [[MIDDLE_BLOCK]]:
-; FORCED-NEXT:    br [[EXIT:label %.*]]
-; FORCED:       [[SCALAR_PH:.*:]]
+; FORCED-NEXT:    br label %[[EXIT:.*]]
+; FORCED:       [[EXIT]]:
+; FORCED-NEXT:    ret void
 ;
 entry:
   br label %loop
@@ -98,8 +99,8 @@ define void @test_replicating_store_x86_fp80_cost(i32 %n, ptr %dst) #0 {
 ; FORCED-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; FORCED-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; FORCED-NEXT:    [[TMP4:%.*]] = zext <2 x i32> [[VEC_IND]] to <2 x i64>
-; FORCED-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64> [[TMP4]], i32 0
-; FORCED-NEXT:    [[TMP7:%.*]] = extractelement <2 x i64> [[TMP4]], i32 1
+; FORCED-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64> [[TMP4]], i64 0
+; FORCED-NEXT:    [[TMP7:%.*]] = extractelement <2 x i64> [[TMP4]], i64 1
 ; FORCED-NEXT:    [[TMP6:%.*]] = getelementptr x86_fp80, ptr [[DST]], i64 [[TMP5]]
 ; FORCED-NEXT:    [[TMP8:%.*]] = getelementptr x86_fp80, ptr [[DST]], i64 [[TMP7]]
 ; FORCED-NEXT:    store x86_fp80 0xK00000000000000000000, ptr [[TMP6]], align 16

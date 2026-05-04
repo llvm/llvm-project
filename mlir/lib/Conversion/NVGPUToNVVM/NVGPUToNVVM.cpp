@@ -179,6 +179,7 @@ static SmallVector<Value> unpackOperandVector(ImplicitLocOpBuilder &b,
   Type f64Ty = b.getF64Type();
   Type f32Ty = b.getF32Type();
   Type i64Ty = b.getI64Type();
+  Type bf16x2Ty = VectorType::get(2, b.getBF16Type());
   Type i8x4Ty = VectorType::get(4, b.getI8Type());
   Type i4x8Ty = VectorType::get(8, b.getIntegerType(4));
   Type f32x1Ty = VectorType::get(1, f32Ty);
@@ -191,6 +192,8 @@ static SmallVector<Value> unpackOperandVector(ImplicitLocOpBuilder &b,
     // scalar types.
     if (arrayTy.getElementType() == i8x4Ty ||
         arrayTy.getElementType() == i4x8Ty ||
+        (arrayTy.getElementType() == bf16x2Ty &&
+         operandPtxType == NVVM::MMATypes::bf16) ||
         (arrayTy.getElementType() == f32x1Ty &&
          operandPtxType == NVVM::MMATypes::tf32)) {
       result.push_back(LLVM::BitcastOp::create(b, i32Ty, toUse));
@@ -320,6 +323,8 @@ static FailureOr<NVVM::MMATypes> getNvvmMmaType(Type t) {
     return NVVM::MMATypes::s4;
   if (elType.isF16())
     return NVVM::MMATypes::f16;
+  if (elType.isBF16())
+    return NVVM::MMATypes::bf16;
   if (elType.isF64())
     return NVVM::MMATypes::f64;
   if (elType.isF32())

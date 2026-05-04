@@ -48,6 +48,7 @@ class RegBankLegalizeHelper {
   const bool IsWave32;
   const RegisterBank *SgprRB;
   const RegisterBank *VgprRB;
+  const RegisterBank *AgprRB;
   const RegisterBank *VccRB;
 
   static constexpr LLT S1 = LLT::scalar(1);
@@ -94,9 +95,6 @@ public:
                         const RegBankLegalizeRules &RBLRules);
 
   bool findRuleAndApplyMapping(MachineInstr &MI);
-
-  // Manual apply helpers.
-  void applyMappingTrivial(MachineInstr &MI);
 
 private:
   bool executeInWaterfallLoop(MachineIRBuilder &B, const WaterfallInfo &WFI);
@@ -146,7 +144,7 @@ private:
   bool lowerInsVecEltTo32(MachineInstr &MI);
   bool lowerAbsToNegMax(MachineInstr &MI);
   bool lowerAbsToS32(MachineInstr &MI);
-  bool applyRegisterBanksINTRIN_IMAGE(MachineInstr &MI);
+  bool applyRegisterBanksVgprWithSgprRsrc(MachineInstr &MI, unsigned RsrcIdx);
 };
 
 } // end namespace AMDGPU

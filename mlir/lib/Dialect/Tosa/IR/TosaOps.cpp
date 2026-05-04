@@ -662,6 +662,23 @@ static void printShapeToDiagnostic(InFlightDiagnostic &diag,
   llvm::interleaveComma(shape, diag, printDim);
 }
 
+static LogicalResult
+verifyOutputShapeCompatibleWithExpected(Operation *op, ShapedType outputType,
+                                        ArrayRef<int64_t> expectedShape,
+                                        StringRef outputName = "output") {
+  assert(outputType.hasRank() && "expected output type to be ranked");
+
+  if (succeeded(verifyCompatibleShape(outputType.getShape(), expectedShape)))
+    return success();
+
+  InFlightDiagnostic diag = op->emitOpError("expected ");
+  diag << outputName << " shape ";
+  printShapeToDiagnostic(diag, outputType.getShape());
+  diag << " to be compatible with inferred shape ";
+  printShapeToDiagnostic(diag, expectedShape);
+  return diag;
+}
+
 LogicalResult verifyConvOutputSize(
     Operation *op, const int64_t inputSize, const int64_t kernelSize,
     const int64_t outputSize, const int64_t padBefore, const int64_t padAfter,
@@ -2542,6 +2559,10 @@ LogicalResult tosa::MulOp::verify() {
 
   const bool aHasRank = aType.hasRank();
   const bool bHasRank = bType.hasRank();
+
+  bool hasExpectedOutputShape = false;
+  SmallVector<int64_t> expectedOutputShape;
+
   if (aHasRank && bHasRank) {
     const int64_t aRank = aType.getRank();
     const int64_t bRank = bType.getRank();
@@ -2550,12 +2571,12 @@ LogicalResult tosa::MulOp::verify() {
              << aRank << " and " << bRank;
 
     // check for broadcast compatible shapes
-    SmallVector<int64_t> resultShape;
     if (!mlir::OpTrait::util::getBroadcastedShape(
-            aType.getShape(), bType.getShape(), resultShape))
+            aType.getShape(), bType.getShape(), expectedOutputShape))
       return emitOpError("a and b operands don't have broadcast-compatible "
                          "shapes, got ")
              << aType << " and " << bType;
+    hasExpectedOutputShape = true;
   }
 
   ShapedType resultType = cast<ShapedType>(output.getType());
@@ -2569,6 +2590,11 @@ LogicalResult tosa::MulOp::verify() {
   if (bHasRank && resultRank != bType.getRank())
     return emitOpError("result type has different rank than b, got ")
            << resultRank << " vs " << bType.getRank();
+
+  if (hasExpectedOutputShape &&
+      failed(verifyOutputShapeCompatibleWithExpected(getOperation(), resultType,
+                                                     expectedOutputShape)))
+    return failure();
 
   return success();
 }
@@ -4846,12 +4872,7 @@ LogicalResult TransposeConv2DOp::verify() {
 }
 
 LogicalResult RescaleOp::verify() {
-  auto inputType = llvm::dyn_cast<ShapedType>(getInput().getType());
-  if (!inputType) {
-    emitOpError("expect shaped tensor for input, got ") << getInput().getType();
-    return failure();
-  }
-
+  const auto inputType = llvm::cast<ShapedType>(getInput().getType());
   auto inputElementType =
       getStorageElementTypeOrSelf(inputType.getElementType());
   if (!mlir::isa<IntegerType>(inputElementType)) {
@@ -4860,13 +4881,7 @@ LogicalResult RescaleOp::verify() {
     return failure();
   }
 
-  auto outputType = llvm::dyn_cast<ShapedType>(getOutput().getType());
-  if (!outputType) {
-    emitOpError("expect shaped tensor for output, got ")
-        << getOutput().getType();
-    return failure();
-  }
-
+  const auto outputType = llvm::cast<ShapedType>(getOutput().getType());
   auto outputElementType =
       getStorageElementTypeOrSelf(outputType.getElementType());
   if (!mlir::isa<IntegerType>(outputElementType)) {
@@ -4891,19 +4906,7 @@ LogicalResult RescaleOp::verify() {
   if (succeeded(maybeOZp) && verifyOutputZeroPoint(*maybeOZp).failed())
     return failure();
 
-  auto multiplierType = llvm::dyn_cast<ShapedType>(getMultiplier().getType());
-  if (!multiplierType) {
-    emitOpError("expect shaped tensor for multiplier, got ")
-        << getMultiplier().getType();
-    return failure();
-  }
-
-  auto shiftType = llvm::dyn_cast<ShapedType>(getShift().getType());
-  if (!shiftType) {
-    emitOpError("expect shaped tensor for shift, got ") << getShift().getType();
-    return failure();
-  }
-
+  const auto multiplierType = llvm::cast<ShapedType>(getMultiplier().getType());
   // multiplier element type must be i32 for scale32 = true
   if (getScale32() && !multiplierType.getElementType().isInteger(32)) {
     emitOpError("expect i32 element type for multiplier for scale32=true, got ")
@@ -4936,28 +4939,34 @@ LogicalResult RescaleOp::verify() {
     numChannels = inputType.getDimSize(inputType.getRank() - 1);
   }
 
-  if (!multiplierType.hasRank())
-    return success();
-
-  ArrayRef<int64_t> multiplierShape = multiplierType.getShape();
-  // multiplier input has rank 1 by dialect definition
-  if (multiplierShape[0] != ShapedType::kDynamic &&
-      multiplierShape[0] != numChannels) {
-    emitOpError("expect shape of { ")
-        << numChannels << " } for multiplier input, got { "
-        << multiplierShape[0] << " }";
-    return failure();
+  if (outputType.hasRank()) {
+    if (failed(verifyOutputShapeCompatibleWithExpected(
+            getOperation(), outputType, inputType.getShape())))
+      return failure();
   }
 
-  if (!shiftType.hasRank())
-    return success();
+  if (multiplierType.hasRank()) {
+    ArrayRef<int64_t> multiplierShape = multiplierType.getShape();
+    // multiplier input has rank 1 by dialect definition
+    if (multiplierShape[0] != ShapedType::kDynamic &&
+        multiplierShape[0] != numChannels) {
+      emitOpError("expect shape of { ")
+          << numChannels << " } for multiplier input, got { "
+          << multiplierShape[0] << " }";
+      return failure();
+    }
+  }
 
-  ArrayRef<int64_t> shiftShape = shiftType.getShape();
-  // shift input has rank 1 by dialect definition
-  if (shiftShape[0] != ShapedType::kDynamic && shiftShape[0] != numChannels) {
-    emitOpError("expect shape of { ")
-        << numChannels << " } for shift input, got { " << shiftShape[0] << " }";
-    return failure();
+  const auto shiftType = llvm::cast<ShapedType>(getShift().getType());
+  if (shiftType.hasRank()) {
+    ArrayRef<int64_t> shiftShape = shiftType.getShape();
+    // shift input has rank 1 by dialect definition
+    if (shiftShape[0] != ShapedType::kDynamic && shiftShape[0] != numChannels) {
+      emitOpError("expect shape of { ")
+          << numChannels << " } for shift input, got { " << shiftShape[0]
+          << " }";
+      return failure();
+    }
   }
 
   return success();

@@ -20,7 +20,7 @@ define void @foo() presplitcoroutine {
 ; CHECK-LABEL: define void @foo() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TESTVAL:%.*]] = alloca [[I8_ARRAY:%.*]], align 8
-; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr @foo.resumers)
+; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr @foo, ptr @foo.resumers)
 ; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @malloc(i64 16)
 ; CHECK-NEXT:    [[VFRAME:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[ALLOC]])
 ; CHECK-NEXT:    store ptr @foo.resume, ptr [[VFRAME]], align 8
@@ -35,7 +35,7 @@ define void @foo() presplitcoroutine {
 ;
 entry:
   %testval = alloca %i8.array
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @foo, ptr null)
   %alloc = call ptr @malloc(i64 16) #3
   %vFrame = call noalias nonnull ptr @llvm.coro.begin(token %id, ptr %alloc)
 
@@ -63,7 +63,7 @@ define void @bar() presplitcoroutine {
 ; CHECK-LABEL: define void @bar() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TESTVAL:%.*]] = alloca [[I8_ARRAY:%.*]], align 8
-; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr @bar.resumers)
+; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr @bar, ptr @bar.resumers)
 ; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @malloc(i64 16)
 ; CHECK-NEXT:    [[VFRAME:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[ALLOC]])
 ; CHECK-NEXT:    store ptr @bar.resume, ptr [[VFRAME]], align 8
@@ -82,7 +82,7 @@ define void @bar() presplitcoroutine {
 ;
 entry:
   %testval = alloca %i8.array
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @bar, ptr null)
   %alloc = call ptr @malloc(i64 16) #3
   %vFrame = call noalias nonnull ptr @llvm.coro.begin(token %id, ptr %alloc)
   %save = call token @llvm.coro.save(ptr null)

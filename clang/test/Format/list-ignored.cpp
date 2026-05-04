@@ -56,5 +56,16 @@
 // CHECK7-NOT: foo.c
 // CHECK7: foo.js
 
+// RUN: echo "!foo.c" > .clang-format-ignore
+// RUN: clang-format -list-ignored foo.c foo.h 2>&1 \
+// RUN:   | FileCheck %s -allow-empty -check-prefix=CHECK8
+// CHECK8-NOT: foo.c
+
+// RUN: echo "*" > .clang-format-ignore
+// RUN: echo "!foo.*" >> .clang-format-ignore
+// RUN: clang-format -list-ignored foo.c 2>&1 \
+// RUN:   | FileCheck %s -allow-empty -check-prefix=CHECK9
+// CHECK9-NOT: foo.c
+
 // RUN: cd ..
 // RUN: rm -r %t.dir
