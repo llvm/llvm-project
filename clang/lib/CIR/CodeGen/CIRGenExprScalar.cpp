@@ -796,16 +796,18 @@ public:
 
     // NOTE: LLVM codegen will lower this directly to either a FNeg
     // or a Sub instruction.  In CIR this will be handled later in LowerToLLVM.
+    auto flags = nsw ? cir::OverflowFlags::nsw : cir::OverflowFlags::none;
     return builder.createOrFold<cir::MinusOp>(
-        cgf.getLoc(e->getSourceRange().getBegin()), operand, nsw);
+        cgf.getLoc(e->getSourceRange().getBegin()), operand, flags);
   }
 
   mlir::Value emitIncOrDec(const UnaryOperator *e, mlir::Value input,
                            bool nsw = false) {
     mlir::Location loc = cgf.getLoc(e->getSourceRange().getBegin());
+    auto flags = nsw ? cir::OverflowFlags::nsw : cir::OverflowFlags::none;
     return e->isIncrementOp()
-               ? builder.createOrFold<cir::IncOp>(loc, input, nsw)
-               : builder.createOrFold<cir::DecOp>(loc, input, nsw);
+               ? builder.createOrFold<cir::IncOp>(loc, input, flags)
+               : builder.createOrFold<cir::DecOp>(loc, input, flags);
   }
 
   mlir::Value VisitUnaryNot(const UnaryOperator *e) {

@@ -432,11 +432,11 @@ static mlir::Value lowerDataMemberCast(mlir::Operation *op,
   mlir::Value adjustedPtr;
   if (isDerivedToBase) {
     auto subOp = cir::SubOp::create(builder, loc, ty, loweredSrc, offsetValue);
-    subOp.setNoSignedWrap(true);
+    subOp.setFlags(cir::OverflowFlags::nsw);
     adjustedPtr = subOp;
   } else {
     auto addOp = cir::AddOp::create(builder, loc, ty, loweredSrc, offsetValue);
-    addOp.setNoSignedWrap(true);
+    addOp.setFlags(cir::OverflowFlags::nsw);
     adjustedPtr = addOp;
   }
 
@@ -477,12 +477,12 @@ static mlir::Value lowerMethodCast(mlir::Operation *op, mlir::Value loweredSrc,
   if (isDerivedToBase) {
     auto subOp = cir::SubOp::create(builder, op->getLoc(), ptrdiffCIRTy,
                                     adjField, offsetValue);
-    subOp.setNoSignedWrap(true);
+    subOp.setFlags(cir::OverflowFlags::nsw);
     adjustedAdjField = subOp;
   } else {
     auto addOp = cir::AddOp::create(builder, op->getLoc(), ptrdiffCIRTy,
                                     adjField, offsetValue);
-    addOp.setNoSignedWrap(true);
+    addOp.setFlags(cir::OverflowFlags::nsw);
     adjustedAdjField = addOp;
   }
 

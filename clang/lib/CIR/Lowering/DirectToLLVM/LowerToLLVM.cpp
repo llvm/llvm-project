@@ -2582,7 +2582,8 @@ lowerIncDecOp(CIROp op, typename CIROp::Adaptor adaptor,
   mlir::Location loc = op.getLoc();
 
   if (mlir::isa<cir::IntType>(elementType)) {
-    auto maybeNSW = nswFlag(op.getNoSignedWrap());
+    auto maybeNSW =
+        nswFlag(bitEnumContainsAll(op.getFlags(), cir::OverflowFlags::nsw));
     auto one = mlir::LLVM::ConstantOp::create(rewriter, loc, llvmType, 1);
     rewriter.replaceOpWithNewOp<LLVMIntOp>(op, adaptor.getInput(), one,
                                            maybeNSW);
@@ -2621,7 +2622,8 @@ mlir::LogicalResult CIRToLLVMMinusOpLowering::matchAndRewrite(
   mlir::Location loc = op.getLoc();
 
   if (mlir::isa<cir::IntType>(elementType)) {
-    auto maybeNSW = nswFlag(op.getNoSignedWrap());
+    auto maybeNSW =
+        nswFlag(bitEnumContainsAll(op.getFlags(), cir::OverflowFlags::nsw));
     mlir::Value zero;
     if (isVector)
       zero = mlir::LLVM::ZeroOp::create(rewriter, loc, llvmType);
@@ -2683,11 +2685,17 @@ static bool isIntTypeUnsigned(mlir::Type type) {
 
 template <typename BinOp>
 static mlir::LLVM::IntegerOverflowFlags intOverflowFlag(BinOp op) {
-  if (op.getNoUnsignedWrap())
-    return mlir::LLVM::IntegerOverflowFlags::nuw;
-  if (op.getNoSignedWrap())
-    return mlir::LLVM::IntegerOverflowFlags::nsw;
-  return mlir::LLVM::IntegerOverflowFlags::none;
+  // cir::OverflowFlags and mlir::LLVM::IntegerOverflowFlags share the same
+  // bit positions (nsw=0, nuw=1) so the underlying values map directly.
+  static_assert(
+      static_cast<uint32_t>(cir::OverflowFlags::nsw) ==
+          static_cast<uint32_t>(mlir::LLVM::IntegerOverflowFlags::nsw),
+      "nsw bit position mismatch between cir and llvm dialects");
+  static_assert(
+      static_cast<uint32_t>(cir::OverflowFlags::nuw) ==
+          static_cast<uint32_t>(mlir::LLVM::IntegerOverflowFlags::nuw),
+      "nuw bit position mismatch between cir and llvm dialects");
+  return static_cast<mlir::LLVM::IntegerOverflowFlags>(op.getFlags());
 }
 
 /// Lower an arithmetic op that supports saturation, overflow flags, and an FP
