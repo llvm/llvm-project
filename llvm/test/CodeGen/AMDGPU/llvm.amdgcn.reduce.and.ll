@@ -7,10 +7,10 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -global-isel=1 -new-reg-bank-select -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GFX10GISEL,GFX1064GISEL %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -global-isel=0 < %s | FileCheck -check-prefixes=GFX10DAGISEL,GFX1032DAGISEL %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -global-isel=1 -new-reg-bank-select < %s | FileCheck -check-prefixes=GFX10GISEL,GFX1032GISEL %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -global-isel=0 -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GFX1164DAGISEL,GFX1164DAGISEL-FAKE16 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -global-isel=1 -new-reg-bank-select -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GFX1164GISEL,GFX1164GISEL-FAKE16 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -global-isel=0 < %s | FileCheck -check-prefixes=GFX1132DAGISEL,GFX1132DAGISEL-FAKE16 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -global-isel=1 -new-reg-bank-select < %s | FileCheck -check-prefixes=GFX1132GISEL,GFX1132GISEL-FAKE16 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -global-isel=0 -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GFX1164DAGISEL %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -global-isel=1 -new-reg-bank-select -mattr=+wavefrontsize64 < %s | FileCheck -check-prefixes=GFX1164GISEL %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -global-isel=0 < %s | FileCheck -check-prefixes=GFX1132DAGISEL %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -global-isel=1 -new-reg-bank-select < %s | FileCheck -check-prefixes=GFX1132GISEL %s
 
 define amdgpu_kernel void @uniform_value_i16(ptr addrspace(1) %out, i16 %in) {
 ; GFX8DAGISEL-LABEL: uniform_value_i16:
@@ -138,7 +138,7 @@ define void @divergent_value_i16(ptr addrspace(1) %out, i16 %in) {
 ; GFX8DAGISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8DAGISEL-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX8DAGISEL-NEXT:    s_mov_b32 s6, -1
-; GFX8DAGISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; GFX8DAGISEL-NEXT:    v_bfe_u32 v2, v2, 0, 16
 ; GFX8DAGISEL-NEXT:  .LBB1_1: ; =>This Inner Loop Header: Depth=1
 ; GFX8DAGISEL-NEXT:    s_ff1_i32_b64 s7, s[4:5]
 ; GFX8DAGISEL-NEXT:    v_readlane_b32 s8, v2, s7
@@ -157,7 +157,7 @@ define void @divergent_value_i16(ptr addrspace(1) %out, i16 %in) {
 ; GFX8GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8GISEL-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX8GISEL-NEXT:    s_mov_b32 s6, -1
-; GFX8GISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; GFX8GISEL-NEXT:    v_bfe_u32 v2, v2, 0, 16
 ; GFX8GISEL-NEXT:  .LBB1_1: ; =>This Inner Loop Header: Depth=1
 ; GFX8GISEL-NEXT:    s_ff1_i32_b64 s7, s[4:5]
 ; GFX8GISEL-NEXT:    v_readlane_b32 s8, v2, s7
@@ -176,7 +176,7 @@ define void @divergent_value_i16(ptr addrspace(1) %out, i16 %in) {
 ; GFX9DAGISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9DAGISEL-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX9DAGISEL-NEXT:    s_mov_b32 s6, -1
-; GFX9DAGISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; GFX9DAGISEL-NEXT:    v_bfe_u32 v2, v2, 0, 16
 ; GFX9DAGISEL-NEXT:  .LBB1_1: ; =>This Inner Loop Header: Depth=1
 ; GFX9DAGISEL-NEXT:    s_ff1_i32_b64 s7, s[4:5]
 ; GFX9DAGISEL-NEXT:    v_readlane_b32 s8, v2, s7
@@ -195,7 +195,7 @@ define void @divergent_value_i16(ptr addrspace(1) %out, i16 %in) {
 ; GFX9GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9GISEL-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX9GISEL-NEXT:    s_mov_b32 s6, -1
-; GFX9GISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; GFX9GISEL-NEXT:    v_bfe_u32 v2, v2, 0, 16
 ; GFX9GISEL-NEXT:  .LBB1_1: ; =>This Inner Loop Header: Depth=1
 ; GFX9GISEL-NEXT:    s_ff1_i32_b64 s7, s[4:5]
 ; GFX9GISEL-NEXT:    v_readlane_b32 s8, v2, s7
@@ -212,7 +212,7 @@ define void @divergent_value_i16(ptr addrspace(1) %out, i16 %in) {
 ; GFX1064DAGISEL-LABEL: divergent_value_i16:
 ; GFX1064DAGISEL:       ; %bb.0: ; %entry
 ; GFX1064DAGISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1064DAGISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; GFX1064DAGISEL-NEXT:    v_bfe_u32 v2, v2, 0, 16
 ; GFX1064DAGISEL-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX1064DAGISEL-NEXT:    s_mov_b32 s6, -1
 ; GFX1064DAGISEL-NEXT:  .LBB1_1: ; =>This Inner Loop Header: Depth=1
@@ -230,7 +230,7 @@ define void @divergent_value_i16(ptr addrspace(1) %out, i16 %in) {
 ; GFX1064GISEL-LABEL: divergent_value_i16:
 ; GFX1064GISEL:       ; %bb.0: ; %entry
 ; GFX1064GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1064GISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; GFX1064GISEL-NEXT:    v_bfe_u32 v2, v2, 0, 16
 ; GFX1064GISEL-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX1064GISEL-NEXT:    s_mov_b32 s6, -1
 ; GFX1064GISEL-NEXT:  .LBB1_1: ; =>This Inner Loop Header: Depth=1
@@ -248,7 +248,7 @@ define void @divergent_value_i16(ptr addrspace(1) %out, i16 %in) {
 ; GFX1032DAGISEL-LABEL: divergent_value_i16:
 ; GFX1032DAGISEL:       ; %bb.0: ; %entry
 ; GFX1032DAGISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1032DAGISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; GFX1032DAGISEL-NEXT:    v_bfe_u32 v2, v2, 0, 16
 ; GFX1032DAGISEL-NEXT:    s_mov_b32 s5, exec_lo
 ; GFX1032DAGISEL-NEXT:    s_mov_b32 s4, -1
 ; GFX1032DAGISEL-NEXT:  .LBB1_1: ; =>This Inner Loop Header: Depth=1
@@ -266,7 +266,7 @@ define void @divergent_value_i16(ptr addrspace(1) %out, i16 %in) {
 ; GFX1032GISEL-LABEL: divergent_value_i16:
 ; GFX1032GISEL:       ; %bb.0: ; %entry
 ; GFX1032GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1032GISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; GFX1032GISEL-NEXT:    v_bfe_u32 v2, v2, 0, 16
 ; GFX1032GISEL-NEXT:    s_mov_b32 s5, exec_lo
 ; GFX1032GISEL-NEXT:    s_mov_b32 s4, -1
 ; GFX1032GISEL-NEXT:  .LBB1_1: ; =>This Inner Loop Header: Depth=1
@@ -284,7 +284,7 @@ define void @divergent_value_i16(ptr addrspace(1) %out, i16 %in) {
 ; GFX1164DAGISEL-LABEL: divergent_value_i16:
 ; GFX1164DAGISEL:       ; %bb.0: ; %entry
 ; GFX1164DAGISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1164DAGISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; GFX1164DAGISEL-NEXT:    v_bfe_u32 v2, v2, 0, 16
 ; GFX1164DAGISEL-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX1164DAGISEL-NEXT:    s_mov_b32 s2, -1
 ; GFX1164DAGISEL-NEXT:  .LBB1_1: ; =>This Inner Loop Header: Depth=1
@@ -303,7 +303,7 @@ define void @divergent_value_i16(ptr addrspace(1) %out, i16 %in) {
 ; GFX1164GISEL-LABEL: divergent_value_i16:
 ; GFX1164GISEL:       ; %bb.0: ; %entry
 ; GFX1164GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1164GISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; GFX1164GISEL-NEXT:    v_bfe_u32 v2, v2, 0, 16
 ; GFX1164GISEL-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX1164GISEL-NEXT:    s_mov_b32 s2, -1
 ; GFX1164GISEL-NEXT:  .LBB1_1: ; =>This Inner Loop Header: Depth=1
@@ -322,7 +322,7 @@ define void @divergent_value_i16(ptr addrspace(1) %out, i16 %in) {
 ; GFX1132DAGISEL-LABEL: divergent_value_i16:
 ; GFX1132DAGISEL:       ; %bb.0: ; %entry
 ; GFX1132DAGISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1132DAGISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; GFX1132DAGISEL-NEXT:    v_bfe_u32 v2, v2, 0, 16
 ; GFX1132DAGISEL-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX1132DAGISEL-NEXT:    s_mov_b32 s0, -1
 ; GFX1132DAGISEL-NEXT:  .LBB1_1: ; =>This Inner Loop Header: Depth=1
@@ -341,7 +341,7 @@ define void @divergent_value_i16(ptr addrspace(1) %out, i16 %in) {
 ; GFX1132GISEL-LABEL: divergent_value_i16:
 ; GFX1132GISEL:       ; %bb.0: ; %entry
 ; GFX1132GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1132GISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; GFX1132GISEL-NEXT:    v_bfe_u32 v2, v2, 0, 16
 ; GFX1132GISEL-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX1132GISEL-NEXT:    s_mov_b32 s0, -1
 ; GFX1132GISEL-NEXT:  .LBB1_1: ; =>This Inner Loop Header: Depth=1
@@ -3494,8 +3494,3 @@ endif:
   store i64 %combine, ptr addrspace(1) %out
   ret void
 }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; GFX1132DAGISEL-FAKE16: {{.*}}
-; GFX1132GISEL-FAKE16: {{.*}}
-; GFX1164DAGISEL-FAKE16: {{.*}}
-; GFX1164GISEL-FAKE16: {{.*}}
