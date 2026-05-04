@@ -195,8 +195,8 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
         return ::mlir::success();
       }]
     >,
-    // Note: The initial motivating factcor for adding this interface method is to
-    // enable folding operations like `memref.subview` with transfer opes in a
+    // Note: The initial motivating factor for adding this interface method is to
+    // enable folding operations like `memref.subview` with transfer ops in a
     // generic way. If future usecases require extending this method, it should be
     // done.
     InterfaceMethod<
@@ -206,7 +206,7 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
         The new base, indices, and map must:
         - Keep the same element type as the base (this condition could be relaxed
           in the future)
-        - Preserve the number of transefr dimensions and avoid inserting new
+        - Preserve the number of transfer dimensions and avoid inserting new
           dimensions unaccounted for in the permutation map - that is, if the transfer operation is
           reading or writing a 4x2 vector to/from an Nx4x2 tensor or memref, it is
           not valid to update that base to an Nx8 one, but updating in an N0xN1x4x2
