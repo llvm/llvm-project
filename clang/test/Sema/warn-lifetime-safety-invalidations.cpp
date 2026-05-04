@@ -283,7 +283,7 @@ void IteratorUsedAfterReverseSubtraction(std::vector<int> v) {
   (void)*prev;              // expected-note {{later used here}}
 }
 
-void IteratorUSedAfterAddAdd(std::vector<int> v) {
+void IteratorUsedAfterAddAdd(std::vector<int> v) {
   auto it = v.cbegin();     // expected-warning {{object whose reference is captured is later invalidated}}
   auto next = (it + 5) + 5;
   v.push_back(1);           // expected-note {{invalidated here}}
