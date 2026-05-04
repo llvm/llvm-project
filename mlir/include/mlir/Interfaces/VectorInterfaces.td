@@ -136,7 +136,9 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
       /*desc=*/[{
         Return the indices that specify the starting offsets into the source
         operand. The starting offsets are guaranteed to be in-bounds except
-        when the transfer operation is masked.
+        when the transfer operation is masked or the `in_bounds` array doesn't
+        specify that that dimension is not necessarily in bounds. It is undefinied
+        behavior if these guarantees are violated.
       }],
       /*retTy=*/"::mlir::OperandRange",
       /*methodName=*/"getIndices",
@@ -183,10 +185,6 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
         `newPermutationMap`, where the replacement would adhere to the
         conditinos specified by `updateStartingPosition`, passes any addihtional
         op-specific constraints.
-
-        (Note: this method has been added in case it ends up being needed
-        and, if some upstream or downstream use requires additional argument,
-        they should be added.)
       }],
       /*retTy=*/"::mlir::LogicalResult",
       /*methodName=*/"mayUpdateStartingPosition",
@@ -197,6 +195,10 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
         return ::mlir::success();
       }]
     >,
+    // Note: The initial motivating factcor for adding this interface method is to
+    // enable folding operations like `memref.subview` with transfer opes in a
+    // generic way. If future usecases require extending this method, it should be
+    // done.
     InterfaceMethod<
       /*desc=*/[{
         Updates the base of this transfer operation to `newBase`, the indices into
@@ -221,11 +223,6 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
         The update is performed in-place. Implementations of the interface
         should use `RewriterBase::modifyOpInPlace` to ensure proper pattern
         rewriter operation.
-
-        Note: The initial motivating factcor for adding this interface method is to
-        enable folding operations like `memref.subview` with transfer opes in a
-        generic way. If future usecases require extending this method, it should be
-        done.
       }],
       /*retTy=*/"void",
       /*methodName=*/"updateStartingPosition",
