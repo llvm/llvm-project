@@ -34,6 +34,34 @@
 #include <arm_fp16.h>
 
 //===------------------------------------------------------===//
+// 2.6.1.7 Maximum 
+// 
+// TODO: Implement the remaining intrinsics from this group.
+//===------------------------------------------------------===//
+
+// LLVM-LABEL: @test_vmaxv_f16(
+// CIR-LABEL: @test_vmaxv_f16(
+float16_t test_vmaxv_f16(float16x4_t a) {
+// CIR: {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.fmaxv" {{%.*}} : (!cir.vector<4 x !cir.f16>) -> !cir.f16
+
+// LLVM-SAME: <4 x half> {{.*}}[[A:%.*]])
+// LLVM:      [[VMAXV1:%.*]] = call half @llvm.aarch64.neon.fmaxv.f16.v4f16(<4 x half> {{.*}})
+// LLVM:      ret half [[VMAXV1]]
+  return vmaxv_f16(a);
+}
+
+// LLVM-LABEL: @test_vmaxvq_f16(
+// CIR-LABEL: cir.func {{.*}} @test_vmaxvq_f16
+float16_t test_vmaxvq_f16(float16x8_t a) {
+// CIR: {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.fmaxv" {{%.*}} : (!cir.vector<8 x !cir.f16>) -> !cir.f16
+
+// LLVM-SAME: <8 x half> {{.*}}[[A:%.*]])
+// LLVM:      [[VMAXV1:%.*]] = call half @llvm.aarch64.neon.fmaxv.f16.v8f16(<8 x half> {{.*}})
+// LLVM:      ret half [[VMAXV1]]
+  return vmaxvq_f16(a);
+}
+
+//===------------------------------------------------------===//
 // 2.5.1.1.  Addition
 //===------------------------------------------------------===//
 // ALL-LABEL: @test_vaddh_f16(
