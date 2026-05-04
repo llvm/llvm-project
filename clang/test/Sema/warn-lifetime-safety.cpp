@@ -3284,3 +3284,75 @@ void assign_non_capturing_to_function_ref(function_ref &r) {
 }
 
 } // namespace GH126600
+
+namespace LifetimeboundReturnVerification {
+
+bool cond();
+
+View drop_lb(const MyObj &obj) { return obj; }
+
+View keep_lb(const MyObj &obj [[clang::lifetimebound]]) {
+  return obj;
+}
+
+View return_through_unannotated_passthrough(
+    const MyObj &obj [[clang::lifetimebound]]) { // function-warning {{parameter is marked as [[clang::lifetimebound]] but doesn't escape}}
+  return drop_lb(obj);
+}
+
+View return_through_lifetimebound_passthrough(
+    const MyObj &obj [[clang::lifetimebound]]) {
+  return keep_lb(obj);
+}
+
+View keep_lb2(const MyObj &obj [[clang::lifetimebound]]) {
+  return keep_lb(obj);
+}
+
+View lose_lb(const MyObj &obj [[clang::lifetimebound]]) { // function-warning {{parameter is marked as [[clang::lifetimebound]] but doesn't escape}}
+  return drop_lb(obj);
+}
+
+View return_through_alias(const MyObj &obj [[clang::lifetimebound]]) {
+  const MyObj &alias = obj;
+  return alias;
+}
+
+View return_alias_through_unannotated_passthrough(
+    const MyObj &obj [[clang::lifetimebound]]) { // function-warning {{parameter is marked as [[clang::lifetimebound]] but doesn't escape}}
+  const MyObj &alias = obj;
+  return drop_lb(alias);
+}
+
+View return_through_two_lifetimebound_calls(
+    const MyObj &obj [[clang::lifetimebound]]) {
+  return keep_lb2(obj);
+}
+
+View return_through_broken_chain(
+    const MyObj &obj [[clang::lifetimebound]]) {
+  return lose_lb(obj);
+}
+
+View fwd_view(View v) { return v; }
+
+View fwd_view_lb(View v [[clang::lifetimebound]]) { return v; }
+
+View return_constructed_view_through_unannotated_forwarder(
+    const MyObj &obj [[clang::lifetimebound]]) { // function-warning {{parameter is marked as [[clang::lifetimebound]] but doesn't escape}}
+  return fwd_view(View(obj));
+}
+
+View return_constructed_view_through_lifetimebound_forwarder(
+    const MyObj &obj [[clang::lifetimebound]]) {
+  return fwd_view_lb(View(obj));
+}
+
+View verify_each_annotated_param_independently(
+    const MyObj &a [[clang::lifetimebound]],
+    const MyObj &b [[clang::lifetimebound]], // function-warning {{parameter is marked as [[clang::lifetimebound]] but doesn't escape}}
+    const MyObj &c [[clang::lifetimebound]]) { // expected-warning {{parameter is marked as [[clang::lifetimebound]] but doesn't escape}}
+  return cond() ? a : drop_lb(b);
+}
+
+} // namespace LifetimeboundReturnVerification
