@@ -96,7 +96,6 @@ jobs:
       id-token: write # Requred for pypi publishing
     needs:
       - validate-tag
-    environment: pypi
     steps:
       - name: Checkout LLVM
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
