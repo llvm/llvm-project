@@ -33,6 +33,81 @@
 
 #include <arm_fp16.h>
 
+// TODO: fix the tests below
+
+//===------------------------------------------------------===//
+// 2.5.1.3  Rounding
+//===------------------------------------------------------===//
+// ALL-LABEL: test_vrndh_f16
+float16_t test_vrndh_f16(float16_t a) {
+// CIR:  cir.call_llvm_intrinsic "trunc" {{.*}} -> !cir.f16
+
+// LLVM-SAME: half {{.*}} [[A:%.*]])
+// LLVM:  [[RND:%.*]] =  call half @llvm.trunc.f16(half %a)
+// LLVM:  ret half [[RND]]
+  return vrndh_f16(a);
+}
+
+// ALL-LABEL: test_vrndah_f16
+float16_t test_vrndah_f16(float16_t a) {
+// CIR:  cir.call_llvm_intrinsic "round" {{.*}} -> !cir.f16
+
+// LLVM-SAME: half {{.*}} [[A:%.*]])
+// LLVM:  [[RND:%.*]] =  call half @llvm.round.f16(half %a)
+// LLVM:  ret half [[RND]]
+  return vrndah_f16(a);
+}
+
+// ALL-LABEL: test_vrndih_f16
+float16_t test_vrndih_f16(float16_t a) {
+// CIR:  cir.call_llvm_intrinsic "nearbyint" {{.*}} -> !cir.f16
+
+// LLVM-SAME: half {{.*}} [[A:%.*]])
+// LLVM:  [[RND:%.*]] =  call half @llvm.nearbyint.f16(half %a)
+// LLVM:  ret half [[RND]]
+  return vrndih_f16(a);
+}
+
+// ALL-LABEL: test_vrndmh_f16
+float16_t test_vrndmh_f16(float16_t a) {
+// CIR:  cir.call_llvm_intrinsic "floor" {{.*}} -> !cir.f16
+
+// LLVM-SAME: half {{.*}} [[A:%.*]])
+// LLVM:  [[RND:%.*]] =  call half @llvm.floor.f16(half %a)
+// LLVM:  ret half [[RND]]
+  return vrndmh_f16(a);
+}
+
+// ALL-LABEL: test_vrndnh_f16
+float16_t test_vrndnh_f16(float16_t a) {
+// CIR:  cir.call_llvm_intrinsic "roundeven" {{.*}} -> !cir.f16
+
+// LLVM-SAME: half {{.*}} [[A:%.*]])
+// LLVM:  [[RND:%.*]] =  call half @llvm.roundeven.f16(half %a)
+// LLVM:  ret half [[RND]]
+  return vrndnh_f16(a);
+}
+
+// LLVM-LABEL: test_vrndph_f16
+float16_t test_vrndph_f16(float16_t a) {
+// CIR:  cir.call_llvm_intrinsic "ceil" {{.*}} -> !cir.f16
+
+// LLVM-SAME: half {{.*}} [[A:%.*]])
+// LLVM:  [[RND:%.*]] =  call half @llvm.ceil.f16(half %a)
+// LLVM:  ret half [[RND]]
+  return vrndph_f16(a);
+}
+
+// LLVM-LABEL: test_vrndxh_f16
+float16_t test_vrndxh_f16(float16_t a) {
+// CIR:  cir.call_llvm_intrinsic "rint" {{.*}} -> !cir.f16
+
+// LLVM-SAME: half {{.*}} [[A:%.*]])
+// LLVM:  [[RND:%.*]] =  call half @llvm.rint.f16(half %a)
+// LLVM:  ret half [[RND]]
+  return vrndxh_f16(a);
+}
+
 //===------------------------------------------------------===//
 // 2.5.1.5.1.  Addition
 //===------------------------------------------------------===//
