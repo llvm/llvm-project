@@ -127,6 +127,7 @@ class ASTWriter;
 class CXXBasePath;
 class CXXBasePaths;
 class CXXFieldCollector;
+class AnalysisDeclContext;
 class CodeCompleteConsumer;
 enum class ComparisonCategoryType : unsigned char;
 class ConstraintSatisfaction;
@@ -1070,8 +1071,19 @@ public:
 
   bool isProfileSuppressed(StringRef ProfileName,
                            StringRef RuleName = "") const;
+  bool isProfileSuppressed(StringRef ProfileName, StringRef RuleName,
+                           const Stmt *S, AnalysisDeclContext &AC) const;
+  bool shouldEmitProfileViolation(StringRef ProfileName, StringRef RuleName,
+                                  SourceLocation Loc);
+  bool shouldEmitProfileViolation(StringRef ProfileName, StringRef RuleName,
+                                  const Stmt *UseStmt,
+                                  AnalysisDeclContext &AC) const;
   bool checkProfileViolation(StringRef ProfileName, StringRef RuleName,
                              SourceLocation Loc, unsigned DiagID);
+
+  bool anyProfileRequestsCFGUninitAnalysis() const;
+  bool tryEmitCFGUninitAnalysisDiagnostic(const VarDecl *VD, const Expr *UseExpr,
+                                          AnalysisDeclContext &AC);
 
   class ProfileSuppressScope {
     Sema &S;

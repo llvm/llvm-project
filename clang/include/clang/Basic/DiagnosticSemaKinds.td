@@ -14136,4 +14136,6 @@ def err_profiles_suppress_justification_not_string : Error<
   "'justification' argument of 'profiles::suppress' must be a string literal">;
 def err_profile_type_cast_reinterpret : ProfileRuleError<
   "'reinterpret_cast' is unsafe under profile '%0'">;
+def err_profile_uninit_read : ProfileRuleError<
+  "variable %1 is read before initialization under profile '%0'">;
 } // end of sema component.

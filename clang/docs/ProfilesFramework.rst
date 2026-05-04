@@ -90,6 +90,21 @@ Unevaluated and discarded-statement contexts are skipped.  The profile name is
 passed as ``%0``.
 
 
+Suppression Dominion is Token-Based
+===================================
+
+A ``[[profiles::suppress(P)]]`` attribute suppresses profile ``P`` in the
+token range of the declaration or statement it appertains to -- nothing more.
+For a variable declaration that range covers the initializer expression (so
+``[[profiles::suppress(P)]] T x = init();`` silences violations inside
+``init()``), but it does *not* tag the variable as permitted-uninitialized for
+subsequent uses; those uses appear in different declarations or statements
+and are checked normally at their own source location. Profiles that need
+per-object "opt-out of this check everywhere this value is used" semantics
+(for example, the proposed ``[[uninitialized]]`` attribute of the
+initialization profile) must introduce their own, separate, decl-scoped
+marker.
+
 Framework Internals Reference
 =============================
 

@@ -1688,6 +1688,7 @@ struct SortDiagBySourceLocation {
 namespace {
 class UninitValsDiagReporter : public UninitVariablesHandler {
   Sema &S;
+  AnalysisDeclContext &AC;
   typedef SmallVector<UninitUse, 2> UsesVec;
   typedef llvm::PointerIntPair<UsesVec *, 1, bool> MappedType;
   // Prefer using MapVector to DenseMap, so that iteration order will be
@@ -1697,7 +1698,7 @@ class UninitValsDiagReporter : public UninitVariablesHandler {
   UsesMap uses;
 
 public:
-  UninitValsDiagReporter(Sema &S) : S(S) {}
+  UninitValsDiagReporter(Sema &S, AnalysisDeclContext &AC) : S(S), AC(AC) {}
   ~UninitValsDiagReporter() override { flushDiagnostics(); }
 
   MappedType &getUses(const VarDecl *vd) {
@@ -1745,6 +1746,14 @@ private:
   // diagnostic is printed, further diagnostics for this variable are skipped.
   void diagnoseUnitializedVar(const VarDecl *vd, bool hasSelfInit,
                               UsesVec *vec) {
+    // If a CFG-uninit-analysis-requesting profile is enforced at any real
+    // use site and is not suppressed there, emit the profile diagnostic
+    // and skip the default warning path entirely.
+    for (const auto &U : *vec) {
+      if (S.tryEmitCFGUninitAnalysisDiagnostic(vd, U.getUser(), AC))
+        return;
+    }
+
     // Specially handle the case where we have uses of an uninitialized
     // variable, but the root cause is an idiomatic self-init.  We want
     // to report the diagnostic at the self-init since that is the root cause.
@@ -3302,13 +3311,14 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
     Analyzer.run(AC);
   }
 
-  if (!Diags.isIgnored(diag::warn_uninit_var, D->getBeginLoc()) ||
+  if (S.anyProfileRequestsCFGUninitAnalysis() ||
+      !Diags.isIgnored(diag::warn_uninit_var, D->getBeginLoc()) ||
       !Diags.isIgnored(diag::warn_sometimes_uninit_var, D->getBeginLoc()) ||
       !Diags.isIgnored(diag::warn_maybe_uninit_var, D->getBeginLoc()) ||
       !Diags.isIgnored(diag::warn_uninit_const_reference, D->getBeginLoc()) ||
       !Diags.isIgnored(diag::warn_uninit_const_pointer, D->getBeginLoc())) {
     if (CFG *cfg = AC.getCFG()) {
-      UninitValsDiagReporter reporter(S);
+      UninitValsDiagReporter reporter(S, AC);
       UninitVariablesAnalysisStats stats;
       std::memset(&stats, 0, sizeof(UninitVariablesAnalysisStats));
       runUninitializedVariablesAnalysis(*cast<DeclContext>(D), *cfg, AC,

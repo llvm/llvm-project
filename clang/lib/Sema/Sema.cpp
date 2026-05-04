@@ -20,9 +20,11 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/ParentMap.h"
 #include "clang/AST/PrettyDeclStackTrace.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/TypeOrdering.h"
+#include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Basic/DarwinSDKInfo.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/PartialDiagnostic.h"
@@ -3095,19 +3097,55 @@ ProfilesSuppressAttr *Sema::makeProfilesSuppressAttr(const ParsedAttr &AL) {
       RawArgumentKinds.size());
 }
 
+static bool profileSuppressMatches(StringRef EntryProfile, StringRef EntryRule,
+                                   StringRef Profile, StringRef Rule) {
+  return EntryProfile == Profile &&
+         (EntryRule.empty() || EntryRule == Rule);
+}
+
 bool Sema::isProfileSuppressed(StringRef ProfileName,
                                 StringRef RuleName) const {
-  for (const auto &E : ProfileSuppressStack) {
-    if (E.ProfileName != ProfileName)
-      continue;
-    if (E.RuleName.empty() || E.RuleName == RuleName)
+  for (const auto &E : ProfileSuppressStack)
+    if (profileSuppressMatches(E.ProfileName, E.RuleName, ProfileName,
+                               RuleName))
       return true;
+  return false;
+}
+
+bool Sema::isProfileSuppressed(StringRef ProfileName, StringRef RuleName,
+                               const Stmt *S,
+                               AnalysisDeclContext &AC) const {
+  ParentMap &PM = AC.getParentMap();
+  for (const Stmt *Cur = S; Cur; Cur = PM.getParent(Cur)) {
+    if (const auto *AS = dyn_cast<AttributedStmt>(Cur))
+      for (const Attr *A : AS->getAttrs())
+        if (const auto *PSA = dyn_cast<ProfilesSuppressAttr>(A))
+          if (profileSuppressMatches(PSA->getProfileName(), PSA->getRule(),
+                                     ProfileName, RuleName))
+            return true;
+    // [[profiles::suppress]] on a local variable attaches to the VarDecl,
+    // not the enclosing DeclStmt. Walk the declared decls so the post-parse
+    // walker matches the parse-time ProfileSuppressForInit RAII behavior.
+    if (const auto *DS = dyn_cast<DeclStmt>(Cur))
+      for (const Decl *D : DS->decls())
+        for (const auto *PSA : D->specific_attrs<ProfilesSuppressAttr>())
+          if (profileSuppressMatches(PSA->getProfileName(), PSA->getRule(),
+                                     ProfileName, RuleName))
+            return true;
+  }
+  for (const Decl *D = AC.getDecl(); D;) {
+    for (const auto *PSA : D->specific_attrs<ProfilesSuppressAttr>())
+      if (profileSuppressMatches(PSA->getProfileName(), PSA->getRule(),
+                                 ProfileName, RuleName))
+        return true;
+    const DeclContext *DC = D->getLexicalDeclContext();
+    D = DC ? dyn_cast<Decl>(DC) : nullptr;
   }
   return false;
 }
 
-bool Sema::checkProfileViolation(StringRef ProfileName, StringRef RuleName,
-                                 SourceLocation Loc, unsigned DiagID) {
+bool Sema::shouldEmitProfileViolation(StringRef ProfileName, StringRef RuleName,
+                                      SourceLocation Loc) {
   if (!isProfileEnforced(ProfileName))
     return false;
   if (isProfileSuppressed(ProfileName, RuleName))
@@ -3121,7 +3159,40 @@ bool Sema::checkProfileViolation(StringRef ProfileName, StringRef RuleName,
     return false;
   if (currentEvaluationContext().isDiscardedStatementContext())
     return false;
+  return true;
+}
+
+bool Sema::shouldEmitProfileViolation(StringRef ProfileName, StringRef RuleName,
+                                      const Stmt *UseStmt,
+                                      AnalysisDeclContext &AC) const {
+  if (!isProfileEnforced(ProfileName))
+    return false;
+  if (isProfileSuppressed(ProfileName, RuleName, UseStmt, AC))
+    return false;
+  return true;
+}
+
+bool Sema::checkProfileViolation(StringRef ProfileName, StringRef RuleName,
+                                 SourceLocation Loc, unsigned DiagID) {
+  if (!shouldEmitProfileViolation(ProfileName, RuleName, Loc))
+    return false;
   Diag(Loc, DiagID) << ProfileName;
+  return true;
+}
+
+bool Sema::anyProfileRequestsCFGUninitAnalysis() const {
+  return isProfileEnforced("test::uninit_read");
+}
+
+bool Sema::tryEmitCFGUninitAnalysisDiagnostic(const VarDecl *VD,
+                                              const Expr *UseExpr,
+                                              AnalysisDeclContext &AC) {
+  static constexpr StringRef Profile = "test::uninit_read";
+  if (!shouldEmitProfileViolation(Profile, /*RuleName=*/"", UseExpr, AC))
+    return false;
+  Diag(UseExpr->getBeginLoc(), diag::err_profile_uninit_read)
+      << Profile << VD->getDeclName();
+  Diag(VD->getLocation(), diag::note_var_declared_here) << VD->getDeclName();
   return true;
 }
 
