@@ -613,6 +613,33 @@ define void @nonnull_only_ephemeral_use(ptr %p) {
   ret void
 }
 
+define ptr @nonnull_gep(ptr %p, i64 %i) {
+; DEFAULT-LABEL: @nonnull_gep(
+; DEFAULT-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[I:%.*]]
+; DEFAULT-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[P2]]) ]
+; DEFAULT-NEXT:    ret ptr [[P2]]
+;
+; BUNDLES-LABEL: @nonnull_gep(
+; BUNDLES-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[I:%.*]]
+; BUNDLES-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[P]]) ]
+; BUNDLES-NEXT:    ret ptr [[P2]]
+;
+  %p2 = getelementptr i8, ptr %p, i64 %i
+  call void @llvm.assume(i1 true) ["nonnull"(ptr %p2)]
+  ret ptr %p2
+}
+
+define ptr @nonnull_gep_inbounds(ptr %p, i64 %i) {
+; CHECK-LABEL: @nonnull_gep_inbounds(
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 [[I:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[P]]) ]
+; CHECK-NEXT:    ret ptr [[P2]]
+;
+  %p2 = getelementptr inbounds i8, ptr %p, i64 %i
+  call void @llvm.assume(i1 true) ["nonnull"(ptr %p2)]
+  ret ptr %p2
+}
+
 define void @always_true_assumption() {
 ; CHECK-LABEL: @always_true_assumption(
 ; CHECK-NEXT:    ret void

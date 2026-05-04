@@ -3716,6 +3716,24 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
           return CallBase::removeOperandBundle(II, OBU.getTagID());
         }
 
+        // Move assume to the base pointer of a gep if it's inbounds
+        if (auto *GEP = dyn_cast<GEPOperator>(RK.WasOn); GEP && GEP->isInBounds()) {
+          while (true) {
+            auto *NextGEP = dyn_cast<GEPOperator>(GEP->getPointerOperand());
+            if (!NextGEP || !NextGEP->isInBounds())
+              break;
+            GEP = NextGEP;
+          }
+          if (auto *Replacement = buildAssumeFromKnowledge(
+                  {RetainedKnowledge{Attribute::NonNull, 0,
+                                     GEP->getPointerOperand()}},
+                  Next, &AC, &DT)) {
+            InsertNewInstBefore(Replacement, Next->getIterator());
+            AC.registerAssumption(Replacement);
+            return CallBase::removeOperandBundle(II, OBU.getTagID());
+          }
+        }
+
         // TODO: apply nonnull return attributes to calls and invokes
       }
     }
