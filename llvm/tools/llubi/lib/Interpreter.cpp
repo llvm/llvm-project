@@ -64,6 +64,81 @@ static AnyValue mulNoWrap(const APInt &LHS, const APInt &RHS, bool HasNSW,
   return Res;
 }
 
+/// Visit the scalar values recursively. The callback function may modify the
+/// value in-place.
+static void forEachScalarValue(AnyValue &V,
+                               function_ref<void(AnyValue &)> Visit) {
+  if (V.isNone())
+    return;
+
+  if (V.isAggregate()) {
+    for (auto &SubValue : V.asAggregate())
+      forEachScalarValue(SubValue, Visit);
+    return;
+  }
+
+  Visit(V);
+}
+
+static void applyRangeAttr(AnyValue &V, const ConstantRange &CR) {
+  forEachScalarValue(V, [&](AnyValue &Scalar) {
+    if (Scalar.isInteger() && !CR.contains(Scalar.asInteger()))
+      Scalar = AnyValue::poison();
+  });
+}
+
+static void applyNoFPClassAttr(AnyValue &V, FPClassTest NoFPClass) {
+  forEachScalarValue(V, [NoFPClass](AnyValue &Scalar) {
+    if (Scalar.isFloat() && (Scalar.asFloat().classify() & NoFPClass))
+      Scalar = AnyValue::poison();
+  });
+}
+
+static void applyNonNullAttr(AnyValue &V, unsigned AS, const DataLayout &DL) {
+  if (V.isPointer() && V.asPointer().isNullPtr(AS, DL))
+    V = AnyValue::poison();
+}
+
+static void applyAlignAttr(AnyValue &V, Align Alignment) {
+  forEachScalarValue(V, [Alignment](AnyValue &Scalar) {
+    if (Scalar.isPointer() &&
+        Scalar.asPointer().address().countr_zero() < Log2(Alignment))
+      Scalar = AnyValue::poison();
+  });
+}
+
+static bool violatesNoUndefAttr(AnyValue &V) {
+  bool ContainsPoison = false;
+  forEachScalarValue(
+      V, [&](AnyValue &Scalar) { ContainsPoison |= Scalar.isPoison(); });
+  return ContainsPoison;
+}
+
+/// Assumes V is either a poison or a pointer.
+static bool violatesDereferenceableBytesAttr(const AnyValue &V, uint64_t Bytes,
+                                             bool OrNull, unsigned AS,
+                                             const DataLayout &DL) {
+  if (V.isPoison())
+    return true;
+
+  auto &Ptr = V.asPointer();
+  if (Ptr.isNullPtr(AS, DL)) {
+    if (OrNull)
+      return false;
+    return true;
+  }
+  auto *MO = Ptr.getMemoryObject();
+  if (!MO)
+    return true;
+
+  // TODO: check read_provenance
+  // TODO: check nofree for attributes/metadata.
+
+  const APInt &PtrAddr = Ptr.address();
+  return Bytes > MO->getSize() || PtrAddr.ult(MO->getAddress()) ||
+         PtrAddr.ugt(MO->getAddress() + MO->getSize() - Bytes);
+}
+
 /// Instruction executor using the visitor pattern.
 /// Unlike the Context class that manages the global state,
 /// InstExecutor only maintains the state for call frames.
@@ -381,6 +456,14 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     return Boolean == BooleanKind::True;
   }
 
+  APInt getIntNonPoison(const AnyValue &V) {
+    if (V.isPoison()) {
+      reportImmediateUB() << "Unexpected poison integer value.";
+      return APInt::getZero(64);
+    }
+    return V.asInteger();
+  }
+
 public:
   InstExecutor(Context &C, EventHandler &H, Function &F,
                ArrayRef<AnyValue> Args, AnyValue &RetVal)
@@ -462,12 +545,18 @@ public:
   }
 
   void returnFromCallee() {
-    // TODO: handle retval attributes (Attributes from known callee should be
-    // applied if available).
-    // TODO: handle metadata
     auto &CB = cast<CallBase>(*CurrentFrame->PC);
     CurrentFrame->CalleeArgs.clear();
     AnyValue &RetVal = CurrentFrame->CalleeRetVal;
+    if (Type *RetTy = CB.getType(); !RetTy->isVoidTy()) {
+      // Handle attributes on the return value (Attributes from resolved callee
+      // should be applied if available).
+      AttributeSet AttrsAtCallSite = CB.getRetAttributes();
+      AttributeSet AttrsAtCallee =
+          CurrentFrame->ResolvedCallee->getAttributes().getRetAttrs();
+      handleAttributes(RetTy, RetVal, AttrsAtCallSite, AttrsAtCallee);
+      handleMetadata(RetTy, RetVal, CB);
+    }
     setResult(CB, std::move(RetVal));
 
     if (auto *II = dyn_cast<InvokeInst>(&CB))
@@ -484,13 +573,86 @@ public:
     case Intrinsic::assume:
       switch (Args[0].asBoolean()) {
       case BooleanKind::True:
+        for (unsigned Idx = 0; Idx < CB.getNumOperandBundles(); Idx++) {
+          OperandBundleUse OBU = CB.getOperandBundleAt(Idx);
+          auto GetBundleArg = [&](uint32_t Offset) -> Value * {
+            return OBU.Inputs[Offset];
+          };
+          if (OBU.Inputs.empty())
+            continue;
+          Value *WasOnVal = GetBundleArg(0);
+          // Bail out on unrecognized operand bundles.
+          if (!WasOnVal->getType()->isPointerTy())
+            continue;
+          unsigned AS = WasOnVal->getType()->getPointerAddressSpace();
+          const AnyValue &WasOn = getValue(WasOnVal);
+          if (WasOn.isPoison()) {
+            reportImmediateUB() << "Assume on poison pointer.";
+            break;
+          }
+          const Pointer &WasOnPtr = WasOn.asPointer();
+          Attribute::AttrKind Kind =
+              Attribute::getAttrKindFromName(OBU.getTagName());
+          switch (Kind) {
+          case Attribute::Alignment: {
+            // Alignment assumptions should have 2 or 3 arguments.
+            // If there are two integer arguments, use the largest power of 2
+            // that divides them as the alignment.
+            APInt Alignment = getIntNonPoison(getValue(GetBundleArg(1)));
+            if (OBU.Inputs.size() == 3) {
+              APInt Offset = getIntNonPoison(getValue(GetBundleArg(2)));
+              if (!Alignment.isZero() || !Offset.isZero())
+                Alignment = APInt::getOneBitSet(
+                    std::max(Alignment.getBitWidth(), Offset.getBitWidth()),
+                    std::min(Alignment.countr_zero(), Offset.countr_zero()));
+            }
+            if (!Alignment.isPowerOf2()) {
+              if (!WasOnPtr.address().isZero())
+                reportImmediateUB() << "Assume on nonzero pointer " << WasOn
+                                    << " with a "
+                                       "non-power-of-two alignment "
+                                    << Alignment << '.';
+              break;
+            }
+            if (WasOnPtr.address().countr_zero() < Alignment.logBase2())
+              reportImmediateUB()
+                  << "The pointer " << WasOn << " violates align(" << Alignment
+                  << ") assumption.";
+            break;
+          }
+          case Attribute::NonNull:
+            if (WasOnPtr.isNullPtr(AS, DL))
+              reportImmediateUB()
+                  << "The pointer " << WasOn << " violates nonnull assumption.";
+            break;
+          case Attribute::Dereferenceable:
+          case Attribute::DereferenceableOrNull: {
+            APInt DereferenceableBytes =
+                getIntNonPoison(getValue(GetBundleArg(1)));
+            // Only n > 0 implies that the pointer is dereferenceable.
+            if (DereferenceableBytes.isZero())
+              break;
+            if (violatesDereferenceableBytesAttr(
+                    WasOn, DereferenceableBytes.getLimitedValue(),
+                    Kind == Attribute::DereferenceableOrNull, AS, DL))
+              reportImmediateUB() << "The pointer " << WasOn << " violates "
+                                  << (Kind == Attribute::DereferenceableOrNull
+                                          ? "dereferenceable_or_null("
+                                          : "dereferenceable(")
+                                  << DereferenceableBytes << ") assumption.";
+            break;
+          }
+          default:
+            // TODO: handle other operand bundles like separate_storage.
+            break;
+          }
+        }
         break;
       case BooleanKind::False:
       case BooleanKind::Poison:
         reportImmediateUB() << "Assume on false or poison condition.";
         break;
       }
-      // TODO: handle llvm.assume with operand bundles
       return AnyValue();
     case Intrinsic::lifetime_start:
     case Intrinsic::lifetime_end: {
@@ -924,10 +1086,134 @@ public:
     return AnyValue();
   }
 
+  /// Handle both poison-generating and UB-implying attributes for parameters
+  /// and return values.
+  void handleAttributes(Type *Ty, AnyValue &V, AttributeSet AttrsAtCallSite,
+                        AttributeSet AttrsAtCallee) {
+    if (Ty->isIntOrIntVectorTy()) {
+      if (auto CRAttr = AttrsAtCallSite.getAttribute(Attribute::Range);
+          CRAttr.isValid())
+        applyRangeAttr(V, CRAttr.getRange());
+      if (auto CRAttr = AttrsAtCallee.getAttribute(Attribute::Range);
+          CRAttr.isValid())
+        applyRangeAttr(V, CRAttr.getRange());
+    }
+    if (AttributeFuncs::isNoFPClassCompatibleType(Ty)) {
+      if (auto CRAttr = AttrsAtCallSite.getAttribute(Attribute::NoFPClass);
+          CRAttr.isValid())
+        applyNoFPClassAttr(V, CRAttr.getNoFPClass());
+      if (auto CRAttr = AttrsAtCallee.getAttribute(Attribute::NoFPClass);
+          CRAttr.isValid())
+        applyNoFPClassAttr(V, CRAttr.getNoFPClass());
+    }
+    if (Ty->isPointerTy()) {
+      if (AttrsAtCallSite.hasAttribute(Attribute::NonNull) ||
+          AttrsAtCallee.hasAttribute(Attribute::NonNull))
+        applyNonNullAttr(V, Ty->getPointerAddressSpace(), DL);
+    }
+    if (Ty->isPtrOrPtrVectorTy()) {
+      if (MaybeAlign Align = AttrsAtCallSite.getAlignment())
+        applyAlignAttr(V, *Align);
+      if (MaybeAlign Align = AttrsAtCallee.getAlignment())
+        applyAlignAttr(V, *Align);
+    }
+    if ((AttrsAtCallSite.hasAttribute(Attribute::NoUndef) ||
+         AttrsAtCallee.hasAttribute(Attribute::NoUndef)) &&
+        violatesNoUndefAttr(V)) {
+      reportImmediateUB() << "The value " << V
+                          << " violates noundef attribute.";
+      return;
+    }
+    if (Ty->isPointerTy()) {
+      unsigned AS = Ty->getPointerAddressSpace();
+      if (uint64_t DereferenceableBytes =
+              std::max(AttrsAtCallSite.getDereferenceableBytes(),
+                       AttrsAtCallee.getDereferenceableBytes())) {
+        if (violatesDereferenceableBytesAttr(V, DereferenceableBytes,
+                                             /*OrNull=*/false, AS, DL))
+          reportImmediateUB()
+              << "The value " << V << " violates dereferenceable("
+              << DereferenceableBytes << ") attribute.";
+      } else if (uint64_t DereferenceableOrNullBytes =
+                     std::max(AttrsAtCallSite.getDereferenceableOrNullBytes(),
+                              AttrsAtCallee.getDereferenceableOrNullBytes())) {
+        if (violatesDereferenceableBytesAttr(V, DereferenceableOrNullBytes,
+                                             /*OrNull=*/true, AS, DL))
+          reportImmediateUB() << "The value " << V
+                              << " violates "
+                                 "dereferenceable_or_null("
+                              << DereferenceableOrNullBytes << ") attribute.";
+      }
+    }
+  }
+
+  /// Handle both poison-generating and UB-implying metadata on instructions.
+  void handleMetadata(Type *Ty, AnyValue &V, Instruction &I) {
+    auto ExtractFirstIntOperand = [](const MDNode *Node) {
+      return mdconst::extract<ConstantInt>(Node->getOperand(0))->getZExtValue();
+    };
+
+    if (Ty->isIntOrIntVectorTy()) {
+      if (MDNode *Ranges = I.getMetadata(LLVMContext::MD_range)) {
+        SmallVector<ConstantRange> RangeList;
+        for (uint32_t I = 0; I < Ranges->getNumOperands(); I += 2) {
+          RangeList.emplace_back(
+              mdconst::extract<ConstantInt>(Ranges->getOperand(I))->getValue(),
+              mdconst::extract<ConstantInt>(Ranges->getOperand(I + 1))
+                  ->getValue());
+        }
+        forEachScalarValue(V, [&](AnyValue &Scalar) {
+          if (!Scalar.isInteger())
+            return;
+          for (auto &CR : RangeList)
+            if (CR.contains(Scalar.asInteger()))
+              return;
+          Scalar = AnyValue::poison();
+        });
+      }
+    }
+    if (AttributeFuncs::isNoFPClassCompatibleType(Ty)) {
+      if (const MDNode *NoFPClass = I.getMetadata(LLVMContext::MD_nofpclass)) {
+        applyNoFPClassAttr(
+            V, static_cast<FPClassTest>(ExtractFirstIntOperand(NoFPClass)));
+      }
+    }
+    if (Ty->isPointerTy()) {
+      if (I.hasMetadata(LLVMContext::MD_nonnull))
+        applyNonNullAttr(V, Ty->getPointerAddressSpace(), DL);
+      // Unlike align attributes, !align is only defined for pointer types.
+      if (const MDNode *Alignment = I.getMetadata(LLVMContext::MD_align))
+        applyAlignAttr(V, Align(ExtractFirstIntOperand(Alignment)));
+    }
+    if (I.hasMetadata(LLVMContext::MD_noundef) && violatesNoUndefAttr(V)) {
+      reportImmediateUB() << "The value " << V
+                          << " violates !noundef metadata.";
+      return;
+    }
+    if (Ty->isPointerTy()) {
+      unsigned AS = Ty->getPointerAddressSpace();
+      if (const MDNode *DereferenceableBytes =
+              I.getMetadata(LLVMContext::MD_dereferenceable)) {
+        uint64_t Bytes = ExtractFirstIntOperand(DereferenceableBytes);
+        if (violatesDereferenceableBytesAttr(V, Bytes,
+                                             /*OrNull=*/false, AS, DL))
+          reportImmediateUB()
+              << "The value " << V << " violates !dereferenceable !{i64 "
+              << Bytes << "} metadata.";
+      } else if (const MDNode *DereferenceableOrNullBytes =
+                     I.getMetadata(LLVMContext::MD_dereferenceable_or_null)) {
+        uint64_t Bytes = ExtractFirstIntOperand(DereferenceableOrNullBytes);
+        if (violatesDereferenceableBytesAttr(V, Bytes,
+                                             /*OrNull=*/true, AS, DL))
+          reportImmediateUB()
+              << "The value " << V << " violates !dereferenceable_or_null!{i64 "
+              << Bytes << "} metadata.";
+      }
+    }
+  }
+
   void enterCall(CallBase &CB) {
     Function *Callee = CB.getCalledFunction();
-    // TODO: handle parameter attributes (Attributes from known callee should be
-    // applied if available).
     // TODO: handle byval/initializes
     auto &CalleeArgs = CurrentFrame->CalleeArgs;
     assert(CalleeArgs.empty() &&
@@ -973,6 +1259,19 @@ public:
     assert(
         Callee->getFunctionType() == CB.getFunctionType() &&
         "Expected the callee function type to match the call site signature.");
+
+    // Handle parameter attributes (Attributes from resolved callee should be
+    // applied if available).
+    for (auto [I, Arg] : enumerate(CB.args())) {
+      Type *ArgTy = Arg->getType();
+      AnyValue &ArgVal = CalleeArgs[I];
+      // CallBase::paramHasAttr also checks parameter attributes at known
+      // callee. We do it explicitly to avoid duplication.
+      AttributeSet AttrsAtCallSite = CB.getParamAttributes(I);
+      AttributeSet AttrsAtCallee = Callee->getAttributes().getParamAttrs(I);
+      handleAttributes(ArgTy, ArgVal, AttrsAtCallSite, AttrsAtCallee);
+    }
+
     CurrentFrame->ResolvedCallee = Callee;
     if (Callee->isIntrinsic()) {
       CurrentFrame->CalleeRetVal = callIntrinsic(CB, CalleeArgs);
@@ -1395,7 +1694,8 @@ public:
     auto RetVal =
         load(getValue(LI.getPointerOperand()), LI.getAlign(), LI.getType());
     // TODO: track volatile loads
-    // TODO: handle metadata
+    // TODO: Check undef bits when !noundef is set.
+    handleMetadata(LI.getType(), RetVal, LI);
     setResult(LI, std::move(RetVal));
   }
 
