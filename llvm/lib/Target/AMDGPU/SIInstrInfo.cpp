@@ -10752,6 +10752,15 @@ MachineInstr *SIInstrInfo::createPHISourceCopy(
 
 bool llvm::SIInstrInfo::isWave32() const { return ST.isWave32(); }
 
+bool SIInstrInfo::hasRAWDependency(const MachineInstr &FirstMI,
+                                   const MachineInstr &SecondMI) const {
+  for (const auto &Use : SecondMI.all_uses()) {
+    if (Use.isReg() && FirstMI.modifiesRegister(Use.getReg(), &RI))
+      return true;
+  }
+  return false;
+}
+
 /// If OpX is multicycle, anti-dependencies are not allowed.
 /// isDPMACCInstruction was not designed for VOPD, but it is fit for the
 /// purpose.

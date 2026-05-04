@@ -1666,6 +1666,9 @@ public:
 
   bool isVOPDAntidependencyAllowed(const MachineInstr &MI) const;
 
+  bool hasRAWDependency(const MachineInstr &FirstMI,
+                        const MachineInstr &SecondMI) const;
+
   /// Return a partially built integer add instruction without carry.
   /// Caller must add source operands.
   /// For pre-GFX9 it will generate unused carry destination operand.

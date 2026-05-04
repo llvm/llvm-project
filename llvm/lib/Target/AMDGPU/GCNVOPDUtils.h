@@ -23,11 +23,6 @@ namespace llvm {
 class MachineInstr;
 class SIInstrInfo;
 
-namespace AMDGPU {
-bool hasDataDependencyForVOPD(const MachineInstr &FirstMI,
-                              const MachineInstr &SecondMI);
-} // namespace AMDGPU
-
 bool checkVOPDRegConstraints(const SIInstrInfo &TII,
                              const MachineInstr &FirstMI,
                              const MachineInstr &SecondMI, bool IsVOPD3,
@@ -36,8 +31,8 @@ bool checkVOPDRegConstraints(const SIInstrInfo &TII,
 /// Describes a matched VOPD pair: which instruction is the X component and
 /// which is the Y component, and whether this is a VOPD3 encoding.
 struct VOPDMatchInfo {
-  const MachineInstr *MIX;
-  const MachineInstr *MIY;
+  MachineInstr *MIX;
+  MachineInstr *MIY;
   bool IsVOPD3;
 };
 
@@ -45,8 +40,8 @@ struct VOPDMatchInfo {
 /// combined into a VOPD instruction.  Returns the match info (X/Y assignment
 /// and encoding variant) on success, or std::nullopt if they cannot be paired.
 std::optional<VOPDMatchInfo> tryMatchVOPDPair(const SIInstrInfo &TII,
-                                              const MachineInstr &FirstMI,
-                                              const MachineInstr &SecondMI);
+                                              MachineInstr &FirstMI,
+                                              MachineInstr &SecondMI);
 
 std::unique_ptr<ScheduleDAGMutation> createVOPDPairingMutation();
 

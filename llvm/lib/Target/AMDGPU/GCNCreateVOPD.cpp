@@ -150,11 +150,8 @@ public:
         auto *SecondMI = &*MII;
 
         if (auto Match = tryMatchVOPDPair(*SII, *FirstMI, *SecondMI)) {
-          // MIX and MIY point to either FirstMI or SecondMI, both non-const.
-          auto *MIX = const_cast<MachineInstr *>(Match->MIX);
-          auto *MIY = const_cast<MachineInstr *>(Match->MIY);
           ReplaceCandidates.push_back(
-              VOPDCombineInfo(MIX, MIY, Match->IsVOPD3));
+              VOPDCombineInfo(Match->MIX, Match->MIY, Match->IsVOPD3));
           ++MII;
         }
       }

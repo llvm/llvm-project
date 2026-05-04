@@ -34,17 +34,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "gcn-vopd-utils"
 
-bool AMDGPU::hasDataDependencyForVOPD(const MachineInstr &FirstMI,
-                                      const MachineInstr &SecondMI) {
-  const GCNSubtarget &ST = FirstMI.getMF()->getSubtarget<GCNSubtarget>();
-  const SIRegisterInfo *TRI = ST.getRegisterInfo();
-  for (const auto &Use : SecondMI.all_uses()) {
-    if (Use.isReg() && FirstMI.modifiesRegister(Use.getReg(), TRI))
-      return true;
-  }
-  return false;
-}
-
 bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
                                    const MachineInstr &MIX,
                                    const MachineInstr &MIY, bool IsVOPD3,
@@ -184,18 +173,18 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
 /// VOPD3).  Returns the X/Y assignment on success, or std::nullopt otherwise.
 static std::optional<VOPDMatchInfo>
 tryMatchVOPDPairVariant(const SIInstrInfo &TII, unsigned EncodingFamily,
-                        const MachineInstr &FirstMI,
-                        const MachineInstr &SecondMI, bool IsVOPD3) {
+                        MachineInstr &FirstMI, MachineInstr &SecondMI,
+                        bool IsVOPD3) {
   unsigned Opc = FirstMI.getOpcode();
   unsigned Opc2 = SecondMI.getOpcode();
   auto FirstCanBeVOPD = AMDGPU::getCanBeVOPD(Opc, EncodingFamily, IsVOPD3);
   auto SecondCanBeVOPD = AMDGPU::getCanBeVOPD(Opc2, EncodingFamily, IsVOPD3);
 
   // If SecondMI depends on FirstMI they cannot execute at the same time.
-  if (AMDGPU::hasDataDependencyForVOPD(FirstMI, SecondMI))
+  if (TII.hasRAWDependency(FirstMI, SecondMI))
     return std::nullopt;
 
-  bool IsAntiDep = AMDGPU::hasDataDependencyForVOPD(SecondMI, FirstMI);
+  bool IsAntiDep = TII.hasRAWDependency(SecondMI, FirstMI);
   // AllowSameVGPR relaxes the VGPR bank overlap check for source operands.
   // Only enable it when there is no antidependency.
   const GCNSubtarget &ST = TII.getSubtarget();
@@ -217,9 +206,9 @@ tryMatchVOPDPairVariant(const SIInstrInfo &TII, unsigned EncodingFamily,
   return std::nullopt;
 }
 
-std::optional<VOPDMatchInfo>
-llvm::tryMatchVOPDPair(const SIInstrInfo &TII, const MachineInstr &FirstMI,
-                       const MachineInstr &SecondMI) {
+std::optional<VOPDMatchInfo> llvm::tryMatchVOPDPair(const SIInstrInfo &TII,
+                                                    MachineInstr &FirstMI,
+                                                    MachineInstr &SecondMI) {
   const GCNSubtarget &ST = TII.getSubtarget();
   unsigned EncodingFamily = AMDGPU::getVOPDEncodingFamily(ST);
   if (auto Match = tryMatchVOPDPairVariant(TII, EncodingFamily, FirstMI,
@@ -263,7 +252,9 @@ static bool shouldScheduleVOPDAdjacent(const TargetInstrInfo &TII,
   }() && "Expected FirstMI to precede SecondMI");
 #endif
 
-  return tryMatchVOPDPair(STII, *FirstMI, SecondMI).has_value();
+  return tryMatchVOPDPair(STII, *const_cast<MachineInstr *>(FirstMI),
+                          const_cast<MachineInstr &>(SecondMI))
+      .has_value();
 }
 
 namespace {
