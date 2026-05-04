@@ -190,14 +190,14 @@ const StackFrame *CallEvent::getCalleeStackFrame(unsigned BlockCount) const {
 
 const ParamVarRegion
 *CallEvent::getParameterLocation(unsigned Index, unsigned BlockCount) const {
-  const StackFrame *SFC = getCalleeStackFrame(BlockCount);
+  const StackFrame *SF = getCalleeStackFrame(BlockCount);
   // We cannot construct a VarRegion without a stack frame.
-  if (!SFC)
+  if (!SF)
     return nullptr;
 
   const ParamVarRegion *PVR =
-    State->getStateManager().getRegionManager().getParamVarRegion(
-        getOriginExpr(), Index, SFC);
+      State->getStateManager().getRegionManager().getParamVarRegion(
+          getOriginExpr(), Index, SF);
   return PVR;
 }
 
@@ -987,10 +987,10 @@ void AnyCXXConstructorCall::getInitialStackFrameContents(
 }
 
 const StackFrame *CXXInheritedConstructorCall::getInheritingStackFrame() const {
-  const StackFrame *SFC = getLocationContext()->getStackFrame();
-  while (isa<CXXInheritedCtorInitExpr>(SFC->getCallSite()))
-    SFC = SFC->getParent()->getStackFrame();
-  return SFC;
+  const StackFrame *SF = getLocationContext()->getStackFrame();
+  while (isa<CXXInheritedCtorInitExpr>(SF->getCallSite()))
+    SF = SF->getParent()->getStackFrame();
+  return SF;
 }
 
 SVal CXXDestructorCall::getCXXThisVal() const {

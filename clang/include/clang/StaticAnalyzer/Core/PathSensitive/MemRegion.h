@@ -419,18 +419,18 @@ public:
 class StackSpaceRegion : public MemSpaceRegion {
   virtual void anchor();
 
-  const StackFrame *SFC;
+  const StackFrame *SF;
 
 protected:
-  StackSpaceRegion(MemRegionManager &mgr, Kind k, const StackFrame *sfc)
-      : MemSpaceRegion(mgr, k), SFC(sfc) {
+  StackSpaceRegion(MemRegionManager &mgr, Kind k, const StackFrame *SF)
+      : MemSpaceRegion(mgr, k), SF(SF) {
     assert(classof(this));
-    assert(sfc);
+    assert(SF);
   }
 
 public:
   LLVM_ATTRIBUTE_RETURNS_NONNULL
-  const StackFrame *getStackFrame() const { return SFC; }
+  const StackFrame *getStackFrame() const { return SF; }
 
   void Profile(llvm::FoldingSetNodeID &ID) const override;
 
@@ -443,8 +443,8 @@ public:
 class StackLocalsSpaceRegion : public StackSpaceRegion {
   friend class MemRegionManager;
 
-  StackLocalsSpaceRegion(MemRegionManager &mgr, const StackFrame *sfc)
-      : StackSpaceRegion(mgr, StackLocalsSpaceRegionKind, sfc) {}
+  StackLocalsSpaceRegion(MemRegionManager &mgr, const StackFrame *SF)
+      : StackSpaceRegion(mgr, StackLocalsSpaceRegionKind, SF) {}
 
 public:
   void dumpToStream(raw_ostream &os) const override;
@@ -458,8 +458,8 @@ class StackArgumentsSpaceRegion : public StackSpaceRegion {
 private:
   friend class MemRegionManager;
 
-  StackArgumentsSpaceRegion(MemRegionManager &mgr, const StackFrame *sfc)
-      : StackSpaceRegion(mgr, StackArgumentsSpaceRegionKind, sfc) {}
+  StackArgumentsSpaceRegion(MemRegionManager &mgr, const StackFrame *SF)
+      : StackSpaceRegion(mgr, StackArgumentsSpaceRegionKind, SF) {}
 
 public:
   void dumpToStream(raw_ostream &os) const override;

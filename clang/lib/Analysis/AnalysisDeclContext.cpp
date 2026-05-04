@@ -438,8 +438,8 @@ const StackFrame *LocationContextManager::getStackFrame(
 const StackFrame *LocationContext::getStackFrame() const {
   const LocationContext *LC = this;
   while (LC) {
-    if (const auto *SFC = dyn_cast<StackFrame>(LC))
-      return SFC;
+    if (const auto *SF = dyn_cast<StackFrame>(LC))
+      return SF;
     LC = LC->getParent();
   }
   return nullptr;

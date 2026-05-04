@@ -461,8 +461,8 @@ void ExprEngine::examineStackFrames(const Decl *D, const LocationContext *LCtx,
   StackDepth = 0;
 
   while (LCtx) {
-    if (const StackFrame *SFC = dyn_cast<StackFrame>(LCtx)) {
-      const Decl *DI = SFC->getDecl();
+    if (const StackFrame *SF = dyn_cast<StackFrame>(LCtx)) {
+      const Decl *DI = SF->getDecl();
 
       // Mark recursive (and mutually recursive) functions and always count
       // them when measuring the stack depth.

@@ -391,10 +391,10 @@ public:
   }
 
   /// Return a memory region for the 'this' object reference.
-  loc::MemRegionVal getCXXThis(const CXXMethodDecl *D, const StackFrame *SFC);
+  loc::MemRegionVal getCXXThis(const CXXMethodDecl *D, const StackFrame *SF);
 
   /// Return a memory region for the 'this' object reference.
-  loc::MemRegionVal getCXXThis(const CXXRecordDecl *D, const StackFrame *SFC);
+  loc::MemRegionVal getCXXThis(const CXXRecordDecl *D, const StackFrame *SF);
 };
 
 SValBuilder* createSimpleSValBuilder(llvm::BumpPtrAllocator &alloc,

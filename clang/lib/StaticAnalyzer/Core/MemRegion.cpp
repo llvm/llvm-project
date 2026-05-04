@@ -1000,12 +1000,12 @@ getStackOrCaptureRegionForDeclContext(const LocationContext *LC,
                                       const DeclContext *DC,
                                       const VarDecl *VD) {
   while (LC) {
-    if (const auto *SFC = dyn_cast<StackFrame>(LC)) {
-      if (cast<DeclContext>(SFC->getDecl()) == DC)
-        return SFC;
-      if (SFC->getData()) {
+    if (const auto *SF = dyn_cast<StackFrame>(LC)) {
+      if (cast<DeclContext>(SF->getDecl()) == DC)
+        return SF;
+      if (SF->getData()) {
         // FIXME: This can be made more efficient.
-        for (auto Var : static_cast<const BlockDataRegion *>(SFC->getData())
+        for (auto Var : static_cast<const BlockDataRegion *>(SF->getData())
                             ->referenced_vars()) {
           const TypedValueRegion *OrigR = Var.getOriginalRegion();
           if (const auto *VR = dyn_cast<VarRegion>(OrigR)) {
@@ -1042,10 +1042,10 @@ const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
   const auto *PVD = dyn_cast<ParmVarDecl>(D);
   if (PVD) {
     unsigned Index = PVD->getFunctionScopeIndex();
-    const StackFrame *SFC = LC->getStackFrame();
-    const Expr *CallSite = SFC->getCallSite();
+    const StackFrame *SF = LC->getStackFrame();
+    const Expr *CallSite = SF->getCallSite();
     if (CallSite) {
-      const Decl *CalleeDecl = SFC->getDecl();
+      const Decl *CalleeDecl = SF->getDecl();
       bool CurrentParam = true;
       if (const auto *FD = dyn_cast<FunctionDecl>(CalleeDecl)) {
         CurrentParam =
@@ -1059,7 +1059,7 @@ const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
         // If this is a parameter of the *current* stack frame, we can
         // represent it with a `ParamVarRegion`.
         return getSubRegion<ParamVarRegion>(CallSite, Index,
-                                            getStackArgumentsRegion(SFC));
+                                            getStackArgumentsRegion(SF));
       } else {
         // TODO: Parameters of other stack frames (which may have been be
         // captured by a lambda or a block) are currently represented by
@@ -1175,10 +1175,10 @@ MemRegionManager::getNonParamVarRegion(const VarDecl *D,
 const ParamVarRegion *
 MemRegionManager::getParamVarRegion(const Expr *OriginExpr, unsigned Index,
                                     const LocationContext *LC) {
-  const StackFrame *SFC = LC->getStackFrame();
-  assert(SFC);
+  const StackFrame *SF = LC->getStackFrame();
+  assert(SF);
   return getSubRegion<ParamVarRegion>(OriginExpr, Index,
-                                      getStackArgumentsRegion(SFC));
+                                      getStackArgumentsRegion(SF));
 }
 
 const BlockDataRegion *
@@ -1299,18 +1299,18 @@ MemRegionManager::getObjCIvarRegion(const ObjCIvarDecl *d,
 const CXXTempObjectRegion*
 MemRegionManager::getCXXTempObjectRegion(Expr const *E,
                                          LocationContext const *LC) {
-  const StackFrame *SFC = LC->getStackFrame();
-  assert(SFC);
-  return getSubRegion<CXXTempObjectRegion>(E, getStackLocalsRegion(SFC));
+  const StackFrame *SF = LC->getStackFrame();
+  assert(SF);
+  return getSubRegion<CXXTempObjectRegion>(E, getStackLocalsRegion(SF));
 }
 
 const CXXLifetimeExtendedObjectRegion *
 MemRegionManager::getCXXLifetimeExtendedObjectRegion(
     const Expr *Ex, const ValueDecl *VD, const LocationContext *LC) {
-  const StackFrame *SFC = LC->getStackFrame();
-  assert(SFC);
+  const StackFrame *SF = LC->getStackFrame();
+  assert(SF);
   return getSubRegion<CXXLifetimeExtendedObjectRegion>(
-      Ex, VD, getStackLocalsRegion(SFC));
+      Ex, VD, getStackLocalsRegion(SF));
 }
 
 const CXXLifetimeExtendedObjectRegion *

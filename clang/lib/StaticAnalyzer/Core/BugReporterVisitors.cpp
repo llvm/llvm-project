@@ -2295,7 +2295,7 @@ public:
                          const ExplodedNode *LVNode,
                          TrackingOptions Opts) override {
     ProgramStateRef LVState = LVNode->getState();
-    const StackFrame *SFC = LVNode->getStackFrame();
+    const StackFrame *SF = LVNode->getStackFrame();
     PathSensitiveBugReport &Report = getParentTracker().getReport();
     Tracker::Result Result;
 
@@ -2311,7 +2311,7 @@ public:
       // pointer. In addition, we should find the store at which the reference
       // got initialized.
       if (RR && !LVIsNull)
-        Result.combineWith(getParentTracker().track(LVal, RR, Opts, SFC));
+        Result.combineWith(getParentTracker().track(LVal, RR, Opts, SF));
 
       // In case of C++ references, we want to differentiate between a null
       // reference and reference to null pointer.
@@ -2356,7 +2356,7 @@ public:
             // previously.
             Report.addVisitor<SuppressInlineDefensiveChecksVisitor>(*DV,
                                                                     InputNode);
-        getParentTracker().track(V, R, Opts, SFC);
+        getParentTracker().track(V, R, Opts, SF);
       }
     }
 
@@ -2463,7 +2463,7 @@ public:
                          const ExplodedNode *LVNode,
                          TrackingOptions Opts) override {
     ProgramStateRef LVState = LVNode->getState();
-    const StackFrame *SFC = LVNode->getStackFrame();
+    const StackFrame *SF = LVNode->getStackFrame();
     PathSensitiveBugReport &Report = getParentTracker().getReport();
     Tracker::Result Result;
 
@@ -2499,7 +2499,7 @@ public:
 
         if (!RVal.isUnknown())
           Result.combineWith(
-              getParentTracker().track(RVal, L->getRegion(), Opts, SFC));
+              getParentTracker().track(RVal, L->getRegion(), Opts, SF));
       }
 
       const MemRegion *RegionRVal = RVal.getAsRegion();

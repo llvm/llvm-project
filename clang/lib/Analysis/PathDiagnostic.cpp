@@ -514,10 +514,10 @@ SourceLocation PathDiagnosticLocation::getValidSourceLocation(
 }
 
 static PathDiagnosticLocation
-getLocationForCaller(const StackFrame *SFC, const LocationContext *CallerCtx,
+getLocationForCaller(const StackFrame *SF, const LocationContext *CallerCtx,
                      const SourceManager &SM) {
-  const CFGBlock &Block = *SFC->getCallSiteBlock();
-  CFGElement Source = Block[SFC->getIndex()];
+  const CFGBlock &Block = *SF->getCallSiteBlock();
+  CFGElement Source = Block[SF->getIndex()];
 
   switch (Source.getKind()) {
   case CFGElement::Statement:

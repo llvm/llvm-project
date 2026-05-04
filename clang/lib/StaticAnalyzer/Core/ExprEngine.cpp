@@ -305,9 +305,9 @@ ProgramStateRef ExprEngine::getInitialState(const LocationContext *InitLoc) {
       // Precondition: 'this' is always non-null upon entry to the
       // top-level function.  This is our starting assumption for
       // analyzing an "open" program.
-      const StackFrame *SFC = InitLoc->getStackFrame();
-      if (SFC->getParent() == nullptr) {
-        loc::MemRegionVal L = svalBuilder.getCXXThis(MD, SFC);
+      const StackFrame *SF = InitLoc->getStackFrame();
+      if (SF->getParent() == nullptr) {
+        loc::MemRegionVal L = svalBuilder.getCXXThis(MD, SF);
         SVal V = state->getSVal(L);
         if (std::optional<Loc> LV = V.getAs<Loc>()) {
           state = state->assume(*LV, true);
@@ -1055,8 +1055,8 @@ void ExprEngine::removeDead(ExplodedNode *Pred, ExplodedNodeSet &Out,
     LC = LC->getParent();
   }
 
-  const StackFrame *SFC = LC ? LC->getStackFrame() : nullptr;
-  SymbolReaper SymReaper(SFC, ReferenceStmt, SymMgr, getStoreManager());
+  const StackFrame *SF = LC ? LC->getStackFrame() : nullptr;
+  SymbolReaper SymReaper(SF, ReferenceStmt, SymMgr, getStoreManager());
 
   for (auto I : CleanedState->get<ObjectsUnderConstruction>()) {
     if (SymbolRef Sym = I.second.getAsSymbol())
@@ -1071,7 +1071,7 @@ void ExprEngine::removeDead(ExplodedNode *Pred, ExplodedNodeSet &Out,
   // and the store. TODO: The function should just return new env and store,
   // not a new state.
   CleanedState = StateMgr.removeDeadBindingsFromEnvironmentAndStore(
-      CleanedState, SFC, SymReaper);
+      CleanedState, SF, SymReaper);
 
   // Process any special transfer function for dead symbols.
   // Call checkers with the non-cleaned state so that they could query the
