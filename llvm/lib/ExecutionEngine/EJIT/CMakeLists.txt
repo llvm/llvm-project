@@ -1,0 +1,20 @@
+add_llvm_component_library(LLVMEJIT
+  EJit.cpp
+  EJitRuntime.cpp
+  EJitRegistration.cpp
+  EJitOrcEngine.cpp
+  EJitJITLinkMemoryManager.cpp
+  EJitCompileDriver.cpp
+  EJitCache.cpp
+  EJitRuntimeState.cpp
+  EJitModuleLoader.cpp
+  EJitLogger.cpp
+  EJitRegistrationStore.cpp
+
+  LINK_COMPONENTS
+  Core
+  ExecutionEngine
+  OrcJIT
+  JITLink
+  Support
+  )

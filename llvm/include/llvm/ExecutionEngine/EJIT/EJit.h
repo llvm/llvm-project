@@ -1,0 +1,72 @@
+//===-- EJit.h - EmbeddedJIT Main C++ API ---------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_EXECUTIONENGINE_EJIT_EJIT_H
+#define LLVM_EXECUTIONENGINE_EJIT_EJIT_H
+
+#include "llvm/ExecutionEngine/EJIT/EJitCache.h"
+#include "llvm/ExecutionEngine/EJIT/EJitError.h"
+#include "llvm/ExecutionEngine/EJIT/EJitModuleLoader.h"
+#include "llvm/ExecutionEngine/EJIT/EJitOptions.h"
+#include "llvm/ExecutionEngine/EJIT/EJitRuntimeState.h"
+#include <memory>
+#include <string>
+
+namespace llvm {
+namespace ejit {
+
+class EJitCompileDriver;
+class EJitLogger;
+
+/// Main user-facing class for EmbeddedJIT. Owns all runtime components.
+class EJit {
+public:
+  EJit(const Config &config = {});
+  ~EJit();
+
+  // Lifecycle
+  void activate(const std::string &periodName, unsigned cellIdx);
+  void deactivate(const std::string &periodName, unsigned cellIdx);
+  void activateAll(const std::string &periodName);
+  void deactivateAll(const std::string &periodName);
+  bool isActive(const std::string &periodName, unsigned cellIdx) const;
+
+  // Compilation
+  void *getOrCompile(const std::string &funcName,
+                     const std::pair<std::string, unsigned> *dims,
+                     unsigned count);
+
+  // Cache management
+  void clearCache();
+  void invalidateByPeriod(const std::string &periodName, unsigned cellIdx);
+
+  // Configuration
+  void setCompileMode(CompileMode mode);
+  CompileMode getCompileMode() const;
+  void setOptimizationLevel(OptimizationLevel level);
+  OptimizationLevel getOptimizationLevel() const;
+
+  // Statistics
+  EJitCache::Stats getStats() const;
+
+  // Error
+  const EJitError *getLastError() const;
+
+private:
+  Config config_;
+  std::unique_ptr<EJitRuntimeState> runtimeState_;
+  std::unique_ptr<EJitModuleLoader> moduleLoader_;
+  std::unique_ptr<EJitCache> cache_;
+  std::unique_ptr<EJitLogger> logger_;
+  std::unique_ptr<EJitCompileDriver> compileDriver_;
+};
+
+} // namespace ejit
+} // namespace llvm
+
+#endif

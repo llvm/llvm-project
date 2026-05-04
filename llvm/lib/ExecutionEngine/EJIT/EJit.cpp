@@ -1,0 +1,116 @@
+//===-- EJit.cpp - EmbeddedJIT Main C++ API -------------------------------===//
+
+#include "llvm/ExecutionEngine/EJIT/EJit.h"
+#include "llvm/ExecutionEngine/EJIT/EJitCompileDriver.h"
+#include "llvm/ExecutionEngine/EJIT/EJitLogger.h"
+#include "llvm/ExecutionEngine/EJIT/EJitOrcEngine.h"
+#include "llvm/ExecutionEngine/EJIT/EJitRegistrationStore.h"
+
+using namespace llvm;
+using namespace llvm::ejit;
+
+EJit::EJit(const Config &config) : config_(config) {
+  // Create all runtime components
+  runtimeState_ = std::make_unique<EJitRuntimeState>();
+  moduleLoader_ = std::make_unique<EJitModuleLoader>();
+  cache_ = std::make_unique<EJitCache>(config.maxCacheEntries,
+                                       config.maxCacheSize,
+                                       config.maxSingleFuncSize);
+
+  if (config.enableLogger)
+    logger_ = std::make_unique<EJitLogger>();
+
+  compileDriver_ = std::make_unique<EJitCompileDriver>(
+      config, *cache_, runtimeState_->getRegistry(),
+      *runtimeState_, *moduleLoader_, logger_.get());
+
+  // Consume registration data from the staging store
+  StoredData data = EJitRegistrationStore::instance().consume();
+
+  // Populate bitcode tracker
+  for (auto &be : data.bitcodes)
+    moduleLoader_->registerBitcode(be.funcName, be.data, be.size);
+
+  // Populate period registry
+  PeriodArrayRegistry &reg = runtimeState_->getRegistry();
+  for (auto &pa : data.periodArrays)
+    reg.registerArray(pa.periodName, pa.varName, pa.baseAddr, pa.arraySize);
+
+  for (auto &sv : data.staticVars)
+    reg.registerStaticVar(sv.varName, sv.varAddr);
+
+  // Create sync JIT engine
+  auto engine = EJitOrcEngine::Create(config, reg, *runtimeState_);
+  if (engine)
+    compileDriver_->setSyncEngine(std::move(*engine));
+}
+
+EJit::~EJit() {
+  // Destroy in reverse order (compile driver holds references to other components)
+  compileDriver_.reset();
+  cache_.reset();
+  moduleLoader_.reset();
+  logger_.reset();
+  runtimeState_.reset();
+}
+
+void EJit::activate(const std::string &periodName, unsigned cellIdx) {
+  runtimeState_->activate(periodName, cellIdx);
+}
+
+void EJit::deactivate(const std::string &periodName, unsigned cellIdx) {
+  runtimeState_->deactivate(periodName, cellIdx);
+}
+
+void EJit::activateAll(const std::string &periodName) {
+  runtimeState_->activateAll(periodName);
+}
+
+void EJit::deactivateAll(const std::string &periodName) {
+  runtimeState_->deactivateAll(periodName);
+}
+
+bool EJit::isActive(const std::string &periodName, unsigned cellIdx) const {
+  return runtimeState_->isActive(periodName, cellIdx);
+}
+
+void *EJit::getOrCompile(const std::string &funcName,
+                         const std::pair<std::string, unsigned> *dims,
+                         unsigned count) {
+  return compileDriver_->getOrCompile(funcName, dims, count);
+}
+
+void EJit::clearCache() {
+  cache_->clear();
+}
+
+void EJit::invalidateByPeriod(const std::string &periodName,
+                              unsigned cellIdx) {
+  cache_->invalidateByPeriod(periodName, cellIdx);
+}
+
+void EJit::setCompileMode(CompileMode mode) {
+  config_.compileMode = mode;
+}
+
+CompileMode EJit::getCompileMode() const {
+  return config_.compileMode;
+}
+
+void EJit::setOptimizationLevel(OptimizationLevel level) {
+  config_.optLevel = level;
+}
+
+OptimizationLevel EJit::getOptimizationLevel() const {
+  return config_.optLevel;
+}
+
+EJitCache::Stats EJit::getStats() const {
+  return cache_->getStats();
+}
+
+const EJitError *EJit::getLastError() const {
+  if (logger_)
+    return logger_->getLastError();
+  return nullptr;
+}

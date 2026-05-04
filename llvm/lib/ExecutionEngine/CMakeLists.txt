@@ -36,6 +36,7 @@ endif( LLVM_USE_INTEL_JITEVENTS )
 add_subdirectory(Interpreter)
 add_subdirectory(JITLink)
 add_subdirectory(MCJIT)
+add_subdirectory(EJIT)
 add_subdirectory(Orc)
 add_subdirectory(RuntimeDyld)
 
