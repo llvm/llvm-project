@@ -1395,6 +1395,11 @@ public:
   /// in device compilation.
   llvm::DenseSet<const FunctionDecl *> CUDAImplicitHostDeviceFunUsedByDevice;
 
+  /// Keep track of CUDA/HIP wrong-side overload candidates seen in overload
+  /// resolution. Their usage is owned by the opposite compilation side, so the
+  /// current side should not warn that they are unused.
+  llvm::DenseSet<const FunctionDecl *> CUDAWrongSideOverloadCandidates;
+
   /// Map of SYCL kernels indexed by the unique type used to name the kernel.
   /// Entries are not serialized but are recreated on deserialization of a
   /// sycl_kernel_entry_point attributed function declaration.

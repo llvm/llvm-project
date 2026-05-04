@@ -1927,6 +1927,17 @@ bool Sema::ShouldWarnIfUnusedFileScopedDecl(const DeclaratorDecl *D) const {
     return false;
 
   if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
+    if (LangOpts.CUDA && Context.CUDAWrongSideOverloadCandidates.contains(FD)) {
+      bool IsHost =
+          FD->hasAttr<CUDAHostAttr>() || !FD->hasAttr<CUDADeviceAttr>();
+      bool IsDeviceOnly =
+          !FD->hasAttr<CUDAHostAttr>() && FD->hasAttr<CUDADeviceAttr>();
+      bool IsGlobal = FD->hasAttr<CUDAGlobalAttr>();
+      if ((LangOpts.CUDAIsDevice && IsHost) ||
+          (!LangOpts.CUDAIsDevice && (IsDeviceOnly || IsGlobal)))
+        return false;
+    }
+
     if (FD->getTemplateSpecializationKind() == TSK_ImplicitInstantiation)
       return false;
     // A non-out-of-line declaration of a member specialization was implicitly

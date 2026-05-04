@@ -7452,6 +7452,9 @@ void Sema::AddOverloadCandidate(
   // (CUDA B.1): Check for invalid calls between targets.
   if (getLangOpts().CUDA) {
     const FunctionDecl *Caller = getCurFunctionDecl(/*AllowLambda=*/true);
+    if (Caller && Function &&
+        CUDA().IdentifyPreference(Caller, Function) == SemaCUDA::CFP_WrongSide)
+      getASTContext().CUDAWrongSideOverloadCandidates.insert(Function);
     // Skip the check for callers that are implicit members, because in this
     // case we may not yet know what the member's target is; the target is
     // inferred for the member automatically, based on the bases and fields of
@@ -8022,13 +8025,17 @@ void Sema::AddMethodCandidate(
   }
 
   // (CUDA B.1): Check for invalid calls between targets.
-  if (getLangOpts().CUDA)
-    if (!CUDA().IsAllowedCall(getCurFunctionDecl(/*AllowLambda=*/true),
-                              Method)) {
+  if (getLangOpts().CUDA) {
+    const FunctionDecl *Caller = getCurFunctionDecl(/*AllowLambda=*/true);
+    if (Caller && Method &&
+        CUDA().IdentifyPreference(Caller, Method) == SemaCUDA::CFP_WrongSide)
+      getASTContext().CUDAWrongSideOverloadCandidates.insert(Method);
+    if (!CUDA().IsAllowedCall(Caller, Method)) {
       Candidate.Viable = false;
       Candidate.FailureKind = ovl_fail_bad_target;
       return;
     }
+  }
 
   if (Method->getTrailingRequiresClause()) {
     ConstraintSatisfaction Satisfaction;
