@@ -24,7 +24,8 @@ endif()
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/generic)
 
 if(NOT LLVM_LIBC_FULL_BUILD)
-  list(APPEND use_system_file "COMPILE_OPTIONS" "-DLIBC_COPT_STDIO_USE_SYSTEM_FILE")
+  set(use_system_file "COMPILE_OPTIONS")
+  libc_add_definition(use_system_file "LIBC_COPT_STDIO_USE_SYSTEM_FILE")
 endif()
 
 add_entrypoint_object(
@@ -262,6 +263,7 @@ add_stdio_entrypoint_object(feof_unlocked)
 add_stdio_entrypoint_object(ferror)
 add_stdio_entrypoint_object(ferror_unlocked)
 add_stdio_entrypoint_object(fseek)
+add_stdio_entrypoint_object(rewind)
 add_stdio_entrypoint_object(ftell)
 add_stdio_entrypoint_object(fseeko)
 add_stdio_entrypoint_object(fileno)

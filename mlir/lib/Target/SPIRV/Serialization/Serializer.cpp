@@ -405,6 +405,23 @@ LogicalResult Serializer::processDecorationAttr(Location loc, uint32_t resultID,
               resultID, decoration,
               {cacheLevel, static_cast<uint32_t>(storeCacheControl)});
         });
+  case spirv::Decoration::AlignmentId:
+  case spirv::Decoration::MaxByteOffsetId:
+  case spirv::Decoration::CounterBuffer: {
+    auto symRef = dyn_cast<FlatSymbolRefAttr>(attr);
+    if (!symRef)
+      return emitError(loc, "expected symbol reference for ")
+             << stringifyDecoration(decoration);
+    StringRef symName = symRef.getValue();
+    uint32_t operandID = getVariableID(symName);
+    if (!operandID)
+      operandID = getSpecConstID(symName);
+    if (!operandID)
+      return emitError(loc, "could not find <id> for symbol '")
+             << symName << "' referenced by "
+             << stringifyDecoration(decoration);
+    return emitDecorationId(resultID, decoration, {operandID});
+  }
   default:
     return emitError(loc, "unhandled decoration ")
            << stringifyDecoration(decoration);
@@ -726,6 +743,11 @@ LogicalResult Serializer::prepareBasicType(
     typeEnum = spirv::Opcode::OpTypeRuntimeArray;
     operands.push_back(elementTypeID);
     return processTypeDecoration(loc, runtimeArrayType, resultID);
+  }
+
+  if (isa<spirv::SamplerType>(type)) {
+    typeEnum = spirv::Opcode::OpTypeSampler;
+    return success();
   }
 
   if (auto sampledImageType = dyn_cast<spirv::SampledImageType>(type)) {
@@ -1669,6 +1691,18 @@ LogicalResult Serializer::emitDecoration(uint32_t target,
       spirv::getPrefixedOpcode(wordCount, spirv::Opcode::OpDecorate), target,
       static_cast<uint32_t>(decoration));
   llvm::append_range(decorations, params);
+  return success();
+}
+
+LogicalResult Serializer::emitDecorationId(uint32_t target,
+                                           spirv::Decoration decoration,
+                                           ArrayRef<uint32_t> operandIds) {
+  uint32_t wordCount = 3 + operandIds.size();
+  llvm::append_values(
+      decorations,
+      spirv::getPrefixedOpcode(wordCount, spirv::Opcode::OpDecorateId), target,
+      static_cast<uint32_t>(decoration));
+  llvm::append_range(decorations, operandIds);
   return success();
 }
 

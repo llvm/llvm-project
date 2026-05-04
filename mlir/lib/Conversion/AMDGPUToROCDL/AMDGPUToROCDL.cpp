@@ -13,6 +13,7 @@
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
+#include "mlir/Dialect/AMDGPU/IR/AMDGPUEnums.h"
 #include "mlir/Dialect/AMDGPU/Utils/Chipset.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
@@ -28,8 +29,10 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <cstdint>
 #include <optional>
 
 namespace mlir {
@@ -46,6 +49,59 @@ constexpr Chipset kGfx90a = Chipset(9, 0, 0xa);
 constexpr Chipset kGfx942 = Chipset(9, 4, 2);
 constexpr Chipset kGfx950 = Chipset(9, 5, 0);
 constexpr Chipset kGfx1250 = Chipset(12, 5, 0);
+
+// Predicates mirroring the LLVM AMDGPU `HasDot{N}Insts` features that gate
+// the `v_dot*` instructions consumed by the `amdgpu.dot` lowering.
+static bool hasDot1Insts(const Chipset &chipset) {
+  if (chipset.majorVersion == 9)
+    return chipset >= Chipset(9, 0, 6);
+  if (chipset.majorVersion == 10) {
+    if (chipset.minorVersion == 1)
+      return chipset.steppingVersion == 1u || chipset.steppingVersion == 2u;
+    return chipset.minorVersion >= 3u;
+  }
+  return false;
+}
+
+static bool hasDot2Insts(const Chipset &chipset) {
+  return hasDot1Insts(chipset);
+}
+
+static bool hasDot7Insts(const Chipset &chipset) {
+  return chipset.majorVersion >= 11 || hasDot1Insts(chipset);
+}
+
+static bool hasDot8Insts(const Chipset &chipset) {
+  return chipset.majorVersion >= 11;
+}
+
+static bool hasDot9Insts(const Chipset &chipset) {
+  if (chipset.majorVersion == 11)
+    return true;
+  return chipset.majorVersion == 12 && chipset.minorVersion == 0;
+}
+
+static bool hasDot10Insts(const Chipset &chipset) {
+  if (chipset.majorVersion == 11)
+    return true;
+  if (chipset.majorVersion == 12)
+    return chipset.minorVersion == 0;
+  return hasDot1Insts(chipset);
+}
+
+static bool hasDot11Insts(const Chipset &chipset) {
+  if (chipset.majorVersion == 11)
+    return chipset.minorVersion == 7u;
+  return chipset.majorVersion == 12 && chipset.minorVersion == 0;
+}
+
+static bool hasDot12Insts(const Chipset &chipset) {
+  if (chipset == Chipset(9, 5, 0))
+    return true;
+  if (chipset.majorVersion == 11)
+    return true;
+  return chipset.majorVersion == 12 && chipset.minorVersion == 0;
+}
 
 /// Convert an unsigned number `val` to i32.
 static Value convertUnsignedToI32(ConversionPatternRewriter &rewriter,
@@ -680,9 +736,8 @@ static Value packSmallFloatVectorOperand(ConversionPatternRewriter &rewriter,
   return input;
 }
 
-/// Converts sparse MFMA/WMMA (smfmac/swmmac) operands to the expected ROCDL
-/// types.
-static Value convertSparseVectorOperand(ConversionPatternRewriter &rewriter,
+/// Converts packed vector operands to the expected ROCDL types.
+static Value convertPackedVectorOperand(ConversionPatternRewriter &rewriter,
                                         Location loc, Value input,
                                         bool allowBf16 = true) {
   Type inputType = input.getType();
@@ -1643,9 +1698,9 @@ struct SparseMFMAOpLowering : public ConvertOpToLLVMPattern<SparseMFMAOp> {
       return op->emitOpError("sparse MFMA (smfmac) only supported on gfx942+");
     bool isGfx950 = chipset >= kGfx950;
 
-    Value a = convertSparseVectorOperand(rewriter, loc, adaptor.getSourceA(),
+    Value a = convertPackedVectorOperand(rewriter, loc, adaptor.getSourceA(),
                                          isGfx950);
-    Value b = convertSparseVectorOperand(rewriter, loc, adaptor.getSourceB(),
+    Value b = convertPackedVectorOperand(rewriter, loc, adaptor.getSourceB(),
                                          isGfx950);
     Value c = adaptor.getDestC();
 
@@ -1655,8 +1710,11 @@ struct SparseMFMAOpLowering : public ConvertOpToLLVMPattern<SparseMFMAOp> {
           "no intrinsic matching sparse MFMA on the given chipset");
 
     // Bitcast sparse indices from vector<4xi8> or vector<2xi16> to i32.
-    Value sparseIdx = LLVM::BitcastOp::create(
-        rewriter, loc, rewriter.getI32Type(), adaptor.getSparseIdx());
+    // gfx950 8-bit variants already carry the index as i32; skip the bitcast.
+    Value sparseIdx = adaptor.getSparseIdx();
+    Type i32Type = rewriter.getI32Type();
+    if (sparseIdx.getType() != i32Type)
+      sparseIdx = LLVM::BitcastOp::create(rewriter, loc, i32Type, sparseIdx);
 
     OperationState loweredOp(loc, maybeIntrinsic.value());
     loweredOp.addTypes(outType);
@@ -1750,6 +1808,163 @@ struct WMMAOpLowering : public ConvertOpToLLVMPattern<WMMAOp> {
   }
 };
 
+enum class DotFamily {
+  /// ROCDL_Dot_IntrOp: single `clamp` attribute.
+  Clamp,
+  /// ROCDL_Dot_NoClamp_IntrOp: no attributes.
+  NoClamp,
+  /// ROCDL_Sudot_IntrOp: `signA`, `signB`, and `clamp` attributes.
+  Sudot,
+};
+
+static std::optional<std::pair<StringRef, DotFamily>>
+dotOpToIntrinsic(DotOp op, Chipset chipset) {
+  Type aElem = cast<VectorType>(op.getSourceA().getType()).getElementType();
+  Type bElem = cast<VectorType>(op.getSourceB().getType()).getElementType();
+  Type dest = op.getDestC().getType();
+  bool uA = op.getUnsignedA();
+  bool uB = op.getUnsignedB();
+
+  // f16 x f16 -> f32 / f16.
+  if (aElem.isF16() && bElem.isF16()) {
+    if (dest.isF32() && hasDot10Insts(chipset))
+      return {{ROCDL::fdot2::getOperationName(), DotFamily::Clamp}};
+    if (dest.isF16() && hasDot9Insts(chipset))
+      return {{ROCDL::fdot2_f16_f16::getOperationName(), DotFamily::NoClamp}};
+    return std::nullopt;
+  }
+
+  // bf16 x bf16 -> f32 / bf16.
+  if (aElem.isBF16() && bElem.isBF16()) {
+    if (dest.isF32() && hasDot12Insts(chipset))
+      return {{ROCDL::fdot2_f32_bf16::getOperationName(), DotFamily::Clamp}};
+    if (dest.isBF16() && hasDot9Insts(chipset))
+      return {{ROCDL::fdot2_bf16_bf16::getOperationName(), DotFamily::NoClamp}};
+    return std::nullopt;
+  }
+
+  // Integer sources -> i32.
+  if (isa<IntegerType>(aElem) && isa<IntegerType>(bElem) &&
+      dest.isInteger(32)) {
+    bool mixedSign = (uA != uB);
+    unsigned elemWidth = aElem.getIntOrFloatBitWidth();
+
+    if (mixedSign) {
+      if (!hasDot8Insts(chipset))
+        return std::nullopt;
+      StringRef name;
+      switch (elemWidth) {
+      case 8:
+        name = ROCDL::sudot4::getOperationName();
+        break;
+      case 4:
+        name = ROCDL::sudot8::getOperationName();
+        break;
+      default:
+        return std::nullopt;
+      }
+      return {{name, DotFamily::Sudot}};
+    }
+
+    StringRef name;
+    bool supported = false;
+    switch (elemWidth) {
+    case 16:
+      supported = hasDot2Insts(chipset);
+      name = uA ? ROCDL::udot2::getOperationName()
+                : ROCDL::sdot2::getOperationName();
+      break;
+    case 8:
+      supported = uA ? hasDot7Insts(chipset)
+                     : hasDot1Insts(chipset) || hasDot8Insts(chipset);
+      name = uA ? ROCDL::udot4::getOperationName()
+                : ROCDL::sdot4::getOperationName();
+      break;
+    case 4:
+      supported = uA ? hasDot7Insts(chipset)
+                     : hasDot1Insts(chipset) || hasDot8Insts(chipset);
+      name = uA ? ROCDL::udot8::getOperationName()
+                : ROCDL::sdot8::getOperationName();
+      break;
+    default:
+      return std::nullopt;
+    }
+    if (!supported)
+      return std::nullopt;
+    return {{name, DotFamily::Clamp}};
+  }
+
+  // fp8/bf8 x fp8/bf8 -> f32.
+  bool aIsFp8 = isa<Float8E4M3FNType>(aElem);
+  bool aIsBf8 = isa<Float8E5M2Type>(aElem);
+  bool bIsFp8 = isa<Float8E4M3FNType>(bElem);
+  bool bIsBf8 = isa<Float8E5M2Type>(bElem);
+  if ((aIsFp8 || aIsBf8) && (bIsFp8 || bIsBf8) && dest.isF32()) {
+    if (!hasDot11Insts(chipset))
+      return std::nullopt;
+    StringRef name;
+    if (aIsFp8 && bIsFp8)
+      name = ROCDL::dot4_f32_fp8_fp8::getOperationName();
+    else if (aIsFp8 && bIsBf8)
+      name = ROCDL::dot4_f32_fp8_bf8::getOperationName();
+    else if (aIsBf8 && bIsFp8)
+      name = ROCDL::dot4_f32_bf8_fp8::getOperationName();
+    else
+      name = ROCDL::dot4_f32_bf8_bf8::getOperationName();
+    return {{name, DotFamily::NoClamp}};
+  }
+
+  return std::nullopt;
+}
+
+struct DotOpLowering : public ConvertOpToLLVMPattern<DotOp> {
+  DotOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
+      : ConvertOpToLLVMPattern<DotOp>(converter), chipset(chipset) {}
+
+  Chipset chipset;
+
+  LogicalResult
+  matchAndRewrite(DotOp op, DotOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+
+    std::optional<std::pair<StringRef, DotFamily>> maybeIntrinsic =
+        dotOpToIntrinsic(op, chipset);
+    if (!maybeIntrinsic)
+      return op.emitOpError("no intrinsic matching dot on the given chipset: ")
+             << op.getSourceA().getType() << " * " << op.getSourceB().getType()
+             << " + " << op.getDestC().getType();
+
+    auto [intrinsicName, family] = maybeIntrinsic.value();
+
+    Value a = convertPackedVectorOperand(rewriter, loc, adaptor.getSourceA());
+    Value b = convertPackedVectorOperand(rewriter, loc, adaptor.getSourceB());
+    Value c = adaptor.getDestC();
+
+    SmallVector<NamedAttribute, 3> attrs;
+    if (family == DotFamily::Sudot) {
+      attrs.push_back(rewriter.getNamedAttr(
+          "signA", rewriter.getBoolAttr(!op.getUnsignedA())));
+      attrs.push_back(rewriter.getNamedAttr(
+          "signB", rewriter.getBoolAttr(!op.getUnsignedB())));
+    }
+
+    if (family != DotFamily::NoClamp && op.getClamp())
+      attrs.push_back(
+          rewriter.getNamedAttr("clamp", rewriter.getBoolAttr(true)));
+
+    Type resultType = typeConverter->convertType(op.getDestD().getType());
+
+    OperationState loweredOp(loc, intrinsicName);
+    loweredOp.addTypes(resultType);
+    loweredOp.addOperands({a, b, c});
+    loweredOp.addAttributes(attrs);
+    Operation *lowered = rewriter.create(loweredOp);
+    rewriter.replaceOp(op, lowered->getResults());
+    return success();
+  }
+};
+
 struct SparseWMMAOpLowering : public ConvertOpToLLVMPattern<SparseWMMAOp> {
   SparseWMMAOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
       : ConvertOpToLLVMPattern<SparseWMMAOp>(converter), chipset(chipset) {}
@@ -1800,14 +2015,14 @@ struct SparseWMMAOpLowering : public ConvertOpToLLVMPattern<SparseWMMAOp> {
 
     const bool isGFX1250orHigher =
         chipset.majorVersion == 12 && chipset.minorVersion >= 5;
-    Value a = convertSparseVectorOperand(rewriter, loc, adaptor.getSourceA(),
+    Value a = convertPackedVectorOperand(rewriter, loc, adaptor.getSourceA(),
                                          isGFX1250orHigher);
-    Value b = convertSparseVectorOperand(rewriter, loc, adaptor.getSourceB(),
+    Value b = convertPackedVectorOperand(rewriter, loc, adaptor.getSourceB(),
                                          isGFX1250orHigher);
     Value c = adaptor.getDestC();
     VectorType rawOutType = outType;
     if (!isGFX1250orHigher) {
-      c = convertSparseVectorOperand(rewriter, loc, adaptor.getDestC(), false);
+      c = convertPackedVectorOperand(rewriter, loc, adaptor.getDestC(), false);
       rawOutType = cast<VectorType>(c.getType());
     }
 
@@ -2070,6 +2285,83 @@ struct GatherToLDSOpLowering : public ConvertOpToLLVMPattern<GatherToLDSOp> {
           ArrayAttr{});
     }
 
+    return success();
+  }
+};
+
+struct GlobalLoadAsyncToLDSOpLowering
+    : public ConvertOpToLLVMPattern<GlobalLoadAsyncToLDSOp> {
+  GlobalLoadAsyncToLDSOpLowering(const LLVMTypeConverter &converter,
+                                 Chipset chipset)
+      : ConvertOpToLLVMPattern<GlobalLoadAsyncToLDSOp>(converter),
+        chipset(chipset) {}
+
+  Chipset chipset;
+
+  LogicalResult
+  matchAndRewrite(GlobalLoadAsyncToLDSOp op,
+                  GlobalLoadAsyncToLDSOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (chipset < kGfx1250)
+      return op.emitOpError(
+          "global_load_async_to_lds is only supported on gfx1250+");
+
+    Location loc = op.getLoc();
+    auto srcMemRefType = cast<MemRefType>(op.getSrc().getType());
+    auto dstMemRefType = cast<MemRefType>(op.getDst().getType());
+
+    Type transferType = op.getTransferType();
+    int transferBits =
+        isa<VectorType>(transferType)
+            ? cast<VectorType>(transferType).getNumElements() *
+                  cast<VectorType>(transferType).getElementTypeBitWidth()
+            : transferType.getIntOrFloatBitWidth();
+
+    Value srcPtr =
+        getStridedElementPtr(rewriter, loc, srcMemRefType, adaptor.getSrc(),
+                             adaptor.getSrcIndices());
+    Value dstPtr =
+        getStridedElementPtr(rewriter, loc, dstMemRefType, adaptor.getDst(),
+                             adaptor.getDstIndices());
+
+    if (op.getMask()) {
+      Value mask = adaptor.getMask();
+      int64_t nullptrVal =
+          llvm::AMDGPU::getNullPointerValue(llvm::AMDGPUAS::LOCAL_ADDRESS);
+      Value nullInt =
+          createI32Constant(rewriter, loc, static_cast<int32_t>(nullptrVal));
+      Value nullPtr =
+          LLVM::IntToPtrOp::create(rewriter, loc, dstPtr.getType(), nullInt);
+      dstPtr = LLVM::SelectOp::create(rewriter, loc, mask, dstPtr, nullPtr);
+    }
+
+    auto offset = rewriter.getI32IntegerAttr(0);
+    auto aux = rewriter.getI32IntegerAttr(0);
+
+    switch (transferBits) {
+    case 8:
+      rewriter.replaceOpWithNewOp<ROCDL::GlobalLoadAsyncToLDSB8Op>(
+          op, srcPtr, dstPtr, offset, aux, ArrayAttr{}, ArrayAttr{},
+          ArrayAttr{});
+      break;
+    case 32:
+      rewriter.replaceOpWithNewOp<ROCDL::GlobalLoadAsyncToLDSB32Op>(
+          op, srcPtr, dstPtr, offset, aux, ArrayAttr{}, ArrayAttr{},
+          ArrayAttr{});
+      break;
+    case 64:
+      rewriter.replaceOpWithNewOp<ROCDL::GlobalLoadAsyncToLDSB64Op>(
+          op, srcPtr, dstPtr, offset, aux, ArrayAttr{}, ArrayAttr{},
+          ArrayAttr{});
+      break;
+    case 128:
+      rewriter.replaceOpWithNewOp<ROCDL::GlobalLoadAsyncToLDSB128Op>(
+          op, srcPtr, dstPtr, offset, aux, ArrayAttr{}, ArrayAttr{},
+          ArrayAttr{});
+      break;
+    default:
+      return op.emitOpError("unsupported transfer width");
+    }
     return success();
   }
 };
@@ -3950,6 +4242,43 @@ struct AMDGPUTensorLoadStoreOpLowering
   }
 };
 
+struct GlobalPrefetchOpLowering
+    : public ConvertOpToLLVMPattern<GlobalPrefetchOp> {
+  GlobalPrefetchOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
+      : ConvertOpToLLVMPattern<GlobalPrefetchOp>(converter), chipset(chipset) {}
+
+  LogicalResult
+  matchAndRewrite(GlobalPrefetchOp op, GlobalPrefetchOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (chipset < kGfx1250)
+      return op->emitOpError("is only supported on gfx1250+");
+
+    const bool isSpeculative = op.getSpeculative();
+    const int32_t immArgValue = getGlobalPrefetchLLVMEncoding(
+        op.getTemporalHint(), op.getCacheScope(), isSpeculative);
+    IntegerAttr immArgAttr = rewriter.getI32IntegerAttr(immArgValue);
+
+    ValueRange indices = adaptor.getIndices();
+    Value memRef = adaptor.getSrc();
+    MemRefDescriptor descriptor(memRef);
+    MemRefType memRefType = op.getSrc().getType();
+    Location loc = op->getLoc();
+    auto inboundsFlags = isSpeculative ? LLVM::GEPNoWrapFlags::none
+                                       : LLVM::GEPNoWrapFlags::inbounds |
+                                             LLVM::GEPNoWrapFlags::nuw;
+    Value prefetchPtr = getStridedElementPtr(
+        rewriter, loc, memRefType, descriptor, indices, inboundsFlags);
+
+    rewriter.replaceOpWithNewOp<ROCDL::GlobalPrefetchOp>(
+        op, prefetchPtr, immArgAttr, mlir::ArrayAttr{}, mlir::ArrayAttr{},
+        mlir::ArrayAttr{});
+    return success();
+  }
+
+private:
+  Chipset chipset;
+};
+
 struct ConvertAMDGPUToROCDLPass
     : public impl::ConvertAMDGPUToROCDLPassBase<ConvertAMDGPUToROCDLPass> {
   using Base::Base;
@@ -3989,6 +4318,8 @@ void mlir::amdgpu::populateCommonGPUTypeAndAttributeConversions(
           return ROCDL::ROCDLDialect::kSharedMemoryAddressSpace;
         case gpu::AddressSpace::Private:
           return ROCDL::ROCDLDialect::kPrivateMemoryAddressSpace;
+        case gpu::AddressSpace::Constant:
+          return ROCDL::ROCDLDialect::kConstantMemoryAddressSpace;
         }
         llvm_unreachable("unknown address space enum value");
       });
@@ -4072,12 +4403,12 @@ void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
            AMDGPUDPPLowering, MemoryCounterWaitOpLowering, LDSBarrierOpLowering,
            SchedBarrierOpLowering, MFMAOpLowering, ScaledMFMAOpLowering,
            SparseMFMAOpLowering, WMMAOpLowering, ScaledWMMAOpLowering,
-           SparseWMMAOpLowering, ExtPackedFp8OpLowering,
+           SparseWMMAOpLowering, DotOpLowering, ExtPackedFp8OpLowering,
            ScaledExtPackedMatrixOpLowering, ScaledExtPackedOpLowering,
            PackedScaledTruncOpLowering, PackedTrunc2xFp8OpLowering,
            PackedStochRoundFp8OpLowering, GatherToLDSOpLowering,
-           TransposeLoadOpLowering, AMDGPUPermlaneLowering,
-           AMDGPUMakeDmaBaseLowering<MakeDmaBaseOp>,
+           GlobalLoadAsyncToLDSOpLowering, TransposeLoadOpLowering,
+           AMDGPUPermlaneLowering, AMDGPUMakeDmaBaseLowering<MakeDmaBaseOp>,
            AMDGPUMakeDmaBaseLowering<MakeGatherDmaBaseOp>,
            AMDGPULowerDescriptor<MakeDmaDescriptorOp>,
            AMDGPULowerDescriptor<MakeGatherDmaDescriptorOp>,
@@ -4086,8 +4417,8 @@ void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
            AMDGPUTensorLoadStoreOpLowering<TensorStoreFromLDSOp,
                                            ROCDL::TensorStoreFromLDSOp>,
            DsBarrierInitOpLowering, DsBarrierPollStateOpLowering,
-           DsAsyncBarrierArriveOpLowering, DsBarrierArriveOpLowering>(converter,
-                                                                      chipset);
+           DsAsyncBarrierArriveOpLowering, DsBarrierArriveOpLowering,
+           GlobalPrefetchOpLowering>(converter, chipset);
   patterns.add<AMDGPUSwizzleBitModeLowering, DsBarrierStatePhaseOpLowering,
                DsBarrierStatePendingCountOpLowering,
                DsBarrierStateInitCountOpLowering,

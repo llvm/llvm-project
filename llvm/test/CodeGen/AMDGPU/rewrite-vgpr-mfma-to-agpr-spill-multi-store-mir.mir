@@ -1,0 +1,459 @@
+# REQUIRES: asserts
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a \
+# RUN:   -amdgpu-use-amdgpu-trackers=1 -verify-machineinstrs \
+# RUN:   -start-before=register-coalescer \
+# RUN:   -stop-after=amdgpu-rewrite-agpr-copy-mfma \
+# RUN:   -debug-only=amdgpu-rewrite-agpr-copy-mfma -filetype=null %s 2>&1 \
+# RUN:   | FileCheck %s
+
+# This test verifies that when the VGPR-to-AGPR MFMA rewrite pass eliminates
+# spills of reassigned VGPRs, multiple connected live range components are
+# split into separate virtual registers to satisfy the verifier.
+
+# CHECK: Split unspilled interval into {{[0-9]+}} components
+
+--- |
+  define amdgpu_kernel void @multi_store_spill_slot() #0 {
+  entry:
+    br label %do.body
+
+  do.body:
+    br label %DummyReturnBlock
+
+  DummyReturnBlock:
+    unreachable
+  }
+
+  attributes #0 = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-lds-size"="32768" "target-cpu"="gfx90a" }
+...
+---
+name:            multi_store_spill_slot
+tracksRegLiveness: true
+noPhis:          true
+isSSA:           false
+machineFunctionInfo:
+  ldsSize:         32768
+  stackPtrOffsetReg: '$sgpr32'
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x80000000)
+  
+    %39:vgpr_32 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %41:sreg_32 = S_MOV_B32 0
+    undef %42.sub0:sreg_64 = COPY %41
+    %42.sub1:sreg_64 = COPY killed %41
+    %44:av_64_align2 = COPY killed %42
+    %45:vgpr_32 = V_MOV_B32_e32 2143289344, implicit $exec
+    %50:vgpr_32 = AV_MOV_B32_IMM_PSEUDO 1065353216, implicit $exec
+    %101:vgpr_32 = V_MOV_B32_e32 1006648320, implicit $exec
+    undef %93.sub0:av_64_align2 = COPY %101
+    %93.sub1:av_64_align2 = COPY killed %101
+    %100:sreg_64 = S_AND_B64 $exec, -1, implicit-def dead $scc
+    %102:av_32 = COPY %39
+    %103:av_32 = COPY %39
+    %104:av_32 = COPY %39
+    %105:av_32 = COPY %39
+    %106:av_32 = COPY %39
+    %107:av_32 = COPY %39
+    %108:av_32 = COPY %39
+    %109:av_32 = COPY %39
+    %110:av_32 = COPY %39
+    %111:av_32 = COPY %39
+    %112:av_32 = COPY %39
+    %113:av_32 = COPY %39
+    %114:av_32 = COPY %39
+    %115:av_32 = COPY %39
+    %116:av_32 = COPY %39
+    %117:av_32 = COPY %39
+    %118:av_32 = COPY %39
+    %119:av_32 = COPY %39
+    %120:av_32 = COPY %39
+    %121:av_32 = COPY %39
+    %122:av_32 = COPY %39
+  
+  bb.1.do.body:
+    successors: %bb.2(0x04000000), %bb.1(0x7c000000)
+  
+    %19:av_32 = COPY killed %121
+    %18:av_32 = COPY killed %120
+    %17:av_32 = COPY killed %119
+    %16:av_32 = COPY killed %118
+    %15:av_32 = COPY killed %117
+    %14:av_32 = COPY killed %116
+    %13:av_32 = COPY killed %115
+    %12:av_32 = COPY killed %114
+    %11:av_32 = COPY killed %113
+    %10:av_32 = COPY killed %112
+    %9:av_32 = COPY killed %111
+    %8:av_32 = COPY killed %110
+    %7:av_32 = COPY killed %109
+    %6:av_32 = COPY killed %108
+    %5:av_32 = COPY killed %107
+    %4:av_32 = COPY killed %106
+    %3:av_32 = COPY killed %105
+    %2:av_32 = COPY killed %104
+    %1:av_32 = COPY killed %103
+    %0:av_32 = COPY killed %102
+    undef %40.sub0:vreg_512_align2 = COPY killed %0
+    %40.sub1:vreg_512_align2 = COPY %39
+    %40.sub2:vreg_512_align2 = COPY %39
+    %40.sub3:vreg_512_align2 = COPY %39
+    %40.sub4:vreg_512_align2 = COPY %39
+    %40.sub5:vreg_512_align2 = COPY %39
+    %40.sub6:vreg_512_align2 = COPY %39
+    %40.sub7:vreg_512_align2 = COPY %39
+    %40.sub8:vreg_512_align2 = COPY %39
+    %40.sub9:vreg_512_align2 = COPY %39
+    %40.sub10:vreg_512_align2 = COPY %39
+    %40.sub11:vreg_512_align2 = COPY %39
+    %40.sub12:vreg_512_align2 = COPY %39
+    %40.sub13:vreg_512_align2 = COPY %39
+    %40.sub14:vreg_512_align2 = COPY %39
+    %40.sub15:vreg_512_align2 = COPY %39
+    %43:vreg_512_align2 = COPY killed %40
+    %43:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %44, %44, %43, 0, 0, 0, implicit $mode, implicit $exec
+    undef %46.sub0:vreg_512_align2 = COPY %45
+    %46.sub1:vreg_512_align2 = COPY %39
+    %46.sub2:vreg_512_align2 = COPY %39
+    %46.sub3:vreg_512_align2 = COPY %39
+    %46.sub4:vreg_512_align2 = COPY %39
+    %46.sub5:vreg_512_align2 = COPY %39
+    %46.sub6:vreg_512_align2 = COPY %39
+    %46.sub7:vreg_512_align2 = COPY %39
+    %46.sub8:vreg_512_align2 = COPY %39
+    %46.sub9:vreg_512_align2 = COPY %39
+    %46.sub10:vreg_512_align2 = COPY %39
+    %46.sub11:vreg_512_align2 = COPY %39
+    %46.sub12:vreg_512_align2 = COPY %39
+    %46.sub13:vreg_512_align2 = COPY killed %1
+    %46.sub14:vreg_512_align2 = COPY killed %2
+    %46.sub15:vreg_512_align2 = COPY %39
+    %47:vreg_512_align2 = COPY killed %46
+    %47:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %44, %44, %47, 0, 0, 0, implicit $mode, implicit $exec
+    undef %48.sub0:vreg_512_align2 = COPY %39
+    %48.sub1:vreg_512_align2 = COPY %39
+    %48.sub2:vreg_512_align2 = COPY %39
+    %48.sub3:vreg_512_align2 = COPY killed %5
+    %48.sub4:vreg_512_align2 = COPY %39
+    %48.sub5:vreg_512_align2 = COPY %39
+    %48.sub6:vreg_512_align2 = COPY %39
+    %48.sub7:vreg_512_align2 = COPY %39
+    %48.sub8:vreg_512_align2 = COPY %39
+    %48.sub9:vreg_512_align2 = COPY %39
+    %48.sub10:vreg_512_align2 = COPY %39
+    %48.sub11:vreg_512_align2 = COPY %39
+    %48.sub12:vreg_512_align2 = COPY %39
+    %48.sub13:vreg_512_align2 = COPY %39
+    %48.sub14:vreg_512_align2 = COPY %39
+    %48.sub15:vreg_512_align2 = COPY %39
+    undef %49.sub0:vreg_512_align2 = COPY killed %6
+    %49.sub1:vreg_512_align2 = COPY %39
+    %49.sub2:vreg_512_align2 = COPY %39
+    %49.sub3:vreg_512_align2 = COPY %39
+    %49.sub4:vreg_512_align2 = COPY %39
+    %49.sub5:vreg_512_align2 = COPY %39
+    %49.sub6:vreg_512_align2 = COPY %39
+    %49.sub7:vreg_512_align2 = COPY %39
+    %49.sub8:vreg_512_align2 = COPY %39
+    %49.sub9:vreg_512_align2 = COPY %39
+    %49.sub10:vreg_512_align2 = COPY %39
+    %49.sub11:vreg_512_align2 = COPY %39
+    %49.sub12:vreg_512_align2 = COPY %39
+    %49.sub13:vreg_512_align2 = COPY %39
+    %49.sub14:vreg_512_align2 = COPY %39
+    %49.sub15:vreg_512_align2 = COPY %39
+    undef %51.sub0:vreg_512_align2 = COPY killed %8
+    %51.sub1:vreg_512_align2 = COPY %50
+    %51.sub2:vreg_512_align2 = COPY %50
+    %51.sub3:vreg_512_align2 = COPY %50
+    %51.sub4:vreg_512_align2 = COPY %50
+    %51.sub5:vreg_512_align2 = COPY %50
+    %51.sub6:vreg_512_align2 = COPY %50
+    %51.sub7:vreg_512_align2 = COPY %50
+    %51.sub8:vreg_512_align2 = COPY %50
+    %51.sub9:vreg_512_align2 = COPY %50
+    %51.sub10:vreg_512_align2 = COPY %50
+    %51.sub11:vreg_512_align2 = COPY %50
+    %51.sub12:vreg_512_align2 = COPY %50
+    %51.sub13:vreg_512_align2 = COPY %50
+    %51.sub14:vreg_512_align2 = COPY %50
+    %51.sub15:vreg_512_align2 = COPY %50
+    %52:vreg_512_align2 = COPY killed %51
+    %52:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %44, %44, %52, 0, 0, 0, implicit $mode, implicit $exec
+    undef %53.sub0:vreg_512_align2 = COPY killed %10
+    %53.sub1:vreg_512_align2 = COPY killed %9
+    %53.sub2:vreg_512_align2 = COPY %39
+    %53.sub3:vreg_512_align2 = COPY %39
+    %53.sub4:vreg_512_align2 = COPY %39
+    %53.sub5:vreg_512_align2 = COPY %39
+    %53.sub6:vreg_512_align2 = COPY %39
+    %53.sub7:vreg_512_align2 = COPY %39
+    %53.sub8:vreg_512_align2 = COPY %39
+    %53.sub9:vreg_512_align2 = COPY %39
+    %53.sub10:vreg_512_align2 = COPY %39
+    %53.sub11:vreg_512_align2 = COPY %39
+    %53.sub12:vreg_512_align2 = COPY %39
+    %53.sub13:vreg_512_align2 = COPY %39
+    %53.sub14:vreg_512_align2 = COPY %39
+    %53.sub15:vreg_512_align2 = COPY %39
+    undef %54.sub0:vreg_512_align2 = COPY killed %12
+    %54.sub1:vreg_512_align2 = COPY %39
+    %54.sub2:vreg_512_align2 = COPY %39
+    %54.sub3:vreg_512_align2 = COPY %39
+    %54.sub4:vreg_512_align2 = COPY %39
+    %54.sub5:vreg_512_align2 = COPY %39
+    %54.sub6:vreg_512_align2 = COPY %39
+    %54.sub7:vreg_512_align2 = COPY %39
+    %54.sub8:vreg_512_align2 = COPY %39
+    %54.sub9:vreg_512_align2 = COPY %39
+    %54.sub10:vreg_512_align2 = COPY %39
+    %54.sub11:vreg_512_align2 = COPY %39
+    %54.sub12:vreg_512_align2 = COPY %39
+    %54.sub13:vreg_512_align2 = COPY %39
+    %54.sub14:vreg_512_align2 = COPY %39
+    %54.sub15:vreg_512_align2 = COPY %39
+    undef %55.sub0:vreg_512_align2 = COPY %39
+    %55.sub1:vreg_512_align2 = COPY %39
+    %55.sub2:vreg_512_align2 = COPY %39
+    %55.sub3:vreg_512_align2 = COPY %39
+    %55.sub4:vreg_512_align2 = COPY %39
+    %55.sub5:vreg_512_align2 = COPY %39
+    %55.sub6:vreg_512_align2 = COPY %39
+    %55.sub7:vreg_512_align2 = COPY %39
+    %55.sub8:vreg_512_align2 = COPY %39
+    %55.sub9:vreg_512_align2 = COPY %39
+    %55.sub10:vreg_512_align2 = COPY %39
+    %55.sub11:vreg_512_align2 = COPY %39
+    %55.sub12:vreg_512_align2 = COPY %39
+    %55.sub13:vreg_512_align2 = COPY %39
+    %55.sub14:vreg_512_align2 = COPY %13
+    %55.sub15:vreg_512_align2 = COPY killed %14
+    %56:vreg_512_align2 = COPY killed %55
+    %56:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %44, %44, %56, 0, 0, 0, implicit $mode, implicit $exec
+    undef %57.sub0:vreg_512_align2 = COPY killed %15
+    %57.sub1:vreg_512_align2 = COPY %39
+    %57.sub2:vreg_512_align2 = COPY %39
+    %57.sub3:vreg_512_align2 = COPY %39
+    %57.sub4:vreg_512_align2 = COPY %39
+    %57.sub5:vreg_512_align2 = COPY %39
+    %57.sub6:vreg_512_align2 = COPY %39
+    %57.sub7:vreg_512_align2 = COPY %39
+    %57.sub8:vreg_512_align2 = COPY %39
+    %57.sub9:vreg_512_align2 = COPY %39
+    %57.sub10:vreg_512_align2 = COPY %39
+    %57.sub11:vreg_512_align2 = COPY %39
+    %57.sub12:vreg_512_align2 = COPY %39
+    %57.sub13:vreg_512_align2 = COPY %39
+    %57.sub14:vreg_512_align2 = COPY %39
+    %57.sub15:vreg_512_align2 = COPY %39
+    undef %58.sub0:vreg_512_align2 = COPY %17
+    %58.sub1:vreg_512_align2 = COPY killed %16
+    %58.sub2:vreg_512_align2 = COPY %39
+    %58.sub3:vreg_512_align2 = COPY %39
+    %58.sub4:vreg_512_align2 = COPY %39
+    %58.sub5:vreg_512_align2 = COPY %39
+    %58.sub6:vreg_512_align2 = COPY %39
+    %58.sub7:vreg_512_align2 = COPY %39
+    %58.sub8:vreg_512_align2 = COPY %39
+    %58.sub9:vreg_512_align2 = COPY %39
+    %58.sub10:vreg_512_align2 = COPY %39
+    %58.sub11:vreg_512_align2 = COPY %39
+    %58.sub12:vreg_512_align2 = COPY %39
+    %58.sub13:vreg_512_align2 = COPY %39
+    %58.sub14:vreg_512_align2 = COPY %39
+    %58.sub15:vreg_512_align2 = COPY %39
+    undef %59.sub0:vreg_512_align2 = COPY %39
+    %59.sub1:vreg_512_align2 = COPY %39
+    %59.sub2:vreg_512_align2 = COPY %39
+    %59.sub3:vreg_512_align2 = COPY %39
+    %59.sub4:vreg_512_align2 = COPY %39
+    %59.sub5:vreg_512_align2 = COPY %39
+    %59.sub6:vreg_512_align2 = COPY %39
+    %59.sub7:vreg_512_align2 = COPY %39
+    %59.sub8:vreg_512_align2 = COPY %39
+    %59.sub9:vreg_512_align2 = COPY %39
+    %59.sub10:vreg_512_align2 = COPY %39
+    %59.sub11:vreg_512_align2 = COPY %39
+    %59.sub12:vreg_512_align2 = COPY %39
+    %59.sub13:vreg_512_align2 = COPY %39
+    %59.sub14:vreg_512_align2 = COPY %39
+    %59.sub15:vreg_512_align2 = COPY killed %18
+    %20:av_32 = COPY killed %122
+    undef %60.sub0:vreg_512_align2 = COPY killed %19
+    %60.sub1:vreg_512_align2 = COPY killed %20
+    %60.sub2:vreg_512_align2 = COPY %39
+    %60.sub3:vreg_512_align2 = COPY %39
+    %60.sub4:vreg_512_align2 = COPY %39
+    %60.sub5:vreg_512_align2 = COPY %39
+    %60.sub6:vreg_512_align2 = COPY %39
+    %60.sub7:vreg_512_align2 = COPY %39
+    %60.sub8:vreg_512_align2 = COPY %39
+    %60.sub9:vreg_512_align2 = COPY %39
+    %60.sub10:vreg_512_align2 = COPY %39
+    %60.sub11:vreg_512_align2 = COPY %39
+    %60.sub12:vreg_512_align2 = COPY %39
+    %60.sub13:vreg_512_align2 = COPY %39
+    %60.sub14:vreg_512_align2 = COPY %39
+    %60.sub15:vreg_512_align2 = COPY %39
+    %61:vreg_512_align2 = COPY killed %54
+    %61:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %44, %44, %61, 0, 0, 0, implicit $mode, implicit $exec
+    %62:vreg_512_align2 = COPY killed %61
+    %62:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %44, %44, %62, 0, 0, 0, implicit $mode, implicit $exec
+    %63:vreg_512_align2 = COPY killed %59
+    %63:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %44, %44, %63, 0, 0, 0, implicit $mode, implicit $exec
+    %64:vreg_512_align2 = COPY killed %63
+    %64:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %44, %44, %64, 0, 0, 0, implicit $mode, implicit $exec
+    %65:vreg_512_align2 = COPY killed %48
+    %65:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %44, %44, %65, 0, 0, 0, implicit $mode, implicit $exec
+    %66:vreg_512_align2 = COPY killed %43
+    %66:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %44, %44, %66, 0, 0, 0, implicit $mode, implicit $exec
+    %67:vreg_512_align2 = COPY killed %52
+    %67:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %44, %44, %67, 0, 0, 0, implicit $mode, implicit $exec
+    %68:vreg_512_align2 = COPY killed %53
+    %68:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %44, %44, %68, 0, 0, 0, implicit $mode, implicit $exec
+    %69:vreg_512_align2 = COPY killed %58
+    %69:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %44, %44, %69, 0, 0, 0, implicit $mode, implicit $exec
+    %70:vreg_512_align2 = COPY killed %60
+    %70:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %44, %44, %70, 0, 0, 0, implicit $mode, implicit $exec
+    %71:vreg_512_align2 = COPY killed %66
+    %71:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %44, %44, %71, 0, 0, 0, implicit $mode, implicit $exec
+    early-clobber %72:vreg_512_align2 = V_MFMA_F32_32X32X8F16_vgprcd_e64 %44, %44, %68, 0, 0, 0, implicit $mode, implicit $exec
+    %73:vreg_512_align2 = COPY killed %56
+    %73:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %44, %44, %73, 0, 0, 0, implicit $mode, implicit $exec
+    %74:vreg_512_align2 = COPY killed %47
+    %74:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %44, %44, %74, 0, 0, 0, implicit $mode, implicit $exec
+    early-clobber %75:vreg_512_align2 = V_MFMA_F32_32X32X8F16_vgprcd_e64 %44, %44, %74, 0, 0, 0, implicit $mode, implicit $exec
+    undef %76.sub0:vreg_512_align2 = COPY %3
+    %76.sub1:vreg_512_align2 = COPY killed %4
+    %76.sub2:vreg_512_align2 = COPY %39
+    %76.sub3:vreg_512_align2 = COPY %39
+    %76.sub4:vreg_512_align2 = COPY %39
+    %76.sub5:vreg_512_align2 = COPY %39
+    %76.sub6:vreg_512_align2 = COPY %39
+    %76.sub7:vreg_512_align2 = COPY %39
+    %76.sub8:vreg_512_align2 = COPY %39
+    %76.sub9:vreg_512_align2 = COPY %39
+    %76.sub10:vreg_512_align2 = COPY %39
+    %76.sub11:vreg_512_align2 = COPY %39
+    %76.sub12:vreg_512_align2 = COPY %39
+    %76.sub13:vreg_512_align2 = COPY %39
+    %76.sub14:vreg_512_align2 = COPY %39
+    %76.sub15:vreg_512_align2 = COPY %39
+    %77:vreg_512_align2 = COPY killed %76
+    %77:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %44, %44, %77, 0, 0, 0, implicit $mode, implicit $exec
+    %78:vreg_512_align2 = COPY killed %65
+    %78:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %44, %44, %78, 0, 0, 0, implicit $mode, implicit $exec
+    %79:vreg_512_align2 = COPY killed %78
+    %79:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %44, %44, %79, 0, 0, 0, implicit $mode, implicit $exec
+    %80:vreg_512_align2 = COPY killed %73
+    %80:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %44, %44, %80, 0, 0, 0, implicit $mode, implicit $exec
+    %81:vreg_512_align2 = COPY killed %69
+    %81:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %44, %44, %81, 0, 0, 0, implicit $mode, implicit $exec
+    %21:av_32 = COPY killed %71.sub0
+    %82:vreg_512_align2 = COPY killed %75
+    %82:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %44, %44, %82, 0, 0, 0, implicit $mode, implicit $exec
+    %22:av_32 = COPY killed %82.sub0
+    %23:av_32 = COPY killed %74.sub0
+    %83:vreg_512_align2 = COPY killed %77
+    %83:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %44, %44, %83, 0, 0, 0, implicit $mode, implicit $exec
+    %24:av_32 = COPY killed %83.sub0
+    %25:av_32 = COPY killed %79.sub0
+    %84:vreg_512_align2 = COPY killed %49
+    %84:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %44, %44, %84, 0, 0, 0, implicit $mode, implicit $exec
+    %85:vreg_512_align2 = COPY killed %84
+    %85:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %44, %44, %85, 0, 0, 0, implicit $mode, implicit $exec
+    %26:av_32 = COPY killed %85.sub0
+    undef %86.sub0:vreg_512_align2 = COPY killed %7
+    %86.sub1:vreg_512_align2 = COPY %39
+    %86.sub2:vreg_512_align2 = COPY %39
+    %86.sub3:vreg_512_align2 = COPY %39
+    %86.sub4:vreg_512_align2 = COPY %39
+    %86.sub5:vreg_512_align2 = COPY %39
+    %86.sub6:vreg_512_align2 = COPY %39
+    %86.sub7:vreg_512_align2 = COPY %39
+    %86.sub8:vreg_512_align2 = COPY %39
+    %86.sub9:vreg_512_align2 = COPY %39
+    %86.sub10:vreg_512_align2 = COPY %39
+    %86.sub11:vreg_512_align2 = COPY %39
+    %86.sub12:vreg_512_align2 = COPY %39
+    %86.sub13:vreg_512_align2 = COPY %39
+    %86.sub14:vreg_512_align2 = COPY %39
+    %86.sub15:vreg_512_align2 = COPY %39
+    %87:vreg_512_align2 = COPY killed %86
+    %87:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %44, %44, %87, 0, 0, 0, implicit $mode, implicit $exec
+    %88:vreg_512_align2 = COPY killed %87
+    %88:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %44, %44, %88, 0, 0, 0, implicit $mode, implicit $exec
+    %27:av_32 = COPY killed %88.sub0
+    %89:vreg_512_align2 = COPY killed %67
+    %89:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %44, %44, %89, 0, 0, 0, implicit $mode, implicit $exec
+    %28:av_32 = COPY killed %89.sub0
+    %29:av_32 = COPY killed %68.sub0
+    %90:vreg_512_align2 = COPY killed %72
+    %90:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %44, %44, %90, 0, 0, 0, implicit $mode, implicit $exec
+    %91:vreg_512_align2 = COPY killed %90
+    %91:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %44, %44, %91, 0, 0, 0, implicit $mode, implicit $exec
+    %92:vreg_512_align2 = COPY killed %91
+    %92:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %44, %93, %92, 0, 0, 0, implicit $mode, implicit $exec
+    %30:av_32 = COPY killed %92.sub7
+    undef %94.sub0:vreg_512_align2 = COPY killed %11
+    %94.sub1:vreg_512_align2 = COPY %39
+    %94.sub2:vreg_512_align2 = COPY %39
+    %94.sub3:vreg_512_align2 = COPY %39
+    %94.sub4:vreg_512_align2 = COPY %39
+    %94.sub5:vreg_512_align2 = COPY %39
+    %94.sub6:vreg_512_align2 = COPY %39
+    %94.sub7:vreg_512_align2 = COPY %39
+    %94.sub8:vreg_512_align2 = COPY %39
+    %94.sub9:vreg_512_align2 = COPY %39
+    %94.sub10:vreg_512_align2 = COPY %39
+    %94.sub11:vreg_512_align2 = COPY %39
+    %94.sub12:vreg_512_align2 = COPY %39
+    %94.sub13:vreg_512_align2 = COPY %39
+    %94.sub14:vreg_512_align2 = COPY %39
+    %94.sub15:vreg_512_align2 = COPY %39
+    %95:vreg_512_align2 = COPY killed %94
+    %95:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %44, %44, %95, 0, 0, 0, implicit $mode, implicit $exec
+    %96:vreg_512_align2 = COPY killed %95
+    %96:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %44, %44, %96, 0, 0, 0, implicit $mode, implicit $exec
+    %31:av_32 = COPY killed %96.sub0
+    %32:av_32 = COPY killed %62.sub0
+    %33:av_32 = COPY killed %80.sub0
+    %97:vreg_512_align2 = COPY killed %57
+    %97:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %44, %44, %97, 0, 0, 0, implicit $mode, implicit $exec
+    %34:av_32 = COPY killed %97.sub0
+    %98:vreg_512_align2 = COPY killed %81
+    %98:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %44, %44, %98, 0, 0, 0, implicit $mode, implicit $exec
+    %35:av_32 = COPY killed %98.sub0
+    %36:av_32 = COPY killed %64.sub0
+    %37:av_32 = COPY %70.sub0
+    %99:vreg_512_align2 = COPY killed %70
+    %99:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %44, %44, %99, 0, 0, 0, implicit $mode, implicit $exec
+    %38:av_32 = COPY killed %99.sub0
+    $vcc = COPY %100
+    %102:av_32 = COPY killed %21
+    %103:av_32 = COPY killed %22
+    %104:av_32 = COPY killed %23
+    %105:av_32 = COPY killed %24
+    %106:av_32 = COPY killed %3
+    %107:av_32 = COPY killed %25
+    %108:av_32 = COPY killed %26
+    %109:av_32 = COPY killed %27
+    %110:av_32 = COPY killed %28
+    %111:av_32 = COPY killed %29
+    %112:av_32 = COPY killed %30
+    %113:av_32 = COPY killed %31
+    %114:av_32 = COPY killed %32
+    %115:av_32 = COPY killed %33
+    %116:av_32 = COPY killed %13
+    %117:av_32 = COPY killed %34
+    %118:av_32 = COPY killed %17
+    %119:av_32 = COPY killed %35
+    %120:av_32 = COPY killed %36
+    %121:av_32 = COPY killed %37
+    %122:av_32 = COPY killed %38
+    S_CBRANCH_VCCNZ %bb.1, implicit killed $vcc
+    S_BRANCH %bb.2
+  
+  bb.2.DummyReturnBlock:
+    S_ENDPGM 0
+...

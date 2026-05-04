@@ -1067,7 +1067,8 @@ void Parser::ParseOpenCLQualifiers(ParsedAttributes &Attrs) {
 }
 
 bool Parser::isHLSLQualifier(const Token &Tok) const {
-  return Tok.is(tok::kw_groupshared);
+  return Tok.is(tok::kw_groupshared) || Tok.is(tok::kw_row_major) ||
+         Tok.is(tok::kw_column_major);
 }
 
 void Parser::ParseHLSLQualifiers(ParsedAttributes &Attrs) {
@@ -2160,7 +2161,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
       ;
 
   if (Tok.is(tok::kw_requires))
-    ParseTrailingRequiresClause(D);
+    ParseTrailingRequiresClauseWithScope(D);
 
   // Save late-parsed attributes for now; they need to be parsed in the
   // appropriate function scope after the function Decl has been constructed.
@@ -2413,7 +2414,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
       //	      declarator initializer[opt]
       //        declarator requires-clause
       if (Tok.is(tok::kw_requires))
-        ParseTrailingRequiresClause(D);
+        ParseTrailingRequiresClauseWithScope(D);
       Decl *ThisDecl = ParseDeclarationAfterDeclarator(D, TemplateInfo);
       D.complete(ThisDecl);
       if (ThisDecl)
@@ -3364,11 +3365,8 @@ void Parser::ParseDeclarationSpecifiers(
 
   // If we are in a operator context, convert it back into a type specifier
   // context for better error handling later on.
-  if (DSContext == DeclSpecContext::DSC_conv_operator) {
-    // No implicit typename here.
-    AllowImplicitTypename = ImplicitTypenameContext::No;
+  if (DSContext == DeclSpecContext::DSC_conv_operator)
     DSContext = DeclSpecContext::DSC_type_specifier;
-  }
 
   bool EnteringContext = (DSContext == DeclSpecContext::DSC_class ||
                           DSContext == DeclSpecContext::DSC_top_level);
@@ -4093,7 +4091,28 @@ void Parser::ParseDeclarationSpecifiers(
       break;
     case tok::kw_auto:
       if (getLangOpts().CPlusPlus11 || getLangOpts().C23) {
-        if (isKnownToBeTypeSpecifier(GetLookAheadToken(1))) {
+        auto MayBeTypeSpecifier = [&]() {
+          // In pre-C23 C, auto can be used as a storage-class specifier.
+          // C23 removes auto from the storage-class specifiers and repurposes
+          // it for type inference (6.7.10).
+          if (getLangOpts().C23 && DS.hasTypeSpecifier() &&
+              DS.getTypeSpecType() != DeclSpec::TST_auto)
+            return true;
+
+          unsigned I = 1;
+          while (true) {
+            const Token &T = GetLookAheadToken(I);
+            if (isKnownToBeTypeSpecifier(T))
+              return true;
+
+            if (getLangOpts().C23 && isTypeSpecifierQualifier(T))
+              ++I;
+            else
+              return false;
+          }
+        };
+
+        if (MayBeTypeSpecifier()) {
           isInvalid = DS.SetStorageClassSpec(Actions, DeclSpec::SCS_auto, Loc,
                                              PrevSpec, DiagID, Policy);
           if (!isInvalid && !getLangOpts().C23)
@@ -4610,7 +4629,8 @@ void Parser::ParseDeclarationSpecifiers(
     case tok::kw___read_write:
       ParseOpenCLQualifiers(DS.getAttributes());
       break;
-
+    case tok::kw_row_major:
+    case tok::kw_column_major:
     case tok::kw_groupshared:
     case tok::kw_in:
     case tok::kw_inout:
@@ -5055,7 +5075,11 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
                          (AllowEnumSpecifier == AllowDefiningTypeSpec::Yes ||
                           CanBeOpaqueEnumDeclaration);
 
-  CXXScopeSpec &SS = DS.getTypeSpecScope();
+  // We use a temporary scope when parsing the name specifier for a
+  // declaration with additional invalid type specifiers.
+  CXXScopeSpec InvalidDeclScope;
+  CXXScopeSpec &SS =
+      DS.hasTypeSpecifier() ? InvalidDeclScope : DS.getTypeSpecScope();
   if (getLangOpts().CPlusPlus) {
     // "enum foo : bar;" is not a potential typo for "enum foo::bar;".
     ColonProtectionRAIIObject X(*this);
@@ -5575,13 +5599,19 @@ bool Parser::isKnownToBeTypeSpecifier(const Token &Tok) const {
     // enum-specifier
   case tok::kw_enum:
 
+  case tok::kw_typeof:
+  case tok::kw_typeof_unqual:
+
+  // C11 _Atomic
+  case tok::kw__Atomic:
+
     // typedef-name
   case tok::annot_typename:
     return true;
   }
 }
 
-bool Parser::isTypeSpecifierQualifier() {
+bool Parser::isTypeSpecifierQualifier(const Token &Tok) {
   switch (Tok.getKind()) {
   default: return false;
 
@@ -5594,9 +5624,9 @@ bool Parser::isTypeSpecifierQualifier() {
     // recurse to handle whatever we get.
     if (TryAnnotateTypeOrScopeToken())
       return true;
-    if (Tok.is(tok::identifier))
+    if (getCurToken().is(tok::identifier))
       return false;
-    return isTypeSpecifierQualifier();
+    return isTypeSpecifierQualifier(getCurToken());
 
   case tok::coloncolon:   // ::foo::bar
     if (NextToken().is(tok::kw_new) ||    // ::new
@@ -5605,7 +5635,7 @@ bool Parser::isTypeSpecifierQualifier() {
 
     if (TryAnnotateTypeOrScopeToken())
       return true;
-    return isTypeSpecifierQualifier();
+    return isTypeSpecifierQualifier(getCurToken());
 
     // GNU attributes support.
   case tok::kw___attribute:
@@ -5721,6 +5751,8 @@ bool Parser::isTypeSpecifierQualifier() {
   case tok::kw_in:
   case tok::kw_inout:
   case tok::kw_out:
+  case tok::kw_row_major:
+  case tok::kw_column_major:
     return getLangOpts().HLSL;
   }
 }
@@ -5998,6 +6030,10 @@ bool Parser::isDeclarationSpecifier(
   case tok::kw___funcref:
   case tok::kw_groupshared:
     return true;
+
+  case tok::kw_row_major:
+  case tok::kw_column_major:
+    return getLangOpts().HLSL;
 
   case tok::kw_private:
     return getLangOpts().OpenCL;

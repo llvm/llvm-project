@@ -421,81 +421,6 @@ public:
   }
 };
 
-//===----------------------------------------------------------------------===//
-// BytecodeDialectInterface
-//===----------------------------------------------------------------------===//
-
-class BytecodeDialectInterface
-    : public DialectInterface::Base<BytecodeDialectInterface> {
-public:
-  using Base::Base;
-
-  //===--------------------------------------------------------------------===//
-  // Reading
-  //===--------------------------------------------------------------------===//
-
-  /// Read an attribute belonging to this dialect from the given reader. This
-  /// method should return null in the case of failure. Optionally, the dialect
-  /// version can be accessed through the reader.
-  virtual Attribute readAttribute(DialectBytecodeReader &reader) const {
-    reader.emitError() << "dialect " << getDialect()->getNamespace()
-                       << " does not support reading attributes from bytecode";
-    return Attribute();
-  }
-
-  /// Read a type belonging to this dialect from the given reader. This method
-  /// should return null in the case of failure. Optionally, the dialect version
-  /// can be accessed thorugh the reader.
-  virtual Type readType(DialectBytecodeReader &reader) const {
-    reader.emitError() << "dialect " << getDialect()->getNamespace()
-                       << " does not support reading types from bytecode";
-    return Type();
-  }
-
-  //===--------------------------------------------------------------------===//
-  // Writing
-  //===--------------------------------------------------------------------===//
-
-  /// Write the given attribute, which belongs to this dialect, to the given
-  /// writer. This method may return failure to indicate that the given
-  /// attribute could not be encoded, in which case the textual format will be
-  /// used to encode this attribute instead.
-  virtual LogicalResult writeAttribute(Attribute attr,
-                                       DialectBytecodeWriter &writer) const {
-    return failure();
-  }
-
-  /// Write the given type, which belongs to this dialect, to the given writer.
-  /// This method may return failure to indicate that the given type could not
-  /// be encoded, in which case the textual format will be used to encode this
-  /// type instead.
-  virtual LogicalResult writeType(Type type,
-                                  DialectBytecodeWriter &writer) const {
-    return failure();
-  }
-
-  /// Write the version of this dialect to the given writer.
-  virtual void writeVersion(DialectBytecodeWriter &writer) const {}
-
-  // Read the version of this dialect from the provided reader and return it as
-  // a `unique_ptr` to a dialect version object.
-  virtual std::unique_ptr<DialectVersion>
-  readVersion(DialectBytecodeReader &reader) const {
-    reader.emitError("Dialect does not support versioning");
-    return nullptr;
-  }
-
-  /// Hook invoked after parsing completed, if a version directive was present
-  /// and included an entry for the current dialect. This hook offers the
-  /// opportunity to the dialect to visit the IR and upgrades constructs emitted
-  /// by the version of the dialect corresponding to the provided version.
-  virtual LogicalResult
-  upgradeFromVersion(Operation *topLevelOp,
-                     const DialectVersion &version) const {
-    return success();
-  }
-};
-
 /// Helper for resource handle reading that returns LogicalResult.
 template <typename T, typename... Ts>
 static LogicalResult readResourceHandle(DialectBytecodeReader &reader,
@@ -558,5 +483,7 @@ auto getChecked(function_ref<InFlightDiagnostic()> emitError,
 }
 
 } // namespace mlir
+
+#include "mlir/Bytecode/BytecodeDialectInterface.h.inc"
 
 #endif // MLIR_BYTECODE_BYTECODEIMPLEMENTATION_H

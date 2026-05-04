@@ -68,7 +68,7 @@ llvm.func @sections_(%arg0: !llvm.ptr {fir.bindc_name = "x"}) attributes {fir.in
 // CHECK:         store i32 1, ptr %[[VAL_14]], align 4
 // CHECK:         store i32 1, ptr %[[VAL_15]], align 4
 // CHECK:         %[[VAL_27:.*]] = call i32 @__kmpc_global_thread_num(ptr @1)
-// CHECK:         call void @__kmpc_for_static_init_4u(ptr @1, i32 %[[VAL_27]], i32 34, ptr %[[VAL_12]], ptr %[[VAL_13]], ptr %[[VAL_14]], ptr %[[VAL_15]], i32 1, i32 0)
+// CHECK:         call void @__kmpc_for_static_init_4u(ptr @2, i32 %[[VAL_27]], i32 34, ptr %[[VAL_12]], ptr %[[VAL_13]], ptr %[[VAL_14]], ptr %[[VAL_15]], i32 1, i32 0)
 // CHECK:         %[[VAL_28:.*]] = load i32, ptr %[[VAL_13]], align 4
 // CHECK:         %[[VAL_29:.*]] = load i32, ptr %[[VAL_14]], align 4
 // CHECK:         %[[VAL_30:.*]] = sub i32 %[[VAL_29]], %[[VAL_28]]
@@ -81,9 +81,9 @@ llvm.func @sections_(%arg0: !llvm.ptr {fir.bindc_name = "x"}) attributes {fir.in
 // CHECK:         %[[VAL_37:.*]] = icmp ult i32 %[[VAL_34]], %[[VAL_31]]
 // CHECK:         br i1 %[[VAL_37]], label %[[VAL_38:.*]], label %[[VAL_39:.*]]
 // CHECK:       omp_section_loop.exit:                            ; preds = %[[VAL_36]]
-// CHECK:         call void @__kmpc_for_static_fini(ptr @1, i32 %[[VAL_27]])
+// CHECK:         call void @__kmpc_for_static_fini(ptr @2, i32 %[[VAL_27]])
 // CHECK:         %[[VAL_40:.*]] = call i32 @__kmpc_global_thread_num(ptr @1)
-// CHECK:         call void @__kmpc_barrier(ptr @2, i32 %[[VAL_40]])
+// CHECK:         call void @__kmpc_barrier(ptr @3, i32 %[[VAL_40]])
 // CHECK:         br label %[[VAL_41:.*]]
 // CHECK:       omp_section_loop.after:                           ; preds = %[[VAL_39]]
 // CHECK:         %[[VAL_43:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_21]], i64 0, i64 0
@@ -105,7 +105,7 @@ llvm.func @sections_(%arg0: !llvm.ptr {fir.bindc_name = "x"}) attributes {fir.in
 // CHECK:         br label %[[VAL_46]]
 // CHECK:       reduce.finalize:                                  ; preds = %[[VAL_47]], %[[VAL_41]]
 // CHECK:         %[[VAL_52:.*]] = call i32 @__kmpc_global_thread_num(ptr @1)
-// CHECK:         call void @__kmpc_barrier(ptr @2, i32 %[[VAL_52]])
+// CHECK:         call void @__kmpc_barrier(ptr @3, i32 %[[VAL_52]])
 // CHECK:         br label %[[VAL_53:.*]]
 // CHECK:       omp.region.cont:                                  ; preds = %[[VAL_46]]
 // CHECK:         br label %[[VAL_54:.*]]

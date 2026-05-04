@@ -52,7 +52,7 @@ define void @memcpy_x(ptr %dst, ptr %src, i64 %x) nounwind  !prof !0 {
 !1 = !{!"VP", i32 1, i32 100, i32 5, i32 10, i32 16, i32 13}
 ;.
 ; CHECK: attributes #[[ATTR0]] = { nounwind }
-; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ;.
 ; CHECK: [[PROF0]] = !{!"function_entry_count", i32 10}
 ; CHECK: [[PROF1]] = !{!"VP", i32 1, i32 100, i32 5, i32 10, i32 16, i32 13}

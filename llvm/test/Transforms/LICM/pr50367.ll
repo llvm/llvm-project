@@ -44,6 +44,9 @@ define void @store_null(i1 %arg) {
 ; CHECK-LABEL: define void @store_null(
 ; CHECK-SAME: i1 [[ARG:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    store ptr null, ptr @e, align 8, !tbaa [[ANYPTR_TBAA0]]
+; CHECK-NEXT:    [[PTR:%.*]] = load ptr, ptr @e, align 8, !tbaa [[ANYPTR_TBAA0]]
+; CHECK-NEXT:    store i32 0, ptr [[PTR]], align 4, !tbaa [[INT_TBAA4]]
 ; CHECK-NEXT:    br label %[[LOOP1:.*]]
 ; CHECK:       [[LOOP1]]:
 ; CHECK-NEXT:    br label %[[LOOP2:.*]]
@@ -53,7 +56,6 @@ define void @store_null(i1 %arg) {
 ; CHECK-NEXT:    store i32 0, ptr null, align 4
 ; CHECK-NEXT:    br label %[[LOOP2]]
 ; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    store i32 0, ptr null, align 4, !tbaa [[INT_TBAA4]]
 ; CHECK-NEXT:    br label %[[LOOP1]]
 ;
 entry:

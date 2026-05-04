@@ -199,11 +199,21 @@ public:
     bool AddrDiscIsKilled;
   };
 
+  // Helper for emitting AUTRELLOADPAC: increment Pointer by Addend and then by
+  // a 32-bit signed value loaded from memory. The instructions emitted are
+  //
+  //     ldrsw Scratch, [Pointer, #Addend]!
+  //     add Pointer, Pointer, Scratch
+  //
+  // for small Addend value, with longer sequences required for wider Addend.
+  void emitPtrauthApplyIndirectAddend(Register Pointer, Register Scratch,
+                                      int64_t Addend);
+
   // Emit the sequence for AUT or AUTPAC. Addend if AUTRELLOADPAC
   void emitPtrauthAuthResign(Register Pointer, Register Scratch,
                              PtrAuthSchema AuthSchema,
                              std::optional<PtrAuthSchema> SignSchema,
-                             std::optional<uint64_t> Addend, Value *DS);
+                             std::optional<int64_t> Addend, Value *DS);
 
   // Emit R_AARCH64_PATCHINST, the deactivation symbol relocation. Returns true
   // if no instruction should be emitted because the deactivation symbol is
@@ -677,12 +687,9 @@ void AArch64AsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
 
     // Adjust the offset for patchable-function-prefix. This assumes that
     // patchable-function-prefix is the same for all functions.
-    int64_t PrefixNops = 0;
-    (void)MI.getMF()
-        ->getFunction()
-        .getFnAttribute("patchable-function-prefix")
-        .getValueAsString()
-        .getAsInteger(10, PrefixNops);
+    int64_t PrefixNops =
+        MI.getMF()->getFunction().getFnAttributeAsParsedInteger(
+            "patchable-function-prefix");
 
     // Load the target function type hash.
     EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::LDURWi)
@@ -1311,7 +1318,7 @@ void AArch64AsmPrinter::PrintDebugValueComment(const MachineInstr *MI,
                                                raw_ostream &OS) {
   unsigned NOps = MI->getNumOperands();
   assert(NOps == 4);
-  OS << '\t' << MAI->getCommentString() << "DEBUG_VALUE: ";
+  OS << '\t' << MAI.getCommentString() << "DEBUG_VALUE: ";
   // cast away const; DIetc do not take const operands for some reason.
   OS << MI->getDebugVariable()->getName();
   OS << " <- ";
@@ -2235,12 +2242,64 @@ AArch64AsmPrinter::PtrAuthSchema::PtrAuthSchema(
     : Key(Key), IntDisc(IntDisc), AddrDisc(AddrDiscOp.getReg()),
       AddrDiscIsKilled(AddrDiscOp.isKill()) {}
 
+void AArch64AsmPrinter::emitPtrauthApplyIndirectAddend(Register Pointer,
+                                                       Register Scratch,
+                                                       int64_t Addend) {
+  if (isInt<9>(Addend)) {
+    // ldrsw Scratch, [Pointer, #Addend]! ; note: Pointer+Addend is used later.
+    EmitToStreamer(MCInstBuilder(AArch64::LDRSWpre)
+                       .addReg(Pointer)
+                       .addReg(Scratch)
+                       .addReg(Pointer)
+                       .addImm(/*simm9:*/ Addend));
+  } else {
+    // Pointer += Addend computation has 2 variants
+    if (isUInt<24>(Addend)) {
+      // Variant 1: add Pointer, Pointer, (Addend >> shift12) lsl shift12
+      // This can take up to 2 instructions.
+      for (int BitPos = 0; BitPos != 24 && (Addend >> BitPos); BitPos += 12) {
+        EmitToStreamer(
+            MCInstBuilder(AArch64::ADDXri)
+                .addReg(Pointer)
+                .addReg(Pointer)
+                .addImm((Addend >> BitPos) & 0xfff)
+                .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, BitPos)));
+      }
+    } else {
+      // Variant 2: accumulate constant in Scratch 16 bits at a time,
+      // and add it to Pointer. This can take 2-5 instructions.
+      emitMOVZ(Scratch, Addend & 0xffff, 0);
+      for (int Offset = 16; Offset < 64; Offset += 16) {
+        if (unsigned Fragment = (Addend >> Offset) & 0xffff)
+          emitMOVK(Scratch, Fragment, Offset);
+      }
+
+      // add Pointer, Pointer, Scratch
+      EmitToStreamer(MCInstBuilder(AArch64::ADDXrs)
+                         .addReg(Pointer)
+                         .addReg(Pointer)
+                         .addReg(Scratch)
+                         .addImm(0));
+    }
+    // ldrsw Scratch, [Pointer]
+    EmitToStreamer(MCInstBuilder(AArch64::LDRSWui)
+                       .addReg(Scratch)
+                       .addReg(Pointer)
+                       .addImm(0));
+  }
+  // add Pointer, Pointer, Scratch
+  EmitToStreamer(MCInstBuilder(AArch64::ADDXrs)
+                     .addReg(Pointer)
+                     .addReg(Pointer)
+                     .addReg(Scratch)
+                     .addImm(0));
+}
+
 void AArch64AsmPrinter::emitPtrauthAuthResign(
     Register Pointer, Register Scratch, PtrAuthSchema AuthSchema,
-    std::optional<PtrAuthSchema> SignSchema, std::optional<uint64_t> OptAddend,
+    std::optional<PtrAuthSchema> SignSchema, std::optional<int64_t> Addend,
     Value *DS) {
   const bool IsResign = SignSchema.has_value();
-  const bool HasLoad = OptAddend.has_value();
   // We expand AUT/AUTPAC into a sequence of the form
   //
   //      ; authenticate x16
@@ -2307,69 +2366,8 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(
   if (!IsResign)
     return;
 
-  if (HasLoad) {
-    int64_t Addend = *OptAddend;
-    // incoming rawpointer in X16, X17 is not live at this point.
-    //   LDSRWpre x17, x16, simm9  ; note: x16+simm9 used later.
-    if (isInt<9>(Addend)) {
-      EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::LDRSWpre)
-                                       .addReg(AArch64::X16)
-                                       .addReg(AArch64::X17)
-                                       .addReg(AArch64::X16)
-                                       .addImm(/*simm9:*/ Addend));
-    } else {
-      //   x16 = x16 + Addend computation has 2 variants
-      if (isUInt<24>(Addend)) {
-        // variant 1: add x16, x16, Addend >> shift12 ls shift12
-        // This can take upto 2 instructions.
-        for (int BitPos = 0; BitPos != 24 && (Addend >> BitPos); BitPos += 12) {
-          EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::ADDXri)
-                                           .addReg(AArch64::X16)
-                                           .addReg(AArch64::X16)
-                                           .addImm((Addend >> BitPos) & 0xfff)
-                                           .addImm(AArch64_AM::getShifterImm(
-                                               AArch64_AM::LSL, BitPos)));
-        }
-      } else {
-        // variant 2: accumulate constant in X17 16 bits at a time, and add to
-        // X16 This can take 2-5 instructions.
-        EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::MOVZXi)
-                                         .addReg(AArch64::X17)
-                                         .addImm(Addend & 0xffff)
-                                         .addImm(AArch64_AM::getShifterImm(
-                                             AArch64_AM::LSL, 0)));
-
-        for (int Offset = 16; Offset < 64; Offset += 16) {
-          uint16_t Fragment = static_cast<uint16_t>(Addend >> Offset);
-          if (!Fragment)
-            continue;
-          EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::MOVKXi)
-                                           .addReg(AArch64::X17)
-                                           .addReg(AArch64::X17)
-                                           .addImm(Fragment)
-                                           .addImm(/*shift:*/ Offset));
-        }
-        // addx x16, x16, x17
-        EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::ADDXrs)
-                                         .addReg(AArch64::X16)
-                                         .addReg(AArch64::X16)
-                                         .addReg(AArch64::X17)
-                                         .addImm(0));
-      }
-      // ldrsw x17,x16(0)
-      EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::LDRSWui)
-                                       .addReg(AArch64::X17)
-                                       .addReg(AArch64::X16)
-                                       .addImm(0));
-    }
-    // addx x16, x16, x17
-    EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::ADDXrs)
-                                     .addReg(AArch64::X16)
-                                     .addReg(AArch64::X16)
-                                     .addReg(AArch64::X17)
-                                     .addImm(0));
-
-  } /* HasLoad == true */
+  if (Addend.has_value())
+    emitPtrauthApplyIndirectAddend(Pointer, Scratch, *Addend);
 
   // Compute pac discriminator into x17
   Register PACDiscReg = emitPtrauthDiscriminator(SignSchema->IntDisc,
@@ -2697,8 +2695,10 @@ AArch64AsmPrinter::lowerConstantPtrAuth(const ConstantPtrAuth &CPA) {
     else if (Offset.slt(0))
       Sym = MCBinaryExpr::createSub(
           Sym, MCConstantExpr::create((-Offset).getSExtValue(), Ctx), Ctx);
-  } else {
+  } else if (isa<ConstantPointerNull>(BaseGV)) {
     Sym = MCConstantExpr::create(Offset.getSExtValue(), Ctx);
+  } else {
+    reportFatalUsageError("unsupported constant expression in ptrauth pointer");
   }
 
   const MCExpr *DSExpr = nullptr;
@@ -3256,20 +3256,20 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     return;
 
   case AArch64::EMITBKEY: {
-      ExceptionHandling ExceptionHandlingType = MAI->getExceptionHandlingType();
-      if (ExceptionHandlingType != ExceptionHandling::DwarfCFI &&
-          ExceptionHandlingType != ExceptionHandling::ARM)
-        return;
-
-      if (getFunctionCFISectionType(*MF) == CFISection::None)
-        return;
-
-      OutStreamer->emitCFIBKeyFrame();
+    ExceptionHandling ExceptionHandlingType = MAI.getExceptionHandlingType();
+    if (ExceptionHandlingType != ExceptionHandling::DwarfCFI &&
+        ExceptionHandlingType != ExceptionHandling::ARM)
       return;
+
+    if (getFunctionCFISectionType(*MF) == CFISection::None)
+      return;
+
+    OutStreamer->emitCFIBKeyFrame();
+    return;
   }
 
   case AArch64::EMITMTETAGGED: {
-    ExceptionHandling ExceptionHandlingType = MAI->getExceptionHandlingType();
+    ExceptionHandling ExceptionHandlingType = MAI.getExceptionHandlingType();
     if (ExceptionHandlingType != ExceptionHandling::DwarfCFI &&
         ExceptionHandlingType != ExceptionHandling::ARM)
       return;

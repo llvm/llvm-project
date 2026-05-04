@@ -1830,13 +1830,18 @@ CFGBlock *CFGBuilder::addInitializer(CXXCtorInitializer *I) {
   // after initialization finishes.
   Expr *Init = I->getInit();
   if (Init) {
-    HasTemporaries = isa<ExprWithCleanups>(Init);
+    Expr *ActualInit = Init;
+    if (BuildOpts.AddCXXDefaultInitExprInCtors)
+      if (auto *DIE = dyn_cast<CXXDefaultInitExpr>(Init))
+        ActualInit = DIE->getExpr();
+
+    HasTemporaries = isa<ExprWithCleanups>(ActualInit);
 
     if (HasTemporaries &&
         (BuildOpts.AddTemporaryDtors || BuildOpts.AddLifetime)) {
       // Generate destructors for temporaries in initialization expression.
       TempDtorContext Context;
-      VisitForTemporaries(cast<ExprWithCleanups>(Init)->getSubExpr(),
+      VisitForTemporaries(cast<ExprWithCleanups>(ActualInit)->getSubExpr(),
                           /*ExternallyDestructed=*/false, Context);
 
       addFullExprCleanupMarker(Context);
@@ -1856,11 +1861,6 @@ CFGBlock *CFGBuilder::addInitializer(CXXCtorInitializer *I) {
         ConstructionContextLayer::create(cfg->getBumpVectorContext(), I),
         AILEInit ? AILEInit : Init);
 
-    if (HasTemporaries) {
-      // For expression with temporaries go directly to subexpression to omit
-      // generating destructors for the second time.
-      return Visit(cast<ExprWithCleanups>(Init)->getSubExpr());
-    }
     if (BuildOpts.AddCXXDefaultInitExprInCtors) {
       if (CXXDefaultInitExpr *Default = dyn_cast<CXXDefaultInitExpr>(Init)) {
         // In general, appending the expression wrapped by a CXXDefaultInitExpr
@@ -1868,11 +1868,20 @@ CFGBlock *CFGBuilder::addInitializer(CXXCtorInitializer *I) {
         // here is safe because there's only one initializer per field.
         autoCreateBlock();
         appendStmt(Block, Default);
-        if (Stmt *Child = Default->getExpr())
+        if (Stmt *Child = Default->getExpr()) {
+          if (HasTemporaries)
+            Child = cast<ExprWithCleanups>(Child)->getSubExpr();
           if (CFGBlock *R = Visit(Child))
             Block = R;
+        }
         return Block;
       }
+    }
+
+    if (HasTemporaries) {
+      // For expression with temporaries go directly to subexpression to omit
+      // generating destructors for the second time.
+      return Visit(cast<ExprWithCleanups>(Init)->getSubExpr());
     }
     return Visit(Init);
   }
@@ -4179,9 +4188,7 @@ CFGBlock *CFGBuilder::VisitArrayInitLoopExpr(ArrayInitLoopExpr *A,
   if (CFGBlock *R = Visit(A->getSubExpr()))
     B = R;
 
-  auto *OVE = dyn_cast<OpaqueValueExpr>(A->getCommonExpr());
-  assert(OVE && "ArrayInitLoopExpr->getCommonExpr() should be wrapped in an "
-                "OpaqueValueExpr!");
+  OpaqueValueExpr *OVE = A->getCommonExpr();
   if (CFGBlock *R = Visit(OVE->getSourceExpr()))
     B = R;
 

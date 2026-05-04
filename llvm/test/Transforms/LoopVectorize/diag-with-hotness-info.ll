@@ -46,7 +46,6 @@
 source_filename = "/tmp/s.c"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
-; Function Attrs: norecurse nounwind ssp uwtable
 define void @cold(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture %C, ptr nocapture readonly %D, ptr nocapture readonly %E, i32 %N) #0 !dbg !7 !prof !56 {
 entry:
   %cmp28 = icmp sgt i32 %N, 0, !dbg !9
@@ -58,20 +57,20 @@ ph:
 for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %ph ]
   %arrayidx = getelementptr inbounds i8, ptr %A, i64 %indvars.iv, !dbg !12
-  %0 = load i8, ptr %arrayidx, align 1, !dbg !12, !tbaa !13
+  %0 = load i8, ptr %arrayidx, align 1, !dbg !12
   %arrayidx2 = getelementptr inbounds i8, ptr %B, i64 %indvars.iv, !dbg !16
-  %1 = load i8, ptr %arrayidx2, align 1, !dbg !16, !tbaa !13
+  %1 = load i8, ptr %arrayidx2, align 1, !dbg !16
   %add = add i8 %1, %0, !dbg !17
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1, !dbg !10
   %arrayidx7 = getelementptr inbounds i8, ptr %A, i64 %indvars.iv.next, !dbg !18
-  store i8 %add, ptr %arrayidx7, align 1, !dbg !19, !tbaa !13
+  store i8 %add, ptr %arrayidx7, align 1, !dbg !19
   %arrayidx9 = getelementptr inbounds i8, ptr %D, i64 %indvars.iv, !dbg !20
-  %2 = load i8, ptr %arrayidx9, align 1, !dbg !20, !tbaa !13
+  %2 = load i8, ptr %arrayidx9, align 1, !dbg !20
   %arrayidx12 = getelementptr inbounds i8, ptr %E, i64 %indvars.iv, !dbg !21
-  %3 = load i8, ptr %arrayidx12, align 1, !dbg !21, !tbaa !13
+  %3 = load i8, ptr %arrayidx12, align 1, !dbg !21
   %mul = mul i8 %3, %2, !dbg !22
   %arrayidx16 = getelementptr inbounds i8, ptr %C, i64 %indvars.iv, !dbg !23
-  store i8 %mul, ptr %arrayidx16, align 1, !dbg !24, !tbaa !13
+  store i8 %mul, ptr %arrayidx16, align 1, !dbg !24
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32, !dbg !10
   %exitcond = icmp eq i32 %lftr.wideiv, %N, !dbg !10
   br i1 %exitcond, label %for.cond.cleanup, label %for.body, !dbg !10, !llvm.loop !25, !prof !59
@@ -80,7 +79,6 @@ for.cond.cleanup:
   ret void, !dbg !11
 }
 
-; Function Attrs: norecurse nounwind ssp uwtable
 define void @hot(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture %C, ptr nocapture readonly %D, ptr nocapture readonly %E, i32 %N) #0 !dbg !26 !prof !57 {
 entry:
   %cmp28 = icmp sgt i32 %N, 0, !dbg !27
@@ -92,20 +90,20 @@ ph:
 for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %ph ]
   %arrayidx = getelementptr inbounds i8, ptr %A, i64 %indvars.iv, !dbg !30
-  %0 = load i8, ptr %arrayidx, align 1, !dbg !30, !tbaa !13
+  %0 = load i8, ptr %arrayidx, align 1, !dbg !30
   %arrayidx2 = getelementptr inbounds i8, ptr %B, i64 %indvars.iv, !dbg !31
-  %1 = load i8, ptr %arrayidx2, align 1, !dbg !31, !tbaa !13
+  %1 = load i8, ptr %arrayidx2, align 1, !dbg !31
   %add = add i8 %1, %0, !dbg !32
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1, !dbg !28
   %arrayidx7 = getelementptr inbounds i8, ptr %A, i64 %indvars.iv.next, !dbg !33
-  store i8 %add, ptr %arrayidx7, align 1, !dbg !34, !tbaa !13
+  store i8 %add, ptr %arrayidx7, align 1, !dbg !34
   %arrayidx9 = getelementptr inbounds i8, ptr %D, i64 %indvars.iv, !dbg !35
-  %2 = load i8, ptr %arrayidx9, align 1, !dbg !35, !tbaa !13
+  %2 = load i8, ptr %arrayidx9, align 1, !dbg !35
   %arrayidx12 = getelementptr inbounds i8, ptr %E, i64 %indvars.iv, !dbg !36
-  %3 = load i8, ptr %arrayidx12, align 1, !dbg !36, !tbaa !13
+  %3 = load i8, ptr %arrayidx12, align 1, !dbg !36
   %mul = mul i8 %3, %2, !dbg !37
   %arrayidx16 = getelementptr inbounds i8, ptr %C, i64 %indvars.iv, !dbg !38
-  store i8 %mul, ptr %arrayidx16, align 1, !dbg !39, !tbaa !13
+  store i8 %mul, ptr %arrayidx16, align 1, !dbg !39
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32, !dbg !28
   %exitcond = icmp eq i32 %lftr.wideiv, %N, !dbg !28
   br i1 %exitcond, label %for.cond.cleanup, label %for.body, !dbg !28, !llvm.loop !40, !prof !59
@@ -114,42 +112,40 @@ for.cond.cleanup:
   ret void, !dbg !29
 }
 
-; Function Attrs: norecurse nounwind ssp uwtable
 define void @unknown(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture %C, ptr nocapture readonly %D, ptr nocapture readonly %E, i32 %N) #0 !dbg !41 {
 entry:
   %cmp28 = icmp sgt i32 %N, 0, !dbg !42
   br i1 %cmp28, label %for.body, label %for.cond.cleanup, !dbg !43
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   ret void, !dbg !44
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i8, ptr %A, i64 %indvars.iv, !dbg !45
-  %0 = load i8, ptr %arrayidx, align 1, !dbg !45, !tbaa !13
+  %0 = load i8, ptr %arrayidx, align 1, !dbg !45
   %arrayidx2 = getelementptr inbounds i8, ptr %B, i64 %indvars.iv, !dbg !46
-  %1 = load i8, ptr %arrayidx2, align 1, !dbg !46, !tbaa !13
+  %1 = load i8, ptr %arrayidx2, align 1, !dbg !46
   %add = add i8 %1, %0, !dbg !47
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1, !dbg !43
   %arrayidx7 = getelementptr inbounds i8, ptr %A, i64 %indvars.iv.next, !dbg !48
-  store i8 %add, ptr %arrayidx7, align 1, !dbg !49, !tbaa !13
+  store i8 %add, ptr %arrayidx7, align 1, !dbg !49
   %arrayidx9 = getelementptr inbounds i8, ptr %D, i64 %indvars.iv, !dbg !50
-  %2 = load i8, ptr %arrayidx9, align 1, !dbg !50, !tbaa !13
+  %2 = load i8, ptr %arrayidx9, align 1, !dbg !50
   %arrayidx12 = getelementptr inbounds i8, ptr %E, i64 %indvars.iv, !dbg !51
-  %3 = load i8, ptr %arrayidx12, align 1, !dbg !51, !tbaa !13
+  %3 = load i8, ptr %arrayidx12, align 1, !dbg !51
   %mul = mul i8 %3, %2, !dbg !52
   %arrayidx16 = getelementptr inbounds i8, ptr %C, i64 %indvars.iv, !dbg !53
-  store i8 %mul, ptr %arrayidx16, align 1, !dbg !54, !tbaa !13
+  store i8 %mul, ptr %arrayidx16, align 1, !dbg !54
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32, !dbg !43
   %exitcond = icmp eq i32 %lftr.wideiv, %N, !dbg !43
   br i1 %exitcond, label %for.cond.cleanup, label %for.body, !dbg !43, !llvm.loop !55
 }
 
-attributes #0 = { norecurse nounwind ssp uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="core2" "target-features"="+cx16,+fxsr,+mmx,+sse,+sse2,+sse3,+ssse3,+x87" "use-soft-float"="false" }
+attributes #0 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="core2" "target-features"="+cx16,+fxsr,+mmx,+sse,+sse2,+sse3,+ssse3,+x87" "use-soft-float"="false" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5}
-!llvm.ident = !{!6}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.9.0 (trunk 273572) (llvm/trunk 273585)", isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !2)
 !1 = !DIFile(filename: "/tmp/s.c", directory: "/tmp")
@@ -157,16 +153,12 @@ attributes #0 = { norecurse nounwind ssp uwtable "disable-tail-calls"="false" "l
 !3 = !{i32 2, !"Dwarf Version", i32 2}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 !5 = !{i32 1, !"PIC Level", i32 2}
-!6 = !{!"clang version 3.9.0 (trunk 273572) (llvm/trunk 273585)"}
 !7 = distinct !DISubprogram(name: "cold", scope: !1, file: !1, line: 1, type: !8, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !2)
 !8 = !DISubroutineType(types: !2)
 !9 = !DILocation(line: 2, column: 20, scope: !7)
 !10 = !DILocation(line: 2, column: 3, scope: !7)
 !11 = !DILocation(line: 6, column: 1, scope: !7)
 !12 = !DILocation(line: 3, column: 16, scope: !7)
-!13 = !{!14, !14, i64 0}
-!14 = !{!"omnipotent char", !15, i64 0}
-!15 = !{!"Simple C/C++ TBAA"}
 !16 = !DILocation(line: 3, column: 23, scope: !7)
 !17 = !DILocation(line: 3, column: 21, scope: !7)
 !18 = !DILocation(line: 3, column: 5, scope: !7)

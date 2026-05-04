@@ -43,6 +43,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatAdapters.h"
 
@@ -425,6 +426,14 @@ ScriptInterpreterPythonImpl::ScriptInterpreterPythonImpl(Debugger &debugger)
   RunSimpleString(run_string.GetData());
   run_string.Clear();
 
+  // Configure pydoc (built-in module) to use the "plain" pager. The default one
+  // doesn't play nice with the statusline.
+  run_string.Printf("run_one_line (%s, 'import pydoc; pydoc.pager = "
+                    "pydoc.plainpager')",
+                    m_dictionary_name.c_str());
+  RunSimpleString(run_string.GetData());
+  run_string.Clear();
+
   run_string.Printf("run_one_line (%s, 'lldb.debugger_unique_id = %" PRIu64
                     "')",
                     m_dictionary_name.c_str(), m_debugger.GetID());
@@ -589,7 +598,10 @@ bool ScriptInterpreterPythonImpl::SetStdHandle(FileSP file_sp,
 
   auto new_file = PythonFile::FromFile(file, mode);
   if (!new_file) {
-    llvm::consumeError(new_file.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Script), new_file.takeError(),
+                   "ScriptInterpreterPythonImpl::SetStdHandle failed to wrap "
+                   "sys.{1}: {0}",
+                   py_name);
     return false;
   }
 
@@ -858,8 +870,8 @@ bool ScriptInterpreterPythonImpl::ExecuteOneLine(
 
     // The one-liner failed.  Append the error message.
     if (result) {
-      result->AppendErrorWithFormat(
-          "python failed attempting to evaluate '%s'\n", command_str.c_str());
+      result->AppendErrorWithFormat("python failed attempting to evaluate '%s'",
+                                    command_str.c_str());
     }
     return false;
   }
@@ -1521,6 +1533,11 @@ ScriptInterpreterPythonImpl::CreateScriptedStopHookInterface() {
   return std::make_shared<ScriptedStopHookPythonInterface>(*this);
 }
 
+ScriptedHookInterfaceSP
+ScriptInterpreterPythonImpl::CreateScriptedHookInterface() {
+  return std::make_shared<ScriptedHookPythonInterface>(*this);
+}
+
 ScriptedBreakpointInterfaceSP
 ScriptInterpreterPythonImpl::CreateScriptedBreakpointInterface() {
   return std::make_shared<ScriptedBreakpointPythonInterface>(*this);
@@ -1957,14 +1974,17 @@ lldb::ValueObjectSP ScriptInterpreterPythonImpl::GetChildAtIndex(
 llvm::Expected<uint32_t> ScriptInterpreterPythonImpl::GetIndexOfChildWithName(
     const StructuredData::ObjectSP &implementor_sp, const char *child_name) {
   if (!implementor_sp)
-    return llvm::createStringError("Type has no child named '%s'", child_name);
+    return llvm::createStringErrorV("type has no child named '{0}'",
+                                    child_name);
 
   StructuredData::Generic *generic = implementor_sp->GetAsGeneric();
   if (!generic)
-    return llvm::createStringError("Type has no child named '%s'", child_name);
+    return llvm::createStringErrorV("type has no child named '{0}'",
+                                    child_name);
   auto *implementor = static_cast<PyObject *>(generic->GetValue());
   if (!implementor)
-    return llvm::createStringError("Type has no child named '%s'", child_name);
+    return llvm::createStringErrorV("type has no child named '{0}'",
+                                    child_name);
 
   uint32_t ret_val = UINT32_MAX;
 
@@ -1976,7 +1996,8 @@ llvm::Expected<uint32_t> ScriptInterpreterPythonImpl::GetIndexOfChildWithName(
   }
 
   if (ret_val == UINT32_MAX)
-    return llvm::createStringError("Type has no child named '%s'", child_name);
+    return llvm::createStringErrorV("type has no child named '{0}'",
+                                    child_name);
   return ret_val;
 }
 
