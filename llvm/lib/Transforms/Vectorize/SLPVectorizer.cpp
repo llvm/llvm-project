@@ -26551,7 +26551,7 @@ bool SLPVectorizerPass::vectorizeStores(
   SmallVector<std::unique_ptr<StoreChainContext>> AllContexts;
   SmallVector<unsigned> RangeSizesByIdx(Stores.size(), 1);
 
-  auto ExtendOperands = [&](const RelatedStoreInsts::DistToInstMap &StoreSeq) {
+  auto ExtendContexts = [&](const RelatedStoreInsts::DistToInstMap &StoreSeq) {
     BoUpSLP::ValueList Operands;
     const unsigned MaxStride = EnableStridedStores ? MaxProfitableStride : 1;
 
@@ -26720,7 +26720,7 @@ bool SLPVectorizerPass::vectorizeStores(
     // Otherwise, insert this store and keep collecting.
     if (std::optional<unsigned> PrevInst =
             RelatedStores->insertOrLookup(Idx, *PtrDist)) {
-      ExtendOperands(RelatedStores->getStores());
+      ExtendContexts(RelatedStores->getStores());
       RelatedStores->rebase(/*MinSafeIdx=*/*PrevInst + 1,
                             /*NewBaseInstIdx=*/Idx,
                             /*DistFromCurBase=*/*PtrDist);
@@ -26735,7 +26735,7 @@ bool SLPVectorizerPass::vectorizeStores(
     // Check that we do not try to vectorize stores of different types.
     if (PrevValTy != SI->getValueOperand()->getType()) {
       for (RelatedStoreInsts &StoreSeq : SortedStores)
-        ExtendOperands(StoreSeq.getStores());
+        ExtendContexts(StoreSeq.getStores());
       SortedStores.clear();
       PrevValTy = SI->getValueOperand()->getType();
     }
@@ -26744,7 +26744,7 @@ bool SLPVectorizerPass::vectorizeStores(
 
   // Final vectorization attempt.
   for (RelatedStoreInsts &StoreSeq : SortedStores)
-    ExtendOperands(StoreSeq.getStores());
+    ExtendContexts(StoreSeq.getStores());
 
   TryToVectorize();
   return Changed;
