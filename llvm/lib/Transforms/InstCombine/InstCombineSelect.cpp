@@ -1115,18 +1115,17 @@ canonicalizeSaturatedSubtractSigned(const ICmpInst *ICI, const Value *TrueVal,
   // `A != B ? X : Y` --> `A == B ? Y : X`
   // This canonicalization allows us to handle more patterns with fewer checks.
   if (Pred == ICmpInst::ICMP_NE) {
-    Pred = ICmpInst::getInversePredicate(Pred);
+    Pred = ICmpInst::ICMP_EQ;
     std::swap(TrueVal, FalseVal);
   }
 
-  if (Pred == ICmpInst::ICMP_EQ) {
-    // `A == MIN_INT ? MAX_INT : 0 - A` --> `ssub_sat 0, A`
-    if (match(CmpRHS, m_SignMask()) && match(TrueVal, m_MaxSignedValue()) &&
-        match(FalseVal, m_Neg(m_Specific(CmpLHS)))) {
-      return Builder.CreateBinaryIntrinsic(
-          Intrinsic::ssub_sat, ConstantInt::getNullValue(CmpLHS->getType()),
-          CmpLHS);
-    }
+  // `A == MIN_INT ? MAX_INT : 0 - A` --> `ssub_sat 0, A`
+  if (Pred == ICmpInst::ICMP_EQ && match(CmpRHS, m_SignMask()) &&
+      match(TrueVal, m_MaxSignedValue()) &&
+      match(FalseVal, m_Neg(m_Specific(CmpLHS)))) {
+    return Builder.CreateBinaryIntrinsic(
+        Intrinsic::ssub_sat, ConstantInt::getNullValue(CmpLHS->getType()),
+        CmpLHS);
   }
 
   return nullptr;
