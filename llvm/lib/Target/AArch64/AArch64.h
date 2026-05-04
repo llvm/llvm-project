@@ -105,14 +105,14 @@ public:
 };
 
 class AArch64PostSelectOptimizePass
-    : public PassInfoMixin<AArch64PostSelectOptimizePass> {
+    : public OptionalPassInfoMixin<AArch64PostSelectOptimizePass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
 };
 
 class AArch64PostLegalizerLoweringPass
-    : public PassInfoMixin<AArch64PostLegalizerLoweringPass> {
+    : public OptionalPassInfoMixin<AArch64PostLegalizerLoweringPass> {
   std::unique_ptr<AArch64PostLegalizerLoweringImplRuleConfig> RuleConfig;
 
 public:
@@ -181,7 +181,7 @@ void initializeSVEIntrinsicOptsPass(PassRegistry &);
 void initializeAArch64Arm64ECCallLoweringPass(PassRegistry &);
 
 class AArch64StackTaggingPreRAPass
-    : public PassInfoMixin<AArch64StackTaggingPreRAPass> {
+    : public OptionalPassInfoMixin<AArch64StackTaggingPreRAPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
@@ -216,7 +216,7 @@ public:
 };
 
 class AArch64RedundantCondBranchPass
-    : public PassInfoMixin<AArch64RedundantCondBranchPass> {
+    : public OptionalPassInfoMixin<AArch64RedundantCondBranchPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
@@ -303,7 +303,7 @@ public:
 };
 
 class AArch64ConditionalComparesPass
-    : public PassInfoMixin<AArch64ConditionalComparesPass> {
+    : public OptionalPassInfoMixin<AArch64ConditionalComparesPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
