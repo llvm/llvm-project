@@ -37,18 +37,19 @@ using VPInstructionTest = VPlanTestBase;
 using VPlanSCEVTest = VPlanTestIRBase;
 
 TEST_F(VPlanSCEVTest, GetSCEVExprForVPValueAbs) {
-  const char *ModuleString =
-      "define void @f(i32 %x) {\n"
-      "entry:\n"
-      "  br label %loop\n"
-      "loop:\n"
-      "  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]\n"
-      "  %iv.next = add nuw nsw i32 %iv, 1\n"
-      "  %exit = icmp eq i32 %iv.next, 4\n"
-      "  br i1 %exit, label %exit.block, label %loop\n"
-      "exit.block:\n"
-      "  ret void\n"
-      "}\n";
+  const char *ModuleString = R"(
+define void @f(i32 %x) {
+entry:
+  br label %loop
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.next = add nuw nsw i32 %iv, 1
+  %exit = icmp eq i32 %iv.next, 4
+  br i1 %exit, label %exit.block, label %loop
+exit.block:
+  ret void
+}
+)";
 
   Module &M = parseModule(ModuleString);
   Function *F = M.getFunction("f");
@@ -60,14 +61,14 @@ TEST_F(VPlanSCEVTest, GetSCEVExprForVPValueAbs) {
   VPlan Plan(LoopHeader);
   Argument *X = F->getArg(0);
   VPValue *Op = Plan.getOrAddLiveIn(X);
-  VPValue *IsIntMinPoison = Plan.getOrAddLiveIn(ConstantInt::getTrue(*Ctx));
+  VPValue *IsIntMinPoison = Plan.getTrue();
   VPWidenIntrinsicRecipe Abs(Intrinsic::abs, {Op, IsIntMinPoison},
                              X->getType());
 
   const SCEV *Expr = vputils::getSCEVExprForVPValue(&Abs, PSE, L);
   EXPECT_EQ(SE->getAbsExpr(SE->getSCEV(X), /*IsNSW=*/true), Expr);
 
-  IsIntMinPoison = Plan.getOrAddLiveIn(ConstantInt::getFalse(*Ctx));
+  IsIntMinPoison = Plan.getFalse();
   VPWidenIntrinsicRecipe WrappingAbs(Intrinsic::abs, {Op, IsIntMinPoison},
                                      X->getType());
   Expr = vputils::getSCEVExprForVPValue(&WrappingAbs, PSE, L);
