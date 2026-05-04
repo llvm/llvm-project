@@ -6593,8 +6593,6 @@ VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(VPInstruction *VPI,
 }
 
 bool VPRecipeBuilder::shouldWiden(Instruction *I, VFRange &Range) const {
-  assert((!isa<UncondBrInst, CondBrInst, PHINode, LoadInst, StoreInst>(I)) &&
-         "Instruction should have been handled earlier");
   // Instruction should be widened, unless it is scalar after vectorization,
   // scalarization is profitable or it is predicated.
   auto WillScalarize = [this, I](ElementCount VF) -> bool {
@@ -6716,6 +6714,11 @@ VPReplicateRecipe *VPRecipeBuilder::handleReplication(VPInstruction *VPI,
       Range);
 
   bool IsPredicated = CM.isPredicatedInst(I);
+
+  // Avoid unnecessarily replicating casts if they are uniform: they
+  // are always unmasked, so there is no mask to drop.
+  if (IsUniform && Instruction::isCast(VPI->getOpcode()))
+    return nullptr;
 
   // Even if the instruction is not marked as uniform, there are certain
   // intrinsic calls that can be effectively treated as such, so we check for
@@ -7022,23 +7025,19 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VPlanPtr Plan,
       if (!VPI->getUnderlyingValue())
         continue;
 
-      // TODO: Gradually replace uses of underlying instruction by analyses on
-      // VPlan. Migrate code relying on the underlying instruction from VPlan0
-      // to construct recipes below to not use the underlying instruction.
-      Instruction *Instr = cast<Instruction>(VPI->getUnderlyingValue());
       Builder.setInsertPoint(VPI);
-
       VPRecipeBase *Recipe =
           RecipeBuilder.tryToCreateWidenNonPhiRecipe(VPI, Range);
-      if (!Recipe)
-        Recipe =
-            RecipeBuilder.handleReplication(cast<VPInstruction>(VPI), Range);
 
-      if (isa<VPWidenIntOrFpInductionRecipe>(Recipe) && isa<TruncInst>(Instr)) {
-        // Optimized a truncate to VPWidenIntOrFpInductionRecipe. It needs to be
-        // moved to the phi section in the header.
-        Recipe->insertBefore(*HeaderVPBB, HeaderVPBB->getFirstNonPhi());
+      if (isa_and_nonnull<VPWidenIntOrFpInductionRecipe>(Recipe)) {
+        if (VPI->getOpcode() == Instruction::Trunc)
+          // Optimized a truncate to VPWidenIntOrFpInductionRecipe. It needs
+          // to be moved to the phi section in the header.
+          Recipe->insertBefore(*HeaderVPBB, HeaderVPBB->getFirstNonPhi());
       } else {
+        if (!Recipe)
+          if (!(Recipe = RecipeBuilder.handleReplication(VPI, Range)))
+            continue;
         Builder.insert(Recipe);
       }
       if (Recipe->getNumDefinedValues() == 1) {
