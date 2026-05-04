@@ -258,6 +258,13 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
     return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getSMinExpr(Ops[0], Ops[1]);
     });
+  const APInt *IsIntMinPoison;
+  if (match(V, m_Intrinsic<Intrinsic::abs>(m_VPValue(LHSVal),
+                                           m_APInt(IsIntMinPoison))) &&
+      IsIntMinPoison->getBitWidth() == 1)
+    return CreateSCEV({LHSVal}, [&](ArrayRef<SCEVUse> Ops) {
+      return SE.getAbsExpr(Ops[0], IsIntMinPoison->isOne());
+    });
 
   ArrayRef<VPValue *> Ops;
   Type *SourceElementType;
