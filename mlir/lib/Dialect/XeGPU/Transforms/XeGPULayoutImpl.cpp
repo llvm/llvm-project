@@ -478,7 +478,7 @@ xegpu::inferInterleaveSourceLayout(xegpu::DistributeLayoutAttr resLayout) {
 
   // Interleave doubles the innermost dimension, so we need to halve the
   // layout values (similar to bitcast with ratio = 2)
-  int ratio = 2;
+  constexpr int ratio = 2;
   if (sgDataSize) {
     assert((sgData.back() % ratio) == 0 &&
            "sgData not divisible by interleave ratio");
@@ -495,11 +495,7 @@ xegpu::inferInterleaveSourceLayout(xegpu::DistributeLayoutAttr resLayout) {
     laneDataValue = laneData.back() / ratio;
   }
 
-  xegpu::DistributeLayoutAttr finalSrcLayout;
-  finalSrcLayout =
-      resLayout.setDimData(dim, sgDataValue, instDataValue, laneDataValue);
-
-  return finalSrcLayout;
+  return resLayout.setDimData(dim, sgDataValue, instDataValue, laneDataValue);
 }
 
 /// Infers the source layout attribute for a deinterleave operation given the
@@ -522,7 +518,7 @@ xegpu::inferDeinterleaveSourceLayout(xegpu::DistributeLayoutAttr resLayout) {
 
   // Deinterleave halves the innermost dimension, so we need to double the
   // layout values (similar to bitcast with ratio = 2)
-  int ratio = 2;
+  constexpr int ratio = 2;
   if (sgDataSize)
     sgDataValue = sgData.back() * ratio;
   if (instDataSize)
@@ -530,11 +526,7 @@ xegpu::inferDeinterleaveSourceLayout(xegpu::DistributeLayoutAttr resLayout) {
   if (laneDataSize)
     laneDataValue = laneData.back() * ratio;
 
-  xegpu::DistributeLayoutAttr finalSrcLayout;
-  finalSrcLayout =
-      resLayout.setDimData(dim, sgDataValue, instDataValue, laneDataValue);
-
-  return finalSrcLayout;
+  return resLayout.setDimData(dim, sgDataValue, instDataValue, laneDataValue);
 }
 
 /// Infers the source layout attribute for an insert strided slice operation
@@ -958,8 +950,8 @@ xegpu::DistributeLayoutAttr xegpu::setupBitCastResultLayout(
 
 /// Sets up the result layout for an interleave operation to ensure the source
 /// layout can be safely derived. Interleave doubles the innermost dimension,
-/// so the result layout must ensure that laneData is at least 2 (or a multiple
-/// of 2), and instData must be divisible by innermostDimLaneLayout * 2.
+/// so the result layout must ensure that laneData is a multiple
+/// of 2, and instData must be divisible by innermostDimLaneLayout * 2.
 ///
 /// Example:
 ///   Interleave: vector<128x256xf4> -> vector<128x512xf4>
@@ -982,43 +974,41 @@ xegpu::DistributeLayoutAttr xegpu::setupInterleaveResultLayout(
 
   assert(consumerLayout.getRank() == static_cast<int64_t>(srcShape.size()) &&
          "consumer layout rank must match source shape rank");
-  size_t dim = srcShape.size() - 1;
+  const size_t innerMostDim = srcShape.size() - 1;
   int64_t sgDataValue = -1;
   int64_t instDataValue = -1;
   int64_t laneDataValue = -1;
-  const int subgroupSize = uArch->getSubgroupSize();
 
   // Interleave doubles the innermost dimension (ratio = 2)
-  int ratio = 2;
-  int innermostDimLaneLayout = subgroupSize;
+  constexpr int ratio = 2;
+  int innermostDimLaneLayout = uArch->getSubgroupSize();
 
   if (layoutKind == xegpu::LayoutKind::Subgroup) {
-    sgDataValue = sgData[dim];
+    sgDataValue = sgData[innerMostDim];
     // Ensure sgDataValue is divisible by ratio so source sgData can be inferred
-    while ((sgDataValue <= srcShape[dim]) && (sgDataValue % ratio != 0))
-      sgDataValue *= 2;
+    while ((sgDataValue <= srcShape[innerMostDim]) &&
+           (sgDataValue % ratio != 0))
+      sgDataValue *= ratio;
   } else if (layoutKind == xegpu::LayoutKind::InstData) {
-    instDataValue = instData[dim];
+    instDataValue = instData[innerMostDim];
     // Adjust instDataValue so it can be divided by (innermostDimLaneLayout *
     // ratio) when inferring the source layout
-    while ((instDataValue <= srcShape[dim]) &&
+    while ((instDataValue <= srcShape[innerMostDim]) &&
            (instDataValue % (innermostDimLaneLayout * ratio) != 0))
-      instDataValue *= 2;
-    assert((srcShape[dim] % instDataValue) == 0 &&
+      instDataValue *= ratio;
+    assert((srcShape[innerMostDim] % instDataValue) == 0 &&
            "srcShape, instData, and laneLayout for innermost must be 2^n!");
   } else if (layoutKind == xegpu::LayoutKind::Lane) {
-    laneDataValue = laneData[dim];
+    laneDataValue = laneData[innerMostDim];
     // Ensure laneDataValue is at least 2 and divisible by ratio
     // so that source laneData = laneDataValue/2 is valid
-    while ((laneDataValue <= srcShape[dim]) && (laneDataValue % ratio != 0))
-      laneDataValue *= 2;
+    while ((laneDataValue <= srcShape[innerMostDim]) &&
+           (laneDataValue % ratio != 0))
+      laneDataValue *= ratio;
   }
 
-  xegpu::DistributeLayoutAttr resLayout;
-  resLayout =
-      consumerLayout.setDimData(dim, sgDataValue, instDataValue, laneDataValue);
-
-  return resLayout;
+  return consumerLayout.setDimData(innerMostDim, sgDataValue, instDataValue,
+                                   laneDataValue);
 }
 
 /// Sets up the result layout for an insert strided slice operation.
