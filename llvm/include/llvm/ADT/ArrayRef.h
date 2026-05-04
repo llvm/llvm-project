@@ -25,7 +25,7 @@
 namespace llvm {
   template<typename T> class [[nodiscard]] MutableArrayRef;
 
-  /// ArrayRef - Represent a constant reference to an array (0 or more elements
+  /// Represent a constant reference to an array (0 or more elements
   /// consecutively in memory), i.e. a start pointer and a length.  It allows
   /// various APIs to take consecutive elements easily and conveniently.
   ///
@@ -133,21 +133,21 @@ namespace llvm {
     reverse_iterator rbegin() const { return reverse_iterator(end()); }
     reverse_iterator rend() const { return reverse_iterator(begin()); }
 
-    /// empty - Check if the array is empty.
+    /// Check if the array is empty.
     bool empty() const { return Length == 0; }
 
     const T *data() const { return Data; }
 
-    /// size - Get the array size.
+    /// Get the array size.
     size_t size() const { return Length; }
 
-    /// front - Get the first element.
+    /// Get the first element.
     const T &front() const {
       assert(!empty());
       return Data[0];
     }
 
-    /// back - Get the last element.
+    /// Get the last element.
     const T &back() const {
       assert(!empty());
       return Data[Length-1];
@@ -174,7 +174,7 @@ namespace llvm {
       return MutableArrayRef<T>(Buff, Length);
     }
 
-    /// equals - Check for element-wise equality.
+    /// Check for element-wise equality.
     bool equals(ArrayRef RHS) const {
       if (Length != RHS.Length)
         return false;
@@ -282,9 +282,9 @@ namespace llvm {
     /// @}
   };
 
-  /// MutableArrayRef - Represent a mutable reference to an array (0 or more
-  /// elements consecutively in memory), i.e. a start pointer and a length.  It
-  /// allows various APIs to take and modify consecutive elements easily and
+  /// Represent a mutable reference to an array (0 or more elements
+  /// consecutively in memory), i.e. a start pointer and a length.  It allows
+  /// various APIs to take and modify consecutive elements easily and
   /// conveniently.
   ///
   /// This class does not own the underlying data, it is expected to be used in
@@ -345,40 +345,40 @@ namespace llvm {
     reverse_iterator rbegin() const { return reverse_iterator(end()); }
     reverse_iterator rend() const { return reverse_iterator(begin()); }
 
-    /// front - Get the first element.
+    /// Get the first element.
     T &front() const {
       assert(!this->empty());
       return data()[0];
     }
 
-    /// back - Get the last element.
+    /// Get the last element.
     T &back() const {
       assert(!this->empty());
       return data()[this->size()-1];
     }
 
-    /// consume_front() - Returns the first element and drops it from ArrayRef.
+    /// Returns the first element and drops it from ArrayRef.
     T &consume_front() {
       T &Ret = front();
       *this = drop_front();
       return Ret;
     }
 
-    /// consume_back() - Returns the last element and drops it from ArrayRef.
+    /// Returns the last element and drops it from ArrayRef.
     T &consume_back() {
       T &Ret = back();
       *this = drop_back();
       return Ret;
     }
 
-    /// slice(n, m) - Chop off the first N elements of the array, and keep M
-    /// elements in the array.
+    /// Chop off the first \p N elements of the array, and keep \p M elements
+    /// in the array.
     MutableArrayRef<T> slice(size_t N, size_t M) const {
       assert(N + M <= this->size() && "Invalid specifier");
       return MutableArrayRef<T>(this->data() + N, M);
     }
 
-    /// slice(n) - Chop off the first N elements of the array.
+    /// Chop off the first \p N elements of the array.
     MutableArrayRef<T> slice(size_t N) const {
       return slice(N, this->size() - N);
     }
