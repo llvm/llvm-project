@@ -27473,6 +27473,137 @@ bool SLPVectorizerPass::vectorizeStores(
                         return A && (!B || A->getStride() < B->getStride());
                       });
 
+    // Mixed scalar/build-vector slice handling.
+    //
+    // Conceptually a "store reduction": SLP builds a tree on the per-lane
+    // values, treating the original IE chain and StoreInsts together as
+    // the reduction-operation chain via UserIgnoreList. After the tree's
+    // standard cost analysis we add the store-sink-specific cost (one vector
+    // store, minus the replaced scalar store costs); if profitable we let
+    // the standard tree emitter materialize the lane-value vector, then
+    // emit the new <VF x T> store and erase the originals here. The IE
+    // chains feeding any erased build-vector store become trivially dead
+    // and are cleaned up by the standard pass at the end.
+    auto VectorizeBuildVectorStoreSinkSlice =
+        [&](ArrayRef<StoreLane> Chain) -> std::optional<bool> {
+      SmallVector<Value *> LaneValues;
+      SmallVector<std::pair<StoreInst *, unsigned>> Owners;
+      StoreInst *LastOwner = nullptr;
+      for (const StoreLane &Lane : Chain) {
+        LaneValues.push_back(Lane.ScalarValue);
+        if (Lane.Store == LastOwner) {
+          Owners.back().second++;
+        } else {
+          Owners.emplace_back(Lane.Store, 1);
+          LastOwner = Lane.Store;
+        }
+      }
+      // Each build-vector owner must be fully covered by this slice;
+      // otherwise erasing it would lose data outside the slice.
+      for (auto &[SI, Count] : Owners) {
+        SmallVector<Value *, 16> Elts;
+        SmallVector<Instruction *, 16> Insts;
+        if (collectBuildVector(SI->getValueOperand(), Elts, Insts) &&
+            Count != Elts.size())
+          return false;
+      }
+      // UserIgnoreList: original stores plus any IE chain feeding a build-
+      // vector store. SLP treats this exactly like a reduction tree: the
+      // lane values' uses inside listed instructions are not counted as
+      // external uses, since those instructions will be erased after the
+      // new vector store is emitted.
+      SmallDenseSet<Value *> Ignored;
+      for (auto &[SI, _] : Owners) {
+        Ignored.insert(SI);
+        SmallVector<Value *, 16> Elts;
+        SmallVector<Instruction *, 16> Insts;
+        if (collectBuildVector(SI->getValueOperand(), Elts, Insts))
+          for (Instruction *I : Insts)
+            Ignored.insert(I);
+      }
+      // Conservatively require owner stores to appear in the same order in the
+      // block as they appear in the lane range, and reject any intervening
+      // instruction that may read or write memory. The standard scalar store
+      // path gets memory-dependence checks through store-root scheduling; this
+      // manual store sink must not move a wider store across unknown memory.
+      StoreInst *PrevStore = nullptr;
+      for (auto &[SI, _] : Owners) {
+        if (PrevStore && !PrevStore->comesBefore(SI))
+          return false;
+        PrevStore = SI;
+      }
+      StoreInst *FirstStore = Owners.front().first;
+      StoreInst *LastStore = Owners.back().first;
+      for (Instruction &I : make_range(std::next(FirstStore->getIterator()),
+                                       LastStore->getIterator())) {
+        if (Ignored.contains(&I))
+          continue;
+        if (I.mayReadOrWriteMemory())
+          return false;
+      }
+      R.buildTree(LaneValues, Ignored);
+      if (R.isTreeTinyAndNotFullyVectorizable())
+        return false;
+      if (R.isProfitableToReorder()) {
+        R.reorderTopToBottom();
+        R.reorderBottomToTop();
+      }
+      R.transformNodes();
+      R.computeMinimumValueSizes();
+      InstructionCost TreeCost = R.calculateTreeCostAndTrimNonProfitable();
+      R.buildExternalUses();
+      InstructionCost Cost = R.getTreeCost(TreeCost);
+      // Add the store-sink-specific cost: one new vector store at the
+      // lowest-lane address, with alignment computed from each owner's
+      // base alignment shifted by its lane offset, minus the original
+      // store costs being replaced.
+      Type *EltTy = LaneValues.front()->getType();
+      auto *VecTy = getWidenedType(EltTy, LaneValues.size());
+      TypeSize EltSize = DL->getTypeStoreSize(EltTy);
+      Align CommonAlign = FirstStore->getAlign();
+      int64_t LaneOffset = 0;
+      for (auto &[SI, Count] : Owners) {
+        Align A = commonAlignment(SI->getAlign(),
+                                  LaneOffset * EltSize.getFixedValue());
+        CommonAlign = std::min(CommonAlign, A);
+        LaneOffset += Count;
+      }
+      InstructionCost VecStoreCost = TTI->getMemoryOpCost(
+          Instruction::Store, VecTy, CommonAlign,
+          FirstStore->getPointerAddressSpace(), TTI::TCK_RecipThroughput);
+      InstructionCost ScalarStoreCost = 0;
+      for (auto &[SI, Count] : Owners) {
+        TTI::OperandValueInfo OpInfo =
+            TTI::getOperandInfo(SI->getValueOperand());
+        ScalarStoreCost += TTI->getMemoryOpCost(
+            Instruction::Store, SI->getValueOperand()->getType(),
+            SI->getAlign(), SI->getPointerAddressSpace(),
+            TTI::TCK_RecipThroughput, OpInfo, SI);
+      }
+      Cost += VecStoreCost - ScalarStoreCost;
+      if (Cost >= -SLPCostThreshold)
+        return false;
+      // Standard emitter materializes the lane-value vector.
+      Value *VecValue = R.vectorizeTree();
+      // Emit the new vector store at the first owner's location.
+      IRBuilder<> Builder(FirstStore);
+      if (VecValue->getType() != VecTy) {
+        bool IsSigned = any_of(LaneValues, [&](Value *V) {
+          return !isKnownNonNegative(V, SimplifyQuery(*DL));
+        });
+        VecValue = Builder.CreateIntCast(VecValue, VecTy, IsSigned);
+      }
+      StoreInst *NewSI = Builder.CreateAlignedStore(
+          VecValue, FirstStore->getPointerOperand(), CommonAlign);
+      SmallVector<Value *> OwnerValues;
+      for (auto &[SI, _] : Owners)
+        OwnerValues.push_back(SI);
+      (void)::propagateMetadata(NewSI, OwnerValues);
+      for (auto &[SI, _] : Owners)
+        R.eraseInstruction(SI);
+      return true;
+    };
+
     for (unsigned LimitVF = GlobalMaxVF; LimitVF > 0;
          LimitVF = bit_ceil(LimitVF) / 2) {
       for (auto &CtxPtr : AllContexts) {
@@ -27484,16 +27615,27 @@ bool SLPVectorizerPass::vectorizeStores(
           unsigned VF = *VFUnval;
           if (!Context.vectorizeOneVF(
                   *TTI, VF, VectorizedStores, Changed,
-                  [this, &R](ArrayRef<StoreLane> Chain, unsigned Idx,
-                             unsigned MinVF,
-                             unsigned &Size) -> std::optional<bool> {
-                    // Mixed scalar/build-vector slices need a dedicated
-                    // TreeEntry path which is added by a follow-up commit.
-                    // For now decline them so the scalar-only path is
-                    // unchanged but keep the slice attempt counted.
-                    if (any_of(Chain, [](const StoreLane &Lane) {
-                          return Lane.IsVectorLane;
-                        })) {
+                  [&](ArrayRef<StoreLane> Chain, unsigned Idx, unsigned MinVF,
+                      unsigned &Size) -> std::optional<bool> {
+                    bool HasVec = any_of(Chain, [](const StoreLane &Lane) {
+                      return Lane.IsVectorLane;
+                    });
+                    bool HasScalar = any_of(Chain, [](const StoreLane &Lane) {
+                      return !Lane.IsVectorLane;
+                    });
+                    if (HasVec && HasScalar) {
+                      // Mixed scalar/build-vector slice: store-reduction sink.
+                      Size = 1;
+                      std::optional<bool> Res =
+                          VectorizeBuildVectorStoreSinkSlice(Chain);
+                      if (Res)
+                        Size = R.getTreeSize();
+                      return Res;
+                    }
+                    if (HasVec) {
+                      // All-build-vector slice: nothing to merge with
+                      // surrounding scalar stores; fall through and decline
+                      // so the existing scalar-only path is unaffected.
                       Size = 1;
                       return false;
                     }
