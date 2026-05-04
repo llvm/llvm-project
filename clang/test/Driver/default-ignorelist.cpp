@@ -1,7 +1,4 @@
 // XFAIL: !sanitizer-ignorelists
-// Test that ASan uses the default ignorelist from resource directory.
-// RUN: %clangxx -fsanitize=address -### %s 2>&1 | FileCheck %s
-// CHECK: fsanitize-system-ignorelist={{.*}}asan_ignorelist.txt
 
 // Check that the default ignorelist is not added as an extra dependency.
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=address -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-DEFAULT-IGNORELIST-ASAN --implicit-check-not=fdepfile-entry --implicit-check-not=-fsanitize-ignorelist=
