@@ -26,9 +26,9 @@ func.func @bar() {
   }
 #-}
 
-// BEFORE: // -----// IR Dump Before{{.*}}CSEPass (cse) //----- //
+// BEFORE: // -----// IR Dump Before{{.*}}CSEPass: cse //----- //
 // BEFORE: func @foo()
-// BEFORE: // -----// IR Dump Before{{.*}}CSEPass (cse) //----- //
+// BEFORE: // -----// IR Dump Before{{.*}}CSEPass: cse //----- //
 // BEFORE: func @bar()
-// BEFORE-NOT: // -----// IR Dump Before{{.*}}CanonicalizerPass (canonicalize) //----- //
+// BEFORE-NOT: // -----// IR Dump Before{{.*}}CanonicalizerPass: canonicalize //----- //
 // BEFORE-NOT: // -----// IR Dump After
