@@ -25062,7 +25062,7 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
       TLI.isOperationLegal(ISD::UMIN, VT)) {
     // If Op0 is a load and Op1 is not, swap them to allow folding the load
     // into the min/max operation.
-    if (Op0.getOpcode() == ISD::LOAD && Op1.getOpcode() != ISD::LOAD) {
+    if (X86::mayFoldLoad(Op0, Subtarget) && !X86::mayFoldLoad(Op1, Subtarget)) {
       std::swap(Op0, Op1);
       Cond = ISD::getSetCCSwappedOperands(Cond);
     }
