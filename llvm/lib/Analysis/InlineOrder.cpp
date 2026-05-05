@@ -264,7 +264,6 @@ public:
 private:
   SmallVector<CallBase *, 16> Heap;
   std::function<bool(const CallBase *L, const CallBase *R)> isLess;
-  DenseMap<CallBase *, int> InlineHistoryMap;
   DenseMap<const CallBase *, PriorityT> Priorities;
   FunctionAnalysisManager &FAM;
   const InlineParams &Params;

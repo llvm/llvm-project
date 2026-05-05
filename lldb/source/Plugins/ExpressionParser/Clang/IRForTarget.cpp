@@ -1396,7 +1396,7 @@ IRForTarget::UnfoldConstant(Constant *old_constant,
         } break;
         }
       } else {
-        return llvm::createStringErrorV("unhandled constant type \"{0\".",
+        return llvm::createStringErrorV("unhandled constant type \"{0}\".",
                                         PrintValue(constant));
       }
     } else if (Instruction *inst = llvm::dyn_cast<Instruction>(user)) {

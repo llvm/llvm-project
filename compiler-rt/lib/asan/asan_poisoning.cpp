@@ -19,6 +19,7 @@
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_interface_internal.h"
+#include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_ring_buffer.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
@@ -45,19 +46,20 @@ void AddPoisonRecord(const PoisonRecord &new_record) {
   poison_records->push(new_record);
 }
 
-bool FindPoisonRecord(uptr addr, PoisonRecord &match) {
+bool FindPoisonRecord(uptr addr, PoisonRecord& match, bool& is_full) {
   if (flags()->poison_history_size <= 0)
     return false;
 
   GenericScopedLock<Mutex> l(&poison_records_mutex);
 
-  if (poison_records) {
-    for (unsigned int i = 0; i < poison_records->size(); i++) {
-      PoisonRecord record = (*poison_records)[i];
-      if (record.begin <= addr && addr < record.end) {
-        internal_memcpy(&match, &record, sizeof(record));
-        return true;
-      }
+  const uptr records_count = poison_records ? poison_records->size() : 0;
+  is_full = records_count >= static_cast<uptr>(flags()->poison_history_size);
+
+  for (uptr i = 0; i < records_count; i++) {
+    PoisonRecord record = (*poison_records)[i];
+    if (record.begin <= addr && addr < record.end) {
+      internal_memcpy(&match, &record, sizeof(record));
+      return true;
     }
   }
 

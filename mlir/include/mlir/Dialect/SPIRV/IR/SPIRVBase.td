@@ -369,6 +369,7 @@ def SPV_AMD_shader_fragment_mask                 : I32EnumAttrCase<"SPV_AMD_shad
 def SPV_AMD_shader_image_load_store_lod          : I32EnumAttrCase<"SPV_AMD_shader_image_load_store_lod", 2004>;
 def SPV_AMD_texture_gather_bias_lod              : I32EnumAttrCase<"SPV_AMD_texture_gather_bias_lod", 2005>;
 def SPV_AMD_shader_early_and_late_fragment_tests : I32EnumAttrCase<"SPV_AMD_shader_early_and_late_fragment_tests", 2006>;
+def SPV_AMD_weak_linkage                         : I32EnumAttrCase<"SPV_AMD_weak_linkage", 2007>;
 
 def SPV_GOOGLE_decorate_string           : I32EnumAttrCase<"SPV_GOOGLE_decorate_string", 3000>;
 def SPV_GOOGLE_hlsl_functionality1       : I32EnumAttrCase<"SPV_GOOGLE_hlsl_functionality1", 3001>;
@@ -456,7 +457,7 @@ def SPIRV_ExtensionAttr :
       SPV_AMD_gpu_shader_half_float_fetch, SPV_AMD_shader_ballot,
       SPV_AMD_shader_explicit_vertex_parameter, SPV_AMD_shader_fragment_mask,
       SPV_AMD_shader_image_load_store_lod, SPV_AMD_texture_gather_bias_lod,
-      SPV_AMD_shader_early_and_late_fragment_tests,
+      SPV_AMD_shader_early_and_late_fragment_tests, SPV_AMD_weak_linkage,
       SPV_GOOGLE_decorate_string, SPV_GOOGLE_hlsl_functionality1, SPV_GOOGLE_user_type,
       SPV_INTEL_device_side_avc_motion_estimation, SPV_INTEL_media_block_io,
       SPV_INTEL_shader_integer_functions2, SPV_INTEL_subgroups, SPV_INTEL_vector_compute,
@@ -3718,10 +3719,16 @@ def SPIRV_LT_LinkOnceODR : I32EnumAttrCase<"LinkOnceODR", 2> {
     Capability<[SPIRV_C_Linkage]>
   ];
 }
+def SPIRV_LT_Weak        : I32EnumAttrCase<"Weak", 3> {
+  list<Availability> availability = [
+    Extension<[SPV_AMD_weak_linkage]>,
+    Capability<[SPIRV_C_Linkage]>
+  ];
+}
 
 def SPIRV_LinkageTypeAttr :
     SPIRV_I32EnumAttr<"LinkageType", "valid SPIR-V LinkageType", "linkage_type", [
-      SPIRV_LT_Export, SPIRV_LT_Import, SPIRV_LT_LinkOnceODR
+      SPIRV_LT_Export, SPIRV_LT_Import, SPIRV_LT_LinkOnceODR, SPIRV_LT_Weak
     ]>;
 
 def SPIRV_LC_None                      : I32BitEnumAttrCaseNone<"None">;
@@ -4573,6 +4580,8 @@ def SPIRV_OC_OpEmitVertex                     : I32EnumAttrCase<"OpEmitVertex", 
 def SPIRV_OC_OpEndPrimitive                   : I32EnumAttrCase<"OpEndPrimitive", 219>;
 def SPIRV_OC_OpControlBarrier                 : I32EnumAttrCase<"OpControlBarrier", 224>;
 def SPIRV_OC_OpMemoryBarrier                  : I32EnumAttrCase<"OpMemoryBarrier", 225>;
+def SPIRV_OC_OpAtomicLoad                     : I32EnumAttrCase<"OpAtomicLoad", 227>;
+def SPIRV_OC_OpAtomicStore                    : I32EnumAttrCase<"OpAtomicStore", 228>;
 def SPIRV_OC_OpAtomicExchange                 : I32EnumAttrCase<"OpAtomicExchange", 229>;
 def SPIRV_OC_OpAtomicCompareExchange          : I32EnumAttrCase<"OpAtomicCompareExchange", 230>;
 def SPIRV_OC_OpAtomicCompareExchangeWeak      : I32EnumAttrCase<"OpAtomicCompareExchangeWeak", 231>;
@@ -4749,7 +4758,8 @@ def SPIRV_OpcodeAttr :
       SPIRV_OC_OpNot, SPIRV_OC_OpBitFieldInsert, SPIRV_OC_OpBitFieldSExtract,
       SPIRV_OC_OpBitFieldUExtract, SPIRV_OC_OpBitReverse, SPIRV_OC_OpBitCount,
       SPIRV_OC_OpEmitVertex, SPIRV_OC_OpEndPrimitive, SPIRV_OC_OpControlBarrier,
-      SPIRV_OC_OpMemoryBarrier, SPIRV_OC_OpAtomicExchange,
+      SPIRV_OC_OpMemoryBarrier, SPIRV_OC_OpAtomicLoad, SPIRV_OC_OpAtomicStore,
+      SPIRV_OC_OpAtomicExchange,
       SPIRV_OC_OpAtomicCompareExchange, SPIRV_OC_OpAtomicCompareExchangeWeak,
       SPIRV_OC_OpAtomicIIncrement, SPIRV_OC_OpAtomicIDecrement,
       SPIRV_OC_OpAtomicIAdd, SPIRV_OC_OpAtomicISub, SPIRV_OC_OpAtomicSMin,

@@ -61,7 +61,7 @@ constexpr int DEFAULT_OFLAGS = O_NOFOLLOW | O_CLOEXEC;
 
 ErrorOr<TmpPath> generate_tmp_path() {
   // fill out 8 random bytes.
-  cpp::array<uint8_t, RANDOM_SUFFIX_BYTES> rand_bytes;
+  cpp::array<uint8_t, RANDOM_SUFFIX_BYTES> rand_bytes{};
   auto ret = linux_syscalls::getrandom(rand_bytes.data(), rand_bytes.size(), 0);
   if (!ret.has_value())
     return Error(ret.error());
