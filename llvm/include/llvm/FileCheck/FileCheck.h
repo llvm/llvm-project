@@ -235,7 +235,7 @@ public:
   ///
   /// This is not always the same as \c getStatus()!=Success.  For example,
   /// \c CHECK-DAG discarded matches are neither successful matches nor errors.
-  virtual bool isError() const override {
+  bool isError() const override {
     return Status != Success && Status != Discarded;
   }
   /// Was this a successful match?  If not, why not?
@@ -257,9 +257,7 @@ public:
     Status = S;
   }
   /// Return the match's input range, never \c std::nullopt.
-  virtual std::optional<SMRange> getMatchRange() const override {
-    return MatchRange;
-  }
+  std::optional<SMRange> getMatchRange() const override { return MatchRange; }
 };
 
 /// \c MatchResultDiag for a pattern that did not match the input.
@@ -291,13 +289,11 @@ public:
     return FCD->getKind() == FCDK_MatchNoneDiag;
   }
   /// Does the lack of match represent an error?
-  virtual bool isError() const override { return Status != Success; }
+  bool isError() const override { return Status != Success; }
   /// Does the lack of a match indicate a success?  If not, why not?
   StatusTy getStatus() const { return Status; }
   /// Return \c std::nullopt.
-  virtual std::optional<SMRange> getMatchRange() const override {
-    return std::nullopt;
-  }
+  std::optional<SMRange> getMatchRange() const override { return std::nullopt; }
 };
 
 /// Abstract base class for recording a FileCheck diagnostic that provides an
@@ -340,10 +336,10 @@ public:
   }
   /// Always false.  A fuzzy match is not an error even though it is performed
   /// due to an error.
-  virtual bool isError() const override { return false; }
+  bool isError() const override { return false; }
   /// Return an input range (never \c std::nullopt) starting and ending at the
   /// match start.  The actual match end is not computed.
-  virtual std::optional<SMRange> getMatchRange() const override {
+  std::optional<SMRange> getMatchRange() const override {
     return SMRange(MatchStart, MatchStart);
   }
 };
@@ -394,11 +390,9 @@ public:
   ///
   /// For details, see the \c MatchCustomNoteDiag::MatchCustomNoteDiag comments
   /// for its \c AddsError parameter.
-  virtual bool isError() const override { return AddsError; }
+  bool isError() const override { return AddsError; }
   /// Return the match range described by the note, or \c std::nullopt if none.
-  virtual std::optional<SMRange> getMatchRange() const override {
-    return MatchRange;
-  }
+  std::optional<SMRange> getMatchRange() const override { return MatchRange; }
 };
 
 /// A \c FileCheckDiag series emitted by the FileCheck library.
