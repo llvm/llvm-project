@@ -1051,6 +1051,9 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
     unsigned SrcSubReg = I.getOperand(1).getSubReg();
     unsigned SubReg;
 
+    if (SrcSubReg && RBI.constrainGenericRegister(DstReg, *DstRC, MRI))
+      return true;
+
     // If the source bank doesn't support a subregister copy small enough,
     // then we first need to copy to the destination bank.
     if (getMinSizeForRegBank(SrcRegBank) > DstSize) {
@@ -1061,12 +1064,9 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
       MachineIRBuilder MIB(I);
       auto Copy = MIB.buildCopy({DstTempRC}, {SrcReg});
       copySubReg(I, MRI, RBI, Copy.getReg(0), DstRC, SubReg);
-    } else if (SrcSize > DstSize &&
-               (!SrcSubReg || TRI.getMatchingSuperRegClass(
-                                  SrcRC, DstRC, SrcSubReg) != SrcRC)) {
+    } else if (SrcSize > DstSize) {
       // If the source register is bigger than the destination we need to
-      // perform a subregister copy, unless there is already a compatible
-      // sub-register present.
+      // perform a subregister copy.
       const TargetRegisterClass *SubRegRC =
           getMinClassForRegBank(SrcRegBank, DstSize, /* GetAllRegSet */ true);
       getSubRegForClass(SubRegRC, TRI, SubReg);
