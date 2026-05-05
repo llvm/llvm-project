@@ -869,4 +869,6 @@ quit
         with open(self.out_filename, "r") as f:
             output = f.read()
             self.assertIn("Show a list of all debugger commands", output)
-            self.assertIn("List debugger commands related to a word", output)
+            self.assertIn(
+                "List debugger commands and settings related to a word", output
+            )
