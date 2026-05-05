@@ -203,6 +203,20 @@ Error DWARFLinkerImpl::link() {
     Pool.wait();
   }
 
+  // Merge staged parseable Swift interface entries into the shared map. Done
+  // serially so that the final map contents and any conflict warnings are
+  // deterministic.
+  if (DWARFLinkerBase::SwiftInterfacesMapTy *SwiftInterfaces =
+          GlobalData.Options.ParseableSwiftInterfaces) {
+    for (std::unique_ptr<LinkContext> &Context : ObjectContexts) {
+      for (LinkContext::RefModuleUnit &ModuleUnit :
+           Context->ModulesCompileUnits)
+        ModuleUnit.Unit->mergeSwiftInterfaces(*SwiftInterfaces);
+      for (std::unique_ptr<CompileUnit> &CU : Context->CompileUnits)
+        CU->mergeSwiftInterfaces(*SwiftInterfaces);
+    }
+  }
+
   if (ArtificialTypeUnit != nullptr && !ArtificialTypeUnit->getTypePool()
                                             .getRoot()
                                             ->getValue()
