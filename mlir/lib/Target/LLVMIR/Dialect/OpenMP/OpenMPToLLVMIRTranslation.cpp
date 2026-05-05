@@ -4968,10 +4968,12 @@ convertOmpAtomicCompare(omp::AtomicCompareOp atomicCompareOp,
                                                  false};
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
 
+  bool savedHandleFPNegZero = ompBuilder->setHandleFPNegZero(true);
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
       ompBuilder->createAtomicCompare(ompLoc, llvmAtomicX, vOpVal, rOpVal, eVal,
                                       dVal, atomicOrdering, compareOp,
                                       isXBinopExpr, false, false);
+  ompBuilder->setHandleFPNegZero(savedHandleFPNegZero);
 
   if (failed(handleError(afterIP, *atomicCompareOp)))
     return failure();
