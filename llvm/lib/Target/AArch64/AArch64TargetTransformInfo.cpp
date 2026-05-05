@@ -6047,6 +6047,10 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
 
   bool IsSub = Opcode == Instruction::Sub;
   InstructionCost Cost = InputLT.first * TTI::TCC_Basic;
+  // Integer partial sub-reductions that don't map to a specific instruction,
+  // carry an extra cost for implementing a double negation:
+  //      partial_reduce_umls  acc, lhs, rhs
+  // <=> -partial_reduce_umla -acc, lhs, rhs
   InstructionCost INegCost = IsSub ? 2 * InputLT.first * TTI::TCC_Basic : 0;
 
   if (AccumLT.second.getScalarType() == MVT::i32 &&
@@ -6064,7 +6068,8 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
     if (AccumLT.second.getScalarType() == MVT::i64 &&
         InputLT.second.getScalarType() == MVT::i16)
       return Cost + INegCost;
-    // i16 -> i32 is natively supported with SVE2p1
+    // i16 -> i32 is natively supported with SVE2p1 udot/sdot.
+    // For sub-reductions, we prefer using the *mlslb/t instructions.
     if (AccumLT.second.getScalarType() == MVT::i32 &&
         InputLT.second.getScalarType() == MVT::i16 &&
         (ST->hasSVE2p1() || ST->hasSME2()) && !IsSub)
@@ -6078,11 +6083,12 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
       // the extends in the IR are still counted. This can be fixed
       // after https://github.com/llvm/llvm-project/pull/147302 has landed.
       return Cost + INegCost;
-    // i8 -> i16 is natively supported with SVE2p3
+    // i8 -> i16 is natively supported with SVE2p3 udot/sdot
+    // For sub-reductions, we prefer using the *mlslb/t instructions.
     if (AccumLT.second.getScalarType() == MVT::i16 &&
         InputLT.second.getScalarType() == MVT::i8 &&
         (ST->hasSVE2p3() || ST->hasSME2p3()) && !IsSub)
-      return Cost + INegCost;
+      return Cost;
   }
 
   // f16 -> f32 is natively supported for fdot using either
@@ -6094,7 +6100,7 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
     return Cost;
 
   // For a ratio of 2, we can use *mlal and *mlsl top/bottom instructions.
-  if (Ratio == 2) {
+  if (Ratio == 2 && !IsUSDot) {
     MVT InVT = InputLT.second.getScalarType();
 
     // SVE2 [us]ml[as]lb/t and NEON [us]ml[as]l(2)
