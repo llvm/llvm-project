@@ -217,13 +217,15 @@ public:
   LLVM_ABI unsigned FindBufferContainingLoc(SMLoc Loc) const;
 
   /// Find the line number for the specified location in the specified file.
-  /// This is not a fast method.
+  /// This method has O(log n) complexity, where n is the number of lines in the
+  /// buffer.
   unsigned FindLineNumber(SMLoc Loc, unsigned BufferID = 0) const {
     return getLineAndColumn(Loc, BufferID).first;
   }
 
   /// Find the line and column number for the specified location in the
-  /// specified file. This is not a fast method.
+  /// specified file. This method has O(log n) complexity, where n is the number
+  /// of lines in the
   LLVM_ABI std::pair<unsigned, unsigned>
   getLineAndColumn(SMLoc Loc, unsigned BufferID = 0) const;
 
