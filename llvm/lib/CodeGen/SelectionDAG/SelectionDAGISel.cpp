@@ -449,6 +449,8 @@ SelectionDAGISelPass::run(MachineFunction &MF,
   if (MF.getProperties().hasSelected())
     return PreservedAnalyses::all();
 
+  MFPropsModifier _(*this, MF);
+
   // Do some sanity-checking on the command-line options.
   if (EnableFastISelAbort && !Selector->TM.Options.EnableFastISel)
     reportFatalUsageError("-fast-isel-abort > 0 requires -fast-isel");

@@ -579,6 +579,16 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
   bool runOnMachineFunction(MachineFunction &MF) override;
+
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().setIsSSA();
+  }
+  MachineFunctionProperties getSetProperties() const override {
+    return MachineFunctionProperties().setSelected();
+  }
+  MachineFunctionProperties getClearedProperties() const override {
+    return MachineFunctionProperties().setNoPHIs().setNoVRegs();
+  }
 };
 
 class SelectionDAGISelPass : public PassInfoMixin<SelectionDAGISelPass> {
@@ -592,6 +602,16 @@ public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
   static bool isRequired() { return true; }
+
+  MachineFunctionProperties getRequiredProperties() const {
+    return MachineFunctionProperties().setIsSSA();
+  }
+  MachineFunctionProperties getSetProperties() const {
+    return MachineFunctionProperties().setSelected();
+  }
+  MachineFunctionProperties getClearedProperties() const {
+    return MachineFunctionProperties().setNoPHIs().setNoVRegs();
+  }
 };
 }
 
