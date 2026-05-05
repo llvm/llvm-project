@@ -1,6 +1,6 @@
 "Issue #","Issue Name","Meeting","Status","First released version","GitHub issue","Notes"
 "`LWG2994 <https://wg21.link/LWG2994>`__","Needless UB for ``basic_string`` and ``basic_string_view``","2023-06 (Varna)","|Complete|","5","`#105268 <https://github.com/llvm/llvm-project/issues/105268>`__",""
-"`LWG3884 <https://wg21.link/LWG3884>`__","``flat_foo`` is missing allocator-extended copy/move constructors","2023-06 (Varna)","","","`#105269 <https://github.com/llvm/llvm-project/issues/105269>`__",""
+"`LWG3884 <https://wg21.link/LWG3884>`__","``flat_foo`` is missing allocator-extended copy/move constructors","2023-06 (Varna)","|Complete|","21","`#105269 <https://github.com/llvm/llvm-project/issues/105269>`__",""
 "`LWG3885 <https://wg21.link/LWG3885>`__","``op`` should be in [zombie.names]","2023-06 (Varna)","|Nothing To Do|","","`#105270 <https://github.com/llvm/llvm-project/issues/105270>`__",""
 "`LWG3887 <https://wg21.link/LWG3887>`__","Version macro for ``allocate_at_least``","2023-06 (Varna)","|Complete|","19","`#105271 <https://github.com/llvm/llvm-project/issues/105271>`__",""
 "`LWG3893 <https://wg21.link/LWG3893>`__","LWG 3661 broke ``atomic<shared_ptr<T>> a; a = nullptr;``","2023-06 (Varna)","","","`#105273 <https://github.com/llvm/llvm-project/issues/105273>`__",""
