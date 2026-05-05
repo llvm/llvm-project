@@ -37,7 +37,7 @@ template <class _Tp>
 [[nodiscard]]
 _LIBCPP_HIDE_FROM_ABI constexpr _Tp midpoint(_Tp __a, _Tp __b) noexcept _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK {
 #  if defined(_LIBCPP_COMPILER_CLANG_BASED)
-  if constexpr (is_unsigned_v<_Tp>  {
+  if constexpr (is_unsigned_v<_Tp>)  {
     using _Ip = unsigned _BitInt(sizeof(_Tp) * 8 + 1);
     return (_Ip(__a) + _Ip(__b) + _Ip(__a > __b)) / 2;
   }
