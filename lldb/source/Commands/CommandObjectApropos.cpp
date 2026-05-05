@@ -121,7 +121,8 @@ void CommandObjectApropos::DoExecute(Args &args, CommandReturnObject &result) {
           const bool dump_qualified_name = true;
           for (auto property : properties)
             property->DumpDescription(m_interpreter, result.GetOutputStream(),
-                                      properties_max_len, dump_qualified_name, highlight);
+                                      properties_max_len, dump_qualified_name,
+                                      highlight);
         }
       }
       result.SetStatus(return_status);
