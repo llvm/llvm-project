@@ -210,7 +210,8 @@ void TargetLoweringObjectFile::emitPseudoProbeDescMetadata(
     const auto *MD = cast<MDNode>(Operand);
     auto *GUID = mdconst::extract<ConstantInt>(MD->getOperand(0));
     auto *Hash = mdconst::extract<ConstantInt>(MD->getOperand(1));
-    auto *Name = cast<MDString>(MD->getOperand(2));
+    auto *Attributes = mdconst::extract<ConstantInt>(MD->getOperand(2));
+    auto *Name = cast<MDString>(MD->getOperand(3));
     auto *S = C.getObjectFileInfo()->getPseudoProbeDescSection(
         TM->getFunctionSections() ? Name->getString() : StringRef());
 
@@ -221,7 +222,10 @@ void TargetLoweringObjectFile::emitPseudoProbeDescMetadata(
       COMDATSymEmitter(Streamer);
 
     Streamer.emitInt64(GUID->getZExtValue());
-    Streamer.emitInt64(Hash->getZExtValue());
+    // [0:59] - function hash
+    // [60:63] - attributes
+    Streamer.emitInt64(Hash->getZExtValue() |
+                       (Attributes->getZExtValue() << 60));
     Streamer.emitULEB128IntValue(Name->getString().size());
     Streamer.emitBytes(Name->getString());
   }

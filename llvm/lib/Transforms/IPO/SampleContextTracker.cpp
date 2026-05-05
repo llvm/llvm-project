@@ -561,6 +561,10 @@ void SampleContextTracker::mergeContextNode(ContextTrieNode &FromNode,
     FromSamples->getContext().setState(MergedContext);
     if (FromSamples->getContext().hasAttribute(ContextShouldBeInlined))
       ToSamples->getContext().setAttribute(ContextShouldBeInlined);
+    if (FromSamples->getContext().hasAttribute(ContextAlwaysInline))
+      ToSamples->getContext().setAttribute(ContextAlwaysInline);
+    if (FromSamples->getContext().hasAttribute(ContextNoInline))
+      ToSamples->getContext().setAttribute(ContextNoInline);
   } else if (FromSamples) {
     // Transfer FromSamples from FromNode to ToNode
     ToNode.setFunctionSamples(FromSamples);

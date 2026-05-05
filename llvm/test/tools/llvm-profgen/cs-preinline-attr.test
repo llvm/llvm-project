@@ -1,0 +1,52 @@
+; Test that always_inline/noinline attributes are correctly decoded from pseudo
+; probe descriptors.
+
+; RUN: llvm-profgen --show-disassembly-only --show-pseudo-probe --binary=%S/Inputs/cs-preinline-attr.perfbin --output=/dev/null 2>&1 | FileCheck %s
+
+; CHECK: Name: always_inlined_callee
+; CHECK-NEXT: Hash: {{[0-9]+}} Attributes: 1
+; CHECK: Name: foo
+; CHECK-NEXT: Hash: {{[0-9]+}} Attributes: 0
+; CHECK: Name: noinline_callee
+; CHECK-NEXT: Hash: {{[0-9]+}} Attributes: 2
+; CHECK: Name: normal_callee
+; CHECK-NEXT: Hash: {{[0-9]+}} Attributes: 0
+; CHECK: Name: main
+; CHECK-NEXT: Hash: {{[0-9]+}} Attributes: 0
+
+; The binary is built from the source below with:
+;   clang -O2 -g -fpseudo-probe-for-profiling -fdebug-info-for-profiling \
+;         cs-preinline-attr-test.c -o cs-preinline-attr.perfbin \
+;         --target=x86_64-linux-gnu -fno-pie -no-pie
+;
+;  volatile int state = 100;
+;
+;  __attribute__((always_inline))
+;  int always_inlined_callee(int x) {
+;      return x + state;
+;  }
+;
+;  __attribute__((noinline))
+;  int noinline_callee(int x) {
+;      return x * state;
+;  }
+;
+;  int normal_callee(int x) {
+;      return x - state;
+;  }
+;
+;  int foo(int x) {
+;      int r = 0;
+;      r += always_inlined_callee(x);
+;      r += noinline_callee(x);
+;      r += normal_callee(x);
+;      return r;
+;  }
+;
+;  int main() {
+;      int r = 0;
+;      for (int i = 0; i < 1000000; i++) {
+;          r += foo(i);
+;      }
+;      return r;
+;  }

@@ -177,8 +177,8 @@ attributes #0 = { noinline nounwind uwtable "use-sample-profile"}
 attributes #1 = { nounwind }
 
 !llvm.pseudo_probe_desc = !{!1079, !4496}
-!1079 = !{i64 -7702751003264189226, i64 158496288380146391, !"yyparse_1", null}
-!4496 = !{i64 7682762345278052905, i64 404850113186107133, !"foo1", null}
+!1079 = !{i64 -7702751003264189226, i64 158496288380146391, i8 2, !"yyparse_1", null}
+!4496 = !{i64 7682762345278052905, i64 404850113186107133, i8 0, !"foo1", null}
 !132 = !{!"function_entry_count", i64 1}
 !133 = !{!"branch_weights", i32 0, i32 86, i32 0}
 !134 = !{!"branch_weights", i32 85, i32 9449, i32 1, i32 8212}

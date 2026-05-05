@@ -490,6 +490,8 @@ enum ContextAttributeMask {
   ContextShouldBeInlined = 0x2, // Leaf of context should be inlined
   ContextDuplicatedIntoBase =
       0x4, // Leaf of context is duplicated into the base profile
+  ContextAlwaysInline = 0x8, // Function has always_inline attribute
+  ContextNoInline = 0x10,    // Function has noinline attribute
 };
 
 // Represents a context frame with profile function and line location

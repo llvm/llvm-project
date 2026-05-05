@@ -284,7 +284,7 @@ attributes #4 = { inaccessiblememonly nounwind willreturn }
 
 !llvm.pseudo_probe_desc = !{!7, !8, !9, !10}
 
-!7 = !{i64 -5758218299531803684, i64 223598586707, !"countMultipliers", null}
-!8 = !{i64 2506109673213838996, i64 2235985, !"countMultipliers2", null}
-!9 = !{i64 -544905447084884130, i64 22985, !"countMultipliers3", null}
-!10 = !{i64 -2989539179265513123, i64 2298578, !"countMultipliers4", null}
+!7 = !{i64 -5758218299531803684, i64 223598586707, i8 2, !"countMultipliers", null}
+!8 = !{i64 2506109673213838996, i64 2235985, i8 2, !"countMultipliers2", null}
+!9 = !{i64 -544905447084884130, i64 22985, i8 2, !"countMultipliers3", null}
+!10 = !{i64 -2989539179265513123, i64 2298578, i8 2, !"countMultipliers4", null}

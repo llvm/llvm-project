@@ -88,10 +88,13 @@ enum class MCPseudoProbeFlag {
 struct MCPseudoProbeFuncDesc {
   uint64_t FuncGUID = 0;
   uint64_t FuncHash = 0;
+  uint8_t Attributes = 0;
   StringRef FuncName;
 
-  MCPseudoProbeFuncDesc(uint64_t GUID, uint64_t Hash, StringRef Name)
-      : FuncGUID(GUID), FuncHash(Hash), FuncName(Name){};
+  MCPseudoProbeFuncDesc(uint64_t GUID, uint64_t Hash, uint8_t Attributes,
+                        StringRef Name)
+      : FuncGUID(GUID), FuncHash(Hash), Attributes(Attributes),
+        FuncName(Name) {};
 
   LLVM_ABI void print(raw_ostream &OS);
 };

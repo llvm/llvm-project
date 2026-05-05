@@ -70,8 +70,8 @@ if.end:
 }
 
 ; CHECK: !llvm.pseudo_probe_desc = !{![[#DESC0:]], ![[#DESC1:]]}
-; CHECK: ![[#DESC0]] = !{i64 [[#GUID1]], i64 [[#HASH1:]], !"foo"}
-; CHECK: ![[#DESC1]] = !{i64 [[#GUID2]], i64 [[#HASH2:]], !"zen"}
+; CHECK: ![[#DESC0]] = !{i64 [[#GUID1]], i64 [[#HASH1:]], i8 0, !"foo"}
+; CHECK: ![[#DESC1]] = !{i64 [[#GUID2]], i64 [[#HASH2:]], i8 0, !"zen"}
 ; CHECK: ![[PD1]] = !{!"branch_weights", i32 5, i32 0}
 ; CHECK: ![[PD2]] = !{!"branch_weights", i32 382915, i32 5}
 

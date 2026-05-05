@@ -33,7 +33,7 @@ declare void @llvm.pseudoprobe(i64, i64, i32, i64)
 !4 = !{i32 1, !"wchar_size", i32 4}
 !5 = !{i32 7, !"uwtable", i32 2}
 !6 = !{i32 7, !"frame-pointer", i32 2}
-!7 = !{i64 6028998432455395745, i64 281479271677951, !"extract1"}
+!7 = !{i64 6028998432455395745, i64 281479271677951, i8 0, !"extract1"}
 !8 = distinct !DISubprogram(name: "extract1", scope: !1, file: !1, line: 4, type: !9, scopeLine: 4, spFlags: DISPFlagDefinition, unit: !0)
 !9 = !DISubroutineType(types: !10)
 !10 = !{}
