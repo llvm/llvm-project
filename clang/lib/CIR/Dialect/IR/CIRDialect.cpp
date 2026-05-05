@@ -915,6 +915,28 @@ static Value tryFoldCastChain(cir::CastOp op) {
   return {};
 }
 
+//===----------------------------------------------------------------------===//
+// ReinterpretCastOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::ReinterpretCastOp::verify() {
+  // The op is meaningless for identical types -- the folder is the right
+  // way to remove it -- but we accept it at the verifier level so that
+  // peephole code (e.g. pattern rewriters that round-trip values) doesn't
+  // need a type-equality guard.  Producers should still avoid emitting
+  // it for matching types.
+  //
+  // The same-bit-width invariant is documented on the op but not yet
+  // checked here; see the op description for the rationale.
+  return success();
+}
+
+OpFoldResult cir::ReinterpretCastOp::fold(FoldAdaptor adaptor) {
+  if (getSrc().getType() == getType())
+    return getSrc();
+  return {};
+}
+
 OpFoldResult cir::CastOp::fold(FoldAdaptor adaptor) {
   if (mlir::isa_and_present<cir::PoisonAttr>(adaptor.getSrc())) {
     // Propagate poison value

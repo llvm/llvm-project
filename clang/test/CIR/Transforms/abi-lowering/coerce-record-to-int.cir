@@ -1,0 +1,50 @@
+// Direct with coerced type going from a small record to a same-bit-width
+// integer.  The shapes don't match (record vs scalar) so the rewriter
+// emits a memory roundtrip: alloca in the entry block + store + ptr-cast +
+// load.
+// RUN: cir-opt %s -cir-call-conv-lowering="classification-attr=test_classify" \
+// RUN:   | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!rec_Pair = !cir.record<struct "Pair" {!s32i, !s32i}>
+
+#coerce_pair_to_i64 = {
+  return = { kind = "direct" },
+  args   = [ { kind = "direct", coerced_type = !s64i } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  cir.func @takes_pair(%arg0: !rec_Pair)
+      attributes { test_classify = #coerce_pair_to_i64 } {
+    cir.return
+  }
+
+  // Signature changes to !s64i; entry block grows an alloca + store + cast
+  // + load chain that recovers the original !rec_Pair value.  The alloca
+  // lands at the very start of the entry block so this composes correctly
+  // with cir-hoist-allocas regardless of pipeline ordering.
+  // CHECK:      cir.func{{.*}} @takes_pair(%[[ARG:.*]]: !s64i)
+  // CHECK:        %[[SLOT:.*]] = cir.alloca !s64i, !cir.ptr<!s64i>, ["coerce"]
+  // CHECK:        cir.store %[[ARG]], %[[SLOT]] : !s64i, !cir.ptr<!s64i>
+  // CHECK:        %[[CAST:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!s64i> -> !cir.ptr<!rec_Pair>
+  // CHECK:        %{{.*}} = cir.load %[[CAST]] : !cir.ptr<!rec_Pair>, !rec_Pair
+
+  cir.func @caller(%arg0: !rec_Pair)
+      attributes { test_classify = #coerce_pair_to_i64 } {
+    cir.call @takes_pair(%arg0) : (!rec_Pair) -> ()
+    cir.return
+  }
+
+  // At the call site, the original !rec_Pair gets coerced to !s64i via the
+  // same memory roundtrip before being passed.  Caller's own arg coercion
+  // chain runs first (it shares the pattern), then the call.
+  // CHECK:      cir.func{{.*}} @caller(%[[ARG:.*]]: !s64i)
+  // CHECK:        cir.call @takes_pair(%{{.*}}) : (!s64i) -> ()
+
+}

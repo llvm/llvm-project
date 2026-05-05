@@ -1,0 +1,34 @@
+// Direct with a coerced type that's a different record (record-to-record):
+// neither side is a vector and at least one is a record, so the rewriter
+// uses the memory-roundtrip path even though both types are aggregates.
+// RUN: cir-opt %s -cir-call-conv-lowering="classification-attr=test_classify" \
+// RUN:   | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!rec_Pair  = !cir.record<struct "Pair"  {!s32i, !s32i}>
+!rec_Single = !cir.record<struct "Single" {!s64i}>
+
+#coerce_pair_to_single = {
+  return = { kind = "direct" },
+  args   = [ { kind = "direct", coerced_type = !rec_Single } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  cir.func @takes_pair(%arg0: !rec_Pair)
+      attributes { test_classify = #coerce_pair_to_single } {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @takes_pair(%[[ARG:.*]]: !rec_Single)
+  // CHECK:   %[[SLOT:.*]] = cir.alloca !rec_Single, !cir.ptr<!rec_Single>, ["coerce"]
+  // CHECK:   cir.store %[[ARG]], %[[SLOT]] : !rec_Single, !cir.ptr<!rec_Single>
+  // CHECK:   %[[CAST:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_Single> -> !cir.ptr<!rec_Pair>
+  // CHECK:   %{{.*}} = cir.load %[[CAST]] : !cir.ptr<!rec_Pair>, !rec_Pair
+
+}
