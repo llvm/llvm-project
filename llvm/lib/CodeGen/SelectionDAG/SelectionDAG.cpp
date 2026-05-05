@@ -13544,16 +13544,16 @@ bool llvm::isMinSignedConstant(SDValue V) {
   return Const != nullptr && Const->isMinSignedValue();
 }
 
-bool SelectionDAG::isNeutralElement(unsigned Opcode, SDNodeFlags Flags,
-                                    SDValue V, unsigned OperandNo,
-                                    unsigned Depth) const {
+bool SelectionDAG::isIdentityElement(unsigned Opcode, SDNodeFlags Flags,
+                                     SDValue V, unsigned OperandNo,
+                                     unsigned Depth) const {
   APInt DemandedElts = getDemandAllEltsMask(V);
-  return isNeutralElement(Opcode, Flags, V, DemandedElts, OperandNo, Depth);
+  return isIdentityElement(Opcode, Flags, V, DemandedElts, OperandNo, Depth);
 }
 
-bool SelectionDAG::isNeutralElement(unsigned Opcode, SDNodeFlags Flags,
-                                    SDValue V, const APInt &DemandedElts,
-                                    unsigned OperandNo, unsigned Depth) const {
+bool SelectionDAG::isIdentityElement(unsigned Opcode, SDNodeFlags Flags,
+                                     SDValue V, const APInt &DemandedElts,
+                                     unsigned OperandNo, unsigned Depth) const {
   // NOTE: The cases should match with IR's ConstantExpr::getBinOpIdentity().
   // TODO: Target-specific opcodes could be added.
   if (auto *ConstV = isConstOrConstSplat(V, DemandedElts, /*AllowUndefs*/ false,
@@ -14912,8 +14912,8 @@ SDValue SelectionDAG::getTokenFactor(const SDLoc &DL,
   return getNode(ISD::TokenFactor, DL, MVT::Other, Vals);
 }
 
-SDValue SelectionDAG::getNeutralElement(unsigned Opcode, const SDLoc &DL,
-                                        EVT VT, SDNodeFlags Flags) {
+SDValue SelectionDAG::getIdentityElement(unsigned Opcode, const SDLoc &DL,
+                                         EVT VT, SDNodeFlags Flags) {
   switch (Opcode) {
   default:
     return SDValue();
