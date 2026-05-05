@@ -307,10 +307,10 @@ static void test_throws() {
   TEST_THROWS_TYPE(std::out_of_range, m.at(0, 10));
   TEST_THROWS_TYPE(std::out_of_range, m.at(-1, 0));
 
-  std::array bad_row{10, 0};
+  [[maybe_unused]] std::array bad_row{10, 0};
   TEST_THROWS_TYPE(std::out_of_range, m.at(bad_row));
 
-  std::array bad_col{0, 10};
+  [[maybe_unused]] std::array bad_col{0, 10};
   TEST_THROWS_TYPE(std::out_of_range, m.at(std::span{bad_col}));
 }
 
