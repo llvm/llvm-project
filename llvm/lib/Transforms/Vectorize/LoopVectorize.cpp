@@ -3065,8 +3065,8 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
 
   auto ExpectedTC = getSmallBestKnownTC(PSE, TheLoop);
   unsigned EffectiveIC = UserIC > 0 ? UserIC : 1;
-  auto HasOneScalarIterationRemainder = [EffectiveIC](ElementCount &ExactTC,
-                                                      unsigned int MaxVF) -> bool {
+  auto HasOneScalarIterationRemainder =
+      [EffectiveIC](ElementCount &ExactTC, unsigned int MaxVF) -> bool {
     return ExactTC.getFixedValue() == 1 + (MaxVF * EffectiveIC);
   };
   if (ExpectedTC && ExpectedTC->isFixed() &&
@@ -3095,10 +3095,10 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
         // If the maximum VF cannot produce 1 vector iteration + 1 scalar
         // iteration, step down VF's to find one that can. The result should
         // also eliminate any loops.
-        // 
-        // Forced interleaving is considered when seeing if OneScalarIterationRemainder
-        // is produced. It may prodiced more than one vector iteration, but only one
-        // scalar iteration.
+        //
+        // Forced interleaving is considered when seeing if
+        // OneScalarIterationRemainder is produced. It may prodiced more than
+        // one vector iteration, but only one scalar iteration.
         for (unsigned MaxVF = MaxFactors.FixedVF.getFixedValue(); MaxVF >= 2;
              MaxVF /= 2) {
           if (HasOneScalarIterationRemainder(ExactTC, MaxVF)) {
