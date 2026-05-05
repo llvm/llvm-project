@@ -68,7 +68,9 @@ class TestDelayedBreakpoint(TestBase):
             .splitlines()
         )
         breakpoint_lines = [line for line in log if "send packet: $Z" in line]
-        breakpoint_lines += [line for line in log if "send packet: $jMultiBreakpoint" in line]
+        breakpoint_lines += [
+            line for line in log if "send packet: $jMultiBreakpoint" in line
+        ]
         breakpoint_lines = "".join(breakpoint_lines)
 
         bp_addresses = [f"{loc.GetLoadAddress():x}" for loc in bp1.locations]
