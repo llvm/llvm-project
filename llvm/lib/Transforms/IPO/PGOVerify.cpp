@@ -24,6 +24,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <limits>
 #include <numeric>
+#include <string>
 
 using namespace llvm;
 
@@ -36,6 +37,14 @@ static cl::opt<bool> VerifyIPGOPrintDiagnostics(
 static cl::opt<bool>
     VerifyIPGO("verify-ipgo", cl::init(false), cl::Hidden,
                cl::desc("Enable Instrumented PGO verification"));
+
+/// Emit a labelled PGO-verify diagnostic to stderr (when enabled).
+static void emitPGOVerifyDiagnostic(const Function *F, StringRef Kind,
+                                    const std::string &Msg) {
+  if (VerifyIPGOPrintDiagnostics)
+    errs() << "PGOVerify# " << Kind << " in function " << F->getName()
+           << ": " << Msg << "\n";
+}
 
 /// Register post-pass diagnostic callbacks for `-verify-ipgo`.
 ///
@@ -127,14 +136,33 @@ void IPGOVerifier::invalidateFunctionFrequencyCache(Any IR) {
 /// \param M Module callback payload.
 void IPGOVerifier::runAfterPass(const Module *M) {
   // Run Use-phase checks only when an InstrProf use summary is present.
+  if (M->getProfileSummary(/*IsCS=*/true))
+    return;
   if (!hasInstrProfUseSummary(M))
     return;
 
+  // First build frequency cache for all non-declaration functions so caller
+  // information is available regardless of function order in the module.
   for (const Function &F : *M) {
     if (F.isDeclaration())
       continue;
+    // use BFI's non-synthetic per-block profile
+    // counts as the primary overflow signal.
+    auto *NonConstF = const_cast<Function *>(&F);
+    DominatorTree DT(*NonConstF);
+    LoopInfo LI(DT);
+    BranchProbabilityInfo BPI(*NonConstF, LI, nullptr, &DT, nullptr);
+    BlockFrequencyInfo BFI(*NonConstF, BPI, LI);
 
-    runAfterPass(const_cast<Function *>(&F));
+    computeBlockFrequencies(&F, BFI);
+  }
+
+  // Then run validations using the populated cache.
+  for (const Function &F : *M) {
+    if (F.isDeclaration())
+      continue;
+    validateBlockFrequencies(&F);
+    validateEntryCountAgainstCallerSum(&F);
   }
 }
 
@@ -142,10 +170,12 @@ void IPGOVerifier::runAfterPass(const Module *M) {
 ///
 /// \param F Function callback payload.
 void IPGOVerifier::runAfterPass(Function *F) {
-  if (!F || F->isDeclaration())
+  if (!F || F->isDeclaration() || !F->getParent())
     return;
 
   // Run Use-phase checks only when an InstrProf use summary is present.
+  if (F->getParent()->getProfileSummary(/*IsCS=*/true))
+    return;
   if (!hasInstrProfUseSummary(F->getParent()))
     return;
 
@@ -158,6 +188,7 @@ void IPGOVerifier::runAfterPass(Function *F) {
 
   computeBlockFrequencies(F, BFI);
   validateBlockFrequencies(F);
+  validateEntryCountAgainstCallerSum(F);
 }
 
 /// Delegate SCC callback handling to the function handler.
@@ -417,5 +448,96 @@ void IPGOVerifier::validateBlockFrequencies(const Function *F) {
           dbgs() << "PGOVerify# Not able to determine Block frequency for "
                  << F->getName() << ", block " << BB.getName() << "\n");
     }
+  }
+}
+
+void IPGOVerifier::validateEntryCountAgainstCallerSum(const Function *F) {
+  // Skip main - it is the program entry point with no in-module callers.
+  if (F->getName() == "main")
+    return;
+
+  auto MaybeEntryCount = F->getEntryCount();
+  if (!MaybeEntryCount)
+    return;
+  uint64_t EntryCount = MaybeEntryCount->getCount();
+
+  uint64_t Sum = 0;
+  bool IsRecursive = false;
+  bool HasAnyDirectCallsite = false;
+  bool HasUnknownCallsiteCount = false;
+
+  // Walk the use-def chain of F: only CallBase uses where F is the callee
+  // are direct calls.  This avoids a costly triple-nested module scan.
+  for (const User *U : F->users()) {
+    const auto *CB = dyn_cast<CallBase>(U);
+    // Skip non-call uses (e.g. address-taken, bitcast passed as argument).
+    if (!CB || CB->getCalledOperand() != F)
+      continue;
+
+    const BasicBlock *BB = CB->getParent();
+    if (!BB)
+      continue;
+    const Function *CallerFunc = BB->getParent();
+    if (!CallerFunc)
+      continue;
+
+    // Detect recursion: callee is also the caller.
+    if (CallerFunc == F)
+      IsRecursive = true;
+
+    HasAnyDirectCallsite = true;
+    uint64_t CallsiteCount = 0;
+    bool HasKnownCount = extractProfTotalWeight(*CB, CallsiteCount);
+
+    // Fall back to cached caller block frequency when direct callsite
+    // metadata is unavailable.
+    if (!HasKnownCount) {
+      const AllBlockFreqInfo *CallerFreq = getCachedBlockFreqInfo(CallerFunc);
+      if (CallerFreq) {
+        auto CallerBBIt = CallerFreq->find(BB);
+        if (CallerBBIt != CallerFreq->end() &&
+            CallerBBIt->second.numUnknownIn == 0) {
+          CallsiteCount = CallerBBIt->second.sumIn;
+          HasKnownCount = true;
+        }
+      }
+    }
+
+    if (!HasKnownCount) {
+      HasUnknownCallsiteCount = true;
+      continue;
+    }
+
+    if (CallsiteCount > std::numeric_limits<uint64_t>::max() - Sum)
+      Sum = std::numeric_limits<uint64_t>::max();
+    else
+      Sum += CallsiteCount;
+  }
+
+  // Require complete direct-caller count visibility to avoid false positives.
+  if (!HasAnyDirectCallsite || HasUnknownCallsiteCount)
+    return;
+
+  if (EntryCount == Sum)
+    return;
+
+  if (IsRecursive) {
+    LLVM_DEBUG(dbgs() << "PGOVerify# EntryCount mismatch in RECURSIVE function "
+                      << F->getName() << " Entry=" << EntryCount
+                      << " CallerSiteSum=" << Sum
+                      << " (unreliable for recursion)\n");
+    emitPGOVerifyDiagnostic(
+        F, "EntryCountMismatch",
+        "EntryCount mismatch (recursive function): entry=" +
+            std::to_string(EntryCount) + " vs caller-sum=" +
+            std::to_string(Sum));
+  } else {
+    LLVM_DEBUG(dbgs() << "PGOVerify# Entry count mismatch in function "
+                      << F->getName() << ":  Entry=" << EntryCount
+                      << ":  CallerSum=" << Sum << "\n");
+    emitPGOVerifyDiagnostic(F, "EntryCountMismatch",
+                            "Entry count mismatch: entry=" +
+                                std::to_string(EntryCount) +
+                                " vs caller-sum=" + std::to_string(Sum));
   }
 }

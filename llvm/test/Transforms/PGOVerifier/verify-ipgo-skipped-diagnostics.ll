@@ -5,6 +5,7 @@
 
 ; CHECK: *** IPGO Verification After InstCombinePass ***
 ; CHECK: *** IPGO Verification After InstCombinePass (Skipped) ***
+; CHECK-NOT: PGOVerify# Entry count mismatch in function f
 
 define i32 @f(i32 %x) {
 entry:

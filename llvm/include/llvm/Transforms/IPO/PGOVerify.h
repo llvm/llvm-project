@@ -15,6 +15,7 @@
 #ifndef LLVM_TRANSFORMS_IPO_PGOVERIFY_H
 #define LLVM_TRANSFORMS_IPO_PGOVERIFY_H
 
+#include "llvm/ADT/Any.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -109,6 +110,12 @@ private:
   /// fully known, this checks whether incoming sum equals outgoing sum.
   /// Diagnostics are emitted in debug mode for mismatches or unknown states.
   void validateBlockFrequencies(const Function *F);
+
+  /// Validate function entry count against summed direct-caller profile counts.
+  ///
+  /// This check runs only when the function has an entry count and all direct
+  /// callsites to the function have extractable profile totals.
+  void validateEntryCountAgainstCallerSum(const Function *F);
 
   /// Per-instance cache of inferred block-frequency data keyed by function.
   DenseMap<const Function *, AllBlockFreqInfo> FunctionBlockFreqInfoCache;
