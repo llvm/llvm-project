@@ -4732,7 +4732,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
 
       // Fix the CallBack code genereated to use the correct Values for the LHS
       // and RHS. Cast to match types before replacing (necessary to handle
-      // SPIRV address spaces).
+      // different address spaces).
       Value *CastRedValue = RedValue;
       if (LHSPtr->getType() != RedValue->getType())
         CastRedValue = Builder.CreatePointerBitCastOrAddrSpaceCast(
