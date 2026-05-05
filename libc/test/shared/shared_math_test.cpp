@@ -147,6 +147,8 @@ TEST(LlvmLibcSharedMathTest, AllFloat16) {
   EXPECT_EQ(0LL, LIBC_NAMESPACE::shared::llroundf16(0.0f16));
   EXPECT_EQ(0L, LIBC_NAMESPACE::shared::lrintf16(0.0f16));
   EXPECT_EQ(0L, LIBC_NAMESPACE::shared::lroundf16(0.0f16));
+  EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::nearbyintf16(0.0f16));
+  EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::rintf16(0.0f16));
 }
 
 #endif // LIBC_TYPES_HAS_FLOAT16
@@ -297,6 +299,8 @@ TEST(LlvmLibcSharedMathTest, AllFloat) {
   EXPECT_EQ(0L, LIBC_NAMESPACE::shared::lroundf(0.0f));
   EXPECT_EQ(0LL, LIBC_NAMESPACE::shared::llrintf(0.0f));
   EXPECT_EQ(0LL, LIBC_NAMESPACE::shared::llroundf(0.0f));
+  EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::nearbyintf(0.0f));
+  EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::rintf(0.0f));
 }
 
 TEST(LlvmLibcSharedMathTest, AllDouble) {
@@ -423,6 +427,8 @@ TEST(LlvmLibcSharedMathTest, AllDouble) {
   EXPECT_EQ(0L, LIBC_NAMESPACE::shared::lround(0.0));
   EXPECT_EQ(0LL, LIBC_NAMESPACE::shared::llrint(0.0));
   EXPECT_EQ(0LL, LIBC_NAMESPACE::shared::llround(0.0));
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::nearbyint(0.0));
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::rint(0.0));
 }
 
 // TODO: Enable the tests when double-double type is supported.
@@ -531,6 +537,8 @@ TEST(LlvmLibcSharedMathTest, AllLongDouble) {
   EXPECT_EQ(0LL, LIBC_NAMESPACE::shared::llroundl(0.0L));
   EXPECT_EQ(0L, LIBC_NAMESPACE::shared::lrintl(0.0L));
   EXPECT_EQ(0L, LIBC_NAMESPACE::shared::lroundl(0.0L));
+  EXPECT_FP_EQ(0x0p+0L, LIBC_NAMESPACE::shared::nearbyintl(0.0L));
+  EXPECT_FP_EQ(0x0p+0L, LIBC_NAMESPACE::shared::rintl(0.0L));
 }
 
 #endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
@@ -697,6 +705,9 @@ TEST(LlvmLibcSharedMathTest, AllFloat128) {
   EXPECT_FP_EQ(0.0L, LIBC_NAMESPACE::shared::llroundf128(float128(0.0)));
   EXPECT_EQ(0L, LIBC_NAMESPACE::shared::lrintf128(float128(0.0)));
   EXPECT_EQ(0L, LIBC_NAMESPACE::shared::lroundf128(float128(0.0)));
+  EXPECT_FP_EQ(float128(0.0),
+               LIBC_NAMESPACE::shared::nearbyintf128(float128(0.0)));
+  EXPECT_FP_EQ(float128(0.0), LIBC_NAMESPACE::shared::rintf128(float128(0.0)));
 }
 
 #endif // LIBC_TYPES_HAS_FLOAT128
@@ -826,4 +837,7 @@ TEST(LlvmLibcSharedMathTest, AllBFloat16) {
   EXPECT_EQ(0L, LIBC_NAMESPACE::shared::lroundbf16(bfloat16(0.0)));
   EXPECT_EQ(0LL, LIBC_NAMESPACE::shared::llrintbf16(bfloat16(0.0)));
   EXPECT_EQ(0LL, LIBC_NAMESPACE::shared::llroundbf16(bfloat16(0.0)));
+  EXPECT_FP_EQ(bfloat16(0.0),
+               LIBC_NAMESPACE::shared::nearbyintbf16(bfloat16(0.0)));
+  EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::rintbf16(bfloat16(0.0)));
 }

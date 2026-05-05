@@ -986,9 +986,7 @@ add_entrypoint_object(
   HDRS
     ../rint.h
   DEPENDS
-    libc.src.__support.FPUtil.nearest_integer_operations
-  FLAGS
-    ROUND_OPT
+    libc.src.__support.math.rint
 )
 
 add_entrypoint_object(
@@ -998,9 +996,7 @@ add_entrypoint_object(
   HDRS
     ../rintf.h
   DEPENDS
-    libc.src.__support.FPUtil.nearest_integer_operations
-  FLAGS
-    ROUND_OPT
+    libc.src.__support.math.rintf
 )
 
 add_entrypoint_object(
@@ -1010,7 +1006,7 @@ add_entrypoint_object(
   HDRS
     ../rintl.h
   DEPENDS
-    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.math.rintl
 )
 
 add_entrypoint_object(
@@ -1020,12 +1016,7 @@ add_entrypoint_object(
   HDRS
     ../rintf16.h
   DEPENDS
-    libc.src.__support.FPUtil.cast
-    libc.src.__support.FPUtil.nearest_integer_operations
-    libc.src.__support.macros.properties.cpu_features
-    libc.src.__support.macros.properties.types
-  FLAGS
-    ROUND_OPT
+    libc.src.__support.math.rintf16
 )
 
 add_entrypoint_object(
@@ -1035,8 +1026,7 @@ add_entrypoint_object(
   HDRS
     ../rintf128.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.math.rintf128
 )
 
 add_entrypoint_object(
@@ -1046,12 +1036,7 @@ add_entrypoint_object(
   HDRS
     ../rintbf16.h
   DEPENDS
-    libc.src.__support.common
-    libc.src.__support.FPUtil.bfloat16
-    libc.src.__support.FPUtil.nearest_integer_operations
-    libc.src.__support.macros.config
-  FLAGS
-    ROUND_OPT
+    libc.src.__support.math.rintbf16
 )
 
 add_entrypoint_object(
@@ -1181,7 +1166,7 @@ add_entrypoint_object(
   HDRS
     ../nearbyint.h
   DEPENDS
-    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.math.nearbyint
 )
 
 add_entrypoint_object(
@@ -1191,7 +1176,7 @@ add_entrypoint_object(
   HDRS
     ../nearbyintf.h
   DEPENDS
-    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.math.nearbyintf
 )
 
 add_entrypoint_object(
@@ -1201,7 +1186,7 @@ add_entrypoint_object(
   HDRS
     ../nearbyintl.h
   DEPENDS
-    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.math.nearbyintl
 )
 
 add_entrypoint_object(
@@ -1211,8 +1196,7 @@ add_entrypoint_object(
   HDRS
     ../nearbyintf16.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.math.nearbyintf16
 )
 
 add_entrypoint_object(
@@ -1222,8 +1206,7 @@ add_entrypoint_object(
   HDRS
     ../nearbyintf128.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.math.nearbyintf128
 )
 
 add_entrypoint_object(
@@ -1233,10 +1216,7 @@ add_entrypoint_object(
   HDRS
     ../nearbyintbf16.h
   DEPENDS
-    libc.src.__support.common
-    libc.src.__support.FPUtil.bfloat16
-    libc.src.__support.FPUtil.nearest_integer_operations
-    libc.src.__support.macros.config
+    libc.src.__support.math.nearbyintbf16
 )
 
 add_entrypoint_object(
