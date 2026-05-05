@@ -35,7 +35,7 @@
 "`LWG3965 <https://wg21.link/LWG3965>`__","Incorrect example in [format.string.escaped] p3 for formatting of combining characters","2023-11 (Kona)","|Complete|","19","`#105305 <https://github.com/llvm/llvm-project/issues/105305>`__",""
 "`LWG3970 <https://wg21.link/LWG3970>`__","[mdspan.syn] Missing definition of ``full_extent_t`` and ``full_extent``","2023-11 (Kona)","","","`#105306 <https://github.com/llvm/llvm-project/issues/105306>`__",""
 "`LWG3973 <https://wg21.link/LWG3973>`__","Monadic operations should be ADL-proof","2023-11 (Kona)","","","`#105307 <https://github.com/llvm/llvm-project/issues/105307>`__",""
-"`LWG3974 <https://wg21.link/LWG3974>`__","``mdspan::operator[]`` should not copy ``OtherIndexTypes``","2023-11 (Kona)","","","`#105308 <https://github.com/llvm/llvm-project/issues/105308>`__",""
+"`LWG3974 <https://wg21.link/LWG3974>`__","``mdspan::operator[]`` should not copy ``OtherIndexTypes``","2023-11 (Kona)","|Complete|","23","`#105308 <https://github.com/llvm/llvm-project/issues/105308>`__",""
 "`LWG3987 <https://wg21.link/LWG3987>`__","Including ``<flat_foo>`` doesn't provide ``std::begin``/``end``","2023-11 (Kona)","|Complete|","","`#105309 <https://github.com/llvm/llvm-project/issues/105309>`__",""
 "`LWG3990 <https://wg21.link/LWG3990>`__","Program-defined specializations of ``std::tuple`` and ``std::variant`` can't be properly supported","2023-11 (Kona)","|Complete|","21","`#105310 <https://github.com/llvm/llvm-project/issues/105310>`__",""
 "`LWG4001 <https://wg21.link/LWG4001>`__","``iota_view`` should provide ``empty``","2023-11 (Kona)","|Complete|","19","`#105311 <https://github.com/llvm/llvm-project/issues/105311>`__",""

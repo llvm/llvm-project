@@ -196,9 +196,27 @@ constexpr void test_layout_large() {
   test_iteration(construct_mapping(Layout(), std::extents<int64_t, D, 4, 1, D>(3, 6)));
 }
 
+struct Index {
+  Index()             = default;
+  Index(const Index&) = delete;
+  constexpr operator int() const noexcept { return 0; }
+};
+
 // mdspan::operator[] casts to index_type before calling mapping
 // mapping requirements only require the index operator to mixed integer types not anything convertible to index_type
-constexpr void test_index_cast_happens() {}
+constexpr void test_index_cast_happens() {
+  int data[1]{};
+  std::mdspan m(data, std::extents<int, 1>{1});
+
+  // Index i;
+  std::array<Index, 1> a{};
+  std::span s(a);
+
+  // LWG3995: Issue with custom index conversion in <mdspan>
+  // TEST_IGNORE_NODISCARD m[i];
+  TEST_IGNORE_NODISCARD m[a];
+  TEST_IGNORE_NODISCARD m[s];
+}
 
 struct RValueInt {
   constexpr operator int() && noexcept { return 0; }
@@ -213,6 +231,7 @@ constexpr bool test() {
   std::mdspan m(data, std::extents<int, 1>{1});
   TEST_IGNORE_NODISCARD m[RValueInt{}];
 
+  test_index_cast_happens();
   return true;
 }
 
