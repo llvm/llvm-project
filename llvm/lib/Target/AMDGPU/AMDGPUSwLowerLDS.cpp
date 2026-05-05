@@ -210,7 +210,7 @@ public:
                                 Value *HiddenDynLDSSize,
                                 SetVector<GlobalVariable *> &DynamicLDSGlobals);
   void initAsanInfo();
-  void propagateAsanAttrs(Function *KernelFunc, FunctionCallee& Callee);
+  void propagateAsanAttrs(Function *KernelFunc, FunctionCallee &Callee);
 
 private:
   Module &M;
@@ -746,7 +746,7 @@ void AMDGPUSwLowerLDS::translateLDSMemoryOperationsToGlobalMemory(
 }
 
 void AMDGPUSwLowerLDS::propagateAsanAttrs(Function *KernelFunc,
-                                          FunctionCallee& Callee) {
+                                          FunctionCallee &Callee) {
   auto *F = dyn_cast<Function>(Callee.getCallee());
   if (!F)
     return;
