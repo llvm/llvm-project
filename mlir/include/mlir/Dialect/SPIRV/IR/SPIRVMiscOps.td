@@ -56,6 +56,58 @@ def SPIRV_KHRAssumeTrueOp : SPIRV_KhrVendorOp<"AssumeTrue", []> {
 
 // -----
 
+def SPIRV_KHRExpectOp : SPIRV_KhrVendorOp<"Expect",
+    [Pure, AllTypesMatch<["value", "expectedValue", "result"]>]> {
+  let summary = "Provides a hint to the optimizer that the value is likely "
+                "to equal the expected value.";
+
+  let description = [{
+    Result Type must be a scalar or vector of integer type or Boolean type.
+
+    Value and Expected Value must be of Result Type. Result is the same as
+    Value.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    integer-scalar-vector-type ::= integer-type |
+                                   `vector<` integer-literal `x` integer-type `>`
+    bool-scalar-vector-type ::= `i1` |
+                                `vector<` integer-literal `x` `i1` `>`
+    expect-op ::= ssa-id `=` `spirv.KHR.Expect` ssa-use `,` ssa-use
+                  `:` (integer-scalar-vector-type | bool-scalar-vector-type)
+    ```
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.KHR.Expect %0, %1 : i32
+    %5 = spirv.KHR.Expect %3, %4 : vector<4xi1>
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[SPV_KHR_expect_assume]>,
+    Capability<[SPIRV_C_ExpectAssumeKHR]>
+  ];
+
+  let arguments = (ins
+    SPIRV_ScalarOrVectorOf<AnyTypeOf<[SPIRV_Integer, SPIRV_Bool]>>:$value,
+    SPIRV_ScalarOrVectorOf<AnyTypeOf<[SPIRV_Integer, SPIRV_Bool]>>:$expectedValue
+  );
+
+  let results = (outs
+    SPIRV_ScalarOrVectorOf<AnyTypeOf<[SPIRV_Integer, SPIRV_Bool]>>:$result
+  );
+
+  let hasVerifier = 0;
+  let assemblyFormat = "operands attr-dict `:` type($result)";
+}
+
+// -----
+
 def SPIRV_UndefOp : SPIRV_Op<"Undef", [Pure]> {
   let summary = "Make an intermediate object whose value is undefined.";
 
