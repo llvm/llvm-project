@@ -658,6 +658,7 @@ static void CheckPoisonRecords(uptr addr) {
   u8 shadow_val = *shadow_addr;
 
   if (shadow_val != kAsanUserPoisonedMemoryMagic &&
+      shadow_val != kAsanContiguousContainerOOBMagic &&
       shadow_val >= ASAN_SHADOW_GRANULARITY) {
     return;
   }
