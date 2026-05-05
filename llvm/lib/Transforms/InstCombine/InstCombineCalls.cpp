@@ -3627,21 +3627,16 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // Canonicalize assume(a && b) -> assume(a); assume(b);
     // Note: New assumption intrinsics created here are registered by
     // the InstCombineIRInserter object.
-    FunctionType *AssumeIntrinsicTy = II->getFunctionType();
-    Value *AssumeIntrinsic = II->getCalledOperand();
     Value *A, *B;
     if (match(IIOperand, m_LogicalAnd(m_Value(A), m_Value(B)))) {
-      Builder.CreateCall(AssumeIntrinsicTy, AssumeIntrinsic, A, OpBundles,
-                         II->getName());
-      Builder.CreateCall(AssumeIntrinsicTy, AssumeIntrinsic, B, II->getName());
+      Builder.CreateAssumption(A, OpBundles);
+      Builder.CreateAssumption(B);
       return eraseInstFromFunction(*II);
     }
     // assume(!(a || b)) -> assume(!a); assume(!b);
     if (match(IIOperand, m_Not(m_LogicalOr(m_Value(A), m_Value(B))))) {
-      Builder.CreateCall(AssumeIntrinsicTy, AssumeIntrinsic,
-                         Builder.CreateNot(A), OpBundles, II->getName());
-      Builder.CreateCall(AssumeIntrinsicTy, AssumeIntrinsic,
-                         Builder.CreateNot(B), II->getName());
+      Builder.CreateAssumption(Builder.CreateNot(A), OpBundles);
+      Builder.CreateAssumption(Builder.CreateNot(B));
       return eraseInstFromFunction(*II);
     }
 
