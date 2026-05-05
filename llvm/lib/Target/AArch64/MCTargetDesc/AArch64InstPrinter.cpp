@@ -944,30 +944,14 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
       }
     // BRB aliases.
     case 2: {
-      if (Op1Val == 1) {
-        if (!(STI.hasFeature(AArch64::FeatureAll) ||
-              STI.hasFeature(AArch64::FeatureBRBE)))
-          return false;
-
-        NeedsReg = false;
-        if (Op2Val == 4) {
-          Ins = "brb\t";
-          Name = "iall";
-        } else if (Op2Val == 5) {
-          Ins = "brb\t";
-          Name = "inj";
-        } else {
-          return false;
-        }
-      } else if (Op1Val == 3) {
-        if (Op2Val != 7 || !(STI.hasFeature(AArch64::FeatureAll) ||
-                             STI.hasFeature(AArch64::FeatureITE)))
-          return false;
-
+      if (Op1Val != 1 ||
+          !(STI.hasFeature(AArch64::FeatureAll) ||
+            STI.hasFeature(AArch64::FeatureBRBE)) ||
+          (Op2Val != 4 && Op2Val != 5))
         return false;
-      } else {
-        return false;
-      }
+
+      Ins = "brb\t";
+      Name = Op2Val == 4 ? "iall" : "inj";
     } break;
     // Prediction Restriction aliases
     case 3: {
@@ -1047,13 +1031,9 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
         }
       } else if (Op1Val == 3) {
         NeedsReg = true;
-        if (Op2Val == 0) {
-          Ins = "gcspushm";
-        } else if (Op2Val == 2) {
-          Ins = "gcsss1";
-        } else {
+        if (Op1Val != 0 && Op1Val != 2)
           return false;
-        }
+        Ins = Op2Val == 0 ? "gcspushm" : "gcsss1";
       } else {
         return false;
       }
@@ -1147,8 +1127,8 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
 bool AArch64InstPrinter::printSyslAlias(const MCInst *MI,
                                         const MCSubtargetInfo &STI,
                                         raw_ostream &O) {
-  unsigned Opcode = MI->getOpcode();
 #ifndef NDEBUG
+  unsigned Opcode = MI->getOpcode();
   assert(Opcode == AArch64::SYSLxt && "Invalid opcode for SYSL alias!");
 #endif
 
