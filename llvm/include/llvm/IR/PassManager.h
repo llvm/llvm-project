@@ -70,6 +70,8 @@ template <typename IRUnitT, typename... ExtraArgTs> class AnalysisManager;
 ///
 /// Actual passes should inherit from RequiredPassInfoMixin or
 /// OptionalPassInfoMixin.
+///
+/// TODO: move to a detail namespace once we've branched for LLVM 23.
 template <typename DerivedT> struct PassInfoMixin {
   /// Gets the name of the pass we are mixed into.
   static StringRef name() {
