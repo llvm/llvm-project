@@ -63,3 +63,22 @@ struct on_pointer_named_inner_both {
     struct size_known *buf __counted_by(count);
   } inner;
 };
+
+//==============================================================================
+// TODO: allow future sizeof, offsetof expressions in the new ordering
+// of ActOnFields
+//==============================================================================
+
+#define offsetof(t, d) __builtin_offsetof(t, d)
+
+struct pointer_sizeof {
+  // TODO: Allow this
+  // expected-error@+1{{'counted_by' argument must be a simple declaration reference}}
+  struct size_known *p __counted_by(sizeof(struct pointer_sizeof));
+};
+
+struct pointer_offsetof {
+  // TODO: Allow this
+  // expected-error@+1{{'counted_by' argument must be a simple declaration reference}}
+  struct size_known *q __counted_by(offsetof(struct pointer_offsetof, q));
+};
