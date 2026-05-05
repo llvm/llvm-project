@@ -25,7 +25,9 @@ TEST_CONSTEXPR_CXX20 void test(const S& s, const typename S::allocator_type& a) 
 template <class Alloc>
 TEST_CONSTEXPR_CXX20 void test_string(const Alloc& a) {
   using S = std::basic_string<char, std::char_traits<char>, Alloc>;
-  test(S(""), Alloc());
+  if (are_default_allocators_always_equal<Alloc>::value)
+    test(S(""), Alloc());
+  test(S("", Alloc(a)), Alloc(a));
   test(S("abcde", Alloc(a)), Alloc(a));
   test(S("abcdefghij", Alloc(a)), Alloc(a));
   test(S("abcdefghijklmnopqrst", Alloc(a)), Alloc(a));
@@ -39,6 +41,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   test_string(test_allocator<char>(3));
 #if TEST_STD_VER >= 11
   test_string(min_allocator<char>());
+  test_string(fancy_pointer_allocator<char>());
 #endif
 
   return true;

@@ -15,6 +15,7 @@
 
 #include "test_macros.h"
 #include "min_allocator.h"
+#include "test_allocator.h"
 
 TEST_CONSTEXPR_CXX20 int sign(int x) {
   if (x == 0)
@@ -57,6 +58,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   test_string<char, std::allocator>();
 #if TEST_STD_VER >= 11
   test_string<char, min_allocator>();
+  test_string<char, fancy_pointer_allocator>();
 #endif
 
   return true;

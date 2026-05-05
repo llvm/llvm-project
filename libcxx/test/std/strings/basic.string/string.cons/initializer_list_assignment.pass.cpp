@@ -17,6 +17,7 @@
 
 #include "test_macros.h"
 #include "min_allocator.h"
+#include "test_allocator.h"
 #include "asan_testing.h"
 
 // clang-format off
@@ -65,6 +66,7 @@ TEST_CONSTEXPR_CXX20 void test_string() {
 TEST_CONSTEXPR_CXX20 bool test() {
   test_string<std::allocator>();
   test_string<min_allocator>();
+  test_string<fancy_pointer_allocator>();
   test_string<safe_allocator>();
 
   return true;

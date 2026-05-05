@@ -17,6 +17,7 @@
 
 #include "test_macros.h"
 #include "min_allocator.h"
+#include "test_allocator.h"
 #include "nasty_string.h"
 #include "asan_testing.h"
 
@@ -42,6 +43,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   test<std::u32string>();
 
   test<std::basic_string<char, std::char_traits<char>, min_allocator<char>>>();
+  test<std::basic_string<char, std::char_traits<char>, fancy_pointer_allocator<char>>>();
   test<std::basic_string<char, std::char_traits<char>, safe_allocator<char>>>();
 #if TEST_STD_VER >= 20
   test<nasty_string>();

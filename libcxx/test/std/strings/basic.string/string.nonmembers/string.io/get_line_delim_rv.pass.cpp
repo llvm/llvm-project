@@ -19,6 +19,7 @@
 
 #include "test_macros.h"
 #include "min_allocator.h"
+#include "test_allocator.h"
 
 template <template <class> class Alloc>
 void test() {
@@ -42,6 +43,7 @@ int main(int, char**) {
   test<std::allocator>();
 #if TEST_STD_VER >= 11
   test<min_allocator>();
+  test<fancy_pointer_allocator>();
 #endif
 
   return 0;

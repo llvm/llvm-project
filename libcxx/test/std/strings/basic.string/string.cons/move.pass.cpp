@@ -47,6 +47,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   test_string(test_allocator<char>());
   test_string(test_allocator<char>(3));
   test_string(min_allocator<char>());
+  test_string(fancy_pointer_allocator<char>());
 
   return true;
 }

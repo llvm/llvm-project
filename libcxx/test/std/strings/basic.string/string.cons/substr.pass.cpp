@@ -31,7 +31,6 @@
 template <class S>
 TEST_CONSTEXPR_CXX20 void test(S str, unsigned pos) {
   typedef typename S::traits_type T;
-  typedef typename S::allocator_type A;
 
   if (pos <= str.size()) {
     S s2(str, pos);
@@ -39,7 +38,7 @@ TEST_CONSTEXPR_CXX20 void test(S str, unsigned pos) {
     typename S::size_type rlen = str.size() - pos;
     assert(s2.size() == rlen);
     assert(T::compare(s2.data(), str.data() + pos, rlen) == 0);
-    assert(s2.get_allocator() == A());
+    ASSERT_CONTAINER_ALLOCATOR_EQUALS_DEFAULT(S, s2);
     assert(s2.capacity() >= s2.size());
     LIBCPP_ASSERT(is_string_asan_correct(s2));
   }
@@ -58,14 +57,13 @@ TEST_CONSTEXPR_CXX20 void test(S str, unsigned pos) {
 template <class S>
 TEST_CONSTEXPR_CXX20 void test(S str, unsigned pos, unsigned n) {
   typedef typename S::traits_type T;
-  typedef typename S::allocator_type A;
   if (pos <= str.size()) {
     S s2(str, pos, n);
     LIBCPP_ASSERT(s2.__invariants());
     typename S::size_type rlen = std::min<typename S::size_type>(str.size() - pos, n);
     assert(s2.size() == rlen);
     assert(T::compare(s2.data(), str.data() + pos, rlen) == 0);
-    assert(s2.get_allocator() == A());
+    ASSERT_CONTAINER_ALLOCATOR_EQUALS_DEFAULT(S, s2);
     assert(s2.capacity() >= s2.size());
     LIBCPP_ASSERT(is_string_asan_correct(s2));
   }
@@ -168,6 +166,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   test_string(test_allocator<char>(3), test_allocator<char>(5));
 #if TEST_STD_VER >= 11
   test_string(min_allocator<char>(), min_allocator<char>());
+  test_string(fancy_pointer_allocator<char>(), fancy_pointer_allocator<char>());
   test_string(safe_allocator<char>(), safe_allocator<char>());
 #endif
 

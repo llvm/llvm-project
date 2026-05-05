@@ -19,6 +19,7 @@
 
 #include "test_macros.h"
 #include "min_allocator.h"
+#include "test_allocator.h"
 
 template <class S, class SV>
 TEST_CONSTEXPR_CXX20 void
@@ -1857,6 +1858,8 @@ int main(int, char**) {
   test<std::string, std::string_view>();
 #if TEST_STD_VER >= 11
   test<std::basic_string<char, std::char_traits<char>, min_allocator<char>>,
+       std::basic_string_view<char, std::char_traits<char>>>();
+  test<std::basic_string<char, std::char_traits<char>, fancy_pointer_allocator<char>>,
        std::basic_string_view<char, std::char_traits<char>>>();
 #endif
 

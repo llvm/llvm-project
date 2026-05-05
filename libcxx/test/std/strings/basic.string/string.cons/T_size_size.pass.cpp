@@ -28,7 +28,6 @@
 template <class S, class SV>
 TEST_CONSTEXPR_CXX20 void test(SV sv, std::size_t pos, std::size_t n) {
   typedef typename S::traits_type T;
-  typedef typename S::allocator_type A;
   typedef typename S::size_type Size;
   if (pos <= sv.size()) {
     S s2(sv, static_cast<Size>(pos), static_cast<Size>(n));
@@ -37,7 +36,7 @@ TEST_CONSTEXPR_CXX20 void test(SV sv, std::size_t pos, std::size_t n) {
     std::size_t rlen = std::min(sv.size() - pos, n);
     assert(s2.size() == rlen);
     assert(T::compare(s2.data(), sv.data() + pos, rlen) == 0);
-    assert(s2.get_allocator() == A());
+    ASSERT_CONTAINER_ALLOCATOR_EQUALS_DEFAULT(S, s2);
     assert(s2.capacity() >= s2.size());
     LIBCPP_ASSERT(is_string_asan_correct(s2));
   }
@@ -115,6 +114,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   test_string(test_allocator<char>(8));
 #if TEST_STD_VER >= 11
   test_string(min_allocator<char>());
+  test_string(fancy_pointer_allocator<char>());
   test_string(safe_allocator<char>());
 #endif
 

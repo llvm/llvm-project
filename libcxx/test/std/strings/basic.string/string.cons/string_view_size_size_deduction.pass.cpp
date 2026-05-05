@@ -110,6 +110,16 @@ TEST_CONSTEXPR_CXX20 bool test() {
   }
   {
     std::u32string_view sv = U"12345678901234";
+    std::basic_string s1{sv, 0, 4, fancy_pointer_allocator<char32_t>{}};
+    using S = decltype(s1); // what type did we get?
+    static_assert(std::is_same_v<S::value_type, char32_t>, "");
+    static_assert(std::is_same_v<S::traits_type, std::char_traits<char32_t>>, "");
+    static_assert(std::is_same_v<S::allocator_type, fancy_pointer_allocator<char32_t>>, "");
+    assert(s1.size() == 4);
+    assert(s1.compare(0, s1.size(), sv.data(), s1.size()) == 0);
+  }
+  {
+    std::u32string_view sv = U"12345678901234";
     std::basic_string s1{sv, 0, 4, explicit_allocator<char32_t>{}};
     using S = decltype(s1); // what type did we get?
     static_assert(std::is_same_v<S::value_type, char32_t>, "");

@@ -107,6 +107,15 @@ TEST_CONSTEXPR_CXX20 bool test() {
     testAlloc(S(), S("1234567890"), min_allocator<char>());
     testAlloc(S(), S("12345678901234567890"), min_allocator<char>());
   }
+  {
+    typedef std::basic_string<char, std::char_traits<char>, fancy_pointer_allocator<char>> S;
+    test_assign<S>();
+    fancy_pointer_allocator<char> a;
+    testAlloc(S(), S(a), a);
+    testAlloc(S(), S("12345", a), a);
+    testAlloc(S(), S("1234567890", a), a);
+    testAlloc(S(), S("12345678901234567890", a), a);
+  }
 #endif
 #if TEST_STD_VER > 14
   {

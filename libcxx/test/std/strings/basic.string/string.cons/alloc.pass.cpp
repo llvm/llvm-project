@@ -67,7 +67,10 @@ TEST_CONSTEXPR_CXX20 void test2() {
     assert(s.data());
     assert(s.size() == 0);
     assert(s.capacity() >= s.size());
-    assert(s.get_allocator() == typename S::allocator_type());
+#  if TEST_STD_VER >= 11
+    static_assert(std::is_same<decltype(s.get_allocator()), typename S::allocator_type>::value, "");
+#  endif
+    ASSERT_CONTAINER_ALLOCATOR_EQUALS_DEFAULT(S, s);
     LIBCPP_ASSERT(is_string_asan_correct(s));
   }
   {
@@ -78,12 +81,13 @@ TEST_CONSTEXPR_CXX20 void test2() {
                    std::is_nothrow_copy_constructible<typename S::allocator_type>::value),
                   "");
 #  endif
-    S s(typename S::allocator_type{});
+    typename S::allocator_type a{};
+    S s(a);
     LIBCPP_ASSERT(s.__invariants());
     assert(s.data());
     assert(s.size() == 0);
     assert(s.capacity() >= s.size());
-    assert(s.get_allocator() == typename S::allocator_type());
+    assert(s.get_allocator() == a);
     LIBCPP_ASSERT(is_string_asan_correct(s));
   }
 }
@@ -94,6 +98,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   test<std::basic_string<char, std::char_traits<char>, test_allocator<char> > >();
 #if TEST_STD_VER >= 11
   test2<std::basic_string<char, std::char_traits<char>, min_allocator<char> > >();
+  test2<std::basic_string<char, std::char_traits<char>, fancy_pointer_allocator<char> > >();
   test2<std::basic_string<char, std::char_traits<char>, safe_allocator<char> > >();
   test2<std::basic_string<char, std::char_traits<char>, explicit_allocator<char> > >();
 #endif

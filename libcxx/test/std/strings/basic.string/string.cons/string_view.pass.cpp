@@ -34,7 +34,7 @@ TEST_CONSTEXPR_CXX20 void test(std::basic_string_view<CharT> sv) {
     LIBCPP_ASSERT(s2.__invariants());
     assert(s2.size() == sv.size());
     assert(T::compare(s2.data(), sv.data(), sv.size()) == 0);
-    assert(s2.get_allocator() == Alloc());
+    ASSERT_CONTAINER_ALLOCATOR_EQUALS_DEFAULT(S, s2);
     assert(s2.capacity() >= s2.size());
     LIBCPP_ASSERT(is_string_asan_correct(s2));
   }
@@ -44,7 +44,7 @@ TEST_CONSTEXPR_CXX20 void test(std::basic_string_view<CharT> sv) {
     LIBCPP_ASSERT(s2.__invariants());
     assert(s2.size() == sv.size());
     assert(T::compare(s2.data(), sv.data(), sv.size()) == 0);
-    assert(s2.get_allocator() == Alloc());
+    ASSERT_CONTAINER_ALLOCATOR_EQUALS_DEFAULT(S, s2);
     assert(s2.capacity() >= s2.size());
     LIBCPP_ASSERT(is_string_asan_correct(s2));
   }
@@ -98,6 +98,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   test_string(test_allocator<char>(2));
 #if TEST_STD_VER >= 11
   test_string(min_allocator<char>());
+  test_string(fancy_pointer_allocator<char>());
   test_string(safe_allocator<char>());
 #endif
 

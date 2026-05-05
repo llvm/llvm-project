@@ -69,6 +69,10 @@ TEST_CONSTEXPR_CXX20 bool test() {
     static_assert(!std::is_nothrow_move_assignable<C>::value, "");
   }
   {
+    typedef std::basic_string<char, std::char_traits<char>, fancy_pointer_allocator<char>> C;
+    static_assert(std::is_nothrow_move_assignable<C>::value, "");
+  }
+  {
     typedef std::basic_string<char, std::char_traits<char>, some_alloc<char>> C;
 #if TEST_STD_VER > 14
     // if the allocators are always equal, then the move assignment can be noexcept
