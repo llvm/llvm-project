@@ -92,8 +92,7 @@ SmallVector<std::string, 8> getCandidateBinPaths(StringRef ExeDir) {
   constexpr int MaxParentLevels = 6;
   SmallString<256> Parent(sys::path::parent_path(ExeDir));
   for (int Depth = 0; Depth < MaxParentLevels && !Parent.empty(); ++Depth) {
-    SmallString<256> GrandParent(sys::path::parent_path(Parent));
-    if (StringRef(GrandParent) == StringRef(Parent))
+    if (sys::path::root_path(Parent) == StringRef(Parent))
       break;
     SmallString<256> Candidate(Parent);
     sys::path::append(Candidate, "bin");
@@ -103,7 +102,7 @@ SmallVector<std::string, 8> getCandidateBinPaths(StringRef ExeDir) {
     };
     if (llvm::none_of(Paths, IsDup))
       Paths.push_back(CandStr);
-    Parent = GrandParent;
+    Parent = sys::path::parent_path(Parent);
   }
   return Paths;
 }
