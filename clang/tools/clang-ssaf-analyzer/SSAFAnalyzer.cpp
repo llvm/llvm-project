@@ -20,6 +20,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
+#include <memory>
 #include <string>
 
 using namespace llvm;
@@ -98,7 +99,7 @@ void analyze(const AnalyzerInput &AI) {
 
   // Run analyses. If specific names were given, run only those;
   // otherwise run all registered analyses.
-  AnalysisDriver Driver(std::move(*ExpectedLU));
+  AnalysisDriver Driver(std::make_unique<LUSummary>(std::move(*ExpectedLU)));
   auto ExpectedSuite =
       AI.Names.empty() ? std::move(Driver).run() : Driver.run(AI.Names);
   if (!ExpectedSuite) {

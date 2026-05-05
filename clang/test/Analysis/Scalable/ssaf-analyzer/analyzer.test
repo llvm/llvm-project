@@ -89,11 +89,12 @@
 // RUN: diff %S/Outputs/all.json %t/all-full-dup.json
 
 // ============================================================================
-// Success: run all analyses (no -a flag)
+// Success: run all example-plugin analyses explicitly
 // ============================================================================
 
 // RUN: %clang-ssaf-analyzer-with-plugin %S/Inputs/lu.json \
-// RUN:   -o %t/all-default.json
+// RUN:   -o %t/all-default.json \
+// RUN:   -a TagsAnalysisResult -a PairsAnalysisResult -a TagsPairsAnalysisResult
 // RUN: diff %S/Outputs/all.json %t/all-default.json
 
 // ============================================================================
