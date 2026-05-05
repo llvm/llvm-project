@@ -42,7 +42,7 @@ void __kmp_print_structure(void); // Forward declaration
 static inline bool __kmp_hyper_forkjoin_uses_spin_wait(int nproc) {
   static const int min_threads = 32;
 
-  if (__kmp_dflt_blocktime == KMP_MAX_BLOCKTIME)
+  if (__kmp_dflt_blocktime == KMP_MAX_BLOCKTIME || __kmp_wpolicy_passive)
     return false;
 
   if (nproc <= 0) {
