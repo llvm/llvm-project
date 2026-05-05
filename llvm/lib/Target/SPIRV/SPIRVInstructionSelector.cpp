@@ -1744,7 +1744,7 @@ bool SPIRVInstructionSelector::selectPopCount(Register ResVReg,
                                               MachineInstr &I,
                                               unsigned Opcode) const {
   // Vulkan restricts OpBitCount to 32-bit integers or vectors of 32-bit
-  // integers unless VK_KHR_maintenance9 is enabled. Until VK_KHR_maintaince9
+  // integers unless VK_KHR_maintenance9 is enabled. Until VK_KHR_maintenance9
   // is core we will not generate OpBitCount with any other types when
   // targeting Vulkan.
   if (!STI.getTargetTriple().isVulkanOS())
