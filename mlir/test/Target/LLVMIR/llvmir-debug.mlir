@@ -818,3 +818,32 @@ llvm.func @fn_cu_import_cycle() {
 
 // CHECK-DAG: !DIImportedEntity(tag: DW_TAG_imported_module{{.*}})
 // CHECK-DAG: !DICompileUnit({{.*}}imports:
+
+// -----
+
+#di_file  = #llvm.di_file<"foo.mlir" in "/tmp">
+#di_cu    = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #di_file, isOptimized = false, emissionKind = Full>
+#di_uint8 = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "uint8", sizeInBits = 8, encoding = DW_ATE_unsigned>
+#di_int64 = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "int64", sizeInBits = 64, encoding = DW_ATE_signed>
+#di_f64   = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "float64", sizeInBits = 64, encoding = DW_ATE_float>
+#di_disc  = #llvm.di_derived_type<tag = DW_TAG_member, name = "discriminator", baseType = #di_uint8, sizeInBits = 8, flags = Artificial>
+#di_arm_i = #llvm.di_derived_type<tag = DW_TAG_member, name = "_int64", baseType = #di_int64, sizeInBits = 64, offsetInBits = 64, extraData = 1 : i8>
+#di_arm_f = #llvm.di_derived_type<tag = DW_TAG_member, name = "_float64", baseType = #di_f64, sizeInBits = 64, offsetInBits = 64, extraData = 2 : i8>
+#di_vp    = #llvm.di_composite_type<tag = DW_TAG_variant_part, name = "variant_part", file = #di_file, sizeInBits = 64, identifier = "variant-id", discriminator = #di_disc, elements = #di_arm_i, #di_arm_f>
+#di_sub   = #llvm.di_subprogram<id = distinct[1]<>, compileUnit = #di_cu, scope = #di_file, name = "variant_part_emission", file = #di_file, subprogramFlags = Definition>
+#di_local = #llvm.di_local_variable<scope = #di_sub, name = "x", file = #di_file, type = #di_vp>
+#loc      = loc(fused<#di_sub>["foo.mlir":1:1])
+
+// CHECK-LABEL: define void @variant_part_emission
+// CHECK-DAG: !DICompositeType(tag: DW_TAG_variant_part
+// CHECK-SAME: identifier: "variant-id"
+// CHECK-SAME: discriminator: ![[DISC:[0-9]+]]
+// CHECK-DAG: !DIDerivedType(tag: DW_TAG_member, name: "_int64"{{.*}}extraData: i8 1)
+// CHECK-DAG: !DIDerivedType(tag: DW_TAG_member, name: "_float64"{{.*}}extraData: i8 2)
+// CHECK: ![[DISC]] = !DIDerivedType(tag: DW_TAG_member
+// CHECK-SAME: name: "discriminator"
+// CHECK-SAME: flags: DIFlagArtificial
+llvm.func @variant_part_emission(%arg0: i32) {
+  llvm.intr.dbg.value #di_local = %arg0 : i32 loc(#loc)
+  llvm.return loc(#loc)
+} loc(#loc)
