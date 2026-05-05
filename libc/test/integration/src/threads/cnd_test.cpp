@@ -11,6 +11,7 @@
 #include "src/threads/cnd_destroy.h"
 #include "src/threads/cnd_init.h"
 #include "src/threads/cnd_signal.h"
+#include "src/threads/cnd_timedwait.h"
 #include "src/threads/cnd_wait.h"
 #include "src/threads/mtx_destroy.h"
 #include "src/threads/mtx_init.h"
@@ -18,10 +19,12 @@
 #include "src/threads/mtx_unlock.h"
 #include "src/threads/thrd_create.h"
 #include "src/threads/thrd_join.h"
+#include "src/time/timespec_get.h"
 
 #include "test/IntegrationTest/test.h"
 
 #include <threads.h>
+#include <time.h> // for TIME_UTC
 
 namespace wait_notify_broadcast_test {
 
@@ -146,8 +149,56 @@ void single_waiter_test() {
 
 } // namespace single_waiter_test
 
+namespace timed_wait_test {
+
+void timeout_test() {
+  /*cnd_t cnd;
+  mtx_t mtx;
+  ASSERT_EQ(LIBC_NAMESPACE::cnd_init(&cnd), int(thrd_success));
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_init(&mtx, mtx_plain), int(thrd_success));
+
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_lock(&mtx), int(thrd_success));
+
+  struct timespec ts;
+  ts.tv_sec = 0;
+  ts.tv_nsec = 0;
+  ASSERT_EQ(LIBC_NAMESPACE::cnd_timedwait(&cnd, &mtx, &ts), int(thrd_timedout));
+
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_unlock(&mtx), int(thrd_success));
+
+  LIBC_NAMESPACE::cnd_destroy(&cnd);
+  LIBC_NAMESPACE::mtx_destroy(&mtx);*/
+}
+
+void future_timeout_test() {
+  cnd_t cnd;
+  mtx_t mtx;
+  ASSERT_EQ(LIBC_NAMESPACE::cnd_init(&cnd), int(thrd_success));
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_init(&mtx, mtx_plain), int(thrd_success));
+
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_lock(&mtx), int(thrd_success));
+
+  struct timespec ts;
+  ASSERT_EQ(LIBC_NAMESPACE::timespec_get(&ts, TIME_UTC), TIME_UTC);
+  ts.tv_nsec += 100000000;
+  if (ts.tv_nsec >= 1000000000) {
+    ts.tv_sec += 1;
+    ts.tv_nsec -= 1000000000;
+  }
+  ASSERT_EQ(LIBC_NAMESPACE::cnd_timedwait(&cnd, &mtx, &ts), int(thrd_timedout));
+
+  ASSERT_EQ(LIBC_NAMESPACE::mtx_unlock(&mtx), int(thrd_success));
+
+  LIBC_NAMESPACE::cnd_destroy(&cnd);
+  LIBC_NAMESPACE::mtx_destroy(&mtx);
+}
+
+} // namespace timed_wait_test
+
 TEST_MAIN() {
   wait_notify_broadcast_test::wait_notify_broadcast_test();
   single_waiter_test::single_waiter_test();
+  timed_wait_test::timeout_test();
+  timed_wait_test::future_timeout_test();
   return 0;
 }
