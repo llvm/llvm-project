@@ -1051,8 +1051,11 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
     unsigned SrcSubReg = I.getOperand(1).getSubReg();
     unsigned SubReg;
 
-    if (SrcSubReg && RBI.constrainGenericRegister(DstReg, *DstRC, MRI))
+    if (SrcSubReg) {
+      if (!RBI.constrainGenericRegister(DstReg, *DstRC, MRI))
+        return false;
       return true;
+    }
 
     // If the source bank doesn't support a subregister copy small enough,
     // then we first need to copy to the destination bank.
