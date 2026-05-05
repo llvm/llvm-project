@@ -312,8 +312,10 @@ void CSEDriver::pruneDeadOps(Operation *root, ScopedMapTy &knownValues) {
       if (Operation *argOp = arg.getDefiningOp())
         worklist.insert(argOp);
 
-    // Since the root op is not inserted into the ScopedHashMap, do not undo
-    // its previous insertion.
+    // If the `op` is not the `root`, it must be an "existing op" previously
+    // inserted into the ScopedHashTable (since it had users). We erase it here
+    // to maintain the balance of the ScopedHashTable. The `root` itself was
+    // never inserted.
     if (op != root)
       knownValues.erase(op);
     rewriter.eraseOp(op);
