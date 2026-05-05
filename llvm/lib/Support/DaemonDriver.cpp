@@ -179,7 +179,7 @@ struct RunCommand {
   static Expected<RunCommand> parse(StringRef Remaining) {
     Remaining = Remaining.trim();
 
-    if (!Remaining.trim().empty())
+    if (!Remaining.empty())
       return createStringError("Unexpected trailing characters in command");
 
     return RunCommand();
