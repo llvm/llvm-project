@@ -230,12 +230,12 @@ static void primeLibraryLoad(StringRef Path) {
   static HMODULE PinnedModule = nullptr;
   if (PinnedModule || !sys::path::is_absolute(Path))
     return;
-  SmallVector<wchar_t, 256> WPath;
+  SmallVector<UTF16, 256> WPath;
   if (!convertUTF8ToUTF16String(Path, WPath))
     return;
-  WPath.push_back(L'\0'); // ensure null-termination for LoadLibraryExW
-  PinnedModule =
-      LoadLibraryExW(WPath.data(), nullptr, LOAD_WITH_ALTERED_SEARCH_PATH);
+  WPath.push_back(0);
+  PinnedModule = LoadLibraryExW(reinterpret_cast<LPCWSTR>(WPath.data()),
+                                nullptr, LOAD_WITH_ALTERED_SEARCH_PATH);
   DWORD Err = GetLastError();
   if (!PinnedModule && Verbose)
     WithColor::note() << "priming LoadLibraryExW failed for " << Path
