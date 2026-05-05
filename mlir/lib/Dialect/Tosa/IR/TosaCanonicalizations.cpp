@@ -941,6 +941,13 @@ struct NonNarrowingCastsOptimization : public OpRewritePattern<tosa::CastOp> {
                   "legal in TOSA");
     }
 
+    if (innerInputType.getElementType().isInteger() !=
+        outerOutputType.getElementType().isInteger()) {
+      return rewriter.notifyMatchFailure(
+          castOp, "integer to float and float to integer casts are not "
+                  "supported to avoid introducing illegal type combinations");
+    }
+
     // Check that the cast we're considering for removal is non-narrowing
     if (isNarrowingCast(innerInputType, innerOutputType))
       return rewriter.notifyMatchFailure(castOp,
