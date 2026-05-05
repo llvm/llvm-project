@@ -808,7 +808,6 @@ static constexpr IntrinsicHandler handlers[]{
        {"team", asBox, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"time", &I::genTime, {}, /*isElemental=*/false},
-    {"timef", &I::genTimef, {}, /*isElemental=*/false},
     {"tokenize",
      &I::genTokenize,
      {{{"string", asAddr},
@@ -8266,13 +8265,6 @@ IntrinsicLibrary::genThisImage(mlir::Type resultType,
     TODO(loc, "this_image with coarray argument.");
   mlir::Value res = mif::ThisImageOp::create(builder, loc, team);
   return builder.createConvert(loc, resultType, res);
-}
-
-// TIMEF
-mlir::Value IntrinsicLibrary::genTimef(mlir::Type resultType,
-                                       llvm::ArrayRef<mlir::Value> args) {
-  assert(args.empty() && "timef does not accept any args");
-  return fir::runtime::genTimef(builder, loc);
 }
 
 // TRAILZ
