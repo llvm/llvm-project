@@ -1399,17 +1399,18 @@ static bool checkTupleLikeDecomposition(Sema &S,
 
     // Don't give this VarDecl a TypeSourceInfo, since this is a synthesized
     // entity and this type was never written in source code.
-    auto *RefVD = VarDecl::Create(S.Context, Src->getDeclContext(), Loc, Loc,
-                                  B->getDeclName().getAsIdentifierInfo(), U,
-                                  /*TInfo=*/nullptr, Src->getStorageClass());
-    RefVD->setLexicalDeclContext(Src->getLexicalDeclContext());
-    RefVD->setTSCSpec(Src->getTSCSpec());
-    RefVD->setImplicit();
+    auto *BindingVD =
+        VarDecl::Create(S.Context, Src->getDeclContext(), Loc, Loc,
+                        B->getDeclName().getAsIdentifierInfo(), U,
+                        /*TInfo=*/nullptr, Src->getStorageClass());
+    BindingVD->setLexicalDeclContext(Src->getLexicalDeclContext());
+    BindingVD->setTSCSpec(Src->getTSCSpec());
+    BindingVD->setImplicit();
     if (Src->isInlineSpecified())
-      RefVD->setInlineSpecified();
-    RefVD->getLexicalDeclContext()->addHiddenDecl(RefVD);
+      BindingVD->setInlineSpecified();
+    BindingVD->getLexicalDeclContext()->addHiddenDecl(BindingVD);
 
-    InitializedEntity Entity = InitializedEntity::InitializeBinding(RefVD);
+    InitializedEntity Entity = InitializedEntity::InitializeBinding(BindingVD);
     InitializationKind Kind =
         E.get()->isPRValue() ? InitializationKind::CreateDirect(Loc, Loc, Loc)
                              : InitializationKind::CreateCopy(Loc, Loc);
@@ -1420,12 +1421,11 @@ static bool checkTupleLikeDecomposition(Sema &S,
     E = S.ActOnFinishFullExpr(E.get(), Loc, /*DiscardedValue*/ false);
     if (E.isInvalid())
       return true;
-    RefVD->setInit(E.get());
-    S.CheckCompleteVariableDeclaration(RefVD);
+    BindingVD->setInit(E.get());
+    S.CheckCompleteVariableDeclaration(BindingVD);
 
-    E = S.BuildDeclarationNameExpr(CXXScopeSpec(),
-                                   DeclarationNameInfo(B->getDeclName(), Loc),
-                                   RefVD);
+    E = S.BuildDeclarationNameExpr(
+        CXXScopeSpec(), DeclarationNameInfo(B->getDeclName(), Loc), BindingVD);
     if (E.isInvalid())
       return true;
 
