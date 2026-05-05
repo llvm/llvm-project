@@ -10,6 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <cstdlib>
+
 #include <level_zero/ze_api.h>
 #include <sycl/ext/oneapi/backend/level_zero.hpp>
 #include <sycl/sycl.hpp>
@@ -41,8 +43,8 @@ auto catchAll(F &&func) {
   {                                                                            \
     ze_result_t status = (call);                                               \
     if (status != ZE_RESULT_SUCCESS) {                                         \
-      fprintf(stdout, "L0 error %d\n", status);                                \
-      fflush(stdout);                                                          \
+      fprintf(stderr, "L0 error %d\n", status);                                \
+      fflush(stderr);                                                          \
       abort();                                                                 \
     }                                                                          \
   }
