@@ -305,9 +305,9 @@ ProgramStateRef ExprEngine::getInitialState(const LocationContext *InitLoc) {
       // Precondition: 'this' is always non-null upon entry to the
       // top-level function.  This is our starting assumption for
       // analyzing an "open" program.
-      const StackFrameContext *SFC = InitLoc->getStackFrame();
-      if (SFC->getParent() == nullptr) {
-        loc::MemRegionVal L = svalBuilder.getCXXThis(MD, SFC);
+      const StackFrame *SF = InitLoc->getStackFrame();
+      if (SF->getParent() == nullptr) {
+        loc::MemRegionVal L = svalBuilder.getCXXThis(MD, SF);
         SVal V = state->getSVal(L);
         if (std::optional<Loc> LV = V.getAs<Loc>()) {
           state = state->assume(*LV, true);
@@ -1055,8 +1055,8 @@ void ExprEngine::removeDead(ExplodedNode *Pred, ExplodedNodeSet &Out,
     LC = LC->getParent();
   }
 
-  const StackFrameContext *SFC = LC ? LC->getStackFrame() : nullptr;
-  SymbolReaper SymReaper(SFC, ReferenceStmt, SymMgr, getStoreManager());
+  const StackFrame *SF = LC ? LC->getStackFrame() : nullptr;
+  SymbolReaper SymReaper(SF, ReferenceStmt, SymMgr, getStoreManager());
 
   for (auto I : CleanedState->get<ObjectsUnderConstruction>()) {
     if (SymbolRef Sym = I.second.getAsSymbol())
@@ -1071,7 +1071,7 @@ void ExprEngine::removeDead(ExplodedNode *Pred, ExplodedNodeSet &Out,
   // and the store. TODO: The function should just return new env and store,
   // not a new state.
   CleanedState = StateMgr.removeDeadBindingsFromEnvironmentAndStore(
-      CleanedState, SFC, SymReaper);
+      CleanedState, SF, SymReaper);
 
   // Process any special transfer function for dead symbols.
   // Call checkers with the non-cleaned state so that they could query the
@@ -1173,7 +1173,7 @@ void ExprEngine::ProcessInitializer(const CFGInitializer CFGInit,
                                 "Error evaluating initializer");
 
   // We don't clean up dead bindings here.
-  const auto *stackFrame = cast<StackFrameContext>(Pred->getLocationContext());
+  const auto *stackFrame = cast<StackFrame>(Pred->getLocationContext());
   const auto *decl = cast<CXXConstructorDecl>(stackFrame->getDecl());
 
   ProgramStateRef State = Pred->getState();
@@ -2479,8 +2479,8 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
 
 bool ExprEngine::replayWithoutInlining(ExplodedNode *N,
                                        const LocationContext *CalleeLC) {
-  const StackFrameContext *CalleeSF = CalleeLC->getStackFrame();
-  const StackFrameContext *CallerSF = CalleeSF->getParent()->getStackFrame();
+  const StackFrame *CalleeSF = CalleeLC->getStackFrame();
+  const StackFrame *CallerSF = CalleeSF->getParent()->getStackFrame();
   assert(CalleeSF && CallerSF);
   ExplodedNode *BeforeProcessingCall = nullptr;
   const Expr *CE = CalleeSF->getCallSite();
