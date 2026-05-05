@@ -26,10 +26,10 @@ namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> mkdir(const char *path, mode_t mode) {
-#ifdef SYS_mkdir
-  int ret = syscall_impl<int>(SYS_mkdir, path, mode);
-#else
+#ifdef SYS_mkdirat
   int ret = syscall_impl<int>(SYS_mkdirat, AT_FDCWD, path, mode);
+#else
+  int ret = syscall_impl<int>(SYS_mkdir, path, mode);
 #endif
   if (ret < 0)
     return Error(-ret);
