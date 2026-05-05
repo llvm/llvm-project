@@ -208,9 +208,11 @@ CaptureComponents SimpleCaptureAnalysis::getCapturesBefore(const Value *Object,
   if (!Inserted)
     return CacheIt->second;
 
-  CaptureComponents Ret = PointerMayBeCaptured(
-      Object, /*ReturnCaptures=*/false, CaptureComponents::Provenance,
-      [](CaptureComponents CC) { return capturesFullProvenance(CC); });
+  CaptureComponents Ret =
+      PointerMayBeCaptured(
+          Object, CaptureComponents::Provenance,
+          [](CaptureComponents CC) { return capturesFullProvenance(CC); })
+          .WithoutRet;
   CacheIt->second = Ret;
   return Ret;
 }
@@ -234,13 +236,13 @@ EarliestEscapeAnalysis::getCapturesBefore(const Value *Object,
 
   auto Iter = EarliestEscapes.try_emplace(Object);
   if (Iter.second) {
-    std::pair<Instruction *, CaptureComponents> EarliestCapture =
-        FindEarliestCapture(Object, *DT.getRoot()->getParent(),
-                            /*ReturnCaptures=*/false, DT,
+    std::pair<Instruction *, CaptureResult> EarliestCapture =
+        FindEarliestCapture(Object, *DT.getRoot()->getParent(), DT,
                             CaptureComponents::Provenance);
     if (EarliestCapture.first)
       Inst2Obj[EarliestCapture.first].push_back(Object);
-    Iter.first->second = EarliestCapture;
+    Iter.first->second = {EarliestCapture.first,
+                          EarliestCapture.second.WithoutRet};
   }
 
   auto IsNotCapturedBefore = [&]() {
