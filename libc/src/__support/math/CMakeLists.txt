@@ -1678,6 +1678,33 @@ add_header_library(
 )
 
 add_header_library(
+  isnan
+  HDRS
+    isnan.h
+  DEPENDS
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  isnanf
+  HDRS
+    isnanf.h
+  DEPENDS
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  isnanl
+  HDRS
+    isnanl.h
+  DEPENDS
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   issignaling
   HDRS
     issignaling.h

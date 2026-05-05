@@ -3017,6 +3017,8 @@ add_entrypoint_object(
     isnan.cpp
   HDRS
     ../isnan.h
+  DEPENDS
+    libc.src.__support.math.isnan
 )
 
 add_entrypoint_object(
@@ -3025,6 +3027,8 @@ add_entrypoint_object(
     isnanf.cpp
   HDRS
     ../isnanf.h
+  DEPENDS
+    libc.src.__support.math.isnanf
 )
 
 add_entrypoint_object(
@@ -3033,6 +3037,8 @@ add_entrypoint_object(
     isnanl.cpp
   HDRS
     ../isnanl.h
+  DEPENDS
+    libc.src.__support.math.isnanl
 )
 
 add_entrypoint_object(

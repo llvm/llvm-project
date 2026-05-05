@@ -88,6 +88,7 @@ static_assert(1 == [] {
 static_assert(0.0 == LIBC_NAMESPACE::shared::round(0.0));
 static_assert(0.0 == LIBC_NAMESPACE::shared::roundeven(0.0));
 static_assert(0.0 == LIBC_NAMESPACE::shared::trunc(0.0));
+static_assert(0 == LIBC_NAMESPACE::shared::isnan(0.0));
 
 //===----------------------------------------------------------------------===//
 //                       Float Tests
@@ -162,6 +163,7 @@ static_assert(1 == [] {
 static_assert(0.0f == LIBC_NAMESPACE::shared::roundf(0.0f));
 static_assert(0.0f == LIBC_NAMESPACE::shared::roundevenf(0.0f));
 static_assert(0.0f == LIBC_NAMESPACE::shared::truncf(0.0f));
+static_assert(0 == LIBC_NAMESPACE::shared::isnanf(0.0f));
 
 //===----------------------------------------------------------------------===//
 //                       Float16 Tests
@@ -341,6 +343,7 @@ static_assert(1 == [] {
 static_assert(0.0L == LIBC_NAMESPACE::shared::roundl(0.0L));
 static_assert(0.0L == LIBC_NAMESPACE::shared::roundevenl(0.0L));
 static_assert(0.0L == LIBC_NAMESPACE::shared::truncl(0.0L));
+static_assert(0 == LIBC_NAMESPACE::shared::isnanl(0.0L));
 
 #endif
 

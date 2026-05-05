@@ -4878,6 +4878,33 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_isnan",
+    hdrs = ["src/__support/math/isnan.h"],
+    deps = [
+        ":__support_fputil_fp_bits",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_isnanf",
+    hdrs = ["src/__support/math/isnanf.h"],
+    deps = [
+        ":__support_fputil_fp_bits",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_isnanl",
+    hdrs = ["src/__support/math/isnanl.h"],
+    deps = [
+        ":__support_fputil_fp_bits",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_issignaling",
     hdrs = ["src/__support/math/issignaling.h"],
     deps = [
@@ -9471,6 +9498,27 @@ libc_math_function(
     name = "iscanonicalf16",
     additional_deps = [
         ":__support_math_iscanonicalf16",
+    ],
+)
+
+libc_math_function(
+    name = "isnan",
+    additional_deps = [
+        ":__support_math_isnan",
+    ],
+)
+
+libc_math_function(
+    name = "isnanf",
+    additional_deps = [
+        ":__support_math_isnanf",
+    ],
+)
+
+libc_math_function(
+    name = "isnanl",
+    additional_deps = [
+        ":__support_math_isnanl",
     ],
 )
 
