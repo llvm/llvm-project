@@ -8,9 +8,6 @@
 ; isUIntN(16, val) assertion in the APInt constructor for any constant with
 ; bit 15 set.
 
-target datalayout = "e-p:16:16:16-i1:8:8-i8:8:8-i16:16:16-i32:16:32"
-target triple = "msp430-generic-generic"
-
 ; CHECK-LABEL: cmp_ule_high_bit:
 ; Folded into `rhs u< 0x8001` (c = 0x8000, c+1 = 0x8001 = -32767 signed).
 ; CHECK: cmp #-32767, r12
