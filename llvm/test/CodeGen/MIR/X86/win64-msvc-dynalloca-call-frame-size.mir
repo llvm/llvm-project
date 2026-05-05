@@ -1,0 +1,14 @@
+# RUN: llc -mtriple=x86_64-pc-windows-msvc -run-pass=none -o - %s | FileCheck %s
+
+---
+# CHECK-LABEL: name: test
+# CHECK: machineFunctionInfo:
+# CHECK-NEXT:   amxProgModel: None
+# CHECK-NEXT:   win64MSVCDynAllocaCallFrameSize: 32
+name: test
+machineFunctionInfo:
+  win64MSVCDynAllocaCallFrameSize: 32
+body: |
+  bb.0:
+    RET 0
+...
