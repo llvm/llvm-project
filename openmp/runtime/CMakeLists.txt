@@ -327,12 +327,14 @@ if(LIBOMP_STATS)
   set(LIBOMP_USE_STDCPPLIB TRUE)
 endif()
 
-# Thread cancellation via pthread_cancel.  Disabled on platforms that lack it
-# (Android, WASI) but can also be forced off via -DLIBOMP_USE_CANCEL_THREADS=OFF.
+# Thread cancellation via pthread_cancel.  Platforms known to lack it at the
+# ABI level (Android, WASM) are forced off; others default to symbol
+# availability but can be overridden via -DLIBOMP_USE_CANCEL_THREADS=OFF for
+# cases where the build sysroot is more complete than the target runtime.
 if(ANDROID OR WASM)
   set(LIBOMP_USE_CANCEL_THREADS_DEFAULT FALSE)
 else()
-  set(LIBOMP_USE_CANCEL_THREADS_DEFAULT TRUE)
+  set(LIBOMP_USE_CANCEL_THREADS_DEFAULT "${LIBOMP_HAVE_PTHREAD_CANCEL}")
 endif()
 set(LIBOMP_USE_CANCEL_THREADS "${LIBOMP_USE_CANCEL_THREADS_DEFAULT}" CACHE BOOL
   "Enable thread cancellation via pthread_cancel?")
