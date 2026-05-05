@@ -14,9 +14,9 @@
 namespace clang::tidy::bugprone {
 
 /// Finds cases where the ``const CharT*`` constructor of
-/// ``std::basic_string_view`` is passed a null pointer argument and replaces them
-/// with calls to the default constructor or construction from the empty string
-/// (``""``) as appropriate.
+/// ``std::basic_string_view`` is passed a null pointer argument and replaces
+/// them with calls to the default constructor or construction from the empty
+/// string (``""``) as appropriate.
 ///
 /// For the user-facing documentation see:
 /// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/stringview-nullptr.html
