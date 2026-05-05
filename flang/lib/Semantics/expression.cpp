@@ -2934,7 +2934,7 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
   // host_data use_device clause: the variable itself is host-resident, but
   // inside the host_data region it is referenced via its device address.
   // It can therefore match either a host dummy or a device dummy in generic
-  // resolution.  The matching distance disambiguates when both kinds of
+  // resolution. The matching distance disambiguates when both kinds of
   // specifics exist:
   //   - device dummy:           0 (best match: actual carries a device address)
   //   - managed/unified dummy:  2 (acceptable: dummy is reachable from device)
