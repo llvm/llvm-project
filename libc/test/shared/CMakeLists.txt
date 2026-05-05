@@ -512,6 +512,12 @@ add_fp_unittest(
   DEPENDS
     libc.src.__support.math.asinbf16
     libc.src.__support.math.bf16subl
+    libc.src.__support.math.canonicalize
+    libc.src.__support.math.canonicalizebf16
+    libc.src.__support.math.canonicalizef
+    libc.src.__support.math.canonicalizef128
+    libc.src.__support.math.canonicalizef16
+    libc.src.__support.math.canonicalizel
     libc.src.__support.math.ceil
     libc.src.__support.math.ceilbf16
     libc.src.__support.math.ceilf
