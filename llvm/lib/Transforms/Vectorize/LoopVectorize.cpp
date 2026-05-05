@@ -225,7 +225,7 @@ static cl::opt<TailFoldingPolicyTy> TailFoldingPolicy(
         clEnumValN(
             TailFoldingPolicyTy::PreferFoldEpilogueTail,
             "prefer-fold-epilogue-tail",
-            "prefer tail-folded vector epilogue, otherwise fallback to a "
+            "prefer tail-folded vector epilogue, otherwise fall back to a "
             "normal epilogue.")));
 
 static cl::opt<TailFoldingStyle> ForceTailFoldingStyle(
@@ -2962,10 +2962,9 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
       return FixedScalableVFPair::getNone();
 
     break;
-  default:
-    // Ignore the case of CM_EpilogueNotNeededFoldEpilogueTail for now.
-    // TODO: delete/clarify the comment when there is a handling for the case of
-    // CM_EpilogueNotNeededFoldEpilogueTail
+  case CM_EpilogueNotNeededFoldEpilogueTail:
+    // Ignore this case for now.
+    // TODO: delete/clarify the comment when there is a handling for it.
     break;
   }
 
@@ -7375,7 +7374,8 @@ getEpilogueLowering(Function *F, Loop *L, LoopVectorizeHints &Hints,
       return CM_EpilogueNotNeededFoldTail;
     case TailFoldingPolicyTy::MustFoldTail:
       return CM_EpilogueNotAllowedFoldTail;
-    default:
+    case TailFoldingPolicyTy::PreferFoldEpilogueTail:
+      // Handled separately as this is realted specifically to epilogue loop.
       break;
     };
   }
@@ -7409,7 +7409,7 @@ getEpilogueTailLowering(const LoopVectorizationCostModel &MainCM, const Loop *L,
 
   if (!EnableEpilogueVectorization) {
     reportVectorizationInfo(
-        "LV: Options conflict, epilogue vectorization is disallowed while "
+        "Options conflict, epilogue vectorization is disallowed while "
         "epilogue tail-folding allowed!\n",
         "UnsupportedTailFoldingPolicy", ORE, L);
     return CM_EpilogueAllowed;
@@ -7419,14 +7419,14 @@ getEpilogueTailLowering(const LoopVectorizationCostModel &MainCM, const Loop *L,
   if (MainCM.requiresScalarEpilogue(/*IsVectorizing*/ true)) {
     LLVM_DEBUG(dbgs() << "LV: Epilogue tail-folding can't be applied because "
                          "scalar epilogue is required\n"
-                         "LV: Fallback to a normal epilogue\n");
+                         "LV: Fall back to a normal epilogue\n");
     return CM_EpilogueAllowed;
   }
 
   // If having epilogue is NOT allowed, then no epilogue to apply TF for.
   if (!MainCM.isEpilogueAllowed()) {
     LLVM_DEBUG(dbgs() << "LV: No epilogue to apply tail-folding for.\n"
-                         "LV: Fallback to a normal epilogue\n");
+                         "LV: Fall back to a normal epilogue\n");
     return CM_EpilogueAllowed;
   }
 
