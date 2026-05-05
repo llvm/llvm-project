@@ -258,7 +258,10 @@ bool Listener::GetEventInternal(
     Broadcaster *broadcaster, // nullptr for any broadcaster
     uint32_t event_type_mask, EventSP &event_sp) {
   Log *log = GetLog(LLDBLog::Events);
-  LLDB_LOG(log, "this = {0}, timeout = {1} for {2}", this, timeout, m_name);
+
+  LLDB_LOG(log,
+           "{0} Listener('{1}')::{2}, timeout = {3}, event_type_mask = {4:x}",
+           this, m_name, __FUNCTION__, timeout, event_type_mask);
 
   std::unique_lock<std::mutex> lock(m_events_mutex);
 
@@ -275,8 +278,8 @@ bool Listener::GetEventInternal(
 
       if (result == std::cv_status::timeout) {
         log = GetLog(LLDBLog::Events);
-        LLDB_LOGF(log, "%p Listener::GetEventInternal() timed out for %s",
-                  static_cast<void *>(this), m_name.c_str());
+        LLDB_LOG(log, "{0} Listener('{1}')::{2}(), timed out", this, m_name,
+                 __FUNCTION__);
         return false;
       } else if (result != std::cv_status::no_timeout) {
         log = GetLog(LLDBLog::Events);
