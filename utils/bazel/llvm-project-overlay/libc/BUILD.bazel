@@ -5551,6 +5551,124 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_round",
+    hdrs = ["src/__support/math/round.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_roundbf16",
+    hdrs = ["src/__support/math/roundbf16.h"],
+    deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_roundeven",
+    hdrs = ["src/__support/math/roundeven.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_roundevenbf16",
+    hdrs = ["src/__support/math/roundevenbf16.h"],
+    deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_roundevenf",
+    hdrs = ["src/__support/math/roundevenf.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_roundevenf128",
+    hdrs = ["src/__support/math/roundevenf128.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_roundevenf16",
+    hdrs = ["src/__support/math/roundevenf16.h"],
+    deps = [
+        ":__support_fputil_cast",
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+        ":__support_macros_properties_cpu_features",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_roundevenl",
+    hdrs = ["src/__support/math/roundevenl.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_roundf",
+    hdrs = ["src/__support/math/roundf.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_roundf128",
+    hdrs = ["src/__support/math/roundf128.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_roundf16",
+    hdrs = ["src/__support/math/roundf16.h"],
+    deps = [
+        ":__support_fputil_cast",
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+        ":__support_macros_properties_cpu_features",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_roundl",
+    hdrs = ["src/__support/math/roundl.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_scalbln",
     hdrs = ["src/__support/math/scalbln.h"],
     deps = [
@@ -8449,6 +8567,65 @@ libc_support_library(
     hdrs = ["src/__support/math/totalordermagl.h"],
     deps = [
         ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_trunc",
+    hdrs = ["src/__support/math/trunc.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_truncbf16",
+    hdrs = ["src/__support/math/truncbf16.h"],
+    deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_truncf",
+    hdrs = ["src/__support/math/truncf.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_truncf128",
+    hdrs = ["src/__support/math/truncf128.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_truncf16",
+    hdrs = ["src/__support/math/truncf16.h"],
+    deps = [
+        ":__support_fputil_cast",
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_macros_config",
+        ":__support_macros_properties_cpu_features",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_truncl",
+    hdrs = ["src/__support/math/truncl.h"],
+    deps = [
+        ":__support_fputil_nearest_integer_operations",
         ":__support_macros_config",
     ],
 )
@@ -11528,39 +11705,87 @@ libc_math_function(
     ],
 )
 
-libc_math_function(name = "round")
+libc_math_function(
+    name = "round",
+    additional_deps = [
+        ":__support_math_round",
+    ],
+)
 
-libc_math_function(name = "roundf")
+libc_math_function(
+    name = "roundbf16",
+    additional_deps = [
+        ":__support_math_roundbf16",
+    ],
+)
 
-libc_math_function(name = "roundl")
+libc_math_function(
+    name = "roundevenbf16",
+    additional_deps = [
+        ":__support_math_roundevenbf16",
+    ],
+)
+
+libc_math_function(
+    name = "roundf",
+    additional_deps = [
+        ":__support_math_roundf",
+    ],
+)
+
+libc_math_function(
+    name = "roundl",
+    additional_deps = [
+        ":__support_math_roundl",
+    ],
+)
 
 libc_math_function(
     name = "roundf128",
+    additional_deps = [
+        ":__support_math_roundf128",
+    ],
 )
 
 libc_math_function(
     name = "roundf16",
     additional_deps = [
-        ":__support_fputil_cast",
-        ":__support_macros_properties_cpu_features",
+        ":__support_math_roundf16",
     ],
 )
 
-libc_math_function(name = "roundeven")
+libc_math_function(
+    name = "roundeven",
+    additional_deps = [
+        ":__support_math_roundeven",
+    ],
+)
 
-libc_math_function(name = "roundevenf")
+libc_math_function(
+    name = "roundevenf",
+    additional_deps = [
+        ":__support_math_roundevenf",
+    ],
+)
 
-libc_math_function(name = "roundevenl")
+libc_math_function(
+    name = "roundevenl",
+    additional_deps = [
+        ":__support_math_roundevenl",
+    ],
+)
 
 libc_math_function(
     name = "roundevenf128",
+    additional_deps = [
+        ":__support_math_roundevenf128",
+    ],
 )
 
 libc_math_function(
     name = "roundevenf16",
     additional_deps = [
-        ":__support_fputil_cast",
-        ":__support_macros_properties_cpu_features",
+        ":__support_math_roundevenf16",
     ],
 )
 
@@ -11961,21 +12186,45 @@ libc_math_function(
     ],
 )
 
-libc_math_function(name = "trunc")
+libc_math_function(
+    name = "trunc",
+    additional_deps = [
+        ":__support_math_trunc",
+    ],
+)
 
-libc_math_function(name = "truncf")
+libc_math_function(
+    name = "truncbf16",
+    additional_deps = [
+        ":__support_math_truncbf16",
+    ],
+)
 
-libc_math_function(name = "truncl")
+libc_math_function(
+    name = "truncf",
+    additional_deps = [
+        ":__support_math_truncf",
+    ],
+)
+
+libc_math_function(
+    name = "truncl",
+    additional_deps = [
+        ":__support_math_truncl",
+    ],
+)
 
 libc_math_function(
     name = "truncf128",
+    additional_deps = [
+        ":__support_math_truncf128",
+    ],
 )
 
 libc_math_function(
     name = "truncf16",
     additional_deps = [
-        ":__support_fputil_cast",
-        ":__support_macros_properties_cpu_features",
+        ":__support_math_truncf16",
     ],
 )
 
