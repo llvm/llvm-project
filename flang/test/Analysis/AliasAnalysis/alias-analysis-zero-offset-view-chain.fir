@@ -45,6 +45,19 @@ func.func @_QPtest_embox_declare_ref() {
 
 // -----
 
+// Test: two box_addr from the same source => MustAlias (sibling case)
+// CHECK-LABEL: Testing : "_QPtest_sibling_box_addr"
+// CHECK-DAG: addr1#0 <-> addr2#0: MustAlias
+func.func @_QPtest_sibling_box_addr(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"}) {
+  %0 = fir.dummy_scope : !fir.dscope
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QPtestEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+  %addr1 = fir.box_addr %1#0 {test.ptr = "addr1"} : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<f32>
+  %addr2 = fir.box_addr %1#0 {test.ptr = "addr2"} : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<f32>
+  return
+}
+
+// -----
+
 // Test: embox with slice does NOT chain-walk to the ref (non-zero offset)
 // CHECK-LABEL: Testing : "_QPtest_embox_slice_ref"
 // CHECK-DAG: ref#0 <-> sliced_box#0: MayAlias

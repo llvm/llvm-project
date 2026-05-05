@@ -367,8 +367,8 @@ static bool pathsDivergeAtComponent(const fir::AliasAnalysis::Source &lhsSrc,
 
 /// Walk backward from \p val through FortranObjectViewOpInterface ops
 /// that have zero offset (i.e. they access the same base address).
-/// Return true if \p other is found on this chain.
-static bool isOnZeroOffsetViewChain(mlir::Value val, mlir::Value other) {
+/// Return the root value at the end of the chain.
+static mlir::Value getZeroOffsetViewRoot(mlir::Value val) {
   while (auto *defOp = val.getDefiningOp()) {
     auto viewOp = mlir::dyn_cast<fir::FortranObjectViewOpInterface>(defOp);
     if (!viewOp)
@@ -377,10 +377,8 @@ static bool isOnZeroOffsetViewChain(mlir::Value val, mlir::Value other) {
     if (!offset || *offset != 0)
       break;
     val = viewOp.getViewSource(mlir::cast<mlir::OpResult>(val));
-    if (val == other)
-      return true;
   }
-  return false;
+  return val;
 }
 
 AliasResult AliasAnalysis::alias(mlir::Value lhs, mlir::Value rhs) {
@@ -398,13 +396,12 @@ AliasResult AliasAnalysis::alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
   // After MLIR inlining, the current implementation may
   // not recognize non-aliasing entities.
 
-  // If one value is directly derived from the other through a chain of
-  // zero-offset view operations (e.g. embox, declare, convert), they
-  // access the same underlying memory. This check avoids the case where
+  // If both values trace back to the same root through zero-offset view
+  // operations (e.g. embox without slice, declare, convert), they access
+  // the same underlying memory. This check avoids the case where
   // getSource() traces through upstream operations (e.g. a sliced embox)
   // that set approximateSource, conservatively preventing MustAlias.
-  if (lhs == rhs || isOnZeroOffsetViewChain(lhs, rhs) ||
-      isOnZeroOffsetViewChain(rhs, lhs))
+  if (lhs == rhs || getZeroOffsetViewRoot(lhs) == getZeroOffsetViewRoot(rhs))
     return AliasResult::MustAlias;
 
   bool approximateSource = lhsSrc.approximateSource || rhsSrc.approximateSource;
