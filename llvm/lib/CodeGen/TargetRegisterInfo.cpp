@@ -218,6 +218,11 @@ getMinimalPhysRegClass(const TargetRegisterInfo *TRI, MCRegister Reg,
       return !Ty.isValid();
   }();
 
+  if (IsDefault) {
+    if (const TargetRegisterClass *RC = TRI->getDefaultMinimalPhysRegClass(Reg))
+      return RC;
+  }
+
   // Pick the most sub register class of the right type that contains
   // this physreg.
   const TargetRegisterClass *BestRC = nullptr;
@@ -263,10 +268,6 @@ getCommonMinimalPhysRegClass(const TargetRegisterInfo *TRI, MCRegister Reg1,
 
 const TargetRegisterClass *
 TargetRegisterInfo::getMinimalPhysRegClass(MCRegister Reg, MVT VT) const {
-  if (VT == MVT::Other) {
-    if (const TargetRegisterClass *RC = getDefaultMinimalPhysRegClass(Reg))
-      return RC;
-  }
   return ::getMinimalPhysRegClass(this, Reg, VT);
 }
 
