@@ -17,11 +17,10 @@ struct deleter {
   void operator()(pointer) const {}
 };
 
-int main(int, char**) {
+void test() {
   long l = 0;
   std::unique_ptr<const int, deleter> p(&l);
   // expected-error-re@*:* {{static assertion failed{{.*}}'!__reference_converts_from_temporary(const int &, long &)': Reference type _Tp must not convert from a temporary object}}
   // expected-error@*:*{{returning reference to local temporary object}}
-  int i = *p; // expected-note {{requested here}}
-  return 0;
+  std::ignore = *p; // expected-note {{requested here}}
 }
