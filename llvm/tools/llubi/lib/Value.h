@@ -152,7 +152,7 @@ public:
                    uint64_t NoAliasNode)
       : Obj(std::move(Obj)), Address(Address), NoAliasNode(NoAliasNode) {}
   Pointer getWithNewAddr(const APInt &NewAddr) const {
-    return Pointer(Obj, NewAddr);
+    return Pointer(Obj, NewAddr, NoAliasNode);
   }
   Pointer getWithNoAliasNode(uint64_t NewNoAliasNode) const {
     return Pointer(Obj, Address, NewNoAliasNode);
