@@ -779,7 +779,46 @@ bool CIRGenModule::getCPUAndFeaturesAttributes(
   const auto *tc = fd ? fd->getAttr<TargetClonesAttr>() : nullptr;
   bool addedAttr = false;
   if (td || tv || sd || tc) {
-    assert(!cir::MissingFeatures::opFuncMultiVersioning());
+    llvm::StringMap<bool> featureMap;
+    astContext.getFunctionFeatureMap(featureMap, gd);
+
+    // Now add the target-cpu and target-features to the function.
+    // While we populated the feature map above, we still need to
+    // get and parse the target/target_clones attribute so we can
+    // get the cpu for the function.
+    llvm::StringRef featureStr = td ? td->getFeaturesStr() : llvm::StringRef();
+    if (tc && (getTriple().isOSAIX() || getTriple().isX86()))
+      featureStr = tc->getFeatureStr(gd.getMultiVersionIndex());
+    if (!featureStr.empty()) {
+      clang::ParsedTargetAttr parsedAttr =
+          getTarget().parseTargetAttr(featureStr);
+      if (!parsedAttr.CPU.empty() &&
+          getTarget().isValidCPUName(parsedAttr.CPU)) {
+        targetCPU = parsedAttr.CPU;
+        tuneCPU = ""; // Clear the tune CPU.
+      }
+      if (!parsedAttr.Tune.empty() &&
+          getTarget().isValidCPUName(parsedAttr.Tune))
+        tuneCPU = parsedAttr.Tune;
+    }
+
+    if (sd) {
+      // Apply the given CPU name as the 'tune-cpu' so that the optimizer can
+      // favor this processor.
+      tuneCPU = sd->getCPUName(gd.getMultiVersionIndex())->getName();
+    }
+
+    // For AMDGPU, only emit delta features (features that differ from the
+    // target CPU's defaults). Other targets might want to follow a similar
+    // pattern.
+    if (getTarget().getTriple().isAMDGPU()) {
+      features = getFeatureDeltaFromDefault(*this, targetCPU, featureMap);
+    } else {
+      // Produce the canonical string for this set of features.
+      for (const auto &entry : featureMap)
+        features.push_back((entry.getValue() ? "+" : "-") +
+                           entry.getKey().str());
+    }
   } else {
     // Just add the existing target cpu and target features to the function.
     if (setTargetFeatures && getTarget().getTriple().isAMDGPU()) {
@@ -814,8 +853,32 @@ bool CIRGenModule::getCPUAndFeaturesAttributes(
     attrs["cir.target-features"] = llvm::join(features, ",");
     addedAttr = true;
   }
-  // TODO(cir): add metadata for AArch64 Function Multi Versioning.
-  assert(!cir::MissingFeatures::opFuncMultiVersioning());
+  // Add metadata for AArch64 Function Multi Versioning. An empty string value
+  // for "cir.fmv-features" represents the default version (matches OGCG's
+  // value-less LLVM attribute).
+  if (getTarget().getTriple().isAArch64()) {
+    llvm::SmallVector<llvm::StringRef, 8> feats;
+    bool isDefault = false;
+    if (tv) {
+      isDefault = tv->isDefaultVersion();
+      tv->getFeatures(feats);
+    } else if (tc) {
+      isDefault = tc->isDefaultVersion(gd.getMultiVersionIndex());
+      tc->getFeatures(feats, gd.getMultiVersionIndex());
+    }
+    if (isDefault) {
+      attrs["cir.fmv-features"] = "";
+      addedAttr = true;
+    } else if (!feats.empty()) {
+      // Sort features and remove duplicates.
+      std::set<llvm::StringRef> orderedFeats(feats.begin(), feats.end());
+      std::string fmvFeatures;
+      for (llvm::StringRef f : orderedFeats)
+        fmvFeatures.append("," + f.str());
+      attrs["cir.fmv-features"] = fmvFeatures.substr(1);
+      addedAttr = true;
+    }
+  }
   return addedAttr;
 }
 
