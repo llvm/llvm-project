@@ -18,9 +18,11 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/ProfileSummary.h"
+#include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <limits>
@@ -43,12 +45,19 @@ static cl::list<std::string>
   VerifyIPGOFuncList("verify-ipgo-funcs", cl::Hidden,
              cl::desc("Comma-separated list of functions to verify"));
 
-/// Emit a labelled PGO-verify diagnostic to stderr (when enabled).
-static void emitPGOVerifyDiagnostic(const Function *F, StringRef Kind,
-                                    const std::string &Msg) {
+/// Emit PGO verification diagnostics with structured formatting.
+///
+/// \param F Function being verified.
+/// \param RemarkName Diagnostic remark identifier.
+/// \param Msg Error/diagnostic message.
+static void emitPGOVerifyDiagnostic(const Function *F, StringRef RemarkName,
+                                    const Twine &Msg) {
+  std::string MsgText = Msg.str();
   if (VerifyIPGOPrintDiagnostics)
-    errs() << "PGOVerify# " << Kind << " in function " << F->getName()
-           << ": " << Msg << "\n";
+    errs() << "PGOVerify[" << RemarkName << "] " << F->getName() << ": "
+           << MsgText << "\n";
+  LLVM_DEBUG(dbgs() << "PGOVerify[" << RemarkName << "] " << F->getName()
+                    << ": " << MsgText << "\n");
 }
 
 bool IPGOVerifier::shouldVerifyFunction(const Function *F) const {
@@ -161,9 +170,14 @@ void IPGOVerifier::runAfterPass(const Module *M) {
   // Run Use-phase checks only when an InstrProf use summary is present.
   if (M->getProfileSummary(/*IsCS=*/true))
     return;
-  if (!hasInstrProfUseSummary(M))
+  if (!hasInstrProfUseSummary(M)) {
+    for (const Function &F : *M) {
+      if (F.isDeclaration())
+        continue;
+      verifyGenPhase(&F);
+    }
     return;
-
+  }
   // First build frequency cache for all non-declaration functions so caller
   // information is available regardless of function order in the module.
   for (const Function &F : *M) {
@@ -202,8 +216,11 @@ void IPGOVerifier::runAfterPass(Function *F) {
   // Run Use-phase checks only when an InstrProf use summary is present.
   if (F->getParent()->getProfileSummary(/*IsCS=*/true))
     return;
-  if (!hasInstrProfUseSummary(F->getParent()))
+  if (!hasInstrProfUseSummary(F->getParent())) {
+    // Run Gen-phase checks (no dependencies on other passes).
+    verifyGenPhase(F);
     return;
+  }
 
   // Rebuild the minimal local analysis stack here so verification can query
   // non-synthetic block profile counts after each pass callback.
@@ -423,6 +440,64 @@ bool IPGOVerifier::hasFunctionLocalCountOverflow(const Function *F,
   }
 
   return false;
+}
+
+/// Validate instrumentation-generation phase invariants.
+void IPGOVerifier::verifyGenPhase(const Function *F) {
+  // Validate instrprof_increment names against the containing function.
+  auto *IncIntrinsic = Intrinsic::getOrInsertDeclaration(
+      const_cast<Module *>(F->getParent()), Intrinsic::instrprof_increment);
+
+  if (IncIntrinsic) {
+    for (User *U : IncIntrinsic->users()) {
+      auto *Instr = dyn_cast<InstrProfCntrInstBase>(U);
+      if (!Instr || Instr->getFunction() != F)
+        continue;
+
+      StringRef Prefix = getInstrProfNameVarPrefix();
+      StringRef ProfiledName =
+          cast<InstrProfInstBase>(Instr)->getName()->getName().substr(
+              Prefix.size());
+
+      if (!ProfiledName.ends_with(F->getName())) {
+        LLVM_DEBUG(dbgs() << "PGOVerify# Intrinsic name mismatch in function "
+                          << F->getName() << ": ");
+        LLVM_DEBUG(Instr->print(dbgs()));
+        LLVM_DEBUG(dbgs() << "\n");
+        emitPGOVerifyDiagnostic(F, "IntrinsicNameMismatch",
+                                "Intrinsic name mismatch: profiling " +
+                                    ProfiledName.str() + " instead of " +
+                                    F->getName().str());
+      }
+    }
+  }
+
+  // Validate counter-global loads against the containing function.
+  for (auto &GV : const_cast<Module *>(F->getParent())->globals()) {
+
+    StringRef Prefix = getInstrProfCountersVarPrefix();
+    if (!GV.getName().starts_with(Prefix))
+      continue;
+
+    StringRef CounterName = GV.getName().substr(Prefix.size());
+
+    for (const User *U : GV.users()) {
+      auto *LI = dyn_cast<LoadInst>(U);
+      if (!LI || LI->getFunction() != F)
+        continue;
+
+      if (!CounterName.contains(F->getName())) {
+        LLVM_DEBUG(dbgs() << "PGOVerify# Counter load mismatch in function "
+                          << F->getName() << ": ");
+        LLVM_DEBUG(LI->print(dbgs()));
+        LLVM_DEBUG(dbgs() << "\n");
+        emitPGOVerifyDiagnostic(F, "CounterLoadMismatch",
+                                "Counter variable mismatch: loading " +
+                                    CounterName.str() + " instead of " +
+                                    F->getName().str());
+      }
+    }
+  }
 }
 
 bool IPGOVerifier::hasInstrProfUseSummary(const Module *M) const {

@@ -122,6 +122,13 @@ private:
   /// callsites to the function have extractable profile totals.
   void validateEntryCountAgainstCallerSum(const Function *F);
 
+  /// Validate instrumentation-generation phase invariants.
+  ///
+  /// Checks for gen-phase violations such as:
+  /// - InstrProf intrinsic names matching their containing function
+  /// - Counter global loads from the correct function
+  void verifyGenPhase(const Function *F);
+
   /// Per-instance cache of inferred block-frequency data keyed by function.
   DenseMap<const Function *, AllBlockFreqInfo> FunctionBlockFreqInfoCache;
 };

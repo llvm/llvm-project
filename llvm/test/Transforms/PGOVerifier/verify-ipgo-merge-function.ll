@@ -1,7 +1,7 @@
 ; RUN:  opt < %s -verify-ipgo -passes=mergefunc -S -disable-output 2>&1 | FileCheck %s --check-prefix=VERIFY
 
 ; VERIFY: *** IPGO Verification After MergeFunctionsPass ***
-; VERIFY-NEXT: PGOVerify# EntryCountMismatch in function add1: Entry count mismatch: entry=1 vs caller-sum=2
+; VERIFY-NEXT: PGOVerify[EntryCountMismatch] add1: Entry count mismatch: entry=1 vs caller-sum=2
 
 ; ModuleID = '../llvm/test/Transforms/PGOVerifier/verify-ipgo-merge-function.ll'
 source_filename = "mymergefun.c"

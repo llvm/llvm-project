@@ -28,14 +28,14 @@ entry:
   ret i32 %s
 }
 
-; NOFILTER: PGOVerify# EntryCountMismatch in function callee_a: Entry count mismatch: entry=2 vs caller-sum=1
-; NOFILTER: PGOVerify# EntryCountMismatch in function callee_b: Entry count mismatch: entry=3 vs caller-sum=1
+; NOFILTER: PGOVerify[EntryCountMismatch] callee_a: Entry count mismatch: entry=2 vs caller-sum=1
+; NOFILTER: PGOVerify[EntryCountMismatch] callee_b: Entry count mismatch: entry=3 vs caller-sum=1
 
-; FILTERA: PGOVerify# EntryCountMismatch in function callee_a: Entry count mismatch: entry=2 vs caller-sum=1
-; FILTERA-NOT: PGOVerify# EntryCountMismatch in function callee_b: Entry count mismatch: entry=3 vs caller-sum=1
+; FILTERA: PGOVerify[EntryCountMismatch] callee_a: Entry count mismatch: entry=2 vs caller-sum=1
+; FILTERA-NOT: PGOVerify[EntryCountMismatch] callee_b: Entry count mismatch: entry=3 vs caller-sum=1
 
 ; FILTERMAIN: *** IPGO Verification After
-; FILTERMAIN-NOT: PGOVerify# EntryCountMismatch
+; FILTERMAIN-NOT: PGOVerify[EntryCountMismatch]
 
 !llvm.module.flags = !{!30}
 !30 = !{i32 1, !"ProfileSummary", !31}

@@ -2,8 +2,8 @@
 ; RUN: opt < %s -verify-ipgo -passes=pgo-instr-gen -S -disable-output 2>&1 | FileCheck %s --check-prefix=VERIFY
 ; REQUIRES: asserts
 ;
-; Ensure verify-ipgo runs in Gen phase without emitting entry/block diagnostics
-; for this minimal IR.
+; Ensure Gen-phase counter load mismatch is diagnosed when a function loads
+; a counter global that belongs to a different function.
 
 @__profc_bar = global i64 0, align 8
 
@@ -21,3 +21,4 @@ entry:
 ; VERIFY-LABEL: *** IPGO Verification After PGOInstrumentationGen ***
 ; VERIFY-NOT: PGOVerify# Entry count mismatch
 ; VERIFY-NOT: PGOVerify# Block frequency mismatch
+; VERIFY: PGOVerify[CounterLoadMismatch] foo: Counter variable mismatch: loading bar instead of foo

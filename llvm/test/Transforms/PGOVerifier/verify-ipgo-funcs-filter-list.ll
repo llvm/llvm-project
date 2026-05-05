@@ -28,14 +28,14 @@ entry:
   ret i32 %s
 }
 
-; LISTAB: PGOVerify# EntryCountMismatch in function callee_a: Entry count mismatch: entry=2 vs caller-sum=1
-; LISTAB: PGOVerify# EntryCountMismatch in function callee_b: Entry count mismatch: entry=3 vs caller-sum=1
+; LISTAB: PGOVerify[EntryCountMismatch] callee_a: Entry count mismatch: entry=2 vs caller-sum=1
+; LISTAB: PGOVerify[EntryCountMismatch] callee_b: Entry count mismatch: entry=3 vs caller-sum=1
 
-; LISTA: PGOVerify# EntryCountMismatch in function callee_a: Entry count mismatch: entry=2 vs caller-sum=1
-; LISTA-NOT: PGOVerify# EntryCountMismatch in function callee_b: Entry count mismatch: entry=3 vs caller-sum=1
+; LISTA: PGOVerify[EntryCountMismatch] callee_a: Entry count mismatch: entry=2 vs caller-sum=1
+; LISTA-NOT: PGOVerify[EntryCountMismatch] callee_b: Entry count mismatch: entry=3 vs caller-sum=1
 
 ; NOMATCH: *** IPGO Verification After
-; NOMATCH-NOT: PGOVerify# EntryCountMismatch
+; NOMATCH-NOT: PGOVerify[EntryCountMismatch]
 
 !llvm.module.flags = !{!30}
 !30 = !{i32 1, !"ProfileSummary", !31}
