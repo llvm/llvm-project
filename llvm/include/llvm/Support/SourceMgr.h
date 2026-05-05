@@ -71,6 +71,15 @@ private:
     template <typename T>
     unsigned getLineNumberSpecialized(const char *Ptr) const;
 
+    /// Look up a given \p Ptr in the buffer, determining which line and column
+    /// it came from. This method has O(log n) complexity, where n is the number
+    /// of lines in the buffer.
+    LLVM_ABI std::pair<unsigned, unsigned>
+    getLineAndColumn(const char *Ptr) const;
+    template <typename T>
+    std::pair<unsigned, unsigned>
+    getLineAndColumnSpecialized(const char *Ptr) const;
+
     /// Return a pointer to the first character of the specified line number or
     /// null if the line number is invalid.
     LLVM_ABI const char *getPointerForLineNumber(unsigned LineNo) const;

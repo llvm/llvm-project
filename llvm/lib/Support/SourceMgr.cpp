@@ -152,6 +152,45 @@ unsigned SourceMgr::SrcBuffer::getLineNumber(const char *Ptr) const {
 }
 
 template <typename T>
+std::pair<unsigned, unsigned>
+SourceMgr::SrcBuffer::getLineAndColumnSpecialized(const char *Ptr) const {
+  std::vector<T> &Offsets =
+      GetOrCreateOffsetCache<T>(OffsetCache, Buffer.get());
+
+  const char *BufStart = Buffer->getBufferStart();
+  assert(Ptr >= BufStart && Ptr <= Buffer->getBufferEnd());
+  ptrdiff_t PtrDiff = Ptr - BufStart;
+  assert(PtrDiff >= 0 &&
+         static_cast<size_t>(PtrDiff) <= std::numeric_limits<T>::max());
+  T PtrOffset = static_cast<T>(PtrDiff);
+
+  // llvm::lower_bound gives the number of EOL before PtrOffset. Add 1 to get
+  // the line number.
+  auto I = llvm::lower_bound(Offsets, PtrOffset);
+  unsigned LineNo = I - Offsets.begin() + 1;
+
+  // The column number is the distance from the previous EOL (or the start of
+  // the buffer) to the pointer.
+  T LineStartOffs = (I == Offsets.begin()) ? 0 : (I[-1] + 1);
+  unsigned ColNo = PtrOffset - LineStartOffs + 1;
+  return {LineNo, ColNo};
+}
+
+/// Look up a given \p Ptr in the buffer, determining which line and column
+/// it came from.
+LLVM_ABI std::pair<unsigned, unsigned>
+SourceMgr::SrcBuffer::getLineAndColumn(const char *Ptr) const {
+  size_t Sz = Buffer->getBufferSize();
+  if (Sz <= std::numeric_limits<uint8_t>::max())
+    return getLineAndColumnSpecialized<uint8_t>(Ptr);
+  if (Sz <= std::numeric_limits<uint16_t>::max())
+    return getLineAndColumnSpecialized<uint16_t>(Ptr);
+  if (Sz <= std::numeric_limits<uint32_t>::max())
+    return getLineAndColumnSpecialized<uint32_t>(Ptr);
+  return getLineAndColumnSpecialized<uint64_t>(Ptr);
+}
+
+template <typename T>
 const char *SourceMgr::SrcBuffer::getPointerForLineNumberSpecialized(
     unsigned LineNo) const {
   std::vector<T> &Offsets =
@@ -217,12 +256,7 @@ SourceMgr::getLineAndColumn(SMLoc Loc, unsigned BufferID) const {
   auto &SB = getBufferInfo(BufferID);
   const char *Ptr = Loc.getPointer();
 
-  unsigned LineNo = SB.getLineNumber(Ptr);
-  const char *BufStart = SB.Buffer->getBufferStart();
-  size_t NewlineOffs = StringRef(BufStart, Ptr - BufStart).find_last_of("\n\r");
-  if (NewlineOffs == StringRef::npos)
-    NewlineOffs = ~(size_t)0;
-  return {LineNo, Ptr - BufStart - NewlineOffs};
+  return SB.getLineAndColumn(Ptr);
 }
 
 // FIXME: Note that the formatting of source locations is spread between
