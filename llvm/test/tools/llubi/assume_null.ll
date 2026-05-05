@@ -2,11 +2,11 @@
 ; RUN: not llubi --verbose < %s 2>&1 | FileCheck %s
 
 define void @main() {
-  call void @llvm.assume(i1 poison)
+  call void @llvm.assume(i1 true) ["nonnull"(ptr null)]
   ret void
 }
 ; CHECK: Entering function: main
 ; CHECK-NEXT: Stacktrace:
-; CHECK-NEXT: #0   call void @llvm.assume(i1 poison) at @main
-; CHECK-NEXT: Immediate UB detected: The value poison violates noundef attribute.
+; CHECK-NEXT: #0   call void @llvm.assume(i1 true) [ "nonnull"(ptr null) ] at @main
+; CHECK-NEXT: Immediate UB detected: The pointer ptr 0x0 [dangling] violates nonnull assumption.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

@@ -61,8 +61,7 @@ AnyValue Context::getConstantValueImpl(Constant *C) {
     return AnyValue::getNullValue(*this, C->getType());
 
   if (isa<ConstantPointerNull>(C))
-    return Pointer::null(
-        DL.getPointerSizeInBits(C->getType()->getPointerAddressSpace()));
+    return Pointer::null(C->getType()->getPointerAddressSpace(), DL);
 
   if (auto *CI = dyn_cast<ConstantInt>(C)) {
     if (auto *VecTy = dyn_cast<VectorType>(CI->getType()))
