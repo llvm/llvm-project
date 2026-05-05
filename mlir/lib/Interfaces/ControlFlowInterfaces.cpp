@@ -153,6 +153,21 @@ LogicalResult detail::verifyRegionBranchWeights(Operation *op) {
 }
 
 //===----------------------------------------------------------------------===//
+// RegionBranchPointOperandConstants
+//===----------------------------------------------------------------------===//
+
+ArrayRef<Attribute> RegionBranchPointOperandConstants::getOperandConstants(
+    RegionBranchPoint point) const {
+  if (point.isParent())
+    return parentOperandConstants;
+  Operation *terminator = point.getTerminatorPredecessorOrNull();
+  auto it = terminatorOperandConstants.find(terminator);
+  if (it == terminatorOperandConstants.end())
+    return {};
+  return it->second;
+}
+
+//===----------------------------------------------------------------------===//
 // RegionBranchOpInterface
 //===----------------------------------------------------------------------===//
 
@@ -246,7 +261,6 @@ static bool traverseRegionGraph(Region *begin,
   SmallVector<Region *> worklist;
   auto enqueueAllSuccessors = [&](Region *region) {
     LDBG() << "Enqueuing successors for region #" << region->getRegionNumber();
-    SmallVector<Attribute> operandAttributes(op->getNumOperands());
     for (Block &block : *region) {
       if (block.empty())
         continue;
@@ -255,8 +269,9 @@ static bool traverseRegionGraph(Region *begin,
       if (!terminator)
         continue;
       SmallVector<RegionSuccessor> successors;
-      operandAttributes.resize(terminator->getNumOperands());
-      terminator.getSuccessorRegions(operandAttributes, successors);
+      // No constant operand information is provided here; the unfiltered set
+      // of successors is sufficient for the region-graph traversal.
+      op.getSuccessorRegions(RegionBranchPoint(terminator), successors);
       LDBG() << "Found " << successors.size()
              << " successors from terminator in block";
       for (RegionSuccessor successor : successors) {
@@ -1088,15 +1103,18 @@ static SmallVector<RegionSuccessor>
 getSuccessorRegionsWithAttrs(RegionBranchOpInterface op,
                              RegionBranchPoint point) {
   SmallVector<RegionSuccessor> successors;
+  RegionBranchPointOperandConstants operandConstants;
+  SmallVector<Attribute> constants;
   if (point.isParent()) {
-    op.getEntrySuccessorRegions(extractConstants(op->getOperands()),
-                                successors);
-    return successors;
+    constants = extractConstants(op->getOperands());
+    operandConstants.setParentOperandConstants(constants);
+  } else {
+    RegionBranchTerminatorOpInterface terminator =
+        point.getTerminatorPredecessorOrNull();
+    constants = extractConstants(terminator->getOperands());
+    operandConstants.setTerminatorOperandConstants(terminator, constants);
   }
-  RegionBranchTerminatorOpInterface terminator =
-      point.getTerminatorPredecessorOrNull();
-  terminator.getSuccessorRegions(extractConstants(terminator->getOperands()),
-                                 successors);
+  op.getSuccessorRegionsWithConstants(point, operandConstants, successors);
   return successors;
 }
 

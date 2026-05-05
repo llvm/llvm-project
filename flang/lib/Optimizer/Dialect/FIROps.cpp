@@ -5137,9 +5137,16 @@ fir::IfOp::getSuccessorInputs(mlir::RegionSuccessor successor) {
   return mlir::ValueRange();
 }
 
-void fir::IfOp::getEntrySuccessorRegions(
-    llvm::ArrayRef<mlir::Attribute> operands,
+void fir::IfOp::getSuccessorRegionsWithConstants(
+    mlir::RegionBranchPoint point,
+    const mlir::RegionBranchPointOperandConstants &operandConstants,
     llvm::SmallVectorImpl<mlir::RegionSuccessor> &regions) {
+  llvm::ArrayRef<mlir::Attribute> operands =
+      operandConstants.getOperandConstants(point);
+  if (!point.isParent() || operands.empty()) {
+    getSuccessorRegions(point, regions);
+    return;
+  }
   FoldAdaptor adaptor(operands);
   auto boolAttr =
       mlir::dyn_cast_or_null<mlir::BoolAttr>(adaptor.getCondition());

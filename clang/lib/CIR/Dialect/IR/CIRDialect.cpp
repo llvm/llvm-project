@@ -406,23 +406,6 @@ cir::LocalInitOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 // BranchOpTerminatorInterface Methods
 //===----------------------------------
 
-void cir::ConditionOp::getSuccessorRegions(
-    ArrayRef<Attribute> operands, SmallVectorImpl<RegionSuccessor> &regions) {
-  // TODO(cir): The condition value may be folded to a constant, narrowing
-  // down its list of possible successors.
-
-  // Parent is a loop: condition may branch to the body or to the parent op.
-  if (auto loopOp = dyn_cast<LoopOpInterface>(getOperation()->getParentOp())) {
-    regions.emplace_back(&loopOp.getBody());
-    regions.push_back(RegionSuccessor::parent());
-  }
-
-  // Parent is an await: condition may branch to resume or suspend regions.
-  auto await = cast<AwaitOp>(getOperation()->getParentOp());
-  regions.emplace_back(&await.getResume());
-  regions.emplace_back(&await.getSuspend());
-}
-
 MutableOperandRange
 cir::ConditionOp::getMutableSuccessorOperands(RegionSuccessor point) {
   // No values are yielded to the successor region.

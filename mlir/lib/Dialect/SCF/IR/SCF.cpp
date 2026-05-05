@@ -296,21 +296,6 @@ ConditionOp::getMutableSuccessorOperands(RegionSuccessor point) {
   return getArgsMutable();
 }
 
-void ConditionOp::getSuccessorRegions(
-    ArrayRef<Attribute> operands, SmallVectorImpl<RegionSuccessor> &regions) {
-  FoldAdaptor adaptor(operands, *this);
-
-  WhileOp whileOp = getParentOp();
-
-  // Condition can either lead to the after region or back to the parent op
-  // depending on whether the condition is true or not.
-  auto boolAttr = dyn_cast_or_null<BoolAttr>(adaptor.getCondition());
-  if (!boolAttr || boolAttr.getValue())
-    regions.emplace_back(&whileOp.getAfter());
-  if (!boolAttr || !boolAttr.getValue())
-    regions.push_back(RegionSuccessor::parent());
-}
-
 //===----------------------------------------------------------------------===//
 // ForOp
 //===----------------------------------------------------------------------===//
@@ -2120,8 +2105,16 @@ ValueRange IfOp::getSuccessorInputs(RegionSuccessor successor) {
                               : ValueRange();
 }
 
-void IfOp::getEntrySuccessorRegions(ArrayRef<Attribute> operands,
-                                    SmallVectorImpl<RegionSuccessor> &regions) {
+void IfOp::getSuccessorRegionsWithConstants(
+    RegionBranchPoint point,
+    const RegionBranchPointOperandConstants &operandConstants,
+    SmallVectorImpl<RegionSuccessor> &regions) {
+  // Constant folding only applies when entering from the parent op.
+  ArrayRef<Attribute> operands = operandConstants.getOperandConstants(point);
+  if (!point.isParent() || operands.empty()) {
+    getSuccessorRegions(point, regions);
+    return;
+  }
   FoldAdaptor adaptor(operands, *this);
   auto boolAttr = dyn_cast_or_null<BoolAttr>(adaptor.getCondition());
   if (!boolAttr || boolAttr.getValue())
@@ -3291,6 +3284,31 @@ void WhileOp::getSuccessorRegions(RegionBranchPoint point,
   regions.emplace_back(&getAfter());
 }
 
+void WhileOp::getSuccessorRegionsWithConstants(
+    RegionBranchPoint point,
+    const RegionBranchPointOperandConstants &operandConstants,
+    SmallVectorImpl<RegionSuccessor> &regions) {
+  // Constant folding only applies when branching from the `scf.condition`
+  // terminator of the "before" region. For all other branch points, fall back
+  // to the unfiltered behavior.
+  RegionBranchTerminatorOpInterface terminator =
+      point.getTerminatorPredecessorOrNull();
+  auto conditionOp = dyn_cast_or_null<ConditionOp>(terminator.getOperation());
+  ArrayRef<Attribute> operands = operandConstants.getOperandConstants(point);
+  if (!conditionOp || operands.empty()) {
+    getSuccessorRegions(point, regions);
+    return;
+  }
+  ConditionOp::FoldAdaptor adaptor(operands, conditionOp);
+  // Condition can either lead to the after region or back to the parent op
+  // depending on whether the condition is true or not.
+  auto boolAttr = dyn_cast_or_null<BoolAttr>(adaptor.getCondition());
+  if (!boolAttr || boolAttr.getValue())
+    regions.emplace_back(&getAfter());
+  if (!boolAttr || !boolAttr.getValue())
+    regions.push_back(RegionSuccessor::parent());
+}
+
 ValueRange WhileOp::getSuccessorInputs(RegionSuccessor successor) {
   if (successor.isParent())
     return getOperation()->getResults();
@@ -3842,9 +3860,16 @@ ValueRange IndexSwitchOp::getSuccessorInputs(RegionSuccessor successor) {
                               : ValueRange();
 }
 
-void IndexSwitchOp::getEntrySuccessorRegions(
-    ArrayRef<Attribute> operands,
+void IndexSwitchOp::getSuccessorRegionsWithConstants(
+    RegionBranchPoint point,
+    const RegionBranchPointOperandConstants &operandConstants,
     SmallVectorImpl<RegionSuccessor> &successors) {
+  // Constant folding only applies when entering from the parent op.
+  ArrayRef<Attribute> operands = operandConstants.getOperandConstants(point);
+  if (!point.isParent() || operands.empty()) {
+    getSuccessorRegions(point, successors);
+    return;
+  }
   FoldAdaptor adaptor(operands, *this);
 
   // If a constant was not provided, all regions are possible successors.

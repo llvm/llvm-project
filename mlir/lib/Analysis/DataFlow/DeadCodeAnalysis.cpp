@@ -497,7 +497,10 @@ void DeadCodeAnalysis::visitRegionBranchOperation(
     return;
 
   SmallVector<RegionSuccessor> successors;
-  branch.getEntrySuccessorRegions(*operands, successors);
+  RegionBranchPointOperandConstants operandConstants;
+  operandConstants.setParentOperandConstants(*operands);
+  branch.getSuccessorRegionsWithConstants(RegionBranchPoint::parent(),
+                                          operandConstants, successors);
 
   visitRegionBranchEdges(branch, branch.getOperation(), successors);
 }
@@ -513,7 +516,10 @@ void DeadCodeAnalysis::visitRegionTerminator(Operation *op,
   auto terminator = dyn_cast<RegionBranchTerminatorOpInterface>(op);
   if (!terminator)
     return;
-  terminator.getSuccessorRegions(*operands, successors);
+  RegionBranchPointOperandConstants operandConstants;
+  operandConstants.setTerminatorOperandConstants(terminator, *operands);
+  branch.getSuccessorRegionsWithConstants(RegionBranchPoint(terminator),
+                                          operandConstants, successors);
   visitRegionBranchEdges(branch, op, successors);
 }
 

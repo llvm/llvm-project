@@ -1520,7 +1520,7 @@ def EmitC_YieldOp : EmitC_Op<"yield",
 def EmitC_IfOp : EmitC_Op<"if",
     [DeclareOpInterfaceMethods<RegionBranchOpInterface, [
     "getNumRegionInvocations", "getRegionInvocationBounds",
-    "getEntrySuccessorRegions", "getSuccessorInputs"]>,
+    "getSuccessorRegionsWithConstants", "getSuccessorInputs"]>,
     OpAsmOpInterface, SingleBlock,
     SingleBlockImplicitTerminator<"emitc::YieldOp">,
     RecursiveMemoryEffects, NoRegionArguments]> {
@@ -1645,7 +1645,7 @@ def EmitC_SwitchOp : EmitC_Op<"switch", [RecursiveMemoryEffects,
     OpAsmOpInterface, SingleBlockImplicitTerminator<"emitc::YieldOp">,
     DeclareOpInterfaceMethods<RegionBranchOpInterface,
                               ["getRegionInvocationBounds",
-                               "getEntrySuccessorRegions"]>]> {
+                               "getSuccessorRegionsWithConstants"]>]> {
   let summary = "Switch operation";
   let description = [{
     The `emitc.switch` is a control-flow operation that branches to one of

@@ -1000,8 +1000,15 @@ ValueRange IfOp::getSuccessorInputs(RegionSuccessor successor) {
                               : ValueRange();
 }
 
-void IfOp::getEntrySuccessorRegions(ArrayRef<Attribute> operands,
-                                    SmallVectorImpl<RegionSuccessor> &regions) {
+void IfOp::getSuccessorRegionsWithConstants(
+    RegionBranchPoint point,
+    const RegionBranchPointOperandConstants &operandConstants,
+    SmallVectorImpl<RegionSuccessor> &regions) {
+  ArrayRef<Attribute> operands = operandConstants.getOperandConstants(point);
+  if (!point.isParent() || operands.empty()) {
+    getSuccessorRegions(point, regions);
+    return;
+  }
   FoldAdaptor adaptor(operands, *this);
   auto boolAttr = dyn_cast_or_null<BoolAttr>(adaptor.getCondition());
   if (!boolAttr || boolAttr.getValue())
@@ -1577,9 +1584,15 @@ static std::optional<int64_t> getIntAttrValue(IntegerAttr attr) {
   return std::nullopt;
 }
 
-void SwitchOp::getEntrySuccessorRegions(
-    ArrayRef<Attribute> operands,
+void SwitchOp::getSuccessorRegionsWithConstants(
+    RegionBranchPoint point,
+    const RegionBranchPointOperandConstants &operandConstants,
     SmallVectorImpl<RegionSuccessor> &successors) {
+  ArrayRef<Attribute> operands = operandConstants.getOperandConstants(point);
+  if (!point.isParent() || operands.empty()) {
+    getSuccessorRegions(point, successors);
+    return;
+  }
   FoldAdaptor adaptor(operands, *this);
 
   // If a constant was not provided, all regions are possible successors.

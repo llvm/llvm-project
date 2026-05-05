@@ -617,7 +617,10 @@ void AbstractSparseBackwardDataFlowAnalysis::visitRegionSuccessors(
   Operation *op = branch.getOperation();
   SmallVector<RegionSuccessor> successors;
   SmallVector<Attribute> operands(op->getNumOperands(), nullptr);
-  branch.getEntrySuccessorRegions(operands, successors);
+  RegionBranchPointOperandConstants operandConstants;
+  operandConstants.setParentOperandConstants(operands);
+  branch.getSuccessorRegionsWithConstants(RegionBranchPoint::parent(),
+                                          operandConstants, successors);
   for (RegionSuccessor &successor : successors) {
     if (successor.isParent())
       continue;

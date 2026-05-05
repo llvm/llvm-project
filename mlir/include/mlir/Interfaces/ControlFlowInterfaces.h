@@ -270,6 +270,51 @@ private:
   Operation *predecessor = nullptr;
 };
 
+/// A bundle of constant-operand information for a `RegionBranchOpInterface`
+/// implementation and any of the region branch terminators in its regions.
+///
+/// This is used by
+/// `RegionBranchOpInterface::getSuccessorRegionsWithConstants` to allow
+/// analyses/transformations to pass along constant operand values for a given
+/// branch point so that the implementation can refine the returned successors.
+/// Operand constants are optional: an implementation that doesn't recognize
+/// the provided constants (or for which no constants are provided) must
+/// return the same successors as the no-constants overload.
+///
+/// For each branch point (the parent op or a region branch terminator), the
+/// associated `ArrayRef<Attribute>` either has the same size as the number of
+/// operands of that op (with a null attribute for non-constant operands), or
+/// is empty (which means: no constant information is available for this
+/// branch point).
+class RegionBranchPointOperandConstants {
+public:
+  /// Default constructor: no constants known for any branch point.
+  RegionBranchPointOperandConstants() = default;
+
+  /// Set the constant operand information for the parent (region branch) op.
+  void setParentOperandConstants(ArrayRef<Attribute> constants) {
+    parentOperandConstants = constants;
+  }
+
+  /// Set the constant operand information for a specific region branch
+  /// terminator.
+  void setTerminatorOperandConstants(Operation *terminator,
+                                     ArrayRef<Attribute> constants) {
+    terminatorOperandConstants[terminator] = constants;
+  }
+
+  /// Returns the constant operand information for the given branch point.
+  /// Returns an empty range if no constants were provided for this point.
+  ArrayRef<Attribute> getOperandConstants(RegionBranchPoint point) const;
+
+private:
+  /// Constant operand information for the parent op of the region branch.
+  ArrayRef<Attribute> parentOperandConstants;
+
+  /// Constant operand information for region branch terminators.
+  DenseMap<Operation *, ArrayRef<Attribute>> terminatorOperandConstants;
+};
+
 /// This class represents upper and lower bounds on the number of times a region
 /// of a `RegionBranchOpInterface` can be invoked. The lower bound is at least
 /// zero, but the upper bound may not be known.

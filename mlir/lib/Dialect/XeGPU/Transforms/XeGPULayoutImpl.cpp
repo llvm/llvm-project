@@ -174,7 +174,10 @@ static void propagateRegionResultsToYieldOperands(
 
   SmallVector<RegionSuccessor> successors;
   SmallVector<Attribute> operandAttrs(yieldOp->getNumOperands(), nullptr);
-  yieldOp.getSuccessorRegions(operandAttrs, successors);
+  RegionBranchPointOperandConstants operandConstants;
+  operandConstants.setTerminatorOperandConstants(yieldOp, operandAttrs);
+  regionBranchOp.getSuccessorRegionsWithConstants(RegionBranchPoint(yieldOp),
+                                                  operandConstants, successors);
 
   for (const RegionSuccessor &successor : successors) {
     OperandRange succOps = yieldOp.getSuccessorOperands(successor);

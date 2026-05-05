@@ -55,7 +55,7 @@ class SCF_Op<string mnemonic, list<Trait> traits = []> :
 def ConditionOp : SCF_Op<"condition", [
   HasParent<"WhileOp">,
   DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface,
-    ["getSuccessorRegions", "getMutableSuccessorOperands"]>,
+    ["getMutableSuccessorOperands"]>,
   Pure,
   Terminator
 ]> {
@@ -704,7 +704,7 @@ def InParallelOp : SCF_Op<"forall.in_parallel", [
 
 def IfOp : SCF_Op<"if", [DeclareOpInterfaceMethods<RegionBranchOpInterface, [
     "getNumRegionInvocations", "getRegionInvocationBounds",
-    "getEntrySuccessorRegions", "getSuccessorInputs"]>,
+    "getSuccessorRegionsWithConstants", "getSuccessorInputs"]>,
     DeclareOpInterfaceMethods<PromotableRegionOpInterface>,
     InferTypeOpAdaptor, SingleBlockImplicitTerminator<"scf::YieldOp">,
     RecursiveMemoryEffects, RecursivelySpeculatable, NoRegionArguments]> {
@@ -991,7 +991,8 @@ def ReduceReturnOp :
 
 def WhileOp : SCF_Op<"while",
     [DeclareOpInterfaceMethods<RegionBranchOpInterface,
-        ["getEntrySuccessorOperands", "getSuccessorInputs"]>,
+        ["getEntrySuccessorOperands", "getSuccessorInputs",
+         "getSuccessorRegionsWithConstants"]>,
      DeclareOpInterfaceMethods<LoopLikeOpInterface,
         ["getRegionIterArgs", "getYieldedValuesMutable"]>,
      DeclareOpInterfaceMethods<PromotableRegionOpInterface>,
@@ -1147,7 +1148,7 @@ def IndexSwitchOp : SCF_Op<"index_switch", [RecursiveMemoryEffects,
     DeclareOpInterfaceMethods<PromotableRegionOpInterface>,
     DeclareOpInterfaceMethods<RegionBranchOpInterface,
                               ["getRegionInvocationBounds",
-                               "getEntrySuccessorRegions",
+                               "getSuccessorRegionsWithConstants",
                                "getSuccessorInputs"]>]> {
   let summary = "switch-case operation on an index argument";
   let description = [{

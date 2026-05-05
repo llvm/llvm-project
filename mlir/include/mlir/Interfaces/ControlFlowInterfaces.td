@@ -137,6 +137,13 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
     specified with `getEntrySuccessorOperands` /
     `RegionBranchTerminatorOpInterface::getSuccessorOperands`.
 
+    Implementations may also optionally refine the set of successors based on
+    constant operand values. To do so, implement
+    `getSuccessorRegionsWithConstants`, which that takes a
+    `RegionBranchPointOperandConstants` argument; that method is invoked by
+    analyses that have constant-folded information. By default, the
+    constants-aware overload dispatches to the no-constants overload.
+
     A "region successor" indicates the target of a branch. It can indicate:
     1. A region of this op.
     2. `RegionSuccessor::parent()`, i.e., the control flow leaves this op.
@@ -183,7 +190,7 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
         Returns the operands of this operation that are forwarded to the
         successor inputs when branching to `successor`. `successor` is
         guaranteed to be among the successors that are returned by
-        `getEntrySuccessorRegions`/`getSuccessorRegions(parent())`.
+        `getSuccessorRegions(parent())`.
 
         Example: In the above example, this method returns the operand %b of the
         `scf.for` op, regardless of the value of `successor`. I.e., this op always
@@ -198,31 +205,39 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
       }]
     >,
     InterfaceMethod<[{
-        Returns the potential region successors when first executing the op.
+        Returns the potential region successors when branching from `point`.
 
-        Unlike `getSuccessorRegions`, this method also passes along the
-        constant operands of this op. Based on these, the implementation may
-        filter out certain successors. By default, simply dispatches to
-        `getSuccessorRegions`. `operands` contains an entry for every
-        operand of this op, with a null attribute if the operand has no constant
-        value.
+        This is a "constants-aware" variant of `getSuccessorRegions`. The
+        `operandConstants` parameter bundles up the constant values of the
+        operands of the parent (region branch) op and any of its region
+        branch terminators. Based on these, the implementation may filter out
+        certain successors that are statically known not to be taken.
 
-        Note: The control flow does not necessarily have to enter any region of
-        this op.
+        By default, this method simply dispatches to `getSuccessorRegions`,
+        ignoring the constant operand information.
+
+        Implementations should handle the case where no constant information
+        is available for a given branch point (i.e.,
+        `operandConstants.getOperandConstants(point)` returns an empty range)
+        by falling back to the no-constants overload.
 
         Example: In the above example, this method may return two region
-        region successors: the single region of the `scf.for` op and the
-        `scf.for` operation (that implements this interface). If %lb, %ub, %step
-        are constants and it can be determined the loop does not have any
-        iterations, this method may choose to return only this operation.
-        Similarly, if it can be determined that the loop has at least one
-        iteration, this method may choose to return only the region of the loop.
+        region successors for the "parent" branching point: the single region
+        of the `scf.for` op and the `scf.for` operation (that implements this
+        interface). If %lb, %ub, %step are constants and it can be determined
+        the loop does not have any iterations, this method may choose to return
+        only this operation. Similarly, if it can be determined that the loop
+        has at least one iteration, this method may choose to return only the
+        region of the loop.
       }],
-      "void", "getEntrySuccessorRegions",
-      (ins "::llvm::ArrayRef<::mlir::Attribute>":$operands,
-           "::llvm::SmallVectorImpl<::mlir::RegionSuccessor> &":$regions), [{}],
+      "void", "getSuccessorRegionsWithConstants",
+      (ins "::mlir::RegionBranchPoint":$point,
+           "const ::mlir::RegionBranchPointOperandConstants &"
+             :$operandConstants,
+           "::llvm::SmallVectorImpl<::mlir::RegionSuccessor> &":$regions),
+      [{}],
       /*defaultImplementation=*/[{
-        $_op.getSuccessorRegions(mlir::RegionBranchPoint::parent(), regions);
+        $_op.getSuccessorRegions(point, regions);
       }]
     >,
     InterfaceMethod<[{
@@ -423,6 +438,11 @@ def RegionBranchTerminatorOpInterface :
     (However, there may be other block terminators in the same region that
     implement the `RegionBranchTerminatorOpInterface`, so the enclosing region
     may have region successors.)
+
+    To query the region successors that may be branched to after a given
+    terminator, use `RegionBranchOpInterface::getSuccessorRegions(point, ...)` /
+    `getSuccessorRegionsWithConstants(point, ...)` on the parent op (passing the
+    terminator as the branch point).
   }];
   let cppNamespace = "::mlir";
 
@@ -436,26 +456,6 @@ def RegionBranchTerminatorOpInterface :
       [{}],
       /*defaultImplementation=*/[{
         return ::mlir::MutableOperandRange($_op);
-      }]
-    >,
-    InterfaceMethod<[{
-        Returns the potential region successors that are branched to after this
-        terminator based on the given constant operands.
-
-        This method also passes along the constant operands of this op.
-        `operands` contains an entry for every operand of this op, with a null
-        attribute if the operand has no constant value.
-
-        The default implementation simply dispatches to the parent
-        `RegionBranchOpInterface`'s `getSuccessorRegions` implementation.
-      }],
-      "void", "getSuccessorRegions",
-      (ins "::llvm::ArrayRef<::mlir::Attribute>":$operands,
-           "::llvm::SmallVectorImpl<::mlir::RegionSuccessor> &":$regions), [{}],
-      /*defaultImplementation=*/[{
-        ::mlir::Operation *op = $_op;
-        ::llvm::cast<::mlir::RegionBranchOpInterface>(op->getParentOp())
-          .getSuccessorRegions(::llvm::cast<::mlir::RegionBranchTerminatorOpInterface>(op), regions);
       }]
     >,
   ];
