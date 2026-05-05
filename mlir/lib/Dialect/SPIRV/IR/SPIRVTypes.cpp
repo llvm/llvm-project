@@ -435,10 +435,8 @@ void TypeExtensionVisitor::addConcrete(ImageType type) {
   // OpTypeImage with a 64-bit integer Sampled Type requires the
   // SPV_EXT_shader_image_int64 extension (companion to Int64ImageEXT).
   if (auto intTy = dyn_cast<IntegerType>(type.getElementType());
-      intTy && intTy.getWidth() == 64) {
-    static constexpr auto ext = Extension::SPV_EXT_shader_image_int64;
-    extensions.push_back(ext);
-  }
+      intTy && intTy.getWidth() == 64)
+    pushExts<Extension::SPV_EXT_shader_image_int64>();
   add(type.getElementType());
 }
 
