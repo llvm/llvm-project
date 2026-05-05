@@ -5955,8 +5955,6 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
   // subtract in the middle block.
   if (WidenRecipe->getOpcode() == Instruction::Sub &&
       Chain.RK != RecurKind::Sub) {
-    assert((WidenRecipe->getOpcode() != Instruction::FSub) &&
-           "Fsub chain reduction isn't supported");
     VPBuilder Builder(WidenRecipe);
     Type *ElemTy = TypeInfo.inferScalarType(ExtendedOp);
     auto *Zero = Plan.getZero(ElemTy);
@@ -5966,6 +5964,9 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
     Builder.insert(NegRecipe);
     ExtendedOp = NegRecipe;
   }
+
+  assert((Chain.RK != RecurKind::FAddChainWithSubs) &&
+         "FSub chain reduction isn't supported");
 
   // FIXME: Do these transforms before invoking the cost-model.
   ExtendedOp = optimizeExtendsForPartialReduction(ExtendedOp, TypeInfo);
