@@ -842,14 +842,12 @@ void CodeGenModule::checkAliases() {
                                           AliaseeFTy->getReturnType()))
             return true;
           const auto *AliasFPTy = dyn_cast<FunctionProtoType>(AliasFTy);
+          const auto *AliaseeFPTy = dyn_cast<FunctionProtoType>(AliaseeFTy);
           // Do not report aliases with unspecified parameter lists.
-          if (!AliasFPTy)
+          if (!AliasFPTy || !AliaseeFPTy)
             return false;
           // Report if the parameter lists are different. Any other mismatches,
           // such as in exception specifications, are ignored.
-          const auto *AliaseeFPTy = dyn_cast<FunctionProtoType>(AliaseeFTy);
-          if (!AliaseeFPTy)
-            return true;
           if (AliasFPTy->getNumParams() != AliaseeFPTy->getNumParams() ||
               AliasFPTy->isVariadic() != AliaseeFPTy->isVariadic())
             return true;
