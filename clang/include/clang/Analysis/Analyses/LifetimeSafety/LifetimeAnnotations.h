@@ -63,7 +63,7 @@ bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee,
 bool shouldTrackFirstArgument(const FunctionDecl *FD);
 
 // Returns true if the second argument of a free function should be tracked for
-// GSL lifetime analysis. This applies to free operator functions that take a
+// lifetime analysis. This applies to free operator functions that take a
 // GSL Pointer as their second argument.
 bool shouldTrackSecondArgument(const FunctionDecl *FD);
 
