@@ -14,7 +14,9 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/Module.h"
 #include <map>
+#include <optional>
 #include <random>
+#include <string>
 
 namespace llvm::ubi {
 
@@ -82,6 +84,8 @@ struct ProgramExitInfo {
            Kind == ProgramExitKind::Terminated;
   }
 };
+
+enum class NoAliasAccessKind { Read, Write };
 
 class MemoryObject : public RefCountedBase<MemoryObject> {
   uint64_t Address;
@@ -167,6 +171,7 @@ public:
     return true;
   }
   virtual void onProgramExit(const ProgramExitInfo &ExitInfo) {}
+  virtual bool onNoAliasEvent(StringRef Msg) { return true; }
   virtual bool onPrint(StringRef Msg) {
     outs() << Msg;
     outs().flush();
@@ -207,6 +212,7 @@ class Context {
   uint32_t MaxSteps = 0;
   uint32_t MaxStackDepth = 256;
   UndefValueBehavior UndefBehavior = UndefValueBehavior::NonDeterministic;
+  bool ExperimentalNoAlias = false;
 
   std::mt19937_64 Rng;
   APInt generateRandomAPInt(uint32_t BitWidth);
@@ -226,6 +232,48 @@ class Context {
   // TODO: Maintains a global list of 'exposed' provenances. This is used to
   // convert an address back to a pointer with a previously exposed provenance.
 
+  /// Experimental noalias states (see https://jhostert.de/blog/2025/noalias/).
+  /// The states Frozen and FrozenL from the original state machine are omitted
+  /// as proposed. Note that the Reserved state is the implicit default and is
+  /// intentionally omitted from sparse state runs below.
+  enum class NoAliasState : uint8_t {
+    Reserved,
+    ReservedL,
+    ReservedF,
+    ReservedLF,
+    Unique,
+    Disabled,
+    Dummy,
+  };
+
+  /// A non-Reserved state over the byte interval [Begin, End).
+  struct NoAliasStateRun {
+    uint64_t Begin;
+    uint64_t End;
+    NoAliasState State;
+  };
+
+  /// A protected noalias node created by retagging a noalias function argument.
+  /// Parent is another noalias node, or 0 for the raw/root parent. The
+  /// underlying pointer provenance remains represented by Pointer::Obj.
+  struct NoAliasNode {
+    uint64_t Parent = 0;
+    MemoryObject *Object = nullptr;
+    bool Active = false;
+    // Run-Length Encoding to reduce memory consumption.
+    SmallVector<NoAliasStateRun, 1> States;
+  };
+
+  // The node ID 0 is reserved for raw/root nodes.
+  uint64_t NextNoAliasNode = 1;
+  uint64_t ActiveNoAliasScopes = 0;
+  DenseMap<uint64_t, NoAliasNode> NoAliasNodes;
+  DenseMap<MemoryObject *, SmallVector<uint64_t, 2>> NoAliasNodesByObject;
+
+  // noalias-related diagnostics
+  std::string LastNoAliasError;
+  SmallVector<std::string, 4> NoAliasEvents;
+
   /// Get the tag for a pointer to the given memory object.
   /// TODO: encode metadata bits into the tag.
   APInt getTag(uint32_t BitWidth, MemoryObject *Obj);
@@ -233,6 +281,44 @@ class Context {
                      bool CheckPaddingBits, bool *ContainsUndefinedBits);
   void toBytes(const AnyValue &Val, Type *Ty, uint32_t OffsetInBits,
                MutableBytesView Bytes, bool PaddingBits);
+
+  /// Return whether \p Ancestor is on \p Descendant's noalias parent chain.
+  /// This relation defines whether an access is local to a protected node.
+  bool isNoAliasAncestor(uint64_t Ancestor, uint64_t Descendant) const;
+  bool hasActiveNoAliasDescendant(uint64_t NodeID) const;
+  /// Try to erase the node if it is inactive and has no active descendant.
+  void tryEraseInactiveNoAliasNode(uint64_t NodeID);
+  static StringRef getNoAliasAccessKindName(NoAliasAccessKind Kind);
+  static StringRef getNoAliasStateName(NoAliasState State);
+  static std::string getNoAliasNodeName(uint64_t NodeID);
+  static std::string getNoAliasObjectName(const MemoryObject &MO);
+  void appendNoAliasEvent(std::string Msg);
+  /// Record a noalias violation in both the user-facing error slot and verbose
+  /// event queue.
+  void setNoAliasViolation(uint64_t ProtectedNodeId, uint64_t AccessNode,
+                           const MemoryObject &MO, uint64_t Begin, uint64_t End,
+                           NoAliasAccessKind Kind, bool IsLocal,
+                           NoAliasState State, bool IsProtectorEndAction);
+  /// Apply the noalias state machine for one homogeneous byte range. Returns
+  /// std::nullopt when the access is forbidden and should be reported as an
+  /// immediate UB.
+  static std::optional<NoAliasState>
+  transitionNoAliasState(NoAliasState State, NoAliasAccessKind Kind,
+                         bool IsLocal);
+  /// Apply a memory access to every active protector for \p MO. \p
+  /// SkipDescendantsOf is used for protector-end synthetic accesses.
+  bool accessNoAliasImpl(MemoryObject &MO, uint64_t Offset, uint64_t Size,
+                         uint64_t AccessNode, NoAliasAccessKind Kind,
+                         uint64_t SkipDescendantsOf);
+  /// Update one node's sparse byte-state runs for access to [Begin, End).
+  /// The nodes store only non-Reserved runs, so this routine splits old runs,
+  /// treats gaps as implicit Reserved ranges, transitions each touches segment,
+  /// and coalesces adjacent ranges that end in the same non-Reserved state.
+  bool updateNoAliasNodeForAccess(NoAliasNode &Node, uint64_t Begin,
+                                  uint64_t End, NoAliasAccessKind Kind,
+                                  bool IsLocal, uint64_t ProtectedNodeID,
+                                  uint64_t AccessNode,
+                                  bool IsProtectorEndAction);
 
   // Constants
   // Use std::map to avoid iterator/reference invalidation.
@@ -259,10 +345,12 @@ public:
   void setVScale(uint32_t VS) { VScale = VS; }
   void setMaxSteps(uint32_t MS) { MaxSteps = MS; }
   void setMaxStackDepth(uint32_t Depth) { MaxStackDepth = Depth; }
+  void setExperimentalNoAlias(bool Enabled) { ExperimentalNoAlias = Enabled; }
   uint64_t getMemoryLimit() const { return MaxMem; }
   uint32_t getVScale() const { return VScale; }
   uint32_t getMaxSteps() const { return MaxSteps; }
   uint32_t getMaxStackDepth() const { return MaxStackDepth; }
+  bool isExperimentalNoAliasEnabled() const { return ExperimentalNoAlias; }
   void setUndefValueBehavior(UndefValueBehavior UB) { UndefBehavior = UB; }
   void reseed(uint32_t Seed) { Rng.seed(Seed); }
 
@@ -318,6 +406,20 @@ public:
 
   Function *getTargetFunction(const Pointer &Ptr);
   BasicBlock *getTargetBlock(const Pointer &Ptr);
+
+  /// Create a new protected noalias node based on \p Ptr and return a pointer
+  /// associated with that node. The underlying pointer provenance is unchanged.
+  Pointer createNoAliasPointer(const Pointer &Ptr);
+  /// Apply a memory access to the active noalias state machines for \p MO.
+  /// Returns false when the protected state machine detects UB.
+  bool accessNoAlias(MemoryObject &MO, uint64_t Offset, uint64_t Size,
+                     uint64_t AccessNode, NoAliasAccessKind Kind);
+  /// End all noalias protectors created for a call frame.
+  bool endNoAliasScopes(ArrayRef<uint64_t> Nodes);
+  StringRef getLastNoAliasError() const { return LastNoAliasError; }
+  SmallVector<std::string, 4> takeNoAliasEvents();
+  /// Drop noalias state for an object \p MO that is no longer usable.
+  void clearNoAliasState(const MemoryObject &MO);
 
   /// Initialize global variables and function/block objects. This function
   /// should be called before executing any function. Returns false if the

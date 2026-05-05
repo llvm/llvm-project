@@ -79,6 +79,11 @@ static cl::opt<unsigned>
          cl::desc("Random seed for non-deterministic behavior (default = 0)"),
          cl::value_desc("N"), cl::init(0), cl::cat(InterpreterCategory));
 
+static cl::opt<bool>
+    ExperimentalNoAlias("experimental-noalias",
+                        cl::desc("Enable experimental LLVM noalias checking."),
+                        cl::init(false), cl::cat(InterpreterCategory));
+
 cl::opt<ubi::UndefValueBehavior> UndefBehavior(
     "", cl::desc("Choose undef value behavior:"),
     cl::values(clEnumVal(ubi::UndefValueBehavior::NonDeterministic,
@@ -151,6 +156,11 @@ public:
     llvm_unreachable("Unknown ProgramExitKind");
   }
 
+  bool onNoAliasEvent(StringRef Msg) override {
+    errs() << "NoAlias: " << Msg << '\n';
+    return true;
+  }
+
   void onUnrecognizedInstruction(Instruction &I) override {
     errs() << "Unrecognized instruction: " << I << '\n';
   }
@@ -207,6 +217,7 @@ int main(int argc, char **argv) {
   Ctx.setVScale(VScale);
   Ctx.setMaxSteps(MaxSteps);
   Ctx.setMaxStackDepth(MaxStackDepth);
+  Ctx.setExperimentalNoAlias(ExperimentalNoAlias);
   Ctx.setUndefValueBehavior(UndefBehavior);
   Ctx.reseed(Seed);
 
