@@ -3,13 +3,11 @@
 
 define void @main() {
   %alloc = alloca i32
-  call void @llvm.lifetime.start.p0(ptr %alloc)
   %undef_load = load i32, ptr %alloc
   ret void
 }
 ; CHECK: Entering function: main
 ; CHECK-NEXT:   %alloc = alloca i32, align 4 => ptr 0x8 [alloc]
-; CHECK-NEXT:   call void @llvm.lifetime.start.p0(ptr %alloc)
 ; CHECK-NEXT:   %undef_load = load i32, ptr %alloc, align 4 => i32 0
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

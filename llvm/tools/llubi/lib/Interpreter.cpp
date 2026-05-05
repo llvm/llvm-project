@@ -236,7 +236,7 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     assert(Val.isNaN() && "Expected NaN.");
     const APFloat Preferred =
         APFloat::getQNaN(Val.getSemantics(), Val.isNegative());
-    return Val.bitcastToAPInt() == Preferred.bitcastToAPInt();
+    return Val.bitwiseIsEqual(Preferred);
   }
 
   bool wasmMayProduceExtraNaNPayload(ArrayRef<const APFloat *> Inputs) {
