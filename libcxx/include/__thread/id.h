@@ -59,20 +59,20 @@ class __thread_id {
   // Strong total order implementation.
   // Here we provide a best-effort implementation of strong total order, comparing
   // integral types as-is and routing pointers through uintptr_t for a well-defined comparison.
-  template <typename Thr, enable_if<is_pointer<typename Thr::_Tp>::value, int>::type = 0>
+  template <typename Thr, typename enable_if<is_pointer<typename Thr::_Tp>::value, int>::type = 0>
   static _LIBCPP_HIDE_FROM_ABI bool __eq_impl(Thr __x, Thr __y) _NOEXCEPT {
     return reinterpret_cast<uintptr_t>(__x.__id_) == reinterpret_cast<uintptr_t>(__y.__id_);
   }
-  template <typename Thr, enable_if<is_integral<typename Thr::_Tp>::value, int>::type = 0>
+  template <typename Thr, typename enable_if<is_integral<typename Thr::_Tp>::value, int>::type = 0>
   static _LIBCPP_HIDE_FROM_ABI bool __eq_impl(Thr __x, Thr __y) _NOEXCEPT {
     return __x.__id_ == __y.__id_;
   }
 
-  template <typename Thr, enable_if<is_pointer<typename Thr::_Tp>::value, int>::type = 0>
+  template <typename Thr, typename enable_if<is_pointer<typename Thr::_Tp>::value, int>::type = 0>
   static _LIBCPP_HIDE_FROM_ABI bool __lt_impl(Thr __x, Thr __y) _NOEXCEPT {
     return reinterpret_cast<uintptr_t>(__x.__id_) < reinterpret_cast<uintptr_t>(__y.__id_);
   }
-  template <typename Thr, enable_if<is_integral<typename Thr::_Tp>::value, int>::type = 0>
+  template <typename Thr, typename enable_if<is_integral<typename Thr::_Tp>::value, int>::type = 0>
   static _LIBCPP_HIDE_FROM_ABI bool __lt_impl(Thr __x, Thr __y) _NOEXCEPT {
     // For integral thread IDs, assume 0 is always less than any other thread_id.
     if (__x.__id_ == 0)
@@ -100,9 +100,9 @@ class __thread_id {
   _LIBCPP_HIDE_FROM_ABI _FormatterTp __get_formatter_value() const { return reinterpret_cast<_FormatterTp>(__id_); }
 
 public:
-  _LIBCPP_HIDE_FROM_ABI __thread_id() _NOEXCEPT : __id_{} {}
+  _LIBCPP_HIDE_FROM_ABI __thread_id() _NOEXCEPT : __id_(__libcpp_thread_id()) {}
 
-  _LIBCPP_HIDE_FROM_ABI void __reset() { __id_ = __libcpp_thread_id{}; }
+  _LIBCPP_HIDE_FROM_ABI void __reset() { __id_ = __libcpp_thread_id(); }
 
   friend _LIBCPP_HIDE_FROM_ABI bool operator==(__thread_id __x, __thread_id __y) _NOEXCEPT;
 #  if _LIBCPP_STD_VER <= 17
@@ -116,7 +116,7 @@ public:
   operator<<(basic_ostream<_CharT, _Traits>& __os, __thread_id __id);
 
 private:
-  _LIBCPP_HIDE_FROM_ABI __thread_id(__libcpp_thread_id __id) : __id_{__id} {}
+  _LIBCPP_HIDE_FROM_ABI __thread_id(__libcpp_thread_id __id) : __id_(__id) {}
 
   friend __thread_id this_thread::get_id() _NOEXCEPT;
   friend class _LIBCPP_EXPORTED_FROM_ABI thread;
