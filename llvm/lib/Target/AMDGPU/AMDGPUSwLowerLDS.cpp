@@ -210,6 +210,7 @@ public:
                                 Value *HiddenDynLDSSize,
                                 SetVector<GlobalVariable *> &DynamicLDSGlobals);
   void initAsanInfo();
+  void propagateAsanAttrs(Function *KernelFunc, FunctionCallee& Callee);
 
 private:
   Module &M;
@@ -744,6 +745,19 @@ void AMDGPUSwLowerLDS::translateLDSMemoryOperationsToGlobalMemory(
   }
 }
 
+void AMDGPUSwLowerLDS::propagateAsanAttrs(Function *KernelFunc,
+                                          FunctionCallee& Callee) {
+  auto *F = dyn_cast<Function>(Callee.getCallee());
+  if (!F)
+    return;
+  const GCNSubtarget &ST = AMDGPUTM.getSubtarget<GCNSubtarget>(*KernelFunc);
+  if (!ST.hasGFX90AInsts())
+    return;
+  Attribute AGPRAlloc = KernelFunc->getFnAttribute("amdgpu-agpr-alloc");
+  if (AGPRAlloc.isValid())
+    F->addFnAttr(AGPRAlloc);
+}
+
 void AMDGPUSwLowerLDS::poisonRedzones(Function *Func, Value *MallocPtr) {
   auto &LDSParams = FuncLDSAccessInfo.KernelToLDSParametersMap[Func];
   Type *Int64Ty = IRB.getInt64Ty();
@@ -751,6 +765,7 @@ void AMDGPUSwLowerLDS::poisonRedzones(Function *Func, Value *MallocPtr) {
   FunctionCallee AsanPoisonRegion = M.getOrInsertFunction(
       "__asan_poison_region",
       FunctionType::get(VoidTy, {Int64Ty, Int64Ty}, false));
+  propagateAsanAttrs(Func, AsanPoisonRegion);
 
   auto RedzonesVec = LDSParams.RedzoneOffsetAndSizeVector;
   size_t VecSize = RedzonesVec.size();
@@ -887,6 +902,7 @@ void AMDGPUSwLowerLDS::lowerKernelLDSAccesses(Function *Func,
   FunctionCallee MallocFunc = M.getOrInsertFunction(
       StringRef("__asan_malloc_impl"),
       FunctionType::get(Int64Ty, {Int64Ty, Int64Ty}, false));
+  propagateAsanAttrs(Func, MallocFunc);
   Value *RAPtrToInt = IRB.CreatePtrToInt(ReturnAddress, Int64Ty);
   Value *MallocCall = IRB.CreateCall(MallocFunc, {CurrMallocSize, RAPtrToInt});
 
@@ -948,6 +964,7 @@ void AMDGPUSwLowerLDS::lowerKernelLDSAccesses(Function *Func,
   FunctionCallee AsanFreeFunc = M.getOrInsertFunction(
       StringRef("__asan_free_impl"),
       FunctionType::get(IRB.getVoidTy(), {Int64Ty, Int64Ty}, false));
+  propagateAsanAttrs(Func, AsanFreeFunc);
   Value *ReturnAddr = IRB.CreateIntrinsic(
       Intrinsic::returnaddress, IRB.getPtrTy(DL.getProgramAddressSpace()),
       IRB.getInt32(0));
