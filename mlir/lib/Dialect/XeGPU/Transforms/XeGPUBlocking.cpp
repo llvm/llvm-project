@@ -209,9 +209,9 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
         bScaleTile->size() != 2)
       return std::nullopt;
 
-    // Validate scale tile dimensions
-    assert((*aScaleTile)[0] == aTile[0] && "aScaleTile[0] must equal aTile[0]");
-    assert((*bScaleTile)[1] == bTile[1] && "bScaleTile[1] must equal bTile[1]");
+    // Validate scale tile dimensions match expected values
+    if ((*aScaleTile)[0] != aTile[0] || (*bScaleTile)[1] != bTile[1])
+      return std::nullopt;
 
     if ((*aScaleTile)[1] != (*bScaleTile)[0])
       return std::nullopt;
@@ -241,31 +241,19 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
 
     auto [aTile, bTile] = *abTiles;
 
-    // Get operand indices using AttrSizedOperandSegments
-    auto segmentSizesAttr = dpasMxOp->getAttrOfType<DenseI32ArrayAttr>(
-        dpasMxOp.getOperandSegmentSizesAttrName());
-    if (!segmentSizesAttr)
-      return std::nullopt;
-
-    auto segmentSizes = segmentSizesAttr.asArrayRef();
-    unsigned aSize = segmentSizes[0];
-    unsigned bSize = segmentSizes[1];
-    unsigned accSize = segmentSizes[2];
-    unsigned scaleASize = segmentSizes[3];
-    unsigned scaleBSize = segmentSizes[4];
-
-    // Validate C tile if present
-    if (accSize > 0) {
-      unsigned accOperandIdx = aSize + bSize;
+    // Validate C tile if present using op-specific accessor
+    if (dpasMxOp.getAcc()) {
+      unsigned accOperandIdx = 2; // acc is the 3rd operand
       if (!validateCTile(op, accOperandIdx, aTile, bTile))
         return std::nullopt;
     }
 
-    // Validate scale tiles if present
+    // Validate scale tiles if present using op-specific accessors
     int64_t kScaleFactor = 1;
-    if (scaleASize > 0 && scaleBSize > 0) {
-      unsigned scaleAOperandIdx = aSize + bSize + accSize;
-      unsigned scaleBOperandIdx = scaleAOperandIdx + scaleASize;
+    if (dpasMxOp.getScaleA() && dpasMxOp.getScaleB()) {
+      // Calculate operand indices based on which operands are present
+      unsigned scaleAOperandIdx = 2 + (dpasMxOp.getAcc() ? 1 : 0);
+      unsigned scaleBOperandIdx = scaleAOperandIdx + 1;
 
       auto scaleFactor = validateABScaleTiles(op, scaleAOperandIdx,
                                               scaleBOperandIdx, aTile, bTile);

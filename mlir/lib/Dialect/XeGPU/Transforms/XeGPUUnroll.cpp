@@ -415,10 +415,12 @@ struct UnrollDpasMxOp : public UnrollPattern<xegpu::DpasMxOp> {
   LogicalResult matchAndRewrite(xegpu::DpasMxOp op,
                                 PatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
-    if (llvm::any_of(op->getOperandTypes(), [&](Type type) {
-          auto vecTy = dyn_cast<VectorType>(type);
-          return !vecTy || vecTy.getRank() != 2;
-        }))
+    // Scale operands can be scalars, which we don't unroll
+    // Check that A and B (required operands) are 2D vectors
+    if (op.getAType().getRank() != 2 || op.getBType().getRank() != 2)
+      return failure();
+    // If acc is present, it must be a 2D vector
+    if (op.getAcc() && op.getAccType().getRank() != 2)
       return failure();
 
     std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
