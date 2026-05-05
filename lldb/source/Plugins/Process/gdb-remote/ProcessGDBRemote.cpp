@@ -4919,11 +4919,246 @@ void ParseFlags(
       });
 }
 
+struct GDBTypeInfo {
+  lldb::Encoding encoding;
+  lldb::Format format;
+  uint32_t byte_size;
+};
+
+static std::optional<GDBTypeInfo>
+ResolveGDBTypeName(llvm::StringRef type_name) {
+  if (type_name == "ieee_half")
+    return GDBTypeInfo{eEncodingIEEE754, eFormatFloat, 2};
+  if (type_name == "ieee_single" || type_name == "float")
+    return GDBTypeInfo{eEncodingIEEE754, eFormatFloat, 4};
+  if (type_name == "ieee_double")
+    return GDBTypeInfo{eEncodingIEEE754, eFormatFloat, 8};
+  if (type_name == "int8")
+    return GDBTypeInfo{eEncodingSint, eFormatDecimal, 1};
+  if (type_name == "int16")
+    return GDBTypeInfo{eEncodingSint, eFormatDecimal, 2};
+  if (type_name == "int32" || type_name == "int")
+    return GDBTypeInfo{eEncodingSint, eFormatDecimal, 4};
+  if (type_name == "int64")
+    return GDBTypeInfo{eEncodingSint, eFormatDecimal, 8};
+  if (type_name == "uint8")
+    return GDBTypeInfo{eEncodingUint, eFormatHex, 1};
+  if (type_name == "uint16")
+    return GDBTypeInfo{eEncodingUint, eFormatHex, 2};
+  if (type_name == "uint32")
+    return GDBTypeInfo{eEncodingUint, eFormatHex, 4};
+  if (type_name == "uint64")
+    return GDBTypeInfo{eEncodingUint, eFormatHex, 8};
+  if (type_name == "uint128")
+    return GDBTypeInfo{eEncodingUint, eFormatHex, 16};
+  if (type_name == "data_ptr" || type_name == "code_ptr")
+    return GDBTypeInfo{eEncodingUint, eFormatAddressInfo, 0};
+  return std::nullopt;
+}
+
+struct GDBRegisteredType {
+  lldb::Encoding encoding;
+  lldb::Format format;
+  uint32_t element_byte_size;
+  uint32_t vector_count;
+  uint32_t GetTotalByteSize() const {
+    return vector_count > 0 ? element_byte_size * vector_count
+                            : element_byte_size;
+  }
+};
+
+static void ParseVectors(XMLNode feature_node,
+                         llvm::StringMap<GDBRegisteredType> &type_registry) {
+  Log *log(GetLog(GDBRLog::Process));
+
+  feature_node.ForEachChildElementWithName(
+      "vector", [&log, &type_registry](const XMLNode &vector_node) -> bool {
+        std::string id;
+        std::string element_type;
+        uint32_t count = 0;
+
+        vector_node.ForEachAttribute(
+            [&id, &element_type, &count](const llvm::StringRef &attr_name,
+                                         const llvm::StringRef &attr_value) {
+              if (attr_name == "id")
+                id = attr_value;
+              else if (attr_name == "type")
+                element_type = attr_value;
+              else if (attr_name == "count")
+                llvm::to_integer(attr_value, count);
+              return true;
+            });
+
+        if (id.empty() || element_type.empty() || count == 0) {
+          LLDB_LOG(log, "ProcessGDBRemote::ParseVectors Ignoring vector with "
+                        "missing id, type, or count");
+          return true;
+        }
+
+        auto reg_it = type_registry.find(element_type);
+        if (reg_it != type_registry.end()) {
+          auto &elem = reg_it->second;
+          type_registry.insert_or_assign(
+              id, GDBRegisteredType{elem.encoding, elem.format,
+                                    elem.element_byte_size, count});
+        } else {
+          auto resolved = ResolveGDBTypeName(element_type);
+          if (resolved) {
+            type_registry.insert_or_assign(
+                id, GDBRegisteredType{resolved->encoding, resolved->format,
+                                      resolved->byte_size, count});
+          } else {
+            LLDB_LOG(log,
+                     "ProcessGDBRemote::ParseVectors Could not resolve "
+                     "element type \"{0}\" for vector \"{1}\"",
+                     element_type, id);
+          }
+        }
+
+        return true;
+      });
+}
+
+static std::vector<RegisterUnion::Field>
+ParseUnionFields(const XMLNode &union_node,
+                 const llvm::StringMap<GDBRegisteredType> &type_registry) {
+  Log *log(GetLog(GDBRLog::Process));
+  std::vector<RegisterUnion::Field> fields;
+  bool has_unresolved = false;
+
+  union_node.ForEachChildElementWithName(
+      "field",
+      [&fields, &has_unresolved, &log,
+       &type_registry](const XMLNode &field_node) -> bool {
+        std::optional<llvm::StringRef> name;
+        std::optional<llvm::StringRef> type;
+
+        field_node.ForEachAttribute(
+            [&name, &type, &log](const llvm::StringRef &attr_name,
+                                 const llvm::StringRef &attr_value) {
+              if (attr_name == "name") {
+                if (attr_value.size())
+                  name = attr_value;
+                else
+                  LLDB_LOG(log, "ProcessGDBRemote::ParseUnionFields "
+                                "Ignoring empty name in field");
+              } else if (attr_name == "type") {
+                if (attr_value.size())
+                  type = attr_value;
+                else
+                  LLDB_LOG(log, "ProcessGDBRemote::ParseUnionFields "
+                                "Ignoring empty type in field");
+              } else {
+                LLDB_LOG(log,
+                         "ProcessGDBRemote::ParseUnionFields "
+                         "Ignoring unknown attribute \"{0}\" in field",
+                         attr_name.data());
+              }
+              return true;
+            });
+
+        if (name && type) {
+          auto reg_it = type_registry.find(*type);
+          if (reg_it != type_registry.end()) {
+            auto &reg_type = reg_it->second;
+            fields.push_back(RegisterUnion::Field(
+                name->str(), reg_type.encoding, reg_type.format,
+                reg_type.element_byte_size, reg_type.vector_count));
+          } else {
+            auto resolved = ResolveGDBTypeName(*type);
+            if (resolved && resolved->byte_size > 0) {
+              fields.push_back(
+                  RegisterUnion::Field(name->str(), resolved->encoding,
+                                       resolved->format, resolved->byte_size));
+            } else {
+              LLDB_LOG(log,
+                       "ProcessGDBRemote::ParseUnionFields Could not resolve "
+                       "type \"{0}\" for field \"{1}\", discarding union",
+                       type->data(), name->data());
+              has_unresolved = true;
+            }
+          }
+        } else {
+          if (!name)
+            LLDB_LOG(log, "ProcessGDBRemote::ParseUnionFields "
+                          "Field missing required \"name\" attribute");
+          if (!type)
+            LLDB_LOG(log, "ProcessGDBRemote::ParseUnionFields "
+                          "Field missing required \"type\" attribute");
+          has_unresolved = true;
+        }
+        return true;
+      });
+
+  if (has_unresolved) {
+    LLDB_LOG(log, "ProcessGDBRemote::ParseUnionFields Discarding union because "
+                  "one or more fields have unresolvable types");
+    fields.clear();
+  }
+
+  return fields;
+}
+
+static void ParseUnions(
+    XMLNode feature_node,
+    llvm::StringMap<std::unique_ptr<RegisterUnion>> &registers_union_types,
+    const llvm::StringMap<GDBRegisteredType> &type_registry) {
+  Log *log(GetLog(GDBRLog::Process));
+
+  feature_node.ForEachChildElementWithName(
+      "union",
+      [&log, &registers_union_types,
+       &type_registry](const XMLNode &union_node) -> bool {
+        std::string id;
+
+        union_node.ForEachAttribute([&id](const llvm::StringRef &attr_name,
+                                          const llvm::StringRef &attr_value) {
+          if (attr_name == "id")
+            id = attr_value;
+          return true;
+        });
+
+        if (id.empty()) {
+          LLDB_LOG(log, "ProcessGDBRemote::ParseUnions "
+                        "Ignoring union without \"id\" attribute");
+          return true;
+        }
+
+        if (registers_union_types.contains(id)) {
+          LLDB_LOG(log,
+                   "ProcessGDBRemote::ParseUnions "
+                   "Definition of union \"{0}\" shadows previous definition, "
+                   "using original",
+                   id);
+          return true;
+        }
+
+        std::vector<RegisterUnion::Field> fields =
+            ParseUnionFields(union_node, type_registry);
+        if (!fields.empty()) {
+          LLDB_LOG(log,
+                   "ProcessGDBRemote::ParseUnions Found union type \"{0}\" "
+                   "with {1} fields",
+                   id, fields.size());
+          registers_union_types.insert_or_assign(
+              id, std::make_unique<RegisterUnion>(id, std::move(fields)));
+        } else {
+          LLDB_LOG(log,
+                   "ProcessGDBRemote::ParseUnions Ignoring union \"{0}\" "
+                   "because it contains no resolvable fields",
+                   id);
+        }
+
+        return true;
+      });
+}
+
 bool ParseRegisters(
     XMLNode feature_node, GdbServerTargetInfo &target_info,
     std::vector<DynamicRegisterInfo::Register> &registers,
     llvm::StringMap<std::unique_ptr<RegisterFlags>> &registers_flags_types,
-    llvm::StringMap<std::unique_ptr<FieldEnum>> &registers_enum_types) {
+    llvm::StringMap<std::unique_ptr<FieldEnum>> &registers_enum_types,
+    llvm::StringMap<std::unique_ptr<RegisterUnion>> &registers_union_types) {
   if (!feature_node)
     return false;
 
@@ -4938,9 +5173,19 @@ bool ParseRegisters(
   for (const auto &flags : registers_flags_types)
     flags.second->DumpToLog(log);
 
+  // Type registry for resolving <vector> and <union> field types within this
+  // feature. Note: types defined in one xi:include file cannot currently
+  // reference types from another xi:include file. In practice, <vector> and
+  // <union> elements are always in the same <feature>.
+  llvm::StringMap<GDBRegisteredType> type_registry;
+  ParseVectors(feature_node, type_registry);
+  ParseUnions(feature_node, registers_union_types, type_registry);
+  for (const auto &union_type : registers_union_types)
+    union_type.second->DumpToLog(log);
+
   feature_node.ForEachChildElementWithName(
       "reg",
-      [&target_info, &registers, &registers_flags_types,
+      [&target_info, &registers, &registers_flags_types, &registers_union_types,
        log](const XMLNode &reg_node) -> bool {
         std::string gdb_group;
         std::string gdb_type;
@@ -5018,27 +5263,51 @@ bool ParseRegisters(
         });
 
         if (!gdb_type.empty()) {
-          // gdb_type could reference some flags type defined in XML.
-          llvm::StringMap<std::unique_ptr<RegisterFlags>>::iterator it =
-              registers_flags_types.find(gdb_type);
-          if (it != registers_flags_types.end()) {
-            auto flags_type = it->second.get();
-            if (reg_info.byte_size == flags_type->GetSize())
-              reg_info.flags_type = flags_type;
-            else
+          // Check union types first.
+          auto union_it = registers_union_types.find(gdb_type);
+          if (union_it != registers_union_types.end()) {
+            auto *union_type = union_it->second.get();
+            if (reg_info.byte_size >= union_type->GetSize()) {
+              reg_info.union_type = union_type;
+              if (!(encoding_set || format_set)) {
+                reg_info.encoding = eEncodingUint;
+                reg_info.format = eFormatHex;
+              }
+            } else {
               LLDB_LOG(
                   log,
-                  "ProcessGDBRemote::ParseRegisters Size of register flags {0} "
-                  "({1} bytes) for register {2} does not match the register "
-                  "size ({3} bytes). Ignoring this set of flags.",
-                  flags_type->GetID().c_str(), flags_type->GetSize(),
+                  "ProcessGDBRemote::ParseRegisters Size of register union "
+                  "{0} ({1} bytes) for register {2} does not fit in the "
+                  "register size ({3} bytes). Ignoring this union type.",
+                  union_type->GetID().c_str(), union_type->GetSize(),
                   reg_info.name, reg_info.byte_size);
+            }
           }
 
-          // There's a slim chance that the gdb_type name is both a flags type
-          // and a simple type. Just in case, look for that too (setting both
-          // does no harm).
-          if (!gdb_type.empty() && !(encoding_set || format_set)) {
+          // Then check flags types (only if not a union).
+          if (!reg_info.union_type) {
+            // gdb_type could reference some flags type defined in XML.
+            llvm::StringMap<std::unique_ptr<RegisterFlags>>::iterator it =
+                registers_flags_types.find(gdb_type);
+            if (it != registers_flags_types.end()) {
+              auto flags_type = it->second.get();
+              if (reg_info.byte_size == flags_type->GetSize())
+                reg_info.flags_type = flags_type;
+              else
+                LLDB_LOG(
+                    log,
+                    "ProcessGDBRemote::ParseRegisters Size of register flags "
+                    "{0} "
+                    "({1} bytes) for register {2} does not match the register "
+                    "size ({3} bytes). Ignoring this set of flags.",
+                    flags_type->GetID().c_str(), flags_type->GetSize(),
+                    reg_info.name, reg_info.byte_size);
+            }
+          }
+
+          // Then check simple built-in type strings (only if not a union).
+          if (!gdb_type.empty() && !reg_info.union_type &&
+              !(encoding_set || format_set)) {
             if (llvm::StringRef(gdb_type).starts_with("int")) {
               reg_info.format = eFormatHex;
               reg_info.encoding = eEncodingUint;
@@ -5202,7 +5471,8 @@ bool ProcessGDBRemote::GetGDBServerRegisterInfoXMLAndProcess(
     if (arch_to_use.IsValid()) {
       for (auto &feature_node : feature_nodes) {
         ParseRegisters(feature_node, target_info, registers,
-                       m_registers_flags_types, m_registers_enum_types);
+                       m_registers_flags_types, m_registers_enum_types,
+                       m_registers_union_types);
       }
 
       for (const auto &include : target_info.includes) {
@@ -5280,6 +5550,7 @@ llvm::Error ProcessGDBRemote::GetGDBServerRegisterInfo(ArchSpec &arch_to_use) {
   // include read.
   m_registers_flags_types.clear();
   m_registers_enum_types.clear();
+  m_registers_union_types.clear();
   std::vector<DynamicRegisterInfo::Register> registers;
   if (GetGDBServerRegisterInfoXMLAndProcess(arch_to_use, "target.xml",
                                             registers) &&

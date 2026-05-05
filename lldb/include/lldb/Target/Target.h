@@ -1487,6 +1487,11 @@ public:
                                const lldb_private::RegisterFlags &flags,
                                uint32_t byte_size);
 
+  CompilerType
+  GetRegisterUnionType(const std::string &name,
+                       const lldb_private::RegisterUnion &union_type,
+                       uint32_t byte_size);
+
   /// Sends a breakpoint notification event.
   void NotifyBreakpointChanged(Breakpoint &bp,
                                lldb::BreakpointEventType event_kind);

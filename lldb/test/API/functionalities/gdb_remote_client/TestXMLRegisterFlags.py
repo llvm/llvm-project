@@ -1,4 +1,4 @@
-""" Check that register fields found in target XML are properly processed.
+"""Check that register fields found in target XML are properly processed.
 
 These tests make XML out of string substitution. This can lead to some strange
 failures. Check that the final XML is valid and each child is indented more than
@@ -1056,3 +1056,239 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
         )
 
         self.expect("register read x0", patterns=[r"\(foo = foo_1, foo = foo_0\)$"])
+
+    @skipIfXmlSupportMissing
+    @skipIfRemote
+    def test_union_basic(self):
+        """Union with ieee_single and ieee_double fields."""
+        self.setup_register_test(
+            """\
+          <union id="fpu_type">
+            <field name="float" type="ieee_single"/>
+            <field name="double" type="ieee_double"/>
+          </union>
+          <reg name="x0" regnum="0" bitsize="64" type="fpu_type"/>
+          <reg name="cpsr" regnum="33" bitsize="32"/>
+          <reg name="pc" bitsize="64"/>"""
+        )
+
+        self.expect(
+            "register read x0",
+            substrs=["(float = ", ", double = "],
+        )
+
+    @skipIfXmlSupportMissing
+    @skipIfRemote
+    def test_union_no_id(self):
+        """Union without id attribute is ignored."""
+        self.setup_register_test(
+            """\
+          <union>
+            <field name="float" type="ieee_single"/>
+            <field name="double" type="ieee_double"/>
+          </union>
+          <reg name="x0" regnum="0" bitsize="64"/>
+          <reg name="cpsr" regnum="33" bitsize="32"/>
+          <reg name="pc" bitsize="64"/>"""
+        )
+
+        self.expect("register read x0", matching=False, substrs=["(float = "])
+
+    @skipIfXmlSupportMissing
+    @skipIfRemote
+    def test_union_no_fields(self):
+        """Union with no field children is ignored."""
+        self.setup_register_test(
+            """\
+          <union id="empty_union">
+          </union>
+          <reg name="x0" regnum="0" bitsize="64" type="empty_union"/>
+          <reg name="cpsr" regnum="33" bitsize="32"/>
+          <reg name="pc" bitsize="64"/>"""
+        )
+
+        self.expect("register read x0", matching=False, substrs=["(float = "])
+
+    @skipIfXmlSupportMissing
+    @skipIfRemote
+    def test_union_unknown_field_type(self):
+        """Union with any unresolvable field type discards the entire union."""
+        self.setup_register_test(
+            """\
+          <union id="bad_union">
+            <field name="float" type="ieee_single"/>
+            <field name="custom" type="some_undefined_type"/>
+          </union>
+          <reg name="x0" regnum="0" bitsize="64" type="bad_union"/>
+          <reg name="cpsr" regnum="33" bitsize="32"/>
+          <reg name="pc" bitsize="64"/>"""
+        )
+
+        self.expect("register read x0", matching=False, substrs=["(float = "])
+
+    @skipIfXmlSupportMissing
+    @skipIfRemote
+    def test_union_field_missing_name(self):
+        """Union field without name attribute causes union to be discarded."""
+        self.setup_register_test(
+            """\
+          <union id="bad_union2">
+            <field type="ieee_single"/>
+            <field name="double" type="ieee_double"/>
+          </union>
+          <reg name="x0" regnum="0" bitsize="64" type="bad_union2"/>
+          <reg name="cpsr" regnum="33" bitsize="32"/>
+          <reg name="pc" bitsize="64"/>"""
+        )
+
+        self.expect("register read x0", matching=False, substrs=["(double = "])
+
+    @skipIfXmlSupportMissing
+    @skipIfRemote
+    def test_union_field_missing_type(self):
+        """Union field without type attribute causes union to be discarded."""
+        self.setup_register_test(
+            """\
+          <union id="bad_union3">
+            <field name="float"/>
+            <field name="double" type="ieee_double"/>
+          </union>
+          <reg name="x0" regnum="0" bitsize="64" type="bad_union3"/>
+          <reg name="cpsr" regnum="33" bitsize="32"/>
+          <reg name="pc" bitsize="64"/>"""
+        )
+
+        self.expect("register read x0", matching=False, substrs=["(double = "])
+
+    @skipIfXmlSupportMissing
+    @skipIfRemote
+    def test_union_duplicate_id(self):
+        """Second union with same ID is ignored, first definition wins."""
+        self.setup_register_test(
+            """\
+          <union id="fpu_type">
+            <field name="float" type="ieee_single"/>
+            <field name="double" type="ieee_double"/>
+          </union>
+          <union id="fpu_type">
+            <field name="uint" type="uint64"/>
+          </union>
+          <reg name="x0" regnum="0" bitsize="64" type="fpu_type"/>
+          <reg name="cpsr" regnum="33" bitsize="32"/>
+          <reg name="pc" bitsize="64"/>"""
+        )
+
+        self.expect("register read x0", substrs=["(float = ", ", double = "])
+        self.expect("register read x0", matching=False, substrs=["uint"])
+
+    @skipIfXmlSupportMissing
+    @skipIfRemote
+    def test_union_register_info(self):
+        """register info shows union field descriptions."""
+        self.setup_register_test(
+            """\
+          <union id="fpu_type">
+            <field name="float" type="ieee_single"/>
+            <field name="double" type="ieee_double"/>
+          </union>
+          <reg name="x0" regnum="0" bitsize="64" type="fpu_type"/>
+          <reg name="cpsr" regnum="33" bitsize="32"/>
+          <reg name="pc" bitsize="64"/>"""
+        )
+
+        self.expect(
+            "register info x0",
+            substrs=["Union members:", "float (4 bytes)", "double (8 bytes)"],
+        )
+
+    @skipIfXmlSupportMissing
+    @skipIfRemote
+    def test_union_format_disables_display(self):
+        """Explicit format flag suppresses union annotation."""
+        self.setup_register_test(
+            """\
+          <union id="fpu_type">
+            <field name="float" type="ieee_single"/>
+            <field name="double" type="ieee_double"/>
+          </union>
+          <reg name="x0" regnum="0" bitsize="64" type="fpu_type"/>
+          <reg name="cpsr" regnum="33" bitsize="32"/>
+          <reg name="pc" bitsize="64"/>"""
+        )
+
+        self.expect("register read -f hex x0", matching=False, substrs=["(float = "])
+
+    @skipIfXmlSupportMissing
+    @skipIfRemote
+    def test_union_and_flags_separate_registers(self):
+        """One register uses flags, another uses union, both render correctly."""
+        self.setup_register_test(
+            """\
+          <flags id="cpsr_flags" size="4">
+            <field name="SP" start="0" end="0"/>
+          </flags>
+          <union id="fpu_type">
+            <field name="float" type="ieee_single"/>
+            <field name="double" type="ieee_double"/>
+          </union>
+          <reg name="x0" regnum="0" bitsize="64" type="fpu_type"/>
+          <reg name="cpsr" regnum="33" bitsize="32" type="cpsr_flags"/>
+          <reg name="pc" bitsize="64"/>"""
+        )
+
+        self.expect("register read x0", substrs=["(float = ", ", double = "])
+        self.expect("register read cpsr", substrs=["(SP = "])
+
+    @skipIfXmlSupportMissing
+    @skipIfRemote
+    def test_union_with_vector_fields(self):
+        """Union with vector fields resolved from <vector> elements."""
+        self.setup_register_test(
+            """\
+          <vector id="v4f" type="ieee_single" count="4"/>
+          <vector id="v2d" type="ieee_double" count="2"/>
+          <union id="vec128">
+            <field name="v4_float" type="v4f"/>
+            <field name="v2_double" type="v2d"/>
+            <field name="uint128" type="uint128"/>
+          </union>
+          <reg name="x0" regnum="0" bitsize="64"/>
+          <reg name="cpsr" regnum="33" bitsize="32"/>
+          <reg name="pc" bitsize="64"/>"""
+        )
+
+        # The union should be registered even though we don't have a 128-bit
+        # register to test display with. Just verify no crash on parsing.
+        self.expect("register read x0", substrs=["x0 = "])
+
+    @skipIfXmlSupportMissing
+    @skipIfRemote
+    def test_union_xi_include(self):
+        """Union defined in xi:included file works."""
+        self.setup_multidoc_test(
+            {
+                "target.xml": dedent(
+                    """\
+            <?xml version="1.0"?>
+              <target version="1.0">
+                <architecture>aarch64</architecture>
+                <xi:include href="fpu.xml"/>
+            </target>"""
+                ),
+                "fpu.xml": dedent(
+                    """\
+            <?xml version="1.0"?>
+              <feature name="org.gnu.gdb.aarch64.fpu">
+                <union id="fpu_type">
+                  <field name="float" type="ieee_single"/>
+                  <field name="double" type="ieee_double"/>
+                </union>
+                <reg name="x0" regnum="0" bitsize="64" type="fpu_type"/>
+                <reg name="cpsr" regnum="33" bitsize="32"/>
+                <reg name="pc" bitsize="64"/>
+            </feature>"""
+                ),
+            }
+        )
+
+        self.expect("register read x0", substrs=["(float = ", ", double = "])

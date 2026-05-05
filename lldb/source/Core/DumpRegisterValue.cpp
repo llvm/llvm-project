@@ -22,18 +22,16 @@
 using namespace lldb;
 
 template <typename T>
-static void dump_type_value(lldb_private::CompilerType &fields_type, T value,
+static void dump_type_value(lldb_private::CompilerType &type, T value,
                             lldb_private::ExecutionContextScope *exe_scope,
                             const lldb_private::RegisterInfo &reg_info,
-                            lldb_private::Stream &strm) {
+                            lldb_private::Stream &strm, bool is_flags) {
   lldb::ByteOrder target_order = exe_scope->CalculateProcess()->GetByteOrder();
 
-  // For the bitfield types we generate, it is expected that the fields are
-  // in what is usually a big endian order. Most significant field first.
-  // This is also clang's internal ordering and the order we want to print
-  // them. On a big endian host this all matches up, for a little endian
-  // host we have to swap the order of the fields before display.
-  if (target_order == lldb::ByteOrder::eByteOrderLittle) {
+  // For bitfield (flags) types, fields are in MSB-first order which matches
+  // big endian. On little endian we reverse the field order before display.
+  // For union types, members are full types so no reordering is needed.
+  if (is_flags && target_order == lldb::ByteOrder::eByteOrderLittle) {
     value = reg_info.flags_type->ReverseFieldOrder(value);
   }
 
@@ -45,14 +43,16 @@ static void dump_type_value(lldb_private::CompilerType &fields_type, T value,
       &value, sizeof(T), lldb_private::endian::InlHostByteOrder(), 8};
 
   lldb::ValueObjectSP vobj_sp = lldb_private::ValueObjectConstResult::Create(
-      exe_scope, fields_type, lldb_private::ConstString(), data_extractor);
+      exe_scope, type, lldb_private::ConstString(), data_extractor);
   lldb_private::DumpValueObjectOptions dump_options;
   lldb_private::DumpValueObjectOptions::ChildPrintingDecider decider =
       [](lldb_private::ConstString varname) {
         // Unnamed bit-fields are padding that we don't want to show.
         return varname.GetLength();
       };
-  dump_options.SetChildPrintingDecider(decider).SetHideRootType(true);
+  dump_options.SetChildPrintingDecider(decider)
+      .SetHideRootType(true)
+      .SetShowSummary(false);
 
   if (llvm::Error error = vobj_sp->Dump(strm, dump_options))
     strm << "error: " << toString(std::move(error));
@@ -121,22 +121,34 @@ void lldb_private::DumpRegisterValue(const RegisterValue &reg_val, Stream &s,
                     0,                    // item_bit_offset
                     exe_scope);
 
-  if (!print_flags || !reg_info.flags_type || !exe_scope || !target_sp ||
+  if (!print_flags || !exe_scope || !target_sp ||
       (reg_info.byte_size != 4 && reg_info.byte_size != 8))
     return;
 
-  CompilerType fields_type = target_sp->GetRegisterType(
-      reg_info.name, *reg_info.flags_type, reg_info.byte_size);
+  CompilerType type_to_dump;
+  bool is_flags = false;
+
+  if (reg_info.flags_type) {
+    type_to_dump = target_sp->GetRegisterType(
+        reg_info.name, *reg_info.flags_type, reg_info.byte_size);
+    is_flags = true;
+  } else if (reg_info.union_type) {
+    type_to_dump = target_sp->GetRegisterUnionType(
+        reg_info.name, *reg_info.union_type, reg_info.byte_size);
+  }
+
+  if (!type_to_dump)
+    return;
 
   // Use a new stream so we can remove a trailing newline later.
   StreamString fields_stream;
 
   if (reg_info.byte_size == 4) {
-    dump_type_value(fields_type, reg_val.GetAsUInt32(), exe_scope, reg_info,
-                    fields_stream);
+    dump_type_value(type_to_dump, reg_val.GetAsUInt32(), exe_scope, reg_info,
+                    fields_stream, is_flags);
   } else {
-    dump_type_value(fields_type, reg_val.GetAsUInt64(), exe_scope, reg_info,
-                    fields_stream);
+    dump_type_value(type_to_dump, reg_val.GetAsUInt64(), exe_scope, reg_info,
+                    fields_stream, is_flags);
   }
 
   // Registers are indented like:

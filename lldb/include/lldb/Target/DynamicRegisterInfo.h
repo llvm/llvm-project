@@ -42,6 +42,7 @@ public:
     uint32_t value_reg_offset = 0;
     // Non-null if there is an XML provided type.
     const RegisterFlags *flags_type = nullptr;
+    const RegisterUnion *union_type = nullptr;
   };
 
   DynamicRegisterInfo() = default;

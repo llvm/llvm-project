@@ -2640,6 +2640,17 @@ CompilerType Target::GetRegisterType(const std::string &name,
   return m_register_type_builder_sp->GetRegisterType(name, flags, byte_size);
 }
 
+CompilerType
+Target::GetRegisterUnionType(const std::string &name,
+                             const lldb_private::RegisterUnion &union_type,
+                             uint32_t byte_size) {
+  if (!m_register_type_builder_sp)
+    m_register_type_builder_sp = PluginManager::GetRegisterTypeBuilder(*this);
+  assert(m_register_type_builder_sp);
+  return m_register_type_builder_sp->GetRegisterUnionType(name, union_type,
+                                                          byte_size);
+}
+
 std::vector<lldb::TypeSystemSP>
 Target::GetScratchTypeSystems(bool create_on_demand) {
   if (!m_valid)

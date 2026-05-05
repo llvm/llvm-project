@@ -530,6 +530,10 @@ private:
   // directly because the map may reallocate. Pointers to these are contained
   // within instances of RegisterFlags.
   llvm::StringMap<std::unique_ptr<FieldEnum>> m_registers_enum_types;
+
+  // Union types defined in target XML. Same lifetime and pointer-stability
+  // requirements as m_registers_flags_types.
+  llvm::StringMap<std::unique_ptr<RegisterUnion>> m_registers_union_types;
 };
 
 } // namespace process_gdb_remote

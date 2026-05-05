@@ -63,7 +63,7 @@ void lldb_private::DumpRegisterInfo(Stream &strm, RegisterContext &ctx,
 
   DoDumpRegisterInfo(strm, info.name, info.alt_name, info.byte_size,
                      invalidates, read_from, in_sets, info.flags_type,
-                     terminal_width);
+                     info.union_type, terminal_width);
 }
 
 template <typename ElementType>
@@ -89,7 +89,7 @@ void lldb_private::DoDumpRegisterInfo(
     const std::vector<const char *> &invalidates,
     const std::vector<const char *> &read_from,
     const std::vector<SetInfo> &in_sets, const RegisterFlags *flags_type,
-    uint32_t terminal_width) {
+    const RegisterUnion *union_type, uint32_t terminal_width) {
   strm << "       Name: " << name;
   if (alt_name)
     strm << " (" << alt_name << ")";
@@ -117,5 +117,17 @@ void lldb_private::DoDumpRegisterInfo(
     std::string enumerators = flags_type->DumpEnums(terminal_width);
     if (enumerators.size())
       strm << "\n\n" << enumerators;
+  }
+
+  if (union_type) {
+    strm << "\n\n  Union members:";
+    for (const auto &field : union_type->GetFields()) {
+      if (field.IsVector())
+        strm.Printf("\n    %s (%u x %u bytes)", field.GetName().c_str(),
+                    field.GetVectorCount(), field.GetByteSize());
+      else
+        strm.Printf("\n    %s (%u bytes)", field.GetName().c_str(),
+                    field.GetByteSize());
+    }
   }
 }
