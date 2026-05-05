@@ -7465,14 +7465,22 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
 
   auto CheckMismatchedTypeAwareAllocators =
       [&](OverloadedOperatorKind NewKind, OverloadedOperatorKind DeleteKind) {
-        if (!TypeAwareAllocatorDeclKinds.contains(NewKind) &&
-            !TypeAwareAllocatorDeclKinds.contains(DeleteKind))
+        bool HasTypeAwareNew =
+          TypeAwareAllocatorDeclKinds.contains(NewKind);
+        bool HasClassScopedNew =
+          AllocatorDeclsKinds.contains(NewKind);
+        bool HasTypeAwareDelete =
+          TypeAwareAllocatorDeclKinds.contains(DeleteKind);
+        bool HasClassScopedDelete =
+          AllocatorDeclsKinds.contains(DeleteKind);
+
+        // No type aware allocators so nothing to do.
+        if (!HasTypeAwareNew && !HasTypeAwareDelete)
           return;
-        if (TypeAwareAllocatorDeclKinds.contains(NewKind) &&
-            AllocatorDeclsKinds.contains(DeleteKind))
-          return;
-        if (TypeAwareAllocatorDeclKinds.contains(DeleteKind) &&
-            AllocatorDeclsKinds.contains(NewKind))
+
+        // There is at least one type aware allocation function, so we must
+        // have both operators new and delete declared in the class.
+        if (HasClassScopedNew && HasClassScopedDelete)
           return;
 
         bool TypeAwareOperatorIsNew =

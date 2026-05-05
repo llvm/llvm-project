@@ -3142,20 +3142,21 @@ bool Sema::FindAllocationFunctions(
       [&](bool IsPlacementOperator, TypeAwareCleanupOperatorError Error,
           FunctionDecl *OperatorDelete = 0) {
         assert(isTypeAwareAllocation(IAP.PassTypeIdentity));
-        if (Diagnose) {
-          Diag(StartLoc, diag::err_type_aware_new_missing_cleanup_operator)
-              << OperatorNew->getDeclName() << Error << IsPlacementOperator
-              << DeleteName;
-          Diag(OperatorNew->getLocation(),
-               diag::note_type_aware_operator_declared)
-              << OperatorNew->getDeclName() << OperatorNewContext;
-          if (Error == TypeAwareCleanupOperatorError::MismatchedScope) {
-            DeclContext *OperatorDeleteContext =
-                GetRedeclContext(OperatorDelete);
-            Diag(OperatorDelete->getLocation(),
-                 diag::note_type_aware_operator_declared)
-                << OperatorDelete->getDeclName() << OperatorDeleteContext;
-          }
+        if (!Diagnose)
+          return;
+
+        Diag(StartLoc, diag::err_type_aware_new_missing_cleanup_operator)
+            << OperatorNew->getDeclName() << Error << IsPlacementOperator
+            << DeleteName;
+        Diag(OperatorNew->getLocation(),
+              diag::note_type_aware_operator_declared)
+            << OperatorNew->getDeclName() << OperatorNewContext;
+
+        if (Error == TypeAwareCleanupOperatorError::MismatchedScope) {
+          DeclContext *OperatorDeleteContext = GetRedeclContext(OperatorDelete);
+          Diag(OperatorDelete->getLocation(),
+                diag::note_type_aware_operator_declared)
+              << OperatorDelete->getDeclName() << OperatorDeleteContext;
         }
       };
 
