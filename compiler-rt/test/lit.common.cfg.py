@@ -581,7 +581,9 @@ if config.target_os == "Darwin":
         os_detection_prefix = []
 
     darwin_os_version = lit.util.runCommandCached(
-        os_detection_prefix + ["sw_vers", "-productVersion"], universal_newlines=True, text=True
+        os_detection_prefix + ["sw_vers", "-productVersion"],
+        universal_newlines=True,
+        text=True,
     )
     darwin_os_version = tuple(int(x) for x in darwin_os_version.strip().split("."))
 
@@ -943,7 +945,9 @@ if config.target_os == "Darwin":
     if lit.util.which("log"):
         # Querying the log can only done by a privileged user so
         # so check if we can query the log.
-        res = lit.util.runCommandCached(["log", "show", "--last", "1m", "--predicate", "1 == 0"], allow_failure=True)
+        res = lit.util.runCommandCached(
+            ["log", "show", "--last", "1m", "--predicate", "1 == 0"], allow_failure=True
+        )
         if res is not None:
             config.available_features.add("darwin_log_cmd")
     else:

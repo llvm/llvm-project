@@ -442,6 +442,7 @@ def killProcessAndChildren(pid):
         except psutil.NoSuchProcess:
             pass
 
+
 @functools.cache
 def _runCommandCachedInner(cmd, allow_failure, **kwargs):
     try:
@@ -456,6 +457,7 @@ def _runCommandCachedInner(cmd, allow_failure, **kwargs):
         else:
             lit_config.fatal(msg)
         return None
+
 
 def runCommandCached(cmd, allow_failure=False, **kwargs):
     if type(cmd) is list:
