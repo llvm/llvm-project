@@ -1,4 +1,4 @@
-// RUN: mlir-opt -finalize-memref-to-llvm -convert-func-to-llvm -finalize-memref-to-llvm %s | FileCheck %s
+// RUN: mlir-opt -convert-func-to-llvm -finalize-memref-to-llvm %s | FileCheck %s
 
 // Verify that memref.dealloc lowering does not create a duplicate @free
 // declaration when a func.func @free already exists in the module (e.g. from

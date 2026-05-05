@@ -23,6 +23,7 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/IRMapping.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/Support/DebugLog.h"
 #include "llvm/Support/MathExtras.h"
@@ -45,6 +46,31 @@ namespace {
 
 static bool isStaticStrideOrOffset(int64_t strideOrOffset) {
   return ShapedType::isStatic(strideOrOffset);
+}
+
+/// If a non-LLVM symbol with the given name exists and is an external function
+/// declaration with a matching signature, erase it so that lookupOrCreateFn can
+/// later create an llvm.func with the same name.  This handles Fortran
+/// `bind(c, name="free")` producing a func.func @free that conflicts with the
+/// llvm.func @free that memref lowering creates.
+static void eraseConflictingDeclaration(Operation *module, StringRef name,
+                                        ArrayRef<Type> argTypes,
+                                        unsigned numResults) {
+  Operation *existingOp = SymbolTable::lookupSymbolIn(module, name);
+  if (!existingOp)
+    return;
+  if (isa<LLVM::LLVMFuncOp>(existingOp))
+    return;
+  auto funcIface = dyn_cast<FunctionOpInterface>(existingOp);
+  if (!funcIface || !funcIface.isExternal())
+    return;
+  if (funcIface.getNumArguments() != argTypes.size() ||
+      funcIface.getNumResults() != numResults)
+    return;
+  for (unsigned i = 0; i < argTypes.size(); ++i)
+    if (funcIface.getArgumentTypes()[i] != argTypes[i])
+      return;
+  existingOp->erase();
 }
 
 static FailureOr<LLVM::LLVMFuncOp>
@@ -2127,6 +2153,15 @@ struct FinalizeMemRefToLLVMConversionPass
 
     LLVMTypeConverter typeConverter(&getContext(), options,
                                     &dataLayoutAnalysis);
+
+    // Erase non-LLVM external function declarations that would conflict with
+    // the llvm.func declarations that memref alloc/dealloc lowering creates.
+    auto ptrTy = LLVM::LLVMPointerType::get(&getContext());
+    auto indexTy = typeConverter.getIndexType();
+    eraseConflictingDeclaration(op, "free", {ptrTy}, 0);
+    eraseConflictingDeclaration(op, "malloc", {indexTy}, 1);
+    eraseConflictingDeclaration(op, "aligned_alloc", {indexTy, indexTy}, 1);
+
     RewritePatternSet patterns(&getContext());
     SymbolTableCollection symbolTables;
     populateFinalizeMemRefToLLVMConversionPatterns(typeConverter, patterns,
