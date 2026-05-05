@@ -46,9 +46,10 @@ public:
       return;
 
     TypeSwitch<SPIRVType>(type)
-        .Case<CooperativeMatrixType, PointerType, ScalarType, TensorArmType>(
+        .Case<CooperativeMatrixType, ImageType, PointerType, ScalarType,
+              TensorArmType>(
             [this](auto concreteType) { addConcrete(concreteType); })
-        .Case<ArrayType, ImageType, MatrixType, RuntimeArrayType, VectorType>(
+        .Case<ArrayType, MatrixType, RuntimeArrayType, VectorType>(
             [this](auto concreteType) { add(concreteType.getElementType()); })
         .Case([this](SampledImageType concreteType) {
           add(concreteType.getImageType());
@@ -66,6 +67,7 @@ public:
 private:
   // Types that add unique extensions.
   void addConcrete(CooperativeMatrixType type);
+  void addConcrete(ImageType type);
   void addConcrete(PointerType type);
   void addConcrete(ScalarType type);
   void addConcrete(TensorArmType type);
@@ -429,12 +431,72 @@ ImageSamplerUseInfo ImageType::getSamplerUseInfo() const {
 
 ImageFormat ImageType::getImageFormat() const { return getImpl()->format; }
 
+void TypeExtensionVisitor::addConcrete(ImageType type) {
+  // OpTypeImage with a 64-bit integer Sampled Type requires the
+  // SPV_EXT_shader_image_int64 extension (companion to Int64ImageEXT).
+  if (auto intTy = dyn_cast<IntegerType>(type.getElementType());
+      intTy && intTy.getWidth() == 64)
+    pushExts<Extension::SPV_EXT_shader_image_int64>();
+  add(type.getElementType());
+}
+
 void TypeCapabilityVisitor::addConcrete(ImageType type) {
-  if (auto dimCaps = spirv::getCapabilities(type.getDim()))
-    capabilities.push_back(*dimCaps);
+  // Capability requirements for OpTypeImage are determined jointly by Dim,
+  // Sampled, MS, and Arrayed - see the SPIR-V spec's "Capabilities" column on
+  // OpTypeImage.
+  Dim dim = type.getDim();
+  bool isMultisampled =
+      type.getSamplingInfo() == ImageSamplingInfo::MultiSampled;
+  bool isArrayed = type.getArrayedInfo() == ImageArrayedInfo::Arrayed;
+  ImageSamplerUseInfo sampler = type.getSamplerUseInfo();
+  bool noSampler = sampler == ImageSamplerUseInfo::NoSampler;
+  bool needSampler = sampler == ImageSamplerUseInfo::NeedSampler;
+
+  switch (dim) {
+  case Dim::Dim1D:
+    if (needSampler)
+      pushCaps<Capability::Sampled1D>();
+    else if (noSampler)
+      pushCaps<Capability::Image1D>();
+    else
+      pushCaps<Capability::Image1D, Capability::Sampled1D>();
+    break;
+  case Dim::Dim2D:
+    if (isMultisampled && noSampler)
+      pushCaps<Capability::StorageImageMultisample>();
+    if (isMultisampled && isArrayed)
+      pushCaps<Capability::ImageMSArray>();
+    break;
+  case Dim::Dim3D:
+    break;
+  case Dim::Cube:
+    pushCaps<Capability::Shader>();
+    if (isArrayed)
+      pushCaps<Capability::ImageCubeArray>();
+    break;
+  case Dim::Rect:
+    pushCaps<Capability::ImageRect, Capability::SampledRect>();
+    break;
+  case Dim::Buffer:
+    if (needSampler)
+      pushCaps<Capability::SampledBuffer>();
+    else if (noSampler)
+      pushCaps<Capability::ImageBuffer>();
+    else
+      pushCaps<Capability::ImageBuffer, Capability::SampledBuffer>();
+    break;
+  case Dim::SubpassData:
+    pushCaps<Capability::InputAttachment>();
+    break;
+  }
 
   if (auto fmtCaps = spirv::getCapabilities(type.getImageFormat()))
     capabilities.push_back(*fmtCaps);
+
+  // OpTypeImage with a 64-bit integer Sampled Type requires Int64ImageEXT.
+  if (auto intTy = dyn_cast<IntegerType>(type.getElementType());
+      intTy && intTy.getWidth() == 64)
+    pushCaps<Capability::Int64ImageEXT>();
 
   add(type.getElementType());
 }
