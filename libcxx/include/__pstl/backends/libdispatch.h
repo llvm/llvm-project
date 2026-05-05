@@ -548,16 +548,16 @@ struct __transform_reduce<__libdispatch_backend_tag, _ExecutionPolicy>
     : __cpu_parallel_transform_reduce<__libdispatch_backend_tag, _ExecutionPolicy> {};
 
 template <class _ExecutionPolicy>
+struct __transform_reduce_binary<__libdispatch_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_transform_reduce_binary<__libdispatch_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
 struct __transform_exclusive_scan<__libdispatch_backend_tag, _ExecutionPolicy>
     : __cpu_parallel_transform_exclusive_scan<__libdispatch_backend_tag, _ExecutionPolicy> {};
 
 template <class _ExecutionPolicy>
 struct __transform_inclusive_scan<__libdispatch_backend_tag, _ExecutionPolicy>
     : __cpu_parallel_transform_inclusive_scan<__libdispatch_backend_tag, _ExecutionPolicy> {};
-
-template <class _ExecutionPolicy>
-struct __transform_reduce_binary<__libdispatch_backend_tag, _ExecutionPolicy>
-    : __cpu_parallel_transform_reduce_binary<__libdispatch_backend_tag, _ExecutionPolicy> {};
 
 // Not mandatory, but better optimized
 template <class _ExecutionPolicy>

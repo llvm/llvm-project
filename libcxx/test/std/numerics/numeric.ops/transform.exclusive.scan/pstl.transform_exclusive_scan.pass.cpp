@@ -37,7 +37,7 @@ template <class Iter>
 struct Test {
   template <class Policy>
   void operator()(Policy&& policy) {
-    for (int size : {0, 1, 2, 100, 350}) {
+    for (int size : {0, 1, 2, 100, 350, 10000}) {
       std::vector<int> a(size);
       for (int i = 0; i != size; ++i)
         a[i] = i;
