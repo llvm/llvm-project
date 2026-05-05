@@ -70,8 +70,6 @@ liveins:
 machineFunctionInfo:
   params:          [  ]
   results:         [ i32 ]
-  wasmEHFuncInfo:
-    3:               4
 body: |
   ; CHECK: TRY 127
   ; CHECK:   TRY 127
@@ -90,7 +88,7 @@ body: |
   ; CHECK:   RETHROW
   ; CHECK: END_TRY
   bb.0:
-    successors: %bb.1, %bb.3
+    successors: %bb.1, %bb.3, %bb.4
     EH_LABEL <mcsymbol .Ltmp0>
     CALL @foo, implicit-def dead $arguments, implicit $sp32, implicit $sp64
     EH_LABEL <mcsymbol .Ltmp1>

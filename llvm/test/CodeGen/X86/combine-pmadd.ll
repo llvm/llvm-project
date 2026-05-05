@@ -331,3 +331,144 @@ define i1 @pmaddwd_pcmpgt_infinite_loop() {
   %8 = icmp eq i4 %7, 0
   ret i1 %8
 }
+
+; If the shuffle matches, but there is no multiply, introduce a trivial multiply by 1.
+define <8 x i32> @sext_pairwise_add(<16 x i16> %x) {
+; SSE-LABEL: sext_pairwise_add:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pmovsxbw {{.*#+}} xmm2 = [1,1,1,1,1,1,1,1]
+; SSE-NEXT:    pmaddwd %xmm2, %xmm0
+; SSE-NEXT:    pmaddwd %xmm2, %xmm1
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: sext_pairwise_add:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1,1,1,1,1,1,1,1]
+; AVX1-NEXT:    vpmaddwd %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpmaddwd %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: sext_pairwise_add:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpmaddwd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; AVX2-NEXT:    retq
+  %1 = sext <16 x i16> %x to <16 x i32>
+  %2 = shufflevector <16 x i32> %1, <16 x i32> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+  %3 = shufflevector <16 x i32> %1, <16 x i32> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+  %4 = add nsw <8 x i32> %2, %3
+  ret <8 x i32> %4
+}
+
+define <8 x i32> @combine_with_mul(<16 x i16> %v) {
+; SSE-LABEL: combine_with_mul:
+; SSE:       # %bb.0: # %bb1
+; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [4096,1,4096,1,4096,1,4096,1]
+; SSE-NEXT:    pmaddwd %xmm2, %xmm0
+; SSE-NEXT:    pmaddwd %xmm2, %xmm1
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: combine_with_mul:
+; AVX1:       # %bb.0: # %bb1
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [4096,1,4096,1,4096,1,4096,1]
+; AVX1-NEXT:    vpmaddwd %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpmaddwd %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: combine_with_mul:
+; AVX2:       # %bb.0: # %bb1
+; AVX2-NEXT:    vpmaddwd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [4096,1,4096,1,4096,1,4096,1,4096,1,4096,1,4096,1,4096,1]
+; AVX2-NEXT:    retq
+bb1:
+  %0 = sext <16 x i16> %v to <16 x i32>
+  %1 = mul nsw <16 x i32> %0, <i32 4096, i32 1, i32 4096, i32 1, i32 4096, i32 1, i32 4096, i32 1, i32 4096, i32 1, i32 4096, i32 1, i32 4096, i32 1, i32 4096, i32 1>
+  %2 = shufflevector <16 x i32> %1, <16 x i32> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+  %3 = shufflevector <16 x i32> %1, <16 x i32> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+  %4 = add <8 x i32> %2, %3
+  ret <8 x i32> %4
+}
+
+define <8 x i32> @combine_with_shl(<16 x i16> %v) {
+; SSE-LABEL: combine_with_shl:
+; SSE:       # %bb.0: # %bb1
+; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [4096,1,4096,1,4096,1,4096,1]
+; SSE-NEXT:    pmaddwd %xmm2, %xmm0
+; SSE-NEXT:    pmaddwd %xmm2, %xmm1
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: combine_with_shl:
+; AVX1:       # %bb.0: # %bb1
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [4096,1,4096,1,4096,1,4096,1]
+; AVX1-NEXT:    vpmaddwd %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpmaddwd %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: combine_with_shl:
+; AVX2:       # %bb.0: # %bb1
+; AVX2-NEXT:    vpmaddwd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [4096,1,4096,1,4096,1,4096,1,4096,1,4096,1,4096,1,4096,1]
+; AVX2-NEXT:    retq
+bb1:
+  %0 = sext <16 x i16> %v to <16 x i32>
+  %1 = shl nsw <16 x i32> %0, <i32 12, i32 0, i32 12, i32 0, i32 12, i32 0, i32 12, i32 0, i32 12, i32 0, i32 12, i32 0, i32 12, i32 0, i32 12, i32 0>
+  %2 = shufflevector <16 x i32> %1, <16 x i32> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+  %3 = shufflevector <16 x i32> %1, <16 x i32> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+  %4 = add <8 x i32> %2, %3
+  ret <8 x i32> %4
+}
+
+; This version cannot use `vpmaddwd` because the multiply would overflow an i16.
+define <8 x i32> @combine_with_shl_overflow(<16 x i16> %v) {
+; SSE-LABEL: combine_with_shl_overflow:
+; SSE:       # %bb.0: # %bb1
+; SSE-NEXT:    pxor %xmm2, %xmm2
+; SSE-NEXT:    pxor %xmm4, %xmm4
+; SSE-NEXT:    punpckhwd {{.*#+}} xmm4 = xmm4[4],xmm1[4],xmm4[5],xmm1[5],xmm4[6],xmm1[6],xmm4[7],xmm1[7]
+; SSE-NEXT:    pxor %xmm3, %xmm3
+; SSE-NEXT:    punpcklwd {{.*#+}} xmm3 = xmm3[0],xmm1[0],xmm3[1],xmm1[1],xmm3[2],xmm1[2],xmm3[3],xmm1[3]
+; SSE-NEXT:    phaddd %xmm4, %xmm3
+; SSE-NEXT:    pxor %xmm1, %xmm1
+; SSE-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
+; SSE-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3]
+; SSE-NEXT:    phaddd %xmm1, %xmm2
+; SSE-NEXT:    movdqa %xmm2, %xmm0
+; SSE-NEXT:    movdqa %xmm3, %xmm1
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: combine_with_shl_overflow:
+; AVX1:       # %bb.0: # %bb1
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3]
+; AVX1-NEXT:    vpunpcklwd {{.*#+}} xmm4 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3]
+; AVX1-NEXT:    vphaddd %xmm3, %xmm4, %xmm3
+; AVX1-NEXT:    vpunpckhwd {{.*#+}} xmm1 = xmm2[4],xmm1[4],xmm2[5],xmm1[5],xmm2[6],xmm1[6],xmm2[7],xmm1[7]
+; AVX1-NEXT:    vpunpckhwd {{.*#+}} xmm0 = xmm2[4],xmm0[4],xmm2[5],xmm0[5],xmm2[6],xmm0[6],xmm2[7],xmm0[7]
+; AVX1-NEXT:    vphaddd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm3, %ymm1
+; AVX1-NEXT:    vshufpd {{.*#+}} ymm0 = ymm1[0],ymm0[0],ymm1[3],ymm0[3]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: combine_with_shl_overflow:
+; AVX2:       # %bb.0: # %bb1
+; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX2-NEXT:    vpslld $16, %ymm0, %ymm0
+; AVX2-NEXT:    vpslld $16, %ymm1, %ymm1
+; AVX2-NEXT:    vphaddd %ymm0, %ymm1, %ymm0
+; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
+; AVX2-NEXT:    retq
+bb1:
+  %0 = sext <16 x i16> %v to <16 x i32>
+  %1 = shl nsw <16 x i32> %0, splat (i32 16)
+  %2 = shufflevector <16 x i32> %1, <16 x i32> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+  %3 = shufflevector <16 x i32> %1, <16 x i32> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+  %4 = add <8 x i32> %2, %3
+  ret <8 x i32> %4
+}

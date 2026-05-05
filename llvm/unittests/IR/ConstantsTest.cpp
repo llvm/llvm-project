@@ -260,7 +260,7 @@ TEST(ConstantsTest, AsInstructionsTest) {
   // FIXME: getGetElementPtr() actually creates an inbounds ConstantGEP,
   //        not a normal one!
   // CHECK(ConstantExpr::getGetElementPtr(Global, V, false),
-  //      "getelementptr i32*, i32** @dummy, i32 1");
+  //      "getelementptr ptr, ptr @dummy, i32 1");
   CHECK(ConstantExpr::getInBoundsGetElementPtr(PointerType::getUnqual(Context),
                                                Global, V),
         "getelementptr inbounds ptr, ptr @dummy, i32 1");
@@ -767,6 +767,34 @@ TEST(ConstantsTest, GetSplatValueRoundTrip) {
           EXPECT_EQ(SplatVal, C);
         }
       }
+    }
+  }
+}
+
+TEST(ConstantsTest, ConstantPointerNullVectorSplat) {
+  LLVMContext Context;
+
+  PointerType *PtrTy = PointerType::getUnqual(Context);
+  Constant *ScalarNull = ConstantPointerNull::get(PtrTy);
+
+  for (unsigned Min : {1, 2, 8}) {
+    ElementCount ScalableEC = ElementCount::getScalable(Min);
+    ElementCount FixedEC = ElementCount::getFixed(Min);
+
+    for (ElementCount EC : {ScalableEC, FixedEC}) {
+      VectorType *VecTy = VectorType::get(PtrTy, EC);
+      Constant *Null = Constant::getNullValue(VecTy);
+
+      ASSERT_TRUE(isa<ConstantPointerNull>(Null));
+      EXPECT_EQ(VecTy, Null->getType());
+      EXPECT_TRUE(Null->isNullValue());
+      EXPECT_EQ(ScalarNull, Null->getSplatValue());
+      EXPECT_EQ(ScalarNull, Null->getAggregateElement(0U));
+      EXPECT_EQ(PtrTy, cast<ConstantPointerNull>(Null)->getPointerType());
+
+      Constant *Splat = ConstantVector::getSplat(EC, ScalarNull);
+      EXPECT_EQ(Null, Splat);
+      EXPECT_EQ(ScalarNull, Splat->getSplatValue());
     }
   }
 }

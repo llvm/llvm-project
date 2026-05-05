@@ -105,7 +105,7 @@ body: |
     ; GCN-NEXT: $vgpr3 = V_LSHLREV_B32_e64 16, $vgpr2, implicit $exec
     ; GCN-NEXT: $vgpr4 = V_MOV_B32_e32 1, implicit $exec
     ; GCN-NEXT: $vgpr0 = nofpexcept V_ADD_F32_e32 killed $vgpr3, killed $vgpr4, implicit $mode, implicit $exec
-    $vgpr2 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec:: (load (s32) from `float addrspace(1)* undef`, align 4, addrspace 1)
+    $vgpr2 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec:: (load (s32) from `ptr addrspace(1) undef`, align 4, addrspace 1)
     $vgpr3 = V_LSHLREV_B32_e64 16, $vgpr2, implicit $exec
     $vgpr4 = V_MOV_B32_e32 1, implicit $exec
     $vgpr0 = nofpexcept V_ADD_F32_e32 killed $vgpr3, killed $vgpr4, implicit $mode, implicit $exec
@@ -770,9 +770,9 @@ body: |
     ; GCN-NEXT: DS_WRITE_B32_gfx9 killed $vgpr0, killed $vgpr1, 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(3) undef`, addrspace 3)
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 20, implicit $exec
      $vgpr1 = V_MOV_B32_e32 1, implicit $exec
-     $vgpr0 = DS_READ_B32_gfx9 killed $vgpr1, 0, 0, implicit $exec :: (load (s32) from `i32 addrspace(3)* undef`)
+     $vgpr0 = DS_READ_B32_gfx9 killed $vgpr1, 0, 0, implicit $exec :: (load (s32) from `ptr addrspace(3) undef`)
      $vgpr1 = V_MOV_B32_e32 2, implicit $exec
-     DS_WRITE_B32_gfx9 killed $vgpr0, killed $vgpr1, 0, 0, implicit $exec :: (store (s32) into `i32 addrspace(3)* undef`)
+     DS_WRITE_B32_gfx9 killed $vgpr0, killed $vgpr1, 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(3) undef`)
      $vgpr0 = V_MOV_B32_e32 20, implicit $exec
 ...
 

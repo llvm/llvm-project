@@ -10,6 +10,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcError.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -26,6 +27,7 @@ namespace llvm {
 namespace orc {
 
 char ResourceTrackerDefunct::ID = 0;
+char JITDylibDefunct::ID = 0;
 char FailedToMaterialize::ID = 0;
 char SymbolsNotFound::ID = 0;
 char SymbolsCouldNotBeRemoved::ID = 0;
@@ -77,6 +79,15 @@ std::error_code ResourceTrackerDefunct::convertToErrorCode() const {
 
 void ResourceTrackerDefunct::log(raw_ostream &OS) const {
   OS << "Resource tracker " << (void *)RT.get() << " became defunct";
+}
+
+std::error_code JITDylibDefunct::convertToErrorCode() const {
+  return orcError(OrcErrorCode::UnknownORCError);
+}
+
+void JITDylibDefunct::log(raw_ostream &OS) const {
+  OS << "JITDylib " << JD->getName() << " (" << (void *)JD.get()
+     << ") is defunct";
 }
 
 FailedToMaterialize::FailedToMaterialize(
@@ -1566,9 +1577,16 @@ void LookupTask::printDescription(raw_ostream &OS) { OS << "Lookup task"; }
 void LookupTask::run() { LS.continueLookup(Error::success()); }
 
 ExecutionSession::ExecutionSession(std::unique_ptr<ExecutorProcessControl> EPC)
-    : EPC(std::move(EPC)) {
+    : EPC(std::move(EPC)), BootstrapJD(createBareJITDylib("<bootstrap>")) {
   // Associated EPC and this.
   this->EPC->ES = this;
+  SymbolMap BootstrapSymbols;
+  for (auto &[Name, Ptr] : this->EPC->getBootstrapSymbolsMap())
+    BootstrapSymbols[intern(Name)] =
+        ExecutorSymbolDef(Ptr, JITSymbolFlags::Exported);
+  // Can't fail: BootstrapJD is a new, empty JD and the BootstrapSymbols
+  // variable is a map, so can't contain duplicates.
+  cantFail(BootstrapJD.define(absoluteSymbols(std::move(BootstrapSymbols))));
 }
 
 ExecutionSession::~ExecutionSession() {
@@ -1580,12 +1598,15 @@ ExecutionSession::~ExecutionSession() {
 Error ExecutionSession::endSession() {
   LLVM_DEBUG(dbgs() << "Ending ExecutionSession " << this << "\n");
 
+  WaitingOnGraph::OpRecorder *GOpRecorderToEnd = nullptr;
   auto JDsToRemove = runSessionLocked([&] {
 
 #ifdef EXPENSIVE_CHECKS
     verifySessionState("Entering ExecutionSession::endSession");
 #endif
 
+    if (SessionOpen)
+      GOpRecorderToEnd = GOpRecorder;
     SessionOpen = false;
     return JDs;
   });
@@ -1595,6 +1616,9 @@ Error ExecutionSession::endSession() {
   auto Err = removeJITDylibs(std::move(JDsToRemove));
 
   Err = joinErrors(std::move(Err), EPC->disconnect());
+
+  if (GOpRecorderToEnd)
+    GOpRecorderToEnd->recordEnd();
 
   return Err;
 }
@@ -1897,9 +1921,9 @@ Error ExecutionSession::registerJITDispatchHandlers(
   return Error::success();
 }
 
-void ExecutionSession::runJITDispatchHandler(SendResultFunction SendResult,
-                                             ExecutorAddr HandlerFnTagAddr,
-                                             ArrayRef<char> ArgBuffer) {
+void ExecutionSession::runJITDispatchHandler(
+    SendResultFunction SendResult, ExecutorAddr HandlerFnTagAddr,
+    shared::WrapperFunctionBuffer ArgBytes) {
 
   std::shared_ptr<JITDispatchHandlerFunction> F;
   {
@@ -1910,7 +1934,7 @@ void ExecutionSession::runJITDispatchHandler(SendResultFunction SendResult,
   }
 
   if (F)
-    (*F)(std::move(SendResult), ArgBuffer.data(), ArgBuffer.size());
+    (*F)(std::move(SendResult), ArgBytes.data(), ArgBytes.size());
   else
     SendResult(shared::WrapperFunctionBuffer::createOutOfBandError(
         ("No function registered for tag " +
@@ -2978,7 +3002,7 @@ Error ExecutionSession::OL_notifyEmitted(
           std::move(Residual), WaitingOnGraph::ContainerElementsMap()));
   }
 
-  auto SR = WaitingOnGraph::simplify(std::move(SNs));
+  auto SR = WaitingOnGraph::simplify(std::move(SNs), GOpRecorder);
 
   LLVM_DEBUG({
     dbgs() << "  Simplified dependencies:\n";
@@ -3096,6 +3120,10 @@ ExecutionSession::IL_failSymbols(JITDylib &JD,
   verifySessionState("entering ExecutionSession::IL_failSymbols");
 #endif
 
+  // Early out in the easy case.
+  if (SymbolsToFail.empty())
+    return {};
+
   JITDylib::AsynchronousSymbolQuerySet FailedQueries;
   auto Fail = [&](JITDylib *FailJD, NonOwningSymbolStringPtr FailSym) {
     auto I = FailJD->Symbols.find_as(FailSym);
@@ -3124,7 +3152,7 @@ ExecutionSession::IL_failSymbols(JITDylib &JD,
   for (auto &Sym : SymbolsToFail)
     JDToFail.insert(NonOwningSymbolStringPtr(Sym));
 
-  auto FailedSNs = G.fail(ToFail);
+  auto FailedSNs = G.fail(ToFail, GOpRecorder);
 
   for (auto &SN : FailedSNs) {
     for (auto &[FailJD, Defs] : SN->defs()) {

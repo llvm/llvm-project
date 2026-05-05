@@ -1,9 +1,13 @@
 ;RUN: opt -mtriple='arm64-' %s -S -passes='module(coro-early),cgscc(coro-split,simplifycfg)' -o - | FileCheck %s
 
+; CHECK-LABEL: define swifttailcc void @coroutineA
+; CHECK-SAME:    (ptr swiftasync %[[frame_ptr:.*]],
 ; CHECK:  %.debug = alloca double, align 8
 ; CHECK-NEXT:    #dbg_declare(ptr %{{.*}}, !{{[0-9]+}}, !DIExpression(DW_OP_deref), !{{[0-9]+}})
 ; CHECK-NEXT:  store double %{{[0-9]+}}, ptr %{{.*}}, align 8
-; CHECK-NEXT:    #dbg_declare(ptr %arg, !{{[0-9]+}}, !DIExpression(DW_OP_plus_uconst, 24), !{{[0-9]+}})
+; CHECK:       %[[frame_ptr_alloca:.*]] = alloca ptr,
+; CHECK-NEXT:  #dbg_declare(ptr %[[frame_ptr_alloca]], !{{[0-9]+}}, !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 24), !{{[0-9]+}})
+; CHECK-NEXT:  store ptr %[[frame_ptr]], ptr %[[frame_ptr_alloca]]
 
 ; ModuleID = '/Users/srastogi/Development/llvm-project-2/llvm/test/Transforms/Coroutines/declare-value.ll'
 source_filename = "/Users/srastogi/Development/llvm-project-2/llvm/test/Transforms/Coroutines/declare-value.ll"
@@ -52,17 +56,19 @@ attributes #0 = { presplitcoroutine }
 attributes #1 = { nomerge nounwind }
 attributes #2 = { nounwind }
 
+!12 = !{null}
+!13 = !DISubroutineType(types: !12)
 !llvm.module.flags = !{!0}
 
 !0 = !{i32 2, !"Debug Info Version", i32 3}
-!1 = distinct !DISubprogram(scope: null, spFlags: DISPFlagDefinition, unit: !2, retainedNodes: !4)
+!1 = distinct !DISubprogram(scope: null, spFlags: DISPFlagDefinition, type: !13, unit: !2, retainedNodes: !4)
 !2 = distinct !DICompileUnit(language: DW_LANG_Swift, file: !3, isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug)
 !3 = !DIFile(filename: "blah", directory: "")
 !4 = !{}
 !5 = !DILocalVariable(scope: !1, type: !6)
 !6 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "Klass")
 !7 = !DILocation(line: 0, scope: !1)
-!8 = distinct !DISubprogram(scope: null, spFlags: DISPFlagDefinition, unit: !2)
+!8 = distinct !DISubprogram(scope: null, spFlags: DISPFlagDefinition, type: !13, unit: !2)
 !9 = !DILocation(line: 0, scope: !8)
-!10 = distinct !DISubprogram(scope: null, spFlags: DISPFlagDefinition, unit: !2)
+!10 = distinct !DISubprogram(scope: null, spFlags: DISPFlagDefinition, type: !13, unit: !2)
 !11 = !DILocation(line: 0, scope: !10)

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains the global defintions (mostly command line parameters)
+// This file contains the global definitions (mostly command line parameters)
 // shared between llvm-tblgen and llvm-min-tblgen.
 //
 //===----------------------------------------------------------------------===//

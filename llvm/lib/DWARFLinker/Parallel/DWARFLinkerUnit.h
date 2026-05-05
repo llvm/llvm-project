@@ -131,6 +131,10 @@ public:
     /// Output offset of the DIE this entry describes.
     uint64_t OutOffset;
 
+    /// Output offset of the enclosing non-declaration DIE, used for the
+    /// DW_IDX_parent field of DWARF 5 name index entries.
+    std::optional<uint64_t> ParentOffset;
+
     /// Hash of the fully qualified name.
     uint32_t QualifiedNameHash = 0;
 

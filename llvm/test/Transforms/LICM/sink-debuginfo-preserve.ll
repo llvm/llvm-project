@@ -30,7 +30,7 @@ target triple = "x86_64-apple-macosx10.15.0"
 
 define i32 @main() local_unnamed_addr !dbg !22 {
 bb:
-  %i = load volatile i32, ptr @b, align 4, !dbg !37, !tbaa !40
+  %i = load i32, ptr @b, align 4, !dbg !37, !tbaa !40
   %i1 = icmp sgt i32 %i, -9, !dbg !44
   br i1 %i1, label %bb2, label %bb4, !dbg !45
 
@@ -41,7 +41,7 @@ bb3:                                              ; preds = %bb8
   br label %bb4, !dbg !45
 
 bb4:                                              ; preds = %bb3, %bb
-  %i5 = load volatile i32, ptr @c, align 4, !dbg !46, !tbaa !40
+  %i5 = load i32, ptr @c, align 4, !dbg !46, !tbaa !40
   %i6 = icmp slt i32 %i5, 6, !dbg !47
   br i1 %i6, label %bb7, label %bb23, !dbg !48
 
@@ -49,16 +49,16 @@ bb7:                                              ; preds = %bb4
   br label %bb13, !dbg !48
 
 bb8:                                              ; preds = %bb8, %bb2
-  %i9 = load volatile i32, ptr @b, align 4, !dbg !49, !tbaa !40
+  %i9 = load i32, ptr @b, align 4, !dbg !49, !tbaa !40
   %i10 = add nsw i32 %i9, -1, !dbg !49
-  store volatile i32 %i10, ptr @b, align 4, !dbg !49, !tbaa !40
-  %i11 = load volatile i32, ptr @b, align 4, !dbg !37, !tbaa !40
+  store i32 %i10, ptr @b, align 4, !dbg !49, !tbaa !40
+  %i11 = load i32, ptr @b, align 4, !dbg !37, !tbaa !40
   %i12 = icmp sgt i32 %i11, -9, !dbg !44
   br i1 %i12, label %bb8, label %bb3, !dbg !45, !llvm.loop !50
 
 bb13:                                             ; preds = %bb17, %bb7
   store i32 0, ptr getelementptr inbounds ([2 x i32], ptr @g_390, i64 0, i64 1), align 4, !dbg !53, !tbaa !40
-  %i14 = load volatile i32, ptr @b, align 4, !dbg !54, !tbaa !40
+  %i14 = load i32, ptr @b, align 4, !dbg !54, !tbaa !40
   %i15 = icmp eq i32 %i14, 0, !dbg !54
   br i1 %i15, label %bb16, label %bb17, !dbg !55
 
@@ -67,8 +67,8 @@ bb16:                                             ; preds = %bb13
   br label %bb17
 
 bb17:                                             ; preds = %bb16, %bb13
-  %i18 = load volatile i32, ptr @c, align 4, !dbg !57, !tbaa !40
-  %i20 = load volatile i32, ptr @c, align 4, !dbg !46, !tbaa !40
+  %i18 = load i32, ptr @c, align 4, !dbg !57, !tbaa !40
+  %i20 = load i32, ptr @c, align 4, !dbg !46, !tbaa !40
   %i21 = icmp slt i32 %i20, 6, !dbg !47
   br i1 %i21, label %bb13, label %bb22, !dbg !48, !llvm.loop !58
 

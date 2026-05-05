@@ -144,9 +144,9 @@ static int PrintSupportedExtensions(std::string TargetStr) {
   std::unique_ptr<llvm::TargetMachine> TheTargetMachine(
       TheTarget->createTargetMachine(Triple, "", "", Options, std::nullopt));
   const llvm::Triple &MachineTriple = TheTargetMachine->getTargetTriple();
-  const llvm::MCSubtargetInfo *MCInfo = TheTargetMachine->getMCSubtargetInfo();
+  const llvm::MCSubtargetInfo &MCInfo = TheTargetMachine->getMCSubtargetInfo();
   const llvm::ArrayRef<llvm::SubtargetFeatureKV> Features =
-    MCInfo->getAllProcessorFeatures();
+      MCInfo.getAllProcessorFeatures();
 
   llvm::StringMap<llvm::StringRef> DescMap;
   for (const llvm::SubtargetFeatureKV &feature : Features)
@@ -187,13 +187,13 @@ static int PrintEnabledExtensions(const TargetOptions& TargetOpts) {
       TheTarget->createTargetMachine(Triple, TargetOpts.CPU, FeaturesStr,
                                      BackendOptions, std::nullopt));
   const llvm::Triple &MachineTriple = TheTargetMachine->getTargetTriple();
-  const llvm::MCSubtargetInfo *MCInfo = TheTargetMachine->getMCSubtargetInfo();
+  const llvm::MCSubtargetInfo &MCInfo = TheTargetMachine->getMCSubtargetInfo();
 
   // Extract the feature names that are enabled for the given target.
   // We do that by capturing the key from the set of SubtargetFeatureKV entries
   // provided by MCSubtargetInfo, which match the '-target-feature' values.
   const std::vector<llvm::SubtargetFeatureKV> Features =
-    MCInfo->getEnabledProcessorFeatures();
+      MCInfo.getEnabledProcessorFeatures();
   std::set<llvm::StringRef> EnabledFeatureNames;
   for (const llvm::SubtargetFeatureKV &feature : Features)
     EnabledFeatureNames.insert(feature.Key);
@@ -289,20 +289,11 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
                                   static_cast<void*>(&Clang->getDiagnostics()));
 
   DiagsBuffer->FlushDiagnostics(Clang->getDiagnostics());
-  if (!Success) {
-    Clang->getDiagnosticClient().finish();
+  if (!Success)
     return 1;
-  }
 
   // Execute the frontend actions.
-  {
-    llvm::TimeTraceScope TimeScope("ExecuteCompiler");
-    bool TimePasses = Clang->getCodeGenOpts().TimePasses;
-    if (TimePasses)
-      Clang->createFrontendTimer();
-    llvm::TimeRegion Timer(TimePasses ? &Clang->getFrontendTimer() : nullptr);
-    Success = ExecuteCompilerInvocation(Clang.get());
-  }
+  Success = ExecuteCompilerInvocation(Clang.get());
 
   // If any timers were active but haven't been destroyed yet, print their
   // results now.  This happens in -disable-free mode.
@@ -339,6 +330,8 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
 
   // When running with -disable-free, don't do any destruction or shutdown.
   if (Clang->getFrontendOpts().DisableFree) {
+    // DiagnosticConsumer must be always destroyed.
+    Clang->getDiagnosticClient().~DiagnosticConsumer();
     llvm::BuryPointer(std::move(Clang));
     return !Success;
   }

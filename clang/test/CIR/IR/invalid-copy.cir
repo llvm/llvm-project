@@ -12,10 +12,10 @@ module {
 // -----
 
 module {
-  // Should not copy to same address.
-  cir.func @invalid_copy(%arg0 : !cir.ptr<!cir.int<s, 8>>) {
-    // expected-error@+1 {{source and destination are the same}}
-    cir.copy %arg0 to %arg0 : !cir.ptr<!cir.int<s, 8>>
+  // skip_tail_padding is only valid for record pointee types.
+  cir.func @invalid_skip_tail_padding(%arg0 : !cir.ptr<!cir.int<s, 32>>, %arg1 : !cir.ptr<!cir.int<s, 32>>) {
+    // expected-error@+1 {{skip_tail_padding is only valid for record pointee types}}
+    cir.copy %arg0 to %arg1 skip_tail_padding : !cir.ptr<!cir.int<s, 32>>
     cir.return
   }
 }

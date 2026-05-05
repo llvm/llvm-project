@@ -30,8 +30,8 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/ModuleSymbolTable.h"
 #include "llvm/Passes/PassBuilder.h"
-#include "llvm/Passes/PassPlugin.h"
 #include "llvm/Passes/StandardInstrumentations.h"
+#include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -74,6 +74,12 @@ static cl::opt<bool> ThinLTOAssumeMerged(
     cl::desc("Assume the input has already undergone ThinLTO function "
              "importing and the other pre-optimization pipeline changes."));
 
+static cl::list<std::string>
+    SaveModulesList("filter-save-modules", cl::value_desc("module names"),
+                    cl::desc("Only save bitcode for module whose name without "
+                             "path matches this for -save-temps options"),
+                    cl::CommaSeparated, cl::Hidden);
+
 namespace llvm {
 extern cl::opt<bool> NoPGOWarnMismatch;
 }
@@ -102,7 +108,17 @@ Error Config::addSaveTemps(std::string OutputFileName, bool UseInputModulePath,
   auto setHook = [&](std::string PathSuffix, ModuleHookFn &Hook) {
     // Keep track of the hook provided by the linker, which also needs to run.
     ModuleHookFn LinkerHook = Hook;
-    Hook = [=](unsigned Task, const Module &M) {
+    Hook = [=, SaveModNames = llvm::SmallVector<std::string, 1>(
+                   SaveModulesList.begin(), SaveModulesList.end())](
+               unsigned Task, const Module &M) {
+      // If SaveModulesList is not empty, only do save-temps if the module's
+      // filename (without path) matches a name in the list.
+      if (!SaveModNames.empty() &&
+          !llvm::is_contained(
+              SaveModNames,
+              std::string(llvm::sys::path::filename(M.getName()))))
+        return false;
+
       // If the linker's hook returned false, we need to pass that result
       // through.
       if (LinkerHook && !LinkerHook(Task, M))
@@ -183,20 +199,23 @@ Error Config::addSaveTemps(std::string OutputFileName, bool UseInputModulePath,
 #include "llvm/Support/Extension.def"
 #undef HANDLE_EXTENSION
 
-static void RegisterPassPlugins(ArrayRef<std::string> PassPlugins,
-                                PassBuilder &PB) {
+static void RegisterPassPlugins(const Config &Conf, PassBuilder &PB) {
 #define HANDLE_EXTENSION(Ext)                                                  \
   get##Ext##PluginInfo().RegisterPassBuilderCallbacks(PB);
 #include "llvm/Support/Extension.def"
 #undef HANDLE_EXTENSION
 
   // Load requested pass plugins and let them register pass builder callbacks
-  for (auto &PluginFN : PassPlugins) {
+  for (auto &PluginFN : Conf.PassPluginFilenames) {
     auto PassPlugin = PassPlugin::Load(PluginFN);
     if (!PassPlugin)
       reportFatalUsageError(PassPlugin.takeError());
     PassPlugin->registerPassBuilderCallbacks(PB);
   }
+
+  // Register already loaded plugins
+  for (auto *LoadedPlugin : Conf.LoadedPassPlugins)
+    LoadedPlugin->registerPassBuilderCallbacks(PB);
 }
 
 static std::unique_ptr<TargetMachine>
@@ -276,7 +295,7 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   SI.registerCallbacks(PIC, &MAM);
   PassBuilder PB(TM, Conf.PTO, PGOOpt, &PIC);
 
-  RegisterPassPlugins(Conf.PassPlugins, PB);
+  RegisterPassPlugins(Conf, PB);
 
   std::unique_ptr<TargetLibraryInfoImpl> TLII(
       new TargetLibraryInfoImpl(TM->getTargetTriple(), TM->Options.VecLib));

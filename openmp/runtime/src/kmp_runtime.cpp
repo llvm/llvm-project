@@ -6747,7 +6747,7 @@ void __kmp_register_library_startup(void) {
         }
       }
       if (__kmp_shm_available && shm_preexist == 0) { // SHM created, set size
-        if (ftruncate(fd1, SHM_SIZE) == -1) { // error occured setting size;
+        if (ftruncate(fd1, SHM_SIZE) == -1) { // error occurred setting size;
           KMP_WARNING(FunctionError, "Can't set size of SHM");
           __kmp_shm_available = false;
         }
@@ -6796,7 +6796,7 @@ void __kmp_register_library_startup(void) {
       }
       if (__kmp_tmp_available && tmp_preexist == 0) {
         // we created /tmp file now set size
-        if (ftruncate(fd1, SHM_SIZE) == -1) { // error occured setting size;
+        if (ftruncate(fd1, SHM_SIZE) == -1) { // error occurred setting size;
           KMP_WARNING(FunctionError, "Can't set size of /tmp file");
           __kmp_tmp_available = false;
         }
@@ -8924,7 +8924,7 @@ __kmp_determine_reduction_method(
 
 #if KMP_ARCH_X86_64 || KMP_ARCH_PPC64 || KMP_ARCH_AARCH64 ||                   \
     KMP_ARCH_MIPS64 || KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64 ||             \
-    KMP_ARCH_VE || KMP_ARCH_S390X || KMP_ARCH_WASM
+    KMP_ARCH_VE || KMP_ARCH_S390X || KMP_ARCH_WASM || KMP_ARCH_ARM64EC
 
 #if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
     KMP_OS_OPENBSD || KMP_OS_WINDOWS || KMP_OS_DARWIN || KMP_OS_HAIKU ||       \

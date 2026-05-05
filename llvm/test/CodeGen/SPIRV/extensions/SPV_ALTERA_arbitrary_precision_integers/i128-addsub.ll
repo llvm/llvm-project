@@ -1,7 +1,7 @@
 ; RUN: not llc -O0 -mtriple=spirv64-unknown-unknown %s -o %t.spvt 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
 
 ; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_ALTERA_arbitrary_precision_integers %s -o - | FileCheck %s
-; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_ALTERA_arbitrary_precision_integers %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_ALTERA_arbitrary_precision_integers %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-ERROR: LLVM ERROR: OpTypeInt type with a width other than 8, 16, 32 or 64 bits requires the following SPIR-V extension: SPV_ALTERA_arbitrary_precision_integers
 
@@ -10,7 +10,7 @@
 ; CHECK: OpName %[[#TestAdd:]] "test_add"
 ; CHECK: OpName %[[#TestSub:]] "test_sub"
 ; CHECK: %[[#Int128Ty:]] = OpTypeInt 128 0
-; CHECK: %[[#Const64Int128:]] = OpConstant %[[#Int128Ty]] 64 0 0 0
+; CHECK: %[[#Const64Int128:]] = OpConstant %[[#Int128Ty]] 64
 
 ; CHECK: %[[#TestAdd]] = OpFunction
 define spir_func void @test_add(i64 %AL, i64 %AH, i64 %BL, i64 %BH, ptr %RL, ptr %RH) {

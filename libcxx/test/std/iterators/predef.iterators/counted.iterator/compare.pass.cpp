@@ -14,7 +14,9 @@
 // friend constexpr bool operator==(
 //   const counted_iterator& x, default_sentinel_t);
 
+#include <cassert>
 #include <iterator>
+#include <utility>
 
 #include "test_macros.h"
 #include "test_iterators.h"

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReplaceDisallowCopyAndAssignMacroCheck.h"
+#include "../utils/LexerUtils.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/MacroArgs.h"
 #include "clang/Lex/PPCallbacks.h"
@@ -38,7 +39,7 @@ public:
       // For now we only support simple argument that don't need to be
       // pre-expanded.
       return;
-    const clang::IdentifierInfo *ClassIdent = ClassNameTok->getIdentifierInfo();
+    const IdentifierInfo *ClassIdent = ClassNameTok->getIdentifierInfo();
     if (!ClassIdent)
       return;
 
@@ -59,7 +60,7 @@ private:
   /// \returns \c true if the next token after the given \p MacroLoc is \b not a
   /// semicolon.
   bool shouldAppendSemi(SourceRange MacroLoc) {
-    std::optional<Token> Next = Lexer::findNextToken(
+    std::optional<Token> Next = utils::lexer::findNextTokenSkippingComments(
         MacroLoc.getEnd(), PP.getSourceManager(), PP.getLangOpts());
     return !(Next && Next->is(tok::semi));
   }

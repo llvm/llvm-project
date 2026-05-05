@@ -265,49 +265,35 @@ def : Pat<(PPCcall_nop_rm (i64 mcsym:$dst)),
 // clean this up in PPCMIPeephole with calls to
 // PPCInstrInfo::convertToImmediateForm() but we should probably not emit them
 // in the first place.
-let Defs = [CR0] in {
-  def ATOMIC_LOAD_ADD_I64 : PPCCustomInserterPseudo<
-    (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$incr), "#ATOMIC_LOAD_ADD_I64",
-    [(set i64:$dst, (atomic_load_add_i64 ForceXForm:$ptr, i64:$incr))]>;
-  def ATOMIC_LOAD_SUB_I64 : PPCCustomInserterPseudo<
-    (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$incr), "#ATOMIC_LOAD_SUB_I64",
-    [(set i64:$dst, (atomic_load_sub_i64 ForceXForm:$ptr, i64:$incr))]>;
-  def ATOMIC_LOAD_OR_I64 : PPCCustomInserterPseudo<
-    (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$incr), "#ATOMIC_LOAD_OR_I64",
-    [(set i64:$dst, (atomic_load_or_i64 ForceXForm:$ptr, i64:$incr))]>;
-  def ATOMIC_LOAD_XOR_I64 : PPCCustomInserterPseudo<
-    (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$incr), "#ATOMIC_LOAD_XOR_I64",
-    [(set i64:$dst, (atomic_load_xor_i64 ForceXForm:$ptr, i64:$incr))]>;
-  def ATOMIC_LOAD_AND_I64 : PPCCustomInserterPseudo<
-    (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$incr), "#ATOMIC_LOAD_AND_i64",
-    [(set i64:$dst, (atomic_load_and_i64 ForceXForm:$ptr, i64:$incr))]>;
-  def ATOMIC_LOAD_NAND_I64 : PPCCustomInserterPseudo<
-    (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$incr), "#ATOMIC_LOAD_NAND_I64",
-    [(set i64:$dst, (atomic_load_nand_i64 ForceXForm:$ptr, i64:$incr))]>;
-  def ATOMIC_LOAD_MIN_I64 : PPCCustomInserterPseudo<
-    (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$incr), "#ATOMIC_LOAD_MIN_I64",
-    [(set i64:$dst, (atomic_load_min_i64 ForceXForm:$ptr, i64:$incr))]>;
-  def ATOMIC_LOAD_MAX_I64 : PPCCustomInserterPseudo<
-    (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$incr), "#ATOMIC_LOAD_MAX_I64",
-    [(set i64:$dst, (atomic_load_max_i64 ForceXForm:$ptr, i64:$incr))]>;
-  def ATOMIC_LOAD_UMIN_I64 : PPCCustomInserterPseudo<
-    (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$incr), "#ATOMIC_LOAD_UMIN_I64",
-    [(set i64:$dst, (atomic_load_umin_i64 ForceXForm:$ptr, i64:$incr))]>;
-  def ATOMIC_LOAD_UMAX_I64 : PPCCustomInserterPseudo<
-    (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$incr), "#ATOMIC_LOAD_UMAX_I64",
-    [(set i64:$dst, (atomic_load_umax_i64 ForceXForm:$ptr, i64:$incr))]>;
-
-  def ATOMIC_CMP_SWAP_I64 : PPCCustomInserterPseudo<
-    (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$old, g8rc:$new), "#ATOMIC_CMP_SWAP_I64",
-    [(set i64:$dst, (atomic_cmp_swap_i64 ForceXForm:$ptr, i64:$old, i64:$new))]>;
-
-  def ATOMIC_SWAP_I64 : PPCCustomInserterPseudo<
-    (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$new), "#ATOMIC_SWAP_I64",
-    [(set i64:$dst, (atomic_swap_i64 ForceXForm:$ptr, i64:$new))]>;
+foreach op = ["add", "sub", "and", "or", "xor", "nand", "min", "max", "umax",
+              "umin"] in {
+  defvar pat = !cast<PatFrag>("atomic_load_"#op#"_i64");
+  defvar pseudo = "ATOMIC_LOAD_"#!toupper(op)#"_I64";
+  let Defs = [CR0] in
+    def pseudo : PPCCustomInserterPseudo<
+        (outs g8rc:$dst), (ins memrr:$ptr, i32imm:$sz, g8rc:$incr),
+        "#" # NAME, []>;
+  def : Pat<(i64 (pat ForceXForm:$ptr, g8rc:$incr)),
+          (!cast<Instruction>(pseudo) memrr:$ptr, 8, g8rc:$incr)>;
 }
 
+let Defs = [CR0] in {
+  def ATOMIC_CMP_SWAP_I64 : PPCCustomInserterPseudo<
+    (outs g8rc:$dst), (ins memrr:$ptr, g8rc:$old, g8rc:$new),
+    "#" # NAME, []>;
+
+  def ATOMIC_SWAP_I64 : PPCCustomInserterPseudo<
+    (outs g8rc:$dst), (ins memrr:$ptr, i32imm:$sz, g8rc:$new),
+    "#" # NAME, []>;
+}
+
+def : Pat<(i64 (atomic_cmp_swap_i64 ForceXForm:$ptr, g8rc:$old, g8rc:$new)),
+          (ATOMIC_CMP_SWAP_I64 memrr:$ptr, i64:$old, i64:$new)>;
+def : Pat<(i64 (atomic_swap_i64 ForceXForm:$ptr, g8rc:$new)),
+          (ATOMIC_SWAP_I64 memrr:$ptr, 8, i64:$new)>;
+
 // Instructions to support atomic operations
-let mayLoad = 1, hasSideEffects = 0 in {
+let mayLoad = 1, mayStore = 1, hasSideEffects = 1 in {
 def LDARX : XForm_1_memOp<31,  84, (outs g8rc:$RST), (ins (memrr $RA, $RB):$addr),
                           "ldarx $RST, $addr", IIC_LdStLDARX, []>;
 // TODO: Add scheduling info.
@@ -332,15 +318,36 @@ def LDAT : X_RD5_RS5_IM5<31, 614, (outs g8prc:$RST), (ins g8prc:$RSTi, ptr_rc_no
                          "ldat $RST, $RA, $RB", IIC_LdStLoad>, isPPC64,
            Requires<[IsISA3_0]>,
            RegConstraint<"$RSTi = $RST">;
+
+let hasExtraSrcRegAllocReq = 1, mayStore = 1,
+      isCodeGenOnly = 1, hasNoSchedulingInfo = 1 in
+def LDAT_CSNE : X_RD5_RS5_IM5<31, 614, (outs g8rc:$RST), (ins ptr_rc_nor0:$RA, u5imm:$RB),
+                         "ldat $RST, $RA, $RB", IIC_LdStLoad>,
+           Requires<[IsISA3_0]>;
 }
 
 def LDAT_PSEUDO : PPCCustomInserterPseudo<
     (outs g8rc:$dst),
     (ins ptr_rc_nor0:$ptr, g8rc:$val, u5imm:$fc),
     "#LDAT_PSEUDO",
-    [(set i64:$dst, (int_ppc_amo_ldat ptr_rc_nor0:$ptr, g8rc:$val, timm:$fc))]>;
+    [(set i64:$dst, (int_ppc_amo_ldat ptr_rc_nor0:$ptr, g8rc:$val,
+                                      u5imm_timm:$fc))]>;
 
-let Defs = [CR0], mayStore = 1, mayLoad = 0, hasSideEffects = 0 in {
+def LDAT_COND_PSEUDO : PPCCustomInserterPseudo <
+    (outs g8rc:$dst),
+    (ins ptr_rc_nor0:$ptr, u5imm:$fc),
+    "#LDAT_COND_PSEUDO",
+    [(set i64:$dst, (int_ppc_amo_ldat_cond ptr_rc_nor0:$ptr,
+                                            u5imm_timm:$fc))]>;
+
+let Defs = [X8, X9, X10], Uses = [X9, X10] in
+def LDAT_CSNE_PSEUDO : PPCPostRAExpPseudo<
+    (outs g8rc:$dst),
+    (ins ptr_rc_nor0:$ptr),
+    "#LDAT_CSNE_PSEUDO",
+    [(set i64:$dst, (int_ppc_amo_ldat_csne ptr_rc_nor0:$ptr, X9, X10))]>;
+
+let Defs = [CR0], mayStore = 1, mayLoad = 1, hasSideEffects = 1 in {
 def STDCX : XForm_1_memOp<31, 214, (outs), (ins g8rc:$RST, (memrr $RA, $RB):$addr),
                           "stdcx. $RST, $addr", IIC_LdStSTDCX, []>, isRecordForm;
 // TODO: Add scheduling info.
@@ -406,8 +413,11 @@ def : Pat<(int_ppc_cmpxchg_i128 ForceXForm:$ptr,
                            g8rc:$new_hi))>;
 
 let mayStore = 1, mayLoad = 0, hasSideEffects = 0 in
-def STDAT : X_RD5_RS5_IM5<31, 742, (outs), (ins g8rc:$RST, g8rc:$RA, u5imm:$RB),
-                          "stdat $RST, $RA, $RB", IIC_LdStStore>, isPPC64,
+def STDAT : XForm_base_r3xo_memOp<31, 742, (outs),
+                                  (ins g8rc:$RST, ptr_rc_nor0:$RA, u5imm:$RB),
+                                  "stdat $RST, $RA, $RB", IIC_LdStStore,
+                                  [(PPCstat i64:$RST, ptr_rc_nor0:$RA,
+                                            u5imm_timm:$RB)]>, isPPC64,
             Requires<[IsISA3_0]>;
 
 let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
@@ -1521,12 +1531,12 @@ let hasExtraSrcRegAllocReq = 1, hasExtraDefRegAllocReq = 1 in {
 // correct because the branch select pass is relying on it.
 let Defs = [X0,X4,X5,X6,X7,X8,X9,X10,X11,X12,LR8,CTR8,CR0,CR1,CR5,CR6,CR7], Size = 8 in
 def GETtlsADDR : GETtlsADDRPseudo <"#GETtlsADDR">;
-let Defs = [X0,X2,X4,X5,X6,X7,X8,X9,X10,X11,X12,LR8,CTR8,CR0,CR1,CR5,CR6,CR7], Size = 8 in
+let Defs = [X0,X2,X4,X5,X6,X7,X8,X9,X10,X11,X12,LR8,CTR8,CR0,CR1,CR5,CR6,CR7] in
 def GETtlsADDRPCREL : GETtlsADDRPseudo <"#GETtlsADDRPCREL">;
 
 // LR8 is a true define, while the rest of the Defs are clobbers. X3 is
 // explicitly defined when this op is created, so not mentioned here.
-let Defs = [X0,X4,X5,X6,X7,X8,X9,X10,X11,X12,LR8,CTR8,CR0,CR1,CR5,CR6,CR7] in
+let Defs = [X0,X4,X5,X6,X7,X8,X9,X10,X11,X12,LR8,CTR8,CR0,CR1,CR5,CR6,CR7], Size = 8 in
 def GETtlsldADDR : GETtlsldADDRPseudo <"#GETtlsldADDR">;
 let Defs = [X0,X2,X4,X5,X6,X7,X8,X9,X10,X11,X12,LR8,CTR8,CR0,CR1,CR5,CR6,CR7] in
 def GETtlsldADDRPCREL : GETtlsldADDRPseudo <"#GETtlsldADDRPCREL">;
@@ -1608,6 +1618,7 @@ def ADDIdtprelL : PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc_nox0:$reg, s16imm
                          [(set i64:$rD,
                            (PPCaddiDtprelL i64:$reg, tglobaltlsaddr:$disp))]>,
                   isPPC64;
+let Size = 8 in
 def PADDIdtprel : PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc_nox0:$reg, s16imm64:$disp),
                           "#PADDIdtprel",
                           [(set i64:$rD,
@@ -1816,7 +1827,7 @@ def ADDEX8 : Z23Form_RTAB5_CY2<31, 170, (outs g8rc:$RT),
                               (ins g8rc:$RA, g8rc:$RB, u2imm:$CY),
                               "addex $RT, $RA, $RB, $CY", IIC_IntGeneral,
                               [(set i64:$RT, (int_ppc_addex i64:$RA, i64:$RB,
-                                                            timm:$CY))]>;
+                                                            u2imm_timm:$CY))]>;
 
 //===----------------------------------------------------------------------===//
 // Instruction Patterns

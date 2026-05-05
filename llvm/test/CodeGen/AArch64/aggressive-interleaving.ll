@@ -7,7 +7,7 @@
 ; multiple loads / multiplies / adds in the vector body.
 
 
-define void @test_interleave_reduction(i32*** %arg, double** %arg1) {
+define void @test_interleave_reduction(ptr %arg, ptr %arg1) {
 ; A320-LABEL: define void @test_interleave_reduction(
 ; A320-SAME: ptr [[ARG:%.*]], ptr [[ARG1:%.*]]) #[[ATTR0:[0-9]+]] {
 ; A320-NEXT:  [[ENTRY:.*:]]
@@ -33,20 +33,20 @@ define void @test_interleave_reduction(i32*** %arg, double** %arg1) {
 ; A320:       [[VECTOR_PH]]:
 ; A320-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 2
 ; A320-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
-; A320-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], 4
+; A320-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 2
 ; A320-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[TPM27]], i64 [[TMP4]]
-; A320-NEXT:    [[TMP5:%.*]] = mul i64 [[N_VEC]], 8
+; A320-NEXT:    [[TMP5:%.*]] = shl i64 [[N_VEC]], 3
 ; A320-NEXT:    [[IND_END3:%.*]] = getelementptr i8, ptr [[TPM32]], i64 [[TMP5]]
 ; A320-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; A320:       [[VECTOR_BODY]]:
 ; A320-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; A320-NEXT:    [[VEC_PHI:%.*]] = phi double [ 0.000000e+00, %[[VECTOR_PH]] ], [ [[TMP22:%.*]], %[[VECTOR_BODY]] ]
 ; A320-NEXT:    [[VEC_PHI5:%.*]] = phi double [ 0.000000e+00, %[[VECTOR_PH]] ], [ [[TMP23:%.*]], %[[VECTOR_BODY]] ]
-; A320-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 4
+; A320-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 2
 ; A320-NEXT:    [[TMP7:%.*]] = add i64 [[OFFSET_IDX]], 4
 ; A320-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[TPM27]], i64 [[OFFSET_IDX]]
 ; A320-NEXT:    [[NEXT_GEP6:%.*]] = getelementptr i8, ptr [[TPM27]], i64 [[TMP7]]
-; A320-NEXT:    [[OFFSET_IDX7:%.*]] = mul i64 [[INDEX]], 8
+; A320-NEXT:    [[OFFSET_IDX7:%.*]] = shl i64 [[INDEX]], 3
 ; A320-NEXT:    [[TMP9:%.*]] = add i64 [[OFFSET_IDX7]], 8
 ; A320-NEXT:    [[NEXT_GEP8:%.*]] = getelementptr i8, ptr [[TPM32]], i64 [[OFFSET_IDX7]]
 ; A320-NEXT:    [[NEXT_GEP9:%.*]] = getelementptr i8, ptr [[TPM32]], i64 [[TMP9]]
@@ -73,12 +73,12 @@ define void @test_interleave_reduction(i32*** %arg, double** %arg1) {
 ; A320-NEXT:    br i1 [[CMP_N]], label %[[EXIT_INNER:.*]], label %[[SCALAR_PH]]
 ; A320:       [[SCALAR_PH]]:
 ; A320-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[IND_END]], %[[MIDDLE_BLOCK]] ], [ [[TPM27]], %[[OUTER]] ]
-; A320-NEXT:    [[BC_RESUME_VAL8:%.*]] = phi ptr [ [[IND_END3]], %[[MIDDLE_BLOCK]] ], [ [[TPM32]], %[[OUTER]] ]
+; A320-NEXT:    [[BC_RESUME_VAL7:%.*]] = phi ptr [ [[IND_END3]], %[[MIDDLE_BLOCK]] ], [ [[TPM32]], %[[OUTER]] ]
 ; A320-NEXT:    [[BC_MERGE_RDX:%.*]] = phi double [ [[BIN_RDX]], %[[MIDDLE_BLOCK]] ], [ 0.000000e+00, %[[OUTER]] ]
 ; A320-NEXT:    br label %[[INNER:.*]]
 ; A320:       [[INNER]]:
 ; A320-NEXT:    [[PHI_PTR_I32:%.*]] = phi ptr [ [[NEXT_I32:%.*]], %[[INNER]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
-; A320-NEXT:    [[PHI_PTR_F64:%.*]] = phi ptr [ [[NEXT_F64:%.*]], %[[INNER]] ], [ [[BC_RESUME_VAL8]], %[[SCALAR_PH]] ]
+; A320-NEXT:    [[PHI_PTR_F64:%.*]] = phi ptr [ [[NEXT_F64:%.*]], %[[INNER]] ], [ [[BC_RESUME_VAL7]], %[[SCALAR_PH]] ]
 ; A320-NEXT:    [[PHI_ACC:%.*]] = phi double [ [[TPM50:%.*]], %[[INNER]] ], [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ]
 ; A320-NEXT:    [[TPM44:%.*]] = load double, ptr [[PHI_PTR_F64]], align 8
 ; A320-NEXT:    [[TPM45:%.*]] = load i32, ptr [[PHI_PTR_I32]], align 4
@@ -99,16 +99,16 @@ define void @test_interleave_reduction(i32*** %arg, double** %arg1) {
 ; A320-NEXT:    br label %[[OUTER]]
 ;
 entry:
-  %tpm15 = load i32**, i32*** %arg, align 8
-  %tpm19 = load double*, double** %arg1, align 8
+  %tpm15 = load ptr, ptr %arg, align 8
+  %tpm19 = load ptr, ptr %arg1, align 8
   br label %outer
 
 outer:                                            ; preds = %inner, %entry
   %tpm26 = add i64 0, 1
   %tpm10 = alloca i32, align 8
   %tpm27 = getelementptr inbounds i32, ptr %tpm10, i64 %tpm26
-  %tpm28 = getelementptr inbounds i32*, ptr %tpm15, i64 0
-  %tpm29 = load i32*, ptr %tpm28, align 8
+  %tpm28 = getelementptr inbounds ptr, ptr %tpm15, i64 0
+  %tpm29 = load ptr, ptr %tpm28, align 8
   %tpm17 = alloca double, align 8
   %tpm32 = getelementptr inbounds double, ptr %tpm17, i64 %tpm26
   br label %inner
@@ -144,7 +144,7 @@ exit.inner:                                       ; preds = %inner
 ;    duplicated loads and adds.
 ;===---------------------------------------------------------------------===;
 
-define double @sum_reduction(double* nocapture readonly %a, i64 %n) {
+define double @sum_reduction(ptr nocapture readonly %a, i64 %n) {
 ; A320-LABEL: define double @sum_reduction(
 ; A320-SAME: ptr readonly captures(none) [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; A320-NEXT:  [[ENTRY:.*]]:
@@ -225,7 +225,7 @@ exit:
 ;    have multiple pairs of loads and fmuls/fadds.
 ;===---------------------------------------------------------------------===;
 
-define double @dot_product(double* nocapture readonly %a, double* nocapture readonly %b, i64 %n) {
+define double @dot_product(ptr nocapture readonly %a, ptr nocapture readonly %b, i64 %n) {
 ; A320-LABEL: define double @dot_product(
 ; A320-SAME: ptr readonly captures(none) [[A:%.*]], ptr readonly captures(none) [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; A320-NEXT:  [[ENTRY:.*]]:

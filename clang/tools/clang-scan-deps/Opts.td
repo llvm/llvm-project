@@ -44,7 +44,11 @@ def emit_visible_modules
 
 def verbose : F<"v", "Use verbose output">;
 
+def async_scan_modules : F<"async-scan-modules", "Scan modules asynchronously">;
+
 def round_trip_args : F<"round-trip-args", "verify that command-line arguments are canonical by parsing and re-serializing">;
+
+def no_flush_module_cache : F<"no-flush-module-cache", "do not flush the module cache from memory to disk at the end of the scan">;
 
 def verbatim_args : F<"verbatim-args", "Pass commands to the scanner verbatim without adjustments">;
 

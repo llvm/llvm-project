@@ -9,19 +9,21 @@
 // RUN: touch %t.dir/Inputs/header.h
 // RUN: sed -e "s|DIR|%/t.dir|g" %S/Inputs/relative_directory.json > %t.cdb
 //
-// RUN: clang-scan-deps -compilation-database %t.cdb -j 1 | FileCheck --check-prefixes=CHECK1,CHECK2 %s
+// RUN: clang-scan-deps -compilation-database %t.cdb -j 1 | FileCheck --check-prefixes=CHECK1,CHECK2%if system-darwin && target={{.*}}-{{darwin|macos}}{{.*}} %{,CHECK-DARWIN1,CHECK-DARWIN2 %} %s
 
 // The output order is non-deterministic when using more than one thread,
 // so check the output using two runs.
-// RUN: clang-scan-deps -compilation-database %t.cdb -j 2 | FileCheck --check-prefix=CHECK1 %s
-// RUN: clang-scan-deps -compilation-database %t.cdb -j 2 | FileCheck --check-prefix=CHECK2 %s
+// RUN: clang-scan-deps -compilation-database %t.cdb -j 2 | FileCheck --check-prefixes=CHECK1%if system-darwin && target={{.*}}-{{darwin|macos}}{{.*}} %{,CHECK-DARWIN1 %} %s
+// RUN: clang-scan-deps -compilation-database %t.cdb -j 2 | FileCheck --check-prefixes=CHECK2%if system-darwin && target={{.*}}-{{darwin|macos}}{{.*}} %{,CHECK-DARWIN2 %} %s
 
 #include <header.h>
 
 // CHECK1: relative_directory_input1.o:
+// CHECK-DARWIN1-NEXT: SDKSettings.json
 // CHECK1-NEXT: relative_directory_input1.cpp
 // CHECK1-NEXT: header.h
 
 // CHECK2: relative_directory_input2.o:
+// CHECK-DARWIN2-NEXT: SDKSettings.json
 // CHECK2-NEXT: relative_directory_input2.cpp
 // CHECK2-NEXT: header.h

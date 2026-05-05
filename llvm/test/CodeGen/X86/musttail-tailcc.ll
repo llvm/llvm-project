@@ -55,15 +55,6 @@ define dso_local tailcc void @void_test(i32, i32, i32, i32) {
 ;
 ; X86-LABEL: void_test:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %esi, -8
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    jmp void_test # TAILCALL
   entry:
    musttail call tailcc void @void_test( i32 %0, i32 %1, i32 %2, i32 %3)
@@ -77,15 +68,6 @@ define dso_local tailcc i1 @i1test(i32, i32, i32, i32) {
 ;
 ; X86-LABEL: i1test:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %esi, -8
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl %esi, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    jmp i1test # TAILCALL
   entry:
   %4 = musttail call tailcc i1 @i1test( i32 %0, i32 %1, i32 %2, i32 %3)

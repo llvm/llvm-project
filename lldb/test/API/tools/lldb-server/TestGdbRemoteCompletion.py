@@ -6,6 +6,8 @@ from lldbgdbserverutils import *
 
 
 class GdbRemoteCompletionTestCase(gdbremote_testcase.GdbRemoteTestCaseBase):
+    SHARED_BUILD_TESTCASE = False
+
     def init_lldb_server(self):
         self.debug_monitor_exe = get_lldb_server_exe()
         if not self.debug_monitor_exe:

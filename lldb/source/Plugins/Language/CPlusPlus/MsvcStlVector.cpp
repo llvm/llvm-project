@@ -10,6 +10,7 @@
 
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
+#include "llvm/Support/ErrorExtras.h"
 
 using namespace lldb;
 
@@ -106,9 +107,9 @@ lldb_private::formatters::MsvcStlVectorSyntheticFrontEnd::GetChildAtIndex(
   offset = offset + m_start->GetValueAsUnsigned(0);
   StreamString name;
   name.Printf("[%" PRIu64 "]", (uint64_t)idx);
-  return CreateValueObjectFromAddress(name.GetString(), offset,
-                                      m_backend.GetExecutionContextRef(),
-                                      m_element_type);
+  return CreateChildValueObjectFromAddress(name.GetString(), offset,
+                                           m_backend.GetExecutionContextRef(),
+                                           m_element_type);
 }
 
 lldb::ChildCacheState
@@ -138,12 +139,10 @@ lldb_private::formatters::MsvcStlVectorSyntheticFrontEnd::Update() {
 llvm::Expected<size_t> lldb_private::formatters::
     MsvcStlVectorSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
   if (!m_start || !m_finish)
-    return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
+    return llvm::createStringErrorV("type has no child named '{0}'", name);
   auto optional_idx = ExtractIndexFromString(name.GetCString());
   if (!optional_idx) {
-    return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
+    return llvm::createStringErrorV("type has no child named '{0}'", name);
   }
   return *optional_idx;
 }
@@ -209,11 +208,11 @@ lldb_private::formatters::MsvcStlVectorBoolSyntheticFrontEnd::GetChildAtIndex(
   }
   StreamString name;
   name.Printf("[%" PRIu64 "]", (uint64_t)idx);
-  ValueObjectSP retval_sp(CreateValueObjectFromData(
+  ValueObjectSP retval_sp = CreateChildValueObjectFromData(
       name.GetString(),
       DataExtractor(buffer_sp, process_sp->GetByteOrder(),
                     process_sp->GetAddressByteSize()),
-      m_exe_ctx_ref, m_bool_type));
+      m_exe_ctx_ref, m_bool_type);
   if (retval_sp)
     m_children[idx] = retval_sp;
   return retval_sp;
@@ -267,17 +266,14 @@ llvm::Expected<size_t>
 lldb_private::formatters::MsvcStlVectorBoolSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   if (!m_count || !m_base_data_address)
-    return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
-  auto optional_idx = ExtractIndexFromString(name.AsCString());
+    return llvm::createStringErrorV("type has no child named '{0}'", name);
+  auto optional_idx = ExtractIndexFromString(name.AsCString(nullptr));
   if (!optional_idx) {
-    return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
+    return llvm::createStringErrorV("type has no child named '{0}'", name);
   }
   uint32_t idx = *optional_idx;
   if (idx >= CalculateNumChildrenIgnoringErrors())
-    return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
+    return llvm::createStringErrorV("type has no child named '{0}'", name);
   return idx;
 }
 

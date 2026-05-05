@@ -46,3 +46,60 @@ TEST(LlvmLibcStrNCaseCmpTest, Case) {
   result = LIBC_NAMESPACE::strncasecmp(s2, s1, 2);
   ASSERT_EQ(result, 0);
 }
+
+TEST(LlvmLibcStrNCaseCmpTest, EqualStringsShouldReturnZero) {
+  const char *s1 = "abc";
+  const char *s2 = "abc";
+  int result = LIBC_NAMESPACE::strncasecmp(s1, s2, 3);
+  ASSERT_EQ(result, 0);
+
+  result = LIBC_NAMESPACE::strncasecmp(s2, s1, 3);
+  ASSERT_EQ(result, 0);
+}
+
+TEST(LlvmLibcStrNCaseCmpTest, ShouldReturnResultOfFirstDifference) {
+  const char *s1 = "___B42__";
+  const char *s2 = "___C55__";
+  int result = LIBC_NAMESPACE::strncasecmp(s1, s2, 8);
+  ASSERT_LT(result, 0);
+
+  result = LIBC_NAMESPACE::strncasecmp(s2, s1, 8);
+  ASSERT_GT(result, 0);
+}
+
+TEST(LlvmLibcStrNCaseCmpTest, UnequalLengthStringsShouldNotReturnZero) {
+  const char *s1 = "abc";
+  const char *s2 = "abcd";
+  int result = LIBC_NAMESPACE::strncasecmp(s1, s2, 4);
+  ASSERT_LT(result, 0);
+
+  result = LIBC_NAMESPACE::strncasecmp(s2, s1, 4);
+  ASSERT_GT(result, 0);
+}
+
+TEST(LlvmLibcStrNCaseCmpTest, StringsEqualUpToNShouldReturnZero) {
+  const char *s1 = "abcD";
+  const char *s2 = "abcE";
+  int result = LIBC_NAMESPACE::strncasecmp(s1, s2, 3);
+  ASSERT_EQ(result, 0);
+
+  result = LIBC_NAMESPACE::strncasecmp(s2, s1, 3);
+  ASSERT_EQ(result, 0);
+}
+
+TEST(LlvmLibcStrNCaseCmpTest, StringsEqualUpToNdifferentCaseShouldReturnZero) {
+  const char *s1 = "abcD";
+  const char *s2 = "ABCE";
+  int result = LIBC_NAMESPACE::strncasecmp(s1, s2, 3);
+  ASSERT_EQ(result, 0);
+
+  result = LIBC_NAMESPACE::strncasecmp(s2, s1, 3);
+  ASSERT_EQ(result, 0);
+}
+
+TEST(LlvmLibcStrNCaseCmpTest, ZeroNShouldReturnZero) {
+  const char *s1 = "abc";
+  const char *s2 = "def";
+  int result = LIBC_NAMESPACE::strncasecmp(s1, s2, 0);
+  ASSERT_EQ(result, 0);
+}

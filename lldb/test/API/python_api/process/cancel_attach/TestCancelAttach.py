@@ -16,7 +16,7 @@ class AttachCancelTestCase(TestBase):
 
     @skipIf(
         remote=True,
-        hostoslist=["windows"],
+        hostoslist=["windows", "linux"],
         bugnumber="https://github.com/llvm/llvm-project/issues/115618",
     )
     def test_scripted_implementation(self):

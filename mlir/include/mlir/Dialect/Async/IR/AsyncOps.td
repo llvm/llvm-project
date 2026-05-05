@@ -36,6 +36,7 @@ def Async_ExecuteOp :
   Async_Op<"execute", [SingleBlockImplicitTerminator<"YieldOp">,
                        DeclareOpInterfaceMethods<RegionBranchOpInterface,
                                                  ["getEntrySuccessorOperands",
+                                                  "getSuccessorInputs",
                                                   "areTypesCompatible"]>,
                        AttrSizedOperandSegments,
                        AutomaticAllocationScope,

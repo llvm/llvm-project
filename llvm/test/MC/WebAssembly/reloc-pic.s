@@ -1,4 +1,4 @@
-# RUN: sed -e '/^REF-/d' %s | llvm-mc -triple=wasm32-unknown-unknown -filetype=obj | obj2yaml | FileCheck %s
+# RUN: sed -e '/^REF-/d' %s | llvm-mc -triple=wasm32-unknown-unknown -mcpu=mvp -filetype=obj | obj2yaml | FileCheck %s
 # RUN: sed -e 's/^REF-//g' %s | llvm-mc -triple=wasm32-unknown-unknown -mattr=+reference-types -filetype=obj | obj2yaml | FileCheck --check-prefix=REF %s
 
 # Verify that @GOT relocation entryes result in R_WASM_GLOBAL_INDEX_LEB against

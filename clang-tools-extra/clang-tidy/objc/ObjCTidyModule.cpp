@@ -8,7 +8,6 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
-#include "../ClangTidyModuleRegistry.h"
 #include "AssertEqualsCheck.h"
 #include "AvoidNSErrorInitCheck.h"
 #include "DeallocInCategoryCheck.h"

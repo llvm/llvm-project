@@ -23,7 +23,7 @@ using namespace allocator;
 // Provide a default implementation of malloc / free for AMDGPU platforms built
 // without 'libc' support.
 extern "C" {
-#if defined(__AMDGPU__) && !defined(OMPTARGET_HAS_LIBC)
+#if (defined(__AMDGPU__) || defined(__SPIRV__)) && !defined(OMPTARGET_HAS_LIBC)
 [[gnu::weak]] void *malloc(size_t Size) { return allocator::alloc(Size); }
 [[gnu::weak]] void free(void *Ptr) { allocator::free(Ptr); }
 #else
@@ -41,7 +41,7 @@ struct BumpAllocatorTy final {
   uint64_t Offset = 0;
 
   void *alloc(uint64_t Size) {
-    Size = utils::roundUp(Size, uint64_t(allocator::ALIGNMENT));
+    Size = utils::alignUp(Size, uint64_t(allocator::ALIGNMENT));
 
     uint64_t OldData = atomic::add(&Offset, Size, atomic::seq_cst);
     if (OldData + Size >= MEMORY_SIZE)

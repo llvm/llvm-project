@@ -12,23 +12,21 @@ define void @i65_induction_with_negative_step(ptr %dst) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i65 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i64> [ <i64 poison, i64 poison, i64 poison, i64 0>, %[[VECTOR_PH]] ], [ [[STEP_ADD:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 -1, i64 -2, i64 -3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[STEP_ADD]] = add <4 x i64> [[VEC_IND]], splat (i64 -4)
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 -1, i64 -2, i64 -3>, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[STEP_ADD]] = sub <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i65 0, [[INDEX]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i65 [[OFFSET_IDX]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i64> [[VECTOR_RECUR]], <4 x i64> [[VEC_IND]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i64> [[VEC_IND]], <4 x i64> [[STEP_ADD]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[TMP4]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[TMP5]], i64 -3
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[TMP4]], i64 -4
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[TMP7]], i64 -3
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[TMP4]], i64 -3
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[TMP4]], i64 -7
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i64> [[TMP2]], <4 x i64> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[REVERSE1:%.*]] = shufflevector <4 x i64> [[TMP3]], <4 x i64> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    store <4 x i64> [[REVERSE]], ptr [[TMP6]], align 8
 ; CHECK-NEXT:    store <4 x i64> [[REVERSE1]], ptr [[TMP8]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i65 [[INDEX]], 8
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[STEP_ADD]], splat (i64 -4)
+; CHECK-NEXT:    [[TMP7]] = sub <4 x i64> [[STEP_ADD]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i65 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:

@@ -3,7 +3,7 @@
 // The data type of arguments of operation are irrelevant in this test.
 //--------------------------------------------------------------------------------------------------
 
-// RUN: mlir-opt -mlir-disable-threading -test-tosa-op-availability %s | FileCheck %s
+// RUN: mlir-opt -test-tosa-op-availability %s | FileCheck %s
 
 // -----
 // CHECK-LABEL: argmax
@@ -22,6 +22,20 @@ func.func @test_avg_pool2d(%arg0: tensor<1x7x7x9xf32>) -> tensor<1x7x7x9xf32> {
   %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
   %output_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
   %0 = tosa.avg_pool2d %arg0, %input_zp, %output_zp {acc_type = f32, kernel = array<i64: 2, 2>, pad = array<i64: 0, 1, 0, 1>, stride = array<i64: 1, 1>} : (tensor<1x7x7x9xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x7x7x9xf32>
+  return %0 : tensor<1x7x7x9xf32>
+}
+
+// -----
+// CHECK-LABEL: avg_pool2d_adaptive
+func.func @test_avg_pool2d_adaptive(%arg0: tensor<1x7x7x9xf32>) -> tensor<1x7x7x9xf32> {
+  // CHECK: profiles: [ [pro_int, pro_fp] ]
+  // CHECK: extensions: [ [int16, fp8e4m3, fp8e5m2, bf16] ]
+  %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %output_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %kernel = tosa.const_shape {values = dense<[2, 2]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %stride = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %pad = tosa.const_shape {values = dense<[0, 1, 0, 1]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  %0 = tosa.avg_pool2d_adaptive %arg0, %input_zp, %output_zp, %kernel, %stride, %pad {acc_type = f32} : (tensor<1x7x7x9xf32>, tensor<1xf32>, tensor<1xf32>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<1x7x7x9xf32>
   return %0 : tensor<1x7x7x9xf32>
 }
 
@@ -545,11 +559,11 @@ func.func @test_reverse(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x3xf32> {
 // -----
 // CHECK-LABEL: slice
 func.func @test_slice(%arg0: tensor<13x21x3xf32>) -> tensor<4x11x1xf32> {
-  %0 = tosa.const_shape {values = dense<[4, 11, 1]> : tensor<3xindex>} : () -> !tosa.shape<3>
-  %1 = tosa.const_shape {values = dense<[6, 8, 0]> : tensor<3xindex>} : () -> !tosa.shape<3>
+  %size = tosa.const_shape {values = dense<[4, 11, 1]> : tensor<3xindex>} : () -> !tosa.shape<3>
+  %start = tosa.const_shape {values = dense<[6, 8, 0]> : tensor<3xindex>} : () -> !tosa.shape<3>
   // CHECK: profiles: [ [pro_int, pro_fp] ]
   // CHECK: extensions: [ [fp8e4m3, fp8e5m2, bf16, int64] ]
-  %2 = tosa.slice %arg0, %0, %1 : (tensor<13x21x3xf32>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<4x11x1xf32>
+  %2 = tosa.slice %arg0, %start, %size : (tensor<13x21x3xf32>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<4x11x1xf32>
   return %2 : tensor<4x11x1xf32>
 }
 
@@ -579,6 +593,16 @@ func.func @test_gather(%arg0: tensor<13x21x3xf32>, %arg1: tensor<13x26xi32>) -> 
   // CHECK: extensions: [ [fp8e4m3, fp8e5m2, bf16, int64] ]
   %0 = tosa.gather %arg0, %arg1 : (tensor<13x21x3xf32>, tensor<13x26xi32>) -> tensor<13x26x3xf32>
   return %0 : tensor<13x26x3xf32>
+}
+
+// -----
+// CHECK-LABEL: row_gather_block_scaled
+func.func @test_row_gather_block_scaled(%arg0: tensor<13x21x32xf4E2M1FN>, %arg1: tensor<13x21x1xf8E8M0FNU>, %arg2: tensor<13x26xi32>) -> (tensor<13x52x32xf4E2M1FN>, tensor<13x52x1xf8E8M0FNU>) {
+  %row_count = "tosa.const"() {values = dense<2> : tensor<1xi32>} : () -> tensor<1xi32>
+  // CHECK: profiles: [ [pro_int, pro_fp] ]
+  // CHECK: extensions: [ [fp8e4m3, fp8e5m2, bf16, mxfp, int64] ]
+  %0:2 = tosa.row_gather_block_scaled %arg0, %arg1, %arg2, %row_count {block_size = #tosa.block_size<BLOCK_SIZE_32>} : (tensor<13x21x32xf4E2M1FN>, tensor<13x21x1xf8E8M0FNU>, tensor<13x26xi32>, tensor<1xi32>) -> (tensor<13x52x32xf4E2M1FN>, tensor<13x52x1xf8E8M0FNU>)
+  return %0#0, %0#1 : tensor<13x52x32xf4E2M1FN>, tensor<13x52x1xf8E8M0FNU>
 }
 
 // -----
@@ -713,4 +737,3 @@ func.func @test_cast_to_block_scaled(%arg0: tensor<4x32xf32>) -> (tensor<4x32xf4
   %0:2 = tosa.cast_to_block_scaled %arg0 {block_size = BLOCK_SIZE_32, stochastic_round = false} : (tensor<4x32xf32>) -> (tensor<4x32xf4E2M1FN>, tensor<4x1xf8E8M0FNU>)
   return %0#0, %0#1 : tensor<4x32xf4E2M1FN>, tensor<4x1xf8E8M0FNU>
 }
-

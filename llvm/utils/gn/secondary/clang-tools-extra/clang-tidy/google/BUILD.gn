@@ -26,7 +26,6 @@ static_library("google") {
     "IntegerTypesCheck.cpp",
     "OverloadedUnaryAndCheck.cpp",
     "TodoCommentCheck.cpp",
-    "UnnamedNamespaceInHeaderCheck.cpp",
     "UpgradeGoogletestCaseCheck.cpp",
     "UsingNamespaceDirectiveCheck.cpp",
   ]
