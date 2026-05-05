@@ -2,6 +2,9 @@
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_abort %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_abort %s -o - -filetype=obj | spirv-val %}
 
+;; Without the extension, llvm.ubsantrap is dropped silently (existing behavior).
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-NO-EXT
+
 ;; llvm.ubsantrap(i8 N) lowers to OpAbortKHR with the i8 failure-kind argument
 ;; zero-extended to a 32-bit Message operand.
 
@@ -13,6 +16,9 @@
 ; CHECK:     OpAbortKHR %[[#I32]] %[[#MSG]]
 ; CHECK-NOT: OpUnreachable
 ; CHECK-NEXT: OpFunctionEnd
+
+; CHECK-NO-EXT-NOT: OpCapability AbortKHR
+; CHECK-NO-EXT-NOT: OpAbortKHR
 
 define spir_func void @ubsantrap_simple() {
 entry:
