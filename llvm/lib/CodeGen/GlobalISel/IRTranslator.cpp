@@ -218,6 +218,25 @@ ArrayRef<Register> IRTranslator::getOrCreateVRegs(const Value &Val) {
     assert(Val.getType()->isSized() &&
            "Don't know how to create an empty vreg");
 
+  // Fast-path values that lower to a single vreg.
+  if (!Val.getType()->isAggregateType()) {
+    LLT Ty = getLLTForType(*Val.getType(), *DL);
+    if (Offsets->empty())
+      Offsets->push_back(0);
+    VRegs->push_back(MRI->createGenericVirtualRegister(Ty));
+    if (isa<Constant>(Val)) {
+      bool Success = translate(cast<Constant>(Val), VRegs->front());
+      if (!Success) {
+        OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
+                                   MF->getFunction().getSubprogram(),
+                                   &MF->getFunction().getEntryBlock());
+        R << "unable to translate constant: " << ore::NV("Type", Val.getType());
+        reportTranslationError(*MF, *ORE, R);
+      }
+    }
+    return *VRegs;
+  }
+
   SmallVector<LLT, 4> SplitTys;
   computeValueLLTs(*DL, *Val.getType(), SplitTys,
                    Offsets->empty() ? Offsets : nullptr);
@@ -228,26 +247,12 @@ ArrayRef<Register> IRTranslator::getOrCreateVRegs(const Value &Val) {
     return *VRegs;
   }
 
-  if (Val.getType()->isAggregateType()) {
-    // UndefValue, ConstantAggregateZero
-    auto &C = cast<Constant>(Val);
-    unsigned Idx = 0;
-    while (auto Elt = C.getAggregateElement(Idx++)) {
-      auto EltRegs = getOrCreateVRegs(*Elt);
-      llvm::append_range(*VRegs, EltRegs);
-    }
-  } else {
-    assert(SplitTys.size() == 1 && "unexpectedly split LLT");
-    VRegs->push_back(MRI->createGenericVirtualRegister(SplitTys[0]));
-    bool Success = translate(cast<Constant>(Val), VRegs->front());
-    if (!Success) {
-      OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
-                                 MF->getFunction().getSubprogram(),
-                                 &MF->getFunction().getEntryBlock());
-      R << "unable to translate constant: " << ore::NV("Type", Val.getType());
-      reportTranslationError(*MF, *ORE, R);
-      return *VRegs;
-    }
+  // UndefValue, ConstantAggregateZero
+  auto &C = cast<Constant>(Val);
+  unsigned Idx = 0;
+  while (auto Elt = C.getAggregateElement(Idx++)) {
+    auto EltRegs = getOrCreateVRegs(*Elt);
+    llvm::append_range(*VRegs, EltRegs);
   }
 
   return *VRegs;
