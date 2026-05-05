@@ -12,7 +12,7 @@ import signal
 import subprocess
 import sys
 import threading
-
+import functools
 
 def pythonize_bool(value):
     if value is None:
@@ -441,3 +441,26 @@ def killProcessAndChildren(pid):
             psutilProc.kill()
         except psutil.NoSuchProcess:
             pass
+
+@functools.cache
+def _runCommandCachedInner(cmd, allow_failure, **kwargs):
+    try:
+        result = subprocess.run(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True, **kwargs
+        )
+        return result.stdout
+    except subprocess.CalledProcessError as e:
+        msg = f"Failed to run {cmd}\nrc:{e.returncode}\nstdout:{e.stdout}\ne.stderr{e.stderr}"
+        if allow_failure:
+            lit_config.warning(msg)
+        else:
+            lit_config.fatal(msg)
+        return None
+
+def runCommandCached(cmd, allow_failure=False, **kwargs):
+    if type(cmd) is list:
+        cmd = tuple(cmd)
+    elif type(cmd) is str:
+        cmd = tuple([cmd])
+
+    return _runCommandCachedInner(cmd, allow_failure, **kwargs)
