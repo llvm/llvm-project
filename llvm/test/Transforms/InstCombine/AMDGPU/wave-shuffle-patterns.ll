@@ -570,6 +570,24 @@ define i16 @test_quad_perm_xor1_i16_negative(i16 %val) {
   ret i16 %result
 }
 
+; Negative: poison index, should not optimize.
+define i32 @test_poison_index_negative(i32 %val) {
+; GFX11-LABEL: @test_poison_index_negative(
+; GFX11-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[VAL:%.*]], i32 poison)
+; GFX11-NEXT:    ret i32 [[RESULT]]
+;
+; GFX11-W64-LABEL: @test_poison_index_negative(
+; GFX11-W64-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[VAL:%.*]], i32 poison)
+; GFX11-W64-NEXT:    ret i32 [[RESULT]]
+;
+; GFX9-LABEL: @test_poison_index_negative(
+; GFX9-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[VAL:%.*]], i32 poison)
+; GFX9-NEXT:    ret i32 [[RESULT]]
+;
+  %result = call i32 @llvm.amdgcn.wave.shuffle.i32(i32 %val, i32 poison)
+  ret i32 %result
+}
+
 ; Negative: non-constant index, should not be optimized.
 define i32 @test_nonconstant_shuffle_w32(i32 %val, i32 %idx) {
 ; GFX11-LABEL: @test_nonconstant_shuffle_w32(

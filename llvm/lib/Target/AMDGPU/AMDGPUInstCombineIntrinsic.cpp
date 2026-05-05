@@ -21,6 +21,7 @@
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
@@ -664,9 +665,9 @@ static std::optional<unsigned> evalLaneExpr(Value *V, unsigned Lane,
   if (Depth >= MaxAnalysisRecursionDepth)
     return std::nullopt;
 
-  // Poison/undef in the index expression: the shuffle result is poison
-  // regardless of which lane we evaluate.
-  if (isa<PoisonValue>(V) || isa<UndefValue>(V))
+  // Poison/undef in the index expression: bail and let InstCombine fold the
+  // intrinsic the usual way.
+  if (isa<UndefValue>(V))
     return std::nullopt;
 
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(V))
