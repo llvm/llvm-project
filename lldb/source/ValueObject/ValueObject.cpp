@@ -1403,7 +1403,13 @@ bool ValueObject::DumpPrintableRepresentation(
         options.SetQuote('"');
         options.SetSourceSize(buffer_sp->GetByteSize());
         options.SetIsTruncated(read_string.second);
-        options.SetBinaryZeroIsTerminator(custom_format != eFormatVectorOfChar);
+        if (custom_format == eFormatVectorOfChar) {
+          options.SetZeroTermination(
+              formatters::StringPrinter::ZeroTermination::Ignore);
+        } else {
+          options.SetZeroTermination(
+              formatters::StringPrinter::ZeroTermination::ZeroTerminate);
+        }
         formatters::StringPrinter::ReadBufferAndDumpToStream<
             lldb_private::formatters::StringPrinter::StringElementType::ASCII>(
             options);

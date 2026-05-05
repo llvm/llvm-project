@@ -279,14 +279,11 @@ static bool DumpEncodedBufferToStream(
         (const SourceDataType *)data.GetDataStart();
     const SourceDataType *data_end_ptr = data_ptr + source_size;
 
-    const bool zero_is_terminator = dump_options.GetBinaryZeroIsTerminator();
-    const bool trim_trailing_zeros = dump_options.GetTrimTrailingZeros();
+    switch (dump_options.GetZeroTermination()) {
+    case StringPrinter::ZeroTermination::Ignore:
+      break;
 
-    assert((!zero_is_terminator || !trim_trailing_zeros) &&
-           "BinaryZeroIsTerminator and "
-           "TrimTrailingZeros are mutually exclusive");
-
-    if (zero_is_terminator) {
+    case StringPrinter::ZeroTermination::ZeroTerminate: {
       while (data_ptr < data_end_ptr) {
         if (!*data_ptr) {
           data_end_ptr = data_ptr;
@@ -296,13 +293,19 @@ static bool DumpEncodedBufferToStream(
       }
 
       data_ptr = (const SourceDataType *)data.GetDataStart();
-    } else if (trim_trailing_zeros) {
+    } break;
+
+    case StringPrinter::ZeroTermination::TrimTrailingZeros: {
       while (data_end_ptr != data_ptr) {
         if (*(data_end_ptr - 1))
           break;
         data_end_ptr--;
       }
+    } break;
     }
+    const bool zero_is_terminator =
+        dump_options.GetZeroTermination() ==
+        StringPrinter::ZeroTermination::ZeroTerminate;
 
     lldb::WritableDataBufferSP utf8_data_buffer_sp;
     llvm::UTF8 *utf8_data_ptr = nullptr;
@@ -395,8 +398,7 @@ lldb_private::formatters::StringPrinter::ReadBufferAndDumpToStreamOptions::
   SetSuffixToken(options.GetSuffixToken());
   SetQuote(options.GetQuote());
   SetEscapeNonPrintables(options.GetEscapeNonPrintables());
-  SetBinaryZeroIsTerminator(options.GetBinaryZeroIsTerminator());
-  SetTrimTrailingZeros(options.GetTrimTrailingZeros());
+  SetZeroTermination(options.GetZeroTermination());
   SetEscapeStyle(options.GetEscapeStyle());
 }
 
@@ -431,7 +433,8 @@ static bool ReadEncodedBufferAndDumpToStream(
   if (origin_encoding != 8 && !ConvertFunction)
     return false;
 
-  bool needs_zero_terminator = options.GetNeedsZeroTermination();
+  bool needs_zero_terminator = options.GetZeroTermination() ==
+                               StringPrinter::ZeroTermination::ZeroTerminate;
 
   bool is_truncated = false;
   const auto max_size = target_sp->GetMaximumSizeOfStringSummary();
@@ -491,9 +494,10 @@ static bool ReadEncodedBufferAndDumpToStream(
                     target_sp->GetArchitecture().GetAddressByteSize()));
   dump_options.SetSourceSize(sourceSize);
   dump_options.SetIsTruncated(is_truncated);
-  dump_options.SetNeedsZeroTermination(needs_zero_terminator);
-  if (needs_zero_terminator)
-    dump_options.SetBinaryZeroIsTerminator(true);
+  if (needs_zero_terminator) {
+    dump_options.SetZeroTermination(
+        StringPrinter::ZeroTermination::ZeroTerminate);
+  }
 
   GetPrintableElementType print_style = (elem_type == StringElementType::ASCII)
                                             ? GetPrintableElementType::ASCII
