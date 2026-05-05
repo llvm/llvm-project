@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
+! RUN: %python %S/test_errors.py %s %flang_fc1 -frelaxed-c-loc
 module m
   use iso_c_binding
   type haslen(L)
@@ -14,7 +14,6 @@ module m
     type(c_ptr) cp
     type(c_funptr) cfp
     real notATarget
-    !PORTABILITY: Procedure pointer 'pptr' should not have an ELEMENTAL intrinsic as its interface [-Wportability]
     procedure(sin), pointer :: pptr
     real, target :: arr(3)
     type(hasLen(1)), target :: clen
@@ -26,9 +25,9 @@ module m
     real :: arr2(purefun2(c_funloc(subr))) ! ok
     character(:), allocatable, target :: deferred
     character(n), pointer :: p2ch
-    !ERROR: C_LOC() argument must be a data pointer or target
+    !WARNING: C_LOC() argument should be a data pointer or target [-Wc-loc]
     cp = c_loc(notATarget)
-    !ERROR: C_LOC() argument must be a data pointer or target
+    !WARNING: C_LOC() argument should be a data pointer or target [-Wc-loc]
     cp = c_loc(pptr)
     !ERROR: C_LOC() argument must be contiguous
     cp = c_loc(arr(1:3:2))
@@ -41,7 +40,6 @@ module m
     cp = c_loc(nclen)
     !ERROR: C_LOC() argument may not be zero-length character
     cp = c_loc(ch(2:1))
-    !WARNING: C_LOC() argument has non-interoperable character length [-Wcharacter-interoperability]
     cp = c_loc(ch)
     !WARNING: C_LOC() argument has non-interoperable intrinsic type or kind [-Winteroperability]
     cp = c_loc(unicode)
@@ -77,3 +75,25 @@ module m2
   !WARNING: PRIVATE name '__address' is accessible only within module '__fortran_builtins'
   type(c_ptr) :: p = c_ptr(0)
 end
+
+module m3
+  use iso_c_binding
+  implicit none
+  real, target :: modtarg
+ contains
+  subroutine helper()
+  end subroutine
+  subroutine test
+    implicit none
+    type(c_ptr) :: cp
+    real :: notATarget
+    real, target :: localtarg
+    procedure(helper), pointer :: pptr
+    cp = c_loc(modtarg)    ! ok
+    cp = c_loc(localtarg)  ! ok
+    !WARNING: C_LOC() argument should be a data pointer or target [-Wc-loc]
+    cp = c_loc(notATarget)
+    !WARNING: C_LOC() argument should be a data pointer or target [-Wc-loc]
+    cp = c_loc(pptr)
+  end subroutine
+end module
