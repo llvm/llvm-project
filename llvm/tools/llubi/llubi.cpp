@@ -85,6 +85,11 @@ static cl::opt<bool>
                   cl::desc("Disable interpreter-introduced non-determinism."),
                   cl::init(false), cl::cat(InterpreterCategory));
 
+static cl::opt<bool>
+    ExperimentalNoAlias("experimental-noalias",
+                        cl::desc("Enable experimental LLVM noalias checking."),
+                        cl::init(false), cl::cat(InterpreterCategory));
+
 static cl::opt<bool> FuseFMulAdd("fuse-fmuladd",
                                  cl::desc("Fuse llvm.fmuladd.* intrinsic"),
                                  cl::init(true), cl::cat(InterpreterCategory));
@@ -192,6 +197,10 @@ public:
 
     llvm_unreachable("Unknown ProgramExitKind");
   }
+  bool onNoAliasEvent(StringRef Msg) override {
+    errs() << "NoAlias: " << Msg << '\n';
+    return true;
+  }
 };
 
 int main(int argc, char **argv) {
@@ -254,6 +263,7 @@ int main(int argc, char **argv) {
   Ctx.setMaxStackDepth(MaxStackDepth);
   Ctx.setFusedMultiplyAdd(FuseFMulAdd);
   Ctx.setDeterministic(Deterministic);
+  Ctx.setExperimentalNoAlias(ExperimentalNoAlias);
   Ctx.setUndefValueBehavior(UndefBehavior);
   Ctx.setNaNPropagationBehavior(NaNPropagationBehavior);
   Ctx.reseed(Seed);
