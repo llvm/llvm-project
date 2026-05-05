@@ -132,7 +132,41 @@ RValue CIRGenFunction::emitCXXMemberOrOperatorMemberCallExpr(
   // Compute the object pointer.
   bool canUseVirtualCall = md->isVirtual() && !hasQualifier;
   const CXXMethodDecl *devirtualizedMethod = nullptr;
-  assert(!cir::MissingFeatures::devirtualizeMemberFunction());
+  // TODO: This devirtualization logic should be hoisted to the AST layer so it
+  // can be shared with classic codegen (see CGExprCXX.cpp).
+  if (canUseVirtualCall &&
+      md->getDevirtualizedMethod(base, getLangOpts().AppleKext)) {
+    const CXXRecordDecl *bestDynamicDecl = base->getBestDynamicClassType();
+    devirtualizedMethod = md->getCorrespondingMethodInClass(bestDynamicDecl);
+    assert(devirtualizedMethod);
+    const CXXRecordDecl *devirtualizedClass = devirtualizedMethod->getParent();
+    const Expr *inner = base->IgnoreParenBaseCasts();
+    auto getCXXRecord = [](const Expr *e) -> const CXXRecordDecl * {
+      QualType t = e->getType();
+      if (t->isRecordType())
+        return t->getAsCXXRecordDecl();
+      return t->getPointeeCXXRecordDecl();
+    };
+    if (devirtualizedMethod->getReturnType().getCanonicalType() !=
+        md->getReturnType().getCanonicalType())
+      // If the return types are not the same, this might be a case where more
+      // code needs to run to compensate for it. For example, the derived
+      // method might return a type that inherits from the return type of MD
+      // and has a prefix.
+      // For now we just avoid devirtualizing these covariant cases.
+      devirtualizedMethod = nullptr;
+    else if (getCXXRecord(inner) == devirtualizedClass)
+      // If the class of the Inner expression is where the dynamic method
+      // is defined, build the this pointer from it.
+      base = inner;
+    else if (getCXXRecord(base) != devirtualizedClass) {
+      // If the method is defined in a class that is not the best dynamic
+      // one or the one of the full expression, we would have to build
+      // a derived-to-base cast to compute the correct this pointer, but
+      // we don't have support for that yet, so do a virtual call.
+      devirtualizedMethod = nullptr;
+    }
+  }
 
   // Note on trivial assignment
   // --------------------------
@@ -214,8 +248,8 @@ RValue CIRGenFunction::emitCXXMemberOrOperatorMemberCallExpr(
         callee = CIRGenCallee::forDirect(
             cgm.getAddrOfCXXStructor(globalDecl, fInfo, ty), globalDecl);
       } else {
-        cgm.errorNYI(ce->getSourceRange(), "devirtualized destructor call");
-        return RValue::get(nullptr);
+        callee = CIRGenCallee::forDirect(cgm.getAddrOfFunction(globalDecl, ty),
+                                         globalDecl);
       }
 
       QualType thisTy =
