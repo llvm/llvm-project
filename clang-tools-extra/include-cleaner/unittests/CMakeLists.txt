@@ -10,6 +10,7 @@ add_unittest(ClangIncludeCleanerUnitTests ClangIncludeCleanerTests
   FindHeadersTest.cpp
   IncludeSpellerTest.cpp
   LocateSymbolTest.cpp
+  MappingFileTest.cpp
   RecordTest.cpp
   TypesTest.cpp
   WalkASTTest.cpp

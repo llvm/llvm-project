@@ -29,6 +29,7 @@
 #include <optional>
 #include <queue>
 #include <set>
+#include <string>
 #include <utility>
 
 namespace clang::include_cleaner {
@@ -252,6 +253,28 @@ llvm::SmallVector<Header> headersForSymbol(const Symbol &S,
   } else {
     for (auto &Loc : locateSymbol(S, PP.getLangOpts()))
       Headers.append(applyHints(findHeaders(Loc, SM, PI), Loc.Hint));
+  }
+
+  // Apply external symbol mappings from mapping files.  We check both the
+  // simple (unqualified) name and, for declarations, the fully-qualified name.
+  if (PI) {
+    auto AddSymbolMapping = [&](llvm::StringRef Name) {
+      if (Name.empty())
+        return;
+      llvm::StringRef Spelling = PI->getExternalSymbolHeader(Name);
+      if (!Spelling.empty())
+        Headers.emplace_back(Header(Spelling), Hints::PublicHeader |
+                                                   Hints::PreferredHeader |
+                                                   Hints::CompleteSymbol);
+    };
+    AddSymbolMapping(symbolName(S));
+    if (S.kind() == Symbol::Declaration) {
+      if (const auto *ND = llvm::dyn_cast<NamedDecl>(&S.declaration())) {
+        std::string QualName = ND->getQualifiedNameAsString();
+        if (QualName != symbolName(S))
+          AddSymbolMapping(QualName);
+      }
+    }
   }
   // If two Headers probably refer to the same file (e.g. Verbatim(foo.h) and
   // Physical(/path/to/foo.h), we won't deduplicate them or merge their hints
