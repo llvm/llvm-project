@@ -1,4 +1,4 @@
-//===-- Internal Semaphore implementation for POSIX semaphores ------------===//
+//===-- Linux Semaphore implementation for POSIX semaphores ---------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SEMAPHORE_POSIX_SEMAPHORE_H
-#define LLVM_LIBC_SRC_SEMAPHORE_POSIX_SEMAPHORE_H
+#ifndef LLVM_LIBC_SRC_SEMAPHORE_LINUX_SEMAPHORE_H
+#define LLVM_LIBC_SRC_SEMAPHORE_LINUX_SEMAPHORE_H
 
+#include "hdr/types/mode_t.h"
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/common.h"
+#include "src/__support/error_or.h"
 #include "src/__support/threads/futex_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -26,8 +28,7 @@ class Semaphore {
 
 public:
   // TODO:
-  // 1. Add named semaphore support: sem_open, sem_close, sem_unlink
-  // 2. Add the posting and waiting operations: sem_post, sem_wait,
+  // Add the posting and waiting operations: sem_post, sem_wait,
   //    sem_trywait, sem_timedwait, sem_clockwait.
 
   LIBC_INLINE constexpr Semaphore(unsigned int value)
@@ -52,8 +53,21 @@ public:
     return static_cast<int>(
         const_cast<Futex &>(value).load(cpp::MemoryOrder::RELAXED));
   }
+
+  // Named semaphore operations.
+  // creates or opens a named semaphore backed by a file in /dev/shm/.
+  // When O_CREAT is specified in oflag, mode and value are used for
+  // initialization.
+  static ErrorOr<Semaphore *> open(const char *name, int oflag, mode_t mode,
+                                   unsigned int value);
+
+  // unmaps a named semaphore.
+  static int close(Semaphore *sem);
+
+  // removes a named semaphore from the filesystem.
+  static int unlink(const char *name);
 };
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_SEMAPHORE_POSIX_SEMAPHORE_H
+#endif // LLVM_LIBC_SRC_SEMAPHORE_LINUX_SEMAPHORE_H
