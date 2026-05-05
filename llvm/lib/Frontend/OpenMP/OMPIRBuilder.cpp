@@ -4733,16 +4733,15 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
       // Fix the CallBack code genereated to use the correct Values for the LHS
       // and RHS. Cast to match types before replacing (necessary to handle
       // different address spaces).
-      Value *CastRedValue = RedValue;
       if (LHSPtr->getType() != RedValue->getType())
-        CastRedValue = Builder.CreatePointerBitCastOrAddrSpaceCast(
+        RedValue = Builder.CreatePointerBitCastOrAddrSpaceCast(
             RedValue, LHSPtr->getType());
       Value *CastRHS = RHS;
       if (RHSPtr->getType() != RHS->getType())
         CastRHS =
             Builder.CreatePointerBitCastOrAddrSpaceCast(RHS, RHSPtr->getType());
 
-      LHSPtr->replaceUsesWithIf(CastRedValue, [ReductionFunc](const Use &U) {
+      LHSPtr->replaceUsesWithIf(RedValue, [ReductionFunc](const Use &U) {
         return cast<Instruction>(U.getUser())->getParent()->getParent() ==
                ReductionFunc;
       });
