@@ -2731,3 +2731,12 @@ define <16 x i4> @v8i4_to_v16i8(<8 x i4> %a) {
   %r = shufflevector <8 x i4> %a, <8 x i4> poison, <16 x i32> zeroinitializer
   ret <16 x i4> %r
 }
+
+define <4 x i16> @dup_zero_undef_first() {
+; CHECK-LABEL: dup_zero_undef_first:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    ret
+    %i = insertelement <4 x i16> zeroinitializer, i16 undef, i32 0
+    ret <4 x i16> %i
+}

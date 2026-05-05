@@ -218,6 +218,25 @@ ArrayRef<Register> IRTranslator::getOrCreateVRegs(const Value &Val) {
     assert(Val.getType()->isSized() &&
            "Don't know how to create an empty vreg");
 
+  // Fast-path values that lower to a single vreg.
+  if (!Val.getType()->isAggregateType()) {
+    LLT Ty = getLLTForType(*Val.getType(), *DL);
+    if (Offsets->empty())
+      Offsets->push_back(0);
+    VRegs->push_back(MRI->createGenericVirtualRegister(Ty));
+    if (isa<Constant>(Val)) {
+      bool Success = translate(cast<Constant>(Val), VRegs->front());
+      if (!Success) {
+        OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
+                                   MF->getFunction().getSubprogram(),
+                                   &MF->getFunction().getEntryBlock());
+        R << "unable to translate constant: " << ore::NV("Type", Val.getType());
+        reportTranslationError(*MF, *ORE, R);
+      }
+    }
+    return *VRegs;
+  }
+
   SmallVector<LLT, 4> SplitTys;
   computeValueLLTs(*DL, *Val.getType(), SplitTys,
                    Offsets->empty() ? Offsets : nullptr);
@@ -228,26 +247,12 @@ ArrayRef<Register> IRTranslator::getOrCreateVRegs(const Value &Val) {
     return *VRegs;
   }
 
-  if (Val.getType()->isAggregateType()) {
-    // UndefValue, ConstantAggregateZero
-    auto &C = cast<Constant>(Val);
-    unsigned Idx = 0;
-    while (auto Elt = C.getAggregateElement(Idx++)) {
-      auto EltRegs = getOrCreateVRegs(*Elt);
-      llvm::append_range(*VRegs, EltRegs);
-    }
-  } else {
-    assert(SplitTys.size() == 1 && "unexpectedly split LLT");
-    VRegs->push_back(MRI->createGenericVirtualRegister(SplitTys[0]));
-    bool Success = translate(cast<Constant>(Val), VRegs->front());
-    if (!Success) {
-      OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
-                                 MF->getFunction().getSubprogram(),
-                                 &MF->getFunction().getEntryBlock());
-      R << "unable to translate constant: " << ore::NV("Type", Val.getType());
-      reportTranslationError(*MF, *ORE, R);
-      return *VRegs;
-    }
+  // UndefValue, ConstantAggregateZero
+  auto &C = cast<Constant>(Val);
+  unsigned Idx = 0;
+  while (auto Elt = C.getAggregateElement(Idx++)) {
+    auto EltRegs = getOrCreateVRegs(*Elt);
+    llvm::append_range(*VRegs, EltRegs);
   }
 
   return *VRegs;
@@ -1387,13 +1392,10 @@ bool IRTranslator::translateLoad(const User &U, MachineIRBuilder &MIRBuilder) {
     return true;
 
   ArrayRef<Register> Regs = getOrCreateVRegs(LI);
-  ArrayRef<uint64_t> Offsets = *VMap.getOffsets(LI);
   Register Base = getOrCreateVReg(*LI.getPointerOperand());
   AAMDNodes AAInfo = LI.getAAMetadata();
 
   const Value *Ptr = LI.getPointerOperand();
-  Type *OffsetIRTy = DL->getIndexType(Ptr->getType());
-  LLT OffsetTy = getLLTForType(*OffsetIRTy, *DL);
 
   if (CLI->supportSwiftError() && isSwiftError(Ptr)) {
     assert(Regs.size() == 1 && "swifterror should be single pointer");
@@ -1412,18 +1414,30 @@ bool IRTranslator::translateLoad(const User &U, MachineIRBuilder &MIRBuilder) {
     }
   }
 
-  const MDNode *Ranges =
-      Regs.size() == 1 ? LI.getMetadata(LLVMContext::MD_range) : nullptr;
+  // Fast-path the common single-register load.
+  if (Regs.size() == 1) {
+    auto *MMO = MF->getMachineMemOperand(
+        MachinePointerInfo(LI.getPointerOperand()), Flags,
+        MRI->getType(Regs[0]), getMemOpAlign(LI), AAInfo,
+        LI.getMetadata(LLVMContext::MD_range), LI.getSyncScopeID(),
+        LI.getOrdering());
+    MIRBuilder.buildLoad(Regs[0], Base, *MMO);
+    return true;
+  }
+
+  ArrayRef<uint64_t> Offsets = *VMap.getOffsets(LI);
+  Type *OffsetIRTy = DL->getIndexType(Ptr->getType());
+  LLT OffsetTy = getLLTForType(*OffsetIRTy, *DL);
   for (unsigned i = 0; i < Regs.size(); ++i) {
     Register Addr;
     MIRBuilder.materializeObjectPtrOffset(Addr, Base, OffsetTy, Offsets[i]);
 
     MachinePointerInfo Ptr(LI.getPointerOperand(), Offsets[i]);
     Align BaseAlign = getMemOpAlign(LI);
-    auto MMO =
-        MF->getMachineMemOperand(Ptr, Flags, MRI->getType(Regs[i]),
-                                 commonAlignment(BaseAlign, Offsets[i]), AAInfo,
-                                 Ranges, LI.getSyncScopeID(), LI.getOrdering());
+    auto *MMO = MF->getMachineMemOperand(Ptr, Flags, MRI->getType(Regs[i]),
+                                         commonAlignment(BaseAlign, Offsets[i]),
+                                         AAInfo, nullptr, LI.getSyncScopeID(),
+                                         LI.getOrdering());
     MIRBuilder.buildLoad(Regs[i], Addr, *MMO);
   }
 
@@ -1436,11 +1450,7 @@ bool IRTranslator::translateStore(const User &U, MachineIRBuilder &MIRBuilder) {
     return true;
 
   ArrayRef<Register> Vals = getOrCreateVRegs(*SI.getValueOperand());
-  ArrayRef<uint64_t> Offsets = *VMap.getOffsets(*SI.getValueOperand());
   Register Base = getOrCreateVReg(*SI.getPointerOperand());
-
-  Type *OffsetIRTy = DL->getIndexType(SI.getPointerOperandType());
-  LLT OffsetTy = getLLTForType(*OffsetIRTy, *DL);
 
   if (CLI->supportSwiftError() && isSwiftError(SI.getPointerOperand())) {
     assert(Vals.size() == 1 && "swifterror should be single pointer");
@@ -1452,17 +1462,29 @@ bool IRTranslator::translateStore(const User &U, MachineIRBuilder &MIRBuilder) {
   }
 
   MachineMemOperand::Flags Flags = TLI->getStoreMemOperandFlags(SI, *DL);
+  // Fast-path the common single-register store.
+  if (Vals.size() == 1) {
+    auto *MMO = MF->getMachineMemOperand(
+        MachinePointerInfo(SI.getPointerOperand()), Flags,
+        MRI->getType(Vals[0]), getMemOpAlign(SI), SI.getAAMetadata(), nullptr,
+        SI.getSyncScopeID(), SI.getOrdering());
+    MIRBuilder.buildStore(Vals[0], Base, *MMO);
+    return true;
+  }
 
+  ArrayRef<uint64_t> Offsets = *VMap.getOffsets(*SI.getValueOperand());
+  Type *OffsetIRTy = DL->getIndexType(SI.getPointerOperandType());
+  LLT OffsetTy = getLLTForType(*OffsetIRTy, *DL);
   for (unsigned i = 0; i < Vals.size(); ++i) {
     Register Addr;
     MIRBuilder.materializeObjectPtrOffset(Addr, Base, OffsetTy, Offsets[i]);
 
     MachinePointerInfo Ptr(SI.getPointerOperand(), Offsets[i]);
     Align BaseAlign = getMemOpAlign(SI);
-    auto MMO = MF->getMachineMemOperand(Ptr, Flags, MRI->getType(Vals[i]),
-                                        commonAlignment(BaseAlign, Offsets[i]),
-                                        SI.getAAMetadata(), nullptr,
-                                        SI.getSyncScopeID(), SI.getOrdering());
+    auto *MMO = MF->getMachineMemOperand(Ptr, Flags, MRI->getType(Vals[i]),
+                                         commonAlignment(BaseAlign, Offsets[i]),
+                                         SI.getAAMetadata(), nullptr,
+                                         SI.getSyncScopeID(), SI.getOrdering());
     MIRBuilder.buildStore(Vals[i], Addr, *MMO);
   }
   return true;
