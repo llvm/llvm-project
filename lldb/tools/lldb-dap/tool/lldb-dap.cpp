@@ -669,7 +669,7 @@ int main(int argc, char *argv[]) {
 #ifdef _WIN32
   if (input_args.hasArg(OPT_check_python)) {
 #ifndef LLDB_ENABLE_PYTHON
-    llvm::outs() << "lldb-dap was not built with Python support" << '\n';
+    llvm::errs() << "lldb-dap was not built with Python support" << '\n';
     return EXIT_SUCCESS;
 #endif
     auto python_path_or_err = SetupPythonRuntimeLibrary();
