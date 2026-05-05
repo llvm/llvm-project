@@ -6,18 +6,14 @@
 
 target triple = "aarch64-grtev4-linux-gnu"
 
-define { <8 x i8>, <8 x i8>, <8 x i8> } @foo() {
-; CHECK-LABEL: define { <8 x i8>, <8 x i8>, <8 x i8> } @foo() {
-; CHECK-NEXT:  [[BB:.*:]]
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr null, i8 0, i64 0, i1 false)
-; CHECK-NEXT:    [[CALL:%.*]] = call { <8 x i8>, <8 x i8>, <8 x i8> } @llvm.aarch64.neon.ld3.v8i8.p0(ptr null)
+define { <8 x i8>, <8 x i8>, <8 x i8> } @foo(ptr %p) {
+; CHECK-LABEL: define { <8 x i8>, <8 x i8>, <8 x i8> } @foo(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[P]], i8 0, i64 0, i1 false)
+; CHECK-NEXT:    [[CALL:%.*]] = call { <8 x i8>, <8 x i8>, <8 x i8> } @llvm.aarch64.neon.ld3.v8i8.p0(ptr [[P]])
 ; CHECK-NEXT:    ret { <8 x i8>, <8 x i8>, <8 x i8> } [[CALL]]
 ;
-bb:
-  call void @llvm.memset.p0.i64(ptr null, i8 0, i64 0, i1 false)
-  %call = call { <8 x i8>, <8 x i8>, <8 x i8> } @llvm.aarch64.neon.ld3.v8i8.p0(ptr null)
+  call void @llvm.memset.p0.i64(ptr %p, i8 0, i64 0, i1 false)
+  %call = call { <8 x i8>, <8 x i8>, <8 x i8> } @llvm.aarch64.neon.ld3.v8i8.p0(ptr %p)
   ret { <8 x i8>, <8 x i8>, <8 x i8> } %call
 }
-
-declare void @llvm.memset.p0.i64(ptr writeonly captures(none), i8, i64, i1 immarg)
-declare { <8 x i8>, <8 x i8>, <8 x i8> } @llvm.aarch64.neon.ld3.v8i8.p0(ptr)
