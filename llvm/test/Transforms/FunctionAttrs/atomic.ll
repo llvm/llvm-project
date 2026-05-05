@@ -20,17 +20,64 @@ entry:
   ret i32 %r
 }
 
-; A function with an Acquire load is not readonly.
-define i32 @test2(ptr %x) uwtable ssp {
-; CHECK: Function Attrs: mustprogress nofree norecurse nounwind ssp willreturn uwtable
-; CHECK-LABEL: @test2(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[R:%.*]] = load atomic i32, ptr [[X:%.*]] seq_cst, align 4
+define i32 @load_monotonic(ptr %x) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
+; CHECK-LABEL: @load_monotonic(
+; CHECK-NEXT:    [[R:%.*]] = load atomic i32, ptr [[X:%.*]] monotonic, align 4
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
-entry:
-  %r = load atomic i32, ptr %x seq_cst, align 4
+  %r = load atomic i32, ptr %x monotonic, align 4
   ret i32 %r
+}
+
+define i32 @load_acquire(ptr %x) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn
+; CHECK-LABEL: @load_acquire(
+; CHECK-NEXT:    [[R:%.*]] = load atomic i32, ptr [[X:%.*]] acquire, align 4
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %r = load atomic i32, ptr %x acquire, align 4
+  ret i32 %r
+}
+
+define i32 @load_seq_cst(ptr %x) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn
+; CHECK-LABEL: @load_seq_cst(
+; CHECK-NEXT:    [[R:%.*]] = load atomic i32, ptr [[X:%.*]] acquire, align 4
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %r = load atomic i32, ptr %x acquire, align 4
+  ret i32 %r
+}
+
+define void @store_monotonic(ptr %x) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
+; CHECK-LABEL: @store_monotonic(
+; CHECK-NEXT:    store atomic i32 0, ptr [[X:%.*]] monotonic, align 4
+; CHECK-NEXT:    ret void
+;
+  store atomic i32 0, ptr %x monotonic, align 4
+  ret void
+}
+
+define void @store_release(ptr %x) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn
+; CHECK-LABEL: @store_release(
+; CHECK-NEXT:    store atomic i32 0, ptr [[X:%.*]] release, align 4
+; CHECK-NEXT:    ret void
+;
+  store atomic i32 0, ptr %x release, align 4
+  ret void
+}
+
+define void @store_seq_cst(ptr %x) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn
+; CHECK-LABEL: @store_seq_cst(
+; CHECK-NEXT:    store atomic i32 0, ptr [[X:%.*]] seq_cst, align 4
+; CHECK-NEXT:    ret void
+;
+  store atomic i32 0, ptr %x seq_cst, align 4
+  ret void
 }
 
 define void @atomicrmw_monotonic_arg(ptr %x) {
