@@ -241,3 +241,27 @@ Vol vn1() {
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: avoid repeating the return type
   // CHECK-FIXES: return {x};
 }
+
+struct Gaz {
+  Gaz(int) {}
+};
+
+Gaz hn1() {
+  return Gaz(0);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: avoid repeating the return type
+  // CHECK-FIXES: return {0};
+}
+
+Gaz hn2() {
+  const int x = 1;
+  return Gaz(x);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: avoid repeating the return type
+  // CHECK-FIXES: return {x};
+}
+
+Gaz hn3() {
+  const int& x = 2;
+  return Gaz(x);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: avoid repeating the return type
+  // CHECK-FIXES: return {x};
+}
