@@ -42,6 +42,16 @@ void bf16(uint32x2_t v2i32, uint32x4_t v4i32, uint16x8_t v8i16, uint8x16_t v16i8
   vcvt_bf16_f32(v4f32);
 }
 
+__attribute__((target("f16mm")))
+void f16mm(float16x8_t v8f16) {
+  vmmlaq_f16_f16(v8f16, v8f16, v8f16);
+}
+
+__attribute__((target("f16f32mm")))
+void f16f32mm(float32x4_t v4f32, float16x8_t v8f16) {
+  vmmlaq_f32_f16(v4f32, v8f16, v8f16);
+}
+
 __attribute__((target("arch=armv8-a")))
 uint64x2_t test_v8(uint64x2_t a, uint64x2_t b) {
   return veorq_u64(a, b);
@@ -66,7 +76,7 @@ void test_v85(float32x4_t v4f32) {
   vrnd32xq_f32(v4f32);
 }
 
-void undefined(uint32x2_t v2i32, uint32x4_t v4i32, uint16x8_t v8i16, uint8x16_t v16i8, uint8x8_t v8i8, float32x2_t v2f32, float32x4_t v4f32, float16x4_t v4f16, float64x2_t v2f64, bfloat16x4_t v4bf16, __bf16 bf16, poly64_t poly64, poly64x2_t poly64x2) {
+void undefined(uint32x2_t v2i32, uint32x4_t v4i32, uint16x8_t v8i16, uint8x16_t v16i8, uint8x8_t v8i8, float32x2_t v2f32, float32x4_t v4f32, float16x4_t v4f16, float16x8_t v8f16, float64x2_t v2f64, bfloat16x4_t v4bf16, __bf16 bf16, poly64_t poly64, poly64x2_t poly64x2) {
   // dotprod
   vdot_u32(v2i32, v8i8, v8i8); // expected-error {{always_inline function 'vdot_u32' requires target feature 'dotprod'}}
   vdot_laneq_u32(v2i32, v8i8, v16i8, 1); // expected-error {{always_inline function 'vdot_u32' requires target feature 'dotprod'}}
@@ -88,6 +98,9 @@ void undefined(uint32x2_t v2i32, uint32x4_t v4i32, uint16x8_t v8i16, uint8x16_t 
   vld1_bf16(0); // expected-error {{'__builtin_neon_vld1_bf16' needs target feature bf16}}
   vcvt_f32_bf16(v4bf16); // expected-error {{always_inline function 'vcvt_f32_bf16' requires target feature 'bf16'}}
   vcvt_bf16_f32(v4f32); // expected-error {{always_inline function 'vcvt_bf16_f32' requires target feature 'bf16'}}
+  // f16mm / f16f32mm
+  vmmlaq_f16_f16(v8f16, v8f16, v8f16); // expected-error {{always_inline function 'vmmlaq_f16_f16' requires target feature 'f16mm'}}
+  vmmlaq_f32_f16(v4f32, v8f16, v8f16); // expected-error {{always_inline function 'vmmlaq_f32_f16' requires target feature 'f16f32mm'}}
   // v8.1 - qrdmla
   vqrdmlahq_s32(v4i32, v4i32, v4i32); // expected-error {{always_inline function 'vqrdmlahq_s32' requires target feature 'v8.1a'}}
   vqrdmlah_laneq_s32(v2i32, v2i32, v4i32, 1); // expected-error {{always_inline function 'vqrdmlah_s32' requires target feature 'v8.1a'}}

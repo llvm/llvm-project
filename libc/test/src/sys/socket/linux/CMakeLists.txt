@@ -140,7 +140,7 @@ add_libc_unittest(
   SRCS
     send_recv_test.cpp
   DEPENDS
-    libc.include.sys_socket
+    libc.hdr.sys_socket_macros
     libc.src.errno.errno
     libc.src.sys.socket.socketpair
     libc.src.sys.socket.send
@@ -174,8 +174,14 @@ add_libc_unittest(
   SRCS
     sendmsg_recvmsg_test.cpp
   DEPENDS
-    libc.include.sys_socket
+    libc.hdr.fcntl_macros
+    libc.hdr.sys_socket_macros
+    libc.hdr.types.struct_cmsghdr
     libc.src.errno.errno
+    libc.src.fcntl.fcntl
+    libc.src.string.memcpy
+    libc.src.string.memset
+    libc.src.sys.socket.getsockopt
     libc.src.sys.socket.socketpair
     libc.src.sys.socket.sendmsg
     libc.src.sys.socket.recvmsg
@@ -201,4 +207,16 @@ add_libc_unittest(
     libc.src.unistd.read
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_unittest(
+  sockaddr_storage_test
+  SUITE
+    libc_sys_socket_unittests
+  SRCS
+    sockaddr_storage_test.cpp
+    sockaddr_storage_helper.cpp
+  DEPENDS
+    libc.hdr.types.struct_sockaddr_storage
+    libc.hdr.types.struct_sockaddr_un
 )

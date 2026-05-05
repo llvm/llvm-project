@@ -72,59 +72,6 @@ function (check_fortran_builtins_available)
 endfunction ()
 
 
-# Workarounds for older versions of CMake not recognizing FLang. Hence, we
-# cannot use CMAKE_Fortran_COMPILER_ID.
-cmake_path(GET CMAKE_Fortran_COMPILER STEM _Fortran_COMPILER_STEM)
-if (_Fortran_COMPILER_STEM STREQUAL "flang-new" OR _Fortran_COMPILER_STEM STREQUAL "flang")
-  # CMake 3.24 is the first version of CMake that directly recognizes Flang.
-  # LLVM's requirement is only CMake 3.20, teach CMake 3.20-3.23 how to use Flang, if used.
-  if (CMAKE_VERSION VERSION_LESS "3.24")
-    include(CMakeForceCompiler)
-    CMAKE_FORCE_Fortran_COMPILER("${CMAKE_Fortran_COMPILER}" "LLVMFlang")
-
-    set(CMAKE_Fortran_COMPILER_ID "LLVMFlang")
-    set(CMAKE_Fortran_COMPILER_VERSION "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}")
-
-    set(CMAKE_Fortran_SUBMODULE_SEP "-")
-    set(CMAKE_Fortran_SUBMODULE_EXT ".mod")
-
-    set(CMAKE_Fortran_PREPROCESS_SOURCE
-        "<CMAKE_Fortran_COMPILER> -cpp <DEFINES> <INCLUDES> <FLAGS> -E <SOURCE> > <PREPROCESSED_SOURCE>")
-
-    set(CMAKE_Fortran_FORMAT_FIXED_FLAG "-ffixed-form")
-    set(CMAKE_Fortran_FORMAT_FREE_FLAG "-ffree-form")
-
-    set(CMAKE_Fortran_MODDIR_FLAG "-J")
-
-    set(CMAKE_Fortran_COMPILE_OPTIONS_PREPROCESS_ON "-cpp")
-    set(CMAKE_Fortran_COMPILE_OPTIONS_PREPROCESS_OFF "-nocpp")
-    set(CMAKE_Fortran_POSTPROCESS_FLAG "-ffixed-line-length-72")
-
-    set(CMAKE_Fortran_LINKER_WRAPPER_FLAG "-Wl,")
-    set(CMAKE_Fortran_LINKER_WRAPPER_FLAG_SEP ",")
-
-    set(CMAKE_Fortran_VERBOSE_FLAG "-v")
-
-    set(CMAKE_Fortran_LINK_MODE DRIVER)
-  endif ()
-
-  # Optimization flags are only passed after CMake 3.27.4
-  # https://gitlab.kitware.com/cmake/cmake/-/commit/1140087adea98bd8d8974e4c18979f4949b52c34
-  if (CMAKE_VERSION VERSION_LESS "3.27.4")
-    string(APPEND CMAKE_Fortran_FLAGS_DEBUG_INIT " -O0 -g")
-    string(APPEND CMAKE_Fortran_FLAGS_RELWITHDEBINFO_INIT " -O2 -g")
-    string(APPEND CMAKE_Fortran_FLAGS_RELEASE_INIT " -O3")
-  endif ()
-
-  # Only CMake 3.28+ pass --target= to Flang. But for cross-compiling, including
-  # to nvptx amd amdgpu targets, passing the target triple is essential.
-  # https://gitlab.kitware.com/cmake/cmake/-/commit/e9af7b968756e72553296ecdcde6f36606a0babf
-  if (CMAKE_VERSION VERSION_LESS "3.28")
-    set(CMAKE_Fortran_COMPILE_OPTIONS_TARGET "--target=")
-  endif ()
-endif ()
-
-
 set(RUNTIMES_ENABLE_FORTRAN OFF)
 
 # Insert at least one element for
@@ -134,6 +81,72 @@ set(RUNTIMES_ENABLE_FORTRAN OFF)
 # to not fail
 add_custom_target(fortran-dummy-dep)
 set(RUNTIMES_FORTRAN_BUILD_DEPS fortran-dummy-dep)
+
+
+if (CMAKE_Fortran_COMPILER)
+  # Workarounds for older versions of CMake not recognizing FLang. Hence, we
+  # cannot use CMAKE_Fortran_COMPILER_ID.
+  cmake_path(GET CMAKE_Fortran_COMPILER STEM _Fortran_COMPILER_STEM)
+  if (_Fortran_COMPILER_STEM STREQUAL "flang-new" OR _Fortran_COMPILER_STEM STREQUAL "flang")
+    # CMake 3.24 is the first version of CMake that directly recognizes Flang.
+    # LLVM's requirement is only CMake 3.20, teach CMake 3.20-3.23 how to use Flang, if used.
+    if (CMAKE_VERSION VERSION_LESS "3.24")
+      include(CMakeForceCompiler)
+      CMAKE_FORCE_Fortran_COMPILER("${CMAKE_Fortran_COMPILER}" "LLVMFlang")
+
+      set(CMAKE_Fortran_COMPILER_ID "LLVMFlang")
+      set(CMAKE_Fortran_COMPILER_VERSION "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}")
+
+      set(CMAKE_Fortran_SUBMODULE_SEP "-")
+      set(CMAKE_Fortran_SUBMODULE_EXT ".mod")
+
+      set(CMAKE_Fortran_PREPROCESS_SOURCE
+          "<CMAKE_Fortran_COMPILER> -cpp <DEFINES> <INCLUDES> <FLAGS> -E <SOURCE> > <PREPROCESSED_SOURCE>")
+
+      set(CMAKE_Fortran_FORMAT_FIXED_FLAG "-ffixed-form")
+      set(CMAKE_Fortran_FORMAT_FREE_FLAG "-ffree-form")
+
+      set(CMAKE_Fortran_MODDIR_FLAG "-J")
+
+      set(CMAKE_Fortran_COMPILE_OPTIONS_PREPROCESS_ON "-cpp")
+      set(CMAKE_Fortran_COMPILE_OPTIONS_PREPROCESS_OFF "-nocpp")
+      set(CMAKE_Fortran_POSTPROCESS_FLAG "-ffixed-line-length-72")
+
+      set(CMAKE_Fortran_LINKER_WRAPPER_FLAG "-Wl,")
+      set(CMAKE_Fortran_LINKER_WRAPPER_FLAG_SEP ",")
+
+      set(CMAKE_Fortran_VERBOSE_FLAG "-v")
+
+      set(CMAKE_Fortran_LINK_MODE DRIVER)
+    endif ()
+
+    # Optimization flags are only passed after CMake 3.27.4
+    # https://gitlab.kitware.com/cmake/cmake/-/commit/1140087adea98bd8d8974e4c18979f4949b52c34
+    if (CMAKE_VERSION VERSION_LESS "3.27.4")
+      string(APPEND CMAKE_Fortran_FLAGS_DEBUG_INIT " -O0 -g")
+      string(APPEND CMAKE_Fortran_FLAGS_RELWITHDEBINFO_INIT " -O2 -g")
+      string(APPEND CMAKE_Fortran_FLAGS_RELEASE_INIT " -O3")
+    endif ()
+
+    # Only CMake 3.28+ pass --target= to Flang. But for cross-compiling, including
+    # to nvptx amd amdgpu targets, passing the target triple is essential.
+    # https://gitlab.kitware.com/cmake/cmake/-/commit/e9af7b968756e72553296ecdcde6f36606a0babf
+    if (CMAKE_VERSION VERSION_LESS "3.28")
+      set(CMAKE_Fortran_COMPILE_OPTIONS_TARGET "--target=")
+    endif ()
+  endif ()
+else ()
+  # Do not enable Fortran support unless a Fortran compiler is passed, i.e.
+  # compilation of Fortran is explicitly intended.
+  # The automatically detected C/C++ and Fortran compiler may not play together.
+  # An issue encountered is that CMake adds CMAKE_EXE_LINKER_FLAGS to the linker
+  # line of C/C++ as well as Fortran programs, but the compiler drivers may not
+  # use accept the same flags. Specifically, LLVM adds -Wl,--color-diagnostics
+  # which is supported by lld, but the flag is not accepted by ld.bfd used by
+  # gfortran's driver.
+  return ()
+endif ()
+
 
 include(CheckLanguage)
 check_language(Fortran)
@@ -193,6 +206,10 @@ if (RUNTIMES_ENABLE_FLANG_MODULES)
   install(DIRECTORY "${RUNTIMES_OUTPUT_RESOURCE_MOD_DIR}"
     DESTINATION "${destination}"
   )
+
+  # The INSTALL'ed directory must exist, even if empty, or `ninja install` will
+  # fail with an error.
+  file(MAKE_DIRECTORY "${RUNTIMES_OUTPUT_RESOURCE_MOD_DIR}")
 else ()
   # If Flang modules are disabled (e.g. because the compiler is not Flang), avoid the risk of Flang accidentally picking them up.
   extend_path(RUNTIMES_OUTPUT_RESOURCE_MOD_DIR "${CMAKE_CURRENT_BINARY_DIR}" "finclude-${CMAKE_Fortran_COMPILER_ID}")

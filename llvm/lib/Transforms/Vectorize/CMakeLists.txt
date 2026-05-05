@@ -2,6 +2,7 @@ add_llvm_component_library(LLVMVectorize
   LoadStoreVectorizer.cpp
   LoopIdiomVectorize.cpp
   LoopVectorizationLegality.cpp
+  LoopVectorizationPlanner.cpp
   LoopVectorize.cpp
   SandboxVectorizer/DependencyGraph.cpp
   SandboxVectorizer/InstrMaps.cpp
@@ -15,6 +16,7 @@ add_llvm_component_library(LLVMVectorize
   SandboxVectorizer/Passes/SeedCollection.cpp
   SandboxVectorizer/Passes/TransactionAcceptOrRevert.cpp
   SandboxVectorizer/Passes/TransactionSave.cpp
+  SandboxVectorizer/RegionWithScore.cpp
   SandboxVectorizer/SandboxVectorizer.cpp
   SandboxVectorizer/SandboxVectorizerPassBuilder.cpp
   SandboxVectorizer/Scheduler.cpp
@@ -28,7 +30,6 @@ add_llvm_component_library(LLVMVectorize
   VPlanConstruction.cpp
   VPlanPredicator.cpp
   VPlanRecipes.cpp
-  VPlanSLP.cpp
   VPlanTransforms.cpp
   VPlanUnroll.cpp
   VPlanVerifier.cpp

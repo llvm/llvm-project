@@ -244,7 +244,14 @@ public:
   }
 
   /// Set location information used by debugging information.
-  void SetCurrentDebugLocation(DebugLoc L) {
+  void SetCurrentDebugLocation(const DebugLoc &L) {
+    // For !dbg metadata attachments, we use DebugLoc instead of the raw MDNode
+    // to include optional introspection data for use in Debugify.
+    StoredDL = L;
+  }
+
+  /// Set location information used by debugging information.
+  void SetCurrentDebugLocation(DebugLoc &&L) {
     // For !dbg metadata attachments, we use DebugLoc instead of the raw MDNode
     // to include optional introspection data for use in Debugify.
     StoredDL = std::move(L);
@@ -1036,6 +1043,12 @@ public:
     return CreateIntrinsic(ID, /*Types=*/{}, Args, FMFSource, Name);
   }
 
+  /// Create call to the fabs intrinsic.
+  CallInst *CreateFAbs(Value *V, FMFSource FMFSource = {},
+                       const Twine &Name = "") {
+    return CreateUnaryIntrinsic(Intrinsic::fabs, V, FMFSource, Name);
+  }
+
   /// Create call to the minnum intrinsic.
   Value *CreateMinNum(Value *LHS, Value *RHS, FMFSource FMFSource = {},
                       const Twine &Name = "") {
@@ -1749,6 +1762,18 @@ public:
     return Insert(BinOp, Name);
   }
 
+  Value *CreateNoWrapBinOp(Instruction::BinaryOps Opc, Value *LHS, Value *RHS,
+                           bool IsNUW, bool IsNSW, const Twine &Name = "") {
+    if (Value *V = Folder.FoldNoWrapBinOp(Opc, LHS, RHS, IsNUW, IsNSW))
+      return V;
+    Instruction *BinOp = BinaryOperator::Create(Opc, LHS, RHS);
+    if (IsNUW)
+      BinOp->setHasNoUnsignedWrap(IsNUW);
+    if (IsNSW)
+      BinOp->setHasNoSignedWrap(IsNSW);
+    return Insert(BinOp, Name);
+  }
+
   Value *CreateLogicalAnd(Value *Cond1, Value *Cond2, const Twine &Name = "",
                           Instruction *MDFrom = nullptr) {
     assert(Cond2->getType()->isIntOrIntVectorTy(1));
@@ -1952,13 +1977,15 @@ public:
   AtomicRMWInst *CreateAtomicRMW(AtomicRMWInst::BinOp Op, Value *Ptr,
                                  Value *Val, MaybeAlign Align,
                                  AtomicOrdering Ordering,
-                                 SyncScope::ID SSID = SyncScope::System) {
+                                 SyncScope::ID SSID = SyncScope::System,
+                                 bool Elementwise = false) {
     if (!Align) {
       const DataLayout &DL = BB->getDataLayout();
       Align = llvm::Align(DL.getTypeStoreSize(Val->getType()));
     }
 
-    return Insert(new AtomicRMWInst(Op, Ptr, Val, *Align, Ordering, SSID));
+    return Insert(
+        new AtomicRMWInst(Op, Ptr, Val, *Align, Ordering, SSID, Elementwise));
   }
 
   CallInst *CreateStructuredGEP(Type *BaseType, Value *PtrBase,

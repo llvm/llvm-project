@@ -18,6 +18,7 @@
 
 #include "llvm/ADT/bit.h"
 #include <array>
+#include <cassert>
 #include <climits>
 #include <cstdint>
 
@@ -51,8 +52,9 @@ template <unsigned NumBits> class Bitset {
 
   constexpr void maskLastWord() { Bits[getLastWordIndex()] &= RemainderMask; }
 
-protected:
-  constexpr Bitset(const std::array<uint64_t, (NumBits + 63) / 64> &B) {
+public:
+  explicit constexpr Bitset(
+      const std::array<uint64_t, (NumBits + 63) / 64> &B) {
     if constexpr (sizeof(BitWord) == sizeof(uint64_t)) {
       for (size_t I = 0; I != B.size(); ++I)
         Bits[I] = B[I];
@@ -70,8 +72,6 @@ protected:
     }
     maskLastWord();
   }
-
-public:
   constexpr Bitset() = default;
   constexpr Bitset(std::initializer_list<unsigned> Init) {
     for (auto I : Init)
@@ -194,6 +194,102 @@ public:
     }
     return false;
   }
+
+  constexpr Bitset &operator<<=(unsigned N) {
+    if (N == 0)
+      return *this;
+    if (N >= NumBits)
+      return *this = Bitset();
+    const unsigned WordShift = N / BitwordBits;
+    const unsigned BitShift = N % BitwordBits;
+    if (BitShift == 0) {
+      for (unsigned I = NumWords; I > WordShift;) {
+        --I;
+        Bits[I] = Bits[I - WordShift];
+      }
+    } else {
+      const unsigned CarryShift = BitwordBits - BitShift;
+      for (unsigned I = NumWords - 1; I > WordShift; --I) {
+        Bits[I] = (Bits[I - WordShift] << BitShift) |
+                  (Bits[I - WordShift - 1] >> CarryShift);
+      }
+      Bits[WordShift] = Bits[0] << BitShift;
+    }
+    for (unsigned I = 0; I < WordShift; ++I)
+      Bits[I] = 0;
+    maskLastWord();
+    return *this;
+  }
+
+  constexpr Bitset operator<<(unsigned N) const {
+    Bitset Result(*this);
+    Result <<= N;
+    return Result;
+  }
+
+  constexpr Bitset &operator>>=(unsigned N) {
+    if (N == 0)
+      return *this;
+    if (N >= NumBits)
+      return *this = Bitset();
+    const unsigned WordShift = N / BitwordBits;
+    const unsigned BitShift = N % BitwordBits;
+    if (BitShift == 0) {
+      for (unsigned I = 0; I < NumWords - WordShift; ++I)
+        Bits[I] = Bits[I + WordShift];
+    } else {
+      const unsigned CarryShift = BitwordBits - BitShift;
+      for (unsigned I = 0; I < NumWords - WordShift - 1; ++I) {
+        Bits[I] = (Bits[I + WordShift] >> BitShift) |
+                  (Bits[I + WordShift + 1] << CarryShift);
+      }
+      Bits[NumWords - WordShift - 1] = Bits[NumWords - 1] >> BitShift;
+    }
+    for (unsigned I = NumWords - WordShift; I < NumWords; ++I)
+      Bits[I] = 0;
+    maskLastWord();
+    return *this;
+  }
+
+  constexpr Bitset operator>>(unsigned N) const {
+    Bitset Result(*this);
+    Result >>= N;
+    return Result;
+  }
+
+  /// Return the I-th 64-bit word of the bitset, from least significant to most.
+  ///
+  /// All words other than the last contain exactly 64 stored bits. The last
+  /// word (\p I == \c getNumWords64() - 1) may cover fewer than 64 stored bits
+  /// when \c NumBits is not a multiple of 64; in that case the unused high bits
+  /// are reported as 0.
+  constexpr uint64_t getWord64(unsigned I) const {
+    assert(I < getNumWords64() && "Word index out of range");
+    if constexpr (BitwordBits == 64) {
+      return Bits[I];
+    } else {
+      static_assert(BitwordBits == 32, "Unsupported word size");
+      // When Bitword is 32-bit, for a valid I, the first word is always
+      // present, but the second may not be present.
+      uint64_t Lo = Bits[2 * I];
+      uint64_t Hi = (2 * I + 1 < NumWords) ? Bits[2 * I + 1] : 0;
+      return Lo | (Hi << 32);
+    }
+  }
+
+  /// Return the index of the highest set bit, or -1 if no bits are set.
+  constexpr int findLastSet() const {
+    for (unsigned I = NumWords; I > 0;) {
+      --I;
+      if (Bits[I] != 0)
+        return I * BitwordBits +
+               (BitwordBits - 1 - countl_zero_constexpr(Bits[I]));
+    }
+    return -1;
+  }
+
+  /// Return the number of 64-bit words needed to hold all bits.
+  static constexpr unsigned getNumWords64() { return (NumBits + 63) / 64; }
 };
 
 } // end namespace llvm
