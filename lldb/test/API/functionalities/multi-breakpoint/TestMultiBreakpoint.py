@@ -157,7 +157,9 @@ class TestMultiBreakpoint(TestBase):
         # Clean up both.
         array = [f"z0,{addr_a},{bp_kind}", f"z0,{addr_a},{bp_kind}"]
         reply = self.send_packet(make_packet(array))
-        self.assertMultiResponse(reply, ["OK", "OK" if breakpoints_are_refcounted else "error"])
+        self.assertMultiResponse(
+            reply, ["OK", "OK" if breakpoints_are_refcounted else "error"]
+        )
 
         # --- Set the same breakpoint twice, but remove it thrice.
         array = [f"Z0,{addr_a},{bp_kind}", f"Z0,{addr_a},{bp_kind}"]
@@ -169,7 +171,9 @@ class TestMultiBreakpoint(TestBase):
             f"z0,{addr_a},{bp_kind}",
         ]
         reply = self.send_packet(make_packet(array))
-        self.assertMultiResponse(reply, ["OK", "OK" if breakpoints_are_refcounted else "error", "error"])
+        self.assertMultiResponse(
+            reply, ["OK", "OK" if breakpoints_are_refcounted else "error", "error"]
+        )
 
         # --- Set and remove the same address in a single packet ---
         # The spec requires requests to be executed in order, so the set
