@@ -35,6 +35,10 @@ static_assert(0.0 == LIBC_NAMESPACE::shared::ufromfp(0.0, 0, 32));
 static_assert(0.0 == LIBC_NAMESPACE::shared::ufromfpx(0.0, 0, 32));
 static_assert(0.0 == LIBC_NAMESPACE::shared::fmaximum_mag(0.0, 0.0));
 static_assert(0.0 == LIBC_NAMESPACE::shared::fminimum_mag(0.0, 0.0));
+static_assert(-1.0 == [] {
+  double getpayload_x = 0.0;
+  return LIBC_NAMESPACE::shared::getpayload(&getpayload_x);
+}());
 
 constexpr double TOTALORDER_X = 0.0;
 constexpr double TOTALORDER_Y = 0.0;
@@ -92,6 +96,10 @@ static_assert(0.0f == LIBC_NAMESPACE::shared::ufromfpf(0.0f, 0, 32));
 static_assert(0.0f == LIBC_NAMESPACE::shared::ufromfpxf(0.0f, 0, 32));
 static_assert(0.0f == LIBC_NAMESPACE::shared::fmaximum_magf(0.0f, 0.0f));
 static_assert(0.0f == LIBC_NAMESPACE::shared::fminimum_magf(0.0f, 0.0f));
+static_assert(-1.0f == [] {
+  float getpayload_x = 0.0f;
+  return LIBC_NAMESPACE::shared::getpayloadf(&getpayload_x);
+}());
 
 constexpr float TOTALORDERF_X = 0.0f;
 constexpr float TOTALORDERF_Y = 0.0f;
@@ -155,6 +163,10 @@ static_assert(0.0f16 ==
               LIBC_NAMESPACE::shared::fminimum_numf16(0.0f16, 0.0f16));
 static_assert(0.0f16 == LIBC_NAMESPACE::shared::fromfpf16(0.0f16, 0, 32));
 static_assert(0.0f16 == LIBC_NAMESPACE::shared::fromfpxf16(0.0f16, 0, 32));
+static_assert(-1.0f16 == [] {
+  float16 getpayload_x = 0.0f16;
+  return LIBC_NAMESPACE::shared::getpayloadf16(&getpayload_x);
+}());
 static_assert(0.0f16 == LIBC_NAMESPACE::shared::ufromfpf16(0.0f16, 0, 32));
 static_assert(0.0f16 == LIBC_NAMESPACE::shared::ufromfpxf16(0.0f16, 0, 32));
 static_assert(0.0f16 ==
@@ -223,6 +235,10 @@ static_assert(0.0L == LIBC_NAMESPACE::shared::fminimum_numl(0.0L, 0.0L));
 static_assert(0.0L == LIBC_NAMESPACE::shared::fromfpl(0.0L, 0, 32));
 static_assert(0.0L == LIBC_NAMESPACE::shared::fromfpxl(0.0L, 0, 32));
 static_assert(0.0L == LIBC_NAMESPACE::shared::ufromfpl(0.0L, 0, 32));
+static_assert(-1.0L == [] {
+  long double getpayload_x = 0.0L;
+  return LIBC_NAMESPACE::shared::getpayloadl(&getpayload_x);
+}());
 static_assert(0.0L == LIBC_NAMESPACE::shared::ufromfpxl(0.0L, 0, 32));
 static_assert(0.0L == LIBC_NAMESPACE::shared::fmaximum_magl(0.0L, 0.0L));
 static_assert(0.0L == LIBC_NAMESPACE::shared::fminimum_magl(0.0L, 0.0L));
@@ -313,6 +329,10 @@ static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::fromfpf128(float128(0.0), 0, 32));
 static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::fromfpxf128(float128(0.0), 0, 32));
+static_assert(float128(-1.0) == [] {
+  float128 getpayload_x = float128(0.0);
+  return LIBC_NAMESPACE::shared::getpayloadf128(&getpayload_x);
+}());
 static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::ufromfpf128(float128(0.0), 0, 32));
 static_assert(float128(0.0) ==
@@ -412,6 +432,12 @@ static_assert(bfloat16(0.0) ==
               LIBC_NAMESPACE::shared::fromfpbf16(bfloat16(0.0), 0, 32));
 static_assert(bfloat16(0.0) ==
               LIBC_NAMESPACE::shared::fromfpxbf16(bfloat16(0.0), 0, 32));
+
+static_assert(bfloat16(-1.0) == [] {
+  bfloat16 getpayload_x = bfloat16(0.0);
+  return LIBC_NAMESPACE::shared::getpayloadbf16(&getpayload_x);
+}());
+
 static_assert(bfloat16(0.0) ==
               LIBC_NAMESPACE::shared::ufromfpbf16(bfloat16(0.0), 0, 32));
 static_assert(bfloat16(0.0) ==

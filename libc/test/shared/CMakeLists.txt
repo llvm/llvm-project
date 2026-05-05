@@ -599,6 +599,12 @@ add_fp_unittest(
     libc.src.__support.math.fsub
     libc.src.__support.math.fsubf128
     libc.src.__support.math.fsubl
+    libc.src.__support.math.getpayload
+    libc.src.__support.math.getpayloadbf16
+    libc.src.__support.math.getpayloadf
+    libc.src.__support.math.getpayloadf128
+    libc.src.__support.math.getpayloadf16
+    libc.src.__support.math.getpayloadl
     libc.src.__support.math.ldexp
     libc.src.__support.math.ldexpbf16
     libc.src.__support.math.ldexpl

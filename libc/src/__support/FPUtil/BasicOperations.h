@@ -365,7 +365,8 @@ totalordermag(T x, T y) {
 }
 
 template <typename T>
-LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, T> getpayload(T x) {
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_floating_point_v<T>, T>
+getpayload(T x) {
   using FPBits = FPBits<T>;
   using StorageType = typename FPBits::StorageType;
   FPBits x_bits(x);
