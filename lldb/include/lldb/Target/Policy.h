@@ -46,12 +46,12 @@ struct Policy {
 
   View view = View::Public;
   Capabilities capabilities = {
-      true,  // can_evaluate_expressions
-      false, // stop_others_only
-      true,  // can_try_all_threads
-      true,  // can_run_breakpoint_actions
-      true,  // can_load_frame_providers
-      true,  // can_run_frame_recognizers
+      /*can_evaluate_expressions=*/true,
+      /*stop_others_only=*/false,
+      /*can_try_all_threads=*/true,
+      /*can_run_breakpoint_actions=*/true,
+      /*can_load_frame_providers=*/true,
+      /*can_run_frame_recognizers=*/true,
   };
 
   static Policy PublicState() { return {}; }
