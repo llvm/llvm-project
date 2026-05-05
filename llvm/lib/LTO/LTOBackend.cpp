@@ -27,6 +27,18 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/LTO/LTO.h"
+#include "llvm/MC/MCAsmBackend.h"
+#include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCCodeEmitter.h"
+#include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCObjectFileInfo.h"
+#include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCParser/MCAsmParser.h"
+#include "llvm/MC/MCParser/MCTargetAsmParser.h"
+#include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCStreamer.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/ModuleSymbolTable.h"
 #include "llvm/Passes/PassBuilder.h"
@@ -36,6 +48,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -105,36 +118,40 @@ Error Config::addSaveTemps(std::string OutputFileName, bool UseInputModulePath,
     }
   }
 
+  // If this is the combined module (not a ThinLTO backend compile) or the
+  // user hasn't requested using the input module's path, emit to a file
+  // named from the provided OutputFileName with the Task ID appended.
+  auto getPathPrefix = [=](const Module &M, unsigned Task) -> std::string {
+    if (M.getModuleIdentifier() == "ld-temp.o" || !UseInputModulePath) {
+      std::string Prefix = OutputFileName;
+      if (Task != (unsigned)-1)
+        Prefix += utostr(Task) + ".";
+      return Prefix;
+    }
+    return std::string(M.getModuleIdentifier()) + ".";
+  };
+
+  auto shouldSkipModule =
+      [SaveModNames = SmallVector<std::string, 1>(
+           SaveModulesList.begin(), SaveModulesList.end())](const Module &M) {
+        return !SaveModNames.empty() &&
+               !llvm::is_contained(
+                   SaveModNames,
+                   std::string(llvm::sys::path::filename(M.getName())));
+      };
+
   auto setHook = [&](std::string PathSuffix, ModuleHookFn &Hook) {
     // Keep track of the hook provided by the linker, which also needs to run.
     ModuleHookFn LinkerHook = Hook;
-    Hook = [=, SaveModNames = llvm::SmallVector<std::string, 1>(
-                   SaveModulesList.begin(), SaveModulesList.end())](
-               unsigned Task, const Module &M) {
-      // If SaveModulesList is not empty, only do save-temps if the module's
-      // filename (without path) matches a name in the list.
-      if (!SaveModNames.empty() &&
-          !llvm::is_contained(
-              SaveModNames,
-              std::string(llvm::sys::path::filename(M.getName()))))
+    Hook = [=](unsigned Task, const Module &M) {
+      if (shouldSkipModule(M))
         return false;
-
       // If the linker's hook returned false, we need to pass that result
       // through.
       if (LinkerHook && !LinkerHook(Task, M))
         return false;
 
-      std::string PathPrefix;
-      // If this is the combined module (not a ThinLTO backend compile) or the
-      // user hasn't requested using the input module's path, emit to a file
-      // named from the provided OutputFileName with the Task ID appended.
-      if (M.getModuleIdentifier() == "ld-temp.o" || !UseInputModulePath) {
-        PathPrefix = OutputFileName;
-        if (Task != (unsigned)-1)
-          PathPrefix += utostr(Task) + ".";
-      } else
-        PathPrefix = M.getModuleIdentifier() + ".";
-      std::string Path = PathPrefix + PathSuffix + ".bc";
+      std::string Path = getPathPrefix(M, Task) + PathSuffix + ".bc";
       std::error_code EC;
       raw_fd_ostream OS(Path, EC, sys::fs::OpenFlags::OF_None);
       // Because -save-temps is a debugging feature, we report the error
@@ -143,6 +160,19 @@ Error Config::addSaveTemps(std::string OutputFileName, bool UseInputModulePath,
         reportOpenError(Path, EC.message());
       WriteBitcodeToFile(M, OS, /*ShouldPreserveUseListOrder=*/false);
       return true;
+    };
+  };
+
+  auto setAsmHook = [&]() {
+    SaveTempsAsmHook = [=](unsigned Task, const Module &M, StringRef AsmText) {
+      if (shouldSkipModule(M))
+        return;
+      std::string Path = getPathPrefix(M, Task) + "s";
+      std::error_code EC;
+      raw_fd_ostream OS(Path, EC, sys::fs::OF_Text);
+      if (EC)
+        reportOpenError(Path, EC.message());
+      OS << AsmText;
     };
   };
 
@@ -189,6 +219,8 @@ Error Config::addSaveTemps(std::string OutputFileName, bool UseInputModulePath,
       setHook("5.precodegen", PreCodeGenModuleHook);
     if (SaveTempsArgs.contains("combinedindex"))
       CombinedIndexHook = SaveCombinedIndex;
+    if (SaveTempsArgs.contains("asm"))
+      setAsmHook();
   }
 
   return Error::success();
@@ -434,6 +466,44 @@ bool lto::opt(const Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
   return !Conf.PostOptModuleHook || Conf.PostOptModuleHook(Task, Mod);
 }
 
+// Converts textual assembly code into the requested object format.
+static void assemble(const Target *T, const TargetMachine *TM,
+                     StringRef AsmText, raw_pwrite_stream &OS) {
+  const llvm::Triple &TT = TM->getTargetTriple();
+  std::unique_ptr<MCRegisterInfo> MRI(T->createMCRegInfo(TT));
+  std::unique_ptr<MCAsmInfo> MAI(
+      T->createMCAsmInfo(*MRI, TT, TM->Options.MCOptions));
+  std::unique_ptr<MCSubtargetInfo> STI(T->createMCSubtargetInfo(
+      TT, TM->getTargetCPU(), TM->getTargetFeatureString()));
+  std::unique_ptr<MCInstrInfo> MCII(T->createMCInstrInfo());
+
+  MCContext Ctx(TT, *MAI, *MRI, *STI);
+  std::unique_ptr<MCObjectFileInfo> MOFI(
+      T->createMCObjectFileInfo(Ctx, /*PIC=*/false));
+  Ctx.setObjectFileInfo(MOFI.get());
+
+  std::unique_ptr<MCCodeEmitter> CE(T->createMCCodeEmitter(*MCII, Ctx));
+  std::unique_ptr<MCAsmBackend> MAB(
+      T->createMCAsmBackend(*STI, *MRI, TM->Options.MCOptions));
+  std::unique_ptr<MCObjectWriter> OW = MAB->createObjectWriter(OS);
+  std::unique_ptr<MCStreamer> Streamer(T->createMCObjectStreamer(
+      TT, Ctx, std::move(MAB), std::move(OW), std::move(CE), *STI));
+
+  auto Buf = MemoryBuffer::getMemBufferCopy(AsmText, "<save-temps-asm>");
+  SourceMgr SrcMgr;
+  SrcMgr.AddNewSourceBuffer(std::move(Buf), SMLoc());
+
+  std::unique_ptr<MCAsmParser> Parser(
+      createMCAsmParser(SrcMgr, Ctx, *Streamer, *MAI));
+  std::unique_ptr<MCTargetAsmParser> TAP(
+      T->createMCAsmParser(*STI, *Parser, *MCII));
+  if (!TAP)
+    report_fatal_error("Failed to create target asm parser");
+  Parser->setTargetParser(*TAP);
+  if (Parser->Run(false))
+    report_fatal_error("Failed to assemble save-temps assembly output");
+}
+
 static void codegen(const Config &Conf, TargetMachine *TM,
                     AddStreamFn AddStream, unsigned Task, Module &Mod,
                     const ModuleSummaryIndex &CombinedIndex) {
@@ -467,6 +537,47 @@ static void codegen(const Config &Conf, TargetMachine *TM,
     if (EC)
       report_fatal_error(Twine("Failed to open ") + DwoFile + ": " +
                          EC.message());
+  }
+
+  // Emit an intermediate assembly file phase if requested by the user.
+  if (Conf.SaveTempsAsmHook) {
+    SmallString<0> AsmBuf;
+    raw_svector_ostream AsmOS(AsmBuf);
+
+    legacy::PassManager CodeGenPasses;
+    TargetLibraryInfoImpl TLII(Mod.getTargetTriple(), TM->Options.VecLib);
+    CodeGenPasses.add(new TargetLibraryInfoWrapperPass(TLII));
+    CodeGenPasses.add(new RuntimeLibraryInfoWrapper(
+        Mod.getTargetTriple(), TM->Options.ExceptionModel,
+        TM->Options.FloatABIType, TM->Options.EABIVersion,
+        TM->Options.MCOptions.ABIName, TM->Options.VecLib));
+    if (!isEmptyModule(Mod))
+      CodeGenPasses.add(
+          createImmutableModuleSummaryIndexWrapperPass(&CombinedIndex));
+    if (Conf.PreCodeGenPassesHook)
+      Conf.PreCodeGenPassesHook(CodeGenPasses);
+    if (TM->addPassesToEmitFile(CodeGenPasses, AsmOS, nullptr,
+                                CodeGenFileType::AssemblyFile))
+      report_fatal_error("Failed to setup codegen");
+    CodeGenPasses.run(Mod);
+
+    Conf.SaveTempsAsmHook(Task, Mod, AsmBuf.str());
+
+    Expected<std::unique_ptr<CachedFileStream>> StreamOrErr =
+        AddStream(Task, Mod.getModuleIdentifier());
+    if (Error Err = StreamOrErr.takeError())
+      report_fatal_error(std::move(Err));
+    std::unique_ptr<CachedFileStream> &Stream = *StreamOrErr;
+    TM->Options.ObjectFilenameForDebug = Stream->ObjectPathName;
+
+    assemble(&TM->getTarget(), TM, AsmBuf.str(), *Stream->OS);
+
+    if (DwoOut)
+      DwoOut->keep();
+
+    if (Error Err = Stream->commit())
+      report_fatal_error(std::move(Err));
+    return;
   }
 
   Expected<std::unique_ptr<CachedFileStream>> StreamOrErr =
