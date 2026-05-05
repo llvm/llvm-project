@@ -17314,13 +17314,17 @@ ExprResult Sema::BuildVAArgExpr(SourceLocation BuiltinLoc,
       if (!PromoteType.isNull() && !UnderlyingType->isBooleanType() &&
           PromoteType->isUnsignedIntegerType() !=
               UnderlyingType->isUnsignedIntegerType()) {
-        UnderlyingType =
-            UnderlyingType->isUnsignedIntegerType()
-                ? Context.getCorrespondingSignedType(UnderlyingType)
-                : Context.getCorrespondingUnsignedType(UnderlyingType);
-        if (Context.typesAreCompatible(PromoteType, UnderlyingType,
-                                       /*CompareUnqualified*/ true))
-          PromoteType = QualType();
+
+        if (!UnderlyingType->isUnsignedIntegerType() ||
+            UnderlyingType->hasSignedIntegerRepresentation()) {
+          UnderlyingType =
+              UnderlyingType->isUnsignedIntegerType()
+                  ? Context.getCorrespondingSignedType(UnderlyingType)
+                  : Context.getCorrespondingUnsignedType(UnderlyingType);
+          if (Context.typesAreCompatible(PromoteType, UnderlyingType,
+                                         /*CompareUnqualified*/ true))
+            PromoteType = QualType();
+        }
       }
     }
     if (TInfo->getType()->isSpecificBuiltinType(BuiltinType::Float))
