@@ -4,8 +4,6 @@
 // RUN: fir-opt %s -pass-pipeline='builtin.module(func.func(test-fir-alias-analysis))' -split-input-file --mlir-disable-threading 2>&1 | FileCheck %s
 
 // Test: embox(ref) vs ref => MustAlias
-// This is the pattern that arises when a subroutine with acc.deviceptr
-// on embox(b) is inlined into a caller that uses b directly.
 // CHECK-LABEL: Testing : "_QPtest_embox_ref"
 // CHECK-DAG: ref#0 <-> box#0: MustAlias
 func.func @_QPtest_embox_ref(%arg0: !fir.ref<!fir.array<10xf32>> {fir.bindc_name = "b"}) {
