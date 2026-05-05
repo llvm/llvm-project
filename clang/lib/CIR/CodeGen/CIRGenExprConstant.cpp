@@ -381,22 +381,26 @@ bool ConstantAggregateBuilder::split(size_t index, CharUnits hint) {
       SmallVector<Element> newElems;
       unsigned numExplicit = arrayAttr.size();
       unsigned trailingZeros = constArray.getTrailingZerosNum();
-      newElems.reserve(numExplicit + trailingZeros);
+      newElems.reserve(numExplicit + (trailingZeros ? 1 : 0));
 
       for (unsigned i = 0; i < numExplicit; ++i) {
         auto eltAttr = mlir::cast<mlir::TypedAttr>(arrayAttr[i]);
         newElems.emplace_back(eltAttr, offset + i * elemSize);
       }
-      // Expand trailing zeros as individual zero elements.
-      for (unsigned i = 0; i < trailingZeros; ++i) {
-        auto zeroAttr = mlir::cast<mlir::TypedAttr>(
-            cir::ZeroAttr::get(arrayTy.getElementType()));
-        newElems.emplace_back(zeroAttr, offset + (numExplicit + i) * elemSize);
+      // Keep trailing zeros as a single ZeroAttr to avoid blowing up the
+      // element list. The ZeroAttr branch of split() can break it apart
+      // further if a later overwrite targets an element inside this range.
+      if (trailingZeros > 0) {
+        auto trailingArrayTy =
+            cir::ArrayType::get(arrayTy.getElementType(), trailingZeros);
+        auto zeroAttr =
+            mlir::cast<mlir::TypedAttr>(cir::ZeroAttr::get(trailingArrayTy));
+        newElems.emplace_back(zeroAttr, offset + numExplicit * elemSize);
       }
       replace(elements, index, index + 1, newElems);
       return true;
     }
-    // TODO: Handle StringAttr elements (char arrays) if needed.
+    cgm.errorNYI("split of ConstArrayAttr with StringAttr elements");
     return false;
   }
 
@@ -418,6 +422,16 @@ bool ConstantAggregateBuilder::split(size_t index, CharUnits hint) {
     // Drop undef; it doesn't contribute to the final layout.
     replace(elements, index, index + 1, SmallVector<Element>{});
     return true;
+  }
+
+  if (mlir::isa<cir::ConstVectorAttr>(c)) {
+    cgm.errorNYI("split of ConstVectorAttr");
+    return false;
+  }
+
+  if (mlir::isa<cir::PoisonAttr>(c)) {
+    cgm.errorNYI("split of PoisonAttr");
+    return false;
   }
 
   // FIXME: We could split a cir::IntAttr if the need ever arose.
@@ -473,12 +487,14 @@ ConstantAggregateBuilder::buildFrom(CIRGenModule &cgm, ArrayRef<Element> elems,
   // If we want an array type, see if all the elements are the same type and
   // appropriately spaced.
   if (auto arrTy = mlir::dyn_cast<cir::ArrayType>(desiredTy)) {
+    assert(!allowOversized && "oversized array emission not supported");
     mlir::Type eltTy = arrTy.getElementType();
     uint64_t numElements = arrTy.getSize();
     CharUnits eltSize = utils.getSize(eltTy);
 
     // Check if all elements have the correct type and are at stride offsets.
-    SmallVector<mlir::Attribute> arrayElts(numElements);
+    SmallVector<mlir::TypedAttr> arrayElts;
+    arrayElts.resize(numElements);
     bool canBuildArray = true;
 
     for (const auto &[element, offset] : elems) {
@@ -497,14 +513,15 @@ ConstantAggregateBuilder::buildFrom(CIRGenModule &cgm, ArrayRef<Element> elems,
     }
 
     if (canBuildArray) {
-      // Fill gaps with zero.
+      mlir::TypedAttr filler =
+          mlir::cast<mlir::TypedAttr>(cir::ZeroAttr::get(eltTy));
+      // Fill gaps with the filler (zero).
       for (uint64_t i = 0; i < numElements; ++i) {
         if (!arrayElts[i])
-          arrayElts[i] = cir::ZeroAttr::get(eltTy);
+          arrayElts[i] = filler;
       }
-      CIRGenBuilderTy &builder = cgm.getBuilder();
-      return cir::ConstArrayAttr::get(
-          arrTy, mlir::ArrayAttr::get(builder.getContext(), arrayElts));
+      return emitArrayConstant(cgm, desiredTy, eltTy, numElements, arrayElts,
+                               filler);
     }
 
     // Elements don't form a clean array layout; fall through to struct-based
@@ -605,7 +622,7 @@ public:
                                      const APValue &value, QualType valTy);
   static bool updateRecord(ConstantEmitter &emitter,
                            ConstantAggregateBuilder &constant, CharUnits offset,
-                           InitListExpr *updater);
+                           const InitListExpr *updater);
 
 private:
   ConstRecordBuilder(ConstantEmitter &emitter,
@@ -642,7 +659,7 @@ private:
   bool applyZeroInitPadding(const ASTRecordLayout &layout, bool allowOverwrite,
                             CharUnits &sizeSoFar);
 
-  bool build(InitListExpr *ile, bool allowOverwrite);
+  bool build(const InitListExpr *ile, bool allowOverwrite);
   bool build(const APValue &val, const RecordDecl *rd, bool isPrimaryBase,
              const CXXRecordDecl *vTableClass, CharUnits baseOffset);
 
@@ -738,8 +755,8 @@ static bool emitDesignatedInitUpdater(ConstantEmitter &emitter,
                                       CharUnits offset, QualType type,
                                       const InitListExpr *updater);
 
-bool ConstRecordBuilder::build(InitListExpr *ile, bool allowOverwrite) {
-  RecordDecl *rd = ile->getType()->castAsRecordDecl();
+bool ConstRecordBuilder::build(const InitListExpr *ile, bool allowOverwrite) {
+  const RecordDecl *rd = ile->getType()->castAsRecordDecl();
   const ASTRecordLayout &layout = cgm.getASTContext().getASTRecordLayout(rd);
 
   // Bail out if we have base classes. We could support these, but they only
@@ -767,7 +784,7 @@ bool ConstRecordBuilder::build(InitListExpr *ile, bool allowOverwrite) {
 
     // Get the initializer.  A record can include fields without initializers,
     // we just use explicit null values for them.
-    Expr *init = nullptr;
+    const Expr *init = nullptr;
     if (elementNo < ile->getNumInits())
       init = ile->getInit(elementNo++);
     if (isa_and_nonnull<NoInitExpr>(init))
@@ -989,7 +1006,8 @@ mlir::Attribute ConstRecordBuilder::buildRecord(ConstantEmitter &emitter,
 
 bool ConstRecordBuilder::updateRecord(ConstantEmitter &emitter,
                                       ConstantAggregateBuilder &constant,
-                                      CharUnits offset, InitListExpr *updater) {
+                                      CharUnits offset,
+                                      const InitListExpr *updater) {
   return ConstRecordBuilder(emitter, constant, offset)
       .build(updater, /*allowOverwrite*/ true);
 }
@@ -999,8 +1017,7 @@ static bool emitDesignatedInitUpdater(ConstantEmitter &emitter,
                                       CharUnits offset, QualType type,
                                       const InitListExpr *updater) {
   if (type->isRecordType())
-    return ConstRecordBuilder::updateRecord(
-        emitter, constant, offset, const_cast<InitListExpr *>(updater));
+    return ConstRecordBuilder::updateRecord(emitter, constant, offset, updater);
 
   auto *cat = emitter.cgm.getASTContext().getAsConstantArrayType(type);
   if (!cat)
