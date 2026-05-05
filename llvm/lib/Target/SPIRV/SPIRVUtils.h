@@ -31,7 +31,6 @@
 namespace llvm {
 class MCInst;
 class MachineFunction;
-class MachineInstr;
 class MachineInstrBuilder;
 class MachineIRBuilder;
 class MachineRegisterInfo;
@@ -40,7 +39,6 @@ class StringRef;
 class SPIRVInstrInfo;
 class SPIRVSubtarget;
 class SPIRVGlobalRegistry;
-class SPIRVTypeInst;
 
 // This class implements a partial ordering visitor, which visits a cyclic graph
 // in natural topological-like ordering. Topological ordering is not defined for
@@ -180,10 +178,6 @@ void addStringImm(const StringRef &Str, MCInst &Inst);
 void addStringImm(const StringRef &Str, MachineInstrBuilder &MIB);
 void addStringImm(const StringRef &Str, IRBuilder<> &B,
                   std::vector<Value *> &Args);
-
-// Read the series of integer operands back as a null-terminated string using
-// the reverse of the logic in addStringImm.
-std::string getStringImm(const MachineInstr &MI, unsigned StartIndex);
 
 // Returns the string constant that the register refers to. It is assumed that
 // Reg is a global value that contains a string.
@@ -396,13 +390,6 @@ inline Type *getPointeeTypeByAttr(Argument *Arg) {
   if (Arg->hasByRefAttr())
     return Arg->getParamByRefType();
   return nullptr;
-}
-
-inline Type *reconstructFunctionType(Function *F) {
-  SmallVector<Type *> ArgTys;
-  for (unsigned i = 0; i < F->arg_size(); ++i)
-    ArgTys.push_back(F->getArg(i)->getType());
-  return FunctionType::get(F->getReturnType(), ArgTys, F->isVarArg());
 }
 
 #define TYPED_PTR_TARGET_EXT_NAME "spirv.$TypedPointerType"

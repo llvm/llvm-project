@@ -172,10 +172,6 @@ void addStringImm(const StringRef &Str, IRBuilder<> &B,
   }
 }
 
-std::string getStringImm(const MachineInstr &MI, unsigned StartIndex) {
-  return getSPIRVStringOperand(MI, StartIndex);
-}
-
 std::string getStringValueFromReg(Register Reg, MachineRegisterInfo &MRI) {
   MachineInstr *Def = getVRegDef(MRI, Reg);
   assert(Def && Def->getOpcode() == TargetOpcode::G_GLOBAL_VALUE &&
