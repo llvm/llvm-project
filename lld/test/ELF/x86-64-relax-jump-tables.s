@@ -1,7 +1,11 @@
 // REQUIRES: x86
 // RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t.o
-// RUN: ld.lld %t.o -shared -o %t
+// RUN: ld.lld --relax-cfi-jump-tables %t.o -shared -o %t
 // RUN: llvm-objdump -d --show-all-symbols %t | FileCheck %s
+// RUN: ld.lld -O2 %t.o -shared -o %t
+// RUN: llvm-objdump -d --show-all-symbols %t | FileCheck %s
+// RUN: ld.lld %t.o -shared -o %t
+// RUN: llvm-objdump -d --show-all-symbols %t | FileCheck --check-prefix=O0 %s
 
 // Mostly positive cases, except for f2.
 .section .text.jt1,"ax",@llvm_cfi_jump_table,8
@@ -41,6 +45,8 @@ jmp f3.cfi
 // CHECK: <f4>:
 // CHECK-NEXT: <f4.cfi>:
 // CHECK-NEXT: retq $0x4
+// O0: <f4>
+// O0-NEXT: jmp {{.*}} <f4.cfi>
 f4:
 jmp f4.cfi
 .balign 16, 0xcc
@@ -132,6 +138,65 @@ jmp f15.cfi
 f16:
 jmp f16.cfi
 .balign 8, 0xcc
+
+// Invalid last jumptable entry: no relocations at all.
+
+// CHECK: <f17>:
+// CHECK-NEXT: retq $0x11
+.section .text.jt6,"ax",@llvm_cfi_jump_table,16
+f17:
+ret $17
+.balign 16, 0xcc
+
+.section .text.f18,"ax",@progbits
+f18.cfi:
+ret $18
+
+// Invalid last jumptable entry: no relocations covering entry.
+
+// CHECK: <f18>:
+// CHECK-NEXT: <f18.cfi>:
+// CHECK-NEXT: retq $0x12
+.section .text.jt7,"ax",@llvm_cfi_jump_table,16
+f18:
+jmp f18.cfi
+.balign 16, 0xcc
+
+// CHECK: <f19>:
+// CHECK-NEXT: retq $0x13
+f19:
+ret $19
+.balign 16, 0xcc
+
+.section .text.f20,"ax",@progbits
+f20.cfi:
+ret $20
+
+// Invalid last jumptable entry: unexpected number of relocations.
+
+// CHECK: <f20>:
+// CHECK-NEXT: jmp {{.*}} <f20.cfi>
+// CHECK-NEXT: jmp {{.*}} <f20.cfi>
+.section .text.jt8,"ax",@llvm_cfi_jump_table,16
+f20:
+jmp f20.cfi
+jmp f20.cfi
+.balign 16, 0xcc
+
+// Similar case to f3, but without a padding section.
+// CHECK: <f21>:
+// CHECK-NEXT: <f21.cfi>:
+// CHECK-NEXT: retq $0x15
+.section .text.jt9,"ax",@llvm_cfi_jump_table,8
+.zero 4096
+f21:
+jmp f21.cfi
+.balign 8, 0xcc
+
+.section .text.f21,"ax",@progbits
+.balign 4096
+f21.cfi:
+ret $21
 
 // CHECK: <f1>:
 // CHECK-NEXT: <f1.cfi>:

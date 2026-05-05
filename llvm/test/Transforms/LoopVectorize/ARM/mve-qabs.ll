@@ -30,9 +30,7 @@ define void @arm_abs_q7(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 %
 ; CHECK-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[PDST]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[NEXT_GEP]], align 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt <16 x i8> [[WIDE_LOAD]], zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <16 x i8> [[WIDE_LOAD]], splat (i8 -128)
-; CHECK-NEXT:    [[TMP6:%.*]] = sub <16 x i8> zeroinitializer, [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP7:%.*]] = select <16 x i1> [[TMP5]], <16 x i8> splat (i8 127), <16 x i8> [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = call <16 x i8> @llvm.ssub.sat.v16i8(<16 x i8> zeroinitializer, <16 x i8> [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = select <16 x i1> [[TMP4]], <16 x i8> [[WIDE_LOAD]], <16 x i8> [[TMP7]]
 ; CHECK-NEXT:    store <16 x i8> [[TMP8]], ptr [[NEXT_GEP3]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 16
@@ -53,9 +51,7 @@ define void @arm_abs_q7(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 %
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds nuw i8, ptr [[PSRC_ADDR_022]], i32 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i8, ptr [[PSRC_ADDR_022]], align 1
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i8 [[TMP10]], 0
-; CHECK-NEXT:    [[CMP5:%.*]] = icmp eq i8 [[TMP10]], -128
-; CHECK-NEXT:    [[SUB:%.*]] = sub i8 0, [[TMP10]]
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP5]], i8 127, i8 [[SUB]]
+; CHECK-NEXT:    [[COND:%.*]] = call i8 @llvm.ssub.sat.i8(i8 0, i8 [[TMP10]])
 ; CHECK-NEXT:    [[COND11:%.*]] = select i1 [[CMP1]], i8 [[TMP10]], i8 [[COND]]
 ; CHECK-NEXT:    [[INCDEC_PTR13]] = getelementptr inbounds nuw i8, ptr [[PDST_ADDR_020]], i32 1
 ; CHECK-NEXT:    store i8 [[COND11]], ptr [[PDST_ADDR_020]], align 1
@@ -124,9 +120,7 @@ define void @arm_abs_q15(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 
 ; CHECK-NEXT:    [[NEXT_GEP4:%.*]] = getelementptr i8, ptr [[PDST]], i32 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i16>, ptr [[NEXT_GEP]], align 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp sgt <8 x i16> [[WIDE_LOAD]], zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq <8 x i16> [[WIDE_LOAD]], splat (i16 -32768)
-; CHECK-NEXT:    [[TMP8:%.*]] = sub <8 x i16> zeroinitializer, [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP9:%.*]] = select <8 x i1> [[TMP7]], <8 x i16> splat (i16 32767), <8 x i16> [[TMP8]]
+; CHECK-NEXT:    [[TMP9:%.*]] = call <8 x i16> @llvm.ssub.sat.v8i16(<8 x i16> zeroinitializer, <8 x i16> [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[TMP10:%.*]] = select <8 x i1> [[TMP6]], <8 x i16> [[WIDE_LOAD]], <8 x i16> [[TMP9]]
 ; CHECK-NEXT:    store <8 x i16> [[TMP10]], ptr [[NEXT_GEP4]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
@@ -147,9 +141,7 @@ define void @arm_abs_q15(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds nuw i8, ptr [[PSRC_ADDR_023]], i32 2
 ; CHECK-NEXT:    [[TMP12:%.*]] = load i16, ptr [[PSRC_ADDR_023]], align 2
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i16 [[TMP12]], 0
-; CHECK-NEXT:    [[CMP5:%.*]] = icmp eq i16 [[TMP12]], -32768
-; CHECK-NEXT:    [[SUB:%.*]] = sub i16 0, [[TMP12]]
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP5]], i16 32767, i16 [[SUB]]
+; CHECK-NEXT:    [[COND:%.*]] = call i16 @llvm.ssub.sat.i16(i16 0, i16 [[TMP12]])
 ; CHECK-NEXT:    [[COND11:%.*]] = select i1 [[CMP1]], i16 [[TMP12]], i16 [[COND]]
 ; CHECK-NEXT:    [[INCDEC_PTR13]] = getelementptr inbounds nuw i8, ptr [[PDST_ADDR_021]], i32 2
 ; CHECK-NEXT:    store i16 [[COND11]], ptr [[PDST_ADDR_021]], align 2
@@ -218,9 +210,7 @@ define void @arm_abs_q31(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 
 ; CHECK-NEXT:    [[NEXT_GEP4:%.*]] = getelementptr i8, ptr [[PDST]], i32 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[NEXT_GEP]], align 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp sgt <4 x i32> [[WIDE_LOAD]], zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], splat (i32 -2147483648)
-; CHECK-NEXT:    [[TMP8:%.*]] = sub nsw <4 x i32> zeroinitializer, [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP9:%.*]] = select <4 x i1> [[TMP7]], <4 x i32> splat (i32 2147483647), <4 x i32> [[TMP8]]
+; CHECK-NEXT:    [[TMP9:%.*]] = call <4 x i32> @llvm.ssub.sat.v4i32(<4 x i32> zeroinitializer, <4 x i32> [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[TMP10:%.*]] = select <4 x i1> [[TMP6]], <4 x i32> [[WIDE_LOAD]], <4 x i32> [[TMP9]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP10]], ptr [[NEXT_GEP4]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
@@ -241,9 +231,7 @@ define void @arm_abs_q31(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds nuw i8, ptr [[PSRC_ADDR_017]], i32 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[PSRC_ADDR_017]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[TMP12]], 0
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[TMP12]], -2147483648
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 0, [[TMP12]]
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP2]], i32 2147483647, i32 [[SUB]]
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.ssub.sat.i32(i32 0, i32 [[TMP12]])
 ; CHECK-NEXT:    [[COND6:%.*]] = select i1 [[CMP1]], i32 [[TMP12]], i32 [[COND]]
 ; CHECK-NEXT:    [[INCDEC_PTR7]] = getelementptr inbounds nuw i8, ptr [[PDST_ADDR_015]], i32 4
 ; CHECK-NEXT:    store i32 [[COND6]], ptr [[PDST_ADDR_015]], align 4
