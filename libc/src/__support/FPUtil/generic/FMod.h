@@ -170,7 +170,7 @@ private:
   using FPB = FPBits<T>;
   using StorageType = typename FPB::StorageType;
 
-  LIBC_INLINE static bool pre_check(T x, T y, T &out) {
+  LIBC_INLINE static constexpr bool pre_check(T x, T y, T &out) {
     using FPB = fputil::FPBits<T>;
     const T quiet_nan = FPB::quiet_nan().get_val();
     FPB sx(x), sy(y);
@@ -200,8 +200,8 @@ private:
 
     if (LIBC_LIKELY(sx.uintval() <= sy.uintval())) {
       if (sx.uintval() < sy.uintval())
-        return sx;             // |x|<|y| return x
-      return FPB::zero();      // |x|=|y| return 0.0
+        return sx;        // |x|<|y| return x
+      return FPB::zero(); // |x|=|y| return 0.0
     }
 
     int e_x = sx.get_biased_exponent();
@@ -276,8 +276,8 @@ private:
   }
 
 public:
-  LIBC_INLINE static T eval(T x, T y) {
-    if (T out; LIBC_UNLIKELY(pre_check(x, y, out)))
+  LIBC_INLINE static constexpr T eval(T x, T y) {
+    if (T out{}; LIBC_UNLIKELY(pre_check(x, y, out)))
       return out;
     FPB sx(x), sy(y);
     Sign sign = sx.sign();

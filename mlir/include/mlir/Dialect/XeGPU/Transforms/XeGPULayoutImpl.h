@@ -103,6 +103,16 @@ DistributeLayoutAttr inferBitCastSourceLayout(DistributeLayoutAttr resLayout,
                                               int resElemTyBitWidth,
                                               int srcElemTyBitWidth);
 
+/// Infers the source layout attribute for an interleave operation given the
+/// result layout attribute. Interleave doubles the innermost dimension size.
+DistributeLayoutAttr
+inferInterleaveSourceLayout(DistributeLayoutAttr resLayout);
+
+/// Infers the source layout attribute for a deinterleave operation given the
+/// result layout attribute. Deinterleave halves the innermost dimension size.
+DistributeLayoutAttr
+inferDeinterleaveSourceLayout(DistributeLayoutAttr resLayout);
+
 /// Infers the source layout attribute for a shape cast operation given the
 /// result layout attribute, result shape, and source shape.
 DistributeLayoutAttr inferShapeCastSourceLayout(DistributeLayoutAttr resLayout,
@@ -161,6 +171,14 @@ DistributeLayoutAttr setupBitCastResultLayout(
     LayoutKind layoutKind, VectorType srcVectorTy, VectorType resVectorTy,
     DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch);
 
+/// Sets up the result layout for an interleave operation to ensure the source
+/// layout can be safely derived. Interleave doubles the innermost dimension,
+/// so the result layout must ensure that laneData is at least 2 (or a multiple
+/// of 2), and instData must be divisible by innermostDimLaneLayout * 2.
+DistributeLayoutAttr setupInterleaveResultLayout(
+    LayoutKind layoutKind, VectorType srcVectorTy, VectorType resVectorTy,
+    DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch);
+
 /// Sets up the result layout for an insert strided slice operation.
 /// Creates a result layout based on the specified layout kind (InstData or
 /// Lane).
@@ -198,6 +216,17 @@ std::optional<std::tuple<DistributeLayoutAttr, DistributeLayoutAttr,
 setupDpasLayout(LayoutKind layoutKind, VectorType aTy, VectorType bTy,
                 VectorType cdTy, DistributeLayoutAttr consumerLayout, int numSg,
                 const uArch::uArch *uArch);
+
+/// Sets up the anchor layouts for dpas_mx operands (A, B, C/D, A_scale, and
+/// B_scale). The numSg and consumerLayout (optional) are only used by sg layout
+/// creation. A_scale and B_scale are optional.
+std::optional<
+    std::tuple<DistributeLayoutAttr, DistributeLayoutAttr, DistributeLayoutAttr,
+               DistributeLayoutAttr, DistributeLayoutAttr>>
+setupDpasMxLayout(LayoutKind layoutKind, VectorType aTy, VectorType bTy,
+                  VectorType cdTy, VectorType aScaleTy, VectorType bScaleTy,
+                  DistributeLayoutAttr consumerLayout, int numSg,
+                  const uArch::uArch *uArch);
 
 /// Gets the expected layout for a given consumer operand. This will check if
 /// the owning operation of the consumer operand is one of the special layout

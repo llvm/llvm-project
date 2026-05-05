@@ -114,6 +114,7 @@ public:
   Args GetAlwaysRunThreadNames() const;
   FollowForkMode GetFollowForkMode() const;
   bool TrackMemoryCacheChanges() const;
+  bool GetUseDelayedBreakpoints() const;
 
 protected:
   Process *m_process; // Can be nullptr for global ProcessProperties
@@ -2246,6 +2247,9 @@ public:
   // Process Breakpoints
   size_t GetSoftwareBreakpointTrapOpcode(BreakpointSite *bp_site);
 
+  enum class BreakpointAction { Enable, Disable };
+
+protected:
   virtual Status EnableBreakpointSite(BreakpointSite *bp_site) {
     return Status::FromErrorStringWithFormatv(
         "error: {0} does not support enabling breakpoints", GetPluginName());
@@ -2255,6 +2259,24 @@ public:
     return Status::FromErrorStringWithFormatv(
         "error: {0} does not support disabling breakpoints", GetPluginName());
   }
+
+  /// Compare BreakpointSiteSPs by ID, so that iteration order is independent
+  /// of pointer addresses.
+  struct SiteIDCmp {
+    bool operator()(const lldb::BreakpointSiteSP &lhs,
+                    const lldb::BreakpointSiteSP &rhs) const {
+      return lhs->GetID() < rhs->GetID();
+    }
+  };
+  using BreakpointSiteToActionMap =
+      std::map<lldb::BreakpointSiteSP, BreakpointAction, SiteIDCmp>;
+
+  virtual llvm::Error
+  UpdateBreakpointSites(const BreakpointSiteToActionMap &site_to_action);
+
+public:
+  llvm::Error ExecuteBreakpointSiteAction(BreakpointSite &site,
+                                          Process::BreakpointAction action);
 
   // This is implemented completely using the lldb::Process API. Subclasses
   // don't need to implement this function unless the standard flow of read
@@ -2283,6 +2305,17 @@ public:
   Status DisableBreakpointSiteByID(lldb::user_id_t break_id);
 
   Status EnableBreakpointSiteByID(lldb::user_id_t break_id);
+
+  bool IsBreakpointSiteEnabled(const BreakpointSite &site);
+
+  bool IsBreakpointSitePhysicallyEnabled(const BreakpointSite &site);
+
+  /// Reports whether this process should delay physically enabling/disabling
+  /// breakpoints until the process is about to resume. The default honors the
+  /// user-facing `target.process.use-delayed-breakpoints` setting.
+  virtual bool ShouldUseDelayedBreakpoints() const {
+    return GetUseDelayedBreakpoints();
+  }
 
   // BreakpointLocations use RemoveConstituentFromBreakpointSite to remove
   // themselves from the constituent's list of this breakpoint sites.
@@ -3538,6 +3571,21 @@ protected:
   /// GetExtendedCrashInformation.
   StructuredData::DictionarySP m_crash_info_dict_sp;
 
+  struct DelayedBreakpointCache {
+    void Enqueue(lldb::BreakpointSiteSP site, BreakpointAction action);
+    void RemoveSite(lldb::BreakpointSiteSP site) {
+      m_site_to_action.erase(site);
+    }
+    void Clear() { m_site_to_action.clear(); }
+
+    BreakpointSiteToActionMap m_site_to_action;
+  };
+
+  DelayedBreakpointCache m_delayed_breakpoints;
+  std::recursive_mutex m_delayed_breakpoints_mutex;
+
+  llvm::Error FlushDelayedBreakpoints();
+
   size_t RemoveBreakpointOpcodesFromBuffer(lldb::addr_t addr, size_t size,
                                            uint8_t *buf) const;
 
@@ -3618,6 +3666,13 @@ protected:
   void LoadOperatingSystemPlugin(bool flush);
 
   void SetAddressableBitMasks(AddressableBits bit_masks);
+
+  // Updates the state of site.
+  // This should be used by derived Process classes after they have changed the
+  // state of a site.
+  void SetBreakpointSiteEnabled(BreakpointSite &site, bool is_enabled = true) {
+    site.SetEnabled(is_enabled);
+  }
 
 private:
   Status DestroyImpl(bool force_kill);
