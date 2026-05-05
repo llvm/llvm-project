@@ -276,7 +276,7 @@ private:
       _Phase3Func __phase3) noexcept {
     auto __n = __last - __first;
     if (__n == 0)
-      return __result;
+      return std::move(__result);
 
     auto __partitions  = __libdispatch::__partition_chunks(__n);
     auto __chunk_count = __partitions.__chunk_count_;
