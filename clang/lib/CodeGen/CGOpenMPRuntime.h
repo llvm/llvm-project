@@ -582,7 +582,9 @@ protected:
   TaskResultTy emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
                             const OMPExecutableDirective &D,
                             llvm::Function *TaskFunction, QualType SharedsTy,
-                            Address Shareds, const OMPTaskDataTy &Data);
+                            Address Shareds, const OMPTaskDataTy &Data,
+                            bool ForTaskgraph,
+                            std::array<llvm::Value *, 3> &TaskAllocArgs);
 
   /// Emit update for lastprivate conditional data.
   void emitLastprivateConditionalUpdate(CodeGenFunction &CGF, LValue IVLVal,
