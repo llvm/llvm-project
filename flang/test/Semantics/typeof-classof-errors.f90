@@ -64,4 +64,10 @@ contains
     integer, optional :: a
     typeof(a) :: b
   end subroutine
+
+  subroutine test_typeof_deferred_char_local(c)
+    character(:), allocatable :: c
+    !ERROR: 'localc' has a type CHARACTER(KIND=1,LEN=:) with a deferred type parameter but is neither an allocatable nor an object pointer
+    typeof(c) :: localc
+  end subroutine
 end module

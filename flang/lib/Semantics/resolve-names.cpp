@@ -6569,23 +6569,11 @@ bool DeclarationVisitor::ResolveTypeOfOrClassOf(
     return false;
   }
 
-  // C713: If the data-ref has the OPTIONAL attribute, it shall not have
+  // F2023 C713: If the data-ref has the OPTIONAL attribute, it shall not have
   // a deferred or assumed type parameter.
   if (ultimate.attrs().test(Attr::OPTIONAL)) {
-    bool hasAssumedOrDeferred{false};
-    if (refType->category() == DeclTypeSpec::Character) {
-      const auto &len{refType->characterTypeSpec().length()};
-      hasAssumedOrDeferred = len.isAssumed() || len.isDeferred();
-    } else if (refType->category() == DeclTypeSpec::TypeDerived ||
-        refType->category() == DeclTypeSpec::ClassDerived) {
-      for (const auto &[_, value] : refType->derivedTypeSpec().parameters()) {
-        if (value.isAssumed() || value.isDeferred()) {
-          hasAssumedOrDeferred = true;
-          break;
-        }
-      }
-    }
-    if (hasAssumedOrDeferred) {
+    if (auto dyType{evaluate::DynamicType::From(ultimate)};
+        dyType && dyType->HasDeferredOrAssumedTypeParameter()) {
       Say(currStmtSource().value(),
           "The OPTIONAL data-ref in %s must not have assumed or deferred type parameters"_err_en_US,
           specName);
@@ -6612,14 +6600,16 @@ bool DeclarationVisitor::ResolveTypeOfOrClassOf(
     const auto &charSpec{refType->characterTypeSpec()};
     if (charSpec.length().isAssumed()) {
       auto lenExpr{evaluate::NamedEntity{ultimate}.LEN()};
-      if (lenExpr) {
-        SetDeclTypeSpec(currScope().MakeCharacterType(
-            ParamValue{
-                SomeIntExpr{std::move(*lenExpr)}, common::TypeParamAttr::Len},
-            KindExpr{charSpec.kind()}));
-      } else {
-        SetDeclTypeSpec(*refType);
+      if (!lenExpr) {
+        Say(currStmtSource().value(),
+            "Could not determine the length of '%s' in %s"_err_en_US,
+            name->source, specName);
+        return false;
       }
+      SetDeclTypeSpec(currScope().MakeCharacterType(
+          ParamValue{
+              SomeIntExpr{std::move(*lenExpr)}, common::TypeParamAttr::Len},
+          KindExpr{charSpec.kind()}));
     } else {
       SetDeclTypeSpec(*refType);
     }
@@ -6632,6 +6622,14 @@ bool DeclarationVisitor::ResolveTypeOfOrClassOf(
       Say(currStmtSource().value(),
           "CLASSOF requires a data-ref of extensible type"_err_en_US);
       return false;
+    }
+    for (const auto &[paramName, paramValue] : derived.parameters()) {
+      if (paramValue.isAssumed()) {
+        Say(currStmtSource().value(),
+            "%s with parameterized derived type that has assumed LEN parameter '%s' is not yet implemented"_todo_en_US,
+            specName, paramName.ToString());
+        return false;
+      }
     }
     auto category{
         isClassOf ? DeclTypeSpec::ClassDerived : DeclTypeSpec::TypeDerived};
@@ -6653,7 +6651,7 @@ bool DeclarationVisitor::ResolveTypeOfOrClassOf(
   }
   case DeclTypeSpec::TypeStar:
     if (isClassOf) {
-      // C712: CLASSOF shall not be used with assumed-type
+      // F2023 C712: CLASSOF shall not be used with assumed-type
       Say(currStmtSource().value(),
           "The data-ref in CLASSOF must not be assumed-type"_err_en_US);
       return false;
@@ -6663,7 +6661,7 @@ bool DeclarationVisitor::ResolveTypeOfOrClassOf(
     break;
   case DeclTypeSpec::ClassStar:
     if (!isClassOf) {
-      // C711: TYPEOF shall not be used with unlimited polymorphic
+      // F2023 C711: TYPEOF shall not be used with unlimited polymorphic
       Say(currStmtSource().value(),
           "The data-ref in TYPEOF must not be unlimited polymorphic"_err_en_US);
       return false;

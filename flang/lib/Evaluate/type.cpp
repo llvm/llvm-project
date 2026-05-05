@@ -776,6 +776,19 @@ bool DynamicType::HasDeferredTypeParameter() const {
   return charLengthParamValue_ && charLengthParamValue_->isDeferred();
 }
 
+bool DynamicType::HasDeferredOrAssumedTypeParameter() const {
+  if (derived_) {
+    for (const auto &pair : derived_->parameters()) {
+      if (pair.second.isDeferred() || pair.second.isAssumed()) {
+        return true;
+      }
+    }
+  }
+  return charLengthParamValue_ &&
+      (charLengthParamValue_->isDeferred() ||
+          charLengthParamValue_->isAssumed());
+}
+
 bool SomeKind<TypeCategory::Derived>::operator==(
     const SomeKind<TypeCategory::Derived> &that) const {
   return PointeeComparison(derivedTypeSpec_, that.derivedTypeSpec_);
