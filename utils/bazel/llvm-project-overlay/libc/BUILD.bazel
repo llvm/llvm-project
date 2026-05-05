@@ -4821,6 +4821,120 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_iscanonical",
+    hdrs = ["src/__support/math/iscanonical.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_iscanonicalbf16",
+    hdrs = ["src/__support/math/iscanonicalbf16.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_fputil_bfloat16",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_iscanonicalf",
+    hdrs = ["src/__support/math/iscanonicalf.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_iscanonicalf128",
+    hdrs = ["src/__support/math/iscanonicalf128.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_iscanonicalf16",
+    hdrs = ["src/__support/math/iscanonicalf16.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_iscanonicall",
+    hdrs = ["src/__support/math/iscanonicall.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_issignaling",
+    hdrs = ["src/__support/math/issignaling.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_issignalingbf16",
+    hdrs = ["src/__support/math/issignalingbf16.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_fputil_bfloat16",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_issignalingf",
+    hdrs = ["src/__support/math/issignalingf.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_issignalingf128",
+    hdrs = ["src/__support/math/issignalingf128.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_issignalingf16",
+    hdrs = ["src/__support/math/issignalingf16.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_issignalingl",
+    hdrs = ["src/__support/math/issignalingl.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_ldexp",
     hdrs = ["src/__support/math/ldexp.h"],
     deps = [
@@ -5140,6 +5254,69 @@ libc_support_library(
     deps = [
         ":__support_fputil_manipulation_functions",
         ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_nan",
+    hdrs = ["src/__support/math/nan.h"],
+    deps = [
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_str_to_float",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_nanbf16",
+    hdrs = ["src/__support/math/nanbf16.h"],
+    deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_str_to_float",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_nanf",
+    hdrs = ["src/__support/math/nanf.h"],
+    deps = [
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_str_to_float",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_nanf128",
+    hdrs = ["src/__support/math/nanf128.h"],
+    deps = [
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_str_to_float",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_nanf16",
+    hdrs = ["src/__support/math/nanf16.h"],
+    deps = [
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_str_to_float",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_nanl",
+    hdrs = ["src/__support/math/nanl.h"],
+    deps = [
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_str_to_float",
     ],
 )
 
@@ -9078,32 +9255,88 @@ libc_math_function(
     ],
 )
 
-libc_math_function(name = "iscanonical")
+libc_math_function(
+    name = "iscanonical",
+    additional_deps = [
+        ":__support_math_iscanonical",
+    ],
+)
 
-libc_math_function(name = "iscanonicalf")
+libc_math_function(
+    name = "iscanonicalbf16",
+    additional_deps = [
+        ":__support_math_iscanonicalbf16",
+    ],
+)
 
-libc_math_function(name = "iscanonicall")
+libc_math_function(
+    name = "iscanonicalf",
+    additional_deps = [
+        ":__support_math_iscanonicalf",
+    ],
+)
+
+libc_math_function(
+    name = "iscanonicall",
+    additional_deps = [
+        ":__support_math_iscanonicall",
+    ],
+)
 
 libc_math_function(
     name = "iscanonicalf128",
+    additional_deps = [
+        ":__support_math_iscanonicalf128",
+    ],
 )
 
 libc_math_function(
     name = "iscanonicalf16",
+    additional_deps = [
+        ":__support_math_iscanonicalf16",
+    ],
 )
 
-libc_math_function(name = "issignaling")
+libc_math_function(
+    name = "issignaling",
+    additional_deps = [
+        ":__support_math_issignaling",
+    ],
+)
 
-libc_math_function(name = "issignalingf")
+libc_math_function(
+    name = "issignalingbf16",
+    additional_deps = [
+        ":__support_math_issignalingbf16",
+    ],
+)
 
-libc_math_function(name = "issignalingl")
+libc_math_function(
+    name = "issignalingf",
+    additional_deps = [
+        ":__support_math_issignalingf",
+    ],
+)
+
+libc_math_function(
+    name = "issignalingl",
+    additional_deps = [
+        ":__support_math_issignalingl",
+    ],
+)
 
 libc_math_function(
     name = "issignalingf128",
+    additional_deps = [
+        ":__support_math_issignalingf128",
+    ],
 )
 
 libc_math_function(
     name = "issignalingf16",
+    additional_deps = [
+        ":__support_math_issignalingf16",
+    ],
 )
 
 libc_math_function(
@@ -10911,45 +11144,42 @@ libc_math_function(
 libc_math_function(
     name = "nan",
     additional_deps = [
-        ":__support_libc_errno",
-        ":__support_str_to_float",
-        ":errno",
+        ":__support_math_nan",
+    ],
+)
+
+libc_math_function(
+    name = "nanbf16",
+    additional_deps = [
+        ":__support_math_nanbf16",
     ],
 )
 
 libc_math_function(
     name = "nanf",
     additional_deps = [
-        ":__support_libc_errno",
-        ":__support_str_to_float",
-        ":errno",
+        ":__support_math_nanf",
     ],
 )
 
 libc_math_function(
     name = "nanl",
     additional_deps = [
-        ":__support_libc_errno",
-        ":__support_str_to_float",
-        ":errno",
+        ":__support_math_nanl",
     ],
 )
 
 libc_math_function(
     name = "nanf128",
     additional_deps = [
-        ":__support_libc_errno",
-        ":__support_str_to_float",
-        ":errno",
+        ":__support_math_nanf128",
     ],
 )
 
 libc_math_function(
     name = "nanf16",
     additional_deps = [
-        ":__support_libc_errno",
-        ":__support_str_to_float",
-        ":errno",
+        ":__support_math_nanf16",
     ],
 )
 

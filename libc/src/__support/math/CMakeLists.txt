@@ -1620,6 +1620,119 @@ add_header_library(
     libc.src.__support.macros.config
 )
 
+add_header_library(
+  iscanonical
+  HDRS
+    iscanonical.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  iscanonicalbf16
+  HDRS
+    iscanonicalbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  iscanonicalf
+  HDRS
+    iscanonicalf.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  iscanonicalf128
+  HDRS
+    iscanonicalf128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  iscanonicalf16
+  HDRS
+    iscanonicalf16.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  iscanonicall
+  HDRS
+    iscanonicall.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  issignaling
+  HDRS
+    issignaling.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  issignalingbf16
+  HDRS
+    issignalingbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  issignalingf
+  HDRS
+    issignalingf.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  issignalingf128
+  HDRS
+    issignalingf128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  issignalingf16
+  HDRS
+    issignalingf16.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  issignalingl
+  HDRS
+    issignalingl.h
+  DEPENDS
+    libc.src.__support.macros.config
+    libc.src.__support.FPUtil.basic_operations
+)
 
 add_header_library(
   ldexp
@@ -1952,6 +2065,70 @@ add_header_library(
   DEPENDS
     libc.src.__support.FPUtil.manipulation_functions
     libc.src.__support.macros.config
+)
+
+add_header_library(
+  nan
+  HDRS
+    nan.h
+  DEPENDS
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.str_to_float
+
+)
+
+add_header_library(
+  nanbf16
+  HDRS
+    nanbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.str_to_float
+)
+
+add_header_library(
+  nanf
+  HDRS
+    nanf.h
+  DEPENDS
+    libc.src.__support.macros.config
+    libc.src.__support.str_to_float
+    libc.src.__support.libc_errno
+)
+
+add_header_library(
+  nanf128
+  HDRS
+    nanf128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.macros.config
+    libc.src.__support.str_to_float
+    libc.src.__support.libc_errno
+)
+
+add_header_library(
+  nanf16
+  HDRS
+    nanf16.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.macros.config
+    libc.src.__support.str_to_float
+    libc.src.__support.libc_errno
+)
+
+add_header_library(
+  nanl
+  HDRS
+    nanl.h
+  DEPENDS
+    libc.src.__support.macros.config
+    libc.src.__support.str_to_float
+    libc.src.__support.libc_errno
 )
 
 add_header_library(
@@ -5332,4 +5509,3 @@ add_header_library(
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.config
 )
-

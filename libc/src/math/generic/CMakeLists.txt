@@ -91,7 +91,7 @@ add_entrypoint_object(
   HDRS
     ../iscanonicalf16.h
   DEPENDS
-    libc.src.__support.macros.properties.types
+    libc.src.__support.math.iscanonicall
 )
 
 add_entrypoint_object(
@@ -101,7 +101,7 @@ add_entrypoint_object(
   HDRS
     ../iscanonicalf128.h
   DEPENDS
-    libc.src.__support.macros.properties.types
+    libc.src.__support.math.iscanonicalf128
 )
 
 add_entrypoint_object(
@@ -111,11 +111,7 @@ add_entrypoint_object(
   HDRS
     ../iscanonicalbf16.h
   DEPENDS
-    libc.src.__support.common
-    libc.src.__support.macros.config
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.basic_operations
-    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.math.iscanonicalbf16
 )
 
 add_entrypoint_object(
@@ -3040,7 +3036,7 @@ add_entrypoint_object(
   HDRS
     ../issignalingf16.h
   DEPENDS
-    libc.src.__support.macros.properties.types
+    libc.src.__support.math.issignalingl
 )
 
 add_entrypoint_object(
@@ -3050,7 +3046,7 @@ add_entrypoint_object(
   HDRS
     ../issignalingf128.h
   DEPENDS
-    libc.src.__support.macros.properties.types
+    libc.src.__support.math.issignalingf128
 )
 
 add_entrypoint_object(
@@ -3060,11 +3056,7 @@ add_entrypoint_object(
   HDRS
     ../issignalingbf16.h
   DEPENDS
-    libc.src.__support.common
-    libc.src.__support.macros.config
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.basic_operations
-    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.math.issignalingbf16
 )
 
 add_entrypoint_object(
@@ -3098,8 +3090,7 @@ add_entrypoint_object(
   HDRS
     ../nan.h
   DEPENDS
-    libc.src.__support.str_to_float
-    libc.src.errno.errno
+    libc.src.__support.math.nan
 )
 
 add_entrypoint_object(
@@ -3109,8 +3100,7 @@ add_entrypoint_object(
   HDRS
     ../nanf.h
   DEPENDS
-    libc.src.__support.str_to_float
-    libc.src.errno.errno
+    libc.src.__support.math.nanf
 )
 
 add_entrypoint_object(
@@ -3120,8 +3110,7 @@ add_entrypoint_object(
   HDRS
     ../nanl.h
   DEPENDS
-    libc.src.__support.str_to_float
-    libc.src.errno.errno
+    libc.src.__support.math.nanl
 )
 
 add_entrypoint_object(
@@ -3131,8 +3120,7 @@ add_entrypoint_object(
   HDRS
     ../nanf16.h
   DEPENDS
-    libc.src.__support.str_to_float
-    libc.src.errno.errno
+    libc.src.__support.math.nanf16
 )
 
 add_entrypoint_object(
@@ -3142,8 +3130,7 @@ add_entrypoint_object(
   HDRS
     ../nanf128.h
   DEPENDS
-    libc.src.__support.str_to_float
-    libc.src.errno.errno
+    libc.src.__support.math.nanf128
 )
 
 add_entrypoint_object(
@@ -3153,13 +3140,7 @@ add_entrypoint_object(
   HDRS
     ../nanbf16.h
   DEPENDS
-    libc.src.errno.errno
-    libc.src.__support.common
-    libc.src.__support.FPUtil.bfloat16
-    libc.src.__support.libc_errno
-    libc.src.__support.macros.config
-    libc.src.__support.macros.properties.types
-    libc.src.__support.str_to_float
+    libc.src.__support.math.nanbf16
 )
 
 add_entrypoint_object(
