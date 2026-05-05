@@ -11,11 +11,8 @@
 #include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
-#include "utils/MPFRWrapper/MPFRUtils.h"
 
 using LlvmLibcExp10Bf16Test = LIBC_NAMESPACE::testing::FPTest<bfloat16>;
-
-namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 TEST_F(LlvmLibcExp10Bf16Test, SpecialNumbers) {
   EXPECT_FP_IS_NAN(LIBC_NAMESPACE::exp10bf16(aNaN));
