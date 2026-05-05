@@ -291,11 +291,10 @@ void NVPTXDwarfDebug::finishTargetUnitAttributes(const DICompileUnit &DIUnit,
     if (Dialect != SimtDialect && Dialect != TileDialect &&
         WarnedDialectCUs.insert(&DIUnit).second) {
       DIUnit.getContext().diagnose(
-          DiagnosticInfoGeneric(
-              Twine("unknown NVPTX language dialect '") + Dialect +
-                  "' on DICompileUnit; expected '" + SimtDialect + "' or '" +
-                  TileDialect + "'",
-              DS_Warning));
+          DiagnosticInfoGeneric(Twine("unknown NVPTX language dialect '") +
+                                    Dialect + "' on DICompileUnit; expected '" +
+                                    SimtDialect + "' or '" + TileDialect + "'",
+                                DS_Warning));
     }
     NewCU.addString(NewCU.getUnitDie(), dwarf::DW_AT_LLVM_language_dialect,
                     Dialect);

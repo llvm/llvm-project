@@ -2894,7 +2894,7 @@ TEST_F(DICompileUnitTest, get) {
   uint64_t DWOId = 0x10000000c0ffee;
   MDTuple *Macros = getTuple();
   StringRef SysRoot = "/";
-  StringRef SDK = "TestSDK";
+  StringRef SDK = "MacOSX.sdk";
   auto *N = DICompileUnit::getDistinct(
       Context, DISourceLanguageName(SourceLanguage), File, Producer,
       IsOptimized, Flags, RuntimeVersion, SplitDebugFilename, EmissionKind,
@@ -2962,7 +2962,7 @@ TEST_F(DICompileUnitTest, getWithDialect) {
   uint64_t DWOId = 0x10000000c0ffee;
   MDTuple *Macros = getTuple();
   StringRef SysRoot = "/";
-  StringRef SDK = "MacOSX.sdk";
+  StringRef SDK = "TestSDK";
   auto *Dialect = MDString::get(Context, "simt");
   auto *N = DICompileUnit::getDistinct(
       Context, DISourceLanguageName(SourceLanguage, Dialect), File, Producer,
