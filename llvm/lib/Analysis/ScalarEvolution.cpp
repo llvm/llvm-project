@@ -3738,55 +3738,9 @@ APInt gcd(const SCEVConstant *C1, const SCEVConstant *C2) {
 
 /// Get a canonical unsigned division expression, or something simpler if
 /// possible. There is no representation for an exact udiv in SCEV IR, but we
-/// can attempt to remove factors from the LHS and RHS.  We can't do this when
-/// it's not exact because the udiv may be clearing bits.
+/// can attempt to optimize it prior to construction.
 const SCEV *ScalarEvolution::getUDivExactExpr(SCEVUse LHS, SCEVUse RHS) {
-  // TODO: we could try to find factors in all sorts of things, but for now we
-  // just deal with u/exact (multiply, constant). See SCEVDivision towards the
-  // end of this file for inspiration.
-
-  const SCEVMulExpr *Mul = dyn_cast<SCEVMulExpr>(LHS);
-  if (!Mul || !Mul->hasNoUnsignedWrap())
-    return getUDivExpr(LHS, RHS);
-
-  if (const SCEVConstant *RHSCst = dyn_cast<SCEVConstant>(RHS)) {
-    // If the mulexpr multiplies by a constant, then that constant must be the
-    // first element of the mulexpr.
-    if (const auto *LHSCst = dyn_cast<SCEVConstant>(Mul->getOperand(0))) {
-      if (LHSCst == RHSCst) {
-        SmallVector<SCEVUse, 2> Operands(drop_begin(Mul->operands()));
-        return getMulExpr(Operands);
-      }
-
-      // We can't just assume that LHSCst divides RHSCst cleanly, it could be
-      // that there's a factor provided by one of the other terms. We need to
-      // check.
-      APInt Factor = gcd(LHSCst, RHSCst);
-      if (!Factor.isIntN(1)) {
-        LHSCst =
-            cast<SCEVConstant>(getConstant(LHSCst->getAPInt().udiv(Factor)));
-        RHSCst =
-            cast<SCEVConstant>(getConstant(RHSCst->getAPInt().udiv(Factor)));
-        SmallVector<SCEVUse, 2> Operands;
-        Operands.push_back(LHSCst);
-        append_range(Operands, Mul->operands().drop_front());
-        LHS = getMulExpr(Operands);
-        RHS = RHSCst;
-        Mul = dyn_cast<SCEVMulExpr>(LHS);
-        if (!Mul)
-          return getUDivExactExpr(LHS, RHS);
-      }
-    }
-  }
-
-  for (int i = 0, e = Mul->getNumOperands(); i != e; ++i) {
-    if (Mul->getOperand(i) == RHS) {
-      SmallVector<SCEVUse, 2> Operands;
-      append_range(Operands, Mul->operands().take_front(i));
-      append_range(Operands, Mul->operands().drop_front(i + 1));
-      return getMulExpr(Operands);
-    }
-  }
+  // Currently there is no exact specific logic.
 
   return getUDivExpr(LHS, RHS);
 }
