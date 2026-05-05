@@ -1384,7 +1384,8 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
                               Legal);
     setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_UMLA, MVT::v4i32, MVT::v16i8,
                               Legal);
-    setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, MVT::v4i32, MVT::v16i8,                              Legal);
+    setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, MVT::v4i32, MVT::v16i8,
+                              Legal);
   }
 
   if (Subtarget.pairedVectorMemops()) {
