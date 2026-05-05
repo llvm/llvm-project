@@ -549,7 +549,9 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
     if (MCRegister Reg = State.AllocateReg(ArgGPRs))
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
     else {
-      int64_t StackOffset = State.AllocateStack(4, Align(4));
+      uint32_t PtrSizeInBytes = LocVT.getSizeInBits() / 8;
+      int64_t StackOffset =
+          State.AllocateStack(PtrSizeInBytes, Align(PtrSizeInBytes));
       State.addLoc(
           CCValAssign::getMem(ValNo, ValVT, StackOffset, LocVT, LocInfo));
     }
@@ -566,9 +568,9 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
     // cases.
     MCRegister Reg = State.AllocateReg(ArgGPRs);
     if (!Reg) {
-      uint32_t AlignForStoredValue = LocVT.getSizeInBits() / 8;
+      uint32_t StoredSizeInBytes = LocVT.getSizeInBits() / 8;
       int64_t StackOffset =
-          State.AllocateStack(AlignForStoredValue, Align(AlignForStoredValue));
+          State.AllocateStack(StoredSizeInBytes, Align(StoredSizeInBytes));
       State.addLoc(
           CCValAssign::getMem(ValNo, ValVT, StackOffset, LocVT, LocInfo));
       return false;
@@ -580,9 +582,9 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
       State.addLoc(
           CCValAssign::getCustomReg(ValNo, ValVT, HiReg, LocVT, LocInfo));
     } else {
-      uint32_t AlignForStoredValue = LocVT.getSizeInBits() / 8;
+      uint32_t LocSizeInBytes = LocVT.getSizeInBits() / 8;
       int64_t StackOffset =
-          State.AllocateStack(AlignForStoredValue, Align(AlignForStoredValue));
+          State.AllocateStack(LocSizeInBytes, Align(LocSizeInBytes));
       State.addLoc(
           CCValAssign::getCustomMem(ValNo, ValVT, StackOffset, LocVT, LocInfo));
     }
