@@ -9253,6 +9253,16 @@ flags metadata, using the following key-value pairs:
        * 2 --- CFG uses the "dispatch" mechanism. This calls a dispatcher
          function which both checks and then calls the target.
 
+Other Module Flags
+------------------
+
+``require-logical-pointer``
+    This flag indicates this module must only use logical pointer intrinsics
+    such as :ref:`@llvm.structured.gep <i_structured_gep>` or
+    :ref:`@llvm.structured.alloca <i_structured_alloca>`.
+    Using a normal :ref:`getelementptr <i_getelementptr>` or
+    :ref:`alloca <i_alloca>` is illegal.
+
 Embedded Objects Names Metadata
 ===============================
 
