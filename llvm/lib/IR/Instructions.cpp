@@ -3547,9 +3547,8 @@ CmpInst::CmpInst(Type *ty, OtherOps op, Predicate predicate, Value *LHS,
   Op<1>() = RHS;
   setPredicate(predicate);
   setName(Name);
-  if (FlagsSource)
-    copyIRFlags(FlagsSource, /*IncludeWrapFlags=*/true,
-                /*IncludeFastMathFlags=*/false);
+  if (FlagsSource && op == OtherOps::ICmp)
+    copyIRFlags(FlagsSource);
 }
 
 CmpInst *CmpInst::Create(OtherOps Op, Predicate predicate, Value *S1, Value *S2,

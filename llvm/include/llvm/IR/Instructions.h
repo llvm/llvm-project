@@ -1457,7 +1457,7 @@ public:
       : CmpInst(makeCmpResultType(LHS->getType()), Instruction::FCmp, Pred, LHS,
                 RHS, NameStr, nullptr, FlagsSource) {
     if (FlagsSource)
-      copyFastMathFlags(FlagsSource);
+      copyIRFlags(FlagsSource);
     AssertOK();
   }
 
