@@ -81,3 +81,15 @@ define ptr @xor_decompose_casts_chain_2(i32 %x, i32 %y, ptr %p) {
   %gep = getelementptr i32, ptr %p, i64 %idx
   ret ptr %gep
 }
+
+define <4 x ptr> @xor_decompose_gep_vector(<4 x ptr> %p, i32 %x) {
+; CHECK-LABEL: define <4 x ptr> @xor_decompose_gep_vector(
+; CHECK-SAME: <4 x ptr> [[P:%.*]], i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[X]], 33
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, <4 x ptr> [[P]], i32 [[XOR]]
+; CHECK-NEXT:    ret <4 x ptr> [[GEP]]
+;
+  %xor = xor i32 %x, 33
+  %gep = getelementptr i32, <4 x ptr> %p, i32 %xor
+  ret <4 x ptr> %gep
+}

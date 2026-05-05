@@ -221,7 +221,7 @@ public:
 
 private:
   ConstantOffsetExtractor(BasicBlock::iterator InsertionPt)
-      : IP(InsertionPt), DL(InsertionPt->getDataLayout()) {}
+      : IP(InsertionPt), DL(InsertionPt->getDataLayout()), SQ(DL) {}
 
   /// Searches the expression that computes V for a non-zero constant C s.t.
   /// V can be reassociated into the form V' + C. If the searching is
@@ -341,6 +341,7 @@ private:
   BasicBlock::iterator IP;
 
   const DataLayout &DL;
+  const SimplifyQuery SQ;
 };
 
 /// A pass that tries to split every GEP in the function into a variadic
@@ -917,7 +918,6 @@ APInt ConstantOffsetExtractor::extractDisjointBitsFromXor(
   if (!match(XorInst, m_Xor(m_Value(BaseOp), m_ConstantInt(XorConstantOp))))
     return APInt::getZero(BitWidth);
 
-  const SimplifyQuery SQ(DL);
   const KnownBits BaseKnownBits = computeKnownBits(BaseOp, SQ);
   const APInt &ConstantValue = XorConstantOp->getValue();
 
