@@ -49,7 +49,7 @@ bool ScriptedBreakpointPythonInterface::OverridesResolver(
   if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
                                                     error)) {
     Log *log = GetLog(LLDBLog::Script);
-    LLDB_LOG(log, "Error calling overrides_resolver method: {1}", error);
+    LLDB_LOG(log, "Error calling overrides_resolver method: {0}", error);
     return false;
   }
   return obj->GetBooleanValue();
@@ -62,7 +62,7 @@ void ScriptedBreakpointPythonInterface::SetBreakpoint(
   if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
                                                     error)) {
     Log *log = GetLog(LLDBLog::Script);
-    LLDB_LOG(log, "Error calling set_breakpoint method: {1}", error);
+    LLDB_LOG(log, "Error calling set_breakpoint method: {0}", error);
   }
 }
 

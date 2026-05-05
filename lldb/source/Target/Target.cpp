@@ -944,7 +944,7 @@ void Target::GetBreakpointNames(std::vector<std::string> &names) {
   llvm::sort(names);
 }
 
-uint64_t
+lldb::user_id_t
 Target::AddBreakpointResolverOverride(llvm::StringRef class_name,
                                       StructuredData::DictionarySP args_data_sp,
                                       llvm::StringRef description) {
@@ -955,6 +955,33 @@ Target::AddBreakpointResolverOverride(llvm::StringRef class_name,
       new ScriptedBreakpointResolverOverride(*this, std::string(description),
                                              std::string(class_name), impl);
   return AddBreakpointResolverOverride(new_override);
+}
+
+void Target::DescribeBreakpointOverrides(Stream &stream, 
+    std::vector<lldb::user_id_t> &idxs) {
+  if (m_breakpoint_overrides.size() == 0) {
+    stream << "No overrides.\n";
+    return;
+  }
+
+  auto begin = idxs.begin();
+  auto end = idxs.end();
+  bool empty = idxs.empty();
+  bool print_first = true;
+  for (auto const &elem : m_breakpoint_overrides) {
+    auto idx_pos = std::find(begin, end, elem.first);
+    if (empty || idx_pos != end) {
+      if (print_first) {
+        // FIXME: Is there some good way to flow the description?
+        stream << "ID    Description\n";
+        stream << "----  -----------\n";
+        print_first = false;
+      }
+      stream.Format("{0,4}  {1}\n", elem.first, elem.second->GetDescription());
+      if (!empty)
+        idxs.erase(idx_pos);
+    }
+  }
 }
 
 bool Target::ProcessIsValid() {

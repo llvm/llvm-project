@@ -37,15 +37,7 @@ class TestOverridesResolver(TestBase):
         command = "command script import " + script_name
         self.runCmd(command)
 
-    def do_test(self, use_cmd):
-        """This reads in a python file and sets a breakpoint using it."""
-        alternate_location = "stop_here_instead"
-        target = self.make_target_and_import()
-        help_text = "SOME HELP TEXT"
-        class_name = "bkpt_resolver.OverrideExample"
-        key = "symbol"
-        value = "stop_here_instead"
-
+    def add_override(self, use_cmd, help_text, class_name, key, value):
         if use_cmd:
             result = lldb.SBCommandReturnObject()
             self.ci.HandleCommand(
@@ -61,9 +53,39 @@ class TestOverridesResolver(TestBase):
             override_id = target.AddBreakpointOverride(
                 class_name, help_text, extra_args
             )
-
         # Check the override listing, make sure our new entry is present:
         self.expect("breakpoint override list", substrs=[str(override_id), help_text])
+        
+        return override_id
+        
+    def do_test(self, use_cmd):
+        """This reads in a python file and sets a breakpoint using it."""
+        alternate_location = "stop_here_instead"
+        target = self.make_target_and_import()
+        # Add out trivial one first so we test more than one list element:
+
+        trivial_help = "Trivial help text"
+        trivial_id = self.add_override(
+            use_cmd,
+            trivial_help,
+            "bkpt_resolver.TrivialExample",
+            "test_key",
+            "test_value")
+        
+        useful_help = "SOME HELP TEXT"
+        useful_id = self.add_override(
+            use_cmd,
+            useful_help,
+            "bkpt_resolver.OverrideExample",
+            "symbol",
+            "stop_here_instead"
+        )
+
+        # Now exercise the list command by id:
+        self.expect(f"breakpoint override list {trivial_id}", substrs=[str(useful_id), useful_help], matching=False)
+        self.expect(f"breakpoint override list {trivial_id}", substrs=[str(trivial_id), trivial_help])
+        self.expect(f"breakpoint override list {useful_id}", substrs=[str(trivial_id), trivial_help], matching=False)
+        self.expect(f"breakpoint override list {useful_id}", substrs=[str(useful_id), useful_help])
 
         # Now make a breakpoint by file and line:
         # FIXME: Use source_line to find this line number:
@@ -98,13 +120,24 @@ class TestOverridesResolver(TestBase):
         # Now delete the override and make sure we hit newly set
         # source breakpoints:
         if use_cmd:
-            self.runCmd(f"breakpoint override delete {override_id}")
+            self.runCmd(f"breakpoint override delete {useful_id}")
         else:
             self.assertTrue(
-                target.DeleteBreakpointOverride(override_id), "Delete the right one"
+                target.DeleteBreakpointOverride(useful_id), "Delete the right one"
             )
 
-        # FIXME use source_line:
+        # Make sure it's gone from the listings:
+        self.expect(
+            "breakpoint override list",
+            substrs=[str(useful_id), useful_help],
+            matching=False
+        )
+        # And that listing it is an error:
+        self.expect(
+            f"breakpoint override list {useful_id}",
+            error=True
+        )
+        
         new_bkpt = target.BreakpointCreateByLocation(
             "main.c", line_number("main.c", "return 0")
         )

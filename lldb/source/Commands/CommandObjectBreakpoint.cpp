@@ -3663,7 +3663,7 @@ class CommandObjectBreakpointOverrideDelete : public CommandObjectParsed {
 public:
   CommandObjectBreakpointOverrideDelete(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "breakpoint override delete",
-                            "Add a scripted breakpoint override resolver.",
+                            "Delete a scripted breakpoint override resolver.",
                             nullptr) {
     AddSimpleArgumentList(eArgTypeIndex, eArgRepeatOptional);
     m_all_options.Append(&m_dummy_options, LLDB_OPT_SET_1, LLDB_OPT_SET_1);
@@ -3734,9 +3734,9 @@ protected:
     if (argc != 0) {
       for (auto &entry : command.entries()) {
         uint64_t id;
-        if (entry.ref().getAsInteger(0, id))
+        if (!entry.ref().getAsInteger(0, id)) {
           idxs.push_back(id);
-        else {
+        } else {
           result.AppendErrorWithFormatv("Index not an integer: {0}",
                                         entry.ref());
           result.SetStatus(eReturnStatusFailed);
@@ -3745,7 +3745,22 @@ protected:
       }
     }
     target.DescribeBreakpointOverrides(result.GetOutputStream(), idxs);
-    result.SetStatus(eReturnStatusSuccessFinishNoResult);
+    if (idxs.empty()) {
+      result.SetStatus(eReturnStatusSuccessFinishResult);
+    } else {
+      result.SetStatus(eReturnStatusFailed);
+      Stream &error_strm = result.GetErrorStream();
+      if (idxs.size() == 1) {
+        error_strm << llvm::formatv("error: invalid index: {0}", idxs[0]);
+        return;
+      }
+      error_strm << "error: invalid indices: ";
+      auto begin = idxs.begin();
+      error_strm << llvm::formatv("{0}", *begin);
+      idxs.erase(begin);
+      for (auto elem : idxs)
+        error_strm << llvm::formatv(", {0}", elem);
+    }
   }
 
 private:

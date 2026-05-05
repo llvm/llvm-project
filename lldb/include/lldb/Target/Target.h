@@ -1029,21 +1029,21 @@ public:
     std::string m_desc;
   };
 
-  uint64_t AddBreakpointResolverOverride(BreakpointResolverOverride *override) {
-    static uint64_t g_override_id = 1;
-    uint64_t id_used = g_override_id;
+  lldb::user_id_t AddBreakpointResolverOverride(
+      BreakpointResolverOverride *override) {
+    lldb::user_id_t id_used = m_override_id;
     m_breakpoint_overrides.emplace(
-        g_override_id, std::unique_ptr<BreakpointResolverOverride>(override));
-    g_override_id++;
+        m_override_id, std::unique_ptr<BreakpointResolverOverride>(override));
+    m_override_id++;
     return id_used;
   }
 
-  uint64_t
+  lldb::user_id_t
   AddBreakpointResolverOverride(llvm::StringRef class_name,
                                 StructuredData::DictionarySP args_data_sp,
                                 llvm::StringRef description);
 
-  bool RemoveBreakpointResolverOverride(uint64_t override_id) {
+  bool RemoveBreakpointResolverOverride(lldb::user_id_t override_id) {
     size_t removed = m_breakpoint_overrides.erase(override_id);
     return removed == 1;
   }
@@ -1053,34 +1053,20 @@ public:
   lldb::BreakpointResolverSP
   CheckBreakpointOverrides(lldb::BreakpointResolverSP original_sp) {
     for (auto const &elem : m_breakpoint_overrides) {
-      lldb::BreakpointResolverSP overriden_sp;
-      overriden_sp = elem.second->CheckForOverride(*this, original_sp);
-      if (overriden_sp)
+      if (lldb::BreakpointResolverSP overriden_sp = 
+          elem.second->CheckForOverride(*this, original_sp))
         return overriden_sp;
     }
     return {};
   }
 
-  // Describe the
-  void DescribeBreakpointOverrides(Stream &stream, std::vector<uint64_t> idxs) {
-    if (m_breakpoint_overrides.size() == 0) {
-      stream << "No overrides.\n";
-      return;
-    }
-    // FIXME: Is there some good way to flow the description?
-    stream << "ID      Description\n";
-    stream << "------  -----------\n";
+  /// Describe the breakpoint overrides.  If ixds is empty, list all.  Otherwise
+  /// list the overrides whose ids match the ones given in idxs.  The matched
+  /// elements are removed from the list, so any elements remaining in idxs are
+  /// indexes that are not breakpoint override indexes.
+  void DescribeBreakpointOverrides(Stream &stream, 
+      std::vector<lldb::user_id_t> &idxs);
 
-    auto begin = idxs.begin();
-    auto end = idxs.end();
-    bool empty = idxs.empty();
-    for (auto const &elem : m_breakpoint_overrides) {
-      if (empty || std::find(begin, end, elem.first) != end)
-        stream.Format("{0,-6}  {1}", elem.first, elem.second->GetDescription());
-      else
-        stream.Format("{0,6} is not a breakpoint override index", elem.first);
-    }
-  }
   // The flag 'end_to_end', default to true, signifies that the operation is
   // performed end to end, for both the debugger and the debuggee.
 
@@ -2103,8 +2089,11 @@ protected:
       std::map<ConstString, std::unique_ptr<BreakpointName>>;
   BreakpointNameList m_breakpoint_names;
 
-  std::map<uint64_t, std::unique_ptr<BreakpointResolverOverride>>
+  std::map<lldb::user_id_t, std::unique_ptr<BreakpointResolverOverride>>
       m_breakpoint_overrides;
+  /// This is the ID that will be handed out for the next added breakpoint
+  /// override resolver for this target.
+  lldb::user_id_t m_override_id = 0;
 
   lldb::BreakpointSP m_last_created_breakpoint;
   WatchpointList m_watchpoint_list;
