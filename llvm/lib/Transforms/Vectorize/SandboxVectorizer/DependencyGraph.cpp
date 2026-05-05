@@ -71,9 +71,9 @@ bool PredIterator::operator==(const PredIterator &Other) const {
   return OpIt == Other.OpIt && MemIt == Other.MemIt;
 }
 
-User::user_iterator SuccIterator::skipBadIt(User::user_iterator UserIt,
-                                            User::user_iterator UserItE,
-                                            const DependencyGraph &DAG) {
+User::user_iterator SuccIterator::skipOutOfScope(User::user_iterator UserIt,
+                                                 User::user_iterator UserItE,
+                                                 const DependencyGraph &DAG) {
   auto Skip = [&DAG](User::user_iterator UserIt) {
     auto *I = dyn_cast<Instruction>(*UserIt);
     return I == nullptr || DAG.getNode(I) == nullptr;
@@ -105,7 +105,7 @@ SuccIterator &SuccIterator::operator++() {
     assert(UserIt != UserItE && "Already at end!");
     ++UserIt;
     // Skip users that are not instructions or are outside the DAG.
-    UserIt = SuccIterator::skipBadIt(UserIt, UserItE, *DAG);
+    UserIt = SuccIterator::skipOutOfScope(UserIt, UserItE, *DAG);
     return *this;
   }
   // It's a MemDGNode, so if we are not at the end of the def-use iterator we
@@ -113,7 +113,7 @@ SuccIterator &SuccIterator::operator++() {
   if (UserIt != UserItE) {
     ++UserIt;
     // Skip operands that are not instructions or are outside the DAG.
-    UserIt = SuccIterator::skipBadIt(UserIt, UserItE, *DAG);
+    UserIt = SuccIterator::skipOutOfScope(UserIt, UserItE, *DAG);
     return *this;
   }
   // It's a MemDGNode with UserIt == end, so we need to increment MemIt.

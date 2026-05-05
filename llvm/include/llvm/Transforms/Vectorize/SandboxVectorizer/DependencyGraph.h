@@ -110,11 +110,11 @@ class SuccIterator {
   friend class DGNode;    // For constructor
   friend class MemDGNode; // For constructor
 
-  /// Skip iterators that don't point instructions or are outside \p DAG,
-  /// starting from \p OpIt and ending before \p OpItE.n
-  LLVM_ABI static User::user_iterator skipBadIt(User::user_iterator UserIt,
-                                                User::user_iterator UserItE,
-                                                const DependencyGraph &DAG);
+  /// Skip iterators that don't point to instructions or are outside \p DAG,
+  /// starting from \p OpIt and ending before \p OpItE.
+  LLVM_ABI static User::user_iterator
+  skipOutOfScope(User::user_iterator UserIt, User::user_iterator UserItE,
+                 const DependencyGraph &DAG);
 
 public:
   using difference_type = std::ptrdiff_t;
@@ -221,7 +221,7 @@ public:
   using succ_iterator = SuccIterator;
   virtual succ_iterator succs_begin(DependencyGraph &DAG) {
     return SuccIterator(
-        SuccIterator::skipBadIt(I->user_begin(), I->user_end(), DAG),
+        SuccIterator::skipOutOfScope(I->user_begin(), I->user_end(), DAG),
         I->user_end(), this, DAG);
   }
   virtual succ_iterator succs_end(DependencyGraph &DAG) {
@@ -347,8 +347,8 @@ public:
   succ_iterator succs_begin(DependencyGraph &DAG) override {
     auto UserEndIt = I->user_end();
     return SuccIterator(
-        SuccIterator::skipBadIt(I->user_begin(), UserEndIt, DAG), UserEndIt,
-        MemSuccs.begin(), this, DAG);
+        SuccIterator::skipOutOfScope(I->user_begin(), UserEndIt, DAG),
+        UserEndIt, MemSuccs.begin(), this, DAG);
   }
   succ_iterator succs_end(DependencyGraph &DAG) override {
     return SuccIterator(I->user_end(), I->user_end(), MemSuccs.end(), this,

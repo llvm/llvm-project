@@ -415,7 +415,7 @@ define void @foo(ptr %ptr, i8 %val) {
   auto *BB = &*F->begin();
   auto It = BB->begin();
   auto *GEP = cast<sandboxir::GetElementPtrInst>(&*It++);
-  auto *S0 = cast<sandboxir::StoreInst>(&*It++);
+  [[maybe_unused]] auto *S0 = cast<sandboxir::StoreInst>(&*It++);
   [[maybe_unused]] auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
 
   sandboxir::DependencyGraph DAG(getAA(*LLVMF), Ctx);
