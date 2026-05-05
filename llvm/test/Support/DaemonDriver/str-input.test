@@ -1,9 +1,10 @@
 # This test verifies that the tool gives the correct output when the input is
 # provided with "in.str".
-RUN: ExampleDaemon --daemon --daemon-status-pipe=path:%t.status < %S/Inputs/str-input.txt > %t.stdout 2> %t.stderr
-RUN: FileCheck < %t.stdout %s --check-prefix=CHECK-STDOUT --strict-whitespace
-RUN: FileCheck < %t.stderr %s --check-prefix=CHECK-STDERR --strict-whitespace
-RUN: FileCheck < %t.status %s --check-prefix=CHECK-STATUS --strict-whitespace
+RUN: split-file %s %t
+RUN: ExampleDaemon --daemon --daemon-status-pipe=path:%t/status < %t/daemon-commands > %t/stdout 2> %t/stderr
+RUN: FileCheck < %t/stdout %s --check-prefix=CHECK-STDOUT --strict-whitespace
+RUN: FileCheck < %t/stderr %s --check-prefix=CHECK-STDERR --strict-whitespace
+RUN: FileCheck < %t/status %s --check-prefix=CHECK-STATUS --strict-whitespace
 END.
 CHECK-STATUS: ready
 
@@ -21,3 +22,25 @@ CHECK-STDERR-SAME: aceg
 CHECK-STATUS-NEXT: returned 0
 CHECK-STDOUT-SAME: aaaa
 
+;--- daemon-commands
+arg 13
+ExampleDaemon
+input_string 5
+aBcDe
+run
+
+arg 13
+ExampleDaemon
+arg 28
+--separate-lowercase-instead
+input_string 8
+aBcDeFgH
+run 
+
+arg 13
+ExampleDaemon
+input_string 4
+aaaa
+run
+
+exit

@@ -1,5 +1,0 @@
-arg 13
-ExampleDaemon
-arg 14
---exit-process
-run 

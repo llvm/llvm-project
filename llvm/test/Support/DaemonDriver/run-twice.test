@@ -1,7 +1,17 @@
 # This test verifies that the tool can be run twice. The `ExampleDaemon` makes 
 # sure that `resetState()` was called.
-RUN: ExampleDaemon --daemon --daemon-status-pipe=path:%t.status < %S/Inputs/run-twice.txt
-RUN: FileCheck %s < %t.status --match-full-lines
+RUN: split-file %s %t
+RUN: ExampleDaemon < %t/daemon-commands --daemon --daemon-status-pipe=path:%t/status
+RUN: FileCheck %s < %t/status --match-full-lines
 CHECK: ready
 CHECK-NEXT: returned 0
 CHECK-NEXT: returned 0
+
+;--- daemon-commands
+arg 13
+ExampleDaemon
+run
+arg 13
+ExampleDaemon
+run
+exit

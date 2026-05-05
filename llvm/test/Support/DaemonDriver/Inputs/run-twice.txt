@@ -1,7 +1,0 @@
-arg 13
-ExampleDaemon
-run
-arg 13
-ExampleDaemon
-run
-exit
