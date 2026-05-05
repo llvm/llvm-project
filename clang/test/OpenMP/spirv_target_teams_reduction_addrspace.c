@@ -5,21 +5,20 @@
 
 // expected-no-diagnostics
 
-// Verify the kernel is generated
+// Verify the kernel is generated.
 // CHECK: define weak_odr protected spir_kernel void @__omp_offloading_{{.*}}_main_{{.*}}
 
-// Verify __kmpc_alloc_shared is called for reduction variable
-// The return type should be ptr addrspace(4) (generic pointer)
+// Verify __kmpc_alloc_shared is called for reduction variable.
+// The return type should be ptr addrspace(4) (generic pointer).
 // CHECK: call spir_func align 8 addrspace(9) ptr addrspace(4) @__kmpc_alloc_shared(i64 4)
 
-// Verify the reduction runtime function is called
+// Verify the reduction runtime function is called.
 // CHECK: call spir_func addrspace(9) i32 @__kmpc_nvptx_teams_reduce_nowait_v2(
 
-// Verify __kmpc_free_shared is called
+// Verify __kmpc_free_shared is called.
 // CHECK: call spir_func addrspace(9) void @__kmpc_free_shared(ptr addrspace(4)
 
-// Verify the reduction function is generated
-// This is where the address space cast fix is critical
+// Verify the reduction function is generated.
 // CHECK: define internal void @{{.*}}reduction{{.*}}func
 
 int main() {
