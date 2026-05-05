@@ -2277,6 +2277,19 @@ public:
     return computeOverflowForMul(IsSigned, N0, N1) == OFK_Never;
   }
 
+  /// Returns true if \p V is a neutral element of Opc with Flags.
+  /// When OperandNo is 0, it checks that V is a left identity. Otherwise, it
+  /// checks that V is a right identity.
+  LLVM_ABI bool isNeutralElement(unsigned Opc, SDNodeFlags Flags, SDValue V,
+                                 unsigned OperandNo, unsigned Depth = 0) const;
+
+  /// Returns true if the demanded vector elements of \p V is a neutral element
+  /// of Opc with Flags. When OperandNo is 0, it checks that V is a left
+  /// identity. Otherwise, it checks that V is a right identity.
+  LLVM_ABI bool isNeutralElement(unsigned Opc, SDNodeFlags Flags, SDValue V,
+                                 const APInt &DemandedElts, unsigned OperandNo,
+                                 unsigned Depth = 0) const;
+
   /// Test if the given value is known to have exactly one bit set. This differs
   /// from computeKnownBits in that it doesn't necessarily determine which bit
   /// is set. If 'OrZero' is set, then return true if the given value is either
