@@ -258,10 +258,10 @@ def lower_mulv2s64 : GICombineRule<
 >;
 
 def build_vector_to_dup : GICombineRule<
-  (defs root:$root),
+  (defs root:$root, register_matchinfo:$matchinfo),
   (match (wip_match_opcode G_BUILD_VECTOR):$root,
-          [{ return matchBuildVectorToDup(*${root}, MRI); }]),
-  (apply [{ applyBuildVectorToDup(*${root}, MRI, B); }])
+          [{ return matchBuildVectorToDup(*${root}, ${matchinfo}, MRI); }]),
+  (apply [{ applyBuildVectorToDup(*${root}, ${matchinfo}, MRI, B); }])
 >;
 
 def build_vector_to_vector_insert : GICombineRule<

@@ -461,7 +461,7 @@ define i32 @assumption_conflicts_with_known_bits(i32 %a, i32 %b) {
 
 define void @debug_interference(i8 %x) {
 ; CHECK-LABEL: @debug_interference(
-; CHECK-NEXT:      #dbg_value(i32 5, [[META7:![0-9]+]], !DIExpression(), [[META9:![0-9]+]])
+; CHECK-NEXT:      #dbg_value(i32 5, [[META7:![0-9]+]], !DIExpression(), [[META11:![0-9]+]])
 ; CHECK-NEXT:    store i1 true, ptr poison, align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -610,6 +610,29 @@ define void @nonnull_only_ephemeral_use(ptr %p) {
   %a = load ptr, ptr %p
   %cmp = icmp ne ptr %a, null
   tail call void @llvm.assume(i1 %cmp)
+  ret void
+}
+
+define void @nonnull_gep_inbounds(ptr %p, i64 %i) {
+; CHECK-LABEL: @nonnull_gep_inbounds(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[P:%.*]]) ]
+; CHECK-NEXT:    ret void
+;
+  %p2 = getelementptr inbounds i8, ptr %p, i64 %i
+  %cmp = icmp ne ptr %p2, null
+  call void @llvm.assume(i1 %cmp)
+  ret void
+}
+
+define void @nonnull_gep_not_inbounds(ptr %p, i64 %i) {
+; CHECK-LABEL: @nonnull_gep_not_inbounds(
+; CHECK-NEXT:    [[P:%.*]] = getelementptr i8, ptr [[P1:%.*]], i64 [[I:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[P]]) ]
+; CHECK-NEXT:    ret void
+;
+  %p2 = getelementptr i8, ptr %p, i64 %i
+  %cmp = icmp ne ptr %p2, null
+  call void @llvm.assume(i1 %cmp)
   ret void
 }
 
