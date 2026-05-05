@@ -13196,6 +13196,12 @@ SDValue TargetLowering::expandVectorNaryOpBySplitting(SDNode *Node,
 
   SmallVector<SDValue, 4> LoOps, HiOps;
   for (const SDValue &V : Node->op_values()) {
+    if (!V.getValueType().isVector()) {
+      // Scalar operands pass through to both halves unchanged.
+      LoOps.push_back(V);
+      HiOps.push_back(V);
+      continue;
+    }
     auto [Lo, Hi] = DAG.SplitVector(V, DL, LoVT, HiVT);
     LoOps.push_back(Lo);
     HiOps.push_back(Hi);

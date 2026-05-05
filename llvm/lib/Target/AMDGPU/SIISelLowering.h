@@ -106,8 +106,8 @@ private:
   SDValue LowerCONVERT_FROM_ARBITRARY_FP(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFromFP8ToF32(SDValue Op, bool IsBF8, SelectionDAG &DAG) const;
   SDValue lowerFromFP8ToF16(SDValue Op, bool IsBF8, SelectionDAG &DAG) const;
-  static SDValue packBytesToI32(SelectionDAG &DAG, const SDLoc &SL, SDValue Src,
-                                unsigned NumBytes, unsigned FirstLane);
+  static SDValue packBytesToI32(SelectionDAG &DAG, const SDLoc &SL,
+                                SDValue Src);
 
   // The raw.tbuffer and struct.tbuffer intrinsics have two offset args: offset
   // (the offset that is included in bounds checking and swizzling, to be split

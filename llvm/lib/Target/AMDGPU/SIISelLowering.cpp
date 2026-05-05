@@ -987,15 +987,14 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   }
 
   if (Subtarget->hasOCPFP8ConversionInsts()) {
-    setOperationAction(ISD::CONVERT_FROM_ARBITRARY_FP,
-                       {MVT::f32, MVT::v2f32, MVT::v4f32}, Custom);
-    setOperationAction(ISD::CONVERT_FROM_ARBITRARY_FP, {MVT::v2i8, MVT::v4i8},
+    setOperationAction(ISD::CONVERT_FROM_ARBITRARY_FP, {MVT::f32, MVT::v2f32},
                        Custom);
+    setOperationAction(ISD::CONVERT_FROM_ARBITRARY_FP, MVT::v2i8, Custom);
   }
 
   if (Subtarget->hasFP8F16ConversionInsts()) {
-    setOperationAction(ISD::CONVERT_FROM_ARBITRARY_FP,
-                       {MVT::f16, MVT::v2f16, MVT::v4f16}, Custom);
+    setOperationAction(ISD::CONVERT_FROM_ARBITRARY_FP, {MVT::f16, MVT::v2f16},
+                       Custom);
   }
 
   if (Subtarget->hasCvtPkF16F32Inst()) {
@@ -10587,80 +10586,40 @@ SDValue SITargetLowering::lowerWorkitemID(SelectionDAG &DAG, SDValue Op,
 // Pack a vector of i8 lanes into i32 via bitcast.
 // FIXME: packing loses lane-wise poison. Should we do something about it?
 SDValue SITargetLowering::packBytesToI32(SelectionDAG &DAG, const SDLoc &SL,
-                                         SDValue Src, unsigned NumBytes,
-                                         unsigned FirstLane) {
-  EVT SrcVT = Src.getValueType();
-  assert(SrcVT.isVector() && SrcVT.getVectorElementType() == MVT::i8 &&
-         "packBytesToI32 expects a v*i8 source");
-  unsigned SrcBytes = SrcVT.getVectorNumElements();
-  assert((NumBytes == 2 || NumBytes == 4) && "expected 2 or 4 bytes");
-
-  if (NumBytes == 4) {
-    assert(FirstLane == 0 && "v4i8 -> i32 takes the full vector");
-    return DAG.getNode(ISD::BITCAST, SL, MVT::i32, Src);
-  }
-
-  // Bitcast a vector to the same-width integer, optionally shift down to the
-  // requested slice, truncate to i16, and zext to i32.
-  EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), SrcBytes * 8);
-  SDValue AsInt = DAG.getNode(ISD::BITCAST, SL, IntVT, Src);
-  if (FirstLane != 0)
-    AsInt = DAG.getNode(ISD::SRL, SL, IntVT, AsInt,
-                        DAG.getConstant(FirstLane * 8, SL, IntVT));
-  SDValue I16 = DAG.getNode(ISD::TRUNCATE, SL, MVT::i16, AsInt);
-  return DAG.getNode(ISD::ZERO_EXTEND, SL, MVT::i32, I16);
+                                         SDValue Src) {
+  assert(Src.getValueType() == MVT::v2i8 &&
+         "packBytesToI32 expects a v2i8 source");
+  // Widen v2i8 to v4i8 with the high half undef, then bitcast to i32. This
+  // selects to v_perm_b32, packing two i8 values into low 16 bits of an i32.
+  SDValue Wide = DAG.getNode(ISD::CONCAT_VECTORS, SL, MVT::v4i8, Src,
+                             DAG.getUNDEF(MVT::v2i8));
+  return DAG.getNode(ISD::BITCAST, SL, MVT::i32, Wide);
 }
 
 SDValue SITargetLowering::lowerFromFP8ToF32(SDValue Op, bool IsBF8,
                                             SelectionDAG &DAG) const {
-  EVT DstVT = Op.getValueType();
   SDLoc SL(Op);
   SDValue Src = Op.getOperand(0);
-
-  assert(DstVT.isVector() && "Scalar f32 should be selected by TableGen");
-
-  auto EmitPk = [&](SDValue PackedI32, unsigned WordSel) {
-    unsigned IntrID = IsBF8 ? Intrinsic::amdgcn_cvt_pk_f32_bf8
-                            : Intrinsic::amdgcn_cvt_pk_f32_fp8;
-    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, MVT::v2f32,
-                       DAG.getTargetConstant(IntrID, SL, MVT::i32), PackedI32,
-                       DAG.getTargetConstant(WordSel, SL, MVT::i1));
-  };
-
-  if (DstVT == MVT::v2f32)
-    return EmitPk(packBytesToI32(DAG, SL, Src, 2, 0), 0);
-
-  SDValue PackedI32 = packBytesToI32(DAG, SL, Src, 4, 0);
-  SDValue Lo = EmitPk(PackedI32, 0);
-  SDValue Hi = EmitPk(PackedI32, 1);
-  return DAG.getNode(ISD::CONCAT_VECTORS, SL, MVT::v4f32, Lo, Hi);
+  unsigned IntrID = IsBF8 ? Intrinsic::amdgcn_cvt_pk_f32_bf8
+                          : Intrinsic::amdgcn_cvt_pk_f32_fp8;
+  SDValue PackedI32 = packBytesToI32(DAG, SL, Src);
+  return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, MVT::v2f32,
+                     DAG.getTargetConstant(IntrID, SL, MVT::i32), PackedI32,
+                     DAG.getTargetConstant(0, SL, MVT::i1));
 }
 
 SDValue SITargetLowering::lowerFromFP8ToF16(SDValue Op, bool IsBF8,
                                             SelectionDAG &DAG) const {
   assert(Subtarget->hasFP8F16ConversionInsts() &&
          "fp8/bf8 -> f16 conversion requires FP8F16ConversionInsts");
-  EVT DstVT = Op.getValueType();
   SDLoc SL(Op);
   SDValue Src = Op.getOperand(0);
-
-  // Scalar f16 is handled by TableGen patterns.
-  assert(DstVT.isVector() && "Scalar f16 should be selected by TableGen");
-
   unsigned IntrID = IsBF8 ? Intrinsic::amdgcn_cvt_pk_f16_bf8
                           : Intrinsic::amdgcn_cvt_pk_f16_fp8;
-  SDValue IntrConst = DAG.getTargetConstant(IntrID, SL, MVT::i32);
-  auto EmitPk = [&](unsigned FirstLane) {
-    SDValue PackedI32 = packBytesToI32(DAG, SL, Src, 2, FirstLane);
-    SDValue PackedI16 = DAG.getNode(ISD::TRUNCATE, SL, MVT::i16, PackedI32);
-    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, MVT::v2f16, IntrConst,
-                       PackedI16);
-  };
-  if (DstVT.getVectorNumElements() == 2)
-    return EmitPk(0);
-  SDValue Lo = EmitPk(0);
-  SDValue Hi = EmitPk(2);
-  return DAG.getNode(ISD::CONCAT_VECTORS, SL, DstVT, Lo, Hi);
+  SDValue PackedI32 = packBytesToI32(DAG, SL, Src);
+  SDValue PackedI16 = DAG.getNode(ISD::TRUNCATE, SL, MVT::i16, PackedI32);
+  return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, MVT::v2f16,
+                     DAG.getTargetConstant(IntrID, SL, MVT::i32), PackedI16);
 }
 
 SDValue
@@ -10668,17 +10627,13 @@ SITargetLowering::LowerCONVERT_FROM_ARBITRARY_FP(SDValue Op,
                                                  SelectionDAG &DAG) const {
   // Only handle OCP FP8 formats (E4M3FN, E5M2). FNUZ formats that are supported
   // by gfx942 fall through to the generic expansion.
-  bool IsBF8 = false;
-  switch (static_cast<APFloatBase::Semantics>(Op.getConstantOperandVal(1))) {
-  case APFloatBase::S_Float8E4M3FN:
-    IsBF8 = false;
-    break;
-  case APFloatBase::S_Float8E5M2:
-    IsBF8 = true;
-    break;
-  default:
+  APFloatBase::Semantics FPSemantic =
+      static_cast<APFloatBase::Semantics>(Op.getConstantOperandVal(1));
+  if (FPSemantic != APFloatBase::S_Float8E4M3FN &&
+      FPSemantic != APFloatBase::S_Float8E5M2) {
     return SDValue();
   }
+  const bool IsBF8 = FPSemantic == APFloatBase::S_Float8E5M2;
 
   // Defer constant inputs to generic bit-twiddling expansion.
   if (DAG.isConstantIntBuildVectorOrConstantInt(Op.getOperand(0)))
