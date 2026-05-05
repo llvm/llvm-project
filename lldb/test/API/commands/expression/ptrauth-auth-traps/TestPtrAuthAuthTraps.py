@@ -17,7 +17,7 @@ class TestPtrAuthAuthTraps(TestBase):
 
     def build_arm64e(self):
         self.build(
-            dictionary={"TRIPLE": configuration.triple.replace("arm64", "arm64e")}
+            dictionary={"TRIPLE": configuration.triple.replace("arm64-", "arm64e-")}
         )
 
     @skipUnlessArm64eSupported
