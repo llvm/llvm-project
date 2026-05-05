@@ -469,16 +469,16 @@ static Error runAOTCompile(StringRef InputFile, StringRef OutputFile,
 }
 
 /// SYCL device code module split mode.
-enum IRSplitMode {
+enum class IRSplitMode {
   SPLIT_PER_KERNEL, // one module per kernel
   SPLIT_NONE        // no splitting
 };
 
-/// Parses the value of \p -sycl-module-split-mode.
+/// Parses the value of \p -module-split-mode.
 static std::optional<IRSplitMode> convertStringToSplitMode(StringRef S) {
   return StringSwitch<std::optional<IRSplitMode>>(S)
-      .Case("kernel", SPLIT_PER_KERNEL)
-      .Case("none", SPLIT_NONE)
+      .Case("kernel", IRSplitMode::SPLIT_PER_KERNEL)
+      .Case("none", IRSplitMode::SPLIT_NONE)
       .Default(std::nullopt);
 }
 
@@ -517,13 +517,13 @@ splitDeviceCode(std::unique_ptr<Module> M, StringRef LinkedBitcodeFile,
                 IRSplitMode Mode, const ArgList &Args) {
   SmallVector<SplitModule, 0> SplitModules;
 
-  if (Mode == SPLIT_NONE) {
+  if (Mode == IRSplitMode::SPLIT_NONE) {
     SplitModules.push_back(
         {SmallString<256>(LinkedBitcodeFile), collectSymbols(*M)});
     return SplitModules;
   }
 
-  assert(Mode == SPLIT_PER_KERNEL);
+  assert(Mode == IRSplitMode::SPLIT_PER_KERNEL);
 
   // splitModuleTransitiveFromEntryPoints asserts that at least one entry point
   // was categorized. If the linked module contains no kernel definitions at
@@ -547,23 +547,25 @@ splitDeviceCode(std::unique_ptr<Module> M, StringRef LinkedBitcodeFile,
     return NextCategory++;
   };
 
+  auto SplitCallback = [&](std::unique_ptr<Module> Part) -> Error {
+    Expected<StringRef> BitcodeFileOrErr =
+        createTempFile(Args, sys::path::filename(OutputFile), "bc");
+    if (!BitcodeFileOrErr)
+      return BitcodeFileOrErr.takeError();
+
+    int FD = -1;
+    if (std::error_code EC = sys::fs::openFileForWrite(*BitcodeFileOrErr, FD))
+      return errorCodeToError(EC);
+    raw_fd_ostream OS(FD, /*shouldClose=*/true);
+    WriteBitcodeToFile(*Part, OS);
+
+    SplitModules.push_back(
+        {SmallString<256>(*BitcodeFileOrErr), collectSymbols(*Part)});
+    return Error::success();
+  };
+
   if (Error Err = splitModuleTransitiveFromEntryPoints(
-          std::move(M), EntryPointCategorizer,
-          [&](std::unique_ptr<Module> Part) -> Error {
-            Expected<StringRef> BitcodeFileOrErr =
-                createTempFile(Args, sys::path::filename(OutputFile), "bc");
-            if (!BitcodeFileOrErr)
-              return BitcodeFileOrErr.takeError();
-            int FD = -1;
-            if (std::error_code EC =
-                    sys::fs::openFileForWrite(*BitcodeFileOrErr, FD))
-              return errorCodeToError(EC);
-            raw_fd_ostream OS(FD, /*shouldClose=*/true);
-            WriteBitcodeToFile(*Part, OS);
-            SplitModules.push_back(
-                {SmallString<256>(*BitcodeFileOrErr), collectSymbols(*Part)});
-            return Error::success();
-          }))
+          std::move(M), EntryPointCategorizer, SplitCallback))
     return Err;
 
   return SplitModules;
@@ -584,13 +586,13 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
   auto &[LinkedModule, LinkedFile] = *LinkedOrErr;
 
   // Determine the requested module split mode.
-  IRSplitMode SplitMode = SPLIT_NONE;
-  if (Arg *A = Args.getLastArg(OPT_sycl_module_split_mode_EQ)) {
+  IRSplitMode SplitMode = IRSplitMode::SPLIT_NONE;
+  if (Arg *A = Args.getLastArg(OPT_module_split_mode_EQ)) {
     std::optional<IRSplitMode> ModeOrNone =
         convertStringToSplitMode(A->getValue());
     if (!ModeOrNone)
       return createStringError(formatv(
-          "sycl-module-split-mode value isn't recognized: {0}", A->getValue()));
+          "module-split-mode value isn't recognized: {0}", A->getValue()));
     SplitMode = *ModeOrNone;
   }
 
@@ -606,7 +608,8 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
       SplitFiles.push_back(SI.ModuleFilePath);
     errs() << formatv("sycl-module-split: input: {0}, output: {1}, mode: {2}\n",
                       LinkedFile, llvm::join(SplitFiles, ", "),
-                      SplitMode == SPLIT_PER_KERNEL ? "kernel" : "none");
+                      SplitMode == IRSplitMode::SPLIT_PER_KERNEL ? "kernel"
+                                                                 : "none");
   }
 
   bool IsAOTCompileNeeded = IsIntelOffloadArch(
