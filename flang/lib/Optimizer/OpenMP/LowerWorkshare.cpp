@@ -361,9 +361,21 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
     if (auto reloaded = rootMapping.lookupOrNull(v))
       return nullptr;
     Type ty = v.getType();
-    Value alloc = fir::AllocaOp::create(allocaBuilder, loc, ty);
-    fir::StoreOp::create(singleBuilder, loc, singleMapping.lookup(v), alloc);
-    Value reloaded = fir::LoadOp::create(parallelBuilder, loc, ty, alloc);
+    // fir.alloca cannot wrap fir.ref, so for reference-typed values
+    // (e.g. results of dynamic fir.alloca ops) use fir.heap as the
+    // intermediary pointer type for the broadcast alloca.
+    Type allocTy = ty;
+    if (auto rt = mlir::dyn_cast<fir::ReferenceType>(ty))
+      allocTy = fir::HeapType::get(rt.getEleTy());
+    Value alloc = fir::AllocaOp::create(allocaBuilder, loc, allocTy);
+    Value singleVal = singleMapping.lookup(v);
+    if (allocTy != ty)
+      singleVal =
+          fir::ConvertOp::create(singleBuilder, loc, allocTy, singleVal);
+    fir::StoreOp::create(singleBuilder, loc, singleVal, alloc);
+    Value reloaded = fir::LoadOp::create(parallelBuilder, loc, allocTy, alloc);
+    if (allocTy != ty)
+      reloaded = fir::ConvertOp::create(parallelBuilder, loc, ty, reloaded);
     rootMapping.map(v, reloaded);
     return alloc;
   };
@@ -423,13 +435,30 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
           allParallelized = false;
         }
       } else if (auto alloca = dyn_cast<fir::AllocaOp>(&op)) {
-        auto hoisted =
-            cast<fir::AllocaOp>(allocaBuilder.clone(*alloca, singleMapping));
-        rootMapping.map(&*alloca, &*hoisted);
-        rootMapping.map(alloca.getResult(), hoisted.getResult());
-        copyPrivate.push_back(hoisted);
-        hoistedCopyprivateAllocas.insert(alloca.getResult());
-        allParallelized = false;
+        if (alloca.isDynamic()) {
+          // Dynamic allocas (e.g. firstprivate arrays with runtime extent)
+          // cannot use the simple load/store copyprivate copy function
+          // because it only copies a single element for sequence types like
+          // !fir.array<?xi32>. Instead, keep the alloca in the single block
+          // and broadcast only its pointer to all threads.
+          singleBuilder.clone(op, singleMapping);
+          if (isTransitivelyUsedOutside(alloca.getResult(), sr)) {
+            auto alloc =
+                mapReloadedValue(alloca.getResult(), allocaBuilder,
+                                 singleBuilder, parallelBuilder, singleMapping);
+            if (alloc)
+              copyPrivate.push_back(alloc);
+          }
+          allParallelized = false;
+        } else {
+          auto hoisted =
+              cast<fir::AllocaOp>(allocaBuilder.clone(*alloca, singleMapping));
+          rootMapping.map(&*alloca, &*hoisted);
+          rootMapping.map(alloca.getResult(), hoisted.getResult());
+          copyPrivate.push_back(hoisted);
+          hoistedCopyprivateAllocas.insert(alloca.getResult());
+          allParallelized = false;
+        }
       } else {
         singleBuilder.clone(op, singleMapping);
         // Prepare reloaded values for results of operations that cannot be
