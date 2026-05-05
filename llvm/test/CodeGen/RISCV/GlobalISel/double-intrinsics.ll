@@ -1014,6 +1014,135 @@ define i1 @isnan_d_fpclass(double %x) {
   ret i1 %1
 }
 
+define i1 @isnan_q_fpclass(fp128 %x) {
+; RV32IFD-LABEL: isnan_q_fpclass:
+; RV32IFD:       # %bb.0:
+; RV32IFD-NEXT:    lw a3, 4(a0)
+; RV32IFD-NEXT:    lw a2, 12(a0)
+; RV32IFD-NEXT:    lw a1, 8(a0)
+; RV32IFD-NEXT:    slli a2, a2, 1
+; RV32IFD-NEXT:    beqz a3, .LBB26_2
+; RV32IFD-NEXT:  # %bb.1:
+; RV32IFD-NEXT:    snez a0, a3
+; RV32IFD-NEXT:    j .LBB26_3
+; RV32IFD-NEXT:  .LBB26_2:
+; RV32IFD-NEXT:    lw a0, 0(a0)
+; RV32IFD-NEXT:    snez a0, a0
+; RV32IFD-NEXT:  .LBB26_3:
+; RV32IFD-NEXT:    lui a3, 524272
+; RV32IFD-NEXT:    srli a2, a2, 1
+; RV32IFD-NEXT:    bnez a1, .LBB26_6
+; RV32IFD-NEXT:  # %bb.4:
+; RV32IFD-NEXT:    bne a2, a3, .LBB26_7
+; RV32IFD-NEXT:  .LBB26_5:
+; RV32IFD-NEXT:    ret
+; RV32IFD-NEXT:  .LBB26_6:
+; RV32IFD-NEXT:    snez a0, a1
+; RV32IFD-NEXT:    beq a2, a3, .LBB26_5
+; RV32IFD-NEXT:  .LBB26_7:
+; RV32IFD-NEXT:    sltu a0, a3, a2
+; RV32IFD-NEXT:    ret
+;
+; RV64IFD-LABEL: isnan_q_fpclass:
+; RV64IFD:       # %bb.0:
+; RV64IFD-NEXT:    lui a2, 32767
+; RV64IFD-NEXT:    slli a3, a1, 1
+; RV64IFD-NEXT:    slli a1, a2, 36
+; RV64IFD-NEXT:    srli a2, a3, 1
+; RV64IFD-NEXT:    beq a2, a1, .LBB26_2
+; RV64IFD-NEXT:  # %bb.1:
+; RV64IFD-NEXT:    sltu a0, a1, a2
+; RV64IFD-NEXT:    ret
+; RV64IFD-NEXT:  .LBB26_2:
+; RV64IFD-NEXT:    snez a0, a0
+; RV64IFD-NEXT:    ret
+;
+; RV32I-LABEL: isnan_q_fpclass:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lw a3, 4(a0)
+; RV32I-NEXT:    lw a2, 12(a0)
+; RV32I-NEXT:    lw a1, 8(a0)
+; RV32I-NEXT:    slli a2, a2, 1
+; RV32I-NEXT:    beqz a3, .LBB26_2
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    snez a0, a3
+; RV32I-NEXT:    j .LBB26_3
+; RV32I-NEXT:  .LBB26_2:
+; RV32I-NEXT:    lw a0, 0(a0)
+; RV32I-NEXT:    snez a0, a0
+; RV32I-NEXT:  .LBB26_3:
+; RV32I-NEXT:    lui a3, 524272
+; RV32I-NEXT:    srli a2, a2, 1
+; RV32I-NEXT:    bnez a1, .LBB26_6
+; RV32I-NEXT:  # %bb.4:
+; RV32I-NEXT:    bne a2, a3, .LBB26_7
+; RV32I-NEXT:  .LBB26_5:
+; RV32I-NEXT:    ret
+; RV32I-NEXT:  .LBB26_6:
+; RV32I-NEXT:    snez a0, a1
+; RV32I-NEXT:    beq a2, a3, .LBB26_5
+; RV32I-NEXT:  .LBB26_7:
+; RV32I-NEXT:    sltu a0, a3, a2
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: isnan_q_fpclass:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a2, 32767
+; RV64I-NEXT:    slli a3, a1, 1
+; RV64I-NEXT:    slli a1, a2, 36
+; RV64I-NEXT:    srli a2, a3, 1
+; RV64I-NEXT:    beq a2, a1, .LBB26_2
+; RV64I-NEXT:  # %bb.1:
+; RV64I-NEXT:    sltu a0, a1, a2
+; RV64I-NEXT:    ret
+; RV64I-NEXT:  .LBB26_2:
+; RV64I-NEXT:    snez a0, a0
+; RV64I-NEXT:    ret
+  %1 = call i1 @llvm.is.fpclass.f128(fp128 %x, i32 3)  ; nan
+  ret i1 %1
+}
+
+define i1 @iszero_q_fpclass(fp128 %x) {
+; RV32IFD-LABEL: iszero_q_fpclass:
+; RV32IFD:       # %bb.0:
+; RV32IFD-NEXT:    lw a1, 0(a0)
+; RV32IFD-NEXT:    lw a2, 4(a0)
+; RV32IFD-NEXT:    lw a3, 8(a0)
+; RV32IFD-NEXT:    lw a0, 12(a0)
+; RV32IFD-NEXT:    or a1, a1, a2
+; RV32IFD-NEXT:    or a0, a3, a0
+; RV32IFD-NEXT:    or a0, a1, a0
+; RV32IFD-NEXT:    seqz a0, a0
+; RV32IFD-NEXT:    ret
+;
+; RV64IFD-LABEL: iszero_q_fpclass:
+; RV64IFD:       # %bb.0:
+; RV64IFD-NEXT:    or a0, a0, a1
+; RV64IFD-NEXT:    seqz a0, a0
+; RV64IFD-NEXT:    ret
+;
+; RV32I-LABEL: iszero_q_fpclass:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lw a1, 0(a0)
+; RV32I-NEXT:    lw a2, 4(a0)
+; RV32I-NEXT:    lw a3, 8(a0)
+; RV32I-NEXT:    lw a0, 12(a0)
+; RV32I-NEXT:    or a1, a1, a2
+; RV32I-NEXT:    or a0, a3, a0
+; RV32I-NEXT:    or a0, a1, a0
+; RV32I-NEXT:    seqz a0, a0
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: iszero_q_fpclass:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    seqz a0, a0
+; RV64I-NEXT:    ret
+  %1 = call i1 @llvm.is.fpclass.f128(fp128 %x, i32 64)  ; zero
+  ret i1 %1
+}
+
+
 define double @tan_f64(double %a) nounwind {
 ; RV32IFD-LABEL: tan_f64:
 ; RV32IFD:       # %bb.0:
