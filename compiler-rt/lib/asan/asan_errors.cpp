@@ -657,8 +657,10 @@ static void CheckPoisonRecords(uptr addr) {
     shadow_addr++;
   u8 shadow_val = *shadow_addr;
 
-  if (shadow_val != kAsanUserPoisonedMemoryMagic)
+  if (shadow_val != kAsanUserPoisonedMemoryMagic &&
+      shadow_val >= ASAN_SHADOW_GRANULARITY) {
     return;
+  }
 
   Printf("\n");
 
