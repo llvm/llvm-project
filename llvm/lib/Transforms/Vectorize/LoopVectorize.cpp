@@ -3070,7 +3070,8 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     MaxFactors.ScalableVF = ElementCount::getScalable(ScalableVF);
   };
   unsigned EffectiveIC = UserIC > 0 ? UserIC : 1;
-  auto HasOneScalarIterationRemainder = [EffectiveIC](ElementCount &ExactTC, unsigned int VF)-> bool {
+  auto HasOneScalarIterationRemainder = [EffectiveIC](ElementCount &ExactTC,
+                                                      unsigned int VF) -> bool {
     return ExactTC.getFixedValue() == ((VF * EffectiveIC) + 1);
   };
   if (ExpectedTC && ExpectedTC->isFixed() &&
@@ -3096,7 +3097,8 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
       ElementCount ExactTC = getSmallConstantTripCount(PSE.getSE(), TheLoop);
       if (EpilogueLoweringStatus == CM_EpilogueNotAllowedLowTripLoop &&
           ExactTC && ExactTC.isFixed()) {
-        if (HasOneScalarIterationRemainder(ExactTC, MaxFactors.FixedVF.getFixedValue())) {
+        if (HasOneScalarIterationRemainder(
+                ExactTC, MaxFactors.FixedVF.getFixedValue())) {
           LLVM_DEBUG(dbgs() << "LV: Picking a fixed-width with 1 scalar "
                                "iteration remainder.\n");
           ApplyVectorWidth(MaxFactors, MaxFactors.FixedVF.getFixedValue(), 0);
