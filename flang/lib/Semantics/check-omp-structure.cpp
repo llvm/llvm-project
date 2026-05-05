@@ -2051,7 +2051,7 @@ void OmpStructureChecker::CheckIndividualAllocateDirective(
       continue;
     }
 
-    if (const Symbol *symbol{GetObjectSymbol(*object)}) {
+    if (const Symbol *symbol{GetObjectSymbol(*object, /*ultimate=*/true)}) {
       if (!IsTypeParamInquiry(*symbol)) {
         checkSymbol(*symbol, arg.source);
       }
@@ -2084,7 +2084,7 @@ void OmpStructureChecker::CheckExecutableAllocateDirective(
       hasEmptyList = true;
     }
     for (const parser::OmpArgument &arg : spec.Arguments().v) {
-      if (auto *sym{GetArgumentSymbol(arg)}) {
+      if (auto *sym{GetArgumentSymbol(arg, /*ultimate=*/true)}) {
         // Ignore these checks for structure members. They are not allowed
         // in the first place, so don't tell the users that they need to
         // be specified somewhere,
@@ -2215,7 +2215,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Allocate &x) {
       if (auto *found{parser::omp::FindClause(spec, dsaClause)}) {
         for (auto &object : GetOmpObjectList(*found)->v) {
           if (auto *symbol{GetObjectSymbol(object)}) {
-            privatized.insert(symbol);
+            privatized.insert(&symbol->GetUltimate());
           }
         }
       }
@@ -2223,7 +2223,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Allocate &x) {
 
     for (auto &object : GetOmpObjectList(x)->v) {
       if (auto *symbol{GetObjectSymbol(object)}) {
-        if (!privatized.count(symbol)) {
+        if (!privatized.count(&symbol->GetUltimate())) {
           context_.Say(
               GetObjectSource(object).value_or(GetContext().clauseSource),
               "The ALLOCATE clause requires that '%s' must be listed in a private data-sharing attribute clause on the same directive"_err_en_US,
@@ -2321,7 +2321,7 @@ void OmpStructureChecker::Enter(const parser::OmpDeclareTargetDirective &x) {
 
   // Check if arguments are extended-list-items.
   for (const parser::OmpArgument &arg : x.v.Arguments().v) {
-    const Symbol *symbol{GetArgumentSymbol(arg)};
+    const Symbol *symbol{GetArgumentSymbol(arg, /*ultimate=*/true)};
     if (!symbol) {
       context_.Say(arg.source,
           "An argument to the DECLARE TARGET directive should be an extended-list-item"_err_en_US);
@@ -2568,7 +2568,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPAllocatorsConstruct &x) {
     }
     for (auto &object : DEREF(GetOmpObjectList(clause)).v) {
       CheckVarIsNotPartOfAnotherVar(dirName.source, object);
-      if (auto *symbol{GetObjectSymbol(object)}) {
+      if (auto *symbol{GetObjectSymbol(object, /*ultimate=*/true)}) {
         if (IsStructureComponent(*symbol)) {
           continue;
         }
