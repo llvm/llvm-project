@@ -268,9 +268,6 @@ public:
     if constexpr (BitwordBits == 64) {
       return Bits[I];
     } else {
-      static_assert(BitwordBits == 32, "Unsupported word size");
-      // When Bitword is 32-bit, for a valid I, the first word is always
-      // present, but the second may not be present.
       uint64_t Lo = Bits[2 * I];
       uint64_t Hi = (2 * I + 1 < NumWords) ? Bits[2 * I + 1] : 0;
       return Lo | (Hi << 32);
