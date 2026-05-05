@@ -3440,6 +3440,10 @@ template int __kmp_execute_tasks_64<false, true>(kmp_info_t *, kmp_int32,
                                                  int *USE_ITT_BUILD_ARG(void *),
                                                  kmp_int32);
 
+template int __kmp_execute_tasks_64<false, false>(
+    kmp_info_t *, kmp_int32, kmp_flag_64<false, false> *, int,
+    int *USE_ITT_BUILD_ARG(void *), kmp_int32);
+
 template int __kmp_execute_tasks_64<true, false>(kmp_info_t *, kmp_int32,
                                                  kmp_flag_64<true, false> *,
                                                  int,

@@ -39,6 +39,23 @@
 
 void __kmp_print_structure(void); // Forward declaration
 
+static inline bool __kmp_hyper_forkjoin_uses_spin_wait(int nproc) {
+  static const int min_threads = 32;
+
+  if (__kmp_dflt_blocktime == KMP_MAX_BLOCKTIME)
+    return false;
+
+  if (nproc <= 0) {
+    nproc = __kmp_dflt_team_nth;
+    if (nproc <= 0)
+      nproc = __kmp_dflt_team_nth_ub;
+    if (__kmp_cg_max_nth > 0)
+      nproc = KMP_MIN(nproc, __kmp_cg_max_nth);
+  }
+
+  return nproc >= min_threads;
+}
+
 // ---------------------------- Barrier Algorithms ----------------------------
 // Distributed barrier
 
@@ -1105,8 +1122,14 @@ static void __kmp_hyper_barrier_gather(
                 gtid, team->t.t_id, tid, __kmp_gtid_from_tid(child_tid, team),
                 team->t.t_id, child_tid, &child_bar->b_arrived, new_state));
       // Wait for child to arrive
-      kmp_flag_64<> c_flag(&child_bar->b_arrived, new_state);
-      c_flag.wait(this_thr, FALSE USE_ITT_BUILD_ARG(itt_sync_obj));
+      if (bt == bs_forkjoin_barrier &&
+          __kmp_hyper_forkjoin_uses_spin_wait(num_threads)) {
+        kmp_flag_64<false, false> c_flag(&child_bar->b_arrived, new_state);
+        c_flag.wait(this_thr, FALSE USE_ITT_BUILD_ARG(itt_sync_obj));
+      } else {
+        kmp_flag_64<> c_flag(&child_bar->b_arrived, new_state);
+        c_flag.wait(this_thr, FALSE USE_ITT_BUILD_ARG(itt_sync_obj));
+      }
       KMP_MB(); // Synchronize parent and child threads.
 #if USE_ITT_BUILD && USE_ITT_NOTIFY
       // Barrier imbalance - write min of the thread time and a child time to
@@ -1183,8 +1206,15 @@ static void __kmp_hyper_barrier_release(
     KA_TRACE(20, ("__kmp_hyper_barrier_release: T#%d wait go(%p) == %u\n", gtid,
                   &thr_bar->b_go, KMP_BARRIER_STATE_BUMP));
     // Wait for parent thread to release us
-    kmp_flag_64<> flag(&thr_bar->b_go, KMP_BARRIER_STATE_BUMP);
-    flag.wait(this_thr, TRUE USE_ITT_BUILD_ARG(itt_sync_obj));
+    if (bt == bs_forkjoin_barrier &&
+        __kmp_hyper_forkjoin_uses_spin_wait(
+            thr_bar->th_fixed_icvs.nproc)) {
+      kmp_flag_64<false, false> flag(&thr_bar->b_go, KMP_BARRIER_STATE_BUMP);
+      flag.wait(this_thr, TRUE USE_ITT_BUILD_ARG(itt_sync_obj));
+    } else {
+      kmp_flag_64<> flag(&thr_bar->b_go, KMP_BARRIER_STATE_BUMP);
+      flag.wait(this_thr, TRUE USE_ITT_BUILD_ARG(itt_sync_obj));
+    }
 #if USE_ITT_BUILD && USE_ITT_NOTIFY
     if ((__itt_sync_create_ptr && itt_sync_obj == NULL) || KMP_ITT_DEBUG) {
       // In fork barrier where we could not get the object reliably

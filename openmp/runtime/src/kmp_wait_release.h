@@ -484,8 +484,8 @@ final_spin=FALSE)
   KMP_INIT_YIELD(spins); // Setup for waiting
   KMP_INIT_BACKOFF(time);
 
-  if (__kmp_dflt_blocktime != KMP_MAX_BLOCKTIME ||
-      __kmp_pause_status == kmp_soft_paused) {
+  if (Sleepable && (__kmp_dflt_blocktime != KMP_MAX_BLOCKTIME ||
+                    __kmp_pause_status == kmp_soft_paused)) {
 #if KMP_USE_MONITOR
 // The worker threads cannot rely on the team struct existing at this point.
 // Use the bt values cached in the thread struct instead.
@@ -608,6 +608,11 @@ final_spin=FALSE)
       continue;
     }
 
+    // Don't suspend if wait loop designated non-sleepable
+    // in template parameters
+    if (!Sleepable)
+      continue;
+
     // Don't suspend if KMP_BLOCKTIME is set to "infinite"
     if (__kmp_dflt_blocktime == KMP_MAX_BLOCKTIME &&
         __kmp_pause_status != kmp_soft_paused)
@@ -626,11 +631,6 @@ final_spin=FALSE)
     if (KMP_BLOCKING(hibernate_goal, poll_count++))
       continue;
 #endif
-    // Don't suspend if wait loop designated non-sleepable
-    // in template parameters
-    if (!Sleepable)
-      continue;
-
 #if KMP_HAVE_MWAIT || KMP_HAVE_UMWAIT
     if (__kmp_mwait_enabled || __kmp_umwait_enabled) {
       KF_TRACE(50, ("__kmp_wait_sleep: T#%d using monitor/mwait\n", th_gtid));
