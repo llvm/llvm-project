@@ -814,13 +814,13 @@ void CodeGenModule::checkAliases() {
         continue;
       }
 
-      bool aliasIsFuncDecl = isa<FunctionDecl>(D);
-      bool aliaseeIsFunc = isa<llvm::Function, llvm::GlobalIFunc>(GV);
+      bool AliasIsFuncDecl = isa<FunctionDecl>(D);
+      bool AliaseeIsFunc = isa<llvm::Function, llvm::GlobalIFunc>(GV);
       // Function declarations can only alias functions (including IFUNCs).
       // Similarly, variable declarations can only alias variables.
-      if (aliasIsFuncDecl != aliaseeIsFunc) {
+      if (AliasIsFuncDecl != AliaseeIsFunc) {
         Diags.Report(Location, diag::err_alias_between_function_and_variable)
-            << aliasIsFuncDecl;
+            << AliasIsFuncDecl;
         Diags.Report(AliaseeGD.getDecl()->getLocation(),
                      diag::note_aliasee_declaration);
         Error = true;
@@ -829,7 +829,7 @@ void CodeGenModule::checkAliases() {
 
       // Only report functions.
       // Type mismatches for variables can be intentional.
-      if (aliasIsFuncDecl && aliaseeIsFunc) {
+      if (AliasIsFuncDecl && AliaseeIsFunc) {
         QualType AliasTy = D->getType();
         QualType AliaseeTy = cast<ValueDecl>(AliaseeGD.getDecl())->getType();
         auto shouldReportTypeMismatch = [&]() {
