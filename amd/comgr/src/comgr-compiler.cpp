@@ -690,21 +690,178 @@ amd_comgr_status_t executeLLVMLink(ArrayRef<const char *> Args,
 }
 
 #ifdef COMGR_SPIRV_TRANSLATOR_AVAILABLE
-// Execute amd-llvm-spirv in-process using writeSpirv
+namespace {
+
+// Map "SPV_…" extension name → SPIRV::ExtensionID using the x-macro shipped
+// with the translator. Mirrors the table that amd-llvm-spirv builds in
+// parseSPVExtOption (llvm-spirv.cpp).
+const llvm::DenseMap<StringRef, SPIRV::ExtensionID> &spirvExtensionNameMap() {
+  static const auto Map = []() {
+    llvm::DenseMap<StringRef, SPIRV::ExtensionID> M;
+#define EXT(X) M[#X] = SPIRV::ExtensionID::X;
+#include "LLVMSPIRVExtensions.inc"
+#undef EXT
+    return M;
+  }();
+  return Map;
+}
+
+bool parseSpirvExtList(StringRef Spec,
+                       SPIRV::TranslatorOpts::ExtensionsStatusMap &Status,
+                       raw_ostream &LogS) {
+  const auto &Names = spirvExtensionNameMap();
+  SmallVector<StringRef, 16> Items;
+  Spec.split(Items, ',', -1, false);
+  for (StringRef Item : Items) {
+    if (Item.empty() || (Item.front() != '+' && Item.front() != '-')) {
+      LogS << "spirv-translator: invalid --spirv-ext value '" << Item
+           << "' (expected +EXT or -EXT)\n";
+      return false;
+    }
+    bool Allow = Item.front() == '+';
+    StringRef Name = Item.drop_front();
+    if (Name == "all") {
+      for (const auto &E : Names)
+        Status[E.second] = Allow;
+      continue;
+    }
+    auto It = Names.find(Name);
+    if (It == Names.end()) {
+      LogS << "spirv-translator: unknown extension '" << Name
+           << "' in --spirv-ext\n";
+      return false;
+    }
+    Status[It->second] = Allow;
+  }
+  return true;
+}
+
+// Parse the --spirv-* subset of the amd-llvm-spirv CLI that the HIPAMD clang
+// driver emits (see clang/lib/Driver/ToolChains/HIPAMD.cpp), populating Opts
+// to match. Also extracts InputPath (.bc) and OutputPath (-o argument).
+// Unrecognized --spirv-* flags are logged and ignored.
+bool parseSPIRVTranslatorArgs(ArrayRef<const char *> Args,
+                              SPIRV::TranslatorOpts &Opts, StringRef &InputPath,
+                              StringRef &OutputPath, raw_ostream &LogS) {
+  SPIRV::VersionNumber MaxVer = SPIRV::VersionNumber::MaximumVersion;
+  SPIRV::TranslatorOpts::ExtensionsStatusMap ExtStatus;
+  std::optional<SPIRV::DebugInfoEIS> DebugEIS;
+  std::optional<SPIRV::TranslatorOpts::ArgList> AllowUnknownIntrinsics;
+  bool PreserveAux = false;
+
+  for (size_t I = 0, N = Args.size(); I < N; ++I) {
+    if (!Args[I])
+      continue;
+    StringRef Arg(Args[I]);
+
+    if (Arg == "-o") {
+      if (I + 1 >= N) {
+        LogS << "spirv-translator: '-o' requires an argument\n";
+        return false;
+      }
+      OutputPath = Args[++I];
+      continue;
+    }
+    if (Arg.ends_with(".bc")) {
+      InputPath = Arg;
+      continue;
+    }
+
+    // Normalize: strip leading "--" or "-" so we can compare against bare
+    // names.
+    StringRef Body = Arg;
+    if (!Body.consume_front("--") && !Body.consume_front("-"))
+      continue;
+
+    auto EqPos = Body.find('=');
+    StringRef Name = Body.substr(0, EqPos);
+    bool HasValue = EqPos != StringRef::npos;
+    StringRef Value = HasValue ? Body.substr(EqPos + 1) : StringRef();
+
+    if (Name == "spirv-max-version" && HasValue) {
+      using V_ = SPIRV::VersionNumber;
+      auto Parsed = llvm::StringSwitch<std::optional<V_>>(Value)
+                        .Case("1.0", V_::SPIRV_1_0)
+                        .Case("1.1", V_::SPIRV_1_1)
+                        .Case("1.2", V_::SPIRV_1_2)
+                        .Case("1.3", V_::SPIRV_1_3)
+                        .Case("1.4", V_::SPIRV_1_4)
+                        .Case("1.5", V_::SPIRV_1_5)
+                        .Case("1.6", V_::SPIRV_1_6)
+                        .Default(std::nullopt);
+      if (!Parsed) {
+        LogS << "spirv-translator: unknown --spirv-max-version '" << Value
+             << "'\n";
+        return false;
+      }
+      MaxVer = *Parsed;
+    } else if (Name == "spirv-ext" && HasValue) {
+      if (!parseSpirvExtList(Value, ExtStatus, LogS))
+        return false;
+    } else if (Name == "spirv-debug-info-version" && HasValue) {
+      using EIS_ = SPIRV::DebugInfoEIS;
+      auto Parsed = llvm::StringSwitch<std::optional<EIS_>>(Value)
+                        .Case("legacy", EIS_::SPIRV_Debug)
+                        .Case("ocl-100", EIS_::OpenCL_DebugInfo_100)
+                        .Case("nonsemantic-shader-100",
+                              EIS_::NonSemantic_Shader_DebugInfo_100)
+                        .Case("nonsemantic-shader-200",
+                              EIS_::NonSemantic_Shader_DebugInfo_200)
+                        .Default(std::nullopt);
+      if (!Parsed) {
+        LogS << "spirv-translator: unknown --spirv-debug-info-version '"
+             << Value << "'\n";
+        return false;
+      }
+      DebugEIS = *Parsed;
+    } else if (Name == "spirv-allow-unknown-intrinsics") {
+      // Bare flag → allow all unknown intrinsics. With =prefix1,prefix2 →
+      // restrict to listed prefixes. Matches cl::ValueOptional semantics in
+      // llvm-spirv.cpp. The translator's isUnknownIntrinsicAllowed only
+      // returns true if some prefix matches; an empty prefix matches every
+      // intrinsic name (StringRef::starts_with("") is true), so represent
+      // "allow all" as a single empty prefix rather than an empty list.
+      SPIRV::TranslatorOpts::ArgList Prefixes;
+      if (HasValue) {
+        SmallVector<StringRef, 4> Parts;
+        Value.split(Parts, ',', -1, false);
+        for (StringRef P : Parts)
+          Prefixes.push_back(P);
+      } else {
+        Prefixes.push_back(StringRef());
+      }
+      AllowUnknownIntrinsics = std::move(Prefixes);
+    } else if (Name == "spirv-preserve-auxdata") {
+      PreserveAux = true;
+    } else if (Name == "spirv-lower-const-expr") {
+      // No-op: this is a global cl::opt with cl::init(true) in
+      // SPIRVLowerConstExpr.cpp; the default already matches. Recognized so we
+      // don't warn.
+    } else if (Name.starts_with("spirv-")) {
+      LogS << "spirv-translator: ignoring unrecognized flag '" << Arg << "'\n";
+    }
+  }
+
+  Opts = SPIRV::TranslatorOpts(MaxVer, ExtStatus);
+  if (PreserveAux)
+    Opts.setPreserveAuxData(true);
+  if (DebugEIS)
+    Opts.setDebugInfoEIS(*DebugEIS);
+  if (AllowUnknownIntrinsics)
+    Opts.setSPIRVAllowUnknownIntrinsics(*AllowUnknownIntrinsics);
+  return true;
+}
+
+} // namespace
+
+// Execute amd-llvm-spirv in-process using writeSpirv.
 // Args format: [options...] <input.bc> -o <output.spv>
 amd_comgr_status_t executeSPIRVTranslator(ArrayRef<const char *> Args,
                                           raw_ostream &LogS) {
-  // Parse args: find input .bc and -o <output>
   StringRef InputPath, OutputPath;
-
-  for (size_t I = 0; I < Args.size(); ++I) {
-    StringRef Arg(Args[I]);
-    if (Arg == "-o" && I + 1 < Args.size()) {
-      OutputPath = Args[++I];
-    } else if (Arg.ends_with(".bc")) {
-      InputPath = Arg;
-    }
-  }
+  SPIRV::TranslatorOpts Opts;
+  if (!parseSPIRVTranslatorArgs(Args, Opts, InputPath, OutputPath, LogS))
+    return AMD_COMGR_STATUS_ERROR;
 
   if (InputPath.empty() || OutputPath.empty()) {
     LogS << "spirv-translator: missing input or output files\n";
@@ -725,12 +882,6 @@ amd_comgr_status_t executeSPIRVTranslator(ArrayRef<const char *> Args,
     Err.print("spirv-translator", LogS);
     return AMD_COMGR_STATUS_ERROR;
   }
-
-  // Configure SPIRV translator options (match amd-llvm-spirv defaults)
-  SPIRV::TranslatorOpts Opts;
-  Opts.enableAllExtensions();
-  Opts.setPreserveAuxData(true);
-  Opts.setSPIRVAllowUnknownIntrinsics({"llvm.amdgcn"});
 
   // Translate to SPIRV
   std::string ErrMsg;
@@ -848,7 +999,7 @@ executeCommand(const Command &Job, raw_ostream &LogS,
 #ifdef COMGR_SPIRV_TRANSLATOR_AVAILABLE
     if (ExeName.contains("llvm-spirv")) {
       if (env::shouldEmitVerboseLogs()) {
-        logArgv(LogS, "llvm-spirv", Argv);
+        logArgv(LogS, "amd-llvm-spirv", Argv);
       }
       return executeSPIRVTranslator(Arguments, LogS);
     }
@@ -2305,7 +2456,8 @@ AMDGPUCompiler::translateSpirvToBitcodeImpl(DataSet *SpirvInSet,
 
     if (env::shouldEmitVerboseLogs()) {
       LogS << "SPIR-V Translation: amd-llvm-spirv -r --spirv-target-env=CL2.0 "
-           << getFilePath(Input, InputDir) << " "
+              "--spirv-preserve-auxdata "
+           << getFilePath(Input, InputDir) << " -o "
            << getFilePath(Output, OutputDir) << " (command line equivalent)\n";
     }
 
