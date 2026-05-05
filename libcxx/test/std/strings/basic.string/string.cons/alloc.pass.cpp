@@ -59,7 +59,7 @@ TEST_CONSTEXPR_CXX20 void test2() {
   {
 #  if TEST_STD_VER > 14
     static_assert((noexcept(S{})), "");
-#  elif TEST_STD_VER >= 11
+#  else
     static_assert((noexcept(S()) == noexcept(typename S::allocator_type())), "");
 #  endif
     S s;
@@ -67,23 +67,23 @@ TEST_CONSTEXPR_CXX20 void test2() {
     assert(s.data());
     assert(s.size() == 0);
     assert(s.capacity() >= s.size());
-    assert(s.get_allocator() == typename S::allocator_type());
     LIBCPP_ASSERT(is_string_asan_correct(s));
   }
   {
 #  if TEST_STD_VER > 14
     static_assert((noexcept(S{typename S::allocator_type{}})), "");
-#  elif TEST_STD_VER >= 11
+#  else
     static_assert((noexcept(S(typename S::allocator_type())) ==
                    std::is_nothrow_copy_constructible<typename S::allocator_type>::value),
                   "");
 #  endif
-    S s(typename S::allocator_type{});
+    typename S::allocator_type a{};
+    S s(a);
     LIBCPP_ASSERT(s.__invariants());
     assert(s.data());
     assert(s.size() == 0);
     assert(s.capacity() >= s.size());
-    assert(s.get_allocator() == typename S::allocator_type());
+    assert(s.get_allocator() == a);
     LIBCPP_ASSERT(is_string_asan_correct(s));
   }
 }
@@ -101,11 +101,21 @@ TEST_CONSTEXPR_CXX20 bool test() {
   return true;
 }
 
+void test_default_alloc_arg() {
+  using A = ControlledDefaultConstructorAllocator<char>;
+  using S = std::basic_string<char, std::char_traits<char>, A>;
+
+  A::reset_to_base();
+  S s;
+  assert(s.get_allocator().is_base());
+}
+
 int main(int, char**) {
   test();
 #if TEST_STD_VER > 17
   static_assert(test());
 #endif
+  test_default_alloc_arg();
 
   return 0;
 }

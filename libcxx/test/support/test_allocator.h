@@ -515,4 +515,40 @@ struct SocccAllocator {
   using propagate_on_container_swap            = std::false_type;
 };
 
+// Track how many times the allocator was default-constructed
+//
+
+template <class T>
+class ControlledDefaultConstructorAllocator : public std::allocator<T> {
+public:
+  template <class U>
+  struct rebind {
+    typedef ControlledDefaultConstructorAllocator<U> other;
+  };
+
+  ControlledDefaultConstructorAllocator() TEST_NOEXCEPT { default_constructed_tag_ = next_default_constructed_tag_++; }
+  bool is_base() const TEST_NOEXCEPT { return default_constructed_tag_ == base_default_constructed_tag_; }
+
+  static void reset_to_base() { next_default_constructed_tag_ = base_default_constructed_tag_; }
+
+  friend bool operator==(ControlledDefaultConstructorAllocator x, ControlledDefaultConstructorAllocator y) {
+    return x.default_constructed_tag_ == y.default_constructed_tag_;
+  }
+  friend bool operator!=(ControlledDefaultConstructorAllocator x, ControlledDefaultConstructorAllocator y) {
+    return !(x == y);
+  }
+
+  const static int base_default_constructed_tag_;
+  static int next_default_constructed_tag_;
+
+  int default_constructed_tag_;
+};
+
+template <class T>
+const int ControlledDefaultConstructorAllocator<T>::base_default_constructed_tag_ = 42;
+
+template <class T>
+int ControlledDefaultConstructorAllocator<T>::next_default_constructed_tag_ =
+    ControlledDefaultConstructorAllocator<T>::base_default_constructed_tag_;
+
 #endif // TEST_ALLOCATOR_H

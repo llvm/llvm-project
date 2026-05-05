@@ -31,7 +31,6 @@
 template <class S>
 TEST_CONSTEXPR_CXX20 void test(S str, unsigned pos) {
   typedef typename S::traits_type T;
-  typedef typename S::allocator_type A;
 
   if (pos <= str.size()) {
     S s2(str, pos);
@@ -39,7 +38,6 @@ TEST_CONSTEXPR_CXX20 void test(S str, unsigned pos) {
     typename S::size_type rlen = str.size() - pos;
     assert(s2.size() == rlen);
     assert(T::compare(s2.data(), str.data() + pos, rlen) == 0);
-    assert(s2.get_allocator() == A());
     assert(s2.capacity() >= s2.size());
     LIBCPP_ASSERT(is_string_asan_correct(s2));
   }
@@ -58,14 +56,12 @@ TEST_CONSTEXPR_CXX20 void test(S str, unsigned pos) {
 template <class S>
 TEST_CONSTEXPR_CXX20 void test(S str, unsigned pos, unsigned n) {
   typedef typename S::traits_type T;
-  typedef typename S::allocator_type A;
   if (pos <= str.size()) {
     S s2(str, pos, n);
     LIBCPP_ASSERT(s2.__invariants());
     typename S::size_type rlen = std::min<typename S::size_type>(str.size() - pos, n);
     assert(s2.size() == rlen);
     assert(T::compare(s2.data(), str.data() + pos, rlen) == 0);
-    assert(s2.get_allocator() == A());
     assert(s2.capacity() >= s2.size());
     LIBCPP_ASSERT(is_string_asan_correct(s2));
   }
@@ -174,12 +170,56 @@ TEST_CONSTEXPR_CXX20 bool test() {
   return true;
 }
 
+template <class S>
+void test_default_alloc_arg(S str, unsigned pos) {
+  using A = typename S::allocator_type;
+  A::reset_to_base();
+  S s2(str, pos);
+  assert(s2.get_allocator().is_base());
+}
+
+template <class S>
+void test_default_alloc_arg(S str, unsigned pos, unsigned n) {
+  using A = typename S::allocator_type;
+  A::reset_to_base();
+  S s2(str, pos, n);
+  assert(s2.get_allocator().is_base());
+}
+
+void test_default_alloc_arg() {
+  using Alloc = ControlledDefaultConstructorAllocator<char>;
+  using S     = std::basic_string<char, std::char_traits<char>, Alloc>;
+  Alloc a1;
+  test(S(Alloc(a1)), 0);
+  test(S(Alloc(a1)), 1);
+  test(S("1", Alloc(a1)), 0);
+  test(S("1", Alloc(a1)), 1);
+  test(S("1", Alloc(a1)), 2);
+  test(S("1234567890123456789012345678901234567890123456789012345678901234567890", Alloc(a1)), 0);
+  test(S("1234567890123456789012345678901234567890123456789012345678901234567890", Alloc(a1)), 5);
+  test(S("1234567890123456789012345678901234567890123456789012345678901234567890", Alloc(a1)), 50);
+  test(S("1234567890123456789012345678901234567890123456789012345678901234567890", Alloc(a1)), 500);
+
+  test(S(Alloc(a1)), 0, 0);
+  test(S(Alloc(a1)), 0, 1);
+  test(S(Alloc(a1)), 1, 0);
+  test(S(Alloc(a1)), 1, 1);
+  test(S(Alloc(a1)), 1, 2);
+  test(S("1", Alloc(a1)), 0, 0);
+  test(S("1", Alloc(a1)), 0, 1);
+  test(S("1234567890123456789012345678901234567890123456789012345678901234567890", Alloc(a1)), 50, 0);
+  test(S("1234567890123456789012345678901234567890123456789012345678901234567890", Alloc(a1)), 50, 1);
+  test(S("1234567890123456789012345678901234567890123456789012345678901234567890", Alloc(a1)), 50, 10);
+  test(S("1234567890123456789012345678901234567890123456789012345678901234567890", Alloc(a1)), 50, 100);
+}
+
 int main(int, char**) {
   test();
 #if TEST_STD_VER > 17
   static_assert(test());
 #endif
   test_lwg2583();
+  test_default_alloc_arg();
 
   return 0;
 }
