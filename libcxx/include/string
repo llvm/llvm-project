@@ -2600,27 +2600,25 @@ inline const bool __is_transparently_comparable_v<_Comparator, _CharT[_Np], basi
     __is_transparently_comparable_v<_Comparator, basic_string<_CharT, _Traits, _Alloc>, const _CharT*>;
 
 template <class _Comparator, class _CharT, class _Traits, class _Alloc>
-inline const bool
-    __is_transparently_comparable_v<_Comparator,
-                                   basic_string<_CharT, _Traits, _Alloc>,
-                                   basic_string_view<_CharT, _Traits> > =
-        __desugars_to_v<__less_tag,
-                        _Comparator,
-                        basic_string<_CharT, _Traits, _Alloc>,
-                        basic_string<_CharT, _Traits, _Alloc> > ||
-        __desugars_to_v<__greater_tag,
-                        _Comparator,
-                        basic_string<_CharT, _Traits, _Alloc>,
-                        basic_string<_CharT, _Traits, _Alloc> >;
+inline const bool __is_transparently_comparable_v<_Comparator,
+                                                  basic_string<_CharT, _Traits, _Alloc>,
+                                                  basic_string_view<_CharT, _Traits> > =
+    __desugars_to_v<__less_tag,
+                    _Comparator,
+                    basic_string<_CharT, _Traits, _Alloc>,
+                    basic_string<_CharT, _Traits, _Alloc> > ||
+    __desugars_to_v<__greater_tag,
+                    _Comparator,
+                    basic_string<_CharT, _Traits, _Alloc>,
+                    basic_string<_CharT, _Traits, _Alloc> >;
 
 template <class _Comparator, class _CharT, class _Traits, class _Alloc>
-inline const bool
+inline const bool __is_transparently_comparable_v<_Comparator,
+                                                  basic_string_view<_CharT, _Traits>,
+                                                  basic_string<_CharT, _Traits, _Alloc> > =
     __is_transparently_comparable_v<_Comparator,
-                                   basic_string_view<_CharT, _Traits>,
-                                   basic_string<_CharT, _Traits, _Alloc> > =
-        __is_transparently_comparable_v<_Comparator,
-                                       basic_string<_CharT, _Traits, _Alloc>,
-                                       basic_string_view<_CharT, _Traits> >;
+                                    basic_string<_CharT, _Traits, _Alloc>,
+                                    basic_string_view<_CharT, _Traits> >;
 
 #  if _LIBCPP_STD_VER >= 17
 template <class _InputIterator,

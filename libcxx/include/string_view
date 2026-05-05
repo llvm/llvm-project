@@ -234,8 +234,8 @@ namespace std {
 #  include <__ranges/enable_view.h>
 #  include <__ranges/size.h>
 #  include <__string/char_traits.h>
-#  include <__type_traits/is_array.h>
 #  include <__type_traits/desugars_to.h>
+#  include <__type_traits/is_array.h>
 #  include <__type_traits/is_convertible.h>
 #  include <__type_traits/is_same.h>
 #  include <__type_traits/is_standard_layout.h>
