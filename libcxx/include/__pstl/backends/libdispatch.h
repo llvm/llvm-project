@@ -25,7 +25,9 @@
 #include <__memory/destroy.h>
 #include <__memory/unique_ptr.h>
 #include <__new/exceptions.h>
+#include <__numeric/exclusive_scan.h>
 #include <__numeric/reduce.h>
+#include <__numeric/transform_exclusive_scan.h>
 #include <__pstl/backend_fwd.h>
 #include <__pstl/cpu_algos/any_of.h>
 #include <__pstl/cpu_algos/cpu_traits.h>
