@@ -2076,7 +2076,7 @@ SDValue VectorLegalizer::ExpandFNEG(SDNode *Node) {
          TLI.isOperationLegalOrCustomOrPromote(ISD::FNEG, EltVT)) ||
         (VT.getVectorNumElements() < 3 &&
          TLI.isOperationLegal(ISD::FNEG, EltVT) &&
-         TLI.isExtractVecEltCheap(VT, 0)))
+         TLI.isExtractVecEltCheap(VT, 0) && TLI.isExtractVecEltCheap(VT, 1)))
       return SDValue();
   }
 
