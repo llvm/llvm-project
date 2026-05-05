@@ -10003,7 +10003,7 @@ that boundary; a value of zero has no effect on the alignment chosen at runtime.
 If the alignment factor is omitted, the compiler defaults to the largest(the most strict) 
 alignment supported by the target machine for any data type. 
 
-Applying this attribute to a structure or union changes the type's layout 
+Applying this attribute to a structure or union, or to one of its members, changes the type's layout 
 properties. To ensure that array indexing and pointer arithmetic remain 
 consistent, the compiler automatically increases the structure's total size 
 (via tail padding) to a multiple of the alignment value. For example, a 
