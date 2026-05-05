@@ -2096,7 +2096,7 @@ SDValue VectorLegalizer::ExpandFABS(SDNode *Node) {
          TLI.isOperationLegalOrCustomOrPromote(ISD::FABS, EltVT)) ||
         (VT.getVectorNumElements() < 3 &&
          TLI.isOperationLegal(ISD::FABS, EltVT) &&
-         TLI.isExtractVecEltCheap(VT, 0)))
+         TLI.isExtractVecEltCheap(VT, 0) && TLI.isExtractVecEltCheap(VT, 1)))
       return SDValue();
   }
 
