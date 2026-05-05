@@ -207,6 +207,19 @@ void SimpleExecutorMemoryManager::addBootstrapSymbols(
       ExecutorAddr::fromPtr(&deinitializeWrapper);
   M[rt::SimpleExecutorMemoryManagerReleaseWrapperName] =
       ExecutorAddr::fromPtr(&releaseWrapper);
+
+  {
+    // Also provide SimpleNativeMemoryMap symbols for compatibility.
+    // FIXME: We should codify a "simple" memory manager interface and make
+    // SimpleExecutorMemoryManager its LLVM-based implementation, and
+    // SimpleNativeMemoryMap its ORC-runtime implementation.
+    const auto &SNs = rt::orc_rt_SimpleNativeMemoryMapSPSSymbols;
+    M[SNs.AllocatorName] = ExecutorAddr::fromPtr(this);
+    M[SNs.ReserveName] = ExecutorAddr::fromPtr(reserveWrapper);
+    M[SNs.InitializeName] = ExecutorAddr::fromPtr(initializeWrapper);
+    M[SNs.DeinitializeName] = ExecutorAddr::fromPtr(deinitializeWrapper);
+    M[SNs.ReleaseName] = ExecutorAddr::fromPtr(releaseWrapper);
+  }
 }
 
 Expected<SimpleExecutorMemoryManager::SlabInfo &>

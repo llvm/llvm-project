@@ -129,6 +129,24 @@ func.func @parse() -> !qalias {
 }
 
 // -----
+// Storage type: ui8 (explicit unsigned)
+// CHECK: !quant.uniform<ui8:f32, 1.000000e+00>
+!qalias = !quant.uniform<ui8:f32, 1.0>
+func.func @parse() -> !qalias {
+  %0 = "foo"() : () -> !qalias
+  return %0 : !qalias
+}
+
+// -----
+// Storage type: si8 (explicit signed)
+// CHECK: !quant.uniform<si8:f32, 1.000000e+00>
+!qalias = !quant.uniform<si8:f32, 1.0>
+func.func @parse() -> !qalias {
+  %0 = "foo"() : () -> !qalias
+  return %0 : !qalias
+}
+
+// -----
 // Per-axis scales and zero points (affine)
 // CHECK: !quant.uniform<u8:f32:1, {2.000000e+02:-120,9.987200e-01:127}>
 !qalias = !quant.uniform<u8:f32:1, {2.0e+2:-120,0.99872:127}>

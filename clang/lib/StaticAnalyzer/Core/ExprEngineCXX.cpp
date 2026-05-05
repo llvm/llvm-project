@@ -222,16 +222,10 @@ SVal ExprEngine::computeObjectUnderConstruction(
           // able to find construction context at all.
           break;
         }
-        if (isa<BlockInvocationContext>(CallerLCtx)) {
-          // Unwrap block invocation contexts. They're mostly part of
-          // the current stack frame.
-          CallerLCtx = CallerLCtx->getParent();
-          assert(!isa<BlockInvocationContext>(CallerLCtx));
-        }
 
         unsigned NVCaller = getNumVisited(CallerLCtx, SFC->getCallSiteBlock());
         return computeObjectUnderConstruction(
-            cast<Expr>(SFC->getCallSite()), State, NVCaller, CallerLCtx,
+            SFC->getCallSite(), State, NVCaller, CallerLCtx,
             RTC->getConstructionContext(), CallOpts);
       } else {
         // We are on the top frame of the analysis. We do not know where is the
@@ -447,15 +441,9 @@ ProgramStateRef ExprEngine::updateObjectsUnderConstruction(
       auto RTC = (*SFC->getCallSiteBlock())[SFC->getIndex()]
                      .getAs<CFGCXXRecordTypedCall>();
       assert(RTC && "Could not have had a target region without it");
-      if (isa<BlockInvocationContext>(CallerLCtx)) {
-        // Unwrap block invocation contexts. They're mostly part of
-        // the current stack frame.
-        CallerLCtx = CallerLCtx->getParent();
-        assert(!isa<BlockInvocationContext>(CallerLCtx));
-      }
 
-      return updateObjectsUnderConstruction(V,
-          cast<Expr>(SFC->getCallSite()), State, CallerLCtx,
+      return updateObjectsUnderConstruction(
+          V, SFC->getCallSite(), State, CallerLCtx,
           RTC->getConstructionContext(), CallOpts);
     }
     case ConstructionContext::ElidedTemporaryObjectKind: {

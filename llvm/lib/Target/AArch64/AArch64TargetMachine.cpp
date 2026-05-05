@@ -222,11 +222,6 @@ static cl::opt<bool>
                            cl::desc("Enable Machine Pipeliner for AArch64"),
                            cl::init(false), cl::Hidden);
 
-static cl::opt<bool>
-    EnableNewSMEABILowering("aarch64-new-sme-abi",
-                            cl::desc("Enable new lowering for the SME ABI"),
-                            cl::init(true), cl::Hidden);
-
 static cl::opt<bool> EnableSRLTSubregToRegMitigation(
     "aarch64-srlt-mitigate-sr2r",
     cl::desc("Enable SUBREG_TO_REG mitigation by adding 'implicit-def' for "
@@ -244,35 +239,34 @@ LLVMInitializeAArch64Target() {
   auto &PR = *PassRegistry::getPassRegistry();
   initializeGlobalISel(PR);
   initializeAArch64A53Fix835769LegacyPass(PR);
-  initializeAArch64A57FPLoadBalancingPass(PR);
+  initializeAArch64A57FPLoadBalancingLegacyPass(PR);
   initializeAArch64AdvSIMDScalarLegacyPass(PR);
   initializeAArch64AsmPrinterPass(PR);
   initializeAArch64BranchTargetsLegacyPass(PR);
   initializeAArch64CollectLOHLegacyPass(PR);
   initializeAArch64CompressJumpTablesLegacyPass(PR);
-  initializeAArch64ConditionalComparesPass(PR);
+  initializeAArch64ConditionalComparesLegacyPass(PR);
   initializeAArch64ConditionOptimizerLegacyPass(PR);
   initializeAArch64DeadRegisterDefinitionsLegacyPass(PR);
   initializeAArch64ExpandPseudoLegacyPass(PR);
   initializeAArch64LoadStoreOptLegacyPass(PR);
   initializeAArch64MIPeepholeOptLegacyPass(PR);
-  initializeAArch64SIMDInstrOptPass(PR);
-  initializeAArch64O0PreLegalizerCombinerPass(PR);
-  initializeAArch64PreLegalizerCombinerPass(PR);
-  initializeAArch64PointerAuthPass(PR);
-  initializeAArch64PostCoalescerPass(PR);
+  initializeAArch64SIMDInstrOptLegacyPass(PR);
+  initializeAArch64O0PreLegalizerCombinerLegacyPass(PR);
+  initializeAArch64PreLegalizerCombinerLegacyPass(PR);
+  initializeAArch64PointerAuthLegacyPass(PR);
+  initializeAArch64PostCoalescerLegacyPass(PR);
   initializeAArch64PostLegalizerCombinerPass(PR);
-  initializeAArch64PostLegalizerLoweringPass(PR);
-  initializeAArch64PostSelectOptimizePass(PR);
+  initializeAArch64PostSelectOptimizeLegacyPass(PR);
+  initializeAArch64PostLegalizerLoweringLegacyPass(PR);
   initializeAArch64PromoteConstantPass(PR);
-  initializeAArch64RedundantCopyEliminationPass(PR);
-  initializeAArch64RedundantCondBranchPass(PR);
+  initializeAArch64RedundantCopyEliminationLegacyPass(PR);
+  initializeAArch64RedundantCondBranchLegacyPass(PR);
   initializeAArch64StorePairSuppressPass(PR);
   initializeFalkorHWPFFixPass(PR);
   initializeFalkorMarkStridedAccessesLegacyPass(PR);
   initializeLDTLSCleanupPass(PR);
-  initializeKCFIPass(PR);
-  initializeSMEABIPass(PR);
+  initializeMachineKCFILegacyPass(PR);
   initializeMachineSMEABIPass(PR);
   initializeAArch64SRLTDefineSuperRegsPass(PR);
   initializeSMEPeepholeOptPass(PR);
@@ -280,7 +274,7 @@ LLVMInitializeAArch64Target() {
   initializeAArch64SpeculationHardeningPass(PR);
   initializeAArch64SLSHardeningPass(PR);
   initializeAArch64StackTaggingPass(PR);
-  initializeAArch64StackTaggingPreRAPass(PR);
+  initializeAArch64StackTaggingPreRALegacyPass(PR);
   initializeAArch64LowerHomogeneousPrologEpilogPass(PR);
   initializeAArch64DAGToDAGISelLegacyPass(PR);
   initializeAArch64CondBrTuningPass(PR);
@@ -357,8 +351,7 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
                                computeDefaultCPU(TT, CPU), FS, Options,
                                getEffectiveRelocModel(TT, RM),
                                getEffectiveAArch64CodeModel(TT, CM, JIT), OL),
-      TLOF(createTLOF(getTargetTriple())), isLittle(LittleEndian),
-      UseNewSMEABILowering(EnableNewSMEABILowering) {
+      TLOF(createTLOF(getTargetTriple())), isLittle(LittleEndian) {
   initAsmInfo();
 
   if (TT.isOSBinFormatMachO()) {
@@ -366,7 +359,7 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
     this->Options.NoTrapAfterNoreturn = true;
   }
 
-  if (getMCAsmInfo()->usesWindowsCFI()) {
+  if (getMCAsmInfo().usesWindowsCFI()) {
     // Unwinding can get confused if the last instruction in an
     // exception-handling region (function, funclet, try block, etc.)
     // is a call.
@@ -404,6 +397,8 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
     setGlobalISelAbort(GlobalISelAbortMode::Disable);
   }
 
+  LLT::setUseExtended(true);
+
   // AArch64 supports the MachineOutliner.
   setMachineOutliner(true);
 
@@ -414,7 +409,7 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
   setSupportsDebugEntryValues(true);
 
   // AArch64 supports fixing up the DWARF unwind information.
-  if (!getMCAsmInfo()->usesWindowsCFI())
+  if (!getMCAsmInfo().usesWindowsCFI())
     setCFIFixup(true);
 }
 
@@ -693,19 +688,12 @@ void AArch64PassConfig::addIRPasses() {
     addPass(createInterleavedAccessPass());
   }
 
-  if (!EnableNewSMEABILowering) {
-    // Expand any functions marked with SME attributes which require special
-    // changes for the calling convention or that require the lazy-saving
-    // mechanism specified in the SME ABI.
-    addPass(createSMEABIPass());
-  }
-
   // Add Control Flow Guard checks.
   if (TM->getTargetTriple().isOSWindows()) {
     if (TM->getTargetTriple().isWindowsArm64EC())
       addPass(createAArch64Arm64ECCallLoweringPass());
     else
-      addPass(createCFGuardCheckPass());
+      addPass(createCFGuardPass());
   }
 
   if (TM->Options.JMCInstrument)
@@ -802,7 +790,7 @@ bool AArch64PassConfig::addGlobalInstructionSelect() {
 }
 
 void AArch64PassConfig::addMachineSSAOptimization() {
-  if (TM->getOptLevel() != CodeGenOptLevel::None && EnableNewSMEABILowering)
+  if (TM->getOptLevel() != CodeGenOptLevel::None)
     addPass(createMachineSMEABIPass(TM->getOptLevel()));
 
   if (TM->getOptLevel() != CodeGenOptLevel::None && EnableSMEPeepholeOpt)
@@ -830,12 +818,12 @@ bool AArch64PassConfig::addILPOpts() {
     addPass(createAArch64StorePairSuppressPass());
   addPass(createAArch64SIMDInstrOptPass());
   if (TM->getOptLevel() != CodeGenOptLevel::None)
-    addPass(createAArch64StackTaggingPreRAPass());
+    addPass(createAArch64StackTaggingPreRALegacyPass());
   return true;
 }
 
 void AArch64PassConfig::addPreRegAlloc() {
-  if (TM->getOptLevel() == CodeGenOptLevel::None && EnableNewSMEABILowering)
+  if (TM->getOptLevel() == CodeGenOptLevel::None)
     addPass(createMachineSMEABIPass(CodeGenOptLevel::None));
 
   // Change dead register definitions to refer to the zero register.
@@ -867,7 +855,7 @@ void AArch64PassConfig::addPostRegAlloc() {
 
   if (TM->getOptLevel() != CodeGenOptLevel::None && usingDefaultRegAlloc())
     // Improve performance for some FP/SIMD code for A57.
-    addPass(createAArch64A57FPLoadBalancing());
+    addPass(createAArch64A57FPLoadBalancingLegacyPass());
 }
 
 void AArch64PassConfig::addPreSched2() {
@@ -939,6 +927,9 @@ void AArch64PassConfig::addPostBBSections() {
 }
 
 void AArch64PassConfig::addPreEmitPass2() {
+  // Insert pseudo probe annotation for callsite profiling
+  addPass(createPseudoProbeInserter());
+
   // SVE bundles move prefixes with destructive operations. BLR_RVMARKER pseudo
   // instructions are lowered to bundles as well.
   addPass(createUnpackMachineBundlesLegacy(nullptr));

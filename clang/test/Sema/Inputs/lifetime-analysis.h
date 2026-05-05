@@ -40,6 +40,7 @@ template<typename T, int N>
 T *begin(T (&array)[N]);
 
 using size_t = decltype(sizeof(0));
+using nullptr_t = decltype(nullptr);
 
 template<typename T>
 struct initializer_list {
@@ -156,6 +157,12 @@ struct basic_string_view {
 };
 using string_view = basic_string_view<char>;
 
+template<typename T>
+struct span {
+  span();
+  span(const vector<T>&);
+};
+
 template<class _Mystr> struct iter {
     iter& operator-=(int);
 
@@ -190,12 +197,41 @@ using string = basic_string<char>;
 template<typename T>
 struct unique_ptr {
   unique_ptr();
+  explicit unique_ptr(T*);
   unique_ptr(unique_ptr<T>&&);
+  unique_ptr& operator=(unique_ptr<T>&&);
+  unique_ptr& operator=(std::nullptr_t);
+  void reset();
   ~unique_ptr();
   T* release();
   T &operator*();
   T *operator->();
   T *get() const;
+};
+
+template<typename T, typename... Args>
+unique_ptr<T> make_unique(Args&&... args) {
+  return unique_ptr<T>(new T(args...));
+}
+
+template <class T>
+void destroy_at(T *);
+
+template<typename T>
+struct shared_ptr {
+  shared_ptr();
+  explicit shared_ptr(T*);
+  shared_ptr(const shared_ptr<T>&);
+  shared_ptr(shared_ptr<T>&&);
+  
+  template<typename U>
+  shared_ptr(unique_ptr<U>&& up) : ptr_(up.get()) { up.release(); }
+
+  ~shared_ptr();
+  T &operator*();
+  T *operator->();
+  T *get() const;
+  T* ptr_;
 };
 
 template<typename T>
@@ -261,4 +297,21 @@ struct true_type {
 template<class T> struct is_pointer : false_type {};
 template<class T> struct is_pointer<T*> : true_type {};
 template<class T> struct is_pointer<T* const> : true_type {};
+
+template<class> class function;
+template<class R, class... Args>
+class function<R(Args...)> {
+public:
+  template<class F> function(F) {}
+  function(const function&) {}
+  function(function&&) {}
+  template<class F> function& operator=(F) { return *this; }
+  function& operator=(const function&) { return *this; }
+  function& operator=(function&&) { return *this; }
+  ~function();
+};
+
 }
+
+void *operator new(std::size_t, void *) noexcept;
+void *operator new[](std::size_t, void *) noexcept;

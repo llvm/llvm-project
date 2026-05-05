@@ -289,7 +289,7 @@ bool DynamicLoaderHexagonDYLD::SetRendezvousBreakpoint() {
 
     // Make sure our breakpoint is at the right address.
     assert(target.GetBreakpointByID(m_dyld_bid)
-               ->FindLocationByAddress(break_addr)
+               ->FindLocationByAddress(Address(break_addr))
                ->GetBreakpoint()
                .GetID() == m_dyld_bid);
 

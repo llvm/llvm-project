@@ -236,7 +236,7 @@ struct CUFDataTransferOpConversion
         // Initialization of an array from a scalar value should be implemented
         // via a kernel launch. Use the flang runtime via the Assign function
         // until we have more infrastructure.
-        mlir::Type dstEleTy = fir::unwrapInnerType(fir::unwrapRefType(dstTy));
+        mlir::Type dstEleTy = fir::getFortranElementType(dstTy);
         mlir::Value src = emboxSrc(rewriter, op, symtab, dstEleTy);
         mlir::Value dst = emboxDst(rewriter, op, symtab);
         mlir::func::FuncOp func =
@@ -319,7 +319,7 @@ struct CUFDataTransferOpConversion
       mlir::Value dst = op.getDst();
       mlir::Value src = op.getSrc();
       if (!mlir::isa<fir::BaseBoxType>(srcTy)) {
-        mlir::Type dstEleTy = fir::unwrapInnerType(dstBoxTy.getEleTy());
+        mlir::Type dstEleTy = dstBoxTy.unwrapInnerType();
         src = emboxSrc(rewriter, op, symtab, dstEleTy);
         if (fir::isa_trivial(srcTy))
           func = fir::runtime::getRuntimeFunc<mkRTKey(CUFDataTransferCstDesc)>(

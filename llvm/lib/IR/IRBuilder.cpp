@@ -13,6 +13,7 @@
 
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -927,12 +928,12 @@ Value *IRBuilderBase::CreateBinaryIntrinsic(Intrinsic::ID ID, Value *LHS,
 }
 
 CallInst *IRBuilderBase::CreateIntrinsic(Intrinsic::ID ID,
-                                         ArrayRef<Type *> Types,
+                                         ArrayRef<Type *> OverloadTypes,
                                          ArrayRef<Value *> Args,
                                          FMFSource FMFSource,
                                          const Twine &Name) {
   Module *M = BB->getModule();
-  Function *Fn = Intrinsic::getOrInsertDeclaration(M, ID, Types);
+  Function *Fn = Intrinsic::getOrInsertDeclaration(M, ID, OverloadTypes);
   return createCallHelper(Fn, Args, Name, FMFSource);
 }
 
@@ -941,12 +942,7 @@ CallInst *IRBuilderBase::CreateIntrinsic(Type *RetTy, Intrinsic::ID ID,
                                          FMFSource FMFSource,
                                          const Twine &Name) {
   Module *M = BB->getModule();
-
-  SmallVector<Type *> ArgTys;
-  ArgTys.reserve(Args.size());
-  for (auto &I : Args)
-    ArgTys.push_back(I->getType());
-
+  SmallVector<Type *> ArgTys = llvm::map_to_vector(Args, &Value::getType);
   Function *Fn = Intrinsic::getOrInsertDeclaration(M, ID, RetTy, ArgTys);
   return createCallHelper(Fn, Args, Name, FMFSource);
 }

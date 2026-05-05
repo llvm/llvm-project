@@ -158,16 +158,15 @@ define void @dont_hoist_predicated_load(ptr %dst, ptr %invariant_ptr, ptr %cond_
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[COND_PTR]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4, !alias.scope [[META11:![0-9]+]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i32> [[WIDE_LOAD]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i1> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i1> [[TMP1]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[INVARIANT_PTR]], align 4, !alias.scope [[META14:![0-9]+]]
-; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[TMP4]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[INDEX]]
 ; CHECK-NEXT:    store i32 [[TMP7]], ptr [[TMP9]], align 4, !alias.scope [[META16:![0-9]+]], !noalias [[META18:![0-9]+]]
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP1]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[PRED_STORE_IF6:.*]], label %[[PRED_STORE_CONTINUE7:.*]]
 ; CHECK:       [[PRED_STORE_IF6]]:
 ; CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[INVARIANT_PTR]], align 4, !alias.scope [[META14]]
@@ -176,7 +175,7 @@ define void @dont_hoist_predicated_load(ptr %dst, ptr %invariant_ptr, ptr %cond_
 ; CHECK-NEXT:    store i32 [[TMP11]], ptr [[TMP13]], align 4, !alias.scope [[META16]], !noalias [[META18]]
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE7]]
 ; CHECK:       [[PRED_STORE_CONTINUE7]]:
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i1> [[TMP1]], i32 2
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i1> [[TMP1]], i64 2
 ; CHECK-NEXT:    br i1 [[TMP10]], label %[[PRED_STORE_IF8:.*]], label %[[PRED_STORE_CONTINUE9:.*]]
 ; CHECK:       [[PRED_STORE_IF8]]:
 ; CHECK-NEXT:    [[TMP15:%.*]] = load i32, ptr [[INVARIANT_PTR]], align 4, !alias.scope [[META14]]
@@ -185,7 +184,7 @@ define void @dont_hoist_predicated_load(ptr %dst, ptr %invariant_ptr, ptr %cond_
 ; CHECK-NEXT:    store i32 [[TMP15]], ptr [[TMP17]], align 4, !alias.scope [[META16]], !noalias [[META18]]
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE9]]
 ; CHECK:       [[PRED_STORE_CONTINUE9]]:
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x i1> [[TMP1]], i32 3
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x i1> [[TMP1]], i64 3
 ; CHECK-NEXT:    br i1 [[TMP14]], label %[[PRED_STORE_IF10:.*]], label %[[PRED_STORE_CONTINUE11]]
 ; CHECK:       [[PRED_STORE_IF10]]:
 ; CHECK-NEXT:    [[TMP19:%.*]] = load i32, ptr [[INVARIANT_PTR]], align 4, !alias.scope [[META14]]

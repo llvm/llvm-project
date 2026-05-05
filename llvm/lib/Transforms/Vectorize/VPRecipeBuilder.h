@@ -11,7 +11,6 @@
 
 #include "LoopVectorizationPlanner.h"
 #include "VPlan.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 
 namespace llvm {
@@ -38,24 +37,10 @@ class VPRecipeBuilder {
 
   VPBuilder &Builder;
 
-  // VPlan construction support: Hold a mapping from ingredients to
-  // their recipe.
-  DenseMap<Instruction *, VPRecipeBase *> Ingredient2Recipe;
-
-  /// Cross-iteration reduction & first-order recurrence phis for which we need
-  /// to add the incoming value from the backedge after all recipes have been
-  /// created.
-  SmallVector<VPHeaderPHIRecipe *, 4> PhisToFix;
-
   /// Check if \p I can be widened at the start of \p Range and possibly
   /// decrease the range such that the returned value holds for the entire \p
   /// Range. The function should not be called for memory instructions or calls.
   bool shouldWiden(Instruction *I, VFRange &Range) const;
-
-  /// Check if the load or store instruction \p VPI should widened for \p
-  /// Range.Start and potentially masked. Such instructions are handled by a
-  /// recipe that takes an additional VPInstruction for the mask.
-  VPRecipeBase *tryToWidenMemory(VPInstruction *VPI, VFRange &Range);
 
   /// Optimize the special case where the operand of \p VPI is a constant
   /// integer induction variable.
@@ -72,13 +57,6 @@ class VPRecipeBuilder {
   /// cost-model indicates that widening should be performed.
   VPWidenRecipe *tryToWiden(VPInstruction *VPI);
 
-  /// Makes Histogram count operations safe for vectorization, by emitting a
-  /// llvm.experimental.vector.histogram.add intrinsic in place of the
-  /// Load + Add|Sub + Store operations that perform the histogram in the
-  /// original scalar loop.
-  VPHistogramRecipe *tryToWidenHistogram(const HistogramInfo *HI,
-                                         VPInstruction *VPI);
-
 public:
   VPRecipeBuilder(VPlan &Plan, const TargetLibraryInfo *TLI,
                   LoopVectorizationLegality *Legal,
@@ -90,34 +68,30 @@ public:
   VPRecipeBase *tryToCreateWidenNonPhiRecipe(VPSingleDefRecipe *R,
                                              VFRange &Range);
 
-  /// Set the recipe created for given ingredient.
-  void setRecipe(Instruction *I, VPRecipeBase *R) {
-    assert(!Ingredient2Recipe.contains(I) &&
-           "Cannot reset recipe for instruction.");
-    Ingredient2Recipe[I] = R;
-  }
+  /// Check if the load or store instruction \p VPI should widened for \p
+  /// Range.Start and potentially masked. Such instructions are handled by a
+  /// recipe that takes an additional VPInstruction for the mask.
+  VPRecipeBase *tryToWidenMemory(VPInstruction *VPI, VFRange &Range);
 
-  /// Return the recipe created for given ingredient.
-  VPRecipeBase *getRecipe(Instruction *I) {
-    assert(Ingredient2Recipe.count(I) &&
-           "Recording this ingredients recipe was not requested");
-    assert(Ingredient2Recipe[I] != nullptr &&
-           "Ingredient doesn't have a recipe");
-    return Ingredient2Recipe[I];
-  }
+  /// If \p VPI represents a histogram operation (as determined by
+  /// LoopVectorizationLegality) make that safe for vectorization, by emitting a
+  /// llvm.experimental.vector.histogram.add intrinsic in place of the Load +
+  /// Add|Sub + Store operations that perform the histogram in the original
+  /// scalar loop.
+  VPHistogramRecipe *widenIfHistogram(VPInstruction *VPI);
+
+  /// If \p VPI is a store of a reduction into an invariant address, delete it.
+  /// If it is the final store of a reduction result, a uniform store recipe
+  /// will be created for it in the middle block. Returns `true` if replacement
+  /// took place. The order of stores must be preserved, hence \p
+  /// FinalRedStoresBuidler.
+  bool replaceWithFinalIfReductionStore(VPInstruction *VPI,
+                                        VPBuilder &FinalRedStoresBuilder);
 
   /// Build a VPReplicationRecipe for \p VPI. If it is predicated, add the mask
   /// as last operand. Range.End may be decreased to ensure same recipe behavior
   /// from \p Range.Start to \p Range.End.
   VPReplicateRecipe *handleReplication(VPInstruction *VPI, VFRange &Range);
-
-  VPValue *getVPValueOrAddLiveIn(Value *V) {
-    if (auto *I = dyn_cast<Instruction>(V)) {
-      if (auto *R = Ingredient2Recipe.lookup(I))
-        return R->getVPSingleValue();
-    }
-    return Plan.getOrAddLiveIn(V);
-  }
 };
 } // end namespace llvm
 

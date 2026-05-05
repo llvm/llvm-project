@@ -394,13 +394,13 @@ void ProcessMinidump::BuildMemoryRegions() {
                                                 section_sp->GetByteSize());
       MemoryRegionInfo region =
           MinidumpParser::GetMemoryRegionInfo(*m_memory_regions, load_addr);
-      if (region.GetMapped() != MemoryRegionInfo::eYes &&
+      if (region.GetMapped() != eLazyBoolYes &&
           region.GetRange().GetRangeBase() <= section_range.GetRangeBase() &&
           section_range.GetRangeEnd() <= region.GetRange().GetRangeEnd()) {
         to_add.emplace_back();
         to_add.back().GetRange() = section_range;
         to_add.back().SetLLDBPermissions(section_sp->GetPermissions());
-        to_add.back().SetMapped(MemoryRegionInfo::eYes);
+        to_add.back().SetMapped(eLazyBoolYes);
         to_add.back().SetName(module_sp->GetFileSpec().GetPath().c_str());
       }
     }

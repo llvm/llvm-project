@@ -99,7 +99,8 @@ private:
 };
 
 Expected<std::unique_ptr<EPCGenericJITLinkMemoryManager>>
-EPCGenericJITLinkMemoryManager::Create(JITDylib &JD, SymbolNames SNs) {
+EPCGenericJITLinkMemoryManager::Create(
+    JITDylib &JD, rt::SimpleExecutorMemoryManagerSymbolNames SNs) {
   auto &ES = JD.getExecutionSession();
   SymbolAddrs SAs;
   if (auto Err = lookupAndRecordAddrs(
@@ -114,6 +115,12 @@ EPCGenericJITLinkMemoryManager::Create(JITDylib &JD, SymbolNames SNs) {
     return Err;
   return std::make_unique<EPCGenericJITLinkMemoryManager>(
       ES.getExecutorProcessControl(), SAs);
+}
+
+Expected<std::unique_ptr<EPCGenericJITLinkMemoryManager>>
+EPCGenericJITLinkMemoryManager::Create(
+    ExecutionSession &ES, rt::SimpleExecutorMemoryManagerSymbolNames SNs) {
+  return Create(ES.getBootstrapJITDylib(), std::move(SNs));
 }
 
 void EPCGenericJITLinkMemoryManager::allocate(const JITLinkDylib *JD,

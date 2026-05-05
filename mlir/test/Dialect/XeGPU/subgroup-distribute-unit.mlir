@@ -469,10 +469,9 @@ gpu.func @vector_multi_reduction_3d_trivial_reduction(%laneid: index) {
   gpu.return
 }
 
-
 // CHECK-LABEL: gpu.func @scatter_ops_chunksize({{.*}}) {
-// CHECK:       %[[OFFSETS:.*]] = arith.constant {{.*}} dense<12> : vector<16xindex>
-// CHECK:       %[[MASKS:.*]] = arith.constant {{.*}} dense<true> : vector<16xi1>
+// CHECK:       %[[OFFSETS:.*]] = arith.constant dense<12> : vector<16xindex>
+// CHECK:       %[[MASKS:.*]] = arith.constant dense<true> : vector<16xi1>
 // CHECK:       %[[W:.*]]:4 = gpu.warp_execute_on_lane_0(%{{.*}})[16]
 // CHECK-SAME:    -> (vector<1x8xf16>, memref<256xf16>, vector<1xindex>, vector<1xi1>) {
 // CHECK:         gpu.yield %{{.*}}, %{{.*}}, %[[OFFSETS]], %[[MASKS]] :
@@ -484,34 +483,19 @@ gpu.func @vector_multi_reduction_3d_trivial_reduction(%laneid: index) {
 // CHECK-SAME:    : vector<8xf16>, memref<256xf16>, vector<1xindex>, vector<1xi1>
 gpu.func @scatter_ops_chunksize(%laneid: index, %src: memref<256xf16>) {
   gpu.warp_execute_on_lane_0(%laneid)[16] {
-    %1 = arith.constant
-      {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>}
-      dense<1>: vector<16xi1>
-    %offset = arith.constant
-      {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>}
-      dense<12> : vector<16xindex>
-    %3 = xegpu.load %src[%offset], %1 <{chunk_size=8}>
-      {
-        layout_operand_1 = #xegpu.layout<lane_layout = [16], lane_data = [1]>,
-        layout_operand_2 = #xegpu.layout<lane_layout = [16], lane_data = [1]>,
-        layout_result_0 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 2]>
-      }
+    %1 = arith.constant dense<1>: vector<16xi1>
+    %offset = arith.constant dense<12> : vector<16xindex>
+    %3 = xegpu.load %src[%offset], %1 <{chunk_size=8, layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 2]>}>
       : memref<256xf16>, vector<16xindex>, vector<16xi1> -> vector<16x8xf16>
-    xegpu.store %3, %src[%offset], %1 <{chunk_size=8}>
-      {
-        layout_operand_0 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 2]>,
-        layout_operand_2 = #xegpu.layout<lane_layout = [16], lane_data = [1]>,
-        layout_operand_3 = #xegpu.layout<lane_layout = [16], lane_data = [1]>
-      }
+    xegpu.store %3, %src[%offset], %1 <{chunk_size=8, layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 2]>}>
       : vector<16x8xf16>, memref<256xf16>, vector<16xindex>, vector<16xi1>
   }
   gpu.return
 }
 
-
 // CHECK-LABEL: gpu.func @scatter_ops({{.*}}) {
-// CHECK:       %[[OFFSETS:.*]] = arith.constant {{.*}} dense<12> : vector<16xindex>
-// CHECK:       %[[MASKS:.*]] = arith.constant {{.*}} dense<true> : vector<16xi1>
+// CHECK:       %[[OFFSETS:.*]] = arith.constant dense<12> : vector<16xindex>
+// CHECK:       %[[MASKS:.*]] = arith.constant dense<true> : vector<16xi1>
 // CHECK:       %[[W:.*]]:4 = gpu.warp_execute_on_lane_0(%{{.*}})[16]
 // CHECK-SAME:    -> (vector<1xf16>, memref<256xf16>, vector<1xindex>, vector<1xi1>) {
 // CHECK:         gpu.yield %{{.*}}, %{{.*}}, %[[OFFSETS]], %[[MASKS]]
@@ -523,23 +507,15 @@ gpu.func @scatter_ops_chunksize(%laneid: index, %src: memref<256xf16>) {
 // CHECK-SAME:    : vector<1xf16>, memref<256xf16>, vector<1xindex>, vector<1xi1>
 gpu.func @scatter_ops(%src: memref<256xf16>, %laneid: index) {
   gpu.warp_execute_on_lane_0(%laneid)[16] {
-    %1 = arith.constant
-      {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>}
-      dense<1> : vector<16xi1>
-    %offset = arith.constant
-      {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>}
-      dense<12> : vector<16xindex>
+    %1 = arith.constant dense<1> : vector<16xi1>
+    %offset = arith.constant dense<12> : vector<16xindex>
     %3 = xegpu.load %src[%offset], %1
     {
-      layout_operand_1 = #xegpu.layout<lane_layout = [16], lane_data = [1]>,
-      layout_operand_2 = #xegpu.layout<lane_layout = [16], lane_data = [1]>,
-      layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>
+      layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>
     } : memref<256xf16>, vector<16xindex>, vector<16xi1> -> vector<16xf16>
     xegpu.store %3, %src[%offset], %1
     {
-      layout_operand_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>,
-      layout_operand_2 = #xegpu.layout<lane_layout = [16], lane_data = [1]>,
-      layout_operand_3 = #xegpu.layout<lane_layout = [16], lane_data = [1]>
+      layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>
     }
     : vector<16xf16>, memref<256xf16>, vector<16xindex>, vector<16xi1>
   }
@@ -547,8 +523,8 @@ gpu.func @scatter_ops(%src: memref<256xf16>, %laneid: index) {
 }
 
 // CHECK-LABEL: gpu.func @scatter_ops_with_leading_dims({{.*}}) {
-// CHECK:       %[[OFFSETS:.*]] = arith.constant {{.*}} dense<12> : vector<1x1x16xindex>
-// CHECK:       %[[MASKS:.*]] = arith.constant {{.*}} dense<true> : vector<1x1x16xi1>
+// CHECK:       %[[OFFSETS:.*]] = arith.constant dense<12> : vector<1x1x16xindex>
+// CHECK:       %[[MASKS:.*]] = arith.constant dense<true> : vector<1x1x16xi1>
 // CHECK:       %[[W:.*]]:4 = gpu.warp_execute_on_lane_0(%{{.*}})[16]
 // CHECK-SAME:    -> (vector<1x1x1xf16>, memref<256xf16>, vector<1x1x1xindex>, vector<1x1x1xi1>) {
 // CHECK:         gpu.yield %{{.*}}, %{{.*}}, %[[OFFSETS]], %[[MASKS]]
@@ -563,23 +539,12 @@ gpu.func @scatter_ops(%src: memref<256xf16>, %laneid: index) {
 gpu.func @scatter_ops_with_leading_dims(%src: memref<256xf16>, %laneid: index) {
   gpu.warp_execute_on_lane_0(%laneid)[16] {
     %1 = arith.constant
-      {layout_result_0 = #xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>}
       dense<1> : vector<1x1x16xi1>
     %offset = arith.constant
-      {layout_result_0 = #xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>}
       dense<12> : vector<1x1x16xindex>
-    %3 = xegpu.load %src[%offset], %1
-    {
-      layout_operand_1 = #xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>,
-      layout_operand_2 = #xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>,
-      layout_result_0 = #xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>
-    } : memref<256xf16>, vector<1x1x16xindex>, vector<1x1x16xi1> -> vector<1x1x16xf16>
-    xegpu.store %3, %src[%offset], %1
-    {
-      layout_operand_0 = #xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>,
-      layout_operand_2 = #xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>,
-      layout_operand_3 = #xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>
-    }
+    %3 = xegpu.load %src[%offset], %1 {layout = #xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>} 
+    : memref<256xf16>, vector<1x1x16xindex>, vector<1x1x16xi1> -> vector<1x1x16xf16>
+    xegpu.store %3, %src[%offset], %1 { layout = #xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>}
     : vector<1x1x16xf16>, memref<256xf16>, vector<1x1x16xindex>, vector<1x1x16xi1>
   }
   gpu.return
@@ -1268,15 +1233,39 @@ gpu.func
   // CHECK-NOT: xegpu.convert_layout
   // CHECK: gpu.yield %{{.*}} : vector<16xf32>
   gpu.func @convert_layout_removed_when_compatible(%laneid: index){
-    %r = gpu.warp_execute_on_lane_0(%laneid)[16] -> (vector<1xf32>) {
+    %r:2 = gpu.warp_execute_on_lane_0(%laneid)[16] -> (vector<1xf32>, vector<1xf32>) {
       %0 = "some_op"() : () -> vector<16xf32>
+      %2 = "some_op"() : () -> vector<1xf32>
       %1 = xegpu.convert_layout %0
         <{input_layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>,
         target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>}> 
         : vector<16xf32>
-      gpu.yield %1 : vector<16xf32>
+      %3 = xegpu.convert_layout %2
+        <{input_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>, 
+        target_layout = #xegpu.layout<lane_layout = [1], lane_data = [1]>}>
+        : vector<1xf32>
+      %4 = xegpu.convert_layout %3
+        <{input_layout = #xegpu.layout<lane_layout = [1], lane_data = [1]>,
+        target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>, dims = [0, 1]>}> 
+        : vector<1xf32>
+      gpu.yield %1, %4 : vector<16xf32>, vector<1xf32>
     }
-    "some_user_op"(%r) : (vector<1xf32>) -> ()
+    "some_user_op"(%r#0, %r#1) : (vector<1xf32>, vector<1xf32>) -> ()
+    gpu.return
+  }
+
+  // CHECK-NOT: xegpu.convert_layout
+  // CHECK: gpu.yield %{{.*}} : f32
+  gpu.func @convert_layout_scalar(%laneid: index){
+    %r = gpu.warp_execute_on_lane_0(%laneid)[16] -> (f32) {
+      %0 = "some_op"() : () -> f32
+      %1 = xegpu.convert_layout %0
+        <{input_layout = #xegpu.slice<#xegpu.layout<lane_layout = [16], lane_data = [1]>, dims = [0]>,
+        target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [16], lane_data = [1]>, dims = [0]>}> 
+        : f32
+      gpu.yield %1 : f32
+    }
+    "some_user_op"(%r) : (f32) -> ()
     gpu.return
   }
 }

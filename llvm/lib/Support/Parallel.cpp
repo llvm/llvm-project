@@ -21,37 +21,25 @@
 #include <thread>
 #include <vector>
 
-llvm::ThreadPoolStrategy llvm::parallel::strategy;
+using namespace llvm;
+using namespace llvm::parallel;
 
-namespace llvm {
-namespace parallel {
+llvm::ThreadPoolStrategy parallel::strategy;
+
 #if LLVM_ENABLE_THREADS
 
 #ifdef _WIN32
 static thread_local unsigned threadIndex = UINT_MAX;
 
-unsigned getThreadIndex() { GET_THREAD_INDEX_IMPL; }
+unsigned parallel::getThreadIndex() { GET_THREAD_INDEX_IMPL; }
 #else
-thread_local unsigned threadIndex = UINT_MAX;
+thread_local unsigned parallel::threadIndex = UINT_MAX;
 #endif
-
-namespace detail {
 
 namespace {
 
-/// An abstract class that takes closures and runs them asynchronously.
-class Executor {
-public:
-  virtual ~Executor() = default;
-  virtual void add(std::function<void()> func) = 0;
-  virtual size_t getThreadCount() const = 0;
-
-  static Executor *getDefaultExecutor();
-};
-
-/// An implementation of an Executor that runs closures on a thread pool
-///   in filo order.
-class ThreadPoolExecutor : public Executor {
+/// Runs closures on a thread pool in filo order.
+class ThreadPoolExecutor {
 public:
   explicit ThreadPoolExecutor(ThreadPoolStrategy S) {
     if (S.UseJobserver)
@@ -99,7 +87,7 @@ public:
         T.join();
   }
 
-  ~ThreadPoolExecutor() override { stop(); }
+  ~ThreadPoolExecutor() { stop(); }
 
   struct Creator {
     static void *call() { return new ThreadPoolExecutor(strategy); }
@@ -108,17 +96,47 @@ public:
     static void call(void *Ptr) { ((ThreadPoolExecutor *)Ptr)->stop(); }
   };
 
-  void add(std::function<void()> F) override {
+  struct WorkItem {
+    std::function<void()> F;
+    std::reference_wrapper<parallel::detail::Latch> L;
+    void operator()() {
+      F();
+      L.get().dec();
+    }
+  };
+
+  void add(std::function<void()> F, parallel::detail::Latch &L) {
     {
       std::lock_guard<std::mutex> Lock(Mutex);
-      WorkStack.push_back(std::move(F));
+      WorkStack.push_back({std::move(F), std::ref(L)});
     }
     Cond.notify_one();
   }
 
-  size_t getThreadCount() const override { return ThreadCount; }
+  // Execute tasks from the work queue until the latch reaches zero.
+  // Used by nested TaskGroups (on worker threads) to prevent deadlock:
+  // instead of blocking in sync(), actively help drain the queue.
+  void helpSync(const parallel::detail::Latch &L) {
+    while (L.getCount() != 0) {
+      std::unique_lock<std::mutex> Lock(Mutex);
+      if (Stop || WorkStack.empty())
+        return;
+      popAndRun(Lock);
+    }
+  }
+
+  size_t getThreadCount() const { return ThreadCount; }
 
 private:
+  // Pop one task from the queue and run it. Must be called with Lock held;
+  // releases Lock before executing the task.
+  void popAndRun(std::unique_lock<std::mutex> &Lock) {
+    auto Item = std::move(WorkStack.back());
+    WorkStack.pop_back();
+    Lock.unlock();
+    Item();
+  }
+
   void work(ThreadPoolStrategy S, unsigned ThreadID) {
     threadIndex = ThreadID;
     S.apply_thread_strategy(ThreadID);
@@ -153,34 +171,26 @@ private:
             [&] { TheJobserver->release(std::move(Slot)); });
 
         while (true) {
-          std::function<void()> Task;
-          {
-            std::unique_lock<std::mutex> Lock(Mutex);
-            Cond.wait(Lock, [&] { return Stop || !WorkStack.empty(); });
-            if (Stop && WorkStack.empty())
-              return;
-            if (WorkStack.empty())
-              break;
-            Task = std::move(WorkStack.back());
-            WorkStack.pop_back();
-          }
-          Task();
+          std::unique_lock<std::mutex> Lock(Mutex);
+          Cond.wait(Lock, [&] { return Stop || !WorkStack.empty(); });
+          if (Stop && WorkStack.empty())
+            return;
+          if (WorkStack.empty())
+            break;
+          popAndRun(Lock);
         }
       } else {
         std::unique_lock<std::mutex> Lock(Mutex);
         Cond.wait(Lock, [&] { return Stop || !WorkStack.empty(); });
         if (Stop)
           break;
-        auto Task = std::move(WorkStack.back());
-        WorkStack.pop_back();
-        Lock.unlock();
-        Task();
+        popAndRun(Lock);
       }
     }
   }
 
   std::atomic<bool> Stop{false};
-  std::vector<std::function<void()>> WorkStack;
+  std::vector<WorkItem> WorkStack;
   std::mutex Mutex;
   std::condition_variable Cond;
   std::promise<void> ThreadsCreated;
@@ -189,8 +199,9 @@ private:
 
   JobserverClient *TheJobserver = nullptr;
 };
+} // namespace
 
-Executor *Executor::getDefaultExecutor() {
+static ThreadPoolExecutor *getDefaultExecutor() {
 #ifdef _WIN32
   // The ManagedStatic enables the ThreadPoolExecutor to be stopped via
   // llvm_shutdown() on Windows. This is important to avoid various race
@@ -210,28 +221,36 @@ Executor *Executor::getDefaultExecutor() {
   return &Exec;
 #endif
 }
-} // namespace
-} // namespace detail
 
-size_t getThreadCount() {
-  return detail::Executor::getDefaultExecutor()->getThreadCount();
+size_t parallel::getThreadCount() {
+  return getDefaultExecutor()->getThreadCount();
 }
 #endif
 
-// Latch::sync() called by the dtor may cause one thread to block. If is a dead
-// lock if all threads in the default executor are blocked. To prevent the dead
-// lock, only allow the root TaskGroup to run tasks parallelly. In the scenario
-// of nested parallel_for_each(), only the outermost one runs parallelly.
-TaskGroup::TaskGroup()
+static bool isNested() {
 #if LLVM_ENABLE_THREADS
-    : Parallel((parallel::strategy.ThreadsRequested != 1) &&
-               (threadIndex == UINT_MAX)) {}
+  return threadIndex != UINT_MAX;
 #else
-    : Parallel(false) {}
+  return false;
 #endif
+}
+
+TaskGroup::TaskGroup()
+    : Parallel(
+#if LLVM_ENABLE_THREADS
+          strategy.ThreadsRequested != 1
+#else
+          false
+#endif
+      ) {
+}
+
 TaskGroup::~TaskGroup() {
-  // We must ensure that all the workloads have finished before decrementing the
-  // instances count.
+#if LLVM_ENABLE_THREADS
+  // In a nested TaskGroup (threadIndex != -1u), actively help drain the queue.
+  if (Parallel && isNested())
+    getDefaultExecutor()->helpSync(L);
+#endif
   L.sync();
 }
 
@@ -239,23 +258,17 @@ void TaskGroup::spawn(std::function<void()> F) {
 #if LLVM_ENABLE_THREADS
   if (Parallel) {
     L.inc();
-    detail::Executor::getDefaultExecutor()->add([&, F = std::move(F)] {
-      F();
-      L.dec();
-    });
+    getDefaultExecutor()->add(std::move(F), L);
     return;
   }
 #endif
   F();
 }
 
-} // namespace parallel
-} // namespace llvm
-
 void llvm::parallelFor(size_t Begin, size_t End,
-                       llvm::function_ref<void(size_t)> Fn) {
+                       function_ref<void(size_t)> Fn) {
 #if LLVM_ENABLE_THREADS
-  if (parallel::strategy.ThreadsRequested != 1) {
+  if (strategy.ThreadsRequested != 1) {
     size_t NumItems = End - Begin;
     if (NumItems == 0)
       return;
@@ -264,7 +277,7 @@ void llvm::parallelFor(size_t Begin, size_t End,
     // For lld, per-file work is somewhat uneven, so a multipler > 1 is safer.
     // While 2 vs 4 vs 8 makes no measurable difference, 4 is used as a
     // reasonable default.
-    size_t NumWorkers = std::min<size_t>(NumItems, parallel::getThreadCount());
+    size_t NumWorkers = std::min<size_t>(NumItems, getThreadCount());
     size_t ChunkSize = std::max(size_t(1), NumItems / (NumWorkers * 4));
     std::atomic<size_t> Idx{Begin};
     auto Worker = [&] {
@@ -278,7 +291,7 @@ void llvm::parallelFor(size_t Begin, size_t End,
       }
     };
 
-    parallel::TaskGroup TG;
+    TaskGroup TG;
     for (size_t I = 0; I != NumWorkers; ++I)
       TG.spawn(Worker);
     return;
