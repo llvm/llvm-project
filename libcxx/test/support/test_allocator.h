@@ -393,21 +393,30 @@ namespace detail {
 template <class T>
 class thread_unsafe_shared_ptr {
 public:
-  thread_unsafe_shared_ptr() = default;
-
-  TEST_CONSTEXPR_CXX14 thread_unsafe_shared_ptr(const thread_unsafe_shared_ptr& other) : block(other.block) {
+  // as it's internal and technically not nullable, we don't care about null pointer state
+  // and don't need destructive move
+  TEST_CONSTEXPR_CXX14 thread_unsafe_shared_ptr(const thread_unsafe_shared_ptr& other) TEST_NOEXCEPT
+      : block(other.block) {
     ++block->ref_count;
   }
-
-  TEST_CONSTEXPR_CXX20 ~thread_unsafe_shared_ptr() {
-    --block->ref_count;
-    if (block->ref_count != 0)
-      return;
-    typedef std::allocator_traits<std::allocator<control_block> > allocator_traits;
-    std::allocator<control_block> alloc;
-    allocator_traits::destroy(alloc, block);
-    allocator_traits::deallocate(alloc, block, 1);
+  TEST_CONSTEXPR_CXX14 thread_unsafe_shared_ptr(thread_unsafe_shared_ptr&& other) TEST_NOEXCEPT : block(other.block) {
+    ++block->ref_count;
   }
+  TEST_CONSTEXPR_CXX14 thread_unsafe_shared_ptr& operator=(const thread_unsafe_shared_ptr& other) TEST_NOEXCEPT {
+    // self-assignment safe order
+    ++other.block->ref_count;
+    detach_control_block();
+    block = other.block;
+    return *this;
+  }
+  TEST_CONSTEXPR_CXX20 thread_unsafe_shared_ptr& operator=(thread_unsafe_shared_ptr&& other) TEST_NOEXCEPT {
+    // self-assignment safe order
+    ++other.block->ref_count;
+    detach_control_block();
+    block = other.block;
+    return *this;
+  }
+  TEST_CONSTEXPR_CXX20 ~thread_unsafe_shared_ptr() TEST_NOEXCEPT { detach_control_block(); }
 
   TEST_CONSTEXPR const T& operator*() const { return block->content; }
   TEST_CONSTEXPR const T* operator->() const { return &block->content; }
@@ -423,6 +432,33 @@ private:
     std::size_t ref_count = 1;
     T content;
   };
+
+  thread_unsafe_shared_ptr() = default;
+
+  TEST_CONSTEXPR_CXX20 void detach_control_block() {
+    --block->ref_count;
+    if (block->ref_count != 0)
+      return;
+    typedef std::allocator_traits<std::allocator<control_block> > allocator_traits;
+    std::allocator<control_block> alloc;
+    allocator_traits::destroy(alloc, block);
+#ifdef COUNT_NEW_H
+    // We are called from test code instrumented by counting operator new/operator delete,
+    // which might be surprised by unexpected deallocations we introduce.
+    // Instead of changing all the potentially affected tests, we will just temporarily
+    // disable that counting here.
+    bool disable_allocations = false;
+    if (!TEST_IS_CONSTANT_EVALUATED) {
+      disable_allocations                  = globalMemCounter.disable_allocations;
+      globalMemCounter.disable_allocations = false;
+    }
+#endif
+    allocator_traits::deallocate(alloc, block, 1);
+#ifdef COUNT_NEW_H
+    if (!TEST_IS_CONSTANT_EVALUATED)
+      globalMemCounter.disable_allocations = disable_allocations;
+#endif
+  }
 
   control_block* block = nullptr;
 
