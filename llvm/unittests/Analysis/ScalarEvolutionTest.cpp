@@ -1582,11 +1582,10 @@ TEST_F(ScalarEvolutionsTest, SCEVUDivFloorCeiling) {
 TEST_F(ScalarEvolutionsTest, SCEVUDivEqual) {
   LLVMContext C;
   SMDiagnostic Err;
-  std::unique_ptr<Module> M =
-      parseAssemblyString("define void @foo(i32 %a) {"
-                          "  ret void"
-                          "}",
-                          Err, C);
+  std::unique_ptr<Module> M = parseAssemblyString("define void @foo(i32 %a) {"
+                                                  "  ret void"
+                                                  "}",
+                                                  Err, C);
 
   ASSERT_TRUE(M && "Could not parse module?");
   ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");
