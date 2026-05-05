@@ -57,7 +57,7 @@ LLVMSymbolizer::getXCOFFSectionAddress(StringRef ModulePath,
                                        XCOFF::SectionTypeFlags SectionTypeFlag,
                                        StringRef SectionTypeName) {
   // Check the cache first.
-  auto &Entry = XCOFFSectionBaseCache[ModulePath][SectionTypeFlag];
+  uint64_t &Entry = XCOFFSectionBaseCache[ModulePath][SectionTypeFlag];
   if (Entry != 0)
     return Entry;
 
