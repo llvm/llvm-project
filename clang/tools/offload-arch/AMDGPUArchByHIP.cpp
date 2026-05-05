@@ -84,8 +84,8 @@ static cl::opt<HipApiVersion> HipApi(
 
 #ifdef _WIN32
 // Return candidate bin/ directories by walking parent dirs of ExeDir.
-SmallVector<std::string, 8> getCandidateBinPaths(StringRef ExeDir) {
-  SmallVector<std::string, 8> Paths;
+std::vector<std::string> getCandidateBinPaths(StringRef ExeDir) {
+  std::vector<std::string> Paths;
   Paths.push_back(sys::path::convert_to_slash(ExeDir));
   // Search parent/bin dirs: <root>/lib/llvm/bin needs depth 2,
   // <root>/opt/rocm/lib/llvm/bin needs 3. Cap at 6.
@@ -102,7 +102,7 @@ SmallVector<std::string, 8> getCandidateBinPaths(StringRef ExeDir) {
     };
     if (llvm::none_of(Paths, IsDup))
       Paths.push_back(CandStr);
-    Parent = sys::path::parent_path(Parent);
+    Parent = SmallString<256>(sys::path::parent_path(Parent));
   }
   return Paths;
 }

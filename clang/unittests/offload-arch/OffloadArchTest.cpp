@@ -16,7 +16,7 @@
 // Defined in AMDGPUArchByHIP.cpp (non-static, compiled into this test).
 #ifdef _WIN32
 bool compareVersions(llvm::StringRef A, llvm::StringRef B);
-llvm::SmallVector<std::string, 8> getCandidateBinPaths(llvm::StringRef ExeDir);
+std::vector<std::string> getCandidateBinPaths(llvm::StringRef ExeDir);
 #endif
 
 using namespace llvm;
