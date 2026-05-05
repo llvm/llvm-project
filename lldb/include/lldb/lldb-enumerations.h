@@ -330,7 +330,7 @@ enum ErrorType {
   eErrorTypeWin32       ///< Standard Win32 error codes.
 };
 
-enum ValueType {
+enum ValueType : uint32_t {
   eValueTypeInvalid = 0,
   eValueTypeVariableGlobal = 1,   ///< globals variable
   eValueTypeVariableStatic = 2,   ///< static variable
@@ -342,12 +342,13 @@ enum ValueType {
   eValueTypeVariableThreadLocal = 8, ///< thread local storage variable
   eValueTypeVTable = 9,              ///< virtual function table
   eValueTypeVTableEntry = 10, ///< function pointer in virtual function table
-  /// A mask that we can use to check if the value type is synthetic or not.
-  // NOTE: This limits the number of value types to 31, but that's 3x more than
-  // what we currently have now. See lldb/Utility/ValueType.h for helpers for
-  // working with synthetic value types.
-  eValueTypeSyntheticMask = 0x20,
 };
+
+/// A mask that we can use to check if the value type is synthetic or not.
+// NOTE: This limits the number of value types to 31, but that's 3x more than
+// what we currently have now. See lldb/Utility/ValueType.h for helpers for
+// working with synthetic value types.
+static constexpr unsigned ValueTypeSyntheticMask = 0x20;
 
 /// Token size/granularities for Input Readers.
 

@@ -562,7 +562,6 @@ protected:
     case eValueTypeVariableThreadLocal:
     case eValueTypeVTable:
     case eValueTypeVTableEntry:
-    case eValueTypeSyntheticMask:
       // The default for all other value types is is_synthetic. Aside from the
       // modifiers above that should apply equally to synthetic and normal
       // variables, any other synthetic variable we should default to showing.
