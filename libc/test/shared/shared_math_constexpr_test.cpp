@@ -62,6 +62,10 @@ static_assert(0.0 == [] {
 static_assert(0.0 == LIBC_NAMESPACE::shared::ldexp(0.0, 0.0));
 static_assert(0.0 == LIBC_NAMESPACE::shared::scalbln(0.0, 0.0));
 static_assert(0.0 == LIBC_NAMESPACE::shared::scalbn(0.0, 0.0));
+static_assert(0 == [] {
+  double setpayload_x = 0.0;
+  return LIBC_NAMESPACE::shared::setpayload(&setpayload_x, 0.0);
+}());
 static_assert(0.0 == [] {
   int exp{};
   return LIBC_NAMESPACE::shared::frexp(0.0, &exp);
@@ -122,6 +126,10 @@ static_assert(0.0f == [] {
 }());
 static_assert(0.0f == LIBC_NAMESPACE::shared::scalblnf(0.0f, 0.0));
 static_assert(0.0f == LIBC_NAMESPACE::shared::scalbnf(0.0f, 0.0));
+static_assert(0 == [] {
+  float setpayload_x = 0.0f;
+  return LIBC_NAMESPACE::shared::setpayloadf(&setpayload_x, 0.0f);
+}());
 static_assert(0.0f == LIBC_NAMESPACE::shared::fmul(0.0, 0.0));
 static_assert(0.0f == LIBC_NAMESPACE::shared::fsub(0.0, 0.0));
 static_assert(0LL == LIBC_NAMESPACE::shared::llrintf(0.0f));
@@ -200,6 +208,10 @@ static_assert(0.0f16 == [] {
 }());
 static_assert(0.0f16 == LIBC_NAMESPACE::shared::scalblnf16(0.0f16, 0.0));
 static_assert(0.0f16 == LIBC_NAMESPACE::shared::scalbnf16(0.0f16, 0.0));
+static_assert(0 == [] {
+  float16 setpayload_x = 0.0f16;
+  return LIBC_NAMESPACE::shared::setpayloadf16(&setpayload_x, 0.0f16);
+}());
 static_assert(0LL == LIBC_NAMESPACE::shared::llrintf16(0.0));
 static_assert(0LL == LIBC_NAMESPACE::shared::llroundf16(0.0f16));
 static_assert(0L == LIBC_NAMESPACE::shared::lrintf16(0.0f16));
@@ -267,6 +279,10 @@ static_assert(0.0L == [] {
 static_assert(0.0L == LIBC_NAMESPACE::shared::ldexpl(0.0L, 0.0));
 static_assert(0.0L == LIBC_NAMESPACE::shared::scalblnl(0.0L, 0.0));
 static_assert(0.0L == LIBC_NAMESPACE::shared::scalbnl(0.0L, 0.0));
+static_assert(0 == [] {
+  long double setpayload_x = 0.0L;
+  return LIBC_NAMESPACE::shared::setpayloadl(&setpayload_x, 0.0L);
+}());
 static_assert(0.0f == LIBC_NAMESPACE::shared::fmull(0.0L, 0.0L));
 static_assert(0.0f == LIBC_NAMESPACE::shared::fsubl(0.0L, 0.0L));
 static_assert(0.0L == [] {
@@ -375,6 +391,10 @@ static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::scalblnf128(float128(0.0), 0.0));
 static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::scalbnf128(float128(0.0), 0.0));
+static_assert(0 == [] {
+  float128 setpayload_x = float128(0.0);
+  return LIBC_NAMESPACE::shared::setpayloadf128(&setpayload_x, float128(0.0));
+}());
 static_assert(0.0f ==
               LIBC_NAMESPACE::shared::fmulf128(float128(0.0), float128(0.0)));
 static_assert(0.0f ==
@@ -480,6 +500,10 @@ static_assert(bfloat16(0.0) ==
               LIBC_NAMESPACE::shared::scalblnbf16(bfloat16(0.0), 0.0));
 static_assert(bfloat16(0.0) ==
               LIBC_NAMESPACE::shared::scalbnbf16(bfloat16(0.0), 0.0));
+static_assert(0 == [] {
+  bfloat16 setpayload_x = bfloat16(0.0);
+  return LIBC_NAMESPACE::shared::setpayloadbf16(&setpayload_x, bfloat16(0.0));
+}());
 static_assert(bfloat16(0.0) == [] {
   int exp{};
   return LIBC_NAMESPACE::shared::frexpbf16(bfloat16(0.0), &exp);
