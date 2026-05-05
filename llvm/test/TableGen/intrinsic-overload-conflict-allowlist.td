@@ -1,32 +1,17 @@
-// RUN: llvm-tblgen -gen-intrinsic-enums -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS | FileCheck %s --check-prefix=CHECK-PASS
-// RUN: llvm-tblgen -gen-intrinsic-enums -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS -DALLOWLIST 2>&1 | FileCheck %s --check-prefix=CHECK-ALLOWLIST
-// RUN: not llvm-tblgen -gen-intrinsic-enums -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS -DERROR_NOT_ALLOWLISTED 2>&1 | FileCheck %s --check-prefix=CHECK-NOT-ALLOWLISTED
-// RUN: not llvm-tblgen -gen-intrinsic-enums -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS -DERROR_NONEXISTENT 2>&1 | FileCheck %s --check-prefix=CHECK-NONEXISTENT
-// RUN: not llvm-tblgen -gen-intrinsic-enums -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS -DERROR_NOT_OVERLOADED 2>&1 | FileCheck %s --check-prefix=CHECK-NOT-OVERLOADED
-// RUN: not llvm-tblgen -gen-intrinsic-enums -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS -DERROR_NOT_INTRINSIC 2>&1 | FileCheck %s --check-prefix=CHECK-NOT-INTRINSIC
+// RUN: llvm-tblgen -gen-intrinsic-enums -I %p/../../include %s | FileCheck %s --check-prefix=CHECK-PASS
+// RUN: llvm-tblgen -gen-intrinsic-enums -I %p/../../include %s -DALLOWLIST 2>&1 | FileCheck %s --check-prefix=CHECK-ALLOWLIST
+// RUN: llvm-tblgen -gen-intrinsic-enums -I %p/../../include %s -DALLOWLIST_EXPLICIT_NAME 2>&1 | FileCheck %s --check-prefix=CHECK-ALLOWLIST-EXPLICIT
+// RUN: not llvm-tblgen -gen-intrinsic-enums -I %p/../../include %s -DERROR_NOT_ALLOWLISTED 2>&1 | FileCheck %s --check-prefix=CHECK-NOT-ALLOWLISTED
+// RUN: not llvm-tblgen -gen-intrinsic-enums -I %p/../../include %s -DERROR_NONEXISTENT 2>&1 | FileCheck %s --check-prefix=CHECK-NONEXISTENT
+// RUN: not llvm-tblgen -gen-intrinsic-enums -I %p/../../include %s -DERROR_NOT_OVERLOADED 2>&1 | FileCheck %s --check-prefix=CHECK-NOT-OVERLOADED
+// RUN: not llvm-tblgen -gen-intrinsic-enums -I %p/../../include %s -DERROR_NOT_INTRINSIC 2>&1 | FileCheck %s --check-prefix=CHECK-NOT-INTRINSIC
 
-// =========================================================================
-// MAINTAINER NOTE -- test-case flags are mutually exclusive
-// =========================================================================
-// `-DTEST_INTRINSICS_SUPPRESS_DEFS` is shared infrastructure (it tells
-// `Intrinsics.td` to skip the bulk intrinsic defs so this file can
-// stand on its own) and is on EVERY RUN line.
-//
-// The five *test-case* flags below -- `ALLOWLIST`,
-// `ERROR_NOT_ALLOWLISTED`, `ERROR_NONEXISTENT`, `ERROR_NOT_OVERLOADED`,
-// `ERROR_NOT_INTRINSIC` -- are mutually exclusive. Three of them
-// (`ALLOWLIST`, `ERROR_NOT_ALLOWLISTED`, `ERROR_NONEXISTENT`) all
-// `def int_foo_f128`, so combining any two of them on the same tblgen
-// invocation would yield a duplicate-record error from TableGen
-// instead of exercising the intended check.
-//
-// To add a new test case that needs multiple test-case flags
-// simultaneously (e.g., "what happens when both a valid annotation
-// AND a typo annotation coexist?"), give the new `#ifdef` block a
-// flag-specific record name -- e.g., `int_foo_f128_combined_case` --
-// so its records are disjoint from the existing blocks.
-// =========================================================================
+/// Tests the `KnownOverloadConflict` allowlist for intrinsic prefix conflicts:
+/// covers the pass paths (baseline + two allowlist forms) and four diagnostic
+/// paths (unallowlisted conflict, nonexistent target, non-overloaded target,
+/// and target that isn't an Intrinsic).
 
+#define TEST_INTRINSICS_SUPPRESS_DEFS
 include "llvm/IR/Intrinsics.td"
 
 // === Baseline (always defined) ===========================================
@@ -42,6 +27,15 @@ def int_foo : Intrinsic<[llvm_any_ty]>;
 
 let KnownOverloadConflict = "int_foo" in
 def int_foo_f128 : Intrinsic<[llvm_i32_ty]>;
+#endif
+
+#ifdef ALLOWLIST_EXPLICIT_NAME
+// CHECK-ALLOWLIST-EXPLICIT: corge
+// CHECK-ALLOWLIST-EXPLICIT-NOT: error:
+
+def int_corge_dom : Intrinsic<[llvm_any_ty], [], [], "llvm.corge">;
+let KnownOverloadConflict = "int_corge_dom" in
+def int_corge_sub : Intrinsic<[llvm_i32_ty], [], [], "llvm.corge.f128">;
 #endif
 
 // === Conflict without allowlist ==========================================

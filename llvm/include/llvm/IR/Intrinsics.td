@@ -730,12 +730,29 @@ class Intrinsic<list<LLVMType> ret_types,
   // IntrinsicProperty<1>
   bit DisableDefaultAttributes = disable_default_attributes;
 
-  // TableGen *record name* of an overloaded intrinsic this intrinsic is
-  // allowlisted to share a prefix with (e.g., `"int_foo"`, NOT
-  // `"llvm.foo"` -- this is the literal identifier after `def` in the
-  // .td source, not the mangled `LLVMName`). Set this only on the
-  // subordinate (concrete, non-overloaded) side of a known conflict
-  // detected by `CheckOverloadSuffixConflicts`.
+  // Names an overloaded intrinsic that this intrinsic is allowed to
+  // share a name prefix with, even though doing so would normally be
+  // flagged as a conflict by `CheckOverloadSuffixConflicts`. Set this
+  // only on the concrete (non-overloaded) side of a known conflict;
+  // the overloaded side has nothing to set.
+  //
+  // The value is the TableGen record name -- the identifier you write
+  // in the .td source -- not the mangled name LLVM uses at runtime.
+  // Use `"int_foo"`, NOT `"llvm.foo"`.
+  //
+  // How to figure out the record name in each case:
+  //   * `def int_foo : Intrinsic<...>`              -> use `"int_foo"`.
+  //   * `defm int_foo : SomeMulticlass<...>`        -> a `defm` runs a
+  //       multiclass and prefixes every `def` inside it with `int_foo`.
+  //       Use whatever full name the `defm` produced, for example
+  //       `"int_foo_bar"` if the multiclass's inner `def` is named
+  //       `_bar`.
+  //   * `foreach v = [...] in def int_foo_ # v : ...`
+  //                                                 -> the record name
+  //       is built per loop iteration. Write the annotation with the
+  //       matching concatenation, e.g.
+  //       `let KnownOverloadConflict = "int_dom_" # v in`, so each
+  //       generated record points at its right dominator.
   string KnownOverloadConflict = "";
 
   TypeInfoGen TypeInfo = TypeInfoGen<RetTypes, ParamTypes>;
