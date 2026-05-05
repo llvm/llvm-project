@@ -50,7 +50,7 @@ func.func @illegal_loop_with_diag_dependence() {
 
 // -----
 
-// Verify that tiling is not applied when a flow dependence with distance
+// Verify that tiling is not applied when a dependence with distance
 // vector (1, -1) would be violated.
 
 // CHECK-LABEL: func @flow_dep_distance_1_neg1
