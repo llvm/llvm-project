@@ -461,7 +461,6 @@ define i32 @assumption_conflicts_with_known_bits(i32 %a, i32 %b) {
 
 define void @debug_interference(i8 %x) {
 ; CHECK-LABEL: @debug_interference(
-; CHECK-NEXT:      #dbg_value(i32 5, [[META7:![0-9]+]], !DIExpression(), [[META11:![0-9]+]])
 ; CHECK-NEXT:    store i1 true, ptr poison, align 1
 ; CHECK-NEXT:    ret void
 ;

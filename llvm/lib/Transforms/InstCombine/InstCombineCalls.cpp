@@ -3617,12 +3617,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       replaceUse(II->getOperandUse(0), ConstantInt::getTrue(II->getContext()));
       return nullptr;
     };
-    // Remove an assume if it is followed by an identical assume.
-    // TODO: Do we need this? Unless there are conflicting assumptions, the
-    // computeKnownBits(IIOperand) below here eliminates redundant assumes.
-    Instruction *Next = II->getNextNode();
-    if (match(Next, m_Intrinsic<Intrinsic::assume>(m_Specific(IIOperand))))
-      return RemoveConditionFromAssume(Next);
 
     // Canonicalize assume(a && b) -> assume(a); assume(b);
     // Note: New assumption intrinsics created here are registered by
@@ -3715,6 +3709,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
     }
 
+    Instruction *Next = II->getNextNode();
     // Convert nonnull assume like:
     // %A = icmp ne i32* %PTR, null
     // call void @llvm.assume(i1 %A)
