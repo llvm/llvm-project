@@ -80,16 +80,6 @@ void reportVectorizationInfo(const char *PassName, const StringRef Msg,
 void reportVectorization(const char *PassName, OptimizationRemarkEmitter *ORE,
                          Loop *TheLoop, ElementCount VFWidth, unsigned IC);
 
-/// A version of ScalarEvolution::getSmallConstantTripCount that returns an
-/// ElementCount to include loops whose trip count is a function of vscale.
-ElementCount getSmallConstantTripCount(ScalarEvolution *SE, const Loop *L);
-
-/// Get the maximum trip count for \p L from the SCEV unsigned range, excluding
-/// zero from the range. Only valid when not folding the tail, as the minimum
-/// iteration count check guards against a zero trip count. Returns 0 if
-/// unknown.
-unsigned getMaxTCFromNonZeroRange(PredicatedScalarEvolution &PSE,
-                                  const Loop *L);
 } // namespace LoopVectorizationUtils
 } // namespace llvm
 

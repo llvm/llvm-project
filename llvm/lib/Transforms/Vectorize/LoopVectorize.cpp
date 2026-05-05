@@ -400,6 +400,48 @@ static bool hasIrregularType(Type *Ty, const DataLayout &DL) {
   return DL.getTypeAllocSizeInBits(Ty) != DL.getTypeSizeInBits(Ty);
 }
 
+/// A version of ScalarEvolution::getSmallConstantTripCount that returns an
+/// ElementCount to include loops whose trip count is a function of vscale.
+static ElementCount getSmallConstantTripCount(ScalarEvolution *SE,
+                                              const Loop *L) {
+  if (unsigned ExpectedTC = SE->getSmallConstantTripCount(L))
+    return ElementCount::getFixed(ExpectedTC);
+
+  const SCEV *BTC = SE->getBackedgeTakenCount(L);
+  if (isa<SCEVCouldNotCompute>(BTC))
+    return ElementCount::getFixed(0);
+
+  const SCEV *ExitCount = SE->getTripCountFromExitCount(BTC, BTC->getType(), L);
+  if (isa<SCEVVScale>(ExitCount))
+    return ElementCount::getScalable(1);
+
+  const APInt *Scale;
+  if (match(ExitCount, m_scev_Mul(m_scev_APInt(Scale), m_SCEVVScale())))
+    if (cast<SCEVMulExpr>(ExitCount)->hasNoUnsignedWrap())
+      if (Scale->getActiveBits() <= 32)
+        return ElementCount::getScalable(Scale->getZExtValue());
+
+  return ElementCount::getFixed(0);
+}
+
+/// Get the maximum trip count for \p L from the SCEV unsigned range, excluding
+/// zero from the range. Only valid when not folding the tail, as the minimum
+/// iteration count check guards against a zero trip count. Returns 0 if
+/// unknown.
+static unsigned getMaxTCFromNonZeroRange(PredicatedScalarEvolution &PSE,
+                                         Loop *L) {
+  const SCEV *BTC = PSE.getBackedgeTakenCount();
+  if (isa<SCEVCouldNotCompute>(BTC))
+    return 0;
+  ScalarEvolution *SE = PSE.getSE();
+  const SCEV *TripCount = SE->getTripCountFromExitCount(BTC, BTC->getType(), L);
+  ConstantRange TCRange = SE->getUnsignedRange(TripCount);
+  APInt MaxTCFromRange = TCRange.getUnsignedMax();
+  if (!MaxTCFromRange.isZero() && MaxTCFromRange.getActiveBits() <= 32)
+    return MaxTCFromRange.getZExtValue();
+  return 0;
+}
+
 /// Returns "best known" trip count, which is either a valid positive trip count
 /// or std::nullopt when an estimate cannot be made (including when the trip
 /// count would overflow), for the specified loop \p L as defined by the
@@ -415,8 +457,7 @@ getSmallBestKnownTC(PredicatedScalarEvolution &PSE, Loop *L,
                     bool CanUseConstantMax = true,
                     bool CanExcludeZeroTrips = false) {
   // Check if exact trip count is known.
-  if (auto ExpectedTC =
-          LoopVectorizationUtils::getSmallConstantTripCount(PSE.getSE(), L))
+  if (auto ExpectedTC = getSmallConstantTripCount(PSE.getSE(), L))
     return ExpectedTC;
 
   // Check if there is an expected trip count available from profile data.
@@ -435,8 +476,7 @@ getSmallBestKnownTC(PredicatedScalarEvolution &PSE, Loop *L,
   // only safe when not folding the tail, as the minimum iteration count check
   // prevents entering the vector loop with a zero trip count.
   if (CanUseConstantMax && CanExcludeZeroTrips)
-    if (unsigned RefinedTC =
-            LoopVectorizationUtils::getMaxTCFromNonZeroRange(PSE, L))
+    if (unsigned RefinedTC = getMaxTCFromNonZeroRange(PSE, L))
       return ElementCount::getFixed(RefinedTC);
 
   return std::nullopt;
@@ -2776,12 +2816,11 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   }
 
   ScalarEvolution *SE = PSE.getSE();
-  ElementCount TC =
-      LoopVectorizationUtils::getSmallConstantTripCount(SE, TheLoop);
+  ElementCount TC = getSmallConstantTripCount(SE, TheLoop);
   unsigned MaxTC = PSE.getSmallConstantMaxTripCount();
   if (!MaxTC &&
       EpilogueLoweringStatus == LoopVectorizationUtils::EpilogueAllowed)
-    MaxTC = LoopVectorizationUtils::getMaxTCFromNonZeroRange(PSE, TheLoop);
+    MaxTC = getMaxTCFromNonZeroRange(PSE, TheLoop);
   LLVM_DEBUG(dbgs() << "LV: Found trip count: " << TC << '\n');
   if (TC != ElementCount::getFixed(MaxTC))
     LLVM_DEBUG(dbgs() << "LV: Found maximum trip count: " << MaxTC << '\n');
@@ -3621,8 +3660,7 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
     unsigned InterleaveCountLB = bit_floor(std::max(
         1u, std::min(AvailableTC / (EstimatedVF * 2), MaxInterleaveCount)));
 
-    if (LoopVectorizationUtils::getSmallConstantTripCount(PSE.getSE(), OrigLoop)
-            .isNonZero()) {
+    if (getSmallConstantTripCount(PSE.getSE(), OrigLoop).isNonZero()) {
       // If the best known trip count is exact, we select between two
       // prospective ICs, where
       //
@@ -5685,8 +5723,7 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
     // simplified away.
     // TODO: Remove this code after stepping away from the legacy cost model and
     // adding code to simplify VPlans before calculating their costs.
-    auto TC = LoopVectorizationUtils::getSmallConstantTripCount(PSE.getSE(),
-                                                                OrigLoop);
+    auto TC = getSmallConstantTripCount(PSE.getSE(), OrigLoop);
     if (TC == VF && !CM.foldTailByMasking())
       addFullyUnrolledInstructionsToIgnore(OrigLoop, Legal->getInductionVars(),
                                            CostCtx.SkipCostComputation);
