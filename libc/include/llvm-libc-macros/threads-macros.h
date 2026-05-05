@@ -13,7 +13,7 @@
 #include "stdint-macros.h"
 
 // LLVM libc extensions
-#define __THRD_GET_ID(t)                                                       \
+#define __thrd_get_id(t)                                                       \
   __LLVM_LIBC_CAST(reinterpret_cast, uintptr_t, (t).__attrib)
 
 #endif // LLVM_LIBC_MACROS_THREADS_MACRO_H

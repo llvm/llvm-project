@@ -13,6 +13,6 @@
 pthread_t p = PTHREAD_NULL;
 
 int main(void) {
-  assert(__PTHREAD_GET_ID(p) == 0);
+  assert(__pthread_get_id(p) == 0);
   return 0;
 }

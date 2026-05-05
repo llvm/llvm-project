@@ -28,7 +28,7 @@ static int child_func(void *arg) {
   int *ret = reinterpret_cast<int *>(arg);
   auto self = LIBC_NAMESPACE::thrd_current();
   *ret = LIBC_NAMESPACE::thrd_equal(child_thread, self);
-  child_self_thread_id = __THRD_GET_ID(self);
+  child_self_thread_id = __thrd_get_id(self);
   LIBC_NAMESPACE::mtx_unlock(&mutex);
   return 0;
 }
@@ -52,12 +52,12 @@ TEST_MAIN() {
             int(thrd_success));
   // This new thread should of course not be equal to the main thread.
   ASSERT_EQ(LIBC_NAMESPACE::thrd_equal(th, main_thread), 0);
-  ASSERT_NE(__THRD_GET_ID(th), __THRD_GET_ID(main_thread));
+  ASSERT_NE(__thrd_get_id(th), __thrd_get_id(main_thread));
 
   // Set the |child_thread| global var and unlock to allow the child to perform
   // the comparison.
   child_thread = th;
-  uintptr_t child_thread_id = __THRD_GET_ID(child_thread);
+  uintptr_t child_thread_id = __thrd_get_id(child_thread);
   ASSERT_EQ(LIBC_NAMESPACE::mtx_unlock(&mutex), int(thrd_success));
 
   int retval;

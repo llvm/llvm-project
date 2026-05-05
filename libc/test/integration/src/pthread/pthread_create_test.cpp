@@ -179,7 +179,7 @@ static void run_success_config(int detachstate, size_t guardsize,
   ASSERT_EQ(LIBC_NAMESPACE::pthread_create(&tid, attr, successThread,
                                            reinterpret_cast<void *>(th_arg)),
             0);
-  ASSERT_NE(__PTHREAD_GET_ID(tid), 0);
+  ASSERT_NE(__pthread_get_id(tid), 0);
   ASSERT_ERRNO_SUCCESS();
 
   if (detachstate == PTHREAD_CREATE_JOINABLE) {

@@ -27,7 +27,7 @@ void create_and_join() {
     ASSERT_EQ(LIBC_NAMESPACE::thrd_create(&thread, thread_func, nullptr),
               (int)thrd_success);
     int retval = thread_count + 1; // Start with a retval we dont expect.
-    ASSERT_NE(__THRD_GET_ID(thread), 0);
+    ASSERT_NE(__thrd_get_id(thread), 0);
     ASSERT_EQ(LIBC_NAMESPACE::thrd_join(thread, &retval), (int)thrd_success);
     ASSERT_EQ(retval, 0);
     ASSERT_EQ(counter, old_counter_val + 1);

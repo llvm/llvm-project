@@ -4,7 +4,7 @@ standards:
 macros:
   - macro_name: ONCE_FLAG_INIT
     macro_value: '{0}'
-  - macro_name: __THRD_GET_ID
+  - macro_name: __thrd_get_id
     macro_header: threads-macros.h
 types:
   - type_name: once_flag
