@@ -2414,11 +2414,12 @@ For example:
     If an invocation of an annotated function does not return control back
     to a point in the call stack, the behavior is undefined.
 ``nosync``
-    This function attribute indicates that the function does not communicate
-    (synchronize) with another thread through memory or other well-defined means.
-    Synchronization is considered possible in the presence of `atomic` accesses
-    that enforce an order, thus not "unordered" and "monotonic", `volatile` accesses,
-    as well as `convergent` function calls.
+    This function attribute indicates that the function does not introduce any
+    *synchronizes-with* edges in the sense of the memory model.
+
+    In particular, synchronization is considered possible in the presence of
+    `atomic` accesses that enforce an order, thus not "unordered" and
+    "monotonic", as well as `convergent` function calls.
 
     Note that `convergent` operations can involve communication that is
     considered to be not through memory and does not necessarily imply an
