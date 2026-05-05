@@ -255,6 +255,7 @@ void CompileUnit::cleanupDataAfterClonning() {
   OutDieOffsetArray = SmallVector<uint64_t>();
   TypeEntries = SmallVector<TypeEntry *>();
   Dependencies.reset(nullptr);
+  StmtSeqListAttributes.clear();
   getOrigUnit().clear();
 }
 
