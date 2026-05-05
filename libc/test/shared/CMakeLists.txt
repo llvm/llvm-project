@@ -745,9 +745,6 @@ add_fp_unittest(
     libc.src.__support.math.totalordermagf128
     libc.src.__support.math.totalordermagf16
     libc.src.__support.math.totalordermagl
-  COMPILE_OPTIONS
-    $<$<CXX_COMPILER_ID:Clang>:-Xclang -fconstexpr-steps=1000000>
-    $<$<CXX_COMPILER_ID:GNU>:-fconstexpr-ops-limit=1000000 -fconstexpr-depth=100000>
 )
 
 add_fp_unittest(
