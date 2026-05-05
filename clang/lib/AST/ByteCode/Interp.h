@@ -1977,6 +1977,11 @@ inline bool GetRefLocal(InterpState &S, CodePtr OpPC, uint32_t I) {
   return handleReference(S, OpPC, LocalBlock);
 }
 
+inline bool CheckRefInit(InterpState &S, CodePtr OpPC) {
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  return CheckRange(S, OpPC, Ptr, AK_Read);
+}
+
 inline bool GetPtrParam(InterpState &S, CodePtr OpPC, uint32_t Index) {
   if (S.Current->isBottomFrame())
     return false;

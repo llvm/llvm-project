@@ -221,7 +221,7 @@ def m_sparc_Features_Group : OptionGroup<"<sparc features group>">,
 // The features added by this group will not be added to target features.
 // These are explicitly handled.
 def m_hexagon_Features_HVX_Group : OptionGroup<"<hexagon features group>">,
-                                   Group<m_Group>, DocName<"Hexagon">;
+                                   Group<m_Group>, DocName<"Hexagon HVX">;
 def m_m68k_Features_Group: OptionGroup<"<m68k features group>">,
                            Group<m_Group>, DocName<"M68k">;
 def m_mips_Features_Group : OptionGroup<"<mips features group>">,

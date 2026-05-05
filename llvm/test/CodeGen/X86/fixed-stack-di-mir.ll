@@ -15,7 +15,7 @@ entry:
 ; CHECK: id: 0
 ; CHECK: debug-info-variable: '!3'
 ; CHECK: debug-info-expression: '!DIExpression()'
-; CHECK: debug-info-location: '!5'
+; CHECK: debug-info-location: '!7'
   unreachable
 }
 
@@ -28,5 +28,7 @@ attributes #0 = { nounwind readnone speculatable }
 !1 = !DIFile(filename: "file.cpp", directory: "/dir")
 !2 = !{i32 2, !"Debug Info Version", i32 3}
 !3 = !DILocalVariable(name: "dstRect", scope: !4)
-!4 = distinct !DISubprogram(name: "foo", linkageName: "foo", scope: !0, file: !1, line: 42, unit: !0)
+!4 = distinct !DISubprogram(name: "foo", linkageName: "foo", scope: !0, file: !1, line: 42, unit: !0, type: !6)
 !5 = !DILocation(line: 42, column: 85, scope: !4)
+!6 = !DISubroutineType(types: !7)
+!7 = !{null}
