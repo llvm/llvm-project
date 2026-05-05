@@ -83,5 +83,6 @@ class TestCommandCache(unittest.TestCase):
         # Second time should be cached, i.e. equal to the first
         self.assertEqual(lit_config.run_command_cached("date -Ins", shell=True), date)
 
+
 if __name__ == "__main__":
     unittest.main()
