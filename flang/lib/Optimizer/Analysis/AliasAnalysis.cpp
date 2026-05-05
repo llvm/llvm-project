@@ -365,6 +365,24 @@ static bool pathsDivergeAtComponent(const fir::AliasAnalysis::Source &lhsSrc,
   return false;
 }
 
+/// Walk backward from \p val through FortranObjectViewOpInterface ops
+/// that have zero offset (i.e. they access the same base address).
+/// Return true if \p other is found on this chain.
+static bool isOnZeroOffsetViewChain(mlir::Value val, mlir::Value other) {
+  while (auto *defOp = val.getDefiningOp()) {
+    auto viewOp = mlir::dyn_cast<fir::FortranObjectViewOpInterface>(defOp);
+    if (!viewOp)
+      break;
+    auto offset = viewOp.getViewOffset(mlir::cast<mlir::OpResult>(val));
+    if (!offset || *offset != 0)
+      break;
+    val = viewOp.getViewSource(mlir::cast<mlir::OpResult>(val));
+    if (val == other)
+      return true;
+  }
+  return false;
+}
+
 AliasResult AliasAnalysis::alias(mlir::Value lhs, mlir::Value rhs) {
   // A wrapper around alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
   // mlir::Value rhs) This allows a user to provide Source that may be obtained
@@ -379,6 +397,16 @@ AliasResult AliasAnalysis::alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
   // TODO: alias() has to be aware of the function scopes.
   // After MLIR inlining, the current implementation may
   // not recognize non-aliasing entities.
+
+  // If one value is directly derived from the other through a chain of
+  // zero-offset view operations (e.g. embox, declare, convert), they
+  // access the same underlying memory. This check avoids the case where
+  // getSource() traces through upstream operations (e.g. a sliced embox)
+  // that set approximateSource, conservatively preventing MustAlias.
+  if (lhs == rhs || isOnZeroOffsetViewChain(lhs, rhs) ||
+      isOnZeroOffsetViewChain(rhs, lhs))
+    return AliasResult::MustAlias;
+
   bool approximateSource = lhsSrc.approximateSource || rhsSrc.approximateSource;
   LLVM_DEBUG(llvm::dbgs() << "\nAliasAnalysis::alias\n";
              llvm::dbgs() << "  lhs: " << lhs << "\n";
