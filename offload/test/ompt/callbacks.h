@@ -27,6 +27,8 @@ static const char *ompt_target_data_op_t_values[] = {
     "ompt_target_data_transfer_to_device_async",
     "ompt_target_data_transfer_from_device_async",
     "ompt_target_data_delete_async",
+    "",
+    "",
     "ompt_target_data_transfer_async",
     "ompt_target_data_memset_async",
     "ompt_target_data_transfer_rect_async"};
