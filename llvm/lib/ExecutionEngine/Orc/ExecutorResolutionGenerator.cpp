@@ -48,24 +48,20 @@ Error ExecutorResolutionGenerator::tryToGenerate(
     LookupSymbols.add(Name, LookupFlag);
   }
 
-  DylibManager::LookupRequest LR(H, LookupSymbols);
   DylibMgr.lookupSymbolsAsync(
-      LR, [this, LS = std::move(LS), JD = JITDylibSP(&JD),
-           LookupSymbols](auto Result) mutable {
+      H, LookupSymbols,
+      [this, LS = std::move(LS), JD = JITDylibSP(&JD),
+       LookupSymbols](auto Result) mutable {
         if (Result) {
           LLVM_DEBUG({
             dbgs() << "ExecutorResolutionGenerator lookup failed due to error";
           });
           return LS.continueLookup(Result.takeError());
         }
-        assert(Result->size() == 1 &&
-               "Results for more than one library returned");
-        assert(Result->front().size() == LookupSymbols.size() &&
+        assert(Result->size() == LookupSymbols.size() &&
                "Result has incorrect number of elements");
 
-        // const tpctypes::LookupResult &Syms = Result->front();
-        // size_t SymIdx = 0;
-        auto Syms = Result->front().begin();
+        auto Syms = Result->begin();
         SymbolNameSet MissingSymbols;
         SymbolMap NewSyms;
         for (auto &[Name, Flags] : LookupSymbols) {
