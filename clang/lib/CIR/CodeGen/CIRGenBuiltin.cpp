@@ -2607,8 +2607,10 @@ emitTargetArchBuiltinExpr(CIRGenFunction *cgf, unsigned builtinID,
   case llvm::Triple::amdgcn:
     return cgf->emitAMDGPUBuiltinExpr(builtinID, e);
   case llvm::Triple::systemz:
+    return std::nullopt;
   case llvm::Triple::nvptx:
   case llvm::Triple::nvptx64:
+    return cgf->emitNVPTXBuiltinExpr(builtinID, e);
   case llvm::Triple::wasm32:
   case llvm::Triple::wasm64:
   case llvm::Triple::hexagon:
