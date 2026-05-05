@@ -526,29 +526,24 @@ xegpu::inferExtractSourceLayout(xegpu::DistributeLayoutAttr resLayout,
   auto context = resLayout.getContext();
   // construct the source layout by adding unit dimensions to the front of
   // result layout
-
-  SmallVector<int64_t> sgLayout(srcShapeSize, 1);
-  SmallVector<int64_t> sgData(srcShapeSize, 1);
-  SmallVector<int64_t> instData(srcShapeSize, 1);
-  SmallVector<int64_t> laneLayout(srcShapeSize, 1);
-  SmallVector<int64_t> laneData(srcShapeSize, 1);
-
   if (dimDiff > 0) {
-    auto resSgLayout = resLayout.getEffectiveSgLayoutAsInt();
-    auto resSgData = resLayout.getEffectiveSgDataAsInt();
-    auto resInstData = resLayout.getEffectiveInstDataAsInt();
-    auto resLaneLayout = resLayout.getEffectiveLaneLayoutAsInt();
-    auto resLaneData = resLayout.getEffectiveLaneDataAsInt();
+    auto sgLayout = resLayout.getEffectiveSgLayoutAsInt();
+    auto sgData = resLayout.getEffectiveSgDataAsInt();
+    auto instData = resLayout.getEffectiveInstDataAsInt();
+    auto laneLayout = resLayout.getEffectiveLaneLayoutAsInt();
+    auto laneData = resLayout.getEffectiveLaneDataAsInt();
+    auto order = resLayout.getEffectiveOrderAsInt();
 
-    for (int i = 0; i < resShapeSize; i++) {
-      sgLayout[dimDiff + i] = (resSgLayout.size() == 0) ? 1 : resSgLayout[i];
-      sgData[dimDiff + i] = (resSgData.size() == 0) ? 1 : resSgData[i];
-      instData[dimDiff + i] = (resInstData.size() == 0) ? 1 : resInstData[i];
-      laneLayout[dimDiff + i] =
-          (resLaneLayout.size() == 0) ? 1 : resLaneLayout[i];
-      laneData[dimDiff + i] = (resLaneData.size() == 0) ? 1 : resLaneData[i];
+    for (int i = resShapeSize; i < dimDiff; i++) {
+      sgLayout.insert(sgLayout.begin(), 1);
+      sgData.insert(sgData.begin(), 1);
+      instData.insert(instData.begin(), 1);
+      laneLayout.insert(laneLayout.begin(), 1);
+      laneData.insert(laneData.begin(), 1);
+      order.insert(order.begin(), i);
     }
 
+    DenseI32ArrayAttr orderAttr = resLayout ? resLayout.getOrder() : nullptr;
     auto toAttr = [&](ArrayRef<int64_t> v) -> DenseI32ArrayAttr {
       if (v.empty())
         return DenseI32ArrayAttr();
@@ -556,11 +551,12 @@ xegpu::inferExtractSourceLayout(xegpu::DistributeLayoutAttr resLayout,
       return DenseI32ArrayAttr::get(context, v32);
     };
     auto srcLayout = xegpu::LayoutAttr::get(
-        context, resSgLayout.empty() ? nullptr : toAttr(sgLayout),
-        resSgData.empty() ? nullptr : toAttr(sgData),
-        resInstData.empty() ? nullptr : toAttr(instData),
-        resLaneLayout.empty() ? nullptr : toAttr(laneLayout),
-        resLaneData.empty() ? nullptr : toAttr(laneData), nullptr);
+        context, sgLayout.empty() ? nullptr : toAttr(sgLayout),
+        sgData.empty() ? nullptr : toAttr(sgData),
+        instData.empty() ? nullptr : toAttr(instData),
+        laneLayout.empty() ? nullptr : toAttr(laneLayout),
+        laneData.empty() ? nullptr : toAttr(laneData),
+        (orderAttr && !orderAttr.empty()) ? nullptr : toAttr(order));
     return srcLayout;
   }
   return resLayout;
@@ -1687,7 +1683,7 @@ xegpu::inferSourceLayoutFromResult(OpOperand &operand,
     VectorType valueToStoreTy =
         dyn_cast<VectorType>(insert.getValueToStore().getType());
 
-    if (idx == 0) {
+    if ((idx == 0) && valueToStoreTy) {
       return xegpu::inferInsertSourceLayout(resLayout, resVecTy.getShape(),
                                             valueToStoreTy.getShape());
     }
