@@ -1,9 +1,10 @@
 // Check that __asan_poison_memory_region and ASAN_OPTIONS=poison_history_size work for partial granules.
 //
-// RUN: %clangxx_asan -O0 %s -o %t && env ASAN_OPTIONS=poison_history_size=1000 not %run %t 10 20 10 2>&1 | FileCheck %s
+// RUN: %clangxx_asan -O0 %s -o %t && env ASAN_OPTIONS=poison_history_size=1000 not %run %t 10 20 10 2>&1 | FileCheck %s --check-prefixes=CHECK,POISON
 //
 // Partial granule
-// RUN: %clangxx_asan -O0 %s -o %t && env ASAN_OPTIONS=poison_history_size=1000 not %run %t 10 20 20 2>&1 | FileCheck %s
+// RUN: %clangxx_asan -O0 %s -o %t && env ASAN_OPTIONS=poison_history_size=1000 not %run %t 10 20 20 2>&1 | FileCheck %s --check-prefixes=CHECK,POISON
+// RUN: %clangxx_asan -O0 %s -o %t && env ASAN_OPTIONS=poison_history_size=1000 not %run %t 10 6 11  2>&1 | FileCheck %s --check-prefixes=CHECK,UNKNOWN
 
 // TODO
 // REQUIRES: linux
@@ -37,13 +38,14 @@ int main(int argc, char **argv) {
   // Bytes [32,  63]: addressable
 
   int res = x[access_offset]; // BOOOM
-  // CHECK: ERROR: AddressSanitizer: use-after-poison
-  // CHECK: main{{.*}}use-after-poison-history-size-partial-granule.cpp:[[@LINE-2]]
+  // POISON: ERROR: AddressSanitizer: use-after-poison
+  // UNKNOWN: ERROR: AddressSanitizer: unknown-crash
+  // CHECK: main{{.*}}use-after-poison-history-size-partial-granule.cpp:[[@LINE-3]]
 
   // CHECK: Memory was manually poisoned by thread T0:
-  // CHECK: honey_ive_poisoned_the_memory{{.*}}use-after-poison-history-size-partial-granule.cpp:[[@LINE-24]]
-  // CHECK: foo{{.*}}use-after-poison-history-size-partial-granule.cpp:[[@LINE-21]]
-  // CHECK: main{{.*}}use-after-poison-history-size-partial-granule.cpp:[[@LINE-12]]
+  // CHECK: honey_ive_poisoned_the_memory{{.*}}use-after-poison-history-size-partial-granule.cpp:[[@LINE-25]]
+  // CHECK: foo{{.*}}use-after-poison-history-size-partial-granule.cpp:[[@LINE-22]]
+  // CHECK: main{{.*}}use-after-poison-history-size-partial-granule.cpp:[[@LINE-13]]
 
   delete[] x;
 

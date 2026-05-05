@@ -611,21 +611,21 @@ implementation.
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
 | defaultmap implicit-behavior 'private'                      | :good:`done`              | :none:`unclaimed`         | https://github.com/llvm/llvm-project/pull/158712                         |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
-| OMPT: ompt_get_buffer_limits entry point                    | :none:`unclaimed`         | :good:`N/A`               |                                                                          |
+| OMPT: ompt_get_buffer_limits entry point                    | :part:`partial`           | :good:`N/A`               | Definition: https://github.com/llvm/llvm-project/pull/195829             |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
-| OMPT: ompt_any_record_ompt_t for device tracing             | :none:`unclaimed`         | :good:`N/A`               |                                                                          |
+| OMPT: ompt_any_record_ompt_t for device tracing             | :good:`done`              | :good:`N/A`               | https://github.com/llvm/llvm-project/pull/195829                         |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
-| OMPT: ompt_target_data_transfer_rect(_async) & subvolume    | :none:`unclaimed`         | :good:`N/A`               |                                                                          |
+| OMPT: ompt_target_data_transfer_rect(_async) & subvolume    | :part:`partial`           | :good:`N/A`               | Enum: https://github.com/llvm/llvm-project/pull/195829                   |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
-| OMPT: ompt_target_data_transfer(_async)                     | :none:`unclaimed`         | :good:`N/A`               |                                                                          |
+| OMPT: ompt_target_data_transfer(_async)                     | :part:`partial`           | :good:`N/A`               | Enum: https://github.com/llvm/llvm-project/pull/195829                   |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
-| OMPT: ompt_target_data_memset(_async)                       | :none:`unclaimed`         | :good:`N/A`               |                                                                          |
+| OMPT: ompt_target_data_memset(_async)                       | :part:`partial`           | :good:`N/A`               | Enum: https://github.com/llvm/llvm-project/pull/195829                   |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
-| OMPT: workdistribute work callback enum                     | :none:`unclaimed`         | :good:`N/A`               |                                                                          |
+| OMPT: workdistribute work callback enum                     | :part:`partial`           | :good:`N/A`               | Enum: https://github.com/llvm/llvm-project/pull/195829                   |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
-| OMPT: transparent task flag enum (importing/exporting)      | :none:`unclaimed`         | :good:`N/A`               |                                                                          |
+| OMPT: transparent task flag enum (importing/exporting)      | :part:`partial`           | :good:`N/A`               | Enum: https://github.com/llvm/llvm-project/pull/195829                   |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
-| OMPT: dependence type {out, inout}_all_memory               | :none:`unclaimed`         | :good:`N/A`               |                                                                          |
+| OMPT: dependence type {out, inout}_all_memory               | :part:`partial`           | :good:`N/A`               | Enum: https://github.com/llvm/llvm-project/pull/195829                   |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
 | OMPT: removed master callback                               | :none:`unclaimed`         | :good:`N/A`               |                                                                          |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+

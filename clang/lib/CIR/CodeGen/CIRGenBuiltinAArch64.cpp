@@ -338,6 +338,11 @@ static mlir::Value emitCommonNeonSISDBuiltinExpr(
   case NEON::BI__builtin_neon_vaddvq_u64:
   case NEON::BI__builtin_neon_vaddvq_f32:
   case NEON::BI__builtin_neon_vaddvq_f64:
+  case NEON::BI__builtin_neon_vabdh_f16:
+  case NEON::BI__builtin_neon_vrecpeh_f16:
+  case NEON::BI__builtin_neon_vrecpxh_f16:
+  case NEON::BI__builtin_neon_vrsqrteh_f16:
+  case NEON::BI__builtin_neon_vrsqrtsh_f16:
     return emitNeonCall(cgf.cgm, cgf.getBuilder(),
                         {cgf.convertType(expr->getArg(0)->getType())}, ops,
                         llvmIntrName, cgf.convertType(expr->getType()), loc);

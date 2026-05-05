@@ -13,10 +13,10 @@ namespace qualified {
 // CHECK-NEXT: TypeAliasDecl
 // CHECK-NEXT: `-TemplateSpecializationType
 // CHECK-NEXT:   |-name: 'N' qualified
-// CHECK-NEXT:   | `-TypeAliasTemplateDecl {{.+}} N{{$}}
+// CHECK-NEXT:   | `-TypeAliasTemplateDecl {{.+}} N external-linkage{{$}}
 // CHECK-NEXT:   |-TemplateArgument template 'foo::A':'qualified::foo::A' qualified{{$}}
 // CHECK-NEXT:   | |-NestedNameSpecifier Namespace 0x{{.+}} 'foo'{{$}}
-// CHECK-NEXT:   | `-ClassTemplateDecl {{.+}} A{{$}}
+// CHECK-NEXT:   | `-ClassTemplateDecl {{.+}} A external-linkage{{$}}
 
 namespace dependent {
   template <class T> struct B {
@@ -54,4 +54,4 @@ namespace subst {
 // CHECK-NEXT:     | |-parameter: TemplateTemplateParmDecl {{.+}} depth 0 index 0 TT{{$}}
 // CHECK-NEXT:     | |-associated ClassTemplateSpecialization {{.+}} 'B'{{$}}
 // CHECK-NEXT:     | `-replacement:
-// CHECK-NEXT:     |   `-ClassTemplateDecl {{.+}} A{{$}}
+// CHECK-NEXT:     |   `-ClassTemplateDecl {{.+}} A external-linkage{{$}}

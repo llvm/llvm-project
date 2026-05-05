@@ -75,8 +75,8 @@ TEST(BootstrapInfoTest, CreateDefaultContainsSPSCISymbols) {
             noErrors);
   auto BI = cantFail(BootstrapInfo::CreateDefault(S));
   // The default addAll should have registered SPS CI symbols.
-  EXPECT_TRUE(BI.symbols().count(
-      "orc_rt_sps_ci_SimpleNativeMemoryMap_reserve_sps_wrapper"));
+  EXPECT_TRUE(
+      BI.symbols().count("orc_rt_ci_sps_SimpleNativeMemoryMap_reserve"));
 }
 
 TEST(BootstrapInfoTest, CreateDefaultWithNoSymbolsBuilder) {
@@ -87,8 +87,8 @@ TEST(BootstrapInfoTest, CreateDefaultWithNoSymbolsBuilder) {
   // Should still contain the session symbol (added unconditionally).
   ASSERT_TRUE(BI.symbols().count("orc_rt_Session_Instance"));
   // But no SPS CI symbols.
-  EXPECT_FALSE(BI.symbols().count(
-      "orc_rt_sps_ci_SimpleNativeMemoryMap_reserve_sps_wrapper"));
+  EXPECT_FALSE(
+      BI.symbols().count("orc_rt_ci_sps_SimpleNativeMemoryMap_reserve"));
 }
 
 TEST(BootstrapInfoTest, CreateDefaultWithCustomValuesBuilder) {

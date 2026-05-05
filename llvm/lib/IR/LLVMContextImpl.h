@@ -1697,7 +1697,7 @@ public:
   using VectorConstantsTy = ConstantUniqueMap<ConstantVector>;
   VectorConstantsTy VectorConstants;
 
-  DenseMap<PointerType *, std::unique_ptr<ConstantPointerNull>> CPNConstants;
+  DenseMap<Type *, std::unique_ptr<ConstantPointerNull>> CPNConstants;
 
   DenseMap<TargetExtType *, std::unique_ptr<ConstantTargetNone>> CTNConstants;
 

@@ -690,41 +690,84 @@ static unsigned getEncodedBinaryOpcode(unsigned Opcode) {
   }
 }
 
-static unsigned getEncodedRMWOperation(AtomicRMWInst::BinOp Op) {
-  switch (Op) {
+static unsigned getEncodedRMWOperation(const AtomicRMWInst &I) {
+  unsigned Encoding = 0;
+  switch (I.getOperation()) {
   default: llvm_unreachable("Unknown RMW operation!");
-  case AtomicRMWInst::Xchg: return bitc::RMW_XCHG;
-  case AtomicRMWInst::Add: return bitc::RMW_ADD;
-  case AtomicRMWInst::Sub: return bitc::RMW_SUB;
-  case AtomicRMWInst::And: return bitc::RMW_AND;
-  case AtomicRMWInst::Nand: return bitc::RMW_NAND;
-  case AtomicRMWInst::Or: return bitc::RMW_OR;
-  case AtomicRMWInst::Xor: return bitc::RMW_XOR;
-  case AtomicRMWInst::Max: return bitc::RMW_MAX;
-  case AtomicRMWInst::Min: return bitc::RMW_MIN;
-  case AtomicRMWInst::UMax: return bitc::RMW_UMAX;
-  case AtomicRMWInst::UMin: return bitc::RMW_UMIN;
-  case AtomicRMWInst::FAdd: return bitc::RMW_FADD;
-  case AtomicRMWInst::FSub: return bitc::RMW_FSUB;
-  case AtomicRMWInst::FMax: return bitc::RMW_FMAX;
-  case AtomicRMWInst::FMin: return bitc::RMW_FMIN;
+  case AtomicRMWInst::Xchg:
+    Encoding = bitc::RMW_XCHG;
+    break;
+  case AtomicRMWInst::Add:
+    Encoding = bitc::RMW_ADD;
+    break;
+  case AtomicRMWInst::Sub:
+    Encoding = bitc::RMW_SUB;
+    break;
+  case AtomicRMWInst::And:
+    Encoding = bitc::RMW_AND;
+    break;
+  case AtomicRMWInst::Nand:
+    Encoding = bitc::RMW_NAND;
+    break;
+  case AtomicRMWInst::Or:
+    Encoding = bitc::RMW_OR;
+    break;
+  case AtomicRMWInst::Xor:
+    Encoding = bitc::RMW_XOR;
+    break;
+  case AtomicRMWInst::Max:
+    Encoding = bitc::RMW_MAX;
+    break;
+  case AtomicRMWInst::Min:
+    Encoding = bitc::RMW_MIN;
+    break;
+  case AtomicRMWInst::UMax:
+    Encoding = bitc::RMW_UMAX;
+    break;
+  case AtomicRMWInst::UMin:
+    Encoding = bitc::RMW_UMIN;
+    break;
+  case AtomicRMWInst::FAdd:
+    Encoding = bitc::RMW_FADD;
+    break;
+  case AtomicRMWInst::FSub:
+    Encoding = bitc::RMW_FSUB;
+    break;
+  case AtomicRMWInst::FMax:
+    Encoding = bitc::RMW_FMAX;
+    break;
+  case AtomicRMWInst::FMin:
+    Encoding = bitc::RMW_FMIN;
+    break;
   case AtomicRMWInst::FMaximum:
-    return bitc::RMW_FMAXIMUM;
+    Encoding = bitc::RMW_FMAXIMUM;
+    break;
   case AtomicRMWInst::FMinimum:
-    return bitc::RMW_FMINIMUM;
+    Encoding = bitc::RMW_FMINIMUM;
+    break;
   case AtomicRMWInst::FMaximumNum:
-    return bitc::RMW_FMAXIMUMNUM;
+    Encoding = bitc::RMW_FMAXIMUMNUM;
+    break;
   case AtomicRMWInst::FMinimumNum:
-    return bitc::RMW_FMINIMUMNUM;
+    Encoding = bitc::RMW_FMINIMUMNUM;
+    break;
   case AtomicRMWInst::UIncWrap:
-    return bitc::RMW_UINC_WRAP;
+    Encoding = bitc::RMW_UINC_WRAP;
+    break;
   case AtomicRMWInst::UDecWrap:
-    return bitc::RMW_UDEC_WRAP;
+    Encoding = bitc::RMW_UDEC_WRAP;
+    break;
   case AtomicRMWInst::USubCond:
-    return bitc::RMW_USUB_COND;
+    Encoding = bitc::RMW_USUB_COND;
+    break;
   case AtomicRMWInst::USubSat:
-    return bitc::RMW_USUB_SAT;
+    Encoding = bitc::RMW_USUB_SAT;
+    break;
   }
+
+  if (I.isElementwise())
+    Encoding |= bitc::RMW_ELEMENTWISE_FLAG;
+  return Encoding;
 }
 
 static unsigned getEncodedOrdering(AtomicOrdering Ordering) {
@@ -3554,8 +3597,7 @@ void ModuleBitcodeWriter::writeInstruction(const Instruction &I,
     Code = bitc::FUNC_CODE_INST_ATOMICRMW;
     pushValueAndType(I.getOperand(0), InstID, Vals); // ptrty + ptr
     pushValueAndType(I.getOperand(1), InstID, Vals); // valty + val
-    Vals.push_back(
-        getEncodedRMWOperation(cast<AtomicRMWInst>(I).getOperation()));
+    Vals.push_back(getEncodedRMWOperation(cast<AtomicRMWInst>(I)));
     Vals.push_back(cast<AtomicRMWInst>(I).isVolatile());
     Vals.push_back(getEncodedOrdering(cast<AtomicRMWInst>(I).getOrdering()));
     Vals.push_back(

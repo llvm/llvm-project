@@ -1,0 +1,85 @@
+! RUN: %python %S/test_errors.py %s %flang_fc1 -fopenacc
+
+! Test that OpenACC host_data use_device variables (UseDevice attribute)
+! are compatible with both host and device dummy arguments in generic
+! resolution.
+
+module m
+  interface overl
+    module procedure overl_host
+  end interface
+contains
+  subroutine overl_host(x)
+    integer :: x(:)
+  end subroutine
+end module m
+
+module m2
+  interface dforce
+    module procedure dforce_host
+    module procedure dforce_device
+  end interface
+contains
+  subroutine dforce_host(x, y)
+    integer :: x(:), y(:)
+  end subroutine
+  subroutine dforce_device(x, y)
+    integer, device :: x(:), y(:)
+  end subroutine
+end module m2
+
+subroutine test_use_device_host_only()
+  use m
+  integer, allocatable :: fx(:)
+  allocate(fx(100))
+  !$acc data copy(fx)
+  !$acc host_data use_device(fx)
+  call overl(fx)
+  !$acc end host_data
+  !$acc end data
+  deallocate(fx)
+end
+
+subroutine test_use_device_with_device_specific()
+  use m2
+  integer, allocatable :: fx(:)
+  integer, device, allocatable :: fy(:)
+  allocate(fx(100), fy(100))
+  !$acc data copy(fx)
+  !$acc host_data use_device(fx)
+  call dforce(fx, fy)
+  !$acc end host_data
+  !$acc end data
+  deallocate(fx, fy)
+end
+
+module m3
+  integer, parameter :: dp = selected_real_kind(14,200)
+  complex(dp), allocatable, target, pinned :: vkb(:,:)
+  interface dforce2
+    module procedure dforce2_host
+    module procedure dforce2_gpu
+  end interface
+contains
+  subroutine dforce2_host(vkb, c, v)
+    complex(dp) :: vkb(:,:), c(:,:)
+    real(dp) :: v(:,:)
+  end subroutine
+  subroutine dforce2_gpu(vkb, c, v)
+    complex(dp), device :: vkb(:,:), c(:,:)
+    real(dp), device :: v(:,:)
+  end subroutine
+end module m3
+
+subroutine test_use_device_pinned_use_assoc()
+  use m3
+  complex(dp), device, allocatable :: c_d(:,:)
+  real(dp), device, allocatable :: v_d(:,:)
+  allocate(vkb(64,64), c_d(64,64), v_d(64,64))
+  !$acc enter data copyin(vkb)
+  !$acc host_data use_device(vkb)
+  call dforce2(vkb, c_d, v_d)
+  !$acc end host_data
+  !$acc exit data delete(vkb)
+  deallocate(vkb, c_d, v_d)
+end

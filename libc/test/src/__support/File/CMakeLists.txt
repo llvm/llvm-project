@@ -15,10 +15,12 @@ add_libc_test(
     LibcMemoryHelpers
   DEPENDS
     libc.include.stdio
+    libc.hdr.wchar_macros
     libc.hdr.types.size_t
     libc.src.errno.errno
     libc.src.__support.CPP.new
     libc.src.__support.File.file
+    libc.src.__support.error_or
 )
 
 add_libc_test(

@@ -460,12 +460,18 @@ void SPIRVSerializer::init() {
 }
 
 #if LLVM_HAS_SPIRV_TARGET
+// Enable default set of SPIR-V extensions.
+// Supported extensions vary based on chip. See,
+// https://github.com/intel/intel-graphics-compiler/blob/master/
+//   documentation/igc/supported-spirv-extensions.md
+// for details.
 static const std::vector<std::string> getDefaultSPIRVExtensions() {
   return {
       "SPV_KHR_bfloat16",
       "SPV_EXT_relaxed_printf_string_address_space",
       "SPV_INTEL_cache_controls",
       "SPV_INTEL_variable_length_array",
+      "SPV_INTEL_bfloat16_arithmetic",
   };
 }
 

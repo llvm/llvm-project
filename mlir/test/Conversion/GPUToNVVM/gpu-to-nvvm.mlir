@@ -85,7 +85,7 @@ gpu.module @test_module_2 {
     %arg0 = arith.constant 1.0 : f32
     // TODO: Check full IR expansion once lowering has settled.
     // CHECK: nvvm.shfl.sync bfly {{.*}}
-    // CHECK: nvvm.barrier0
+    // CHECK: nvvm.barrier
     // CHECK: llvm.fadd
     %result = gpu.all_reduce add %arg0 uniform {} : (f32) -> (f32)
 
@@ -101,7 +101,7 @@ gpu.module @test_module_3 {
     %arg0 = arith.constant 1 : i32
     // TODO: Check full IR expansion once lowering has settled.
     // CHECK: nvvm.shfl.sync bfly {{.*}}
-    // CHECK: nvvm.barrier0
+    // CHECK: nvvm.barrier
     %result = gpu.all_reduce %arg0 uniform {
     ^bb(%lhs : i32, %rhs : i32):
       %xor = arith.xori %lhs, %rhs : i32
@@ -185,7 +185,7 @@ gpu.module @test_module_4 {
 gpu.module @test_module_5 {
   // CHECK-LABEL: func @gpu_sync()
   func.func @gpu_sync() {
-    // CHECK: nvvm.barrier0
+    // CHECK: nvvm.barrier
     gpu.barrier
     func.return
   }

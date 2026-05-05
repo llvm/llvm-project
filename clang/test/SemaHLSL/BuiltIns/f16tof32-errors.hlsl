@@ -77,58 +77,69 @@ float f16tof32_too_many_arg(uint p0) {
   // expected-error@-1 {{no matching function for call to 'f16tof32'}}
 }
 
+// Overload resolution selects uint f16tof32(uint); bool is implicitly converted to uint.
 float f16tof32_bool(bool p0) {
   return f16tof32(p0);
-  // expected-error@-1 {{1st argument must be a scalar or vector of unsigned integer types (was 'bool')}}
 }
 
+// Overload resolution selects an overload; bool3 is implicitly converted.
 float f16tof32_bool3(bool3 p0) {
   return f16tof32(p0);
-  // expected-error@-1 {{1st argument must be a scalar or vector of unsigned integer types (was 'bool3' (aka 'vector<bool, 3>'))}}
+  // expected-warning@-1 {{implicit conversion turns vector to scalar: 'vector<float, 3>' (vector of 3 'float' values) to 'float'}}
 }
 
 
+// Overload resolution selects uint f16tof32(uint); short is implicitly converted to uint.
 float f16tof32_int16_t(short p0) {
   return f16tof32(p0);
-  // expected-error@-1 {{1st argument must be a scalar or vector of unsigned integer types (was 'short')}}
+  // expected-warning@-1 {{implicit conversion changes signedness: 'short' to 'uint' (aka 'unsigned int')}}
 }
 
+// Overload resolution selects uint f16tof32(uint); unsigned short is implicitly converted to uint.
 float f16tof32_int16_t(unsigned short p0) {
   return f16tof32(p0);
-  // expected-error@-1 {{incorrect number of bits in integer (expected 32 bits, have 16)}}
 }
 
+// Overload resolution selects uint f16tof32(uint); int is implicitly converted to uint.
 float f16tof32_int(int p0) {
   return f16tof32(p0);
-  // expected-error@-1 {{1st argument must be a scalar or vector of unsigned integer types (was 'int')}}
+  // expected-warning@-1 {{implicit conversion changes signedness: 'int' to 'uint' (aka 'unsigned int')}}
 }
 
+// Overload resolution selects uint f16tof32(uint); long is implicitly converted to uint.
 float f16tof32_int64_t(long p0) {
   return f16tof32(p0);
-  // expected-error@-1 {{1st argument must be a scalar or vector of unsigned integer types (was 'long')}}
+  // expected-warning@-1 {{implicit conversion loses integer precision: 'long' to 'uint' (aka 'unsigned int')}}
 }
 
+// Overload resolution selects an overload; int3 is implicitly converted.
 float2 f16tof32_int2_to_float2_promotion(int3 p0) {
   return f16tof32(p0);
-  // expected-error@-1 {{1st argument must be a scalar or vector of unsigned integer types (was 'int3' (aka 'vector<int, 3>'))}}
+  // expected-warning@-1 {{implicit conversion truncates vector: 'vector<float, 3>' (vector of 3 'float' values) to 'vector<float, 2>' (vector of 2 'float' values)}}
+  // expected-warning@-2 {{implicit conversion changes signedness: 'int3' (aka 'vector<int, 3>') to 'vector<uint, 3>' (vector of 3 'uint' values)}}
 }
 
+// Overload resolution selects uint f16tof32(uint); half is implicitly converted to uint.
 float f16tof32_half(half p0) {
   return f16tof32(p0);
-  // expected-error@-1 {{1st argument must be a scalar or vector of unsigned integer types (was 'half')}}
+  // expected-warning@-1 {{implicit conversion turns floating-point number into integer: 'half' to 'uint' (aka 'unsigned int')}}
 }
 
+// Overload resolution selects an overload; half2 is implicitly converted.
 float f16tof32_half2(half2 p0) {
   return f16tof32(p0);
-  // expected-error@-1 {{1st argument must be a scalar or vector of unsigned integer types (was 'half2' (aka 'vector<half, 2>'))}}
+  // expected-warning@-1 {{implicit conversion turns vector to scalar: 'vector<float, 2>' (vector of 2 'float' values) to 'float'}}
+  // expected-warning@-2 {{implicit conversion turns floating-point number into integer: 'half2' (aka 'vector<half, 2>') to 'vector<uint, 2>' (vector of 2 'uint' values)}}
 }
 
+// Overload resolution selects uint f16tof32(uint); float is implicitly converted to uint.
 float f16tof32_float(float p0) {
   return f16tof32(p0);
-  // expected-error@-1 {{1st argument must be a scalar or vector of unsigned integer types (was 'float')}}
+  // expected-warning@-1 {{implicit conversion turns floating-point number into integer: 'float' to 'uint' (aka 'unsigned int')}}
 }
 
+// Overload resolution selects uint f16tof32(uint); double is implicitly converted to uint.
 float f16tof32_double(double p0) {
   return f16tof32(p0);
-  // expected-error@-1 {{1st argument must be a scalar or vector of unsigned integer types (was 'double')}}
+  // expected-warning@-1 {{implicit conversion turns floating-point number into integer: 'double' to 'uint' (aka 'unsigned int')}}
 }

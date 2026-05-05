@@ -346,7 +346,7 @@ define void @tail_folded_store_avx512(ptr %start, ptr %end) #3 {
 ; CHECK-NEXT:    [[VEC_IV:%.*]] = phi <64 x i32> [ <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <64 x i32> <i32 0, i32 -72, i32 -144, i32 -216, i32 -288, i32 -360, i32 -432, i32 -504, i32 -576, i32 -648, i32 -720, i32 -792, i32 -864, i32 -936, i32 -1008, i32 -1080, i32 -1152, i32 -1224, i32 -1296, i32 -1368, i32 -1440, i32 -1512, i32 -1584, i32 -1656, i32 -1728, i32 -1800, i32 -1872, i32 -1944, i32 -2016, i32 -2088, i32 -2160, i32 -2232, i32 -2304, i32 -2376, i32 -2448, i32 -2520, i32 -2592, i32 -2664, i32 -2736, i32 -2808, i32 -2880, i32 -2952, i32 -3024, i32 -3096, i32 -3168, i32 -3240, i32 -3312, i32 -3384, i32 -3456, i32 -3528, i32 -3600, i32 -3672, i32 -3744, i32 -3816, i32 -3888, i32 -3960, i32 -4032, i32 -4104, i32 -4176, i32 -4248, i32 -4320, i32 -4392, i32 -4464, i32 -4536>
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ule <64 x i32> [[VEC_IV]], [[BROADCAST_SPLAT4]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v64p0.v64p0(<64 x ptr> zeroinitializer, <64 x ptr> align 8 [[TMP5]], <64 x i1> [[TMP6]])
+; CHECK-NEXT:    call void @llvm.masked.scatter.v64p0.v64p0(<64 x ptr> splat (ptr null), <64 x ptr> align 8 [[TMP5]], <64 x i1> [[TMP6]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 64
 ; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i32 -4608
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw <64 x i32> [[VEC_IV]], splat (i32 64)
@@ -381,7 +381,7 @@ define void @tail_folded_store_avx512(ptr %start, ptr %end) #3 {
 ; AUTOVF-NEXT:    [[VEC_IV:%.*]] = phi <8 x i32> [ <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; AUTOVF-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <8 x i32> <i32 0, i32 -72, i32 -144, i32 -216, i32 -288, i32 -360, i32 -432, i32 -504>
 ; AUTOVF-NEXT:    [[TMP6:%.*]] = icmp ule <8 x i32> [[VEC_IV]], [[BROADCAST_SPLAT4]]
-; AUTOVF-NEXT:    call void @llvm.masked.scatter.v8p0.v8p0(<8 x ptr> zeroinitializer, <8 x ptr> align 8 [[TMP5]], <8 x i1> [[TMP6]])
+; AUTOVF-NEXT:    call void @llvm.masked.scatter.v8p0.v8p0(<8 x ptr> splat (ptr null), <8 x ptr> align 8 [[TMP5]], <8 x i1> [[TMP6]])
 ; AUTOVF-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; AUTOVF-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i32 -576
 ; AUTOVF-NEXT:    [[VEC_IND_NEXT]] = add nuw <8 x i32> [[VEC_IV]], splat (i32 8)

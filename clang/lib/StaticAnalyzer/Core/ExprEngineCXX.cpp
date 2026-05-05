@@ -212,9 +212,9 @@ SVal ExprEngine::computeObjectUnderConstruction(
       // The temporary is to be managed by the parent stack frame.
       // So build it in the parent stack frame if we're not in the
       // top frame of the analysis.
-      const StackFrameContext *SFC = LCtx->getStackFrame();
-      if (const LocationContext *CallerLCtx = SFC->getParent()) {
-        auto RTC = (*SFC->getCallSiteBlock())[SFC->getIndex()]
+      const StackFrame *SF = LCtx->getStackFrame();
+      if (const LocationContext *CallerLCtx = SF->getParent()) {
+        auto RTC = (*SF->getCallSiteBlock())[SF->getIndex()]
                        .getAs<CFGCXXRecordTypedCall>();
         if (!RTC) {
           // We were unable to find the correct construction context for the
@@ -223,9 +223,9 @@ SVal ExprEngine::computeObjectUnderConstruction(
           break;
         }
 
-        unsigned NVCaller = getNumVisited(CallerLCtx, SFC->getCallSiteBlock());
+        unsigned NVCaller = getNumVisited(CallerLCtx, SF->getCallSiteBlock());
         return computeObjectUnderConstruction(
-            SFC->getCallSite(), State, NVCaller, CallerLCtx,
+            SF->getCallSite(), State, NVCaller, CallerLCtx,
             RTC->getConstructionContext(), CallOpts);
       } else {
         // We are on the top frame of the analysis. We do not know where is the
@@ -246,7 +246,7 @@ SVal ExprEngine::computeObjectUnderConstruction(
         QualType ReturnTy = RetE->getType();
         QualType RegionTy = ACtx.getPointerType(ReturnTy);
         return SVB.conjureSymbolVal(&TopLevelSymRegionTag, getCFGElementRef(),
-                                    SFC, RegionTy, getNumVisitedCurrent());
+                                    SF, RegionTy, getNumVisitedCurrent());
       }
       llvm_unreachable("Unhandled return value construction context!");
     }
@@ -431,19 +431,19 @@ ProgramStateRef ExprEngine::updateObjectsUnderConstruction(
     }
     case ConstructionContext::SimpleReturnedValueKind:
     case ConstructionContext::CXX17ElidedCopyReturnedValueKind: {
-      const StackFrameContext *SFC = LCtx->getStackFrame();
-      const LocationContext *CallerLCtx = SFC->getParent();
+      const StackFrame *SF = LCtx->getStackFrame();
+      const LocationContext *CallerLCtx = SF->getParent();
       if (!CallerLCtx) {
         // No extra work is necessary in top frame.
         return State;
       }
 
-      auto RTC = (*SFC->getCallSiteBlock())[SFC->getIndex()]
+      auto RTC = (*SF->getCallSiteBlock())[SF->getIndex()]
                      .getAs<CFGCXXRecordTypedCall>();
       assert(RTC && "Could not have had a target region without it");
 
       return updateObjectsUnderConstruction(
-          V, SFC->getCallSite(), State, CallerLCtx,
+          V, SF->getCallSite(), State, CallerLCtx,
           RTC->getConstructionContext(), CallOpts);
     }
     case ConstructionContext::ElidedTemporaryObjectKind: {

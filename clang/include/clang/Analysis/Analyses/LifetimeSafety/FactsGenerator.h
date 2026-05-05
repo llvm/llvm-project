@@ -99,7 +99,7 @@ private:
                           ArrayRef<const Expr *> Args,
                           bool IsGslConstruction = false);
 
-  // Detect container methods that invalidate iterators/references.
+  // Detect methods that invalidate iterators/references/pointees.
   // For instance methods, Args[0] is the implicit 'this' pointer.
   void handleInvalidatingCall(const Expr *Call, const FunctionDecl *FD,
                               ArrayRef<const Expr *> Args);

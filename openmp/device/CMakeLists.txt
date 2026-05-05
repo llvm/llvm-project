@@ -106,3 +106,5 @@ set_target_properties(ompdevice PROPERTIES
 )
 target_link_libraries(ompdevice PRIVATE ompdevice.all_objs)
 install(TARGETS ompdevice ARCHIVE DESTINATION "${OPENMP_INSTALL_LIBDIR}")
+
+openmp_register_meta_dep(ompdevice)

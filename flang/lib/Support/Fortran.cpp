@@ -117,6 +117,9 @@ bool AreCompatibleCUDADataAttrs(std::optional<CUDADataAttr> x,
   if (ignoreTKR.test(common::IgnoreTKR::Device)) {
     return true;
   }
+  // A use_device(...) actual is compatible with any dummy.
+  if (y && *y == CUDADataAttr::UseDevice)
+    return true;
   if (!y && isHostDeviceProcedure) {
     return true;
   }

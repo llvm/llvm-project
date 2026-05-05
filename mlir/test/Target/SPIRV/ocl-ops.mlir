@@ -35,6 +35,8 @@ spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, Vec
   spirv.func @integer_insts(%arg0 : i32) "None" {
     // CHECK: {{%.*}} = spirv.CL.s_abs {{%.*}} : i32
     %0 = spirv.CL.s_abs %arg0 : i32
+    // CHECK: {{%.*}} = spirv.CL.clz {{%.*}} : i32
+    %1 = spirv.CL.clz %arg0 : i32
     spirv.Return
   }
 

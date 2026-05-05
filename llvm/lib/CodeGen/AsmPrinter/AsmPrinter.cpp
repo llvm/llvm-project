@@ -506,19 +506,6 @@ void AsmPrinter::EmitToStreamer(MCStreamer &S, const MCInst &Inst) {
   S.emitInstruction(Inst, getSubtargetInfo());
 }
 
-void AsmPrinter::emitInitialRawDwarfLocDirective(const MachineFunction &MF) {
-  if (DD) {
-    assert(OutStreamer->hasRawTextSupport() &&
-           "Expected assembly output mode.");
-    // This is NVPTX specific and it's unclear why.
-    // PR51079: If we have code without debug information we need to give up.
-    DISubprogram *MFSP = MF.getFunction().getSubprogram();
-    if (!MFSP)
-      return;
-    (void)DD->emitInitialLocDirective(MF, /*CUID=*/0);
-  }
-}
-
 /// getCurrentSection() - Return the current section we are emitting to.
 const MCSection *AsmPrinter::getCurrentSection() const {
   return OutStreamer->getCurrentSectionOnly();

@@ -669,15 +669,9 @@ public:
   /// of FP operations.
   bool useOrderedReductions(const RecurrenceDescriptor &RdxDesc) const;
 
-  /// Returns true if the target machine supports masked store operation
-  /// for the given \p DataType and kind of access to \p Ptr.
-  bool isLegalMaskedStore(Type *DataType, Value *Ptr, Align Alignment,
-                          unsigned AddressSpace) const;
-
-  /// Returns true if the target machine supports masked load operation
-  /// for the given \p DataType and kind of access to \p Ptr.
-  bool isLegalMaskedLoad(Type *DataType, Value *Ptr, Align Alignment,
-                         unsigned AddressSpace) const;
+  /// Returns true if the target machine supports masked loads or stores
+  /// for \p I's data type and alignment.
+  bool isLegalMaskedLoadOrStore(Instruction *I, ElementCount VF) const;
 
   /// Returns true if the target machine can represent \p V as a masked gather
   /// or scatter operation.

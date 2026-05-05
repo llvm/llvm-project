@@ -34,5 +34,7 @@ if(LIBOMP_OMPT_SUPPORT AND LIBOMP_ARCHER_SUPPORT)
     LIBRARY DESTINATION ${OPENMP_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${OPENMP_INSTALL_LIBDIR})
 
+  openmp_register_meta_dep(archer archer_static)
+
   add_subdirectory(tests)
 endif()

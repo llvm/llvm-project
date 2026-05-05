@@ -2014,7 +2014,7 @@ define <8 x i8> @urem8x8(<8 x i8> %A, <8 x i8> %B) {
 ; CHECK-GI-NEXT:    ushll v0.4s, v2.4h, #0
 ; CHECK-GI-NEXT:    ushll v3.4s, v1.4h, #0
 ; CHECK-GI-NEXT:    ushll2 v2.4s, v2.8h, #0
-; CHECK-GI-NEXT:    mov d5, v1.d[1]
+; CHECK-GI-NEXT:    ext v5.16b, v1.16b, v1.16b, #8
 ; CHECK-GI-NEXT:    fmov w8, s0
 ; CHECK-GI-NEXT:    fmov w9, s3
 ; CHECK-GI-NEXT:    mov w10, v0.s[1]
@@ -2173,8 +2173,8 @@ define <16 x i8> @urem16x8(<16 x i8> %A, <16 x i8> %B) {
 ; CHECK-GI-NEXT:    ushll v5.4s, v3.4h, #0
 ; CHECK-GI-NEXT:    ushll2 v4.4s, v4.8h, #0
 ; CHECK-GI-NEXT:    ushll v6.4s, v1.4h, #0
-; CHECK-GI-NEXT:    mov d18, v3.d[1]
-; CHECK-GI-NEXT:    mov d19, v1.d[1]
+; CHECK-GI-NEXT:    ext v18.16b, v3.16b, v3.16b, #8
+; CHECK-GI-NEXT:    ext v19.16b, v1.16b, v1.16b, #8
 ; CHECK-GI-NEXT:    fmov w8, s2
 ; CHECK-GI-NEXT:    fmov w9, s5
 ; CHECK-GI-NEXT:    mov w12, v2.s[3]
@@ -2390,7 +2390,7 @@ define <8 x i16> @urem8x16(<8 x i16> %A, <8 x i16> %B) {
 ; CHECK-GI-NEXT:    ushll v2.4s, v0.4h, #0
 ; CHECK-GI-NEXT:    ushll v3.4s, v1.4h, #0
 ; CHECK-GI-NEXT:    ushll2 v0.4s, v0.8h, #0
-; CHECK-GI-NEXT:    mov d5, v1.d[1]
+; CHECK-GI-NEXT:    ext v5.16b, v1.16b, v1.16b, #8
 ; CHECK-GI-NEXT:    fmov w8, s2
 ; CHECK-GI-NEXT:    fmov w9, s3
 ; CHECK-GI-NEXT:    mov w10, v2.s[1]

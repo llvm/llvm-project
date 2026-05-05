@@ -771,6 +771,34 @@ TEST(ConstantsTest, GetSplatValueRoundTrip) {
   }
 }
 
+TEST(ConstantsTest, ConstantPointerNullVectorSplat) {
+  LLVMContext Context;
+
+  PointerType *PtrTy = PointerType::getUnqual(Context);
+  Constant *ScalarNull = ConstantPointerNull::get(PtrTy);
+
+  for (unsigned Min : {1, 2, 8}) {
+    ElementCount ScalableEC = ElementCount::getScalable(Min);
+    ElementCount FixedEC = ElementCount::getFixed(Min);
+
+    for (ElementCount EC : {ScalableEC, FixedEC}) {
+      VectorType *VecTy = VectorType::get(PtrTy, EC);
+      Constant *Null = Constant::getNullValue(VecTy);
+
+      ASSERT_TRUE(isa<ConstantPointerNull>(Null));
+      EXPECT_EQ(VecTy, Null->getType());
+      EXPECT_TRUE(Null->isNullValue());
+      EXPECT_EQ(ScalarNull, Null->getSplatValue());
+      EXPECT_EQ(ScalarNull, Null->getAggregateElement(0U));
+      EXPECT_EQ(PtrTy, cast<ConstantPointerNull>(Null)->getPointerType());
+
+      Constant *Splat = ConstantVector::getSplat(EC, ScalarNull);
+      EXPECT_EQ(Null, Splat);
+      EXPECT_EQ(ScalarNull, Splat->getSplatValue());
+    }
+  }
+}
+
 TEST(ConstantsTest, ComdatUserTracking) {
   LLVMContext Context;
   Module M("MyModule", Context);

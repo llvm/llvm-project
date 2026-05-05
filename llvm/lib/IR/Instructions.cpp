@@ -1436,7 +1436,7 @@ AtomicCmpXchgInst::AtomicCmpXchgInst(Value *Ptr, Value *Cmp, Value *NewVal,
 
 void AtomicRMWInst::Init(BinOp Operation, Value *Ptr, Value *Val,
                          Align Alignment, AtomicOrdering Ordering,
-                         SyncScope::ID SSID) {
+                         SyncScope::ID SSID, bool Elementwise) {
   assert(Ordering != AtomicOrdering::NotAtomic &&
          "atomicrmw instructions can only be atomic.");
   assert(Ordering != AtomicOrdering::Unordered &&
@@ -1446,6 +1446,7 @@ void AtomicRMWInst::Init(BinOp Operation, Value *Ptr, Value *Val,
   setOperation(Operation);
   setOrdering(Ordering);
   setSyncScopeID(SSID);
+  setElementwise(Elementwise);
   setAlignment(Alignment);
 
   assert(getOperand(0) && getOperand(1) && "All operands must be non-null!");
@@ -1457,9 +1458,10 @@ void AtomicRMWInst::Init(BinOp Operation, Value *Ptr, Value *Val,
 
 AtomicRMWInst::AtomicRMWInst(BinOp Operation, Value *Ptr, Value *Val,
                              Align Alignment, AtomicOrdering Ordering,
-                             SyncScope::ID SSID, InsertPosition InsertBefore)
+                             SyncScope::ID SSID, bool Elementwise,
+                             InsertPosition InsertBefore)
     : Instruction(Val->getType(), AtomicRMW, AllocMarker, InsertBefore) {
-  Init(Operation, Ptr, Val, Alignment, Ordering, SSID);
+  Init(Operation, Ptr, Val, Alignment, Ordering, SSID, Elementwise);
 }
 
 StringRef AtomicRMWInst::getOperationName(BinOp Op) {
@@ -4397,9 +4399,9 @@ AtomicCmpXchgInst *AtomicCmpXchgInst::cloneImpl() const {
 }
 
 AtomicRMWInst *AtomicRMWInst::cloneImpl() const {
-  AtomicRMWInst *Result =
-      new AtomicRMWInst(getOperation(), getOperand(0), getOperand(1),
-                        getAlign(), getOrdering(), getSyncScopeID());
+  AtomicRMWInst *Result = new AtomicRMWInst(
+      getOperation(), getOperand(0), getOperand(1), getAlign(), getOrdering(),
+      getSyncScopeID(), isElementwise());
   Result->setVolatile(isVolatile());
   return Result;
 }

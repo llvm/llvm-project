@@ -1374,7 +1374,7 @@ define <4 x ptr> @ptrLoadStoreTysPtr(ptr %init, i64 %val2) {
 ; CHECK-LABEL: @ptrLoadStoreTysPtr(
 ; CHECK-NEXT:    [[VAL0:%.*]] = load ptr, ptr [[INIT:%.*]], align 8
 ; CHECK-NEXT:    [[OBJ:%.*]] = alloca <4 x ptr>, align 16
-; CHECK-NEXT:    store <4 x ptr> zeroinitializer, ptr [[OBJ]], align 16
+; CHECK-NEXT:    store <4 x ptr> splat (ptr null), ptr [[OBJ]], align 16
 ; CHECK-NEXT:    store ptr [[VAL0]], ptr [[OBJ]], align 16
 ; CHECK-NEXT:    [[OBJ_8_PTR2_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[OBJ]], i64 8
 ; CHECK-NEXT:    store i64 [[VAL2:%.*]], ptr [[OBJ_8_PTR2_SROA_IDX]], align 8
@@ -1388,7 +1388,7 @@ define <4 x ptr> @ptrLoadStoreTysPtr(ptr %init, i64 %val2) {
 ; DEBUG-NEXT:      #dbg_value(ptr [[VAL0]], [[META536:![0-9]+]], !DIExpression(), [[DBG541]])
 ; DEBUG-NEXT:    [[OBJ:%.*]] = alloca <4 x ptr>, align 16, !dbg [[DBG542:![0-9]+]]
 ; DEBUG-NEXT:      #dbg_value(ptr [[OBJ]], [[META537:![0-9]+]], !DIExpression(), [[DBG542]])
-; DEBUG-NEXT:    store <4 x ptr> zeroinitializer, ptr [[OBJ]], align 16, !dbg [[DBG543:![0-9]+]]
+; DEBUG-NEXT:    store <4 x ptr> splat (ptr null), ptr [[OBJ]], align 16, !dbg [[DBG543:![0-9]+]]
 ; DEBUG-NEXT:    store ptr [[VAL0]], ptr [[OBJ]], align 16, !dbg [[DBG544:![0-9]+]]
 ; DEBUG-NEXT:      #dbg_value(ptr undef, [[META538:![0-9]+]], !DIExpression(), [[META545:![0-9]+]])
 ; DEBUG-NEXT:    [[OBJ_8_PTR2_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[OBJ]], i64 8, !dbg [[DBG546:![0-9]+]]

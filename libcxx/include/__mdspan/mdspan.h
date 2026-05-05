@@ -191,11 +191,11 @@ public:
              (is_nothrow_constructible_v<index_type, _OtherIndexTypes> && ...) &&
              (sizeof...(_OtherIndexTypes) == rank()))
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr reference operator[](_OtherIndexTypes... __indices) const {
-    // Note the standard layouts would also check this, but user provided ones may not, so we
-    // check the precondition here
-    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__mdspan_detail::__is_multidimensional_index_in(extents(), __indices...),
-                                        "mdspan: operator[] out of bounds access");
-    return __acc_.access(__ptr_, __map_(static_cast<index_type>(std::move(__indices))...));
+    return [&]<class... _IndexTypes>(_IndexTypes... __idxs) -> reference {
+      _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__mdspan_detail::__is_multidimensional_index_in(extents(), __idxs...),
+                                          "mdspan: operator[] out of bounds access");
+      return __acc_.access(__ptr_, __map_(static_cast<index_type>(std::move(__idxs))...));
+    }(extents_type::__index_cast(std::move(__indices))...);
   }
 
   template <class _OtherIndexType>

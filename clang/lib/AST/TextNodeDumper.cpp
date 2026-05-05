@@ -1429,6 +1429,29 @@ static void dumpBasePath(raw_ostream &OS, const CastExpr *Node) {
   OS << ')';
 }
 
+void TextNodeDumper::dumpFormalLinkage(const NamedDecl *ND) {
+  switch (ND->getFormalLinkage()) {
+  case Linkage::None:
+    // A lot of declarations have no linkage, so we only dump linkage if there
+    // is one.
+    break;
+  case Linkage::Internal:
+    OS << " internal-linkage";
+    break;
+  case Linkage::External:
+    OS << " external-linkage";
+    break;
+  case Linkage::Module:
+    OS << " module-linkage";
+    break;
+  case Linkage::Invalid:
+    llvm_unreachable("Linkage hasn't been computed!");
+  case Linkage::UniqueExternal:
+  case Linkage::VisibleNone:
+    llvm_unreachable("Not a formal linkage!");
+  }
+}
+
 void TextNodeDumper::VisitLoopControlStmt(const LoopControlStmt *Node) {
   if (!Node->hasLabelTarget())
     return;
@@ -2295,6 +2318,11 @@ void TextNodeDumper::VisitTypedefDecl(const TypedefDecl *D) {
   dumpType(D->getUnderlyingType());
   if (D->isModulePrivate())
     OS << " __module_private__";
+
+  const TagDecl *TD = D->getUnderlyingType()->getAsTagDecl();
+  if (TD && TD->getTypedefNameForAnonDecl()) {
+    dumpFormalLinkage(D);
+  }
 }
 
 void TextNodeDumper::VisitEnumDecl(const EnumDecl *D) {
@@ -2314,6 +2342,8 @@ void TextNodeDumper::VisitEnumDecl(const EnumDecl *D) {
     OS << " instantiated_from";
     dumpPointer(Instance);
   }
+
+  dumpFormalLinkage(D);
 }
 
 void TextNodeDumper::VisitRecordDecl(const RecordDecl *D) {
@@ -2323,6 +2353,10 @@ void TextNodeDumper::VisitRecordDecl(const RecordDecl *D) {
     OS << " __module_private__";
   if (D->isCompleteDefinition())
     OS << " definition";
+
+  if (!D->isImplicit() && !D->getDescribedTemplate()) {
+    dumpFormalLinkage(D);
+  }
 }
 
 void TextNodeDumper::VisitEnumConstantDecl(const EnumConstantDecl *D) {
@@ -2419,6 +2453,10 @@ void TextNodeDumper::VisitFunctionDecl(const FunctionDecl *D) {
   if (const auto *Instance = D->getTemplateInstantiationPattern()) {
     OS << " instantiated_from";
     dumpPointer(Instance);
+  }
+
+  if (!isa<CXXDeductionGuideDecl>(D) && !D->getDescribedTemplate()) {
+    dumpFormalLinkage(D);
   }
 }
 
@@ -2519,6 +2557,10 @@ void TextNodeDumper::VisitVarDecl(const VarDecl *D) {
       if (Value)
         AddChild("value", [=] { Visit(*Value, E->getType()); });
     }
+  }
+
+  if (!D->getDescribedVarTemplate()) {
+    dumpFormalLinkage(D);
   }
 }
 
@@ -2633,6 +2675,8 @@ void TextNodeDumper::VisitNamespaceDecl(const NamespaceDecl *D) {
     OS << " nested";
   if (!D->isFirstDecl())
     dumpDeclRef(D->getFirstDecl(), "original");
+
+  dumpFormalLinkage(D);
 }
 
 void TextNodeDumper::VisitUsingDirectiveDecl(const UsingDirectiveDecl *D) {
@@ -2648,11 +2692,17 @@ void TextNodeDumper::VisitNamespaceAliasDecl(const NamespaceAliasDecl *D) {
 void TextNodeDumper::VisitTypeAliasDecl(const TypeAliasDecl *D) {
   dumpName(D);
   dumpType(D->getUnderlyingType());
+
+  const TagDecl *TD = D->getUnderlyingType()->getAsTagDecl();
+  if (TD && TD->getTypedefNameForAnonDecl()) {
+    dumpFormalLinkage(D);
+  }
 }
 
 void TextNodeDumper::VisitTypeAliasTemplateDecl(
     const TypeAliasTemplateDecl *D) {
   dumpName(D);
+  dumpFormalLinkage(D);
 }
 
 void TextNodeDumper::VisitCXXRecordDecl(const CXXRecordDecl *D) {
@@ -2813,14 +2863,17 @@ void TextNodeDumper::VisitCXXRecordDecl(const CXXRecordDecl *D) {
 
 void TextNodeDumper::VisitFunctionTemplateDecl(const FunctionTemplateDecl *D) {
   dumpName(D);
+  dumpFormalLinkage(D);
 }
 
 void TextNodeDumper::VisitClassTemplateDecl(const ClassTemplateDecl *D) {
   dumpName(D);
+  dumpFormalLinkage(D);
 }
 
 void TextNodeDumper::VisitVarTemplateDecl(const VarTemplateDecl *D) {
   dumpName(D);
+  dumpFormalLinkage(D);
 }
 
 void TextNodeDumper::VisitBuiltinTemplateDecl(const BuiltinTemplateDecl *D) {
@@ -3118,6 +3171,7 @@ void TextNodeDumper::VisitBlockDecl(const BlockDecl *D) {
 
 void TextNodeDumper::VisitConceptDecl(const ConceptDecl *D) {
   dumpName(D);
+  dumpFormalLinkage(D);
 }
 
 void TextNodeDumper::VisitCompoundStmt(const CompoundStmt *S) {

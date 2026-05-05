@@ -325,7 +325,7 @@ namespace TTP {
 // CHECK-NEXT:    |-TemplateArgument type 'int'
 // CHECK-NEXT:    | `-BuiltinType {{.+}} 'int'{{$}}
 // CHECK-NEXT:    |-TemplateArgument template 'TTP::A'{{$}}
-// CHECK-NEXT:    | `-ClassTemplateDecl {{.+}} A{{$}}
+// CHECK-NEXT:    | `-ClassTemplateDecl {{.+}} A external-linkage{{$}}
 // CHECK-NEXT:    `-ParmVarDecl {{.+}} 'TTP::A<int>'{{$}}
 // CHECK-NEXT:  FunctionProtoType {{.+}} 'auto (TT<T>) -> TTP::B<T>' dependent trailing_return cdecl{{$}}
 // CHECK-NEXT:  |-InjectedClassNameType {{.+}} 'TTP::B<T>' dependent{{$}}

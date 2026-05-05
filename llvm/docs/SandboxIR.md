@@ -105,5 +105,10 @@ Internally this will go through the changes and run any finalization required.
 Please note that after a call to `revert()` or `accept()` tracking will stop.
 To start tracking again, the user needs to call `save()`.
 
+
+Sandbox IR supports nested checkpoints, meaning that you can save more than once and revert more than once.
+Conceptually each `save()` adds a new checkpoint to a stack and each `revert()` rolls back the IR state to that of the checkpoint at the top of the stack and pops the checkpoint off the stack.
+A call to `accept()` will clear the stack.
+
 ## Users of Sandbox IR
 - [The Sandbox Vectorizer](project:SandboxVectorizer.md)

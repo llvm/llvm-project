@@ -1588,15 +1588,12 @@ define <8 x i8> @dontcrashonnvcasts() {
 ;
 ; CHECK-GI-LABEL: dontcrashonnvcasts:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d0, #0000000000000000
-; CHECK-GI-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-GI-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-GI-NEXT:    adrp x8, .LCPI91_0
-; CHECK-GI-NEXT:    ldr d2, [x8, :lo12:.LCPI91_0]
-; CHECK-GI-NEXT:    mov v0.b[2], wzr
-; CHECK-GI-NEXT:    urhadd v1.8b, v2.8b, v1.8b
-; CHECK-GI-NEXT:    mov v0.b[4], wzr
-; CHECK-GI-NEXT:    mov v0.b[6], wzr
-; CHECK-GI-NEXT:    uzp1 v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI91_0]
+; CHECK-GI-NEXT:    urhadd v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v2.8b
 ; CHECK-GI-NEXT:    ret
   %vrhadd_v.i = tail call <8 x i8> @llvm.aarch64.neon.urhadd.v8i8(<8 x i8> <i8 0, i8 0, i8 0, i8 -1, i8 0, i8 0, i8 0, i8 0>, <8 x i8> zeroinitializer)
   %shuffle.i = shufflevector <8 x i8> %vrhadd_v.i, <8 x i8> <i8 0, i8 poison, i8 0, i8 poison, i8 0, i8 poison, i8 0, i8 poison>, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>

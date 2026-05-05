@@ -864,3 +864,29 @@ body:             |
     SI_RETURN_TO_EPILOG $sgpr0_lo16
 
 ...
+---
+# Test that foldImmediate correctly handles kill flags when eliminating
+# redundant instructions. Without the fix, kill flags are not cleared when
+# replacing the COPY's destination with the original immediate-defining register.
+name: fold_imm_copy_kill_bug
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; GCN-LABEL: name: fold_imm_copy_kill_bug
+    ; GCN: %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; GCN-NEXT: %1:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
+    ; GCN-NEXT: %3:vreg_64 = REG_SEQUENCE %1, %subreg.sub0, %0, %subreg.sub1
+    ; GCN-NEXT: %4:vreg_64 = REG_SEQUENCE %1, %subreg.sub0, %0, %subreg.sub1
+    ; GCN-NEXT: S_ENDPGM 0
+
+    %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %1:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
+
+    %2:vgpr_32 = COPY %0:vgpr_32
+
+    %3:vreg_64 = REG_SEQUENCE %1:vgpr_32, %subreg.sub0, killed %2:vgpr_32, %subreg.sub1
+    %4:vreg_64 = REG_SEQUENCE %1:vgpr_32, %subreg.sub0, %0:vgpr_32, %subreg.sub1
+
+    S_ENDPGM 0
+
+...

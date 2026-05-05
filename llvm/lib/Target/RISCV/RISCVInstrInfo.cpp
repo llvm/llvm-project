@@ -957,7 +957,8 @@ static unsigned getLoadPredicatedOpcode(unsigned Opcode) {
 
 MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
     MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
-    MachineInstr &LoadMI, MachineInstr *&CopyMI, LiveIntervals *LIS) const {
+    MachineInstr &LoadMI, MachineInstr *&CopyMI, LiveIntervals *LIS,
+    VirtRegMap *VRM) const {
   MachineBasicBlock::iterator InsertPt = MI;
   // For now, only handle RISCV::PseudoCCMOVGPR.
   if (MI.getOpcode() != RISCV::PseudoCCMOVGPR)

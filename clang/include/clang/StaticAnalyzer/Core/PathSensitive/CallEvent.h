@@ -53,7 +53,7 @@ namespace clang {
 class LocationContext;
 class ProgramPoint;
 class ProgramPointTag;
-class StackFrameContext;
+class StackFrame;
 
 namespace ento {
 
@@ -382,7 +382,7 @@ public:
 
   /// Populates the given SmallVector with the bindings in the callee's stack
   /// frame at the start of this call.
-  virtual void getInitialStackFrameContents(const StackFrameContext *CalleeCtx,
+  virtual void getInitialStackFrameContents(const StackFrame *CalleeSF,
                                             BindingsTy &Bindings) const = 0;
 
   /// Returns a copy of this CallEvent, but using the given state.
@@ -416,7 +416,7 @@ public:
   /// during analysis if the call is inlined, but it may still be useful
   /// in intermediate calculations even if the call isn't inlined.
   /// May fail; returns null on failure.
-  const StackFrameContext *getCalleeStackFrame(unsigned BlockCount) const;
+  const StackFrame *getCalleeStackFrame(unsigned BlockCount) const;
 
   /// Returns memory location for a parameter variable within the callee stack
   /// frame. The behavior is undefined if the block count is different from the
@@ -530,7 +530,7 @@ public:
 
   bool argumentsMayEscape() const override;
 
-  void getInitialStackFrameContents(const StackFrameContext *CalleeCtx,
+  void getInitialStackFrameContents(const StackFrame *CalleeSF,
                                     BindingsTy &Bindings) const override;
 
   ArrayRef<ParmVarDecl *> parameters() const override;
@@ -674,7 +674,7 @@ public:
 
   bool argumentsMayEscape() const override { return true; }
 
-  void getInitialStackFrameContents(const StackFrameContext *CalleeCtx,
+  void getInitialStackFrameContents(const StackFrame *CalleeSF,
                                     BindingsTy &Bindings) const override;
 
   ArrayRef<ParmVarDecl *> parameters() const override;
@@ -719,7 +719,7 @@ public:
 
   RuntimeDefinition getRuntimeDefinition() const override;
 
-  void getInitialStackFrameContents(const StackFrameContext *CalleeCtx,
+  void getInitialStackFrameContents(const StackFrame *CalleeSF,
                                     BindingsTy &Bindings) const override;
 
   static bool classof(const CallEvent *CA) {
@@ -978,7 +978,7 @@ protected:
       ValueList &Values,
       RegionAndSymbolInvalidationTraits *ETraits) const override;
 
-  void getInitialStackFrameContents(const StackFrameContext *CalleeCtx,
+  void getInitialStackFrameContents(const StackFrame *CalleeSF,
                                     BindingsTy &Bindings) const override;
 
 public:
@@ -1091,7 +1091,7 @@ public:
 
   /// Obtain the stack frame of the inheriting constructor. Argument expressions
   /// can be found on the call site of that stack frame.
-  const StackFrameContext *getInheritingStackFrame() const;
+  const StackFrame *getInheritingStackFrame() const;
 
   /// Obtain the CXXConstructExpr for the sub-class that inherited the current
   /// constructor (possibly indirectly). It's the statement that contains
@@ -1351,7 +1351,7 @@ public:
 
   bool argumentsMayEscape() const override;
 
-  void getInitialStackFrameContents(const StackFrameContext *CalleeCtx,
+  void getInitialStackFrameContents(const StackFrame *CalleeSF,
                                     BindingsTy &Bindings) const override;
 
   ArrayRef<ParmVarDecl *> parameters() const override;
@@ -1428,8 +1428,7 @@ public:
   CallEventManager(llvm::BumpPtrAllocator &alloc);
 
   /// Gets an outside caller given a callee context.
-  CallEventRef<> getCaller(const StackFrameContext *CalleeCtx,
-                           ProgramStateRef State);
+  CallEventRef<> getCaller(const StackFrame *CalleeSF, ProgramStateRef State);
 
   /// Gets a call event for a function call, Objective-C method call,
   /// a 'new', or a 'delete' call.

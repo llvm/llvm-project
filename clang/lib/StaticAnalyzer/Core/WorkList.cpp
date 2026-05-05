@@ -137,7 +137,7 @@ class UnexploredFirstStack : public WorkList {
   SmallVector<WorkListUnit, 20> StackOthers;
 
   using BlockID = unsigned;
-  using LocIdentifier = std::pair<BlockID, const StackFrameContext *>;
+  using LocIdentifier = std::pair<BlockID, const StackFrame *>;
 
   llvm::DenseSet<LocIdentifier> Reachable;
 
@@ -192,7 +192,7 @@ std::unique_ptr<WorkList> WorkList::makeUnexploredFirst() {
 namespace {
 class UnexploredFirstPriorityQueue : public WorkList {
   using BlockID = unsigned;
-  using LocIdentifier = std::pair<BlockID, const StackFrameContext *>;
+  using LocIdentifier = std::pair<BlockID, const StackFrame *>;
 
   // How many times each location was visited.
   // Is signed because we negate it later in order to have a reversed

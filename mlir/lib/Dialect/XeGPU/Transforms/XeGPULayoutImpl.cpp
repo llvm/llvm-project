@@ -458,6 +458,77 @@ xegpu::inferBitCastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
   return finalSrcLayout;
 }
 
+/// Infers the source layout attribute for an interleave operation given the
+/// result layout attribute. Interleave doubles the size of the innermost
+/// dimension, so the layout inference is similar to bitcast where the source
+/// element type is larger than the result element type (ratio = 2).
+xegpu::DistributeLayoutAttr
+xegpu::inferInterleaveSourceLayout(xegpu::DistributeLayoutAttr resLayout) {
+
+  SmallVector<int64_t> sgData = resLayout.getEffectiveSgDataAsInt();
+  SmallVector<int64_t> instData = resLayout.getEffectiveInstDataAsInt();
+  SmallVector<int64_t> laneData = resLayout.getEffectiveLaneDataAsInt();
+  size_t sgDataSize = sgData.size();
+  size_t instDataSize = instData.size();
+  size_t laneDataSize = laneData.size();
+  int64_t sgDataValue = -1;
+  int64_t instDataValue = -1;
+  int64_t laneDataValue = -1;
+  int64_t dim = resLayout.getRank() - 1;
+
+  // Interleave doubles the innermost dimension, so we need to halve the
+  // layout values (similar to bitcast with ratio = 2)
+  constexpr int ratio = 2;
+  if (sgDataSize) {
+    assert((sgData.back() % ratio) == 0 &&
+           "sgData not divisible by interleave ratio");
+    sgDataValue = sgData.back() / ratio;
+  }
+  if (instDataSize) {
+    assert((instData.back() % ratio) == 0 &&
+           "instData not divisible by interleave ratio");
+    instDataValue = instData.back() / ratio;
+  }
+  if (laneDataSize) {
+    assert((laneData.back() % ratio) == 0 &&
+           "laneData not divisible by interleave ratio");
+    laneDataValue = laneData.back() / ratio;
+  }
+
+  return resLayout.setDimData(dim, sgDataValue, instDataValue, laneDataValue);
+}
+
+/// Infers the source layout attribute for a deinterleave operation given the
+/// result layout attribute. Deinterleave halves the size of the innermost
+/// dimension, so the layout inference is similar to bitcast where the source
+/// element type is smaller than the result element type (ratio = 2).
+xegpu::DistributeLayoutAttr
+xegpu::inferDeinterleaveSourceLayout(xegpu::DistributeLayoutAttr resLayout) {
+
+  SmallVector<int64_t> sgData = resLayout.getEffectiveSgDataAsInt();
+  SmallVector<int64_t> instData = resLayout.getEffectiveInstDataAsInt();
+  SmallVector<int64_t> laneData = resLayout.getEffectiveLaneDataAsInt();
+  size_t sgDataSize = sgData.size();
+  size_t instDataSize = instData.size();
+  size_t laneDataSize = laneData.size();
+  int64_t sgDataValue = -1;
+  int64_t instDataValue = -1;
+  int64_t laneDataValue = -1;
+  int64_t dim = resLayout.getRank() - 1;
+
+  // Deinterleave halves the innermost dimension, so we need to double the
+  // layout values (similar to bitcast with ratio = 2)
+  constexpr int ratio = 2;
+  if (sgDataSize)
+    sgDataValue = sgData.back() * ratio;
+  if (instDataSize)
+    instDataValue = instData.back() * ratio;
+  if (laneDataSize)
+    laneDataValue = laneData.back() * ratio;
+
+  return resLayout.setDimData(dim, sgDataValue, instDataValue, laneDataValue);
+}
+
 /// Infers the source layout attribute for an insert strided slice operation
 /// given the result layout attribute, result shape, and source shape. Removes
 /// leading dimensions from the result layout to match the source shape size.
@@ -875,6 +946,69 @@ xegpu::DistributeLayoutAttr xegpu::setupBitCastResultLayout(
     return resLayout;
   }
   return consumerLayout;
+}
+
+/// Sets up the result layout for an interleave operation to ensure the source
+/// layout can be safely derived. Interleave doubles the innermost dimension,
+/// so the result layout must ensure that laneData is a multiple
+/// of 2, and instData must be divisible by innermostDimLaneLayout * 2.
+///
+/// Example:
+///   Interleave: vector<128x256xf4> -> vector<128x512xf4>
+///   Consumer layout: laneLayout=[1, 16], laneData=[1, 4], instData=[1, 64]
+///   Result layout adjustment to ensure source can be safely inferred:
+///     - laneData must be >= 2 and multiple of 2 (so source = laneData/2 is
+///     valid)
+///     - instData must be divisible by (16 * 2 = 32) (so source = instData/2 is
+///     valid)
+///     - Adjusted instData: ensure (instData % 32 == 0)
+///
+xegpu::DistributeLayoutAttr xegpu::setupInterleaveResultLayout(
+    xegpu::LayoutKind layoutKind, VectorType srcVecTy, VectorType resVecTy,
+    DistributeLayoutAttr consumerLayout, const xegpu::uArch::uArch *uArch) {
+
+  ArrayRef<int64_t> srcShape = srcVecTy.getShape();
+  SmallVector<int64_t> sgData = consumerLayout.getEffectiveSgDataAsInt();
+  SmallVector<int64_t> instData = consumerLayout.getEffectiveInstDataAsInt();
+  SmallVector<int64_t> laneData = consumerLayout.getEffectiveLaneDataAsInt();
+
+  assert(consumerLayout.getRank() == static_cast<int64_t>(srcShape.size()) &&
+         "consumer layout rank must match source shape rank");
+  const size_t innerMostDim = srcShape.size() - 1;
+  int64_t sgDataValue = -1;
+  int64_t instDataValue = -1;
+  int64_t laneDataValue = -1;
+
+  // Interleave doubles the innermost dimension (ratio = 2)
+  constexpr int ratio = 2;
+  int innermostDimLaneLayout = uArch->getSubgroupSize();
+
+  if (layoutKind == xegpu::LayoutKind::Subgroup) {
+    sgDataValue = sgData[innerMostDim];
+    // Ensure sgDataValue is divisible by ratio so source sgData can be inferred
+    while ((sgDataValue <= srcShape[innerMostDim]) &&
+           (sgDataValue % ratio != 0))
+      sgDataValue *= ratio;
+  } else if (layoutKind == xegpu::LayoutKind::InstData) {
+    instDataValue = instData[innerMostDim];
+    // Adjust instDataValue so it can be divided by (innermostDimLaneLayout *
+    // ratio) when inferring the source layout
+    while ((instDataValue <= srcShape[innerMostDim]) &&
+           (instDataValue % (innermostDimLaneLayout * ratio) != 0))
+      instDataValue *= ratio;
+    assert((srcShape[innerMostDim] % instDataValue) == 0 &&
+           "srcShape, instData, and laneLayout for innermost must be 2^n!");
+  } else if (layoutKind == xegpu::LayoutKind::Lane) {
+    laneDataValue = laneData[innerMostDim];
+    // Ensure laneDataValue is at least 2 and divisible by ratio
+    // so that source laneData = laneDataValue/2 is valid
+    while ((laneDataValue <= srcShape[innerMostDim]) &&
+           (laneDataValue % ratio != 0))
+      laneDataValue *= ratio;
+  }
+
+  return consumerLayout.setDimData(innerMostDim, sgDataValue, instDataValue,
+                                   laneDataValue);
 }
 
 /// Sets up the result layout for an insert strided slice operation.
@@ -1603,6 +1737,27 @@ xegpu::inferSourceLayoutFromResult(OpOperand &operand,
   if (auto transpose = dyn_cast<vector::TransposeOp>(op)) {
     return xegpu::inferTransposeSourceLayout(resLayout,
                                              transpose.getPermutation());
+  }
+
+  // For vector::BitCastOp, infer source layout from result layout using
+  // element type bitwidths.
+  if (auto bitcast = dyn_cast<vector::BitCastOp>(op)) {
+    int resElemBitWidth =
+        bitcast.getResultVectorType().getElementType().getIntOrFloatBitWidth();
+    int srcElemBitWidth =
+        bitcast.getSourceVectorType().getElementType().getIntOrFloatBitWidth();
+    return xegpu::inferBitCastSourceLayout(resLayout, resElemBitWidth,
+                                           srcElemBitWidth);
+  }
+
+  // for vector::interleave
+  if (auto interleave = dyn_cast<vector::InterleaveOp>(op)) {
+    return xegpu::inferInterleaveSourceLayout(resLayout);
+  }
+
+  // for vector::deinterleave
+  if (auto deinterleave = dyn_cast<vector::DeinterleaveOp>(op)) {
+    return xegpu::inferDeinterleaveSourceLayout(resLayout);
   }
 
   // For vector::ExtractStridedSliceOp, simply return result layout

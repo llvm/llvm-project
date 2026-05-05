@@ -1970,11 +1970,11 @@ define i32 @foo(i32 %arg) {
   EXPECT_DEATH(Checker.expectNoDiff(), "Found IR difference");
 }
 
-TEST_F(TrackerTest, IRSnapshotCheckerSaveMultipleTimes) {
+TEST_F(TrackerTest, NestedCheckpoints) {
   parseIR(C, R"IR(
-define i32 @foo(i32 %arg) {
-  %add0 = add i32 %arg, %arg
-  %add1 = add i32 %add0, %arg
+define i32 @foo(i32 %arg0, i32 %arg1) {
+  %add0 = add i32 %arg0, %arg0
+  %add1 = add i32 %add0, %add0
   ret i32 %add1
 }
 )IR");
@@ -1984,14 +1984,74 @@ define i32 @foo(i32 %arg) {
   auto *F = Ctx.createFunction(&LLVMF);
   auto *BB = &*F->begin();
   auto It = BB->begin();
+  sandboxir::Argument *Arg0 = F->getArg(0);
+  sandboxir::Argument *Arg1 = F->getArg(1);
   sandboxir::Instruction *Add0 = &*It++;
   sandboxir::Instruction *Add1 = &*It++;
   sandboxir::IRSnapshotChecker Checker(Ctx);
   Checker.save();
-  Add1->setOperand(1, Add0);
-  // Now IR differs from the last snapshot. Let's take a new snapshot.
+  Ctx.save();
+  // Check that revert() works even with no changes
+  Ctx.revert();
+
+  // Check multiple save(), revert().
+  Ctx.save();
+  Ctx.save();
+  Ctx.revert();
+  Ctx.revert();
+  Checker.expectNoDiff();
+
+  // Check nested checkpoint: save,save,revert,revert.
+  EXPECT_EQ(Add1->getOperand(0), Add0);
+  Ctx.save();
+  EXPECT_EQ(Ctx.getTracker().nestingDepth(), 1u);
+  Add1->setOperand(0, Arg0);
+  Ctx.save();
+  EXPECT_EQ(Ctx.getTracker().nestingDepth(), 2u);
+  Add1->setOperand(0, Arg1);
+  Ctx.revert();
+  EXPECT_EQ(Ctx.getTracker().nestingDepth(), 1u);
+  EXPECT_EQ(Add1->getOperand(0), Arg0);
+  Ctx.revert();
+  EXPECT_EQ(Ctx.getTracker().nestingDepth(), 0u);
+  EXPECT_EQ(Add1->getOperand(0), Add0);
+
+  Checker.expectNoDiff();
+
+  // Check nested checkpoint: save,revert,save,revert
+  EXPECT_EQ(Add1->getOperand(0), Add0);
+  Ctx.save();
+  EXPECT_EQ(Ctx.getTracker().nestingDepth(), 1u);
+  Add1->setOperand(0, Arg0);
+  Ctx.revert();
+  EXPECT_EQ(Ctx.getTracker().nestingDepth(), 0u);
+  EXPECT_EQ(Add1->getOperand(0), Add0);
+  Checker.expectNoDiff();
+
+  Ctx.save();
+  EXPECT_EQ(Ctx.getTracker().nestingDepth(), 1u);
+  Add1->setOperand(0, Arg1);
+  Ctx.revert();
+  EXPECT_EQ(Ctx.getTracker().nestingDepth(), 0u);
+  EXPECT_EQ(Add1->getOperand(0), Add0);
+  Checker.expectNoDiff();
+
+  // Check nested checkpoint: save,accept,save,revert
+  EXPECT_EQ(Add1->getOperand(0), Add0);
+  Ctx.save();
+  EXPECT_EQ(Ctx.getTracker().nestingDepth(), 1u);
+  Add1->setOperand(0, Arg0);
+  Ctx.accept();
+  EXPECT_EQ(Ctx.getTracker().nestingDepth(), 0u);
+  EXPECT_EQ(Add1->getOperand(0), Arg0);
+
   Checker.save();
-  // The new snapshot should have replaced the old one, so this should succeed.
+  Ctx.save();
+  EXPECT_EQ(Ctx.getTracker().nestingDepth(), 1u);
+  Add1->setOperand(0, Arg1);
+  Ctx.revert();
+  EXPECT_EQ(Ctx.getTracker().nestingDepth(), 0u);
+  EXPECT_EQ(Add1->getOperand(0), Arg0);
   Checker.expectNoDiff();
 }
 

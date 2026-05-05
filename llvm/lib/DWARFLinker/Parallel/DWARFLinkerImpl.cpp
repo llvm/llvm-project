@@ -203,6 +203,20 @@ Error DWARFLinkerImpl::link() {
     Pool.wait();
   }
 
+  // Merge staged parseable Swift interface entries into the shared map. Done
+  // serially so that the final map contents and any conflict warnings are
+  // deterministic.
+  if (DWARFLinkerBase::SwiftInterfacesMapTy *SwiftInterfaces =
+          GlobalData.Options.ParseableSwiftInterfaces) {
+    for (std::unique_ptr<LinkContext> &Context : ObjectContexts) {
+      for (LinkContext::RefModuleUnit &ModuleUnit :
+           Context->ModulesCompileUnits)
+        ModuleUnit.Unit->mergeSwiftInterfaces(*SwiftInterfaces);
+      for (std::unique_ptr<CompileUnit> &CU : Context->CompileUnits)
+        CU->mergeSwiftInterfaces(*SwiftInterfaces);
+    }
+  }
+
   if (ArtificialTypeUnit != nullptr && !ArtificialTypeUnit->getTypePool()
                                             .getRoot()
                                             ->getValue()
@@ -1374,8 +1388,8 @@ void DWARFLinkerImpl::emitDWARFv5DebugNamesSection(const Triple &TargetTriple) {
       case DwarfUnit::AccelType::Namespace:
       case DwarfUnit::AccelType::Type: {
         DebugNames->addName(*DebugStrStrings.getExistingEntry(Info.String),
-                            Info.OutOffset, std::nullopt /*ParentDIEOffset*/,
-                            Info.Tag, CU->getUniqueID(),
+                            Info.OutOffset, Info.ParentOffset, Info.Tag,
+                            CU->getUniqueID(),
                             CU->getTag() == dwarf::DW_TAG_type_unit);
       } break;
 

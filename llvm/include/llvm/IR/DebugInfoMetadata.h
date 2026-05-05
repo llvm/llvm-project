@@ -2156,6 +2156,8 @@ public:
   DebugEmissionKind getEmissionKind() const {
     return (DebugEmissionKind)EmissionKind;
   }
+  // Return true if this CU was compiled with debug info disabled
+  bool isNoDebug() const { return EmissionKind == NoDebug; }
   bool isDebugDirectivesOnly() const {
     return EmissionKind == DebugDirectivesOnly;
   }

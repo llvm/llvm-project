@@ -487,7 +487,7 @@ def CIR_ConstantOp : CIR_Op<"const", [
 // SignBitOp
 //===----------------------------------------------------------------------===//
 
-def SignBitOp : CIR_Op<"signbit", [Pure]> {
+def CIR_SignBitOp : CIR_Op<"signbit", [Pure]> {
   let summary = "Checks the sign of a floating-point number";
   let description = [{
     It returns whether the sign bit (i.e. the highest bit) of the input operand
@@ -7699,6 +7699,57 @@ def CIR_InitCatchParamOp : CIR_Op<"init_catch_param"> {
   let assemblyFormat = [{
     $kind $exn_ptr `to` $param_addr `:`
       qualified(type($exn_ptr)) `,` qualified(type($param_addr)) attr-dict
+  }];
+
+  let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
+// EH Operations: ConstructCatchParamOp
+//===----------------------------------------------------------------------===//
+
+def CIR_ConstructCatchParamOp : CIR_Op<"construct_catch_param", [
+    DeclareOpInterfaceMethods<SymbolUserOpInterface>
+  ]> {
+  let summary = "Construct a catch parameter from the in-flight exception";
+  let description = [{
+    `cir.construct_catch_param` abstractly represents the target-specific work
+    that must be performed before `cir.begin_catch` to bind the in-flight
+    exception object to the local alloca used for the catch parameter.
+
+    For example: for non-pointer, non-reference catch parameters whose type has
+    a non-trivial copy constructor, the Itanium C++ ABI requires
+    calling `__cxa_get_exception_ptr` to obtain the adjusted exception pointer
+    and then invoking the catch parameter's copy constructor to create a local
+    copy of the object before `__cxa_begin_catch` is invoked.
+
+    This operation takes a `!cir.eh_token` that represents the in-flight
+    exception and the alloca value that is used for the local copy of the
+    exception object. The `copy_fn` attribute is a flat symbol reference to a
+    `cir.func` thunk that copies the exception object to a local alloca value.
+
+    This operation is replaced with a target-specific representation during
+    the EHABI lowering pass. For some targets, such as the Microsoft ABI,
+    this operation is a no-op and is simply erased during lowering.
+
+    Example:
+
+    ```
+    cir.construct_catch_param non_trivial_copy %eh_token to %param_addr
+      using @__clang_cir_catch_init_T : !cir.ptr<!rec_T>
+    ```
+  }];
+
+  let arguments = (ins
+      CIR_EhTokenType:$eh_token,
+      CIR_PointerType:$param_addr,
+      CIR_InitCatchKind:$kind,
+      FlatSymbolRefAttr:$copy_fn
+  );
+
+  let assemblyFormat = [{
+    $kind $eh_token `to` $param_addr `using` $copy_fn `:`
+      qualified(type($param_addr)) attr-dict
   }];
 
   let hasLLVMLowering = false;

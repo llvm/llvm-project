@@ -969,6 +969,7 @@ bool Instruction::hasSameSpecialState(const Instruction *I2,
                cast<AtomicCmpXchgInst>(I2)->getSyncScopeID();
   if (const AtomicRMWInst *RMWI = dyn_cast<AtomicRMWInst>(I1))
     return RMWI->getOperation() == cast<AtomicRMWInst>(I2)->getOperation() &&
+           RMWI->isElementwise() == cast<AtomicRMWInst>(I2)->isElementwise() &&
            RMWI->isVolatile() == cast<AtomicRMWInst>(I2)->isVolatile() &&
            (RMWI->getAlign() == cast<AtomicRMWInst>(I2)->getAlign() ||
             IgnoreAlignment) &&

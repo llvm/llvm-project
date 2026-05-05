@@ -4245,7 +4245,7 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
     }
 
     if (I == N) {
-      if (!handler.found(*O, ObjType))
+      if (!handler.found(*O, ObjType, Obj.Base))
         return false;
 
       // If we modified a bit-field, truncate it to the right width.
@@ -4342,7 +4342,7 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
         expandVector(*O, NumElements);
       }
       assert(O->isVector() && "unexpected object during vector element access");
-      return handler.found(O->getVectorElt(Index), ObjType);
+      return handler.found(O->getVectorElt(Index), ObjType, Obj.Base);
     } else if (const FieldDecl *Field = getAsField(Sub.Entries[I])) {
       if (Field->isMutable() &&
           !Obj.mayAccessMutableMembers(Info, handler.AccessKind)) {
@@ -4402,7 +4402,7 @@ struct ExtractSubobjectHandler {
 
   typedef bool result_type;
   bool failed() { return false; }
-  bool found(APValue &Subobj, QualType SubobjType) {
+  bool found(APValue &Subobj, QualType SubobjType, APValue::LValueBase Base) {
     Result = Subobj;
     if (AccessKind == AK_ReadObjectRepresentation)
       return true;
@@ -4448,7 +4448,7 @@ struct ModifySubobjectHandler {
   }
 
   bool failed() { return false; }
-  bool found(APValue &Subobj, QualType SubobjType) {
+  bool found(APValue &Subobj, QualType SubobjType, APValue::LValueBase Base) {
     if (!checkConst(SubobjType))
       return false;
     // We've been given ownership of NewVal, so just swap it in.
@@ -4978,7 +4978,7 @@ struct CompoundAssignSubobjectHandler {
   }
 
   bool failed() { return false; }
-  bool found(APValue &Subobj, QualType SubobjType) {
+  bool found(APValue &Subobj, QualType SubobjType, APValue::LValueBase Base) {
     switch (Subobj.getKind()) {
     case APValue::Int:
       return found(Subobj.getInt(), SubobjType);
@@ -4997,6 +4997,7 @@ struct CompoundAssignSubobjectHandler {
       Info.FFDiag(E, diag::note_constexpr_access_uninit)
           << /*read of=*/0 << /*uninitialized object=*/1
           << E->getLHS()->getSourceRange();
+      NoteLValueLocation(Info, Base);
       return false;
     default:
       // FIXME: can this happen?
@@ -5125,7 +5126,7 @@ struct IncDecSubobjectHandler {
   }
 
   bool failed() { return false; }
-  bool found(APValue &Subobj, QualType SubobjType) {
+  bool found(APValue &Subobj, QualType SubobjType, APValue::LValueBase Base) {
     // Stash the old value. Also clear Old, so we don't clobber it later
     // if we're post-incrementing a complex.
     if (Old) {
@@ -6412,7 +6413,9 @@ struct CheckDynamicTypeHandler {
   AccessKinds AccessKind;
   typedef bool result_type;
   bool failed() { return false; }
-  bool found(APValue &Subobj, QualType SubobjType) { return true; }
+  bool found(APValue &Subobj, QualType SubobjType, APValue::LValueBase Base) {
+    return true;
+  }
   bool found(APSInt &Value, QualType SubobjType) { return true; }
   bool found(APFloat &Value, QualType SubobjType) { return true; }
 };
@@ -6762,7 +6765,7 @@ struct StartLifetimeOfUnionMemberHandler {
 
   typedef bool result_type;
   bool failed() { return Failed; }
-  bool found(APValue &Subobj, QualType SubobjType) {
+  bool found(APValue &Subobj, QualType SubobjType, APValue::LValueBase Base) {
     // We are supposed to perform no initialization but begin the lifetime of
     // the object. We interpret that as meaning to do what default
     // initialization of the object would do if all constructors involved were
@@ -7480,7 +7483,7 @@ struct DestroyObjectHandler {
 
   typedef bool result_type;
   bool failed() { return false; }
-  bool found(APValue &Subobj, QualType SubobjType) {
+  bool found(APValue &Subobj, QualType SubobjType, APValue::LValueBase Base) {
     return HandleDestructionImpl(Info, E->getSourceRange(), This, Subobj,
                                  SubobjType);
   }
@@ -10865,7 +10868,8 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
         }
         return true;
       }
-      bool found(APValue &Subobj, QualType SubobjType) {
+      bool found(APValue &Subobj, QualType SubobjType,
+                 APValue::LValueBase Base) {
         if (!checkConst(SubobjType))
           return false;
         // FIXME: Reject the cases where [basic.life]p8 would not permit the
@@ -22524,6 +22528,11 @@ struct IsWithinLifetimeHandler {
   static constexpr AccessKinds AccessKind = AccessKinds::AK_IsWithinLifetime;
   using result_type = std::optional<bool>;
   std::optional<bool> failed() { return std::nullopt; }
+  template <typename T>
+  std::optional<bool> found(T &Subobj, QualType SubobjType,
+                            APValue::LValueBase) {
+    return true;
+  }
   template <typename T>
   std::optional<bool> found(T &Subobj, QualType SubobjType) {
     return true;

@@ -153,7 +153,7 @@ bool LiveRangeEdit::foldAsLoad(LiveInterval *LI,
 
   MachineInstr *CopyMI = nullptr;
   MachineInstr *FoldMI =
-      TII.foldMemoryOperand(*UseMI, Ops, *DefMI, CopyMI, &LIS);
+      TII.foldMemoryOperand(*UseMI, Ops, *DefMI, CopyMI, &LIS, VRM);
   if (!FoldMI)
     return false;
   LLVM_DEBUG(dbgs() << "                folded: " << *FoldMI);

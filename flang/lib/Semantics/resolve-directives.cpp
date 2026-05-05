@@ -844,8 +844,8 @@ public:
   }
 
   bool Pre(const parser::OmpClause::Nontemporal &x) {
-    const auto &nontemporalNameList{x.v};
-    ResolveOmpNameList(nontemporalNameList, Symbol::Flag::OmpNontemporal);
+    ResolveOmpObjectList(
+        *parser::omp::GetOmpObjectList(x), Symbol::Flag::OmpNontemporal);
     return false;
   }
 

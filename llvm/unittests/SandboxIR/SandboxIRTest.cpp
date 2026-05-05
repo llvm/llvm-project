@@ -6240,6 +6240,7 @@ define void @foo() {
 
 /// Makes sure that all Instruction sub-classes have a classof().
 TEST_F(SandboxIRTest, CheckClassof) {
+#define DEF_ENABLE_AUTO_UNDEF
 #define DEF_INSTR(ID, OPC, CLASS)                                              \
   EXPECT_NE(&sandboxir::CLASS::classof, &sandboxir::Instruction::classof);
 #include "llvm/SandboxIR/Values.def"

@@ -12,6 +12,7 @@
 #include "Value.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/IR/FPEnv.h"
 #include "llvm/IR/Module.h"
 #include <map>
 #include <random>
@@ -53,6 +54,18 @@ enum class MemoryObjectState {
 enum class UndefValueBehavior {
   NonDeterministic, // Each use of the undef value can yield different results.
   Zero,             // All uses of the undef value yield zero.
+};
+
+enum class NaNPropagationBehavior {
+  NonDeterministic, // Non-deterministically choose from valid NaN results
+  PreferredNaN,     // The quiet bit is set and the payload is all-zero
+  QuietingNaN,  // The quiet bit is set and the payload is copied from any input
+                // operand that is a NaN
+  UnchangedNaN, // The quiet bit and payload are copied from any input operand
+                // that is a NaN
+  TargetSpecificNaN // The quiet bit is set and the payload is picked from a
+                    // known target-specific set of "extra" possible NaN
+                    // payloads
 };
 
 struct ProgramExitInfo {
@@ -192,7 +205,9 @@ class Context {
   uint32_t VScale = 4;
   uint32_t MaxSteps = 0;
   uint32_t MaxStackDepth = 256;
+  bool Deterministic = false;
   UndefValueBehavior UndefBehavior = UndefValueBehavior::NonDeterministic;
+  NaNPropagationBehavior NaNBehavior = NaNPropagationBehavior::NonDeterministic;
 
   std::mt19937_64 Rng;
 
@@ -226,7 +241,12 @@ class Context {
       ValidBlockTargets;
   AnyValue getConstantValueImpl(Constant *C);
 
-  // TODO: errno and fpenv
+  // Floating-point environment
+  RoundingMode CurrentRoundingMode = RoundingMode::NearestTiesToEven;
+  fp::ExceptionBehavior CurrentExceptionBehavior =
+      fp::ExceptionBehavior::ebIgnore;
+
+  // TODO: errno
 
 public:
   explicit Context(Module &M);
@@ -244,11 +264,20 @@ public:
   uint32_t getVScale() const { return VScale; }
   uint32_t getMaxSteps() const { return MaxSteps; }
   uint32_t getMaxStackDepth() const { return MaxStackDepth; }
+  void setDeterministic(bool D) { Deterministic = D; }
+  bool isDeterministic() const { return Deterministic; }
+  bool mayUseNonDeterminism() const { return !Deterministic; }
+  UndefValueBehavior getEffectiveUndefValueBehavior() const;
+  NaNPropagationBehavior getEffectiveNaNPropagationBehavior() const;
   void setUndefValueBehavior(UndefValueBehavior UB) { UndefBehavior = UB; }
+  void setNaNPropagationBehavior(NaNPropagationBehavior NaNBehav) {
+    NaNBehavior = NaNBehav;
+  }
   void reseed(uint32_t Seed) { Rng.seed(Seed); }
 
   LLVMContext &getContext() const { return Ctx; }
   const DataLayout &getDataLayout() const { return DL; }
+  const Triple &getTargetTriple() const { return M.getTargetTriple(); }
   const TargetLibraryInfoImpl &getTLIImpl() const { return TLIImpl; }
   /// Get the effective vector length for a vector type.
   uint32_t getEVL(ElementCount EC) const {
@@ -315,6 +344,15 @@ public:
   /// explicit call to `exit()`, `abort()`, or `terminate()`.
   ProgramExitInfo runFunction(Function &F, ArrayRef<AnyValue> Args,
                               AnyValue &RetVal, EventHandler &Handler);
+
+  RoundingMode getCurrentRoundingMode() const;
+  fp::ExceptionBehavior getCurrentExceptionBehavior() const;
+  void setCurrentRoundingMode(RoundingMode RM);
+  void setCurrentExceptionBehavior(fp::ExceptionBehavior EB);
+  bool isDefaultFPEnv() const;
+
+  bool getRandomBool();
+  uint64_t getRandomUInt64();
 };
 
 } // namespace llvm::ubi

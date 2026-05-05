@@ -32,19 +32,19 @@ protected:
 };
 
 TEST_F(MemoryAccessSPSCITest, Registration) {
-  EXPECT_TRUE(CI.count("orc_rt_sps_ci_mem_write_uint8s_sps_wrapper"));
-  EXPECT_TRUE(CI.count("orc_rt_sps_ci_mem_write_uint16s_sps_wrapper"));
-  EXPECT_TRUE(CI.count("orc_rt_sps_ci_mem_write_uint32s_sps_wrapper"));
-  EXPECT_TRUE(CI.count("orc_rt_sps_ci_mem_write_uint64s_sps_wrapper"));
-  EXPECT_TRUE(CI.count("orc_rt_sps_ci_mem_write_pointers_sps_wrapper"));
-  EXPECT_TRUE(CI.count("orc_rt_sps_ci_mem_write_buffers_sps_wrapper"));
-  EXPECT_TRUE(CI.count("orc_rt_sps_ci_mem_read_uint8s_sps_wrapper"));
-  EXPECT_TRUE(CI.count("orc_rt_sps_ci_mem_read_uint16s_sps_wrapper"));
-  EXPECT_TRUE(CI.count("orc_rt_sps_ci_mem_read_uint32s_sps_wrapper"));
-  EXPECT_TRUE(CI.count("orc_rt_sps_ci_mem_read_uint64s_sps_wrapper"));
-  EXPECT_TRUE(CI.count("orc_rt_sps_ci_mem_read_pointers_sps_wrapper"));
-  EXPECT_TRUE(CI.count("orc_rt_sps_ci_mem_read_buffers_sps_wrapper"));
-  EXPECT_TRUE(CI.count("orc_rt_sps_ci_mem_read_strings_sps_wrapper"));
+  EXPECT_TRUE(CI.count("orc_rt_ci_sps_mem_write_uint8s"));
+  EXPECT_TRUE(CI.count("orc_rt_ci_sps_mem_write_uint16s"));
+  EXPECT_TRUE(CI.count("orc_rt_ci_sps_mem_write_uint32s"));
+  EXPECT_TRUE(CI.count("orc_rt_ci_sps_mem_write_uint64s"));
+  EXPECT_TRUE(CI.count("orc_rt_ci_sps_mem_write_pointers"));
+  EXPECT_TRUE(CI.count("orc_rt_ci_sps_mem_write_buffers"));
+  EXPECT_TRUE(CI.count("orc_rt_ci_sps_mem_read_uint8s"));
+  EXPECT_TRUE(CI.count("orc_rt_ci_sps_mem_read_uint16s"));
+  EXPECT_TRUE(CI.count("orc_rt_ci_sps_mem_read_uint32s"));
+  EXPECT_TRUE(CI.count("orc_rt_ci_sps_mem_read_uint64s"));
+  EXPECT_TRUE(CI.count("orc_rt_ci_sps_mem_read_pointers"));
+  EXPECT_TRUE(CI.count("orc_rt_ci_sps_mem_read_buffers"));
+  EXPECT_TRUE(CI.count("orc_rt_ci_sps_mem_read_strings"));
 }
 
 TEST_F(MemoryAccessSPSCITest, WriteUInt8s) {
@@ -53,7 +53,7 @@ TEST_F(MemoryAccessSPSCITest, WriteUInt8s) {
   std::vector<std::pair<ExecutorAddr, uint8_t>> Writes = {
       {ExecutorAddr::fromPtr(&X), 42}, {ExecutorAddr::fromPtr(&Y), 255}};
   SPSWrapperFunction<SPSSig>::call(
-      caller("orc_rt_sps_ci_mem_write_uint8s_sps_wrapper"),
+      caller("orc_rt_ci_sps_mem_write_uint8s"),
       [](Error Err) { cantFail(std::move(Err)); }, std::move(Writes));
   EXPECT_EQ(X, 42U);
   EXPECT_EQ(Y, 255U);
@@ -65,7 +65,7 @@ TEST_F(MemoryAccessSPSCITest, WriteUInt16s) {
   std::vector<std::pair<ExecutorAddr, uint16_t>> Writes = {
       {ExecutorAddr::fromPtr(&X), 1000}, {ExecutorAddr::fromPtr(&Y), 65535}};
   SPSWrapperFunction<SPSSig>::call(
-      caller("orc_rt_sps_ci_mem_write_uint16s_sps_wrapper"),
+      caller("orc_rt_ci_sps_mem_write_uint16s"),
       [](Error Err) { cantFail(std::move(Err)); }, std::move(Writes));
   EXPECT_EQ(X, 1000U);
   EXPECT_EQ(Y, 65535U);
@@ -78,7 +78,7 @@ TEST_F(MemoryAccessSPSCITest, WriteUInt32s) {
       {ExecutorAddr::fromPtr(&X), 100000},
       {ExecutorAddr::fromPtr(&Y), 0xdeadbeef}};
   SPSWrapperFunction<SPSSig>::call(
-      caller("orc_rt_sps_ci_mem_write_uint32s_sps_wrapper"),
+      caller("orc_rt_ci_sps_mem_write_uint32s"),
       [](Error Err) { cantFail(std::move(Err)); }, std::move(Writes));
   EXPECT_EQ(X, 100000U);
   EXPECT_EQ(Y, 0xdeadbeefU);
@@ -91,7 +91,7 @@ TEST_F(MemoryAccessSPSCITest, WriteUInt64s) {
       {ExecutorAddr::fromPtr(&X), 0x0102030405060708ULL},
       {ExecutorAddr::fromPtr(&Y), 0xdeadbeefcafef00dULL}};
   SPSWrapperFunction<SPSSig>::call(
-      caller("orc_rt_sps_ci_mem_write_uint64s_sps_wrapper"),
+      caller("orc_rt_ci_sps_mem_write_uint64s"),
       [](Error Err) { cantFail(std::move(Err)); }, std::move(Writes));
   EXPECT_EQ(X, 0x0102030405060708ULL);
   EXPECT_EQ(Y, 0xdeadbeefcafef00dULL);
@@ -105,7 +105,7 @@ TEST_F(MemoryAccessSPSCITest, WritePointers) {
       {ExecutorAddr::fromPtr(&X), ExecutorAddr::fromPtr(&A)},
       {ExecutorAddr::fromPtr(&Y), ExecutorAddr::fromPtr(&B)}};
   SPSWrapperFunction<SPSSig>::call(
-      caller("orc_rt_sps_ci_mem_write_pointers_sps_wrapper"),
+      caller("orc_rt_ci_sps_mem_write_pointers"),
       [](Error Err) { cantFail(std::move(Err)); }, std::move(Writes));
   EXPECT_EQ(X, static_cast<void *>(&A));
   EXPECT_EQ(Y, static_cast<void *>(&B));
@@ -119,7 +119,7 @@ TEST_F(MemoryAccessSPSCITest, WriteBuffers) {
   std::vector<std::pair<ExecutorAddr, span<char>>> Writes = {
       {ExecutorAddr::fromPtr(Buf), span<char>(Content, sizeof(Content))}};
   SPSWrapperFunction<SPSSig>::call(
-      caller("orc_rt_sps_ci_mem_write_buffers_sps_wrapper"),
+      caller("orc_rt_ci_sps_mem_write_buffers"),
       [](Error Err) { cantFail(std::move(Err)); }, std::move(Writes));
   EXPECT_EQ(Buf[0], 'h');
   EXPECT_EQ(Buf[1], 'e');
@@ -136,7 +136,7 @@ TEST_F(MemoryAccessSPSCITest, ReadUInt8s) {
                                      ExecutorAddr::fromPtr(&Y)};
   std::vector<uint8_t> Result;
   SPSWrapperFunction<SPSSig>::call(
-      caller("orc_rt_sps_ci_mem_read_uint8s_sps_wrapper"),
+      caller("orc_rt_ci_sps_mem_read_uint8s"),
       [&](Expected<std::vector<uint8_t>> R) {
         Result = cantFail(std::move(R));
       },
@@ -153,7 +153,7 @@ TEST_F(MemoryAccessSPSCITest, ReadUInt16s) {
                                      ExecutorAddr::fromPtr(&Y)};
   std::vector<uint16_t> Result;
   SPSWrapperFunction<SPSSig>::call(
-      caller("orc_rt_sps_ci_mem_read_uint16s_sps_wrapper"),
+      caller("orc_rt_ci_sps_mem_read_uint16s"),
       [&](Expected<std::vector<uint16_t>> R) {
         Result = cantFail(std::move(R));
       },
@@ -170,7 +170,7 @@ TEST_F(MemoryAccessSPSCITest, ReadUInt32s) {
                                      ExecutorAddr::fromPtr(&Y)};
   std::vector<uint32_t> Result;
   SPSWrapperFunction<SPSSig>::call(
-      caller("orc_rt_sps_ci_mem_read_uint32s_sps_wrapper"),
+      caller("orc_rt_ci_sps_mem_read_uint32s"),
       [&](Expected<std::vector<uint32_t>> R) {
         Result = cantFail(std::move(R));
       },
@@ -187,7 +187,7 @@ TEST_F(MemoryAccessSPSCITest, ReadUInt64s) {
                                      ExecutorAddr::fromPtr(&Y)};
   std::vector<uint64_t> Result;
   SPSWrapperFunction<SPSSig>::call(
-      caller("orc_rt_sps_ci_mem_read_uint64s_sps_wrapper"),
+      caller("orc_rt_ci_sps_mem_read_uint64s"),
       [&](Expected<std::vector<uint64_t>> R) {
         Result = cantFail(std::move(R));
       },
@@ -205,7 +205,7 @@ TEST_F(MemoryAccessSPSCITest, ReadPointers) {
                                      ExecutorAddr::fromPtr(&Y)};
   std::vector<void *> Result;
   SPSWrapperFunction<SPSSig>::call(
-      caller("orc_rt_sps_ci_mem_read_pointers_sps_wrapper"),
+      caller("orc_rt_ci_sps_mem_read_pointers"),
       [&](Expected<std::vector<void *>> R) { Result = cantFail(std::move(R)); },
       std::move(Addrs));
   ASSERT_EQ(Result.size(), 2U);
@@ -222,7 +222,7 @@ TEST_F(MemoryAccessSPSCITest, ReadBuffers) {
       {ExecutorAddr::fromPtr(Src + 6), 5}}; // "world"
   std::vector<std::vector<char>> Result;
   SPSWrapperFunction<SPSSig>::call(
-      caller("orc_rt_sps_ci_mem_read_buffers_sps_wrapper"),
+      caller("orc_rt_ci_sps_mem_read_buffers"),
       [&](Expected<std::vector<std::vector<char>>> R) {
         Result = cantFail(std::move(R));
       },
@@ -240,7 +240,7 @@ TEST_F(MemoryAccessSPSCITest, ReadStrings) {
                                      ExecutorAddr::fromPtr(Str2)};
   std::vector<std::string> Result;
   SPSWrapperFunction<SPSSig>::call(
-      caller("orc_rt_sps_ci_mem_read_strings_sps_wrapper"),
+      caller("orc_rt_ci_sps_mem_read_strings"),
       [&](Expected<std::vector<std::string>> R) {
         Result = cantFail(std::move(R));
       },

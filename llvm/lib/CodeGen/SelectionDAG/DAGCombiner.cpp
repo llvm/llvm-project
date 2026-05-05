@@ -2538,7 +2538,7 @@ static SDValue foldSelectWithIdentityConstant(SDNode *N, SelectionDAG &DAG,
   // This transform increases uses of N0, so freeze it to be safe.
   // binop N0, (vselect Cond, IDC, FVal) --> vselect Cond, N0, (binop N0, FVal)
   unsigned OpNo = ShouldCommuteOperands ? 0 : 1;
-  if (isNeutralConstant(Opcode, N->getFlags(), TVal, OpNo) &&
+  if (DAG.isIdentityElement(Opcode, N->getFlags(), TVal, OpNo) &&
       TLI.shouldFoldSelectWithIdentityConstant(Opcode, VT, SelOpcode, N0,
                                                FVal)) {
     SDValue F0 = DAG.getFreeze(N0);
@@ -2546,7 +2546,7 @@ static SDValue foldSelectWithIdentityConstant(SDNode *N, SelectionDAG &DAG,
     return DAG.getSelect(SDLoc(N), VT, Cond, F0, NewBO);
   }
   // binop N0, (vselect Cond, TVal, IDC) --> vselect Cond, (binop N0, TVal), N0
-  if (isNeutralConstant(Opcode, N->getFlags(), FVal, OpNo) &&
+  if (DAG.isIdentityElement(Opcode, N->getFlags(), FVal, OpNo) &&
       TLI.shouldFoldSelectWithIdentityConstant(Opcode, VT, SelOpcode, N0,
                                                TVal)) {
     SDValue F0 = DAG.getFreeze(N0);

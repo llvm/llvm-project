@@ -449,8 +449,8 @@ define i1 @any_of_cost(ptr %start, ptr %end) #0 {
 ; CHECK-NEXT:    [[TMP19:%.*]] = load ptr, ptr [[TMP13]], align 8
 ; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP18]], i32 0
 ; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <2 x ptr> [[TMP20]], ptr [[TMP19]], i32 1
-; CHECK-NEXT:    [[TMP24:%.*]] = icmp ne <2 x ptr> [[TMP17]], zeroinitializer
-; CHECK-NEXT:    [[TMP25:%.*]] = icmp ne <2 x ptr> [[TMP21]], zeroinitializer
+; CHECK-NEXT:    [[TMP24:%.*]] = icmp ne <2 x ptr> [[TMP17]], splat (ptr null)
+; CHECK-NEXT:    [[TMP25:%.*]] = icmp ne <2 x ptr> [[TMP21]], splat (ptr null)
 ; CHECK-NEXT:    [[TMP26]] = or <2 x i1> [[VEC_PHI]], [[TMP24]]
 ; CHECK-NEXT:    [[TMP27]] = or <2 x i1> [[VEC_PHI3]], [[TMP25]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4

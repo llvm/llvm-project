@@ -1027,7 +1027,7 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>> Ops,
   MachineInstr *CopyMI = nullptr;
   MachineInstr *FoldMI =
       LoadMI
-          ? TII.foldMemoryOperand(*MI, FoldOps, *LoadMI, CopyMI, &LIS)
+          ? TII.foldMemoryOperand(*MI, FoldOps, *LoadMI, CopyMI, &LIS, &VRM)
           : TII.foldMemoryOperand(*MI, FoldOps, StackSlot, CopyMI, &LIS, &VRM);
   if (!FoldMI) {
     // Re-tie operands.

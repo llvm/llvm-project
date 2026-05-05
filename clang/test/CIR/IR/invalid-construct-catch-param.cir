@@ -1,0 +1,211 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+!u8i = !cir.int<u, 8>
+!s32i = !cir.int<s, 32>
+!void = !cir.void
+!rec_E = !cir.record<struct "E" padded {!u8i}>
+
+module {
+
+cir.global "private" constant external @_ZTI1E : !cir.ptr<!u8i>
+
+cir.func @copy_fn_missing() {
+  cir.scope {
+    %p = cir.alloca !rec_E, !cir.ptr<!rec_E>, ["e"] {alignment = 1 : i64}
+    cir.try {
+      cir.yield
+    } catch [type #cir.global_view<@_ZTI1E> : !cir.ptr<!u8i>]
+        (%eh_token: !cir.eh_token) {
+      // expected-error @below {{'__not_a_func' does not reference a valid cir.func}}
+      cir.construct_catch_param non_trivial_copy %eh_token to %p using @__not_a_func
+        : !cir.ptr<!rec_E>
+      %catch_token, %exn_ptr = cir.begin_catch %eh_token
+        : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+      cir.end_catch %catch_token : !cir.catch_token
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!void = !cir.void
+!rec_E = !cir.record<struct "E" padded {!u8i}>
+
+module {
+
+cir.global "private" constant external @_ZTI1E : !cir.ptr<!u8i>
+
+// copy_fn takes only one argument (should be two).
+cir.func private @bad_copy_fn_arity(!cir.ptr<!rec_E>)
+
+cir.func @copy_fn_wrong_arity() {
+  cir.scope {
+    %p = cir.alloca !rec_E, !cir.ptr<!rec_E>, ["e"] {alignment = 1 : i64}
+    cir.try {
+      cir.yield
+    } catch [type #cir.global_view<@_ZTI1E> : !cir.ptr<!u8i>]
+        (%eh_token: !cir.eh_token) {
+      // expected-error @below {{catch-init copy_fn must take two pointer arguments and return void}}
+      cir.construct_catch_param non_trivial_copy %eh_token to %p using @bad_copy_fn_arity
+        : !cir.ptr<!rec_E>
+      %catch_token, %exn_ptr = cir.begin_catch %eh_token
+        : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+      cir.end_catch %catch_token : !cir.catch_token
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!s32i = !cir.int<s, 32>
+!void = !cir.void
+!rec_E = !cir.record<struct "E" padded {!u8i}>
+
+module {
+
+cir.global "private" constant external @_ZTI1E : !cir.ptr<!u8i>
+
+// copy_fn returns a non-void type.
+cir.func private @bad_copy_fn_ret(
+    !cir.ptr<!rec_E>, !cir.ptr<!rec_E>) -> !s32i
+
+cir.func @copy_fn_non_void_return() {
+  cir.scope {
+    %p = cir.alloca !rec_E, !cir.ptr<!rec_E>, ["e"] {alignment = 1 : i64}
+    cir.try {
+      cir.yield
+    } catch [type #cir.global_view<@_ZTI1E> : !cir.ptr<!u8i>]
+        (%eh_token: !cir.eh_token) {
+      // expected-error @below {{catch-init copy_fn must take two pointer arguments and return void}}
+      cir.construct_catch_param non_trivial_copy %eh_token to %p using @bad_copy_fn_ret
+        : !cir.ptr<!rec_E>
+      %catch_token, %exn_ptr = cir.begin_catch %eh_token
+        : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+      cir.end_catch %catch_token : !cir.catch_token
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!s32i = !cir.int<s, 32>
+!void = !cir.void
+!rec_E = !cir.record<struct "E" padded {!u8i}>
+
+module {
+
+cir.global "private" constant external @_ZTI1E : !cir.ptr<!u8i>
+
+// copy_fn's first parameter does not match the catch parameter pointer
+// type (!cir.ptr<!s32i> vs !cir.ptr<!rec_E>).
+cir.func private @bad_copy_fn_first_arg(
+    !cir.ptr<!s32i>, !cir.ptr<!rec_E>)
+
+cir.func @copy_fn_first_arg_mismatch() {
+  cir.scope {
+    %p = cir.alloca !rec_E, !cir.ptr<!rec_E>, ["e"] {alignment = 1 : i64}
+    cir.try {
+      cir.yield
+    } catch [type #cir.global_view<@_ZTI1E> : !cir.ptr<!u8i>]
+        (%eh_token: !cir.eh_token) {
+      // expected-error @below {{first argument of catch-init copy_fn must match the type of 'param_addr'}}
+      cir.construct_catch_param non_trivial_copy %eh_token to %p using @bad_copy_fn_first_arg
+        : !cir.ptr<!rec_E>
+      %catch_token, %exn_ptr = cir.begin_catch %eh_token
+        : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+      cir.end_catch %catch_token : !cir.catch_token
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!s32i = !cir.int<s, 32>
+!void = !cir.void
+!rec_E = !cir.record<struct "E" padded {!u8i}>
+
+module {
+
+cir.global "private" constant external @_ZTI1E : !cir.ptr<!u8i>
+
+// copy_fn's second parameter does not match the catch parameter pointer
+// type (the source argument must also be !cir.ptr<!rec_E>).
+cir.func private @bad_copy_fn_second_arg(
+    !cir.ptr<!rec_E>, !cir.ptr<!s32i>)
+
+cir.func @copy_fn_second_arg_mismatch() {
+  cir.scope {
+    %p = cir.alloca !rec_E, !cir.ptr<!rec_E>, ["e"] {alignment = 1 : i64}
+    cir.try {
+      cir.yield
+    } catch [type #cir.global_view<@_ZTI1E> : !cir.ptr<!u8i>]
+        (%eh_token: !cir.eh_token) {
+      // expected-error @below {{second argument of catch-init copy_fn must be a pointer to the catch type}}
+      cir.construct_catch_param non_trivial_copy %eh_token to %p using @bad_copy_fn_second_arg
+        : !cir.ptr<!rec_E>
+      %catch_token, %exn_ptr = cir.begin_catch %eh_token
+        : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+      cir.end_catch %catch_token : !cir.catch_token
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!void = !cir.void
+!rec_E = !cir.record<struct "E" padded {!u8i}>
+
+module {
+
+cir.global "private" constant external @_ZTI1E : !cir.ptr<!u8i>
+
+cir.func linkonce_odr hidden @__clang_cir_catch_copy__ZTS1E(
+    %arg0: !cir.ptr<!rec_E>, %arg1: !cir.ptr<!rec_E>) {
+  cir.return
+}
+
+// `cir.construct_catch_param` itself verifies, but `cir.try` rejects the
+// catch handler because the op after `cir.construct_catch_param` is not
+// `cir.begin_catch`.
+cir.func @construct_not_followed_by_begin_catch() {
+  cir.scope {
+    %p = cir.alloca !rec_E, !cir.ptr<!rec_E>, ["e"] {alignment = 1 : i64}
+    // expected-error @below {{catch handler region must start with 'cir.begin_catch'}}
+    cir.try {
+      cir.yield
+    } catch [type #cir.global_view<@_ZTI1E> : !cir.ptr<!u8i>]
+        (%eh_token: !cir.eh_token) {
+      cir.construct_catch_param non_trivial_copy %eh_token to %p using @__clang_cir_catch_copy__ZTS1E
+        : !cir.ptr<!rec_E>
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+}

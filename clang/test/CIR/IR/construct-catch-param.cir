@@ -1,0 +1,61 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!s8i = !cir.int<s, 8>
+!u8i = !cir.int<u, 8>
+!void = !cir.void
+!rec_E = !cir.record<struct "E" padded {!u8i}>
+
+module {
+
+cir.global "private" constant external @_ZTI1E : !cir.ptr<!u8i>
+
+// A CIRGen-style catch-init helper thunk: takes (dest, src) and returns void.
+// `cir.construct_catch_param` references this function via its `copy_fn`
+// attribute; the verifier checks the symbol resolves and matches the
+// (T*, T*) -> void signature.
+cir.func linkonce_odr hidden @__clang_cir_catch_copy__ZTS1E(
+    %arg0: !cir.ptr<!rec_E>, %arg1: !cir.ptr<!rec_E>) {
+  cir.return
+}
+
+// CHECK: cir.func linkonce_odr hidden @__clang_cir_catch_copy__ZTS1E(
+// CHECK:   cir.return
+// CHECK: }
+
+// Positive shape: a `cir.try` whose typed catch handler region begins with
+// `cir.construct_catch_param` (referring to an alloca defined in the
+// enclosing scope) followed by `cir.begin_catch`.
+cir.func @construct_catch_param_basic() {
+  cir.scope {
+    %param = cir.alloca !rec_E, !cir.ptr<!rec_E>, ["e"] {alignment = 1 : i64}
+    cir.try {
+      cir.yield
+    } catch [type #cir.global_view<@_ZTI1E> : !cir.ptr<!u8i>]
+        (%eh_token: !cir.eh_token) {
+      cir.construct_catch_param non_trivial_copy %eh_token to %param
+        using @__clang_cir_catch_copy__ZTS1E : !cir.ptr<!rec_E>
+      %catch_token, %exn_ptr = cir.begin_catch %eh_token
+        : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+      cir.cleanup.scope {
+        cir.yield
+      } cleanup eh {
+        cir.end_catch %catch_token : !cir.catch_token
+        cir.yield
+      }
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @construct_catch_param_basic()
+// CHECK:         %[[E:.*]] = cir.alloca !rec_E, !cir.ptr<!rec_E>, ["e"]
+// CHECK:         cir.try {
+// CHECK:           cir.yield
+// CHECK:         } catch [type #cir.global_view<@_ZTI1E> : !cir.ptr<!u8i>]
+// CHECK-SAME:        (%[[EH:.*]]: !cir.eh_token) {
+// CHECK:           cir.construct_catch_param non_trivial_copy %[[EH]] to %[[E]]
+// CHECK-SAME:        using @__clang_cir_catch_copy__ZTS1E : !cir.ptr<!rec_E>
+// CHECK:           cir.begin_catch %[[EH]]
+
+}

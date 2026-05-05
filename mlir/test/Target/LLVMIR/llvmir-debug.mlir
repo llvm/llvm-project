@@ -830,7 +830,9 @@ llvm.func @fn_cu_import_cycle() {
 #di_arm_i = #llvm.di_derived_type<tag = DW_TAG_member, name = "_int64", baseType = #di_int64, sizeInBits = 64, offsetInBits = 64, extraData = 1 : i8>
 #di_arm_f = #llvm.di_derived_type<tag = DW_TAG_member, name = "_float64", baseType = #di_f64, sizeInBits = 64, offsetInBits = 64, extraData = 2 : i8>
 #di_vp    = #llvm.di_composite_type<tag = DW_TAG_variant_part, name = "variant_part", file = #di_file, sizeInBits = 64, identifier = "variant-id", discriminator = #di_disc, elements = #di_arm_i, #di_arm_f>
-#di_sub   = #llvm.di_subprogram<id = distinct[1]<>, compileUnit = #di_cu, scope = #di_file, name = "variant_part_emission", file = #di_file, subprogramFlags = Definition>
+#void_return = #llvm.di_null_type
+#void_type = #llvm.di_subroutine_type<types = #void_return>
+#di_sub   = #llvm.di_subprogram<id = distinct[1]<>, compileUnit = #di_cu, scope = #di_file, name = "variant_part_emission", file = #di_file, subprogramFlags = Definition, type = #void_type>
 #di_local = #llvm.di_local_variable<scope = #di_sub, name = "x", file = #di_file, type = #di_vp>
 #loc      = loc(fused<#di_sub>["foo.mlir":1:1])
 

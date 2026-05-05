@@ -310,7 +310,7 @@ AnalysisDeclContext *AnalysisDeclContextManager::getContext(const Decl *D) {
 
 BodyFarm &AnalysisDeclContextManager::getBodyFarm() { return FunctionBodyFarm; }
 
-const StackFrameContext *AnalysisDeclContext::getStackFrame(
+const StackFrame *AnalysisDeclContext::getStackFrame(
     const LocationContext *ParentLC, const void *Data, const Expr *E,
     const CFGBlock *Blk, unsigned BlockCount, unsigned Index) {
   return getLocationContextManager().getStackFrame(this, ParentLC, Data, E, Blk,
@@ -407,7 +407,7 @@ void LocationContext::ProfileCommon(llvm::FoldingSetNodeID &ID,
   ID.AddPointer(data);
 }
 
-void StackFrameContext::Profile(llvm::FoldingSetNodeID &ID) {
+void StackFrame::Profile(llvm::FoldingSetNodeID &ID) {
   Profile(ID, getAnalysisDeclContext(), getParent(), Data, CallSite, Block,
           BlockCount, Index);
 }
@@ -416,18 +416,16 @@ void StackFrameContext::Profile(llvm::FoldingSetNodeID &ID) {
 // LocationContext creation.
 //===----------------------------------------------------------------------===//
 
-const StackFrameContext *LocationContextManager::getStackFrame(
+const StackFrame *LocationContextManager::getStackFrame(
     AnalysisDeclContext *Ctx, const LocationContext *Parent, const void *Data,
     const Expr *E, const CFGBlock *Blk, unsigned BlockCount, unsigned StmtIdx) {
   llvm::FoldingSetNodeID ID;
-  StackFrameContext::Profile(ID, Ctx, Parent, Data, E, Blk, BlockCount,
-                             StmtIdx);
+  StackFrame::Profile(ID, Ctx, Parent, Data, E, Blk, BlockCount, StmtIdx);
   void *InsertPos;
   auto *L =
-   cast_or_null<StackFrameContext>(Contexts.FindNodeOrInsertPos(ID, InsertPos));
+      cast_or_null<StackFrame>(Contexts.FindNodeOrInsertPos(ID, InsertPos));
   if (!L) {
-    L = new StackFrameContext(Ctx, Parent, Data, E, Blk, BlockCount, StmtIdx,
-                              ++NewID);
+    L = new StackFrame(Ctx, Parent, Data, E, Blk, BlockCount, StmtIdx, ++NewID);
     Contexts.InsertNode(L, InsertPos);
   }
   return L;
@@ -437,11 +435,11 @@ const StackFrameContext *LocationContextManager::getStackFrame(
 // LocationContext methods.
 //===----------------------------------------------------------------------===//
 
-const StackFrameContext *LocationContext::getStackFrame() const {
+const StackFrame *LocationContext::getStackFrame() const {
   const LocationContext *LC = this;
   while (LC) {
-    if (const auto *SFC = dyn_cast<StackFrameContext>(LC))
-      return SFC;
+    if (const auto *SF = dyn_cast<StackFrame>(LC))
+      return SF;
     LC = LC->getParent();
   }
   return nullptr;
@@ -482,14 +480,14 @@ void LocationContext::dumpStack(raw_ostream &Out) const {
   unsigned Frame = 0;
   for (const LocationContext *LCtx = this; LCtx; LCtx = LCtx->getParent()) {
     switch (LCtx->getKind()) {
-    case StackFrame:
+    case StackFrameKind:
       Out << "\t#" << Frame << ' ';
       ++Frame;
       if (const auto *D = dyn_cast<NamedDecl>(LCtx->getDecl()))
         Out << "Calling " << AnalysisDeclContext::getFunctionName(D);
       else
         Out << "Calling anonymous code";
-      if (const Expr *E = cast<StackFrameContext>(LCtx)->getCallSite()) {
+      if (const Expr *E = cast<StackFrame>(LCtx)->getCallSite()) {
         Out << " at line ";
         printLocation(Out, SM, E->getBeginLoc());
       }
@@ -515,7 +513,7 @@ void LocationContext::printJson(raw_ostream &Out, const char *NL,
     Indent(Out, Space, IsDot)
         << "{ \"lctx_id\": " << LCtx->getID() << ", \"location_context\": \"";
     switch (LCtx->getKind()) {
-    case StackFrame:
+    case StackFrameKind:
       Out << '#' << Frame << " Call\", \"calling\": \"";
       ++Frame;
       if (const auto *D = dyn_cast<NamedDecl>(LCtx->getDecl()))
@@ -524,7 +522,7 @@ void LocationContext::printJson(raw_ostream &Out, const char *NL,
         Out << "anonymous code";
 
       Out << "\", \"location\": ";
-      if (const Expr *E = cast<StackFrameContext>(LCtx)->getCallSite()) {
+      if (const Expr *E = cast<StackFrame>(LCtx)->getCallSite()) {
         printSourceLocationAsJson(Out, E->getBeginLoc(), SM);
       } else {
         Out << "null";

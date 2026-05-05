@@ -303,10 +303,10 @@ private:
 
 /// Find the first node with the parent stack frame.
 static const ExplodedNode *getCalleeNode(const ExplodedNode *Pred) {
-  const StackFrameContext *SC = Pred->getStackFrame();
+  const StackFrame *SC = Pred->getStackFrame();
   if (SC->inTopFrame())
     return nullptr;
-  const StackFrameContext *PC = SC->getParent()->getStackFrame();
+  const StackFrame *PC = SC->getParent()->getStackFrame();
   if (!PC)
     return nullptr;
 

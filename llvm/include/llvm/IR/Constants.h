@@ -696,12 +696,13 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-/// A constant pointer value that points to null
+/// A constant pointer value that points to null. This represents both scalar
+/// pointer nulls and vector splats of pointer nulls.
 ///
 class ConstantPointerNull final : public ConstantData {
   friend class Constant;
 
-  explicit ConstantPointerNull(PointerType *T)
+  explicit ConstantPointerNull(Type *T)
       : ConstantData(T, Value::ConstantPointerNullVal) {}
 
   void destroyConstantImpl();
@@ -709,13 +710,15 @@ class ConstantPointerNull final : public ConstantData {
 public:
   ConstantPointerNull(const ConstantPointerNull &) = delete;
 
-  /// Static factory methods - Return objects of the specified value
+  /// Static factory methods - Return objects of the specified value. If Ty is a
+  /// vector type, return a ConstantPointerNull with a splat of null pointer
+  /// values. Otherwise return a ConstantPointerNull for the given pointer type.
   LLVM_ABI static ConstantPointerNull *get(PointerType *T);
+  LLVM_ABI static ConstantPointerNull *get(Type *T);
 
-  /// Specialize the getType() method to always return an PointerType,
-  /// which reduces the amount of casting needed in parts of the compiler.
-  inline PointerType *getType() const {
-    return cast<PointerType>(Value::getType());
+  /// Return the scalar pointer type for this null value.
+  PointerType *getPointerType() const {
+    return cast<PointerType>(Value::getType()->getScalarType());
   }
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:

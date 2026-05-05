@@ -380,6 +380,9 @@ Changes in existing checks
   - Fixed false positive where a pointer used with placement new was
     incorrectly diagnosed as allowing the pointee to be made ``const``.
 
+  - Fixed false positives when pointers were later passed or bound through
+    ``const``-qualified pointer references.
+
 - Improved :doc:`misc-multiple-inheritance
   <clang-tidy/checks/misc/multiple-inheritance>` by avoiding false positives when
   virtual inheritance causes concrete bases to be counted more than once.
@@ -419,6 +422,10 @@ Changes in existing checks
 
 - Improved :doc:`modernize-redundant-void-arg
   <clang-tidy/checks/modernize/redundant-void-arg>` check to work in C23.
+
+- Improved :doc:`modernize-return-braced-init-list
+  <clang-tidy/checks/modernize/return-braced-init-list>` check to apply fix-it
+  when type qualifiers and/or reference modifiers are used with parameters.
 
 - Improved :doc:`modernize-use-equals-delete
   <clang-tidy/checks/modernize/use-equals-delete>` check by only warning on

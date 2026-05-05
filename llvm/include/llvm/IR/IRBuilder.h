@@ -1977,13 +1977,15 @@ public:
   AtomicRMWInst *CreateAtomicRMW(AtomicRMWInst::BinOp Op, Value *Ptr,
                                  Value *Val, MaybeAlign Align,
                                  AtomicOrdering Ordering,
-                                 SyncScope::ID SSID = SyncScope::System) {
+                                 SyncScope::ID SSID = SyncScope::System,
+                                 bool Elementwise = false) {
     if (!Align) {
       const DataLayout &DL = BB->getDataLayout();
       Align = llvm::Align(DL.getTypeStoreSize(Val->getType()));
     }
 
-    return Insert(new AtomicRMWInst(Op, Ptr, Val, *Align, Ordering, SSID));
+    return Insert(
+        new AtomicRMWInst(Op, Ptr, Val, *Align, Ordering, SSID, Elementwise));
   }
 
   CallInst *CreateStructuredGEP(Type *BaseType, Value *PtrBase,

@@ -945,7 +945,7 @@ void GenericTaintChecker::checkPostCall(const CallEvent &Call,
   // Set the marked values as tainted. The return value only accessible from
   // checkPostStmt.
   ProgramStateRef State = C.getState();
-  const StackFrameContext *CurrentFrame = C.getStackFrame();
+  const StackFrame *CurrentFrame = C.getStackFrame();
 
   // Depending on what was tainted at pre-visit, we determined a set of
   // arguments which should be tainted after the function returns. These are
