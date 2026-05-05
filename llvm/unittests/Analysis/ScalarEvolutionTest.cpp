@@ -1670,7 +1670,7 @@ TEST_F(ScalarEvolutionsTest, SCEVUDivExactPreserveNUW) {
     const SCEVMulExpr *NonConstFactor =
         cast<const SCEVMulExpr>(SE.getUDivExactExpr(LHSMulNUW, B));
     SmallVector<SCEVUse, 2> NonConstFactorResOps = {A, Twelve};
-    EXPECT_FALSE(NonConstFactor->hasNoUnsignedWrap());
+    EXPECT_TRUE(NonConstFactor->hasNoUnsignedWrap());
     EXPECT_EQ(NonConstFactor, SE.getMulExpr(NonConstFactorResOps));
   });
 }
@@ -1739,10 +1739,10 @@ TEST_F(ScalarEvolutionsTest, SCEVUDivExactNUWMulDivisor) {
       auto *A_ABC = SE.getUDivExactExpr(A, ABC);
       auto *Denom = dyn_cast<const SCEVMulExpr>(A_ABC->operands().back());
       EXPECT_TRUE(Denom);
-      EXPECT_FALSE(!Denom || Denom->hasNoUnsignedWrap());
+      EXPECT_TRUE(Denom && Denom->hasNoUnsignedWrap());
       SmallVector<SCEVUse, 2> BCOps = {B, C};
-      const SCEV *BCNoNUW = SE.getMulExpr(BCOps);
-      EXPECT_EQ(A_ABC, SE.getUDivExpr(One, BCNoNUW));
+      const SCEV *BC = SE.getMulExpr(BCOps, SCEV::FlagNUW);
+      EXPECT_EQ(A_ABC, SE.getUDivExpr(One, BC));
     }
 
     // B / (A * B * C)
@@ -1750,10 +1750,10 @@ TEST_F(ScalarEvolutionsTest, SCEVUDivExactNUWMulDivisor) {
       auto *B_ABC = SE.getUDivExactExpr(B, ABC);
       auto *Denom = dyn_cast<const SCEVMulExpr>(B_ABC->operands().back());
       EXPECT_TRUE(Denom);
-      EXPECT_FALSE(!Denom || Denom->hasNoUnsignedWrap());
+      EXPECT_TRUE(Denom && Denom->hasNoUnsignedWrap());
       SmallVector<SCEVUse, 2> ACOps = {A, C};
-      const SCEV *ACNoNUW = SE.getMulExpr(ACOps);
-      EXPECT_EQ(B_ABC, SE.getUDivExpr(One, ACNoNUW));
+      const SCEV *AC = SE.getMulExpr(ACOps, SCEV::FlagNUW);
+      EXPECT_EQ(B_ABC, SE.getUDivExpr(One, AC));
     }
 
     // C / (A * B * C)
@@ -1761,35 +1761,24 @@ TEST_F(ScalarEvolutionsTest, SCEVUDivExactNUWMulDivisor) {
       auto *C_ABC = SE.getUDivExactExpr(C, ABC);
       auto *Denom = dyn_cast<const SCEVMulExpr>(C_ABC->operands().back());
       EXPECT_TRUE(Denom);
-      EXPECT_FALSE(!Denom || Denom->hasNoUnsignedWrap());
+      EXPECT_TRUE(Denom && Denom->hasNoUnsignedWrap());
       SmallVector<SCEVUse, 2> ABOps = {A, B};
-      const SCEV *ABNoNUW = SE.getMulExpr(ABOps);
-      EXPECT_EQ(C_ABC, SE.getUDivExpr(One, ABNoNUW));
+      const SCEV *AB = SE.getMulExpr(ABOps, SCEV::FlagNUW);
+      EXPECT_EQ(C_ABC, SE.getUDivExpr(One, AB));
     }
 
     // (C * E) / (C * D * E)
-    {
-      auto *CE_CDE = SE.getUDivExactExpr(CE, CDE);
-      auto *Denom = dyn_cast<const SCEVMulExpr>(CE_CDE->operands().back());
-      EXPECT_TRUE(Denom);
-      EXPECT_FALSE(!Denom || Denom->hasNoUnsignedWrap());
-      SmallVector<SCEVUse, 2> DEOps = {D, E};
-      const SCEV *DENoNUW = SE.getMulExpr(DEOps);
-      SmallVector<SCEVUse, 2> CDOps = {C, D};
-      const SCEV *CDNoNUW = SE.getMulExpr(CDOps);
-      EXPECT_TRUE(CE_CDE == SE.getUDivExpr(E, DENoNUW) ||
-                  CE_CDE == SE.getUDivExpr(C, CDNoNUW));
-    }
+    EXPECT_TRUE(SE.getUDivExactExpr(CE, CDE) == SE.getUDivExpr(One, D));
 
     // (B * D) / (A * B * E)
     {
       auto *BD_ABE = SE.getUDivExactExpr(BD, ABE);
       auto *Denom = dyn_cast<const SCEVMulExpr>(BD_ABE->operands().back());
       EXPECT_TRUE(Denom);
-      EXPECT_FALSE(!Denom || Denom->hasNoUnsignedWrap());
+      EXPECT_TRUE(Denom && Denom->hasNoUnsignedWrap());
       SmallVector<SCEVUse, 2> AEOps = {A, E};
-      const SCEV *AENoNUW = SE.getMulExpr(AEOps);
-      EXPECT_EQ(BD_ABE, SE.getUDivExpr(D, AENoNUW));
+      const SCEV *AE = SE.getMulExpr(AEOps, SCEV::FlagNUW);
+      EXPECT_EQ(BD_ABE, SE.getUDivExpr(D, AE));
     }
 
     // (3 * A) / (3 * B)
@@ -1822,10 +1811,10 @@ TEST_F(ScalarEvolutionsTest, SCEVUDivExactNUWMulDivisor) {
       SmallVector<SCEVUse, 2> D2Ops = {D, Two};
       const SCEV *D2 = SE.getMulExpr(D2Ops, SCEV::FlagNUW);
       EXPECT_EQ(D6_ABCE3, SE.getUDivExpr(D2, ABCE));
-      // No NUW
-      EXPECT_EQ(SE.getUDivExactExpr(A, ABCDNoNUW),
-                SE.getUDivExpr(A, ABCDNoNUW));
     }
+
+    // No NUW
+    EXPECT_EQ(SE.getUDivExactExpr(A, ABCDNoNUW), SE.getUDivExpr(A, ABCDNoNUW));
   });
 }
 

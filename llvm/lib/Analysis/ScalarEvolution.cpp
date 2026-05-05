@@ -3750,80 +3750,56 @@ const SCEV *ScalarEvolution::getUDivExactExpr(SCEVUse LHS, SCEVUse RHS) {
   // just deal with u/exact (multiply, constant). See SCEVDivision towards the
   // end of this file for inspiration.
 
+  SmallVector<SCEVUse> RHSOperands, LHSOperands;
   if (const SCEVMulExpr *RHSMul = dyn_cast<SCEVMulExpr>(RHS);
-      RHSMul && RHSMul->hasNoUnsignedWrap() &&
-      isa<SCEVMulExpr, SCEVConstant, SCEVUnknown>(LHS)) {
-    const SCEV *CurrSCEV = LHS;
-    SmallVector<SCEVUse, 2> Operands;
-    bool OnlyNonZero = true;
-    for (SCEVUse Op : RHSMul->operands()) {
-      if (!OnlyNonZero) {
-        Operands.push_back(Op);
+      RHSMul && RHSMul->hasNoUnsignedWrap())
+    RHSOperands = to_vector(RHSMul->operands());
+  else
+    RHSOperands.push_back(RHS);
+  if (const SCEVMulExpr *LHSMul = dyn_cast<SCEVMulExpr>(LHS);
+      LHSMul && LHSMul->hasNoUnsignedWrap())
+    LHSOperands = to_vector(LHSMul->operands());
+  else
+    LHSOperands.push_back(LHS);
+
+  for (unsigned RHSIdx = 0; RHSIdx < RHSOperands.size(); ++RHSIdx) {
+    SCEVUse RHSOp = RHSOperands[RHSIdx];
+    if (RHSOp->isOne())
+      continue;
+    if (const SCEVConstant *RHSCst = dyn_cast<SCEVConstant>(RHSOp)) {
+      // If the mulexpr multiplies by a constant, then that constant must be the
+      // first element of the mulexpr.
+      if (const auto *LHSCst = dyn_cast<SCEVConstant>(LHSOperands[0])) {
+        if (LHSCst == RHSCst) {
+          RHSOperands[RHSIdx] = getConstant(RHSOp->getType(), 1);
+          LHSOperands[0] = getConstant(RHSOp->getType(), 1);
+          continue;
+        }
+
+        // We can't just assume that LHSCst divides RHSCst cleanly, it could be
+        // that there's a factor provided by one of the other terms. We need to
+        // check.
+        APInt Factor = gcd(LHSCst, RHSCst);
+        if (!Factor.isIntN(1)) {
+          LHSOperands[0] =
+              cast<SCEVConstant>(getConstant(LHSCst->getAPInt().udiv(Factor)));
+          RHSOperands[RHSIdx] =
+              cast<SCEVConstant>(getConstant(RHSCst->getAPInt().udiv(Factor)));
+        }
         continue;
       }
-      const SCEV *NewSCEV = getUDivExactExpr(CurrSCEV, Op);
-      if (isa<SCEVUDivExpr>(NewSCEV)) {
-        Operands.push_back(Op);
-        continue;
-      }
-      if (!isa<SCEVConstant>(Op)) // Constant is guaranteed non-zero is MulExpr
-        OnlyNonZero = false;
-      CurrSCEV = NewSCEV;
     }
-    if (Operands.size())
-      return getUDivExpr(
-          CurrSCEV,
-          getMulExpr(Operands, OnlyNonZero
-                                   ? RHSMul->getNoWrapFlags() & SCEV::FlagNUW
-                                   : SCEVNoWrapFlags::FlagAnyWrap));
-    else
-      return CurrSCEV;
-  }
 
-  const SCEVMulExpr *Mul = dyn_cast<SCEVMulExpr>(LHS);
-  if (!Mul || !Mul->hasNoUnsignedWrap())
-    return getUDivExpr(LHS, RHS);
-
-  if (const SCEVConstant *RHSCst = dyn_cast<SCEVConstant>(RHS)) {
-    // If the mulexpr multiplies by a constant, then that constant must be the
-    // first element of the mulexpr.
-    if (const auto *LHSCst = dyn_cast<SCEVConstant>(Mul->getOperand(0))) {
-      if (LHSCst == RHSCst) {
-        SmallVector<SCEVUse, 2> Operands(drop_begin(Mul->operands()));
-        return getMulExpr(Operands, Mul->getNoWrapFlags() & SCEV::FlagNUW);
-      }
-
-      // We can't just assume that LHSCst divides RHSCst cleanly, it could be
-      // that there's a factor provided by one of the other terms. We need to
-      // check.
-      APInt Factor = gcd(LHSCst, RHSCst);
-      if (!Factor.isIntN(1)) {
-        LHSCst =
-            cast<SCEVConstant>(getConstant(LHSCst->getAPInt().udiv(Factor)));
-        RHSCst =
-            cast<SCEVConstant>(getConstant(RHSCst->getAPInt().udiv(Factor)));
-        SmallVector<SCEVUse, 2> Operands;
-        Operands.push_back(LHSCst);
-        append_range(Operands, Mul->operands().drop_front());
-        LHS = getMulExpr(Operands, Mul->getNoWrapFlags() & SCEV::FlagNUW);
-        RHS = RHSCst;
-        Mul = dyn_cast<SCEVMulExpr>(LHS);
-        if (!Mul)
-          return getUDivExactExpr(LHS, RHS);
+    for (unsigned LHSIdx = 0; LHSIdx < LHSOperands.size(); ++LHSIdx) {
+      if (LHSOperands[LHSIdx] == RHSOp) {
+        RHSOperands[RHSIdx] = getConstant(RHSOp->getType(), 1);
+        LHSOperands[LHSIdx] = getConstant(LHSOperands[LHSIdx]->getType(), 1);
+        break;
       }
     }
   }
-
-  for (int i = 0, e = Mul->getNumOperands(); i != e; ++i) {
-    if (Mul->getOperand(i) == RHS) {
-      SmallVector<SCEVUse, 2> Operands;
-      append_range(Operands, Mul->operands().take_front(i));
-      append_range(Operands, Mul->operands().drop_front(i + 1));
-      return getMulExpr(Operands);
-    }
-  }
-
-  return getUDivExpr(LHS, RHS);
+  return getUDivExpr(getMulExpr(LHSOperands, SCEV::FlagNUW),
+                     getMulExpr(RHSOperands, SCEV::FlagNUW));
 }
 
 /// Get an add recurrence expression for the specified loop.  Simplify the
