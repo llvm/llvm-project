@@ -14,6 +14,8 @@
 #include "ExecutorBase.h"
 #include "Library.h"
 #include "Value.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/InlineAsm.h"
@@ -21,6 +23,7 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include <limits>
 
@@ -161,6 +164,175 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     CurrentFrame->ValueMap.insert_or_assign(&I, std::move(V));
   }
 
+  APFloat handleDenormal(APFloat Val, DenormalMode::DenormalModeKind Mode,
+                         bool IsInput = false) {
+    if (!Val.isDenormal())
+      return Val;
+    if (IsInput) {
+      // Non-deterministically choose between flushing or preserving the
+      // denormal value.
+      if (Ctx.getRandomBool())
+        return Val;
+    }
+    if (Mode == DenormalMode::PositiveZero)
+      return APFloat::getZero(Val.getSemantics(), false);
+    if (Mode == DenormalMode::PreserveSign)
+      return APFloat::getZero(Val.getSemantics(), Val.isNegative());
+    // Default case for IEEE, Dynamic, and Invalid
+    // Currently we treat Dynamic the same as IEEE, since we don't support
+    // changing the mode at this point.
+    return Val;
+  }
+
+  AnyValue handleFMFFlags(AnyValue Val, FastMathFlags FMF, bool IsInput) {
+    if (Val.isPoison())
+      return AnyValue::poison();
+
+    if (Val.isAggregate()) {
+      std::vector<AnyValue> ResVec;
+      ResVec.reserve(Val.asAggregate().size());
+      for (const auto &A : Val.asAggregate())
+        ResVec.push_back(handleFMFFlags(A, FMF, IsInput));
+      return AnyValue(ResVec);
+    }
+
+    const APFloat &APVal = Val.asFloat();
+    if (FMF.noNaNs() && APVal.isNaN())
+      return AnyValue::poison();
+    if (FMF.noInfs() && APVal.isInfinity())
+      return AnyValue::poison();
+    if (IsInput && FMF.noSignedZeros() && APVal.isZero())
+      return AnyValue(APFloat::getZero(
+          APVal.getSemantics(), APVal.isNegative() ^ Ctx.getRandomBool()));
+    return Val;
+  }
+
+  void addNaNCandidate(SmallVectorImpl<APFloat> &Candidates,
+                       APFloat Candidate) {
+    if (any_of(Candidates, [&](const APFloat &Existing) {
+          return Existing.bitwiseIsEqual(Candidate);
+        }))
+      return;
+    Candidates.push_back(std::move(Candidate));
+  }
+
+  APFloat pickNaNCandidate(ArrayRef<APFloat> Candidates) {
+    assert(!Candidates.empty() && "Need at least one NaN candidate.");
+    return Candidates[Ctx.getRandomUInt64() % Candidates.size()];
+  }
+
+  APInt getRandomNaNPayload(const fltSemantics &Sem) {
+    const unsigned NumBits = Sem.precision - 1;
+    SmallVector<APInt::WordType, 2> RandomWords;
+    const unsigned NumWords = APInt::getNumWords(NumBits);
+    RandomWords.reserve(NumWords);
+    for (unsigned I = 0; I != NumWords; ++I)
+      RandomWords.push_back(Ctx.getRandomUInt64());
+    return APInt(NumBits, RandomWords);
+  }
+
+  bool isPreferredNaN(const APFloat &Val) {
+    assert(Val.isNaN() && "Expected NaN.");
+    const APFloat Preferred =
+        APFloat::getQNaN(Val.getSemantics(), Val.isNegative());
+    return Val.bitwiseIsEqual(Preferred);
+  }
+
+  bool wasmMayProduceExtraNaNPayload(ArrayRef<const APFloat *> Inputs) {
+    for (const APFloat *Input : Inputs) {
+      if (!Input->isNaN())
+        continue;
+      if (Input->isSignaling() || !isPreferredNaN(*Input))
+        return true;
+    }
+    return false;
+  }
+
+  APFloat propagateInputNaN(const APFloat &InputNaN, const fltSemantics &DstSem,
+                            bool QuietingMode, bool FlipSign) {
+    APFloat Res = InputNaN;
+    bool LosesInfo;
+    Res.convert(DstSem, APFloat::rmNearestTiesToEven, &LosesInfo);
+    if (FlipSign)
+      Res.changeSign();
+    if (QuietingMode && Res.isSignaling())
+      Res = Res.makeQuiet();
+    return Res;
+  }
+
+  void addPropagatedNaNCandidates(SmallVectorImpl<APFloat> &Candidates,
+                                  ArrayRef<const APFloat *> Inputs,
+                                  const fltSemantics &DstSem, bool QuietingMode,
+                                  bool SignChoice) {
+    for (const APFloat *Input : Inputs) {
+      if (!Input->isNaN())
+        continue;
+      addNaNCandidate(Candidates, propagateInputNaN(*Input, DstSem,
+                                                    QuietingMode, SignChoice));
+    }
+  }
+
+  void addTargetSpecificNaNCandidates(SmallVectorImpl<APFloat> &Candidates,
+                                      const APFloat &Result,
+                                      ArrayRef<const APFloat *> Inputs,
+                                      bool SignChoice) {
+    const Triple &TT = Ctx.getTargetTriple();
+    if (TT.isWasm()) {
+      if (!wasmMayProduceExtraNaNPayload(Inputs))
+        return;
+      APInt Payload = getRandomNaNPayload(Result.getSemantics());
+      addNaNCandidate(Candidates, APFloat::getQNaN(Result.getSemantics(),
+                                                   SignChoice, &Payload));
+      return;
+    }
+
+    if (TT.isSPARC32() || TT.isSPARC64()) {
+      APInt Payload = APInt::getAllOnes(Result.getSemantics().precision - 1);
+      addNaNCandidate(Candidates, APFloat::getQNaN(Result.getSemantics(),
+                                                   SignChoice, &Payload));
+    }
+  }
+
+  APFloat applyNaNPropagation(const APFloat &Result,
+                              ArrayRef<const APFloat *> Inputs) {
+    if (!Result.isNaN())
+      return Result;
+
+    const NaNPropagationBehavior Choice =
+        Ctx.getEffectiveNaNPropagationBehavior();
+    const bool SignChoice = Ctx.getRandomBool();
+    const fltSemantics &ResultSem = Result.getSemantics();
+    auto PreferredNaN = [&]() {
+      return APFloat::getQNaN(ResultSem, SignChoice);
+    };
+
+    SmallVector<APFloat, 4> Candidates;
+    switch (Choice) {
+    case NaNPropagationBehavior::PreferredNaN:
+      return PreferredNaN();
+    case NaNPropagationBehavior::QuietingNaN:
+      addPropagatedNaNCandidates(Candidates, Inputs, ResultSem,
+                                 /*QuietingMode=*/true, SignChoice);
+      return Candidates.empty() ? PreferredNaN() : pickNaNCandidate(Candidates);
+    case NaNPropagationBehavior::UnchangedNaN:
+      addPropagatedNaNCandidates(Candidates, Inputs, ResultSem,
+                                 /*QuietingMode=*/false, SignChoice);
+      return Candidates.empty() ? PreferredNaN() : pickNaNCandidate(Candidates);
+    case NaNPropagationBehavior::TargetSpecificNaN:
+      addTargetSpecificNaNCandidates(Candidates, Result, Inputs, SignChoice);
+      return Candidates.empty() ? PreferredNaN() : pickNaNCandidate(Candidates);
+    case NaNPropagationBehavior::NonDeterministic:
+      addNaNCandidate(Candidates, PreferredNaN());
+      addPropagatedNaNCandidates(Candidates, Inputs, ResultSem,
+                                 /*QuietingMode=*/true, SignChoice);
+      addPropagatedNaNCandidates(Candidates, Inputs, ResultSem,
+                                 /*QuietingMode=*/false, SignChoice);
+      addTargetSpecificNaNCandidates(Candidates, Result, Inputs, SignChoice);
+      return pickNaNCandidate(Candidates);
+    }
+    llvm_unreachable("Unhandled NaN propagation behavior.");
+  }
+
   AnyValue computeUnOp(Type *Ty, const AnyValue &Operand,
                        function_ref<AnyValue(const AnyValue &)> ScalarFn) {
     if (Ty->isVectorTy()) {
@@ -185,6 +357,29 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
       if (Operand.isPoison())
         return AnyValue::poison();
       return ScalarFn(Operand.asInteger());
+    });
+  }
+
+  void visitFPUnOp(Instruction &I,
+                   function_ref<APFloat(const APFloat &)> ScalarFn) {
+    FastMathFlags FMF = cast<FPMathOperator>(I).getFastMathFlags();
+
+    visitUnOp(I, [&](const AnyValue &Operand) -> AnyValue {
+      if (Operand.isPoison())
+        return AnyValue::poison();
+
+      // We don't flush denormals here since the only floating-point unary
+      // operation is fneg. And fneg is specified as a bitwise operation which
+      // only flips the sign bit of the input.
+
+      AnyValue ValidatedOperand =
+          handleFMFFlags(Operand, FMF, /*IsInput=*/true);
+      if (ValidatedOperand.isPoison())
+        return ValidatedOperand;
+
+      APFloat Result = ScalarFn(ValidatedOperand.asFloat());
+
+      return handleFMFFlags(Result, FMF, /*IsInput=*/false);
     });
   }
 
@@ -228,6 +423,46 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
       if (LHS.isPoison() || RHS.isPoison())
         return AnyValue::poison();
       return ScalarFn(LHS.asInteger(), RHS.asInteger());
+    });
+  }
+
+  void visitFPBinOp(
+      Instruction &I,
+      function_ref<APFloat(const APFloat &, const APFloat &)> ScalarFn) {
+    FastMathFlags FMF = cast<FPMathOperator>(I).getFastMathFlags();
+    DenormalMode DenormMode = getCurrentDenormalMode(I);
+
+    if (!Ctx.isDefaultFPEnv())
+      reportImmediateUB() << "Non-constrained floating-point operation assumes "
+                             "default floating-point environment";
+
+    visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
+      if (LHS.isPoison() || RHS.isPoison())
+        return AnyValue::poison();
+
+      AnyValue ValidatedLHS = handleFMFFlags(LHS, FMF, /*IsInput=*/true);
+      AnyValue ValidatedRHS = handleFMFFlags(RHS, FMF, /*IsInput=*/true);
+      if (ValidatedLHS.isPoison())
+        return ValidatedLHS;
+      if (ValidatedRHS.isPoison())
+        return ValidatedRHS;
+
+      // Flush input denormals
+      APFloat FLHS = handleDenormal(ValidatedLHS.asFloat(), DenormMode.Input);
+      APFloat FRHS = handleDenormal(ValidatedRHS.asFloat(), DenormMode.Input);
+
+      APFloat RawResult = ScalarFn(FLHS, FRHS);
+
+      // Flush output denormals and handle fast-math flags.
+      AnyValue FResult = handleFMFFlags(
+          handleDenormal(RawResult, DenormMode.Output, /*IsInput=*/true), FMF,
+          /*IsInput=*/false);
+
+      if (FResult.isPoison())
+        return FResult;
+
+      APFloat Result = FResult.asFloat();
+      return applyNaNPropagation(Result, {&FLHS, &FRHS});
     });
   }
 
@@ -349,9 +584,17 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     SmallVector<std::pair<PHINode *, AnyValue>> IncomingValues;
     PHINode *PHI = nullptr;
     while ((PHI = dyn_cast<PHINode>(CurrentFrame->PC))) {
-      Value *Incoming = PHI->getIncomingValueForBlock(From);
-      // TODO: handle fast-math flags.
-      IncomingValues.emplace_back(PHI, getValue(Incoming));
+      AnyValue IncomingVal = getValue(PHI->getIncomingValueForBlock(From));
+
+      // Fast-math flags validation
+      if (isa<FPMathOperator>(PHI)) {
+        FastMathFlags FMF = PHI->getFastMathFlags();
+        if (FMF.any())
+          IncomingVal =
+              handleFMFFlags(std::move(IncomingVal), FMF, /*IsInput=*/true);
+      }
+
+      IncomingValues.emplace_back(PHI, IncomingVal);
       ++CurrentFrame->PC;
     }
     for (auto &[K, V] : IncomingValues)
@@ -446,6 +689,11 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
       return IdxInt.trunc(IndexBitWidth);
     }
     return IdxInt.sext(IndexBitWidth);
+  }
+
+  DenormalMode getCurrentDenormalMode(Instruction &I) {
+    return CurrentFrame->Func.getDenormalMode(
+        I.getOperand(0)->getType()->getScalarType()->getFltSemantics());
   }
 
   // Helper function to convert BooleanKind to bool. Report an immediate UB if
@@ -1434,6 +1682,50 @@ public:
     });
   }
 
+  void visitFAdd(BinaryOperator &I) {
+    visitFPBinOp(I, [](const APFloat &LHS, const APFloat &RHS) -> APFloat {
+      APFloat Res = LHS;
+      Res.add(RHS, APFloat::rmNearestTiesToEven);
+      return Res;
+    });
+  }
+
+  void visitFSub(BinaryOperator &I) {
+    visitFPBinOp(I, [](const APFloat &LHS, const APFloat &RHS) -> APFloat {
+      APFloat Res = LHS;
+      Res.subtract(RHS, APFloat::rmNearestTiesToEven);
+      return Res;
+    });
+  }
+
+  void visitFMul(BinaryOperator &I) {
+    visitFPBinOp(I, [](const APFloat &LHS, const APFloat &RHS) -> APFloat {
+      APFloat Res = LHS;
+      Res.multiply(RHS, APFloat::rmNearestTiesToEven);
+      return Res;
+    });
+  }
+
+  void visitFDiv(BinaryOperator &I) {
+    visitFPBinOp(I, [](const APFloat &LHS, const APFloat &RHS) -> APFloat {
+      APFloat Res = LHS;
+      Res.divide(RHS, APFloat::rmNearestTiesToEven);
+      return Res;
+    });
+  }
+
+  void visitFRem(BinaryOperator &I) {
+    visitFPBinOp(I, [](const APFloat &LHS, const APFloat &RHS) -> APFloat {
+      APFloat Res = LHS;
+      Res.mod(RHS);
+      return Res;
+    });
+  }
+
+  void visitFNeg(UnaryOperator &I) {
+    visitFPUnOp(I, [](const APFloat &Operand) -> APFloat { return -Operand; });
+  }
+
   void visitTruncInst(TruncInst &Trunc) {
     visitIntUnOp(Trunc, [&](const APInt &Operand) -> AnyValue {
       unsigned DestBW = Trunc.getType()->getScalarSizeInBits();
@@ -1458,6 +1750,103 @@ public:
     visitIntUnOp(SExt, [&](const APInt &Operand) -> AnyValue {
       uint32_t DestBW = SExt.getDestTy()->getScalarSizeInBits();
       return Operand.sext(DestBW);
+    });
+  }
+
+  void visitFPExtInst(FPExtInst &FPExt) { visitFPConvInst(FPExt); }
+
+  void visitFPTruncInst(FPTruncInst &FPTrunc) { visitFPConvInst(FPTrunc); }
+
+  void visitFPConvInst(Instruction &I) {
+    if (!Ctx.isDefaultFPEnv())
+      reportImmediateUB() << "Non-constrained floating-point operation assumes "
+                             "default floating-point environment";
+
+    const fltSemantics &DstSem =
+        I.getType()->getScalarType()->getFltSemantics();
+
+    visitUnOp(I, [&](const AnyValue &Operand) -> AnyValue {
+      if (Operand.isPoison())
+        return AnyValue::poison();
+
+      FastMathFlags FMF = cast<FPMathOperator>(I).getFastMathFlags();
+      DenormalMode DenormMode = getCurrentDenormalMode(I);
+
+      auto ValidatedOperand = handleFMFFlags(Operand, FMF, /*IsInput=*/true);
+      if (ValidatedOperand.isPoison())
+        return ValidatedOperand;
+
+      APFloat FOperand =
+          handleDenormal(ValidatedOperand.asFloat(), DenormMode.Input);
+      APFloat SourceNaN = FOperand;
+
+      bool LosesInfo;
+      FOperand.convert(DstSem, Ctx.getCurrentRoundingMode(), &LosesInfo);
+
+      if (auto ValidateRes = handleFMFFlags(FOperand, FMF, /*IsInput=*/false);
+          ValidateRes.isPoison())
+        return ValidateRes;
+
+      FOperand = handleDenormal(std::move(FOperand), DenormMode.Output, true);
+
+      return AnyValue(applyNaNPropagation(FOperand, {&SourceNaN}));
+    });
+  }
+
+  void visitFPToSIInst(FPToSIInst &FPToSI) {
+    visitFPToIntInst(FPToSI, /*IsUnsigned=*/false);
+  }
+
+  void visitFPToUIInst(FPToUIInst &FPToUI) {
+    visitFPToIntInst(FPToUI, /*IsUnsigned=*/true);
+  }
+
+  void visitFPToIntInst(Instruction &I, bool IsUnsigned) {
+    // Note: We DO NOT use CurrentRoundingMode here.
+    // Language specs require truncation towards zero for FP-to-Int conversions.
+    visitUnOp(I, [&](const AnyValue &Operand) -> AnyValue {
+      if (Operand.isPoison())
+        return AnyValue::poison();
+
+      APSInt Res(I.getType()->getScalarSizeInBits(), /*isUnsigned=*/IsUnsigned);
+      bool IsExact;
+      APFloat::opStatus Status = Operand.asFloat().convertToInteger(
+          Res, APFloat::rmTowardZero, &IsExact);
+
+      if (Status == APFloat::opInvalidOp)
+        return AnyValue::poison();
+
+      return AnyValue(Res);
+    });
+  }
+
+  void visitSIToFPInst(SIToFPInst &SIToFP) {
+    visitIntToFPInst(SIToFP, /*IsSigned=*/true);
+  }
+
+  void visitUIToFPInst(UIToFPInst &UIToFP) {
+    visitIntToFPInst(UIToFP, /*IsSigned=*/false);
+  }
+
+  void visitIntToFPInst(Instruction &I, bool IsSigned) {
+    const fltSemantics &DstSem =
+        I.getType()->getScalarType()->getFltSemantics();
+
+    visitUnOp(I, [&](const AnyValue &Operand) -> AnyValue {
+      if (Operand.isPoison())
+        return AnyValue::poison();
+
+      APInt IOperand = Operand.asInteger();
+
+      if (isa<UIToFPInst>(I) && I.hasNonNeg() && IOperand.isNegative())
+        return AnyValue::poison();
+
+      APFloat Res(DstSem);
+
+      Res.convertFromAPInt(Operand.asInteger(), /*IsSigned=*/IsSigned,
+                           Ctx.getCurrentRoundingMode());
+
+      return AnyValue(Res);
     });
   }
 
@@ -1527,41 +1916,72 @@ public:
     });
   }
 
+  void visitFCmpInst(FCmpInst &I) {
+    DenormalMode DenormMode = getCurrentDenormalMode(I);
+    FastMathFlags FMF = I.getFastMathFlags();
+
+    visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
+      if (LHS.isPoison() || RHS.isPoison())
+        return AnyValue::poison();
+
+      if (auto ValidateRes = handleFMFFlags(LHS, FMF, /*IsInput=*/true);
+          ValidateRes.isPoison())
+        return ValidateRes;
+      if (auto ValidateRes = handleFMFFlags(RHS, FMF, /*IsInput=*/true);
+          ValidateRes.isPoison())
+        return ValidateRes;
+
+      APFloat FLHS = handleDenormal(LHS.asFloat(), DenormMode.Input);
+      APFloat FRHS = handleDenormal(RHS.asFloat(), DenormMode.Input);
+
+      return AnyValue::boolean(FCmpInst::compare(FLHS, FRHS, I.getPredicate()));
+    });
+  }
+
   void visitSelect(SelectInst &SI) {
-    // TODO: handle fast-math flags.
+    AnyValue Res;
+
     if (SI.getCondition()->getType()->isIntegerTy(1)) {
       switch (getValue(SI.getCondition()).asBoolean()) {
       case BooleanKind::True:
-        setResult(SI, getValue(SI.getTrueValue()));
-        return;
+        Res = getValue(SI.getTrueValue());
+        break;
       case BooleanKind::False:
-        setResult(SI, getValue(SI.getFalseValue()));
-        return;
+        Res = getValue(SI.getFalseValue());
+        break;
       case BooleanKind::Poison:
-        setResult(SI, AnyValue::getPoisonValue(Ctx, SI.getType()));
-        return;
+        Res = AnyValue::getPoisonValue(Ctx, SI.getType());
+        break;
       }
+    } else {
+      auto &Cond = getValue(SI.getCondition()).asAggregate();
+      auto &TV = getValue(SI.getTrueValue()).asAggregate();
+      auto &FV = getValue(SI.getFalseValue()).asAggregate();
+      std::vector<AnyValue> ResVec;
+      size_t Len = Cond.size();
+      ResVec.reserve(Len);
+      for (uint32_t I = 0; I != Len; ++I) {
+        switch (Cond[I].asBoolean()) {
+        case BooleanKind::True:
+          ResVec.push_back(TV[I]);
+          break;
+        case BooleanKind::False:
+          ResVec.push_back(FV[I]);
+          break;
+        case BooleanKind::Poison:
+          ResVec.push_back(AnyValue::poison());
+          break;
+        }
+      }
+      Res = AnyValue(std::move(ResVec));
     }
 
-    auto &Cond = getValue(SI.getCondition()).asAggregate();
-    auto &TV = getValue(SI.getTrueValue()).asAggregate();
-    auto &FV = getValue(SI.getFalseValue()).asAggregate();
-    std::vector<AnyValue> Res;
-    size_t Len = Cond.size();
-    Res.reserve(Len);
-    for (uint32_t I = 0; I != Len; ++I) {
-      switch (Cond[I].asBoolean()) {
-      case BooleanKind::True:
-        Res.push_back(TV[I]);
-        break;
-      case BooleanKind::False:
-        Res.push_back(FV[I]);
-        break;
-      case BooleanKind::Poison:
-        Res.push_back(AnyValue::poison());
-        break;
-      }
+    // Handle fast-math flags
+    if (auto *FPMO = dyn_cast<FPMathOperator>(&SI)) {
+      if (FastMathFlags FMF = FPMO->getFastMathFlags(); FMF.any())
+        Res = handleFMFFlags(std::move(Res), FMF, /*IsInput=*/true);
     }
+
     setResult(SI, std::move(Res));
   }
 
