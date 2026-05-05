@@ -843,7 +843,6 @@ public:
     IPM_Opcode,
     IPM_NumOperands,
     IPM_ImmPredicate,
-    IPM_Imm,
     IPM_AtomicOrderingMMO,
     IPM_MemoryLLTSize,
     IPM_MemoryVsLLTSize,
@@ -854,7 +853,10 @@ public:
     IPM_OneUse,
     IPM_GenericPredicate,
     IPM_MIFlags,
+
     OPM_LeafPredicate,
+    OPM_ImmPredicate,
+    OPM_Imm,
     OPM_SameOperand,
     OPM_ComplexPattern,
     OPM_IntrinsicID,
@@ -1199,10 +1201,10 @@ public:
 class ImmOperandMatcher : public OperandPredicateMatcher {
 public:
   ImmOperandMatcher(unsigned InsnVarID, unsigned OpIdx)
-      : OperandPredicateMatcher(IPM_Imm, InsnVarID, OpIdx) {}
+      : OperandPredicateMatcher(OPM_Imm, InsnVarID, OpIdx) {}
 
   static bool classof(const PredicateMatcher *P) {
-    return P->getKind() == IPM_Imm;
+    return P->getKind() == OPM_Imm;
   }
 
   void emitPredicateOpcodes(MatchTable &Table,
@@ -1311,7 +1313,7 @@ protected:
 public:
   OperandImmPredicateMatcher(unsigned InsnVarID, unsigned OpIdx,
                              const TreePredicateFn &Predicate)
-      : OperandPredicateMatcher(IPM_ImmPredicate, InsnVarID, OpIdx),
+      : OperandPredicateMatcher(OPM_ImmPredicate, InsnVarID, OpIdx),
         Predicate(Predicate) {}
 
   bool isIdentical(const PredicateMatcher &B) const override {
@@ -1322,7 +1324,7 @@ public:
   }
 
   static bool classof(const PredicateMatcher *P) {
-    return P->getKind() == IPM_ImmPredicate;
+    return P->getKind() == OPM_ImmPredicate;
   }
 
   void emitPredicateOpcodes(MatchTable &Table,
