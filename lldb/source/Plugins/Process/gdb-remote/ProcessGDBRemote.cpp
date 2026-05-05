@@ -6493,19 +6493,22 @@ llvm::Error ProcessGDBRemote::UpdateBreakpointSites(
   if (!m_gdb_comm.GetMultiBreakpointSupported())
     return UpdateBreakpointSitesNotBatched(site_to_action);
 
-  std::vector<BreakpointPacketInfo> breakpoint_infos;
-  std::vector<std::pair<BreakpointSiteSP, BreakpointAction>>
-      non_batchable_sites;
+  Log *log = GetLog(GDBRLog::Breakpoints);
 
+  std::vector<BreakpointPacketInfo> breakpoint_infos;
   for (auto [site, action] : site_to_action) {
     size_t trap_opcode_size = GetSoftwareBreakpointTrapOpcode(site.get());
     std::optional<GDBStoppointType> type =
         GetStoppointType(*site, action == BreakpointAction::Enable, m_gdb_comm);
-    if (type)
-      breakpoint_infos.push_back(
-          {*site, trap_opcode_size, *type, action == BreakpointAction::Enable});
-    else
-      non_batchable_sites.emplace_back(site, action);
+
+    if (!type) {
+      LLDB_LOG(log, "MultiBreakpoint: site {0} at {1:x} can't be batched",
+               site->GetID(), site->GetLoadAddress());
+      return UpdateBreakpointSitesNotBatched(site_to_action);
+    }
+
+    breakpoint_infos.push_back(
+        {*site, trap_opcode_size, *type, action == BreakpointAction::Enable});
   }
 
   StreamString stream;
@@ -6525,8 +6528,6 @@ llvm::Error ProcessGDBRemote::UpdateBreakpointSites(
       m_gdb_comm.SendPacketAndExpectResponse(escaped_stream.GetString(),
                                              GetInterruptTimeout());
 
-  Log *log = GetLog(GDBRLog::Breakpoints);
-
   if (!response) {
     LLDB_LOG_ERROR(log, response.takeError(), "jMultiBreakpoint failed: {0}");
     return UpdateBreakpointSitesNotBatched(site_to_action);
@@ -6542,36 +6543,21 @@ llvm::Error ProcessGDBRemote::UpdateBreakpointSites(
         site_to_action.size(), results.size());
 
   llvm::Error joined = llvm::Error::success();
-  for (auto [site, action] : non_batchable_sites) {
-    LLDB_LOG(log,
-             "MultiBreakpoint: site {0} at {1:x} can't be batched, trying on "
-             "its own",
-             site->GetID(), site->GetLoadAddress());
-    llvm::Error error = action == BreakpointAction::Enable
-                            ? DoEnableBreakpointSite(*site)
-                            : DoDisableBreakpointSite(*site);
-    joined = llvm::joinErrors(std::move(joined), std::move(error));
-  }
-
-  // Process results: mark successful sites as enabled/disabled, retry failed
-  // sites individually.
   for (auto [error_code, bp_info] :
        llvm::zip_equal(results, breakpoint_infos)) {
     BreakpointSite &site = bp_info.site;
-    if (error_code == std::nullopt) {
-      SetBreakpointSiteEnabled(site, bp_info.is_enable);
-      if (bp_info.is_enable)
-        site.SetType(bp_info.type == eBreakpointHardware
-                         ? BreakpointSite::eHardware
-                         : BreakpointSite::eExternal);
+    if (error_code) {
+      auto error = llvm::createStringErrorV(
+          "MultiBreakpoint: site {0} at {1:x} failed with E{2}",
+          bp_info.site.GetID(), bp_info.site.GetLoadAddress(), error_code);
+      joined = llvm::joinErrors(std::move(joined), std::move(error));
       continue;
     }
-    LLDB_LOG(log,
-             "MultiBreakpoint: site {0} at {1:x} failed (E{2:X-2}), retrying",
-             site.GetID(), site.GetLoadAddress(), *error_code);
-    llvm::Error error = bp_info.is_enable ? DoEnableBreakpointSite(site)
-                                          : DoDisableBreakpointSite(site);
-    joined = llvm::joinErrors(std::move(joined), std::move(error));
+    SetBreakpointSiteEnabled(site, bp_info.is_enable);
+    if (bp_info.is_enable)
+      site.SetType(bp_info.type == eBreakpointHardware
+                       ? BreakpointSite::eHardware
+                       : BreakpointSite::eExternal);
   }
 
   return joined;
