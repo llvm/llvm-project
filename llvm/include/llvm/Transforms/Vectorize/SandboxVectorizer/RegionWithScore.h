@@ -85,16 +85,8 @@ public:
   /// \Returns the ScoreBoard data structure that keeps track of instr costs.
   const ScoreBoard &getScoreboard() const { return Scoreboard; }
 
-  LLVM_ABI static SmallVector<std::unique_ptr<RegionWithScore>>
-  createRegionsFromMD(Function &F, const TargetTransformInfo &TTI) {
-    auto Rgns = Region::createRegionsFromMD(F);
-    SmallVector<std::unique_ptr<RegionWithScore>> NewRgns;
-    NewRgns.reserve(Rgns.size());
-    for (auto &RgnPtr : Rgns)
-      NewRgns.push_back(
-          std::make_unique<RegionWithScore>(std::move(*RgnPtr.release()), TTI));
-    return NewRgns;
-  }
+  static SmallVector<std::unique_ptr<RegionWithScore>>
+  createRegionsFromMD(Function &F, const TargetTransformInfo &TTI);
 };
 
 } // namespace llvm::sandboxir

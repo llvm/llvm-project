@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/RegionWithScore.h"
+#include "llvm/SandboxIR/Function.h"
 
 namespace llvm::sandboxir {
 
@@ -30,5 +31,13 @@ void ScoreBoard::remove(Instruction *I) {
 #ifndef NDEBUG
 void ScoreBoard::dump() const { dump(dbgs()); }
 #endif
+
+SmallVector<std::unique_ptr<RegionWithScore>>
+RegionWithScore::createRegionsFromMD(Function &F,
+                                     const TargetTransformInfo &TTI) {
+  return Region::createRegionsFromMD<RegionWithScore>(F, [&F, &TTI]() {
+    return std::make_unique<RegionWithScore>(F.getContext(), TTI);
+  });
+}
 
 } // namespace llvm::sandboxir

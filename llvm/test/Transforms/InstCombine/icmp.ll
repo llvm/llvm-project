@@ -4735,7 +4735,7 @@ define i1 @PR35794(ptr %a) {
 define <2 x i1> @PR36583(<2 x ptr>)  {
 ; CHECK-LABEL: define <2 x i1> @PR36583(
 ; CHECK-SAME: <2 x ptr> [[TMP0:%.*]]) {
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq <2 x ptr> [[TMP0]], zeroinitializer
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq <2 x ptr> [[TMP0]], splat (ptr null)
 ; CHECK-NEXT:    ret <2 x i1> [[RES]]
 ;
   %cast = ptrtoint <2 x ptr> %0 to <2 x i64>
