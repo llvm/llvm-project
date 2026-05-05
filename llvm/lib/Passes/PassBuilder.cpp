@@ -109,6 +109,7 @@
 #include "llvm/CodeGen/InterleavedAccess.h"
 #include "llvm/CodeGen/InterleavedLoadCombine.h"
 #include "llvm/CodeGen/JMCInstrumenter.h"
+#include "llvm/CodeGen/KCFI.h"
 #include "llvm/CodeGen/LiveDebugValuesPass.h"
 #include "llvm/CodeGen/LiveDebugVariables.h"
 #include "llvm/CodeGen/LiveIntervals.h"
@@ -119,10 +120,12 @@
 #include "llvm/CodeGen/LowerEmuTLS.h"
 #include "llvm/CodeGen/MIRPrinter.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
+#include "llvm/CodeGen/MachineBlockHashInfo.h"
 #include "llvm/CodeGen/MachineBlockPlacement.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineCSE.h"
 #include "llvm/CodeGen/MachineCopyPropagation.h"
+#include "llvm/CodeGen/MachineDebugify.h"
 #include "llvm/CodeGen/MachineDominanceFrontier.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
@@ -134,6 +137,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/MachineSink.h"
+#include "llvm/CodeGen/MachineStripDebug.h"
 #include "llvm/CodeGen/MachineTraceMetrics.h"
 #include "llvm/CodeGen/MachineUniformityAnalysis.h"
 #include "llvm/CodeGen/MachineVerifier.h"
@@ -402,6 +406,19 @@ AnalysisKey NoOpLoopAnalysis::Key;
 
 namespace {
 
+bool applyMIRDebugify(DIBuilder &DIB, Function &F, ModuleAnalysisManager &AM) {
+  FunctionAnalysisManager &FAM =
+      AM.getResult<FunctionAnalysisManagerModuleProxy>(*F.getParent())
+          .getManager();
+
+  return applyDebugifyMetadataToMachineFunction(
+      DIB, F, [&](Function &Func) -> MachineFunction * {
+        MachineFunctionAnalysis::Result *MFA =
+            FAM.getCachedResult<MachineFunctionAnalysis>(Func);
+        return MFA ? &MFA->getMF() : nullptr;
+      });
+}
+
 // Passes for testing crashes.
 // DO NOT USE THIS EXCEPT FOR TESTING!
 class TriggerCrashModulePass : public PassInfoMixin<TriggerCrashModulePass> {
@@ -487,13 +504,17 @@ public:
 } // namespace
 
 static std::optional<OptimizationLevel> parseOptLevel(StringRef S) {
+  if (S == "Os" || S == "Oz")
+    reportFatalUsageError(
+        Twine("The optimization level \"") + S +
+        "\" is no longer supported. Use O2 in conjunction with the " +
+        (S == "Os" ? "optsize" : "minsize") + " attribute instead.");
+
   return StringSwitch<std::optional<OptimizationLevel>>(S)
       .Case("O0", OptimizationLevel::O0)
       .Case("O1", OptimizationLevel::O1)
       .Case("O2", OptimizationLevel::O2)
       .Case("O3", OptimizationLevel::O3)
-      .Case("Os", OptimizationLevel::Os)
-      .Case("Oz", OptimizationLevel::Oz)
       .Default(std::nullopt);
 }
 
@@ -807,17 +828,6 @@ Expected<bool> parseLintOptions(StringRef Params) {
                                             "LintPass");
 }
 
-/// Parser of parameters for FunctionPropertiesStatistics pass.
-Expected<bool> parseFunctionPropertiesStatisticsOptions(StringRef Params) {
-  return PassBuilder::parseSinglePassOption(Params, "pre-opt",
-                                            "FunctionPropertiesStatisticsPass");
-}
-
-/// Parser of parameters for InstCount pass.
-Expected<bool> parseInstCountOptions(StringRef Params) {
-  return PassBuilder::parseSinglePassOption(Params, "pre-opt", "InstCountPass");
-}
-
 /// Parser of parameters for LoopUnroll pass.
 Expected<LoopUnrollOptions> parseLoopUnrollOptions(StringRef Params) {
   LoopUnrollOptions UnrollOpts;
@@ -825,8 +835,7 @@ Expected<LoopUnrollOptions> parseLoopUnrollOptions(StringRef Params) {
     StringRef ParamName;
     std::tie(ParamName, Params) = Params.split(';');
     std::optional<OptimizationLevel> OptLevel = parseOptLevel(ParamName);
-    // Don't accept -Os/-Oz.
-    if (OptLevel && !OptLevel->isOptimizingForSize()) {
+    if (OptLevel) {
       UnrollOpts.setOptLevel(OptLevel->getSpeedupLevel());
       continue;
     }

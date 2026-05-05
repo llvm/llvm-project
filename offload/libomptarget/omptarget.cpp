@@ -2350,7 +2350,7 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
 #endif
 
     Ret = Device.launchKernel(TgtEntryPtr, TgtArgs.data(), TgtOffsets.data(),
-                              KernelArgs, AsyncInfo);
+                              KernelArgs, nullptr, AsyncInfo);
   }
 
   if (Ret != OFFLOAD_SUCCESS) {
@@ -2391,11 +2391,13 @@ int target_activate_rr(DeviceTy &Device, uint64_t MemorySize, void *VAddr,
 /// configuration.
 int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
                   void *DeviceMemory, int64_t DeviceMemorySize,
+                  void *ReuseDeviceAlloc,
                   const llvm::offloading::EntryTy *Globals, int32_t NumGlobals,
                   void **TgtArgs, ptrdiff_t *TgtOffsets, int32_t NumArgs,
                   int32_t NumTeams, int32_t ThreadLimit,
                   uint32_t SharedMemorySize, uint64_t LoopTripCount,
-                  AsyncInfoTy &AsyncInfo) {
+                  AsyncInfoTy &AsyncInfo,
+                  KernelReplayOutcomeTy *ReplayOutcome) {
   int32_t DeviceId = Device.DeviceID;
   int32_t NumSymbols = NumGlobals + 1;
 
@@ -2447,12 +2449,19 @@ int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
     }
   }
 
-  void *TgtPtr = Device.allocData(DeviceMemorySize, /*HstPtr=*/nullptr,
-                                  TARGET_ALLOC_DEFAULT);
+  // Reuse a previous device allocation or allocate a new device buffer.
+  void *&TgtPtr = ReuseDeviceAlloc;
+  if (!TgtPtr)
+    TgtPtr = Device.allocData(DeviceMemorySize, /*HstPtr=*/nullptr,
+                              TARGET_ALLOC_DEFAULT);
   if (!TgtPtr) {
     REPORT() << "Failed to allocate device memory.";
     return OFFLOAD_FAIL;
   }
+
+  // Save the device allocation for future replays of the same kernel.
+  if (ReplayOutcome)
+    ReplayOutcome->ReplayDeviceAlloc = TgtPtr;
 
   int Ret =
       Device.submitData(TgtPtr, DeviceMemory, DeviceMemorySize, AsyncInfo);
@@ -2473,8 +2482,11 @@ int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
   KernelArgs.ThreadLimit[2] = 1;
   KernelArgs.DynCGroupMem = SharedMemorySize;
 
+  KernelExtraArgsTy KernelExtraArgs{};
+  KernelExtraArgs.ReplayOutcome = ReplayOutcome;
+
   Ret = Device.launchKernel(Symbols[0].DevPtr, TgtArgs, TgtOffsets, KernelArgs,
-                            AsyncInfo);
+                            &KernelExtraArgs, AsyncInfo);
   if (Ret != OFFLOAD_SUCCESS) {
     REPORT() << "Failed to launch kernel replay.";
     return OFFLOAD_FAIL;

@@ -441,6 +441,7 @@ FunctionTemplateDecl *
 FunctionTemplateDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation L,
                              DeclarationName Name,
                              TemplateParameterList *Params, NamedDecl *Decl) {
+  assert(!Params->empty() && "template with no template parameters");
   bool Invalid = AdoptTemplateParameterList(Params, cast<DeclContext>(Decl));
   auto *TD = new (C, DC) FunctionTemplateDecl(C, DC, L, Name, Params, Decl);
   if (Invalid)
@@ -528,6 +529,7 @@ ClassTemplateDecl *ClassTemplateDecl::Create(ASTContext &C, DeclContext *DC,
                                              DeclarationName Name,
                                              TemplateParameterList *Params,
                                              NamedDecl *Decl) {
+  assert(!Params->empty() && "template with no template parameters");
   bool Invalid = AdoptTemplateParameterList(Params, cast<DeclContext>(Decl));
   auto *TD = new (C, DC) ClassTemplateDecl(C, DC, L, Name, Params, Decl);
   if (Invalid)
@@ -877,6 +879,7 @@ TemplateTemplateParmDecl *TemplateTemplateParmDecl::Create(
     const ASTContext &C, DeclContext *DC, SourceLocation L, unsigned D,
     unsigned P, bool ParameterPack, IdentifierInfo *Id, TemplateNameKind Kind,
     bool Typename, TemplateParameterList *Params) {
+  assert(!Params->empty() && "template with no template parameters");
   return new (C, DC) TemplateTemplateParmDecl(DC, L, D, P, ParameterPack, Id,
                                               Kind, Typename, Params);
 }
@@ -887,6 +890,7 @@ TemplateTemplateParmDecl::Create(const ASTContext &C, DeclContext *DC,
                                  IdentifierInfo *Id, TemplateNameKind Kind,
                                  bool Typename, TemplateParameterList *Params,
                                  ArrayRef<TemplateParameterList *> Expansions) {
+  assert(!Params->empty() && "template with no template parameters");
   return new (C, DC,
               additionalSizeToAlloc<TemplateParameterList *>(Expansions.size()))
       TemplateTemplateParmDecl(DC, L, D, P, Id, Kind, Typename, Params,
@@ -1104,6 +1108,7 @@ ConceptDecl *ConceptDecl::Create(ASTContext &C, DeclContext *DC,
                                  SourceLocation L, DeclarationName Name,
                                  TemplateParameterList *Params,
                                  Expr *ConstraintExpr) {
+  assert(!Params->empty() && "template with no template parameters");
   bool Invalid = AdoptTemplateParameterList(Params, DC);
   auto *TD = new (C, DC) ConceptDecl(DC, L, Name, Params, ConstraintExpr);
   if (Invalid)
@@ -1185,6 +1190,7 @@ ClassTemplatePartialSpecializationDecl::Create(
     ClassTemplateDecl *SpecializedTemplate, ArrayRef<TemplateArgument> Args,
     CanQualType CanonInjectedTST,
     ClassTemplatePartialSpecializationDecl *PrevDecl) {
+  assert(!Params->empty() && "template with no template parameters");
   auto *Result = new (Context, DC) ClassTemplatePartialSpecializationDecl(
       Context, TK, DC, StartLoc, IdLoc, Params, SpecializedTemplate, Args,
       CanonInjectedTST, PrevDecl);
@@ -1218,7 +1224,7 @@ SourceRange ClassTemplatePartialSpecializationDecl::getSourceRange() const {
     return MT->getSourceRange();
   SourceRange Range = ClassTemplateSpecializationDecl::getSourceRange();
   if (const TemplateParameterList *TPL = getTemplateParameters();
-      TPL && !getNumTemplateParameterLists())
+      TPL && getTemplateParameterLists().empty())
     Range.setBegin(TPL->getTemplateLoc());
   return Range;
 }
@@ -1256,6 +1262,7 @@ TypeAliasTemplateDecl *
 TypeAliasTemplateDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation L,
                               DeclarationName Name,
                               TemplateParameterList *Params, NamedDecl *Decl) {
+  assert(!Params->empty() && "template with no template parameters");
   bool Invalid = AdoptTemplateParameterList(Params, DC);
   auto *TD = new (C, DC) TypeAliasTemplateDecl(C, DC, L, Name, Params, Decl);
   if (Invalid)
@@ -1294,6 +1301,7 @@ VarTemplateDecl *VarTemplateDecl::Create(ASTContext &C, DeclContext *DC,
                                          SourceLocation L, DeclarationName Name,
                                          TemplateParameterList *Params,
                                          VarDecl *Decl) {
+  assert(!Params->empty() && "template with no template parameters");
   bool Invalid = AdoptTemplateParameterList(Params, DC);
   auto *TD = new (C, DC) VarTemplateDecl(C, DC, L, Name, Params, Decl);
   if (Invalid)
@@ -1551,6 +1559,7 @@ VarTemplatePartialSpecializationDecl::Create(
     SourceLocation IdLoc, TemplateParameterList *Params,
     VarTemplateDecl *SpecializedTemplate, QualType T, TypeSourceInfo *TInfo,
     StorageClass S, ArrayRef<TemplateArgument> Args) {
+  assert(!Params->empty() && "template with no template parameters");
   auto *Result = new (Context, DC) VarTemplatePartialSpecializationDecl(
       Context, DC, StartLoc, IdLoc, Params, SpecializedTemplate, T, TInfo, S,
       Args);
@@ -1571,7 +1580,7 @@ SourceRange VarTemplatePartialSpecializationDecl::getSourceRange() const {
     return MT->getSourceRange();
   SourceRange Range = VarTemplateSpecializationDecl::getSourceRange();
   if (const TemplateParameterList *TPL = getTemplateParameters();
-      TPL && !getNumTemplateParameterLists())
+      TPL && getTemplateParameterLists().empty())
     Range.setBegin(TPL->getTemplateLoc());
   return Range;
 }
@@ -1783,4 +1792,133 @@ const Decl &clang::adjustDeclToTemplate(const Decl &D) {
   }
   // FIXME: Adjust alias templates?
   return D;
+}
+
+ExplicitInstantiationDecl::ExplicitInstantiationDecl(
+    DeclContext *DC, NamedDecl *Specialization, SourceLocation ExternLoc,
+    SourceLocation TemplateLoc, NestedNameSpecifierLoc QualifierLoc,
+    const ASTTemplateArgumentListInfo *ArgsAsWritten, SourceLocation NameLoc,
+    TypeSourceInfo *TypeAsWritten, TemplateSpecializationKind TSK)
+    : Decl(ExplicitInstantiation, DC, TemplateLoc),
+      SpecAndTSK(Specialization, TSK), ExternLoc(ExternLoc), NameLoc(NameLoc) {
+  unsigned Flags = 0;
+  if (QualifierLoc)
+    Flags |= HasQualifierFlag;
+  if (ArgsAsWritten)
+    Flags |= HasArgsAsWrittenFlag;
+  // Set flags BEFORE writing trailing objects, because
+  // numTrailingObjects reads TypeAndFlags.getInt() to compute offsets.
+  TypeAndFlags.setPointerAndInt(TypeAsWritten, Flags);
+  if (QualifierLoc)
+    *getTrailingObjects<NestedNameSpecifierLoc>() = QualifierLoc;
+  if (ArgsAsWritten)
+    *getTrailingObjects<const ASTTemplateArgumentListInfo *>() = ArgsAsWritten;
+}
+
+ExplicitInstantiationDecl *ExplicitInstantiationDecl::Create(
+    ASTContext &C, DeclContext *DC, NamedDecl *Specialization,
+    SourceLocation ExternLoc, SourceLocation TemplateLoc,
+    NestedNameSpecifierLoc QualifierLoc,
+    const ASTTemplateArgumentListInfo *ArgsAsWritten, SourceLocation NameLoc,
+    TypeSourceInfo *TypeAsWritten, TemplateSpecializationKind TSK) {
+  unsigned Extra = additionalSizeToAlloc<NestedNameSpecifierLoc,
+                                         const ASTTemplateArgumentListInfo *>(
+      QualifierLoc ? 1 : 0, ArgsAsWritten ? 1 : 0);
+  return new (C, DC, Extra) ExplicitInstantiationDecl(
+      DC, Specialization, ExternLoc, TemplateLoc, QualifierLoc, ArgsAsWritten,
+      NameLoc, TypeAsWritten, TSK);
+}
+
+ExplicitInstantiationDecl *
+ExplicitInstantiationDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID,
+                                              unsigned TrailingFlags) {
+  unsigned Extra = additionalSizeToAlloc<NestedNameSpecifierLoc,
+                                         const ASTTemplateArgumentListInfo *>(
+      (TrailingFlags & HasQualifierFlag) ? 1 : 0,
+      (TrailingFlags & HasArgsAsWrittenFlag) ? 1 : 0);
+  auto *D = new (C, ID, Extra) ExplicitInstantiationDecl(EmptyShell());
+  // Set the flags so the reader knows which trailing objects are present.
+  D->TypeAndFlags.setInt(TrailingFlags);
+  return D;
+}
+
+SourceLocation ExplicitInstantiationDecl::getTagKWLoc() const {
+  if (auto *TSI = getRawTypeSourceInfo()) {
+    if (auto TL = TSI->getTypeLoc().getAs<TemplateSpecializationTypeLoc>())
+      return TL.getElaboratedKeywordLoc();
+    if (auto TL = TSI->getTypeLoc().getAs<TagTypeLoc>())
+      return TL.getElaboratedKeywordLoc();
+  }
+  return SourceLocation();
+}
+
+NestedNameSpecifierLoc ExplicitInstantiationDecl::getQualifierLoc() const {
+  if (hasTrailingQualifier())
+    return *getTrailingObjects<NestedNameSpecifierLoc>();
+  if (auto *TSI = getRawTypeSourceInfo())
+    return TSI->getTypeLoc().getPrefix();
+  return NestedNameSpecifierLoc();
+}
+
+TypeSourceInfo *ExplicitInstantiationDecl::getTypeAsWritten() const {
+  auto *TSI = getRawTypeSourceInfo();
+  if (!TSI)
+    return nullptr;
+  TypeLoc TL = TSI->getTypeLoc();
+  // For class templates and nested classes, the "type" is fully described by
+  // the unified accessors (getQualifierLoc, getTemplateArg, getTagKWLoc).
+  if (TL.getAs<TemplateSpecializationTypeLoc>() || TL.getAs<TagTypeLoc>())
+    return nullptr;
+  return TSI;
+}
+
+unsigned ExplicitInstantiationDecl::getNumTemplateArgs() const {
+  if (const auto *Args = getTrailingArgsInfo())
+    return Args->NumTemplateArgs;
+  if (auto *TSI = getRawTypeSourceInfo())
+    if (auto TL = TSI->getTypeLoc().getAs<TemplateSpecializationTypeLoc>())
+      return TL.getNumArgs();
+  return 0;
+}
+
+TemplateArgumentLoc
+ExplicitInstantiationDecl::getTemplateArg(unsigned I) const {
+  if (const auto *Args = getTrailingArgsInfo())
+    return (*Args)[I];
+  auto *TSI = getRawTypeSourceInfo();
+  return TSI->getTypeLoc().castAs<TemplateSpecializationTypeLoc>().getArgLoc(I);
+}
+
+SourceLocation ExplicitInstantiationDecl::getTemplateArgsLAngleLoc() const {
+  if (const auto *Args = getTrailingArgsInfo())
+    return Args->getLAngleLoc();
+  if (auto *TSI = getRawTypeSourceInfo())
+    if (auto TL = TSI->getTypeLoc().getAs<TemplateSpecializationTypeLoc>())
+      return TL.getLAngleLoc();
+  return SourceLocation();
+}
+
+SourceLocation ExplicitInstantiationDecl::getTemplateArgsRAngleLoc() const {
+  if (const auto *Args = getTrailingArgsInfo())
+    return Args->getRAngleLoc();
+  if (auto *TSI = getRawTypeSourceInfo())
+    if (auto TL = TSI->getTypeLoc().getAs<TemplateSpecializationTypeLoc>())
+      return TL.getRAngleLoc();
+  return SourceLocation();
+}
+
+SourceLocation ExplicitInstantiationDecl::getEndLoc() const {
+  // For func/var templates with postfix type syntax (arrays, functions),
+  // the type extends past the name, so use the type's end location.
+  if (auto *TSI = getTypeAsWritten())
+    if (TSI->getType().hasPostfixDeclaratorSyntax())
+      return TSI->getTypeLoc().getEndLoc();
+  // Otherwise, template args RAngleLoc or NameLoc.
+  SourceLocation RAngle = getTemplateArgsRAngleLoc();
+  return RAngle.isValid() ? RAngle : NameLoc;
+}
+
+SourceRange ExplicitInstantiationDecl::getSourceRange() const {
+  SourceLocation Begin = ExternLoc.isValid() ? ExternLoc : getLocation();
+  return SourceRange(Begin, getEndLoc());
 }

@@ -57,7 +57,7 @@ public:
           for (Type elementType : concreteType.getElementTypes())
             add(elementType);
         })
-        .Case<SamplerType>([](auto) { /* no extensions */ })
+        .Case<SamplerType, NamedBarrierType>([](auto) { /* no extensions */ })
         .DefaultUnreachable("Unhandled type");
   }
 
@@ -109,6 +109,11 @@ public:
             add(elementType);
         })
         .Case<SamplerType>([](auto) { /* no capabilities */ })
+        .Case<NamedBarrierType>([this](auto) {
+          static const Capability caps[] = {Capability::NamedBarrier};
+          ArrayRef<Capability> ref(caps, std::size(caps));
+          capabilities.push_back(ref);
+        })
         .DefaultUnreachable("Unhandled type");
   }
 
@@ -307,9 +312,18 @@ void TypeExtensionVisitor::addConcrete(CooperativeMatrixType type) {
 }
 
 void TypeCapabilityVisitor::addConcrete(CooperativeMatrixType type) {
-  add(type.getElementType());
+  Type elementType = type.getElementType();
+  add(elementType);
   static constexpr auto caps = Capability::CooperativeMatrixKHR;
   capabilities.push_back(caps);
+  if (elementType.isBF16()) {
+    static constexpr auto caps = Capability::BFloat16CooperativeMatrixKHR;
+    capabilities.push_back(caps);
+  }
+  if (elementType.isF8E4M3FN() || elementType.isF8E5M2()) {
+    static constexpr auto caps = Capability::Float8CooperativeMatrixEXT;
+    capabilities.push_back(caps);
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -541,6 +555,8 @@ bool ScalarType::classof(Type type) {
 }
 
 bool ScalarType::isValid(FloatType type) {
+  if (type.isF8E4M3FN() || type.isF8E5M2())
+    return true;
   return llvm::is_contained({16u, 32u, 64u}, type.getWidth());
 }
 
@@ -549,12 +565,12 @@ bool ScalarType::isValid(IntegerType type) {
 }
 
 void TypeExtensionVisitor::addConcrete(ScalarType type) {
-  if (isa<BFloat16Type>(type)) {
+  if (type.isBF16()) {
     static constexpr auto ext = Extension::SPV_KHR_bfloat16;
     extensions.push_back(ext);
   }
 
-  if (isa<Float8E4M3FNType, Float8E5M2Type>(type)) {
+  if (type.isF8E4M3FN() || type.isF8E5M2()) {
     static constexpr auto ext = Extension::SPV_EXT_float8;
     extensions.push_back(ext);
   }
@@ -657,7 +673,7 @@ void TypeCapabilityVisitor::addConcrete(ScalarType type) {
     assert(isa<FloatType>(type));
     switch (bitwidth) {
     case 8: {
-      if (isa<Float8E4M3FNType, Float8E5M2Type>(type)) {
+      if (type.isF8E4M3FN() || type.isF8E5M2()) {
         static constexpr auto cap = Capability::Float8EXT;
         capabilities.push_back(cap);
       } else {
@@ -666,7 +682,7 @@ void TypeCapabilityVisitor::addConcrete(ScalarType type) {
       break;
     }
     case 16: {
-      if (isa<BFloat16Type>(type)) {
+      if (type.isBF16()) {
         static constexpr auto cap = Capability::BFloat16TypeKHR;
         capabilities.push_back(cap);
       } else {
@@ -802,6 +818,14 @@ SampledImageType::verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
 //===----------------------------------------------------------------------===//
 
 SamplerType SamplerType::get(MLIRContext *context) {
+  return Base::get(context);
+}
+
+//===----------------------------------------------------------------------===//
+// NamedBarrierType
+//===----------------------------------------------------------------------===//
+
+NamedBarrierType NamedBarrierType::get(MLIRContext *context) {
   return Base::get(context);
 }
 
@@ -1341,7 +1365,7 @@ TensorArmType::verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
 //===----------------------------------------------------------------------===//
 
 void SPIRVDialect::registerTypes() {
-  addTypes<ArrayType, CooperativeMatrixType, ImageType, MatrixType, PointerType,
-           RuntimeArrayType, SampledImageType, SamplerType, StructType,
-           TensorArmType>();
+  addTypes<ArrayType, CooperativeMatrixType, ImageType, MatrixType,
+           NamedBarrierType, PointerType, RuntimeArrayType, SampledImageType,
+           SamplerType, StructType, TensorArmType>();
 }

@@ -64,11 +64,9 @@ class ExplodedGraph;
 // successors to it at any time after creating it.
 
 class ExplodedNode : public llvm::FoldingSetNode {
-  friend class BranchNodeBuilder;
   friend class CoreEngine;
   friend class ExplodedGraph;
   friend class NodeBuilder;
-  friend class SwitchNodeBuilder;
 
   /// Efficiently stores a list of ExplodedNodes, or an optional flag.
   ///
@@ -171,8 +169,8 @@ public:
   }
 
   /// Get the value of an arbitrary expression at this node.
-  SVal getSVal(const Stmt *S) const {
-    return getState()->getSVal(S, getLocationContext());
+  SVal getSVal(const Expr *E) const {
+    return getState()->getSVal(E, getLocationContext());
   }
 
   static void Profile(llvm::FoldingSetNodeID &ID,

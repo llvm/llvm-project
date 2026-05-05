@@ -12,6 +12,7 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -102,7 +103,8 @@ public:
   Pointer getWithNewAddr(const APInt &NewAddr) const {
     return Pointer(Obj, NewAddr);
   }
-  static AnyValue null(unsigned BitWidth);
+  static AnyValue null(unsigned AS, const DataLayout &DL);
+  bool isNullPtr(unsigned AS, const DataLayout &DL) const;
   void print(raw_ostream &OS) const;
   const APInt &address() const { return Address; }
   MemoryObject *getMemoryObject() const { return Obj.get(); }

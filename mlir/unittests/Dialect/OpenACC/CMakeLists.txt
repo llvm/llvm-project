@@ -16,6 +16,7 @@ mlir_target_link_libraries(MLIROpenACCTests
   MLIRDLTIDialect
   MLIRFuncDialect
   MLIRGPUDialect
+  MLIRLLVMDialect
   MLIRMemRefDialect
   MLIRArithDialect
   MLIROpenACCDialect

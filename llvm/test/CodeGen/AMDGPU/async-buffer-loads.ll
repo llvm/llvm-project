@@ -7,12 +7,13 @@ define float @raw.buffer.load(<4 x i32> inreg %rsrc, ptr addrspace(3) inreg %lds
 ; CHECK:       ; %bb.0: ; %main_body
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_mov_b32 m0, s20
-; CHECK-NEXT:    v_mov_b32_e32 v0, s20
+; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    buffer_load_dword off, s[16:19], 0 lds
 ; CHECK-NEXT:    ; asyncmark
 ; CHECK-NEXT:    buffer_load_dword off, s[16:19], 0 offset:4 glc lds
 ; CHECK-NEXT:    ; asyncmark
 ; CHECK-NEXT:    buffer_load_dword off, s[16:19], 0 offset:8 slc lds
+; CHECK-NEXT:    v_mov_b32_e32 v0, s20
 ; CHECK-NEXT:    ; wait_asyncmark(1)
 ; CHECK-NEXT:    s_waitcnt vmcnt(2)
 ; CHECK-NEXT:    ds_read_b32 v0, v0
@@ -34,12 +35,13 @@ define float @raw.ptr.buffer.load(ptr addrspace(8) inreg %rsrc, ptr addrspace(3)
 ; CHECK:       ; %bb.0: ; %main_body
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_mov_b32 m0, s20
-; CHECK-NEXT:    v_mov_b32_e32 v0, s20
+; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    buffer_load_dword off, s[16:19], 0 lds
 ; CHECK-NEXT:    ; asyncmark
 ; CHECK-NEXT:    buffer_load_dword off, s[16:19], 0 offset:4 glc lds
 ; CHECK-NEXT:    ; asyncmark
 ; CHECK-NEXT:    buffer_load_dword off, s[16:19], 0 offset:8 slc lds
+; CHECK-NEXT:    v_mov_b32_e32 v0, s20
 ; CHECK-NEXT:    ; wait_asyncmark(1)
 ; CHECK-NEXT:    s_waitcnt vmcnt(2)
 ; CHECK-NEXT:    ds_read_b32 v0, v0

@@ -1294,7 +1294,8 @@ AliasResult BasicAAResult::aliasGEP(
     const VariableGEPIndex &Index = DecompGEP1.VarIndices[i];
     const APInt &Scale = Index.Scale;
 
-    KnownBits Known = computeKnownBits(Index.Val.V, DL, &AC, Index.CxtI, DT);
+    SimplifyQuery SQ(DL, DT, &AC, Index.CxtI, /*UseInstrInfo=*/true);
+    KnownBits Known = computeKnownBits(Index.Val.V, SQ);
 
     APInt ScaleForGCD = Scale;
     if (!Index.IsNSW)
@@ -1317,8 +1318,8 @@ AliasResult BasicAAResult::aliasGEP(
     else
       GCD = APIntOps::GreatestCommonDivisor(GCD, ScaleForGCD.abs());
 
-    ConstantRange CR = computeConstantRange(Index.Val.V, /* ForSigned */ false,
-                                            true, &AC, Index.CxtI);
+    ConstantRange CR =
+        computeConstantRange(Index.Val.V, /*ForSigned=*/false, SQ);
     CR = CR.intersectWith(
         ConstantRange::fromKnownBits(Known, /* Signed */ true),
         ConstantRange::Signed);
@@ -1639,10 +1640,10 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
   // Null values in the default address space don't point to any object, so they
   // don't alias any other pointer.
   if (const ConstantPointerNull *CPN = dyn_cast<ConstantPointerNull>(O1))
-    if (!NullPointerIsDefined(&F, CPN->getType()->getAddressSpace()))
+    if (!NullPointerIsDefined(&F, CPN->getPointerType()->getAddressSpace()))
       return AliasResult::NoAlias;
   if (const ConstantPointerNull *CPN = dyn_cast<ConstantPointerNull>(O2))
-    if (!NullPointerIsDefined(&F, CPN->getType()->getAddressSpace()))
+    if (!NullPointerIsDefined(&F, CPN->getPointerType()->getAddressSpace()))
       return AliasResult::NoAlias;
 
   if (O1 != O2) {
