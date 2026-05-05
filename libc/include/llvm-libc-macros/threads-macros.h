@@ -9,9 +9,11 @@
 #ifndef LLVM_LIBC_MACROS_THREADS_MACRO_H
 #define LLVM_LIBC_MACROS_THREADS_MACRO_H
 
+#include "__llvm-libc-common.h"
 #include "stdint-macros.h"
 
 // LLVM libc extensions
-#define __THRD_GET_ID(t) (reinterpret_cast<uintptr_t>((t).__attrib))
+#define __THRD_GET_ID(t)                                                       \
+  __LLVM_LIBC_CAST(reinterpret_cast, uintptr_t, (t).__attrib)
 
 #endif // LLVM_LIBC_MACROS_THREADS_MACRO_H

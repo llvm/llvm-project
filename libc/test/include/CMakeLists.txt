@@ -229,6 +229,19 @@ add_libc_test(
 )
 
 add_libc_test(
+  pthread_test
+  C_TEST
+  UNIT_TEST_ONLY
+  SUITE
+    libc_include_tests
+  SRCS
+    pthread_test.c
+  DEPENDS
+    libc.include.llvm-libc-macros.pthread_macros
+    libc.include.llvm-libc-types.pthread_t
+)
+
+add_libc_test(
   signbit_test
   SUITE
     libc_include_tests
