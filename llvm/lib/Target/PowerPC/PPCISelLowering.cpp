@@ -5066,13 +5066,9 @@ static bool hasSameArgumentList(const Function *CallerFn, const CallBase &CB) {
     if (CalleeArg == CallerArg)
       continue;
 
-    // e.g. @caller([4 x i64] %a, [4 x i64] %b) {
-    //        tail call @callee([4 x i64] undef, [4 x i64] %b)
-    //      }
-    // 1st argument of callee is undef and has the same type as caller.
-    if (CalleeArg->getType() == CallerArg->getType() &&
-        isa<UndefValue>(CalleeArg))
-      continue;
+    // TODO: Revisit handling of undef callee arguments here. The previous
+    // special-case accepted undef when its type matched the caller argument,
+    // but that behavior is known to be incorrect and was intentionally removed
 
     return false;
   }
