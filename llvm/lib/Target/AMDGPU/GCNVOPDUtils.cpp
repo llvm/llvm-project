@@ -184,17 +184,18 @@ tryMatchVOPDPairVariant(const SIInstrInfo &TII, unsigned EncodingFamily,
   if (TII.hasRAWDependency(FirstMI, SecondMI))
     return std::nullopt;
 
-  bool IsAntiDep = TII.hasRAWDependency(SecondMI, FirstMI);
-  // AllowSameVGPR relaxes the VGPR bank overlap check for source operands.
-  // Only enable it when there is no antidependency.
   const GCNSubtarget &ST = TII.getSubtarget();
-  bool AllowSameVGPR = ST.hasGFX1250Insts() && !IsAntiDep;
+  bool AllowSameVGPR = ST.hasGFX1250Insts();
 
   if (FirstCanBeVOPD.X && SecondCanBeVOPD.Y) {
-    if ((!IsAntiDep || TII.isVOPDAntidependencyAllowed(FirstMI)) &&
-        checkVOPDRegConstraints(TII, FirstMI, SecondMI, IsVOPD3, AllowSameVGPR))
+    if (checkVOPDRegConstraints(TII, FirstMI, SecondMI, IsVOPD3, AllowSameVGPR))
       return VOPDMatchInfo{&FirstMI, &SecondMI, IsVOPD3};
   }
+
+  // AllowSameVGPR relaxes the VGPR bank overlap check for source operands.
+  // Only enable it when there is no antidependency.
+  bool IsAntiDep = TII.hasRAWDependency(SecondMI, FirstMI);
+  AllowSameVGPR &= !IsAntiDep;
 
   if (FirstCanBeVOPD.Y && SecondCanBeVOPD.X) {
     if (IsAntiDep && !TII.isVOPDAntidependencyAllowed(SecondMI))

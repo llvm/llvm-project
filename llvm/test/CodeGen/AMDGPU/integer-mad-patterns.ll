@@ -11576,8 +11576,7 @@ define <2 x i32> @multi_use_mul_mad_i32_var(i32 %x, i32 %y, i32 %z0, i32 %z1) {
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mul_lo_u32 v1, v0, v1
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_add_nc_u32_e32 v0, v1, v2
-; GFX1250-NEXT:    v_add_nc_u32_e32 v1, v1, v3
+; GFX1250-NEXT:    v_dual_add_nc_u32 v0, v1, v2 :: v_dual_add_nc_u32 v1, v1, v3
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %mul = mul i32 %x, %y
