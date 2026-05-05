@@ -11468,6 +11468,10 @@ SemaOpenMP::ActOnOpenMPTaskwaitDirective(ArrayRef<OMPClause *> Clauses,
     Diag(StartLoc, diag::err_omp_nowait_clause_without_depend);
     return StmtError();
   }
+  if (DSAStack->getParentDirective() == OMPD_taskgraph && !HasDependC) {
+    Diag(StartLoc, diag::err_omp_taskgraph_taskwait_without_depend);
+    return StmtError();
+  }
 
   return OMPTaskwaitDirective::Create(getASTContext(), StartLoc, EndLoc,
                                       Clauses);
