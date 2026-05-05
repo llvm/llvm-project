@@ -904,8 +904,6 @@ static bool CheckInvoke(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   if (!Ptr.isDummy() && !isConstexprUnknown(Ptr)) {
     if (!CheckLive(S, OpPC, Ptr, AK_MemberCall))
       return false;
-    if (!CheckExtern(S, OpPC, Ptr))
-      return false;
     if (!CheckRange(S, OpPC, Ptr, AK_MemberCall))
       return false;
     if (!IsCtorDtor && !CheckLifetime(S, OpPC, Ptr, AK_MemberCall))

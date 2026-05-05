@@ -1044,11 +1044,9 @@ define <2 x i8> @pr168848(<2 x i1> %shift) {
 ; CHECK-GI-LABEL: pr168848:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    movi v1.2s, #1
-; CHECK-GI-NEXT:    mov w8, #1 // =0x1
 ; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    fmov s1, w8
+; CHECK-GI-NEXT:    movi v1.8b, #1
 ; CHECK-GI-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
-; CHECK-GI-NEXT:    mov v1.b[1], w8
 ; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    ushl v0.8b, v1.8b, v0.8b
 ; CHECK-GI-NEXT:    umov w8, v0.b[0]

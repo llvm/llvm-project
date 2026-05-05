@@ -111,6 +111,30 @@ static StringRef getSamplerName(const Value &V) {
   return V.getName();
 }
 
+/// Emits initial debug location directive.
+static void emitInitialRawDwarfLocDirective(const MachineFunction &MF,
+                                            DwarfDebug *DD,
+                                            MCStreamer &OutStreamer) {
+  if (!DD)
+    return;
+
+  assert(OutStreamer.hasRawTextSupport() && "Expected assembly output mode.");
+  // This is NVPTX specific and it's unclear why.
+  // PR51079: If we have code without debug information we need to give up.
+  const DISubprogram *SP = MF.getFunction().getSubprogram();
+  if (!SP)
+    return;
+  assert(SP->getUnit());
+  // NoDebug and DebugDirectivesOnly do not require emitting the initial loc
+  // directive. NoDebug does not require any debug directives and the initial
+  // loc directive is not needed for DebugDirectivesOnly as it is redundant
+  // assuming this is a non-empty function.
+  if (SP->getUnit()->isDebugDirectivesOnly() || SP->getUnit()->isNoDebug())
+    return;
+
+  (void)DD->emitInitialLocDirective(MF, /*CUID=*/0);
+}
+
 /// discoverDependentGlobals - Return a set of GlobalVariables on which \p V
 /// depends.
 static void
@@ -375,11 +399,7 @@ void NVPTXAsmPrinter::emitFunctionEntryLabel() {
   setAndEmitFunctionVirtualRegisters(*MF);
   encodeDebugInfoRegisterNumbers(*MF);
   // Emit initial .loc debug directive for correct relocation symbol data.
-  if (const DISubprogram *SP = MF->getFunction().getSubprogram()) {
-    assert(SP->getUnit());
-    if (!SP->getUnit()->isDebugDirectivesOnly())
-      emitInitialRawDwarfLocDirective(*MF);
-  }
+  emitInitialRawDwarfLocDirective(*MF, getDwarfDebug(), *OutStreamer);
 }
 
 bool NVPTXAsmPrinter::runOnMachineFunction(MachineFunction &F) {
