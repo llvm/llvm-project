@@ -3767,7 +3767,6 @@ void ExprEngine::evalBind(ExplodedNodeSet &Dst, const Stmt *StoreE,
     }
 
     const ProgramPoint L = PostStore(StoreE, LC, LocReg, nullptr);
-    Dst.erase(PredI);
     Dst.insert(Engine.makeNode(L, state, PredI));
   }
 }
