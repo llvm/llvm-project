@@ -11,6 +11,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
+#include "clang/AST/ExprCXX.h"
 #include <set>
 
 using namespace clang;
@@ -34,8 +35,16 @@ public:
   bool VisitVarDecl(VarDecl *D) override {
     DeclContext *DC = D->getDeclContext();
 
-    if (DC->isFileContext() || DC->isNamespace())
+    // Collects Decl for global variables or static data members:
+    if (DC->isFileContext() || D->isStaticDataMember())
       Contributors.insert(D);
+    return true;
+  }
+
+  bool VisitLambdaExpr(LambdaExpr *L) override {
+    // TraverseLambdaExpr directly visits the body stmt, skipping the
+    // CXXMethodDecl, which is a contributor that needs to be collected.
+    VisitFunctionDecl(L->getCallOperator());
     return true;
   }
 };
