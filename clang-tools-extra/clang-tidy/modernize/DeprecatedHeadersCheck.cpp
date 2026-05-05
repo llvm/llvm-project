@@ -175,6 +175,10 @@ void IncludeModernizePPCallbacks::InclusionDirective(
   if (SM.isInSystemHeader(HashLoc))
     return;
 
+  // Skip headers that happen to use the same name as a standard library header.
+  if (!File || !SrcMgr::isSystem(FileType))
+    return;
+
   // FIXME: Take care of library symbols from the global namespace.
   //
   // Reasonable options for the check:

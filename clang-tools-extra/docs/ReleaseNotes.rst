@@ -380,6 +380,9 @@ Changes in existing checks
   - Fixed false positive where a pointer used with placement new was
     incorrectly diagnosed as allowing the pointee to be made ``const``.
 
+  - Fixed false positives when pointers were later passed or bound through
+    ``const``-qualified pointer references.
+
 - Improved :doc:`misc-multiple-inheritance
   <clang-tidy/checks/misc/multiple-inheritance>` by avoiding false positives when
   virtual inheritance causes concrete bases to be counted more than once.
@@ -407,6 +410,11 @@ Changes in existing checks
   internal linkage to entities defined in C++ module interface units.
   Because it only sees one file at a time, the check can't be sure
   such entities aren't referenced in any other files of that module.
+
+- Improved :doc:`modernize-deprecated-headers
+  <clang-tidy/checks/modernize/deprecated-headers>` check by avoiding false
+  positives on project headers that use the same name as a standard library
+  header.
 
 - Improved :doc:`modernize-pass-by-value
   <clang-tidy/checks/modernize/pass-by-value>` check by adding `IgnoreMacros`
