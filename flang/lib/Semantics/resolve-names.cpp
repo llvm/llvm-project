@@ -1616,12 +1616,14 @@ bool AccVisitor::Pre(const parser::OpenACCBlockConstruct &x) {
 
 void AccVisitor::CopySymbolWithDevice(const parser::Name *name) {
   // New symbols are created for those appearing in the use_device clause.
-  // These new symbols get the CUDA device attribute.
+  // These new symbols get the CUDA UseDevice attribute so that generic
+  // resolution can distinguish them from true DEVICE variables: UseDevice
+  // actuals are compatible with both host and device dummy arguments.
   if (name && name->symbol) {
     Symbol *copy{CopyUseDeviceSymbol(*name->symbol)};
     if (copy) {
       if (auto *object{copy->detailsIf<ObjectEntityDetails>()}) {
-        object->set_cudaDataAttr(common::CUDADataAttr::Device);
+        object->set_cudaDataAttr(common::CUDADataAttr::UseDevice);
       }
       name->symbol = copy;
     }
