@@ -109,17 +109,17 @@ template <typename T>
 static void reduceChildren(OwningVec<T> &Children,
                            OwningVec<T> &&ChildrenToMerge) {
   while (!ChildrenToMerge.empty()) {
-    auto &ChildToMerge = ChildrenToMerge.front();
+    T *Ptr = ChildrenToMerge.front().Ptr;
     ChildrenToMerge.pop_front();
 
-    auto It = llvm::find_if(Children, [&](const auto &C) {
-      return C.Ptr->USR == ChildToMerge.Ptr->USR;
+    auto It = llvm::find_if(Children, [Ptr](const auto &C) {
+      return C.Ptr->USR == Ptr->USR;
     });
 
     if (It == Children.end()) {
-      Children.push_back(*allocateListNodeTransient<T>(ChildToMerge.Ptr));
+      Children.push_back(*allocateListNodeTransient<T>(Ptr));
     } else {
-      It->Ptr->merge(std::move(*(ChildToMerge.Ptr)));
+      It->Ptr->merge(std::move(*Ptr));
     }
   }
 }
@@ -127,11 +127,11 @@ static void reduceChildren(OwningVec<T> &Children,
 template <typename T>
 static void mergeUnkeyed(OwningVec<T> &Target, OwningVec<T> &&Source) {
   while (!Source.empty()) {
-    auto &Item = Source.front();
+    T *Ptr = Source.front().Ptr;
     Source.pop_front();
 
-    if (!llvm::any_of(Target, [&](const auto &E) { return E == Item; }))
-      Target.push_back(*allocateListNodeTransient<T>(Item.Ptr));
+    if (!llvm::any_of(Target, [Ptr](const auto &E) { return *E.Ptr == *Ptr; }))
+      Target.push_back(*allocateListNodeTransient<T>(Ptr));
   }
 }
 
