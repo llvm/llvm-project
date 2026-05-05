@@ -42,6 +42,7 @@
 #include <__type_traits/is_trivially_relocatable.h>
 #include <__type_traits/is_void.h>
 #include <__type_traits/nat.h>
+#include <__type_traits/reference_converts_from_temporary.h>
 #include <__type_traits/remove_extent.h>
 #include <__type_traits/remove_reference.h>
 #include <__type_traits/void_t.h>
@@ -237,14 +238,9 @@ public:
   template <class _Ptr = pointer, __enable_if_t<__can_dereference<_Ptr>, int> = 0>
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 __add_lvalue_reference_t<_Tp> operator*() const
       _NOEXCEPT_(_NOEXCEPT_(*std::declval<pointer>())) {
-    // TODO(LLVM-21): Remove this workaround
-#if __has_builtin(__reference_converts_from_temporary) ||                                                              \
-    (defined(_LIBCPP_CLANG_VER) &&                                                                                     \
-     ((!defined(__ANDROID__) && _LIBCPP_CLANG_VER >= 1901) || (defined(__ANDROID__) && _LIBCPP_CLANG_VER >= 2000)))
     static_assert(
-        !__reference_converts_from_temporary(__add_lvalue_reference_t<_Tp>, decltype(*std::declval<pointer>())),
+        !__reference_converts_from_temporary_v<__add_lvalue_reference_t<_Tp>, decltype(*std::declval<pointer>())>,
         "Reference type _Tp must not convert from a temporary object");
-#endif
     return *__ptr_;
   }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 pointer operator->() const _NOEXCEPT { return __ptr_; }
