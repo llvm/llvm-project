@@ -3152,7 +3152,7 @@ the behavior is undefined, unless one of the following exceptions applies:
 
 * ``"align"`` operand bundles may specify a non-power-of-two alignment
   (including a zero alignment). If this is the case, then the pointer value
-  must be a null pointer, otherwise the behavior is undefined.
+  must be an all-zero pointer, otherwise the behavior is undefined.
 
 * ``dereferenceable(<n>)`` operand bundles only guarantee the pointer is
   dereferenceable at the point of the assumption. The pointer may not be
