@@ -18,6 +18,7 @@
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/ValueObject/ValueObjectRegister.h"
 #include "lldb/ValueObject/ValueObjectVariable.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/FormatAdapters.h"
 #include <memory>
 
@@ -44,11 +45,14 @@ static lldb::ValueObjectSP ArrayToPointerConversion(ValueObject &valobj,
 }
 
 static llvm::Expected<lldb::TypeSystemSP>
-GetTypeSystemFromCU(std::shared_ptr<StackFrame> ctx) {
+GetTypeSystemFromCU(const std::shared_ptr<StackFrame> &ctx) {
   SymbolContext symbol_context =
       ctx->GetSymbolContext(lldb::eSymbolContextCompUnit);
-  lldb::LanguageType language = symbol_context.comp_unit->GetLanguage();
+  if (!symbol_context.comp_unit)
+    return llvm::createStringErrorV("no compile unit for frame: {}",
+                                    ctx->GetFunctionName());
 
+  lldb::LanguageType language = symbol_context.comp_unit->GetLanguage();
   symbol_context = ctx->GetSymbolContext(lldb::eSymbolContextModule);
   return symbol_context.module_sp->GetTypeSystemForLanguage(language);
 }
