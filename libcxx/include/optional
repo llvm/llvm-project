@@ -966,7 +966,7 @@ private:
     }
 
     template <class>
-    _LIBCPP_HIDE_FROM_ABI constexpr bool __enable_assign() {
+    _LIBCPP_HIDE_FROM_ABI static constexpr bool __enable_assign() {
       return false;
     }
   };
