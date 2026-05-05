@@ -179,6 +179,10 @@ void addStringImm(const StringRef &Str, MachineInstrBuilder &MIB);
 void addStringImm(const StringRef &Str, IRBuilder<> &B,
                   std::vector<Value *> &Args);
 
+// Read the series of integer operands back as a null-terminated string using
+// the reverse of the logic in addStringImm.
+std::string getStringImm(const MachineInstr &MI, unsigned StartIndex);
+
 // Returns the string constant that the register refers to. It is assumed that
 // Reg is a global value that contains a string.
 std::string getStringValueFromReg(Register Reg, MachineRegisterInfo &MRI);

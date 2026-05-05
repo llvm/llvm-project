@@ -579,7 +579,7 @@ void SPIRVModuleAnalysis::collectFuncNames(MachineInstr &MI,
       if (Lnk == SPIRV::LinkageType::Import) {
         // Map imported function name to function ID register.
         const Function *ImportedFunc =
-            F->getParent()->getFunction(getSPIRVStringOperand(MI, 2));
+            F->getParent()->getFunction(getStringImm(MI, 2));
         Register Target = MI.getOperand(0).getReg();
         MAI.GlobalObjMap[ImportedFunc] =
             MAI.getRegisterAlias(MI.getMF(), Target);
