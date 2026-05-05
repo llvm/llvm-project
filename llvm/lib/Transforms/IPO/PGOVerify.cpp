@@ -12,10 +12,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/PGOVerify.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/ProfDataUtils.h"
+#include "llvm/IR/ProfileSummary.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include <limits>
+#include <numeric>
 
 using namespace llvm;
 
@@ -62,6 +70,10 @@ void IPGOVerifier::registerCallbacks(PassInstrumentationCallbacks &PIC) {
 void IPGOVerifier::runAfterPass(StringRef PassID, Any IR) {
   (void)PassID;
 
+  // Drop cached per-function state for the IR unit that just changed before
+  // rebuilding or rechecking any derived block-frequency information.
+  invalidateFunctionFrequencyCache(IR);
+
   if (const auto *M = any_cast<const Module *>(&IR))
     runAfterPass(*M);
   else if (const auto *F = any_cast<const Function *>(&IR)) {
@@ -78,10 +90,46 @@ void IPGOVerifier::runAfterPass(StringRef PassID, Any IR) {
   }
 }
 
+void IPGOVerifier::invalidateFunctionFrequencyCache(Any IR) {
+  if (const auto *M = any_cast<const Module *>(&IR)) {
+    (void)M;
+    // Module passes can invalidate frequency state for any contained function.
+    FunctionBlockFreqInfoCache.clear();
+    LLVM_DEBUG(dbgs() << "PGOVerify cache invalidated: module\n");
+    return;
+  }
+
+  if (const auto *F = any_cast<const Function *>(&IR)) {
+    FunctionBlockFreqInfoCache.erase(*F);
+    LLVM_DEBUG(dbgs() << "PGOVerify cache invalidated: function\n");
+    return;
+  }
+
+  if (const auto *C = any_cast<const LazyCallGraph::SCC *>(&IR)) {
+    for (const LazyCallGraph::Node &N : **C)
+      FunctionBlockFreqInfoCache.erase(&N.getFunction());
+    LLVM_DEBUG(dbgs() << "PGOVerify cache invalidated: scc\n");
+    return;
+  }
+
+  if (const auto *L = any_cast<const Loop *>(&IR)) {
+    FunctionBlockFreqInfoCache.erase((*L)->getHeader()->getParent());
+    LLVM_DEBUG(dbgs() << "PGOVerify cache invalidated: loop\n");
+    return;
+  }
+
+  FunctionBlockFreqInfoCache.clear();
+  LLVM_DEBUG(dbgs() << "PGOVerify cache invalidated: unknown\n");
+}
+
 /// Delegate module callback handling to the function handler.
 ///
 /// \param M Module callback payload.
 void IPGOVerifier::runAfterPass(const Module *M) {
+  // Run Use-phase checks only when an InstrProf use summary is present.
+  if (!hasInstrProfUseSummary(M))
+    return;
+
   for (const Function &F : *M) {
     if (F.isDeclaration())
       continue;
@@ -93,9 +141,23 @@ void IPGOVerifier::runAfterPass(const Module *M) {
 /// Per-function post-pass handler.
 ///
 /// \param F Function callback payload.
-void IPGOVerifier::runAfterPass(const Function *F) {
+void IPGOVerifier::runAfterPass(Function *F) {
   if (!F || F->isDeclaration())
     return;
+
+  // Run Use-phase checks only when an InstrProf use summary is present.
+  if (!hasInstrProfUseSummary(F->getParent()))
+    return;
+
+  // Rebuild the minimal local analysis stack here so verification can query
+  // non-synthetic block profile counts after each pass callback.
+  DominatorTree DT(*F);
+  LoopInfo LI(DT);
+  BranchProbabilityInfo BPI(*F, LI, nullptr, &DT, nullptr);
+  BlockFrequencyInfo BFI(*F, BPI, LI);
+
+  computeBlockFrequencies(F, BFI);
+  validateBlockFrequencies(F);
 }
 
 /// Delegate SCC callback handling to the function handler.
@@ -111,4 +173,249 @@ void IPGOVerifier::runAfterPass(const LazyCallGraph::SCC *C) {
 /// \param L Loop callback payload.
 void IPGOVerifier::runAfterPass(const Loop *L) {
   runAfterPass(L->getHeader()->getParent());
+}
+
+/// Compute and cache per-block flow state for verifier checks.
+///
+/// This seeds block-local incoming and outgoing totals from profile metadata,
+/// then iteratively propagates any facts that become forced by CFG structure
+/// until no additional block flow state can be resolved.
+///
+///
+/// \param F Function whose basic blocks are being analyzed.
+/// \param BFI BlockFrequencyInfo used to query non-synthetic profile counts
+///            and to detect cases where strict verification would be unsafe.
+void IPGOVerifier::computeBlockFrequencies(const Function *F,
+                                           const BlockFrequencyInfo &BFI) {
+  // Skip strict flow checks when local profile counts can overflow uint32.
+  if (hasFunctionLocalCountOverflow(F, BFI)) {
+    FunctionBlockFreqInfoCache[F] = AllBlockFreqInfo();
+    return;
+  }
+
+  AllBlockFreqInfo AllFreqInfo;
+
+  for (const BasicBlock &BB : *F) {
+    // Start with all predecessor and successor contributions unknown, then
+    // refine each block as profile metadata or structural rules provide facts.
+    AllFreqInfo[&BB].numUnknownIn = llvm::pred_size(&BB);
+    AllFreqInfo[&BB].numUnknownOut = llvm::succ_size(&BB);
+    AllFreqInfo[&BB].sumIn = 0;
+    AllFreqInfo[&BB].sumOut = 0;
+  }
+
+  // Model the function entry as an external incoming edge so the entry count
+  // can seed flow-conservation reasoning like any other known predecessor.
+  AllFreqInfo[&F->getEntryBlock()].numUnknownIn = 1;
+
+  if (auto Count = F->getEntryCount()) {
+    AllFreqInfo[&F->getEntryBlock()].sumIn = Count->getCount();
+    AllFreqInfo[&F->getEntryBlock()].numUnknownIn = 0;
+    if (Count->getCount() == 0) {
+      // A zero entry count forces every reachable block contribution to zero,
+      // which avoids leaving unknown edges behind in dead-profile functions.
+      for (const BasicBlock &BB : *F) {
+        AllFreqInfo[&BB].numUnknownIn = 0;
+        AllFreqInfo[&BB].sumIn = 0;
+        AllFreqInfo[&BB].numUnknownOut = 0;
+        AllFreqInfo[&BB].sumOut = 0;
+      }
+    } else {
+      const Instruction *Term = F->getEntryBlock().getTerminator();
+      if (Term && (Term->getNumSuccessors() == 0)) {
+        AllFreqInfo[&F->getEntryBlock()].sumOut = Count->getCount();
+        AllFreqInfo[&F->getEntryBlock()].numUnknownOut = 0;
+      }
+    }
+  }
+
+  for (const BasicBlock &BB : *F) {
+    SmallVector<uint64_t> Weights;
+    const Instruction *Term = BB.getTerminator();
+    if (!Term)
+      continue;
+
+    if (isa<ReturnInst>(Term) && AllFreqInfo[&BB].numUnknownIn == 0) {
+      AllFreqInfo[&BB].sumOut = AllFreqInfo[&BB].sumIn;
+      AllFreqInfo[&BB].numUnknownOut = 0;
+      continue;
+    }
+
+    if (MDNode *Prof = Term->getMetadata(LLVMContext::MD_prof)) {
+      if (Prof->getNumOperands() > 1) {
+        for (unsigned I = 1; I < Prof->getNumOperands(); ++I) {
+          auto *CI = mdconst::dyn_extract<ConstantInt>(Prof->getOperand(I));
+          if (!CI) {
+            // Ignore malformed weight metadata and leave the block unresolved.
+            Weights.clear();
+            break;
+          }
+          Weights.push_back(CI->getZExtValue());
+        }
+      }
+    }
+
+    if (Weights.empty())
+      continue;
+
+    if (Weights.size() != Term->getNumSuccessors())
+      continue;
+
+    // Explicit successor weights fully determine the outgoing total for this
+    // terminator and contribute known incoming counts to each successor.
+    for (unsigned I = 0; I < Term->getNumSuccessors(); ++I) {
+      if (AllFreqInfo[Term->getSuccessor(I)].numUnknownIn > 0)
+        AllFreqInfo[Term->getSuccessor(I)].numUnknownIn--;
+      AllFreqInfo[Term->getSuccessor(I)].sumIn += Weights[I];
+    }
+    AllFreqInfo[&BB].numUnknownOut = 0;
+    AllFreqInfo[&BB].sumOut =
+        std::accumulate(Weights.begin(), Weights.end(), uint64_t(0));
+  }
+
+  bool Changed = false;
+  do {
+    Changed = false;
+    for (const BasicBlock &BB : *F) {
+      const Instruction *Term = BB.getTerminator();
+      if (!Term)
+        continue;
+
+      // Once a block is known to receive zero flow, every still-unknown exit
+      // edge from that block can also be fixed to zero.
+      if (AllFreqInfo[&BB].numUnknownIn == 0 && AllFreqInfo[&BB].sumIn == 0 &&
+          AllFreqInfo[&BB].numUnknownOut > 0) {
+        for (unsigned I = 0; I < Term->getNumSuccessors(); ++I)
+          if (AllFreqInfo[Term->getSuccessor(I)].numUnknownIn > 0)
+            AllFreqInfo[Term->getSuccessor(I)].numUnknownIn--;
+        AllFreqInfo[&BB].numUnknownOut = 0;
+        AllFreqInfo[&BB].sumOut = 0;
+
+        Changed = true;
+        continue;
+      }
+
+      // A single unresolved successor on a single-successor terminator must
+      // carry the entire incoming flow for this block.
+      if (AllFreqInfo[&BB].numUnknownIn == 0 &&
+          AllFreqInfo[&BB].numUnknownOut == 1) {
+        if (Term->getNumSuccessors() > 1)
+          continue;
+
+        for (unsigned I = 0; I < Term->getNumSuccessors(); ++I) {
+          if (AllFreqInfo[Term->getSuccessor(I)].numUnknownIn > 0)
+            AllFreqInfo[Term->getSuccessor(I)].numUnknownIn--;
+          AllFreqInfo[Term->getSuccessor(I)].sumIn += AllFreqInfo[&BB].sumIn;
+        }
+        AllFreqInfo[&BB].numUnknownOut = 0;
+        AllFreqInfo[&BB].sumOut = AllFreqInfo[&BB].sumIn;
+
+        Changed = true;
+      }
+    }
+  } while (Changed);
+
+  FunctionBlockFreqInfoCache[F] = AllFreqInfo;
+}
+
+const IPGOVerifier::AllBlockFreqInfo *
+IPGOVerifier::getCachedBlockFreqInfo(const Function *F) const {
+  auto It = FunctionBlockFreqInfoCache.find(F);
+  if (It == FunctionBlockFreqInfoCache.end())
+    return nullptr;
+  return &It->second;
+}
+
+bool IPGOVerifier::hasFunctionLocalCountOverflow(const Function *F,
+                                           const BlockFrequencyInfo &BFI) const {
+  constexpr uint64_t UInt32Max = std::numeric_limits<uint32_t>::max();
+
+  if (auto EntryCount = F->getEntryCount();
+      EntryCount && EntryCount->getCount() > UInt32Max)
+    return true;
+
+
+  bool HasUnknownBlockCount = false;
+  for (const BasicBlock &BB : *F) {
+    if (&BB == &F->getEntryBlock())
+      continue;
+
+    // Only trust non-synthetic counts here; synthetic counts may already be
+    // inferred from the CFG and would circularly justify verifier results.
+    if (std::optional<uint64_t> Count =
+            BFI.getBlockProfileCount(&BB, /*AllowSynthetic=*/false);
+        Count && *Count > UInt32Max)
+      return true;
+    else if (!Count)
+      HasUnknownBlockCount = true;
+  }
+
+  // Conservative fallback when some per-block counts are unavailable.
+  if (HasUnknownBlockCount) {
+    if (const Module *M = F->getParent()) {
+      // The profile summary gives an upper bound when local block counts are
+      // missing, allowing the verifier to avoid strict checks near overflow.
+      Metadata *SummaryMD = M->getProfileSummary(/*IsCS=*/false);
+      if (SummaryMD) {
+        std::unique_ptr<ProfileSummary> PS(
+            ProfileSummary::getFromMD(SummaryMD));
+        if (PS && PS->getMaxInternalCount() > UInt32Max)
+          return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+bool IPGOVerifier::hasInstrProfUseSummary(const Module *M) const {
+  if (!M)
+    return false;
+
+  Metadata *SummaryMD = M->getProfileSummary(/*IsCS=*/false);
+  if (!SummaryMD)
+    return false;
+
+  std::unique_ptr<ProfileSummary> PS(ProfileSummary::getFromMD(SummaryMD));
+  return PS && PS->getKind() == ProfileSummary::PSK_Instr;
+}
+
+/// Validate flow conservation where both sides are known.
+void IPGOVerifier::validateBlockFrequencies(const Function *F) {
+  auto CachedIt = FunctionBlockFreqInfoCache.find(F);
+  if (CachedIt == FunctionBlockFreqInfoCache.end())
+    return;
+  const AllBlockFreqInfo &AllFreqInfo = CachedIt->second;
+
+  for (const BasicBlock &BB : *F) {
+    const Instruction *Term = BB.getTerminator();
+    if (!Term)
+      continue;
+    if (Term->getNumSuccessors() == 0)
+      continue;
+
+    auto It = AllFreqInfo.find(&BB);
+    if (It == AllFreqInfo.end())
+      continue;
+
+    const BlockFreqInfo &Info = It->second;
+    // Only diagnose hard mismatches once both sides are fully known; otherwise
+    // leave the block as debug-only inconclusive state.
+    if (Info.numUnknownIn == 0 && Info.numUnknownOut == 0 &&
+        Info.sumIn != Info.sumOut) {
+      if (VerifyIPGOPrintDiagnostics)
+        errs() << "PGOVerify# Block frequency mismatch in function "
+               << F->getName() << ", block " << BB.getName()
+               << ":  Incoming=" << Info.sumIn
+               << ":  Outgoing=" << Info.sumOut << "\n";
+      LLVM_DEBUG(dbgs() << "PGOVerify# Block frequency mismatch in function "
+                        << F->getName() << ", block " << BB.getName()
+                        << ":  Incoming=" << Info.sumIn
+                        << ":  Outgoing=" << Info.sumOut << "\n");
+    } else if (Info.numUnknownIn != 0 || Info.numUnknownOut != 0) {
+      LLVM_DEBUG(
+          dbgs() << "PGOVerify# Not able to determine Block frequency for "
+                 << F->getName() << ", block " << BB.getName() << "\n");
+    }
+  }
 }

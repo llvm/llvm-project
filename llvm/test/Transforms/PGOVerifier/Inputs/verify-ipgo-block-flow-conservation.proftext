@@ -1,0 +1,55 @@
+# IR level Instrumentation Flag
+:ir
+correct_if_else
+# Func Hash:
+146835647075900052
+# Num Counters:
+3
+# Counter Values:
+1000
+600
+400
+
+correct_loop
+# Func Hash:
+784007056507080604
+# Num Counters:
+3
+# Counter Values:
+10
+90
+10
+
+incorrect_diamond
+# Func Hash:
+1124680652064592474
+# Num Counters:
+5
+# Counter Values:
+1000
+400
+600
+700
+200
+
+incorrect_if_else_middle
+# Func Hash:
+146835647075900052
+# Num Counters:
+4
+# Counter Values:
+1000
+700
+500
+300
+
+incorrect_loop_flow
+# Func Hash:
+1063705162469825436
+# Num Counters:
+4
+# Counter Values:
+10
+70
+10
+80

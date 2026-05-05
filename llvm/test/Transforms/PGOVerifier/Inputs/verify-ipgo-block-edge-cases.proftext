@@ -1,0 +1,60 @@
+# IR level Instrumentation Flag
+:ir
+multiple_returns
+# Func Hash:
+238984481941143025
+# Num Counters:
+3
+# Counter Values:
+1000
+200
+500
+
+nested_correct
+# Func Hash:
+536873292852368260
+# Num Counters:
+3
+# Counter Values:
+1000
+700
+400
+
+nested_incorrect
+# Func Hash:
+536873292852368260
+# Num Counters:
+3
+# Counter Values:
+1000
+700
+300
+
+switch_all_returns
+# Func Hash:
+1124680651005410801
+# Num Counters:
+4
+# Counter Values:
+1000
+200
+300
+400
+
+with_assertion
+# Func Hash:
+784007058953177093
+# Num Counters:
+2
+# Counter Values:
+1000
+999
+
+with_unreachable
+# Func Hash:
+1063705161907589342
+# Num Counters:
+2
+# Counter Values:
+1000
+600
