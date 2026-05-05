@@ -8,7 +8,7 @@
 
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/RegionsFromMetadata.h"
 
-#include "llvm/Transforms/Vectorize/SandboxVectorizer/RegionWithScore.h"
+#include "llvm/SandboxIR/Region.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/SandboxVectorizerPassBuilder.h"
 
 namespace llvm::sandboxir {
@@ -18,8 +18,8 @@ RegionsFromMetadata::RegionsFromMetadata(StringRef Pipeline, StringRef AuxArg)
       RPM("rpm", Pipeline, SandboxVectorizerPassBuilder::createRegionPass) {}
 
 bool RegionsFromMetadata::runOnFunction(Function &F, const Analyses &A) {
-  SmallVector<std::unique_ptr<sandboxir::RegionWithScore>> Regions =
-      sandboxir::RegionWithScore::createRegionsFromMD(F, A.getTTI());
+  SmallVector<std::unique_ptr<sandboxir::Region>> Regions =
+      sandboxir::Region::createRegionsFromMD(F, A.getTTI());
   bool Change = false;
   for (auto &R : Regions) {
     Change |= RPM.runOnRegion(*R, A);
