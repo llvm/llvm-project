@@ -7223,6 +7223,13 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MI.getOperand(0).setReg(OriginalExec);
     return BB;
   }
+  case AMDGPU::EXT_SRC16_V32_PSEUDO:
+  case AMDGPU::EXT_SRC16_S32_PSEUDO:
+  case AMDGPU::TRUNC_SRC32_V16_PSEUDO:
+  case AMDGPU::TRUNC_SRC32_S16_PSEUDO: {
+    LowerTrue16ExtTruncPseudo(MI);
+    return BB;
+  }
   default:
     if (TII->isImage(MI) || TII->isMUBUF(MI)) {
       if (!MI.mayStore())
@@ -18930,6 +18937,72 @@ void SITargetLowering::AddMemOpInit(MachineInstr &MI) const {
   MI.tieOperands(DstIdx, MI.getNumOperands() - 1);
 }
 
+void SITargetLowering::LowerTrue16ExtTruncPseudo(MachineInstr &MI) const {
+  const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
+  const DebugLoc &DL = MI.getDebugLoc();
+  MachineFunction *MF = MI.getMF();
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+  auto BB = MI.getParent();
+  switch (MI.getOpcode()) {
+  case AMDGPU::EXT_SRC16_V32_PSEUDO:
+  case AMDGPU::EXT_SRC16_S32_PSEUDO: {
+    // v32 = ext vgpr16  => reg_seq
+    // v32 = ext sreg32  => copy
+    // s32 = ext vgpr16  => reg_seq + copy
+    // s32 = ext sreg32  => copy
+    if (MRI.constrainRegClass(MI.getOperand(1).getReg(),
+                              &AMDGPU::VGPR_16RegClass)) {
+      Register NewDstReg;
+      Register Hi16Reg = MRI.createVirtualRegister(&AMDGPU::VGPR_16RegClass);
+      BuildMI(*BB, MI, DL, TII->get(AMDGPU::IMPLICIT_DEF), Hi16Reg);
+      if (MI.getOpcode() == AMDGPU::EXT_SRC16_S32_PSEUDO)
+        NewDstReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+      else
+        NewDstReg = MI.getOperand(0).getReg();
+
+      BuildMI(*BB, MI, DL, TII->get(TargetOpcode::REG_SEQUENCE), NewDstReg)
+          .add(MI.getOperand(1))
+          .addImm(AMDGPU::lo16)
+          .addReg(Hi16Reg)
+          .addImm(AMDGPU::hi16);
+      if (MI.getOpcode() == AMDGPU::EXT_SRC16_S32_PSEUDO)
+        BuildMI(*BB, MI, DL, TII->get(AMDGPU::COPY), MI.getOperand(0).getReg())
+            .addReg(NewDstReg);
+    } else {
+      BuildMI(*BB, MI, DL, TII->get(AMDGPU::COPY), MI.getOperand(0).getReg())
+          .add(MI.getOperand(1));
+    }
+    break;
+  }
+  case AMDGPU::TRUNC_SRC32_V16_PSEUDO: {
+    // v16 = trunc vgpr32  => copy
+    // v16 = trunc sreg32  => copy + copy
+    Register NewSrcReg;
+    if (MRI.constrainRegClass(MI.getOperand(1).getReg(),
+                              &AMDGPU::SReg_32RegClass)) {
+      NewSrcReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+      BuildMI(*BB, MI, DL, TII->get(AMDGPU::COPY), NewSrcReg)
+          .add(MI.getOperand(1));
+    } else {
+      NewSrcReg = MI.getOperand(1).getReg();
+    }
+    BuildMI(*BB, MI, DL, TII->get(AMDGPU::COPY), MI.getOperand(0).getReg())
+        .addReg(NewSrcReg, {}, AMDGPU::lo16);
+    break;
+  }
+  case AMDGPU::TRUNC_SRC32_S16_PSEUDO: {
+    // s16 = trunc vgpr32  => copy
+    // s16 = trunc sreg32  => copy
+    BuildMI(*BB, MI, DL, TII->get(AMDGPU::COPY), MI.getOperand(0).getReg())
+        .add(MI.getOperand(1));
+    break;
+  }
+  default:
+    llvm_unreachable("Invalid True16 Ext/Trunc Pseudo");
+  }
+  MI.eraseFromParent();
+}
+
 /// Assign the register class depending on the number of
 /// bits set in the writemask
 void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
@@ -18964,6 +19037,9 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
 
   if (TII->isImage(MI))
     TII->enforceOperandRCAlignment(MI, AMDGPU::OpName::vaddr);
+
+  if (TII->isTrue16ExtTruncPseudo(MI.getOpcode()))
+    LowerTrue16ExtTruncPseudo(MI);
 }
 
 static SDValue buildSMovImm32(SelectionDAG &DAG, const SDLoc &DL,

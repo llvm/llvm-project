@@ -717,6 +717,13 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::FLAT;
   }
 
+  bool isTrue16ExtTruncPseudo(uint32_t Opcode) const {
+    return (Opcode == AMDGPU::EXT_SRC16_V32_PSEUDO ||
+            Opcode == AMDGPU::EXT_SRC16_S32_PSEUDO ||
+            Opcode == AMDGPU::TRUNC_SRC32_V16_PSEUDO ||
+            Opcode == AMDGPU::TRUNC_SRC32_S16_PSEUDO);
+  }
+
   /// \returns true for SCRATCH_ instructions, or FLAT/BUF instructions unless
   /// the MMOs do not include scratch.
   /// Conservatively correct; will return true if \p MI cannot be proven

@@ -637,11 +637,19 @@ tracksRegLiveness: true
 body: |
   bb.0:
 
-    ; GFX9PLUS-LABEL: name: test_build_vector_trunc_s_v2s16_anyext_impdef_anyext_constant
-    ; GFX9PLUS: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-    ; GFX9PLUS-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 123
-    ; GFX9PLUS-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[DEF]], [[S_MOV_B32_]]
-    ; GFX9PLUS-NEXT: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
+    ; GFX9-LABEL: name: test_build_vector_trunc_s_v2s16_anyext_impdef_anyext_constant
+    ; GFX9: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+    ; GFX9-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 123
+    ; GFX9-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[DEF]], [[S_MOV_B32_]]
+    ; GFX9-NEXT: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
+    ;
+    ; GFX11-LABEL: name: test_build_vector_trunc_s_v2s16_anyext_impdef_anyext_constant
+    ; GFX11: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+    ; GFX11-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 123
+    ; GFX11-NEXT: [[EXT_SRC:%[0-9]+]]:sreg_32 = EXT_SRC16_S32_PSEUDO [[DEF]], implicit $exec
+    ; GFX11-NEXT: [[EXT_SRC1:%[0-9]+]]:sreg_32 = EXT_SRC16_S32_PSEUDO [[S_MOV_B32_]], implicit $exec
+    ; GFX11-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[EXT_SRC]], [[EXT_SRC1]]
+    ; GFX11-NEXT: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
     %0:sgpr(s16) = G_IMPLICIT_DEF
     %1:sgpr(s16) = G_CONSTANT i16 123
     %2:sgpr(s32) = G_ANYEXT %0

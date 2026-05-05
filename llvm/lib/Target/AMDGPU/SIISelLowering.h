@@ -321,6 +321,8 @@ private:
                                       SDLoc DL, SDValue Ops[],
                                       MemSDNode *M) const;
 
+  void LowerTrue16ExtTruncPseudo(MachineInstr &MI) const;
+
 public:
   SITargetLowering(const TargetMachine &tm, const GCNSubtarget &STI);
 
