@@ -3889,70 +3889,68 @@ void SIRegisterInfo::addVGPRBankConflictHints(Register VirtReg,
                                               const MachineFunction &MF,
                                               const VirtRegMap *VRM) const {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  if (EnableVGPRBankConflictAvoidance && VRM && isVGPR(MRI, VirtReg)) {
-    // Track which banks are already in use by allocated operands
-    SmallDenseMap<unsigned, unsigned, 4> BankUsage; // bank_id -> use_count
-    bool HasRelevant3OpVALU = false;
+  if (!EnableVGPRBankConflictAvoidance || !VRM || !isVGPR(MRI, VirtReg))
+    return;
 
-    // Scan all uses of this virtual register
-    for (const MachineInstr &Use : MRI.use_nodbg_instructions(VirtReg)) {
-      if (!canHave3VGPROperands(Use))
+  // Track which banks are already in use by allocated operands
+  SmallDenseMap<unsigned, unsigned, 4> BankUsage; // bank_id -> use_count
+  bool HasRelevant3OpVALU = false;
+
+  // Scan all uses of this virtual register
+  for (const MachineInstr &Use : MRI.use_nodbg_instructions(VirtReg)) {
+    if (!canHave3VGPROperands(Use))
+      continue;
+
+    HasRelevant3OpVALU = true;
+
+    // Check which banks are used by other operands
+    for (const MachineOperand &MO : Use.uses()) {
+      if (!MO.isReg() || MO.getReg() == VirtReg)
         continue;
 
-      HasRelevant3OpVALU = true;
+      Register OpReg = MO.getReg();
 
-      // Check which banks are used by other operands
-      for (const MachineOperand &MO : Use.uses()) {
-        if (!MO.isReg() || MO.getReg() == VirtReg)
-          continue;
+      // Only care about already-allocated physical registers
+      if (!OpReg.isVirtual() || !VRM->hasPhys(OpReg))
+        continue;
+      OpReg = VRM->getPhys(OpReg);
 
-        Register OpReg = MO.getReg();
+      if (OpReg.isPhysical() && isVGPR(MRI, OpReg)) {
+        unsigned Bank = getHWRegIndex(OpReg) % 4;
+        BankUsage[Bank]++;
+      }
+    }
+  }
 
-        // Only care about already-allocated physical registers
-        if (OpReg.isVirtual()) {
-          if (VRM->hasPhys(OpReg))
-            OpReg = VRM->getPhys(OpReg);
-          else
-            continue;
-        }
+  if (HasRelevant3OpVALU && !BankUsage.empty()) {
+    constexpr unsigned MaxBankHints =
+        32; // Arbitrary limit to avoid excessive hints
+    unsigned Added = 0;
 
-        if (OpReg.isPhysical() && isVGPR(MRI, OpReg)) {
-          unsigned Bank = getHWRegIndex(OpReg) % 4;
-          BankUsage[Bank]++;
-        }
+    // Pass 1: conflict-free candidates (no operands on this bank)
+    for (MCPhysReg Cand : Order) {
+      if (Added >= MaxBankHints)
+        break;
+      unsigned CandBank = getVGPRBankIndex(Cand);
+      if (!BankUsage.count(CandBank)) {
+        Hints.push_back(Cand);
+        ++Added;
       }
     }
 
-    if (HasRelevant3OpVALU && !BankUsage.empty()) {
-      constexpr unsigned MaxBankHints =
-          32; // Arbitrary limit to avoid excessive hints
-      unsigned Added = 0;
-
-      // Pass 1: conflict-free candidates (no operands on this bank)
-      for (MCPhysReg Cand : Order) {
-        if (Added >= MaxBankHints)
-          break;
-        unsigned CandBank = getVGPRBankIndex(Cand);
-        if (!BankUsage.count(CandBank)) {
-          Hints.push_back(Cand);
-          ++Added;
-        }
+    // Pass 2: moderate-conflict candidates (1 existing; 2-way conflict)
+    for (MCPhysReg Cand : Order) {
+      if (Added >= MaxBankHints)
+        break;
+      unsigned CandBank = getVGPRBankIndex(Cand);
+      auto It = BankUsage.find(CandBank);
+      if (It != BankUsage.end() && It->second < 2) {
+        Hints.push_back(Cand);
+        ++Added;
       }
-
-      // Pass 2: moderate-conflict candidates (1 existing; 2-way conflict)
-      for (MCPhysReg Cand : Order) {
-        if (Added >= MaxBankHints)
-          break;
-        unsigned CandBank = getVGPRBankIndex(Cand);
-        auto It = BankUsage.find(CandBank);
-        if (It != BankUsage.end() && It->second < 2) {
-          Hints.push_back(Cand);
-          ++Added;
-        }
-      }
-      // 3-way conflicts (usage >= 2) are not hinted; the allocator falls
-      // back to Order naturally via AllocationOrder iteration.
     }
+    // 3-way conflicts (usage >= 2) are not hinted; the allocator falls
+    // back to Order naturally via AllocationOrder iteration.
   }
 }
 

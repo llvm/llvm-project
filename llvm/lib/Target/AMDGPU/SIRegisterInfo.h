@@ -278,7 +278,7 @@ public:
   unsigned getVGPRBankIndex(MCRegister Reg) const;
 
   /// \returns true if MI is a VALU instruction that may have
-  /// at least 3 VGPR operands.
+  /// 3 VGPR operands.
   bool canHave3VGPROperands(const MachineInstr &MI) const;
 
   /// Add register allocation hints to avoid VGPRs that would cause
