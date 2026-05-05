@@ -153,10 +153,16 @@ void TypeReferenceTracker::markReferencedTypes() {
       case LF_INTERFACE:
       case LF_STRUCTURE:
       case LF_UNION:
-      case LF_ENUM:
-        addOneTypeRef(TiRefKind::TypeRef,
-                      cantFail(Tpi->findFullDeclForForwardRef(RefTI)));
-        break;
+      case LF_ENUM: {
+        SmallVector<TypeIndex, 2> TIs;
+        cantFail(Tpi->findFullDeclsForForwardRef(RefTI, TIs));
+        if (TIs.empty()) {
+          addOneTypeRef(TiRefKind::TypeRef, RefTI);
+        } else {
+          for (TypeIndex TI : TIs)
+            addOneTypeRef(TiRefKind::TypeRef, TI);
+        }
+      } break;
       }
     }
   }

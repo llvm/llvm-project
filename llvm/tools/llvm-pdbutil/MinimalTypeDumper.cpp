@@ -41,18 +41,34 @@ static std::string formatClassOptions(uint32_t IndentLevel,
       !opts::dump::DontResolveForwardRefs &&
       ((Options & ClassOptions::ForwardReference) != ClassOptions::None)) {
     // If we're able to resolve forward references, do that.
-    Expected<TypeIndex> ETI =
-        Stream->findFullDeclForForwardRef(CurrentTypeIndex);
-    if (!ETI) {
-      consumeError(ETI.takeError());
+    SmallVector<TypeIndex, 2> TIs;
+    Error Err = Stream->findFullDeclsForForwardRef(CurrentTypeIndex, TIs);
+    if (Err) {
+      consumeError(std::move(Err));
       PUSH_FLAG(ClassOptions, ForwardReference, Options, "forward ref (??\?)");
-    } else {
-      const char *Direction = (*ETI == CurrentTypeIndex)
-                                  ? "="
-                                  : ((*ETI < CurrentTypeIndex) ? "<-" : "->");
-      std::string Formatted =
-          formatv("forward ref ({0} {1})", Direction, *ETI).str();
+    } else if (!TIs.empty()) {
+      std::string Formatted = "forward ref (";
+      bool First = true;
+      for (TypeIndex TI : TIs) {
+        if (First)
+          First = false;
+        else
+          Formatted += ", ";
+
+        if (TI > CurrentTypeIndex)
+          Formatted += "-> ";
+        else if (TI < CurrentTypeIndex)
+          Formatted += "<- ";
+        else
+          Formatted += "= ";
+
+        Formatted += formatv("{0}", TI);
+      }
+      Formatted += ')';
       PUSH_FLAG(ClassOptions, ForwardReference, Options, std::move(Formatted));
+    } else {
+      PUSH_FLAG(ClassOptions, ForwardReference, Options,
+                formatv("forward ref (= {0})", CurrentTypeIndex));
     }
   } else {
     PUSH_FLAG(ClassOptions, ForwardReference, Options, "forward ref");

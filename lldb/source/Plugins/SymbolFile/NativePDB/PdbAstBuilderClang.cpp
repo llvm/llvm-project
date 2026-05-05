@@ -904,10 +904,13 @@ clang::FunctionDecl *PdbAstBuilderClang::CreateFunctionDecl(
     TagRecord tag_record = CVTagRecord::create(parent_cvt).asTag();
     // If it's a forward reference, try to get the real TypeIndex.
     if (tag_record.isForwardRef()) {
-      llvm::Expected<TypeIndex> eti =
-          index.tpi().findFullDeclForForwardRef(class_index);
-      if (eti) {
-        tag_record = CVTagRecord::create(index.tpi().getType(*eti)).asTag();
+      llvm::SmallVector<TypeIndex, 2> tis;
+      llvm::Error err =
+          index.tpi().findFullDeclsForForwardRef(class_index, tis);
+      if (!err && !tis.empty()) {
+        // FIXME: Find correct type if `tis` has more than one type index.
+        tag_record =
+            CVTagRecord::create(index.tpi().getType(tis.front())).asTag();
       }
     }
 

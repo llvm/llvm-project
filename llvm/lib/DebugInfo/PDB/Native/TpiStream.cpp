@@ -175,14 +175,14 @@ std::vector<TypeIndex> TpiStream::findRecordsByName(StringRef Name) const {
 
 bool TpiStream::supportsTypeLookup() const { return !HashMap.empty(); }
 
-Expected<TypeIndex>
-TpiStream::findFullDeclForForwardRef(TypeIndex ForwardRefTI) const {
+Error TpiStream::findFullDeclsForForwardRef(
+    TypeIndex ForwardRefTI, SmallVectorImpl<TypeIndex> &Decls) const {
   if (!supportsTypeLookup())
-    const_cast<TpiStream*>(this)->buildHashMap();
+    const_cast<TpiStream *>(this)->buildHashMap();
 
   CVType F = Types->getType(ForwardRefTI);
   if (!isUdtForwardRef(F))
-    return ForwardRefTI;
+    return Error::success();
 
   Expected<TagRecordHash> ForwardTRH = hashTagRecord(F);
   if (!ForwardTRH)
@@ -205,16 +205,17 @@ TpiStream::findFullDeclForForwardRef(TypeIndex ForwardRefTI) const {
 
     if (!ForwardTR.hasUniqueName()) {
       if (ForwardTR.getName() == FullTR.getName())
-        return TI;
+        Decls.emplace_back(TI);
       continue;
     }
 
     if (!FullTR.hasUniqueName())
       continue;
     if (ForwardTR.getUniqueName() == FullTR.getUniqueName())
-      return TI;
+      Decls.emplace_back(TI);
   }
-  return ForwardRefTI;
+
+  return Error::success();
 }
 
 codeview::CVType TpiStream::getType(codeview::TypeIndex Index) {
