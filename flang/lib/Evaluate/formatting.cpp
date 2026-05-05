@@ -510,7 +510,7 @@ llvm::raw_ostream &Convert<TO, FROMCAT>::AsFortran(llvm::raw_ostream &o) const {
   if constexpr (TO::category == TypeCategory::Character) {
     this->left().AsFortran(o << "achar(iachar(") << ')';
   } else if constexpr (TO::category == TypeCategory::Integer) {
-    this->left().AsFortran(o << "__builtin_int(");
+    this->left().AsFortran(o << Intrinsics::BuiltinInt << "(");
   } else if constexpr (TO::category == TypeCategory::Real) {
     this->left().AsFortran(o << "real(");
   } else if constexpr (TO::category == TypeCategory::Complex) {
@@ -828,10 +828,10 @@ llvm::raw_ostream &DescriptorInquiry::AsFortran(llvm::raw_ostream &o) const {
     o << "%STRIDE(";
     break;
   case Field::Rank:
-    o << "__builtin_int(rank(";
+    o << Intrinsics::BuiltinInt << "(rank(";
     break;
   case Field::Len:
-    o << "__builtin_int(";
+    o << Intrinsics::BuiltinInt << "(";
     break;
   }
   base_.AsFortran(o);
