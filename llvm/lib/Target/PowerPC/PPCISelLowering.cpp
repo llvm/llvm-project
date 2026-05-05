@@ -14131,9 +14131,8 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 
   else if (MI.getOpcode() == PPC::ATOMIC_SWAP_NOWP)
     BB = EmitPartwordAtomicBinary(MI, BB, 0);
-  else if (MI.getOpcode() == PPC::ATOMIC_SWAP)
-    BB = EmitAtomicBinary(MI, BB, 0);
-  else if (MI.getOpcode() == PPC::ATOMIC_SWAP_I64)
+  else if (MI.getOpcode() == PPC::ATOMIC_SWAP ||
+           MI.getOpcode() == PPC::ATOMIC_SWAP_I64)
     BB = EmitAtomicBinary(MI, BB, 0);
   else if (MI.getOpcode() == PPC::ATOMIC_CMP_SWAP_I32 ||
            MI.getOpcode() == PPC::ATOMIC_CMP_SWAP_I64 ||
