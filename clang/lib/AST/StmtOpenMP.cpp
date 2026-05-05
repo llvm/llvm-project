@@ -264,7 +264,8 @@ OMPMetaDirective *OMPMetaDirective::Create(
     const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
     ArrayRef<OMPClause *> Clauses, Stmt *AssociatedStmt, Stmt *IfStmt,
     ArrayRef<Expr *> Conditions, ArrayRef<Stmt *> Directives) {
-  assert(Conditions.size() == Directives.size());
+  assert(Conditions.size() == Directives.size() &&
+         "Mismatch: number of Conditions and Directives must be equal");
   unsigned NumVariants = Conditions.size();
   auto *Dir = createDirective<OMPMetaDirective>(
       C, Clauses, AssociatedStmt,

@@ -2481,7 +2481,7 @@ void ASTStmtReader::VisitOMPLoopDirective(OMPLoopDirective *D) {
 
 void ASTStmtReader::VisitOMPMetaDirective(OMPMetaDirective *D) {
   VisitStmt(D);
-  // The NumClauses field was read in ReadStmtFromStream.
+  // NumClauses and NumVariants were read in ReadStmtFromStream.
   Record.skipInts(2);
   VisitOMPExecutableDirective(D);
 }
