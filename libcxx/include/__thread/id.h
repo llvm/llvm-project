@@ -53,13 +53,14 @@ class __thread_id {
   // * std::hash implementation
   // Currently, we can implement all of the above only on pointer and integral types.
   using _Tp = __libcpp_thread_id;
-  static_assert(is_pointer_v<_Tp> || is_integral_v<_Tp>, "unsupported thread::id type, please file a bug report");
+  static_assert(is_pointer<_Tp>::value || is_integral<_Tp>::value,
+                "unsupported thread::id type, please file a bug report");
 
   // Strong total order implementation.
   // Here we provide a best-effort implementation of strong total order, comparing
   // integral types as-is and routing pointers through uintptr_t for a well-defined comparison.
   static _LIBCPP_HIDE_FROM_ABI bool __eq_impl(__thread_id __x, __thread_id __y) _NOEXCEPT {
-    if constexpr (is_pointer_v<_Tp>) {
+    if _LIBCPP_CONSTEXPR (is_pointer<_Tp>::value) {
       return reinterpret_cast<uintptr_t>(__x.__id_) == reinterpret_cast<uintptr_t>(__y.__id_);
     } else {
       return __x.__id_ == __y.__id_;
@@ -67,7 +68,7 @@ class __thread_id {
   }
 
   static _LIBCPP_HIDE_FROM_ABI bool __lt_impl(__thread_id __x, __thread_id __y) _NOEXCEPT {
-    if constexpr (is_pointer_v<_Tp>) {
+    if _LIBCPP_CONSTEXPR (is_pointer<_Tp>::value) {
       return reinterpret_cast<uintptr_t>(__x.__id_) < reinterpret_cast<uintptr_t>(__y.__id_);
     } else {
       // For integral thread IDs, assume 0 is always less than any other thread_id.
@@ -90,9 +91,9 @@ class __thread_id {
   // was added to the Standard, our logic mimics what the stream
   // operator does (i.e. prints thread-id as integer, but uses a hexadecimal
   // format if it's represented by a pointer)
-  using _FormatterTp = conditional_t<is_integral_v<_Tp>, _Tp, uintptr_t>;
+  using _FormatterTp = conditional<is_integral<_Tp>::value, _Tp, uintptr_t>::type;
 
-  static _LIBCPP_HIDE_FROM_ABI constexpr bool __PRINT_AS_HEX = is_pointer_v<_Tp>;
+  static _LIBCPP_CONSTEXPR const bool __PRINT_AS_HEX = is_pointer<_Tp>::value;
 
   _LIBCPP_HIDE_FROM_ABI _FormatterTp __get_formatter_value() const { return reinterpret_cast<_FormatterTp>(__id_); }
 

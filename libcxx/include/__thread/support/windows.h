@@ -86,10 +86,6 @@ _LIBCPP_EXPORTED_FROM_ABI int __libcpp_execute_once(__libcpp_exec_once_flag* __f
 //
 typedef long __libcpp_thread_id;
 
-_LIBCPP_EXPORTED_FROM_ABI bool __libcpp_thread_id_equal(__libcpp_thread_id __t1, __libcpp_thread_id __t2);
-
-_LIBCPP_EXPORTED_FROM_ABI bool __libcpp_thread_id_less(__libcpp_thread_id __t1, __libcpp_thread_id __t2);
-
 //
 // Thread
 //

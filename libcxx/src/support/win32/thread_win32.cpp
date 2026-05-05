@@ -135,6 +135,7 @@ int __libcpp_execute_once(__libcpp_exec_once_flag* __flag, void (*__init_routine
 }
 
 // Thread ID
+// TODO: Clarify whether to keep these functions since they were _LIBCPP_EXPORTED_FROM_ABI.
 bool __libcpp_thread_id_equal(__libcpp_thread_id __lhs, __libcpp_thread_id __rhs) { return __lhs == __rhs; }
 
 bool __libcpp_thread_id_less(__libcpp_thread_id __lhs, __libcpp_thread_id __rhs) { return __lhs < __rhs; }
