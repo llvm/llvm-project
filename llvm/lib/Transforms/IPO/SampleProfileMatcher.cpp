@@ -776,8 +776,7 @@ static std::string getDemangledBaseName(ItaniumPartialDemangler &Demangler,
     while (!CtxStr.empty() && CtxStr.back() == '\0')
       CtxStr = CtxStr.drop_back();
     StringRef ResultRef(Result);
-    if (ResultRef.starts_with(CtxStr) &&
-        ResultRef.size() > CtxStr.size() + 2 &&
+    if (ResultRef.starts_with(CtxStr) && ResultRef.size() > CtxStr.size() + 2 &&
         ResultRef[CtxStr.size()] == ':' && ResultRef[CtxStr.size() + 1] == ':')
       Result = ResultRef.substr(CtxStr.size() + 2).str();
   }
