@@ -210,9 +210,9 @@ define i32 @test_chained_first_order_recurrences_4(ptr %base, i64 %x) {
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%gep> = getelementptr ir<%base>, vp<[[VP5]]>
 ; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = first-order splice ir<%for.x>, vp<[[VP3]]>
-; CHECK-NEXT:      WIDEN-CAST ir<%for.x.prev> = trunc vp<[[VP6]]> to i32
+; CHECK-NEXT:      EMIT ir<%for.x.prev> = trunc vp<[[VP6]]> to i32
 ; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = first-order splice ir<%for.y>, ir<%for.x.prev>
-; CHECK-NEXT:      WIDEN-CAST ir<%for.y.i64> = sext vp<[[VP7]]> to i64
+; CHECK-NEXT:      EMIT ir<%for.y.i64> = sext vp<[[VP7]]> to i64
 ; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer ir<%gep>
 ; CHECK-NEXT:      WIDEN store vp<[[VP8]]>, ir<%for.y.i64>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP4]]>, vp<[[VP1]]>
@@ -299,9 +299,9 @@ define i32 @test_chained_first_order_recurrences_5_hoist_to_load(ptr %base) {
 ; CHECK-NEXT:      WIDEN ir<%l> = load vp<[[VP5]]>
 ; CHECK-NEXT:      EMIT vp<[[VP6]]> = shl ir<%l>, ir<1>
 ; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = first-order splice ir<%for.x>, vp<[[VP6]]>
-; CHECK-NEXT:      WIDEN-CAST ir<%for.x.prev> = trunc vp<[[VP7]]> to i32
+; CHECK-NEXT:      EMIT ir<%for.x.prev> = trunc vp<[[VP7]]> to i32
 ; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = first-order splice ir<%for.y>, ir<%for.x.prev>
-; CHECK-NEXT:      WIDEN-CAST ir<%for.y.i64> = sext vp<[[VP8]]> to i64
+; CHECK-NEXT:      EMIT ir<%for.y.i64> = sext vp<[[VP8]]> to i64
 ; CHECK-NEXT:      vp<[[VP9:%[0-9]+]]> = vector-pointer ir<%gep>
 ; CHECK-NEXT:      WIDEN store vp<[[VP9]]>, ir<%for.y.i64>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>

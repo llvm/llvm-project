@@ -321,10 +321,10 @@ define void @narrow_scatter_with_uniform_addr_to_scalar_unroll(ptr noalias %src,
 ; VF4IC1-NEXT:    [[TMP11:%.*]] = extractelement <4 x i8> [[TMP10]], i64 3
 ; VF4IC1-NEXT:    store i8 [[TMP11]], ptr [[DST2]], align 4
 ; VF4IC1-NEXT:    [[TMP12:%.*]] = extractelement <4 x i8> [[TMP10]], i64 0
-; VF4IC1-NEXT:    [[TMP13:%.*]] = extractelement <4 x i8> [[TMP10]], i64 1
-; VF4IC1-NEXT:    [[TMP14:%.*]] = extractelement <4 x i8> [[TMP10]], i64 2
 ; VF4IC1-NEXT:    store i8 [[TMP12]], ptr [[TMP5]], align 4
+; VF4IC1-NEXT:    [[TMP13:%.*]] = extractelement <4 x i8> [[TMP10]], i64 1
 ; VF4IC1-NEXT:    store i8 [[TMP13]], ptr [[TMP6]], align 4
+; VF4IC1-NEXT:    [[TMP14:%.*]] = extractelement <4 x i8> [[TMP10]], i64 2
 ; VF4IC1-NEXT:    store i8 [[TMP14]], ptr [[TMP7]], align 4
 ; VF4IC1-NEXT:    store i8 [[TMP11]], ptr [[TMP8]], align 4
 ; VF4IC1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4

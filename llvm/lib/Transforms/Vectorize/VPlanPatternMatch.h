@@ -303,8 +303,7 @@ private:
 template <unsigned Opcode, typename... OpTys>
 using AllRecipe_match =
     Recipe_match<std::tuple<OpTys...>, Opcode, /*Commutative*/ false,
-                 VPWidenRecipe, VPReplicateRecipe, VPWidenCastRecipe,
-                 VPInstruction>;
+                 VPWidenRecipe, VPReplicateRecipe, VPInstruction>;
 
 template <unsigned Opcode, typename... OpTys>
 using AllRecipe_commutative_match =
@@ -545,7 +544,8 @@ m_ZExtOrSExt(const Op0_t &Op0) {
 }
 
 template <typename Op0_t> inline auto m_WidenAnyExtend(const Op0_t &Op0) {
-  return m_Isa<VPWidenCastRecipe>(m_CombineOr(m_ZExtOrSExt(Op0), m_FPExt(Op0)));
+  return m_Isa<VPInstructionWithType>(
+      m_CombineOr(m_ZExtOrSExt(Op0), m_FPExt(Op0)));
 }
 
 template <typename Op0_t>

@@ -1132,10 +1132,12 @@ TEST_F(VPRecipeTest, CastVPWidenCastRecipeToVPUser) {
   IntegerType *Int64 = IntegerType::get(C, 64);
   auto *Cast = CastInst::CreateZExtOrBitCast(PoisonValue::get(Int32), Int64);
   VPValue *Op1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
-  VPWidenCastRecipe Recipe(Instruction::ZExt, Op1, Int64, Cast,
-                           VPIRFlags::getDefaultFlags(Instruction::ZExt));
+  VPInstructionWithType *Recipe = VPInstructionWithType::createWide(
+      Instruction::ZExt, Op1, Int64, Cast,
+      VPIRFlags::getDefaultFlags(Instruction::ZExt));
 
-  checkVPRecipeCastImpl<VPWidenCastRecipe, VPUser, VPIRMetadata>(&Recipe);
+  checkVPRecipeCastImpl<VPInstructionWithType, VPUser, VPIRMetadata>(Recipe);
+  delete Recipe;
   delete Cast;
 }
 

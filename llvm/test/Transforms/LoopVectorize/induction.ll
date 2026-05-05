@@ -2423,11 +2423,11 @@ define void @iv_vector_and_scalar_users(ptr %p, i32 %a, i32 %n) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <2 x i32> [[BROADCAST_SPLAT]], [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = trunc <2 x i32> [[TMP5]] to <2 x i16>
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i16> [[TMP6]], i64 0
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i16> [[TMP6]], i64 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[PAIR_I16:%.*]], ptr [[P:%.*]], i64 [[INDEX]], i32 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [[PAIR_I16]], ptr [[P]], i64 [[TMP4]], i32 1
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i16> [[TMP6]], i64 0
 ; CHECK-NEXT:    store i16 [[TMP9]], ptr [[TMP7]], align 2
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i16> [[TMP6]], i64 1
 ; CHECK-NEXT:    store i16 [[TMP10]], ptr [[TMP8]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i32> [[VEC_IND]], splat (i32 2)
@@ -2470,13 +2470,13 @@ define void @iv_vector_and_scalar_users(ptr %p, i32 %a, i32 %n) {
 ; IND-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; IND-NEXT:    [[TMP4:%.*]] = add <2 x i32> [[BROADCAST_SPLAT]], [[VEC_IND]]
 ; IND-NEXT:    [[TMP5:%.*]] = trunc <2 x i32> [[TMP4]] to <2 x i16>
-; IND-NEXT:    [[TMP8:%.*]] = extractelement <2 x i16> [[TMP5]], i64 0
-; IND-NEXT:    [[TMP9:%.*]] = extractelement <2 x i16> [[TMP5]], i64 1
 ; IND-NEXT:    [[DOTSPLIT:%.*]] = getelementptr inbounds [4 x i8], ptr [[P:%.*]], i64 [[INDEX]]
 ; IND-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT]], i64 2
 ; IND-NEXT:    [[TMP16:%.*]] = getelementptr [4 x i8], ptr [[P]], i64 [[INDEX]]
 ; IND-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP16]], i64 6
+; IND-NEXT:    [[TMP8:%.*]] = extractelement <2 x i16> [[TMP5]], i64 0
 ; IND-NEXT:    store i16 [[TMP8]], ptr [[TMP6]], align 2
+; IND-NEXT:    [[TMP9:%.*]] = extractelement <2 x i16> [[TMP5]], i64 1
 ; IND-NEXT:    store i16 [[TMP9]], ptr [[TMP7]], align 2
 ; IND-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; IND-NEXT:    [[VEC_IND_NEXT]] = add <2 x i32> [[VEC_IND]], splat (i32 2)
@@ -2522,11 +2522,7 @@ define void @iv_vector_and_scalar_users(ptr %p, i32 %a, i32 %n) {
 ; UNROLL-NEXT:    [[TMP6:%.*]] = add <2 x i32> [[BROADCAST_SPLAT]], [[VEC_IND]]
 ; UNROLL-NEXT:    [[TMP7:%.*]] = add <2 x i32> [[BROADCAST_SPLAT]], [[STEP_ADD]]
 ; UNROLL-NEXT:    [[TMP8:%.*]] = trunc <2 x i32> [[TMP6]] to <2 x i16>
-; UNROLL-NEXT:    [[TMP14:%.*]] = extractelement <2 x i16> [[TMP8]], i64 0
-; UNROLL-NEXT:    [[TMP15:%.*]] = extractelement <2 x i16> [[TMP8]], i64 1
 ; UNROLL-NEXT:    [[TMP9:%.*]] = trunc <2 x i32> [[TMP7]] to <2 x i16>
-; UNROLL-NEXT:    [[TMP16:%.*]] = extractelement <2 x i16> [[TMP9]], i64 0
-; UNROLL-NEXT:    [[TMP17:%.*]] = extractelement <2 x i16> [[TMP9]], i64 1
 ; UNROLL-NEXT:    [[DOTSPLIT:%.*]] = getelementptr inbounds [4 x i8], ptr [[P:%.*]], i64 [[INDEX]]
 ; UNROLL-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT]], i64 2
 ; UNROLL-NEXT:    [[TMP24:%.*]] = getelementptr [4 x i8], ptr [[P]], i64 [[INDEX]]
@@ -2535,9 +2531,13 @@ define void @iv_vector_and_scalar_users(ptr %p, i32 %a, i32 %n) {
 ; UNROLL-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[TMP25]], i64 10
 ; UNROLL-NEXT:    [[TMP26:%.*]] = getelementptr [4 x i8], ptr [[P]], i64 [[INDEX]]
 ; UNROLL-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[TMP26]], i64 14
+; UNROLL-NEXT:    [[TMP14:%.*]] = extractelement <2 x i16> [[TMP8]], i64 0
 ; UNROLL-NEXT:    store i16 [[TMP14]], ptr [[TMP10]], align 2
+; UNROLL-NEXT:    [[TMP15:%.*]] = extractelement <2 x i16> [[TMP8]], i64 1
 ; UNROLL-NEXT:    store i16 [[TMP15]], ptr [[TMP11]], align 2
+; UNROLL-NEXT:    [[TMP16:%.*]] = extractelement <2 x i16> [[TMP9]], i64 0
 ; UNROLL-NEXT:    store i16 [[TMP16]], ptr [[TMP12]], align 2
+; UNROLL-NEXT:    [[TMP17:%.*]] = extractelement <2 x i16> [[TMP9]], i64 1
 ; UNROLL-NEXT:    store i16 [[TMP17]], ptr [[TMP13]], align 2
 ; UNROLL-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; UNROLL-NEXT:    [[VEC_IND_NEXT]] = add <2 x i32> [[VEC_IND]], splat (i32 4)
@@ -2587,18 +2587,18 @@ define void @iv_vector_and_scalar_users(ptr %p, i32 %a, i32 %n) {
 ; UNROLL-NO-IC-NEXT:    [[TMP7:%.*]] = add <2 x i32> [[BROADCAST_SPLAT]], [[VEC_IND]]
 ; UNROLL-NO-IC-NEXT:    [[TMP8:%.*]] = add <2 x i32> [[BROADCAST_SPLAT]], [[STEP_ADD]]
 ; UNROLL-NO-IC-NEXT:    [[TMP9:%.*]] = trunc <2 x i32> [[TMP7]] to <2 x i16>
-; UNROLL-NO-IC-NEXT:    [[TMP15:%.*]] = extractelement <2 x i16> [[TMP9]], i64 0
-; UNROLL-NO-IC-NEXT:    [[TMP16:%.*]] = extractelement <2 x i16> [[TMP9]], i64 1
 ; UNROLL-NO-IC-NEXT:    [[TMP10:%.*]] = trunc <2 x i32> [[TMP8]] to <2 x i16>
-; UNROLL-NO-IC-NEXT:    [[TMP17:%.*]] = extractelement <2 x i16> [[TMP10]], i64 0
-; UNROLL-NO-IC-NEXT:    [[TMP18:%.*]] = extractelement <2 x i16> [[TMP10]], i64 1
 ; UNROLL-NO-IC-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [[PAIR_I16:%.*]], ptr [[P:%.*]], i64 [[INDEX]], i32 1
 ; UNROLL-NO-IC-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [[PAIR_I16]], ptr [[P]], i64 [[TMP4]], i32 1
 ; UNROLL-NO-IC-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [[PAIR_I16]], ptr [[P]], i64 [[TMP5]], i32 1
 ; UNROLL-NO-IC-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [[PAIR_I16]], ptr [[P]], i64 [[TMP6]], i32 1
+; UNROLL-NO-IC-NEXT:    [[TMP15:%.*]] = extractelement <2 x i16> [[TMP9]], i64 0
 ; UNROLL-NO-IC-NEXT:    store i16 [[TMP15]], ptr [[TMP11]], align 2
+; UNROLL-NO-IC-NEXT:    [[TMP16:%.*]] = extractelement <2 x i16> [[TMP9]], i64 1
 ; UNROLL-NO-IC-NEXT:    store i16 [[TMP16]], ptr [[TMP12]], align 2
+; UNROLL-NO-IC-NEXT:    [[TMP17:%.*]] = extractelement <2 x i16> [[TMP10]], i64 0
 ; UNROLL-NO-IC-NEXT:    store i16 [[TMP17]], ptr [[TMP13]], align 2
+; UNROLL-NO-IC-NEXT:    [[TMP18:%.*]] = extractelement <2 x i16> [[TMP10]], i64 1
 ; UNROLL-NO-IC-NEXT:    store i16 [[TMP18]], ptr [[TMP14]], align 2
 ; UNROLL-NO-IC-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; UNROLL-NO-IC-NEXT:    [[VEC_IND_NEXT]] = add <2 x i32> [[STEP_ADD]], splat (i32 2)
@@ -2643,15 +2643,7 @@ define void @iv_vector_and_scalar_users(ptr %p, i32 %a, i32 %n) {
 ; INTERLEAVE-NEXT:    [[TMP10:%.*]] = add <4 x i32> [[BROADCAST_SPLAT]], [[VEC_IND]]
 ; INTERLEAVE-NEXT:    [[TMP11:%.*]] = add <4 x i32> [[BROADCAST_SPLAT]], [[STEP_ADD]]
 ; INTERLEAVE-NEXT:    [[TMP12:%.*]] = trunc <4 x i32> [[TMP10]] to <4 x i16>
-; INTERLEAVE-NEXT:    [[TMP22:%.*]] = extractelement <4 x i16> [[TMP12]], i64 0
-; INTERLEAVE-NEXT:    [[TMP23:%.*]] = extractelement <4 x i16> [[TMP12]], i64 1
-; INTERLEAVE-NEXT:    [[TMP24:%.*]] = extractelement <4 x i16> [[TMP12]], i64 2
-; INTERLEAVE-NEXT:    [[TMP25:%.*]] = extractelement <4 x i16> [[TMP12]], i64 3
 ; INTERLEAVE-NEXT:    [[TMP13:%.*]] = trunc <4 x i32> [[TMP11]] to <4 x i16>
-; INTERLEAVE-NEXT:    [[TMP26:%.*]] = extractelement <4 x i16> [[TMP13]], i64 0
-; INTERLEAVE-NEXT:    [[TMP27:%.*]] = extractelement <4 x i16> [[TMP13]], i64 1
-; INTERLEAVE-NEXT:    [[TMP28:%.*]] = extractelement <4 x i16> [[TMP13]], i64 2
-; INTERLEAVE-NEXT:    [[TMP29:%.*]] = extractelement <4 x i16> [[TMP13]], i64 3
 ; INTERLEAVE-NEXT:    [[DOTSPLIT:%.*]] = getelementptr inbounds [4 x i8], ptr [[P:%.*]], i64 [[INDEX]]
 ; INTERLEAVE-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT]], i64 2
 ; INTERLEAVE-NEXT:    [[TMP8:%.*]] = getelementptr [4 x i8], ptr [[P]], i64 [[INDEX]]
@@ -2668,13 +2660,21 @@ define void @iv_vector_and_scalar_users(ptr %p, i32 %a, i32 %n) {
 ; INTERLEAVE-NEXT:    [[TMP20:%.*]] = getelementptr i8, ptr [[TMP40]], i64 26
 ; INTERLEAVE-NEXT:    [[TMP41:%.*]] = getelementptr [4 x i8], ptr [[P]], i64 [[INDEX]]
 ; INTERLEAVE-NEXT:    [[TMP21:%.*]] = getelementptr i8, ptr [[TMP41]], i64 30
+; INTERLEAVE-NEXT:    [[TMP22:%.*]] = extractelement <4 x i16> [[TMP12]], i64 0
 ; INTERLEAVE-NEXT:    store i16 [[TMP22]], ptr [[TMP14]], align 2
+; INTERLEAVE-NEXT:    [[TMP23:%.*]] = extractelement <4 x i16> [[TMP12]], i64 1
 ; INTERLEAVE-NEXT:    store i16 [[TMP23]], ptr [[TMP15]], align 2
+; INTERLEAVE-NEXT:    [[TMP24:%.*]] = extractelement <4 x i16> [[TMP12]], i64 2
 ; INTERLEAVE-NEXT:    store i16 [[TMP24]], ptr [[TMP16]], align 2
+; INTERLEAVE-NEXT:    [[TMP25:%.*]] = extractelement <4 x i16> [[TMP12]], i64 3
 ; INTERLEAVE-NEXT:    store i16 [[TMP25]], ptr [[TMP17]], align 2
+; INTERLEAVE-NEXT:    [[TMP26:%.*]] = extractelement <4 x i16> [[TMP13]], i64 0
 ; INTERLEAVE-NEXT:    store i16 [[TMP26]], ptr [[TMP18]], align 2
+; INTERLEAVE-NEXT:    [[TMP27:%.*]] = extractelement <4 x i16> [[TMP13]], i64 1
 ; INTERLEAVE-NEXT:    store i16 [[TMP27]], ptr [[TMP19]], align 2
+; INTERLEAVE-NEXT:    [[TMP28:%.*]] = extractelement <4 x i16> [[TMP13]], i64 2
 ; INTERLEAVE-NEXT:    store i16 [[TMP28]], ptr [[TMP20]], align 2
+; INTERLEAVE-NEXT:    [[TMP29:%.*]] = extractelement <4 x i16> [[TMP13]], i64 3
 ; INTERLEAVE-NEXT:    store i16 [[TMP29]], ptr [[TMP21]], align 2
 ; INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; INTERLEAVE-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 8)
