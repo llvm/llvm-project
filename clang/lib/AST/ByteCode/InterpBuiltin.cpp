@@ -1636,10 +1636,6 @@ static bool interp__builtin_operator_delete(InterpState &S, CodePtr OpPC,
   assert(Call->getNumArgs() >= 1);
   unsigned NumArgs = Call->getNumArgs();
 
-  // The std::nothrow_t argument never put on the stack.
-  if (Call->getArg(NumArgs - 1)->getType()->isNothrowT())
-    --NumArgs;
-
   // Args are pushed in source order. The trailing sized/aligned delete
   // operands are above the pointer on the stack.
   for (unsigned I = NumArgs - 1; I != 0; --I)
