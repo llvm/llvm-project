@@ -12,7 +12,7 @@ entry:
 }
 ; CHECK: Entering function: main
 ; CHECK-NEXT:   %ptr_1 = call ptr @malloc(i64 50) => ptr 0x10 [ptr_1]
-; CHECK-NEXT:   %ptr_2 = call ptr @malloc(i64 100) => ptr 0x0 [dangling]
-; CHECK-NEXT:   %ptr_3 = call ptr @malloc(i64 200) => ptr 0x0 [dangling]
+; CHECK-NEXT:   %ptr_2 = call ptr @malloc(i64 100) => ptr 0x0 [nullary]
+; CHECK-NEXT:   %ptr_3 = call ptr @malloc(i64 200) => ptr 0x0 [nullary]
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

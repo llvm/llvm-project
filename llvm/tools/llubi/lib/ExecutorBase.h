@@ -58,6 +58,8 @@ struct Frame {
   // Stack objects allocated in this frame. They will be automatically freed
   // when the function returns.
   SmallVector<IntrusiveRefCntPtr<MemoryObject>> Allocas;
+  // Protected noalias nodes created for this frame's arguments
+  SmallVector<uint64_t, 4> NoAliasNodes;
   // Values of arguments and executed instructions in this function.
   DenseMap<Value *, AnyValue> ValueMap;
 
@@ -66,9 +68,8 @@ struct Frame {
   SmallVector<AnyValue> CalleeArgs;
   AnyValue CalleeRetVal;
 
-  Frame(Function &F, CallBase *CallSite, Frame *LastFrame,
-        ArrayRef<AnyValue> Args, AnyValue &RetVal,
-        const TargetLibraryInfoImpl &TLIImpl);
+  Frame(Context &Ctx, Function &F, CallBase *CallSite, Frame *LastFrame,
+        ArrayRef<AnyValue> Args, AnyValue &RetVal);
 };
 
 enum class DiagnosticKind {
@@ -98,6 +99,8 @@ private:
 public:
   DiagnosticReporter reportImmediateUB();
   DiagnosticReporter reportError();
+
+  void flushNoAliasEvents();
 
   /// Check if the upcoming memory access is valid. Returns the offset relative
   /// to the underlying object if it is valid.

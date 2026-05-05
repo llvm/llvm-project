@@ -469,8 +469,8 @@ public:
                ArrayRef<AnyValue> Args, AnyValue &RetVal)
       : ExecutorBase(C, H), DL(Ctx.getDataLayout()),
         Lib(Ctx, Handler, DL, static_cast<ExecutorBase &>(*this)) {
-    CallStack.emplace_back(F, /*CallSite=*/nullptr, /*LastFrame=*/nullptr, Args,
-                           RetVal, Ctx.getTLIImpl());
+    CallStack.emplace_back(Ctx, F, /*CallSite=*/nullptr, /*LastFrame=*/nullptr,
+                           Args, RetVal);
   }
 
   void visitReturnInst(ReturnInst &RI) {
@@ -1292,8 +1292,7 @@ public:
       ArrayRef<AnyValue> Args = CurrentFrame->CalleeArgs;
       AnyValue &RetVal = CurrentFrame->CalleeRetVal;
       CurrentFrame->State = FrameState::Pending;
-      CallStack.emplace_back(*Callee, &CB, CurrentFrame, Args, RetVal,
-                             Ctx.getTLIImpl());
+      CallStack.emplace_back(Ctx, *Callee, &CB, CurrentFrame, Args, RetVal);
     }
   }
 
@@ -1805,6 +1804,7 @@ public:
       CurrentFrame = &Top;
       if (Top.State == FrameState::Entry) {
         Handler.onFunctionEntry(Top.Func, Top.Args, Top.CallSite);
+        flushNoAliasEvents();
       } else {
         assert(Top.State == FrameState::Pending &&
                "Expected to return from a callee.");
@@ -1844,6 +1844,14 @@ public:
       if (Top.State == FrameState::Exit) {
         assert((Top.Func.getReturnType()->isVoidTy() || !Top.RetVal.isNone()) &&
                "Expected return value to be set on function exit.");
+        // End protectors before freeing frame allocas: protector end actions
+        // are still accesses to the protected memory object.
+        if (!Ctx.endNoAliasScopes(Top.NoAliasNodes)) {
+          flushNoAliasEvents();
+          reportImmediateUB() << Ctx.getLastNoAliasError();
+          break;
+        }
+        flushNoAliasEvents();
         Handler.onFunctionExit(Top.Func, Top.RetVal);
         // Free stack objects allocated in this frame.
         for (auto &Obj : Top.Allocas)

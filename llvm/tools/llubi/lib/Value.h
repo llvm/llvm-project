@@ -27,15 +27,20 @@ class AnyValue;
 /// - If the concrete mask bit is 0, the bit is either undef or poison. The
 /// value bit indicates whether it is undef.
 /// - If the concrete mask bit is 1, the bit is a concrete value. The value bit
-/// stores the concrete bit value.
+/// stores the concrete bit value. The tag mask bit indicates whether it is a
+/// pointer bit, and the tag value bit is used for provenance tracking of
+/// pointers.
 struct Byte {
   uint8_t ConcreteMask;
   uint8_t Value;
-  // TODO: captured capabilities of pointers.
+  uint8_t TagMask;      // A mask to indicate which bits are pointer bits.
+  uint8_t TagValue;     // Part of the tag for provenance tracking of pointers.
+  uint8_t NoAliasMask;  // A mask to indicate which bits carry a noalias node.
+  uint64_t NoAliasNode; // Shadow noalias node id for pointer bits.
 
-  static Byte poison() { return Byte{0, 0}; }
-  static Byte undef() { return Byte{0, 255}; }
-  static Byte concrete(uint8_t Val) { return Byte{255, Val}; }
+  static Byte poison() { return Byte{0, 0, 0, 0, 0, 0}; }
+  static Byte undef() { return Byte{0, 255, 0, 0, 0, 0}; }
+  static Byte concrete(uint8_t Val) { return Byte{255, Val, 0, 0, 0, 0}; }
 
   void zeroBits(uint8_t Mask) {
     ConcreteMask |= Mask;
@@ -55,6 +60,30 @@ struct Byte {
   void writeBits(uint8_t Mask, uint8_t Val) {
     ConcreteMask |= Mask;
     Value = (Value & ~Mask) | (Val & Mask);
+    TagMask &= ~Mask;
+    NoAliasMask &= ~Mask;
+  }
+
+  void writeTagBits(uint8_t Mask, uint8_t Tag) {
+    assert(
+        (ConcreteMask & Mask) == Mask &&
+        "Please ensure pointer bits are concrete before calling writeTagBits.");
+    TagMask |= Mask;
+    TagValue = (TagValue & ~Mask) | (Tag & Mask);
+  }
+
+  void writeNoAliasBits(uint8_t Mask, uint64_t NodeID) {
+    assert((ConcreteMask & Mask) == Mask &&
+           "Please ensure pointer bits are concrete before calling "
+           "writeNoAliasBits.");
+    if (!NodeID) {
+      NoAliasMask &= ~Mask;
+      return;
+    }
+    if (NoAliasMask && NoAliasNode != NodeID)
+      NoAliasMask = 0;
+    NoAliasNode = NodeID;
+    NoAliasMask |= Mask;
   }
 
   /// Returns a logical byte that is part of two adjacent bytes.
@@ -63,14 +92,30 @@ struct Byte {
   /// LSB | 0 1 0 1 0 1 0 1 | 0 0 0 0 1 1 1 1 | MSB
   ///     Result =  | 1 0 1   0 0 0 0 1 |
   static Byte fshr(const Byte &Low, const Byte &High, uint32_t ShAmt) {
-    return Byte{static_cast<uint8_t>(
-                    (Low.ConcreteMask | (High.ConcreteMask << 8)) >> ShAmt),
-                static_cast<uint8_t>((Low.Value | (High.Value << 8)) >> ShAmt)};
+    uint16_t NoAliasMask = Low.NoAliasMask | (High.NoAliasMask << 8);
+    uint64_t NoAliasNode = Low.NoAliasNode;
+    if (Low.NoAliasMask && High.NoAliasMask &&
+        Low.NoAliasNode != High.NoAliasNode)
+      NoAliasMask = 0;
+    else if (!Low.NoAliasMask)
+      NoAliasNode = High.NoAliasNode;
+    return Byte{
+        static_cast<uint8_t>((Low.ConcreteMask | (High.ConcreteMask << 8)) >>
+                             ShAmt),
+        static_cast<uint8_t>((Low.Value | (High.Value << 8)) >> ShAmt),
+        static_cast<uint8_t>((Low.TagMask | (High.TagMask << 8)) >> ShAmt),
+        static_cast<uint8_t>((Low.TagValue | (High.TagValue << 8)) >> ShAmt),
+        static_cast<uint8_t>(NoAliasMask >> ShAmt),
+        NoAliasNode};
   }
 
   Byte lshr(uint8_t Shift) const {
     return Byte{static_cast<uint8_t>(ConcreteMask >> Shift),
-                static_cast<uint8_t>(Value >> Shift)};
+                static_cast<uint8_t>(Value >> Shift),
+                static_cast<uint8_t>(TagMask >> Shift),
+                static_cast<uint8_t>(TagValue >> Shift),
+                static_cast<uint8_t>(NoAliasMask >> Shift),
+                NoAliasNode};
   }
 };
 
@@ -94,20 +139,30 @@ class Pointer {
   // The address of the pointer. The bit width is determined by
   // DataLayout::getPointerSizeInBits.
   APInt Address;
+  // A side-channel id for the noalias borrow tree node this pointer is based
+  // on. This is intentionally separate from the object provenance above.
+  uint64_t NoAliasNode = 0;
   // TODO: modeling inrange(Start, End) attribute
 
 public:
   explicit Pointer(const APInt &Address) : Obj(nullptr), Address(Address) {}
   explicit Pointer(IntrusiveRefCntPtr<MemoryObject> Obj, const APInt &Address)
       : Obj(std::move(Obj)), Address(Address) {}
+  explicit Pointer(IntrusiveRefCntPtr<MemoryObject> Obj, const APInt &Address,
+                   uint64_t NoAliasNode)
+      : Obj(std::move(Obj)), Address(Address), NoAliasNode(NoAliasNode) {}
   Pointer getWithNewAddr(const APInt &NewAddr) const {
-    return Pointer(Obj, NewAddr);
+    return Pointer(Obj, NewAddr, NoAliasNode);
+  }
+  Pointer getWithNoAliasNode(uint64_t NewNoAliasNode) const {
+    return Pointer(Obj, Address, NewNoAliasNode);
   }
   static AnyValue null(unsigned AS, const DataLayout &DL);
   bool isNullPtr(unsigned AS, const DataLayout &DL) const;
   void print(raw_ostream &OS) const;
   const APInt &address() const { return Address; }
   MemoryObject *getMemoryObject() const { return Obj.get(); }
+  uint64_t getNoAliasNodeID() const { return NoAliasNode; }
 };
 
 // Value representation for actual values of LLVM values.
