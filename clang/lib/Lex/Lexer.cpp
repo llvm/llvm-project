@@ -921,8 +921,21 @@ bool Lexer::isAtEndOfMacroExpansion(SourceLocation loc,
 
   SourceLocation afterLoc = loc.getLocWithOffset(tokLen);
   SourceLocation expansionLoc;
-  if (!SM.isAtEndOfImmediateMacroExpansion(afterLoc, &expansionLoc))
-    return false;
+  FileID FID = SM.getFileID(loc);
+
+  if (SM.isInFileID(afterLoc, FID)) {
+    if (!SM.isAtEndOfImmediateMacroExpansion(afterLoc, &expansionLoc))
+      return false;
+  } else {
+    // During error recovery, a zero-length synthetic token might be inserted
+    // past the end of the FileID, e.g. inserting ")" when a macro-arg
+    // containing a comma should be guarded by parentheses. In this case,
+    // afterLoc reaches the `NextLocalOffset` boundary, any operations on
+    // afterLoc will be invalid!
+    const SrcMgr::SLocEntry &Entry = SM.getSLocEntry(FID);
+    assert(Entry.isExpansion() && "Should be in an expansion");
+    expansionLoc = Entry.getExpansion().getExpansionLocEnd();
+  }
 
   if (expansionLoc.isFileID()) {
     // No other macro expansions.

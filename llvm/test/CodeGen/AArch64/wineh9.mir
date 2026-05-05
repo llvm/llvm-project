@@ -91,7 +91,7 @@ body:             |
     STRXui killed renamable $x1, $sp, 1 :: (store (s64) into %ir.x.addr)
     $x0 = ADDXri $sp, 8, 0
     BLR killed renamable $x8, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit-def $sp
-    INLINEASM &"", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $x19
+    INLINEASM &"", sideeffect attdialect, clobber, implicit-def dead early-clobber $x19
     renamable $x0 = LDRXui $sp, 1 :: (dereferenceable load (s64) from %ir.x.addr)
     frame-destroy SEH_EpilogStart
     $lr = frame-destroy LDRXui $sp, 3 :: (load (s64) from %stack.1)

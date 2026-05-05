@@ -17,6 +17,7 @@
 #include "Protocol/ProtocolTypes.h"
 
 #include "lldb/API/SBAddress.h"
+#include "lldb/lldb-types.h"
 
 namespace lldb_dap {
 
@@ -106,6 +107,14 @@ CreateExceptionBreakpointFilter(const ExceptionBreakpoint &bp);
 ///     A string representing the size in a readable format (e.g., "1 KB",
 ///     "2 MB").
 std::string ConvertDebugInfoSizeToString(uint64_t debug_size);
+
+/// Add a mask to the breakpoint's id, this is to avoid id collision
+/// as internally, lldb breakpoint's id and watchpoint's id starts from one.
+/// Similar to the variables_reference we start from 8'000'000.
+inline lldb::break_id_t ApplyWatchpointMask(lldb::break_id_t breakpoint_id) {
+  constexpr lldb::break_id_t watchpoint_mask = 8'000'000;
+  return watchpoint_mask + breakpoint_id;
+}
 
 } // namespace lldb_dap
 

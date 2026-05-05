@@ -890,6 +890,15 @@ def ParentOp1 : TEST_Op<"parent1"> {
 def ChildWithParentOneOf : TEST_Op<"child_with_parent_one_of",
                                 [ParentOneOf<["ParentOp", "ParentOp1"]>]>;
 
+// HasAncestor trait
+def ChildWithAncestor
+    : TEST_Op<"child_with_ancestor", [HasAncestor<"ParentOp">]>;
+
+// AncestorOneOf trait
+def ChildWithAncestorOneOf
+    : TEST_Op<"child_with_ancestor_one_of", [AncestorOneOf<["ParentOp",
+                                                            "ParentOp1"]>]>;
+
 def TerminatorOp : TEST_Op<"finish", [Terminator]>;
 def SingleBlockImplicitTerminatorOp : TEST_Op<"SingleBlockImplicitTerminator",
     [SingleBlockImplicitTerminator<"TerminatorOp">]> {
@@ -3936,10 +3945,13 @@ def TestAllocWithMultipleResults : TEST_Op<"alloc_with_multiple_results"> {
 // Test Ops bufferization
 //===----------------------------------------------------------------------===//
 
-def TestDummyTensorOp : TEST_Op<"dummy_tensor_op",
-    [DeclareOpInterfaceMethods<BufferizableOpInterface,
-        ["bufferize", "bufferizesToMemoryRead",
-         "bufferizesToMemoryWrite", "getAliasingValues"]>]> {
+def TestDummyTensorOp
+    : TEST_Op<"dummy_tensor_op",
+              [DeclareOpInterfaceMethods<
+                  BufferizableOpInterface,
+                  ["bufferize", "getBufferType", "bufferizesToMemoryRead",
+                   "bufferizesToMemoryWrite", "getAliasingValues",
+                   "getAliasingOpOperands"]>]> {
   let arguments = (ins
     Arg<Bufferization_TensorLikeTypeInterface>:$input
   );
@@ -3959,7 +3971,23 @@ def TestDummyTensorOp : TEST_Op<"dummy_tensor_op",
     ::mlir::bufferization::AliasingValueList
     test::TestDummyTensorOp::getAliasingValues(::mlir::OpOperand&,
         const ::mlir::bufferization::AnalysisState&) {
-      return {};
+      auto relation = getInput().getType() == getOutput().getType()
+                          ? ::mlir::bufferization::BufferRelation::Equivalent
+                          : ::mlir::bufferization::BufferRelation::Unknown;
+      return {{getOutput(), relation, /*isDefinite=*/true}};
+    }
+
+    ::mlir::bufferization::AliasingOpOperandList
+    test::TestDummyTensorOp::getAliasingOpOperands(::mlir::Value value,
+        const ::mlir::bufferization::AnalysisState&) {
+      if (value != getOutput())
+        return {};
+
+      auto relation = getInput().getType() == getOutput().getType()
+                          ? ::mlir::bufferization::BufferRelation::Equivalent
+                          : ::mlir::bufferization::BufferRelation::Unknown;
+      return {{&getOperation()->getOpOperand(0), relation,
+               /*isDefinite=*/true}};
     }
   }];
 }
@@ -3973,11 +4001,13 @@ def TestDummyMemrefOp : TEST_Op<"dummy_memref_op", []> {
   );
 }
 
-def TestCreateTensorOp : TEST_Op<"create_tensor_op",
-    [DeclareOpInterfaceMethods<BufferizableOpInterface,
-        ["bufferize", "getBufferType", "bufferizesToMemoryRead",
-         "bufferizesToMemoryWrite", "getAliasingValues",
-         "bufferizesToAllocation"]>]> {
+def TestCreateTensorOp
+    : TEST_Op<"create_tensor_op",
+              [DeclareOpInterfaceMethods<
+                  BufferizableOpInterface,
+                  ["bufferize", "getBufferType", "bufferizesToMemoryRead",
+                   "bufferizesToMemoryWrite", "getAliasingValues",
+                   "getAliasingOpOperands", "bufferizesToAllocation"]>]> {
   let arguments = (ins);
   let results = (outs Arg<Bufferization_TensorLikeTypeInterface>:$output);
   let extraClassDefinition = [{
@@ -3996,6 +4026,14 @@ def TestCreateTensorOp : TEST_Op<"create_tensor_op",
     ::mlir::bufferization::AliasingValueList
     test::TestCreateTensorOp::getAliasingValues(::mlir::OpOperand&,
         const ::mlir::bufferization::AnalysisState&) {
+      return {};
+    }
+
+    ::mlir::bufferization::AliasingOpOperandList
+    test::TestCreateTensorOp::getAliasingOpOperands(
+        ::mlir::Value value,
+        const ::mlir::bufferization::AnalysisState&) {
+      (void)value;
       return {};
     }
   }];

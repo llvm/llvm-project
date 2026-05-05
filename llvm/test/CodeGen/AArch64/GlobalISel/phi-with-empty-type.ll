@@ -9,8 +9,8 @@ define %zero @test(%zero %x, %zero %y) {
   ; CHECK: bb.1.b1:
   ; CHECK-NEXT:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s1) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   G_BRCOND [[DEF]](s1), %bb.3
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(i1) = G_IMPLICIT_DEF
+  ; CHECK-NEXT:   G_BRCOND [[DEF]](i1), %bb.3
   ; CHECK-NEXT:   G_BR %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.b2:

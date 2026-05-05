@@ -54,6 +54,8 @@ public:
   LLVM_ABI bool mayStore(const MCInst &Inst) const;
 
   LLVM_ABI bool mayModifyRegister(const MCInst &Inst, MCRegister Reg) const;
+  LLVM_ABI bool explicitlyModifiesRegister(const MCInst &Inst,
+                                           MCRegister Reg) const;
 
   virtual ~MCLFIRewriter() = default;
   virtual bool rewriteInst(const MCInst &Inst, MCStreamer &Out,

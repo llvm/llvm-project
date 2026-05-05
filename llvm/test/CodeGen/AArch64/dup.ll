@@ -2,7 +2,6 @@
 ; RUN: llc -mtriple=aarch64-none-none-eabi -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc -mtriple=aarch64-none-none-eabi -verify-machineinstrs -global-isel -global-isel-abort=2 %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:       warning: Instruction selection used fallback path for v8i4_to_v16i8
 
 define <2 x i8> @dup_v2i8(i8 %a) {
 ; CHECK-SD-LABEL: dup_v2i8:
@@ -200,8 +199,7 @@ define <4 x i8> @dup_v4i8(i8 %a) {
 ; CHECK-GI-LABEL: dup_v4i8:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    dup v0.8b, w0
-; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    zip1 v0.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    ret
 entry:
   %b = insertelement <4 x i8> poison, i8 %a, i64 0
@@ -220,8 +218,7 @@ define <4 x i8> @duplane0_v4i8(<4 x i8> %b) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    dup v0.8b, v0.b[0]
-; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    zip1 v0.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = shufflevector <4 x i8> %b, <4 x i8> poison, <4 x i32> zeroinitializer
@@ -238,8 +235,7 @@ define <4 x i8> @loaddup_v4i8(ptr %p) {
 ; CHECK-GI-LABEL: loaddup_v4i8:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    ld1r { v0.8b }, [x0]
-; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    zip1 v0.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    ret
 entry:
   %a = load i8, ptr %p
@@ -261,8 +257,7 @@ define <4 x i8> @loaddup_str_v4i8(ptr %p) {
 ; CHECK-GI-NEXT:    ldr b0, [x0]
 ; CHECK-GI-NEXT:    strb wzr, [x0]
 ; CHECK-GI-NEXT:    dup v0.8b, v0.b[0]
-; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    zip1 v0.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    ret
 entry:
   %a = load i8, ptr %p
@@ -455,8 +450,7 @@ define <2 x i16> @dup_v2i16(i16 %a) {
 ; CHECK-GI-LABEL: dup_v2i16:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    dup v0.4h, w0
-; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    zip1 v0.4h, v0.4h, v0.4h
 ; CHECK-GI-NEXT:    ret
 entry:
   %b = insertelement <2 x i16> poison, i16 %a, i64 0
@@ -475,8 +469,7 @@ define <2 x i16> @duplane0_v2i16(<2 x i16> %b) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
 ; CHECK-GI-NEXT:    dup v0.4h, v0.h[0]
-; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    zip1 v0.4h, v0.4h, v0.4h
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = shufflevector <2 x i16> %b, <2 x i16> poison, <2 x i32> zeroinitializer
@@ -493,8 +486,7 @@ define <2 x i16> @loaddup_v2i16(ptr %p) {
 ; CHECK-GI-LABEL: loaddup_v2i16:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    ld1r { v0.4h }, [x0]
-; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    zip1 v0.4h, v0.4h, v0.4h
 ; CHECK-GI-NEXT:    ret
 entry:
   %a = load i16, ptr %p
@@ -516,8 +508,7 @@ define <2 x i16> @loaddup_str_v2i16(ptr %p) {
 ; CHECK-GI-NEXT:    ldr h0, [x0]
 ; CHECK-GI-NEXT:    strh wzr, [x0]
 ; CHECK-GI-NEXT:    dup v0.4h, v0.h[0]
-; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    zip1 v0.4h, v0.4h, v0.4h
 ; CHECK-GI-NEXT:    ret
 entry:
   %a = load i16, ptr %p
@@ -2731,4 +2722,13 @@ define <16 x i4> @v8i4_to_v16i8(<8 x i4> %a) {
 ; CHECK-NEXT:    ret
   %r = shufflevector <8 x i4> %a, <8 x i4> poison, <16 x i32> zeroinitializer
   ret <16 x i4> %r
+}
+
+define <4 x i16> @dup_zero_undef_first() {
+; CHECK-LABEL: dup_zero_undef_first:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    ret
+    %i = insertelement <4 x i16> zeroinitializer, i16 undef, i32 0
+    ret <4 x i16> %i
 }
