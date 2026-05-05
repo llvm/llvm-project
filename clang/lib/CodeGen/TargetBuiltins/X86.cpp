@@ -102,8 +102,6 @@ static Value *emitX86RoundImmediate(CodeGenFunction &CGF, Value *X,
     case 0b11:
       ID = Intrinsic::experimental_constrained_trunc;
       break;
-    default:
-      llvm_unreachable("Invalid rounding mode");
     }
 
     Function *F = CGF.CGM.getIntrinsic(ID, X->getType());
@@ -123,8 +121,6 @@ static Value *emitX86RoundImmediate(CodeGenFunction &CGF, Value *X,
   case 0b11:
     ID = Intrinsic::trunc;
     break;
-  default:
-    llvm_unreachable("Invalid rounding mode");
   }
 
   Function *F = CGF.CGM.getIntrinsic(ID, X->getType());
