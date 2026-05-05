@@ -1575,7 +1575,7 @@ public:
   }
 
   /// Mark a file as included at the top level (outside any module).
-  /// Called by ASTReader when deserializing header file info.
+  /// Called by ASTReader when deserializing header file info from a PCH.
   void markIncludedOnTopLevel(const FileEntry *File) {
     Includes.insert(File);
     CurSubmoduleState->VisibleIncludedFiles.insert(File);

@@ -2161,11 +2161,10 @@ namespace {
       endian::Writer LE(Out, llvm::endianness::little);
       uint64_t Start = Out.tell(); (void)Start;
 
-      unsigned char Flags =
-          (Data.HFI.isImport << 5) |
-          (Writer.isWritingStdCXXNamedModules() ? 0
-                                                : Data.HFI.isPragmaOnce << 4) |
-          (Data.HFI.DirInfo << 1);
+      unsigned char Flags = (Data.HFI.isImport << 5)
+                          | (Writer.isWritingStdCXXNamedModules() ? 0 :
+                             Data.HFI.isPragmaOnce << 4)
+                          | (Data.HFI.DirInfo << 1);
       LE.write<uint8_t>(Flags);
 
       if (Data.HFI.LazyControllingMacro.isID())
