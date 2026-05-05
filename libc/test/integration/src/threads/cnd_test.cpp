@@ -152,7 +152,7 @@ void single_waiter_test() {
 namespace timed_wait_test {
 
 void timeout_test() {
-  /*cnd_t cnd;
+  cnd_t cnd;
   mtx_t mtx;
   ASSERT_EQ(LIBC_NAMESPACE::cnd_init(&cnd), int(thrd_success));
   ASSERT_EQ(LIBC_NAMESPACE::mtx_init(&mtx, mtx_plain), int(thrd_success));
@@ -167,7 +167,7 @@ void timeout_test() {
   ASSERT_EQ(LIBC_NAMESPACE::mtx_unlock(&mtx), int(thrd_success));
 
   LIBC_NAMESPACE::cnd_destroy(&cnd);
-  LIBC_NAMESPACE::mtx_destroy(&mtx);*/
+  LIBC_NAMESPACE::mtx_destroy(&mtx);
 }
 
 void future_timeout_test() {
