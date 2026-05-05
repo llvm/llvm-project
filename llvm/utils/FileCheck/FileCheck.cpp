@@ -429,7 +429,7 @@ buildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
     LabelWidth = std::max((std::string::size_type)LabelWidth, A.Label.size());
 
     A.Marker = GetMarker(Diag.getMatchType());
-    std::optional<StringRef> CustomNote = std::nullopt;
+    std::optional<StringRef> CustomNote;
     if (const MatchNoteDiag *NoteDiag = dyn_cast<MatchNoteDiag>(&Diag)) {
       CustomNote = NoteDiag->getCustomNote();
       if (CustomNote) {
