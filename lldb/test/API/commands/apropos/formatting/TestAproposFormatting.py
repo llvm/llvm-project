@@ -73,7 +73,6 @@ class AproposFormattingTest(PExpectTest):
         # Settings descriptions.
         self.child.expect_exact("'" + ansi_green + "plug" + ansi_reset + "in")
         self.expect_prompt()
-
         self.quit()
 
     @skipIfAsan
