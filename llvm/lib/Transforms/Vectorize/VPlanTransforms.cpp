@@ -6810,6 +6810,20 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
       if (!Ptr)
         continue;
 
+      // Check if this is a strided access by analyzing the address SCEV for an
+      // affine add recurrence pattern.
+      const SCEV *PtrSCEV = vputils::getSCEVExprForVPValue(Ptr, PSE, &L);
+      const SCEV *Start;
+      const APInt *Step;
+      // TODO: Support non-constant loop invariant stride.
+      if (!match(PtrSCEV, m_scev_AffineAddRec(m_SCEV(Start), m_scev_APInt(Step),
+                                              m_SpecificLoop(&L))))
+        continue;
+
+      // TODO: Support the base pointer that requires SCEV expander.
+      if (!isa<SCEVUnknown, SCEVConstant>(Start))
+        continue;
+
       Type *LoadTy = TypeInfo.inferScalarType(LoadR);
       Align Alignment = LoadR->getAlign();
       auto IsProfitable = [&](ElementCount VF) {
@@ -6828,18 +6842,6 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
 
       if (!LoopVectorizationPlanner::getDecisionAndClampRange(IsProfitable,
                                                               Range))
-        continue;
-
-      const SCEV *PtrSCEV = vputils::getSCEVExprForVPValue(Ptr, PSE, &L);
-      const SCEV *Start;
-      const APInt *Step;
-      // TODO: Support non-constant loop invariant stride.
-      if (!match(PtrSCEV,
-                 m_scev_AffineAddRec(m_SCEV(Start), m_scev_APInt(Step))))
-        continue;
-
-      // TODO: Support the base pointer that requires SCEV expander.
-      if (!isa<SCEVUnknown, SCEVConstant>(Start))
         continue;
 
       // Get VF as i32 for the vector length operand.
