@@ -1018,7 +1018,8 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setOperationAction(ISD::ROTL, VT, Expand);
     setOperationAction(ISD::ROTR, VT, Expand);
   }
-  setOperationAction(ISD::CTTZ,  MVT::i32, Custom);
+  if (!Subtarget->hasV6T2Ops())
+    setOperationAction(ISD::CTTZ, MVT::i32, Custom);
   // TODO: These two should be set to LibCall, but this currently breaks
   //   the Linux kernel build. See #101786.
   setOperationAction(ISD::CTPOP, MVT::i32, Expand);
@@ -18439,6 +18440,53 @@ ARMTargetLowering::PerformBRCONDCombine(SDNode *N, SelectionDAG &DAG) const {
   return SDValue();
 }
 
+/// Fold (cmov cttz, 0, EQ, (cmpz X, 0)) and (cmov 0, cttz, NE, (cmpz X, 0)) on
+/// i32 to (and cttz, 31). CMOV(False, True, CC): when CC matches flags, result
+/// is True; else False (see getCMOV). 32-bit ARM only; no i64 cttz / trunc
+/// path.
+static SDValue foldCMOVofCTTZ(SDNode *N, SelectionDAG &DAG) {
+  if (N->getOpcode() != ARMISD::CMOV || N->getValueType(0) != MVT::i32)
+    return SDValue();
+
+  SDValue Cmp = N->getOperand(3);
+  if (Cmp.getOpcode() != ARMISD::CMPZ)
+    return SDValue();
+
+  auto CC = (ARMCC::CondCodes)N->getConstantOperandVal(2);
+  SDValue Zero, CTTZ;
+
+  if (CC == ARMCC::EQ) {
+    CTTZ = N->getOperand(0);
+    Zero = N->getOperand(1);
+  } else if (CC == ARMCC::NE) {
+    Zero = N->getOperand(0);
+    CTTZ = N->getOperand(1);
+  } else
+    return SDValue();
+
+  if (CTTZ.getOpcode() != ISD::CTTZ || CTTZ.getValueType() != MVT::i32)
+    return SDValue();
+
+  if (!isNullConstant(Zero))
+    return SDValue();
+
+  SDValue CmpLHS = Cmp.getOperand(0);
+  SDValue CmpRHS = Cmp.getOperand(1);
+  SDValue XFromCmp;
+  if (isNullConstant(CmpRHS))
+    XFromCmp = CmpLHS;
+  else if (isNullConstant(CmpLHS))
+    XFromCmp = CmpRHS;
+  else
+    return SDValue();
+
+  if (CTTZ.getOperand(0) != XFromCmp)
+    return SDValue();
+
+  SDValue BitWidthMinusOne = DAG.getConstant(31, SDLoc(N), MVT::i32);
+  return DAG.getNode(ISD::AND, SDLoc(N), MVT::i32, CTTZ, BitWidthMinusOne);
+}
+
 /// PerformCMOVCombine - Target-specific DAG combining for ARMISD::CMOV.
 SDValue
 ARMTargetLowering::PerformCMOVCombine(SDNode *N, SelectionDAG &DAG) const {
@@ -18515,6 +18563,9 @@ ARMTargetLowering::PerformCMOVCombine(SDNode *N, SelectionDAG &DAG) const {
 
   if (!VT.isInteger())
       return SDValue();
+
+  if (SDValue Folded = foldCMOVofCTTZ(N, DAG))
+    return Folded;
 
   // Fold away an unnecessary CMPZ/CMOV
   // CMOV A, B, C1, (CMPZ (CMOV 1, 0, C2, D), 0) ->

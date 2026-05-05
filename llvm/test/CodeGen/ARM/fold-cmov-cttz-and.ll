@@ -22,9 +22,9 @@ define i32 @cttzi32(i32 %x) {
 ;
 ; CHECK-LABEL: cttzi32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    rbit r1, r0
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    clzne r0, r1
+; CHECK-NEXT:    rbit r0, r0
+; CHECK-NEXT:    clz r0, r0
+; CHECK-NEXT:    and r0, r0, #31
 ; CHECK-NEXT:    bx lr
 ;
 ; CHECK-6M-LABEL: cttzi32:
@@ -104,9 +104,9 @@ define i32 @cttzi32ne(i32 %x) {
 ;
 ; CHECK-LABEL: cttzi32ne:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    rbit r1, r0
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    clzne r0, r1
+; CHECK-NEXT:    rbit r0, r0
+; CHECK-NEXT:    clz r0, r0
+; CHECK-NEXT:    and r0, r0, #31
 ; CHECK-NEXT:    bx lr
 ;
 ; CHECK-6M-LABEL: cttzi32ne:
