@@ -39,6 +39,7 @@
 #include <__pstl/cpu_algos/stable_sort.h>
 #include <__pstl/cpu_algos/transform.h>
 #include <__pstl/cpu_algos/transform_reduce.h>
+#include <__pstl/cpu_algos/transform_scan.h>
 #include <__type_traits/invoke.h>
 #include <__utility/empty.h>
 #include <__utility/exception_guard.h>
@@ -545,6 +546,14 @@ struct __transform_binary<__libdispatch_backend_tag, _ExecutionPolicy>
 template <class _ExecutionPolicy>
 struct __transform_reduce<__libdispatch_backend_tag, _ExecutionPolicy>
     : __cpu_parallel_transform_reduce<__libdispatch_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
+struct __transform_exclusive_scan<__libdispatch_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_transform_exclusive_scan<__libdispatch_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
+struct __transform_inclusive_scan<__libdispatch_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_transform_inclusive_scan<__libdispatch_backend_tag, _ExecutionPolicy> {};
 
 template <class _ExecutionPolicy>
 struct __transform_reduce_binary<__libdispatch_backend_tag, _ExecutionPolicy>
