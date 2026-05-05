@@ -109,9 +109,9 @@ define linkonce_odr noundef ptr @_ZN4llvm25SmallVectorTemplateCommonIcvE5beginEv
 !345 = !DILocation(line: 372, scope: !340)
 !444 = !DISubroutineType(types: !445)
 !445 = !{}
-!462 = distinct !DISubprogram(name: "end", scope: !462)
+!462 = distinct !DISubprogram(name: "end", scope: !462, type: !13)
 !469 = distinct !DISubprogram(name: "__uninitialized_fill_n<char, char>", type: !444, unit: !7, retainedNodes: !36)
-!483 = distinct !DISubprogram(name: "__voidify<char>", unit: !7, retainedNodes: !36)
+!483 = distinct !DISubprogram(name: "__voidify<char>", type: !13, unit: !7, retainedNodes: !36)
 !488 = distinct !DILocation(line: 214, scope: !469)
 !489 = !DILocation(line: 137, scope: !483, inlinedAt: !488)
 !491 = !DILocation(line: 214, scope: !469)
