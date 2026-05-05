@@ -39,6 +39,7 @@
 #include <__pstl/cpu_algos/stable_sort.h>
 #include <__pstl/cpu_algos/transform.h>
 #include <__pstl/cpu_algos/transform_reduce.h>
+#include <__type_traits/invoke.h>
 #include <__utility/empty.h>
 #include <__utility/exception_guard.h>
 #include <__utility/move.h>
@@ -333,6 +334,23 @@ struct __cpu_traits<__libdispatch_backend_tag> {
     });
 
     return __result + __n;
+  }
+
+  template < class _RandomAccessIterator1, class _RandomAccessIterator2, class _BinaryOperation, class _UnaryOperation>
+  _LIBCPP_HIDE_FROM_ABI static optional<_RandomAccessIterator2> __transform_inclusive_scan(
+      _RandomAccessIterator1 __first,
+      _RandomAccessIterator1 __last,
+      _RandomAccessIterator2 __result,
+      _BinaryOperation __binary_op,
+      _UnaryOperation __unary_op) noexcept {
+    using _Tp = invoke_result_t<_UnaryOperation, iter_reference_t<_RandomAccessIterator1>>;
+    return __transform_inclusive_scan(
+        std::move(__first),
+        std::move(__last),
+        std::move(__result),
+        std::move(__binary_op),
+        std::move(__unary_op),
+        _Tp{});
   }
 
   template < class _RandomAccessIterator1,
