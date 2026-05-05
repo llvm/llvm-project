@@ -829,9 +829,8 @@ public:
     return nullptr;
   }
 
-  /// Return the target-defined minimal register class for an untyped physical
-  /// register query.
-  /// Will be nullptr if the register is not in any register class.
+  /// Returns the target-defined minimal register class for an untyped physical
+  /// register query or nullptr if the register is not in any register class.
   virtual const TargetRegisterClass *
   getDefaultMinimalPhysRegClass(MCRegister Reg) const {
     return nullptr;
