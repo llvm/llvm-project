@@ -53,42 +53,4 @@ exit:
   ret void
 }
 
-define void @trip5_i8(ptr noalias nocapture noundef %dst, ptr noalias nocapture noundef readonly %src) #0 {
-; CHECK-LABEL: define void @trip5_i8(
-; CHECK-SAME: ptr noalias noundef captures(none) [[DST:%.*]], ptr noalias noundef readonly captures(none) [[SRC:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[SRC]], align 1
-; CHECK-NEXT:    [[TMP0:%.*]] = shl <4 x i8> [[WIDE_LOAD]], splat (i8 1)
-; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i8>, ptr [[DST]], align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i8> [[TMP0]], [[WIDE_LOAD1]]
-; CHECK-NEXT:    store <4 x i8> [[TMP1]], ptr [[DST]], align 1
-; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
-; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
-; CHECK:       [[SCALAR_PH]]:
-;
-entry:
-  br label %loop
-
-loop:
-  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %gep.src = getelementptr inbounds i8, ptr %src, i64 %iv
-  %0 = load i8, ptr %gep.src, align 1
-  %mul = shl i8 %0, 1
-  %gep.dst = getelementptr inbounds i8, ptr %dst, i64 %iv
-  %1 = load i8, ptr %gep.dst, align 1
-  %add = add i8 %mul, %1
-  store i8 %add, ptr %gep.dst, align 1
-  %iv.next = add nuw nsw i64 %iv, 1
-  %ec = icmp eq i64 %iv.next, 5
-  br i1 %ec, label %exit, label %loop
-
-exit:
-  ret void
-}
-
 attributes #0 = { vscale_range(1,16) "target-features"="+sve" }

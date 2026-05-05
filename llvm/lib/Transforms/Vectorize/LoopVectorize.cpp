@@ -3064,15 +3064,10 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   }
 
   auto ExpectedTC = getSmallBestKnownTC(PSE, TheLoop);
-  auto ApplyVectorWidth = [](FixedScalableVFPair &MaxFactors,
-                             unsigned int FixedVF, unsigned int ScalableVF) {
-    MaxFactors.FixedVF = ElementCount::getFixed(FixedVF);
-    MaxFactors.ScalableVF = ElementCount::getScalable(ScalableVF);
-  };
   unsigned EffectiveIC = UserIC > 0 ? UserIC : 1;
   auto HasOneScalarIterationRemainder = [EffectiveIC](ElementCount &ExactTC,
-                                                      unsigned int VF) -> bool {
-    return ExactTC.getFixedValue() == ((VF * EffectiveIC) + 1);
+                                                      unsigned int MaxVF) -> bool {
+    return ExactTC.getFixedValue() == 1 + (MaxVF * EffectiveIC);
   };
   if (ExpectedTC && ExpectedTC->isFixed() &&
       ExpectedTC->getFixedValue() <=
@@ -3085,7 +3080,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
           NoScalarEpilogueNeeded(MaxFactors.FixedVF.getFixedValue())) {
         LLVM_DEBUG(dbgs() << "LV: Picking a fixed-width so that no tail will "
                              "remain for any chosen VF.\n");
-        ApplyVectorWidth(MaxFactors, MaxFactors.FixedVF.getFixedValue(), 0);
+        MaxFactors.ScalableVF = ElementCount::getScalable(0);
         return MaxFactors;
       }
       // Allow cases where the ExactTC == VF + 1. VF can be any power of
@@ -3096,22 +3091,21 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
       // straight-line code as the both iteration counts are statically known.
       ElementCount ExactTC = getSmallConstantTripCount(PSE.getSE(), TheLoop);
       if (EpilogueLoweringStatus == CM_EpilogueNotAllowedLowTripLoop &&
-          ExactTC && ExactTC.isFixed()) {
-        if (HasOneScalarIterationRemainder(
-                ExactTC, MaxFactors.FixedVF.getFixedValue())) {
-          LLVM_DEBUG(dbgs() << "LV: Picking a fixed-width with 1 scalar "
-                               "iteration remainder.\n");
-          ApplyVectorWidth(MaxFactors, MaxFactors.FixedVF.getFixedValue(), 0);
-          return MaxFactors;
-        }
+          ExactTC.isFixed()) {
         // If the maximum VF cannot produce 1 vector iteration + 1 scalar
-        // iteration, step down VF's to find one that can.
-        for (unsigned VF = MaxFactors.FixedVF.getFixedValue(); VF >= 2;
-             VF /= 2) {
-          if (HasOneScalarIterationRemainder(ExactTC, VF)) {
-            LLVM_DEBUG(dbgs() << "LV: Picking VF=" << VF
+        // iteration, step down VF's to find one that can. The result should
+        // also eliminate any loops.
+        // 
+        // Forced interleaving is considered when seeing if OneScalarIterationRemainder
+        // is produced. It may prodiced more than one vector iteration, but only one
+        // scalar iteration.
+        for (unsigned MaxVF = MaxFactors.FixedVF.getFixedValue(); MaxVF >= 2;
+             MaxVF /= 2) {
+          if (HasOneScalarIterationRemainder(ExactTC, MaxVF)) {
+            LLVM_DEBUG(dbgs() << "LV: Picking VF=" << MaxVF
                               << " with 1 scalar iteration remainder.\n");
-            ApplyVectorWidth(MaxFactors, VF, 0);
+            MaxFactors.FixedVF = ElementCount::getFixed(MaxVF);
+            MaxFactors.ScalableVF = ElementCount::getScalable(0);
             return MaxFactors;
           }
         }
