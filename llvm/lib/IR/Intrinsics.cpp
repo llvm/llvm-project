@@ -37,6 +37,14 @@
 
 using namespace llvm;
 
+// Forward declaration of static functions.
+static bool isIntrinsicVarArg(ArrayRef<Intrinsic::IITDescriptor> &Infos,
+                              bool Consume);
+static bool isSignatureValid(FunctionType *FTy,
+                             ArrayRef<Intrinsic::IITDescriptor> &Infos,
+                             SmallVectorImpl<Type *> &OverloadTys,
+                             raw_ostream &OS);
+
 /// Table of string intrinsic names indexed by enum value.
 #define GET_INTRINSIC_NAME_TABLE
 #include "llvm/IR/IntrinsicImpl.inc"
@@ -601,21 +609,15 @@ FunctionType *Intrinsic::getType(LLVMContext &Context, ID id,
                                  ArrayRef<Type *> OverloadTys) {
   SmallVector<IITDescriptor, 8> Table;
   getIntrinsicInfoTableEntries(id, Table);
-
   ArrayRef<IITDescriptor> TableRef = Table;
+
+  bool IsVarArg = isIntrinsicVarArg(TableRef, /*Consume=*/true);
+
   Type *ResultTy = DecodeFixedType(TableRef, OverloadTys, Context);
 
   SmallVector<Type *, 8> ArgTys;
   while (!TableRef.empty())
     ArgTys.push_back(DecodeFixedType(TableRef, OverloadTys, Context));
-
-  // VarArg intrinsics encode a void type as the last argument type. Detect that
-  // and then drop the void argument.
-  bool IsVarArg = false;
-  if (!ArgTys.empty() && ArgTys.back()->isVoidTy()) {
-    ArgTys.pop_back();
-    IsVarArg = true;
-  }
   return FunctionType::get(ResultTy, ArgTys, IsVarArg);
 }
 
@@ -778,13 +780,6 @@ Function *Intrinsic::getOrInsertDeclaration(Module *M, ID id,
   FunctionType *FT = getType(M->getContext(), id, OverloadTys);
   return getOrInsertIntrinsicDeclarationImpl(M, id, OverloadTys, FT);
 }
-
-static bool isIntrinsicVarArg(ArrayRef<Intrinsic::IITDescriptor> &Infos,
-                              bool Consume);
-static bool isSignatureValid(FunctionType *FTy,
-                             ArrayRef<Intrinsic::IITDescriptor> &Infos,
-                             SmallVectorImpl<Type *> &OverloadTys,
-                             raw_ostream &OS);
 
 Function *Intrinsic::getOrInsertDeclaration(Module *M, ID id, Type *RetTy,
                                             ArrayRef<Type *> ArgTys) {

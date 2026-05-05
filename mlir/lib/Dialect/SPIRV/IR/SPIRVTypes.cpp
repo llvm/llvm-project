@@ -57,7 +57,7 @@ public:
           for (Type elementType : concreteType.getElementTypes())
             add(elementType);
         })
-        .Case<SamplerType>([](auto) { /* no extensions */ })
+        .Case<SamplerType, NamedBarrierType>([](auto) { /* no extensions */ })
         .DefaultUnreachable("Unhandled type");
   }
 
@@ -69,6 +69,12 @@ private:
   void addConcrete(PointerType type);
   void addConcrete(ScalarType type);
   void addConcrete(TensorArmType type);
+
+  template <Extension... Es>
+  void pushExts() {
+    static constexpr Extension exts[] = {Es...};
+    extensions.push_back(exts);
+  }
 
   SPIRVType::ExtensionArrayRefVector &extensions;
   std::optional<StorageClass> storage;
@@ -109,6 +115,8 @@ public:
             add(elementType);
         })
         .Case<SamplerType>([](auto) { /* no capabilities */ })
+        .Case<NamedBarrierType>(
+            [this](auto) { pushCaps<Capability::NamedBarrier>(); })
         .DefaultUnreachable("Unhandled type");
   }
 
@@ -124,6 +132,12 @@ private:
   void addConcrete(ScalarType type);
   void addConcrete(TensorArmType type);
   void addConcrete(VectorType type);
+
+  template <Capability... Cs>
+  void pushCaps() {
+    static constexpr Capability caps[] = {Cs...};
+    capabilities.push_back(caps);
+  }
 
   SPIRVType::CapabilityArrayRefVector &capabilities;
   std::optional<StorageClass> storage;
@@ -219,10 +233,8 @@ void TypeCapabilityVisitor::addConcrete(VectorType type) {
   add(type.getElementType());
 
   int64_t vecSize = type.getNumElements();
-  if (vecSize == 8 || vecSize == 16) {
-    static constexpr auto cap = Capability::Vector16;
-    capabilities.push_back(cap);
-  }
+  if (vecSize == 8 || vecSize == 16)
+    pushCaps<Capability::Vector16>();
 }
 
 //===----------------------------------------------------------------------===//
@@ -302,23 +314,17 @@ CooperativeMatrixUseKHR CooperativeMatrixType::getUse() const {
 
 void TypeExtensionVisitor::addConcrete(CooperativeMatrixType type) {
   add(type.getElementType());
-  static constexpr auto ext = Extension::SPV_KHR_cooperative_matrix;
-  extensions.push_back(ext);
+  pushExts<Extension::SPV_KHR_cooperative_matrix>();
 }
 
 void TypeCapabilityVisitor::addConcrete(CooperativeMatrixType type) {
   Type elementType = type.getElementType();
   add(elementType);
-  static constexpr auto caps = Capability::CooperativeMatrixKHR;
-  capabilities.push_back(caps);
-  if (elementType.isBF16()) {
-    static constexpr auto caps = Capability::BFloat16CooperativeMatrixKHR;
-    capabilities.push_back(caps);
-  }
-  if (elementType.isF8E4M3FN() || elementType.isF8E5M2()) {
-    static constexpr auto caps = Capability::Float8CooperativeMatrixEXT;
-    capabilities.push_back(caps);
-  }
+  pushCaps<Capability::CooperativeMatrixKHR>();
+  if (elementType.isBF16())
+    pushCaps<Capability::BFloat16CooperativeMatrixKHR>();
+  if (elementType.isF8E4M3FN() || elementType.isF8E5M2())
+    pushCaps<Capability::Float8CooperativeMatrixEXT>();
 }
 
 //===----------------------------------------------------------------------===//
@@ -531,8 +537,7 @@ unsigned RuntimeArrayType::getArrayStride() const { return getImpl()->stride; }
 
 void TypeCapabilityVisitor::addConcrete(RuntimeArrayType type) {
   add(type.getElementType());
-  static constexpr auto cap = Capability::Shader;
-  capabilities.push_back(cap);
+  pushCaps<Capability::Shader>();
 }
 
 //===----------------------------------------------------------------------===//
@@ -560,15 +565,11 @@ bool ScalarType::isValid(IntegerType type) {
 }
 
 void TypeExtensionVisitor::addConcrete(ScalarType type) {
-  if (type.isBF16()) {
-    static constexpr auto ext = Extension::SPV_KHR_bfloat16;
-    extensions.push_back(ext);
-  }
+  if (type.isBF16())
+    pushExts<Extension::SPV_KHR_bfloat16>();
 
-  if (type.isF8E4M3FN() || type.isF8E5M2()) {
-    static constexpr auto ext = Extension::SPV_EXT_float8;
-    extensions.push_back(ext);
-  }
+  if (type.isF8E4M3FN() || type.isF8E5M2())
+    pushExts<Extension::SPV_EXT_float8>();
 
   // 8- or 16-bit integer/floating-point numbers will require extra extensions
   // to appear in interface storage classes. See SPV_KHR_16bit_storage and
@@ -580,17 +581,13 @@ void TypeExtensionVisitor::addConcrete(ScalarType type) {
   case StorageClass::PushConstant:
   case StorageClass::StorageBuffer:
   case StorageClass::Uniform:
-    if (type.getIntOrFloatBitWidth() == 8) {
-      static constexpr auto ext = Extension::SPV_KHR_8bit_storage;
-      extensions.push_back(ext);
-    }
+    if (type.getIntOrFloatBitWidth() == 8)
+      pushExts<Extension::SPV_KHR_8bit_storage>();
     [[fallthrough]];
   case StorageClass::Input:
   case StorageClass::Output:
-    if (type.getIntOrFloatBitWidth() == 16) {
-      static constexpr auto ext = Extension::SPV_KHR_16bit_storage;
-      extensions.push_back(ext);
-    }
+    if (type.getIntOrFloatBitWidth() == 16)
+      pushExts<Extension::SPV_KHR_16bit_storage>();
     break;
   default:
     break;
@@ -607,13 +604,11 @@ void TypeCapabilityVisitor::addConcrete(ScalarType type) {
 #define STORAGE_CASE(storage, cap8, cap16)                                     \
   case StorageClass::storage: {                                                \
     if (bitwidth == 8) {                                                       \
-      static constexpr auto cap = Capability::cap8;                            \
-      capabilities.push_back(cap);                                             \
+      pushCaps<Capability::cap8>();                                            \
       return;                                                                  \
     }                                                                          \
     if (bitwidth == 16) {                                                      \
-      static constexpr auto cap = Capability::cap16;                           \
-      capabilities.push_back(cap);                                             \
+      pushCaps<Capability::cap16>();                                           \
       return;                                                                  \
     }                                                                          \
     /* For 64-bit integers/floats, Int64/Float64 enables support for all */    \
@@ -632,8 +627,7 @@ void TypeCapabilityVisitor::addConcrete(ScalarType type) {
     case StorageClass::Input:
     case StorageClass::Output: {
       if (bitwidth == 16) {
-        static constexpr auto cap = Capability::StorageInputOutput16;
-        capabilities.push_back(cap);
+        pushCaps<Capability::StorageInputOutput16>();
         return;
       }
       break;
@@ -648,10 +642,9 @@ void TypeCapabilityVisitor::addConcrete(ScalarType type) {
   // capabilities for special bitwidths.
 
 #define WIDTH_CASE(type, width)                                                \
-  case width: {                                                                \
-    static constexpr auto cap = Capability::type##width;                       \
-    capabilities.push_back(cap);                                               \
-  } break
+  case width:                                                                  \
+    pushCaps<Capability::type##width>();                                       \
+    break
 
   if (auto intType = dyn_cast<IntegerType>(type)) {
     switch (bitwidth) {
@@ -668,22 +661,17 @@ void TypeCapabilityVisitor::addConcrete(ScalarType type) {
     assert(isa<FloatType>(type));
     switch (bitwidth) {
     case 8: {
-      if (type.isF8E4M3FN() || type.isF8E5M2()) {
-        static constexpr auto cap = Capability::Float8EXT;
-        capabilities.push_back(cap);
-      } else {
+      if (type.isF8E4M3FN() || type.isF8E5M2())
+        pushCaps<Capability::Float8EXT>();
+      else
         llvm_unreachable("invalid 8-bit float type to getCapabilities");
-      }
       break;
     }
     case 16: {
-      if (type.isBF16()) {
-        static constexpr auto cap = Capability::BFloat16TypeKHR;
-        capabilities.push_back(cap);
-      } else {
-        static constexpr auto cap = Capability::Float16;
-        capabilities.push_back(cap);
-      }
+      if (type.isBF16())
+        pushCaps<Capability::BFloat16TypeKHR>();
+      else
+        pushCaps<Capability::Float16>();
       break;
     }
       WIDTH_CASE(Float, 64);
@@ -813,6 +801,14 @@ SampledImageType::verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
 //===----------------------------------------------------------------------===//
 
 SamplerType SamplerType::get(MLIRContext *context) {
+  return Base::get(context);
+}
+
+//===----------------------------------------------------------------------===//
+// NamedBarrierType
+//===----------------------------------------------------------------------===//
+
+NamedBarrierType NamedBarrierType::get(MLIRContext *context) {
   return Base::get(context);
 }
 
@@ -1275,8 +1271,7 @@ ArrayRef<int64_t> MatrixType::getShape() const { return getImpl()->shape; }
 
 void TypeCapabilityVisitor::addConcrete(MatrixType type) {
   add(type.getColumnType());
-  static constexpr auto cap = Capability::Matrix;
-  capabilities.push_back(cap);
+  pushCaps<Capability::Matrix>();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1324,14 +1319,12 @@ ArrayRef<int64_t> TensorArmType::getShape() const { return getImpl()->shape; }
 
 void TypeExtensionVisitor::addConcrete(TensorArmType type) {
   add(type.getElementType());
-  static constexpr auto ext = Extension::SPV_ARM_tensors;
-  extensions.push_back(ext);
+  pushExts<Extension::SPV_ARM_tensors>();
 }
 
 void TypeCapabilityVisitor::addConcrete(TensorArmType type) {
   add(type.getElementType());
-  static constexpr auto cap = Capability::TensorsARM;
-  capabilities.push_back(cap);
+  pushCaps<Capability::TensorsARM>();
 }
 
 LogicalResult
@@ -1352,7 +1345,7 @@ TensorArmType::verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
 //===----------------------------------------------------------------------===//
 
 void SPIRVDialect::registerTypes() {
-  addTypes<ArrayType, CooperativeMatrixType, ImageType, MatrixType, PointerType,
-           RuntimeArrayType, SampledImageType, SamplerType, StructType,
-           TensorArmType>();
+  addTypes<ArrayType, CooperativeMatrixType, ImageType, MatrixType,
+           NamedBarrierType, PointerType, RuntimeArrayType, SampledImageType,
+           SamplerType, StructType, TensorArmType>();
 }

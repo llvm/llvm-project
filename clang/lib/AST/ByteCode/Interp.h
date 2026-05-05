@@ -3435,6 +3435,12 @@ inline bool CopyArray(InterpState &S, CodePtr OpPC, uint32_t SrcIndex,
   if (!SrcPtr.isBlockPointer() || !DestPtr.isBlockPointer())
     return false;
 
+  const Descriptor *SrcDesc = SrcPtr.getFieldDesc();
+  const Descriptor *DestDesc = DestPtr.getFieldDesc();
+  if (!SrcDesc->isPrimitiveArray() || !DestDesc->isPrimitiveArray() ||
+      SrcDesc->getPrimType() != Name || DestDesc->getPrimType() != Name)
+    return false;
+
   for (uint32_t I = 0; I != Size; ++I) {
     const Pointer &SP = SrcPtr.atIndex(SrcIndex + I);
 
