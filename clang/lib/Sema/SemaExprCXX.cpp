@@ -3149,13 +3149,13 @@ bool Sema::FindAllocationFunctions(
             << OperatorNew->getDeclName() << Error << IsPlacementOperator
             << DeleteName;
         Diag(OperatorNew->getLocation(),
-              diag::note_type_aware_operator_declared)
+             diag::note_type_aware_operator_declared)
             << OperatorNew->getDeclName() << OperatorNewContext;
 
         if (Error == TypeAwareCleanupOperatorError::MismatchedScope) {
           DeclContext *OperatorDeleteContext = GetRedeclContext(OperatorDelete);
           Diag(OperatorDelete->getLocation(),
-                diag::note_type_aware_operator_declared)
+               diag::note_type_aware_operator_declared)
               << OperatorDelete->getDeclName() << OperatorDeleteContext;
         }
       };
