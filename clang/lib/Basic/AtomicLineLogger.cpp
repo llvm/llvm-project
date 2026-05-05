@@ -75,3 +75,4 @@ LogLine AtomicLineLogger::log() {
     return LogLine(*OS);
   return LogLine();
 }
+

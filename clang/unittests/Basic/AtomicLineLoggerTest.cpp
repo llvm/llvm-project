@@ -211,3 +211,4 @@ TEST(AtomicLineLoggerTest, ConcurrentWritesProduceCompleteLines) {
     EXPECT_EQ(Pid, (uint64_t)llvm::sys::Process::getProcessId());
   }
 }
+
