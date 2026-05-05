@@ -945,7 +945,7 @@ void GenericTaintChecker::checkPostCall(const CallEvent &Call,
   // Set the marked values as tainted. The return value only accessible from
   // checkPostStmt.
   ProgramStateRef State = C.getState();
-  const StackFrameContext *CurrentFrame = C.getStackFrame();
+  const StackFrame *CurrentFrame = C.getStackFrame();
 
   // Depending on what was tainted at pre-visit, we determined a set of
   // arguments which should be tainted after the function returns. These are
@@ -1215,7 +1215,7 @@ void GenericTaintChecker::taintUnsafeSocketProtocol(const CallEvent &Call,
     return;
 
   SourceLocation DomLoc = Call.getArgExpr(0)->getExprLoc();
-  StringRef DomName = C.getMacroNameOrSpelling(DomLoc);
+  std::string DomName = C.getMacroNameOrSpelling(DomLoc);
   // Allow internal communication protocols.
   bool SafeProtocol = DomName == "AF_SYSTEM" || DomName == "AF_LOCAL" ||
                       DomName == "AF_UNIX" || DomName == "AF_RESERVED_36";

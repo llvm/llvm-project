@@ -221,11 +221,11 @@ def HasOCCMO         : Predicate<"Subtarget->hasOCCMO()">,
                                  AssemblerPredicateWithAll<(all_of FeatureOCCMO), "occmo">;
 def HasLSCP          : Predicate<"Subtarget->hasLSCP()">,
                                  AssemblerPredicateWithAll<(all_of FeatureLSCP), "lscp">;
-def HasSVE2p2        : Predicate<"Subtarget->hasSVE2p2()">,
+def HasSVE2p2        : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE2p2()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE2p2), "sve2p2">;
 def HasSVE_B16MM     : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE_B16MM()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE_B16MM), "sve-b16mm">;
-def HasF16MM         : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasF16MM()">,
+def HasF16MM         : Predicate<"Subtarget->hasF16MM()">,
                                  AssemblerPredicateWithAll<(all_of FeatureF16MM), "f16mm">;
 def HasSVE2p3        : Predicate<"Subtarget->hasSVE2p3()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE2p3), "sve2p3">;
@@ -6176,7 +6176,7 @@ defm MUL      : SIMDThreeSameVectorBHS<0, 0b10011, "mul", mul>;
 let isCommutable = 1 in
 defm PMUL     : SIMDThreeSameVectorB<1, 0b10011, "pmul", clmul>;
 defm SABA     : SIMDThreeSameVectorBHSTied<0, 0b01111, "saba",
-      TriOpFrag<(add node:$LHS, (abds node:$MHS, node:$RHS))> >;
+      TriOpFrag<(add_like node:$LHS, (abds node:$MHS, node:$RHS))> >;
 defm SABD     : SIMDThreeSameVectorBHS<0,0b01110,"sabd", abds>;
 defm SHADD    : SIMDThreeSameVectorBHS<0,0b00000,"shadd", avgfloors>;
 defm SHSUB    : SIMDThreeSameVectorBHS<0,0b00100,"shsub", int_aarch64_neon_shsub>;
@@ -6195,7 +6195,7 @@ defm SRSHL    : SIMDThreeSameVector<0,0b01010,"srshl", int_aarch64_neon_srshl>;
 defm SSHL     : SIMDThreeSameVector<0,0b01000,"sshl", int_aarch64_neon_sshl>;
 defm SUB      : SIMDThreeSameVector<1,0b10000,"sub", sub>;
 defm UABA     : SIMDThreeSameVectorBHSTied<1, 0b01111, "uaba",
-      TriOpFrag<(add node:$LHS, (abdu node:$MHS, node:$RHS))> >;
+      TriOpFrag<(add_like node:$LHS, (abdu node:$MHS, node:$RHS))> >;
 defm UABD     : SIMDThreeSameVectorBHS<1,0b01110,"uabd", abdu>;
 defm UHADD    : SIMDThreeSameVectorBHS<1,0b00000,"uhadd", avgflooru>;
 defm UHSUB    : SIMDThreeSameVectorBHS<1,0b00100,"uhsub", int_aarch64_neon_uhsub>;
@@ -7399,7 +7399,7 @@ defm RSUBHN  : SIMDNarrowThreeVectorBHS<1,0b0110,"rsubhn",int_aarch64_neon_rsubh
 let isCommutable = 1 in
 defm PMULL   : SIMDDifferentThreeVectorBD<0,0b1110,"pmull", AArch64pmull>;
 defm SABAL   : SIMDLongThreeVectorTiedBHS<0,0b0101,"sabal",
-                 TriOpFrag<(add node:$LHS, (zext (abds node:$MHS, node:$RHS)))>>;
+                 TriOpFrag<(add_like node:$LHS, (zext (abds node:$MHS, node:$RHS)))>>;
 defm SABDL   : SIMDLongThreeVectorBHS<0, 0b0111, "sabdl",
                  BinOpFrag<(zext (abds node:$LHS, node:$RHS))>>;
 defm SADDL   : SIMDLongThreeVectorBHS<   0, 0b0000, "saddl",
@@ -7407,7 +7407,7 @@ defm SADDL   : SIMDLongThreeVectorBHS<   0, 0b0000, "saddl",
 defm SADDW   : SIMDWideThreeVectorBHS<   0, 0b0001, "saddw",
                  BinOpFrag<(add node:$LHS, (sext node:$RHS))>>;
 defm SMLAL   : SIMDLongThreeVectorTiedBHS<0, 0b1000, "smlal",
-                 TriOpFrag<(add node:$LHS, (AArch64smull node:$MHS, node:$RHS))>>;
+                 TriOpFrag<(add_like node:$LHS, (AArch64smull node:$MHS, node:$RHS))>>;
 defm SMLSL   : SIMDLongThreeVectorTiedBHS<0, 0b1010, "smlsl",
                  TriOpFrag<(sub node:$LHS, (AArch64smull node:$MHS, node:$RHS))>>;
 defm SMULL   : SIMDLongThreeVectorBHS<0, 0b1100, "smull", AArch64smull>;
@@ -7420,7 +7420,7 @@ defm SSUBL   : SIMDLongThreeVectorBHS<0, 0b0010, "ssubl",
 defm SSUBW   : SIMDWideThreeVectorBHS<0, 0b0011, "ssubw",
                  BinOpFrag<(sub node:$LHS, (sext node:$RHS))>>;
 defm UABAL   : SIMDLongThreeVectorTiedBHS<1, 0b0101, "uabal",
-                 TriOpFrag<(add node:$LHS, (zext (abdu node:$MHS, node:$RHS)))>>;
+                 TriOpFrag<(add_like node:$LHS, (zext (abdu node:$MHS, node:$RHS)))>>;
 defm UABDL   : SIMDLongThreeVectorBHS<1, 0b0111, "uabdl",
                  BinOpFrag<(zext (abdu node:$LHS, node:$RHS))>>;
 defm UADDL   : SIMDLongThreeVectorBHS<1, 0b0000, "uaddl",
@@ -7428,7 +7428,7 @@ defm UADDL   : SIMDLongThreeVectorBHS<1, 0b0000, "uaddl",
 defm UADDW   : SIMDWideThreeVectorBHS<1, 0b0001, "uaddw",
                  BinOpFrag<(add node:$LHS, (zanyext node:$RHS))>>;
 defm UMLAL   : SIMDLongThreeVectorTiedBHS<1, 0b1000, "umlal",
-                 TriOpFrag<(add node:$LHS, (AArch64umull node:$MHS, node:$RHS))>>;
+                 TriOpFrag<(add_like node:$LHS, (AArch64umull node:$MHS, node:$RHS))>>;
 defm UMLSL   : SIMDLongThreeVectorTiedBHS<1, 0b1010, "umlsl",
                  TriOpFrag<(sub node:$LHS, (AArch64umull node:$MHS, node:$RHS))>>;
 defm UMULL   : SIMDLongThreeVectorBHS<1, 0b1100, "umull", AArch64umull>;
@@ -8874,25 +8874,25 @@ def MVNIv4s_msl   : SIMDModifiedImmMoveMSL<1, 1, {1,1,0,?}, V128, "mvni", ".4s",
 }
 
 // SABA patterns for add(x, abs(y)) -> saba(x, y, 0)
-def : Pat<(v8i8 (add V64:$Vn, (abs V64:$Vm))),
+def : Pat<(v8i8 (add_like V64:$Vn, (abs V64:$Vm))),
           (SABAv8i8 V64:$Vn, V64:$Vm, (EXTRACT_SUBREG (MOVIv2d_ns (i32 0)), dsub))>;
-def : Pat<(v4i16 (add V64:$Vn, (abs V64:$Vm))),
+def : Pat<(v4i16 (add_like V64:$Vn, (abs V64:$Vm))),
           (SABAv4i16 V64:$Vn, V64:$Vm, (EXTRACT_SUBREG (MOVIv2d_ns (i32 0)), dsub))>;
-def : Pat<(v2i32 (add V64:$Vn, (abs V64:$Vm))),
+def : Pat<(v2i32 (add_like V64:$Vn, (abs V64:$Vm))),
           (SABAv2i32 V64:$Vn, V64:$Vm, (EXTRACT_SUBREG (MOVIv2d_ns (i32 0)), dsub))>;
-def : Pat<(v16i8 (add V128:$Vn, (abs V128:$Vm))),
+def : Pat<(v16i8 (add_like V128:$Vn, (abs V128:$Vm))),
           (SABAv16i8 V128:$Vn, V128:$Vm, (MOVIv2d_ns (i32 0)))>;
-def : Pat<(v8i16 (add V128:$Vn, (abs V128:$Vm))),
+def : Pat<(v8i16 (add_like V128:$Vn, (abs V128:$Vm))),
           (SABAv8i16 V128:$Vn, V128:$Vm, (MOVIv2d_ns (i32 0)))>;
-def : Pat<(v4i32 (add V128:$Vn, (abs V128:$Vm))),
+def : Pat<(v4i32 (add_like V128:$Vn, (abs V128:$Vm))),
           (SABAv4i32 V128:$Vn, V128:$Vm, (MOVIv2d_ns (i32 0)))>;
 
 // SABAL patterns for add(x, zext(abs(y))) -> sabal(x, y, 0)
-def : Pat<(v8i16 (add V128:$Vn, (zext (abs (v8i8 V64:$Vm))))),
+def : Pat<(v8i16 (add_like V128:$Vn, (zext (abs (v8i8 V64:$Vm))))),
           (SABALv8i8_v8i16 V128:$Vn, V64:$Vm, (EXTRACT_SUBREG (MOVIv2d_ns (i32 0)), dsub))>;
-def : Pat<(v4i32 (add V128:$Vn, (zext (abs (v4i16 V64:$Vm))))),
+def : Pat<(v4i32 (add_like V128:$Vn, (zext (abs (v4i16 V64:$Vm))))),
           (SABALv4i16_v4i32 V128:$Vn, V64:$Vm, (EXTRACT_SUBREG (MOVIv2d_ns (i32 0)), dsub))>;
-def : Pat<(v2i64 (add V128:$Vn, (zext (abs (v2i32 V64:$Vm))))),
+def : Pat<(v2i64 (add_like V128:$Vn, (zext (abs (v2i32 V64:$Vm))))),
           (SABALv2i32_v2i64 V128:$Vn, V64:$Vm, (EXTRACT_SUBREG (MOVIv2d_ns (i32 0)), dsub))>;
 
 
@@ -9035,7 +9035,7 @@ defm MLS   : SIMDVectorIndexedHSTied<1, 0b0100, "mls", null_frag>;
 
 defm MUL   : SIMDVectorIndexedHS<0, 0b1000, "mul", mul>;
 defm SMLAL : SIMDVectorIndexedLongSDTied<0, 0b0010, "smlal",
-    TriOpFrag<(add node:$LHS, (AArch64smull node:$MHS, node:$RHS))>>;
+    TriOpFrag<(add_like node:$LHS, (AArch64smull node:$MHS, node:$RHS))>>;
 defm SMLSL : SIMDVectorIndexedLongSDTied<0, 0b0110, "smlsl",
     TriOpFrag<(sub node:$LHS, (AArch64smull node:$MHS, node:$RHS))>>;
 defm SMULL : SIMDVectorIndexedLongSD<0, 0b1010, "smull", AArch64smull>;
@@ -9049,7 +9049,7 @@ defm SQRDMLSH : SIMDIndexedSQRDMLxHSDTied<1, 0b1111, "sqrdmlsh",
                                           AArch64sqrdmlsh, int_aarch64_neon_sqrdmlsh>;
 defm SQDMULL : SIMDIndexedLongSD<0, 0b1011, "sqdmull", int_aarch64_neon_sqdmull>;
 defm UMLAL   : SIMDVectorIndexedLongSDTied<1, 0b0010, "umlal",
-    TriOpFrag<(add node:$LHS, (AArch64umull node:$MHS, node:$RHS))>>;
+    TriOpFrag<(add_like node:$LHS, (AArch64umull node:$MHS, node:$RHS))>>;
 defm UMLSL   : SIMDVectorIndexedLongSDTied<1, 0b0110, "umlsl",
     TriOpFrag<(sub node:$LHS, (AArch64umull node:$MHS, node:$RHS))>>;
 defm UMULL   : SIMDVectorIndexedLongSD<1, 0b1010, "umull", AArch64umull>;
@@ -9296,6 +9296,53 @@ defm : FCVTPat<v4f16, v4i16, i16, V64, fixedpoint_v4f16>;
 defm : FCVTPat<v8f16, v8i16, i16, V128, fixedpoint_v8f16>;
 }
 
+// fmul(sitofp(x), 1/2^N) -> scvtf(x, N), fmul(uitofp(x), 1/2^N) -> ucvtf(x, N)
+class fixedpoint_recip_vec_f64<ValueType FloatVT>
+    : ComplexPattern<FloatVT, 1, "SelectCVTFixedPosRecipOperandVec<64>">;
+class fixedpoint_recip_vec_f32<ValueType FloatVT>
+    : ComplexPattern<FloatVT, 1, "SelectCVTFixedPosRecipOperandVec<32>">;
+class fixedpoint_recip_vec_f16<ValueType FloatVT>
+    : ComplexPattern<FloatVT, 1, "SelectCVTFixedPosRecipOperandVec<16>">;
+def fixedpoint_recip_vec_xform : SDNodeXForm<timm, [{
+  (void)N;
+  return V;
+}]>;
+def gi_fixedpoint_recip_vec_xform
+    : GICustomOperandRenderer<"renderFixedPointRecipXForm">,
+      GISDNodeXFormEquiv<fixedpoint_recip_vec_xform>;
+
+def fixedpoint_recip_v2f64 : fixedpoint_recip_vec_f64<v2f64>;
+def fixedpoint_recip_v2f32 : fixedpoint_recip_vec_f32<v2f32>;
+def fixedpoint_recip_v4f32 : fixedpoint_recip_vec_f32<v4f32>;
+def fixedpoint_recip_v4f16 : fixedpoint_recip_vec_f16<v4f16>;
+def fixedpoint_recip_v8f16 : fixedpoint_recip_vec_f16<v8f16>;
+
+def gi_fixedpoint_recip_v2f64
+    : GIComplexOperandMatcher<v2s64, "selectCVTFixedPosRecipOperandVec">,
+      GIComplexPatternEquiv<fixedpoint_recip_v2f64>;
+def gi_fixedpoint_recip_v2f32
+    : GIComplexOperandMatcher<v2s32, "selectCVTFixedPosRecipOperandVec">,
+      GIComplexPatternEquiv<fixedpoint_recip_v2f32>;
+def gi_fixedpoint_recip_v4f32
+    : GIComplexOperandMatcher<v4s32, "selectCVTFixedPosRecipOperandVec">,
+      GIComplexPatternEquiv<fixedpoint_recip_v4f32>;
+def gi_fixedpoint_recip_v4f16
+    : GIComplexOperandMatcher<v4s16, "selectCVTFixedPosRecipOperandVec">,
+      GIComplexPatternEquiv<fixedpoint_recip_v4f16>;
+def gi_fixedpoint_recip_v8f16
+    : GIComplexOperandMatcher<v8s16, "selectCVTFixedPosRecipOperandVec">,
+      GIComplexPatternEquiv<fixedpoint_recip_v8f16>;
+
+multiclass CVTFRecipPat<ValueType FVT, ValueType IVT,
+                        RegisterOperand RC, ComplexPattern fixedpoint> {
+  def : Pat<(FVT (fmul (sint_to_fp (IVT RC:$Rn)), fixedpoint:$scale)),
+            (!cast<Instruction>("SCVTF"#IVT#"_shift") RC:$Rn,
+                (fixedpoint_recip_vec_xform fixedpoint:$scale))>;
+  def : Pat<(FVT (fmul (uint_to_fp (IVT RC:$Rn)), fixedpoint:$scale)),
+            (!cast<Instruction>("UCVTF"#IVT#"_shift") RC:$Rn,
+                (fixedpoint_recip_vec_xform fixedpoint:$scale))>;
+}
+
 // X << 1 ==> X + X
 class SHLToADDPat<ValueType ty, RegisterClass regtype>
   : Pat<(ty (AArch64vshl (ty regtype:$Rn), (i32 1))),
@@ -9349,6 +9396,16 @@ defm USHLL   : SIMDVectorLShiftLongBHSD<1, 0b10100, "ushll",
 defm USHR    : SIMDVectorRShiftBHSD<1, 0b00000, "ushr", AArch64vlshr>;
 defm USRA    : SIMDVectorRShiftBHSDTied<1, 0b00010, "usra",
                 TriOpFrag<(add_like node:$LHS, (AArch64vlshr node:$MHS, node:$RHS))> >;
+
+let Predicates = [HasNEON] in {
+defm : CVTFRecipPat<v2f64, v2i64, V128, fixedpoint_recip_v2f64>;
+defm : CVTFRecipPat<v2f32, v2i32, V64, fixedpoint_recip_v2f32>;
+defm : CVTFRecipPat<v4f32, v4i32, V128, fixedpoint_recip_v4f32>;
+}
+let Predicates = [HasNEON, HasFullFP16] in {
+defm : CVTFRecipPat<v4f16, v4i16, V64, fixedpoint_recip_v4f16>;
+defm : CVTFRecipPat<v8f16, v8i16, V128, fixedpoint_recip_v8f16>;
+}
 
 def VImm0080:         PatLeaf<(AArch64movi_shift (i32 128), (i32 0))>;
 def VImm00008000:     PatLeaf<(AArch64movi_shift (i32 128), (i32 8))>;
@@ -10929,9 +10986,9 @@ defm : InsertSubvectorUndef<i64>;
 
 // Use pair-wise add instructions when summing up the lanes for v2f64, v2i64
 // or v2f32.
-def : Pat<(i64 (add (vector_extract (v2i64 FPR128:$Rn), (i64 0)),
-                    (vector_extract (v2i64 FPR128:$Rn), (i64 1)))),
-           (i64 (ADDPv2i64p (v2i64 FPR128:$Rn)))>;
+def : Pat<(i64 (add_like (vector_extract (v2i64 FPR128:$Rn), (i64 0)),
+                         (vector_extract (v2i64 FPR128:$Rn), (i64 1)))),
+          (i64 (ADDPv2i64p (v2i64 FPR128:$Rn)))>;
 def : Pat<(f64 (any_fadd (vector_extract (v2f64 FPR128:$Rn), (i64 0)),
                          (vector_extract (v2f64 FPR128:$Rn), (i64 1)))),
            (f64 (FADDPv2i64p (v2f64 FPR128:$Rn)))>;
@@ -10979,25 +11036,39 @@ multiclass PairwiseZIPBinOp<SDPatternOperator Op, ValueType VT,
 }
 
 // add(uzp1(X, Y), uzp2(X, Y)) -> addp(X, Y)
-defm : PairwiseZIPBinOp<add, v2i64, FPR128, ADDPv2i64>;
-defm : PairwiseZIPBinOp<add, v2i32, FPR64,  ADDPv2i32>;
-defm : PairwiseUZPBinOp<add, v4i32, FPR128, ADDPv4i32>;
-defm : PairwiseUZPBinOp<add, v4i16, FPR64,  ADDPv4i16>;
-defm : PairwiseUZPBinOp<add, v8i16, FPR128, ADDPv8i16>;
-defm : PairwiseUZPBinOp<add, v8i8,  FPR64,  ADDPv8i8>;
-defm : PairwiseUZPBinOp<add, v16i8, FPR128, ADDPv16i8>;
+defm : PairwiseZIPBinOp<add_like, v2i64, FPR128, ADDPv2i64>;
+defm : PairwiseZIPBinOp<add_like, v2i32, FPR64,  ADDPv2i32>;
+defm : PairwiseUZPBinOp<add_like, v4i32, FPR128, ADDPv4i32>;
+defm : PairwiseUZPBinOp<add_like, v4i16, FPR64,  ADDPv4i16>;
+defm : PairwiseUZPBinOp<add_like, v8i16, FPR128, ADDPv8i16>;
+defm : PairwiseUZPBinOp<add_like, v8i8,  FPR64,  ADDPv8i8>;
+defm : PairwiseUZPBinOp<add_like, v16i8, FPR128, ADDPv16i8>;
 
-def : Pat<(v2i32 (add (AArch64zip1 (extract_subvector (v4i32 FPR128:$Rn), (i64 0)),
-                                   (extract_subvector (v4i32 FPR128:$Rn), (i64 2))),
-                      (AArch64zip2 (extract_subvector (v4i32 FPR128:$Rn), (i64 0)),
-                                   (extract_subvector (v4i32 FPR128:$Rn), (i64 2))))),
+def : Pat<(v2i32 (add_like (AArch64zip1 (extract_subvector (v4i32 FPR128:$Rn), (i64 0)),
+                                        (extract_subvector (v4i32 FPR128:$Rn), (i64 2))),
+                           (AArch64zip2 (extract_subvector (v4i32 FPR128:$Rn), (i64 0)),
+                                        (extract_subvector (v4i32 FPR128:$Rn), (i64 2))))),
           (EXTRACT_SUBREG (ADDPv4i32 $Rn, $Rn), dsub)>;
-def : Pat<(v4i16 (add (trunc (v4i32 (bitconvert FPR128:$Rn))),
-                      (extract_subvector (AArch64uzp2 (v8i16 FPR128:$Rn), undef), (i64 0)))),
+def : Pat<(v4i16 (add_like (trunc (v4i32 (bitconvert FPR128:$Rn))),
+                           (extract_subvector (AArch64uzp2 (v8i16 FPR128:$Rn), undef), (i64 0)))),
           (EXTRACT_SUBREG (ADDPv8i16 $Rn, $Rn), dsub)>;
-def : Pat<(v8i8  (add (trunc (v8i16 (bitconvert FPR128:$Rn))),
-                      (extract_subvector (AArch64uzp2 (v16i8 FPR128:$Rn), undef), (i64 0)))),
+def : Pat<(v8i8  (add_like (trunc (v8i16 (bitconvert FPR128:$Rn))),
+                           (extract_subvector (AArch64uzp2 (v16i8 FPR128:$Rn), undef), (i64 0)))),
           (EXTRACT_SUBREG (ADDPv16i8 $Rn, $Rn), dsub)>;
+
+multiclass PairwiseXtnUzp2BinOpWide<SDPatternOperator Op, ValueType VT,
+                                    ValueType HalfVT, ValueType WideEltVT,
+                                    Instruction Inst> {
+  def : Pat<(VT (Op (VT (concat_vectors
+                          (HalfVT (trunc (WideEltVT (bitconvert (VT FPR128:$Rn))))),
+                          (HalfVT undef))),
+                    (VT (AArch64uzp2 (VT FPR128:$Rn), (VT undef))))),
+            (Inst $Rn, $Rn)>;
+}
+
+defm : PairwiseXtnUzp2BinOpWide<add_like, v16i8, v8i8,  v8i16, ADDPv16i8>;
+defm : PairwiseXtnUzp2BinOpWide<add_like, v8i16, v4i16, v4i32, ADDPv8i16>;
+defm : PairwiseXtnUzp2BinOpWide<add_like, v4i32, v2i32, v2i64, ADDPv4i32>;
 
 defm : PairwiseZIPBinOp<fadd, v2f64, FPR128, FADDPv2f64>;
 defm : PairwiseZIPBinOp<fadd, v2f32, FPR64,  FADDPv2f32>;
@@ -11842,10 +11913,10 @@ let Predicates = [HasF16F32DOT] in {
 }
 
 let Predicates = [HasF16MM] in
-  defm FMMLA : SIMDThreeSameVectorFMLA<"fmmla">;
+  defm FMMLA : SIMDThreeSameVectorFMLA<"fmmla", int_aarch64_neon_fmmla>;
 
 let Predicates = [HasF16F32MM] in
-  defm FMMLA : SIMDThreeSameVectorFMLAWiden<"fmmla">;
+  defm FMMLA : SIMDThreeSameVectorFMLAWiden<"fmmla", int_aarch64_neon_fmmla>;
 
 let Uses = [FPMR, FPCR] in
   defm FMMLA : SIMDThreeSameVectorFP8MatrixMul<"fmmla", int_aarch64_neon_fmmla>;

@@ -580,9 +580,9 @@ void MCObjectStreamer::emitDwarfLineEndEntry(MCSection *Section,
   MCContext &Ctx = getContext();
   switchSection(Ctx.getObjectFileInfo()->getDwarfLineSection());
 
-  const MCAsmInfo *AsmInfo = Ctx.getAsmInfo();
+  const MCAsmInfo &AsmInfo = Ctx.getAsmInfo();
   emitDwarfAdvanceLineAddr(INT64_MAX, LastLabel, EndLabel,
-                           AsmInfo->getCodePointerSize());
+                           AsmInfo.getCodePointerSize());
 }
 
 void MCObjectStreamer::emitDwarfAdvanceFrameAddr(const MCSymbol *LastLabel,
@@ -740,25 +740,14 @@ void MCObjectStreamer::emitFill(const MCExpr &NumValues, int64_t Size,
                                 int64_t Expr, SMLoc Loc) {
   int64_t IntNumValues;
   // Do additional checking now if we can resolve the value.
-  if (NumValues.evaluateAsAbsolute(IntNumValues, getAssembler())) {
-    if (IntNumValues < 0) {
-      getContext().getSourceManager()->PrintMessage(
-          Loc, SourceMgr::DK_Warning,
-          "'.fill' directive with negative repeat count has no effect");
-      return;
-    }
-    // Emit now if we can for better errors.
-    int64_t NonZeroSize = Size > 4 ? 4 : Size;
-    Expr &= ~0ULL >> (64 - NonZeroSize * 8);
-    for (uint64_t i = 0, e = IntNumValues; i != e; ++i) {
-      emitIntValue(Expr, NonZeroSize);
-      if (NonZeroSize < Size)
-        emitIntValue(0, Size - NonZeroSize);
-    }
+  if (NumValues.evaluateAsAbsolute(IntNumValues, getAssembler()) &&
+      IntNumValues < 0) {
+    getContext().getSourceManager()->PrintMessage(
+        Loc, SourceMgr::DK_Warning,
+        "'.fill' directive with negative repeat count has no effect");
     return;
   }
 
-  // Otherwise emit as fragment.
   assert(getCurrentSectionOnly() && "need a section");
   newSpecialFragment<MCFillFragment>(Expr, Size, NumValues, Loc);
 }

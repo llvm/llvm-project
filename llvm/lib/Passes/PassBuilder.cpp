@@ -109,6 +109,7 @@
 #include "llvm/CodeGen/InterleavedAccess.h"
 #include "llvm/CodeGen/InterleavedLoadCombine.h"
 #include "llvm/CodeGen/JMCInstrumenter.h"
+#include "llvm/CodeGen/KCFI.h"
 #include "llvm/CodeGen/LiveDebugValuesPass.h"
 #include "llvm/CodeGen/LiveDebugVariables.h"
 #include "llvm/CodeGen/LiveIntervals.h"
@@ -124,6 +125,7 @@
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineCSE.h"
 #include "llvm/CodeGen/MachineCopyPropagation.h"
+#include "llvm/CodeGen/MachineDebugify.h"
 #include "llvm/CodeGen/MachineDominanceFrontier.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
@@ -403,6 +405,19 @@ AnalysisKey NoOpFunctionAnalysis::Key;
 AnalysisKey NoOpLoopAnalysis::Key;
 
 namespace {
+
+bool applyMIRDebugify(DIBuilder &DIB, Function &F, ModuleAnalysisManager &AM) {
+  FunctionAnalysisManager &FAM =
+      AM.getResult<FunctionAnalysisManagerModuleProxy>(*F.getParent())
+          .getManager();
+
+  return applyDebugifyMetadataToMachineFunction(
+      DIB, F, [&](Function &Func) -> MachineFunction * {
+        MachineFunctionAnalysis::Result *MFA =
+            FAM.getCachedResult<MachineFunctionAnalysis>(Func);
+        return MFA ? &MFA->getMF() : nullptr;
+      });
+}
 
 // Passes for testing crashes.
 // DO NOT USE THIS EXCEPT FOR TESTING!
@@ -811,17 +826,6 @@ Expected<HardwareLoopOptions> parseHardwareLoopOptions(StringRef Params) {
 Expected<bool> parseLintOptions(StringRef Params) {
   return PassBuilder::parseSinglePassOption(Params, "abort-on-error",
                                             "LintPass");
-}
-
-/// Parser of parameters for FunctionPropertiesStatistics pass.
-Expected<bool> parseFunctionPropertiesStatisticsOptions(StringRef Params) {
-  return PassBuilder::parseSinglePassOption(Params, "pre-opt",
-                                            "FunctionPropertiesStatisticsPass");
-}
-
-/// Parser of parameters for InstCount pass.
-Expected<bool> parseInstCountOptions(StringRef Params) {
-  return PassBuilder::parseSinglePassOption(Params, "pre-opt", "InstCountPass");
 }
 
 /// Parser of parameters for LoopUnroll pass.

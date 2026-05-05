@@ -98,6 +98,49 @@ mlirInferShapedTypeOpInterfaceInferReturnTypes(
     MlirShapedTypeComponentsCallback callback, void *userData);
 
 //===---------------------------------------------------------------------===//
+// ConditionallySpeculatable
+//===---------------------------------------------------------------------===//
+
+/// Enum representing the speculatability of an operation.
+typedef enum {
+  /// The operation is not speculatable.
+  MlirSpeculatabilityNotSpeculatable,
+  /// The operation is speculatable.
+  MlirSpeculatabilitySpeculatable,
+  /// The operation is speculatable if all nested operations are speculatable.
+  MlirSpeculatabilityRecursivelySpeculatable
+} MlirSpeculatability;
+
+/// Returns the interface TypeID of the ConditionallySpeculatable interface.
+MLIR_CAPI_EXPORTED MlirTypeID
+mlirConditionallySpeculatableOpInterfaceTypeID(void);
+
+/// Callbacks for implementing ConditionallySpeculatable from external code.
+typedef struct {
+  /// Optional constructor for user data. Set to nullptr to disable it.
+  void (*construct)(void *userData);
+  /// Optional destructor for user data. Set to nullptr to disable it.
+  void (*destruct)(void *userData);
+  /// Returns the speculatability of the given operation.
+  MlirSpeculatability (*getSpeculatability)(MlirOperation op, void *userData);
+  void *userData;
+} MlirConditionallySpeculatableOpInterfaceCallbacks;
+
+/// Attach a new FallbackModel for the ConditionallySpeculatable interface to
+/// the named operation. The FallbackModel will call the provided callbacks.
+MLIR_CAPI_EXPORTED void
+mlirConditionallySpeculatableOpInterfaceAttachFallbackModel(
+    MlirContext ctx, MlirStringRef opName,
+    MlirConditionallySpeculatableOpInterfaceCallbacks callbacks);
+
+/// Returns the speculatability of the given operation.
+///
+/// The operation must implement the ConditionallySpeculatable interface.
+MLIR_CAPI_EXPORTED MlirSpeculatability
+mlirConditionallySpeculatableOpInterfaceGetSpeculatability(
+    MlirOperation operation);
+
+//===---------------------------------------------------------------------===//
 // MemoryEffectsOpInterface
 //===---------------------------------------------------------------------===//
 

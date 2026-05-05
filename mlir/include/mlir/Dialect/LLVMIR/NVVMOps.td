@@ -302,6 +302,16 @@ class NVVM_SingleResultIntrinsicOp<string mnemonic, list<Trait> traits = [], str
   }];
 }
 
+class NVVM_F32UnaryApproxOp<string mnemonic, list<Trait> traits = []> :
+    NVVM_SingleResultIntrinsicOp<mnemonic,
+        traits # [Pure, SameOperandsAndResultType]> {
+  let arguments = (ins F32:$src,
+                       DefaultValuedAttr<BoolAttr, "false">:$ftz);
+  let results = (outs F32:$res);
+  let assemblyFormat = "$src attr-dict `:` type($src)";
+}
+
+
 //===----------------------------------------------------------------------===//
 // NVVM special register op definitions
 //===----------------------------------------------------------------------===//
@@ -309,12 +319,15 @@ class NVVM_SingleResultIntrinsicOp<string mnemonic, list<Trait> traits = [], str
 class NVVM_PureSpecialRegisterOp<string mnemonic, list<Trait> traits = []> :
   NVVM_IntrOp<mnemonic, !listconcat(traits, [Pure]), 1> {
   let arguments = (ins);
+  let results = (outs I32:$res);
   let assemblyFormat = "attr-dict `:` type($res)";
 }
 
-class NVVM_SpecialRegisterOp<string mnemonic, list<Trait> traits = []> :
+class NVVM_SpecialRegisterOp<string mnemonic, Type resultType = I32,
+                                              list<Trait> traits = []> :
   NVVM_IntrOp<mnemonic, traits, 1> {
   let arguments = (ins);
+  let results = (outs resultType:$res);
   let assemblyFormat = "attr-dict `:` type($res)";
 }
 
@@ -421,8 +434,8 @@ def NVVM_AggrSmemSize    : NVVM_PureSpecialRegisterOp<"read.ptx.sreg.aggr.smem.s
 //===----------------------------------------------------------------------===//
 // Clock registers
 def NVVM_ClockOp : NVVM_SpecialRegisterOp<"read.ptx.sreg.clock">;
-def NVVM_Clock64Op : NVVM_SpecialRegisterOp<"read.ptx.sreg.clock64">;
-def NVVM_GlobalTimerOp : NVVM_SpecialRegisterOp<"read.ptx.sreg.globaltimer">;
+def NVVM_Clock64Op : NVVM_SpecialRegisterOp<"read.ptx.sreg.clock64", I64>;
+def NVVM_GlobalTimerOp : NVVM_SpecialRegisterOp<"read.ptx.sreg.globaltimer", I64>;
 def NVVM_GlobalTimerLoOp : NVVM_SpecialRegisterOp<"read.ptx.sreg.globaltimer.lo">;
 
 //===----------------------------------------------------------------------===//
@@ -521,55 +534,48 @@ def NVVM_RcpApproxFtzF32Op : NVVM_IntrOp<"rcp.approx.ftz.f", [Pure], 1> {
 //===----------------------------------------------------------------------===//
 // NVVM transcendental op definitions
 //===----------------------------------------------------------------------===//
-// PTX provides only fast approximations for sin/cos/lg2/ex2/tanh. Exposing
-// these as plain `nvvm.{sin,cos,lg2,ex2,tanh}` (without a `.approx` suffix)
+// PTX provides only fast approximations for sin/cos/log2/ex2/tanh. Exposing
+// these as plain `nvvm.{sin,cos,log2,ex2,tanh}` (without a `.approx` suffix)
 // keeps the NVVM dialect self-contained -- users don't need to reach for
 // `math.*` ops for something that already has a PTX instruction.
 
-def NVVM_SinOp : NVVM_SingleResultIntrinsicOp<"sin",
-    [Pure, SameOperandsAndResultType]> {
+def NVVM_SinOp : NVVM_F32UnaryApproxOp<"sin"> {
   let summary = "Sine (fast approximation)";
   let description = [{
     Computes a fast approximation of the sine of the input value (in radians).
-    The `ftz` attribute, when set, flushes subnormal inputs and results to 
+    The `ftz` attribute, when set, flushes subnormal inputs and results to
     sign-preserving zero.
 
     For more information, see PTX ISA:
     [sin](https://docs.nvidia.com/cuda/parallel-thread-execution/#floating-point-instructions-sin)
   }];
-  let arguments = (ins F32:$src,
-                       DefaultValuedAttr<BoolAttr, "false">:$ftz);
-  let results = (outs F32:$res);
-  let assemblyFormat = "$src attr-dict `:` type($src)";
 }
 
-
-def NVVM_CosOp : NVVM_SingleResultIntrinsicOp<"cos",
-    [Pure, SameOperandsAndResultType]> {
+def NVVM_CosOp : NVVM_F32UnaryApproxOp<"cos"> {
   let summary = "Cosine (fast approximation)";
   let description = [{
     Computes a fast approximation of the cosine of the input value (in
     radians). The `ftz` attribute, when set, flushes subnormal inputs
     and results to sign-preserving zero.
   }];
-  let arguments = (ins F32:$src,
-                       DefaultValuedAttr<BoolAttr, "false">:$ftz);
-  let results = (outs F32:$res);
-  let assemblyFormat = "$src attr-dict `:` type($src)";
 }
 
-def NVVM_Ex2Op : NVVM_SingleResultIntrinsicOp<"ex2",
-    [Pure, SameOperandsAndResultType]> {
+def NVVM_Log2Op : NVVM_F32UnaryApproxOp<"log2"> {
+  let summary = "Base-2 logarithm (fast approximation)";
+  let description = [{
+    Computes a fast approximation of the base-2 logarithm of the input
+    value. The `ftz` attribute, when set, flushes subnormal inputs and
+    results to sign-preserving zero.
+  }];
+}
+
+def NVVM_Ex2Op : NVVM_F32UnaryApproxOp<"ex2"> {
   let summary = "Base-2 exponential (fast approximation)";
   let description = [{
     Computes a fast approximation of 2 raised to the power of the input
     value. The `ftz` attribute, when set, flushes subnormal inputs and
     results to sign-preserving zero.
   }];
-  let arguments = (ins F32:$src,
-                       DefaultValuedAttr<BoolAttr, "false">:$ftz);
-  let results = (outs F32:$res);
-  let assemblyFormat = "$src attr-dict `:` type($src)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1148,24 +1154,6 @@ def NVVM_MBarrierTryWaitOp : NVVM_SingleResultIntrinsicOp<"mbarrier.try_wait"> {
 //===----------------------------------------------------------------------===//
 // NVVM synchronization op definitions
 //===----------------------------------------------------------------------===//
-
-def NVVM_Barrier0Op : NVVM_Op<"barrier0"> {
-  let summary = "CTA Barrier Synchronization Op (Barrier ID 0)";
-  let description = [{
-    The `nvvm.barrier0` operation is a convenience operation that performs barrier 
-    synchronization and communication within a CTA (Cooperative Thread Array) using 
-    barrier ID 0. It is functionally equivalent to `nvvm.barrier` or `nvvm.barrier id=0`. 
-
-    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-bar)
-  }];
-
-  let assemblyFormat = "attr-dict";
-  string llvmBuilder = [{
-      createIntrinsicCall(
-          builder, llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_all,
-          {builder.getInt32(0)});
-  }];
-}
 
 // Attrs describing the reduction operations for the barrier operation.
 def BarrierReductionPopc : I32EnumAttrCase<"POPC", 0, "popc">;
@@ -3323,6 +3311,36 @@ def NVVM_LdMatrixOp: NVVM_Op<"ldmatrix", [InferTypeOpAdaptor]>,
   }];
 
   let assemblyFormat = "$ptr attr-dict `:` functional-type($ptr, $res)";
+  let hasVerifier = 1;
+}
+
+def NVVM_MovMatrixOp
+    : NVVM_SingleResultIntrinsicOp<"movmatrix", [NVVMRequiresSM<75>], "$dst"> {
+  let summary = "Warp-level matrix transpose";
+  let description = [{
+    Moves a row-major matrix across all threads in a warp, reading elements
+    from source `$src`, and writing the transposed elements to destination
+    `$dst`.
+
+    The `shape` attribute indicates the dimensions of the matrix being
+    transposed. Each matrix element holds 16-bit data as indicated by the
+    `eltType` attribute.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#warp-level-matrix-movmatrix-instruction)
+
+    Example:
+    ```mlir
+    %dst = nvvm.movmatrix %src {shape = #nvvm.ld_st_matrix_shape<m = 8, n = 8>,
+                                eltType = #nvvm.ld_st_matrix_elt_type<b16>} : i32
+    ```
+  }];
+
+  let results = (outs I32:$dst);
+  let arguments = (ins I32:$src, LdStMatrixShapeAttr:$shape,
+      DefaultValuedAttr<MMALayoutAttr, "MMALayout::col">:$layout,
+      LdStMatrixEltTypeAttr:$eltType);
+
+  let assemblyFormat = "$src attr-dict `:` type($src)";
   let hasVerifier = 1;
 }
 

@@ -24,8 +24,7 @@ define i16 @test_access_size_not_multiple_of_align(i64 %len, ptr %test_base) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i1> [[TMP3]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
 ; CHECK:       pred.load.if:
-; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i16, ptr [[ALLOCA]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i16, ptr [[ALLOCA]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i16, ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i16> poison, i16 [[TMP7]], i64 0
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE]]
@@ -98,8 +97,7 @@ define i32 @test_access_size_multiple_of_align_but_offset_by_1(i64 %len, ptr %te
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i1> [[TMP3]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
 ; CHECK:       pred.load.if:
-; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[START]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[START]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> poison, i32 [[TMP7]], i64 0
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE]]
@@ -636,8 +634,7 @@ define void @adding_offset_overflows(i32 %n, ptr %A) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i1> [[TMP3]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
 ; CHECK:       pred.load.if:
-; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i32, ptr [[B]], i64 [[TMP15]]
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i32, ptr [[B]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = load i32, ptr [[TMP16]], align 4
 ; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <2 x i32> poison, i32 [[TMP17]], i64 0
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE]]
@@ -654,16 +651,14 @@ define void @adding_offset_overflows(i32 %n, ptr %A) {
 ; CHECK:       pred.load.continue2:
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = phi <2 x i32> [ [[TMP19]], [[PRED_LOAD_CONTINUE]] ], [ [[TMP14]], [[PRED_LOAD_IF1]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = sext <2 x i32> [[WIDE_LOAD1]] to <2 x i64>
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i1> [[TMP3]], i64 0
-; CHECK-NEXT:    br i1 [[TMP6]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
+; CHECK-NEXT:    br i1 [[TMP4]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i64> [[TMP5]], i64 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[C]], i64 [[TMP7]]
 ; CHECK-NEXT:    store i32 0, ptr [[TMP8]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; CHECK:       pred.store.continue:
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i1> [[TMP3]], i64 1
-; CHECK-NEXT:    br i1 [[TMP9]], label [[PRED_STORE_IF2:%.*]], label [[PRED_STORE_CONTINUE3]]
+; CHECK-NEXT:    br i1 [[TMP20]], label [[PRED_STORE_IF3:%.*]], label [[PRED_STORE_CONTINUE3]]
 ; CHECK:       pred.store.if3:
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i64> [[TMP5]], i64 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i32, ptr [[C]], i64 [[TMP10]]
