@@ -1,3 +1,11 @@
+; This test verifies that indirect call promotion (ICP) under sample profiling
+; correctly checks target feature compatibility. Specifically, a callee with
+; target features incompatible with the caller's features (e.g., "_Z3moov" requiring
+; "+avx512f" while caller "_Z3goov" does not support it) should not be promoted,
+; while a compatible callee (e.g., "_Z3hoov") should be promoted successfully.
+; Note that under Sample PGO, the promotion candidates (e.g., _Z3hoov and _Z3moov)
+; are retrieved directly from the sample profile file (Inputs/norepeated-icp-2.prof)
+; at the corresponding line offset (1) rather than using value profile !prof metadata.
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/norepeated-icp-2.prof -S | FileCheck %s
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
@@ -22,9 +30,13 @@ entry:
 define dso_local void @_Z3goov() #1 !dbg !24 {
 entry:
   %t0 = load ptr, ptr @p, align 8
+  ; Here, _Z3moov requires "+avx512f" (attributes #0) which the caller lacks (attributes #1).
+  ; Therefore, _Z3moov is not promoted.
+  ; CHECK-NOT: icmp eq ptr %t0, @_Z3moov
+  ; On the other hand, _Z3hoov has compatible target features and is promoted successfully.
   ; CHECK: icmp eq ptr %t0, @_Z3hoov
   ; CHECK-NOT: icmp eq ptr %t0, @_Z3moov
-  call void %t0(), !dbg !26, !prof !30
+  call void %t0(), !dbg !26
   ret void
 }
 
@@ -47,4 +59,3 @@ attributes #1 = { uwtable mustprogress "use-sample-profile" }
 !11 = distinct !DISubprogram(name: "hoo", linkageName: "_Z3hoov", scope: !1, file: !1, line: 9, type: !8, scopeLine: 9, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
 !24 = distinct !DISubprogram(name: "goo", linkageName: "_Z3goov", scope: !1, file: !1, line: 15, type: !8, scopeLine: 15, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
 !26 = !DILocation(line: 16, column: 3, scope: !24)
-!30 = !{!"VP", i32 0, i64 0, i64 1850239051784516332, i64 -1}
