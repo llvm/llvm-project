@@ -19,10 +19,9 @@ define fastcc ptr @wrongUseOfPostDominate(ptr readonly %s, i32 %off, ptr readnon
 ; ENABLE:       @ %bb.0: @ %entry
 ; ENABLE-NEXT:    .save {r11, lr}
 ; ENABLE-NEXT:    push {r11, lr}
-; ENABLE-NEXT:    cmn r1, #1
-; ENABLE-NEXT:    ble .LBB0_7
-; ENABLE-NEXT:  @ %bb.1: @ %while.cond.preheader
 ; ENABLE-NEXT:    cmp r1, #0
+; ENABLE-NEXT:    bmi .LBB0_7
+; ENABLE-NEXT:  @ %bb.1: @ %while.cond.preheader
 ; ENABLE-NEXT:    beq .LBB0_6
 ; ENABLE-NEXT:  @ %bb.2: @ %while.cond.preheader
 ; ENABLE-NEXT:    cmp r0, r2
@@ -74,8 +73,8 @@ define fastcc ptr @wrongUseOfPostDominate(ptr readonly %s, i32 %off, ptr readnon
 ; ENABLE-NEXT:    bls .LBB0_7
 ; ENABLE-NEXT:  @ %bb.12: @ %land.rhs14.preheader
 ; ENABLE-NEXT:    @ in Loop: Header=BB0_7 Depth=1
-; ENABLE-NEXT:    cmn lr, #1
-; ENABLE-NEXT:    bgt .LBB0_7
+; ENABLE-NEXT:    cmp lr, #0
+; ENABLE-NEXT:    bpl .LBB0_7
 ; ENABLE-NEXT:  @ %bb.13: @ %land.rhs14.preheader
 ; ENABLE-NEXT:    @ in Loop: Header=BB0_7 Depth=1
 ; ENABLE-NEXT:    cmp r12, #191
@@ -109,10 +108,9 @@ define fastcc ptr @wrongUseOfPostDominate(ptr readonly %s, i32 %off, ptr readnon
 ; DISABLE:       @ %bb.0: @ %entry
 ; DISABLE-NEXT:    .save {r11, lr}
 ; DISABLE-NEXT:    push {r11, lr}
-; DISABLE-NEXT:    cmn r1, #1
-; DISABLE-NEXT:    ble .LBB0_7
-; DISABLE-NEXT:  @ %bb.1: @ %while.cond.preheader
 ; DISABLE-NEXT:    cmp r1, #0
+; DISABLE-NEXT:    bmi .LBB0_7
+; DISABLE-NEXT:  @ %bb.1: @ %while.cond.preheader
 ; DISABLE-NEXT:    beq .LBB0_6
 ; DISABLE-NEXT:  @ %bb.2: @ %while.cond.preheader
 ; DISABLE-NEXT:    cmp r0, r2
@@ -164,8 +162,8 @@ define fastcc ptr @wrongUseOfPostDominate(ptr readonly %s, i32 %off, ptr readnon
 ; DISABLE-NEXT:    bls .LBB0_7
 ; DISABLE-NEXT:  @ %bb.12: @ %land.rhs14.preheader
 ; DISABLE-NEXT:    @ in Loop: Header=BB0_7 Depth=1
-; DISABLE-NEXT:    cmn lr, #1
-; DISABLE-NEXT:    bgt .LBB0_7
+; DISABLE-NEXT:    cmp lr, #0
+; DISABLE-NEXT:    bpl .LBB0_7
 ; DISABLE-NEXT:  @ %bb.13: @ %land.rhs14.preheader
 ; DISABLE-NEXT:    @ in Loop: Header=BB0_7 Depth=1
 ; DISABLE-NEXT:    cmp r12, #191

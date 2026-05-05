@@ -560,13 +560,13 @@ define void @test_vsel_gezero(i32 %lhs32, float %a, float %b) {
   %tst1 = icmp sge i32 %lhs32, 0
   %val1 = select i1 %tst1, float %a, float %b
   store float %val1, ptr @varfloat
-; CHECK: cmn r0, #1
-; CHECK: vselgt.f32 s0, s0, s1
+; CHECK: cmp r0, #0
+; CHECK: vselge.f32 s0, s0, s1
   ret void
 }
 
 define void @test_vsel_ltzero64(i32 %lhs32, double %a, double %b) {
-; CHECK-LABEL: test_vsel_ltzero
+; CHECK-LABEL: test_vsel_ltzero64
   %tst1 = icmp slt i32 %lhs32, 0
   %val1 = select i1 %tst1, double %a, double %b
   store double %val1, ptr @vardouble
@@ -576,7 +576,7 @@ define void @test_vsel_ltzero64(i32 %lhs32, double %a, double %b) {
 }
 
 define void @test_vsel_lezero64(i32 %lhs32, double %a, double %b) {
-; CHECK-LABEL: test_vsel_lezero
+; CHECK-LABEL: test_vsel_lezero64
   %tst1 = icmp sle i32 %lhs32, 0
   %val1 = select i1 %tst1, double %a, double %b
   store double %val1, ptr @vardouble
@@ -586,7 +586,7 @@ define void @test_vsel_lezero64(i32 %lhs32, double %a, double %b) {
 }
 
 define void @test_vsel_gtzero64(i32 %lhs32, double %a, double %b) {
-; CHECK-LABEL: test_vsel_gtzero
+; CHECK-LABEL: test_vsel_gtzero64
   %tst1 = icmp sgt i32 %lhs32, 0
   %val1 = select i1 %tst1, double %a, double %b
   store double %val1, ptr @vardouble
@@ -596,11 +596,11 @@ define void @test_vsel_gtzero64(i32 %lhs32, double %a, double %b) {
 }
 
 define void @test_vsel_gezero64(i32 %lhs32, double %a, double %b) {
-; CHECK-LABEL: test_vsel_gezero
+; CHECK-LABEL: test_vsel_gezero64
   %tst1 = icmp sge i32 %lhs32, 0
   %val1 = select i1 %tst1, double %a, double %b
   store double %val1, ptr @vardouble
-; CHECK: cmn r0, #1
-; CHECK: vselgt.f64 d16, d0, d1
+; CHECK: cmp r0, #0
+; CHECK: vselge.f64 d16, d0, d1
   ret void
 }

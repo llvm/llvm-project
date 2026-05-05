@@ -4452,6 +4452,28 @@ static bool isFloatingPointZero(SDValue Op) {
   return false;
 }
 
+static bool isLegalArithImmed(unsigned Imm, const ARMSubtarget *Subtarget) {
+  if (!Subtarget->isThumb())
+    return ARM_AM::getSOImmVal(Imm) != -1;
+  if (Subtarget->isThumb2())
+    return ARM_AM::getT2SOImmVal(Imm) != -1;
+  // Thumb1 only has 8-bit unsigned immediate.
+  return Imm <= 255;
+}
+
+bool isLegalCmpImmed(const APInt &C, const ARMSubtarget *Subtarget) {
+  int64_t Imm = C.getSExtValue();
+  // Thumb2 and ARM modes can use cmn for negative immediates.
+  if (!Subtarget->isThumb())
+    return ARM_AM::getSOImmVal((uint32_t)Imm) != -1 ||
+           ARM_AM::getSOImmVal(-(uint32_t)Imm) != -1;
+  if (Subtarget->isThumb2())
+    return ARM_AM::getT2SOImmVal((uint32_t)Imm) != -1 ||
+           ARM_AM::getT2SOImmVal(-(uint32_t)Imm) != -1;
+  // Thumb1 doesn't have cmn, and only 8-bit immediates.
+  return Imm >= 0 && Imm <= 255;
+}
+
 static bool isSafeSignedCMN(SDValue Op, SelectionDAG &DAG) {
   // 0 - INT_MIN sign wraps, so no signed wrap means cmn is safe.
   if (Op->getFlags().hasNoSignedWrap())
@@ -4475,49 +4497,82 @@ static bool isCMN(SDValue Op, ISD::CondCode CC, SelectionDAG &DAG) {
           (isSignedIntSetCC(CC) && isSafeSignedCMN(Op, DAG)));
 }
 
+// Adjust compares against -1 to a compare against 0 in signed cases.
+// This specifically enables condition forms that map to sign checks (mi/pl).
+static bool shouldBeAdjustedToZero(SDValue LHS, const APInt &C,
+                                   ISD::CondCode &CC) {
+  if (!LHS.hasOneUse())
+    return false;
+
+  if (C.isAllOnes() && (CC == ISD::SETLE || CC == ISD::SETGT)) {
+    CC = (CC == ISD::SETLE) ? ISD::SETLT : ISD::SETGE;
+    return true;
+  }
+
+  return false;
+}
+
 /// Returns appropriate ARM CMP (cmp) and corresponding condition code for
 /// the given operands.
 SDValue ARMTargetLowering::getARMCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
                                      SDValue &ARMcc, SelectionDAG &DAG,
                                      const SDLoc &dl) const {
   if (ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(RHS.getNode())) {
-    unsigned C = RHSC->getZExtValue();
-    if (!isLegalICmpImmediate((int32_t)C)) {
+    APInt CInt = RHSC->getAPIntValue();
+    if (shouldBeAdjustedToZero(LHS, CInt, CC)) {
+      // Adjust the constant to zero.
+      // CC has already been adjusted.
+      RHS = DAG.getConstant(0, dl, MVT::i32);
+    } else if (!isLegalCmpImmed(CInt, Subtarget)) {
       // Constant does not fit, try adjusting it by one.
       switch (CC) {
-      default: break;
+      default:
+        break;
       case ISD::SETLT:
       case ISD::SETGE:
-        if (C != 0x80000000 && isLegalICmpImmediate(C-1)) {
-          CC = (CC == ISD::SETLT) ? ISD::SETLE : ISD::SETGT;
-          RHS = DAG.getConstant(C - 1, dl, MVT::i32);
+        if (!CInt.isMinSignedValue()) {
+          APInt CMinusOne = CInt - 1;
+          if (isLegalCmpImmed(CMinusOne, Subtarget)) {
+            CC = (CC == ISD::SETLT) ? ISD::SETLE : ISD::SETGT;
+            RHS = DAG.getConstant(CMinusOne, dl, MVT::i32);
+          }
         }
         break;
       case ISD::SETULT:
-      case ISD::SETUGE:
-        if (C != 0 && isLegalICmpImmediate(C-1)) {
+      case ISD::SETUGE: {
+        // C is not 0 because it is a legal immediate.
+        assert(!CInt.isZero() && "C should not be zero here");
+        APInt CMinusOne = CInt - 1;
+        if (isLegalCmpImmed(CMinusOne, Subtarget)) {
           CC = (CC == ISD::SETULT) ? ISD::SETULE : ISD::SETUGT;
-          RHS = DAG.getConstant(C - 1, dl, MVT::i32);
+          RHS = DAG.getConstant(CMinusOne, dl, MVT::i32);
         }
-        break;
+      } break;
       case ISD::SETLE:
       case ISD::SETGT:
-        if (C != 0x7fffffff && isLegalICmpImmediate(C+1)) {
-          CC = (CC == ISD::SETLE) ? ISD::SETLT : ISD::SETGE;
-          RHS = DAG.getConstant(C + 1, dl, MVT::i32);
+        if (!CInt.isMaxSignedValue()) {
+          APInt CPlusOne = CInt + 1;
+          if (isLegalCmpImmed(CPlusOne, Subtarget)) {
+            CC = (CC == ISD::SETLE) ? ISD::SETLT : ISD::SETGE;
+            RHS = DAG.getConstant(CPlusOne, dl, MVT::i32);
+          }
         }
         break;
       case ISD::SETULE:
-      case ISD::SETUGT:
-        if (C != 0xffffffff && isLegalICmpImmediate(C+1)) {
+      case ISD::SETUGT: {
+        assert(!CInt.isAllOnes() && "C should not be -1 here");
+        APInt CPlusOne = CInt + 1;
+        if (isLegalCmpImmed(CPlusOne, Subtarget)) {
           CC = (CC == ISD::SETULE) ? ISD::SETULT : ISD::SETUGE;
-          RHS = DAG.getConstant(C + 1, dl, MVT::i32);
+          RHS = DAG.getConstant(CPlusOne, dl, MVT::i32);
         }
-        break;
+      } break;
       }
     }
-  } else if ((ARM_AM::getShiftOpcForNode(LHS.getOpcode()) != ARM_AM::no_shift) &&
-             (ARM_AM::getShiftOpcForNode(RHS.getOpcode()) == ARM_AM::no_shift)) {
+  } else if ((ARM_AM::getShiftOpcForNode(LHS.getOpcode()) !=
+              ARM_AM::no_shift) &&
+             (ARM_AM::getShiftOpcForNode(RHS.getOpcode()) ==
+              ARM_AM::no_shift)) {
     // In ARM and Thumb-2, the compare instructions can shift their second
     // operand.
     CC = ISD::getSetCCSwappedOperands(CC);
@@ -4551,7 +4606,7 @@ SDValue ARMTargetLowering::getARMCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
       !isSignedIntSetCC(CC)) {
     unsigned Mask = LHS.getConstantOperandVal(1);
     auto *RHSC = cast<ConstantSDNode>(RHS.getNode());
-    uint64_t RHSV = RHSC->getZExtValue();
+    unsigned RHSV = RHSC->getZExtValue();
     if (isMask_32(Mask) && (RHSV & ~Mask) == 0 && Mask != 255 && Mask != 65535) {
       unsigned ShiftBits = llvm::countl_zero(Mask);
       if (RHSV && (RHSV > 255 || (RHSV << ShiftBits) <= 255)) {
@@ -7491,7 +7546,7 @@ static SDValue LowerBuildVectorOfFPExt(SDValue BV, SelectionDAG &DAG,
 // instruction).  Otherwise return null.
 static SDValue IsSingleInstrConstant(SDValue N, SelectionDAG &DAG,
                                      const ARMSubtarget *ST, const SDLoc &dl) {
-  uint64_t Val;
+  unsigned Val;
   if (!isa<ConstantSDNode>(N))
     return SDValue();
   Val = N->getAsZExtVal();
@@ -13071,7 +13126,7 @@ static SDValue PerformAddeSubeCombine(SDNode *N,
     SelectionDAG &DAG = DCI.DAG;
     SDValue RHS = N->getOperand(1);
     if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(RHS)) {
-      int64_t imm = C->getSExtValue();
+      int32_t imm = C->getSExtValue();
       if (imm < 0) {
         SDLoc DL(N);
 
@@ -19687,6 +19742,7 @@ bool ARMTargetLowering::isLegalAddImmediate(int64_t Imm) const {
   uint64_t AbsImm = AbsoluteValue(Imm);
   if (!Subtarget->isThumb())
     return ARM_AM::getSOImmVal(AbsImm) != -1;
+
   if (Subtarget->isThumb2())
     return ARM_AM::getT2SOImmVal(AbsImm) != -1;
   // Thumb1 only has 8-bit unsigned immediate.
@@ -20164,16 +20220,6 @@ void ARMTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
   }
 }
 
-static bool isLegalLogicalImmediate(unsigned Imm,
-                                    const ARMSubtarget *Subtarget) {
-  if (!Subtarget->isThumb())
-    return ARM_AM::getSOImmVal(Imm) != -1;
-  if (Subtarget->isThumb2())
-    return ARM_AM::getT2SOImmVal(Imm) != -1;
-  // Thumb1 only has 8-bit unsigned immediate.
-  return Imm <= 255;
-}
-
 /// Refine i32 AND/OR/XOR with a constant RHS using demanded bits: replace the
 /// immediate with an equivalent constant that ARM/Thumb can encode as a
 /// logical immediate (or that selects better lowering), without changing the
@@ -20239,7 +20285,7 @@ static bool optimizeLogicalImm(SDValue Op, unsigned Imm,
   }
 
   // Don't optimize if it is legal.
-  if (isLegalLogicalImmediate(Imm, Subtarget))
+  if (isLegalArithImmed(Imm, Subtarget))
     return false;
 
   // FIXME: Check for BIC being legal causes infinite loop due to target
@@ -20247,7 +20293,7 @@ static bool optimizeLogicalImm(SDValue Op, unsigned Imm,
 
   // Prefer strict shrink when ShrunkImm encodes for this target, before
   // complement expansion.
-  if (isLegalLogicalImmediate(ShrunkImm, Subtarget)) {
+  if (isLegalArithImmed(ShrunkImm, Subtarget)) {
     ++NumOptimizedImms;
     return UseImm(ShrunkImm);
   }
@@ -20264,7 +20310,7 @@ static bool optimizeLogicalImm(SDValue Op, unsigned Imm,
 
   // FIXME: The check for v6 is because this interferes with some ubfx
   // optimizations.
-  if (Opc == ISD::AND && isLegalLogicalImmediate(~ExpandedImm, Subtarget) &&
+  if (Opc == ISD::AND && isLegalArithImmed(~ExpandedImm, Subtarget) &&
       !Subtarget->hasV6Ops()) {
     ++NumOptimizedImms;
     return UseImm(ExpandedImm);

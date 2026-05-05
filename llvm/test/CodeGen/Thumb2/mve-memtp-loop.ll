@@ -211,9 +211,9 @@ entry:
 define void @test11(ptr nocapture %x, ptr nocapture %y, i32 %n) {
 ; CHECK-LABEL: test11:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    cmp.w r2, #-1
-; CHECK-NEXT:    it gt
-; CHECK-NEXT:    bxgt lr
+; CHECK-NEXT:    cmp r2, #0
+; CHECK-NEXT:    it pl
+; CHECK-NEXT:    bxpl lr
 ; CHECK-NEXT:  .LBB10_1: @ %prehead
 ; CHECK-NEXT:    .save {r4, lr}
 ; CHECK-NEXT:    push {r4, lr}
