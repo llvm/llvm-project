@@ -535,6 +535,7 @@ public:
     raw_.extra &= ~_CFI_ALLOCATOR_IDX_MASK; // Clear the allocator index bits.
     raw_.extra |= pos << _CFI_ALLOCATOR_IDX_SHIFT;
   }
+
 private:
   ISO::CFI_cdesc_t raw_;
 };
