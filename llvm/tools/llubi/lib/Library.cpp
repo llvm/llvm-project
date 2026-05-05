@@ -125,7 +125,7 @@ AnyValue Library::executeFree(ArrayRef<AnyValue> Args) {
 
   auto &Ptr = PtrVal.asPointer();
   // no-op when free is called with a null pointer.
-  if (Ptr.address().isZero())
+  if (Ptr.isNullPtr(/*AS=*/0, DL))
     return AnyValue();
 
   MemoryObject *Obj = Ptr.getMemoryObject();

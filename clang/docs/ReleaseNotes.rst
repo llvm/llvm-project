@@ -62,6 +62,9 @@ ABI Changes in This Version
   types, or ``_Complex float`` types are passed, and may introduce
   incompatibilities with code compiled by earlier versions of Clang that uses
   the ``__regcall`` calling convention on these targets. (#GH62999) (#GH98635)
+- Fixed Itanium mangling for lambdas in instantiated non-static data member
+  initializers by preserving the field-name closure-prefix. This changes the
+  mangled names for affected lambdas. (#GH190555)
 
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
@@ -320,6 +323,14 @@ Attribute Changes in Clang
   exclusively, while *reading* requires at least one to be held.  This is
   sound because any writer must hold all capabilities, so holding any one
   prevents concurrent writes.
+
+- :doc:`ThreadSafetyAnalysis` attributes like ``acquire_capability``,
+  ``release_capability``, ``requires_capability``, ``locks_excluded``,
+  ``try_acquire_capability``, and ``assert_capability`` can now be applied to
+  function pointer variables and fields.  The analysis checks calls through
+  annotated function pointers the same way it checks direct function calls.
+  Only plain function pointers are supported; pointers-to-member functions,
+  blocks, or wrappers (e.g. ``std::function``) are not yet supported.
 
 - The ``[[clang::unsafe_buffer_usage]]`` attribute is now supported in API
   notes. For example:
@@ -746,6 +757,7 @@ Static Analyzer
 
 Sanitizers
 ----------
+- UndefinedBehaviorSanitizer now supports ``__ubsan_default_suppressions``.
 
 Python Binding Changes
 ----------------------

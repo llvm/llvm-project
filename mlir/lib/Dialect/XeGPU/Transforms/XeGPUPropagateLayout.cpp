@@ -347,6 +347,14 @@ private:
                             ArrayRef<LayoutInfoLattice *> operands,
                             ArrayRef<const LayoutInfoLattice *> results);
 
+  void visitVectorInterleaveOp(vector::InterleaveOp interleave,
+                               ArrayRef<LayoutInfoLattice *> operands,
+                               ArrayRef<const LayoutInfoLattice *> results);
+
+  void visitVectorDeinterleaveOp(vector::DeinterleaveOp deinterleave,
+                                 ArrayRef<LayoutInfoLattice *> operands,
+                                 ArrayRef<const LayoutInfoLattice *> results);
+
   void visitPrefetchNdOp(xegpu::PrefetchNdOp prefetch,
                          ArrayRef<LayoutInfoLattice *> operands,
                          ArrayRef<const LayoutInfoLattice *> results);
@@ -452,6 +460,12 @@ LogicalResult LayoutInfoPropagation::visitOperation(
       })
       .Case([&](vector::BitCastOp bitcastOp) {
         visitVectorBitcastOp(bitcastOp, operands, results);
+      })
+      .Case([&](vector::InterleaveOp interleaveOp) {
+        visitVectorInterleaveOp(interleaveOp, operands, results);
+      })
+      .Case([&](vector::DeinterleaveOp deinterleaveOp) {
+        visitVectorDeinterleaveOp(deinterleaveOp, operands, results);
       })
       .Case([&](vector::MultiDimReductionOp reductionOp) {
         visitVectorMultiReductionOp(reductionOp, operands, results);
@@ -1064,10 +1078,12 @@ void LayoutInfoPropagation::visitTransposeOp(
   LayoutInfo resultLayout = results[0]->getValue();
   if (!resultLayout.isAssigned())
     return;
+
   auto consumerLayoutAttr =
       dyn_cast<xegpu::DistributeLayoutAttr>(resultLayout.get());
   auto srcLayoutAttr = xegpu::inferTransposeSourceLayout(
       consumerLayoutAttr, transpose.getPermutation());
+
   // Propagate the new layout to the vector operand.
   propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(srcLayoutAttr)));
 }
@@ -1101,6 +1117,63 @@ void LayoutInfoPropagation::visitVectorBitcastOp(
   // derive the source layout from the dominant layout and reduction dims
   auto srcLayoutAttr = xegpu::inferBitCastSourceLayout(
       requiredResLayoutAttr, outElemTyBitWidth, inElemTyBitWidth);
+
+  propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(srcLayoutAttr)));
+}
+
+/// For vector::InterleaveOp, the result has double the innermost dimension size
+/// compared to each source operand. The layout is propagated from result to
+/// sources, adjusting for the 2x size increase.
+void LayoutInfoPropagation::visitVectorInterleaveOp(
+    vector::InterleaveOp interleave, ArrayRef<LayoutInfoLattice *> operands,
+    ArrayRef<const LayoutInfoLattice *> results) {
+  // Need the layout of interleave result to propagate to the operands.
+  LayoutInfo resLayoutInfo = results[0]->getValue();
+  if (!resLayoutInfo.isAssigned())
+    return;
+
+  auto srcVecType = interleave.getSourceVectorType();
+  auto resVecType = interleave.getResultVectorType();
+
+  auto consumerLayoutAttr =
+      dyn_cast<xegpu::DistributeLayoutAttr>(resLayoutInfo.get());
+  const uArch *uArch = getUArch(xegpu::getChipStr(interleave).value_or(""));
+  if (!uArch)
+    return;
+
+  // Setup the result layout to ensure the source layout can be safely derived
+  auto requiredResLayoutAttr = setupInterleaveResultLayout(
+      layoutKind, srcVecType, resVecType, consumerLayoutAttr, uArch);
+
+  xegpu::setTemporaryLayout(interleave->getResult(0), requiredResLayoutAttr);
+
+  // Derive the source layout from the result layout (halve the innermost dim)
+  auto srcLayoutAttr =
+      xegpu::inferInterleaveSourceLayout(requiredResLayoutAttr);
+
+  // Both operands (lhs and rhs) get the same source layout
+  propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(srcLayoutAttr)));
+  propagateIfChanged(operands[1], operands[1]->meet(LayoutInfo(srcLayoutAttr)));
+}
+
+/// For vector::DeinterleaveOp, the source has double the innermost dimension
+/// size compared to each result. The layout is propagated from results to
+/// source, adjusting for the 2x size decrease in results.
+void LayoutInfoPropagation::visitVectorDeinterleaveOp(
+    vector::DeinterleaveOp deinterleave, ArrayRef<LayoutInfoLattice *> operands,
+    ArrayRef<const LayoutInfoLattice *> results) {
+  // Need the layout of deinterleave results to propagate to the operand.
+  // Use the first result's layout (both results should have the same layout)
+  LayoutInfo resLayoutInfo = results[0]->getValue();
+  if (!resLayoutInfo.isAssigned())
+    return;
+
+  auto consumerLayoutAttr =
+      dyn_cast<xegpu::DistributeLayoutAttr>(resLayoutInfo.get());
+
+  // Derive the source layout from the result layout (double the innermost dim)
+  // No setup function needed - just infer directly
+  auto srcLayoutAttr = xegpu::inferDeinterleaveSourceLayout(consumerLayoutAttr);
 
   propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(srcLayoutAttr)));
 }
