@@ -1643,7 +1643,7 @@ static bool interp__builtin_operator_delete(InterpState &S, CodePtr OpPC,
   // Args are pushed in source order. The trailing sized/aligned delete
   // operands are above the pointer on the stack.
   for (unsigned I = NumArgs; I > 1; --I)
-    discard(S.Stk, *S.getContext().classify(Call->getArg(I - 1)));
+    discard(S.Stk, *S.getContext().classify(Call->getArg(I)));
 
   if (S.checkingPotentialConstantExpression()) {
     S.Stk.discard<Pointer>();
