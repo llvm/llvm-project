@@ -42,12 +42,7 @@ define void @f(i32 %x) {
 entry:
   br label %loop
 loop:
-  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
-  %iv.next = add nuw nsw i32 %iv, 1
-  %exit = icmp eq i32 %iv.next, 4
-  br i1 %exit, label %exit.block, label %loop
-exit.block:
-  ret void
+  br label %loop
 }
 )";
 
