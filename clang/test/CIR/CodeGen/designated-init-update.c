@@ -109,6 +109,11 @@ struct R g8 = { (struct Q){{1, 2, 3}}, 5, .q.arr[7] = 99 };
 //     as a struct {i32, i32, i32, [17 x i32] zeroinitializer}. Updating
 //     arr[15] requires splitting the trailing ZeroAttr (a cir::ZeroAttr over
 //     an array type) via the ZeroAttr branch of split(), then condensing back.
+//
+//     The CIR result is a packed struct of byte arrays rather than a clean
+//     [20 x i32]; the LLVM output similarly diverges from classic codegen.
+//     FIXME: tighten g9 once buildFrom reuses emitArrayConstant on the
+//     array fallthrough path.
 struct BigArrInner { int arr[20]; };
 struct BigArrOuter { struct BigArrInner in; int x; };
 struct BigArrOuter g9 =
@@ -117,3 +122,26 @@ struct BigArrOuter g9 =
 // CIR: cir.global external @g9 = #cir.const_record<{{.*}}#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.const_array<[{{(#cir.zero : !u8i(, )?)+}}]> : !cir.array<!u8i x 48>, #cir.int<99> : !s32i,{{.*}}#cir.int<7> : !s32i{{.*}}
 // LLVM: @g9 = global { { { i32, i32, i32, [48 x i8], i32{{(, i8)+}} } }, i32 }
 // OGCG: @g9 = global %struct.BigArrOuter { %struct.BigArrInner { [20 x i32] [i32 1, i32 2, i32 3,{{( i32 0,)+}} i32 0, i32 0, i32 0, i32 0, i32 99, i32 0, i32 0, i32 0, i32 0] }, i32 7 }
+
+// g10: all-zero base, single override. Exercises the cir::ZeroAttr split
+//      branch — the base whole-record is emitted as ZeroAttr, which split
+//      breaks apart at the override offset.
+struct AllZero { int arr[12]; };
+struct AllZeroOuter { struct AllZero az; int x; };
+struct AllZeroOuter g10 = { (struct AllZero){{0}}, 7, .az.arr[5] = 99 };
+
+// CIR: cir.global external @g10 = #cir.const_record<{#cir.const_record<{#cir.const_record<{#cir.const_array<[{{(#cir.zero : !u8i(, )?)+}}]> : !cir.array<!u8i x 20>, #cir.int<99> : !s32i,{{.*}}}> : !rec_anon_struct{{[0-9]*}}}> : !rec_anon_struct{{[0-9]*}}, #cir.int<7> : !s32i}> : !rec_anon_struct{{[0-9]*}}
+// LLVM: @g10 = global { { { [20 x i8], i32{{(, i8)+}} } }, i32 }
+// OGCG: @g10 = global { { { [20 x i8], i32, [24 x i8] } }, i32 } { { { [20 x i8], i32, [24 x i8] } } { { [20 x i8], i32, [24 x i8] } { [20 x i8] zeroinitializer, i32 99, [24 x i8] zeroinitializer } }, i32 7 }
+
+// g11: very large array trailing-zero stress test. 97 trailing zeros after
+//      {1,2,3} with an override at index 80. Same FIXME as g9 — CIR produces
+//      a packed struct of byte arrays rather than a clean [100 x i32].
+//      FIXME: tighten g11 once buildFrom reuses emitArrayConstant.
+struct Many { int arr[100]; };
+struct ManyOuter { struct Many mm; int x; };
+struct ManyOuter g11 = { (struct Many){{1, 2, 3}}, 7, .mm.arr[80] = 42 };
+
+// CIR: cir.global external @g11 = #cir.const_record<{{.*}}#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.const_array<[{{(#cir.zero : !u8i(, )?)+}}]> : !cir.array<!u8i x 308>, #cir.int<42> : !s32i,{{.*}}#cir.int<7> : !s32i{{.*}}
+// LLVM: @g11 = global { { { i32, i32, i32, [308 x i8], i32{{(, i8)+}} } }, i32 }
+// OGCG: @g11 = global {{.*}}[81 x i32]{{.*}}i32 42], [19 x i32] zeroinitializer{{.*}}i32 7{{.*}}

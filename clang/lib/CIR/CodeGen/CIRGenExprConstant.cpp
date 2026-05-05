@@ -787,8 +787,13 @@ bool ConstRecordBuilder::build(const InitListExpr *ile, bool allowOverwrite) {
     const Expr *init = nullptr;
     if (elementNo < ile->getNumInits())
       init = ile->getInit(elementNo++);
-    if (isa_and_nonnull<NoInitExpr>(init))
+    if (isa_and_nonnull<NoInitExpr>(init)) {
+      if (zeroInitPadding &&
+          !applyZeroInitPadding(layout, index, *field, allowOverwrite,
+                                sizeSoFar, zeroFieldSize))
+        return false;
       continue;
+    }
 
     // Zero-sized fields are not emitted, but their initializers may still
     // prevent emission of this record as a constant.
@@ -798,7 +803,7 @@ bool ConstRecordBuilder::build(const InitListExpr *ile, bool allowOverwrite) {
       continue;
     }
 
-    if (zeroInitPadding && !allowOverwrite &&
+    if (zeroInitPadding &&
         !applyZeroInitPadding(layout, index, *field, allowOverwrite, sizeSoFar,
                               zeroFieldSize))
       return false;
@@ -857,7 +862,7 @@ bool ConstRecordBuilder::build(const InitListExpr *ile, bool allowOverwrite) {
     }
   }
 
-  return !zeroInitPadding || allowOverwrite ||
+  return !zeroInitPadding ||
          applyZeroInitPadding(layout, allowOverwrite, sizeSoFar);
 }
 
