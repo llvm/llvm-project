@@ -17368,7 +17368,7 @@ SDValue AArch64TargetLowering::LowerVECREDUCE_MUL(SDValue Op,
 
   SDVTList SrcVTs = DAG.getVTList(SrcVT, SrcVT);
   unsigned BaseOpc = ISD::getVecReduceBaseOpcode(Op.getOpcode());
-  SDValue Identity = DAG.getNeutralElement(BaseOpc, DL, SrcVT, Op->getFlags());
+  SDValue Identity = DAG.getIdentityElement(BaseOpc, DL, SrcVT, Op->getFlags());
 
   // Whilst we don't know the size of the vector we do know the maximum size so
   // can perform a tree reduction with an identity vector, which means once we

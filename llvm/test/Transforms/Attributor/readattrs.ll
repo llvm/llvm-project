@@ -76,7 +76,7 @@ declare void @test6_1()
 ; This is not a missed optz'n.
 define void @test6_2(ptr %p, ptr %q) {
 ; CHECK-LABEL: define {{[^@]+}}@test6_2
-; CHECK-SAME: (ptr nofree noundef nonnull writeonly align 8 captures(none) dereferenceable(8) [[P:%.*]], ptr nofree [[Q:%.*]]) {
+; CHECK-SAME: (ptr nofree noundef nonnull writeonly align 8 captures(none) dereferenceable(8) [[P:%.*]], ptr [[Q:%.*]]) {
 ; CHECK-NEXT:    store ptr [[Q]], ptr [[P]], align 8
 ; CHECK-NEXT:    call void @test6_1()
 ; CHECK-NEXT:    ret void
