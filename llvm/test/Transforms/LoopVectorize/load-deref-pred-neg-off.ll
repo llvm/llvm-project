@@ -22,8 +22,6 @@ define i8 @test_negative_off(i16 %len, ptr %test_base) {
 ; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i32 [[INDEX]] to i16
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i16 -1000, [[DOTCAST]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i16 [[OFFSET_IDX]], 1
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i16> poison, i16 [[OFFSET_IDX]], i32 0
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <2 x i16> [[TMP8]], i16 [[TMP1]], i32 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i1, ptr [[TEST_BASE:%.*]], i16 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i1, ptr [[TEST_BASE]], i16 [[TMP1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i1, ptr [[TMP2]], align 1

@@ -1957,8 +1957,8 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   }
 
   // ctpop(A) + ctpop(B) => ctpop(A | B) if A and B have no bits set in common.
-  if (match(LHS, m_OneUse(m_Intrinsic<Intrinsic::ctpop>(m_Value(A)))) &&
-      match(RHS, m_OneUse(m_Intrinsic<Intrinsic::ctpop>(m_Value(B)))) &&
+  if (match(LHS, m_OneUse(m_Ctpop(m_Value(A)))) &&
+      match(RHS, m_OneUse(m_Ctpop(m_Value(B)))) &&
       haveNoCommonBitsSet(A, B, SQ.getWithInstruction(&I)))
     return replaceInstUsesWith(
         I, Builder.CreateIntrinsic(Intrinsic::ctpop, {I.getType()},
@@ -1970,14 +1970,11 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   // BW - ctlz(A - 1, false)
   const APInt *XorC;
   CmpPredicate Pred;
-  if (match(&I,
-            m_c_Add(
-                m_ZExt(m_ICmp(Pred, m_Intrinsic<Intrinsic::ctpop>(m_Value(A)),
-                              m_One())),
-                m_OneUse(m_ZExtOrSelf(m_OneUse(m_Xor(
-                    m_OneUse(m_TruncOrSelf(m_OneUse(
-                        m_Intrinsic<Intrinsic::ctlz>(m_Deferred(A), m_One())))),
-                    m_APInt(XorC))))))) &&
+  if (match(&I, m_c_Add(m_ZExt(m_ICmp(Pred, m_Ctpop(m_Value(A)), m_One())),
+                        m_OneUse(m_ZExtOrSelf(m_OneUse(
+                            m_Xor(m_OneUse(m_TruncOrSelf(m_OneUse(
+                                      m_Ctlz(m_Deferred(A), m_One())))),
+                                  m_APInt(XorC))))))) &&
       (Pred == ICmpInst::ICMP_UGT || Pred == ICmpInst::ICMP_NE) &&
       *XorC == A->getType()->getScalarSizeInBits() - 1) {
     Value *Sub = Builder.CreateAdd(A, Constant::getAllOnesValue(A->getType()));
@@ -2971,7 +2968,7 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
 
   // C - ctpop(X) => ctpop(~X) if C is bitwidth
   if (match(Op0, m_SpecificInt(BitWidth)) &&
-      match(Op1, m_OneUse(m_Intrinsic<Intrinsic::ctpop>(m_Value(X)))))
+      match(Op1, m_OneUse(m_Ctpop(m_Value(X)))))
     return replaceInstUsesWith(
         I, Builder.CreateIntrinsic(Intrinsic::ctpop, {I.getType()},
                                    {Builder.CreateNot(X)}));

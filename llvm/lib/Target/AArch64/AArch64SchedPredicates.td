@@ -240,6 +240,12 @@ def RegExtendedFn     : TIIPredicate<"hasExtendedReg",
                                            CheckNot<CheckZeroOperand<3>>>>],
                                        MCReturnStatement<FalsePred>>>;
 def RegExtendedPred   : MCSchedPredicate<RegExtendedFn>;
+def IsExtWorXPred     : MCSchedPredicate<
+                          CheckAny<
+                            [CheckExtUXTW,
+                             CheckExtSXTW,
+                             CheckExtUXTX,
+                             CheckExtSXTX]>>;
 
 // Identify arithmetic and logic instructions with a shifted register.
 def RegShiftedFn      : TIIPredicate<"hasShiftedReg",
@@ -408,6 +414,10 @@ def CheckIsZRegOp0 : CheckAll<[
 def SameZRegDstSrcPred : MCSchedPredicate<
   CheckAll<[CheckSameRegOperand<0, 1>, CheckIsZRegOp0]>
 >;
+
+// Identify predicate-dest instructions that reuse the same predicate as a
+// source (e.g. Pd == Pg for PPz* forms).
+def IsPredDestSameAsPgPred : MCSchedPredicate<CheckSameRegOperand<0, 1>>;
 
 // Identify LDR/STR Q-form scaled (and potentially extended) FP instructions
 def FPIsQForm : MCSchedPredicate<

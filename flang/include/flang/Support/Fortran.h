@@ -66,7 +66,7 @@ ENUM_CLASS(CUDASubprogramAttrs, Host, Device, HostDevice, Global, Grid_Global)
 
 // CUDA data attributes; mutually exclusive
 ENUM_CLASS(CUDADataAttr, Constant, Device, Managed, Pinned, Shared, Texture,
-    Unified, Value)
+    Unified, UseDevice, Value)
 
 // OpenACC device types
 ENUM_CLASS(

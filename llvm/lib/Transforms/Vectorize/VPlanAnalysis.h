@@ -24,7 +24,6 @@ class VPBlendRecipe;
 class VPInstruction;
 class VPWidenRecipe;
 class VPWidenCallRecipe;
-class VPWidenIntOrFpInductionRecipe;
 class VPWidenMemoryRecipe;
 class VPReplicateRecipe;
 class VPRecipeBase;
@@ -57,7 +56,6 @@ class VPTypeAnalysis {
   Type *inferScalarTypeForRecipe(const VPInstruction *R);
   Type *inferScalarTypeForRecipe(const VPWidenCallRecipe *R);
   Type *inferScalarTypeForRecipe(const VPWidenRecipe *R);
-  Type *inferScalarTypeForRecipe(const VPWidenIntOrFpInductionRecipe *R);
   Type *inferScalarTypeForRecipe(const VPWidenMemoryRecipe *R);
   Type *inferScalarTypeForRecipe(const VPReplicateRecipe *R);
 

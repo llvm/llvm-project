@@ -23,6 +23,7 @@
 #include <__iterator/concepts.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/next.h>
+#include <__iterator/reverse_iterator.h>
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
 #include <__ranges/dangling.h>
@@ -82,6 +83,22 @@ concept __indirectly_binary_left_foldable =
     copy_constructible<_Fp> &&                     //
     invocable<_Fp&, _Tp, iter_reference_t<_Ip>> && //
     __indirectly_binary_left_foldable_impl<_Fp, _Tp, _Ip, invoke_result_t<_Fp&, _Tp, iter_reference_t<_Ip>>>;
+
+template <class _Func>
+struct __flipped {
+  _Func __func;
+
+  template <class _Tp, class _Up>
+    requires invocable<_Func&, _Up, _Tp>
+  invoke_result_t<_Func&, _Up, _Tp> operator()(_Tp&&, _Up&&);
+};
+
+template <class _Func, class _Tp, class _Iter>
+concept __indirectly_binary_right_foldable =
+    __indirectly_binary_left_foldable_impl<__flipped<_Func>,
+                                           _Tp,
+                                           _Iter,
+                                           invoke_result_t<_Func&, _Tp, iter_reference_t<_Iter>>>;
 
 struct __fold_left_with_iter {
   template <input_iterator _Ip, sentinel_for<_Ip> _Sp, class _Tp, __indirectly_binary_left_foldable<_Tp, _Ip> _Fp>
@@ -187,6 +204,36 @@ struct __fold_left_first {
 };
 
 inline constexpr auto fold_left_first = __fold_left_first();
+
+struct __fold_right {
+  template <bidirectional_iterator _Iter,
+            sentinel_for<_Iter> _Sp,
+            class _Tp,
+            __indirectly_binary_right_foldable<_Tp, _Iter> _Func>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto
+  operator()(_Iter __first, _Sp __last, _Tp __init, _Func __func) {
+    using _Up = decay_t<invoke_result_t<_Func&, iter_reference_t<_Iter>, _Tp>>;
+
+    if (__first == __last)
+      return _Up(std::move(__init));
+
+    _Iter __tail = ranges::next(__first, __last);
+    --__tail;
+    _Up __result = std::invoke(__func, *__tail, std::move(__init));
+    std::for_each(std::make_reverse_iterator(__tail), std::make_reverse_iterator(__first), [&](auto&& __element) {
+      __result = std::invoke(__func, std::forward<decltype(__element)>(__element), std::move(__result));
+    });
+
+    return __result;
+  }
+
+  template <bidirectional_range _Range, class _Tp, __indirectly_binary_right_foldable<_Tp, iterator_t<_Range>> _Func>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()(_Range&& __range, _Tp __init, _Func __func) {
+    return operator()(ranges::begin(__range), ranges::end(__range), std::move(__init), std::ref(__func));
+  }
+};
+
+inline constexpr auto fold_right = __fold_right();
 } // namespace ranges
 
 #endif // _LIBCPP_STD_VER >= 23

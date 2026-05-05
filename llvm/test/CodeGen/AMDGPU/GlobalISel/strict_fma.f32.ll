@@ -911,15 +911,9 @@ define void @v_constained_fma_v2f32_fpexcept_strict_fneg_fneg_uni(<2 x float> in
 ; GFX942-LABEL: v_constained_fma_v2f32_fpexcept_strict_fneg_fneg_uni:
 ; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    v_mov_b32_e32 v2, s0
-; GFX942-NEXT:    v_mov_b32_e32 v3, s1
-; GFX942-NEXT:    v_mov_b32_e32 v4, s2
-; GFX942-NEXT:    v_mov_b32_e32 v5, s3
-; GFX942-NEXT:    v_xor_b32_e32 v2, 0x80000000, v2
-; GFX942-NEXT:    v_xor_b32_e32 v3, 0x80000000, v3
-; GFX942-NEXT:    v_xor_b32_e32 v4, 0x80000000, v4
-; GFX942-NEXT:    v_xor_b32_e32 v5, 0x80000000, v5
-; GFX942-NEXT:    v_pk_fma_f32 v[2:3], v[2:3], v[4:5], s[16:17]
+; GFX942-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX942-NEXT:    v_mov_b64_e32 v[4:5], s[16:17]
+; GFX942-NEXT:    v_pk_fma_f32 v[2:3], s[0:1], v[2:3], v[4:5] neg_lo:[1,1,0] neg_hi:[1,1,0]
 ; GFX942-NEXT:    global_store_dwordx2 v[0:1], v[2:3], off
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
@@ -982,11 +976,7 @@ define void @v_constained_fma_v2f32_fpexcept_strict_fneg_fneg_div(<2 x float> %x
 ; GFX942-LABEL: v_constained_fma_v2f32_fpexcept_strict_fneg_fneg_div:
 ; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
-; GFX942-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
-; GFX942-NEXT:    v_xor_b32_e32 v2, 0x80000000, v2
-; GFX942-NEXT:    v_xor_b32_e32 v3, 0x80000000, v3
-; GFX942-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], v[2:3], v[4:5]
+; GFX942-NEXT:    v_pk_fma_f32 v[0:1], v[0:1], v[2:3], v[4:5] neg_lo:[1,1,0] neg_hi:[1,1,0]
 ; GFX942-NEXT:    global_store_dwordx2 v[6:7], v[0:1], off
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]

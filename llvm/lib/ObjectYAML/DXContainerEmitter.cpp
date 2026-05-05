@@ -242,7 +242,8 @@ Error DXContainerWriter::writeParts(raw_ostream &OS) {
                                 P.Info->PatchOutputMap.end());
 
       PSV.finalize(static_cast<Triple::EnvironmentType>(
-          Triple::Pixel + P.Info->Info.ShaderStage));
+                       Triple::Pixel + P.Info->Info.ShaderStage),
+                   P.Info->Version);
       PSV.write(OS, P.Info->Version);
       break;
     }

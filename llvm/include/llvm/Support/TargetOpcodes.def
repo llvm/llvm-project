@@ -409,6 +409,9 @@ HANDLE_TARGET_OPCODE(G_SEXTLOAD)
 /// Generic zeroext load
 HANDLE_TARGET_OPCODE(G_ZEXTLOAD)
 
+/// Generic floating-point extending load
+HANDLE_TARGET_OPCODE(G_FPEXTLOAD)
+
 /// Generic indexed load (including anyext load)
 HANDLE_TARGET_OPCODE(G_INDEXED_LOAD)
 
@@ -420,6 +423,9 @@ HANDLE_TARGET_OPCODE(G_INDEXED_ZEXTLOAD)
 
 /// Generic store.
 HANDLE_TARGET_OPCODE(G_STORE)
+
+/// Generic floating-point truncating store
+HANDLE_TARGET_OPCODE(G_FPTRUNCSTORE)
 
 /// Generic indexed store.
 HANDLE_TARGET_OPCODE(G_INDEXED_STORE)

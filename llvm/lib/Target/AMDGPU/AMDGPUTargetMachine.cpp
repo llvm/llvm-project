@@ -878,9 +878,9 @@ AMDGPUTargetMachine::AMDGPUTargetMachine(const Target &T, const Triple &TT,
       TLOF(createTLOF(getTargetTriple())) {
   initAsmInfo();
   if (TT.isAMDGCN()) {
-    if (getMCSubtargetInfo()->checkFeatures("+wavefrontsize64"))
+    if (getMCSubtargetInfo().checkFeatures("+wavefrontsize64"))
       MRI.reset(llvm::createGCNMCRegisterInfo(AMDGPUDwarfFlavour::Wave64));
-    else if (getMCSubtargetInfo()->checkFeatures("+wavefrontsize32"))
+    else if (getMCSubtargetInfo().checkFeatures("+wavefrontsize32"))
       MRI.reset(llvm::createGCNMCRegisterInfo(AMDGPUDwarfFlavour::Wave32));
   }
 }

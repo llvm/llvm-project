@@ -2495,13 +2495,13 @@ LLVM_ABI APInt clmulh(const APInt &LHS, const APInt &RHS);
 // order to compile LLVM with IBM xlC compiler.
 LLVM_ABI hash_code hash_value(const APInt &Arg);
 
-/// StoreIntToMemory - Fills the StoreBytes bytes of memory starting from Dst
-/// with the integer held in IntVal.
+/// Fills the StoreBytes bytes of memory starting from Dst with the integer held
+/// in IntVal.
 LLVM_ABI void StoreIntToMemory(const APInt &IntVal, uint8_t *Dst,
                                unsigned StoreBytes);
 
-/// LoadIntFromMemory - Loads the integer stored in the LoadBytes bytes starting
-/// from Src into IntVal, which is assumed to be wide enough and to hold zero.
+/// Loads the integer stored in the LoadBytes bytes starting from Src into
+/// IntVal, which is assumed to be wide enough and to hold zero.
 LLVM_ABI void LoadIntFromMemory(APInt &IntVal, const uint8_t *Src,
                                 unsigned LoadBytes);
 

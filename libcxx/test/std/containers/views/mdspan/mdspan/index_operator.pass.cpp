@@ -200,10 +200,19 @@ constexpr void test_layout_large() {
 // mapping requirements only require the index operator to mixed integer types not anything convertible to index_type
 constexpr void test_index_cast_happens() {}
 
+struct RValueInt {
+  constexpr operator int() && noexcept { return 0; }
+};
+
 constexpr bool test() {
   test_layout<std::layout_left>();
   test_layout<std::layout_right>();
   test_layout<layout_wrapping_integral<4>>();
+
+  int data[1]{};
+  std::mdspan m(data, std::extents<int, 1>{1});
+  TEST_IGNORE_NODISCARD m[RValueInt{}];
+
   return true;
 }
 

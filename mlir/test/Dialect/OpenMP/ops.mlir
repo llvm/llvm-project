@@ -871,7 +871,7 @@ func.func @omp_target(%if_cond : i1, %device : si32,  %num_threads : i32, %devic
     "omp.target"(%device, %if_cond, %num_threads) ({
        // CHECK: omp.terminator
        omp.terminator
-    }) {nowait, operandSegmentSizes = array<i32: 0,0,0,0,1,0,0,1,0,0,0,0,1>} : ( si32, i1, i32 ) -> ()
+    }) {nowait, operandSegmentSizes = array<i32: 0,0,0,0,1,0,0,0,1,0,0,0,0,1>} : ( si32, i1, i32 ) -> ()
 
     // Test with optional map clause.
     // CHECK: %[[MAP_A:.*]] = omp.map.info var_ptr(%[[VAL_1:.*]] : memref<?xi32>, tensor<?xi32>)   map_clauses(always, to) capture(ByRef) -> memref<?xi32> {name = ""}
@@ -1124,7 +1124,8 @@ func.func @parallel_wsloop_reduction(%lb : index, %ub : index, %step : index) {
 
 // CHECK-LABEL: omp_teams
 func.func @omp_teams(%lb : i32, %ub : i32, %if_cond : i1, %num_threads : i32,
-                     %data_var : memref<i32>, %ub64 : i64, %ub16 : i16) -> () {
+                     %data_var : memref<i32>, %ub64 : i64, %ub16 : i16,
+                     %dyn_size : i32) -> () {
   // Test nesting inside of omp.target
   omp.target {
     // CHECK: omp.teams
@@ -1217,6 +1218,13 @@ func.func @omp_teams(%lb : i32, %ub : i32, %if_cond : i1, %num_threads : i32,
   // Test allocate.
   // CHECK: omp.teams allocate(%{{.+}} : memref<i32> -> %{{.+}} : memref<i32>)
   omp.teams allocate(%data_var : memref<i32> -> %data_var : memref<i32>) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // Test dyn_groupprivate
+  // CHECK: omp.teams dyn_groupprivate(cgroup, fallback(null), %{{.+}} : i32)
+  omp.teams dyn_groupprivate(cgroup, fallback(null), %dyn_size : i32) {
     // CHECK: omp.terminator
     omp.terminator
   }
@@ -2310,7 +2318,33 @@ func.func @omp_target_depend(%arg0: memref<i32>, %arg1: memref<i32>) {
   omp.target depend(taskdependin -> %arg0 : memref<i32>, taskdependin -> %arg1 : memref<i32>, taskdependinout -> %arg0 : memref<i32>) {
     // CHECK: omp.terminator
     omp.terminator
-  } {operandSegmentSizes = array<i32: 0,0,3,0,0,0,0,0,0,0,0,0,0>}
+  } {operandSegmentSizes = array<i32: 0,0,3,0,0,0,0,0,0,0,0,0,0,0>}
+  return
+}
+
+// CHECK-LABEL: @omp_target_dyn_groupprivate
+func.func @omp_target_dyn_groupprivate(%dyn_size: i32, %large_size: i64) {
+  // CHECK: omp.target dyn_groupprivate(%{{.*}} : i32)
+  omp.target dyn_groupprivate(%dyn_size : i32) {
+    omp.terminator
+  }
+  // CHECK: omp.target dyn_groupprivate(cgroup, %{{.*}} : i64)
+  omp.target dyn_groupprivate(cgroup, %large_size : i64) {
+    omp.terminator
+  }
+  // CHECK: omp.target dyn_groupprivate(cgroup, fallback(abort), %{{.*}} : i32)
+  omp.target dyn_groupprivate(cgroup, fallback(abort), %dyn_size : i32) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  // CHECK: omp.target dyn_groupprivate(cgroup, fallback(null), %{{.*}} : i32)
+  omp.target dyn_groupprivate(fallback(null), cgroup, %dyn_size : i32) {
+    omp.terminator
+  }
+  // CHECK: omp.target dyn_groupprivate(%{{.*}} : i64)
+  omp.target dyn_groupprivate(%large_size : i64) {
+    omp.terminator
+  }
   return
 }
 
@@ -3957,3 +3991,30 @@ func.func @omp_free_shared_mem(%n: i64) {
   omp.free_shared_mem [%n x f32 : (i64) align(32)] %1 : !llvm.ptr
   return
 }
+
+// CHECK-LABEL: func.func @omp_groupprivate_device_type
+func.func @omp_groupprivate_device_type() {
+  %1 = arith.constant 2 : i32
+
+  // CHECK: {{.*}} = omp.groupprivate @gp : !llvm.ptr
+  %group_private_addr = omp.groupprivate @gp : !llvm.ptr
+
+  // CHECK: {{.*}} = omp.groupprivate @any device_type (any) : !llvm.ptr
+  %group_private_any = omp.groupprivate @any device_type(any) : !llvm.ptr
+  llvm.store %1, %group_private_any : i32, !llvm.ptr
+
+  // CHECK: {{.*}} = omp.groupprivate @host device_type (host) : !llvm.ptr
+  %group_private_host = omp.groupprivate @host device_type(host) : !llvm.ptr
+  llvm.store %1, %group_private_host : i32, !llvm.ptr
+
+  // CHECK: {{.*}} = omp.groupprivate @nohost device_type (nohost) : !llvm.ptr
+  %group_private_nohost = omp.groupprivate @nohost device_type(nohost) : !llvm.ptr
+  llvm.store %1, %group_private_nohost : i32, !llvm.ptr
+
+  return
+}
+
+llvm.mlir.global internal @gp() : i32
+llvm.mlir.global internal @any() : i32
+llvm.mlir.global internal @host() : i32
+llvm.mlir.global internal @nohost() : i32

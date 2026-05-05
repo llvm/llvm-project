@@ -19,5 +19,7 @@ loop:
 ; CHECK-NEXT:   br label %loop jump to %loop
 ; CHECK-NEXT:   br label %loop jump to %loop
 ; CHECK-NEXT:   br label %loop jump to %loop
+; CHECK-NEXT: Stacktrace:
+; CHECK-NEXT: #0   br label %loop at @main
 ; CHECK-NEXT: Error: Exceeded maximum number of execution steps.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

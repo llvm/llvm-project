@@ -447,9 +447,10 @@ LLVM_DUMP_METHOD void Descriptor::dump(llvm::raw_ostream &OS) const {
 
   // Print a few interesting bits about the descriptor.
   if (isPrimitiveArray())
-    OS << " primitive-array";
+    OS << " primitive-array " << getNumElems() << ' '
+       << primTypeToString(getPrimType());
   else if (isCompositeArray())
-    OS << " composite-array";
+    OS << " composite-array " << getNumElems();
   else if (isUnion())
     OS << " union(" << ElemRecord->getName() << ")";
   else if (isRecord())

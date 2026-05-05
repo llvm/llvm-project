@@ -180,6 +180,103 @@ MlirLogicalResult mlirInferShapedTypeOpInterfaceInferReturnTypes(
 }
 
 //===---------------------------------------------------------------------===//
+// ConditionallySpeculatable
+//===---------------------------------------------------------------------===//
+
+MlirTypeID mlirConditionallySpeculatableOpInterfaceTypeID() {
+  return wrap(ConditionallySpeculatable::getInterfaceID());
+}
+
+/// Fallback model for the ConditionallySpeculatable interface that uses C API
+/// callbacks.
+class ConditionallySpeculatableOpInterfaceFallbackModel
+    : public mlir::ConditionallySpeculatable::FallbackModel<
+          ConditionallySpeculatableOpInterfaceFallbackModel> {
+public:
+  /// Sets the callbacks that this FallbackModel will use.
+  /// NB: the callbacks can only be set through this method as the
+  /// RegisteredOperationName::attachInterface mechanism default-constructs
+  /// the FallbackModel without being able to provide arguments.
+  void
+  setCallbacks(MlirConditionallySpeculatableOpInterfaceCallbacks callbacks) {
+    this->callbacks = callbacks;
+  }
+
+  ~ConditionallySpeculatableOpInterfaceFallbackModel() {
+    if (callbacks.destruct)
+      callbacks.destruct(callbacks.userData);
+  }
+
+  static TypeID getInterfaceID() {
+    return ConditionallySpeculatable::getInterfaceID();
+  }
+
+  static bool classof(const mlir::ConditionallySpeculatable::Concept *op) {
+    // Enable casting back to the FallbackModel from the Interface. This is
+    // necessary as attachInterface(...) default-constructs the FallbackModel
+    // without being able to pass in the callbacks and returns just the Concept.
+    return true;
+  }
+
+  Speculation::Speculatability getSpeculatability(Operation *op) const {
+    assert(callbacks.getSpeculatability &&
+           "getSpeculatability callback not set");
+
+    switch (callbacks.getSpeculatability(wrap(op), callbacks.userData)) {
+    case MlirSpeculatabilityNotSpeculatable:
+      return Speculation::NotSpeculatable;
+    case MlirSpeculatabilitySpeculatable:
+      return Speculation::Speculatable;
+    case MlirSpeculatabilityRecursivelySpeculatable:
+      return Speculation::RecursivelySpeculatable;
+    }
+    llvm_unreachable("unknown speculatability");
+  }
+
+private:
+  MlirConditionallySpeculatableOpInterfaceCallbacks callbacks;
+};
+
+/// Attach a ConditionallySpeculatable FallbackModel to the given named op.
+/// The FallbackModel uses the provided callbacks to implement the interface.
+void mlirConditionallySpeculatableOpInterfaceAttachFallbackModel(
+    MlirContext ctx, MlirStringRef opName,
+    MlirConditionallySpeculatableOpInterfaceCallbacks callbacks) {
+  // Look up the operation definition in the context.
+  std::optional<RegisteredOperationName> opInfo =
+      RegisteredOperationName::lookup(unwrap(opName), unwrap(ctx));
+
+  assert(opInfo.has_value() && "operation not found in context");
+
+  // NB: the following default-constructs the FallbackModel _without_ being able
+  // to provide arguments.
+  opInfo->attachInterface<ConditionallySpeculatableOpInterfaceFallbackModel>();
+  // Cast to get the underlying FallbackModel and set the callbacks.
+  auto *model = cast<ConditionallySpeculatableOpInterfaceFallbackModel>(
+      opInfo
+          ->getInterface<ConditionallySpeculatableOpInterfaceFallbackModel>());
+  assert(model &&
+         "Failed to get ConditionallySpeculatableOpInterfaceFallbackModel");
+  model->setCallbacks(callbacks);
+}
+
+MlirSpeculatability mlirConditionallySpeculatableOpInterfaceGetSpeculatability(
+    MlirOperation operation) {
+  auto iface = dyn_cast<ConditionallySpeculatable>(unwrap(operation));
+  assert(iface && "operation does not implement ConditionallySpeculatable");
+
+  switch (iface.getSpeculatability()) {
+  case Speculation::NotSpeculatable:
+    return MlirSpeculatabilityNotSpeculatable;
+  case Speculation::Speculatable:
+    return MlirSpeculatabilitySpeculatable;
+  case Speculation::RecursivelySpeculatable:
+    return MlirSpeculatabilityRecursivelySpeculatable;
+  }
+  llvm_unreachable("unknown speculatability");
+}
+
+//===---------------------------------------------------------------------===//
 // MemoryEffectOpInterface
 //===---------------------------------------------------------------------===//
 

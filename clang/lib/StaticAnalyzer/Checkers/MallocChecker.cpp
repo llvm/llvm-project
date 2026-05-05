@@ -985,7 +985,7 @@ protected:
 
   // A release function stack frame in which memory was released. Used for
   // miscellaneous false positive suppression.
-  const StackFrameContext *ReleaseFunctionLC;
+  const StackFrame *ReleaseFunctionLC;
 
   bool IsLeak;
 

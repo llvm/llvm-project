@@ -377,8 +377,8 @@ private:
 
 public:
   LLVM_ABI explicit MCContext(const Triple &TheTriple, const MCAsmInfo &MAI,
-                              const MCRegisterInfo *MRI,
-                              const MCSubtargetInfo *MSTI,
+                              const MCRegisterInfo &MRI,
+                              const MCSubtargetInfo &MSTI,
                               const SourceMgr *Mgr = nullptr,
                               bool DoAutoReset = true,
                               StringRef Swift5ReflSegmentName = {});

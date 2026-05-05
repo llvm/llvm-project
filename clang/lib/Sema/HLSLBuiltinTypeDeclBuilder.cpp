@@ -2262,9 +2262,9 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addHandleAccessFunction(
       ReturnTy.addConst();
     ReturnTy = AST.getLValueReferenceType(ReturnTy);
   } else {
+    assert(!IsConstReturn && "There shouldn't be any resource methods with a "
+                             "const ref return value");
     ReturnTy = ElemTy;
-    if (IsConstReturn)
-      ReturnTy.addConst();
   }
   MMB.ReturnTy = ReturnTy;
 

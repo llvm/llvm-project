@@ -29,6 +29,12 @@
   sizeInBits = 32, encoding = DW_ATE_signed
 >
 
+// CHECK-DAG: #[[FLOAT1:.*]] = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "float1", sizeInBits = 32, encoding = DW_ATE_float>
+#float1 = #llvm.di_basic_type<
+  tag = DW_TAG_base_type, name = "float1",
+  sizeInBits = 32, encoding = DW_ATE_float
+>
+
 // CHECK-DAG: #[[PTR0:.*]] = #llvm.di_derived_type<tag = DW_TAG_pointer_type, baseType = #[[INT0]], sizeInBits = 64, alignInBits = 32, offsetInBits = 4, extraData = #[[INT1]]>
 #ptr0 = #llvm.di_derived_type<
   tag = DW_TAG_pointer_type, baseType = #int0,
@@ -74,6 +80,31 @@
   elements = #llvm.di_subrange<count = 4>
 >
 
+// CHECK-DAG: #[[DISC:.*]] = #llvm.di_derived_type<tag = DW_TAG_member, name = "discriminator", baseType = #[[INT0]], flags = Artificial>
+#disc = #llvm.di_derived_type<
+  tag = DW_TAG_member, name = "discriminator", baseType = #int0,
+  flags = Artificial
+>
+
+// CHECK-DAG: #[[ELEM_INT:.*]] = #llvm.di_derived_type<tag = DW_TAG_member, name = "_int1", baseType = #[[INT1]], extraData = 1 : i8>
+#elemInt = #llvm.di_derived_type<
+  tag = DW_TAG_member, name = "_int1", baseType = #int1,
+  extraData = 1 : i8
+>
+
+// CHECK-DAG: #[[ELEM_FLOAT:.*]] = #llvm.di_derived_type<tag = DW_TAG_member, name = "_float1", baseType = #[[FLOAT1]], extraData = 2 : i8>
+#elemFloat = #llvm.di_derived_type<
+  tag = DW_TAG_member, name = "_float1", baseType = #float1,
+  extraData = 2 : i8
+>
+
+// CHECK-DAG: #[[VARIANT:.*]] = #llvm.di_composite_type<tag = DW_TAG_variant_part, name = "variant_part", identifier = "variant-id", discriminator = #[[DISC]], elements = #[[ELEM_INT]], #[[ELEM_FLOAT]]>
+#variant = #llvm.di_composite_type<
+  tag = DW_TAG_variant_part, name = "variant_part",
+  identifier = "variant-id", discriminator = #disc,
+  elements = #elemInt, #elemFloat
+>
+
 // CHECK-DAG: #[[TOPLEVEL:.*]] = #llvm.di_namespace<name = "toplevel", exportSymbols = true>
 #toplevel_namespace = #llvm.di_namespace<
   name = "toplevel", exportSymbols = true
@@ -104,9 +135,9 @@
  name = "expr_elements2", baseType = #int0, elements =
  #llvm.di_generic_subrange<count = #exp1, lowerBound = #exp2, stride = #exp3>>
 
-// CHECK-DAG: #[[SPTYPE0:.*]] = #llvm.di_subroutine_type<callingConvention = DW_CC_normal, types = #[[NULL]], #[[INT0]], #[[PTR0]], #[[PTR1]], #[[PTR2]], #[[PTR3]], #[[PTR4]], #[[COMP0:.*]], #[[COMP1:.*]], #[[COMP2:.*]], #[[COMP3:.*]]>
+// CHECK-DAG: #[[SPTYPE0:.*]] = #llvm.di_subroutine_type<callingConvention = DW_CC_normal, types = #[[NULL]], #[[INT0]], #[[PTR0]], #[[PTR1]], #[[PTR2]], #[[PTR3]], #[[PTR4]], #[[COMP0:.*]], #[[COMP1:.*]], #[[COMP2:.*]], #[[COMP3:.*]], #[[VARIANT]]>
 #spType0 = #llvm.di_subroutine_type<
-  callingConvention = DW_CC_normal, types = #null, #int0, #ptr0, #ptr1, #ptr2, #ptr3, #ptr4, #comp0, #comp1, #comp2, #comp3
+  callingConvention = DW_CC_normal, types = #null, #int0, #ptr0, #ptr1, #ptr2, #ptr3, #ptr4, #comp0, #comp1, #comp2, #comp3, #variant
 >
 
 // CHECK-DAG: #[[SPTYPE1:.*]] = #llvm.di_subroutine_type<types = #[[INT1]], #[[INT1]]>

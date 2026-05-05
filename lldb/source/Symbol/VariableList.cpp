@@ -70,34 +70,22 @@ uint32_t VariableList::FindVariableIndex(const VariableSP &var_sp) {
 }
 
 VariableSP VariableList::FindVariable(ConstString name,
-                                      bool include_static_members) {
-  VariableSP var_sp;
-  iterator pos, end = m_variables.end();
-  for (pos = m_variables.begin(); pos != end; ++pos) {
-    if ((*pos)->NameMatches(name)) {
-      if (include_static_members || !(*pos)->IsStaticMember()) {
-        var_sp = (*pos);
-        break;
-      }
-    }
-  }
-  return var_sp;
+                                      bool include_static_members) const {
+  for (const auto &var_sp : m_variables)
+    if (var_sp->NameMatches(name))
+      if (include_static_members || !var_sp->IsStaticMember())
+        return var_sp;
+  return {};
 }
 
 VariableSP VariableList::FindVariable(ConstString name,
                                       lldb::ValueType value_type,
-                                      bool include_static_members) {
-  VariableSP var_sp;
-  iterator pos, end = m_variables.end();
-  for (pos = m_variables.begin(); pos != end; ++pos) {
-    if ((*pos)->NameMatches(name) && (*pos)->GetScope() == value_type) {
-      if (include_static_members || !(*pos)->IsStaticMember()) {
-        var_sp = (*pos);
-        break;
-      }
-    }
-  }
-  return var_sp;
+                                      bool include_static_members) const {
+  for (const auto &var_sp : m_variables)
+    if (var_sp->NameMatches(name) && var_sp->GetScope() == value_type)
+      if (include_static_members || !var_sp->IsStaticMember())
+        return var_sp;
+  return {};
 }
 
 size_t VariableList::AppendVariablesIfUnique(VariableList &var_list) {

@@ -318,12 +318,13 @@ TEST(DiagnosticsTest, ClangTidy) {
     }
   )cpp");
   auto TU = TestTU::withCode(Test.code());
-  TU.HeaderFilename = "assert.h"; // Suppress "not found" error.
+  TU.AdditionalFiles["system/assert.h"] = ""; // Suppress "not found" error.
   TU.ClangTidyProvider = addTidyChecks("bugprone-sizeof-expression,"
                                        "bugprone-macro-repeated-side-effects,"
                                        "modernize-deprecated-headers,"
                                        "modernize-use-trailing-return-type,"
                                        "misc-no-recursion");
+  TU.ExtraArgs.push_back("-isystem" + testPath("system"));
   TU.ExtraArgs.push_back("-Wno-unsequenced");
   EXPECT_THAT(
       TU.build().getDiagnostics(),

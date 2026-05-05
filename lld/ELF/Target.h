@@ -42,7 +42,6 @@ public:
   virtual void writeGotPlt(uint8_t *buf, const Symbol &s) const {}
   virtual void writeIgotPlt(uint8_t *buf, const Symbol &s) const {}
   virtual int64_t getImplicitAddend(const uint8_t *buf, RelType type) const;
-  virtual int getTlsGdRelaxSkip(RelType type) const { return 1; }
 
   // If lazy binding is supported, the first entry of the PLT has code
   // to call the dynamic linker to resolve PLT entries the first time

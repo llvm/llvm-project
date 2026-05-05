@@ -324,7 +324,7 @@ define void @latch_branch_cost(ptr %dst) {
 ; PRED-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
 ; PRED:       [[PRED_STORE_CONTINUE6]]:
 ; PRED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; PRED-NEXT:    [[VEC_IND_NEXT]] = add <4 x i8> [[VEC_IND]], splat (i8 4)
+; PRED-NEXT:    [[VEC_IND_NEXT]] = add nuw <4 x i8> [[VEC_IND]], splat (i8 4)
 ; PRED-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; PRED-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; PRED:       [[MIDDLE_BLOCK]]:

@@ -9,5 +9,7 @@ exit:
   ret void
 }
 ; CHECK: Entering function: main
+; CHECK-NEXT: Stacktrace:
+; CHECK-NEXT: #0   br i1 poison, label %exit, label %exit at @main
 ; CHECK-NEXT: Immediate UB detected: Branch on poison condition.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

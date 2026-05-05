@@ -46,7 +46,11 @@ public:
 #define OP(OPC) OPC,
 #define OPCODES(...) __VA_ARGS__
 #define DEF_INSTR(ID, OPC, CLASS) OPC
-#include "llvm/SandboxIR/Values.def"
+#define DEF_DISABLE_AUTO_UNDEF // ValuesDefFilesList.def includes multiple .def
+#include "llvm/SandboxIR/ValuesDefFilesList.def"
+#undef OP
+#undef OPCODES
+#undef DEF_INSTR
   };
 
 protected:
@@ -113,7 +117,21 @@ protected:
   }
 
 public:
-  LLVM_ABI static const char *getOpcodeName(Opcode Opc);
+  LLVM_ABI static const char *getOpcodeName(Opcode Opc) {
+    switch (Opc) {
+#define OP(OPC)                                                                \
+  case Opcode::OPC:                                                            \
+    return #OPC;
+#define OPCODES(...) __VA_ARGS__
+#define DEF_INSTR(ID, OPC, CLASS) OPC
+#define DEF_DISABLE_AUTO_UNDEF // ValuesDefFilesList.def includes multiple .def
+#include "llvm/SandboxIR/ValuesDefFilesList.def"
+#undef OPCODES
+#undef DEF_INSTR
+    }
+    llvm_unreachable("Unknown Opcode");
+  }
+
   /// This is used by BasicBlock::iterator.
   virtual unsigned getNumOfIRInstrs() const = 0;
   /// \Returns a BasicBlock::iterator for this Instruction.

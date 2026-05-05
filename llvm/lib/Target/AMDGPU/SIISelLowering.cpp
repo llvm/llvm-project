@@ -18319,8 +18319,9 @@ SDValue SITargetLowering::performSelectCombine(SDNode *N,
     if (!Val.isNormal() || Subtarget->getInstrInfo()->isInlineConstant(Val))
       return SDValue();
   } else {
-    if (AMDGPU::isInlinableIntLiteral(
-            cast<ConstantSDNode>(ConstVal)->getSExtValue()))
+    const std::optional<int64_t> Val =
+        cast<ConstantSDNode>(ConstVal)->getAPIntValue().trySExtValue();
+    if (Val && AMDGPU::isInlinableIntLiteral(*Val))
       return SDValue();
   }
 

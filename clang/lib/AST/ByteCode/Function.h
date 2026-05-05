@@ -101,6 +101,7 @@ public:
   enum class FunctionKind {
     Normal,
     Ctor,
+    CopyOrMoveCtor,
     Dtor,
     LambdaStaticInvoker,
     LambdaCallOperator,
@@ -185,7 +186,13 @@ public:
   bool isConstexpr() const { return Constexpr; }
 
   /// Checks if the function is a constructor.
-  bool isConstructor() const { return Kind == FunctionKind::Ctor; }
+  bool isConstructor() const {
+    return Kind == FunctionKind::Ctor || Kind == FunctionKind::CopyOrMoveCtor;
+  }
+  bool isCopyOrMoveConstructor() const {
+    return Kind == FunctionKind::CopyOrMoveCtor;
+  }
+
   /// Checks if the function is a destructor.
   bool isDestructor() const { return Kind == FunctionKind::Dtor; }
   /// Checks if the function is copy or move operator.

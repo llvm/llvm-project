@@ -958,6 +958,18 @@ class MapInfoFinalizationPass
       localBoxAllocas.clear();
       deferrableDesc.clear();
 
+      // Walk all of the existing maps for parents with child maps and then
+      // make sure to appropriately bind them to the target region that the
+      // parent is bound to. Necessary for the next implicit record member
+      // map step which depends on this canonicalization step. This step
+      // is executed again as the final step of this pass to maintain
+      // map to block argument consistency.
+      func->walk([&](mlir::omp::MapInfoOp op) {
+        mlir::Operation *targetUser = getFirstTargetUser(op);
+        assert(targetUser && "expected user of map operation was not found");
+        addImplicitMembersToTarget(op, builder, targetUser);
+      });
+
       // Next, walk `omp.map.info` ops to see if any record members should be
       // implicitly mapped.
       func->walk([&](mlir::omp::MapInfoOp op) {
@@ -1172,9 +1184,46 @@ class MapInfoFinalizationPass
         // this pass to support multiple users, as we may wish to have a map
         // be re-used by multiple users (e.g. across multiple targets that map
         // the variable and have identical map properties).
-        assert(llvm::hasSingleElement(op->getUsers()) &&
-               "OMPMapInfoFinalization currently only supports single users "
-               "of a MapInfoOp");
+        auto assertCheck = [&](mlir::omp::MapInfoOp op) {
+          if (llvm::hasSingleElement(op->getUsers()))
+            return true;
+
+          if (llvm::range_size(op->getUsers()) > 2)
+            return false;
+
+          // We only allow a TargetOp or MapInfoOp when we have multiple users
+          // for the moment.
+          bool targetUser = false;
+          for (auto *user : op->getUsers()) {
+            if (targetUser &&
+                !llvm::isa<
+                    mlir::omp::TargetOp, mlir::omp::TargetDataOp,
+                    mlir::omp::TargetUpdateOp, mlir::omp::TargetExitDataOp,
+                    mlir::omp::TargetEnterDataOp,
+                    mlir::omp::DeclareMapperInfoOp, mlir::omp::MapInfoOp>(user))
+              return false;
+
+            // We do not handle multiple target users currently.
+            if (targetUser &&
+                llvm::isa<mlir::omp::TargetDataOp, mlir::omp::TargetUpdateOp,
+                          mlir::omp::TargetExitDataOp,
+                          mlir::omp::TargetEnterDataOp>(user))
+              return false;
+
+            if (!targetUser)
+              targetUser =
+                  llvm::isa<mlir::omp::TargetDataOp, mlir::omp::TargetUpdateOp,
+                            mlir::omp::TargetExitDataOp,
+                            mlir::omp::TargetEnterDataOp>(user);
+          }
+
+          return true;
+        };
+
+        assert(assertCheck(op) &&
+               "OMPMapInfoFinalization currently only supports "
+               "single users or up to two users when those users"
+               "are a MapInfoOp and Target mapping directive");
 
         if (hasADescriptor(op.getVarPtr().getDefiningOp(),
                            fir::unwrapRefType(op.getVarType()))) {

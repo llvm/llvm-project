@@ -68,6 +68,7 @@ Using Clang as a Compiler
    APINotes
    DebuggingCoroutines
    AMDGPUSupport
+   RISCVSupport
    CXXTypeAwareAllocators
    CIR/index
    CommandGuide/index

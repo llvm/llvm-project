@@ -294,6 +294,8 @@ X86RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_FPEXT:
   case TargetOpcode::G_FPTRUNC:
   case TargetOpcode::G_FCONSTANT:
+  case TargetOpcode::G_FPEXTLOAD:
+  case TargetOpcode::G_FPTRUNCSTORE:
     // Instruction having only floating-point operands (all scalars in
     // VECRReg)
     getInstrPartialMappingIdxs(MI, MRI, /* isFP= */ true, OpRegBankIdx);

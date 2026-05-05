@@ -14,5 +14,7 @@ define i32 @main() {
 ; CHECK: Entering function: main
 ; CHECK-NEXT:   %p = call ptr @malloc(i64 4) => ptr 0x10 [p]
 ; CHECK-NEXT:   %p_oob = getelementptr i8, ptr %p, i64 8 => ptr 0x18 [p + 8]
-; CHECK-NEXT: Immediate UB detected: freeing a pointer that does not point to the start of an allocation.
+; CHECK-NEXT: Stacktrace:
+; CHECK-NEXT: #0   call void @free(ptr %p_oob) at @main
+; CHECK-NEXT: Immediate UB detected: freeing a pointer that does not point to the start of an allocation. Pointer address: 0x18, allocation base: 0x10.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

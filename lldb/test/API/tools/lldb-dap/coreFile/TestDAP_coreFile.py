@@ -77,6 +77,37 @@ class TestDAP_coreFile(lldbdap_testcase.DAPTestCaseBase):
         self.assertEqual(error_msg, "Failed to create the process")
 
     @skipIfLLVMTargetMissing("X86")
+    def test_core_file_stopped_reason(self):
+        """Test that the stopped event for a core file reports the actual crash
+        reason (e.g. 'exception') rather than 'entry'."""
+        current_dir = os.path.dirname(__file__)
+        exe_file = os.path.join(current_dir, "linux-x86_64.out")
+        core_file = os.path.join(current_dir, "linux-x86_64.core")
+
+        self.create_debug_adapter()
+        self.attach(program=exe_file, coreFile=core_file)
+        self.dap_server.request_configurationDone()
+        self.dap_server.wait_for_stopped()
+
+        # Core files should report the actual crash reason, not 'entry'.
+        stop_reasons = self.dap_server.thread_stop_reasons
+        self.assertGreater(len(stop_reasons), 0, "Expected at least one stopped thread")
+
+        # Find any thread with a stop reason — the crashing thread should
+        # report 'exception' with a description about the signal.
+        found_exception = False
+        for tid, body in stop_reasons.items():
+            if body.get("reason") == "exception":
+                found_exception = True
+                self.assertIn("description", body)
+                break
+        self.assertTrue(
+            found_exception,
+            f"Expected at least one thread with stop reason 'exception', "
+            f"got: {stop_reasons}",
+        )
+
+    @skipIfLLVMTargetMissing("X86")
     def test_core_file_source_mapping_array(self):
         """Test that sourceMap property is correctly applied when loading a core"""
         current_dir = os.path.dirname(__file__)

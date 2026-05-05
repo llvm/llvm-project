@@ -291,20 +291,6 @@ uint64_t test_vcvtph_u64_f16 (float16_t a) {
   return vcvtph_u64_f16(a);
 }
 
-// CHECK-LABEL: test_vrecpeh_f16
-// CHECK: [[VREC:%.*]] = call half @llvm.aarch64.neon.frecpe.f16(half %a)
-// CHECK: ret half [[VREC]]
-float16_t test_vrecpeh_f16(float16_t a) {
-  return vrecpeh_f16(a);
-}
-
-// CHECK-LABEL: test_vrecpxh_f16
-// CHECK: [[VREC:%.*]] = call half @llvm.aarch64.neon.frecpx.f16(half %a)
-// CHECK: ret half [[VREC]]
-float16_t test_vrecpxh_f16(float16_t a) {
-  return vrecpxh_f16(a);
-}
-
 // CHECK-LABEL: test_vrndh_f16
 // CHECK:  [[RND:%.*]] =  call half @llvm.trunc.f16(half %a)
 // CHECK:  ret half [[RND]]
@@ -354,25 +340,11 @@ float16_t test_vrndxh_f16(float16_t a) {
   return vrndxh_f16(a);
 }
 
-// CHECK-LABEL: test_vrsqrteh_f16
-// CHECK:  [[RND:%.*]] = call half @llvm.aarch64.neon.frsqrte.f16(half %a)
-// CHECK:  ret half [[RND]]
-float16_t test_vrsqrteh_f16(float16_t a) {
-  return vrsqrteh_f16(a);
-}
-
 // CHECK-LABEL: test_vsqrth_f16
 // CHECK:  [[SQR:%.*]] = call half @llvm.sqrt.f16(half %a)
 // CHECK:  ret half [[SQR]]
 float16_t test_vsqrth_f16(float16_t a) {
   return vsqrth_f16(a);
-}
-
-// CHECK-LABEL: test_vabdh_f16
-// CHECK:  [[ABD:%.*]] = call half @llvm.aarch64.sisd.fabd.f16(half %a, half %b)
-// CHECK:  ret half [[ABD]]
-float16_t test_vabdh_f16(float16_t a, float16_t b) {
-  return vabdh_f16(a, b);
 }
 
 // CHECK-LABEL: test_vcageh_f16
@@ -575,11 +547,4 @@ float16_t test_vmulxh_f16(float16_t a, float16_t b) {
 // CHECK: ret half [[RECPS]]
 float16_t test_vrecpsh_f16(float16_t a, float16_t b) {
   return vrecpsh_f16(a, b);
-}
-
-// CHECK-LABEL: test_vrsqrtsh_f16
-// CHECK:  [[RSQRTS:%.*]] = call half @llvm.aarch64.neon.frsqrts.f16(half %a, half %b)
-// CHECK:  ret half [[RSQRTS]]
-float16_t test_vrsqrtsh_f16(float16_t a, float16_t b) {
-  return vrsqrtsh_f16(a, b);
 }

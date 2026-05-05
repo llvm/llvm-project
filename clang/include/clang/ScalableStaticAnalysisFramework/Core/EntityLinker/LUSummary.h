@@ -48,6 +48,8 @@ class LUSummary {
 public:
   explicit LUSummary(NestedBuildNamespace LUNamespace)
       : LUNamespace(std::move(LUNamespace)) {}
+
+  const NestedBuildNamespace &getNamespace() const { return LUNamespace; }
 };
 
 } // namespace clang::ssaf

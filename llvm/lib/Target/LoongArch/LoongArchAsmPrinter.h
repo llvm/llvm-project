@@ -31,7 +31,8 @@ private:
 public:
   explicit LoongArchAsmPrinter(TargetMachine &TM,
                                std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer), ID), STI(TM.getMCSubtargetInfo()) {}
+      : AsmPrinter(TM, std::move(Streamer), ID), STI(&TM.getMCSubtargetInfo()) {
+  }
 
   StringRef getPassName() const override {
     return "LoongArch Assembly Printer";

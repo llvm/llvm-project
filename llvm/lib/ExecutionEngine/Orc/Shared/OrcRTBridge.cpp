@@ -85,11 +85,11 @@ const char *RunAsIntFunctionWrapperName =
 
 const SimpleExecutorMemoryManagerSymbolNames
     orc_rt_SimpleNativeMemoryMapSPSSymbols = {
-        "orc_rt_SimpleNativeMemoryMap_Instance",
-        "orc_rt_SimpleNativeMemoryMap_reserve_sps_wrapper",
-        "orc_rt_SimpleNativeMemoryMap_initialize_sps_wrapper",
-        "orc_rt_SimpleNativeMemoryMap_deinitializeMultiple_sps_wrapper",
-        "orc_rt_SimpleNativeMemoryMap_releaseMultiple_sps_wrapper",
+        "orc_rt_ci_SimpleNativeMemoryMap_Instance",
+        "orc_rt_ci_sps_SimpleNativeMemoryMap_reserve",
+        "orc_rt_ci_sps_SimpleNativeMemoryMap_initialize",
+        "orc_rt_ci_sps_SimpleNativeMemoryMap_deinitializeMultiple",
+        "orc_rt_ci_sps_SimpleNativeMemoryMap_releaseMultiple",
 };
 
 } // end namespace rt

@@ -514,11 +514,10 @@ SourceLocation PathDiagnosticLocation::getValidSourceLocation(
 }
 
 static PathDiagnosticLocation
-getLocationForCaller(const StackFrameContext *SFC,
-                     const LocationContext *CallerCtx,
+getLocationForCaller(const StackFrame *SF, const LocationContext *CallerCtx,
                      const SourceManager &SM) {
-  const CFGBlock &Block = *SFC->getCallSiteBlock();
-  CFGElement Source = Block[SFC->getIndex()];
+  const CFGBlock &Block = *SF->getCallSiteBlock();
+  CFGElement Source = Block[SF->getIndex()];
 
   switch (Source.getKind()) {
   case CFGElement::Statement:
@@ -866,11 +865,11 @@ PathDiagnosticCallPiece::construct(PathPieces &path,
 
 void PathDiagnosticCallPiece::setCallee(const CallEnter &CE,
                                         const SourceManager &SM) {
-  const StackFrameContext *CalleeCtx = CE.getCalleeContext();
-  Callee = CalleeCtx->getDecl();
+  const StackFrame *CalleeSF = CE.getCalleeContext();
+  Callee = CalleeSF->getDecl();
 
   callEnterWithin = PathDiagnosticLocation::createBegin(Callee, SM);
-  callEnter = getLocationForCaller(CalleeCtx, CE.getLocationContext(), SM);
+  callEnter = getLocationForCaller(CalleeSF, CE.getLocationContext(), SM);
 
   // Autosynthesized property accessors are special because we'd never
   // pop back up to non-autosynthesized code until we leave them.
@@ -879,9 +878,9 @@ void PathDiagnosticCallPiece::setCallee(const CallEnter &CE,
   // Unless set here, the IsCalleeAnAutosynthesizedPropertyAccessor flag
   // defaults to false.
   if (const auto *MD = dyn_cast<ObjCMethodDecl>(Callee))
-    IsCalleeAnAutosynthesizedPropertyAccessor = (
-        MD->isPropertyAccessor() &&
-        CalleeCtx->getAnalysisDeclContext()->isBodyAutosynthesized());
+    IsCalleeAnAutosynthesizedPropertyAccessor =
+        (MD->isPropertyAccessor() &&
+         CalleeSF->getAnalysisDeclContext()->isBodyAutosynthesized());
 }
 
 static void describeTemplateParameters(raw_ostream &Out,

@@ -286,9 +286,9 @@ define i32 @pr190962(ptr %a, ptr %b, ptr %c, i64 %d, i64 %e, i64 %f) nounwind {
 ; CHECK-NEXT:    movq %r9, %rdi
 ; CHECK-NEXT:    movq %rdx, %rbx
 ; CHECK-NEXT:    movq %rcx, %rsi
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r14
 ; CHECK-NEXT:    callq f2
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    imulq {{[0-9]+}}(%rsp), %rax
+; CHECK-NEXT:    imulq %rdi, %r14, %rax
 ; CHECK-NEXT:    testq %rax, %rax
 ; CHECK-NEXT:    je .LBB3_3
 ; CHECK-NEXT:  # %bb.1: # %l1

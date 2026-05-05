@@ -63,6 +63,7 @@
     "watch": "npm run bundle-webview && tsc -watch -p ./",
     "format": "npx prettier . --write",
     "package": "rm -rf ./out && vsce package --out ./out/lldb-dap.vsix",
+    "compile-debug": "npm run bundle-webview && npx esbuild src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node --target=node22 --sourcemap",
     "compile": "tsc -p ./",
     "publish": "vsce publish",
     "publish-ovsx": "ovsx publish",

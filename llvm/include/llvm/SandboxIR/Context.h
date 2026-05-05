@@ -240,7 +240,7 @@ protected:
 
 public:
   LLVM_ABI Context(LLVMContext &LLVMCtx);
-  LLVM_ABI ~Context();
+  LLVM_ABI virtual ~Context();
   /// Clears function-level state.
   LLVM_ABI void clear();
 

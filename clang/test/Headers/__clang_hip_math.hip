@@ -712,6 +712,7 @@ extern "C" __device__ float test_asinhf(float x) {
   return asinhf(x);
 }
 
+//
 // DEFAULT-LABEL: define dso_local noundef double @test_asinh(
 // DEFAULT-SAME: double noundef [[X:%.*]]) local_unnamed_addr #[[ATTR5]] {
 // DEFAULT-NEXT:  [[ENTRY:.*:]]
@@ -2455,7 +2456,7 @@ extern "C" __device__ double test_fmod(double x, double y) {
 // DEFAULT-NEXT:    [[TMP2:%.*]] = extractvalue { float, i32 } [[TMP0]], 0
 // DEFAULT-NEXT:    ret float [[TMP2]]
 //
-// FINITEONLY-LABEL: define dso_local noundef nofpclass(nan inf) float @test_frexpf(
+// FINITEONLY-LABEL: define dso_local nofpclass(nan inf) float @test_frexpf(
 // FINITEONLY-SAME: float noundef nofpclass(nan inf) [[X:%.*]], ptr noundef writeonly captures(none) initializes((0, 4)) [[Y:%.*]]) local_unnamed_addr #[[ATTR7:[0-9]+]] {
 // FINITEONLY-NEXT:  [[ENTRY:.*:]]
 // FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call { float, i32 } @llvm.frexp.f32.i32(float nofpclass(nan inf) [[X]])
@@ -2504,7 +2505,7 @@ extern "C" __device__ float test_frexpf(float x, int* y) {
 // DEFAULT-NEXT:    [[TMP2:%.*]] = extractvalue { double, i32 } [[TMP0]], 0
 // DEFAULT-NEXT:    ret double [[TMP2]]
 //
-// FINITEONLY-LABEL: define dso_local noundef nofpclass(nan inf) double @test_frexp(
+// FINITEONLY-LABEL: define dso_local nofpclass(nan inf) double @test_frexp(
 // FINITEONLY-SAME: double noundef nofpclass(nan inf) [[X:%.*]], ptr noundef writeonly captures(none) initializes((0, 4)) [[Y:%.*]]) local_unnamed_addr #[[ATTR7]] {
 // FINITEONLY-NEXT:  [[ENTRY:.*:]]
 // FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call { double, i32 } @llvm.frexp.f64.i32(double nofpclass(nan inf) [[X]])

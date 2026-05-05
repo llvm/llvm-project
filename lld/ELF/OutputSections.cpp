@@ -536,12 +536,6 @@ void OutputSection::writeTo(Ctx &ctx, uint8_t *buf, parallel::TaskGroup &tg) {
   if (nonZeroFiller)
     fill(buf, sections.empty() ? size : sections[0]->outSecOff, filler);
 
-  if (type == SHT_CREL && !(flags & SHF_ALLOC)) {
-    buf += encodeULEB128(crelHeader, buf);
-    memcpy(buf, crelBody.data(), crelBody.size());
-    return;
-  }
-
   auto fn = [=, &ctx](size_t begin, size_t end) {
     size_t numSections = sections.size();
     for (size_t i = begin; i != end; ++i) {

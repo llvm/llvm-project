@@ -29,12 +29,14 @@ for.body:
 !1 = !DIFile(filename: "repro.c", directory: "/")
 !2 = !{i32 2, !"Debug Info Version", i32 3}
 !3 = !DILocalVariable(name: "s0", scope: !4)
-!4 = distinct !DISubprogram(name: "foo", scope: !1, unit: !0)
+!4 = distinct !DISubprogram(name: "foo", scope: !1, unit: !0, type: !6)
 !5 = !DILocation(line: 0, scope: !4)
 ;.
 ; CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C11, file: [[META1:![0-9]+]], isOptimized: false, runtimeVersion: 0, emissionKind: NoDebug)
 ; CHECK: [[META1]] = !DIFile(filename: "repro.c", directory: {{.*}})
 ; CHECK: [[META3]] = !DILocalVariable(name: "s0", scope: [[META4:![0-9]+]])
-; CHECK: [[META4]] = distinct !DISubprogram(name: "foo", scope: [[META1]], spFlags: DISPFlagDefinition, unit: [[META0]])
+; CHECK: [[META4]] = distinct !DISubprogram(name: "foo", scope: [[META1]], type: [[TYPE:![0-9]+]], spFlags: DISPFlagDefinition, unit: [[META0]])
 ; CHECK: [[META5]] = !DILocation(line: 0, scope: [[META4]])
 ;.
+!6 = !DISubroutineType(types: !7)
+!7 = !{null}

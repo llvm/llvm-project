@@ -325,6 +325,9 @@ def GetPtrLocal : OffsetOpcode {
 def GetRefLocal : OffsetOpcode {
   bit HasCustomEval = 1;
 }
+
+def CheckRefInit : Opcode {}
+
 // [] -> [Pointer]
 def GetPtrParam : OffsetOpcode;
 // [] -> [Pointer]

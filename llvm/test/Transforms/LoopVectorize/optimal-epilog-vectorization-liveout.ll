@@ -144,8 +144,8 @@ define i64 @test_non_unit_stride_iv_live_out(ptr %dst, i64 %N) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
 ; CHECK-NEXT:    [[IND_ESCAPE:%.*]] = sub i64 [[TMP3]], 2
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 2
@@ -168,8 +168,8 @@ define i64 @test_non_unit_stride_iv_live_out(ptr %dst, i64 %N) {
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT5]], [[N_VEC3]]
 ; CHECK-NEXT:    br i1 [[TMP17]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[CMP_N6:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC3]]
 ; CHECK-NEXT:    [[IND_ESCAPE7:%.*]] = sub i64 [[TMP12]], 2
+; CHECK-NEXT:    [[CMP_N6:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC3]]
 ; CHECK-NEXT:    br i1 [[CMP_N6]], label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL8:%.*]] = phi i64 [ [[TMP12]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP3]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
@@ -248,8 +248,8 @@ define ptr @test_ptr_iv_live_out(ptr %start, ptr %end, ptr %dst) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; CHECK-NEXT:    [[IND_ESCAPE:%.*]] = getelementptr i8, ptr [[TMP10]], i64 -4
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 2
@@ -272,8 +272,8 @@ define ptr @test_ptr_iv_live_out(ptr %start, ptr %end, ptr %dst) {
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT12]], [[N_VEC8]]
 ; CHECK-NEXT:    br i1 [[TMP17]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[CMP_N13:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC8]]
 ; CHECK-NEXT:    [[IND_ESCAPE14:%.*]] = getelementptr i8, ptr [[TMP14]], i64 -4
+; CHECK-NEXT:    [[CMP_N13:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC8]]
 ; CHECK-NEXT:    br i1 [[CMP_N13]], label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL15:%.*]] = phi i64 [ [[N_VEC8]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[ITER_CHECK]] ]
@@ -337,8 +337,8 @@ define i32 @test_both_iv_and_iv_next_live_out(ptr %dst, i64 %N, i32 %start) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[UMAX]], [[N_VEC]]
 ; CHECK-NEXT:    [[IND_ESCAPE:%.*]] = sub i32 [[TMP0]], 1
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[UMAX]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 2
@@ -358,8 +358,8 @@ define i32 @test_both_iv_and_iv_next_live_out(ptr %dst, i64 %N, i32 %start) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT6]], [[N_VEC3]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[CMP_N7:%.*]] = icmp eq i64 [[UMAX]], [[N_VEC3]]
 ; CHECK-NEXT:    [[IND_ESCAPE8:%.*]] = sub i32 [[TMP3]], 1
+; CHECK-NEXT:    [[CMP_N7:%.*]] = icmp eq i64 [[UMAX]], [[N_VEC3]]
 ; CHECK-NEXT:    br i1 [[CMP_N7]], label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL8:%.*]] = phi i64 [ [[N_VEC3]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
@@ -430,9 +430,9 @@ define double @test_multiple_iv_live_outs(ptr %dst, i64 %N, i64 %i, i64 %start) 
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[UMAX]], [[N_VEC]]
 ; CHECK-NEXT:    [[IND_ESCAPE:%.*]] = sub i64 [[TMP1]], [[I]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = fsub fast double [[TMP3]], 2.500000e+00
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[UMAX]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 2
@@ -461,9 +461,9 @@ define double @test_multiple_iv_live_outs(ptr %dst, i64 %N, i64 %i, i64 %start) 
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT8]], [[N_VEC4]]
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[CMP_N10:%.*]] = icmp eq i64 [[UMAX]], [[N_VEC4]]
 ; CHECK-NEXT:    [[IND_ESCAPE11:%.*]] = sub i64 [[TMP8]], [[I]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = fsub fast double [[TMP10]], 2.500000e+00
+; CHECK-NEXT:    [[CMP_N10:%.*]] = icmp eq i64 [[UMAX]], [[N_VEC4]]
 ; CHECK-NEXT:    br i1 [[CMP_N10]], label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL11:%.*]] = phi i64 [ [[N_VEC4]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]

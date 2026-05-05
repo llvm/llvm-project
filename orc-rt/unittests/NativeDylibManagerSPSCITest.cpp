@@ -51,7 +51,7 @@ protected:
   void spsLoad(OnCompleteFn &&OnComplete, std::string Path) {
     using SPSSig = SPSExpected<SPSExecutorAddr>(SPSExecutorAddr, SPSString);
     SPSWrapperFunction<SPSSig>::call(
-        caller("orc_rt_sps_ci_NativeDylibManager_load_sps_wrapper"),
+        caller("orc_rt_ci_sps_NativeDylibManager_load"),
         std::forward<OnCompleteFn>(OnComplete), NDM.get(), std::move(Path));
   }
 
@@ -59,7 +59,7 @@ protected:
   void spsUnload(OnCompleteFn &&OnComplete, void *Handle) {
     using SPSSig = SPSError(SPSExecutorAddr, SPSExecutorAddr);
     SPSWrapperFunction<SPSSig>::call(
-        caller("orc_rt_sps_ci_NativeDylibManager_unload_sps_wrapper"),
+        caller("orc_rt_ci_sps_NativeDylibManager_unload"),
         std::forward<OnCompleteFn>(OnComplete), NDM.get(), Handle);
   }
 
@@ -69,7 +69,7 @@ protected:
     using SPSSig = SPSExpected<SPSSequence<SPSExecutorAddr>>(
         SPSExecutorAddr, SPSExecutorAddr, SPSSequence<SPSString>);
     SPSWrapperFunction<SPSSig>::call(
-        caller("orc_rt_sps_ci_NativeDylibManager_lookup_sps_wrapper"),
+        caller("orc_rt_ci_sps_NativeDylibManager_lookup"),
         std::forward<OnCompleteFn>(OnComplete), NDM.get(), Handle,
         std::move(Names));
   }
@@ -80,9 +80,9 @@ protected:
 };
 
 TEST_F(NativeDylibManagerSPSCITest, Registration) {
-  EXPECT_TRUE(CI.count("orc_rt_sps_ci_NativeDylibManager_load_sps_wrapper"));
-  EXPECT_TRUE(CI.count("orc_rt_sps_ci_NativeDylibManager_unload_sps_wrapper"));
-  EXPECT_TRUE(CI.count("orc_rt_sps_ci_NativeDylibManager_lookup_sps_wrapper"));
+  EXPECT_TRUE(CI.count("orc_rt_ci_sps_NativeDylibManager_load"));
+  EXPECT_TRUE(CI.count("orc_rt_ci_sps_NativeDylibManager_unload"));
+  EXPECT_TRUE(CI.count("orc_rt_ci_sps_NativeDylibManager_lookup"));
 }
 
 TEST_F(NativeDylibManagerSPSCITest, LoadAndUnload) {

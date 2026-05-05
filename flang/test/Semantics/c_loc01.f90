@@ -48,6 +48,8 @@ module m
     cp = c_loc(ch(1:1)) ! ok
     cp = c_loc(deferred) ! ok
     cp = c_loc(p2ch) ! ok
+    !ERROR: alternate return specification may not appear on function reference
+666 cp = c_loc(*666)
     !ERROR: PRIVATE name '__address' is accessible only within module '__fortran_builtins'
     cp = c_ptr(0)
     !ERROR: PRIVATE name '__address' is accessible only within module '__fortran_builtins'

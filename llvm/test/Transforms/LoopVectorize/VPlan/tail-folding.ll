@@ -31,8 +31,6 @@ define i32 @live_out(ptr noalias %p, i32 %n) {
 ; CHECK-NEXT:      EMIT-SCALAR ir<%x> = load ir<%gep>
 ; CHECK-NEXT:      EMIT ir<%y> = add ir<%x>, ir<1>
 ; CHECK-NEXT:      EMIT store ir<%y>, ir<%gep>
-; CHECK-NEXT:      EMIT ir<%iv.next> = add ir<%iv>, ir<1>
-; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<%n>
 ; CHECK-NEXT:    Successor(s): vector.latch
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.latch:
@@ -126,8 +124,6 @@ define i32 @conditional_live_out(ptr noalias %p, i32 %n, i1 %c) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    latch:
 ; CHECK-NEXT:      EMIT-SCALAR ir<%phi> = phi [ ir<%y>, if ], [ ir<0>, vector.body.split ]
-; CHECK-NEXT:      EMIT ir<%iv.next> = add ir<%iv>, ir<1>
-; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<%n>
 ; CHECK-NEXT:    Successor(s): vector.latch
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.latch:
@@ -213,8 +209,6 @@ define void @header_unconditional_branch(ptr noalias %p, i32 %n) {
 ; CHECK-NEXT:    Successor(s): latch
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    latch:
-; CHECK-NEXT:      EMIT ir<%iv.next> = add ir<%iv>, ir<1>
-; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<%n>
 ; CHECK-NEXT:    Successor(s): vector.latch
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.latch:
@@ -287,8 +281,6 @@ define i32 @reduction(ptr noalias %p, i32 %n) {
 ; CHECK-NEXT:      EMIT ir<%gep> = getelementptr ir<%p>, ir<%iv>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%x> = load ir<%gep>
 ; CHECK-NEXT:      EMIT ir<%rdx.next> = add ir<%rdx>, ir<%x>
-; CHECK-NEXT:      EMIT ir<%iv.next> = add ir<%iv>, ir<1>
-; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<%n>
 ; CHECK-NEXT:    Successor(s): vector.latch
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.latch:

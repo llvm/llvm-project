@@ -170,6 +170,29 @@ public:
   ExplodedNode *makeNode(const ProgramPoint &Loc, ProgramStateRef State,
                          ExplodedNode *Pred, bool MarkAsSink = false) const;
 
+  ExplodedNode *makePostStmtNode(const Stmt *S, ProgramStateRef State,
+                                 ExplodedNode *Pred,
+                                 bool MarkAsSink = false) const {
+    PostStmt Loc(S, Pred->getLocationContext(), /*tag=*/nullptr);
+    return makeNode(Loc, State, Pred, MarkAsSink);
+  }
+
+  ExplodedNode *
+  makeNodeWithBinding(ExplodedNode *Pred, const Expr *E, SVal V,
+                      ProgramStateRef State,
+                      ProgramPoint::Kind K = ProgramPoint::PostStmtKind) const {
+    const LocationContext *LC = Pred->getLocationContext();
+    State = State->BindExpr(E, LC, V);
+    const auto &L = ProgramPoint::getProgramPoint(E, K, LC, /*tag=*/nullptr);
+    return makeNode(L, State, Pred);
+  }
+
+  ExplodedNode *
+  makeNodeWithBinding(ExplodedNode *Pred, const Expr *E, SVal V,
+                      ProgramPoint::Kind K = ProgramPoint::PostStmtKind) const {
+    return makeNodeWithBinding(Pred, E, V, Pred->getState(), K);
+  }
+
   /// Enqueue the given set of nodes onto the work list.
   void enqueue(ExplodedNodeSet &Set);
 

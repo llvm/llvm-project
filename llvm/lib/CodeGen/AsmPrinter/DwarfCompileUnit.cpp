@@ -344,7 +344,7 @@ void DwarfCompileUnit::addLocationAttribute(
         // Base register
         Register BaseReg = Asm->getObjFileLowering().getStaticBase();
         unsigned DwarfBaseReg =
-            Asm->TM.getMCRegisterInfo()->getDwarfRegNum(BaseReg, false);
+            Asm->TM.getMCRegisterInfo().getDwarfRegNum(BaseReg, false);
         addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_breg0 + DwarfBaseReg);
         // Offset from base register
         addSInt(*Loc, dwarf::DW_FORM_sdata, 0);

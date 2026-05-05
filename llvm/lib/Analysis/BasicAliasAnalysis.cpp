@@ -1640,10 +1640,10 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
   // Null values in the default address space don't point to any object, so they
   // don't alias any other pointer.
   if (const ConstantPointerNull *CPN = dyn_cast<ConstantPointerNull>(O1))
-    if (!NullPointerIsDefined(&F, CPN->getType()->getAddressSpace()))
+    if (!NullPointerIsDefined(&F, CPN->getPointerType()->getAddressSpace()))
       return AliasResult::NoAlias;
   if (const ConstantPointerNull *CPN = dyn_cast<ConstantPointerNull>(O2))
-    if (!NullPointerIsDefined(&F, CPN->getType()->getAddressSpace()))
+    if (!NullPointerIsDefined(&F, CPN->getPointerType()->getAddressSpace()))
       return AliasResult::NoAlias;
 
   if (O1 != O2) {

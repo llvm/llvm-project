@@ -30,11 +30,13 @@ lpad:
   ret void
 }
 
+!7 = !{null}
+!8 = !DISubroutineType(types: !7)
 !llvm.module.flags = !{!1}
 !llvm.dbg.cu = !{!5}
 
 !1 = !{i32 2, !"Debug Info Version", i32 3}
-!2 = distinct !DISubprogram(unit: !5)
+!2 = distinct !DISubprogram(type: !8, unit: !5)
 !3 = !DILocation(line: 1, scope: !2)
 !4 = !DILocation(line: 2, scope: !2)
 !5 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang",

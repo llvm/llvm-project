@@ -8,7 +8,7 @@ void test(void) {
 }
 
 // CHECK: TranslationUnitDecl {{.*}} <<invalid sloc>> <invalid sloc>
-// CHECK: `-FunctionDecl {{.*}} <{{.*}}ast-dump-openmp-cancellation-point.c:3:1, line:8:1> line:3:6 test 'void (void)'
+// CHECK: `-FunctionDecl {{.*}} <{{.*}}ast-dump-openmp-cancellation-point.c:3:1, line:8:1> line:3:6 test 'void (void)' external-linkage
 // CHECK-NEXT:   `-CompoundStmt {{.*}} <col:17, line:8:1>
 // CHECK-NEXT:     `-OMPParallelDirective {{.*}} <line:4:1, col:21>
 // CHECK-NEXT:       `-CapturedStmt {{.*}} <line:5:3, line:7:3>

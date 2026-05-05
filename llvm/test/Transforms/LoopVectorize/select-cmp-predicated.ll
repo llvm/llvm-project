@@ -21,8 +21,7 @@ define i32 @pred_select_const_i32_from_icmp(ptr noalias nocapture readonly %src1
 ; CHECK-VF2IC1-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP4]], i64 0
 ; CHECK-VF2IC1-NEXT:    br i1 [[TMP5]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
 ; CHECK-VF2IC1:       [[PRED_LOAD_IF]]:
-; CHECK-VF2IC1-NEXT:    [[TMP19:%.*]] = add i64 [[TMP0]], 0
-; CHECK-VF2IC1-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[SRC2]], i64 [[TMP19]]
+; CHECK-VF2IC1-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[SRC2]], i64 [[TMP0]]
 ; CHECK-VF2IC1-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP6]], align 4
 ; CHECK-VF2IC1-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> poison, i32 [[TMP7]], i64 0
 ; CHECK-VF2IC1-NEXT:    br label %[[PRED_LOAD_CONTINUE]]

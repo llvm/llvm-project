@@ -22,11 +22,7 @@ void call_virtual_fn_in_cleanup_scope() {
 // CIR:   cir.call @_ZN1BC2Ev(%[[B]])
 // CIR:   cir.cleanup.scope {
 // CIR:     %[[C_LITERAL:.*]] = cir.const #cir.int<99> : !s8i
-// CIR:     %[[VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[B]] : !cir.ptr<!rec_B> -> !cir.ptr<!cir.vptr>
-// CIR:     %[[VPTR:.*]] = cir.load{{.*}} %[[VPTR_ADDR]]
-// CIR:     %[[FN_PTR_ADDR:.*]] = cir.vtable.get_virtual_fn_addr %[[VPTR]][0] : !cir.vptr -> !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_B>, !s8i)>>>
-// CIR:     %[[FN_PTR:.*]] = cir.load{{.*}} %[[FN_PTR_ADDR:.*]] : !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_B>, !s8i)>>>, !cir.ptr<!cir.func<(!cir.ptr<!rec_B>, !s8i)>>
-// CIR:     cir.call %[[FN_PTR]](%[[B]], %[[C_LITERAL]]) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_B>, !s8i)>>, !cir.ptr<!rec_B> {{.*}}, !s8i {{.*}}) -> ()
+// CIR:     cir.call @_ZN1B1fEc(%[[B]], %[[C_LITERAL]]) : (!cir.ptr<!rec_B> {{.*}}, !s8i {{.*}}) -> ()
 // CIR:     cir.yield
 // CIR:   } cleanup  all {
 // CIR:     cir.call @_ZN1BD1Ev(%[[B]]) nothrow : (!cir.ptr<!rec_B> {{.*}}) -> ()
@@ -39,11 +35,7 @@ void call_virtual_fn_in_cleanup_scope() {
 // CIR-FLAT:   cir.br ^[[CLEANUP_SCOPE:bb[0-9]+]]
 // CIR-FLAT: ^[[CLEANUP_SCOPE]]:
 // CIR-FLAT:   %[[C_LITERAL:.*]] = cir.const #cir.int<99> : !s8i
-// CIR-FLAT:   %[[VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[B]] : !cir.ptr<!rec_B> -> !cir.ptr<!cir.vptr>
-// CIR-FLAT:   %[[VPTR:.*]] = cir.load{{.*}} %[[VPTR_ADDR]]
-// CIR-FLAT:   %[[FN_PTR_ADDR:.*]] = cir.vtable.get_virtual_fn_addr %[[VPTR]][0] : !cir.vptr -> !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_B>, !s8i)>>>
-// CIR-FLAT:   %[[FN_PTR:.*]] = cir.load{{.*}} %[[FN_PTR_ADDR:.*]] : !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_B>, !s8i)>>>, !cir.ptr<!cir.func<(!cir.ptr<!rec_B>, !s8i)>>
-// CIR-FLAT:   cir.try_call %[[FN_PTR]](%[[B]], %[[C_LITERAL]]) ^[[NORMAL:bb[0-9]+]], ^[[UNWIND:bb[0-9]+]] : (!cir.ptr<!cir.func<(!cir.ptr<!rec_B>, !s8i)>>, !cir.ptr<!rec_B> {{.*}}, !s8i {{.*}}) -> ()
+// CIR-FLAT:   cir.try_call @_ZN1B1fEc(%[[B]], %[[C_LITERAL]]) ^[[NORMAL:bb[0-9]+]], ^[[UNWIND:bb[0-9]+]] : (!cir.ptr<!rec_B> {{.*}}, !s8i {{.*}}) -> ()
 // CIR-FLAT: ^[[NORMAL]]:  // pred: ^bb1
 // CIR-FLAT:   cir.br ^[[NORMAL_CLEANUP:bb[0-9]+]]
 // CIR-FLAT: ^[[NORMAL_CLEANUP]]:
@@ -67,10 +59,7 @@ void call_virtual_fn_in_cleanup_scope() {
 // LLVM:   call void @_ZN1BC2Ev(ptr {{.*}} %[[B]])
 // LLVM:   br label %[[CLEANUP_SCOPE:.*]]
 // LLVM: [[CLEANUP_SCOPE]]:
-// LLVM:   %[[B_VPTR:.*]] = load ptr, ptr %[[B]]
-// LLVM:   %[[FN_PTR_ADDR:.*]] = getelementptr inbounds ptr, ptr %[[B_VPTR]], i32 0
-// LLVM:   %[[FN_PTR:.*]] = load ptr, ptr %[[FN_PTR_ADDR]]
-// LLVM:   invoke void %[[FN_PTR]](ptr {{.*}} %[[B]], i8 {{.*}} 99)
+// LLVM:   invoke void @_ZN1B1fEc(ptr {{.*}} %[[B]], i8 noundef 99)
 // LLVM:           to label %[[NORMAL_CONTINUE:.*]] unwind label %[[UNWIND:.*]]
 // LLVM: [[NORMAL_CONTINUE]]
 // LLVM:   br label %[[NORMAL_CLEANUP:.*]]
@@ -95,7 +84,6 @@ void call_virtual_fn_in_cleanup_scope() {
 // LLVM: [[DONE]]:
 // LLVM:   ret void
 
-// Note: OGCG devirtualizes the call. We don't do that yet in CIR.
 // OGCG: define {{.*}} void @_Z32call_virtual_fn_in_cleanup_scopev()
 // OGCG:   %[[B:.*]] = alloca %struct.B, align 8
 // OGCG:   %[[EXN_SLOT:.*]] = alloca ptr

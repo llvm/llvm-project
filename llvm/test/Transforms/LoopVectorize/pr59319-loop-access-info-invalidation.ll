@@ -20,8 +20,8 @@ define void @reduced(ptr %0, ptr %1, i64 %iv, ptr %2, i64 %iv76, i64 %iv93) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[IND_END]]
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[IND_END]]
 ; CHECK-NEXT:    [[IND_ESCAPE:%.*]] = sub i64 [[IND_END]], 1
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[IND_END]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[LOOP_2_PREHEADER:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i64 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]

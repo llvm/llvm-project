@@ -830,7 +830,9 @@ bool matchScalarizeVectorUnmerge(MachineInstr &MI, MachineRegisterInfo &MRI) {
   if (SrcTy.getSizeInBits() != 128 && SrcTy.getSizeInBits() != 64)
     return false;
   return SrcTy.isVector() && !SrcTy.isScalable() &&
-         Unmerge.getNumOperands() == (unsigned)SrcTy.getNumElements() + 1;
+         (Unmerge.getNumOperands() == (unsigned)SrcTy.getNumElements() + 1 ||
+          (Unmerge.getNumDefs() == 2 && SrcTy.getSizeInBits() == 128 &&
+           MRI.getType(Unmerge.getReg(0)).getSizeInBits() == 64));
 }
 
 void applyScalarizeVectorUnmerge(MachineInstr &MI, MachineRegisterInfo &MRI,
@@ -838,15 +840,27 @@ void applyScalarizeVectorUnmerge(MachineInstr &MI, MachineRegisterInfo &MRI,
   auto &Unmerge = cast<GUnmerge>(MI);
   Register Src1Reg = Unmerge.getReg(Unmerge.getNumOperands() - 1);
   const LLT SrcTy = MRI.getType(Src1Reg);
+  const LLT DstTy = MRI.getType(Unmerge.getReg(0));
   assert((SrcTy.isVector() && !SrcTy.isScalable()) &&
          "Expected a fixed length vector");
 
-  for (int I = 0; I < SrcTy.getNumElements(); ++I)
-    B.buildExtractVectorElementConstant(Unmerge.getReg(I), Src1Reg, I);
+  if (DstTy.isVector()) {
+    assert(Unmerge.getNumDefs() == 2);
+    if (!MRI.use_nodbg_empty(Unmerge.getReg(0)))
+      B.buildExtractSubvector(Unmerge.getReg(0), Src1Reg, 0);
+    if (!MRI.use_nodbg_empty(Unmerge.getReg(1)))
+      B.buildExtractSubvector(Unmerge.getReg(1), Src1Reg,
+                              SrcTy.getNumElements() / 2);
+  } else {
+    for (int I = 0; I < SrcTy.getNumElements(); ++I)
+      if (!MRI.use_nodbg_empty(Unmerge.getReg(I)))
+        B.buildExtractVectorElementConstant(Unmerge.getReg(I), Src1Reg, I);
+  }
   MI.eraseFromParent();
 }
 
-bool matchBuildVectorToDup(MachineInstr &MI, MachineRegisterInfo &MRI) {
+bool matchBuildVectorToDup(MachineInstr &MI, Register &Src,
+                           MachineRegisterInfo &MRI) {
   assert(MI.getOpcode() == TargetOpcode::G_BUILD_VECTOR);
 
   // Later, during selection, we'll try to match imported patterns using
@@ -855,14 +869,30 @@ bool matchBuildVectorToDup(MachineInstr &MI, MachineRegisterInfo &MRI) {
   if (isBuildVectorAllZeros(MI, MRI) || isBuildVectorAllOnes(MI, MRI))
     return false;
 
-  return getAArch64VectorSplat(MI, MRI).has_value();
+  // Find buildvector which always uses the same register or undef. Return true
+  // so long as at least 2 registers were found (not all-undef or only 1
+  // non-undef entry).
+  Register Reg = 0;
+  unsigned NumNonUndef = 0;
+  for (const MachineOperand &Op : drop_begin(MI.operands())) {
+    if (getOpcodeDef<GImplicitDef>(Op.getReg(), MRI))
+      continue;
+
+    if (!Reg)
+      Reg = Op.getReg();
+    else if (Op.getReg() != Reg)
+      return false;
+    NumNonUndef++;
+  }
+
+  Src = Reg;
+  return Reg && NumNonUndef > 1;
 }
 
-void applyBuildVectorToDup(MachineInstr &MI, MachineRegisterInfo &MRI,
-                           MachineIRBuilder &B) {
+void applyBuildVectorToDup(MachineInstr &MI, Register Src,
+                           MachineRegisterInfo &MRI, MachineIRBuilder &B) {
   B.setInstrAndDebugLoc(MI);
-  B.buildInstr(AArch64::G_DUP, {MI.getOperand(0).getReg()},
-               {MI.getOperand(1).getReg()});
+  B.buildInstr(AArch64::G_DUP, {MI.getOperand(0).getReg()}, {Src});
   MI.eraseFromParent();
 }
 

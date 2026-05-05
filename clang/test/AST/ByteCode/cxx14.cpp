@@ -28,3 +28,10 @@ constexpr int foo() {
   return s.b[0];
 }
 static_assert(foo() == 12, "");
+
+int arr[3]; // both-note {{declared here}}
+constexpr bool f() { // both-error {{constexpr function never produces a constant expression}}
+  int &r  = arr[3]; // both-note {{read of dereferenced one-past-the-end pointer}} \
+                    // both-warning {{array index 3 is past the end of the array}}
+  return true;
+}

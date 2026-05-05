@@ -6659,9 +6659,7 @@ static SDValue PerformSETCCCombine(SDNode *N,
 
 static SDValue PerformEXTRACTCombine(SDNode *N,
                                      TargetLowering::DAGCombinerInfo &DCI) {
-  SDValue Vector = N->getOperand(0);
-  if (Vector->getOpcode() == ISD::FREEZE)
-    Vector = Vector->getOperand(0);
+  SDValue Vector = peekThroughFreeze(N->getOperand(0));
   SDLoc DL(N);
   EVT VectorVT = Vector.getValueType();
   if (Vector->getOpcode() == ISD::LOAD && VectorVT.isSimple() &&

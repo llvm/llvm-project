@@ -738,10 +738,16 @@ _BUILTINS = {
     "Cast": "@cast",
     "GetChildAtIndex": "@get_child_at_index",
     "GetChildMemberWithName": "@get_child_with_name",
+    "GetIndexOfChildWithName": "@get_child_index",
+    "GetNonSyntheticValue": "@get_non_synthetic_value",
+    "GetNumChildren": "@get_num_children",
     "GetSummary": "@summary",
     "GetSyntheticValue": "@get_synthetic_value",
     "GetTemplateArgumentType": "@get_template_argument_type",
     "GetType": "@get_type",
+    "GetValue": "@get_value",
+    "GetValueAsAddress": "@get_value_as_address",
+    "GetValueAsSigned": "@get_value_as_signed",
     "GetValueAsUnsigned": "@get_value_as_unsigned",
 }
 

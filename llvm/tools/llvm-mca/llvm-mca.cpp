@@ -486,7 +486,7 @@ int main(int argc, char **argv) {
   }
 
   // Parse the input and create CodeRegions that llvm-mca can analyze.
-  MCContext ACtx(TheTriple, *MAI, MRI.get(), STI.get(), &SrcMgr);
+  MCContext ACtx(TheTriple, *MAI, *MRI, *STI, &SrcMgr);
   std::unique_ptr<MCObjectFileInfo> AMOFI(
       TheTarget->createMCObjectFileInfo(ACtx, /*PIC=*/false));
   ACtx.setObjectFileInfo(AMOFI.get());
@@ -534,7 +534,7 @@ int main(int argc, char **argv) {
 
   // Parse the input and create InstrumentRegion that llvm-mca
   // can use to improve analysis.
-  MCContext ICtx(TheTriple, *MAI, MRI.get(), STI.get(), &SrcMgr);
+  MCContext ICtx(TheTriple, *MAI, *MRI, *STI, &SrcMgr);
   std::unique_ptr<MCObjectFileInfo> IMOFI(
       TheTarget->createMCObjectFileInfo(ICtx, /*PIC=*/false));
   ICtx.setObjectFileInfo(IMOFI.get());

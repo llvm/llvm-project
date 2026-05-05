@@ -2354,7 +2354,7 @@ bool CXXRecordDecl::isEffectivelyFinal() const {
 
 void CXXDeductionGuideDecl::anchor() {}
 
-bool ExplicitSpecifier::isEquivalent(const ExplicitSpecifier Other) const {
+bool ExplicitSpecifier::isEquivalent(ExplicitSpecifier Other) const {
   if ((getKind() != Other.getKind() ||
        getKind() == ExplicitSpecKind::Unresolved)) {
     if (getKind() == ExplicitSpecKind::Unresolved &&
@@ -2369,7 +2369,7 @@ bool ExplicitSpecifier::isEquivalent(const ExplicitSpecifier Other) const {
   return true;
 }
 
-ExplicitSpecifier ExplicitSpecifier::getFromDecl(FunctionDecl *Function) {
+ExplicitSpecifier ExplicitSpecifier::getFromDecl(const FunctionDecl *Function) {
   switch (Function->getDeclKind()) {
   case Decl::Kind::CXXConstructor:
     return cast<CXXConstructorDecl>(Function)->getExplicitSpecifier();

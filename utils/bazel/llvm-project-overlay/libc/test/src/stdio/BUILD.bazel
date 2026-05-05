@@ -142,6 +142,7 @@ libc_test(
     deps = [
         "//libc:access",
         "//libc:close",
+        "//libc:hdr_sys_stat_macros",
         "//libc:mkdirat",
         "//libc:open",
         "//libc:remove",

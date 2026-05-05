@@ -209,11 +209,6 @@ public:
     bytesDropped += num;
   }
 
-  void push_back(uint64_t num) {
-    assert(bytesDropped >= num);
-    bytesDropped -= num;
-  }
-
   mutable const uint8_t *content_;
   uint64_t size;
 

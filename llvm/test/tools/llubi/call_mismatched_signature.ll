@@ -10,5 +10,7 @@ define void @main() {
   ret void
 }
 ; CHECK: Entering function: main
-; CHECK-NEXT: Immediate UB detected: Indirect call through a function pointer with mismatched signature.
+; CHECK-NEXT: Stacktrace:
+; CHECK-NEXT: #0   call void @foo() at @main
+; CHECK-NEXT: Immediate UB detected: Indirect call through a function pointer with mismatched signature. Expected: void (), Actual: i32 ()
 ; CHECK-NEXT: error: Execution of function 'main' failed.

@@ -196,8 +196,7 @@ define i16 @select_decreasing_induction_icmp_table_i16(i16 noundef %val) {
 ; IC4VF4:       [[VECTOR_BODY]]:
 ; IC4VF4-NEXT:    br i1 true, label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
 ; IC4VF4:       [[PRED_LOAD_IF]]:
-; IC4VF4-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 12
-; IC4VF4-NEXT:    [[TMP7:%.*]] = load i16, ptr [[TMP6]], align 1
+; IC4VF4-NEXT:    [[TMP7:%.*]] = load i16, ptr getelementptr inbounds nuw (i8, ptr @table, i64 24), align 1
 ; IC4VF4-NEXT:    [[TMP2:%.*]] = insertelement <4 x i16> poison, i16 [[TMP7]], i64 0
 ; IC4VF4-NEXT:    br label %[[PRED_LOAD_CONTINUE]]
 ; IC4VF4:       [[PRED_LOAD_CONTINUE]]:
@@ -462,8 +461,7 @@ define i16 @select_decreasing_induction_icmp_table_half(half noundef %val) {
 ; IC4VF4:       [[VECTOR_BODY]]:
 ; IC4VF4-NEXT:    br i1 true, label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
 ; IC4VF4:       [[PRED_LOAD_IF]]:
-; IC4VF4-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [13 x i16], ptr @table, i16 0, i16 12
-; IC4VF4-NEXT:    [[TMP7:%.*]] = load half, ptr [[TMP6]], align 1
+; IC4VF4-NEXT:    [[TMP7:%.*]] = load half, ptr getelementptr inbounds nuw (i8, ptr @table, i64 24), align 1
 ; IC4VF4-NEXT:    [[TMP2:%.*]] = insertelement <4 x half> poison, half [[TMP7]], i64 0
 ; IC4VF4-NEXT:    br label %[[PRED_LOAD_CONTINUE]]
 ; IC4VF4:       [[PRED_LOAD_CONTINUE]]:

@@ -187,7 +187,8 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertBoxedSequenceType(
         /*file=*/nullptr, /*line=*/0, /*scope=*/nullptr, elemTy,
         mlir::LLVM::DIFlags::Zero, /*sizeInBits=*/0, /*alignInBits=*/0,
         dataLocation, rank, /*allocated=*/nullptr,
-        /*associated=*/nullptr, elements);
+        /*associated=*/nullptr, /*identifier=*/nullptr,
+        /*discriminator=*/nullptr, elements);
   }
 
   addOp(llvm::dwarf::DW_OP_push_object_address, {});
@@ -264,7 +265,8 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertBoxedSequenceType(
       context, llvm::dwarf::DW_TAG_array_type, /*name=*/nullptr,
       /*file=*/nullptr, /*line=*/0, /*scope=*/nullptr, elemTy,
       mlir::LLVM::DIFlags::Zero, /*sizeInBits=*/0, /*alignInBits=*/0,
-      dataLocation, /*rank=*/nullptr, allocated, associated, elements);
+      dataLocation, /*rank=*/nullptr, allocated, associated,
+      /*identifier=*/nullptr, /*discriminator=*/nullptr, elements);
 }
 
 std::pair<std::uint64_t, unsigned short>
@@ -398,7 +400,8 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
       mlir::StringAttr::get(context, ""), fileAttr, /*line=*/0, scope,
       /*baseType=*/nullptr, mlir::LLVM::DIFlags::Zero, /*sizeInBits=*/0,
       /*alignInBits=*/0, /*dataLocation=*/nullptr, /*rank=*/nullptr,
-      /*allocated=*/nullptr, /*associated=*/nullptr, elements);
+      /*allocated=*/nullptr, /*associated=*/nullptr, /*identifier=*/nullptr,
+      /*discriminator=*/nullptr, elements);
   DerivedTypeCache::ActiveLevels nestedRecursions =
       derivedTypeCache.startTranslating(Ty, placeHolder);
 
@@ -438,7 +441,8 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
           convertType(seqTy.getEleTy(), fileAttr, scope, declOp),
           mlir::LLVM::DIFlags::Zero, /*sizeInBits=*/0, /*alignInBits=*/0,
           /*dataLocation=*/nullptr, /*rank=*/nullptr,
-          /*allocated=*/nullptr, /*associated=*/nullptr, arrayElements);
+          /*allocated=*/nullptr, /*associated=*/nullptr,
+          /*identifier=*/nullptr, /*discriminator=*/nullptr, arrayElements);
     } else
       elemTy = convertType(fieldTy, fileAttr, scope, /*declOp=*/nullptr);
     offset = llvm::alignTo(offset, byteAlign);
@@ -459,7 +463,8 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
       mlir::StringAttr::get(context, sourceName.name), fileAttr, line, scope,
       /*baseType=*/nullptr, mlir::LLVM::DIFlags::Zero, offset * 8,
       /*alignInBits=*/0, /*dataLocation=*/nullptr, /*rank=*/nullptr,
-      /*allocated=*/nullptr, /*associated=*/nullptr, elements);
+      /*allocated=*/nullptr, /*associated=*/nullptr, /*identifier=*/nullptr,
+      /*discriminator=*/nullptr, elements);
 
   derivedTypeCache.finalize(Ty, finalAttr, std::move(nestedRecursions));
 
@@ -503,7 +508,8 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertTupleType(
       mlir::StringAttr::get(context, ""), fileAttr, /*line=*/0, scope,
       /*baseType=*/nullptr, mlir::LLVM::DIFlags::Zero, offset * 8,
       /*alignInBits=*/0, /*dataLocation=*/nullptr, /*rank=*/nullptr,
-      /*allocated=*/nullptr, /*associated=*/nullptr, elements);
+      /*allocated=*/nullptr, /*associated=*/nullptr, /*identifier=*/nullptr,
+      /*discriminator=*/nullptr, elements);
   derivedTypeCache.finalize(Ty, typeAttr, std::move(nestedRecursions));
   return typeAttr;
 }
@@ -565,7 +571,8 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertSequenceType(
       /*file=*/nullptr, /*line=*/0, /*scope=*/nullptr, elemTy,
       mlir::LLVM::DIFlags::Zero, /*sizeInBits=*/0, /*alignInBits=*/0,
       /*dataLocation=*/nullptr, /*rank=*/nullptr, /*allocated=*/nullptr,
-      /*associated=*/nullptr, elements);
+      /*associated=*/nullptr, /*identifier=*/nullptr,
+      /*discriminator=*/nullptr, elements);
 }
 
 mlir::LLVM::DITypeAttr DebugTypeGenerator::convertVectorType(
@@ -598,7 +605,8 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertVectorType(
       /*file=*/nullptr, /*line=*/0, /*scope=*/nullptr, elemTy,
       mlir::LLVM::DIFlags::Vector, sizeInBits, /*alignInBits=*/0,
       /*dataLocation=*/nullptr, /*rank=*/nullptr, /*allocated=*/nullptr,
-      /*associated=*/nullptr, elements);
+      /*associated=*/nullptr, /*identifier=*/nullptr,
+      /*discriminator=*/nullptr, elements);
 }
 
 mlir::LLVM::DITypeAttr DebugTypeGenerator::convertCharacterType(

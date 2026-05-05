@@ -1449,6 +1449,55 @@ def AMDGPU_TransposeLoadOp :
   let hasVerifier = 1;
 }
 
+def AMDGPU_GlobalTransposeLoadOp :
+    AMDGPU_Op<"global_transpose_load", [SameVariadicOperandSize]>,
+    Arguments<(ins Arg<AnyMemRef, "buffer to transpose load from", [MemRead]>:$src,
+                      Variadic<Index>:$srcIndices)>,
+    Results<(outs AnyTypeOf<[
+      FixedVectorOfLengthAndType<[8], [I8, F8E5M2FNUZ, F8E4M3FNUZ, F8E5M2,
+                                       F8E4M3FN, F16, BF16, I16]>,
+      FixedVectorOfLengthAndType<[16], [I<4>, F4E2M1FN, I<6>, F6E2M3FN, F6E3M2FN]>
+    ]>:$result)> {
+  let summary = "MLIR wrapper for global memory transpose load instructions";
+  let description = [{
+    The `amdgpu.global_transpose_load` op is a wrapper around the
+    `global_load_tr` family of instructions introduced in gfx1200.
+
+    Each thread reads a column of a matrix stored in global memory and receives
+    the corresponding row of the transposed matrix in its result register.
+    The subgroup collectively performs a transpose of the tile.
+
+    This op is a direct wrapper around the ROCDL `global.load.tr` family
+    intrinsics. Refer to the ISA manual for exact semantics.
+
+    Format example:
+    ```mlir
+    %0 = amdgpu.global_transpose_load %src[%i, %j]
+           : memref<128x256xf16, #gpu.address_space<global>> -> vector<8xf16>
+    ```
+
+    Operands:
+    * `$src`: Global address space memref to read from.
+    * `$srcIndices`: indices into `$src` for this thread. Indices must be
+      non-negative and in-bounds for the corresponding dimension of `$src`,
+      matching the constraints of `memref.load`.
+    * `$result`: register this transpose load instruction writes to.
+
+    Valid (element bits, num elements) pairs:
+    * (4, 16)  -> global_load_tr4_b64  (gfx1250+)
+    * (6, 16)  -> global_load_tr6_b96  (gfx1250+)
+    * (8, 8)   -> global_load_tr_b64   (gfx1200+)
+    * (16, 8)  -> global_load_tr_b128  (gfx1200+)
+
+    Note: 8-bit and 16-bit element lowering requires gfx1200+.
+          4-bit and 6-bit element lowering requires gfx1250+.
+  }];
+  let assemblyFormat = [{
+    $src `[` $srcIndices `]` attr-dict `:` type($src) `->` type($result)
+  }];
+  let hasVerifier = 1;
+}
+
 def AMDGPU_ScaledMFMAOp :
     AMDGPU_Op<"scaled_mfma", [AllTypesMatch<["destC", "destD"]>,
                         Pure]>,

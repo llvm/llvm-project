@@ -21,15 +21,19 @@ define void @multiple_vppredinstphi_with_same_predicate(ptr %A, i32 %d) {
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE]]
 ; CHECK:       [[PRED_SDIV_CONTINUE]]:
 ; CHECK-NEXT:    [[TMP5:%.*]] = phi <2 x i32> [ poison, %[[VECTOR_BODY]] ], [ [[TMP4]], %[[PRED_SDIV_IF]] ]
+; CHECK-NEXT:    [[TMP8:%.*]] = phi <2 x i32> [ poison, %[[VECTOR_BODY]] ], [ [[TMP4]], %[[PRED_SDIV_IF]] ]
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i1> [[TMP1]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[PRED_SDIV_IF1:.*]], label %[[PRED_SDIV_CONTINUE2]]
 ; CHECK:       [[PRED_SDIV_IF1]]:
 ; CHECK-NEXT:    [[TMP7:%.*]] = sdiv i32 -10, [[D]]
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> [[TMP5]], i32 [[TMP7]], i64 1
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i32> [[TMP5]], i32 [[TMP7]], i64 1
+; CHECK-NEXT:    [[TMP14:%.*]] = sdiv i32 -10, [[D]]
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <2 x i32> [[TMP8]], i32 [[TMP14]], i64 1
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE2]]
 ; CHECK:       [[PRED_SDIV_CONTINUE2]]:
-; CHECK-NEXT:    [[TMP9:%.*]] = phi <2 x i32> [ [[TMP5]], %[[PRED_SDIV_CONTINUE]] ], [ [[TMP8]], %[[PRED_SDIV_IF1]] ]
-; CHECK-NEXT:    [[TMP10:%.*]] = add <2 x i32> [[TMP9]], [[TMP9]]
+; CHECK-NEXT:    [[TMP12:%.*]] = phi <2 x i32> [ [[TMP5]], %[[PRED_SDIV_CONTINUE]] ], [ [[TMP9]], %[[PRED_SDIV_IF1]] ]
+; CHECK-NEXT:    [[TMP13:%.*]] = phi <2 x i32> [ [[TMP8]], %[[PRED_SDIV_CONTINUE]] ], [ [[TMP15]], %[[PRED_SDIV_IF1]] ]
+; CHECK-NEXT:    [[TMP10:%.*]] = add <2 x i32> [[TMP13]], [[TMP12]]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP1]], <2 x i32> [[TMP10]], <2 x i32> zeroinitializer
 ; CHECK-NEXT:    store <2 x i32> [[PREDPHI]], ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2

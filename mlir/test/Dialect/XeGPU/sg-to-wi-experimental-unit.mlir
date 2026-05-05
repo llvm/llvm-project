@@ -62,12 +62,12 @@ gpu.func @load_nd_transpose() {
 // CHECK-LABEL: gpu.func @load_nd_array_length
 // CHECK: %[[C0:.*]] = arith.constant 0 : index
 // CHECK: %[[LOAD:.*]] = xegpu.load_nd %{{.*}}[%[[C0]], %[[C0]]] : !xegpu.tensor_desc<32x16xf16, #xegpu.block_tdesc_attr<array_length = 2 : i64>> -> vector<64xf16>
-// CHECK: %[[CAST:.*]] = vector.shape_cast %[[LOAD]] : vector<64xf16> to vector<2x32x1xf16>
+// CHECK: %[[CAST:.*]] = vector.shape_cast %[[LOAD]] : vector<64xf16> to vector<64x1xf16>
 gpu.func @load_nd_array_length() {
   %c0 = arith.constant 0 : index
   %0 = "some_op"() : () -> !xegpu.tensor_desc<32x16xf16, #xegpu.block_tdesc_attr<array_length = 2>, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
   %1 = xegpu.load_nd %0[%c0, %c0] {layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
-    : !xegpu.tensor_desc<32x16xf16, #xegpu.block_tdesc_attr<array_length = 2>, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>> -> vector<2x32x16xf16>
+    : !xegpu.tensor_desc<32x16xf16, #xegpu.block_tdesc_attr<array_length = 2>, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>> -> vector<64x16xf16>
   gpu.return
 }
 

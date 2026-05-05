@@ -144,7 +144,7 @@ public:
     return getLocation().getLocationContext();
   }
 
-  const StackFrameContext *getStackFrame() const {
+  const StackFrame *getStackFrame() const {
     return getLocation().getStackFrame();
   }
 

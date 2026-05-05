@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/signal_macros.h"
+#include "hdr/sys_mman_macros.h"
 #include "include/llvm-libc-macros/linux/time-macros.h"
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/OSUtil/syscall.h"

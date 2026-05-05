@@ -588,23 +588,22 @@ public:
   LLVM_ABI void dropPoisonGeneratingMetadata();
 
   /// Return true if this instruction has poison-generating attribute.
-  LLVM_ABI bool hasPoisonGeneratingReturnAttributes() const LLVM_READONLY;
+  LLVM_ABI bool hasPoisonGeneratingAttributes() const LLVM_READONLY;
 
-  /// Drops return attributes that may generate poison.
-  LLVM_ABI void dropPoisonGeneratingReturnAttributes();
+  /// Drops attributes that may generate poison.
+  LLVM_ABI void dropPoisonGeneratingAttributes();
 
   /// Return true if this instruction has poison-generating flags,
-  /// return attributes or metadata.
+  /// attributes or metadata.
   bool hasPoisonGeneratingAnnotations() const {
-    return hasPoisonGeneratingFlags() ||
-           hasPoisonGeneratingReturnAttributes() ||
+    return hasPoisonGeneratingFlags() || hasPoisonGeneratingAttributes() ||
            hasPoisonGeneratingMetadata();
   }
 
-  /// Drops flags, return attributes and metadata that may generate poison.
+  /// Drops flags, attributes and metadata that may generate poison.
   void dropPoisonGeneratingAnnotations() {
     dropPoisonGeneratingFlags();
-    dropPoisonGeneratingReturnAttributes();
+    dropPoisonGeneratingAttributes();
     dropPoisonGeneratingMetadata();
   }
 

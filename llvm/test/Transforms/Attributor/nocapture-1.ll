@@ -584,7 +584,7 @@ define void @test_atomicrmw(ptr %p) {
 }
 
 define void @test_volatile(ptr %x) {
-; TUNIT: Function Attrs: nofree norecurse nounwind memory(argmem: readwrite)
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind memory(argmem: readwrite)
 ; TUNIT-LABEL: define {{[^@]+}}@test_volatile
 ; TUNIT-SAME: (ptr nofree align 4 [[X:%.*]]) #[[ATTR9:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
@@ -592,7 +592,7 @@ define void @test_volatile(ptr %x) {
 ; TUNIT-NEXT:    store volatile i32 0, ptr [[GEP]], align 4
 ; TUNIT-NEXT:    ret void
 ;
-; CGSCC: Function Attrs: nofree norecurse nounwind memory(argmem: readwrite)
+; CGSCC: Function Attrs: nofree norecurse nosync nounwind memory(argmem: readwrite)
 ; CGSCC-LABEL: define {{[^@]+}}@test_volatile
 ; CGSCC-SAME: (ptr nofree align 4 [[X:%.*]]) #[[ATTR12:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
@@ -857,7 +857,7 @@ declare ptr @llvm.strip.invariant.group.p0(ptr)
 ; TUNIT: attributes #[[ATTR6]] = { nounwind memory(argmem: readwrite) }
 ; TUNIT: attributes #[[ATTR7]] = { nofree nosync nounwind memory(write) }
 ; TUNIT: attributes #[[ATTR8]] = { mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite) }
-; TUNIT: attributes #[[ATTR9]] = { nofree norecurse nounwind memory(argmem: readwrite) }
+; TUNIT: attributes #[[ATTR9]] = { nofree norecurse nosync nounwind memory(argmem: readwrite) }
 ; TUNIT: attributes #[[ATTR10]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
 ; TUNIT: attributes #[[ATTR11]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write) }
 ; TUNIT: attributes #[[ATTR12]] = { mustprogress nofree norecurse nosync nounwind null_pointer_is_valid willreturn memory(none) }
@@ -885,7 +885,7 @@ declare ptr @llvm.strip.invariant.group.p0(ptr)
 ; CGSCC: attributes #[[ATTR9]] = { nounwind memory(argmem: readwrite) }
 ; CGSCC: attributes #[[ATTR10]] = { nofree nosync nounwind memory(write) }
 ; CGSCC: attributes #[[ATTR11]] = { mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite) }
-; CGSCC: attributes #[[ATTR12]] = { nofree norecurse nounwind memory(argmem: readwrite) }
+; CGSCC: attributes #[[ATTR12]] = { nofree norecurse nosync nounwind memory(argmem: readwrite) }
 ; CGSCC: attributes #[[ATTR13]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
 ; CGSCC: attributes #[[ATTR14]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write) }
 ; CGSCC: attributes #[[ATTR15]] = { mustprogress nofree norecurse nosync nounwind null_pointer_is_valid willreturn memory(none) }

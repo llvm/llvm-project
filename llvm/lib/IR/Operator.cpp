@@ -75,7 +75,7 @@ bool Operator::hasPoisonGeneratingAnnotations() const {
   if (hasPoisonGeneratingFlags())
     return true;
   auto *I = dyn_cast<Instruction>(this);
-  return I && (I->hasPoisonGeneratingReturnAttributes() ||
+  return I && (I->hasPoisonGeneratingAttributes() ||
                I->hasPoisonGeneratingMetadata());
 }
 

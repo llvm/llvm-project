@@ -13,12 +13,12 @@ define void @test(ptr %A, i32 %x) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[OFFSET_IDX]] to i32
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[OFFSET_IDX]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[TMP3]] to i32
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP4]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP6]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[OFFSET_IDX]] to i32
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP0]] to i64
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP8]]
 ; CHECK-NEXT:    store <4 x float> [[WIDE_LOAD]], ptr [[TMP9]], align 4

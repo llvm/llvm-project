@@ -152,7 +152,7 @@
 "`LWG3454 <https://wg21.link/LWG3454>`__","``pointer_traits::pointer_to`` should be ``constexpr``","2025-11 (Kona)","","","`#171307 <https://github.com/llvm/llvm-project/issues/171307>`__",""
 "`LWG3627 <https://wg21.link/LWG3627>`__","Inconsistent specifications for ``std::make_optional`` overloads","2025-11 (Kona)","|Complete|","22","`#171309 <https://github.com/llvm/llvm-project/issues/171309>`__",""
 "`LWG4015 <https://wg21.link/LWG4015>`__","LWG 3973 broke const overloads of ``std::optional`` monadic operations","2025-11 (Kona)","","","`#171310 <https://github.com/llvm/llvm-project/issues/171310>`__",""
-"`LWG4020 <https://wg21.link/LWG4020>`__","``extents::index-cast`` weirdness","2025-11 (Kona)","","","`#171311 <https://github.com/llvm/llvm-project/issues/171311>`__",""
+"`LWG4020 <https://wg21.link/LWG4020>`__","``extents::index-cast`` weirdness","2025-11 (Kona)","|Complete|","23","`#171311 <https://github.com/llvm/llvm-project/issues/171311>`__",""
 "`LWG4136 <https://wg21.link/LWG4136>`__","Specify behavior of [linalg] Hermitian algorithms on diagonal with nonzero imaginary part","2025-11 (Kona)","","","`#171312 <https://github.com/llvm/llvm-project/issues/171312>`__",""
 "`LWG4137 <https://wg21.link/LWG4137>`__","Fix *Mandates*, *Preconditions*, and *Complexity* elements of [linalg] algorithms","2025-11 (Kona)","","","`#171313 <https://github.com/llvm/llvm-project/issues/171313>`__",""
 "`LWG4166 <https://wg21.link/LWG4166>`__","``concat_view::end()`` should be more constrained in order to support noncopyable iterators","2025-11 (Kona)","","","`#171314 <https://github.com/llvm/llvm-project/issues/171314>`__",""

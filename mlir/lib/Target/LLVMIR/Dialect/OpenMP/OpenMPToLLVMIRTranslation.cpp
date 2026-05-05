@@ -34,7 +34,9 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/ReplaceConstant.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
@@ -387,6 +389,11 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       result = todo("thread_limit with multi-dimensional values");
   };
 
+  auto checkDynGroupprivate = [&todo](auto op, LogicalResult &result) {
+    if (op.getDynGroupprivateSize())
+      result = todo("dyn_groupprivate");
+  };
+
   LogicalResult result = success();
   llvm::TypeSwitch<Operation &>(op)
       .Case([&](omp::DistributeOp op) {
@@ -411,6 +418,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         checkPrivate(op, result);
         checkNumTeams(op, result);
         checkThreadLimit(op, result);
+        checkDynGroupprivate(op, result);
       })
       .Case([&](omp::TaskOp op) {
         checkAllocate(op, result);
@@ -7261,6 +7269,22 @@ initTargetRuntimeAttrs(llvm::IRBuilderBase &builder,
   }
 }
 
+static llvm::omp::OMPDynGroupprivateFallbackType
+getDynGroupprivateFallbackType(omp::FallbackModifierAttr fallbackAttr) {
+  omp::FallbackModifier fb = fallbackAttr ? fallbackAttr.getValue()
+                                          : omp::FallbackModifier::default_mem;
+  switch (fb) {
+  case omp::FallbackModifier::abort:
+    return llvm::omp::OMPDynGroupprivateFallbackType::Abort;
+  case omp::FallbackModifier::null:
+    return llvm::omp::OMPDynGroupprivateFallbackType::Null;
+  case omp::FallbackModifier::default_mem:
+    return llvm::omp::OMPDynGroupprivateFallbackType::DefaultMem;
+  }
+
+  llvm_unreachable("unexpected dyn_groupprivate fallback type");
+}
+
 static LogicalResult
 convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
                  LLVM::ModuleTranslation &moduleTranslation) {
@@ -7573,12 +7597,23 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
   if (Value targetIfCond = targetOp.getIfExpr())
     ifCond = moduleTranslation.lookupValue(targetIfCond);
 
+  Value dynGroupPrivateSize = targetOp.getDynGroupprivateSize();
+  llvm::Value *dynSizeVal = nullptr;
+  if (dynGroupPrivateSize) {
+    dynSizeVal = moduleTranslation.lookupValue(dynGroupPrivateSize);
+    dynSizeVal = builder.CreateIntCast(dynSizeVal, builder.getInt32Ty(),
+                                       /*isSigned=*/false);
+  }
+
+  llvm::omp::OMPDynGroupprivateFallbackType fallbackType =
+      getDynGroupprivateFallbackType(targetOp.getDynGroupprivateFallbackAttr());
+
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
       moduleTranslation.getOpenMPBuilder()->createTarget(
           ompLoc, isOffloadEntry, allocaIP, builder.saveIP(), deallocBlocks,
           info, entryInfo, defaultAttrs, runtimeAttrs, ifCond, kernelInput,
           genMapInfoCB, bodyCB, argAccessorCB, customMapperCB, dds,
-          targetOp.getNowait());
+          targetOp.getNowait(), dynSizeVal, fallbackType);
 
   if (failed(handleError(afterIP, opInst)))
     return failure();
@@ -8123,6 +8158,76 @@ convertFreeSharedMemOp(omp::FreeSharedMemOp freeMemOp,
   return success();
 }
 
+/// Converts an OpenMP groupprivate operation into LLVM IR.
+static LogicalResult
+convertOmpGroupprivate(Operation &opInst, llvm::IRBuilderBase &builder,
+                       LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+  auto groupprivateOp = cast<omp::GroupprivateOp>(opInst);
+
+  if (failed(checkImplementationStatus(opInst)))
+    return failure();
+
+  bool isTargetDevice = ompBuilder->Config.isTargetDevice();
+
+  // Determine whether group-private storage should be allocated based on
+  // device_type. When not specified, default to 'any' (allocate on both).
+  bool shouldAllocate = true;
+  switch (groupprivateOp.getDeviceType().value_or(
+      mlir::omp::DeclareTargetDeviceType::any)) {
+  case mlir::omp::DeclareTargetDeviceType::host:
+    shouldAllocate = !isTargetDevice;
+    break;
+  case mlir::omp::DeclareTargetDeviceType::nohost:
+    shouldAllocate = isTargetDevice;
+    break;
+  case mlir::omp::DeclareTargetDeviceType::any:
+    shouldAllocate = true;
+    break;
+  }
+
+  // Look up the global variable directly by symbol name.
+  LLVM::GlobalOp global = SymbolTable::lookupNearestSymbolFrom<LLVM::GlobalOp>(
+      &opInst, groupprivateOp.getSymNameAttr());
+  if (!global)
+    return opInst.emitError()
+           << "expected symbol '" << groupprivateOp.getSymName()
+           << "' to reference an LLVM global variable";
+
+  llvm::GlobalValue *globalValue = moduleTranslation.lookupGlobal(global);
+  llvm::Type *varType = moduleTranslation.convertType(global.getType());
+  std::string varName = globalValue->getName().str();
+
+  llvm::Value *resultPtr;
+  if (shouldAllocate && isTargetDevice) {
+    llvm::Module *llvmModule = moduleTranslation.getLLVMModule();
+    llvm::Triple targetTriple(llvmModule->getTargetTriple());
+    unsigned sharedAddressSpace;
+    if (targetTriple.isAMDGCN())
+      sharedAddressSpace = llvm::AMDGPUAS::LOCAL_ADDRESS;
+    else if (targetTriple.isNVPTX())
+      sharedAddressSpace = llvm::NVPTXAS::ADDRESS_SPACE_SHARED;
+    else
+      return opInst.emitError() << "groupprivate is not supported for target: "
+                                << targetTriple.str();
+    llvm::GlobalVariable *sharedVar = new llvm::GlobalVariable(
+        *llvmModule, varType, /*isConstant=*/false,
+        llvm::GlobalValue::InternalLinkage, llvm::PoisonValue::get(varType),
+        varName, /*InsertBefore=*/nullptr, llvm::GlobalValue::NotThreadLocal,
+        sharedAddressSpace,
+        /*isExternallyInitialized=*/false);
+    resultPtr = sharedVar;
+  } else {
+    if (shouldAllocate && !isTargetDevice)
+      opInst.emitWarning("groupprivate directive is currently ignored on the "
+                         "host, using original global");
+    resultPtr = globalValue;
+  }
+
+  moduleTranslation.mapValue(opInst.getResult(0), resultPtr);
+  return success();
+}
+
 /// Given an OpenMP MLIR operation, create the corresponding LLVM IR (including
 /// OpenMP runtime calls).
 LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
@@ -8348,6 +8453,9 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
           })
           .Case([&](omp::FreeSharedMemOp op) {
             return convertFreeSharedMemOp(op, builder, moduleTranslation);
+          })
+          .Case([&](omp::GroupprivateOp) {
+            return convertOmpGroupprivate(*op, builder, moduleTranslation);
           })
           .Default([&](Operation *inst) {
             return inst->emitError()

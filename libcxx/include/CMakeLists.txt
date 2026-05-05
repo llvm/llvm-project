@@ -1009,7 +1009,6 @@ set(files
   cstring
   ctgmath
   ctime
-  ctype.h
   cuchar
   cwchar
   cwctype
@@ -1036,7 +1035,6 @@ set(files
   ext/__hash
   ext/hash_map
   ext/hash_set
-  fenv.h
   filesystem
   flat_map
   flat_set

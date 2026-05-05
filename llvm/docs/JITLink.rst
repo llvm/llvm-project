@@ -1065,32 +1065,31 @@ handling of cross-process and cross-architecture use cases.
 Roadmap
 =======
 
-JITLink is under active development. Work so far has focused on the MachO
-implementation. In LLVM 12 there is limited support for ELF on x86-64.
+JITLink is under active development. The MachO and ELF backends are mature, with
+ELF support spanning x86-64, arm64, RISC-V, LoongArch, PowerPC 64, arm32,
+SystemZ, and Hexagon. A COFF backend supports x86-64 on Windows. Initial XCOFF
+support for PowerPC 64 is available but not yet usable for general JIT compilation.
 
 Major outstanding projects include:
 
-* Refactor architecture support to maximize sharing across formats.
+* Improve XCOFF support.
 
-  All formats should be able to share the bulk of the architecture-specific
-  code (especially relocations) for each supported architecture.
+  The XCOFF/ppc64 backend exists but does not yet implement the relocation
+  handling needed for general JIT use. Completing this would enable JITLink on
+  AIX.
 
-* Refactor ELF link graph construction.
+* Continue improving early-stage backends.
 
-  ELF's link graph construction is currently implemented in the `ELF_x86_64.cpp`
-  file, and tied to the x86-64 relocation parsing code. The bulk of the code is
-  generic and should be split into an ELFLinkGraphBuilder base class along the
-  same lines as the existing generic MachOLinkGraphBuilder.
+  Some backends (arm32, Hexagon) support common relocations but are not yet
+  ready for general use. Contributions to extend relocation coverage are welcome.
 
-* Implement support for arm32.
-
-* Implement support for other new architectures.
+* Implement support for other new architectures and formats.
 
 JITLink Availability and Feature Status
 ---------------------------------------
 
 The following table describes the status of the JITlink backends for various
-format / architecture combinations (as of July 2023).
+format / architecture combinations (as of May 2026).
 
 Support levels:
 
@@ -1108,7 +1107,7 @@ Support levels:
 * Complete: The backend supports all relocations and object format features.
 
 .. list-table:: Availability and Status
-   :widths: 10 30 30 30
+   :widths: 10 22 22 22 22
    :header-rows: 1
    :stub-columns: 1
 
@@ -1116,34 +1115,52 @@ Support levels:
      - ELF
      - COFF
      - MachO
+     - XCOFF
    * - arm32
-     - Skeleton
+     - Basic
+     -
      -
      -
    * - arm64
      - Usable
      -
      - Good
+     -
+   * - Hexagon
+     - Basic
+     -
+     -
+     -
    * - LoongArch
      - Good
+     -
      -
      -
    * - PowerPC 64
      - Usable
      -
      -
+     - Skeleton
    * - RISC-V
      - Good
+     -
+     -
+     -
+   * - SystemZ
+     - Usable
+     -
      -
      -
    * - x86-32
      - Basic
      -
      -
+     -
    * - x86-64
      - Good
      - Usable
      - Good
+     -
 
 .. [1] See ``llvm/examples/OrcV2Examples/LLJITWithObjectLinkingLayerPlugin`` for
        a full worked example.

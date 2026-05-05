@@ -1949,6 +1949,16 @@ namespace WithinLifetime {
   static_assert(test_dynamic(false));
   static_assert(test_dynamic(true)); // both-error {{not an integral constant expression}} \
                                      // both-note {{in call to}}
+
+
+  void LocalGlobal() {
+    constexpr const int &temp = 0; // both-error {{must be initialized by a constant expression}} \
+                                   // both-note {{reference to temporary is not a constant expression}} \
+                                   // both-note {{temporary created here}} \
+                                   // ref-note {{declared here}}
+    static_assert(__builtin_is_within_lifetime(&temp)); // ref-error {{not an integral constant expression}} \
+                                                        // ref-note {{initializer of 'temp' is not a constant expression}}
+  }
 }
 
 #ifdef __SIZEOF_INT128__

@@ -121,6 +121,7 @@ struct DAP final : public DAPTransport::MessageHandler {
   llvm::once_flag terminated_event_flag;
   bool stop_at_entry = false;
   bool is_attach = false;
+  bool is_live_session = true;
 
   /// The process event thread normally responds to process exited events by
   /// shutting down the entire adapter. When we're restarting, we keep the id of

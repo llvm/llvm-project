@@ -95,10 +95,10 @@ gpu.func @load_nd_2d(%laneid: index) {
 
 // CHECK-LABEL: gpu.func @load_nd_array_length
 // CHECK: (%[[ARG0:[0-9a-zA-Z]+]]: index) {
-// CHECK:       %[[W:.*]]:4 = gpu.warp_execute_on_lane_0(%[[ARG0]])[16] -> (vector<2x16x1xf16>,
+// CHECK:       %[[W:.*]]:4 = gpu.warp_execute_on_lane_0(%[[ARG0]])[16] -> (vector<32x1xf16>,
 // CHECK-SAME:    !xegpu.tensor_desc<16x16xf16, #xegpu.block_tdesc_attr<array_length = 2 : i64>,
 // CHECK-SAME:    #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>, index, index) {
-// CHECK:         gpu.yield %{{.*}} : vector<2x16x16xf16>, !xegpu.tensor_desc<16x16xf16, #xegpu.block_tdesc_attr<
+// CHECK:         gpu.yield %{{.*}} : vector<32x16xf16>, !xegpu.tensor_desc<16x16xf16, #xegpu.block_tdesc_attr<
 // CHECK-SAME:      array_length = 2 : i64>, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>, index, index
 // CHECK-NEXT:  }
 // CHECK-NEXT:  %[[T1:.*]] = builtin.unrealized_conversion_cast %[[W]]#1 : !xegpu.tensor_desc<16x16xf16,
@@ -106,18 +106,18 @@ gpu.func @load_nd_2d(%laneid: index) {
 // CHECK-SAME:      lane_data = [1, 1]>> to !xegpu.tensor_desc<16x16xf16, #xegpu.block_tdesc_attr<array_length = 2 : i64>>
 // CHECK-NEXT:  %[[T2:.*]] = xegpu.load_nd %[[T1]][%[[W]]#2, %[[W]]#3]  : !xegpu.tensor_desc<16x16xf16,
 // CHECK-SAME:    #xegpu.block_tdesc_attr<array_length = 2 : i64>> -> vector<32xf16>
-// CHECK-NEXT:  vector.shape_cast %[[T2]] : vector<32xf16> to vector<2x16x1xf16>
+// CHECK-NEXT:  vector.shape_cast %[[T2]] : vector<32xf16> to vector<32x1xf16>
 gpu.func @load_nd_array_length(%laneid: index) {
   %c0 = arith.constant 0 : index
-  %r = gpu.warp_execute_on_lane_0(%laneid)[16] -> (vector<2x16x1xf16>) {
+  %r = gpu.warp_execute_on_lane_0(%laneid)[16] -> (vector<32x1xf16>) {
     %0 = "some_op"() : () -> !xegpu.tensor_desc<16x16xf16, #xegpu.block_tdesc_attr<array_length = 2 : i64>,
       #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
     %1 = xegpu.load_nd %0[%c0, %c0]  {layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
       : !xegpu.tensor_desc<16x16xf16, #xegpu.block_tdesc_attr<array_length = 2 : i64>,
-        #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>> -> vector<2x16x16xf16>
-    gpu.yield %1 : vector<2x16x16xf16>
+        #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>> -> vector<32x16xf16>
+    gpu.yield %1 : vector<32x16xf16>
   }
-  "some_user_op"(%r) : (vector<2x16x1xf16>) -> ()
+  "some_user_op"(%r) : (vector<32x1xf16>) -> ()
   gpu.return
 }
 

@@ -1553,7 +1553,7 @@ define i1 @is_power2_or_zero_with_range(i32 %x) {
 ; CHECK-NEXT:    [[RES:%.*]] = icmp samesign ult i32 [[CTPOP]], 2
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
-  %ctpop = call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 %x)
+  %ctpop = call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 range(i32 1, 0) %x)
   %cmp = icmp eq i32 %ctpop, 1
   %notzero = icmp eq i32 %x, 0
   %res = select i1 %notzero, i1 true, i1 %cmp
@@ -1566,7 +1566,7 @@ define i1 @is_power2_or_zero_inv_with_range(i32 %x) {
 ; CHECK-NEXT:    [[RES:%.*]] = icmp samesign ugt i32 [[CTPOP]], 1
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
-  %ctpop = call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 %x)
+  %ctpop = call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 range(i32 1, 0) %x)
   %cmp = icmp ne i32 %ctpop, 1
   %notzero = icmp ne i32 %x, 0
   %res = select i1 %notzero, i1 %cmp, i1 false

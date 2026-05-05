@@ -28,7 +28,7 @@ using namespace ento;
 namespace {
 enum class ObjectState : bool { CtorCalled, DtorCalled };
 } // end namespace
-  // FIXME: Ascending over StackFrameContext maybe another method.
+  // FIXME: Ascending over StackFrame maybe another method.
 
 namespace llvm {
 template <> struct FoldingSetTrait<ObjectState> {

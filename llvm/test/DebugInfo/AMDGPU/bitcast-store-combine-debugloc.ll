@@ -17,10 +17,12 @@ define void @test(ptr %p, ptr %q) !dbg !4 {
 }
 
 !llvm.dbg.cu = !{!0}
+!9 = !{null}
+!10 = !DISubroutineType(types: !9)
 !llvm.module.flags = !{!2}
 !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, emissionKind: LineTablesOnly)
 !1 = !DIFile(filename: "t.c", directory: "")
 !2 = !{i32 2, !"Debug Info Version", i32 3}
-!4 = distinct !DISubprogram(name: "test", file: !1, line: 1, spFlags: DISPFlagDefinition, unit: !0)
+!4 = distinct !DISubprogram(name: "test", file: !1, line: 1, spFlags: DISPFlagDefinition, type: !10, unit: !0)
 !7 = !DILocation(line: 2, scope: !4)
 !8 = !DILocation(line: 3, scope: !4)

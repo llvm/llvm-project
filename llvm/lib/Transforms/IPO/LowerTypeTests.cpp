@@ -35,6 +35,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
@@ -122,6 +123,11 @@ static cl::opt<std::string> ClWriteSummary(
     "lowertypetests-write-summary",
     cl::desc("Write summary to given YAML file after running pass"),
     cl::Hidden);
+
+// FIXME: Remove in clang 24.
+static cl::opt<bool> EnableJumpTableDebugInfo(
+    "lowertypetests-jump-table-debug-info", cl::init(true), cl::Hidden,
+    cl::desc("Enable debug info generation for jump tables"));
 
 bool BitSetInfo::containsGlobalOffset(uint64_t Offset) const {
   if (Offset < ByteOffset)
@@ -1523,11 +1529,67 @@ Triple::ArchType LowerTypeTestsModule::selectJumpTableArmEncoding(
   return ArmCount > ThumbCount ? Triple::arm : Triple::thumb;
 }
 
+// Create location for each function entry which should look like this:
+// frame #0: c::c() (.cfi_jt) at sanitizer/ubsan_interface.h:0:0
+// frame #1: __ubsan_check_cfi_icall_jt at sanitizer/ubsan_interface.h:0
+static SmallVector<DILocation *>
+createJumpTableDebugInfo(Function *F, ArrayRef<GlobalTypeMember *> Functions) {
+  Module &M = *F->getParent();
+  DICompileUnit *CU = nullptr;
+  auto CUs = M.debug_compile_units();
+  if (!CUs.empty())
+    CU = *CUs.begin();
+
+  DIBuilder DIB(M, /*AllowUnresolved=*/true, CU);
+  DIFile *File = DIB.createFile("ubsan_interface.h", "sanitizer");
+  if (!CU) {
+    // Synthetic module (like ld-temp.o), it frequently lacks a DICompileUnit
+    // even if the rest of the program has debug info.
+    CU = DIB.createCompileUnit(
+        DISourceLanguageName(dwarf::DW_LANG_C), File, "llvm", true, "", 0, "",
+        DICompileUnit::DebugEmissionKind::LineTablesOnly);
+  }
+
+  DISubroutineType *DIFnTy = DIB.createSubroutineType(nullptr);
+
+  DISubprogram *UbsanSP = DIB.createFunction(
+      CU, "__ubsan_check_cfi_icall_jt", {}, File, 0, DIFnTy, 0,
+      DINode::FlagArtificial, DISubprogram::SPFlagDefinition);
+
+  F->setSubprogram(UbsanSP);
+
+  DILocation *UbsanLoc = DILocation::get(M.getContext(), 0, 0, UbsanSP);
+
+  SmallVector<DILocation *> Locations;
+  Locations.reserve(Functions.size());
+
+  for (auto *Func : Functions) {
+    StringRef FuncName = Func->getGlobal()->getName();
+    FuncName.consume_back(".cfi");
+    DISubprogram *JumpSP = DIB.createFunction(
+        CU, (FuncName + ".cfi_jt").str(), {}, File, 0, DIFnTy, 0,
+        DINode::FlagArtificial, DISubprogram::SPFlagDefinition);
+
+    DILocation *EntryLoc =
+        DILocation::get(M.getContext(), 0, 0, JumpSP, UbsanLoc);
+
+    Locations.push_back(EntryLoc);
+  }
+
+  DIB.finalize();
+
+  return Locations;
+}
+
 void LowerTypeTestsModule::createJumpTable(
     Function *F, ArrayRef<GlobalTypeMember *> Functions,
     Triple::ArchType JumpTableArch) {
   BasicBlock *BB = BasicBlock::Create(M.getContext(), "entry", F);
   IRBuilder<> IRB(BB);
+
+  SmallVector<DILocation *> Locations;
+  if (M.getDwarfVersion() != 0 && EnableJumpTableDebugInfo)
+    Locations = createJumpTableDebugInfo(F, Functions);
 
   InlineAsm *JumpTableAsm = createJumpTableEntryAsm(JumpTableArch);
 
@@ -1536,12 +1598,15 @@ void LowerTypeTestsModule::createJumpTable(
   // cfi.jumptable as NoUnwind, otherwise, direct calls
   // to the jump table will not handle exceptions properly
   bool areAllEntriesNounwind = true;
-  for (GlobalTypeMember *GTM : Functions) {
-    if (!llvm::cast<llvm::Function>(GTM->getGlobal())
-             ->hasFnAttribute(llvm::Attribute::NoUnwind)) {
+  assert(Locations.empty() || Functions.size() == Locations.size());
+  for (auto [GTM, Loc] : zip_longest(Functions, Locations)) {
+    if (Loc.has_value())
+      IRB.SetCurrentDebugLocation(*Loc);
+    if (!cast<Function>((*GTM)->getGlobal())
+             ->hasFnAttribute(Attribute::NoUnwind)) {
       areAllEntriesNounwind = false;
     }
-    IRB.CreateCall(JumpTableAsm, GTM->getGlobal());
+    IRB.CreateCall(JumpTableAsm, (*GTM)->getGlobal());
   }
   IRB.CreateUnreachable();
 

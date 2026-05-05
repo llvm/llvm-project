@@ -45,8 +45,8 @@ LLVM_ABI bool consumeUnsignedInteger(StringRef &Str, unsigned Radix,
 LLVM_ABI bool consumeSignedInteger(StringRef &Str, unsigned Radix,
                                    long long &Result);
 
-/// StringRef - Represent a constant reference to a string, i.e. a character
-/// array and a length, which need not be null terminated.
+/// Represent a constant reference to a string, i.e. a character array and a
+/// length, which need not be null terminated.
 ///
 /// This class does not own the string data, it is expected to be used in
 /// situations where the character data resides in some other buffer, whose
@@ -132,29 +132,29 @@ public:
   /// @name String Operations
   /// @{
 
-  /// data - Get a pointer to the start of the string (which may not be null
+  /// Get a pointer to the start of the string (which may not be null
   /// terminated).
   [[nodiscard]] constexpr const char *data() const { return Data; }
 
-  /// empty - Check if the string is empty.
+  /// Check if the string is empty.
   [[nodiscard]] constexpr bool empty() const { return size() == 0; }
 
-  /// size - Get the string size.
+  /// Get the string size.
   [[nodiscard]] constexpr size_t size() const { return Length; }
 
-  /// front - Get the first character in the string.
+  /// Get the first character in the string.
   [[nodiscard]] char front() const {
     assert(!empty());
     return data()[0];
   }
 
-  /// back - Get the last character in the string.
+  /// Get the last character in the string.
   [[nodiscard]] char back() const {
     assert(!empty());
     return data()[size() - 1];
   }
 
-  // copy - Allocate copy in Allocator and return StringRef to it.
+  // Allocate copy in Allocator and return StringRef to it.
   template <typename Allocator>
   [[nodiscard]] StringRef copy(Allocator &A) const {
     // Don't request a length 0 copy from the allocator.
@@ -170,9 +170,9 @@ public:
     return size() == RHS.size() && compare_insensitive(RHS) == 0;
   }
 
-  /// compare - Compare two strings; the result is negative, zero, or positive
-  /// if this string is lexicographically less than, equal to, or greater than
-  /// the \p RHS.
+  /// Compare two strings; the result is negative, zero, or positive if this
+  /// string is lexicographically less than, equal to, or greater than the
+  /// \p RHS.
   [[nodiscard]] int compare(StringRef RHS) const {
     // Check the prefix for a mismatch.
     if (int Res =
@@ -188,8 +188,7 @@ public:
   /// Compare two strings, ignoring case.
   [[nodiscard]] LLVM_ABI int compare_insensitive(StringRef RHS) const;
 
-  /// compare_numeric - Compare two strings, treating sequences of digits as
-  /// numbers.
+  /// Compare two strings, treating sequences of digits as numbers.
   [[nodiscard]] LLVM_ABI int compare_numeric(StringRef RHS) const;
 
   /// Determine the edit distance between this string and another
@@ -218,7 +217,7 @@ public:
   edit_distance_insensitive(StringRef Other, bool AllowReplacements = true,
                             unsigned MaxEditDistance = 0) const;
 
-  /// str - Get the contents as an std::string.
+  /// Get the contents as an std::string.
   [[nodiscard]] std::string str() const {
     if (!data())
       return std::string();

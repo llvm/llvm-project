@@ -16,6 +16,12 @@
 extern "C" {
 #endif
 
+#define __riscv_intrinsic_zbb 1
+#define __riscv_intrinsic_zbc 1
+#define __riscv_intrinsic_zbkb 1
+#define __riscv_intrinsic_zbkc 1
+#define __riscv_intrinsic_zbkx 1
+
 #if defined(__riscv_zbb)
 static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
 __riscv_orc_b_32(uint32_t __x) {

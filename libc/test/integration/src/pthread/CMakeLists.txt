@@ -50,6 +50,7 @@ add_integration_test(
   DEPENDS
     libc.hdr.time_macros
     libc.hdr.errno_macros
+    libc.hdr.sys_mman_macros
     libc.include.pthread
     libc.src.pthread.pthread_rwlock_destroy
     libc.src.pthread.pthread_rwlock_init
@@ -262,6 +263,7 @@ add_integration_test(
   SRCS
     pthread_create_test.cpp
   DEPENDS
+    libc.hdr.sys_mman_macros
     libc.include.pthread
     libc.src.errno.errno
     libc.src.pthread.pthread_create

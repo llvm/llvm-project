@@ -12,6 +12,7 @@
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/RegisterContext.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/ValueObject/DILAST.h"
 #include "lldb/ValueObject/DILParser.h"
 #include "lldb/ValueObject/ValueObject.h"
@@ -82,7 +83,7 @@ Interpreter::UnaryConversion(lldb::ValueObjectSP valobj, uint32_t location) {
       llvm::Expected<uint64_t> uint_bit_size =
           uint_type.GetBitSize(m_exe_ctx_scope.get());
       if (!uint_bit_size)
-        return int_bit_size.takeError();
+        return uint_bit_size.takeError();
       if (bitfield_size < *int_bit_size ||
           (in_type.IsSigned() && bitfield_size == *int_bit_size))
         return valobj->CastToBasicType(int_type);
@@ -1258,6 +1259,8 @@ Interpreter::VerifyArithmeticCast(CompilerType source_type,
     } else {
       std::string errMsg = llvm::formatv("unable to get byte size for type {0}",
                                          target_type.TypeDescription());
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Expressions), temp.takeError(),
+                     "GetByteSize failed: {0}");
       return llvm::make_error<DILDiagnosticError>(
           m_expr, std::move(errMsg), location,
           target_type.TypeDescription().length());
@@ -1268,6 +1271,8 @@ Interpreter::VerifyArithmeticCast(CompilerType source_type,
     } else {
       std::string errMsg = llvm::formatv("unable to get byte size for type {0}",
                                          source_type.TypeDescription());
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Expressions), temp.takeError(),
+                     "GetByteSize failed: {0}");
       return llvm::make_error<DILDiagnosticError>(
           m_expr, std::move(errMsg), location,
           source_type.TypeDescription().length());

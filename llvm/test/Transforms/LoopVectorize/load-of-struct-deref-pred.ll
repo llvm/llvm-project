@@ -79,8 +79,7 @@ define void @accesses_to_struct_may_not_be_dereferenceable_due_to_loop_bound(ptr
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i1> [[TMP1]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
 ; CHECK:       pred.load.if:
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_FOO:%.*]], ptr @foo, i64 0, i32 1, i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_FOO:%.*]], ptr @foo, i64 0, i32 1, i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> poison, i32 [[TMP5]], i64 0
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE]]
@@ -196,8 +195,7 @@ define void @accesses_to_struct_may_not_be_dereferenceable_access_size(ptr noali
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i1> [[TMP1]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
 ; CHECK:       pred.load.if:
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_FOO:%.*]], ptr @foo, i64 0, i32 1, i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_FOO:%.*]], ptr @foo, i64 0, i32 1, i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i64> poison, i64 [[TMP5]], i64 0
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE]]

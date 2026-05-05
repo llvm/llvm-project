@@ -124,7 +124,8 @@ static bool IsHostArray(const Symbol &symbol) {
             *details->cudaDataAttr() == common::CUDADataAttr::Constant ||
             *details->cudaDataAttr() == common::CUDADataAttr::Managed ||
             *details->cudaDataAttr() == common::CUDADataAttr::Shared ||
-            *details->cudaDataAttr() == common::CUDADataAttr::Unified)) {
+            *details->cudaDataAttr() == common::CUDADataAttr::Unified ||
+            *details->cudaDataAttr() == common::CUDADataAttr::UseDevice)) {
       return false;
     }
   }
@@ -178,7 +179,9 @@ struct FindHostArray
                   *details->cudaDataAttr() != common::CUDADataAttr::Constant &&
                   *details->cudaDataAttr() != common::CUDADataAttr::Managed &&
                   *details->cudaDataAttr() != common::CUDADataAttr::Shared &&
-                  *details->cudaDataAttr() != common::CUDADataAttr::Unified))) {
+                  *details->cudaDataAttr() != common::CUDADataAttr::Unified &&
+                  *details->cudaDataAttr() !=
+                      common::CUDADataAttr::UseDevice))) {
         return &symbol;
       }
     }
@@ -833,7 +836,9 @@ void CUDAChecker::Enter(const parser::PrintStmt &x) {
             if (details->cudaDataAttr() &&
                 (*details->cudaDataAttr() == common::CUDADataAttr::Device ||
                     *details->cudaDataAttr() ==
-                        common::CUDADataAttr::Constant)) {
+                        common::CUDADataAttr::Constant ||
+                    *details->cudaDataAttr() ==
+                        common::CUDADataAttr::UseDevice)) {
               context_.Say(parser::FindSourceLocation(*x),
                   "device data not allowed in I/O statements"_err_en_US);
             }

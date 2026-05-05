@@ -980,28 +980,6 @@ defm VCVTHF82PH : avx10_convert_2op_nomb<"vcvthf82ph", avx512vl_f16_info,
 //-------------------------------------------------
 
 // VADDBF16, VSUBBF16, VMULBF16, VDIVBF16, VMAXBF16, VMINBF16
-multiclass avx10_fp_binop_int_bf16<bits<8> opc, string OpcodeStr,
-                                      X86SchedWriteSizes sched,
-                                      bit IsCommutable = 0> {
-  let Predicates = [HasAVX10_2] in {
-    defm Z : avx512_fp_packed<opc, OpcodeStr,
-                              !cast<Intrinsic>("int_x86_avx10_"#OpcodeStr#"bf16512"),
-                              !cast<Intrinsic>("int_x86_avx10_"#OpcodeStr#"bf16512"),
-                              v32bf16_info, sched.PH.ZMM, IsCommutable>, EVEX_V512,
-                              T_MAP5, PD, EVEX_CD8<16, CD8VF>;
-    defm Z128 : avx512_fp_packed<opc, OpcodeStr,
-                                 !cast<Intrinsic>("int_x86_avx10_"#OpcodeStr#"bf16128"),
-                                 !cast<Intrinsic>("int_x86_avx10_"#OpcodeStr#"bf16128"),
-                                 v8bf16x_info, sched.PH.XMM, IsCommutable>, EVEX_V128,
-                                 T_MAP5, PD, EVEX_CD8<16, CD8VF>;
-    defm Z256 : avx512_fp_packed<opc, OpcodeStr,
-                                 !cast<Intrinsic>("int_x86_avx10_"#OpcodeStr#"bf16256"),
-                                 !cast<Intrinsic>("int_x86_avx10_"#OpcodeStr#"bf16256"),
-                                 v16bf16x_info, sched.PH.YMM, IsCommutable>, EVEX_V256,
-                                 T_MAP5, PD, EVEX_CD8<16, CD8VF>;
-  }
-}
-
 multiclass avx10_fp_binop_bf16<bits<8> opc, string OpcodeStr, SDPatternOperator OpNode,
                                 X86SchedWriteSizes sched,
                                 bit IsCommutable = 0,
@@ -1024,8 +1002,8 @@ defm VADDBF16 : avx10_fp_binop_bf16<0x58, "vadd", fadd, SchedWriteFAddSizes, 1>;
 defm VSUBBF16 : avx10_fp_binop_bf16<0x5C, "vsub", fsub, SchedWriteFAddSizes, 0>;
 defm VMULBF16 : avx10_fp_binop_bf16<0x59, "vmul", fmul, SchedWriteFMulSizes, 1>;
 defm VDIVBF16 : avx10_fp_binop_bf16<0x5E, "vdiv", fdiv, SchedWriteFDivSizes, 0>;
-defm VMINBF16 : avx10_fp_binop_int_bf16<0x5D, "vmin", SchedWriteFCmpSizes, 0>;
-defm VMAXBF16 : avx10_fp_binop_int_bf16<0x5F, "vmax", SchedWriteFCmpSizes, 0>;
+defm VMINBF16 : avx10_fp_binop_bf16<0x5D, "vmin", X86fmin, SchedWriteFCmpSizes, 0>;
+defm VMAXBF16 : avx10_fp_binop_bf16<0x5F, "vmax", X86fmax, SchedWriteFCmpSizes, 0>;
 }
 
 // VCOMISBF16

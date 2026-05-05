@@ -6465,7 +6465,7 @@ bool CFGBlock::isInevitablySinking() const {
     // If at least one path reaches the CFG exit, it means that control is
     // returned to the caller. For now, say that we are not sure what
     // happens next. If necessary, this can be improved to analyze
-    // the parent StackFrameContext's call site in a similar manner.
+    // the parent StackFrame's call site in a similar manner.
     if (Blk == &Cfg.getExit())
       return false;
 

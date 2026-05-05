@@ -1240,6 +1240,8 @@ void CheckHelper::CheckObjectEntity(
       messages_.Say(
           "ATTRIBUTES(TEXTURE) is obsolete and no longer supported"_err_en_US);
       break;
+    case common::CUDADataAttr::UseDevice:
+      break;
     }
     if (attr != common::CUDADataAttr::Pinned) {
       if (details.commonBlock()) {

@@ -582,6 +582,18 @@ struct XeGPUPeepHoleOptimizerPass final
       return;
     }
 
+    // Run array length optimization patterns first so that subsequent transpose
+    // peephole patterns operate on the array-length-optimized tensor descs.
+    {
+      RewritePatternSet arrayLenPatterns(&context);
+      xegpu::populateXeGPUArrayLengthOptimizationPatterns(arrayLenPatterns);
+      if (failed(applyPatternsGreedily(getOperation(),
+                                       std::move(arrayLenPatterns)))) {
+        DBGS() << "Array length optimization patterns failed.\n";
+        return signalPassFailure();
+      }
+    }
+
     // CreateNdDescOp and LoadNdOp with optimizable tensor desc types must be
     // converted.
     target.addDynamicallyLegalOp<xegpu::CreateNdDescOp>(

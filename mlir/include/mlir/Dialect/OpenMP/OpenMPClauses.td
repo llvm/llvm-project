@@ -1845,4 +1845,39 @@ class OpenMP_UniformClauseSkip<
 
 def OpenMP_UniformClause : OpenMP_UniformClauseSkip<>;
 
+//===----------------------------------------------------------------------===//
+// V6.1 `dyn_groupprivate` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_DynGroupprivateClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+
+  let arguments = (ins
+    OptionalAttr<AccessGroupModifierAttr>:$dyn_groupprivate_access_group,
+    OptionalAttr<FallbackModifierAttr>:$dyn_groupprivate_fallback,
+    Optional<AnyInteger>:$dyn_groupprivate_size
+  );
+
+  let description = [{
+    The `dyn_groupprivate_access_group` attribute specifies the access group
+    modifier for the dynamically allocated group-private memory. The
+    `dyn_groupprivate_fallback` attribute specifies the fallback behavior when
+    allocation fails. The `dyn_groupprivate_size` operand specifies the size in
+    bytes to allocate.
+  }];
+
+  let optAssemblyFormat = [{
+    `dyn_groupprivate` `(`
+      custom<DynGroupprivateClause>($dyn_groupprivate_access_group,
+      $dyn_groupprivate_fallback,
+      $dyn_groupprivate_size, type($dyn_groupprivate_size))
+    `)`
+  }];
+}
+
+def OpenMP_DynGroupprivateClause : OpenMP_DynGroupprivateClauseSkip<>;
+
 #endif // OPENMP_CLAUSES

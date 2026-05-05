@@ -143,7 +143,7 @@ struct IntOpWithFlagLowering
       return success();
     }
 
-    if (!isa<VectorType>(llvmResultType))
+    if (!isa<VectorType>(resultType))
       return failure();
 
     return LLVM::detail::handleMultidimensionalVectors(

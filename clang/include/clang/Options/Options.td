@@ -221,7 +221,7 @@ def m_sparc_Features_Group : OptionGroup<"<sparc features group>">,
 // The features added by this group will not be added to target features.
 // These are explicitly handled.
 def m_hexagon_Features_HVX_Group : OptionGroup<"<hexagon features group>">,
-                                   Group<m_Group>, DocName<"Hexagon">;
+                                   Group<m_Group>, DocName<"Hexagon HVX">;
 def m_m68k_Features_Group: OptionGroup<"<m68k features group>">,
                            Group<m_Group>, DocName<"M68k">;
 def m_mips_Features_Group : OptionGroup<"<mips features group>">,
@@ -2413,9 +2413,9 @@ defm fast_math : BoolFOption<"fast-math",
   NegFlag<SetFalse, [], [ClangOption, CC1Option, FC1Option, FlangOption]>>;
 defm math_errno : BoolFOption<"math-errno",
   LangOpts<"MathErrno">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+  PosFlag<SetTrue, [], [ClangOption, CLOption, CC1Option],
           "Require math functions to indicate errors by setting errno">,
-  NegFlag<SetFalse>>,
+  NegFlag<SetFalse, [], [CLOption]>>,
   ShouldParseIf<!strconcat("!", open_cl.KeyPath)>;
 def fextend_args_EQ : Joined<["-"], "fextend-arguments=">, Group<f_Group>,
   Flags<[NoArgumentUnused]>, Visibility<[ClangOption, CC1Option]>,
@@ -6410,7 +6410,7 @@ def prebind : Flag<["-"], "prebind">;
 def preload : Flag<["-"], "preload">;
 def print_file_name_EQ : Joined<["-", "--"], "print-file-name=">,
   HelpText<"Print the full library path of <file>">, MetaVarName<"<file>">,
-  Visibility<[ClangOption, CLOption]>;
+  Visibility<[ClangOption, FlangOption, CLOption]>;
 def print_ivar_layout : Flag<["-"], "print-ivar-layout">,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Enable Objective-C Ivar layout bitmap print trace">,

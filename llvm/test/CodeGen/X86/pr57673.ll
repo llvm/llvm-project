@@ -38,7 +38,7 @@ define void @foo() {
   ; NORMAL-NEXT: {{  $}}
   ; NORMAL-NEXT:   [[MOVUPSrm:%[0-9]+]]:vr128 = MOVUPSrm %stack.1.i, 1, $noreg, 40, $noreg :: (load (s128) from %ir.i4, align 8)
   ; NORMAL-NEXT:   MOVUPSmr $noreg, 1, $noreg, 0, $noreg, killed [[MOVUPSrm]] :: (store (s128) into `ptr null`, align 8)
-  ; NORMAL-NEXT:   DBG_VALUE_LIST !3, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_plus_uconst, 40, DW_OP_stack_value), %stack.1.i, %stack.1.i, debug-location !8
+  ; NORMAL-NEXT:   DBG_VALUE_LIST !3, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_plus_uconst, 40, DW_OP_stack_value), %stack.1.i, %stack.1.i, debug-location !10
   ; NORMAL-NEXT:   [[MOVUPSrm1:%[0-9]+]]:vr128 = MOVUPSrm %stack.1.i, 1, $noreg, 40, $noreg :: (load (s128) from %ir.i6, align 8)
   ; NORMAL-NEXT:   MOVUPSmr $noreg, 1, $noreg, 0, $noreg, killed [[MOVUPSrm1]] :: (store (s128) into `ptr null`, align 8)
   ; NORMAL-NEXT: {{  $}}
@@ -78,7 +78,7 @@ define void @foo() {
   ; INSTRREF-NEXT: {{  $}}
   ; INSTRREF-NEXT:   [[MOVUPSrm:%[0-9]+]]:vr128 = MOVUPSrm %stack.1.i, 1, $noreg, 40, $noreg :: (load (s128) from %ir.i4, align 8)
   ; INSTRREF-NEXT:   MOVUPSmr $noreg, 1, $noreg, 0, $noreg, killed [[MOVUPSrm]] :: (store (s128) into `ptr null`, align 8)
-  ; INSTRREF-NEXT:   DBG_VALUE_LIST !3, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_plus_uconst, 40, DW_OP_stack_value), %stack.1.i, %stack.1.i, debug-location !8
+  ; INSTRREF-NEXT:   DBG_VALUE_LIST !3, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_plus_uconst, 40, DW_OP_stack_value), %stack.1.i, %stack.1.i, debug-location !10
   ; INSTRREF-NEXT:   [[MOVUPSrm1:%[0-9]+]]:vr128 = MOVUPSrm %stack.1.i, 1, $noreg, 40, $noreg :: (load (s128) from %ir.i6, align 8)
   ; INSTRREF-NEXT:   MOVUPSmr $noreg, 1, $noreg, 0, $noreg, killed [[MOVUPSrm1]] :: (store (s128) into `ptr null`, align 8)
   ; INSTRREF-NEXT: {{  $}}
@@ -131,6 +131,8 @@ declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
+!10 = !{null}
+!11 = !DISubroutineType(types: !10)
 !llvm.module.flags = !{!2}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, isOptimized: false, runtimeVersion: 0, emissionKind: NoDebug)
@@ -138,7 +140,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !2 = !{i32 2, !"Debug Info Version", i32 3}
 !3 = !{!"function_entry_count", i64 2423}
 !4 = !DILocalVariable(name: "r", scope: !5, file: !6, line: 93)
-!5 = distinct !DISubprogram(name: "c", scope: !7, file: !6, line: 92, spFlags: DISPFlagDefinition, unit: !0)
+!5 = distinct !DISubprogram(name: "c", scope: !7, file: !6, line: 92, spFlags: DISPFlagDefinition, type: !11, unit: !0)
 !6 = !DIFile(filename: "a", directory: "/proc/self/cwd")
 !7 = !DINamespace(name: "u", scope: !8)
 !8 = !DINamespace(name: "s", scope: null)

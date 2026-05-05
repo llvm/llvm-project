@@ -5732,8 +5732,7 @@ define <2 x i16> @fptos_v2f16_v2i16(<2 x half> %a) {
 ; CHECK-FP16-GI-LABEL: fptos_v2f16_v2i16:
 ; CHECK-FP16-GI:       // %bb.0: // %entry
 ; CHECK-FP16-GI-NEXT:    fcvtzs v0.4h, v0.4h
-; CHECK-FP16-GI-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-FP16-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-FP16-GI-NEXT:    zip1 v0.4h, v0.4h, v0.4h
 ; CHECK-FP16-GI-NEXT:    ret
 entry:
   %c = fptosi <2 x half> %a to <2 x i16>
@@ -5764,8 +5763,7 @@ define <2 x i16> @fptou_v2f16_v2i16(<2 x half> %a) {
 ; CHECK-FP16-GI-LABEL: fptou_v2f16_v2i16:
 ; CHECK-FP16-GI:       // %bb.0: // %entry
 ; CHECK-FP16-GI-NEXT:    fcvtzu v0.4h, v0.4h
-; CHECK-FP16-GI-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-FP16-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-FP16-GI-NEXT:    zip1 v0.4h, v0.4h, v0.4h
 ; CHECK-FP16-GI-NEXT:    ret
 entry:
   %c = fptoui <2 x half> %a to <2 x i16>
@@ -5998,8 +5996,7 @@ define <2 x i8> @fptos_v2f16_v2i8(<2 x half> %a) {
 ; CHECK-FP16-GI-LABEL: fptos_v2f16_v2i8:
 ; CHECK-FP16-GI:       // %bb.0: // %entry
 ; CHECK-FP16-GI-NEXT:    fcvtzs v0.4h, v0.4h
-; CHECK-FP16-GI-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-FP16-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-FP16-GI-NEXT:    zip1 v0.4h, v0.4h, v0.4h
 ; CHECK-FP16-GI-NEXT:    ret
 entry:
   %c = fptosi <2 x half> %a to <2 x i8>
@@ -6030,8 +6027,7 @@ define <2 x i8> @fptou_v2f16_v2i8(<2 x half> %a) {
 ; CHECK-FP16-GI-LABEL: fptou_v2f16_v2i8:
 ; CHECK-FP16-GI:       // %bb.0: // %entry
 ; CHECK-FP16-GI-NEXT:    fcvtzu v0.4h, v0.4h
-; CHECK-FP16-GI-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-FP16-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-FP16-GI-NEXT:    zip1 v0.4h, v0.4h, v0.4h
 ; CHECK-FP16-GI-NEXT:    ret
 entry:
   %c = fptoui <2 x half> %a to <2 x i8>

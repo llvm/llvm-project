@@ -29,15 +29,17 @@ define internal void @inlinable() !dbg !7 {
 }
 
 !llvm.dbg.cu = !{!0}
+!9 = !{null}
+!10 = !DISubroutineType(types: !9)
 !llvm.module.flags = !{!4, !5, !6}
 
 ; CHECK: ![[DBGLOC]] = !DILocation(line: 0
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, runtimeVersion: 0, file: !3)
-!1 = distinct !DISubprogram(name: "test", unit: !0)
+!1 = distinct !DISubprogram(name: "test", type: !10, unit: !0)
 !2 = !DILocation(line: 2, scope: !1)
 !3 = !DIFile(filename: "foo", directory: ".")
 !4 = !{i32 2, !"Dwarf Version", i32 4}
 !5 = !{i32 2, !"Debug Info Version", i32 3}
 !6 = !{i32 1, !"wchar_size", i32 4}
-!7 = distinct !DISubprogram(name: "inlinable", unit: !0)
+!7 = distinct !DISubprogram(name: "inlinable", type: !10, unit: !0)
 !8 = !DILocation(line: 3, scope: !1)

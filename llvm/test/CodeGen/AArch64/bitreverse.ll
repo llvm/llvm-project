@@ -19,8 +19,7 @@ define <2 x i16> @f(<2 x i16> %a) {
 ; GISEL-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
 ; GISEL-NEXT:    rev16 v0.8b, v0.8b
 ; GISEL-NEXT:    rbit v0.8b, v0.8b
-; GISEL-NEXT:    ushll v0.4s, v0.4h, #0
-; GISEL-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; GISEL-NEXT:    zip1 v0.4h, v0.4h, v0.4h
 ; GISEL-NEXT:    ret
   %b = call <2 x i16> @llvm.bitreverse.v2i16(<2 x i16> %a)
   ret <2 x i16> %b
@@ -157,8 +156,7 @@ define <4 x i8> @g_vec_4x8(<4 x i8> %a) {
 ; GISEL:       // %bb.0:
 ; GISEL-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; GISEL-NEXT:    rbit v0.8b, v0.8b
-; GISEL-NEXT:    ushll v0.8h, v0.8b, #0
-; GISEL-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; GISEL-NEXT:    zip1 v0.8b, v0.8b, v0.8b
 ; GISEL-NEXT:    ret
   %b = call <4 x i8> @llvm.bitreverse.v4i8(<4 x i8> %a)
   ret <4 x i8> %b

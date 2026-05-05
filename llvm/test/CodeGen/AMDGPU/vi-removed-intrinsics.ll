@@ -21,4 +21,6 @@ attributes #1 = { nounwind }
 !2 = !{i32 2, !"Dwarf Version", i32 4}
 !3 = !{i32 2, !"Debug Info Version", i32 3}
 !4 = !DILocation(line: 1, column: 42, scope: !5)
-!5 = distinct !DISubprogram(name: "rsq_legacy_f32", scope: null, file: !1, line: 1, isLocal: false, isDefinition: true, scopeLine: 2, isOptimized: false, unit: !0)
+!5 = distinct !DISubprogram(name: "rsq_legacy_f32", scope: null, file: !1, line: 1, isLocal: false, isDefinition: true, scopeLine: 2, isOptimized: false, unit: !0, type: !6)
+!6 = !DISubroutineType(types: !7)
+!7 = !{null}

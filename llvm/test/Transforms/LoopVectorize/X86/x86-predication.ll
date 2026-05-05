@@ -190,8 +190,7 @@ define i32 @scalarize_and_sink_gather(ptr %a, i1 %c, i32 %x, i64 %n) {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP14:%.*]], %[[PRED_UDIV_CONTINUE2]] ]
 ; CHECK-NEXT:    br i1 [[C]], label %[[PRED_UDIV_IF:.*]], label %[[PRED_UDIV_CONTINUE:.*]]
 ; CHECK:       [[PRED_UDIV_IF]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 777
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[INDEX]], 777
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = udiv i32 [[TMP3]], [[X]]

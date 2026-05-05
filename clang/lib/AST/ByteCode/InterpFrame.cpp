@@ -150,11 +150,6 @@ static bool shouldSkipInBacktrace(const Function *F) {
       MD && MD->getParent()->isAnonymousStructOrUnion())
     return true;
 
-  if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(FD);
-      Ctor && Ctor->isDefaulted() && Ctor->isTrivial() &&
-      Ctor->isCopyOrMoveConstructor() && Ctor->inits().empty())
-    return true;
-
   return false;
 }
 

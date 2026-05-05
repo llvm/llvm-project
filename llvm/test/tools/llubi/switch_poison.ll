@@ -9,5 +9,8 @@ exit:
   ret void
 }
 ; CHECK: Entering function: main
+; CHECK-NEXT: Stacktrace:
+; CHECK-NEXT: #0   switch i32 poison, label %exit [
+; CHECK-NEXT:   ] at @main
 ; CHECK-NEXT: Immediate UB detected: Switch on poison condition.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

@@ -113,6 +113,28 @@ bb1:
   br label %bb1
 }
 
+; GCN-LABEL: {{^}}dpp64_fmin:
+; DPP64-GFX1251: v_min_num_f64_dpp v[0:1], v[0:1], v[0:1] [[CTL]]:1 row_mask:0xf bank_mask:0xf{{$}}
+; DPP64-GFX9: v_min_f64 v[0:1], v[0:1], v[{{[0-9:]+}}]{{$}}
+; DPP32: v_min{{(_num)?}}_f64{{(_e32)?}} v[0:1], v[0:1], v[{{[0-9:]+}}]{{$}}
+define nofpclass(nan) double @dpp64_fmin(double nofpclass(nan) %x) {
+entry:
+  %dpp = tail call double @llvm.amdgcn.update.dpp.f64(double 0x7FF0000000000000, double %x, i32 337, i32 15, i32 15, i1 false)
+  %min = tail call nnan double @llvm.minnum.f64(double %x, double %dpp)
+  ret double %min
+}
+
+; GCN-LABEL: {{^}}dpp64_fmax:
+; DPP64-GFX1251: v_max_num_f64_dpp v[0:1], v[0:1], v[0:1] [[CTL]]:1 row_mask:0xf bank_mask:0xf{{$}}
+; DPP64-GFX9: v_max_f64 v[0:1], v[0:1], v[{{[0-9:]+}}]{{$}}
+; DPP32: v_max{{(_num)?}}_f64{{(_e32)?}} v[0:1], v[0:1], v[{{[0-9:]+}}]{{$}}
+define nofpclass(nan) double @dpp64_fmax(double nofpclass(nan) %x) #0 {
+entry:
+  %dpp = tail call double @llvm.amdgcn.update.dpp.f64(double 0xFFF0000000000000, double %x, i32 337, i32 15, i32 15, i1 false)
+  %max = tail call nnan double @llvm.maxnum.f64(double %x, double %dpp)
+  ret double %max
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x()
 declare i64 @llvm.amdgcn.update.dpp.i64(i64, i64, i32, i32, i32, i1) #0
 declare double @llvm.ceil.f64(double)

@@ -177,7 +177,7 @@ SPIRVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
   if (VT.isFloatingPoint())
     RC = VT.isVector() ? &SPIRV::vfIDRegClass : &SPIRV::fIDRegClass;
   else if (VT.isInteger())
-    RC = VT.isVector() ? &SPIRV::vIDRegClass : &SPIRV::iIDRegClass;
+    RC = VT.isVector() ? &SPIRV::viIDRegClass : &SPIRV::iIDRegClass;
   else
     RC = &SPIRV::iIDRegClass;
 

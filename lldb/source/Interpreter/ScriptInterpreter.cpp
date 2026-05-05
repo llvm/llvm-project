@@ -263,7 +263,7 @@ ScriptInterpreterIORedirect::Create(bool enable_io, Debugger &debugger,
   auto nullout = FileSystem::Instance().Open(FileSpec(FileSystem::DEV_NULL),
                                              File::eOpenOptionWriteOnly);
   if (!nullout)
-    return nullin.takeError();
+    return nullout.takeError();
 
   return std::unique_ptr<ScriptInterpreterIORedirect>(
       new ScriptInterpreterIORedirect(std::move(*nullin), std::move(*nullout)));

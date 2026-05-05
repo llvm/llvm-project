@@ -380,6 +380,9 @@ Changes in existing checks
   - Fixed false positive where a pointer used with placement new was
     incorrectly diagnosed as allowing the pointee to be made ``const``.
 
+  - Fixed false positives when pointers were later passed or bound through
+    ``const``-qualified pointer references.
+
 - Improved :doc:`misc-multiple-inheritance
   <clang-tidy/checks/misc/multiple-inheritance>` by avoiding false positives when
   virtual inheritance causes concrete bases to be counted more than once.
@@ -393,6 +396,11 @@ Changes in existing checks
   - Fixed the `CheckThrowTemporaries` option to correctly reflect its
     configured value in exported settings.
 
+- Improved :doc:`misc-unused-parameters
+  <clang-tidy/checks/misc/unused-parameters>` check by adding
+  `IgnoreMacroParameters` option to suppress warnings for unused parameters
+  whose declarations originate from macro expansions.
+
 - Improved :doc:`misc-unused-using-decls
   <clang-tidy/checks/misc/unused-using-decls>` to not diagnose ``using``
   declarations as unused if they're exported from a module.
@@ -403,12 +411,21 @@ Changes in existing checks
   Because it only sees one file at a time, the check can't be sure
   such entities aren't referenced in any other files of that module.
 
+- Improved :doc:`modernize-deprecated-headers
+  <clang-tidy/checks/modernize/deprecated-headers>` check by avoiding false
+  positives on project headers that use the same name as a standard library
+  header.
+
 - Improved :doc:`modernize-pass-by-value
   <clang-tidy/checks/modernize/pass-by-value>` check by adding `IgnoreMacros`
   option to suppress warnings in macros.
 
 - Improved :doc:`modernize-redundant-void-arg
   <clang-tidy/checks/modernize/redundant-void-arg>` check to work in C23.
+
+- Improved :doc:`modernize-return-braced-init-list
+  <clang-tidy/checks/modernize/return-braced-init-list>` check to apply fix-it
+  when type qualifiers and/or reference modifiers are used with parameters.
 
 - Improved :doc:`modernize-use-equals-delete
   <clang-tidy/checks/modernize/use-equals-delete>` check by only warning on
@@ -434,8 +451,12 @@ Changes in existing checks
   macros appearing in the return type of a function.
 
 - Improved :doc:`modernize-use-using
-  <clang-tidy/checks/modernize/use-using>` check by avoiding the generation
-  of invalid code for function types with redundant parentheses.
+  <clang-tidy/checks/modernize/use-using>` check:
+
+  - Avoid generating invalid code for function types with redundant
+    parentheses.
+
+  - Preserve inline comment blocks that appear between the ``typedef``'s parts.
 
 - Improved :doc:`performance-enum-size
   <clang-tidy/checks/performance/enum-size>` check:

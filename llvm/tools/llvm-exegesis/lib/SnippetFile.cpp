@@ -257,7 +257,7 @@ Expected<std::vector<BenchmarkCode>> readSnippets(const LLVMState &State,
   const std::unique_ptr<MCInstPrinter> InstPrinter(
       TM.getTarget().createMCInstPrinter(
           TM.getTargetTriple(), TM.getMCAsmInfo().getAssemblerDialect(),
-          TM.getMCAsmInfo(), *TM.getMCInstrInfo(), *TM.getMCRegisterInfo()));
+          TM.getMCAsmInfo(), *TM.getMCInstrInfo(), TM.getMCRegisterInfo()));
   // The following call will take care of calling Streamer.setTargetStreamer.
   TM.getTarget().createAsmTargetStreamer(Streamer, InstPrinterOStream,
                                          InstPrinter.get());
@@ -271,7 +271,7 @@ Expected<std::vector<BenchmarkCode>> readSnippets(const LLVMState &State,
   AsmParser->getLexer().setCommentConsumer(&Streamer);
 
   const std::unique_ptr<MCTargetAsmParser> TargetAsmParser(
-      TM.getTarget().createMCAsmParser(*TM.getMCSubtargetInfo(), *AsmParser,
+      TM.getTarget().createMCAsmParser(TM.getMCSubtargetInfo(), *AsmParser,
                                        *TM.getMCInstrInfo()));
 
   if (!TargetAsmParser)

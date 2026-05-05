@@ -148,6 +148,13 @@ void f() {
 #endif
 } // namespace cwg2628
 
+namespace cwg2629 { // cwg2629: 2.7
+void f() {
+  switch (double d = 0.0) {}
+  // expected-error@-1 {{statement requires expression of integer type ('double' invalid)}}
+}
+} // namespace cwg2629
+
 // cwg2630 is in cwg2630.cpp
 
 namespace cwg2631 { // cwg2631: 16

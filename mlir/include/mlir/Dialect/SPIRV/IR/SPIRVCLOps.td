@@ -783,6 +783,29 @@ def SPIRV_CLSAbsOp : SPIRV_CLUnaryArithmeticOp<"s_abs", 141, SPIRV_Integer> {
 
 // -----
 
+def SPIRV_CLClzOp : SPIRV_CLUnaryArithmeticOp<"clz", 151, SPIRV_Integer> {
+  let summary = "Count leading zeros in operand";
+
+  let description = [{
+    Returns the number of most-significant 0-bits in x.
+
+    Result Type and x must be integer or vector(2,3,4,8,16) of
+    integer values.
+
+    All of the operands, including the Result Type operand, must be of the
+    same type.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.CL.clz %0 : i32
+    %3 = spirv.CL.clz %1 : vector<3xi16>
+    ```
+  }];
+}
+
+// -----
+
 def SPIRV_CLSMaxOp : SPIRV_CLBinaryArithmeticOp<"s_max", 156, SPIRV_Integer> {
   let summary = "Return maximum of two signed integer operands";
 

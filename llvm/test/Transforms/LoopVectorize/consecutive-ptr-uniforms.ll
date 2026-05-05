@@ -1058,9 +1058,14 @@ define void @pointer_iv_non_uniform_0(ptr %a, i64 %n) {
 ; INTER-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <16 x i32> [[WIDE_VEC]], <16 x i32> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
 ; INTER-NEXT:    [[STRIDED_VEC4:%.*]] = shufflevector <16 x i32> [[WIDE_VEC]], <16 x i32> poison, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
 ; INTER-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[NEXT_GEP]], i32 4
-; INTER-NEXT:    [[WIDE_VEC5:%.*]] = load <16 x i32>, ptr [[TMP7]], align 8
-; INTER-NEXT:    [[STRIDED_VEC6:%.*]] = shufflevector <16 x i32> [[WIDE_VEC5]], <16 x i32> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
-; INTER-NEXT:    [[STRIDED_VEC7:%.*]] = shufflevector <16 x i32> [[WIDE_VEC5]], <16 x i32> poison, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
+; INTER-NEXT:    [[TMP28:%.*]] = getelementptr inbounds i32, ptr [[NEXT_GEP1]], i32 4
+; INTER-NEXT:    [[TMP29:%.*]] = getelementptr inbounds i32, ptr [[NEXT_GEP2]], i32 4
+; INTER-NEXT:    [[TMP30:%.*]] = getelementptr inbounds i32, ptr [[NEXT_GEP3]], i32 4
+; INTER-NEXT:    [[TMP31:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP7]], i32 0
+; INTER-NEXT:    [[TMP32:%.*]] = insertelement <4 x ptr> [[TMP31]], ptr [[TMP28]], i32 1
+; INTER-NEXT:    [[TMP33:%.*]] = insertelement <4 x ptr> [[TMP32]], ptr [[TMP29]], i32 2
+; INTER-NEXT:    [[TMP34:%.*]] = insertelement <4 x ptr> [[TMP33]], ptr [[TMP30]], i32 3
+; INTER-NEXT:    [[STRIDED_VEC6:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 8 [[TMP34]], <4 x i1> splat (i1 true), <4 x i32> poison)
 ; INTER-NEXT:    [[TMP17:%.*]] = sub <4 x i32> [[STRIDED_VEC6]], [[STRIDED_VEC]]
 ; INTER-NEXT:    [[TMP13:%.*]] = extractelement <4 x i32> [[TMP17]], i64 0
 ; INTER-NEXT:    [[TMP14:%.*]] = extractelement <4 x i32> [[TMP17]], i64 1
@@ -1094,11 +1099,11 @@ define void @pointer_iv_non_uniform_0(ptr %a, i64 %n) {
 ; INTER-NEXT:    br label %[[SCALAR_PH]]
 ; INTER:       [[SCALAR_PH]]:
 ; INTER-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; INTER-NEXT:    [[BC_RESUME_VAL8:%.*]] = phi ptr [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ [[A]], %[[ENTRY]] ]
+; INTER-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi ptr [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ [[A]], %[[ENTRY]] ]
 ; INTER-NEXT:    br label %[[FOR_BODY:.*]]
 ; INTER:       [[FOR_BODY]]:
 ; INTER-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
-; INTER-NEXT:    [[P:%.*]] = phi ptr [ [[UNNAMEDTMP3:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL8]], %[[SCALAR_PH]] ]
+; INTER-NEXT:    [[P:%.*]] = phi ptr [ [[UNNAMEDTMP3:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL5]], %[[SCALAR_PH]] ]
 ; INTER-NEXT:    [[UNNAMEDTMP00:%.*]] = load i32, ptr [[P]], align 8
 ; INTER-NEXT:    [[UNNAMEDTMP03:%.*]] = getelementptr inbounds i32, ptr [[P]], i32 1
 ; INTER-NEXT:    [[UNNAMEDTMP04:%.*]] = load i32, ptr [[UNNAMEDTMP03]], align 8

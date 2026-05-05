@@ -65,8 +65,7 @@ define void @preserve_flags_narrowing_extends_and_truncs(ptr noalias %A, ptr noa
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    br i1 true, label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
 ; CHECK:       [[PRED_LOAD_IF]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[TMP0]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[A]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i8> poison, i8 [[TMP1]], i64 0
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE]]
 ; CHECK:       [[PRED_LOAD_CONTINUE]]:
@@ -187,18 +186,10 @@ define void @preserve_flags_narrowing_extends_and_truncs(ptr noalias %A, ptr noa
 ; CHECK-NEXT:    [[TMP51:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 1
 ; CHECK-NEXT:    [[TMP52:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 2
 ; CHECK-NEXT:    [[TMP53:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 3
-; CHECK-NEXT:    [[TMP54:%.*]] = insertelement <4 x ptr> poison, ptr [[B]], i32 0
-; CHECK-NEXT:    [[TMP55:%.*]] = insertelement <4 x ptr> [[TMP54]], ptr [[TMP51]], i32 1
-; CHECK-NEXT:    [[TMP56:%.*]] = insertelement <4 x ptr> [[TMP55]], ptr [[TMP52]], i32 2
-; CHECK-NEXT:    [[TMP57:%.*]] = insertelement <4 x ptr> [[TMP56]], ptr [[TMP53]], i32 3
 ; CHECK-NEXT:    [[TMP58:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 4
 ; CHECK-NEXT:    [[TMP59:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 5
 ; CHECK-NEXT:    [[TMP60:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 6
 ; CHECK-NEXT:    [[TMP61:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 7
-; CHECK-NEXT:    [[TMP62:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP58]], i32 0
-; CHECK-NEXT:    [[TMP63:%.*]] = insertelement <4 x ptr> [[TMP62]], ptr [[TMP59]], i32 1
-; CHECK-NEXT:    [[TMP64:%.*]] = insertelement <4 x ptr> [[TMP63]], ptr [[TMP60]], i32 2
-; CHECK-NEXT:    [[TMP65:%.*]] = insertelement <4 x ptr> [[TMP64]], ptr [[TMP61]], i32 3
 ; CHECK-NEXT:    br i1 true, label %[[PRED_LOAD_IF29:.*]], label %[[PRED_LOAD_CONTINUE30:.*]]
 ; CHECK:       [[PRED_LOAD_IF29]]:
 ; CHECK-NEXT:    [[TMP66:%.*]] = load i8, ptr [[B]], align 1

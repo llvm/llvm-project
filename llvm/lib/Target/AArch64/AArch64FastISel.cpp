@@ -538,6 +538,8 @@ Register AArch64FastISel::fastMaterializeConstant(const Constant *C) {
   // arm64_32 has 32-bit pointers held in 64-bit registers. Because of that,
   // 'null' pointers need to have a somewhat special treatment.
   if (isa<ConstantPointerNull>(C)) {
+    if (C->getType()->isVectorTy())
+      return Register();
     assert(VT == MVT::i64 && "Expected 64-bit pointers");
     return materializeInt(ConstantInt::get(Type::getInt64Ty(*Context), 0), VT);
   }

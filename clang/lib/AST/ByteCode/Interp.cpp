@@ -904,11 +904,11 @@ static bool CheckInvoke(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   if (!Ptr.isDummy() && !isConstexprUnknown(Ptr)) {
     if (!CheckLive(S, OpPC, Ptr, AK_MemberCall))
       return false;
-    if (!CheckExtern(S, OpPC, Ptr))
-      return false;
     if (!CheckRange(S, OpPC, Ptr, AK_MemberCall))
       return false;
     if (!IsCtorDtor && !CheckLifetime(S, OpPC, Ptr, AK_MemberCall))
+      return false;
+    if (!CheckMutable(S, OpPC, Ptr))
       return false;
   }
   return true;
@@ -1781,6 +1781,14 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
       if (!CheckInvoke(S, OpPC, ThisPtr,
                        Func->isConstructor() || Func->isDestructor()))
         return cleanup();
+
+      if (Func->isCopyOrMoveOperator() || Func->isCopyOrMoveConstructor()) {
+        const Pointer &RVOPtr =
+            S.Stk.peek<Pointer>(ThisOffset - align(sizeof(Pointer)));
+        if (!CheckInvoke(S, OpPC, RVOPtr, /*IsCtorDtor=*/true))
+          return cleanup();
+      }
+
       if (!Func->isConstructor() && !Func->isDestructor() &&
           !CheckActive(S, OpPC, ThisPtr, AK_MemberCall))
         return false;
@@ -2083,8 +2091,9 @@ static void setLifeStateRecurse(const Pointer &Ptr, Lifetime L) {
 
   if (const Descriptor *FieldDesc = Ptr.getFieldDesc();
       FieldDesc->isCompositeArray()) {
-    // No endLifetime() for array roots.
-    assert(Ptr.getLifetime() == Lifetime::Started);
+    // No endLifetime() for primitive array roots.
+    if (Ptr.getFieldDesc()->isPrimitiveArray())
+      assert(Ptr.getLifetime() == Lifetime::Started);
     for (unsigned I = 0; I != FieldDesc->getNumElems(); ++I)
       setLifeStateRecurse(Ptr.atIndex(I).narrow(), L);
     return;

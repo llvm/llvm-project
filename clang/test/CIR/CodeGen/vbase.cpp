@@ -70,22 +70,14 @@ void ppp() { B b; }
 // CIR:   %[[ADJ_THIS_I8:.+]] = cir.ptr_stride %[[D_I8]], %[[OFFSET]] : (!cir.ptr<!u8i>, !s64i) -> !cir.ptr<!u8i>
 // CIR:   %[[ADJ_THIS_D:.+]] = cir.cast bitcast %[[ADJ_THIS_I8]] : !cir.ptr<!u8i> -> !cir.ptr<!rec_Derived>
 // CIR:   %[[BASE_THIS:.+]] = cir.cast bitcast %[[ADJ_THIS_D]] : !cir.ptr<!rec_Derived> -> !cir.ptr<!rec_Base>
-// CIR:   %[[BASE_VPTR_PTR:.+]] = cir.vtable.get_vptr %[[BASE_THIS]] : !cir.ptr<!rec_Base> -> !cir.ptr<!cir.vptr>
-// CIR:   %[[BASE_VPTR:.+]] = cir.load {{.*}} %[[BASE_VPTR_PTR]] : !cir.ptr<!cir.vptr>, !cir.vptr
-// CIR:   %[[SLOT_PTR:.+]] = cir.vtable.get_virtual_fn_addr %[[BASE_VPTR]][0] : !cir.vptr -> !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_Base>)>>>
-// CIR:   %[[FN:.+]] = cir.load {{.*}} %[[SLOT_PTR]] : !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_Base>)>>>, !cir.ptr<!cir.func<(!cir.ptr<!rec_Base>)>>
-// CIR:   cir.call %[[FN]](%[[BASE_THIS]]) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_Base>)>>, !cir.ptr<!rec_Base> {{.*}}) -> ()
+// CIR:   cir.call @_ZN4Base1fEv(%[[BASE_THIS]]) : (!cir.ptr<!rec_Base> {{.*}}) -> ()
 // CIR:   cir.return
 
 // CIR: cir.func {{.*}}@_Z1gv()
 // CIR:   %[[DF:.+]] = cir.alloca !rec_DerivedFinal, !cir.ptr<!rec_DerivedFinal>, ["df", init]
 // CIR:   cir.call @_ZN12DerivedFinalC1Ev(%[[DF]]) nothrow : (!cir.ptr<!rec_DerivedFinal> {{.*}}) -> ()
 // CIR:   %[[BASE_THIS_2:.+]] = cir.base_class_addr %[[DF]] : !cir.ptr<!rec_DerivedFinal> nonnull [0] -> !cir.ptr<!rec_Base>
-// CIR:   %[[BASE_VPTR_PTR_2:.+]] = cir.vtable.get_vptr %[[BASE_THIS_2]] : !cir.ptr<!rec_Base> -> !cir.ptr<!cir.vptr>
-// CIR:   %[[BASE_VPTR_2:.+]] = cir.load {{.*}} %[[BASE_VPTR_PTR_2]] : !cir.ptr<!cir.vptr>, !cir.vptr
-// CIR:   %[[SLOT_PTR_2:.+]] = cir.vtable.get_virtual_fn_addr %[[BASE_VPTR_2]][0] : !cir.vptr -> !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_Base>)>>>
-// CIR:   %[[FN_2:.+]] = cir.load {{.*}} %[[SLOT_PTR_2]] : !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_Base>)>>>, !cir.ptr<!cir.func<(!cir.ptr<!rec_Base>)>>
-// CIR:   cir.call %[[FN_2]](%[[BASE_THIS_2]]) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_Base>)>>, !cir.ptr<!rec_Base> {{.*}}) -> ()
+// CIR:   cir.call @_ZN4Base1fEv(%[[BASE_THIS_2]]) : (!cir.ptr<!rec_Base> {{.*}}) -> ()
 // CIR:   cir.return
 
 // LLVM: define {{.*}}void @_Z1fv(){{.*}}
@@ -95,19 +87,13 @@ void ppp() { B b; }
 // LLVM:   %[[NEG32_PTR:.+]] = getelementptr i8, ptr %[[VPTR_ADDR]], i64 -32
 // LLVM:   %[[OFF:.+]] = load i64, ptr %[[NEG32_PTR]]
 // LLVM:   %[[ADJ_THIS:.+]] = getelementptr i8, ptr %[[D]], i64 %[[OFF]]
-// LLVM:   %[[VFN_TAB:.+]] = load ptr, ptr %[[ADJ_THIS]]
-// LLVM:   %[[SLOT0:.+]] = getelementptr inbounds ptr, ptr %[[VFN_TAB]], i32 0
-// LLVM:   %[[VFN:.+]] = load ptr, ptr %[[SLOT0]]
-// LLVM:   call void %[[VFN]](ptr {{.*}}%[[ADJ_THIS]])
+// LLVM:   call void @_ZN4Base1fEv(ptr {{.*}}%[[ADJ_THIS]])
 // LLVM:   ret void
 
 // LLVM: define {{.*}}void @_Z1gv(){{.*}}
 // LLVM:   %[[DF:.+]] = alloca {{.*}}
 // LLVM:   call void @_ZN12DerivedFinalC1Ev(ptr {{.*}} %[[DF]])
-// LLVM:   %[[VPTR2:.+]] = load ptr, ptr %[[DF]]
-// LLVM:   %[[SLOT0_2:.+]] = getelementptr inbounds ptr, ptr %[[VPTR2]], i32 0
-// LLVM:   %[[VFN2:.+]] = load ptr, ptr %[[SLOT0_2]]
-// LLVM:   call void %[[VFN2]](ptr {{.*}}%[[DF]])
+// LLVM:   call void @_ZN4Base1fEv(ptr {{.*}}%[[DF]])
 // LLVM:   ret void
 
 // OGCG: define {{.*}}void @_Z1fv()

@@ -59,20 +59,20 @@ static cl::opt<bool> ForceTargetSupportsMaskedMemoryOps(
     cl::desc("Assume the target supports masked memory operations (used for "
              "testing)."));
 
-bool VFSelectionContext::isLegalMaskedStore(Type *DataType, Value *Ptr,
-                                            Align Alignment,
-                                            unsigned AddressSpace) const {
-  return Legal->isConsecutivePtr(DataType, Ptr) &&
-         (ForceTargetSupportsMaskedMemoryOps ||
-          TTI.isLegalMaskedStore(DataType, Alignment, AddressSpace));
-}
+bool VFSelectionContext::isLegalMaskedLoadOrStore(Instruction *I,
+                                                  ElementCount VF) const {
+  assert(isa<LoadInst>(I) || isa<StoreInst>(I));
+  auto *Ptr = getLoadStorePointerOperand(I);
+  auto *Ty = getLoadStoreType(I);
+  const unsigned AS = getLoadStoreAddressSpace(I);
+  const Align Alignment = getLoadStoreAlignment(I);
 
-bool VFSelectionContext::isLegalMaskedLoad(Type *DataType, Value *Ptr,
-                                           Align Alignment,
-                                           unsigned AddressSpace) const {
-  return Legal->isConsecutivePtr(DataType, Ptr) &&
-         (ForceTargetSupportsMaskedMemoryOps ||
-          TTI.isLegalMaskedLoad(DataType, Alignment, AddressSpace));
+  if (!Legal->isConsecutivePtr(Ty, Ptr))
+    return false;
+
+  return ForceTargetSupportsMaskedMemoryOps ||
+         (isa<LoadInst>(I) ? TTI.isLegalMaskedLoad(Ty, Alignment, AS)
+                           : TTI.isLegalMaskedStore(Ty, Alignment, AS));
 }
 
 bool VFSelectionContext::isLegalGatherOrScatter(Value *V,

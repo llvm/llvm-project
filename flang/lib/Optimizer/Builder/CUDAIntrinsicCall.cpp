@@ -1328,7 +1328,7 @@ CUDAIntrinsicLibrary::genMatchAnySync(mlir::Type resultType,
 // SYNCTHREADS
 void CUDAIntrinsicLibrary::genSyncThreads(
     llvm::ArrayRef<fir::ExtendedValue> args) {
-  mlir::NVVM::Barrier0Op::create(builder, loc);
+  mlir::NVVM::BarrierOp::create(builder, loc);
 }
 
 // SYNCTHREADS_AND

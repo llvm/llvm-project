@@ -22,24 +22,34 @@ define i32 @fold_urem_positive_odd(i32 %x) {
 ; CHECK-GI-NEXT:    lsr x8, x8, #32
 ; CHECK-GI-NEXT:    sub w9, w0, w8
 ; CHECK-GI-NEXT:    add w8, w8, w9, lsr #1
-; CHECK-GI-NEXT:    mov w9, #95 // =0x5f
+; CHECK-GI-NEXT:    mov w9, #-95 // =0xffffffa1
 ; CHECK-GI-NEXT:    lsr w8, w8, #6
-; CHECK-GI-NEXT:    msub w0, w8, w9, w0
+; CHECK-GI-NEXT:    madd w0, w8, w9, w0
 ; CHECK-GI-NEXT:    ret
   %1 = urem i32 %x, 95
   ret i32 %1
 }
 
 define i32 @fold_urem_positive_even(i32 %x) {
-; CHECK-LABEL: fold_urem_positive_even:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #16323 // =0x3fc3
-; CHECK-NEXT:    mov w9, #1060 // =0x424
-; CHECK-NEXT:    movk w8, #63310, lsl #16
-; CHECK-NEXT:    umull x8, w0, w8
-; CHECK-NEXT:    lsr x8, x8, #42
-; CHECK-NEXT:    msub w0, w8, w9, w0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: fold_urem_positive_even:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    mov w8, #16323 // =0x3fc3
+; CHECK-SD-NEXT:    mov w9, #1060 // =0x424
+; CHECK-SD-NEXT:    movk w8, #63310, lsl #16
+; CHECK-SD-NEXT:    umull x8, w0, w8
+; CHECK-SD-NEXT:    lsr x8, x8, #42
+; CHECK-SD-NEXT:    msub w0, w8, w9, w0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fold_urem_positive_even:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov w8, #16323 // =0x3fc3
+; CHECK-GI-NEXT:    mov w9, #-1060 // =0xfffffbdc
+; CHECK-GI-NEXT:    movk w8, #63310, lsl #16
+; CHECK-GI-NEXT:    umull x8, w0, w8
+; CHECK-GI-NEXT:    lsr x8, x8, #42
+; CHECK-GI-NEXT:    madd w0, w8, w9, w0
+; CHECK-GI-NEXT:    ret
   %1 = urem i32 %x, 1060
   ret i32 %1
 }
@@ -102,18 +112,31 @@ define i32 @dont_fold_urem_i32_umax(i32 %x) {
 
 ; Don't fold i64 urem
 define i64 @dont_fold_urem_i64(i64 %x) {
-; CHECK-LABEL: dont_fold_urem_i64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x9, #58849 // =0xe5e1
-; CHECK-NEXT:    lsr x8, x0, #1
-; CHECK-NEXT:    movk x9, #48148, lsl #16
-; CHECK-NEXT:    movk x9, #33436, lsl #32
-; CHECK-NEXT:    movk x9, #21399, lsl #48
-; CHECK-NEXT:    umulh x8, x8, x9
-; CHECK-NEXT:    mov w9, #98 // =0x62
-; CHECK-NEXT:    lsr x8, x8, #4
-; CHECK-NEXT:    msub x0, x8, x9, x0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: dont_fold_urem_i64:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    mov x9, #58849 // =0xe5e1
+; CHECK-SD-NEXT:    lsr x8, x0, #1
+; CHECK-SD-NEXT:    movk x9, #48148, lsl #16
+; CHECK-SD-NEXT:    movk x9, #33436, lsl #32
+; CHECK-SD-NEXT:    movk x9, #21399, lsl #48
+; CHECK-SD-NEXT:    umulh x8, x8, x9
+; CHECK-SD-NEXT:    mov w9, #98 // =0x62
+; CHECK-SD-NEXT:    lsr x8, x8, #4
+; CHECK-SD-NEXT:    msub x0, x8, x9, x0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: dont_fold_urem_i64:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov x9, #58849 // =0xe5e1
+; CHECK-GI-NEXT:    lsr x8, x0, #1
+; CHECK-GI-NEXT:    movk x9, #48148, lsl #16
+; CHECK-GI-NEXT:    movk x9, #33436, lsl #32
+; CHECK-GI-NEXT:    movk x9, #21399, lsl #48
+; CHECK-GI-NEXT:    umulh x8, x8, x9
+; CHECK-GI-NEXT:    mov x9, #-98 // =0xffffffffffffff9e
+; CHECK-GI-NEXT:    lsr x8, x8, #4
+; CHECK-GI-NEXT:    madd x0, x8, x9, x0
+; CHECK-GI-NEXT:    ret
   %1 = urem i64 %x, 98
   ret i64 %1
 }

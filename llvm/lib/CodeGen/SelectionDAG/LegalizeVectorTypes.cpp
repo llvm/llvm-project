@@ -8328,7 +8328,7 @@ SDValue DAGTypeLegalizer::WidenVecOp_VECREDUCE(SDNode *N) {
 
   unsigned Opc = N->getOpcode();
   unsigned BaseOpc = ISD::getVecReduceBaseOpcode(Opc);
-  SDValue NeutralElem = DAG.getNeutralElement(BaseOpc, dl, ElemVT, Flags);
+  SDValue NeutralElem = DAG.getIdentityElement(BaseOpc, dl, ElemVT, Flags);
   assert(NeutralElem && "Neutral element must exist");
 
   // Pad the vector with the neutral element.
@@ -8382,7 +8382,7 @@ SDValue DAGTypeLegalizer::WidenVecOp_VECREDUCE_SEQ(SDNode *N) {
 
   unsigned Opc = N->getOpcode();
   unsigned BaseOpc = ISD::getVecReduceBaseOpcode(Opc);
-  SDValue NeutralElem = DAG.getNeutralElement(BaseOpc, dl, ElemVT, Flags);
+  SDValue NeutralElem = DAG.getIdentityElement(BaseOpc, dl, ElemVT, Flags);
 
   // Pad the vector with the neutral element.
   unsigned OrigElts = OrigVT.getVectorMinNumElements();

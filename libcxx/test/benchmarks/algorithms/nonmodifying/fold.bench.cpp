@@ -71,10 +71,9 @@ int main(int argc, char** argv) {
     bm.operator()<std::deque<unsigned int>>("rng::fold_left_first(deque<int>)", std_ranges_fold_left_first);
     bm.operator()<std::list<unsigned int>>("rng::fold_left_first(list<int>)", std_ranges_fold_left_first);
 
-    // TODO: fold_right not implemented yet
-    // bm.operator()<std::vector<unsigned int>>("rng::fold_right(vector<int>)", std::ranges::fold_right);
-    // bm.operator()<std::deque<unsigned int>>("rng::fold_right(deque<int>)", std::ranges::fold_right);
-    // bm.operator()<std::list<unsigned int>>("rng::fold_right(list<int>)", std::ranges::fold_right);
+    bm.operator()<std::vector<unsigned int>>("rng::fold_right(vector<int>)", std::ranges::fold_right);
+    bm.operator()<std::deque<unsigned int>>("rng::fold_right(deque<int>)", std::ranges::fold_right);
+    bm.operator()<std::list<unsigned int>>("rng::fold_right(list<int>)", std::ranges::fold_right);
   }
 
   benchmark::Initialize(&argc, argv);

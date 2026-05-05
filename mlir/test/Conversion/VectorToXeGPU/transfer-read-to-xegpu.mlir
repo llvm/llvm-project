@@ -144,6 +144,46 @@ gpu.func @load_transposed(%source: memref<32x64xf32>,
 
 // -----
 gpu.module @xevm_module {
+gpu.func @load_transpose_3d_memref(%source: memref<32x64x128xf32>,
+    %i: index, %j: index, %k: index) -> vector<8x16xf32> {
+  %c0 = arith.constant 0.0 : f32
+  %0 = vector.transfer_read %source[%i, %j, %k], %c0
+    {permutation_map = affine_map<(d0, d1, d2) -> (d2, d1)>,
+    in_bounds = [true, true]} : memref<32x64x128xf32>, vector<8x16xf32>
+  gpu.return %0 : vector<8x16xf32>
+}
+
+// LOAD-ND-LABEL:  @load_transpose_3d_memref(
+// LOAD-ND-SAME:   %[[SRC:.+]]: memref<32x64x128xf32>,
+// LOAD-ND-SAME:   %[[OFF0:.+]]: index, %[[OFF1:.+]]: index, %[[OFF2:.+]]: index) -> vector<8x16xf32> {
+// LOAD-ND:        %[[ELEM_BYTES:.+]] = arith.constant 4 : index
+// LOAD-ND:        %[[COLLAPSED:.+]] = memref.subview %[[SRC]][%[[OFF0]], 0, 0]
+// LOAD-ND:        %[[BASE_BUFFER:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:2, %[[STRIDES:.*]]:2 = memref.extract_strided_metadata %[[COLLAPSED]]
+// LOAD-ND:        %[[INTPTR:.*]] = memref.extract_aligned_pointer_as_index %[[BASE_BUFFER]]
+// LOAD-ND-SAME:     : memref<f32> -> index
+// LOAD-ND:        %[[MUL:.*]] = arith.muli %[[OFFSET]], %[[ELEM_BYTES]] : index
+// LOAD-ND:        %[[ADD:.*]] = arith.addi %[[INTPTR]], %[[MUL]] : index
+// LOAD-ND:        %[[I64PTR:.*]] = arith.index_cast %[[ADD]] : index to i64
+// LOAD-ND:        %[[DESC:.+]] = xegpu.create_nd_tdesc %[[I64PTR]], shape : [64, 128],
+// LOAD-ND-SAME:                   strides : [128, 1] : i64 -> !xegpu.tensor_desc<16x8xf32,
+// LOAD-ND-SAME:     #xegpu.block_tdesc_attr<boundary_check = false>>
+// LOAD-ND:        %[[VEC:.+]] = xegpu.load_nd %[[DESC]][%[[OFF1]], %[[OFF2]]]
+// LOAD-ND-SAME:     : !xegpu.tensor_desc<16x8xf32, #xegpu.block_tdesc_attr<boundary_check = false>> -> vector<16x8xf32>
+// LOAD-ND:        %[[VEC_TRANSPOSED:.+]] = vector.transpose %[[VEC]], [1, 0] : vector<16x8xf32> to vector<8x16xf32>
+
+// LOAD-GATHER-LABEL:  @load_transpose_3d_memref(
+// LOAD-GATHER-SAME:    %[[SRC:.+]]: memref<32x64x128xf32>,
+// LOAD-GATHER-SAME:    %[[OFF1:.+]]: index, %[[OFF2:.+]]: index, %[[OFF3:.+]]: index
+// LOAD-GATHER:         %[[BCAST3:.+]] = vector.broadcast %{{.*}} : index to vector<8x16xindex>
+// LOAD-GATHER:         %[[IDX:.+]] = arith.addi %[[BCAST3]], %{{.*}} : vector<8x16xindex>
+// LOAD-GATHER:         %[[INTPTR:.*]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<32x64x128xf32> -> index
+// LOAD-GATHER-NEXT:    %[[I64PTR:.+]] = arith.index_cast %[[INTPTR]] : index to i64
+// LOAD-GATHER-NEXT:    %[[LOAD:.*]] = xegpu.load %[[I64PTR]][%[[IDX]]], %{{.*}} : i64, vector<8x16xindex>, vector<8x16xi1> -> vector<8x16xf32>
+
+}
+
+// -----
+gpu.module @xevm_module {
 gpu.func @load_dynamic_source(%source: memref<?x?x?xf32>,
     %i: index, %j: index, %k: index) -> vector<8x16xf32> {
   %c0 = arith.constant 0.0 : f32

@@ -158,7 +158,8 @@ class LValue {
     BitField,     // This is a bitfield l-value, use getBitfield*.
     ExtVectorElt, // This is an extended vector subset, use getExtVectorComp
     GlobalReg,    // This is a register l-value, use getGlobalReg()
-    MatrixElt     // This is a matrix element, use getVector*
+    MatrixElt,    // This is a matrix element, use getVector*
+    MatrixRow     // This is a matrix vector subset, use getVector*
   } lvType;
   clang::QualType type;
   clang::Qualifiers quals;
@@ -194,6 +195,7 @@ public:
   bool isBitField() const { return lvType == BitField; }
   bool isExtVectorElt() const { return lvType == ExtVectorElt; }
   bool isGlobalReg() const { return lvType == GlobalReg; }
+  bool isMatrixRow() const { return lvType == MatrixRow; }
   bool isVolatile() const { return quals.hasVolatile(); }
 
   bool isVolatileQualified() const { return quals.hasVolatile(); }

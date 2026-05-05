@@ -809,7 +809,7 @@ private:
 public:
   LLVM_ABI AtomicRMWInst(BinOp Operation, Value *Ptr, Value *Val,
                          Align Alignment, AtomicOrdering Ordering,
-                         SyncScope::ID SSID,
+                         SyncScope::ID SSID, bool Elementwise = false,
                          InsertPosition InsertBefore = nullptr);
 
   // allocate space for exactly two operands
@@ -821,8 +821,10 @@ public:
       AtomicOrderingBitfieldElementT<VolatileField::NextBit>;
   using OperationField = BinOpBitfieldElement<AtomicOrderingField::NextBit>;
   using AlignmentField = AlignmentBitfieldElementT<OperationField::NextBit>;
+  using ElementwiseField = BoolBitfieldElementT<AlignmentField::NextBit>;
   static_assert(Bitfield::areContiguous<VolatileField, AtomicOrderingField,
-                                        OperationField, AlignmentField>(),
+                                        OperationField, AlignmentField,
+                                        ElementwiseField>(),
                 "Bitfields must be contiguous");
 
   BinOp getOperation() const { return getSubclassData<OperationField>(); }
@@ -866,6 +868,12 @@ public:
   /// Specify whether this is a volatile RMW or not.
   ///
   void setVolatile(bool V) { setSubclassData<VolatileField>(V); }
+
+  /// Return true if this RMW has elementwise vector semantics.
+  bool isElementwise() const { return getSubclassData<ElementwiseField>(); }
+
+  /// Specify whether this RMW has elementwise vector semantics.
+  void setElementwise(bool V) { setSubclassData<ElementwiseField>(V); }
 
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
@@ -920,7 +928,7 @@ public:
 
 private:
   void Init(BinOp Operation, Value *Ptr, Value *Val, Align Align,
-            AtomicOrdering Ordering, SyncScope::ID SSID);
+            AtomicOrdering Ordering, SyncScope::ID SSID, bool Elementwise);
 
   // Shadow Instruction::setInstructionSubclassData with a private forwarding
   // method so that subclasses cannot accidentally use it.
