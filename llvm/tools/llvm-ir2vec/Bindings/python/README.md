@@ -7,7 +7,7 @@ in machine learning-based compiler optimization.
 ## Installation
 
 ```bash
-pip install llvm-ir2vec
+pip install ir2vec
 ```
 
 ## Usage
@@ -38,15 +38,13 @@ inst_map = emb.getInstEmbMap("foo")
 
 ## Bundled vocabularies
 
-The package ships three pre-trained seed embedding vocabularies:
+The package ships a pre-trained seed embedding vocabulary:
 
 | Attribute | Dimensions | Use |
 |---|---|---|
 | `ir2vec.vocab.seedEmbedding75D` | 75 |
-| `ir2vec.vocab.seedEmbedding100D` | 100 |
-| `ir2vec.vocab.seedEmbedding300D` | 300 |
 
-Pass any of these directly to `initEmbedding(vocabPath=...)`.
+Pass this or an vocab of your choice directly to `loadVocab(vocabPath=...)`.
 
 ## Building from source
 
@@ -57,7 +55,6 @@ cmake -G Ninja -B build \
   -DCMAKE_BUILD_TYPE=Release \
   -DLLVM_TARGETS_TO_BUILD=host \
   -DLLVM_IR2VEC_ENABLE_PYTHON_BINDINGS=ON \
-  -DPython3_EXECUTABLE=$(which python3) \
   llvm
 
 ninja -C build llvm-ir2vec

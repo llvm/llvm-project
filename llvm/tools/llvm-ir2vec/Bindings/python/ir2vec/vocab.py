@@ -6,6 +6,10 @@
 
 Attributes are filesystem paths to JSON vocabulary files bundled in the
 wheel, suitable for passing directly to ``ir2vec.initEmbedding(vocabPath=...)``.
+
+Note: The vocab JSON is not present in this source tree. It is injected
+into ``ir2vec/vocab_data/`` at wheel build time from its canonical location:
+``llvm/lib/Analysis/models/seedEmbeddingVocab75D.json``.
 """
 
 import importlib.resources as _resources
@@ -16,5 +20,3 @@ def _resolve(filename: str) -> str:
 
 
 seedEmbedding75D: str = _resolve("seedEmbeddingVocab75D.json")
-seedEmbedding100D: str = _resolve("seedEmbeddingVocab100D.json")
-seedEmbedding300D: str = _resolve("seedEmbeddingVocab300D.json")

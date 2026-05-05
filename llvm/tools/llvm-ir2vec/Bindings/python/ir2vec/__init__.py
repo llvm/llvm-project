@@ -26,14 +26,16 @@ Example usage::
     func_emb_map = emb.getFuncEmbMap()
 """
 
-try:
-    from importlib.metadata import version as _get_version
 
-    __version__ = _get_version("llvm-ir2vec")
-except Exception:
-    # Package not installed (e.g., running from the build tree or during
-    # testing before installation). Falls back to a dev sentinel.
-    __version__ = "0.0.0.dev"
+from importlib.metadata import version, PackageNotFoundError
+
+try:
+    # After `pip install`, reads the version baked into the wheel's METADATA.
+    # Always consistent with what `pip show ir2vec` reports.
+    __version__ = version("ir2vec")
+except PackageNotFoundError:
+    # Running directly from the source tree without installing.
+    __version__ = "0.0.0+DEADBEEF"
 
 try:
     from ir2vec.ir2vec import *  # noqa: F401, F403
