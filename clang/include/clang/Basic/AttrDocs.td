@@ -10010,6 +10010,21 @@ consistent, the compiler automatically increases the structure's total size
 struct with a natural size of 6 bytes marked directly (or indirectly via a member declaration) with ``aligned(8)`` will be 
 padded to 8 bytes.
 
+In C++, alignment requirements are inherited by derived classes. If a base 
+class has an alignment specified, the derived class will honor that 
+requirement to ensure the base subobject remains correctly aligned. 
+
+.. code-block:: c++
+
+  struct alignas(16) Base {
+    int i;
+  };
+
+  struct Derived : Base {
+    int j;
+  };
+  // sizeof(Derived) will be 32, and alignof(Derived) will be 16.
+
 The attribute is additive and follows a "strictest-wins" rule: if multiple 
 alignment specifications are applied to the same declaration—whether 
 through a mix of ``alignas`` and ``aligned`` or multiple ``aligned`` 
