@@ -2,6 +2,8 @@
 // These macros indicate which extensions have intrinsics supported by the
 // toolchain, regardless of whether they are currently enabled via -march.
 
+// REQUIRES: riscv-registered-target
+
 // RUN: %clang_cc1 -triple riscv32 -target-feature +zihintntl -E -dM %s -o - \
 // RUN:   | FileCheck --check-prefix=CHECK-INTRINSIC-EXTS %s
 // RUN: %clang_cc1 -triple riscv64 -target-feature +zihintntl -E -dM %s -o - \
