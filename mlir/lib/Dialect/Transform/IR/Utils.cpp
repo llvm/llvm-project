@@ -143,7 +143,7 @@ transform::detail::mergeSymbolsInto(Operation *target,
       return;
 
     if (!inliner.isLegalToInline(call, callable, /*wouldBeCloned=*/false)) {
-      noInlineCalls.insert(callable);
+      noInlineCalls.insert(call.getOperation());
     }
     return;
   });
@@ -335,7 +335,7 @@ transform::detail::mergeSymbolsInto(Operation *target,
 
     if (!callable)
       return WalkResult::advance();
-    if (!noInlineCalls.contains(callable) &&
+    if (!noInlineCalls.contains(call.getOperation()) &&
         !inliner.isLegalToInline(call, callable, /*wouldBeCloned=*/false)) {
       InFlightDiagnostic diag =
           call->emitError()
