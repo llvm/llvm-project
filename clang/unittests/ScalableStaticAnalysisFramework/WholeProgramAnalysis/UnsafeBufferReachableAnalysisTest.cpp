@@ -231,6 +231,40 @@ protected:
     }
     return Expected;
   }
+
+  /// The simple, non-comprehensive alternative to `forEachPartition`. All edges
+  /// and starters owned by entity 0.
+  std::optional<std::set<unsigned>>
+  singlePartition(unsigned NumEnt,
+                  llvm::ArrayRef<std::pair<unsigned, unsigned>> EdgeLayout,
+                  llvm::ArrayRef<unsigned> StarterLayout, unsigned Line) {
+    auto LU = makeLUSummary();
+    auto Entities = createEntities(*LU, NumEnt);
+    auto N = createEPLs(Entities);
+
+    std::vector<EPLEdge> Edges;
+    for (const auto &[F, T] : EdgeLayout)
+      Edges.push_back({N[F], N[T]});
+
+    std::vector<EntityPointerLevel> Starters;
+    for (unsigned Idx : StarterLayout)
+      Starters.push_back(N[Idx]);
+
+    insertSummaries(*LU, Entities[0], Edges, Starters);
+    for (unsigned Idx = 1; Idx < NumEnt; ++Idx)
+      insertSummaries(*LU, Entities[Idx], {}, {});
+
+    auto Reachables = computeReachables(std::move(LU), Line);
+    if (!Reachables.has_value())
+      return std::nullopt;
+
+    std::set<unsigned> ReachableIndices;
+    for (unsigned I : llvm::seq(0U, NumEnt))
+      if (Reachables->count(N[I]))
+        ReachableIndices.insert(I);
+
+    return ReachableIndices;
+  }
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -246,7 +280,7 @@ protected:
 // Linear chain: 0 -> 1 -> 2 -> 3.
 // Start from {0} => {0, 1, 2, 3}
 TEST_F(UnsafeBufferReachableAnalysisTest, LinearChain) {
-  auto Reachables = forEachPartition(
+  auto Reachables = singlePartition(
       /* NumEnt */ 4,
       /* EdgeLayout */ {{0, 1}, {1, 2}, {2, 3}},
       /* StarterLayout */ {0}, __LINE__);
@@ -257,7 +291,7 @@ TEST_F(UnsafeBufferReachableAnalysisTest, LinearChain) {
 // Linear chain: 0 -> 1 -> 2 -> 3.
 // Start from mid-chain {2} => {2, 3}
 TEST_F(UnsafeBufferReachableAnalysisTest, LinearChainFromMiddle) {
-  auto Reachables = forEachPartition(
+  auto Reachables = singlePartition(
       /* NumEnt */ 4,
       /* EdgeLayout */ {{0, 1}, {1, 2}, {2, 3}},
       /* StarterLayout */ {2}, __LINE__);
@@ -270,7 +304,7 @@ TEST_F(UnsafeBufferReachableAnalysisTest, LinearChainFromMiddle) {
 // Diamond: 0 -> 1, 0 -> 2, 1 -> 3, 2 -> 3.
 // Start from {0} => {0, 1, 2, 3}
 TEST_F(UnsafeBufferReachableAnalysisTest, Diamond) {
-  auto Reachables = forEachPartition(
+  auto Reachables = singlePartition(
       /* NumEnt */ 4,
       /* EdgeLayout */ {{0, 1}, {0, 2}, {1, 3}, {2, 3}},
       /* StarterLayout */ {0}, __LINE__);
@@ -281,7 +315,7 @@ TEST_F(UnsafeBufferReachableAnalysisTest, Diamond) {
 // Diamond: 0 -> 1, 0 -> 2, 1 -> 3, 2 -> 3.
 // Start from one branch {1} => {1, 3}
 TEST_F(UnsafeBufferReachableAnalysisTest, DiamondFromBranch) {
-  auto Reachables = forEachPartition(
+  auto Reachables = singlePartition(
       /* NumEnt */ 4,
       /* EdgeLayout */ {{0, 1}, {0, 2}, {1, 3}, {2, 3}},
       /* StarterLayout */ {1}, __LINE__);
@@ -294,7 +328,7 @@ TEST_F(UnsafeBufferReachableAnalysisTest, DiamondFromBranch) {
 // Disconnected subgraphs: 0 -> 1, 2 -> 3.
 // Start from {0} => {0, 1}
 TEST_F(UnsafeBufferReachableAnalysisTest, DisconnectedSubgraphs) {
-  auto Reachables = forEachPartition(
+  auto Reachables = singlePartition(
       /* NumEnt */ 4,
       /* EdgeLayout */ {{0, 1}, {2, 3}},
       /* StarterLayout */ {0}, __LINE__);
@@ -307,7 +341,7 @@ TEST_F(UnsafeBufferReachableAnalysisTest, DisconnectedSubgraphs) {
 // Disconnected subgraphs: 0 -> 1, 2 -> 3.
 // Start from tail {1} => {1}
 TEST_F(UnsafeBufferReachableAnalysisTest, DisconnectedSubgraphsFromTail) {
-  auto Reachables = forEachPartition(
+  auto Reachables = singlePartition(
       /* NumEnt */ 4,
       /* EdgeLayout */ {{0, 1}, {2, 3}},
       /* StarterLayout */ {1}, __LINE__);
@@ -319,7 +353,7 @@ TEST_F(UnsafeBufferReachableAnalysisTest, DisconnectedSubgraphsFromTail) {
 // Cycle: 0 -> 1 -> 2 -> 3 -> 0.
 // Start from {2} => {0, 1, 2, 3}
 TEST_F(UnsafeBufferReachableAnalysisTest, Cycle) {
-  auto Reachables = forEachPartition(
+  auto Reachables = singlePartition(
       /* NumEnt */ 4,
       /* EdgeLayout */ {{0, 1}, {1, 2}, {2, 3}, {3, 0}},
       /* StarterLayout */ {2}, __LINE__);
@@ -333,7 +367,7 @@ TEST_F(UnsafeBufferReachableAnalysisTest, Cycle) {
 
 // Empty graph: no edges, start from {0} => {0}
 TEST_F(UnsafeBufferReachableAnalysisTest, EmptyGraph) {
-  auto Reachables = forEachPartition(
+  auto Reachables = singlePartition(
       /* NumEnt */ 4,
       /* EdgeLayout */ {},
       /* StarterLayout */ {0}, __LINE__);
@@ -345,7 +379,7 @@ TEST_F(UnsafeBufferReachableAnalysisTest, EmptyGraph) {
 // Star: 0 -> 1, 0 -> 2, 0 -> 3.
 // Start from {0} => {0, 1, 2, 3}
 TEST_F(UnsafeBufferReachableAnalysisTest, StarFromHub) {
-  auto Reachables = forEachPartition(
+  auto Reachables = singlePartition(
       /* NumEnt */ 4,
       /* EdgeLayout */ {{0, 1}, {0, 2}, {0, 3}},
       /* StarterLayout */ {0}, __LINE__);
@@ -356,7 +390,7 @@ TEST_F(UnsafeBufferReachableAnalysisTest, StarFromHub) {
 // Star: 0 -> 1, 0 -> 2, 0 -> 3.
 // Start from leaf {2} => {2}
 TEST_F(UnsafeBufferReachableAnalysisTest, StarFromLeaf) {
-  auto Reachables = forEachPartition(
+  auto Reachables = singlePartition(
       /* NumEnt */ 4,
       /* EdgeLayout */ {{0, 1}, {0, 2}, {0, 3}},
       /* StarterLayout */ {2}, __LINE__);
@@ -368,7 +402,7 @@ TEST_F(UnsafeBufferReachableAnalysisTest, StarFromLeaf) {
 // Reverse star: 0 -> 3, 1 -> 3, 2 -> 3.
 // Start from {0} => {0, 3}
 TEST_F(UnsafeBufferReachableAnalysisTest, ReverseStarFromSource) {
-  auto Reachables = forEachPartition(
+  auto Reachables = singlePartition(
       /* NumEnt */ 4,
       /* EdgeLayout */ {{0, 3}, {1, 3}, {2, 3}},
       /* StarterLayout */ {0}, __LINE__);
@@ -381,7 +415,7 @@ TEST_F(UnsafeBufferReachableAnalysisTest, ReverseStarFromSource) {
 // Reverse star: 0 -> 3, 1 -> 3, 2 -> 3.
 // Start from sink {3} => {3}
 TEST_F(UnsafeBufferReachableAnalysisTest, ReverseStarFromSink) {
-  auto Reachables = forEachPartition(
+  auto Reachables = singlePartition(
       /* NumEnt */ 4,
       /* EdgeLayout */ {{0, 3}, {1, 3}, {2, 3}},
       /* StarterLayout */ {3}, __LINE__);
@@ -393,7 +427,7 @@ TEST_F(UnsafeBufferReachableAnalysisTest, ReverseStarFromSink) {
 // Self-loop: 0 -> 1, 1 -> 1, 1 -> 2, 2 -> 3.
 // Start from {0} => {0, 1, 2, 3}
 TEST_F(UnsafeBufferReachableAnalysisTest, SelfLoopFromRoot) {
-  auto Reachables = forEachPartition(
+  auto Reachables = singlePartition(
       /* NumEnt */ 4,
       /* EdgeLayout */ {{0, 1}, {1, 1}, {1, 2}, {2, 3}},
       /* StarterLayout */ {0}, __LINE__);
@@ -404,7 +438,7 @@ TEST_F(UnsafeBufferReachableAnalysisTest, SelfLoopFromRoot) {
 // Self-loop: 0 -> 1, 1 -> 1, 1 -> 2, 2 -> 3.
 // Start from {1} => {1, 2, 3}
 TEST_F(UnsafeBufferReachableAnalysisTest, SelfLoopFromLoopNode) {
-  auto Reachables = forEachPartition(
+  auto Reachables = singlePartition(
       /* NumEnt */ 4,
       /* EdgeLayout */ {{0, 1}, {1, 1}, {1, 2}, {2, 3}},
       /* StarterLayout */ {1}, __LINE__);
@@ -418,7 +452,7 @@ TEST_F(UnsafeBufferReachableAnalysisTest, SelfLoopFromLoopNode) {
 // Multiple starters: 0 -> 1, 2 -> 3 (disconnected).
 // Start from {0, 2} => {0, 1, 2, 3}
 TEST_F(UnsafeBufferReachableAnalysisTest, MultipleStartersBothChains) {
-  auto Reachables = forEachPartition(
+  auto Reachables = singlePartition(
       /* NumEnt */ 4,
       /* EdgeLayout */ {{0, 1}, {2, 3}},
       /* StarterLayout */ {0, 2}, __LINE__);
@@ -429,7 +463,7 @@ TEST_F(UnsafeBufferReachableAnalysisTest, MultipleStartersBothChains) {
 // Multiple starters: 0 -> 1, 2 -> 3 (disconnected).
 // Start from leaves {1, 3} => {1, 3}
 TEST_F(UnsafeBufferReachableAnalysisTest, MultipleStartersLeaves) {
-  auto Reachables = forEachPartition(
+  auto Reachables = singlePartition(
       /* NumEnt */ 4,
       /* EdgeLayout */ {{0, 1}, {2, 3}},
       /* StarterLayout */ {1, 3}, __LINE__);
