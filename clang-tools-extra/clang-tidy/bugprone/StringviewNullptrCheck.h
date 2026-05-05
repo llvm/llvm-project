@@ -13,11 +13,10 @@
 
 namespace clang::tidy::bugprone {
 
-/// Checks for various ways that the `const CharT*` constructor of
-/// `std::basic_string_view` can be passed a null argument and replaces them
-/// with the default constructor in most cases. For the comparison operators,
-/// braced initializer list does not compile so instead a call to `.empty()` or
-/// the empty string literal are used, where appropriate.
+/// Finds cases where the ``const CharT*`` constructor of
+/// ``std::basic_string_view`` is passed a null pointer argument and replaces them
+/// with calls to the default constructor or construction from the empty string
+/// (``""``) as appropriate.
 ///
 /// For the user-facing documentation see:
 /// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/stringview-nullptr.html

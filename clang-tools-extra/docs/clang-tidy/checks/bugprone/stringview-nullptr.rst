@@ -2,7 +2,7 @@
 
 bugprone-stringview-nullptr
 ===========================
-Checks for cases where the ``const CharT*`` constructor of
+Finds cases where the ``const CharT*`` constructor of
 ``std::basic_string_view`` is passed a null pointer argument and replaces them
 with calls to the default constructor or construction from the empty string
 (``""``) as appropriate.
