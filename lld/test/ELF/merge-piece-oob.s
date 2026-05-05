@@ -18,7 +18,7 @@
 ## .data.retain references .foo-2 as well.
 # CHECK-NEXT: [[PREFIX]]: {{.*}}:(.foo): offset 0xfffffffffffffffe is outside the section
 
-## --gc-sections with an out-of-bounds offset doesn't crash.
+## Test that --gc-sections with an out-of-bounds offset doesn't crash.
 ## .data is discarded but .data.retain (SHF_GNU_RETAIN) is kept.
 ## The bad offset prevents the piece from being marked live, so .foo is discarded.
 # RUN: not ld.lld %t.err.o -o /dev/null --gc-sections 2>&1 | FileCheck %s --check-prefix=GC
