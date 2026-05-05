@@ -15,7 +15,7 @@
 declare void @llvm.va_start(ptr)
 declare ptr @llvm.addressofreturnaddress()
 
-define dso_local ptr @"foo"() {
+define dso_local ptr @foo() {
 ; CHECK-LABEL: foo:
 ; CHECK:       .seh_proc foo
 ; CHECK-NEXT:  // %bb.0: // %entry
@@ -37,7 +37,7 @@ entry:
   ret ptr %0
 }
 
-define dso_local i32 @"bar"(ptr %x, ...) {
+define dso_local i32 @bar(ptr %x, ...) {
 ; CHECK-LABEL: bar:
 ; CHECK:       .seh_proc bar
 ; CHECK-NEXT:  // %bb.0: // %entry
