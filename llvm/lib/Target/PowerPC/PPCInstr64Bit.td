@@ -332,6 +332,12 @@ def LDAT : X_RD5_RS5_IM5<31, 614, (outs g8prc:$RST), (ins g8prc:$RSTi, ptr_rc_no
                          "ldat $RST, $RA, $RB", IIC_LdStLoad>, isPPC64,
            Requires<[IsISA3_0]>,
            RegConstraint<"$RSTi = $RST">;
+
+let hasExtraSrcRegAllocReq = 1, mayStore = 1,
+      isCodeGenOnly = 1, hasNoSchedulingInfo = 1 in
+def LDAT_CSNE : X_RD5_RS5_IM5<31, 614, (outs g8rc:$RST), (ins ptr_rc_nor0:$RA, u5imm:$RB),
+                         "ldat $RST, $RA, $RB", IIC_LdStLoad>,
+           Requires<[IsISA3_0]>;
 }
 
 def LDAT_PSEUDO : PPCCustomInserterPseudo<
@@ -347,6 +353,13 @@ def LDAT_COND_PSEUDO : PPCCustomInserterPseudo <
     "#LDAT_COND_PSEUDO",
     [(set i64:$dst, (int_ppc_amo_ldat_cond ptr_rc_nor0:$ptr,
                                             u5imm_timm:$fc))]>;
+
+let Defs = [X8, X9, X10], Uses = [X9, X10] in
+def LDAT_CSNE_PSEUDO : PPCPostRAExpPseudo<
+    (outs g8rc:$dst),
+    (ins ptr_rc_nor0:$ptr),
+    "#LDAT_CSNE_PSEUDO",
+    [(set i64:$dst, (int_ppc_amo_ldat_csne ptr_rc_nor0:$ptr, X9, X10))]>;
 
 let Defs = [CR0], mayStore = 1, mayLoad = 1, hasSideEffects = 1 in {
 def STDCX : XForm_1_memOp<31, 214, (outs), (ins g8rc:$RST, (memrr $RA, $RB):$addr),

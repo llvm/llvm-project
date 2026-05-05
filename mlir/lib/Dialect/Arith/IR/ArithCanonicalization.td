@@ -437,21 +437,25 @@ def UIToFPOfExtUI :
 //===----------------------------------------------------------------------===//
 
 // mulf(negf(x), negf(y)) -> mulf(x,y)
-// (retain fastmath flags of original mulf)
+// TODO: Verify if this canonicalization is safe when a rounding mode is
+// specified. For the moment, bail on custom rounding modes.
 def MulFOfNegF :
-    Pat<(Arith_MulFOp (Arith_NegFOp $x, $_), (Arith_NegFOp $y, $_), $fmf),
-        (Arith_MulFOp $x, $y, $fmf),
-        [(Constraint<CPred<"$0.getType() == $1.getType()">> $x, $y)]>;
+    Pat<(Arith_MulFOp (Arith_NegFOp $x, $_), (Arith_NegFOp $y, $_), $fmf, $rm),
+        (Arith_MulFOp $x, $y, $fmf, $rm),
+        [(Constraint<CPred<"$0.getType() == $1.getType()">> $x, $y),
+         (Constraint<CPred<"$0 == nullptr">, "default rounding mode"> $rm)]>;
 
 //===----------------------------------------------------------------------===//
 // DivFOp
 //===----------------------------------------------------------------------===//
 
 // divf(negf(x), negf(y)) -> divf(x,y)
-// (retain fastmath flags of original divf)
+// TODO: Verify if this canonicalization is safe when a rounding mode is
+// specified. For the moment, bail on custom rounding modes.
 def DivFOfNegF :
-    Pat<(Arith_DivFOp (Arith_NegFOp $x, $_), (Arith_NegFOp $y, $_), $fmf),
-        (Arith_DivFOp $x, $y, $fmf),
-        [(Constraint<CPred<"$0.getType() == $1.getType()">> $x, $y)]>;
+    Pat<(Arith_DivFOp (Arith_NegFOp $x, $_), (Arith_NegFOp $y, $_), $fmf, $rm),
+        (Arith_DivFOp $x, $y, $fmf, $rm),
+        [(Constraint<CPred<"$0.getType() == $1.getType()">> $x, $y),
+         (Constraint<CPred<"$0 == nullptr">, "default rounding mode"> $rm)]>;
 
 #endif // ARITH_PATTERNS

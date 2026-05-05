@@ -362,6 +362,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  pthread_mutex_trylock
+  SRCS
+    pthread_mutex_trylock.cpp
+  HDRS
+    pthread_mutex_trylock.h
+  DEPENDS
+    libc.include.pthread
+    libc.src.__support.threads.mutex
+)
+
+add_entrypoint_object(
   pthread_mutex_unlock
   SRCS
     pthread_mutex_unlock.cpp

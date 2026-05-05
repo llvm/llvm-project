@@ -1557,8 +1557,7 @@ bool ValueObject::DumpPrintableRepresentation(
         str = GetSummaryAsCString();
       else if (val_obj_display == eValueObjectRepresentationStyleSummary) {
         if (!CanProvideValue()) {
-          strm.Printf("%s @ %s", GetTypeName().AsCString(),
-                      GetLocationAsCString());
+          strm.Format("{0} @ {1}", GetTypeName(), GetLocationAsCString());
           str = strm.GetString();
         } else
           str = GetValueAsCString();
@@ -2523,7 +2522,7 @@ ValueObjectSP ValueObject::GetValueForExpressionPath_Impl(
             child_valobj_sp = root->GetSyntheticArrayMember(index, true);
           if (!child_valobj_sp)
             if (root->HasSyntheticValue() &&
-                llvm::expectedToStdOptional(
+                llvm::expectedToOptional(
                     root->GetSyntheticValue()->GetNumChildren())
                         .value_or(0) > index)
               child_valobj_sp =

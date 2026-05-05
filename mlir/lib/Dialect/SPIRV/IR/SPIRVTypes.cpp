@@ -57,6 +57,7 @@ public:
           for (Type elementType : concreteType.getElementTypes())
             add(elementType);
         })
+        .Case<SamplerType>([](auto) { /* no extensions */ })
         .DefaultUnreachable("Unhandled type");
   }
 
@@ -107,6 +108,7 @@ public:
           for (Type elementType : concreteType.getElementTypes())
             add(elementType);
         })
+        .Case<SamplerType>([](auto) { /* no capabilities */ })
         .DefaultUnreachable("Unhandled type");
   }
 
@@ -188,7 +190,8 @@ bool CompositeType::classof(Type type) {
 bool CompositeType::isValid(VectorType type) {
   return type.getRank() == 1 &&
          llvm::is_contained({2, 3, 4, 8, 16}, type.getNumElements()) &&
-         isa<ScalarType>(type.getElementType());
+         (isa<ScalarType>(type.getElementType()) ||
+          isa<PointerType>(type.getElementType()));
 }
 
 Type CompositeType::getElementType(unsigned index) const {
@@ -795,6 +798,14 @@ SampledImageType::verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
 }
 
 //===----------------------------------------------------------------------===//
+// SamplerType
+//===----------------------------------------------------------------------===//
+
+SamplerType SamplerType::get(MLIRContext *context) {
+  return Base::get(context);
+}
+
+//===----------------------------------------------------------------------===//
 // StructType
 //===----------------------------------------------------------------------===//
 
@@ -1331,5 +1342,6 @@ TensorArmType::verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
 
 void SPIRVDialect::registerTypes() {
   addTypes<ArrayType, CooperativeMatrixType, ImageType, MatrixType, PointerType,
-           RuntimeArrayType, SampledImageType, StructType, TensorArmType>();
+           RuntimeArrayType, SampledImageType, SamplerType, StructType,
+           TensorArmType>();
 }

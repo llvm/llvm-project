@@ -1339,6 +1339,17 @@ LogicalResult spirv::GlobalVariableOp::verify() {
            << stringifyStorageClass(storageClass) << "'";
   }
 
+  // SPIR-V spec: "A module-scope OpVariable with an Initializer operand must
+  // not be decorated with the Import Linkage Type."
+  if (std::optional<spirv::LinkageAttributesAttr> linkage =
+          getLinkageAttributes()) {
+    if (linkage->getLinkageType().getValue() == spirv::LinkageType::Import &&
+        getInitializer()) {
+      return emitOpError(
+          "with Import linkage type must not have an initializer");
+    }
+  }
+
   if (auto init = (*this)->getAttrOfType<FlatSymbolRefAttr>(
           this->getInitializerAttrName())) {
     Operation *initOp = SymbolTable::lookupNearestSymbolFrom(

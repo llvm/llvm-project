@@ -55,6 +55,8 @@ public:
     OriginEscapes,
     /// An origin is invalidated (e.g. vector resized).
     InvalidateOrigin,
+    /// All loans of an origin are cleared.
+    KillOrigin,
   };
 
 private:
@@ -246,6 +248,7 @@ public:
       : Fact(Kind::Use), UseExpr(UseExpr), OList(OList) {}
 
   const OriginList *getUsedOrigins() const { return OList; }
+  void setUsedOrigins(const OriginList *NewList) { OList = NewList; }
   const Expr *getUseExpr() const { return UseExpr; }
   void markAsWritten() { IsWritten = true; }
   bool isWritten() const { return IsWritten; }
@@ -313,6 +316,24 @@ public:
 
   void dump(llvm::raw_ostream &OS, const LoanManager &,
             const OriginManager &) const override;
+};
+
+/// All loans are cleared from an origin (e.g., assigning a callable without
+/// tracked origins to std::function).
+class KillOriginFact : public Fact {
+  OriginID OID;
+
+public:
+  static bool classof(const Fact *F) {
+    return F->getKind() == Kind::KillOrigin;
+  }
+
+  KillOriginFact(OriginID OID) : Fact(Kind::KillOrigin), OID(OID) {}
+
+  OriginID getKilledOrigin() const { return OID; }
+
+  void dump(llvm::raw_ostream &OS, const LoanManager &,
+            const OriginManager &OM) const override;
 };
 
 class FactManager {

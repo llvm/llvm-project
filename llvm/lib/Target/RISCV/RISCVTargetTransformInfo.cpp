@@ -1615,6 +1615,18 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     }
     break;
   }
+  case Intrinsic::masked_udiv:
+    return getArithmeticInstrCost(Instruction::UDiv, ICA.getReturnType(),
+                                  CostKind);
+  case Intrinsic::masked_sdiv:
+    return getArithmeticInstrCost(Instruction::SDiv, ICA.getReturnType(),
+                                  CostKind);
+  case Intrinsic::masked_urem:
+    return getArithmeticInstrCost(Instruction::URem, ICA.getReturnType(),
+                                  CostKind);
+  case Intrinsic::masked_srem:
+    return getArithmeticInstrCost(Instruction::SRem, ICA.getReturnType(),
+                                  CostKind);
   case Intrinsic::get_active_lane_mask: {
     if (ST->hasVInstructions()) {
       Type *ExpRetTy = VectorType::get(
@@ -2669,6 +2681,29 @@ RISCVTTIImpl::getIndexedVectorInstrCostFromEnd(unsigned Opcode, Type *Val,
                             nullptr);
 }
 
+/// Check to see if this instruction is expected to be combined to a simpler
+/// operation during/before lowering. If so return the cost of the combined
+/// operation rather than provided one. For instance, `udiv i16 %X, 2` is likely
+/// to be combined to `lshr i16 %X, 1`, so return the cost of a `lshr` rather
+/// than the cost of a `udiv`
+std::optional<InstructionCost>
+RISCVTTIImpl::getCombinedArithmeticInstructionCost(
+    unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
+    TTI::OperandValueInfo Opd1Info, TTI::OperandValueInfo Opd2Info,
+    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
+  // Vector unsigned division/remainder will be simplified to shifts/masks.
+  if ((Opcode == Instruction::UDiv || Opcode == Instruction::URem) &&
+      Opd2Info.isConstant() && Opd2Info.isPowerOf2()) {
+    if (Opcode == Instruction::UDiv)
+      return getArithmeticInstrCost(Instruction::LShr, Ty, CostKind, Opd1Info,
+                                    Opd2Info.getNoProps());
+    // UREM
+    return getArithmeticInstrCost(Instruction::And, Ty, CostKind, Opd1Info,
+                                  Opd2Info.getNoProps());
+  }
+  return std::nullopt;
+}
+
 InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
@@ -2687,6 +2722,11 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
   if (isa<VectorType>(Ty) && Ty->getScalarSizeInBits() > ST->getELen())
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
                                          Args, CxtI);
+
+  if (std::optional<InstructionCost> CombinedCost =
+          getCombinedArithmeticInstructionCost(Opcode, Ty, CostKind, Op1Info,
+                                               Op2Info, Args, CxtI))
+    return *CombinedCost;
 
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);

@@ -1014,3 +1014,20 @@ func.func @global_load_async_to_lds_dynamic_indices(
       memref<256xi32, #gpu.address_space<workgroup>>
   func.return
 }
+
+// -----
+
+// CHECK-LABEL: func @global_load_async_to_lds_b128_masked
+func.func @global_load_async_to_lds_b128_masked(
+    %global : memref<128x72xf32, #gpu.address_space<global>>, %mask : i1) {
+  %c0 = arith.constant 0 : index
+  %alloc = memref.alloc() : memref<64x64xf32, #gpu.address_space<workgroup>>
+  // CHECK: [[NULLPTR_INT:%.*]] = llvm.mlir.constant(-1 : i32) : i32
+  // CHECK: [[NULLPTR:%.*]] = llvm.inttoptr [[NULLPTR_INT]] : i32 to !llvm.ptr<3>
+  // CHECK: [[DST:%.*]] = llvm.select {{.*}}, {{.*}}, [[NULLPTR]] : i1, !llvm.ptr<3>
+  // CHECK: rocdl.global.load.async.to.lds.b128 {{.*}}, [[DST]]
+  amdgpu.global_load_async_to_lds %global[%c0, %c0], %alloc[%c0, %c0], %mask
+    : vector<4xf32>, memref<128x72xf32, #gpu.address_space<global>>,
+      memref<64x64xf32, #gpu.address_space<workgroup>>
+  func.return
+}

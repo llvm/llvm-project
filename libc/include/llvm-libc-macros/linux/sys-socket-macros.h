@@ -25,4 +25,22 @@
 #define SOCK_SEQPACKET 5
 #define SOCK_PACKET 10
 
+#define SOL_SOCKET 1
+
+#define SO_DEBUG 1
+#define SO_REUSEADDR 2
+#define SO_TYPE 3
+#define SO_ERROR 4
+#define SO_DONTROUTE 5
+#define SO_BROADCAST 6
+#define SO_SNDBUF 7
+#define SO_RCVBUF 8
+#define SO_KEEPALIVE 9
+#define SO_OOBINLINE 10
+#define SO_NO_CHECK 11
+#define SO_PRIORITY 12
+#define SO_LINGER 13
+#define SO_BSDCOMPAT 14
+#define SO_REUSEPORT 15
+
 #endif // LLVM_LIBC_MACROS_LINUX_SYS_SOCKET_MACROS_H

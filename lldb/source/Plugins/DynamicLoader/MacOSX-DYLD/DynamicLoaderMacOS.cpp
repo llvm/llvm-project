@@ -189,10 +189,6 @@ void DynamicLoaderMacOS::ClearNotificationBreakpoint() {
   }
 }
 
-// Try and figure out where dyld is by first asking the Process if it knows
-// (which currently calls down in the lldb::Process to get the DYLD info
-// (available on SnowLeopard only). If that fails, then check in the default
-// addresses.
 void DynamicLoaderMacOS::DoInitialImageFetch() {
   Log *log = GetLog(LLDBLog::DynamicLoader);
 
@@ -203,7 +199,8 @@ void DynamicLoaderMacOS::DoInitialImageFetch() {
   UnloadAllImages();
 
   StructuredData::ObjectSP all_image_info_json_sp(
-      m_process->GetLoadedDynamicLibrariesInfos());
+      m_process->GetLoadedDynamicLibrariesInfos(
+          eBinaryInformationLevelAddrOnly));
   ImageInfo::collection image_infos;
   if (all_image_info_json_sp.get() &&
       all_image_info_json_sp->GetAsDictionary() &&
@@ -211,14 +208,44 @@ void DynamicLoaderMacOS::DoInitialImageFetch() {
       all_image_info_json_sp->GetAsDictionary()
           ->GetValueForKey("images")
           ->GetAsArray()) {
-    if (JSONImageInformationIntoImageInfo(all_image_info_json_sp,
-                                          image_infos)) {
-      LLDB_LOGF(log, "Initial module fetch:  Adding %" PRId64 " modules.\n",
-                (uint64_t)image_infos.size());
 
-      auto images = PreloadModulesFromImageInfos(image_infos);
-      UpdateSpecialBinariesFromPreloadedModules(images);
-      AddModulesUsingPreloadedModules(images);
+    // Older debugserver (pre-2024-ish) will not recognize the
+    // eBinaryInformationLevelAddrOnly enum above, and
+    // will return the full binary information including mach
+    // header and segments/load commands.  The response includes
+    // the full information on all binaries.
+    StructuredData::Array *images = all_image_info_json_sp->GetAsDictionary()
+                                        ->GetValueForKey("images")
+                                        ->GetAsArray();
+    if (images->GetSize() > 0 && images->GetItemAtIndex(0)->GetAsDictionary() &&
+        images->GetItemAtIndex(0)->GetAsDictionary()->HasKey("mach_header")) {
+      if (JSONImageInformationIntoImageInfo(all_image_info_json_sp,
+                                            image_infos)) {
+        LLDB_LOGF(log, "Initial module fetch:  Adding %" PRIu64 " modules.\n",
+                  (uint64_t)image_infos.size());
+
+        auto new_images = PreloadModulesFromImageInfos(image_infos);
+        UpdateSpecialBinariesFromPreloadedModules(new_images);
+        AddModulesUsingPreloadedModules(new_images);
+      }
+    } else {
+      // This is a newer debugserver which only replied with
+      // `load_address` for all binaries loaded in the process.
+      // We can request detailed information in smaller chunks,
+      // instead of one gigantic packet.
+      size_t image_count = images->GetSize();
+      std::vector<addr_t> load_addresses;
+      for (size_t i = 0; i < image_count; i++) {
+        StructuredData::Dictionary *image =
+            images->GetItemAtIndex(i)->GetAsDictionary();
+        if (image && image->HasKey("load_address")) {
+          addr_t val = image->GetValueForKey("load_address")
+                           ->GetUnsignedIntegerValue(LLDB_INVALID_ADDRESS);
+          if (val != LLDB_INVALID_ADDRESS)
+            load_addresses.push_back(val);
+        }
+      }
+      AddBinaries(load_addresses);
     }
   }
 
@@ -413,26 +440,44 @@ void DynamicLoaderMacOS::AddBinaries(
   Log *log = GetLog(LLDBLog::DynamicLoader);
   ImageInfo::collection image_infos;
 
-  LLDB_LOGF(log, "Adding %" PRId64 " modules.",
-            (uint64_t)load_addresses.size());
-  StructuredData::ObjectSP binaries_info_sp =
-      m_process->GetLoadedDynamicLibrariesInfos(load_addresses);
-  if (binaries_info_sp.get() && binaries_info_sp->GetAsDictionary() &&
-      binaries_info_sp->GetAsDictionary()->HasKey("images") &&
-      binaries_info_sp->GetAsDictionary()
-          ->GetValueForKey("images")
-          ->GetAsArray() &&
-      binaries_info_sp->GetAsDictionary()
-              ->GetValueForKey("images")
-              ->GetAsArray()
-              ->GetSize() == load_addresses.size()) {
-    if (JSONImageInformationIntoImageInfo(binaries_info_sp, image_infos)) {
-      auto images = PreloadModulesFromImageInfos(image_infos);
-      UpdateSpecialBinariesFromPreloadedModules(images);
-      AddModulesUsingPreloadedModules(images);
+  // For now, hardcode a limit of fetching 600 binaries at once.
+  // Fetching the full binary information for a large number of
+  // binaries can cause debugserver to use too much memory on
+  // memory-limited environments, and get killed.
+  const size_t image_fetch_max = 600;
+  size_t fetched = 0;
+  size_t total_image_size = load_addresses.size();
+  while (fetched < total_image_size) {
+    size_t this_fetch_amt =
+        std::min(image_fetch_max, total_image_size - fetched);
+    std::vector<addr_t> fetch_binaries(load_addresses.begin() + fetched,
+                                       load_addresses.begin() + fetched +
+                                           this_fetch_amt);
+
+    LLDB_LOGF(log, "Adding %" PRId64 " modules.",
+              (uint64_t)fetch_binaries.size());
+    image_infos.clear();
+    StructuredData::ObjectSP binaries_info_sp =
+        m_process->GetLoadedDynamicLibrariesInfos(eBinaryInformationLevelFull,
+                                                  fetch_binaries);
+    if (binaries_info_sp && binaries_info_sp->GetAsDictionary() &&
+        binaries_info_sp->GetAsDictionary()->HasKey("images") &&
+        binaries_info_sp->GetAsDictionary()
+            ->GetValueForKey("images")
+            ->GetAsArray()) {
+      StructuredData::Array *images = binaries_info_sp->GetAsDictionary()
+                                          ->GetValueForKey("images")
+                                          ->GetAsArray();
+      if (images->GetSize() == fetch_binaries.size() &&
+          JSONImageInformationIntoImageInfo(binaries_info_sp, image_infos)) {
+        auto new_images = PreloadModulesFromImageInfos(image_infos);
+        UpdateSpecialBinariesFromPreloadedModules(new_images);
+        AddModulesUsingPreloadedModules(new_images);
+      }
     }
-    m_dyld_image_infos_stop_id = m_process->GetStopID();
+    fetched += this_fetch_amt;
   }
+  m_dyld_image_infos_stop_id = m_process->GetStopID();
 }
 
 // Dump the _dyld_all_image_infos members and all current image infos that we

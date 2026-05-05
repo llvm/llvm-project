@@ -594,6 +594,15 @@ getStandardOpcodeLengths(uint16_t Version, std::optional<uint8_t> OpcodeBase) {
   return StandardOpcodeLengths;
 }
 
+static void writeV5EntryFormat(raw_ostream &OS, uint8_t Count,
+                               ArrayRef<DWARFYAML::LnctForm> Format) {
+  OS << static_cast<char>(Count);
+  for (const auto [ContentType, Form] : Format) {
+    encodeULEB128(ContentType, OS);
+    encodeULEB128(Form, OS);
+  }
+}
+
 Error DWARFYAML::emitDebugLine(raw_ostream &OS, const DWARFYAML::Data &DI) {
   for (const DWARFYAML::LineTable &LineTable : DI.DebugLines) {
     // Buffer holds the bytes following the header_length (or prologue_length in
@@ -602,7 +611,6 @@ Error DWARFYAML::emitDebugLine(raw_ostream &OS, const DWARFYAML::Data &DI) {
     raw_string_ostream BufferOS(Buffer);
 
     writeInteger(LineTable.MinInstLength, BufferOS, DI.IsLittleEndian);
-    // TODO: Add support for emitting DWARFv5 line table.
     if (LineTable.Version >= 4)
       writeInteger(LineTable.MaxOpsPerInst, BufferOS, DI.IsLittleEndian);
     writeInteger(LineTable.DefaultIsStmt, BufferOS, DI.IsLittleEndian);
@@ -619,15 +627,27 @@ Error DWARFYAML::emitDebugLine(raw_ostream &OS, const DWARFYAML::Data &DI) {
     for (uint8_t OpcodeLength : StandardOpcodeLengths)
       writeInteger(OpcodeLength, BufferOS, DI.IsLittleEndian);
 
-    for (StringRef IncludeDir : LineTable.IncludeDirs) {
-      BufferOS.write(IncludeDir.data(), IncludeDir.size());
+    if (LineTable.Version >= 5) {
+      writeV5EntryFormat(BufferOS, LineTable.DirectoryEntryFormatCount,
+                         LineTable.DirectoryEntryFormat);
+      // TODO: Support directories in DWARFv5
+      encodeULEB128(/*directories_count=*/0, BufferOS);
+
+      writeV5EntryFormat(BufferOS, LineTable.FileNameEntryFormatCount,
+                         LineTable.FileNameEntryFormat);
+      // TODO: Support file names in DWARFv5
+      encodeULEB128(/*file_names_count=*/0, BufferOS);
+    } else {
+      for (StringRef IncludeDir : LineTable.IncludeDirs) {
+        BufferOS.write(IncludeDir.data(), IncludeDir.size());
+        BufferOS.write('\0');
+      }
+      BufferOS.write('\0');
+
+      for (const DWARFYAML::File &File : LineTable.Files)
+        emitFileEntry(BufferOS, File);
       BufferOS.write('\0');
     }
-    BufferOS.write('\0');
-
-    for (const DWARFYAML::File &File : LineTable.Files)
-      emitFileEntry(BufferOS, File);
-    BufferOS.write('\0');
 
     uint64_t HeaderLength =
         LineTable.PrologueLength ? *LineTable.PrologueLength : Buffer.size();
@@ -640,14 +660,20 @@ Error DWARFYAML::emitDebugLine(raw_ostream &OS, const DWARFYAML::Data &DI) {
     if (LineTable.Length) {
       Length = *LineTable.Length;
     } else {
-      Length = 2; // sizeof(version)
-      Length +=
-          (LineTable.Format == dwarf::DWARF64 ? 8 : 4); // sizeof(header_length)
+      Length =
+          (LineTable.Format == dwarf::DWARF64 ? 8 : 4); // sizeof(unit_length)
+      Length += 2;                                      // sizeof(version)
+      if (LineTable.Version >= 5)
+        Length += 2; // sizeof(address_size) + sizeof(segment_selector_size)
       Length += Buffer.size();
     }
 
     writeInitialLength(LineTable.Format, Length, OS, DI.IsLittleEndian);
     writeInteger(LineTable.Version, OS, DI.IsLittleEndian);
+    if (LineTable.Version >= 5) {
+      writeInteger(LineTable.AddressSize, OS, DI.IsLittleEndian);
+      writeInteger(LineTable.SegmentSelectorSize, OS, DI.IsLittleEndian);
+    }
     writeDWARFOffset(HeaderLength, LineTable.Format, OS, DI.IsLittleEndian);
     OS.write(Buffer.data(), Buffer.size());
   }

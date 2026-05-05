@@ -549,6 +549,7 @@ private:
   void visitAccessGroupMetadata(const MDNode *MD);
   void visitCapturesMetadata(Instruction &I, const MDNode *Captures);
   void visitAllocTokenMetadata(Instruction &I, MDNode *MD);
+  void visitInlineHistoryMetadata(Instruction &I, MDNode *MD);
 
   template <class Ty> bool isValidMetadataArray(const MDTuple &N);
 #define HANDLE_SPECIALIZED_MDNODE_LEAF(CLASS) void visit##CLASS(const CLASS &N);
@@ -3121,9 +3122,6 @@ void Verifier::visitFunction(const Function &F) {
   Check(!Attrs.hasAttrSomewhere(Attribute::ElementType),
         "Attribute 'elementtype' can only be applied to a callsite.", &F);
 
-  Check(!Attrs.hasFnAttr("aarch64_zt0_undef"),
-        "Attribute 'aarch64_zt0_undef' can only be applied to a callsite.");
-
   if (Attrs.hasFnAttr(Attribute::Naked))
     for (const Argument &Arg : F.args())
       Check(Arg.use_empty(), "cannot use argument of naked function", &Arg);
@@ -5619,6 +5617,20 @@ void Verifier::visitAllocTokenMetadata(Instruction &I, MDNode *MD) {
         "expected integer constant", MD);
 }
 
+void Verifier::visitInlineHistoryMetadata(Instruction &I, MDNode *MD) {
+  Check(isa<CallBase>(I), "!inline_history should only exist on calls", &I);
+  for (Metadata *Op : MD->operands()) {
+    // Can be null when a function is erased.
+    if (!Op)
+      continue;
+    Check(isa<ValueAsMetadata>(Op) &&
+              isa<Function>(cast<ValueAsMetadata>(Op)
+                                ->getValue()
+                                ->stripPointerCastsAndAliases()),
+          "!inline_history operands must be functions or null", MD);
+  }
+}
+
 /// verifyInstruction - Verify that an instruction is well formed.
 ///
 void Verifier::visitInstruction(Instruction &I) {
@@ -5850,6 +5862,9 @@ void Verifier::visitInstruction(Instruction &I) {
 
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_alloc_token))
     visitAllocTokenMetadata(I, MD);
+
+  if (MDNode *MD = I.getMetadata(LLVMContext::MD_inline_history))
+    visitInlineHistoryMetadata(I, MD);
 
   if (MDNode *N = I.getDebugLoc().getAsMDNode()) {
     CheckDI(isa<DILocation>(N), "invalid !dbg metadata attachment", &I, N);
@@ -6527,7 +6542,6 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "masked_store: vector mask must be same length as value", Call);
     break;
   }
-
   case Intrinsic::experimental_guard: {
     Check(isa<CallInst>(Call), "experimental_guard cannot be invoked", Call);
     Check(Call.countOperandBundlesOfType(LLVMContext::OB_deopt) == 1,
@@ -6572,6 +6586,10 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           Call);
     break;
   }
+  case Intrinsic::masked_udiv:
+  case Intrinsic::masked_sdiv:
+  case Intrinsic::masked_urem:
+  case Intrinsic::masked_srem:
   case Intrinsic::vector_reduce_and:
   case Intrinsic::vector_reduce_or:
   case Intrinsic::vector_reduce_xor:
@@ -6911,25 +6929,6 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "write argument to llvm.aarch64.range.prefetch must be 0 or 1", Call);
     Check(cast<ConstantInt>(Call.getArgOperand(2))->getZExtValue() < 2,
           "stream argument to llvm.aarch64.range.prefetch must be 0 or 1",
-          Call);
-    break;
-  }
-  case Intrinsic::aarch64_stshh_atomic_store: {
-    uint64_t Order = cast<ConstantInt>(Call.getArgOperand(2))->getZExtValue();
-    Check(Order == static_cast<uint64_t>(AtomicOrderingCABI::relaxed) ||
-              Order == static_cast<uint64_t>(AtomicOrderingCABI::release) ||
-              Order == static_cast<uint64_t>(AtomicOrderingCABI::seq_cst),
-          "order argument to llvm.aarch64.stshh.atomic.store must be 0, 3 or 5",
-          Call);
-
-    Check(cast<ConstantInt>(Call.getArgOperand(3))->getZExtValue() < 2,
-          "policy argument to llvm.aarch64.stshh.atomic.store must be 0 or 1",
-          Call);
-
-    uint64_t Size = cast<ConstantInt>(Call.getArgOperand(4))->getZExtValue();
-    Check(Size == 8 || Size == 16 || Size == 32 || Size == 64,
-          "size argument to llvm.aarch64.stshh.atomic.store must be 8, 16, "
-          "32 or 64",
           Call);
     break;
   }

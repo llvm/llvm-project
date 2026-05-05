@@ -379,9 +379,9 @@ unsigned TargetTransformInfo::getEpilogueVectorizationMinVF() const {
   return TTIImpl->getEpilogueVectorizationMinVF();
 }
 
-bool TargetTransformInfo::preferPredicateOverEpilogue(
+bool TargetTransformInfo::preferTailFoldingOverEpilogue(
     TailFoldingInfo *TFI) const {
-  return TTIImpl->preferPredicateOverEpilogue(TFI);
+  return TTIImpl->preferTailFoldingOverEpilogue(TFI);
 }
 
 TailFoldingStyle TargetTransformInfo::getPreferredTailFoldingStyle() const {

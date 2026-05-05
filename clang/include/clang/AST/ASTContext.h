@@ -1268,6 +1268,8 @@ public:
   bool isInSameModule(const Module *M1, const Module *M2) const;
 
   TranslationUnitDecl *getTranslationUnitDecl() const {
+    assert(TUDecl && "TUDecl might have been reset by 'cleanup' likely because "
+                     "'CodeGenOpts.ClearASTBeforeBackend' was set.");
     assert(TUDecl->getMostRecentDecl() == TUDecl &&
            "The active TU is not current one!");
     return TUDecl->getMostRecentDecl();
@@ -3070,6 +3072,10 @@ public:
   /// types, values, and templates.
   TemplateName getCanonicalTemplateName(TemplateName Name,
                                         bool IgnoreDeduced = false) const;
+
+  /// Return the default argument of a template parameter, if one exists.
+  const TemplateArgument *
+  getDefaultTemplateArgumentOrNone(const NamedDecl *P) const;
 
   /// Determine whether the given template names refer to the same
   /// template.

@@ -211,11 +211,12 @@ PreservedAnalyses JumpTableToSwitchPass::run(Function &F,
   PostDominatorTree *PDT = AM.getCachedResult<PostDominatorTreeAnalysis>(F);
   DomTreeUpdater DTU(DT, PDT, DomTreeUpdater::UpdateStrategy::Lazy);
   bool Changed = false;
-  auto FuncToGuid = [&](const Function &Fct) {
+  auto FuncToGuid = [InLTO = this->InLTO](const Function &Fct) {
     if (Fct.getMetadata(AssignGUIDPass::GUIDMetadataName))
       return AssignGUIDPass::getGUID(Fct);
 
-    return Function::getGUIDAssumingExternalLinkage(getIRPGOFuncName(F, InLTO));
+    return Function::getGUIDAssumingExternalLinkage(
+        getIRPGOFuncName(Fct, InLTO));
   };
 
   for (BasicBlock &BB : make_early_inc_range(F)) {

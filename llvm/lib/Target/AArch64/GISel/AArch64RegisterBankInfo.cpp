@@ -625,6 +625,7 @@ static bool isFPIntrinsic(const MachineRegisterInfo &MRI,
   case Intrinsic::aarch64_neon_sqadd:
   case Intrinsic::aarch64_neon_uqsub:
   case Intrinsic::aarch64_neon_sqsub:
+  case Intrinsic::aarch64_neon_sqdmulls_scalar:
   case Intrinsic::aarch64_neon_srshl:
   case Intrinsic::aarch64_neon_urshl:
   case Intrinsic::aarch64_neon_sqshl:
@@ -711,6 +712,15 @@ bool AArch64RegisterBankInfo::onlyUsesFP(const MachineInstr &MI,
                                          const AArch64RegisterInfo &TRI,
                                          unsigned Depth) const {
   switch (MI.getOpcode()) {
+  case TargetOpcode::G_BITCAST: {
+    Register DstReg = MI.getOperand(0).getReg();
+    return all_of(MRI.use_nodbg_instructions(DstReg),
+                  [&](const MachineInstr &UseMI) {
+                    return onlyUsesFP(UseMI, MRI, TRI, Depth + 1) ||
+                           prefersFPUse(UseMI, MRI, TRI);
+                  });
+  }
+
   case TargetOpcode::G_FPTOSI:
   case TargetOpcode::G_FPTOUI:
   case TargetOpcode::G_FPTOSI_SAT:
@@ -896,6 +906,19 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
                                    &ValMappings[Shift64Imm], 3);
     return getSameKindOfOperandsMapping(MI);
   }
+  case TargetOpcode::G_BITCAST: {
+    Register SrcReg = MI.getOperand(1).getReg();
+    const RegisterBank *SrcRB = getRegBank(SrcReg, MRI, TRI);
+    if (SrcRB) {
+      TypeSize Size = getSizeInBits(SrcReg, MRI, TRI);
+      return getInstructionMapping(
+          DefaultMappingID, 0,
+          getCopyMapping(SrcRB->getID(), SrcRB->getID(), Size),
+          // We only care about the mapping of the destination.
+          /*NumOperands=*/2);
+    }
+    [[fallthrough]];
+  }
   case TargetOpcode::COPY: {
     Register DstReg = MI.getOperand(0).getReg();
     Register SrcReg = MI.getOperand(1).getReg();
@@ -918,10 +941,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
           // We only care about the mapping of the destination.
           /*NumOperands*/ 1);
     }
-    // Both registers are generic, use G_BITCAST.
-    [[fallthrough]];
-  }
-  case TargetOpcode::G_BITCAST: {
+    // Both registers are generic
     LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
     LLT SrcTy = MRI.getType(MI.getOperand(1).getReg());
     TypeSize Size = DstTy.getSizeInBits();

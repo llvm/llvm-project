@@ -322,6 +322,9 @@ class OffsetOpcode : Opcode {
 def GetPtrLocal : OffsetOpcode {
   bit HasCustomEval = 1;
 }
+def GetRefLocal : OffsetOpcode {
+  bit HasCustomEval = 1;
+}
 // [] -> [Pointer]
 def GetPtrParam : OffsetOpcode;
 // [] -> [Pointer]
@@ -429,6 +432,7 @@ def SetLocal : AccessOpcode { let HasCustomEval = 1; }
 
 def EndLifetimePop : Opcode;
 def EndLifetime : Opcode;
+def MarkDestroyed : Opcode;
 def StartLifetime : Opcode;
 
 def CheckDecl : Opcode {

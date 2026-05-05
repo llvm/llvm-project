@@ -28,6 +28,7 @@
 #include "llvm/Frontend/OpenMP/DirectiveNameParser.h"
 #include "llvm/Frontend/OpenMP/OMPAssume.h"
 #include "llvm/Frontend/OpenMP/OMPContext.h"
+#include <climits>
 #include <optional>
 
 using namespace clang;
@@ -2424,6 +2425,10 @@ StmtResult Parser::ParseOpenMPExecutableDirective(
     Diag(Loc, diag::err_omp_required_clause)
         << getOpenMPDirectiveName(DKind, OMPVersion) << "sizes";
   }
+  if (DKind == OMPD_split && !SeenClauses[unsigned(OMPC_counts)]) {
+    Diag(Loc, diag::err_omp_required_clause)
+        << getOpenMPDirectiveName(DKind, OMPVersion) << "counts";
+  }
 
   StmtResult AssociatedStmt;
   if (HasAssociatedStatement) {
@@ -2986,6 +2991,51 @@ OMPClause *Parser::ParseOpenMPSizesClause() {
                                                  OpenLoc, CloseLoc);
 }
 
+OMPClause *Parser::ParseOpenMPCountsClause() {
+  SourceLocation ClauseNameLoc, OpenLoc, CloseLoc;
+  SmallVector<Expr *, 4> ValExprs;
+  std::optional<unsigned> FillIdx;
+  unsigned FillCount = 0;
+  SourceLocation FillLoc;
+
+  assert(getOpenMPClauseName(OMPC_counts) == PP.getSpelling(Tok) &&
+         "Expected parsing to start at clause name");
+  ClauseNameLoc = ConsumeToken();
+
+  BalancedDelimiterTracker T(*this, tok::l_paren, tok::annot_pragma_openmp_end);
+  if (T.consumeOpen()) {
+    Diag(Tok, diag::err_expected) << tok::l_paren;
+    return nullptr;
+  }
+
+  do {
+    if (Tok.is(tok::identifier) &&
+        Tok.getIdentifierInfo()->getName() == "omp_fill") {
+      if (FillCount == 0)
+        FillIdx = ValExprs.size();
+      ++FillCount;
+      FillLoc = Tok.getLocation();
+      ConsumeToken();
+      ValExprs.push_back(nullptr);
+    } else {
+      ExprResult Val = ParseConstantExpression();
+      if (!Val.isUsable()) {
+        T.skipToEnd();
+        return nullptr;
+      }
+      ValExprs.push_back(Val.get());
+    }
+  } while (TryConsumeToken(tok::comma));
+
+  if (T.consumeClose())
+    return nullptr;
+  OpenLoc = T.getOpenLocation();
+  CloseLoc = T.getCloseLocation();
+
+  return Actions.OpenMP().ActOnOpenMPCountsClause(
+      ValExprs, ClauseNameLoc, OpenLoc, CloseLoc, FillIdx, FillLoc, FillCount);
+}
+
 OMPClause *Parser::ParseOpenMPLoopRangeClause() {
   SourceLocation ClauseNameLoc = ConsumeToken();
   SourceLocation FirstLoc, CountLoc;
@@ -3431,6 +3481,15 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
       ErrorFound = true;
     }
     Clause = ParseOpenMPPermutationClause();
+    break;
+  case OMPC_counts:
+    if (!FirstClause) {
+      Diag(Tok, diag::err_omp_more_one_clause)
+          << getOpenMPDirectiveName(DKind, OMPVersion)
+          << getOpenMPClauseName(CKind) << 0;
+      ErrorFound = true;
+    }
+    Clause = ParseOpenMPCountsClause();
     break;
   case OMPC_uses_allocators:
     Clause = ParseOpenMPUsesAllocatorClause(DKind);

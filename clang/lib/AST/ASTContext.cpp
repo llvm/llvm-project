@@ -943,6 +943,7 @@ void ASTContext::cleanup() {
     Value.second->~PerModuleInitializers();
   ModuleInitializers.clear();
 
+  TUDecl = nullptr;
   XRayFilter.reset();
   NoSanitizeL.reset();
 }
@@ -7305,8 +7306,8 @@ ASTContext::getNameForTemplate(TemplateName Name,
   llvm_unreachable("bad template name kind!");
 }
 
-static const TemplateArgument *
-getDefaultTemplateArgumentOrNone(const NamedDecl *P) {
+const TemplateArgument *
+ASTContext::getDefaultTemplateArgumentOrNone(const NamedDecl *P) const {
   auto handleParam = [](auto *TP) -> const TemplateArgument * {
     if (!TP->hasDefaultArgument())
       return nullptr;

@@ -3,6 +3,8 @@
 
 module m
 
+real, allocatable, pinned :: pinned_real(:,:,:)
+
 interface doit
 subroutine __device_sub(a)
     real(4), device, intent(in) :: a(:,:,:)
@@ -78,3 +80,16 @@ end
 ! CHECK: fir.call @_QP__host_sub
 ! CHECK: fir.call @_QP__device_sub
 ! CHECK: fir.call @_QP__device_sub
+
+subroutine test_use_details()
+  use m
+  call doit(pinned_real)
+  !$acc host_data use_device(pinned_real)
+  call doit(pinned_real)
+  !$acc end host_data
+  call doit(pinned_real)
+end subroutine
+
+! CHECK: fir.address_of(@_QP__host_sub)
+! CHECK: fir.address_of(@_QP__device_sub)
+! CHECK: fir.address_of(@_QP__host_sub)

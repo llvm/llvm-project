@@ -732,7 +732,8 @@ TYPE_PARSER("CONSTANT" >> pure(common::CUDADataAttr::Constant) ||
     "PINNED" >> pure(common::CUDADataAttr::Pinned) ||
     "SHARED" >> pure(common::CUDADataAttr::Shared) ||
     "TEXTURE" >> pure(common::CUDADataAttr::Texture) ||
-    "UNIFIED" >> pure(common::CUDADataAttr::Unified))
+    "UNIFIED" >> pure(common::CUDADataAttr::Unified) ||
+    "VALUE" >> pure(common::CUDADataAttr::Value))
 
 // R804 object-name -> name
 constexpr auto objectName{name};

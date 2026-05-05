@@ -196,7 +196,7 @@ bool CSEDriver::hasOtherSideEffectingOpInBetween(Operation *fromOp,
   Operation *nextOp = fromOp->getNextNode();
   auto result =
       memEffectsCache.try_emplace(fromOp, std::make_pair(fromOp, nullptr));
-  if (result.second) {
+  if (!result.second) {
     auto memEffectsCachePair = result.first->second;
     if (memEffectsCachePair.second == nullptr) {
       // No MemoryEffects::Write has been detected until the cached operation.
@@ -394,9 +394,13 @@ void CSEDriver::simplify(Operation *op, bool *changed) {
   for (auto &region : op->getRegions())
     simplifyRegion(knownValues, region);
 
-  /// Erase any operations that were marked as dead during simplification.
-  for (auto *op : opsToErase)
+  /// Erase any operations that were marked as dead during simplification, and
+  /// remove their associated dominator trees.
+  for (auto *op : opsToErase) {
+    for (Region &region : op->getRegions())
+      domInfo->invalidate(&region);
     rewriter.eraseOp(op);
+  }
   if (changed)
     *changed = !opsToErase.empty();
 
@@ -433,7 +437,8 @@ void CSE::runOnOperation() {
   if (!changed)
     return markAllAnalysesPreserved();
 
-  // We currently don't remove region operations, so mark dominance as
-  // preserved.
+  // We only delete redundant operations without moving any operation to a
+  // different block, so the dominance tree structure remains unchanged and
+  // DominanceInfo/PostDominanceInfo can be safely preserved.
   markAnalysesPreserved<DominanceInfo, PostDominanceInfo>();
 }

@@ -233,9 +233,11 @@ public:
   ConfigureStructuredData(llvm::StringRef type_name,
                           const StructuredData::ObjectSP &config_sp) override;
 
-  StructuredData::ObjectSP GetLoadedDynamicLibrariesInfos() override;
+  StructuredData::ObjectSP GetLoadedDynamicLibrariesInfos(
+      lldb::BinaryInformationLevel info_level) override;
 
   StructuredData::ObjectSP GetLoadedDynamicLibrariesInfos(
+      lldb::BinaryInformationLevel info_level,
       const std::vector<lldb::addr_t> &load_addresses) override;
 
   StructuredData::ObjectSP

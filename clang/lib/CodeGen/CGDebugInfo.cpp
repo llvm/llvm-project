@@ -4026,12 +4026,19 @@ llvm::DIMacroFile *CGDebugInfo::CreateTempMacroFile(llvm::DIMacroFile *Parent,
   return DBuilder.createTempMacroFile(Parent, Line, FName);
 }
 
-llvm::DILocation *CGDebugInfo::CreateSyntheticInlineAt(llvm::DebugLoc Location,
-                                                       StringRef FuncName) {
-  llvm::DISubprogram *SP =
-      createInlinedSubprogram(FuncName, Location->getFile());
+llvm::DILocation *
+CGDebugInfo::CreateSyntheticInlineAt(llvm::DebugLoc ParentLocation,
+                                     llvm::DISubprogram *SynthSubprogram) {
   return llvm::DILocation::get(CGM.getLLVMContext(), /*Line=*/0, /*Column=*/0,
-                               /*Scope=*/SP, /*InlinedAt=*/Location);
+                               SynthSubprogram, ParentLocation);
+}
+
+llvm::DILocation *
+CGDebugInfo::CreateSyntheticInlineAt(llvm::DebugLoc ParentLocation,
+                                     StringRef SynthFuncName,
+                                     llvm::DIFile *SynthFile) {
+  llvm::DISubprogram *SP = createInlinedSubprogram(SynthFuncName, SynthFile);
+  return CreateSyntheticInlineAt(ParentLocation, SP);
 }
 
 llvm::DILocation *CGDebugInfo::CreateTrapFailureMessageFor(
@@ -4045,7 +4052,8 @@ llvm::DILocation *CGDebugInfo::CreateTrapFailureMessageFor(
   FuncName += "$";
   FuncName += FailureMsg;
 
-  return CreateSyntheticInlineAt(TrapLocation, FuncName);
+  return CreateSyntheticInlineAt(TrapLocation, FuncName,
+                                 TrapLocation->getFile());
 }
 
 static QualType UnwrapTypeForDebugInfo(QualType T, const ASTContext &C) {
@@ -6769,8 +6777,15 @@ llvm::DILocation *CodeGenFunction::SanitizerAnnotateDebugInfo(
   else
     Label = SanitizerHandlerToCheckLabel(Handler);
 
-  if (any_of(Ordinals, [&](auto Ord) { return AnnotateDebugInfo.has(Ord); }))
-    return DI->CreateSyntheticInlineAt(CheckDebugLoc, Label);
+  if (any_of(Ordinals, [&](auto Ord) { return AnnotateDebugInfo.has(Ord); })) {
+    // Use ubsan header file to have the same filename for all checks. There is
+    // nothing special in that file, we just want to make tools to count all
+    // syntetic functions of a check as the same.
+    llvm::DIFile *File = llvm::DIFile::get(CGM.getLLVMContext(),
+                                           /*Filename=*/"ubsan_interface.h",
+                                           /*Directory=*/"sanitizer");
+    return DI->CreateSyntheticInlineAt(CheckDebugLoc, Label, File);
+  }
 
   return CheckDebugLoc;
 }

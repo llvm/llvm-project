@@ -492,8 +492,8 @@ def warn_drv_clang_unsupported : Warning<
 def warn_drv_deprecated_arg : Warning<
   "argument '%0' is deprecated%select{|, use '%2' instead}1">, InGroup<Deprecated>;
 def warn_drv_deprecated_arg_ofast : Warning<
-  "argument '-Ofast' is deprecated; use '-O3 -ffast-math' for the same behavior,"
-  " or '-O3' to enable only conforming optimizations">,
+  "argument '-Ofast' is deprecated; use '-O3' to enable only conforming optimizations, "
+  "or consult the documentation for the same behavior">,
   InGroup<DeprecatedOFast>;
 def warn_drv_deprecated_arg_ofast_for_flang : Warning<
   "argument '-Ofast' is deprecated; use '-O3 -ffast-math -fstack-arrays -fno-protect-parens' for the same behavior,"
@@ -873,6 +873,9 @@ def err_drv_hlsl_bad_shader_unsupported : Error<
 def warn_drv_dxc_missing_dxv : Warning<
   "dxv not found; resulting DXIL will not be validated or signed for use in "
   "release environment">, InGroup<DXILValidation>;
+def warn_drv_dxc_missing_spirv_val : Warning<
+  "spirv-val not found; resulting SPIR-V will not be validated">,
+  InGroup<SPIRVValidation>;
 
 def err_drv_invalid_range_dxil_validator_version : Error<
   "invalid validator version : %0; validator version must be less than or "

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "HeaderGuard.h"
+#include "../utils/FileExtensionsUtils.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
@@ -283,16 +284,17 @@ std::string HeaderGuardCheck::sanitizeHeaderGuard(StringRef Guard) {
 }
 
 bool HeaderGuardCheck::shouldSuggestEndifComment(StringRef FileName) {
-  return utils::isFileExtension(FileName, HeaderFileExtensions);
+  return utils::isFileExtension(FileName, getHeaderFileExtensions());
 }
 
 bool HeaderGuardCheck::shouldFixHeaderGuard(StringRef FileName) { return true; }
 
 bool HeaderGuardCheck::shouldSuggestToAddHeaderGuard(StringRef FileName) {
-  return utils::isFileExtension(FileName, HeaderFileExtensions);
+  return utils::isFileExtension(FileName, getHeaderFileExtensions());
 }
 
 std::string HeaderGuardCheck::formatEndIf(StringRef HeaderGuard) {
   return "endif // " + HeaderGuard.str();
 }
+
 } // namespace clang::tidy::utils

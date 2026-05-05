@@ -1128,7 +1128,7 @@ void NVPTXAsmPrinter::AggBuffer::printBytes(raw_ostream &os) {
   // ptxas. This saves on both space requirements for the generated PTX and on
   // memory use by ptxas. (See:
   // https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#global-state-space)
-  unsigned int InitializerCount = size;
+  unsigned int InitializerCount = Size;
   // TODO: symbols make this harder, but it would still be good to trim trailing
   // 0s for aggs with symbols as well.
   if (numSymbols() == 0)
@@ -1166,11 +1166,11 @@ void NVPTXAsmPrinter::AggBuffer::printBytes(raw_ostream &os) {
 
 void NVPTXAsmPrinter::AggBuffer::printWords(raw_ostream &os) {
   unsigned int ptrSize = AP.MAI->getCodePointerSize();
-  symbolPosInBuffer.push_back(size);
+  symbolPosInBuffer.push_back(Size);
   unsigned int nSym = 0;
   unsigned int nextSymbolPos = symbolPosInBuffer[nSym];
   assert(nextSymbolPos % ptrSize == 0);
-  for (unsigned int pos = 0; pos < size; pos += ptrSize) {
+  for (unsigned int pos = 0; pos < Size; pos += ptrSize) {
     if (pos)
       os << ", ";
     if (pos == nextSymbolPos) {
@@ -1710,24 +1710,41 @@ void NVPTXAsmPrinter::bufferAggregateConstant(const Constant *CPV,
       Buffer->addByte(Val.extractBitsAsZExtValue(8, I * 8));
   };
 
+  // Integer or floating point vector splats.
+  if (isa<ConstantInt, ConstantFP>(CPV)) {
+    if (auto *VTy = dyn_cast<FixedVectorType>(CPV->getType())) {
+      for (unsigned I : llvm::seq(VTy->getNumElements()))
+        bufferLEByte(CPV->getAggregateElement(I), 0, aggBuffer);
+      return;
+    }
+  }
+
   // Integers of arbitrary width
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(CPV)) {
+    assert(CI->getType()->isIntegerTy() && "Expected integer constant!");
     ExtendBuffer(CI->getValue(), aggBuffer);
     return;
   }
 
   // f128
   if (const ConstantFP *CFP = dyn_cast<ConstantFP>(CPV)) {
+    assert(CFP->getType()->isFloatingPointTy() && "Expected fp constant!");
     if (CFP->getType()->isFP128Ty()) {
       ExtendBuffer(CFP->getValueAPF().bitcastToAPInt(), aggBuffer);
       return;
     }
   }
 
-  // Old constants
-  if (isa<ConstantArray>(CPV) || isa<ConstantVector>(CPV)) {
+  // Buffer arrays one element at a time.
+  if (isa<ConstantArray>(CPV)) {
     for (const auto &Op : CPV->operands())
       bufferLEByte(cast<Constant>(Op), 0, aggBuffer);
+    return;
+  }
+
+  // Constant vectors
+  if (const auto *CVec = dyn_cast<ConstantVector>(CPV)) {
+    bufferAggregateConstVec(CVec, aggBuffer);
     return;
   }
 
@@ -1752,6 +1769,77 @@ void NVPTXAsmPrinter::bufferAggregateConstant(const Constant *CPV,
     return;
   }
   llvm_unreachable("unsupported constant type in printAggregateConstant()");
+}
+
+void NVPTXAsmPrinter::bufferAggregateConstVec(const ConstantVector *CV,
+                                              AggBuffer *aggBuffer) {
+  unsigned NumElems = CV->getType()->getNumElements();
+  const unsigned BuffSize = aggBuffer->getBufferSize();
+
+  // Buffer one element at a time if we have allocated enough buffer space.
+  if (BuffSize >= NumElems) {
+    for (const auto &Op : CV->operands())
+      bufferLEByte(cast<Constant>(Op), 0, aggBuffer);
+    return;
+  }
+
+  // Sub-byte datatypes will have more elements than bytes allocated for the
+  // buffer. Merge consecutive elements to form a full byte. We expect that 8 %
+  // sub-byte-elem-size should be 0 and current expected usage is for i4 (for
+  // e2m1-fp4 types).
+  Type *ElemTy = CV->getType()->getElementType();
+  assert(ElemTy->isIntegerTy() && "Expected integer data type.");
+  unsigned ElemTySize = ElemTy->getPrimitiveSizeInBits();
+  assert(ElemTySize < 8 && "Expected sub-byte data type.");
+  assert(8 % ElemTySize == 0 && "Element type size must evenly divide a byte.");
+  // Number of elements to merge to form a full byte.
+  unsigned NumElemsPerByte = 8 / ElemTySize;
+  unsigned NumCompleteBytes = NumElems / NumElemsPerByte;
+  unsigned NumTailElems = NumElems % NumElemsPerByte;
+
+  // Helper lambda to constant-fold sub-vector of sub-byte type elements into
+  // i8. Start and end indices of the sub-vector is provided, along with number
+  // of padding zeros if required.
+  auto ConvertSubCVtoInt8 = [this, &ElemTy](const ConstantVector *CV,
+                                            unsigned Start, unsigned End,
+                                            unsigned NumPaddingZeros = 0) {
+    // Collect elements to create sub-vector.
+    SmallVector<Constant *, 8> SubCVElems;
+    for (unsigned I : llvm::seq(Start, End))
+      SubCVElems.push_back(CV->getAggregateElement(I));
+
+    // Optionally pad with zeros.
+    for (auto _ : llvm::seq(NumPaddingZeros))
+      SubCVElems.push_back(ConstantInt::getNullValue(ElemTy));
+
+    auto SubCV = ConstantVector::get(SubCVElems);
+    Type *Int8Ty = IntegerType::get(SubCV->getContext(), 8);
+
+    // Merge elements of the sub-vector using ConstantFolding.
+    ConstantInt *MergedElem =
+        dyn_cast_or_null<ConstantInt>(ConstantFoldConstant(
+            ConstantExpr::getBitCast(const_cast<Constant *>(SubCV), Int8Ty),
+            getDataLayout()));
+
+    if (!MergedElem)
+      report_fatal_error(
+          "Cannot lower vector global with unusual element type");
+
+    return MergedElem;
+  };
+
+  // Iterate through elements of vector one chunk at a time and buffer that
+  // chunk.
+  for (unsigned ByteIdx : llvm::seq(NumCompleteBytes))
+    bufferLEByte(ConvertSubCVtoInt8(CV, ByteIdx * NumElemsPerByte,
+                                    (ByteIdx + 1) * NumElemsPerByte),
+                 0, aggBuffer);
+
+  // For unevenly sized vectors add tail padding zeros.
+  if (NumTailElems > 0)
+    bufferLEByte(ConvertSubCVtoInt8(CV, NumElems - NumTailElems, NumElems,
+                                    NumElemsPerByte - NumTailElems),
+                 0, aggBuffer);
 }
 
 /// lowerConstantForGV - Return an MCExpr for the given Constant.  This is mostly
@@ -1975,6 +2063,119 @@ void NVPTXAsmPrinter::printMemOperand(const MachineInstr *MI, unsigned OpNum,
     O << "+";
     printOperand(MI, OpNum + 1, O);
   }
+}
+
+/// Returns true if \p Line begins with an alphabetic character or underscore,
+/// indicating it is a PTX instruction that should receive a .loc directive.
+static bool isPTXInstruction(StringRef Line) {
+  StringRef Trimmed = Line.ltrim();
+  return !Trimmed.empty() &&
+         (std::isalpha(static_cast<unsigned char>(Trimmed[0])) ||
+          Trimmed[0] == '_');
+}
+
+/// Returns the DILocation for an inline asm MachineInstr if debug line info
+/// should be emitted, or nullptr otherwise.
+static const DILocation *getInlineAsmDebugLoc(const MachineInstr *MI) {
+  if (!MI || !MI->getDebugLoc())
+    return nullptr;
+  const DISubprogram *SP = MI->getMF()->getFunction().getSubprogram();
+  if (!SP || SP->getUnit()->getEmissionKind() == DICompileUnit::NoDebug)
+    return nullptr;
+  const DILocation *DL = MI->getDebugLoc();
+  if (!DL->getFile() || !DL->getLine())
+    return nullptr;
+  return DL;
+}
+
+namespace {
+struct InlineAsmInliningContext {
+  MCSymbol *FuncNameSym = nullptr;
+  unsigned FileIA = 0;
+  unsigned LineIA = 0;
+  unsigned ColIA = 0;
+
+  bool hasInlinedAt() const { return FuncNameSym != nullptr; }
+};
+} // namespace
+
+/// Resolves the enhanced-lineinfo inlining context for an inline asm debug
+/// location. Returns a default (empty) context if inlining info is unavailable.
+static InlineAsmInliningContext
+getInlineAsmInliningContext(const DILocation *DL, const MachineFunction &MF,
+                            NVPTXDwarfDebug *NVDD, MCStreamer &Streamer,
+                            unsigned CUID) {
+  InlineAsmInliningContext Ctx;
+  const DILocation *InlinedAt = DL->getInlinedAt();
+  if (!InlinedAt || !InlinedAt->getFile() || !NVDD ||
+      !NVDD->isEnhancedLineinfo(MF))
+    return Ctx;
+  const auto *SubProg = getDISubprogram(DL->getScope());
+  if (!SubProg)
+    return Ctx;
+  Ctx.FuncNameSym = NVDD->getOrCreateFuncNameSymbol(SubProg->getLinkageName());
+  Ctx.FileIA = Streamer.emitDwarfFileDirective(
+      0, InlinedAt->getFile()->getDirectory(),
+      InlinedAt->getFile()->getFilename(), std::nullopt, std::nullopt, CUID);
+  Ctx.LineIA = InlinedAt->getLine();
+  Ctx.ColIA = InlinedAt->getColumn();
+  return Ctx;
+}
+
+void NVPTXAsmPrinter::emitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
+                                    const MCTargetOptions &MCOptions,
+                                    const MDNode *LocMDNode,
+                                    InlineAsm::AsmDialect Dialect,
+                                    const MachineInstr *MI) {
+  assert(!Str.empty() && "Can't emit empty inline asm block");
+  if (Str.back() == 0)
+    Str = Str.substr(0, Str.size() - 1);
+
+  auto emitAsmStr = [&](StringRef AsmStr) {
+    emitInlineAsmStart();
+    OutStreamer->emitRawText(AsmStr);
+    emitInlineAsmEnd(STI, nullptr, MI);
+  };
+
+  const DILocation *DL = getInlineAsmDebugLoc(MI);
+  if (!DL) {
+    emitAsmStr(Str);
+    return;
+  }
+
+  const DIFile *File = DL->getFile();
+  unsigned Line = DL->getLine();
+  const unsigned Column = DL->getColumn();
+  const unsigned CUID = OutStreamer->getContext().getDwarfCompileUnitID();
+  const unsigned FileNumber = OutStreamer->emitDwarfFileDirective(
+      0, File->getDirectory(), File->getFilename(), std::nullopt, std::nullopt,
+      CUID);
+
+  auto *NVDD = static_cast<NVPTXDwarfDebug *>(getDwarfDebug());
+  InlineAsmInliningContext InlineCtx =
+      getInlineAsmInliningContext(DL, *MI->getMF(), NVDD, *OutStreamer, CUID);
+
+  SmallVector<StringRef, 16> Lines;
+  Str.split(Lines, '\n');
+  emitInlineAsmStart();
+  for (const StringRef &L : Lines) {
+    StringRef RTrimmed = L.rtrim('\r');
+    if (isPTXInstruction(L)) {
+      if (InlineCtx.hasInlinedAt()) {
+        OutStreamer->emitDwarfLocDirectiveWithInlinedAt(
+            FileNumber, Line, Column, InlineCtx.FileIA, InlineCtx.LineIA,
+            InlineCtx.ColIA, InlineCtx.FuncNameSym, DWARF2_FLAG_IS_STMT, 0, 0,
+            File->getFilename());
+      } else {
+        OutStreamer->emitDwarfLocDirective(FileNumber, Line, Column,
+                                           DWARF2_FLAG_IS_STMT, 0, 0,
+                                           File->getFilename());
+      }
+    }
+    OutStreamer->emitRawText(RTrimmed);
+    ++Line;
+  }
+  emitInlineAsmEnd(STI, nullptr, MI);
 }
 
 char NVPTXAsmPrinter::ID = 0;

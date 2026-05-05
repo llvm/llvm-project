@@ -16,6 +16,7 @@
 #include "mlir/IR/Block.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -536,7 +537,10 @@ public:
     mlir::Operation *trueTerminator = trueRegion.back().getTerminator();
     rewriter.setInsertionPointToEnd(&trueRegion.back());
 
-    // Handle both yield and unreachable terminators (throw expressions)
+    // Handle both yield and unreachable terminators (throw expressions).
+    // Note: IR has already been modified (splitBlock, createBlock above), so
+    // we must not return failure() from this point onward per the MLIR pattern
+    // rewriter contract.
     if (auto trueYieldOp = dyn_cast<cir::YieldOp>(trueTerminator)) {
       rewriter.replaceOpWithNewOp<cir::BrOp>(trueYieldOp, trueYieldOp.getArgs(),
                                              continueBlock);
@@ -546,7 +550,9 @@ public:
       trueTerminator->emitError("unexpected terminator in ternary true region, "
                                 "expected yield or unreachable, got: ")
           << trueTerminator->getName();
-      return mlir::failure();
+      // Return success because IR was already modified
+      // (splitBlock/createBlock).
+      return mlir::success();
     }
     rewriter.inlineRegionBefore(trueRegion, continueBlock);
 
@@ -567,7 +573,9 @@ public:
       falseTerminator->emitError("unexpected terminator in ternary false "
                                  "region, expected yield or unreachable, got: ")
           << falseTerminator->getName();
-      return mlir::failure();
+      // Return success because IR was already modified
+      // (splitBlock/createBlock).
+      return mlir::success();
     }
     rewriter.inlineRegionBefore(falseRegion, continueBlock);
 
@@ -913,7 +921,7 @@ public:
       if (shouldSinkReturnOperand(operand, returnOp)) {
         // Sink the defining op to the dispatch block.
         mlir::Operation *defOp = operand.getDefiningOp();
-        defOp->moveBefore(destBlock, destBlock->end());
+        rewriter.moveOpBefore(defOp, destBlock, destBlock->end());
         returnValues.push_back(operand);
       } else {
         // Create an alloca in the function entry block.
@@ -1384,7 +1392,13 @@ public:
     // Erase the original cleanup scope op.
     rewriter.eraseOp(cleanupOp);
 
-    return result;
+    // Always return success because the IR has been modified (blocks split,
+    // regions inlined, ops erased, etc.). The MLIR pattern rewriter contract
+    // requires that if a pattern modifies IR, it must return success(). Any
+    // errors from unsupported exit operations (e.g. goto) have already been
+    // reported via emitError and an unreachable terminator was placed as a
+    // placeholder.
+    return mlir::success();
   }
 
   mlir::LogicalResult
@@ -1395,6 +1409,23 @@ public:
     // Nested cleanup scopes and try operations must be flattened before the
     // enclosing cleanup scope so that EH cleanup inside them is properly
     // handled. Fail the match so the pattern rewriter processes them first.
+    //
+    // Before checking, erase any trivially dead nested cleanup scopes. These
+    // arise from deactivated cleanups (e.g. partial-construction guards for
+    // lambda captures). The greedy rewriter may have already DCE'd them, but
+    // when a trivially dead nested op is erased first, the parent isn't always
+    // re-added to the worklist, so we handle it here. These types of operations
+    // will normally be removed by the canonicalizer, but we handle it here
+    // also, because DCE can run between pattern matches in the current pass,
+    // and if a trivially dead operation makes it this far, we will fail.
+    llvm::SmallVector<cir::CleanupScopeOp> deadNestedOps;
+    cleanupOp.getBodyRegion().walk([&](cir::CleanupScopeOp nested) {
+      if (mlir::isOpTriviallyDead(nested))
+        deadNestedOps.push_back(nested);
+    });
+    for (auto op : deadNestedOps)
+      rewriter.eraseOp(op);
+
     bool hasNestedOps = cleanupOp.getBodyRegion()
                             .walk([&](mlir::Operation *op) {
                               if (isa<cir::CleanupScopeOp, cir::TryOp>(op))

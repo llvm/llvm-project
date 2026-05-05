@@ -1727,14 +1727,16 @@ def S_WAITCNT_lds_direct : SPseudoInstSI<(outs), (ins)> {
    let hasSideEffects = 0;
 }
 
-let SubtargetPredicate = HasVMemToLDSLoad in {
+let SubtargetPredicate = HasAsyncMark in {
 def ASYNCMARK : SPseudoInstSI<(outs), (ins),
   [(int_amdgcn_asyncmark)]> {
    let maybeAtomic = 0;
+   let isMeta = 1;
 }
 def WAIT_ASYNCMARK : SOPP_Pseudo <"", (ins s16imm:$simm16), "$simm16",
     [(int_amdgcn_wait_asyncmark timm:$simm16)]> {
     let maybeAtomic = 0;
+    let isMeta = 1;
 }
 }
 

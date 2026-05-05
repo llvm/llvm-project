@@ -5473,6 +5473,8 @@ TemplateDeclInstantiator::InitFunctionInstantiation(FunctionDecl *New,
   SemaRef.InstantiateAttrs(TemplateArgs, Definition, New,
                            LateAttrs, StartingScope);
 
+  SemaRef.inferLifetimeBoundAttribute(New);
+
   return false;
 }
 
@@ -5967,6 +5969,8 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     // context seems wrong. Investigate more.
     ActOnFinishFunctionBody(Function, Body.get(), /*IsInstantiation=*/true);
 
+    inferLifetimeBoundAttribute(Function);
+
     checkReferenceToTULocalFromOtherTU(Function, PointOfInstantiation);
 
     if (PatternDecl->isDependentContext())
@@ -6013,7 +6017,6 @@ VarTemplateSpecializationDecl *Sema::BuildVarTemplateInstantiation(
   if (FromVar->isInvalidDecl())
     return nullptr;
 
-  NonSFINAEContext _(*this);
   InstantiatingTemplate Inst(*this, PointOfInstantiation, FromVar);
   if (Inst.isInvalid())
     return nullptr;

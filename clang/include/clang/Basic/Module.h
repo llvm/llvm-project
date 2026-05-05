@@ -306,6 +306,9 @@ public:
   /// The umbrella header or directory.
   std::variant<std::monostate, FileEntryRef, DirectoryEntryRef> Umbrella;
 
+  /// The location of the umbrella header or directory declaration.
+  SourceLocation UmbrellaDeclLoc;
+
   /// The module signature.
   ASTFileSignature Signature;
 

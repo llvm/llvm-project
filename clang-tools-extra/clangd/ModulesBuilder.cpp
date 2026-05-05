@@ -658,6 +658,16 @@ llvm::Error ModulesBuilder::ModulesBuilderImpl::getOrBuildModuleFile(
   return llvm::Error::success();
 }
 
+bool ModulesBuilder::hasRequiredModules(PathRef File) {
+  std::unique_ptr<ProjectModules> MDB = Impl->getCDB().getProjectModules(File);
+  if (!MDB)
+    return false;
+
+  CachingProjectModules CachedMDB(std::move(MDB),
+                                  Impl->getProjectModulesCache());
+  return !CachedMDB.getRequiredModules(File).empty();
+}
+
 std::unique_ptr<PrerequisiteModules>
 ModulesBuilder::buildPrerequisiteModulesFor(PathRef File,
                                             const ThreadsafeFS &TFS) {

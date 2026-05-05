@@ -196,6 +196,7 @@ using string = basic_string<char>;
 template<typename T>
 struct unique_ptr {
   unique_ptr();
+  explicit unique_ptr(T*);
   unique_ptr(unique_ptr<T>&&);
   unique_ptr& operator=(unique_ptr<T>&&);
   ~unique_ptr();
@@ -204,6 +205,11 @@ struct unique_ptr {
   T *operator->();
   T *get() const;
 };
+
+template<typename T, typename... Args>
+unique_ptr<T> make_unique(Args&&... args) {
+  return unique_ptr<T>(new T(args...));
+}
 
 template<typename T>
 struct optional {
@@ -268,4 +274,18 @@ struct true_type {
 template<class T> struct is_pointer : false_type {};
 template<class T> struct is_pointer<T*> : true_type {};
 template<class T> struct is_pointer<T* const> : true_type {};
+
+template<class> class function;
+template<class R, class... Args>
+class function<R(Args...)> {
+public:
+  template<class F> function(F) {}
+  function(const function&) {}
+  function(function&&) {}
+  template<class F> function& operator=(F) { return *this; }
+  function& operator=(const function&) { return *this; }
+  function& operator=(function&&) { return *this; }
+  ~function();
+};
+
 }

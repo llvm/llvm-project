@@ -1,5 +1,5 @@
 // NetBSD: noatime mounts currently inhibit 'touch -a' updates
-// UNSUPPORTED: system-netbsd
+// UNSUPPORTED: system-netbsd, system-darwin
 
 // Test the automatic pruning of module cache entries.
 

@@ -176,6 +176,9 @@ def NullConversion : DiagGroup<"null-conversion">;
 def ImplicitConversionFloatingPointToBool :
   DiagGroup<"implicit-conversion-floating-point-to-bool">;
 def ObjCLiteralConversion : DiagGroup<"objc-literal-conversion">;
+def NonportableIncludePathSeparator : DiagGroup<"nonportable-include-path-separator">;
+def NonportableIncludePath : DiagGroup<"nonportable-include-path",
+                                       [NonportableIncludePathSeparator]>;
 def MacroRedefined : DiagGroup<"macro-redefined">;
 def BuiltinMacroRedefined : DiagGroup<"builtin-macro-redefined">;
 def BuiltinRequiresHeader : DiagGroup<"builtin-requires-header">;
@@ -270,6 +273,7 @@ def UnguardedAvailability : DiagGroup<"unguarded-availability",
 def : DiagGroup<"partial-availability", [UnguardedAvailability]>;
 def DeprecatedDynamicExceptionSpec
     : DiagGroup<"deprecated-dynamic-exception-spec">;
+def HipDeprecatedBuiltins : DiagGroup<"hip-deprecated-builtins">;
 def DeprecatedBuiltins : DiagGroup<"deprecated-builtins">;
 def DeprecatedImplementations :DiagGroup<"deprecated-implementations">;
 def DeprecatedIncrementBool : DiagGroup<"deprecated-increment-bool">;
@@ -1877,6 +1881,9 @@ def HLSLExplicitBinding : DiagGroup<"hlsl-explicit-binding">;
 
 // Warnings for DXIL validation
 def DXILValidation : DiagGroup<"dxil-validation">;
+
+// Warnings for SPIRV validation
+def SPIRVValidation : DiagGroup<"spirv-validation">;
 
 // Warning for HLSL API availability
 def HLSLAvailability : DiagGroup<"hlsl-availability">;

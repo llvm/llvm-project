@@ -2771,8 +2771,8 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
       llvm::Type *VecTy = Vec->getType();
       llvm::Value *SrcVal = Src.getScalarVal();
 
-      if (SrcVal->getType()->getPrimitiveSizeInBits() <
-          VecTy->getScalarSizeInBits())
+      if (VecTy->isVectorTy() && SrcVal->getType()->getPrimitiveSizeInBits() <
+                                     VecTy->getScalarSizeInBits())
         SrcVal = Builder.CreateZExt(SrcVal, VecTy->getScalarType());
 
       auto *IRStoreTy = dyn_cast<llvm::IntegerType>(Vec->getType());
@@ -7082,14 +7082,15 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
 
     const auto *VD = DRE ? dyn_cast<VarDecl>(DRE->getDecl()) : nullptr;
     if (VD && VD->hasAttr<OMPTargetIndirectCallAttr>()) {
-      auto *PtrTy = CGM.VoidPtrTy;
-      llvm::Type *RtlFnArgs[] = {PtrTy};
+      auto *FuncPtrTy = llvm::PointerType::get(
+          CGM.getLLVMContext(), CGM.getDataLayout().getProgramAddressSpace());
+      llvm::Type *RtlFnArgs[] = {FuncPtrTy};
       llvm::FunctionCallee DeviceRtlFn = CGM.CreateRuntimeFunction(
-          llvm::FunctionType::get(PtrTy, RtlFnArgs, false),
+          llvm::FunctionType::get(FuncPtrTy, RtlFnArgs, false),
           "__llvm_omp_indirect_call_lookup");
       llvm::Value *Func = Callee.getFunctionPointer();
       llvm::Type *BackupTy = Func->getType();
-      Func = Builder.CreatePointerBitCastOrAddrSpaceCast(Func, PtrTy);
+      Func = Builder.CreatePointerBitCastOrAddrSpaceCast(Func, FuncPtrTy);
       Func = EmitRuntimeCall(DeviceRtlFn, {Func});
       Func = Builder.CreatePointerBitCastOrAddrSpaceCast(Func, BackupTy);
       Callee.setFunctionPointer(Func);

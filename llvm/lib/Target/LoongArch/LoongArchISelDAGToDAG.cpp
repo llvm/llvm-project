@@ -400,8 +400,35 @@ bool LoongArchDAGToDAGISel::selectVSplat(SDNode *N, APInt &Imm,
   return true;
 }
 
-template <unsigned ImmBitSize, bool IsSigned>
+template <unsigned ImmBitSize, unsigned EltBitSize, bool IsSigned>
 bool LoongArchDAGToDAGISel::selectVSplatImm(SDValue N, SDValue &SplatVal) {
+  APInt ImmValue;
+  EVT EltTy = N->getValueType(0).getVectorElementType();
+  unsigned EltBitWidth = EltBitSize ? EltBitSize : EltTy.getSizeInBits();
+
+  if (N->getOpcode() == ISD::BITCAST)
+    N = N->getOperand(0);
+
+  if (selectVSplat(N.getNode(), ImmValue, EltBitWidth) &&
+      ImmValue.getBitWidth() == EltBitWidth) {
+    if (IsSigned && ImmValue.isSignedIntN(ImmBitSize)) {
+      SplatVal = CurDAG->getSignedTargetConstant(
+          ImmValue.getSExtValue(), SDLoc(N), Subtarget->getGRLenVT());
+      return true;
+    }
+    if (!IsSigned && ImmValue.isIntN(ImmBitSize)) {
+      SplatVal = CurDAG->getTargetConstant(ImmValue.getZExtValue(), SDLoc(N),
+                                           Subtarget->getGRLenVT());
+      return true;
+    }
+  }
+
+  return false;
+}
+
+template <unsigned ImmBitSize>
+bool LoongArchDAGToDAGISel::selectVSplatImmNeg(SDValue N,
+                                               SDValue &SplatVal) const {
   APInt ImmValue;
   EVT EltTy = N->getValueType(0).getVectorElementType();
 
@@ -410,13 +437,8 @@ bool LoongArchDAGToDAGISel::selectVSplatImm(SDValue N, SDValue &SplatVal) {
 
   if (selectVSplat(N.getNode(), ImmValue, EltTy.getSizeInBits()) &&
       ImmValue.getBitWidth() == EltTy.getSizeInBits()) {
-    if (IsSigned && ImmValue.isSignedIntN(ImmBitSize)) {
-      SplatVal = CurDAG->getSignedTargetConstant(
-          ImmValue.getSExtValue(), SDLoc(N), Subtarget->getGRLenVT());
-      return true;
-    }
-    if (!IsSigned && ImmValue.isIntN(ImmBitSize)) {
-      SplatVal = CurDAG->getTargetConstant(ImmValue.getZExtValue(), SDLoc(N),
+    if ((-ImmValue).isIntN(ImmBitSize)) {
+      SplatVal = CurDAG->getTargetConstant(-ImmValue.getSExtValue(), SDLoc(N),
                                            Subtarget->getGRLenVT());
       return true;
     }

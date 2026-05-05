@@ -1080,20 +1080,23 @@ DNBGetMainBinaryCPUTypes(nub_process_t pid) {
 }
 
 JSONGenerator::ObjectSP
-DNBGetAllLoadedLibrariesInfos(nub_process_t pid, bool report_load_commands) {
+DNBGetAllLoadedLibrariesInfos(nub_process_t pid,
+                              DNBBinaryInformationLevel info_level) {
   MachProcessSP procSP;
   if (GetProcessSP(pid, procSP)) {
-    return procSP->GetAllLoadedLibrariesInfos(pid, report_load_commands);
+    return procSP->GetAllLoadedLibrariesInfos(pid, info_level);
   }
   return JSONGenerator::ObjectSP();
 }
 
 JSONGenerator::ObjectSP
 DNBGetLibrariesInfoForAddresses(nub_process_t pid,
+                                DNBBinaryInformationLevel info_level,
                                 std::vector<uint64_t> &macho_addresses) {
   MachProcessSP procSP;
   if (GetProcessSP(pid, procSP)) {
-    return procSP->GetLibrariesInfoForAddresses(pid, macho_addresses);
+    return procSP->GetLibrariesInfoForAddresses(pid, info_level,
+                                                macho_addresses);
   }
   return JSONGenerator::ObjectSP();
 }

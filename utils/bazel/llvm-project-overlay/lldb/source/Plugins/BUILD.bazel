@@ -1828,6 +1828,7 @@ cc_library(
         "//lldb:SymbolHeaders",
         "//lldb:Utility",
         "//llvm:Debuginfod",
+        "//llvm:HTTP",
         "//llvm:Support",
     ],
 )

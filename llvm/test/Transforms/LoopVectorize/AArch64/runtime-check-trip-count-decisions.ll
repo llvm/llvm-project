@@ -11,7 +11,7 @@ define i32 @foo_no_trip_count(ptr %a, ptr %b, ptr %c, i32 %bound) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %idx = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %a.index = getelementptr inbounds [32 x i8], ptr %a, i32 0, i32 %idx
   %0 = load i8, ptr %a.index, align 1
@@ -24,7 +24,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i32 %idx, %bound
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret i32 0
 }
 
@@ -36,7 +36,7 @@ define i32 @foo_low_trip_count(ptr %a, ptr %b, ptr %c, i32 %bound) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %idx = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %a.index = getelementptr inbounds [32 x i8], ptr %a, i32 0, i32 %idx
   %0 = load i8, ptr %a.index, align 1
@@ -49,7 +49,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i32 %idx, %bound
   br i1 %exitcond, label %for.end, label %for.body, !prof !0
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret i32 0
 }
 
@@ -61,7 +61,7 @@ define i32 @foo_mid_trip_count(ptr %a, ptr %b, ptr %c, i32 %bound) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %idx = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %a.index = getelementptr inbounds [32 x i8], ptr %a, i32 0, i32 %idx
   %0 = load i8, ptr %a.index, align 1
@@ -74,7 +74,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i32 %idx, %bound
   br i1 %exitcond, label %for.end, label %for.body, !prof !1
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret i32 0
 }
 
@@ -86,7 +86,7 @@ define i32 @foo_high_trip_count(ptr %a, ptr %b, ptr %c, i32 %bound) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %idx = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %a.index = getelementptr inbounds [32 x i8], ptr %a, i32 0, i32 %idx
   %0 = load i8, ptr %a.index, align 1
@@ -99,7 +99,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i32 %idx, %bound
   br i1 %exitcond, label %for.end, label %for.body, !prof !2
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret i32 0
 }
 

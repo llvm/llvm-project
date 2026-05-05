@@ -2477,13 +2477,22 @@ def int_nvvm_read_ptx_sreg_dynamic_smem_size :
 //
 // SHUFFLE
 //
-// Generate intrinsics for all variants of shfl instruction.
-let IntrProperties = [IntrInaccessibleMemOnly, IntrConvergent, IntrNoCallback] in {
-  foreach sync = [false, true] in {
+// Non-sync SHFL variants are pure functions of their SSA operands and the active
+// thread mask. Memory properties (IntrReadMem + IntrInaccessibleMemOnly + IntrWillReturn) 
+// model reading the implicit mask state to ensure correct ordering with other convergent
+// operations, preventing unsafe reordering while allowing DCE of truly dead code.
+//
+// Sync shfl variants have synchronization side effects modeled as
+// inaccessible memory accesses to prevent DCE and reordering.
+foreach is_sync = [false, true] in {
+  defvar CommonIntrinsicProps = [IntrInaccessibleMemOnly, IntrConvergent, IntrNoCallback];
+  defvar IntrinsicProps = !if(is_sync, CommonIntrinsicProps,
+                              !listconcat(CommonIntrinsicProps, [IntrReadMem, IntrWillReturn]));
+  let IntrProperties = IntrinsicProps in {
     foreach mode = ["up", "down", "bfly", "idx"] in {
       foreach type = ["i32", "f32"] in {
         foreach return_pred = [false, true] in {
-          defvar i = SHFL_INFO<sync, mode, type, return_pred>;
+          defvar i = SHFL_INFO<is_sync, mode, type, return_pred>;
           if i.withGccBuiltin then
             def i.Name : NVVMBuiltin, Intrinsic<i.RetTy, i.ArgsTy>;
           else
@@ -2801,6 +2810,12 @@ foreach transposed = [0, 1] in {
     }
   }
 }
+
+// movmatrix
+def int_nvvm_movmatrix_sync_aligned_m8n8_trans_b16
+  : Intrinsic<[llvm_i32_ty], [llvm_i32_ty],
+              [IntrInaccessibleMemOnly, IntrConvergent,
+               IntrNoCallback, IntrNoFree]>;
 
 // MAPA
 let IntrProperties = [IntrNoMem, IntrSpeculatable, NoCapture<ArgIndex<0>>] in {

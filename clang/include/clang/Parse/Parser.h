@@ -815,6 +815,11 @@ private:
   /// to the semicolon, consumes that extra token.
   bool ExpectAndConsumeSemi(unsigned DiagID, StringRef TokenUsed = "");
 
+  /// Returns true if the current token is likely the start of a new
+  /// declaration (e.g., it starts a new line and is a declaration specifier).
+  /// This is a heuristic used for error recovery.
+  bool isLikelyAtStartOfNewDeclaration();
+
   /// Consume any extra semi-colons until the end of the line.
   void ConsumeExtraSemi(ExtraSemiKind Kind, DeclSpec::TST T = TST_unspecified);
 
@@ -2029,7 +2034,7 @@ private:
 
   /// isTypeSpecifierQualifier - Return true if the current token could be the
   /// start of a specifier-qualifier-list.
-  bool isTypeSpecifierQualifier();
+  bool isTypeSpecifierQualifier(const Token &Tok);
 
   /// isKnownToBeTypeSpecifier - Return true if we know that the specified token
   /// is definitely a type-specifier.  Return false if it isn't part of a type
@@ -4350,7 +4355,7 @@ private:
       return isCXXTypeId(TentativeCXXTypeIdContext::AsGenericSelectionArgument,
                          isAmbiguous);
     }
-    return isTypeSpecifierQualifier();
+    return isTypeSpecifierQualifier(Tok);
   }
 
   /// Checks if the current tokens form type-id or expression.
@@ -4361,7 +4366,7 @@ private:
       bool isAmbiguous;
       return isCXXTypeId(TentativeCXXTypeIdContext::Unambiguous, isAmbiguous);
     }
-    return isTypeSpecifierQualifier();
+    return isTypeSpecifierQualifier(Tok);
   }
 
   /// ParseBlockId - Parse a block-id, which roughly looks like int (int x).
@@ -5054,7 +5059,7 @@ private:
     if (getLangOpts().CPlusPlus)
       return isCXXTypeId(TentativeCXXTypeIdContext::InParens, isAmbiguous);
     isAmbiguous = false;
-    return isTypeSpecifierQualifier();
+    return isTypeSpecifierQualifier(Tok);
   }
   bool isTypeIdInParens() {
     bool isAmbiguous;
@@ -6811,6 +6816,9 @@ private:
 
   /// Parses the 'sizes' clause of a '#pragma omp tile' directive.
   OMPClause *ParseOpenMPSizesClause();
+
+  /// Parses the 'counts' clause of a '#pragma omp split' directive.
+  OMPClause *ParseOpenMPCountsClause();
 
   /// Parses the 'permutation' clause of a '#pragma omp interchange' directive.
   OMPClause *ParseOpenMPPermutationClause();

@@ -299,7 +299,7 @@ struct UnwindState {
   uint64_t getCurrentLBRTarget() const { return LBRStack[LBRIndex].Target; }
   const LBREntry &getCurrentLBR() const { return LBRStack[LBRIndex]; }
   bool IsLastLBR() const { return LBRIndex == 0; }
-  bool getLBRStackSize() const { return LBRStack.size(); }
+  size_t getLBRStackSize() const { return LBRStack.size(); }
   void advanceLBR() { LBRIndex++; }
   ProfiledFrame *getParentFrame() { return CurrentLeafFrame->Parent; }
 
@@ -650,6 +650,8 @@ protected:
   void warnTruncatedStack();
   // Warn if range is invalid.
   void warnInvalidRange();
+  // Warn if sampled branch/target addresses don't match the binary.
+  void warnIfBranchTargetMismatch();
   // Extract call stack from the perf trace lines
   bool extractCallstack(TraceStream &TraceIt,
                         SmallVectorImpl<uint64_t> &CallStack);

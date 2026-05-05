@@ -1862,19 +1862,22 @@ APValue *EvalInfo::createHeapAlloc(const Expr *E, QualType T, LValue &LV) {
 void CallStackFrame::describe(raw_ostream &Out) const {
   bool IsMemberCall = false;
   bool ExplicitInstanceParam = false;
+  clang::PrintingPolicy PrintingPolicy = Info.Ctx.getPrintingPolicy();
+  PrintingPolicy.SuppressLambdaBody = true;
+
   if (const auto *MD = dyn_cast<CXXMethodDecl>(Callee)) {
     IsMemberCall = !isa<CXXConstructorDecl>(MD) && !MD->isStatic();
     ExplicitInstanceParam = MD->isExplicitObjectMemberFunction();
   }
 
   if (!IsMemberCall)
-    Callee->getNameForDiagnostic(Out, Info.Ctx.getPrintingPolicy(),
+    Callee->getNameForDiagnostic(Out, PrintingPolicy,
                                  /*Qualified=*/false);
 
   if (This && IsMemberCall) {
     if (const auto *MCE = dyn_cast_if_present<CXXMemberCallExpr>(CallExpr)) {
       const Expr *Object = MCE->getImplicitObjectArgument();
-      Object->printPretty(Out, /*Helper=*/nullptr, Info.Ctx.getPrintingPolicy(),
+      Object->printPretty(Out, /*Helper=*/nullptr, PrintingPolicy,
                           /*Indentation=*/0);
       if (Object->getType()->isPointerType())
           Out << "->";
@@ -1882,8 +1885,7 @@ void CallStackFrame::describe(raw_ostream &Out) const {
           Out << ".";
     } else if (const auto *OCE =
                    dyn_cast_if_present<CXXOperatorCallExpr>(CallExpr)) {
-      OCE->getArg(0)->printPretty(Out, /*Helper=*/nullptr,
-                                  Info.Ctx.getPrintingPolicy(),
+      OCE->getArg(0)->printPretty(Out, /*Helper=*/nullptr, PrintingPolicy,
                                   /*Indentation=*/0);
       Out << ".";
     } else {
@@ -1894,7 +1896,7 @@ void CallStackFrame::describe(raw_ostream &Out) const {
           Info.Ctx.getLValueReferenceType(This->Designator.MostDerivedType));
       Out << ".";
     }
-    Callee->getNameForDiagnostic(Out, Info.Ctx.getPrintingPolicy(),
+    Callee->getNameForDiagnostic(Out, PrintingPolicy,
                                  /*Qualified=*/false);
   }
 
@@ -4180,10 +4182,12 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
       // IsWithinLifetime, resulting in false.
       if (I != 0 && handler.AccessKind == AK_IsWithinLifetime)
         return false;
-      if (!Info.checkingPotentialConstantExpression())
+      if (!Info.checkingPotentialConstantExpression()) {
         Info.FFDiag(E, diag::note_constexpr_access_uninit)
             << handler.AccessKind << O->isIndeterminate()
             << E->getSourceRange();
+        NoteLValueLocation(Info, Obj.Base);
+      }
       return handler.failed();
     }
 
@@ -16822,6 +16826,99 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     default:
       return Success(
           APSInt(Value.rotl(Amount.getZExtValue()), Value.isUnsigned()), E);
+    }
+  }
+
+  case Builtin::BIstdc_leading_zeros:
+  case Builtin::BIstdc_leading_ones:
+  case Builtin::BIstdc_trailing_zeros:
+  case Builtin::BIstdc_trailing_ones:
+  case Builtin::BIstdc_first_leading_zero:
+  case Builtin::BIstdc_first_leading_one:
+  case Builtin::BIstdc_first_trailing_zero:
+  case Builtin::BIstdc_first_trailing_one:
+  case Builtin::BIstdc_count_zeros:
+  case Builtin::BIstdc_count_ones:
+  case Builtin::BIstdc_has_single_bit:
+  case Builtin::BIstdc_bit_width:
+  case Builtin::BIstdc_bit_floor:
+  case Builtin::BIstdc_bit_ceil:
+  case Builtin::BI__builtin_stdc_leading_zeros:
+  case Builtin::BI__builtin_stdc_leading_ones:
+  case Builtin::BI__builtin_stdc_trailing_zeros:
+  case Builtin::BI__builtin_stdc_trailing_ones:
+  case Builtin::BI__builtin_stdc_first_leading_zero:
+  case Builtin::BI__builtin_stdc_first_leading_one:
+  case Builtin::BI__builtin_stdc_first_trailing_zero:
+  case Builtin::BI__builtin_stdc_first_trailing_one:
+  case Builtin::BI__builtin_stdc_count_zeros:
+  case Builtin::BI__builtin_stdc_count_ones:
+  case Builtin::BI__builtin_stdc_has_single_bit:
+  case Builtin::BI__builtin_stdc_bit_width:
+  case Builtin::BI__builtin_stdc_bit_floor:
+  case Builtin::BI__builtin_stdc_bit_ceil: {
+    APSInt Val;
+    if (!EvaluateInteger(E->getArg(0), Val, Info))
+      return false;
+
+    unsigned BitWidth = Val.getBitWidth();
+    const unsigned ResBitWidth = Info.Ctx.getIntWidth(E->getType());
+
+    switch (BuiltinOp) {
+    case Builtin::BI__builtin_stdc_leading_zeros:
+      return Success(APInt(ResBitWidth, Val.countl_zero()), E);
+    case Builtin::BI__builtin_stdc_leading_ones:
+      return Success(APInt(ResBitWidth, Val.countl_one()), E);
+    case Builtin::BI__builtin_stdc_trailing_zeros:
+      return Success(APInt(ResBitWidth, Val.countr_zero()), E);
+    case Builtin::BI__builtin_stdc_trailing_ones:
+      return Success(APInt(ResBitWidth, Val.countr_one()), E);
+    case Builtin::BI__builtin_stdc_first_leading_zero:
+      return Success(
+          APInt(ResBitWidth, Val.isAllOnes() ? 0 : Val.countl_one() + 1), E);
+    case Builtin::BI__builtin_stdc_first_leading_one:
+      return Success(
+          APInt(ResBitWidth, Val.isZero() ? 0 : Val.countl_zero() + 1), E);
+    case Builtin::BI__builtin_stdc_first_trailing_zero:
+      return Success(
+          APInt(ResBitWidth, Val.isAllOnes() ? 0 : Val.countr_one() + 1), E);
+    case Builtin::BI__builtin_stdc_first_trailing_one:
+      return Success(
+          APInt(ResBitWidth, Val.isZero() ? 0 : Val.countr_zero() + 1), E);
+    case Builtin::BI__builtin_stdc_count_zeros: {
+      APInt Cnt(ResBitWidth, BitWidth - Val.popcount());
+      return Success(APSInt(Cnt, /*IsUnsigned*/ true), E);
+    }
+    case Builtin::BI__builtin_stdc_count_ones: {
+      APInt Cnt(ResBitWidth, Val.popcount());
+      return Success(APSInt(Cnt, /*IsUnsigned*/ true), E);
+    }
+    case Builtin::BI__builtin_stdc_has_single_bit: {
+      APInt Res(ResBitWidth, Val.popcount() == 1 ? 1 : 0);
+      return Success(APSInt(Res, /*IsUnsigned*/ true), E);
+    }
+    case Builtin::BI__builtin_stdc_bit_width:
+      return Success(APInt(ResBitWidth, BitWidth - Val.countl_zero()), E);
+    case Builtin::BI__builtin_stdc_bit_floor: {
+      if (Val.isZero())
+        return Success(APInt(BitWidth, 0), E);
+      unsigned Exp = BitWidth - Val.countl_zero() - 1;
+      return Success(
+          APSInt(APInt::getOneBitSet(BitWidth, Exp), /*IsUnsigned*/ true), E);
+    }
+    case Builtin::BI__builtin_stdc_bit_ceil: {
+      if (Val.ule(1))
+        return Success(APSInt(APInt(BitWidth, 1), /*IsUnsigned*/ true), E);
+      APInt ValMinusOne = Val - 1;
+      unsigned LZ = ValMinusOne.countl_zero();
+      if (LZ == 0)
+        return Success(APSInt(APInt(BitWidth, 0), /*IsUnsigned*/ true),
+                       E); // overflows; wrap to 0
+      APInt Result = APInt::getOneBitSet(BitWidth, BitWidth - LZ);
+      return Success(APSInt(Result, /*IsUnsigned*/ true), E);
+    }
+    default:
+      llvm_unreachable("Unknown stdc builtin");
     }
   }
 
