@@ -174,14 +174,14 @@ void ThreadPlanCallFunction::ReportRegisterState(const char *message) {
 
 void ThreadPlanCallFunction::DoTakedown(bool success) {
   Log *log = GetLog(LLDBLog::Step);
-  Thread &thread = GetThread();
 
   if (!m_valid) {
     // If ConstructorSetup was succesfull but PrepareTrivialCall was not,
     // we will have a saved register state and potentially modified registers.
     // Restore those.
     if (m_stored_thread_state.register_backup_sp)
-      if (!thread.RestoreRegisterStateFromCheckpoint(m_stored_thread_state))
+      if (!GetThread().RestoreRegisterStateFromCheckpoint(
+              m_stored_thread_state))
         LLDB_LOGF(
             log,
             "ThreadPlanCallFunction(%p): Failed to restore register state from "
@@ -205,6 +205,7 @@ void ThreadPlanCallFunction::DoTakedown(bool success) {
               "0x%4.4" PRIx64 ", m_valid: %d complete: %d.\n",
               static_cast<void *>(this), m_tid, m_valid, IsPlanComplete());
     m_takedown_done = true;
+    Thread &thread = GetThread();
     m_stop_address =
         thread.GetStackFrameAtIndex(0)->GetRegisterContext()->GetPC();
     m_real_stop_info_sp = GetPrivateStopInfo();
