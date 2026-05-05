@@ -1029,8 +1029,8 @@ public:
     std::string m_desc;
   };
 
-  lldb::user_id_t AddBreakpointResolverOverride(
-      BreakpointResolverOverride *override) {
+  lldb::user_id_t
+  AddBreakpointResolverOverride(BreakpointResolverOverride *override) {
     lldb::user_id_t id_used = m_override_id;
     m_breakpoint_overrides.emplace(
         m_override_id, std::unique_ptr<BreakpointResolverOverride>(override));
@@ -1053,8 +1053,8 @@ public:
   lldb::BreakpointResolverSP
   CheckBreakpointOverrides(lldb::BreakpointResolverSP original_sp) {
     for (auto const &elem : m_breakpoint_overrides) {
-      if (lldb::BreakpointResolverSP overriden_sp = 
-          elem.second->CheckForOverride(*this, original_sp))
+      if (lldb::BreakpointResolverSP overriden_sp =
+              elem.second->CheckForOverride(*this, original_sp))
         return overriden_sp;
     }
     return {};
@@ -1064,8 +1064,8 @@ public:
   /// list the overrides whose ids match the ones given in idxs.  The matched
   /// elements are removed from the list, so any elements remaining in idxs are
   /// indexes that are not breakpoint override indexes.
-  void DescribeBreakpointOverrides(Stream &stream, 
-      std::vector<lldb::user_id_t> &idxs);
+  void DescribeBreakpointOverrides(Stream &stream,
+                                   std::vector<lldb::user_id_t> &idxs);
 
   // The flag 'end_to_end', default to true, signifies that the operation is
   // performed end to end, for both the debugger and the debuggee.

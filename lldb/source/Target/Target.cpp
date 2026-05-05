@@ -957,8 +957,8 @@ Target::AddBreakpointResolverOverride(llvm::StringRef class_name,
   return AddBreakpointResolverOverride(new_override);
 }
 
-void Target::DescribeBreakpointOverrides(Stream &stream, 
-    std::vector<lldb::user_id_t> &idxs) {
+void Target::DescribeBreakpointOverrides(Stream &stream,
+                                         std::vector<lldb::user_id_t> &idxs) {
   if (m_breakpoint_overrides.size() == 0) {
     stream << "No overrides.\n";
     return;
