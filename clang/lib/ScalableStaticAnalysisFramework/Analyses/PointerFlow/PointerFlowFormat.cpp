@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/ScalableStaticAnalysisFramework/Analyses/PointerFlow/PointerFlowFormat.h"
 #include "SSAFAnalysesCommon.h"
 #include "clang/ScalableStaticAnalysisFramework/Analyses/EntityPointerLevel/EntityPointerLevelFormat.h"
 #include "clang/ScalableStaticAnalysisFramework/Analyses/PointerFlow/PointerFlow.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Serialization/JSONFormat.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
@@ -31,29 +31,64 @@ namespace {
 constexpr const char *const PointerFlowKey = "PointerFlow";
 } // namespace
 
-// Writes the 'Edges' map as an array of array of EntityPointerLevels:
-// Array [
-//    Array [ [src-node], [dest-node], [dest-node], ...]
-//    Array [ [src-node], [dest-node], [dest-node], ...]
+// Writes an EdgeSet as an array of arrays of EntityPointerLevels:
+// [
+//    [ [src-node], [dest-node], [dest-node], ...],
+//    [ [src-node], [dest-node], [dest-node], ...],
 //    ...
 // ]
+Array clang::ssaf::edgeSetToJSON(
+    llvm::iterator_range<EdgeSet::const_iterator> Edges,
+    JSONFormat::EntityIdToJSONFn EntityId2JSON) {
+  Array EdgesData;
+
+  for (const auto &[LHS, RHSSet] : Edges) {
+    Array EdgeEntry;
+    EdgeEntry.push_back(entityPointerLevelToJSON(LHS, EntityId2JSON));
+    for (const auto &RHS : RHSSet)
+      EdgeEntry.push_back(entityPointerLevelToJSON(RHS, EntityId2JSON));
+    EdgesData.push_back(Value(std::move(EdgeEntry)));
+  }
+  return EdgesData;
+}
+
+llvm::Expected<EdgeSet>
+clang::ssaf::edgeSetFromJSON(const Array &EdgesData,
+                             JSONFormat::EntityIdFromJSONFn EntityIdFromJSON) {
+  EdgeSet Edges;
+
+  for (const auto &EdgesEntryData : EdgesData) {
+    const auto *EPLArray = EdgesEntryData.getAsArray();
+
+    if (!EPLArray || EPLArray->size() <= 1)
+      return makeSawButExpectedError(
+          EdgesEntryData, "a JSON array of EntityPointerLevels with a size "
+                          "greater than 1: [src, dest, dest, ...]");
+
+    auto SrcEPL =
+        entityPointerLevelFromJSON(*EPLArray->begin(), EntityIdFromJSON);
+
+    if (!SrcEPL)
+      return SrcEPL.takeError();
+    for (const auto &EPLData :
+         llvm::make_range(EPLArray->begin() + 1, EPLArray->end())) {
+      auto EPL = entityPointerLevelFromJSON(EPLData, EntityIdFromJSON);
+      if (!EPL)
+        return EPL.takeError();
+      Edges[*SrcEPL].insert(*EPL);
+    }
+  }
+  return Edges;
+}
+
 static llvm::json::Object
 summaryToJSON(const EntitySummary &ES,
               JSONFormat::EntityIdToJSONFn EntityId2JSON) {
-  Array EdgesData;
-
-  for (const auto &Entry :
-       getEdges(static_cast<const PointerFlowEntitySummary &>(ES))) {
-    Array EdgesEntryData;
-    EntityPointerLevel LHS = Entry.first;
-
-    EdgesEntryData.push_back(entityPointerLevelToJSON(LHS, EntityId2JSON));
-    // Add to nodes:
-    for (const auto &RHS : Entry.second)
-      EdgesEntryData.push_back(entityPointerLevelToJSON(RHS, EntityId2JSON));
-    EdgesData.push_back(Value(std::move(EdgesEntryData)));
-  }
-  return Object{{PointerFlowKey, Value(std::move(EdgesData))}};
+  Object Data;
+  Data[PointerFlowKey] = Value(
+      edgeSetToJSON(getEdges(static_cast<const PointerFlowEntitySummary &>(ES)),
+                    EntityId2JSON));
+  return Data;
 }
 
 static llvm::Expected<std::unique_ptr<EntitySummary>>
@@ -65,33 +100,18 @@ summaryFromJSON(const Object &Data, EntityIdTable &,
     return makeSawButExpectedError(
         Object(Data), "a JSON object with the key: %s", PointerFlowKey);
 
-  EdgeSet Edges;
   const auto *EdgesDataAsArr = EdgesData->getAsArray();
 
   if (!EdgesDataAsArr)
     return makeSawButExpectedError(
         *EdgesData, "a JSON array of array of EntityPointerLevels");
-  for (const auto &EdgesEntryData : *EdgesDataAsArr) {
-    const auto *EPLArray = EdgesEntryData.getAsArray();
 
-    if (!EPLArray || EPLArray->size() <= 1)
-      return makeSawButExpectedError(
-          EdgesEntryData, "a JSON array of EntityPointerLevels with a size "
-                          "greater than 1: [lhs, rhs, rhs, ...]");
+  auto Edges = edgeSetFromJSON(*EdgesDataAsArr, EntityIdFromJSON);
 
-    auto SrcEPL = entityPointerLevelFromJSON((*EPLArray)[0], EntityIdFromJSON);
-
-    if (!SrcEPL)
-      return SrcEPL.takeError();
-    for (const auto &EPLData : llvm::drop_begin(*EPLArray)) {
-      auto EPL = entityPointerLevelFromJSON(EPLData, EntityIdFromJSON);
-      if (!EPL)
-        return EPL.takeError();
-      Edges[*SrcEPL].insert(*EPL);
-    }
-  }
+  if (!Edges)
+    return Edges.takeError();
   return std::make_unique<PointerFlowEntitySummary>(
-      buildPointerFlowEntitySummary(std::move(Edges)));
+      buildPointerFlowEntitySummary(std::move(*Edges)));
 }
 
 namespace {
