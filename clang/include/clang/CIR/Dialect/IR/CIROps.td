@@ -3928,8 +3928,8 @@ def CIR_DeleteArrayOp : CIR_Op<"delete_array"> {
     The `element_dtor` attribute, when present, specifies the destructor to call
     on each array element before deallocation.
 
-    The `dtor_may_throw` unit attribute, when present, indicates that the
-    element destructor is may throw exceptions.
+    The `dtor_may_throw` unit property, when present, indicates that the
+    element destructor may throw exceptions.
   }];
 
   let arguments = (ins
@@ -3937,7 +3937,7 @@ def CIR_DeleteArrayOp : CIR_Op<"delete_array"> {
     FlatSymbolRefAttr:$delete_fn,
     CIR_UsualDeleteParamsAttr:$delete_params,
     OptionalAttr<FlatSymbolRefAttr>:$element_dtor,
-    UnitAttr:$dtor_may_throw
+    UnitProp:$dtor_may_throw
   );
 
   let builders = [
@@ -3946,23 +3946,16 @@ def CIR_DeleteArrayOp : CIR_Op<"delete_array"> {
                    "cir::UsualDeleteParamsAttr":$delete_params), [{
       build($_builder, $_state, address, delete_fn, delete_params,
             /*element_dtor=*/mlir::FlatSymbolRefAttr{},
-            /*dtor_may_throw=*/mlir::UnitAttr{});
-    }]>,
-    OpBuilder<(ins "mlir::Value":$address,
-                   "mlir::FlatSymbolRefAttr":$delete_fn,
-                   "cir::UsualDeleteParamsAttr":$delete_params,
-                   "mlir::FlatSymbolRefAttr":$element_dtor,
-                   "bool":$dtor_may_throw), [{
-      build($_builder, $_state, address, delete_fn, delete_params,
-            element_dtor,
-            dtor_may_throw ? $_builder.getUnitAttr() : mlir::UnitAttr{});
+            /*dtor_may_throw=*/false);
     }]>
   ];
 
   let assemblyFormat = [{
-    $address `:` qualified(type($address)) attr-dict
+    $address `:` qualified(type($address)) (`dtor_may_throw` $dtor_may_throw^)?
+    attr-dict
   }];
 
+  let hasVerifier = 1;
   let hasLLVMLowering = false;
   let hasCXXABILowering = true;
 }
