@@ -242,6 +242,8 @@ template <> struct MappingTraits<ClangTidyOptions> {
     IO.mapOptional("InheritParentConfig", Options.InheritParentConfig);
     IO.mapOptional("UseColor", Options.UseColor);
     IO.mapOptional("SystemHeaders", Options.SystemHeaders);
+    IO.mapOptional("ExperimentalHeaderFilterMatching",
+                   Options.ExperimentalHeaderFilterMatching);
     IO.mapOptional("CustomChecks", Options.CustomChecks);
   }
 };
@@ -259,6 +261,7 @@ ClangTidyOptions ClangTidyOptions::getDefaults() {
   Options.HeaderFilterRegex = ".*";
   Options.ExcludeHeaderFilterRegex = "";
   Options.SystemHeaders = false;
+  Options.ExperimentalHeaderFilterMatching = false;
   Options.FormatStyle = "none";
   Options.User = std::nullopt;
   Options.RemovedArgs = std::nullopt;
@@ -300,6 +303,8 @@ ClangTidyOptions &ClangTidyOptions::mergeWith(const ClangTidyOptions &Other,
   overrideValue(HeaderFilterRegex, Other.HeaderFilterRegex);
   overrideValue(ExcludeHeaderFilterRegex, Other.ExcludeHeaderFilterRegex);
   overrideValue(SystemHeaders, Other.SystemHeaders);
+  overrideValue(ExperimentalHeaderFilterMatching,
+                Other.ExperimentalHeaderFilterMatching);
   overrideValue(FormatStyle, Other.FormatStyle);
   overrideValue(User, Other.User);
   overrideValue(UseColor, Other.UseColor);

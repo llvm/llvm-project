@@ -44,6 +44,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Timer.h"
+#include <functional>
 #include <optional>
 
 namespace clang {
@@ -144,6 +145,23 @@ public:
 
     /// Avoids matching declarations in system headers.
     bool IgnoreSystemHeaders{false};
+
+    /// Skips matching for declarations based on location.
+    ///
+    /// When set and the callback returns true for a \c Decl node's location,
+    /// that declaration is not matched during the outer AST traversal. The
+    /// traversal may also skip that declaration's subtree when its lexical
+    /// children do not contain any declaration that the callback would keep.
+    /// The callback is only consulted for \c Decl nodes (not \c Stmt, \c Type,
+    /// etc.) during this outer traversal and only when the source location is
+    /// valid, so the translation-unit root is never skipped.
+    ///
+    /// \note This is a best-effort declaration pruning mechanism, not a general
+    /// source-location filter. Matchers that recursively visit children of an
+    /// in-scope node (e.g.
+    /// \c hasDescendant / \c forEachDescendant) may still reach declarations
+    /// in skipped regions through the internal child-match visitor.
+    std::function<bool(SourceLocation)> ShouldSkipLocation;
 
     bool SkipDeclsInModules{false};
   };

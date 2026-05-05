@@ -2,22 +2,27 @@
 // CHECK-BASE: Checks: {{.*}}from-parent
 // CHECK-BASE: HeaderFilterRegex: parent
 // CHECK-BASE: ExcludeHeaderFilterRegex: exc-parent
+// CHECK-BASE: ExperimentalHeaderFilterMatching: true
 // RUN: clang-tidy -dump-config %S/Inputs/config-files/1/- -- | FileCheck %s -check-prefix=CHECK-CHILD1
 // CHECK-CHILD1: Checks: {{.*}}from-child1
 // CHECK-CHILD1: HeaderFilterRegex: child1
 // CHECK-CHILD1: ExcludeHeaderFilterRegex: exc-child1
+// CHECK-CHILD1: ExperimentalHeaderFilterMatching: false
 // RUN: clang-tidy -dump-config %S/Inputs/config-files/2/- -- | FileCheck %s -check-prefix=CHECK-CHILD2
 // CHECK-CHILD2: Checks: {{.*}}from-parent
 // CHECK-CHILD2: HeaderFilterRegex: parent
 // CHECK-CHILD2: ExcludeHeaderFilterRegex: exc-parent
+// CHECK-CHILD2: ExperimentalHeaderFilterMatching: true
 // RUN: clang-tidy -dump-config %S/Inputs/config-files/3/- -- | FileCheck %s -check-prefix=CHECK-CHILD3
 // CHECK-CHILD3: Checks: {{.*}}from-parent,from-child3
 // CHECK-CHILD3: HeaderFilterRegex: child3
 // CHECK-CHILD3: ExcludeHeaderFilterRegex: exc-child3
-// RUN: clang-tidy -dump-config -checks='from-command-line' -header-filter='from command line' -exclude-header-filter='from_command_line' %S/Inputs/config-files/- -- | FileCheck %s -check-prefix=CHECK-COMMAND-LINE
+// CHECK-CHILD3: ExperimentalHeaderFilterMatching: false
+// RUN: clang-tidy -dump-config -checks='from-command-line' -header-filter='from command line' -exclude-header-filter='from_command_line' --experimental-header-filter-matching=false %S/Inputs/config-files/- -- | FileCheck %s -check-prefix=CHECK-COMMAND-LINE
 // CHECK-COMMAND-LINE: Checks: {{.*}}from-parent,from-command-line
 // CHECK-COMMAND-LINE: HeaderFilterRegex: from command line
 // CHECK-COMMAND-LINE: ExcludeHeaderFilterRegex: from_command_line
+// CHECK-COMMAND-LINE: ExperimentalHeaderFilterMatching: false
 
 // For this test we have to use names of the real checks because otherwise values are ignored.
 // Running with the old key: <Key>, value: <value> CheckOptions

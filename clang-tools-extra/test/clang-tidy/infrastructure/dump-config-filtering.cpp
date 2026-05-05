@@ -5,8 +5,10 @@
 // CHECK-NEXT:   misc-unused-parameters.IgnoreVirtual: 'false'
 // CHECK-NEXT:   misc-unused-parameters.StrictMode: 'false'
 // CHECK-NEXT: SystemHeaders:   false
+// CHECK-NEXT: ExperimentalHeaderFilterMatching: false
 
 // CHECK-DISABLED: CheckOptions:    {}
 // CHECK-DISABLED-NEXT: SystemHeaders:   false
+// CHECK-DISABLED-NEXT: ExperimentalHeaderFilterMatching: false
 
 int main() { return 0; }

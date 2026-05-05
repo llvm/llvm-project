@@ -345,6 +345,188 @@ TEST(IsInlineMatcher, IsInline) {
 // Windows.
 #ifndef _WIN32
 
+static bool isExpansionInFileEndingWith(const SourceManager &SM,
+                                        SourceLocation Location,
+                                        StringRef Suffix) {
+  const FileID FID = SM.getDecomposedExpansionLoc(Location).first;
+  const OptionalFileEntryRef File = SM.getFileEntryRefForID(FID);
+  return File && File->getName().ends_with(Suffix);
+}
+
+TEST(MatchFinder, HonorsShouldSkipLocation) {
+  FileContentMappings M;
+  M.emplace_back("/other.h", "class HeaderDecl {};");
+  auto AST = tooling::buildASTFromCodeWithArgs(
+      "#include \"other.h\"\n"
+      "class MainDecl {};\n",
+      {"-std=gnu++11", "-target", "i386-unknown-unknown", "-I/"}, "input.cc",
+      "clang-tool", std::make_shared<PCHContainerOperations>(),
+      tooling::getClangStripDependencyFileAdjuster(), M);
+  ASSERT_TRUE(AST);
+
+  auto matchRecordDecls = [&](MatchFinder::MatchFinderOptions Options) {
+    struct RecordCallback : MatchFinder::MatchCallback {
+      explicit RecordCallback(std::vector<std::string> &Names) : Names(Names) {}
+
+      void run(const MatchFinder::MatchResult &Result) override {
+        const auto *Record = Result.Nodes.getNodeAs<CXXRecordDecl>("record");
+        ASSERT_NE(nullptr, Record);
+        Names.push_back(std::string(Record->getName()));
+      }
+
+      std::vector<std::string> &Names;
+    };
+
+    std::vector<std::string> Names;
+    RecordCallback Callback(Names);
+    MatchFinder Finder(std::move(Options));
+    Finder.addMatcher(
+        cxxRecordDecl(isDefinition(), unless(isImplicit())).bind("record"),
+        &Callback);
+    Finder.matchAST(AST->getASTContext());
+    llvm::sort(Names);
+    return Names;
+  };
+
+  const auto AllMatches = matchRecordDecls({});
+  ASSERT_EQ(2u, AllMatches.size());
+  EXPECT_EQ("HeaderDecl", AllMatches[0]);
+  EXPECT_EQ("MainDecl", AllMatches[1]);
+
+  MatchFinder::MatchFinderOptions ScopedOptions;
+  SourceManager &SM = AST->getSourceManager();
+  ScopedOptions.ShouldSkipLocation = [&SM](SourceLocation Location) {
+    return !SM.isInMainFile(Location);
+  };
+  const auto ScopedMatches = matchRecordDecls(std::move(ScopedOptions));
+  ASSERT_EQ(1u, ScopedMatches.size());
+  EXPECT_EQ("MainDecl", ScopedMatches[0]);
+}
+
+TEST(MatchFinder, ShouldSkipLocationKeepsAncestorMatchersReachable) {
+  FileContentMappings M;
+  M.emplace_back("/kept.h", "class Kept {};");
+  M.emplace_back("/wrapper.h", "namespace skipped {\n"
+                               "#include \"kept.h\"\n"
+                               "}");
+  auto AST = tooling::buildASTFromCodeWithArgs(
+      "#include \"wrapper.h\"\n",
+      {"-std=gnu++11", "-target", "i386-unknown-unknown", "-I/"}, "input.cc",
+      "clang-tool", std::make_shared<PCHContainerOperations>(),
+      tooling::getClangStripDependencyFileAdjuster(), M);
+  ASSERT_TRUE(AST);
+
+  MatchFinder::MatchFinderOptions Options;
+  SourceManager &SM = AST->getSourceManager();
+  Options.ShouldSkipLocation = [&SM](SourceLocation Location) {
+    return isExpansionInFileEndingWith(SM, Location, "/wrapper.h");
+  };
+
+  struct MatchCallback : MatchFinder::MatchCallback {
+    void run(const MatchFinder::MatchResult &Result) override {
+      ASSERT_NE(nullptr, Result.Nodes.getNodeAs<CXXRecordDecl>("record"));
+      Matched = true;
+    }
+
+    bool Matched = false;
+  } Callback;
+
+  MatchFinder Finder(std::move(Options));
+  Finder.addMatcher(
+      cxxRecordDecl(isDefinition(), unless(isImplicit()), hasName("Kept"),
+                    hasParent(namespaceDecl(hasName("skipped"))),
+                    hasAncestor(namespaceDecl(hasName("skipped"))))
+          .bind("record"),
+      &Callback);
+  Finder.matchAST(AST->getASTContext());
+  EXPECT_TRUE(Callback.Matched);
+}
+
+TEST(MatchFinder, ShouldSkipLocationPrunesSkippedDeclContexts) {
+  FileContentMappings M;
+  M.emplace_back("/skipped.h", "namespace skipped { class Hidden {}; }");
+  auto AST = tooling::buildASTFromCodeWithArgs(
+      "#include \"skipped.h\"\n",
+      {"-std=gnu++11", "-target", "i386-unknown-unknown", "-I/"}, "input.cc",
+      "clang-tool", std::make_shared<PCHContainerOperations>(),
+      tooling::getClangStripDependencyFileAdjuster(), M);
+  ASSERT_TRUE(AST);
+
+  auto matchSkippedDeclNames = [&](MatchFinder::MatchFinderOptions Options) {
+    struct DeclCallback : MatchFinder::MatchCallback {
+      explicit DeclCallback(std::vector<std::string> &Names) : Names(Names) {}
+
+      void run(const MatchFinder::MatchResult &Result) override {
+        const auto *Node = Result.Nodes.getNodeAs<NamedDecl>("decl");
+        ASSERT_NE(nullptr, Node);
+        Names.push_back(std::string(Node->getName()));
+      }
+
+      std::vector<std::string> &Names;
+    };
+
+    std::vector<std::string> Names;
+    DeclCallback Callback(Names);
+    MatchFinder Finder(std::move(Options));
+    Finder.addMatcher(
+        decl(anyOf(namespaceDecl(hasName("skipped")),
+                   cxxRecordDecl(isDefinition(), unless(isImplicit()),
+                                 hasName("Hidden"))))
+            .bind("decl"),
+        &Callback);
+    Finder.matchAST(AST->getASTContext());
+    llvm::sort(Names);
+    return Names;
+  };
+
+  const auto AllMatches = matchSkippedDeclNames({});
+  ASSERT_EQ(2u, AllMatches.size());
+  EXPECT_EQ("Hidden", AllMatches[0]);
+  EXPECT_EQ("skipped", AllMatches[1]);
+
+  MatchFinder::MatchFinderOptions ScopedOptions;
+  SourceManager &SM = AST->getSourceManager();
+  ScopedOptions.ShouldSkipLocation = [&SM](SourceLocation Location) {
+    return isExpansionInFileEndingWith(SM, Location, "/skipped.h");
+  };
+  EXPECT_TRUE(matchSkippedDeclNames(std::move(ScopedOptions)).empty());
+}
+
+TEST(MatchFinder, ShouldSkipLocationPrunesSkippedSubtrees) {
+  FileContentMappings M;
+  M.emplace_back("/skipped.h", "void hidden() { int local = 0; }");
+  auto AST = tooling::buildASTFromCodeWithArgs(
+      "#include \"skipped.h\"\n",
+      {"-std=gnu++11", "-target", "i386-unknown-unknown", "-I/"}, "input.cc",
+      "clang-tool", std::make_shared<PCHContainerOperations>(),
+      tooling::getClangStripDependencyFileAdjuster(), M);
+  ASSERT_TRUE(AST);
+
+  auto countSkippedSubtreeMatches =
+      [&](MatchFinder::MatchFinderOptions Options) {
+        struct CountCallback : MatchFinder::MatchCallback {
+          void run(const MatchFinder::MatchResult &Result) override { ++Count; }
+
+          unsigned Count = 0;
+        } Callback;
+
+        MatchFinder Finder(std::move(Options));
+        Finder.addMatcher(functionDecl(hasName("hidden")), &Callback);
+        Finder.addMatcher(integerLiteral(equals(0)), &Callback);
+        Finder.matchAST(AST->getASTContext());
+        return Callback.Count;
+      };
+
+  EXPECT_EQ(2u, countSkippedSubtreeMatches({}));
+
+  MatchFinder::MatchFinderOptions ScopedOptions;
+  SourceManager &SM = AST->getSourceManager();
+  ScopedOptions.ShouldSkipLocation = [&SM](SourceLocation Location) {
+    return isExpansionInFileEndingWith(SM, Location, "/skipped.h");
+  };
+  EXPECT_EQ(0u, countSkippedSubtreeMatches(std::move(ScopedOptions)));
+}
+
 TEST(Matcher, IsExpansionInMainFileMatcher) {
   EXPECT_TRUE(matches("class X {};",
                       recordDecl(hasName("X"), isExpansionInMainFile())));

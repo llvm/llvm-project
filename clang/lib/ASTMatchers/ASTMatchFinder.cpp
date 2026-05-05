@@ -1366,10 +1366,55 @@ private:
     return SM.isInSystemHeader(Loc);
   }
 
-  template <typename T> bool shouldSkipNode(T &Node) {
-    if (Options.IgnoreSystemHeaders && isInSystemHeader(getNodeLocation(Node)))
-      return true;
+  bool shouldSkipLocation(const Decl &Node) {
+    if (!Options.ShouldSkipLocation)
+      return false;
+
+    SourceLocation Loc = getNodeLocation(Node);
+    return Loc.isValid() && Options.ShouldSkipLocation(Loc);
+  }
+
+  bool shouldSkipNode(Decl &Node) {
+    return shouldSkipSystemHeaders(Node) || shouldSkipLocation(Node);
+  }
+
+  bool declContextMayContainNonSkippedDecl(const DeclContext &DC) {
+    for (const Decl *Child : DC.decls())
+      if (Child && declOrChildrenMayBeNonSkipped(*Child))
+        return true;
     return false;
+  }
+
+  bool declOrChildrenMayBeNonSkipped(const Decl &Node) {
+    auto It = DeclOrChildrenMayBeNonSkippedCache.find(&Node);
+    if (It != DeclOrChildrenMayBeNonSkippedCache.end())
+      return It->second;
+
+    bool MayBeNonSkipped = false;
+    if (!shouldSkipSystemHeaders(Node)) {
+      if (!shouldSkipLocation(Node)) {
+        MayBeNonSkipped = true;
+      } else if (const auto *DC = dyn_cast<DeclContext>(&Node)) {
+        MayBeNonSkipped = declContextMayContainNonSkippedDecl(*DC);
+      }
+    }
+
+    DeclOrChildrenMayBeNonSkippedCache[&Node] = MayBeNonSkipped;
+    return MayBeNonSkipped;
+  }
+
+  bool shouldSkipTraversal(Decl &Node) {
+    if (shouldSkipSystemHeaders(Node))
+      return true;
+    if (!shouldSkipLocation(Node))
+      return false;
+
+    const auto *DC = dyn_cast<DeclContext>(&Node);
+    return !DC || !declContextMayContainNonSkippedDecl(*DC);
+  }
+
+  template <typename T> bool shouldSkipNode(T &Node) {
+    return shouldSkipSystemHeaders(Node);
   }
 
   template <typename T> bool shouldSkipNode(T *Node) {
@@ -1379,6 +1424,12 @@ private:
   bool shouldSkipNode(QualType &) { return false; }
 
   bool shouldSkipNode(NestedNameSpecifier &) { return false; }
+
+  template <typename T> bool shouldSkipSystemHeaders(T &Node) {
+    if (Options.IgnoreSystemHeaders && isInSystemHeader(getNodeLocation(Node)))
+      return true;
+    return false;
+  }
 
   /// Bucket to record map.
   ///
@@ -1405,6 +1456,8 @@ private:
   llvm::DenseMap<const ObjCInterfaceDecl *,
                  llvm::SmallPtrSet<const ObjCCompatibleAliasDecl *, 2>>
       CompatibleAliases;
+
+  llvm::DenseMap<const Decl *, bool> DeclOrChildrenMayBeNonSkippedCache;
 
   // Maps (matcher, node) -> the match result for memoization.
   typedef std::map<MatchKey, MemoizedMatchResult> MemoizationMap;
@@ -1509,7 +1562,10 @@ bool MatchASTVisitor::objcClassIsDerivedFrom(
 }
 
 bool MatchASTVisitor::TraverseDecl(Decl *DeclNode) {
-  if (shouldSkipNode(DeclNode))
+  if (!DeclNode)
+    return true;
+
+  if (shouldSkipTraversal(*DeclNode))
     return true;
 
   if (Options.SkipDeclsInModules && DeclNode->isInAnotherModuleUnit())
@@ -1536,7 +1592,8 @@ bool MatchASTVisitor::TraverseDecl(Decl *DeclNode) {
   ASTNodeNotSpelledInSourceScope RAII1(this, ScopedTraversal);
   ASTChildrenNotSpelledInSourceScope RAII2(this, ScopedChildren);
 
-  match(*DeclNode);
+  if (!shouldSkipNode(*DeclNode))
+    match(*DeclNode);
   return RecursiveASTVisitor<MatchASTVisitor>::TraverseDecl(DeclNode);
 }
 

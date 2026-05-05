@@ -12,12 +12,12 @@
 #include "ClangTidyOptions.h"
 #include "ClangTidyProfiling.h"
 #include "FileExtensionsSet.h"
+#include "HeaderFilterHelpers.h"
 #include "NoLintDirectiveHandler.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Tooling/Core/Diagnostic.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringSet.h"
-#include "llvm/Support/Regex.h"
 #include <optional>
 #include <utility>
 
@@ -310,13 +310,9 @@ private:
   void removeIncompatibleErrors();
   void removeDuplicatedDiagnosticsOfAliasCheckers();
 
-  /// Returns the \c HeaderFilter constructed for the options set in the
-  /// context.
-  llvm::Regex *getHeaderFilter();
-
-  /// Returns the \c ExcludeHeaderFilter constructed for the options set in the
-  /// context.
-  llvm::Regex *getExcludeHeaderFilter();
+  /// Returns the cached header-filter evaluator for the current translation
+  /// unit.
+  HeaderFilterLocationFilter &getHeaderFilterLocationFilter();
 
   /// Updates \c LastErrorRelatesToUserCode and LastErrorPassesLineFilter
   /// according to the diagnostic \p Location.
@@ -331,8 +327,7 @@ private:
   bool GetFixesFromNotes;
   bool EnableNolintBlocks;
   std::vector<ClangTidyError> Errors;
-  std::unique_ptr<llvm::Regex> HeaderFilter;
-  std::unique_ptr<llvm::Regex> ExcludeHeaderFilter;
+  std::unique_ptr<HeaderFilterLocationFilter> HeaderFilterLocation;
   bool LastErrorRelatesToUserCode = false;
   bool LastErrorPassesLineFilter = false;
   bool LastErrorWasIgnored = false;

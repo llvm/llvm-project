@@ -1,4 +1,5 @@
 // RUN: not clang-tidy -checks='-*,modernize-use-override' %s.nonexistent.cpp -- | FileCheck -check-prefix=CHECK1 -implicit-check-not='{{warning:|error:}}' %s
+// RUN: not clang-tidy -checks='-*,modernize-use-override' -header-filter='' --experimental-header-filter-matching %s.nonexistent.cpp -- | FileCheck -check-prefix=CHECK1 -implicit-check-not='{{warning:|error:}}' %s
 // RUN: not clang-tidy -checks='-*,clang-diagnostic-*,google-explicit-constructor' %s -- -fan-unknown-option | FileCheck -check-prefix=CHECK2 -implicit-check-not='{{warning:|error:}}' %s
 // RUN: not clang-tidy -checks='-*,google-explicit-constructor,clang-diagnostic-literal-conversion' %s -- -fan-unknown-option | FileCheck -check-prefix=CHECK3 -implicit-check-not='{{warning:|error:}}' %s
 // RUN: clang-tidy -checks='-*,modernize-use-override,clang-diagnostic-macro-redefined' %s -- -DMACRO_FROM_COMMAND_LINE | FileCheck -check-prefix=CHECK4 -implicit-check-not='{{warning:|error:}}' %s
@@ -6,6 +7,7 @@
 //
 // Now repeat the tests and ensure no other errors appear on stderr:
 // RUN: not clang-tidy -checks='-*,modernize-use-override' %s.nonexistent.cpp -- 2>&1 | FileCheck -check-prefix=CHECK1 -implicit-check-not='{{warning:|error:}}' %s
+// RUN: not clang-tidy -checks='-*,modernize-use-override' -header-filter='' --experimental-header-filter-matching %s.nonexistent.cpp -- 2>&1 | FileCheck -check-prefix=CHECK1 -implicit-check-not='{{warning:|error:}}' %s
 // RUN: not clang-tidy -checks='-*,clang-diagnostic-*,google-explicit-constructor' %s -- -fan-unknown-option 2>&1 | FileCheck -check-prefix=CHECK2 -implicit-check-not='{{warning:|error:}}' %s
 // RUN: not clang-tidy -checks='-*,google-explicit-constructor,clang-diagnostic-literal-conversion' %s -- -fan-unknown-option 2>&1 | FileCheck -check-prefix=CHECK3 -implicit-check-not='{{warning:|error:}}' %s
 // RUN: clang-tidy -checks='-*,modernize-use-override,clang-diagnostic-macro-redefined' %s -- -DMACRO_FROM_COMMAND_LINE 2>&1 | FileCheck -check-prefix=CHECK4 -implicit-check-not='{{warning:|error:}}' %s

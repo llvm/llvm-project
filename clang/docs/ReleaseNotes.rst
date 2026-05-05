@@ -707,6 +707,8 @@ AST Matchers
 ------------
 - Add ``functionTypeLoc`` matcher for matching ``FunctionTypeLoc``.
 - Add missing support for ``TraversalKind`` in some ``addMatcher()`` overloads.
+- Add ``MatchFinderOptions::ShouldSkipLocation`` as a best-effort declaration
+  pruning callback for the outer AST matcher traversal.
 
 clang-format
 ------------

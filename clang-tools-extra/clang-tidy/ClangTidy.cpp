@@ -20,6 +20,7 @@
 #include "ClangTidyModule.h"
 #include "ClangTidyProfiling.h"
 #include "ExpandModularHeadersPPCallbacks.h"
+#include "HeaderFilterHelpers.h"
 #include "clang-tidy-config.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -447,6 +448,16 @@ ClangTidyASTConsumerFactory::createASTConsumer(CompilerInstance &Compiler,
   // Avoid processing system headers, unless the user explicitly requests it
   if (!Context.getOptions().SystemHeaders.value_or(false))
     FinderOptions.IgnoreSystemHeaders = true;
+
+  if (Context.getOptions().ExperimentalHeaderFilterMatching.value_or(false)) {
+    auto LocationFilter = std::make_shared<HeaderFilterLocationFilter>(
+        Context.getOptions().HeaderFilterRegex.value_or(""),
+        Context.getOptions().ExcludeHeaderFilterRegex.value_or(""));
+    FinderOptions.ShouldSkipLocation = [LocationFilter,
+                                        SM](SourceLocation Location) {
+      return !LocationFilter->shouldInclude(Location, *SM);
+    };
+  }
 
   auto Finder =
       std::make_unique<ast_matchers::MatchFinder>(std::move(FinderOptions));

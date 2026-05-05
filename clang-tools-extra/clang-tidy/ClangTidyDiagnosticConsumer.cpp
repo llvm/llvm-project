@@ -36,7 +36,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/Regex.h"
 #include <optional>
 #include <tuple>
 #include <utility>
@@ -372,6 +371,7 @@ void ClangTidyDiagnosticConsumer::BeginSourceFile(const LangOptions &LangOpts,
 
   assert(!InSourceFile);
   InSourceFile = true;
+  HeaderFilterLocation.reset();
 }
 
 void ClangTidyDiagnosticConsumer::EndSourceFile() {
@@ -568,9 +568,10 @@ void ClangTidyDiagnosticConsumer::forwardDiagnostic(const Diagnostic &Info) {
 
 void ClangTidyDiagnosticConsumer::checkFilters(SourceLocation Location,
                                                const SourceManager &Sources) {
-  // Invalid location may mean a diagnostic in a command line, don't skip these.
   if (!Location.isValid()) {
-    LastErrorRelatesToUserCode = true;
+    LastErrorRelatesToUserCode =
+        LastErrorRelatesToUserCode ||
+        getHeaderFilterLocationFilter().shouldInclude(Location, Sources);
     LastErrorPassesLineFilter = true;
     return;
   }
@@ -578,6 +579,10 @@ void ClangTidyDiagnosticConsumer::checkFilters(SourceLocation Location,
   if (!Context.getOptions().SystemHeaders.value_or(false) &&
       (Sources.isInSystemHeader(Location) || Sources.isInSystemMacro(Location)))
     return;
+
+  LastErrorRelatesToUserCode =
+      LastErrorRelatesToUserCode ||
+      getHeaderFilterLocationFilter().shouldInclude(Location, Sources);
 
   // FIXME: We start with a conservative approach here, but the actual type of
   // location needed depends on the check (in particular, where this check wants
@@ -588,34 +593,24 @@ void ClangTidyDiagnosticConsumer::checkFilters(SourceLocation Location,
   // -DMACRO definitions on the command line have locations in a virtual buffer
   // that doesn't have a FileEntry. Don't skip these as well.
   if (!File) {
-    LastErrorRelatesToUserCode = true;
     LastErrorPassesLineFilter = true;
     return;
   }
 
   const StringRef FileName(File->getName());
-  LastErrorRelatesToUserCode = LastErrorRelatesToUserCode ||
-                               Sources.isInMainFile(Location) ||
-                               (getHeaderFilter()->match(FileName) &&
-                                !getExcludeHeaderFilter()->match(FileName));
 
   const unsigned LineNumber = Sources.getExpansionLineNumber(Location);
   LastErrorPassesLineFilter =
       LastErrorPassesLineFilter || passesLineFilter(FileName, LineNumber);
 }
 
-llvm::Regex *ClangTidyDiagnosticConsumer::getHeaderFilter() {
-  if (!HeaderFilter)
-    HeaderFilter = std::make_unique<llvm::Regex>(
-        Context.getOptions().HeaderFilterRegex.value_or(""));
-  return HeaderFilter.get();
-}
-
-llvm::Regex *ClangTidyDiagnosticConsumer::getExcludeHeaderFilter() {
-  if (!ExcludeHeaderFilter)
-    ExcludeHeaderFilter = std::make_unique<llvm::Regex>(
+HeaderFilterLocationFilter &
+ClangTidyDiagnosticConsumer::getHeaderFilterLocationFilter() {
+  if (!HeaderFilterLocation)
+    HeaderFilterLocation = std::make_unique<HeaderFilterLocationFilter>(
+        Context.getOptions().HeaderFilterRegex.value_or(""),
         Context.getOptions().ExcludeHeaderFilterRegex.value_or(""));
-  return ExcludeHeaderFilter.get();
+  return *HeaderFilterLocation;
 }
 
 void ClangTidyDiagnosticConsumer::removeIncompatibleErrors() {

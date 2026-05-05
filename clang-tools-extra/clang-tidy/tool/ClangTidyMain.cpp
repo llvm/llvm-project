@@ -63,6 +63,9 @@ Configuration files:
   CustomChecks                 - Array of user defined checks based on
                                  Clang-Query syntax.
   ExcludeHeaderFilterRegex     - Same as '--exclude-header-filter'.
+  ExperimentalHeaderFilterMatching
+                               - Same as
+                                 '--experimental-header-filter-matching'.
   ExtraArgs                    - Same as '--extra-arg'.
   ExtraArgsBefore              - Same as '--extra-arg-before'.
   FormatStyle                  - Same as '--format-style'.
@@ -95,6 +98,7 @@ Configuration files:
     HeaderFileExtensions:         ['', 'h','hh','hpp','hxx']
     ImplementationFileExtensions: ['c','cc','cpp','cxx']
     HeaderFilterRegex:            '.*'
+    ExperimentalHeaderFilterMatching: false
     FormatStyle:                  none
     InheritParentConfig:          true
     User:                         user
@@ -157,6 +161,25 @@ option in .clang-tidy file, if any.
 )"),
                                                 cl::init(""),
                                                 cl::cat(ClangTidyCategory));
+
+static cl::opt<bool> ExperimentalHeaderFilterMatching(
+    "experimental-header-filter-matching", desc(R"(
+When enabled, clang-tidy experimentally skips
+AST matching for declarations in headers that
+do not match -header-filter or that match
+-exclude-header-filter.
+This can improve performance for narrow
+header-filter runs, but checks that rely on
+declarations outside the filtered headers can
+produce different results, including false
+negatives or false positives.
+This is an opt-in semantic mode, not only a
+diagnostic filtering mode.
+This option overrides the
+'ExperimentalHeaderFilterMatching' option in
+.clang-tidy file, if any.
+)"),
+    cl::init(false), cl::cat(ClangTidyCategory));
 
 static cl::opt<bool> SystemHeaders("system-headers", desc(R"(
 Display the errors from system headers.
@@ -412,6 +435,8 @@ createOptionsProvider(llvm::IntrusiveRefCntPtr<vfs::FileSystem> FS) {
   DefaultOptions.HeaderFilterRegex = HeaderFilter;
   DefaultOptions.ExcludeHeaderFilterRegex = ExcludeHeaderFilter;
   DefaultOptions.SystemHeaders = SystemHeaders;
+  DefaultOptions.ExperimentalHeaderFilterMatching =
+      ExperimentalHeaderFilterMatching;
   DefaultOptions.FormatStyle = FormatStyle;
   DefaultOptions.User = llvm::sys::Process::GetEnv("USER");
   // USERNAME is used on Windows.
@@ -429,6 +454,9 @@ createOptionsProvider(llvm::IntrusiveRefCntPtr<vfs::FileSystem> FS) {
     OverrideOptions.ExcludeHeaderFilterRegex = ExcludeHeaderFilter;
   if (SystemHeaders.getNumOccurrences() > 0)
     OverrideOptions.SystemHeaders = SystemHeaders;
+  if (ExperimentalHeaderFilterMatching.getNumOccurrences() > 0)
+    OverrideOptions.ExperimentalHeaderFilterMatching =
+        ExperimentalHeaderFilterMatching;
   if (FormatStyle.getNumOccurrences() > 0)
     OverrideOptions.FormatStyle = FormatStyle;
   if (UseColor.getNumOccurrences() > 0)
