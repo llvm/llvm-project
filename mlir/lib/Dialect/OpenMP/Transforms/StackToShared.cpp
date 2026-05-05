@@ -114,8 +114,9 @@ public:
       // Create a new omp.free_shared_mem for the allocated buffer prior to
       // exiting the region.
       insertDeviceSharedMemDeallocation(
-          builder, allocaOp.getElemTypeAttr(), allocaOp.getArraySize(),
-          allocaOp.getAlignmentAttr(), sharedAllocOp.getResult());
+          builder, sharedAllocOp.getMemElemTypeAttr(),
+          sharedAllocOp.getMemArraySize(), sharedAllocOp.getMemAlignmentAttr(),
+          sharedAllocOp.getResult());
     });
     for (Operation *op : toBeDeleted)
       op->erase();

@@ -4,6 +4,7 @@ set(LLVM_LINK_COMPONENTS
   BinaryFormat
   BitWriter
   Core
+  FrontendOffloading
   IRReader
   Linker
   MC

@@ -28,7 +28,7 @@ using namespace llvm;
 MCSymbol *MCResourceInfo::getSymbol(StringRef FuncName, ResourceInfoKind RIK,
                                     MCContext &OutContext) {
   auto GOCS = [FuncName, &OutContext](StringRef Suffix) {
-    StringRef Prefix = OutContext.getAsmInfo()->getInternalSymbolPrefix();
+    StringRef Prefix = OutContext.getAsmInfo().getInternalSymbolPrefix();
     return OutContext.getOrCreateSymbol(Twine(Prefix) + FuncName +
                                         Twine(Suffix));
   };

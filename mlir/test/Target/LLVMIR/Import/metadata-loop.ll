@@ -366,9 +366,11 @@ end:
 !0 = !{i32 2, !"Debug Info Version", i32 3}
 !1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
 !2 = !DIFile(filename: "metadata-loop.ll", directory: "/")
-!3 = distinct !DISubprogram(name: "loop_locs", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1)
+!3 = distinct !DISubprogram(name: "loop_locs", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1, type: !999)
 !4 = !DILocation(line: 1, column: 2, scope: !3)
 !5 = !DILocation(line: 2, column: 2, scope: !3)
 
 !6 = distinct !{!6, !4, !5, !7}
 !7 = !{!"llvm.loop.mustprogress"}
+!999 = !DISubroutineType(types: !1000)
+!1000 = !{null}

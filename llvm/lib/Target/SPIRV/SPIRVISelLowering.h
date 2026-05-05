@@ -84,6 +84,10 @@ public:
   shouldCastAtomicRMWIInIR(AtomicRMWInst *RMWI) const override;
   AtomicExpansionKind shouldCastAtomicLoadInIR(LoadInst *LI) const override;
   AtomicExpansionKind shouldCastAtomicStoreInIR(StoreInst *SI) const override;
+
+  bool shouldIssueAtomicLoadForAtomicEmulationLoop() const override {
+    return false;
+  }
 };
 } // namespace llvm
 

@@ -2,9 +2,9 @@
 ; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple -global-isel -global-isel-abort=2 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:	 warning: Instruction selection used fallback path for ext_via_i19
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for srhadd_v2i32_trunc
-; CHECK-GI-NEXT: warning: Instruction selection used fallback path for urhadd_v2i32_trunc
+; CHECK-GI:       warning: Instruction selection used fallback path for ext_via_i19
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for srhadd_v2i32_trunc
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for urhadd_v2i32_trunc
 
 define <8 x i8> @shadd8b(ptr nocapture readonly %A, ptr nocapture readonly %B) {
 ; CHECK-LABEL: shadd8b:
@@ -1197,15 +1197,11 @@ define <2 x i16> @hadd8x2_sext_asr(<2 x i8> %src1, <2 x i8> %src2) {
 ; CHECK-GI-LABEL: hadd8x2_sext_asr:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    shl.2s v1, v1, #24
-; CHECK-GI-NEXT:    mov w8, #1 // =0x1
 ; CHECK-GI-NEXT:    shl.2s v0, v0, #24
-; CHECK-GI-NEXT:    fmov s2, w8
 ; CHECK-GI-NEXT:    sshr.2s v1, v1, #24
-; CHECK-GI-NEXT:    mov.h v2[1], w8
 ; CHECK-GI-NEXT:    ssra.2s v1, v0, #24
 ; CHECK-GI-NEXT:    uzp1.4h v0, v1, v0
-; CHECK-GI-NEXT:    neg.4h v1, v2
-; CHECK-GI-NEXT:    sshl.4h v0, v0, v1
+; CHECK-GI-NEXT:    sshr.4h v0, v0, #1
 ; CHECK-GI-NEXT:    ushll.4s v0, v0, #0
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
@@ -1228,15 +1224,11 @@ define <2 x i16> @hadd8x2_zext_asr(<2 x i8> %src1, <2 x i8> %src2) {
 ; CHECK-GI-LABEL: hadd8x2_zext_asr:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    movi d2, #0x0000ff000000ff
-; CHECK-GI-NEXT:    mov w8, #1 // =0x1
 ; CHECK-GI-NEXT:    and.8b v0, v0, v2
 ; CHECK-GI-NEXT:    and.8b v1, v1, v2
-; CHECK-GI-NEXT:    fmov s2, w8
 ; CHECK-GI-NEXT:    add.2s v0, v0, v1
-; CHECK-GI-NEXT:    mov.h v2[1], w8
 ; CHECK-GI-NEXT:    uzp1.4h v0, v0, v0
-; CHECK-GI-NEXT:    neg.4h v1, v2
-; CHECK-GI-NEXT:    ushl.4h v0, v0, v1
+; CHECK-GI-NEXT:    ushr.4h v0, v0, #1
 ; CHECK-GI-NEXT:    ushll.4s v0, v0, #0
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
@@ -1262,15 +1254,11 @@ define <2 x i16> @hadd8x2_sext_lsr(<2 x i8> %src1, <2 x i8> %src2) {
 ; CHECK-GI-LABEL: hadd8x2_sext_lsr:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    shl.2s v1, v1, #24
-; CHECK-GI-NEXT:    mov w8, #1 // =0x1
 ; CHECK-GI-NEXT:    shl.2s v0, v0, #24
-; CHECK-GI-NEXT:    fmov s2, w8
 ; CHECK-GI-NEXT:    sshr.2s v1, v1, #24
-; CHECK-GI-NEXT:    mov.h v2[1], w8
 ; CHECK-GI-NEXT:    ssra.2s v1, v0, #24
 ; CHECK-GI-NEXT:    uzp1.4h v0, v1, v0
-; CHECK-GI-NEXT:    neg.4h v1, v2
-; CHECK-GI-NEXT:    ushl.4h v0, v0, v1
+; CHECK-GI-NEXT:    ushr.4h v0, v0, #1
 ; CHECK-GI-NEXT:    ushll.4s v0, v0, #0
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
@@ -1293,15 +1281,11 @@ define <2 x i16> @hadd8x2_zext_lsr(<2 x i8> %src1, <2 x i8> %src2) {
 ; CHECK-GI-LABEL: hadd8x2_zext_lsr:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    movi d2, #0x0000ff000000ff
-; CHECK-GI-NEXT:    mov w8, #1 // =0x1
 ; CHECK-GI-NEXT:    and.8b v0, v0, v2
 ; CHECK-GI-NEXT:    and.8b v1, v1, v2
-; CHECK-GI-NEXT:    fmov s2, w8
 ; CHECK-GI-NEXT:    add.2s v0, v0, v1
-; CHECK-GI-NEXT:    mov.h v2[1], w8
 ; CHECK-GI-NEXT:    uzp1.4h v0, v0, v0
-; CHECK-GI-NEXT:    neg.4h v1, v2
-; CHECK-GI-NEXT:    ushl.4h v0, v0, v1
+; CHECK-GI-NEXT:    ushr.4h v0, v0, #1
 ; CHECK-GI-NEXT:    ushll.4s v0, v0, #0
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
@@ -1436,16 +1420,12 @@ define <2 x i16> @rhadd8x2_sext_asr(<2 x i8> %src1, <2 x i8> %src2) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    shl.2s v1, v1, #24
 ; CHECK-GI-NEXT:    shl.2s v0, v0, #24
-; CHECK-GI-NEXT:    mov w8, #1 // =0x1
 ; CHECK-GI-NEXT:    movi.2s v2, #1
 ; CHECK-GI-NEXT:    sshr.2s v1, v1, #24
 ; CHECK-GI-NEXT:    ssra.2s v1, v0, #24
-; CHECK-GI-NEXT:    fmov s0, w8
-; CHECK-GI-NEXT:    mov.h v0[1], w8
-; CHECK-GI-NEXT:    add.2s v1, v1, v2
-; CHECK-GI-NEXT:    uzp1.4h v1, v1, v0
-; CHECK-GI-NEXT:    neg.4h v0, v0
-; CHECK-GI-NEXT:    sshl.4h v0, v1, v0
+; CHECK-GI-NEXT:    add.2s v0, v1, v2
+; CHECK-GI-NEXT:    uzp1.4h v0, v0, v0
+; CHECK-GI-NEXT:    sshr.4h v0, v0, #1
 ; CHECK-GI-NEXT:    ushll.4s v0, v0, #0
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
@@ -1469,17 +1449,13 @@ define <2 x i16> @rhadd8x2_zext_asr(<2 x i8> %src1, <2 x i8> %src2) {
 ; CHECK-GI-LABEL: rhadd8x2_zext_asr:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    movi d2, #0x0000ff000000ff
-; CHECK-GI-NEXT:    mov w8, #1 // =0x1
 ; CHECK-GI-NEXT:    and.8b v0, v0, v2
 ; CHECK-GI-NEXT:    and.8b v1, v1, v2
 ; CHECK-GI-NEXT:    movi.2s v2, #1
 ; CHECK-GI-NEXT:    add.2s v0, v0, v1
-; CHECK-GI-NEXT:    fmov s1, w8
 ; CHECK-GI-NEXT:    add.2s v0, v0, v2
-; CHECK-GI-NEXT:    mov.h v1[1], w8
 ; CHECK-GI-NEXT:    uzp1.4h v0, v0, v0
-; CHECK-GI-NEXT:    neg.4h v1, v1
-; CHECK-GI-NEXT:    ushl.4h v0, v0, v1
+; CHECK-GI-NEXT:    ushr.4h v0, v0, #1
 ; CHECK-GI-NEXT:    ushll.4s v0, v0, #0
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
@@ -1509,16 +1485,12 @@ define <2 x i16> @rhadd8x2_sext_lsr(<2 x i8> %src1, <2 x i8> %src2) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    shl.2s v1, v1, #24
 ; CHECK-GI-NEXT:    shl.2s v0, v0, #24
-; CHECK-GI-NEXT:    mov w8, #1 // =0x1
 ; CHECK-GI-NEXT:    movi.2s v2, #1
 ; CHECK-GI-NEXT:    sshr.2s v1, v1, #24
 ; CHECK-GI-NEXT:    ssra.2s v1, v0, #24
-; CHECK-GI-NEXT:    fmov s0, w8
-; CHECK-GI-NEXT:    mov.h v0[1], w8
-; CHECK-GI-NEXT:    add.2s v1, v1, v2
-; CHECK-GI-NEXT:    uzp1.4h v1, v1, v0
-; CHECK-GI-NEXT:    neg.4h v0, v0
-; CHECK-GI-NEXT:    ushl.4h v0, v1, v0
+; CHECK-GI-NEXT:    add.2s v0, v1, v2
+; CHECK-GI-NEXT:    uzp1.4h v0, v0, v0
+; CHECK-GI-NEXT:    ushr.4h v0, v0, #1
 ; CHECK-GI-NEXT:    ushll.4s v0, v0, #0
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
@@ -1542,17 +1514,13 @@ define <2 x i16> @rhadd8x2_zext_lsr(<2 x i8> %src1, <2 x i8> %src2) {
 ; CHECK-GI-LABEL: rhadd8x2_zext_lsr:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    movi d2, #0x0000ff000000ff
-; CHECK-GI-NEXT:    mov w8, #1 // =0x1
 ; CHECK-GI-NEXT:    and.8b v0, v0, v2
 ; CHECK-GI-NEXT:    and.8b v1, v1, v2
 ; CHECK-GI-NEXT:    movi.2s v2, #1
 ; CHECK-GI-NEXT:    add.2s v0, v0, v1
-; CHECK-GI-NEXT:    fmov s1, w8
 ; CHECK-GI-NEXT:    add.2s v0, v0, v2
-; CHECK-GI-NEXT:    mov.h v1[1], w8
 ; CHECK-GI-NEXT:    uzp1.4h v0, v0, v0
-; CHECK-GI-NEXT:    neg.4h v1, v1
-; CHECK-GI-NEXT:    ushl.4h v0, v0, v1
+; CHECK-GI-NEXT:    ushr.4h v0, v0, #1
 ; CHECK-GI-NEXT:    ushll.4s v0, v0, #0
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret

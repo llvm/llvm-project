@@ -10,9 +10,13 @@
 #define LLVM_LIBC_SRC___SUPPORT_THREADS_UNIX_MUTEX_H
 
 #include "hdr/types/pid_t.h"
+#include "hdr/types/size_t.h"
+#include "src/__support/CPP/atomic.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/libc_assert.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/optimization.h"
+#include "src/__support/threads/identifier.h"
 #include "src/__support/threads/mutex_common.h"
 #include "src/__support/threads/raw_mutex.h"
 
@@ -20,36 +24,45 @@ namespace LIBC_NAMESPACE_DECL {
 
 // TODO: support shared/recursive/robust mutexes.
 class Mutex final : private RawMutex {
-  // reserved timed, may be useful when combined with other flags.
-  unsigned char timed;
-  unsigned char recursive;
-  unsigned char robust;
-  unsigned char pshared;
+  // Use bitfields to allow encoding more attributes.
+  // TODO: we may still need error checking or other flags and the robustness
+  //       and priority inheritance will need to be implemented.
+  //       See also https://github.com/llvm/llvm-project/issues/194396
+  LIBC_PREFERED_TYPE(bool) unsigned int priority_inherit : 1;
+  LIBC_PREFERED_TYPE(bool) unsigned int recursive : 1;
+  LIBC_PREFERED_TYPE(bool) unsigned int robust : 1;
+  LIBC_PREFERED_TYPE(bool) unsigned int pshared : 1;
 
   // TLS address may not work across forked processes. Use thread id instead.
-  pid_t owner;
-  unsigned long long lock_count;
+  cpp::Atomic<pid_t> owner;
+  size_t lock_count;
 
   // CndVar needs to access Mutex as RawMutex
   friend class CndVar;
 
-public:
-  LIBC_INLINE constexpr Mutex(bool is_timed, bool is_recursive, bool is_robust,
-                              bool is_pshared)
-      : RawMutex(), timed(is_timed), recursive(is_recursive), robust(is_robust),
-        pshared(is_pshared), owner(0), lock_count(0) {}
+  template <class LockRoutine>
+  LIBC_INLINE MutexError lock_impl(LockRoutine do_lock) {
+    if (is_recursive() && owner == internal::gettid()) {
+      if (LIBC_UNLIKELY(lock_count == cpp::numeric_limits<size_t>::max()))
+        return MutexError::OVERFLOW;
+      lock_count++;
+      return MutexError::NONE;
+    }
 
-  LIBC_INLINE static MutexError init(Mutex *mutex, bool is_timed, bool isrecur,
-                                     bool isrobust, bool is_pshared) {
-    RawMutex::init(mutex);
-    mutex->timed = is_timed;
-    mutex->recursive = isrecur;
-    mutex->robust = isrobust;
-    mutex->pshared = is_pshared;
-    mutex->owner = 0;
-    mutex->lock_count = 0;
-    return MutexError::NONE;
+    MutexError res = do_lock();
+    if (is_recursive() && res == MutexError::NONE) {
+      owner = internal::gettid();
+      lock_count = 1;
+    }
+    return res;
   }
+
+public:
+  LIBC_INLINE constexpr Mutex(bool is_priority_inherit, bool is_recursive,
+                              bool is_robust, bool is_pshared)
+      : RawMutex(), priority_inherit(is_priority_inherit),
+        recursive(is_recursive), robust(is_robust), pshared(is_pshared),
+        owner(0), lock_count(0) {}
 
   LIBC_INLINE static MutexError destroy(Mutex *lock) {
     LIBC_ASSERT(lock->owner == 0 && lock->lock_count == 0 &&
@@ -58,39 +71,53 @@ public:
     return MutexError::NONE;
   }
 
-  // TODO: record owner and lock count.
   LIBC_INLINE MutexError lock() {
-    // Since timeout is not specified, we do not need to check the return value.
-    this->RawMutex::lock(
-        /* timeout=*/cpp::nullopt, this->pshared);
-    return MutexError::NONE;
+    return lock_impl([this] {
+      // Since timeout is not specified, we do not need to check the return
+      // value.
+      // TODO: check deadlock? POSIX made it optional.
+      this->RawMutex::lock(/* timeout=*/cpp::nullopt, this->pshared);
+      return MutexError::NONE;
+    });
   }
 
-  // TODO: record owner and lock count.
   LIBC_INLINE MutexError timed_lock(internal::AbsTimeout abs_time) {
-    if (this->RawMutex::lock(abs_time, this->pshared))
-      return MutexError::NONE;
-    return MutexError::TIMEOUT;
+    return lock_impl([this, abs_time] {
+      // TODO: check deadlock? POSIX made it optional.
+      if (this->RawMutex::lock(abs_time, this->pshared))
+        return MutexError::NONE;
+      return MutexError::TIMEOUT;
+    });
   }
 
   LIBC_INLINE MutexError unlock() {
+    if (is_recursive() && owner == internal::gettid()) {
+      lock_count--;
+      if (lock_count == 0)
+        owner = 0;
+      else
+        return MutexError::NONE;
+    }
     if (this->RawMutex::unlock(this->pshared))
       return MutexError::NONE;
     return MutexError::UNLOCK_WITHOUT_LOCK;
   }
 
-  // TODO: record owner and lock count.
   LIBC_INLINE MutexError try_lock() {
-    if (this->RawMutex::try_lock())
-      return MutexError::NONE;
-    return MutexError::BUSY;
+    return lock_impl([this] {
+      if (this->RawMutex::try_lock())
+        return MutexError::NONE;
+      return MutexError::BUSY;
+    });
   }
 
   LIBC_INLINE bool can_be_requeued() const {
-    return !this->pshared && !this->robust;
+    return !this->pshared && !this->robust && !this->recursive &&
+           !this->priority_inherit;
   }
 
   LIBC_INLINE bool is_robust() const { return this->robust; }
+  LIBC_INLINE bool is_recursive() const { return this->recursive; }
 };
 
 } // namespace LIBC_NAMESPACE_DECL
