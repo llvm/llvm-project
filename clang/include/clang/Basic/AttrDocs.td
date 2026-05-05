@@ -9992,7 +9992,7 @@ The ``aligned`` attribute specifies a minimum alignment (in bytes) for a
 variable, structure field, or type definition. The attribute takes an 
 optional non-negative integral constant expression. If the value is a 
 power of two, the compiler ensures the declaration is aligned to at least 
-that boundary; a value of zero has no effect.
+that boundary; a value of zero has no effect on the alignment chosen at runtime.
 
 .. code-block:: c++
 
