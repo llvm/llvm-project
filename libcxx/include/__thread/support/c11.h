@@ -124,16 +124,6 @@ inline _LIBCPP_HIDE_FROM_ABI int __libcpp_execute_once(__libcpp_exec_once_flag* 
 //
 typedef thrd_t __libcpp_thread_id;
 
-// Returns non-zero if the thread ids are equal, otherwise 0
-inline _LIBCPP_HIDE_FROM_ABI bool __libcpp_thread_id_equal(__libcpp_thread_id t1, __libcpp_thread_id t2) {
-  return thrd_equal(t1, t2) != 0;
-}
-
-// Returns non-zero if t1 < t2, otherwise 0
-inline _LIBCPP_HIDE_FROM_ABI bool __libcpp_thread_id_less(__libcpp_thread_id t1, __libcpp_thread_id t2) {
-  return t1 < t2;
-}
-
 //
 // Thread
 //

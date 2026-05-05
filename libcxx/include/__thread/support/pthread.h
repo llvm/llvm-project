@@ -150,16 +150,6 @@ typedef unsigned long long __libcpp_thread_id;
 typedef pthread_t __libcpp_thread_id;
 #endif
 
-// Returns non-zero if the thread ids are equal, otherwise 0
-inline _LIBCPP_HIDE_FROM_ABI bool __libcpp_thread_id_equal(__libcpp_thread_id __t1, __libcpp_thread_id __t2) {
-  return __t1 == __t2;
-}
-
-// Returns non-zero if t1 < t2, otherwise 0
-inline _LIBCPP_HIDE_FROM_ABI bool __libcpp_thread_id_less(__libcpp_thread_id __t1, __libcpp_thread_id __t2) {
-  return __t1 < __t2;
-}
-
 //
 // Thread
 //

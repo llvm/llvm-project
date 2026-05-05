@@ -15,6 +15,10 @@
 #include <__fwd/functional.h>
 #include <__fwd/ostream.h>
 #include <__thread/support.h>
+#include <__type_traits/conditional.h>
+#include <__type_traits/is_integral.h>
+#include <__type_traits/is_pointer.h>
+#include <cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -35,24 +39,67 @@ template <>
 struct hash<__thread_id>;
 
 class __thread_id {
-  // FIXME: pthread_t is a pointer on Darwin but a long on Linux.
-  // NULL is the no-thread value on Darwin.  Someone needs to check
-  // on other platforms.  We assume 0 works everywhere for now.
   __libcpp_thread_id __id_;
 
-  static _LIBCPP_HIDE_FROM_ABI bool
-  __lt_impl(__thread_id __x, __thread_id __y) _NOEXCEPT { // id==0 is always less than any other thread_id
-    if (__x.__id_ == 0)
-      return __y.__id_ != 0;
-    if (__y.__id_ == 0)
-      return false;
-    return __libcpp_thread_id_less(__x.__id_, __y.__id_);
+  // Even though __libcpp_thread_id is provided by underlying threading implementation
+  // (e.g. C11, pthreads, or Windows) its type may still be unspecified. E.g. for pthreads
+  // implementation __libcpp_thread_id is an alias for pthread_t, which is left unspecified
+  // in POSIX. Typically it's either an integral type (glibc) or a pointer (Apple systems),
+  // but it can also be an opaque type on some systems / libc implementations.
+  //
+  // Note that in order to satisfy standard requirements on std::thread::id, we need:
+  // * strong total order
+  // * formatter support
+  // * std::hash implementation
+  // Currently, we can implement all of the above only on pointer and integral types.
+  using _Tp = __libcpp_thread_id;
+  static_assert(is_pointer_v<_Tp> || is_integral_v<_Tp>, "unsupported thread::id type, please file a bug report");
+
+  // Strong total order implementation.
+  // Here we provide a best-effort implementation of strong total order, comparing
+  // integral types as-is and routing pointers through uintptr_t for a well-defined comparison.
+  static _LIBCPP_HIDE_FROM_ABI bool __eq_impl(__thread_id __x, __thread_id __y) _NOEXCEPT {
+    if constexpr (is_pointer_v<_Tp>) {
+      return reinterpret_cast<uintptr_t>(__x.__id_) == reinterpret_cast<uintptr_t>(__y.__id_);
+    } else {
+      return __x.__id_ == __y.__id_;
+    }
   }
 
-public:
-  _LIBCPP_HIDE_FROM_ABI __thread_id() _NOEXCEPT : __id_(0) {}
+  static _LIBCPP_HIDE_FROM_ABI bool __lt_impl(__thread_id __x, __thread_id __y) _NOEXCEPT {
+    if constexpr (is_pointer_v<_Tp>) {
+      return reinterpret_cast<uintptr_t>(__x.__id_) < reinterpret_cast<uintptr_t>(__y.__id_);
+    } else {
+      // For integral thread IDs, assume 0 is always less than any other thread_id.
+      if (__x.__id_ == 0)
+        return __y.__id_ != 0;
+      if (__y.__id_ == 0)
+        return false;
+      return __x.__id_ < __y.__id_;
+    }
+  }
 
-  _LIBCPP_HIDE_FROM_ABI void __reset() { __id_ = 0; }
+  // Hashing implementation.
+  // Simply use the underlying pointer or integral types as-is.
+  using _HashTp = _Tp;
+  _LIBCPP_HIDE_FROM_ABI _HashTp __hash_value() const { return __id_; }
+
+  // Formatter implementation.
+  // Note the output should match what the stream operator does. Since
+  // the ostream operator has been shipped years before the formatter
+  // was added to the Standard, our logic mimics what the stream
+  // operator does (i.e. prints thread-id as integer, but uses a hexadecimal
+  // format if it's represented by a pointer)
+  using _FormatterTp = conditional_t<is_integral_v<_Tp>, _Tp, uintptr_t>;
+
+  static _LIBCPP_HIDE_FROM_ABI constexpr bool __PRINT_AS_HEX = is_pointer_v<_Tp>;
+
+  _LIBCPP_HIDE_FROM_ABI _FormatterTp __get_formatter_value() const { return reinterpret_cast<_FormatterTp>(__id_); }
+
+public:
+  _LIBCPP_HIDE_FROM_ABI __thread_id() _NOEXCEPT : __id_{} {}
+
+  _LIBCPP_HIDE_FROM_ABI void __reset() { __id_ = __libcpp_thread_id{}; }
 
   friend _LIBCPP_HIDE_FROM_ABI bool operator==(__thread_id __x, __thread_id __y) _NOEXCEPT;
 #  if _LIBCPP_STD_VER <= 17
@@ -66,22 +113,18 @@ public:
   operator<<(basic_ostream<_CharT, _Traits>& __os, __thread_id __id);
 
 private:
-  _LIBCPP_HIDE_FROM_ABI __thread_id(__libcpp_thread_id __id) : __id_(__id) {}
-
-  _LIBCPP_HIDE_FROM_ABI friend __libcpp_thread_id __get_underlying_id(const __thread_id __id) { return __id.__id_; }
+  _LIBCPP_HIDE_FROM_ABI __thread_id(__libcpp_thread_id __id) : __id_{__id} {}
 
   friend __thread_id this_thread::get_id() _NOEXCEPT;
   friend class _LIBCPP_EXPORTED_FROM_ABI thread;
   friend struct hash<__thread_id>;
+
+  template <class _Typename, class _CharT>
+  friend struct formatter;
 };
 
 inline _LIBCPP_HIDE_FROM_ABI bool operator==(__thread_id __x, __thread_id __y) _NOEXCEPT {
-  // Don't pass id==0 to underlying routines
-  if (__x.__id_ == 0)
-    return __y.__id_ == 0;
-  if (__y.__id_ == 0)
-    return false;
-  return __libcpp_thread_id_equal(__x.__id_, __y.__id_);
+  return __thread_id::__eq_impl(__x, __y);
 }
 
 #  if _LIBCPP_STD_VER <= 17
@@ -89,7 +132,7 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator==(__thread_id __x, __thread_id __y) _
 inline _LIBCPP_HIDE_FROM_ABI bool operator!=(__thread_id __x, __thread_id __y) _NOEXCEPT { return !(__x == __y); }
 
 inline _LIBCPP_HIDE_FROM_ABI bool operator<(__thread_id __x, __thread_id __y) _NOEXCEPT {
-  return __thread_id::__lt_impl(__x.__id_, __y.__id_);
+  return __thread_id::__lt_impl(__x, __y);
 }
 
 inline _LIBCPP_HIDE_FROM_ABI bool operator<=(__thread_id __x, __thread_id __y) _NOEXCEPT { return !(__y < __x); }

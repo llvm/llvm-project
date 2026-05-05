@@ -72,9 +72,6 @@ int __libcpp_execute_once(__libcpp_exec_once_flag*, void (*__init_routine)());
 //
 using __libcpp_thread_id = ...;
 
-bool __libcpp_thread_id_equal(__libcpp_thread_id, __libcpp_thread_id);
-bool __libcpp_thread_id_less(__libcpp_thread_id, __libcpp_thread_id);
-
 //
 // Thread
 //

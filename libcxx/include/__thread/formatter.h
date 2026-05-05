@@ -18,10 +18,6 @@
 #include <__format/formatter_integral.h>
 #include <__format/parser_std_format_spec.h>
 #include <__thread/id.h>
-#include <__type_traits/conditional.h>
-#include <__type_traits/is_pointer.h>
-#include <__type_traits/is_same.h>
-#include <cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -43,29 +39,12 @@ public:
 
   template <class _FormatContext>
   _LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator format(__thread_id __id, _FormatContext& __ctx) const {
-    // In __thread/support/pthread.h, __libcpp_thread_id is either a
-    // unsigned long long or a pthread_t.
-    //
-    // The type of pthread_t is left unspecified in POSIX so it can be any
-    // type. The most logical types are an integral or pointer.
-    // On Linux systems pthread_t is an unsigned long long.
-    // On Apple systems pthread_t is a pointer type.
-    //
-    // Note the output should match what the stream operator does. Since
-    // the ostream operator has been shipped years before this formatter
-    // was added to the Standard, this formatter does what the stream
-    // operator does. This may require platform specific changes.
-
-    using _Tp = decltype(__get_underlying_id(__id));
-    using _Cp = conditional_t<integral<_Tp>, _Tp, conditional_t<is_pointer_v<_Tp>, uintptr_t, void>>;
-    static_assert(!is_same_v<_Cp, void>, "unsupported thread::id type, please file a bug report");
-
     __format_spec::__parsed_specifications<_CharT> __specs = __parser_.__get_parsed_std_specifications(__ctx);
-    if constexpr (is_pointer_v<_Tp>) {
+    if constexpr (__thread_id::__PRINT_AS_HEX) {
       __specs.__std_.__alternate_form_ = true;
       __specs.__std_.__type_           = __format_spec::__type::__hexadecimal_lower_case;
     }
-    return __formatter::__format_integer(reinterpret_cast<_Cp>(__get_underlying_id(__id)), __ctx, __specs);
+    return __formatter::__format_integer(__id.__get_formatter_value(), __ctx, __specs);
   }
 
   __format_spec::__parser<_CharT> __parser_{.__alignment_ = __format_spec::__alignment::__right};
