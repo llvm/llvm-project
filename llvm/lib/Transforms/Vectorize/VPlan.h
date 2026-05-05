@@ -535,6 +535,10 @@ public:
   /// Returns true if the recipe may have side-effects.
   bool mayHaveSideEffects() const;
 
+  /// Return true if we can safely execute this recipe unconditionally even if
+  /// it is masked originally.
+  bool isSafeToSpeculativelyExecute() const;
+
   /// Returns true for PHI-like recipes.
   bool isPhi() const;
 

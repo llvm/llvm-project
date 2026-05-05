@@ -1216,6 +1216,18 @@ public:
         addImplicitMembersToTarget(op, builder, targetUser);
       });
 
+      // Walk all of the existing maps for parents with child maps and then
+      // make sure to appropriately bind them to the target region that the
+      // parent is bound to. Necessary for the next implicit record member
+      // map step which depends on this canonicalization step. This step
+      // is executed again as the final step of this pass to maintain
+      // map to block argument consistency.
+      func->walk([&](mlir::omp::MapInfoOp op) {
+        mlir::Operation *targetUser = getFirstTargetUser(op);
+        assert(targetUser && "expected user of map operation was not found");
+        addImplicitMembersToTarget(op, builder, targetUser);
+      });
+
       // Next, walk `omp.map.info` ops to see if any record members should be
       // implicitly mapped.
       // TODO/FIXME/UPDATE: I believe we need to add implicit capture of
@@ -1444,14 +1456,13 @@ public:
           // for the moment.
           bool targetUser = false;
           for (auto *user : op->getUsers()) {
-            if (!llvm::isa<
+            if (targetUser &&
+                !llvm::isa<
                     mlir::omp::TargetOp, mlir::omp::TargetDataOp,
                     mlir::omp::TargetUpdateOp, mlir::omp::TargetExitDataOp,
                     mlir::omp::TargetEnterDataOp,
-                    mlir::omp::DeclareMapperInfoOp, mlir::omp::MapInfoOp>(
-                    user))
+                    mlir::omp::DeclareMapperInfoOp, mlir::omp::MapInfoOp>(user))
               return false;
-
 
             // We do not handle multiple target users currently.
             if (targetUser &&
