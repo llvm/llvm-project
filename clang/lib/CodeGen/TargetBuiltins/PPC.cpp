@@ -1138,7 +1138,8 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
       break;
   #include "clang/Basic/BuiltinsPPC.def"
     }
-    // Handle Accumulate=false custom builtins that returns directly.
+    // Handle custom builtins that return early without using the common
+    // store-back pattern.
     switch (BuiltinID) {
     case PPC::BI__builtin_vsx_lxvp:
     case PPC::BI__builtin_mma_lxvp:
@@ -1213,15 +1214,25 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
       break;
     }
 
-    // Handle Accumulate = true custom builtins that need to load the existing
-    // accumulator value from the first argument (a pointer) and pass it as the
-    // first operand to the intrinsic call.
     SmallVector<Value*, 4> CallOps;
+
+    // Accumulate = true, are used for builtins where the hardware instruction
+    // reads the old destination value, performs an operation with it, and
+    // writes the result back.
+    // Load the existing value from the first argument (destination pointer) and
+    // add it to CallOps as the first intrinsic operand.
     if (Accumulate) {
       Address Addr = EmitPointerWithAlignment(E->getArg(0));
       Value *Acc = Builder.CreateLoad(Addr);
       CallOps.push_back(Acc);
     }
+
+    // Handles builtins that need special argument handling such as:
+    // - Dereferencing pointer arguments to load actual register values.
+    // - Adding implicit operands required by the intrinsic.
+    // - Transforming or reordering operands.
+    // After preprocessing, the loop at end copies Ops[1..n] into CallOps,
+    // skipping Ops[0] which is the destination pointer for result storage.
     switch (BuiltinID) {
     case PPC::BI__builtin_dmmr:
     case PPC::BI__builtin_dmxor:
