@@ -13,8 +13,9 @@
 //   fcmp-fcsel: Enable FCMP-FCSEL code layout optimization
 //   cmp-csel:   Enable CMP/CMN-CSEL code layout optimization
 //
-// The initial implementation induces function alignment to help optimize
-// code layout for the detected patterns.
+// The initial implementation induces function alignment when a supported
+// pattern is detected, and possibly instruction-alignment when a pair would
+// straddle cache-lines.
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
@@ -84,12 +85,6 @@ private:
   // Emit .p2align before MI. Splits the block if MI is not at its start.
   void emitP2Align(MachineInstr &MI, Align DesiredAlign,
                    unsigned MaxSkipBytes = 4);
-
-  LLVM_ATTRIBUTE_ALWAYS_INLINE
-  void padIfCachelineStraddle(MachineInstr &MI) {
-    emitP2Align(MI, Align(64));
-    DBG(".p2align 6, , 4 before " << MI);
-  }
 
   bool optimizeForCodeLayout(MachineFunction &MF);
 };
@@ -233,7 +228,8 @@ bool AArch64CodeLayoutOpt::detectLayoutSensitivePattern(
   }
 
   for (auto &[MI, IsFcmpFcsel] : Pairs) {
-    padIfCachelineStraddle(*MI);
+    emitP2Align(*MI, Align(64));
+    DBG(".p2align 6, , 4 before " << *MI);
     ++(IsFcmpFcsel ? NumFcmpFcselPairsDetected : NumCmpCselPairsDetected);
   }
 
