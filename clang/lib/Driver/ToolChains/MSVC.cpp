@@ -132,8 +132,7 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       // Add library search path so linker can find LLVMSYCL[d].lib.
       SmallString<128> LibPath(TC.getDriver().Dir);
       llvm::sys::path::append(LibPath, "..", "lib");
-      CmdArgs.push_back(
-          Args.MakeArgString(Twine("-libpath:") + LibPath));
+      CmdArgs.push_back(Args.MakeArgString(Twine("-libpath:") + LibPath));
     }
   }
 
