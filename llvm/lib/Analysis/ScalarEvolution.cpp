@@ -3703,6 +3703,19 @@ const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
       NegC->isNegative() && !NegC->isMinSignedValue() && *C == -*NegC)
     return getZero(LHS->getType());
 
+  // (%a * %b)<nuw> / %b -> %a
+  const auto *Mul = dyn_cast<SCEVMulExpr>(LHS);
+  if (Mul && Mul->hasNoUnsignedWrap()) {
+    for (int i = 0, e = Mul->getNumOperands(); i != e; ++i) {
+      if (Mul->getOperand(i) == RHS) {
+        SmallVector<SCEVUse, 2> Operands;
+        append_range(Operands, Mul->operands().take_front(i));
+        append_range(Operands, Mul->operands().drop_front(i + 1));
+        return getMulExpr(Operands);
+      }
+    }
+  }
+
   // TODO: Generalize to handle any common factors.
   // udiv (mul nuw a, vscale), (mul nuw b, vscale) --> udiv a, b
   const SCEV *NewLHS, *NewRHS;

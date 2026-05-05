@@ -87,7 +87,7 @@ define i8 @udiv_mul_nuw_by_factor(i8 %x, i8 %y) {
 ; CHECK-NEXT:    %mul = mul nuw i8 %x, %y
 ; CHECK-NEXT:    --> (%x * %y)<nuw> U: full-set S: full-set
 ; CHECK-NEXT:    %div = udiv i8 %mul, %y
-; CHECK-NEXT:    --> ((%x * %y)<nuw> /u %y) U: full-set S: full-set
+; CHECK-NEXT:    --> %x U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @udiv_mul_nuw_by_factor
 ;
   %mul = mul nuw i8 %x, %y
