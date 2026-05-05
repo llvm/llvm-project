@@ -1661,7 +1661,7 @@ TEST_F(FileCheckTest, CapturedVarDiags) {
   EXPECT_EQ(Diags.size(), 2ul);
   SmallVector<MatchCustomNoteDiag, 2> Notes;
   for (const FileCheckDiag &Diag : Diags) {
-    EXPECT_EQ(Diag.getKind(), FileCheckDiag::FCDK_MatchCustomNoteDiag);
+    EXPECT_EQ(Diag.getKind(), FileCheckDiag::MatchCustomNoteDiag);
     EXPECT_FALSE(Diag.isError());
     Notes.push_back(cast<MatchCustomNoteDiag>(Diag));
   }

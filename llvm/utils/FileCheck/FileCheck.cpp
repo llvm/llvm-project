@@ -213,7 +213,7 @@ static MarkerStyle getMarker(const FileCheckDiag &Diag) {
 
   // Add Note.  Override the default Lead and Color for some diagnostic kinds.
   switch (Diag.getKind()) {
-  case FileCheckDiag::FCDK_MatchFoundDiag:
+  case FileCheckDiag::MatchFoundDiag:
     switch (cast<MatchFoundDiag>(Diag).getStatus()) {
     case MatchFoundDiag::Success:
       break;
@@ -230,7 +230,7 @@ static MarkerStyle getMarker(const FileCheckDiag &Diag) {
       break;
     }
     break;
-  case FileCheckDiag::FCDK_MatchNoneDiag:
+  case FileCheckDiag::MatchNoneDiag:
     Res.Lead = 'X';
     switch (cast<MatchNoneDiag>(Diag).getStatus()) {
     case MatchNoneDiag::Success:
@@ -243,12 +243,12 @@ static MarkerStyle getMarker(const FileCheckDiag &Diag) {
       break;
     }
     break;
-  case FileCheckDiag::FCDK_MatchFuzzyDiag:
+  case FileCheckDiag::MatchFuzzyDiag:
     Res.Lead = '?';
     Res.Color = raw_ostream::MAGENTA;
     Res.Note = "possible intended match";
     break;
-  case FileCheckDiag::FCDK_MatchCustomNoteDiag:
+  case FileCheckDiag::MatchCustomNoteDiag:
     Res.Note = cast<MatchCustomNoteDiag>(Diag).getNote();
     break;
   }

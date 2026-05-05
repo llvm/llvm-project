@@ -134,15 +134,15 @@ class FileCheckDiag {
 public:
   enum FileCheckDiagKind {
     // MatchResultDiag
-    FCDK_MatchResultDiag_First,
-    FCDK_MatchFoundDiag = FCDK_MatchResultDiag_First,
-    FCDK_MatchNoneDiag,
-    FCDK_MatchResultDiag_Last = FCDK_MatchNoneDiag,
+    MatchResultDiag_First,
+    MatchFoundDiag = MatchResultDiag_First,
+    MatchNoneDiag,
+    MatchResultDiag_Last = MatchNoneDiag,
     // MatchNoteDiag
-    FCDK_MatchNoteDiag_First,
-    FCDK_MatchFuzzyDiag = FCDK_MatchNoteDiag_First,
-    FCDK_MatchCustomNoteDiag,
-    FCDK_MatchNoteDiag_Last = FCDK_MatchCustomNoteDiag
+    MatchNoteDiag_First,
+    MatchFuzzyDiag = MatchNoteDiag_First,
+    MatchCustomNoteDiag,
+    MatchNoteDiag_Last = MatchCustomNoteDiag
   };
 
 private:
@@ -189,9 +189,8 @@ public:
   virtual ~MatchResultDiag() = 0;
   /// Is \p FCD an instance of \c MatchResultDiag?
   static bool classof(const FileCheckDiag *FCD) {
-    FileCheckDiagKind FCDK = FCD->getKind();
-    return FCDK_MatchResultDiag_First <= FCDK &&
-           FCDK <= FCDK_MatchResultDiag_Last;
+    FileCheckDiagKind Kind = FCD->getKind();
+    return MatchResultDiag_First <= Kind && Kind <= MatchResultDiag_Last;
   }
   /// Get itself.
   const MatchResultDiag &getMatchResultDiag() const override { return *this; }
@@ -225,11 +224,12 @@ private:
 public:
   MatchFoundDiag(const Check::FileCheckType &CheckTy, SMLoc CheckLoc,
                  StatusTy Status, SMRange MatchRange, SMRange SearchRange)
-      : MatchResultDiag(FCDK_MatchFoundDiag, CheckTy, CheckLoc, SearchRange),
+      : MatchResultDiag(FileCheckDiag::MatchFoundDiag, CheckTy, CheckLoc,
+                        SearchRange),
         Status(Status), MatchRange(MatchRange) {}
   /// Is \p FCD an instance of \c MatchFoundDiag?
   static bool classof(const FileCheckDiag *FCD) {
-    return FCD->getKind() == FCDK_MatchFoundDiag;
+    return FCD->getKind() == FileCheckDiag::MatchFoundDiag;
   }
   /// Does this match produce an error?
   ///
@@ -282,11 +282,12 @@ private:
 public:
   MatchNoneDiag(const Check::FileCheckType &CheckTy, SMLoc CheckLoc,
                 StatusTy Status, SMRange SearchRange)
-      : MatchResultDiag(FCDK_MatchNoneDiag, CheckTy, CheckLoc, SearchRange),
+      : MatchResultDiag(FileCheckDiag::MatchNoneDiag, CheckTy, CheckLoc,
+                        SearchRange),
         Status(Status) {}
   /// Is \p FCD an instance of \c MatchNoneDiag?
   static bool classof(const FileCheckDiag *FCD) {
-    return FCD->getKind() == FCDK_MatchNoneDiag;
+    return FCD->getKind() == FileCheckDiag::MatchNoneDiag;
   }
   /// Does the lack of match represent an error?
   bool isError() const override { return Status != Success; }
@@ -304,13 +305,13 @@ private:
   MatchResultDiag *MRD;
 
 public:
-  MatchNoteDiag(FileCheckDiagKind FCDK) : FileCheckDiag(FCDK), MRD(nullptr) {}
+  MatchNoteDiag(FileCheckDiagKind Kind) : FileCheckDiag(Kind), MRD(nullptr) {}
   /// Destructor is purely virtual to ensure this remains an abstract class.
   virtual ~MatchNoteDiag() = 0;
   /// Is \p FCD an instance of \c MatchNoteDiag?
   static bool classof(const FileCheckDiag *FCD) {
-    FileCheckDiagKind FCDK = FCD->getKind();
-    return FCDK_MatchNoteDiag_First <= FCDK && FCDK <= FCDK_MatchNoteDiag_Last;
+    FileCheckDiagKind Kind = FCD->getKind();
+    return MatchNoteDiag_First <= Kind && Kind <= MatchNoteDiag_Last;
   }
   /// Get the note's associated \c MatchResultDiag.
   const MatchResultDiag &getMatchResultDiag() const override { return *MRD; }
@@ -329,10 +330,10 @@ private:
 
 public:
   MatchFuzzyDiag(SMLoc MatchStart)
-      : MatchNoteDiag(FCDK_MatchFuzzyDiag), MatchStart(MatchStart) {}
+      : MatchNoteDiag(FileCheckDiag::MatchFuzzyDiag), MatchStart(MatchStart) {}
   /// Is \p FCD an instance of \c MatchFuzzyDiag?
   static bool classof(const FileCheckDiag *FCD) {
-    return FCD->getKind() == FCDK_MatchFuzzyDiag;
+    return FCD->getKind() == FileCheckDiag::MatchFuzzyDiag;
   }
   /// Always false.  A fuzzy match is not an error even though it is performed
   /// due to an error.
@@ -375,14 +376,15 @@ public:
   ///@{
   MatchCustomNoteDiag(SMRange MatchRange, StringRef Note,
                       bool AddsError = false)
-      : MatchNoteDiag(FCDK_MatchCustomNoteDiag), Note(Note),
+      : MatchNoteDiag(FileCheckDiag::MatchCustomNoteDiag), Note(Note),
         AddsError(AddsError), MatchRange(MatchRange) {}
   MatchCustomNoteDiag(StringRef Note)
-      : MatchNoteDiag(FCDK_MatchCustomNoteDiag), Note(Note), AddsError(false) {}
+      : MatchNoteDiag(FileCheckDiag::MatchCustomNoteDiag), Note(Note),
+        AddsError(false) {}
   ///@}
   /// Is \p FCD an instance of \c MatchCustomNoteDiag?
   static bool classof(const FileCheckDiag *FCD) {
-    return FCD->getKind() == FCDK_MatchCustomNoteDiag;
+    return FCD->getKind() == FileCheckDiag::MatchCustomNoteDiag;
   }
   const std::string &getNote() const { return Note; }
   /// Does this note indicate an \a additional error not indicated by the
