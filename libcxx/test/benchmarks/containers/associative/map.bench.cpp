@@ -10,6 +10,7 @@
 
 #include <map>
 #include <string>
+#include <string_view>
 #include <utility>
 
 #include "associative_container_benchmarks.h"
@@ -28,6 +29,42 @@ static void BM_map_find_string_literal(benchmark::State& state) {
 }
 
 BENCHMARK(BM_map_find_string_literal);
+
+// Benchmark: find() with string_view vs find() with string (constructed from
+// string_view). Demonstrates the benefit of __is_transparently_comparable_v
+// for basic_string_view: the optimized path avoids constructing a temporary
+// std::string (and its potential heap allocation for keys beyond SSO).
+
+static void BM_map_find_string_view(benchmark::State& state) {
+  std::map<std::string, int> map;
+  map.emplace("Something very very long to show a long string situation", 1);
+  map.emplace("Something Else", 2);
+
+  std::string_view sv = "Something very very long to show a long string situation";
+
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(map);
+    benchmark::DoNotOptimize(map.find(sv));
+  }
+}
+
+BENCHMARK(BM_map_find_string_view);
+
+static void BM_map_find_string_constructed_from_view(benchmark::State& state) {
+  std::map<std::string, int> map;
+  map.emplace("Something very very long to show a long string situation", 1);
+  map.emplace("Something Else", 2);
+
+  std::string_view sv = "Something very very long to show a long string situation";
+
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(map);
+    // Simulates the non-optimized path: explicitly construct a std::string
+    benchmark::DoNotOptimize(map.find(std::string(sv)));
+  }
+}
+
+BENCHMARK(BM_map_find_string_constructed_from_view);
 
 template <class K, class V>
 struct support::adapt_operations<std::map<K, V>> {
