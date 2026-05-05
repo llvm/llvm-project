@@ -441,10 +441,30 @@ static void checkAttrArgsAreCapabilityObjs(Sema &S, Decl *D,
   }
 }
 
+/// True if T (or its pointee, after stripping a top-level reference) is a
+/// function pointer or dependent.
+static bool isFunctionPointerOrDependent(QualType T) {
+  T = T.getNonReferenceType();
+  return T->isDependentType() || T->isFunctionPointerType();
+}
+
+/// Checks that thread-safety attributes on variables or fields apply only to
+/// function pointer types.
+static bool checkThreadSafetyValueDeclIsFunPtr(Sema &S, const ValueDecl *VD,
+                                               const AttributeCommonInfo &A) {
+  if (isFunctionPointerOrDependent(VD->getType()))
+    return true;
+  S.Diag(A.getLoc(), diag::warn_thread_attribute_not_on_fun_ptr)
+      << A << (isa<FieldDecl>(VD) ? 1 : 0);
+  return false;
+}
+
 static bool checkFunParamsAreScopedLockable(Sema &S,
                                             const ParmVarDecl *ParamDecl,
-                                            const ParsedAttr &AL) {
+                                            const AttributeCommonInfo &AL) {
   QualType ParamType = ParamDecl->getType();
+  if (ParamType->isDependentType())
+    return true;
   if (const auto *RefType = ParamType->getAs<ReferenceType>();
       RefType &&
       checkRecordTypeForScopedCapability(S, RefType->getPointeeType()))
@@ -452,6 +472,48 @@ static bool checkFunParamsAreScopedLockable(Sema &S,
   S.Diag(AL.getLoc(), diag::warn_thread_attribute_not_on_scoped_lockable_param)
       << AL;
   return false;
+}
+
+static bool checkThreadSafetyAttrSubject(Sema &S, Decl *D, const ParsedAttr &AL,
+                                         bool CheckParmVar = false) {
+  const auto *VD = dyn_cast<ValueDecl>(D);
+  if (!VD || isa<FunctionDecl>(VD))
+    return true;
+
+  if (CheckParmVar) {
+    if (const auto *PVD = dyn_cast<ParmVarDecl>(VD)) {
+      // A function-pointer parameter is also valid here.
+      if (isFunctionPointerOrDependent(PVD->getType()))
+        return true;
+      return checkFunParamsAreScopedLockable(S, PVD, AL);
+    }
+  }
+
+  return checkThreadSafetyValueDeclIsFunPtr(S, VD, AL);
+}
+
+bool Sema::checkInstantiatedThreadSafetyAttrs(const Decl *D, const Attr *A) {
+  if (!isa<AssertCapabilityAttr, AcquireCapabilityAttr,
+           TryAcquireCapabilityAttr, ReleaseCapabilityAttr,
+           RequiresCapabilityAttr, LocksExcludedAttr>(A))
+    return true;
+
+  const auto *VD = dyn_cast<ValueDecl>(D);
+  if (!VD)
+    return true;
+
+  // Parameters of template functions need to be re-checked during
+  // instantiation because their types might have been dependent.
+  if (const auto *PVD = dyn_cast<ParmVarDecl>(VD)) {
+    if (isFunctionPointerOrDependent(PVD->getType()))
+      return true;
+    return checkFunParamsAreScopedLockable(*this, PVD, *A);
+  }
+
+  if (isa<FunctionDecl>(VD))
+    return true;
+
+  return checkThreadSafetyValueDeclIsFunPtr(*this, VD, *A);
 }
 
 //===----------------------------------------------------------------------===//
@@ -635,8 +697,7 @@ static void handleLockReturnedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 }
 
 static void handleLocksExcludedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  if (const auto *ParmDecl = dyn_cast<ParmVarDecl>(D);
-      ParmDecl && !checkFunParamsAreScopedLockable(S, ParmDecl, AL))
+  if (!checkThreadSafetyAttrSubject(S, D, AL, /*CheckParmVar=*/true))
     return;
 
   if (!AL.checkAtLeastNumArgs(S, 1))
@@ -8263,6 +8324,9 @@ static void handleReentrantCapabilityAttr(Sema &S, Decl *D,
 }
 
 static void handleAssertCapabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  if (!checkThreadSafetyAttrSubject(S, D, AL))
+    return;
+
   SmallVector<Expr*, 1> Args;
   if (!checkLockFunAttrCommon(S, D, AL, Args))
     return;
@@ -8273,8 +8337,7 @@ static void handleAssertCapabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
 static void handleAcquireCapabilityAttr(Sema &S, Decl *D,
                                         const ParsedAttr &AL) {
-  if (const auto *ParmDecl = dyn_cast<ParmVarDecl>(D);
-      ParmDecl && !checkFunParamsAreScopedLockable(S, ParmDecl, AL))
+  if (!checkThreadSafetyAttrSubject(S, D, AL, /*CheckParmVar=*/true))
     return;
 
   SmallVector<Expr*, 1> Args;
@@ -8287,6 +8350,9 @@ static void handleAcquireCapabilityAttr(Sema &S, Decl *D,
 
 static void handleTryAcquireCapabilityAttr(Sema &S, Decl *D,
                                            const ParsedAttr &AL) {
+  if (!checkThreadSafetyAttrSubject(S, D, AL))
+    return;
+
   SmallVector<Expr*, 2> Args;
   if (!checkTryLockFunAttrCommon(S, D, AL, Args))
     return;
@@ -8297,9 +8363,9 @@ static void handleTryAcquireCapabilityAttr(Sema &S, Decl *D,
 
 static void handleReleaseCapabilityAttr(Sema &S, Decl *D,
                                         const ParsedAttr &AL) {
-  if (const auto *ParmDecl = dyn_cast<ParmVarDecl>(D);
-      ParmDecl && !checkFunParamsAreScopedLockable(S, ParmDecl, AL))
+  if (!checkThreadSafetyAttrSubject(S, D, AL, /*CheckParmVar=*/true))
     return;
+
   // Check that all arguments are lockable objects.
   SmallVector<Expr *, 1> Args;
   checkAttrArgsAreCapabilityObjs(S, D, AL, Args, 0, true);
@@ -8310,8 +8376,7 @@ static void handleReleaseCapabilityAttr(Sema &S, Decl *D,
 
 static void handleRequiresCapabilityAttr(Sema &S, Decl *D,
                                          const ParsedAttr &AL) {
-  if (const auto *ParmDecl = dyn_cast<ParmVarDecl>(D);
-      ParmDecl && !checkFunParamsAreScopedLockable(S, ParmDecl, AL))
+  if (!checkThreadSafetyAttrSubject(S, D, AL, /*CheckParmVar=*/true))
     return;
 
   if (!AL.checkAtLeastNumArgs(S, 1))
