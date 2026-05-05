@@ -26,21 +26,14 @@ define void @main() {
 ; CHECK-NEXT: NoAlias: created protector node #1 for 'array' based on raw/root
 ; CHECK-NEXT: NoAlias: created protector node #2 for 'array' based on raw/root
 ; CHECK-NEXT:   %a1 = getelementptr [4 x i32], ptr %a, i64 0, i64 1 => ptr 0xC [array + 4]
-; CHECK-NEXT: NoAlias: node #1 foreign write through raw/root on 'array' bytes [4, 8): Reserved -> Disabled
-; CHECK-NEXT: NoAlias: node #2 foreign write through raw/root on 'array' bytes [4, 8): Reserved -> Disabled
-; CHECK-NEXT: NoAlias: write through raw/root on 'array' bytes [4, 8) checked 2 active noalias protectors
+; CHECK-NEXT: NoAlias: node #1 local write through node #1 on 'array' bytes [4, 8): Reserved -> Unique
+; CHECK-NEXT: NoAlias: node #2 foreign write through node #1 on 'array' bytes [4, 8): Reserved -> Disabled
+; CHECK-NEXT: NoAlias: write through node #1 on 'array' bytes [4, 8) checked 2 active noalias protectors
 ; CHECK-NEXT:   store i32 5, ptr %a1, align 4
 ; CHECK-NEXT:   %b1 = getelementptr [4 x i32], ptr %b, i64 0, i64 1 => ptr 0xC [array + 4]
-; CHECK-NEXT: NoAlias: node #1 foreign write through raw/root on 'array' bytes [4, 8): Disabled -> Disabled
-; CHECK-NEXT: NoAlias: node #2 foreign write through raw/root on 'array' bytes [4, 8): Disabled -> Disabled
-; CHECK-NEXT: NoAlias: write through raw/root on 'array' bytes [4, 8) checked 2 active noalias protectors
-; CHECK-NEXT:   store i32 6, ptr %b1, align 4
-; CHECK-NEXT:   ret void
-; CHECK-NEXT: NoAlias: ended protector node #1
-; CHECK-NEXT: NoAlias: erased inactive protector node #1
-; CHECK-NEXT: NoAlias: ended protector node #2
-; CHECK-NEXT: NoAlias: erased inactive protector node #2
-; CHECK-NEXT: Exiting function: write_overlap
-; CHECK-NEXT:   call void @write_overlap(ptr %array, ptr %array)
-; CHECK-NEXT:   ret void
-; CHECK-NEXT: Exiting function: main
+; CHECK-NEXT: NoAlias: noalias violation: write through node #2 on 'array' bytes [4, 8) is foreign to protected node #1, but that protector is in Unique state
+; CHECK-NEXT: Stacktrace:
+; CHECK-NEXT: #0   store i32 6, ptr %b1, align 4 at @write_overlap
+; CHECK-NEXT: #1   call void @write_overlap(ptr %array, ptr %array) at @main
+; CHECK-NEXT: Immediate UB detected: noalias violation: write through node #2 on 'array' bytes [4, 8) is foreign to protected node #1, but that protector is in Unique state
+; CHECK-NEXT: error: Execution of function 'main' failed.
