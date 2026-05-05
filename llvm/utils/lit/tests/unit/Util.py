@@ -76,19 +76,12 @@ class TestCommandCache(unittest.TestCase):
     def test_cache(self):
         lit_config = self._lit_config()
 
-        t1 = time.time()
-        self.assertNotEqual(lit_config.run_command_cached("sleep 1", shell=True), None)
-        t2 = time.time()
-        self.assertGreater(t2 - t1, 0.5)
+        # Check the date (with nanoseconds)
+        date = lit_config.run_command_cached("date -Ins", shell=True)
+        self.assertNotEqual(date, None)
 
-        # Second time should be cached
-        t1 = time.time()
-        self.assertNotEqual(lit_config.run_command_cached("sleep 1", shell=True), None)
-        t2 = time.time()
-
-        # The second run should be instant
-        self.assertLess(t2 - t1, 0.5)
-
+        # Second time should be cached, i.e. equal to the first
+        self.assertEqual(lit_config.run_command_cached("date -Ins", shell=True), date)
 
 if __name__ == "__main__":
     unittest.main()
