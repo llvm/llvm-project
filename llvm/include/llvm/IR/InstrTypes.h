@@ -174,8 +174,8 @@ public:
 };
 
 /// Unary operators support fast-math flags, users should not use this
-/// class directly, Unary can automatic create instructions with
-/// correct type.
+/// class directly, Unary can create instructions with correct type
+/// automatically.
 class FPUnaryOperator : public UnaryOperator, public FastMathFlagsStorage {
   // Note: Instruction needs to be a friend here to call cloneImpl.
   friend class Instruction;
@@ -471,8 +471,8 @@ BinaryOperator *BinaryOperator::CreateDisjoint(BinaryOps Opc, Value *V1,
 }
 
 /// Binary operators support fast-math flags, users should not use this
-/// class directly, BinaryOperator can automatic create instructions with
-/// correct type.
+/// class directly, BinaryOperator can create instructions with correct type
+/// automatically.
 class FPBinaryOperator : public BinaryOperator, public FastMathFlagsStorage {
   // Note: Instruction needs to be a friend here to call cloneImpl.
   friend class Instruction;
