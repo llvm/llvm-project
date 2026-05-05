@@ -204,6 +204,10 @@ LLDBMemoryReader::resolvePointerAsSymbol(swift::remote::RemoteAddress address) {
   }
 
   if (auto *symbol = addr.CalculateSymbolContextSymbol()) {
+    // Require `addr` to point to the beginning of the symbol since the
+    // COFF export table is sparse and we can inadvertently misattribute
+    // private symbols to the preceding public symbol.
+    // See https://github.com/swiftlang/llvm-project/issues/12891
     if (triple.isOSWindows() &&
         addr.GetFileAddress() != symbol->GetAddressRef().GetFileAddress())
       return {};
