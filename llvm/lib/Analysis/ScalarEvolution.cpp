@@ -3561,6 +3561,11 @@ const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
   if (match(LHS, m_scev_Zero()))
     return LHS;
 
+  // X udiv X == 1
+  if (LHS == RHS)
+    return getConstant(LHS->getType(), 1);
+
+
   if (const SCEVConstant *RHSC = dyn_cast<SCEVConstant>(RHS)) {
     if (RHSC->getValue()->isOne())
       return LHS;                               // X udiv 1 --> x
@@ -3744,9 +3749,6 @@ const SCEV *ScalarEvolution::getUDivExactExpr(SCEVUse LHS, SCEVUse RHS) {
   // TODO: we could try to find factors in all sorts of things, but for now we
   // just deal with u/exact (multiply, constant). See SCEVDivision towards the
   // end of this file for inspiration.
-
-  if (LHS == RHS)
-    return getConstant(LHS->getType(), 1);
 
   if (const SCEVMulExpr *RHSMul = dyn_cast<SCEVMulExpr>(RHS);
       RHSMul && RHSMul->hasNoUnsignedWrap() &&

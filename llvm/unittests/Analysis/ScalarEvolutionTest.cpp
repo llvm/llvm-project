@@ -1579,6 +1579,30 @@ TEST_F(ScalarEvolutionsTest, SCEVUDivFloorCeiling) {
   });
 }
 
+TEST_F(ScalarEvolutionsTest, SCEVUDivEqual) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M =
+      parseAssemblyString("define void @foo(i32 %a) {"
+                          "  ret void"
+                          "}",
+                          Err, C);
+
+  ASSERT_TRUE(M && "Could not parse module?");
+  ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");
+
+  runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    const SCEV *A = SE.getSCEV(getArgByName(F, "a"));
+    const SCEV *One = SE.getConstant(A->getType(), 1);
+    const SCEV *Two = SE.getConstant(A->getType(), 2);
+    EXPECT_EQ(One, SE.getUDivExpr(A, A));
+    EXPECT_EQ(One, SE.getUDivExpr(Two, Two));
+    EXPECT_EQ(One, SE.getUDivExactExpr(A, A));
+    EXPECT_EQ(One, SE.getUDivExactExpr(Two, Two));
+  });
+}
+
+
 TEST_F(ScalarEvolutionsTest, SCEVUDivExactPreserveNUW) {
   LLVMContext C;
   SMDiagnostic Err;
