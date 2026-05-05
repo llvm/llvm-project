@@ -9,7 +9,7 @@
 
 // RUN: not clang-ssaf-analyzer 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=NO-ARGS
-// NO-ARGS: clang-ssaf-analyzer: Not enough positional command line arguments specified!
+// NO-ARGS: clang-ssaf-analyzer{{(\.exe)?}}: Not enough positional command line arguments specified!
 
 // ============================================================================
 // CLI error: missing -o
@@ -17,7 +17,7 @@
 
 // RUN: not clang-ssaf-analyzer %S/Inputs/lu.json -a Foo 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=NO-OUTPUT
-// NO-OUTPUT: clang-ssaf-analyzer: for the -o option: must be specified at least once!
+// NO-OUTPUT: clang-ssaf-analyzer{{(\.exe)?}}: for the -o option: must be specified at least once!
 
 // ============================================================================
 // Error: nonexistent plugin path
