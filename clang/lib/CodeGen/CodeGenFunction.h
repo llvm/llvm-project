@@ -4713,6 +4713,10 @@ public:
                             llvm::CallBase **CallOrInvoke = nullptr);
   CGCallee EmitCallee(const Expr *E);
 
+  RValue EmitTypedMemoryCall(const CallExpr *E, TypedMemoryAttr *TMA,
+                             ReturnValueSlot ReturnValue);
+  CGCallee EmitCallee(const FunctionDecl *FD);
+
   void checkTargetFeatures(const CallExpr *E, const FunctionDecl *TargetDecl);
   void checkTargetFeatures(SourceLocation Loc, const FunctionDecl *TargetDecl);
 

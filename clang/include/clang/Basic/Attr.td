@@ -5157,6 +5157,15 @@ def EnforceTCBLeaf : InheritableAttr {
   bit InheritEvenIfAlreadyPresent = 1;
 }
 
+def TypedMemory : InheritableAttr {
+  let Spellings = [Clang<"typed_memory_operation">];
+  let Subjects = SubjectList<[Function]>;
+  let Args = [DeclArgument<Function, "RewriteTarget">,
+              ParamIdxArgument<"InferredParameterIdx">];
+  let SemaHandler = 1;
+  let Documentation = [Undocumented];
+}
+
 def Error : InheritableAttr {
   let Spellings = [GCC<"error">, GCC<"warning">];
   let Accessors = [Accessor<"isError", [GCC<"error">]>,

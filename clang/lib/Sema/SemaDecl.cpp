@@ -4703,6 +4703,27 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
     return true;
   }
 
+  auto *OldTypedMemoryAttr = Old->getAttr<TypedMemoryAttr>();
+  auto *NewTypedMemoryAttr = New->getAttr<TypedMemoryAttr>();
+  if (OldTypedMemoryAttr && NewTypedMemoryAttr) {
+    if (OldTypedMemoryAttr->getRewriteTarget() !=
+        NewTypedMemoryAttr->getRewriteTarget()) {
+      Diag(NewTypedMemoryAttr->getLocation(),
+           diag::err_incompatible_duplicate_attribute)
+          << NewTypedMemoryAttr;
+      Diag(OldTypedMemoryAttr->getLocation(), diag::note_conflicting_attribute);
+      return true;
+    }
+    if (OldTypedMemoryAttr->getInferredParameterIdx() !=
+        NewTypedMemoryAttr->getInferredParameterIdx()) {
+      Diag(NewTypedMemoryAttr->getLocation(),
+           diag::err_incompatible_duplicate_attribute)
+          << NewTypedMemoryAttr;
+      Diag(OldTypedMemoryAttr->getLocation(), diag::note_conflicting_attribute);
+      return true;
+    }
+  }
+
   /*TO_UPSTREAM(BoundsSafety) ON */
   if (getLangOpts().BoundsSafetyAttributes) {
     // This is the same logic to suppress warnings in system headers.
@@ -14900,6 +14921,7 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
   llvm::scope_exit ResetDeclForInitializer([this]() {
     if (!this->ExprEvalContexts.empty())
       this->ExprEvalContexts.back().DeclForInitializer = nullptr;
+    finalizeOutstandingTMOCandidates();
   });
 
   // If there is no declaration, there was an error parsing it.  Just ignore

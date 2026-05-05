@@ -7345,6 +7345,13 @@ RValue CodeGenFunction::EmitCallExpr(const CallExpr *E,
         MD && MD->isImplicitObjectMemberFunction())
       return EmitCXXOperatorMemberCallExpr(CE, MD, ReturnValue, CallOrInvoke);
 
+  auto *CalleeExpr = E->getCallee();
+
+  if (auto *CalleeDecl = CalleeExpr->getReferencedDeclOfCallee()) {
+    if (auto *TMA = CalleeDecl->getAttr<TypedMemoryAttr>())
+      return EmitTypedMemoryCall(E, TMA, ReturnValue);
+  }
+
   CGCallee callee = EmitCallee(E->getCallee());
 
   if (callee.isBuiltin()) {
@@ -7603,6 +7610,10 @@ CGCallee CodeGenFunction::EmitCallee(const Expr *E) {
   CGPointerAuthInfo pointerAuth = CGM.getFunctionPointerAuthInfo(functionType);
   CGCallee callee(calleeInfo, calleePtr, pointerAuth);
   return callee;
+}
+
+CGCallee CodeGenFunction::EmitCallee(const FunctionDecl *FD) {
+  return EmitDirectCallee(*this, GlobalDecl(FD));
 }
 
 LValue CodeGenFunction::EmitBinaryOperatorLValue(const BinaryOperator *E) {

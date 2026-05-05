@@ -55,6 +55,8 @@ LLVM_ABI uint64_t getStableSipHash(StringRef Str);
 /// in the ABI that use a constant zero.
 LLVM_ABI uint16_t getPointerAuthStableSipHash(StringRef S);
 
+LLVM_ABI uint64_t getTypedMemoryDescriptorStableSipHash(StringRef S);
+
 } // end namespace llvm
 
 #endif

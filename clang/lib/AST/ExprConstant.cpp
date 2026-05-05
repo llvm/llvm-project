@@ -19505,6 +19505,16 @@ bool IntExprEvaluator::VisitBinaryOperator(const BinaryOperator *E) {
   return ExprEvaluatorBaseTy::VisitBinaryOperator(E);
 }
 
+static bool HandleTMOTypeAnalysis(EvalInfo &Info, QualType Ty,
+                                  ASTContext::TypedMemoryDescriptor *OutDescr) {
+  if (Ty->isIncompleteType() || Ty->isVoidType() || Ty->isDependentType() ||
+      Ty->isFunctionType())
+    return false;
+  *OutDescr = Info.Ctx.getTypedMemoryDescriptor(Ty, OO_None,
+                                                TypedMemoryCallsiteFlags::None);
+  return true;
+}
+
 /// VisitUnaryExprOrTypeTraitExpr - Evaluate a sizeof, alignof or vec_step with
 /// a result as the expression's type.
 bool IntExprEvaluator::VisitUnaryExprOrTypeTraitExpr(
@@ -19621,6 +19631,13 @@ bool IntExprEvaluator::VisitUnaryExprOrTypeTraitExpr(
     // FIXME: Better diagnostic.
     Info.FFDiag(E->getBeginLoc());
     return false;
+  }
+  case UETT_TMOGetTypeDescriptor: {
+    QualType Ty = E->getTypeOfArgument();
+    ASTContext::TypedMemoryDescriptor TMD;
+    if (!HandleTMOTypeAnalysis(Info, Ty, &TMD))
+      return false;
+    return Success(TMD.asBits().value(), E);
   }
   }
 

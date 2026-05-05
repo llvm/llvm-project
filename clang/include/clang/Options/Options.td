@@ -10162,3 +10162,10 @@ def wasm_opt : Flag<["--"], "wasm-opt">,
   Group<m_Group>,
   HelpText<"Enable the wasm-opt optimizer (default)">,
   MarshallingInfoNegativeFlag<LangOpts<"NoWasmOpt">>;
+
+defm typed_memory_operations : BoolFOption<"typed-memory-operations",
+  LangOpts<"TypedMemoryOperations">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable">,
+  NegFlag<SetFalse, [], [ClangOption, CC1Option], "Disable">,
+  BothFlags<[], [],
+          " typed memory operations call site rewriting">>;

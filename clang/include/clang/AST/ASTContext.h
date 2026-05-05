@@ -27,6 +27,7 @@
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeOrdering.h"
+#include "clang/AST/TypedMemoryInference.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/PartialDiagnostic.h"
@@ -147,6 +148,7 @@ class UsingShadowDecl;
 class VarTemplateDecl;
 class VTableContextBase;
 class XRayFunctionFilter;
+struct TypedMemoryDescriptorBits;
 
 /// A simple array of base specifiers.
 typedef SmallVector<CXXBaseSpecifier *, 4> CXXCastPath;
@@ -1557,6 +1559,32 @@ public:
 
   /// Return the "other" type-specific discriminator for the given type.
   uint16_t getPointerAuthTypeDiscriminator(QualType T);
+
+  //===--------------------------------------------------------------------===//
+  //                    TypedMemoryOperations Support
+  //===--------------------------------------------------------------------===//
+private:
+  mutable std::unique_ptr<TypedMemoryInference> TypeInference;
+  TypedMemoryInference &getTMOInference() const;
+
+public:
+  using TypedMemoryDescriptor = TypedMemoryInference::TypedMemoryDescriptor;
+  /// Return the descriptor for the provided type and callsite semantics
+  TypedMemoryDescriptor
+  getTypedMemoryDescriptor(QualType QT, OverloadedOperatorKind,
+                           TypedMemoryCallsiteFlags) const;
+  StringRef getTypeSummaryDescription(TypedMemorySummary Summary) const;
+
+  std::optional<InferredTypeInfo>
+  getInferredInfoForCall(const CallExpr *Call) const;
+  InferredTypeInfo inferTypedMemoryType(const CallExpr *Call,
+                                        const Expr &SizeArg,
+                                        const CastExpr *ContainingCast) const;
+  /// Only used when reading an external AST, such as a module or PCH.
+  void setInferredInfoForCall(const CallExpr *Call, InferredTypeInfo);
+
+  /// Find the flexible array member for a type if present
+  std::optional<QualType> findFlexibleArrayElementType(QualType T) const;
 
   /// Apply Objective-C protocol qualifiers to the given type.
   /// \param allowOnPointerType specifies if we can apply protocol

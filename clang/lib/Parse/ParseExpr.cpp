@@ -744,6 +744,26 @@ ExprResult Parser::ParseBuiltinPtrauthTypeDiscriminator() {
       /*isType=*/true, Ty.get().getAsOpaquePtr(), SourceRange(Loc, EndLoc));
 }
 
+ExprResult Parser::ParseBuiltinTMOGetTypeDescriptor() {
+  SourceLocation Loc = ConsumeToken();
+
+  BalancedDelimiterTracker T(*this, tok::l_paren);
+  if (T.expectAndConsume())
+    return ExprError();
+
+  TypeResult Ty = ParseTypeName();
+  if (Ty.isInvalid()) {
+    SkipUntil(tok::r_paren, StopAtSemi);
+    return ExprError();
+  }
+
+  SourceLocation EndLoc = Tok.getLocation();
+  T.consumeClose();
+  return Actions.ActOnUnaryExprOrTypeTraitExpr(
+      Loc, UETT_TMOGetTypeDescriptor,
+      /*isType=*/true, Ty.get().getAsOpaquePtr(), SourceRange(Loc, EndLoc));
+}
+
 ExprResult
 Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
                             bool &NotCastExpr,
@@ -1582,6 +1602,9 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
       *NotPrimaryExpression = true;
     Res = ParseExpressionTrait();
     break;
+
+  case tok::kw___builtin_tmo_get_type_descriptor:
+    return ParseBuiltinTMOGetTypeDescriptor();
 
   case tok::at: {
     if (NotPrimaryExpression)

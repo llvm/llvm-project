@@ -16595,3 +16595,18 @@ void ASTContext::recordOffsetOfEvaluation(const OffsetOfExpr *E) {
   if (FieldDecl *FD = Comp.getField(); isPFPField(FD))
     PFPFieldsWithEvaluatedOffset.insert(FD);
 }
+
+std::optional<QualType>
+ASTContext::findFlexibleArrayElementType(QualType T) const {
+  const RecordDecl *RD = T->getAsRecordDecl();
+  if (!RD || !RD->hasFlexibleArrayMember())
+    return std::nullopt;
+  const FieldDecl *FlexibleArrayField = nullptr;
+  for (const FieldDecl *FD : RD->fields())
+    FlexibleArrayField = FD;
+  assert(FlexibleArrayField);
+  const IncompleteArrayType *IAT =
+      getAsIncompleteArrayType(FlexibleArrayField->getType());
+  assert(IAT);
+  return IAT->getElementType();
+}

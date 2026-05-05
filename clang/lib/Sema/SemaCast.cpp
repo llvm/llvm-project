@@ -162,6 +162,7 @@ namespace {
             Self.CurFPFeatureOverrides());
       }
       updatePartOfExplicitCastFlags(castExpr);
+      Self.currentTMOContext().recordCastForTMOInference(Self, castExpr);
       return castExpr;
     }
 

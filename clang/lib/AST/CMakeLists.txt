@@ -133,6 +133,9 @@ add_clang_library(clangAST
   Type.cpp
   TypeLoc.cpp
   TypePrinter.cpp
+  TypedMemoryInference.cpp
+  TypedMemoryLayoutBuilder.cpp
+  TypedMemoryTypeDescriptor.cpp
   VTableBuilder.cpp
   VTTBuilder.cpp
 

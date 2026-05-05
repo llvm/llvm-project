@@ -1064,6 +1064,52 @@ void ASTStmtReader::VisitOMPIteratorExpr(OMPIteratorExpr *E) {
   }
 }
 
+static InferredTypeInfo readInferredTypeInfo(ASTRecordReader &Record) {
+  auto Flags = static_cast<TypedMemoryCallsiteFlags>(Record.readInt());
+  if (!Record.readBool())
+    return {std::nullopt, nullptr, Flags};
+
+  auto Kind = static_cast<InferredAllocationType::TypeKind>(Record.readInt());
+  auto MarshalResult = [&](InferredAllocationType &&Inferred) {
+    return InferredTypeInfo{std::move(Inferred), nullptr, Flags};
+  };
+  switch (Kind) {
+  case InferredAllocationType::TypeKind::Object:
+    return MarshalResult(InferredAllocationType::create(Record.readType()));
+  case InferredAllocationType::TypeKind::Array: {
+    bool IsConstantSize = Record.readBool();
+    return MarshalResult(
+        InferredAllocationType::createArray(Record.readType(), IsConstantSize));
+  }
+  case InferredAllocationType::TypeKind::PrefixedArray: {
+    bool IsConstantSize = Record.readBool();
+    QualType HeaderType = Record.readType();
+    std::optional<QualType> ElemType;
+    if (Record.readBool())
+      ElemType = Record.readType();
+    return MarshalResult(InferredAllocationType::createPrefixedArray(
+        HeaderType, ElemType, IsConstantSize));
+  }
+  case InferredAllocationType::TypeKind::Tuple:
+  case InferredAllocationType::TypeKind::UnknownLayout: {
+    bool IsConstantSize = true;
+    if (Kind == InferredAllocationType::TypeKind::UnknownLayout)
+      IsConstantSize = Record.readBool();
+    size_t Count = Record.readUInt32();
+    SmallVector<QualType, 2> Entries;
+    Entries.reserve(Count);
+    for (size_t I = 0; I < Count; ++I)
+      Entries.push_back(Record.readType());
+    if (Kind == InferredAllocationType::TypeKind::Tuple)
+      return MarshalResult(
+          InferredAllocationType::createTuple(std::move(Entries)));
+    return MarshalResult(InferredAllocationType::createUnknownLayout(
+        std::move(Entries), IsConstantSize));
+  }
+  }
+  llvm_unreachable("Unrecognised inferrence kind.");
+}
+
 void ASTStmtReader::VisitCallExpr(CallExpr *E) {
   VisitExpr(E);
 
@@ -1074,6 +1120,7 @@ void ASTStmtReader::VisitCallExpr(CallExpr *E) {
   bool HasFPFeatures = CurrentUnpackingBits->getNextBit();
   E->setCoroElideSafe(CurrentUnpackingBits->getNextBit());
   E->setUsesMemberSyntax(CurrentUnpackingBits->getNextBit());
+  bool HasTMOInfo = CurrentUnpackingBits->getNextBit();
   assert((NumArgs == E->getNumArgs()) && "Wrong NumArgs!");
   E->setRParenLoc(readSourceLocation());
   E->setCallee(Record.readSubExpr());
@@ -1083,6 +1130,9 @@ void ASTStmtReader::VisitCallExpr(CallExpr *E) {
   if (HasFPFeatures)
     E->setStoredFPFeatures(
         FPOptionsOverride::getFromOpaqueInt(Record.readInt()));
+
+  if (HasTMOInfo)
+    Record.getContext().setInferredInfoForCall(E, readInferredTypeInfo(Record));
 
   if (E->getStmtClass() == Stmt::CallExprClass)
     E->updateTrailingSourceLoc();

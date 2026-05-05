@@ -4449,6 +4449,7 @@ private:
   bool tryParseOpenMPArrayShapingCastPart();
 
   ExprResult ParseBuiltinPtrauthTypeDiscriminator();
+  ExprResult ParseBuiltinTMOGetTypeDescriptor();
 
   /* TO_UPSTREAM(BoundsSafety) ON*/
   //===--------------------------------------------------------------------===//

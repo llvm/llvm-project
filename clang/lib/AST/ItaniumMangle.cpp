@@ -5470,7 +5470,8 @@ recurse:
     case UETT_OpenMPRequiredSimdAlign:
     case UETT_VecStep:
     case UETT_PtrAuthTypeDiscriminator:
-    case UETT_DataSizeOf: {
+    case UETT_DataSizeOf:
+    case UETT_TMOGetTypeDescriptor: {
       DiagnosticsEngine &Diags = Context.getDiags();
       Diags.Report(E->getExprLoc(), diag::err_unsupported_itanium_expr_mangling)
           << getTraitSpelling(SAE->getKind());

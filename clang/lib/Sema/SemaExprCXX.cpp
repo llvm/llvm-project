@@ -7764,6 +7764,8 @@ ExprResult Sema::ActOnFinishFullExpr(Expr *FE, SourceLocation CC,
                                      bool IsTemplateArgument) {
   ExprResult FullExpr = FE;
 
+  finalizeOutstandingTMOCandidates();
+
   if (!FullExpr.get())
     return ExprError();
 

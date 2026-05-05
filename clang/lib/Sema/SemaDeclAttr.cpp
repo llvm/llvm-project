@@ -8766,6 +8766,180 @@ static void handleEnforceTCBAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(AttrTy::Create(S.Context, Argument, AL));
 }
 
+static bool typedMemoryTypesAreEquivalentOrDependent(const ASTContext &Context,
+                                                     QualType SourceType,
+                                                     QualType DestinationType) {
+  SourceType = Context.getCanonicalType(SourceType).getUnqualifiedType();
+  DestinationType =
+      Context.getCanonicalType(DestinationType).getUnqualifiedType();
+  if (SourceType->isDependentType() || DestinationType->isDependentType())
+    return true;
+  return SourceType == DestinationType;
+}
+
+static void handleTypedMemory(Sema &S, Decl *D, const ParsedAttr &AL) {
+  if (!S.getLangOpts().TypedMemoryOperations)
+    return;
+
+  FunctionDecl *SourceDecl = D->getAsFunction();
+  if (isFunctionOrMethodVariadic(D) || isInstanceMethod(D)) {
+    S.Diag(SourceDecl->getBeginLoc(), diag::err_tmo_function_kind_error)
+        << 0 << SourceDecl << (isFunctionOrMethodVariadic(D) ? 0 : 1);
+    AL.setInvalid();
+    return;
+  }
+
+  auto Loc = AL.getLoc();
+  if (!SourceDecl) {
+    auto *ND = cast<NamedDecl>(D);
+    S.Diag(Loc, diag::err_tmo_function_kind_error) << 0 << ND << 3;
+    AL.setInvalid();
+    return;
+  }
+  if (AL.getNumArgs() < 2) {
+    S.Diag(Loc, diag::err_attribute_too_few_arguments) << AL;
+    AL.setInvalid();
+    return;
+  }
+  if (AL.getNumArgs() > 3) {
+    S.Diag(Loc, diag::err_attribute_too_many_arguments) << AL;
+    AL.setInvalid();
+    return;
+  }
+  Expr *TargetExpr = AL.getArgAsExpr(0);
+  FunctionDecl *TargetDecl = nullptr;
+  DeclarationNameInfo TargetName;
+  if (auto *DRE = dyn_cast<DeclRefExpr>(TargetExpr)) {
+    TargetDecl = dyn_cast<FunctionDecl>(DRE->getDecl());
+    TargetName = DRE->getNameInfo();
+    if (!TargetDecl) {
+      S.Diag(Loc, diag::err_tmo_function_kind_error)
+          << DRE->getSourceRange() << 1 << DRE->getNameInfo().getName() << 3;
+      AL.setInvalid();
+      return;
+    }
+  } else if (auto *ULE = dyn_cast<UnresolvedLookupExpr>(TargetExpr)) {
+    TargetDecl = S.ResolveSingleFunctionTemplateSpecialization(ULE, true);
+    TargetName = ULE->getNameInfo();
+    if (!TargetDecl) {
+      S.Diag(Loc, diag::err_tmo_rewrite_target_is_overloaded)
+          << TargetName.getName();
+      if (ULE->getType() == S.Context.OverloadTy)
+        S.NoteAllOverloadCandidates(ULE);
+      AL.setInvalid();
+      return;
+    }
+  } else {
+    S.Diag(Loc, diag::err_tmo_function_kind_error)
+        << TargetExpr->getSourceRange() << 1 << TargetExpr << 3;
+    AL.setInvalid();
+    return;
+  }
+
+  TargetDecl = TargetDecl->getCanonicalDecl();
+  ParamIdx InferredParameterIdx;
+  if (!S.checkFunctionOrMethodParameterIndex(D, AL, 1, AL.getArgAsExpr(1),
+                                             InferredParameterIdx))
+    return;
+
+  auto *InferredParam =
+      SourceDecl->getParamDecl(InferredParameterIdx.getASTIndex());
+  auto SizeType = InferredParam->getType();
+  auto isIntegerOrDependentNonArrayType = [](QualType QT) -> bool {
+    auto *T = QT->getUnqualifiedDesugaredType();
+    if (T->isIntegerType())
+      return true;
+    if (T->isDependentSizedArrayType())
+      return false;
+    return T->isDependentType();
+  };
+  if (!isIntegerOrDependentNonArrayType(SizeType)) {
+    S.Diag(Loc, diag::err_tmo_invalid_inferred_parameter_type)
+        << InferredParameterIdx.getSourceIndex() << SizeType
+        << InferredParam->getLocation();
+    AL.setInvalid();
+    return;
+  }
+
+  if (!hasFunctionProto(TargetDecl) || isFunctionOrMethodVariadic(TargetDecl) ||
+      isInstanceMethod(TargetDecl)) {
+    unsigned MessageSelector = !hasFunctionProto(TargetDecl)            ? 2u
+                               : isFunctionOrMethodVariadic(TargetDecl) ? 1u
+                                                                        : 0u;
+    S.Diag(Loc, diag::err_tmo_function_kind_error)
+        << 1 << TargetDecl << MessageSelector;
+    AL.setInvalid();
+    return;
+  }
+
+  auto reportTargetTypeMismatchError = [&]() {
+    std::vector<QualType> ExpectedArguments;
+    for (size_t I = 0; I < InferredParameterIdx.getSourceIndex(); I++)
+      ExpectedArguments.push_back(SourceDecl->getParamDecl(I)->getType());
+    ExpectedArguments.push_back(S.Context.getIntTypeForBitwidth(64, false));
+    for (size_t I = InferredParameterIdx.getSourceIndex();
+         I < SourceDecl->getNumParams(); I++)
+      ExpectedArguments.push_back(SourceDecl->getParamDecl(I)->getType());
+    FunctionProtoType::ExtProtoInfo EPI = {};
+    auto ExpectedType = S.Context.getFunctionType(SourceDecl->getReturnType(),
+                                                  ExpectedArguments, EPI);
+    S.Diag(Loc, diag::err_tmo_rewrite_target_type_mismatch)
+        << TargetDecl->getNameInfo().getName() << ExpectedType
+        << TargetDecl->getType();
+    S.Diag(TargetDecl->getLocation(),
+           diag::note_tmo_rewrite_target_type_mismatch);
+    AL.setInvalid();
+  };
+
+  if (!typedMemoryTypesAreEquivalentOrDependent(S.Context,
+                                                TargetDecl->getReturnType(),
+                                                SourceDecl->getReturnType())) {
+    reportTargetTypeMismatchError();
+    return;
+  }
+
+  if (getFunctionOrMethodNumParams(TargetDecl) !=
+      getFunctionOrMethodNumParams(SourceDecl) + 1) {
+    reportTargetTypeMismatchError();
+    return;
+  }
+
+  auto *TargetTypeDescriptorParam = getFunctionOrMethodParam(
+      TargetDecl, InferredParameterIdx.getASTIndex() + 1);
+  auto TargetTypeDescriptorType = TargetTypeDescriptorParam->getType();
+  if (!TargetTypeDescriptorType->isDependentType()) {
+    if (!TargetTypeDescriptorType->isIntegerType() ||
+        S.Context.getTypeSize(TargetTypeDescriptorType) != 64) {
+      reportTargetTypeMismatchError();
+      return;
+    }
+  }
+
+  size_t SourceParameterIdx = 0;
+  size_t TargetParameterIdx = 0;
+  for (; SourceParameterIdx < getFunctionOrMethodNumParams(SourceDecl);
+       SourceParameterIdx++, TargetParameterIdx++) {
+    auto *SourceParamDecl =
+        getFunctionOrMethodParam(SourceDecl, SourceParameterIdx);
+    auto *TargetParamDecl =
+        getFunctionOrMethodParam(TargetDecl, TargetParameterIdx);
+    if (!typedMemoryTypesAreEquivalentOrDependent(S.Context,
+                                                  SourceParamDecl->getType(),
+                                                  TargetParamDecl->getType())) {
+      reportTargetTypeMismatchError();
+      return;
+    }
+    if (SourceParameterIdx == InferredParameterIdx.getASTIndex())
+      TargetParameterIdx++;
+  }
+  if (AL.isInvalid())
+    return;
+
+  auto *TMA = ::new (S.Context)
+      TypedMemoryAttr(S.Context, AL, TargetDecl, InferredParameterIdx);
+  D->addAttr(TMA);
+}
+
 template <typename AttrTy, typename ConflictingAttrTy>
 static AttrTy *mergeEnforceTCBAttrImpl(Sema &S, Decl *D, const AttrTy &AL) {
   // Check if the new redeclaration has different leaf-ness in the same TCB.
@@ -9979,6 +10153,10 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
 
   case ParsedAttr::AT_EnforceTCBLeaf:
     handleEnforceTCBAttr<EnforceTCBLeafAttr, EnforceTCBAttr>(S, D, AL);
+    break;
+
+  case ParsedAttr::AT_TypedMemory:
+    handleTypedMemory(S, D, AL);
     break;
 
   case ParsedAttr::AT_BuiltinAlias:

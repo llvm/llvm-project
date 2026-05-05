@@ -105,6 +105,7 @@ add_clang_library(clangSema
   SemaTemplateVariadic.cpp
   SemaType.cpp
   SemaTypeTraits.cpp
+  SemaTypedMemory.cpp
   SemaWasm.cpp
   SemaX86.cpp
   TypeLocBuilder.cpp

@@ -59,3 +59,12 @@ uint16_t llvm::getPointerAuthStableSipHash(StringRef Str) {
              << " of: " << Str << "\n");
   return Discriminator;
 }
+
+uint64_t llvm::getTypedMemoryDescriptorStableSipHash(StringRef Str) {
+  static const uint8_t K[16] = {0xb5, 0xd4, 0xc9, 0xeb, 0x79, 0x10, 0x4a, 0x79,
+                                0x6f, 0xec, 0x8b, 0x1b, 0x42, 0x87, 0x81, 0xd4};
+
+  uint8_t RawHashBytes[8];
+  getSipHash_2_4_64(arrayRefFromStringRef(Str), K, RawHashBytes);
+  return endian::read64le(RawHashBytes);
+}

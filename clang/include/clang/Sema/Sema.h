@@ -68,6 +68,7 @@
 #include "clang/Sema/SemaBase.h"
 #include "clang/Sema/SemaConcept.h"
 #include "clang/Sema/SemaRISCV.h"
+#include "clang/Sema/TypedMemoryCallsiteContext.h"
 #include "clang/Sema/TypoCorrection.h"
 #include "clang/Sema/Weak.h"
 #include "llvm/ADT/APInt.h"
@@ -16404,6 +16405,38 @@ public:
   void performFunctionEffectAnalysis(TranslationUnitDecl *TU);
 
   ///@}
+
+  //===--------------------------------------------------------------------===//
+  // Typed Memory Operations
+  //===--------------------------------------------------------------------===//
+  /// @{
+private:
+  // TMO context information used to track non-function scoped TMO calls, such
+  // as global or declaration scoped initializers and similar.
+  sema::TypedMemoryCallsiteContext NonFunctionTMOContext;
+  bool checkTMOGetTypeDescriptor(QualType T, SourceLocation Loc,
+                                 SourceRange ArgRange);
+
+  void emitTMODiagnosticsForTypeQuery(SourceLocation QueryLocation,
+                                      SourceRange ExpressionRange,
+                                      QualType QueriedType);
+
+public:
+  sema::TypedMemoryCallsiteContext &currentTMOContext() {
+    if (auto *EnclosingFunctionScope = getEnclosingFunction())
+      return EnclosingFunctionScope->TMOContext;
+    return NonFunctionTMOContext;
+  }
+
+  // While performing semantic analysis of full expressions or initializers
+  // we accumulate all the allocation calls in that expression, and the
+  // casts of the results of any such allocation calls. At the end of the
+  // expression analysis we perform the TMO inference and diagnostics of any
+  // such calls we've encountered.
+  void finalizeOutstandingTMOCandidates() {
+    currentTMOContext().finalizeOutstandingTMOCandidates(*this);
+  }
+  /// @}
 };
 
 DeductionFailureInfo

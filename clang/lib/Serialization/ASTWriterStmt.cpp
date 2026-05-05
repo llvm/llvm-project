@@ -998,6 +998,45 @@ void ASTStmtWriter::VisitOMPIteratorExpr(OMPIteratorExpr *E) {
   Code = serialization::EXPR_OMP_ITERATOR;
 }
 
+static void writeInferredTypeInfo(ASTRecordWriter &Record,
+                                  InferredTypeInfo &TMOInference) {
+  Record.push_back(static_cast<uint64_t>(TMOInference.InferredCallsiteFlags));
+  if (!TMOInference.Type) {
+    Record.writeBool(false);
+    return;
+  }
+  Record.writeBool(true);
+
+  const InferredAllocationType &Type = *TMOInference.Type;
+  InferredAllocationType::TypeKind Kind = Type.kind();
+  Record.push_back(static_cast<uint64_t>(Kind));
+  if (auto *Fixed = Type.asObject()) {
+    Record.AddTypeRef(Fixed->Type);
+    return;
+  }
+  if (auto *Array = Type.asArray()) {
+    Record.writeBool(Array->IsConstantSize);
+    Record.AddTypeRef(Array->ElementType);
+    return;
+  }
+  if (auto *PrefixedArrayType = Type.asPrefixedArray()) {
+    Record.writeBool(PrefixedArrayType->IsConstantSize);
+    Record.AddTypeRef(PrefixedArrayType->HeaderType);
+    auto ElementType = PrefixedArrayType->ElementType;
+    Record.writeBool(ElementType.has_value());
+    if (ElementType)
+      Record.AddTypeRef(*ElementType);
+    return;
+  }
+  assert(Type.asTuple() || Type.asUnknownLayout());
+  if (auto *UnknownLayout = Type.asUnknownLayout())
+    Record.writeBool(UnknownLayout->isConstantSize());
+  ArrayRef<QualType> Entries = Type.entries();
+  Record.writeUInt32(Entries.size());
+  for (QualType E : Entries)
+    Record.AddTypeRef(E);
+}
+
 void ASTStmtWriter::VisitCallExpr(CallExpr *E) {
   VisitExpr(E);
 
@@ -1008,6 +1047,10 @@ void ASTStmtWriter::VisitCallExpr(CallExpr *E) {
   CurrentPackingBits.addBit(E->isCoroElideSafe());
   CurrentPackingBits.addBit(E->usesMemberSyntax());
 
+  std::optional<InferredTypeInfo> TMOInference =
+      Record.getASTContext().getInferredInfoForCall(E);
+  CurrentPackingBits.addBit(TMOInference.has_value());
+
   Record.AddSourceLocation(E->getRParenLoc());
   Record.AddStmt(E->getCallee());
   for (CallExpr::arg_iterator Arg = E->arg_begin(), ArgEnd = E->arg_end();
@@ -1016,9 +1059,11 @@ void ASTStmtWriter::VisitCallExpr(CallExpr *E) {
 
   if (E->hasStoredFPFeatures())
     Record.push_back(E->getFPFeatures().getAsOpaqueInt());
+  if (TMOInference)
+    writeInferredTypeInfo(Record, *TMOInference);
 
   if (!E->hasStoredFPFeatures() && !static_cast<bool>(E->getADLCallKind()) &&
-      !E->isCoroElideSafe() && !E->usesMemberSyntax() &&
+      !E->isCoroElideSafe() && !E->usesMemberSyntax() && !TMOInference &&
       E->getStmtClass() == Stmt::CallExprClass)
     AbbrevToUse = Writer.getCallExprAbbrev();
 

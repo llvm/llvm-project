@@ -4816,6 +4816,10 @@ static bool CheckExtensionTraitOperandType(Sema &S, QualType T,
       return false;
     }
   }
+  if ((T->isVoidType() || T->isFunctionType()) &&
+      TraitKind == UETT_TMOGetTypeDescriptor) {
+    return true;
+  }
   return true;
 }
 
@@ -5208,6 +5212,9 @@ bool Sema::CheckUnaryExprOrTypeTraitOperand(QualType ExprType,
   if (ExprKind == UETT_PtrAuthTypeDiscriminator)
     return checkPtrAuthTypeDiscriminatorOperandType(*this, ExprType, OpLoc,
                                                     ExprRange);
+
+  if (ExprKind == UETT_TMOGetTypeDescriptor)
+    return checkTMOGetTypeDescriptor(ExprType, OpLoc, ExprRange);
 
   // Explicitly list some types as extensions.
   if (!CheckExtensionTraitOperandType(*this, ExprType, OpLoc, ExprRange,
@@ -7331,6 +7338,7 @@ ExprResult Sema::ActOnCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
     DiagCompat(Fn->getExprLoc(), diag_compat::adl_only_template_id)
         << ULE->getName();
   }
+  currentTMOContext().recordTMOInferenceCandidate(*this, Call.get());
 
   if (LangOpts.OpenMP)
     Call = OpenMP().ActOnOpenMPCall(Call, Scope, LParenLoc, ArgExprs, RParenLoc,

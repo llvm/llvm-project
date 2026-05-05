@@ -23,6 +23,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/CleanupInfo.h"
 #include "clang/Sema/DeclSpec.h"
+#include "clang/Sema/TypedMemoryCallsiteContext.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/MapVector.h"
@@ -113,6 +114,8 @@ protected:
 public:
   /// What kind of scope we are describing.
   ScopeKind Kind : 3;
+
+  TypedMemoryCallsiteContext TMOContext;
 
   /// Whether this function contains a VLA, \@try, try, C++
   /// initializer, or anything else that can't be jumped past.

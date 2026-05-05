@@ -1996,3 +1996,6 @@ def ExperimentalOption : DiagGroup<"experimental-option">;
 
 // Warnings about unguarded usages of AMDGPU target specific constructs
 def UnguardedBuiltinUsageAMDGPU : DiagGroup<"amdgpu-unguarded-builtin-usage">;
+
+
+def TMODiagnosticRemarks : DiagGroup<"tmo-remarks">;

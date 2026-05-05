@@ -11641,6 +11641,8 @@ def err_duplicate_attribute
     : Error<"attribute %0 is already applied with different arguments">;
 def err_disallowed_duplicate_attribute : Error<
   "attribute %0 cannot appear more than once on a declaration">;
+def err_incompatible_duplicate_attribute : Error<
+  "attribute %0 is already applied with different arguments">;
 
 def warn_sync_fetch_and_nand_semantics_change : Warning<
   "the semantics of this intrinsic changed with GCC "
@@ -15231,4 +15233,42 @@ def err_cuda_device_kernel_launch_not_supported
 def err_cuda_device_kernel_launch_require_rdc
     : Error<"kernel launch from __device__ or __global__ function requires "
             "relocatable device code (i.e. requires -fgpu-rdc)">;
+
+// TMO warnings and notes
+def err_tmo_non_function : Error<
+  "the typed_memory_operations attribute can only be applied to functions">;
+
+def err_tmo_invalid_inferred_parameter_type : Error<
+  "invalid parameter type for inference at index %0. %1 is not an integer type">;
+
+def err_tmo_function_kind_error : Error<
+  "%select{untyped|typed}0 memory operation %1 %select{cannot be a variadic function|cannot be an instance method|must have a prototype|must be a function}2">;
+
+def err_tmo_rewrite_target_is_overloaded : Error<
+  "typed memory operation %0 has multiple overloads">;
+
+def err_tmo_rewrite_target_type_mismatch : Error<
+  "typed memory operation %0 has incompatible type (%diff{$ vs $|}1,2)">;
+
+def note_tmo_rewrite_target_type_mismatch : Note<
+  "rewrite target here">;
+
+def warn_tmo_inference_failed
+    : Warning<"could not infer allocation type in call to %0">,
+      InGroup<DiagGroup<"typed-memory-inference-failure">>,
+      DefaultIgnore;
+def remark_tmo_passed_type : Remark<
+  "passing TMO information for %0%1 to %2%select{ (retargeted from %4)|}3">,
+  InGroup<TMODiagnosticRemarks>;
+
+def note_tmo_failed_inference_source
+    : Note<"unable to infer allocation type from expression %0">;
+def note_tmo_inference_result : Note<"inferred %0 from %select{expression|cast "
+                                     "of result from call to}1 %2">;
+def note_tmo_type_encoding : Note<"encoding %0%1 as %2. %3">;
+def remark_tmo_get_descriptor_info
+    : Remark<"__builtin_tmo_get_type_descriptor reported %0 as %1. Type "
+             "semantics: %2">,
+      InGroup<TMODiagnosticRemarks>;
+
 } // end of sema component.
