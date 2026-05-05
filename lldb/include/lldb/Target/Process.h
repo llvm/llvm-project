@@ -2310,6 +2310,13 @@ public:
 
   bool IsBreakpointSitePhysicallyEnabled(const BreakpointSite &site);
 
+  /// Reports whether this process should delay physically enabling/disabling
+  /// breakpoints until the process is about to resume. The default honors the
+  /// user-facing `target.process.use-delayed-breakpoints` setting.
+  virtual bool ShouldUseDelayedBreakpoints() const {
+    return GetUseDelayedBreakpoints();
+  }
+
   // BreakpointLocations use RemoveConstituentFromBreakpointSite to remove
   // themselves from the constituent's list of this breakpoint sites.
   void RemoveConstituentFromBreakpointSite(lldb::user_id_t site_id,
