@@ -8,8 +8,8 @@
 ///
 /// \file
 /// This file contains the declaration of the mlir::NonFloatComplex type and
-/// mlir::complex type alias. The interface is intended to match the
-/// std::complex type, and the mlir::complex alias defers to std::complex for
+/// mlir::Complex type alias. The interface is intended to match the
+/// std::complex type, and the mlir::Complex alias defers to std::complex for
 /// builtin floating point types.
 ///
 //===----------------------------------------------------------------------===//
