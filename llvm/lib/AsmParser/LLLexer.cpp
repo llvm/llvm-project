@@ -601,6 +601,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(unwind);
   KEYWORD(datalayout);
   KEYWORD(volatile);
+  KEYWORD(elementwise);
   KEYWORD(atomic);
   KEYWORD(unordered);
   KEYWORD(monotonic);

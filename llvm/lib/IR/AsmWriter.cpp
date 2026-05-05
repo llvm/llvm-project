@@ -4484,8 +4484,11 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
     Out << ' ' << CI->getPredicate();
 
   // Print out the atomicrmw operation
-  if (const auto *RMWI = dyn_cast<AtomicRMWInst>(&I))
+  if (const auto *RMWI = dyn_cast<AtomicRMWInst>(&I)) {
+    if (RMWI->isElementwise())
+      Out << " elementwise";
     Out << ' ' << AtomicRMWInst::getOperationName(RMWI->getOperation());
+  }
 
   // Print out the type of the operands...
   const Value *Operand = I.getNumOperands() ? I.getOperand(0) : nullptr;
