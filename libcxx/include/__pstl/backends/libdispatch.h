@@ -241,7 +241,7 @@ struct __cpu_traits<__libdispatch_backend_tag> {
       auto __this_chunk_size = __chunk == 0 ? __partitions.__first_chunk_size_ : __partitions.__chunk_size_;
       auto __index           = __chunk == 0 ? 0
                                             : (__chunk * __partitions.__chunk_size_) +
-                                        (__partitions.__first_chunk_size_ - __partitions.__chunk_size_);
+                                                  (__partitions.__first_chunk_size_ - __partitions.__chunk_size_);
       if (__this_chunk_size != 1) {
         std::__construct_at(
             __values.get() + __chunk,
@@ -307,7 +307,7 @@ private:
       auto __this_chunk_size = __chunk == 0 ? __partitions.__first_chunk_size_ : __partitions.__chunk_size_;
       auto __index           = __chunk == 0 ? 0
                                             : (__chunk * __partitions.__chunk_size_) +
-                                        (__partitions.__first_chunk_size_ - __partitions.__chunk_size_);
+                                                  (__partitions.__first_chunk_size_ - __partitions.__chunk_size_);
       std::__construct_at(
           __chunk_totals.get() + __chunk,
           std::transform_reduce(
@@ -327,7 +327,7 @@ private:
       auto __this_chunk_size = __chunk == 0 ? __partitions.__first_chunk_size_ : __partitions.__chunk_size_;
       auto __index           = __chunk == 0 ? 0
                                             : (__chunk * __partitions.__chunk_size_) +
-                                        (__partitions.__first_chunk_size_ - __partitions.__chunk_size_);
+                                                  (__partitions.__first_chunk_size_ - __partitions.__chunk_size_);
       __phase3(__first + __index,
                __first + __index + __this_chunk_size,
                __result + __index,
