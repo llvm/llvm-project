@@ -3028,6 +3028,19 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
       F->addTypeMetadata(0, Id);
     }
   }
+
+  // Attach "sycl-module-id" to sycl_external function definitions to mark
+  // them as entry points for per-translation-unit device-code splitting.
+  if (getLangOpts().SYCLIsDevice) {
+    if (const auto *FD = dyn_cast<FunctionDecl>(D))
+      if (FD->hasAttr<SYCLExternalAttr>())
+        addSYCLModuleIdAttr(F);
+  }
+}
+
+void CodeGenModule::addSYCLModuleIdAttr(llvm::Function *Fn) {
+  assert(getLangOpts().SYCLIsDevice);
+  Fn->addFnAttr("sycl-module-id", getModule().getModuleIdentifier());
 }
 
 void CodeGenModule::SetCommonAttributes(GlobalDecl GD, llvm::GlobalValue *GV) {
