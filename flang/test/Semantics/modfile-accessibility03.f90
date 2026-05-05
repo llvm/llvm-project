@@ -9,6 +9,6 @@ module testmod
   use basemod
   implicit none
   private basemod
-  !ERROR: The accessibility of entities from module 'basemod' has already been specified
+  !ERROR: The name of module 'basemod' shall appear at most once in all of the ACCESS statements in a module
   public basemod
 end module
