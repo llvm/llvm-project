@@ -64,6 +64,10 @@ Makes programs 10x faster by doing Special New Thing.
 * The `"nooutline"` attribute is now writen as `nooutline`. Existing IR and
   bitcode will be automatically updated.
 
+* `ConstantPointerNull` can now represent fixed and scalable vector splats of
+  null pointers. Such constants may print as `splat (ptr null)` instead of
+  `zeroinitializer`.
+
 * LLVM IR floating-point literals have greatly changed:
 
   * The old hexadecimal bitwise representation is deprecated and will be removed
@@ -239,6 +243,7 @@ Makes programs 10x faster by doing Special New Thing.
 * Breakpoint commands now accept `.` to refer to the location(s) at which the current thread is stopped. For
   example, `breakpoint disable .` disables the just-hit breakpoint location. Another usage is to automate a
   command to run at the current location: `breakpoint command add -o 'p my_var' .`.
+* The `apropos` command now highlights matching keywords in its output when color is enabled.
 
 #### Deprecated APIs
 

@@ -1869,10 +1869,8 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
     // intrinsics declared to return a struct, not for intrinsics with
     // overloaded return type, in which case the exact struct type will be
     // mangled into the name.
-    SmallVector<Intrinsic::IITDescriptor> Desc;
-    Intrinsic::getIntrinsicInfoTableEntries(F->getIntrinsicID(), Desc);
-    if (Desc.front().Kind == Intrinsic::IITDescriptor::Struct) {
-      auto *FT = F->getFunctionType();
+    if (Intrinsic::hasStructReturnType(F->getIntrinsicID())) {
+      FunctionType *FT = F->getFunctionType();
       auto *NewST = StructType::get(ST->getContext(), ST->elements());
       auto *NewFT = FunctionType::get(NewST, FT->params(), FT->isVarArg());
       std::string Name = F->getName().str();
@@ -1913,7 +1911,7 @@ bool llvm::UpgradeIntrinsicFunction(Function *F, Function *&NewFn,
   if (Intrinsic::ID id = F->getIntrinsicID()) {
     // Only do this if the intrinsic signature is valid.
     SmallVector<Type *> OverloadTys;
-    if (Intrinsic::getIntrinsicSignature(id, F->getFunctionType(), OverloadTys))
+    if (Intrinsic::isSignatureValid(id, F->getFunctionType(), OverloadTys))
       F->setAttributes(
           Intrinsic::getAttributes(F->getContext(), id, F->getFunctionType()));
   }

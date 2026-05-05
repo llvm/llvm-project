@@ -7939,7 +7939,7 @@ define i32 @test_mm512_reduce_max_epi32(<8 x i64> %__W) {
 ; CHECK-LABEL: test_mm512_reduce_max_epi32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; CHECK-NEXT:    vpmaxsd %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vpmaxsd %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; CHECK-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
@@ -7959,7 +7959,7 @@ define i32 @test_mm512_reduce_max_epu32(<8 x i64> %__W) {
 ; CHECK-LABEL: test_mm512_reduce_max_epu32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; CHECK-NEXT:    vpmaxud %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vpmaxud %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; CHECK-NEXT:    vpmaxud %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
@@ -8016,7 +8016,7 @@ define i32 @test_mm512_reduce_min_epi32(<8 x i64> %__W) {
 ; CHECK-LABEL: test_mm512_reduce_min_epi32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; CHECK-NEXT:    vpminsd %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vpminsd %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; CHECK-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
@@ -8036,7 +8036,7 @@ define i32 @test_mm512_reduce_min_epu32(<8 x i64> %__W) {
 ; CHECK-LABEL: test_mm512_reduce_min_epu32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; CHECK-NEXT:    vpminud %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vpminud %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; CHECK-NEXT:    vpminud %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
@@ -8097,7 +8097,7 @@ define i32 @test_mm512_mask_reduce_max_epi32(i16 zeroext %__M, <8 x i64> %__W) {
 ; X86-NEXT:    vpbroadcastd {{.*#+}} zmm1 = [2147483648,2147483648,2147483648,2147483648,2147483648,2147483648,2147483648,2147483648,2147483648,2147483648,2147483648,2147483648,2147483648,2147483648,2147483648,2147483648]
 ; X86-NEXT:    vmovdqa32 %zmm0, %zmm1 {%k1}
 ; X86-NEXT:    vextracti64x4 $1, %zmm1, %ymm0
-; X86-NEXT:    vpmaxsd %zmm0, %zmm1, %zmm0
+; X86-NEXT:    vpmaxsd %ymm0, %ymm1, %ymm0
 ; X86-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; X86-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
@@ -8114,7 +8114,7 @@ define i32 @test_mm512_mask_reduce_max_epi32(i16 zeroext %__M, <8 x i64> %__W) {
 ; X64-NEXT:    vpbroadcastd {{.*#+}} zmm1 = [2147483648,2147483648,2147483648,2147483648,2147483648,2147483648,2147483648,2147483648,2147483648,2147483648,2147483648,2147483648,2147483648,2147483648,2147483648,2147483648]
 ; X64-NEXT:    vmovdqa32 %zmm0, %zmm1 {%k1}
 ; X64-NEXT:    vextracti64x4 $1, %zmm1, %ymm0
-; X64-NEXT:    vpmaxsd %zmm0, %zmm1, %zmm0
+; X64-NEXT:    vpmaxsd %ymm0, %ymm1, %ymm0
 ; X64-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; X64-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
@@ -8139,7 +8139,7 @@ define i32 @test_mm512_mask_reduce_max_epu32(i16 zeroext %__M, <8 x i64> %__W) {
 ; X86-NEXT:    kmovw %eax, %k1
 ; X86-NEXT:    vmovdqa32 %zmm0, %zmm0 {%k1} {z}
 ; X86-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; X86-NEXT:    vpmaxud %zmm1, %zmm0, %zmm0
+; X86-NEXT:    vpmaxud %ymm1, %ymm0, %ymm0
 ; X86-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; X86-NEXT:    vpmaxud %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
@@ -8155,7 +8155,7 @@ define i32 @test_mm512_mask_reduce_max_epu32(i16 zeroext %__M, <8 x i64> %__W) {
 ; X64-NEXT:    kmovw %edi, %k1
 ; X64-NEXT:    vmovdqa32 %zmm0, %zmm0 {%k1} {z}
 ; X64-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; X64-NEXT:    vpmaxud %zmm1, %zmm0, %zmm0
+; X64-NEXT:    vpmaxud %ymm1, %ymm0, %ymm0
 ; X64-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; X64-NEXT:    vpmaxud %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
@@ -8227,7 +8227,7 @@ define i32 @test_mm512_mask_reduce_min_epi32(i16 zeroext %__M, <8 x i64> %__W) {
 ; X86-NEXT:    vpbroadcastd {{.*#+}} zmm1 = [2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647]
 ; X86-NEXT:    vmovdqa32 %zmm0, %zmm1 {%k1}
 ; X86-NEXT:    vextracti64x4 $1, %zmm1, %ymm0
-; X86-NEXT:    vpminsd %zmm0, %zmm1, %zmm0
+; X86-NEXT:    vpminsd %ymm0, %ymm1, %ymm0
 ; X86-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; X86-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
@@ -8244,7 +8244,7 @@ define i32 @test_mm512_mask_reduce_min_epi32(i16 zeroext %__M, <8 x i64> %__W) {
 ; X64-NEXT:    vpbroadcastd {{.*#+}} zmm1 = [2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647]
 ; X64-NEXT:    vmovdqa32 %zmm0, %zmm1 {%k1}
 ; X64-NEXT:    vextracti64x4 $1, %zmm1, %ymm0
-; X64-NEXT:    vpminsd %zmm0, %zmm1, %zmm0
+; X64-NEXT:    vpminsd %ymm0, %ymm1, %ymm0
 ; X64-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; X64-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
@@ -8270,7 +8270,7 @@ define i32 @test_mm512_mask_reduce_min_epu32(i16 zeroext %__M, <8 x i64> %__W) {
 ; X86-NEXT:    vpternlogd {{.*#+}} zmm1 = -1
 ; X86-NEXT:    vmovdqa32 %zmm0, %zmm1 {%k1}
 ; X86-NEXT:    vextracti64x4 $1, %zmm1, %ymm0
-; X86-NEXT:    vpminud %zmm0, %zmm1, %zmm0
+; X86-NEXT:    vpminud %ymm0, %ymm1, %ymm0
 ; X86-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; X86-NEXT:    vpminud %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
@@ -8287,7 +8287,7 @@ define i32 @test_mm512_mask_reduce_min_epu32(i16 zeroext %__M, <8 x i64> %__W) {
 ; X64-NEXT:    vpternlogd {{.*#+}} zmm1 = -1
 ; X64-NEXT:    vmovdqa32 %zmm0, %zmm1 {%k1}
 ; X64-NEXT:    vextracti64x4 $1, %zmm1, %ymm0
-; X64-NEXT:    vpminud %zmm0, %zmm1, %zmm0
+; X64-NEXT:    vpminud %ymm0, %ymm1, %ymm0
 ; X64-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; X64-NEXT:    vpminud %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]

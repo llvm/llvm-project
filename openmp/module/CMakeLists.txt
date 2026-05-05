@@ -87,3 +87,5 @@ if (BUILD_FORTRAN_MODULES)
     DESTINATION ${destination}
   )
 endif ()
+
+openmp_register_meta_dep(libomp-mod)

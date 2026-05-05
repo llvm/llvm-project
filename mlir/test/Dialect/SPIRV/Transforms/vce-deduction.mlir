@@ -303,3 +303,31 @@ spirv.module Physical64 GLSL450 attributes {
   spirv.GlobalVariable @recursive:
     !spirv.ptr<!spirv.struct<rec, (!spirv.ptr<!spirv.struct<rec>, StorageBuffer>)>, StorageBuffer>
 }
+
+// CHECK: requires #spirv.vce<v1.0, [Linkage, Shader, Matrix], [SPV_KHR_linkonce_odr]>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.5, [Shader, Linkage], [SPV_KHR_linkonce_odr]>,
+    #spirv.resource_limits<>>
+} {
+  spirv.func @linkonce_odr_fn() "None" attributes {
+    linkage_attributes = #spirv.linkage_attributes<
+      linkage_name = "linkonce_odr_fn",
+      linkage_type = <LinkOnceODR>>
+  } {
+    spirv.Return
+  }
+}
+
+// CHECK: requires #spirv.vce<v1.0, [Linkage, Shader, Matrix], [SPV_AMD_weak_linkage]>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.5, [Shader, Linkage], [SPV_AMD_weak_linkage]>,
+    #spirv.resource_limits<>>
+} {
+  spirv.GlobalVariable @weak_var {
+    linkage_attributes = #spirv.linkage_attributes<
+      linkage_name = "weak_var",
+      linkage_type = <Weak>>
+  } : !spirv.ptr<i32, Private>
+}
