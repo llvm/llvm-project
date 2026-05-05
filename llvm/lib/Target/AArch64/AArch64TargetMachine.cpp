@@ -872,9 +872,6 @@ void AArch64PassConfig::addPostRegAlloc() {
 }
 
 void AArch64PassConfig::addPreSched2() {
-  // Apply code layout optimizations for instruction pairs.
-  if (getOptLevel() != CodeGenOptLevel::None)
-    addPass(createAArch64CodeLayoutOptPass());
   // Lower homogeneous frame instructions
   if (EnableHomogeneousPrologEpilog)
     addPass(createAArch64LowerHomogeneousPrologEpilogPass());
@@ -926,6 +923,11 @@ void AArch64PassConfig::addPreEmitPass() {
   if (TM->getOptLevel() != CodeGenOptLevel::None && EnableCollectLOH &&
       TM->getTargetTriple().isOSBinFormatMachO())
     addPass(createAArch64CollectLOHPass());
+
+  // Apply code layout optimizations. Run late so detection reflects the
+  // final MI stream.
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addPass(createAArch64CodeLayoutOptPass());
 }
 
 void AArch64PassConfig::addPostBBSections() {
