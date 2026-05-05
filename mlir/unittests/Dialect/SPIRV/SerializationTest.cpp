@@ -260,16 +260,17 @@ bool hasOpcode(SmallVectorImpl<uint32_t> &binary, spirv::Opcode target) {
   return false;
 }
 
-bool hasLongCompositesCapabilityAndExtension(SmallVectorImpl<uint32_t> &b) {
+bool hasLongCompositesCapabilityAndExtension(SmallVectorImpl<uint32_t> &binary) {
   bool foundCap = false;
   bool foundExt = false;
   size_t offset = spirv::kHeaderWordCount;
-  while (offset < b.size()) {
-    uint32_t wordCount = b[offset] >> 16;
-    if (!wordCount || offset + wordCount > b.size())
+  size_t binarySize = binary.size();
+  while (offset < binarySize) {
+    uint32_t wordCount = binary[offset] >> 16;
+    if (!wordCount || offset + wordCount > binarySize)
       break;
-    auto op = static_cast<spirv::Opcode>(b[offset] & 0xffff);
-    ArrayRef<uint32_t> operands(b.data() + offset + 1, wordCount - 1);
+    auto op = static_cast<spirv::Opcode>(binary[offset] & 0xffff);
+    ArrayRef<uint32_t> operands(binary.data() + offset + 1, wordCount - 1);
     if (op == spirv::Opcode::OpCapability && !operands.empty() &&
         operands[0] ==
             static_cast<uint32_t>(spirv::Capability::LongCompositesINTEL))
@@ -288,10 +289,11 @@ bool hasLongCompositesCapabilityAndExtension(SmallVectorImpl<uint32_t> &b) {
 
 // Verifies that no instruction in the binary has a word count exceeding the
 // SPIR-V 16-bit limit (which would mean the splitting logic failed).
-bool allInstructionsWithinWordLimit(SmallVectorImpl<uint32_t> &b) {
+bool allInstructionsWithinWordLimit(SmallVectorImpl<uint32_t> &binary) {
   size_t offset = spirv::kHeaderWordCount;
-  while (offset < b.size()) {
-    uint32_t wordCount = b[offset] >> 16;
+  size_t binarySize = binary.size();
+  while (offset < binarySize) {
+    uint32_t wordCount = binary[offset] >> 16;
     if (!wordCount || wordCount > spirv::kMaxWordCount)
       return false;
     offset += wordCount;

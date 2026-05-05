@@ -145,13 +145,13 @@ void spirv::Deserializer::mergeLongCompositeContinuations(
   if (!isNextContinuation())
     return;
 
-  mergedStorage.assign(operands.begin(), operands.end());
+  mergedStorage.assign(operands);
   do {
     spirv::Opcode contOpcode;
     ArrayRef<uint32_t> contOperands;
     if (failed(sliceInstruction(contOpcode, contOperands, *continuationOp)))
       return;
-    mergedStorage.append(contOperands.begin(), contOperands.end());
+    llvm::append_range(mergedStorage, contOperands);
   } while (isNextContinuation());
   operands = mergedStorage;
 }
