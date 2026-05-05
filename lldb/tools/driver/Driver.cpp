@@ -651,11 +651,10 @@ void Driver::UpdateWindowSize() {
   }
 }
 
-void sigint_handler(int signo) {
 #ifdef _WIN32
+void sigint_handler(int signo) {
   // Restore handler as it is not persistent on Windows.
   signal(SIGINT, sigint_handler);
-#endif
 
   static std::atomic_flag g_interrupt_sent = ATOMIC_FLAG_INIT;
   if (g_driver != nullptr) {
@@ -668,6 +667,7 @@ void sigint_handler(int signo) {
 
   _exit(signo);
 }
+#endif
 
 static void printHelp(LLDBOptTable &table, llvm::StringRef tool_name) {
   std::string usage_str = tool_name.str() + " [options]";
@@ -781,14 +781,40 @@ int main(int argc, char const *argv[]) {
   // Setup LLDB signal handlers once the debugger has been initialized.
   SBDebugger::PrintDiagnosticsOnError();
 
-  //  FIXME: Migrate the SIGINT handler to be handled by the signal loop below.
+#ifdef _WIN32
   signal(SIGINT, sigint_handler);
-#if !defined(_WIN32)
+#else
   signal(SIGPIPE, SIG_IGN);
 
   // Handle signals in a MainLoop running on a separate thread.
   MainLoop signal_loop;
   Status signal_status;
+
+  auto sigint_handler = signal_loop.RegisterSignal(
+      SIGINT,
+      [&](MainLoopBase &) {
+        // Temporarily restore the default disposition so that a second SIGINT
+        // delivered while DispatchInputInterrupt is running hard-terminates
+        // the process. This preserves the "double Ctrl-C to force exit"
+        // escape hatch users rely on when the debugger is unresponsive.
+        struct sigaction old_action;
+        struct sigaction new_action = {};
+        new_action.sa_handler = SIG_DFL;
+        sigemptyset(&new_action.sa_mask);
+
+        int ret = sigaction(SIGINT, &new_action, &old_action);
+        UNUSED_IF_ASSERT_DISABLED(ret);
+        assert(ret == 0 && "sigaction failed");
+
+        if (g_driver)
+          g_driver->GetDebugger().DispatchInputInterrupt();
+
+        ret = sigaction(SIGINT, &old_action, nullptr);
+        UNUSED_IF_ASSERT_DISABLED(ret);
+        assert(ret == 0 && "sigaction failed");
+      },
+      signal_status);
+  assert(sigint_handler && signal_status.Success());
 
   auto sigwinch_handler = signal_loop.RegisterSignal(
       SIGWINCH,
