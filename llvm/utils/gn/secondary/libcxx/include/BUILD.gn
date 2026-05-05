@@ -1671,7 +1671,6 @@ if (current_toolchain == default_toolchain) {
       "cstring",
       "ctgmath",
       "ctime",
-      "ctype.h",
       "cuchar",
       "cwchar",
       "cwctype",
