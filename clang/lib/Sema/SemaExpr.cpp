@@ -12848,10 +12848,7 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
   Expr *RHSStripped = RHS.get()->IgnoreParenImpCasts();
   if (getLangOpts().CPlusPlus && LHSStripped->getType()->isArrayType() &&
       RHSStripped->getType()->isArrayType()) {
-    if (isSFINAEContext()) {
-      // in SFINAE context — don't emit diagnostic, just return
-      return QualType();
-    }
+
     auto IsDeprArrayComparionIgnored =
         getDiagnostics().isIgnored(diag::warn_depr_array_comparison, Loc);
     auto DiagID = getLangOpts().CPlusPlus26 ? diag::warn_array_comparison_cxx26
@@ -12861,6 +12858,8 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
     Diag(Loc, DiagID) << LHS.get()->getSourceRange()
                       << RHS.get()->getSourceRange() << LHSStripped->getType()
                       << RHSStripped->getType();
+    if (getLangOpts().CPlusPlus26)
+      return QualType();
   }
 
   // C++2a [expr.spaceship]p6: If at least one of the operands is of pointer
