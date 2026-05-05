@@ -533,18 +533,24 @@ void Instruction::dropPoisonGeneratingMetadata() {
     eraseMetadata(ID);
 }
 
-bool Instruction::hasPoisonGeneratingReturnAttributes() const {
+bool Instruction::hasPoisonGeneratingAttributes() const {
   if (const auto *CB = dyn_cast<CallBase>(this)) {
-    AttributeSet RetAttrs = CB->getAttributes().getRetAttrs();
-    return RetAttrs.hasAttribute(Attribute::Range) ||
-           RetAttrs.hasAttribute(Attribute::Alignment) ||
-           RetAttrs.hasAttribute(Attribute::NonNull) ||
-           RetAttrs.hasAttribute(Attribute::NoFPClass);
+    auto HasPoisonGeneratingAttributes = [](AttributeSet Attrs) {
+      return Attrs.hasAttribute(Attribute::Range) ||
+             Attrs.hasAttribute(Attribute::Alignment) ||
+             Attrs.hasAttribute(Attribute::NonNull) ||
+             Attrs.hasAttribute(Attribute::NoFPClass);
+    };
+    if (HasPoisonGeneratingAttributes(CB->getRetAttributes()))
+      return true;
+    for (unsigned ArgNo = 0; ArgNo < CB->arg_size(); ArgNo++)
+      if (HasPoisonGeneratingAttributes(CB->getParamAttributes(ArgNo)))
+        return true;
   }
   return false;
 }
 
-void Instruction::dropPoisonGeneratingReturnAttributes() {
+void Instruction::dropPoisonGeneratingAttributes() {
   if (auto *CB = dyn_cast<CallBase>(this)) {
     AttributeMask AM;
     AM.addAttribute(Attribute::Range);
@@ -552,8 +558,10 @@ void Instruction::dropPoisonGeneratingReturnAttributes() {
     AM.addAttribute(Attribute::NonNull);
     AM.addAttribute(Attribute::NoFPClass);
     CB->removeRetAttrs(AM);
+    for (unsigned ArgNo = 0; ArgNo < CB->arg_size(); ArgNo++)
+      CB->removeParamAttrs(ArgNo, AM);
   }
-  assert(!hasPoisonGeneratingReturnAttributes() && "must be kept in sync");
+  assert(!hasPoisonGeneratingAttributes() && "must be kept in sync");
 }
 
 void Instruction::dropUBImplyingAttrsAndUnknownMetadata(
@@ -961,6 +969,7 @@ bool Instruction::hasSameSpecialState(const Instruction *I2,
                cast<AtomicCmpXchgInst>(I2)->getSyncScopeID();
   if (const AtomicRMWInst *RMWI = dyn_cast<AtomicRMWInst>(I1))
     return RMWI->getOperation() == cast<AtomicRMWInst>(I2)->getOperation() &&
+           RMWI->isElementwise() == cast<AtomicRMWInst>(I2)->isElementwise() &&
            RMWI->isVolatile() == cast<AtomicRMWInst>(I2)->isVolatile() &&
            (RMWI->getAlign() == cast<AtomicRMWInst>(I2)->getAlign() ||
             IgnoreAlignment) &&
