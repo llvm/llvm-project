@@ -65,12 +65,6 @@ private:
     /// dynamically based on the size of Buffer.
     mutable void *OffsetCache = nullptr;
 
-    /// Look up a given \p Ptr in the buffer, determining which line it came
-    /// from.
-    LLVM_ABI unsigned getLineNumber(const char *Ptr) const;
-    template <typename T>
-    unsigned getLineNumberSpecialized(const char *Ptr) const;
-
     /// Look up a given \p Ptr in the buffer, determining which line and column
     /// it came from. This method has O(log n) complexity, where n is the number
     /// of lines in the buffer.

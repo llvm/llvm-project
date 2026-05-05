@@ -121,37 +121,6 @@ static std::vector<T> &GetOrCreateOffsetCache(void *&OffsetCache,
 }
 
 template <typename T>
-unsigned SourceMgr::SrcBuffer::getLineNumberSpecialized(const char *Ptr) const {
-  std::vector<T> &Offsets =
-      GetOrCreateOffsetCache<T>(OffsetCache, Buffer.get());
-
-  const char *BufStart = Buffer->getBufferStart();
-  assert(Ptr >= BufStart && Ptr <= Buffer->getBufferEnd());
-  ptrdiff_t PtrDiff = Ptr - BufStart;
-  assert(PtrDiff >= 0 &&
-         static_cast<size_t>(PtrDiff) <= std::numeric_limits<T>::max());
-  T PtrOffset = static_cast<T>(PtrDiff);
-
-  // llvm::lower_bound gives the number of EOL before PtrOffset. Add 1 to get
-  // the line number.
-  return llvm::lower_bound(Offsets, PtrOffset) - Offsets.begin() + 1;
-}
-
-/// Look up a given \p Ptr in the buffer, determining which line it came
-/// from.
-unsigned SourceMgr::SrcBuffer::getLineNumber(const char *Ptr) const {
-  size_t Sz = Buffer->getBufferSize();
-  if (Sz <= std::numeric_limits<uint8_t>::max())
-    return getLineNumberSpecialized<uint8_t>(Ptr);
-  else if (Sz <= std::numeric_limits<uint16_t>::max())
-    return getLineNumberSpecialized<uint16_t>(Ptr);
-  else if (Sz <= std::numeric_limits<uint32_t>::max())
-    return getLineNumberSpecialized<uint32_t>(Ptr);
-  else
-    return getLineNumberSpecialized<uint64_t>(Ptr);
-}
-
-template <typename T>
 std::pair<unsigned, unsigned>
 SourceMgr::SrcBuffer::getLineAndColumnSpecialized(const char *Ptr) const {
   std::vector<T> &Offsets =
