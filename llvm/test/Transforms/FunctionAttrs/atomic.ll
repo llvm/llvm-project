@@ -24,7 +24,7 @@ entry:
 define i32 @load_monotonic(ptr %x) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: define i32 @load_monotonic(
-; CHECK-SAME: ptr readonly captures(none) [[X:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: ptr captures(none) [[X:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    [[R:%.*]] = load atomic i32, ptr [[X]] monotonic, align 4
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -35,7 +35,7 @@ define i32 @load_monotonic(ptr %x) {
 define i32 @load_acquire(ptr %x) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn
 ; CHECK-LABEL: define i32 @load_acquire(
-; CHECK-SAME: ptr readonly captures(none) [[X:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-SAME: ptr captures(none) [[X:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:    [[R:%.*]] = load atomic i32, ptr [[X]] acquire, align 4
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -46,7 +46,7 @@ define i32 @load_acquire(ptr %x) {
 define i32 @load_seq_cst(ptr %x) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn
 ; CHECK-LABEL: define i32 @load_seq_cst(
-; CHECK-SAME: ptr readonly captures(none) [[X:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: ptr captures(none) [[X:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[R:%.*]] = load atomic i32, ptr [[X]] acquire, align 4
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -57,7 +57,7 @@ define i32 @load_seq_cst(ptr %x) {
 define void @store_monotonic(ptr %x) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: define void @store_monotonic(
-; CHECK-SAME: ptr writeonly captures(none) [[X:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr captures(none) [[X:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    store atomic i32 0, ptr [[X]] monotonic, align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -68,7 +68,7 @@ define void @store_monotonic(ptr %x) {
 define void @store_release(ptr %x) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn
 ; CHECK-LABEL: define void @store_release(
-; CHECK-SAME: ptr writeonly captures(none) [[X:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: ptr captures(none) [[X:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    store atomic i32 0, ptr [[X]] release, align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -79,7 +79,7 @@ define void @store_release(ptr %x) {
 define void @store_seq_cst(ptr %x) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn
 ; CHECK-LABEL: define void @store_seq_cst(
-; CHECK-SAME: ptr writeonly captures(none) [[X:%.*]]) #[[ATTR2]] {
+; CHECK-SAME: ptr captures(none) [[X:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    store atomic i32 0, ptr [[X]] seq_cst, align 4
 ; CHECK-NEXT:    ret void
 ;

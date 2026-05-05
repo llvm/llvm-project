@@ -958,9 +958,9 @@ determinePointerAccessAttrs(Argument *A,
     }
 
     case Instruction::Load:
-      // A volatile load has side effects beyond what readonly can be relied
-      // upon.
-      if (cast<LoadInst>(I)->isVolatile())
+      // Volatile and ordered atomic accesses are modelled as reading and
+      // writing the location.
+      if (!cast<LoadInst>(I)->isUnordered())
         return Attribute::None;
 
       IsRead = true;
@@ -971,9 +971,9 @@ determinePointerAccessAttrs(Argument *A,
         // untrackable capture
         return Attribute::None;
 
-      // A volatile store has side effects beyond what writeonly can be relied
-      // upon.
-      if (cast<StoreInst>(I)->isVolatile())
+      // Volatile and ordered atomic accesses are modelled as reading and
+      // writing the location.
+      if (!cast<StoreInst>(I)->isUnordered())
         return Attribute::None;
 
       IsWrite = true;
