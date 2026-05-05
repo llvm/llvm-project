@@ -2000,3 +2000,14 @@ namespace EmptyRecords {
                                   // both-note {{in call}}
   constexpr int testc = f(e3, 3);
 }
+
+namespace RVOPtrIsExtern {
+  struct __ph {
+  } extern const _1;
+  constexpr void test(__ph) {}
+  constexpr bool test_all() {
+    test(_1);
+    return true;
+  }
+  static_assert(test_all(), "");
+}

@@ -17,30 +17,29 @@
 namespace orc_rt::sps_ci {
 
 ORC_RT_SPS_WRAPPER(
-    orc_rt_sps_ci_NativeDylibManager_load_sps_wrapper,
+    orc_rt_ci_sps_NativeDylibManager_load,
     SPSExpected<SPSExecutorAddr>(SPSExecutorAddr, SPSString),
     WrapperFunction::handleWithAsyncMethod(&NativeDylibManager::load))
 
 ORC_RT_SPS_WRAPPER(
-    orc_rt_sps_ci_NativeDylibManager_unload_sps_wrapper,
+    orc_rt_ci_sps_NativeDylibManager_unload,
     SPSError(SPSExecutorAddr, SPSExecutorAddr),
     WrapperFunction::handleWithAsyncMethod(&NativeDylibManager::unload))
 
 ORC_RT_SPS_WRAPPER(
-    orc_rt_sps_ci_NativeDylibManager_lookup_sps_wrapper,
+    orc_rt_ci_sps_NativeDylibManager_lookup,
     SPSExpected<SPSSequence<SPSExecutorAddr>>(SPSExecutorAddr, SPSExecutorAddr,
                                               SPSSequence<SPSString>),
     WrapperFunction::handleWithAsyncMethod(&NativeDylibManager::lookup))
 
 static std::pair<const char *, const void *>
-    orc_rt_sps_ci_NativeDylibManager_sps_interface[] = {
-        ORC_RT_SYMTAB_PAIR(orc_rt_sps_ci_NativeDylibManager_load_sps_wrapper),
-        ORC_RT_SYMTAB_PAIR(orc_rt_sps_ci_NativeDylibManager_unload_sps_wrapper),
-        ORC_RT_SYMTAB_PAIR(
-            orc_rt_sps_ci_NativeDylibManager_lookup_sps_wrapper)};
+    orc_rt_ci_NativeDylibManager_sps_interface[] = {
+        ORC_RT_SYMTAB_PAIR(orc_rt_ci_sps_NativeDylibManager_load),
+        ORC_RT_SYMTAB_PAIR(orc_rt_ci_sps_NativeDylibManager_unload),
+        ORC_RT_SYMTAB_PAIR(orc_rt_ci_sps_NativeDylibManager_lookup)};
 
 Error addNativeDylibManager(SimpleSymbolTable &ST) {
-  return ST.addUnique(orc_rt_sps_ci_NativeDylibManager_sps_interface);
+  return ST.addUnique(orc_rt_ci_NativeDylibManager_sps_interface);
 }
 
 } // namespace orc_rt::sps_ci
