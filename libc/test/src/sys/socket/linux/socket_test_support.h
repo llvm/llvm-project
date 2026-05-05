@@ -44,6 +44,9 @@ class SocketAddressMatcher : public Matcher<SocketAddress> {
   struct sockaddr_un actual_addr;
   socklen_t actual_addrlen;
 
+  static constexpr size_t SUN_PATH_OFFSET =
+      offsetof(struct sockaddr_un, sun_path);
+
 public:
   explicit SocketAddressMatcher(cpp::string_view path) : expected_path(path) {}
 
@@ -55,11 +58,13 @@ public:
     if (actual_addrlen > sizeof(actual_addr))
       return false;
     size_t expected_path_len = expected_path.size();
-    if (expected_path_len + 1 + sizeof(actual_addr.sun_family) > actual_addrlen)
+    if (expected_path_len + 1 + SUN_PATH_OFFSET > actual_addrlen)
+      return false;
+    if (actual_addrlen < SUN_PATH_OFFSET)
       return false;
     cpp::string_view actual_path(
         actual_addr.sun_path,
-        strnlen(actual_addr.sun_path, actual_addrlen - sizeof(sa_family_t)));
+        strnlen(actual_addr.sun_path, actual_addrlen - SUN_PATH_OFFSET));
     return actual_path == expected_path;
   }
 
@@ -67,24 +72,32 @@ public:
     if (actual_addr.sun_family != AF_UNIX) {
       tlog << "Expected address family to be AF_UNIX but got "
            << actual_addr.sun_family << "\n";
+      return;
     }
     if (actual_addrlen > sizeof(actual_addr)) {
       tlog << "Expected address length to be less than or equal to "
            << sizeof(actual_addr) << " but got " << actual_addrlen << "\n";
+      return;
     }
     size_t expected_path_len = expected_path.size();
-    if (expected_path_len + 1 + sizeof(actual_addr.sun_family) >
-        actual_addrlen) {
+    if (expected_path_len + 1 + SUN_PATH_OFFSET > actual_addrlen) {
       tlog << "Expected address length to be less than or equal to "
-           << expected_path_len + 1 + sizeof(actual_addr.sun_family)
-           << " but got " << actual_addrlen << "\n";
+           << expected_path_len + 1 + SUN_PATH_OFFSET << " but got "
+           << actual_addrlen << "\n";
+      return;
+    }
+    if (actual_addrlen < SUN_PATH_OFFSET) {
+      tlog << "Expected address length to be greater than or equal to "
+           << SUN_PATH_OFFSET << " but got " << actual_addrlen << "\n";
+      return;
     }
     cpp::string_view actual_path(
         actual_addr.sun_path,
-        strnlen(actual_addr.sun_path, actual_addrlen - sizeof(sa_family_t)));
+        strnlen(actual_addr.sun_path, actual_addrlen - SUN_PATH_OFFSET));
     if (actual_path != expected_path) {
       tlog << "Expected address path to be " << expected_path << " but got "
            << actual_path << "\n";
+      return;
     }
   }
 };
