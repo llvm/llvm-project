@@ -1052,7 +1052,7 @@ Error writeArchiveToStream(raw_ostream &Out,
   LLVMContext Context;
 
   if (IsWholeArchive)
-    StringTable << "-wholearchive" << '\0';
+    StringTable << Archive::kWholeArchiveString;
   Expected<std::vector<MemberData>> DataOrErr = computeMemberData(
       StringTable, SymNames, Kind, Thin, Deterministic, WriteSymtab,
       isCOFFArchive(Kind) ? &SymMap : nullptr, Context, NewMembers, IsEC, Warn);
