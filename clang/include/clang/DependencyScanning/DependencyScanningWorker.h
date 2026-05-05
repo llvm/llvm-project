@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_DEPENDENCYSCANNING_DEPENDENCYSCANNINGWORKER_H
 #define LLVM_CLANG_DEPENDENCYSCANNING_DEPENDENCYSCANNINGWORKER_H
 
+#include "clang/Basic/AtomicLineLogger.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LLVM.h"
@@ -26,6 +27,7 @@
 namespace clang {
 
 class DependencyOutputOptions;
+class AtomicLineLogger;
 
 namespace tooling {
 class CompilerInstanceWithContext;
