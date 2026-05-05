@@ -2449,10 +2449,6 @@ module std_errno_h [system] {
   header "errno.h"
   export *
 }
-module std_fenv_h [system] {
-  header "fenv.h"
-  export *
-}
 module std_math_h [system] {
   header "math.h"
   export *
