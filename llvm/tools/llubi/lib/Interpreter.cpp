@@ -209,9 +209,8 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
 
   void addNaNCandidate(SmallVectorImpl<APFloat> &Candidates,
                        APFloat Candidate) {
-    APInt Bits = Candidate.bitcastToAPInt();
     if (any_of(Candidates, [&](const APFloat &Existing) {
-          return Existing.bitcastToAPInt() == Bits;
+          return Existing.bitwiseIsEqual(Candidate);
         }))
       return;
     Candidates.push_back(std::move(Candidate));
