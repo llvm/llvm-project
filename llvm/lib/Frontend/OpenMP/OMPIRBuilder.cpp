@@ -4736,16 +4736,15 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
       if (LHSPtr->getType() != RedValue->getType())
         RedValue = Builder.CreatePointerBitCastOrAddrSpaceCast(
             RedValue, LHSPtr->getType());
-      Value *CastRHS = RHS;
       if (RHSPtr->getType() != RHS->getType())
-        CastRHS =
+        RHS =
             Builder.CreatePointerBitCastOrAddrSpaceCast(RHS, RHSPtr->getType());
 
       LHSPtr->replaceUsesWithIf(RedValue, [ReductionFunc](const Use &U) {
         return cast<Instruction>(U.getUser())->getParent()->getParent() ==
                ReductionFunc;
       });
-      RHSPtr->replaceUsesWithIf(CastRHS, [ReductionFunc](const Use &U) {
+      RHSPtr->replaceUsesWithIf(RHS, [ReductionFunc](const Use &U) {
         return cast<Instruction>(U.getUser())->getParent()->getParent() ==
                ReductionFunc;
       });
