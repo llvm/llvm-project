@@ -74,6 +74,11 @@ private:
   /// Invalidate cached block-frequency entries for changed IR scopes.
   void invalidateFunctionFrequencyCache(Any IR);
 
+  /// Return true if a function is eligible for verification.
+  ///
+  /// Applies verifier-local exclusions and optional command-line filtering.
+  bool shouldVerifyFunction(const Function *F) const;
+
   /// Handle module callbacks by delegating each function to function handler.
   void runAfterPass(const Module *M);
 

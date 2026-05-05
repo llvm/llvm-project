@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/PGOVerify.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -38,12 +39,34 @@ static cl::opt<bool>
     VerifyIPGO("verify-ipgo", cl::init(false), cl::Hidden,
                cl::desc("Enable Instrumented PGO verification"));
 
+static cl::list<std::string>
+  VerifyIPGOFuncList("verify-ipgo-funcs", cl::Hidden,
+             cl::desc("Comma-separated list of functions to verify"));
+
 /// Emit a labelled PGO-verify diagnostic to stderr (when enabled).
 static void emitPGOVerifyDiagnostic(const Function *F, StringRef Kind,
                                     const std::string &Msg) {
   if (VerifyIPGOPrintDiagnostics)
     errs() << "PGOVerify# " << Kind << " in function " << F->getName()
            << ": " << Msg << "\n";
+}
+
+bool IPGOVerifier::shouldVerifyFunction(const Function *F) const {
+  if (!F || F->isDeclaration())
+    return false;
+
+  if (F->hasAvailableExternallyLinkage())
+    return false;
+
+  // Cache command-line function filters.
+  static const DenseSet<StringRef> FuncFilter = [] {
+    DenseSet<StringRef> S;
+    for (const auto &Func : VerifyIPGOFuncList)
+      S.insert(Func);
+    return S;
+  }();
+
+  return FuncFilter.empty() || FuncFilter.count(F->getName());
 }
 
 /// Register post-pass diagnostic callbacks for `-verify-ipgo`.
@@ -159,7 +182,7 @@ void IPGOVerifier::runAfterPass(const Module *M) {
 
   // Then run validations using the populated cache.
   for (const Function &F : *M) {
-    if (F.isDeclaration())
+    if (!shouldVerifyFunction(&F))
       continue;
     validateBlockFrequencies(&F);
     validateEntryCountAgainstCallerSum(&F);
@@ -171,6 +194,9 @@ void IPGOVerifier::runAfterPass(const Module *M) {
 /// \param F Function callback payload.
 void IPGOVerifier::runAfterPass(Function *F) {
   if (!F || F->isDeclaration() || !F->getParent())
+    return;
+
+  if (!shouldVerifyFunction(F))
     return;
 
   // Run Use-phase checks only when an InstrProf use summary is present.
