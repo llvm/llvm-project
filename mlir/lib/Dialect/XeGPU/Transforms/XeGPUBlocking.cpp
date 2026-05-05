@@ -195,29 +195,42 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
     return true;
   };
 
-  // Helper lambda to validate scale A/B tiles for DpasMxOp
-  auto validateABScaleTiles =
-      [&](Operation *op, unsigned scaleAOperandIdx, unsigned scaleBOperandIdx,
-          const SmallVector<int64_t> &aTile,
-          const SmallVector<int64_t> &bTile) -> std::optional<int64_t> {
+  // Helper lambda to validate scale A tile for DpasMxOp
+  auto validateScaleATile =
+      [&](Operation *op, unsigned scaleAOperandIdx,
+          const SmallVector<int64_t> &aTile) -> std::optional<int64_t> {
     std::optional<SmallVector<int64_t>> aScaleTile =
         getTileShape(op->getOpOperand(scaleAOperandIdx));
-    std::optional<SmallVector<int64_t>> bScaleTile =
-        getTileShape(op->getOpOperand(scaleBOperandIdx));
 
-    if (!aScaleTile || aScaleTile->size() != 2 || !bScaleTile ||
-        bScaleTile->size() != 2)
+    if (!aScaleTile || aScaleTile->size() != 2)
       return std::nullopt;
 
-    // Validate scale tile dimensions match expected values
-    if ((*aScaleTile)[0] != aTile[0] || (*bScaleTile)[1] != bTile[1])
-      return std::nullopt;
-
-    if ((*aScaleTile)[1] != (*bScaleTile)[0])
+    // Validate scale_a tile: [M_tile, K_scale]
+    // M dimension must match A's M dimension
+    if ((*aScaleTile)[0] != aTile[0])
       return std::nullopt;
 
     // Return the K scale factor
     return (*aScaleTile)[1];
+  };
+
+  // Helper lambda to validate scale B tile for DpasMxOp
+  auto validateScaleBTile =
+      [&](Operation *op, unsigned scaleBOperandIdx,
+          const SmallVector<int64_t> &bTile) -> std::optional<int64_t> {
+    std::optional<SmallVector<int64_t>> bScaleTile =
+        getTileShape(op->getOpOperand(scaleBOperandIdx));
+
+    if (!bScaleTile || bScaleTile->size() != 2)
+      return std::nullopt;
+
+    // Validate scale_b tile: [K_scale, N_tile]
+    // N dimension must match B's N dimension
+    if ((*bScaleTile)[1] != bTile[1])
+      return std::nullopt;
+
+    // Return the K scale factor
+    return (*bScaleTile)[0];
   };
 
   if (isa<xegpu::DpasOp>(op)) {
@@ -250,17 +263,33 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
 
     // Validate scale tiles if present using op-specific accessors
     int64_t kScaleFactor = 1;
-    if (dpasMxOp.getScaleA() && dpasMxOp.getScaleB()) {
-      // Calculate operand indices based on which operands are present
+    std::optional<int64_t> scaleAFactor;
+    std::optional<int64_t> scaleBFactor;
+
+    if (dpasMxOp.getScaleA()) {
       unsigned scaleAOperandIdx = 2 + (dpasMxOp.getAcc() ? 1 : 0);
-      unsigned scaleBOperandIdx = scaleAOperandIdx + 1;
-
-      auto scaleFactor = validateABScaleTiles(op, scaleAOperandIdx,
-                                              scaleBOperandIdx, aTile, bTile);
-      if (!scaleFactor)
+      scaleAFactor = validateScaleATile(op, scaleAOperandIdx, aTile);
+      if (!scaleAFactor)
         return std::nullopt;
+    }
 
-      kScaleFactor = *scaleFactor;
+    if (dpasMxOp.getScaleB()) {
+      unsigned scaleBOperandIdx =
+          2 + (dpasMxOp.getAcc() ? 1 : 0) + (dpasMxOp.getScaleA() ? 1 : 0);
+      scaleBFactor = validateScaleBTile(op, scaleBOperandIdx, bTile);
+      if (!scaleBFactor)
+        return std::nullopt;
+    }
+
+    // If both scales are present, their K dimensions must match
+    if (scaleAFactor && scaleBFactor) {
+      if (*scaleAFactor != *scaleBFactor)
+        return std::nullopt;
+      kScaleFactor = *scaleAFactor;
+    } else if (scaleAFactor) {
+      kScaleFactor = *scaleAFactor;
+    } else if (scaleBFactor) {
+      kScaleFactor = *scaleBFactor;
     }
 
     return SmallVector<int64_t>({aTile[0], aTile[1], bTile[1], kScaleFactor});
