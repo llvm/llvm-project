@@ -185,7 +185,7 @@ define i32 @freeze_add_nsw(i32 %a0) nounwind {
 define <4 x i32> @freeze_add_vec(<4 x i32> %a0) nounwind {
 ; X86-LABEL: freeze_add_vec:
 ; X86:       # %bb.0:
-; X86-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 # [5,5,5,5]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_add_vec:
@@ -202,14 +202,14 @@ define <4 x i32> @freeze_add_vec(<4 x i32> %a0) nounwind {
 define <4 x i32> @freeze_add_vec_undef(<4 x i32> %a0) nounwind {
 ; X86-LABEL: freeze_add_vec_undef:
 ; X86:       # %bb.0:
-; X86-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 # [1,2,3,0]
+; X86-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 # [4,3,2,u]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_add_vec_undef:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; X64-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,2,3,0]
+; X64-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [4,3,2,u]
 ; X64-NEXT:    retq
   %x = add <4 x i32> %a0, <i32 1, i32 2, i32 3, i32 undef>
   %y = freeze <4 x i32> %x

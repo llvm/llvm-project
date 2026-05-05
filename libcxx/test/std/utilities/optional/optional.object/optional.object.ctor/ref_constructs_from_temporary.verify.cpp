@@ -29,12 +29,10 @@ void test() {
   const std::optional<int> co(1);
   std::optional<int> o0(1);
 
-  // expected-error-re@*:* 10 {{call to deleted constructor of 'std::optional<{{.*}}>'}}
+  // expected-error-re@*:* 8 {{call to deleted constructor of 'std::optional<{{.*}}>'}}
   std::optional<const int&> o1{1};             // optional(U&&)
-  std::optional<const int&> o2{o0};            // optional(optional<U>&)
-  std::optional<const int&> o3{co};            // optional(const optional<U>&)
-  std::optional<const int&> o4{std::move(o0)}; // optional(optional<U>&&&)
-  std::optional<const int&> o5{std::move(co)}; // optional(optional<U>&&&)
+  std::optional<const int&> o4{std::move(o0)}; // optional(optional<U>&&)
+  std::optional<const int&> o5{std::move(co)}; // optional(optional<U>&&)
 
   std::optional<const X&> o6{1};              // optional(U&&)
   std::optional<const X&> o7{o0};             // optional(optional<U>&)

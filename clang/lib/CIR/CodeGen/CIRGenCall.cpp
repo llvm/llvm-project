@@ -391,8 +391,13 @@ void CIRGenModule::constructAttributeList(
     attrs.set(cir::CIRDialect::getSideEffectAttrName(),
               cir::SideEffectAttr::get(&getMLIRContext(), sideEffect));
 
-    // TODO(cir): When doing 'return attrs' we need to cover the Restrict and
-    // ReturnsNonNull attributes here.
+    // TODO(cir): Add noalias to returns for malloc-like functions
+    // (__attribute__((malloc)) / __declspec(restrict)).
+
+    if (targetDecl->hasAttr<ReturnsNonNullAttr>() &&
+        !codeGenOpts.NullPointerIsValid)
+      retAttrs.set(mlir::LLVM::LLVMDialect::getNonNullAttrName(),
+                   mlir::UnitAttr::get(&getMLIRContext()));
     if (targetDecl->hasAttr<AnyX86NoCallerSavedRegistersAttr>())
       addUnitAttr(cir::CIRDialect::getNoCallerSavedRegsAttrName());
     // TODO(cir): Implement 'NoCFCheck' attribute here.  This requires
@@ -695,8 +700,8 @@ void CIRGenModule::constructFunctionArgumentAttributes(
   const auto *fd = dyn_cast_or_null<FunctionDecl>(targetDecl);
 
   // Build a parallel array of ParmVarDecls aligned with argAttrs so we can
-  // access parameter-level qualifiers (e.g. restrict) without manual index
-  // arithmetic in the loop.
+  // access parameter-level attributes (e.g. restrict, nonnull) without manual
+  // index arithmetic in the loop.
   SmallVector<const ParmVarDecl *> parmDecls;
   parmDecls.reserve(argAttrs.size());
   if (fd) {
@@ -750,6 +755,17 @@ void CIRGenModule::constructFunctionArgumentAttributes(
         pvd->getType().isRestrictQualified() && !fd->getBuiltinID())
       argAttrList.set(mlir::LLVM::LLVMDialect::getNoAliasAttrName(),
                       mlir::UnitAttr::get(&getMLIRContext()));
+
+    // __attribute__((nonnull)) on pointer parameters.  Checks both
+    // per-parameter and function-level nonnull attributes.
+    if (pvd && argType->isAnyPointerType() && !codeGenOpts.NullPointerIsValid) {
+      unsigned srcIdx = pvd->getFunctionScopeIndex();
+      if (pvd->hasAttr<NonNullAttr>() ||
+          (fd->getAttr<NonNullAttr>() &&
+           fd->getAttr<NonNullAttr>()->isNonNull(srcIdx)))
+        argAttrList.set(mlir::LLVM::LLVMDialect::getNonNullAttrName(),
+                        mlir::UnitAttr::get(&getMLIRContext()));
+    }
   }
 }
 
@@ -1340,6 +1356,7 @@ mlir::Value CIRGenFunction::emitRuntimeCall(mlir::Location loc,
                                             cir::FuncOp callee,
                                             ArrayRef<mlir::Value> args,
                                             mlir::NamedAttrList attrs) {
+
   // TODO(cir): set the calling convention to this runtime call.
   assert(!cir::MissingFeatures::opFuncCallingConv());
 

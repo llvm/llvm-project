@@ -301,6 +301,8 @@ protected:
   /// been created. visitInitializer() then relies on a pointer to this
   /// variable being on top of the stack.
   bool visitInitializer(const Expr *E);
+  /// Similar, but will also pop the pointer.
+  bool visitInitializerPop(const Expr *E);
   bool visitAsLValue(const Expr *E);
   /// Evaluates an expression for side effects and discards the result.
   bool discard(const Expr *E);
@@ -629,6 +631,7 @@ public:
         if (!this->Ctx->emitDestructionPop(Local.Desc, Local.Desc->getLoc()))
           return false;
 
+        this->Ctx->fallthrough(EndLabel);
         this->Ctx->emitLabel(EndLabel);
       } else {
         if (!this->Ctx->emitGetPtrLocal(Local.Offset, E))

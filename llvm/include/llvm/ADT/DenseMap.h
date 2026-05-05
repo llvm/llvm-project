@@ -200,8 +200,8 @@ public:
     return end();
   }
 
-  /// lookup - Return the entry for the specified key, or a default
-  /// constructed value if no such entry exists.
+  /// Return the entry for the specified key, or a default constructed value if
+  /// no such entry exists.
   [[nodiscard]] ValueT lookup(const_arg_type_t<KeyT> Val) const {
     if (const BucketT *Bucket = doFind(Val))
       return Bucket->getSecond();
@@ -219,16 +219,14 @@ public:
     return Default;
   }
 
-  /// at - Return the entry for the specified key, or abort if no such
-  /// entry exists.
+  /// Return the entry for the specified key, or abort if no such entry exists.
   [[nodiscard]] ValueT &at(const_arg_type_t<KeyT> Val) {
     auto Iter = this->find(std::move(Val));
     assert(Iter != this->end() && "DenseMap::at failed due to a missing key");
     return Iter->second;
   }
 
-  /// at - Return the entry for the specified key, or abort if no such
-  /// entry exists.
+  /// Return the entry for the specified key, or abort if no such entry exists.
   [[nodiscard]] const ValueT &at(const_arg_type_t<KeyT> Val) const {
     auto Iter = this->find(std::move(Val));
     assert(Iter != this->end() && "DenseMap::at failed due to a missing key");
@@ -284,7 +282,7 @@ public:
     return {makeIterator(TheBucket), true};
   }
 
-  /// insert - Range insertion of pairs.
+  /// Range insertion of pairs.
   template <typename InputIt> void insert(InputIt I, InputIt E) {
     for (; I != E; ++I)
       insert(*I);
@@ -354,9 +352,8 @@ public:
     return lookupOrInsertIntoBucket(std::move(Key)).first->second;
   }
 
-  /// isPointerIntoBucketsArray - Return true if the specified pointer points
-  /// somewhere into the DenseMap's array of buckets (i.e. either to a key or
-  /// value in the DenseMap).
+  /// Return true if the specified pointer points somewhere into the DenseMap's
+  /// array of buckets (i.e. either to a key or value in the DenseMap).
   [[nodiscard]] bool isPointerIntoBucketsArray(const void *Ptr) const {
     return Ptr >= getBuckets() && Ptr < getBucketsEnd();
   }
@@ -642,10 +639,9 @@ private:
         static_cast<const DenseMapBase *>(this)->doFind(Val));
   }
 
-  /// LookupBucketFor - Lookup the appropriate bucket for Val, returning it in
-  /// FoundBucket.  If the bucket contains the key and a value, this returns
-  /// true, otherwise it returns a bucket with an empty marker or tombstone and
-  /// returns false.
+  /// Lookup the appropriate bucket for Val, returning it in FoundBucket. If the
+  /// bucket contains the key and a value, this returns true, otherwise it
+  /// returns a bucket with an empty marker or tombstone and returns false.
   template <typename LookupKeyT>
   bool LookupBucketFor(const LookupKeyT &Val, BucketT *&FoundBucket) {
     BucketT *BucketsPtr = getBuckets();
@@ -1037,7 +1033,8 @@ private:
     // Note that this cast does not violate aliasing rules as we assert that
     // the memory's dynamic type is the small, inline bucket buffer, and the
     // 'storage' is a POD containing a char buffer.
-#if defined(__SANITIZE_ADDRESS__) || defined(__SANITIZE_HWADDRESS__)
+#if defined(__clang__) &&                                                      \
+    (defined(__SANITIZE_ADDRESS__) || defined(__SANITIZE_HWADDRESS__))
     // Unless it's a sanitizer with container overflow detection. In this case
     // some items in buckets can be partially poisoned, triggering sanitizer
     // report on load.
@@ -1054,7 +1051,8 @@ private:
   const LargeRep *getLargeRep() const {
     assert(!Small);
     // Note, same rule about aliasing as with getInlineBuckets.
-#if defined(__SANITIZE_ADDRESS__) || defined(__SANITIZE_HWADDRESS__)
+#if defined(__clang__) &&                                                      \
+    (defined(__SANITIZE_ADDRESS__) || defined(__SANITIZE_HWADDRESS__))
     __asm__ volatile("" ::: "memory");
 #endif
     return reinterpret_cast<const LargeRep *>(&storage);

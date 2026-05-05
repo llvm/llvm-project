@@ -124,6 +124,11 @@ static cl::opt<std::string> ClWriteSummary(
     cl::desc("Write summary to given YAML file after running pass"),
     cl::Hidden);
 
+// FIXME: Remove in clang 24.
+static cl::opt<bool> EnableJumpTableDebugInfo(
+    "lowertypetests-jump-table-debug-info", cl::init(true), cl::Hidden,
+    cl::desc("Enable debug info generation for jump tables"));
+
 bool BitSetInfo::containsGlobalOffset(uint64_t Offset) const {
   if (Offset < ByteOffset)
     return false;
@@ -1525,9 +1530,8 @@ Triple::ArchType LowerTypeTestsModule::selectJumpTableArmEncoding(
 }
 
 // Create location for each function entry which should look like this:
-// frame #0: __ubsan_check_cfi_icall_jt at sanitizer/ubsan_interface.h:0
-// frame #1: c::c() (.cfi_jt) at sanitizer/ubsan_interface.h:0:0
-// frame #2: .cfi.jumptable.81 at sanitizer/ubsan_interface.h:0:0
+// frame #0: c::c() (.cfi_jt) at sanitizer/ubsan_interface.h:0:0
+// frame #1: __ubsan_check_cfi_icall_jt at sanitizer/ubsan_interface.h:0
 static SmallVector<DILocation *>
 createJumpTableDebugInfo(Function *F, ArrayRef<GlobalTypeMember *> Functions) {
   Module &M = *F->getParent();
@@ -1539,7 +1543,8 @@ createJumpTableDebugInfo(Function *F, ArrayRef<GlobalTypeMember *> Functions) {
   DIBuilder DIB(M, /*AllowUnresolved=*/true, CU);
   DIFile *File = DIB.createFile("ubsan_interface.h", "sanitizer");
   if (!CU) {
-    // Even with debug info enabled it can be missing if not info yet.
+    // Synthetic module (like ld-temp.o), it frequently lacks a DICompileUnit
+    // even if the rest of the program has debug info.
     CU = DIB.createCompileUnit(
         DISourceLanguageName(dwarf::DW_LANG_C), File, "llvm", true, "", 0, "",
         DICompileUnit::DebugEmissionKind::LineTablesOnly);
@@ -1547,16 +1552,13 @@ createJumpTableDebugInfo(Function *F, ArrayRef<GlobalTypeMember *> Functions) {
 
   DISubroutineType *DIFnTy = DIB.createSubroutineType(nullptr);
 
-  DISubprogram *JTSP = DIB.createFunction(File, F->getName(), StringRef(), File,
-                                          0, DIFnTy, 0, DINode::FlagArtificial,
-                                          DISubprogram::SPFlagDefinition);
-  F->setSubprogram(JTSP);
-
-  DILocation *JTLoc = DILocation::get(M.getContext(), 0, 0, JTSP);
-
   DISubprogram *UbsanSP = DIB.createFunction(
-      File, "__ubsan_check_cfi_icall_jt", StringRef(), File, 0, DIFnTy, 0,
+      CU, "__ubsan_check_cfi_icall_jt", {}, File, 0, DIFnTy, 0,
       DINode::FlagArtificial, DISubprogram::SPFlagDefinition);
+
+  F->setSubprogram(UbsanSP);
+
+  DILocation *UbsanLoc = DILocation::get(M.getContext(), 0, 0, UbsanSP);
 
   SmallVector<DILocation *> Locations;
   Locations.reserve(Functions.size());
@@ -1565,12 +1567,12 @@ createJumpTableDebugInfo(Function *F, ArrayRef<GlobalTypeMember *> Functions) {
     StringRef FuncName = Func->getGlobal()->getName();
     FuncName.consume_back(".cfi");
     DISubprogram *JumpSP = DIB.createFunction(
-        File, (FuncName + ".cfi_jt").str(), StringRef(), File, 0, DIFnTy, 0,
+        CU, (FuncName + ".cfi_jt").str(), {}, File, 0, DIFnTy, 0,
         DINode::FlagArtificial, DISubprogram::SPFlagDefinition);
 
-    DILocation *EntryLoc = JTLoc;
-    EntryLoc = DILocation::get(M.getContext(), 0, 0, JumpSP, EntryLoc);
-    EntryLoc = DILocation::get(M.getContext(), 0, 0, UbsanSP, EntryLoc);
+    DILocation *EntryLoc =
+        DILocation::get(M.getContext(), 0, 0, JumpSP, UbsanLoc);
+
     Locations.push_back(EntryLoc);
   }
 
@@ -1586,8 +1588,7 @@ void LowerTypeTestsModule::createJumpTable(
   IRBuilder<> IRB(BB);
 
   SmallVector<DILocation *> Locations;
-  // FIXME: Support Cross-DSO CFI.
-  if (M.getDwarfVersion() != 0 && !M.getModuleFlag("Cross-DSO CFI"))
+  if (M.getDwarfVersion() != 0 && EnableJumpTableDebugInfo)
     Locations = createJumpTableDebugInfo(F, Functions);
 
   InlineAsm *JumpTableAsm = createJumpTableEntryAsm(JumpTableArch);
