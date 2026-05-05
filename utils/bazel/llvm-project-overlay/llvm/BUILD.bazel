@@ -4845,6 +4845,7 @@ cc_binary(
         ":Core",
         ":IRReader",
         ":Support",
+        ":TargetParser",
         ":config",
     ],
 )

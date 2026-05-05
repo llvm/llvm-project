@@ -9,6 +9,7 @@
 #include "llvm/Object/DXContainer.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Magic.h"
+#include "llvm/MC/DXContainerPSVInfo.h"
 #include "llvm/ObjectYAML/DXContainerYAML.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/Error.h"
@@ -1248,4 +1249,50 @@ TEST(RootSignature, ParseStaticSamplers) {
     ASSERT_EQ(Sampler.ShaderVisibility, 7U);
     ASSERT_EQ(Sampler.Flags, 1U);
   }
+}
+
+// PSVInfo:
+//   Version:         2
+//   ShaderStage:     5
+//   MinimumWaveLaneCount: 0
+//   MaximumWaveLaneCount: 4294967295
+//   NumThreadsX:     8
+//   NumThreadsY:     1
+//   NumThreadsZ:     1
+//   EntryName:       CSMain  <--- not serialized for version < 3
+//   ResourceStride:  0
+//   Resources:       []
+TEST(DXCFile, PSVv2EntryNameNotInStringTable) {
+  // Verify that when EntryName is set but PSV version is < 3,
+  // the entry name does not appear in the serialized string table.
+  mcdxbc::PSVRuntimeInfo PSV;
+  PSV.BaseData.ShaderStage =
+      static_cast<uint8_t>(Triple::EnvironmentType::Compute - Triple::Pixel);
+  PSV.BaseData.MinimumWaveLaneCount = 0;
+  PSV.BaseData.MaximumWaveLaneCount = 0xFFFFFFFF;
+  PSV.BaseData.NumThreadsX = 8;
+  PSV.BaseData.NumThreadsY = 1;
+  PSV.BaseData.NumThreadsZ = 1;
+  PSV.EntryName = "CSMain";
+
+  PSV.finalize(Triple::EnvironmentType::Compute, 2);
+
+  SmallVector<char> Buffer;
+  raw_svector_ostream OS(Buffer);
+  PSV.write(OS, 2);
+
+  // The serialized PSV data should not contain the entry name string.
+  StringRef Data(Buffer.data(), Buffer.size());
+  EXPECT_FALSE(Data.contains("CSMain"));
+
+  // Deserialize and verify the string table contains only null bytes
+  // (size 4 = one null byte padded to 4-byte alignment).
+  DirectX::PSVRuntimeInfo ParsedPSV(Data);
+  ASSERT_THAT_ERROR(ParsedPSV.parse(static_cast<uint16_t>(
+                        Triple::EnvironmentType::Compute - Triple::Pixel)),
+                    Succeeded());
+  EXPECT_EQ(ParsedPSV.getVersion(), 2u);
+  StringRef StrTab = ParsedPSV.getStringTable();
+  EXPECT_EQ(StrTab.size(), 4u);
+  EXPECT_TRUE(llvm::all_of(StrTab, [](char C) { return C == '\0'; }));
 }

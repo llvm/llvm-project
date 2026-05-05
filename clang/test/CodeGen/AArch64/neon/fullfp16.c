@@ -102,6 +102,9 @@ uint16_t test_vceqzh_f16(float16_t a) {
   return vceqzh_f16(a);
 }
 
+//===------------------------------------------------------===//
+// 2.5.1.1.1. Absolute value
+//===------------------------------------------------------===//
 // ALL-LABEL: @test_vabsh_f16
 float16_t test_vabsh_f16(float16_t a) {
 // CIR: {{%.*}} = cir.fabs {{%.*}} : !cir.f16
@@ -112,6 +115,68 @@ float16_t test_vabsh_f16(float16_t a) {
   return vabsh_f16(a);
 }
 
+//===------------------------------------------------------===//
+// 2.5.1.1.2. Absolute difference
+//===------------------------------------------------------===//
+// ALL-LABEL: test_vabdh_f16
+float16_t test_vabdh_f16(float16_t a, float16_t b) {
+// CIR:  cir.call_llvm_intrinsic "aarch64.sisd.fabd" {{.*}} -> !cir.f16
+
+// LLVM-SAME: half {{.*}} [[A:%.*]], half {{.*}} [[B:%.*]])
+// LLVM:  [[ABD:%.*]] = call half @llvm.aarch64.sisd.fabd.f16(half [[A]], half [[B]])
+// LLVM:  ret half [[ABD]]
+  return vabdh_f16(a, b);
+}
+
+//===------------------------------------------------------===//
+// 2.5.1.2.1.  Reciprocal estimate
+//===------------------------------------------------------===//
+// ALL-LABEL: test_vrecpeh_f16
+float16_t test_vrecpeh_f16(float16_t a) {
+// CIR:  cir.call_llvm_intrinsic "aarch64.neon.frecpe" {{.*}} -> !cir.f16
+
+// LLVM-SAME: half {{.*}} [[A:%.*]])
+// LLVM: [[VREC:%.*]] = call half @llvm.aarch64.neon.frecpe.f16(half [[A]])
+// LLVM: ret half [[VREC]]
+  return vrecpeh_f16(a);
+}
+
+// ALL-LABEL: test_vrecpxh_f16
+float16_t test_vrecpxh_f16(float16_t a) {
+// CIR:  cir.call_llvm_intrinsic "aarch64.neon.frecpx" {{.*}} -> !cir.f16
+
+// LLVM-SAME: half {{.*}} [[A:%.*]])
+// LLVM: [[VREC:%.*]] = call half @llvm.aarch64.neon.frecpx.f16(half [[A]])
+// LLVM: ret half [[VREC]]
+  return vrecpxh_f16(a);
+}
+
+//===------------------------------------------------------===//
+// 2.5.1.2.2.  Reciprocal square-root estimate
+//===------------------------------------------------------===//
+// ALL-LABEL: test_vrsqrteh_f16
+float16_t test_vrsqrteh_f16(float16_t a) {
+// CIR:  cir.call_llvm_intrinsic "aarch64.neon.frsqrte" {{.*}} -> !cir.f16
+
+// LLVM-SAME: half {{.*}} [[A:%.*]])
+// LLVM:  [[RND:%.*]] = call half @llvm.aarch64.neon.frsqrte.f16(half [[A]])
+// LLVM:  ret half [[RND]]
+  return vrsqrteh_f16(a);
+}
+
+// ALL-LABEL: test_vrsqrtsh_f16
+float16_t test_vrsqrtsh_f16(float16_t a, float16_t b) {
+// CIR:  cir.call_llvm_intrinsic "aarch64.neon.frsqrts" {{.*}} -> !cir.f16
+
+// LLVM-SAME: half {{.*}} [[A:%.*]], half {{.*}} [[B:%.*]])
+// LLVM:  [[RSQRTS:%.*]] = call half @llvm.aarch64.neon.frsqrts.f16(half [[A]], half [[B]])
+// LLVM:  ret half [[RSQRTS]]
+  return vrsqrtsh_f16(a, b);
+}
+
+//===------------------------------------------------------===//
+// 2.5.4.1. Negate
+//===------------------------------------------------------===//
 // ALL-LABEL: @test_vnegh_f16
 float16_t test_vnegh_f16(float16_t a) {
 // CIR: cir.minus {{.*}} : !cir.f16
@@ -122,6 +187,9 @@ float16_t test_vnegh_f16(float16_t a) {
   return vnegh_f16(a);
 }
 
+//===------------------------------------------------------===//
+// 2.5.1.9.3 Fused multiply-accumulate
+//===------------------------------------------------------===//
 // ALL-LABEL: test_vfmah_f16
 float16_t test_vfmah_f16(float16_t a, float16_t b, float16_t c) {
 // CIR: cir.call_llvm_intrinsic "fma" {{.*}} : (!cir.f16, !cir.f16, !cir.f16) -> !cir.f16
