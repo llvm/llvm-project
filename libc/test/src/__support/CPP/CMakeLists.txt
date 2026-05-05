@@ -131,6 +131,16 @@ add_libc_test(
 )
 
 add_libc_test(
+  expected_test
+  SUITE
+    libc-cpp-utils-tests
+  SRCS
+    expected_test.cpp
+  DEPENDS
+    libc.src.__support.CPP.expected
+)
+
+add_libc_test(
   tuple_test
   SUITE
     libc-cpp-utils-tests

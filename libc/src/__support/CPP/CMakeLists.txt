@@ -197,6 +197,9 @@ add_header_library(
   expected
   HDRS
     expected.h
+  DEPENDS
+    .type_traits
+    .utility
 )
 
 add_object_library(
