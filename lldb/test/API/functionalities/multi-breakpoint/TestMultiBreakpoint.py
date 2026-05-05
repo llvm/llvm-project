@@ -17,7 +17,6 @@ from lldbsuite.test.gdbclientutils import *
 # Runs on systems where we can always predict the software break size
 @skipIf(archs=no_match(["x86_64", "arm64", "aarch64"]))
 class TestMultiBreakpoint(TestBase):
-
     NO_DEBUG_INFO_TESTCASE = True
 
     def check_invalid_packet(self, packet_str):
