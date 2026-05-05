@@ -20,7 +20,7 @@ def get_path_from_clang(args, allow_failure):
         f"--target={config.target_triple}",
         *args,
     ]
-    path = lit.util.runCommandCached(clang_cmd, allow_failure, text=True)
+    path = lit_config.run_command_cached(clang_cmd, allow_failure, text=True)
     return path.strip(), clang_cmd
 
 def find_compiler_libdir():
@@ -580,7 +580,7 @@ if config.target_os == "Darwin":
         # There is no simulator-specific sw_vers/sysctl, so we use the host OS version
         os_detection_prefix = []
 
-    darwin_os_version = lit.util.runCommandCached(
+    darwin_os_version = lit_config.run_command_cached(
         os_detection_prefix + ["sw_vers", "-productVersion"],
         universal_newlines=True,
         text=True,
@@ -598,17 +598,15 @@ if config.target_os == "Darwin":
     config.darwin_os_version = darwin_os_version
 
     # Detect x86_64h
-    try:
-        output = lit.util.runCommandCached(
-            os_detection_prefix + ["sysctl", "hw.cpusubtype"], text=True
-        )
+    output = lit_config.run_command_cached(
+        os_detection_prefix + ["sysctl", "hw.cpusubtype"], text=True, allow_failure=True
+    )
+    if output:
         output_re = re.match("^hw.cpusubtype: ([0-9]+)$", output)
         if output_re:
             cpu_subtype = int(output_re.group(1))
             if cpu_subtype == 8:  # x86_64h
                 config.available_features.add("x86_64h")
-    except:
-        pass
 
     # 32-bit iOS simulator is deprecated and removed in latest Xcode.
     if config.apple_platform == "iossim":
@@ -945,7 +943,7 @@ if config.target_os == "Darwin":
     if lit.util.which("log"):
         # Querying the log can only done by a privileged user so
         # so check if we can query the log.
-        res = lit.util.runCommandCached(
+        res = lit_config.run_command_cached(
             ["log", "show", "--last", "1m", "--predicate", "1 == 0"], allow_failure=True
         )
         if res is not None:
