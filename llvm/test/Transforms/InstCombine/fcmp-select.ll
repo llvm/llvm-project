@@ -595,3 +595,48 @@ define float @test_select_fcmp_uitofp_min(i8 %x) {
   %sel = select i1 %cmp, float 2.550000e+02, float %f
   ret float %sel
 }
+
+define float @test_clamp_select_nnan_ninf_fcmp_no_nnan(float %x) {
+; CHECK-LABEL: @test_clamp_select_nnan_ninf_fcmp_no_nnan(
+; CHECK-NEXT:    [[CMP2DOTINV:%.*]] = fcmp nnan ninf oge float [[X:%.*]], 2.550000e+02
+; CHECK-NEXT:    [[MIN:%.*]] = select nnan ninf i1 [[CMP2DOTINV]], float 2.550000e+02, float [[X]]
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ule float [[X]], 1.000000e+00
+; CHECK-NEXT:    [[R:%.*]] = select nnan ninf i1 [[CMP1]], float 1.000000e+00, float [[MIN]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %cmp2 = fcmp nnan ninf ult float %x, 2.550000e+02
+  %min = select i1 %cmp2, float %x, float 2.550000e+02
+  %cmp1 = fcmp ule float %x, 1.000000e+00
+  %r = select nnan ninf i1 %cmp1, float 1.000000e+00, float %min
+  ret float %r
+}
+
+; Outer select also has nsz; outer fcmp must stay plain on %x.
+define float @test_clamp_outer_select_nnan_ninf_nsz_inner_plain(float %x) {
+; CHECK-LABEL: @test_clamp_outer_select_nnan_ninf_nsz_inner_plain(
+; CHECK-NEXT:    [[MIN:%.*]] = call nnan ninf nsz float @llvm.minnum.f32(float [[X:%.*]], float 2.550000e+02)
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ule float [[X]], 1.000000e+00
+; CHECK-NEXT:    [[R:%.*]] = select nnan ninf nsz i1 [[CMP1]], float 1.000000e+00, float [[MIN]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %cmp2 = fcmp nnan ninf ult float %x, 2.550000e+02
+  %min = select i1 %cmp2, float %x, float 2.550000e+02
+  %cmp1 = fcmp ule float %x, 1.000000e+00
+  %r = select nnan ninf nsz i1 %cmp1, float 1.000000e+00, float %min
+  ret float %r
+}
+
+define <2 x float> @test_clamp_select_nnan_ninf_fcmp_no_nnan_vec(<2 x float> %x) {
+; CHECK-LABEL: @test_clamp_select_nnan_ninf_fcmp_no_nnan_vec(
+; CHECK-NEXT:    [[CMP2DOTINV:%.*]] = fcmp nnan ninf oge <2 x float> [[X:%.*]], splat (float 2.550000e+02)
+; CHECK-NEXT:    [[MIN:%.*]] = select nnan ninf <2 x i1> [[CMP2DOTINV]], <2 x float> splat (float 2.550000e+02), <2 x float> [[X]]
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ule <2 x float> [[X]], splat (float 1.000000e+00)
+; CHECK-NEXT:    [[R:%.*]] = select nnan ninf <2 x i1> [[CMP1]], <2 x float> splat (float 1.000000e+00), <2 x float> [[MIN]]
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %cmp2 = fcmp nnan ninf ult <2 x float> %x, splat (float 2.550000e+02)
+  %min = select <2 x i1> %cmp2, <2 x float> %x, <2 x float> splat (float 2.550000e+02)
+  %cmp1 = fcmp ule <2 x float> %x, splat (float 1.000000e+00)
+  %r = select nnan ninf <2 x i1> %cmp1, <2 x float> splat (float 1.000000e+00), <2 x float> %min
+  ret <2 x float> %r
+}

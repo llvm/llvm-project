@@ -8865,12 +8865,11 @@ llvm::getFlippedStrictnessPredicateAndConstant(CmpPredicate Pred, Constant *C) {
   return std::make_pair(NewPred, NewC);
 }
 
-static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
-                                              FastMathFlags FMF,
-                                              Value *CmpLHS, Value *CmpRHS,
-                                              Value *TrueVal, Value *FalseVal,
-                                              Value *&LHS, Value *&RHS,
-                                              unsigned Depth) {
+static SelectPatternResult
+matchSelectPattern(CmpInst::Predicate Pred, FastMathFlags FMF,
+                   FastMathFlags CmpFMF, Value *CmpLHS, Value *CmpRHS,
+                   Value *TrueVal, Value *FalseVal, Value *&LHS, Value *&RHS,
+                   unsigned Depth) {
   bool HasMismatchedZeros = false;
   if (CmpInst::isFPPredicate(Pred)) {
     // IEEE-754 ignores the sign of 0.0 in comparisons. So if the select has one
@@ -8922,14 +8921,21 @@ static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
   SelectPatternNaNBehavior NaNBehavior = SPNB_NA;
   bool Ordered = false;
 
+  auto NaNFMFFor = [&](const Value *Op) {
+    FastMathFlags Res = CmpFMF;
+    if ((Op == TrueVal || Op == FalseVal) && FMF.noNaNs())
+      Res.setNoNaNs(true);
+    return Res;
+  };
+
   // When given one NaN and one non-NaN input:
   //   - maxnum/minnum (C99 fmaxf()/fminf()) return the non-NaN input.
   //   - A simple C99 (a < b ? a : b) construction will return 'b' (as the
   //     ordered comparison fails), which could be NaN or non-NaN.
   // so here we discover exactly what NaN behavior is required/accepted.
   if (CmpInst::isFPPredicate(Pred)) {
-    bool LHSSafe = isKnownNonNaN(CmpLHS, FMF);
-    bool RHSSafe = isKnownNonNaN(CmpRHS, FMF);
+    bool LHSSafe = isKnownNonNaN(CmpLHS, NaNFMFFor(CmpLHS));
+    bool RHSSafe = isKnownNonNaN(CmpRHS, NaNFMFFor(CmpRHS));
 
     if (LHSSafe && RHSSafe) {
       // Both operands are known non-NaN.
@@ -9202,8 +9208,10 @@ SelectPatternResult llvm::matchDecomposedSelectPattern(
   CmpInst::Predicate Pred = CmpI->getPredicate();
   Value *CmpLHS = CmpI->getOperand(0);
   Value *CmpRHS = CmpI->getOperand(1);
-  if (isa<FPMathOperator>(CmpI) && CmpI->hasNoNaNs())
-    FMF.setNoNaNs();
+  FastMathFlags CmpFMF;
+  // Fast-math flags on the compare instruction.
+  if (auto *FPMO = dyn_cast<FPMathOperator>(CmpI))
+    CmpFMF = FPMO->getFastMathFlags();
 
   // Bail out early.
   if (CmpI->isEquality())
@@ -9216,7 +9224,7 @@ SelectPatternResult llvm::matchDecomposedSelectPattern(
       // -0.0 because there is no corresponding integer value.
       if (*CastOp == Instruction::FPToSI || *CastOp == Instruction::FPToUI)
         FMF.setNoSignedZeros();
-      return ::matchSelectPattern(Pred, FMF, CmpLHS, CmpRHS,
+      return ::matchSelectPattern(Pred, FMF, CmpFMF, CmpLHS, CmpRHS,
                                   cast<CastInst>(TrueVal)->getOperand(0), C,
                                   LHS, RHS, Depth);
     }
@@ -9225,13 +9233,13 @@ SelectPatternResult llvm::matchDecomposedSelectPattern(
       // -0.0 because there is no corresponding integer value.
       if (*CastOp == Instruction::FPToSI || *CastOp == Instruction::FPToUI)
         FMF.setNoSignedZeros();
-      return ::matchSelectPattern(Pred, FMF, CmpLHS, CmpRHS,
-                                  C, cast<CastInst>(FalseVal)->getOperand(0),
-                                  LHS, RHS, Depth);
+      return ::matchSelectPattern(Pred, FMF, CmpFMF, CmpLHS, CmpRHS, C,
+                                  cast<CastInst>(FalseVal)->getOperand(0), LHS,
+                                  RHS, Depth);
     }
   }
-  return ::matchSelectPattern(Pred, FMF, CmpLHS, CmpRHS, TrueVal, FalseVal,
-                              LHS, RHS, Depth);
+  return ::matchSelectPattern(Pred, FMF, CmpFMF, CmpLHS, CmpRHS, TrueVal,
+                              FalseVal, LHS, RHS, Depth);
 }
 
 CmpInst::Predicate llvm::getMinMaxPred(SelectPatternFlavor SPF, bool Ordered) {
