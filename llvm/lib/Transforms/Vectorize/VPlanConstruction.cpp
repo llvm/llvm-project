@@ -1182,7 +1182,7 @@ static bool areAllLoadsDereferenceable(VPBasicBlock *HeaderVPBB,
 
       // Get the pointer SCEV for dereferenceability checking.
       VPValue *Ptr = VPI->getOperand(0);
-      const SCEV *PtrSCEV = vputils::getSCEVExprForVPValue(Ptr, PSE, TheLoop);
+      const SCEV *PtrSCEV = vputils::getSCEVExprForVPValue(Ptr, PSE);
       if (isa<SCEVCouldNotCompute>(PtrSCEV)) {
         LLVM_DEBUG(dbgs() << "LV: Not vectorizing: Found non-dereferenceable "
                              "load with SCEVCouldNotCompute pointer\n");

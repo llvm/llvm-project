@@ -15468,6 +15468,12 @@ PredicatedScalarEvolution::PredicatedScalarEvolution(ScalarEvolution &SE,
   Preds = std::make_unique<SCEVUnionPredicate>(Empty, SE);
 }
 
+const SCEV *PredicatedScalarEvolution::getAddRecExpr(SCEVUse Start,
+                                                     SCEVUse Step,
+                                                     SCEV::NoWrapFlags Flags) {
+  return SE.getAddRecExpr(Start, Step, &L, Flags);
+}
+
 void ScalarEvolution::registerUser(const SCEV *User,
                                    ArrayRef<const SCEV *> Ops) {
   for (const auto *Op : Ops)

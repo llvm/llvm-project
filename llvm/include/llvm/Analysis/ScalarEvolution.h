@@ -2603,6 +2603,10 @@ public:
 
   LLVM_ABI const SCEVPredicate &getPredicate() const;
 
+  /// Forwards to ScalarEvolution::getAddRecExpr, with Loop argument.
+  LLVM_ABI const SCEV *getAddRecExpr(SCEVUse Start, SCEVUse Step,
+                                     SCEV::NoWrapFlags Flags);
+
   /// Returns the SCEV expression of V, in the context of the current SCEV
   /// predicate.  The order of transformations applied on the expression of V
   /// returned by ScalarEvolution is guaranteed to be preserved, even when

@@ -155,7 +155,6 @@ class SinkStoreInfo {
   const SmallPtrSetImpl<VPRecipeBase *> &ExcludeRecipes;
   VPReplicateRecipe &GroupLeader;
   PredicatedScalarEvolution &PSE;
-  const Loop &L;
   VPTypeAnalysis &TypeInfo;
 
   // Return true if \p A and \p B are known to not alias for all VFs in the
@@ -166,9 +165,9 @@ class SinkStoreInfo {
       return false;
 
     VPValue *AddrA = A->getOperand(1);
-    const SCEV *SCEVA = vputils::getSCEVExprForVPValue(AddrA, PSE, &L);
+    const SCEV *SCEVA = vputils::getSCEVExprForVPValue(AddrA, PSE);
     VPValue *AddrB = B->getOperand(1);
-    const SCEV *SCEVB = vputils::getSCEVExprForVPValue(AddrB, PSE, &L);
+    const SCEV *SCEVB = vputils::getSCEVExprForVPValue(AddrB, PSE);
     if (isa<SCEVCouldNotCompute>(SCEVA) || isa<SCEVCouldNotCompute>(SCEVB))
       return false;
 
@@ -199,9 +198,9 @@ class SinkStoreInfo {
 public:
   SinkStoreInfo(const SmallPtrSetImpl<VPRecipeBase *> &ExcludeRecipes,
                 VPReplicateRecipe &GroupLeader, PredicatedScalarEvolution &PSE,
-                const Loop &L, VPTypeAnalysis &TypeInfo)
+                VPTypeAnalysis &TypeInfo)
       : ExcludeRecipes(ExcludeRecipes), GroupLeader(GroupLeader), PSE(PSE),
-        L(L), TypeInfo(TypeInfo) {}
+        TypeInfo(TypeInfo) {}
 
   /// Return true if \p R should be skipped during alias checking, either
   /// because it's in the exclude set or because no-alias can be proven via
@@ -255,7 +254,7 @@ canHoistOrSinkWithNoAliasCheck(const MemoryLocation &MemLoc,
 template <unsigned Opcode>
 static SmallVector<SmallVector<VPReplicateRecipe *, 4>>
 collectGroupedReplicateMemOps(
-    VPlan &Plan, PredicatedScalarEvolution &PSE, const Loop *L,
+    VPlan &Plan, PredicatedScalarEvolution &PSE,
     function_ref<bool(VPReplicateRecipe *)> FilterFn) {
   static_assert(Opcode == Instruction::Load || Opcode == Instruction::Store,
                 "Only Load and Store opcodes supported");
@@ -271,7 +270,7 @@ collectGroupedReplicateMemOps(
 
       // For loads, operand 0 is address; for stores, operand 1 is address.
       VPValue *Addr = RepR->getOperand(IsLoad ? 0 : 1);
-      const SCEV *AddrSCEV = vputils::getSCEVExprForVPValue(Addr, PSE, L);
+      const SCEV *AddrSCEV = vputils::getSCEVExprForVPValue(Addr, PSE);
       if (!isa<SCEVCouldNotCompute>(AddrSCEV))
         RecipesByAddress[AddrSCEV].push_back(RepR);
     }
@@ -4648,8 +4647,7 @@ static VPIRMetadata getCommonMetadata(ArrayRef<VPReplicateRecipe *> Recipes) {
 template <unsigned Opcode>
 static SmallVector<SmallVector<VPReplicateRecipe *, 4>>
 collectComplementaryPredicatedMemOps(VPlan &Plan,
-                                     PredicatedScalarEvolution &PSE,
-                                     const Loop *L) {
+                                     PredicatedScalarEvolution &PSE) {
   static_assert(Opcode == Instruction::Load || Opcode == Instruction::Store,
                 "Only Load and Store opcodes supported");
   constexpr bool IsLoad = (Opcode == Instruction::Load);
@@ -4661,8 +4659,7 @@ collectComplementaryPredicatedMemOps(VPlan &Plan,
     return TypeInfo.inferScalarType(IsLoad ? Recipe : Recipe->getOperand(0));
   };
   auto Groups = collectGroupedReplicateMemOps<Opcode>(
-      Plan, PSE, L,
-      [](VPReplicateRecipe *RepR) { return RepR->isPredicated(); });
+      Plan, PSE, [](VPReplicateRecipe *RepR) { return RepR->isPredicated(); });
   for (auto Recipes : Groups) {
     if (Recipes.size() < 2)
       continue;
@@ -4717,10 +4714,9 @@ findRecipeWithMinAlign(ArrayRef<VPReplicateRecipe *> Group) {
 }
 
 void VPlanTransforms::hoistPredicatedLoads(VPlan &Plan,
-                                           PredicatedScalarEvolution &PSE,
-                                           const Loop *L) {
+                                           PredicatedScalarEvolution &PSE) {
   auto Groups =
-      collectComplementaryPredicatedMemOps<Instruction::Load>(Plan, PSE, L);
+      collectComplementaryPredicatedMemOps<Instruction::Load>(Plan, PSE);
   if (Groups.empty())
     return;
 
@@ -4767,7 +4763,7 @@ void VPlanTransforms::hoistPredicatedLoads(VPlan &Plan,
 
 static bool
 canSinkStoreWithNoAliasCheck(ArrayRef<VPReplicateRecipe *> StoresToSink,
-                             PredicatedScalarEvolution &PSE, const Loop &L,
+                             PredicatedScalarEvolution &PSE,
                              VPTypeAnalysis &TypeInfo) {
   auto StoreLoc = vputils::getMemoryLocation(*StoresToSink.front());
   if (!StoreLoc || !StoreLoc->AATags.Scope)
@@ -4780,22 +4776,21 @@ canSinkStoreWithNoAliasCheck(ArrayRef<VPReplicateRecipe *> StoresToSink,
 
   VPBasicBlock *FirstBB = StoresToSink.front()->getParent();
   VPBasicBlock *LastBB = StoresToSink.back()->getParent();
-  SinkStoreInfo SinkInfo(StoresToSinkSet, *StoresToSink[0], PSE, L, TypeInfo);
+  SinkStoreInfo SinkInfo(StoresToSinkSet, *StoresToSink[0], PSE, TypeInfo);
   return canHoistOrSinkWithNoAliasCheck(*StoreLoc, FirstBB, LastBB, SinkInfo);
 }
 
 void VPlanTransforms::sinkPredicatedStores(VPlan &Plan,
-                                           PredicatedScalarEvolution &PSE,
-                                           const Loop *L) {
+                                           PredicatedScalarEvolution &PSE) {
   auto Groups =
-      collectComplementaryPredicatedMemOps<Instruction::Store>(Plan, PSE, L);
+      collectComplementaryPredicatedMemOps<Instruction::Store>(Plan, PSE);
   if (Groups.empty())
     return;
 
   VPTypeAnalysis TypeInfo(Plan);
 
   for (auto &Group : Groups) {
-    if (!canSinkStoreWithNoAliasCheck(Group, PSE, *L, TypeInfo))
+    if (!canSinkStoreWithNoAliasCheck(Group, PSE, TypeInfo))
       continue;
 
     // Use the last (most dominated) store's location for the unconditional
@@ -5649,8 +5644,7 @@ static VPValue *cloneBinOpForScalarIV(VPWidenRecipe *BinOp, VPValue *ScalarIV,
 }
 
 void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
-                                               PredicatedScalarEvolution &PSE,
-                                               Loop &L) {
+                                               PredicatedScalarEvolution &PSE) {
   ScalarEvolution &SE = *PSE.getSE();
   VPRegionBlock *VectorLoopRegion = Plan.getVectorLoopRegion();
 
@@ -5709,11 +5703,10 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
     // so, we can track the underlying IV instead and sink the expression.
     auto *IVOfExpressionToSink = getExpressionIV(FindLastExpression);
     const SCEV *IVSCEV = vputils::getSCEVExprForVPValue(
-        IVOfExpressionToSink ? IVOfExpressionToSink : FindLastExpression, PSE,
-        &L);
+        IVOfExpressionToSink ? IVOfExpressionToSink : FindLastExpression, PSE);
     const SCEV *Step;
     if (!match(IVSCEV, m_scev_AffineAddRec(m_SCEV(), m_SCEV(Step)))) {
-      assert(!match(vputils::getSCEVExprForVPValue(FindLastExpression, PSE, &L),
+      assert(!match(vputils::getSCEVExprForVPValue(FindLastExpression, PSE),
                     m_scev_AffineAddRec(m_SCEV(), m_SCEV())) &&
              "IVOfExpressionToSink not being an AddRec must imply "
              "FindLastExpression not being an AddRec.");
@@ -5737,7 +5730,7 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
     // sinking undesirable.
     if (IVOfExpressionToSink) {
       const SCEV *FindLastExpressionSCEV =
-          vputils::getSCEVExprForVPValue(FindLastExpression, PSE, &L);
+          vputils::getSCEVExprForVPValue(FindLastExpression, PSE);
       if (match(FindLastExpressionSCEV,
                 m_scev_AffineAddRec(m_SCEV(), m_SCEV(Step)))) {
         bool NewUseMax = SE.isKnownPositive(Step);

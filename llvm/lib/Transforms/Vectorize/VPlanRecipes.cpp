@@ -3319,7 +3319,7 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
 static const SCEV *getAddressAccessSCEV(const VPValue *Ptr,
                                         PredicatedScalarEvolution &PSE,
                                         const Loop *L) {
-  const SCEV *Addr = vputils::getSCEVExprForVPValue(Ptr, PSE, L);
+  const SCEV *Addr = vputils::getSCEVExprForVPValue(Ptr, PSE);
   if (isa<SCEVCouldNotCompute>(Addr))
     return Addr;
 

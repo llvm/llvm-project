@@ -400,15 +400,13 @@ struct VPlanTransforms {
   /// Hoist predicated loads from the same address to the loop entry block, if
   /// they are guaranteed to execute on both paths (i.e., in replicate regions
   /// with complementary masks P and NOT P).
-  static void hoistPredicatedLoads(VPlan &Plan, PredicatedScalarEvolution &PSE,
-                                   const Loop *L);
+  static void hoistPredicatedLoads(VPlan &Plan, PredicatedScalarEvolution &PSE);
 
   /// Sink predicated stores to the same address with complementary predicates
   /// (P and NOT P) to an unconditional store with select recipes for the
   /// stored values. This eliminates branching overhead when all paths
   /// unconditionally store to the same location.
-  static void sinkPredicatedStores(VPlan &Plan, PredicatedScalarEvolution &PSE,
-                                   const Loop *L);
+  static void sinkPredicatedStores(VPlan &Plan, PredicatedScalarEvolution &PSE);
 
   // Materialize vector trip counts for constants early if it can simply be
   // computed as (Original TC / VF * UF) * VF * UF.
@@ -527,7 +525,7 @@ struct VPlanTransforms {
   /// suitable sentinel value. For expressions of IVs, the expression is sunk
   /// to the middle block.
   static void optimizeFindIVReductions(VPlan &Plan,
-                                       PredicatedScalarEvolution &PSE, Loop &L);
+                                       PredicatedScalarEvolution &PSE);
 
   /// Detect and create partial reduction recipes for scaled reductions in
   /// \p Plan. Must be called after recipe construction. If partial reductions

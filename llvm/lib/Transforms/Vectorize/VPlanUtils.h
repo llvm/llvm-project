@@ -42,8 +42,7 @@ VPValue *getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr);
 /// Return the SCEV expression for \p V. Returns SCEVCouldNotCompute if no
 /// SCEV expression could be constructed.
 const SCEV *getSCEVExprForVPValue(const VPValue *V,
-                                  PredicatedScalarEvolution &PSE,
-                                  const Loop *L = nullptr);
+                                  PredicatedScalarEvolution &PSE);
 
 /// Returns true if \p Addr is an address SCEV that can be passed to
 /// TTI::getAddressComputationCost, i.e. the address SCEV is loop invariant, an
