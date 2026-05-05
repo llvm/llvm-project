@@ -203,7 +203,7 @@ define void @test_v8i8_load_with_extracts_no_scalarize(ptr addrspace(1) %out) {
   %e0 = extractelement <8 x i8> %val, i64 1
   %e3 = extractelement <8 x i8> %val, i64 3
   %e4 = extractelement <8 x i8> %val, i64 4
-  %e6 = extractelement <8x i8> %val, i64 6
+  %e6 = extractelement <8 x i8> %val, i64 6
   %p0 = getelementptr inbounds i8, ptr addrspace(1) %out, i64 0
   store i8 %e0, ptr addrspace(1) %p0, align 1
   %p4 = getelementptr inbounds i8, ptr addrspace(1) %out, i64 2
