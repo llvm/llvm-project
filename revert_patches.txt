@@ -17,6 +17,3 @@ breaks build of llvm
 breaks windows build
 [cmake] Refactor DIA SDK detection into FindDIASDK module (#160354)
 ---
-breaks smoke-limbo/whole-archive
-[flang][flang-rt] Add support for non-standard TIMEF intrinsic (#185377)
----
