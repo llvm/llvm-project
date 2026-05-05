@@ -2891,10 +2891,11 @@ bool RecordVal::setValue(const Init *V) {
     return false;
   }
 
-  Value = V->getCastTo(getType());
-  if (!Value)
+  const Init *NewValue = V->getCastTo(getType());
+  if (!NewValue)
     return true;
 
+  Value = NewValue;
   assert(!isa<TypedInit>(Value) ||
          cast<TypedInit>(Value)->getType()->typeIsA(getType()));
   if (const auto *BTy = dyn_cast<BitsRecTy>(getType())) {
