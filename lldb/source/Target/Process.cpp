@@ -1766,7 +1766,7 @@ Process::CreateBreakpointSite(const BreakpointLocationSP &constituent,
   // If this breakpoint must be eager, flush the breakpoint queue in case there
   // is an interaction between the sites in the queue and this new site.
   if (should_be_eager)
-    if (auto E = FlushDelayedBreakpoints())
+    if (llvm::Error E = FlushDelayedBreakpoints())
       LLDB_LOG_ERROR(
           GetLog(LLDBLog::Breakpoints), std::move(E),
           "eager breakpoint requested, but failed to flush breakpoints: {0}");
