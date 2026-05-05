@@ -16,6 +16,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include <mutex>
 
 using namespace mlir;
 using namespace mlir::detail;
@@ -260,16 +261,13 @@ static LogicalResult createDirectoryOrPrintErr(llvm::StringRef dirPath) {
 
 /// Creates  directories (if required) and opens an output file for the
 /// FileTreeIRPrinterConfig.
-static std::unique_ptr<llvm::ToolOutputFile>
-createTreePrinterOutputPath(Operation *op, llvm::StringRef passArgument,
-                            llvm::StringRef rootDir,
-                            llvm::DenseMap<Operation *, unsigned> &counters) {
+static std::unique_ptr<llvm::ToolOutputFile> createTreePrinterOutputPath(
+    ArrayRef<std::pair<std::string, std::string>> opAndSymbolNames,
+    llvm::StringRef fileName, llvm::StringRef rootDir) {
   // Create the path. We will create a tree rooted at the given 'rootDir'
   // directory. The root directory will contain folders with the names of
   // modules. Sub-directories within those folders mirror the nesting
   // structure of the pass manager, using symbol names for directory names.
-  auto [opAndSymbolNames, fileName] =
-      getOpAndSymbolNames(op, passArgument, counters);
 
   // Create all the directories, starting at the root. Abort early if we fail to
   // create any directory.
@@ -319,8 +317,19 @@ struct FileTreeIRPrinterConfig : public PassManager::IRPrinterConfig {
                             PrintCallbackFn printCallback) final {
     if (!shouldPrintBeforePass || !shouldPrintBeforePass(pass, operation))
       return;
-    std::unique_ptr<llvm::ToolOutputFile> file = createTreePrinterOutputPath(
-        operation, pass->getArgument(), treeDir, counters);
+
+    SmallVector<std::pair<std::string, std::string>> opAndSymbolNames;
+    std::string fileName;
+    {
+      std::lock_guard<std::mutex> lock(mutex);
+      auto result =
+          getOpAndSymbolNames(operation, pass->getArgument(), counters);
+      opAndSymbolNames = std::move(result.first);
+      fileName = std::move(result.second);
+    }
+
+    std::unique_ptr<llvm::ToolOutputFile> file =
+        createTreePrinterOutputPath(opAndSymbolNames, fileName, treeDir);
     if (!file)
       return;
     printCallback(file->os());
@@ -331,8 +340,19 @@ struct FileTreeIRPrinterConfig : public PassManager::IRPrinterConfig {
                            PrintCallbackFn printCallback) final {
     if (!shouldPrintAfterPass || !shouldPrintAfterPass(pass, operation))
       return;
-    std::unique_ptr<llvm::ToolOutputFile> file = createTreePrinterOutputPath(
-        operation, pass->getArgument(), treeDir, counters);
+
+    SmallVector<std::pair<std::string, std::string>> opAndSymbolNames;
+    std::string fileName;
+    {
+      std::lock_guard<std::mutex> lock(mutex);
+      auto result =
+          getOpAndSymbolNames(operation, pass->getArgument(), counters);
+      opAndSymbolNames = std::move(result.first);
+      fileName = std::move(result.second);
+    }
+
+    std::unique_ptr<llvm::ToolOutputFile> file =
+        createTreePrinterOutputPath(opAndSymbolNames, fileName, treeDir);
     if (!file)
       return;
     printCallback(file->os());
@@ -349,6 +369,9 @@ struct FileTreeIRPrinterConfig : public PassManager::IRPrinterConfig {
   /// Counters used for labeling the prefix. Every op which could be targeted by
   /// a pass gets its own counter.
   llvm::DenseMap<Operation *, unsigned> counters;
+
+  /// Mutex to protect `counters` map.
+  std::mutex mutex;
 };
 
 } // namespace
