@@ -3426,6 +3426,7 @@ Expected<Function *> OpenMPIRBuilder::emitInterWarpCopyFunction(
   Function *WcFunc =
       Function::Create(FuncTy, GlobalVariable::InternalLinkage,
                        "_omp_reduction_inter_warp_copy_func", &M);
+  WcFunc->setCallingConv(Config.getRuntimeCC());
   WcFunc->setAttributes(FuncAttrs);
   WcFunc->addParamAttr(0, Attribute::NoUndef);
   WcFunc->addParamAttr(1, Attribute::NoUndef);
@@ -3686,6 +3687,7 @@ Expected<Function *> OpenMPIRBuilder::emitShuffleAndReduceFunction(
   Function *SarFunc =
       Function::Create(FuncTy, GlobalVariable::InternalLinkage,
                        "_omp_reduction_shuffle_and_reduce_func", &M);
+  SarFunc->setCallingConv(Config.getRuntimeCC());
   SarFunc->setAttributes(FuncAttrs);
   SarFunc->addParamAttr(0, Attribute::NoUndef);
   SarFunc->addParamAttr(1, Attribute::NoUndef);
@@ -4382,6 +4384,7 @@ Expected<Function *> OpenMPIRBuilder::createReductionFunction(
   std::string Name = getReductionFuncName(ReducerName);
   Function *ReductionFunc =
       Function::Create(FuncTy, GlobalVariable::InternalLinkage, Name, &M);
+  ReductionFunc->setCallingConv(Config.getRuntimeCC());
   ReductionFunc->setAttributes(FuncAttrs);
   ReductionFunc->addParamAttr(0, Attribute::NoUndef);
   ReductionFunc->addParamAttr(1, Attribute::NoUndef);

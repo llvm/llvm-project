@@ -18,8 +18,10 @@
 // Verify __kmpc_free_shared is called.
 // CHECK: call spir_func addrspace(9) void @__kmpc_free_shared(ptr addrspace(4)
 
-// Verify the reduction function is generated.
-// CHECK: define internal void @{{.*}}reduction{{.*}}func
+// Verify the reduction helper functions are generated.
+// CHECK: define internal spir_func void @{{.*}}reduction{{.*}}func
+// CHECK: define internal spir_func void @{{.*}}shuffle_and_reduce_func
+// CHECK: define internal spir_func void @{{.*}}inter_warp_copy_func
 
 int main() {
   int x = 0;
