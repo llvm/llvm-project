@@ -149,9 +149,7 @@ struct VPlanTransforms {
   /// Create VPReductionRecipes for in-loop reductions. This processes chains
   /// of operations contributing to in-loop reductions and creates appropriate
   /// VPReductionRecipe instances.
-  static void createInLoopReductionRecipes(
-      VPlan &Plan, const DenseSet<BasicBlock *> &BlocksNeedingPredication,
-      ElementCount MinVF);
+  static void createInLoopReductionRecipes(VPlan &Plan, ElementCount MinVF);
 
   /// Update \p Plan to account for all early exits. If \p Style is not
   /// NoUncountableExit, handles uncountable early exits and checks that all

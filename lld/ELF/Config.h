@@ -384,6 +384,7 @@ struct Config {
   std::optional<uint64_t> randomizeSectionPadding;
   bool rejectMismatch;
   bool relax;
+  bool relaxCFIJumpTables = false;
   bool relaxGP;
   bool relocatable;
   bool resolveGroups;

@@ -1680,6 +1680,9 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.power10Stubs = args.getLastArgValue(OPT_power10_stubs_eq) != "no";
   ctx.arg.branchToBranch = args.hasFlag(
       OPT_branch_to_branch, OPT_no_branch_to_branch, ctx.arg.optimize >= 2);
+  ctx.arg.relaxCFIJumpTables =
+      args.hasFlag(OPT_relax_cfi_jump_tables, OPT_no_relax_cfi_jump_tables,
+                   ctx.arg.optimize >= 2);
 
   if (opt::Arg *arg = args.getLastArg(OPT_eb, OPT_el)) {
     if (arg->getOption().matches(OPT_eb))

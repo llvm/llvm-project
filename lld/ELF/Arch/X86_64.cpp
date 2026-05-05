@@ -341,7 +341,7 @@ void X86_64::relaxCFIJumpTables() const {
       auto getMovableSection = [&](Relocation &r) -> InputSection * {
         if (r.type != R_X86_64_PC32 && r.type != R_X86_64_PLT32)
           return nullptr;
-        auto *sym = dyn_cast_or_null<Defined>(r.sym);
+        auto *sym = dyn_cast<Defined>(r.sym);
         if (!sym || sym->isPreemptible || sym->isGnuIFunc() ||
             sym->value + r.addend != -4ull)
           return nullptr;
