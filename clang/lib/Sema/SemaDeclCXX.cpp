@@ -1380,25 +1380,28 @@ static bool checkTupleLikeDecomposition(Sema &S,
       return true;
     Expr *Init = E.get();
 
-    //   Given the type T designated by std::tuple_element<i - 1, E>::type,
+    //   Given the type T designated by std::tuple_element<i - 1, E>::type
     QualType T = getTupleLikeElementType(S, Loc, I, DecompType);
     if (T.isNull())
       return true;
 
-    //   each vi is a variable of type "reference to T" initialized with the
-    //   initializer, where the reference is an lvalue reference if the
-    //   initializer is an lvalue and an rvalue reference otherwise
-    QualType RefType =
-        S.BuildReferenceType(T, E.get()->isLValue(), Loc, B->getDeclName());
-    if (RefType.isNull())
+    // C++26 [dcl.struct.bind]p7:
+    //   and the type Ui, defined as Ti if the initializer is a prvalue,
+    //   as "lvalue reference to Ti" if the initializer is an lvalue,
+    //   or as "rvalue reference to Ti" otherwise
+    // "defined as Ti if the initializer is a prvalue" was introduced by CWG3135
+    QualType U = E.get()->isPRValue()
+                     ? T
+                     : S.BuildReferenceType(T, E.get()->isLValue(), Loc,
+                                            B->getDeclName());
+    if (U.isNull())
       return true;
 
     // Don't give this VarDecl a TypeSourceInfo, since this is a synthesized
     // entity and this type was never written in source code.
-    auto *RefVD =
-        VarDecl::Create(S.Context, Src->getDeclContext(), Loc, Loc,
-                        B->getDeclName().getAsIdentifierInfo(), RefType,
-                        /*TInfo=*/nullptr, Src->getStorageClass());
+    auto *RefVD = VarDecl::Create(S.Context, Src->getDeclContext(), Loc, Loc,
+                                  B->getDeclName().getAsIdentifierInfo(), U,
+                                  /*TInfo=*/nullptr, Src->getStorageClass());
     RefVD->setLexicalDeclContext(Src->getLexicalDeclContext());
     RefVD->setTSCSpec(Src->getTSCSpec());
     RefVD->setImplicit();
@@ -1407,7 +1410,9 @@ static bool checkTupleLikeDecomposition(Sema &S,
     RefVD->getLexicalDeclContext()->addHiddenDecl(RefVD);
 
     InitializedEntity Entity = InitializedEntity::InitializeBinding(RefVD);
-    InitializationKind Kind = InitializationKind::CreateCopy(Loc, Loc);
+    InitializationKind Kind =
+        E.get()->isPRValue() ? InitializationKind::CreateDirect(Loc, Loc, Loc)
+                             : InitializationKind::CreateCopy(Loc, Loc);
     InitializationSequence Seq(S, Entity, Kind, Init);
     E = Seq.Perform(S, Entity, Kind, Init);
     if (E.isInvalid())
