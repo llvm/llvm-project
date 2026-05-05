@@ -10007,7 +10007,7 @@ Applying this attribute to a structure or union, or to one of its members, chang
 properties. To ensure that array indexing and pointer arithmetic remain 
 consistent, the compiler automatically increases the structure's total size 
 (via tail padding) to a multiple of the alignment value. For example, a 
-struct with a natural size of 6 bytes marked ``aligned(8)`` will be 
+struct with a natural size of 6 bytes marked directly (or indirectly via a member declaration) with ``aligned(8)`` will be 
 padded to 8 bytes.
 
 The attribute is additive and follows a "strictest-wins" rule: if multiple 
