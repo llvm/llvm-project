@@ -734,8 +734,8 @@ static bool isFusionLegal(ParallelOp firstPloop, ParallelOp secondPloop,
 }
 
 // Interchange loops of the parallel loop, if there are just two loops
-std::optional<ParallelOp> interchangeLoops(OpBuilder &builder,
-                                           ParallelOp &loop) {
+static std::optional<ParallelOp> interchangeLoops(OpBuilder &builder,
+                                                  ParallelOp &loop) {
 
   if (loop.getNumLoops() != 2)
     return std::nullopt;
@@ -755,8 +755,7 @@ std::optional<ParallelOp> interchangeLoops(OpBuilder &builder,
   // Copy parallel loop body
   builder.setInsertionPoint(&(newOp.getBody()->front()));
   for (auto &o : loop.getRegion().front().without_terminator()) {
-    if (!isa<scf::ReduceOp>(o))
-      builder.clone(o, mapping);
+    builder.clone(o, mapping);
   }
   return newOp;
 }
