@@ -25,42 +25,42 @@ void operator delete(void*, size_t, std::align_val_t) noexcept; // #default_oper
 #endif
 
 struct Invalid1 {
-  // expected-error@-1 {{declaration of type aware 'operator new' in 'Invalid1' must have matching type aware 'operator delete'}}
+  // expected-error@-1 {{declaration of type aware 'operator new' in 'Invalid1' must have an 'operator delete'}}
   void *operator new(std::type_identity<Invalid1>, size_t, std::align_val_t);
   // expected-note@-1 {{unmatched type aware 'operator new' declared here}}
 };
 struct Invalid2 {
-  // expected-error@-1 {{declaration of type aware 'operator new' in 'Invalid2' must have matching type aware 'operator delete'}}
+  // expected-error@-1 {{declaration of type aware 'operator new' in 'Invalid2' must have an 'operator delete'}}
   template <class T> void *operator new(std::type_identity<T>, size_t, std::align_val_t); // #Invalid2_new
   // expected-note@-1 {{unmatched type aware 'operator new' declared here}}
 };
 struct Invalid3 {
-  // expected-error@-1 {{declaration of type aware 'operator delete' in 'Invalid3' must have matching type aware 'operator new'}}
+  // expected-error@-1 {{declaration of type aware 'operator delete' in 'Invalid3' must have an 'operator new'}}
   void operator delete(std::type_identity<Invalid3>, void*, size_t, std::align_val_t);
   // expected-note@-1 {{unmatched type aware 'operator delete' declared here}}
 };
 struct Invalid4 {
-  // expected-error@-1 {{declaration of type aware 'operator delete' in 'Invalid4' must have matching type aware 'operator new'}}
+  // expected-error@-1 {{declaration of type aware 'operator delete' in 'Invalid4' must have an 'operator new'}}
   template <class T> void operator delete(std::type_identity<T>, void*, size_t, std::align_val_t); // #Invalid4_delete
   // expected-note@-1 {{unmatched type aware 'operator delete' declared here}}
 };
 struct Invalid5 {
-  // expected-error@-1 {{declaration of type aware 'operator new[]' in 'Invalid5' must have matching type aware 'operator delete[]'}}
+  // expected-error@-1 {{declaration of type aware 'operator new[]' in 'Invalid5' must have an 'operator delete[]'}}
   void *operator new[](std::type_identity<Invalid5>, size_t, std::align_val_t);
   // expected-note@-1 {{unmatched type aware 'operator new[]' declared here}}
 };
 struct Invalid6 {
-  // expected-error@-1 {{declaration of type aware 'operator new[]' in 'Invalid6' must have matching type aware 'operator delete[]'}}
+  // expected-error@-1 {{declaration of type aware 'operator new[]' in 'Invalid6' must have an 'operator delete[]'}}
   template <class T> void *operator new[](std::type_identity<T>, size_t, std::align_val_t);
   // expected-note@-1 {{unmatched type aware 'operator new[]' declared here}}
 };
 struct Invalid7 {
-  // expected-error@-1 {{declaration of type aware 'operator delete[]' in 'Invalid7' must have matching type aware 'operator new[]'}}
+  // expected-error@-1 {{declaration of type aware 'operator delete[]' in 'Invalid7' must have an 'operator new[]'}}
   void operator delete[](std::type_identity<Invalid7>, void*, size_t, std::align_val_t);
   // expected-note@-1 {{unmatched type aware 'operator delete[]' declared here}}
 };
 struct Invalid8 {
-  // expected-error@-1 {{declaration of type aware 'operator delete[]' in 'Invalid8' must have matching type aware 'operator new[]'}}
+  // expected-error@-1 {{declaration of type aware 'operator delete[]' in 'Invalid8' must have an 'operator new[]'}}
   template <class T> void operator delete[](std::type_identity<T>, void*, size_t, std::align_val_t);
   // expected-note@-1 {{unmatched type aware 'operator delete[]' declared here}}
 };
@@ -89,6 +89,8 @@ struct TestClass2 {
 
 void basic_tests() {
   TestClass1 * tc1 = new TestClass1;
+  // expected-error@-1 {{type aware 'operator new' requires a matching cleanup 'operator delete}}
+  // expected-note@#TestClass1_new {{type aware 'operator new' declared here in 'TestClass1'}}
   delete tc1;
   // expected-error@-1 {{no suitable member 'operator delete' in 'TestClass1'}}
   // expected-note@#TestClass1_delete {{member 'operator delete' declared here}}
@@ -96,23 +98,20 @@ void basic_tests() {
   // expected-error@-1 {{no matching function for call to 'operator new'}}
   delete tc2;
   Invalid9 * i9 = new Invalid9;
-  // expected-error@-1 {{type aware 'operator new' requires a matching type aware 'operator delete' to be declared in the same scope}}
+  // expected-error@-1 {{type aware 'operator new' requires a matching cleanup 'operator delete'}}
   // expected-note@#Invalid2_new {{type aware 'operator new' declared here in 'Invalid2'}}
   delete i9;
   Invalid10 * i10 = new Invalid10;
-  // expected-error@-1 {{type aware 'operator delete' requires a matching type aware 'operator new' to be declared in the same scope}}
   // expected-note@#Invalid4_delete {{type aware 'operator delete' declared here in 'Invalid4'}}
-  // expected-note@#default_operator_new {{non-type aware 'operator new' declared here in the global namespace}}
   delete i10;
   Invalid11 * i11 = new Invalid11;
-  // expected-error@-1 {{type aware 'operator new' requires a matching type aware 'operator delete' to be declared in the same scope}}
-  // expected-note@#Invalid2_new {{type aware 'operator new' declared here in 'Invalid2'}}
+  // expected-error@-1 {{type aware 'operator new' requires the cleanup 'operator delete' to be declared in the same scope}}
+  // expected-note@#Invalid2_new {{type aware 'operator new' declared here}}
   // expected-note@#Invalid4_delete {{type aware 'operator delete' declared here in 'Invalid4'}}
   delete i11;
   Invalid12 * i12 = new Invalid12;
-  // expected-error@-1 {{type aware 'operator new' requires a matching type aware 'operator delete' to be declared in the same scope}}
+  // expected-error@-1 {{type aware 'operator new' requires the cleanup 'operator delete' to be declared in the same scope}}
   // expected-note@#Invalid2_new {{type aware 'operator new' declared here in 'Invalid2'}}
-  // expected-note@#Invalid4_delete {{type aware 'operator delete' declared here in 'Invalid4'}}
   delete i12;
 }
 
@@ -126,7 +125,7 @@ struct Subclass1 : Baseclass1 {
 };
 
 struct Baseclass2 {
-  template <class T> void *operator new(std::type_identity<T>, size_t, std::align_val_t);
+  template <class T> void *operator new(std::type_identity<T>, size_t, std::align_val_t); // #Baseclass2_new
   void  operator delete(std::type_identity<Baseclass2>, void *, size_t, std::align_val_t); // #Baseclass2_delete
 };
 
@@ -147,7 +146,7 @@ struct Subclass3_1 : Baseclass3 {
 
 struct Subclass3_2 : Baseclass3 {
   Subclass3_2();
-  template <class T> void *operator new(std::type_identity<T>, size_t, std::align_val_t);
+  template <class T> void *operator new(std::type_identity<T>, size_t, std::align_val_t); // #Subclass3_2_new
   void  operator delete(std::type_identity<int>, void *, size_t, std::align_val_t); // #Subclass3_2_delete
 };
 
@@ -159,6 +158,8 @@ void test_subclasses() {
   // expected-error@-1 {{no suitable member 'operator delete' in 'Subclass1'}}
   // expected-note@#Baseclass1_delete {{member 'operator delete' declared here}}
   Subclass2 * sc2 = new Subclass2;
+  // expected-error@-1 {{type aware 'operator new' requires a matching cleanup 'operator delete'}}
+  // expected-note@#Baseclass2_new {{type aware 'operator new' declared here in 'Baseclass2'}}
   delete sc2;
   // expected-error@-1 {{no suitable member 'operator delete' in 'Subclass2'}}
   // expected-note@#Baseclass2_delete {{member 'operator delete' declared here}}
@@ -166,6 +167,8 @@ void test_subclasses() {
   // expected-error@-1 {{no matching function for call to 'operator new'}}
   delete sc3_1;
   Subclass3_2 * sc3_2 = new Subclass3_2;
+  // expected-error@-1 {{type aware 'operator new' requires a matching cleanup 'operator delete'}}
+  // expected-note@#Subclass3_2_new {{type aware 'operator new' declared here in 'Subclass3_2'}}
   delete sc3_2;
   // expected-error@-1 {{no suitable member 'operator delete' in 'Subclass3_2'}}
   // expected-note@#Subclass3_2_delete {{member 'operator delete' declared here}}
@@ -175,7 +178,7 @@ template <class A, class B> constexpr bool same_type_v = false;
 template <class A> constexpr bool same_type_v<A, A> = true;
 
 template <class T> struct InvalidConstrainedOperator {
-  template <class U> void *operator new(std::type_identity<U>, size_t, std::align_val_t);
+  template <class U> void *operator new(std::type_identity<U>, size_t, std::align_val_t); // #InvalidConstrainedOperator_new
   template <class U> requires (same_type_v<T, int>) void  operator delete(std::type_identity<U>, void *, size_t, std::align_val_t); // #InvalidConstrainedOperator_delete
 };
 
@@ -190,13 +193,15 @@ void test_incompatible_constrained_operators(Context &Ctx) {
   InvalidConstrainedOperator<int> *ico1 = new InvalidConstrainedOperator<int>;
   delete ico1;
   InvalidConstrainedOperator<float> *ico2 = new InvalidConstrainedOperator<float>;
+  // expected-error@-1 {{type aware 'operator new' requires a matching cleanup 'operator delete'}}
+  // expected-note@#InvalidConstrainedOperator_new {{type aware 'operator new' declared here in 'InvalidConstrainedOperator<float>'}}
   delete ico2;
   // expected-error@-1 {{no suitable member 'operator delete' in 'InvalidConstrainedOperator<float>'}}
   // expected-note@#InvalidConstrainedOperator_delete {{member 'operator delete' declared here}}
   InvalidConstrainedCleanup<int> *icc1 = new (Ctx) InvalidConstrainedCleanup<int>;
   delete icc1;
   InvalidConstrainedCleanup<float> *icc2 = new (Ctx) InvalidConstrainedCleanup<float>;
-  // expected-error@-1 {{type aware 'operator new' requires a matching type aware placement 'operator delete' to be declared in the same scope}}
+  // expected-error@-1 {{type aware 'operator new' requires a matching placement cleanup 'operator delete'}}
   // expected-note@#InvalidConstrainedCleanup_placement_new {{type aware 'operator new' declared here in 'InvalidConstrainedCleanup<float>'}}
   delete icc2;
 }
@@ -233,31 +238,45 @@ void *operator new(std::type_identity<AnonymousClass6>, size_t, std::align_val_t
 void operator delete(std::type_identity<AnonymousClass6>, void*, size_t, std::align_val_t);
 void test_anonymous_types(Context &Ctx) {
   AnonymousClass1 *ac1 = new AnonymousClass1;
-  // expected-error@-1 {{type aware 'operator new' requires a matching type aware 'operator delete' to be declared in the same scope}}
+  // expected-error@-1 {{type aware 'operator new' requires a matching cleanup 'operator delete'}}
   // expected-note@#AnonymousClass1_new {{type aware 'operator new' declared here in 'AnonymousClass1'}}
 
   delete ac1;
   AnonymousClass2 *ac2 = new AnonymousClass2;
-  // expected-error@-1 {{type aware 'operator delete' requires a matching type aware 'operator new' to be declared in the same scope}}
-  // expected-note@#AnonymousClass2_delete {{unmatched type aware 'operator delete' declared here}}
-  // expected-note@#AnonymousClass2_delete {{type aware 'operator delete' declared here in 'AnonymousClass2'}}
-  // expected-note@#default_operator_new {{non-type aware 'operator new' declared here in the global namespace}}
-
   delete ac2;
   AnonymousClass3 *ac3 = new AnonymousClass3;
   delete ac3;
   AnonymousClass4 *ac4 = new AnonymousClass4;
-  // expected-error@-1 {{type aware 'operator new' requires a matching type aware 'operator delete' to be declared in the same scope}}
-  // expected-note@#AnonymousClass4_new {{type aware 'operator new' declared here in the global namespace}}
   delete ac4;
   AnonymousClass5 *ac5 = new AnonymousClass5;
-  // expected-error@-1 {{type aware 'operator delete' requires a matching type aware 'operator new' to be declared in the same scope}}
-  // expected-note@#AnonymousClass5_delete {{type aware 'operator delete' declared here}}
-  // expected-note@#default_operator_new {{non-type aware 'operator new' declared here in the global namespace}}
   delete ac5;
   AnonymousClass6 *ac6 = new (Ctx) AnonymousClass6;
-  // expected-error@-1 {{type aware 'operator new' requires a matching type aware placement 'operator delete' to be declared in the same scope}}
+  // expected-error@-1 {{type aware 'operator new' requires a matching placement cleanup 'operator delete'}}
   // expected-note@#AnonymousClass6_placement_new {{type aware 'operator new' declared here in the global namespace}}
-  // expected-note@#default_operator_delete {{non-type aware 'operator delete' declared here in the global namespace}}
+  // expected-note@#AnonymousClass2_delete {{unmatched type aware 'operator delete' declared here}}
   delete ac6;
+}
+struct AllocatorContext;
+struct NonPlacementTypedDeleteIsAnOption {
+  NonPlacementTypedDeleteIsAnOption();
+  void *operator new(std::type_identity<NonPlacementTypedDeleteIsAnOption>, size_t, std::align_val_t, AllocatorContext *);
+  void operator delete(std::type_identity<NonPlacementTypedDeleteIsAnOption>, void *, size_t, std::align_val_t, AllocatorContext *);
+  void operator delete(std::type_identity<NonPlacementTypedDeleteIsAnOption>, void *, size_t, std::align_val_t);
+};
+
+void typeAwarePlacementDelete(AllocatorContext *Ctx) {
+  NonPlacementTypedDeleteIsAnOption *Obj = new (Ctx) NonPlacementTypedDeleteIsAnOption;
+  delete Obj;
+}
+
+struct UntypedDeleteIsAnOption {
+  UntypedDeleteIsAnOption();
+  void *operator new(std::type_identity<UntypedDeleteIsAnOption>, size_t, std::align_val_t, AllocatorContext *);
+  void operator delete(std::type_identity<UntypedDeleteIsAnOption>, void *, size_t, std::align_val_t, AllocatorContext *);
+  void operator delete(void *);
+};
+
+void nontypeAwareDelete(AllocatorContext *Ctx) {
+  UntypedDeleteIsAnOption *Obj = new (Ctx) UntypedDeleteIsAnOption;
+  delete Obj;
 }

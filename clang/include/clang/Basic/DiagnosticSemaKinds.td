@@ -10396,14 +10396,17 @@ def err_type_aware_destroying_operator_delete : Error<
 def warn_ext_type_aware_allocators : ExtWarn<
   "type aware allocators are a Clang extension">, InGroup<DiagGroup<"ext-cxx-type-aware-allocators">>;
 def err_type_aware_allocator_missing_matching_operator : Error<
-  "declaration of type aware %0 in %1 must have matching type aware %2"
+  "declaration of type aware %0 in %1 must have an %2 in the same scope"
 >;
 def note_unmatched_type_aware_allocator_declared : Note<
   "unmatched type aware %0 declared here">;
-def err_mismatching_type_aware_cleanup_deallocator : Error<
-  "type aware %0 requires a matching type aware %select{|placement }1%2 to be declared in the same scope">;
+def err_type_aware_new_missing_cleanup_operator : Error<
+  "type aware %0 requires %select{a matching|an unambiguous|the}1 %select{|placement }2cleanup %3%select{|| to be declared in the same scope}1">;
+def note_type_aware_ambiguous_delete : Error<
+  "cleanup candidate %0 declared here"
+>;
 def note_type_aware_operator_declared : Note<
-  "%select{non-|}0type aware %1 declared here in %2">;
+  "type aware %0 declared here in %1">;
 def note_implicit_delete_this_in_destructor_here : Note<
   "while checking implicit 'delete this' for virtual destructor">;
 def err_builtin_operator_new_delete_not_usual : Error<

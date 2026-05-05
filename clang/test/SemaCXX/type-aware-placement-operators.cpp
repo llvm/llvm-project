@@ -67,7 +67,7 @@ void test(Context& Ctx) {
   // expected-note@#4 {{'operator delete<S3>' has been explicitly marked deleted here}}
 
   S4 *s4_1 = new (Ctx) S4;
-  // expected-error@-1 {{type aware 'operator new' requires a matching type aware placement 'operator delete' to be declared in the same scope}}
+  // expected-error@-1 {{type aware 'operator new' requires a matching placement cleanup 'operator delete'}}
   // expected-note@#S4_new {{type aware 'operator new' declared here in 'S4'}}
   delete s4_1;
 }

@@ -3133,20 +3133,38 @@ bool Sema::FindAllocationFunctions(
   bool IsClassScopedTypeAwareNew =
       isTypeAwareAllocation(IAP.PassTypeIdentity) &&
       OperatorNewContext->isRecord();
-  auto DiagnoseMissingTypeAwareCleanupOperator = [&](bool IsPlacementOperator) {
-    assert(isTypeAwareAllocation(IAP.PassTypeIdentity));
-    if (Diagnose) {
-      Diag(StartLoc, diag::err_mismatching_type_aware_cleanup_deallocator)
-          << OperatorNew->getDeclName() << IsPlacementOperator << DeleteName;
-      Diag(OperatorNew->getLocation(), diag::note_type_aware_operator_declared)
-          << OperatorNew->isTypeAwareOperatorNewOrDelete()
-          << OperatorNew->getDeclName() << OperatorNewContext;
-    }
+  enum class TypeAwareCleanupOperatorError {
+    Missing,
+    Ambiguous,
+    MismatchedScope
   };
+  auto DiagnoseMissingTypeAwareCleanupOperator =
+      [&](bool IsPlacementOperator, TypeAwareCleanupOperatorError Error,
+          FunctionDecl *OperatorDelete = 0) {
+        assert(isTypeAwareAllocation(IAP.PassTypeIdentity));
+        if (Diagnose) {
+          Diag(StartLoc, diag::err_type_aware_new_missing_cleanup_operator)
+              << OperatorNew->getDeclName() << Error << IsPlacementOperator
+              << DeleteName;
+          Diag(OperatorNew->getLocation(),
+               diag::note_type_aware_operator_declared)
+              << OperatorNew->getDeclName() << OperatorNewContext;
+          if (Error == TypeAwareCleanupOperatorError::MismatchedScope) {
+            DeclContext *OperatorDeleteContext =
+                GetRedeclContext(OperatorDelete);
+            Diag(OperatorDelete->getLocation(),
+                 diag::note_type_aware_operator_declared)
+                << OperatorDelete->getDeclName() << OperatorDeleteContext;
+          }
+        }
+      };
+
   if (IsClassScopedTypeAwareNew && FoundDelete.empty()) {
-    DiagnoseMissingTypeAwareCleanupOperator(/*isPlacementNew=*/false);
+    DiagnoseMissingTypeAwareCleanupOperator(
+        /*isPlacementNew=*/false, TypeAwareCleanupOperatorError::Missing);
     return true;
   }
+
   if (FoundDelete.empty()) {
     FoundDelete.clear(LookupOrdinaryName);
 
@@ -3162,6 +3180,12 @@ bool Sema::FindAllocationFunctions(
   }
 
   FoundDelete.suppressDiagnostics();
+
+  if (OperatorNew->isTypeAwareOperatorNewOrDelete() && FoundDelete.empty()) {
+    DiagnoseMissingTypeAwareCleanupOperator(
+        /*isPlacementNew=*/false, TypeAwareCleanupOperatorError::Missing);
+    return true;
+  }
 
   SmallVector<std::pair<DeclAccessPair,FunctionDecl*>, 2> Matches;
 
@@ -3247,10 +3271,6 @@ bool Sema::FindAllocationFunctions(
     if (getLangOpts().CUDA)
       CUDA().EraseUnwantedMatches(getCurFunctionDecl(/*AllowLambda=*/true),
                                   Matches);
-    if (Matches.empty() && isTypeAwareAllocation(IAP.PassTypeIdentity)) {
-      DiagnoseMissingTypeAwareCleanupOperator(isPlacementNew);
-      return true;
-    }
   } else {
     // C++1y [expr.new]p22:
     //   For a non-placement allocation function, the normal deallocation
@@ -3277,40 +3297,38 @@ bool Sema::FindAllocationFunctions(
     }
   }
 
+  if (OperatorNew->isTypeAwareOperatorNewOrDelete()) {
+    if (Matches.size() == 0) {
+      DiagnoseMissingTypeAwareCleanupOperator(
+          isPlacementNew, TypeAwareCleanupOperatorError::Missing);
+      return true;
+    }
+    if (Matches.size() > 1) {
+      DiagnoseMissingTypeAwareCleanupOperator(
+          isPlacementNew, TypeAwareCleanupOperatorError::Ambiguous);
+      for (auto &Match : Matches)
+        Diag(Match.second->getLocation(),
+             diag::note_type_aware_ambiguous_delete)
+            << DeleteName;
+      return true;
+    }
+    FunctionDecl *OperatorDelete = Matches[0].second;
+    DeclContext *OperatorNewContext = GetRedeclContext(OperatorNew);
+    DeclContext *OperatorDeleteContext = GetRedeclContext(OperatorDelete);
+    if (OperatorDeleteContext != OperatorNewContext) {
+      DiagnoseMissingTypeAwareCleanupOperator(
+          isPlacementNew, TypeAwareCleanupOperatorError::MismatchedScope,
+          OperatorDelete);
+      return true;
+    }
+  }
+
   // C++ [expr.new]p20:
   //   [...] If the lookup finds a single matching deallocation
   //   function, that function will be called; otherwise, no
   //   deallocation function will be called.
   if (Matches.size() == 1) {
     OperatorDelete = Matches[0].second;
-    DeclContext *OperatorDeleteContext = GetRedeclContext(OperatorDelete);
-    bool FoundTypeAwareOperator =
-        OperatorDelete->isTypeAwareOperatorNewOrDelete() ||
-        OperatorNew->isTypeAwareOperatorNewOrDelete();
-    if (Diagnose && FoundTypeAwareOperator) {
-      bool MismatchedTypeAwareness =
-          OperatorDelete->isTypeAwareOperatorNewOrDelete() !=
-          OperatorNew->isTypeAwareOperatorNewOrDelete();
-      bool MismatchedContext = OperatorDeleteContext != OperatorNewContext;
-      if (MismatchedTypeAwareness || MismatchedContext) {
-        FunctionDecl *Operators[] = {OperatorDelete, OperatorNew};
-        bool TypeAwareOperatorIndex =
-            OperatorNew->isTypeAwareOperatorNewOrDelete();
-        Diag(StartLoc, diag::err_mismatching_type_aware_cleanup_deallocator)
-            << Operators[TypeAwareOperatorIndex]->getDeclName()
-            << isPlacementNew
-            << Operators[!TypeAwareOperatorIndex]->getDeclName()
-            << GetRedeclContext(Operators[TypeAwareOperatorIndex]);
-        Diag(OperatorNew->getLocation(),
-             diag::note_type_aware_operator_declared)
-            << OperatorNew->isTypeAwareOperatorNewOrDelete()
-            << OperatorNew->getDeclName() << OperatorNewContext;
-        Diag(OperatorDelete->getLocation(),
-             diag::note_type_aware_operator_declared)
-            << OperatorDelete->isTypeAwareOperatorNewOrDelete()
-            << OperatorDelete->getDeclName() << OperatorDeleteContext;
-      }
-    }
 
     // C++1z [expr.new]p23:
     //   If the lookup finds a usual deallocation function (3.7.4.2)

@@ -7448,42 +7448,53 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
 
   llvm::SmallDenseMap<OverloadedOperatorKind,
                       llvm::SmallVector<const FunctionDecl *, 2>, 4>
-      TypeAwareDecls{{OO_New, {}},
-                     {OO_Array_New, {}},
-                     {OO_Delete, {}},
-                     {OO_Array_New, {}}};
+      TypeAwareAllocatorDeclKinds;
+  llvm::SmallDenseSet<OverloadedOperatorKind, 4> AllocatorDeclsKinds;
   for (auto *D : Record->decls()) {
     const FunctionDecl *FnDecl = D->getAsFunction();
-    if (!FnDecl || !FnDecl->isTypeAwareOperatorNewOrDelete())
+    if (!FnDecl)
       continue;
-    assert(FnDecl->getDeclName().isAnyOperatorNewOrDelete());
-    TypeAwareDecls[FnDecl->getOverloadedOperator()].push_back(FnDecl);
+    DeclarationName FnName = FnDecl->getDeclName();
+    if (!FnName.isAnyOperatorNewOrDelete())
+      continue;
+    OverloadedOperatorKind OperatorKind = FnDecl->getOverloadedOperator();
+    if (FnDecl->isTypeAwareOperatorNewOrDelete())
+      TypeAwareAllocatorDeclKinds[OperatorKind].push_back(FnDecl);
+    AllocatorDeclsKinds.insert(OperatorKind);
   }
+
   auto CheckMismatchedTypeAwareAllocators =
-      [this, &TypeAwareDecls, Record](OverloadedOperatorKind NewKind,
-                                      OverloadedOperatorKind DeleteKind) {
-        auto &NewDecls = TypeAwareDecls[NewKind];
-        auto &DeleteDecls = TypeAwareDecls[DeleteKind];
-        if (NewDecls.empty() == DeleteDecls.empty())
+      [&](OverloadedOperatorKind NewKind, OverloadedOperatorKind DeleteKind) {
+        if (!TypeAwareAllocatorDeclKinds.contains(NewKind) &&
+            !TypeAwareAllocatorDeclKinds.contains(DeleteKind))
           return;
-        DeclarationName FoundOperator =
-            Context.DeclarationNames.getCXXOperatorName(
-                NewDecls.empty() ? DeleteKind : NewKind);
-        DeclarationName MissingOperator =
-            Context.DeclarationNames.getCXXOperatorName(
-                NewDecls.empty() ? NewKind : DeleteKind);
+        if (TypeAwareAllocatorDeclKinds.contains(NewKind) &&
+            AllocatorDeclsKinds.contains(DeleteKind))
+          return;
+        if (TypeAwareAllocatorDeclKinds.contains(DeleteKind) &&
+            AllocatorDeclsKinds.contains(NewKind))
+          return;
+
+        bool TypeAwareOperatorIsNew =
+            TypeAwareAllocatorDeclKinds.contains(NewKind);
+        OverloadedOperatorKind TypedAllocatorKind =
+            TypeAwareOperatorIsNew ? NewKind : DeleteKind;
+        OverloadedOperatorKind UntypedAllocatorKind =
+            TypeAwareOperatorIsNew ? DeleteKind : NewKind;
+        DeclarationName TypedOperator =
+            Context.DeclarationNames.getCXXOperatorName(TypedAllocatorKind);
+        DeclarationName UntypedOperator =
+            Context.DeclarationNames.getCXXOperatorName(UntypedAllocatorKind);
+
         Diag(Record->getLocation(),
              diag::err_type_aware_allocator_missing_matching_operator)
-            << FoundOperator << Context.getCanonicalTagType(Record)
-            << MissingOperator;
-        for (auto MD : NewDecls)
-          Diag(MD->getLocation(),
+            << TypedOperator << Context.getCanonicalTagType(Record)
+            << UntypedOperator;
+        for (const FunctionDecl *UnmatchedTypeAwareDecl :
+             TypeAwareAllocatorDeclKinds[TypedAllocatorKind])
+          Diag(UnmatchedTypeAwareDecl->getLocation(),
                diag::note_unmatched_type_aware_allocator_declared)
-              << MD;
-        for (auto MD : DeleteDecls)
-          Diag(MD->getLocation(),
-               diag::note_unmatched_type_aware_allocator_declared)
-              << MD;
+              << UnmatchedTypeAwareDecl;
       };
   CheckMismatchedTypeAwareAllocators(OO_New, OO_Delete);
   CheckMismatchedTypeAwareAllocators(OO_Array_New, OO_Array_Delete);
