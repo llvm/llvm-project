@@ -2086,14 +2086,21 @@ void VPWidenMemIntrinsicRecipe::execute(VPTransformState &State) {
   State.set(this, MemI);
 }
 
+InstructionCost VPWidenMemIntrinsicRecipe::computeMemIntrinsicCost(
+    Intrinsic::ID IID, Type *Ty, bool IsMasked, Align Alignment,
+    VPCostContext &Ctx) {
+  return Ctx.TTI.getMemIntrinsicInstrCost(
+      MemIntrinsicCostAttributes(IID, Ty, /*Ptr=*/nullptr, IsMasked, Alignment),
+      Ctx.CostKind);
+}
+
 InstructionCost
 VPWidenMemIntrinsicRecipe::computeCost(ElementCount VF,
                                        VPCostContext &Ctx) const {
   Type *Ty = toVectorTy(getScalarType(), VF);
-  return Ctx.TTI.getMemIntrinsicInstrCost(
-      MemIntrinsicCostAttributes(getVectorIntrinsicID(), Ty, /*Ptr=*/nullptr,
-                                 !match(getOperand(2), m_True()), Alignment),
-      Ctx.CostKind);
+  return computeMemIntrinsicCost(getVectorIntrinsicID(), Ty,
+                                 !match(getOperand(2), m_True()), Alignment,
+                                 Ctx);
 }
 
 void VPHistogramRecipe::execute(VPTransformState &State) {

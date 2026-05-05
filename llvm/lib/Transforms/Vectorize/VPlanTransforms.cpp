@@ -6832,11 +6832,9 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
           return false;
         const InstructionCost CurrentCost = LoadR->computeCost(VF, Ctx);
         const InstructionCost StridedLoadStoreCost =
-            Ctx.TTI.getMemIntrinsicInstrCost(
-                MemIntrinsicCostAttributes(
-                    Intrinsic::experimental_vp_strided_load, DataTy,
-                    /*Ptr=*/nullptr, LoadR->isMasked(), Alignment),
-                Ctx.CostKind);
+            VPWidenMemIntrinsicRecipe::computeMemIntrinsicCost(
+                Intrinsic::experimental_vp_strided_load, DataTy,
+                LoadR->isMasked(), Alignment, Ctx);
         return StridedLoadStoreCost < CurrentCost;
       };
 

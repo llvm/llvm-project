@@ -2047,6 +2047,11 @@ public:
   /// Produce a widened version of the vector memory intrinsic.
   void execute(VPTransformState &State) override;
 
+  /// Helper function for computing the cost of vector memory intrinsic.
+  static InstructionCost computeMemIntrinsicCost(Intrinsic::ID IID, Type *Ty,
+                                                 bool IsMasked, Align Alignment,
+                                                 VPCostContext &Ctx);
+
   /// Return the cost of this vector memory intrinsic.
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override;
