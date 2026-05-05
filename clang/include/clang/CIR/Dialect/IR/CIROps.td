@@ -4067,6 +4067,9 @@ def CIR_CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
         $_state.addTypes(resType);
     }]>
   ];
+
+  let customLLVMLoweringConstructorDecl =
+    LoweringBuilders<(ins "mlir::SymbolTableCollection &":$symbolTables)>;
 }
 
 def CIR_TryCallOp : CIR_CallOpBase<"try_call",[
@@ -4156,6 +4159,9 @@ def CIR_TryCallOp : CIR_CallOpBase<"try_call",[
       $_state.addSuccessors(unwindDest);
     }]>
   ];
+
+  let customLLVMLoweringConstructorDecl =
+    LoweringBuilders<(ins "mlir::SymbolTableCollection &":$symbolTables)>;
 }
 
 //===----------------------------------------------------------------------===//
