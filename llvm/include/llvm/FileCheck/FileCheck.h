@@ -194,9 +194,7 @@ public:
            FCDK <= FCDK_MatchResultDiag_Last;
   }
   /// Get itself.
-  virtual const MatchResultDiag &getMatchResultDiag() const override {
-    return *this;
-  }
+  const MatchResultDiag &getMatchResultDiag() const override { return *this; }
   /// What is the type of pattern for this match result?
   Check::FileCheckType getCheckTy() const { return CheckTy; }
   /// Where is the pattern for this match result?
@@ -319,9 +317,7 @@ public:
     return FCDK_MatchNoteDiag_First <= FCDK && FCDK <= FCDK_MatchNoteDiag_Last;
   }
   /// Get the note's associated \c MatchResultDiag.
-  virtual const MatchResultDiag &getMatchResultDiag() const override {
-    return *MRD;
-  }
+  const MatchResultDiag &getMatchResultDiag() const override { return *MRD; }
   /// Set the note's associated \c MatchResultDiag.
   void setMatchResultDiag(MatchResultDiag *MRDNew) {
     assert(!MRD && "expected setMatchResultDiag to be called only once");
