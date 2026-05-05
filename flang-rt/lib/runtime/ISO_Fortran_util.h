@@ -55,7 +55,7 @@ static inline RT_API_ATTRS int VerifyEstablishParameters(
   if (rank > 0 && base_addr && !extents) {
     return CFI_INVALID_EXTENT;
   }
-  if ((type < CFI_type_signed_char || type > CFI_TYPE_LAST)) {
+  if (type < CFI_type_signed_char || type > CFI_TYPE_LAST) {
     return CFI_INVALID_TYPE;
   }
   if (!descriptor) {
