@@ -85,11 +85,9 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back(Args.MakeArgString("--dependent-lib=amath"));
   }
 
-  // ==========================================================================
   // SYCL: Auto-add /MD if no C++ runtime specified
   // SYCL requires dynamic C++ runtime because STL objects cross DLL boundaries
   // This must happen BEFORE other CRT handling logic
-  // ==========================================================================
   if (Args.hasFlag(options::OPT_fsycl, options::OPT_fno_sycl, false) &&
       !Args.hasArg(options::OPT_nolibsycl) &&
       !Args.hasArg(options::OPT_nostdlib) &&
@@ -111,75 +109,31 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  // ==========================================================================
-  // SYCL: Validate CRT compatibility and add SYCL runtime libraries
-  // This needs to run for both CL mode and regular mode
-  // ==========================================================================
+  // SYCL requires dynamic CRT because STL objects cross DLL boundaries.
+  // Library dependency is added via --dependent-lib at compiler stage.
+  // Here we validate CRT compatibility and add the library search path.
   if (Args.hasFlag(options::OPT_fsycl, options::OPT_fno_sycl, false) &&
       !Args.hasArg(options::OPT_nolibsycl) &&
       !Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles)) {
 
-    // ------------------------------------------------------------------------
-    // STEP 1: Validate that static CRT is not being used
-    // ------------------------------------------------------------------------
-    bool HasStaticCRT = false;
+    // Check if static CRT is being used.
+    bool HasStaticCRT = Args.hasArg(options::OPT__SLASH_MT) ||
+                        Args.hasArg(options::OPT__SLASH_MTd);
 
-    // Check for explicit /MT or /MTd flags
-    if (Args.hasArg(options::OPT__SLASH_MT) ||
-        Args.hasArg(options::OPT__SLASH_MTd)) {
-      HasStaticCRT = true;
-    }
-
-    // Check -fms-runtime-lib flag
     if (const Arg *A = Args.getLastArg(options::OPT_fms_runtime_lib_EQ)) {
       StringRef RuntimeLib = A->getValue();
-      if (RuntimeLib == "static" || RuntimeLib == "static_dbg") {
+      if (RuntimeLib == "static" || RuntimeLib == "static_dbg")
         HasStaticCRT = true;
-      }
     }
 
-    // Reject static CRT with SYCL
     if (HasStaticCRT) {
       TC.getDriver().Diag(diag::err_drv_sycl_requires_dynamic_crt);
-      // Continue to show other potential errors, but skip SYCL library linking
     } else {
-      // ----------------------------------------------------------------------
-      // STEP 2: Add SYCL library search path
-      // ----------------------------------------------------------------------
-      CmdArgs.push_back(Args.MakeArgString(std::string("-libpath:") +
-                                           TC.getDriver().Dir + "/../lib"));
-
-      // ----------------------------------------------------------------------
-      // STEP 3: Determine if this is a debug build
-      // Only check DYNAMIC CRT flags (/MDd), never static (/MTd)
-      // ----------------------------------------------------------------------
-      bool IsDebugBuild = false;
-
-      // Method 1: Check -fms-runtime-lib=dll_dbg
-      if (const Arg *A = Args.getLastArg(options::OPT_fms_runtime_lib_EQ)) {
-        StringRef RuntimeVal = A->getValue();
-        if (RuntimeVal == "dll_dbg")
-          IsDebugBuild = true;
-      }
-
-      // Method 2: Check for /MDd flag (dynamic debug CRT)
-      if (Args.hasArg(options::OPT__SLASH_MDd))
-        IsDebugBuild = true;
-
-      // ----------------------------------------------------------------------
-      // STEP 4: Add appropriate SYCL runtime library
-      // Using LLVMSYCL for LLVM naming convention
-      // ----------------------------------------------------------------------
-      if (IsDebugBuild) {
-        // Debug build: link debug SYCL runtime
-        CmdArgs.push_back("-defaultlib:LLVMSYCLd.lib");
-      } else {
-        // Release build: link release SYCL runtime
-        CmdArgs.push_back("-defaultlib:LLVMSYCL.lib");
-      }
-
-      // Add msvcrt for SYCL (dynamic CRT)
-      CmdArgs.push_back("-defaultlib:msvcrt");
+      // Add library search path so linker can find LLVMSYCL[d].lib.
+      SmallString<128> LibPath(TC.getDriver().Dir);
+      llvm::sys::path::append(LibPath, "..", "lib");
+      CmdArgs.push_back(
+          Args.MakeArgString(Twine("-libpath:") + LibPath));
     }
   }
 
@@ -260,9 +214,9 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (TC.getVFS().exists(CRTPath))
     CmdArgs.push_back(Args.MakeArgString("-libpath:" + CRTPath));
 
-  // ==========================================================================
-  // SYCL: Suppress LNK4078 warning (multiple .llvm.offloading sections)
-  // ==========================================================================
+  // SYCL offload compilation creates .llvm.offloading sections in each object
+  // file to store device code and metadata. Suppress linker warning about
+  // multiple sections with different attributes (LNK4078).
   if (Args.hasFlag(options::OPT_fsycl, options::OPT_fno_sycl, false))
     CmdArgs.push_back("/IGNORE:4078");
 
