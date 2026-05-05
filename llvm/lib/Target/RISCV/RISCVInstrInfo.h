@@ -338,7 +338,8 @@ public:
   /// Return true if moving \p From down to \p To won't cause any physical
   /// register reads or writes to be clobbered and no visible side effects are
   /// affected. From and To must be in the same block.
-  static bool isSafeToMove(const MachineInstr &From, const MachineInstr &To);
+  static bool isSafeToMove(const MachineInstr &From,
+                           const MachineBasicBlock::iterator &To);
 
   /// Return true if pairing the given load or store may be paired with another.
   static bool isPairableLdStInstOpc(unsigned Opc);
@@ -363,8 +364,6 @@ protected:
   const RISCVSubtarget &STI;
 
 private:
-  unsigned getInstBundleLength(const MachineInstr &MI) const;
-
   bool isVectorAssociativeAndCommutative(const MachineInstr &MI,
                                          bool Invert = false) const;
   bool areRVVInstsReassociable(const MachineInstr &MI1,

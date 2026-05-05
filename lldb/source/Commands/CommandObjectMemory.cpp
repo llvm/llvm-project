@@ -358,7 +358,7 @@ protected:
 
     if ((argc == 0 && m_next_addr == LLDB_INVALID_ADDRESS) || argc > 2) {
       result.AppendErrorWithFormat("%s takes a start address expression with "
-                                   "an optional end address expression.",
+                                   "an optional end address expression",
                                    m_cmd_name.c_str());
       result.AppendWarning("expressions should be quoted if they contain "
                            "spaces or other special characters");
@@ -597,13 +597,13 @@ protected:
       } else if (end_addr <= addr) {
         result.AppendErrorWithFormat(
             "end address (0x%" PRIx64
-            ") must be greater than the start address (0x%" PRIx64 ").",
+            ") must be greater than the start address (0x%" PRIx64 ")",
             end_addr, addr);
         return;
       } else if (m_format_options.GetCountValue().OptionWasSet()) {
         result.AppendErrorWithFormat(
             "specify either the end address (0x%" PRIx64
-            ") or the count (--count %" PRIu64 "), not both.",
+            ") or the count (--count %" PRIu64 "), not both",
             end_addr, (uint64_t)item_count);
         return;
       }
@@ -617,12 +617,12 @@ protected:
     if (total_byte_size > max_unforced_size && !m_memory_options.m_force) {
       result.AppendErrorWithFormat(
           "Normally, \'memory read\' will not read over %" PRIu32
-          " bytes of data.",
+          " bytes of data",
           max_unforced_size);
       result.AppendErrorWithFormat(
-          "Please use --force to override this restriction just once.");
+          "Please use --force to override this restriction just once");
       result.AppendErrorWithFormat("or set target.max-memory-read-size if you "
-                                   "will often need a larger limit.");
+                                   "will often need a larger limit");
       return;
     }
 
@@ -772,7 +772,7 @@ protected:
             return;
           } else {
             result.AppendErrorWithFormat("Failed to write %" PRIu64
-                                         " bytes to '%s'.",
+                                         " bytes to '%s'",
                                          (uint64_t)bytes_read, path.c_str());
             return;
           }
@@ -1261,19 +1261,19 @@ protected:
     if (m_memory_options.m_infile) {
       if (argc < 1) {
         result.AppendErrorWithFormat(
-            "%s takes a destination address when writing file contents.",
+            "%s takes a destination address when writing file contents",
             m_cmd_name.c_str());
         return;
       }
       if (argc > 1) {
         result.AppendErrorWithFormat(
-            "%s takes only a destination address when writing file contents.",
+            "%s takes only a destination address when writing file contents",
             m_cmd_name.c_str());
         return;
       }
     } else if (argc < 2) {
       result.AppendErrorWithFormat(
-          "%s takes a destination address and at least one value.",
+          "%s takes a destination address and at least one value",
           m_cmd_name.c_str());
       return;
     }
@@ -1322,12 +1322,12 @@ protected:
             result.SetStatus(eReturnStatusSuccessFinishResult);
           } else {
             result.AppendErrorWithFormat("Memory write to 0x%" PRIx64
-                                         " failed: %s.",
+                                         " failed: %s",
                                          addr, error.AsCString());
           }
         }
       } else {
-        result.AppendErrorWithFormat("Unable to read contents of file.");
+        result.AppendErrorWithFormat("Unable to read contents of file");
       }
       return;
     } else if (item_byte_size == 0) {
@@ -1389,13 +1389,13 @@ protected:
         if (!success)
           success = !entry.ref().getAsInteger(16, uval64);
         if (!success) {
-          result.AppendErrorWithFormat("'%s' is not a valid hex string value.",
+          result.AppendErrorWithFormat("'%s' is not a valid hex string value",
                                        entry.c_str());
           return;
         } else if (!llvm::isUIntN(item_byte_size * 8, uval64)) {
           result.AppendErrorWithFormat("Value 0x%" PRIx64
                                        " is too large to fit in a %" PRIu64
-                                       " byte unsigned integer value.",
+                                       " byte unsigned integer value",
                                        uval64, (uint64_t)item_byte_size);
           return;
         }
@@ -1406,7 +1406,7 @@ protected:
         uval64 = OptionArgParser::ToBoolean(entry.ref(), false, &success);
         if (!success) {
           result.AppendErrorWithFormat(
-              "'%s' is not a valid boolean string value.", entry.c_str());
+              "'%s' is not a valid boolean string value", entry.c_str());
           return;
         }
         buffer.PutMaxHex64(uval64, item_byte_size);
@@ -1415,12 +1415,12 @@ protected:
       case eFormatBinary:
         if (entry.ref().getAsInteger(2, uval64)) {
           result.AppendErrorWithFormat(
-              "'%s' is not a valid binary string value.", entry.c_str());
+              "'%s' is not a valid binary string value", entry.c_str());
           return;
         } else if (!llvm::isUIntN(item_byte_size * 8, uval64)) {
           result.AppendErrorWithFormat("Value 0x%" PRIx64
                                        " is too large to fit in a %" PRIu64
-                                       " byte unsigned integer value.",
+                                       " byte unsigned integer value",
                                        uval64, (uint64_t)item_byte_size);
           return;
         }
@@ -1442,7 +1442,7 @@ protected:
           addr += len;
         } else {
           result.AppendErrorWithFormat("Memory write to 0x%" PRIx64
-                                       " failed: %s.\n",
+                                       " failed: %s",
                                        addr, error.AsCString());
           return;
         }
@@ -1451,12 +1451,12 @@ protected:
       case eFormatDecimal:
         if (entry.ref().getAsInteger(0, sval64)) {
           result.AppendErrorWithFormat(
-              "'%s' is not a valid signed decimal value.", entry.c_str());
+              "'%s' is not a valid signed decimal value", entry.c_str());
           return;
         } else if (!llvm::isIntN(item_byte_size * 8, sval64)) {
           result.AppendErrorWithFormat(
               "Value %" PRIi64 " is too large or small to fit in a %" PRIu64
-              " byte signed integer value.",
+              " byte signed integer value",
               sval64, (uint64_t)item_byte_size);
           return;
         }
@@ -1467,13 +1467,13 @@ protected:
 
         if (entry.ref().getAsInteger(0, uval64)) {
           result.AppendErrorWithFormat(
-              "'%s' is not a valid unsigned decimal string value.",
+              "'%s' is not a valid unsigned decimal string value",
               entry.c_str());
           return;
         } else if (!llvm::isUIntN(item_byte_size * 8, uval64)) {
           result.AppendErrorWithFormat("Value %" PRIu64
                                        " is too large to fit in a %" PRIu64
-                                       " byte unsigned integer value.",
+                                       " byte unsigned integer value",
                                        uval64, (uint64_t)item_byte_size);
           return;
         }
@@ -1482,13 +1482,13 @@ protected:
 
       case eFormatOctal:
         if (entry.ref().getAsInteger(8, uval64)) {
-          result.AppendErrorWithFormat(
-              "'%s' is not a valid octal string value.", entry.c_str());
+          result.AppendErrorWithFormat("'%s' is not a valid octal string value",
+                                       entry.c_str());
           return;
         } else if (!llvm::isUIntN(item_byte_size * 8, uval64)) {
           result.AppendErrorWithFormat("Value %" PRIo64
                                        " is too large to fit in a %" PRIu64
-                                       " byte unsigned integer value.",
+                                       " byte unsigned integer value",
                                        uval64, (uint64_t)item_byte_size);
           return;
         }
@@ -1505,8 +1505,7 @@ protected:
           process->WriteMemory(addr, buffer_data, buffer_size, error);
 
       if (write_size != buffer_size) {
-        result.AppendErrorWithFormat("Memory write to 0x%" PRIx64
-                                     " failed: %s.",
+        result.AppendErrorWithFormat("Memory write to 0x%" PRIx64 " failed: %s",
                                      addr, error.AsCString());
         return;
       }
@@ -1690,6 +1689,28 @@ protected:
     LazyBool is_shadow_stack = range_info.IsShadowStack();
     if (is_shadow_stack == eLazyBoolYes)
       result.AppendMessage("shadow stack: yes");
+    if (std::optional<unsigned> protection_key =
+            range_info.GetProtectionKey()) {
+      Stream &strm = result.GetOutputStream();
+      strm << llvm::formatv("protection key: {0}", *protection_key);
+
+      if (const lldb::ABISP &abi = target.GetProcessSP()->GetABI()) {
+        if (auto permissions = abi->GetMemoryPermissions(
+                *m_exe_ctx.GetRegisterContext(), *protection_key,
+                range_info.GetLLDBPermissions())) {
+          strm << llvm::formatv(
+              " ({0}{1}{2}, effective: {3}{4}{5})",
+              permissions->overlay & lldb::ePermissionsReadable ? 'r' : '-',
+              permissions->overlay & lldb::ePermissionsWritable ? 'w' : '-',
+              permissions->overlay & lldb::ePermissionsExecutable ? 'x' : '-',
+              permissions->effective & lldb::ePermissionsReadable ? 'r' : '-',
+              permissions->effective & lldb::ePermissionsWritable ? 'w' : '-',
+              permissions->effective & lldb::ePermissionsExecutable ? 'x'
+                                                                    : '-');
+        }
+      }
+      strm.PutChar('\n');
+    }
 
     const std::optional<std::vector<addr_t>> &dirty_page_list =
         range_info.GetDirtyPageList();

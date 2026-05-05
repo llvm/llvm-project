@@ -201,6 +201,20 @@ public:
         Opcode, Operands, ResultTy, Flags, {}, DL, Name));
   }
 
+  VPInstruction *createFirstActiveLane(ArrayRef<VPValue *> Masks,
+                                       DebugLoc DL = DebugLoc::getUnknown(),
+                                       const Twine &Name = "") {
+    return tryInsertInstruction(new VPInstruction(
+        VPInstruction::FirstActiveLane, Masks, {}, {}, DL, Name));
+  }
+
+  VPInstruction *createLastActiveLane(ArrayRef<VPValue *> Masks,
+                                      DebugLoc DL = DebugLoc::getUnknown(),
+                                      const Twine &Name = "") {
+    return tryInsertInstruction(new VPInstruction(VPInstruction::LastActiveLane,
+                                                  Masks, {}, {}, DL, Name));
+  }
+
   VPInstruction *createOverflowingOp(
       unsigned Opcode, ArrayRef<VPValue *> Operands,
       VPRecipeWithIRFlags::WrapFlagsTy WrapFlags = {false, false},
@@ -351,10 +365,9 @@ public:
   /// \p Step.
   VPDerivedIVRecipe *createDerivedIV(InductionDescriptor::InductionKind Kind,
                                      FPMathOperator *FPBinOp, VPIRValue *Start,
-                                     VPValue *Current, VPValue *Step,
-                                     const Twine &Name = "") {
+                                     VPValue *Current, VPValue *Step) {
     return tryInsertInstruction(
-        new VPDerivedIVRecipe(Kind, FPBinOp, Start, Current, Step, Name));
+        new VPDerivedIVRecipe(Kind, FPBinOp, Start, Current, Step));
   }
 
   VPInstructionWithType *createScalarLoad(Type *ResultTy, VPValue *Addr,
@@ -553,6 +566,7 @@ class VFSelectionContext {
   const Loop *TheLoop;
   const Function &F;
   PredicatedScalarEvolution &PSE;
+  DemandedBits *DB;
   OptimizationRemarkEmitter *ORE;
   const LoopVectorizeHints *Hints;
 
@@ -586,6 +600,11 @@ class VFSelectionContext {
   /// computeFeasibleMaxVF.
   std::optional<unsigned> MaxSafeElements;
 
+  /// Map of scalar integer values to the smallest bitwidth they can be legally
+  /// represented as. The vector equivalents of these values should be truncated
+  /// to this type.
+  MapVector<Instruction *, uint64_t> MinBWs;
+
 public:
   /// The kind of cost that we are calculating.
   const TTI::TargetCostKind CostKind;
@@ -597,11 +616,11 @@ public:
   VFSelectionContext(const TargetTransformInfo &TTI,
                      const LoopVectorizationLegality *Legal,
                      const Loop *TheLoop, const Function &F,
-                     PredicatedScalarEvolution &PSE,
+                     PredicatedScalarEvolution &PSE, DemandedBits *DB,
                      OptimizationRemarkEmitter *ORE,
                      const LoopVectorizeHints *Hints, bool OptForSize)
-      : TTI(TTI), Legal(Legal), TheLoop(TheLoop), F(F), PSE(PSE), ORE(ORE),
-        Hints(Hints),
+      : TTI(TTI), Legal(Legal), TheLoop(TheLoop), F(F), PSE(PSE), DB(DB),
+        ORE(ORE), Hints(Hints),
         CostKind(F.hasMinSize() ? TTI::TCK_CodeSize : TTI::TCK_RecipThroughput),
         OptForSize(OptForSize) {
     initializeVScaleForTuning();
@@ -689,6 +708,16 @@ public:
   /// Check whether vectorization would require runtime checks. When optimizing
   /// for size, returning true here aborts vectorization.
   bool runtimeChecksRequired();
+
+  /// Compute smallest bitwidth each instruction can be represented with.
+  /// The vector equivalents of these instructions should be truncated to this
+  /// type.
+  void computeMinimalBitwidths();
+
+  /// \returns The smallest bitwidth each instruction can be represented with.
+  const MapVector<Instruction *, uint64_t> &getMinimalBitwidths() const {
+    return MinBWs;
+  }
 };
 
 /// Planner drives the vectorization process after having passed
@@ -879,8 +908,7 @@ private:
   /// set the largest included VF to the maximum VF for which no plan could be
   /// built. Each VPlan is built starting from a copy of \p InitialPlan, which
   /// is a plain CFG VPlan wrapping the original scalar loop.
-  VPlanPtr tryToBuildVPlanWithVPRecipes(VPlanPtr InitialPlan, VFRange &Range,
-                                        LoopVersioning *LVer);
+  VPlanPtr tryToBuildVPlanWithVPRecipes(VPlanPtr InitialPlan, VFRange &Range);
 
   /// Build VPlans for power-of-2 VF's between \p MinVF and \p MaxVF inclusive,
   /// according to the information gathered by Legal when it checked if it is

@@ -70,4 +70,6 @@ llvm.func @_FortranAAssign(!llvm.ptr, !llvm.ptr, !llvm.ptr, i32) -> !llvm.struct
 // CHECK:  call void @dealloc_foo_1(ptr %[[DESC_TO_DEALLOC]])
 // CHECK-NEXT: br label %[[CONT_BLOCK:.*]]
 // CHECK: [[CONT_BLOCK]]:
+// CHECK-NEXT: br label %[[EXIT_BLOCK:.*]]
+// CHECK: [[EXIT_BLOCK]]:
 // CHECK-NEXT: ret void
