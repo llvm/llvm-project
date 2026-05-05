@@ -8,9 +8,9 @@ add_distinct_clang_unittest(ClangScalableAnalysisTests
   EntityLinkageTest.cpp
   EntityLinkerTest.cpp
   EntityNameTest.cpp
-  LUSummaryTest.cpp
   ErrorBuilderTest.cpp
   Frontend/TUSummaryExtractorFrontendActionTest.cpp
+  LUSummaryTest.cpp
   ModelStringConversionsTest.cpp
   Registries/FancyAnalysisData.cpp
   Registries/MockSerializationFormat.cpp
