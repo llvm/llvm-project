@@ -147,10 +147,11 @@ struct VPlanTransforms {
       const SmallPtrSetImpl<PHINode *> &InLoopReductions, bool AllowReordering);
 
   /// Finalize SCEV predicates by adding induction predicates from \p Plan to
-  /// \p PSE and checking constraints. Returns false if predicated IVs have
-  /// outside-loop uses via ExitingIVValue, if SCEV predicate complexity exceeds
-  /// \p SCEVCheckThreshold, or if predicates are needed but \p
-  /// NoEpilogueAllowed is true.
+  /// \p PSE and checking constraints.
+  /// \returns false if:
+  /// - Predicated IVs have outside-loop uses via ExitingIVValue,
+  /// - Predicates are needed but \p NoEpilogueAllowed is true,
+  /// - SCEV predicate complexity exceeds \p SCEVCheckThreshold.
   static bool
   finalizeSCEVPredicates(VPlan &Plan, PredicatedScalarEvolution &PSE,
                          bool NoEpilogueAllowed, unsigned SCEVCheckThreshold,
