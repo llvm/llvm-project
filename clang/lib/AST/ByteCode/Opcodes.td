@@ -181,6 +181,10 @@ def Jf : JumpOpcode;
 def PushIgnoreDiags : Opcode;
 def PopIgnoreDiags : Opcode;
 
+
+def StartInit : Opcode;
+def EndInit : Opcode;
+
 def StartSpeculation : Opcode;
 def EndSpeculation : Opcode;
 def BCP : Opcode {
