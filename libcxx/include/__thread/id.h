@@ -59,25 +59,27 @@ class __thread_id {
   // Strong total order implementation.
   // Here we provide a best-effort implementation of strong total order, comparing
   // integral types as-is and routing pointers through uintptr_t for a well-defined comparison.
-  static _LIBCPP_HIDE_FROM_ABI bool __eq_impl(__thread_id __x, __thread_id __y) _NOEXCEPT {
-    if _LIBCPP_CONSTEXPR (is_pointer<_Tp>::value) {
-      return reinterpret_cast<uintptr_t>(__x.__id_) == reinterpret_cast<uintptr_t>(__y.__id_);
-    } else {
-      return __x.__id_ == __y.__id_;
-    }
+  template <typename Thr, enable_if<is_pointer<typename Thr::_Tp>::value, int>::type = 0>
+  static _LIBCPP_HIDE_FROM_ABI bool __eq_impl(Thr __x, Thr __y) _NOEXCEPT {
+    return reinterpret_cast<uintptr_t>(__x.__id_) == reinterpret_cast<uintptr_t>(__y.__id_);
+  }
+  template <typename Thr, enable_if<is_integral<typename Thr::_Tp>::value, int>::type = 0>
+  static _LIBCPP_HIDE_FROM_ABI bool __eq_impl(Thr __x, Thr __y) _NOEXCEPT {
+    return __x.__id_ == __y.__id_;
   }
 
-  static _LIBCPP_HIDE_FROM_ABI bool __lt_impl(__thread_id __x, __thread_id __y) _NOEXCEPT {
-    if _LIBCPP_CONSTEXPR (is_pointer<_Tp>::value) {
-      return reinterpret_cast<uintptr_t>(__x.__id_) < reinterpret_cast<uintptr_t>(__y.__id_);
-    } else {
-      // For integral thread IDs, assume 0 is always less than any other thread_id.
-      if (__x.__id_ == 0)
-        return __y.__id_ != 0;
-      if (__y.__id_ == 0)
-        return false;
-      return __x.__id_ < __y.__id_;
-    }
+  template <typename Thr, enable_if<is_pointer<typename Thr::_Tp>::value, int>::type = 0>
+  static _LIBCPP_HIDE_FROM_ABI bool __lt_impl(Thr __x, Thr __y) _NOEXCEPT {
+    return reinterpret_cast<uintptr_t>(__x.__id_) < reinterpret_cast<uintptr_t>(__y.__id_);
+  }
+  template <typename Thr, enable_if<is_integral<typename Thr::_Tp>::value, int>::type = 0>
+  static _LIBCPP_HIDE_FROM_ABI bool __lt_impl(Thr __x, Thr __y) _NOEXCEPT {
+    // For integral thread IDs, assume 0 is always less than any other thread_id.
+    if (__x.__id_ == 0)
+      return __y.__id_ != 0;
+    if (__y.__id_ == 0)
+      return false;
+    return __x.__id_ < __y.__id_;
   }
 
   // Hashing implementation.
