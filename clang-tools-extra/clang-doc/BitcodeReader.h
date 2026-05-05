@@ -96,7 +96,7 @@ private:
 
   llvm::BitstreamCursor &Stream;
   std::optional<llvm::BitstreamBlockInfo> BlockInfo;
-  FieldId CurrentReferenceField;
+  FieldId CurrentReferenceField = FieldId::F_default;
   DiagnosticsEngine &Diags;
 };
 
