@@ -59,6 +59,103 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// All source dimensions are dynamic, so read in_bounds cannot be proven for
+// any vector dimension. The transfer_read should therefore print without an
+// in_bounds attribute (all-false canonical form).
+//
+// CHECK-LABEL:   func.func @insert_dynamic_slice_all_false_read_in_bounds(
+// CHECK-SAME:      %[[ARG_0:.*]]: tensor<?x?x?xf32>,
+// CHECK-SAME:      %[[PAD:.*]]: f32, %[[SZ0:.*]]: index, %[[SZ1:.*]]: index, %[[SZ2:.*]]: index) -> tensor<9x8x7x1x2x3xf32> {
+// CHECK:           %[[EMPTY:.*]] = tensor.empty() : tensor<9x8x7x1x2x3xf32>
+// CHECK:           %[[BC:.*]] = vector.broadcast %[[PAD]] : f32 to vector<9x8x7x1x2x3xf32>
+// CHECK:           %[[WRITE:.*]] = vector.transfer_write %[[BC]], %[[EMPTY]]{{.*}} {in_bounds = [true, true, true, true, true, true]} : vector<9x8x7x1x2x3xf32>, tensor<9x8x7x1x2x3xf32>
+// CHECK:           %[[READ:.*]] = vector.transfer_read %[[ARG_0]]{{.*}}, %[[PAD]] : tensor<?x?x?xf32>, vector<1x2x3xf32>
+// CHECK:           %[[RES:.*]] = vector.transfer_write %[[READ]], %[[WRITE]]{{.*}} {in_bounds = [true, true, true]} : vector<1x2x3xf32>, tensor<9x8x7x1x2x3xf32>
+// CHECK:           return %[[RES]] : tensor<9x8x7x1x2x3xf32>
+func.func @insert_dynamic_slice_all_false_read_in_bounds(
+    %arg0: tensor<?x?x?xf32>, %pad : f32,
+    %sz0: index, %sz1: index, %sz2: index) -> tensor<9x8x7x1x2x3xf32> {
+  %init = tensor.empty() : tensor<9x8x7x1x2x3xf32>
+  %fill = linalg.fill ins(%pad : f32) outs(%init : tensor<9x8x7x1x2x3xf32>) -> tensor<9x8x7x1x2x3xf32>
+  %res = tensor.insert_slice %arg0 into %fill[0, 0, 0, 0, 0, 0] [1, 1, 1, %sz0, %sz1, %sz2][1, 1, 1, 1, 1, 1] : tensor<?x?x?xf32> into tensor<9x8x7x1x2x3xf32>
+  return %res : tensor<9x8x7x1x2x3xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["tensor.insert_slice"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.vectorize_children_and_apply_patterns %1 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// All write offsets in the vectorized dimensions are dynamic, so write
+// in_bounds cannot be proven for any vector dimension. The transfer_write
+// should print without an in_bounds attribute (all-false canonical form).
+//
+// CHECK-LABEL:   func.func @insert_static_slice_all_false_write_in_bounds(
+// CHECK-SAME:      %[[ARG_0:.*]]: tensor<1x2x3xf32>,
+// CHECK-SAME:      %[[PAD:.*]]: f32, %[[OFF0:.*]]: index, %[[OFF1:.*]]: index, %[[OFF2:.*]]: index) -> tensor<9x8x7x1x2x3xf32> {
+// CHECK:           %[[EMPTY:.*]] = tensor.empty() : tensor<9x8x7x1x2x3xf32>
+// CHECK:           %[[BC:.*]] = vector.broadcast %[[PAD]] : f32 to vector<9x8x7x1x2x3xf32>
+// CHECK:           %[[WRITE:.*]] = vector.transfer_write %[[BC]], %[[EMPTY]]{{.*}} {in_bounds = [true, true, true, true, true, true]} : vector<9x8x7x1x2x3xf32>, tensor<9x8x7x1x2x3xf32>
+// CHECK:           %[[READ:.*]] = vector.transfer_read %[[ARG_0]]{{.*}}, %[[PAD]] {in_bounds = [true, true, true]} : tensor<1x2x3xf32>, vector<1x2x3xf32>
+// CHECK:           %[[RES:.*]] = vector.transfer_write %[[READ]], %[[WRITE]]{{.*}} : vector<1x2x3xf32>, tensor<9x8x7x1x2x3xf32>
+// CHECK:           return %[[RES]] : tensor<9x8x7x1x2x3xf32>
+func.func @insert_static_slice_all_false_write_in_bounds(
+    %arg0: tensor<1x2x3xf32>, %pad : f32,
+    %off0: index, %off1: index, %off2: index) -> tensor<9x8x7x1x2x3xf32> {
+  %init = tensor.empty() : tensor<9x8x7x1x2x3xf32>
+  %fill = linalg.fill ins(%pad : f32) outs(%init : tensor<9x8x7x1x2x3xf32>) -> tensor<9x8x7x1x2x3xf32>
+  %res = tensor.insert_slice %arg0 into %fill[0, 0, 0, %off0, %off1, %off2] [1, 1, 1, 1, 2, 3][1, 1, 1, 1, 1, 1] : tensor<1x2x3xf32> into tensor<9x8x7x1x2x3xf32>
+  return %res : tensor<9x8x7x1x2x3xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["tensor.insert_slice"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.vectorize_children_and_apply_patterns %1 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// Non-zero insert offsets should affect transfer_write in_bounds. Since source
+// shape is dynamic, transfer_read also keeps a conservative in_bounds.
+//
+// CHECK-LABEL:   func.func @insert_dynamic_slice_non_zero_offset(
+// CHECK-SAME:      %[[ARG_0:.*]]: tensor<1x?x3xf32>,
+// CHECK-SAME:      %[[PAD:.*]]: f32,
+// CHECK-SAME:      %[[SIZE:.*]]: index) -> tensor<9x8x7x1x2x3xf32> {
+// CHECK:           %[[EMPTY:.*]] = tensor.empty() : tensor<9x8x7x1x2x3xf32>
+// CHECK:           %[[BC:.*]] = vector.broadcast %[[PAD]] : f32 to vector<9x8x7x1x2x3xf32>
+// CHECK:           %[[WRITE:.*]] = vector.transfer_write %[[BC]], %[[EMPTY]]{{.*}} {in_bounds = [true, true, true, true, true, true]} : vector<9x8x7x1x2x3xf32>, tensor<9x8x7x1x2x3xf32>
+// CHECK:           %[[READ:.*]] = vector.transfer_read %[[ARG_0]]{{.*}}, %[[PAD]] {in_bounds = [true, false, true]} : tensor<1x?x3xf32>, vector<1x2x3xf32>
+// CHECK:           %[[RES:.*]] = vector.transfer_write %[[READ]], %[[WRITE]]{{.*}} {in_bounds = [true, false, true]} : vector<1x2x3xf32>, tensor<9x8x7x1x2x3xf32>
+// CHECK:           return %[[RES]] : tensor<9x8x7x1x2x3xf32>
+func.func @insert_dynamic_slice_non_zero_offset(%arg0: tensor<1x?x3xf32>, %pad : f32, %size: index) -> tensor<9x8x7x1x2x3xf32> {
+  %init = tensor.empty() : tensor<9x8x7x1x2x3xf32>
+  %fill = linalg.fill ins(%pad : f32) outs(%init : tensor<9x8x7x1x2x3xf32>) -> tensor<9x8x7x1x2x3xf32>
+  %res = tensor.insert_slice %arg0 into %fill[0, 0, 0, 0, 1, 0] [1, 1, 1, 1, %size, 3][1, 1, 1, 1, 1, 1] : tensor<1x?x3xf32> into tensor<9x8x7x1x2x3xf32>
+  return %res : tensor<9x8x7x1x2x3xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["tensor.insert_slice"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.vectorize_children_and_apply_patterns %1 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
 // Same as above, but the source type has is dynamically shaped. This means
 // that the pad value is now required and the vector dim corresponding to the
 // dynamic shape has to be inferred from the shape of the destination tensor.
