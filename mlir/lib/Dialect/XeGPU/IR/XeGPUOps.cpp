@@ -698,20 +698,22 @@ void StoreScatterOp::build(
 //===----------------------------------------------------------------------===//
 
 // Helper to verify layout distributability for a value
-static LogicalResult verifyLayoutDistributable(Operation *op,
-                                                 std::optional<DistributeLayoutAttr> layout,
-                                                 ArrayRef<int64_t> shape,
-                                                 StringRef operandName) {
-  if (layout && !layout->isDistributable(SmallVector<int64_t>(shape.begin(), shape.end())))
+static LogicalResult
+verifyLayoutDistributable(Operation *op,
+                          std::optional<DistributeLayoutAttr> layout,
+                          ArrayRef<int64_t> shape, StringRef operandName) {
+  if (layout && !layout->isDistributable(
+                    SmallVector<int64_t>(shape.begin(), shape.end())))
     return op->emitOpError(operandName)
            << " shape is not distributable with the layout";
   return success();
 }
 
 // Helper to verify M, N, K dimensions match between A, B, and result matrices
-static LogicalResult verifyDpasDimensions(Operation *op, ArrayRef<int64_t> aShape,
-                                           ArrayRef<int64_t> bShape,
-                                           ArrayRef<int64_t> resShape) {
+static LogicalResult verifyDpasDimensions(Operation *op,
+                                          ArrayRef<int64_t> aShape,
+                                          ArrayRef<int64_t> bShape,
+                                          ArrayRef<int64_t> resShape) {
 
   auto aRank = aShape.size();
   auto bRank = bShape.size();
@@ -750,7 +752,7 @@ static LogicalResult verifyDpasDimensions(Operation *op, ArrayRef<int64_t> aShap
 
 // Helper to verify accumulator matches result type
 static LogicalResult verifyDpasAccumulator(Operation *op, Type accType,
-                                             Type resultType) {
+                                           Type resultType) {
   if (accType != resultType)
     return op->emitOpError("Accumulator type must match result type.");
   return success();
@@ -765,7 +767,8 @@ LogicalResult DpasOp::verify() {
   auto resShape = getResultType().getShape();
 
   // Verify layout distributability
-  if (failed(verifyLayoutDistributable(*this, getLayoutCd(), resShape, "Result")))
+  if (failed(
+          verifyLayoutDistributable(*this, getLayoutCd(), resShape, "Result")))
     return failure();
   if (failed(verifyLayoutDistributable(*this, getLayoutA(), lhsShape, "A")))
     return failure();
@@ -773,7 +776,8 @@ LogicalResult DpasOp::verify() {
     return failure();
 
   // Verify accumulator if present
-  if (getAcc() && failed(verifyDpasAccumulator(*this, getAcc().getType(), getResultType())))
+  if (getAcc() &&
+      failed(verifyDpasAccumulator(*this, getAcc().getType(), getResultType())))
     return failure();
 
   return verifyDpasDimensions(*this, lhsShape, rhsShape, resShape);
@@ -887,7 +891,8 @@ LogicalResult DpasMxOp::verify() {
   auto resShape = getResultType().getShape();
 
   // Verify layout distributability for A, B, and result
-  if (failed(verifyLayoutDistributable(*this, getLayoutCd(), resShape, "Result")))
+  if (failed(
+          verifyLayoutDistributable(*this, getLayoutCd(), resShape, "Result")))
     return failure();
   if (failed(verifyLayoutDistributable(*this, getLayoutA(), aShape, "A")))
     return failure();
@@ -895,7 +900,8 @@ LogicalResult DpasMxOp::verify() {
     return failure();
 
   // Verify accumulator if present
-  if (getAcc() && failed(verifyDpasAccumulator(*this, getAcc().getType(), getResultType())))
+  if (getAcc() &&
+      failed(verifyDpasAccumulator(*this, getAcc().getType(), getResultType())))
     return failure();
 
   // Verify M, N, K dimensions
@@ -913,13 +919,15 @@ LogicalResult DpasMxOp::verify() {
         return emitOpError("Scale A must be a 2D vector when not a scalar.");
 
       // Verify layout distributability for scale_a
-      if (failed(verifyLayoutDistributable(*this, getLayoutAScale(), scaleAShape, "ScaleA")))
+      if (failed(verifyLayoutDistributable(*this, getLayoutAScale(),
+                                           scaleAShape, "ScaleA")))
         return failure();
 
       // Validate M dimension: scale_a[0] must match a[0]
       if (scaleAShape[0] != aShape[0])
         return emitOpError("Scale A M dimension [")
-               << scaleAShape[0] << "] must match A M dimension [" << aShape[0] << "].";
+               << scaleAShape[0] << "] must match A M dimension [" << aShape[0]
+               << "].";
     }
   }
 
@@ -934,17 +942,20 @@ LogicalResult DpasMxOp::verify() {
         return emitOpError("Scale B must be a 2D vector when not a scalar.");
 
       // Verify layout distributability for scale_b
-      if (failed(verifyLayoutDistributable(*this, getLayoutBScale(), scaleBShape, "ScaleB")))
+      if (failed(verifyLayoutDistributable(*this, getLayoutBScale(),
+                                           scaleBShape, "ScaleB")))
         return failure();
 
       // Validate N dimension: scale_b[1] must match b[1]
       if (scaleBShape[1] != bShape[1])
         return emitOpError("Scale B N dimension [")
-               << scaleBShape[1] << "] must match B N dimension [" << bShape[1] << "].";
+               << scaleBShape[1] << "] must match B N dimension [" << bShape[1]
+               << "].";
     }
   }
 
-  // Validate scale K dimension compatibility if both scales are present and vectors
+  // Validate scale K dimension compatibility if both scales are present and
+  // vectors
   if (getScaleA() && getScaleB()) {
     auto scaleAVecType = dyn_cast<VectorType>(getScaleAType());
     auto scaleBVecType = dyn_cast<VectorType>(getScaleBType());
@@ -953,10 +964,12 @@ LogicalResult DpasMxOp::verify() {
       auto scaleAShape = scaleAVecType.getShape();
       auto scaleBShape = scaleBVecType.getShape();
 
-      // Validate scale K dimension compatibility: scale_a[1] must match scale_b[0]
+      // Validate scale K dimension compatibility: scale_a[1] must match
+      // scale_b[0]
       if (scaleAShape[1] != scaleBShape[0])
         return emitOpError("Scale K dimension mismatch: scale_a has K=")
-               << scaleAShape[1] << " but scale_b has K=" << scaleBShape[0] << ".";
+               << scaleAShape[1] << " but scale_b has K=" << scaleBShape[0]
+               << ".";
     }
   }
 

@@ -240,7 +240,6 @@ struct SgToWiDpas : public OpConversionPattern<xegpu::DpasOp> {
     auto layoutCd = cast<xegpu::LayoutAttr>(op.getLayoutCdAttr());
     if (!layoutA || !layoutB || !layoutCd)
       return failure();
-    // llvm::errs() << "tryning to calculate wi types for dpas op\n";
     auto wiResultTyOrFailure =
         xegpu::getDistributedVectorType(op.getType(), layoutCd);
     auto wiATypeOrFailure =
@@ -263,25 +262,30 @@ struct SgToWiDpas : public OpConversionPattern<xegpu::DpasOp> {
     const uArch *uArch = getUArch(xegpu::getChipStr(op).value_or(""));
     if (uArch) {
       const auto *uArchInstruction =
-          dyn_cast<xegpu::uArch::SubgroupMatrixMultiplyAcc>(uArch->getInstruction(
-              xegpu::uArch::InstructionKind::SubgroupMatrixMultiplyAcc));
+          dyn_cast<xegpu::uArch::SubgroupMatrixMultiplyAcc>(
+              uArch->getInstruction(
+                  xegpu::uArch::InstructionKind::SubgroupMatrixMultiplyAcc));
       if (uArchInstruction) {
         auto wiAType = wiATypeOrFailure.value();
         auto wiBType = wiBTypeOrFailure.value();
         // Calculate total packed bit width = element bit width * vector size
-        unsigned aPackedBitWidth = wiAType.getElementTypeBitWidth() * wiAType.getNumElements();
-        unsigned bPackedBitWidth = wiBType.getElementTypeBitWidth() * wiBType.getNumElements();
+        unsigned aPackedBitWidth =
+            wiAType.getElementTypeBitWidth() * wiAType.getNumElements();
+        unsigned bPackedBitWidth =
+            wiBType.getElementTypeBitWidth() * wiBType.getNumElements();
         unsigned expectedABitSize = uArchInstruction->getPackedFormatBitSizeA();
         unsigned expectedBBitSize = uArchInstruction->getPackedFormatBitSizeB();
 
         if (aPackedBitWidth % expectedABitSize != 0)
           return rewriter.notifyMatchFailure(
-              op, "A operand packed bit width must be a multiple of uArch packed "
-                  "format requirement");
+              op,
+              "A operand packed bit width must be a multiple of uArch packed "
+              "format requirement");
         if (bPackedBitWidth % expectedBBitSize != 0)
           return rewriter.notifyMatchFailure(
-              op, "B operand packed bit width must be a multiple of uArch packed "
-                  "format requirement");
+              op,
+              "B operand packed bit width must be a multiple of uArch packed "
+              "format requirement");
       }
     }
 
