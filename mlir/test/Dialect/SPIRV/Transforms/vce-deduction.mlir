@@ -411,3 +411,31 @@ spirv.module Logical GLSL450 attributes {
   spirv.GlobalVariable @img_2d_i64 bind(0, 0) :
     !spirv.ptr<!spirv.image<i64, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>, UniformConstant>
 }
+
+// CHECK: requires #spirv.vce<v1.0, [Linkage, Shader, Matrix], [SPV_KHR_linkonce_odr]>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.5, [Shader, Linkage], [SPV_KHR_linkonce_odr]>,
+    #spirv.resource_limits<>>
+} {
+  spirv.func @linkonce_odr_fn() "None" attributes {
+    linkage_attributes = #spirv.linkage_attributes<
+      linkage_name = "linkonce_odr_fn",
+      linkage_type = <LinkOnceODR>>
+  } {
+    spirv.Return
+  }
+}
+
+// CHECK: requires #spirv.vce<v1.0, [Linkage, Shader, Matrix], [SPV_AMD_weak_linkage]>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.5, [Shader, Linkage], [SPV_AMD_weak_linkage]>,
+    #spirv.resource_limits<>>
+} {
+  spirv.GlobalVariable @weak_var {
+    linkage_attributes = #spirv.linkage_attributes<
+      linkage_name = "weak_var",
+      linkage_type = <Weak>>
+  } : !spirv.ptr<i32, Private>
+}

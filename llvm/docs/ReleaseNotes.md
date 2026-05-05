@@ -64,6 +64,10 @@ Makes programs 10x faster by doing Special New Thing.
 * The `"nooutline"` attribute is now writen as `nooutline`. Existing IR and
   bitcode will be automatically updated.
 
+* `ConstantPointerNull` can now represent fixed and scalable vector splats of
+  null pointers. Such constants may print as `splat (ptr null)` instead of
+  `zeroinitializer`.
+
 * LLVM IR floating-point literals have greatly changed:
 
   * The old hexadecimal bitwise representation is deprecated and will be removed
@@ -80,6 +84,13 @@ Makes programs 10x faster by doing Special New Thing.
   zero. All callers should use ``isNullValue`` instead. ``isZeroValue``
   will be reintroduced in the future with bitwise-all-zeros semantics
   to support non-zero null pointers.
+
+* Added support for specifying the null pointer bit representation per
+  address space in `DataLayout`. Pointer specifications (`p`) accept new
+  flags: `z` (null is all-zeros) and `o` (null is all-ones). Address
+  spaces without an explicit flag default to all-zeros. See the
+  `DataLayout` section of the
+  [LangRef](https://llvm.org/docs/LangRef.html#data-layout) for details.
 
 * Removed TypePromoteFloat legalization from SelectionDAG
 
@@ -232,6 +243,7 @@ Makes programs 10x faster by doing Special New Thing.
 * Breakpoint commands now accept `.` to refer to the location(s) at which the current thread is stopped. For
   example, `breakpoint disable .` disables the just-hit breakpoint location. Another usage is to automate a
   command to run at the current location: `breakpoint command add -o 'p my_var' .`.
+* The `apropos` command now highlights matching keywords in its output when color is enabled.
 
 #### Deprecated APIs
 

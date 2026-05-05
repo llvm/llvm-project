@@ -369,6 +369,7 @@ def SPV_AMD_shader_fragment_mask                 : I32EnumAttrCase<"SPV_AMD_shad
 def SPV_AMD_shader_image_load_store_lod          : I32EnumAttrCase<"SPV_AMD_shader_image_load_store_lod", 2004>;
 def SPV_AMD_texture_gather_bias_lod              : I32EnumAttrCase<"SPV_AMD_texture_gather_bias_lod", 2005>;
 def SPV_AMD_shader_early_and_late_fragment_tests : I32EnumAttrCase<"SPV_AMD_shader_early_and_late_fragment_tests", 2006>;
+def SPV_AMD_weak_linkage                         : I32EnumAttrCase<"SPV_AMD_weak_linkage", 2007>;
 
 def SPV_GOOGLE_decorate_string           : I32EnumAttrCase<"SPV_GOOGLE_decorate_string", 3000>;
 def SPV_GOOGLE_hlsl_functionality1       : I32EnumAttrCase<"SPV_GOOGLE_hlsl_functionality1", 3001>;
@@ -398,7 +399,7 @@ def SPV_INTEL_usm_storage_classes                : I32EnumAttrCase<"SPV_INTEL_us
 def SPV_INTEL_io_pipes                           : I32EnumAttrCase<"SPV_INTEL_io_pipes", 4021>;
 def SPV_ALTERA_blocking_pipes                     : I32EnumAttrCase<"SPV_ALTERA_blocking_pipes", 4022>;
 def SPV_INTEL_fpga_reg                           : I32EnumAttrCase<"SPV_INTEL_fpga_reg", 4023>;
-def SPV_INTEL_long_constant_composite            : I32EnumAttrCase<"SPV_INTEL_long_constant_composite", 4024>;
+def SPV_INTEL_long_composites                    : I32EnumAttrCase<"SPV_INTEL_long_composites", 4024>;
 def SPV_INTEL_optnone                            : I32EnumAttrCase<"SPV_INTEL_optnone", 4025>;
 def SPV_INTEL_debug_module                       : I32EnumAttrCase<"SPV_INTEL_debug_module", 4026>;
 def SPV_INTEL_fp_fast_math_mode                  : I32EnumAttrCase<"SPV_INTEL_fp_fast_math_mode", 4027>;
@@ -456,7 +457,7 @@ def SPIRV_ExtensionAttr :
       SPV_AMD_gpu_shader_half_float_fetch, SPV_AMD_shader_ballot,
       SPV_AMD_shader_explicit_vertex_parameter, SPV_AMD_shader_fragment_mask,
       SPV_AMD_shader_image_load_store_lod, SPV_AMD_texture_gather_bias_lod,
-      SPV_AMD_shader_early_and_late_fragment_tests,
+      SPV_AMD_shader_early_and_late_fragment_tests, SPV_AMD_weak_linkage,
       SPV_GOOGLE_decorate_string, SPV_GOOGLE_hlsl_functionality1, SPV_GOOGLE_user_type,
       SPV_INTEL_device_side_avc_motion_estimation, SPV_INTEL_media_block_io,
       SPV_INTEL_shader_integer_functions2, SPV_INTEL_subgroups, SPV_INTEL_vector_compute,
@@ -468,7 +469,7 @@ def SPIRV_ExtensionAttr :
       SPV_INTEL_fpga_cluster_attributes, SPV_INTEL_loop_fuse,
       SPV_INTEL_fpga_buffer_location, SPV_INTEL_arbitrary_precision_fixed_point,
       SPV_INTEL_usm_storage_classes, SPV_INTEL_io_pipes, SPV_ALTERA_blocking_pipes,
-      SPV_INTEL_fpga_reg, SPV_INTEL_long_constant_composite, SPV_INTEL_optnone,
+      SPV_INTEL_fpga_reg, SPV_INTEL_long_composites, SPV_INTEL_optnone,
       SPV_INTEL_debug_module, SPV_INTEL_fp_fast_math_mode,
       SPV_INTEL_memory_access_aliasing, SPV_INTEL_split_barrier,
       SPV_INTEL_bfloat16_conversion, SPV_INTEL_cache_controls,
@@ -877,9 +878,9 @@ def SPIRV_C_AtomicFloat64AddEXT                         : I32EnumAttrCase<"Atomi
     Extension<[SPV_EXT_shader_atomic_float_add]>
   ];
 }
-def SPIRV_C_LongConstantCompositeINTEL                  : I32EnumAttrCase<"LongConstantCompositeINTEL", 6089> {
+def SPIRV_C_LongCompositesINTEL                         : I32EnumAttrCase<"LongCompositesINTEL", 6089> {
   list<Availability> availability = [
-    Extension<[SPV_INTEL_long_constant_composite]>
+    Extension<[SPV_INTEL_long_composites]>
   ];
 }
 def SPIRV_C_OptNoneINTEL                                : I32EnumAttrCase<"OptNoneINTEL", 6094> {
@@ -1546,7 +1547,7 @@ def SPIRV_CapabilityAttr :
       SPIRV_C_DotProductInput4x8BitPacked, SPIRV_C_DotProduct, SPIRV_C_RayCullMaskKHR,
       SPIRV_C_CooperativeMatrixKHR, SPIRV_C_ReplicatedCompositesEXT,
       SPIRV_C_BitInstructions, SPIRV_C_AtomicFloat32AddEXT, SPIRV_C_AtomicFloat64AddEXT,
-      SPIRV_C_LongConstantCompositeINTEL, SPIRV_C_OptNoneINTEL,
+      SPIRV_C_LongCompositesINTEL, SPIRV_C_OptNoneINTEL,
       SPIRV_C_AtomicFloat16AddEXT, SPIRV_C_DebugInfoModuleINTEL, SPIRV_C_SplitBarrierINTEL,
       SPIRV_C_GroupUniformArithmeticKHR, SPIRV_C_Shader, SPIRV_C_Vector16,
       SPIRV_C_Float16Buffer, SPIRV_C_Int64Atomics, SPIRV_C_ImageBasic, SPIRV_C_Pipes,
@@ -3718,10 +3719,16 @@ def SPIRV_LT_LinkOnceODR : I32EnumAttrCase<"LinkOnceODR", 2> {
     Capability<[SPIRV_C_Linkage]>
   ];
 }
+def SPIRV_LT_Weak        : I32EnumAttrCase<"Weak", 3> {
+  list<Availability> availability = [
+    Extension<[SPV_AMD_weak_linkage]>,
+    Capability<[SPIRV_C_Linkage]>
+  ];
+}
 
 def SPIRV_LinkageTypeAttr :
     SPIRV_I32EnumAttr<"LinkageType", "valid SPIR-V LinkageType", "linkage_type", [
-      SPIRV_LT_Export, SPIRV_LT_Import, SPIRV_LT_LinkOnceODR
+      SPIRV_LT_Export, SPIRV_LT_Import, SPIRV_LT_LinkOnceODR, SPIRV_LT_Weak
     ]>;
 
 def SPIRV_LC_None                      : I32BitEnumAttrCaseNone<"None">;
@@ -4272,6 +4279,7 @@ def SPIRV_IsPtrType : CPred<"::llvm::isa<::mlir::spirv::PointerType>($_self)">;
 def SPIRV_IsRTArrayType : CPred<"::llvm::isa<::mlir::spirv::RuntimeArrayType>($_self)">;
 def SPIRV_IsSampledImageType : CPred<"::llvm::isa<::mlir::spirv::SampledImageType>($_self)">;
 def SPIRV_IsSamplerType : CPred<"::llvm::isa<::mlir::spirv::SamplerType>($_self)">;
+def SPIRV_IsNamedBarrierType : CPred<"::llvm::isa<::mlir::spirv::NamedBarrierType>($_self)">;
 def SPIRV_IsStructType : CPred<"::llvm::isa<::mlir::spirv::StructType>($_self)">;
 def SPIRV_IsTensorArmType : CPred<"::llvm::isa<::mlir::spirv::TensorArmType>($_self)">;
 
@@ -4317,6 +4325,8 @@ def SPIRV_AnySampledImage : DialectType<SPIRV_Dialect, SPIRV_IsSampledImageType,
                                 "any SPIR-V sampled image type">;
 def SPIRV_AnySampler : DialectType<SPIRV_Dialect, SPIRV_IsSamplerType,
                                 "any SPIR-V sampler type">;
+def SPIRV_AnyNamedBarrier : DialectType<SPIRV_Dialect, SPIRV_IsNamedBarrierType,
+                                "any SPIR-V named barrier type">;
 def SPIRV_AnyTensorArm : DialectType<SPIRV_Dialect, SPIRV_IsTensorArmType,
                                  "any SPIR-V tensorArm type">;
 
@@ -4605,6 +4615,9 @@ def SPIRV_OC_OpGroupFMax                      : I32EnumAttrCase<"OpGroupFMax", 2
 def SPIRV_OC_OpGroupUMax                      : I32EnumAttrCase<"OpGroupUMax", 270>;
 def SPIRV_OC_OpGroupSMax                      : I32EnumAttrCase<"OpGroupSMax", 271>;
 def SPIRV_OC_OpNoLine                         : I32EnumAttrCase<"OpNoLine", 317>;
+def SPIRV_OC_OpTypeNamedBarrier               : I32EnumAttrCase<"OpTypeNamedBarrier", 327>;
+def SPIRV_OC_OpNamedBarrierInitialize         : I32EnumAttrCase<"OpNamedBarrierInitialize", 328>;
+def SPIRV_OC_OpMemoryNamedBarrier             : I32EnumAttrCase<"OpMemoryNamedBarrier", 329>;
 def SPIRV_OC_OpModuleProcessed                : I32EnumAttrCase<"OpModuleProcessed", 330>;
 def SPIRV_OC_OpExecutionModeId                : I32EnumAttrCase<"OpExecutionModeId", 331>;
 def SPIRV_OC_OpDecorateId                     : I32EnumAttrCase<"OpDecorateId", 332>;
@@ -4757,6 +4770,8 @@ def SPIRV_OpcodeAttr :
       SPIRV_OC_OpGroupSMin, SPIRV_OC_OpGroupFMax, SPIRV_OC_OpGroupUMax,
       SPIRV_OC_OpGroupSMax, SPIRV_OC_OpNoLine, SPIRV_OC_OpModuleProcessed,
       SPIRV_OC_OpExecutionModeId, SPIRV_OC_OpDecorateId,
+      SPIRV_OC_OpTypeNamedBarrier, SPIRV_OC_OpNamedBarrierInitialize,
+      SPIRV_OC_OpMemoryNamedBarrier,
       SPIRV_OC_OpGroupNonUniformElect, SPIRV_OC_OpGroupNonUniformAll,
       SPIRV_OC_OpGroupNonUniformAny, SPIRV_OC_OpGroupNonUniformAllEqual,
       SPIRV_OC_OpGroupNonUniformBroadcast, SPIRV_OC_OpGroupNonUniformBroadcastFirst,

@@ -466,10 +466,10 @@ public:
     return MachineMemOperand::MONone;
   }
 
-  MachineMemOperand::Flags
-  getLoadMemOperandFlags(const LoadInst &LI, const DataLayout &DL,
-                         AssumptionCache *AC = nullptr,
-                         const TargetLibraryInfo *LibInfo = nullptr) const;
+  MachineMemOperand::Flags getLoadMemOperandFlags(
+      const LoadInst &LI, const DataLayout &DL, AssumptionCache *AC = nullptr,
+      const TargetLibraryInfo *LibInfo = nullptr,
+      CodeGenOptLevel OptLevel = CodeGenOptLevel::Default) const;
   MachineMemOperand::Flags getStoreMemOperandFlags(const StoreInst &SI,
                                                    const DataLayout &DL) const;
   MachineMemOperand::Flags getAtomicMemOperandFlags(const Instruction &AI,
@@ -2299,6 +2299,14 @@ public:
   virtual AtomicOrdering
   atomicOperationOrderAfterFenceSplit(const Instruction *I) const {
     return AtomicOrdering::Monotonic;
+  }
+
+  // Whether to issue an atomic load for the initial word value before the
+  // atomicrmw/cmpxchg emulation loop.
+  // TODO: For correctness, an atomic load should be issued for all targets.
+  // Remove this API once this is achieved
+  virtual bool shouldIssueAtomicLoadForAtomicEmulationLoop(void) const {
+    return true;
   }
 
   /// Perform a load-linked operation on Addr, returning a "Value *" with the
@@ -5530,10 +5538,12 @@ public:
                  SDValue LL = SDValue(), SDValue LH = SDValue(),
                  SDValue RL = SDValue(), SDValue RH = SDValue()) const;
 
-  /// Attempt to expand an n-bit div/rem/divrem by constant using a n/2-bit
-  /// urem by constant and other arithmetic ops. The n/2-bit urem by constant
-  /// will be expanded by DAGCombiner. This is not possible for all constant
-  /// divisors.
+  /// Attempt to expand an n-bit div/rem/divrem by constant using an n/2-bit
+  /// algorithm. First, attempt to expand the division using a n/2-bit urem by
+  /// constant and other arithmetic ops. The n/2-bit urem by constant will be
+  /// expanded by DAGCombiner. As this is not possible for all constant
+  /// divisors, this method falls back to an implementation of the magic
+  /// algorithm using n/2-bit operations.
   /// \param N Node to expand
   /// \param Result A vector that will be filled with the lo and high parts of
   ///        the results. For *DIVREM, this will be the quotient parts followed
@@ -6031,6 +6041,15 @@ private:
   SDValue buildSREMEqFold(EVT SETCCVT, SDValue REMNode, SDValue CompTargetNode,
                           ISD::CondCode Cond, DAGCombinerInfo &DCI,
                           const SDLoc &DL) const;
+
+  bool expandUDIVREMByConstantViaUREMDecomposition(
+      SDNode *N, APInt Divisor, SmallVectorImpl<SDValue> &Result, EVT HiLoVT,
+      SelectionDAG &DAG, SDValue LL, SDValue LH) const;
+
+  bool expandUDIVREMByConstantViaUMulHiMagic(SDNode *N, const APInt &Divisor,
+                                             SmallVectorImpl<SDValue> &Result,
+                                             EVT HiLoVT, SelectionDAG &DAG,
+                                             SDValue LL, SDValue LH) const;
 };
 
 /// Given an LLVM IR type and return type attributes, compute the return value

@@ -92,8 +92,8 @@ func.func @serial_loop_normalized(%buf: memref<1xi32>) {
   %dev = acc.copyin varPtr(%buf : memref<1xi32>) -> memref<1xi32>
   // CHECK-NOT: acc.serial
   // CHECK: acc.kernel_environment
-  // CHECK-NOT: acc.par_width
-  // CHECK: acc.compute_region
+  // CHECK: acc.par_width {par_dim = #acc.par_dim<sequential>}
+  // CHECK: acc.compute_region launch(
   // CHECK: scf.parallel
   // CHECK-DAG: arith.muli
   // CHECK-DAG: arith.addi
