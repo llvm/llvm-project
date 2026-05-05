@@ -241,22 +241,26 @@ enum CvtMode {
 };
 }
 
-// Field order must match NVPTXInstrInfo.td
-struct CmpModeInfo {
-  uint8_t Value;
-  StringRef Name;
-  uint8_t IntInverseValue;
-  uint8_t FPInverseValue;
-  StringRef FCmpPrintStr;
-  StringRef ICmpPrintStr;
-  StringRef ITypePrintStr;
-};
-
+/// PTXCmpMode - Comparison mode enumeration
 namespace PTXCmpMode {
-#define GET_PTXCmpMode_DECL
-#define GET_PTXCmpModeTable_DECL
-#include "NVPTXGenCmpModes.inc"
-} // namespace PTXCmpMode
+enum CmpMode {
+  EQ = 0,
+  NE,
+  LT,
+  LE,
+  GT,
+  GE,
+  EQU,
+  NEU,
+  LTU,
+  LEU,
+  GTU,
+  GEU,
+  NUM,
+  // NAN is a MACRO
+  NotANumber,
+};
+}
 
 namespace PTXPrmtMode {
 enum PrmtMode {

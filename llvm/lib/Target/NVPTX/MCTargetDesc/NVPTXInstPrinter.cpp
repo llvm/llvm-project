@@ -33,11 +33,6 @@ using namespace llvm;
 
 #include "NVPTXGenAsmWriter.inc"
 
-namespace llvm::NVPTX::PTXCmpMode {
-#define GET_PTXCmpModeTable_IMPL
-#include "NVPTXGenCmpModes.inc"
-} // namespace llvm::NVPTX::PTXCmpMode
-
 static bool hasParamSubqualifiers(const MCSubtargetInfo &STI) {
   return STI.hasFeature(NVPTX::PTX83);
 }
@@ -193,19 +188,108 @@ void NVPTXInstPrinter::printNegatedPredicate(const MCInst *MI, int OpNum,
 void NVPTXInstPrinter::printCmpMode(const MCInst *MI, int OpNum,
                                     const MCSubtargetInfo &, raw_ostream &O,
                                     StringRef Modifier) {
-  const NVPTX::CmpModeInfo *Info =
-      NVPTX::PTXCmpMode::lookupCmpModeByValue(MI->getOperand(OpNum).getImm());
-  StringRef Str;
-  if (Modifier == "FCmp")
-    Str = Info->FCmpPrintStr;
-  else if (Modifier == "ICmp")
-    Str = Info->ICmpPrintStr;
-  else if (Modifier == "IType")
-    Str = Info->ITypePrintStr;
-  else
-    llvm_unreachable("Empty Modifier");
-  assert(!Str.empty() && "Invalid comparison mode for this modifier");
-  O << Str;
+  const MCOperand &MO = MI->getOperand(OpNum);
+  int64_t Imm = MO.getImm();
+
+  if (Modifier == "FCmp") {
+    switch (Imm) {
+    default:
+      return;
+    case NVPTX::PTXCmpMode::EQ:
+      O << "eq";
+      return;
+    case NVPTX::PTXCmpMode::NE:
+      O << "ne";
+      return;
+    case NVPTX::PTXCmpMode::LT:
+      O << "lt";
+      return;
+    case NVPTX::PTXCmpMode::LE:
+      O << "le";
+      return;
+    case NVPTX::PTXCmpMode::GT:
+      O << "gt";
+      return;
+    case NVPTX::PTXCmpMode::GE:
+      O << "ge";
+      return;
+    case NVPTX::PTXCmpMode::EQU:
+      O << "equ";
+      return;
+    case NVPTX::PTXCmpMode::NEU:
+      O << "neu";
+      return;
+    case NVPTX::PTXCmpMode::LTU:
+      O << "ltu";
+      return;
+    case NVPTX::PTXCmpMode::LEU:
+      O << "leu";
+      return;
+    case NVPTX::PTXCmpMode::GTU:
+      O << "gtu";
+      return;
+    case NVPTX::PTXCmpMode::GEU:
+      O << "geu";
+      return;
+    case NVPTX::PTXCmpMode::NUM:
+      O << "num";
+      return;
+    case NVPTX::PTXCmpMode::NotANumber:
+      O << "nan";
+      return;
+    }
+  }
+  if (Modifier == "ICmp") {
+    switch (Imm) {
+    default:
+      llvm_unreachable("Invalid ICmp mode");
+    case NVPTX::PTXCmpMode::EQ:
+      O << "eq";
+      return;
+    case NVPTX::PTXCmpMode::NE:
+      O << "ne";
+      return;
+    case NVPTX::PTXCmpMode::LT:
+    case NVPTX::PTXCmpMode::LTU:
+      O << "lt";
+      return;
+    case NVPTX::PTXCmpMode::LE:
+    case NVPTX::PTXCmpMode::LEU:
+      O << "le";
+      return;
+    case NVPTX::PTXCmpMode::GT:
+    case NVPTX::PTXCmpMode::GTU:
+      O << "gt";
+      return;
+    case NVPTX::PTXCmpMode::GE:
+    case NVPTX::PTXCmpMode::GEU:
+      O << "ge";
+      return;
+    }
+  }
+  if (Modifier == "IType") {
+    switch (Imm) {
+    default:
+      llvm_unreachable("Invalid IType");
+    case NVPTX::PTXCmpMode::EQ:
+    case NVPTX::PTXCmpMode::NE:
+      O << "b";
+      return;
+    case NVPTX::PTXCmpMode::LT:
+    case NVPTX::PTXCmpMode::LE:
+    case NVPTX::PTXCmpMode::GT:
+    case NVPTX::PTXCmpMode::GE:
+      O << "s";
+      return;
+    case NVPTX::PTXCmpMode::LTU:
+    case NVPTX::PTXCmpMode::LEU:
+    case NVPTX::PTXCmpMode::GTU:
+    case NVPTX::PTXCmpMode::GEU:
+      O << "u";
+      return;
+    }
+  }
+  llvm_unreachable("Empty Modifier");
 }
 
 void NVPTXInstPrinter::printAtomicCode(const MCInst *MI, int OpNum,
