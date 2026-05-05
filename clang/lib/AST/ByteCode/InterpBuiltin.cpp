@@ -1633,8 +1633,8 @@ static bool interp__builtin_operator_delete(InterpState &S, CodePtr OpPC,
   const Expr *Source = nullptr;
   const Block *BlockToDelete = nullptr;
 
-  assert(Call->getNumArgs() >= 1);
   unsigned NumArgs = Call->getNumArgs();
+  assert(NumArgs >= 1);
 
   // Args are pushed in source order. The trailing sized/aligned delete
   // operands are above the pointer on the stack.
