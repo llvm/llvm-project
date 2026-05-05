@@ -26,13 +26,14 @@ class SettingsCommandTestCase(TestBase):
             ],
         )
 
-    def test_apropos_searches_settings_prefixes(self):
-        """Test that 'apropos' command searches the prefixes of the qualified names."""
+    def test_apropos_searches_settings_paths(self):
+        """Test that 'apropos' command searches the components of the paths of
+        settings."""
 
         self.expect(
             "apropos 'qemu-user'",
             substrs=[
-                "The following settings prefixes may relate to 'qemu-user':\n"
+                "The following settings paths may relate to 'qemu-user':\n"
                 "  platform.plugin.qemu-user\n"
                 "\n"
             ],

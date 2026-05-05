@@ -77,9 +77,9 @@ Status Properties::DumpPropertyValue(const ExecutionContext *exe_ctx,
 
 void Properties::Apropos(
     llvm::StringRef keyword, std::vector<const Property *> &matching_properties,
-    std::vector<const Property *> &matching_property_prefixes) const {
+    std::vector<const Property *> &matching_property_paths) const {
   m_collection_sp->Apropos(keyword, matching_properties,
-                           matching_property_prefixes);
+                           matching_property_paths);
 }
 
 llvm::StringRef Properties::GetExperimentalSettingsName() {

@@ -64,7 +64,7 @@ public:
 
   void Apropos(llvm::StringRef keyword,
                std::vector<const Property *> &matching_properties,
-               std::vector<const Property *> &matching_property_prefixes) const;
+               std::vector<const Property *> &matching_property_paths) const;
 
   // We sometimes need to introduce a setting to enable experimental features,
   // but then we don't want the setting for these to cause errors when the

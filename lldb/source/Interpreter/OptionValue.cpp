@@ -579,11 +579,12 @@ lldb::OptionValueSP OptionValue::CreateValueFromCStringForTypeMask(
   return value_sp;
 }
 
-bool OptionValue::DumpQualifiedName(Stream &strm) const {
+bool OptionValue::DumpQualifiedName(
+    Stream &strm, std::optional<Stream::HighlightSettings> highlight) const {
   bool dumped_something = false;
   lldb::OptionValueSP m_parent_sp(m_parent_wp.lock());
   if (m_parent_sp) {
-    if (m_parent_sp->DumpQualifiedName(strm))
+    if (m_parent_sp->DumpQualifiedName(strm, highlight))
       dumped_something = true;
   }
   llvm::StringRef name(GetName());
@@ -592,7 +593,7 @@ bool OptionValue::DumpQualifiedName(Stream &strm) const {
       strm.PutChar('.');
     else
       dumped_something = true;
-    strm << name;
+    strm.PutCStringColorHighlighted(name, highlight);
   }
   return dumped_something;
 }

@@ -23,7 +23,8 @@ using namespace lldb_private;
 CommandObjectApropos::CommandObjectApropos(CommandInterpreter &interpreter)
     : CommandObjectParsed(
           interpreter, "apropos",
-          "List debugger commands related to a word or subject.", nullptr) {
+          "List debugger commands and settings related to a word or subject.",
+          nullptr) {
   AddSimpleArgumentList(eArgTypeSearchWord);
 }
 
@@ -73,8 +74,8 @@ void CommandObjectApropos::DoExecute(Args &args, CommandReturnObject &result) {
       // Find all the properties matching the search word.
       size_t properties_max_len = 0;
       std::vector<const Property *> properties;
-      std::vector<const Property *> property_prefixes;
-      GetDebugger().Apropos(search_word, properties, property_prefixes);
+      std::vector<const Property *> property_paths;
+      GetDebugger().Apropos(search_word, properties, property_paths);
       for (const Property *prop : properties) {
         StreamString qualified_name;
         prop->DumpQualifiedName(qualified_name);
@@ -82,7 +83,7 @@ void CommandObjectApropos::DoExecute(Args &args, CommandReturnObject &result) {
             std::max(properties_max_len, qualified_name.GetString().size());
       }
 
-      if (properties.empty() && property_prefixes.empty()) {
+      if (properties.empty() && property_paths.empty()) {
         result.AppendMessageWithFormatv(
             "No settings found pertaining to '{0}'. "
             "Try 'settings show' to see a complete list of "
@@ -92,25 +93,24 @@ void CommandObjectApropos::DoExecute(Args &args, CommandReturnObject &result) {
       } else {
         return_status = eReturnStatusSuccessFinishResult;
 
-        if (!property_prefixes.empty()) {
+        if (!property_paths.empty()) {
           result.AppendMessageWithFormatv(
-              "\nThe following settings prefixes may relate to '{0}': \n\n",
+              "\nThe following settings paths may relate to '{0}': \n\n",
               search_word);
 
           auto &out_strm = result.GetOutputStream();
           out_strm.IndentMore();
-          for (auto prefix : property_prefixes) {
+          for (auto path : property_paths) {
             StreamString qual_name_strm;
-            // TODO: highlight!!!!
-            if (prefix->DumpQualifiedName(qual_name_strm)) {
+            if (path->DumpQualifiedName(qual_name_strm, highlight)) {
               result.GetOutputStream().Indent();
               result.GetOutputStream() << qual_name_strm.GetString() << '\n';
             }
           }
           out_strm.IndentLess();
 
-          result.AppendMessageWithFormatv(
-              "\n(use 'settings list' to show settings with a given prefix)");
+          result.AppendMessageWithFormatv("\n(use 'settings list <path>' to "
+                                          "show settings with a given path)");
         }
 
         if (!properties.empty()) {

@@ -464,7 +464,7 @@ void OptionValueProperties::DumpAllDescriptions(CommandInterpreter &interpreter,
 
 void OptionValueProperties::Apropos(
     llvm::StringRef keyword, std::vector<const Property *> &matching_properties,
-    std::vector<const Property *> &matching_property_prefixes) const {
+    std::vector<const Property *> &matching_property_paths) const {
   const size_t num_properties = m_properties.size();
   for (size_t i = 0; i < num_properties; ++i) {
     const Property *property = ProtectedGetPropertyAtIndex(i);
@@ -475,7 +475,7 @@ void OptionValueProperties::Apropos(
         property->GetValue()->GetAsProperties();
     if (properties)
       properties->Apropos(keyword, matching_properties,
-                          matching_property_prefixes);
+                          matching_property_paths);
 
     bool matched = false;
 
@@ -491,7 +491,7 @@ void OptionValueProperties::Apropos(
       continue;
 
     if (properties) {
-      matching_property_prefixes.push_back(property);
+      matching_property_paths.push_back(property);
     } else {
       matching_properties.push_back(property);
     }

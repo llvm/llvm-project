@@ -59,7 +59,7 @@ public:
 
   void Apropos(llvm::StringRef keyword,
                std::vector<const Property *> &matching_properties,
-               std::vector<const Property *> &matching_property_prefixes) const;
+               std::vector<const Property *> &matching_property_paths) const;
 
   void Initialize(const PropertyCollectionDefinition &setting_definitions);
 
