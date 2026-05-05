@@ -26,10 +26,6 @@ def SPIRV_KHRAssumeTrueOp : SPIRV_KhrVendorOp<"AssumeTrue", []> {
 
     <!-- End of AutoGen section -->
 
-    ```
-    assumetruekhr-op ::= `spirv.KHR.AssumeTrue` ssa-use
-    ```
-
     #### Example:
 
     ```mlir
@@ -68,15 +64,6 @@ def SPIRV_KHRExpectOp : SPIRV_KhrVendorOp<"Expect",
     Value.
 
     <!-- End of AutoGen section -->
-
-    ```
-    integer-scalar-vector-type ::= integer-type |
-                                   `vector<` integer-literal `x` integer-type `>`
-    bool-scalar-vector-type ::= `i1` |
-                                `vector<` integer-literal `x` `i1` `>`
-    expect-op ::= ssa-id `=` `spirv.KHR.Expect` ssa-use `,` ssa-use
-                  `:` (integer-scalar-vector-type | bool-scalar-vector-type)
-    ```
 
     #### Example:
 
