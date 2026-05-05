@@ -318,14 +318,14 @@ static bool CC_RISCVAssign2XLen(CCState &State, CCValAssign VA1,
   return false;
 }
 
-static MCRegister allocateRVVReg(MVT ValVT, unsigned ValNo, CCState &State,
+static MCRegister allocateRVVReg(MVT LocVT, unsigned ValNo, CCState &State,
                                  const RISCVTargetLowering &TLI) {
-  const TargetRegisterClass *RC = TLI.getRegClassFor(ValVT);
+  const TargetRegisterClass *RC = TLI.getRegClassFor(LocVT);
   if (RC == &RISCV::VRRegClass) {
     // Assign the first mask argument to V0.
     // This is an interim calling convention and it may be changed in the
     // future.
-    if (ValVT.getVectorElementType() == MVT::i1)
+    if (LocVT.getVectorElementType() == MVT::i1)
       if (MCRegister Reg = State.AllocateReg(RISCV::V0))
         return Reg;
     return State.AllocateReg(ArgVRs);
@@ -368,6 +368,7 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
                           CCValAssign::LocInfo LocInfo,
                           ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
                           CCState &State, bool IsRet) {
+  assert(ValVT == LocVT && "Expected ValVT and LocVT to match");
   const MachineFunction &MF = State.getMachineFunction();
   const DataLayout &DL = MF.getDataLayout();
   const RISCVSubtarget &Subtarget = MF.getSubtarget<RISCVSubtarget>();
@@ -452,7 +453,7 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
     }
   }
 
-  if ((LocVT == MVT::f16 && Subtarget.hasStdExtZhinxmin())) {
+  if (LocVT == MVT::f16 && Subtarget.hasStdExtZhinxmin()) {
     if (MCRegister Reg = State.AllocateReg(getArgGPR16s(ABI))) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
