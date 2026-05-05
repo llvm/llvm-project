@@ -2372,18 +2372,8 @@ bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I,
     return getCallWideningDecision(cast<CallInst>(I), VF).Kind == CM_Scalarize;
   case Instruction::Load:
   case Instruction::Store: {
-    auto *Ptr = getLoadStorePointerOperand(I);
-    auto *Ty = getLoadStoreType(I);
-    unsigned AS = getLoadStoreAddressSpace(I);
-    Type *VTy = Ty;
-    if (VF.isVector())
-      VTy = VectorType::get(Ty, VF);
-    const Align Alignment = getLoadStoreAlignment(I);
-    return isa<LoadInst>(I)
-               ? !(Config.isLegalMaskedLoad(Ty, Ptr, Alignment, AS) ||
-                   TTI.isLegalMaskedGather(VTy, Alignment))
-               : !(Config.isLegalMaskedStore(Ty, Ptr, Alignment, AS) ||
-                   TTI.isLegalMaskedScatter(VTy, Alignment));
+    return !Config.isLegalMaskedLoadOrStore(I, VF) &&
+           !Config.isLegalGatherOrScatter(I, VF);
   }
   case Instruction::UDiv:
   case Instruction::SDiv:
