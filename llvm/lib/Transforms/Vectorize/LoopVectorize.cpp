@@ -2372,18 +2372,8 @@ bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I,
     return getCallWideningDecision(cast<CallInst>(I), VF).Kind == CM_Scalarize;
   case Instruction::Load:
   case Instruction::Store: {
-    auto *Ptr = getLoadStorePointerOperand(I);
-    auto *Ty = getLoadStoreType(I);
-    unsigned AS = getLoadStoreAddressSpace(I);
-    Type *VTy = Ty;
-    if (VF.isVector())
-      VTy = VectorType::get(Ty, VF);
-    const Align Alignment = getLoadStoreAlignment(I);
-    return isa<LoadInst>(I)
-               ? !(Config.isLegalMaskedLoad(Ty, Ptr, Alignment, AS) ||
-                   TTI.isLegalMaskedGather(VTy, Alignment))
-               : !(Config.isLegalMaskedStore(Ty, Ptr, Alignment, AS) ||
-                   TTI.isLegalMaskedScatter(VTy, Alignment));
+    return !Config.isLegalMaskedLoadOrStore(I, VF) &&
+           !Config.isLegalGatherOrScatter(I, VF);
   }
   case Instruction::UDiv:
   case Instruction::SDiv:
@@ -6423,25 +6413,21 @@ VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
   VPValue *Ptr = VPI->getOpcode() == Instruction::Load ? VPI->getOperand(0)
                                                        : VPI->getOperand(1);
   if (Consecutive) {
-    auto *GEP = dyn_cast<GetElementPtrInst>(
-        Ptr->getUnderlyingValue()->stripPointerCasts());
+    GEPNoWrapFlags Flags = vputils::getGEPFlagsForPtr(Ptr);
     VPSingleDefRecipe *VectorPtr;
     if (Reverse) {
       // When folding the tail, we may compute an address that we don't in the
       // original scalar loop: drop the GEP no-wrap flags in this case.
       // Otherwise preserve existing flags without no-unsigned-wrap, as we will
       // emit negative indices.
-      GEPNoWrapFlags Flags =
-          CM.foldTailByMasking() || !GEP
-              ? GEPNoWrapFlags::none()
-              : GEP->getNoWrapFlags().withoutNoUnsignedWrap();
+      GEPNoWrapFlags ReverseFlags = CM.foldTailByMasking()
+                                        ? GEPNoWrapFlags::none()
+                                        : Flags.withoutNoUnsignedWrap();
       VectorPtr = new VPVectorEndPointerRecipe(
           Ptr, &Plan.getVF(), getLoadStoreType(I),
-          /*Stride*/ -1, Flags, VPI->getDebugLoc());
+          /*Stride*/ -1, ReverseFlags, VPI->getDebugLoc());
     } else {
-      VectorPtr = new VPVectorPointerRecipe(Ptr, getLoadStoreType(I),
-                                            GEP ? GEP->getNoWrapFlags()
-                                                : GEPNoWrapFlags::none(),
+      VectorPtr = new VPVectorPointerRecipe(Ptr, getLoadStoreType(I), Flags,
                                             VPI->getDebugLoc());
     }
     Builder.setInsertPoint(VPI);
@@ -6997,14 +6983,8 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VPlanPtr Plan,
   ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
       HeaderVPBB);
 
-  // Collect blocks that need predication for in-loop reduction recipes.
-  DenseSet<BasicBlock *> BlocksNeedingPredication;
-  for (BasicBlock *BB : OrigLoop->blocks())
-    if (CM.blockNeedsPredicationForAnyReason(BB))
-      BlocksNeedingPredication.insert(BB);
-
   RUN_VPLAN_PASS(VPlanTransforms::createInLoopReductionRecipes, *Plan,
-                 BlocksNeedingPredication, Range.Start);
+                 Range.Start);
 
   VPCostContext CostCtx(CM.TTI, *CM.TLI, *Plan, CM, Config.CostKind, CM.PSE,
                         OrigLoop);
@@ -7062,8 +7042,6 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VPlanPtr Plan,
          "entry block must be set to a VPRegionBlock having a non-empty entry "
          "VPBasicBlock");
 
-  // TODO: We can't call runPass on these transforms yet, due to verifier
-  // failures.
   RUN_VPLAN_PASS(VPlanTransforms::adjustFirstOrderRecurrenceMiddleUsers, *Plan,
                  Range);
 
