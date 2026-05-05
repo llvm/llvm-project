@@ -1052,9 +1052,7 @@ bool WebAssemblyTargetLowering::isIntDivCheap(EVT VT,
 
 bool WebAssemblyTargetLowering::isVectorLoadExtDesirable(SDValue ExtVal) const {
   EVT ExtT = ExtVal.getValueType();
-  SDValue N0 = ExtVal->getOperand(0);
-  if (N0.getOpcode() == ISD::FREEZE)
-    N0 = N0.getOperand(0);
+  SDValue N0 = peekThroughFreeze(ExtVal->getOperand(0));
   auto *Load = dyn_cast<LoadSDNode>(N0);
   if (!Load)
     return false;
