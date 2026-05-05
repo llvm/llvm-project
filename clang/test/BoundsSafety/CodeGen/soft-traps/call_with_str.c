@@ -405,12 +405,12 @@ int read_cb(int*__counted_by(count) ptr, int count) {
 }
 //.
 // UNOPT: attributes #[[ATTR0]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// UNOPT: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+// UNOPT: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 // UNOPT: attributes #[[ATTR2:[0-9]+]] = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // UNOPT: attributes #[[ATTR3]] = { nomerge nounwind }
 //.
 // UNOPT-TF: attributes #[[ATTR0]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// UNOPT-TF: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+// UNOPT-TF: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 // UNOPT-TF: attributes #[[ATTR2:[0-9]+]] = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // UNOPT-TF: attributes #[[ATTR3]] = { nomerge nounwind }
 // UNOPT-TF: attributes #[[ATTR4]] = { "trap-func-name"="not_used" }

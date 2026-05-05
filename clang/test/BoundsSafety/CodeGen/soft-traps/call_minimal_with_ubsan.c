@@ -266,20 +266,20 @@ int read(int* __bidi_indexable ptr, int idx, int other) {
 // UNOPT: attributes #[[ATTR0]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // UNOPT: attributes #[[ATTR1:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
 // UNOPT: attributes #[[ATTR2:[0-9]+]] = { cold noreturn nounwind memory(inaccessiblemem: write) }
-// UNOPT: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+// UNOPT: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 // UNOPT: attributes #[[ATTR4]] = { nomerge noreturn nounwind }
 // UNOPT: attributes #[[ATTR5]] = { nomerge nounwind }
 //.
 // UNOPT-TF: attributes #[[ATTR0]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // UNOPT-TF: attributes #[[ATTR1:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
 // UNOPT-TF: attributes #[[ATTR2:[0-9]+]] = { cold noreturn nounwind memory(inaccessiblemem: write) }
-// UNOPT-TF: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+// UNOPT-TF: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 // UNOPT-TF: attributes #[[ATTR4]] = { nomerge noreturn nounwind "trap-func-name"="ubsan_handler" }
 // UNOPT-TF: attributes #[[ATTR5]] = { nomerge nounwind }
 //.
 // UNOPT-TFR: attributes #[[ATTR0]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // UNOPT-TFR: attributes #[[ATTR1:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
-// UNOPT-TFR: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+// UNOPT-TFR: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 // UNOPT-TFR: attributes #[[ATTR3]] = { nounwind }
 // UNOPT-TFR: attributes #[[ATTR4]] = { nomerge nounwind }
 //.
