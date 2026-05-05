@@ -75,6 +75,7 @@ static_assert(0LL == LIBC_NAMESPACE::shared::llround(0.0));
 static_assert(0L == LIBC_NAMESPACE::shared::lrint(0.0));
 static_assert(0L == LIBC_NAMESPACE::shared::lround(0.0));
 static_assert(0.0 == LIBC_NAMESPACE::shared::nearbyint(0.0));
+static_assert(0.0 == LIBC_NAMESPACE::shared::nextafter(0.0, 0.0));
 static_assert(0.0 == LIBC_NAMESPACE::shared::rint(0.0));
 static_assert(1 == LIBC_NAMESPACE::shared::iscanonical(0.0));
 static_assert(0.0 == LIBC_NAMESPACE::shared::issignaling(0.0));
@@ -145,6 +146,7 @@ static_assert(0LL == LIBC_NAMESPACE::shared::llroundf(0.0f));
 static_assert(0L == LIBC_NAMESPACE::shared::lrintf(0.0f));
 static_assert(0L == LIBC_NAMESPACE::shared::lroundf(0.0f));
 static_assert(0.0f == LIBC_NAMESPACE::shared::nearbyintf(0.0f));
+static_assert(0.0f == LIBC_NAMESPACE::shared::nextafterf(0.0f, 0.0f));
 static_assert(0.0f == LIBC_NAMESPACE::shared::rintf(0.0f));
 static_assert(1 == LIBC_NAMESPACE::shared::iscanonicalf(0.0f));
 static_assert(0.0 == LIBC_NAMESPACE::shared::issignalingf(0.0f));
@@ -233,6 +235,7 @@ static_assert(0LL == LIBC_NAMESPACE::shared::llroundf16(0.0f16));
 static_assert(0L == LIBC_NAMESPACE::shared::lrintf16(0.0f16));
 static_assert(0L == LIBC_NAMESPACE::shared::lroundf16(0.0f16));
 static_assert(0.0f16 == LIBC_NAMESPACE::shared::nearbyintf16(0.0f16));
+static_assert(0.0f16 == LIBC_NAMESPACE::shared::nextafterf16(0.0f16, 0.0f16));
 static_assert(0.0f16 == LIBC_NAMESPACE::shared::rintf16(0.0f16));
 static_assert(1 == LIBC_NAMESPACE::shared::iscanonicalf16(0.0f16));
 static_assert(0.0 == LIBC_NAMESPACE::shared::issignalingf16(0.0f16));
@@ -318,6 +321,7 @@ static_assert(0LL == LIBC_NAMESPACE::shared::llroundl(0.0L));
 static_assert(0L == LIBC_NAMESPACE::shared::lrintl(0.0L));
 static_assert(0L == LIBC_NAMESPACE::shared::lroundl(0.0L));
 static_assert(0.0L == LIBC_NAMESPACE::shared::nearbyintl(0.0L));
+static_assert(0.0L == LIBC_NAMESPACE::shared::nextafterl(0.0L, 0.0L));
 static_assert(0.0L == LIBC_NAMESPACE::shared::rintl(0.0L));
 static_assert(1 == LIBC_NAMESPACE::shared::iscanonicall(0.0L));
 static_assert(0.0 == LIBC_NAMESPACE::shared::issignalingl(0.0L));
@@ -436,6 +440,9 @@ static_assert(0L == LIBC_NAMESPACE::shared::lrintf128(float128(0.0)));
 static_assert(0L == LIBC_NAMESPACE::shared::lroundf128(float128(0.0)));
 static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::nearbyintf128(float128(0.0)));
+static_assert(float128(0.0) ==
+              LIBC_NAMESPACE::shared::nextafterf128(float128(0.0),
+                                                    float128(0.0)));
 static_assert(float128(0.0) == LIBC_NAMESPACE::shared::rintf128(float128(0.0)));
 static_assert(1 == LIBC_NAMESPACE::shared::iscanonicalf128(float128(0.0)));
 static_assert(0.0 == LIBC_NAMESPACE::shared::issignalingf128(float128(0.0)));
@@ -552,6 +559,9 @@ static_assert(0L == LIBC_NAMESPACE::shared::lrintbf16(bfloat16(0.0)));
 static_assert(0L == LIBC_NAMESPACE::shared::lroundbf16(bfloat16(0.0)));
 static_assert(bfloat16(0.0) ==
               LIBC_NAMESPACE::shared::nearbyintbf16(bfloat16(0.0)));
+static_assert(bfloat16(0.0) ==
+              LIBC_NAMESPACE::shared::nextafterbf16(bfloat16(0.0),
+                                                    bfloat16(0.0)));
 static_assert(bfloat16(0.0) == LIBC_NAMESPACE::shared::rintbf16(bfloat16(0.0)));
 static_assert(1 == LIBC_NAMESPACE::shared::iscanonicalbf16(bfloat16(0.0)));
 static_assert(0 == LIBC_NAMESPACE::shared::issignalingbf16(bfloat16(0.0)));

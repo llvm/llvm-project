@@ -684,6 +684,12 @@ add_fp_unittest(
     libc.src.__support.math.nearbyintf128
     libc.src.__support.math.nearbyintf16
     libc.src.__support.math.nearbyintl
+    libc.src.__support.math.nextafter
+    libc.src.__support.math.nextafterbf16
+    libc.src.__support.math.nextafterf
+    libc.src.__support.math.nextafterf16
+    libc.src.__support.math.nextafterl
+    libc.src.__support.math.nextafterf128
     libc.src.__support.math.remainder
     libc.src.__support.math.remainderbf16
     libc.src.__support.math.remainderf
