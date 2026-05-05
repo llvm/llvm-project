@@ -1346,9 +1346,6 @@ void g() {
 }  // namespace GH156579
 
 namespace GH192846 {
-// Regression for GH192846: the default TransformOpaqueValueExpr asserts on
-// OVEs bound by __builtin_dump_struct when the printing callback is
-// immediate-escalated. ComplexRemove must not reach that path.
 
 struct S {};
 
