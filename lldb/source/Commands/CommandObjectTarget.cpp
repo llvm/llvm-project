@@ -450,7 +450,7 @@ protected:
       }
     } else {
       result.AppendErrorWithFormat("'%s' takes exactly one executable path "
-                                   "argument, or use the --core option.",
+                                   "argument, or use the --core option",
                                    m_cmd_name.c_str());
     }
   }
@@ -1162,7 +1162,7 @@ protected:
 
       if (!llvm::to_integer(command.GetArgumentAtIndex(0), insert_idx)) {
         result.AppendErrorWithFormat(
-            "<index> parameter is not an integer: '%s'.",
+            "<index> parameter is not an integer: '%s'",
             command.GetArgumentAtIndex(0));
         return;
       }
@@ -2180,7 +2180,7 @@ public:
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     if (command.GetArgumentCount() != 1) {
-      result.AppendErrorWithFormat("'%s' takes exactly one pcm path argument.",
+      result.AppendErrorWithFormat("'%s' takes exactly one pcm path argument",
                                    m_cmd_name.c_str());
       return;
     }
@@ -3069,7 +3069,7 @@ protected:
           FileSpec *module_spec_file = module_spec.GetFileSpecPtr();
           if (module_spec_file) {
             module_spec_file->GetPath(path, sizeof(path));
-            result.AppendErrorWithFormat("invalid module '%s'.", path);
+            result.AppendErrorWithFormat("invalid module '%s'", path);
           } else
             result.AppendError("no module spec");
         }
@@ -3095,7 +3095,7 @@ protected:
           }
         } else {
           result.AppendErrorWithFormat(
-              "no modules were found  that match%s%s%s%s.",
+              "no modules were found  that match%s%s%s%s",
               path[0] ? " file=" : "", path, !uuid_str.empty() ? " uuid=" : "",
               uuid_str.c_str());
         }
@@ -3193,12 +3193,12 @@ protected:
           result.SetStatus(eReturnStatusSuccessFinishResult);
         } else {
           result.AppendErrorWithFormat(
-              "Couldn't find module matching address: 0x%" PRIx64 ".",
+              "Couldn't find module matching address: 0x%" PRIx64,
               m_options.m_module_addr);
         }
       } else {
         result.AppendErrorWithFormat(
-            "Couldn't find module containing address: 0x%" PRIx64 ".",
+            "Couldn't find module containing address: 0x%" PRIx64,
             m_options.m_module_addr);
       }
       return;
@@ -3580,7 +3580,7 @@ protected:
     }
 
     if (sc_list.GetSize() == 0) {
-      result.AppendErrorWithFormat("no unwind data found that matches '%s'.",
+      result.AppendErrorWithFormat("no unwind data found that matches '%s'",
                                    m_options.m_str.c_str());
       return;
     }
@@ -4336,7 +4336,7 @@ protected:
     if (matching_modules.GetSize() > 1) {
       result.AppendErrorWithFormat("multiple modules match symbol file '%s', "
                                    "use the --uuid option to resolve the "
-                                   "ambiguity.",
+                                   "ambiguity",
                                    symfile_path);
       return false;
     }
@@ -5118,12 +5118,12 @@ protected:
       for (size_t i = 0; i < num_args; i++) {
         lldb::user_id_t user_id;
         if (!llvm::to_integer(command.GetArgumentAtIndex(i), user_id)) {
-          result.AppendErrorWithFormat("invalid stop hook id: \"%s\".",
+          result.AppendErrorWithFormat("invalid stop hook id: \"%s\"",
                                        command.GetArgumentAtIndex(i));
           return;
         }
         if (!target.RemoveStopHookByID(user_id)) {
-          result.AppendErrorWithFormat("unknown stop hook id: \"%s\".",
+          result.AppendErrorWithFormat("unknown stop hook id: \"%s\"",
                                        command.GetArgumentAtIndex(i));
           return;
         }
@@ -5169,13 +5169,13 @@ protected:
       for (size_t i = 0; i < num_args; i++) {
         lldb::user_id_t user_id;
         if (!llvm::to_integer(command.GetArgumentAtIndex(i), user_id)) {
-          result.AppendErrorWithFormat("invalid stop hook id: \"%s\".",
+          result.AppendErrorWithFormat("invalid stop hook id: \"%s\"",
                                        command.GetArgumentAtIndex(i));
           return;
         }
         success = target.SetStopHookActiveStateByID(user_id, m_enable);
         if (!success) {
-          result.AppendErrorWithFormat("unknown stop hook id: \"%s\".",
+          result.AppendErrorWithFormat("unknown stop hook id: \"%s\"",
                                        command.GetArgumentAtIndex(i));
           return;
         }
@@ -5288,6 +5288,708 @@ public:
   }
 
   ~CommandObjectMultiwordTargetStopHooks() override = default;
+};
+
+#pragma mark CommandObjectTargetHookAdd
+
+#define LLDB_OPTIONS_target_hook_add
+#include "CommandOptions.inc"
+
+class CommandObjectTargetHookAdd : public CommandObjectParsed,
+                                   public IOHandlerDelegateMultiline {
+public:
+  class CommandOptions : public OptionGroup {
+  public:
+    CommandOptions() = default;
+    ~CommandOptions() override = default;
+
+    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+      return llvm::ArrayRef(g_target_hook_add_options);
+    }
+
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
+      const int short_option =
+          g_target_hook_add_options[option_idx].short_option;
+      switch (short_option) {
+      case 'o':
+        m_use_one_liner = true;
+        m_one_liner.push_back(std::string(option_arg));
+        break;
+      case 'L':
+        m_on_load = true;
+        break;
+      case 'u':
+        m_on_unload = true;
+        break;
+      case 'S':
+        m_on_stop = true;
+        break;
+      case 's':
+        m_module_name = std::string(option_arg);
+        m_sym_ctx_specified = true;
+        break;
+      case 'x': {
+        uint32_t thread_index;
+        if (option_arg.getAsInteger(0, thread_index))
+          error = Status::FromErrorStringWithFormat("invalid thread index '%s'",
+                                                    option_arg.str().c_str());
+        else
+          m_thread_index = thread_index;
+        m_thread_specified = true;
+        break;
+      }
+      case 't': {
+        lldb::tid_t thread_id;
+        if (option_arg.getAsInteger(0, thread_id))
+          error = Status::FromErrorStringWithFormat("invalid thread id '%s'",
+                                                    option_arg.str().c_str());
+        else
+          m_thread_id = thread_id;
+        m_thread_specified = true;
+        break;
+      }
+      case 'T':
+        m_thread_name = std::string(option_arg);
+        m_thread_specified = true;
+        break;
+      case 'q':
+        m_queue_name = std::string(option_arg);
+        m_thread_specified = true;
+        break;
+      case 'f':
+        m_file_name = std::string(option_arg);
+        m_sym_ctx_specified = true;
+        break;
+      case 'l': {
+        uint32_t line;
+        if (option_arg.getAsInteger(0, line))
+          error = Status::FromErrorStringWithFormat(
+              "invalid start line number '%s'", option_arg.str().c_str());
+        else
+          m_line_start = line;
+        m_sym_ctx_specified = true;
+        break;
+      }
+      case 'e': {
+        uint32_t line;
+        if (option_arg.getAsInteger(0, line))
+          error = Status::FromErrorStringWithFormat(
+              "invalid end line number '%s'", option_arg.str().c_str());
+        else
+          m_line_end = line;
+        m_sym_ctx_specified = true;
+        break;
+      }
+      case 'c':
+        m_class_name = std::string(option_arg);
+        m_sym_ctx_specified = true;
+        break;
+      case 'n':
+        m_function_name = std::string(option_arg);
+        m_sym_ctx_specified = true;
+        break;
+      case 'G': {
+        bool value, success;
+        value = OptionArgParser::ToBoolean(option_arg, false, &success);
+        if (success)
+          m_auto_continue = value;
+        else
+          error = Status::FromErrorStringWithFormat(
+              "invalid boolean value '%s' passed for -G option",
+              option_arg.str().c_str());
+        break;
+      }
+      case 'I': {
+        bool value, success;
+        value = OptionArgParser::ToBoolean(option_arg, true, &success);
+        if (success)
+          m_at_initial_stop = value;
+        else
+          error = Status::FromErrorStringWithFormat(
+              "invalid boolean value '%s' passed for -I option",
+              option_arg.str().c_str());
+        break;
+      }
+      default:
+        llvm_unreachable("unhandled option");
+      }
+      return error;
+    }
+
+    void OptionParsingStarting(ExecutionContext *execution_context) override {
+      m_use_one_liner = false;
+      m_one_liner.clear();
+      m_on_load = false;
+      m_on_unload = false;
+      m_on_stop = false;
+      m_sym_ctx_specified = false;
+      m_thread_specified = false;
+      m_module_name.clear();
+      m_file_name.clear();
+      m_class_name.clear();
+      m_function_name.clear();
+      m_line_start = 0;
+      m_line_end = UINT_MAX;
+      m_thread_id = LLDB_INVALID_THREAD_ID;
+      m_thread_index = UINT32_MAX;
+      m_thread_name.clear();
+      m_queue_name.clear();
+      m_auto_continue = false;
+      m_at_initial_stop = true;
+    }
+
+    std::vector<std::string> m_one_liner;
+    bool m_use_one_liner = false;
+    bool m_on_load = false;
+    bool m_on_unload = false;
+    bool m_on_stop = false;
+
+    // Filter options (for stop trigger).
+    bool m_sym_ctx_specified = false;
+    bool m_thread_specified = false;
+    std::string m_module_name;
+    std::string m_file_name;
+    std::string m_class_name;
+    std::string m_function_name;
+    uint32_t m_line_start = 0;
+    uint32_t m_line_end = UINT_MAX;
+    lldb::tid_t m_thread_id = LLDB_INVALID_THREAD_ID;
+    uint32_t m_thread_index = UINT32_MAX;
+    std::string m_thread_name;
+    std::string m_queue_name;
+    bool m_auto_continue = false;
+    bool m_at_initial_stop = true;
+  };
+
+  CommandObjectTargetHookAdd(CommandInterpreter &interpreter)
+      : CommandObjectParsed(
+            interpreter, "target hook add",
+            "Add a hook to be executed on target lifecycle events.",
+            "target hook add"),
+        IOHandlerDelegateMultiline("DONE",
+                                   IOHandlerDelegate::Completion::LLDBCommand),
+        m_python_class_options("scripted hook", false, 'P') {
+    SetHelpLong(R"help(
+Command-based hooks:
+--------------------
+  Specify which triggers the hook responds to with --on-load (-L),
+  --on-unload (-u), and/or --on-stop (-S).  At least one trigger is required.
+  Provide commands with --one-liner (-o), or omit -o to enter an interactive
+  command editor.  All commands run for every trigger the hook is signed up
+  for; there is no per-trigger command list.
+
+  Examples:
+    target hook add -L -o "script print('module loaded')"
+    target hook add -L -u -o "script print('module event')"
+    target hook add -S -o "bt"
+    target hook add -L -u -S -o "script print('all events')"
+    target hook add -S -s mylib.so -n main -o "bt"
+    target hook add -S -G true -o "thread info"
+
+Python class hooks:
+-------------------
+  Provide a Python class with --python-class (-P).  The class controls which
+  events it handles by implementing the corresponding methods; you do not
+  specify triggers on the command line.  Use -k <key> -v <value> to pass
+  extra_args to the class constructor.
+
+  Examples:
+    target hook add -P mymodule.MyHook
+    target hook add -P mymodule.MyHook -k verbose -v true
+
+  The Python class should implement at least one of these methods:
+
+    class MyHook:
+        def __init__(self, target, extra_args, internal_dict):
+            self.target = target
+        def handle_module_loaded(self, stream):
+            pass
+        def handle_module_unloaded(self, stream):
+            pass
+        def handle_stop(self, exe_ctx, stream):
+            return True  # True = should_stop, False = continue
+
+Filter options:
+---------------
+  Filters (-s, -f, -l, -e, -c, -n, -x, -t, -T, -q) restrict when the hook
+  fires.  They apply to both command-based and Python class hooks.
+)help");
+    // Python class options (-P, -k, -v) are placed in Set 2 (dst_mask).
+    // src_mask must cover Set 1 | Set 2 to match the internal usage masks of
+    // OptionGroupPythonClassWithDict (class=Set1, key/value=Set2).
+    // Since -o, -L, -u, -S are Group<1> only, the parser prevents mixing.
+    m_all_options.Append(&m_python_class_options,
+                         LLDB_OPT_SET_1 | LLDB_OPT_SET_2, LLDB_OPT_SET_2);
+    m_all_options.Append(&m_options);
+    m_all_options.Finalize();
+  }
+
+  ~CommandObjectTargetHookAdd() override = default;
+
+  Options *GetOptions() override { return &m_all_options; }
+
+protected:
+  void IOHandlerActivated(IOHandler &io_handler, bool interactive) override {
+    if (interactive) {
+      if (lldb::LockableStreamFileSP output_sp =
+              io_handler.GetOutputStreamFileSP()) {
+        LockedStreamFile locked_stream = output_sp->Lock();
+        locked_stream.PutCString(
+            "Enter your hook command(s). Type 'DONE' to end.\n");
+      }
+    }
+  }
+
+  void IOHandlerInputComplete(IOHandler &io_handler,
+                              std::string &line) override {
+    if (m_hook_sp) {
+      if (line.empty()) {
+        if (lldb::LockableStreamFileSP error_sp =
+                io_handler.GetErrorStreamFileSP()) {
+          LockedStreamFile locked_stream = error_sp->Lock();
+          locked_stream.Printf("error: hook #%" PRIu64
+                               " aborted, no commands.\n",
+                               m_hook_sp->GetID());
+        }
+        GetTarget().UndoCreateHook(m_hook_sp->GetID());
+      } else {
+        auto *hook = static_cast<Target::HookCommandLine *>(m_hook_sp.get());
+        hook->SetActionFromString(line);
+        if (lldb::LockableStreamFileSP output_sp =
+                io_handler.GetOutputStreamFileSP()) {
+          LockedStreamFile locked_stream = output_sp->Lock();
+          locked_stream.Printf("Hook #%" PRIu64 " added.\n",
+                               m_hook_sp->GetID());
+        }
+      }
+      m_hook_sp.reset();
+    }
+    io_handler.SetIsDone(true);
+  }
+
+  void DoExecute(Args &command, CommandReturnObject &result) override {
+    m_hook_sp.reset();
+    Target &target = GetTarget();
+
+    bool is_python_class = !m_python_class_options.GetName().empty();
+
+    // Command-based hooks require at least one explicit trigger.
+    if (!is_python_class && !m_options.m_on_load && !m_options.m_on_unload &&
+        !m_options.m_on_stop) {
+      result.AppendError("at least one trigger must be specified: "
+                         "--on-load (-L), --on-unload (-u), or --on-stop (-S)");
+      return;
+    }
+
+    Target::Hook::HookKind hook_kind =
+        is_python_class ? Target::Hook::HookKind::ScriptBased
+                        : Target::Hook::HookKind::CommandBased;
+
+    Target::HookSP new_hook_sp = target.CreateHook(hook_kind);
+
+    if (!is_python_class) {
+      // Build trigger mask from explicit command-line flags.
+      auto *cmd_hook =
+          static_cast<Target::HookCommandLine *>(new_hook_sp.get());
+      uint32_t trigger_mask = 0;
+      if (m_options.m_on_load)
+        trigger_mask |= Target::Hook::kModulesLoaded;
+      if (m_options.m_on_unload)
+        trigger_mask |= Target::Hook::kModulesUnloaded;
+      if (m_options.m_on_stop)
+        trigger_mask |= Target::Hook::kProcessStop;
+      cmd_hook->SetTriggerMask(trigger_mask);
+    }
+    // Python class hooks: triggers are computed in SetScriptCallback based
+    // on which callback methods the class implements.
+
+    // Set up symbol context specifier if filter options were provided.
+    if (m_options.m_sym_ctx_specified) {
+      auto specifier_up = std::make_unique<SymbolContextSpecifier>(
+          GetDebugger().GetSelectedTarget());
+
+      if (!m_options.m_module_name.empty())
+        specifier_up->AddSpecification(
+            m_options.m_module_name.c_str(),
+            SymbolContextSpecifier::eModuleSpecified);
+
+      if (!m_options.m_class_name.empty())
+        specifier_up->AddSpecification(
+            m_options.m_class_name.c_str(),
+            SymbolContextSpecifier::eClassOrNamespaceSpecified);
+
+      if (!m_options.m_file_name.empty())
+        specifier_up->AddSpecification(m_options.m_file_name.c_str(),
+                                       SymbolContextSpecifier::eFileSpecified);
+
+      if (m_options.m_line_start != 0)
+        specifier_up->AddLineSpecification(
+            m_options.m_line_start,
+            SymbolContextSpecifier::eLineStartSpecified);
+
+      if (m_options.m_line_end != UINT_MAX)
+        specifier_up->AddLineSpecification(
+            m_options.m_line_end, SymbolContextSpecifier::eLineEndSpecified);
+
+      if (!m_options.m_function_name.empty())
+        specifier_up->AddSpecification(
+            m_options.m_function_name.c_str(),
+            SymbolContextSpecifier::eFunctionSpecified);
+
+      new_hook_sp->SetSCSpecifier(specifier_up.release());
+    }
+
+    // Set up thread specifier.
+    if (m_options.m_thread_specified) {
+      ThreadSpec *thread_spec = new ThreadSpec();
+
+      if (m_options.m_thread_id != LLDB_INVALID_THREAD_ID)
+        thread_spec->SetTID(m_options.m_thread_id);
+
+      if (m_options.m_thread_index != UINT32_MAX)
+        thread_spec->SetIndex(m_options.m_thread_index);
+
+      if (!m_options.m_thread_name.empty())
+        thread_spec->SetName(m_options.m_thread_name.c_str());
+
+      if (!m_options.m_queue_name.empty())
+        thread_spec->SetQueueName(m_options.m_queue_name.c_str());
+
+      new_hook_sp->SetThreadSpecifier(thread_spec);
+    }
+
+    new_hook_sp->SetAutoContinue(m_options.m_auto_continue);
+    new_hook_sp->SetRunAtInitialStop(m_options.m_at_initial_stop);
+
+    if (m_options.m_use_one_liner) {
+      auto *hook = static_cast<Target::HookCommandLine *>(new_hook_sp.get());
+      hook->SetActionFromStrings(m_options.m_one_liner);
+      result.AppendMessageWithFormatv("Hook #{0} added.\n",
+                                      new_hook_sp->GetID());
+    } else if (!m_python_class_options.GetName().empty()) {
+      auto *hook = static_cast<Target::HookScripted *>(new_hook_sp.get());
+      Status callback_error =
+          hook->SetScriptCallback(m_python_class_options.GetName(),
+                                  m_python_class_options.GetStructuredData());
+      if (callback_error.Fail()) {
+        result.AppendErrorWithFormat("couldn't add hook: %s",
+                                     callback_error.AsCString());
+        target.UndoCreateHook(new_hook_sp->GetID());
+        return;
+      }
+      result.AppendMessageWithFormatv("Hook #{0} added.\n",
+                                      new_hook_sp->GetID());
+    } else {
+      m_hook_sp = new_hook_sp;
+      m_interpreter.GetLLDBCommandsFromIOHandler("> ",   // prompt
+                                                 *this); // delegate
+    }
+    result.SetStatus(eReturnStatusSuccessFinishNoResult);
+  }
+
+private:
+  CommandOptions m_options;
+  OptionGroupPythonClassWithDict m_python_class_options;
+  OptionGroupOptions m_all_options;
+  Target::HookSP m_hook_sp;
+};
+
+#pragma mark CommandObjectTargetHookDelete
+
+class CommandObjectTargetHookDelete : public CommandObjectParsed {
+public:
+  CommandObjectTargetHookDelete(CommandInterpreter &interpreter)
+      : CommandObjectParsed(interpreter, "target hook delete", "Delete a hook.",
+                            "target hook delete [<id>]") {
+    AddSimpleArgumentList(eArgTypeStopHookID, eArgRepeatStar);
+  }
+
+  ~CommandObjectTargetHookDelete() override = default;
+
+protected:
+  void DoExecute(Args &command, CommandReturnObject &result) override {
+    Target &target = GetTarget();
+    if (command.GetArgumentCount() == 0) {
+      if (!m_interpreter.Confirm("Delete all hooks?", true)) {
+        result.SetStatus(eReturnStatusFailed);
+        return;
+      }
+      target.RemoveAllHooks();
+      result.SetStatus(eReturnStatusSuccessFinishNoResult);
+      return;
+    }
+
+    for (size_t i = 0; i < command.GetArgumentCount(); i++) {
+      lldb::user_id_t user_id;
+      if (!llvm::to_integer(command.GetArgumentAtIndex(i), user_id)) {
+        result.AppendErrorWithFormat("invalid hook id: \"%s\"",
+                                     command.GetArgumentAtIndex(i));
+        return;
+      }
+      if (!target.RemoveHookByID(user_id)) {
+        result.AppendErrorWithFormat("unknown hook id: \"%s\"",
+                                     command.GetArgumentAtIndex(i));
+        return;
+      }
+    }
+    result.SetStatus(eReturnStatusSuccessFinishNoResult);
+  }
+};
+
+#pragma mark CommandObjectTargetHookEnableDisable
+
+class CommandObjectTargetHookEnableDisable : public CommandObjectParsed {
+public:
+  CommandObjectTargetHookEnableDisable(CommandInterpreter &interpreter,
+                                       bool enable, const char *name,
+                                       const char *help, const char *syntax)
+      : CommandObjectParsed(interpreter, name, help, syntax), m_enable(enable) {
+    AddSimpleArgumentList(eArgTypeStopHookID, eArgRepeatStar);
+  }
+
+  ~CommandObjectTargetHookEnableDisable() override = default;
+
+protected:
+  void DoExecute(Args &command, CommandReturnObject &result) override {
+    Target &target = GetTarget();
+
+    // No IDs = apply to all hooks.
+    if (command.GetArgumentCount() == 0) {
+      target.SetAllHooksEnabledState(m_enable);
+      result.SetStatus(eReturnStatusSuccessFinishNoResult);
+      return;
+    }
+
+    for (size_t i = 0; i < command.GetArgumentCount(); i++) {
+      lldb::user_id_t user_id;
+      if (!llvm::to_integer(command.GetArgumentAtIndex(i), user_id)) {
+        result.AppendErrorWithFormat("invalid hook id: \"%s\"",
+                                     command.GetArgumentAtIndex(i));
+        return;
+      }
+      if (!target.SetHookEnabledStateByID(user_id, m_enable)) {
+        result.AppendErrorWithFormat("unknown hook id: \"%s\"",
+                                     command.GetArgumentAtIndex(i));
+        return;
+      }
+    }
+    result.SetStatus(eReturnStatusSuccessFinishNoResult);
+  }
+
+private:
+  bool m_enable;
+};
+
+#pragma mark CommandObjectTargetHookModify
+
+#define LLDB_OPTIONS_target_hook_modify
+#include "CommandOptions.inc"
+
+/// Modify trigger settings on a hook. Only valid for command-based hooks;
+/// scripted hooks derive their triggers from the class methods.
+class CommandObjectTargetHookModify : public CommandObjectParsed {
+public:
+  class CommandOptions : public Options {
+  public:
+    CommandOptions() = default;
+    ~CommandOptions() override = default;
+
+    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+      return llvm::ArrayRef(g_target_hook_modify_options);
+    }
+
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
+      const int short_option =
+          g_target_hook_modify_options[option_idx].short_option;
+      switch (short_option) {
+      case 'e':
+        m_enable_trigger = option_arg.str();
+        break;
+      case 'd':
+        m_disable_trigger = option_arg.str();
+        break;
+      default:
+        llvm_unreachable("unhandled option");
+      }
+      return error;
+    }
+
+    void OptionParsingStarting(ExecutionContext *execution_context) override {
+      m_enable_trigger.clear();
+      m_disable_trigger.clear();
+    }
+
+    std::string m_enable_trigger;
+    std::string m_disable_trigger;
+  };
+
+  CommandObjectTargetHookModify(CommandInterpreter &interpreter)
+      : CommandObjectParsed(interpreter, "target hook modify",
+                            "Modify trigger settings on a hook.",
+                            "target hook modify [--enable-trigger <name>] "
+                            "[--disable-trigger <name>] [<id>]") {
+    AddSimpleArgumentList(eArgTypeStopHookID, eArgRepeatOptional);
+    SetHelpLong(R"help(
+Modify trigger settings on command-based hooks. Scripted hooks derive their
+triggers from the class methods and cannot be modified.
+
+If no hook ID is given, the last added hook is modified.
+
+Valid trigger names: load, unload, stop.
+
+Examples:
+  target hook modify --enable-trigger stop 1
+  target hook modify --disable-trigger load 1
+  target hook modify --enable-trigger stop   (modifies last added hook)
+)help");
+  }
+
+  ~CommandObjectTargetHookModify() override = default;
+
+  Options *GetOptions() override { return &m_options; }
+
+protected:
+  static uint32_t ParseTriggerName(llvm::StringRef name) {
+    if (name == "load")
+      return Target::Hook::kModulesLoaded;
+    if (name == "unload")
+      return Target::Hook::kModulesUnloaded;
+    if (name == "stop")
+      return Target::Hook::kProcessStop;
+    return 0;
+  }
+
+  void DoExecute(Args &command, CommandReturnObject &result) override {
+    Target &target = GetTarget();
+
+    if (m_options.m_enable_trigger.empty() &&
+        m_options.m_disable_trigger.empty()) {
+      result.AppendError("at least one of --enable-trigger or "
+                         "--disable-trigger must be specified");
+      return;
+    }
+
+    // Resolve the hook ID. Default to last added if not specified.
+    Target::HookSP hook_sp;
+    if (command.GetArgumentCount() == 0) {
+      size_t num_hooks = target.GetNumHooks();
+      if (num_hooks == 0) {
+        result.AppendError("no hooks exist");
+        return;
+      }
+      hook_sp = target.GetHookAtIndex(num_hooks - 1);
+    } else {
+      lldb::user_id_t user_id;
+      if (!llvm::to_integer(command.GetArgumentAtIndex(0), user_id)) {
+        result.AppendErrorWithFormat("invalid hook id: \"%s\"",
+                                     command.GetArgumentAtIndex(0));
+        return;
+      }
+      hook_sp = target.GetHookByID(user_id);
+      if (!hook_sp) {
+        result.AppendErrorWithFormat("unknown hook id: \"%s\"",
+                                     command.GetArgumentAtIndex(0));
+        return;
+      }
+    }
+
+    // Reject trigger modification on scripted hooks.
+    if (hook_sp->GetHookKind() != Target::Hook::HookKind::CommandBased) {
+      result.AppendError("cannot modify triggers on a scripted hook; "
+                         "triggers are determined by the class methods");
+      return;
+    }
+    auto *cmd_hook = static_cast<Target::HookCommandLine *>(hook_sp.get());
+
+    if (!m_options.m_enable_trigger.empty()) {
+      uint32_t trigger = ParseTriggerName(m_options.m_enable_trigger);
+      if (!trigger) {
+        result.AppendErrorWithFormat("unknown trigger name: \"%s\". "
+                                     "Valid names: load, unload, stop",
+                                     m_options.m_enable_trigger.c_str());
+        return;
+      }
+      cmd_hook->AddTrigger(trigger);
+    }
+
+    if (!m_options.m_disable_trigger.empty()) {
+      uint32_t trigger = ParseTriggerName(m_options.m_disable_trigger);
+      if (!trigger) {
+        result.AppendErrorWithFormat("unknown trigger name: \"%s\". "
+                                     "Valid names: load, unload, stop",
+                                     m_options.m_disable_trigger.c_str());
+        return;
+      }
+      cmd_hook->RemoveTrigger(trigger);
+    }
+
+    result.SetStatus(eReturnStatusSuccessFinishNoResult);
+  }
+
+private:
+  CommandOptions m_options;
+};
+
+#pragma mark CommandObjectTargetHookList
+
+class CommandObjectTargetHookList : public CommandObjectParsed {
+public:
+  CommandObjectTargetHookList(CommandInterpreter &interpreter)
+      : CommandObjectParsed(interpreter, "target hook list", "List all hooks.",
+                            "target hook list") {}
+
+  ~CommandObjectTargetHookList() override = default;
+
+protected:
+  void DoExecute(Args &command, CommandReturnObject &result) override {
+    Target &target = GetTarget();
+    size_t num_hooks = target.GetNumHooks();
+    if (num_hooks == 0) {
+      result.GetOutputStream().PutCString("No hooks.\n");
+    } else {
+      for (size_t i = 0; i < num_hooks; i++) {
+        Target::HookSP hook_sp = target.GetHookAtIndex(i);
+        if (hook_sp)
+          hook_sp->GetDescription(result.GetOutputStream(),
+                                  eDescriptionLevelFull);
+      }
+    }
+    result.SetStatus(eReturnStatusSuccessFinishResult);
+  }
+};
+
+#pragma mark CommandObjectMultiwordTargetHooks
+
+class CommandObjectMultiwordTargetHooks : public CommandObjectMultiword {
+public:
+  CommandObjectMultiwordTargetHooks(CommandInterpreter &interpreter)
+      : CommandObjectMultiword(
+            interpreter, "target hook",
+            "Commands for operating on target hooks.",
+            "target hook <subcommand> [<subcommand-options>]") {
+    LoadSubCommand(
+        "add", CommandObjectSP(new CommandObjectTargetHookAdd(interpreter)));
+    LoadSubCommand("delete", CommandObjectSP(new CommandObjectTargetHookDelete(
+                                 interpreter)));
+    LoadSubCommand("disable",
+                   CommandObjectSP(new CommandObjectTargetHookEnableDisable(
+                       interpreter, false, "target hook disable",
+                       "Disable a hook.", "target hook disable [<id> ...]")));
+    LoadSubCommand("enable",
+                   CommandObjectSP(new CommandObjectTargetHookEnableDisable(
+                       interpreter, true, "target hook enable",
+                       "Enable a hook.", "target hook enable [<id> ...]")));
+    LoadSubCommand(
+        "list", CommandObjectSP(new CommandObjectTargetHookList(interpreter)));
+    LoadSubCommand("modify", CommandObjectSP(new CommandObjectTargetHookModify(
+                                 interpreter)));
+  }
+
+  ~CommandObjectMultiwordTargetHooks() override = default;
 };
 
 #pragma mark CommandObjectTargetDumpTypesystem
@@ -5583,6 +6285,8 @@ CommandObjectMultiwordTarget::CommandObjectMultiwordTarget(
   LoadSubCommand(
       "stop-hook",
       CommandObjectSP(new CommandObjectMultiwordTargetStopHooks(interpreter)));
+  LoadSubCommand("hook", CommandObjectSP(new CommandObjectMultiwordTargetHooks(
+                             interpreter)));
   LoadSubCommand("modules",
                  CommandObjectSP(new CommandObjectTargetModules(interpreter)));
   LoadSubCommand("symbols",

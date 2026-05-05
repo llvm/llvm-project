@@ -33,6 +33,7 @@
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/Interfaces/CIROpInterfaces.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 
 #include "CIRGenFunctionInfo.h"
@@ -463,6 +464,12 @@ void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
 
   const auto *global = cast<ValueDecl>(gd.getDecl());
 
+  if (global->hasAttr<WeakRefAttr>())
+    errorNYI(global->getSourceRange(), "emitGlobal: WeakRefAttr");
+
+  if (global->hasAttr<AliasAttr>())
+    errorNYI(global->getSourceRange(), "emitGlobal: AliasAttr");
+
   // If this is CUDA, be selective about which declarations we emit.
   // Non-constexpr non-lambda implicit host device functions are not emitted
   // unless they are used on device side.
@@ -724,6 +731,85 @@ void CIRGenModule::setCommonAttributes(GlobalDecl gd, mlir::Operation *gv) {
   }
 }
 
+/// Get the feature delta from the default feature map for the given target CPU.
+static std::vector<std::string>
+getFeatureDeltaFromDefault(const CIRGenModule &cgm, llvm::StringRef targetCPU,
+                           llvm::StringMap<bool> &featureMap) {
+  llvm::StringMap<bool> defaultFeatureMap;
+  cgm.getTarget().initFeatureMap(
+      defaultFeatureMap, cgm.getASTContext().getDiagnostics(), targetCPU, {});
+
+  std::vector<std::string> delta;
+  for (const auto &[k, v] : featureMap) {
+    auto defaultIt = defaultFeatureMap.find(k);
+    if (defaultIt == defaultFeatureMap.end() || defaultIt->getValue() != v)
+      delta.push_back((v ? "+" : "-") + k.str());
+  }
+
+  return delta;
+}
+
+bool CIRGenModule::getCPUAndFeaturesAttributes(
+    GlobalDecl gd, llvm::StringMap<std::string> &attrs,
+    bool setTargetFeatures) {
+  // Add target-cpu and target-features attributes to functions. If
+  // we have a decl for the function and it has a target attribute then
+  // parse that and add it to the feature set.
+  llvm::StringRef targetCPU = getTarget().getTargetOpts().CPU;
+  llvm::StringRef tuneCPU = getTarget().getTargetOpts().TuneCPU;
+  std::vector<std::string> features;
+  // `fd` may be null when emitting attributes for globals that don't have a
+  // FunctionDecl. The AMDGPU branch below handles
+  // the null case via initFeatureMap.
+  const auto *fd = dyn_cast_or_null<FunctionDecl>(gd.getDecl());
+  fd = fd ? fd->getMostRecentDecl() : fd;
+  const auto *td = fd ? fd->getAttr<TargetAttr>() : nullptr;
+  const auto *tv = fd ? fd->getAttr<TargetVersionAttr>() : nullptr;
+  assert((!td || !tv) && "both target_version and target specified");
+  const auto *sd = fd ? fd->getAttr<CPUSpecificAttr>() : nullptr;
+  const auto *tc = fd ? fd->getAttr<TargetClonesAttr>() : nullptr;
+  bool addedAttr = false;
+  if (td || tv || sd || tc) {
+    assert(!cir::MissingFeatures::opFuncMultiVersioning());
+  } else {
+    // Just add the existing target cpu and target features to the function.
+    if (setTargetFeatures && getTarget().getTriple().isAMDGPU()) {
+      llvm::StringMap<bool> featureMap;
+      if (fd)
+        astContext.getFunctionFeatureMap(featureMap, gd);
+      else
+        getTarget().initFeatureMap(featureMap, astContext.getDiagnostics(),
+                                   targetCPU,
+                                   getTarget().getTargetOpts().Features);
+      features = getFeatureDeltaFromDefault(*this, targetCPU, featureMap);
+    } else {
+      features = getTarget().getTargetOpts().Features;
+    }
+  }
+
+  if (!targetCPU.empty()) {
+    attrs["cir.target-cpu"] = targetCPU.str();
+    addedAttr = true;
+  }
+  if (!tuneCPU.empty()) {
+    attrs["cir.tune-cpu"] = tuneCPU.str();
+    addedAttr = true;
+  }
+  if (!features.empty() && setTargetFeatures) {
+    llvm::erase_if(features, [&](const std::string &f) {
+      assert(!f.empty() && (f[0] == '+' || f[0] == '-') &&
+             "feature string must start with '+' or '-'");
+      return getTarget().isReadOnlyFeature(f.substr(1));
+    });
+    llvm::sort(features);
+    attrs["cir.target-features"] = llvm::join(features, ",");
+    addedAttr = true;
+  }
+  // TODO(cir): add metadata for AArch64 Function Multi Versioning.
+  assert(!cir::MissingFeatures::opFuncMultiVersioning());
+  return addedAttr;
+}
+
 void CIRGenModule::setNonAliasAttributes(GlobalDecl gd, mlir::Operation *op) {
   setCommonAttributes(gd, op);
 
@@ -734,12 +820,21 @@ void CIRGenModule::setNonAliasAttributes(GlobalDecl gd, mlir::Operation *op) {
         gvi.setSection(builder.getStringAttr(sa->getName()));
       if (d->hasAttr<RetainAttr>())
         addUsedGlobal(gvi);
+
+      if (auto func = dyn_cast<cir::FuncOp>(op)) {
+        llvm::StringMap<std::string> attrs;
+        if (getCPUAndFeaturesAttributes(gd, attrs)) {
+          // TODO(cir): Classic codegen removes the existing target-cpu,
+          // target-features, tune-cpu and fmv-features attributes here
+          // before adding the new ones.
+          for (const auto &[key, val] : attrs)
+            func->setAttr(key, builder.getStringAttr(val));
+        }
+      }
     }
   }
 
   assert(!cir::MissingFeatures::opGlobalPragmaClangSection());
-  assert(!cir::MissingFeatures::opFuncCPUAndFeaturesAttributes());
-
   getTargetCIRGenInfo().setTargetAttributes(gd.getDecl(), op, *this);
 }
 
@@ -2701,10 +2796,10 @@ void CIRGenModule::setCIRFunctionAttributes(GlobalDecl globalDecl,
 
   // TODO(cir): Check X86_VectorCall incompatibility wiht WinARM64EC
 
-  // TODO(cir): typically the calling conv is set right here, but since
-  // cir::CallingConv is empty and we've not yet added calling-conv to FuncOop,
-  // this isn't really useful here.  This should call func.setCallingConv/etc
-  // later.
+  // TODO(cir): Set the calling convention computed by constructAttributeList
+  // on the function. FuncOp supports calling_conv, but target-specific
+  // CodeGen is needed to set it correctly (e.g., AMDGPU kernel functions
+  // should be marked with AMDGPUKernel).
   assert(!cir::MissingFeatures::opFuncCallingConv());
 }
 
@@ -3568,6 +3663,50 @@ CIRGenModule::getAddrOfGlobalTemporary(const MaterializeTemporaryExpr *mte,
   entry = cv;
 
   return cv;
+}
+
+cir::GlobalOp CIRGenModule::getAddrOfUnnamedGlobalConstantDecl(
+    const UnnamedGlobalConstantDecl *gcd) {
+  unsigned numEntries = unnamedGlobalConstantDeclMap.size();
+  cir::GlobalOp *globalOpEntry = &unnamedGlobalConstantDeclMap[gcd];
+
+  if (*globalOpEntry)
+    return *globalOpEntry;
+
+  ConstantEmitter emitter(*this);
+
+  const APValue &value = gcd->getValue();
+  assert(!value.isAbsent());
+  assert(!cir::MissingFeatures::addressSpace() &&
+         "emitForInitializer should take gcd->getType().getAddressSpace()");
+  mlir::Attribute init = emitter.emitForInitializer(value, gcd->getType());
+  auto typedInit = dyn_cast<mlir::TypedAttr>(init);
+
+  if (!typedInit)
+    errorNYI(gcd->getSourceRange(),
+             "getAddrOfUnnamedGlobalConstantDecl: non-typed initializer");
+
+  assert(!cir::MissingFeatures::addressSpace());
+
+  // Classic codegen always creates these with .constant, then counts on the
+  // auto-addition of '.#'. CIR global doesn't have this, so we'll just auto-add
+  // one if this isn't the first.  We could probably choose a better name than
+  // .constant to be unique for this type of decl, but this is consistent with
+  // classic codegen.
+  std::string name = numEntries == 0
+                         ? ".constant"
+                         : (Twine(".constant.") + Twine(numEntries)).str();
+  auto globalOp = createGlobalOp(*this, builder.getUnknownLoc(), name,
+                                 typedInit.getType(), /*is_constant=*/true);
+  globalOp.setLinkage(cir::GlobalLinkageKind::PrivateLinkage);
+
+  CharUnits alignment = getASTContext().getTypeAlignInChars(gcd->getType());
+  globalOp.setAlignment(alignment.getAsAlign().value());
+  CIRGenModule::setInitializer(globalOp, init);
+
+  emitter.finalize(globalOp);
+  *globalOpEntry = globalOp;
+  return globalOp;
 }
 
 cir::GlobalOp

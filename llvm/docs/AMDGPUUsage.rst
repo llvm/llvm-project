@@ -1792,6 +1792,32 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    * :ref:`Synchronization Scope<amdgpu-intrinsics-syncscope-metadata-operand>`.
                                                      Note that the scope used must ensure that the L2 cache will be hit.
 
+  llvm.amdgcn.ds.atomic.barrier.arrive.rtn.b64     Available starting GFX12.5.
+                                                   Corresponds to ``ds_atomic_barrier_arrive_rtn_b64``.
+
+                                                   For the purposes of the memory model, this is a monotonic atomic
+                                                   read-modify-write operation in the local address space.
+
+                                                   This intrinsic has 2 operands:
+
+                                                   * Local pointer to the LDS barrier data.
+                                                   * Update value; the pending count of the barrier will be
+                                                     decremented by this value (generally 1).
+
+                                                   Returns the LDS barrier data as it was before this operation
+                                                   was executed.
+
+  llvm.amdgcn.ds.atomic.async.barrier.arrive.b64   Available starting GFX12.5.
+                                                   Corresponds to ``ds_atomic_async_barrier_arrive_b64``.
+
+                                                   For the purposes of the memory model, this is an asynchronous
+                                                   monotonic atomic read-modify-write operation in the local
+                                                   address space.
+
+                                                   This intrinsic has 1 operand:
+
+                                                   * Local pointer to the LDS barrier data.
+
   ==============================================   ==========================================================
 
 .. TODO::

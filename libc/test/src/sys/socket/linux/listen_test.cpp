@@ -18,7 +18,7 @@
 #include "src/__support/CPP/scope.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
-#include "test/UnitTest/Test.h"
+#include "test/src/sys/socket/linux/socket_test_support.h"
 
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
@@ -37,15 +37,7 @@ TEST_F(LlvmLibcListenTest, ListenLocalSocket) {
       [&] { ASSERT_THAT(LIBC_NAMESPACE::close(sock), Succeeds(0)); });
 
   struct sockaddr_un my_addr;
-
-  my_addr.sun_family = AF_UNIX;
-  unsigned int i = 0;
-  for (;
-       SOCK_PATH[i] != '\0' && (i < sizeof(sockaddr_un) - sizeof(sa_family_t));
-       ++i)
-    my_addr.sun_path[i] = SOCK_PATH[i];
-
-  my_addr.sun_path[i] = '\0';
+  ASSERT_TRUE(LIBC_NAMESPACE::testing::make_sockaddr_un(SOCK_PATH, my_addr));
 
   ASSERT_THAT(
       LIBC_NAMESPACE::bind(sock, reinterpret_cast<struct sockaddr *>(&my_addr),
