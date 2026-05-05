@@ -19,7 +19,7 @@
 
 #include <optional>
 #include <type_traits>
-#if _LIBCPP_STD_VER >= 26
+#if _LIBCPP_STD_VER >= 20
 #  include <vector>
 #  include <ranges>
 #  include <cassert>
@@ -43,14 +43,16 @@ int main(int, char**) {
 
   static_assert(std::is_same_v<const nullopt_t, decltype(nullopt)>);
   static_assert(test());
-#if TEST_STD_VER >= 26
-  // Test comparisons between nullopt_t
+
   static_assert(nullopt == nullopt);
   static_assert(!(nullopt != nullopt));
   static_assert(nullopt <= nullopt);
   static_assert(nullopt >= nullopt);
-  static_assert((nullopt <=> nullopt) == std::strong_ordering::equal);
+  static_assert(!(nullopt > nullopt));
+  static_assert(!(nullopt < nullopt));
 
+#if TEST_STD_VER >= 20
+  static_assert((nullopt <=> nullopt) == std::strong_ordering::equal);
   // Test ranges::find with nullopt
   std::vector<std::optional<int>> v = {1, 2, nullopt, 4, 5};
   auto itr                          = std::ranges::find(v, nullopt);

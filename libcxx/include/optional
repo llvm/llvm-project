@@ -362,8 +362,14 @@ struct nullopt_t {
     explicit __secret_tag() = default;
   };
   _LIBCPP_HIDE_FROM_ABI constexpr explicit nullopt_t(__secret_tag, __secret_tag) noexcept {}
-#    if _LIBCPP_STD_VER >= 26
-  _LIBCPP_HIDE_FROM_ABI constexpr strong_ordering operator<=>(const nullopt_t&) const noexcept = default;
+  _LIBCPP_HIDE_FROM_ABI constexpr friend bool operator==(const nullopt_t&, const nullopt_t) { return true; }
+  _LIBCPP_HIDE_FROM_ABI constexpr friend bool operator!=(const nullopt_t&, const nullopt_t) { return false; }
+  _LIBCPP_HIDE_FROM_ABI constexpr friend bool operator>(const nullopt_t&, const nullopt_t) { return false; }
+  _LIBCPP_HIDE_FROM_ABI constexpr friend bool operator<(const nullopt_t&, const nullopt_t) { return false; }
+  _LIBCPP_HIDE_FROM_ABI constexpr friend bool operator>=(const nullopt_t&, const nullopt_t) { return true; }
+  _LIBCPP_HIDE_FROM_ABI constexpr friend bool operator<=(const nullopt_t&, const nullopt_t) { return true; }
+#    if _LIBCPP_STD_VER >= 20
+  _LIBCPP_HIDE_FROM_ABI constexpr friend strong_ordering operator<=>(const nullopt_t&, const nullopt_t&) = default;
 #    endif
 };
 
