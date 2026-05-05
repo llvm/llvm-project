@@ -31,7 +31,7 @@ void record_context(int a, ...) {
 // Ensure the correct behavior for promotable type UB checking.
 void promotable(int a, ...) {
   enum Unscoped1 { One = 0x7FFFFFFF };
-  (void)__builtin_va_arg(ap, Unscoped1); // ok
+  (void)__builtin_va_arg(ap, Unscoped1); // expected-warning {{second argument to 'va_arg' is of promotable type}}
 
   enum Unscoped2 { Two = 0xFFFFFFFF };
   (void)__builtin_va_arg(ap, Unscoped2); // ok
