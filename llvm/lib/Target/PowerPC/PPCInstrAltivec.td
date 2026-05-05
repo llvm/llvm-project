@@ -25,11 +25,6 @@
 // ** in PPCVSXSwapRemoval::gatherVectorInstructions().                      **
 // ****************************************************************************
 
-def SDT_PPCMSumMBM : SDTypeProfile<1, 3, [
-  SDTCisVT<0, v4i32>, SDTCisVT<1, v16i8>, SDTCisVT<2, v16i8>, SDTCisVT<3, v4i32>
-]>;
-def PPCMSumMBM : SDNode<"PPCISD::VMSUMMBM", SDT_PPCMSumMBM, []>;
-
 //===----------------------------------------------------------------------===//
 // Altivec transformation functions and pattern fragments.
 //
@@ -890,7 +885,7 @@ def : Pat<(int_ppc_altivec_dssall), (NOP)>;
 let Predicates = [NotAIX] in
 def : Pat<(int_ppc_altivec_dssall), (DSSALL)>;
 
-// RF debug partial reduce
+// Partial reductions
 def : Pat<(v4i32 (partial_reduce_umla v4i32:$vAcc, v8i16:$vA, v8i16:$vB)),
           (v4i32 (VMSUMUHM v8i16:$vA, v8i16:$vB, v4i32:$vAcc))>;
 def : Pat<(v4i32 (partial_reduce_smla v4i32:$vAcc, v8i16:$vA, v8i16:$vB)),
@@ -898,8 +893,6 @@ def : Pat<(v4i32 (partial_reduce_smla v4i32:$vAcc, v8i16:$vA, v8i16:$vB)),
 def : Pat<(v4i32 (partial_reduce_umla v4i32:$vAcc, v16i8:$vA, v16i8:$vB)),
           (v4i32 (VMSUMUBM v16i8:$vA, v16i8:$vB, v4i32:$vAcc))>;
 def : Pat<(v4i32 (partial_reduce_sumla v4i32:$vAcc, v16i8:$vA, v16i8:$vB)),
-          (v4i32 (VMSUMMBM v16i8:$vA, v16i8:$vB, v4i32:$vAcc))>;
-def : Pat<(v4i32 (PPCMSumMBM v16i8:$vA, v16i8:$vB, v4i32:$vAcc)),
           (v4i32 (VMSUMMBM v16i8:$vA, v16i8:$vB, v4i32:$vAcc))>;
 
 // Rotates.
