@@ -37,8 +37,6 @@ static constexpr const char *SingleRangeNames[] = {
     "replace",
     "replace_if",
     "generate",
-    "remove",
-    "remove_if",
     "remove_copy",
     "remove_copy_if",
     "unique_copy",
@@ -59,9 +57,7 @@ static constexpr const char *SingleRangeNames[] = {
     "shift_left",
     "shift_right",
     "is_partitioned",
-    "partition",
     "partition_copy",
-    "stable_partition",
     "sort",
     "stable_sort",
     "is_sorted",
@@ -79,7 +75,8 @@ static constexpr const char *SingleRangeNames[] = {
     "destroy",
 };
 
-static constexpr const char *SingleRangeBeginResultNames[] = {"unique"};
+static constexpr const char *SingleRangeBeginResultNames[] = {
+    "remove", "remove_if", "stable_partition", "partition", "unique"};
 
 static constexpr const char *TwoRangeNames[] = {
     "equal",
@@ -97,8 +94,10 @@ static constexpr const char *TwoRangeNames[] = {
     "is_permutation",
 };
 
-static constexpr const char *SinglePivotRangeNames[] = {"rotate", "rotate_copy",
+static constexpr const char *SinglePivotRangeNames[] = {"rotate_copy",
                                                         "inplace_merge"};
+
+static constexpr const char *SinglePivotRangeBeginResultNames[] = {"rotate"};
 
 namespace {
 class StdReplacer : public utils::UseRangesCheck::Replacer {
@@ -176,6 +175,7 @@ utils::UseRangesCheck::ReplacerMap UseRangesCheck::getReplacerMap() const {
       {SingleRangeFunc, SingleRangeBeginResultNames, BeginResultPolicy},
       {TwoRangeFunc, TwoRangeNames, DefaultPolicy},
       {SinglePivotFunc, SinglePivotRangeNames, DefaultPolicy},
+      {SinglePivotFunc, SinglePivotRangeBeginResultNames, BeginResultPolicy},
   };
   SmallString<64> Buff;
   for (const auto &[Signatures, Values, Policy] : AlgorithmNames) {
