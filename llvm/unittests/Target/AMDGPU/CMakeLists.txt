@@ -25,6 +25,7 @@ add_llvm_target_unittest(AMDGPUTests
   CSETest.cpp
   DwarfRegMappings.cpp
   ExecMayBeModifiedBeforeAnyUse.cpp
+  InstCacheLineSize.cpp
   LiveRegUnits.cpp
   PALMetadata.cpp
   UniformityAnalysisTest.cpp
