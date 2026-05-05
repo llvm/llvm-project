@@ -260,7 +260,8 @@ bool hasOpcode(SmallVectorImpl<uint32_t> &binary, spirv::Opcode target) {
   return false;
 }
 
-bool hasLongCompositesCapabilityAndExtension(SmallVectorImpl<uint32_t> &binary) {
+bool hasLongCompositesCapabilityAndExtension(
+    SmallVectorImpl<uint32_t> &binary) {
   bool foundCap = false;
   bool foundExt = false;
   size_t offset = spirv::kHeaderWordCount;
