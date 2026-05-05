@@ -483,3 +483,57 @@ func.func @pointer_descriptor_store_is_thread_local() {
 // CHECK-NEXT:    omp.barrier
 // CHECK-NEXT:    omp.terminator
 // CHECK-NEXT:  }
+
+// -----
+
+// Test for "parallel workshare firstprivate(z)" where z is an array.
+// Check that z is broadcast to all private values of the threads.
+
+// CHECK-LABEL: func.func @dynamic_alloca_firstprivate_array
+func.func @dynamic_alloca_firstprivate_array(%n: index, %src: !fir.ref<!fir.array<?xi32>>, %dst: !fir.ref<!fir.array<?xi32>>) {
+  omp.parallel {
+    omp.workshare {
+      // Dynamic alloca for the firstprivate array copy
+      %z = fir.alloca !fir.array<?xi32>, %n {bindc_name = "z", pinned}
+      %shape = fir.shape %n : (index) -> !fir.shape<1>
+      %decl = fir.declare %z(%shape) {uniq_name = "z"} : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.ref<!fir.array<?xi32>>
+      // A side-effecting op that initializes the firstprivate copy
+      "test.init"(%decl, %src) : (!fir.ref<!fir.array<?xi32>>, !fir.ref<!fir.array<?xi32>>) -> ()
+      // Workshared loop that reads from the firstprivate array
+      %c1 = arith.constant 1 : index
+      omp.workshare.loop_wrapper {
+        omp.loop_nest (%i) : index = (%c1) to (%n) inclusive step (%c1) {
+          %elem = fir.array_coor %decl(%shape) %i : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
+          %val = fir.load %elem : !fir.ref<i32>
+          %dst_elem = fir.array_coor %dst(%shape) %i : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
+          fir.store %val to %dst_elem : !fir.ref<i32>
+          omp.yield
+        }
+      }
+      omp.terminator
+    }
+    omp.terminator
+  }
+  return
+}
+
+// The dynamic alloca must be INSIDE the omp.single (not hoisted).
+// A !fir.heap indirection alloca is hoisted for copyprivate.
+// After the single, the array address is loaded and converted back to !fir.ref.
+// CHECK:       omp.parallel {
+// CHECK:         %[[PTR_ALLOC:.*]] = fir.alloca !fir.heap<!fir.array<?xi32>>
+// CHECK:         omp.single copyprivate(%[[PTR_ALLOC]] -> @_workshare_copy_heap_Uxi32 : !fir.ref<!fir.heap<!fir.array<?xi32>>>)
+// The dynamic alloca is inside the single block
+// CHECK:           fir.alloca !fir.array<?xi32>
+// CHECK:           fir.convert {{.*}} : (!fir.ref<!fir.array<?xi32>>) -> !fir.heap<!fir.array<?xi32>>
+// CHECK:           fir.store {{.*}} to %[[PTR_ALLOC]]
+// CHECK:           "test.init"
+// CHECK:           omp.terminator
+// CHECK-NEXT:    }
+// After single, load the broadcast array address and convert back to ref
+// CHECK:         fir.load %[[PTR_ALLOC]]
+// CHECK:         fir.convert {{.*}} : (!fir.heap<!fir.array<?xi32>>) -> !fir.ref<!fir.array<?xi32>>
+// The workshared loop uses the broadcast array address
+// CHECK:         omp.wsloop
+// CHECK:         omp.barrier
+// CHECK:       }

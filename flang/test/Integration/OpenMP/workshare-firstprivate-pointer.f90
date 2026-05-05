@@ -62,3 +62,40 @@ end subroutine
 ! LLVM:     define internal void @test_workshare_firstprivate_pointer_..omp_par
 ! The single construct must be present in the outlined function
 ! LLVM:       call i32 @__kmpc_single
+
+! Test for "workshare firstprivate(z)" where z is an array.
+! Check code to correctly broadcast the address of the firstprivate
+! copy to all threads, instead of using a broken load/store copyprivate
+! that only copies a single element for dynamically-sized arrays.
+
+subroutine test_workshare_firstprivate_array(a, z, n)
+  integer(4) :: n
+  integer(4), dimension(n) :: z, a
+  !$omp parallel workshare firstprivate(z)
+  a = z + 1
+  !$omp end parallel workshare
+end subroutine
+
+! After workshare lowering, the dynamic alloca for the firstprivate copy
+! must be inside omp.single, with its address broadcast via a !fir.heap
+! indirection alloca + copyprivate.
+! FIR:     func.func @_QPtest_workshare_firstprivate_array
+! FIR:     omp.parallel {
+! The heap indirection alloca is hoisted for copyprivate
+! FIR:       fir.alloca !fir.heap<!fir.array<?xi32>>
+! FIR:       omp.single copyprivate(
+! The dynamic alloca (firstprivate copy) is inside the single block
+! FIR:         fir.alloca !fir.array<?xi32>
+! FIR:         fir.convert {{.*}} -> !fir.heap<!fir.array<?xi32>>
+! FIR:         fir.store
+! The initialization of the firstprivate copy
+! FIR:         fir.call @_FortranAAssign
+! FIR:         omp.terminator
+! FIR:       }
+! After single, the address is loaded and converted back
+! FIR:       fir.load
+! FIR:       fir.convert {{.*}} -> !fir.ref<!fir.array<?xi32>>
+! The workshared loop uses the broadcast address
+! FIR:       omp.wsloop
+! FIR:       omp.barrier
+! FIR:       omp.terminator
