@@ -487,7 +487,7 @@ def CIR_ConstantOp : CIR_Op<"const", [
 // SignBitOp
 //===----------------------------------------------------------------------===//
 
-def SignBitOp : CIR_Op<"signbit", [Pure]> {
+def CIR_SignBitOp : CIR_Op<"signbit", [Pure]> {
   let summary = "Checks the sign of a floating-point number";
   let description = [{
     It returns whether the sign bit (i.e. the highest bit) of the input operand
