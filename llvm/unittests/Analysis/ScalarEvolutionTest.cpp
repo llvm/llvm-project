@@ -1602,7 +1602,6 @@ TEST_F(ScalarEvolutionsTest, SCEVUDivEqual) {
   });
 }
 
-
 TEST_F(ScalarEvolutionsTest, SCEVUDivExactPreserveNUW) {
   LLVMContext C;
   SMDiagnostic Err;

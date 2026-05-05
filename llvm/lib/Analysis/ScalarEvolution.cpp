@@ -3565,7 +3565,6 @@ const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
   if (LHS == RHS)
     return getConstant(LHS->getType(), 1);
 
-
   if (const SCEVConstant *RHSC = dyn_cast<SCEVConstant>(RHS)) {
     if (RHSC->getValue()->isOne())
       return LHS;                               // X udiv 1 --> x
