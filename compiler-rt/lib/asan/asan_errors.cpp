@@ -662,14 +662,18 @@ static void CheckPoisonRecords(uptr addr) {
   }
 
   PoisonRecord record;
-  if (FindPoisonRecord(addr, record)) {
+  bool is_full = false;
+  if (FindPoisonRecord(addr, record, is_full)) {
     Printf("Memory was manually poisoned by thread T%u:\n", record.thread_id);
     StackTrace poison_stack = StackDepotGet(record.stack_id);
     if (poison_stack.size > 0)
       poison_stack.Print();
   } else {
     Printf("NOTE: no matching poison tracking record found.\n");
-    Printf("Try a larger value for ASAN_OPTIONS=poison_history_size=<size>.\n");
+    if (is_full) {
+      Printf(
+          "Try a larger value for ASAN_OPTIONS=poison_history_size=<size>.\n");
+    }
   }
 }
 
