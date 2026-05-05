@@ -292,7 +292,7 @@ void Instantiate_RefParamMustBePtrExternallyCountedGood() {
 // CHECK-NEXT:| |       | `-CXXThisExpr {{.*}} <col:9> 'RefParamMustBePtrGood<T> *' implicit this
 // CHECK-NEXT:| |       `-DeclRefExpr {{.*}} <col:16> 'T__unsafe_indexable':'T' lvalue ParmVar {{.*}} 'v' 'T__unsafe_indexable':'T'
 // CHECK-NEXT:| |-ClassTemplateSpecialization {{.*}} 'RefParamMustBePtrGood'
-// CHECK-NEXT:| |-ClassTemplateSpecializationDecl {{.*}} <line:4:1, line:37:1> line:5:7 referenced class RefParamMustBePtrGood definition instantiated_from {{.*}} implicit_instantiation
+// CHECK-NEXT:| |-ClassTemplateSpecializationDecl {{.*}} <line:4:1, line:37:1> line:5:7 referenced class RefParamMustBePtrGood definition external-linkage instantiated_from {{.*}} implicit_instantiation
 // CHECK-NEXT:| | |-DefinitionData pass_in_registers aggregate standard_layout trivially_copyable pod trivial literal
 // CHECK-NEXT:| | | |-DefaultConstructor exists trivial
 // CHECK-NEXT:| | | |-CopyConstructor simple trivial has_const_param implicit_has_const_param
@@ -321,7 +321,7 @@ void Instantiate_RefParamMustBePtrExternallyCountedGood() {
 // CHECK-NEXT:| | | `-ParmVarDecl {{.*}} <col:7> col:7 'const RefParamMustBePtrGood<int *> &'
 // CHECK-NEXT:| | `-CXXConstructorDecl {{.*}} <col:7> col:7 implicit constexpr RefParamMustBePtrGood 'void (RefParamMustBePtrGood<int *> &&)' inline default trivial noexcept-unevaluated {{.*}}
 // CHECK-NEXT:| |   `-ParmVarDecl {{.*}} <col:7> col:7 'RefParamMustBePtrGood<int *> &&'
-// CHECK-NEXT:| `-ClassTemplateSpecializationDecl {{.*}} <line:4:1, line:37:1> line:5:7 referenced class RefParamMustBePtrGood definition instantiated_from {{.*}} implicit_instantiation
+// CHECK-NEXT:| `-ClassTemplateSpecializationDecl {{.*}} <line:4:1, line:37:1> line:5:7 referenced class RefParamMustBePtrGood definition external-linkage instantiated_from {{.*}} implicit_instantiation
 // CHECK-NEXT:|   |-DefinitionData pass_in_registers aggregate standard_layout trivially_copyable pod trivial literal
 // CHECK-NEXT:|   | |-DefaultConstructor exists trivial
 // CHECK-NEXT:|   | |-CopyConstructor simple trivial has_const_param implicit_has_const_param
@@ -415,7 +415,7 @@ void Instantiate_RefParamMustBePtrExternallyCountedGood() {
 // CHECK-NEXT:|-TypeAliasDecl {{.*}} <line:75:1, col:24> col:7 referenced PtrTypedef 'char *'
 // CHECK-NEXT:| `-PointerType {{.*}} 'char *'
 // CHECK-NEXT:|   `-BuiltinType {{.*}} 'char'
-// CHECK-NEXT:|-ClassTemplateSpecializationDecl {{.*}} <line:78:1, line:79:35> col:7 class RefParamMustBePtrGood definition instantiated_from {{.*}} explicit_instantiation_definition
+// CHECK-NEXT:|-ClassTemplateSpecializationDecl {{.*}} <line:78:1, line:79:35> col:7 class RefParamMustBePtrGood definition external-linkage instantiated_from {{.*}} explicit_instantiation_definition
 // CHECK-NEXT:| |-DefinitionData pass_in_registers aggregate standard_layout trivially_copyable pod trivial literal
 // CHECK-NEXT:| | |-DefaultConstructor exists trivial needs_implicit
 // CHECK-NEXT:| | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
@@ -516,7 +516,7 @@ void Instantiate_RefParamMustBePtrExternallyCountedGood() {
 // CHECK-NEXT:| | |-FieldDecl {{.*}} <line:91:5, col:17> col:17 ptr0 'T *__single':'T *'
 // CHECK-NEXT:| | `-FieldDecl {{.*}} <line:92:5, col:27> col:27 pt1 'T *__unsafe_indexable':'T *'
 // CHECK-NEXT:| |-ClassTemplateSpecialization {{.*}} 'RefParamIsPointee'
-// CHECK-NEXT:| |-ClassTemplateSpecializationDecl {{.*}} <line:88:1, line:93:1> line:89:7 referenced class RefParamIsPointee definition instantiated_from {{.*}} implicit_instantiation
+// CHECK-NEXT:| |-ClassTemplateSpecializationDecl {{.*}} <line:88:1, line:93:1> line:89:7 referenced class RefParamIsPointee definition external-linkage instantiated_from {{.*}} implicit_instantiation
 // CHECK-NEXT:| | |-DefinitionData pass_in_registers aggregate standard_layout trivially_copyable pod trivial literal
 // CHECK-NEXT:| | | |-DefaultConstructor exists trivial
 // CHECK-NEXT:| | | |-CopyConstructor simple trivial has_const_param implicit_has_const_param
@@ -536,7 +536,7 @@ void Instantiate_RefParamMustBePtrExternallyCountedGood() {
 // CHECK-NEXT:| | | `-ParmVarDecl {{.*}} <col:7> col:7 'const RefParamIsPointee<int> &'
 // CHECK-NEXT:| | `-CXXConstructorDecl {{.*}} <col:7> col:7 implicit constexpr RefParamIsPointee 'void (RefParamIsPointee<int> &&)' inline default trivial noexcept-unevaluated {{.*}}
 // CHECK-NEXT:| |   `-ParmVarDecl {{.*}} <col:7> col:7 'RefParamIsPointee<int> &&'
-// CHECK-NEXT:| `-ClassTemplateSpecializationDecl {{.*}} <line:88:1, line:93:1> line:89:7 referenced class RefParamIsPointee definition instantiated_from {{.*}} implicit_instantiation
+// CHECK-NEXT:| `-ClassTemplateSpecializationDecl {{.*}} <line:88:1, line:93:1> line:89:7 referenced class RefParamIsPointee definition external-linkage instantiated_from {{.*}} implicit_instantiation
 // CHECK-NEXT:|   |-DefinitionData pass_in_registers aggregate standard_layout trivially_copyable pod trivial literal
 // CHECK-NEXT:|   | |-DefaultConstructor exists trivial
 // CHECK-NEXT:|   | |-CopyConstructor simple trivial has_const_param implicit_has_const_param
@@ -557,7 +557,7 @@ void Instantiate_RefParamMustBePtrExternallyCountedGood() {
 // CHECK-NEXT:|   | `-ParmVarDecl {{.*}} <col:7> col:7 'const RefParamIsPointee<char *> &'
 // CHECK-NEXT:|   `-CXXConstructorDecl {{.*}} <col:7> col:7 implicit constexpr RefParamIsPointee 'void (RefParamIsPointee<char *> &&)' inline default trivial noexcept-unevaluated {{.*}}
 // CHECK-NEXT:|     `-ParmVarDecl {{.*}} <col:7> col:7 'RefParamIsPointee<char *> &&'
-// CHECK-NEXT:|-ClassTemplateSpecializationDecl {{.*}} <line:96:1, col:39> col:16 class RefParamIsPointee definition instantiated_from {{.*}} explicit_instantiation_definition
+// CHECK-NEXT:|-ClassTemplateSpecializationDecl {{.*}} <line:96:1, col:39> col:16 class RefParamIsPointee definition external-linkage instantiated_from {{.*}} explicit_instantiation_definition
 // CHECK-NEXT:| |-DefinitionData pass_in_registers aggregate standard_layout trivially_copyable pod trivial literal
 // CHECK-NEXT:| | |-DefaultConstructor exists trivial needs_implicit
 // CHECK-NEXT:| | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
@@ -603,7 +603,7 @@ void Instantiate_RefParamMustBePtrExternallyCountedGood() {
 // CHECK-NEXT:| |       |-DeclRefExpr {{.*}} <col:9> 'T__single':'T' lvalue Var {{.*}} 'tmp' 'T__single':'T'
 // CHECK-NEXT:| |       `-CXXNullPtrLiteralExpr {{.*}} <col:15> 'std::nullptr_t'
 // CHECK-NEXT:| |-ClassTemplateSpecialization {{.*}} 'TInMethodBodyGood'
-// CHECK-NEXT:| `-ClassTemplateSpecializationDecl {{.*}} <line:107:1, line:114:1> line:108:7 referenced class TInMethodBodyGood definition instantiated_from {{.*}} implicit_instantiation
+// CHECK-NEXT:| `-ClassTemplateSpecializationDecl {{.*}} <line:107:1, line:114:1> line:108:7 referenced class TInMethodBodyGood definition external-linkage instantiated_from {{.*}} implicit_instantiation
 // CHECK-NEXT:|   |-DefinitionData pass_in_registers empty aggregate standard_layout trivially_copyable pod trivial literal has_constexpr_non_copy_move_ctor can_const_default_init
 // CHECK-NEXT:|   | |-DefaultConstructor exists trivial constexpr defaulted_is_constexpr
 // CHECK-NEXT:|   | |-CopyConstructor simple trivial has_const_param implicit_has_const_param
@@ -630,7 +630,7 @@ void Instantiate_RefParamMustBePtrExternallyCountedGood() {
 // CHECK-NEXT:|   | `-ParmVarDecl {{.*}} <col:7> col:7 'const TInMethodBodyGood<int *> &'
 // CHECK-NEXT:|   `-CXXConstructorDecl {{.*}} <col:7> col:7 implicit constexpr TInMethodBodyGood 'void (TInMethodBodyGood<int *> &&)' inline default trivial noexcept-unevaluated {{.*}}
 // CHECK-NEXT:|     `-ParmVarDecl {{.*}} <col:7> col:7 'TInMethodBodyGood<int *> &&'
-// CHECK-NEXT:|-ClassTemplateSpecializationDecl {{.*}} <line:117:1, col:40> col:16 class TInMethodBodyGood definition instantiated_from {{.*}} explicit_instantiation_definition
+// CHECK-NEXT:|-ClassTemplateSpecializationDecl {{.*}} <line:117:1, col:40> col:16 class TInMethodBodyGood definition external-linkage instantiated_from {{.*}} explicit_instantiation_definition
 // CHECK-NEXT:| |-DefinitionData pass_in_registers empty aggregate standard_layout trivially_copyable pod trivial literal has_constexpr_non_copy_move_ctor can_const_default_init
 // CHECK-NEXT:| | |-DefaultConstructor exists trivial constexpr needs_implicit defaulted_is_constexpr
 // CHECK-NEXT:| | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
@@ -708,7 +708,7 @@ void Instantiate_RefParamMustBePtrExternallyCountedGood() {
 // CHECK-NEXT:| |       `-VarDecl {{.*}} <col:9, col:36> col:30 tmp 'T__unsafe_indexable':'T' cinit
 // CHECK-NEXT:| |         `-MemberExpr {{.*}} <col:36> 'U const__unsafe_indexable':'const U' lvalue ->ptr1 {{.*}}
 // CHECK-NEXT:| |           `-CXXThisExpr {{.*}} <col:36> 'const RefParamMustBePtrGoodPartialBase<T, U, V> *' implicit this
-// CHECK-NEXT:| |-ClassTemplateSpecializationDecl {{.*}} <line:131:1, line:149:1> line:132:7 referenced class RefParamMustBePtrGoodPartialBase definition instantiated_from {{.*}} implicit_instantiation
+// CHECK-NEXT:| |-ClassTemplateSpecializationDecl {{.*}} <line:131:1, line:149:1> line:132:7 referenced class RefParamMustBePtrGoodPartialBase definition external-linkage instantiated_from {{.*}} implicit_instantiation
 // CHECK-NEXT:| | |-DefinitionData pass_in_registers aggregate standard_layout trivially_copyable pod trivial literal
 // CHECK-NEXT:| | | |-DefaultConstructor exists trivial needs_implicit
 // CHECK-NEXT:| | | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
@@ -734,7 +734,7 @@ void Instantiate_RefParamMustBePtrExternallyCountedGood() {
 // CHECK-NEXT:| | |-CXXMethodDecl {{.*}} <line:140:5, col:45> col:7 get_counter 'int () const' implicit_instantiation implicit-inline instantiated_from {{.*}}
 // CHECK-NEXT:| | |-CXXMethodDecl {{.*}} <line:142:5, line:144:5> line:142:10 useT 'void () const' implicit_instantiation implicit-inline instantiated_from {{.*}}
 // CHECK-NEXT:| | `-CXXMethodDecl {{.*}} <line:146:5, line:148:5> line:146:10 useU 'void () const' implicit_instantiation implicit-inline instantiated_from {{.*}}
-// CHECK-NEXT:| |-ClassTemplateSpecializationDecl {{.*}} <line:131:1, line:149:1> line:132:7 referenced class RefParamMustBePtrGoodPartialBase definition instantiated_from {{.*}} implicit_instantiation
+// CHECK-NEXT:| |-ClassTemplateSpecializationDecl {{.*}} <line:131:1, line:149:1> line:132:7 referenced class RefParamMustBePtrGoodPartialBase definition external-linkage instantiated_from {{.*}} implicit_instantiation
 // CHECK-NEXT:| | |-DefinitionData pass_in_registers aggregate standard_layout trivially_copyable pod trivial literal
 // CHECK-NEXT:| | | |-DefaultConstructor exists trivial needs_implicit
 // CHECK-NEXT:| | | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
@@ -760,7 +760,7 @@ void Instantiate_RefParamMustBePtrExternallyCountedGood() {
 // CHECK-NEXT:| | |-CXXMethodDecl {{.*}} <line:140:5, col:45> col:7 get_counter 'int () const' implicit_instantiation implicit-inline instantiated_from {{.*}}
 // CHECK-NEXT:| | |-CXXMethodDecl {{.*}} <line:142:5, line:144:5> line:142:10 useT 'void () const' implicit_instantiation implicit-inline instantiated_from {{.*}}
 // CHECK-NEXT:| | `-CXXMethodDecl {{.*}} <line:146:5, line:148:5> line:146:10 useU 'void () const' implicit_instantiation implicit-inline instantiated_from {{.*}}
-// CHECK-NEXT:| `-ClassTemplateSpecializationDecl {{.*}} <line:131:1, line:149:1> line:132:7 referenced class RefParamMustBePtrGoodPartialBase definition instantiated_from {{.*}} implicit_instantiation
+// CHECK-NEXT:| `-ClassTemplateSpecializationDecl {{.*}} <line:131:1, line:149:1> line:132:7 referenced class RefParamMustBePtrGoodPartialBase definition external-linkage instantiated_from {{.*}} implicit_instantiation
 // CHECK-NEXT:|   |-DefinitionData pass_in_registers aggregate standard_layout trivially_copyable pod trivial literal
 // CHECK-NEXT:|   | |-DefaultConstructor exists trivial
 // CHECK-NEXT:|   | |-CopyConstructor simple trivial has_const_param implicit_has_const_param
@@ -814,7 +814,7 @@ void Instantiate_RefParamMustBePtrExternallyCountedGood() {
 // CHECK-NEXT:| |       `-MemberExpr {{.*}} <col:42> 'T__single':'T' lvalue ->ptr2 {{.*}}
 // CHECK-NEXT:| |         `-CXXThisExpr {{.*}} <col:42> 'RefParamMustBePtrGoodPartialT<T> *' implicit this
 // CHECK-NEXT:| |-ClassTemplateSpecialization {{.*}} 'RefParamMustBePtrGoodPartialT'
-// CHECK-NEXT:| `-ClassTemplateSpecializationDecl {{.*}} <line:152:1, line:158:1> line:153:7 referenced class RefParamMustBePtrGoodPartialT definition instantiated_from {{.*}} implicit_instantiation
+// CHECK-NEXT:| `-ClassTemplateSpecializationDecl {{.*}} <line:152:1, line:158:1> line:153:7 referenced class RefParamMustBePtrGoodPartialT definition external-linkage instantiated_from {{.*}} implicit_instantiation
 // CHECK-NEXT:|   |-DefinitionData pass_in_registers aggregate trivially_copyable trivial literal
 // CHECK-NEXT:|   | |-DefaultConstructor exists trivial
 // CHECK-NEXT:|   | |-CopyConstructor simple trivial has_const_param implicit_has_const_param
@@ -860,7 +860,7 @@ void Instantiate_RefParamMustBePtrExternallyCountedGood() {
 // CHECK-NEXT:| |       `-MemberExpr {{.*}} <col:52> 'U__unsafe_indexable':'U' lvalue ->ptr2 {{.*}}
 // CHECK-NEXT:| |         `-CXXThisExpr {{.*}} <col:52> 'RefParamMustBePtrGoodPartialU<U> *' implicit this
 // CHECK-NEXT:| |-ClassTemplateSpecialization {{.*}} 'RefParamMustBePtrGoodPartialU'
-// CHECK-NEXT:| `-ClassTemplateSpecializationDecl {{.*}} <line:160:1, line:166:1> line:161:7 referenced class RefParamMustBePtrGoodPartialU definition instantiated_from {{.*}} implicit_instantiation
+// CHECK-NEXT:| `-ClassTemplateSpecializationDecl {{.*}} <line:160:1, line:166:1> line:161:7 referenced class RefParamMustBePtrGoodPartialU definition external-linkage instantiated_from {{.*}} implicit_instantiation
 // CHECK-NEXT:|   |-DefinitionData pass_in_registers aggregate trivially_copyable trivial literal
 // CHECK-NEXT:|   | |-DefaultConstructor exists trivial
 // CHECK-NEXT:|   | |-CopyConstructor simple trivial has_const_param implicit_has_const_param
@@ -905,7 +905,7 @@ void Instantiate_RefParamMustBePtrExternallyCountedGood() {
 // CHECK-NEXT:|       `-ReturnStmt {{.*}} <col:35, col:42>
 // CHECK-NEXT:|         `-MemberExpr {{.*}} <col:42> 'V__single':'V' lvalue ->ptr2 {{.*}}
 // CHECK-NEXT:|           `-CXXThisExpr {{.*}} <col:42> 'RefParamMustBePtrGoodPartialV<V> *' implicit this
-// CHECK-NEXT:|-ClassTemplateSpecializationDecl {{.*}} <line:178:1, line:179:43> col:7 class RefParamMustBePtrGoodPartialT definition instantiated_from {{.*}} explicit_instantiation_definition
+// CHECK-NEXT:|-ClassTemplateSpecializationDecl {{.*}} <line:178:1, line:179:43> col:7 class RefParamMustBePtrGoodPartialT definition external-linkage instantiated_from {{.*}} explicit_instantiation_definition
 // CHECK-NEXT:| |-DefinitionData pass_in_registers aggregate trivially_copyable trivial literal
 // CHECK-NEXT:| | |-DefaultConstructor exists trivial needs_implicit
 // CHECK-NEXT:| | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
@@ -932,7 +932,7 @@ void Instantiate_RefParamMustBePtrExternallyCountedGood() {
 // CHECK-NEXT:| `-TemplateArgument <line:179:37, col:42> type 'float *'
 // CHECK-NEXT:|   `-PointerType {{.*}} 'float *'
 // CHECK-NEXT:|     `-BuiltinType {{.*}} 'float'
-// CHECK-NEXT:|-ClassTemplateSpecializationDecl {{.*}} <line:180:1, line:181:43> col:7 class RefParamMustBePtrGoodPartialU definition instantiated_from {{.*}} explicit_instantiation_definition
+// CHECK-NEXT:|-ClassTemplateSpecializationDecl {{.*}} <line:180:1, line:181:43> col:7 class RefParamMustBePtrGoodPartialU definition external-linkage instantiated_from {{.*}} explicit_instantiation_definition
 // CHECK-NEXT:| |-DefinitionData pass_in_registers aggregate trivially_copyable trivial literal
 // CHECK-NEXT:| | |-DefaultConstructor exists trivial needs_implicit
 // CHECK-NEXT:| | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
@@ -1023,7 +1023,7 @@ void Instantiate_RefParamMustBePtrExternallyCountedGood() {
 // CHECK-NEXT:| |         `-CountedByAttr {{.*}} <{{.*}}ptrcheck.h:56:40, col:56> 0
 // CHECK-NEXT:| |           `-DeclRefExpr {{.*}} <{{.*}}attributes_in_template_decls_attr_only_mode.cpp:216:24> 'int' lvalue Var {{.*}} 'size_local' 'int'
 // CHECK-NEXT:| |-ClassTemplateSpecialization {{.*}} 'RefParamMustBePtrExternallyCountedGood'
-// CHECK-NEXT:| |-ClassTemplateSpecializationDecl {{.*}} <line:194:1, line:218:1> line:195:7 referenced class RefParamMustBePtrExternallyCountedGood definition instantiated_from {{.*}} implicit_instantiation
+// CHECK-NEXT:| |-ClassTemplateSpecializationDecl {{.*}} <line:194:1, line:218:1> line:195:7 referenced class RefParamMustBePtrExternallyCountedGood definition external-linkage instantiated_from {{.*}} implicit_instantiation
 // CHECK-NEXT:| | |-DefinitionData pass_in_registers aggregate standard_layout trivially_copyable pod trivial literal
 // CHECK-NEXT:| | | |-DefaultConstructor exists trivial
 // CHECK-NEXT:| | | |-CopyConstructor simple trivial has_const_param implicit_has_const_param
@@ -1052,7 +1052,7 @@ void Instantiate_RefParamMustBePtrExternallyCountedGood() {
 // CHECK-NEXT:| | | `-ParmVarDecl {{.*}} <col:7> col:7 'const RefParamMustBePtrExternallyCountedGood<int *> &'
 // CHECK-NEXT:| | `-CXXConstructorDecl {{.*}} <col:7> col:7 implicit constexpr RefParamMustBePtrExternallyCountedGood 'void (RefParamMustBePtrExternallyCountedGood<int *> &&)' inline default trivial noexcept-unevaluated {{.*}}
 // CHECK-NEXT:| |   `-ParmVarDecl {{.*}} <col:7> col:7 'RefParamMustBePtrExternallyCountedGood<int *> &&'
-// CHECK-NEXT:| `-ClassTemplateSpecializationDecl {{.*}} <line:194:1, line:218:1> line:195:7 referenced class RefParamMustBePtrExternallyCountedGood definition instantiated_from {{.*}} implicit_instantiation
+// CHECK-NEXT:| `-ClassTemplateSpecializationDecl {{.*}} <line:194:1, line:218:1> line:195:7 referenced class RefParamMustBePtrExternallyCountedGood definition external-linkage instantiated_from {{.*}} implicit_instantiation
 // CHECK-NEXT:|   |-DefinitionData pass_in_registers aggregate standard_layout trivially_copyable pod trivial literal
 // CHECK-NEXT:|   | |-DefaultConstructor exists trivial
 // CHECK-NEXT:|   | |-CopyConstructor simple trivial has_const_param implicit_has_const_param
@@ -1081,7 +1081,7 @@ void Instantiate_RefParamMustBePtrExternallyCountedGood() {
 // CHECK-NEXT:|   | `-ParmVarDecl {{.*}} <col:7> col:7 'const RefParamMustBePtrExternallyCountedGood<char *> &'
 // CHECK-NEXT:|   `-CXXConstructorDecl {{.*}} <col:7> col:7 implicit constexpr RefParamMustBePtrExternallyCountedGood 'void (RefParamMustBePtrExternallyCountedGood<char *> &&)' inline default trivial noexcept-unevaluated {{.*}}
 // CHECK-NEXT:|     `-ParmVarDecl {{.*}} <col:7> col:7 'RefParamMustBePtrExternallyCountedGood<char *> &&'
-// CHECK-NEXT:|-ClassTemplateSpecializationDecl {{.*}} <line:221:1, col:61> col:16 class RefParamMustBePtrExternallyCountedGood definition instantiated_from {{.*}} explicit_instantiation_definition
+// CHECK-NEXT:|-ClassTemplateSpecializationDecl {{.*}} <line:221:1, col:61> col:16 class RefParamMustBePtrExternallyCountedGood definition external-linkage instantiated_from {{.*}} explicit_instantiation_definition
 // CHECK-NEXT:| |-DefinitionData pass_in_registers aggregate standard_layout trivially_copyable pod trivial literal
 // CHECK-NEXT:| | |-DefaultConstructor exists trivial needs_implicit
 // CHECK-NEXT:| | |-CopyConstructor simple trivial has_const_param needs_implicit implicit_has_const_param
