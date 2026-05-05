@@ -65,16 +65,111 @@ define i16 @cmp_sgt_neg_high_bit(i16 %a) nounwind {
   ret i16 %r
 }
 
+define i16 @cmp_ule_int_max(i16 %a) nounwind {
+; CHECK-LABEL: cmp_ule_int_max:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    mov r12, r13
+; CHECK-NEXT:    mov #1, r12
+; CHECK-NEXT:    tst r13
+; CHECK-NEXT:    jge .LBB4_2
+; CHECK-NEXT:  ; %bb.1:
+; CHECK-NEXT:    clr r12
+; CHECK-NEXT:  .LBB4_2:
+; CHECK-NEXT:    ret
+  %t = icmp ule i16 %a, 32767
+  %r = zext i1 %t to i16
+  ret i16 %r
+}
+
+define i16 @cmp_ugt_int_max(i16 %a) nounwind {
+; CHECK-LABEL: cmp_ugt_int_max:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    mov r12, r13
+; CHECK-NEXT:    mov #1, r12
+; CHECK-NEXT:    tst r13
+; CHECK-NEXT:    jl .LBB5_2
+; CHECK-NEXT:  ; %bb.1:
+; CHECK-NEXT:    clr r12
+; CHECK-NEXT:  .LBB5_2:
+; CHECK-NEXT:    ret
+  %t = icmp ugt i16 %a, 32767
+  %r = zext i1 %t to i16
+  ret i16 %r
+}
+
+define i16 @cmp_sle_int_max(i16 %a) nounwind {
+; CHECK-LABEL: cmp_sle_int_max:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    mov #1, r12
+; CHECK-NEXT:    ret
+  %t = icmp sle i16 %a, 32767
+  %r = zext i1 %t to i16
+  ret i16 %r
+}
+
+define i16 @cmp_sgt_int_max(i16 %a) nounwind {
+; CHECK-LABEL: cmp_sgt_int_max:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    clr r12
+; CHECK-NEXT:    ret
+  %t = icmp sgt i16 %a, 32767
+  %r = zext i1 %t to i16
+  ret i16 %r
+}
+
+define i16 @cmp_sle_int_min(i16 %a) nounwind {
+; CHECK-LABEL: cmp_sle_int_min:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    cmp #-32768, r12
+; CHECK-NEXT:    mov r2, r12
+; CHECK-NEXT:    rra r12
+; CHECK-NEXT:    and #1, r12
+; CHECK-NEXT:    ret
+  %t = icmp sle i16 %a, -32768
+  %r = zext i1 %t to i16
+  ret i16 %r
+}
+
+define i16 @cmp_sgt_int_min(i16 %a) nounwind {
+; CHECK-LABEL: cmp_sgt_int_min:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    cmp #-32768, r12
+; CHECK-NEXT:    mov r2, r13
+; CHECK-NEXT:    rra r13
+; CHECK-NEXT:    mov #1, r12
+; CHECK-NEXT:    bic r13, r12
+; CHECK-NEXT:    ret
+  %t = icmp sgt i16 %a, -32768
+  %r = zext i1 %t to i16
+  ret i16 %r
+}
+
+define i16 @cmp_sgt_neg_one(i16 %a) nounwind {
+; CHECK-LABEL: cmp_sgt_neg_one:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    mov r12, r13
+; CHECK-NEXT:    mov #1, r12
+; CHECK-NEXT:    tst r13
+; CHECK-NEXT:    jge .LBB10_2
+; CHECK-NEXT:  ; %bb.1:
+; CHECK-NEXT:    clr r12
+; CHECK-NEXT:  .LBB10_2:
+; CHECK-NEXT:    ret
+  %t = icmp sgt i16 %a, -1
+  %r = zext i1 %t to i16
+  ret i16 %r
+}
+
 ; The br_cc path goes through the same EmitCMP helper.
 define i16 @br_ule_high_bit(i16 %a) nounwind {
 ; CHECK-LABEL: br_ule_high_bit:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    cmp #-32767, r12
-; CHECK-NEXT:    jhs .LBB4_2
+; CHECK-NEXT:    jhs .LBB11_2
 ; CHECK-NEXT:  ; %bb.1: ; %yes
 ; CHECK-NEXT:    mov #1, r12
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB4_2: ; %no
+; CHECK-NEXT:  .LBB11_2: ; %no
 ; CHECK-NEXT:    clr r12
 ; CHECK-NEXT:    ret
   %t = icmp ule i16 %a, 32768
@@ -89,11 +184,11 @@ define i16 @br_sle_neg_high_bit(i16 %a) nounwind {
 ; CHECK-LABEL: br_sle_neg_high_bit:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    cmp #-32766, r12
-; CHECK-NEXT:    jge .LBB5_2
+; CHECK-NEXT:    jge .LBB12_2
 ; CHECK-NEXT:  ; %bb.1: ; %yes
 ; CHECK-NEXT:    mov #1, r12
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB5_2: ; %no
+; CHECK-NEXT:  .LBB12_2: ; %no
 ; CHECK-NEXT:    clr r12
 ; CHECK-NEXT:    ret
   %t = icmp sle i16 %a, -32767
