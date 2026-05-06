@@ -131,8 +131,6 @@ public:
 
   bool runOnFunction(Function &F) override;
 
-  static bool isRequired() { return true; }
-
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
   }
