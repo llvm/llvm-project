@@ -29723,12 +29723,68 @@ static SDValue lowerAddSub(SDValue Op, SelectionDAG &DAG,
   return splitVectorIntBinary(Op, DAG, DL);
 }
 
+static SDValue lowerUSUBSATTo8Bit(SDValue Op, SelectionDAG &DAG) {
+  EVT VT = Op.getValueType();
+
+  if (!VT.isVector() || VT.getScalarSizeInBits() <= 8)
+    return SDValue();
+
+  SDValue N0 = Op.getOperand(0);
+  SDValue N1 = Op.getOperand(1);
+
+  if (!ISD::isBuildVectorOfConstantSDNodes(N1.getNode()))
+    return SDValue();
+
+  unsigned ScalarSize = VT.getScalarSizeInBits();
+  unsigned RequiredZeros = ScalarSize - 8;
+
+  KnownBits Known0 = DAG.computeKnownBits(N0);
+  if (Known0.countMinLeadingZeros() < RequiredZeros)
+    return SDValue();
+
+  KnownBits Known1 = DAG.computeKnownBits(N1);
+  if (Known1.countMinLeadingZeros() < RequiredZeros)
+    return SDValue();
+
+  SDLoc DL(Op);
+  EVT ByteVT =
+      EVT::getVectorVT(*DAG.getContext(), MVT::i8, VT.getSizeInBits() / 8);
+  EVT ByteScalarVT = ByteVT.getScalarType();
+
+  SmallVector<SDValue, 64> NewConsts;
+  unsigned NumElts = VT.getVectorNumElements();
+  unsigned BytesPerElt = ScalarSize / 8;
+
+  for (unsigned i = 0; i < NumElts; ++i) {
+    auto *CNode = cast<ConstantSDNode>(N1.getOperand(i));
+    uint64_t Val = CNode->getZExtValue();
+
+    NewConsts.push_back(DAG.getConstant(Val & 0xFF, DL, ByteScalarVT));
+
+    for (unsigned j = 1; j < BytesPerElt; ++j) {
+      NewConsts.push_back(DAG.getConstant(0xFF, DL, ByteScalarVT));
+    }
+  }
+
+  SDValue NewN1 = DAG.getBuildVector(ByteVT, DL, NewConsts);
+  SDValue BitcastN0 = DAG.getBitcast(ByteVT, N0);
+
+  SDValue Sub = DAG.getNode(ISD::USUBSAT, DL, ByteVT, BitcastN0, NewN1);
+
+  return DAG.getBitcast(VT, Sub);
+}
+
 static SDValue LowerADDSAT_SUBSAT(SDValue Op, SelectionDAG &DAG,
                                   const X86Subtarget &Subtarget) {
   MVT VT = Op.getSimpleValueType();
   SDValue X = Op.getOperand(0), Y = Op.getOperand(1);
   unsigned Opcode = Op.getOpcode();
   SDLoc DL(Op);
+
+  if (Opcode == ISD::USUBSAT && Op.getValueType().isVector()) {
+    if (SDValue Res = lowerUSUBSATTo8Bit(Op, DAG))
+      return Res;
+  }
 
   if (VT == MVT::v32i16 || VT == MVT::v64i8 ||
       (VT.is256BitVector() && !Subtarget.hasInt256())) {
