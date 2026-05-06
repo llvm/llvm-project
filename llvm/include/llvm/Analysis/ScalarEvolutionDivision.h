@@ -82,7 +82,8 @@ private:
   const SCEV *Denominator, *Quotient, *Remainder, *Zero, *One;
 };
 
-class SCEVDivisionPrinterPass : public PassInfoMixin<SCEVDivisionPrinterPass> {
+class SCEVDivisionPrinterPass
+    : public OptionalPassInfoMixin<SCEVDivisionPrinterPass> {
   raw_ostream &OS;
   void runImpl(Function &F, ScalarEvolution &SE);
 

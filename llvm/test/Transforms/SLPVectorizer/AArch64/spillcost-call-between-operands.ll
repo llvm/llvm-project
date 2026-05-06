@@ -7,19 +7,12 @@ define void @test(ptr %p, ptr %q, ptr %r) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], ptr [[R:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[A0:%.*]] = load double, ptr [[P]], align 8
-; CHECK-NEXT:    [[PP1:%.*]] = getelementptr inbounds double, ptr [[P]], i64 1
-; CHECK-NEXT:    [[A1:%.*]] = load double, ptr [[PP1]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[P]], align 8
 ; CHECK-NEXT:    call void @external()
-; CHECK-NEXT:    [[B0:%.*]] = load double, ptr [[Q]], align 8
-; CHECK-NEXT:    [[QQ1:%.*]] = getelementptr inbounds double, ptr [[Q]], i64 1
-; CHECK-NEXT:    [[B1:%.*]] = load double, ptr [[QQ1]], align 8
-; CHECK-NEXT:    [[S0:%.*]] = fadd double [[A0]], [[B0]]
-; CHECK-NEXT:    [[S1:%.*]] = fadd double [[A1]], [[B1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[Q]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x double> [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    call void @external()
-; CHECK-NEXT:    store double [[S0]], ptr [[R]], align 8
-; CHECK-NEXT:    [[RR1:%.*]] = getelementptr inbounds double, ptr [[R]], i64 1
-; CHECK-NEXT:    store double [[S1]], ptr [[RR1]], align 8
+; CHECK-NEXT:    store <2 x double> [[TMP2]], ptr [[R]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:

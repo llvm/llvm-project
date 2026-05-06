@@ -13,7 +13,7 @@
 
 namespace llvm {
 
-class WasmEHPreparePass : public PassInfoMixin<WasmEHPreparePass> {
+class WasmEHPreparePass : public OptionalPassInfoMixin<WasmEHPreparePass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };

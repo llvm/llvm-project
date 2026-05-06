@@ -476,6 +476,9 @@ template <> struct MDNodeKeyImpl<DIEnumerator> {
 template <> struct MDNodeKeyImpl<DIBasicType> {
   unsigned Tag;
   MDString *Name;
+  Metadata *File;
+  unsigned LineNo;
+  Metadata *Scope;
   Metadata *SizeInBits;
   uint32_t AlignInBits;
   unsigned Encoding;
@@ -483,15 +486,17 @@ template <> struct MDNodeKeyImpl<DIBasicType> {
   uint32_t DataSizeInBits;
   unsigned Flags;
 
-  MDNodeKeyImpl(unsigned Tag, MDString *Name, Metadata *SizeInBits,
-                uint32_t AlignInBits, unsigned Encoding,
-                uint32_t NumExtraInhabitants, uint32_t DataSizeInBits,
-                unsigned Flags)
-      : Tag(Tag), Name(Name), SizeInBits(SizeInBits), AlignInBits(AlignInBits),
-        Encoding(Encoding), NumExtraInhabitants(NumExtraInhabitants),
+  MDNodeKeyImpl(unsigned Tag, MDString *Name, Metadata *File, unsigned LineNo,
+                Metadata *Scope, Metadata *SizeInBits, uint32_t AlignInBits,
+                unsigned Encoding, uint32_t NumExtraInhabitants,
+                uint32_t DataSizeInBits, unsigned Flags)
+      : Tag(Tag), Name(Name), File(File), LineNo(LineNo), Scope(Scope),
+        SizeInBits(SizeInBits), AlignInBits(AlignInBits), Encoding(Encoding),
+        NumExtraInhabitants(NumExtraInhabitants),
         DataSizeInBits(DataSizeInBits), Flags(Flags) {}
   MDNodeKeyImpl(const DIBasicType *N)
-      : Tag(N->getTag()), Name(N->getRawName()),
+      : Tag(N->getTag()), Name(N->getRawName()), File(N->getRawFile()),
+        LineNo(N->getLine()), Scope(N->getRawScope()),
         SizeInBits(N->getRawSizeInBits()), AlignInBits(N->getAlignInBits()),
         Encoding(N->getEncoding()),
         NumExtraInhabitants(N->getNumExtraInhabitants()),
@@ -499,6 +504,8 @@ template <> struct MDNodeKeyImpl<DIBasicType> {
 
   bool isKeyOf(const DIBasicType *RHS) const {
     return Tag == RHS->getTag() && Name == RHS->getRawName() &&
+           File == RHS->getRawFile() && LineNo == RHS->getLine() &&
+           Scope == RHS->getRawScope() &&
            SizeInBits == RHS->getRawSizeInBits() &&
            AlignInBits == RHS->getAlignInBits() &&
            Encoding == RHS->getEncoding() &&
@@ -508,13 +515,17 @@ template <> struct MDNodeKeyImpl<DIBasicType> {
   }
 
   unsigned getHashValue() const {
-    return hash_combine(Tag, Name, SizeInBits, AlignInBits, Encoding);
+    return hash_combine(Tag, Name, File, LineNo, Scope, SizeInBits, AlignInBits,
+                        Encoding);
   }
 };
 
 template <> struct MDNodeKeyImpl<DIFixedPointType> {
   unsigned Tag;
   MDString *Name;
+  Metadata *File;
+  unsigned LineNo;
+  Metadata *Scope;
   Metadata *SizeInBits;
   uint32_t AlignInBits;
   unsigned Encoding;
@@ -524,21 +535,26 @@ template <> struct MDNodeKeyImpl<DIFixedPointType> {
   APInt Numerator;
   APInt Denominator;
 
-  MDNodeKeyImpl(unsigned Tag, MDString *Name, Metadata *SizeInBits,
-                uint32_t AlignInBits, unsigned Encoding, unsigned Flags,
-                unsigned Kind, int Factor, APInt Numerator, APInt Denominator)
-      : Tag(Tag), Name(Name), SizeInBits(SizeInBits), AlignInBits(AlignInBits),
-        Encoding(Encoding), Flags(Flags), Kind(Kind), Factor(Factor),
-        Numerator(Numerator), Denominator(Denominator) {}
+  MDNodeKeyImpl(unsigned Tag, MDString *Name, Metadata *File, unsigned LineNo,
+                Metadata *Scope, Metadata *SizeInBits, uint32_t AlignInBits,
+                unsigned Encoding, unsigned Flags, unsigned Kind, int Factor,
+                APInt Numerator, APInt Denominator)
+      : Tag(Tag), Name(Name), File(File), LineNo(LineNo), Scope(Scope),
+        SizeInBits(SizeInBits), AlignInBits(AlignInBits), Encoding(Encoding),
+        Flags(Flags), Kind(Kind), Factor(Factor), Numerator(Numerator),
+        Denominator(Denominator) {}
   MDNodeKeyImpl(const DIFixedPointType *N)
-      : Tag(N->getTag()), Name(N->getRawName()),
+      : Tag(N->getTag()), Name(N->getRawName()), File(N->getRawFile()),
+        LineNo(N->getLine()), Scope(N->getRawScope()),
         SizeInBits(N->getRawSizeInBits()), AlignInBits(N->getAlignInBits()),
         Encoding(N->getEncoding()), Flags(N->getFlags()), Kind(N->getKind()),
         Factor(N->getFactorRaw()), Numerator(N->getNumeratorRaw()),
         Denominator(N->getDenominatorRaw()) {}
 
   bool isKeyOf(const DIFixedPointType *RHS) const {
-    return Name == RHS->getRawName() && SizeInBits == RHS->getRawSizeInBits() &&
+    return Name == RHS->getRawName() && File == RHS->getRawFile() &&
+           LineNo == RHS->getLine() && Scope == RHS->getRawScope() &&
+           SizeInBits == RHS->getRawSizeInBits() &&
            AlignInBits == RHS->getAlignInBits() && Kind == RHS->getKind() &&
            (RHS->isRational() ? (Numerator == RHS->getNumerator() &&
                                  Denominator == RHS->getDenominator())
@@ -546,7 +562,8 @@ template <> struct MDNodeKeyImpl<DIFixedPointType> {
   }
 
   unsigned getHashValue() const {
-    return hash_combine(Name, Flags, Kind, Factor, Numerator, Denominator);
+    return hash_combine(Name, File, LineNo, Scope, Flags, Kind, Factor,
+                        Numerator, Denominator);
   }
 };
 
@@ -1680,7 +1697,7 @@ public:
   using VectorConstantsTy = ConstantUniqueMap<ConstantVector>;
   VectorConstantsTy VectorConstants;
 
-  DenseMap<PointerType *, std::unique_ptr<ConstantPointerNull>> CPNConstants;
+  DenseMap<Type *, std::unique_ptr<ConstantPointerNull>> CPNConstants;
 
   DenseMap<TargetExtType *, std::unique_ptr<ConstantTargetNone>> CTNConstants;
 

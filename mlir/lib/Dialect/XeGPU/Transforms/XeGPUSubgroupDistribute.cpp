@@ -260,11 +260,6 @@ struct CreateNdDescDistribution final : public gpu::WarpDistributionPattern {
     if (!layout)
       return rewriter.notifyMatchFailure(
           descOp, "the tensor descriptor lacks layout attribute");
-    // CreateNdOp must not have offsets.
-    if (descOp.getMixedOffsets().size())
-      return rewriter.notifyMatchFailure(
-          descOp, "xegpu::CreateNdDescOp must not have offsets");
-
     SmallVector<size_t> newRetIndices;
     rewriter.setInsertionPoint(warpOp);
     gpu::WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(

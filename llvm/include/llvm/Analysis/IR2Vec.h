@@ -652,23 +652,22 @@ public:
 
 /// This pass prints the IR2Vec embeddings for instructions, basic blocks, and
 /// functions.
-class IR2VecPrinterPass : public PassInfoMixin<IR2VecPrinterPass> {
+class IR2VecPrinterPass : public RequiredPassInfoMixin<IR2VecPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit IR2VecPrinterPass(raw_ostream &OS) : OS(OS) {}
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
-  static bool isRequired() { return true; }
 };
 
 /// This pass prints the embeddings in the vocabulary
-class IR2VecVocabPrinterPass : public PassInfoMixin<IR2VecVocabPrinterPass> {
+class IR2VecVocabPrinterPass
+    : public RequiredPassInfoMixin<IR2VecVocabPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit IR2VecVocabPrinterPass(raw_ostream &OS) : OS(OS) {}
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
-  static bool isRequired() { return true; }
 };
 
 } // namespace llvm

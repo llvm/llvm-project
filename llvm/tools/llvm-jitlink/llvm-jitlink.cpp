@@ -753,9 +753,9 @@ static std::unique_ptr<JITLinkMemoryManager> createInProcessMemoryManager() {
 }
 
 Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
-createSimpleRemoteMemoryManager(SimpleRemoteEPC &SREPC) {
+createSimpleRemoteMemoryManager(ExecutorProcessControl &EPC) {
   SimpleRemoteMemoryMapper::SymbolAddrs SAs;
-  if (auto Err = SREPC.getBootstrapSymbols(
+  if (auto Err = EPC.getBootstrapSymbols(
           {{SAs.Instance, rt::SimpleExecutorMemoryManagerInstanceName},
            {SAs.Reserve, rt::SimpleExecutorMemoryManagerReserveWrapperName},
            {SAs.Initialize,
@@ -770,13 +770,13 @@ createSimpleRemoteMemoryManager(SimpleRemoteEPC &SREPC) {
   size_t SlabSize = 1024 * 1024 * 1024;
 #endif
   return MapperJITLinkMemoryManager::CreateWithMapper<SimpleRemoteMemoryMapper>(
-      SlabSize, SREPC, SAs);
+      SlabSize, EPC, SAs);
 }
 
 Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
-createSharedMemoryManager(SimpleRemoteEPC &SREPC) {
+createSharedMemoryManager(ExecutorProcessControl &EPC) {
   SharedMemoryMapper::SymbolAddrs SAs;
-  if (auto Err = SREPC.getBootstrapSymbols(
+  if (auto Err = EPC.getBootstrapSymbols(
           {{SAs.Instance, rt::ExecutorSharedMemoryMapperServiceInstanceName},
            {SAs.Reserve,
             rt::ExecutorSharedMemoryMapperServiceReserveWrapperName},
@@ -798,24 +798,27 @@ createSharedMemoryManager(SimpleRemoteEPC &SREPC) {
     SlabSize = ExitOnErr(getSlabAllocSize(SlabAllocateSizeString));
 
   return MapperJITLinkMemoryManager::CreateWithMapper<SharedMemoryMapper>(
-      SlabSize, SREPC, SAs);
+      SlabSize, EPC, SAs);
 }
 
-#if LLVM_ON_UNIX && LLVM_ENABLE_THREADS
-static void setupEPCRemoteMemoryManager(SimpleRemoteEPC::Setup &S) {
-  switch (UseMemMgr) {
-  case MemMgr::Default:
-  case MemMgr::Generic:
-    break;
-  case MemMgr::SimpleRemote:
-    S.CreateMemoryManager = createSimpleRemoteMemoryManager;
-    break;
-  case MemMgr::Shared:
-    S.CreateMemoryManager = createSharedMemoryManager;
-    break;
+static Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
+createMemoryManager(ExecutorProcessControl &EPC) {
+  if (OutOfProcessExecutor.getNumOccurrences() ||
+      OutOfProcessExecutorConnect.getNumOccurrences()) {
+
+    switch (UseMemMgr) {
+    case MemMgr::Default:
+    case MemMgr::Generic:
+      return EPC.createDefaultMemoryManager();
+    case MemMgr::SimpleRemote:
+      return createSimpleRemoteMemoryManager(EPC);
+    case MemMgr::Shared:
+      return createSharedMemoryManager(EPC);
+    }
   }
+
+  return createInProcessMemoryManager();
 }
-#endif
 
 static Expected<MaterializationUnit::Interface>
 getTestObjectFileInterface(Session &S, MemoryBufferRef O) {
@@ -974,12 +977,9 @@ static Expected<std::unique_ptr<ExecutorProcessControl>> launchExecutor() {
   close(ToExecutor[ReadEnd]);
   close(FromExecutor[WriteEnd]);
 
-  auto S = SimpleRemoteEPC::Setup();
-  setupEPCRemoteMemoryManager(S);
-
   return SimpleRemoteEPC::Create<FDSimpleRemoteEPCTransport>(
       std::make_unique<DynamicThreadPoolTaskDispatcher>(MaterializationThreads),
-      std::move(S), FromExecutor[ReadEnd], ToExecutor[WriteEnd]);
+      FromExecutor[ReadEnd], ToExecutor[WriteEnd]);
 #endif
 }
 
@@ -1063,12 +1063,9 @@ static Expected<std::unique_ptr<ExecutorProcessControl>> connectToExecutor() {
   if (!SockFD)
     return SockFD.takeError();
 
-  auto S = SimpleRemoteEPC::Setup();
-  setupEPCRemoteMemoryManager(S);
-
   return SimpleRemoteEPC::Create<FDSimpleRemoteEPCTransport>(
-      std::make_unique<DynamicThreadPoolTaskDispatcher>(std::nullopt),
-      std::move(S), *SockFD, *SockFD);
+      std::make_unique<DynamicThreadPoolTaskDispatcher>(std::nullopt), *SockFD,
+      *SockFD);
 #endif
 }
 
@@ -1172,7 +1169,7 @@ Expected<std::unique_ptr<Session>> Session::Create(Triple TT,
 
     EPC = std::make_unique<SelfExecutorProcessControl>(
         std::make_shared<SymbolStringPool>(), std::move(Dispatcher),
-        std::move(TT), *PageSize, createInProcessMemoryManager());
+        std::move(TT), *PageSize);
   }
 
   Error Err = Error::success();
@@ -1225,9 +1222,15 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
     Session &S;
   };
 
-  ObjLayer = std::make_unique<ObjectLinkingLayer>(
-      ES, ES.getExecutorProcessControl().getMemMgr());
   ErrorAsOutParameter _(&Err);
+
+  if (auto MM = createMemoryManager(ES.getExecutorProcessControl())) {
+    MemoryMgr = std::move(*MM);
+    ObjLayer = std::make_unique<orc::ObjectLinkingLayer>(ES, *MemoryMgr);
+  } else {
+    Err = MM.takeError();
+    return;
+  }
 
   if (auto DM = ES.getExecutorProcessControl().createDefaultDylibMgr())
     DylibMgr = std::move(*DM);
@@ -2753,8 +2756,7 @@ getTargetInfo(const Triple &TT,
         make_error<StringError>("Unable to create target asm info " + TT.str(),
                                 inconvertibleErrorCode()));
 
-  auto Ctx = std::make_unique<MCContext>(Triple(TT.str()), MAI.get(), MRI.get(),
-                                         STI.get());
+  auto Ctx = std::make_unique<MCContext>(Triple(TT.str()), *MAI, *MRI, *STI);
 
   std::unique_ptr<MCDisassembler> Disassembler(
       TheTarget->createMCDisassembler(*STI, *Ctx));

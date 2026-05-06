@@ -17,6 +17,7 @@
 #include "VPlanVerifier.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Regex.h"
@@ -134,8 +135,11 @@ struct VPlanTransforms {
   /// Replace VPPhi recipes in \p Plan's header with corresponding
   /// VPHeaderPHIRecipe subclasses for inductions, reductions, and
   /// fixed-order recurrences. This processes all header phis and creates
-  /// the appropriate widened recipe for each one.
-  static void createHeaderPhiRecipes(
+  /// the appropriate widened recipe for each one. For fixed-order
+  /// recurrences, also creates FirstOrderRecurrenceSplice instructions and
+  /// sinks/hoists users as needed. Returns false if any fixed-order
+  /// recurrence cannot be handled.
+  static bool createHeaderPhiRecipes(
       VPlan &Plan, PredicatedScalarEvolution &PSE, Loop &OrigLoop,
       const MapVector<PHINode *, InductionDescriptor> &Inductions,
       const MapVector<PHINode *, RecurrenceDescriptor> &Reductions,
@@ -145,9 +149,7 @@ struct VPlanTransforms {
   /// Create VPReductionRecipes for in-loop reductions. This processes chains
   /// of operations contributing to in-loop reductions and creates appropriate
   /// VPReductionRecipe instances.
-  static void createInLoopReductionRecipes(
-      VPlan &Plan, const DenseSet<BasicBlock *> &BlocksNeedingPredication,
-      ElementCount MinVF);
+  static void createInLoopReductionRecipes(VPlan &Plan, ElementCount MinVF);
 
   /// Update \p Plan to account for all early exits. If \p Style is not
   /// NoUncountableExit, handles uncountable early exits and checks that all
@@ -211,16 +213,6 @@ struct VPlanTransforms {
   static bool handleMultiUseReductions(VPlan &Plan,
                                        OptimizationRemarkEmitter *ORE,
                                        Loop *TheLoop);
-
-  /// Try to have all users of fixed-order recurrences appear after the recipe
-  /// defining their previous value, by either sinking users or hoisting recipes
-  /// defining their previous value (and its operands). Then introduce
-  /// FirstOrderRecurrenceSplice VPInstructions to combine the value from the
-  /// recurrence phis and previous values.
-  /// \returns true if all users of fixed-order recurrences could be re-arranged
-  /// as needed or false if it is not possible. In the latter case, \p Plan is
-  /// not valid.
-  static bool adjustFixedOrderRecurrences(VPlan &Plan, VPBuilder &Builder);
 
   /// Check if \p Plan contains any FMaxNum or FMinNum reductions. If they do,
   /// try to update the vector loop to exit early if any input is NaN and resume
@@ -333,7 +325,7 @@ struct VPlanTransforms {
       VPlan &Plan,
       const SmallPtrSetImpl<const InterleaveGroup<Instruction> *>
           &InterleaveGroups,
-      VPRecipeBuilder &RecipeBuilder, const bool &EpilogueAllowed);
+      const bool &EpilogueAllowed);
 
   /// Remove dead recipes from \p Plan.
   static void removeDeadRecipes(VPlan &Plan);
@@ -510,17 +502,25 @@ struct VPlanTransforms {
   /// \p Plan.
   static void introduceMasksAndLinearize(VPlan &Plan);
 
+  /// Replace a VPWidenCanonicalIVRecipe if it is present in \p Plan, with a
+  /// VPWidenIntOrFpInductionRecipe, provided it would not cause additional
+  /// spills for \p VF at unroll factor \p UF.
+  static void replaceWideCanonicalIVWithWideIV(
+      VPlan &Plan, ScalarEvolution &SE, const TargetTransformInfo &TTI,
+      TargetTransformInfo::TargetCostKind CostKind, ElementCount VF,
+      unsigned UF, const SmallPtrSetImpl<const Value *> &ValuesToIgnore);
+
   /// Add branch weight metadata, if the \p Plan's middle block is terminated by
   /// a BranchOnCond recipe.
   static void
   addBranchWeightToMiddleTerminator(VPlan &Plan, ElementCount VF,
                                     std::optional<unsigned> VScaleForTuning);
 
-  /// Handle users in the exit block for first order reductions in the original
-  /// exit block. The penultimate value of recurrences is fed to their LCSSA phi
-  /// users in the original exit block using the VPIRInstruction wrapping to the
-  /// LCSSA phi.
-  static void addExitUsersForFirstOrderRecurrences(VPlan &Plan, VFRange &Range);
+  /// Adjust first-order recurrence users in the middle block: create
+  /// penultimate element extracts for LCSSA phi users, and handle penultimate
+  /// extracts of the last active lane edge.
+  static void adjustFirstOrderRecurrenceMiddleUsers(VPlan &Plan,
+                                                    VFRange &Range);
 
   /// Optimize FindLast reductions selecting IVs (or expressions of IVs) by
   /// converting them to FindIV reductions, if their IV range excludes a
@@ -539,6 +539,11 @@ struct VPlanTransforms {
   /// recipes. Non load/store input instructions are left unchanged.
   static void makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
                                          VPRecipeBuilder &RecipeBuilder);
+
+  /// Make VPlan-based scalarization decision prior to delegating to the ones
+  /// made by the legacy CM. Only transforms "usesFirstLaneOnly` def-use chains
+  /// enabled by prior widening of consecutive memory operations for now.
+  static void makeScalarizationDecisions(VPlan &Plan, VFRange &Range);
 };
 
 } // namespace llvm

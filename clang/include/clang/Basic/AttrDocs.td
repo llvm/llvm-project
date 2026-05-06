@@ -7841,7 +7841,7 @@ that provide transparent access to the pointed-to object. These include:
 
 * Dereference operators: ``operator*``, ``operator->``
 * Data access methods: ``data()``, ``c_str()``, ``get()``
-* Iterator methods: ``begin()``, ``end()``, ``rbegin()``, ``rend()``, ``cbegin()``, ``cend()``, ``crbegin()``, ``crend()``
+* Iterator operations: ``begin()``, ``end()``, ``rbegin()``, ``rend()``, ``cbegin()``, ``cend()``, ``crbegin()``, ``crend()``, ``operator+``, ``operator-``, ``operator++``, ``operator--``
 
 When these methods return pointers, view types, or references, the analysis treats them as
 transparently borrowing from the same object that the pointer itself borrows from,
@@ -9252,6 +9252,23 @@ fields. This parameter has no effect when used outside of an entrypoint
 parameter/parameter field/return value.
 
 This attribute maps to the 'Location' SPIR-V decoration.
+  }];
+}
+
+def HLSLMatrixLayoutDocs : Documentation {
+  let Category = DocCatVariable;
+  let Heading = "row_major, column_major";
+  let Content = [{
+The ``row_major`` and ``column_major`` keywords specify the memory layout 
+of an HLSL matrix type. 
+
+* ``row_major``: Matrices are stored in memory row-by-row.
+* ``column_major``: Matrices are stored in memory column-by-column (default).
+
+Example:
+.. code-block:: hlsl
+
+  row_major float2x2 myMatrix;
   }];
 }
 

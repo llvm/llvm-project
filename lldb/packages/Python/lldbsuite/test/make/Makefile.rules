@@ -56,7 +56,13 @@ else
 	RM = rm $(1) > /dev/null 2>&1 || true
 	RM_F = rm -f $(1)
 	RM_RF = rm -rf $(1)
-	LN_SF = ln -sf $(1) $(2)
+	# Use patsubst to strip the destination's directory from the source
+	# path, turning absolute symlinks into relative ones when both paths
+	# share the same parent directory (e.g. $(BUILDDIR)/Foo.framework/Foo
+	# becomes Foo.framework/Foo). If the paths don't share a directory,
+	# patsubst returns the source unchanged. This ensures symlinks remain
+	# valid when transferred to a remote device.
+	LN_SF = ln -sf $(patsubst $(dir $(2))%,%,$(1)) $(2)
 	ECHO = echo $(1);
 	ECHO_TO_FILE = printf '%s\n' $(1) > "$(2)"
 	ECHO_APPEND_FILE = printf '%s\n' $(1) >> "$(2)"

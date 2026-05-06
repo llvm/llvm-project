@@ -61,8 +61,8 @@ define i32 @preinc(i32 %k)  {
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP0]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[K]], [[N_VEC]]
 ; CHECK-NEXT:    [[IND_ESCAPE:%.*]] = sub i32 [[N_VEC]], 1
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[K]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[FOR_END:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
@@ -166,7 +166,7 @@ define ptr @both(ptr %p, i32 %k)  {
 ; VEC-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 2
 ; VEC-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
 ; VEC-NEXT:    [[TMP3:%.*]] = trunc i64 [[N_VEC]] to i32
-; VEC-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], 4
+; VEC-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 2
 ; VEC-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[TMP4]]
 ; VEC-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VEC:       [[VECTOR_BODY]]:
@@ -179,8 +179,8 @@ define ptr @both(ptr %p, i32 %k)  {
 ; VEC-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
 ; VEC:       [[MIDDLE_BLOCK]]:
 ; VEC-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <2 x ptr> [[VECTOR_GEP]], i64 1
-; VEC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
 ; VEC-NEXT:    [[IND_ESCAPE:%.*]] = getelementptr i8, ptr [[TMP5]], i64 -4
+; VEC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
 ; VEC-NEXT:    br i1 [[CMP_N]], label %[[FOR_END:.*]], label %[[SCALAR_PH]]
 ; VEC:       [[SCALAR_PH]]:
 ; VEC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
@@ -212,7 +212,7 @@ define ptr @both(ptr %p, i32 %k)  {
 ; INTERLEAVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 2
 ; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
 ; INTERLEAVE-NEXT:    [[TMP3:%.*]] = trunc i64 [[N_VEC]] to i32
-; INTERLEAVE-NEXT:    [[TMP8:%.*]] = mul i64 [[N_VEC]], 4
+; INTERLEAVE-NEXT:    [[TMP8:%.*]] = shl i64 [[N_VEC]], 2
 ; INTERLEAVE-NEXT:    [[NEXT_GEP1:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[TMP8]]
 ; INTERLEAVE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; INTERLEAVE:       [[VECTOR_BODY]]:
@@ -221,11 +221,11 @@ define ptr @both(ptr %p, i32 %k)  {
 ; INTERLEAVE-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; INTERLEAVE-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
 ; INTERLEAVE:       [[MIDDLE_BLOCK]]:
-; INTERLEAVE-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 4
+; INTERLEAVE-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 2
 ; INTERLEAVE-NEXT:    [[TMP9:%.*]] = add i64 [[OFFSET_IDX]], 4
 ; INTERLEAVE-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[TMP9]]
-; INTERLEAVE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
 ; INTERLEAVE-NEXT:    [[IND_ESCAPE:%.*]] = getelementptr i8, ptr [[NEXT_GEP1]], i64 -4
+; INTERLEAVE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
 ; INTERLEAVE-NEXT:    br i1 [[CMP_N]], label %[[FOR_END:.*]], label %[[SCALAR_PH]]
 ; INTERLEAVE:       [[SCALAR_PH]]:
 ; INTERLEAVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
@@ -342,8 +342,8 @@ define void @PR30742(ptr %p) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT11]], [[N_VEC7]]
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK10:.*]], label %[[VECTOR_BODY7]], {{!llvm.loop ![0-9]+}}
 ; CHECK:       [[MIDDLE_BLOCK10]]:
-; CHECK-NEXT:    [[CMP_N12:%.*]] = icmp eq i32 [[TMP4]], [[N_VEC7]]
 ; CHECK-NEXT:    [[IND_ESCAPE:%.*]] = sub i32 [[IND_END8]], -8
+; CHECK-NEXT:    [[CMP_N12:%.*]] = icmp eq i32 [[TMP4]], [[N_VEC7]]
 ; CHECK-NEXT:    br i1 [[CMP_N12]], label %[[BB3:.*]], label %[[SCALAR_PH2]]
 ; CHECK:       [[SCALAR_PH2]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL12:%.*]] = phi i32 [ [[IND_END8]], %[[MIDDLE_BLOCK10]] ], [ [[TMP04]], %[[BB1]] ]
@@ -794,11 +794,11 @@ define float @fp_postinc_use_fadd(float %init, ptr noalias nocapture %A, i64 %N,
 ; INTERLEAVE-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; INTERLEAVE:       [[SCALAR_PH]]:
 ; INTERLEAVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; INTERLEAVE-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi float [ [[TMP1]], %[[MIDDLE_BLOCK]] ], [ [[INIT]], %[[ENTRY]] ]
+; INTERLEAVE-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi float [ [[TMP1]], %[[MIDDLE_BLOCK]] ], [ [[INIT]], %[[ENTRY]] ]
 ; INTERLEAVE-NEXT:    br label %[[LOOP:.*]]
 ; INTERLEAVE:       [[LOOP]]:
 ; INTERLEAVE-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; INTERLEAVE-NEXT:    [[FP_IV:%.*]] = phi float [ [[BC_RESUME_VAL2]], %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[LOOP]] ]
+; INTERLEAVE-NEXT:    [[FP_IV:%.*]] = phi float [ [[BC_RESUME_VAL1]], %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[LOOP]] ]
 ; INTERLEAVE-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
 ; INTERLEAVE-NEXT:    store float [[FP_IV]], ptr [[GEP_A]], align 4
 ; INTERLEAVE-NEXT:    [[ADD]] = fadd fast float [[FP_IV]], [[FPINC]]
@@ -909,11 +909,11 @@ define float @fp_postinc_use_fadd_ops_swapped(float %init, ptr noalias nocapture
 ; INTERLEAVE-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; INTERLEAVE:       [[SCALAR_PH]]:
 ; INTERLEAVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; INTERLEAVE-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi float [ [[TMP1]], %[[MIDDLE_BLOCK]] ], [ [[INIT]], %[[ENTRY]] ]
+; INTERLEAVE-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi float [ [[TMP1]], %[[MIDDLE_BLOCK]] ], [ [[INIT]], %[[ENTRY]] ]
 ; INTERLEAVE-NEXT:    br label %[[LOOP:.*]]
 ; INTERLEAVE:       [[LOOP]]:
 ; INTERLEAVE-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; INTERLEAVE-NEXT:    [[FP_IV:%.*]] = phi float [ [[BC_RESUME_VAL2]], %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[LOOP]] ]
+; INTERLEAVE-NEXT:    [[FP_IV:%.*]] = phi float [ [[BC_RESUME_VAL1]], %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[LOOP]] ]
 ; INTERLEAVE-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
 ; INTERLEAVE-NEXT:    store float [[FP_IV]], ptr [[GEP_A]], align 4
 ; INTERLEAVE-NEXT:    [[ADD]] = fadd fast float [[FPINC]], [[FP_IV]]
@@ -1024,11 +1024,11 @@ define float @fp_postinc_use_fsub(float %init, ptr noalias nocapture %A, i64 %N,
 ; INTERLEAVE-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; INTERLEAVE:       [[SCALAR_PH]]:
 ; INTERLEAVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; INTERLEAVE-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi float [ [[TMP1]], %[[MIDDLE_BLOCK]] ], [ [[INIT]], %[[ENTRY]] ]
+; INTERLEAVE-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi float [ [[TMP1]], %[[MIDDLE_BLOCK]] ], [ [[INIT]], %[[ENTRY]] ]
 ; INTERLEAVE-NEXT:    br label %[[LOOP:.*]]
 ; INTERLEAVE:       [[LOOP]]:
 ; INTERLEAVE-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; INTERLEAVE-NEXT:    [[FP_IV:%.*]] = phi float [ [[BC_RESUME_VAL2]], %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[LOOP]] ]
+; INTERLEAVE-NEXT:    [[FP_IV:%.*]] = phi float [ [[BC_RESUME_VAL1]], %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[LOOP]] ]
 ; INTERLEAVE-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
 ; INTERLEAVE-NEXT:    store float [[FP_IV]], ptr [[GEP_A]], align 4
 ; INTERLEAVE-NEXT:    [[ADD]] = fsub fast float [[FP_IV]], [[FPINC]]
@@ -1130,7 +1130,7 @@ define i32 @test_iv_uniform_with_outside_use_scev_simplification_2(ptr %dst) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i32 [[INDEX]], 2
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i32 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[OFFSET_IDX]], 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i16, ptr [[DST]], i32 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i16, ptr [[DST]], i32 [[TMP0]]
