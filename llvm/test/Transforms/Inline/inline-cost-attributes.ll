@@ -61,3 +61,18 @@ entry:
   call void @fn2()
   ret void
 }
+
+define void @fn_no_threshold() {
+entry:
+  ret void
+}
+
+define void @fn4() {
+; INLINER-LABEL: Inlining calls in: fn4
+; INLINER-NEXT: Function size: 2
+; INLINER-NEXT: NOT Inlining (cost=900, threshold=737), Call:   call void @fn_no_threshold()
+
+entry:
+  call void @fn_no_threshold() "function-inline-cost"="900" "function-inline-threshold-bonus"="400"
+  ret void
+}
