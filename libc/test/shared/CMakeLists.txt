@@ -235,9 +235,15 @@ add_fp_unittest(
     libc.src.__support.math.fmodf128
     libc.src.__support.math.fmodf16
     libc.src.__support.math.fmodl
+    libc.src.__support.math.fmul
+    libc.src.__support.math.fmulf128
+    libc.src.__support.math.fmull
+    libc.src.__support.math.frexp
+    libc.src.__support.math.frexpbf16
     libc.src.__support.math.frexpf
     libc.src.__support.math.frexpf128
     libc.src.__support.math.frexpf16
+    libc.src.__support.math.frexpl
     libc.src.__support.math.fromfp
     libc.src.__support.math.fromfpbf16
     libc.src.__support.math.fromfpf
@@ -253,6 +259,9 @@ add_fp_unittest(
     libc.src.__support.math.fsqrt
     libc.src.__support.math.fsqrtf128
     libc.src.__support.math.fsqrtl
+    libc.src.__support.math.fsub
+    libc.src.__support.math.fsubf128
+    libc.src.__support.math.fsubl
     libc.src.__support.math.getpayload
     libc.src.__support.math.getpayloadbf16
     libc.src.__support.math.getpayloadf
@@ -269,12 +278,39 @@ add_fp_unittest(
     libc.src.__support.math.ilogbf16
     libc.src.__support.math.ilogbf128
     libc.src.__support.math.ilogbl
+    libc.src.__support.math.iscanonical
+    libc.src.__support.math.iscanonicalbf16
+    libc.src.__support.math.iscanonicalf
+    libc.src.__support.math.iscanonicalf128
+    libc.src.__support.math.iscanonicalf16
+    libc.src.__support.math.iscanonicall
+    libc.src.__support.math.isnan
+    libc.src.__support.math.isnanf
+    libc.src.__support.math.isnanl
+    libc.src.__support.math.issignaling
+    libc.src.__support.math.issignalingbf16
+    libc.src.__support.math.issignalingf
+    libc.src.__support.math.issignalingf128
+    libc.src.__support.math.issignalingf16
+    libc.src.__support.math.issignalingl
     libc.src.__support.math.ldexp
     libc.src.__support.math.ldexpbf16
     libc.src.__support.math.ldexpf
     libc.src.__support.math.ldexpl
     libc.src.__support.math.llogb
     libc.src.__support.math.llogbbf16
+    libc.src.__support.math.llrint
+    libc.src.__support.math.llrintbf16
+    libc.src.__support.math.llrintf
+    libc.src.__support.math.llrintf128
+    libc.src.__support.math.llrintf16
+    libc.src.__support.math.llrintl
+    libc.src.__support.math.llround
+    libc.src.__support.math.llroundbf16
+    libc.src.__support.math.llroundf
+    libc.src.__support.math.llroundf128
+    libc.src.__support.math.llroundf16
+    libc.src.__support.math.llroundl
     libc.src.__support.math.log
     libc.src.__support.math.log10
     libc.src.__support.math.log10f16
@@ -302,12 +338,36 @@ add_fp_unittest(
     libc.src.__support.math.logbl
     libc.src.__support.math.logf16
     libc.src.__support.math.llogbl
+    libc.src.__support.math.lrint
+    libc.src.__support.math.lrintbf16
+    libc.src.__support.math.lrintf
+    libc.src.__support.math.lrintf128
+    libc.src.__support.math.lrintf16
+    libc.src.__support.math.lrintl
+    libc.src.__support.math.lround
+    libc.src.__support.math.lroundbf16
+    libc.src.__support.math.lroundf
+    libc.src.__support.math.lroundf128
+    libc.src.__support.math.lroundf16
+    libc.src.__support.math.lroundl
     libc.src.__support.math.modf
     libc.src.__support.math.modfbf16
     libc.src.__support.math.modff
     libc.src.__support.math.modff128
     libc.src.__support.math.modff16
     libc.src.__support.math.modfl
+    libc.src.__support.math.nan
+    libc.src.__support.math.nanbf16
+    libc.src.__support.math.nanf
+    libc.src.__support.math.nanf128
+    libc.src.__support.math.nanf16
+    libc.src.__support.math.nanl
+    libc.src.__support.math.nearbyint
+    libc.src.__support.math.nearbyintbf16
+    libc.src.__support.math.nearbyintf
+    libc.src.__support.math.nearbyintf128
+    libc.src.__support.math.nearbyintf16
+    libc.src.__support.math.nearbyintl
     libc.src.__support.math.nextdown
     libc.src.__support.math.nextdownbf16
     libc.src.__support.math.nextdownf
@@ -345,6 +405,24 @@ add_fp_unittest(
     libc.src.__support.math.remquof128
     libc.src.__support.math.remquof16
     libc.src.__support.math.remquol
+    libc.src.__support.math.rint
+    libc.src.__support.math.rintbf16
+    libc.src.__support.math.rintf
+    libc.src.__support.math.rintf128
+    libc.src.__support.math.rintf16
+    libc.src.__support.math.rintl
+    libc.src.__support.math.round
+    libc.src.__support.math.roundbf16
+    libc.src.__support.math.roundeven
+    libc.src.__support.math.roundevenbf16
+    libc.src.__support.math.roundevenf
+    libc.src.__support.math.roundevenf128
+    libc.src.__support.math.roundevenf16
+    libc.src.__support.math.roundevenl
+    libc.src.__support.math.roundf
+    libc.src.__support.math.roundf128
+    libc.src.__support.math.roundf16
+    libc.src.__support.math.roundl
     libc.src.__support.math.rsqrtf
     libc.src.__support.math.rsqrtf16
     libc.src.__support.math.scalbln
@@ -393,6 +471,12 @@ add_fp_unittest(
     libc.src.__support.math.tanhf16
     libc.src.__support.math.tanpif
     libc.src.__support.math.tanpif16
+    libc.src.__support.math.trunc
+    libc.src.__support.math.truncbf16
+    libc.src.__support.math.truncf
+    libc.src.__support.math.truncf128
+    libc.src.__support.math.truncf16
+    libc.src.__support.math.truncl
     libc.src.__support.math.ufromfp
     libc.src.__support.math.ufromfpbf16
     libc.src.__support.math.ufromfpf
@@ -428,6 +512,12 @@ add_fp_unittest(
   DEPENDS
     libc.src.__support.math.asinbf16
     libc.src.__support.math.bf16subl
+    libc.src.__support.math.canonicalize
+    libc.src.__support.math.canonicalizebf16
+    libc.src.__support.math.canonicalizef
+    libc.src.__support.math.canonicalizef128
+    libc.src.__support.math.canonicalizef16
+    libc.src.__support.math.canonicalizel
     libc.src.__support.math.ceil
     libc.src.__support.math.ceilbf16
     libc.src.__support.math.ceilf
@@ -445,6 +535,10 @@ add_fp_unittest(
     libc.src.__support.math.dmulf128
     libc.src.__support.math.dmull
     libc.src.__support.math.dsqrtf128
+    libc.src.__support.math.f16add
+    libc.src.__support.math.f16addf
+    libc.src.__support.math.f16addf128
+    libc.src.__support.math.f16addl
     libc.src.__support.math.fadd
     libc.src.__support.math.faddf128
     libc.src.__support.math.faddl
@@ -529,6 +623,12 @@ add_fp_unittest(
     libc.src.__support.math.fmodf128
     libc.src.__support.math.fmodf16
     libc.src.__support.math.fmodl
+    libc.src.__support.math.fmul
+    libc.src.__support.math.fmulf128
+    libc.src.__support.math.fmull
+    libc.src.__support.math.frexp
+    libc.src.__support.math.frexpbf16
+    libc.src.__support.math.frexpl
     libc.src.__support.math.fromfp
     libc.src.__support.math.fromfpbf16
     libc.src.__support.math.fromfpf
@@ -541,19 +641,85 @@ add_fp_unittest(
     libc.src.__support.math.fromfpxf128
     libc.src.__support.math.fromfpxf16
     libc.src.__support.math.fromfpxl
+    libc.src.__support.math.fsub
+    libc.src.__support.math.fsubf128
+    libc.src.__support.math.fsubl
+    libc.src.__support.math.getpayload
+    libc.src.__support.math.getpayloadbf16
+    libc.src.__support.math.getpayloadf
+    libc.src.__support.math.getpayloadf128
+    libc.src.__support.math.getpayloadf16
+    libc.src.__support.math.getpayloadl
+    libc.src.__support.math.iscanonical
+    libc.src.__support.math.iscanonicalbf16
+    libc.src.__support.math.iscanonicalf
+    libc.src.__support.math.iscanonicalf128
+    libc.src.__support.math.iscanonicalf16
+    libc.src.__support.math.iscanonicall
+    libc.src.__support.math.isnan
+    libc.src.__support.math.isnanf
+    libc.src.__support.math.isnanl
+    libc.src.__support.math.issignaling
+    libc.src.__support.math.issignalingbf16
+    libc.src.__support.math.issignalingf
+    libc.src.__support.math.issignalingf128
+    libc.src.__support.math.issignalingf16
+    libc.src.__support.math.issignalingl
     libc.src.__support.math.ldexp
     libc.src.__support.math.ldexpbf16
     libc.src.__support.math.ldexpl
     libc.src.__support.math.llogbbf16
+    libc.src.__support.math.llrint
+    libc.src.__support.math.llrintbf16
+    libc.src.__support.math.llrintf
+    libc.src.__support.math.llrintf128
+    libc.src.__support.math.llrintf16
+    libc.src.__support.math.llrintl
+    libc.src.__support.math.llround
+    libc.src.__support.math.llroundbf16
+    libc.src.__support.math.llroundf
+    libc.src.__support.math.llroundf128
+    libc.src.__support.math.llroundf16
+    libc.src.__support.math.llroundl
     libc.src.__support.math.log
     libc.src.__support.math.logbbf16
     libc.src.__support.math.ilogbbf16
+    libc.src.__support.math.lrint
+    libc.src.__support.math.lrintbf16
+    libc.src.__support.math.lrintf
+    libc.src.__support.math.lrintf128
+    libc.src.__support.math.lrintf16
+    libc.src.__support.math.lrintl
+    libc.src.__support.math.lround
+    libc.src.__support.math.lroundbf16
+    libc.src.__support.math.lroundf
+    libc.src.__support.math.lroundf128
+    libc.src.__support.math.lroundf16
+    libc.src.__support.math.lroundl
     libc.src.__support.math.modf
     libc.src.__support.math.modfbf16
     libc.src.__support.math.modff
     libc.src.__support.math.modff128
     libc.src.__support.math.modff16
     libc.src.__support.math.modfl
+    libc.src.__support.math.nan
+    libc.src.__support.math.nanbf16
+    libc.src.__support.math.nanf
+    libc.src.__support.math.nanf128
+    libc.src.__support.math.nanf16
+    libc.src.__support.math.nanl
+    libc.src.__support.math.nearbyint
+    libc.src.__support.math.nearbyintbf16
+    libc.src.__support.math.nearbyintf
+    libc.src.__support.math.nearbyintf128
+    libc.src.__support.math.nearbyintf16
+    libc.src.__support.math.nearbyintl
+    libc.src.__support.math.nextafter
+    libc.src.__support.math.nextafterbf16
+    libc.src.__support.math.nextafterf
+    libc.src.__support.math.nextafterf16
+    libc.src.__support.math.nextafterl
+    libc.src.__support.math.nextafterf128
     libc.src.__support.math.remainder
     libc.src.__support.math.remainderbf16
     libc.src.__support.math.remainderf
@@ -566,6 +732,24 @@ add_fp_unittest(
     libc.src.__support.math.remquof128
     libc.src.__support.math.remquof16
     libc.src.__support.math.remquol
+    libc.src.__support.math.rint
+    libc.src.__support.math.rintbf16
+    libc.src.__support.math.rintf
+    libc.src.__support.math.rintf128
+    libc.src.__support.math.rintf16
+    libc.src.__support.math.rintl
+    libc.src.__support.math.round
+    libc.src.__support.math.roundbf16
+    libc.src.__support.math.roundeven
+    libc.src.__support.math.roundevenbf16
+    libc.src.__support.math.roundevenf
+    libc.src.__support.math.roundevenf128
+    libc.src.__support.math.roundevenf16
+    libc.src.__support.math.roundevenl
+    libc.src.__support.math.roundf
+    libc.src.__support.math.roundf128
+    libc.src.__support.math.roundf16
+    libc.src.__support.math.roundl
     libc.src.__support.math.scalbln
     libc.src.__support.math.scalblnbf16
     libc.src.__support.math.scalblnf
@@ -578,7 +762,19 @@ add_fp_unittest(
     libc.src.__support.math.scalbnf128
     libc.src.__support.math.scalbnf16
     libc.src.__support.math.scalbnl
+    libc.src.__support.math.setpayload
+    libc.src.__support.math.setpayloadbf16
+    libc.src.__support.math.setpayloadf
+    libc.src.__support.math.setpayloadf128
+    libc.src.__support.math.setpayloadf16
+    libc.src.__support.math.setpayloadl
     libc.src.__support.math.sqrtl
+    libc.src.__support.math.trunc
+    libc.src.__support.math.truncbf16
+    libc.src.__support.math.truncf
+    libc.src.__support.math.truncf128
+    libc.src.__support.math.truncf16
+    libc.src.__support.math.truncl
     libc.src.__support.math.ufromfp
     libc.src.__support.math.ufromfpbf16
     libc.src.__support.math.ufromfpf

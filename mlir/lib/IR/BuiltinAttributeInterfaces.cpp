@@ -57,7 +57,7 @@ uint64_t ElementsAttr::getFlattenedIndex(Type type, ArrayRef<uint64_t> index) {
   assert(isValidIndex(shapeType, index) &&
          "expected valid multi-dimensional index");
 
-  // Reduce the provided multidimensional index into a flattended 1D row-major
+  // Reduce the provided multidimensional index into a flattened 1D row-major
   // index.
   auto rank = shapeType.getRank();
   ArrayRef<int64_t> shape = shapeType.getShape();

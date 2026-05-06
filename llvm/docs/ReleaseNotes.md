@@ -64,6 +64,10 @@ Makes programs 10x faster by doing Special New Thing.
 * The `"nooutline"` attribute is now writen as `nooutline`. Existing IR and
   bitcode will be automatically updated.
 
+* `ConstantPointerNull` can now represent fixed and scalable vector splats of
+  null pointers. Such constants may print as `splat (ptr null)` instead of
+  `zeroinitializer`.
+
 * LLVM IR floating-point literals have greatly changed:
 
   * The old hexadecimal bitwise representation is deprecated and will be removed
@@ -187,6 +191,7 @@ Makes programs 10x faster by doing Special New Thing.
   Reordering Structured Data) extension.
 * `-mcpu=sifive-x160` and `-mcpu=sifive-x180` were added.
 * Support for the experimental `XRivosVisni` vendor extension has been removed.
+* Adds experimental assembler support for the 'Zvvmm` (RISC-V Integer Matrix Multiply-Accumulate) extension.
 
 ### Changes to the WebAssembly Backend
 

@@ -21073,6 +21073,15 @@ Value *BoUpSLP::gather(
                 InsElt = User;
               assert(InsElt &&
                      "Failed to find shufflevector, caused by resize.");
+            } else if (SLPReVec && isa<ShuffleVectorInst>(InsElt)) {
+              // ReVec gather used V directly as a shufflevector operand.
+              // Register a nullptr-User external use so all remaining
+              // in-IR uses of V get rewritten via replaceAllUsesWith,
+              // and track V in ExternalUsesWithNonUsers to match the
+              // bookkeeping done by buildExternalUses.
+              unsigned FoundLane = (*It)->findLaneForValue(V);
+              ExternalUses.emplace_back(V, nullptr, **It, FoundLane);
+              ExternalUsesWithNonUsers.insert(V);
             }
           }
           UserOp = InsElt;
@@ -31115,11 +31124,12 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
       Type *ScalarTy = getValueType(PostProcessStores.front());
       if (!::isValidElementType(ScalarTy))
         return Changed;
+      auto *IF =
+          dyn_cast<Instruction>(PostProcessStores.front()->getValueOperand());
+      auto *IB =
+          dyn_cast<Instruction>(PostProcessStores.back()->getValueOperand());
       if (!NonVectReductions && PostProcessStores.size() == 2 &&
-          cast<Instruction>(PostProcessStores.front()->getValueOperand())
-                  ->getOpcode() !=
-              cast<Instruction>(PostProcessStores.back()->getValueOperand())
-                  ->getOpcode())
+          (!IF || !IB || IF->getOpcode() != IB->getOpcode()))
         return Changed;
       ScalarTy =
           IntegerType::get(ScalarTy->getContext(),

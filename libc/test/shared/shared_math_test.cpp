@@ -32,7 +32,7 @@ TEST(LlvmLibcSharedMathTest, AllFloat16) {
   EXPECT_FP_EQ(1.0f16, LIBC_NAMESPACE::shared::coshf16(0.0f16));
   EXPECT_FP_EQ(1.0f16, LIBC_NAMESPACE::shared::cospif16(0.0f16));
   EXPECT_FP_EQ(0.0f16, LIBC_NAMESPACE::shared::erff16(0.0f16));
-  EXPECT_FP_EQ(1.0f16, LIBC_NAMESPACE::shared::erfcf16(0.0f));
+  EXPECT_FP_EQ(1.0f16, LIBC_NAMESPACE::shared::erfcf16(0.0f16));
   EXPECT_FP_EQ(1.0f16, LIBC_NAMESPACE::shared::exp10f16(0.0f16));
   EXPECT_FP_EQ(0.0f16, LIBC_NAMESPACE::shared::exp10m1f16(0.0f16));
   EXPECT_FP_EQ(1.0f16, LIBC_NAMESPACE::shared::exp2f16(0.0f16));
@@ -142,6 +142,19 @@ TEST(LlvmLibcSharedMathTest, AllFloat16) {
   EXPECT_EQ(1, remquof16_exp);
   EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::scalblnf16(0.0f16, 0L));
   EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::scalbnf16(0.0f16, 0));
+
+  EXPECT_EQ(0LL, LIBC_NAMESPACE::shared::llrintf16(0.0f16));
+  EXPECT_EQ(0LL, LIBC_NAMESPACE::shared::llroundf16(0.0f16));
+  EXPECT_EQ(0L, LIBC_NAMESPACE::shared::lrintf16(0.0f16));
+  EXPECT_EQ(0L, LIBC_NAMESPACE::shared::lroundf16(0.0f16));
+  EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::nearbyintf16(0.0f16));
+  EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::rintf16(0.0f16));
+  EXPECT_EQ(1, LIBC_NAMESPACE::shared::iscanonicalf16(0.0f16));
+  EXPECT_EQ(0, LIBC_NAMESPACE::shared::issignalingf16(0.0f16));
+  EXPECT_TRUE(FPBits(LIBC_NAMESPACE::shared::nanf16("")).is_nan());
+  EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::roundf16(0.0f16));
+  EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::roundevenf16(0.0f16));
+  EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::truncf16(0.0f16));
 }
 
 #endif // LIBC_TYPES_HAS_FLOAT16
@@ -284,6 +297,23 @@ TEST(LlvmLibcSharedMathTest, AllFloat) {
   EXPECT_EQ(1, remquof_exp);
   EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::scalblnf(0.0f, 0L));
   EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::scalbnf(0.0f, 0));
+  EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::fmul(0.0L, 0.0L));
+  EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::fmull(0.0L, 0.0L));
+  EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::fsub(0.0, 0.0));
+  EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::fsubl(0.0L, 0.0L));
+  EXPECT_EQ(0L, LIBC_NAMESPACE::shared::lrintf(0.0f));
+  EXPECT_EQ(0L, LIBC_NAMESPACE::shared::lroundf(0.0f));
+  EXPECT_EQ(0LL, LIBC_NAMESPACE::shared::llrintf(0.0f));
+  EXPECT_EQ(0LL, LIBC_NAMESPACE::shared::llroundf(0.0f));
+  EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::nearbyintf(0.0f));
+  EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::rintf(0.0f));
+  EXPECT_EQ(1, LIBC_NAMESPACE::shared::iscanonicalf(0.0f));
+  EXPECT_EQ(0, LIBC_NAMESPACE::shared::issignalingf(0.0f));
+  EXPECT_TRUE(FPBits(LIBC_NAMESPACE::shared::nanf("")).is_nan());
+  EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::roundf(0.0f));
+  EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::roundevenf(0.0f));
+  EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::truncf(0.0f));
+  EXPECT_EQ(0, LIBC_NAMESPACE::shared::isnanf(0.0f));
 }
 
 TEST(LlvmLibcSharedMathTest, AllDouble) {
@@ -402,6 +432,23 @@ TEST(LlvmLibcSharedMathTest, AllDouble) {
   EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::ldexp(0.0, 0));
   EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::scalbln(0.0, 0L));
   EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::scalbn(0.0, 0));
+  int frexp_exp = 0;
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::frexp(0.0, &frexp_exp));
+  EXPECT_EQ(0, frexp_exp);
+
+  EXPECT_EQ(0L, LIBC_NAMESPACE::shared::lrint(0.0));
+  EXPECT_EQ(0L, LIBC_NAMESPACE::shared::lround(0.0));
+  EXPECT_EQ(0LL, LIBC_NAMESPACE::shared::llrint(0.0));
+  EXPECT_EQ(0LL, LIBC_NAMESPACE::shared::llround(0.0));
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::nearbyint(0.0));
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::rint(0.0));
+  EXPECT_EQ(1, LIBC_NAMESPACE::shared::iscanonical(0.0L));
+  EXPECT_EQ(0, LIBC_NAMESPACE::shared::issignaling(0.0));
+  EXPECT_TRUE(FPBits(LIBC_NAMESPACE::shared::nan("")).is_nan());
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::round(0.0));
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::roundeven(0.0));
+  EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::trunc(0.0));
+  EXPECT_EQ(0, LIBC_NAMESPACE::shared::isnan(0.0));
 }
 
 // TODO: Enable the tests when double-double type is supported.
@@ -503,6 +550,22 @@ TEST(LlvmLibcSharedMathTest, AllLongDouble) {
   EXPECT_FP_EQ(0x0p+0L, LIBC_NAMESPACE::shared::ldexpl(0.0L, 0));
   EXPECT_FP_EQ(0x0p+0L, LIBC_NAMESPACE::shared::scalblnl(0.0L, 0L));
   EXPECT_FP_EQ(0x0p+0L, LIBC_NAMESPACE::shared::scalbnl(0.0L, 0));
+  int frexpl_exp = 0;
+  EXPECT_FP_EQ(0x0p+0L, LIBC_NAMESPACE::shared::frexpl(0.0L, &frexpl_exp));
+  EXPECT_EQ(0, frexpl_exp);
+  EXPECT_EQ(0LL, LIBC_NAMESPACE::shared::llrintl(0.0L));
+  EXPECT_EQ(0LL, LIBC_NAMESPACE::shared::llroundl(0.0L));
+  EXPECT_EQ(0L, LIBC_NAMESPACE::shared::lrintl(0.0L));
+  EXPECT_EQ(0L, LIBC_NAMESPACE::shared::lroundl(0.0L));
+  EXPECT_FP_EQ(0x0p+0L, LIBC_NAMESPACE::shared::nearbyintl(0.0L));
+  EXPECT_FP_EQ(0x0p+0L, LIBC_NAMESPACE::shared::rintl(0.0L));
+  EXPECT_EQ(1, LIBC_NAMESPACE::shared::iscanonicall(0.0L));
+  EXPECT_EQ(0, LIBC_NAMESPACE::shared::issignalingl(0.0L));
+  EXPECT_TRUE(FPBits(LIBC_NAMESPACE::shared::nanl("")).is_nan());
+  EXPECT_FP_EQ(0x0p+0L, LIBC_NAMESPACE::shared::roundl(0.0L));
+  EXPECT_FP_EQ(0x0p+0L, LIBC_NAMESPACE::shared::roundevenl(0.0L));
+  EXPECT_FP_EQ(0x0p+0L, LIBC_NAMESPACE::shared::truncl(0.0L));
+  EXPECT_EQ(0, LIBC_NAMESPACE::shared::isnanl(0.0L));
 }
 
 #endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
@@ -661,6 +724,24 @@ TEST(LlvmLibcSharedMathTest, AllFloat128) {
                LIBC_NAMESPACE::shared::scalblnf128(float128(0.0), 0L));
   EXPECT_FP_EQ(float128(0.0),
                LIBC_NAMESPACE::shared::scalbnf128(float128(0.0), 0));
+  EXPECT_FP_EQ(0x0p+0f,
+               LIBC_NAMESPACE::shared::fsubf128(float128(0.0), float128(0.0)));
+  EXPECT_FP_EQ(0x0p+0f,
+               LIBC_NAMESPACE::shared::fmulf128(float128(0.0), float128(0.0)));
+  EXPECT_FP_EQ(0.0L, LIBC_NAMESPACE::shared::llrintf128(float128(0.0)));
+  EXPECT_FP_EQ(0.0L, LIBC_NAMESPACE::shared::llroundf128(float128(0.0)));
+  EXPECT_EQ(0L, LIBC_NAMESPACE::shared::lrintf128(float128(0.0)));
+  EXPECT_EQ(0L, LIBC_NAMESPACE::shared::lroundf128(float128(0.0)));
+  EXPECT_FP_EQ(float128(0.0),
+               LIBC_NAMESPACE::shared::nearbyintf128(float128(0.0)));
+  EXPECT_FP_EQ(float128(0.0), LIBC_NAMESPACE::shared::rintf128(float128(0.0)));
+  EXPECT_EQ(1, LIBC_NAMESPACE::shared::iscanonicalf128(float128(0.0)));
+  EXPECT_EQ(0, LIBC_NAMESPACE::shared::issignalingf128(float128(0.0)));
+  EXPECT_TRUE(FPBits(LIBC_NAMESPACE::shared::nanf128("")).is_nan());
+  EXPECT_FP_EQ(float128(0.0), LIBC_NAMESPACE::shared::roundf128(float128(0.0)));
+  EXPECT_FP_EQ(float128(0.0),
+               LIBC_NAMESPACE::shared::roundevenf128(float128(0.0)));
+  EXPECT_FP_EQ(float128(0.0), LIBC_NAMESPACE::shared::truncf128(float128(0.0)));
 }
 
 #endif // LIBC_TYPES_HAS_FLOAT128
@@ -782,4 +863,22 @@ TEST(LlvmLibcSharedMathTest, AllBFloat16) {
                LIBC_NAMESPACE::shared::scalblnbf16(bfloat16(0.0), 0L));
   EXPECT_FP_EQ(bfloat16(0.0),
                LIBC_NAMESPACE::shared::scalbnbf16(bfloat16(0.0), 0));
+  int frexpbf16_exp = 0;
+  EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::frexpbf16(
+                                  bfloat16(0.0), &frexpbf16_exp));
+  EXPECT_EQ(0, frexpbf16_exp);
+  EXPECT_EQ(0L, LIBC_NAMESPACE::shared::lrintbf16(bfloat16(0.0)));
+  EXPECT_EQ(0L, LIBC_NAMESPACE::shared::lroundbf16(bfloat16(0.0)));
+  EXPECT_EQ(0LL, LIBC_NAMESPACE::shared::llrintbf16(bfloat16(0.0)));
+  EXPECT_EQ(0LL, LIBC_NAMESPACE::shared::llroundbf16(bfloat16(0.0)));
+  EXPECT_FP_EQ(bfloat16(0.0),
+               LIBC_NAMESPACE::shared::nearbyintbf16(bfloat16(0.0)));
+  EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::rintbf16(bfloat16(0.0)));
+  EXPECT_EQ(1, LIBC_NAMESPACE::shared::iscanonicalbf16(bfloat16(0.0)));
+  EXPECT_EQ(0, LIBC_NAMESPACE::shared::issignalingbf16(bfloat16(0.0)));
+  EXPECT_TRUE(FPBits(LIBC_NAMESPACE::shared::nanbf16("")).is_nan());
+  EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::roundbf16(bfloat16(0.0)));
+  EXPECT_FP_EQ(bfloat16(0.0),
+               LIBC_NAMESPACE::shared::roundevenbf16(bfloat16(0.0)));
+  EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::truncbf16(bfloat16(0.0)));
 }
