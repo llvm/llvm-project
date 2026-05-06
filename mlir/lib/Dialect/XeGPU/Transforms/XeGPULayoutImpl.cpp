@@ -534,13 +534,32 @@ xegpu::inferExtractSourceLayout(xegpu::DistributeLayoutAttr resLayout,
     auto laneData = resLayout.getEffectiveLaneDataAsInt();
     auto order = resLayout.getEffectiveOrderAsInt();
 
-    for (int i = resShapeSize; i < dimDiff; i++) {
-      sgLayout.insert(sgLayout.begin(), 1);
-      sgData.insert(sgData.begin(), 1);
-      instData.insert(instData.begin(), 1);
-      laneLayout.insert(laneLayout.begin(), 1);
-      laneData.insert(laneData.begin(), 1);
-      order.insert(order.begin(), i);
+    // Example: result shape is 3D with order [1, 2, 0], source shape is 5D
+    // (adding 2 leading dimensions). Expected source order: [3, 4, 2, 1, 0]
+    // Step 1: shift existing order by dimDiff: [1, 2, 0] -> [3, 4, 2]
+    // Step 2: append new leading dims in reverse (slowest first): [3, 4, 2, 1,
+    // 0]
+
+    // Shift existing dimension indices in order by dimDiff to account for the
+    // new leading dimensions being added to the source shape
+    for (auto &o : order)
+      o += dimDiff;
+
+    // Add unit dimensions to the front of non-empty layout vectors and append
+    // the new dimension indices to the order array in reverse (slowest
+    // dimension has the lowest index and appears last in the order array)
+    for (int i = 0; i < dimDiff; i++) {
+      if (!sgLayout.empty())
+        sgLayout.insert(sgLayout.begin(), 1);
+      if (!sgData.empty())
+        sgData.insert(sgData.begin(), 1);
+      if (!instData.empty())
+        instData.insert(instData.begin(), 1);
+      if (!laneLayout.empty())
+        laneLayout.insert(laneLayout.begin(), 1);
+      if (!laneData.empty())
+        laneData.insert(laneData.begin(), 1);
+      order.push_back(dimDiff - 1 - i);
     }
 
     DenseI32ArrayAttr orderAttr = resLayout ? resLayout.getOrder() : nullptr;
@@ -556,7 +575,7 @@ xegpu::inferExtractSourceLayout(xegpu::DistributeLayoutAttr resLayout,
         instData.empty() ? nullptr : toAttr(instData),
         laneLayout.empty() ? nullptr : toAttr(laneLayout),
         laneData.empty() ? nullptr : toAttr(laneData),
-        (orderAttr && !orderAttr.empty()) ? nullptr : toAttr(order));
+        (!orderAttr || orderAttr.empty()) ? nullptr : toAttr(order));
     return srcLayout;
   }
   return resLayout;
