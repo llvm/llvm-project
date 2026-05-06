@@ -6298,13 +6298,13 @@ Module *ASTReader::getSubmodule(uint32_t GlobalID) {
     return nullptr;
   }
 
-  if (GlobalID > SubmodulesLoaded.size()) {
+  SubmoduleID GlobalIndex = GlobalID - NUM_PREDEF_SUBMODULE_IDS;
+  if (GlobalIndex >= SubmodulesLoaded.size()) {
     Error("submodule ID out of range in AST file");
     return nullptr;
   }
 
-  SubmoduleID GlobalIndex = GlobalID - NUM_PREDEF_SUBMODULE_IDS;
-  if (GlobalIndex < SubmodulesLoaded.size() && SubmodulesLoaded[GlobalIndex])
+  if (SubmodulesLoaded[GlobalIndex])
     return SubmodulesLoaded[GlobalIndex];
 
   GlobalSubmoduleMapType::iterator It = GlobalSubmoduleMap.find(GlobalID);
