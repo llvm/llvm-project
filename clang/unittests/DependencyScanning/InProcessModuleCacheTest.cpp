@@ -33,7 +33,7 @@ TEST(InProcessModuleCache, ReadWriteInvalidation) {
   ASSERT_EQ(ModCache->write(Path, *NewBuf, Size, ModTime), std::error_code{});
 
   // Writing a new buffer should not invalidate the previously-read buffer.
-  EXPECT_EQ(Buf->getBuffer(),"original\n");
+  EXPECT_EQ(Buf->getBuffer(), "original\n");
 }
 
 
