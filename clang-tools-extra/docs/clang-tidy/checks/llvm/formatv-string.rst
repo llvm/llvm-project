@@ -42,8 +42,8 @@ Options
   fully qualified function name and `index` is the zero-based parameter
   position of the format string.
 
-  For example, to check ``mylib::log(Level, const char *Fmt, ...)`` where
-  the format string is the second parameter (index 1):
+  For example, to check `mylib::log(Level, const char *Fmt, ...)` where the
+  format string is the second parameter (index 1):
 
   .. code-block:: yaml
 
