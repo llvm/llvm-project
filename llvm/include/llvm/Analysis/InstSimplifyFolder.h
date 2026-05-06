@@ -121,8 +121,8 @@ public:
 
   Value *FoldBinaryIntrinsic(Intrinsic::ID ID, Value *LHS, Value *RHS, Type *Ty,
                              Instruction *FMFSource = nullptr) const override {
-    return simplifyBinaryIntrinsic(ID, Ty, LHS, RHS, SQ,
-                                   dyn_cast_if_present<CallBase>(FMFSource));
+    return simplifyBinaryIntrinsic(ID, Ty, LHS, RHS,
+                                   SQ.getWithInstruction(FMFSource));
   }
 
   //===--------------------------------------------------------------------===//
