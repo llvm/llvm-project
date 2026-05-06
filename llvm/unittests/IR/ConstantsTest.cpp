@@ -882,15 +882,13 @@ TEST(ConstantsTest, ToConstantRangeConstantByteVector) {
   ASSERT_TRUE(isa<ConstantVector>(CV));
 
   ConstantRange CR = CV->toConstantRange();
-  EXPECT_TRUE(CR.contains(APInt(7, 10)));
-  EXPECT_TRUE(CR.contains(APInt(7, 20)));
+  EXPECT_EQ(CR, ConstantRange(APInt(7, 10), APInt(7, 21)));
 
   Constant *CVWithPoison =
       ConstantVector::get({CB1, PoisonValue::get(B7Ty), CB2});
   ASSERT_TRUE(isa<ConstantVector>(CVWithPoison));
   ConstantRange CRPoison = CVWithPoison->toConstantRange();
-  EXPECT_TRUE(CRPoison.contains(APInt(7, 10)));
-  EXPECT_TRUE(CRPoison.contains(APInt(7, 20)));
+  EXPECT_EQ(CRPoison, ConstantRange(APInt(7, 10), APInt(7, 21)));
 }
 
 } // end anonymous namespace
