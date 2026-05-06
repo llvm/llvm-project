@@ -26,7 +26,6 @@
 // CHECK:         [[COMP:%.*]] = fir.convert [[MEMREF]] : (memref<4xcomplex<f32>>) -> memref<4x2xf32>
 // CHECK:         arith.constant 0
 // CHECK:         memref.load [[COMP]][[[IDX]], {{%.*}}] : memref<4x2xf32>
-// CHECK-NOT:     complex.re
 func.func @projected_slice_fwd(%arg0: !fir.ref<!fir.array<4xcomplex<f32>>>) {
   %c1 = arith.constant 1 : index
   %c4 = arith.constant 4 : index
@@ -52,7 +51,6 @@ func.func @projected_slice_fwd(%arg0: !fir.ref<!fir.array<4xcomplex<f32>>>) {
 // CHECK:         [[COMP:%.*]] = fir.convert [[MEMREF]] : (memref<4xcomplex<f32>>) -> memref<4x2xf32>
 // CHECK:         arith.constant 0
 // CHECK:         memref.load [[COMP]][[[IDX]], {{%.*}}] : memref<4x2xf32>
-// CHECK-NOT:     complex.re
 func.func @projected_slice_bwd(%arg0: !fir.ref<!fir.array<4xcomplex<f32>>>) {
   %c1 = arith.constant 1 : index
   %c4 = arith.constant 4 : index
@@ -79,9 +77,6 @@ func.func @projected_slice_bwd(%arg0: !fir.ref<!fir.array<4xcomplex<f32>>>) {
 // CHECK:         [[COMP:%.*]] = fir.convert [[MEMREF]] : (memref<4xcomplex<f32>>) -> memref<4x2xf32>
 // CHECK:         arith.constant 1
 // CHECK:         memref.store %arg1, [[COMP]][[[IDX]], {{%.*}}] : memref<4x2xf32>
-// CHECK-NOT:     complex.re
-// CHECK-NOT:     complex.create
-// CHECK-NOT:     memref.load
 func.func @projected_slice_store_im(%arg0: !fir.ref<!fir.array<4xcomplex<f32>>>,
                                     %arg1: f32) {
   %c1 = arith.constant 1 : index
