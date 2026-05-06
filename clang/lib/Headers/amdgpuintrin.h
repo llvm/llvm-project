@@ -27,19 +27,27 @@ _Pragma("omp begin declare variant match(device = {arch(amdgcn)})");
 #define __gpu_global __attribute__((address_space(1)))
 #define __gpu_generic __attribute__((address_space(0)))
 
+// __builtin_amdgcn_workgroup_size_{x,y,z}() now returns the actual size of
+// the current work-group, which differs from the uniform (enqueued) size for
+// the trailing partial work-group. __gpu_num_blocks_* and __gpu_num_threads_*
+// must report the uniform size, so read it directly from the HSA dispatch
+// packet (workgroup_size_{x,y,z} live at offsets 4, 6, 8 as uint16_t).
+#define __GPU_AMDGCN_UNIFORM_WG_SIZE(idx)                                      \
+  ((uint32_t)((const __gpu_constant uint16_t *)__builtin_amdgcn_dispatch_ptr())[2 + (idx)])
+
 // Returns the number of workgroups in the 'x' dimension of the grid.
 _DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_num_blocks_x(void) {
-  return __builtin_amdgcn_grid_size_x() / __builtin_amdgcn_workgroup_size_x();
+  return __builtin_amdgcn_grid_size_x() / __GPU_AMDGCN_UNIFORM_WG_SIZE(0);
 }
 
 // Returns the number of workgroups in the 'y' dimension of the grid.
 _DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_num_blocks_y(void) {
-  return __builtin_amdgcn_grid_size_y() / __builtin_amdgcn_workgroup_size_y();
+  return __builtin_amdgcn_grid_size_y() / __GPU_AMDGCN_UNIFORM_WG_SIZE(1);
 }
 
 // Returns the number of workgroups in the 'z' dimension of the grid.
 _DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_num_blocks_z(void) {
-  return __builtin_amdgcn_grid_size_z() / __builtin_amdgcn_workgroup_size_z();
+  return __builtin_amdgcn_grid_size_z() / __GPU_AMDGCN_UNIFORM_WG_SIZE(2);
 }
 
 // Returns the 'x' dimension of the current AMD workgroup's id.
@@ -59,17 +67,17 @@ _DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_block_id_z(void) {
 
 // Returns the number of workitems in the 'x' dimension.
 _DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_num_threads_x(void) {
-  return __builtin_amdgcn_workgroup_size_x();
+  return __GPU_AMDGCN_UNIFORM_WG_SIZE(0);
 }
 
 // Returns the number of workitems in the 'y' dimension.
 _DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_num_threads_y(void) {
-  return __builtin_amdgcn_workgroup_size_y();
+  return __GPU_AMDGCN_UNIFORM_WG_SIZE(1);
 }
 
 // Returns the number of workitems in the 'z' dimension.
 _DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_num_threads_z(void) {
-  return __builtin_amdgcn_workgroup_size_z();
+  return __GPU_AMDGCN_UNIFORM_WG_SIZE(2);
 }
 
 // Returns the 'x' dimension id of the workitem in the current AMD workgroup.
