@@ -972,9 +972,6 @@ static bool ShouldBreakUpDistribution(Instruction *Mul) {
                           m_ImmConstant())))
     return false;
 
-  if (!Mul->hasOneUse())
-    return false;
-
   auto *MulUser = dyn_cast<Instruction>(Mul->user_back());
   // The parent MUST be an Add or Sub to ensure the tree is flattened
   if (!MulUser || (MulUser->getOpcode() != Instruction::Add &&
@@ -1008,11 +1005,11 @@ static BinaryOperator *BreakUpDistribute(Instruction *Mul,
                      : C;
 
   BinaryOperator *M1 =
-      CreateMul(AddSub->getOperand(0), C, "Mul1", Mul->getIterator(), nullptr);
+      BinaryOperator::CreateMul(AddSub->getOperand(0), C, "Mul1", Mul->getIterator());
   BinaryOperator *M2 =
-      CreateMul(AddSub->getOperand(1), C2, "Mul2", Mul->getIterator(), nullptr);
+      BinaryOperator::CreateMul(AddSub->getOperand(1), C2, "Mul2", Mul->getIterator());
   BinaryOperator *Result;
-  Result = CreateAdd(M1, M2, "DistAdd", Mul->getIterator(), nullptr);
+  Result = BinaryOperator::CreateAdd(M1, M2, "DistAdd", Mul->getIterator());
 
   Mul->replaceAllUsesWith(Result);
   Result->setDebugLoc(Mul->getDebugLoc());
@@ -1646,6 +1643,17 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
   // where they are actually the same multiply.
   unsigned MaxOcc = 0;
   Value *MaxOccVal = nullptr;
+
+  // Prefer a non-constant factor over a constant when occurrence counts
+  // tie. Factoring out a variable (e.g., X from X*C1 + X*C2) exposes
+  // downstream constant folding; factoring out a constant does not.
+  auto IsBetterFactor = [](Value *Factor, Value *MaxOccVal, unsigned Occ,
+                           unsigned MaxOcc) {
+    return Occ > MaxOcc ||
+           (Occ == MaxOcc &&
+            (isa<Instruction>(Factor) || isa<Argument>(Factor)) &&
+            isa<Constant>(MaxOccVal) && !isa<UndefValue>(MaxOccVal));
+  };
   for (const ValueEntry &Op : Ops) {
     BinaryOperator *BOp =
         isReassociableOp(Op.Op, Instruction::Mul, Instruction::FMul);
@@ -1664,10 +1672,7 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
         continue;
 
       unsigned Occ = ++FactorOccurrences[Factor];
-      if (Occ > MaxOcc ||
-          (Occ == MaxOcc &&
-           (isa<Instruction>(Factor) || isa<Argument>(Factor)) &&
-           isa<Constant>(MaxOccVal) && !isa<UndefValue>(MaxOccVal))) {
+      if (IsBetterFactor(Factor, MaxOccVal, Occ, MaxOcc)) {
         MaxOcc = Occ;
         MaxOccVal = Factor;
       }
@@ -1681,10 +1686,7 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
           if (!Duplicates.insert(Factor).second)
             continue;
           unsigned Occ = ++FactorOccurrences[Factor];
-          if (Occ > MaxOcc ||
-              (Occ == MaxOcc &&
-               (isa<Instruction>(Factor) || isa<Argument>(Factor)) &&
-               isa<Constant>(MaxOccVal) && !isa<UndefValue>(MaxOccVal))) {
+          if (IsBetterFactor(Factor, MaxOccVal, Occ, MaxOcc)) {
             MaxOcc = Occ;
             MaxOccVal = Factor;
           }
@@ -1697,10 +1699,7 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
           if (!Duplicates.insert(Factor).second)
             continue;
           unsigned Occ = ++FactorOccurrences[Factor];
-          if (Occ > MaxOcc ||
-              (Occ == MaxOcc &&
-               (isa<Instruction>(Factor) || isa<Argument>(Factor)) &&
-               isa<Constant>(MaxOccVal) && !isa<UndefValue>(MaxOccVal))) {
+          if (IsBetterFactor(Factor, MaxOccVal, Occ, MaxOcc)) {
             MaxOcc = Occ;
             MaxOccVal = Factor;
           }
