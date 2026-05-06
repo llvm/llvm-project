@@ -169,10 +169,10 @@ struct TestingMoreComplexAttributes {
 } more_complex_atttributes;
 
 void more_complex_attributes() {
-    more_complex_atttributes.a = true; // expected-warning{{writing variable 'a' requires holding mutex 'more_complex_atttributes..lock' exclusively}}
-    more_complex_atttributes.b = true; // expected-warning{{writing variable 'b' requires holding mutex 'more_complex_atttributes..strct.lock' exclusively}}
-    *more_complex_atttributes.ptr_a = true; // expected-warning{{writing the value pointed to by 'ptr_a' requires holding mutex 'more_complex_atttributes..lock' exclusively}}
-    *more_complex_atttributes.ptr_b = true; // expected-warning{{writing the value pointed to by 'ptr_b' requires holding mutex 'more_complex_atttributes..strct.lock' exclusively}}
+    more_complex_atttributes.a = true; // expected-warning{{writing variable 'a' requires holding mutex 'more_complex_atttributes.lock' exclusively}}
+    more_complex_atttributes.b = true; // expected-warning{{writing variable 'b' requires holding mutex 'more_complex_atttributes.strct.lock' exclusively}}
+    *more_complex_atttributes.ptr_a = true; // expected-warning{{writing the value pointed to by 'ptr_a' requires holding mutex 'more_complex_atttributes.lock' exclusively}}
+    *more_complex_atttributes.ptr_b = true; // expected-warning{{writing the value pointed to by 'ptr_b' requires holding mutex 'more_complex_atttributes.strct.lock' exclusively}}
 
     more_complex_atttributes.lock.Lock();
     more_complex_atttributes.lock1.Lock(); // expected-warning{{mutex 'lock1' must be acquired before 'lock'}}
