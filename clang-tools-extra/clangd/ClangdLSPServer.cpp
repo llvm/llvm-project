@@ -1799,10 +1799,9 @@ bool ClangdLSPServer::shouldRunCompletion(
   auto Offset = positionToOffset(*Code, Params.position,
                                  /*AllowColumnsBeyondLineLength=*/false);
   if (!Offset) {
-    vlog("could not convert position '{0}' to offset for file '{1}'",
-         Params.position, Params.textDocument.uri.file());
-    llvm::consumeError(Offset.takeError());
-    return true; // completion code will log the error for invalid position.
+    vlog("could not convert position '{0}' to offset for file '{1}': {2}",
+         Params.position, Params.textDocument.uri.file(), Offset.takeError());
+    return true;
   }
   return allowImplicitCompletion(*Code, *Offset);
 }
