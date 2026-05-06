@@ -617,6 +617,18 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
     return Error;
   }
 
+  if (Name == "call_ref" || Name == "return_call_ref") {
+    // Funcref target popped from the stack, followed by the signature's
+    // parameters; pushes the signature's results.
+    bool Error = popType(ErrorLoc, wasm::ValType::FUNCREF);
+    Error |= checkSig(ErrorLoc, LastSig);
+    if (Name == "return_call_ref") {
+      Error |= endOfFunction(ErrorLoc, false);
+      pushType(Polymorphic{});
+    }
+    return Error;
+  }
+
   if (Name == "call" || Name == "return_call") {
     bool Error = false;
     const wasm::WasmSignature *Sig = nullptr;
