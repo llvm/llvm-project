@@ -140,8 +140,14 @@ public:
                             Register Original);
   bool rmFromMergeableSpills(MachineInstr &Spill, int StackSlot);
   void hoistAllSpills();
+  void LRE_WillShrinkVirtReg(Register) override;
   bool LRE_CanEraseVirtReg(Register) override;
   void LRE_DidCloneVirtReg(Register, Register) override;
+
+private:
+  // Vregs unassigned from the matrix during LRE_WillShrinkVirtReg, pending
+  // re-assignment after the interval is shrunk/split.
+  DenseMap<Register, MCRegister> PendingReassignments;
 };
 
 class InlineSpiller : public Spiller {
@@ -1828,12 +1834,35 @@ void HoistSpillHelper::hoistAllSpills() {
     }
     Edit.eliminateDeadDefs(SpillsToRm, {});
   }
+
+  // Flush vregs that were unassigned from the matrix during shrinking but
+  // were not split (so LRE_DidCloneVirtReg never re-assigned them).
+  for (auto &[VReg, PhysReg] : PendingReassignments) {
+    if (LIS.hasInterval(VReg)) {
+      LiveInterval &LI = LIS.getInterval(VReg);
+      if (!LI.empty())
+        Matrix->assign(LI, PhysReg);
+      else
+        VRM.assignVirt2Phys(VReg, PhysReg);
+    }
+  }
+  PendingReassignments.clear();
+}
+
+void HoistSpillHelper::LRE_WillShrinkVirtReg(Register VirtReg) {
+  if (!Matrix || !VRM.hasPhys(VirtReg) || !LIS.hasInterval(VirtReg))
+    return;
+  MCRegister PhysReg = VRM.getPhys(VirtReg);
+  LiveInterval &LI = LIS.getInterval(VirtReg);
+  Matrix->unassign(LI, /*ClearAllReferencingSegments=*/true);
+  PendingReassignments[VirtReg] = PhysReg;
 }
 
 /// Called before a virtual register is erased from LiveIntervals.
 /// Forcibly remove the register from LiveRegMatrix before it's deleted,
 /// preventing dangling pointers.
 bool HoistSpillHelper::LRE_CanEraseVirtReg(Register VirtReg) {
+  PendingReassignments.erase(VirtReg);
   if (Matrix && VRM.hasPhys(VirtReg)) {
     const LiveInterval &LI = LIS.getInterval(VirtReg);
     Matrix->unassign(LI, /*ClearAllReferencingSegments=*/true);
@@ -1844,12 +1873,53 @@ bool HoistSpillHelper::LRE_CanEraseVirtReg(Register VirtReg) {
 /// For VirtReg clone, the \p New register should have the same physreg or
 /// stackslot as the \p old register.
 void HoistSpillHelper::LRE_DidCloneVirtReg(Register New, Register Old) {
-  if (VRM.hasPhys(Old))
-    VRM.assignVirt2Phys(New, VRM.getPhys(Old));
-  else if (VRM.getStackSlot(Old) != VirtRegMap::NO_STACK_SLOT)
+  auto PendingIt = PendingReassignments.find(Old);
+  if (PendingIt != PendingReassignments.end()) {
+    // Old was already unassigned from the matrix by LRE_WillShrinkVirtReg.
+    // Reassign both Old (with its shrunk interval) and New to the matrix.
+    MCRegister PhysReg = PendingIt->second;
+    PendingReassignments.erase(PendingIt);
+
+    if (LIS.hasInterval(Old)) {
+      LiveInterval &OldLI = LIS.getInterval(Old);
+      if (!OldLI.empty())
+        Matrix->assign(OldLI, PhysReg);
+      else
+        VRM.assignVirt2Phys(Old, PhysReg);
+    }
+    if (LIS.hasInterval(New)) {
+      LiveInterval &NewLI = LIS.getInterval(New);
+      if (!NewLI.empty())
+        Matrix->assign(NewLI, PhysReg);
+      else
+        VRM.assignVirt2Phys(New, PhysReg);
+    } else {
+      VRM.assignVirt2Phys(New, PhysReg);
+    }
+  } else if (VRM.hasPhys(Old)) {
+    MCRegister PhysReg = VRM.getPhys(Old);
+    if (Matrix && LIS.hasInterval(Old)) {
+      LiveInterval &OldLI = LIS.getInterval(Old);
+      Matrix->unassign(OldLI, /*ClearAllReferencingSegments=*/true);
+      if (!OldLI.empty())
+        Matrix->assign(OldLI, PhysReg);
+      else
+        VRM.assignVirt2Phys(Old, PhysReg);
+    }
+    if (Matrix && LIS.hasInterval(New)) {
+      LiveInterval &NewLI = LIS.getInterval(New);
+      if (!NewLI.empty())
+        Matrix->assign(NewLI, PhysReg);
+      else
+        VRM.assignVirt2Phys(New, PhysReg);
+    } else {
+      VRM.assignVirt2Phys(New, PhysReg);
+    }
+  } else if (VRM.getStackSlot(Old) != VirtRegMap::NO_STACK_SLOT) {
     VRM.assignVirt2StackSlot(New, VRM.getStackSlot(Old));
-  else
+  } else {
     llvm_unreachable("VReg should be assigned either physreg or stackslot");
+  }
   if (VRM.hasShape(Old))
     VRM.assignVirt2Shape(New, VRM.getShape(Old));
 }
