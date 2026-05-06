@@ -1065,8 +1065,8 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
         llvmModule->addModuleFlag(llvm::Module::Error, "ThinLTO", uint32_t(0));
 
     if (action == BackendActionTy::Backend_EmitBC)
-      mpm.addPass(llvm::BitcodeWriterPass(os, /*ShouldPreserveUseListOrder=*/false,
-                                          emitSummary));
+      mpm.addPass(llvm::BitcodeWriterPass(
+          os, /*ShouldPreserveUseListOrder=*/false, emitSummary));
     else if (action == BackendActionTy::Backend_EmitLL)
       mpm.addPass(llvm::PrintModulePass(os, /*Banner=*/"",
                                         /*ShouldPreserveUseListOrder=*/false,
