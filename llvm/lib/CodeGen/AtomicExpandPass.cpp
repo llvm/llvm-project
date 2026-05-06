@@ -257,6 +257,8 @@ static void copyMetadataForAtomic(Instruction &Dest,
         Dest.setMetadata(ID, N);
       else if (ID == Ctx.getMDKindID("amdgpu.no.fine.grained.memory"))
         Dest.setMetadata(ID, N);
+      else if (ID == Ctx.getMDKindID("aarch64.atomic.hint"))
+        Dest.setMetadata(ID, N);
 
       // Losing atomic.ignore.denormal.mode, but it doesn't matter for current
       // uses.
@@ -759,6 +761,7 @@ StoreInst *AtomicExpandImpl::convertAtomicStoreToIntegerType(StoreInst *SI) {
   Value *Addr = SI->getPointerOperand();
 
   StoreInst *NewSI = Builder.CreateStore(NewVal, Addr, SI->getProperties());
+  copyMetadataForAtomic(*NewSI, *SI);
   LLVM_DEBUG(dbgs() << "Replaced " << *SI << " with " << *NewSI << "\n");
   SI->eraseFromParent();
   return NewSI;
