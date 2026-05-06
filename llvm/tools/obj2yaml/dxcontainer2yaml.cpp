@@ -53,9 +53,8 @@ dumpDXContainer(MemoryBufferRef Source) {
     DXContainerYAML::Part &NewPart = Obj->Parts.back();
     dxbc::PartType PT = dxbc::parsePartType(P.Part.getName());
     switch (PT) {
-    case dxbc::PartType::ILDB:
-      [[fallthrough]];
-    case dxbc::PartType::DXIL: {
+    case dxbc::PartType::DXIL:
+    case dxbc::PartType::ILDB: {
       std::optional<DXContainer::DXILData> DXIL =
           Container.getDXIL(dxbc::isDebugProgramPart(PT));
       assert(DXIL && "Since we are iterating and found a DXIL/ILDB part, "
@@ -92,7 +91,7 @@ dumpDXContainer(MemoryBufferRef Source) {
         break;
       if (const auto *P =
               std::get_if<dxbc::PSV::v0::RuntimeInfo>(&PSVInfo->getInfo())) {
-        auto ShaderKind = Container.getShaderKind();
+        std::optional<uint16_t> ShaderKind = Container.getShaderKind();
         if (!ShaderKind)
           break;
         NewPart.Info = DXContainerYAML::PSVInfo(P, *ShaderKind);

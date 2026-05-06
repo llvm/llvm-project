@@ -177,9 +177,8 @@ Error DXContainer::parsePartOffsets() {
     StringRef PartData = Data.getBuffer().substr(PartDataStart, PartSize);
     LastOffset = PartOffset + PartSize;
     switch (PT) {
-    case dxbc::PartType::ILDB:
-      [[fallthrough]];
     case dxbc::PartType::DXIL:
+    case dxbc::PartType::ILDB:
       if (Error Err = parseDXILHeader(PT, PartData))
         return Err;
       break;
@@ -224,7 +223,7 @@ Error DXContainer::parsePartOffsets() {
   // Fully parsing the PSVInfo requires knowing the shader kind which we read
   // out of the program header in the DXIL part.
   if (PSVInfo) {
-    auto ShaderKind = getShaderKind();
+    std::optional<uint16_t> ShaderKind = getShaderKind();
     if (!ShaderKind)
       return parseFailed("Cannot fully parse pipeline state validation "
                          "information without DXIL or ILDB part");
