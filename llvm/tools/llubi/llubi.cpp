@@ -86,8 +86,8 @@ static cl::opt<bool>
 
 static cl::opt<bool>
     FuseMultiplyAdd("fuse-multiply-add",
-                  cl::desc("Fuse floating-point multiply add operation"),
-                  cl::init(false), cl::cat(InterpreterCategory));
+                    cl::desc("Fuse floating-point multiply add operation"),
+                    cl::init(false), cl::cat(InterpreterCategory));
 
 cl::opt<ubi::UndefValueBehavior> UndefBehavior(
     "", cl::desc("Choose undef value behavior:"),
