@@ -27,8 +27,8 @@ extern const inline uint32_t __oclc_ABI_version = 500;
 #endif
 
 static bool isInLastWarp() {
-  uint32_t MainTId = (mapping::getNumberOfThreadsInBlock() - 1) &
-                     ~(mapping::getWarpSize() - 1);
+  uint32_t MainTId = utils::alignDown(mapping::getNumberOfThreadsInBlock() - 1,
+                                      mapping::getWarpSize());
   return mapping::getThreadIdInBlock() == MainTId;
 }
 
@@ -131,8 +131,8 @@ uint32_t mapping::getBlockIdInKernel(int32_t Dim) {
 }
 
 uint32_t mapping::getNumberOfWarpsInBlock() {
-  return (mapping::getNumberOfThreadsInBlock() + mapping::getWarpSize() - 1) /
-         mapping::getWarpSize();
+  return utils::alignUp(mapping::getNumberOfThreadsInBlock(),
+                        mapping::getWarpSize());
 }
 
 uint32_t mapping::getNumberOfBlocksInKernel(int32_t Dim) {

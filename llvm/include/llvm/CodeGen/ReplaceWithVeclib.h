@@ -21,7 +21,7 @@
 
 namespace llvm {
 class Function;
-struct ReplaceWithVeclib : public OptionalPassInfoMixin<ReplaceWithVeclib> {
+struct ReplaceWithVeclib : public RequiredPassInfoMixin<ReplaceWithVeclib> {
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 

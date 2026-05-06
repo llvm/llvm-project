@@ -653,6 +653,8 @@ Windows Support
 
 - Clang now defines the ``_MSVC_TRADITIONAL`` macro as ``1`` when emulating MSVC
   19.15 (Visual Studio 2017 version 15.8) and later. (#GH47114)
+- ``-fmacro-prefix-map=`` (``-ffile-prefix-map=``) now affects an anonymous namespace hash generation
+  for the MSVC targets and allows deterministic symbol mangling for reproducible builds.
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
