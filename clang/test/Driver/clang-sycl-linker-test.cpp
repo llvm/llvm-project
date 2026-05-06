@@ -3,13 +3,14 @@
 // REQUIRES: spirv-registered-target
 //
 // Test the dry run of a simple case to link two input files.
-// Also verifies the default split mode ("none").
+// The input has no SYCL kernels, so the default split mode ('source') produces
+// a single device image via the no-entry-point fallback.
 // RUN: %clangxx -emit-llvm -c -target spirv64 %s -o %t_1.bc
 // RUN: %clangxx -emit-llvm -c -target spirv64 %s -o %t_2.bc
 // RUN: clang-sycl-linker --dry-run -v -triple=spirv64 %t_1.bc %t_2.bc -o %t-spirv.out 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=SIMPLE-FO
 // SIMPLE-FO:      sycl-device-link: inputs: {{.*}}.bc, {{.*}}.bc  libfiles:  output: [[LLVMLINKOUT:.*]].bc
-// SIMPLE-FO-NEXT: sycl-module-split: input: [[LLVMLINKOUT]].bc, output: [[LLVMLINKOUT]].bc, mode: none
+// SIMPLE-FO-NEXT: sycl-module-split: input: [[LLVMLINKOUT]].bc, output: [[LLVMLINKOUT]].bc, mode: source
 // SIMPLE-FO-NEXT: LLVM backend: input: [[LLVMLINKOUT]].bc, output: {{.*}}_0.spv
 //
 // Test that IMG_SPIRV image kind is set for non-AOT compilation.
@@ -17,13 +18,14 @@
 // IMAGE-KIND-SPIRV: kind            spir-v
 //
 // Test the dry run of a simple case with device library files specified.
+// No kernels in input; default split mode ('source') produces a single image.
 // RUN: mkdir -p %t.dir
 // RUN: touch %t.dir/lib1.bc
 // RUN: touch %t.dir/lib2.bc
 // RUN: clang-sycl-linker --dry-run -v -triple=spirv64 %t_1.bc %t_2.bc --library-path=%t.dir --device-libs=lib1.bc,lib2.bc -o a.spv 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=DEVLIBS
 // DEVLIBS:      sycl-device-link: inputs: {{.*}}.bc  libfiles: {{.*}}lib1.bc, {{.*}}lib2.bc  output: [[LLVMLINKOUT:.*]].bc
-// DEVLIBS-NEXT: sycl-module-split: input: [[LLVMLINKOUT]].bc, output: [[LLVMLINKOUT]].bc, mode: none
+// DEVLIBS-NEXT: sycl-module-split: input: [[LLVMLINKOUT]].bc, output: [[LLVMLINKOUT]].bc, mode: source
 // DEVLIBS-NEXT: LLVM backend: input: [[LLVMLINKOUT]].bc, output: a_0.spv
 //
 // Test a simple case with a random file (not bitcode) as input.
@@ -41,11 +43,12 @@
 // DEVLIBSERR2: '{{.*}}lib3.bc' SYCL device library file is not found
 //
 // Test AOT compilation for an Intel GPU.
+// No kernels in input; default split mode ('source') produces a single image.
 // RUN: clang-sycl-linker --dry-run -v -triple=spirv64 -arch=bmg_g21 %t_1.bc %t_2.bc -o %t-aot-gpu.out 2>&1 \
 // RUN:     --ocloc-options="-a -b" \
 // RUN:   | FileCheck %s --check-prefix=AOT-INTEL-GPU
 // AOT-INTEL-GPU:      sycl-device-link: inputs: {{.*}}.bc, {{.*}}.bc libfiles: output: [[LLVMLINKOUT:.*]].bc
-// AOT-INTEL-GPU-NEXT: sycl-module-split: input: [[LLVMLINKOUT]].bc, output: [[LLVMLINKOUT]].bc, mode: none
+// AOT-INTEL-GPU-NEXT: sycl-module-split: input: [[LLVMLINKOUT]].bc, output: [[LLVMLINKOUT]].bc, mode: source
 // AOT-INTEL-GPU-NEXT: LLVM backend: input: [[LLVMLINKOUT]].bc, output: [[SPIRVTRANSLATIONOUT:.*]]_0.spv
 // AOT-INTEL-GPU-NEXT: "{{.*}}ocloc{{.*}}" {{.*}}-device bmg_g21 -a -b {{.*}}-output [[SPIRVTRANSLATIONOUT]]_0.out -file [[SPIRVTRANSLATIONOUT]]_0.spv
 //
@@ -54,11 +57,12 @@
 // IMAGE-KIND-OBJECT: kind            elf
 //
 // Test AOT compilation for an Intel CPU.
+// No kernels in input; default split mode ('source') produces a single image.
 // RUN: clang-sycl-linker --dry-run -v -triple=spirv64 -arch=graniterapids %t_1.bc %t_2.bc -o %t-aot-cpu.out 2>&1 \
 // RUN:     --opencl-aot-options="-a -b" \
 // RUN:   | FileCheck %s --check-prefix=AOT-INTEL-CPU
 // AOT-INTEL-CPU:      sycl-device-link: inputs: {{.*}}.bc, {{.*}}.bc libfiles: output: [[LLVMLINKOUT:.*]].bc
-// AOT-INTEL-CPU-NEXT: sycl-module-split: input: [[LLVMLINKOUT]].bc, output: [[LLVMLINKOUT]].bc, mode: none
+// AOT-INTEL-CPU-NEXT: sycl-module-split: input: [[LLVMLINKOUT]].bc, output: [[LLVMLINKOUT]].bc, mode: source
 // AOT-INTEL-CPU-NEXT: LLVM backend: input: [[LLVMLINKOUT]].bc, output: [[SPIRVTRANSLATIONOUT:.*]]_0.spv
 // AOT-INTEL-CPU-NEXT: "{{.*}}opencl-aot{{.*}}" {{.*}}--device=cpu -a -b {{.*}}-o [[SPIRVTRANSLATIONOUT]]_0.out [[SPIRVTRANSLATIONOUT]]_0.spv
 //
@@ -97,3 +101,21 @@
 // RUN: not clang-sycl-linker --dry-run -triple=spirv64 --module-split-mode=bogus %t_1.bc -o a.out 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=SPLIT-INVALID
 // SPLIT-INVALID: module-split-mode value isn't recognized: bogus
+//
+// Test per-TU split: two kernels with different sycl-module-id values produce
+// two device images.
+// RUN: llvm-as %S/Inputs/SYCL/two-modules.ll -o %t-tu.bc
+// RUN: clang-sycl-linker --dry-run -v -triple=spirv64 --module-split-mode=source %t-tu.bc -o %t-src.out 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=SPLIT-SRC
+// SPLIT-SRC:      sycl-device-link: inputs: {{.*}}.bc  libfiles:  output: [[LLVMLINKOUT:.*]].bc
+// SPLIT-SRC-NEXT: sycl-module-split: input: [[LLVMLINKOUT]].bc, output: [[S0:.*]].bc, [[S1:.*]].bc, mode: source
+// SPLIT-SRC-NEXT: LLVM backend: input: [[S0]].bc, output: {{.*}}_0.spv
+// SPLIT-SRC-NEXT: LLVM backend: input: [[S1]].bc, output: {{.*}}_1.spv
+//
+// Test that sycl_external functions are not treated as entry points: a kernel
+// from TU1 and a sycl_external function from TU2 produce a single image,
+// since only the kernel is an entry point.
+// RUN: llvm-as %S/Inputs/SYCL/external-fn.ll -o %t-ext.bc
+// RUN: clang-sycl-linker --dry-run -v -triple=spirv64 --module-split-mode=source %t-ext.bc -o %t-ext.out 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=SPLIT-EXT-DEFAULT
+// SPLIT-EXT-DEFAULT: sycl-module-split: input: {{.*}}.bc, output: [[S0:.*]].bc, mode: source
