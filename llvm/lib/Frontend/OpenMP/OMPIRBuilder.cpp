@@ -2037,9 +2037,19 @@ void OpenMPIRBuilder::createTaskwait(const LocationDescription &Loc,
     return;
 
   if (Dependencies.size()) {
+    Builder.SetInsertPoint(
+        &Builder.GetInsertBlock()->getParent()->getEntryBlock());
+
+    Value *DepArray = nullptr;
+    Type *DepArrayTy = ArrayType::get(DependInfo, Dependencies.size());
+    DepArray = Builder.CreateAlloca(DepArrayTy, nullptr, ".dep.arr.addr");
+    for (const auto &[DepIdx, Dep] : enumerate(Dependencies)) {
+      Value *Base =
+          Builder.CreateConstInBoundsGEP2_64(DepArrayTy, DepArray, 0, DepIdx);
+      this->emitTaskDependency(Builder, Base, Dep);
+    }
     uint32_t SrcLocStrSize;
     Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);
-    Value *DepArray = emitTaskDependencies(*this, Dependencies);
     Value *Ident = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
     Value *Args[] = {
         Ident,
