@@ -388,11 +388,17 @@ def : InstRW<[C1NanoWrite<4, C1NanoUnitPAC>], (instrs XPACD, XPACI, XPACLRI)>;
 // Miscellaneous data-processing instructions
 // -----------------------------------------------------------------------------
 
+// Convert floating-point condition flags
+def : InstRW<[C1NanoMC2Write<1, 2, C1NanoUnitALU>], (instregex "^(AX|XA)FLAG")>;
+
 // Flag set instructions
 def : InstRW<[C1NanoMC2Write<2, 2, C1NanoUnitALU>], (instregex "^SETF(8|16)")>;
 
 // Flag manipulation instructions, rotate and select
-def : InstRW<[C1NanoMC2Write<1, 1, C1NanoUnitALU>], (instregex "^RMIF")>;
+def : InstRW<[C1NanoMC2Write<1, 1, C1NanoUnitALU>], (instrs RMIF)>;
+
+// Flag manipulation instructions, invert carry
+def : InstRW<[C1NanoMC2Write<1, 2, C1NanoUnitALU>], (instrs CFINV)>;
 
 // Load instructions
 // -----------------------------------------------------------------------------
@@ -870,7 +876,7 @@ def : InstRW<[C1NanoMCWrite<9, 7, C1NanoUnitVMC>], (instregex "^SHA512(H|H2|SU0|
 // Crypto SHA3 ops
 def : InstRW<[C1NanoWrite<3, C1NanoUnitVALU>], (instrs BCAX, EOR3)>;
 def : InstRW<[C1NanoWrite<4, C1NanoUnitVALU>], (instrs XAR)>;
-def : InstRW<[C1NanoMC2Write<3, 2, C1NanoUnitVALU>], (instrs RAX1)>;
+def : InstRW<[C1NanoMCWrite<3, 1, C1NanoUnit2VMC>], (instrs RAX1)>;
 
 
 // Crypto SM3 ops

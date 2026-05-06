@@ -20,9 +20,9 @@ xaflag
 # CHECK-NEXT:  1      2     2.00                  U     setf8	w1
 # CHECK-NEXT:  1      2     2.00                  U     setf16	w1
 # CHECK-NEXT:  1      1     1.00                  U     rmif	x0, #0, #0
-# CHECK-NEXT:  1      1     1.00                  U     cfinv
-# CHECK-NEXT:  1      1     1.00                  U     axflag
-# CHECK-NEXT:  1      1     1.00                  U     xaflag
+# CHECK-NEXT:  1      1     2.00                  U     cfinv
+# CHECK-NEXT:  1      1     2.00                  U     axflag
+# CHECK-NEXT:  1      1     2.00                  U     xaflag
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - C1NanoUnitALU0
@@ -41,13 +41,13 @@ xaflag
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
-# CHECK-NEXT: 5.00   5.00   3.00    -      -      -      -      -      -      -      -      -      -
+# CHECK-NEXT: 11.00  11.00   -      -      -      -      -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
 # CHECK-NEXT: 2.00   2.00    -      -      -      -      -      -      -      -      -      -      -     setf8	w1
 # CHECK-NEXT: 2.00   2.00    -      -      -      -      -      -      -      -      -      -      -     setf16	w1
 # CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -      -      -      -      -      -     rmif	x0, #0, #0
-# CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -     cfinv
-# CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -     axflag
-# CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -     xaflag
+# CHECK-NEXT: 2.00   2.00    -      -      -      -      -      -      -      -      -      -      -     cfinv
+# CHECK-NEXT: 2.00   2.00    -      -      -      -      -      -      -      -      -      -      -     axflag
+# CHECK-NEXT: 2.00   2.00    -      -      -      -      -      -      -      -      -      -      -     xaflag

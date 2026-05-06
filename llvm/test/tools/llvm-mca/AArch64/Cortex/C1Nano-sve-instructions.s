@@ -586,9 +586,9 @@
 # CHECK-NEXT:  1      4     0.50                        faddp	z0.h, p0/m, z0.h, z1.h
 # CHECK-NEXT:  1      4     0.50                        faddp	z29.s, p3/m, z29.s, z30.s
 # CHECK-NEXT:  1      4     0.50                        faddp	z31.d, p7/m, z31.d, z30.d
-# CHECK-NEXT:  1      4     2.00                        faddv	d0, p7, z31.d
+# CHECK-NEXT:  1      4     0.50                        faddv	d0, p7, z31.d
 # CHECK-NEXT:  1      12    5.00                        faddv	h0, p7, z31.h
-# CHECK-NEXT:  1      8     3.00                        faddv	s0, p7, z31.s
+# CHECK-NEXT:  1      8     2.50                        faddv	s0, p7, z31.s
 # CHECK-NEXT:  1      4     0.50                        fcadd	z0.d, p0/m, z0.d, z0.d, #90
 # CHECK-NEXT:  1      4     0.50                        fcadd	z0.h, p0/m, z0.h, z0.h, #90
 # CHECK-NEXT:  1      4     0.50                        fcadd	z0.s, p0/m, z0.s, z0.s, #90
@@ -3442,7 +3442,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
-# CHECK-NEXT: 437.00 54.00  9.00    -     221.00 2425.00  -     -     1177.50 1258.50 215.00 215.00 676.00
+# CHECK-NEXT: 437.00 54.00  9.00    -     221.00 2425.00  -     -     1178.50 1258.50 215.00 215.00 676.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
@@ -4022,9 +4022,9 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     faddp	z0.h, p0/m, z0.h, z1.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     faddp	z29.s, p3/m, z29.s, z30.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     faddp	z31.d, p7/m, z31.d, z30.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     2.00    -      -      -      -     faddv	d0, p7, z31.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -     faddv	d0, p7, z31.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     5.00    -      -      -      -     faddv	h0, p7, z31.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     3.00    -      -      -      -     faddv	s0, p7, z31.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     5.00    -      -      -      -     faddv	s0, p7, z31.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     fcadd	z0.d, p0/m, z0.d, z0.d, #90
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     fcadd	z0.h, p0/m, z0.h, z0.h, #90
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     fcadd	z0.s, p0/m, z0.s, z0.s, #90
