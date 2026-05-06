@@ -2839,15 +2839,6 @@ static int CompareCudaMatchingDistance(
   return 0;
 }
 
-static bool IsCudaAddressSpaceAgnostic(
-    const characteristics::DummyDataObject &dummy) {
-  return !dummy.cudaDataAttr && dummy.type.type().IsAssumedType() &&
-      (dummy.type.attrs().test(
-           characteristics::TypeAndShape::Attr::AssumedSize) ||
-          dummy.type.attrs().test(
-              characteristics::TypeAndShape::Attr::AssumedRank));
-}
-
 // Compute the matching distance as described in section 3.2.3 of the CUDA
 // Fortran references.
 static int GetMatchingDistance(const common::LanguageFeatureControl &features,
@@ -2889,7 +2880,7 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
                     [&](const characteristics::DummyDataObject &object) {
                       dummyDataAttr = object.cudaDataAttr;
                       dummyIsCudaAddressSpaceAgnostic =
-                          IsCudaAddressSpaceAgnostic(object);
+                          semantics::IsCUDAAddressSpaceAgnostic(object);
                     },
                     [&](const auto &) {},
                 },
