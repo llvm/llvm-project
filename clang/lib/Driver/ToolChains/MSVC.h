@@ -114,6 +114,7 @@ public:
                      const llvm::opt::ArgList &Args) const override;
 
   std::string ComputeEffectiveClangTriple(const llvm::opt::ArgList &Args,
+                                          llvm::StringRef BoundArch,
                                           types::ID InputType) const override;
   SanitizerMask getSupportedSanitizers() const override;
 

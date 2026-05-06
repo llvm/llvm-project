@@ -18,6 +18,7 @@ import sys
 import threading
 import time
 from enum import Enum
+from typing import Optional
 
 from dex.debugger.DebuggerBase import DebuggerBase, watch_is_active
 from dex.dextIR import FrameIR, LocIR, StepIR, StopReason, ValueIR
@@ -51,9 +52,11 @@ class DAPMessageLogger:
         self.out_handle = None
         self.open = False
         self.lock = threading.Lock()
+        self.start_time: Optional[float] = None
 
     def _custom_enter(self):
         self.open = True
+        self.start_time = time.time()
         if self.log_file is None:
             return
         if self.log_file == "-":
@@ -94,6 +97,13 @@ class DAPMessageLogger:
 
     def write_message(self, message: dict, incoming: bool):
         prefix = self.prefix_recv if incoming else self.prefix_send
+        if self.start_time is not None:
+            message_time = time.time() - self.start_time
+            minutes = int(message_time / 60)
+            seconds = int(message_time % 60)
+            milliseconds = int((message_time % 1) * 1000)
+            prefix += f" {minutes}:{seconds:02d}:{milliseconds:03d}"
+
         # ANSI escape codes get butchered by json.dumps(), so we fix them up here.
         message_str = json.dumps(
             self._colorize_dap_message(message), indent=self.indent

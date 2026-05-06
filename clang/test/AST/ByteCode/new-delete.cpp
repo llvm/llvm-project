@@ -643,6 +643,9 @@ namespace std {
                                     // both-note {{used to delete a null pointer}} \
                                     // both-note {{delete of pointer '&no_deallocate_nonalloc' that does not point to a heap-allocated object}}
     }
+    constexpr void deallocate(void *p, size_t N) {
+       __builtin_operator_delete(p, sizeof(T) * N);
+     }
   };
   template<typename T, typename ...Args>
   constexpr void construct_at(void *p, Args &&...args) { // #construct
@@ -767,6 +770,13 @@ namespace OperatorNewDelete {
                                                                                         // both-note {{in call}}
 
   static_assert((std::allocator<float>().deallocate(std::allocator<float>().allocate(10)), 1) == 1);
+
+  constexpr bool sizedDeallocate() {
+    int *p = std::allocator<int>().allocate(1);
+    std::allocator<int>().deallocate(p, 1);
+    return true;
+  }
+  static_assert(sizedDeallocate());
 }
 
 namespace Limits {

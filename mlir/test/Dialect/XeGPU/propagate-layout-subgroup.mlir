@@ -133,9 +133,9 @@ gpu.module @test {
     %tdesc_src = xegpu.create_nd_tdesc %src : memref<32x64xf32> -> !xegpu.tensor_desc<32x64xf32>
     %load = xegpu.load_nd %tdesc_src[0, 0] : !xegpu.tensor_desc<32x64xf32> -> vector<32x64xf32>
     %reduce = vector.multi_reduction <add>, %load, %cst [1] : vector<32x64xf32> to vector<32xf32>
-    %tdesc_dst = xegpu.create_nd_tdesc %dst : memref<32xf32> -> !xegpu.tensor_desc<32xf32, #xegpu.layout<sg_layout = [32], sg_data = [1]>>
+    %tdesc_dst = xegpu.create_nd_tdesc %dst : memref<32xf32> -> !xegpu.tensor_desc<32xf32>
     xegpu.store_nd %reduce, %tdesc_dst[0] <{layout = #xegpu.layout<sg_layout = [32], sg_data = [1]>}>
-      : vector<32xf32>, !xegpu.tensor_desc<32xf32, #xegpu.layout<sg_layout = [32], sg_data = [1]>>
+      : vector<32xf32>, !xegpu.tensor_desc<32xf32>
     gpu.return
   }
 }

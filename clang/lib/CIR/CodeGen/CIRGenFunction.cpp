@@ -1035,8 +1035,14 @@ clang::QualType CIRGenFunction::buildFunctionArgList(clang::GlobalDecl gd,
   if (passedParams) {
     for (auto *param : fd->parameters()) {
       args.push_back(param);
-      if (param->hasAttr<PassObjectSizeAttr>())
-        cgm.errorNYI(param->getSourceRange(), "pass-object-size attribute");
+      if (!param->hasAttr<PassObjectSizeAttr>())
+        continue;
+
+      auto *implicit = ImplicitParamDecl::Create(
+          getContext(), param->getDeclContext(), param->getLocation(),
+          /*Id=*/nullptr, getContext().getSizeType(), ImplicitParamKind::Other);
+      sizeArguments[param] = implicit;
+      args.push_back(implicit);
     }
   }
 

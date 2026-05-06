@@ -43,7 +43,7 @@ class EntityPointerLevel {
   // For unittests:
   friend EntityPointerLevel buildEntityPointerLevel(EntityId, unsigned);
 
-  EntityPointerLevel(std::pair<EntityId, unsigned> Pair)
+  explicit EntityPointerLevel(std::pair<EntityId, unsigned> Pair)
       : Entity(Pair.first), PointerLevel(Pair.second) {}
 
 public:

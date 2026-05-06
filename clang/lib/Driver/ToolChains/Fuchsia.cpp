@@ -331,8 +331,9 @@ Fuchsia::Fuchsia(const Driver &D, const llvm::Triple &Triple,
 }
 
 std::string Fuchsia::ComputeEffectiveClangTriple(const ArgList &Args,
+                                                 llvm::StringRef BoundArch,
                                                  types::ID InputType) const {
-  llvm::Triple Triple(ComputeLLVMTriple(Args, InputType));
+  llvm::Triple Triple(ComputeLLVMTriple(Args, BoundArch, InputType));
   return Triple.str();
 }
 

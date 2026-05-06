@@ -1187,10 +1187,8 @@ Constant *OpenMPIRBuilder::getOrCreateSrcLocStr(DebugLoc DL,
   DILocation *DIL = DL.get();
   if (!DIL)
     return getOrCreateDefaultSrcLocStr(SrcLocStrSize);
-  StringRef FileName = M.getName();
-  if (DIFile *DIF = DIL->getFile())
-    if (std::optional<StringRef> Source = DIF->getSource())
-      FileName = *Source;
+  StringRef FileName =
+      !DIL->getFilename().empty() ? DIL->getFilename() : M.getName();
   StringRef Function = DIL->getScope()->getSubprogram()->getName();
   if (Function.empty() && F)
     Function = F->getName();

@@ -19,6 +19,7 @@
 
 #include "src/unistd/close.h"
 
+#include "src/__support/CPP/scope.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/LibcTest.h"
@@ -36,6 +37,10 @@ TEST_F(LlvmLibcSendMsgRecvMsgTest, SucceedsWithSocketPair) {
 
   ASSERT_THAT(LIBC_NAMESPACE::socketpair(AF_UNIX, SOCK_STREAM, 0, sockpair),
               Succeeds(0));
+  LIBC_NAMESPACE::cpp::scope_exit close_sockpair([&] {
+    ASSERT_THAT(LIBC_NAMESPACE::close(sockpair[0]), Succeeds(0));
+    ASSERT_THAT(LIBC_NAMESPACE::close(sockpair[1]), Succeeds(0));
+  });
 
   iovec send_msg_text;
   send_msg_text.iov_base =
@@ -73,10 +78,6 @@ TEST_F(LlvmLibcSendMsgRecvMsgTest, SucceedsWithSocketPair) {
               Succeeds(static_cast<ssize_t>(MESSAGE_LEN)));
 
   ASSERT_STREQ(buffer, TEST_MESSAGE);
-
-  // close both ends of the socket
-  ASSERT_THAT(LIBC_NAMESPACE::close(sockpair[0]), Succeeds(0));
-  ASSERT_THAT(LIBC_NAMESPACE::close(sockpair[1]), Succeeds(0));
 }
 
 TEST_F(LlvmLibcSendMsgRecvMsgTest, CmsgDetails) {

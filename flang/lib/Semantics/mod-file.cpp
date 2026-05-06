@@ -664,7 +664,8 @@ void ModFileWriter::PutDECStructure(
 
 // Attributes that may be in a subprogram prefix
 static const Attrs subprogramPrefixAttrs{Attr::ELEMENTAL, Attr::IMPURE,
-    Attr::MODULE, Attr::NON_RECURSIVE, Attr::PURE, Attr::RECURSIVE};
+    Attr::MODULE, Attr::NON_RECURSIVE, Attr::PURE, Attr::SIMPLE,
+    Attr::RECURSIVE};
 
 static void PutOpenACCDeviceTypeRoutineInfo(
     llvm::raw_ostream &os, const OpenACCRoutineDeviceTypeInfo &info) {

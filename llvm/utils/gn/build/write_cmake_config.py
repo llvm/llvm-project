@@ -109,7 +109,7 @@ def main():
         return 1
 
     def read(filename):
-        with open(args.output) as f:
+        with open(filename) as f:
             return f.read()
 
     if not os.path.exists(args.output) or read(args.output) != output:

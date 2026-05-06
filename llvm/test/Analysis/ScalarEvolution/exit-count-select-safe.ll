@@ -433,19 +433,19 @@ define i32 @computeSCEVAtScope(i32 %d.0) {
 ; CHECK-LABEL: 'computeSCEVAtScope'
 ; CHECK-NEXT:  Classifying expressions for: @computeSCEVAtScope
 ; CHECK-NEXT:    %d.1 = phi i32 [ %inc, %for.body ], [ %d.0, %for.cond.preheader ]
-; CHECK-NEXT:    --> {%d.0,+,1}<nsw><%for.cond> U: full-set S: full-set Exits: 0 LoopDispositions: { %for.cond: Computable, %while.cond: Variant }
+; CHECK-NEXT:    --> {%d.0,+,1}<nsw><%for.cond> U: full-set S: full-set Exits: 0 LoopDispositions: { %for.cond: Computable, %while.cond: Uniform }
 ; CHECK-NEXT:    %e.1 = phi i32 [ %inc3, %for.body ], [ %d.0, %for.cond.preheader ]
-; CHECK-NEXT:    --> {%d.0,+,1}<nsw><%for.cond> U: full-set S: full-set Exits: 0 LoopDispositions: { %for.cond: Computable, %while.cond: Variant }
+; CHECK-NEXT:    --> {%d.0,+,1}<nsw><%for.cond> U: full-set S: full-set Exits: 0 LoopDispositions: { %for.cond: Computable, %while.cond: Uniform }
 ; CHECK-NEXT:    %0 = select i1 %tobool1, i1 %tobool2, i1 false
 ; CHECK-NEXT:    --> (%tobool1 umin_seq %tobool2) U: full-set S: full-set Exits: false LoopDispositions: { %for.cond: Variant, %while.cond: Variant }
 ; CHECK-NEXT:    %inc = add nsw i32 %d.1, 1
-; CHECK-NEXT:    --> {(1 + %d.0),+,1}<nw><%for.cond> U: full-set S: full-set Exits: 1 LoopDispositions: { %for.cond: Computable, %while.cond: Variant }
+; CHECK-NEXT:    --> {(1 + %d.0),+,1}<nw><%for.cond> U: full-set S: full-set Exits: 1 LoopDispositions: { %for.cond: Computable, %while.cond: Uniform }
 ; CHECK-NEXT:    %inc3 = add nsw i32 %e.1, 1
-; CHECK-NEXT:    --> {(1 + %d.0),+,1}<nw><%for.cond> U: full-set S: full-set Exits: 1 LoopDispositions: { %for.cond: Computable, %while.cond: Variant }
+; CHECK-NEXT:    --> {(1 + %d.0),+,1}<nw><%for.cond> U: full-set S: full-set Exits: 1 LoopDispositions: { %for.cond: Computable, %while.cond: Uniform }
 ; CHECK-NEXT:    %f.1 = phi i32 [ %inc8, %for.body5 ], [ 0, %for.cond4.preheader ]
-; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%for.cond4> U: [0,1) S: [0,1) Exits: 0 LoopDispositions: { %for.cond4: Computable, %while.cond: Variant }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%for.cond4> U: [0,1) S: [0,1) Exits: 0 LoopDispositions: { %for.cond4: Computable, %while.cond: Uniform }
 ; CHECK-NEXT:    %inc8 = add i32 %f.1, 1
-; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%for.cond4> U: [1,2) S: [1,2) Exits: 1 LoopDispositions: { %for.cond4: Computable, %while.cond: Variant }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%for.cond4> U: [1,2) S: [1,2) Exits: 1 LoopDispositions: { %for.cond4: Computable, %while.cond: Uniform }
 ; CHECK-NEXT:  Determining loop execution counts for: @computeSCEVAtScope
 ; CHECK-NEXT:  Loop %for.cond: backedge-taken count is (-1 * %d.0)
 ; CHECK-NEXT:  Loop %for.cond: constant max backedge-taken count is i32 -1

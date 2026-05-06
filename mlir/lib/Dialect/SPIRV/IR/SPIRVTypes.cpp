@@ -116,9 +116,9 @@ public:
           for (Type elementType : concreteType.getElementTypes())
             add(elementType);
         })
-        .Case<SamplerType>([](auto) { /* no capabilities */ })
-        .Case<NamedBarrierType>(
-            [this](auto) { pushCaps<Capability::NamedBarrier>(); })
+        .Case([](SamplerType) { /* no capabilities */ })
+        .Case(
+            [this](NamedBarrierType) { pushCaps<Capability::NamedBarrier>(); })
         .DefaultUnreachable("Unhandled type");
   }
 

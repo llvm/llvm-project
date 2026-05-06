@@ -338,11 +338,15 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
   auto BitfieldConstruct = cxxConstructorDecl(hasDescendant(cxxCtorInitializer(
       withInitializer(equalsBoundNode("implicitCastFromBool")),
       forField(hasBitWidth(1)))));
+  auto BoolTernaryCondition = conditionalOperator(
+      hasCondition(equalsBoundNode("implicitCastFromBool")));
   Finder->addMatcher(
       traverse(
           TK_AsIs,
           implicitCastExpr(
-              ImplicitCastFromBool, unless(ExceptionCases),
+              ImplicitCastFromBool,
+              implicitCastExpr().bind("implicitCastFromBool"),
+              unless(ExceptionCases),
               // Exclude comparisons of bools, as they are always cast to
               // integers in such context:
               //   bool_expr_a == bool_expr_b
@@ -353,7 +357,9 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
               // Exclude logical operators in C
               unless(allOf(isC(), hasParent(binaryOperator(
                                       hasAnyOperatorName("&&", "||"))))),
-              implicitCastExpr().bind("implicitCastFromBool"),
+              // Exclude bools used as ternary operator conditions in C
+              unless(allOf(isC(), hasCastKind(CK_IntegralCast),
+                           hasParent(BoolTernaryCondition))),
               unless(hasParent(BitfieldConstruct)),
               // Check also for nested casts, for example: bool -> int -> float.
               optionally(

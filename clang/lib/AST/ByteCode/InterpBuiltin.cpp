@@ -1630,6 +1630,14 @@ static bool interp__builtin_operator_delete(InterpState &S, CodePtr OpPC,
   const Expr *Source = nullptr;
   const Block *BlockToDelete = nullptr;
 
+  unsigned NumArgs = Call->getNumArgs();
+  assert(NumArgs >= 1);
+
+  // Args are pushed in source order. The trailing sized/aligned delete
+  // operands are above the pointer on the stack.
+  for (unsigned I = NumArgs - 1; I != 0; --I)
+    discard(S.Stk, *S.getContext().classify(Call->getArg(I)));
+
   if (S.checkingPotentialConstantExpression()) {
     S.Stk.discard<Pointer>();
     return false;

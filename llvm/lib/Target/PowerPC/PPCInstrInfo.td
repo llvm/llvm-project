@@ -2011,18 +2011,36 @@ def : Pat<(int_ppc_dcbtst_with_hint xoaddr:$dst, i32:$TH),
 // clean this up in PPCMIPeephole with calls to
 // PPCInstrInfo::convertToImmediateForm() but we should probably not emit them
 // in the first place.
+
+// For each operation, 2 pseudo instructions are generated. Which one is matched
+// depends on the size and and if the word-part feature is available.
+// For example for operation AND, ATOMIC_LOAD_AND_NOWP is only matched for sizes
+// 8 and 16 bit if the word part feature is not available. In all other cases,
+// ATOMIC_LOAD_AND is matched.
 foreach op = ["add", "sub", "and", "or", "xor", "nand", "min", "max", "umax",
               "umin"] in {
-  foreach bitsz = [8, 16, 32] in {
-    defvar pseudo = "ATOMIC_LOAD_"#!toupper(op)#"_I"#bitsz;
-    defvar pat = !cast<PatFrag>(!tolower(pseudo));
-    let Defs = [CR0] in
-      def pseudo : PPCCustomInserterPseudo<
-          (outs gprc:$dst), (ins memrr:$ptr, i32imm:$sz, gprc:$incr),
-          "#" # NAME,[]>;
-    def : Pat<(i32 (pat ForceXForm:$ptr, gprc:$incr)),
-            (!cast<Instruction>(pseudo) memrr:$ptr, !div(bitsz, 8), gprc:$incr)>;
+  defvar atomic_load = "ATOMIC_LOAD_"#!toupper(op);
+  defvar atomic_load_nowp = "ATOMIC_LOAD_"#!toupper(op)#"_NOWP";
+  let Defs = [CR0] in {
+    def atomic_load : PPCCustomInserterPseudo<
+        (outs gprc:$dst), (ins memrr:$ptr, i32imm:$sz, gprc:$incr),
+        "#" # NAME,[]>;
+    def atomic_load_nowp : PPCCustomInserterPseudo<
+        (outs gprc:$dst), (ins memrr:$ptr, i32imm:$sz, gprc:$incr),
+        "#" # NAME,[]>;
   }
+
+  foreach bitsz = [8, 16] in {
+    defvar pat = !cast<PatFrag>(!tolower(atomic_load)#"_i"#bitsz);
+    def : Pat<(i32 (pat ForceXForm:$ptr, gprc:$incr)),
+            (!cast<Instruction>(atomic_load) memrr:$ptr, !div(bitsz, 8), gprc:$incr)>,
+            Requires<[HasPartwordAtomics]>;
+    def : Pat<(i32 (pat ForceXForm:$ptr, gprc:$incr)),
+            (!cast<Instruction>(atomic_load_nowp) memrr:$ptr, !div(bitsz, 8), gprc:$incr)>;
+  }
+  defvar pat = !cast<PatFrag>(!tolower(atomic_load)#"_i32");
+  def : Pat<(i32 (pat ForceXForm:$ptr, gprc:$incr)),
+          (!cast<Instruction>(atomic_load) memrr:$ptr, 4, gprc:$incr)>;
 }
 
 foreach bitsz = [8, 16, 32] in {
@@ -2036,16 +2054,24 @@ foreach bitsz = [8, 16, 32] in {
           (!cast<Instruction>(pseudo) memrr:$ptr, gprc:$old, gprc:$new)>;
 }
 
-foreach bitsz = [8, 16, 32] in {
-  defvar pseudo = "ATOMIC_SWAP_I"#bitsz;
-  defvar pat = !cast<PatFrag>(!tolower(pseudo));
-  let Defs = [CR0] in
-    def pseudo : PPCCustomInserterPseudo<
+let Defs = [CR0] in {
+  def ATOMIC_SWAP : PPCCustomInserterPseudo<
       (outs gprc:$dst), (ins memrr:$ptr, i32imm:$sz, gprc:$new),
       "#" # NAME,[]>;
-  def : Pat<(i32 (pat ForceXForm:$ptr, gprc:$new)),
-          (!cast<Instruction>(pseudo) memrr:$ptr, !div(bitsz, 8), gprc:$new)>;
+  def ATOMIC_SWAP_NOWP : PPCCustomInserterPseudo<
+      (outs gprc:$dst), (ins memrr:$ptr, i32imm:$sz, gprc:$new),
+      "#" # NAME,[]>;
 }
+foreach bitsz = [8, 16] in {
+  defvar pat = !cast<PatFrag>("atomic_swap_i"#bitsz);
+  def : Pat<(i32 (pat ForceXForm:$ptr, gprc:$new)),
+          (ATOMIC_SWAP memrr:$ptr, !div(bitsz, 8), gprc:$new)>,
+           Requires<[HasPartwordAtomics]>;
+  def : Pat<(i32 (pat ForceXForm:$ptr, gprc:$new)),
+          (ATOMIC_SWAP_NOWP memrr:$ptr, !div(bitsz, 8), gprc:$new)>;
+}
+def : Pat<(i32 (atomic_swap_i32 ForceXForm:$ptr, gprc:$new)),
+          (ATOMIC_SWAP memrr:$ptr, 4, gprc:$new)>;
 
 def : Pat<(PPCatomicCmpSwap_8 ForceXForm:$ptr, i32:$old, i32:$new),
         (ATOMIC_CMP_SWAP_I8 ForceXForm:$ptr, i32:$old, i32:$new)>;

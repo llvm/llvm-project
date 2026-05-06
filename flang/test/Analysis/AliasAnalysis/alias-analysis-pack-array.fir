@@ -16,10 +16,8 @@
 // CHECK-DAG: test1_x_repack(1)#0 <-> test1_x_orig(1)#0: MayAlias
 // CHECK-DAG: test1_y_repack(1)#0 <-> test1_y_orig(1)#0: MayAlias
 
-// Ideally, these should report MustAlias, but MayAlias
-// may work as well:
-// CHECK-DAG: test1_y_repack(1)#0 <-> test1_y_repack2(1)#0: MayAlias
-// CHECK-DAG: test1_x_repack(1)#0 <-> test1_x_repack2(1)#0: MayAlias
+// CHECK-DAG: test1_y_repack(1)#0 <-> test1_y_repack2(1)#0: MustAlias
+// CHECK-DAG: test1_x_repack(1)#0 <-> test1_x_repack2(1)#0: MustAlias
 
 
 func.func @_QFtest1(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"}, %arg1: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "y"}) {

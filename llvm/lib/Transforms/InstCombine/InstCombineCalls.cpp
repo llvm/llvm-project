@@ -3718,13 +3718,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (match(IIOperand,
               m_SpecificICmp(ICmpInst::ICMP_NE, m_Value(A), m_Zero())) &&
         A->getType()->isPointerTy()) {
-      if (auto *Replacement = buildAssumeFromKnowledge(
-              {RetainedKnowledge{Attribute::NonNull, 0, A}}, Next, &AC, &DT)) {
-
-        InsertNewInstBefore(Replacement, Next->getIterator());
-        AC.registerAssumption(Replacement);
-        return RemoveConditionFromAssume(II);
-      }
+      Builder.CreateNonnullAssumption(A);
+      return eraseInstFromFunction(*II);
     }
 
     // Convert alignment assume like:

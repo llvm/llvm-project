@@ -7841,7 +7841,7 @@ that provide transparent access to the pointed-to object. These include:
 
 * Dereference operators: ``operator*``, ``operator->``
 * Data access methods: ``data()``, ``c_str()``, ``get()``
-* Iterator methods: ``begin()``, ``end()``, ``rbegin()``, ``rend()``, ``cbegin()``, ``cend()``, ``crbegin()``, ``crend()``
+* Iterator operations: ``begin()``, ``end()``, ``rbegin()``, ``rend()``, ``cbegin()``, ``cend()``, ``crbegin()``, ``crend()``, ``operator+``, ``operator-``, ``operator++``, ``operator--``
 
 When these methods return pointers, view types, or references, the analysis treats them as
 transparently borrowing from the same object that the pointer itself borrows from,

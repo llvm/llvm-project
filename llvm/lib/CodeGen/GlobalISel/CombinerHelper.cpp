@@ -6914,9 +6914,13 @@ bool CombinerHelper::matchRepeatedFPDivisor(
   if (!MI.getFlag(MachineInstr::MIFlag::FmArcp))
     return false;
 
+  auto IsOne = [this](Register X) {
+    auto N0CFP = isConstantOrConstantSplatVectorFP(*MRI.getVRegDef(X), MRI);
+    return N0CFP && (N0CFP->isExactlyValue(1.0) || N0CFP->isExactlyValue(-1.0));
+  };
+
   // Skip if current node is a reciprocal/fneg-reciprocal.
-  auto N0CFP = isConstantOrConstantSplatVectorFP(*MRI.getVRegDef(X), MRI);
-  if (N0CFP && (N0CFP->isExactlyValue(1.0) || N0CFP->isExactlyValue(-1.0)))
+  if (IsOne(X))
     return false;
 
   // Exit early if the target does not want this transform or if there can't
@@ -6933,7 +6937,8 @@ bool CombinerHelper::matchRepeatedFPDivisor(
     if (&U == &MI || U.getParent() != MI.getParent())
       continue;
     if (U.getOpcode() == TargetOpcode::G_FDIV &&
-        U.getOperand(2).getReg() == Y && U.getOperand(1).getReg() != Y) {
+        U.getOperand(2).getReg() == Y && U.getOperand(1).getReg() != Y &&
+        !IsOne(U.getOperand(1).getReg())) {
       // This division is eligible for optimization only if global unsafe math
       // is enabled or if this division allows reciprocal formation.
       if (U.getFlag(MachineInstr::MIFlag::FmArcp)) {

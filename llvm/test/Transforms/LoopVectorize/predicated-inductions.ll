@@ -282,7 +282,137 @@ exit:
 }
 
 define i32 @predicated_iv_liveout_with_lai_preds(ptr %dst, ptr %src, i64 %stride, i64 %n) {
-; COMMON-LABEL: define i32 @predicated_iv_liveout_with_lai_preds(
+; CHECK-LABEL: define i32 @predicated_iv_liveout_with_lai_preds(
+; CHECK-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[STRIDE:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC]] to i64
+; CHECK-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
+; CHECK-NEXT:    [[SMAX3:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX3]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
+; CHECK:       [[VECTOR_SCEVCHECK]]:
+; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[SMAX]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i8
+; CHECK-NEXT:    [[MUL:%.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 9, i8 [[TMP1]])
+; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i8, i1 } [[MUL]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt i64 [[TMP0]], 255
+; CHECK-NEXT:    [[TMP3:%.*]] = or i1 [[MUL_OVERFLOW]], [[TMP2]]
+; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = or i1 [[TMP3]], [[IDENT_CHECK]]
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
+; CHECK:       [[VECTOR_MEMCHECK]]:
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[DST1]], [[SRC2]]
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP5]], 16
+; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[SMAX3]], 4
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX3]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[TMP6:%.*]] = trunc i64 [[N_VEC]] to i32
+; CHECK-NEXT:    [[TMP7:%.*]] = mul i32 [[TMP6]], 9
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP8]], align 4
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[INDEX]]
+; CHECK-NEXT:    store <4 x i32> [[WIDE_LOAD]], ptr [[TMP9]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[IND_ESCAPE:%.*]] = sub i32 [[TMP7]], 9
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[SMAX3]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL4:%.*]] = phi i32 [ [[TMP7]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[PRED_IV:%.*]] = phi i32 [ [[BC_RESUME_VAL4]], %[[SCALAR_PH]] ], [ [[PRED_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[PRED_IV]], 255
+; CHECK-NEXT:    [[PRED_NEXT]] = add nuw nsw i32 [[MASKED]], 9
+; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[IV]]
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[GEP_SRC]], align 4
+; CHECK-NEXT:    [[STRIDE_OFF:%.*]] = mul nsw i64 [[IV]], [[STRIDE]]
+; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[STRIDE_OFF]]
+; CHECK-NEXT:    store i32 [[VAL]], ptr [[GEP_DST]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[RESULT:%.*]] = phi i32 [ [[PRED_IV]], %[[LOOP]] ], [ [[IND_ESCAPE]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+; THRESHOLD0-LABEL: define i32 @predicated_iv_liveout_with_lai_preds(
+; THRESHOLD0-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[STRIDE:%.*]], i64 [[N:%.*]]) {
+; THRESHOLD0-NEXT:  [[ENTRY:.*]]:
+; THRESHOLD0-NEXT:    br label %[[LOOP:.*]]
+; THRESHOLD0:       [[LOOP]]:
+; THRESHOLD0-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; THRESHOLD0-NEXT:    [[PRED_IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[PRED_NEXT:%.*]], %[[LOOP]] ]
+; THRESHOLD0-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; THRESHOLD0-NEXT:    [[MASKED:%.*]] = and i32 [[PRED_IV]], 255
+; THRESHOLD0-NEXT:    [[PRED_NEXT]] = add nuw nsw i32 [[MASKED]], 9
+; THRESHOLD0-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[IV]]
+; THRESHOLD0-NEXT:    [[VAL:%.*]] = load i32, ptr [[GEP_SRC]], align 4
+; THRESHOLD0-NEXT:    [[STRIDE_OFF:%.*]] = mul nsw i64 [[IV]], [[STRIDE]]
+; THRESHOLD0-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[STRIDE_OFF]]
+; THRESHOLD0-NEXT:    store i32 [[VAL]], ptr [[GEP_DST]], align 4
+; THRESHOLD0-NEXT:    [[CMP:%.*]] = icmp slt i64 [[IV_NEXT]], [[N]]
+; THRESHOLD0-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
+; THRESHOLD0:       [[EXIT]]:
+; THRESHOLD0-NEXT:    [[RESULT:%.*]] = phi i32 [ [[PRED_IV]], %[[LOOP]] ]
+; THRESHOLD0-NEXT:    ret i32 [[RESULT]]
+;
+; THRESHOLD1-LABEL: define i32 @predicated_iv_liveout_with_lai_preds(
+; THRESHOLD1-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[STRIDE:%.*]], i64 [[N:%.*]]) {
+; THRESHOLD1-NEXT:  [[ENTRY:.*]]:
+; THRESHOLD1-NEXT:    br label %[[LOOP:.*]]
+; THRESHOLD1:       [[LOOP]]:
+; THRESHOLD1-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; THRESHOLD1-NEXT:    [[PRED_IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[PRED_NEXT:%.*]], %[[LOOP]] ]
+; THRESHOLD1-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; THRESHOLD1-NEXT:    [[MASKED:%.*]] = and i32 [[PRED_IV]], 255
+; THRESHOLD1-NEXT:    [[PRED_NEXT]] = add nuw nsw i32 [[MASKED]], 9
+; THRESHOLD1-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[IV]]
+; THRESHOLD1-NEXT:    [[VAL:%.*]] = load i32, ptr [[GEP_SRC]], align 4
+; THRESHOLD1-NEXT:    [[STRIDE_OFF:%.*]] = mul nsw i64 [[IV]], [[STRIDE]]
+; THRESHOLD1-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[STRIDE_OFF]]
+; THRESHOLD1-NEXT:    store i32 [[VAL]], ptr [[GEP_DST]], align 4
+; THRESHOLD1-NEXT:    [[CMP:%.*]] = icmp slt i64 [[IV_NEXT]], [[N]]
+; THRESHOLD1-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
+; THRESHOLD1:       [[EXIT]]:
+; THRESHOLD1-NEXT:    [[RESULT:%.*]] = phi i32 [ [[PRED_IV]], %[[LOOP]] ]
+; THRESHOLD1-NEXT:    ret i32 [[RESULT]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %pred.iv = phi i32 [ 0, %entry ], [ %pred.next, %loop ]
+  %iv.next = add nuw nsw i64 %iv, 1
+  %masked = and i32 %pred.iv, 255
+  %pred.next = add nuw nsw i32 %masked, 9
+  ; Symbolic stride access generates LAI SCEV predicates (stride == 1 check).
+  %gep.src = getelementptr inbounds i32, ptr %src, i64 %iv
+  %val = load i32, ptr %gep.src, align 4
+  %stride.off = mul nsw i64 %iv, %stride
+  %gep.dst = getelementptr inbounds i32, ptr %dst, i64 %stride.off
+  store i32 %val, ptr %gep.dst, align 4
+  %cmp = icmp slt i64 %iv.next, %n
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  %result = phi i32 [ %pred.iv, %loop ]
+  ret i32 %result
+}
+
+
+define i32 @predicated_iv_inc_liveout_with_lai_preds(ptr %dst, ptr %src, i64 %stride, i64 %n) {
+; COMMON-LABEL: define i32 @predicated_iv_inc_liveout_with_lai_preds(
 ; COMMON-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[STRIDE:%.*]], i64 [[N:%.*]]) {
 ; COMMON-NEXT:  [[ENTRY:.*]]:
 ; COMMON-NEXT:    br label %[[LOOP:.*]]
@@ -364,7 +494,7 @@ define void @total_complexity_exceeds_threshold(ptr %dst, ptr %src, i64 %stride,
 ; CHECK-NEXT:    store <4 x i32> [[WIDE_LOAD]], ptr [[TMP8]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[SMAX3]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -384,7 +514,7 @@ define void @total_complexity_exceeds_threshold(ptr %dst, ptr %src, i64 %stride,
 ; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[IV]]
 ; CHECK-NEXT:    store i32 [[VAL]], ptr [[GEP_DST]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -488,7 +618,7 @@ define void @combined_lai_iv_complexity(ptr %dst, ptr %src, i64 %stride, i64 %n)
 ; CHECK-NEXT:    store <4 x i32> [[WIDE_LOAD]], ptr [[TMP8]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[LOOP1]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[LOOP1]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[SMAX3]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -508,7 +638,7 @@ define void @combined_lai_iv_complexity(ptr %dst, ptr %src, i64 %stride, i64 %n)
 ; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[IV]]
 ; CHECK-NEXT:    store i32 [[VAL]], ptr [[GEP_DST]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -623,7 +753,7 @@ define void @two_used_predicated_ivs(ptr %dst1, ptr %dst2, i64 %n) {
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i32> [[VEC_IND]], splat (i32 36)
 ; CHECK-NEXT:    [[VEC_IND_NEXT9]] = add nuw nsw <4 x i32> [[VEC_IND8]], splat (i32 20)
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[SMAX6]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -646,7 +776,7 @@ define void @two_used_predicated_ivs(ptr %dst1, ptr %dst2, i64 %n) {
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i32, ptr [[DST2]], i64 [[IV]]
 ; CHECK-NEXT:    store i32 [[PRED_NEXT2]], ptr [[GEP2]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT]], !llvm.loop [[LOOP15:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;

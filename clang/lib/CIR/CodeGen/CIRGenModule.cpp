@@ -17,6 +17,7 @@
 #include "CIRGenFunction.h"
 
 #include "mlir/Dialect/OpenMP/OpenMPOffloadUtils.h"
+#include "mlir/IR/SymbolTable.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/Attrs.inc"
@@ -1648,15 +1649,10 @@ void CIRGenModule::addReplacement(StringRef name, mlir::Operation *op) {
 }
 
 #ifndef NDEBUG
-static bool verifyPointerTypeArgs(mlir::ModuleOp modOp, cir::FuncOp oldF,
-                                  cir::FuncOp newF) {
-  std::optional<mlir::SymbolTable::UseRange> optionalUseRange =
-      oldF.getSymbolUses(modOp);
-  if (!optionalUseRange)
-    return true;
-
-  for (const mlir::SymbolTable::SymbolUse &u : *optionalUseRange) {
-    auto call = mlir::dyn_cast<cir::CallOp>(u.getUser());
+static bool verifyPointerTypeArgs(cir::FuncOp oldF, cir::FuncOp newF,
+                                  mlir::SymbolUserMap &userMap) {
+  for (mlir::Operation *user : userMap.getUsers(oldF)) {
+    auto call = mlir::dyn_cast<cir::CallOp>(user);
     if (!call)
       continue;
 
@@ -1672,6 +1668,15 @@ static bool verifyPointerTypeArgs(mlir::ModuleOp modOp, cir::FuncOp oldF,
 #endif // NDEBUG
 
 void CIRGenModule::applyReplacements() {
+  if (replacements.empty())
+    return;
+
+  // Build a symbol user map once — this walks the module O(M) one time.
+  // Previously, each replaceAllSymbolUses call walked the entire module,
+  // giving O(R × M) quadratic behavior for R replacements.
+  mlir::SymbolTableCollection symbolTableCollection;
+  mlir::SymbolUserMap userMap(symbolTableCollection, theModule);
+
   for (auto &i : replacements) {
     StringRef mangledName = i.first;
     mlir::Operation *replacement = i.second;
@@ -1687,17 +1692,15 @@ void CIRGenModule::applyReplacements() {
       continue;
     }
 
-    assert(verifyPointerTypeArgs(theModule, oldF, newF) &&
+    assert(verifyPointerTypeArgs(oldF, newF, userMap) &&
            "call argument types do not match replacement function");
 
-    // Replace old with new, but keep the old order.
-    if (oldF.replaceAllSymbolUses(newF.getSymNameAttr(), theModule).failed())
-      llvm_unreachable("internal error, cannot RAUW symbol");
-    if (newF) {
-      newF->moveBefore(oldF);
-      eraseGlobalSymbol(oldF);
-      oldF->erase();
-    }
+    // Replace old with new, but keep the old order.  Uses
+    // SymbolUserMap to touch only actual users, not the whole module.
+    userMap.replaceAllUsesWith(oldF, newF.getSymNameAttr());
+    newF->moveBefore(oldF);
+    eraseGlobalSymbol(oldF);
+    oldF->erase();
   }
 }
 

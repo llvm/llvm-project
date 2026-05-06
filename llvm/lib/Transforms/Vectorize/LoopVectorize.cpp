@@ -6504,10 +6504,7 @@ VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(VPInstruction *VPI,
     return nullptr;
 
   Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
-  if (ID && (ID == Intrinsic::assume || ID == Intrinsic::lifetime_end ||
-             ID == Intrinsic::lifetime_start || ID == Intrinsic::sideeffect ||
-             ID == Intrinsic::pseudoprobe ||
-             ID == Intrinsic::experimental_noalias_scope_decl))
+  if (VPCostContext::isFreeScalarIntrinsic(ID))
     return nullptr;
 
   SmallVector<VPValue *, 4> Ops(VPI->op_begin(),

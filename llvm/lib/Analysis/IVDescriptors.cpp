@@ -393,6 +393,8 @@ static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
   StoreInst *IntermediateStore = nullptr;
   const SCEV *StorePtrSCEV = nullptr;
   for (StoreInst *SI : Stores) {
+    if (!SE)
+      return {};
     const SCEV *Ptr = SE->getSCEV(SI->getPointerOperand());
     if (!SE->isLoopInvariant(Ptr, TheLoop) ||
         (StorePtrSCEV && StorePtrSCEV != Ptr))

@@ -11,15 +11,15 @@ define void @test_push_constant_into_zext(ptr %dst, ptr %src, i32 %n, i64 %offse
 ; CHECK-NEXT:    %c = call i1 @cond()
 ; CHECK-NEXT:    --> %c U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %outer.loop: Variant, %inner.loop: Invariant }
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %outer.loop ], [ %iv.next, %inner.loop ]
-; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%inner.loop> U: [0,2147483647) S: [0,2147483647) Exits: (-1 + (1 smax %n))<nsw> LoopDispositions: { %inner.loop: Computable, %outer.loop: Variant }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%inner.loop> U: [0,2147483647) S: [0,2147483647) Exits: (-1 + (1 smax %n))<nsw> LoopDispositions: { %inner.loop: Computable, %outer.loop: Uniform }
 ; CHECK-NEXT:    %ptr.iv = phi ptr [ %src, %outer.loop ], [ %ptr.iv.next, %inner.loop ]
-; CHECK-NEXT:    --> {%src,+,%offset}<%inner.loop> U: full-set S: full-set Exits: (((zext i32 (-1 + (1 smax %n))<nsw> to i64) * %offset) + %src) LoopDispositions: { %inner.loop: Computable, %outer.loop: Variant }
+; CHECK-NEXT:    --> {%src,+,%offset}<%inner.loop> U: full-set S: full-set Exits: (((zext i32 (-1 + (1 smax %n))<nsw> to i64) * %offset) + %src) LoopDispositions: { %inner.loop: Computable, %outer.loop: Uniform }
 ; CHECK-NEXT:    %l = load i8, ptr %outer.ptr, align 1
 ; CHECK-NEXT:    --> %l U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %inner.loop: Variant, %outer.loop: Variant }
 ; CHECK-NEXT:    %ptr.iv.next = getelementptr i8, ptr %ptr.iv, i64 %offset
-; CHECK-NEXT:    --> {(%offset + %src),+,%offset}<%inner.loop> U: full-set S: full-set Exits: (((zext i32 (1 smax %n) to i64) * %offset) + %src) LoopDispositions: { %inner.loop: Computable, %outer.loop: Variant }
+; CHECK-NEXT:    --> {(%offset + %src),+,%offset}<%inner.loop> U: full-set S: full-set Exits: (((zext i32 (1 smax %n) to i64) * %offset) + %src) LoopDispositions: { %inner.loop: Computable, %outer.loop: Uniform }
 ; CHECK-NEXT:    %iv.next = add i32 %iv, 1
-; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%inner.loop> U: [1,-2147483648) S: [1,-2147483648) Exits: (1 smax %n) LoopDispositions: { %inner.loop: Computable, %outer.loop: Variant }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%inner.loop> U: [1,-2147483648) S: [1,-2147483648) Exits: (1 smax %n) LoopDispositions: { %inner.loop: Computable, %outer.loop: Uniform }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_push_constant_into_zext
 ; CHECK-NEXT:  Loop %inner.loop: backedge-taken count is (-1 + (1 smax %n))<nsw>
 ; CHECK-NEXT:  Loop %inner.loop: constant max backedge-taken count is i32 2147483646

@@ -120,7 +120,7 @@ enum class OffloadArch {
   GRANITERAPIDS,
   // Intel GPUs
   BMG_G21,
-  LAST,
+  LAST = BMG_G21,
 
   CudaDefault = OffloadArch::SM_52,
   HIPDefault = OffloadArch::GFX906,
@@ -140,7 +140,7 @@ static inline bool IsIntelCPUOffloadArch(OffloadArch Arch) {
 }
 
 static inline bool IsIntelGPUOffloadArch(OffloadArch Arch) {
-  return Arch >= OffloadArch::BMG_G21 && Arch < OffloadArch::LAST;
+  return Arch >= OffloadArch::BMG_G21 && Arch <= OffloadArch::LAST;
 }
 
 static inline bool IsIntelOffloadArch(OffloadArch Arch) {

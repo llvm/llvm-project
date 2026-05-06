@@ -1849,12 +1849,8 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
   if (Plan.hasScalarVFOnly())
     return;
 
-  // Try to narrow wide and replicating recipes to single scalar recipes,
-  // based on VPlan analysis. Only process blocks in the loop region for now,
-  // without traversing into nested regions, as recipes in replicate regions
-  // cannot be converted yet.
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
-           vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
+           vp_depth_first_deep(Plan.getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
       if (!isa<VPWidenRecipe, VPWidenGEPRecipe, VPReplicateRecipe>(&R))
         continue;
