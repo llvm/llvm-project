@@ -366,17 +366,6 @@ llvm.func @taskloop_reduction(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr)
 
 // -----
 
-llvm.func @taskwait_depend(%x: !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause depend in omp.taskwait operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.taskwait}}
-  omp.taskwait depend(taskdependin -> %x : !llvm.ptr) {
-    omp.terminator
-  }
-  llvm.return
-}
-
-// -----
-
 llvm.func @taskwait_nowait() {
   // expected-error@below {{not yet implemented: Unhandled clause nowait in omp.taskwait operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.taskwait}}
