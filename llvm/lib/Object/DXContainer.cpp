@@ -66,7 +66,7 @@ Error DXContainer::parseDXILHeader(dxbc::PartType PT, StringRef Part) {
   std::optional<DXILData> &DXIL = IsDebug ? this->DebugDXIL : this->DXIL;
 
   if (DXIL)
-    return parseFailed(formatv("More than one {0} part is present in the file",
+    return parseFailed(formatv("more than one {0} part is present in the file",
                                dxbc::getProgramPartName(IsDebug)));
   const char *Current = Part.begin();
   dxbc::ProgramHeader Header;
@@ -225,7 +225,7 @@ Error DXContainer::parsePartOffsets() {
   if (PSVInfo) {
     std::optional<uint16_t> ShaderKind = getShaderKind();
     if (!ShaderKind)
-      return parseFailed("Cannot fully parse pipeline state validation "
+      return parseFailed("cannot fully parse pipeline state validation "
                          "information without DXIL or ILDB part");
     if (Error Err = PSVInfo->parse(*ShaderKind))
       return Err;
