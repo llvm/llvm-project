@@ -103,12 +103,14 @@ enum UniformityLLTOpPredicateID {
 
   UniV2S16,
   UniV2S32,
+  UniV4S32,
   UniV2S64,
 
   DivV2S16,
   DivV2S32,
   DivV2S64,
   DivV3S32,
+  DivV4S32,
   DivV4S16,
   DivV6S32,
 

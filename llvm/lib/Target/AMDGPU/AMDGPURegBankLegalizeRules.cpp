@@ -134,6 +134,8 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
     return MRI.getType(Reg) == LLT::fixed_vector(2, 16) && MUI.isUniform(Reg);
   case UniV2S32:
     return MRI.getType(Reg) == LLT::fixed_vector(2, 32) && MUI.isUniform(Reg);
+  case UniV4S32:
+    return MRI.getType(Reg) == LLT::fixed_vector(4, 32) && MUI.isUniform(Reg);
   case UniB32:
     return MRI.getType(Reg).getSizeInBits() == 32 && MUI.isUniform(Reg);
   case UniB64:
@@ -193,6 +195,8 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
     return MRI.getType(Reg) == LLT::fixed_vector(2, 32) && MUI.isDivergent(Reg);
   case DivV3S32:
     return MRI.getType(Reg) == LLT::fixed_vector(3, 32) && MUI.isDivergent(Reg);
+  case DivV4S32:
+    return MRI.getType(Reg) == LLT::fixed_vector(4, 32) && MUI.isDivergent(Reg);
   case DivV4S16:
     return MRI.getType(Reg) == LLT::fixed_vector(4, 16) && MUI.isDivergent(Reg);
   case DivV6S32:
@@ -1871,6 +1875,26 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
                     amdgcn_global_store_async_from_lds_b64,
                     amdgcn_global_store_async_from_lds_b128})
       .Any({{}, {{}, {IntrId, VgprP1, VgprP3}}});
+
+  addRulesForIOpcs({amdgcn_cluster_load_b32})
+      .Any({{UniB32}, {{UniInVgprB32}, {IntrId, SgprP1, Imm, SgprB32_M0}}})
+      .Any({{DivB32, _, UniP1}, {{VgprB32}, {IntrId, SgprP1, Imm, SgprB32_M0}}})
+      .Any(
+          {{DivB32, _, DivP1}, {{VgprB32}, {IntrId, VgprP1, Imm, SgprB32_M0}}});
+
+  addRulesForIOpcs({amdgcn_cluster_load_b64})
+      .Any({{UniV2S32}, {{UniInVgprV2S32}, {IntrId, SgprP1, Imm, SgprB32_M0}}})
+      .Any({{DivV2S32, _, UniP1},
+            {{VgprV2S32}, {IntrId, SgprP1, Imm, SgprB32_M0}}})
+      .Any({{DivV2S32, _, DivP1},
+            {{VgprV2S32}, {IntrId, VgprP1, Imm, SgprB32_M0}}});
+
+  addRulesForIOpcs({amdgcn_cluster_load_b128})
+      .Any({{UniV4S32}, {{UniInVgprV4S32}, {IntrId, SgprP1, Imm, SgprB32_M0}}})
+      .Any({{DivV4S32, _, UniP1},
+            {{VgprV4S32}, {IntrId, SgprP1, Imm, SgprB32_M0}}})
+      .Any({{DivV4S32, _, DivP1},
+            {{VgprV4S32}, {IntrId, VgprP1, Imm, SgprB32_M0}}});
 
   addRulesForIOpcs({amdgcn_cluster_load_async_to_lds_b8,
                     amdgcn_cluster_load_async_to_lds_b32,
