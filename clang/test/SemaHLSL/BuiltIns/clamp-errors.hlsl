@@ -35,9 +35,11 @@ float2 test_scalar_first_arg3(float p0, float2 p1) {
   // expected-error@-1 {{call to 'clamp' is ambiguous}}
 }
 
-float3 test_clamp_vector_size_last_arg_mismatch(float3 p0, float2 p1) {
+// With implicit conversions, the float2 overload is selected and float3 args
+// are truncated to float2.
+float2 test_clamp_vector_size_last_arg_mismatch(float3 p0, float2 p1) {
   return clamp(p0, p0, p1);
-  // expected-error@-1 {{arguments are of different types ('vector<[...], 3>' vs 'vector<[...], 2>')}}
+  // expected-warning@-1 2{{implicit conversion truncates vector: 'float3' (aka 'vector<float, 3>') to 'vector<float, 2>' (vector of 2 'float' values)}}
 }
 
 typedef float float5 __attribute__((ext_vector_type(5)));

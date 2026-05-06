@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
 #include "llvm/TargetParser/Triple.h"
@@ -298,19 +299,19 @@ static std::string computeRISCVDataLayout(const Triple &TT, StringRef ABIName) {
 
   // TODO: Maybe we should move RISCVABI to TargetParser, so we can reuse that
   // logic here instead of duplicating the string handling?
-  bool IsRVYPurecapABI =
-      ABIName.starts_with("il32pc64") || ABIName.starts_with("l64pc128");
+  bool IsPureCapABI = ABIName.starts_with("il32pc64") ||
+                      ABIName.starts_with("l64pc128") ||
+                      ABIName.starts_with("cheriot");
 
-  // Pointer and integer sizes.
   if (TT.isRISCV64()) {
     Ret += "-p:64:64";
-    if (IsRVYPurecapABI)
+    if (IsPureCapABI)
       Ret += "-pe200:128:128:128:64";
     Ret += "-i64:64-i128:128-n32:64";
   } else {
     assert(TT.isRISCV32() && "only RV32 and RV64 are currently supported");
     Ret += "-p:32:32";
-    if (IsRVYPurecapABI)
+    if (IsPureCapABI)
       Ret += "-pe200:64:64:64:32";
     Ret += "-i64:64-n32";
   }
@@ -323,7 +324,8 @@ static std::string computeRISCVDataLayout(const Triple &TT, StringRef ABIName) {
   else
     Ret += "-S128";
 
-  if (IsRVYPurecapABI)
+  // TODO: Support non-purecap CHERI ABIs.
+  if (IsPureCapABI)
     Ret += "-A200-P200-G200";
 
   return Ret;

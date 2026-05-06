@@ -3519,6 +3519,11 @@ static bool isZerosVector(const SDNode *N) {
   return isNullConstant(Opnd0) || isNullFPConstant(Opnd0);
 }
 
+static bool isOneVector(SDValue V) {
+  return isOneOrOneSplat(V) ||
+         (V.getOpcode() == AArch64ISD::DUP && isOneConstant(V.getOperand(0)));
+}
+
 /// changeIntCCToAArch64CC - Convert a DAG integer condition code to an AArch64
 /// CC
 static AArch64CC::CondCode changeIntCCToAArch64CC(ISD::CondCode CC,
@@ -23225,6 +23230,24 @@ static SDValue performAddTruncShiftCombine(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(ISD::ADD, DL, VT, Trunc, Shift);
 }
 
+static SDValue performSubNegAndOneCombine(SDNode *N, SelectionDAG &DAG) {
+  if (N->getOpcode() != ISD::SUB)
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  if (!VT.isFixedLengthVector())
+    return SDValue();
+
+  SDValue Zero = N->getOperand(0);
+  SDValue And = N->getOperand(1);
+  if (!isZerosVector(Zero.getNode()) || And.getOpcode() != ISD::AND ||
+      !isOneVector(And.getOperand(1)))
+    return SDValue();
+
+  SDLoc DL(N);
+  return DAG.getSetCC(DL, VT, And, DAG.getConstant(0, DL, VT), ISD::SETNE);
+}
+
 // Fold ADD(SBC(Y, 0, W), C) -> SBC(Y, -C, W)
 // SBC(Y, 0, W) = Y - 0 - ~carry = Y + carry - 1
 // Adding C:  Y + carry - 1 + C = Y - (-C) - ~carry = SBC(Y, -C, W)
@@ -23274,6 +23297,8 @@ static SDValue performAddSubCombine(SDNode *N,
   if (SDValue Val = performSubWithBorrowCombine(N, DCI.DAG))
     return Val;
   if (SDValue Val = performAddTruncShiftCombine(N, DCI.DAG))
+    return Val;
+  if (SDValue Val = performSubNegAndOneCombine(N, DCI.DAG))
     return Val;
   if (SDValue Val = performAddWithSBCCombine(N, DCI.DAG))
     return Val;
