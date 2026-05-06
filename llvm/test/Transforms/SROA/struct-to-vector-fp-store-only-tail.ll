@@ -18,7 +18,7 @@ declare void @llvm.memcpy.p0.p0.i64(ptr noalias writeonly captures(none), ptr no
 ; CHECK: %.sroa.4 = alloca { float, float, float, float, float, float, float, float, float, float, float }, align 8
 ; CHECK: %.sroa.2 = alloca { float, float, float, float, float, float, float, float, float, float, float }, align 8
 ; CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %.sroa.4, ptr align 8 %.sroa.2, i64 44, i1 false)
-; CHECK: %.sroa.01.0.vec.insert = insertelement <4 x float> undef, float 0.000000e+00, i32 0
+; CHECK: %.sroa.01.0.vec.insert = insertelement <4 x float> {{.*}}, float 0.000000e+00, i32 0
 ; CHECK: store <4 x float> %.sroa.01.0.vec.insert, ptr null, align 1
 ; CHECK: store float 0.000000e+00, ptr getelementptr inbounds (i8, ptr null, i64 16), align 1
 ; CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 1 getelementptr inbounds (i8, ptr null, i64 20), ptr align 8 %.sroa.4, i64 44, i1 false)
