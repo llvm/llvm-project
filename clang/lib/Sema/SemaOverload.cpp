@@ -15523,8 +15523,8 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
   // various built-in candidates, but as DR507 points out, this can lead to
   // problems. So we do it this way, which pretty much follows what GCC does.
   // Note that we go the traditional code path for compound assignment forms.
-  // In HLSL, user-defined structs/classes do not have  or overloadable
-  // operators, so we can take this shortcut too.
+  // In HLSL, user-defined structs/classes do not have constructors or
+  // overloadable operators, so we can take this shortcut too.
   const Type *LHSTy = Args[0]->getType().getTypePtr();
   if (Opc == BO_Assign &&
       (!LHSTy->isOverloadableType() ||

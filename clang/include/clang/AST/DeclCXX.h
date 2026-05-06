@@ -768,9 +768,7 @@ public:
   //
   /// Determines whether this class has any user provided special members.
   bool hasUserProvidedSpecialMembers() const {
-    return data().UserDeclaredSpecialMembers &
-               (SMF_MoveConstructor | SMF_MoveAssignment | SMF_Destructor |
-                SMF_CopyAssignment | SMF_CopyConstructor) ||
+    return data().UserDeclaredSpecialMembers & SMF_All ||
            data().UserDeclaredConstructor ||
            data().UserProvidedDefaultConstructor;
   }
@@ -780,19 +778,19 @@ public:
   ///
   /// This value is used for lazy creation of default constructors.
   bool needsImplicitDefaultConstructor() const {
-    return ((!data().UserDeclaredConstructor &&
-             !(data().DeclaredSpecialMembers & SMF_DefaultConstructor) &&
-             (!isLambda() || lambdaIsDefaultConstructibleAndAssignable())) ||
-            // FIXME: Proposed fix to core wording issue: if a class inherits
-            // a default constructor and doesn't explicitly declare one, one
-            // is declared implicitly.
-            (data().HasInheritedDefaultConstructor &&
-             !(data().DeclaredSpecialMembers & SMF_DefaultConstructor))) &&
-           // In HLSL, only built-in records like resources classes can have
-           // constructors.
-           (!getLangOpts().HLSL ||
-            (isLambda() && lambdaIsDefaultConstructibleAndAssignable()) ||
-            hasUserProvidedSpecialMembers());
+    // In HLSL, only built-in records like resources classes can have
+    // constructors and overloadable operators.
+    if (getLangOpts().HLSL && !hasUserProvidedSpecialMembers())
+      return false;
+
+    return (!data().UserDeclaredConstructor &&
+            !(data().DeclaredSpecialMembers & SMF_DefaultConstructor) &&
+            (!isLambda() || lambdaIsDefaultConstructibleAndAssignable())) ||
+           // FIXME: Proposed fix to core wording issue: if a class inherits
+           // a default constructor and doesn't explicitly declare one, one
+           // is declared implicitly.
+           (data().HasInheritedDefaultConstructor &&
+            !(data().DeclaredSpecialMembers & SMF_DefaultConstructor));
   }
 
   /// Determine whether this class has any user-declared constructors.
@@ -818,11 +816,12 @@ public:
   /// Determine whether this class needs an implicit copy
   /// constructor to be lazily declared.
   bool needsImplicitCopyConstructor() const {
-    return !(data().DeclaredSpecialMembers & SMF_CopyConstructor) &&
-           // In HLSL, only built-in records like resources classes can have
-           // constructors.
-           (!getLangOpts().HLSL || isLambda() ||
-            hasUserProvidedSpecialMembers());
+    // In HLSL, only built-in records like resources classes can have
+    // constructors and overloadable operators.
+    if (getLangOpts().HLSL && !hasUserProvidedSpecialMembers())
+      return false;
+
+    return !(data().DeclaredSpecialMembers & SMF_CopyConstructor);
   }
 
   /// Determine whether we need to eagerly declare a defaulted copy
@@ -915,14 +914,16 @@ public:
   /// Determine whether this class should get an implicit move
   /// constructor or if any existing special member function inhibits this.
   bool needsImplicitMoveConstructor() const {
+    // In HLSL, only built-in records like resources classes can have
+    // constructors and overloadable operators.
+    if (getLangOpts().HLSL && !hasUserProvidedSpecialMembers())
+      return false;
+
     return !(data().DeclaredSpecialMembers & SMF_MoveConstructor) &&
            !hasUserDeclaredCopyConstructor() &&
            !hasUserDeclaredCopyAssignment() &&
-           !hasUserDeclaredMoveAssignment() && !hasUserDeclaredDestructor() &&
-           // In HLSL, only built-in records like resources classes can have
-           // constructors.
-           (!getLangOpts().HLSL || isLambda() ||
-            hasUserProvidedSpecialMembers());
+           !hasUserDeclaredMoveAssignment() &&
+           !hasUserDeclaredDestructor();
   }
 
   /// Determine whether we need to eagerly declare a defaulted move
@@ -951,11 +952,12 @@ public:
   /// Determine whether this class needs an implicit copy
   /// assignment operator to be lazily declared.
   bool needsImplicitCopyAssignment() const {
-    return !(data().DeclaredSpecialMembers & SMF_CopyAssignment) &&
-           // In HLSL, only built-in records like resources classes can have
-           // constructors.
-           (!getLangOpts().HLSL || isLambda() ||
-            hasUserProvidedSpecialMembers());
+    // In HLSL, only built-in records like resources classes can have
+    // constructors and overloadable operators.
+    if (getLangOpts().HLSL && !hasUserProvidedSpecialMembers())
+      return false;
+
+    return !(data().DeclaredSpecialMembers & SMF_CopyAssignment);
   }
 
   /// Determine whether we need to eagerly declare a defaulted copy
@@ -1013,17 +1015,18 @@ public:
   /// assignment operator or if any existing special member function inhibits
   /// this.
   bool needsImplicitMoveAssignment() const {
+    // In HLSL, only built-in records like resources classes can have
+    // constructors and overloadable operators.
+    if (getLangOpts().HLSL && !hasUserProvidedSpecialMembers())
+      return false;
+
     return !(data().DeclaredSpecialMembers & SMF_MoveAssignment) &&
            !hasUserDeclaredCopyConstructor() &&
            !hasUserDeclaredCopyAssignment() &&
-           !hasUserDeclaredMoveConstructor() && !hasUserDeclaredDestructor() &&
-           (!isLambda() || lambdaIsDefaultConstructibleAndAssignable()) &&
-           // In HLSL, only built-in records like resources classes can have
-           // constructors.
-           (!getLangOpts().HLSL ||
-            (isLambda() && lambdaIsDefaultConstructibleAndAssignable()) ||
-            hasUserProvidedSpecialMembers());
-  }
+           !hasUserDeclaredMoveConstructor() &&
+           !hasUserDeclaredDestructor() &&
+           (!isLambda() || lambdaIsDefaultConstructibleAndAssignable());
+ }
 
   /// Determine whether we need to eagerly declare a move assignment
   /// operator for this class.

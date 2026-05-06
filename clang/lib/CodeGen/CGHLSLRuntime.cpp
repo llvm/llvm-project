@@ -1079,10 +1079,14 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
             PD->getAttr<HLSLParamModifierAttr>()) {
       llvm_unreachable("Not handled yet");
     } else {
-      llvm::Type *ParamType = Param.hasByValAttr() ? Param.getParamByValType()
-                              : PD->getType()->isRecordType()
-                                  ? CGM.getTypes().ConvertType(PD->getType())
-                                  : Param.getType();
+      llvm::Type *ParamType = nullptr;
+      if (Param.hasByValAttr())
+        ParamType = Param.getParamByValType();
+      else if (PD->getType()->isRecordType())
+        ParamType = CGM.getTypes().ConvertType(PD->getType());
+      else
+        ParamType = Param.getType();
+      
       auto AttrBegin = PD->specific_attr_begin<HLSLAppliedSemanticAttr>();
       auto AttrEnd = PD->specific_attr_end<HLSLAppliedSemanticAttr>();
       auto Result =
