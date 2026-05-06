@@ -1937,16 +1937,17 @@ static void privatizeInductionVariables(
   // pre-allocated PFT scaffold blocks (preheader, header, exit) without
   // terminators -- which then trips runRegionDCE's mightHaveTerminator
   // assertion.
-  visitLoopControl(converter, outerDoConstruct, loopsToProcess, eval,
-                   [&](const Fortran::parser::LoopControl::Bounds &bounds,
-                       mlir::Location loc) {
-                     locs.push_back(loc);
-                     Fortran::semantics::Symbol &ivSym =
-                         bounds.Name().thing.symbol->GetUltimate();
-                     privatizeIv(converter, ivSym, currentLocation, ivTypes,
-                                 ivLocs, privateOperands, ivPrivate);
-                   },
-                   /*markInnerCollapsed=*/false);
+  visitLoopControl(
+      converter, outerDoConstruct, loopsToProcess, eval,
+      [&](const Fortran::parser::LoopControl::Bounds &bounds,
+          mlir::Location loc) {
+        locs.push_back(loc);
+        Fortran::semantics::Symbol &ivSym =
+            bounds.Name().thing.symbol->GetUltimate();
+        privatizeIv(converter, ivSym, currentLocation, ivTypes, ivLocs,
+                    privateOperands, ivPrivate);
+      },
+      /*markInnerCollapsed=*/false);
 }
 
 static mlir::acc::LoopOp
