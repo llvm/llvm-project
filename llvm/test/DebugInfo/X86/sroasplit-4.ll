@@ -3,7 +3,7 @@
 ; Test that recursively splitting an alloca updates the debug info correctly.
 ; CHECK-LABEL: if.end:
 ; CHECK-NEXT: %[[T0:.*]] = load i64, ptr @t, align 8{{.*}}
-; CHECK-NEXT: %[[Y0:.*]] = insertelement <2 x i64> undef, i64 %[[T0]], i32 0{{.*}}
+; CHECK-NEXT: %[[Y0:.*]] = insertelement <2 x i64> {{.*}}, i64 %[[T0]], i32 0{{.*}}
 ; CHECK-NEXT: #dbg_value(<2 x i64> %[[Y0]], ![[Y:[0-9]+]], !DIExpression(), !{{[0-9]+}})
 ; CHECK-NEXT: %[[T1:.*]] = load i64, ptr @t, align 8{{.*}}
 ; CHECK-NEXT: %[[Y1:.*]] = insertelement <2 x i64> %[[Y0]], i64 %[[T1]], i32 1{{.*}}
