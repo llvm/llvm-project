@@ -14,7 +14,7 @@
 namespace llvm {
 
 class SPIRVMergeRegionExitTargets
-    : public PassInfoMixin<SPIRVMergeRegionExitTargets> {
+    : public OptionalPassInfoMixin<SPIRVMergeRegionExitTargets> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
