@@ -837,11 +837,11 @@ else:
   ret i32 0
 }
 
-; Non-indirect args that spill to the stack (exercises the isEligibleFor
-; TailCallOptimization stack-size bypass for musttail). Both RV32 and RV64
-; use a0..a7 for the first 8 args and spill from the 9th. The spilled args
-; live in the caller's incoming stack slots, which musttail can re-use
-; because matching prototypes imply a matching layout.
+; Non-indirect args that spill to the stack (exercises the
+; isEligibleForTailCallOptimization stack-size bypass for musttail). Both
+; RV32 and RV64 use a0..a7 for the first 8 args and spill from the 9th. The
+; spilled args live in the caller's incoming stack slots, which musttail can
+; re-use because matching prototypes imply a matching layout.
 declare void @callee_musttail_stack_spill(i32, i32, i32, i32, i32, i32, i32, i32, i32, i32)
 
 define void @caller_musttail_stack_spill(i32 %a0, i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a5, i32 %a6, i32 %a7, i32 %a8, i32 %a9) nounwind {
@@ -906,9 +906,9 @@ define void @caller_musttail_indirect_and_spill(fp128 %a, i32 %i0, i32 %i1, i32 
   ret void
 }
 
-; Note: byval + musttail is intentionally NOT tested here. isEligibleFor
-; TailCallOptimization rejects byval outright, which causes the musttail
-; site to hit reportFatalInternalError. Tail-call support for byval was
-; reverted in 501417baa60f (RISC-V/LoongArch) pending a vreg-based
+; Note: byval + musttail is intentionally NOT tested here.
+; isEligibleForTailCallOptimization rejects byval outright, which causes the
+; musttail site to hit reportFatalInternalError. Tail-call support for byval
+; was reverted in 501417baa60f (RISC-V/LoongArch) pending a vreg-based
 ; re-implementation; once that lands, musttail + byval can be tested as
 ; well.
