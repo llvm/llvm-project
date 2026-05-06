@@ -105,7 +105,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -386,7 +385,9 @@ NaryReassociatePass::tryReassociateGEPAtIndex(GetElementPtrInst *GEP,
         computeOverflowForSignedAdd(AO, SQ) != OverflowResult::NeverOverflows)
       return nullptr;
 
-    Value *LHS = AO->getOperand(0), *RHS = AO->getOperand(1);
+    const Use &LHSUse = AO->getOperandUse(0);
+    const Use &RHSUse = AO->getOperandUse(1);
+    Value *LHS = LHSUse.get(), *RHS = RHSUse.get();
     // IndexToSplit = LHS + RHS.
     // tryReassociateGEPAtIndex(GEP, I, LHS, RHS, ...) looks for a dominating
     // GEP with LHS as index, then creates: NewGEP = existingGEP + RHS * scale.
@@ -396,12 +397,12 @@ NaryReassociatePass::tryReassociateGEPAtIndex(GetElementPtrInst *GEP,
     if (LHS == RHS)
       return tryReassociateGEPAtIndex(GEP, I, LHS, RHS, IndexedType);
 
-    // When uniformity analysis is available, prefer the remaining calculation
-    // to be uniform, keeping uniform computations grouped together.
-    // Default order tries LHS first (RHS as remainder). If LHS is uniform and
-    // RHS is divergent, try RHS first so uniform LHS becomes the remainder.
-    if (UI && !UI->isDivergentUse(AO->getOperandUse(0)) &&
-        UI->isDivergentUse(AO->getOperandUse(1))) {
+    // When the GEP base is divergent, prefer the remaining index calculation
+    // to be uniform so the offset computation stays in scalar registers.
+    // This only helps when the base is already divergent — if the base is
+    // uniform, the default order naturally reuses the uniform dominating GEP.
+    if (UI->isDivergentUse(GEP->getOperandUse(0)) &&
+        !UI->isDivergentUse(LHSUse) && UI->isDivergentUse(RHSUse)) {
       LLVM_DEBUG(
           dbgs() << "NARY: Preferring uniform remainder for GEP index\n");
       if (GetElementPtrInst *NewGEP =
@@ -492,11 +493,11 @@ Instruction *NaryReassociatePass::tryReassociateBinaryOp(BinaryOperator *I) {
   // There is no need to reassociate 0.
   if (SE->getSCEV(I)->isZero())
     return nullptr;
-  if (Instruction *NewI =
-          tryReassociateBinaryOp(I->getOperandUse(0), I->getOperandUse(1), I))
+  const Use &LHSUse = I->getOperandUse(0);
+  const Use &RHSUse = I->getOperandUse(1);
+  if (Instruction *NewI = tryReassociateBinaryOp(LHSUse, RHSUse, I))
     return NewI;
-  if (Instruction *NewI =
-          tryReassociateBinaryOp(I->getOperandUse(1), I->getOperandUse(0), I))
+  if (Instruction *NewI = tryReassociateBinaryOp(RHSUse, LHSUse, I))
     return NewI;
   return nullptr;
 }
@@ -514,9 +515,8 @@ Instruction *NaryReassociatePass::tryReassociateBinaryOp(const Use &LHSUse,
     SCEVUse AExpr = SE->getSCEV(A), BExpr = SE->getSCEV(B);
     SCEVUse RHSExpr = SE->getSCEV(RHS);
 
-    // When uniformity analysis is available, prefer reassociations that group
-    // uniform values together. This can reduce register pressure on targets
-    // with divergent execution.
+    // Prefer reassociations that group uniform values together. This can
+    // reduce register pressure on targets with divergent execution.
     //
     // For I = (A op B) op RHS, we can form:
     //   - (A op RHS) op B: groups A and RHS
@@ -529,7 +529,7 @@ Instruction *NaryReassociatePass::tryReassociateBinaryOp(const Use &LHSUse,
     // divergent. The symmetric case (A and RHS uniform, B divergent) is already
     // handled by the default order which tries (A op RHS) op B first.
     User *LHSOp = cast<User>(LHS);
-    if (UI && !UI->isDivergentUse(LHSOp->getOperandUse(1)) &&
+    if (!UI->isDivergentUse(LHSOp->getOperandUse(1)) &&
         !UI->isDivergentUse(RHSUse) &&
         UI->isDivergentUse(LHSOp->getOperandUse(0))) {
       LLVM_DEBUG(dbgs() << "NARY: Preferring uniform grouping for " << *I
@@ -715,15 +715,14 @@ Value *NaryReassociatePass::tryReassociateMinOrMax(Instruction *I,
   SCEVUse BExpr = SE->getSCEV(B);
   SCEVUse RHSExpr = SE->getSCEV(RHS);
 
-  // Similar to binary ops, prefer grouping uniform values together when
-  // uniformity analysis is available.
+  // Similar to binary ops, prefer grouping uniform values together.
   // For I = minmax(minmax(A, B), RHS), we can form:
   //   - minmax(minmax(A, RHS), B): groups A and RHS
   //   - minmax(minmax(B, RHS), A): groups B and RHS
   User *LHSOp = cast<User>(LHS);
   unsigned AIdx = (LHSOp->getOperand(0) == A) ? 0 : 1;
   unsigned RHSIdx = (I->getOperand(0) == RHS) ? 0 : 1;
-  if (UI && !UI->isDivergentUse(LHSOp->getOperandUse(1 - AIdx)) &&
+  if (!UI->isDivergentUse(LHSOp->getOperandUse(1 - AIdx)) &&
       !UI->isDivergentUse(I->getOperandUse(RHSIdx)) &&
       UI->isDivergentUse(LHSOp->getOperandUse(AIdx))) {
     LLVM_DEBUG(dbgs() << "NARY: Preferring uniform grouping for minmax " << *I

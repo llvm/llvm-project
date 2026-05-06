@@ -185,7 +185,9 @@ define amdgpu_kernel void @prefer_uniform_grouping_umin(i32 %u1, i32 %u2) {
   ret void
 }
 
-; Test GEP with LHS=uniform, RHS=divergent
+; Test GEP with LHS=uniform, RHS=divergent, uniform base.
+; When base is uniform, the default order is preferred: it reuses the uniform
+; dominating GEP (gep_u), keeping the base computation in scalar registers.
 define amdgpu_kernel void @gep_lhs_uniform_rhs_divergent(ptr %base, i64 %u_offset) {
 ; CHECK-LABEL: define amdgpu_kernel void @gep_lhs_uniform_rhs_divergent(
 ; CHECK-SAME: ptr [[BASE:%.*]], i64 [[U_OFFSET:%.*]]) {
@@ -195,7 +197,7 @@ define amdgpu_kernel void @gep_lhs_uniform_rhs_divergent(ptr %base, i64 %u_offse
 ; CHECK-NEXT:    [[GEP_D:%.*]] = getelementptr i32, ptr [[BASE]], i64 [[D_EXT]]
 ; CHECK-NEXT:    call void @use_ptr(ptr [[GEP_U]])
 ; CHECK-NEXT:    call void @use_ptr(ptr [[GEP_D]])
-; CHECK-NEXT:    [[GEP_RESULT:%.*]] = getelementptr i32, ptr [[GEP_D]], i64 [[U_OFFSET]]
+; CHECK-NEXT:    [[GEP_RESULT:%.*]] = getelementptr i32, ptr [[GEP_U]], i64 [[D_EXT]]
 ; CHECK-NEXT:    call void @use_ptr(ptr [[GEP_RESULT]])
 ; CHECK-NEXT:    ret void
 ;
