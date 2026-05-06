@@ -21,15 +21,48 @@
 
 using namespace Fortran::frontend;
 
+static void printWarningOption(llvm::raw_ostream &os,
+    clang::DiagnosticsEngine::Level level, const clang::Diagnostic &info) {
+  auto &diagIDs = *info.getDiags()->getDiagnosticIDs();
+
+  if (level == clang::DiagnosticsEngine::Warning) {
+    llvm::StringRef opt = diagIDs.getWarningOptionForDiag(info.getID());
+    if (!opt.empty()) {
+      os << " [-W" << opt;
+      llvm::StringRef optValue = info.getFlagValue();
+      if (!optValue.empty())
+        os << "=" << optValue;
+      os << ']';
+    }
+  }
+}
+
 /// HandleDiagnostic - Store the errors, warnings, and notes that are
 /// reported.
 void TextDiagnosticBuffer::HandleDiagnostic(
     clang::DiagnosticsEngine::Level level, const clang::Diagnostic &info) {
-  // Default implementation (warnings_/errors count).
+  // Default implementation (warnings/errors count).
   DiagnosticConsumer::HandleDiagnostic(level, info);
 
   llvm::SmallString<100> buf;
   info.FormatDiagnostic(buf);
+
+  // This function dealing with diagnostics emitted directly through the
+  // diagnostic engine, e.g. in CompilerInvocation. With -Werror any warning
+  // emitted there would become an error, and prevented any part of compilation
+  // from happening. In case of OpenMP, this would cause the warning about an
+  // incomplete implementation to completely skip the compilation, which is
+  // undesirable.
+  // Downgrade -Werror'ed warnings back to warnings to avoid this situation.
+  const clang::DiagnosticsEngine &diags = *info.getDiags();
+  if (level == clang::DiagnosticsEngine::Error) {
+    if (!diags.getDiagnosticIDs()->isDefaultMappingAsError(info.getID()))
+      level = clang::DiagnosticsEngine::Warning;
+  }
+
+  llvm::raw_svector_ostream os(buf);
+  printWarningOption(os, level, info);
+
   switch (level) {
   default:
     llvm_unreachable("Diagnostic not handled during diagnostic buffering!");
