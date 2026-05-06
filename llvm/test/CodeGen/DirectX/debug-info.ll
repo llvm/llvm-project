@@ -1,4 +1,7 @@
 ; RUN: llc --filetype=asm %s -o  - | FileCheck %s
+;
+; Verify that we are able to print LLVM IR containing downgraded debug
+; intrinsics, #194884.
 
 target triple = "dxil-unknown-shadermodel6.7-library"
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
@@ -24,12 +27,6 @@ attributes #0 = { norecurse nounwind readnone willreturn "hlsl.export" }
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}
 !llvm.ident = !{!5}
-
-; Other tests verify that we come back with reasonable structure for the debug
-; info types, this test just needs to ensure they are there.
-; The patch this is paired with fixes a bug where function debug info wasn't
-; being emitted correctly even though other tests verified the MD would be
-; emitted if it was referenced as module metadata.
 
 ; CHECK:      !0 = distinct !DICompileUnit
 ; CHECK-NEXT: !1 = !DIFile(filename:
