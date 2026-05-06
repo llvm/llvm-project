@@ -3,9 +3,7 @@
 
 ## This test was added to capture a case where MachineCopyPropagation may
 ## leave a no-op register move (add reg, x0, reg).
-## Due to the bug reported in
-## <https://github.com/llvm/llvm-project/issues/166870>, we are not currently
-## able to optimize this case.
+## See <https://github.com/llvm/llvm-project/issues/166870>.
 
 ---
 name: ham
@@ -24,7 +22,6 @@ body: |
   ; CHECK-NEXT:   liveins: $x10
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $x11 = ADDI $x0, 0
-  ; CHECK-NEXT:   renamable $x10 = ADDI killed renamable $x10, 0
   ; CHECK-NEXT:   BEQ renamable $x10, $x0, %bb.4
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:

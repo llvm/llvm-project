@@ -11083,8 +11083,14 @@ AArch64InstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
        MI.getOperand(0).getSubReg() == 0) &&
       (!MI.getOperand(0).getReg().isPhysical() ||
        MI.findRegisterDefOperandIdx(getXRegFromWReg(MI.getOperand(0).getReg()),
-                                    /*TRI=*/nullptr) == -1))
+                                    /*TRI=*/nullptr) == -1)) {
+    // Do not report as a copy when src == dest: the 32-bit ORR zeros the
+    // upper 32 bits of the destination X register, so even a "self-copy"
+    // has a side effect that downstream code may rely on.
+    if (MI.getOperand(0).getReg() == MI.getOperand(2).getReg())
+      return std::nullopt;
     return DestSourcePair{MI.getOperand(0), MI.getOperand(2)};
+  }
 
   if (MI.getOpcode() == AArch64::ORRXrs &&
       MI.getOperand(1).getReg() == AArch64::XZR &&

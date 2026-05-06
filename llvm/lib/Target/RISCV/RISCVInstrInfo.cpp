@@ -2172,8 +2172,34 @@ RISCVInstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
   case RISCV::FSGNJ_H_INX:
     // The canonical floating-point move is fsgnj rd, rs, rs.
     if (MI.getOperand(1).isReg() && MI.getOperand(2).isReg() &&
-        MI.getOperand(1).getReg() == MI.getOperand(2).getReg())
+        MI.getOperand(1).getReg() == MI.getOperand(2).getReg()) {
+      // Do not report as a copy when dest == source and a wider register
+      // exists: narrower FP operations NaN-box the result by writing all 1s
+      // to the upper bits. Zfinx/Zhinx GPR variants sign-extend the result
+      // into the upper bits. In both cases a self-copy is not a no-op.
+      if (MI.getOperand(0).getReg() == MI.getOperand(1).getReg()) {
+        bool HasWiderReg = false;
+        switch (MI.getOpcode()) {
+        case RISCV::FSGNJ_S:
+          HasWiderReg = STI.hasStdExtD();
+          break;
+        case RISCV::FSGNJ_H:
+          HasWiderReg = STI.hasStdExtF();
+          break;
+        case RISCV::FSGNJ_S_INX:
+          HasWiderReg = STI.is64Bit();
+          break;
+        case RISCV::FSGNJ_H_INX:
+          HasWiderReg = true;
+          break;
+        default:
+          break;
+        }
+        if (HasWiderReg)
+          return std::nullopt;
+      }
       return DestSourcePair{MI.getOperand(0), MI.getOperand(1)};
+    }
     break;
   }
   return std::nullopt;
