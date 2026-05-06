@@ -217,14 +217,20 @@ void Serializer::addLongCompositesCapability() {
   if (longCompositesEmitted)
     return;
   longCompositesEmitted = true;
-  encodeInstructionInto(
-      capabilities, spirv::Opcode::OpCapability,
-      {static_cast<uint32_t>(spirv::Capability::LongCompositesINTEL)});
-  SmallVector<uint32_t, 8> extName;
-  spirv::encodeStringLiteralInto(
-      extName,
-      spirv::stringifyExtension(spirv::Extension::SPV_INTEL_long_composites));
-  encodeInstructionInto(extensions, spirv::Opcode::OpExtension, extName);
+  auto vceTriple = module.getVceTriple();
+  if (!llvm::is_contained(vceTriple->getCapabilities(),
+                          spirv::Capability::LongCompositesINTEL))
+    encodeInstructionInto(
+        capabilities, spirv::Opcode::OpCapability,
+        {static_cast<uint32_t>(spirv::Capability::LongCompositesINTEL)});
+  if (!llvm::is_contained(vceTriple->getExtensions(),
+                          spirv::Extension::SPV_INTEL_long_composites)) {
+    SmallVector<uint32_t, 8> extName;
+    spirv::encodeStringLiteralInto(
+        extName,
+        spirv::stringifyExtension(spirv::Extension::SPV_INTEL_long_composites));
+    encodeInstructionInto(extensions, spirv::Opcode::OpExtension, extName);
+  }
 }
 
 void Serializer::encodeInstructionWithContinuationInto(

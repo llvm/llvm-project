@@ -305,11 +305,13 @@ bool allInstructionsWithinWordLimit(SmallVectorImpl<uint32_t> &binary) {
 } // namespace
 
 TEST_F(SerializationTest, LongTypeStructIsSplit) {
-  // Build a struct with kLongCompositeSize i8 members and reference it via a
-  // global variable so the type gets serialized.
   OpBuilder builder(module->getRegion());
-  Type i8Type = builder.getIntegerType(8);
-  SmallVector<Type> memberTypes(kLongCompositeSize, i8Type);
+  Type i32Type = builder.getIntegerType(32);
+  Type f32Type = builder.getF32Type();
+  SmallVector<Type> memberTypes;
+  memberTypes.reserve(kLongCompositeSize);
+  for (unsigned i = 0; i < kLongCompositeSize; ++i)
+    memberTypes.push_back((i & 1) ? f32Type : i32Type);
   SmallVector<spirv::StructType::OffsetInfo> offsets(kLongCompositeSize, 0);
   auto structType = spirv::StructType::get(memberTypes, offsets);
   addGlobalVar(structType, "var0");
@@ -333,27 +335,37 @@ TEST_F(SerializationTest, LongTypeStructIsSplit) {
     auto rtStruct = dyn_cast<spirv::StructType>(ptrType.getPointeeType());
     if (!rtStruct)
       return;
-    EXPECT_EQ(rtStruct.getNumElements(), kLongCompositeSize);
+    ASSERT_EQ(rtStruct.getNumElements(), kLongCompositeSize);
+    bool typesMatch = true;
+    for (unsigned i = 0; i < kLongCompositeSize; ++i) {
+      Type expected = (i & 1) ? Type(Float32Type::get(&freshContext))
+                              : Type(IntegerType::get(&freshContext, 32));
+      if (rtStruct.getElementType(i) != expected) {
+        typesMatch = false;
+        break;
+      }
+    }
+    EXPECT_TRUE(typesMatch);
     foundStruct = true;
   });
   EXPECT_TRUE(foundStruct);
 }
 
 TEST_F(SerializationTest, LongConstantCompositeIsSplit) {
-  // Build `spirv.func @f() -> !spirv.array<N x i8>` whose body returns a
-  // single long array constant.
   OpBuilder builder(module->getRegion());
   Location loc = UnknownLoc::get(&context);
-  Type i8Type = builder.getIntegerType(8);
-  auto arrayType = spirv::ArrayType::get(i8Type, kLongCompositeSize);
+  Type i32Type = builder.getIntegerType(32);
+  auto arrayType = spirv::ArrayType::get(i32Type, kLongCompositeSize);
   auto funcType = builder.getFunctionType({}, {arrayType});
 
   auto funcOp = spirv::FuncOp::create(builder, loc, "long_array_const",
                                       funcType, spirv::FunctionControl::None);
   Block *entry = funcOp.addEntryBlock();
   OpBuilder bodyBuilder = OpBuilder::atBlockBegin(entry);
-  SmallVector<Attribute> elements(kLongCompositeSize,
-                                  bodyBuilder.getI8IntegerAttr(0));
+  SmallVector<Attribute> elements;
+  elements.reserve(kLongCompositeSize);
+  for (unsigned i = 0; i < kLongCompositeSize; ++i)
+    elements.push_back(bodyBuilder.getI32IntegerAttr(i & 0xff));
   auto arrayAttr = bodyBuilder.getArrayAttr(elements);
   auto cst = spirv::ConstantOp::create(bodyBuilder, loc, arrayType, arrayAttr);
   spirv::ReturnValueOp::create(bodyBuilder, loc, cst.getResult());
@@ -372,10 +384,20 @@ TEST_F(SerializationTest, LongConstantCompositeIsSplit) {
   ASSERT_TRUE(roundTripped);
   bool foundConst = false;
   roundTripped->walk([&](spirv::ConstantOp op) {
-    if (auto arr = dyn_cast<ArrayAttr>(op.getValue())) {
-      EXPECT_EQ(arr.size(), kLongCompositeSize);
-      foundConst = true;
+    auto arr = dyn_cast<ArrayAttr>(op.getValue());
+    if (!arr)
+      return;
+    ASSERT_EQ(arr.size(), kLongCompositeSize);
+    bool valuesMatch = true;
+    for (unsigned i = 0; i < kLongCompositeSize; ++i) {
+      auto intAttr = dyn_cast<IntegerAttr>(arr[i]);
+      if (!intAttr || intAttr.getInt() != static_cast<int64_t>(i & 0xff)) {
+        valuesMatch = false;
+        break;
+      }
     }
+    EXPECT_TRUE(valuesMatch);
+    foundConst = true;
   });
   EXPECT_TRUE(foundConst);
 }
@@ -383,15 +405,16 @@ TEST_F(SerializationTest, LongConstantCompositeIsSplit) {
 TEST_F(SerializationTest, LongSpecConstantCompositeIsSplit) {
   OpBuilder builder(module->getRegion());
   Location loc = UnknownLoc::get(&context);
-  Type i8Type = builder.getIntegerType(8);
-  auto arrayType = spirv::ArrayType::get(i8Type, kLongCompositeSize);
+  Type i32Type = builder.getIntegerType(32);
+  auto arrayType = spirv::ArrayType::get(i32Type, kLongCompositeSize);
 
   SmallVector<Attribute> constituents;
   constituents.reserve(kLongCompositeSize);
   for (unsigned i = 0; i < kLongCompositeSize; ++i) {
     std::string name = ("sc" + Twine(i)).str();
-    auto sc = spirv::SpecConstantOp::create(
-        builder, loc, builder.getStringAttr(name), builder.getI8IntegerAttr(0));
+    auto sc =
+        spirv::SpecConstantOp::create(builder, loc, builder.getStringAttr(name),
+                                      builder.getI32IntegerAttr(0));
     constituents.push_back(SymbolRefAttr::get(sc));
   }
   spirv::SpecConstantCompositeOp::create(builder, loc, TypeAttr::get(arrayType),
@@ -412,7 +435,18 @@ TEST_F(SerializationTest, LongSpecConstantCompositeIsSplit) {
   ASSERT_TRUE(roundTripped);
   bool foundSCC = false;
   roundTripped->walk([&](spirv::SpecConstantCompositeOp op) {
-    EXPECT_EQ(op.getConstituents().size(), kLongCompositeSize);
+    ArrayAttr rtConstituents = op.getConstituents();
+    ASSERT_EQ(rtConstituents.size(), kLongCompositeSize);
+    bool namesMatch = true;
+    for (unsigned i = 0; i < kLongCompositeSize; ++i) {
+      auto symRef = dyn_cast<SymbolRefAttr>(rtConstituents[i]);
+      if (!symRef ||
+          symRef.getLeafReference().getValue() != ("sc" + Twine(i)).str()) {
+        namesMatch = false;
+        break;
+      }
+    }
+    EXPECT_TRUE(namesMatch);
     foundSCC = true;
   });
   EXPECT_TRUE(foundSCC);
@@ -421,15 +455,21 @@ TEST_F(SerializationTest, LongSpecConstantCompositeIsSplit) {
 TEST_F(SerializationTest, LongCompositeConstructIsSplit) {
   OpBuilder builder(module->getRegion());
   Location loc = UnknownLoc::get(&context);
-  Type i8Type = builder.getIntegerType(8);
-  auto arrayType = spirv::ArrayType::get(i8Type, kLongCompositeSize);
-  auto funcType = builder.getFunctionType({i8Type}, {arrayType});
+  Type i32Type = builder.getIntegerType(32);
+  auto arrayType = spirv::ArrayType::get(i32Type, kLongCompositeSize);
+  auto funcType = builder.getFunctionType({}, {arrayType});
 
   auto funcOp = spirv::FuncOp::create(builder, loc, "long_composite_construct",
                                       funcType, spirv::FunctionControl::None);
   Block *entry = funcOp.addEntryBlock();
   OpBuilder bodyBuilder = OpBuilder::atBlockBegin(entry);
-  SmallVector<Value> constituents(kLongCompositeSize, entry->getArgument(0));
+  SmallVector<Value> constituents;
+  constituents.reserve(kLongCompositeSize);
+  for (unsigned i = 0; i < kLongCompositeSize; ++i) {
+    auto cst = spirv::ConstantOp::create(
+        bodyBuilder, loc, i32Type, bodyBuilder.getI32IntegerAttr(i & 0xff));
+    constituents.push_back(cst.getResult());
+  }
   auto cc = spirv::CompositeConstructOp::create(bodyBuilder, loc, arrayType,
                                                 constituents);
   spirv::ReturnValueOp::create(bodyBuilder, loc, cc.getResult());
@@ -448,8 +488,65 @@ TEST_F(SerializationTest, LongCompositeConstructIsSplit) {
   ASSERT_TRUE(roundTripped);
   bool foundCC = false;
   roundTripped->walk([&](spirv::CompositeConstructOp op) {
-    EXPECT_EQ(op.getConstituents().size(), kLongCompositeSize);
+    auto rtConstituents = op.getConstituents();
+    ASSERT_EQ(rtConstituents.size(), kLongCompositeSize);
+    bool valuesMatch = true;
+    for (unsigned i = 0; i < kLongCompositeSize; ++i) {
+      auto definingCst = rtConstituents[i].getDefiningOp<spirv::ConstantOp>();
+      if (!definingCst) {
+        valuesMatch = false;
+        break;
+      }
+      auto intAttr = dyn_cast<IntegerAttr>(definingCst.getValue());
+      if (!intAttr || intAttr.getInt() != static_cast<int64_t>(i & 0xff)) {
+        valuesMatch = false;
+        break;
+      }
+    }
+    EXPECT_TRUE(valuesMatch);
     foundCC = true;
   });
   EXPECT_TRUE(foundCC);
+}
+
+namespace {
+unsigned countOpcode(SmallVectorImpl<uint32_t> &binary, spirv::Opcode target) {
+  unsigned count = 0;
+  size_t offset = spirv::kHeaderWordCount;
+  size_t binarySize = binary.size();
+  while (offset < binarySize) {
+    uint32_t wordCount = binary[offset] >> 16;
+    if (!wordCount || offset + wordCount > binarySize)
+      break;
+    auto op = static_cast<spirv::Opcode>(binary[offset] & 0xffff);
+    if (op == target)
+      ++count;
+    offset += wordCount;
+  }
+  return count;
+}
+} // namespace
+
+TEST_F(SerializationTest, LongCompositeDoesNotDuplicateDeclaredCapability) {
+  // Pre-declare LongCompositesINTEL / SPV_INTEL_long_composites in the VCE
+  // triple. The serializer must not emit a second OpCapability/OpExtension
+  // when a long composite triggers `addLongCompositesCapability()`.
+  module->getOperation()->setAttr(
+      spirv::ModuleOp::getVCETripleAttrName(),
+      spirv::VerCapExtAttr::get(
+          spirv::Version::V_1_0, {spirv::Capability::LongCompositesINTEL},
+          {spirv::Extension::SPV_INTEL_long_composites}, &context));
+
+  OpBuilder builder(module->getRegion());
+  Type i32Type = builder.getIntegerType(32);
+  SmallVector<Type> memberTypes(kLongCompositeSize, i32Type);
+  SmallVector<spirv::StructType::OffsetInfo> offsets(kLongCompositeSize, 0);
+  auto structType = spirv::StructType::get(memberTypes, offsets);
+  addGlobalVar(structType, "var0");
+
+  ASSERT_TRUE(succeeded(spirv::serialize(module.get(), binary)));
+  EXPECT_TRUE(allInstructionsWithinWordLimit(binary));
+  EXPECT_TRUE(hasOpcode(binary, spirv::Opcode::OpTypeStructContinuedINTEL));
+  EXPECT_EQ(countOpcode(binary, spirv::Opcode::OpCapability), 1u);
+  EXPECT_EQ(countOpcode(binary, spirv::Opcode::OpExtension), 1u);
 }
