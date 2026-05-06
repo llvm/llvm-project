@@ -1801,7 +1801,8 @@ bool ClangdLSPServer::shouldRunCompletion(
   if (!Offset) {
     vlog("could not convert position '{0}' to offset for file '{1}'",
          Params.position, Params.textDocument.uri.file());
-    return true;
+    llvm::consumeError(Offset.takeError());
+    return true; // completion code will log the error for invalid position.
   }
   return allowImplicitCompletion(*Code, *Offset);
 }
