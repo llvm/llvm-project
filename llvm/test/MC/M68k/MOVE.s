@@ -15,6 +15,18 @@ move.b %d0, %d1
 ; CHECK-SAME: encoding: [0x1e,0x00]
 move.b %d0, %d7
 
+; CHECK:      move.b %d0, (%a0)
+; CHECK-SAME: encoding: [0x10,0x80]
+move.b %d0, (%a0)
+
+; CHECK:      move.b %d0, (%a1)
+; CHECK-SAME: encoding: [0x12,0x80]
+move.b %d0, (%a1)
+
+; CHECK:      move.b %d0, (%sp)
+; CHECK-SAME: encoding: [0x1e,0x80]
+move.b %d0, (%sp)
+
 ; CHECK:      move.b %d1, %d0
 ; CHECK-SAME: encoding: [0x10,0x01]
 move.b %d1, %d0
@@ -26,6 +38,18 @@ move.b %d1, %d1
 ; CHECK:      move.b %d1, %d7
 ; CHECK-SAME: encoding: [0x1e,0x01]
 move.b %d1, %d7
+
+; CHECK:      move.b %d1, (%a0)
+; CHECK-SAME: encoding: [0x10,0x81]
+move.b %d1, (%a0)
+
+; CHECK:      move.b %d1, (%a1)
+; CHECK-SAME: encoding: [0x12,0x81]
+move.b %d1, (%a1)
+
+; CHECK:      move.b %d1, (%sp)
+; CHECK-SAME: encoding: [0x1e,0x81]
+move.b %d1, (%sp)
 
 ; CHECK:      move.b %d7, %d0
 ; CHECK-SAME: encoding: [0x10,0x07]
@@ -39,6 +63,90 @@ move.b %d7, %d1
 ; CHECK-SAME: encoding: [0x1e,0x07]
 move.b %d7, %d7
 
+; CHECK:      move.b %d7, (%a0)
+; CHECK-SAME: encoding: [0x10,0x87]
+move.b %d7, (%a0)
+
+; CHECK:      move.b %d7, (%a1)
+; CHECK-SAME: encoding: [0x12,0x87]
+move.b %d7, (%a1)
+
+; CHECK:      move.b %d7, (%sp)
+; CHECK-SAME: encoding: [0x1e,0x87]
+move.b %d7, (%sp)
+
+; CHECK:      move.b (%a0), %d0
+; CHECK-SAME: encoding: [0x10,0x10]
+move.b (%a0), %d0
+
+; CHECK:      move.b (%a0), %d1
+; CHECK-SAME: encoding: [0x12,0x10]
+move.b (%a0), %d1
+
+; CHECK:      move.b (%a0), %d7
+; CHECK-SAME: encoding: [0x1e,0x10]
+move.b (%a0), %d7
+
+; CHECK:      move.b (%a0), (%a0)
+; CHECK-SAME: encoding: [0x10,0x90]
+move.b (%a0), (%a0)
+
+; CHECK:      move.b (%a0), (%a1)
+; CHECK-SAME: encoding: [0x12,0x90]
+move.b (%a0), (%a1)
+
+; CHECK:      move.b (%a0), (%sp)
+; CHECK-SAME: encoding: [0x1e,0x90]
+move.b (%a0), (%sp)
+
+; CHECK:      move.b (%a1), %d0
+; CHECK-SAME: encoding: [0x10,0x11]
+move.b (%a1), %d0
+
+; CHECK:      move.b (%a1), %d1
+; CHECK-SAME: encoding: [0x12,0x11]
+move.b (%a1), %d1
+
+; CHECK:      move.b (%a1), %d7
+; CHECK-SAME: encoding: [0x1e,0x11]
+move.b (%a1), %d7
+
+; CHECK:      move.b (%a1), (%a0)
+; CHECK-SAME: encoding: [0x10,0x91]
+move.b (%a1), (%a0)
+
+; CHECK:      move.b (%a1), (%a1)
+; CHECK-SAME: encoding: [0x12,0x91]
+move.b (%a1), (%a1)
+
+; CHECK:      move.b (%a1), (%sp)
+; CHECK-SAME: encoding: [0x1e,0x91]
+move.b (%a1), (%sp)
+
+; CHECK:      move.b (%sp), %d0
+; CHECK-SAME: encoding: [0x10,0x17]
+move.b (%sp), %d0
+
+; CHECK:      move.b (%sp), %d1
+; CHECK-SAME: encoding: [0x12,0x17]
+move.b (%sp), %d1
+
+; CHECK:      move.b (%sp), %d7
+; CHECK-SAME: encoding: [0x1e,0x17]
+move.b (%sp), %d7
+
+; CHECK:      move.b (%sp), (%a0)
+; CHECK-SAME: encoding: [0x10,0x97]
+move.b (%sp), (%a0)
+
+; CHECK:      move.b (%sp), (%a1)
+; CHECK-SAME: encoding: [0x12,0x97]
+move.b (%sp), (%a1)
+
+; CHECK:      move.b (%sp), (%sp)
+; CHECK-SAME: encoding: [0x1e,0x97]
+move.b (%sp), (%sp)
+
 ; CHECK:      move.w %d0, %d0
 ; CHECK-SAME: encoding: [0x30,0x00]
 move.w %d0, %d0
@@ -50,6 +158,18 @@ move.w %d0, %d1
 ; CHECK:      move.w %d0, %d7
 ; CHECK-SAME: encoding: [0x3e,0x00]
 move.w %d0, %d7
+
+; CHECK:      move.w %d0, (%a0)
+; CHECK-SAME: encoding: [0x30,0x80]
+move.w %d0, (%a0)
+
+; CHECK:      move.w %d0, (%a1)
+; CHECK-SAME: encoding: [0x32,0x80]
+move.w %d0, (%a1)
+
+; CHECK:      move.w %d0, (%sp)
+; CHECK-SAME: encoding: [0x3e,0x80]
+move.w %d0, (%sp)
 
 ; CHECK:      move.w %d1, %d0
 ; CHECK-SAME: encoding: [0x30,0x01]
@@ -63,6 +183,18 @@ move.w %d1, %d1
 ; CHECK-SAME: encoding: [0x3e,0x01]
 move.w %d1, %d7
 
+; CHECK:      move.w %d1, (%a0)
+; CHECK-SAME: encoding: [0x30,0x81]
+move.w %d1, (%a0)
+
+; CHECK:      move.w %d1, (%a1)
+; CHECK-SAME: encoding: [0x32,0x81]
+move.w %d1, (%a1)
+
+; CHECK:      move.w %d1, (%sp)
+; CHECK-SAME: encoding: [0x3e,0x81]
+move.w %d1, (%sp)
+
 ; CHECK:      move.w %d7, %d0
 ; CHECK-SAME: encoding: [0x30,0x07]
 move.w %d7, %d0
@@ -74,6 +206,18 @@ move.w %d7, %d1
 ; CHECK:      move.w %d7, %d7
 ; CHECK-SAME: encoding: [0x3e,0x07]
 move.w %d7, %d7
+
+; CHECK:      move.w %d7, (%a0)
+; CHECK-SAME: encoding: [0x30,0x87]
+move.w %d7, (%a0)
+
+; CHECK:      move.w %d7, (%a1)
+; CHECK-SAME: encoding: [0x32,0x87]
+move.w %d7, (%a1)
+
+; CHECK:      move.w %d7, (%sp)
+; CHECK-SAME: encoding: [0x3e,0x87]
+move.w %d7, (%sp)
 
 ; CHECK:      move.w %a0, %d0
 ; CHECK-SAME: encoding: [0x30,0x08]
@@ -87,6 +231,18 @@ move.w %a0, %d1
 ; CHECK-SAME: encoding: [0x3e,0x08]
 move.w %a0, %d7
 
+; CHECK:      move.w %a0, (%a0)
+; CHECK-SAME: encoding: [0x30,0x88]
+move.w %a0, (%a0)
+
+; CHECK:      move.w %a0, (%a1)
+; CHECK-SAME: encoding: [0x32,0x88]
+move.w %a0, (%a1)
+
+; CHECK:      move.w %a0, (%sp)
+; CHECK-SAME: encoding: [0x3e,0x88]
+move.w %a0, (%sp)
+
 ; CHECK:      move.w %a1, %d0
 ; CHECK-SAME: encoding: [0x30,0x09]
 move.w %a1, %d0
@@ -98,6 +254,18 @@ move.w %a1, %d1
 ; CHECK:      move.w %a1, %d7
 ; CHECK-SAME: encoding: [0x3e,0x09]
 move.w %a1, %d7
+
+; CHECK:      move.w %a1, (%a0)
+; CHECK-SAME: encoding: [0x30,0x89]
+move.w %a1, (%a0)
+
+; CHECK:      move.w %a1, (%a1)
+; CHECK-SAME: encoding: [0x32,0x89]
+move.w %a1, (%a1)
+
+; CHECK:      move.w %a1, (%sp)
+; CHECK-SAME: encoding: [0x3e,0x89]
+move.w %a1, (%sp)
 
 ; CHECK:      move.w %sp, %d0
 ; CHECK-SAME: encoding: [0x30,0x0f]
@@ -111,6 +279,90 @@ move.w %sp, %d1
 ; CHECK-SAME: encoding: [0x3e,0x0f]
 move.w %sp, %d7
 
+; CHECK:      move.w %sp, (%a0)
+; CHECK-SAME: encoding: [0x30,0x8f]
+move.w %sp, (%a0)
+
+; CHECK:      move.w %sp, (%a1)
+; CHECK-SAME: encoding: [0x32,0x8f]
+move.w %sp, (%a1)
+
+; CHECK:      move.w %sp, (%sp)
+; CHECK-SAME: encoding: [0x3e,0x8f]
+move.w %sp, (%sp)
+
+; CHECK:      move.w (%a0), %d0
+; CHECK-SAME: encoding: [0x30,0x10]
+move.w (%a0), %d0
+
+; CHECK:      move.w (%a0), %d1
+; CHECK-SAME: encoding: [0x32,0x10]
+move.w (%a0), %d1
+
+; CHECK:      move.w (%a0), %d7
+; CHECK-SAME: encoding: [0x3e,0x10]
+move.w (%a0), %d7
+
+; CHECK:      move.w (%a0), (%a0)
+; CHECK-SAME: encoding: [0x30,0x90]
+move.w (%a0), (%a0)
+
+; CHECK:      move.w (%a0), (%a1)
+; CHECK-SAME: encoding: [0x32,0x90]
+move.w (%a0), (%a1)
+
+; CHECK:      move.w (%a0), (%sp)
+; CHECK-SAME: encoding: [0x3e,0x90]
+move.w (%a0), (%sp)
+
+; CHECK:      move.w (%a1), %d0
+; CHECK-SAME: encoding: [0x30,0x11]
+move.w (%a1), %d0
+
+; CHECK:      move.w (%a1), %d1
+; CHECK-SAME: encoding: [0x32,0x11]
+move.w (%a1), %d1
+
+; CHECK:      move.w (%a1), %d7
+; CHECK-SAME: encoding: [0x3e,0x11]
+move.w (%a1), %d7
+
+; CHECK:      move.w (%a1), (%a0)
+; CHECK-SAME: encoding: [0x30,0x91]
+move.w (%a1), (%a0)
+
+; CHECK:      move.w (%a1), (%a1)
+; CHECK-SAME: encoding: [0x32,0x91]
+move.w (%a1), (%a1)
+
+; CHECK:      move.w (%a1), (%sp)
+; CHECK-SAME: encoding: [0x3e,0x91]
+move.w (%a1), (%sp)
+
+; CHECK:      move.w (%sp), %d0
+; CHECK-SAME: encoding: [0x30,0x17]
+move.w (%sp), %d0
+
+; CHECK:      move.w (%sp), %d1
+; CHECK-SAME: encoding: [0x32,0x17]
+move.w (%sp), %d1
+
+; CHECK:      move.w (%sp), %d7
+; CHECK-SAME: encoding: [0x3e,0x17]
+move.w (%sp), %d7
+
+; CHECK:      move.w (%sp), (%a0)
+; CHECK-SAME: encoding: [0x30,0x97]
+move.w (%sp), (%a0)
+
+; CHECK:      move.w (%sp), (%a1)
+; CHECK-SAME: encoding: [0x32,0x97]
+move.w (%sp), (%a1)
+
+; CHECK:      move.w (%sp), (%sp)
+; CHECK-SAME: encoding: [0x3e,0x97]
+move.w (%sp), (%sp)
+
 ; CHECK:      move.l %d0, %d0
 ; CHECK-SAME: encoding: [0x20,0x00]
 move.l %d0, %d0
@@ -122,6 +374,18 @@ move.l %d0, %d1
 ; CHECK:      move.l %d0, %d7
 ; CHECK-SAME: encoding: [0x2e,0x00]
 move.l %d0, %d7
+
+; CHECK:      move.l %d0, (%a0)
+; CHECK-SAME: encoding: [0x20,0x80]
+move.l %d0, (%a0)
+
+; CHECK:      move.l %d0, (%a1)
+; CHECK-SAME: encoding: [0x22,0x80]
+move.l %d0, (%a1)
+
+; CHECK:      move.l %d0, (%sp)
+; CHECK-SAME: encoding: [0x2e,0x80]
+move.l %d0, (%sp)
 
 ; CHECK:      move.l %d1, %d0
 ; CHECK-SAME: encoding: [0x20,0x01]
@@ -135,6 +399,18 @@ move.l %d1, %d1
 ; CHECK-SAME: encoding: [0x2e,0x01]
 move.l %d1, %d7
 
+; CHECK:      move.l %d1, (%a0)
+; CHECK-SAME: encoding: [0x20,0x81]
+move.l %d1, (%a0)
+
+; CHECK:      move.l %d1, (%a1)
+; CHECK-SAME: encoding: [0x22,0x81]
+move.l %d1, (%a1)
+
+; CHECK:      move.l %d1, (%sp)
+; CHECK-SAME: encoding: [0x2e,0x81]
+move.l %d1, (%sp)
+
 ; CHECK:      move.l %d7, %d0
 ; CHECK-SAME: encoding: [0x20,0x07]
 move.l %d7, %d0
@@ -146,6 +422,18 @@ move.l %d7, %d1
 ; CHECK:      move.l %d7, %d7
 ; CHECK-SAME: encoding: [0x2e,0x07]
 move.l %d7, %d7
+
+; CHECK:      move.l %d7, (%a0)
+; CHECK-SAME: encoding: [0x20,0x87]
+move.l %d7, (%a0)
+
+; CHECK:      move.l %d7, (%a1)
+; CHECK-SAME: encoding: [0x22,0x87]
+move.l %d7, (%a1)
+
+; CHECK:      move.l %d7, (%sp)
+; CHECK-SAME: encoding: [0x2e,0x87]
+move.l %d7, (%sp)
 
 ; CHECK:      move.l %a0, %d0
 ; CHECK-SAME: encoding: [0x20,0x08]
@@ -159,6 +447,18 @@ move.l %a0, %d1
 ; CHECK-SAME: encoding: [0x2e,0x08]
 move.l %a0, %d7
 
+; CHECK:      move.l %a0, (%a0)
+; CHECK-SAME: encoding: [0x20,0x88]
+move.l %a0, (%a0)
+
+; CHECK:      move.l %a0, (%a1)
+; CHECK-SAME: encoding: [0x22,0x88]
+move.l %a0, (%a1)
+
+; CHECK:      move.l %a0, (%sp)
+; CHECK-SAME: encoding: [0x2e,0x88]
+move.l %a0, (%sp)
+
 ; CHECK:      move.l %a1, %d0
 ; CHECK-SAME: encoding: [0x20,0x09]
 move.l %a1, %d0
@@ -171,6 +471,18 @@ move.l %a1, %d1
 ; CHECK-SAME: encoding: [0x2e,0x09]
 move.l %a1, %d7
 
+; CHECK:      move.l %a1, (%a0)
+; CHECK-SAME: encoding: [0x20,0x89]
+move.l %a1, (%a0)
+
+; CHECK:      move.l %a1, (%a1)
+; CHECK-SAME: encoding: [0x22,0x89]
+move.l %a1, (%a1)
+
+; CHECK:      move.l %a1, (%sp)
+; CHECK-SAME: encoding: [0x2e,0x89]
+move.l %a1, (%sp)
+
 ; CHECK:      move.l %sp, %d0
 ; CHECK-SAME: encoding: [0x20,0x0f]
 move.l %sp, %d0
@@ -182,3 +494,87 @@ move.l %sp, %d1
 ; CHECK:      move.l %sp, %d7
 ; CHECK-SAME: encoding: [0x2e,0x0f]
 move.l %sp, %d7
+
+; CHECK:      move.l %sp, (%a0)
+; CHECK-SAME: encoding: [0x20,0x8f]
+move.l %sp, (%a0)
+
+; CHECK:      move.l %sp, (%a1)
+; CHECK-SAME: encoding: [0x22,0x8f]
+move.l %sp, (%a1)
+
+; CHECK:      move.l %sp, (%sp)
+; CHECK-SAME: encoding: [0x2e,0x8f]
+move.l %sp, (%sp)
+
+; CHECK:      move.l (%a0), %d0
+; CHECK-SAME: encoding: [0x20,0x10]
+move.l (%a0), %d0
+
+; CHECK:      move.l (%a0), %d1
+; CHECK-SAME: encoding: [0x22,0x10]
+move.l (%a0), %d1
+
+; CHECK:      move.l (%a0), %d7
+; CHECK-SAME: encoding: [0x2e,0x10]
+move.l (%a0), %d7
+
+; CHECK:      move.l (%a0), (%a0)
+; CHECK-SAME: encoding: [0x20,0x90]
+move.l (%a0), (%a0)
+
+; CHECK:      move.l (%a0), (%a1)
+; CHECK-SAME: encoding: [0x22,0x90]
+move.l (%a0), (%a1)
+
+; CHECK:      move.l (%a0), (%sp)
+; CHECK-SAME: encoding: [0x2e,0x90]
+move.l (%a0), (%sp)
+
+; CHECK:      move.l (%a1), %d0
+; CHECK-SAME: encoding: [0x20,0x11]
+move.l (%a1), %d0
+
+; CHECK:      move.l (%a1), %d1
+; CHECK-SAME: encoding: [0x22,0x11]
+move.l (%a1), %d1
+
+; CHECK:      move.l (%a1), %d7
+; CHECK-SAME: encoding: [0x2e,0x11]
+move.l (%a1), %d7
+
+; CHECK:      move.l (%a1), (%a0)
+; CHECK-SAME: encoding: [0x20,0x91]
+move.l (%a1), (%a0)
+
+; CHECK:      move.l (%a1), (%a1)
+; CHECK-SAME: encoding: [0x22,0x91]
+move.l (%a1), (%a1)
+
+; CHECK:      move.l (%a1), (%sp)
+; CHECK-SAME: encoding: [0x2e,0x91]
+move.l (%a1), (%sp)
+
+; CHECK:      move.l (%sp), %d0
+; CHECK-SAME: encoding: [0x20,0x17]
+move.l (%sp), %d0
+
+; CHECK:      move.l (%sp), %d1
+; CHECK-SAME: encoding: [0x22,0x17]
+move.l (%sp), %d1
+
+; CHECK:      move.l (%sp), %d7
+; CHECK-SAME: encoding: [0x2e,0x17]
+move.l (%sp), %d7
+
+; CHECK:      move.l (%sp), (%a0)
+; CHECK-SAME: encoding: [0x20,0x97]
+move.l (%sp), (%a0)
+
+; CHECK:      move.l (%sp), (%a1)
+; CHECK-SAME: encoding: [0x22,0x97]
+move.l (%sp), (%a1)
+
+; CHECK:      move.l (%sp), (%sp)
+; CHECK-SAME: encoding: [0x2e,0x97]
+move.l (%sp), (%sp)

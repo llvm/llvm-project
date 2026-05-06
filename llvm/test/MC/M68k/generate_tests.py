@@ -164,7 +164,7 @@ class DataRegisterDirect(EffectiveAddressingMode):
 
     register: DataRegister
 
-    def permutations() -> Generator["DataRegisterDirect", None, None]:
+    def permutations() -> Generator[EffectiveAddressingMode, None, None]:
         for register in DataRegister.permutations():
             yield DataRegisterDirect(register)
 
@@ -186,7 +186,7 @@ class AddressRegisterDirect(EffectiveAddressingMode):
 
     register: AddressRegister
 
-    def permutations() -> Generator["AddressRegisterDirect", None, None]:
+    def permutations() -> Generator[EffectiveAddressingMode, None, None]:
         for register in AddressRegister.permutations():
             yield AddressRegisterDirect(register)
 
@@ -195,6 +195,28 @@ class AddressRegisterDirect(EffectiveAddressingMode):
 
     def modeField(self) -> int:
         return 0b001
+
+    def registerField(self) -> int:
+        return self.register
+
+
+# https://m680x0.github.io/ref/M68000PM_AD_Rev_1_Programmers_Reference_Manual_1992.html#pf2e
+# (An)
+@dataclass
+class AddressRegisterIndirect(EffectiveAddressingMode):
+    """Represents the contents of memory, with address in a particular address register."""
+
+    register: AddressRegister
+
+    def permutations() -> Generator[EffectiveAddressingMode, None, None]:
+        for register in AddressRegister.permutations():
+            yield AddressRegisterIndirect(register)
+
+    def asm(self) -> str:
+        return f"({self.register.asm()})"
+
+    def modeField(self) -> int:
+        return 0b010
 
     def registerField(self) -> int:
         return self.register
@@ -233,8 +255,12 @@ class MOVE(Instruction):
     source: EffectiveAddressingMode
 
     def permutations() -> Generator["MOVE", None, None]:
-        sourceModes = [DataRegisterDirect, AddressRegisterDirect]
-        destinationModes = [DataRegisterDirect]
+        sourceModes = [
+            DataRegisterDirect,
+            AddressRegisterDirect,
+            AddressRegisterIndirect,
+        ]
+        destinationModes = [DataRegisterDirect, AddressRegisterIndirect]
 
         for size in [Byte, Word, Long]:
             for sourceMode in sourceModes:
