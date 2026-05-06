@@ -3,18 +3,13 @@
 //
 // RUN: %clang -### --target=spirv64-amd-amdhsa -use-spirv-backend \
 // RUN:   -Xlinker -opt-bisect-limit=-1 %s 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=CHECK-LINKER-OPT
+// RUN:   | FileCheck %s
 //
 // RUN: %clang -### --target=spirv64-amd-amdhsa -use-spirv-backend \
 // RUN:   -Xlinker -mllvm -Xlinker -opt-bisect-limit=-1 %s 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=CHECK-LINKER-MLLVM
+// RUN:   | FileCheck %s
 //
-// CHECK-LINKER-OPT: "{{.*}}llvm-link"
-// CHECK-LINKER-OPT-NOT: opt-bisect-limit
-// CHECK-LINKER-OPT-NOT: -mllvm
-// CHECK-LINKER-OPT-SAME: "-o" "{{.*}}.bc" "{{.*}}.bc"{{$}}
-//
-// CHECK-LINKER-MLLVM: "{{.*}}llvm-link"
-// CHECK-LINKER-MLLVM-NOT: opt-bisect-limit
-// CHECK-LINKER-MLLVM-NOT: -mllvm
-// CHECK-LINKER-MLLVM-SAME: "-o" "{{.*}}.bc" "{{.*}}.bc"{{$}}
+// CHECK: "{{.*}}llvm-link"
+// CHECK-NOT: opt-bisect-limit
+// CHECK-NOT: -mllvm
+// CHECK-SAME: "-o" "{{.*}}.bc" "{{.*}}.bc"{{$}}
