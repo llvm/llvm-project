@@ -244,6 +244,28 @@ class AddressRegisterIndirectWithPostincrement(EffectiveAddressingMode):
         return self.register
 
 
+# https://m680x0.github.io/ref/M68000PM_AD_Rev_1_Programmers_Reference_Manual_1992.html#pf30
+# -(An)
+@dataclass
+class AddressRegisterIndirectWithPredecrement(EffectiveAddressingMode):
+    """Represents the contents of memory, with address in a particular address register. The address register is decremented by size before dereferencing."""
+
+    register: AddressRegister
+
+    def permutations() -> Generator[EffectiveAddressingMode, None, None]:
+        for register in AddressRegister.permutations():
+            yield AddressRegisterIndirectWithPredecrement(register)
+
+    def asm(self) -> str:
+        return f"-({self.register.asm()})"
+
+    def modeField(self) -> int:
+        return 0b100
+
+    def registerField(self) -> int:
+        return self.register
+
+
 # Instructions
 
 
@@ -282,11 +304,13 @@ class MOVE(Instruction):
             AddressRegisterDirect,
             AddressRegisterIndirect,
             AddressRegisterIndirectWithPostincrement,
+            AddressRegisterIndirectWithPredecrement,
         ]
         destinationModes = [
             DataRegisterDirect,
             AddressRegisterIndirect,
             AddressRegisterIndirectWithPostincrement,
+            AddressRegisterIndirectWithPredecrement,
         ]
 
         for size in [Byte, Word, Long]:
