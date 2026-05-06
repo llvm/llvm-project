@@ -151,7 +151,7 @@ public:
   LLVM_ABI void cluster(BasicBlock::iterator Where);
   /// \Returns true if all nodes in the bundle are ready.
   bool ready() const {
-    return all_of(Nodes, [](const auto *N) { return N->ready(); });
+    return all_of(Nodes, [](const auto *N) { return N->readyBottomUp(); });
   }
 #ifndef NDEBUG
   void dump(raw_ostream &OS) const;
