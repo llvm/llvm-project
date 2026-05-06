@@ -100,7 +100,7 @@ FormatvStringCheck::FormatvStringCheck(StringRef Name,
   // Parse "name1:idx1;name2:idx2;..." from AdditionalFunctions.
   llvm::StringRef Input(AdditionalFunctions);
   while (!Input.empty()) {
-    auto [Entry, Rest] = Input.split(';');
+    const auto [Entry, Rest] = Input.split(';');
     Input = Rest;
     if (Entry.empty())
       continue;
