@@ -2342,8 +2342,8 @@ For example:
     allocation which existed before the call, either through direct calls to
     a memory-deallocation function like ``free``, or through synchronization.
     Freeing through synchronization here means that a deallocation
-    happens-before the function exit but does not happens-before the function
-    entry.
+    *happens-before* the function exit but does not *happens-before* the
+    function entry.
 
     As a result, pointers that are known to be dereferenceable prior to a call
     to a function with the ``nofree`` attribute are still known to be
