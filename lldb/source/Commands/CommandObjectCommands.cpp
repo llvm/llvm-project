@@ -1915,7 +1915,7 @@ public:
           auto report_error = [this, elem_counter,
                                counter](const char *err_txt) -> bool {
             m_args_error = Status::FromErrorStringWithFormatv(
-                "Element {} of arguments list element {}: {}.", elem_counter,
+                "element {} of arguments list element {}: {}", elem_counter,
                 counter, err_txt);
             return false;
           };
