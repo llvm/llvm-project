@@ -1163,22 +1163,9 @@ void Fortran::lower::associateMutableBox(
     cuf::genPointerSync(box.getAddr(), builder);
     return;
   }
-  if (converter.getLoweringOptions().getLowerToHighLevelFIR()) {
-    fir::ExtendedValue rhs = converter.genExprAddr(loc, source, stmtCtx);
-    fir::factory::associateMutableBox(builder, loc, box, rhs, lbounds);
-    cuf::genPointerSync(box.getAddr(), builder);
-    return;
-  }
-  // The right hand side is not be evaluated into a temp. Array sections can
-  // typically be represented as a value of type `!fir.box`. However, an
-  // expression that uses vector subscripts cannot be emboxed. In that case,
-  // generate a reference to avoid having to later use a fir.rebox to implement
-  // the pointer association.
-  fir::ExtendedValue rhs = isArraySectionWithoutVectorSubscript(source)
-                               ? converter.genExprBox(loc, source, stmtCtx)
-                               : converter.genExprAddr(loc, source, stmtCtx);
-
+  fir::ExtendedValue rhs = converter.genExprAddr(loc, source, stmtCtx);
   fir::factory::associateMutableBox(builder, loc, box, rhs, lbounds);
+  cuf::genPointerSync(box.getAddr(), builder);
 }
 
 bool Fortran::lower::isWholeAllocatable(const Fortran::lower::SomeExpr &expr) {
