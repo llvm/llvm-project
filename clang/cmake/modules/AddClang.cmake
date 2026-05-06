@@ -137,7 +137,11 @@ macro(add_clang_library name)
           LIBRARY DESTINATION lib${LLVM_LIBDIR_SUFFIX}
           ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX}
           RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
-
+        if (MSVC)
+          install(FILES $<TARGET_FILE_DIR:${lib}>/$<TARGET_FILE_BASE_NAME:${lib}>.pdb
+            DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT ${lib}
+            OPTIONAL)
+        endif()
         if (NOT LLVM_ENABLE_IDE)
           add_llvm_install_targets(install-${lib}
                                    DEPENDS ${lib}
@@ -186,8 +190,8 @@ macro(add_clang_tool name)
         RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
         COMPONENT ${name})
 
-      if (LLVM_ENABLE_PDB)
-        install(FILES $<TARGET_PDB_FILE:${name}> DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT ${name} OPTIONAL)
+      if (MSVC)
+        install(FILES $<TARGET_FILE_DIR:${name}>/$<TARGET_FILE_BASE_NAME:${name}>.pdb DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT ${name} OPTIONAL)
       endif()
 
       if(NOT LLVM_ENABLE_IDE)
