@@ -153,22 +153,9 @@ static void abort_with_message(const char *kind, uintptr_t caller) {
     android_set_abort_message(msg_buf);
   abort();
 }
-#elif SANITIZER_AMDGPU || SANITIZER_NVPTX
+#elif SANITIZER_AMDGPU || SANITIZER_NVPTX || SANITIZER_SPIRV
 static void abort_with_message(const char *kind, uintptr_t caller) {
   __builtin_verbose_trap("ubsan", "unrecoverable error");
-}
-#elif SANITIZER_SPIRV
-struct __ubsan_abort_info_t {
-  const char *fmt;
-  const char *kind;
-  const void *caller;
-};
-[[noreturn]] void __spirv_AbortKHR(__ubsan_abort_info_t info);
-[[noreturn]] static void abort_with_message(const char *kind,
-                                            uintptr_t caller) {
-  __ubsan_abort_info_t info = {"ubsan: %s by %p\n", kind,
-                               reinterpret_cast<void *>(caller)};
-  __spirv_AbortKHR(info);
 }
 #else
 static void abort_with_message(const char *kind, uintptr_t caller) { abort(); }
