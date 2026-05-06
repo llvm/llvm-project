@@ -8,9 +8,12 @@
 
 #include "DebugTranslation.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 
@@ -98,8 +101,8 @@ llvm::MDTuple *
 DebugTranslation::getMDTupleOrNull(ArrayRef<DINodeAttr> elements) {
   if (elements.empty())
     return nullptr;
-  SmallVector<llvm::Metadata *> llvmElements = llvm::to_vector(
-      llvm::map_range(elements, [&](DINodeAttr attr) -> llvm::Metadata * {
+  SmallVector<llvm::Metadata *> llvmElements =
+      llvm::map_to_vector(elements, [&](DINodeAttr attr) -> llvm::Metadata * {
         if (DIAnnotationAttr annAttr = dyn_cast<DIAnnotationAttr>(attr)) {
           llvm::Metadata *ops[2] = {
               llvm::MDString::get(llvmCtx, annAttr.getName()),
@@ -107,7 +110,7 @@ DebugTranslation::getMDTupleOrNull(ArrayRef<DINodeAttr> elements) {
           return llvm::MDNode::get(llvmCtx, ops);
         }
         return translate(attr);
-      }));
+      });
   return llvm::MDNode::get(llvmCtx, llvmElements);
 }
 
@@ -118,9 +121,34 @@ llvm::DIBasicType *DebugTranslation::translateImpl(DIBasicTypeAttr attr) {
       /*AlignInBits=*/0, attr.getEncoding(), llvm::DINode::FlagZero);
 }
 
+llvm::TempDICompileUnit
+DebugTranslation::translateTemporaryImpl(DICompileUnitAttr attr) {
+  return llvm::DICompileUnit::getTemporary(
+      llvmCtx,
+      static_cast<llvm::DISourceLanguageName>(attr.getSourceLanguage()),
+      /*File=*/nullptr, "", attr.getIsOptimized(),
+      /*Flags=*/"", /*RuntimeVersion=*/0,
+      /*splitDebugFileName=*/"",
+      static_cast<llvm::DICompileUnit::DebugEmissionKind>(
+          attr.getEmissionKind()),
+      /*EnumTypes=*/nullptr, /*RetainedTypes=*/nullptr,
+      /*GlobalVariables=*/nullptr, /*ImportedEntities=*/nullptr,
+      /*Macros=*/nullptr,
+      /*DWOId=*/0, /*SplitDebugInlining=*/true,
+      attr.getIsDebugInfoForProfiling(),
+      static_cast<llvm::DICompileUnit::DebugNameTableKind>(
+          attr.getNameTableKind()),
+      /*RangesBaseAddress=*/false, /*SysRoot=*/"", /*SDK=*/"");
+}
+
 llvm::DICompileUnit *DebugTranslation::translateImpl(DICompileUnitAttr attr) {
+  if (attr.getId())
+    if (auto iter = distinctAttrToNode.find(attr.getId());
+        iter != distinctAttrToNode.end())
+      return cast<llvm::DICompileUnit>(iter->second);
+
   llvm::DIBuilder builder(llvmModule);
-  return builder.createCompileUnit(
+  llvm::DICompileUnit *cu = builder.createCompileUnit(
       attr.getSourceLanguage(), translate(attr.getFile()),
       attr.getProducer() ? attr.getProducer().getValue() : "",
       attr.getIsOptimized(),
@@ -129,9 +157,20 @@ llvm::DICompileUnit *DebugTranslation::translateImpl(DICompileUnitAttr attr) {
                                    : "",
       static_cast<llvm::DICompileUnit::DebugEmissionKind>(
           attr.getEmissionKind()),
-      0, true, false,
+      0, true, attr.getIsDebugInfoForProfiling(),
       static_cast<llvm::DICompileUnit::DebugNameTableKind>(
           attr.getNameTableKind()));
+
+  llvm::SmallVector<llvm::Metadata *> importNodes;
+  for (DINodeAttr importNode : attr.getImportedEntities())
+    importNodes.push_back(translate(importNode));
+  if (!importNodes.empty())
+    cu->replaceImportedEntities(llvm::MDTuple::get(llvmCtx, importNodes));
+
+  if (attr.getId())
+    distinctAttrToNode.try_emplace(attr.getId(), cu);
+
+  return cu;
 }
 
 /// Returns a new `DINodeT` that is either distinct or not, depending on
@@ -188,8 +227,8 @@ DebugTranslation::translateImpl(DICompositeTypeAttr attr) {
       /*Flags=*/static_cast<llvm::DINode::DIFlags>(attr.getFlags()),
       getMDTupleOrNull(attr.getElements()),
       /*RuntimeLang=*/0, /*EnumKind*/ std::nullopt, /*VTableHolder=*/nullptr,
-      /*TemplateParams=*/nullptr, /*Identifier=*/nullptr,
-      /*Discriminator=*/nullptr,
+      /*TemplateParams=*/nullptr, getMDStringOrNull(attr.getIdentifier()),
+      translate(attr.getDiscriminator()),
       getExpressionAttrOrNull(attr.getDataLocation()),
       getExpressionAttrOrNull(attr.getAssociated()),
       getExpressionAttrOrNull(attr.getAllocated()),
@@ -197,13 +236,27 @@ DebugTranslation::translateImpl(DICompositeTypeAttr attr) {
 }
 
 llvm::DIDerivedType *DebugTranslation::translateImpl(DIDerivedTypeAttr attr) {
+  llvm::Metadata *extraData = nullptr;
+  if (Attribute extraDataAttr = attr.getExtraData()) {
+    extraData =
+        llvm::TypeSwitch<Attribute, llvm::Metadata *>(extraDataAttr)
+            .Case([&](DINodeAttr nodeAttr) { return translate(nodeAttr); })
+            .Case([&](IntegerAttr intAttr) {
+              return llvm::ConstantAsMetadata::get(
+                  llvm::ConstantInt::get(llvmCtx, intAttr.getValue()));
+            })
+            .Default([](Attribute) -> llvm::Metadata * {
+              llvm_unreachable("verifier guarantees DINodeAttr or IntegerAttr");
+            });
+  }
+
   return llvm::DIDerivedType::get(
       llvmCtx, attr.getTag(), getMDStringOrNull(attr.getName()),
-      /*File=*/nullptr, /*Line=*/0,
-      /*Scope=*/nullptr, translate(attr.getBaseType()), attr.getSizeInBits(),
+      translate(attr.getFile()), attr.getLine(), translate(attr.getScope()),
+      translate(attr.getBaseType()), attr.getSizeInBits(),
       attr.getAlignInBits(), attr.getOffsetInBits(),
       attr.getDwarfAddressSpace(), /*PtrAuthData=*/std::nullopt,
-      /*Flags=*/llvm::DINode::FlagZero, translate(attr.getExtraData()));
+      /*Flags=*/static_cast<llvm::DINode::DIFlags>(attr.getFlags()), extraData);
 }
 
 llvm::DIStringType *DebugTranslation::translateImpl(DIStringTypeAttr attr) {
@@ -283,7 +336,7 @@ DebugTranslation::translateRecursive(DIRecursiveTypeAttrInterface attr) {
 
   llvm::DINode *result =
       TypeSwitch<DIRecursiveTypeAttrInterface, llvm::DINode *>(attr)
-          .Case<DICompositeTypeAttr>([&](auto attr) {
+          .Case([&](DICompositeTypeAttr attr) {
             auto temporary = translateTemporaryImpl(attr);
             setRecursivePlaceholder(temporary.get());
             // Must call `translateImpl` directly instead of `translate` to
@@ -292,11 +345,18 @@ DebugTranslation::translateRecursive(DIRecursiveTypeAttrInterface attr) {
             temporary->replaceAllUsesWith(concrete);
             return concrete;
           })
-          .Case<DISubprogramAttr>([&](auto attr) {
+          .Case([&](DISubprogramAttr attr) {
             auto temporary = translateTemporaryImpl(attr);
             setRecursivePlaceholder(temporary.get());
             // Must call `translateImpl` directly instead of `translate` to
             // avoid handling the recursive interface again.
+            auto *concrete = translateImpl(attr);
+            temporary->replaceAllUsesWith(concrete);
+            return concrete;
+          })
+          .Case([&](DICompileUnitAttr attr) {
+            auto temporary = translateTemporaryImpl(attr);
+            setRecursivePlaceholder(temporary.get());
             auto *concrete = translateImpl(attr);
             temporary->replaceAllUsesWith(concrete);
             return concrete;
@@ -441,7 +501,7 @@ DebugTranslation::translateImpl(DISubroutineTypeAttr attr) {
     types.push_back(translate(type));
   return llvm::DISubroutineType::get(
       llvmCtx, llvm::DINode::FlagZero, attr.getCallingConvention(),
-      llvm::DITypeRefArray(llvm::MDNode::get(llvmCtx, types)));
+      llvm::DITypeArray(llvm::MDNode::get(llvmCtx, types)));
 }
 
 llvm::DIType *DebugTranslation::translateImpl(DITypeAttr attr) {

@@ -1,4 +1,4 @@
-!RUN: %flang_fc1 -fsyntax-only %s 2>&1 | FileCheck --allow-empty %s
+!RUN: %flang -fc1 -fsyntax-only %s 2>&1 | FileCheck --allow-empty %s
 module foo_mod
   use, intrinsic :: iso_fortran_env
   use, intrinsic :: iso_c_binding

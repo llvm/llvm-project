@@ -36,6 +36,10 @@ void ZOS::addClangTargetOptions(const ArgList &DriverArgs,
                                 options::OPT_fno_aligned_allocation))
     CC1Args.push_back("-faligned-alloc-unavailable");
 
+  if (!DriverArgs.hasArg(options::OPT_fvisibility_EQ,
+                         options::OPT_fvisibility_ms_compat))
+    CC1Args.push_back("-fvisibility=hidden");
+
   if (DriverArgs.hasFlag(options::OPT_fxl_pragma_pack,
                          options::OPT_fno_xl_pragma_pack, true))
     CC1Args.push_back("-fxl-pragma-pack");

@@ -18,7 +18,7 @@ open Llvm
 open Llvm_bitwriter
 
 open Testsuite
-let context = global_context ()
+let context = create_context ()
 let i1_type = Llvm.i1_type context
 let i8_type = Llvm.i8_type context
 let i16_type = Llvm.i16_type context
@@ -263,7 +263,6 @@ let test_constants () =
   group "constant arithmetic";
   (* CHECK: @const_neg = global i64 sub
    * CHECK: @const_nsw_neg = global i64 sub nsw
-   * CHECK: @const_nuw_neg = global i64 sub
    * CHECK: @const_not = global i64 xor
    * CHECK: @const_add = global i64 add
    * CHECK: @const_nsw_add = global i64 add nsw
@@ -279,7 +278,6 @@ let test_constants () =
   let foldbomb = const_ptrtoint foldbomb_gv i64_type in
   ignore (define_global "const_neg" (const_neg foldbomb) m);
   ignore (define_global "const_nsw_neg" (const_nsw_neg foldbomb) m);
-  ignore (define_global "const_nuw_neg" (const_nuw_neg foldbomb) m);
   ignore (define_global "const_not" (const_not foldbomb) m);
   ignore (define_global "const_add" (const_add foldbomb five) m);
   ignore (define_global "const_nsw_add" (const_nsw_add foldbomb five) m);
@@ -537,7 +535,7 @@ let test_global_variables () =
     let m = create_module context "temp" in
 
     insist (get_module_identifier m = "temp");
-    set_module_identifer m "temp2";
+    set_module_identifier m "temp2";
     insist (get_module_identifier m = "temp2");
 
     insist (At_end m = global_begin m);
@@ -678,6 +676,22 @@ let test_functions () =
   set_value_name "Param1" params.(0);
   set_value_name "Param2" params.(1);
   ignore (build_unreachable (builder_at_end context (entry_block fn)));
+
+  group "intrinsics";
+  insist (not (is_intrinsic fn));
+  let abs_id = lookup_intrinsic_id "llvm.abs" in
+  let abs_decl = intrinsic_declaration m abs_id [|i32_type|] in
+  insist ("llvm.abs.i8" = intrinsic_overloaded_name m abs_id [|i8_type|]);
+  insist ("llvm.abs.i32" = intrinsic_overloaded_name m abs_id [|i32_type|]);
+  let abs_i8_type = intrinsic_type context abs_id [|i8_type|] in
+  insist (TypeKind.Function = classify_type abs_i8_type);
+  insist (is_intrinsic abs_decl);
+  insist (intrinsic_is_overloaded abs_id);
+  let stackmap_id = lookup_intrinsic_id "llvm.experimental.stackmap" in
+  let stackmap_decl = intrinsic_declaration m stackmap_id [||] in
+  insist ("llvm.experimental.stackmap" = intrinsic_name stackmap_id);
+  insist (is_intrinsic stackmap_decl);
+  insist (not (intrinsic_is_overloaded stackmap_id));
 
   (* CHECK: fastcc{{.*}}Fn5
    *)
@@ -1318,7 +1332,6 @@ let test_builder () =
      * CHECK: %build_xor = xor i32 %P1, %P2
      * CHECK: %build_neg = sub i32 0, %P1
      * CHECK: %build_nsw_neg = sub nsw i32 0, %P1
-     * CHECK: %build_nuw_neg = sub nuw i32 0, %P1
      * CHECK: %build_fneg = fneg float %F1
      * CHECK: %build_not = xor i32 %P1, -1
      * CHECK: %build_freeze = freeze i32 %P1
@@ -1350,7 +1363,6 @@ let test_builder () =
     ignore (build_xor p1 p2 "build_xor" b);
     ignore (build_neg p1 "build_neg" b);
     ignore (build_nsw_neg p1 "build_nsw_neg" b);
-    ignore (build_nuw_neg p1 "build_nuw_neg" b);
     ignore (build_fneg f1 "build_fneg" b);
     ignore (build_not p1 "build_not" b);
     ignore (build_freeze p1 "build_freeze" b);
@@ -1495,4 +1507,5 @@ let _ =
   suite "builder"          test_builder;
   suite "memory buffer"    test_memory_buffer;
   suite "writer"           test_writer; (* Keep this last; it disposes m. *)
+  dispose_context context;
   exit !exit_status

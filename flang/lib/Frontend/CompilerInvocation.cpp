@@ -165,16 +165,24 @@ static bool parseDebugArgs(Fortran::frontend::CodeGenOptions &opts,
             args.getLastArg(clang::options::OPT_split_dwarf_output))
       opts.SplitDwarfOutput = a->getValue();
   }
+
+  if (const llvm::opt::Arg *arg =
+          args.getLastArg(clang::options::OPT_dwarf_debug_flags))
+    opts.DwarfDebugFlags = arg->getValue();
+
+  opts.DebugInfoForProfiling =
+      args.hasArg(clang::options::OPT_fdebug_info_for_profiling);
+
   return true;
 }
 
-static void parseDoConcurrentMapping(Fortran::frontend::CodeGenOptions &opts,
+static bool parseDoConcurrentMapping(Fortran::frontend::CodeGenOptions &opts,
                                      llvm::opt::ArgList &args,
                                      clang::DiagnosticsEngine &diags) {
   llvm::opt::Arg *arg =
       args.getLastArg(clang::options::OPT_fdo_concurrent_to_openmp_EQ);
   if (!arg)
-    return;
+    return true;
 
   using DoConcurrentMappingKind =
       Fortran::frontend::CodeGenOptions::DoConcurrentMappingKind;
@@ -189,9 +197,11 @@ static void parseDoConcurrentMapping(Fortran::frontend::CodeGenOptions &opts,
   if (!val.has_value()) {
     diags.Report(clang::diag::err_drv_invalid_value)
         << arg->getAsString(args) << arg->getValue();
+    return false;
   }
 
   opts.setDoConcurrentMapping(val.value());
+  return true;
 }
 
 static bool parseVectorLibArg(Fortran::frontend::CodeGenOptions &opts,
@@ -276,9 +286,17 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
                    clang::options::OPT_fno_debug_pass_manager, false))
     opts.DebugPassManager = 1;
 
+  if (!args.hasFlag(clang::options::OPT_fprotect_parens,
+                    clang::options::OPT_fno_protect_parens, true))
+    opts.ProtectParens = 0;
+
   if (args.hasFlag(clang::options::OPT_fstack_arrays,
                    clang::options::OPT_fno_stack_arrays, false))
     opts.StackArrays = 1;
+
+  if (args.hasFlag(clang::options::OPT_fsafe_trampoline,
+                   clang::options::OPT_fno_safe_trampoline, false))
+    opts.EnableSafeTrampoline = 1;
 
   if (args.getLastArg(clang::options::OPT_floop_interchange))
     opts.InterchangeLoops = 1;
@@ -335,6 +353,11 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
 
   if (args.hasArg(clang::options::OPT_finstrument_functions))
     opts.InstrumentFunctions = 1;
+
+  // -fno-integrated-as: emit GNU Assembler compatible assembly.
+  if (!args.hasFlag(clang::options::OPT_fintegrated_as,
+                    clang::options::OPT_fno_integrated_as, true))
+    opts.DisableIntegratedAS = 1;
 
   if (const llvm::opt::Arg *a =
           args.getLastArg(clang::options::OPT_mcode_object_version_EQ)) {
@@ -453,6 +476,9 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
     opts.ProfileInstrumentUsePath = A->getValue();
   }
 
+  opts.SampleProfileFile =
+      args.getLastArgValue(clang::options::OPT_fprofile_sample_use_EQ);
+
   // -mcmodel option.
   if (const llvm::opt::Arg *a =
           args.getLastArg(clang::options::OPT_mcmodel_EQ)) {
@@ -481,8 +507,6 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
                    clang::options::OPT_funderscoring, false)) {
     opts.Underscoring = 0;
   }
-
-  parseDoConcurrentMapping(opts, args, diags);
 
   if (const llvm::opt::Arg *arg =
           args.getLastArg(clang::options::OPT_complex_range_EQ)) {
@@ -845,6 +869,11 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
                        args.hasFlag(clang::options::OPT_funsigned,
                                     clang::options::OPT_fno_unsigned, false));
 
+  // -frelaxed-c-loc
+  if (args.hasArg(clang::options::OPT_relaxed_c_loc)) {
+    opts.features.Enable(Fortran::common::LanguageFeature::RelaxedCLoc);
+  }
+
   // -f{no-}xor-operator
   opts.features.Enable(Fortran::common::LanguageFeature::XOROperator,
                        args.hasFlag(clang::options::OPT_fxor_operator,
@@ -882,6 +911,16 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
   opts.dashX = dashX;
 
   return diags.getNumErrors() == numErrorsBefore;
+}
+
+// Generate the path to look for intrinsic modules
+static std::string getIntrinsicDir(const char *argv) {
+  // TODO: Find a system independent API
+  llvm::SmallString<128> driverPath;
+  driverPath.assign(llvm::sys::fs::getMainExecutable(argv, nullptr));
+  llvm::sys::path::remove_filename(driverPath);
+  driverPath.append("/../include/flang/");
+  return std::string(driverPath);
 }
 
 // Generate the path to look for OpenMP headers
@@ -1014,14 +1053,27 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   // this has to change when other -W<opt>'s are supported.
   if (args.hasArg(clang::options::OPT_W_Joined)) {
     const auto &wArgs = args.getAllArgValues(clang::options::OPT_W_Joined);
-    for (const auto &wArg : wArgs) {
+    // TODO: Consider using std::string_view instead of llvm::StringRef
+    // when moving to C++20:
+    for (const llvm::StringRef wArg : wArgs) {
       if (wArg == "error") {
         res.setWarnAsErr(true);
         // -Wfatal-errors
       } else if (wArg == "fatal-errors") {
         res.setMaxErrors(1);
         // -W[no-]<feature>
-      } else if (!features.EnableWarning(wArg)) {
+      } else if (features.EnableWarning(wArg)) {
+        if (auto canonical{features.CheckDeprecatedSpelling(wArg)}) {
+          std::string suggestion{*canonical};
+          if (wArg.starts_with("no-")) {
+            suggestion = "no-" + suggestion;
+          }
+          const unsigned diagID =
+              diags.getCustomDiagID(clang::DiagnosticsEngine::Warning,
+                                    "-W%0 is deprecated; use -W%1 instead");
+          diags.Report(diagID) << wArg << suggestion;
+        }
+      } else {
         const unsigned diagID = diags.getCustomDiagID(
             clang::DiagnosticsEngine::Error, "Unknown diagnostic option: -W%0");
         diags.Report(diagID) << wArg;
@@ -1076,15 +1128,35 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   }
 
   // -fdefault* family
-  if (args.hasArg(clang::options::OPT_fdefault_real_8)) {
-    res.getDefaultKinds().set_defaultRealKind(8);
-    res.getDefaultKinds().set_doublePrecisionKind(16);
+  if (const llvm::opt::Arg *arg =
+          args.getLastArg(clang::options::OPT_fdefault_real_8,
+                          clang::options::OPT_fdefault_real_4)) {
+    const llvm::opt::Option &opt = arg->getOption();
+    if (opt.matches(clang::options::OPT_fdefault_real_8)) {
+      res.getDefaultKinds().set_defaultRealKind(8);
+      res.getDefaultKinds().set_doublePrecisionKind(16);
+    } else if (opt.matches(clang::options::OPT_fdefault_real_4)) {
+      res.getDefaultKinds().set_defaultRealKind(4);
+      res.getDefaultKinds().set_doublePrecisionKind(8);
+    }
   }
-  if (args.hasArg(clang::options::OPT_fdefault_integer_8)) {
-    res.getDefaultKinds().set_defaultIntegerKind(8);
-    res.getDefaultKinds().set_subscriptIntegerKind(8);
-    res.getDefaultKinds().set_sizeIntegerKind(8);
-    res.getDefaultKinds().set_defaultLogicalKind(8);
+  if (const llvm::opt::Arg *arg =
+          args.getLastArg(clang::options::OPT_fdefault_integer_8,
+                          clang::options::OPT_fdefault_integer_4)) {
+    const llvm::opt::Option &opt = arg->getOption();
+    if (opt.matches(clang::options::OPT_fdefault_integer_8)) {
+      res.getDefaultKinds().set_defaultIntegerKind(8);
+      res.getDefaultKinds().set_subscriptIntegerKind(8);
+      res.getDefaultKinds().set_sizeIntegerKind(8);
+      res.getDefaultKinds().set_defaultLogicalKind(8);
+    } else if (opt.matches(clang::options::OPT_fdefault_integer_4)) {
+      // Note that the subscript integer kind is set to 8 here. If a
+      // default-integer-kind is not provided, it is also set to 8.
+      res.getDefaultKinds().set_defaultIntegerKind(4);
+      res.getDefaultKinds().set_subscriptIntegerKind(8);
+      res.getDefaultKinds().set_sizeIntegerKind(4);
+      res.getDefaultKinds().set_defaultLogicalKind(4);
+    }
   }
   if (args.hasArg(clang::options::OPT_fdefault_double_8)) {
     if (!args.hasArg(clang::options::OPT_fdefault_real_8)) {
@@ -1557,14 +1629,6 @@ bool CompilerInvocation::createFromArgs(
     success = false;
   }
 
-  // User-specified or default resource dir
-  if (const llvm::opt::Arg *a =
-          args.getLastArg(clang::options::OPT_resource_dir))
-    invoc.resourceDir = a->getValue();
-  else
-    invoc.resourceDir = clang::GetResourcesPath(
-        llvm::sys::fs::getMainExecutable(argv0, nullptr));
-
   // -flang-experimental-hlfir
   if (args.hasArg(clang::options::OPT_flang_experimental_hlfir) ||
       args.hasArg(clang::options::OPT_emit_hlfir)) {
@@ -1615,8 +1679,10 @@ bool CompilerInvocation::createFromArgs(
 
   // -frealloc-lhs is the default.
   if (!args.hasFlag(clang::options::OPT_frealloc_lhs,
-                    clang::options::OPT_fno_realloc_lhs, true))
+                    clang::options::OPT_fno_realloc_lhs, true)) {
     invoc.loweringOpts.setReallocateLHS(false);
+    invoc.getLangOpts().NoReallocateLHS = true;
+  }
 
   invoc.loweringOpts.setRepackArrays(args.hasFlag(
       clang::options::OPT_frepack_arrays, clang::options::OPT_fno_repack_arrays,
@@ -1630,11 +1696,26 @@ bool CompilerInvocation::createFromArgs(
     invoc.loweringOpts.setRepackArraysWhole(arg->getValue() ==
                                             llvm::StringRef{"whole"});
 
+  if (auto *arg = args.getLastArg(clang::options::OPT_ffp_maxmin_behavior_EQ)) {
+    auto value = Fortran::common::parseFPMaxminBehavior(arg->getValue());
+    invoc.getCodeGenOpts().setFPMaxminBehavior(value);
+    invoc.loweringOpts.setFPMaxminBehavior(value);
+  }
+
   success &= parseFrontendArgs(invoc.getFrontendOpts(), args, diags);
   parseTargetArgs(invoc.getTargetOpts(), args);
   parsePreprocessorArgs(invoc.getPreprocessorOpts(), args);
   parseCodeGenArgs(invoc.getCodeGenOpts(), args, diags);
+  success &= parseDoConcurrentMapping(invoc.getCodeGenOpts(), args, diags);
   success &= parseDebugArgs(invoc.getCodeGenOpts(), args, diags);
+
+  // Enable USE statement preservation for debug info if debug level is above
+  // LineTablesOnly.
+  using DebugInfoKind = llvm::codegenoptions::DebugInfoKind;
+  DebugInfoKind debugLevel = invoc.getCodeGenOpts().getDebugInfo();
+  invoc.loweringOpts.setPreserveUseDebugInfo(
+      debugLevel > DebugInfoKind::DebugLineTablesOnly);
+
   success &= parseVectorLibArg(invoc.getCodeGenOpts(), args, diags);
   success &= parseSemaArgs(invoc, args, diags);
   success &= parseDialectArgs(invoc, args, diags);
@@ -1831,11 +1912,9 @@ void CompilerInvocation::setFortranOpts() {
       preprocessorOptions.searchDirectoriesFromIntrModPath.begin(),
       preprocessorOptions.searchDirectoriesFromIntrModPath.end());
 
-  // Add the ordered list of -fintrinsic-modules-path
-  fortranOptions.intrinsicModuleDirectories.insert(
-      fortranOptions.intrinsicModuleDirectories.end(),
-      preprocessorOptions.searchDirectoriesFromIntrModPath.begin(),
-      preprocessorOptions.searchDirectoriesFromIntrModPath.end());
+  //  Add the default intrinsic module directory
+  fortranOptions.intrinsicModuleDirectories.emplace_back(
+      getIntrinsicDir(getArgv0()));
 
   // Add the directory supplied through -J/-module-dir to the list of search
   // directories
@@ -1862,7 +1941,7 @@ CompilerInvocation::getSemanticsCtx(
 
   auto semanticsContext = std::make_unique<semantics::SemanticsContext>(
       getDefaultKinds(), fortranOptions.features, getLangOpts(),
-      allCookedSources);
+      allCookedSources, getCodeGenOpts().getFPMaxminBehavior());
 
   semanticsContext->set_moduleDirectory(getModuleDir())
       .set_searchDirectories(fortranOptions.searchDirectories)
@@ -1892,6 +1971,7 @@ void CompilerInvocation::setLoweringOptions() {
   const Fortran::common::LangOptions &langOptions = getLangOpts();
   loweringOpts.setIntegerWrapAround(langOptions.getSignedOverflowBehavior() ==
                                     Fortran::common::LangOptions::SOB_Defined);
+  loweringOpts.setProtectParens(codegenOpts.ProtectParens);
   Fortran::common::MathOptionsBase &mathOpts = loweringOpts.getMathOptions();
   // TODO: when LangOptions are finalized, we can represent
   //       the math related options using Fortran::commmon::MathOptionsBase,

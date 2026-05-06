@@ -935,31 +935,3 @@ label:
   goto label;
   i++;
 }
-
-// CHECK:       [B2 (ENTRY)]
-// CHECK-NEXT:    Succs (1): B1
-// CHECK:       [B1]
-// CHECK-NEXT:    1: a
-// CHECK-NEXT:    2: [B1.1] (ImplicitCastExpr, LValueToRValue, int)
-// CHECK-NEXT:    3: b
-// CHECK-NEXT:    4: [B1.3] (ImplicitCastExpr, LValueToRValue, int)
-// CHECK-NEXT:    5: [B1.2] + [B1.4]
-// CHECK-NEXT:    6: c
-// CHECK-NEXT:    7: [B1.6] (ImplicitCastExpr, LValueToRValue, int)
-// CHECK-NEXT:    8: [B1.5] + [B1.7]
-// CHECK-NEXT:    9: int res = a + b + c;
-// CHECK-NEXT:    10: res
-// CHECK-NEXT:    11: [B1.10] (ImplicitCastExpr, LValueToRValue, int)
-// CHECK-NEXT:    12: return [B1.11];
-// CHECK-NEXT:    13: [B1.9] (Lifetime ends)
-// CHECK-NEXT:    14: [Parm: c] (Lifetime ends)
-// CHECK-NEXT:    15: [Parm: b] (Lifetime ends)
-// CHECK-NEXT:    16: [Parm: a] (Lifetime ends)
-// CHECK-NEXT:    Preds (1): B2
-// CHECK-NEXT:    Succs (1): B0
-// CHECK:       [B0 (EXIT)]
-// CHECK-NEXT:    Preds (1): B1
-int test_param_scope_end_order(int a, int b, int c) {
-  int res = a + b + c;
-  return res; 
-}

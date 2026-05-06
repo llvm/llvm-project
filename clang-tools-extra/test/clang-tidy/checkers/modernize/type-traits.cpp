@@ -150,3 +150,17 @@ struct ImplicitlyInstantiatedConstructor {
 const ImplicitlyInstantiatedConstructor<int> ImplicitInstantiation(std::remove_reference<int>::type(123));
 // CHECK-MESSAGES: :[[@LINE-1]]:68: warning: use c++14 style type templates
 // CHECK-FIXES: const ImplicitlyInstantiatedConstructor<int> ImplicitInstantiation(std::remove_reference_t<int>(123));
+
+#if __cplusplus >= 202002L
+
+template <typename T>
+struct S {
+  typename std::remove_reference<T>::type a; // NOLINT
+};
+
+void f() {
+  auto [a] = S<int>{};
+  [&] { a; }; // This used to cause a false positive.
+}
+
+#endif // __cplusplus >= 202002L

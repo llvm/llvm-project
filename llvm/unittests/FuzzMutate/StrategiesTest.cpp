@@ -172,7 +172,7 @@ TEST(InstDeleterIRStrategyTest, EmptyFunction) {
                      "\n"
                      "define i32 @func2() {\n"
                      "%A9 = alloca i32\n"
-                     "%L6 = load i32, i32* %A9\n"
+                     "%L6 = load i32, ptr %A9\n"
                      "ret i32 %L6\n"
                      "}\n";
 
@@ -306,9 +306,9 @@ TEST(InstModificationIRStrategyTest, FCmp) {
 TEST(InstModificationIRStrategyTest, GEP) {
   LLVMContext Ctx;
   StringRef Source = "\n\
-      define i32* @test(i32* %ptr) {\n\
-        %gep = getelementptr i32, i32* %ptr, i32 10\n\
-        ret i32* %gep\n\
+      define ptr @test(ptr %ptr) {\n\
+        %gep = getelementptr i32, ptr %ptr, i32 10\n\
+        ret ptr %gep\n\
       }";
 
   auto Mutator = createMutator<InstModificationIRStrategy>();
@@ -733,11 +733,12 @@ TEST(AllStrategies, SkipEHPad) {
   StringRef Source = "\n\
     define void @f(i32 %x) personality ptr @__CxxFrameHandler3 { \n\
     entry: \n\
+      %I = alloca i32, align 4 \n\
       invoke void @g() to label %try.cont unwind label %catch.dispatch \n\
     catch.dispatch: \n\
       %0 = catchswitch within none [label %catch] unwind to caller \n\
     catch: \n\
-      %1 = catchpad within %0 [ptr null, i32 64, ptr null] \n\
+      %1 = catchpad within %0 [ptr null, i32 64, ptr %I] \n\
       catchret from %1 to label %try.cont \n\
     try.cont: \n\
       ret void \n\

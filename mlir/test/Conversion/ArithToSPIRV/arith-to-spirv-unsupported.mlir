@@ -122,6 +122,16 @@ func.func @unsupported_constant_tensor_2xf64_0() {
 
 // -----
 
+// Regression test: arith.trunci on tensor types should not crash
+// (https://github.com/llvm/llvm-project/issues/178214).
+func.func @trunci_tensor_no_crash(%arg0: tensor<1xi32>) -> tensor<1xi16> {
+  // expected-error @+1 {{failed to legalize operation 'arith.trunci'}}
+  %0 = arith.trunci %arg0 : tensor<1xi32> to tensor<1xi16>
+  return %0 : tensor<1xi16>
+}
+
+// -----
+
 func.func @constant_dense_resource_non_existant() {
   // expected-error @+2 {{failed to legalize operation 'arith.constant'}}
   // expected-error @+1 {{could not find resource blob}}

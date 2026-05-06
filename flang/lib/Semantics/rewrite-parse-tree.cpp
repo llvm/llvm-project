@@ -118,7 +118,7 @@ static bool ReturnsDataPointer(const Symbol &symbol) {
 }
 
 static bool LoopConstructIsSIMD(parser::OpenMPLoopConstruct *ompLoop) {
-  return llvm::omp::allSimdSet.test(ompLoop->BeginDir().DirName().v);
+  return llvm::omp::allSimdSet.test(ompLoop->BeginDir().DirId());
 }
 
 // Remove non-SIMD OpenMPConstructs once they are parsed.
@@ -133,7 +133,7 @@ void RewriteMutator::OpenMPSimdOnly(parser::SpecificationPart &specPart) {
               &specConstr->u)}) {
         if (std::holds_alternative<parser::OpenMPThreadprivate>(
                 ompDecl->value().u) ||
-            std::holds_alternative<parser::OpenMPDeclareMapperConstruct>(
+            std::holds_alternative<parser::OmpDeclareMapperDirective>(
                 ompDecl->value().u)) {
           it = list.erase(it);
           continue;

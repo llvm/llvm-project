@@ -190,6 +190,14 @@ template <typename I, typename E> using ObjectListT = ListT<ObjectT<I, E>>;
 using DirectiveName = llvm::omp::Directive;
 
 template <typename I, typename E> //
+struct StylizedInstanceT {
+  using Variables = ObjectListT<I, E>;
+  using Instance = E;
+  using TupleTrait = std::true_type;
+  std::tuple<Variables, Instance> t;
+};
+
+template <typename I, typename E> //
 struct DefinedOperatorT {
   struct DefinedOpName {
     using WrapperTrait = std::true_type;
@@ -407,6 +415,12 @@ struct AppendArgsT {
   using IncompleteTrait = std::true_type;
 };
 
+// [6.0:372-373]
+template <typename T, typename I, typename E> //
+struct ApplyT {
+  using IncompleteTrait = std::true_type;
+};
+
 // V5.2: [8.1] `at` clause
 template <typename T, typename I, typename E> //
 struct AtT {
@@ -451,6 +465,15 @@ struct CollectorT {
   using IncompleteTrait = std::true_type;
 };
 
+// [6.0:262]
+template <typename T, typename I, typename E> //
+struct CombinerT {
+  using List = ListT<type::StylizedInstanceT<I, E>>;
+  using WrapperTrait = std::true_type;
+  List v;
+};
+
+// V5.2: [15.8.3] `extended-atomic` clauses
 template <typename T, typename I, typename E> //
 struct CompareT {
   using EmptyTrait = std::true_type;
@@ -480,6 +503,12 @@ struct CopyprivateT {
   List v;
 };
 
+// [6.0:378-379]
+template <typename T, typename I, typename E> //
+struct CountsT {
+  using IncompleteTrait = std::true_type;
+};
+
 // V5.2: [5.4.1] `default` clause
 template <typename T, typename I, typename E> //
 struct DefaultT {
@@ -498,9 +527,6 @@ struct DefaultmapT {
   std::tuple<ImplicitBehavior, OPT(VariableCategory)> t;
 };
 
-template <typename T, typename I, typename E> //
-struct DoacrossT;
-
 // V5.2: [15.9.5] `depend` clause
 template <typename T, typename I, typename E> //
 struct DependT {
@@ -508,15 +534,17 @@ struct DependT {
   using LocatorList = ObjectListT<I, E>;
   using DependenceType = tomp::type::DependenceType;
 
-  struct TaskDep { // The form with task dependence type.
-    using TupleTrait = std::true_type;
-    // Empty LocatorList means "omp_all_memory".
-    std::tuple<DependenceType, OPT(Iterator), LocatorList> t;
-  };
+  using TupleTrait = std::true_type;
+  // Empty LocatorList means "omp_all_memory".
+  std::tuple<DependenceType, OPT(Iterator), LocatorList> t;
+};
 
-  using Doacross = DoacrossT<T, I, E>;
-  using UnionTrait = std::true_type;
-  std::variant<Doacross, TaskDep> u; // Doacross form is legacy
+// [tr14:212-213]
+template <typename T, typename I, typename E> //
+struct DepthT {
+  using DepthExpr = E;
+  using WrapperTrait = std::true_type;
+  DepthExpr v;
 };
 
 // V5.2: [3.5] `destroy` clause
@@ -740,6 +768,12 @@ struct IndirectT {
   OPT(InvokedByFptr) v;
 };
 
+// [6.0:257-261]
+template <typename T, typename I, typename E> //
+struct InductionT {
+  using IncompleteTrait = std::true_type;
+};
+
 // [6.0:265-266]
 template <typename T, typename I, typename E> //
 struct InductorT {
@@ -759,12 +793,18 @@ struct InitT {
   std::tuple<OPT(InteropPreference), InteropTypes, InteropVar> t;
 };
 
+// [6.0:270]
+template <typename T, typename I, typename E> //
+struct InitCompleteT {
+  using IncompleteTrait = std::true_type;
+};
+
 // V5.2: [5.5.4] `initializer` clause
 template <typename T, typename I, typename E> //
 struct InitializerT {
-  using InitializerExpr = E;
+  using List = ListT<type::StylizedInstanceT<I, E>>;
   using WrapperTrait = std::true_type;
-  InitializerExpr v;
+  List v;
 };
 
 // V5.2: [5.5.10] `in_reduction` clause
@@ -776,6 +816,12 @@ struct InReductionT {
   using ReductionIdentifiers = ListT<type::ReductionIdentifierT<I, E>>;
   using TupleTrait = std::true_type;
   std::tuple<ReductionIdentifiers, List> t;
+};
+
+// [6.0:339-340]
+template <typename T, typename I, typename E> //
+struct InteropT {
+  using IncompleteTrait = std::true_type;
 };
 
 // V5.2: [5.4.7] `is_device_ptr` clause
@@ -817,6 +863,22 @@ struct LinkT {
   List v;
 };
 
+// [6.0:303]
+template <typename T, typename I, typename E> //
+struct LocalT {
+  using IncompleteTrait = std::true_type;
+};
+
+// V6: [6.4.7] Looprange clause
+template <typename T, typename I, typename E> //
+struct LooprangeT {
+  using Begin = E;
+  using Count = E;
+
+  using TupleTrait = std::true_type;
+  std::tuple<Begin, Count> t;
+};
+
 // V5.2: [5.8.3] `map` clause
 template <typename T, typename I, typename E> //
 struct MapT {
@@ -839,6 +901,12 @@ struct MapT {
 // V5.2: [7.5.1] `match` clause
 template <typename T, typename I, typename E> //
 struct MatchT {
+  using IncompleteTrait = std::true_type;
+};
+
+// [6.0:493-494]
+template <typename T, typename I, typename E> //
+struct MemscopeT {
   using IncompleteTrait = std::true_type;
 };
 
@@ -884,15 +952,15 @@ struct NoOpenmpT {
   using EmptyTrait = std::true_type;
 };
 
-// V5.2: [8.3.1] `assumption` clauses
-template <typename T, typename I, typename E> //
-struct NoOpenmpRoutinesT {
-  using EmptyTrait = std::true_type;
-};
-
 // V6.0: [10.6.1] `assumption` clauses
 template <typename T, typename I, typename E> //
 struct NoOpenmpConstructsT {
+  using EmptyTrait = std::true_type;
+};
+
+// V5.2: [8.3.1] `assumption` clauses
+template <typename T, typename I, typename E> //
+struct NoOpenmpRoutinesT {
   using EmptyTrait = std::true_type;
 };
 
@@ -932,30 +1000,26 @@ struct NumTasksT {
 };
 
 // V5.2: [10.2.1] `num_teams` clause
+// V6.1: Extended with dims modifier support
 template <typename T, typename I, typename E> //
 struct NumTeamsT {
   using LowerBound = E;
   using UpperBound = E;
+  using UpperBoundList = ListT<UpperBound>;
 
-  // The name Range is not a spec name.
-  struct Range {
-    using TupleTrait = std::true_type;
-    std::tuple<OPT(LowerBound), UpperBound> t;
-  };
-
-  // The name List is not a spec name. The list is an extension to allow
-  // specifying a grid with connection with the ompx_bare clause.
-  using List = ListT<Range>;
-  using WrapperTrait = std::true_type;
-  List v;
+  using TupleTrait = std::true_type;
+  // Representation: {LB?, [UB]}
+  std::tuple<OPT(LowerBound), UpperBoundList> t;
 };
 
 // V5.2: [10.1.2] `num_threads` clause
+// V6.1: Extended with dims modifier support
 template <typename T, typename I, typename E> //
 struct NumThreadsT {
   using Nthreads = E;
+  using List = ListT<Nthreads>;
   using WrapperTrait = std::true_type;
-  Nthreads v;
+  List v;
 };
 
 template <typename T, typename I, typename E> //
@@ -1089,6 +1153,12 @@ struct SafelenT {
   Length v;
 };
 
+// [6.0:393]
+template <typename T, typename I, typename E> //
+struct SafesyncT {
+  using IncompleteTrait = std::true_type;
+};
+
 // V5.2: [11.5.3] `schedule` clause
 template <typename T, typename I, typename E> //
 struct ScheduleT {
@@ -1164,11 +1234,13 @@ struct TaskReductionT {
 };
 
 // V5.2: [13.3] `thread_limit` clause
+// V6.1: Extended with dims modifier support
 template <typename T, typename I, typename E> //
 struct ThreadLimitT {
   using Threadlim = E;
+  using List = ListT<Threadlim>;
   using WrapperTrait = std::true_type;
-  Threadlim v;
+  List v;
 };
 
 // V5.2: [15.10.3] `parallelization-level` clauses
@@ -1198,7 +1270,7 @@ struct ToT {
   std::tuple<OPT(Expectation), OPT(Mappers), OPT(Iterator), LocatorList> t;
 };
 
-// [6.0:440-441] `transparent` clause
+// [6.0:510:25] `transparent` clause
 template <typename T, typename I, typename E> //
 struct TransparentT {
   using IncompleteTrait = std::true_type;
@@ -1306,15 +1378,6 @@ struct WriteT {
   using EmptyTrait = std::true_type;
 };
 
-// V6: [6.4.7] Looprange clause
-template <typename T, typename I, typename E> struct LooprangeT {
-  using Begin = E;
-  using End = E;
-
-  using TupleTrait = std::true_type;
-  std::tuple<Begin, End> t;
-};
-
 // ---
 
 template <typename T, typename I, typename E>
@@ -1334,10 +1397,13 @@ using EmptyClausesT = std::variant<
 
 template <typename T, typename I, typename E>
 using IncompleteClausesT =
-    std::variant<AdjustArgsT<T, I, E>, AppendArgsT<T, I, E>,
-                 CollectorT<T, I, E>, GraphIdT<T, I, E>, GraphResetT<T, I, E>,
-                 InductorT<T, I, E>, MatchT<T, I, E>, OtherwiseT<T, I, E>,
-                 ReplayableT<T, I, E>, TransparentT<T, I, E>, WhenT<T, I, E>>;
+    std::variant<AdjustArgsT<T, I, E>, AppendArgsT<T, I, E>, ApplyT<T, I, E>,
+                 CollectorT<T, I, E>, CountsT<T, I, E>, GraphIdT<T, I, E>,
+                 GraphResetT<T, I, E>, InductionT<T, I, E>, InductorT<T, I, E>,
+                 InitCompleteT<T, I, E>, InteropT<T, I, E>, LocalT<T, I, E>,
+                 MatchT<T, I, E>, MemscopeT<T, I, E>, OtherwiseT<T, I, E>,
+                 ReplayableT<T, I, E>, SafesyncT<T, I, E>,
+                 TransparentT<T, I, E>, WhenT<T, I, E>>;
 
 template <typename T, typename I, typename E>
 using TupleClausesT =
@@ -1357,17 +1423,17 @@ template <typename T, typename I, typename E>
 using WrapperClausesT = std::variant<
     AbsentT<T, I, E>, AlignT<T, I, E>, AllocatorT<T, I, E>,
     AtomicDefaultMemOrderT<T, I, E>, AtT<T, I, E>, BindT<T, I, E>,
-    CollapseT<T, I, E>, ContainsT<T, I, E>, CopyinT<T, I, E>,
-    CopyprivateT<T, I, E>, DefaultT<T, I, E>, DestroyT<T, I, E>,
-    DetachT<T, I, E>, DeviceSafesyncT<T, I, E>, DeviceTypeT<T, I, E>,
-    DynamicAllocatorsT<T, I, E>, EnterT<T, I, E>, ExclusiveT<T, I, E>,
-    FailT<T, I, E>, FilterT<T, I, E>, FinalT<T, I, E>, FirstprivateT<T, I, E>,
-    HasDeviceAddrT<T, I, E>, HintT<T, I, E>, HoldsT<T, I, E>,
-    InclusiveT<T, I, E>, IndirectT<T, I, E>, InitializerT<T, I, E>,
-    IsDevicePtrT<T, I, E>, LinkT<T, I, E>, MessageT<T, I, E>,
-    NocontextT<T, I, E>, NontemporalT<T, I, E>, NovariantsT<T, I, E>,
-    NumTeamsT<T, I, E>, NumThreadsT<T, I, E>, OrderedT<T, I, E>,
-    PartialT<T, I, E>, PriorityT<T, I, E>, PrivateT<T, I, E>,
+    CollapseT<T, I, E>, CombinerT<T, I, E>, ContainsT<T, I, E>,
+    CopyinT<T, I, E>, CopyprivateT<T, I, E>, DefaultT<T, I, E>, DepthT<T, I, E>,
+    DestroyT<T, I, E>, DetachT<T, I, E>, DeviceSafesyncT<T, I, E>,
+    DeviceTypeT<T, I, E>, DynamicAllocatorsT<T, I, E>, EnterT<T, I, E>,
+    ExclusiveT<T, I, E>, FailT<T, I, E>, FilterT<T, I, E>, FinalT<T, I, E>,
+    FirstprivateT<T, I, E>, HasDeviceAddrT<T, I, E>, HintT<T, I, E>,
+    HoldsT<T, I, E>, InclusiveT<T, I, E>, IndirectT<T, I, E>,
+    InitializerT<T, I, E>, IsDevicePtrT<T, I, E>, LinkT<T, I, E>,
+    MessageT<T, I, E>, NocontextT<T, I, E>, NontemporalT<T, I, E>,
+    NovariantsT<T, I, E>, NumTeamsT<T, I, E>, NumThreadsT<T, I, E>,
+    OrderedT<T, I, E>, PartialT<T, I, E>, PriorityT<T, I, E>, PrivateT<T, I, E>,
     ProcBindT<T, I, E>, ReverseOffloadT<T, I, E>, SafelenT<T, I, E>,
     SelfMapsT<T, I, E>, SeverityT<T, I, E>, SharedT<T, I, E>, SimdlenT<T, I, E>,
     SizesT<T, I, E>, PermutationT<T, I, E>, ThreadLimitT<T, I, E>,

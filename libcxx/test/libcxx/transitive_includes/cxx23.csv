@@ -669,6 +669,7 @@ memory_resource cerrno
 memory_resource climits
 memory_resource compare
 memory_resource cstdint
+memory_resource cstring
 memory_resource ctime
 memory_resource limits
 memory_resource ratio
@@ -678,6 +679,7 @@ mutex cerrno
 mutex climits
 mutex compare
 mutex cstdint
+mutex cstring
 mutex ctime
 mutex limits
 mutex ratio
@@ -805,6 +807,7 @@ random string
 random string_view
 random tuple
 random version
+ranges array
 ranges cctype
 ranges compare
 ranges concepts
@@ -876,6 +879,7 @@ set version
 shared_mutex cerrno
 shared_mutex climits
 shared_mutex cstdint
+shared_mutex cstring
 shared_mutex ctime
 shared_mutex limits
 shared_mutex ratio

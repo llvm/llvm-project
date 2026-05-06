@@ -440,6 +440,19 @@ private:
   ResourceTrackerSP RT;
 };
 
+/// Returned by operations that fail because a JITDylib has been closed.
+class LLVM_ABI JITDylibDefunct : public ErrorInfo<JITDylibDefunct> {
+public:
+  static char ID;
+
+  JITDylibDefunct(JITDylibSP JD) : JD(std::move(JD)) {}
+  std::error_code convertToErrorCode() const override;
+  void log(raw_ostream &OS) const override;
+
+private:
+  JITDylibSP JD;
+};
+
 /// Used to notify a JITDylib that the given set of symbols failed to
 /// materialize.
 class LLVM_ABI FailedToMaterialize : public ErrorInfo<FailedToMaterialize> {
@@ -1352,7 +1365,7 @@ public:
   using ErrorReporter = unique_function<void(Error)>;
 
   /// Send a result to the remote.
-  using SendResultFunction = unique_function<void(shared::WrapperFunctionResult)>;
+  using SendResultFunction = unique_function<void(shared::WrapperFunctionBuffer)>;
 
   /// An asynchronous wrapper-function callable from the executor via
   /// jit-dispatch.
@@ -1394,6 +1407,22 @@ public:
 
   /// Add a symbol name to the SymbolStringPool and return a pointer to it.
   SymbolStringPtr intern(StringRef SymName) { return EPC->intern(SymName); }
+
+  /// Returns a reference to the bootstrap JITDylib.
+  ///
+  /// This is a bare JITDylib that is created for each ExecutionSession and
+  /// populated with the bootstrap symbol definitions provided by the
+  /// ExecutorProcessControl object.
+  JITDylib &getBootstrapJITDylib() { return BootstrapJD; }
+
+  /// Set a WaitingOnGraph::Recorder to capture WaitingOnGraph operations.
+  ///
+  /// This method can be called at most once. If called, it should be called
+  /// before any symbols are materialized.
+  void setWaitingOnGraphOpRecorder(WaitingOnGraph::OpRecorder &R) {
+    assert(!GOpRecorder && "WaitingOnGraph recorder already set");
+    GOpRecorder = &R;
+  }
 
   /// Set the Platform for this ExecutionSession.
   void setPlatform(std::unique_ptr<Platform> P) { this->P = std::move(P); }
@@ -1584,7 +1613,7 @@ public:
   /// The wrapper function should be callable as:
   ///
   /// \code{.cpp}
-  ///   CWrapperFunctionResult fn(uint8_t *Data, uint64_t Size);
+  ///   CWrapperFunctionBuffer fn(uint8_t *Data, uint64_t Size);
   /// \endcode{.cpp}
   void callWrapperAsync(ExecutorAddr WrapperFnAddr,
                         ExecutorProcessControl::IncomingWFRHandler OnComplete,
@@ -1614,9 +1643,9 @@ public:
   /// callable as:
   ///
   /// \code{.cpp}
-  ///   CWrapperFunctionResult fn(uint8_t *Data, uint64_t Size);
+  ///   CWrapperFunctionBuffer fn(uint8_t *Data, uint64_t Size);
   /// \endcode{.cpp}
-  shared::WrapperFunctionResult callWrapper(ExecutorAddr WrapperFnAddr,
+  shared::WrapperFunctionBuffer callWrapper(ExecutorAddr WrapperFnAddr,
                                             ArrayRef<char> ArgBuffer) {
     return EPC->callWrapper(WrapperFnAddr, ArgBuffer);
   }
@@ -1692,7 +1721,7 @@ public:
   /// to incoming jit-dispatch requests from the executor.
   LLVM_ABI void runJITDispatchHandler(SendResultFunction SendResult,
                                       ExecutorAddr HandlerFnTagAddr,
-                                      ArrayRef<char> ArgBuffer);
+                                      shared::WrapperFunctionBuffer ArgBytes);
 
   /// Dump the state of all the JITDylibs in this session.
   LLVM_ABI void dump(raw_ostream &OS);
@@ -1813,7 +1842,9 @@ private:
   std::vector<ResourceManager *> ResourceManagers;
 
   std::vector<JITDylibSP> JDs;
+  JITDylib &BootstrapJD;
   WaitingOnGraph G;
+  WaitingOnGraph::OpRecorder *GOpRecorder = nullptr;
 
   // FIXME: Remove this (and runOutstandingMUs) once the linking layer works
   //        with callbacks from asynchronous queries.
@@ -1887,7 +1918,8 @@ Error JITDylib::define(std::unique_ptr<MaterializationUnitType> &&MU,
     });
 
   return ES.runSessionLocked([&, this]() -> Error {
-    assert(State == Open && "JD is defunct");
+    if (State != Open)
+      return make_error<JITDylibDefunct>(this);
 
     if (auto Err = defineImpl(*MU))
       return Err;

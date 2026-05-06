@@ -232,3 +232,14 @@ define i32 @knownbits_fshr(i32 %a0) nounwind {
 
 declare i32 @llvm.fshl.i32(i32, i32, i32) nounwind readnone
 declare i32 @llvm.fshr.i32(i32, i32, i32) nounwind readnone
+
+define i32 @knownbits_add_self_lsb(i32 %a0) nounwind {
+; CHECK-LABEL: knownbits_add_self_lsb:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    ret{{[l|q]}}
+  %x = freeze i32 %a0
+  %sum = add i32 %x, %x
+  %and = and i32 %sum, 1
+  ret i32 %and
+}

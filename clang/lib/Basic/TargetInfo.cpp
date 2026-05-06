@@ -52,6 +52,8 @@ static const LangASMap FakeAddrSpaceMap = {
     15, // hlsl_private
     16, // hlsl_device
     17, // hlsl_input
+    18, // hlsl_output
+    19, // hlsl_push_constant
     20, // wasm_funcref
 };
 
@@ -129,6 +131,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 0;
   MaxVectorAlign = 0;
   MaxTLSAlign = 0;
+  VectorsAreElementAligned = false;
   SizeType = UnsignedLong;
   PtrDiffType = SignedLong;
   IntMaxType = SignedLongLong;
@@ -631,6 +634,13 @@ TargetInfo::getCallingConvKind(bool ClangABICompat4) const {
 
 bool TargetInfo::callGlobalDeleteInDeletingDtor(
     const LangOptions &LangOpts) const {
+  if (getCXXABI() == TargetCXXABI::Microsoft &&
+      LangOpts.getClangABICompat() > LangOptions::ClangABI::Ver21)
+    return true;
+  return false;
+}
+
+bool TargetInfo::emitVectorDeletingDtors(const LangOptions &LangOpts) const {
   if (getCXXABI() == TargetCXXABI::Microsoft &&
       LangOpts.getClangABICompat() > LangOptions::ClangABI::Ver21)
     return true;

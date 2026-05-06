@@ -321,8 +321,8 @@ define void @larger_smull(ptr nocapture noundef readonly %x, i16 noundef %y, ptr
 ; CHECK-GI-NEXT:    mov x14, x11
 ; CHECK-GI-NEXT:    subs x13, x13, #16
 ; CHECK-GI-NEXT:    add x12, x12, #32
-; CHECK-GI-NEXT:    mov d3, v1.d[1]
-; CHECK-GI-NEXT:    mov d4, v2.d[1]
+; CHECK-GI-NEXT:    ext v3.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    ext v4.16b, v2.16b, v2.16b, #8
 ; CHECK-GI-NEXT:    smull v1.4s, v0.4h, v1.4h
 ; CHECK-GI-NEXT:    smull v2.4s, v0.4h, v2.4h
 ; CHECK-GI-NEXT:    smull v3.4s, v0.4h, v3.4h
@@ -481,8 +481,8 @@ define void @larger_umull(ptr nocapture noundef readonly %x, i16 noundef %y, ptr
 ; CHECK-GI-NEXT:    mov x13, x10
 ; CHECK-GI-NEXT:    subs x12, x12, #16
 ; CHECK-GI-NEXT:    add x11, x11, #32
-; CHECK-GI-NEXT:    mov d3, v1.d[1]
-; CHECK-GI-NEXT:    mov d4, v2.d[1]
+; CHECK-GI-NEXT:    ext v3.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    ext v4.16b, v2.16b, v2.16b, #8
 ; CHECK-GI-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-GI-NEXT:    umull v1.4s, v0.4h, v1.4h
 ; CHECK-GI-NEXT:    umull v3.4s, v0.4h, v3.4h
@@ -634,9 +634,8 @@ define i16 @red_mla_dup_ext_u8_s8_s16(ptr noalias nocapture noundef readonly %A,
 ; CHECK-GI-NEXT:    mov w8, w2
 ; CHECK-GI-NEXT:    b.hs .LBB5_4
 ; CHECK-GI-NEXT:  // %bb.2:
-; CHECK-GI-NEXT:    mov w10, #0 // =0x0
+; CHECK-GI-NEXT:    movi d0, #0000000000000000
 ; CHECK-GI-NEXT:    mov x9, xzr
-; CHECK-GI-NEXT:    fmov s0, w10
 ; CHECK-GI-NEXT:    b .LBB5_8
 ; CHECK-GI-NEXT:  .LBB5_3:
 ; CHECK-GI-NEXT:    mov w0, wzr
@@ -823,15 +822,14 @@ define i64 @red_mla_dup_ext_u8_s8_s64(ptr noalias noundef readonly captures(none
 ; CHECK-SD-NEXT:  // %bb.9: // %vec.epilog.iter.check
 ; CHECK-SD-NEXT:    cbz x11, .LBB6_13
 ; CHECK-SD-NEXT:  .LBB6_10: // %vec.epilog.ph
-; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-SD-NEXT:    mov w11, w1
-; CHECK-SD-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-SD-NEXT:    sxtb x11, w11
+; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-SD-NEXT:    movi v3.2d, #0x000000000000ff
-; CHECK-SD-NEXT:    dup v2.2s, w11
+; CHECK-SD-NEXT:    sxtb x11, w11
+; CHECK-SD-NEXT:    fmov d2, x8
+; CHECK-SD-NEXT:    dup v1.2s, w11
 ; CHECK-SD-NEXT:    mov x11, x10
 ; CHECK-SD-NEXT:    and x10, x9, #0xfffffffc
-; CHECK-SD-NEXT:    mov v0.d[0], x8
 ; CHECK-SD-NEXT:    sub x8, x11, x10
 ; CHECK-SD-NEXT:    add x11, x0, x11
 ; CHECK-SD-NEXT:  .LBB6_11: // %vec.epilog.vector.body
@@ -846,11 +844,11 @@ define i64 @red_mla_dup_ext_u8_s8_s64(ptr noalias noundef readonly captures(none
 ; CHECK-SD-NEXT:    and v4.16b, v4.16b, v3.16b
 ; CHECK-SD-NEXT:    xtn v5.2s, v5.2d
 ; CHECK-SD-NEXT:    xtn v4.2s, v4.2d
-; CHECK-SD-NEXT:    smlal v1.2d, v2.2s, v4.2s
-; CHECK-SD-NEXT:    smlal v0.2d, v2.2s, v5.2s
+; CHECK-SD-NEXT:    smlal v0.2d, v1.2s, v4.2s
+; CHECK-SD-NEXT:    smlal v2.2d, v1.2s, v5.2s
 ; CHECK-SD-NEXT:    b.ne .LBB6_11
 ; CHECK-SD-NEXT:  // %bb.12: // %vec.epilog.middle.block
-; CHECK-SD-NEXT:    add v0.2d, v0.2d, v1.2d
+; CHECK-SD-NEXT:    add v0.2d, v2.2d, v0.2d
 ; CHECK-SD-NEXT:    cmp x10, x9
 ; CHECK-SD-NEXT:    addp d0, v0.2d
 ; CHECK-SD-NEXT:    fmov x8, d0
@@ -911,10 +909,10 @@ define i64 @red_mla_dup_ext_u8_s8_s64(ptr noalias noundef readonly captures(none
 ; CHECK-GI-NEXT:    ushll2 v18.4s, v18.8h, #0
 ; CHECK-GI-NEXT:    ushll v20.4s, v17.4h, #0
 ; CHECK-GI-NEXT:    ushll2 v17.4s, v17.8h, #0
-; CHECK-GI-NEXT:    mov d21, v19.d[1]
-; CHECK-GI-NEXT:    mov d22, v18.d[1]
-; CHECK-GI-NEXT:    mov d23, v20.d[1]
-; CHECK-GI-NEXT:    mov d24, v17.d[1]
+; CHECK-GI-NEXT:    ext v21.16b, v19.16b, v19.16b, #8
+; CHECK-GI-NEXT:    ext v22.16b, v18.16b, v18.16b, #8
+; CHECK-GI-NEXT:    ext v23.16b, v20.16b, v20.16b, #8
+; CHECK-GI-NEXT:    ext v24.16b, v17.16b, v17.16b, #8
 ; CHECK-GI-NEXT:    smlal v0.2d, v16.2s, v19.2s
 ; CHECK-GI-NEXT:    smlal v2.2d, v16.2s, v18.2s
 ; CHECK-GI-NEXT:    smlal v4.2d, v16.2s, v20.2s
@@ -1178,7 +1176,7 @@ define void @sink_v4i64_1(ptr %p, ptr %d, i64 %n, <2 x i32> %a) {
 ; CHECK-GI-NEXT:    ldr q1, [x0]
 ; CHECK-GI-NEXT:    subs x2, x2, #8
 ; CHECK-GI-NEXT:    add x8, x8, #8
-; CHECK-GI-NEXT:    mov d2, v1.d[1]
+; CHECK-GI-NEXT:    ext v2.16b, v1.16b, v1.16b, #8
 ; CHECK-GI-NEXT:    smull v1.2d, v1.2s, v0.2s
 ; CHECK-GI-NEXT:    smull v2.2d, v2.2s, v0.2s
 ; CHECK-GI-NEXT:    shrn v1.2s, v1.2d, #15
@@ -1304,7 +1302,7 @@ define void @sink_v16s16_8(ptr %p, ptr %d, i64 %n, <16 x i8> %a) {
 ; CHECK-GI-NEXT:    ldr q1, [x0]
 ; CHECK-GI-NEXT:    subs x2, x2, #8
 ; CHECK-GI-NEXT:    add x8, x8, #8
-; CHECK-GI-NEXT:    mov d2, v1.d[1]
+; CHECK-GI-NEXT:    ext v2.16b, v1.16b, v1.16b, #8
 ; CHECK-GI-NEXT:    smull v1.8h, v1.8b, v0.8b
 ; CHECK-GI-NEXT:    smull v2.8h, v2.8b, v0.8b
 ; CHECK-GI-NEXT:    cmlt v1.8h, v1.8h, #0
@@ -1462,8 +1460,8 @@ define void @matrix_mul_unsigned_and_double(i32 %N, ptr nocapture %C, ptr nocapt
 ; CHECK-GI-NEXT:    ldur q2, [x9, #8]
 ; CHECK-GI-NEXT:    add x9, x1, w0, uxtw #2
 ; CHECK-GI-NEXT:    add w0, w0, #16
-; CHECK-GI-NEXT:    mov d3, v1.d[1]
-; CHECK-GI-NEXT:    mov d4, v2.d[1]
+; CHECK-GI-NEXT:    ext v3.16b, v1.16b, v1.16b, #8
+; CHECK-GI-NEXT:    ext v4.16b, v2.16b, v2.16b, #8
 ; CHECK-GI-NEXT:    umull v1.4s, v0.4h, v1.4h
 ; CHECK-GI-NEXT:    umull v2.4s, v0.4h, v2.4h
 ; CHECK-GI-NEXT:    umull v3.4s, v0.4h, v3.4h
@@ -1520,10 +1518,10 @@ for.end12:                                        ; preds = %vector.body
 define void @matrix_mul_signed_and(i32 %N, ptr nocapture %C, ptr nocapture readonly %A, i32 %val) {
 ; CHECK-SD-LABEL: matrix_mul_signed_and:
 ; CHECK-SD:       // %bb.0: // %vector.header
-; CHECK-SD-NEXT:    and w9, w3, #0xffff
+; CHECK-SD-NEXT:    and w8, w3, #0xffff
 ; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-SD-NEXT:    fmov s0, w8
 ; CHECK-SD-NEXT:    and x8, x0, #0xfffffff8
-; CHECK-SD-NEXT:    fmov s0, w9
 ; CHECK-SD-NEXT:  .LBB13_1: // %vector.body
 ; CHECK-SD-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-SD-NEXT:    add x9, x2, w0, uxtw #1
@@ -1608,10 +1606,10 @@ for.end12:                                        ; preds = %vector.body
 define void @matrix_mul_signed_and_double(i32 %N, ptr nocapture %C, ptr nocapture readonly %A, i32 %val) {
 ; CHECK-SD-LABEL: matrix_mul_signed_and_double:
 ; CHECK-SD:       // %bb.0: // %vector.header
-; CHECK-SD-NEXT:    and w9, w3, #0xffff
+; CHECK-SD-NEXT:    and w8, w3, #0xffff
 ; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-SD-NEXT:    fmov s0, w8
 ; CHECK-SD-NEXT:    and x8, x0, #0xfffffff0
-; CHECK-SD-NEXT:    fmov s0, w9
 ; CHECK-SD-NEXT:  .LBB14_1: // %vector.body
 ; CHECK-SD-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-SD-NEXT:    add x9, x2, w0, uxtw #1
@@ -1733,7 +1731,7 @@ define noundef <8 x i16> @cmplx_mul_combined_re_im(<8 x i16> noundef %a, i64 %sc
 ; CHECK-GI-NEXT:    sqneg v2.8h, v1.8h
 ; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI15_0]
 ; CHECK-GI-NEXT:    tbl v1.16b, { v2.16b, v3.16b }, v1.16b
-; CHECK-GI-NEXT:    mov d2, v0.d[1]
+; CHECK-GI-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
 ; CHECK-GI-NEXT:    dup v3.8h, w0
 ; CHECK-GI-NEXT:    sqdmull v2.4s, v2.4h, v3.4h
 ; CHECK-GI-NEXT:    sqdmull v5.4s, v4.4h, v1.4h

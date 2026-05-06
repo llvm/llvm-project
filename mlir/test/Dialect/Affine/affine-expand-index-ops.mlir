@@ -127,3 +127,50 @@ func.func @linearize_sort_adds(%arg0: memref<?xi32>, %arg1: index, %arg2: index)
   }
   return
 }
+
+// -----
+
+// CHECK-LABEL: @delinearize_vector
+// CHECK-SAME:    (%[[VEC:.+]]: vector<4xindex>)
+// CHECK-DAG:     %[[C8:.+]] = arith.constant dense<8> : vector<4xindex>
+// CHECK-DAG:     %[[C0:.+]] = arith.constant dense<0> : vector<4xindex>
+// CHECK:         %[[DIV:.+]] = arith.floordivsi %[[VEC]], %[[C8]]
+// CHECK:         %[[REM:.+]] = arith.remsi %[[VEC]], %[[C8]]
+// CHECK:         %[[NEG:.+]] = arith.cmpi slt, %[[REM]], %[[C0]]
+// CHECK:         %[[ADD:.+]] = arith.addi %[[REM]], %[[C8]] overflow<nsw>
+// CHECK:         %[[MOD:.+]] = arith.select %[[NEG]], %[[ADD]], %[[REM]]
+// CHECK:         return %[[DIV]], %[[MOD]]
+func.func @delinearize_vector(%vec: vector<4xindex>) -> (vector<4xindex>, vector<4xindex>) {
+  %0:2 = affine.delinearize_index %vec into (4, 8) : vector<4xindex>, vector<4xindex>
+  return %0#0, %0#1 : vector<4xindex>, vector<4xindex>
+}
+
+// -----
+
+// CHECK-LABEL: @linearize_vector
+// CHECK-SAME:    (%[[V0:.+]]: vector<4xindex>, %[[V1:.+]]: vector<4xindex>)
+// CHECK-DAG:     %[[C8:.+]] = arith.constant dense<8> : vector<4xindex>
+// CHECK:         %[[MUL:.+]] = arith.muli %[[V0]], %[[C8]] overflow<nsw>
+// CHECK:         %[[ADD:.+]] = arith.addi %[[MUL]], %[[V1]] overflow<nsw>
+// CHECK:         return %[[ADD]]
+func.func @linearize_vector(%v0: vector<4xindex>, %v1: vector<4xindex>) -> vector<4xindex> {
+  %0 = affine.linearize_index [%v0, %v1] by (4, 8) : vector<4xindex>
+  return %0 : vector<4xindex>
+}
+
+// -----
+
+// CHECK-LABEL: @delinearize_vector_dynamic
+// CHECK-SAME:    (%[[VEC:.+]]: vector<4xindex>, %[[B:.+]]: index)
+// CHECK-DAG:     %[[C0:.+]] = arith.constant dense<0> : vector<4xindex>
+// CHECK:         %[[BCAST:.+]] = vector.broadcast %[[B]] : index to vector<4xindex>
+// CHECK:         %[[DIV:.+]] = arith.floordivsi %[[VEC]], %[[BCAST]]
+// CHECK:         %[[REM:.+]] = arith.remsi %[[VEC]], %[[BCAST]]
+// CHECK:         %[[NEG:.+]] = arith.cmpi slt, %[[REM]], %[[C0]]
+// CHECK:         %[[ADD:.+]] = arith.addi %[[REM]], %[[BCAST]] overflow<nsw>
+// CHECK:         %[[MOD:.+]] = arith.select %[[NEG]], %[[ADD]], %[[REM]]
+// CHECK:         return %[[DIV]], %[[MOD]]
+func.func @delinearize_vector_dynamic(%vec: vector<4xindex>, %b: index) -> (vector<4xindex>, vector<4xindex>) {
+  %0:2 = affine.delinearize_index %vec into (4, %b) : vector<4xindex>, vector<4xindex>
+  return %0#0, %0#1 : vector<4xindex>, vector<4xindex>
+}

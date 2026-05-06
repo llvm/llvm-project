@@ -885,7 +885,7 @@ static void writeWhyExtract() {
 // Equivalent of demote demoteSharedAndLazySymbols() in the ELF linker
 static void demoteLazySymbols() {
   for (Symbol *sym : symtab->symbols()) {
-    if (auto* s = dyn_cast<LazySymbol>(sym)) {
+    if (auto *s = dyn_cast<LazySymbol>(sym)) {
       if (s->signature) {
         LLVM_DEBUG(llvm::dbgs()
                    << "demoting lazy func: " << s->getName() << "\n");
@@ -915,13 +915,13 @@ static InputGlobal *createGlobal(StringRef name, bool isMutable) {
   return make<InputGlobal>(wasmGlobal, nullptr);
 }
 
-static GlobalSymbol *createGlobalVariable(StringRef name, bool isMutable,
-                                          uint32_t flags = 0) {
+static DefinedGlobal *createGlobalVariable(StringRef name, bool isMutable,
+                                           uint32_t flags = 0) {
   InputGlobal *g = createGlobal(name, isMutable);
   return symtab->addSyntheticGlobal(name, flags, g);
 }
 
-static GlobalSymbol *createOptionalGlobal(StringRef name, bool isMutable) {
+static DefinedGlobal *createOptionalGlobal(StringRef name, bool isMutable) {
   InputGlobal *g = createGlobal(name, isMutable);
   return symtab->addOptionalGlobalSymbol(name, g);
 }
@@ -988,8 +988,11 @@ static void createOptionalSymbols() {
 
   ctx.sym.dsoHandle = symtab->addOptionalDataSymbol("__dso_handle");
 
-  if (!ctx.arg.shared)
+  if (!ctx.arg.shared) {
     ctx.sym.dataEnd = symtab->addOptionalDataSymbol("__data_end");
+    ctx.sym.rodataStart = symtab->addOptionalDataSymbol("__rodata_start");
+    ctx.sym.rodataEnd = symtab->addOptionalDataSymbol("__rodata_end");
+  }
 
   if (!ctx.isPic) {
     ctx.sym.stackLow = symtab->addOptionalDataSymbol("__stack_low");
@@ -997,8 +1000,8 @@ static void createOptionalSymbols() {
     ctx.sym.globalBase = symtab->addOptionalDataSymbol("__global_base");
     ctx.sym.heapBase = symtab->addOptionalDataSymbol("__heap_base");
     ctx.sym.heapEnd = symtab->addOptionalDataSymbol("__heap_end");
-    ctx.sym.definedMemoryBase = symtab->addOptionalDataSymbol("__memory_base");
-    ctx.sym.definedTableBase = symtab->addOptionalDataSymbol("__table_base");
+    ctx.sym.memoryBase = createOptionalGlobal("__memory_base", false);
+    ctx.sym.tableBase = createOptionalGlobal("__table_base", false);
   }
 
   ctx.sym.firstPageEnd = symtab->addOptionalDataSymbol("__wasm_first_page_end");
@@ -1023,15 +1026,15 @@ static void processStubLibrariesPreLTO() {
   for (auto &stub_file : ctx.stubFiles) {
     LLVM_DEBUG(llvm::dbgs()
                << "processing stub file: " << stub_file->getName() << "\n");
-    for (auto [name, deps]: stub_file->symbolDependencies) {
-      auto* sym = symtab->find(name);
+    for (auto [name, deps] : stub_file->symbolDependencies) {
+      auto *sym = symtab->find(name);
       // If the symbol is not present at all (yet), or if it is present but
       // undefined, then mark the dependent symbols as used by a regular
       // object so they will be preserved and exported by the LTO process.
       if (!sym || sym->isUndefined()) {
         for (const auto dep : deps) {
-          auto* needed = symtab->find(dep);
-          if (needed ) {
+          auto *needed = symtab->find(dep);
+          if (needed) {
             needed->isUsedInRegularObj = true;
             // Like with handleLibcall we have to extract any LTO archive
             // members that might need to be exported due to stub library
@@ -1103,9 +1106,9 @@ static void processStubLibraries() {
 
       // First look for any imported symbols that directly match
       // the names of the stub imports
-      for (auto [name, deps]: stub_file->symbolDependencies) {
-        auto* sym = symtab->find(name);
-        if (sym && sym->isUndefined()) {
+      for (auto [name, deps] : stub_file->symbolDependencies) {
+        auto *sym = symtab->find(name);
+        if (sym && sym->isUndefined() && sym->isUsedInRegularObj) {
           depsAdded |= addStubSymbolDeps(stub_file, sym, deps);
         } else {
           if (sym && sym->traced)
@@ -1394,7 +1397,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   if (!ctx.arg.relocatable && !ctx.arg.shared &&
       !ctx.sym.callCtors->isUsedInRegularObj &&
       ctx.sym.callCtors->getName() != ctx.arg.entry &&
-      !ctx.arg.exportedSymbols.count(ctx.sym.callCtors->getName())) {
+      !ctx.arg.exportedSymbols.contains(ctx.sym.callCtors->getName())) {
     if (Symbol *callDtors =
             handleUndefined("__wasm_call_dtors", "<internal>")) {
       if (auto *callDtorsFunc = dyn_cast<DefinedFunction>(callDtors)) {

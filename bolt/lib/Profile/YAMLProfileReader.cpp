@@ -559,7 +559,7 @@ size_t YAMLProfileReader::matchWithCallGraph(BinaryContext &BC) {
     auto BFsWithSameHashOpt = CGMatcher.getBFsWithNeighborHash(Hash);
     if (!BFsWithSameHashOpt)
       continue;
-    std::vector<BinaryFunction *> BFsWithSameHash = BFsWithSameHashOpt.value();
+    BinaryFunctionListType BFsWithSameHash = BFsWithSameHashOpt.value();
     // Finds the binary function with the longest common prefix to the profiled
     // function and matches.
     BinaryFunction *ClosestBF = nullptr;
@@ -725,7 +725,7 @@ size_t YAMLProfileReader::matchWithNameSimilarity(BinaryContext &BC) {
     NamespaceToProfiledBFSizes[YamlBFNamespace].insert(YamlBF.NumBasicBlocks);
   }
 
-  StringMap<std::vector<BinaryFunction *>> NamespaceToBFs;
+  StringMap<BinaryFunctionListType> NamespaceToBFs;
 
   // Maps namespaces to BFs excluding binary functions with no equal sized
   // profiled functions belonging to the same namespace.
@@ -760,7 +760,7 @@ size_t YAMLProfileReader::matchWithNameSimilarity(BinaryContext &BC) {
       continue;
 
     std::string &YamlBFDemangledName = ProfileBFDemangledNames[I];
-    std::vector<BinaryFunction *> BFs = It->second;
+    BinaryFunctionListType BFs = It->second;
     unsigned MinEditDistance = UINT_MAX;
     BinaryFunction *ClosestNameBF = nullptr;
 

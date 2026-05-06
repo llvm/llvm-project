@@ -1,6 +1,7 @@
 // Use the generic state machine.  On some architectures, other threads in the
 // main thread's warp must avoid barrier instructions.
 //
+// REQUIRES: gpu
 // RUN: %libomptarget-compile-run-and-check-generic
 
 // SPMDize.  There is no main thread, so there's no issue.
@@ -32,6 +33,8 @@
 // RUN: %fcheck-nvptx64-nvidia-cuda -check-prefix=CUSTOM -input-file=%t.custom
 // RUN: %fcheck-amdgcn-amd-amdhsa -check-prefix=CUSTOM -input-file=%t.custom
 // RUN: %libomptarget-run-generic 2>&1 | %fcheck-generic
+// https://github.com/llvm/llvm-project/issues/182119
+// UNSUPPORTED: intelgpu
 //
 // CUSTOM: Rewriting generic-mode kernel with a customized state machine.
 

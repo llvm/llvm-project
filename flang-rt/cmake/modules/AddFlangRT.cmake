@@ -94,10 +94,6 @@ function (add_flangrt_library name)
     set(build_object ON)
   elseif (build_static AND build_shared)
     set(build_object ON)
-  elseif (NOT build_static AND NOT build_shared)
-    # If not building a library, still build the object files
-    # Needed to generate the .mod files as byproduct
-    set(build_object ON)
   endif ()
 
   # srctargets: targets that contain source files
@@ -126,12 +122,18 @@ function (add_flangrt_library name)
     list(APPEND extra_args EXCLUDE_FROM_ALL)
   endif ()
 
+  # Include the RPC utilities from the `libc` project.
+  if (TARGET llvm-libc-common-utilities)
+    set(extra_deps llvm-libc-common-utilities)
+  endif()
+
   # Also add header files to IDEs to list as part of the library.
   set_source_files_properties(${ARG_ADDITIONAL_HEADERS} PROPERTIES HEADER_FILE_ONLY ON)
 
   # Create selected library types.
   if (build_object)
     add_library("${name_object}" OBJECT ${extra_args} ${ARG_ADDITIONAL_HEADERS} ${ARG_UNPARSED_ARGUMENTS})
+    target_link_libraries(${name_object} PRIVATE ${extra_deps})
     set_target_properties(${name_object} PROPERTIES
         POSITION_INDEPENDENT_CODE ON
         FOLDER "Flang-RT/Object Libraries"
@@ -143,11 +145,11 @@ function (add_flangrt_library name)
   endif ()
   if (build_static)
     add_library("${name_static}" STATIC ${extra_args} ${ARG_ADDITIONAL_HEADERS} ${ARG_UNPARSED_ARGUMENTS})
-    target_link_libraries("${name_static}" PRIVATE flang-rt-libcxx-headers flang-rt-libc-headers flang-rt-libc-static)
+    target_link_libraries("${name_static}" PRIVATE flang-rt-libcxx-headers flang-rt-libc-headers flang-rt-libc-static ${extra_deps})
   endif ()
   if (build_shared)
     add_library("${name_shared}" SHARED ${extra_args} ${ARG_ADDITIONAL_HEADERS} ${ARG_UNPARSED_ARGUMENTS})
-    target_link_libraries("${name_shared}" PRIVATE flang-rt-libcxx-headers flang-rt-libc-headers flang-rt-libc-shared)
+    target_link_libraries("${name_shared}" PRIVATE flang-rt-libcxx-headers flang-rt-libc-headers flang-rt-libc-shared  ${extra_deps})
     if (Threads_FOUND) 
       target_link_libraries(${name_shared} PUBLIC Threads::Threads)
     endif ()
@@ -172,18 +174,14 @@ function (add_flangrt_library name)
     if (BUILD_SHARED_LIBS)
       if (build_shared)
         set(default_target "${name_shared}")
-      elseif (build_static)
-        set(default_target "${name_static}")
       else ()
-        set(default_target "${name_object}")
+        set(default_target "${name_static}")
       endif ()
     else ()
       if (build_static)
         set(default_target "${name_static}")
-      elseif (build_shared)
-        set(default_target "${name_shared}")
       else ()
-        set(default_target "${name_object}")
+        set(default_target "${name_shared}")
       endif ()
     endif ()
     add_library(${name}.default ALIAS "${default_target}")
@@ -196,12 +194,6 @@ function (add_flangrt_library name)
       add_custom_target(${name})
       add_dependencies(${name} ${libtargets})
     endif ()
-  endif ()
-
-  if (build_object)
-    add_library(${name}.compile ALIAS "${name_object}")
-  else ()
-    add_library(${name}.compile ALIAS "${default_target}")
   endif ()
 
   foreach (tgtname IN LISTS libtargets)
@@ -233,23 +225,11 @@ function (add_flangrt_library name)
     # Minimum required C++ version for Flang-RT, even if CMAKE_CXX_STANDARD is defined to something else.
     target_compile_features(${tgtname} PRIVATE cxx_std_17)
 
-    target_compile_options(${tgtname} PRIVATE
-      # Always enable preprocessor regardless of file extension
-      "$<$<COMPILE_LANGUAGE:Fortran>:-cpp>"
-
-      # Missing type descriptors are expected for intrinsic modules
-      "$<$<COMPILE_LANGUAGE:Fortran>:SHELL:-mmlir;SHELL:-ignore-missing-type-desc>"
-    )
-
     # When building the flang runtime if LTO is enabled the archive file
     # contains LLVM IR rather than object code. Currently flang is not
     # LTO aware so cannot link this file to compiled Fortran code.
     if (FLANG_RT_HAS_FNO_LTO_FLAG)
       target_compile_options(${tgtname} PRIVATE -fno-lto)
-    endif ()
-
-    if (FORTRAN_SUPPORTS_REAL16)
-      target_compile_definitions(${tgtname} PRIVATE FLANG_SUPPORT_R16=1)
     endif ()
 
     # Use compiler-specific options to disable exceptions and RTTI.
@@ -258,42 +238,39 @@ function (add_flangrt_library name)
           $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions -fno-rtti -funwind-tables -fno-asynchronous-unwind-tables>
         )
 
-      # We define our own _GLIBCXX_THROW_OR_ABORT here because, as of
-      # GCC 15.1, the libstdc++ header file <bits/c++config> uses
-      # (void)_EXC in its definition of _GLIBCXX_THROW_OR_ABORT to
-      # silence a warning.
-      #
-      # This is a problem for us because some compilers, specifically
-      # clang, do not always optimize away that (void)_EXC even though
-      # it is unreachable since it occurs after a call to
-      # _builtin_abort().  Because _EXC is typically an object derived
-      # from std::exception, (void)_EXC, when not optimized away,
-      # calls std::exception methods defined in the libstdc++ shared
-      # library.  We shouldn't link against that library since our
-      # build version may conflict with the version used by a hybrid
-      # Fortran/C++ application.
-      #
-      # Redefining _GLIBCXX_THROW_OR_ABORT in this manner is not
-      # supported by the maintainers of libstdc++, so future changes
-      # to libstdc++ may require future changes to this build script
-      # and/or future changes to the Fortran runtime source code.
-      target_compile_options(${tgtname} PUBLIC "-D_GLIBCXX_THROW_OR_ABORT(_EXC)=(__builtin_abort())")
+      # Include header at the top of all compilation units to avoid dependency
+      # on the C++ STL (libstdc++ or libc++).
+      target_compile_options(${tgtname} PRIVATE
+          "$<$<COMPILE_LANGUAGE:CXX>:-include${FLANG_RT_SOURCE_DIR}/lib/runtime/stl-overrides.h>"
+        )
     elseif (MSVC)
       target_compile_options(${tgtname} PRIVATE
           $<$<COMPILE_LANGUAGE:CXX>:/EHs-c- /GR->
+        )
+
+      # Include header at the top of all compilation units to avoid dependency
+      # on the C++ STL (libstdc++ or libc++).
+      target_compile_options(${tgtname} PRIVATE
+          "$<$<COMPILE_LANGUAGE:CXX>:/FI${FLANG_RT_SOURCE_DIR}/lib/runtime/stl-overrides.h>"
         )
     elseif (CMAKE_CXX_COMPILER_ID MATCHES "XL")
       target_compile_options(${tgtname} PRIVATE
           $<$<COMPILE_LANGUAGE:CXX>:-qnoeh -qnortti>
         )
+
+      # Include header at the top of all compilation units to avoid dependency
+      # on the C++ STL (libstdc++ or libc++).
+      target_compile_options(${tgtname} PRIVATE
+          "$<$<COMPILE_LANGUAGE:CXX>:-qinclude=${FLANG_RT_SOURCE_DIR}/lib/runtime/stl-overrides.h>"
+        )
     endif ()
 
     # Add target specific options if necessary.
-    if ("${LLVM_RUNTIMES_TARGET}" MATCHES "^amdgcn")
+    if ("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn")
       target_compile_options(${tgtname} PRIVATE
           $<$<COMPILE_LANGUAGE:CXX>:-nogpulib -flto -fvisibility=hidden>
         )
-    elseif ("${LLVM_RUNTIMES_TARGET}" MATCHES "^nvptx")
+    elseif ("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^nvptx")
       target_compile_options(${tgtname} PRIVATE
           $<$<COMPILE_LANGUAGE:CXX>:-nogpulib -flto -fvisibility=hidden -Wno-unknown-cuda-version --cuda-feature=+ptx63>
         )
@@ -368,6 +345,20 @@ function (add_flangrt_library name)
     # directory. Otherwise it is part of testing and is not installed at all.
     # TODO: Consider multi-configuration builds (MSVC_IDE, "Ninja Multi-Config")
     if (ARG_INSTALL_WITH_TOOLCHAIN)
+      # FIXME: RUNTIMES_OUTPUT_RESOURCE_LIB_DIR is not a good location for
+      #        shared libraries because it is not a ld.so default search path.
+      #        Also, the machine where the executable is eventually executed may
+      #        not be one where the compiler is installed, so even RPATH/RUNPATH
+      #        will not help. The most appropriate location for shared libraries
+      #        is /usr/lib/<triple>/lib<name>.so, like e.g. libgcc_s.so.
+      #        Flang-RT also would require a library versioning scheme so
+      #        executables compiled with different versions of Flang either use
+      #        matching versions of Flang-RT, or use a newer backward-compatible
+      #        version. Currently, Flang-RT has no ABI backwards-compatibility
+      #        policy.
+      #        Currently, we just emit it into RUNTIMES_OUTPUT_RESOURCE_LIB_DIR
+      #        like the static library, which is already in the driver's and
+      #        linker's search path.
       set_target_properties(${tgtname}
         PROPERTIES
           ARCHIVE_OUTPUT_DIRECTORY "${RUNTIMES_OUTPUT_RESOURCE_LIB_DIR}"

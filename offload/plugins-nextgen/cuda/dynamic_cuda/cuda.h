@@ -261,6 +261,7 @@ typedef enum CUdevice_attribute_enum {
 
 typedef enum CUfunction_attribute_enum {
   CU_FUNC_ATTRIBUTE_MAX_THREADS_PER_BLOCK = 0,
+  CU_FUNC_ATTRIBUTE_SHARED_SIZE_BYTES = 1,
   CU_FUNC_ATTRIBUTE_MAX_DYNAMIC_SHARED_SIZE_BYTES = 8,
 } CUfunction_attribute;
 
@@ -370,6 +371,7 @@ CUresult cuEventRecord(CUevent, CUstream);
 CUresult cuEventQuery(CUevent);
 CUresult cuStreamWaitEvent(CUstream, CUevent, unsigned int);
 CUresult cuEventSynchronize(CUevent);
+CUresult cuEventElapsedTime(float *, CUevent, CUevent);
 CUresult cuEventDestroy(CUevent);
 
 CUresult cuMemUnmap(CUdeviceptr ptr, size_t size);
@@ -390,5 +392,6 @@ CUresult cuMemGetAllocationGranularity(size_t *granularity,
                                        CUmemAllocationGranularity_flags option);
 CUresult cuOccupancyMaxPotentialBlockSize(int *, int *, CUfunction,
                                           CUoccupancyB2DSize, size_t, int);
+CUresult cuFuncGetParamInfo(CUfunction, size_t, size_t *, size_t *);
 
 #endif

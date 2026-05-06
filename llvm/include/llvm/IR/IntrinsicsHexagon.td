@@ -14,7 +14,7 @@
 //
 // All Hexagon intrinsics start with "llvm.hexagon.".
 let TargetPrefix = "hexagon" in {
-  /// Hexagon_Intrinsic - Base class for majority of Hexagon intrinsics.
+  /// Hexagon_Intrinsic - Base class for the majority of Hexagon intrinsics.
   class Hexagon_Intrinsic<string GCCIntSuffix, list<LLVMType> ret_types,
                               list<LLVMType> param_types,
                               list<IntrinsicProperty> properties>
@@ -435,84 +435,6 @@ def int_hexagon_V6_vmaskedstorenq_128B: Hexagon_custom_vms_Intrinsic_128B;
 def int_hexagon_V6_vmaskedstorentq_128B: Hexagon_custom_vms_Intrinsic_128B;
 def int_hexagon_V6_vmaskedstorentnq_128B: Hexagon_custom_vms_Intrinsic_128B;
 
-// Carryo
-// The script can't autogenerate clang builtins for vaddcarryo/vsubarryo,
-// and they are marked in HexagonIset.py as not having intrinsics at all.
-// The script could generate intrinsics, but instead of doing intrinsics
-// without builtins, just put the intrinsics here.
-
-// tag : V6_vaddcarryo
-class Hexagon_custom_v16i32v64i1_v16i32v16i32_Intrinsic<
-      list<IntrinsicProperty> intr_properties = [IntrNoMem]>
-  : Hexagon_NonGCC_Intrinsic<
-       [llvm_v16i32_ty,llvm_v64i1_ty], [llvm_v16i32_ty,llvm_v16i32_ty],
-       intr_properties>;
-
-// tag : V6_vaddcarryo
-class Hexagon_custom_v32i32v128i1_v32i32v32i32_Intrinsic_128B<
-      list<IntrinsicProperty> intr_properties = [IntrNoMem]>
-  : Hexagon_NonGCC_Intrinsic<
-       [llvm_v32i32_ty,llvm_v128i1_ty], [llvm_v32i32_ty,llvm_v32i32_ty],
-       intr_properties>;
-
-// Pseudo intrinsics for widening vector isntructions that
-// get replaced with the real Hexagon instructions during
-// instruction lowering.
-class Hexagon_widenvec_Intrinsic
-  : Hexagon_NonGCC_Intrinsic<
-       [llvm_anyvector_ty],
-       [LLVMTruncatedType<0>, LLVMTruncatedType<0>],
-       [IntrNoMem]>;
-
-class Hexagon_non_widenvec_Intrinsic
-  : Hexagon_NonGCC_Intrinsic<
-       [llvm_anyvector_ty],
-       [LLVMMatchType<0>, LLVMMatchType<0>],
-       [IntrNoMem]>;
-
-// Widening vector add
-def int_hexagon_vadd_su: Hexagon_widenvec_Intrinsic;
-def int_hexagon_vadd_uu: Hexagon_widenvec_Intrinsic;
-def int_hexagon_vadd_ss: Hexagon_widenvec_Intrinsic;
-def int_hexagon_vadd_us: Hexagon_widenvec_Intrinsic;
-
-
-// Widening vector subtract
-def int_hexagon_vsub_su: Hexagon_widenvec_Intrinsic;
-def int_hexagon_vsub_uu: Hexagon_widenvec_Intrinsic;
-def int_hexagon_vsub_ss: Hexagon_widenvec_Intrinsic;
-def int_hexagon_vsub_us: Hexagon_widenvec_Intrinsic;
-
-// Widening vector multiply
-def int_hexagon_vmpy_su: Hexagon_widenvec_Intrinsic;
-def int_hexagon_vmpy_uu: Hexagon_widenvec_Intrinsic;
-def int_hexagon_vmpy_ss: Hexagon_widenvec_Intrinsic;
-def int_hexagon_vmpy_us: Hexagon_widenvec_Intrinsic;
-
-def int_hexagon_vavgu: Hexagon_non_widenvec_Intrinsic;
-def int_hexagon_vavgs: Hexagon_non_widenvec_Intrinsic;
-
-class Hexagon_vasr_Intrinsic
-  : Hexagon_NonGCC_Intrinsic<
-       [LLVMSubdivide2VectorType<0>],
-       [llvm_anyvector_ty, LLVMMatchType<0>, llvm_i32_ty],
-       [IntrNoMem]>;
-
-def int_hexagon_vasrsat_su: Hexagon_vasr_Intrinsic;
-def int_hexagon_vasrsat_uu: Hexagon_vasr_Intrinsic;
-def int_hexagon_vasrsat_ss: Hexagon_vasr_Intrinsic;
-
-class Hexagon_widen_vec_scalar_Intrinsic
-  : Hexagon_NonGCC_Intrinsic<
-       [llvm_anyvector_ty],
-       [LLVMTruncatedType<0>, llvm_i32_ty],
-       [IntrNoMem]>;
-
-// Widening vector scalar multiply
-def int_hexagon_vmpy_ub_b: Hexagon_widen_vec_scalar_Intrinsic;
-def int_hexagon_vmpy_ub_ub: Hexagon_widen_vec_scalar_Intrinsic;
-def int_hexagon_vmpy_uh_uh: Hexagon_widen_vec_scalar_Intrinsic;
-def int_hexagon_vmpy_h_h: Hexagon_widen_vec_scalar_Intrinsic;
 
 // Intrinsic for instrumentation based profiling using a custom handler. The
 // name of the handler is passed as the first operand to the intrinsic. The

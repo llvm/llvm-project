@@ -34,7 +34,7 @@ def testSmoke():
     # CHECK: %{{.*}} = "rocdl.wmma.f16.16x16x16.f16"
     print(c_frag)
     assert isinstance(c_frag, OpView)
-    # CHECK: Value(%{{.*}} = "rocdl.wmma.f16.16x16x16.f16"
+    # CHECK: OpResult(%{{.*}} = "rocdl.wmma.f16.16x16x16.f16"
     c_frag = rocdl.wmma_f16_16x16x16_f16_(v16f32, a_frag, b_frag, c_frag, opsel=False)
     print(c_frag)
     assert isinstance(c_frag, Value)

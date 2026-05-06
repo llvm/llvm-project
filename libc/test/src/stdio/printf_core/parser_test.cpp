@@ -230,6 +230,7 @@ TEST(LlvmLibcPrintfParserTest, EvalOneArgWithLongLengthModifier) {
   ASSERT_PFORMAT_EQ(expected, format_arr[0]);
 }
 
+#ifndef LIBC_COPT_PRINTF_DISABLE_BITINT
 TEST(LlvmLibcPrintfParserTest, EvalOneArgWithBitWidthLengthModifier) {
   LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
   const char *str = "%w32d";
@@ -267,6 +268,7 @@ TEST(LlvmLibcPrintfParserTest, EvalOneArgWithFastBitWidthLengthModifier) {
 
   ASSERT_PFORMAT_EQ(expected, format_arr[0]);
 }
+#endif // LIBC_COPT_PRINTF_DISABLE_BITINT
 
 TEST(LlvmLibcPrintfParserTest, EvalOneArgWithAllOptions) {
   LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];

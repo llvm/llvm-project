@@ -10182,4 +10182,50 @@ TEST(APFloatTest, FrexpQuietSNaN) {
   EXPECT_FALSE(Result.isSignaling());
 }
 
+TEST(APFloatTest, isValidArbitraryFPFormat) {
+  // Test all valid format strings.
+  EXPECT_TRUE(APFloat::isValidArbitraryFPFormat("Float8E5M2"));
+  EXPECT_TRUE(APFloat::isValidArbitraryFPFormat("Float8E5M2FNUZ"));
+  EXPECT_TRUE(APFloat::isValidArbitraryFPFormat("Float8E4M3"));
+  EXPECT_TRUE(APFloat::isValidArbitraryFPFormat("Float8E4M3FN"));
+  EXPECT_TRUE(APFloat::isValidArbitraryFPFormat("Float8E4M3FNUZ"));
+  EXPECT_TRUE(APFloat::isValidArbitraryFPFormat("Float8E4M3B11FNUZ"));
+  EXPECT_TRUE(APFloat::isValidArbitraryFPFormat("Float8E3M4"));
+  EXPECT_TRUE(APFloat::isValidArbitraryFPFormat("Float8E8M0FNU"));
+  EXPECT_TRUE(APFloat::isValidArbitraryFPFormat("Float6E3M2FN"));
+  EXPECT_TRUE(APFloat::isValidArbitraryFPFormat("Float6E2M3FN"));
+  EXPECT_TRUE(APFloat::isValidArbitraryFPFormat("Float4E2M1FN"));
+
+  // Test invalid format strings.
+  EXPECT_FALSE(APFloat::isValidArbitraryFPFormat(""));
+  EXPECT_FALSE(APFloat::isValidArbitraryFPFormat("Float8"));
+  EXPECT_FALSE(
+      APFloat::isValidArbitraryFPFormat("Float8E5M2FN")); // Should be FNUZ.
+  EXPECT_FALSE(APFloat::isValidArbitraryFPFormat("float8e4m3")); // Wrong case.
+  EXPECT_FALSE(APFloat::isValidArbitraryFPFormat("Float16E5M10"));
+  EXPECT_FALSE(APFloat::isValidArbitraryFPFormat("unknown"));
+}
+
+TEST(APFloatTest, DecimalStringPreservesInexactStatus) {
+  APFloat F(APFloat::IEEEsingle());
+
+  auto StatusOr = F.convertFromString("10384593717069655257060992658440193.0",
+                                      APFloat::rmNearestTiesToEven);
+  EXPECT_TRUE(!!StatusOr);
+
+  APFloat::opStatus Status = *StatusOr;
+
+  // The value is 2^113 + 1, not exactly representable in float.
+  EXPECT_TRUE(Status & APFloat::opInexact);
+
+  // But it should round to exactly 2^113.
+  APFloat Expected(APFloat::IEEEsingle());
+  auto ExpectedStatus =
+      Expected.convertFromString("0x1p113", APFloat::rmNearestTiesToEven);
+  EXPECT_TRUE(!!ExpectedStatus);
+  EXPECT_FALSE(*ExpectedStatus & APFloat::opInexact);
+
+  EXPECT_EQ(F.bitcastToAPInt(), Expected.bitcastToAPInt());
+}
+
 } // namespace

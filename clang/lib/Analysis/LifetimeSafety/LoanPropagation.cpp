@@ -59,11 +59,18 @@ static llvm::BitVector computePersistentOrigins(const FactManager &FactMgr,
         break;
       }
       case Fact::Kind::Use:
-        CheckOrigin(F->getAs<UseFact>()->getUsedOrigin());
+        for (const OriginList *Cur = F->getAs<UseFact>()->getUsedOrigins(); Cur;
+             Cur = Cur->peelOuterOrigin())
+          CheckOrigin(Cur->getOuterOriginID());
         break;
+      case Fact::Kind::KillOrigin:
+        CheckOrigin(F->getAs<KillOriginFact>()->getKilledOrigin());
+        break;
+      case Fact::Kind::MovedOrigin:
       case Fact::Kind::OriginEscapes:
       case Fact::Kind::Expire:
       case Fact::Kind::TestPoint:
+      case Fact::Kind::InvalidateOrigin:
         break;
       }
     }
@@ -175,6 +182,16 @@ public:
     LoanSet MergedLoans = utils::join(DestLoans, SrcLoans, LoanSetFactory);
 
     return setLoans(In, DestOID, MergedLoans);
+  }
+
+  Lattice transfer(Lattice In, const KillOriginFact &F) {
+    return setLoans(In, F.getKilledOrigin(), LoanSetFactory.getEmptySet());
+  }
+
+  Lattice transfer(Lattice In, const ExpireFact &F) {
+    if (auto OID = F.getOriginID())
+      return setLoans(In, *OID, LoanSetFactory.getEmptySet());
+    return In;
   }
 
   LoanSet getLoans(OriginID OID, ProgramPoint P) const {

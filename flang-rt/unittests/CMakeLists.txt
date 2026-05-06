@@ -42,17 +42,6 @@ function(add_flangrt_unittest_offload_properties target)
       PROPERTIES CUDA_RESOLVE_DEVICE_SYMBOLS ON
       )
   endif()
-  # Enable OpenMP offload during linking. We may need to replace
-  # LINK_OPTIONS with COMPILE_OPTIONS when there are OpenMP offload
-  # unittests.
-  #
-  # FIXME: replace 'native' in --offload-arch option with the list
-  #        of targets that Fortran Runtime was built for.
-  if (FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "OpenMP")
-    set_property(TARGET ${target} APPEND
-      PROPERTY LINK_OPTIONS -fopenmp --offload-arch=native
-      )
-  endif()
 endfunction()
 
 # flang-rt on Windows requires compiler-rt for some symbols. For binaries built

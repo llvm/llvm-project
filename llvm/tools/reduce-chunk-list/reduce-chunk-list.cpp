@@ -11,9 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/DebugCounter.h"
+#include "llvm/Support/IntegerInclusiveInterval.h"
 #include "llvm/Support/Program.h"
 
 using namespace llvm;
@@ -24,29 +23,16 @@ static cl::opt<std::string> StartChunks(cl::Positional, cl::Required);
 
 static cl::opt<bool> Pessimist("pessimist", cl::init(false));
 
-using Chunk = DebugCounter::Chunk;
-
 namespace {
 
-SmallVector<Chunk> simplifyChunksList(ArrayRef<Chunk> Chunks) {
-  SmallVector<Chunk> Res;
-  Res.push_back(Chunks.front());
-  for (unsigned Idx = 1; Idx < Chunks.size(); Idx++) {
-    if (Chunks[Idx].Begin == Res.back().End + 1)
-      Res.back().End = Chunks[Idx].End;
-    else
-      Res.push_back(Chunks[Idx]);
-  }
-  return Res;
-}
-
-bool isStillInteresting(ArrayRef<Chunk> Chunks) {
-  SmallVector<Chunk> SimpleChunks = simplifyChunksList(Chunks);
+bool isStillInteresting(ArrayRef<IntegerInclusiveInterval> Chunks) {
+  IntegerInclusiveIntervalUtils::IntervalList SimpleChunks =
+      IntegerInclusiveIntervalUtils::mergeAdjacentIntervals(Chunks);
 
   std::string ChunkStr;
   {
     raw_string_ostream OS(ChunkStr);
-    DebugCounter::printChunks(OS, SimpleChunks);
+    IntegerInclusiveIntervalUtils::printIntervals(OS, SimpleChunks);
   }
 
   errs() << "Checking with: " << ChunkStr << "\n";
@@ -73,18 +59,18 @@ bool isStillInteresting(ArrayRef<Chunk> Chunks) {
   return Res;
 }
 
-bool increaseGranularity(SmallVector<Chunk> &Chunks) {
+bool increaseGranularity(IntegerInclusiveIntervalUtils::IntervalList &Chunks) {
   errs() << "Increasing granularity\n";
-  SmallVector<Chunk> NewChunks;
+  IntegerInclusiveIntervalUtils::IntervalList NewChunks;
   bool SplitOne = false;
 
   for (auto &C : Chunks) {
-    if (C.Begin == C.End) {
+    if (C.getBegin() == C.getEnd()) {
       NewChunks.push_back(C);
     } else {
-      int Half = (C.Begin + C.End) / 2;
-      NewChunks.push_back({C.Begin, Half});
-      NewChunks.push_back({Half + 1, C.End});
+      int64_t Half = (C.getBegin() + C.getEnd()) / 2;
+      NewChunks.push_back(IntegerInclusiveInterval(C.getBegin(), Half));
+      NewChunks.push_back(IntegerInclusiveInterval(Half + 1, C.getEnd()));
       SplitOne = true;
     }
   }
@@ -99,10 +85,16 @@ bool increaseGranularity(SmallVector<Chunk> &Chunks) {
 int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv);
 
-  SmallVector<Chunk> CurrChunks;
-  if (DebugCounter::parseChunks(StartChunks, CurrChunks)) {
+  auto ExpectedChunks =
+      IntegerInclusiveIntervalUtils::parseIntervals(StartChunks, ',');
+  if (!ExpectedChunks) {
+    handleAllErrors(ExpectedChunks.takeError(), [](const StringError &E) {
+      errs() << "Error parsing chunks: " << E.getMessage() << "\n";
+    });
     return 1;
   }
+  IntegerInclusiveIntervalUtils::IntervalList CurrChunks =
+      std::move(*ExpectedChunks);
 
   auto Program = sys::findProgramByName(ReproductionCmd);
   if (!Program) {
@@ -126,7 +118,7 @@ int main(int argc, char **argv) {
       if (CurrChunks.size() == 1)
         break;
 
-      Chunk Testing = CurrChunks[Idx];
+      IntegerInclusiveInterval Testing = CurrChunks[Idx];
       errs() << "Trying to remove : ";
       Testing.print(errs());
       errs() << "\n";
@@ -142,6 +134,8 @@ int main(int argc, char **argv) {
   }
 
   errs() << "Minimal Chunks = ";
-  DebugCounter::printChunks(llvm::errs(), simplifyChunksList(CurrChunks));
+  IntegerInclusiveIntervalUtils::printIntervals(
+      llvm::errs(),
+      IntegerInclusiveIntervalUtils::mergeAdjacentIntervals(CurrChunks));
   errs() << "\n";
 }

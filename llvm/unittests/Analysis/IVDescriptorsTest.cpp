@@ -259,3 +259,127 @@ for.end:
         EXPECT_EQ(Kind, RecurKind::FMax);
       });
 }
+
+TEST(IVDescriptorsTest, UnsupportedFindLastPhi) {
+  // Parse the module.
+  LLVMContext Context;
+
+  // This is a constructed example for the test, but it's based on a loop like:
+  //  int result = default_val;
+  //  for (int i = 0; i < N; ++i) {
+  //    if (cond_0) {
+  //      if (cond_1)
+  //        result = v1;
+  //    } else {
+  //      if (cond_1)
+  //        result = v2;
+  //    }
+  //  }
+  //  return result;
+  std::unique_ptr<Module> M = parseIR(Context, R"(
+    define i64 @unsupported_find_last_phi(
+      i64 %v1, i64 %v2, i64 %default_val, i64 %N, i1 %cond.0, i1 %cond.1
+    ) {
+      entry:
+        br label %loop
+
+      loop:
+        %result.0 = phi i64 [ %default_val, %entry ], [ %result.3, %for.inc ]
+        %idx = phi i64 [ 0, %entry ], [ %inc, %for.inc ]
+        br i1 %cond.0, label %outer.if.then, label %if.else
+
+      outer.if.then:
+        br i1 %cond.1, label %inner.if.then.0, label %inner.if.end.0
+
+      inner.if.then.0:
+        br label %inner.if.end.0
+
+      inner.if.end.0:
+        %result.1 = phi i64
+          [ %v1, %inner.if.then.0 ], [ %result.0, %outer.if.then ]
+        br label %for.inc
+
+      if.else:
+        br i1 %cond.1, label %inner.if.then.1, label %inner.if.end.1
+
+      inner.if.then.1:
+        br label %inner.if.end.1
+
+      inner.if.end.1:
+        %result.2 = phi i64 [ %v2, %inner.if.then.1 ], [ %result.0, %if.else ]
+        br label %for.inc
+
+      for.inc:
+        %result.3 = phi i64
+          [ %result.1, %inner.if.end.0 ], [ %result.2, %inner.if.end.1 ]
+        %inc = add nsw i64 %idx, 1
+        %cmp = icmp slt i64 %idx, %N
+        br i1 %cmp, label  %loop, label %exit
+
+      exit:
+        ret i64 %result.3
+    })");
+
+  runWithLoopInfoAndSE(*M, "unsupported_find_last_phi",
+                       [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+                         Function::iterator FI = F.begin();
+                         // First basic block is entry - skip it.
+                         BasicBlock *Header = &*(++FI);
+                         assert(Header->getName() == "loop");
+                         Loop *L = LI.getLoopFor(Header);
+                         EXPECT_NE(L, nullptr);
+                         BasicBlock::iterator BBI = Header->begin();
+                         PHINode *Phi = dyn_cast<PHINode>(&*BBI);
+                         EXPECT_NE(Phi, nullptr);
+                         EXPECT_EQ(Phi->getName(), "result.0");
+                         RecurrenceDescriptor Rdx;
+                         bool IsRdxPhi =
+                             RecurrenceDescriptor::isReductionPHI(Phi, L, Rdx);
+                         EXPECT_FALSE(IsRdxPhi);
+                       });
+}
+
+// Make sure isReductionPHI doesn't crash when SE is not passed to it.
+TEST(IVDescriptorsTest, InvariantStoreNoSCEV) {
+  // Parse the module.
+  LLVMContext Context;
+
+  std::unique_ptr<Module> M = parseIR(Context, R"(
+    define void @smax_with_invariant_store_user(ptr noalias %src, ptr %dst, i64 %n) {
+    entry:
+      br label %loop
+
+    loop:
+      %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+      %max = phi i32 [ 0, %entry ], [ %max.next, %loop ]
+      %gep.src = getelementptr inbounds i32, ptr %src, i64 %iv
+      %l = load i32, ptr %gep.src, align 4
+      %max.next = tail call i32 @llvm.smax.i32(i32 %max, i32 %l)
+      store i32 %max.next, ptr %dst, align 4
+      %iv.next = add i64 %iv, 1
+      %ec = icmp eq i64 %iv, %n
+      br i1 %ec, label %exit, label %loop
+
+    exit:
+      ret void
+    })");
+
+  runWithLoopInfoAndSE(*M, "smax_with_invariant_store_user",
+                       [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+                         Function::iterator FI = F.begin();
+                         // First basic block is entry - skip it.
+                         BasicBlock *Header = &*(++FI);
+                         assert(Header->getName() == "loop");
+                         Loop *L = LI.getLoopFor(Header);
+                         EXPECT_NE(L, nullptr);
+                         BasicBlock::iterator BBI = Header->begin();
+                         ++BBI;
+                         PHINode *Phi = dyn_cast<PHINode>(&*BBI);
+                         EXPECT_NE(Phi, nullptr);
+                         EXPECT_EQ(Phi->getName(), "max");
+                         RecurrenceDescriptor Rdx;
+                         bool IsRdxPhi =
+                             RecurrenceDescriptor::isReductionPHI(Phi, L, Rdx);
+                         EXPECT_FALSE(IsRdxPhi);
+                       });
+}

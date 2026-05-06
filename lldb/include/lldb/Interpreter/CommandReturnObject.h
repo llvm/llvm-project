@@ -114,22 +114,11 @@ public:
 
   void AppendMessage(llvm::StringRef in_string);
 
-  void AppendMessageWithFormat(const char *format, ...)
-      __attribute__((format(printf, 2, 3)));
-
   void AppendNote(llvm::StringRef in_string);
-
-  void AppendNoteWithFormat(const char *format, ...)
-      __attribute__((format(printf, 2, 3)));
 
   void AppendWarning(llvm::StringRef in_string);
 
-  void AppendWarningWithFormat(const char *format, ...)
-      __attribute__((format(printf, 2, 3)));
-
   void AppendError(llvm::StringRef in_string);
-
-  void AppendRawError(llvm::StringRef in_string);
 
   void AppendErrorWithFormat(const char *format, ...)
       __attribute__((format(printf, 2, 3)));

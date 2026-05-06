@@ -12,12 +12,14 @@
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/DependencyScanning/DependencyScannerImpl.h"
 #include "clang/DependencyScanning/DependencyScanningService.h"
 #include "clang/DependencyScanning/ModuleDepCollector.h"
 #include "clang/Frontend/PCHContainerOperations.h"
-#include "llvm/Support/Error.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBufferRef.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include <optional>
 #include <string>
 
@@ -25,10 +27,13 @@ namespace clang {
 
 class DependencyOutputOptions;
 
+namespace tooling {
+class CompilerInstanceWithContext;
+}
+
 namespace dependencies {
 
 class DependencyScanningWorkerFilesystem;
-class CompilerInstanceWithContext;
 
 /// A command-line tool invocation that is part of building a TU.
 ///
@@ -70,8 +75,55 @@ class DependencyActionController {
 public:
   virtual ~DependencyActionController();
 
+  /// Creates a copy of the controller. The result must be both thread-safe.
+  virtual std::unique_ptr<DependencyActionController> clone() const = 0;
+
+  /// Provides output path for a given module dependency. Must be thread-safe.
   virtual std::string lookupModuleOutput(const ModuleDeps &MD,
                                          ModuleOutputKind Kind) = 0;
+
+  /// Initializes the scan invocation.
+  virtual void initializeScanInvocation(CompilerInvocation &ScanInvocation) {}
+
+  /// Initializes the scan instance and modifies the resulting TU invocation.
+  /// Returns true on success, false on failure.
+  virtual bool initialize(CompilerInstance &ScanInstance,
+                          CompilerInvocation &NewInvocation) {
+    return true;
+  }
+
+  /// Finalizes the scan instance and modifies the resulting TU invocation.
+  /// Returns true on success, false on failure.
+  virtual bool finalize(CompilerInstance &ScanInstance,
+                        CompilerInvocation &NewInvocation) {
+    return true;
+  }
+
+  /// Returns the cache key for the resulting invocation, or nullopt.
+  virtual std::optional<std::string>
+  getCacheKey(const CompilerInvocation &NewInvocation) {
+    return std::nullopt;
+  }
+
+  /// Initializes the module scan instance.
+  /// Returns true on success, false on failure.
+  virtual bool initializeModuleBuild(CompilerInstance &ModuleScanInstance) {
+    return true;
+  }
+
+  /// Finalizes the module scan instance.
+  /// Returns true on success, false on failure.
+  virtual bool finalizeModuleBuild(CompilerInstance &ModuleScanInstance) {
+    return true;
+  }
+
+  /// Modifies the resulting module invocation and the associated structure.
+  /// Returns true on success, false on failure.
+  virtual bool finalizeModuleInvocation(CompilerInstance &ScanInstance,
+                                        CowCompilerInvocation &CI,
+                                        const ModuleDeps &MD) {
+    return true;
+  }
 };
 
 /// An individual dependency scanning worker that is able to run on its own
@@ -85,76 +137,43 @@ public:
   /// Construct a dependency scanning worker.
   ///
   /// @param Service The parent service. Must outlive the worker.
-  /// @param BaseFS The filesystem for the worker to use.
-  DependencyScanningWorker(DependencyScanningService &Service,
-                           IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS);
+  DependencyScanningWorker(DependencyScanningService &Service);
 
   ~DependencyScanningWorker();
 
-  /// Run the dependency scanning tool for a given clang driver command-line,
-  /// and report the discovered dependencies to the provided consumer. If
-  /// TUBuffer is not nullopt, it is used as TU input for the dependency
-  /// scanning. Otherwise, the input should be included as part of the
-  /// command-line.
+  /// Run the dependency scanning worker for the given frontend command-line,
+  /// and report the discovered dependencies to the provided consumer.
   ///
-  /// \returns false if clang errors occurred (with diagnostics reported to
+  /// OverlayFS should be based on the Worker's dependency scanning file-system
+  /// and can be used to provide any input specified on the command-line as
+  /// in-memory file. If no overlay file-system is provided, the Worker's
+  /// dependency scanning file-system is used instead.
+  ///
+  /// \returns false if any errors occurred (with diagnostics reported to
   /// \c DiagConsumer), true otherwise.
   bool computeDependencies(
       StringRef WorkingDirectory, ArrayRef<std::string> CommandLine,
       DependencyConsumer &DepConsumer, DependencyActionController &Controller,
       DiagnosticConsumer &DiagConsumer,
-      std::optional<llvm::MemoryBufferRef> TUBuffer = std::nullopt);
+      llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS =
+          nullptr);
 
-  /// Run the dependency scanning tool for a given clang driver command-line
-  /// for a specific translation unit via file system or memory buffer.
+  /// Run the dependency scanning tool for all given frontend command-lines,
+  /// and report the discovered dependencies to the provided consumer.
   ///
-  /// \returns A \c StringError with the diagnostic output if clang errors
-  /// occurred, success otherwise.
-  llvm::Error computeDependencies(
-      StringRef WorkingDirectory, ArrayRef<std::string> CommandLine,
-      DependencyConsumer &Consumer, DependencyActionController &Controller,
-      std::optional<llvm::MemoryBufferRef> TUBuffer = std::nullopt);
-
-  /// The three method below implements a new interface for by name
-  /// dependency scanning. They together enable the dependency scanning worker
-  /// to more effectively perform scanning for a sequence of modules
-  /// by name when the CWD and CommandLine do not change across the queries.
-
-  /// @brief Initializing the context and the compiler instance.
-  /// @param CWD The current working directory used during the scan.
-  /// @param CommandLine The commandline used for the scan.
-  /// @return Error if the initializaiton fails.
-  llvm::Error initializeCompilerInstanceWithContextOrError(
-      StringRef CWD, ArrayRef<std::string> CommandLine);
-
-  /// @brief Performaces dependency scanning for the module whose name is
-  ///        specified.
-  /// @param ModuleName  The name of the module whose dependency will be
-  ///                    scanned.
-  /// @param Consumer The dependency consumer that stores the results.
-  /// @param Controller The controller for the dependency scanning action.
-  /// @return Error if the scanner incurs errors.
-  llvm::Error computeDependenciesByNameWithContextOrError(
-      StringRef ModuleName, DependencyConsumer &Consumer,
-      DependencyActionController &Controller);
-
-  /// @brief Finalizes the diagnostics engine and deletes the compiler instance.
-  /// @return Error if errors occur during finalization.
-  llvm::Error finalizeCompilerInstanceWithContextOrError();
-
-  /// The three methods below provides the same functionality as the
-  /// three methods above. Instead of returning `llvm::Error`s, these
-  /// three methods return a flag to indicate if the call is successful.
-  /// The initialization function asks the client for a DiagnosticsConsumer
-  /// that it direct the diagnostics to.
-  bool initializeCompilerInstanceWithContext(StringRef CWD,
-                                             ArrayRef<std::string> CommandLine,
-                                             DiagnosticConsumer *DC = nullptr);
-  bool
-  computeDependenciesByNameWithContext(StringRef ModuleName,
-                                       DependencyConsumer &Consumer,
-                                       DependencyActionController &Controller);
-  bool finalizeCompilerInstance();
+  /// OverlayFS should be based on the Worker's dependency scanning file-system
+  /// and can be used to provide any input specified on the command-line as
+  /// in-memory file. If no overlay file-system is provided, the Worker's
+  /// dependency scanning file-system is used instead.
+  ///
+  /// \returns false if any errors occurred (with diagnostics reported to
+  /// \c DiagConsumer), true otherwise.
+  bool computeDependencies(
+      StringRef WorkingDirectory, ArrayRef<ArrayRef<std::string>> CommandLines,
+      DependencyConsumer &DepConsumer, DependencyActionController &Controller,
+      DiagnosticConsumer &DiagConsumer,
+      llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS =
+          nullptr);
 
   llvm::vfs::FileSystem &getVFS() const { return *DepFS; }
 
@@ -166,18 +185,8 @@ private:
   /// overlaid on top of the base VFS passed in the constructor.
   IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
 
-  friend CompilerInstanceWithContext;
-  std::unique_ptr<CompilerInstanceWithContext> CIWithContext;
-
-  /// Actually carries out the scan. If \c OverlayFS is provided, it must be
-  /// based on top of DepFS.
-  bool scanDependencies(
-      StringRef WorkingDirectory, ArrayRef<std::string> CommandLine,
-      DependencyConsumer &Consumer, DependencyActionController &Controller,
-      DiagnosticConsumer &DC,
-      IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS = nullptr);
+  friend tooling::CompilerInstanceWithContext;
 };
-
 } // end namespace dependencies
 } // end namespace clang
 

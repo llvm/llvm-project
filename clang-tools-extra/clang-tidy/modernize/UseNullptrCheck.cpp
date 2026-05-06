@@ -30,7 +30,7 @@ AST_MATCHER(Type, sugaredNullptrType) {
 
 } // namespace
 
-static const char CastSequence[] = "sequence";
+static constexpr char CastSequence[] = "sequence";
 
 /// Create a matcher that finds implicit casts as well as the head of a
 /// sequence of zero or more nested explicit casts that have an implicit cast
@@ -45,8 +45,7 @@ static const char CastSequence[] = "sequence";
 /// would check for the "NULL" macro instead, but that'd be harder to express.
 /// In practice, "NULL" is often defined as "__null", and this is a useful
 /// condition.
-static StatementMatcher
-makeCastSequenceMatcher(llvm::ArrayRef<StringRef> NameList) {
+void UseNullptrCheck::registerMatchers(MatchFinder *Finder) {
   auto ImplicitCastToNull = implicitCastExpr(
       anyOf(hasCastKind(CK_NullToPointer), hasCastKind(CK_NullToMemberPointer)),
       anyOf(hasSourceExpression(gnuNullExpr()),
@@ -54,32 +53,34 @@ makeCastSequenceMatcher(llvm::ArrayRef<StringRef> NameList) {
                 qualType(substTemplateTypeParmType())))),
       unless(hasSourceExpression(hasType(sugaredNullptrType()))),
       unless(hasImplicitDestinationType(
-          qualType(matchers::matchesAnyListedTypeName(NameList)))));
+          qualType(matchers::matchesAnyListedTypeName(IgnoredTypes)))));
 
   auto IsOrHasDescendant = [](const auto &InnerMatcher) {
     return anyOf(InnerMatcher, hasDescendant(InnerMatcher));
   };
 
-  return traverse(
-      TK_AsIs,
-      anyOf(castExpr(anyOf(ImplicitCastToNull,
-                           explicitCastExpr(hasDescendant(ImplicitCastToNull))),
-                     unless(hasAncestor(explicitCastExpr())),
-                     unless(hasAncestor(cxxRewrittenBinaryOperator())))
-                .bind(CastSequence),
-            cxxRewrittenBinaryOperator(
-                // Match rewritten operators, but verify (in the check method)
-                // that if an implicit cast is found, it is not from another
-                // nested rewritten operator.
-                expr().bind("matchBinopOperands"),
-                hasEitherOperand(IsOrHasDescendant(
-                    implicitCastExpr(
-                        ImplicitCastToNull,
-                        hasAncestor(cxxRewrittenBinaryOperator().bind(
-                            "checkBinopOperands")))
-                        .bind(CastSequence))),
-                // Skip defaulted comparison operators.
-                unless(hasAncestor(functionDecl(isDefaulted()))))));
+  Finder->addMatcher(
+      castExpr(anyOf(ImplicitCastToNull,
+                     explicitCastExpr(hasDescendant(ImplicitCastToNull))),
+               unless(hasAncestor(explicitCastExpr())),
+               unless(hasAncestor(cxxRewrittenBinaryOperator())))
+          .bind(CastSequence),
+      this);
+
+  Finder->addMatcher(
+      cxxRewrittenBinaryOperator(
+          // Match rewritten operators, but verify (in the check method)
+          // that if an implicit cast is found, it is not from another
+          // nested rewritten operator.
+          expr().bind("matchBinopOperands"),
+          hasEitherOperand(IsOrHasDescendant(
+              implicitCastExpr(ImplicitCastToNull,
+                               hasAncestor(cxxRewrittenBinaryOperator().bind(
+                                   "checkBinopOperands")))
+                  .bind(CastSequence))),
+          // Skip defaulted comparison operators.
+          unless(hasAncestor(functionDecl(isDefaulted())))),
+      this);
 }
 
 static bool isReplaceableRange(SourceLocation StartLoc, SourceLocation EndLoc,
@@ -238,9 +239,8 @@ public:
 
     auto *CastSubExpr = C->getSubExpr()->IgnoreParens();
     // Ignore cast expressions which cast nullptr literal.
-    if (isa<CXXNullPtrLiteralExpr>(CastSubExpr)) {
+    if (isa<CXXNullPtrLiteralExpr>(CastSubExpr))
       return true;
-    }
 
     if (!FirstSubExpr)
       FirstSubExpr = CastSubExpr;
@@ -286,9 +286,8 @@ public:
       EndLoc = SM.getFileLoc(EndLoc);
     }
 
-    if (!isReplaceableRange(StartLoc, EndLoc, SM)) {
+    if (!isReplaceableRange(StartLoc, EndLoc, SM))
       return skipSubTree();
-    }
     replaceWithNullptr(Check, SM, StartLoc, EndLoc);
 
     return true;
@@ -395,9 +394,8 @@ private:
   /// - TestLoc is not from a macro expansion.
   /// - TestLoc is from a different macro expansion.
   bool expandsFrom(SourceLocation TestLoc, SourceLocation TestMacroLoc) {
-    if (TestLoc.isFileID()) {
+    if (TestLoc.isFileID())
       return false;
-    }
 
     SourceLocation Loc = TestLoc, MacroLoc;
 
@@ -409,9 +407,8 @@ private:
       Loc = Expansion.getExpansionLocStart();
 
       if (!Expansion.isMacroArgExpansion()) {
-        if (Loc.isFileID()) {
+        if (Loc.isFileID())
           return Loc == TestMacroLoc;
-        }
         // Since Loc is still a macro ID and it's not an argument expansion, we
         // don't need to do the work of handling an argument expansion. Simply
         // keep recursively expanding until we hit a FileID or a macro arg
@@ -458,10 +455,9 @@ private:
         // they are InitListsExpr (semantic and syntactic form). In this case we
         // can choose any one here, and the ASTVisitor will take care of
         // traversing the right one.
-        for (const auto &Parent : Parents) {
+        for (const auto &Parent : Parents)
           if (!Parent.get<InitListExpr>())
             return false;
-        }
       }
 
       const DynTypedNode &Parent = Parents[0];
@@ -508,10 +504,6 @@ void UseNullptrCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "NullMacros", NullMacrosStr);
   Options.store(Opts, "IgnoredTypes",
                 utils::options::serializeStringList(IgnoredTypes));
-}
-
-void UseNullptrCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(makeCastSequenceMatcher(IgnoredTypes), this);
 }
 
 void UseNullptrCheck::check(const MatchFinder::MatchResult &Result) {

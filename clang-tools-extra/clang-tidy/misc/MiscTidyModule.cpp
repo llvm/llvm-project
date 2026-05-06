@@ -8,7 +8,7 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
-#include "../ClangTidyModuleRegistry.h"
+#include "AnonymousNamespaceInHeaderCheck.h"
 #include "ConfusableIdentifierCheck.h"
 #include "ConstCorrectnessCheck.h"
 #include "CoroutineHostileRAIICheck.h"
@@ -18,6 +18,7 @@
 #include "MisleadingBidirectionalCheck.h"
 #include "MisleadingIdentifierCheck.h"
 #include "MisplacedConstCheck.h"
+#include "MultipleInheritanceCheck.h"
 #include "NewDeleteOverloadsCheck.h"
 #include "NoRecursionCheck.h"
 #include "NonCopyableObjectsCheck.h"
@@ -37,10 +38,13 @@
 
 namespace clang::tidy {
 namespace misc {
+namespace {
 
 class MiscModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
+    CheckFactories.registerCheck<AnonymousNamespaceInHeaderCheck>(
+        "misc-anonymous-namespace-in-header");
     CheckFactories.registerCheck<ConfusableIdentifierCheck>(
         "misc-confusable-identifiers");
     CheckFactories.registerCheck<ConstCorrectnessCheck>(
@@ -57,6 +61,8 @@ public:
     CheckFactories.registerCheck<MisleadingIdentifierCheck>(
         "misc-misleading-identifier");
     CheckFactories.registerCheck<MisplacedConstCheck>("misc-misplaced-const");
+    CheckFactories.registerCheck<MultipleInheritanceCheck>(
+        "misc-multiple-inheritance");
     CheckFactories.registerCheck<NewDeleteOverloadsCheck>(
         "misc-new-delete-overloads");
     CheckFactories.registerCheck<NoRecursionCheck>("misc-no-recursion");
@@ -89,6 +95,7 @@ public:
   }
 };
 
+} // namespace
 } // namespace misc
 
 // Register the MiscTidyModule using this statically initialized variable.

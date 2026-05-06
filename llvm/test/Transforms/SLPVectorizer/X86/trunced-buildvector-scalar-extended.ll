@@ -7,8 +7,15 @@ define <4 x float> @test(i64 %0) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i64> <i64 0, i64 0, i64 poison, i64 0>, i64 [[TMP0]], i32 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc <4 x i64> [[TMP3]] to <4 x i32>
-; CHECK-NEXT:    [[TMP4:%.*]] = sitofp <4 x i64> [[TMP3]] to <4 x float>
+; CHECK-NEXT:    [[TMP11:%.*]] = sitofp i64 0 to float
+; CHECK-NEXT:    [[TMP12:%.*]] = sitofp i64 0 to float
+; CHECK-NEXT:    [[TMP13:%.*]] = sitofp i64 [[TMP0]] to float
+; CHECK-NEXT:    [[TMP14:%.*]] = sitofp i64 0 to float
 ; CHECK-NEXT:    [[TMP5:%.*]] = sitofp <4 x i32> [[TMP2]] to <4 x float>
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x float> poison, float [[TMP11]], i32 0
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x float> [[TMP8]], float [[TMP12]], i32 1
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x float> [[TMP9]], float [[TMP13]], i32 2
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[TMP10]], float [[TMP14]], i32 3
 ; CHECK-NEXT:    [[TMP6:%.*]] = fadd <4 x float> [[TMP4]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = fcmp ogt <4 x float> [[TMP6]], zeroinitializer
 ; CHECK-NEXT:    ret <4 x float> [[TMP6]]

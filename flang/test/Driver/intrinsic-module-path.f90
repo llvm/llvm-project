@@ -1,0 +1,23 @@
+! Ensure argument -fintrinsic-modules-path works as expected.
+! WITHOUT the option, the default location for the module is checked and no error generated.
+! With the option GIVEN, the module with the same name is PREPENDED, and considered over the
+! default one, causing an error.
+
+!-----------------------------------------
+! FRONTEND FLANG DRIVER (flang -fc1)
+!-----------------------------------------
+! RUN: %flang_fc1 -fsyntax-only %s  2>&1 | FileCheck %s --allow-empty --check-prefix=WITHOUT
+! RUN: not %flang_fc1 -fsyntax-only -fintrinsic-modules-path %S/Inputs/ %s  2>&1 | FileCheck %s --check-prefix=GIVEN
+! RUN: not %flang_fc1 -fsyntax-only -fintrinsic-modules-path=%S/Inputs/ %s  2>&1 | FileCheck %s --check-prefix=GIVEN
+
+! WITHOUT-NOT: 'ieee_arithmetic.mod' was not found
+! WITHOUT-NOT: 'iso_fortran_env.mod' was not found
+
+! GIVEN: error: Cannot read module file for module 'ieee_arithmetic': 'ieee_arithmetic.mod' is not a module file for this compiler
+! GIVEN: error: Cannot read module file for module 'iso_fortran_env': 'iso_fortran_env.mod' is not a module file for this compiler
+
+
+program test_intrinsic_module_path
+   use ieee_arithmetic, only: ieee_round_type
+   use iso_fortran_env, only: team_type, event_type, lock_type
+end program

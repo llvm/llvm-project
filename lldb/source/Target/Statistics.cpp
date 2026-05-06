@@ -17,6 +17,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/UnixSignals.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/StructuredData.h"
 
 using namespace lldb;
@@ -207,6 +208,10 @@ TargetStats::ToJSON(Target &target,
     if (process_sp->GetDynamicLoader())
       dyld_plugin_name = process_sp->GetDynamicLoader()->GetPluginName();
     target_metrics_json.try_emplace("dyldPluginName", dyld_plugin_name);
+
+    if (process_sp->GetCoreFile())
+      target_metrics_json.try_emplace("coreFile",
+                                      process_sp->GetCoreFile().GetFilename());
   }
   target_metrics_json.try_emplace("sourceMapDeduceCount",
                                   m_source_map_deduce_count);
@@ -503,6 +508,9 @@ llvm::json::Value DebuggerStats::ReportStatistics(
       if (auto json_transcript = llvm::json::parse(buffer))
         global_stats.try_emplace("transcript",
                                  std::move(json_transcript.get()));
+      else
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Target), json_transcript.takeError(),
+                       "failed to parse transcript JSON: {0}");
     }
   }
 

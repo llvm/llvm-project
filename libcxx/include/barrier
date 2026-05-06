@@ -57,8 +57,6 @@ namespace std
 #    include <__atomic/memory_order.h>
 #    include <__cstddef/ptrdiff_t.h>
 #    include <__memory/unique_ptr.h>
-#    include <__thread/poll_with_backoff.h>
-#    include <__thread/timed_backoff_policy.h>
 #    include <__utility/move.h>
 #    include <cstdint>
 #    include <limits>
@@ -142,8 +140,7 @@ public:
     return __old_phase;
   }
   _LIBCPP_HIDE_FROM_ABI void wait(arrival_token&& __old_phase) const {
-    auto const __test_fn = [this, __old_phase]() -> bool { return __phase_.load(memory_order_acquire) != __old_phase; };
-    std::__libcpp_thread_poll_with_backoff(__test_fn, __libcpp_timed_backoff_policy());
+    __phase_.wait(__old_phase, std::memory_order_acquire);
   }
   _LIBCPP_HIDE_FROM_ABI void arrive_and_drop() {
     __expected_adjustment_.fetch_sub(1, memory_order_relaxed);

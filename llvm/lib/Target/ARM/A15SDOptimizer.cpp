@@ -432,11 +432,8 @@ unsigned A15SDOptimizer::createExtractSubreg(
     const DebugLoc &DL, unsigned DReg, unsigned Lane,
     const TargetRegisterClass *TRC) {
   Register Out = MRI->createVirtualRegister(TRC);
-  BuildMI(MBB,
-          InsertBefore,
-          DL,
-          TII->get(TargetOpcode::COPY), Out)
-    .addReg(DReg, 0, Lane);
+  BuildMI(MBB, InsertBefore, DL, TII->get(TargetOpcode::COPY), Out)
+      .addReg(DReg, {}, Lane);
 
   return Out;
 }
@@ -580,12 +577,12 @@ bool A15SDOptimizer::runOnInstruction(MachineInstr *MI) {
   //                      lane, and the other lane(s) of the DPR/QPR register
   //                      that we are inserting in are undefined, use the
   //                      original DPR/QPR value.
-  //                    * Otherwise, fall back on the same stategy as COPY.
+  //                    * Otherwise, fall back on the same strategy as COPY.
   //
   //   * REG_SEQUENCE:  * If all except one of the input operands are
   //                      IMPLICIT_DEFs, insert the VDUP pattern for just the
   //                      defined input operand
-  //                    * Otherwise, fall back on the same stategy as COPY.
+  //                    * Otherwise, fall back on the same strategy as COPY.
   //
 
   // First, get all the reads of D-registers done by this instruction.

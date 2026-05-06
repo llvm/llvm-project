@@ -12,8 +12,8 @@ define float @flog2_s(float %x) nounwind {
 ;
 ; LA64-LABEL: flog2_s:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    flogb.s $fa0, $fa0
-; LA64-NEXT:    ret
+; LA64-NEXT:    pcaddu18i $t8, %call36(log2f)
+; LA64-NEXT:    jr $t8
   %y = call float @llvm.log2.f32(float %x)
   ret float %y
 }
@@ -25,8 +25,8 @@ define double @flog2_d(double %x) nounwind {
 ;
 ; LA64-LABEL: flog2_d:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    flogb.d $fa0, $fa0
-; LA64-NEXT:    ret
+; LA64-NEXT:    pcaddu18i $t8, %call36(log2)
+; LA64-NEXT:    jr $t8
   %y = call double @llvm.log2.f64(double %x)
   ret double %y
 }
