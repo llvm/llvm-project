@@ -169,6 +169,7 @@ func.func @_QQmain() {
 // PASSES-NEXT:  'omp.private' Pipeline
 // PASSES-NEXT:    AbstractResultOpt
 
+// PASSES-NEXT: RematerializeFIRBoxOpsPass
 // PASSES-NEXT: CodeGenRewrite
 // PASSES-NEXT:   (S) 0 num-dce'd - Number of operations eliminated
 // PASSES-NEXT: TargetRewrite

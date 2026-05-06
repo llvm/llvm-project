@@ -181,6 +181,7 @@ end program
 ! ALL-NEXT:  'omp.private' Pipeline
 ! ALL-NEXT:    AbstractResultOpt
 
+! ALL-NEXT: RematerializeFIRBoxOpsPass
 ! ALL-NEXT: CodeGenRewrite
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations eliminated
 ! ALL-NEXT: ExternalNameConversion
