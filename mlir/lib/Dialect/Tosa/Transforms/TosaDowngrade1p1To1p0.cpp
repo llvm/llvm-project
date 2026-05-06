@@ -16,8 +16,6 @@
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/Tosa/IR/TargetEnv.h"
-#include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
@@ -32,58 +30,6 @@ using namespace mlir;
 using namespace mlir::tosa;
 
 namespace {
-
-class AvgPool2dAdaptiveToAvgPool2d
-    : public OpRewritePattern<tosa::AvgPool2dAdaptiveOp> {
-public:
-  using OpRewritePattern::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(tosa::AvgPool2dAdaptiveOp op,
-                                PatternRewriter &rewriter) const override {
-    llvm::SmallVector<int64_t> kernel;
-    llvm::SmallVector<int64_t> stride;
-    llvm::SmallVector<int64_t> pad;
-    if (!tosa::getConstShapeValues(op.getKernel().getDefiningOp(), kernel) ||
-        !tosa::getConstShapeValues(op.getStride().getDefiningOp(), stride) ||
-        !tosa::getConstShapeValues(op.getPad().getDefiningOp(), pad))
-      return rewriter.notifyMatchFailure(
-          op, "expected constant kernel, stride, and pad operands");
-
-    auto replacement = tosa::AvgPool2dOp::create(
-        rewriter, op.getLoc(), op.getType(), op.getInput(), op.getInputZp(),
-        op.getOutputZp(), rewriter.getDenseI64ArrayAttr(kernel),
-        rewriter.getDenseI64ArrayAttr(stride),
-        rewriter.getDenseI64ArrayAttr(pad), op.getAccTypeAttr());
-    rewriter.replaceOp(op, replacement.getOutput());
-    return success();
-  }
-};
-
-class MaxPool2dAdaptiveToMaxPool2d
-    : public OpRewritePattern<tosa::MaxPool2dAdaptiveOp> {
-public:
-  using OpRewritePattern::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(tosa::MaxPool2dAdaptiveOp op,
-                                PatternRewriter &rewriter) const override {
-    llvm::SmallVector<int64_t> kernel;
-    llvm::SmallVector<int64_t> stride;
-    llvm::SmallVector<int64_t> pad;
-    if (!tosa::getConstShapeValues(op.getKernel().getDefiningOp(), kernel) ||
-        !tosa::getConstShapeValues(op.getStride().getDefiningOp(), stride) ||
-        !tosa::getConstShapeValues(op.getPad().getDefiningOp(), pad))
-      return rewriter.notifyMatchFailure(
-          op, "expected constant kernel, stride, and pad operands");
-
-    auto replacement = tosa::MaxPool2dOp::create(
-        rewriter, op.getLoc(), op.getType(), op.getInput(),
-        rewriter.getDenseI64ArrayAttr(kernel),
-        rewriter.getDenseI64ArrayAttr(stride),
-        rewriter.getDenseI64ArrayAttr(pad), op.getNanModeAttr());
-    rewriter.replaceOp(op, replacement.getOutput());
-    return success();
-  }
-};
 
 class BoolFp32CastRewrite : public OpRewritePattern<tosa::CastOp> {
 public:
@@ -204,8 +150,7 @@ struct TosaDowngrade1p1To1p0Pass
     func::FuncOp func = getOperation();
 
     RewritePatternSet patterns(&context);
-    patterns.add<AvgPool2dAdaptiveToAvgPool2d, MaxPool2dAdaptiveToMaxPool2d,
-                 BoolFp32CastRewrite, BoolGatherRewrite, BoolScatterRewrite>(
+    patterns.add<BoolFp32CastRewrite, BoolGatherRewrite, BoolScatterRewrite>(
         &context);
     FrozenRewritePatternSet frozenPatterns(std::move(patterns));
 
