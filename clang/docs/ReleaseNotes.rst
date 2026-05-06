@@ -745,6 +745,12 @@ Code Completion
 Static Analyzer
 ---------------
 
+Crash and bug fixes
+^^^^^^^^^^^^^^^^^^^
+
+- Fixed ``security.VAList`` checker producing false positives when analyzing
+  C23 code where ``va_start`` expands to ``__builtin_c23_va_start``.
+
 .. comment:
   This is for the Static Analyzer.
   Using the caret `^^^` underlining for subsections:

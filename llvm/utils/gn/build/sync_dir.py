@@ -19,14 +19,14 @@ def read(filename):
 
 def main():
     parser = argparse.ArgumentParser(
-        description=__doc__,
-        formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--stamp", required=True,
-                        help="name of a file whose mtime is updated on run")
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument(
+        "--stamp", required=True, help="name of a file whose mtime is updated on run"
+    )
     parser.add_argument("--source-dir", required=True)
     parser.add_argument("--output-dir", required=True)
-    parser.add_argument("--except", dest="exceptions", action="append",
-                        default=[])
+    parser.add_argument("--except", dest="exceptions", action="append", default=[])
     parser.add_argument("rspfile")
     args = parser.parse_args()
 
