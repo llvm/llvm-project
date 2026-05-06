@@ -2974,6 +2974,12 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
       FileChange.Kind == Change::None)
     FileChange = HasInputContentChanged(FileChange);
 
+  // Ignore modification time of relocated inputs:
+  // files at different absolute paths are likely to have mismatching mtime,
+  // even if their contents match.
+  if (FileChange.Kind == Change::ModTime && F.RelocatablePCH)
+    FileChange = Change{Change::None};
+
   // For an overridden file, there is nothing to validate.
   if (!Overridden && FileChange.Kind != Change::None) {
     if (Complain) {

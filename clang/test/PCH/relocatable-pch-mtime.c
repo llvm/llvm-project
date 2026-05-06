@@ -1,8 +1,8 @@
 // Test the mtime validation behavior of a relocatable PCH when source files
-// are relocated and their timestamps change.  Without content validation any
-// mtime difference is a hard error.  With -fvalidate-ast-input-files-content
-// an mtime mismatch falls back to a content hash comparison, which tolerates
-// mtime drift but still catches genuine content changes.
+// are relocated and their timestamps change.  Mtime drift is expected after
+// relocation, so a bare mtime mismatch is tolerated.  With
+// -fvalidate-ast-input-files-content an mtime mismatch falls back to a
+// content hash comparison, which still catches genuine content changes.
 
 // RUN: rm -rf %t
 // RUN: mkdir -p %t/sysroot_orig/usr/include
@@ -39,10 +39,10 @@
 // RUN: %python -c "import os,sys; t=os.path.getmtime(sys.argv[1])+3600; os.utime(sys.argv[1],(t,t))" \
 // RUN:   %t/sysroot_new/usr/include/test.h
 
-// Mtime changed but content is identical: the relocatable PCH is rejected
-// RUN: not %clang_cc1 -include-pch %t/test.pch \
+// Mtime changed but content is identical: the relocatable PCH is accepted.
+// RUN: %clang_cc1 -include-pch %t/test.pch \
 // RUN:   -isysroot %t/sysroot_new \
-// RUN:   -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix=CHECK-MTIME,CHECK
+// RUN:   -fsyntax-only %s
 
 // With content validation the mtime mismatch falls back to a content hash
 // comparison; since the content is unchanged the PCH loads successfully.
@@ -61,10 +61,11 @@
 // RUN: %python -c "import os,sys; t=os.path.getmtime(sys.argv[1])+3600; os.utime(sys.argv[1],(t,t))" \
 // RUN:   %t/sysroot_new/usr/include/test.h
 
-// Without content validation the mtime mismatch is reported.
-// RUN: not %clang_cc1 -include-pch %t/test.pch \
+// Without content validation, mtime drift is tolerated and the content change
+// goes undetected.
+// RUN: %clang_cc1 -include-pch %t/test.pch \
 // RUN:   -isysroot %t/sysroot_new \
-// RUN:   -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix=CHECK-MTIME,CHECK
+// RUN:   -fsyntax-only %s
 
 // With content validation the change is caught even though size is the same.
 // RUN: not %clang_cc1 -include-pch %t/test.pch \
@@ -73,6 +74,5 @@
 
 // CHECK: fatal error: file '{{.*}}test.h' has been modified since the precompiled header '{{.*}}test.pch' was built
 // CHECK-CONTENT: note: content changed
-// CHECK-MTIME: note: mtime changed
 
 int get_val(void) { return relocated_val; }
