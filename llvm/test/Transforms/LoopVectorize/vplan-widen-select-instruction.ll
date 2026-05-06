@@ -16,10 +16,6 @@ define void @loop_invariant_select(ptr noalias nocapture %out, i1 %select, doubl
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x double> poison, double [[A]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x double> [[BROADCAST_SPLATINSERT]], <4 x double> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <4 x double> poison, double [[B]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <4 x double> [[BROADCAST_SPLATINSERT2]], <4 x double> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_LATCH:.*]] ]
@@ -28,7 +24,9 @@ define void @loop_invariant_select(ptr noalias nocapture %out, i1 %select, doubl
 ; CHECK-NEXT:    br label %[[FOR2_HEADER3:.*]]
 ; CHECK:       [[FOR2_HEADER3]]:
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP2:%.*]], %[[FOR2_HEADER3]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[SELECT]], <4 x double> [[BROADCAST_SPLAT]], <4 x double> [[BROADCAST_SPLAT3]]
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[SELECT]], double [[A]], double [[B]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x double> poison, double [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[BROADCAST_SPLATINSERT]], <4 x double> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v4f64.v4p0(<4 x double> [[TMP1]], <4 x ptr> align 8 [[TMP0]], <4 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[TMP2]] = add nuw nsw <4 x i64> [[VEC_PHI]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <4 x i64> [[TMP2]], splat (i64 10000)

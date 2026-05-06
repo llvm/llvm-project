@@ -1722,7 +1722,10 @@ cc_library(
     ]),
     hdrs = glob(["include/llvm/SandboxIR/*.h"]),
     copts = llvm_copts,
-    textual_hdrs = ["include/llvm/SandboxIR/Values.def"],
+    textual_hdrs = glob([
+        "include/llvm/SandboxIR/*.def",
+        "include/llvm/Transforms/Vectorize/SandboxVectorizer/*.def",
+    ]),
     deps = [
         ":Analysis",
         ":Core",
@@ -1763,9 +1766,9 @@ cc_library(
         "include/llvm/Transforms/Vectorize/**/*.h",
     ]),
     copts = llvm_copts,
-    textual_hdrs = [
-        "lib/Transforms/Vectorize/SandboxVectorizer/Passes/PassRegistry.def",
-    ],
+    textual_hdrs = glob([
+        "lib/Transforms/Vectorize/SandboxVectorizer/Passes/*.def",
+    ]),
     deps = [
         ":Analysis",
         ":Core",
@@ -4845,6 +4848,7 @@ cc_binary(
         ":Core",
         ":IRReader",
         ":Support",
+        ":TargetParser",
         ":config",
     ],
 )
