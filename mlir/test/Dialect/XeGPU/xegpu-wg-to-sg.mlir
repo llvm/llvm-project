@@ -1309,11 +1309,14 @@ gpu.module @test_distribution {
       -> vector<256x128xf32>
     // CHECK: vector.bitcast {{.*}} : vector<32x32xf32> to vector<32x64xi16>
     %bitcast = vector.bitcast %load : vector<256x128xf32> to vector<256x256xi16>
-    %anchor = xegpu.convert_layout %bitcast
+    %add = arith.addi %bitcast, %bitcast : vector<256x256xi16>
+    // CHECK: vector.bitcast {{.*}} : vector<32x64xi16> to vector<32x32xi32>
+    %bitcast2 = vector.bitcast %add : vector<256x256xi16> to vector<256x128xi32>
+    %anchor = xegpu.convert_layout %bitcast2
       <{
-        input_layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 64]>,
-        target_layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 64]>
-      }> : vector<256x256xi16>
+        input_layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32]>,
+        target_layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32]>
+      }> : vector<256x128xi32>
     gpu.return
   }
 
@@ -1327,7 +1330,7 @@ gpu.module @test_distribution {
     %load2 =  xegpu.load_nd %tdesc[0, 0] {layout = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32]>}
       : !xegpu.tensor_desc<256x128xf32>
       -> vector<256x128xf32>
-    // CHECK: vector.interleave {{.*}}, {{.*}} : vector<32x32xf32>
+    // CHECK: vector.interleave {{.*}}, {{.*}} : vector<32x32xf32> -> vector<32x64xf32>
     %interleave = vector.interleave %load1, %load2
       : vector<256x128xf32> -> vector<256x256xf32>
     %anchor = xegpu.convert_layout %interleave

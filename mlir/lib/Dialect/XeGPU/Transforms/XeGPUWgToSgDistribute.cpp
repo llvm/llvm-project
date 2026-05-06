@@ -325,9 +325,9 @@ struct WgToSgDpasOp : public OpConversionPattern<xegpu::DpasOp> {
         }
 
         ArrayRef<int64_t> aVecShape =
-            llvm::cast<VectorType>(aVec.getType()).getShape();
+            cast<VectorType>(aVec.getType()).getShape();
         ArrayRef<int64_t> bVecShape =
-            llvm::cast<VectorType>(bVec.getType()).getShape();
+            cast<VectorType>(bVec.getType()).getShape();
         VectorType resTy = VectorType::get({aVecShape[0], bVecShape[1]},
                                            resultTy.getElementType());
         auto newDpasOp = xegpu::DpasOp::create(rewriter, loc, resTy, operands);
@@ -369,23 +369,16 @@ struct WgToSgDpasMxOp : public OpConversionPattern<xegpu::DpasMxOp> {
     SmallVector<Value> newDpasMxOps;
     for (auto [index_a, aVec] : llvm::enumerate(adaptor.getA())) {
       for (auto [index_b, bVec] : llvm::enumerate(adaptor.getB())) {
-        Value accVal;
-        if (op.getAcc()) {
-          accVal = adaptor.getAcc()[index_c++];
-        }
-        Value scaleAVal;
-        if (op.getScaleA()) {
-          scaleAVal = adaptor.getScaleA()[index_a];
-        }
-        Value scaleBVal;
-        if (op.getScaleB()) {
-          scaleBVal = adaptor.getScaleB()[index_b];
-        }
+        Value accVal = (op.getAcc()) ? adaptor.getAcc()[index_c++] : Value();
+        Value scaleAVal =
+            (op.getScaleA()) ? adaptor.getScaleA()[index_a] : Value();
+        Value scaleBVal =
+            (op.getScaleB()) ? adaptor.getScaleB()[index_b] : Value();
 
         ArrayRef<int64_t> aVecShape =
-            llvm::cast<VectorType>(aVec.getType()).getShape();
+            cast<VectorType>(aVec.getType()).getShape();
         ArrayRef<int64_t> bVecShape =
-            llvm::cast<VectorType>(bVec.getType()).getShape();
+            cast<VectorType>(bVec.getType()).getShape();
         VectorType resTy = VectorType::get({aVecShape[0], bVecShape[1]},
                                            resultTy.getElementType());
         auto newDpasMxOp = xegpu::DpasMxOp::create(
@@ -1536,29 +1529,6 @@ struct WgToSgVectorDeinterleaveOp
   LogicalResult
   matchAndRewrite(vector::DeinterleaveOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    llvm::dbgs() << "[DEBUG WgToSgVectorDeinterleaveOp] ENTRY\n";
-    llvm::dbgs() << "[DEBUG WgToSgVectorDeinterleaveOp] deinterleave op: " << op
-                 << "\n";
-
-    xegpu::DistributeLayoutAttr layout =
-        xegpu::getTemporaryLayout(dyn_cast<OpResult>(op.getRes1()));
-    llvm::dbgs() << "[DEBUG WgToSgVectorDeinterleaveOp] layout: " << layout
-                 << "\n";
-    llvm::dbgs() << "[DEBUG WgToSgVectorDeinterleaveOp] layout is null: "
-                 << (!layout) << "\n";
-    if (layout)
-      llvm::dbgs()
-          << "[DEBUG WgToSgVectorDeinterleaveOp] layout.isForWorkgroup(): "
-          << layout.isForWorkgroup() << "\n";
-
-    if (!layout || !layout.isForWorkgroup()) {
-      llvm::dbgs() << "[DEBUG WgToSgVectorDeinterleaveOp] FAILURE: no "
-                      "workgroup layout\n";
-      return failure();
-    }
-    llvm::dbgs() << "[DEBUG WgToSgVectorDeinterleaveOp] About to process "
-                 << adaptor.getSource().size() << " sources\n";
-
     SmallVector<Value> newRes1Ops;
     SmallVector<Value> newRes2Ops;
 
@@ -1743,29 +1713,13 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
   target.addDynamicallyLegalOp<
       vector::ShapeCastOp, vector::StepOp, vector::TransposeOp,
       vector::BroadcastOp, vector::MultiDimReductionOp, vector::ConstantMaskOp,
-      vector::CreateMaskOp, vector::BitCastOp, vector::InterleaveOp>(
-      [=](Operation *op) -> bool {
-        // Check for either a SliceAttr or LayoutAttr on the result.
-        auto layout =
-            xegpu::getTemporaryLayout(dyn_cast<OpResult>(op->getResult(0)));
-        return isLegal(layout);
-      });
-
-  target.addDynamicallyLegalOp<vector::DeinterleaveOp>(
-      [=](vector::DeinterleaveOp op) -> bool {
-        // DeinterleaveOp has two results, check the first one
-        llvm::dbgs()
-            << "[DEBUG Legality Check] Checking vector.deinterleave legality\n";
-        llvm::dbgs() << "[DEBUG Legality Check] deinterleave op: " << op
-                     << "\n";
-        auto layout =
-            xegpu::getTemporaryLayout(dyn_cast<OpResult>(op.getRes1()));
-        llvm::dbgs() << "[DEBUG Legality Check] layout: " << layout << "\n";
-        bool legal = isLegal(layout);
-        llvm::dbgs() << "[DEBUG Legality Check] isLegal(layout) = " << legal
-                     << "\n";
-        return legal;
-      });
+      vector::CreateMaskOp, vector::BitCastOp, vector::InterleaveOp,
+      vector::DeinterleaveOp>([=](Operation *op) -> bool {
+    // Check for either a SliceAttr or LayoutAttr on the result.
+    auto layout =
+        xegpu::getTemporaryLayout(dyn_cast<OpResult>(op->getResult(0)));
+    return isLegal(layout);
+  });
 
   target.addDynamicallyLegalOp<xegpu::LoadGatherOp>(
       [=](xegpu::LoadGatherOp op) -> bool {
