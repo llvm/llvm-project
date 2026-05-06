@@ -571,7 +571,7 @@ def NegImm : SDNodeXForm<imm, [{
 }]>;
 
 // FP immediate patterns.
-def fpimm0    : PatLeaf<(fpimm), [{return N->isExactlyValue(+0.0);}]>;
+def fpimm0    : PatLeaf<(fpimm), [{return N->isPosZero();}]>;
 def fpimm0neg : PatLeaf<(fpimm), [{return N->isExactlyValue(-0.0);}]>;
 def fpimm1    : PatLeaf<(fpimm), [{return N->isExactlyValue(+1.0);}]>;
 

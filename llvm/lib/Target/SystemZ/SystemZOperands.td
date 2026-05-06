@@ -536,7 +536,7 @@ def len8imm64 : Imm64 {
 //===----------------------------------------------------------------------===//
 
 // Floating-point zero.
-def fpimm0 : FPImmLeaf<fAny, [{ return Imm.isExactlyValue(+0.0); }]>;
+def fpimm0 : FPImmLeaf<fAny, [{ return Imm.isPosZero(); }]>;
 
 // Floating point negative zero.
 def fpimmneg0 : FPImmLeaf<fAny, [{ return Imm.isExactlyValue(-0.0); }]>;
