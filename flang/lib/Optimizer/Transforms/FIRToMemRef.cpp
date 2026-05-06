@@ -921,6 +921,8 @@ MemRefInfo FIRToMemRef::convertCoordinateArrayOp(
   FailureOr<Value> converted;
   if (isa<BlockArgument>(firBase)) {
     Type memrefTy = typeConverter.convertMemrefType(firBase.getType());
+    if (!memrefTy)
+      return failure();
     converted =
         fir::ConvertOp::create(rewriter, loc, memrefTy, firBase).getResult();
   } else {
@@ -1042,7 +1044,7 @@ MemRefInfo FIRToMemRef::getMemRefInfo(Value firMemref,
     }
 
     // Fallback: struct field access or dynamic array — produce a rank-0 scalar
-    // memref from the leaf reference (existing behaviour).
+    // memref from the leaf reference.
     FailureOr<Value> converted =
         getFIRConvert(memOp, coordinateOp, rewriter, typeConverter);
     if (failed(converted)) {
