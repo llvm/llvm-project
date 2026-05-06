@@ -201,6 +201,7 @@ with ``[[clang::lifetimebound]]`` annotated parameters:
 
 For more details, see `lifetimebound <https://clang.llvm.org/docs/AttributeReference.html#lifetimebound>`_.
 
+.. _Wlifetime-safety-noescape:
 NoEscape
 --------
 
