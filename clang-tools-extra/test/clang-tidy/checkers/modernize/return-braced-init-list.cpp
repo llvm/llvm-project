@@ -265,3 +265,19 @@ Gaz hn3() {
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: avoid repeating the return type
   // CHECK-FIXES: return {x};
 }
+
+
+struct foo {};
+
+struct bar {
+  operator const foo&() const;
+};
+
+foo x() {
+  return bar();
+}
+
+foo y() {
+  auto b = bar();
+  return b;
+}

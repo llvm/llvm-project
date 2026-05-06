@@ -7429,8 +7429,8 @@ static ExprResult CopyObject(Sema &S,
 
   // Actually perform the constructor call.
   CurInit = S.BuildCXXConstructExpr(
-      Loc, T, Best->FoundDecl, Constructor, Elidable, ConstructorArgs,
-      HadMultipleCandidates,
+      CurInitExpr->getBeginLoc(), T, Best->FoundDecl, Constructor, Elidable,
+      ConstructorArgs, HadMultipleCandidates,
       /*ListInit*/ false,
       /*StdInitListInit*/ false,
       /*ZeroInit*/ false, CXXConstructionKind::Complete, SourceRange());
