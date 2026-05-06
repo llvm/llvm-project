@@ -915,7 +915,7 @@ public:
   }
 
   void printVariableDefs(FileCheckDiag::MatchType MatchTy,
-                         std::vector<FileCheckDiag> &Diags) {
+                         FileCheckDiagList &Diags) {
     P.printVariableDefs(SM, MatchTy, &Diags);
   }
 };
@@ -1641,7 +1641,7 @@ TEST_F(FileCheckTest, CapturedVarDiags) {
   PatternTester Tester;
   ASSERT_FALSE(Tester.parsePattern("[[STRVAR:[a-z]+]] [[#NUMVAR:@LINE]]"));
   EXPECT_THAT_EXPECTED(Tester.match("foobar 2"), Succeeded());
-  std::vector<FileCheckDiag> Diags;
+  FileCheckDiagList Diags;
   Tester.printVariableDefs(FileCheckDiag::MatchFoundAndExpected, Diags);
   EXPECT_EQ(Diags.size(), 2ul);
   for (const FileCheckDiag &Diag : Diags) {
