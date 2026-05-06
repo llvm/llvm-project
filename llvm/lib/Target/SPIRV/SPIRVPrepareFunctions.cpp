@@ -617,6 +617,9 @@ static bool isAbortKHRBuiltin(const Function &F) {
   if (F.isIntrinsic())
     return false;
   StringRef Name = F.getName();
+  // Quick reject: the mangled or unmangled name must contain the substring.
+  if (!Name.contains("__spirv_AbortKHR"))
+    return false;
   std::string Demangled = getOclOrSpirvBuiltinDemangledName(Name);
   if (Demangled.empty())
     return false;
