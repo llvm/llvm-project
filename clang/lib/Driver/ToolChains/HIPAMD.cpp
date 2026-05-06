@@ -420,8 +420,8 @@ HIPAMDToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs,
     assert(!GpuArch.empty() && "Must have an explicit GPU arch.");
 
     // Add common device libraries like ocml etc.
-    for (auto N : getCommonDeviceLibNames(DriverArgs, GpuArch.str(),
-                                          DeviceOffloadingKind))
+    for (auto N :
+         getCommonDeviceLibNames(DriverArgs, GpuArch, DeviceOffloadingKind))
       BCLibs.emplace_back(N);
 
     // Add instrument lib.
