@@ -40,7 +40,6 @@ static void applyPatterns(Region &region,
                           ArrayRef<ReductionNode::Range> rangeToKeep,
                           bool eraseOpNotInRange) {
   std::vector<Operation *> opsNotInRange;
-  std::vector<Operation *> opsInRange;
   size_t keepIndex = 0;
   for (const auto &op : enumerate(region.getOps())) {
     int index = op.index();
@@ -48,9 +47,7 @@ static void applyPatterns(Region &region,
         index == rangeToKeep[keepIndex].second)
       ++keepIndex;
     if (keepIndex == rangeToKeep.size() || index < rangeToKeep[keepIndex].first)
-      opsNotInRange.push_back(&op.value());
-    else
-      opsInRange.push_back(&op.value());
+      opsNotInRange.push_back(&op.value()); 
   }
 
   // `applyOpPatternsGreedily` with folding may erase the ops so we can't do the

@@ -1,3 +1,4 @@
+// UNSUPPORTED: system-windows
 // RUN: mlir-reduce %s -split-input-file -reduction-tree='traversal-mode=0 test=%S/../script/query-test.sh' | FileCheck %s
 func.func @query_test(%arg0: i1) -> f32 {
   %0 = arith.constant 1 : i32
