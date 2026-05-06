@@ -1,4 +1,4 @@
-//===------------------- PassTimingAnalyzer.cpp - LLVM Advisor =============//
+//===--- PassTimingAnalyzer.cpp - LLVM Advisor ---------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,10 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "Analysis/IR/PassTimingAnalyzer.h"
-
+#include "Analysis/IR/IRAnalysisUtils.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IRReader/IRReader.h"
-#include "llvm/Support/SourceMgr.h"
 
 #include <chrono>
 
@@ -19,41 +18,39 @@ using namespace llvm::advisor;
 
 Expected<std::unique_ptr<CapabilityResult>>
 PassTimingAnalyzer::run(const CapabilityContext &Context) {
-  if (Context.IRPath.empty()) {
-    return std::make_unique<JSONCapabilityResult>(json::Object{
-        {"capability", getCapabilityID()},
-        {"unit_id", Context.Unit.ID},
-        {"available", false},
-        {"reason", "missing IR artifact"},
-    });
-  }
+  // Intentionally not using withIRModule() because we need to measure and
+  // record the IR parsing time (parse_time_us) in the result.
+  if (Context.IRPath.empty())
+    return makeUnavailableResult(getCapabilityID(), Context.Unit.ID,
+                                 "missing IR artifact");
 
+  StringRef CapID = getCapabilityID();
+  StringRef UnitID = Context.Unit.ID;
   LLVMContext LLVMCtx;
-  SMDiagnostic Err;
   std::unique_ptr<Module> M;
   int64_t ParseTimeUs = 0;
-  int64_t AnalysisTimeUs = 0;
   {
     auto Start = std::chrono::steady_clock::now();
-    M = parseIRFile(Context.IRPath, Err, LLVMCtx);
+    auto MOrErr = parseIRModule(Context.IRPath, LLVMCtx);
     auto End = std::chrono::steady_clock::now();
     ParseTimeUs =
         std::chrono::duration_cast<std::chrono::microseconds>(End - Start)
             .count();
+    if (!MOrErr)
+      return MOrErr.takeError();
+    M = std::move(*MOrErr);
   }
-  if (!M)
-    return createStringError(inconvertibleErrorCode(), "cannot parse IR: %s",
-                             Context.IRPath.c_str());
 
-  int64_t Functions = 0;
-  int64_t Instructions = 0;
+  int64_t FunctionCount = 0;
+  int64_t InstructionCount = 0;
+  int64_t AnalysisTimeUs = 0;
   {
     auto Start = std::chrono::steady_clock::now();
     for (const Function &F : *M) {
       if (F.isDeclaration())
         continue;
-      ++Functions;
-      Instructions += static_cast<int64_t>(F.getInstructionCount());
+      ++FunctionCount;
+      InstructionCount += static_cast<int64_t>(F.getInstructionCount());
     }
     auto End = std::chrono::steady_clock::now();
     AnalysisTimeUs =
@@ -61,12 +58,9 @@ PassTimingAnalyzer::run(const CapabilityContext &Context) {
             .count();
   }
 
-  return std::make_unique<JSONCapabilityResult>(json::Object{
-      {"capability", getCapabilityID()},
-      {"unit_id", Context.Unit.ID},
+  return makeJSONResult(CapID, UnitID, json::Object{
       {"parse_time_us", ParseTimeUs},
       {"analysis_time_us", AnalysisTimeUs},
-      {"functions", Functions},
-      {"instructions", Instructions},
-  });
+      {"function_count", FunctionCount},
+      {"instruction_count", InstructionCount}});
 }

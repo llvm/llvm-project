@@ -1,5 +1,4 @@
-//===------------------- PluginRegistry.cpp - LLVM Advisor
-//-------------------===//
+//===--- PluginRegistry.cpp - LLVM Advisor -------------------------------===//
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //===----------------------------------------------------------------------===//
@@ -18,11 +17,14 @@ using namespace llvm;
 using namespace llvm::advisor;
 
 Error PluginRegistry::load(StringRef Path) {
+  if (Loaded.contains(Path))
+    return Error::success();
   std::string Err;
+  std::string PathStr = Path.str();
   sys::DynamicLibrary Library =
-      sys::DynamicLibrary::getPermanentLibrary(Path.str().c_str(), &Err);
+      sys::DynamicLibrary::getPermanentLibrary(PathStr.c_str(), &Err);
   if (!Library.isValid())
-    return createStringError(inconvertibleErrorCode(), "%s", Err.c_str());
+    return createStringError(inconvertibleErrorCode(), Twine(Err));
 
   Plugin P;
   P.Path = Path.str();
@@ -35,10 +37,10 @@ Error PluginRegistry::load(StringRef Path) {
   if (!P.RegisterFn || !P.RunFn) {
     return createStringError(
         inconvertibleErrorCode(),
-        "plugin %s missing required symbols (register_capabilities=%s, "
-        "run_capability=%s)",
-        Path.str().c_str(), P.RegisterFn ? "ok" : "missing",
-        P.RunFn ? "ok" : "missing");
+        Twine("plugin ") + Path +
+            " missing required symbols (register_capabilities=" +
+            (P.RegisterFn ? "ok" : "missing") +
+            ", run_capability=" + (P.RunFn ? "ok" : "missing") + ")");
   }
 
   Plugins.push_back(std::move(P));
@@ -52,7 +54,7 @@ Error PluginRegistry::loadVerified(StringRef Path, StringRef BLAKE3) {
     return Digest.takeError();
   if (!BLAKE3.empty() && *Digest != BLAKE3)
     return createStringError(inconvertibleErrorCode(),
-                             "plugin hash mismatch for %s", Path.str().c_str());
+                             Twine("plugin hash mismatch for ") + Path);
   return load(Path);
 }
 
