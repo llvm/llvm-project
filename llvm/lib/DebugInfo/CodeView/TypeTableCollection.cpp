@@ -52,7 +52,7 @@ StringRef TypeTableCollection::getTypeName(TypeIndex Index) {
 }
 
 bool TypeTableCollection::contains(TypeIndex Index) {
-  return Index.toArrayIndex() <= size();
+  return !Index.isSimple() && Index.toArrayIndex() < size();
 }
 
 uint32_t TypeTableCollection::size() { return Records.size(); }
