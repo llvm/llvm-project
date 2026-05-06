@@ -1,4 +1,5 @@
 add_clang_library(clangAnalysisLifetimeSafety
+  AssignmentQuery.cpp
   Checker.cpp
   Facts.cpp
   FactsGenerator.cpp

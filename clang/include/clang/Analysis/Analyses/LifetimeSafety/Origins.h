@@ -27,6 +27,13 @@ namespace clang::lifetimes::internal {
 
 using OriginID = utils::ID<struct OriginTag>;
 
+/// Represents all possible expressions or declarations that function
+/// as the Src/Dest Origin in a visible assignment.
+using DestOriginEntity =
+    llvm::PointerUnion<const DeclRefExpr *, const ValueDecl *,
+                       const MemberExpr *>;
+using SrcOriginEntity = const Expr *;
+
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, OriginID ID) {
   return OS << ID.Value;
 }

@@ -9,6 +9,7 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeSafety.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/AssignmentQuery.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Loans.h"
 #include "clang/Testing/TestAST.h"
 #include "llvm/ADT/StringMap.h"
@@ -202,6 +203,26 @@ public:
 
   llvm::ArrayRef<const Fact *> getBlockContaining(ProgramPoint P) {
     return Runner.getAnalysis().getFactManager().getBlockContaining(P);
+  }
+
+  void trackAssignmentHistoryInOneBlock(
+      llvm::SmallVectorImpl<AssignmentPair> &AssignmentList,
+      llvm::StringRef StartOriginVar, llvm::StringRef EndLoanVar) {
+    const CFG *CurrCFG = Runner.getAnalysisContext().getCFG();
+    AssignmentQueryContext Context = {Runner.getAnalysis().getLoanPropagation(),
+                                      Runner.getAnalysis().getFactManager()};
+
+    std::optional<OriginID> StartOriginID = getOriginForDecl(StartOriginVar);
+    std::vector<LoanID> EndLoanIDs = getLoansForVar(EndLoanVar);
+
+    for (const CFGBlock *CurrCFGBlock : *CurrCFG) {
+      for (LoanID &LID : EndLoanIDs) {
+        trackAssignmentHistory(Context, AssignmentList, CurrCFGBlock,
+                               *StartOriginID, LID);
+        if (!AssignmentList.empty())
+          return;
+      }
+    }
   }
 
 private:
@@ -1950,6 +1971,32 @@ TEST_F(LifetimeAnalysisTest, LambdaInitCaptureViewByValue) {
     }
   )");
   EXPECT_THAT(Origin("lambda"), HasLoansTo({"obj"}, "after_lambda"));
+}
+
+// ========================================================================= //
+//                    Tests for trackAssignmentHistory
+// ========================================================================= //
+
+TEST_F(LifetimeAnalysisTest, TrackLinearAssignmentHistoryInOneBlock) {
+  SetupTest(R"(
+    void target() {
+      int *s;
+      {
+        int tgt = 2;
+        int *a = &tgt;
+        int *c = a;
+        int *b = a;
+        int *e = b;
+        s = e;
+      }
+      (void)s;
+    }
+  )");
+
+  llvm::SmallVector<AssignmentPair> AssignmentList;
+  Helper->trackAssignmentHistoryInOneBlock(AssignmentList, "s", "tgt");
+
+  EXPECT_EQ(4u, AssignmentList.size());
 }
 } // anonymous namespace
 } // namespace clang::lifetimes::internal
