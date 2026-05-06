@@ -159,8 +159,7 @@ AnalysisDeclContext *CallEvent::getCalleeAnalysisDeclContext() const {
   return ADC;
 }
 
-const StackFrameContext *
-CallEvent::getCalleeStackFrame(unsigned BlockCount) const {
+const StackFrame *CallEvent::getCalleeStackFrame(unsigned BlockCount) const {
   AnalysisDeclContext *ADC = getCalleeAnalysisDeclContext();
   if (!ADC)
     return nullptr;
@@ -191,14 +190,14 @@ CallEvent::getCalleeStackFrame(unsigned BlockCount) const {
 
 const ParamVarRegion
 *CallEvent::getParameterLocation(unsigned Index, unsigned BlockCount) const {
-  const StackFrameContext *SFC = getCalleeStackFrame(BlockCount);
+  const StackFrame *SF = getCalleeStackFrame(BlockCount);
   // We cannot construct a VarRegion without a stack frame.
-  if (!SFC)
+  if (!SF)
     return nullptr;
 
   const ParamVarRegion *PVR =
-    State->getStateManager().getRegionManager().getParamVarRegion(
-        getOriginExpr(), Index, SFC);
+      State->getStateManager().getRegionManager().getParamVarRegion(
+          getOriginExpr(), Index, SF);
   return PVR;
 }
 
@@ -476,11 +475,11 @@ static SVal castArgToParamTypeIfNeeded(const CallEvent &Call, unsigned ArgIdx,
   return SVB.evalCast(ArgVal, Param->getType(), ArgExpr->getType());
 }
 
-static void addParameterValuesToBindings(const StackFrameContext *CalleeCtx,
+static void addParameterValuesToBindings(const StackFrame *CalleeSF,
                                          CallEvent::BindingsTy &Bindings,
                                          SValBuilder &SVB,
                                          const CallEvent &Call,
-                                         ArrayRef<ParmVarDecl*> parameters) {
+                                         ArrayRef<ParmVarDecl *> parameters) {
   MemRegionManager &MRMgr = SVB.getRegionManager();
 
   // If the function has fewer parameters than the call has arguments, we simply
@@ -510,7 +509,7 @@ static void addParameterValuesToBindings(const StackFrameContext *CalleeCtx,
     ArgVal = castArgToParamTypeIfNeeded(Call, Idx, ArgVal, SVB);
 
     Loc ParamLoc = SVB.makeLoc(
-        MRMgr.getParamVarRegion(Call.getOriginExpr(), Idx, CalleeCtx));
+        MRMgr.getParamVarRegion(Call.getOriginExpr(), Idx, CalleeSF));
     Bindings.push_back(
         std::make_pair(ParamLoc, processArgument(ArgVal, ArgExpr, *I, SVB)));
   }
@@ -519,7 +518,7 @@ static void addParameterValuesToBindings(const StackFrameContext *CalleeCtx,
 }
 
 const ConstructionContext *CallEvent::getConstructionContext() const {
-  const StackFrameContext *StackFrame = getCalleeStackFrame(0);
+  const StackFrame *StackFrame = getCalleeStackFrame(0);
   if (!StackFrame)
     return nullptr;
 
@@ -540,12 +539,12 @@ const CallEventRef<> CallEvent::getCaller() const {
   if (!CallLocationContext || CallLocationContext->inTopFrame())
     return nullptr;
 
-  const auto *CallStackFrameContext = CallLocationContext->getStackFrame();
-  if (!CallStackFrameContext)
+  const auto *CallSF = CallLocationContext->getStackFrame();
+  if (!CallSF)
     return nullptr;
 
   CallEventManager &CEMgr = State->getStateManager().getCallEventManager();
-  return CEMgr.getCaller(CallStackFrameContext, State);
+  return CEMgr.getCaller(CallSF, State);
 }
 
 bool CallEvent::isCalledFromSystemHeader() const {
@@ -633,13 +632,11 @@ RuntimeDefinition AnyFunctionCall::getRuntimeDefinition() const {
   return RuntimeDefinition(*CTUDeclOrError, /*Foreign=*/true);
 }
 
-void AnyFunctionCall::getInitialStackFrameContents(
-                                        const StackFrameContext *CalleeCtx,
-                                        BindingsTy &Bindings) const {
-  const auto *D = cast<FunctionDecl>(CalleeCtx->getDecl());
+void AnyFunctionCall::getInitialStackFrameContents(const StackFrame *CalleeSF,
+                                                   BindingsTy &Bindings) const {
+  const auto *D = cast<FunctionDecl>(CalleeSF->getDecl());
   SValBuilder &SVB = getState()->getStateManager().getSValBuilder();
-  addParameterValuesToBindings(CalleeCtx, Bindings, SVB, *this,
-                               D->parameters());
+  addParameterValuesToBindings(CalleeSF, Bindings, SVB, *this, D->parameters());
 }
 
 bool AnyFunctionCall::argumentsMayEscape() const {
@@ -847,10 +844,9 @@ RuntimeDefinition CXXInstanceCall::getRuntimeDefinition() const {
   return RuntimeDefinition(Definition, /*DispatchRegion=*/nullptr);
 }
 
-void CXXInstanceCall::getInitialStackFrameContents(
-                                            const StackFrameContext *CalleeCtx,
-                                            BindingsTy &Bindings) const {
-  AnyFunctionCall::getInitialStackFrameContents(CalleeCtx, Bindings);
+void CXXInstanceCall::getInitialStackFrameContents(const StackFrame *CalleeSF,
+                                                   BindingsTy &Bindings) const {
+  AnyFunctionCall::getInitialStackFrameContents(CalleeSF, Bindings);
 
   // Handle the binding of 'this' in the new stack frame.
   SVal ThisVal = getCXXThisVal();
@@ -858,8 +854,8 @@ void CXXInstanceCall::getInitialStackFrameContents(
     ProgramStateManager &StateMgr = getState()->getStateManager();
     SValBuilder &SVB = StateMgr.getSValBuilder();
 
-    const auto *MD = cast<CXXMethodDecl>(CalleeCtx->getDecl());
-    Loc ThisLoc = SVB.getCXXThis(MD, CalleeCtx);
+    const auto *MD = cast<CXXMethodDecl>(CalleeSF->getDecl());
+    Loc ThisLoc = SVB.getCXXThis(MD, CalleeSF);
 
     // If we devirtualized to a different member function, we need to make sure
     // we have the proper layering of CXXBaseObjectRegions.
@@ -930,12 +926,12 @@ void BlockCall::getExtraInvalidatedValues(ValueList &Values,
     Values.push_back(loc::MemRegionVal(R));
 }
 
-void BlockCall::getInitialStackFrameContents(const StackFrameContext *CalleeCtx,
+void BlockCall::getInitialStackFrameContents(const StackFrame *CalleeSF,
                                              BindingsTy &Bindings) const {
   SValBuilder &SVB = getState()->getStateManager().getSValBuilder();
   ArrayRef<ParmVarDecl*> Params;
   if (isConversionFromLambda()) {
-    auto *LambdaOperatorDecl = cast<CXXMethodDecl>(CalleeCtx->getDecl());
+    auto *LambdaOperatorDecl = cast<CXXMethodDecl>(CalleeSF->getDecl());
     Params = LambdaOperatorDecl->parameters();
 
     // For blocks converted from a C++ lambda, the callee declaration is the
@@ -943,14 +939,13 @@ void BlockCall::getInitialStackFrameContents(const StackFrameContext *CalleeCtx,
     // the lambda captured by the block.
     const VarRegion *CapturedLambdaRegion = getRegionStoringCapturedLambda();
     SVal ThisVal = loc::MemRegionVal(CapturedLambdaRegion);
-    Loc ThisLoc = SVB.getCXXThis(LambdaOperatorDecl, CalleeCtx);
+    Loc ThisLoc = SVB.getCXXThis(LambdaOperatorDecl, CalleeSF);
     Bindings.push_back(std::make_pair(ThisLoc, ThisVal));
   } else {
-    Params = cast<BlockDecl>(CalleeCtx->getDecl())->parameters();
+    Params = cast<BlockDecl>(CalleeSF->getDecl())->parameters();
   }
 
-  addParameterValuesToBindings(CalleeCtx, Bindings, SVB, *this,
-                               Params);
+  addParameterValuesToBindings(CalleeSF, Bindings, SVB, *this, Params);
 }
 
 SVal AnyCXXConstructorCall::getCXXThisVal() const {
@@ -977,25 +972,23 @@ void AnyCXXConstructorCall::getExtraInvalidatedValues(ValueList &Values,
 }
 
 void AnyCXXConstructorCall::getInitialStackFrameContents(
-                                             const StackFrameContext *CalleeCtx,
-                                             BindingsTy &Bindings) const {
-  AnyFunctionCall::getInitialStackFrameContents(CalleeCtx, Bindings);
+    const StackFrame *CalleeSF, BindingsTy &Bindings) const {
+  AnyFunctionCall::getInitialStackFrameContents(CalleeSF, Bindings);
 
   SVal ThisVal = getCXXThisVal();
   if (!ThisVal.isUnknown()) {
     SValBuilder &SVB = getState()->getStateManager().getSValBuilder();
-    const auto *MD = cast<CXXMethodDecl>(CalleeCtx->getDecl());
-    Loc ThisLoc = SVB.getCXXThis(MD, CalleeCtx);
+    const auto *MD = cast<CXXMethodDecl>(CalleeSF->getDecl());
+    Loc ThisLoc = SVB.getCXXThis(MD, CalleeSF);
     Bindings.push_back(std::make_pair(ThisLoc, ThisVal));
   }
 }
 
-const StackFrameContext *
-CXXInheritedConstructorCall::getInheritingStackFrame() const {
-  const StackFrameContext *SFC = getLocationContext()->getStackFrame();
-  while (isa<CXXInheritedCtorInitExpr>(SFC->getCallSite()))
-    SFC = SFC->getParent()->getStackFrame();
-  return SFC;
+const StackFrame *CXXInheritedConstructorCall::getInheritingStackFrame() const {
+  const StackFrame *SF = getLocationContext()->getStackFrame();
+  while (isa<CXXInheritedCtorInitExpr>(SF->getCallSite()))
+    SF = SF->getParent()->getStackFrame();
+  return SF;
 }
 
 SVal CXXDestructorCall::getCXXThisVal() const {
@@ -1422,19 +1415,17 @@ bool ObjCMethodCall::argumentsMayEscape() const {
   return CallEvent::argumentsMayEscape();
 }
 
-void ObjCMethodCall::getInitialStackFrameContents(
-                                             const StackFrameContext *CalleeCtx,
-                                             BindingsTy &Bindings) const {
-  const auto *D = cast<ObjCMethodDecl>(CalleeCtx->getDecl());
+void ObjCMethodCall::getInitialStackFrameContents(const StackFrame *CalleeSF,
+                                                  BindingsTy &Bindings) const {
+  const auto *D = cast<ObjCMethodDecl>(CalleeSF->getDecl());
   SValBuilder &SVB = getState()->getStateManager().getSValBuilder();
-  addParameterValuesToBindings(CalleeCtx, Bindings, SVB, *this,
-                               D->parameters());
+  addParameterValuesToBindings(CalleeSF, Bindings, SVB, *this, D->parameters());
 
   SVal SelfVal = getReceiverSVal();
   if (!SelfVal.isUnknown()) {
-    const VarDecl *SelfD = CalleeCtx->getAnalysisDeclContext()->getSelfDecl();
+    const VarDecl *SelfD = CalleeSF->getAnalysisDeclContext()->getSelfDecl();
     MemRegionManager &MRMgr = SVB.getRegionManager();
-    Loc SelfLoc = SVB.makeLoc(MRMgr.getVarRegion(SelfD, CalleeCtx));
+    Loc SelfLoc = SVB.makeLoc(MRMgr.getVarRegion(SelfD, CalleeSF));
     Bindings.push_back(std::make_pair(SelfLoc, SelfVal));
   }
 }
@@ -1471,24 +1462,23 @@ CallEventManager::getSimpleCall(const CallExpr *CE, ProgramStateRef State,
   return create<SimpleFunctionCall>(CE, State, LCtx, ElemRef);
 }
 
-CallEventRef<>
-CallEventManager::getCaller(const StackFrameContext *CalleeCtx,
-                            ProgramStateRef State) {
-  const LocationContext *ParentCtx = CalleeCtx->getParent();
+CallEventRef<> CallEventManager::getCaller(const StackFrame *CalleeSF,
+                                           ProgramStateRef State) {
+  const LocationContext *ParentCtx = CalleeSF->getParent();
   const LocationContext *CallerCtx = ParentCtx->getStackFrame();
-  CFGBlock::ConstCFGElementRef ElemRef = {CalleeCtx->getCallSiteBlock(),
-                                          CalleeCtx->getIndex()};
+  CFGBlock::ConstCFGElementRef ElemRef = {CalleeSF->getCallSiteBlock(),
+                                          CalleeSF->getIndex()};
   assert(CallerCtx && "This should not be used for top-level stack frames");
 
-  const Expr *CallSite = CalleeCtx->getCallSite();
+  const Expr *CallSite = CalleeSF->getCallSite();
 
   if (CallSite) {
     if (CallEventRef<> Out = getCall(CallSite, State, CallerCtx, ElemRef))
       return Out;
 
     SValBuilder &SVB = State->getStateManager().getSValBuilder();
-    const auto *Ctor = cast<CXXMethodDecl>(CalleeCtx->getDecl());
-    Loc ThisPtr = SVB.getCXXThis(Ctor, CalleeCtx);
+    const auto *Ctor = cast<CXXMethodDecl>(CalleeSF->getDecl());
+    Loc ThisPtr = SVB.getCXXThis(Ctor, CalleeSF);
     SVal ThisVal = State->getSVal(ThisPtr);
 
     if (const auto *CE = dyn_cast<CXXConstructExpr>(CallSite))
@@ -1503,14 +1493,14 @@ CallEventManager::getCaller(const StackFrameContext *CalleeCtx,
 
   // Fall back to the CFG. The only thing we haven't handled yet is
   // destructors, though this could change in the future.
-  const CFGBlock *B = CalleeCtx->getCallSiteBlock();
-  CFGElement E = (*B)[CalleeCtx->getIndex()];
+  const CFGBlock *B = CalleeSF->getCallSiteBlock();
+  CFGElement E = (*B)[CalleeSF->getIndex()];
   assert((E.getAs<CFGImplicitDtor>() || E.getAs<CFGTemporaryDtor>()) &&
          "All other CFG elements should have exprs");
 
   SValBuilder &SVB = State->getStateManager().getSValBuilder();
-  const auto *Dtor = cast<CXXDestructorDecl>(CalleeCtx->getDecl());
-  Loc ThisPtr = SVB.getCXXThis(Dtor, CalleeCtx);
+  const auto *Dtor = cast<CXXDestructorDecl>(CalleeSF->getDecl());
+  Loc ThisPtr = SVB.getCXXThis(Dtor, CalleeSF);
   SVal ThisVal = State->getSVal(ThisPtr);
 
   const Stmt *Trigger;

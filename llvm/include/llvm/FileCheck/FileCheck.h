@@ -18,6 +18,7 @@
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/SMLoc.h"
 #include <bitset>
+#include <iterator>
 #include <memory>
 #include <string>
 #include <vector>
@@ -174,6 +175,67 @@ struct FileCheckDiag {
                          StringRef Note = "");
 };
 
+/// A \c FileCheckDiag series emitted by the FileCheck library.
+class FileCheckDiagList {
+private:
+  using vector_type = std::vector<std::unique_ptr<FileCheckDiag>>;
+  vector_type DiagList;
+
+public:
+  /// Emplace a new \c FileCheckDiag.
+  template <typename... ArgTys> void emplace_back(ArgTys &&...Args) {
+    DiagList.emplace_back(
+        std::make_unique<FileCheckDiag>(std::forward<ArgTys>(Args)...));
+  }
+  /// Adjust recent consecutive diagnostics of the same \c CheckLoc to have
+  /// \c MatchTy.
+  void adjustPrevDiags(FileCheckDiag::MatchType MatchTy) {
+    SMLoc CheckLoc = (*DiagList.rbegin())->CheckLoc;
+    for (auto I = DiagList.rbegin(), E = DiagList.rend();
+         I != E && (*I)->CheckLoc == CheckLoc; ++I)
+      (*I)->MatchTy = MatchTy;
+  }
+  class const_iterator {
+    friend FileCheckDiagList;
+
+  public:
+    using difference_type = std::ptrdiff_t;
+    using value_type = FileCheckDiag;
+    using pointer = const FileCheckDiag *;
+    using reference = const FileCheckDiag &;
+    using iterator_category = std::forward_iterator_tag;
+
+  private:
+    vector_type::const_iterator Itr;
+    const_iterator(vector_type::const_iterator Itr) : Itr(Itr) {}
+
+  public:
+    reference operator*() const { return **Itr; }
+    pointer operator->() const { return &operator*(); }
+    const_iterator &operator++() {
+      ++Itr;
+      return *this;
+    }
+    const_iterator operator++(int) {
+      const_iterator Old = *this;
+      ++Itr;
+      return Old;
+    }
+    bool operator==(const const_iterator &Other) const {
+      return Itr == Other.Itr;
+    }
+    bool operator!=(const const_iterator &Other) const {
+      return Itr != Other.Itr;
+    }
+  };
+
+  using size_type = vector_type::size_type;
+  const_iterator begin() const { return const_iterator(DiagList.begin()); }
+  const_iterator end() const { return const_iterator(DiagList.end()); }
+  const FileCheckDiag &operator[](size_type I) const { return *DiagList[I]; }
+  size_type size() const { return DiagList.size(); }
+};
+
 class FileCheckPatternContext;
 struct FileCheckString;
 
@@ -211,7 +273,7 @@ public:
   ///
   /// \returns false if the input fails to satisfy the checks.
   LLVM_ABI bool checkInput(SourceMgr &SM, StringRef Buffer,
-                           std::vector<FileCheckDiag> *Diags = nullptr);
+                           FileCheckDiagList *Diags = nullptr);
 };
 
 } // namespace llvm

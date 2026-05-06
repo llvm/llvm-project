@@ -29,6 +29,7 @@
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/remove_cvref.h>
+#include <__utility/exchange.h>
 #include <__utility/forward.h>
 #include <tuple>
 
