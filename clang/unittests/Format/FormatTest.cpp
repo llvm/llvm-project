@@ -320,9 +320,7 @@ TEST_F(FormatTest, RemovesEmptyLines) {
                "\n"
                "}");
   verifyFormat("void f() {\n"
-               "  if (a) {\n"
-               "    f();\n"
-               "  }\n"
+               "  if (a) { f(); }\n"
                "}",
                "void f() {\n"
                "\n"
@@ -773,10 +771,7 @@ TEST_F(FormatTest, FormatIfWithoutCompoundStatementButElseWith) {
                AllowsMergedIf);
 
   verifyFormat("if (a) g();", AllowsMergedIf);
-  verifyFormat("if (a) {\n"
-               "  g()\n"
-               "};",
-               AllowsMergedIf);
+  verifyFormat("if (a) { g() };", AllowsMergedIf);
   verifyFormat("if (a)\n"
                "  g();\n"
                "else\n"
@@ -857,10 +852,7 @@ TEST_F(FormatTest, FormatIfWithoutCompoundStatementButElseWith) {
                AllowsMergedIf);
 
   verifyFormat("MYIF (a) g();", AllowsMergedIf);
-  verifyFormat("MYIF (a) {\n"
-               "  g()\n"
-               "};",
-               AllowsMergedIf);
+  verifyFormat("MYIF (a) { g() };", AllowsMergedIf);
   verifyFormat("MYIF (a)\n"
                "  g();\n"
                "else\n"
@@ -993,10 +985,7 @@ TEST_F(FormatTest, FormatIfWithoutCompoundStatementButElseWith) {
                AllowsMergedIf);
 
   verifyFormat("if (a) g();", AllowsMergedIf);
-  verifyFormat("if (a) {\n"
-               "  g()\n"
-               "};",
-               AllowsMergedIf);
+  verifyFormat("if (a) { g() };", AllowsMergedIf);
   verifyFormat("if (a) g();\n"
                "else\n"
                "  g();",
@@ -1074,10 +1063,7 @@ TEST_F(FormatTest, FormatIfWithoutCompoundStatementButElseWith) {
                AllowsMergedIf);
 
   verifyFormat("MYIF (a) g();", AllowsMergedIf);
-  verifyFormat("MYIF (a) {\n"
-               "  g()\n"
-               "};",
-               AllowsMergedIf);
+  verifyFormat("MYIF (a) { g() };", AllowsMergedIf);
   verifyFormat("MYIF (a) g();\n"
                "else\n"
                "  g();",
@@ -1200,10 +1186,7 @@ TEST_F(FormatTest, FormatIfWithoutCompoundStatementButElseWith) {
                AllowsMergedIf);
 
   verifyFormat("if (a) g();", AllowsMergedIf);
-  verifyFormat("if (a) {\n"
-               "  g()\n"
-               "};",
-               AllowsMergedIf);
+  verifyFormat("if (a) { g() };", AllowsMergedIf);
   verifyFormat("if (a) g();\n"
                "else g();",
                AllowsMergedIf);
@@ -1273,10 +1256,7 @@ TEST_F(FormatTest, FormatIfWithoutCompoundStatementButElseWith) {
                AllowsMergedIf);
 
   verifyFormat("MYIF (a) g();", AllowsMergedIf);
-  verifyFormat("MYIF (a) {\n"
-               "  g()\n"
-               "};",
-               AllowsMergedIf);
+  verifyFormat("MYIF (a) { g() };", AllowsMergedIf);
   verifyFormat("MYIF (a) g();\n"
                "else g();",
                AllowsMergedIf);
@@ -1500,10 +1480,7 @@ TEST_F(FormatTest, FormatShortBracedStatements) {
       FormatStyle::SIS_WithoutElse;
   verifyFormat("if (true) {}", AllowSimpleBracedStatements);
   verifyFormat("if (i) break;", AllowSimpleBracedStatements);
-  verifyFormat("if (i > 0) {\n"
-               "  return i;\n"
-               "}",
-               AllowSimpleBracedStatements);
+  verifyFormat("if (i > 0) { return i; }", AllowSimpleBracedStatements);
 
   AllowSimpleBracedStatements.IfMacros.push_back("MYIF");
   // Where line-lengths matter, a 2-letter synonym that maintains line length.
@@ -1842,6 +1819,56 @@ TEST_F(FormatTest, FormatShortBracedStatements) {
                "else\n"
                "{\n"
                "  b = 0;\n"
+               "}",
+               Style);
+}
+
+TEST_F(FormatTest, ShortControlStatementsOverrideShortBlocks) {
+  // AllowShortIfStatementsOnASingleLine and AllowShortLoopsOnASingleLine
+  // override AllowShortBlocksOnASingleLine for the blocks of their
+  // constructs.
+  auto Style = getLLVMStyle();
+  Style.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_WithoutElse;
+  Style.AllowShortLoopsOnASingleLine = true;
+  ASSERT_EQ(Style.AllowShortBlocksOnASingleLine, FormatStyle::SBS_Never);
+
+  verifyFormat("if (b) { return; }", Style);
+  verifyFormat("if (b) {}", Style);
+  verifyFormat("while (b) { --b; }", Style);
+  verifyFormat("for (;;) { f(); }", Style);
+  verifyFormat("if (b) { return; }",
+               "if (b)\n"
+               "{\n"
+               "  return;\n"
+               "}",
+               Style);
+
+  // They also override BraceWrapping.AfterControlStatement.
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterControlStatement = FormatStyle::BWACS_Always;
+  verifyFormat("if (b) { return; }", Style);
+  verifyFormat("while (b) { --b; }", Style);
+
+  // Blocks of other constructs are still controlled by
+  // AllowShortBlocksOnASingleLine (https://llvm.org/PR183705).
+  Style.BraceWrapping.AfterControlStatement = FormatStyle::BWACS_Never;
+  Style.BraceWrapping.AfterFunction = true;
+  Style.AllowShortFunctionsOnASingleLine = {};
+  verifyFormat("void f(bool b)\n"
+               "{\n"
+               "  if (b) { return; }\n"
+               "}",
+               Style);
+
+  // Statements that are not allowed to be merged are not affected.
+  Style.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_Never;
+  Style.AllowShortLoopsOnASingleLine = false;
+  verifyFormat("if (b) {\n"
+               "  return;\n"
+               "}",
+               Style);
+  verifyFormat("while (b) {\n"
+               "  --b;\n"
                "}",
                Style);
 }
@@ -2441,18 +2468,15 @@ TEST_F(FormatTest, ForEachLoops) {
                "}",
                ShortBlocks);
 
+  // AllowShortLoopsOnASingleLine overrides AllowShortBlocksOnASingleLine.
   FormatStyle ShortLoops = getLLVMStyle();
   ShortLoops.AllowShortLoopsOnASingleLine = true;
   EXPECT_EQ(ShortLoops.AllowShortBlocksOnASingleLine, FormatStyle::SBS_Never);
   verifyFormat("void f() {\n"
                "  for (;;) int j = 1;\n"
                "  Q_FOREACH (int &v, vec) int j = 1;\n"
-               "  for (;;) {\n"
-               "    int j = 1;\n"
-               "  }\n"
-               "  Q_FOREACH (int &v, vec) {\n"
-               "    int j = 1;\n"
-               "  }\n"
+               "  for (;;) { int j = 1; }\n"
+               "  Q_FOREACH (int &v, vec) { int j = 1; }\n"
                "}",
                ShortLoops);
 
@@ -10179,21 +10203,20 @@ TEST_F(FormatTest, DeclarationsOfMultipleVariables) {
                "          *b = bbbbbbbbbbbbbbbbbbb, *d = ddddddddddddddddddd;",
                Style);
   verifyFormat("vector<int*> a, b;", Style);
-  verifyFormat("for (int *p, *q; p != q; p = p->next) {\n}", Style);
-  verifyFormat("/*comment*/ for (int *p, *q; p != q; p = p->next) {\n}", Style);
-  verifyFormat("if (int *p, *q; p != q) {\n  p = p->next;\n}", Style);
-  verifyFormat("/*comment*/ if (int *p, *q; p != q) {\n  p = p->next;\n}",
-               Style);
+  verifyFormat("for (int *p, *q; p != q; p = p->next) {}", Style);
+  verifyFormat("/*comment*/ for (int *p, *q; p != q; p = p->next) {}", Style);
+  verifyFormat("if (int *p, *q; p != q) { p = p->next; }", Style);
+  verifyFormat("/*comment*/ if (int *p, *q; p != q) { p = p->next; }", Style);
   verifyFormat("switch (int *p, *q; p != q) {\n  default:\n    break;\n}",
                Style);
   verifyFormat(
       "/*comment*/ switch (int *p, *q; p != q) {\n  default:\n    break;\n}",
       Style);
 
-  verifyFormat("if ([](int* p, int* q) {}()) {\n}", Style);
-  verifyFormat("for ([](int* p, int* q) {}();;) {\n}", Style);
-  verifyFormat("for (; [](int* p, int* q) {}();) {\n}", Style);
-  verifyFormat("for (;; [](int* p, int* q) {}()) {\n}", Style);
+  verifyFormat("if ([](int* p, int* q) {}()) {}", Style);
+  verifyFormat("for ([](int* p, int* q) {}();;) {}", Style);
+  verifyFormat("for (; [](int* p, int* q) {}();) {}", Style);
+  verifyFormat("for (;; [](int* p, int* q) {}()) {}", Style);
   verifyFormat("switch ([](int* p, int* q) {}()) {\n  default:\n    break;\n}",
                Style);
 }
@@ -12486,7 +12509,7 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
                "}");
   verifyFormat("for (int i = a * a; i < 10; ++i) {\n}");
   verifyFormat("for (int i = 0; i < a * a; ++i) {\n}");
-  verifyGoogleFormat("for (int i = 0; i * 2 < z; i *= 2) {\n}");
+  verifyGoogleFormat("for (int i = 0; i * 2 < z; i *= 2) {}");
 
   verifyFormat("#define A (!a * b)");
   verifyFormat("#define MACRO     \\\n"
@@ -15560,11 +15583,24 @@ TEST_F(FormatTest, MergeShortFunctionBody) {
   auto Style = getLLVMStyle();
   Style.AllowShortFunctionsOnASingleLine = FormatStyle::ShortFunctionStyle();
   Style.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Always;
+  Style.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_WithoutElse;
   Style.BreakBeforeBraces = FormatStyle::BS_Custom;
   Style.BraceWrapping.AfterFunction = true;
 
   verifyFormat("int foo()\n"
-               "{ return 1; }",
+               "{\n"
+               "  return 1;\n"
+               "}\n",
+               Style);
+  verifyFormat("int foo()\n"
+               "{\n"
+               "  if (true) { return 42; };\n"
+               "}\n",
+               Style);
+  verifyFormat("int foo()\n"
+               "{\n"
+               "  static constexpr auto lambda = []() -> int { return 42; };\n"
+               "}\n",
                Style);
 }
 
@@ -15913,11 +15949,15 @@ TEST_F(FormatTest, AllowShortRecordOnASingleLine) {
 
   Style.AllowShortRecordOnASingleLine = FormatStyle::SRS_Never;
   verifyFormat("class foo\n"
-               "{ int i; };",
+               "{\n"
+               "  int i;\n"
+               "};",
                Style);
   Style.AllowShortRecordOnASingleLine = FormatStyle::SRS_Empty;
   verifyFormat("class foo\n"
-               "{ int i; };",
+               "{\n"
+               "  int i;\n"
+               "};",
                Style);
   Style.AllowShortRecordOnASingleLine = FormatStyle::SRS_Always;
   verifyFormat("class foo\n"
@@ -19334,32 +19374,25 @@ TEST_F(FormatTest, AllmanBraceBreaking) {
                AllmanBraceStyle);
   AllmanBraceStyle.ColumnLimit = 80;
 
+  // The construct-specific AllowShort* options override
+  // AllowShortBlocksOnASingleLine and BraceWrapping.AfterControlStatement.
   FormatStyle BreakBeforeBraceShortIfs = AllmanBraceStyle;
   BreakBeforeBraceShortIfs.AllowShortIfStatementsOnASingleLine =
       FormatStyle::SIS_WithoutElse;
   BreakBeforeBraceShortIfs.AllowShortLoopsOnASingleLine = true;
   verifyFormat("void f(bool b)\n"
                "{\n"
-               "  if (b)\n"
-               "  {\n"
-               "    return;\n"
-               "  }\n"
+               "  if (b) { return; }\n"
                "}",
                BreakBeforeBraceShortIfs);
   verifyFormat("void f(bool b)\n"
                "{\n"
-               "  if constexpr (b)\n"
-               "  {\n"
-               "    return;\n"
-               "  }\n"
+               "  if constexpr (b) { return; }\n"
                "}",
                BreakBeforeBraceShortIfs);
   verifyFormat("void f(bool b)\n"
                "{\n"
-               "  if CONSTEXPR (b)\n"
-               "  {\n"
-               "    return;\n"
-               "  }\n"
+               "  if CONSTEXPR (b) { return; }\n"
                "}",
                BreakBeforeBraceShortIfs);
   verifyFormat("void f(bool b)\n"
@@ -19379,10 +19412,7 @@ TEST_F(FormatTest, AllmanBraceBreaking) {
                BreakBeforeBraceShortIfs);
   verifyFormat("void f(bool b)\n"
                "{\n"
-               "  while (b)\n"
-               "  {\n"
-               "    return;\n"
-               "  }\n"
+               "  while (b) { return; }\n"
                "}",
                BreakBeforeBraceShortIfs);
 }
@@ -19759,10 +19789,7 @@ TEST_F(FormatTest, WhitesmithsBraceBreaking) {
   BreakBeforeBraceShortIfs.AllowShortLoopsOnASingleLine = true;
   verifyFormat("void f(bool b)\n"
                "  {\n"
-               "  if (b)\n"
-               "    {\n"
-               "    return;\n"
-               "    }\n"
+               "  if (b) { return; }\n"
                "  }",
                BreakBeforeBraceShortIfs);
   verifyFormat("void f(bool b)\n"
@@ -19772,10 +19799,7 @@ TEST_F(FormatTest, WhitesmithsBraceBreaking) {
                BreakBeforeBraceShortIfs);
   verifyFormat("void f(bool b)\n"
                "  {\n"
-               "  while (b)\n"
-               "    {\n"
-               "    return;\n"
-               "    }\n"
+               "  while (b) { return; }\n"
                "  }",
                BreakBeforeBraceShortIfs);
 }

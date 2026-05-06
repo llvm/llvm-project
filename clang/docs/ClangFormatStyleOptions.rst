@@ -1827,6 +1827,11 @@ the configuration (without a prefix: ``Auto``).
   Dependent on the value, ``while (true) { continue; }`` can be put on a
   single line.
 
+  For blocks of if statements and loops, this option is overridden by
+  ``AllowShortIfStatementsOnASingleLine`` and
+  ``AllowShortLoopsOnASingleLine``, respectively, if they allow merging
+  the statement.
+
   Possible values:
 
   * ``SBS_Never`` (in configuration: ``Never``)
@@ -2047,6 +2052,10 @@ the configuration (without a prefix: ``Auto``).
 **AllowShortIfStatementsOnASingleLine** (``ShortIfStyle``) :versionbadge:`clang-format 3.3` :ref:`¶ <AllowShortIfStatementsOnASingleLine>`
   Dependent on the value, ``if (a) return;`` can be put on a single line.
 
+  If merging is allowed, it also applies to braced if statements, e.g.
+  ``if (a) { return; }``, overriding ``AllowShortBlocksOnASingleLine``
+  and ``BraceWrapping.AfterControlStatement``.
+
   Possible values:
 
   * ``SIS_Never`` (in configuration: ``Never``)
@@ -2168,6 +2177,10 @@ the configuration (without a prefix: ``Auto``).
 **AllowShortLoopsOnASingleLine** (``Boolean``) :versionbadge:`clang-format 3.7` :ref:`¶ <AllowShortLoopsOnASingleLine>`
   If ``true``, ``while (true) continue;`` can be put on a single
   line.
+
+  This also applies to braced loops, e.g. ``while (true) { continue; }``,
+  overriding ``AllowShortBlocksOnASingleLine`` and
+  ``BraceWrapping.AfterControlStatement``.
 
 .. _AllowShortNamespacesOnASingleLine:
 

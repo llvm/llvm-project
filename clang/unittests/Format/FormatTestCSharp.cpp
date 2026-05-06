@@ -583,12 +583,8 @@ TEST_F(FormatTestCSharp, CSharpSpaceBefore) {
   verifyFormat("List<string> list;", Style);
   verifyFormat("Dictionary<string, string> dict;", Style);
 
-  verifyFormat("for (int i = 0; i < size (); i++) {\n"
-               "}",
-               Style);
-  verifyFormat("foreach (var x in y) {\n"
-               "}",
-               Style);
+  verifyFormat("for (int i = 0; i < size (); i++) {}", Style);
+  verifyFormat("foreach (var x in y) {}", Style);
   verifyFormat("switch (x) {}", Style);
   verifyFormat("do {\n"
                "} while (x);",
@@ -599,12 +595,8 @@ TEST_F(FormatTestCSharp, CSharpSpaceBefore) {
   verifyFormat("List<string> list;", Style);
   verifyFormat("Dictionary<string, string> dict;", Style);
 
-  verifyFormat("for(int i = 0; i < size(); i++) {\n"
-               "}",
-               Style);
-  verifyFormat("foreach(var x in y) {\n"
-               "}",
-               Style);
+  verifyFormat("for(int i = 0; i < size(); i++) {}", Style);
+  verifyFormat("foreach(var x in y) {}", Style);
   verifyFormat("switch(x) {}", Style);
   verifyFormat("do {\n"
                "} while(x);",
@@ -1222,8 +1214,7 @@ TEST_F(FormatTestCSharp, CSharpSpaces) {
 
   // Not seen as a C-style cast.
   verifyFormat(R"(//
-foreach ((A a, B b) in someList) {
-})",
+foreach ((A a, B b) in someList) {})",
                Style);
 
   // space after lock in `lock (processes)`.

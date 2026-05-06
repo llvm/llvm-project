@@ -971,6 +971,12 @@ clang-format
   enum assignments without affecting other assignments.
 - Add ``BreakBeforeReturnType`` option to break before the function return
   type.
+- ``AllowShortIfStatementsOnASingleLine`` and ``AllowShortLoopsOnASingleLine``
+  now override ``AllowShortBlocksOnASingleLine`` and
+  ``BraceWrapping.AfterControlStatement`` for the blocks of their constructs.
+  In particular, braced bodies of short if statements and loops are now merged
+  onto a single line if the respective option allows it, even if
+  ``AllowShortBlocksOnASingleLine`` is ``Never``. (#GH183705)
 
 libclang
 --------
