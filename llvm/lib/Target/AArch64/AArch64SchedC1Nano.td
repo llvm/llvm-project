@@ -69,6 +69,7 @@ def C1NanoUnitVMAC   : ProcResGroup<[C1NanoUnitVMAC0, C1NanoUnitVMAC1]>;
 // Workaround for throughput being doubled on a single resource
 def C1NanoUnit2VMC : ProcResGroup<[C1NanoUnitVMC, C1NanoUnitVMC]>;
 def C1NanoUnit4VMC : ProcResGroup<[C1NanoUnitVMC, C1NanoUnitVMC, C1NanoUnitVMC, C1NanoUnitVMC]>;
+def C1NanoUnit2VALU0: ProcResGroup<[C1NanoUnitVALU0, C1NanoUnitVALU0]>;
 
 // These latencies are modeled without taking into account forwarding paths
 // (the software optimisation guide lists latencies taking into account
@@ -398,7 +399,7 @@ def : InstRW<[C1NanoMC2Write<1, 1, C1NanoUnitALU>], (instregex "^RMIF")>;
 def C1NanoWriteVLD1 : SchedWriteRes<[C1NanoUnitLd]> { let Latency = 2; }
 def C1NanoWriteVLD1SI : SchedWriteRes<[C1NanoUnitLd]> { let Latency = 2; let SingleIssue = 1; }
 def C1NanoWriteLDP1 : SchedWriteRes<[C1NanoUnitLd]> { let Latency = 2; }
-def C1NanoWriteLDP2 : SchedWriteRes<[C1NanoUnitLd]> { let Latency = 2; }
+def C1NanoWriteLDP3 : SchedWriteRes<[C1NanoUnitLd]> { let Latency = 3; }
 def C1NanoWriteLDPFP : SchedWriteRes<[C1NanoUnitLd]> { let Latency = 3; }
 
 // Integer loads, immediate and register offset.
@@ -411,14 +412,12 @@ def : InstRW<[WriteAdr, C1NanoWr_LDR, C1NanoWr_LDR], (instregex "LDR[WX](pre|pos
 // Load vector register, immediate pre-index / post-index
 def : InstRW<[WriteAdr, C1NanoWriteLDPFP, C1NanoWriteLDPFP], (instregex "LDR[BHSDQ](pre|post)")>;
 
-def : InstRW<[C1NanoWriteLDP1, C1NanoWriteLDP1], (instregex "LDPSWi")>;
-def : InstRW<[WriteAdr, C1NanoWriteLDP1, C1NanoWriteLDP1],
-             (instregex "LDPSW(pre|post)")>;
-
-def : InstRW<[C1NanoWriteVLD1SI, C1NanoWriteLDP1], (instregex "LDPWi")>;
-def : InstRW<[C1NanoWriteLDPFP, C1NanoWriteLDP1], (instregex "LDN?P[SDQ]i")>;
+def : InstRW<[C1NanoWriteLDP1], (instregex "LDPSWi")>;
+def : InstRW<[C1NanoWriteLDP1], (instregex "LDN?P[WX]i")>;
+def : InstRW<[C1NanoWriteLDP3,C1NanoWriteLDP3], (instregex "LDN?P[SDQ]i")>;
+def : InstRW<[WriteAdr, C1NanoWriteLDP1, C1NanoWriteLDP1], (instregex "LDPSW(pre|post)")>;
 def : InstRW<[WriteAdr, C1NanoWriteVLD1SI, C1NanoWriteLDP1], (instregex "LDPW(pre|post)")>;
-def : InstRW<[WriteAdr, C1NanoWriteVLD1, C1NanoWriteLDP2], (instregex "LDPX(i|pre|post)")>;
+def : InstRW<[WriteAdr, C1NanoWriteVLD1, C1NanoWriteLDP1], (instregex "LDPX(pre|post)")>;
 def : InstRW<[WriteAdr, C1NanoWriteLDPFP, C1NanoWriteLDP1], (instregex "LDP[SDQ](pre|post)")>;
 def : InstRW<[WriteI], (instrs COPY)>;
 
@@ -1526,11 +1525,10 @@ def : InstRW<[C1NanoWrite<4, C1NanoUnitVALU0>], (instregex "^F(MAX|MIN)(NM)?V_VP
 def : InstRW<[C1NanoMCWrite<12, 5, C1NanoUnitVALU0>], (instregex "^FADDV_VPZ_H")>;
 
 // Floating point reduction, F32
-// RThoughput should be 5/2 but we cannot have fractional values so using 3
-def : InstRW<[C1NanoMCWrite<8, 3, C1NanoUnitVALU0>], (instregex "^FADDV_VPZ_S")>;
+def : InstRW<[C1NanoMCWrite<8, 5, C1NanoUnit2VALU0>], (instregex "^FADDV_VPZ_S")>;
 
 // Floating point reduction, F64
-def : InstRW<[C1NanoMCWrite<4, 2, C1NanoUnitVALU0>], (instregex "^FADDV_VPZ_D")>;
+def : InstRW<[C1NanoMCWrite<4, 1, C1NanoUnit2VALU0>], (instregex "^FADDV_VPZ_D")>;
 
 
 // Floating point round to integral, F16
