@@ -178,10 +178,11 @@ class UnsafeBufferReachableAnalysis
                                      std::vector<EPLPtr> &WorkList) {
     for (auto &[Id, SubGraph] : *Graph) {
       auto I = SubGraph.find(*EPL);
+      EntityPointerLevelSet &ReachablesOfId = getResult().Reachables[Id];
 
       if (I != SubGraph.end()) {
         for (const auto &EPL : I->second) {
-          auto [Ignored, Inserted] = getResult().Reachables[Id].insert(EPL);
+          auto [Ignored, Inserted] = ReachablesOfId.insert(EPL);
           if (Inserted)
             WorkList.push_back(&EPL);
         }
