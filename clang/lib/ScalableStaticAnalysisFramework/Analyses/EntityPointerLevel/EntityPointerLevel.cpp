@@ -13,6 +13,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/ASTEntityMapping.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityName.h"
+#include <map>
 #include <optional>
 
 using namespace clang;

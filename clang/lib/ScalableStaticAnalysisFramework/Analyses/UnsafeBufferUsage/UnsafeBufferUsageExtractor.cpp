@@ -105,4 +105,4 @@ volatile int UnsafeBufferUsageTUSummaryExtractorAnchorSource = 0;
 static clang::ssaf::TUSummaryExtractorRegistry::Add<
     UnsafeBufferUsageTUSummaryExtractor>
     RegisterExtractor(UnsafeBufferUsageEntitySummary::Name,
-                      "The TUSummaryExtractor for unsafe buffer pointers");
+                      "Extract unsafe buffer pointers");

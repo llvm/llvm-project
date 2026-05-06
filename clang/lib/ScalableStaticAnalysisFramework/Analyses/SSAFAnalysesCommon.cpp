@@ -16,6 +16,18 @@
 
 using namespace clang;
 
+std::string ssaf::describeJSONValue(const llvm::json::Value &V) {
+  return llvm::formatv("{0:2}", V).str();
+}
+
+std::string ssaf::describeJSONValue(const llvm::json::Array &A) {
+  return llvm::formatv("array of size {0}", A.size()).str();
+}
+
+std::string ssaf::describeJSONValue(const llvm::json::Object &O) {
+  return llvm::formatv("an object of {0} key(s)", O.size()).str();
+}
+
 namespace {
 // Traverses the AST and finds contributors.
 class ContributorFinder : public DynamicRecursiveASTVisitor {
@@ -107,15 +119,15 @@ public:
 };
 } // namespace
 
-void clang::ssaf::findContributors(
-    ASTContext &Ctx, std::vector<const NamedDecl *> &Contributors) {
+void ssaf::findContributors(ASTContext &Ctx,
+                            std::vector<const NamedDecl *> &Contributors) {
   ContributorFinder Finder;
   Finder.TraverseAST(Ctx);
   Contributors.insert(Contributors.end(), Finder.Contributors.begin(),
                       Finder.Contributors.end());
 }
 
-void clang::ssaf::findMatchesIn(
+void ssaf::findMatchesIn(
     const NamedDecl *Contributor,
     llvm::function_ref<void(const DynTypedNode &)> MatchActionRef) {
   ContributorFactFinder{MatchActionRef}.findMatches(Contributor);
