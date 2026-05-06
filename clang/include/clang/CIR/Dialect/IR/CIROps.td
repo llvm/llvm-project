@@ -2871,7 +2871,8 @@ def CIR_GlobalOp : CIR_Op<"global", [
                        OptionalAttr<I64Attr>:$alignment,
                        OptionalAttr<ASTVarDeclInterface>:$ast,
                        OptionalAttr<StrAttr>:$section,
-                       OptionalAttr<CIR_AnnotationArrayAttr>:$annotations
+                       OptionalAttr<CIR_AnnotationArrayAttr>:$annotations,
+                       OptionalAttr<FlatSymbolRefAttr>:$aliasee
                        );
 
   let regions = (region AnyRegion:$ctorRegion,
@@ -2888,6 +2889,7 @@ def CIR_GlobalOp : CIR_Op<"global", [
     (`static_local_guard` `` $static_local_guard^)?
     (` ` custom<GlobalAddressSpaceValue>($addr_space)^ )?
     $sym_name
+    (`alias` `(` $aliasee^ `)`)?
     custom<GlobalOpTypeAndInitialValue>($sym_type, $initial_value,
                                         $ctorRegion, $dtorRegion)
     ($annotations^)?
@@ -2896,6 +2898,9 @@ def CIR_GlobalOp : CIR_Op<"global", [
 
   let extraClassDeclaration = [{
     bool isDeclaration() {
+      // Aliases are always definitions.
+      if (getAliasee())
+        return false;
       return !getInitialValue() && getCtorRegion().empty() && getDtorRegion().empty();
     }
     bool hasInitializer() { return !isDeclaration(); }
