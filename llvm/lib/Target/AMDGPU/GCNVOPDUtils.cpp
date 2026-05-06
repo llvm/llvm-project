@@ -177,8 +177,10 @@ tryMatchVOPDPairVariant(const SIInstrInfo &TII, unsigned EncodingFamily,
                         bool IsVOPD3) {
   unsigned Opc = FirstMI.getOpcode();
   unsigned Opc2 = SecondMI.getOpcode();
-  auto FirstCanBeVOPD = AMDGPU::getCanBeVOPD(Opc, EncodingFamily, IsVOPD3);
-  auto SecondCanBeVOPD = AMDGPU::getCanBeVOPD(Opc2, EncodingFamily, IsVOPD3);
+  AMDGPU::CanBeVOPD FirstCanBeVOPD =
+      AMDGPU::getCanBeVOPD(Opc, EncodingFamily, IsVOPD3);
+  AMDGPU::CanBeVOPD SecondCanBeVOPD =
+      AMDGPU::getCanBeVOPD(Opc2, EncodingFamily, IsVOPD3);
 
   // If SecondMI depends on FirstMI they cannot execute at the same time.
   if (TII.hasRAWDependency(FirstMI, SecondMI))
@@ -236,7 +238,8 @@ static bool shouldScheduleVOPDAdjacent(const TargetInstrInfo &TII,
     unsigned EncodingFamily = AMDGPU::getVOPDEncodingFamily(ST);
     unsigned Opc2 = SecondMI.getOpcode();
     auto checkCanBeVOPD = [&](bool VOPD3) {
-      auto CanBeVOPD = AMDGPU::getCanBeVOPD(Opc2, EncodingFamily, VOPD3);
+      AMDGPU::CanBeVOPD CanBeVOPD =
+          AMDGPU::getCanBeVOPD(Opc2, EncodingFamily, VOPD3);
       return CanBeVOPD.Y || CanBeVOPD.X;
     };
     return checkCanBeVOPD(false) || (ST.hasVOPD3() && checkCanBeVOPD(true));
