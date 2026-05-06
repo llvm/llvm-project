@@ -17,6 +17,7 @@
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Sema.h"
+#include "llvm/Support/AArch64AtomicHints.h"
 
 namespace clang {
 
@@ -318,6 +319,94 @@ bool SemaARM::BuiltinARMSpecialReg(unsigned BuiltinID, CallExpr *TheCall,
     // colon-separated numbers in a string.
     return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, *MaxLimit);
   }
+
+  return false;
+}
+
+bool SemaARM::BuiltinARMAtomicStoreHintCall(unsigned BuiltinID,
+                                            CallExpr *TheCall) {
+  if (SemaRef.checkArgCount(TheCall, 4))
+    return true;
+
+  // Arg 0 should be the pointer type. The pointee type must be a
+  // scalar integral or floating-point type of 8, 16, 32 or 64 bits.
+  ASTContext &Context = getASTContext();
+  Expr *PtrArg = TheCall->getArg(0);
+  auto PtrArgRes = SemaRef.DefaultFunctionArrayLvalueConversion(PtrArg);
+  if (PtrArgRes.isInvalid())
+    return true;
+  auto *PtrTy = PtrArg->getType()->getAs<PointerType>();
+  if (!PtrTy)
+    return Diag(TheCall->getBeginLoc(),
+                diag::err_atomic_builtin_must_be_pointer)
+           << PtrArg->getType() << 0 << PtrArg->getSourceRange();
+  QualType PtrQT = PtrTy->getPointeeType();
+
+  // TODO: Allow MFloat8 types when supported by atomic store
+  if (!PtrQT->isIntegralType(getASTContext()) && !PtrQT->isFloatingType())
+    return Diag(TheCall->getBeginLoc(),
+                diag::err_atomic_op_needs_atomic_int_or_fp)
+           << 0 << PtrQT << PtrArg->getSourceRange();
+
+  unsigned TySize =
+      Context.getTypeSize(Context.getCanonicalType(PtrQT).getUnqualifiedType());
+  if (TySize != 8 && TySize != 16 && TySize != 32 && TySize != 64)
+    return Diag(TheCall->getBeginLoc(), diag::err_atomic_op_hint_data_size)
+           << PtrArg->getSourceRange();
+
+  // Arg 1 is the data to be stored. The type must match the pointee
+  // type found above.
+  auto DataArgRes =
+      SemaRef.DefaultFunctionArrayLvalueConversion(TheCall->getArg(1));
+  if (DataArgRes.isInvalid())
+    return true;
+  QualType DataQT = DataArgRes.get()->getType();
+
+  if (PtrQT != DataQT)
+    return Diag(TheCall->getBeginLoc(),
+                diag::err_typecheck_call_different_arg_types)
+           << PtrQT << DataQT;
+
+  // Arg 2 is the memory order, which must be relaxed, release or seq_cst
+  auto MemOrdArg =
+      SemaRef.DefaultFunctionArrayLvalueConversion(TheCall->getArg(2)).get();
+  std::optional<llvm::APSInt> MemOrdAP =
+      MemOrdArg->getIntegerConstantExpr(Context);
+  if (!MemOrdAP)
+    return Diag(TheCall->getBeginLoc(),
+                diag::err_atomic_hint_has_invalid_memory_order)
+           << MemOrdArg->getType() << MemOrdArg->getSourceRange();
+
+  unsigned Ordering = MemOrdAP->getZExtValue();
+  if (!llvm::isValidAtomicOrderingCABI(Ordering))
+    return Diag(TheCall->getBeginLoc(),
+                diag::err_atomic_hint_has_invalid_memory_order)
+           << *MemOrdAP << MemOrdArg->getSourceRange();
+
+  auto AtomicOrdering = static_cast<llvm::AtomicOrderingCABI>(Ordering);
+  if (AtomicOrdering != llvm::AtomicOrderingCABI::relaxed &&
+      AtomicOrdering != llvm::AtomicOrderingCABI::release &&
+      AtomicOrdering != llvm::AtomicOrderingCABI::seq_cst)
+    return Diag(TheCall->getBeginLoc(),
+                diag::err_atomic_hint_has_invalid_memory_order)
+           << *MemOrdAP << MemOrdArg->getSourceRange();
+
+  // Arg 3 is the hint type. Only values represented by AArch64AtomicStoreHint
+  // are valid.
+  auto HintArg =
+      SemaRef.DefaultFunctionArrayLvalueConversion(TheCall->getArg(3)).get();
+  std::optional<llvm::APSInt> HintAP = HintArg->getIntegerConstantExpr(Context);
+  if (!HintAP)
+    return Diag(TheCall->getBeginLoc(),
+                diag::err_atomic_hint_has_invalid_hint_type)
+           << HintArg->getType() << HintArg->getSourceRange();
+
+  unsigned Hint = HintAP->getZExtValue();
+  if (llvm::getAtomicStoreHintFromMD(Hint) ==
+      llvm::AArch64AtomicStoreHint::HINT_NONE)
+    return Diag(TheCall->getBeginLoc(),
+                diag::err_atomic_hint_has_invalid_hint_type)
+           << *HintAP << HintArg->getSourceRange();
 
   return false;
 }
@@ -1165,6 +1254,9 @@ bool SemaARM::CheckAArch64BuiltinFunctionCall(const TargetInfo &TI,
       BuiltinID == AArch64::BI__builtin_arm_wsr ||
       BuiltinID == AArch64::BI__builtin_arm_wsrp)
     return BuiltinARMSpecialReg(BuiltinID, TheCall, 0, 5, true);
+
+  if (BuiltinID == AArch64::BI__builtin_arm_atomic_store_with_hint)
+    return BuiltinARMAtomicStoreHintCall(BuiltinID, TheCall);
 
   // Only check the valid encoding range. Any constant in this range would be
   // converted to a register of the form S2_2_C3_C4_5. Let the hardware throw

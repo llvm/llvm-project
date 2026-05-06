@@ -2885,6 +2885,19 @@ bool AArch64InstrInfo::isStridedAccess(const MachineInstr &MI) {
   });
 }
 
+AArch64AtomicStoreHint
+AArch64InstrInfo::decodeAtomicHintFlags(MachineMemOperand::Flags MMOFlags) {
+  unsigned AtomicHint = 0;
+  if (MMOFlags & MOAtomicHintBit0)
+    AtomicHint += 0b1;
+  if (MMOFlags & MOAtomicHintBit1)
+    AtomicHint += 0b10;
+
+  if (!isValidAArch64AtomicHintValue(AtomicHint))
+    return AArch64AtomicStoreHint::HINT_NONE;
+  return static_cast<AArch64AtomicStoreHint>(AtomicHint);
+}
+
 bool AArch64InstrInfo::hasUnscaledLdStOffset(unsigned Opc) {
   switch (Opc) {
   default:

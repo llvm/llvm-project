@@ -78,6 +78,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/AArch64AtomicHints.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
@@ -18662,7 +18663,25 @@ AArch64TargetLowering::getTargetMMOFlags(const Instruction &I) const {
   if (Subtarget->getProcFamily() == AArch64Subtarget::Falkor &&
       I.hasMetadata(FALKOR_STRIDED_ACCESS_MD))
     return MOStridedAccess;
-  return MachineMemOperand::MONone;
+
+  auto Flags = MachineMemOperand::MONone;
+  const MDNode *AtomicStHint = I.getMetadata(AARCH64_ATOMIC_STORE_HINT_MD);
+  if (AtomicStHint) {
+    unsigned HintVal =
+        cast<ConstantInt>(
+            cast<ConstantAsMetadata>(AtomicStHint->getOperand(0))->getValue())
+            ->getZExtValue();
+    AArch64AtomicStoreHint Hint = getAtomicStoreHintFromMD(HintVal);
+    assert(Hint != AArch64AtomicStoreHint::HINT_NONE &&
+           "Unrecognised atomic hint value requested.");
+
+    if (static_cast<unsigned>(Hint) & 0b1)
+      Flags |= MOAtomicHintBit0;
+    if (static_cast<unsigned>(Hint) & 0b10)
+      Flags |= MOAtomicHintBit1;
+  }
+
+  return Flags;
 }
 
 bool AArch64TargetLowering::isLegalInterleavedAccessType(

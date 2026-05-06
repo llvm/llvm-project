@@ -16,6 +16,7 @@
 #include "AArch64.h"
 #include "AArch64RegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/Support/AArch64AtomicHints.h"
 #include "llvm/Support/TypeSize.h"
 #include <optional>
 
@@ -30,8 +31,13 @@ static const MachineMemOperand::Flags MOSuppressPair =
     MachineMemOperand::MOTargetFlag1;
 static const MachineMemOperand::Flags MOStridedAccess =
     MachineMemOperand::MOTargetFlag2;
+static const MachineMemOperand::Flags MOAtomicHintBit0 =
+    MachineMemOperand::MOTargetFlag3;
+static const MachineMemOperand::Flags MOAtomicHintBit1 =
+    MachineMemOperand::MOTargetFlag4;
 
 #define FALKOR_STRIDED_ACCESS_MD "falkor.strided.access"
+#define AARCH64_ATOMIC_STORE_HINT_MD "aarch64.atomic.hint"
 
 // AArch64 MachineCombiner patterns
 enum AArch64MachineCombinerPattern : unsigned {
@@ -229,6 +235,9 @@ public:
 
   /// Return true if the given load or store is a strided memory access.
   static bool isStridedAccess(const MachineInstr &MI);
+
+  static AArch64AtomicStoreHint
+  decodeAtomicHintFlags(MachineMemOperand::Flags MMOFlags);
 
   /// Return true if it has an unscaled load/store offset.
   static bool hasUnscaledLdStOffset(unsigned Opc);

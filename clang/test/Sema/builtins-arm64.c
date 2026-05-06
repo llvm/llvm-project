@@ -51,3 +51,20 @@ void test_trap(short s, unsigned short us) {
   __builtin_arm_trap(s); // expected-error {{argument to '__builtin_arm_trap' must be a constant integer}}
   __builtin_arm_trap(us); // expected-error {{argument to '__builtin_arm_trap' must be a constant integer}}
 }
+
+void test_atomic_store_hint(char *c_ptr, __int128 *inv_ptr, float *f_ptr,
+                            char c_data, __int128 inv_data, float f_data,
+                            int inv_int) {
+  __builtin_arm_atomic_store_with_hint(c_ptr, c_data, 0); // expected-error {{too few arguments to function call, expected 4, have 3}}
+  __builtin_arm_atomic_store_with_hint(c_ptr, c_data, 0, 0, 0); // expected-error {{too many arguments to function call, expected 4, have 5}}
+
+  __builtin_arm_atomic_store_with_hint(0, c_data, 0, 0); // expected-error {{address argument to atomic builtin must be a pointer ('int' invalid)}}
+  __builtin_arm_atomic_store_with_hint(c_ptr, f_data, 0, 0); // expected-error {{arguments are of different types ('char' vs 'float')}}
+  __builtin_arm_atomic_store_with_hint(inv_ptr, inv_data, 0, 0); // expected-error {{address argument to atomic store with hint must be of size 8, 16, 32 or 64 bits}}
+
+  __builtin_arm_atomic_store_with_hint(c_ptr, c_data, inv_int, 0); // expected-error {{invalid memory order argument to atomic hint operation ('int' invalid)}}
+  __builtin_arm_atomic_store_with_hint(c_ptr, c_data, 2, 0); // expected-error {{invalid memory order argument to atomic hint operation (2 invalid)}}
+
+  __builtin_arm_atomic_store_with_hint(c_ptr, c_data, 0, inv_int); // expected-error {{invalid hint type argument to atomic hint operation ('int' invalid)}}
+  __builtin_arm_atomic_store_with_hint(c_ptr, c_data, 0, 3); // expected-error {{invalid hint type argument to atomic hint operation (3 invalid)}}
+}

@@ -20,6 +20,7 @@
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/IntrinsicsARM.h"
 #include "llvm/IR/IntrinsicsBPF.h"
+#include "llvm/Support/AArch64AtomicHints.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 
 #include <numeric>
@@ -2127,6 +2128,56 @@ static Value *EmitRangePrefetchBuiltin(CodeGenFunction &CGF, unsigned BuiltinID,
 
   return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::aarch64_range_prefetch),
                             Ops);
+}
+
+static Value *EmitAtomicStoreWithHintBuiltin(CodeGenFunction &CGF,
+                                             unsigned BuiltinID,
+                                             const CallExpr *E) {
+  CodeGen::CGBuilderTy &Builder = CGF.Builder;
+  CodeGen::CodeGenModule &CGM = CGF.CGM;
+  Expr::EvalResult Result;
+  if (!E->getArg(2)->EvaluateAsInt(Result, CGM.getContext()))
+    llvm_unreachable(
+        "Expected integer policy argument to atomic store with hint.");
+
+  StoreInst *Store =
+      Builder.CreateStore(CGF.EmitScalarExpr(E->getArg(1)),            // Value
+                          CGF.EmitPointerWithAlignment(E->getArg(0))); // Ptr;
+
+  AtomicOrdering Ordering;
+  unsigned OrderingArg = Result.Val.getInt().getExtValue();
+  assert(isValidAtomicOrderingCABI(OrderingArg) && "Invalid atomic ordering");
+
+  switch (static_cast<AtomicOrderingCABI>(OrderingArg)) {
+  default:
+    llvm_unreachable("Unsupported atomic ordering found.");
+  case AtomicOrderingCABI::relaxed:
+    Ordering = AtomicOrdering::Monotonic;
+    break;
+  case AtomicOrderingCABI::release:
+    Ordering = AtomicOrdering::Release;
+    break;
+  case AtomicOrderingCABI::seq_cst:
+    Ordering = AtomicOrdering::SequentiallyConsistent;
+    break;
+  }
+  Store->setAtomic(Ordering);
+
+  if (!E->getArg(3)->EvaluateAsInt(Result, CGM.getContext()))
+    llvm_unreachable(
+        "Expected integer hint argument to atomic store with hint.");
+  unsigned HintArg = Result.Val.getInt().getExtValue();
+  assert((getAtomicStoreHintFromMD(HintArg) !=
+          AArch64AtomicStoreHint::HINT_NONE) &&
+         "Invalid hint type");
+
+  MDNode *HintMDVal =
+      MDNode::get(CGM.getLLVMContext(),
+                  llvm::ConstantAsMetadata::get(Builder.getInt32(HintArg)));
+  Store->setMetadata(CGM.getModule().getMDKindID("aarch64.atomic.hint"),
+                     HintMDVal);
+
+  return Store;
 }
 
 /// Return true if BuiltinID is an overloaded Neon intrinsic with an extra
@@ -4926,6 +4977,9 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   if (BuiltinID == AArch64::BI__builtin_arm_range_prefetch ||
       BuiltinID == AArch64::BI__builtin_arm_range_prefetch_x)
     return EmitRangePrefetchBuiltin(*this, BuiltinID, E);
+
+  if (BuiltinID == AArch64::BI__builtin_arm_atomic_store_with_hint)
+    return EmitAtomicStoreWithHintBuiltin(*this, BuiltinID, E);
 
   // Memory Tagging Extensions (MTE) Intrinsics
   Intrinsic::ID MTEIntrinsicID = Intrinsic::not_intrinsic;

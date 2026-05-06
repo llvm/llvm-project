@@ -1821,3 +1821,81 @@ int test_rndrrs(uint64_t *__addr) {
   return __rndrrs(__addr);
 }
 #endif
+
+#if defined(__ARM_64BIT_STATE)
+
+// AArch64-LABEL: @test_atomic_store_hint_char(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    store atomic i8 [[DATA:%.*]], ptr [[PTR:%.*]] monotonic, align 1, !aarch64.atomic.hint [[META3:![0-9]+]]
+// AArch64-NEXT:    ret void
+//
+void test_atomic_store_hint_char(char *ptr, char data) {
+  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_RELAXED, 0);
+}
+
+// AArch64-LABEL: @test_atomic_store_hint_bfloat(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    store atomic bfloat [[DATA:%.*]], ptr [[PTR:%.*]] release, align 2, !aarch64.atomic.hint [[META4:![0-9]+]]
+// AArch64-NEXT:    ret void
+//
+void test_atomic_store_hint_bfloat(__bf16 *ptr, __bf16 data) {
+  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_RELEASE, 1);
+}
+
+// AArch64-LABEL: @test_atomic_store_hint_short(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    store atomic i16 [[DATA:%.*]], ptr [[PTR:%.*]] release, align 2, !aarch64.atomic.hint [[META3]]
+// AArch64-NEXT:    ret void
+//
+void test_atomic_store_hint_short(short *ptr, short data) {
+  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_RELEASE, 0);
+}
+
+// AArch64-LABEL: @test_atomic_store_hint_u32(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    store atomic i32 [[DATA:%.*]], ptr [[PTR:%.*]] seq_cst, align 4, !aarch64.atomic.hint [[META3]]
+// AArch64-NEXT:    ret void
+//
+void test_atomic_store_hint_u32(uint32_t *ptr, uint32_t data) {
+  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_SEQ_CST, 0);
+}
+
+// AArch64-LABEL: @test_atomic_store_hint_float(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    store atomic float [[DATA:%.*]], ptr [[PTR:%.*]] seq_cst, align 4, !aarch64.atomic.hint [[META3]]
+// AArch64-NEXT:    ret void
+//
+void test_atomic_store_hint_float(float *ptr, float data) {
+  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_SEQ_CST, 0);
+}
+
+// AArch64-LABEL: @test_atomic_store_hint_s64(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    store atomic i64 [[DATA:%.*]], ptr [[PTR:%.*]] monotonic, align 8, !aarch64.atomic.hint [[META4]]
+// AArch64-NEXT:    ret void
+//
+void test_atomic_store_hint_s64(int64_t *ptr, int64_t data) {
+  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_RELAXED, 1);
+}
+
+// AArch64-LABEL: @test_atomic_store_hint_long_long_int(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    store atomic i64 [[DATA:%.*]], ptr [[PTR:%.*]] release, align 8, !aarch64.atomic.hint [[META3]]
+// AArch64-NEXT:    ret void
+//
+void test_atomic_store_hint_long_long_int(long long int *ptr, long long int data) {
+  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_RELEASE, 0);
+}
+
+// AArch64-LABEL: @test_atomic_store_hint_double(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    store atomic double [[DATA:%.*]], ptr [[PTR:%.*]] monotonic, align 8, !aarch64.atomic.hint [[META4]]
+// AArch64-NEXT:    ret void
+//
+void test_atomic_store_hint_double(double *ptr, double data) {
+  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_RELAXED, 1);
+}
+
+// AArch64: [[META3]] = !{i32 0}
+// AArch64-NEXT: [[META4]] = !{i32 1}
+#endif

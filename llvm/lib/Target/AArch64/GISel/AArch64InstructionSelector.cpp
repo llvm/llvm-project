@@ -45,6 +45,7 @@
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/AArch64AtomicHints.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
@@ -2539,6 +2540,66 @@ bool AArch64InstructionSelector::earlySelect(MachineInstr &I) {
       BuildMI(MBB, I, MIMetadata(I), TII.get(AArch64::DMB))
           .addImm(I.getOperand(0).getImm() == 4 ? 0x9 : 0xb);
     I.eraseFromParent();
+    return true;
+  }
+  case TargetOpcode::G_STORE: {
+    GStore &St = cast<GStore>(I);
+    auto MMO = St.getMMO();
+    LLT PtrTy = MRI.getType(St.getPointerReg());
+
+    // Only for handling atomic store with hint.
+    // Can only handle AddressSpace 0, 64-bit pointers.
+    if (!St.isAtomic() || PtrTy != LLT::pointer(0, 64)) {
+      return false;
+    }
+
+    AArch64AtomicStoreHint Hint = TII.decodeAtomicHintFlags(MMO.getFlags());
+    if (Hint == AArch64AtomicStoreHint::HINT_NONE)
+      return false;
+
+    unsigned HintOpc;
+    unsigned StoreSize = St.getMemSizeInBits().getValue();
+    Register ValueReg = St.getValueReg();
+    switch (StoreSize) {
+    case 8:
+      HintOpc = AArch64::ATOMIC_STORE_HINT_B;
+      break;
+    case 16: {
+      Register CastReg;
+      if (mi_match(ValueReg, MRI, m_GBitcast(m_Reg(CastReg)))) {
+        auto Undef = MIB.buildInstr(TargetOpcode::IMPLICIT_DEF,
+                                    {&AArch64::FPR32RegClass}, {});
+        auto Ins = MIB.buildInstr(TargetOpcode::INSERT_SUBREG,
+                                  {&AArch64::FPR32RegClass}, {Undef, ValueReg})
+                       .addImm(AArch64::hsub);
+        constrainSelectedInstRegOperands(*Undef, TII, TRI, RBI);
+        constrainSelectedInstRegOperands(*Ins, TII, TRI, RBI);
+        ValueReg = Ins.getReg(0);
+      }
+      HintOpc = AArch64::ATOMIC_STORE_HINT_H;
+      break;
+    }
+    case 32:
+      HintOpc = AArch64::ATOMIC_STORE_HINT_S;
+      break;
+    case 64:
+      HintOpc = AArch64::ATOMIC_STORE_HINT_D;
+      break;
+    default:
+      llvm_unreachable("Unexpected getMemSizeInBits() value for atomic hint.");
+    }
+
+    unsigned HintImm = Hint == AArch64AtomicStoreHint::HINT_STSHH_KEEP ? 0 : 1;
+
+    auto StrPseudo = BuildMI(MBB, I, MIMetadata(I), TII.get(HintOpc))
+                         .addReg(St.getPointerReg())
+                         .addReg(ValueReg)
+                         .addImm((int)toCABI(St.getMMO().getSuccessOrdering()))
+                         .addImm(static_cast<unsigned>(HintImm));
+
+    StrPseudo.cloneMemRefs(I);
+    I.eraseFromParent();
+    constrainSelectedInstRegOperands(*StrPseudo, TII, TRI, RBI);
     return true;
   }
   default:

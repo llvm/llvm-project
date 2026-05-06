@@ -1,0 +1,30 @@
+# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass=aarch64-expand-pseudo -verify-machineinstrs %s -o - | FileCheck %s
+
+--- |
+  define void @test_atomic_store_keep_release_i8(ptr %ptr, i8 %val) {
+    store atomic i8 %val, ptr %ptr release, align 8, !aarch64.atomic.hint !0
+    ret void
+  }
+
+  !0 = !{i32 0}
+...
+
+---
+name:            test_atomic_store_keep_release_i8
+liveins:
+  - { reg: '$x0', virtual-reg: '' }
+  - { reg: '$w1', virtual-reg: '' }
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: $w1, $x0
+
+    ; CHECK-LABEL: name: test_atomic_store_keep_release_i8
+    ; CHECK: BUNDLE implicit killed $w1, implicit $x0 :: (store release (s8) into %ir.ptr, align 8) {
+    ; CHECK-NEXT: STSHH 0
+    ; CHECK-NEXT: STRBBui killed renamable $w1, $x0, 0 :: (store release (s8) into %ir.ptr, align 8)
+    ; CHECK-NEXT: }
+    ; CHECK-NEXT: RET undef $lr
+
+    ATOMIC_STORE_HINT_B killed renamable $x0, killed renamable $w1, 0, 0 :: (store release (s8) into %ir.ptr, align 8)
+    RET_ReallyLR
+...
