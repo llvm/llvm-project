@@ -151,8 +151,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     addRegisterClass(MVT::f32, &RISCV::FPR32RegClass);
   if (Subtarget.hasStdExtD())
     addRegisterClass(MVT::f64, &RISCV::FPR64RegClass);
-  if (Subtarget.hasStdExtQ())
-    addRegisterClass(MVT::f128, &RISCV::FPR128RegClass);
+  //if (Subtarget.hasStdExtQ())
+  //  addRegisterClass(MVT::f128, &RISCV::FPR128RegClass);
   if (Subtarget.hasStdExtZhinxmin())
     addRegisterClass(MVT::f16, &RISCV::GPRF16RegClass);
   if (Subtarget.hasStdExtZfinx())
@@ -24573,6 +24573,20 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
     Glue = RetValue.getValue(2);
 
     if (VA.getLocVT() == MVT::i32 && VA.getValVT() == MVT::f64) {
+      assert(VA.needsCustom());
+      SDValue RetValue2 = DAG.getCopyFromReg(Chain, DL, RVLocs[++i].getLocReg(),
+                                             MVT::i32, Glue);
+      Chain = RetValue2.getValue(1);
+      Glue = RetValue2.getValue(2);
+
+      // For big-endian, swap the order when building the pair.
+      SDValue Lo = RetValue;
+      SDValue Hi = RetValue2;
+      if (!Subtarget.isLittleEndian())
+        std::swap(Lo, Hi);
+
+      RetValue = DAG.getNode(RISCVISD::BuildPairF64, DL, MVT::f64, Lo, Hi);
+    } else if (VA.getLocVT() == MVT::i64 && VA.getValVT() == MVT::f128) {
       assert(VA.needsCustom());
       SDValue RetValue2 = DAG.getCopyFromReg(Chain, DL, RVLocs[++i].getLocReg(),
                                              MVT::i32, Glue);
