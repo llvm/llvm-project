@@ -1550,8 +1550,8 @@ Currently, only the following parameter attributes are defined:
     with the same address and a derived provenance, where the derived
     provenance has the same permissions as the original, except that the
     underlying object cannot be freed until the function returns (or unwinds),
-    otherwise the behavior is undefined. This includes frees in nested function
-    calls and on other threads.
+    otherwise the behavior is undefined. This includes frees of the pointer on
+    other threads if the free *happens-before* the function return.
 
     Notably, it is still possible to free the underlying object through a
     pointer that is not based on the argument.
