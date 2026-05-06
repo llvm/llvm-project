@@ -396,6 +396,17 @@ set(TARGET_LIBC_ENTRYPOINTS
     # wchar.h entrypoints
     libc.src.wchar.wcslen
     libc.src.wchar.wctob
+    libc.src.wchar.fgetwc
+    libc.src.wchar.fgetws
+    libc.src.wchar.fputwc
+    libc.src.wchar.fputws
+    libc.src.wchar.fwide
+    libc.src.wchar.getwc
+    libc.src.wchar.getwchar
+    libc.src.wchar.putwc
+    libc.src.wchar.putwchar
+    libc.src.wchar.ungetwc
+
 
     # wctype.h entrypoints
     libc.src.wctype.iswalpha
