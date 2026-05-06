@@ -32,7 +32,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %other:vgpr_32 = V_MOV_B32_e32 42, implicit $exec
   ; CHECK-NEXT:   %orig:vgpr_32 = V_ADD_U32_e32 [[V_MOV_B32_e32_]], %other, implicit $exec
-  ; CHECK-NEXT:   dead [[V_MUL_LO_U32_e64_:%[0-9]+]]:vgpr_32 = V_MUL_LO_U32_e64 %orig, %orig, implicit $exec
+  ; CHECK-NEXT:   dead %unused:vgpr_32 = V_MUL_LO_U32_e64 %orig, %orig, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.1
   bb.0:
     successors: %bb.1(0x40000000)
