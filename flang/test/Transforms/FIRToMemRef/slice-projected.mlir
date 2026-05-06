@@ -3,8 +3,8 @@
 // Tests for fir.slice with a path component (projected component slice).
 // A projected slice changes the element type of the boxed view, e.g.
 // z%re projects complex<f32> -> f32.  The pass bypasses the box descriptor
-// and uses the underlying complex array directly, extracting the component
-// with complex.re / complex.im at the load/store site.
+// and reinterprets the underlying complex array as memref<...x2xf32>, then
+// appends the component index (0=re, 1=im) as the final memref index.
 //
 // Derived from:
 //   complex, target :: z(4) = 0.
@@ -23,8 +23,10 @@
 // CHECK:       fir.do_loop [[I:%.*]] =
 // CHECK:         [[MEMREF:%.*]] = fir.convert %arg0 : (!fir.ref<!fir.array<4xcomplex<f32>>>) -> memref<4xcomplex<f32>>
 // CHECK:         [[IDX:%.*]] = arith.addi
-// CHECK:         [[CVAL:%.*]] = memref.load [[MEMREF]]{{\[}}[[IDX]]{{\]}} : memref<4xcomplex<f32>>
-// CHECK:         complex.re [[CVAL]] : complex<f32>
+// CHECK:         [[COMP:%.*]] = fir.convert [[MEMREF]] : (memref<4xcomplex<f32>>) -> memref<4x2xf32>
+// CHECK:         arith.constant 0
+// CHECK:         memref.load [[COMP]][[[IDX]], {{%.*}}] : memref<4x2xf32>
+// CHECK-NOT:     complex.re
 func.func @projected_slice_fwd(%arg0: !fir.ref<!fir.array<4xcomplex<f32>>>) {
   %c1 = arith.constant 1 : index
   %c4 = arith.constant 4 : index
@@ -47,8 +49,10 @@ func.func @projected_slice_fwd(%arg0: !fir.ref<!fir.array<4xcomplex<f32>>>) {
 // CHECK:       fir.do_loop [[I:%.*]] =
 // CHECK:         [[MEMREF:%.*]] = fir.convert %arg0 : (!fir.ref<!fir.array<4xcomplex<f32>>>) -> memref<4xcomplex<f32>>
 // CHECK:         [[IDX:%.*]] = arith.addi
-// CHECK:         [[CVAL:%.*]] = memref.load [[MEMREF]]{{\[}}[[IDX]]{{\]}} : memref<4xcomplex<f32>>
-// CHECK:         complex.re [[CVAL]] : complex<f32>
+// CHECK:         [[COMP:%.*]] = fir.convert [[MEMREF]] : (memref<4xcomplex<f32>>) -> memref<4x2xf32>
+// CHECK:         arith.constant 0
+// CHECK:         memref.load [[COMP]][[[IDX]], {{%.*}}] : memref<4x2xf32>
+// CHECK-NOT:     complex.re
 func.func @projected_slice_bwd(%arg0: !fir.ref<!fir.array<4xcomplex<f32>>>) {
   %c1 = arith.constant 1 : index
   %c4 = arith.constant 4 : index
@@ -66,16 +70,18 @@ func.func @projected_slice_bwd(%arg0: !fir.ref<!fir.array<4xcomplex<f32>>>) {
 
 // ----------------------------------------------------------------------------
 // Imaginary component store: z(1:4:1)%im = val
-// Read-modify-write: load complex, update imaginary, store back.
+// Direct scalar store — no read-modify-write, no complex.create.
 // ----------------------------------------------------------------------------
 // CHECK-LABEL: func.func @projected_slice_store_im
 // CHECK:       fir.do_loop [[I:%.*]] =
 // CHECK:         [[MEMREF:%.*]] = fir.convert %arg0 : (!fir.ref<!fir.array<4xcomplex<f32>>>) -> memref<4xcomplex<f32>>
 // CHECK:         [[IDX:%.*]] = arith.addi
-// CHECK:         [[OLD:%.*]] = memref.load [[MEMREF]]{{\[}}[[IDX]]{{\]}} : memref<4xcomplex<f32>>
-// CHECK:         [[RE:%.*]]  = complex.re [[OLD]] : complex<f32>
-// CHECK:         [[NEW:%.*]] = complex.create [[RE]], %arg1 : complex<f32>
-// CHECK:         memref.store [[NEW]], [[MEMREF]]{{\[}}[[IDX]]{{\]}} : memref<4xcomplex<f32>>
+// CHECK:         [[COMP:%.*]] = fir.convert [[MEMREF]] : (memref<4xcomplex<f32>>) -> memref<4x2xf32>
+// CHECK:         arith.constant 1
+// CHECK:         memref.store %arg1, [[COMP]][[[IDX]], {{%.*}}] : memref<4x2xf32>
+// CHECK-NOT:     complex.re
+// CHECK-NOT:     complex.create
+// CHECK-NOT:     memref.load
 func.func @projected_slice_store_im(%arg0: !fir.ref<!fir.array<4xcomplex<f32>>>,
                                     %arg1: f32) {
   %c1 = arith.constant 1 : index
@@ -97,13 +103,15 @@ func.func @projected_slice_store_im(%arg0: !fir.ref<!fir.array<4xcomplex<f32>>>,
 //
 // convertMemrefType reverses Fortran column-major extents to MLIR row-major:
 //   !fir.ref<!fir.array<2x3xcomplex<f32>>> → memref<3x2xcomplex<f32>>
+// Reinterpret adds the component dimension:
+//   memref<3x2xcomplex<f32>> → memref<3x2x2xf32>
 //
 // Per-dimension element index (0-based, column-major):
 //   elemIdx_i = (i-1)*1 + (1-1) = i-1   (Fortran dim 1, size 2)
 //   elemIdx_j = (j-1)*1 + (1-1) = j-1   (Fortran dim 2, size 3)
 //
 // After reversing for MLIR row-major access:
-//   memref.load [elemIdx_j, elemIdx_i]
+//   memref.load [elemIdx_j, elemIdx_i, 0]
 // ----------------------------------------------------------------------------
 // CHECK-LABEL: func.func @projected_slice_2d
 // CHECK:       fir.do_loop [[I:%.*]] =
@@ -111,8 +119,9 @@ func.func @projected_slice_store_im(%arg0: !fir.ref<!fir.array<4xcomplex<f32>>>,
 // CHECK:           [[MEMREF:%.*]] = fir.convert %arg0 : (!fir.ref<!fir.array<2x3xcomplex<f32>>>) -> memref<3x2xcomplex<f32>>
 // CHECK:           [[IDX_I:%.*]] = arith.addi
 // CHECK:           [[IDX_J:%.*]] = arith.addi
-// CHECK:           [[CVAL:%.*]] = memref.load [[MEMREF]]{{\[}}[[IDX_J]], [[IDX_I]]{{\]}} : memref<3x2xcomplex<f32>>
-// CHECK:           complex.re [[CVAL]] : complex<f32>
+// CHECK:           [[COMP:%.*]] = fir.convert [[MEMREF]] : (memref<3x2xcomplex<f32>>) -> memref<3x2x2xf32>
+// CHECK:           arith.constant 0
+// CHECK:           memref.load [[COMP]][[[IDX_J]], [[IDX_I]], {{%.*}}] : memref<3x2x2xf32>
 func.func @projected_slice_2d(%arg0: !fir.ref<!fir.array<2x3xcomplex<f32>>>) {
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index
