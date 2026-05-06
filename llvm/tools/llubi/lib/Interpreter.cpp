@@ -165,7 +165,7 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
   }
 
   APFloat handleDenormal(APFloat Val, DenormalMode::DenormalModeKind Mode,
-                         bool IsInput = false) {
+                         bool IsInput) {
     if (!Val.isDenormal())
       return Val;
     if (IsInput) {
@@ -394,6 +394,31 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
                        });
   }
 
+  AnyValue
+  visitFPUnOpWithResult(Type *RetTy, const FastMathFlags &FMF,
+                        const AnyValue &Operand,
+                        function_ref<APFloat(const APFloat &)> ScalarFn) {
+    return computeUnOp(
+        RetTy, Operand, [&](const AnyValue &OperandInner) -> AnyValue {
+          if (OperandInner.isPoison())
+            return AnyValue::poison();
+
+          // We don't flush denormals here since the only
+          // floating-point unary operation is fneg. And fneg is
+          // specified as a bitwise operation which only flips
+          // the sign bit of the input.
+
+          AnyValue ValidatedOperand =
+              handleFMFFlags(OperandInner, FMF, /*IsInput=*/true);
+          if (ValidatedOperand.isPoison())
+            return ValidatedOperand;
+
+          APFloat Result = ScalarFn(ValidatedOperand.asFloat());
+
+          return handleFMFFlags(Result, FMF, /*IsInput=*/false);
+        });
+  }
+
   AnyValue computeBinOp(
       Type *Ty, const AnyValue &LHS, const AnyValue &RHS,
       function_ref<AnyValue(const AnyValue &, const AnyValue &)> ScalarFn) {
@@ -448,14 +473,16 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
         return ValidatedRHS;
 
       // Flush input denormals
-      APFloat FLHS = handleDenormal(ValidatedLHS.asFloat(), DenormMode.Input);
-      APFloat FRHS = handleDenormal(ValidatedRHS.asFloat(), DenormMode.Input);
+      APFloat FLHS = handleDenormal(ValidatedLHS.asFloat(), DenormMode.Input,
+                                    /*IsInput=*/true);
+      APFloat FRHS = handleDenormal(ValidatedRHS.asFloat(), DenormMode.Input,
+                                    /*IsInput=*/true);
 
       APFloat RawResult = ScalarFn(FLHS, FRHS);
 
       // Flush output denormals and handle fast-math flags.
       AnyValue FResult = handleFMFFlags(
-          handleDenormal(RawResult, DenormMode.Output, /*IsInput=*/true), FMF,
+          handleDenormal(RawResult, DenormMode.Output, /*IsInput=*/false), FMF,
           /*IsInput=*/false);
 
       if (FResult.isPoison())
@@ -508,6 +535,53 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     }
     return std::vector{AnyValue(std::move(ResVec)),
                        AnyValue(std::move(OverflowVec))};
+  }
+
+  AnyValue visitFPBinOpWithResult(
+      Type *RetTy, const FastMathFlags &FMF, const AnyValue &LHS,
+      const AnyValue &RHS,
+      function_ref<APFloat(const APFloat &, const APFloat &)> ScalarFn) {
+    DenormalMode DenormMode = getCurrentDenormalMode(RetTy);
+
+    if (!Ctx.isDefaultFPEnv())
+      reportImmediateUB() << "Non-constrained floating-point operation assumes "
+                             "default floating-point environment";
+
+    return computeBinOp(
+        RetTy, LHS, RHS,
+        [&](const AnyValue &LHSInner, const AnyValue &RHSInner) -> AnyValue {
+          if (LHSInner.isPoison() || RHSInner.isPoison())
+            return AnyValue::poison();
+
+          AnyValue ValidatedLHS =
+              handleFMFFlags(LHSInner, FMF, /*IsInput=*/true);
+          AnyValue ValidatedRHS =
+              handleFMFFlags(RHSInner, FMF, /*IsInput=*/true);
+          if (ValidatedLHS.isPoison())
+            return ValidatedLHS;
+          if (ValidatedRHS.isPoison())
+            return ValidatedRHS;
+
+          // Flush input denormals
+          APFloat FLHS = handleDenormal(ValidatedLHS.asFloat(),
+                                        DenormMode.Input, /*IsInput=*/true);
+          APFloat FRHS = handleDenormal(ValidatedRHS.asFloat(),
+                                        DenormMode.Input, /*IsInput=*/true);
+
+          APFloat RawResult = ScalarFn(FLHS, FRHS);
+
+          // Flush output denormals and handle fast-math flags.
+          AnyValue FResult = handleFMFFlags(
+              handleDenormal(RawResult, DenormMode.Output, /*IsInput=*/false),
+              FMF,
+              /*IsInput=*/false);
+
+          if (FResult.isPoison())
+            return FResult;
+
+          APFloat Result = FResult.asFloat();
+          return applyNaNPropagation(Result, {&FLHS, &FRHS});
+        });
   }
 
   AnyValue
@@ -566,6 +640,61 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
             return AnyValue::poison();
           return ScalarFn(Op1Inner.asInteger(), Op2Inner.asInteger(),
                           Op3Inner.asInteger());
+        });
+  }
+
+  AnyValue visitFPTriOpWithResult(
+      Type *RetTy, const FastMathFlags &FMF, const AnyValue &Op1,
+      const AnyValue &Op2, const AnyValue &Op3,
+      function_ref<APFloat(const APFloat &, const APFloat &, const APFloat &)>
+          ScalarFn) {
+    DenormalMode DenormMode = getCurrentDenormalMode(RetTy);
+
+    if (!Ctx.isDefaultFPEnv())
+      reportImmediateUB() << "Non-constrained floating-point operation assumes "
+                             "default floating-point environment";
+
+    return computeTriOp(
+        RetTy, Op1, Op2, Op3,
+        [&](const AnyValue &Op1Inner, const AnyValue &Op2Inner,
+            const AnyValue &Op3Inner) -> AnyValue {
+          if (Op1Inner.isPoison() || Op2Inner.isPoison() || Op3Inner.isPoison())
+            return AnyValue::poison();
+
+          AnyValue ValidatedOp1 =
+              handleFMFFlags(Op1Inner, FMF, /*IsInput=*/true);
+          AnyValue ValidatedOp2 =
+              handleFMFFlags(Op2Inner, FMF, /*IsInput=*/true);
+          AnyValue ValidatedOp3 =
+              handleFMFFlags(Op3Inner, FMF, /*IsInput=*/true);
+          if (ValidatedOp1.isPoison())
+            return ValidatedOp1;
+          if (ValidatedOp2.isPoison())
+            return ValidatedOp2;
+          if (ValidatedOp3.isPoison())
+            return ValidatedOp3;
+
+          // Flush input denormals
+          APFloat FOp1 = handleDenormal(ValidatedOp1.asFloat(),
+                                        DenormMode.Input, /*IsInput=*/true);
+          APFloat FOp2 = handleDenormal(ValidatedOp2.asFloat(),
+                                        DenormMode.Input, /*IsInput=*/true);
+          APFloat FOp3 = handleDenormal(ValidatedOp3.asFloat(),
+                                        DenormMode.Input, /*IsInput=*/true);
+
+          APFloat RawResult = ScalarFn(FOp1, FOp2, FOp3);
+
+          // Flush output denormals and handle fast-math flags.
+          AnyValue FResult = handleFMFFlags(
+              handleDenormal(RawResult, DenormMode.Output, /*IsInput=*/false),
+              FMF,
+              /*IsInput=*/false);
+
+          if (FResult.isPoison())
+            return FResult;
+
+          APFloat Result = FResult.asFloat();
+          return applyNaNPropagation(Result, {&FOp1, &FOp2, &FOp3});
         });
   }
 
@@ -696,6 +825,14 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
         I.getOperand(0)->getType()->getScalarType()->getFltSemantics());
   }
 
+  DenormalMode getCurrentDenormalMode(Type *Ty) {
+    if (Ty->isFPOrFPVectorTy()) {
+      return CurrentFrame->Func.getDenormalMode(
+          Ty->getScalarType()->getFltSemantics());
+    }
+    return DenormalMode::getDefault();
+  }
+
   // Helper function to convert BooleanKind to bool. Report an immediate UB if
   // a poison is found.
   bool getBooleanNonPoison(BooleanKind Boolean) {
@@ -816,6 +953,8 @@ public:
   AnyValue callIntrinsic(CallBase &CB, ArrayRef<AnyValue> Args) {
     Intrinsic::ID IID = CB.getIntrinsicID();
     Type *RetTy = CB.getType();
+    const FastMathFlags FMF =
+        isa<FPMathOperator>(CB) ? CB.getFastMathFlags() : FastMathFlags();
 
     switch (IID) {
     case Intrinsic::assume:
@@ -1304,6 +1443,159 @@ public:
       }
       return std::move(Res);
     }
+    case Intrinsic::vector_reduce_fadd:
+    case Intrinsic::vector_reduce_fmul:
+    case Intrinsic::vector_reduce_fmax:
+    case Intrinsic::vector_reduce_fmin:
+    case Intrinsic::vector_reduce_fmaximum:
+    case Intrinsic::vector_reduce_fminimum: {
+      const auto DenormMode = getCurrentDenormalMode(RetTy);
+      const bool HasStart =
+          IID == Intrinsic::vector_reduce_fadd ||
+          IID == Intrinsic::vector_reduce_fmul;
+      const AnyValue &Vector = HasStart ? Args[1] : Args[0];
+      std::optional<APFloat> Res;
+      if (HasStart) {
+        if (Args[0].isPoison())
+          return AnyValue::poison();
+        const AnyValue ValidatedStart =
+            handleFMFFlags(Args[0], FMF, /*IsInput=*/true);
+        if (ValidatedStart.isPoison())
+          return AnyValue::poison();
+        Res = handleDenormal(ValidatedStart.asFloat(), DenormMode.Input,
+                             /*IsInput=*/true);
+      }
+      for (const auto &V : Vector.asAggregate()) {
+        if (V.isPoison()) {
+          Res.reset();
+          break;
+        }
+        const AnyValue ValidatedOp =
+            handleFMFFlags(V, FMF, /*IsInput=*/true);
+        if (ValidatedOp.isPoison()) {
+          Res.reset();
+          break;
+        }
+        APFloat Op = handleDenormal(ValidatedOp.asFloat(), DenormMode.Input,
+                                    /*IsInput=*/true);
+        if (!Res) {
+          Res = std::move(Op);
+          continue;
+        }
+        switch (IID) {
+        case Intrinsic::vector_reduce_fadd:
+          *Res = *Res + Op;
+          break;
+        case Intrinsic::vector_reduce_fmul:
+          *Res = *Res * Op;
+          break;
+        case Intrinsic::vector_reduce_fmax:
+          *Res = maxnum(*Res, Op);
+          break;
+        case Intrinsic::vector_reduce_fmin:
+          *Res = minnum(*Res, Op);
+          break;
+        case Intrinsic::vector_reduce_fmaximum:
+          *Res = maximum(*Res, Op);
+          break;
+        case Intrinsic::vector_reduce_fminimum:
+          *Res = minimum(*Res, Op);
+          break;
+        default:
+          llvm_unreachable("Unexpected intrinsic ID");
+        }
+      }
+      return Res.has_value()
+                 ? handleDenormal(handleFMFFlags(std::move(*Res), FMF,
+                                                 /*IsInput=*/false)
+                                      .asFloat(),
+                                  DenormMode.Output,
+                                  /*IsInput=*/false)
+                 : AnyValue::poison();
+    }
+    case Intrinsic::fabs: {
+      return visitFPUnOpWithResult(
+          RetTy, FMF, Args[0],
+          [](const APFloat &Operand) -> APFloat { return abs(Operand); });
+    }
+    case Intrinsic::fma: {
+      return visitFPTriOpWithResult(
+          RetTy, FMF, Args[0], Args[1], Args[2],
+          [](const APFloat &Op1, const APFloat &Op2,
+             const APFloat &Op3) -> APFloat {
+            auto Res = Op1;
+            Res.fusedMultiplyAdd(Op2, Op3, RoundingMode::NearestTiesToEven);
+            return Res;
+          });
+    }
+    case Intrinsic::fmuladd: {
+      return visitFPTriOpWithResult(
+          RetTy, FMF, Args[0], Args[1], Args[2],
+          [&](const APFloat &Op1, const APFloat &Op2,
+              const APFloat &Op3) -> APFloat {
+            if (Ctx.fuseMultiplyAdd()) {
+              auto Res = Op1;
+              Res.fusedMultiplyAdd(Op2, Op3, RoundingMode::NearestTiesToEven);
+              return Res;
+            }
+            return Op1 * Op2 + Op3;
+          });
+    }
+    case Intrinsic::is_fpclass: {
+      if (Args[1].isPoison())
+        return AnyValue::poison();
+      const FPClassTest Mask =
+          static_cast<FPClassTest>(Args[1].asInteger().getZExtValue());
+      return computeUnOp(RetTy, Args[0], [&](const AnyValue &Op) -> AnyValue {
+        if (Op.isPoison())
+          return AnyValue::poison();
+        return AnyValue::boolean(
+            static_cast<bool>(Op.asFloat().classify() & Mask));
+      });
+    }
+    case Intrinsic::copysign:
+    case Intrinsic::maxnum:
+    case Intrinsic::minnum:
+    case Intrinsic::maximum:
+    case Intrinsic::minimum:
+    case Intrinsic::maximumnum:
+    case Intrinsic::minimumnum: {
+      return visitFPBinOpWithResult(
+          RetTy, FMF, Args[0], Args[1],
+          [IID](const APFloat &LHS, const APFloat &RHS) -> APFloat {
+            switch (IID) {
+            case Intrinsic::copysign:
+              return APFloat::copySign(LHS, RHS);
+            case Intrinsic::maxnum:
+              return maxnum(LHS, RHS);
+            case Intrinsic::minnum:
+              return minnum(LHS, RHS);
+            case Intrinsic::maximum:
+              return maximum(LHS, RHS);
+            case Intrinsic::minimum:
+              return minimum(LHS, RHS);
+            case Intrinsic::maximumnum:
+              return maximumnum(LHS, RHS);
+            case Intrinsic::minimumnum:
+              return minimumnum(LHS, RHS);
+            default:
+              llvm_unreachable("Unexpected intrinsic ID");
+            }
+          });
+    }
+    case Intrinsic::fptosi_sat:
+    case Intrinsic::fptoui_sat: {
+      const auto BitWidth = RetTy->getScalarSizeInBits();
+      return computeUnOp(RetTy, Args[0], [&](const AnyValue &Op) -> AnyValue {
+        if (Op.isPoison())
+          return AnyValue::poison();
+        const APFloat &Operand = Op.asFloat();
+        APSInt V(BitWidth, IID == Intrinsic::fptoui_sat);
+        [[maybe_unused]] bool IsExact;
+        Operand.convertToInteger(V, APFloat::rmTowardZero, &IsExact);
+        return V;
+      });
+    }
     default:
       Handler.onUnrecognizedInstruction(CB);
       setFailed();
@@ -1776,8 +2068,8 @@ public:
       if (ValidatedOperand.isPoison())
         return ValidatedOperand;
 
-      APFloat FOperand =
-          handleDenormal(ValidatedOperand.asFloat(), DenormMode.Input);
+      APFloat FOperand = handleDenormal(ValidatedOperand.asFloat(),
+                                        DenormMode.Input, /*IsInput=*/true);
       APFloat SourceNaN = FOperand;
 
       bool LosesInfo;
@@ -1931,8 +2223,10 @@ public:
           ValidateRes.isPoison())
         return ValidateRes;
 
-      APFloat FLHS = handleDenormal(LHS.asFloat(), DenormMode.Input);
-      APFloat FRHS = handleDenormal(RHS.asFloat(), DenormMode.Input);
+      APFloat FLHS =
+          handleDenormal(LHS.asFloat(), DenormMode.Input, /*IsInput=*/true);
+      APFloat FRHS =
+          handleDenormal(RHS.asFloat(), DenormMode.Input, /*IsInput=*/true);
 
       return AnyValue::boolean(FCmpInst::compare(FLHS, FRHS, I.getPredicate()));
     });
