@@ -1686,6 +1686,16 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
                  {IntrId, Vgpr32, Vgpr32, SgprB32_ReadFirstLane,
                   SgprB32_ReadFirstLane, Imm, Imm}});
 
+  addRulesForIOpcs({amdgcn_permlane_bcast, amdgcn_permlane_up,
+                    amdgcn_permlane_down, amdgcn_permlane_xor},
+                   Standard)
+      .Div(S32,
+           {{Vgpr32},
+            {IntrId, Vgpr32, SgprB32_ReadFirstLane, SgprB32_ReadFirstLane}});
+
+  addRulesForIOpcs({amdgcn_permlane_idx_gen}, Standard)
+      .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, SgprB32_ReadFirstLane}});
+
   addRulesForIOpcs({amdgcn_perm}, Standard)
       .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}})
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}});
@@ -1714,6 +1724,14 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
                    Standard)
       .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}})
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}});
+
+  addRulesForIOpcs({amdgcn_rsq, amdgcn_rsq_clamp}, Standard)
+      .Uni(S16, {{UniInVgprS16}, {IntrId, Vgpr16}})
+      .Div(S16, {{Vgpr16}, {IntrId, Vgpr16}})
+      .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32}})
+      .Div(S32, {{Vgpr32}, {IntrId, Vgpr32}})
+      .Uni(S64, {{UniInVgprS64}, {IntrId, Vgpr64}})
+      .Div(S64, {{Vgpr64}, {IntrId, Vgpr64}});
 
   addRulesForIOpcs({amdgcn_mul_u24, amdgcn_mul_i24}, Standard)
       .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr32}})

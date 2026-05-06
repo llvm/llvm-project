@@ -136,10 +136,6 @@ xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
   if (!value)
     return nullptr;
 
-  if (auto tdescTy =
-          dyn_cast_if_present<xegpu::TensorDescType>(value.getType()))
-    return tdescTy.getLayoutAttr();
-
   if (auto result = dyn_cast<OpResult>(value)) {
     Operation *defOp = result.getDefiningOp();
     assert(defOp && "result must have a defining op");
@@ -162,9 +158,13 @@ xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
     if (auto loop = dyn_cast_if_present<LoopLikeOpInterface>(parentOp)) {
       OpOperand *tiedInit = loop.getTiedLoopInit(arg);
       if (tiedInit)
-        return getDistributeLayoutAttr(tiedInit->get());
+        return getTemporaryLayout(*tiedInit);
     }
   }
+
+  if (auto tdescTy =
+          dyn_cast_if_present<xegpu::TensorDescType>(value.getType()))
+    return tdescTy.getLayoutAttr();
 
   return nullptr;
 }
@@ -181,6 +181,32 @@ xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
         return dpasOp.getLayoutBAttr();
       } else if (idx == 2) {
         return dpasOp.getLayoutCdAttr();
+      }
+    }
+    if (auto dpasMxOp = dyn_cast<xegpu::DpasMxOp>(op)) {
+      // DpasMxOp has operands: a, b, optional acc, optional scale_a, optional
+      // scale_b Use AttrSizedOperandSegments to determine which operand this is
+      auto segmentSizesAttr = dpasMxOp->getAttrOfType<DenseI32ArrayAttr>(
+          dpasMxOp.getOperandSegmentSizesAttrName());
+      if (!segmentSizesAttr)
+        return nullptr;
+
+      auto segmentSizes = segmentSizesAttr.asArrayRef();
+      unsigned aSize = segmentSizes[0];
+      unsigned bSize = segmentSizes[1];
+      unsigned accSize = segmentSizes[2];
+      unsigned scaleASize = segmentSizes[3];
+
+      if (idx < aSize) {
+        return dpasMxOp.getLayoutAAttr();
+      } else if (idx < aSize + bSize) {
+        return dpasMxOp.getLayoutBAttr();
+      } else if (idx < aSize + bSize + accSize) {
+        return dpasMxOp.getLayoutCdAttr();
+      } else if (idx < aSize + bSize + accSize + scaleASize) {
+        return dpasMxOp.getLayoutAScaleAttr();
+      } else {
+        return dpasMxOp.getLayoutBScaleAttr();
       }
     }
     if (auto convertOp = dyn_cast<xegpu::ConvertLayoutOp>(op)) {
