@@ -1374,10 +1374,9 @@ private:
   /// needed.
   bool canGenerateScalarForFirstLane() const;
 
-  /// Utility methods serving execute(): generates a single vector instance of
-  /// the modeled instruction. \returns the generated value. . In some cases an
-  /// existing value is returned rather than a generated one.
-  Value *generate(VPTransformState &State);
+  /// Utility method serving execute: Generates a scalar or vector value. \p
+  /// IsScalar determines whether to generate a scalar value.
+  Value *generate(VPTransformState &State, bool IsScalar);
 
   /// Returns true if the VPInstruction does not need masking.
   bool alwaysUnmasked() const {

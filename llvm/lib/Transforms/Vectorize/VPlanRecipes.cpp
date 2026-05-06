@@ -725,13 +725,12 @@ static Instruction::BinaryOps getSubRecurOpcode(RecurKind Kind) {
   llvm_unreachable("RecurKind should be Sub/FSub.");
 }
 
-Value *VPInstruction::generate(VPTransformState &State) {
+Value *VPInstruction::generate(VPTransformState &State, bool IsScalar) {
   IRBuilderBase &Builder = State.Builder;
 
   if (Instruction::isBinaryOp(getOpcode())) {
-    bool OnlyFirstLaneUsed = vputils::onlyFirstLaneUsed(this);
-    Value *A = State.get(getOperand(0), OnlyFirstLaneUsed);
-    Value *B = State.get(getOperand(1), OnlyFirstLaneUsed);
+    Value *A = State.get(getOperand(0), IsScalar);
+    Value *B = State.get(getOperand(1), IsScalar);
     auto *Res =
         Builder.CreateBinOp((Instruction::BinaryOps)getOpcode(), A, B, Name);
     if (auto *I = dyn_cast<Instruction>(Res))
@@ -741,8 +740,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
 
   switch (getOpcode()) {
   case VPInstruction::Not: {
-    bool OnlyFirstLaneUsed = vputils::onlyFirstLaneUsed(this);
-    Value *A = State.get(getOperand(0), OnlyFirstLaneUsed);
+    Value *A = State.get(getOperand(0), IsScalar);
     return Builder.CreateNot(A, Name);
   }
   case Instruction::ExtractElement: {
@@ -761,26 +759,23 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return Builder.CreateInsertElement(Vec, Elt, Idx, Name);
   }
   case Instruction::Freeze: {
-    Value *Op = State.get(getOperand(0), vputils::onlyFirstLaneUsed(this));
+    Value *Op = State.get(getOperand(0), IsScalar);
     return Builder.CreateFreeze(Op, Name);
   }
   case Instruction::FCmp:
   case Instruction::ICmp: {
-    bool OnlyFirstLaneUsed = vputils::onlyFirstLaneUsed(this);
-    Value *A = State.get(getOperand(0), OnlyFirstLaneUsed);
-    Value *B = State.get(getOperand(1), OnlyFirstLaneUsed);
+    Value *A = State.get(getOperand(0), IsScalar);
+    Value *B = State.get(getOperand(1), IsScalar);
     return Builder.CreateCmp(getPredicate(), A, B, Name);
   }
   case Instruction::PHI: {
     llvm_unreachable("should be handled by VPPhi::execute");
   }
   case Instruction::Select: {
-    bool OnlyFirstLaneUsed = vputils::onlyFirstLaneUsed(this);
-    Value *Cond =
-        State.get(getOperand(0),
-                  OnlyFirstLaneUsed || vputils::isSingleScalar(getOperand(0)));
-    Value *Op1 = State.get(getOperand(1), OnlyFirstLaneUsed);
-    Value *Op2 = State.get(getOperand(2), OnlyFirstLaneUsed);
+    Value *Cond = State.get(getOperand(0),
+                            IsScalar || vputils::isSingleScalar(getOperand(0)));
+    Value *Op1 = State.get(getOperand(1), IsScalar);
+    Value *Op2 = State.get(getOperand(2), IsScalar);
     return Builder.CreateSelectFMF(Cond, Op1, Op2, getFastMathFlagsOrNone(),
                                    Name);
   }
@@ -1001,13 +996,13 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return Builder.CreateLogicalOr(A, B, Name);
   }
   case VPInstruction::PtrAdd: {
-    assert((State.VF.isScalar() || vputils::onlyFirstLaneUsed(this)) &&
-           "can only generate first lane for PtrAdd");
-    Value *Ptr = State.get(getOperand(0), VPLane(0));
-    Value *Addend = State.get(getOperand(1), VPLane(0));
+    assert(IsScalar && "Can only generate first lane for PtrAdd");
+    Value *Ptr = State.get(getOperand(0), IsScalar);
+    Value *Addend = State.get(getOperand(1), IsScalar);
     return Builder.CreatePtrAdd(Ptr, Addend, Name, getGEPNoWrapFlags());
   }
   case VPInstruction::WidePtrAdd: {
+    assert(!IsScalar && "Cannot generate scalar value for WidePtrAdd");
     Value *Ptr =
         State.get(getOperand(0), vputils::isSingleScalar(getOperand(0)));
     Value *Addend = State.get(getOperand(1));
@@ -1568,20 +1563,18 @@ void VPInstruction::execute(VPTransformState &State) {
   assert(hasRequiredFlagsForOpcode(getOpcode()) &&
          "Opcode requires specific flags to be set");
   State.Builder.setFastMathFlags(getFastMathFlagsOrNone());
-  Value *GeneratedValue = generate(State);
+  bool GenerateScalar =
+      State.VF.isScalar() || (canGenerateScalarForFirstLane() &&
+                              (vputils::onlyFirstLaneUsed(this) ||
+                               isVectorToScalar() || isSingleScalar()));
+  Value *GeneratedValue = generate(State, GenerateScalar);
   if (!hasResult())
     return;
   assert(GeneratedValue && "generate must produce a value");
-  bool GeneratesPerFirstLaneOnly = canGenerateScalarForFirstLane() &&
-                                   (vputils::onlyFirstLaneUsed(this) ||
-                                    isVectorToScalar() || isSingleScalar());
-  assert((((GeneratedValue->getType()->isVectorTy() ||
-            GeneratedValue->getType()->isStructTy()) ==
-           !GeneratesPerFirstLaneOnly) ||
-          State.VF.isScalar()) &&
+  assert(((GeneratedValue->getType()->isVectorTy() ||
+           GeneratedValue->getType()->isStructTy()) == !GenerateScalar) &&
          "scalar value but not only first lane defined");
-  State.set(this, GeneratedValue,
-            /*IsScalar*/ GeneratesPerFirstLaneOnly);
+  State.set(this, GeneratedValue, GenerateScalar);
   if (getOpcode() == VPInstruction::ResumeForEpilogue ||
       getOpcode() == Instruction::Freeze) {
     // FIXME: This is a workaround to enable reliable updates of the scalar loop
