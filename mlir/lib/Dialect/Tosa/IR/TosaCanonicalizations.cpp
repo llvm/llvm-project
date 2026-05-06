@@ -973,19 +973,19 @@ struct NonNarrowingCastsOptimization : public OpRewritePattern<tosa::CastOp> {
                   "legal in TOSA");
     }
 
-    const auto isIntegerOneOf = [](Type type, size_t bitwidth1,
-                                   size_t bitwidth2) {
+    const auto isIntegerOneOfWidth = [](Type type, size_t bitwidth1,
+                                        size_t bitwidth2) {
       return type.isInteger(bitwidth1) || type.isInteger(bitwidth2);
     };
 
-    if (isIntegerOneOf(innerInputElemType, 8, 16) &&
+    if (isIntegerOneOfWidth(innerInputElemType, 8, 16) &&
         outerOutputElemType.isInteger(64)) {
       return rewriter.notifyMatchFailure(
           castOp, "avoid introducing i8/i16 -> i64 casts which are not "
                   "legal in TOSA");
     }
 
-    if (isIntegerOneOf(innerInputElemType, 1, 64) &&
+    if (isIntegerOneOfWidth(innerInputElemType, 1, 64) &&
         !outerOutputElemType.isInteger()) {
       return rewriter.notifyMatchFailure(
           castOp, "avoid introducing bool/i64 to float casts which are not "
@@ -993,7 +993,7 @@ struct NonNarrowingCastsOptimization : public OpRewritePattern<tosa::CastOp> {
     }
 
     if (!innerInputElemType.isInteger() &&
-        isIntegerOneOf(outerOutputElemType, 1, 64)) {
+        isIntegerOneOfWidth(outerOutputElemType, 1, 64)) {
       return rewriter.notifyMatchFailure(
           castOp, "avoid introducing float to bool/i64 casts which are not "
                   "supported in all versions of TOSA");
