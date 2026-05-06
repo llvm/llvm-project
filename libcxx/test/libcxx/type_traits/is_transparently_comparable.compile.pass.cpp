@@ -57,13 +57,11 @@ static_assert(std::__is_transparently_comparable_v<std::less<std::string_view>, 
 static_assert(std::__is_transparently_comparable_v<std::less<std::string_view>, char[5], std::string_view>, "");
 
 // basic_string_view with char pointers/arrays (std::greater)
-static_assert(
-    std::__is_transparently_comparable_v<std::greater<std::string_view>, std::string_view, const char*>, "");
+static_assert(std::__is_transparently_comparable_v<std::greater<std::string_view>, std::string_view, const char*>, "");
 static_assert(std::__is_transparently_comparable_v<std::greater<std::string_view>, std::string_view, char*>, "");
 static_assert(std::__is_transparently_comparable_v<std::greater<std::string_view>, std::string_view, char[5]>, "");
 
-static_assert(
-    std::__is_transparently_comparable_v<std::greater<std::string_view>, const char*, std::string_view>, "");
+static_assert(std::__is_transparently_comparable_v<std::greater<std::string_view>, const char*, std::string_view>, "");
 static_assert(std::__is_transparently_comparable_v<std::greater<std::string_view>, char*, std::string_view>, "");
 static_assert(std::__is_transparently_comparable_v<std::greater<std::string_view>, char[5], std::string_view>, "");
 
@@ -98,11 +96,11 @@ static_assert(std::__is_transparently_comparable_v<std::greater<std::string>, st
 static_assert(std::__is_transparently_comparable_v<std::greater<std::string>, std::string_view, std::string>, "");
 
 // Cross-type negative: wrong comparator
-static_assert(!std::__is_transparently_comparable_v<std::less<std::reference_wrapper<std::string> >,
-                                                    std::string,
-                                                    std::string_view>,
-              "");
-static_assert(!std::__is_transparently_comparable_v<std::less<std::reference_wrapper<std::string> >,
-                                                    std::string_view,
-                                                    std::string>,
-              "");
+static_assert(
+    !std::
+        __is_transparently_comparable_v<std::less<std::reference_wrapper<std::string> >, std::string, std::string_view>,
+    "");
+static_assert(
+    !std::
+        __is_transparently_comparable_v<std::less<std::reference_wrapper<std::string> >, std::string_view, std::string>,
+    "");
