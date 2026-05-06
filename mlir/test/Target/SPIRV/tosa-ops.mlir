@@ -926,7 +926,7 @@ spirv.module Logical Vulkan requires #spirv.vce<v1.3, [VulkanMemoryModel, Shader
   spirv.GlobalVariable @table_int_res_0 bind(1, 0) : !spirv.ptr<!spirv.arm.tensor<3x2x15x7xi8>, UniformConstant>
   spirv.ARM.GraphEntryPoint @table_int, @table_int_arg_0, @table_int_res_0
   spirv.ARM.Graph @table_int(%arg0: !spirv.arm.tensor<3x2x15x7xi8>) -> (!spirv.arm.tensor<3x2x15x7xi8>) {
-    %0 = spirv.ARM.GraphConstant {graph_constant_id = 0 : i32} : !spirv.arm.tensor<256xi8>
+    %0 = spirv.ARM.GraphConstant <{graph_constant_id = 0 : i32}> : !spirv.arm.tensor<256xi8>
     // CHECK: {{%.*}} = spirv.Tosa.Table %arg0, {{%.*}} : !spirv.arm.tensor<3x2x15x7xi8>, !spirv.arm.tensor<256xi8> -> !spirv.arm.tensor<3x2x15x7xi8>
     %1 = spirv.Tosa.Table %arg0, %0 : !spirv.arm.tensor<3x2x15x7xi8>, !spirv.arm.tensor<256xi8> -> !spirv.arm.tensor<3x2x15x7xi8>
     // CHECK: spirv.ARM.GraphOutputs {{%.*}} : !spirv.arm.tensor<3x2x15x7xi8>

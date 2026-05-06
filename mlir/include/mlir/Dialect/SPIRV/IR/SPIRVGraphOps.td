@@ -151,7 +151,7 @@ def SPIRV_GraphConstantARMOp : SPIRV_GraphARMOp<"GraphConstant", [InGraphScope, 
   let autogenSerialization = 0;
 
   let assemblyFormat = [{
-    attr-dict `:` type($output)
+    prop-dict attr-dict `:` type($output)
   }];
 }
 
