@@ -314,9 +314,9 @@ def LDAT : X_RD5_RS5_IM5<31, 614, (outs g8prc:$RST), (ins g8prc:$RSTi, ptr_rc_no
            RegConstraint<"$RSTi = $RST">;
 
 let hasExtraSrcRegAllocReq = 1, mayStore = 1,
-      isCodeGenOnly = 1, hasNoSchedulingInfo = 1 in
-def LDAT_CSNE : X_RD5_RS5_IM5<31, 614, (outs g8rc:$RST), (ins ptr_rc_nor0:$RA, u5imm:$RB),
-                         "ldat $RST, $RA, $RB", IIC_LdStLoad>,
+      isCodeGenOnly = 1, hasNoSchedulingInfo = 1, RB = 16 in
+def LDAT_CSNE : X_RD5_RS5_IM5<31, 614, (outs g8rc:$RST), (ins ptr_rc_nor0:$RA),
+                         "ldat $RST, $RA, 16", IIC_LdStLoad>,
            Requires<[IsISA3_0]>;
 }
 
