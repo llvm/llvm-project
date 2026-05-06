@@ -36,7 +36,7 @@ func.func @no_change(%arg0: vector<2x[4]x1xf32>, %arg1: vector<2x[4]x1xf32>) -> 
 
 // CHECK-LABEL:   func.func @cast_away_leading_one_dim(
 // CHECK:           %[[MUL:.*]] = arith.mulf %{{.*}}, %{{.*}} : vector<4x1xf32>
-// CHECK:           vector.broadcast %[[MUL]] : vector<4x1xf32> to vector<1x4x1xf32>
+// CHECK:           vector.shape_cast %[[MUL]] : vector<4x1xf32> to vector<1x4x1xf32>
 func.func @cast_away_leading_one_dim(%arg0: vector<1x4x1xf32>, %arg1: vector<1x4x1xf32>) -> vector<1x4x1xf32> {
   %1 = arith.mulf %arg0, %arg1 : vector<1x4x1xf32>
   return %1: vector<1x4x1xf32>
@@ -44,7 +44,7 @@ func.func @cast_away_leading_one_dim(%arg0: vector<1x4x1xf32>, %arg1: vector<1x4
 
 // CHECK-LABEL:   func.func @cast_away_leading_one_dim_scalable(
 // CHECK:           %[[MUL:.*]] = arith.mulf %{{.*}}, %{{.*}} : vector<[4]x1xf32>
-// CHECK:           vector.broadcast %[[MUL]] : vector<[4]x1xf32> to vector<1x[4]x1xf32>
+// CHECK:           vector.shape_cast %[[MUL]] : vector<[4]x1xf32> to vector<1x[4]x1xf32>
 func.func @cast_away_leading_one_dim_scalable(%arg0: vector<1x[4]x1xf32>, %arg1: vector<1x[4]x1xf32>) -> vector<1x[4]x1xf32> {
   %1 = arith.mulf %arg0, %arg1 : vector<1x[4]x1xf32>
   return %1: vector<1x[4]x1xf32>
