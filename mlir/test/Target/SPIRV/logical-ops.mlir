@@ -141,7 +141,7 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.4, [Shader, Linkage, BFloat1
 
 // -----
 
-// Test select works with composite types
+// Test select works with composite types.
 
 spirv.module Logical GLSL450 requires #spirv.vce<v1.6, [Shader, Linkage], []> {
   spirv.func @select_op_array(%arg0: i1, %arg1: !spirv.array<4 x i32>, %arg2: !spirv.array<4 x i32>) -> () "None" {
