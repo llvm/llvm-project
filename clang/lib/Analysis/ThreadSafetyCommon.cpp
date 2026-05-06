@@ -466,6 +466,11 @@ til::SExpr *SExprBuilder::translateDeclRefExpr(const DeclRefExpr *DRE,
   if (const auto *VarD = dyn_cast<VarDecl>(VD))
     return translateVariable(VarD, Ctx);
 
+  // FIXME: A FieldDecl reached via a DeclRefExpr should ideally be modelled as
+  // a MemberExpr with an artificial self in the AST (e.g. ImplicitThisExpr as a
+  // C equivalent of CXXThisExpr). Until such AST support is available, project
+  // the field on the current SelfArg, so implicit member references in C and in
+  // parameter attributes are not lost.
   if (const auto *FD = dyn_cast<FieldDecl>(VD); FD && Ctx && Ctx->SelfArg) {
     til::SExpr *BE = translateCXXThisExpr(nullptr, Ctx);
     til::SExpr *E = new (Arena) til::SApply(BE);
