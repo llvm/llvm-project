@@ -924,6 +924,9 @@ void LaunchOp::print(OpAsmPrinter &p) {
     p << ')';
   }
 
+  if (getCooperative())
+    p << " cooperative";
+
   printAttributions(p, getWorkgroupKeyword(), getWorkgroupAttributionBBArgs());
   printAttributions(p, getPrivateKeyword(), getPrivateAttributions());
 
@@ -933,7 +936,8 @@ void LaunchOp::print(OpAsmPrinter &p) {
   p.printOptionalAttrDict((*this)->getAttrs(), /*elidedAttrs=*/{
                               LaunchOp::getOperandSegmentSizeAttr(),
                               getWorkgroupAttributionsAttrName(),
-                              moduleAttrName, functionAttrName});
+                              getCooperativeAttrName(), moduleAttrName,
+                              functionAttrName});
 }
 
 // Parse the size assignment blocks for blocks and threads.  These have the form
@@ -1074,6 +1078,10 @@ ParseResult LaunchOp::parse(OpAsmParser &parser, OperationState &result) {
         parser.parseRParen())
       return failure();
   }
+
+  // Parse optional cooperative keyword.
+  if (succeeded(parser.parseOptionalKeyword("cooperative")))
+    result.addAttribute("cooperative", parser.getBuilder().getUnitAttr());
 
   // Create the region arguments: fixed launch-config args (`index`), then
   // workgroup / private attribution args. The workgroup count is stored in the
@@ -1332,6 +1340,10 @@ LogicalResult LaunchFuncOp::verify() {
       return emitOpError()
              << "expects types of the cluster dimensions must be the same";
   }
+
+  if (!getAsyncDependencies().empty() && getAsyncObject())
+    return emitOpError(
+        "cannot have both async dependencies and an explicit async object");
 
   return success();
 }
