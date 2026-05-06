@@ -56,7 +56,11 @@ def Tosa_ArgMaxOp : Tosa_InferShapedTypeOp<"argmax", [NoMemoryEffect]> {
 
   let hasFolder = 1;
   let hasVerifier = 1;
-  let hasCustomAssemblyFormat = 1;
+
+  let assemblyFormat =
+      "operands `axis` `(` $axis `)` "
+      "oilist(`nan_mode` `` $nan_mode) attr-dict `:` "
+      "functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -109,7 +113,11 @@ def Tosa_AvgPool2dOp : Tosa_InferShapedTypeOp<"avg_pool2d", [NoMemoryEffect]> {
   let hasCanonicalizer = 1;
 
   let assemblyFormat =
-      "operands attr-dict `:` functional-type(operands, results)";
+      "operands `kernel` `(` $kernel `)` "
+      "`stride` `(` $stride `)` "
+      "`pad` `(` $pad `)` "
+      "`acc_type` `(` $acc_type `)` attr-dict `:` "
+      "functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -149,7 +157,8 @@ def Tosa_AvgPool2dAdaptiveOp
   let hasCanonicalizer = 1;
 
   let assemblyFormat =
-      "operands attr-dict `:` functional-type(operands, results)";
+      "operands `acc_type` `(` $acc_type `)` attr-dict `:` "
+      "functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -196,6 +205,15 @@ def Tosa_Conv2DOp : Tosa_ConvOp<"conv2d"> {
 
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
+
+  let assemblyFormat =
+      "operands `pad` `(` $pad `)` "
+      "`stride` `(` $stride `)` "
+      "`dilation` `(` $dilation `)` "
+      "`acc_type` `(` $acc_type `)` "
+      "oilist(`local_bound` `(` $local_bound `)`) "
+      "attr-dict `:` "
+      "functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -234,7 +252,10 @@ def Tosa_Conv2DBlockScaledOp : Tosa_InferShapedTypeOp<"conv2d_block_scaled", [No
   );
 
   let hasVerifier = 1;
-  let hasCustomAssemblyFormat = 1;
+
+  let assemblyFormat =
+      "operands `block_size` `` $block_size attr-dict `:` "
+      "functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -278,6 +299,15 @@ def Tosa_Conv3DOp : Tosa_ConvOp<"conv3d"> {
 
   let builders = [Tosa_ConvOpQuantInfoBuilder];
   let hasVerifier = 1;
+
+  let assemblyFormat =
+      "operands `pad` `(` $pad `)` "
+      "`stride` `(` $stride `)` "
+      "`dilation` `(` $dilation `)` "
+      "`acc_type` `(` $acc_type `)` "
+      "oilist(`local_bound` `(` $local_bound `)`) "
+      "attr-dict `:` "
+      "functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -324,6 +354,15 @@ def Tosa_DepthwiseConv2DOp : Tosa_ConvOp<"depthwise_conv2d"> {
 
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
+
+  let assemblyFormat =
+      "operands `pad` `(` $pad `)` "
+      "`stride` `(` $stride `)` "
+      "`dilation` `(` $dilation `)` "
+      "`acc_type` `(` $acc_type `)` "
+      "oilist(`local_bound` `(` $local_bound `)`) "
+      "attr-dict `:` "
+      "functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -364,14 +403,18 @@ def Tosa_FFT2dOp : Tosa_InferShapedTypeOp<"fft2d", [
   );
 
   let assemblyFormat = [{
-    $input_real `,` $input_imag attr-dict `:` `(` type($input_real) `,`
+    $input_real `,` $input_imag `inverse` `(` $inverse `)`
+    oilist(`local_bound` `(` $local_bound `)`) attr-dict `:` `(` type($input_real) `,`
     type($input_imag) `)` `->` `(` type($output_real) `,` type($output_imag) `)`
   }];
 
   let hasVerifier = 1;
 
   let assemblyFormat =
-      "operands attr-dict `:` functional-type(operands, results)";
+      "operands `inverse` `(` $inverse `)` "
+      "oilist(`local_bound` `(` $local_bound `)`) "
+      "attr-dict `:` "
+      "functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -477,7 +520,10 @@ def Tosa_MatmulTBlockScaledOp : Tosa_InferShapedTypeOp<"matmul_t_block_scaled", 
   );
 
   let hasVerifier = 1;
-  let hasCustomAssemblyFormat = 1;
+
+  let assemblyFormat =
+      "operands `block_size` `` $block_size attr-dict `:` "
+      "functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -508,7 +554,11 @@ def Tosa_MaxPool2dOp : Tosa_InferShapedTypeOp<"max_pool2d", [Pure]> {
 
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
-  let hasCustomAssemblyFormat = 1;
+
+  let assemblyFormat =
+      "operands `kernel` `(` $kernel `)` `stride` `(` $stride `)` "
+      "`pad` `(` $pad `)` oilist(`nan_mode` `` $nan_mode) "
+      "attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -538,7 +588,10 @@ def Tosa_MaxPool2dAdaptiveOp
 
   let hasVerifier = 1;
   let hasCanonicalizer = 1;
-  let hasCustomAssemblyFormat = 1;
+
+  let assemblyFormat =
+      "operands oilist(`nan_mode` `` $nan_mode) attr-dict `:` "
+      "functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -578,13 +631,15 @@ def Tosa_RFFT2dOp : Tosa_InferShapedTypeOp<"rfft2d", [
   );
 
   let assemblyFormat = [{
-    $input_real attr-dict `:` `(` type($input_real) `)` `->` `(` type($output_real) `,` type($output_imag) `)`
+    $input_real oilist(`local_bound` `(` $local_bound `)`) attr-dict `:`
+    `(` type($input_real) `)` `->` `(` type($output_real) `,` type($output_imag) `)`
   }];
 
   let hasVerifier = 1;
 
   let assemblyFormat =
-      "operands attr-dict `:` functional-type(operands, results)";
+      "operands oilist(`local_bound` `(` $local_bound `)`) attr-dict `:` "
+      "functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -628,6 +683,14 @@ def Tosa_TransposeConv2DOp : Tosa_ConvOp<"transpose_conv2d"> {
 
   let builders = [Tosa_TransConvOpQuantInfoBuilder];
   let hasVerifier = 1;
+
+  let assemblyFormat =
+      "operands `out_pad` `(` $out_pad `)` "
+      "`stride` `(` $stride `)` "
+      "`acc_type` `(` $acc_type `)` "
+      "oilist(`local_bound` `(` $local_bound `)`) "
+      "attr-dict `:` "
+      "functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -661,7 +724,11 @@ def Tosa_ClampOp : Tosa_ElementwiseUnaryOp<"clamp", [Pure]> {
 
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
-  let hasCustomAssemblyFormat = 1;
+
+  let assemblyFormat =
+      "operands `min_val` `(` $min_val `)` `max_val` `(` $max_val `)` "
+      "oilist(`nan_mode` `` $nan_mode) attr-dict `:` "
+      "functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -811,7 +878,9 @@ def Tosa_ArithmeticRightShiftOp : Tosa_ElementwiseOp<"arithmetic_right_shift",
     Tosa_Tensor:$output
   );
 
-  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
+  let assemblyFormat =
+      "operands `round` `(` $round `)` attr-dict `:` "
+      "functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1079,7 +1148,10 @@ def Tosa_MaximumOp : Tosa_ElementwiseOp<"maximum", [
   let results = (outs
     Tosa_Tensor:$output
   );
-  let hasCustomAssemblyFormat = 1;
+
+  let assemblyFormat =
+      "operands oilist(`nan_mode` `` $nan_mode) attr-dict `:` "
+      "functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1106,7 +1178,9 @@ def Tosa_MinimumOp : Tosa_ElementwiseOp<"minimum", [
     Tosa_Tensor:$output
   );
 
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat =
+      "operands oilist(`nan_mode` `` $nan_mode) attr-dict `:` "
+      "functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1734,7 +1808,9 @@ def Tosa_ReduceAllOp : Tosa_InferTensorTypeOp<"reduce_all", [Pure]> {
     }
   }];
 
-  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
+  let assemblyFormat =
+      "operands `axis` `(` $axis `)` attr-dict `:` "
+      "functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1770,7 +1846,9 @@ def Tosa_ReduceAnyOp : Tosa_InferTensorTypeOp<"reduce_any", [Pure]> {
     }
   }];
 
-  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
+  let assemblyFormat =
+      "operands `axis` `(` $axis `)` attr-dict `:` "
+      "functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1807,7 +1885,10 @@ def Tosa_ReduceMaxOp : Tosa_InferTensorTypeOp<"reduce_max", [Pure]> {
     }
   }];
 
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat =
+      "operands `axis` `(` $axis `)` "
+      "oilist(`nan_mode` `` $nan_mode) attr-dict `:` "
+      "functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1844,7 +1925,10 @@ def Tosa_ReduceMinOp : Tosa_InferTensorTypeOp<"reduce_min", [Pure]> {
     }
   }];
 
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat =
+      "operands `axis` `(` $axis `)` "
+      "oilist(`nan_mode` `` $nan_mode) attr-dict `:` "
+      "functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1883,7 +1967,9 @@ def Tosa_ReduceProductOp : Tosa_InferTensorTypeOp<"reduce_product", [NoMemoryEff
     }
   }];
 
-  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
+  let assemblyFormat =
+      "operands `axis` `(` $axis `)` attr-dict `:` "
+      "functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1922,7 +2008,9 @@ def Tosa_ReduceSumOp : Tosa_InferTensorTypeOp<"reduce_sum", [NoMemoryEffect]> {
     }
   }];
 
-  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
+  let assemblyFormat =
+      "operands `axis` `(` $axis `)` attr-dict `:` "
+      "functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1958,7 +2046,9 @@ def Tosa_ConcatOp : Tosa_InferTensorTypeOp<"concat", [Pure]> {
     static bool isCompatibleReturnTypes(TypeRange l, TypeRange r);
   }];
 
-  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
+  let assemblyFormat =
+      "operands `axis` `(` $axis `)` attr-dict `:` "
+      "functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -2075,7 +2165,8 @@ def Tosa_ReshapeBlockScaledOp
   }];
 
   let assemblyFormat =
-      "operands attr-dict `:` functional-type(operands, results)";
+      "operands `block_size` `` $block_size attr-dict `:` "
+      "functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -2108,7 +2199,9 @@ def Tosa_ReverseOp: Tosa_Op<"reverse", [
   let hasFolder = 1;
   let hasVerifier = 1;
 
-  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
+  let assemblyFormat =
+      "operands `axis` `(` $axis `)` attr-dict `:` "
+      "functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -2201,7 +2294,8 @@ def Tosa_TransposeOp : Tosa_InferShapedTypeOp<"transpose",
   let hasVerifier = 1;
 
   let assemblyFormat =
-      "operands attr-dict `:` functional-type(operands, results)";
+      "operands `perms` `(` $perms `)` attr-dict `:` "
+      "functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -2304,7 +2398,8 @@ def Tosa_RowGatherBlockScaledOp
   let hasVerifier = 1;
 
   let assemblyFormat =
-      "operands attr-dict `:` functional-type(operands, results)";
+      "operands `block_size` `` $block_size attr-dict `:` "
+      "functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -2394,7 +2489,10 @@ def Tosa_ResizeOp : Tosa_InferShapedTypeOp<"resize", [Pure]> {
 
   let hasFolder = 1;
   let hasVerifier = 1;
-  let hasCustomAssemblyFormat = 1;
+
+  let assemblyFormat =
+      "operands `mode` `` $mode attr-dict `:` "
+      "functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -2423,7 +2521,9 @@ def Tosa_CastOp: Tosa_Op<"cast", [Pure, SameOperandsAndResultShape,
     Tosa_Tensor:$output
   );
 
-  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
+  let assemblyFormat =
+      "operands oilist(`input_unsigned` `(` $input_unsigned `)`) "
+      "attr-dict `:` functional-type(operands, results)";
 
   let hasFolder = 1;
   let hasCanonicalizer = 1;
@@ -2457,7 +2557,10 @@ def Tosa_CastFromBlockScaledOp: Tosa_InferShapedTypeOp<"cast_from_block_scaled",
   );
 
   let hasVerifier = 1;
-  let hasCustomAssemblyFormat = 1;
+
+  let assemblyFormat =
+      "operands `block_size` `` $block_size attr-dict `:` "
+      "functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -2489,7 +2592,10 @@ def Tosa_CastToBlockScaledOp : Tosa_InferShapedTypeOp<"cast_to_block_scaled", [P
 
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
-  let hasCustomAssemblyFormat = 1;
+
+  let assemblyFormat =
+      "operands `block_size` `` $block_size attr-dict `:` "
+      "functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -2561,7 +2667,15 @@ def Tosa_RescaleOp : Tosa_InferShapedTypeOp<"rescale", [NoMemoryEffect]> {
   }];
 
   let hasVerifier = 1;
-  let hasCustomAssemblyFormat = 1;
+
+  let assemblyFormat =
+      "operands `scale32` `(` $scale32 `)` "
+      "`rounding_mode` `` $rounding_mode "
+      "`per_channel` `(` $per_channel `)` "
+      "`input_unsigned` `(` $input_unsigned `)` "
+      "`output_unsigned` `(` $output_unsigned `)` "
+      "attr-dict `:` "
+      "functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -2673,7 +2787,11 @@ def Tosa_CustomOp : Tosa_Op<"custom"> {
     Variadic<Tosa_Tensor>:$output_list
   );
 
-  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
+  let assemblyFormat =
+      "operands `operator_name` `(` $operator_name `)` "
+      "`domain_name` `(` $domain_name `)` "
+      "`implementation_attrs` `(` $implementation_attrs `)` attr-dict `:` "
+      "functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//

@@ -5,7 +5,7 @@ func.func @reciprocal_fold_single_valued() -> tensor<f32> {
   // CHECK: [[RES:]] ={{.*}}tosa.const{{.*}}2.5{{0*}}e-01{{.*}}tensor<f32>
   // CHECK-NOT: tosa.reciprocal
   // CHECK: return [[RES]]
-  %0 = "tosa.const"() {values = dense<4.0> : tensor<f32>} : () -> tensor<f32>
+  %0 = "tosa.const"() <{values = dense<4.0> : tensor<f32>}> : () -> tensor<f32>
   %1 = "tosa.reciprocal"(%0) : (tensor<f32>) -> tensor<f32>
   return %1 : tensor<f32>
 }
@@ -15,7 +15,7 @@ func.func @reciprocal_fold_splat() -> tensor<12x7xf32> {
   // CHECK: [[RES:]] ={{.*}}tosa.const{{.*}}2.5{{0*}}e-01{{.*}}tensor<12x7xf32>
   // CHECK-NOT: tosa.reciprocal
   // CHECK: return [[RES]]
-  %0 = "tosa.const"() {values = dense<4.0> : tensor<12x7xf32>} : () -> tensor<12x7xf32>
+  %0 = "tosa.const"() <{values = dense<4.0> : tensor<12x7xf32>}> : () -> tensor<12x7xf32>
   %1 = "tosa.reciprocal"(%0) : (tensor<12x7xf32>) -> tensor<12x7xf32>
   return %1 : tensor<12x7xf32>
 }
@@ -26,7 +26,7 @@ func.func @reciprocal_div_zero() -> tensor<f32> {
   // CHECK: [[RES:]] ={{.*}}tosa.const{{.*}}0x7F800000
   // CHECK-NOT: tosa.reciprocal
   // CHECK: return [[RES]]
-  %0 = "tosa.const"() {values = dense<0.0> : tensor<f32>} : () -> tensor<f32>
+  %0 = "tosa.const"() <{values = dense<0.0> : tensor<f32>}> : () -> tensor<f32>
   %1 = "tosa.reciprocal"(%0) : (tensor<f32>) -> tensor<f32>
   return %1 : tensor<f32>
 }
@@ -37,7 +37,7 @@ func.func @reciprocal_div_neg_zero() -> tensor<f32> {
   // CHECK: [[RES:]] ={{.*}}tosa.const{{.*}}0xFF800000
   // CHECK-NOT: tosa.reciprocal
   // CHECK: return [[RES]]
-  %0 = "tosa.const"() {values = dense<-0.0> : tensor<f32>} : () -> tensor<f32>
+  %0 = "tosa.const"() <{values = dense<-0.0> : tensor<f32>}> : () -> tensor<f32>
   %1 = "tosa.reciprocal"(%0) : (tensor<f32>) -> tensor<f32>
   return %1 : tensor<f32>
 }
@@ -48,7 +48,7 @@ func.func @reciprocal_div_nan() -> tensor<f32> {
   // CHECK: [[RES:]] ={{.*}}tosa.const{{.*}}0x7FC00000
   // CHECK-NOT: tosa.reciprocal
   // CHECK: return [[RES]]
-  %0 = "tosa.const"() {values = dense<0x7FC00000> : tensor<f32>} : () -> tensor<f32>
+  %0 = "tosa.const"() <{values = dense<0x7FC00000> : tensor<f32>}> : () -> tensor<f32>
   %1 = "tosa.reciprocal"(%0) : (tensor<f32>) -> tensor<f32>
   return %1 : tensor<f32>
 }
@@ -58,7 +58,7 @@ func.func @reciprocal_div_infinity() -> tensor<f32> {
   // CHECK: [[RES:]] ={{.*}}tosa.const{{.*}}<0.{{0*}}e+00>
   // CHECK-NOT: tosa.reciprocal
   // CHECK: return [[RES]]
-  %0 = "tosa.const"() {values = dense<0x7F800000> : tensor<f32>} : () -> tensor<f32>
+  %0 = "tosa.const"() <{values = dense<0x7F800000> : tensor<f32>}> : () -> tensor<f32>
   %1 = "tosa.reciprocal"(%0) : (tensor<f32>) -> tensor<f32>
   return %1 : tensor<f32>
 }
@@ -68,7 +68,7 @@ func.func @reciprocal_div_neg_infinity() -> tensor<f32> {
   // CHECK: [[RES:]] ={{.*}}tosa.const{{.*}}<-0.{{0*}}e+00>
   // CHECK-NOT: tosa.reciprocal
   // CHECK: return [[RES]]
-  %0 = "tosa.const"() {values = dense<0xFF800000> : tensor<f32>} : () -> tensor<f32>
+  %0 = "tosa.const"() <{values = dense<0xFF800000> : tensor<f32>}> : () -> tensor<f32>
   %1 = "tosa.reciprocal"(%0) : (tensor<f32>) -> tensor<f32>
   return %1 : tensor<f32>
 }
@@ -78,7 +78,7 @@ func.func @reciprocal_div_underflow() -> tensor<2xf16> {
   // CHECK: [[RES:]] ={{.*}}tosa.const{{.*}}-0.{{0*}}e+00, 0.{{0*}}e+00
   // CHECK-NOT: tosa.reciprocal
   // CHECK: return [[RES]]
-  %0 = "tosa.const"() {values = dense<[-6.0e+15, 6.0e+15]> : tensor<2xf16>} : () -> tensor<2xf16>
+  %0 = "tosa.const"() <{values = dense<[-6.0e+15, 6.0e+15]> : tensor<2xf16>}> : () -> tensor<2xf16>
   %1 = "tosa.reciprocal"(%0) : (tensor<2xf16>) -> tensor<2xf16>
   return %1 : tensor<2xf16>
 }
@@ -88,7 +88,7 @@ func.func @reciprocal_div_overflow() -> tensor<2xf16> {
   // CHECK: [[RES:]] ={{.*}}tosa.const{{.*}}0x7C00, 0xFC00
   // CHECK-NOT: tosa.reciprocal
   // CHECK: return [[RES]]
-  %0 = "tosa.const"() {values = dense<[0.0000001, -0.0000001]> : tensor<2xf16>} : () -> tensor<2xf16>
+  %0 = "tosa.const"() <{values = dense<[0.0000001, -0.0000001]> : tensor<2xf16>}> : () -> tensor<2xf16>
   %1 = "tosa.reciprocal"(%0) : (tensor<2xf16>) -> tensor<2xf16>
   return %1 : tensor<2xf16>
 }
