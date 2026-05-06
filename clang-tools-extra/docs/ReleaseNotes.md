@@ -220,6 +220,13 @@ infrastructure are described first, followed by tool-specific sections.
   <clang-tidy/checks/modernize/use-ranges>` check by preserving used output
   iterator results when replacing output algorithms such as `std::copy`.
 
+  - Preserved used callable results when replacing `std::for_each` and
+    structured binding results when replacing algorithms such as
+    `std::equal_range`.
+
+  - Kept diagnostics but suppressed unsafe fix-its when no safe
+    result-preserving rewrite is available.
+
 - Improved {doc}`performance-inefficient-algorithm
   <clang-tidy/checks/performance/inefficient-algorithm>` check to no longer
   produce a fix with the container or the searched-for value missing, such as
