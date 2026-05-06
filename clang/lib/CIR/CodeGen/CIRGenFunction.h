@@ -156,6 +156,11 @@ public:
 
   GlobalDecl curSEHParent;
 
+  /// If a ParmVarDecl had the pass_object_size attribute, this will contain a
+  /// mapping from said ParmVarDecl to its implicit "object_size" parameter.
+  llvm::SmallDenseMap<const ParmVarDecl *, const ImplicitParamDecl *>
+      sizeArguments;
+
   /// A mapping from NRVO variables to the flags used to indicate
   /// when the NRVO has been applied to this variable.
   llvm::DenseMap<const VarDecl *, mlir::Value> nrvoFlags;
@@ -1798,6 +1803,8 @@ public:
     virtual ~cxxTryBodyEmitter() = default;
   };
 
+  void emitBeginCatch(const CXXCatchStmt *catchStmt, mlir::Value ehToken);
+
   mlir::LogicalResult emitCXXTryStmt(const clang::CXXTryStmt &s,
                                      cxxTryBodyEmitter &bodyCallback);
   mlir::LogicalResult emitCXXTryStmt(const clang::CXXTryStmt &s);
@@ -2016,6 +2023,10 @@ public:
   std::optional<mlir::Value> emitAMDGPUBuiltinExpr(unsigned builtinID,
                                                    const CallExpr *expr);
 
+  /// Emit a call to an NVPTX builtin function.
+  std::optional<mlir::Value> emitNVPTXBuiltinExpr(unsigned builtinID,
+                                                  const CallExpr *expr);
+
   LValue emitOpaqueValueLValue(const OpaqueValueExpr *e);
 
   LValue emitConditionalOperatorLValue(const AbstractConditionalOperator *expr);
@@ -2068,9 +2079,11 @@ public:
                          bool isInit = false, bool isNontemporal = false);
   void emitStoreOfScalar(mlir::Value value, LValue lvalue, bool isInit);
 
+  void emitStoreThroughExtVectorComponentLValue(RValue src, LValue dst);
+
   /// Store the specified rvalue into the specified
-  /// lvalue, where both are guaranteed to the have the same type, and that type
-  /// is 'Ty'.
+  /// lvalue, where both are guaranteed to the have the same type, and that
+  /// type is 'Ty'.
   void emitStoreThroughLValue(RValue src, LValue dst, bool isInit = false);
 
   mlir::Value emitStoreThroughBitfieldLValue(RValue src, LValue dstresult);

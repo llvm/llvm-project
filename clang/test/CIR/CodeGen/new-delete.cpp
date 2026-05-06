@@ -12,7 +12,7 @@ A *a() {
   return new A(5);
 }
 
-// CIR: cir.func {{.*}} @_Z1av() -> !cir.ptr<!rec_A> {
+// CIR: cir.func {{.*}} @_Z1av() -> !cir.ptr<!rec_A>{{.*}} {
 // CIR:   %[[RETVAL:.*]] = cir.alloca !cir.ptr<!rec_A>, !cir.ptr<!cir.ptr<!rec_A>>, ["__retval"]
 // CIR:   %[[NEW_RESULT:.*]] = cir.alloca !cir.ptr<!rec_A>, !cir.ptr<!cir.ptr<!rec_A>>, ["__new_result"]
 // CIR:   %[[ALLOC_SIZE:.*]] = cir.const #cir.int<8> : !u64i
@@ -87,7 +87,7 @@ A *b() {
   return new A(foo());
 }
 
-// CIR: cir.func {{.*}} @_Z1bv() -> !cir.ptr<!rec_A> {
+// CIR: cir.func {{.*}} @_Z1bv() -> !cir.ptr<!rec_A>{{.*}} {
 // CIR:   %[[RETVAL:.*]] = cir.alloca !cir.ptr<!rec_A>, !cir.ptr<!cir.ptr<!rec_A>>, ["__retval"]
 // CIR:   %[[NEW_RESULT:.*]] = cir.alloca !cir.ptr<!rec_A>, !cir.ptr<!cir.ptr<!rec_A>>, ["__new_result"]
 // CIR:   %[[ALLOC_SIZE:.*]] = cir.const #cir.int<8> : !u64i
@@ -177,7 +177,7 @@ B *c() {
   return new B(5);
 }
 
-// CIR: cir.func {{.*}} @_Z1cv() -> !cir.ptr<!rec_B> {
+// CIR: cir.func {{.*}} @_Z1cv() -> !cir.ptr<!rec_B>{{.*}} {
 // CIR:   %[[RETVAL:.*]] = cir.alloca !cir.ptr<!rec_B>, !cir.ptr<!cir.ptr<!rec_B>>, ["__retval"]
 // CIR:   %[[NEW_RESULT:.*]] = cir.alloca !cir.ptr<!rec_B>, !cir.ptr<!cir.ptr<!rec_B>>, ["__new_result"]
 // CIR:   %[[ALLOC_SIZE:.*]] = cir.const #cir.int<4> : !u64i

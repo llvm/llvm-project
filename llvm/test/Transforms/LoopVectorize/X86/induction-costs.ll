@@ -248,13 +248,12 @@ define void @multiple_pointer_ivs_with_scalar_uses_only(ptr %A, ptr %B) #0 {
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[A]], i64 8589934368
-; CHECK-NEXT:    [[IND_END3:%.*]] = getelementptr i8, ptr [[B]], i64 4294967184
 ; CHECK-NEXT:    [[IND_END5:%.*]] = getelementptr i8, ptr [[B]], i64 4294967184
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <16 x i32> [ <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 2048>, %[[VECTOR_PH]] ], [ [[TMP22:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX]], 6
@@ -337,15 +336,14 @@ define void @multiple_pointer_ivs_with_scalar_uses_only(ptr %A, ptr %B) #0 {
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ -12, %[[MIDDLE_BLOCK]] ], [ 100, %[[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], %[[MIDDLE_BLOCK]] ], [ 2048, %[[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    [[BC_RESUME_VAL19:%.*]] = phi ptr [ [[IND_END]], %[[MIDDLE_BLOCK]] ], [ [[A]], %[[VECTOR_MEMCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL20:%.*]] = phi ptr [ [[IND_END3]], %[[MIDDLE_BLOCK]] ], [ [[B]], %[[VECTOR_MEMCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL21:%.*]] = phi ptr [ [[IND_END5]], %[[MIDDLE_BLOCK]] ], [ [[B]], %[[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL20:%.*]] = phi ptr [ [[IND_END5]], %[[MIDDLE_BLOCK]] ], [ [[B]], %[[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV_1:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[DEC:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[SCALAR_RECUR:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT]], %[[SCALAR_PH]] ], [ [[ADD38:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[PTR_IV_1:%.*]] = phi ptr [ [[BC_RESUME_VAL19]], %[[SCALAR_PH]] ], [ [[OUTPTR_0:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[PTR_IV_2:%.*]] = phi ptr [ [[BC_RESUME_VAL20]], %[[SCALAR_PH]] ], [ [[INCDEC_PTR36:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[PTR_IV_3:%.*]] = phi ptr [ [[BC_RESUME_VAL21]], %[[SCALAR_PH]] ], [ [[INCDEC_PTR33:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[PTR_IV_3:%.*]] = phi ptr [ [[BC_RESUME_VAL20]], %[[SCALAR_PH]] ], [ [[INCDEC_PTR33:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[INCDEC_PTR33]] = getelementptr i8, ptr [[PTR_IV_3]], i64 1
 ; CHECK-NEXT:    [[TMP43:%.*]] = load i8, ptr [[PTR_IV_3]], align 1
 ; CHECK-NEXT:    [[CONV34:%.*]] = zext i8 [[TMP43]] to i32
@@ -616,7 +614,7 @@ define void @wide_iv_trunc(ptr %dst, i64 %N) {
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
 ; CHECK:       [[PRED_STORE_CONTINUE6]]:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP27:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -636,11 +634,16 @@ loop:
   store i32 %iv.trunc, ptr %dst, align 4
   %iv.next = add i64 %iv, 1
   %ec = icmp eq i64 %iv, %N
-  br i1 %ec, label %exit, label %loop
+  br i1 %ec, label %exit, label %loop, !llvm.loop !1
 
 exit:
   ret void
 }
+
+!1 = distinct !{!1, !2, !3, !4}
+!2 = !{!"llvm.loop.vectorize.width", i32 4}
+!3 = !{!"llvm.loop.vectorize.enable", i1 true}
+!4 = !{!"llvm.loop.vectorize.predicate.enable", i1 true}
 
 define void @wide_iv_trunc_reuse(ptr %dst) {
 ; CHECK-LABEL: define void @wide_iv_trunc_reuse(

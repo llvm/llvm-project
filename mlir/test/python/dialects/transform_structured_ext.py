@@ -193,6 +193,33 @@ def testFuseOpAttributes(target):
 
 @run
 @create_sequence
+def testFuseOpPackedTileSizes(target):
+    tiles = structured.MatchOp.match_op_names(target, ["arith.constant"])
+    structured.FuseOp(target, tile_sizes=tiles)
+    # CHECK-LABEL: TEST: testFuseOpPackedTileSizes
+    # CHECK: transform.sequence
+    # CHECK: %[[T:.*]] = transform.structured.match
+    # CHECK: %{{.+}}, %{{.+}} = transform.structured.fuse
+    # CHECK-SAME: tile_sizes *(%[[T]])
+    # CHECK-SAME: (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
+
+
+@run
+@create_sequence
+def testFuseOpPackedTileSizesForall(target):
+    tiles = structured.MatchOp.match_op_names(target, ["arith.constant"])
+    structured.FuseOp(target, tile_sizes=tiles, use_forall=True)
+    # CHECK-LABEL: TEST: testFuseOpPackedTileSizesForall
+    # CHECK: transform.sequence
+    # CHECK: %[[T:.*]] = transform.structured.match
+    # CHECK: %{{.+}}, %{{.+}} = transform.structured.fuse
+    # CHECK-SAME: tile_sizes *(%[[T]])
+    # CHECK-SAME: {use_forall}
+    # CHECK-SAME: (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
+
+
+@run
+@create_sequence
 def testGeneralize(target):
     structured.GeneralizeOp(target)
     # CHECK-LABEL: TEST: testGeneralize

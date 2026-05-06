@@ -325,6 +325,9 @@ def GetPtrLocal : OffsetOpcode {
 def GetRefLocal : OffsetOpcode {
   bit HasCustomEval = 1;
 }
+
+def CheckRefInit : Opcode {}
+
 // [] -> [Pointer]
 def GetPtrParam : OffsetOpcode;
 // [] -> [Pointer]
@@ -870,6 +873,9 @@ def GetMemberPtr : Opcode {
 }
 def GetMemberPtrBase : Opcode;
 def GetMemberPtrDecl : Opcode;
+def CopyMemberPtrPath : Opcode {
+  let Args = [ArgRecordDecl, ArgBool];
+}
 
 //===----------------------------------------------------------------------===//
 // Debugging.
