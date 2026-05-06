@@ -232,17 +232,17 @@ Error object::extractCodeObject(const ObjectFile &Source, size_t Offset,
     return createFileError(Source.getFileName(), std::move(Err));
 
   if (Size > InputBuffOrErr->getBufferSize())
-    return createStringError("size in URI (%llu) is larger than source (%llu)",
+    return createStringError("size in URI (%zu) is larger than source (%zu)",
                              Size, InputBuffOrErr->getBufferSize());
 
   if (Offset > InputBuffOrErr->getBufferSize())
     return createStringError(
-        "offset in URI (%llu) is beyond the end of the source (%llu)", Offset,
+        "offset in URI (%zu) is beyond the end of the source (%zu)", Offset,
         InputBuffOrErr->getBufferSize());
 
   if (Offset + Size > InputBuffOrErr->getBufferSize())
     return createStringError(
-        "offset + size (%llu) in URI is beyond the end of the source (%llu)",
+        "offset + size (%zu) in URI is beyond the end of the source (%zu)",
         Offset + Size, InputBuffOrErr->getBufferSize());
 
   std::unique_ptr<FileOutputBuffer> Buf = std::move(*BufferOrErr);
