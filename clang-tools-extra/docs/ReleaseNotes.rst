@@ -116,6 +116,14 @@ Code completion
   macros. ``ExactPrefix`` is the default, which retains previous
   behavior of suggesting macros which match the prefix exactly.
 
+- Changed completion-style default to ``detailed``. This means function
+  overloads will no longer be bundled together, but instead each have
+  their own completion item. This gives the user a better overview of the
+  possible overloads and also when accepting the item it will generate
+  placeholder parameters, which was not possible due to ambiguity with
+  ``bundled``. To change back to the old behaviour, pass the argument
+  ``--completion-style=bundled`` to clangd.
+
 Code actions
 ^^^^^^^^^^^^
 
