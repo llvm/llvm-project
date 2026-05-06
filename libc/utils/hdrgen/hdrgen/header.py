@@ -262,9 +262,10 @@ class HeaderFile:
                 typ.name,
                 PurePosixPath("llvm-libc-types") / f"{typ.name}.h",
             )
-            current_guard = self.__emit_guard(content, current_guard, typ.guard)
+            self.emit_guard(content, current_guard, typ.guard)
+            current_guard = typ.guard
             content.append(f'#include "{relpath(path)!s}"')
-        self.__emit_guard(content, current_guard, None)
+        self.emit_guard(content, current_guard, None)
 
         return content
 
@@ -315,11 +316,12 @@ class HeaderFile:
             # elide the blank line between the declarations.
             if last_name == function.name_without_underscores():
                 content.pop()
-            current_guard = self.__emit_guard(content, current_guard, function.guard)
+            self.emit_guard(content, current_guard, function.guard)
+            current_guard = function.guard
             content.append(str(function) + " __NOEXCEPT;")
             content.append("")
             last_name = function.name_without_underscores()
-        self.__emit_guard(content, current_guard, None)
+        self.emit_guard(content, current_guard, None)
 
         # Emit object declarations.
         content.extend(str(object) for object in self.objects)
@@ -338,7 +340,7 @@ class HeaderFile:
             "includes": sorted(str(file) for file in {COMMON_HEADER} | self.includes()),
         }
 
-    def __emit_guard(self, content, current_guard, new_guard):
+    def emit_guard(self, content, current_guard, new_guard):
         if current_guard != new_guard:
             if current_guard is not None:
                 if content[-1] == "":
@@ -347,4 +349,3 @@ class HeaderFile:
                 content.append("")
             if new_guard is not None:
                 content.append(f"#ifdef {new_guard}")
-        return new_guard
