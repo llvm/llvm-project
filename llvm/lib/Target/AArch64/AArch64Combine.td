@@ -173,7 +173,7 @@ def form_duplane : GICombineRule <
 >;
 
 // Clean up G_UNMERGE(G_DUPLANE16) -> G_DUPLANE16
-class unmerge_duplane<Instruction Op> : GICombineRule <
+class unmerge_duplane<Instruction Op> : GICombineRule<
   (defs root:$root),
   (match (Op $a, $src, $c),
          (G_UNMERGE_VALUES $d1, $d2, $a):$root,
@@ -184,8 +184,22 @@ def unmerge_duplane8 : unmerge_duplane<G_DUPLANE8>;
 def unmerge_duplane16 : unmerge_duplane<G_DUPLANE16>;
 def unmerge_duplane32 : unmerge_duplane<G_DUPLANE32>;
 // G_DUPLANE64 is not included as the result in scalar.
+
+// G_EXTRACT_SUBVECTOR(G_DUPLANE16) -> G_DUPLANE16
+class extract_duplane<Instruction Op> : GICombineRule<
+  (defs root:$root),
+  (match (Op $a, $src, $c),
+         (G_EXTRACT_SUBVECTOR $d1, $a, $l):$root,
+         [{ return MRI.getType(${d1}.getReg()).getSizeInBits() == 64; }]),
+  (apply (Op $d1, $src, $c))
+>;
+def extract_duplane8 : extract_duplane<G_DUPLANE8>;
+def extract_duplane16 : extract_duplane<G_DUPLANE16>;
+def extract_duplane32 : extract_duplane<G_DUPLANE32>;
+
 def unmerge_duplanes : GICombineGroup<[unmerge_duplane8, unmerge_duplane16,
-                                       unmerge_duplane32]>;
+                                       unmerge_duplane32, extract_duplane8,
+                                       extract_duplane16, extract_duplane32]>;
 
 def shuffle_vector_lowering : GICombineGroup<[dup, form_duplane, rev, ext, zip,
                                               uzp, trn, fullrev, shuf_to_ins]>;

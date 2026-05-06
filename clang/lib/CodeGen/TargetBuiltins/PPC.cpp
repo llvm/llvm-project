@@ -1138,26 +1138,101 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
       break;
   #include "clang/Basic/BuiltinsPPC.def"
     }
-    if (BuiltinID == PPC::BI__builtin_vsx_lxvp ||
-        BuiltinID == PPC::BI__builtin_vsx_stxvp ||
-        BuiltinID == PPC::BI__builtin_mma_lxvp ||
-        BuiltinID == PPC::BI__builtin_mma_stxvp) {
-      if (BuiltinID == PPC::BI__builtin_vsx_lxvp ||
-          BuiltinID == PPC::BI__builtin_mma_lxvp) {
-        Ops[0] = Builder.CreateGEP(Int8Ty, Ops[1], Ops[0]);
-      } else {
-        Ops[1] = Builder.CreateGEP(Int8Ty, Ops[2], Ops[1]);
-      }
+    // Handle custom builtins that return early without using the common
+    // store-back pattern.
+    switch (BuiltinID) {
+    case PPC::BI__builtin_vsx_lxvp:
+    case PPC::BI__builtin_mma_lxvp:
+      Ops[0] = Builder.CreateGEP(Int8Ty, Ops[1], Ops[0]);
       Ops.pop_back();
-      llvm::Function *F = CGM.getIntrinsic(ID);
-      return Builder.CreateCall(F, Ops, "");
+      return Builder.CreateCall(CGM.getIntrinsic(ID), Ops, "");
+    case PPC::BI__builtin_vsx_stxvp:
+    case PPC::BI__builtin_mma_stxvp:
+      Ops[1] = Builder.CreateGEP(Int8Ty, Ops[2], Ops[1]);
+      Ops.pop_back();
+      return Builder.CreateCall(CGM.getIntrinsic(ID), Ops, "");
+    case PPC::BI__builtin_disassemble_dmr:
+      Ops[1] = Builder.CreateLoad(EmitPointerWithAlignment(E->getArg(1)));
+      return Builder.CreateAlignedStore(Ops[1], Ops[0], MaybeAlign());
+
+    // Handle AES encrypt paired builtins - they return a value directly.
+    // For variant builtins, add the appropriate immediate value.
+    case PPC::BI__builtin_aes128_encrypt_paired:
+      Ops.push_back(llvm::ConstantInt::get(Int32Ty, 0));
+      return Builder.CreateCall(CGM.getIntrinsic(ID), Ops, "");
+    case PPC::BI__builtin_aes192_encrypt_paired:
+      Ops.push_back(llvm::ConstantInt::get(Int32Ty, 1));
+      return Builder.CreateCall(CGM.getIntrinsic(ID), Ops, "");
+    case PPC::BI__builtin_aes256_encrypt_paired:
+      Ops.push_back(llvm::ConstantInt::get(Int32Ty, 2));
+      return Builder.CreateCall(CGM.getIntrinsic(ID), Ops, "");
+    case PPC::BI__builtin_aes_encrypt_paired:
+      // For base builtin, Ops already has all 3 arguments.
+      return Builder.CreateCall(CGM.getIntrinsic(ID), Ops, "");
+
+    // Handle AES decrypt paired builtins - they return a value directly.
+    // For variant builtins, add the appropriate immediate value.
+    case PPC::BI__builtin_aes128_decrypt_paired:
+      Ops.push_back(llvm::ConstantInt::get(Int32Ty, 0));
+      return Builder.CreateCall(CGM.getIntrinsic(ID), Ops, "");
+    case PPC::BI__builtin_aes192_decrypt_paired:
+      Ops.push_back(llvm::ConstantInt::get(Int32Ty, 1));
+      return Builder.CreateCall(CGM.getIntrinsic(ID), Ops, "");
+    case PPC::BI__builtin_aes256_decrypt_paired:
+      Ops.push_back(llvm::ConstantInt::get(Int32Ty, 2));
+      return Builder.CreateCall(CGM.getIntrinsic(ID), Ops, "");
+    case PPC::BI__builtin_aes_decrypt_paired:
+      // For base builtin, Ops already has all 3 arguments.
+      return Builder.CreateCall(CGM.getIntrinsic(ID), Ops, "");
+
+    // Handle AES genlastkey paired builtins.
+    case PPC::BI__builtin_aes128_genlastkey_paired:
+      Ops.push_back(llvm::ConstantInt::get(Int32Ty, 0));
+      return Builder.CreateCall(CGM.getIntrinsic(ID), Ops, "");
+    case PPC::BI__builtin_aes192_genlastkey_paired:
+      Ops.push_back(llvm::ConstantInt::get(Int32Ty, 1));
+      return Builder.CreateCall(CGM.getIntrinsic(ID), Ops, "");
+    case PPC::BI__builtin_aes256_genlastkey_paired:
+      Ops.push_back(llvm::ConstantInt::get(Int32Ty, 2));
+      return Builder.CreateCall(CGM.getIntrinsic(ID), Ops, "");
+    case PPC::BI__builtin_aes_genlastkey_paired:
+      // For base builtin, Ops already has all 2 arguments.
+      return Builder.CreateCall(CGM.getIntrinsic(ID), Ops, "");
+
+    // Handle Galois Field multiplication builtins.
+    case PPC::BI__builtin_galois_field_mult_gcm:
+      Ops.push_back(llvm::ConstantInt::get(Int32Ty, 0));
+      return Builder.CreateCall(CGM.getIntrinsic(ID), Ops, "");
+    case PPC::BI__builtin_galois_field_mult_xts:
+      Ops.push_back(llvm::ConstantInt::get(Int32Ty, 1));
+      return Builder.CreateCall(CGM.getIntrinsic(ID), Ops, "");
+    case PPC::BI__builtin_galois_field_mult:
+      // For base builtin, Ops already has all 3 arguments.
+      return Builder.CreateCall(CGM.getIntrinsic(ID), Ops, "");
+
+    default:
+      break;
     }
+
     SmallVector<Value*, 4> CallOps;
+
+    // Accumulate = true, are used for builtins where the hardware instruction
+    // reads the old destination value, performs an operation with it, and
+    // writes the result back.
+    // Load the existing value from the first argument (destination pointer) and
+    // add it to CallOps as the first intrinsic operand.
     if (Accumulate) {
       Address Addr = EmitPointerWithAlignment(E->getArg(0));
       Value *Acc = Builder.CreateLoad(Addr);
       CallOps.push_back(Acc);
     }
+
+    // Handles builtins that need special argument handling such as:
+    // - Dereferencing pointer arguments to load actual register values.
+    // - Adding implicit operands required by the intrinsic.
+    // - Transforming or reordering operands.
+    // After preprocessing, the loop at end copies Ops[1..n] into CallOps,
+    // skipping Ops[0] which is the destination pointer for result storage.
     switch (BuiltinID) {
     case PPC::BI__builtin_dmmr:
     case PPC::BI__builtin_dmxor:
@@ -1165,10 +1240,6 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
       Address Addr = EmitPointerWithAlignment(E->getArg(1));
       Ops[1] = Builder.CreateLoad(Addr);
       break;
-    }
-    case PPC::BI__builtin_disassemble_dmr: {
-      Ops[1] = Builder.CreateLoad(EmitPointerWithAlignment(E->getArg(1)));
-      return Builder.CreateAlignedStore(Ops[1], Ops[0], MaybeAlign());
     }
     case PPC::BI__builtin_dmsha256hash:
     case PPC::BI__builtin_dmsha512hash: {
