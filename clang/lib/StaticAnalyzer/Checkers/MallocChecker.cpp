@@ -985,7 +985,7 @@ protected:
 
   // A release function stack frame in which memory was released. Used for
   // miscellaneous false positive suppression.
-  const StackFrameContext *ReleaseFunctionLC;
+  const StackFrame *ReleaseFunctionLC;
 
   bool IsLeak;
 
@@ -4224,3 +4224,5 @@ REGISTER_CHECKER(NewDeleteChecker)
 REGISTER_CHECKER(NewDeleteLeaksChecker)
 REGISTER_CHECKER(MismatchedDeallocatorChecker)
 REGISTER_CHECKER(TaintedAllocChecker)
+
+#undef REGISTER_CHECKER

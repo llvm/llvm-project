@@ -1850,7 +1850,7 @@ llvm.mlir.alias external @y5 : i32 {
 module {
   llvm.func @foo()
 
-  // expected-error@below {{only integer and string values are currently supported}}
+  // expected-error@below {{only integer, string, and string-array values are currently supported for unknown key '"yolo"'}}
   llvm.module_flags [#llvm.mlir.module_flag<error, "yolo", @foo>]
 }
 
@@ -2019,6 +2019,23 @@ llvm.func @invalid_xevm_matrix_3(%a: !llvm.ptr<1>, %base_width_a: i32, %base_hei
 
 // -----
 
+llvm.func @invalid_xevm_truncf_1(%arg0: vector<8xf16>) {
+  // expected-error@+1 {{op both src and dst should be vector types or both}}
+  %0 = xevm.truncf %arg0 { src_etype = f16, dst_etype = bf8 } : (vector<8xf16>) -> i8
+  llvm.return
+}
+
+// -----
+
+llvm.func @invalid_xevm_mma_mx(%loaded_c_casted: vector<4xf32>, %loaded_a: vector<8xi16>, %loaded_b_casted: vector<8xi32>, %scale_a: vector<2xi8>, %scale_b: vector<2xi8>) -> vector<8xf32> {
+  // expected-error@+1 {{op type of C operand must match result type}}
+  %c_result = xevm.mma_mx %loaded_a, %loaded_b_casted, %scale_a, %scale_b, %loaded_c_casted { shape=<m=8, n=16, k=64>,
+    types=<d=f32, a=e2m1, b=e2m1, c=f32> } : (vector<8xi16>, vector<8xi32>, vector<2xi8>, vector<2xi8>, vector<4xf32>) -> vector<8xf32>
+  llvm.return %c_result : vector<8xf32>
+}
+
+// -----
+
 llvm.func external @resolve_foo() -> !llvm.ptr attributes {dso_local}
 // expected-error@+1 {{'llvm.mlir.ifunc' op resolver must be a definition}}
 llvm.mlir.ifunc external @foo : !llvm.func<void (ptr, i32)>, !llvm.ptr @resolve_foo {dso_local}
@@ -2089,4 +2106,20 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
     // expected-error@+1 {{'llvm.ptrtoaddr' op bit-width of integer result type 'i64' must match the pointer bitwidth (32) specified in the datalayout}}
     %0 = llvm.ptrtoaddr %arg0 : !llvm.ptr to i64
   }
+}
+
+// -----
+
+func.func @nvvm_read_sreg_tid_x_wrong_type() {
+  // expected-error@+1 {{'nvvm.read.ptx.sreg.tid.x' op result #0 must be 32-bit signless integer, but got 'i64'}}
+  %0 = nvvm.read.ptx.sreg.tid.x : i64
+  return
+}
+
+// -----
+
+func.func @nvvm_read_sreg_clock64_wrong_type() {
+  // expected-error@+1 {{'nvvm.read.ptx.sreg.clock64' op result #0 must be 64-bit signless integer, but got 'i32'}}
+  %0 = nvvm.read.ptx.sreg.clock64 : i32
+  return
 }

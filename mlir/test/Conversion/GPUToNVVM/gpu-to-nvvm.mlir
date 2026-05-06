@@ -85,7 +85,7 @@ gpu.module @test_module_2 {
     %arg0 = arith.constant 1.0 : f32
     // TODO: Check full IR expansion once lowering has settled.
     // CHECK: nvvm.shfl.sync bfly {{.*}}
-    // CHECK: nvvm.barrier0
+    // CHECK: nvvm.barrier
     // CHECK: llvm.fadd
     %result = gpu.all_reduce add %arg0 uniform {} : (f32) -> (f32)
 
@@ -101,7 +101,7 @@ gpu.module @test_module_3 {
     %arg0 = arith.constant 1 : i32
     // TODO: Check full IR expansion once lowering has settled.
     // CHECK: nvvm.shfl.sync bfly {{.*}}
-    // CHECK: nvvm.barrier0
+    // CHECK: nvvm.barrier
     %result = gpu.all_reduce %arg0 uniform {
     ^bb(%lhs : i32, %rhs : i32):
       %xor = arith.xori %lhs, %rhs : i32
@@ -185,7 +185,7 @@ gpu.module @test_module_4 {
 gpu.module @test_module_5 {
   // CHECK-LABEL: func @gpu_sync()
   func.func @gpu_sync() {
-    // CHECK: nvvm.barrier0
+    // CHECK: nvvm.barrier
     gpu.barrier
     func.return
   }
@@ -1194,6 +1194,24 @@ gpu.module @test_module_cluster_block_ops {
     %11 = arith.index_cast %10 : index to i64
     llvm.store %11, %arg0 : i64, !llvm.ptr
     gpu.return
+  }
+}
+
+// -----
+
+module attributes {gpu.container_module} {
+  gpu.module @kernels {
+    // CHECK-LABEL: llvm.func @gpu_ballot
+    gpu.func @gpu_ballot(%arg0: i1) -> (i32, i64) {
+      // CHECK: %[[BALLOT_MASK1:.*]] = llvm.mlir.constant(-1 : i32) : i32
+      // CHECK: %[[BALLOT_I32:.*]] = nvvm.vote.sync ballot %[[BALLOT_MASK1]], %{{.*}} -> i32
+      %0 = gpu.ballot %arg0 : i32
+      // CHECK: %[[BALLOT_MASK2:.*]] = llvm.mlir.constant(-1 : i32) : i32
+      // CHECK: %[[BALLOT_I64_TMP:.*]] = nvvm.vote.sync ballot %[[BALLOT_MASK2]], %{{.*}} -> i32
+      // CHECK: %[[BALLOT_I64:.*]] = llvm.zext %[[BALLOT_I64_TMP]] : i32 to i64
+      %1 = gpu.ballot %arg0 : i64
+      gpu.return %0, %1 : i32, i64
+    }
   }
 }
 

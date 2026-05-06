@@ -35,8 +35,14 @@ endif ()
 set(OPENMP_ENABLE_WERROR ${LLVM_ENABLE_WERROR})
 
 # When building in tree we install the runtime according to the LLVM settings.
+# TODO: Use common runtimes infrastructure for output and install paths
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
-  set(OPENMP_INSTALL_LIBDIR lib${LLVM_LIBDIR_SUFFIX}/${LLVM_DEFAULT_TARGET_TRIPLE} CACHE STRING
+  set(OPENMP_TARGET_SUBDIR "${LLVM_DEFAULT_TARGET_TRIPLE}")
+  if(OPENMP_LIBDIR_SUBDIR)
+    string(APPEND OPENMP_TARGET_SUBDIR "/${OPENMP_LIBDIR_SUBDIR}")
+  endif()
+  cmake_path(NORMAL_PATH OPENMP_TARGET_SUBDIR)
+  set(OPENMP_INSTALL_LIBDIR "lib${LLVM_LIBDIR_SUFFIX}/${OPENMP_TARGET_SUBDIR}" CACHE STRING
       "Path where built openmp libraries should be installed.")
 else()
   set(OPENMP_INSTALL_LIBDIR "lib${LLVM_LIBDIR_SUFFIX}" CACHE STRING
@@ -133,6 +139,12 @@ else()
   get_clang_resource_dir(LIBOMP_HEADERS_INSTALL_PATH SUBDIR include)
 endif()
 
+# Meta-target for building OpenMP runtime artifacts (libraries, device RTL, tools).
+# Subdirectories call openmp_register_meta_dep() for each target they add.
+add_custom_target(openmp ALL
+  COMMENT "OpenMP meta-target. Use 'ninja openmp' to build all OpenMP runtime targets."
+)
+
 # Use the current compiler target to determine the appropriate runtime to build.
 if("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn|^nvptx|^spirv64" OR
    "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^amdgcn|^nvptx|^spirv64")
@@ -167,7 +179,7 @@ else()
 
   # Build documentation
   add_subdirectory(docs)
-
-  # Now that we have seen all testsuites, create the check-openmp target.
-  construct_check_openmp_target()
 endif()
+
+# Now that we have seen all testsuites, create the check-openmp target.
+construct_check_openmp_target()

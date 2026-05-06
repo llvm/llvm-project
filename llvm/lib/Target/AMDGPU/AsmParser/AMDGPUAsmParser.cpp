@@ -1468,8 +1468,8 @@ public:
   using OptionalImmIndexMap = std::map<AMDGPUOperand::ImmTy, unsigned>;
 
   AMDGPUAsmParser(const MCSubtargetInfo &STI, MCAsmParser &_Parser,
-                  const MCInstrInfo &MII, const MCTargetOptions &Options)
-      : MCTargetAsmParser(Options, STI, MII), Parser(_Parser),
+                  const MCInstrInfo &MII)
+      : MCTargetAsmParser(STI, MII), Parser(_Parser),
         HwMode(STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo)) {
     MCAsmParserExtension::Initialize(Parser);
 
@@ -5770,7 +5770,8 @@ bool AMDGPUAsmParser::checkUnsupportedInstruction(StringRef Mnemo,
 
   // Finally check if this instruction is supported on any other GPU.
   if (isSupportedMnemo(Mnemo, FeatureBitset().set())) {
-    return Error(IDLoc, "instruction not supported on this GPU");
+    return Error(IDLoc, "instruction not supported on this GPU (" +
+                            getSTI().getCPU() + ")" + ": " + Mnemo);
   }
 
   // Instruction not supported on any GPU. Probably a typo.
@@ -6356,6 +6357,10 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
     return TokError(".amdhsa_next_free_sgpr directive is required");
 
   unsigned UserSGPRCount = ExplicitUserSGPRCount.value_or(ImpliedUserSGPRCount);
+  if (UserSGPRCount > getMaxNumUserSGPRs())
+    return TokError("too many user SGPRs enabled, found " +
+                    Twine(UserSGPRCount) + ", but only " +
+                    Twine(getMaxNumUserSGPRs()) + " are supported.");
 
   // Consider the case where the total number of UserSGPRs with trailing
   // allocated preload SGPRs, is greater than the number of explicitly
@@ -6399,21 +6404,16 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
       COMPUTE_PGM_RSRC1_GRANULATED_WAVEFRONT_SGPR_COUNT, getContext());
 
   if (ExplicitUserSGPRCount && ImpliedUserSGPRCount > *ExplicitUserSGPRCount)
-    return TokError("amdgpu_user_sgpr_count smaller than than implied by "
+    return TokError("amdgpu_user_sgpr_count smaller than implied by "
                     "enabled user SGPRs");
 
   if (isGFX1250Plus()) {
-    if (!isUInt<COMPUTE_PGM_RSRC2_GFX125_USER_SGPR_COUNT_WIDTH>(UserSGPRCount))
-      return TokError("too many user SGPRs enabled");
     AMDGPU::MCKernelDescriptor::bits_set(
         KD.compute_pgm_rsrc2,
         MCConstantExpr::create(UserSGPRCount, getContext()),
         COMPUTE_PGM_RSRC2_GFX125_USER_SGPR_COUNT_SHIFT,
         COMPUTE_PGM_RSRC2_GFX125_USER_SGPR_COUNT, getContext());
   } else {
-    if (!isUInt<COMPUTE_PGM_RSRC2_GFX6_GFX120_USER_SGPR_COUNT_WIDTH>(
-            UserSGPRCount))
-      return TokError("too many user SGPRs enabled");
     AMDGPU::MCKernelDescriptor::bits_set(
         KD.compute_pgm_rsrc2,
         MCConstantExpr::create(UserSGPRCount, getContext()),
@@ -6629,7 +6629,7 @@ bool AMDGPUAsmParser::ParseToEndDirective(const char *AssemblerDirectiveBegin,
     }
 
     CollectStream << Parser.parseStringToEndOfStatement()
-                  << getContext().getAsmInfo()->getSeparatorString();
+                  << getContext().getAsmInfo().getSeparatorString();
 
     Parser.eatToEndOfStatement();
   }
@@ -10519,7 +10519,8 @@ ParseStatus AMDGPUAsmParser::parseCustomOperand(OperandVector &Operands,
   case MCK_idxen:
     return parseTokenOp("idxen", Operands);
   case MCK_lds:
-    return parseTokenOp("lds", Operands);
+    return parseNamedBit("lds", Operands, AMDGPUOperand::ImmTyLDS,
+                         /*IgnoreNegative=*/true);
   case MCK_offen:
     return parseTokenOp("offen", Operands);
   case MCK_off:

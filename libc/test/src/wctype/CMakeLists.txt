@@ -111,3 +111,34 @@ add_libc_test(
   DEPENDS
     libc.src.wctype.iswpunct
 )
+
+add_libc_test(
+  iswprint_test
+  SUITE
+    libc_wctype_unittests
+  SRCS
+    iswprint_test.cpp
+  DEPENDS
+    libc.src.wctype.iswprint
+)
+
+add_libc_test(
+  iswctype_test
+  SUITE
+    libc_wctype_unittests
+  SRCS
+    iswctype_test.cpp
+  DEPENDS
+    libc.src.wctype.iswctype
+    libc.src.wctype.wctype
+)
+
+add_libc_test(
+  wctype_test
+  SUITE
+    libc_wctype_unittests
+  SRCS
+    wctype_test.cpp
+  DEPENDS
+    libc.src.wctype.wctype
+)

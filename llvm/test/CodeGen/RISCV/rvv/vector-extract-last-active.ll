@@ -169,67 +169,132 @@ define double @extract_last_double(<2 x double> %data, <2 x i64> %mask, double %
 }
 
 define i8 @extract_last_i8_scalable(<vscale x 16 x i8> %data, <vscale x 16 x i1> %mask, i8 %passthru) {
-; CHECK-LABEL: extract_last_i8_scalable:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vcpop.m a1, v0
-; CHECK-NEXT:    beqz a1, .LBB6_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    vmv.v.i v10, 0
-; CHECK-NEXT:    vsetvli zero, zero, e8, m2, ta, mu
-; CHECK-NEXT:    vid.v v10, v0.t
-; CHECK-NEXT:    vredmaxu.vs v10, v10, v10
-; CHECK-NEXT:    vmv.x.s a0, v10
-; CHECK-NEXT:    zext.b a0, a0
-; CHECK-NEXT:    vsetvli zero, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vslidedown.vx v8, v8, a0
-; CHECK-NEXT:    vmv.x.s a0, v8
-; CHECK-NEXT:  .LBB6_2:
-; CHECK-NEXT:    ret
+; RV32-LABEL: extract_last_i8_scalable:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetvli a1, zero, e8, m2, ta, ma
+; RV32-NEXT:    vcpop.m a1, v0
+; RV32-NEXT:    beqz a1, .LBB6_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    vsetvli zero, zero, e32, m8, ta, mu
+; RV32-NEXT:    vmv.v.i v16, 0
+; RV32-NEXT:    vid.v v16, v0.t
+; RV32-NEXT:    vredmaxu.vs v10, v16, v16
+; RV32-NEXT:    vmv.x.s a0, v10
+; RV32-NEXT:    vsetvli zero, zero, e8, m2, ta, ma
+; RV32-NEXT:    vslidedown.vx v8, v8, a0
+; RV32-NEXT:    vmv.x.s a0, v8
+; RV32-NEXT:  .LBB6_2:
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: extract_last_i8_scalable:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
+; RV64-NEXT:    vmv1r.v v10, v0
+; RV64-NEXT:    vid.v v16
+; RV64-NEXT:    csrr a1, vlenb
+; RV64-NEXT:    srli a2, a1, 3
+; RV64-NEXT:    vsetvli a3, zero, e8, mf4, ta, ma
+; RV64-NEXT:    vslidedown.vx v0, v0, a2
+; RV64-NEXT:    vsetvli a2, zero, e64, m8, ta, ma
+; RV64-NEXT:    vcpop.m a2, v0
+; RV64-NEXT:    vmv.v.i v24, 0
+; RV64-NEXT:    bnez a2, .LBB6_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    vmv1r.v v0, v10
+; RV64-NEXT:    vmerge.vvm v16, v24, v16, v0
+; RV64-NEXT:    vredmaxu.vs v11, v16, v16
+; RV64-NEXT:    vmv.x.s a1, v11
+; RV64-NEXT:    j .LBB6_3
+; RV64-NEXT:  .LBB6_2:
+; RV64-NEXT:    vmerge.vvm v16, v24, v16, v0
+; RV64-NEXT:    vredmaxu.vs v11, v16, v16
+; RV64-NEXT:    vmv.x.s a2, v11
+; RV64-NEXT:    add a1, a2, a1
+; RV64-NEXT:  .LBB6_3:
+; RV64-NEXT:    vsetvli a2, zero, e8, m2, ta, ma
+; RV64-NEXT:    vcpop.m a2, v10
+; RV64-NEXT:    beqz a2, .LBB6_5
+; RV64-NEXT:  # %bb.4:
+; RV64-NEXT:    vslidedown.vx v8, v8, a1
+; RV64-NEXT:    vmv.x.s a0, v8
+; RV64-NEXT:  .LBB6_5:
+; RV64-NEXT:    ret
   %res = call i8 @llvm.experimental.vector.extract.last.active.nxv16i8(<vscale x 16 x i8> %data, <vscale x 16 x i1> %mask, i8 %passthru)
   ret i8 %res
 }
 
 define i16 @extract_last_i16_scalable(<vscale x 8 x i16> %data, <vscale x 8 x i1> %mask, i16 %passthru) {
-; CHECK-LABEL: extract_last_i16_scalable:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vcpop.m a1, v0
-; CHECK-NEXT:    beqz a1, .LBB7_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    vmv.v.i v10, 0
-; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, mu
-; CHECK-NEXT:    vid.v v10, v0.t
-; CHECK-NEXT:    vredmaxu.vs v10, v10, v10
-; CHECK-NEXT:    vmv.x.s a0, v10
-; CHECK-NEXT:    zext.b a0, a0
-; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vslidedown.vx v8, v8, a0
-; CHECK-NEXT:    vmv.x.s a0, v8
-; CHECK-NEXT:  .LBB7_2:
-; CHECK-NEXT:    ret
+; RV32-LABEL: extract_last_i16_scalable:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
+; RV32-NEXT:    vcpop.m a1, v0
+; RV32-NEXT:    beqz a1, .LBB7_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    vsetvli zero, zero, e32, m4, ta, mu
+; RV32-NEXT:    vmv.v.i v12, 0
+; RV32-NEXT:    vid.v v12, v0.t
+; RV32-NEXT:    vredmaxu.vs v10, v12, v12
+; RV32-NEXT:    vmv.x.s a0, v10
+; RV32-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; RV32-NEXT:    vslidedown.vx v8, v8, a0
+; RV32-NEXT:    vmv.x.s a0, v8
+; RV32-NEXT:  .LBB7_2:
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: extract_last_i16_scalable:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
+; RV64-NEXT:    vcpop.m a1, v0
+; RV64-NEXT:    beqz a1, .LBB7_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    vsetvli zero, zero, e64, m8, ta, mu
+; RV64-NEXT:    vmv.v.i v16, 0
+; RV64-NEXT:    vid.v v16, v0.t
+; RV64-NEXT:    vredmaxu.vs v10, v16, v16
+; RV64-NEXT:    vmv.x.s a0, v10
+; RV64-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; RV64-NEXT:    vslidedown.vx v8, v8, a0
+; RV64-NEXT:    vmv.x.s a0, v8
+; RV64-NEXT:  .LBB7_2:
+; RV64-NEXT:    ret
   %res = call i16 @llvm.experimental.vector.extract.last.active.nxv8i16(<vscale x 8 x i16> %data, <vscale x 8 x i1> %mask, i16 %passthru)
   ret i16 %res
 }
 
 define i32 @extract_last_i32_scalable(<vscale x 4 x i32> %data, <vscale x 4 x i1> %mask, i32 %passthru) {
-; CHECK-LABEL: extract_last_i32_scalable:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vcpop.m a1, v0
-; CHECK-NEXT:    beqz a1, .LBB8_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    vmv.v.i v10, 0
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, mu
-; CHECK-NEXT:    vid.v v10, v0.t
-; CHECK-NEXT:    vredmaxu.vs v10, v10, v10
-; CHECK-NEXT:    vmv.x.s a0, v10
-; CHECK-NEXT:    zext.b a0, a0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vslidedown.vx v8, v8, a0
-; CHECK-NEXT:    vmv.x.s a0, v8
-; CHECK-NEXT:  .LBB8_2:
-; CHECK-NEXT:    ret
+; RV32-LABEL: extract_last_i32_scalable:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
+; RV32-NEXT:    vcpop.m a1, v0
+; RV32-NEXT:    beqz a1, .LBB8_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    vsetvli zero, zero, e32, m2, ta, mu
+; RV32-NEXT:    vmv.v.i v10, 0
+; RV32-NEXT:    vid.v v10, v0.t
+; RV32-NEXT:    vredmaxu.vs v10, v10, v10
+; RV32-NEXT:    vmv.x.s a0, v10
+; RV32-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; RV32-NEXT:    vslidedown.vx v8, v8, a0
+; RV32-NEXT:    vmv.x.s a0, v8
+; RV32-NEXT:  .LBB8_2:
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: extract_last_i32_scalable:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
+; RV64-NEXT:    vcpop.m a1, v0
+; RV64-NEXT:    beqz a1, .LBB8_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
+; RV64-NEXT:    vmv.v.i v12, 0
+; RV64-NEXT:    vid.v v12, v0.t
+; RV64-NEXT:    vredmaxu.vs v10, v12, v12
+; RV64-NEXT:    vmv.x.s a0, v10
+; RV64-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; RV64-NEXT:    vslidedown.vx v8, v8, a0
+; RV64-NEXT:    vmv.x.s a0, v8
+; RV64-NEXT:  .LBB8_2:
+; RV64-NEXT:    ret
   %res = call i32 @llvm.experimental.vector.extract.last.active.nxv4i32(<vscale x 4 x i32> %data, <vscale x 4 x i1> %mask, i32 %passthru)
   ret i32 %res
 }
@@ -241,13 +306,12 @@ define i64 @extract_last_i64_scalable(<vscale x 2 x i64> %data, <vscale x 2 x i1
 ; RV32-NEXT:    vcpop.m a2, v0
 ; RV32-NEXT:    beqz a2, .LBB9_2
 ; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    vsetvli zero, zero, e32, m1, ta, mu
 ; RV32-NEXT:    vmv.v.i v10, 0
 ; RV32-NEXT:    li a1, 32
-; RV32-NEXT:    vsetvli zero, zero, e8, mf4, ta, mu
 ; RV32-NEXT:    vid.v v10, v0.t
 ; RV32-NEXT:    vredmaxu.vs v10, v10, v10
 ; RV32-NEXT:    vmv.x.s a0, v10
-; RV32-NEXT:    zext.b a0, a0
 ; RV32-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
 ; RV32-NEXT:    vslidedown.vx v8, v8, a0
 ; RV32-NEXT:    vmv.x.s a0, v8
@@ -263,12 +327,11 @@ define i64 @extract_last_i64_scalable(<vscale x 2 x i64> %data, <vscale x 2 x i1
 ; RV64-NEXT:    vcpop.m a1, v0
 ; RV64-NEXT:    beqz a1, .LBB9_2
 ; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    vsetvli zero, zero, e64, m2, ta, mu
 ; RV64-NEXT:    vmv.v.i v10, 0
-; RV64-NEXT:    vsetvli zero, zero, e8, mf4, ta, mu
 ; RV64-NEXT:    vid.v v10, v0.t
 ; RV64-NEXT:    vredmaxu.vs v10, v10, v10
 ; RV64-NEXT:    vmv.x.s a0, v10
-; RV64-NEXT:    zext.b a0, a0
 ; RV64-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
 ; RV64-NEXT:    vslidedown.vx v8, v8, a0
 ; RV64-NEXT:    vmv.x.s a0, v8
@@ -279,46 +342,343 @@ define i64 @extract_last_i64_scalable(<vscale x 2 x i64> %data, <vscale x 2 x i1
 }
 
 define float @extract_last_float_scalable(<vscale x 4 x float> %data, <vscale x 4 x i1> %mask, float %passthru) {
-; CHECK-LABEL: extract_last_float_scalable:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vcpop.m a0, v0
-; CHECK-NEXT:    beqz a0, .LBB10_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    vmv.v.i v10, 0
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, mu
-; CHECK-NEXT:    vid.v v10, v0.t
-; CHECK-NEXT:    vredmaxu.vs v10, v10, v10
-; CHECK-NEXT:    vmv.x.s a0, v10
-; CHECK-NEXT:    zext.b a0, a0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vslidedown.vx v8, v8, a0
-; CHECK-NEXT:    vfmv.f.s fa0, v8
-; CHECK-NEXT:  .LBB10_2:
-; CHECK-NEXT:    ret
+; RV32-LABEL: extract_last_float_scalable:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
+; RV32-NEXT:    vcpop.m a0, v0
+; RV32-NEXT:    beqz a0, .LBB10_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    vsetvli zero, zero, e32, m2, ta, mu
+; RV32-NEXT:    vmv.v.i v10, 0
+; RV32-NEXT:    vid.v v10, v0.t
+; RV32-NEXT:    vredmaxu.vs v10, v10, v10
+; RV32-NEXT:    vmv.x.s a0, v10
+; RV32-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; RV32-NEXT:    vslidedown.vx v8, v8, a0
+; RV32-NEXT:    vfmv.f.s fa0, v8
+; RV32-NEXT:  .LBB10_2:
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: extract_last_float_scalable:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
+; RV64-NEXT:    vcpop.m a0, v0
+; RV64-NEXT:    beqz a0, .LBB10_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
+; RV64-NEXT:    vmv.v.i v12, 0
+; RV64-NEXT:    vid.v v12, v0.t
+; RV64-NEXT:    vredmaxu.vs v10, v12, v12
+; RV64-NEXT:    vmv.x.s a0, v10
+; RV64-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
+; RV64-NEXT:    vslidedown.vx v8, v8, a0
+; RV64-NEXT:    vfmv.f.s fa0, v8
+; RV64-NEXT:  .LBB10_2:
+; RV64-NEXT:    ret
   %res = call float @llvm.experimental.vector.extract.last.active.nxv4f32(<vscale x 4 x float> %data, <vscale x 4 x i1> %mask, float %passthru)
   ret float %res
 }
 
 define double @extract_last_double_scalable(<vscale x 2 x double> %data, <vscale x 2 x i1> %mask, double %passthru) {
-; CHECK-LABEL: extract_last_double_scalable:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
-; CHECK-NEXT:    vcpop.m a0, v0
-; CHECK-NEXT:    beqz a0, .LBB11_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    vmv.v.i v10, 0
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, mu
-; CHECK-NEXT:    vid.v v10, v0.t
-; CHECK-NEXT:    vredmaxu.vs v10, v10, v10
-; CHECK-NEXT:    vmv.x.s a0, v10
-; CHECK-NEXT:    zext.b a0, a0
-; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; CHECK-NEXT:    vslidedown.vx v8, v8, a0
-; CHECK-NEXT:    vfmv.f.s fa0, v8
-; CHECK-NEXT:  .LBB11_2:
-; CHECK-NEXT:    ret
+; RV32-LABEL: extract_last_double_scalable:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
+; RV32-NEXT:    vcpop.m a0, v0
+; RV32-NEXT:    beqz a0, .LBB11_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    vsetvli zero, zero, e32, m1, ta, mu
+; RV32-NEXT:    vmv.v.i v10, 0
+; RV32-NEXT:    vid.v v10, v0.t
+; RV32-NEXT:    vredmaxu.vs v10, v10, v10
+; RV32-NEXT:    vmv.x.s a0, v10
+; RV32-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; RV32-NEXT:    vslidedown.vx v8, v8, a0
+; RV32-NEXT:    vfmv.f.s fa0, v8
+; RV32-NEXT:  .LBB11_2:
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: extract_last_double_scalable:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
+; RV64-NEXT:    vcpop.m a0, v0
+; RV64-NEXT:    beqz a0, .LBB11_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    vsetvli zero, zero, e64, m2, ta, mu
+; RV64-NEXT:    vmv.v.i v10, 0
+; RV64-NEXT:    vid.v v10, v0.t
+; RV64-NEXT:    vredmaxu.vs v10, v10, v10
+; RV64-NEXT:    vmv.x.s a0, v10
+; RV64-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; RV64-NEXT:    vslidedown.vx v8, v8, a0
+; RV64-NEXT:    vfmv.f.s fa0, v8
+; RV64-NEXT:  .LBB11_2:
+; RV64-NEXT:    ret
   %res = call double @llvm.experimental.vector.extract.last.active.nxv2f64(<vscale x 2 x double> %data, <vscale x 2 x i1> %mask, double %passthru)
   ret double %res
 }
 
+define i8 @extract_last_i8_scalable_vscale(<vscale x 16 x i8> %data, <vscale x 16 x i1> %mask, i8 %passthru) vscale_range(4,1024) {
+; RV32-LABEL: extract_last_i8_scalable_vscale:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetvli a1, zero, e8, m2, ta, ma
+; RV32-NEXT:    vcpop.m a1, v0
+; RV32-NEXT:    beqz a1, .LBB12_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    vsetvli zero, zero, e16, m4, ta, mu
+; RV32-NEXT:    vmv.v.i v12, 0
+; RV32-NEXT:    vid.v v12, v0.t
+; RV32-NEXT:    vredmaxu.vs v10, v12, v12
+; RV32-NEXT:    vmv.x.s a0, v10
+; RV32-NEXT:    slli a0, a0, 16
+; RV32-NEXT:    srli a0, a0, 16
+; RV32-NEXT:    vsetvli zero, zero, e8, m2, ta, ma
+; RV32-NEXT:    vslidedown.vx v8, v8, a0
+; RV32-NEXT:    vmv.x.s a0, v8
+; RV32-NEXT:  .LBB12_2:
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: extract_last_i8_scalable_vscale:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetvli a1, zero, e8, m2, ta, ma
+; RV64-NEXT:    vcpop.m a1, v0
+; RV64-NEXT:    beqz a1, .LBB12_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    vsetvli zero, zero, e16, m4, ta, mu
+; RV64-NEXT:    vmv.v.i v12, 0
+; RV64-NEXT:    vid.v v12, v0.t
+; RV64-NEXT:    vredmaxu.vs v10, v12, v12
+; RV64-NEXT:    vmv.x.s a0, v10
+; RV64-NEXT:    slli a0, a0, 48
+; RV64-NEXT:    srli a0, a0, 48
+; RV64-NEXT:    vsetvli zero, zero, e8, m2, ta, ma
+; RV64-NEXT:    vslidedown.vx v8, v8, a0
+; RV64-NEXT:    vmv.x.s a0, v8
+; RV64-NEXT:  .LBB12_2:
+; RV64-NEXT:    ret
+  %res = call i8 @llvm.experimental.vector.extract.last.active.nxv16i8(<vscale x 16 x i8> %data, <vscale x 16 x i1> %mask, i8 %passthru)
+  ret i8 %res
+}
+
+define i8 @pr187458(<vscale x 64 x i8> %0, <vscale x 64 x i1> %mask) {
+; RV32-LABEL: pr187458:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    .cfi_def_cfa_offset 16
+; RV32-NEXT:    csrr a0, vlenb
+; RV32-NEXT:    slli a0, a0, 3
+; RV32-NEXT:    sub sp, sp, a0
+; RV32-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
+; RV32-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
+; RV32-NEXT:    vmv1r.v v7, v0
+; RV32-NEXT:    addi a0, sp, 16
+; RV32-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Folded Spill
+; RV32-NEXT:    vid.v v8
+; RV32-NEXT:    vmv.v.i v16, 0
+; RV32-NEXT:    csrr a0, vlenb
+; RV32-NEXT:    srli a3, a0, 2
+; RV32-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
+; RV32-NEXT:    vslidedown.vx v0, v0, a3
+; RV32-NEXT:    vsetvli a1, zero, e8, m2, ta, ma
+; RV32-NEXT:    vcpop.m a1, v0
+; RV32-NEXT:    slli a2, a0, 1
+; RV32-NEXT:    bnez a1, .LBB13_2
+; RV32-NEXT:  # %bb.1: # %entry
+; RV32-NEXT:    vmv1r.v v0, v7
+; RV32-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
+; RV32-NEXT:    vmerge.vvm v24, v16, v8, v0
+; RV32-NEXT:    vredmaxu.vs v24, v24, v24
+; RV32-NEXT:    vmv.x.s a1, v24
+; RV32-NEXT:    j .LBB13_3
+; RV32-NEXT:  .LBB13_2:
+; RV32-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
+; RV32-NEXT:    vmerge.vvm v24, v16, v8, v0
+; RV32-NEXT:    vredmaxu.vs v24, v24, v24
+; RV32-NEXT:    vmv.x.s a1, v24
+; RV32-NEXT:    add a1, a1, a2
+; RV32-NEXT:  .LBB13_3: # %entry
+; RV32-NEXT:    srli a4, a0, 1
+; RV32-NEXT:    vsetvli a5, zero, e8, m1, ta, ma
+; RV32-NEXT:    vslidedown.vx v6, v7, a4
+; RV32-NEXT:    vsetvli a4, zero, e8, mf2, ta, ma
+; RV32-NEXT:    vslidedown.vx v0, v6, a3
+; RV32-NEXT:    vsetvli a3, zero, e8, m2, ta, ma
+; RV32-NEXT:    vcpop.m a3, v0
+; RV32-NEXT:    bnez a3, .LBB13_5
+; RV32-NEXT:  # %bb.4: # %entry
+; RV32-NEXT:    vmv1r.v v0, v6
+; RV32-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
+; RV32-NEXT:    vmerge.vvm v8, v16, v8, v0
+; RV32-NEXT:    vredmaxu.vs v8, v8, v8
+; RV32-NEXT:    vmv.x.s a2, v8
+; RV32-NEXT:    j .LBB13_6
+; RV32-NEXT:  .LBB13_5:
+; RV32-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
+; RV32-NEXT:    vmerge.vvm v8, v16, v8, v0
+; RV32-NEXT:    vredmaxu.vs v8, v8, v8
+; RV32-NEXT:    vmv.x.s a3, v8
+; RV32-NEXT:    add a2, a3, a2
+; RV32-NEXT:  .LBB13_6: # %entry
+; RV32-NEXT:    vsetvli a3, zero, e8, m4, ta, ma
+; RV32-NEXT:    vcpop.m a3, v6
+; RV32-NEXT:    beqz a3, .LBB13_8
+; RV32-NEXT:  # %bb.7:
+; RV32-NEXT:    slli a0, a0, 2
+; RV32-NEXT:    add a1, a2, a0
+; RV32-NEXT:  .LBB13_8: # %entry
+; RV32-NEXT:    addi a0, sp, 16
+; RV32-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
+; RV32-NEXT:    vsetivli zero, 1, e8, m8, ta, ma
+; RV32-NEXT:    vslidedown.vx v8, v8, a1
+; RV32-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
+; RV32-NEXT:    vcpop.m a0, v7
+; RV32-NEXT:    vmv.x.s a1, v8
+; RV32-NEXT:    seqz a0, a0
+; RV32-NEXT:    addi a0, a0, -1
+; RV32-NEXT:    and a0, a0, a1
+; RV32-NEXT:    csrr a1, vlenb
+; RV32-NEXT:    slli a1, a1, 3
+; RV32-NEXT:    add sp, sp, a1
+; RV32-NEXT:    .cfi_def_cfa sp, 16
+; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: pr187458:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    addi sp, sp, -16
+; RV64-NEXT:    .cfi_def_cfa_offset 16
+; RV64-NEXT:    csrr a0, vlenb
+; RV64-NEXT:    slli a0, a0, 3
+; RV64-NEXT:    sub sp, sp, a0
+; RV64-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
+; RV64-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
+; RV64-NEXT:    vmv1r.v v7, v0
+; RV64-NEXT:    addi a0, sp, 16
+; RV64-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Folded Spill
+; RV64-NEXT:    vid.v v8
+; RV64-NEXT:    csrr a0, vlenb
+; RV64-NEXT:    srli a2, a0, 3
+; RV64-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
+; RV64-NEXT:    vslidedown.vx v0, v0, a2
+; RV64-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
+; RV64-NEXT:    vcpop.m a1, v0
+; RV64-NEXT:    vmv.v.i v16, 0
+; RV64-NEXT:    bnez a1, .LBB13_2
+; RV64-NEXT:  # %bb.1: # %entry
+; RV64-NEXT:    vmv1r.v v0, v7
+; RV64-NEXT:    vmerge.vvm v24, v16, v8, v0
+; RV64-NEXT:    vredmaxu.vs v24, v24, v24
+; RV64-NEXT:    vmv.x.s a1, v24
+; RV64-NEXT:    j .LBB13_3
+; RV64-NEXT:  .LBB13_2:
+; RV64-NEXT:    vmerge.vvm v24, v16, v8, v0
+; RV64-NEXT:    vredmaxu.vs v24, v24, v24
+; RV64-NEXT:    vmv.x.s a1, v24
+; RV64-NEXT:    add a1, a1, a0
+; RV64-NEXT:  .LBB13_3: # %entry
+; RV64-NEXT:    srli a3, a0, 2
+; RV64-NEXT:    vsetvli a4, zero, e8, mf2, ta, ma
+; RV64-NEXT:    vslidedown.vx v6, v7, a3
+; RV64-NEXT:    vsetvli a4, zero, e8, mf4, ta, ma
+; RV64-NEXT:    vslidedown.vx v0, v6, a2
+; RV64-NEXT:    vsetvli a4, zero, e8, m1, ta, ma
+; RV64-NEXT:    vcpop.m a4, v0
+; RV64-NEXT:    bnez a4, .LBB13_5
+; RV64-NEXT:  # %bb.4: # %entry
+; RV64-NEXT:    vmv1r.v v0, v6
+; RV64-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
+; RV64-NEXT:    vmerge.vvm v24, v16, v8, v0
+; RV64-NEXT:    vredmaxu.vs v24, v24, v24
+; RV64-NEXT:    vmv.x.s a5, v24
+; RV64-NEXT:    j .LBB13_6
+; RV64-NEXT:  .LBB13_5:
+; RV64-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
+; RV64-NEXT:    vmerge.vvm v24, v16, v8, v0
+; RV64-NEXT:    vredmaxu.vs v24, v24, v24
+; RV64-NEXT:    vmv.x.s a5, v24
+; RV64-NEXT:    add a5, a5, a0
+; RV64-NEXT:  .LBB13_6: # %entry
+; RV64-NEXT:    vsetvli a4, zero, e8, m2, ta, ma
+; RV64-NEXT:    vcpop.m a6, v6
+; RV64-NEXT:    slli a4, a0, 1
+; RV64-NEXT:    beqz a6, .LBB13_8
+; RV64-NEXT:  # %bb.7:
+; RV64-NEXT:    add a1, a5, a4
+; RV64-NEXT:  .LBB13_8: # %entry
+; RV64-NEXT:    srli a5, a0, 1
+; RV64-NEXT:    vsetvli a6, zero, e8, m1, ta, ma
+; RV64-NEXT:    vslidedown.vx v6, v7, a5
+; RV64-NEXT:    vsetvli a5, zero, e8, mf4, ta, ma
+; RV64-NEXT:    vslidedown.vx v0, v6, a2
+; RV64-NEXT:    vsetvli a5, zero, e8, m1, ta, ma
+; RV64-NEXT:    vcpop.m a5, v0
+; RV64-NEXT:    bnez a5, .LBB13_10
+; RV64-NEXT:  # %bb.9: # %entry
+; RV64-NEXT:    vmv1r.v v0, v6
+; RV64-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
+; RV64-NEXT:    vmerge.vvm v24, v16, v8, v0
+; RV64-NEXT:    vredmaxu.vs v24, v24, v24
+; RV64-NEXT:    vmv.x.s a5, v24
+; RV64-NEXT:    j .LBB13_11
+; RV64-NEXT:  .LBB13_10:
+; RV64-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
+; RV64-NEXT:    vmerge.vvm v24, v16, v8, v0
+; RV64-NEXT:    vredmaxu.vs v24, v24, v24
+; RV64-NEXT:    vmv.x.s a5, v24
+; RV64-NEXT:    add a5, a5, a0
+; RV64-NEXT:  .LBB13_11: # %entry
+; RV64-NEXT:    vsetvli a6, zero, e8, mf2, ta, ma
+; RV64-NEXT:    vslidedown.vx v5, v6, a3
+; RV64-NEXT:    vsetvli a3, zero, e8, mf4, ta, ma
+; RV64-NEXT:    vslidedown.vx v0, v5, a2
+; RV64-NEXT:    vsetvli a2, zero, e8, m1, ta, ma
+; RV64-NEXT:    vcpop.m a2, v0
+; RV64-NEXT:    bnez a2, .LBB13_13
+; RV64-NEXT:  # %bb.12: # %entry
+; RV64-NEXT:    vmv1r.v v0, v5
+; RV64-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
+; RV64-NEXT:    vmerge.vvm v8, v16, v8, v0
+; RV64-NEXT:    vredmaxu.vs v8, v8, v8
+; RV64-NEXT:    vmv.x.s a2, v8
+; RV64-NEXT:    j .LBB13_14
+; RV64-NEXT:  .LBB13_13:
+; RV64-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
+; RV64-NEXT:    vmerge.vvm v8, v16, v8, v0
+; RV64-NEXT:    vredmaxu.vs v8, v8, v8
+; RV64-NEXT:    vmv.x.s a2, v8
+; RV64-NEXT:    add a2, a2, a0
+; RV64-NEXT:  .LBB13_14: # %entry
+; RV64-NEXT:    vsetvli a3, zero, e8, m2, ta, ma
+; RV64-NEXT:    vcpop.m a3, v5
+; RV64-NEXT:    beqz a3, .LBB13_16
+; RV64-NEXT:  # %bb.15:
+; RV64-NEXT:    add a5, a2, a4
+; RV64-NEXT:  .LBB13_16: # %entry
+; RV64-NEXT:    vsetvli a2, zero, e8, m4, ta, ma
+; RV64-NEXT:    vcpop.m a2, v6
+; RV64-NEXT:    beqz a2, .LBB13_18
+; RV64-NEXT:  # %bb.17:
+; RV64-NEXT:    slli a0, a0, 2
+; RV64-NEXT:    add a1, a5, a0
+; RV64-NEXT:  .LBB13_18: # %entry
+; RV64-NEXT:    addi a0, sp, 16
+; RV64-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
+; RV64-NEXT:    vsetivli zero, 1, e8, m8, ta, ma
+; RV64-NEXT:    vslidedown.vx v8, v8, a1
+; RV64-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
+; RV64-NEXT:    vcpop.m a0, v7
+; RV64-NEXT:    vmv.x.s a1, v8
+; RV64-NEXT:    seqz a0, a0
+; RV64-NEXT:    addi a0, a0, -1
+; RV64-NEXT:    and a0, a0, a1
+; RV64-NEXT:    csrr a1, vlenb
+; RV64-NEXT:    slli a1, a1, 3
+; RV64-NEXT:    add sp, sp, a1
+; RV64-NEXT:    .cfi_def_cfa sp, 16
+; RV64-NEXT:    addi sp, sp, 16
+; RV64-NEXT:    .cfi_def_cfa_offset 0
+; RV64-NEXT:    ret
+entry:
+  %1 = call i8 @llvm.experimental.vector.extract.last.active.nxv64i8(<vscale x 64 x i8> %0, <vscale x 64 x i1> %mask, i8 0)
+  ret i8 %1
+}

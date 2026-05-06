@@ -238,42 +238,39 @@ function (add_flangrt_library name)
           $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions -fno-rtti -funwind-tables -fno-asynchronous-unwind-tables>
         )
 
-      # We define our own _GLIBCXX_THROW_OR_ABORT here because, as of
-      # GCC 15.1, the libstdc++ header file <bits/c++config> uses
-      # (void)_EXC in its definition of _GLIBCXX_THROW_OR_ABORT to
-      # silence a warning.
-      #
-      # This is a problem for us because some compilers, specifically
-      # clang, do not always optimize away that (void)_EXC even though
-      # it is unreachable since it occurs after a call to
-      # _builtin_abort().  Because _EXC is typically an object derived
-      # from std::exception, (void)_EXC, when not optimized away,
-      # calls std::exception methods defined in the libstdc++ shared
-      # library.  We shouldn't link against that library since our
-      # build version may conflict with the version used by a hybrid
-      # Fortran/C++ application.
-      #
-      # Redefining _GLIBCXX_THROW_OR_ABORT in this manner is not
-      # supported by the maintainers of libstdc++, so future changes
-      # to libstdc++ may require future changes to this build script
-      # and/or future changes to the Fortran runtime source code.
-      target_compile_options(${tgtname} PUBLIC "-D_GLIBCXX_THROW_OR_ABORT(_EXC)=(__builtin_abort())")
+      # Include header at the top of all compilation units to avoid dependency
+      # on the C++ STL (libstdc++ or libc++).
+      target_compile_options(${tgtname} PRIVATE
+          "$<$<COMPILE_LANGUAGE:CXX>:-include${FLANG_RT_SOURCE_DIR}/lib/runtime/stl-overrides.h>"
+        )
     elseif (MSVC)
       target_compile_options(${tgtname} PRIVATE
           $<$<COMPILE_LANGUAGE:CXX>:/EHs-c- /GR->
+        )
+
+      # Include header at the top of all compilation units to avoid dependency
+      # on the C++ STL (libstdc++ or libc++).
+      target_compile_options(${tgtname} PRIVATE
+          "$<$<COMPILE_LANGUAGE:CXX>:/FI${FLANG_RT_SOURCE_DIR}/lib/runtime/stl-overrides.h>"
         )
     elseif (CMAKE_CXX_COMPILER_ID MATCHES "XL")
       target_compile_options(${tgtname} PRIVATE
           $<$<COMPILE_LANGUAGE:CXX>:-qnoeh -qnortti>
         )
+
+      # Include header at the top of all compilation units to avoid dependency
+      # on the C++ STL (libstdc++ or libc++).
+      target_compile_options(${tgtname} PRIVATE
+          "$<$<COMPILE_LANGUAGE:CXX>:-qinclude=${FLANG_RT_SOURCE_DIR}/lib/runtime/stl-overrides.h>"
+        )
     endif ()
 
     # Add target specific options if necessary.
-    if ("${LLVM_RUNTIMES_TARGET}" MATCHES "^amdgcn")
+    if ("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn")
       target_compile_options(${tgtname} PRIVATE
           $<$<COMPILE_LANGUAGE:CXX>:-nogpulib -flto -fvisibility=hidden>
         )
-    elseif ("${LLVM_RUNTIMES_TARGET}" MATCHES "^nvptx")
+    elseif ("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^nvptx")
       target_compile_options(${tgtname} PRIVATE
           $<$<COMPILE_LANGUAGE:CXX>:-nogpulib -flto -fvisibility=hidden -Wno-unknown-cuda-version --cuda-feature=+ptx63>
         )
@@ -348,15 +345,29 @@ function (add_flangrt_library name)
     # directory. Otherwise it is part of testing and is not installed at all.
     # TODO: Consider multi-configuration builds (MSVC_IDE, "Ninja Multi-Config")
     if (ARG_INSTALL_WITH_TOOLCHAIN)
+      # FIXME: RUNTIMES_OUTPUT_RESOURCE_LIB_DIR is not a good location for
+      #        shared libraries because it is not a ld.so default search path.
+      #        Also, the machine where the executable is eventually executed may
+      #        not be one where the compiler is installed, so even RPATH/RUNPATH
+      #        will not help. The most appropriate location for shared libraries
+      #        is /usr/lib/<triple>/lib<name>.so, like e.g. libgcc_s.so.
+      #        Flang-RT also would require a library versioning scheme so
+      #        executables compiled with different versions of Flang either use
+      #        matching versions of Flang-RT, or use a newer backward-compatible
+      #        version. Currently, Flang-RT has no ABI backwards-compatibility
+      #        policy.
+      #        Currently, we just emit it into RUNTIMES_OUTPUT_RESOURCE_LIB_DIR
+      #        like the static library, which is already in the driver's and
+      #        linker's search path.
       set_target_properties(${tgtname}
         PROPERTIES
-          ARCHIVE_OUTPUT_DIRECTORY "${FLANG_RT_OUTPUT_RESOURCE_LIB_DIR}"
-          LIBRARY_OUTPUT_DIRECTORY "${FLANG_RT_OUTPUT_RESOURCE_LIB_DIR}"
+          ARCHIVE_OUTPUT_DIRECTORY "${RUNTIMES_OUTPUT_RESOURCE_LIB_DIR}"
+          LIBRARY_OUTPUT_DIRECTORY "${RUNTIMES_OUTPUT_RESOURCE_LIB_DIR}"
         )
 
       install(TARGETS ${tgtname}
-          ARCHIVE DESTINATION "${FLANG_RT_INSTALL_RESOURCE_LIB_PATH}"
-          LIBRARY DESTINATION "${FLANG_RT_INSTALL_RESOURCE_LIB_PATH}"
+          ARCHIVE DESTINATION "${RUNTIMES_INSTALL_RESOURCE_LIB_PATH}"
+          LIBRARY DESTINATION "${RUNTIMES_INSTALL_RESOURCE_LIB_PATH}"
         )
     endif ()
 

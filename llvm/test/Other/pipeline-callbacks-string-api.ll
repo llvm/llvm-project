@@ -3,7 +3,7 @@
 ; RUN:   -passes='function(vectorizer-start-callbacks<O3>)' < %s 2>&1 | FileCheck %s --check-prefix=VECSTART
 ; RUN: opt -disable-output -print-pipeline-passes \
 ; RUN:   -passes-ep-peephole='no-op-function' \
-; RUN:   -passes='peephole-callbacks<Os>' < %s 2>&1 | FileCheck %s --check-prefix=PEEP
+; RUN:   -passes='peephole-callbacks<O2>' < %s 2>&1 | FileCheck %s --check-prefix=PEEP
 ; RUN: opt -disable-output -print-pipeline-passes \
 ; RUN:   -passes-ep-pipeline-start='no-op-module' \
 ; RUN:   -passes='pipeline-start-callbacks<O1>' < %s 2>&1 | FileCheck %s --check-prefix=MODSTART

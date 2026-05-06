@@ -142,10 +142,11 @@ ModuleSP DynamicLoaderDarwin::FindTargetModuleForImageInfo(
     LazyBool using_sc;
     LazyBool private_sc;
     FileSpec sc_path;
+    std::optional<uint64_t> size;
     SymbolSharedCacheUse sc_mode = ModuleList::GetGlobalModuleListProperties()
                                        .GetSharedCacheBinaryLoading();
     if (GetSharedCacheInformation(sc_base_addr, sc_uuid, using_sc, private_sc,
-                                  sc_path) &&
+                                  sc_path, size) &&
         sc_uuid) {
       if (module_spec.GetUUID())
         image_info = HostInfo::GetSharedCacheImageInfo(module_spec.GetUUID(),
@@ -274,6 +275,7 @@ void DynamicLoaderDarwin::UnloadAllImages() {
 bool DynamicLoaderDarwin::UpdateImageLoadAddress(Module *module,
                                                  ImageInfo &info) {
   bool changed = false;
+  Log *log = GetLog(LLDBLog::DynamicLoader);
   if (module) {
     ObjectFile *image_object_file = module->GetObjectFile();
     if (image_object_file) {
@@ -303,6 +305,23 @@ bool DynamicLoaderDarwin::UpdateImageLoadAddress(Module *module,
               // all other sections.
               const bool warn_multiple =
                   section_sp->GetName() != g_section_name_LINKEDIT;
+
+              // If a segment was eliminated for the in-memory image,
+              // don't map it into lldb's target section load list.
+              if (info.segments[i].vmsize == 0) {
+                LLDB_LOGF(log, "%s: Omitting zero-size segment %s",
+                          info.file_spec.GetFilename().AsCString(""),
+                          info.segments[i].name.AsCString(""));
+                continue;
+              }
+
+              if (info.segments[i].vmsize != section_sp->GetByteSize())
+                LLDB_LOGF(log,
+                          "%s: In-memory segment size for %s is 0x%" PRIx64
+                          " but file segment size is 0x%" PRIx64,
+                          info.file_spec.GetFilename().AsCString(""),
+                          info.segments[i].name.AsCString(""),
+                          info.segments[i].vmsize, section_sp->GetByteSize());
 
               changed = m_process->GetTarget().SetSectionLoadAddress(
                   section_sp, new_section_load_addr, warn_multiple);
@@ -655,7 +674,7 @@ std::optional<lldb_private::Address> DynamicLoaderDarwin::GetStartAddress() {
   Log *log = GetLog(LLDBLog::DynamicLoader);
 
   auto log_err = [log](llvm::StringLiteral err_msg) -> std::nullopt_t {
-    LLDB_LOGV(log, "{}", err_msg);
+    LLDB_LOG_VERBOSE(log, "{}", err_msg);
     return std::nullopt;
   };
 
@@ -846,17 +865,14 @@ bool DynamicLoaderDarwin::AlwaysRelyOnEHUnwindInfo(SymbolContext &sym_ctx) {
 // Dump a Segment to the file handle provided.
 void DynamicLoaderDarwin::Segment::PutToLog(Log *log,
                                             lldb::addr_t slide) const {
-  if (log) {
-    if (slide == 0)
-      LLDB_LOGF(log, "\t\t%16s [0x%16.16" PRIx64 " - 0x%16.16" PRIx64 ")",
-                name.AsCString(""), vmaddr + slide, vmaddr + slide + vmsize);
-    else
-      LLDB_LOGF(log,
-                "\t\t%16s [0x%16.16" PRIx64 " - 0x%16.16" PRIx64
-                ") slide = 0x%" PRIx64,
-                name.AsCString(""), vmaddr + slide, vmaddr + slide + vmsize,
-                slide);
-  }
+  if (slide == 0)
+    LLDB_LOGF(log, "\t\t%16s [0x%16.16" PRIx64 " - 0x%16.16" PRIx64 ")",
+              name.AsCString(""), vmaddr + slide, vmaddr + slide + vmsize);
+  else
+    LLDB_LOGF(
+        log,
+        "\t\t%16s [0x%16.16" PRIx64 " - 0x%16.16" PRIx64 ") slide = 0x%" PRIx64,
+        name.AsCString(""), vmaddr + slide, vmaddr + slide + vmsize, slide);
 }
 
 lldb_private::ArchSpec DynamicLoaderDarwin::ImageInfo::GetArchitecture() const {
@@ -1039,7 +1055,8 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
               current_symbol->GetName().GetCString(),
               actual_symbol->GetName().GetCString(),
               target_addr.GetLoadAddress(target_sp.get()));
-          addresses.push_back(target_addr.GetLoadAddress(target_sp.get()));
+          addresses.push_back(
+              Address(target_addr.GetLoadAddress(target_sp.get())));
         }
       }
     }

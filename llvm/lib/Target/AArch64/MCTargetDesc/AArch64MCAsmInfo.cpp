@@ -114,6 +114,7 @@ StringRef AArch64::getSpecifierName(AArch64::Specifier S) {
 
   case AArch64::S_GOTPCREL:            return "%gotpcrel";
   case AArch64::S_PLT:                 return "%pltpcrel";
+  case AArch64::S_DTPREL:              return "%dtprel";
   case AArch64::S_FUNCINIT:            return "%funcinit";
   default:
     llvm_unreachable("Invalid relocation specifier");
@@ -125,6 +126,7 @@ AArch64::Specifier AArch64::parsePercentSpecifierName(StringRef name) {
   return StringSwitch<AArch64::Specifier>(name)
       .Case("pltpcrel", AArch64::S_PLT)
       .Case("gotpcrel", AArch64::S_GOTPCREL)
+      .Case("dtprel", AArch64::S_DTPREL)
       .Case("funcinit", AArch64::S_FUNCINIT)
       .Default(0);
 }
@@ -137,7 +139,9 @@ static bool evaluate(const MCSpecifierExpr &Expr, MCValue &Res,
   return !Res.getSubSym();
 }
 
-AArch64MCAsmInfoDarwin::AArch64MCAsmInfoDarwin(bool IsILP32) {
+AArch64MCAsmInfoDarwin::AArch64MCAsmInfoDarwin(bool IsILP32,
+                                               const MCTargetOptions &Options)
+    : MCAsmInfoDarwin(Options) {
   // We prefer NEON instructions to be printed in the short, Apple-specific
   // form when targeting Darwin.
   AssemblerDialect = AsmWriterVariant == Default ? Apple : AsmWriterVariant;
@@ -201,7 +205,9 @@ bool AArch64MCAsmInfoDarwin::evaluateAsRelocatableImpl(
   return evaluate(Expr, Res, Asm);
 }
 
-AArch64MCAsmInfoELF::AArch64MCAsmInfoELF(const Triple &T) {
+AArch64MCAsmInfoELF::AArch64MCAsmInfoELF(const Triple &T,
+                                         const MCTargetOptions &Options)
+    : MCAsmInfoELF(Options) {
   if (T.getArch() == Triple::aarch64_be)
     IsLittleEndian = false;
 
@@ -255,7 +261,9 @@ bool AArch64MCAsmInfoELF::evaluateAsRelocatableImpl(
   return evaluate(Expr, Res, Asm);
 }
 
-AArch64MCAsmInfoMicrosoftCOFF::AArch64MCAsmInfoMicrosoftCOFF() {
+AArch64MCAsmInfoMicrosoftCOFF::AArch64MCAsmInfoMicrosoftCOFF(
+    const MCTargetOptions &Options)
+    : MCAsmInfoMicrosoft(Options) {
   InternalSymbolPrefix = ".L";
   PrivateLabelPrefix = ".L";
 
@@ -285,7 +293,8 @@ bool AArch64MCAsmInfoMicrosoftCOFF::evaluateAsRelocatableImpl(
   return evaluate(Expr, Res, Asm);
 }
 
-AArch64MCAsmInfoGNUCOFF::AArch64MCAsmInfoGNUCOFF() {
+AArch64MCAsmInfoGNUCOFF::AArch64MCAsmInfoGNUCOFF(const MCTargetOptions &Options)
+    : MCAsmInfoGNUCOFF(Options) {
   InternalSymbolPrefix = ".L";
   PrivateLabelPrefix = ".L";
 

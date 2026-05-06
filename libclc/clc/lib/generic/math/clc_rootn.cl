@@ -24,8 +24,8 @@
 #include "clc/relational/clc_isunordered.h"
 
 #define __CLC_COMPILING_ROOTN
-#define __CLC_BODY <clc_pow_base.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "clc_pow_base.inc"
+#include "clc/math/gentype.inc"
 
 #define __CLC_FUNCTION __clc_rootn
 #define __CLC_ARG2_SCALAR_TYPE int

@@ -17,6 +17,7 @@
 //   - cir.end_cleanup      → (removed)
 //   - cir.begin_catch      → call to __cxa_begin_catch
 //   - cir.end_catch        → call to __cxa_end_catch
+//   - cir.eh.terminate     → call to __clang_call_terminate + unreachable
 //   - cir.resume           → cir.resume.flat
 //   - !cir.eh_token values → (!cir.ptr<!void>, !u32i) value pairs
 //   - personality function set on functions requiring EH
@@ -116,17 +117,20 @@ private:
   cir::FuncOp personalityFunc;
   cir::FuncOp beginCatchFunc;
   cir::FuncOp endCatchFunc;
+  cir::FuncOp clangCallTerminateFunc;
 
   constexpr const static ::llvm::StringLiteral kGxxPersonality =
       "__gxx_personality_v0";
 
   void ensureRuntimeDecls(mlir::Location loc);
+  void ensureClangCallTerminate(mlir::Location loc);
   mlir::LogicalResult lowerFunc(cir::FuncOp funcOp);
   void lowerEhInitiate(cir::EhInitiateOp initiateOp, EhTokenMap &ehTokenMap,
                        SmallVectorImpl<mlir::Operation *> &deadOps);
   void lowerDispatch(cir::EhDispatchOp dispatch, mlir::Value exnPtr,
                      mlir::Value typeId,
                      SmallVectorImpl<mlir::Operation *> &deadOps);
+  void lowerInitCatchParam(cir::InitCatchParamOp op);
 };
 
 /// Lower all EH operations in the module to the Itanium-specific form.
@@ -170,6 +174,61 @@ void ItaniumEHLowering::ensureRuntimeDecls(mlir::Location loc) {
     endCatchFunc =
         getOrCreateRuntimeFuncDecl(mod, loc, "__cxa_end_catch", endCatchFuncTy);
   }
+}
+
+/// Ensure the __clang_call_terminate function exists in the module. This
+/// function is defined with a body that calls __cxa_begin_catch followed by
+/// std::terminate, matching the behavior of Clang's LLVM IR codegen.
+///
+///   void __clang_call_terminate(void *exn) nounwind noreturn {
+///     __cxa_begin_catch(exn);
+///     std::terminate();
+///     unreachable;
+///   }
+void ItaniumEHLowering::ensureClangCallTerminate(mlir::Location loc) {
+  if (clangCallTerminateFunc)
+    return;
+
+  ensureRuntimeDecls(loc);
+
+  if (auto existing = mod.lookupSymbol<cir::FuncOp>("__clang_call_terminate")) {
+    clangCallTerminateFunc = existing;
+    return;
+  }
+
+  auto funcTy = cir::FuncType::get({voidPtrType}, voidType, /*isVarArg=*/false);
+  builder.setInsertionPointToEnd(mod.getBody());
+  auto funcOp =
+      cir::FuncOp::create(builder, loc, "__clang_call_terminate", funcTy);
+  funcOp.setLinkage(cir::GlobalLinkageKind::LinkOnceODRLinkage);
+  funcOp.setGlobalVisibility(cir::VisibilityKind::Hidden);
+
+  mlir::Block *entryBlock = funcOp.addEntryBlock();
+  builder.setInsertionPointToStart(entryBlock);
+  mlir::Value exnArg = entryBlock->getArgument(0);
+
+  auto catchCall = cir::CallOp::create(
+      builder, loc, mlir::FlatSymbolRefAttr::get(beginCatchFunc), u8PtrType,
+      mlir::ValueRange{exnArg});
+  catchCall.setNothrowAttr(builder.getUnitAttr());
+
+  auto terminateFuncDecl = getOrCreateRuntimeFuncDecl(
+      mod, loc, "_ZSt9terminatev",
+      cir::FuncType::get({}, voidType, /*isVarArg=*/false));
+  terminateFuncDecl->setAttr(cir::CIRDialect::getNoReturnAttrName(),
+                             builder.getUnitAttr());
+  auto terminateCall = cir::CallOp::create(
+      builder, loc, mlir::FlatSymbolRefAttr::get(terminateFuncDecl), voidType,
+      mlir::ValueRange{});
+  terminateCall.setNothrowAttr(builder.getUnitAttr());
+  terminateCall->setAttr(cir::CIRDialect::getNoReturnAttrName(),
+                         builder.getUnitAttr());
+
+  cir::UnreachableOp::create(builder, loc);
+
+  funcOp->setAttr(cir::CIRDialect::getNoReturnAttrName(),
+                  builder.getUnitAttr());
+  clangCallTerminateFunc = funcOp;
 }
 
 /// Lower all EH operations in a single function.
@@ -220,6 +279,14 @@ mlir::LogicalResult ItaniumEHLowering::lowerFunc(cir::FuncOp funcOp) {
     }
   }
 
+  // Lower any cir.init_catch_param ops in this function. These materialize
+  // the catch parameter local from the (already lowered) begin_catch result,
+  // and are independent of the eh_token graph traversal above.
+  SmallVector<cir::InitCatchParamOp> initCatchOps;
+  funcOp.walk([&](cir::InitCatchParamOp op) { initCatchOps.push_back(op); });
+  for (cir::InitCatchParamOp op : initCatchOps)
+    lowerInitCatchParam(op);
+
   return mlir::success();
 }
 
@@ -259,6 +326,7 @@ void ItaniumEHLowering::lowerEhInitiate(
   builder.setInsertionPoint(initiateOp);
   auto inflightOp = cir::EhInflightOp::create(
       builder, initiateOp.getLoc(), /*cleanup=*/initiateOp.getCleanup(),
+      /*catch_all=*/false,
       /*catch_type_list=*/mlir::ArrayAttr{});
 
   ehTokenMap[rootToken] = {inflightOp.getExceptionPtr(),
@@ -353,6 +421,8 @@ void ItaniumEHLowering::lowerEhInitiate(
                 mlir::cast<cir::GlobalViewAttr>(attr).getSymbol());
           inflightOp.setCatchTypeListAttr(builder.getArrayAttr(typeSymbols));
         }
+        if (op.getDefaultIsCatchAll())
+          inflightOp.setCatchAllAttr(builder.getUnitAttr());
         // Only lower the dispatch once. A sibling initiate sharing the same
         // dispatch will still read its catch types (above), but the comparison
         // chain and branch replacement are only created the first time.
@@ -360,6 +430,19 @@ void ItaniumEHLowering::lowerEhInitiate(
           auto [exnPtr, typeId] = ehTokenMap.lookup(op.getEhToken());
           lowerDispatch(op, exnPtr, typeId, deadOps);
         }
+      } else if (auto op = mlir::dyn_cast<cir::EhTerminateOp>(user)) {
+        auto [exnPtr, typeId] = ehTokenMap.lookup(op.getEhToken());
+        ensureClangCallTerminate(op.getLoc());
+        builder.setInsertionPoint(op);
+        auto call = cir::CallOp::create(
+            builder, op.getLoc(),
+            mlir::FlatSymbolRefAttr::get(clangCallTerminateFunc), voidType,
+            mlir::ValueRange{exnPtr});
+        call.setNothrowAttr(builder.getUnitAttr());
+        call->setAttr(cir::CIRDialect::getNoReturnAttrName(),
+                      builder.getUnitAttr());
+        cir::UnreachableOp::create(builder, op.getLoc());
+        op.erase();
       } else if (auto op = mlir::dyn_cast<cir::ResumeOp>(user)) {
         auto [exnPtr, typeId] = ehTokenMap.lookup(op.getEhToken());
         builder.setInsertionPoint(op);
@@ -455,6 +538,88 @@ void ItaniumEHLowering::lowerDispatch(
   deadOps.push_back(dispatch);
 }
 
+/// Lower a cir.init_catch_param into the Itanium-specific sequence that
+/// materializes the catch parameter's local variable from the exception
+/// pointer returned by __cxa_begin_catch. The shape of the lowering
+/// depends on the init catch kind:
+///
+///   - Reference: the begin_catch result is
+///     the pointer value itself, so just bitcast and store it into the alloca
+///     except if it reference of pointer of record.
+///   - Pointer: the begin_catch result is
+///     the pointer value itself, so just bitcast and store it into the
+///     alloca.
+///   - Scalar (any other by-value catch): treat the begin_catch result as a
+///     pointer to the value, load it, and store it into the alloca.
+///   - Objc: Handle pointer representation with ObjCLifetime.
+///   - TrivialCopy: copy the exception
+///     object's bytes into the alloca via cir.copy.
+///   - NonTrivialCopy: copy the exception
+///     object's bytes into the alloca via copy constructor.
+///
+void ItaniumEHLowering::lowerInitCatchParam(cir::InitCatchParamOp op) {
+  builder.setInsertionPoint(op);
+  mlir::Location loc = op.getLoc();
+  mlir::Value exnPtr = op.getExnPtr();
+  mlir::Value paramAddr = op.getParamAddr();
+  auto paramAddrType = mlir::cast<cir::PointerType>(paramAddr.getType());
+  mlir::Type elementType = paramAddrType.getPointee();
+  cir::InitCatchKind kind = op.getKind();
+
+  switch (kind) {
+  case InitCatchKind::Reference: {
+    // We have no way to tell the personality function that we're
+    // catching by reference, so if we're catching a pointer,
+    // __cxa_begin_catch will actually return that pointer by value.
+    if (const auto ref = mlir::dyn_cast<cir::PointerType>(elementType)) {
+      // When catching by reference, generally we should just ignore
+      // this by-value pointer and use the exception object instead.
+      if (auto ptr = mlir::dyn_cast<cir::PointerType>(ref.getPointee()))
+        if (!mlir::isa<cir::RecordType>(ptr.getPointee()))
+          llvm_unreachable(
+              "InitCatchParam: reference of pointer or non-record is NYI");
+    }
+
+    mlir::Value casted = cir::CastOp::create(builder, loc, elementType,
+                                             cir::CastKind::bitcast, exnPtr);
+    cir::StoreOp::create(builder, loc, casted, paramAddr, {}, {}, {}, {});
+    break;
+  }
+  case InitCatchKind::TrivialCopy: {
+    mlir::Value srcPtr = cir::CastOp::create(builder, loc, paramAddrType,
+                                             cir::CastKind::bitcast, exnPtr);
+    cir::CopyOp::create(builder, loc, paramAddr, srcPtr, {}, {});
+    break;
+  }
+  case InitCatchKind::NonTrivialCopy: {
+    llvm_unreachable("InitCatchParam: non-trivial-copy is NYI");
+    break;
+  }
+  case InitCatchKind::Scalar: {
+    // Scalar by-value catch (integer, float, complex, etc.). The begin_catch
+    // result points into the exception object; load the value through a
+    // typed pointer and store it into the alloca.
+    mlir::Value srcPtr = cir::CastOp::create(builder, loc, paramAddrType,
+                                             cir::CastKind::bitcast, exnPtr);
+    auto loadOp = cir::LoadOp::create(builder, loc, elementType, srcPtr);
+    cir::StoreOp::create(builder, loc, loadOp.getResult(), paramAddr, {}, {},
+                         {}, {});
+    break;
+  }
+  case InitCatchKind::Pointer: {
+    mlir::Value casted = cir::CastOp::create(builder, loc, elementType,
+                                             cir::CastKind::bitcast, exnPtr);
+    cir::StoreOp::create(builder, loc, casted, paramAddr, {}, {}, {}, {});
+    break;
+  }
+  case InitCatchKind::Objc:
+    llvm_unreachable("InitCatchParam: ObjCLifetime is NYI");
+    break;
+  }
+
+  op.erase();
+}
+
 //===----------------------------------------------------------------------===//
 // The Pass
 //===----------------------------------------------------------------------===//
@@ -468,9 +633,9 @@ struct CIREHABILoweringPass
 void CIREHABILoweringPass::runOnOperation() {
   auto mod = mlir::cast<mlir::ModuleOp>(getOperation());
 
-  // The target triple is attached to the module as the "cir.triple" attribute.
-  // If it is absent (e.g. a CIR module parsed from text without a triple) we
-  // cannot determine the ABI and must skip the pass.
+  // The target triple is attached to the module as the "cir.triple"
+  // attribute. If it is absent (e.g. a CIR module parsed from text without a
+  // triple) we cannot determine the ABI and must skip the pass.
   auto tripleAttr = mlir::dyn_cast_if_present<mlir::StringAttr>(
       mod->getAttr(cir::CIRDialect::getTripleAttrName()));
   if (!tripleAttr) {

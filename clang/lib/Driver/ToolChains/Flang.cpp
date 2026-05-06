@@ -193,6 +193,7 @@ void Flang::addDebugOptions(const llvm::opt::ArgList &Args, const JobAction &JA,
       CmdArgs.push_back(SplitDWARFOut);
     }
   }
+  addDebugInfoForProfilingArgs(D, TC, Args, CmdArgs);
 }
 
 void Flang::addCodegenOptions(const ArgList &Args,
@@ -614,6 +615,7 @@ void Flang::addTargetOptions(const ArgList &Args,
   case llvm::Triple::ppc:
   case llvm::Triple::ppc64:
   case llvm::Triple::ppc64le:
+    getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
     AddPPCTargetArgs(Args, CmdArgs);
     break;
   case llvm::Triple::loongarch64:
@@ -975,6 +977,39 @@ static void renderRemarksOptions(const ArgList &Args, ArgStringList &CmdArgs,
   }
 }
 
+static void addPGOAndCoverageFlags(const ToolChain &TC, const JobAction &JA,
+                                   const ArgList &Args,
+                                   ArgStringList &CmdArgs) {
+  const Driver &D = TC.getDriver();
+  const llvm::Triple &T = TC.getTriple();
+
+  bool IsCudaDevice = JA.isDeviceOffloading(Action::OFK_Cuda);
+  bool IsHIPDevice = JA.isDeviceOffloading(Action::OFK_HIP);
+
+  if (T.isOSAIX()) {
+    if (Arg *ProfileSampleUseArg = getLastProfileSampleUseArg(Args))
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << ProfileSampleUseArg->getSpelling() << TC.getTriple().str();
+  }
+
+  if (!(IsCudaDevice || IsHIPDevice)) {
+    // recognise options: -fprofile-sample-use= and -fno-profile-sample-use=
+    if (Arg *A = getLastProfileSampleUseArg(Args)) {
+      if (Arg *PGOArg = Args.getLastArg(options::OPT_fprofile_generate,
+                                        options::OPT_fprofile_generate_EQ)) {
+        D.Diag(diag::err_drv_argument_not_allowed_with)
+            << PGOArg->getAsString(Args) << A->getAsString(Args);
+      }
+
+      StringRef fname = A->getValue();
+      if (!llvm::sys::fs::exists(fname))
+        D.Diag(diag::err_drv_no_such_file) << fname;
+      else
+        A->render(Args, CmdArgs);
+    }
+  }
+}
+
 void Flang::ConstructJob(Compilation &C, const JobAction &JA,
                          const InputInfo &Output, const InputInfoList &Inputs,
                          const ArgList &Args, const char *LinkingOutput) const {
@@ -1072,6 +1107,9 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   // Add target args, features, etc.
   addTargetOptions(Args, CmdArgs);
 
+  if (!TC.useIntegratedAs())
+    CmdArgs.push_back("-no-integrated-as");
+
   llvm::Reloc::Model RelocationModel =
       std::get<0>(ParsePICArgs(getToolChain(), Args));
   // Add MCModel information
@@ -1097,6 +1135,8 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   // recognise options: fprofile-generate -fprofile-use=
   Args.addAllArgs(
       CmdArgs, {options::OPT_fprofile_generate, options::OPT_fprofile_use_EQ});
+
+  addPGOAndCoverageFlags(TC, JA, Args, CmdArgs);
 
   // Forward flags for OpenMP. We don't do this if the current action is an
   // device offloading action other than OpenMP.

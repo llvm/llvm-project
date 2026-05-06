@@ -21,6 +21,7 @@
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
@@ -1663,7 +1664,7 @@ bool AArch64LoadStoreOpt::findMatchingStore(
 }
 
 static bool needsWinCFI(const MachineFunction *MF) {
-  return MF->getTarget().getMCAsmInfo()->usesWindowsCFI() &&
+  return MF->getTarget().getMCAsmInfo().usesWindowsCFI() &&
          MF->getFunction().needsUnwindTableEntry();
 }
 

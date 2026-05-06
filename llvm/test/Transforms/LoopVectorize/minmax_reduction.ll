@@ -1,4 +1,4 @@
-; RUN: opt -S -passes=loop-vectorize,dce -force-vector-width=2 -force-vector-interleave=2  < %s | FileCheck %s
+; RUN: opt -S -passes=loop-vectorize -force-vector-width=2 -force-vector-interleave=2  < %s | FileCheck %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
@@ -882,7 +882,7 @@ define i32 @smin_intrinsic(ptr nocapture readonly %x) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.012 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %s.011 = phi i32 [ 100, %entry ], [ %1, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %x, i32 %i.012
@@ -892,7 +892,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i32 %inc, 1024
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   ret i32 %1
 }
 
@@ -903,7 +903,7 @@ define i32 @smax_intrinsic(ptr nocapture readonly %x) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.012 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %s.011 = phi i32 [ 100, %entry ], [ %1, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %x, i32 %i.012
@@ -913,7 +913,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i32 %inc, 1024
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   ret i32 %1
 }
 
@@ -924,7 +924,7 @@ define i32 @umin_intrinsic(ptr nocapture readonly %x) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.012 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %s.011 = phi i32 [ 100, %entry ], [ %1, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %x, i32 %i.012
@@ -934,7 +934,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i32 %inc, 1024
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   ret i32 %1
 }
 
@@ -945,7 +945,7 @@ define i32 @umax_intrinsic(ptr nocapture readonly %x) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.012 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %s.011 = phi i32 [ 100, %entry ], [ %1, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %x, i32 %i.012
@@ -955,7 +955,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i32 %inc, 1024
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   ret i32 %1
 }
 
@@ -966,10 +966,10 @@ define float @fmin_intrinsic(ptr nocapture readonly %x) {
 entry:
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   ret float %1
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.012 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %s.011 = phi float [ 0.000000e+00, %entry ], [ %1, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %x, i32 %i.012
@@ -987,10 +987,10 @@ define float @fmax_intrinsic(ptr nocapture readonly %x) {
 entry:
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   ret float %1
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.012 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %s.011 = phi float [ 0.000000e+00, %entry ], [ %1, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %x, i32 %i.012
@@ -1009,10 +1009,10 @@ define float @fmin_intrinsic_nofast(ptr nocapture readonly %x) {
 entry:
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   ret float %1
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.012 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %s.011 = phi float [ 0.000000e+00, %entry ], [ %1, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %x, i32 %i.012
@@ -1031,10 +1031,10 @@ define float @fmax_intrinsic_nofast(ptr nocapture readonly %x) {
 entry:
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   ret float %1
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.012 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %s.011 = phi float [ 0.000000e+00, %entry ], [ %1, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %x, i32 %i.012
@@ -1052,10 +1052,10 @@ define i32 @sminmax(ptr nocapture readonly %x, ptr nocapture readonly %y) {
 entry:
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   ret i32 %cond9
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.025 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %s.024 = phi i32 [ 0, %entry ], [ %cond9, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %x, i32 %i.025
@@ -1077,10 +1077,10 @@ define i32 @sminmin(ptr nocapture readonly %x, ptr nocapture readonly %y) {
 entry:
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   ret i32 %cond9
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.025 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %s.024 = phi i32 [ 0, %entry ], [ %cond9, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %x, i32 %i.025
@@ -1106,10 +1106,10 @@ define float @fmaximum_intrinsic(ptr nocapture readonly %x) {
 entry:
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   ret float %1
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.012 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %s.011 = phi float [ 0.000000e+00, %entry ], [ %1, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %x, i32 %i.012
@@ -1132,10 +1132,10 @@ define float @fminimum_intrinsic(ptr nocapture readonly %x) {
 entry:
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   ret float %1
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.012 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %s.011 = phi float [ 0.000000e+00, %entry ], [ %1, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %x, i32 %i.012
@@ -1160,10 +1160,10 @@ define float @fminimum_fminimum(ptr nocapture readonly %x, ptr nocapture readonl
 entry:
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   ret float %cond9
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.025 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %s.011 = phi float [ 0.000000e+00, %entry ], [ %cond9, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %x, i32 %i.025
@@ -1191,10 +1191,10 @@ define float @fminimum_fminimum_one_with_flags(ptr nocapture readonly %x, ptr no
 entry:
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body
+for.cond.cleanup:
   ret float %cond9
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.025 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %s.011 = phi float [ 0.000000e+00, %entry ], [ %cond9, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %x, i32 %i.025
@@ -1211,12 +1211,4 @@ for.body:                                         ; preds = %entry, %for.body
 ; Make sure any check-not directives are not triggered by function declarations.
 ; CHECK: declare
 
-declare i32 @llvm.smin.i32(i32, i32)
-declare i32 @llvm.smax.i32(i32, i32)
-declare i32 @llvm.umin.i32(i32, i32)
-declare i32 @llvm.umax.i32(i32, i32)
-declare float @llvm.minnum.f32(float, float)
-declare float @llvm.maxnum.f32(float, float)
-declare float @llvm.minimum.f32(float, float)
-declare float @llvm.maximum.f32(float, float)
 

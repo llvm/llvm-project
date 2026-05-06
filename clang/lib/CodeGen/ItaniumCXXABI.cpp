@@ -774,7 +774,7 @@ CGCallee ItaniumCXXABI::EmitLoadOfMemberFunctionPointer(
             Builder.CreateCall(CGM.getIntrinsic(IID), {VFPAddr, TypeId});
       }
 
-      if (CGM.getItaniumVTableContext().isRelativeLayout()) {
+      if (CGM.getLangOpts().RelativeCXXABIVTables) {
         VirtualFn = CGF.Builder.CreateCall(
             CGM.getIntrinsic(llvm::Intrinsic::load_relative,
                              {VTableOffset->getType()}),
@@ -1167,7 +1167,7 @@ llvm::Constant *ItaniumCXXABI::BuildMemberPointer(const CXXMethodDecl *MD,
   if (MD->isVirtual()) {
     uint64_t Index = CGM.getItaniumVTableContext().getMethodVTableIndex(MD);
     uint64_t VTableOffset;
-    if (CGM.getItaniumVTableContext().isRelativeLayout()) {
+    if (CGM.getLangOpts().RelativeCXXABIVTables) {
       // Multiply by 4-byte relative offsets.
       VTableOffset = Index * 4;
     } else {
@@ -1381,12 +1381,14 @@ bool ItaniumCXXABI::classifyReturnType(CGFunctionInfo &FI) const {
   if (!RD)
     return false;
 
-  // If C++ prohibits us from making a copy, return by address.
+  // If C++ prohibits us from making a copy, return by address using the target
+  // hook getSRetAddrSpace to decide the AS.
   if (!RD->canPassInRegisters()) {
     auto Align = CGM.getContext().getTypeAlignInChars(FI.getReturnType());
-    FI.getReturnInfo() = ABIArgInfo::getIndirect(
-        Align, /*AddrSpace=*/CGM.getDataLayout().getAllocaAddrSpace(),
-        /*ByVal=*/false);
+    LangAS SRetAS = CGM.getTargetCodeGenInfo().getSRetAddrSpace(RD);
+    unsigned AS = CGM.getContext().getTargetAddressSpace(SRetAS);
+    FI.getReturnInfo() =
+        ABIArgInfo::getIndirect(Align, /*AddrSpace=*/AS, /*ByVal=*/false);
     return true;
   }
   return false;
@@ -1625,7 +1627,7 @@ llvm::Value *ItaniumCXXABI::EmitTypeid(CodeGenFunction &CGF,
   llvm::Value *Value = CGF.GetVTablePtr(ThisPtr, CGM.GlobalsInt8PtrTy,
                                         ClassDecl);
 
-  if (CGM.getItaniumVTableContext().isRelativeLayout()) {
+  if (CGM.getLangOpts().RelativeCXXABIVTables) {
     // Load the type info.
     Value = CGF.Builder.CreateCall(
         CGM.getIntrinsic(llvm::Intrinsic::load_relative, {CGM.Int32Ty}),
@@ -1834,7 +1836,7 @@ llvm::Value *ItaniumCXXABI::emitDynamicCastToVoid(CodeGenFunction &CGF,
                                                   QualType SrcRecordTy) {
   auto *ClassDecl = SrcRecordTy->castAsCXXRecordDecl();
   llvm::Value *OffsetToTop;
-  if (CGM.getItaniumVTableContext().isRelativeLayout()) {
+  if (CGM.getLangOpts().RelativeCXXABIVTables) {
     // Get the vtable pointer.
     llvm::Value *VTable =
         CGF.GetVTablePtr(ThisAddr, CGF.DefaultPtrTy, ClassDecl);
@@ -1886,7 +1888,7 @@ ItaniumCXXABI::GetVirtualBaseClassOffset(CodeGenFunction &CGF,
         "vbase.offset.ptr");
 
   llvm::Value *VBaseOffset;
-  if (CGM.getItaniumVTableContext().isRelativeLayout()) {
+  if (CGM.getLangOpts().RelativeCXXABIVTables) {
     VBaseOffset = CGF.Builder.CreateAlignedLoad(
         CGF.Int32Ty, VBaseOffsetPtr, CharUnits::fromQuantity(4),
         "vbase.offset");
@@ -2137,7 +2139,7 @@ void ItaniumCXXABI::emitVTableDefinitions(CodeGenVTables &CGVT,
     }
   }
 
-  if (VTContext.isRelativeLayout()) {
+  if (CGM.getLangOpts().RelativeCXXABIVTables) {
     CGVT.RemoveHwasanMetadata(VTable);
     if (!VTable->isDSOLocal())
       CGVT.GenerateRelativeVTableAlias(VTable, VTable->getName());
@@ -2307,7 +2309,7 @@ CGCallee ItaniumCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
     CGF.EmitTypeMetadataCodeForVCall(MethodDecl->getParent(), VTable, Loc);
 
     llvm::Value *VFuncLoad;
-    if (CGM.getItaniumVTableContext().isRelativeLayout()) {
+    if (CGM.getLangOpts().RelativeCXXABIVTables) {
       VFuncLoad = CGF.Builder.CreateCall(
           CGM.getIntrinsic(llvm::Intrinsic::load_relative, {CGM.Int32Ty}),
           {VTable, llvm::ConstantInt::get(CGM.Int32Ty, ByteOffset)});
@@ -2475,7 +2477,7 @@ static llvm::Value *performTypeAdjustment(CodeGenFunction &CGF,
     llvm::Value *Offset;
     llvm::Value *OffsetPtr = CGF.Builder.CreateConstInBoundsGEP1_64(
         CGF.Int8Ty, VTablePtr, VirtualAdjustment);
-    if (CGF.CGM.getItaniumVTableContext().isRelativeLayout()) {
+    if (CGF.CGM.getLangOpts().RelativeCXXABIVTables) {
       // Load the adjustment offset from the vtable as a 32-bit int.
       Offset =
           CGF.Builder.CreateAlignedLoad(CGF.Int32Ty, OffsetPtr,
@@ -4085,7 +4087,7 @@ void ItaniumRTTIBuilder::BuildVTablePointer(const Type *Ty,
   llvm::Constant *VTable = nullptr;
 
   // Check if the alias exists. If it doesn't, then get or create the global.
-  if (CGM.getItaniumVTableContext().isRelativeLayout())
+  if (CGM.getLangOpts().RelativeCXXABIVTables)
     VTable = CGM.getModule().getNamedAlias(VTableName);
   if (!VTable) {
     llvm::Type *Ty = llvm::ArrayType::get(CGM.GlobalsInt8PtrTy, 0);
@@ -4098,7 +4100,7 @@ void ItaniumRTTIBuilder::BuildVTablePointer(const Type *Ty,
       CGM.getTypes().ConvertType(CGM.getContext().getPointerDiffType());
 
   // The vtable address point is 2.
-  if (CGM.getItaniumVTableContext().isRelativeLayout()) {
+  if (CGM.getLangOpts().RelativeCXXABIVTables) {
     // The vtable address point is 8 bytes after its start:
     // 4 for the offset to top + 4 for the relative offset to rtti.
     llvm::Constant *Eight = llvm::ConstantInt::get(CGM.Int32Ty, 8);

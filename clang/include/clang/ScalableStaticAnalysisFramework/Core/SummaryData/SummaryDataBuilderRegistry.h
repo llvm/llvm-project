@@ -27,6 +27,8 @@
 #include <memory>
 #include <string>
 
+LLVM_DECLARE_REGISTRY(llvm::Registry<clang::ssaf::SummaryDataBuilderBase>)
+
 namespace clang::ssaf {
 
 /// Registry for SummaryDataBuilder implementations.

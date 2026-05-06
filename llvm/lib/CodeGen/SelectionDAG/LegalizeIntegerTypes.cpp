@@ -235,6 +235,15 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::VP_UDIV:
   case ISD::VP_UREM:     Res = PromoteIntRes_ZExtIntBinOp(N); break;
 
+  case ISD::MASKED_UDIV:
+  case ISD::MASKED_UREM:
+    Res = PromoteIntRes_ZExtMaskedIntBinOp(N);
+    break;
+  case ISD::MASKED_SDIV:
+  case ISD::MASKED_SREM:
+    Res = PromoteIntRes_SExtMaskedIntBinOp(N);
+    break;
+
   case ISD::SADDO:
   case ISD::SSUBO:       Res = PromoteIntRes_SADDSUBO(N, ResNo); break;
   case ISD::UADDO:
@@ -743,15 +752,18 @@ SDValue DAGTypeLegalizer::PromoteIntRes_CTLZ(SDNode *N) {
     // Zero extend to the promoted type and do the count there.
     SDValue Op = ZExtPromotedInteger(N->getOperand(0));
 
+    // At this stage SUB is guaranteed to be positive no-wrap,
+    // that to be used in further KnownBits optimizations.
     if (!N->isVPOpcode())
       return DAG.getNode(ISD::SUB, dl, NVT,
                          DAG.getNode(N->getOpcode(), dl, NVT, Op),
-                         ExtractLeadingBits);
+                         ExtractLeadingBits, SDNodeFlags::NoUnsignedWrap);
     SDValue Mask = N->getOperand(1);
     SDValue EVL = N->getOperand(2);
     return DAG.getNode(ISD::VP_SUB, dl, NVT,
                        DAG.getNode(N->getOpcode(), dl, NVT, Op, Mask, EVL),
-                       ExtractLeadingBits, Mask, EVL);
+                       ExtractLeadingBits, Mask, EVL,
+                       SDNodeFlags::NoUnsignedWrap);
   }
   if (CtlzOpcode == ISD::CTLZ_ZERO_UNDEF ||
       CtlzOpcode == ISD::VP_CTLZ_ZERO_UNDEF) {
@@ -1540,6 +1552,22 @@ SDValue DAGTypeLegalizer::PromoteIntRes_ZExtIntBinOp(SDNode *N) {
                      Mask, EVL);
 }
 
+SDValue DAGTypeLegalizer::PromoteIntRes_ZExtMaskedIntBinOp(SDNode *N) {
+  SDValue LHS = ZExtPromotedInteger(N->getOperand(0));
+  SDValue RHS = ZExtPromotedInteger(N->getOperand(1));
+  SDValue Mask = N->getOperand(2);
+  return DAG.getNode(N->getOpcode(), SDLoc(N), LHS.getValueType(), LHS, RHS,
+                     Mask);
+}
+
+SDValue DAGTypeLegalizer::PromoteIntRes_SExtMaskedIntBinOp(SDNode *N) {
+  SDValue LHS = SExtPromotedInteger(N->getOperand(0));
+  SDValue RHS = SExtPromotedInteger(N->getOperand(1));
+  SDValue Mask = N->getOperand(2);
+  return DAG.getNode(N->getOpcode(), SDLoc(N), LHS.getValueType(), LHS, RHS,
+                     Mask);
+}
+
 SDValue DAGTypeLegalizer::PromoteIntRes_UMINUMAX(SDNode *N) {
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
@@ -2161,15 +2189,27 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
     Res = PromoteIntOp_VECTOR_HISTOGRAM(N, OpNo);
     break;
   case ISD::VECTOR_FIND_LAST_ACTIVE:
-    Res = PromoteIntOp_VECTOR_FIND_LAST_ACTIVE(N, OpNo);
+  case ISD::CTTZ_ELTS:
+  case ISD::CTTZ_ELTS_ZERO_POISON:
+    Res = PromoteIntOp_UnaryBooleanVectorOp(N, OpNo);
     break;
   case ISD::GET_ACTIVE_LANE_MASK:
     Res = PromoteIntOp_GET_ACTIVE_LANE_MASK(N);
+    break;
+  case ISD::MASKED_UDIV:
+  case ISD::MASKED_SDIV:
+  case ISD::MASKED_UREM:
+  case ISD::MASKED_SREM:
+    Res = PromoteIntOp_MaskedBinOp(N, OpNo);
     break;
   case ISD::PARTIAL_REDUCE_UMLA:
   case ISD::PARTIAL_REDUCE_SMLA:
   case ISD::PARTIAL_REDUCE_SUMLA:
     Res = PromoteIntOp_PARTIAL_REDUCE_MLA(N);
+    break;
+  case ISD::LOOP_DEPENDENCE_RAW_MASK:
+  case ISD::LOOP_DEPENDENCE_WAR_MASK:
+    Res = PromoteIntOp_LOOP_DEPENDENCE_MASK(N);
     break;
   }
 
@@ -2226,7 +2266,7 @@ void DAGTypeLegalizer::SExtOrZExtPromotedOperands(SDValue &LHS, SDValue &RHS) {
   // Prefer to promote the comparison operand with zero extension.
 
   // If the width of OpL/OpR excluding the duplicated sign bits is no greater
-  // than the width of LHS/RHS, we can avoid/ inserting a zext_inreg operation
+  // than the width of LHS/RHS, we can avoid inserting a zext_inreg operation
   // that we might not be able to remove.
   unsigned OpLEffectiveBits = DAG.ComputeMaxSignificantBits(OpL);
   unsigned OpREffectiveBits = DAG.ComputeMaxSignificantBits(OpR);
@@ -2989,17 +3029,32 @@ SDValue DAGTypeLegalizer::PromoteIntOp_VECTOR_HISTOGRAM(SDNode *N,
   return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
 }
 
-SDValue DAGTypeLegalizer::PromoteIntOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N,
-                                                               unsigned OpNo) {
-  SmallVector<SDValue, 1> NewOps(N->ops());
-  NewOps[OpNo] = GetPromotedInteger(N->getOperand(OpNo));
-  return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
+SDValue DAGTypeLegalizer::PromoteIntOp_UnaryBooleanVectorOp(SDNode *N,
+                                                            unsigned OpNo) {
+  assert(OpNo == 0 && "Unexpected operand for promotion");
+  SDValue Op = N->getOperand(0);
+
+  SDValue NewOp;
+  if (TLI.getBooleanContents(Op.getValueType()) ==
+      TargetLowering::ZeroOrNegativeOneBooleanContent)
+    NewOp = SExtPromotedInteger(Op);
+  else
+    NewOp = ZExtPromotedInteger(Op);
+
+  return SDValue(DAG.UpdateNodeOperands(N, NewOp), 0);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_GET_ACTIVE_LANE_MASK(SDNode *N) {
   SmallVector<SDValue, 1> NewOps(N->ops());
   NewOps[0] = ZExtPromotedInteger(N->getOperand(0));
   NewOps[1] = ZExtPromotedInteger(N->getOperand(1));
+  return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
+}
+
+SDValue DAGTypeLegalizer::PromoteIntOp_MaskedBinOp(SDNode *N, unsigned OpNo) {
+  assert(OpNo == 2);
+  SmallVector<SDValue, 3> NewOps(N->ops());
+  NewOps[2] = PromoteTargetBoolean(NewOps[2], N->getValueType(0));
   return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
 }
 
@@ -3021,6 +3076,15 @@ SDValue DAGTypeLegalizer::PromoteIntOp_PARTIAL_REDUCE_MLA(SDNode *N) {
   default:
     llvm_unreachable("unexpected opcode");
   }
+  return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
+}
+
+SDValue DAGTypeLegalizer::PromoteIntOp_LOOP_DEPENDENCE_MASK(SDNode *N) {
+  SDValue NewOps[4];
+  NewOps[0] = ZExtPromotedInteger(N->getOperand(0));
+  NewOps[1] = ZExtPromotedInteger(N->getOperand(1));
+  NewOps[2] = ZExtPromotedInteger(N->getOperand(2));
+  NewOps[3] = N->getOperand(3);
   return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
 }
 
@@ -4871,8 +4935,8 @@ void DAGTypeLegalizer::ExpandIntRes_SADDSUBO(SDNode *Node,
     //   Overflow -> ((LHS ^ RHS) & (LHS ^ Sum)) < 0
     //
     // NOTE: This is different than the expansion we do in expandSADDSUBO
-    // because it is more costly to determine the RHS is > 0 for SSUBO with the
-    // integers split.
+    // because it is more costly to implement the same overflow predicate with
+    // SETCC nodes when the integers are split.
     EVT VT = LHS.getValueType();
     SDValue SignsMatch = DAG.getNode(ISD::XOR, dl, VT, LHS, RHS);
     if (IsAdd)
@@ -5610,6 +5674,10 @@ bool DAGTypeLegalizer::ExpandIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::FAKE_USE:
     Res = ExpandOp_FAKE_USE(N);
     break;
+  case ISD::LOOP_DEPENDENCE_RAW_MASK:
+  case ISD::LOOP_DEPENDENCE_WAR_MASK:
+    Res = TLI.expandLoopDependenceMask(N, DAG);
+    break;
   case ISD::INSERT_VECTOR_ELT: Res = ExpandOp_INSERT_VECTOR_ELT(N); break;
   case ISD::SCALAR_TO_VECTOR:  Res = ExpandOp_SCALAR_TO_VECTOR(N); break;
   case ISD::SPLAT_VECTOR:      Res = ExpandIntOp_SPLAT_VECTOR(N); break;
@@ -5723,15 +5791,13 @@ void DAGTypeLegalizer::IntegerExpandSetCCOperands(SDValue &NewLHS,
   TargetLowering::DAGCombinerInfo DagCombineInfo(DAG, AfterLegalizeTypes, true,
                                                  nullptr);
   SDValue LoCmp, HiCmp;
-  if (TLI.isTypeLegal(LHSLo.getValueType()) &&
-      TLI.isTypeLegal(RHSLo.getValueType()))
+  if (TLI.isTypeLegal(LHSLo.getValueType()))
     LoCmp = TLI.SimplifySetCC(getSetCCResultType(LHSLo.getValueType()), LHSLo,
                               RHSLo, LowCC, false, DagCombineInfo, dl);
   if (!LoCmp.getNode())
     LoCmp = DAG.getSetCC(dl, getSetCCResultType(LHSLo.getValueType()), LHSLo,
                          RHSLo, LowCC);
-  if (TLI.isTypeLegal(LHSHi.getValueType()) &&
-      TLI.isTypeLegal(RHSHi.getValueType()))
+  if (TLI.isTypeLegal(LHSHi.getValueType()))
     HiCmp = TLI.SimplifySetCC(getSetCCResultType(LHSHi.getValueType()), LHSHi,
                               RHSHi, CCCode, false, DagCombineInfo, dl);
   if (!HiCmp.getNode())

@@ -18,6 +18,7 @@
 #include "mlir-c/Diagnostics.h"
 #include "mlir-c/Dialect/Func.h"
 #include "mlir-c/IntegerSet.h"
+#include "mlir-c/Interfaces.h"
 #include "mlir-c/RegisterEverything.h"
 #include "mlir-c/Support.h"
 
@@ -2376,6 +2377,24 @@ void testExplicitThreadPools(void) {
   mlirLlvmThreadPoolDestroy(threadPool);
 }
 
+void testLocation(void) {
+  MlirContext ctx = mlirContextCreate();
+  fprintf(stderr, "@test_location\n");
+
+  MlirLocation unknownLoc = mlirLocationUnknownGet(ctx);
+  MlirLocation fileLoc = mlirLocationFileLineColGet(
+      ctx, mlirStringRefCreateFromCString("foo.c"), 1, 2);
+
+  // CHECK-LABEL: @test_location
+  // CHECK: unknown is_a_unknown: 1
+  fprintf(stderr, "unknown is_a_unknown: %d\n",
+          mlirLocationIsAUnknown(unknownLoc));
+  // CHECK: file is_a_unknown: 0
+  fprintf(stderr, "file is_a_unknown: %d\n", mlirLocationIsAUnknown(fileLoc));
+
+  mlirContextDestroy(ctx);
+}
+
 void testDiagnostics(void) {
   MlirContext ctx = mlirContextCreate();
   MlirDiagnosticHandlerID id = mlirContextAttachDiagnosticHandler(
@@ -2469,29 +2488,29 @@ int testBlockPredecessorsSuccessors(MlirContext ctx) {
 #define FPRINTF_OP(OP, FMT) fprintf(stderr, #OP ": " FMT "\n", OP)
 
   // CHECK: mlirBlockGetNumPredecessors(entryBlock): 0
-  FPRINTF_OP(mlirBlockGetNumPredecessors(entryBlock), "%ld");
+  FPRINTF_OP(mlirBlockGetNumPredecessors(entryBlock), "%" PRIdPTR);
 
   // CHECK: mlirBlockGetNumSuccessors(entryBlock): 1
-  FPRINTF_OP(mlirBlockGetNumSuccessors(entryBlock), "%ld");
+  FPRINTF_OP(mlirBlockGetNumSuccessors(entryBlock), "%" PRIdPTR);
   // CHECK: mlirBlockEqual(middleBlock, mlirBlockGetSuccessor(entryBlock, 0)): 1
   FPRINTF_OP(mlirBlockEqual(middleBlock, mlirBlockGetSuccessor(entryBlock, 0)),
              "%d");
   // CHECK: mlirBlockGetNumPredecessors(middleBlock): 1
-  FPRINTF_OP(mlirBlockGetNumPredecessors(middleBlock), "%ld");
+  FPRINTF_OP(mlirBlockGetNumPredecessors(middleBlock), "%" PRIdPTR);
   // CHECK: mlirBlockEqual(entryBlock, mlirBlockGetPredecessor(middleBlock, 0))
   FPRINTF_OP(
       mlirBlockEqual(entryBlock, mlirBlockGetPredecessor(middleBlock, 0)),
       "%d");
 
   // CHECK: mlirBlockGetNumSuccessors(middleBlock): 1
-  FPRINTF_OP(mlirBlockGetNumSuccessors(middleBlock), "%ld");
+  FPRINTF_OP(mlirBlockGetNumSuccessors(middleBlock), "%" PRIdPTR);
   // CHECK: BlockEqual(successorBlock, mlirBlockGetSuccessor(middleBlock, 0)): 1
   fprintf(
       stderr,
       "BlockEqual(successorBlock, mlirBlockGetSuccessor(middleBlock, 0)): %d\n",
       mlirBlockEqual(successorBlock, mlirBlockGetSuccessor(middleBlock, 0)));
   // CHECK: mlirBlockGetNumPredecessors(successorBlock): 1
-  FPRINTF_OP(mlirBlockGetNumPredecessors(successorBlock), "%ld");
+  FPRINTF_OP(mlirBlockGetNumPredecessors(successorBlock), "%" PRIdPTR);
   // CHECK: Equal(middleBlock, mlirBlockGetPredecessor(successorBlock, 0)): 1
   fprintf(
       stderr,
@@ -2499,12 +2518,108 @@ int testBlockPredecessorsSuccessors(MlirContext ctx) {
       mlirBlockEqual(middleBlock, mlirBlockGetPredecessor(successorBlock, 0)));
 
   // CHECK: mlirBlockGetNumSuccessors(successorBlock): 0
-  FPRINTF_OP(mlirBlockGetNumSuccessors(successorBlock), "%ld");
+  FPRINTF_OP(mlirBlockGetNumSuccessors(successorBlock), "%" PRIdPTR);
 
 #undef FPRINTF_OP
 
   mlirModuleDestroy(module);
 
+  return 0;
+}
+
+typedef struct {
+  intptr_t callbackCount;
+} SpeculatabilityCallbackData;
+
+static MlirSpeculatability conditionallySpeculatableCallback(MlirOperation op,
+                                                             void *userData) {
+  SpeculatabilityCallbackData *data = (SpeculatabilityCallbackData *)userData;
+  MlirStringRef opName = mlirIdentifierStr(mlirOperationGetName(op));
+  if (!mlirStringRefEqual(opName,
+                          mlirStringRefCreateFromCString("memref.store")))
+    return MlirSpeculatabilityNotSpeculatable;
+  ++data->callbackCount;
+  return MlirSpeculatabilityRecursivelySpeculatable;
+}
+
+int testInterfaces(MlirContext ctx) {
+  // CHECK-LABEL: @testInterfaces
+  fprintf(stderr, "@testInterfaces\n");
+
+  MlirTypeID condSpecTypeID = mlirConditionallySpeculatableOpInterfaceTypeID();
+  if (mlirTypeIDIsNull(condSpecTypeID)) {
+    fprintf(stderr, "ERROR: Expected ConditionallySpeculatable type id\n");
+    return 1;
+  }
+
+  MlirStringRef constantName = mlirStringRefCreateFromCString("arith.constant");
+  MlirStringRef storeName = mlirStringRefCreateFromCString("memref.store");
+  if (!mlirOperationImplementsInterfaceStatic(constantName, ctx,
+                                              condSpecTypeID)) {
+    fprintf(stderr, "ERROR: Expected arith.constant to implement "
+                    "ConditionallySpeculatable\n");
+    return 2;
+  }
+  if (mlirOperationImplementsInterfaceStatic(storeName, ctx, condSpecTypeID)) {
+    fprintf(stderr, "ERROR: Expected memref.store to not implement "
+                    "ConditionallySpeculatable before attach\n");
+    return 3;
+  }
+
+  MlirLocation loc = mlirLocationUnknownGet(ctx);
+
+  MlirType i32 = mlirIntegerTypeGet(ctx, 32);
+  MlirAttribute zero =
+      mlirAttributeParseGet(ctx, mlirStringRefCreateFromCString("0 : i32"));
+  MlirNamedAttribute valueAttr = mlirNamedAttributeGet(
+      mlirIdentifierGet(ctx, mlirStringRefCreateFromCString("value")), zero);
+  MlirOperationState constantState = mlirOperationStateGet(constantName, loc);
+  mlirOperationStateAddResults(&constantState, 1, &i32);
+  mlirOperationStateAddAttributes(&constantState, 1, &valueAttr);
+  MlirOperation constantOp = mlirOperationCreate(&constantState);
+  if (!mlirOperationImplementsInterface(constantOp, condSpecTypeID)) {
+    fprintf(stderr, "ERROR: Expected arith.constant instance to implement "
+                    "ConditionallySpeculatable\n");
+    return 4;
+  }
+  fprintf(
+      stderr, "arith.constant speculatability: %d\n",
+      mlirConditionallySpeculatableOpInterfaceGetSpeculatability(constantOp));
+  // CHECK: arith.constant speculatability: 1
+
+  MlirOperationState storeState = mlirOperationStateGet(storeName, loc);
+  MlirOperation storeOp = mlirOperationCreate(&storeState);
+  if (mlirOperationImplementsInterface(storeOp, condSpecTypeID)) {
+    fprintf(stderr, "ERROR: Expected memref.store instance to not implement "
+                    "ConditionallySpeculatable before attach\n");
+    return 5;
+  }
+
+  SpeculatabilityCallbackData callbackData = {0};
+  MlirConditionallySpeculatableOpInterfaceCallbacks callbacks = {
+      .construct = NULL,
+      .destruct = NULL,
+      .getSpeculatability = conditionallySpeculatableCallback,
+      .userData = &callbackData,
+  };
+  mlirConditionallySpeculatableOpInterfaceAttachFallbackModel(ctx, storeName,
+                                                              callbacks);
+
+  fprintf(
+      stderr, "memref.store static after attach: %d\n",
+      mlirOperationImplementsInterfaceStatic(storeName, ctx, condSpecTypeID));
+  fprintf(stderr, "memref.store instance after attach: %d\n",
+          mlirOperationImplementsInterface(storeOp, condSpecTypeID));
+  fprintf(stderr, "memref.store speculatability: %d\n",
+          mlirConditionallySpeculatableOpInterfaceGetSpeculatability(storeOp));
+  fprintf(stderr, "callback count: %" PRIdPTR "\n", callbackData.callbackCount);
+  // CHECK: memref.store static after attach: 1
+  // CHECK: memref.store instance after attach: 1
+  // CHECK: memref.store speculatability: 2
+  // CHECK: callback count: 1
+
+  mlirOperationDestroy(storeOp);
+  mlirOperationDestroy(constantOp);
   return 0;
 }
 
@@ -2552,10 +2667,13 @@ int main(void) {
     return 16;
 
   testExplicitThreadPools();
+  testLocation();
   testDiagnostics();
 
   if (testBlockPredecessorsSuccessors(ctx))
     return 17;
+  if (testInterfaces(ctx))
+    return 18;
 
   // CHECK: DESTROY MAIN CONTEXT
   // CHECK: reportResourceDelete: resource_i64_blob

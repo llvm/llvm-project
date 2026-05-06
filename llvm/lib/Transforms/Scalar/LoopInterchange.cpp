@@ -1438,10 +1438,10 @@ bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
   }
   // Check if outer and inner loop contain legal instructions only.
   for (auto *BB : OuterLoop->blocks())
-    for (Instruction &I : BB->instructionsWithoutDebug())
+    for (Instruction &I : *BB)
       if (CallInst *CI = dyn_cast<CallInst>(&I)) {
         // readnone functions do not prevent interchanging.
-        if (CI->onlyWritesMemory())
+        if (CI->onlyWritesMemory() || isa<PseudoProbeInst>(CI))
           continue;
         LLVM_DEBUG(
             dbgs() << "Loops with call instructions cannot be interchanged "
@@ -1935,7 +1935,6 @@ bool LoopInterchangeTransform::transform(
     reduction2Memory();
 
   if (InnerLoop->getSubLoops().empty()) {
-    BasicBlock *InnerLoopPreHeader = InnerLoop->getLoopPreheader();
     LLVM_DEBUG(dbgs() << "Splitting the inner loop latch\n");
     auto &InductionPHIs = LIL.getInnerLoopInductions();
     if (InductionPHIs.empty()) {
@@ -1945,12 +1944,13 @@ bool LoopInterchangeTransform::transform(
 
     SmallVector<Instruction *, 8> InnerIndexVarList;
     for (PHINode *CurInductionPHI : InductionPHIs) {
-      if (CurInductionPHI->getIncomingBlock(0) == InnerLoopPreHeader)
-        InnerIndexVarList.push_back(
-            dyn_cast<Instruction>(CurInductionPHI->getIncomingValue(1)));
-      else
-        InnerIndexVarList.push_back(
-            dyn_cast<Instruction>(CurInductionPHI->getIncomingValue(0)));
+      Instruction *IncomingValue = dyn_cast<Instruction>(
+          CurInductionPHI->getIncomingValueForBlock(InnerLoop->getLoopLatch()));
+      assert(IncomingValue &&
+             "Incoming value from loop latch doesn't an instruction");
+      if (is_contained(InductionPHIs, IncomingValue))
+        continue;
+      InnerIndexVarList.push_back(IncomingValue);
     }
 
     // Create a new latch block for the inner loop. We split at the

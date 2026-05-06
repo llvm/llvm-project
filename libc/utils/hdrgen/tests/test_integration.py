@@ -82,11 +82,18 @@ class TestHeaderGenIntegration(unittest.TestCase):
         self.run_script(yaml_file, output_file)
         self.compare_files(output_file, expected_output_file)
 
-    def test_generate_header(self):
+    def test_generate_proxy_header(self):
         yaml_file = self.source_dir / "input/test_small.yaml"
         expected_output_file = self.source_dir / "expected_output/test_small_proxy.h"
         output_file = self.output_dir / "test_small.h"
         self.run_script(yaml_file, output_file, switches=["--proxy"])
+        self.compare_files(output_file, expected_output_file)
+
+    def test_generate_macro_only_header(self):
+        yaml_file = self.source_dir / "input/macro_only.yaml"
+        expected_output_file = self.source_dir / "expected_output/macro_only.h"
+        output_file = self.output_dir / "macro_only.h"
+        self.run_script(yaml_file, output_file)
         self.compare_files(output_file, expected_output_file)
 
 def main():

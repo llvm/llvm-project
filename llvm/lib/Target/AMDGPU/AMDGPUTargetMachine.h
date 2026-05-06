@@ -27,6 +27,10 @@ namespace llvm {
 // AMDGPU Target Machine (R600+)
 //===----------------------------------------------------------------------===//
 
+namespace AMDGPU {
+StringRef getSchedStrategy(const Function &F);
+}
+
 class AMDGPUTargetMachine : public CodeGenTargetMachineImpl {
 protected:
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
@@ -36,6 +40,7 @@ protected:
 
 public:
   static bool EnableFunctionCalls;
+  static bool EnableObjectLinking;
   static bool EnableLowerModuleLDS;
 
   AMDGPUTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
@@ -94,8 +99,8 @@ public:
 
   bool useIPRA() const override { return true; }
 
-  Error buildCodeGenPipeline(ModulePassManager &MPM, raw_pwrite_stream &Out,
-                             raw_pwrite_stream *DwoOut,
+  Error buildCodeGenPipeline(ModulePassManager &MPM, ModuleAnalysisManager &MAM,
+                             raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
                              CodeGenFileType FileType,
                              const CGPassBuilderOption &Opts, MCContext &Ctx,
                              PassInstrumentationCallbacks *PIC) override;

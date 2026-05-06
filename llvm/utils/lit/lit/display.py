@@ -19,7 +19,9 @@ def create_display(opts, tests, total_tests, workers):
 
         try:
             tc = lit.ProgressBar.TerminalController()
-            progress_bar = lit.ProgressBar.ProgressBar(tc, header)
+            progress_bar = lit.ProgressBar.ProgressBar(
+                tc, header, minOutputInterval=opts.minOutputInterval
+            )
             header = None
         except ValueError:
             progress_bar = lit.ProgressBar.SimpleProgressBar("Testing: ")

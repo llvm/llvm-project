@@ -561,7 +561,7 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FP_ROUND, MVT::f16, LibCall);
     setOperationAction(ISD::STRICT_FP_ROUND, MVT::f16, LibCall);
     setOperationAction(ISD::BITCAST, MVT::i16, Custom);
-    setOperationAction(ISD::IS_FPCLASS, MVT::f16, Custom);
+
     for (auto Op : {ISD::FNEG, ISD::FABS, ISD::FCOPYSIGN})
       setOperationAction(Op, MVT::f16, Legal);
   }
@@ -813,6 +813,10 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   // We want to use MVC in preference to even a single load/store pair.
   MaxStoresPerMemcpy = Subtarget.hasVector() ? 2 : 0;
   MaxStoresPerMemcpyOptSize = 0;
+
+  // Same with memmove.
+  MaxStoresPerMemmove = Subtarget.hasVector() ? 2 : 0;
+  MaxStoresPerMemmoveOptSize = 0;
 
   // The main memset sequence is a byte store followed by an MVC.
   // Two STC or MV..I stores win over that, but the kind of fused stores
@@ -1458,17 +1462,21 @@ bool SystemZTargetLowering::findOptimalMemOpLowering(
     LLVMContext &Context, std::vector<EVT> &MemOps, unsigned Limit,
     const MemOp &Op, unsigned DstAS, unsigned SrcAS,
     const AttributeList &FuncAttributes, EVT *LargestVT) const {
-  const int MVCFastLen = 16;
 
-  if (Limit != ~unsigned(0)) {
-    // Don't expand Op into scalar loads/stores in these cases:
-    if (Op.isMemcpy() && Op.allowOverlap() && Op.size() <= MVCFastLen)
-      return false; // Small memcpy: Use MVC
-    if (Op.isMemset() && Op.size() - 1 <= MVCFastLen)
-      return false; // Small memset (first byte with STC/MVI): Use MVC
-    if (Op.isZeroMemset())
-      return false; // Memset zero: Use XC
-  }
+  assert(Limit != ~0U &&
+         "Expected EmitTargetCodeForMemXXX() to handle AlwaysInline cases.");
+
+  if (Op.isZeroMemset())
+    return false; // Memset zero: Use XC.
+
+  const int MVCFastLen = 16;
+  // Use MVC up to 16 bytes.  Small memset uses STC/MVI for first byte.
+  if ((Op.isMemset() ? Op.size() - 1 : Op.size()) <= MVCFastLen)
+    return false;
+
+  // Avoid unaligned VL/VST:s.
+  if (!Op.isAligned(Align(8)) || (Op.size() >= 25 && Op.size() <= 31))
+    return false;
 
   return TargetLowering::findOptimalMemOpLowering(
       Context, MemOps, Limit, Op, DstAS, SrcAS, FuncAttributes, LargestVT);
@@ -7116,8 +7124,6 @@ SDValue SystemZTargetLowering::lowerIS_FPCLASS(SDValue Op,
     TDCMask |= SystemZ::TDCMASK_ZERO_MINUS;
   SDValue TDCMaskV = DAG.getConstant(TDCMask, DL, MVT::i64);
 
-  if (Arg.getSimpleValueType() == MVT::f16)
-    Arg = DAG.getFPExtendOrRound(Arg, SDLoc(Arg), MVT::f32);
   SDValue Intr = DAG.getNode(SystemZISD::TDC, DL, ResultVT, Arg, TDCMaskV);
   return getCCResult(DAG, Intr);
 }
