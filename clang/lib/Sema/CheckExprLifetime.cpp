@@ -1288,8 +1288,11 @@ checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
         // Suppress false positives for code like the one below:
         //   Ctor(unique_ptr<T> up) : pointer(up.get()), owner(move(up)) {}
         // FIXME: move this logic to analyzePathForGSLPointer.
-        if (DRE && isGslOwnerType(DRE->getType()))
-          return false;
+        if (DRE && isGslOwnerType(DRE->getType())) {
+          auto *Member = ExtendingEntity ? ExtendingEntity->getDecl() : nullptr;
+          if (!Member || !isGslPointerType(Member->getType()))
+            return false;
+        }
 
         auto *VD = DRE ? dyn_cast<VarDecl>(DRE->getDecl()) : nullptr;
         if (!VD) {

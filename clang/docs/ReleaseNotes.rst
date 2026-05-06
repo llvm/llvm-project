@@ -414,6 +414,10 @@ Improvements to Clang's diagnostics
       DanglingView(std::string s) : view(s) {}  // warning: address of stack memory escapes to a field
     };
 
+- ``-Wdangling-field`` now diagnoses view members initialized from by-value owner
+  parameters, such as a ``std::string_view`` member initialized from a
+  ``std::string`` constructor parameter. (#GH187675)
+
 - Improved ``-Wassign-enum`` performance by caching enum enumerator values. (#GH176454)
 
 - Fixed a false negative in ``-Warray-bounds`` where the warning was suppressed
