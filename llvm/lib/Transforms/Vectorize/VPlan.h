@@ -1445,12 +1445,12 @@ private:
 
   /// Returns true if we can generate a scalar for the first lane only if
   /// needed.
-  bool canGenerateScalarForFirstLane() const;
+  bool doesGenerateSingleScalar() const;
 
-  /// Utility methods serving execute(): generates a single vector instance of
-  /// the modeled instruction. \returns the generated value. . In some cases an
-  /// existing value is returned rather than a generated one.
-  Value *generate(VPTransformState &State);
+  /// Utility method serving execute: Generates either a single-scalar or vector
+  /// value. \p GenerateSingleScalar determines whether to generate a
+  /// single-scalar value.
+  Value *generate(VPTransformState &State, bool GenerateSingleScalar);
 
   /// Returns true if the VPInstruction does not need masking.
   bool alwaysUnmasked() const {
