@@ -216,6 +216,24 @@ class Scheduler {
   Scheduler &operator=(const Scheduler &) = delete;
 
 public:
+  enum class Direction {
+    BottomUp,
+    TopDown,
+  };
+  static StringLiteral directionToStr(Direction Dir) {
+    switch (Dir) {
+    case Direction::BottomUp:
+      return "BottomUp";
+    case Direction::TopDown:
+      return "TopDown";
+    }
+    llvm_unreachable("Unhandled Dir!");
+  }
+
+private:
+  Direction Dir = Direction::BottomUp;
+
+public:
   Scheduler(AAResults &AA, Context &Ctx) : DAG(AA, Ctx), Ctx(Ctx) {
     // NOTE: The scheduler's callback depends on the DAG's callback running
     // before it and updating the DAG accordingly.
@@ -225,6 +243,12 @@ public:
   ~Scheduler() {
     if (CreateInstrCB)
       Ctx.unregisterCreateInstrCallback(*CreateInstrCB);
+  }
+  void setDirection(Direction NewDir) {
+    assert(Bndls.empty() && DAG.empty() && ReadyList.empty() &&
+           !ScheduleTopItOpt && ScheduledBB == nullptr &&
+           "We can't change the direction during scheduling!");
+    Dir = NewDir;
   }
   /// Tries to build a schedule that includes all of \p Instrs scheduled at the
   /// same scheduling cycle. This essentially checks that there are no
