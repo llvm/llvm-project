@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple arm64-pc-windows-msvc -fms-compatibility \
-// RUN:     -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-pc-windows-msvc -target-feature +neon \
+// RUN:     -fms-compatibility -emit-llvm -o - %s | FileCheck %s
 
 #include <arm64_neon.h>
 
