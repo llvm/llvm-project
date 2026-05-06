@@ -27,19 +27,10 @@ static constexpr const char *SingleRangeNames[] = {
     "find_if",
     "find_if_not",
     "adjacent_find",
-    "copy",
-    "copy_if",
-    "copy_backward",
-    "move",
-    "move_backward",
     "fill",
-    "transform",
     "replace",
     "replace_if",
     "generate",
-    "remove_copy",
-    "remove_copy_if",
-    "unique_copy",
     "sample",
     "partition_point",
     "lower_bound",
@@ -53,7 +44,6 @@ static constexpr const char *SingleRangeNames[] = {
     "next_permutation",
     "prev_permutation",
     "reverse",
-    "reverse_copy",
     "shift_left",
     "shift_right",
     "is_partitioned",
@@ -67,9 +57,7 @@ static constexpr const char *SingleRangeNames[] = {
     "max_element",
     "min_element",
     "minmax_element",
-    "uninitialized_copy",
     "uninitialized_fill",
-    "uninitialized_move",
     "uninitialized_default_construct",
     "uninitialized_value_construct",
     "destroy",
@@ -78,26 +66,31 @@ static constexpr const char *SingleRangeNames[] = {
 static constexpr const char *SingleRangeBeginResultNames[] = {
     "remove", "remove_if", "stable_partition", "partition", "unique"};
 
-static constexpr const char *TwoRangeNames[] = {
-    "equal",
-    "mismatch",
-    "partial_sort_copy",
-    "includes",
-    "set_union",
-    "set_intersection",
-    "set_difference",
-    "set_symmetric_difference",
-    "merge",
-    "lexicographical_compare",
-    "find_end",
-    "search",
-    "is_permutation",
+static constexpr const char *SingleRangeOutResultNames[] = {
+    "copy",          "copy_if",     "copy_backward",      "move",
+    "move_backward", "remove_copy", "remove_copy_if",     "reverse_copy",
+    "transform",     "unique_copy", "uninitialized_copy", "uninitialized_move",
 };
 
-static constexpr const char *SinglePivotRangeNames[] = {"rotate_copy",
-                                                        "inplace_merge"};
+static constexpr const char *TwoRangeNames[] = {
+    "equal",    "mismatch", "includes",       "lexicographical_compare",
+    "find_end", "search",   "is_permutation",
+};
+
+static constexpr const char *TwoRangeOutResultNames[] = {
+    "merge",
+    "partial_sort_copy",
+    "set_difference",
+    "set_intersection",
+    "set_symmetric_difference",
+    "set_union",
+};
+
+static constexpr const char *SinglePivotRangeNames[] = {"inplace_merge"};
 
 static constexpr const char *SinglePivotRangeBeginResultNames[] = {"rotate"};
+
+static constexpr const char *SinglePivotRangeOutResultNames[] = {"rotate_copy"};
 
 namespace {
 class StdReplacer : public utils::UseRangesCheck::Replacer {
@@ -164,6 +157,8 @@ utils::UseRangesCheck::ReplacerMap UseRangesCheck::getReplacerMap() const {
   const ResultPolicy DefaultPolicy;
   const ResultPolicy BeginResultPolicy = {
       PolicyKind::AppendAccessorForUsedResult, ".begin()"};
+  const ResultPolicy OutResultPolicy = {PolicyKind::AppendAccessorForUsedResult,
+                                        ".out"};
 
   struct AlgorithmGroup {
     ArrayRef<Signature> Signatures;
@@ -173,9 +168,12 @@ utils::UseRangesCheck::ReplacerMap UseRangesCheck::getReplacerMap() const {
   const AlgorithmGroup AlgorithmNames[] = {
       {SingleRangeFunc, SingleRangeNames, DefaultPolicy},
       {SingleRangeFunc, SingleRangeBeginResultNames, BeginResultPolicy},
+      {SingleRangeFunc, SingleRangeOutResultNames, OutResultPolicy},
       {TwoRangeFunc, TwoRangeNames, DefaultPolicy},
+      {TwoRangeFunc, TwoRangeOutResultNames, OutResultPolicy},
       {SinglePivotFunc, SinglePivotRangeNames, DefaultPolicy},
       {SinglePivotFunc, SinglePivotRangeBeginResultNames, BeginResultPolicy},
+      {SinglePivotFunc, SinglePivotRangeOutResultNames, OutResultPolicy},
   };
   SmallString<64> Buff;
   for (const auto &[Signatures, Values, Policy] : AlgorithmNames) {
