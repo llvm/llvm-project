@@ -39,3 +39,23 @@
 // RUN:   %s 2>&1 | FileCheck -check-prefix=NOCOLON %s
 
 // NOCOLON: error: invalid target ID 'gfx900+xnack'
+// RUN: not %clang -target amdgcn-amd-amdhsa \
+// RUN:   -mcpu=gfx900::xnack+ -nostdlib \
+// RUN:   %s 2>&1 | FileCheck -check-prefix=DBLCOLON %s
+// DBLCOLON: error: invalid target ID 'gfx900::xnack+'
+// RUN: not %clang -target amdgcn-amd-amdhsa \
+// RUN:   -mcpu=gfx908:::sramecc+ -nostdlib \
+// RUN:   %s 2>&1 | FileCheck -check-prefix=TRIPLECOLON %s
+// TRIPLECOLON: error: invalid target ID 'gfx908:::sramecc+'
+// RUN: not %clang -target amdgcn-amd-amdhsa \
+// RUN:   -mcpu=gfx908:sramecc+::xnack- -nostdlib \
+// RUN:   %s 2>&1 | FileCheck -check-prefix=MIDCOLON %s
+// MIDCOLON: error: invalid target ID 'gfx908:sramecc+::xnack-'
+// RUN: not %clang -target amdgcn-amd-amdhsa \
+// RUN:   -mcpu=gfx900:: -nostdlib \
+// RUN:   %s 2>&1 | FileCheck -check-prefix=TRAILINGCOLON %s
+// TRAILINGCOLON: error: invalid target ID 'gfx900::'
+// RUN: not %clang -target amdgcn-amd-amdhsa \
+// RUN:   -mcpu=:: -nostdlib \
+// RUN:   %s 2>&1 | FileCheck -check-prefix=ONLYCOLONS %s
+// ONLYCOLONS: error: invalid target ID '::'
