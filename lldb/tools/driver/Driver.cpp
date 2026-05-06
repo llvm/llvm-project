@@ -43,6 +43,9 @@
 #include <clocale>
 #include <csignal>
 #include <future>
+#ifndef _WIN32
+#include <pthread.h>
+#endif
 #include <string>
 #include <thread>
 #include <utility>
@@ -786,13 +789,25 @@ int main(int argc, char const *argv[]) {
 #else
   signal(SIGPIPE, SIG_IGN);
 
+  // Install a no-op handler for SIGURG so the signal thread can use
+  // pthread_kill(main_tid, SIGURG) to interrupt blocking syscalls (e.g.
+  // Python's time.sleep or input()) on the main thread without causing the
+  // process to terminate or re-entering the SIGINT callback.
+  struct sigaction wakeup_action = {};
+  wakeup_action.sa_handler = [](int) {};
+  sigemptyset(&wakeup_action.sa_mask);
+  sigaction(SIGURG, &wakeup_action, nullptr);
+
+  // Capture the main thread's id so the signal thread can target it.
+  pthread_t main_thread = pthread_self();
+
   // Handle signals in a MainLoop running on a separate thread.
   MainLoop signal_loop;
   Status signal_status;
 
   auto sigint_handler = signal_loop.RegisterSignal(
       SIGINT,
-      [&](MainLoopBase &) {
+      [&, main_thread](MainLoopBase &) {
         // Temporarily restore the default disposition so that a second SIGINT
         // delivered while DispatchInputInterrupt is running hard-terminates
         // the process. This preserves the "double Ctrl-C to force exit"
@@ -812,6 +827,12 @@ int main(int argc, char const *argv[]) {
         ret = sigaction(SIGINT, &old_action, nullptr);
         UNUSED_IF_ASSERT_DISABLED(ret);
         assert(ret == 0 && "sigaction failed");
+
+        // Wake the main thread so any blocking syscall (e.g. the Python REPL
+        // waiting on input or sleeping) returns with EINTR. This lets Python
+        // observe the pending interrupt queued by DispatchInputInterrupt and
+        // raise KeyboardInterrupt.
+        pthread_kill(main_thread, SIGURG);
       },
       signal_status);
   assert(sigint_handler && signal_status.Success());
