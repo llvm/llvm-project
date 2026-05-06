@@ -19303,7 +19303,7 @@ SDValue DAGCombiner::visitFMUL(SDNode *N) {
     if (TrueOpnd && FalseOpnd &&
         Cond.getOpcode() == ISD::SETCC && Cond.getOperand(0) == X &&
         isa<ConstantFPSDNode>(Cond.getOperand(1)) &&
-        cast<ConstantFPSDNode>(Cond.getOperand(1))->isExactlyValue(0.0)) {
+        cast<ConstantFPSDNode>(Cond.getOperand(1))->isPosZero()) {
       ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
       switch (CC) {
       default: break;

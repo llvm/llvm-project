@@ -10134,9 +10134,9 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   const ConstantFPSDNode *FPTV = dyn_cast<ConstantFPSDNode>(TrueV);
   const ConstantFPSDNode *FPFV = dyn_cast<ConstantFPSDNode>(FalseV);
   if (FPTV && FPFV) {
-    if (FPTV->isExactlyValue(1.0) && FPFV->isExactlyValue(0.0))
+    if (FPTV->isExactlyValue(1.0) && FPFV->isPosZero())
       return DAG.getNode(ISD::SINT_TO_FP, DL, VT, CondV);
-    if (FPTV->isExactlyValue(0.0) && FPFV->isExactlyValue(1.0)) {
+    if (FPTV->isPosZero() && FPFV->isExactlyValue(1.0)) {
       SDValue XOR = DAG.getNode(ISD::XOR, DL, XLenVT, CondV,
                                 DAG.getConstant(1, DL, XLenVT));
       return DAG.getNode(ISD::SINT_TO_FP, DL, VT, XOR);
