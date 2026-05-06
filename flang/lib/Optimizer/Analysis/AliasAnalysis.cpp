@@ -894,6 +894,14 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           defOp = v.getDefiningOp();
           approximateSource = true;
         })
+        .Case([&](fir::AbsentOp op) {
+          // Although fir.absent is not a local allocation, we treat it
+          // similarly so that it can be disambiguated that it doesn't alias any
+          // other values. Two entities coming from separate fir.absent ops
+          // also do not alias each other.
+          type = SourceKind::Allocate;
+          breakFromLoop = true;
+        })
         .Case([&](fir::LoadOp op) {
           // If load is inside target and it points to mapped item,
           // continue tracking.
