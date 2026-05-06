@@ -147,7 +147,32 @@ LOCAL_LABEL(ddiv_normalised): // denormal handler will come back to here
   // lookup table entries, not 256. The 8-bit value we load also has its top
   // bit set.
   lsr     r5, yh, #24           // r5 is the table index plus 0x80
-  adr     r6, LOCAL_LABEL(reciptbl)-0x80 // so subtract 0x80 from table address
+
+  // Get the address of reciptbl, in various ways depending on position-
+  // independence and Arm/Thumb state.
+  //
+  // Since the table index calculated above in r5 includes the high mantissa
+  // bit, an index of 0x80 refers to the first table entry and 0xFF the last.
+  // So we subtract 0x80 from the table address to compensate.
+#if 0 // (defined __pic__ || defined __PIC__ || defined __ARM_ROPI)
+  // In PIC or ROPI modes, we must construct the address in a pc-relative
+  // manner, by making a literal containing the offset from the current code.
+  // The reference point for that offset is the value of pc as read by the add
+  // instruction at reciptbl_add_to_pc below, which will be 4 or 8 bytes after
+  // it in Thumb or Arm state respectively.
+#if __thumb__
+  ldr     r6, =(LOCAL_LABEL(reciptbl)-0x80) - (LOCAL_LABEL(get_reciptbl)+4)
+#else
+  ldr     r6, =(LOCAL_LABEL(reciptbl)-0x80) - (LOCAL_LABEL(get_reciptbl)+8)
+#endif
+LOCAL_LABEL(get_reciptbl):
+  add     r6, r6, pc
+#else
+  // If we're not building for position independence, we can just load the
+  // target address directly.
+  ldr     r6, =(LOCAL_LABEL(reciptbl)-0x80)
+#endif
+
   ldrb    r6, [r6, r5]          // and load the approximation into r6
 
   // First Newton-Raphson iteration, which expands that 8-bit approximation to
@@ -596,7 +621,10 @@ LOCAL_LABEL(ddiv_ivo):
   mov     xl, #0
   bx      lr
 
+END_COMPILERRT_FUNCTION(__aeabi_ddiv)
+
   // Table of approximate reciprocals.
+  .rodata
 LOCAL_LABEL(reciptbl):
   .byte 0xFF,0xFD,0xFB,0xF9,0xF7,0xF5,0xF4,0xF2
   .byte 0xF0,0xEE,0xED,0xEB,0xE9,0xE8,0xE6,0xE4
@@ -614,7 +642,5 @@ LOCAL_LABEL(reciptbl):
   .byte 0x8D,0x8C,0x8C,0x8B,0x8B,0x8A,0x89,0x89
   .byte 0x88,0x88,0x87,0x87,0x86,0x85,0x85,0x84
   .byte 0x84,0x83,0x83,0x82,0x82,0x81,0x81,0x80
-
-END_COMPILERRT_FUNCTION(__aeabi_ddiv)
 
 NO_EXEC_STACK_DIRECTIVE
