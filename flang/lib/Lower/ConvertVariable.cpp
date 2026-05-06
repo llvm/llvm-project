@@ -2074,9 +2074,9 @@ static void genBoxDeclare(Fortran::lower::AbstractConverter &converter,
                           llvm::ArrayRef<mlir::Value> explicitExtents,
                           bool replace = false) {
   fir::BoxValue boxValue{box, lbounds, explicitParams, explicitExtents};
-  Fortran::lower::genDeclareSymbol(
-      converter, symMap, sym, std::move(boxValue),
-      fir::FortranVariableFlagsEnum::None, replace);
+  Fortran::lower::genDeclareSymbol(converter, symMap, sym, std::move(boxValue),
+                                   fir::FortranVariableFlagsEnum::None,
+                                   replace);
 }
 
 /// Lower specification expressions and attributes of variable \p var and

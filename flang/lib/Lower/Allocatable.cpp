@@ -1011,7 +1011,8 @@ fir::MutableBoxValue Fortran::lower::createMutableBox(
     Fortran::lower::AbstractConverter &converter, mlir::Location loc,
     const Fortran::lower::pft::Variable &var, mlir::Value boxAddr,
     mlir::ValueRange nonDeferredParams, unsigned allocator) {
-  fir::MutableBoxValue box(boxAddr, nonDeferredParams, /*mutableProperties=*/{});
+  fir::MutableBoxValue box(boxAddr, nonDeferredParams,
+                           /*mutableProperties=*/{});
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   if (!var.isGlobal() && !Fortran::semantics::IsDummy(var.getSymbol()))
     fir::factory::disassociateMutableBox(builder, loc, box,
