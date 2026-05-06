@@ -3404,7 +3404,7 @@ void CIRGenModule::emitAliasDefinition(GlobalDecl gd) {
   mlir::Operation *entry = getGlobalValue(mangledName);
   if (entry) {
     auto entryGV = mlir::dyn_cast<cir::CIRGlobalValueInterface>(entry);
-    if (entryGV && !entryGV.isDeclaration())
+    if (entryGV && entryGV.isDefinition())
       return;
   }
 
@@ -3413,7 +3413,7 @@ void CIRGenModule::emitAliasDefinition(GlobalDecl gd) {
   assert(!cir::MissingFeatures::checkAliases());
 
   mlir::Location loc = getLoc(d->getSourceRange());
-  const bool isFunction = isa<FunctionDecl>(d);
+  bool isFunction = isa<FunctionDecl>(d);
 
   // Get the linkage and the type of the alias.
   cir::GlobalLinkageKind linkage;
@@ -3447,22 +3447,21 @@ void CIRGenModule::emitAliasDefinition(GlobalDecl gd) {
   mlir::SymbolTable::Visibility visibility =
       getMLIRVisibilityFromCIRLinkage(linkage);
 
-  if (isFunction) {
-    cir::FuncType fnType = mlir::cast<cir::FuncType>(declTy);
-    cir::FuncOp alias =
-        createCIRFunction(loc, mangledName, fnType, cast<FunctionDecl>(d));
-    alias.setAliasee(aa->getAliasee());
-    alias.setLinkage(linkage);
-    mlir::SymbolTable::setSymbolVisibility(alias, visibility);
-    setCommonAttributes(gd, alias);
-  } else {
-    cir::GlobalOp alias = createGlobalOp(*this, loc, mangledName, declTy);
-    alias.setAliasee(aa->getAliasee());
-    alias.setLinkage(linkage);
-    mlir::SymbolTable::setSymbolVisibility(alias, visibility);
-    assert(!cir::MissingFeatures::opGlobalThreadLocal());
-    setCommonAttributes(gd, alias);
-  }
+  // TODO(cir): Make GlobalAlias a separate op.
+  cir::CIRGlobalValueInterface alias =
+      isFunction
+          ? mlir::cast<cir::CIRGlobalValueInterface>(
+                createCIRFunction(loc, mangledName,
+                                  mlir::cast<cir::FuncType>(declTy),
+                                  cast<FunctionDecl>(d))
+                    .getOperation())
+          : mlir::cast<cir::CIRGlobalValueInterface>(
+                createGlobalOp(*this, loc, mangledName, declTy).getOperation());
+  alias.setAliasee(aa->getAliasee());
+  alias.setLinkage(linkage);
+  mlir::SymbolTable::setSymbolVisibility(alias, visibility);
+  assert(!cir::MissingFeatures::opGlobalThreadLocal());
+  setCommonAttributes(gd, alias);
   assert(!cir::MissingFeatures::generateDebugInfo());
 }
 
