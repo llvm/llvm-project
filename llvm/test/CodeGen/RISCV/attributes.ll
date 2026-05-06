@@ -268,9 +268,9 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+zve32x -mattr=+zvkt %s -o - | FileCheck --check-prefix=RV64ZVKT %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zve32x -mattr=+experimental-zvdot4a8i %s -o - | FileCheck --check-prefix=RV64ZVDOT4A8I %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zve32x -mattr=+experimental-zvqwdota8i %s -o - | FileCheck --check-prefix=RV64ZVQWDOTA8I %s
-; RUN: llc -mtriple=riscv64 -mattr=+zve32x -mattr=+experimental-zvqwdota16i %s -o - | FileCheck --check-prefix=RV64ZVQWDOTA16I %s
-; RUN: llc -mtriple=riscv64 -mattr=+zve32x -mattr=+experimental-zvfwdota16bf %s -o - | FileCheck --check-prefix=RV64ZVFWDOTA16BF %s
-; RUN: llc -mtriple=riscv64 -mattr=+zve32x -mattr=+experimental-zvfqwdota8f %s -o - | FileCheck --check-prefix=RV64ZVFQWDOTA8F %s
+; RUN: llc -mtriple=riscv64 -mattr=+zve64x -mattr=+experimental-zvqwdota16i %s -o - | FileCheck --check-prefix=RV64ZVQWDOTA16I %s
+; RUN: llc -mtriple=riscv64 -mattr=+zve32f -mattr=+experimental-zvfwdota16bf %s -o - | FileCheck --check-prefix=RV64ZVFWDOTA16BF %s
+; RUN: llc -mtriple=riscv64 -mattr=+zve32f -mattr=+experimental-zvfqwdota8f %s -o - | FileCheck --check-prefix=RV64ZVFQWDOTA8F %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zve32x -mattr=+experimental-zvzip %s -o - | FileCheck --check-prefix=RV64ZVZIP %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zvfh %s -o - | FileCheck --check-prefix=RV64ZVFH %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zve32x -mattr=+experimental-zvabd %s -o - | FileCheck --check-prefix=RV64ZVABD %s

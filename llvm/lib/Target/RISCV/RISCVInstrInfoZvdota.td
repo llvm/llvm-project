@@ -1,4 +1,4 @@
-//===-- RISCVInstrInfoZvqwdotZvbdot.td - 'ZvqwdotZvbdot' instructions ------*- tablegen -*-===//
+//===-- RISCVInstrInfoZvdota.td - 'Zvdota' instructions ----*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 ///
-/// This file describes the RISC-V instructions for 'ZvqwdotZvbdot'.
+/// This file describes the RISC-V instructions for 'Zvdota'.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -31,12 +31,12 @@ let Predicates = [HasStdExtZvqwdota8iOrZvqwdota16i],
 let Predicates = [HasStdExtZvfqwdota8f],
     Constraints = "@earlyclobber $vd",
     mayRaiseFPException = true, DestEEW = EEWSEWx4 in {
-  def VFQWDOTA_VV : ZvdotVALUVV<0b010110, OPFVV, "vfqwdota.vv">;
-  def VFQWDOTA_ALT_VV : ZvdotVALUVV<0b010111, OPFVV, "vfqwdota.alt.vv">;
+  def VFQWDOTA_VV : ZvdotVALUVV<0b100110, OPFVV, "vfqwdota.vv">;
+  def VFQWDOTA_ALT_VV : ZvdotVALUVV<0b100111, OPFVV, "vfqwdota.alt.vv">;
 } // Predicates = [HasStdExtZvfqwdota8f]
 
 let Predicates = [HasStdExtZvfwdota16bf],
     Constraints = "@earlyclobber $vd",
     mayRaiseFPException = true, DestEEW = EEWSEWx2 in {
-  def VFWDOTA_VV : ZvdotVALUVV<0b010100, OPFVV, "vfwdota.vv">;
+  def VFWDOTA_VV : ZvdotVALUVV<0b100100, OPFVV, "vfwdota.vv">;
 } // Predicates = [HasStdExtZvfwdota16bf]

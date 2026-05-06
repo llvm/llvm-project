@@ -8,20 +8,20 @@
 # RUN: llvm-mc -triple=riscv32 -filetype=obj --mattr=+v --mattr=+experimental-zvfwdota16bf %s \
 # RUN:        | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-UNKNOWN
 
-vsetvli a2, a0, e8alt, m1, ta, ma
-# CHECK-INST: vsetvli a2, a0, e8alt, m1, ta, ma
-# CHECK-ENCODING: [0x57,0x76,0x05,0x1c]
+vsetvli a2, a0, e16alt, m1, ta, ma
+# CHECK-INST: vsetvli a2, a0, e16alt, m1, ta, ma
+# CHECK-ENCODING: [0x57,0x76,0x85,0x1c]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' (Vector Extensions for Embedded Processors){{$}}
-# CHECK-UNKNOWN: 1c057657 <unknown>
+# CHECK-UNKNOWN: 1c857657 <unknown>
 
 vfwdota.vv v10, v9, v8
 # CHECK-INST: vfwdota.vv v10, v9, v8
-# CHECK-ENCODING: [0x77,0x15,0x94,0x52]
+# CHECK-ENCODING: [0x77,0x15,0x94,0x92]
 # CHECK-ERROR: instruction requires the following: 'Zvfwdota16bf' (BF16 Dot-Product)
-# CHECK-UNKNOWN: 52941577 <unknown>
+# CHECK-UNKNOWN: 92941577 <unknown>
 
 vfwdota.vv v10, v9, v8, v0.t
 # CHECK-INST: vfwdota.vv v10, v9, v8, v0.t
-# CHECK-ENCODING: [0x77,0x15,0x94,0x50]
+# CHECK-ENCODING: [0x77,0x15,0x94,0x90]
 # CHECK-ERROR: instruction requires the following: 'Zvfwdota16bf' (BF16 Dot-Product)
-# CHECK-UNKNOWN: 50941577 <unknown>
+# CHECK-UNKNOWN: 90941577 <unknown>

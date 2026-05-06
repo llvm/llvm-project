@@ -16,25 +16,25 @@ vsetvli a2, a0, e8alt, m1, ta, ma
 
 vfqwdota.vv v10, v9, v8
 # CHECK-INST: vfqwdota.vv v10, v9, v8
-# CHECK-ENCODING: [0x77,0x15,0x94,0x5a]
+# CHECK-ENCODING: [0x77,0x15,0x94,0x9a]
 # CHECK-ERROR: instruction requires the following: 'Zvfqwdota8f' (OCP FP8 Dot-Product)
-# CHECK-UNKNOWN: 5a941577 <unknown>
+# CHECK-UNKNOWN: 9a941577 <unknown>
 
 vfqwdota.vv v10, v9, v8, v0.t
 # CHECK-INST: vfqwdota.vv v10, v9, v8, v0.t
-# CHECK-ENCODING: [0x77,0x15,0x94,0x58]
+# CHECK-ENCODING: [0x77,0x15,0x94,0x98]
 # CHECK-ERROR: instruction requires the following: 'Zvfqwdota8f' (OCP FP8 Dot-Product)
-# CHECK-UNKNOWN: 58941577 <unknown>
+# CHECK-UNKNOWN: 98941577 <unknown>
 
 vfqwdota.alt.vv v10, v9, v8
 # CHECK-INST: vfqwdota.alt.vv v10, v9, v8
-# CHECK-ENCODING: [0x77,0x15,0x94,0x5e]
+# CHECK-ENCODING: [0x77,0x15,0x94,0x9e]
 # CHECK-ERROR: instruction requires the following: 'Zvfqwdota8f' (OCP FP8 Dot-Product)
-# CHECK-UNKNOWN: 5e941577 <unknown>
+# CHECK-UNKNOWN: 9e941577 <unknown>
 
 vfqwdota.alt.vv v10, v9, v8, v0.t
 # CHECK-INST: vfqwdota.alt.vv v10, v9, v8, v0.t
-# CHECK-ENCODING: [0x77,0x15,0x94,0x5c]
+# CHECK-ENCODING: [0x77,0x15,0x94,0x9c]
 # CHECK-ERROR: instruction requires the following: 'Zvfqwdota8f' (OCP FP8 Dot-Product)
-# CHECK-UNKNOWN: 5c941577 <unknown>
+# CHECK-UNKNOWN: 9c941577 <unknown>
 
