@@ -53,7 +53,7 @@ static llvm::Expected<ParseResult> parseFormatvString(llvm::StringRef Fmt) {
       return llvm::createStringError("unterminated brace in format string");
 
     // Extract the content between braces.
-    llvm::StringRef Content = Fmt.substr(1, CloseBrace - 1);
+    const llvm::StringRef Content = Fmt.substr(1, CloseBrace - 1);
     Fmt = Fmt.drop_front(CloseBrace + 1);
 
     // Parse the replacement field: [index] ["," layout] [":" format]
@@ -159,7 +159,7 @@ void FormatvStringCheck::check(const MatchFinder::MatchResult &Result) {
   if (!FmtLiteral)
     return;
 
-  llvm::StringRef FmtStr = FmtLiteral->getString();
+  const llvm::StringRef FmtStr = FmtLiteral->getString();
   const unsigned FirstArgIdx = FmtArgIdx + 1;
   const int NumArgs = Call->getNumArgs() - FirstArgIdx;
 
@@ -184,7 +184,7 @@ void FormatvStringCheck::check(const MatchFinder::MatchResult &Result) {
   // Check for holes in indices.
   if (!Parsed.Indices.empty()) {
     llvm::SmallBitVector UsedIndices(NumRequiredArgs);
-    for (unsigned Index : Parsed.Indices)
+    for (const unsigned Index : Parsed.Indices)
       UsedIndices.set(Index);
 
     const int UnusedIndex = UsedIndices.find_first_unset();
