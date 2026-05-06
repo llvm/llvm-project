@@ -945,7 +945,7 @@ RT_API_ATTRS bool EditLogicalInput(
   }
   common::optional<int> remaining{io.CueUpInput(edit)};
   common::optional<char32_t> next{io.NextInField(remaining, edit)};
-  if (next && *next == '.') { // skip optional period
+  if (next && *next == '.' && edit.descriptor != 'B') { // skip optional period
     next = io.NextInField(remaining, edit);
   }
   if (!next) {
