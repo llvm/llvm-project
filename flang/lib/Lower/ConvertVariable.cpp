@@ -2171,7 +2171,6 @@ void Fortran::lower::mapSymbolAttributes(
     }
     fir::MutableBoxValue box = Fortran::lower::createMutableBox(
         converter, loc, var, boxAlloc, nonDeferredLenParams,
-        /*alwaysUseBox=*/true,
         Fortran::lower::getAllocatorIdx(var.getSymbol()));
     genAllocatableOrPointerDeclare(converter, symMap, var.getSymbol(), box,
                                    replace);

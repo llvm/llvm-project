@@ -71,7 +71,7 @@ void genDeallocateIfAllocated(AbstractConverter &converter,
 fir::MutableBoxValue
 createMutableBox(AbstractConverter &converter, mlir::Location loc,
                  const pft::Variable &var, mlir::Value boxAddr,
-                 mlir::ValueRange nonDeferredParams, bool alwaysUseBox,
+                 mlir::ValueRange nonDeferredParams,
                  unsigned allocator = kDefaultAllocator);
 
 /// Assign a boxed value to a boxed variable, \p box (known as a
