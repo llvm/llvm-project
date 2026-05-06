@@ -537,7 +537,7 @@ namespace {
     SDValue replaceStoreOfInsertLoad(StoreSDNode *ST);
 
     bool refineExtractVectorEltIntoMultipleNarrowExtractVectorElts(SDNode *N);
-
+    SDValue combineStoreConcatTruncVector(StoreSDNode *N);
     SDValue visitSTORE(SDNode *N);
     SDValue visitATOMIC_STORE(SDNode *N);
     SDValue visitLIFETIME_END(SDNode *N);
@@ -23878,6 +23878,74 @@ static SDValue foldToMaskedStore(StoreSDNode *Store, SelectionDAG &DAG,
                             Store->getAddressingMode());
 }
 
+// store(concat_vector(truncate, truncate))
+// --> store(truncate)
+//     store(truncate)
+SDValue DAGCombiner::combineStoreConcatTruncVector(StoreSDNode *ST) {
+  if (!LegalTypes)
+    return SDValue();
+
+  if (ST->isTruncatingStore() || ST->isIndexed())
+    return SDValue();
+
+  SDValue Chain = ST->getChain();
+  SDValue Value = ST->getValue();
+  SDValue Ptr = ST->getBasePtr();
+
+  unsigned Opc = Value.getOpcode();
+  if (Opc != ISD::CONCAT_VECTORS)
+    return SDValue();
+
+  SDValue T1 = Value.getOperand(0);
+  SDValue T2 = Value.getOperand(1);
+  if (T1.getOpcode() != ISD::TRUNCATE || T2.getOpcode() != ISD::TRUNCATE)
+    return SDValue();
+
+  if (!T1.getValueType().isFixedLengthVector())
+    return SDValue();
+
+  if (!T1->hasOneUse() || !T2.hasOneUse())
+    return SDValue();
+
+  EVT LoVT = T1.getOperand(0).getValueType();
+  EVT HiVT = T2.getOperand(0).getValueType();
+  EVT LoMemVT = T1.getValueType();
+  EVT HiMemVT = T2.getValueType();
+  unsigned LoBytes = LoMemVT.getStoreSize();
+  unsigned HiBytes = HiMemVT.getStoreSize();
+  Align LoAlign = ST->getAlign();
+  Align HiAlign = commonAlignment(LoAlign, LoBytes);
+
+  if (!TLI.canCombineTruncStore(T1.getOperand(0).getValueType(),
+                                T1.getValueType(), LoAlign,
+                                ST->getAddressSpace(), LegalOperations))
+    return SDValue();
+
+  if (!TLI.canCombineTruncStore(T2.getOperand(0).getValueType(),
+                                T2.getValueType(), HiAlign,
+                                ST->getAddressSpace(), LegalOperations))
+    return SDValue();
+
+  SDLoc DL(ST);
+  SDValue LoPtr = Ptr;
+  SDValue HiPtr =
+      DAG.getMemBasePlusOffset(LoPtr, TypeSize::getFixed(LoBytes), DL);
+
+  MachinePointerInfo LoPI = ST->getPointerInfo();
+  MachinePointerInfo HiPI = ST->getPointerInfo().getWithOffset(LoBytes);
+
+  MachineFunction &MF = DAG.getMachineFunction();
+  MachineMemOperand *LoMMO =
+      MF.getMachineMemOperand(ST->getMemOperand(), 0, LoBytes);
+  MachineMemOperand *HiMMO =
+      MF.getMachineMemOperand(ST->getMemOperand(), LoBytes, HiBytes);
+
+  SDValue LoSt = DAG.getStore(Chain, DL, T1, LoPtr, LoMMO);
+  SDValue HiSt = DAG.getStore(Chain, DL, T2, HiPtr, HiMMO);
+
+  return DAG.getNode(ISD::TokenFactor, DL, MVT::Other, LoSt, HiSt);
+}
+
 SDValue DAGCombiner::visitSTORE(SDNode *N) {
   StoreSDNode *ST  = cast<StoreSDNode>(N);
   SDValue Chain = ST->getChain();
@@ -23944,6 +24012,9 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
     }
     Chain = ST->getChain();
   }
+
+  if (SDValue R = combineStoreConcatTruncVector(ST))
+    return R;
 
   // FIXME: is there such a thing as a truncating indexed store?
   if (ST->isTruncatingStore() && ST->isUnindexed() &&
