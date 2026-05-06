@@ -62,7 +62,7 @@ class Type;
 class User;
 class BranchProbabilityInfo;
 class BlockFrequencyInfo;
-class InstructionDeletionListener;
+class InstructionListener;
 
 class LLVM_ABI Function : public GlobalObject, public ilist_node<Function> {
 public:
@@ -114,11 +114,11 @@ private:
 
   friend class SymbolTableListTraits<Function>;
 
-  friend class InstructionDeletionListener;
-  SmallVector<InstructionDeletionListener *, 0> InstructionDeletionListeners;
+  friend class InstructionListener;
+  SmallVector<InstructionListener *, 0> InstructionListeners;
 
-  void addInstructionDeletionListener(InstructionDeletionListener *L);
-  void removeInstructionDeletionListener(InstructionDeletionListener *L);
+  void addInstructionListener(InstructionListener *L);
+  void removeInstructionListener(InstructionListener *L);
 
 public:
   /// Notify all registered listeners that an instruction is being removed
@@ -126,9 +126,11 @@ public:
   /// BasicBlock::setParent when the parent is being set to null.
   LLVM_ABI void notifyInstructionRemoved(Instruction *I);
 
-  bool hasInstructionDeletionListeners() const {
-    return !InstructionDeletionListeners.empty();
-  }
+  /// Notify all registered listeners that an instruction in this function is
+  /// being RAUW'd (replaced with another value). Called from Value::doRAUW().
+  LLVM_ABI void notifyInstructionRAUW(Instruction *Old, Value *New);
+
+  bool hasInstructionListeners() const { return !InstructionListeners.empty(); }
 
   /// hasLazyArguments/CheckLazyArguments - The argument list of a function is
   /// built on demand, so that the list isn't allocated until the first client

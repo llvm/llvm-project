@@ -197,7 +197,7 @@ BasicBlock::~BasicBlock() {
 
 void BasicBlock::setParent(Function *parent) {
   // Notify per-function listeners when BB is removed from its parent function.
-  if (!parent && Parent && Parent->hasInstructionDeletionListeners()) {
+  if (!parent && Parent && Parent->hasInstructionListeners()) {
     for (Instruction &I : *this)
       Parent->notifyInstructionRemoved(&I);
   }

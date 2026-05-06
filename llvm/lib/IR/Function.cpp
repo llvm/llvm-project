@@ -30,7 +30,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
-#include "llvm/IR/InstructionDeletionListener.h"
+#include "llvm/IR/InstructionListener.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
@@ -63,31 +63,34 @@ using ProfileCount = Function::ProfileCount;
 // are not in the public header file...
 template class LLVM_EXPORT_TEMPLATE llvm::SymbolTableListTraits<BasicBlock>;
 
-InstructionDeletionListener::InstructionDeletionListener(Function &F,
-                                                         CallbackT CB)
-    : F(F), Callback(CB) {
-  F.addInstructionDeletionListener(this);
+InstructionListener::InstructionListener(Function &F, CallbackT CB,
+                                         RAUWCallbackT RAUWCB)
+    : F(F), Callback(CB), RAUWCallback(RAUWCB) {
+  F.addInstructionListener(this);
 }
 
-InstructionDeletionListener::~InstructionDeletionListener() {
-  F.removeInstructionDeletionListener(this);
+InstructionListener::~InstructionListener() {
+  F.removeInstructionListener(this);
 }
 
-void Function::addInstructionDeletionListener(InstructionDeletionListener *L) {
-  assert(!llvm::is_contained(InstructionDeletionListeners, L) &&
+void Function::addInstructionListener(InstructionListener *L) {
+  assert(!llvm::is_contained(InstructionListeners, L) &&
          "Listener already registered");
-  InstructionDeletionListeners.push_back(L);
+  InstructionListeners.push_back(L);
 }
 
-void Function::removeInstructionDeletionListener(
-    InstructionDeletionListener *L) {
-  InstructionDeletionListeners.erase(
-      llvm::find(InstructionDeletionListeners, L));
+void Function::removeInstructionListener(InstructionListener *L) {
+  InstructionListeners.erase(llvm::find(InstructionListeners, L));
 }
 
 void Function::notifyInstructionRemoved(Instruction *I) {
-  for (InstructionDeletionListener *L : InstructionDeletionListeners)
+  for (InstructionListener *L : InstructionListeners)
     L->instructionRemoved(I);
+}
+
+void Function::notifyInstructionRAUW(Instruction *Old, Value *New) {
+  for (InstructionListener *L : InstructionListeners)
+    L->instructionRAUW(Old, New);
 }
 
 static cl::opt<int> NonGlobalValueMaxNameSize(

@@ -525,6 +525,14 @@ void Value::doRAUW(Value *New, ReplaceMetadataUses ReplaceMetaUses) {
   // Notify all ValueHandles (if present) that this value is going away.
   if (HasValueHandle)
     ValueHandleBase::ValueIsRAUWd(this, New);
+
+  // Notify per-function listeners when an instruction is RAUW'd.
+  if (Instruction *I = dyn_cast<Instruction>(this))
+    if (BasicBlock *BB = I->getParent())
+      if (Function *F = BB->getParent())
+        if (F->hasInstructionListeners())
+          F->notifyInstructionRAUW(I, New);
+
   if (ReplaceMetaUses == ReplaceMetadataUses::Yes && isUsedByMetadata())
     ValueAsMetadata::handleRAUW(this, New);
 
