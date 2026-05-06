@@ -119,6 +119,7 @@
 ; CHECK-FP16-GI-NEXT:  warning: Instruction selection used fallback path for stofp_v32i8_v32bf16
 ; CHECK-FP16-GI-NEXT:  warning: Instruction selection used fallback path for utofp_v32i8_v32bf16
 ; CHECK-FP16-GI-NEXT:  warning: Instruction selection used fallback path for utofp_v4i48_v4f16
+;
 
 define bfloat @stofp_i64_bf16(i64 %a) {
 ; CHECK-NOFP16-LABEL: stofp_i64_bf16:

@@ -131,7 +131,7 @@ uint32_t mapping::getBlockIdInKernel(int32_t Dim) {
 }
 
 uint32_t mapping::getNumberOfWarpsInBlock() {
-  return utils::alignUp(mapping::getNumberOfThreadsInBlock(),
+  return utils::roundUp(mapping::getNumberOfThreadsInBlock(),
                         mapping::getWarpSize());
 }
 
