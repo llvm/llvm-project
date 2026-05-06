@@ -714,6 +714,10 @@ public:
       // When we get support for wasm-gc types, this should become
       // ExpectRefType.
       ExpectFuncType = true;
+    } else if (Name == "ref.cast") {
+      // When we get support for wasm-gc types, this should become
+      // ExpectRefType.
+      ExpectFuncType = true;
     }
 
     if (Name.contains("atomic.")) {
