@@ -278,13 +278,13 @@ module attributes {transform.with_named_sequence} {
 // CHECK-DAG: {{.*}}, {{.*}}, %[[SIZES:.*]]:2, {{.*}} = memref.extract_strided_metadata %[[BASE]]
 // CHECK-DAG: %[[DYN_SIZE:.*]] = affine.min #[[$MIN_496_MAP]]()[%[[SIZES]]#1]
 // CHECK-DAG: %[[SUBVIEW:.*]] = memref.subview %[[BASE]][%[[DYN_OFFSET]], 0] [1, %[[DYN_SIZE]]] [1, 1] : memref<?x?xf16> to memref<1x?xf16, strided<[?, 1], offset: ?>>
-// CHECK: gpu.subgroup_mma_load_matrix %[[SUBVIEW]][%[[C0]], %[[C0]]] {leadDimension = 32 : index} : memref<1x?xf16, strided<[?, 1], offset: ?>> -> !gpu.mma_matrix<16x16xf16, "AOp">
+// CHECK: gpu.subgroup_mma_load_matrix %[[SUBVIEW]][%[[C0]], %[[C0]]] leadDimension 32 : memref<1x?xf16, strided<[?, 1], offset: ?>> -> !gpu.mma_matrix<16x16xf16, "AOp">
 func.func @test_gpu_subgroup_mma_dynamic_source_shape(
     %base : memref<?x?xf16>, %offset : index)
     -> !gpu.mma_matrix<16x16xf16, "AOp"> {
   %c0 = arith.constant 0 : index
   %matrix = gpu.subgroup_mma_load_matrix %base[%offset, %c0]
-      {leadDimension = 32 : index}
+      leadDimension 32
       : memref<?x?xf16> -> !gpu.mma_matrix<16x16xf16, "AOp">
   return %matrix : !gpu.mma_matrix<16x16xf16, "AOp">
 }
