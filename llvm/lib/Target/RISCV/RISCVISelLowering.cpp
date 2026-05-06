@@ -24768,13 +24768,19 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
           MemOpChains.push_back(
               DAG.getStore(CopyOp.getValue(1), DL, ArgValue, IncomingPtr,
                            MachinePointerInfo::getUnknownStack(MF)));
-          // Store any split parts at their respective offsets.
+          // Store any split parts at their respective offsets. Scalable
+          // vectors need their part offsets multiplied by VSCALE, matching
+          // the non-musttail spill path below.
           unsigned ArgPartOffset = Outs[OutIdx].PartOffset;
           while (i + 1 != e && Outs[OutIdx + 1].OrigArgIndex == CallArgIdx) {
             SDValue PartValue = OutVals[OutIdx + 1];
             unsigned PartOffset = Outs[OutIdx + 1].PartOffset - ArgPartOffset;
-            SDValue Addr = DAG.getNode(ISD::ADD, DL, PtrVT, IncomingPtr,
-                                       DAG.getIntPtrConstant(PartOffset, DL));
+            SDValue Offset = DAG.getIntPtrConstant(PartOffset, DL);
+            EVT PartVT = PartValue.getValueType();
+            if (PartVT.isScalableVector())
+              Offset = DAG.getNode(ISD::VSCALE, DL, XLenVT, Offset);
+            SDValue Addr =
+                DAG.getNode(ISD::ADD, DL, PtrVT, IncomingPtr, Offset);
             MemOpChains.push_back(
                 DAG.getStore(CopyOp.getValue(1), DL, PartValue, Addr,
                              MachinePointerInfo::getUnknownStack(MF)));
