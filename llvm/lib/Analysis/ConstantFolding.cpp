@@ -3434,12 +3434,12 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
     case Intrinsic::nvvm_fmax:
     case Intrinsic::nvvm_fmin:
       // If one argument is undef, return the other argument — unless it is a
-      // float NaN, in which case fall through to canonicalize it. Double NaNs
-      // are returned as-is; PTX only canonicalizes f32 NaNs.
+      // float NaN, in which case fall through to canonicalize it. PTX only
+      // canonicalizes f32 NaNs; f16, bf16, and double NaNs are returned as-is.
       if (IsOp0Undef || IsOp1Undef) {
         Constant *Other = Operands[IsOp0Undef ? 1 : 0];
         auto *Op = dyn_cast<ConstantFP>(Other);
-        if (!Op || !Op->isNaN() || Ty->isDoubleTy())
+        if (!Op || !Op->isNaN() || !Ty->isFloatTy())
           return Other;
       }
       [[fallthrough]];
@@ -3556,7 +3556,7 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
       case Intrinsic::nvvm_fmin_nan_xorsign_abs:
       case Intrinsic::nvvm_fmin_xorsign_abs: {
 
-        bool ShouldCanonicalizeNaNs = !Ty->isDoubleTy();
+        bool ShouldCanonicalizeNaNs = Ty->isFloatTy();
         bool IsFTZ = nvvm::FMinFMaxShouldFTZ(IntrinsicID);
         bool IsNaNPropagating = nvvm::FMinFMaxPropagatesNaNs(IntrinsicID);
         bool IsXorSignAbs = nvvm::FMinFMaxIsXorSignAbs(IntrinsicID);
