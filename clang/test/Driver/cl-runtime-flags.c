@@ -38,6 +38,8 @@
 // CHECK-MD: "-D_DLL"
 // CHECK-MD: "--dependent-lib=msvcrt"
 // CHECK-MD: "--dependent-lib=oldnames"
+// CHECK-MD-NOT: "-defaultlib:libcmt"
+// CHECK-MD-NOT: "-defaultlib:oldnames"
 
 // RUN: %clang_cl -### /MDd -- %s 2>&1 | FileCheck -check-prefix=CHECK-MDd %s
 // RUN: %clang -### --target=x86_64-windows-msvc -fms-runtime-lib=dll_dbg -- \
@@ -47,6 +49,8 @@
 // CHECK-MDd: "-D_DLL"
 // CHECK-MDd: "--dependent-lib=msvcrtd"
 // CHECK-MDd: "--dependent-lib=oldnames"
+// CHECK-MDd-NOT: "-defaultlib:libcmt"
+// CHECK-MDd-NOT: "-defaultlib:oldnames"
 
 // RUN: %clang_cl -### /LD -- %s 2>&1 | FileCheck -check-prefix=CHECK-LD %s
 // RUN: %clang_cl -### /LD /MT -- %s 2>&1 | FileCheck -check-prefix=CHECK-LD %s
