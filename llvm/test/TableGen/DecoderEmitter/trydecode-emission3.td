@@ -44,4 +44,6 @@ def InstB : TestInstruction {
 // CHECK-NEXT:                                 // 14: }
 // CHECK-NEXT: };
 
-// CHECK: if (!Check(S, DecodeInstBOp(MI, tmp, Address, Decoder))) { DecodeComplete = false; return MCDisassembler::Fail; }
+// CHECK-LABEL: case 0:
+// CHECK-NEXT:    tmp = fieldFromInstruction(insn, 0, 2);
+// CHECK-NEXT:    if (!Check(S, DecodeInstBOp(MI, tmp, Address, Decoder))) return dbgFailOpd("op", "DecodeInstBOp", {0, 2}, &DecodeComplete);
