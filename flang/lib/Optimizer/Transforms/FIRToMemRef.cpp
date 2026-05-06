@@ -44,6 +44,7 @@
 #include "flang/Optimizer/Transforms/FIRToMemRefTypeConverter.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
@@ -140,6 +141,8 @@ private:
 
   bool memrefIsOptional(Operation *) const;
 
+  std::optional<bool> complexProjectionOf(Value firMemref) const;
+
   Value canonicalizeIndex(Value, PatternRewriter &) const;
 
   // Logical section information used by FIRToMemRef. For projected slices, the
@@ -150,6 +153,7 @@ private:
     SmallVector<Value> shiftVec;
     SmallVector<Value> sliceVec;
     bool hasProjectedSlice = false;
+    std::optional<bool> projectionIsImaginary; // set when hasProjectedSlice
   };
 
   template <typename OpTy>
@@ -169,6 +173,17 @@ private:
 
   static bool hasProjectedSlice(fir::SliceOp sliceOp) {
     return sliceOp && !sliceOp.getFields().empty();
+  }
+
+  // Returns true for imaginary, false for real, nullopt if not a constant.
+  static std::optional<bool> sliceProjectionIsImaginary(fir::SliceOp sliceOp) {
+    auto fields = sliceOp.getFields();
+    if (fields.empty())
+      return std::nullopt;
+    if (auto cst = fields[0].getDefiningOp<arith::ConstantOp>())
+      if (auto attr = mlir::dyn_cast<IntegerAttr>(cst.getValueAttr()))
+        return attr.getInt() != 0;
+    return std::nullopt;
   }
 
   unsigned getRankFromEmbox(fir::EmboxOp embox) const {
@@ -313,15 +328,12 @@ void FIRToMemRef::collectSliceInfoFrom(OpTy op, SliceInfo &info) const {
     }
 
     if (auto sliceOp = getSliceOp(op.getSlice())) {
-      // A slice path changes the physical projection of the boxed entity (for
-      // example, `complex -> real` for `%re`). Preserve shape/shift for logical
-      // indexing, but do not treat the triplets alone as layout information.
       if (hasProjectedSlice(sliceOp)) {
         info.hasProjectedSlice = true;
-      } else {
-        auto triples = sliceOp.getTriples();
-        info.sliceVec.append(triples.begin(), triples.end());
+        info.projectionIsImaginary = sliceProjectionIsImaginary(sliceOp);
       }
+      auto triples = sliceOp.getTriples();
+      info.sliceVec.append(triples.begin(), triples.end());
     }
   }
 }
@@ -473,9 +485,6 @@ FIRToMemRef::getMemrefIndices(fir::ArrayCoorOp arrayCoorOp, Operation *memref,
     rank = getRankFromEmbox(embox);
   }
 
-  // Projected boxed slices leave `sliceVec` empty on purpose: indices are
-  // computed in the logical section coordinate space, while stride/base come
-  // later from the box descriptor.
   SmallVector<Value> &shiftVec = sliceInfo.shiftVec;
   SmallVector<Value> &sliceVec = sliceInfo.sliceVec;
   SmallVector<Value> sliceLbs, sliceStrides;
@@ -626,6 +635,20 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
   bool isDescriptor = mlir::isa<fir::BaseBoxType>(firMemref.getType()) ||
                       firMemref.getDefiningOp<fir::BoxAddrOp>() != nullptr;
 
+  // For complex projections, getFIRConvert uses embox.getMemref() directly,
+  // converting the underlying array to memref<N×complex<T>> and ignoring the
+  // projected box descriptor.  The indices from getMemrefIndices are correct
+  // as-is; no descriptor rebuild is needed.
+  SliceInfo sliceInfo;
+  collectSliceInfoFrom(arrayCoorOp, sliceInfo);
+  if (auto embox = firMemref.getDefiningOp<fir::EmboxOp>())
+    collectSliceInfoFrom(embox, sliceInfo);
+  else if (auto rebox = firMemref.getDefiningOp<fir::ReboxOp>())
+    collectSliceInfoFrom(rebox, sliceInfo);
+  if (sliceInfo.hasProjectedSlice &&
+      isa<mlir::ComplexType>(memRefTy.getElementType()))
+    return std::pair{*converted, indices};
+
   // Static shape does not imply contiguous layout for descriptor-backed
   // entities (e.g. boxed array sections with non-unit stride). Keep the
   // reinterpret-cast path so descriptor strides are preserved.
@@ -633,7 +656,6 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
     return std::pair{*converted, indices};
 
   unsigned rank = arrayCoorOp.getIndices().size();
-
   if (auto embox = firMemref.getDefiningOp<fir::EmboxOp>())
     rank = getRankFromEmbox(embox);
 
@@ -642,29 +664,17 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
   SmallVector<Value> strides;
   strides.reserve(rank);
 
-  SliceInfo sliceInfo;
-  collectSliceInfoFrom(arrayCoorOp, sliceInfo);
-
-  Value box = firMemref;
-  if (!isa<BlockArgument>(firMemref)) {
-    if (auto embox = firMemref.getDefiningOp<fir::EmboxOp>()) {
-      collectSliceInfoFrom(embox, sliceInfo);
-    } else if (auto rebox = firMemref.getDefiningOp<fir::ReboxOp>()) {
-      collectSliceInfoFrom(rebox, sliceInfo);
-    }
-  }
-
   SmallVector<Value> &shapeVec = sliceInfo.shapeVec;
   if (sliceInfo.hasProjectedSlice || shapeVec.empty()) {
     // Projected slices carry their physical layout in the descriptor. Rebuild
     // the MemRef view from box metadata instead of from slice triplets.
     auto boxElementSize =
-        fir::BoxEleSizeOp::create(rewriter, loc, indexTy, box);
+        fir::BoxEleSizeOp::create(rewriter, loc, indexTy, firMemref);
 
     for (unsigned i = 0; i < rank; ++i) {
       Value dim = arith::ConstantIndexOp::create(rewriter, loc, rank - i - 1);
       auto boxDims = fir::BoxDimsOp::create(rewriter, loc, indexTy, indexTy,
-                                            indexTy, box, dim);
+                                            indexTy, firMemref, dim);
 
       Value extent = boxDims->getResult(1);
       sizes.push_back(castTypeToIndexType(extent, rewriter));
@@ -710,6 +720,41 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
 
   Value result = reinterpret->getResult(0);
   return std::pair{result, indices};
+}
+
+static Value complexComponent(PatternRewriter &rewriter, Location loc,
+                              Type elemTy, Value complexVal, bool isImaginary) {
+  return isImaginary ? complex::ImOp::create(rewriter, loc, elemTy, complexVal)
+                           .getResult()
+                     : complex::ReOp::create(rewriter, loc, elemTy, complexVal)
+                           .getResult();
+}
+
+static Value complexRMWValue(PatternRewriter &rewriter, Location loc,
+                             mlir::ComplexType complexTy, Value converted,
+                             ValueRange indices, Value value,
+                             bool isImaginary) {
+  Type elemTy = complexTy.getElementType();
+  Value old = memref::LoadOp::create(rewriter, loc, converted, indices);
+  Value other = complexComponent(rewriter, loc, elemTy, old, !isImaginary);
+  Value re = isImaginary ? other : value;
+  Value im = isImaginary ? value : other;
+  return complex::CreateOp::create(rewriter, loc, complexTy, re, im);
+}
+
+/// If \p firMemref is defined by a fir.array_coor that indexes a
+/// complex-component projection (z%re / z%im), return false for the real
+/// component or true for the imaginary component.
+/// Returns std::nullopt when the IR does not match the projection pattern.
+std::optional<bool> FIRToMemRef::complexProjectionOf(Value firMemref) const {
+  auto arrayCoor = firMemref.getDefiningOp<fir::ArrayCoorOp>();
+  if (!arrayCoor)
+    return std::nullopt;
+  SliceInfo info;
+  collectSliceInfoFrom(arrayCoor, info);
+  if (auto embox = arrayCoor.getMemref().getDefiningOp<fir::EmboxOp>())
+    collectSliceInfoFrom(embox, info);
+  return info.projectionIsImaginary;
 }
 
 FailureOr<Value>
@@ -791,9 +836,7 @@ FIRToMemRef::getFIRConvert(Operation *memOp, Operation *op,
                         "the same, bailing out of conversion\n");
           return failure();
         }
-        // Keep `box_addr` on the projected box so the descriptor remains the
-        // source of truth for projected element type and stride.
-        if (!projectedSlice && embox.getSlice() &&
+        if (embox.getSlice() &&
             embox.getSlice().getDefiningOp<fir::SliceOp>()) {
           Type originalType = embox.getMemref().getType();
           basePtr = embox.getMemref();
@@ -1096,8 +1139,13 @@ void FIRToMemRef::rewriteLoadOp(fir::LoadOp load, PatternRewriter &rewriter,
              loadOp.dump(); assert(succeeded(verify(loadOp))));
 
   if (loadOp.getType() != originalType) {
-    Value castVal =
-        createTypeConversion(rewriter, loadOp.getLoc(), originalType, loadOp);
+    // z%re / z%im: extract the scalar component; otherwise type-convert.
+    auto isComplex = complexProjectionOf(firMemref);
+    Value castVal = isComplex
+                        ? complexComponent(rewriter, loadOp.getLoc(),
+                                           originalType, loadOp, *isComplex)
+                        : createTypeConversion(rewriter, loadOp.getLoc(),
+                                               originalType, loadOp);
     loadOp.getResult().replaceAllUsesExcept(castVal, castVal.getDefiningOp());
   }
 
@@ -1135,9 +1183,26 @@ void FIRToMemRef::rewriteStoreOp(fir::StoreOp store, PatternRewriter &rewriter,
     value =
         createTypeConversion(rewriter, store.getLoc(), convertedType, value);
 
-  Attribute attr = (store.getOperation())->getAttr("tbaa");
+  // For a complex-component projection (z%re / z%im), memref holds complex<T>
+  // but the stored value is scalar T.  Read-modify-write to preserve the
+  // untouched component:
+  //   %old  = memref.load %mem[%idx] : memref<N×complex<T>>
+  //   %re   = complex.re %old : complex<T>      // (or %im for imaginary)
+  //   %new  = complex.create %re, %val : complex<T>
+  //   memref.store %new, %mem[%idx] : memref<N×complex<T>>
+  Value storeVal = value;
+  if (auto isComplex = complexProjectionOf(firMemref)) {
+    auto complexTy = dyn_cast<mlir::ComplexType>(
+        dyn_cast<MemRefType>(converted.getType()).getElementType());
+    assert(complexTy &&
+           "complex projection converted memref must hold complex<T>");
+    storeVal = complexRMWValue(rewriter, store.getLoc(), complexTy, converted,
+                               indices, value, *isComplex);
+  }
+
+  Attribute attr = store.getOperation()->getAttr("tbaa");
   memref::StoreOp storeOp = rewriter.replaceOpWithNewOp<memref::StoreOp>(
-      store, value, converted, indices);
+      store, storeVal, converted, indices);
   if (attr)
     storeOp.getOperation()->setAttr("tbaa", attr);
 
