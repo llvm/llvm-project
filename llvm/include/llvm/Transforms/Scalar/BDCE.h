@@ -23,7 +23,7 @@ namespace llvm {
 class Function;
 
 // The Bit-Tracking Dead Code Elimination pass.
-struct BDCEPass : PassInfoMixin<BDCEPass> {
+struct BDCEPass : OptionalPassInfoMixin<BDCEPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 }

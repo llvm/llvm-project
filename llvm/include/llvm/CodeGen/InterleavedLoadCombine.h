@@ -16,7 +16,7 @@ namespace llvm {
 class TargetMachine;
 
 class InterleavedLoadCombinePass
-    : public PassInfoMixin<InterleavedLoadCombinePass> {
+    : public OptionalPassInfoMixin<InterleavedLoadCombinePass> {
   const TargetMachine *TM;
 
 public:

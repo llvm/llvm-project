@@ -17,7 +17,7 @@
 
 namespace llvm {
 
-class RegToMemPass : public PassInfoMixin<RegToMemPass> {
+class RegToMemPass : public OptionalPassInfoMixin<RegToMemPass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };

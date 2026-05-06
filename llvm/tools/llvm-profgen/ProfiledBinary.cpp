@@ -532,7 +532,7 @@ void ProfiledBinary::decodePseudoProbe(const ObjectFile *Obj) {
       StringRef Contents = unwrapOrError(Section.getContents(), FileName);
       if (!ProbeDecoder.buildGUID2FuncDescMap(
               reinterpret_cast<const uint8_t *>(Contents.data()),
-              Contents.size()))
+              Contents.size(), /*IsMMapped=*/false, ShowDetailedWarning))
         exitWithError(
             "Pseudo Probe decoder fail in .pseudo_probe_desc section");
     } else if (SectionName == ".pseudo_probe") {

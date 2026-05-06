@@ -733,6 +733,34 @@ static bool isFusionLegal(ParallelOp firstPloop, ParallelOp secondPloop,
                                         firstToSecondPloopIndices, mayAlias, b);
 }
 
+// Interchange loops of the parallel loop, if there are just two loops
+static std::optional<ParallelOp> interchangeLoops(OpBuilder &builder,
+                                                  ParallelOp &loop) {
+
+  if (loop.getNumLoops() != 2)
+    return std::nullopt;
+
+  OpBuilder::InsertionGuard guard(builder);
+
+  // Replace the parallel loop with the same parallel loop.
+  builder.setInsertionPoint(loop);
+  auto newOp = ParallelOp::create(builder, loop.getLoc(), loop.getLowerBound(),
+                                  loop.getUpperBound(), loop.getStep(),
+                                  loop.getInitVals(), nullptr);
+  IRMapping mapping;
+  auto ivs = loop.getInductionVars();
+  auto newIvs = newOp.getInductionVars();
+  for (auto [iv, riv] : llvm::zip(ivs, llvm::reverse(newIvs))) {
+    mapping.map(iv, riv);
+  }
+  // Copy parallel loop body
+  builder.setInsertionPoint(&(newOp.getBody()->front()));
+  for (auto &o : loop.getRegion().front().without_terminator()) {
+    builder.clone(o, mapping);
+  }
+  return newOp;
+}
+
 /// Prepend operations of firstPloop's body into secondPloop's body.
 /// Update secondPloop with new loop.
 static void fuseIfLegal(ParallelOp firstPloop, ParallelOp &secondPloop,
@@ -744,8 +772,27 @@ static void fuseIfLegal(ParallelOp firstPloop, ParallelOp &secondPloop,
   firstToSecondPloopIndices.map(block1->getArguments(), block2->getArguments());
 
   if (!isFusionLegal(firstPloop, secondPloop, firstToSecondPloopIndices,
-                     mayAlias, builder))
-    return;
+                     mayAlias, builder)) {
+    // If second parallel loop consists of two loops of same iteration space
+    // then exchange these loops and re-asses the possibility of fusion.
+    if (secondPloop.getNumLoops() == 2 &&
+        secondPloop.getUpperBound()[0] == secondPloop.getUpperBound()[1] &&
+        secondPloop.getLowerBound()[0] == secondPloop.getLowerBound()[1] &&
+        secondPloop.getStep()[0] == secondPloop.getStep()[1]) {
+      firstToSecondPloopIndices.clear();
+      firstToSecondPloopIndices.map(block1->getArguments(),
+                                    llvm::reverse(block2->getArguments()));
+      if (!isFusionLegal(firstPloop, secondPloop, firstToSecondPloopIndices,
+                         mayAlias, builder))
+        return;
+      auto newLoop = interchangeLoops(builder, secondPloop);
+      secondPloop->erase();
+      secondPloop = *newLoop;
+      block2 = secondPloop.getBody();
+    } else {
+      return;
+    }
+  }
 
   DominanceInfo dom;
   // We are fusing first loop into second, make sure there are no users of the

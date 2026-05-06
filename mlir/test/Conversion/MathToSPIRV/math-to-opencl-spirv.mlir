@@ -159,6 +159,15 @@ func.func @float32_ternary_vector(%a: vector<4xf32>, %b: vector<4xf32>,
 func.func @int_unary(%arg0: i32) {
   // CHECK: spirv.CL.s_abs %{{.*}}
   %0 = math.absi %arg0 : i32
+  // CHECK: spirv.CL.clz %{{.*}} : i32
+  %1 = math.ctlz %arg0 : i32
+  return
+}
+
+// CHECK-LABEL: @int_unary_vector
+func.func @int_unary_vector(%arg0: vector<2xi32>) {
+  // CHECK: spirv.CL.clz %{{.*}} : vector<2xi32>
+  %0 = math.ctlz %arg0 : vector<2xi32>
   return
 }
 

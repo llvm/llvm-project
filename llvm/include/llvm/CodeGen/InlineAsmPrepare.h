@@ -13,7 +13,8 @@
 
 namespace llvm {
 
-class InlineAsmPreparePass : public PassInfoMixin<InlineAsmPreparePass> {
+class InlineAsmPreparePass
+    : public OptionalPassInfoMixin<InlineAsmPreparePass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };

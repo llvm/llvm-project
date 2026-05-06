@@ -897,6 +897,8 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
         PVD = Method->getParamDecl(I - 1);
     } else if (I == 0 && shouldTrackFirstArgument(FD)) {
       return true;
+    } else if (I == 1 && shouldTrackSecondArgument(FD)) {
+      return true;
     } else if (I < FD->getNumParams()) {
       // For free functions or static methods.
       PVD = FD->getParamDecl(I);

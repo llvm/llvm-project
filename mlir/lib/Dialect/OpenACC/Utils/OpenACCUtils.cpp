@@ -245,23 +245,33 @@ bool mlir::acc::isDeviceValue(mlir::Value val) {
     if (pointerLikeTy.isDeviceData(val))
       return true;
 
+  mlir::Operation *defOp = val.getDefiningOp();
+  if (!defOp)
+    return false;
+
+  // `acc.declare` with deviceptr marks data that is already associated with
+  // the device.
+  if (auto declareAttr = defOp->getAttrOfType<mlir::acc::DeclareAttr>(
+          mlir::acc::getDeclareAttrName()))
+    if (declareAttr.getDataClause().getValue() ==
+        mlir::acc::DataClause::acc_deviceptr)
+      return true;
+
   // Handle operations that access a partial entity - check if the base entity
   // is device data.
-  if (auto *defOp = val.getDefiningOp()) {
-    if (auto partialAccess =
-            dyn_cast<mlir::acc::PartialEntityAccessOpInterface>(defOp)) {
-      if (mlir::Value base = partialAccess.getBaseEntity())
-        return isDeviceValue(base);
-    }
+  if (auto partialAccess =
+          dyn_cast<mlir::acc::PartialEntityAccessOpInterface>(defOp)) {
+    if (mlir::Value base = partialAccess.getBaseEntity())
+      return isDeviceValue(base);
+  }
 
-    // Handle address_of - check if the referenced global is device data.
-    if (auto addrOfIface =
-            dyn_cast<mlir::acc::AddressOfGlobalOpInterface>(defOp)) {
-      auto symbol = addrOfIface.getSymbol();
-      if (auto global = mlir::SymbolTable::lookupNearestSymbolFrom<
-              mlir::acc::GlobalVariableOpInterface>(defOp, symbol))
-        return global.isDeviceData();
-    }
+  // Handle address_of - check if the referenced global is device data.
+  if (auto addrOfIface =
+          dyn_cast<mlir::acc::AddressOfGlobalOpInterface>(defOp)) {
+    auto symbol = addrOfIface.getSymbol();
+    if (auto global = mlir::SymbolTable::lookupNearestSymbolFrom<
+            mlir::acc::GlobalVariableOpInterface>(defOp, symbol))
+      return global.isDeviceData();
   }
 
   return false;

@@ -116,8 +116,8 @@ TEST(TimePassesTest, LegacyCustomOut) {
   TimePassesIsEnabled = false;
 }
 
-class MyPass1 : public PassInfoMixin<MyPass1> {};
-class MyPass2 : public PassInfoMixin<MyPass2> {};
+class MyPass1 : public OptionalPassInfoMixin<MyPass1> {};
+class MyPass2 : public OptionalPassInfoMixin<MyPass2> {};
 
 TEST(TimePassesTest, CustomOut) {
   PassInstrumentationCallbacks PIC;

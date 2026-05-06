@@ -852,7 +852,7 @@ MVT SystemZTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
                                                          EVT VT) const {
   // 128-bit single-element vector types are passed like other vectors,
   // not like their element type.
-  if (VT.isVector() && VT.getSizeInBits() == 128 &&
+  if (Subtarget.hasVector() && VT.isVector() && VT.getSizeInBits() == 128 &&
       VT.getVectorNumElements() == 1)
     return MVT::v16i8;
   // Pass fp16 vectors in VR(s).

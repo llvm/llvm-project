@@ -2,7 +2,7 @@
 ; RUN: yaml2obj %S/Inputs/etm-opencsd.yaml -o %t.bin
 
 ; Verify ETM trace decoding using OpenCSD with inlined trace data.
-; RUN: printf "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x80\x01\x00\x83\x01\x9a\x4f\x00\x00\x96\x81\x9a\xfc\xfe\xfa\xf8\xfd\xfd\xd6\xfd\xfd\xc1" > %t.trace
+; RUN: printf "\000\000\000\000\000\000\000\000\000\000\000\200\001\000\203\001\232\117\000\000\226\201\232\374\376\372\370\375\375\326\375\375\301" > %t.trace
 
 ; Run the generator to produce the output file.
 ; RUN: llvm-profgen --etm=%t.trace --binary=%t.bin --output=%t.prof --format=text
@@ -13,7 +13,7 @@
 ; RUN: ls %t2.prof
 
 ; Verify error handling when no synchronization header (0x80) is found.
-; RUN: printf "\x00\x00\x00" > %t.nosync
+; RUN: printf "\000\000\000" > %t.nosync
 ; RUN: not llvm-profgen --etm=%t.nosync --binary=%t.bin --output=%t3.prof 2>&1 | FileCheck %s --check-prefix=NOSYNC
 
 ; NOSYNC: error: No synchronization header (0x80) found in the bitstream.

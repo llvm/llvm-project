@@ -1,0 +1,29 @@
+{
+  "id_table": [
+    {
+      "id": 0,
+      "name": {
+        "namespace": [
+          {
+            "kind": "LinkUnit",
+            "name": "test.exe"
+          }
+        ],
+        "suffix": "",
+        "usr": "c:@F@foo#"
+      }
+    }
+  ],
+  "results": [
+    {
+      "analysis_name": "UnsafeBufferUsageAnalysisResult",
+      "result": {
+        "UnsafeBufferUsageAnalysisResult": [
+          {
+            "@": 0
+          }
+        ]
+      }
+    }
+  ]
+}

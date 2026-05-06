@@ -32,6 +32,12 @@ class TestDAP_source(lldbdap_testcase.DAPTestCaseBase):
         response = self.dap_server.request_source(sourceReference=0)
         self.assertFalse(response["success"], "verify invalid sourceReference fails")
 
+        # Check only source reference in the arguments field.
+        response = self.dap_server.request_custom("source", {"sourceReference": 0})
+        self.assertFalse(response["success"], "expected failed response")
+        error_format = self.get_dict_value(response, ["body", "error", "format"])
+        self.assertIn("unknown source reference", error_format)
+
         (stackFrames, totalFrames) = self.get_stackFrames_and_totalFramesCount()
         frameCount = len(stackFrames)
         self.assertGreaterEqual(frameCount, 3, "verify we got up to main at least")

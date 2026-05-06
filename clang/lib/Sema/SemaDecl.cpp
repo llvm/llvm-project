@@ -3140,15 +3140,16 @@ static void checkNewAttributesAfterDef(Sema &S, Decl *New, const Decl *Old) {
         --E;
         continue;
       }
-    } else if (isa<SelectAnyAttr>(NewAttribute) &&
-               cast<VarDecl>(New)->isInline() &&
-               !cast<VarDecl>(New)->isInlineSpecified()) {
+    } else if (isa<SelectAnyAttr>(NewAttribute)) {
       // Don't warn about applying selectany to implicitly inline variables.
       // Older compilers and language modes would require the use of selectany
       // to make such variables inline, and it would have no effect if we
       // honored it.
-      ++I;
-      continue;
+      if (const auto *VD = dyn_cast<VarDecl>(New);
+          VD && VD->isInline() && !VD->isInlineSpecified()) {
+        ++I;
+        continue;
+      }
     } else if (isa<OMPDeclareVariantAttr>(NewAttribute)) {
       // We allow to add OMP[Begin]DeclareVariantAttr to be added to
       // declarations after definitions.
@@ -7119,15 +7120,16 @@ static void checkAliasAttr(Sema &S, NamedDecl &ND) {
 }
 
 static void checkSelectAnyAttr(Sema &S, NamedDecl &ND) {
-  // 'selectany' only applies to externally visible variable declarations.
-  // It does not apply to functions.
-  if (SelectAnyAttr *Attr = ND.getAttr<SelectAnyAttr>()) {
-    if (isa<FunctionDecl>(ND) || !ND.isExternallyVisible()) {
-      S.Diag(Attr->getLocation(),
-             diag::err_attribute_selectany_non_extern_data);
-      ND.dropAttr<SelectAnyAttr>();
-    }
-  }
+  SelectAnyAttr *Attr = ND.getAttr<SelectAnyAttr>();
+  if (!Attr)
+    return;
+
+  if (const auto *VD = dyn_cast<VarDecl>(&ND);
+      VD && !VD->isStaticDataMember() && VD->isExternallyVisible())
+    return;
+
+  S.Diag(Attr->getLocation(), diag::err_attribute_selectany_non_extern_var);
+  ND.dropAttr<SelectAnyAttr>();
 }
 
 static void checkHybridPatchableAttr(Sema &S, NamedDecl &ND) {

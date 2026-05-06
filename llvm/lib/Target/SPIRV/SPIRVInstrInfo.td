@@ -641,6 +641,8 @@ let isReturn = 1, hasDelaySlot = 0, isBarrier = 0, isTerminator = 1, isNotDuplic
   def OpReturn: SimpleOp<"OpReturn", 253>;
   def OpReturnValue: Op<254, (outs), (ins ID:$ret), "OpReturnValue $ret">;
   def OpUnreachable: SimpleOp<"OpUnreachable", 255>;
+  def OpAbortKHR: Op<5121, (outs), (ins TYPE:$msg_type, ID:$msg),
+                  "OpAbortKHR $msg_type $msg">;
 }
 def OpLifetimeStart: Op<256, (outs), (ins ID:$ptr, i32imm:$sz), "OpLifetimeStart $ptr $sz">;
 def OpLifetimeStop: Op<257, (outs), (ins ID:$ptr, i32imm:$sz), "OpLifetimeStop $ptr $sz">;

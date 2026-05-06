@@ -20,7 +20,7 @@
 
 namespace llvm {
 
-struct LoopExtractorPass : public PassInfoMixin<LoopExtractorPass> {
+struct LoopExtractorPass : public OptionalPassInfoMixin<LoopExtractorPass> {
   LoopExtractorPass(unsigned NumLoops = ~0) : NumLoops(NumLoops) {}
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
   void printPipeline(raw_ostream &OS,

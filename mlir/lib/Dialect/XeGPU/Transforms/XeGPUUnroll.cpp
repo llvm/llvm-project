@@ -111,6 +111,25 @@ protected:
     return SmallVector<Value>();
   }
 
+  /// Helper to pack operands for DPAS-like operations with early return if
+  /// no unrolling is needed.
+  SmallVector<Value> packOperandForDpas(Value operand,
+                                        ArrayRef<int64_t> blockSize,
+                                        Location loc,
+                                        PatternRewriter &rewriter) const {
+    auto vecType = cast<VectorType>(operand.getType());
+    std::optional<SmallVector<int64_t>> grids =
+        computeShapeRatio(vecType.getShape(), blockSize);
+    assert(grids && "Expecting grids to be computed.");
+    auto numNewOps = computeProduct(*grids);
+    if (numNewOps == 1)
+      return SmallVector<Value>({operand});
+    VectorType newVecTy =
+        vecType.cloneWith(blockSize, vecType.getElementType());
+    SmallVector<Type> convertedTypes(numNewOps, newVecTy);
+    return pack(operand, convertedTypes, blockSize, loc, rewriter);
+  }
+
 private:
   const char *const packAttrName = "__xegpu_blocking_pack__";
   const char *const unpackAttrName = "__xegpu_blocking_unpack__";
@@ -318,15 +337,6 @@ struct UnrollDpasOp : public UnrollPattern<xegpu::DpasOp> {
                                 PatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
 
-    // expecting every operands is a 2D Vector
-    if (llvm::any_of(op->getOperandTypes(), [&](Type type) {
-          auto vecTy = dyn_cast<VectorType>(type);
-          return !vecTy || vecTy.getRank() != 2;
-        }))
-      return failure();
-
-    // A vector of 3 elements should be returned, representing M, K, N
-    // respectively.
     std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
     if (!targetShape || targetShape->size() != 3)
       return failure();
@@ -338,38 +348,16 @@ struct UnrollDpasOp : public UnrollPattern<xegpu::DpasOp> {
     int64_t bBlockSize[2] = {K, N};
     int64_t cBlockSize[2] = {M, N};
 
-    auto packWrapper = [&](TypedValue<VectorType> val,
-                           ArrayRef<int64_t> blockSize) {
-      VectorType type = val.getType();
-      std::optional<SmallVector<int64_t>> grids =
-          computeShapeRatio(type.getShape(), blockSize);
-      assert(grids && "Expecting grids to be computed.");
-      auto numNewOps = computeProduct(*grids);
-      if (numNewOps == 1)
-        return SmallVector<Value>({val});
-      VectorType newVecTy = type.cloneWith(blockSize, type.getElementType());
-      SmallVector<Type> convertedTypes(numNewOps, newVecTy);
-      SmallVector<Value> values =
-          pack(val, convertedTypes, blockSize, loc, rewriter);
-      return values;
-    };
-
     auto a = op.getLhs();
     auto b = op.getRhs();
     auto c = op.getAcc();
 
-    auto aShape = a.getType().getShape();
-    auto bShape = b.getType().getShape();
-
-    SmallVector<Value> aVals, bVals, cVals;
-    aVals = packWrapper(a, aBlockSize);
-    bVals = packWrapper(b, bBlockSize);
-
+    SmallVector<Value> aVals = packOperandForDpas(a, aBlockSize, loc, rewriter);
+    SmallVector<Value> bVals = packOperandForDpas(b, bBlockSize, loc, rewriter);
+    SmallVector<Value> cVals;
     if (c)
-      cVals = packWrapper(c, cBlockSize);
+      cVals = packOperandForDpas(c, cBlockSize, loc, rewriter);
 
-    // Skip the operation if every operand has an invalid blocking size (empty)
-    // or if the original shape matches the blocking size (size == 1).
     auto ranges = c ? SmallVector<ValueRange>({aVals, bVals, cVals})
                     : SmallVector<ValueRange>({aVals, bVals});
     if (llvm::any_of(ranges, [](auto &v) { return v.size() == 0; }) ||
@@ -379,6 +367,8 @@ struct UnrollDpasOp : public UnrollPattern<xegpu::DpasOp> {
     VectorType resultTy = op.getResult().getType();
     auto vecTy = VectorType::get(cBlockSize, resultTy.getElementType());
 
+    auto aShape = a.getType().getShape();
+    auto bShape = b.getType().getShape();
     int64_t mIters = aShape[0] / M;
     int64_t kIters = aShape[1] / K;
     int64_t nIters = bShape[1] / N;
@@ -388,7 +378,7 @@ struct UnrollDpasOp : public UnrollPattern<xegpu::DpasOp> {
       for (int64_t j = 0; j < nIters; ++j) {
         Value tmpC;
         if (c)
-          tmpC = cVals[i * nIters + j]; // init with acc
+          tmpC = cVals[i * nIters + j];
 
         for (int64_t k = 0; k < kIters; ++k) {
           Value aVec = aVals[i * kIters + k];
@@ -402,6 +392,86 @@ struct UnrollDpasOp : public UnrollPattern<xegpu::DpasOp> {
                                     xegpu::dropInstDataOnAttrs(op->getAttrs()));
         }
         newOps.push_back(tmpC);
+      }
+    }
+    Value castOp = unpack(newOps, resultTy, cBlockSize, loc, rewriter);
+    rewriter.replaceOp(op, castOp);
+    return success();
+  }
+};
+
+struct UnrollDpasMxOp : public UnrollPattern<xegpu::DpasMxOp> {
+  using UnrollPattern<xegpu::DpasMxOp>::UnrollPattern;
+  LogicalResult matchAndRewrite(xegpu::DpasMxOp op,
+                                PatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+
+    std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
+    if (!targetShape || targetShape->size() != 4)
+      return failure();
+    auto M = (*targetShape)[0];
+    auto K = (*targetShape)[1];
+    auto N = (*targetShape)[2];
+    auto S = (*targetShape)[3];
+
+    int64_t aBlockSize[2] = {M, K};
+    int64_t bBlockSize[2] = {K, N};
+    int64_t cBlockSize[2] = {M, N};
+    int64_t aScaleBlockSize[2] = {M, S};
+    int64_t bScaleBlockSize[2] = {S, N};
+
+    auto a = op.getA();
+    auto b = op.getB();
+    auto c = op.getAcc();
+    auto ascale = dyn_cast<TypedValue<VectorType>>(op.getScaleA());
+    auto bscale = dyn_cast<TypedValue<VectorType>>(op.getScaleB());
+
+    SmallVector<Value> aVals = packOperandForDpas(a, aBlockSize, loc, rewriter);
+    SmallVector<Value> bVals = packOperandForDpas(b, bBlockSize, loc, rewriter);
+    SmallVector<Value> cVals;
+    if (c)
+      cVals = packOperandForDpas(c, cBlockSize, loc, rewriter);
+    SmallVector<Value> aScaleVals;
+    if (ascale)
+      aScaleVals = packOperandForDpas(ascale, aScaleBlockSize, loc, rewriter);
+    SmallVector<Value> bScaleVals;
+    if (bscale)
+      bScaleVals = packOperandForDpas(bscale, bScaleBlockSize, loc, rewriter);
+
+    VectorType resultTy = op.getResult().getType();
+    auto vecTy = VectorType::get(cBlockSize, resultTy.getElementType());
+
+    auto aShape = a.getType().getShape();
+    auto bShape = b.getType().getShape();
+    int64_t mIters = aShape[0] / M;
+    int64_t kIters = aShape[1] / K;
+    int64_t nIters = bShape[1] / N;
+
+    SmallVector<Value> newOps;
+    xegpu::DpasMxOp newDpasMxOp;
+    for (int64_t i = 0; i < mIters; ++i) {
+      for (int64_t j = 0; j < nIters; ++j) {
+        Value tmpC;
+        if (c)
+          tmpC = cVals[i * nIters + j];
+
+        for (int64_t k = 0; k < kIters; ++k) {
+          Value aVec = aVals[i * kIters + k];
+          Value bVec = bVals[k * nIters + j];
+          SmallVector<Value> operands({aVec, bVec});
+          if (tmpC)
+            operands.push_back(tmpC);
+          if (ascale)
+            operands.push_back(aScaleVals[i * kIters + k]);
+          if (bscale)
+            operands.push_back(bScaleVals[k * nIters + j]);
+
+          newDpasMxOp = xegpu::DpasMxOp::create(
+              rewriter, loc, vecTy, operands,
+              xegpu::dropInstDataOnAttrs(op->getAttrs()));
+          tmpC = newDpasMxOp.getResult();
+        }
+        newOps.push_back(newDpasMxOp);
       }
     }
     Value castOp = unpack(newOps, resultTy, cBlockSize, loc, rewriter);
@@ -739,7 +809,8 @@ struct UnrollConvertLayoutOp : public UnrollPattern<xegpu::ConvertLayoutOp> {
 void mlir::xegpu::populateXeGPUUnrollPatterns(
     RewritePatternSet &patterns, const xegpu::UnrollOptions &options) {
   patterns.add<UnrollCreateNdOp, UnrollPrefetchNdOp, UnrollLoadNdOp,
-               UnrollStoreNdOp, UnrollDpasOp, UnrollLoadMatrixOp,
-               UnrollStoreMatrixOp, UnrollLoadGatherOp, UnrollStoreScatterOp,
-               UnrollConvertLayoutOp>(patterns.getContext(), options);
+               UnrollStoreNdOp, UnrollDpasOp, UnrollDpasMxOp,
+               UnrollLoadMatrixOp, UnrollStoreMatrixOp, UnrollLoadGatherOp,
+               UnrollStoreScatterOp, UnrollConvertLayoutOp>(
+      patterns.getContext(), options);
 }

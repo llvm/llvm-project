@@ -543,23 +543,22 @@ private:
   MustBeExecutedIterator EndIterator;
 };
 
-class MustExecutePrinterPass : public PassInfoMixin<MustExecutePrinterPass> {
+class MustExecutePrinterPass
+    : public RequiredPassInfoMixin<MustExecutePrinterPass> {
   raw_ostream &OS;
 
 public:
   MustExecutePrinterPass(raw_ostream &OS) : OS(OS) {}
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 class MustBeExecutedContextPrinterPass
-    : public PassInfoMixin<MustBeExecutedContextPrinterPass> {
+    : public RequiredPassInfoMixin<MustBeExecutedContextPrinterPass> {
   raw_ostream &OS;
 
 public:
   MustBeExecutedContextPrinterPass(raw_ostream &OS) : OS(OS) {}
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 } // namespace llvm

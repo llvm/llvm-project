@@ -1187,10 +1187,8 @@ Constant *OpenMPIRBuilder::getOrCreateSrcLocStr(DebugLoc DL,
   DILocation *DIL = DL.get();
   if (!DIL)
     return getOrCreateDefaultSrcLocStr(SrcLocStrSize);
-  StringRef FileName = M.getName();
-  if (DIFile *DIF = DIL->getFile())
-    if (std::optional<StringRef> Source = DIF->getSource())
-      FileName = *Source;
+  StringRef FileName =
+      !DIL->getFilename().empty() ? DIL->getFilename() : M.getName();
   StringRef Function = DIL->getScope()->getSubprogram()->getName();
   if (Function.empty() && F)
     Function = F->getName();
@@ -8349,11 +8347,12 @@ OpenMPIRBuilder::readTeamBoundsForKernel(const Triple &, Function &Kernel) {
 
 void OpenMPIRBuilder::writeTeamsForKernel(const Triple &T, Function &Kernel,
                                           int32_t LB, int32_t UB) {
-  if (T.isNVPTX())
-    if (UB > 0)
+  if (UB > 0) {
+    if (T.isNVPTX())
       Kernel.addFnAttr(NVVMAttr::MaxClusterRank, llvm::utostr(UB));
-  if (T.isAMDGPU())
-    Kernel.addFnAttr("amdgpu-max-num-workgroups", llvm::utostr(LB) + ",1,1");
+    if (T.isAMDGPU())
+      Kernel.addFnAttr("amdgpu-max-num-workgroups", llvm::utostr(UB) + ",1,1");
+  }
 
   Kernel.addFnAttr("omp_target_num_teams", std::to_string(LB));
 }

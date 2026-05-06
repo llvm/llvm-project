@@ -39,6 +39,55 @@ TEST(RISCVVType, CheckSameRatioLMUL) {
                 RISCVVType::getSEWLMULRatio(8, RISCVVType::LMUL_F4), 16));
 }
 
+TEST(RISCVVType, IMEVTypeFields) {
+  EXPECT_TRUE(RISCVVType::IME::isValidLambda(0));
+  EXPECT_TRUE(RISCVVType::IME::isValidLambda(1));
+  EXPECT_TRUE(RISCVVType::IME::isValidLambda(64));
+  EXPECT_FALSE(RISCVVType::IME::isValidLambda(3));
+  EXPECT_FALSE(RISCVVType::IME::isValidLambda(128));
+
+  EXPECT_EQ(0U, RISCVVType::IME::encodeLambda(0));
+  EXPECT_EQ(1U, RISCVVType::IME::encodeLambda(1));
+  EXPECT_EQ(3U, RISCVVType::IME::encodeLambda(4));
+  EXPECT_EQ(7U, RISCVVType::IME::encodeLambda(64));
+  EXPECT_FALSE(RISCVVType::IME::decodeLambda(0));
+  EXPECT_EQ(1U, *RISCVVType::IME::decodeLambda(1));
+  EXPECT_EQ(4U, *RISCVVType::IME::decodeLambda(3));
+  EXPECT_EQ(64U, *RISCVVType::IME::decodeLambda(7));
+
+  unsigned BaseVType =
+      RISCVVType::encodeVTYPE(RISCVVType::LMUL_1, 32, /*TailAgnostic=*/true,
+                              /*MaskAgnostic=*/true);
+
+  uint64_t RV32VType = RISCVVType::IME::addVTypeFields(
+      BaseVType, /*XLen=*/32, /*Lambda=*/4, /*AltFmtA=*/true,
+      /*AltFmtB=*/false, /*BlockSize16=*/true);
+  EXPECT_EQ(0x3a0000d0ULL, RV32VType);
+  EXPECT_EQ(0x7e000000ULL, RISCVVType::IME::getVTypeFieldsMask(32));
+  EXPECT_EQ(3U, RISCVVType::IME::getLambdaEncoding(RV32VType, 32));
+  EXPECT_EQ(4U, *RISCVVType::IME::getLambda(RV32VType, 32));
+  EXPECT_TRUE(RISCVVType::IME::isAltFmtA(RV32VType, 32));
+  EXPECT_FALSE(RISCVVType::IME::isAltFmtB(RV32VType, 32));
+  EXPECT_TRUE(RISCVVType::IME::isBlockSize16(RV32VType, 32));
+
+  uint64_t RV64VType = RISCVVType::IME::addVTypeFields(
+      BaseVType, /*XLen=*/64, /*Lambda=*/64, /*AltFmtA=*/true,
+      /*AltFmtB=*/true, /*BlockSize16=*/true);
+  EXPECT_EQ(0x7e000000000000d0ULL, RV64VType);
+  EXPECT_EQ(0x7e00000000000000ULL, RISCVVType::IME::getVTypeFieldsMask(64));
+  EXPECT_EQ(7U, RISCVVType::IME::getLambdaEncoding(RV64VType, 64));
+  EXPECT_EQ(64U, *RISCVVType::IME::getLambda(RV64VType, 64));
+  EXPECT_TRUE(RISCVVType::IME::isAltFmtA(RV64VType, 64));
+  EXPECT_TRUE(RISCVVType::IME::isAltFmtB(RV64VType, 64));
+  EXPECT_TRUE(RISCVVType::IME::isBlockSize16(RV64VType, 64));
+
+  uint64_t DynamicLambda = RISCVVType::IME::addVTypeFields(
+      BaseVType, /*XLen=*/64, /*Lambda=*/0, /*AltFmtA=*/false,
+      /*AltFmtB=*/false, /*BlockSize16=*/false);
+  EXPECT_FALSE(RISCVVType::IME::getLambda(DynamicLambda, 64));
+  EXPECT_EQ(BaseVType, DynamicLambda);
+}
+
 TEST(RISCVTuneFeature, AllTuneFeatures) {
   SmallVector<StringRef> AllTuneFeatures;
   RISCV::getAllTuneFeatures(AllTuneFeatures);

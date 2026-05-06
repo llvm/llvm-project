@@ -18,7 +18,7 @@
 
 namespace llvm {
 
-struct InferAlignmentPass : public PassInfoMixin<InferAlignmentPass> {
+struct InferAlignmentPass : public OptionalPassInfoMixin<InferAlignmentPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 

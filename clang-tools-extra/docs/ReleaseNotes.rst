@@ -563,6 +563,9 @@ Changes in existing checks
     implicit conversions of logical operator results (``&&``, ``||``, ``!``)
     to ``bool`` in C.
 
+  - Fixed a false positive where ``bool`` conditions in C conditional
+    operators were diagnosed as implicit conversions to ``int``.
+
 - Improved :doc:`readability-non-const-parameter
   <clang-tidy/checks/readability/non-const-parameter>` check:
 

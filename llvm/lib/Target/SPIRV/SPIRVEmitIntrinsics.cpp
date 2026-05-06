@@ -411,6 +411,7 @@ bool isConvergenceIntrinsic(const Instruction *I) {
 bool expectIgnoredInIRTranslation(const Instruction *I) {
   return match(I, m_AnyIntrinsic<Intrinsic::invariant_start,
                                  Intrinsic::spv_resource_handlefrombinding,
+                                 Intrinsic::spv_resource_getbasepointer,
                                  Intrinsic::spv_resource_getpointer>());
 }
 
@@ -1022,7 +1023,8 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
     // TODO: maybe improve performance by caching demangled names
 
     auto *II = dyn_cast<IntrinsicInst>(I);
-    if (II && II->getIntrinsicID() == Intrinsic::spv_resource_getpointer) {
+    if (II && (II->getIntrinsicID() == Intrinsic::spv_resource_getbasepointer ||
+               II->getIntrinsicID() == Intrinsic::spv_resource_getpointer)) {
       auto *HandleType = cast<TargetExtType>(II->getOperand(0)->getType());
       if (HandleType->getTargetExtName() == "spirv.Image" ||
           HandleType->getTargetExtName() == "spirv.SignedImage") {
@@ -1034,12 +1036,15 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
       } else if (HandleType->getTargetExtName() == "spirv.VulkanBuffer") {
         // This call is supposed to index into an array
         Ty = HandleType->getTypeParameter(0);
-        if (Ty->isArrayTy())
-          Ty = Ty->getArrayElementType();
-        else {
-          assert(Ty && Ty->isStructTy());
-          uint32_t Index = cast<ConstantInt>(II->getOperand(1))->getZExtValue();
-          Ty = cast<StructType>(Ty)->getElementType(Index);
+        if (II->getIntrinsicID() == Intrinsic::spv_resource_getpointer) {
+          if (Ty->isArrayTy())
+            Ty = Ty->getArrayElementType();
+          else {
+            assert(Ty && Ty->isStructTy());
+            uint32_t Index =
+                cast<ConstantInt>(II->getOperand(1))->getZExtValue();
+            Ty = cast<StructType>(Ty)->getElementType(Index);
+          }
         }
         Ty = reconstitutePeeledArrayType(Ty);
       } else {
@@ -1550,6 +1555,22 @@ void SPIRVEmitIntrinsics::replaceMemInstrUses(Instruction *Old,
     } else if (isMemInstrToReplace(U) || isa<ReturnInst>(U) ||
                isa<CallInst>(U)) {
       U->replaceUsesOfWith(Old, New);
+      // For a `llvm.spv.abort` call whose composite message argument was
+      // rewritten to a value-id (i32), also retarget the call to a matching
+      // intrinsic declaration so the IR verifier is satisfied. The SPIR-V
+      // type of the value is tracked via the GlobalRegistry, so the selector
+      // still emits OpAbortKHR with the original composite type.
+      if (auto *CI = dyn_cast<CallInst>(U);
+          CI && CI->getIntrinsicID() == Intrinsic::spv_abort) {
+        Type *NewArgTy = New->getType();
+        Type *ExpectedArgTy = CI->getFunctionType()->getParamType(0);
+        if (NewArgTy != ExpectedArgTy) {
+          Module *M = CI->getModule();
+          Function *NewF = Intrinsic::getOrInsertDeclaration(
+              M, Intrinsic::spv_abort, {NewArgTy});
+          CI->setCalledFunction(NewF);
+        }
+      }
     } else if (auto *Phi = dyn_cast<PHINode>(U)) {
       if (Phi->getType() != New->getType()) {
         Phi->mutateType(New->getType());
@@ -2360,9 +2381,47 @@ Instruction *SPIRVEmitIntrinsics::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
   return NewI;
 }
 
+static bool isAbortCall(const Instruction &I, const SPIRVSubtarget &ST) {
+  auto *CI = dyn_cast<CallInst>(&I);
+  if (!CI)
+    return false;
+  switch (CI->getIntrinsicID()) {
+  case Intrinsic::spv_abort:
+    return true;
+  case Intrinsic::trap:
+  case Intrinsic::ubsantrap:
+    // When the extension is enabled, selection lowers these to OpAbortKHR.
+    return ST.canUseExtension(SPIRV::Extension::SPV_KHR_abort);
+  default:
+    return false;
+  }
+}
+
+// The OpAbortKHR instruction itself is a block terminator, so we don't need to
+// emit an extra OpUnreachable instruction.
+static bool precededByAbortIntrinsic(const UnreachableInst &I,
+                                     const SPIRVSubtarget &ST) {
+  // Find a previous non-debug instruction.
+  const Instruction *Prev = I.getPrevNode();
+  while (Prev && Prev->isDebugOrPseudoInst())
+    Prev = Prev->getPrevNode();
+
+  if (Prev && isAbortCall(*Prev, ST))
+    return true;
+
+  assert(llvm::none_of(
+             *I.getParent(),
+             [&ST](const Instruction &II) { return isAbortCall(II, ST); }) &&
+         "abort-like call must be the last non-debug instruction before its "
+         "block's terminator");
+  return false;
+}
+
 Instruction *SPIRVEmitIntrinsics::visitUnreachableInst(UnreachableInst &I) {
-  IRBuilder<> B(I.getParent());
-  B.SetInsertPoint(&I);
+  const SPIRVSubtarget &ST = TM.getSubtarget<SPIRVSubtarget>(*I.getFunction());
+  if (precededByAbortIntrinsic(I, ST))
+    return &I;
+  IRBuilder<> B(&I);
   B.CreateIntrinsic(Intrinsic::spv_unreachable, {});
   return &I;
 }

@@ -1775,6 +1775,8 @@ private:
   }
 
   uptr getStats(ScopedString *Str) {
+    Str->append("Config Stats Base: ");
+    AllocatorConfig::getConfigValues(Str);
     Primary.getStats(Str);
     Secondary.getStats(Str);
     if (!AllocatorConfig::getQuarantineDisabled())

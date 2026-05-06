@@ -42,15 +42,13 @@ public:
 
 /// Printer pass for the \c UniformityInfo.
 class UniformityInfoPrinterPass
-    : public PassInfoMixin<UniformityInfoPrinterPass> {
+    : public RequiredPassInfoMixin<UniformityInfoPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit UniformityInfoPrinterPass(raw_ostream &OS);
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 
 /// Legacy analysis pass which computes a \ref CycleInfo.

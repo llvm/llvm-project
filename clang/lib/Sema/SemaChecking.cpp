@@ -8707,16 +8707,16 @@ bool DecomposePrintfHandler::HandlePrintfSpecifier(
   const auto &FieldWidth = FS.getFieldWidth();
   if (!FieldWidth.isInvalid() && FieldWidth.hasDataArgument()) {
     FieldWidthIndex = Specs.size();
-    Specs.emplace_back(getSpecifierRange(startSpecifier, specifierLen),
-                       getLocationOfByte(FieldWidth.getStart()),
-                       analyze_format_string::LengthModifier::None, "*",
-                       FieldWidth.getArgType(S.Context),
-                       EquatableFormatArgument::FAR_FieldWidth,
-                       EquatableFormatArgument::SS_None,
-                       FieldWidth.usesPositionalArg()
-                           ? FieldWidth.getPositionalArgIndex() - 1
-                           : FieldWidthIndex,
-                       0);
+    Specs.emplace_back(
+        getSpecifierRange(startSpecifier, specifierLen),
+        getLocationOfByte(FieldWidth.getStart()),
+        analyze_format_string::LengthModifier::None, FieldWidth.getCharacters(),
+        FieldWidth.getArgType(S.Context),
+        EquatableFormatArgument::FAR_FieldWidth,
+        EquatableFormatArgument::SS_None,
+        FieldWidth.usesPositionalArg() ? FieldWidth.getPositionalArgIndex() - 1
+                                       : FieldWidthIndex,
+        0);
   }
   // precision?
   const auto &Precision = FS.getPrecision();
@@ -8725,7 +8725,7 @@ bool DecomposePrintfHandler::HandlePrintfSpecifier(
     Specs.emplace_back(
         getSpecifierRange(startSpecifier, specifierLen),
         getLocationOfByte(Precision.getStart()),
-        analyze_format_string::LengthModifier::None, ".*",
+        analyze_format_string::LengthModifier::None, Precision.getCharacters(),
         Precision.getArgType(S.Context), EquatableFormatArgument::FAR_Precision,
         EquatableFormatArgument::SS_None,
         Precision.usesPositionalArg() ? Precision.getPositionalArgIndex() - 1

@@ -26,7 +26,8 @@ class Module;
 class TargetTransformInfo;
 class TargetLibraryInfo;
 
-struct RewriteStatepointsForGC : public PassInfoMixin<RewriteStatepointsForGC> {
+struct RewriteStatepointsForGC
+    : public OptionalPassInfoMixin<RewriteStatepointsForGC> {
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
   bool runOnFunction(Function &F, DominatorTree &, TargetTransformInfo &,

@@ -403,6 +403,7 @@ public:
   ~Darwin() override;
 
   std::string ComputeEffectiveClangTriple(const llvm::opt::ArgList &Args,
+                                          llvm::StringRef BoundArch,
                                           types::ID InputType) const override;
 
   /// @name Darwin Specific Toolchain Implementation

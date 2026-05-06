@@ -40,7 +40,8 @@ void AMDGCN::Linker::constructLLVMLinkCommand(
   ArgStringList LinkerInputs;
 
   for (auto Input : Inputs)
-    LinkerInputs.push_back(Input.getFilename());
+    if (Input.isFilename())
+      LinkerInputs.push_back(Input.getFilename());
 
   // Look for archive of bundled bitcode in arguments, and add temporary files
   // for the extracted archive of bitcode to inputs.
@@ -420,8 +421,8 @@ HIPAMDToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs,
     assert(!GpuArch.empty() && "Must have an explicit GPU arch.");
 
     // Add common device libraries like ocml etc.
-    for (auto N : getCommonDeviceLibNames(DriverArgs, GpuArch.str(),
-                                          DeviceOffloadingKind))
+    for (auto N :
+         getCommonDeviceLibNames(DriverArgs, GpuArch, DeviceOffloadingKind))
       BCLibs.emplace_back(N);
 
     // Add instrument lib.

@@ -15,7 +15,8 @@ namespace llvm {
 
 class TargetMachine;
 
-class IndirectBrExpandPass : public PassInfoMixin<IndirectBrExpandPass> {
+class IndirectBrExpandPass
+    : public OptionalPassInfoMixin<IndirectBrExpandPass> {
   const TargetMachine *TM;
 
 public:

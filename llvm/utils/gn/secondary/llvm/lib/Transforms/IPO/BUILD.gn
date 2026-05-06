@@ -48,6 +48,8 @@ static_library("IPO") {
     "IROutliner.cpp",
     "InferFunctionAttrs.cpp",
     "Inliner.cpp",
+    "Instrumentor.cpp",
+    "InstrumentorConfigFile.cpp",
     "Internalize.cpp",
     "LoopExtractor.cpp",
     "LowerTypeTests.cpp",

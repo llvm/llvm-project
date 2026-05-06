@@ -465,7 +465,7 @@ private:
 };
 
 /// Pass to outline similar regions.
-class IROutlinerPass : public PassInfoMixin<IROutlinerPass> {
+class IROutlinerPass : public OptionalPassInfoMixin<IROutlinerPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };

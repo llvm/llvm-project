@@ -19,7 +19,7 @@
 namespace llvm {
 
 class SPIRVStructurizerWrapper
-    : public PassInfoMixin<SPIRVStructurizerWrapper> {
+    : public OptionalPassInfoMixin<SPIRVStructurizerWrapper> {
 public:
   PreservedAnalyses run(Function &M, FunctionAnalysisManager &AM);
 };

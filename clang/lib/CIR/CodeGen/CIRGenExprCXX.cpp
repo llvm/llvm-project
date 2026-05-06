@@ -1519,12 +1519,12 @@ void CIRGenFunction::emitCXXDeleteExpr(const CXXDeleteExpr *e) {
         isTypeAwareAllocation(udp.TypeAwareDelete), udp.DestroyingDelete);
 
     mlir::FlatSymbolRefAttr elementDtor;
+    bool hasThrowingDtor = false;
     if (const auto *rd = deleteTy->getAsCXXRecordDecl()) {
       if (rd->hasDefinition() && !rd->hasTrivialDestructor()) {
         const CXXDestructorDecl *dtor = rd->getDestructor();
         if (dtor->getType()->castAs<FunctionProtoType>()->canThrow())
-          cgm.errorNYI(e->getSourceRange(),
-                       "emitCXXDeleteExpr: throwing destructor");
+          hasThrowingDtor = true;
         cir::FuncOp dtorFn =
             cgm.getAddrOfCXXStructor(GlobalDecl(dtor, Dtor_Complete));
         elementDtor = mlir::FlatSymbolRefAttr::get(builder.getContext(),
@@ -1534,7 +1534,7 @@ void CIRGenFunction::emitCXXDeleteExpr(const CXXDeleteExpr *e) {
 
     cir::DeleteArrayOp::create(builder, ptr.getPointer().getLoc(),
                                ptr.getPointer(), deleteFn, deleteParams,
-                               elementDtor);
+                               elementDtor, hasThrowingDtor);
   } else {
     emitObjectDelete(*this, e, ptr, deleteTy);
   }

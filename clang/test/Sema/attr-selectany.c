@@ -8,4 +8,8 @@ extern __declspec(selectany) const int x1 = 1; // no warning, const means we nee
 // Should we really warn on this?
 extern __declspec(selectany) int x2 = 1; // expected-warning {{'extern' variable has an initializer}}
 
-__declspec(selectany) void foo(void) { } // expected-error{{'selectany' can only be applied to data items with external linkage}}
+__declspec(selectany) void x3(void) { } // expected-error {{'selectany' attribute only applies to variable declarations with external linkage}}
+
+void t() {
+    __declspec(selectany) extern int i;
+}

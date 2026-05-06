@@ -462,10 +462,9 @@ public:
 
 /// Verifier pass for \c MachineTraceMetrics.
 struct MachineTraceMetricsVerifierPass
-    : PassInfoMixin<MachineTraceMetricsVerifierPass> {
+    : RequiredPassInfoMixin<MachineTraceMetricsVerifierPass> {
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
-  static bool isRequired() { return true; }
 };
 
 class MachineTraceMetricsWrapperPass : public MachineFunctionPass {

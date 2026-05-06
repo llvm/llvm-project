@@ -75,6 +75,7 @@
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/KnownFPClass.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/UndefPoison.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include <algorithm>
 #include <cassert>
@@ -7630,20 +7631,6 @@ static bool shiftAmountKnownInRange(const Value *ShiftAmount) {
   });
 
   return Safe;
-}
-
-enum class UndefPoisonKind {
-  PoisonOnly = (1 << 0),
-  UndefOnly = (1 << 1),
-  UndefOrPoison = PoisonOnly | UndefOnly,
-};
-
-static bool includesPoison(UndefPoisonKind Kind) {
-  return (unsigned(Kind) & unsigned(UndefPoisonKind::PoisonOnly)) != 0;
-}
-
-static bool includesUndef(UndefPoisonKind Kind) {
-  return (unsigned(Kind) & unsigned(UndefPoisonKind::UndefOnly)) != 0;
 }
 
 static bool canCreateUndefOrPoison(const Operator *Op, UndefPoisonKind Kind,

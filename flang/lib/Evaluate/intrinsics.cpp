@@ -2867,6 +2867,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
   if (elementalRank > 0) {
     attrs.set(characteristics::Procedure::Attr::Elemental);
   }
+  // TODO: Mark intrinsic procedures that are SIMPLE per F2023
   if (call.isSubroutineCall) {
     if (intrinsicClass == IntrinsicClass::pureSubroutine /* MOVE_ALLOC */ ||
         intrinsicClass == IntrinsicClass::elementalSubroutine /* MVBITS */) {

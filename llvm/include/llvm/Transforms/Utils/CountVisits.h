@@ -16,7 +16,7 @@ namespace llvm {
 
 class Function;
 
-struct CountVisitsPass : PassInfoMixin<CountVisitsPass> {
+struct CountVisitsPass : OptionalPassInfoMixin<CountVisitsPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &);
 
 private:

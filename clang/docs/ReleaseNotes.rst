@@ -291,6 +291,8 @@ Modified Compiler Flags
 - The `-mno-outline` and `-moutline` compiler flags are now allowed on RISC-V and X86, which both support the machine outliner.
 - The `-mno-outline` flag will now add the `nooutline` IR attribute, so that
   `-mno-outline` and `-moutline` objects can be mixed correctly during LTO.
+- The `-fms-kernel` flag will now implicitly add -fno-delete-null-pointer-checks.
+  Still -fdelete-null-pointer-checks can be used to override this behavior.
 
 Removed Compiler Flags
 ----------------------
@@ -352,6 +354,7 @@ Attribute Changes in Clang
   usage.
 
 - Clang now allows GNU attributes between a member declarator and bit-field width. (#GH184954)
+- Clang now disallows use of the ``selectany`` attribute on non-global-variable declarations. (#GH189141)
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -744,6 +747,12 @@ Code Completion
 
 Static Analyzer
 ---------------
+
+Crash and bug fixes
+^^^^^^^^^^^^^^^^^^^
+
+- Fixed ``security.VAList`` checker producing false positives when analyzing
+  C23 code where ``va_start`` expands to ``__builtin_c23_va_start``.
 
 .. comment:
   This is for the Static Analyzer.

@@ -245,6 +245,36 @@ void DepthwiseConv2DOp::getCanonicalizationPatterns(RewritePatternSet &results,
       context);
 }
 
+struct AvgPool2dAdaptiveToAvgPool2d
+    : public OpRewritePattern<tosa::AvgPool2dAdaptiveOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::AvgPool2dAdaptiveOp op,
+                                PatternRewriter &rewriter) const override {
+    llvm::SmallVector<int64_t> kernel;
+    llvm::SmallVector<int64_t> stride;
+    llvm::SmallVector<int64_t> pad;
+    if (!tosa::getConstShapeValues(op.getKernel().getDefiningOp(), kernel) ||
+        !tosa::getConstShapeValues(op.getStride().getDefiningOp(), stride) ||
+        !tosa::getConstShapeValues(op.getPad().getDefiningOp(), pad))
+      return rewriter.notifyMatchFailure(
+          op, "expected constant kernel, stride, and pad operands");
+
+    auto replacement = tosa::AvgPool2dOp::create(
+        rewriter, op.getLoc(), op.getType(), op.getInput(), op.getInputZp(),
+        op.getOutputZp(), rewriter.getDenseI64ArrayAttr(kernel),
+        rewriter.getDenseI64ArrayAttr(stride),
+        rewriter.getDenseI64ArrayAttr(pad), op.getAccTypeAttr());
+    rewriter.replaceOp(op, replacement.getOutput());
+    return success();
+  }
+};
+
+void AvgPool2dAdaptiveOp::getCanonicalizationPatterns(
+    RewritePatternSet &results, MLIRContext *context) {
+  results.add<AvgPool2dAdaptiveToAvgPool2d>(context);
+}
+
 struct MaxPool2dIsNoOp : public OpRewritePattern<tosa::MaxPool2dOp> {
   using OpRewritePattern::OpRewritePattern;
 
@@ -281,6 +311,36 @@ void MaxPool2dOp::getCanonicalizationPatterns(RewritePatternSet &results,
               FoldPadToTensorOp<tosa::MaxPool2dOp,
                                 PoolPadFoldAdaptor<tosa::MaxPool2dOp>>>(
       context);
+}
+
+struct MaxPool2dAdaptiveToMaxPool2d
+    : public OpRewritePattern<tosa::MaxPool2dAdaptiveOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::MaxPool2dAdaptiveOp op,
+                                PatternRewriter &rewriter) const override {
+    llvm::SmallVector<int64_t> kernel;
+    llvm::SmallVector<int64_t> stride;
+    llvm::SmallVector<int64_t> pad;
+    if (!tosa::getConstShapeValues(op.getKernel().getDefiningOp(), kernel) ||
+        !tosa::getConstShapeValues(op.getStride().getDefiningOp(), stride) ||
+        !tosa::getConstShapeValues(op.getPad().getDefiningOp(), pad))
+      return rewriter.notifyMatchFailure(
+          op, "expected constant kernel, stride, and pad operands");
+
+    auto replacement = tosa::MaxPool2dOp::create(
+        rewriter, op.getLoc(), op.getType(), op.getInput(),
+        rewriter.getDenseI64ArrayAttr(kernel),
+        rewriter.getDenseI64ArrayAttr(stride),
+        rewriter.getDenseI64ArrayAttr(pad), op.getNanModeAttr());
+    rewriter.replaceOp(op, replacement.getOutput());
+    return success();
+  }
+};
+
+void MaxPool2dAdaptiveOp::getCanonicalizationPatterns(
+    RewritePatternSet &results, MLIRContext *context) {
+  results.add<MaxPool2dAdaptiveToMaxPool2d>(context);
 }
 
 //===----------------------------------------------------------------------===//

@@ -13,7 +13,7 @@
 
 namespace llvm {
 
-class MachineCSEPass : public PassInfoMixin<MachineCSEPass> {
+class MachineCSEPass : public OptionalPassInfoMixin<MachineCSEPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

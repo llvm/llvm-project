@@ -312,8 +312,13 @@ Operation *ACCImplicitData::getOriginalDataClauseOpForAlias(
       // Only accept clauses that guarantee that the alias is present.
       if (isa<acc::CopyinOp, acc::CreateOp, acc::PresentOp, acc::NoCreateOp,
               acc::DevicePtrOp>(dataClauseOp))
-        if (aliasAnalysis.alias(acc::getVar(dataClauseOp), var).isMust())
+        if (aliasAnalysis.alias(acc::getVar(dataClauseOp), var).isMust()) {
+          LLVM_DEBUG(llvm::dbgs()
+                         << "Using existing data clause:\n\t" << *dataClauseOp
+                         << "\n\tas reference when processing var:\n\t" << var
+                         << "\n";);
           return dataClauseOp;
+        }
     }
   }
   return nullptr;
@@ -452,6 +457,15 @@ Operation *ACCImplicitData::generateDataClauseOpForCandidate(
       typeCategory, acc::VariableTypeCategory::aggregate);
   Location loc = computeConstructOp->getLoc();
 
+  if (acc::isDeviceValue(var)) {
+    // If the variable is device data, use deviceptr clause.
+    LLVM_DEBUG(llvm::dbgs() << "Using deviceptr clause because variable is "
+                               "device data\n");
+    return acc::DevicePtrOp::create(builder, loc, var,
+                                    /*structured=*/true, /*implicit=*/true,
+                                    accSupport.getVariableName(var));
+  }
+
   Operation *op = nullptr;
   op = getOriginalDataClauseOpForAlias(var, builder, computeConstructOp,
                                        dominatingDataClauses);
@@ -474,13 +488,6 @@ Operation *ACCImplicitData::generateDataClauseOpForCandidate(
                                   /*structured=*/true, /*implicit=*/true,
                                   accSupport.getVariableName(var),
                                   acc::getBounds(op));
-  }
-
-  if (acc::isDeviceValue(var)) {
-    // If the variable is device data, use deviceptr clause.
-    return acc::DevicePtrOp::create(builder, loc, var,
-                                    /*structured=*/true, /*implicit=*/true,
-                                    accSupport.getVariableName(var));
   }
 
   if (isScalar) {

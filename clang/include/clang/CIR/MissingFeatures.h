@@ -97,7 +97,6 @@ struct MissingFeatures {
   static bool opCallABIIndirectArg() { return false; }
   static bool opCallWidenArg() { return false; }
   static bool opCallBitcastArg() { return false; }
-  static bool opCallImplicitObjectSizeArgs() { return false; }
   static bool opCallReturn() { return false; }
   static bool opCallArgEvaluationOrder() { return false; }
   static bool opCallCallConv() { return false; }

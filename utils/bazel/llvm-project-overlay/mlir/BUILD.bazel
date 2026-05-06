@@ -9985,6 +9985,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":SparseTensorEnums",
+        ":Support",
         ":mlir_float16_utils",
     ],
 )

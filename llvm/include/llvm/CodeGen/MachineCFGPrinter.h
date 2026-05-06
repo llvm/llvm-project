@@ -89,4 +89,11 @@ struct DOTGraphTraits<DOTMachineFuncInfo *> : public DefaultDOTGraphTraits {
            "' function";
   }
 };
+
+class MachineCFGPrinterPass : public PassInfoMixin<MachineCFGPrinterPass> {
+public:
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
+};
+
 } // namespace llvm

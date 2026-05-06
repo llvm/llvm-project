@@ -173,23 +173,22 @@ public:
 
 /// Printer pass for the FunctionPropertiesAnalysis results.
 class FunctionPropertiesPrinterPass
-    : public PassInfoMixin<FunctionPropertiesPrinterPass> {
+    : public RequiredPassInfoMixin<FunctionPropertiesPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit FunctionPropertiesPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 
 /// Statistics pass for the FunctionPropertiesAnalysis results.
-struct FunctionPropertiesStatisticsPass
-    : PassInfoMixin<FunctionPropertiesStatisticsPass> {
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+class FunctionPropertiesStatisticsPass
+    : public RequiredPassInfoMixin<FunctionPropertiesStatisticsPass> {
+public:
+  explicit FunctionPropertiesStatisticsPass() {}
 
-  static bool isRequired() { return true; }
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 /// Correctly update FunctionPropertiesInfo post-inlining. A

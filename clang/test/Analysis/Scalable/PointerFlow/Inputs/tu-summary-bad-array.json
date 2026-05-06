@@ -1,0 +1,88 @@
+{
+  "data": [
+    {
+      "summary_data": [
+        {
+          "entity_id": 2,
+          "entity_summary": {
+            "PointerFlow": [
+              [
+                [
+                  {
+                    "@": 0
+                  },
+                  2
+                ]
+              ],
+              [
+                [
+                  {
+                    "@": 2
+                  },
+                  1
+                ],
+                [
+                  {
+                    "@": 0
+                  },
+                  1
+                ]
+              ]
+            ]
+          }
+        }
+      ],
+      "summary_name": "PointerFlow"
+    }
+  ],
+  "id_table": [
+    {
+      "id": 2,
+      "name": {
+        "namespace": [],
+        "suffix": "",
+        "usr": "c:@F@foo#***I#*S0_#I#"
+      }
+    },
+    {
+      "id": 0,
+      "name": {
+        "namespace": [],
+        "suffix": "1",
+        "usr": "c:@F@foo#***I#*S0_#I#"
+      }
+    },
+    {
+      "id": 1,
+      "name": {
+        "namespace": [],
+        "suffix": "2",
+        "usr": "c:@F@foo#***I#*S0_#I#"
+      }
+    }
+  ],
+  "linkage_table": [
+    {
+      "id": 0,
+      "linkage": {
+        "type": "External"
+      }
+    },
+    {
+      "id": 1,
+      "linkage": {
+        "type": "Internal"
+      }
+    },
+    {
+      "id": 2,
+      "linkage": {
+        "type": "Internal"
+      }
+    }
+  ],
+  "tu_namespace": {
+    "kind": "CompilationUnit",
+    "name": "Mock.cpp"
+  }
+}

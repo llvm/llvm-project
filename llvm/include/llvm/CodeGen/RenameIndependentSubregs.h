@@ -14,7 +14,7 @@
 namespace llvm {
 
 class RenameIndependentSubregsPass
-    : public PassInfoMixin<RenameIndependentSubregsPass> {
+    : public OptionalPassInfoMixin<RenameIndependentSubregsPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

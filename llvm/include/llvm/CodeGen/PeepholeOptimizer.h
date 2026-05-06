@@ -13,7 +13,8 @@
 
 namespace llvm {
 
-class PeepholeOptimizerPass : public PassInfoMixin<PeepholeOptimizerPass> {
+class PeepholeOptimizerPass
+    : public OptionalPassInfoMixin<PeepholeOptimizerPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

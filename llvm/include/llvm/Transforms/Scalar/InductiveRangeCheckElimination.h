@@ -18,7 +18,7 @@
 
 namespace llvm {
 
-class IRCEPass : public PassInfoMixin<IRCEPass> {
+class IRCEPass : public OptionalPassInfoMixin<IRCEPass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };

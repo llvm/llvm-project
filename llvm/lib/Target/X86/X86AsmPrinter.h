@@ -205,20 +205,21 @@ public:
   std::function<StaticDataProfileInfo *(Module &)> GetSDPI;
 };
 
-class X86AsmPrinterBeginPass : public PassInfoMixin<X86AsmPrinterBeginPass> {
+class X86AsmPrinterBeginPass
+    : public OptionalPassInfoMixin<X86AsmPrinterBeginPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };
 
-class X86AsmPrinterPass : public PassInfoMixin<X86AsmPrinterPass> {
+class X86AsmPrinterPass : public RequiredPassInfoMixin<X86AsmPrinterPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
   // AsmPrinter needs to run regardless of optimization level.
-  static bool isRequired() { return true; }
 };
 
-class X86AsmPrinterEndPass : public PassInfoMixin<X86AsmPrinterEndPass> {
+class X86AsmPrinterEndPass
+    : public OptionalPassInfoMixin<X86AsmPrinterEndPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };

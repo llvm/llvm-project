@@ -146,15 +146,13 @@ public:
 
 /// Printer pass for the \c DominanceFrontier.
 class DominanceFrontierPrinterPass
-    : public PassInfoMixin<DominanceFrontierPrinterPass> {
+    : public RequiredPassInfoMixin<DominanceFrontierPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit DominanceFrontierPrinterPass(raw_ostream &OS);
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 
 } // end namespace llvm

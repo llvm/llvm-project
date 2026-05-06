@@ -419,7 +419,6 @@ public:
 
 protected:
   struct SoftwareBreakpoint {
-    uint32_t ref_count;
     llvm::SmallVector<uint8_t, 4> saved_opcodes;
     llvm::ArrayRef<uint8_t> breakpoint_opcodes;
   };

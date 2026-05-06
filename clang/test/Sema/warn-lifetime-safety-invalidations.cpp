@@ -252,6 +252,73 @@ void IteratorUsedAfterPushBack(std::vector<int> v) {
   }
   ++it;             // expected-note {{later used here}}
 }
+
+void IteratorUsedAfterPreIncrement() {
+  std::vector<int> v;
+  auto it = v.begin();      // expected-warning {{object whose reference is captured is later invalidated}}
+  auto next = ++it;
+  v.push_back(1);           // expected-note {{invalidated here}}
+  (void)*next;              // expected-note {{later used here}}
+}
+
+void IteratorUsedAfterPostDecrement(std::vector<int> v) {
+  auto it = v.rbegin();     // expected-warning {{object whose reference is captured is later invalidated}}
+  auto prev = it--;
+  v.push_back(1);           // expected-note {{invalidated here}}
+  (void)*prev;              // expected-note {{later used here}}
+}
+
+void IteratorUsedAfterAddition() {
+  std::vector<int> v;
+  auto it = v.cbegin();     // expected-warning {{object whose reference is captured is later invalidated}}
+  auto next = it + 5;
+  v.push_back(1);           // expected-note {{invalidated here}}
+  (void)*next;              // expected-note {{later used here}}
+}
+
+void IteratorUsedAfterReverseSubtraction(std::vector<int> v) {
+  auto it = v.crbegin();    // expected-warning {{object whose reference is captured is later invalidated}}
+  auto prev = 5 - it;
+  v.push_back(1);           // expected-note {{invalidated here}}
+  (void)*prev;              // expected-note {{later used here}}
+}
+
+void IteratorUsedAfterAddAdd(std::vector<int> v) {
+  auto it = v.cbegin();     // expected-warning {{object whose reference is captured is later invalidated}}
+  auto next = (it + 5) + 5;
+  v.push_back(1);           // expected-note {{invalidated here}}
+  (void)*next;              // expected-note {{later used here}}
+}
+
+void IteratorUsedAfterMixedAddition() {
+  std::vector<int> v;
+  auto it = v.cbegin();         // expected-warning {{object whose reference is captured is later invalidated}}
+  auto next = 1 + it + 2 + 3;
+  v.push_back(1);               // expected-note {{invalidated here}}
+  (void)*next;                  // expected-note {{later used here}}
+}
+
+void IteratorUsedAfterPreIncrementAddAssign(std::vector<int> v) {
+  auto it = v.begin();          // expected-warning {{object whose reference is captured is later invalidated}}
+  it = ++it + 1 + 2;
+  v.push_back(1);               // expected-note {{invalidated here}}
+  (void)*it;                    // expected-note {{later used here}}
+}
+
+void IteratorUsedAfterBeginAddAssign() {
+  std::vector<int> v;
+  auto it = v.begin() + 1;      // expected-warning {{object whose reference is captured is later invalidated}}
+  v.push_back(1);               // expected-note {{invalidated here}}
+  (void)*it;                    // expected-note {{later used here}}
+}
+
+void IteratorUsedAfterStdBeginAddAssign() {
+  std::vector<int> v;
+  std::vector<int>::iterator it;
+  it = std::begin(v) + 1;       // expected-warning {{object whose reference is captured is later invalidated}}
+  v.push_back(1);               // expected-note {{invalidated here}}
+  (void)*it;                    // expected-note {{later used here}}
+}
 }  // namespace SimpleInvalidIterators
 
 namespace ElementReferences {

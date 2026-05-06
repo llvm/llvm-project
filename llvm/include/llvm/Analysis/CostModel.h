@@ -13,15 +13,14 @@
 
 namespace llvm {
 /// Printer pass for cost modeling results.
-class CostModelPrinterPass : public PassInfoMixin<CostModelPrinterPass> {
+class CostModelPrinterPass
+    : public RequiredPassInfoMixin<CostModelPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit CostModelPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 } // end namespace llvm
 

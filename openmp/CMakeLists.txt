@@ -109,6 +109,12 @@ set(LIBOMP_BUILD_DATE "No_Timestamp")
 set(LIBOMP_FORTRAN_MODULES FALSE CACHE BOOL
   "Create Fortran module files? (requires fortran compiler)")
 
+option(LIBOMP_FORTRAN_MODULES_ONLY
+  "Build only Fortran modules without libomp runtime library" OFF)
+if(LIBOMP_FORTRAN_MODULES_ONLY)
+  set(LIBOMP_FORTRAN_MODULES TRUE)
+endif()
+
 # Set up testing infrastructure.
 include(OpenMPTesting)
 
@@ -154,7 +160,9 @@ else()
 
   # Build host runtime library, after LIBOMPTARGET variables are set since they
   # are needed to enable time profiling support in the OpenMP runtime.
-  add_subdirectory(runtime)
+  if(NOT LIBOMP_FORTRAN_MODULES_ONLY)
+    add_subdirectory(runtime)
+  endif()	
 
   set(ENABLE_OMPT_TOOLS ON)
   # Currently tools are not tested well on Windows or MacOS X.

@@ -14,7 +14,6 @@
 #include "clang/Analysis/CallGraph.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/ScalableStaticAnalysisFramework/Analyses/CallGraph/CallGraphSummary.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/ASTEntityMapping.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/ExtractorRegistry.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryBuilder.h"
 #include "llvm/ADT/STLExtras.h"
@@ -53,8 +52,8 @@ void CallGraphExtractor::handleCallGraphNode(const ASTContext &Ctx,
   // FIXME: `clang::CallGraph` does not create entries for primary templates.
   assert(!Definition->isTemplated());
 
-  auto CallerName = getEntityName(Definition);
-  if (!CallerName)
+  auto CallerId = addEntity(Definition);
+  if (!CallerId)
     return;
 
   auto FnSummary = std::make_unique<CallGraphSummary>();
@@ -80,21 +79,19 @@ void CallGraphExtractor::handleCallGraphNode(const ASTContext &Ctx,
     // FIXME: `clang::CallGraph` does not create entries for primary templates.
     assert(!CalleeDecl->isTemplated());
 
-    auto CalleeName = getEntityName(CalleeDecl);
-    if (!CalleeName)
+    auto CalleeId = addEntity(cast<NamedDecl>(CalleeDecl));
+    if (!CalleeId)
       continue;
 
-    EntityId CalleeId = SummaryBuilder.addEntity(*CalleeName);
     if (const auto *MD = dyn_cast_or_null<CXXMethodDecl>(CalleeDecl);
         MD && MD->isVirtual()) {
-      FnSummary->VirtualCallees.insert(CalleeId);
+      FnSummary->VirtualCallees.insert(*CalleeId);
       continue;
     }
-    FnSummary->DirectCallees.insert(CalleeId);
+    FnSummary->DirectCallees.insert(*CalleeId);
   }
 
-  EntityId CallerId = SummaryBuilder.addEntity(*CallerName);
-  SummaryBuilder.addSummary(CallerId, std::move(FnSummary));
+  SummaryBuilder.addSummary(*CallerId, std::move(FnSummary));
 }
 
 static TUSummaryExtractorRegistry::Add<CallGraphExtractor>

@@ -11,11 +11,10 @@
 
 #include "clang/AST/Expr.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityId.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityName.h"
-#include "llvm/ADT/STLFunctionalExtras.h"
 #include <set>
 
 namespace clang::ssaf {
+class TUSummaryExtractor;
 
 /// An EntityPointerLevel is associated with a level of the declared
 /// pointer/array type of an entity.  In the fully-expanded spelling of the
@@ -43,7 +42,7 @@ class EntityPointerLevel {
   // For unittests:
   friend EntityPointerLevel buildEntityPointerLevel(EntityId, unsigned);
 
-  EntityPointerLevel(std::pair<EntityId, unsigned> Pair)
+  explicit EntityPointerLevel(std::pair<EntityId, unsigned> Pair)
       : Entity(Pair.first), PointerLevel(Pair.second) {}
 
 public:
@@ -93,9 +92,9 @@ using EntityPointerLevelSet =
 /// \param Ctx the AST context of `E`
 /// \param AddEntity the callback provided by the caller to convert EntityNames
 /// to EntityIds.
-llvm::Expected<EntityPointerLevelSet> translateEntityPointerLevel(
-    const Expr *E, ASTContext &Ctx,
-    llvm::function_ref<EntityId(EntityName EN)> AddEntity);
+llvm::Expected<EntityPointerLevelSet>
+translateEntityPointerLevel(const Expr *E, ASTContext &Ctx,
+                            TUSummaryExtractor &Extractor);
 
 /// Creates a `EntityPointerLevel` from a pair of an EntityId and a pointer
 /// level:
@@ -109,8 +108,7 @@ EntityPointerLevel buildEntityPointerLevel(EntityId, unsigned);
 /// \param IsFunRet true iff the created EPL is associated with the return type
 /// of a function entity.
 llvm::Expected<EntityPointerLevel>
-createEntityPointerLevel(const NamedDecl *ND,
-                         llvm::function_ref<EntityId(EntityName EN)> AddEntity,
+createEntityPointerLevel(const NamedDecl *ND, TUSummaryExtractor &Extractor,
                          bool IsFunRet = false);
 
 /// Creates a new EntityPointerLevel (EPL) from `E` by incrementing `E`'s

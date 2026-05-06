@@ -14,7 +14,7 @@
 namespace llvm {
 
 class PostRAMachineSinkingPass
-    : public PassInfoMixin<PostRAMachineSinkingPass> {
+    : public OptionalPassInfoMixin<PostRAMachineSinkingPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

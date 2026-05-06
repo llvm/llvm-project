@@ -14,7 +14,7 @@
 namespace llvm {
 
 class FixupStatepointCallerSavedPass
-    : public PassInfoMixin<FixupStatepointCallerSavedPass> {
+    : public OptionalPassInfoMixin<FixupStatepointCallerSavedPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

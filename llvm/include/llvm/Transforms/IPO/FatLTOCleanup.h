@@ -24,11 +24,10 @@ namespace llvm {
 class Module;
 class ModuleSummaryIndex;
 
-class FatLtoCleanup : public PassInfoMixin<FatLtoCleanup> {
+class FatLtoCleanup : public RequiredPassInfoMixin<FatLtoCleanup> {
 public:
   FatLtoCleanup() = default;
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 } // end namespace llvm

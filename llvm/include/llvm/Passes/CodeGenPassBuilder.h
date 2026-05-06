@@ -132,21 +132,21 @@ namespace llvm {
 // FIXME: Dummy target independent passes definitions that have not yet been
 // ported to new pass manager. Once they do, remove these.
 #define DUMMY_FUNCTION_PASS(NAME, PASS_NAME)                                   \
-  struct PASS_NAME : public PassInfoMixin<PASS_NAME> {                         \
+  struct PASS_NAME : public OptionalPassInfoMixin<PASS_NAME> {                 \
     template <typename... Ts> PASS_NAME(Ts &&...) {}                           \
     PreservedAnalyses run(Function &, FunctionAnalysisManager &) {             \
       return PreservedAnalyses::all();                                         \
     }                                                                          \
   };
 #define DUMMY_MACHINE_MODULE_PASS(NAME, PASS_NAME)                             \
-  struct PASS_NAME : public PassInfoMixin<PASS_NAME> {                         \
+  struct PASS_NAME : public OptionalPassInfoMixin<PASS_NAME> {                 \
     template <typename... Ts> PASS_NAME(Ts &&...) {}                           \
     PreservedAnalyses run(Module &, ModuleAnalysisManager &) {                 \
       return PreservedAnalyses::all();                                         \
     }                                                                          \
   };
 #define DUMMY_MACHINE_FUNCTION_PASS(NAME, PASS_NAME)                           \
-  struct PASS_NAME : public PassInfoMixin<PASS_NAME> {                         \
+  struct PASS_NAME : public OptionalPassInfoMixin<PASS_NAME> {                 \
     template <typename... Ts> PASS_NAME(Ts &&...) {}                           \
     PreservedAnalyses run(MachineFunction &,                                   \
                           MachineFunctionAnalysisManager &) {                  \

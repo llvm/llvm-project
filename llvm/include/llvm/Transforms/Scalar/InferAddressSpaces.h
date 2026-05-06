@@ -13,7 +13,7 @@
 
 namespace llvm {
 
-struct InferAddressSpacesPass : PassInfoMixin<InferAddressSpacesPass> {
+struct InferAddressSpacesPass : OptionalPassInfoMixin<InferAddressSpacesPass> {
   InferAddressSpacesPass();
   InferAddressSpacesPass(unsigned AddressSpace);
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);

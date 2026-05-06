@@ -180,7 +180,7 @@ inline raw_ostream &operator<<(raw_ostream &OS,
 
 /// Printer pass for testing.
 class StackLifetimePrinterPass
-    : public PassInfoMixin<StackLifetimePrinterPass> {
+    : public RequiredPassInfoMixin<StackLifetimePrinterPass> {
   StackLifetime::LivenessType Type;
   raw_ostream &OS;
 
@@ -188,7 +188,7 @@ public:
   StackLifetimePrinterPass(raw_ostream &OS, StackLifetime::LivenessType Type)
       : Type(Type), OS(OS) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
+
   void printPipeline(raw_ostream &OS,
                      function_ref<StringRef(StringRef)> MapClassName2PassName);
 };

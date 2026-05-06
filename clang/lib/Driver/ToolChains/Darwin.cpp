@@ -1247,8 +1247,9 @@ void Darwin::VerifyTripleForSDK(const llvm::opt::ArgList &Args,
 }
 
 std::string Darwin::ComputeEffectiveClangTriple(const ArgList &Args,
+                                                llvm::StringRef BoundArch,
                                                 types::ID InputType) const {
-  llvm::Triple Triple(ComputeLLVMTriple(Args, InputType));
+  llvm::Triple Triple(ComputeLLVMTriple(Args, BoundArch, InputType));
 
   // If the target isn't initialized (e.g., an unknown Darwin platform, return
   // the default triple). Note: we intentionally do NOT call

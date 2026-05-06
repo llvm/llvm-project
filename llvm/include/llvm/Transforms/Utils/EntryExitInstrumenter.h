@@ -22,7 +22,7 @@ namespace llvm {
 class Function;
 
 struct EntryExitInstrumenterPass
-    : public PassInfoMixin<EntryExitInstrumenterPass> {
+    : public RequiredPassInfoMixin<EntryExitInstrumenterPass> {
   EntryExitInstrumenterPass(bool PostInlining) : PostInlining(PostInlining) {}
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
@@ -31,8 +31,6 @@ struct EntryExitInstrumenterPass
                      function_ref<StringRef(StringRef)> MapClassName2PassName);
 
   bool PostInlining;
-
-  static bool isRequired() { return true; }
 };
 
 } // namespace llvm

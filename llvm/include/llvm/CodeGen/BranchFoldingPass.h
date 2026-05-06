@@ -12,7 +12,7 @@
 
 namespace llvm {
 
-class BranchFolderPass : public PassInfoMixin<BranchFolderPass> {
+class BranchFolderPass : public OptionalPassInfoMixin<BranchFolderPass> {
   bool EnableTailMerge;
 
 public:

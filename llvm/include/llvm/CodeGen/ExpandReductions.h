@@ -14,7 +14,7 @@
 namespace llvm {
 
 class ExpandReductionsPass
-    : public PassInfoMixin<ExpandReductionsPass> {
+    : public OptionalPassInfoMixin<ExpandReductionsPass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };

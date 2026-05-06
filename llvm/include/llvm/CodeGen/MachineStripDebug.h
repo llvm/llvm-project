@@ -22,7 +22,7 @@
 namespace llvm {
 
 class StripDebugMachineModulePass
-    : public PassInfoMixin<StripDebugMachineModulePass> {
+    : public OptionalPassInfoMixin<StripDebugMachineModulePass> {
 public:
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };

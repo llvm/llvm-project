@@ -13,8 +13,6 @@
 #include "clang/Analysis/Analyses/UnsafeBufferUsage.h"
 #include "clang/ScalableStaticAnalysisFramework/Analyses/EntityPointerLevel/EntityPointerLevel.h"
 #include "clang/ScalableStaticAnalysisFramework/Analyses/UnsafeBufferUsage/UnsafeBufferUsage.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/ASTEntityMapping.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityName.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/ExtractorRegistry.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryBuilder.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryExtractor.h"
@@ -51,9 +49,7 @@ clang::ssaf::UnsafeBufferUsageTUSummaryExtractor::extractEntitySummary(
 
   for (const Expr *Ptr : UnsafePointers) {
     Expected<EntityPointerLevelSet> Translation =
-        translateEntityPointerLevel(Ptr, Ctx, [this](const EntityName &EN) {
-          return SummaryBuilder.addEntity(EN);
-        });
+        translateEntityPointerLevel(Ptr, Ctx, *this);
 
     if (Translation) {
       // Filter out those temporary invalid EntityPointerLevels associated
@@ -86,14 +82,13 @@ void clang::ssaf::UnsafeBufferUsageTUSummaryExtractor::HandleTranslationUnit(
     if ((*EntitySummary)->empty())
       continue;
 
-    auto ContributorName = getEntityName(CD);
+    auto ContributorId = addEntity(CD);
 
-    if (!ContributorName)
+    if (!ContributorId)
       llvm::reportFatalInternalError(makeEntityNameErr(Ctx, CD));
 
     [[maybe_unused]] auto [Ignored, InsertionSucceeded] =
-        SummaryBuilder.addSummary(SummaryBuilder.addEntity(*ContributorName),
-                                  std::move(*EntitySummary));
+        SummaryBuilder.addSummary(*ContributorId, std::move(*EntitySummary));
 
     assert(InsertionSucceeded && "duplicated contributor extraction");
   }
@@ -103,6 +98,6 @@ void clang::ssaf::UnsafeBufferUsageTUSummaryExtractor::HandleTranslationUnit(
 volatile int UnsafeBufferUsageTUSummaryExtractorAnchorSource = 0;
 
 static clang::ssaf::TUSummaryExtractorRegistry::Add<
-    ssaf::UnsafeBufferUsageTUSummaryExtractor>
+    UnsafeBufferUsageTUSummaryExtractor>
     RegisterExtractor(UnsafeBufferUsageEntitySummary::Name,
-                      "The TUSummaryExtractor for unsafe buffer pointers");
+                      "Extract unsafe buffer pointers");

@@ -36,7 +36,7 @@ class Value;
 
 /// Eliminate dead arguments (and return values) from functions.
 class DeadArgumentEliminationPass
-    : public PassInfoMixin<DeadArgumentEliminationPass> {
+    : public OptionalPassInfoMixin<DeadArgumentEliminationPass> {
 public:
   /// Struct that represents (part of) either a return value or a function
   /// argument.  Used so that arguments and return values can be used

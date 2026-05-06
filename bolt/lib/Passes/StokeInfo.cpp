@@ -146,6 +146,11 @@ bool StokeInfo::checkFunction(BinaryFunction &BF, DataflowInfoManager &DInfo,
 }
 
 Error StokeInfo::runOnFunctions(BinaryContext &BC) {
+  if (!BC.isX86()) {
+    BC.errs() << "BOLT-ERROR: " << getName() << " is supported only on X86\n";
+    exit(1);
+  }
+
   BC.outs() << "STOKE-INFO: begin of stoke pass\n";
 
   std::ofstream Outfile;

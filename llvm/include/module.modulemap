@@ -353,6 +353,8 @@ module LLVM_Transforms {
 
   // Requires DEBUG_TYPE to be defined by including file.
   exclude header "llvm/Transforms/Utils/InstructionWorklist.h"
+
+  textual header "llvm/Transforms/Vectorize/SandboxVectorizer/SandboxVectorizerIRValues.def"
 }
 
 extern module LLVM_Extern_Utils_DataTypes "module.extern.modulemap"
@@ -453,4 +455,5 @@ module LLVM_SandboxIR {
   module * { export * }
 
   textual header "llvm/SandboxIR/Values.def"
+  textual header "llvm/SandboxIR/ValuesDefFilesList.def"
 }

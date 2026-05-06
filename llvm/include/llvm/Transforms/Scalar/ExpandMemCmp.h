@@ -13,7 +13,7 @@
 
 namespace llvm {
 
-class ExpandMemCmpPass : public PassInfoMixin<ExpandMemCmpPass> {
+class ExpandMemCmpPass : public OptionalPassInfoMixin<ExpandMemCmpPass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };

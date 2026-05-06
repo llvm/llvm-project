@@ -121,6 +121,10 @@ public:
   /// not been used for allocation yet.
   bool isUnusedCalleeSavedReg(MCRegister PhysReg) const;
 
+  /// Returns true if this is an urgent eviction.
+  bool isUrgentEviction(const LiveInterval &VirtReg,
+                        const LiveInterval &Intf) const;
+
 protected:
   RegAllocEvictionAdvisor(const MachineFunction &MF, const RAGreedy &RA);
 

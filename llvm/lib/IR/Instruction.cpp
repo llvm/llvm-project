@@ -1170,6 +1170,33 @@ bool Instruction::isVolatile() const {
   }
 }
 
+bool Instruction::maySynchronize() const {
+  // FIXME: This currently treats atomics with monotonic ordering as
+  // synchronizing. This is unnecessarily conservative and does not match
+  // our LangRef definition of the property.
+  switch (getOpcode()) {
+  default:
+    assert(!isAtomic() && "Unhandled atomic instruction");
+    return false;
+  case Instruction::Fence: {
+    // All legal orderings for fence are stronger than monotonic.
+    auto *FI = cast<FenceInst>(this);
+    return FI->getSyncScopeID() != SyncScope::SingleThread;
+  }
+  case Instruction::AtomicRMW:
+  case Instruction::AtomicCmpXchg:
+    return true;
+  case Instruction::Store:
+    return isStrongerThanUnordered(cast<StoreInst>(this)->getOrdering());
+  case Instruction::Load:
+    return isStrongerThanUnordered(cast<LoadInst>(this)->getOrdering());
+  case Instruction::Call:
+  case Instruction::Invoke:
+  case Instruction::CallBr:
+    return !cast<CallBase>(this)->hasFnAttr(Attribute::NoSync);
+  }
+}
+
 Type *Instruction::getAccessType() const {
   switch (getOpcode()) {
   case Instruction::Store:

@@ -108,7 +108,7 @@ public:
 };
 
 class LiveDebugVariablesPrinterPass
-    : public PassInfoMixin<LiveDebugVariablesPrinterPass> {
+    : public RequiredPassInfoMixin<LiveDebugVariablesPrinterPass> {
   raw_ostream &OS;
 
 public:

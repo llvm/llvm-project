@@ -28,7 +28,7 @@ class LLVMContext;
 class Type;
 class Value;
 
-class Float2IntPass : public PassInfoMixin<Float2IntPass> {
+class Float2IntPass : public OptionalPassInfoMixin<Float2IntPass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 

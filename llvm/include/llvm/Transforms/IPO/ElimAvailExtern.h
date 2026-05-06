@@ -22,7 +22,7 @@ class Module;
 
 /// A pass that transforms external global definitions into declarations.
 class EliminateAvailableExternallyPass
-    : public PassInfoMixin<EliminateAvailableExternallyPass> {
+    : public OptionalPassInfoMixin<EliminateAvailableExternallyPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
 };

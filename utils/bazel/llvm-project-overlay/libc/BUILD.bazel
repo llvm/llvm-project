@@ -1001,6 +1001,17 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_cpp_scope",
+    hdrs = ["src/__support/CPP/scope.h"],
+    deps = [
+        ":__support_cpp_type_traits",
+        ":__support_cpp_utility",
+        ":__support_macros_attributes",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_cpp_simd",
     hdrs = ["src/__support/CPP/simd.h"],
     deps = [
