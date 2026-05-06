@@ -672,7 +672,12 @@ public:
 
     // Named barriers have precise arrival-count semantics; never eliminate.
     if (barrier.getNamedBarrier()) {
-      LDBG() << "barrier is a named barrier, retain it\n";
+      LDBG() << "barrier is a named barrier, retain it";
+      return failure();
+    }
+
+    if (barrier.getScope() != gpu::Scope::Workgroup) {
+      LDBG() << "barrier has non-workgroup scope, retain it";
       return failure();
     }
 

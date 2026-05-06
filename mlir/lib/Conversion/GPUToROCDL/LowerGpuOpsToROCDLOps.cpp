@@ -791,10 +791,6 @@ struct LowerGpuOpsToROCDLOpsPass final
 
     LLVMTypeConverter converter(ctx, options);
     amdgpu::populateCommonGPUTypeAndAttributeConversions(converter);
-    // Convert gpu::NamedBarrierType to ptr addrspace(3) (LDS pointer).
-    converter.addConversion([ctx](gpu::NamedBarrierType) {
-      return LLVM::LLVMPointerType::get(ctx, /*addressSpace=*/3);
-    });
 
     RewritePatternSet llvmPatterns(ctx);
     LLVMConversionTarget target(getContext());
