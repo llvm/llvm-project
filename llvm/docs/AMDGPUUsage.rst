@@ -927,6 +927,7 @@ supported for the ``amdgcn`` target.
      *reserved for downstream use (LLPC)*  12
      *reserved for future use*             13
      *reserved for future use*             14
+     *reserved for future use*             16
      Streamout Registers                   128             N/A         GS_REGS
      ===================================== =============== =========== ================ ======= ============================
 

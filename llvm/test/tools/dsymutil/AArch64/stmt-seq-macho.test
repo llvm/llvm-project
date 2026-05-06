@@ -1,10 +1,11 @@
-## Test that verifies DW_AT_LLVM_stmt_sequence attributes are correctly patched in the dSYM
-## even when line table sequences need to be reordered due to address ordering.
-##
-## This test uses two object files (a.o and b.o) linked with b.o first so that
-## b's functions get lower addresses than a's functions. When dsymutil processes
-## the debug info, it must correctly handle the case where line table sequences
-## from different compilation units need to be interleaved by address.
+## Test that verifies DW_AT_LLVM_stmt_sequence attributes are correctly
+## patched in the dSYM. Each input object (a.o and b.o) carries one
+## compile unit whose line table has two sequences (one per function).
+## After linking, dsymutil merges each CU's two function sequences into a
+## single output sequence (adjacent addresses). We verify that every
+## DW_AT_LLVM_stmt_sequence attribute in the output points at a real
+## DW_LNE_set_address opcode in the emitted .debug_line, for both the
+## classic and parallel linker backends.
 
 # RUN: rm -rf %t && split-file %s %t && cd %t
 # RUN: yaml2obj %t/stmt_seq_macho.exe.yaml -o %t/stmt_seq_macho.exe
@@ -26,7 +27,15 @@
 # RUN: cat %t/stmt_seq_macho.dSYM.txt | FileCheck %s -check-prefix=CHECK_NO_INVALID_OFFSET
 # CHECK_NO_INVALID_OFFSET-NOT: DW_AT_LLVM_stmt_sequence{{.*}}0xfffffff
 
-## FIXME: Support --linker parallel
+# RUN: dsymutil --linker parallel --flat --verify-dwarf=none -oso-prepend-path %t %t/stmt_seq_macho.exe -o %t/stmt_seq_macho.dSYM
+# RUN: llvm-dwarfdump --debug-info --debug-line -v %t/stmt_seq_macho.dSYM > %t/stmt_seq_macho.dSYM.txt
+# RUN: cat %t/stmt_seq_macho.dSYM.txt | grep "DW_AT_LLVM_stmt_sequence" | \
+# RUN:   sed 's/.*(\(0x[0-9a-f]*\)).*/\1/' | sort -u > %t/stmt_offsets.txt
+# RUN: cat %t/stmt_seq_macho.dSYM.txt | grep "DW_LNE_set_address" | \
+# RUN:   sed 's/^\(0x[0-9a-f]*\):.*/\1/' | sort -u > %t/setaddr_offsets.txt
+# RUN: comm -23 %t/stmt_offsets.txt %t/setaddr_offsets.txt > %t/bad_offsets.txt
+# RUN: test ! -s %t/bad_offsets.txt
+# RUN: cat %t/stmt_seq_macho.dSYM.txt | FileCheck %s -check-prefix=CHECK_NO_INVALID_OFFSET
 
 #--- stmt_seq_macho.cpp
 // This file is split into a.cpp and b.cpp by the gen script.

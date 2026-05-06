@@ -2502,6 +2502,17 @@ For example:
     This attribute by itself does not imply restrictions on
     inter-procedural optimizations.  All of the semantic effects the
     patching may have to be separately conveyed via the linkage type.
+``"patchable-function-prefix"``
+    This attribute specifies the number of target-specific NOP instructions
+    emitted before the function entry label.
+``"patchable-function-entry"``
+    This attribute specifies the number of target-specific NOP instructions
+    emitted after the function entry label.  These NOPs are emitted before the
+    function prologue.
+``"patchable-function-entry-section"``
+    This attribute specifies the section used to record the start of the
+    patchable function entry area when such a section is emitted.  If omitted,
+    the default section name is ``__patchable_function_entries``.
 ``"probe-stack"``
     This attribute indicates that the function will trigger a guard region
     in the end of the stack. It ensures that accesses to the stack must be
@@ -12259,7 +12270,7 @@ Syntax:
 
 ::
 
-      atomicrmw [volatile] <operation> ptr <pointer>, <ty> <value> [syncscope("<target-scope>")] <ordering>[, align <alignment>]  ; yields ty
+      atomicrmw [volatile] [elementwise] <operation> ptr <pointer>, <ty> <value> [syncscope("<target-scope>")] <ordering>[, align <alignment>]  ; yields ty
 
 Overview:
 """""""""
@@ -12297,14 +12308,12 @@ operation. The operation must be one of the following keywords:
 -  usub_cond
 -  usub_sat
 
-For most of these operations, the type of '<value>' must be an integer
-type whose bit width is a power of two greater than or equal to eight.
-For xchg, this
-may also be a floating point or a pointer type with the same size constraints
-as integers.  For fadd/fsub/fmax/fmin/fmaximum/fminimum/fmaximumnum/fminimumnum, this must be a floating-point
-or fixed vector of floating-point type.  The type of the '``<pointer>``'
-operand must be a pointer to that type. If the ``atomicrmw`` is marked
-as ``volatile``, then the optimizer is not allowed to modify the
+For all of these operations, the type of '<value>' must be a type whose bit width is a power of two greater than or equal to eight.
+For add/sub/and/nand/or/xor/max/min/umax/umin/uinc_wrap/udec_wrap/usub_cond/usub_sat, this must be an integer type, or, if the ``elementwise`` modifier is present, a fixed vector of integer type.
+For fadd/fsub/fmax/fmin/fmaximum/fminimum/fmaximumnum/fminimumnum, this must be a floating-point or fixed vector of floating-point type.
+For xchg, this must be an integer type, floating-point type, or pointer type, or, if the ``elementwise`` modifier is present, a fixed vector of integer type, floating-point type, or pointer type.
+The type of the '<pointer>' operand must be a pointer to the type of '<value>'.
+If the ``atomicrmw`` is marked as ``volatile``, then the optimizer is not allowed to modify the
 number or order of execution of this ``atomicrmw`` with other
 :ref:`volatile operations <volatile>`.
 
@@ -12320,6 +12329,10 @@ isn't specified.
 
 An ``atomicrmw`` instruction can also take an optional
 ":ref:`syncscope <syncscope>`" argument.
+
+If the ``elementwise`` modifier is present, the instruction has per-element vector
+atomic semantics. It behaves as if it were expanded into one scalar ``atomicrmw`` per element, that are not ordered with respect to each other.
+Without ``elementwise``, vector ``atomicrmw`` keeps whole-value atomic semantics.
 
 Semantics:
 """"""""""

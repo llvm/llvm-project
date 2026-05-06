@@ -12111,7 +12111,7 @@ SDValue RISCVTargetLowering::lowerVECREDUCE(SDValue Op,
   SDValue StartV;
   switch (BaseOpc) {
   default:
-    StartV = DAG.getNeutralElement(BaseOpc, DL, VecEltVT, SDNodeFlags());
+    StartV = DAG.getIdentityElement(BaseOpc, DL, VecEltVT, SDNodeFlags());
     break;
   case ISD::AND:
   case ISD::OR:
@@ -15746,8 +15746,8 @@ static SDValue combineBinOpToReduce(SDNode *N, SelectionDAG &DAG,
 
   // Check the scalar of ScalarV is neutral element
   // TODO: Deal with value other than neutral element.
-  if (!isNeutralConstant(N->getOpcode(), N->getFlags(), ScalarV.getOperand(1),
-                         0))
+  if (!DAG.isIdentityElement(N->getOpcode(), N->getFlags(),
+                             ScalarV.getOperand(1), 0))
     return SDValue();
 
   // If the AVL is zero, operand 0 will be returned. So it's not safe to fold.
@@ -19651,7 +19651,7 @@ static SDValue tryFoldSelectIntoOp(SDNode *N, SelectionDAG &DAG,
   SDValue OtherOp = TrueVal.getOperand(1 - OpToFold);
   EVT OtherOpVT = OtherOp.getValueType();
   SDValue IdentityOperand =
-      DAG.getNeutralElement(Opc, DL, OtherOpVT, N->getFlags());
+      DAG.getIdentityElement(Opc, DL, OtherOpVT, N->getFlags());
   if (!Commutative)
     IdentityOperand = DAG.getConstant(0, DL, OtherOpVT);
   assert(IdentityOperand && "No identity operand!");

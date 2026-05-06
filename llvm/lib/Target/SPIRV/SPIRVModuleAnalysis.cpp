@@ -1967,6 +1967,14 @@ void addInstrRequirements(const MachineInstr &MI,
     Reqs.addExtension(SPIRV::Extension::SPV_KHR_shader_clock);
     Reqs.addCapability(SPIRV::Capability::ShaderClockKHR);
     break;
+  case SPIRV::OpAbortKHR:
+    if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_abort))
+      report_fatal_error("OpAbortKHR instruction requires the "
+                         "following SPIR-V extension: SPV_KHR_abort",
+                         false);
+    Reqs.addExtension(SPIRV::Extension::SPV_KHR_abort);
+    Reqs.addCapability(SPIRV::Capability::AbortKHR);
+    break;
   case SPIRV::OpFunctionPointerCallINTEL:
     if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers)) {
       Reqs.addExtension(SPIRV::Extension::SPV_INTEL_function_pointers);

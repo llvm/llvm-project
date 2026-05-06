@@ -1,0 +1,53 @@
+// Tests for clang-ssaf-analyzer CLI errors that do not require plugins.
+
+// RUN: rm -rf %t
+// RUN: mkdir -p %t
+
+// ============================================================================
+// CLI error: no arguments
+// ============================================================================
+
+// RUN: not clang-ssaf-analyzer 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=NO-ARGS
+// NO-ARGS: clang-ssaf-analyzer{{(\.exe)?}}: Not enough positional command line arguments specified!
+
+// ============================================================================
+// CLI error: missing -o
+// ============================================================================
+
+// RUN: not clang-ssaf-analyzer %S/Inputs/lu.json -a Foo 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=NO-OUTPUT
+// NO-OUTPUT: clang-ssaf-analyzer{{(\.exe)?}}: for the -o option: must be specified at least once!
+
+// ============================================================================
+// Error: nonexistent plugin path
+// ============================================================================
+
+// RUN: not clang-ssaf-analyzer --load /nonexistent/path/plugin.so \
+// RUN:   %S/Inputs/lu.json -o %t/plugin-err.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=BAD-PLUGIN
+// BAD-PLUGIN: clang-ssaf-analyzer: error: failed to load plugin '/nonexistent/path/plugin.so':
+
+// ============================================================================
+// Error: empty analysis name
+// ============================================================================
+
+// RUN: not clang-ssaf-analyzer %S/Inputs/lu.json -o %t/empty-name.json -a "" 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=EMPTY-NAME
+// EMPTY-NAME: clang-ssaf-analyzer: error: analysis name must not be empty
+
+// ============================================================================
+// Error: corrupt input JSON (parse error)
+// ============================================================================
+
+// RUN: not clang-ssaf-analyzer %S/Inputs/lu-corrupt.json -o %t/corrupt.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CORRUPT
+// CORRUPT: clang-ssaf-analyzer: error: reading LUSummary from file '{{.*}}lu-corrupt.json'
+
+// ============================================================================
+// Error: valid JSON but wrong top-level type (array instead of object)
+// ============================================================================
+
+// RUN: not clang-ssaf-analyzer %S/Inputs/lu-wrong-type.json -o %t/wrong-type.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=WRONG-TYPE
+// WRONG-TYPE: clang-ssaf-analyzer: error: reading LUSummary from file '{{.*}}lu-wrong-type.json'
