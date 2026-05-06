@@ -132,7 +132,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .legalFor(UseX87 && !HasSSE1, {s32})
       .legalFor(UseX87 && !HasSSE2, {s64})
       .legalFor(UseX87, {s80})
-      .lowerFor({s32, s64});
+      .lower();
 
   getActionDefinitionsBuilder(G_FSQRT)
       .legalFor(HasSSE1 || UseX87, {s32})
