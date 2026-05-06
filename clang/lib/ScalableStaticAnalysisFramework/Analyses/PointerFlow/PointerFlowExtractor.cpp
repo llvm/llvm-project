@@ -347,7 +347,7 @@ public:
       if (!ContributorName)
         llvm::reportFatalInternalError(makeEntityNameErr(Ctx, CD));
 
-      auto [_, InsertionSucceeded] = SummaryBuilder.addSummary(
+      [[maybe_unused]] auto [_, InsertionSucceeded] = SummaryBuilder.addSummary(
           addEntity(*ContributorName), std::move(*EntitySummary));
 
       assert(InsertionSucceeded && "duplicated contributor extraction");
