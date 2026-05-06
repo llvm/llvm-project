@@ -31,17 +31,10 @@ namespace {
 json::Object serializeUnsafeBufferUsageAnalysisResult(
     const UnsafeBufferUsageAnalysisResult &R,
     JSONFormat::EntityIdToJSONFn IdToJSON) {
-  json::Array Content;
-
-  // Flat key-value pairs into an array of values:
-  for (auto &[Id, EPLs] : R.UnsafeBuffers) {
-    Content.push_back(IdToJSON(Id));
-    Content.push_back(entityPointerLevelSetToJSON(EPLs, IdToJSON));
-  }
-
   json::Object Result;
 
-  Result[UnsafeBufferUsageAnalysisResultName] = std::move(Content);
+  Result[UnsafeBufferUsageAnalysisResultName] =
+      entityPointerLevelMapToJSON(R.UnsafeBuffers, IdToJSON);
   return Result;
 }
 
@@ -55,41 +48,14 @@ deserializeUnsafeBufferUsageAnalysisResult(
     return makeSawButExpectedError(Obj, "an object with a key %s",
                                    UnsafeBufferUsageAnalysisResultName.data());
 
-  if (Content->size() % 2 != 0)
-    return makeSawButExpectedError(*Content,
-                                   "an even number of elements, got %lu",
-                                   (unsigned long)Content->size());
+  auto UnsafeBuffers = entityPointerLevelMapFromJSON(*Content, IdFromJSON);
 
-  std::map<EntityId, EntityPointerLevelSet> UnsafeBuffers;
-
-  for (size_t I = 0; I < Content->size(); I += 2) {
-    const json::Object *IdData = (*Content)[I].getAsObject();
-
-    if (!IdData)
-      return makeSawButExpectedError((*Content)[I],
-                                     "an object representing EntityId");
-
-    auto Id = IdFromJSON(*IdData);
-
-    if (!Id)
-      return Id.takeError();
-
-    const json::Array *EPLsData = (*Content)[I + 1].getAsArray();
-
-    if (!EPLsData)
-      return makeSawButExpectedError(
-          (*Content)[I + 1], "an array representing EntityPointerLevelSet");
-
-    auto EPLs = entityPointerLevelSetFromJSON(*EPLsData, IdFromJSON);
-
-    if (!EPLs)
-      return EPLs.takeError();
-    UnsafeBuffers[*Id] = std::move(*EPLs);
-  }
+  if (!UnsafeBuffers)
+    return UnsafeBuffers.takeError();
 
   auto Ret = std::make_unique<UnsafeBufferUsageAnalysisResult>();
 
-  Ret->UnsafeBuffers = std::move(UnsafeBuffers);
+  Ret->UnsafeBuffers = std::move(*UnsafeBuffers);
   return Ret;
 }
 
