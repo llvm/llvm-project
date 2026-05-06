@@ -4580,6 +4580,8 @@ def SPIRV_OC_OpEmitVertex                     : I32EnumAttrCase<"OpEmitVertex", 
 def SPIRV_OC_OpEndPrimitive                   : I32EnumAttrCase<"OpEndPrimitive", 219>;
 def SPIRV_OC_OpControlBarrier                 : I32EnumAttrCase<"OpControlBarrier", 224>;
 def SPIRV_OC_OpMemoryBarrier                  : I32EnumAttrCase<"OpMemoryBarrier", 225>;
+def SPIRV_OC_OpAtomicLoad                     : I32EnumAttrCase<"OpAtomicLoad", 227>;
+def SPIRV_OC_OpAtomicStore                    : I32EnumAttrCase<"OpAtomicStore", 228>;
 def SPIRV_OC_OpAtomicExchange                 : I32EnumAttrCase<"OpAtomicExchange", 229>;
 def SPIRV_OC_OpAtomicCompareExchange          : I32EnumAttrCase<"OpAtomicCompareExchange", 230>;
 def SPIRV_OC_OpAtomicCompareExchangeWeak      : I32EnumAttrCase<"OpAtomicCompareExchangeWeak", 231>;
@@ -4756,7 +4758,8 @@ def SPIRV_OpcodeAttr :
       SPIRV_OC_OpNot, SPIRV_OC_OpBitFieldInsert, SPIRV_OC_OpBitFieldSExtract,
       SPIRV_OC_OpBitFieldUExtract, SPIRV_OC_OpBitReverse, SPIRV_OC_OpBitCount,
       SPIRV_OC_OpEmitVertex, SPIRV_OC_OpEndPrimitive, SPIRV_OC_OpControlBarrier,
-      SPIRV_OC_OpMemoryBarrier, SPIRV_OC_OpAtomicExchange,
+      SPIRV_OC_OpMemoryBarrier, SPIRV_OC_OpAtomicLoad, SPIRV_OC_OpAtomicStore,
+      SPIRV_OC_OpAtomicExchange,
       SPIRV_OC_OpAtomicCompareExchange, SPIRV_OC_OpAtomicCompareExchangeWeak,
       SPIRV_OC_OpAtomicIIncrement, SPIRV_OC_OpAtomicIDecrement,
       SPIRV_OC_OpAtomicIAdd, SPIRV_OC_OpAtomicISub, SPIRV_OC_OpAtomicSMin,

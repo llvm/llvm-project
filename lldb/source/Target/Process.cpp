@@ -1763,6 +1763,14 @@ Process::CreateBreakpointSite(const BreakpointLocationSP &constituent,
       BreakpointResolver::ResolverTy::AddressResolver;
   bool should_be_eager = use_hardware || bp_from_address;
 
+  // If this breakpoint must be eager, flush the breakpoint queue in case there
+  // is an interaction between the sites in the queue and this new site.
+  if (should_be_eager)
+    if (llvm::Error E = FlushDelayedBreakpoints())
+      LLDB_LOG_ERROR(
+          GetLog(LLDBLog::Breakpoints), std::move(E),
+          "eager breakpoint requested, but failed to flush breakpoints: {0}");
+
   auto error = should_be_eager ? EnableBreakpointSite(bp_site_sp.get())
                                : Status::FromError(ExecuteBreakpointSiteAction(
                                      *bp_site_sp, BreakpointAction::Enable));
