@@ -26,14 +26,10 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
 
-static constexpr llvm::StringLiteral WarnOnDependentConstexprIfStr =
-    "WarnOnDependentConstexprIf";
 static constexpr llvm::StringLiteral AllowUserDefinedBoolConversionStr =
     "AllowUserDefinedBoolConversion";
 static constexpr llvm::StringLiteral MergeableIfDiag =
     "nested if statements can be merged";
-static constexpr llvm::StringLiteral DependentConstexprDiag =
-    "nested instantiation-dependent if constexpr statements can be merged";
 static constexpr llvm::StringLiteral NestedIfNote =
     "nested if statement to merge is here";
 
@@ -44,7 +40,6 @@ using IfChain = llvm::SmallVector<const IfStmt *>;
 enum class ChainHandling {
   None,
   WarnOnly,
-  WarnOnlyDependentConstexpr,
   WarnAndFix,
 };
 
@@ -189,7 +184,7 @@ canRewriteOuterConditionVariable(const IfStmt *If,
   assert(If);
   assert(If->hasVarStorage());
 
-  // `if (init; bool X = cond())` cannot generally become 
+  // `if (init; bool X = cond())` cannot generally become
   // `if (init; bool X = cond(); X)`.
   // Same-type declaration merging, like `if (bool Y = init(), X = cond(); X)`,
   // is possible but too narrow to be worth supporting.
@@ -300,19 +295,17 @@ isConstexprChainSemanticallySafe(llvm::ArrayRef<const IfStmt *> Chain,
   if (Chain.empty() || !Chain.front()->isConstexpr())
     return true;
 
-  const bool OuterIsDependent =
-      Chain.front()->getCond()->isInstantiationDependent();
-
-  // Allow outer instantiation-dependence only when every nested condition is a
-  // non-dependent constant `true` expression. This preserves discarded-branch
-  // behavior for template-dependent `if constexpr`.
-  return llvm::all_of(llvm::drop_begin(Chain), [&](const IfStmt *Nested) {
-    const Expr *const NestedCondition = Nested->getCond();
-    if (NestedCondition->isInstantiationDependent())
+  bool PreviousConditionsAreConstantTrue = true;
+  return llvm::all_of(Chain, [&](const IfStmt *If) {
+    const Expr *const Condition = If->getCond();
+    if (Condition->isInstantiationDependent() &&
+        !PreviousConditionsAreConstantTrue)
       return false;
-    return !OuterIsDependent ||
-           isConstantBooleanCondition(NestedCondition, Context,
-                                      /*RequiredValue=*/true);
+
+    PreviousConditionsAreConstantTrue =
+        PreviousConditionsAreConstantTrue &&
+        isConstantBooleanCondition(Condition, Context, /*RequiredValue=*/true);
+    return true;
   });
 }
 
@@ -497,16 +490,13 @@ getConditionReplacementRange(const IfStmt *If, const SourceManager &SM,
 static ChainHandling
 getChainHandling(llvm::ArrayRef<const IfStmt *> Chain,
                  const ASTContext &Context, const SourceManager &SM,
-                 const LangOptions &LangOpts, bool WarnOnDependentConstexprIf,
+                 const LangOptions &LangOpts,
                  std::optional<std::string> *CombinedCondition) {
   if (Chain.size() < 2 || !isFixitSafeForChain(Chain, SM, LangOpts))
     return ChainHandling::None;
 
-  if (!isConstexprChainSemanticallySafe(Chain, Context)) {
-    return WarnOnDependentConstexprIf
-               ? ChainHandling::WarnOnlyDependentConstexpr
-               : ChainHandling::None;
-  }
+  if (!isConstexprChainSemanticallySafe(Chain, Context))
+    return ChainHandling::None;
 
   const CombinedConditionBuildResult Combined =
       buildCombinedCondition(Chain, Context);
@@ -528,23 +518,21 @@ static void emitNestedIfNotes(RedundantNestedIfCheck &Check,
 }
 
 static void diagnoseChain(RedundantNestedIfCheck &Check, const IfStmt *If,
-                          ASTContext &Context, bool WarnOnDependentConstexprIf,
+                          ASTContext &Context,
                           bool AllowUserDefinedBoolConversion);
 
 static void diagnoseChildChain(RedundantNestedIfCheck &Check,
                                const Stmt *Branch, ASTContext &Context,
-                               bool WarnOnDependentConstexprIf,
                                bool AllowUserDefinedBoolConversion) {
   if (const IfStmt *const Nested = getOnlyNestedIf(Branch))
-    diagnoseChain(Check, Nested, Context, WarnOnDependentConstexprIf,
-                  AllowUserDefinedBoolConversion);
+    diagnoseChain(Check, Nested, Context, AllowUserDefinedBoolConversion);
 }
 
 // Match only syntactic chain roots. If a root cannot be diagnosed because it is
 // unsafe to rewrite, descend into excluded single-child nested `if` statements
 // in both branches and try again there.
 static void diagnoseChain(RedundantNestedIfCheck &Check, const IfStmt *If,
-                          ASTContext &Context, bool WarnOnDependentConstexprIf,
+                          ASTContext &Context,
                           bool AllowUserDefinedBoolConversion) {
   const SourceManager &SM = Context.getSourceManager();
   const LangOptions &LangOpts = Context.getLangOpts();
@@ -553,21 +541,12 @@ static void diagnoseChain(RedundantNestedIfCheck &Check, const IfStmt *If,
 
   std::optional<std::string> CombinedCondition;
   const ChainHandling Handling =
-      getChainHandling(Chain, Context, SM, LangOpts, WarnOnDependentConstexprIf,
-                       &CombinedCondition);
+      getChainHandling(Chain, Context, SM, LangOpts, &CombinedCondition);
   if (Handling == ChainHandling::None) {
     diagnoseChildChain(Check, If->getThen(), Context,
-                       WarnOnDependentConstexprIf,
                        AllowUserDefinedBoolConversion);
     diagnoseChildChain(Check, If->getElse(), Context,
-                       WarnOnDependentConstexprIf,
                        AllowUserDefinedBoolConversion);
-    return;
-  }
-
-  if (Handling == ChainHandling::WarnOnlyDependentConstexpr) {
-    Check.diag(If->getIfLoc(), DependentConstexprDiag);
-    emitNestedIfNotes(Check, Chain);
     return;
   }
 
@@ -601,14 +580,11 @@ static void diagnoseChain(RedundantNestedIfCheck &Check, const IfStmt *If,
 
 RedundantNestedIfCheck::RedundantNestedIfCheck(StringRef Name,
                                                ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context), WarnOnDependentConstexprIf(Options.get(
-                                         WarnOnDependentConstexprIfStr, false)),
+    : ClangTidyCheck(Name, Context),
       AllowUserDefinedBoolConversion(
           Options.get(AllowUserDefinedBoolConversionStr, false)) {}
 
 void RedundantNestedIfCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, WarnOnDependentConstexprIfStr,
-                WarnOnDependentConstexprIf);
   Options.store(Opts, AllowUserDefinedBoolConversionStr,
                 AllowUserDefinedBoolConversion);
 }
@@ -629,8 +605,7 @@ void RedundantNestedIfCheck::check(const MatchFinder::MatchResult &Result) {
   assert(If);
 
   ASTContext &Context = *Result.Context;
-  diagnoseChain(*this, If, Context, WarnOnDependentConstexprIf,
-                AllowUserDefinedBoolConversion);
+  diagnoseChain(*this, If, Context, AllowUserDefinedBoolConversion);
 }
 
 } // namespace clang::tidy::readability

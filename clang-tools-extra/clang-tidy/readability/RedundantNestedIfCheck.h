@@ -30,7 +30,6 @@ public:
   }
 
 private:
-  const bool WarnOnDependentConstexprIf;
   const bool AllowUserDefinedBoolConversion;
 };
 

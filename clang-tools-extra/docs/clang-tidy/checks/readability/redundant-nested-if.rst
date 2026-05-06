@@ -97,10 +97,10 @@ The check only transforms chains where:
   preserved safely. Comments inside conditions are preserved, while other
   comments between the ``if`` statements disable fix-its.
 
-For ``if constexpr``, nested merged conditions must be
-non-instantiation-dependent to avoid template semantic changes. The outermost
-condition may be instantiation-dependent when all nested merged conditions are
-constant ``true``.
+For ``if constexpr``, an instantiation-dependent condition is merged only when
+all preceding merged conditions are non-dependent constant ``true`` expressions.
+This preserves discarded-branch behavior for nested template-dependent
+``if constexpr`` statements.
 
 Options
 -------
@@ -114,9 +114,3 @@ Options
    condition still uses built-in ``&&`` semantics.
 
    Default is `false`.
-
-.. option:: WarnOnDependentConstexprIf
-
-   When set to `true`, the check also emits diagnostics for remaining unsafe
-   ``if constexpr`` chains, for example with instantiation-dependent nested
-   conditions, but does not provide a fix-it for them. Default is `false`.

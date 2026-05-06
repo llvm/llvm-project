@@ -9,7 +9,6 @@
 // RUN: %check_clang_tidy -check-suffixes=BASE,CXX17,CXX20 -std=c++20 %s readability-redundant-nested-if %t -- -- -fno-delayed-template-parsing
 // RUN: %check_clang_tidy -check-suffixes=BASE,CXX17,CXX20,CXX23 -std=c++23 %s readability-redundant-nested-if %t -- -- -fno-delayed-template-parsing
 // RUN: %check_clang_tidy -check-suffixes=BASE,CXX17,CXX20,CXX23,CXX26 -std=c++26-or-later %s readability-redundant-nested-if %t -- -- -fno-delayed-template-parsing
-// RUN: %check_clang_tidy -check-suffixes=BASE,CXX17,CXX20,CXX23,CXX26,DEPWARN -std=c++26-or-later %s readability-redundant-nested-if %t -- -config='{CheckOptions: {readability-redundant-nested-if.WarnOnDependentConstexprIf: true}}' -- -fno-delayed-template-parsing
 // RUN: %check_clang_tidy -check-suffixes=BASE,CXX17,CXX20,CXX23,CXX26,ALLOWBOOL -std=c++26-or-later %s readability-redundant-nested-if %t -- -config='{CheckOptions: {readability-redundant-nested-if.AllowUserDefinedBoolConversion: true}}' -- -fno-delayed-template-parsing
 
 bool cond(int X = 0);
@@ -333,22 +332,33 @@ template <bool B> void dependent_constexpr_outer_is_fixable() {
   // CHECK-FIXES-CXX17: sink();
 }
 
-template <bool B> void dependent_constexpr_outer_is_unsafe_when_nested_false() {
-  // CHECK-MESSAGES-CXX17-NOT: :[[@LINE+2]]:3: warning: nested if statements can be merged
-  // CHECK-MESSAGES-DEPWARN: :[[@LINE+1]]:3: warning: nested instantiation-dependent if constexpr statements can be merged
+template <bool B> void dependent_constexpr_outer_with_nested_false_is_fixable() {
+  // CHECK-MESSAGES-CXX17: :[[@LINE+1]]:3: warning: nested if statements can be merged
   if constexpr (B) {
-    // CHECK-MESSAGES-DEPWARN: :[[@LINE+1]]:5: note: nested if statement to merge is here
+    // CHECK-MESSAGES-CXX17: :[[@LINE+1]]:5: note: nested if statement to merge is here
     if constexpr (false)
       sink();
   }
+  // CHECK-FIXES-CXX17: if constexpr ((B) && (false))
+  // CHECK-FIXES-CXX17: sink();
 }
 
-template <typename T> void dependent_constexpr_operand_warn_only_under_option() {
-  // CHECK-MESSAGES-CXX17-NOT: :[[@LINE+2]]:3: warning: nested if statements can be merged
-  // CHECK-MESSAGES-DEPWARN: :[[@LINE+1]]:3: warning: nested instantiation-dependent if constexpr statements can be merged
+template <typename T> void dependent_constexpr_operand_after_true_is_fixable() {
+  // CHECK-MESSAGES-CXX17: :[[@LINE+1]]:3: warning: nested if statements can be merged
   if constexpr (true) {
-    // CHECK-MESSAGES-DEPWARN: :[[@LINE+1]]:5: note: nested if statement to merge is here
+    // CHECK-MESSAGES-CXX17: :[[@LINE+1]]:5: note: nested if statement to merge is here
     if constexpr (sizeof(T) == 4)
+      sink();
+  }
+  // CHECK-FIXES-CXX17: if constexpr ((true) && (sizeof(T) == 4))
+  // CHECK-FIXES-CXX17: sink();
+}
+
+template <bool B, typename T>
+void dependent_constexpr_operand_after_dependent_is_unsafe() {
+  // CHECK-MESSAGES-CXX17-NOT: :[[@LINE+1]]:3: warning: nested if statements can be merged
+  if constexpr (B) {
+    if constexpr (sizeof(typename T::type) == 4)
       sink();
   }
 }
@@ -380,14 +390,15 @@ void mixed_constexpr_and_non_constexpr(bool B) {
 
 #if __cplusplus >= 202400L
 template <typename T> void constexpr_template_static_assert() {
-  // CHECK-MESSAGES-CXX26-NOT: :[[@LINE+2]]:3: warning: nested if statements can be merged
-  // CHECK-MESSAGES-DEPWARN: :[[@LINE+1]]:3: warning: nested instantiation-dependent if constexpr statements can be merged
+  // CHECK-MESSAGES-CXX26: :[[@LINE+1]]:3: warning: nested if statements can be merged
   if constexpr (sizeof(T) == 1) {
-    // CHECK-MESSAGES-DEPWARN: :[[@LINE+1]]:5: note: nested if statement to merge is here
+    // CHECK-MESSAGES-CXX26: :[[@LINE+1]]:5: note: nested if statement to merge is here
     if constexpr (false) {
       static_assert(false, "discarded in template context");
     }
   }
+  // CHECK-FIXES-CXX26: if constexpr ((sizeof(T) == 1) && (false))
+  // CHECK-FIXES-CXX26: static_assert(false, "discarded in template context");
 }
 #endif
 
