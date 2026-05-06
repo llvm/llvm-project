@@ -3269,7 +3269,7 @@ void uaf_via_lifetimebound() {
 namespace GH126600 {
 struct [[gsl::Pointer]] function_ref {
   template <typename Callable>
-  function_ref(Callable &&callable [[clang::lifetimebound]]) : ref(callable) {} // expected-warning {{parameter is marked as [[clang::lifetimebound]] but doesn't escape}}
+  function_ref(Callable &&callable [[clang::lifetimebound]]) : ref(callable) {} // expected-warning {{parameter is marked as [[clang::lifetimebound]] but isn't returned}}
   void (*ref)();
 };
 
@@ -3296,7 +3296,7 @@ View keep_lb(const MyObj &obj [[clang::lifetimebound]]) {
 }
 
 View return_through_unannotated_passthrough(
-    const MyObj &obj [[clang::lifetimebound]]) { // function-warning {{parameter is marked as [[clang::lifetimebound]] but doesn't escape}}
+    const MyObj &obj [[clang::lifetimebound]]) { // function-warning {{parameter is marked as [[clang::lifetimebound]] but isn't returned}}
   return drop_lb(obj);
 }
 
@@ -3309,7 +3309,7 @@ View keep_lb2(const MyObj &obj [[clang::lifetimebound]]) {
   return keep_lb(obj);
 }
 
-View lose_lb(const MyObj &obj [[clang::lifetimebound]]) { // function-warning {{parameter is marked as [[clang::lifetimebound]] but doesn't escape}}
+View lose_lb(const MyObj &obj [[clang::lifetimebound]]) { // function-warning {{parameter is marked as [[clang::lifetimebound]] but isn't returned}}
   return drop_lb(obj);
 }
 
@@ -3319,7 +3319,7 @@ View return_through_alias(const MyObj &obj [[clang::lifetimebound]]) {
 }
 
 View return_alias_through_unannotated_passthrough(
-    const MyObj &obj [[clang::lifetimebound]]) { // function-warning {{parameter is marked as [[clang::lifetimebound]] but doesn't escape}}
+    const MyObj &obj [[clang::lifetimebound]]) { // function-warning {{parameter is marked as [[clang::lifetimebound]] but isn't returned}}
   const MyObj &alias = obj;
   return drop_lb(alias);
 }
@@ -3334,12 +3334,12 @@ View fwd_view(View v) { return v; }
 View fwd_view_lb(View v [[clang::lifetimebound]]) { return v; }
 
 View return_through_nested_broken_chain(
-    const MyObj &obj [[clang::lifetimebound]]) { // function-warning {{parameter is marked as [[clang::lifetimebound]] but doesn't escape}}
+    const MyObj &obj [[clang::lifetimebound]]) { // function-warning {{parameter is marked as [[clang::lifetimebound]] but isn't returned}}
   return fwd_view(fwd_view_lb(View(obj)));
 }
 
 View return_constructed_view_through_unannotated_forwarder(
-    const MyObj &obj [[clang::lifetimebound]]) { // function-warning {{parameter is marked as [[clang::lifetimebound]] but doesn't escape}}
+    const MyObj &obj [[clang::lifetimebound]]) { // function-warning {{parameter is marked as [[clang::lifetimebound]] but isn't returned}}
   return fwd_view(View(obj));
 }
 
@@ -3350,8 +3350,8 @@ View return_constructed_view_through_lifetimebound_forwarder(
 
 View verify_each_annotated_param_independently(
     const MyObj &a [[clang::lifetimebound]],
-    const MyObj &b [[clang::lifetimebound]], // function-warning {{parameter is marked as [[clang::lifetimebound]] but doesn't escape}}
-    const MyObj &c [[clang::lifetimebound]]) { // expected-warning {{parameter is marked as [[clang::lifetimebound]] but doesn't escape}}
+    const MyObj &b [[clang::lifetimebound]], // function-warning {{parameter is marked as [[clang::lifetimebound]] but isn't returned}}
+    const MyObj &c [[clang::lifetimebound]]) { // expected-warning {{parameter is marked as [[clang::lifetimebound]] but isn't returned}}
   return cond() ? a : drop_lb(b);
 }
 

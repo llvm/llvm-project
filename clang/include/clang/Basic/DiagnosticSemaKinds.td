@@ -11004,7 +11004,7 @@ def warn_lifetime_safety_dangling_global_moved
       DefaultIgnore;
 
 def warn_lifetime_safety_param_lifetimebound_violation
-    : Warning<"parameter is marked as [[clang::lifetimebound]] but doesn't escape">,
+    : Warning<"parameter is marked as [[clang::lifetimebound]] but isn't returned">,
       InGroup<LifetimeSafetyLifetimeboundViolation>,
       DefaultIgnore;
 

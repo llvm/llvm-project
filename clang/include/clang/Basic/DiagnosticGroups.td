@@ -626,7 +626,7 @@ Warning to detect invalidation of references.
 
 def LifetimeSafetyLifetimeboundViolation : DiagGroup<"lifetime-safety-lifetimebound-violation"> {
   code Documentation = [{
-Warning to detect lifetimebound violations introduced by marking parameter as lifetimebound but not actually returning it.
+Warning to detect lifetimebound violations introduced by marking parameter as lifetimebound but not returning it in any way.
   }];
 }
 
