@@ -332,8 +332,9 @@ const Symbol *FindExternallyVisibleObject(
   const Symbol &ultimate{GetAssociationRoot(object)};
   if (ultimate.owner().IsDerivedType()) {
     return nullptr;
-  } else if (!IsDummy(ultimate) && (IsUseAssociated(object, scope) ||
-      IsHostAssociatedIntoSubprogram(object, scope)) ){
+  } else if (!IsDummy(ultimate) &&
+      (IsUseAssociated(object, scope) ||
+          IsHostAssociatedIntoSubprogram(object, scope))) {
     return &object;
   } else if (IsDummy(ultimate)) {
     if (IsIntentIn(ultimate)) {
@@ -343,7 +344,7 @@ const Symbol *FindExternallyVisibleObject(
         IsPureProcedure(ultimate.owner()) && IsFunction(ultimate.owner())) {
       return &ultimate;
     }
-  } else if (const Symbol *block {FindCommonBlockContaining(ultimate)}) {
+  } else if (const Symbol *block{FindCommonBlockContaining(ultimate)}) {
     return block;
   }
   return nullptr;
