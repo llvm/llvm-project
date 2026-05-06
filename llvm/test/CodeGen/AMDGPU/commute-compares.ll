@@ -552,8 +552,8 @@ define amdgpu_kernel void @commute_sgt_neg1_i64(ptr addrspace(1) %out, ptr addrs
 ; GCN-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; GCN-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_not_b32_e32 v0, v3
-; GCN-NEXT:    v_ashrrev_i32_e32 v0, 31, v0
+; GCN-NEXT:    v_ashrrev_i32_e32 v0, 31, v3
+; GCN-NEXT:    v_not_b32_e32 v0, v0
 ; GCN-NEXT:    buffer_store_dword v0, v[1:2], s[4:7], 0 addr64
 ; GCN-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
