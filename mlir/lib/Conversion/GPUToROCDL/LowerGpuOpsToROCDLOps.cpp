@@ -563,6 +563,8 @@ static void emitFences(std::optional<ArrayAttr> addrSpaces,
     fence->setDiscardableAttr(LLVM::LLVMDialect::getMmraAttrName(), mmra);
 }
 
+static constexpr int32_t kWholeClusterBarrierId = -3;
+static constexpr int32_t kWholeWorkgroupBarrierId = -1;
 struct GPUBarrierOpLowering final : ConvertOpToLLVMPattern<gpu::BarrierOp> {
   GPUBarrierOpLowering(const LLVMTypeConverter &converter,
                        amdgpu::Chipset chipset)
@@ -598,8 +600,9 @@ struct GPUBarrierOpLowering final : ConvertOpToLLVMPattern<gpu::BarrierOp> {
         return op.emitOpError("cluster scope barriers require gfx1250+");
       emitFences(op.getAddressSpaces(), rewriter, loc, "cluster",
                  /*before=*/true);
-      ROCDL::BarrierSignalOp::create(rewriter, loc, -3);
-      ROCDL::BarrierWaitOp::create(rewriter, loc, static_cast<int16_t>(-3));
+      ROCDL::BarrierSignalOp::create(rewriter, loc, kWholeClusterBarrierId);
+      ROCDL::BarrierWaitOp::create(
+          rewriter, loc, static_cast<int16_t>(kWholeClusterBarrierId));
       emitFences(op.getAddressSpaces(), rewriter, loc, "cluster",
                  /*before=*/false);
       rewriter.eraseOp(op);
@@ -607,7 +610,7 @@ struct GPUBarrierOpLowering final : ConvertOpToLLVMPattern<gpu::BarrierOp> {
     }
 
     // Workgroup scope (default).
-    assert(scope == gpu::Scope::Workgroup);
+    assert(scope == gpu::Scope::Workgroup && "unsupported scope");
 
     // Named barrier path.
     if (Value namedBarrier = adaptor.getNamedBarrier()) {
@@ -636,8 +639,9 @@ struct GPUBarrierOpLowering final : ConvertOpToLLVMPattern<gpu::BarrierOp> {
     if (chipset.majorVersion < 12) {
       ROCDL::SBarrierOp::create(rewriter, loc);
     } else {
-      ROCDL::BarrierSignalOp::create(rewriter, loc, -1);
-      ROCDL::BarrierWaitOp::create(rewriter, loc, static_cast<int16_t>(-1));
+      ROCDL::BarrierSignalOp::create(rewriter, loc, kWholeWorkgroupBarrierId);
+      ROCDL::BarrierWaitOp::create(
+          rewriter, loc, static_cast<int16_t>(kWholeWorkgroupBarrierId));
     }
     emitFences(op.getAddressSpaces(), rewriter, loc, "workgroup",
                /*before=*/false);
