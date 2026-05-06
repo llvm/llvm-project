@@ -9,7 +9,7 @@
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/SeedCollection.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/SandboxIR/Module.h"
-#include "llvm/SandboxIR/Region.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/RegionWithScore.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/SandboxVectorizerPassBuilder.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/SeedCollector.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/VecUtils.h"
@@ -48,14 +48,6 @@ SeedCollection::SeedCollection(StringRef Pipeline, StringRef AuxArg)
   }
 }
 
-static unsigned getAddressSpace(const Instruction *I) {
-  if (auto *LI = dyn_cast<LoadInst>(I))
-    return LI->getPointerAddressSpace();
-  if (auto *SI = dyn_cast<StoreInst>(I))
-    return SI->getPointerAddressSpace();
-  return 0;
-}
-
 bool SeedCollection::runOnFunction(Function &F, const Analyses &A) {
   bool Change = false;
   const auto &DL = F.getParent()->getDataLayout();
@@ -71,7 +63,7 @@ bool SeedCollection::runOnFunction(Function &F, const Analyses &A) {
           Utils::getNumBits(VecUtils::getElementType(Utils::getExpectedType(
                                 Seeds[Seeds.getFirstUnusedElementIdx()])),
                             DL);
-      unsigned AS = getAddressSpace(Seeds[0]);
+      unsigned AS = getLoadStoreAddressSpace(Seeds[0]);
       unsigned VecRegBits = OverrideVecRegBits != 0
                                 ? OverrideVecRegBits
                                 : A.getTTI().getLoadStoreVecRegBitWidth(AS);
@@ -109,7 +101,7 @@ bool SeedCollection::runOnFunction(Function &F, const Analyses &A) {
 
           // Create a region containing the seed slice.
           auto &Ctx = F.getContext();
-          Region Rgn(Ctx, A.getTTI());
+          RegionWithScore Rgn(Ctx, A.getTTI());
           Rgn.setAux(SeedSlice);
           // Run the region pass pipeline.
           Change |= RPM.runOnRegion(Rgn, A);

@@ -610,10 +610,8 @@ public:
   bool Pre(const parser::OpenMPDepobjConstruct &x) {
     PushContext(x.source, llvm::omp::Directive::OMPD_depobj);
     for (auto &arg : x.v.Arguments().v) {
-      if (auto *locator{std::get_if<parser::OmpLocator>(&arg.u)}) {
-        if (auto *object{std::get_if<parser::OmpObject>(&locator->u)}) {
-          ResolveOmpObject(*object, Symbol::Flag::OmpDependObject);
-        }
+      if (auto *object{parser::omp::GetArgumentObject(arg)}) {
+        ResolveOmpObject(*object, Symbol::Flag::OmpDependObject);
       }
     }
     return true;
@@ -623,15 +621,13 @@ public:
   bool Pre(const parser::OpenMPFlushConstruct &x) {
     PushContext(x.source, llvm::omp::Directive::OMPD_flush);
     for (auto &arg : x.v.Arguments().v) {
-      if (auto *locator{std::get_if<parser::OmpLocator>(&arg.u)}) {
-        if (auto *object{std::get_if<parser::OmpObject>(&locator->u)}) {
-          if (auto *name{std::get_if<parser::Name>(&object->u)}) {
-            // ResolveOmpCommonBlockName resolves the symbol as a side effect
-            if (!ResolveOmpCommonBlockName(name)) {
-              context_.Say(name->source, // 2.15.3
-                  "COMMON block must be declared in the same scoping unit "
-                  "in which the OpenMP directive or clause appears"_err_en_US);
-            }
+      if (auto *object{parser::omp::GetArgumentObject(arg)}) {
+        if (auto *name{std::get_if<parser::Name>(&object->u)}) {
+          // ResolveOmpCommonBlockName resolves the symbol as a side effect
+          if (!ResolveOmpCommonBlockName(name)) {
+            context_.Say(name->source, // 2.15.3
+                "COMMON block must be declared in the same scoping unit "
+                "in which the OpenMP directive or clause appears"_err_en_US);
           }
         }
       }
@@ -848,8 +844,8 @@ public:
   }
 
   bool Pre(const parser::OmpClause::Nontemporal &x) {
-    const auto &nontemporalNameList{x.v};
-    ResolveOmpNameList(nontemporalNameList, Symbol::Flag::OmpNontemporal);
+    ResolveOmpObjectList(
+        *parser::omp::GetOmpObjectList(x), Symbol::Flag::OmpNontemporal);
     return false;
   }
 
@@ -2118,16 +2114,6 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndex(
     ivDSA = Symbol::Flag::OmpLastPrivate;
   }
 
-  auto checkThreadprivate{[&](const parser::Name &iv) {
-    if (const auto *details{iv.symbol->detailsIf<HostAssocDetails>()}) {
-      if (details->symbol().test(Symbol::Flag::OmpThreadprivate)) {
-        context_.Say(iv.source,
-            "Loop iteration variable %s is not allowed in THREADPRIVATE."_err_en_US,
-            iv.ToString());
-      }
-    }
-  }};
-
   Scope &scope{currScope()};
 
   if (auto doLoops{omp::CollectAffectedDoLoops(x, version, &context_)}) {
@@ -2136,9 +2122,7 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndex(
       if (!iv || (iv->symbol && IsLocalInsideScope(*iv->symbol, scope))) {
         continue;
       }
-
       if (auto *symbol{ResolveOmp(*iv, ivDSA, scope)}) {
-        checkThreadprivate(*iv);
         SetSymbolDSA(*symbol, {Symbol::Flag::OmpPreDetermined, ivDSA});
         iv->symbol = symbol; // adjust the symbol within region
         AddToContextObjectWithDSA(*symbol, ivDSA);
@@ -2150,10 +2134,8 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndex(
 bool OmpAttributeVisitor::Pre(const parser::OpenMPGroupprivate &x) {
   PushContext(x.source, llvm::omp::Directive::OMPD_groupprivate);
   for (const parser::OmpArgument &arg : x.v.Arguments().v) {
-    if (auto *locator{std::get_if<parser::OmpLocator>(&arg.u)}) {
-      if (auto *object{std::get_if<parser::OmpObject>(&locator->u)}) {
-        ResolveOmpObject(*object, Symbol::Flag::OmpGroupPrivate);
-      }
+    if (auto *object{parser::omp::GetArgumentObject(arg)}) {
+      ResolveOmpObject(*object, Symbol::Flag::OmpGroupPrivate);
     }
   }
   return true;
