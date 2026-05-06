@@ -4,7 +4,7 @@
 
 // MSVC produces similar diagnostics.
 
-__declspec(selectany) void foo() { } // expected-error{{'selectany' can only be applied to variables with external linkage}}
+__declspec(selectany) void foo() { } // expected-error{{'selectany' attribute only applies to variable declarations with external linkage}}
 
 __declspec(selectany) int x1 = 1;
 
