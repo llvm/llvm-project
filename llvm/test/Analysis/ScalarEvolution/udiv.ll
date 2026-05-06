@@ -53,16 +53,30 @@ define i8 @udiv_mul_nuw_const_by_const2(i8 range(i8 0, 16) %x) {
   ret i8 %div
 }
 
-define i8 @udiv_mul_nuw_const_by_const_not_divisible(i8 range(i8 0, 16) %x) {
-; CHECK-LABEL: 'udiv_mul_nuw_const_by_const_not_divisible'
-; CHECK-NEXT:  Classifying expressions for: @udiv_mul_nuw_const_by_const_not_divisible
+define i8 @udiv_mul_nuw_const_by_const_common_factor(i8 range(i8 0, 16) %x) {
+; CHECK-LABEL: 'udiv_mul_nuw_const_by_const_common_factor'
+; CHECK-NEXT:  Classifying expressions for: @udiv_mul_nuw_const_by_const_common_factor
 ; CHECK-NEXT:    %mul = mul i8 %x, 6
 ; CHECK-NEXT:    --> (6 * %x)<nuw><nsw> U: [0,91) S: [0,91)
 ; CHECK-NEXT:    %div = udiv i8 %mul, 4
-; CHECK-NEXT:    --> ((6 * %x)<nuw><nsw> /u 4) U: [0,23) S: [0,23)
-; CHECK-NEXT:  Determining loop execution counts for: @udiv_mul_nuw_const_by_const_not_divisible
+; CHECK-NEXT:    --> ((3 * %x)<nuw><nsw> /u 2) U: [0,23) S: [0,23)
+; CHECK-NEXT:  Determining loop execution counts for: @udiv_mul_nuw_const_by_const_common_factor
 ;
   %mul = mul i8 %x, 6
+  %div = udiv i8 %mul, 4
+  ret i8 %div
+}
+
+define i8 @udiv_mul_nuw_const_by_const_no_common_factor(i8 range(i8 0, 16) %x) {
+; CHECK-LABEL: 'udiv_mul_nuw_const_by_const_no_common_factor'
+; CHECK-NEXT:  Classifying expressions for: @udiv_mul_nuw_const_by_const_no_common_factor
+; CHECK-NEXT:    %mul = mul i8 %x, 7
+; CHECK-NEXT:    --> (7 * %x)<nuw><nsw> U: [0,106) S: [0,106)
+; CHECK-NEXT:    %div = udiv i8 %mul, 4
+; CHECK-NEXT:    --> ((7 * %x)<nuw><nsw> /u 4) U: [0,27) S: [0,27)
+; CHECK-NEXT:  Determining loop execution counts for: @udiv_mul_nuw_const_by_const_no_common_factor
+;
+  %mul = mul i8 %x, 7
   %div = udiv i8 %mul, 4
   ret i8 %div
 }

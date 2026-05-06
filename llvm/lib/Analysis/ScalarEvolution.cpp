@@ -3643,7 +3643,7 @@ const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
         SmallVector<SCEVUse, 4> Operands;
         for (const SCEV *Op : M->operands())
           Operands.push_back(getZeroExtendExpr(Op, ExtTy));
-        if (getZeroExtendExpr(M, ExtTy) == getMulExpr(Operands))
+        if (getZeroExtendExpr(M, ExtTy) == getMulExpr(Operands)) {
           // Find an operand that's safely divisible.
           for (unsigned i = 0, e = M->getNumOperands(); i != e; ++i) {
             const SCEV *Op = M->getOperand(i);
@@ -3654,6 +3654,21 @@ const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
               return getMulExpr(Operands);
             }
           }
+
+          // Even if it's not divisible, try to remove a common factor.
+          if (const auto *LHSC = dyn_cast<SCEVConstant>(M->getOperand(0))) {
+            APInt Factor = APIntOps::GreatestCommonDivisor(LHSC->getAPInt(),
+                                                           RHSC->getAPInt());
+            if (!Factor.isIntN(1)) {
+              SmallVector<SCEVUse, 2> NewOperands;
+              NewOperands.push_back(getConstant(LHSC->getAPInt().udiv(Factor)));
+              append_range(NewOperands, M->operands().drop_front());
+              const SCEV *NewMul = getMulExpr(NewOperands);
+              return getUDivExpr(NewMul,
+                                 getConstant(RHSC->getAPInt().udiv(Factor)));
+            }
+          }
+        }
       }
 
       // (A/B)/C --> A/(B*C) if safe and B*C can be folded.
