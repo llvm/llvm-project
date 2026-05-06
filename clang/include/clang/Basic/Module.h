@@ -230,34 +230,55 @@ struct ModuleAttributes {
         NoUndeclaredIncludes(false) {}
 };
 
-/// A reference to either a fully materialized Module object, or
-/// a yet-to-be-deserialized submodule in an AST file.
+/// Reference to a module that consists of either an existing/materialized
+/// Module object, reference to a serialized submodule record, both, or
+/// neither (null).
 class ModuleRef {
+  /// The existing/materialized Module object.
   mutable Module *Existing = nullptr;
-  mutable ExternalSubmoduleSource *ExternalSource = nullptr;
+
+  /// The external submodule source (i.e. \c ASTReader), and a boolean
+  /// signifying whether it's already been used to deserialize \c SubmoduleID.
+  mutable llvm::PointerIntPair<ExternalSubmoduleSource *, 1, bool>
+      ExternalSource = {nullptr, false};
+
+  /// Identifier of the external submodule in \c ExternalSource.
   mutable uint64_t SubmoduleID = 0;
 
 public:
+  /// Create an empty reference.
   ModuleRef() = default;
-  ModuleRef(Module *M) : Existing(M) {}
-  ModuleRef(ExternalSubmoduleSource *ExtSrc, uint64_t SubmoduleID)
-      : ExternalSource(ExtSrc), SubmoduleID(SubmoduleID) {}
 
+  /// Create reference to a materialized module.
+  ModuleRef(Module *M) : Existing(M) {}
+
+  /// Create reference to a serialized submodule record.
+  ModuleRef(ExternalSubmoduleSource *ExtSrc, uint64_t SubmoduleID)
+      : ExternalSource(ExtSrc, false), SubmoduleID(SubmoduleID) {}
+
+  /// Get the existing/materialized module, if there's any.
   Module *getExisting() const { return Existing; }
+  /// Add the existing/materialized module.
   void setExisting(Module *E) { Existing = E; }
 
+  /// Add the serialized submodule record reference.
   void setExternal(ExternalSubmoduleSource *ExtSrc, uint64_t ID) {
-    ExternalSource = ExtSrc;
+    ExternalSource = {ExtSrc, false};
     SubmoduleID = ID;
   }
 
-  operator bool() const { return Existing || (ExternalSource && SubmoduleID); }
+  /// Check whether this is a non-empty reference.
+  operator bool() const {
+    return Existing || (ExternalSource.getPointer() && SubmoduleID);
+  }
 
+  /// Get the existing/materialized module. Try materializing it on-demand from
+  /// the serialized submodule record if possible.
   operator Module *() const {
-    if (ExternalSource) {
-      Existing = ExternalSource->getSubmodule(SubmoduleID);
-      ExternalSource = nullptr;
-      SubmoduleID = 0;
+    if (!ExternalSource.getInt() && ExternalSource.getPointer() &&
+        SubmoduleID) {
+      Existing = ExternalSource.getPointer()->getSubmodule(SubmoduleID);
+      ExternalSource.setInt(true);
     }
     return Existing;
   }
